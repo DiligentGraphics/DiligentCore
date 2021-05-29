@@ -287,7 +287,11 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
             const auto&    MemTypeInfo        = MemoryProps.memoryTypes[type];
             constexpr auto UnifiedMemoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
-            if ((MemTypeInfo.propertyFlags & UnifiedMemoryFlags) == UnifiedMemoryFlags)
+            if (MemTypeInfo.propertyFlags & VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT)
+            {
+                Mem.MemorylessTextureBindFlags = BIND_RENDER_TARGET | BIND_DEPTH_STENCIL | BIND_INPUT_ATTACHMENT;
+            }
+            else if ((MemTypeInfo.propertyFlags & UnifiedMemoryFlags) == UnifiedMemoryFlags)
             {
                 UnifiedHeap[MemTypeInfo.heapIndex] = true;
                 if (MemTypeInfo.propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
@@ -303,6 +307,13 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
             {
                 HostVisibleHeap[MemTypeInfo.heapIndex] = true;
             }
+
+            // In Metal, input attachment with memoryless texture must be used as an imageblock,
+            // which is not supported in SPIRV to MSL translator.
+#if PLATFORM_MACOS || PLATFORM_IOS
+            if (Mem.MemorylessTextureBindFlags != 0)
+                Mem.MemorylessTextureBindFlags = BIND_RENDER_TARGET | BIND_DEPTH_STENCIL;
+#endif
         }
 
         for (uint32_t heap = 0; heap < MemoryProps.memoryHeapCount; ++heap)

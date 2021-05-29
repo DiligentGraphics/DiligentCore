@@ -952,14 +952,15 @@ inline bool DeviceContextBase<ImplementationTraits>::SetRenderTargets(
         if (pRTView)
         {
             const auto& RTVDesc = pRTView->GetDesc();
+            const auto& TexDesc = pRTView->GetTexture()->GetDesc();
             DEV_CHECK_ERR(RTVDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET,
                           "Texture view object named '", RTVDesc.Name ? RTVDesc.Name : "", "' has incorrect view type (", GetTexViewTypeLiteralName(RTVDesc.ViewType), "). Render target view is expected");
+            DEV_CHECK_ERR(m_pBoundFramebuffer || (TexDesc.MiscFlags & MISC_TEXTURE_FLAG_MEMORYLESS) == 0,
+                          "Memoryless render target '", TexDesc.Name, "' must be used within a framebuffer");
 
             // Use this RTV to set the render target size
             if (m_FramebufferWidth == 0)
             {
-                auto*       pTex     = pRTView->GetTexture();
-                const auto& TexDesc  = pTex->GetDesc();
                 m_FramebufferWidth   = std::max(TexDesc.Width >> RTVDesc.MostDetailedMip, 1U);
                 m_FramebufferHeight  = std::max(TexDesc.Height >> RTVDesc.MostDetailedMip, 1U);
                 m_FramebufferSlices  = RTVDesc.NumArraySlices;
@@ -968,7 +969,6 @@ inline bool DeviceContextBase<ImplementationTraits>::SetRenderTargets(
             else
             {
 #ifdef DILIGENT_DEVELOPMENT
-                const auto& TexDesc = pRTView->GetTexture()->GetDesc();
                 DEV_CHECK_ERR(m_FramebufferWidth == std::max(TexDesc.Width >> RTVDesc.MostDetailedMip, 1U),
                               "Render target width (", std::max(TexDesc.Width >> RTVDesc.MostDetailedMip, 1U), ") specified by RTV '", RTVDesc.Name, "' is inconsistent with the width of previously bound render targets (", m_FramebufferWidth, ")");
                 DEV_CHECK_ERR(m_FramebufferHeight == std::max(TexDesc.Height >> RTVDesc.MostDetailedMip, 1U),
@@ -994,14 +994,15 @@ inline bool DeviceContextBase<ImplementationTraits>::SetRenderTargets(
     if (pDepthStencil != nullptr)
     {
         const auto& DSVDesc = pDepthStencil->GetDesc();
+        const auto& TexDesc = pDepthStencil->GetTexture()->GetDesc();
         DEV_CHECK_ERR(DSVDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL,
                       "Texture view object named '", DSVDesc.Name ? DSVDesc.Name : "", "' has incorrect view type (", GetTexViewTypeLiteralName(DSVDesc.ViewType), "). Depth stencil view is expected");
+        DEV_CHECK_ERR(m_pBoundFramebuffer || (TexDesc.MiscFlags & MISC_TEXTURE_FLAG_MEMORYLESS) == 0,
+                      "Memoryless depth buffer '", TexDesc.Name, "' must be used within a framebuffer");
 
         // Use depth stencil size to set render target size
         if (m_FramebufferWidth == 0)
         {
-            auto*       pTex     = pDepthStencil->GetTexture();
-            const auto& TexDesc  = pTex->GetDesc();
             m_FramebufferWidth   = std::max(TexDesc.Width >> DSVDesc.MostDetailedMip, 1U);
             m_FramebufferHeight  = std::max(TexDesc.Height >> DSVDesc.MostDetailedMip, 1U);
             m_FramebufferSlices  = DSVDesc.NumArraySlices;
@@ -1010,7 +1011,6 @@ inline bool DeviceContextBase<ImplementationTraits>::SetRenderTargets(
         else
         {
 #ifdef DILIGENT_DEVELOPMENT
-            const auto& TexDesc = pDepthStencil->GetTexture()->GetDesc();
             DEV_CHECK_ERR(m_FramebufferWidth == std::max(TexDesc.Width >> DSVDesc.MostDetailedMip, 1U),
                           "Depth-stencil target width (", std::max(TexDesc.Width >> DSVDesc.MostDetailedMip, 1U), ") specified by DSV '", DSVDesc.Name, "' is inconsistent with the width of previously bound render targets (", m_FramebufferWidth, ")");
             DEV_CHECK_ERR(m_FramebufferHeight == std::max(TexDesc.Height >> DSVDesc.MostDetailedMip, 1U),
@@ -2136,6 +2136,7 @@ inline void DeviceContextBase<ImplementationTraits>::DvpVerifyRenderTargets() co
         const auto& TilePipeline = m_pPipelineState->GetTilePipelineDesc();
         NumPipelineRenderTargets = TilePipeline.NumRenderTargets;
         PipelineRTVFormats       = TilePipeline.RTVFormats;
+        PipelineDSVFormat        = BoundDSVFormat; // to disable warning
     }
     else
     {

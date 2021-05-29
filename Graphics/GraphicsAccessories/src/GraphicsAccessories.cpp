@@ -848,6 +848,7 @@ const Char* GetBindFlagString(Uint32 BindFlag)
         BIND_FLAG_STR_CASE(BIND_DEPTH_STENCIL)
         BIND_FLAG_STR_CASE(BIND_UNORDERED_ACCESS)
         BIND_FLAG_STR_CASE(BIND_INDIRECT_DRAW_ARGS)
+        BIND_FLAG_STR_CASE(BIND_INPUT_ATTACHMENT)
         BIND_FLAG_STR_CASE(BIND_RAY_TRACING)
 #undef BIND_FLAG_STR_CASE
         default: UNEXPECTED("Unexpected bind flag ", BindFlag); return "";

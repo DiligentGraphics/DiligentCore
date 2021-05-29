@@ -45,7 +45,7 @@ namespace Diligent
 struct CopyTextureAttribs;
 
 /// Validates texture description and throws an exception in case of an error.
-void ValidateTextureDesc(const TextureDesc& TexDesc) noexcept(false);
+void ValidateTextureDesc(const TextureDesc& TexDesc, const IRenderDevice* pDevice) noexcept(false);
 
 /// Validates and corrects texture view description; throws an exception in case of an error.
 void ValidatedAndCorrectTextureViewDesc(const TextureDesc& TexDesc, TextureViewDesc& ViewDesc) noexcept(false);
@@ -137,11 +137,11 @@ public:
                       ") correspond to one of ", pDevice->GetCommandQueueCount(), " available software command queues");
         this->m_Desc.ImmediateContextMask &= DeviceQueuesMask;
 
+        // Validate correctness of texture description
+        ValidateTextureDesc(this->m_Desc, this->m_pDevice);
+
         if ((this->m_Desc.BindFlags & BIND_INPUT_ATTACHMENT) != 0)
             this->m_Desc.BindFlags |= BIND_SHADER_RESOURCE;
-
-        // Validate correctness of texture description
-        ValidateTextureDesc(this->m_Desc);
     }
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_Texture, TDeviceObjectBase)

@@ -56,6 +56,10 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
     if (m_Desc.Usage == USAGE_IMMUTABLE && (pInitData == nullptr || pInitData->pSubResources == nullptr))
         LOG_ERROR_AND_THROW("Immutable textures must be initialized with data at creation time: pInitData can't be null");
 
+    const auto IsMemoryless = (m_Desc.MiscFlags & MISC_TEXTURE_FLAG_MEMORYLESS) != 0;
+    if (IsMemoryless && pInitData != nullptr && pInitData->pSubResources != nullptr)
+        LOG_ERROR_AND_THROW("Memoryless textures can't be initialized");
+
     const auto& FmtAttribs    = GetTextureFormatAttribs(m_Desc.Format);
     const auto& LogicalDevice = pRenderDeviceVk->GetLogicalDevice();
 
@@ -156,6 +160,7 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
 
         if (m_Desc.MiscFlags & MISC_TEXTURE_FLAG_GENERATE_MIPS)
         {
+            VERIFY_EXPR(!IsMemoryless);
             if (CheckCSBasedMipGenerationSupport(ImageCI.format) && ImageView2DSupported)
             {
                 ImageCI.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
@@ -199,11 +204,17 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
         // and the transition away from this layout is not guaranteed to preserve that data.
         ImageCI.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
+        if (IsMemoryless)
+        {
+            ImageCI.usage &= (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT);
+            ImageCI.usage |= VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
+        }
+
         m_VulkanImage = LogicalDevice.CreateImage(ImageCI, m_Desc.Name);
 
         VkMemoryRequirements MemReqs = LogicalDevice.GetImageMemoryRequirements(m_VulkanImage);
 
-        constexpr auto ImageMemoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+        const auto ImageMemoryFlags = IsMemoryless ? VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT : VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
         VERIFY(IsPowerOfTwo(MemReqs.alignment), "Alignment is not power of 2!");
         m_MemoryAllocation = pRenderDeviceVk->AllocateMemory(MemReqs, ImageMemoryFlags);
         auto AlignedOffset = AlignUp(m_MemoryAllocation.UnalignedOffset, MemReqs.alignment);
