@@ -35,11 +35,12 @@
 namespace Diligent
 {
 
-void ValidateTextureDesc(const TextureDesc& Desc) noexcept(false)
+void ValidateTextureDesc(const TextureDesc& Desc, const IRenderDevice* pDevice) noexcept(false)
 {
 #define LOG_TEXTURE_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Texture '", (Desc.Name ? Desc.Name : ""), "': ", ##__VA_ARGS__)
 
     const auto& FmtAttribs = GetTextureFormatAttribs(Desc.Format);
+    const auto& MemInfo    = pDevice->GetAdapterInfo().Memory;
 
     if (Desc.Type == RESOURCE_DIM_UNDEFINED)
     {
@@ -128,6 +129,24 @@ void ValidateTextureDesc(const TextureDesc& Desc) noexcept(false)
         LOG_WARNING_MESSAGE(FmtName, " texture is created with BIND_RENDER_TARGET flag set.\n"
                                      "There might be an issue in OpenGL driver on NVidia hardware: when rendering to SNORM textures, all negative values are clamped to zero.\n"
                                      "Use UNORM format instead.");
+    }
+
+    if (Desc.MiscFlags & MISC_TEXTURE_FLAG_MEMORYLESS)
+    {
+        if (MemInfo.MemorylessTextureBindFlags == BIND_NONE)
+            LOG_TEXTURE_ERROR_AND_THROW("Memoryless textures are not supported by device");
+
+        if ((Desc.BindFlags & MemInfo.MemorylessTextureBindFlags) != Desc.BindFlags)
+            LOG_TEXTURE_ERROR_AND_THROW("BindFlags ", GetBindFlagsString(Desc.BindFlags & ~MemInfo.MemorylessTextureBindFlags), " are not supported for memoryless textures.");
+
+        if (Desc.Usage != USAGE_DEFAULT)
+            LOG_TEXTURE_ERROR_AND_THROW("Memoryless attachment requires USAGE_DEFAULT.");
+
+        if (Desc.CPUAccessFlags != 0)
+            LOG_TEXTURE_ERROR_AND_THROW("Memoryless attachment requires CPUAccessFlags to be NONE.");
+
+        if (Desc.MiscFlags & MISC_TEXTURE_FLAG_GENERATE_MIPS)
+            LOG_TEXTURE_ERROR_AND_THROW("Memoryless attachment is not compatible with mipmap generation.");
     }
 
     if (Desc.Usage == USAGE_STAGING)

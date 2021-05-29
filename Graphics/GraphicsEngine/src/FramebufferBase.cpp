@@ -99,6 +99,22 @@ void ValidateFramebufferDesc(const FramebufferDesc& Desc) noexcept(false)
                                             " does not match the sample count (", Uint32{AttDesc.SampleCount},
                                             ") defined by the render pass for the same attachment.");
         }
+
+        if ((TexDesc.MiscFlags & MISC_TEXTURE_FLAG_MEMORYLESS) != 0)
+        {
+            const bool HasStencilComponent = GetTextureFormatAttribs(AttDesc.Format).ComponentType == COMPONENT_TYPE_DEPTH_STENCIL;
+
+            if (AttDesc.LoadOp == ATTACHMENT_LOAD_OP_LOAD ||
+                (HasStencilComponent && AttDesc.StencilLoadOp == ATTACHMENT_LOAD_OP_LOAD))
+            {
+                LOG_FRAMEBUFFER_ERROR_AND_THROW("memoryless attachment ", i, " is not compatible with ATTACHMENT_LOAD_OP_LOAD");
+            }
+            if (AttDesc.StoreOp == ATTACHMENT_STORE_OP_STORE ||
+                (HasStencilComponent && AttDesc.StencilStoreOp == ATTACHMENT_STORE_OP_STORE))
+            {
+                LOG_FRAMEBUFFER_ERROR_AND_THROW("memoryless attachment ", i, " is not compatible with ATTACHMENT_STORE_OP_STORE");
+            }
+        }
     }
 
     for (Uint32 i = 0; i < RPDesc.SubpassCount; ++i)

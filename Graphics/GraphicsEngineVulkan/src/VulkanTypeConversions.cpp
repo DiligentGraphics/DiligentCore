@@ -1968,6 +1968,14 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
     INIT_FEATURE(TileShaders, false); // Not currently supported
 #undef INIT_FEATURE
 
+    // Not supported in Vulkan on top of Metal.
+#if PLATFORM_MACOS || PLATFORM_IOS
+    Features.BinaryOcclusionQueries = DEVICE_FEATURE_STATE_DISABLED;
+    Features.TimestampQueries       = DEVICE_FEATURE_STATE_DISABLED;
+    Features.DurationQueries        = DEVICE_FEATURE_STATE_DISABLED;
+    Features.OcclusionQueries       = DEVICE_FEATURE_STATE_DISABLED;
+#endif
+
 #if defined(_MSC_VER) && defined(_WIN64)
     static_assert(sizeof(DeviceFeatures) == 37, "Did you add a new feature to DeviceFeatures? Please handle its satus here (if necessary).");
 #endif

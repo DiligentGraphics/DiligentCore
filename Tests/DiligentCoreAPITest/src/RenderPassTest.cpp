@@ -180,7 +180,8 @@ protected:
         pContext->EndRenderPass();
     }
 
-    static void TestInputAttachment(bool UseSignature);
+    static void TestMSResolve(bool UseMemoryless);
+    static void TestInputAttachment(bool UseSignature, bool UseMemoryless);
 
     static void Present()
     {
@@ -551,7 +552,7 @@ TEST_F(RenderPassTest, Draw)
     Present();
 }
 
-TEST_F(RenderPassTest, MSResolve)
+void RenderPassTest::TestMSResolve(bool UseMemoryless)
 {
     auto* pEnv       = TestingEnvironment::GetInstance();
     auto* pDevice    = pEnv->GetDevice();
@@ -638,6 +639,7 @@ TEST_F(RenderPassTest, MSResolve)
         TexDesc.MipLevels   = 1;
         TexDesc.SampleCount = Attachments[0].SampleCount;
         TexDesc.Usage       = USAGE_DEFAULT;
+        TexDesc.MiscFlags   = UseMemoryless ? MISC_TEXTURE_FLAG_MEMORYLESS : MISC_TEXTURE_FLAG_NONE;
 
         pDevice->CreateTexture(TexDesc, nullptr, &pMSTex);
         ASSERT_NE(pMSTex, nullptr);
@@ -694,7 +696,24 @@ TEST_F(RenderPassTest, MSResolve)
     Present();
 }
 
-void RenderPassTest::TestInputAttachment(bool UseSignature)
+TEST_F(RenderPassTest, MSResolve)
+{
+    TestMSResolve(false);
+}
+
+TEST_F(RenderPassTest, MemorylessMSResolve)
+{
+    const auto  RequiredBindFlags = BIND_RENDER_TARGET;
+    const auto& MemoryInfo        = TestingEnvironment::GetInstance()->GetDevice()->GetAdapterInfo().Memory;
+
+    if ((MemoryInfo.MemorylessTextureBindFlags & RequiredBindFlags) != RequiredBindFlags)
+    {
+        GTEST_SKIP() << "Memoryless attachment is not supported by device";
+    }
+    TestMSResolve(true);
+}
+
+void RenderPassTest::TestInputAttachment(bool UseSignature, bool UseMemoryless)
 {
     auto* pEnv       = TestingEnvironment::GetInstance();
     auto* pDevice    = pEnv->GetDevice();
@@ -781,6 +800,7 @@ void RenderPassTest::TestInputAttachment(bool UseSignature)
         TexDesc.BindFlags = BIND_RENDER_TARGET | BIND_INPUT_ATTACHMENT;
         TexDesc.MipLevels = 1;
         TexDesc.Usage     = USAGE_DEFAULT;
+        TexDesc.MiscFlags = UseMemoryless ? MISC_TEXTURE_FLAG_MEMORYLESS : MISC_TEXTURE_FLAG_NONE;
 
         pDevice->CreateTexture(TexDesc, nullptr, &pTex);
         ASSERT_NE(pTex, nullptr);
@@ -979,12 +999,24 @@ void RenderPassTest::TestInputAttachment(bool UseSignature)
 
 TEST_F(RenderPassTest, InputAttachment)
 {
-    TestInputAttachment(false);
+    TestInputAttachment(false, false);
 }
 
 TEST_F(RenderPassTest, InputAttachmentWithSignature)
 {
-    TestInputAttachment(true);
+    TestInputAttachment(true, false);
+}
+
+TEST_F(RenderPassTest, MemorylessInputAttachment)
+{
+    const auto  RequiredBindFlags = BIND_RENDER_TARGET | BIND_INPUT_ATTACHMENT;
+    const auto& MemoryInfo        = TestingEnvironment::GetInstance()->GetDevice()->GetAdapterInfo().Memory;
+
+    if ((MemoryInfo.MemorylessTextureBindFlags & RequiredBindFlags) != RequiredBindFlags)
+    {
+        GTEST_SKIP() << "Memoryless attachment is not supported by device";
+    }
+    TestInputAttachment(false, true);
 }
 
 
