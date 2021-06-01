@@ -11,6 +11,7 @@ INTERFACE
 target_link_libraries(Diligent-GraphicsEngineInterface
 INTERFACE
     Diligent-Primitives
+    Diligent-PublicBuildSettings
 )
 
 add_subdirectory(GraphicsAccessories)

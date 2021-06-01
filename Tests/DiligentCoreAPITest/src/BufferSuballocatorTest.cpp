@@ -84,7 +84,7 @@ TEST(BufferSuballocatorTest, Allocate)
     RefCntAutoPtr<IBufferSuballocator> pAllocator;
     CreateBufferSuballocator(pDevice, CI, &pAllocator);
 
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     constexpr size_t NumIterations = 8;
 #else
     constexpr size_t NumIterations = 32;

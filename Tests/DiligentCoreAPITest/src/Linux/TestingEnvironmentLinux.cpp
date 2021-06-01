@@ -118,7 +118,7 @@ NativeWindow TestingEnvironment::CreateNativeWindow()
     }
 
     int Flags = GLX_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB;
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     Flags |= GLX_CONTEXT_DEBUG_BIT_ARB;
 #endif
 

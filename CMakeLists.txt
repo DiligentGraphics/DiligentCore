@@ -94,7 +94,7 @@ else()
     endif()
 endif(WIN32)
 
-add_library(Diligent-BuildSettings INTERFACE)
+add_library(Diligent-PublicBuildSettings INTERFACE)
 
 if(PLATFORM_WIN32)
     if(MSVC)
@@ -111,21 +111,21 @@ if(PLATFORM_WIN32)
 
     set(GL_SUPPORTED TRUE CACHE INTERNAL "OpenGL is supported on Win32 platform")
 	set(VULKAN_SUPPORTED TRUE CACHE INTERNAL "Vulkan is supported on Win32 platform")
-    target_compile_definitions(Diligent-BuildSettings INTERFACE PLATFORM_WIN32=1)
+    target_compile_definitions(Diligent-PublicBuildSettings INTERFACE PLATFORM_WIN32=1)
 elseif(PLATFORM_UNIVERSAL_WINDOWS)
     set(D3D11_SUPPORTED TRUE CACHE INTERNAL "D3D11 is supported on Universal Windows platform")
 	if(CMAKE_SYSTEM_VERSION VERSION_GREATER_EQUAL "10.0")
 		set(D3D12_SUPPORTED TRUE CACHE INTERNAL "D3D12 is supported on Universal Windows platform")
 	endif()
-    target_compile_definitions(Diligent-BuildSettings INTERFACE PLATFORM_UNIVERSAL_WINDOWS=1)
+    target_compile_definitions(Diligent-PublicBuildSettings INTERFACE PLATFORM_UNIVERSAL_WINDOWS=1)
 elseif(PLATFORM_ANDROID)
     set(GLES_SUPPORTED TRUE CACHE INTERNAL "OpenGLES is supported on Android platform")
     set(VULKAN_SUPPORTED TRUE CACHE INTERNAL "Vulkan is supported on Android platform")
-    target_compile_definitions(Diligent-BuildSettings INTERFACE PLATFORM_ANDROID=1)
+    target_compile_definitions(Diligent-PublicBuildSettings INTERFACE PLATFORM_ANDROID=1)
 elseif(PLATFORM_LINUX)
     set(GL_SUPPORTED TRUE CACHE INTERNAL "OpenGL is supported on Linux platform")
     set(VULKAN_SUPPORTED TRUE CACHE INTERNAL "Vulkan is supported on Linux platform")
-    target_compile_definitions(Diligent-BuildSettings INTERFACE PLATFORM_LINUX=1)
+    target_compile_definitions(Diligent-PublicBuildSettings INTERFACE PLATFORM_LINUX=1)
 elseif(PLATFORM_MACOS)
     set(GL_SUPPORTED TRUE CACHE INTERNAL "OpenGL is supported on MacOS platform")
     if(${DILIGENT_CORE_PRO_EXISTS})
@@ -134,7 +134,7 @@ elseif(PLATFORM_MACOS)
         message("DiligentCorePro module is not found. Metal backend will be disabled")
     endif()
     set(VULKAN_SUPPORTED TRUE CACHE INTERNAL "Vulkan is enabled through MoltenVK on MacOS platform")
-    target_compile_definitions(Diligent-BuildSettings INTERFACE PLATFORM_MACOS=1)
+    target_compile_definitions(Diligent-PublicBuildSettings INTERFACE PLATFORM_MACOS=1)
 elseif(PLATFORM_IOS)
     set(GLES_SUPPORTED TRUE CACHE INTERNAL "OpenGLES is supported on iOS platform")
     if(${DILIGENT_CORE_PRO_EXISTS})
@@ -156,7 +156,7 @@ elseif(PLATFORM_IOS)
     else()
         message("VULKAN_SDK or MoltenVK_FRAMEWORK is not defined. Vulkan backend will be disabled.")
     endif()
-    target_compile_definitions(Diligent-BuildSettings INTERFACE PLATFORM_IOS=1)
+    target_compile_definitions(Diligent-PublicBuildSettings INTERFACE PLATFORM_IOS=1)
 else()
     message(FATAL_ERROR "No PLATFORM_XXX variable defined. Make sure that 'DiligentCore' folder is processed first")
 endif()
@@ -207,8 +207,8 @@ message("GLES_SUPPORTED:   " ${GLES_SUPPORTED})
 message("VULKAN_SUPPORTED: " ${VULKAN_SUPPORTED})
 message("METAL_SUPPORTED:  " ${METAL_SUPPORTED})
 
-target_compile_definitions(Diligent-BuildSettings 
-INTERFACE 
+target_compile_definitions(Diligent-PublicBuildSettings 
+INTERFACE
     D3D11_SUPPORTED=$<BOOL:${D3D11_SUPPORTED}>
     D3D12_SUPPORTED=$<BOOL:${D3D12_SUPPORTED}>
     GL_SUPPORTED=$<BOOL:${GL_SUPPORTED}>
@@ -216,6 +216,28 @@ INTERFACE
     VULKAN_SUPPORTED=$<BOOL:${VULKAN_SUPPORTED}>
     METAL_SUPPORTED=$<BOOL:${METAL_SUPPORTED}>
 )
+
+foreach(DBG_CONFIG ${DEBUG_CONFIGURATIONS})
+    target_compile_definitions(Diligent-PublicBuildSettings INTERFACE "$<$<CONFIG:${DBG_CONFIG}>:DILIGENT_DEVELOPMENT;DILIGENT_DEBUG>")
+endforeach()
+
+if(DILIGENT_DEVELOPMENT)
+    foreach(REL_CONFIG ${RELEASE_CONFIGURATIONS})
+		target_compile_definitions(Diligent-PublicBuildSettings INTERFACE "$<$<CONFIG:${REL_CONFIG}>:DILIGENT_DEVELOPMENT>")
+    endforeach()
+endif()
+
+
+add_library(Diligent-BuildSettings INTERFACE)
+target_link_libraries(Diligent-BuildSettings INTERFACE Diligent-PublicBuildSettings)
+
+foreach(DBG_CONFIG ${DEBUG_CONFIGURATIONS})
+    target_compile_definitions(Diligent-BuildSettings INTERFACE "$<$<CONFIG:${DBG_CONFIG}>:_DEBUG;DEBUG>")
+endforeach()
+
+foreach(REL_CONFIG ${RELEASE_CONFIGURATIONS})
+	target_compile_definitions(Diligent-BuildSettings INTERFACE "$<$<CONFIG:${REL_CONFIG}>:NDEBUG>")
+endforeach()
 
 
 if(MSVC)
@@ -247,23 +269,9 @@ if(MSVC)
     # For instance, this way
     # target_compile_options(Diligent-BuildSettings INTERFACE "$<$<CONFIG:RELEASE>:/Ot>")
     # does not work as expected
-
-    set(DEBUG_MACROS DILIGENT_DEVELOPMENT DILIGENT_DEBUG)
-    target_compile_definitions(Diligent-BuildSettings INTERFACE "$<$<CONFIG:DEBUG>:${DEBUG_MACROS}>")
 else()
     # Todo: use __attribute__((always_inline)), but it needs to be defined in a header file
     target_compile_definitions(Diligent-BuildSettings INTERFACE __forceinline=inline)
-
-    set(DEBUG_MACROS _DEBUG DEBUG DILIGENT_DEVELOPMENT DILIGENT_DEBUG)
-    set(RELEASE_MACROS NDEBUG)
-
-    foreach(DBG_CONFIG ${DEBUG_CONFIGURATIONS})
-        target_compile_definitions(Diligent-BuildSettings INTERFACE "$<$<CONFIG:${DBG_CONFIG}>:${DEBUG_MACROS}>")
-    endforeach()
-
-    foreach(REL_CONFIG ${RELEASE_CONFIGURATIONS})
-        target_compile_definitions(Diligent-BuildSettings INTERFACE "$<$<CONFIG:${REL_CONFIG}>:${RELEASE_MACROS}>")
-    endforeach()
 endif(MSVC)
 
 
@@ -293,12 +301,6 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     )
     set(CLANG_RELEASE_OPTIONS -Wno-unused-variable)
     target_compile_options(Diligent-BuildSettings INTERFACE $<$<NOT:$<CONFIG:Debug>>:${CLANG_RELEASE_OPTIONS}>)
-endif()
-
-if(DILIGENT_DEVELOPMENT)
-    foreach(REL_CONFIG ${RELEASE_CONFIGURATIONS})
-		target_compile_definitions(Diligent-BuildSettings INTERFACE "$<$<CONFIG:${REL_CONFIG}>:DILIGENT_DEVELOPMENT>")
-    endforeach()
 endif()
 
 if(PLATFORM_MACOS)

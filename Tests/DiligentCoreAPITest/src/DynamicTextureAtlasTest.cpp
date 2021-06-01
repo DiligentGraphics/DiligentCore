@@ -121,7 +121,7 @@ TEST(DynamicTextureAtlas, Allocate)
     RefCntAutoPtr<IDynamicTextureAtlas> pAtlas;
     CreateDynamicTextureAtlas(pDevice, CI, &pAtlas);
 
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     constexpr size_t NumIterations = 8;
 #else
     constexpr size_t NumIterations = 32;
