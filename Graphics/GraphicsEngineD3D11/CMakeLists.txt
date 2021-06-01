@@ -84,14 +84,8 @@ set(SRC
 )
 
 add_library(Diligent-GraphicsEngineD3D11Interface INTERFACE)
-target_include_directories(Diligent-GraphicsEngineD3D11Interface
-INTERFACE
-    interface
-)
-target_link_libraries(Diligent-GraphicsEngineD3D11Interface 
-INTERFACE 
-    Diligent-GraphicsEngineD3DBaseInterface
-)
+target_link_libraries     (Diligent-GraphicsEngineD3D11Interface INTERFACE Diligent-GraphicsEngineD3DBaseInterface)
+target_include_directories(Diligent-GraphicsEngineD3D11Interface INTERFACE interface)
 
 
 add_library(Diligent-GraphicsEngineD3D11-static STATIC 

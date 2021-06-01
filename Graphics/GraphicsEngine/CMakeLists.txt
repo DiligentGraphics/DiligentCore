@@ -71,6 +71,10 @@ set(INTERFACE
     interface/ShaderBindingTable.h
 )
 
+if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
+    list(APPEND INTERFACE interface/LoadEngineDll.h)
+endif()
+
 set(SOURCE
     src/APIInfo.cpp
     src/BottomLevelASBase.cpp

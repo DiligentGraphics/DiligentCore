@@ -8,8 +8,6 @@ SamplerState g_SamArr_Static[STATIC_SAM_ARRAY_SIZE];  // 2
 SamplerState g_SamArr_Mut   [MUTABLE_SAM_ARRAY_SIZE]; // 4
 SamplerState g_SamArr_Dyn   [DYNAMIC_SAM_ARRAY_SIZE]; // 3
 
-SamplerState g_Sampler;
-
 #define TexRefValue float4(1.0, 0.0, 1.0, 0.0)
 
 float4 CheckValue(float4 Val, float4 Expected)

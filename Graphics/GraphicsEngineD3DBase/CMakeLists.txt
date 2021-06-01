@@ -53,7 +53,7 @@ add_custom_command(OUTPUT ${HLSL_DEFINITIONS_INC} # We must use full path here!
 )
 
 add_library(Diligent-GraphicsEngineD3DBaseInterface INTERFACE)
-target_link_libraries(Diligent-GraphicsEngineD3DBaseInterface INTERFACE Diligent-GraphicsEngineInterface)
+target_link_libraries     (Diligent-GraphicsEngineD3DBaseInterface INTERFACE Diligent-GraphicsEngineInterface)
 target_include_directories(Diligent-GraphicsEngineD3DBaseInterface INTERFACE interface)
 
 target_include_directories(Diligent-GraphicsEngineD3DBase

@@ -136,14 +136,9 @@ set_source_files_properties(${SHADERS} PROPERTIES
 )
 
 add_library(Diligent-GraphicsEngineD3D12Interface INTERFACE)
-target_include_directories(Diligent-GraphicsEngineD3D12Interface
-INTERFACE
-    interface
-)
-target_link_libraries(Diligent-GraphicsEngineD3D12Interface 
-INTERFACE 
-    Diligent-GraphicsEngineD3DBaseInterface
-)
+target_link_libraries     (Diligent-GraphicsEngineD3D12Interface INTERFACE Diligent-GraphicsEngineD3DBaseInterface)
+target_include_directories(Diligent-GraphicsEngineD3D12Interface INTERFACE interface)
+
 
 add_library(Diligent-GraphicsEngineD3D12-static STATIC 
     ${SRC} ${INTERFACE} ${INCLUDE} ${SHADERS}

@@ -148,18 +148,13 @@ add_custom_command(OUTPUT ${GENERATE_MIPS_SHADER_INC} # We must use full path he
 
 
 add_library(Diligent-GraphicsEngineVkInterface INTERFACE)
-target_include_directories(Diligent-GraphicsEngineVkInterface
-INTERFACE
-    interface
-)
-target_link_libraries(Diligent-GraphicsEngineVkInterface 
-INTERFACE 
-    Diligent-GraphicsEngineInterface
-)
+target_link_libraries     (Diligent-GraphicsEngineVkInterface INTERFACE Diligent-GraphicsEngineInterface)
+target_include_directories(Diligent-GraphicsEngineVkInterface INTERFACE interface)
+
 
 add_library(Diligent-GraphicsEngineVk-static STATIC 
     ${SRC} ${VULKAN_UTILS_SRC} ${INTERFACE} ${INCLUDE} ${VULKAN_UTILS_INCLUDE} ${GENERATE_MIPS_SHADER}
-    
+
     # A target created in the same directory (CMakeLists.txt file) that specifies any output of the 
     # custom command as a source file is given a rule to generate the file using the command at build time. 
     ${GENERATE_MIPS_SHADER_INC}

@@ -134,14 +134,8 @@ else()
 endif()
 
 add_library(Diligent-GraphicsEngineOpenGLInterface INTERFACE)
-target_include_directories(Diligent-GraphicsEngineOpenGLInterface
-INTERFACE
-    interface
-)
-target_link_libraries(Diligent-GraphicsEngineOpenGLInterface 
-INTERFACE 
-    Diligent-GraphicsEngineInterface
-)
+target_link_libraries     (Diligent-GraphicsEngineOpenGLInterface INTERFACE Diligent-GraphicsEngineInterface)
+target_include_directories(Diligent-GraphicsEngineOpenGLInterface INTERFACE interface)
 
 
 add_library(Diligent-GraphicsEngineOpenGL-static STATIC 
