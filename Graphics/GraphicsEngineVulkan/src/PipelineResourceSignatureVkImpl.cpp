@@ -116,9 +116,9 @@ inline PipelineResourceSignatureVkImpl::CACHE_GROUP PipelineResourceSignatureVkI
 {
     // NB: SetId is always 0 for static/mutable variables, and 1 - for dynamic ones.
     //     It is not the actual descriptor set index in the set layout!
-    const auto SetId             = VarTypeToDescriptorSetId(Res.VarType);
-    const bool WithDynamicOffset = (Res.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0;
-    const bool UseTexelBuffer    = (Res.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) != 0;
+    const size_t SetId             = VarTypeToDescriptorSetId(Res.VarType);
+    const bool   WithDynamicOffset = (Res.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0;
+    const bool   UseTexelBuffer    = (Res.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) != 0;
 
     if (WithDynamicOffset && !UseTexelBuffer)
     {
