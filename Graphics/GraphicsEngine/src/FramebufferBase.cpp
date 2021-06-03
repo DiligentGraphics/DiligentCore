@@ -114,6 +114,42 @@ void ValidateFramebufferDesc(const FramebufferDesc& Desc) noexcept(false)
             {
                 LOG_FRAMEBUFFER_ERROR_AND_THROW("memoryless attachment ", i, " is not compatible with ATTACHMENT_STORE_OP_STORE");
             }
+
+#if PLATFORM_MACOS || PLATFORM_IOS
+            {
+                Uint32 NumSubpasses = 0;
+                for (Uint32 s = 0; s < RPDesc.SubpassCount; ++s)
+                {
+                    const auto& Subpass = RPDesc.pSubpasses[s];
+
+                    bool UsedInSubpass = false;
+                    for (Uint32 rt_attachment = 0; rt_attachment < Subpass.RenderTargetAttachmentCount; ++rt_attachment)
+                    {
+                        const auto& AttchRef = Subpass.pRenderTargetAttachments[rt_attachment];
+                        if (AttchRef.AttachmentIndex == i)
+                            UsedInSubpass = true;
+                    }
+                    for (Uint32 input_attachment = 0; input_attachment < Subpass.InputAttachmentCount; ++input_attachment)
+                    {
+                        const auto& AttchRef = Subpass.pInputAttachments[input_attachment];
+                        if (AttchRef.AttachmentIndex == i)
+                            UsedInSubpass = true;
+                    }
+                    if (Subpass.pDepthStencilAttachment != nullptr && Subpass.pDepthStencilAttachment->AttachmentIndex == i)
+                        UsedInSubpass = true;
+
+                    if (UsedInSubpass)
+                        ++NumSubpasses;
+                }
+                if (NumSubpasses > 1)
+                {
+                    LOG_FRAMEBUFFER_ERROR_AND_THROW("memoryless attachment ", i,
+                                                    " is used in more than one subpass, which is not supported on MacOS/iOS "
+                                                    "as the contents of the attachment can't be preserved between subpasses without "
+                                                    "storing it in global memory.");
+                }
+            }
+#endif
         }
     }
 
