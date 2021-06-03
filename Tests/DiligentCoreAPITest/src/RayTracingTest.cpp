@@ -33,6 +33,7 @@
 #include "TestingSwapChainBase.hpp"
 #include "BasicMath.hpp"
 #include "Align.hpp"
+#include "ShaderMacroHelper.hpp"
 
 #include "gtest/gtest.h"
 
@@ -63,6 +64,7 @@ void RayTracingMultiGeometryReferenceVk(ISwapChain* pSwapChain);
 
 #if METAL_SUPPORTED
 void InlineRayTracingInComputePplnReferenceMtl(ISwapChain* pSwapChain);
+void RayTracingPRSReferenceMtl(ISwapChain* pSwapChain);
 #endif
 
 } // namespace Testing
@@ -2247,5 +2249,386 @@ TEST_P(RT8, InlineRayTracing_ComputePSO)
     pSwapChain->Present();
 }
 INSTANTIATE_TEST_SUITE_P(RayTracingTest, RT8, TestParamRange, TestIdToString);
+
+
+static void RayTracingPRSTest(const int Mode)
+{
+    auto*       pEnv       = TestingEnvironment::GetInstance();
+    auto*       pDevice    = pEnv->GetDevice();
+    const auto& deviceInfo = pDevice->GetDeviceInfo();
+
+    if (!deviceInfo.IsMetalDevice())
+        GTEST_SKIP() << "Only for Metal";
+
+    if (!deviceInfo.Features.RayTracing)
+        GTEST_SKIP() << "Ray tracing is not supported by this device";
+
+    auto*       pSwapChain = pEnv->GetSwapChain();
+    auto*       pContext   = pEnv->GetDeviceContext();
+    const auto& SCDesc     = pSwapChain->GetDesc();
+
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+    if (pTestingSwapChain)
+    {
+        pContext->Flush();
+        pContext->InvalidateState();
+
+#if METAL_SUPPORTED
+        RayTracingPRSReferenceMtl(pSwapChain);
+#endif
+        pTestingSwapChain->TakeSnapshot();
+    }
+
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+
+    const auto& Vertices = TestingConstants::TriangleClosestHit::Vertices;
+
+    RefCntAutoPtr<IBuffer> pVertexBuffer;
+    RefCntAutoPtr<IBuffer> pConstuffer1;
+    RefCntAutoPtr<IBuffer> pConstuffer2;
+    RefCntAutoPtr<IBuffer> pConstuffer3;
+    {
+        BufferDesc BuffDesc;
+        BuffDesc.Name          = "Triangle vertices";
+        BuffDesc.BindFlags     = BIND_RAY_TRACING;
+        BuffDesc.uiSizeInBytes = sizeof(Vertices);
+        BufferData BuffData{Vertices, sizeof(Vertices)};
+        pDevice->CreateBuffer(BuffDesc, &BuffData, &pVertexBuffer);
+        ASSERT_NE(pVertexBuffer, nullptr);
+
+        BuffDesc.Name           = "Constants";
+        BuffDesc.BindFlags      = BIND_UNIFORM_BUFFER;
+        BuffDesc.uiSizeInBytes  = sizeof(float) * 4;
+        BuffDesc.Usage          = USAGE_DYNAMIC;
+        BuffDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
+        pDevice->CreateBuffer(BuffDesc, nullptr, &pConstuffer1);
+        ASSERT_NE(pConstuffer1, nullptr);
+
+        pDevice->CreateBuffer(BuffDesc, nullptr, &pConstuffer2);
+        ASSERT_NE(pConstuffer2, nullptr);
+
+        BuffDesc.BindFlags         = BIND_SHADER_RESOURCE;
+        BuffDesc.Usage             = USAGE_DEFAULT;
+        BuffDesc.CPUAccessFlags    = CPU_ACCESS_NONE;
+        BuffDesc.Mode              = BUFFER_MODE_STRUCTURED;
+        BuffDesc.ElementByteStride = sizeof(float) * 4;
+        pDevice->CreateBuffer(BuffDesc, nullptr, &pConstuffer3);
+        ASSERT_NE(pConstuffer3, nullptr);
+
+        void* pMapped = nullptr;
+        pContext->MapBuffer(pConstuffer1, MAP_WRITE, MAP_FLAG_DISCARD, pMapped);
+        const float Const1[] = {0.5f, 0.9f, 0.75f, 1.0f};
+        memcpy(pMapped, Const1, sizeof(Const1));
+        pContext->UnmapBuffer(pConstuffer1, MAP_WRITE);
+
+        pContext->MapBuffer(pConstuffer2, MAP_WRITE, MAP_FLAG_DISCARD, pMapped);
+        const float Const2[] = {0.2f, 0.0f, 1.0f, 0.5f};
+        memcpy(pMapped, Const2, sizeof(Const2));
+        pContext->UnmapBuffer(pConstuffer2, MAP_WRITE);
+
+        const float Const3[] = {0.9f, 0.1f, 0.2f, 1.0f};
+        pContext->UpdateBuffer(pConstuffer3, 0, sizeof(Const3), Const3, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    }
+
+    RefCntAutoPtr<IBottomLevelAS> pBLAS;
+    {
+        BLASTriangleDesc TriangleDesc;
+        TriangleDesc.GeometryName         = "Triangle";
+        TriangleDesc.MaxVertexCount       = _countof(Vertices);
+        TriangleDesc.VertexValueType      = VT_FLOAT32;
+        TriangleDesc.VertexComponentCount = 3;
+        TriangleDesc.MaxPrimitiveCount    = 1;
+
+        BLASBuildTriangleData TriangleData;
+        TriangleData.GeometryName         = TriangleDesc.GeometryName;
+        TriangleData.pVertexBuffer        = pVertexBuffer;
+        TriangleData.VertexStride         = sizeof(Vertices[0]);
+        TriangleData.VertexCount          = TriangleDesc.MaxVertexCount;
+        TriangleData.VertexValueType      = TriangleDesc.VertexValueType;
+        TriangleData.VertexComponentCount = TriangleDesc.VertexComponentCount;
+        TriangleData.PrimitiveCount       = 1;
+        TriangleData.Flags                = RAYTRACING_GEOMETRY_FLAG_OPAQUE;
+
+        BottomLevelASDesc ASDesc;
+        ASDesc.Name          = "Triangle BLAS";
+        ASDesc.Flags         = RAYTRACING_BUILD_AS_NONE;
+        ASDesc.pTriangles    = &TriangleDesc;
+        ASDesc.TriangleCount = 1;
+        pDevice->CreateBLAS(ASDesc, &pBLAS);
+        ASSERT_NE(pBLAS, nullptr);
+
+        BufferDesc BuffDesc;
+        BuffDesc.Name          = "BLAS Scratch Buffer";
+        BuffDesc.Usage         = USAGE_DEFAULT;
+        BuffDesc.BindFlags     = BIND_RAY_TRACING;
+        BuffDesc.uiSizeInBytes = pBLAS->GetScratchBufferSizes().Build;
+        RefCntAutoPtr<IBuffer> pScratchBuffer;
+        pDevice->CreateBuffer(BuffDesc, nullptr, &pScratchBuffer);
+        ASSERT_NE(pScratchBuffer, nullptr);
+
+        BuildBLASAttribs Attribs;
+        Attribs.pBLAS                       = pBLAS;
+        Attribs.BLASTransitionMode          = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+        Attribs.GeometryTransitionMode      = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+        Attribs.pTriangleData               = &TriangleData;
+        Attribs.TriangleDataCount           = 1;
+        Attribs.pScratchBuffer              = pScratchBuffer;
+        Attribs.ScratchBufferTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+        pContext->BuildBLAS(Attribs);
+    }
+
+    RefCntAutoPtr<ITopLevelAS> pTLAS;
+    {
+        TopLevelASDesc TLASDesc;
+        TLASDesc.Name             = "TLAS";
+        TLASDesc.MaxInstanceCount = 1;
+        TLASDesc.Flags            = RAYTRACING_BUILD_AS_NONE;
+        pDevice->CreateTLAS(TLASDesc, &pTLAS);
+        ASSERT_NE(pTLAS, nullptr);
+
+        TLASBuildInstanceData Instance;
+        Instance.InstanceName = "Instance";
+        Instance.pBLAS        = pBLAS;
+        Instance.Flags        = RAYTRACING_INSTANCE_NONE;
+
+        BufferDesc BuffDesc;
+        BuffDesc.Name          = "TLAS Scratch Buffer";
+        BuffDesc.Usage         = USAGE_DEFAULT;
+        BuffDesc.BindFlags     = BIND_RAY_TRACING;
+        BuffDesc.uiSizeInBytes = pTLAS->GetScratchBufferSizes().Build;
+        RefCntAutoPtr<IBuffer> pScratchBuffer;
+        pDevice->CreateBuffer(BuffDesc, nullptr, &pScratchBuffer);
+        ASSERT_NE(pScratchBuffer, nullptr);
+
+        BuffDesc.Name          = "TLAS Instance Buffer";
+        BuffDesc.Usage         = USAGE_DEFAULT;
+        BuffDesc.BindFlags     = BIND_RAY_TRACING;
+        BuffDesc.uiSizeInBytes = TLAS_INSTANCE_DATA_SIZE;
+        RefCntAutoPtr<IBuffer> pInstanceBuffer;
+        pDevice->CreateBuffer(BuffDesc, nullptr, &pInstanceBuffer);
+        ASSERT_NE(pInstanceBuffer, nullptr);
+
+        BuildTLASAttribs Attribs;
+        Attribs.pTLAS                        = pTLAS;
+        Attribs.pInstances                   = &Instance;
+        Attribs.InstanceCount                = 1;
+        Attribs.HitGroupStride               = 1;
+        Attribs.BindingMode                  = HIT_GROUP_BINDING_MODE_PER_GEOMETRY;
+        Attribs.TLASTransitionMode           = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+        Attribs.BLASTransitionMode           = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+        Attribs.pInstanceBuffer              = pInstanceBuffer;
+        Attribs.InstanceBufferTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+        Attribs.pScratchBuffer               = pScratchBuffer;
+        Attribs.ScratchBufferTransitionMode  = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+        pContext->BuildTLAS(Attribs);
+    }
+
+    RefCntAutoPtr<IShader> pCS;
+    {
+        ShaderMacroHelper Macros;
+        if (Mode == 2 || Mode == 3)
+        {
+            // Signature 1
+            Macros.AddShaderMacro("CONST_BUFFER_1", 0);
+            Macros.AddShaderMacro("TLAS_1", 1);
+            // Signature 2
+            Macros.AddShaderMacro("CONST_BUFFER_2", 2);
+            Macros.AddShaderMacro("CONST_BUFFER_3", 3);
+            Macros.AddShaderMacro("TLAS_2", 4);
+        }
+
+        ShaderCreateInfo ShaderCI;
+        ShaderCI.SourceLanguage  = SHADER_SOURCE_LANGUAGE_MSL;
+        ShaderCI.Desc.ShaderType = SHADER_TYPE_COMPUTE;
+        ShaderCI.Desc.Name       = "CS";
+        ShaderCI.EntryPoint      = "CSMain";
+        ShaderCI.Source          = MSL::RayTracingTest9_CS.c_str();
+        ShaderCI.Macros          = Macros;
+
+        pDevice->CreateShader(ShaderCI, &pCS);
+        ASSERT_NE(pCS, nullptr);
+    }
+
+    ComputePipelineStateCreateInfo PSOCreateInfo;
+
+    PSOCreateInfo.PSODesc.PipelineType                       = PIPELINE_TYPE_COMPUTE;
+    PSOCreateInfo.PSODesc.ResourceLayout.DefaultVariableType = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE;
+    PSOCreateInfo.pCS                                        = pCS;
+    PSOCreateInfo.PSODesc.Name                               = "Metal ray tracing PSO";
+
+    RefCntAutoPtr<IPipelineState>         pPSO;
+    RefCntAutoPtr<IShaderResourceBinding> pSRB1;
+    RefCntAutoPtr<IShaderResourceBinding> pSRB2;
+
+    if (Mode == 0)
+    {
+        pDevice->CreateComputePipelineState(PSOCreateInfo, &pPSO);
+        ASSERT_NE(pPSO, nullptr);
+
+        pPSO->CreateShaderResourceBinding(&pSRB1);
+        ASSERT_NE(pSRB1, nullptr);
+    }
+    else if (Mode == 1)
+    {
+        // clang-format off
+        const PipelineResourceDesc Resources[]
+        {
+            {SHADER_TYPE_COMPUTE, "g_Constant1",   1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+            {SHADER_TYPE_COMPUTE, "g_Constant2",   1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+            {SHADER_TYPE_COMPUTE, "g_Constant3",   1, SHADER_RESOURCE_TYPE_BUFFER_SRV,      SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS},
+            {SHADER_TYPE_COMPUTE, "g_ColorBuffer", 1, SHADER_RESOURCE_TYPE_TEXTURE_UAV,     SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+            {SHADER_TYPE_COMPUTE, "g_TLAS1",       1, SHADER_RESOURCE_TYPE_ACCEL_STRUCT,    SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+            {SHADER_TYPE_COMPUTE, "g_TLAS2",       1, SHADER_RESOURCE_TYPE_ACCEL_STRUCT,    SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE}
+        };
+        // clang-format on
+        PipelineResourceSignatureDesc PRSDesc;
+        PRSDesc.Name         = "Signature";
+        PRSDesc.Resources    = Resources;
+        PRSDesc.NumResources = _countof(Resources);
+
+        RefCntAutoPtr<IPipelineResourceSignature> pPRS;
+        pDevice->CreatePipelineResourceSignature(PRSDesc, &pPRS);
+        ASSERT_NE(pPRS, nullptr);
+
+        IPipelineResourceSignature* Signatures[] = {pPRS};
+        PSOCreateInfo.ppResourceSignatures       = Signatures;
+        PSOCreateInfo.ResourceSignaturesCount    = _countof(Signatures);
+
+        pDevice->CreateComputePipelineState(PSOCreateInfo, &pPSO);
+        ASSERT_NE(pPSO, nullptr);
+
+        pPRS->CreateShaderResourceBinding(&pSRB1);
+        ASSERT_NE(pSRB1, nullptr);
+    }
+    else if (Mode == 2 || Mode == 3)
+    {
+        const auto VarType = (Mode == 2 ? SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE : SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+        // clang-format off
+        const PipelineResourceDesc Resources1[]
+        {
+            {SHADER_TYPE_COMPUTE, "g_Constant1",   1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, VarType},
+            {SHADER_TYPE_COMPUTE, "g_TLAS1",       1, SHADER_RESOURCE_TYPE_ACCEL_STRUCT,    VarType},
+            {SHADER_TYPE_COMPUTE, "g_ColorBuffer", 1, SHADER_RESOURCE_TYPE_TEXTURE_UAV,     VarType}
+        };
+        const PipelineResourceDesc Resources2[]
+        {
+            {SHADER_TYPE_COMPUTE, "g_Constant2",   1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, VarType},
+            {SHADER_TYPE_COMPUTE, "g_Constant3",   1, SHADER_RESOURCE_TYPE_BUFFER_SRV,      VarType},
+            {SHADER_TYPE_COMPUTE, "g_TLAS2",       1, SHADER_RESOURCE_TYPE_ACCEL_STRUCT,    VarType}
+        };
+        // clang-format on
+        PipelineResourceSignatureDesc PRSDesc;
+        PRSDesc.Name         = "Signature 1";
+        PRSDesc.Resources    = Resources1;
+        PRSDesc.NumResources = _countof(Resources1);
+        PRSDesc.BindingIndex = 0;
+
+        RefCntAutoPtr<IPipelineResourceSignature> pPRS1;
+        pDevice->CreatePipelineResourceSignature(PRSDesc, &pPRS1);
+        ASSERT_NE(pPRS1, nullptr);
+
+        PRSDesc.Name         = "Signature 2";
+        PRSDesc.Resources    = Resources2;
+        PRSDesc.NumResources = _countof(Resources2);
+        PRSDesc.BindingIndex = 1;
+
+        RefCntAutoPtr<IPipelineResourceSignature> pPRS2;
+        pDevice->CreatePipelineResourceSignature(PRSDesc, &pPRS2);
+        ASSERT_NE(pPRS2, nullptr);
+
+        IPipelineResourceSignature* Signatures[] = {pPRS1, pPRS2};
+        PSOCreateInfo.ppResourceSignatures       = Signatures;
+        PSOCreateInfo.ResourceSignaturesCount    = _countof(Signatures);
+
+        pDevice->CreateComputePipelineState(PSOCreateInfo, &pPSO);
+        ASSERT_NE(pPSO, nullptr);
+
+        if (Mode == 3)
+        {
+            pPRS1->GetStaticVariableByName(SHADER_TYPE_COMPUTE, "g_Constant1")->Set(pConstuffer1);
+            pPRS1->GetStaticVariableByName(SHADER_TYPE_COMPUTE, "g_TLAS1")->Set(pTLAS);
+            pPRS1->GetStaticVariableByName(SHADER_TYPE_COMPUTE, "g_ColorBuffer")->Set(pTestingSwapChain->GetCurrentBackBufferUAV());
+
+            pPRS2->GetStaticVariableByName(SHADER_TYPE_COMPUTE, "g_Constant2")->Set(pConstuffer2);
+            pPRS2->GetStaticVariableByName(SHADER_TYPE_COMPUTE, "g_Constant3")->Set(pConstuffer3->GetDefaultView(BUFFER_VIEW_SHADER_RESOURCE));
+            pPRS2->GetStaticVariableByName(SHADER_TYPE_COMPUTE, "g_TLAS2")->Set(pTLAS);
+        }
+
+        pPRS1->CreateShaderResourceBinding(&pSRB1, true);
+        ASSERT_NE(pSRB1, nullptr);
+
+        pPRS2->CreateShaderResourceBinding(&pSRB2, true);
+        ASSERT_NE(pSRB2, nullptr);
+    }
+    else
+        UNEXPECTED("Unexpected Mode");
+
+    pContext->SetPipelineState(pPSO);
+
+    if (Mode == 0 || Mode == 1)
+    {
+        pSRB1->GetVariableByName(SHADER_TYPE_COMPUTE, "g_Constant1")->Set(pConstuffer1);
+        pSRB1->GetVariableByName(SHADER_TYPE_COMPUTE, "g_Constant2")->Set(pConstuffer2);
+        pSRB1->GetVariableByName(SHADER_TYPE_COMPUTE, "g_Constant3")->Set(pConstuffer3->GetDefaultView(BUFFER_VIEW_SHADER_RESOURCE));
+        pSRB1->GetVariableByName(SHADER_TYPE_COMPUTE, "g_TLAS1")->Set(pTLAS);
+        pSRB1->GetVariableByName(SHADER_TYPE_COMPUTE, "g_TLAS2")->Set(pTLAS);
+        pSRB1->GetVariableByName(SHADER_TYPE_COMPUTE, "g_ColorBuffer")->Set(pTestingSwapChain->GetCurrentBackBufferUAV());
+
+        pContext->CommitShaderResources(pSRB1, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    }
+    else if (Mode == 2)
+    {
+        pSRB1->GetVariableByName(SHADER_TYPE_COMPUTE, "g_Constant1")->Set(pConstuffer1);
+        pSRB1->GetVariableByName(SHADER_TYPE_COMPUTE, "g_TLAS1")->Set(pTLAS);
+        pSRB1->GetVariableByName(SHADER_TYPE_COMPUTE, "g_ColorBuffer")->Set(pTestingSwapChain->GetCurrentBackBufferUAV());
+
+        pSRB2->GetVariableByName(SHADER_TYPE_COMPUTE, "g_Constant2")->Set(pConstuffer2);
+        pSRB2->GetVariableByName(SHADER_TYPE_COMPUTE, "g_Constant3")->Set(pConstuffer3->GetDefaultView(BUFFER_VIEW_SHADER_RESOURCE));
+        pSRB2->GetVariableByName(SHADER_TYPE_COMPUTE, "g_TLAS2")->Set(pTLAS);
+
+        pContext->CommitShaderResources(pSRB1, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        pContext->CommitShaderResources(pSRB2, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    }
+    else if (Mode == 3)
+    {
+        pContext->CommitShaderResources(pSRB1, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        pContext->CommitShaderResources(pSRB2, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    }
+    else
+        UNEXPECTED("Unexpected Mode");
+
+    DispatchComputeAttribs dispatchAttrs;
+    dispatchAttrs.ThreadGroupCountX = (SCDesc.Width + 15) / 16;
+    dispatchAttrs.ThreadGroupCountY = (SCDesc.Height + 15) / 16;
+
+    dispatchAttrs.MtlThreadGroupSizeX = 16;
+    dispatchAttrs.MtlThreadGroupSizeY = 16;
+    dispatchAttrs.MtlThreadGroupSizeZ = 1;
+
+    pContext->DispatchCompute(dispatchAttrs);
+
+    pSwapChain->Present();
+}
+
+
+TEST(RayTracingTest, RayTracingWithoutPRS)
+{
+    RayTracingPRSTest(0);
+}
+
+TEST(RayTracingTest, RayTracingWithSinglePRS)
+{
+    RayTracingPRSTest(1);
+}
+
+TEST(RayTracingTest, RayTracingWithMultiplePRS)
+{
+    RayTracingPRSTest(2);
+}
+
+TEST(RayTracingTest, RayTracingWithMultiplePRSWithStaticRes)
+{
+    RayTracingPRSTest(3);
+}
 
 } // namespace
