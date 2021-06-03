@@ -1388,21 +1388,45 @@ MipLevelProperties GetMipLevelProperties(const TextureDesc& TexDesc, Uint32 MipL
     return MipProps;
 }
 
+namespace
+{
+
+enum ADAPTER_VENDOR_ID
+{
+    ADAPTER_VENDOR_ID_AMD      = 0x01002,
+    ADAPTER_VENDOR_ID_NVIDIA   = 0x010DE,
+    ADAPTER_VENDOR_ID_INTEL    = 0x08086,
+    ADAPTER_VENDOR_ID_ARM      = 0x013B5,
+    ADAPTER_VENDOR_ID_QUALCOMM = 0x05143,
+    ADAPTER_VENDOR_ID_IMGTECH  = 0x01010,
+    ADAPTER_VENDOR_ID_MSFT     = 0x01414,
+    ADAPTER_VENDOR_ID_APPLE    = 0x0106B,
+    ADAPTER_VENDOR_ID_MESA     = 0x10005,
+    ADAPTER_VENDOR_ID_BROADCOM = 0x014e4
+};
+
+}
+
 ADAPTER_VENDOR VendorIdToAdapterVendor(Uint32 VendorId)
 {
     static_assert(ADAPTER_VENDOR_LAST == 10, "Please update the switch below to handle the new adapter type");
     switch (VendorId)
     {
-        case 0x01002: return ADAPTER_VENDOR_AMD;
-        case 0x010DE: return ADAPTER_VENDOR_NVIDIA;
-        case 0x08086: return ADAPTER_VENDOR_INTEL;
-        case 0x013B5: return ADAPTER_VENDOR_ARM;
-        case 0x05143: return ADAPTER_VENDOR_QUALCOMM;
-        case 0x01010: return ADAPTER_VENDOR_IMGTECH;
-        case 0x01414: return ADAPTER_VENDOR_MSFT;
-        case 0x0106B: return ADAPTER_VENDOR_APPLE;
-        case 0x10005: return ADAPTER_VENDOR_MESA;
-        case 0x014e4: return ADAPTER_VENDOR_BROADCOM;
+#define VENDOR_ID_TO_VENDOR(Name) \
+    case ADAPTER_VENDOR_ID_##Name: return ADAPTER_VENDOR_##Name
+
+        VENDOR_ID_TO_VENDOR(AMD);
+        VENDOR_ID_TO_VENDOR(NVIDIA);
+        VENDOR_ID_TO_VENDOR(INTEL);
+        VENDOR_ID_TO_VENDOR(ARM);
+        VENDOR_ID_TO_VENDOR(QUALCOMM);
+        VENDOR_ID_TO_VENDOR(IMGTECH);
+        VENDOR_ID_TO_VENDOR(MSFT);
+        VENDOR_ID_TO_VENDOR(APPLE);
+        VENDOR_ID_TO_VENDOR(MESA);
+        VENDOR_ID_TO_VENDOR(BROADCOM);
+#undef VENDOR_ID_TO_VENDOR
+
         default:
             return ADAPTER_VENDOR_UNKNOWN;
     }
@@ -1413,18 +1437,21 @@ Uint32 AdapterVendorToVendorId(ADAPTER_VENDOR Vendor)
     static_assert(ADAPTER_VENDOR_LAST == 10, "Please update the switch below to handle the new adapter type");
     switch (Vendor)
     {
-        // clang-format off
-        case ADAPTER_VENDOR_AMD:      return 0x01002;
-        case ADAPTER_VENDOR_NVIDIA:   return 0x010DE;
-        case ADAPTER_VENDOR_INTEL:    return 0x08086;
-        case ADAPTER_VENDOR_ARM:      return 0x013B5;
-        case ADAPTER_VENDOR_QUALCOMM: return 0x05143;
-        case ADAPTER_VENDOR_IMGTECH:  return 0x01010;
-        case ADAPTER_VENDOR_MSFT:     return 0x01414;
-        case ADAPTER_VENDOR_APPLE:    return 0x0106B;
-        case ADAPTER_VENDOR_MESA:     return 0x10005;
-        case ADAPTER_VENDOR_BROADCOM: return 0x014e4;
-        // clang-format on
+#define VENDOR_TO_VENDOR_ID(Name) \
+    case ADAPTER_VENDOR_##Name: return ADAPTER_VENDOR_ID_##Name
+
+        VENDOR_TO_VENDOR_ID(AMD);
+        VENDOR_TO_VENDOR_ID(NVIDIA);
+        VENDOR_TO_VENDOR_ID(INTEL);
+        VENDOR_TO_VENDOR_ID(ARM);
+        VENDOR_TO_VENDOR_ID(QUALCOMM);
+        VENDOR_TO_VENDOR_ID(IMGTECH);
+        VENDOR_TO_VENDOR_ID(MSFT);
+        VENDOR_TO_VENDOR_ID(APPLE);
+        VENDOR_TO_VENDOR_ID(MESA);
+        VENDOR_TO_VENDOR_ID(BROADCOM);
+#undef VENDOR_TO_VENDOR_ID
+
         default:
             return 0;
     }
