@@ -1872,6 +1872,7 @@ VkQueueGlobalPriorityEXT QueuePriorityToVkQueueGlobalPriority(QUEUE_PRIORITY Pri
 
 DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                                                          vkVersion,
                                           const VkPhysicalDeviceFeatures&                                   vkFeatures,
+                                          const VkPhysicalDeviceProperties&                                 vkDeviceProps,
                                           const VulkanUtilities::VulkanPhysicalDevice::ExtensionFeatures&   ExtFeatures,
                                           const VulkanUtilities::VulkanPhysicalDevice::ExtensionProperties& ExtProps,
                                           DEVICE_FEATURE_STATE                                              OptionalState)
@@ -1892,8 +1893,10 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
     Features.ComputeShaders                = DEVICE_FEATURE_STATE_ENABLED;
     Features.BindlessResources             = DEVICE_FEATURE_STATE_ENABLED;
     Features.BinaryOcclusionQueries        = DEVICE_FEATURE_STATE_ENABLED;
-    Features.TimestampQueries              = DEVICE_FEATURE_STATE_ENABLED;
-    Features.DurationQueries               = DEVICE_FEATURE_STATE_ENABLED;
+
+    // Timestamps are not a feature and can't be disabled. They are either supported by the device, or not.
+    Features.TimestampQueries = vkDeviceProps.limits.timestampComputeAndGraphics ? DEVICE_FEATURE_STATE_ENABLED : DEVICE_FEATURE_STATE_DISABLED;
+    Features.DurationQueries  = vkDeviceProps.limits.timestampComputeAndGraphics ? DEVICE_FEATURE_STATE_ENABLED : DEVICE_FEATURE_STATE_DISABLED;
 
     // clang-format off
     INIT_FEATURE(GeometryShaders,                   vkFeatures.geometryShader);
@@ -1973,7 +1976,6 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
     Features.BinaryOcclusionQueries = DEVICE_FEATURE_STATE_DISABLED;
     Features.TimestampQueries       = DEVICE_FEATURE_STATE_DISABLED;
     Features.DurationQueries        = DEVICE_FEATURE_STATE_DISABLED;
-    Features.OcclusionQueries       = DEVICE_FEATURE_STATE_DISABLED;
 #endif
 
 #if defined(_MSC_VER) && defined(_WIN64)

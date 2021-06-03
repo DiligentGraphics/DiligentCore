@@ -106,6 +106,7 @@ VkQueueGlobalPriorityEXT QueuePriorityToVkQueueGlobalPriority(QUEUE_PRIORITY Pri
 
 DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                                                          vkVersion,
                                           const VkPhysicalDeviceFeatures&                                   vkFeatures,
+                                          const VkPhysicalDeviceProperties&                                 vkDeviceProps,
                                           const VulkanUtilities::VulkanPhysicalDevice::ExtensionFeatures&   ExtFeatures,
                                           const VulkanUtilities::VulkanPhysicalDevice::ExtensionProperties& ExtProps,
                                           DEVICE_FEATURE_STATE                                              OptionalState = DEVICE_FEATURE_STATE_ENABLED);

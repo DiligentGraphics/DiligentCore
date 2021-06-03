@@ -151,6 +151,7 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
 
     m_DeviceInfo.Features = VkFeaturesToDeviceFeatures(vkVersion,
                                                        m_LogicalVkDevice->GetEnabledFeatures(),
+                                                       m_PhysicalDevice->GetProperties(),
                                                        m_LogicalVkDevice->GetEnabledExtFeatures(),
                                                        m_PhysicalDevice->GetExtProperties());
 

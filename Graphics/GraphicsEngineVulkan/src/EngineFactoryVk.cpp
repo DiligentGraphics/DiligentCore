@@ -151,7 +151,7 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
     }
 
     // Label all enabled features as optional
-    AdapterInfo.Features = VkFeaturesToDeviceFeatures(vkVersion, vkFeatures, vkExtFeatures, vkDeviceExtProps, DEVICE_FEATURE_STATE_OPTIONAL);
+    AdapterInfo.Features = VkFeaturesToDeviceFeatures(vkVersion, vkFeatures, vkDeviceProps, vkExtFeatures, vkDeviceExtProps, DEVICE_FEATURE_STATE_OPTIONAL);
 
     // Buffer properties
     {
