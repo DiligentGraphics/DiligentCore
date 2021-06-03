@@ -342,18 +342,22 @@ std::string GetCurrentDirectoryImpl()
 {
     std::string CurrDir;
 
-    // If the function succeeds, the return value specifies the number of characters that are
-    // written to the buffer, not including the terminating null character.
-    auto NumChars = GetCurrentDirectoryA(0, nullptr);
+    // If the function succeeds, the return value specifies the number of characters that
+    // are written to the buffer, NOT including the terminating null character.
+    // HOWEVER, if the buffer that is pointed to by lpBuffer is not large enough,
+    // the return value specifies the required size of the buffer, in characters,
+    // INCLUDING the null-terminating character.
+    // https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-getcurrentdirectory
+    auto BufferSize = GetCurrentDirectoryA(0, nullptr);
 
-    if (NumChars > 0)
+    if (BufferSize > 1)
     {
-        auto BufferSize = NumChars + 1;
-        CurrDir.resize(NumChars); // Resize the string to a length of NumChars characters.
+        // Note that std::string::resize(n) resizes the string to a length of n characters.
+        CurrDir.resize(BufferSize - 1);
 
         // BufferSize must include room for a terminating null character.
-        // https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-getcurrentdirectory
-        GetCurrentDirectoryA(BufferSize, &CurrDir[0]);
+        auto NumChars = GetCurrentDirectoryA(BufferSize, &CurrDir[0]);
+        VERIFY_EXPR(CurrDir.length() == NumChars);
     }
     return CurrDir;
 }
