@@ -432,6 +432,7 @@ struct MipLevelProperties
 MipLevelProperties GetMipLevelProperties(const TextureDesc& TexDesc, Uint32 MipLevel);
 
 ADAPTER_VENDOR VendorIdToAdapterVendor(Uint32 VendorId);
+Uint32         AdapterVendorToVendorId(ADAPTER_VENDOR Vendor);
 
 
 inline Int32 GetShaderTypeIndex(SHADER_TYPE Type)

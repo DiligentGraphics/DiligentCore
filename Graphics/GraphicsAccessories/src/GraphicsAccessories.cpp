@@ -1390,6 +1390,7 @@ MipLevelProperties GetMipLevelProperties(const TextureDesc& TexDesc, Uint32 MipL
 
 ADAPTER_VENDOR VendorIdToAdapterVendor(Uint32 VendorId)
 {
+    static_assert(ADAPTER_VENDOR_LAST == 10, "Please update the switch below to handle the new adapter type");
     switch (VendorId)
     {
         case 0x01002: return ADAPTER_VENDOR_AMD;
@@ -1404,6 +1405,28 @@ ADAPTER_VENDOR VendorIdToAdapterVendor(Uint32 VendorId)
         case 0x014e4: return ADAPTER_VENDOR_BROADCOM;
         default:
             return ADAPTER_VENDOR_UNKNOWN;
+    }
+}
+
+Uint32 AdapterVendorToVendorId(ADAPTER_VENDOR Vendor)
+{
+    static_assert(ADAPTER_VENDOR_LAST == 10, "Please update the switch below to handle the new adapter type");
+    switch (Vendor)
+    {
+        // clang-format off
+        case ADAPTER_VENDOR_AMD:      return 0x01002;
+        case ADAPTER_VENDOR_NVIDIA:   return 0x010DE;
+        case ADAPTER_VENDOR_INTEL:    return 0x08086;
+        case ADAPTER_VENDOR_ARM:      return 0x013B5;
+        case ADAPTER_VENDOR_QUALCOMM: return 0x05143;
+        case ADAPTER_VENDOR_IMGTECH:  return 0x01010;
+        case ADAPTER_VENDOR_MSFT:     return 0x01414;
+        case ADAPTER_VENDOR_APPLE:    return 0x0106B;
+        case ADAPTER_VENDOR_MESA:     return 0x10005;
+        case ADAPTER_VENDOR_BROADCOM: return 0x014e4;
+        // clang-format on
+        default:
+            return 0;
     }
 }
 
