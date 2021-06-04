@@ -323,7 +323,11 @@ void GLContextState::GetBoundImage(Uint32     Index,
         IsLayered = GL_FALSE;
         Layer     = 0;
         Access    = GL_READ_ONLY;
-        Format    = GL_R8;
+        // Even though image handle is null, image format must still
+        // be one of the supported formats, or glBindImageTexture
+        // may fail on some GLES implementations.
+        // GL_RGBA32F seems to be the safest choice.
+        Format = GL_RGBA32F;
     }
 }
 

@@ -1249,7 +1249,7 @@ void RenderDeviceGLImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
                     VERIFY(Success, "Failed to create dummy render target texture");
                     (void)Success;
                     glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, ColorTex, 0);
-                    CHECK_GL_ERROR("Failed to set bind dummy render target to framebuffer");
+                    CHECK_GL_ERROR("Failed to bind dummy render target to framebuffer");
 
                     static const GLenum DrawBuffers[] = {GL_COLOR_ATTACHMENT0};
                     glDrawBuffers(_countof(DrawBuffers), DrawBuffers);
@@ -1298,7 +1298,8 @@ void RenderDeviceGLImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
                 TexFormatInfo.BindFlags |= BIND_UNORDERED_ACCESS;
 
             glBindImageTexture(0, CurrentImg, CurrentLevel, CurrentLayered, CurrentLayer, CurrenAccess, CurrenFormat);
-            CHECK_GL_ERROR("Failed to restore original image");
+            if (glGetError() != GL_NO_ERROR)
+                LOG_ERROR("Failed to restore original image");
         }
 #endif
     }
