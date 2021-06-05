@@ -897,12 +897,12 @@ void RenderDeviceGLImpl::InitAdapterInfo()
 void RenderDeviceGLImpl::FlagSupportedTexFormats()
 {
     const auto& DeviceInfo   = GetDeviceInfo();
-    bool        bGL33OrAbove = DeviceInfo.Type == RENDER_DEVICE_TYPE_GL && DeviceInfo.APIVersion >= Version{4, 3};
+    const auto  bGL33OrAbove = DeviceInfo.Type == RENDER_DEVICE_TYPE_GL && DeviceInfo.APIVersion >= Version{3, 3};
 
-    bool bRGTC      = CheckExtension("GL_ARB_texture_compression_rgtc");
-    bool bBPTC      = CheckExtension("GL_ARB_texture_compression_bptc");
-    bool bS3TC      = CheckExtension("GL_EXT_texture_compression_s3tc");
-    bool bTexNorm16 = CheckExtension("GL_EXT_texture_norm16"); // Only for ES3.1+
+    const bool bRGTC      = CheckExtension("GL_ARB_texture_compression_rgtc");
+    const bool bBPTC      = CheckExtension("GL_ARB_texture_compression_bptc");
+    const bool bS3TC      = CheckExtension("GL_EXT_texture_compression_s3tc");
+    const bool bTexNorm16 = CheckExtension("GL_EXT_texture_norm16"); // Only for ES3.1+
 
 #define FLAG_FORMAT(Fmt, IsSupported) \
     m_TextureFormatsInfo[Fmt].Supported = IsSupported
@@ -911,109 +911,109 @@ void RenderDeviceGLImpl::FlagSupportedTexFormats()
     // Note that GLES2.0 does not specify any required formats
 
     // clang-format off
-    FLAG_FORMAT(TEX_FORMAT_RGBA32_TYPELESS,            true       );
-    FLAG_FORMAT(TEX_FORMAT_RGBA32_FLOAT,               true       );
-    FLAG_FORMAT(TEX_FORMAT_RGBA32_UINT,                true       );
-    FLAG_FORMAT(TEX_FORMAT_RGBA32_SINT,                true       );
-    FLAG_FORMAT(TEX_FORMAT_RGB32_TYPELESS,             true       );
-    FLAG_FORMAT(TEX_FORMAT_RGB32_FLOAT,                true       );
-    FLAG_FORMAT(TEX_FORMAT_RGB32_UINT,                 true       );
-    FLAG_FORMAT(TEX_FORMAT_RGB32_SINT,                 true       );
-    FLAG_FORMAT(TEX_FORMAT_RGBA16_TYPELESS,            true       );
-    FLAG_FORMAT(TEX_FORMAT_RGBA16_FLOAT,               true       );
-    FLAG_FORMAT(TEX_FORMAT_RGBA16_UNORM,               bGL33OrAbove || bTexNorm16 );
-    FLAG_FORMAT(TEX_FORMAT_RGBA16_UINT,                true         );
-    FLAG_FORMAT(TEX_FORMAT_RGBA16_SNORM,               bGL33OrAbove || bTexNorm16 );
-    FLAG_FORMAT(TEX_FORMAT_RGBA16_SINT,                true         );
-    FLAG_FORMAT(TEX_FORMAT_RG32_TYPELESS,              true       );
-    FLAG_FORMAT(TEX_FORMAT_RG32_FLOAT,                 true       );
-    FLAG_FORMAT(TEX_FORMAT_RG32_UINT,                  true       );
-    FLAG_FORMAT(TEX_FORMAT_RG32_SINT,                  true       );
-    FLAG_FORMAT(TEX_FORMAT_R32G8X24_TYPELESS,          true       );
-    FLAG_FORMAT(TEX_FORMAT_D32_FLOAT_S8X24_UINT,       true       );
-    FLAG_FORMAT(TEX_FORMAT_R32_FLOAT_X8X24_TYPELESS,   true       );
-    FLAG_FORMAT(TEX_FORMAT_X32_TYPELESS_G8X24_UINT,    false      );
-    FLAG_FORMAT(TEX_FORMAT_RGB10A2_TYPELESS,           true       );
-    FLAG_FORMAT(TEX_FORMAT_RGB10A2_UNORM,              true       );
-    FLAG_FORMAT(TEX_FORMAT_RGB10A2_UINT,               true       );
-    FLAG_FORMAT(TEX_FORMAT_R11G11B10_FLOAT,            true       );
-    FLAG_FORMAT(TEX_FORMAT_RGBA8_TYPELESS,             true       );
-    FLAG_FORMAT(TEX_FORMAT_RGBA8_UNORM,                true       );
-    FLAG_FORMAT(TEX_FORMAT_RGBA8_UNORM_SRGB,           true       );
-    FLAG_FORMAT(TEX_FORMAT_RGBA8_UINT,                 true       );
-    FLAG_FORMAT(TEX_FORMAT_RGBA8_SNORM,                true       );
-    FLAG_FORMAT(TEX_FORMAT_RGBA8_SINT,                 true       );
-    FLAG_FORMAT(TEX_FORMAT_RG16_TYPELESS,              true       );
-    FLAG_FORMAT(TEX_FORMAT_RG16_FLOAT,                 true       );
-    FLAG_FORMAT(TEX_FORMAT_RG16_UNORM,                 bGL33OrAbove || bTexNorm16 );
-    FLAG_FORMAT(TEX_FORMAT_RG16_UINT,                  true         );
-    FLAG_FORMAT(TEX_FORMAT_RG16_SNORM,                 bGL33OrAbove || bTexNorm16 );
-    FLAG_FORMAT(TEX_FORMAT_RG16_SINT,                  true         );
-    FLAG_FORMAT(TEX_FORMAT_R32_TYPELESS,               true       );
-    FLAG_FORMAT(TEX_FORMAT_D32_FLOAT,                  true       );
-    FLAG_FORMAT(TEX_FORMAT_R32_FLOAT,                  true       );
-    FLAG_FORMAT(TEX_FORMAT_R32_UINT,                   true       );
-    FLAG_FORMAT(TEX_FORMAT_R32_SINT,                   true       );
-    FLAG_FORMAT(TEX_FORMAT_R24G8_TYPELESS,             true       );
-    FLAG_FORMAT(TEX_FORMAT_D24_UNORM_S8_UINT,          true       );
-    FLAG_FORMAT(TEX_FORMAT_R24_UNORM_X8_TYPELESS,      true       );
-    FLAG_FORMAT(TEX_FORMAT_X24_TYPELESS_G8_UINT,       false      );
-    FLAG_FORMAT(TEX_FORMAT_RG8_TYPELESS,               true       );
-    FLAG_FORMAT(TEX_FORMAT_RG8_UNORM,                  true       );
-    FLAG_FORMAT(TEX_FORMAT_RG8_UINT,                   true       );
-    FLAG_FORMAT(TEX_FORMAT_RG8_SNORM,                  true       );
-    FLAG_FORMAT(TEX_FORMAT_RG8_SINT,                   true       );
-    FLAG_FORMAT(TEX_FORMAT_R16_TYPELESS,               true       );
-    FLAG_FORMAT(TEX_FORMAT_R16_FLOAT,                  true       );
-    FLAG_FORMAT(TEX_FORMAT_D16_UNORM,                  true       );
-    FLAG_FORMAT(TEX_FORMAT_R16_UNORM,                  bGL33OrAbove || bTexNorm16 );
-    FLAG_FORMAT(TEX_FORMAT_R16_UINT,                   true       );
-    FLAG_FORMAT(TEX_FORMAT_R16_SNORM,                  bGL33OrAbove || bTexNorm16 );
-    FLAG_FORMAT(TEX_FORMAT_R16_SINT,                   true       );
-    FLAG_FORMAT(TEX_FORMAT_R8_TYPELESS,                true       );
-    FLAG_FORMAT(TEX_FORMAT_R8_UNORM,                   true       );
-    FLAG_FORMAT(TEX_FORMAT_R8_UINT,                    true       );
-    FLAG_FORMAT(TEX_FORMAT_R8_SNORM,                   true       );
-    FLAG_FORMAT(TEX_FORMAT_R8_SINT,                    true       );
-    FLAG_FORMAT(TEX_FORMAT_A8_UNORM,                   false      ); // Not supported in OpenGL
-    FLAG_FORMAT(TEX_FORMAT_R1_UNORM,                   false      ); // Not supported in OpenGL
-    FLAG_FORMAT(TEX_FORMAT_RGB9E5_SHAREDEXP,           true       );
-    FLAG_FORMAT(TEX_FORMAT_RG8_B8G8_UNORM,             false      ); // Not supported in OpenGL
-    FLAG_FORMAT(TEX_FORMAT_G8R8_G8B8_UNORM,            false      ); // Not supported in OpenGL
+    FLAG_FORMAT(TEX_FORMAT_RGBA32_TYPELESS,            true);
+    FLAG_FORMAT(TEX_FORMAT_RGBA32_FLOAT,               true);
+    FLAG_FORMAT(TEX_FORMAT_RGBA32_UINT,                true);
+    FLAG_FORMAT(TEX_FORMAT_RGBA32_SINT,                true);
+    FLAG_FORMAT(TEX_FORMAT_RGB32_TYPELESS,             true);
+    FLAG_FORMAT(TEX_FORMAT_RGB32_FLOAT,                true);
+    FLAG_FORMAT(TEX_FORMAT_RGB32_UINT,                 true);
+    FLAG_FORMAT(TEX_FORMAT_RGB32_SINT,                 true);
+    FLAG_FORMAT(TEX_FORMAT_RGBA16_TYPELESS,            true);
+    FLAG_FORMAT(TEX_FORMAT_RGBA16_FLOAT,               true);
+    FLAG_FORMAT(TEX_FORMAT_RGBA16_UNORM,               bGL33OrAbove || bTexNorm16);
+    FLAG_FORMAT(TEX_FORMAT_RGBA16_UINT,                true);
+    FLAG_FORMAT(TEX_FORMAT_RGBA16_SNORM,               bGL33OrAbove || bTexNorm16);
+    FLAG_FORMAT(TEX_FORMAT_RGBA16_SINT,                true);
+    FLAG_FORMAT(TEX_FORMAT_RG32_TYPELESS,              true);
+    FLAG_FORMAT(TEX_FORMAT_RG32_FLOAT,                 true);
+    FLAG_FORMAT(TEX_FORMAT_RG32_UINT,                  true);
+    FLAG_FORMAT(TEX_FORMAT_RG32_SINT,                  true);
+    FLAG_FORMAT(TEX_FORMAT_R32G8X24_TYPELESS,          true);
+    FLAG_FORMAT(TEX_FORMAT_D32_FLOAT_S8X24_UINT,       true);
+    FLAG_FORMAT(TEX_FORMAT_R32_FLOAT_X8X24_TYPELESS,   true);
+    FLAG_FORMAT(TEX_FORMAT_X32_TYPELESS_G8X24_UINT,    false);
+    FLAG_FORMAT(TEX_FORMAT_RGB10A2_TYPELESS,           true);
+    FLAG_FORMAT(TEX_FORMAT_RGB10A2_UNORM,              true);
+    FLAG_FORMAT(TEX_FORMAT_RGB10A2_UINT,               true);
+    FLAG_FORMAT(TEX_FORMAT_R11G11B10_FLOAT,            true);
+    FLAG_FORMAT(TEX_FORMAT_RGBA8_TYPELESS,             true);
+    FLAG_FORMAT(TEX_FORMAT_RGBA8_UNORM,                true);
+    FLAG_FORMAT(TEX_FORMAT_RGBA8_UNORM_SRGB,           true);
+    FLAG_FORMAT(TEX_FORMAT_RGBA8_UINT,                 true);
+    FLAG_FORMAT(TEX_FORMAT_RGBA8_SNORM,                true);
+    FLAG_FORMAT(TEX_FORMAT_RGBA8_SINT,                 true);
+    FLAG_FORMAT(TEX_FORMAT_RG16_TYPELESS,              true);
+    FLAG_FORMAT(TEX_FORMAT_RG16_FLOAT,                 true);
+    FLAG_FORMAT(TEX_FORMAT_RG16_UNORM,                 bGL33OrAbove || bTexNorm16);
+    FLAG_FORMAT(TEX_FORMAT_RG16_UINT,                  true);
+    FLAG_FORMAT(TEX_FORMAT_RG16_SNORM,                 bGL33OrAbove || bTexNorm16);
+    FLAG_FORMAT(TEX_FORMAT_RG16_SINT,                  true);
+    FLAG_FORMAT(TEX_FORMAT_R32_TYPELESS,               true);
+    FLAG_FORMAT(TEX_FORMAT_D32_FLOAT,                  true);
+    FLAG_FORMAT(TEX_FORMAT_R32_FLOAT,                  true);
+    FLAG_FORMAT(TEX_FORMAT_R32_UINT,                   true);
+    FLAG_FORMAT(TEX_FORMAT_R32_SINT,                   true);
+    FLAG_FORMAT(TEX_FORMAT_R24G8_TYPELESS,             true);
+    FLAG_FORMAT(TEX_FORMAT_D24_UNORM_S8_UINT,          true);
+    FLAG_FORMAT(TEX_FORMAT_R24_UNORM_X8_TYPELESS,      true);
+    FLAG_FORMAT(TEX_FORMAT_X24_TYPELESS_G8_UINT,       false);
+    FLAG_FORMAT(TEX_FORMAT_RG8_TYPELESS,               true);
+    FLAG_FORMAT(TEX_FORMAT_RG8_UNORM,                  true);
+    FLAG_FORMAT(TEX_FORMAT_RG8_UINT,                   true);
+    FLAG_FORMAT(TEX_FORMAT_RG8_SNORM,                  true);
+    FLAG_FORMAT(TEX_FORMAT_RG8_SINT,                   true);
+    FLAG_FORMAT(TEX_FORMAT_R16_TYPELESS,               true);
+    FLAG_FORMAT(TEX_FORMAT_R16_FLOAT,                  true);
+    FLAG_FORMAT(TEX_FORMAT_D16_UNORM,                  true);
+    FLAG_FORMAT(TEX_FORMAT_R16_UNORM,                  bGL33OrAbove || bTexNorm16);
+    FLAG_FORMAT(TEX_FORMAT_R16_UINT,                   true);
+    FLAG_FORMAT(TEX_FORMAT_R16_SNORM,                  bGL33OrAbove || bTexNorm16);
+    FLAG_FORMAT(TEX_FORMAT_R16_SINT,                   true);
+    FLAG_FORMAT(TEX_FORMAT_R8_TYPELESS,                true);
+    FLAG_FORMAT(TEX_FORMAT_R8_UNORM,                   true);
+    FLAG_FORMAT(TEX_FORMAT_R8_UINT,                    true);
+    FLAG_FORMAT(TEX_FORMAT_R8_SNORM,                   true);
+    FLAG_FORMAT(TEX_FORMAT_R8_SINT,                    true);
+    FLAG_FORMAT(TEX_FORMAT_A8_UNORM,                   false); // Not supported in OpenGL
+    FLAG_FORMAT(TEX_FORMAT_R1_UNORM,                   false); // Not supported in OpenGL
+    FLAG_FORMAT(TEX_FORMAT_RGB9E5_SHAREDEXP,           true);
+    FLAG_FORMAT(TEX_FORMAT_RG8_B8G8_UNORM,             false); // Not supported in OpenGL
+    FLAG_FORMAT(TEX_FORMAT_G8R8_G8B8_UNORM,            false); // Not supported in OpenGL
 
-    FLAG_FORMAT(TEX_FORMAT_BC1_TYPELESS,               bS3TC );
-    FLAG_FORMAT(TEX_FORMAT_BC1_UNORM,                  bS3TC );
-    FLAG_FORMAT(TEX_FORMAT_BC1_UNORM_SRGB,             bS3TC );
-    FLAG_FORMAT(TEX_FORMAT_BC2_TYPELESS,               bS3TC );
-    FLAG_FORMAT(TEX_FORMAT_BC2_UNORM,                  bS3TC );
-    FLAG_FORMAT(TEX_FORMAT_BC2_UNORM_SRGB,             bS3TC );
-    FLAG_FORMAT(TEX_FORMAT_BC3_TYPELESS,               bS3TC );
-    FLAG_FORMAT(TEX_FORMAT_BC3_UNORM,                  bS3TC );
-    FLAG_FORMAT(TEX_FORMAT_BC3_UNORM_SRGB,             bS3TC );
+    FLAG_FORMAT(TEX_FORMAT_BC1_TYPELESS,               bS3TC);
+    FLAG_FORMAT(TEX_FORMAT_BC1_UNORM,                  bS3TC);
+    FLAG_FORMAT(TEX_FORMAT_BC1_UNORM_SRGB,             bS3TC);
+    FLAG_FORMAT(TEX_FORMAT_BC2_TYPELESS,               bS3TC);
+    FLAG_FORMAT(TEX_FORMAT_BC2_UNORM,                  bS3TC);
+    FLAG_FORMAT(TEX_FORMAT_BC2_UNORM_SRGB,             bS3TC);
+    FLAG_FORMAT(TEX_FORMAT_BC3_TYPELESS,               bS3TC);
+    FLAG_FORMAT(TEX_FORMAT_BC3_UNORM,                  bS3TC);
+    FLAG_FORMAT(TEX_FORMAT_BC3_UNORM_SRGB,             bS3TC);
 
-    FLAG_FORMAT(TEX_FORMAT_BC4_TYPELESS,               bRGTC );
-    FLAG_FORMAT(TEX_FORMAT_BC4_UNORM,                  bRGTC );
-    FLAG_FORMAT(TEX_FORMAT_BC4_SNORM,                  bRGTC );
-    FLAG_FORMAT(TEX_FORMAT_BC5_TYPELESS,               bRGTC );
-    FLAG_FORMAT(TEX_FORMAT_BC5_UNORM,                  bRGTC );
-    FLAG_FORMAT(TEX_FORMAT_BC5_SNORM,                  bRGTC );
+    FLAG_FORMAT(TEX_FORMAT_BC4_TYPELESS,               bRGTC);
+    FLAG_FORMAT(TEX_FORMAT_BC4_UNORM,                  bRGTC);
+    FLAG_FORMAT(TEX_FORMAT_BC4_SNORM,                  bRGTC);
+    FLAG_FORMAT(TEX_FORMAT_BC5_TYPELESS,               bRGTC);
+    FLAG_FORMAT(TEX_FORMAT_BC5_UNORM,                  bRGTC);
+    FLAG_FORMAT(TEX_FORMAT_BC5_SNORM,                  bRGTC);
 
-    FLAG_FORMAT(TEX_FORMAT_B5G6R5_UNORM,               false       ); // Not supported in OpenGL
-    FLAG_FORMAT(TEX_FORMAT_B5G5R5A1_UNORM,             false       ); // Not supported in OpenGL
-    FLAG_FORMAT(TEX_FORMAT_BGRA8_UNORM,                false       ); // Not supported in OpenGL
-    FLAG_FORMAT(TEX_FORMAT_BGRX8_UNORM,                false       ); // Not supported in OpenGL
-    FLAG_FORMAT(TEX_FORMAT_R10G10B10_XR_BIAS_A2_UNORM, false       ); // Not supported in OpenGL
-    FLAG_FORMAT(TEX_FORMAT_BGRA8_TYPELESS,             false       ); // Not supported in OpenGL
-    FLAG_FORMAT(TEX_FORMAT_BGRA8_UNORM_SRGB,           false       ); // Not supported in OpenGL
-    FLAG_FORMAT(TEX_FORMAT_BGRX8_TYPELESS,             false       ); // Not supported in OpenGL
-    FLAG_FORMAT(TEX_FORMAT_BGRX8_UNORM_SRGB,           false       ); // Not supported in OpenGL
+    FLAG_FORMAT(TEX_FORMAT_B5G6R5_UNORM,               false); // Not supported in OpenGL
+    FLAG_FORMAT(TEX_FORMAT_B5G5R5A1_UNORM,             false); // Not supported in OpenGL
+    FLAG_FORMAT(TEX_FORMAT_BGRA8_UNORM,                false); // Not supported in OpenGL
+    FLAG_FORMAT(TEX_FORMAT_BGRX8_UNORM,                false); // Not supported in OpenGL
+    FLAG_FORMAT(TEX_FORMAT_R10G10B10_XR_BIAS_A2_UNORM, false); // Not supported in OpenGL
+    FLAG_FORMAT(TEX_FORMAT_BGRA8_TYPELESS,             false); // Not supported in OpenGL
+    FLAG_FORMAT(TEX_FORMAT_BGRA8_UNORM_SRGB,           false); // Not supported in OpenGL
+    FLAG_FORMAT(TEX_FORMAT_BGRX8_TYPELESS,             false); // Not supported in OpenGL
+    FLAG_FORMAT(TEX_FORMAT_BGRX8_UNORM_SRGB,           false); // Not supported in OpenGL
     
-    FLAG_FORMAT(TEX_FORMAT_BC6H_TYPELESS,              bBPTC );
-    FLAG_FORMAT(TEX_FORMAT_BC6H_UF16,                  bBPTC );
-    FLAG_FORMAT(TEX_FORMAT_BC6H_SF16,                  bBPTC );
-    FLAG_FORMAT(TEX_FORMAT_BC7_TYPELESS,               bBPTC );
-    FLAG_FORMAT(TEX_FORMAT_BC7_UNORM,                  bBPTC );
-    FLAG_FORMAT(TEX_FORMAT_BC7_UNORM_SRGB,             bBPTC );
+    FLAG_FORMAT(TEX_FORMAT_BC6H_TYPELESS,              bBPTC);
+    FLAG_FORMAT(TEX_FORMAT_BC6H_UF16,                  bBPTC);
+    FLAG_FORMAT(TEX_FORMAT_BC6H_SF16,                  bBPTC);
+    FLAG_FORMAT(TEX_FORMAT_BC7_TYPELESS,               bBPTC);
+    FLAG_FORMAT(TEX_FORMAT_BC7_UNORM,                  bBPTC);
+    FLAG_FORMAT(TEX_FORMAT_BC7_UNORM_SRGB,             bBPTC);
     // clang-format on
 
 #ifdef DILIGENT_DEBUG
