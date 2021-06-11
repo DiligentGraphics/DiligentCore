@@ -110,7 +110,8 @@ struct TextureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 #if DILIGENT_CPP_INTERFACE
     TextureDesc()noexcept{}
 
-    TextureDesc(RESOURCE_DIMENSION  _Type, 
+    TextureDesc(const Char*         _Name,
+                RESOURCE_DIMENSION  _Type, 
                 Uint32              _Width,
                 Uint32              _Height,
                 Uint32              _ArraySizeOrDepth,
@@ -123,6 +124,7 @@ struct TextureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
                 MISC_TEXTURE_FLAGS  _MiscFlags            = TextureDesc{}.MiscFlags,
                 OptimizedClearValue _ClearValue           = TextureDesc{}.ClearValue,
                 Uint64              _ImmediateContextMask = TextureDesc{}.ImmediateContextMask) noexcept : 
+        DeviceObjectAttribs  {_Name            },
         Type                 {_Type            }, 
         Width                {_Width           },
         Height               {_Height          },

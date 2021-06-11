@@ -80,7 +80,7 @@ TEST(GenerateMipsTest, GenerateMips)
 
             pContext->GenerateMips(pTex->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE));
 
-            TextureViewDesc ViewDesc(TEXTURE_VIEW_SHADER_RESOURCE, RESOURCE_DIM_TEX_2D_ARRAY);
+            TextureViewDesc ViewDesc{nullptr, TEXTURE_VIEW_SHADER_RESOURCE, RESOURCE_DIM_TEX_2D_ARRAY};
             ViewDesc.MostDetailedMip = 1;
             ViewDesc.NumMipLevels    = 3;
             ViewDesc.Flags           = TEXTURE_VIEW_FLAG_ALLOW_MIP_MAP_GENERATION;
@@ -106,7 +106,7 @@ TEST(GenerateMipsTest, GenerateMips)
             pDevice->CreateTexture(TexDesc, &InitData, &pTex);
             ASSERT_NE(pTex, nullptr) << "Failed to create texture array: " << TexDesc;
 
-            TextureViewDesc ViewDesc(TEXTURE_VIEW_SHADER_RESOURCE, RESOURCE_DIM_TEX_2D_ARRAY);
+            TextureViewDesc ViewDesc{nullptr, TEXTURE_VIEW_SHADER_RESOURCE, RESOURCE_DIM_TEX_2D_ARRAY};
             ViewDesc.FirstArraySlice = 2;
             ViewDesc.NumArraySlices  = 5;
             ViewDesc.MostDetailedMip = 1;

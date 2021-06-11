@@ -112,7 +112,7 @@ public:
     {
         if (m_bIsFinalized)
         {
-            VERIFY_EXPR(m_Macros.size() > 0 && m_Macros.back().Name == nullptr && m_Macros.back().Definition == nullptr);
+            VERIFY_EXPR(!m_Macros.empty() && m_Macros.back().Name == nullptr && m_Macros.back().Definition == nullptr);
             m_Macros.pop_back();
             m_bIsFinalized = false;
         }
@@ -127,9 +127,9 @@ public:
 
     operator const ShaderMacro*()
     {
-        if (m_Macros.size() > 0 && !m_bIsFinalized)
+        if (!m_Macros.empty() && !m_bIsFinalized)
             Finalize();
-        return m_Macros.size() ? m_Macros.data() : nullptr;
+        return !m_Macros.empty() ? m_Macros.data() : nullptr;
     }
 
     void RemoveMacro(const Char* Name)

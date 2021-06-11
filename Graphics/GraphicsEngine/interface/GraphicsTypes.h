@@ -1212,6 +1212,19 @@ struct OptimizedClearValue
                DepthStencil.Depth   == rhs.DepthStencil.Depth &&
                DepthStencil.Stencil == rhs.DepthStencil.Stencil;
     }
+
+    void SetColor(float r, float g, float b, float a)
+    {
+        Color[0] = r;
+        Color[1] = g;
+        Color[2] = b;
+        Color[3] = a;
+    }
+
+    void SetColor(const float RGBA[])
+    {
+        SetColor(RGBA[0], RGBA[1], RGBA[2], RGBA[3]);
+    }
 #endif
 };
 typedef struct OptimizedClearValue OptimizedClearValue;

@@ -121,13 +121,15 @@ struct BufferDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
     BufferDesc()noexcept{}
 
-    BufferDesc(Uint32           _uiSizeInBytes, 
+    BufferDesc(const Char*      _Name,
+               Uint32           _uiSizeInBytes, 
                BIND_FLAGS       _BindFlags,
                USAGE            _Usage                = BufferDesc{}.Usage,
                CPU_ACCESS_FLAGS _CPUAccessFlags       = BufferDesc{}.CPUAccessFlags,
                BUFFER_MODE      _Mode                 = BufferDesc{}.Mode,
                Uint32           _ElementByteStride    = BufferDesc{}.ElementByteStride,
                Uint64           _ImmediateContextMask = BufferDesc{}.ImmediateContextMask) noexcept : 
+        DeviceObjectAttribs  {_Name             },
         uiSizeInBytes        {_uiSizeInBytes    },
         BindFlags            {_BindFlags        },
         Usage                {_Usage            },

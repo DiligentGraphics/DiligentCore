@@ -134,7 +134,8 @@ struct TextureViewDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
     TextureViewDesc() noexcept {}
 
-    TextureViewDesc(TEXTURE_VIEW_TYPE  _ViewType,
+    TextureViewDesc(const Char*        _Name,
+                    TEXTURE_VIEW_TYPE  _ViewType,
                     RESOURCE_DIMENSION _TextureDim,
                     TEXTURE_FORMAT     _Format                 = TextureViewDesc{}.Format,
                     Uint32             _MostDetailedMip        = TextureViewDesc{}.MostDetailedMip,
@@ -143,15 +144,16 @@ struct TextureViewDesc DILIGENT_DERIVE(DeviceObjectAttribs)
                     Uint32             _NumArrayOrDepthSlices  = TextureViewDesc{}.NumArraySlices,
                     UAV_ACCESS_FLAG    _AccessFlags            = TextureViewDesc{}.AccessFlags,
                     TEXTURE_VIEW_FLAGS _Flags                  = TextureViewDesc{}.Flags) noexcept :
-        ViewType{_ViewType},
-        TextureDim{_TextureDim},
-        Format{_Format},
-        MostDetailedMip{_MostDetailedMip},
-        NumMipLevels{_NumMipLevels},
-        FirstArraySlice{_FirstArrayOrDepthSlice},
-        NumArraySlices{_NumArrayOrDepthSlices},
-        AccessFlags{_AccessFlags},
-        Flags{_Flags}
+        DeviceObjectAttribs{_Name                  },
+        ViewType           {_ViewType              },
+        TextureDim         {_TextureDim            },
+        Format             {_Format                },
+        MostDetailedMip    {_MostDetailedMip       },
+        NumMipLevels       {_NumMipLevels          },
+        FirstArraySlice    {_FirstArrayOrDepthSlice},
+        NumArraySlices     {_NumArrayOrDepthSlices },
+        AccessFlags        {_AccessFlags           },
+        Flags              {_Flags                 }
     {}
 
     /// Tests if two structures are equivalent

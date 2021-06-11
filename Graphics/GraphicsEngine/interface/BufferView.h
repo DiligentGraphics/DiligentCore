@@ -107,14 +107,16 @@ struct BufferViewDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     BufferViewDesc()noexcept{}
 
     explicit
-    BufferViewDesc(BUFFER_VIEW_TYPE _ViewType,
+    BufferViewDesc(const Char*      _Name,
+                   BUFFER_VIEW_TYPE _ViewType,
                    BufferFormat     _Format     = BufferViewDesc{}.Format,
                    Uint32           _ByteOffset = BufferViewDesc{}.ByteOffset,
                    Uint32           _ByteWidth  = BufferViewDesc{}.ByteWidth)noexcept :
-        ViewType    {_ViewType  },
-        Format      {_Format    },
-        ByteOffset  {_ByteOffset},
-        ByteWidth   {_ByteWidth }
+        DeviceObjectAttribs {_Name      },
+        ViewType            {_ViewType  },
+        Format              {_Format    },
+        ByteOffset          {_ByteOffset},
+        ByteWidth           {_ByteWidth }
     {}
 
     /// Comparison operator tests if two structures are equivalent
