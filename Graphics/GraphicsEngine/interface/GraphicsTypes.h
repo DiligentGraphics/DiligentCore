@@ -1213,17 +1213,25 @@ struct OptimizedClearValue
                DepthStencil.Stencil == rhs.DepthStencil.Stencil;
     }
 
-    void SetColor(float r, float g, float b, float a)
+    void SetColor(TEXTURE_FORMAT fmt, float r, float g, float b, float a)
     {
+        Format   = fmt;
         Color[0] = r;
         Color[1] = g;
         Color[2] = b;
         Color[3] = a;
     }
 
-    void SetColor(const float RGBA[])
+    void SetColor(TEXTURE_FORMAT fmt, const float RGBA[])
     {
-        SetColor(RGBA[0], RGBA[1], RGBA[2], RGBA[3]);
+        SetColor(fmt, RGBA[0], RGBA[1], RGBA[2], RGBA[3]);
+    }
+
+    void SetDepthStencil(TEXTURE_FORMAT fmt, float Depth, Uint8 Stencil = 0)
+    {
+        Format               = fmt;
+        DepthStencil.Depth   = Depth;
+        DepthStencil.Stencil = Stencil;
     }
 #endif
 };
