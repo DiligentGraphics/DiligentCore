@@ -244,14 +244,14 @@ DILIGENT_BEGIN_INTERFACE(IPipelineResourceSignature, IDeviceObject)
 
     /// Binds static resources for the specified shader stages in the pipeline resource signature.
 
-    /// \param [in] ShaderFlags      - Flags that specify shader stages, for which resources will be bound.
+    /// \param [in] ShaderStages     - Flags that specify shader stages, for which resources will be bound.
     ///                                Any combination of Diligent::SHADER_TYPE may be used.
     /// \param [in] pResourceMapping - Pointer to the resource mapping interface.
     /// \param [in] Flags            - Additional flags. See Diligent::BIND_SHADER_RESOURCES_FLAGS.
     VIRTUAL void METHOD(BindStaticResources)(THIS_
-                                             Uint32             ShaderFlags,
-                                             IResourceMapping*  pResourceMapping,
-                                             Uint32             Flags) PURE;
+                                             SHADER_TYPE                 ShaderStages,
+                                             IResourceMapping*           pResourceMapping,
+                                             BIND_SHADER_RESOURCES_FLAGS Flags) PURE;
 
 
     /// Returns static shader resource variable. If the variable is not found,

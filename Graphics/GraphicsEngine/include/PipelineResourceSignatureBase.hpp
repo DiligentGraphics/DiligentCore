@@ -217,9 +217,9 @@ public:
     }
 
     /// Implementation of IPipelineResourceSignature::BindStaticResources.
-    virtual void DILIGENT_CALL_TYPE BindStaticResources(Uint32            ShaderFlags,
-                                                        IResourceMapping* pResourceMapping,
-                                                        Uint32            Flags) override final
+    virtual void DILIGENT_CALL_TYPE BindStaticResources(SHADER_TYPE                 ShaderStages,
+                                                        IResourceMapping*           pResourceMapping,
+                                                        BIND_SHADER_RESOURCES_FLAGS Flags) override final
     {
         const auto PipelineType = GetPipelineType();
         for (Uint32 ShaderInd = 0; ShaderInd < m_StaticResStageIndex.size(); ++ShaderInd)
@@ -230,7 +230,7 @@ public:
                 VERIFY_EXPR(static_cast<Uint32>(VarMngrInd) < GetNumStaticResStages());
                 // ShaderInd is the shader type pipeline index here
                 const auto ShaderType = GetShaderTypeFromPipelineIndex(ShaderInd, PipelineType);
-                if (ShaderFlags & ShaderType)
+                if (ShaderStages & ShaderType)
                 {
                     m_StaticVarsMgrs[VarMngrInd].BindResources(pResourceMapping, Flags);
                 }

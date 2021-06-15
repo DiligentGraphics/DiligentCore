@@ -340,7 +340,7 @@ void DeviceContextD3D12Impl::CommitRootTablesAndViews(RootTableInfo& RootInfo, U
             };
         if ((RootInfo.StaleSRBMask & SignBit) != 0)
         {
-            // Commit root views for stale SRBs only
+            // Commit root tables for stale SRBs only
             pSignature->CommitRootTables(CommitAttribs);
         }
 

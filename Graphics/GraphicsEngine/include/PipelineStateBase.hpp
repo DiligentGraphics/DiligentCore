@@ -398,7 +398,9 @@ public:
         return this->GetResourceSignature(0)->GetStaticVariableCount(ShaderType);
     }
 
-    virtual void DILIGENT_CALL_TYPE BindStaticResources(Uint32 ShaderFlags, IResourceMapping* pResourceMapping, Uint32 Flags) override final
+    virtual void DILIGENT_CALL_TYPE BindStaticResources(SHADER_TYPE                 ShaderStages,
+                                                        IResourceMapping*           pResourceMapping,
+                                                        BIND_SHADER_RESOURCES_FLAGS Flags) override final
     {
         if (!m_UsingImplicitSignature)
         {
@@ -407,7 +409,7 @@ public:
             return;
         }
 
-        return this->GetResourceSignature(0)->BindStaticResources(ShaderFlags, pResourceMapping, Flags);
+        return this->GetResourceSignature(0)->BindStaticResources(ShaderStages, pResourceMapping, Flags);
     }
 
     virtual void DILIGENT_CALL_TYPE InitializeStaticSRBResources(IShaderResourceBinding* pSRB) const override final

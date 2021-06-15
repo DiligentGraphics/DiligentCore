@@ -60,7 +60,7 @@ DILIGENT_BEGIN_INTERFACE(IShaderResourceBinding, IObject)
     /// Returns a pointer to the pipeline resource signature object that
     /// defines the layout of this shader resource binding object.
 
-    /// The method does *NOT* call AddRef() on the returned interface,
+    /// The method does *NOT* increment the reference counter of the returned object,
     /// so Release() must not be called.
     VIRTUAL struct IPipelineResourceSignature* METHOD(GetPipelineResourceSignature)(THIS) CONST PURE;
 
@@ -76,7 +76,7 @@ DILIGENT_BEGIN_INTERFACE(IShaderResourceBinding, IObject)
                                        IResourceMapping*            pResMapping, 
                                        BIND_SHADER_RESOURCES_FLAGS  Flags) PURE;
 
-    /// Returns variable
+    /// Returns the variable by its name.
 
     /// \param [in] ShaderType - Type of the shader to look up the variable.
     ///                          Must be one of Diligent::SHADER_TYPE.
@@ -97,7 +97,7 @@ DILIGENT_BEGIN_INTERFACE(IShaderResourceBinding, IObject)
     VIRTUAL Uint32 METHOD(GetVariableCount)(THIS_
                                             SHADER_TYPE ShaderType) CONST PURE;
 
-    /// Returns variable
+    /// Returns the variable by its index.
 
     /// \param [in] ShaderType - Type of the shader to look up the variable.
     ///                          Must be one of Diligent::SHADER_TYPE.
