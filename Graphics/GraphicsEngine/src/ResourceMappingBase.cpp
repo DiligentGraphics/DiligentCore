@@ -84,30 +84,20 @@ void ResourceMappingImpl::RemoveResourceByName(const Char* Name, Uint32 ArrayInd
     m_HashTable.erase(ResMappingHashKey{Name, false, ArrayIndex});
 }
 
-void ResourceMappingImpl::GetResource(const Char* Name, IDeviceObject** ppResource, Uint32 ArrayIndex)
+IDeviceObject* ResourceMappingImpl::GetResource(const Char* Name, Uint32 ArrayIndex)
 {
-    VERIFY(Name, "Name is null");
-    if (*Name == 0)
-        return;
-
-    VERIFY(ppResource, "Null pointer provided");
-    if (!ppResource)
-        return;
-
-    VERIFY(*ppResource == nullptr, "Overwriting reference to existing object may cause memory leaks");
-    *ppResource = nullptr;
+    if (Name == nullptr || *Name == '\0')
+    {
+        DEV_ERROR("Name must not be null or empty");
+        return nullptr;
+    }
 
     auto LockHelper = Lock();
 
     // Find an object with the requested name
     // Name will be implicitly converted to HashMapStringKey without making a copy
     auto It = m_HashTable.find(ResMappingHashKey{Name, false, ArrayIndex});
-    if (It != m_HashTable.end())
-    {
-        *ppResource = It->second.RawPtr();
-        if (*ppResource)
-            (*ppResource)->AddRef();
-    }
+    return It != m_HashTable.end() ? It->second.RawPtr() : nullptr;
 }
 
 size_t ResourceMappingImpl::GetSize()

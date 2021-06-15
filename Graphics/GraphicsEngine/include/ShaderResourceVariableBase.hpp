@@ -726,9 +726,7 @@ struct ShaderVariableBase : public ResourceVariableBaseInterface
             if ((Flags & BIND_SHADER_RESOURCES_KEEP_EXISTING) != 0 && pThis->Get(ArrInd) != nullptr)
                 continue;
 
-            RefCntAutoPtr<IDeviceObject> pObj;
-            pResourceMapping->GetResource(ResDesc.Name, &pObj, ArrInd);
-            if (pObj)
+            if (auto* pObj = pResourceMapping->GetResource(ResDesc.Name, ArrInd))
             {
                 pThis->BindResource(BindResourceInfo{ArrInd, pObj});
             }

@@ -152,17 +152,18 @@ DILIGENT_BEGIN_INTERFACE(IResourceMapping, IObject)
 
     /// Finds a resource in the mapping.
 
-    /// \param [in] Name - Resource name.
-    /// \param [in] ArrayIndex - for arrays, index of the array element.
-    /// \param [out] ppResource - Address of the memory location where the pointer
-    ///                           to the object with the given name will be written.
-    ///                           If no object is found, nullptr will be written.
-    /// \remarks The method increases the reference counter
-    ///          of the returned object, so Release() must be called.
-    VIRTUAL void METHOD(GetResource)(THIS_
-                                     const Char*     Name,
-                                     IDeviceObject** ppResource,
-                                     Uint32          ArrayIndex DEFAULT_VALUE(0)) PURE;
+    /// \param [in] Name        - Resource name.
+    /// \param [in] ArrayIndex  - for arrays, index of the array element.
+    ///
+    /// \return Pointer to the object with the given name and array index.
+    ///
+    /// \remarks The method does *NOT* increase the reference counter
+    ///          of the returned object, so Release() must not be called.
+    ///          The pointer is guaranteed to be valid until the object is removed
+    ///          from the resource mapping, or the mapping is destroyed.
+    VIRTUAL IDeviceObject* METHOD(GetResource)(THIS_
+                                               const Char* Name,
+                                               Uint32      ArrayIndex DEFAULT_VALUE(0)) PURE;
 
     /// Returns the size of the resource mapping, i.e. the number of objects.
     VIRTUAL size_t METHOD(GetSize)(THIS) PURE;

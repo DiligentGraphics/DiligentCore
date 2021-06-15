@@ -76,9 +76,8 @@ public:
     virtual void DILIGENT_CALL_TYPE RemoveResourceByName(const Char* Name, Uint32 ArrayIndex) override final;
 
     /// Implementation of IResourceMapping::GetResource()
-    virtual void DILIGENT_CALL_TYPE GetResource(const Char*     Name,
-                                                IDeviceObject** ppResource,
-                                                Uint32          ArrayIndex) override final;
+    virtual IDeviceObject* DILIGENT_CALL_TYPE GetResource(const Char* Name,
+                                                          Uint32      ArrayIndex) override final;
 
     /// Returns number of resources in the resource mapping.
     virtual size_t DILIGENT_CALL_TYPE GetSize() override final;

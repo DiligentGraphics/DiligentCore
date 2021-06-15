@@ -69,6 +69,6 @@ void TestResourceMappingC_API(struct IResourceMapping* pResourceMapping)
     IResourceMapping_AddResource(pResourceMapping, "Resource Name", pObject, true);
     IResourceMapping_AddResourceArray(pResourceMapping, "Resource Array Name", 0, &pObject, ArraySize, true);
     IResourceMapping_RemoveResourceByName(pResourceMapping, "Resource Name", ArrayIndex);
-    IResourceMapping_GetResource(pResourceMapping, "Resource Name", &pObject, ArrayIndex);
-    Size = IResourceMapping_GetSize(pResourceMapping);
+    pObject = IResourceMapping_GetResource(pResourceMapping, "Resource Name", ArrayIndex);
+    Size    = IResourceMapping_GetSize(pResourceMapping);
 }
