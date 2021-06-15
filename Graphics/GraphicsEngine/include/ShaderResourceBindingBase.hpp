@@ -236,9 +236,9 @@ public:
     }
 
     /// Implementation of IShaderResourceBinding::BindResources().
-    virtual void DILIGENT_CALL_TYPE BindResources(Uint32            ShaderFlags,
-                                                  IResourceMapping* pResMapping,
-                                                  Uint32            Flags) override final
+    virtual void DILIGENT_CALL_TYPE BindResources(SHADER_TYPE                 ShaderStages,
+                                                  IResourceMapping*           pResMapping,
+                                                  BIND_SHADER_RESOURCES_FLAGS Flags) override final
     {
         const auto PipelineType = GetPipelineType();
         for (Int32 ShaderInd = 0; ShaderInd < static_cast<Int32>(m_ActiveShaderStageIndex.size()); ++ShaderInd)
@@ -248,7 +248,7 @@ public:
             {
                 // ShaderInd is the shader type pipeline index here
                 const auto ShaderType = GetShaderTypeFromPipelineIndex(ShaderInd, PipelineType);
-                if ((ShaderFlags & ShaderType) != 0)
+                if ((ShaderStages & ShaderType) != 0)
                 {
                     m_pShaderVarMgrs[VarMngrInd].BindResources(pResMapping, Flags);
                 }

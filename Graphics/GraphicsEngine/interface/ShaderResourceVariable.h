@@ -32,6 +32,7 @@
 
 #include "../../../Primitives/interface/BasicTypes.h"
 #include "../../../Primitives/interface/Object.h"
+#include "../../../Primitives/interface/FlagEnum.h"
 #include "DeviceObject.h"
 #include "Shader.h"
 
@@ -101,6 +102,7 @@ DILIGENT_TYPED_ENUM(BIND_SHADER_RESOURCES_FLAGS, Uint32)
     ///       BIND_SHADER_RESOURCES_UPDATE_DYNAMIC flags.
     BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED = 0x10
 };
+DEFINE_FLAG_ENUM_OPERATORS(BIND_SHADER_RESOURCES_FLAGS);
 
 // clang-format on
 

@@ -57,31 +57,24 @@ static const INTERFACE_ID IID_ShaderResourceBinding =
 /// Shader resource binding interface
 DILIGENT_BEGIN_INTERFACE(IShaderResourceBinding, IObject)
 {
-    /// Returns pointer to the referenced PSO object.
-    /// Deprecated: use GetPipelineResourceSignature() instead.
+    /// Returns a pointer to the pipeline resource signature object that
+    /// defines the layout of this shader resource binding object.
 
-    /// The method calls AddRef() on the returned interface,
-    /// so Release() must be called to avoid memory leaks.
-//    VIRTUAL struct IPipelineState* METHOD(GetPipelineState)(THIS) PURE;
-    
-
-    /// Returns pointer to the referenced pipeline resource signature object.
-
-    /// The method calls AddRef() on the returned interface,
-    /// so Release() must be called to avoid memory leaks.
+    /// The method does *NOT* call AddRef() on the returned interface,
+    /// so Release() must not be called.
     VIRTUAL struct IPipelineResourceSignature* METHOD(GetPipelineResourceSignature)(THIS) CONST PURE;
 
 
     /// Binds mutable and dynamice resources using the resource mapping
 
-    /// \param [in] ShaderFlags - Flags that specify shader stages, for which resources will be bound.
-    ///                           Any combination of Diligent::SHADER_TYPE may be used.
-    /// \param [in] pResMapping - Shader resource mapping, where required resources will be looked up
-    /// \param [in] Flags       - Additional flags. See Diligent::BIND_SHADER_RESOURCES_FLAGS.
+    /// \param [in] ShaderStages - Flags that specify shader stages, for which resources will be bound.
+    ///                            Any combination of Diligent::SHADER_TYPE may be used.
+    /// \param [in] pResMapping  - Shader resource mapping, where required resources will be looked up.
+    /// \param [in] Flags        - Additional flags. See Diligent::BIND_SHADER_RESOURCES_FLAGS.
     VIRTUAL void METHOD(BindResources)(THIS_
-                                       Uint32            ShaderFlags,
-                                       IResourceMapping* pResMapping, 
-                                       Uint32            Flags) PURE;
+                                       SHADER_TYPE                  ShaderStages,
+                                       IResourceMapping*            pResMapping, 
+                                       BIND_SHADER_RESOURCES_FLAGS  Flags) PURE;
 
     /// Returns variable
 
