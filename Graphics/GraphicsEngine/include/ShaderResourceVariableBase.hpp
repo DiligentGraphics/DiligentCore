@@ -713,16 +713,9 @@ struct ShaderVariableBase : public ResourceVariableBaseInterface
         return m_ParentManager.GetVariableIndex(*static_cast<const ThisImplType*>(this));
     }
 
-
-    virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
-    {
-        return static_cast<const ThisImplType*>(this)->Get(ArrayIndex) != nullptr;
-    }
-
     void BindResources(IResourceMapping* pResourceMapping, Uint32 Flags)
     {
-        auto* const pThis = static_cast<ThisImplType*>(this);
-
+        auto* const pThis   = static_cast<ThisImplType*>(this);
         const auto& ResDesc = pThis->GetDesc();
 
         if ((Flags & (1u << ResDesc.VarType)) == 0)
@@ -730,7 +723,7 @@ struct ShaderVariableBase : public ResourceVariableBaseInterface
 
         for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
         {
-            if ((Flags & BIND_SHADER_RESOURCES_KEEP_EXISTING) != 0 && pThis->IsBound(ArrInd))
+            if ((Flags & BIND_SHADER_RESOURCES_KEEP_EXISTING) != 0 && pThis->Get(ArrInd) != nullptr)
                 continue;
 
             RefCntAutoPtr<IDeviceObject> pObj;
@@ -741,7 +734,7 @@ struct ShaderVariableBase : public ResourceVariableBaseInterface
             }
             else
             {
-                if ((Flags & BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED) && !pThis->IsBound(ArrInd))
+                if ((Flags & BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED) && pThis->Get(ArrInd) == nullptr)
                 {
                     LOG_ERROR_MESSAGE("Unable to bind resource to shader variable '",
                                       GetShaderResourcePrintName(ResDesc, ArrInd),

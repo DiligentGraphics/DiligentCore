@@ -1,3 +1,6 @@
+## Current progress
+
+* Removed `IShaderResourceVariable::IsBound` with `IShaderResourceVariable::Get` (API Version 250001)
 
 ## v2.5
 

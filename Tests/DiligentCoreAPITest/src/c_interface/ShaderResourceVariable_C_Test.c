@@ -36,8 +36,7 @@ int TestShaderResourceVariableCInterface(struct IShaderResourceVariable* pVar, s
 
     SHADER_RESOURCE_VARIABLE_TYPE VarType = SHADER_RESOURCE_VARIABLE_TYPE_STATIC;
     ShaderResourceDesc            ResDesc;
-    Uint32                        Index   = 0;
-    bool                          IsBound = false;
+    Uint32                        Index = 0;
 
     int num_errors = TestObjectCInterface((struct IObject*)pVar);
 
@@ -67,10 +66,6 @@ int TestShaderResourceVariableCInterface(struct IShaderResourceVariable* pVar, s
         ++num_errors;
 
     Index = IShaderResourceVariable_GetIndex(pVar);
-
-    IsBound = IShaderResourceVariable_IsBound(pVar, 0);
-    if (!IsBound)
-        ++num_errors;
 
     if (IShaderResourceVariable_Get(pVar, 0) != pObjectToSet)
         ++num_errors;
