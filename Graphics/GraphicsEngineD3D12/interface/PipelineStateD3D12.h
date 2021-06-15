@@ -50,19 +50,19 @@ DILIGENT_BEGIN_INTERFACE(IPipelineStateD3D12, IPipelineState)
 {
     /// Returns ID3D12PipelineState interface of the internal D3D12 pipeline state object object.
 
-    /// The method does *NOT* call AddRef() on the returned interface,
+    /// The method does *NOT* increment the reference counter of the returned object,
     /// so Release() must not be called.
     VIRTUAL ID3D12PipelineState* METHOD(GetD3D12PipelineState)(THIS) CONST PURE;
 
     /// Returns ID3D12StateObject interface of the internal D3D12 state object for ray tracing.
 
-    /// The method does *NOT* call AddRef() on the returned interface,
+    /// The method does *NOT* increment the reference counter of the returned object,
     /// so Release() must not be called.
     VIRTUAL ID3D12StateObject* METHOD(GetD3D12StateObject)(THIS) CONST PURE;
 
     /// Returns a pointer to the root signature object associated with this pipeline state.
 
-    /// The method does *NOT* call AddRef() on the returned interface,
+    /// The method does *NOT* increment the reference counter of the returned object,
     /// so Release() must not be called.
     VIRTUAL ID3D12RootSignature* METHOD(GetD3D12RootSignature)(THIS) CONST PURE;
 };

@@ -57,7 +57,7 @@ DILIGENT_BEGIN_INTERFACE(ISwapChainD3D11, ISwapChain)
 
     /// Returns a pointer to the IDXGISwapChain interface of the internal DXGI object.
 
-    /// The method does *NOT* call AddRef() on the returned interface,
+    /// The method does *NOT* increment the reference counter of the returned object,
     /// so Release() must not be called.
     VIRTUAL IDXGISwapChain* METHOD(GetDXGISwapChain)(THIS) PURE;
 };

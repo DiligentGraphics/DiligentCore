@@ -52,8 +52,8 @@ static const INTERFACE_ID IID_BottomLevelASD3D12 =
 DILIGENT_BEGIN_INTERFACE(IBottomLevelASD3D12, IBottomLevelAS)
 {
     /// Returns ID3D12Resource interface of the internal D3D12 acceleration structure object.
-    
-    /// The method does *NOT* call AddRef() on the returned interface,
+
+    /// The method does *NOT* increment the reference counter of the returned object,
     /// so Release() must not be called.
     VIRTUAL ID3D12Resource* METHOD(GetD3D12BLAS)(THIS) PURE;
 };

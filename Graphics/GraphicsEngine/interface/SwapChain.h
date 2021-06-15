@@ -107,13 +107,13 @@ DILIGENT_BEGIN_INTERFACE(ISwapChain, IObject)
     /// backend it always returns the same pointer. For OpenGL/GLES backends
     /// the method returns null.
     ///
-    /// The method does *NOT* call AddRef() on the returned interface,
+    /// The method does *NOT* increment the reference counter of the returned object,
     /// so Release() must not be called.
     VIRTUAL ITextureView* METHOD(GetCurrentBackBufferRTV)(THIS) PURE;
 
     /// Returns depth-stencil view of the depth buffer
 
-    /// The method does *NOT* call AddRef() on the returned interface,
+    /// The method does *NOT* increment the reference counter of the returned object,
     /// so Release() must not be called.
     VIRTUAL ITextureView* METHOD(GetDepthBufferDSV)(THIS) PURE;
 };

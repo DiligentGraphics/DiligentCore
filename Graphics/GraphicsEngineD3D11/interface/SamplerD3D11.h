@@ -50,7 +50,7 @@ DILIGENT_BEGIN_INTERFACE(ISamplerD3D11, ISampler)
 {
     /// Returns a pointer to the ID3D11SamplerState interface of the internal Direct3D11 object.
 
-    /// The method does *NOT* call AddRef() on the returned interface,
+    /// The method does *NOT* increment the reference counter of the returned object,
     /// so Release() must not be called.
     VIRTUAL ID3D11SamplerState* METHOD(GetD3D11SamplerState)(THIS) PURE;
 };

@@ -216,14 +216,14 @@ DILIGENT_BEGIN_INTERFACE(ITextureView, IDeviceObject)
 
     /// Returns the pointer to the sampler object set by the ITextureView::SetSampler().
 
-    /// The method does *NOT* call AddRef() on the returned interface,
+    /// The method does *NOT* increment the reference counter of the returned object,
     /// so Release() must not be called.
     VIRTUAL struct ISampler* METHOD(GetSampler)(THIS) PURE;
 
 
     /// Returns the pointer to the referenced texture object.
 
-    /// The method does *NOT* call AddRef() on the returned interface,
+    /// The method does *NOT* increment the reference counter of the returned object,
     /// so Release() must not be called.
     VIRTUAL struct ITexture* METHOD(GetTexture)(THIS) PURE;
 };

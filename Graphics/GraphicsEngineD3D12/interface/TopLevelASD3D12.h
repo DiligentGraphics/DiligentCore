@@ -53,13 +53,13 @@ DILIGENT_BEGIN_INTERFACE(ITopLevelASD3D12, ITopLevelAS)
 {
     /// Returns ID3D12Resource interface of the internal D3D12 acceleration structure object.
     
-    /// The method does *NOT* call AddRef() on the returned interface,
+    /// The method does *NOT* increment the reference counter of the returned object,
     /// so Release() must not be called.
     VIRTUAL ID3D12Resource* METHOD(GetD3D12TLAS)(THIS) PURE;
     
     /// Returns a CPU descriptor handle of the D3D12 acceleration structure
 
-    /// The method does *NOT* call AddRef() on the returned interface,
+    /// The method does *NOT* increment the reference counter of the returned object,
     /// so Release() must not be called.
     VIRTUAL D3D12_CPU_DESCRIPTOR_HANDLE METHOD(GetCPUDescriptorHandle)(THIS) PURE;
 };

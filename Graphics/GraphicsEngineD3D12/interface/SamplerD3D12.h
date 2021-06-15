@@ -50,7 +50,7 @@ DILIGENT_BEGIN_INTERFACE(ISamplerD3D12, ISampler)
 {
     /// Returns a CPU descriptor handle of the D3D12 sampler object
 
-    /// The method does *NOT* call AddRef() on the returned interface,
+    /// The method does *NOT* increment the reference counter of the returned object,
     /// so Release() must not be called.
     VIRTUAL D3D12_CPU_DESCRIPTOR_HANDLE METHOD(GetCPUDescriptorHandle)(THIS) PURE;
 };

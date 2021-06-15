@@ -53,7 +53,7 @@ DILIGENT_BEGIN_INTERFACE(IBufferD3D12, IBuffer)
 {
     /// Returns a pointer to the ID3D12Resource interface of the internal Direct3D12 object.
 
-    /// The method does *NOT* call AddRef() on the returned interface,
+    /// The method does *NOT* increment the reference counter of the returned object,
     /// so Release() must not be called.
     /// \param [in] DataStartByteOffset - Offset from the beginning of the buffer
     ///                            to the start of the data. This parameter

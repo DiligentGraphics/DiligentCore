@@ -50,64 +50,64 @@ DILIGENT_BEGIN_INTERFACE(IPipelineStateD3D11, IPipelineState)
 {
     /// Returns a pointer to the ID3D11BlendState interface of the internal Direct3D11 object.
 
-    /// The method does *NOT* call AddRef() on the returned interface,
+    /// The method does *NOT* increment the reference counter of the returned object,
     /// so Release() must not be called.
     VIRTUAL ID3D11BlendState* METHOD(GetD3D11BlendState)(THIS) PURE;
 
 
     /// Returns a pointer to the ID3D11RasterizerState interface of the internal Direct3D11 object.
 
-    /// The method does *NOT* call AddRef() on the returned interface,
+    /// The method does *NOT* increment the reference counter of the returned object,
     /// so Release() must not be called.
     VIRTUAL ID3D11RasterizerState* METHOD(GetD3D11RasterizerState)(THIS) PURE;
 
 
     /// Returns a pointer to the ID3D11DepthStencilState interface of the internal Direct3D11 object.
 
-    /// The method does *NOT* call AddRef() on the returned interface,
+    /// The method does *NOT* increment the reference counter of the returned object,
     /// so Release() must not be called.
     VIRTUAL ID3D11DepthStencilState* METHOD(GetD3D11DepthStencilState)(THIS) PURE;
 
     /// Returns a pointer to the ID3D11InputLayout interface of the internal Direct3D11 object.
 
-    /// The method does *NOT* call AddRef() on the returned interface,
+    /// The method does *NOT* increment the reference counter of the returned object,
     /// so Release() must not be called.
     VIRTUAL ID3D11InputLayout* METHOD(GetD3D11InputLayout)(THIS) PURE;
 
     /// Returns a pointer to the ID3D11VertexShader interface of the internal vertex shader object.
 
-    /// The method does *NOT* call AddRef() on the returned interface,
+    /// The method does *NOT* increment the reference counter of the returned object,
     /// so Release() must not be called.
     VIRTUAL ID3D11VertexShader* METHOD(GetD3D11VertexShader)(THIS) PURE;
 
     /// Returns a pointer to the ID3D11PixelShader interface of the internal pixel shader object.
 
-    /// The method does *NOT* call AddRef() on the returned interface,
+    /// The method does *NOT* increment the reference counter of the returned object,
     /// so Release() must not be called.
     VIRTUAL ID3D11PixelShader* METHOD(GetD3D11PixelShader)(THIS) PURE;
 
 
     /// Returns a pointer to the ID3D11GeometryShader interface of the internal geometry shader object.
 
-    /// The method does *NOT* call AddRef() on the returned interface,
+    /// The method does *NOT* increment the reference counter of the returned object,
     /// so Release() must not be called.
     VIRTUAL ID3D11GeometryShader* METHOD(GetD3D11GeometryShader)(THIS) PURE;
 
     /// Returns a pointer to the ID3D11DomainShader interface of the internal domain shader object.
 
-    /// The method does *NOT* call AddRef() on the returned interface,
+    /// The method does *NOT* increment the reference counter of the returned object,
     /// so Release() must not be called.
     VIRTUAL ID3D11DomainShader* METHOD(GetD3D11DomainShader)(THIS) PURE;
 
     /// Returns a pointer to the ID3D11HullShader interface of the internal hull shader object.
 
-    /// The method does *NOT* call AddRef() on the returned interface,
+    /// The method does *NOT* increment the reference counter of the returned object,
     /// so Release() must not be called.
     VIRTUAL ID3D11HullShader* METHOD(GetD3D11HullShader)(THIS) PURE;
 
     /// Returns a pointer to the ID3D11ComputeShader interface of the internal compute shader object.
 
-    /// The method does *NOT* call AddRef() on the returned interface,
+    /// The method does *NOT* increment the reference counter of the returned object,
     /// so Release() must not be called.
     VIRTUAL ID3D11ComputeShader* METHOD(GetD3D11ComputeShader)(THIS) PURE;
 };
