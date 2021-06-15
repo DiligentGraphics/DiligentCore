@@ -115,10 +115,10 @@ public:
             HLSLResDesc.ShaderRegister = GetAttribs().BindPoints[m_ParentManager.m_ShaderTypeIndex];
         }
 
-        virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
+        virtual IDeviceObject* DILIGENT_CALL_TYPE Get(Uint32 ArrayIndex) const override final
         {
             VERIFY_EXPR(ArrayIndex < GetDesc().ArraySize);
-            return m_ParentManager.m_ResourceCache.IsResourceBound<ResRange>(GetAttribs().BindPoints + ArrayIndex);
+            return m_ParentManager.m_ResourceCache.GetResource<ResRange>(GetAttribs().BindPoints + ArrayIndex).Get();
         }
 
         void SetDynamicOffset(Uint32 ArrayIndex, Uint32 DynamicOffset)

@@ -125,10 +125,11 @@ public:
 
         void BindResource(const BindResourceInfo& BindInfo);
 
-        virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
+        virtual IDeviceObject* DILIGENT_CALL_TYPE Get(Uint32 ArrayIndex) const override final
         {
             VERIFY_EXPR(ArrayIndex < GetDesc().ArraySize);
-            return m_ParentManager.m_ResourceCache.IsUBBound(GetAttribs().CacheOffset + ArrayIndex);
+            const auto& UB = m_ParentManager.m_ResourceCache.GetConstUB(GetAttribs().CacheOffset + ArrayIndex);
+            return UB.pBuffer.RawPtr<IDeviceObject>();
         }
 
         void SetDynamicOffset(Uint32 ArrayIndex, Uint32 Offset);
@@ -143,12 +144,12 @@ public:
 
         void BindResource(const BindResourceInfo& BindInfo);
 
-        virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
+        virtual IDeviceObject* DILIGENT_CALL_TYPE Get(Uint32 ArrayIndex) const override final
         {
             const auto& Desc = GetDesc();
             VERIFY_EXPR(ArrayIndex < Desc.ArraySize);
-            const bool IsTexView = (Desc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV || Desc.ResourceType == SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT);
-            return m_ParentManager.m_ResourceCache.IsTextureBound(GetAttribs().CacheOffset + ArrayIndex, IsTexView);
+            const auto& Tex = m_ParentManager.m_ResourceCache.GetConstTexture(GetAttribs().CacheOffset + ArrayIndex);
+            return Tex.pView.RawPtr<IDeviceObject>();
         }
     };
 
@@ -161,12 +162,12 @@ public:
 
         void BindResource(const BindResourceInfo& BindInfo);
 
-        virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
+        virtual IDeviceObject* DILIGENT_CALL_TYPE Get(Uint32 ArrayIndex) const override final
         {
             const auto& Desc = GetDesc();
             VERIFY_EXPR(ArrayIndex < Desc.ArraySize);
-            const bool IsImgView = (Desc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV || Desc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_UAV);
-            return m_ParentManager.m_ResourceCache.IsImageBound(GetAttribs().CacheOffset + ArrayIndex, IsImgView);
+            const auto& Img = m_ParentManager.m_ResourceCache.GetConstImage(GetAttribs().CacheOffset + ArrayIndex);
+            return Img.pView.RawPtr<IDeviceObject>();
         }
     };
 
@@ -179,10 +180,11 @@ public:
 
         void BindResource(const BindResourceInfo& BindInfo);
 
-        virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
+        virtual IDeviceObject* DILIGENT_CALL_TYPE Get(Uint32 ArrayIndex) const override final
         {
             VERIFY_EXPR(ArrayIndex < GetDesc().ArraySize);
-            return m_ParentManager.m_ResourceCache.IsSSBOBound(GetAttribs().CacheOffset + ArrayIndex);
+            const auto& SSBO = m_ParentManager.m_ResourceCache.GetConstSSBO(GetAttribs().CacheOffset + ArrayIndex);
+            return SSBO.pBufferView.RawPtr<IDeviceObject>();
         }
 
         void SetDynamicOffset(Uint32 ArrayIndex, Uint32 Offset);

@@ -105,8 +105,8 @@ public:
                                 Uint32 ArrayIndex,
                                 Uint32 BufferDynamicOffset);
 
-    bool IsBound(Uint32 ArrayIndex,
-                 Uint32 ResIndex) const;
+    IDeviceObject* Get(Uint32 ArrayIndex,
+                       Uint32 ResIndex) const;
 
     void BindResources(IResourceMapping* pResourceMapping, Uint32 Flags);
 
@@ -166,9 +166,9 @@ public:
         }
     }
 
-    virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
+    virtual IDeviceObject* DILIGENT_CALL_TYPE Get(Uint32 ArrayIndex) const override final
     {
-        return m_ParentManager.IsBound(ArrayIndex, m_ResIndex);
+        return m_ParentManager.Get(ArrayIndex, m_ResIndex);
     }
 
     virtual void DILIGENT_CALL_TYPE GetHLSLResourceDesc(HLSLShaderResourceDesc& HLSLResDesc) const override final

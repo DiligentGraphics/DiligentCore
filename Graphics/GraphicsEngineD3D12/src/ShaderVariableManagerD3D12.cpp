@@ -662,8 +662,8 @@ void ShaderVariableManagerD3D12::SetBufferDynamicOffset(Uint32 ResIndex,
     m_ResourceCache.SetBufferDynamicOffset(RootIndex, OffsetFromTableStart, BufferDynamicOffset);
 }
 
-bool ShaderVariableManagerD3D12::IsBound(Uint32 ArrayIndex,
-                                         Uint32 ResIndex) const
+IDeviceObject* ShaderVariableManagerD3D12::Get(Uint32 ArrayIndex,
+                                               Uint32 ResIndex) const
 {
     const auto& ResDesc              = GetResourceDesc(ResIndex);
     const auto& Attribs              = GetResourceAttribs(ResIndex);
@@ -679,11 +679,11 @@ bool ShaderVariableManagerD3D12::IsBound(Uint32 ArrayIndex,
         if (OffsetFromTableStart < RootTable.GetSize())
         {
             const auto& CachedRes = RootTable.GetResource(OffsetFromTableStart);
-            return !CachedRes.IsNull();
+            return CachedRes.pObject.RawPtr<IDeviceObject>();
         }
     }
 
-    return false;
+    return nullptr;
 }
 
 } // namespace Diligent

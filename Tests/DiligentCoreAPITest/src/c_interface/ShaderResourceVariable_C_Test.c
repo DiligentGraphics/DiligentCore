@@ -72,5 +72,8 @@ int TestShaderResourceVariableCInterface(struct IShaderResourceVariable* pVar, s
     if (!IsBound)
         ++num_errors;
 
+    if (IShaderResourceVariable_Get(pVar, 0) != pObjectToSet)
+        ++num_errors;
+
     return num_errors;
 }

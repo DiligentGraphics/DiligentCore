@@ -125,6 +125,11 @@ public:
             DynamicOffset = 0;
         }
 
+        IDeviceObject* Get() const
+        {
+            return pBuff.RawPtr<IDeviceObject>();
+        }
+
         // Returns true if the bound constant buffer allows setting dynamic offset,
         // i.e. the buffer is not bound as a whole (irrespecitve of the variable type or
         // whether the buffer is USAGE_DYNAMIC or not).
@@ -162,6 +167,11 @@ public:
         // Returns ID3D11SamplerState
         template <D3D11_RESOURCE_RANGE ResRange>
         typename CachedResourceTraits<ResRange>::D3D11ResourceType* GetD3D11Resource();
+
+        IDeviceObject* Get() const
+        {
+            return pSampler.RawPtr<IDeviceObject>();
+        }
     };
 
     /// Cached SRV or a UAV
@@ -215,6 +225,11 @@ public:
             pBuffer        = pBufView ? pBufView->GetBuffer<BufferD3D11Impl>() : nullptr;
             pView          = std::move(pBufView);
             pd3d11Resource = pBuffer ? pBuffer->BufferD3D11Impl::GetD3D11Buffer() : nullptr;
+        }
+
+        IDeviceObject* Get() const
+        {
+            return pView.RawPtr<IDeviceObject>();
         }
 
         // Returns ID3D11ShaderResourceView or ID3D11UnorderedAccessView (not pd3d11Resource!)

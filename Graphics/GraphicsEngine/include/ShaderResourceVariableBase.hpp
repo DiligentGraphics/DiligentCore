@@ -713,6 +713,12 @@ struct ShaderVariableBase : public ResourceVariableBaseInterface
         return m_ParentManager.GetVariableIndex(*static_cast<const ThisImplType*>(this));
     }
 
+
+    virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
+    {
+        return static_cast<const ThisImplType*>(this)->Get(ArrayIndex) != nullptr;
+    }
+
     void BindResources(IResourceMapping* pResourceMapping, Uint32 Flags)
     {
         auto* const pThis = static_cast<ThisImplType*>(this);

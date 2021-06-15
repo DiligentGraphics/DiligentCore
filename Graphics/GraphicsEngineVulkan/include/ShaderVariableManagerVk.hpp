@@ -99,8 +99,8 @@ public:
                                 Uint32 ArrayIndex,
                                 Uint32 BufferDynamicOffset);
 
-    bool IsBound(Uint32 ArrayIndex,
-                 Uint32 ResIndex) const;
+    IDeviceObject* Get(Uint32 ArrayIndex,
+                       Uint32 ResIndex) const;
 
     void BindResources(IResourceMapping* pResourceMapping, Uint32 Flags) const;
 
@@ -148,9 +148,9 @@ public:
     ShaderVariableVkImpl& operator= (ShaderVariableVkImpl&&)      = delete;
     // clang-format on
 
-    virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
+    virtual IDeviceObject* DILIGENT_CALL_TYPE Get(Uint32 ArrayIndex) const override final
     {
-        return m_ParentManager.IsBound(ArrayIndex, m_ResIndex);
+        return m_ParentManager.Get(ArrayIndex, m_ResIndex);
     }
 
     void BindResource(const BindResourceInfo& BindInfo) const

@@ -189,19 +189,30 @@ DILIGENT_BEGIN_INTERFACE(IShaderResourceVariable, IObject)
     /// Returns the shader resource variable type
     VIRTUAL SHADER_RESOURCE_VARIABLE_TYPE METHOD(GetType)(THIS) CONST PURE;
 
+
     /// Returns shader resource description. See Diligent::ShaderResourceDesc.
     VIRTUAL void METHOD(GetResourceDesc)(THIS_
                                          ShaderResourceDesc REF ResourceDesc) CONST PURE;
 
+
     /// Returns the variable index that can be used to access the variable.
     VIRTUAL Uint32 METHOD(GetIndex)(THIS) CONST PURE;
+
 
     /// Returns true if non-null resource is bound to this variable.
 
     /// \param [in] ArrayIndex - Resource array index. Must be 0 for
     ///                          non-array variables.
     VIRTUAL bool METHOD(IsBound)(THIS_
-                                 Uint32 ArrayIndex) CONST PURE;
+                                 Uint32 ArrayIndex DEFAULT_VALUE(0)) CONST PURE;
+
+
+    /// Returns a pointer to the resource that is bound to this variable.
+
+    /// \param [in] ArrayIndex - Resource array index. Must be 0 for
+    ///                          non-array variables.
+    VIRTUAL IDeviceObject* METHOD(Get)(THIS_
+                                       Uint32 ArrayIndex DEFAULT_VALUE(0)) CONST PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -217,6 +228,7 @@ DILIGENT_END_INTERFACE
 #    define IShaderResourceVariable_GetResourceDesc(This, ...) CALL_IFACE_METHOD(ShaderResourceVariable, GetResourceDesc, This, __VA_ARGS__)
 #    define IShaderResourceVariable_GetIndex(This)             CALL_IFACE_METHOD(ShaderResourceVariable, GetIndex,        This)
 #    define IShaderResourceVariable_IsBound(This, ...)         CALL_IFACE_METHOD(ShaderResourceVariable, IsBound,         This, __VA_ARGS__)
+#    define IShaderResourceVariable_Get(This, ...)             CALL_IFACE_METHOD(ShaderResourceVariable, Get,             This, __VA_ARGS__)
 
 // clang-format on
 

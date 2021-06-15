@@ -646,7 +646,7 @@ void ShaderVariableManagerVk::SetBufferDynamicOffset(Uint32 ResIndex,
     m_ResourceCache.SetDynamicBufferOffset(Attribs.DescrSet, DstResCacheOffset, BufferDynamicOffset);
 }
 
-bool ShaderVariableManagerVk::IsBound(Uint32 ArrayIndex, Uint32 ResIndex) const
+IDeviceObject* ShaderVariableManagerVk::Get(Uint32 ArrayIndex, Uint32 ResIndex) const
 {
     const auto&  ResDesc     = GetResourceDesc(ResIndex);
     const auto&  Attribs     = GetResourceAttribs(ResIndex);
@@ -660,11 +660,11 @@ bool ShaderVariableManagerVk::IsBound(Uint32 ArrayIndex, Uint32 ResIndex) const
         if (CacheOffset + ArrayIndex < Set.GetSize())
         {
             const auto& CachedRes = Set.GetResource(CacheOffset + ArrayIndex);
-            return !CachedRes.IsNull();
+            return CachedRes.pObject.RawPtr<IDeviceObject>();
         }
     }
 
-    return false;
+    return nullptr;
 }
 
 } // namespace Diligent
