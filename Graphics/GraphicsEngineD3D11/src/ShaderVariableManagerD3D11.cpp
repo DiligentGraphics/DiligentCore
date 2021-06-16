@@ -451,7 +451,46 @@ void ShaderVariableManagerD3D11::BuffUAVBindInfo::BindResource(const BindResourc
     ResourceCache.SetResource<D3D11_RESOURCE_RANGE_UAV>(Attr.BindPoints + BindInfo.ArrayIndex, std::move(pViewD3D11));
 }
 
-void ShaderVariableManagerD3D11::BindResources(IResourceMapping* pResourceMapping, Uint32 Flags)
+
+void ShaderVariableManagerD3D11::CheckResources(IResourceMapping*                    pResourceMapping,
+                                                BIND_SHADER_RESOURCES_FLAGS          Flags,
+                                                SHADER_RESOURCE_VARIABLE_TYPE_FLAGS& StaleVarTypes) const
+{
+    if ((Flags & BIND_SHADER_RESOURCES_UPDATE_ALL) == 0)
+        Flags |= BIND_SHADER_RESOURCES_UPDATE_ALL;
+
+    const auto AllowedTypes = m_ResourceCache.GetContentType() == ResourceCacheContentType::SRB ?
+        SHADER_RESOURCE_VARIABLE_TYPE_FLAG_MUT_DYN :
+        SHADER_RESOURCE_VARIABLE_TYPE_FLAG_STATIC;
+
+    HandleConstResources(
+        [&](const ConstBuffBindInfo& cb) {
+            cb.CheckResources(pResourceMapping, Flags, StaleVarTypes);
+            return (StaleVarTypes & AllowedTypes) != AllowedTypes;
+        },
+        [&](const TexSRVBindInfo& ts) {
+            ts.CheckResources(pResourceMapping, Flags, StaleVarTypes);
+            return (StaleVarTypes & AllowedTypes) != AllowedTypes;
+        },
+        [&](const TexUAVBindInfo& uav) {
+            uav.CheckResources(pResourceMapping, Flags, StaleVarTypes);
+            return (StaleVarTypes & AllowedTypes) != AllowedTypes;
+        },
+        [&](const BuffSRVBindInfo& srv) {
+            srv.CheckResources(pResourceMapping, Flags, StaleVarTypes);
+            return (StaleVarTypes & AllowedTypes) != AllowedTypes;
+        },
+        [&](const BuffUAVBindInfo& uav) {
+            uav.CheckResources(pResourceMapping, Flags, StaleVarTypes);
+            return (StaleVarTypes & AllowedTypes) != AllowedTypes;
+        },
+        [&](const SamplerBindInfo& sam) {
+            sam.CheckResources(pResourceMapping, Flags, StaleVarTypes);
+            return (StaleVarTypes & AllowedTypes) != AllowedTypes;
+        });
+}
+
+void ShaderVariableManagerD3D11::BindResources(IResourceMapping* pResourceMapping, BIND_SHADER_RESOURCES_FLAGS Flags)
 {
     if (pResourceMapping == nullptr)
     {

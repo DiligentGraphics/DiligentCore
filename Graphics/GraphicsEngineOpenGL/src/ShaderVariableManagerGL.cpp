@@ -389,7 +389,7 @@ void ShaderVariableManagerGL::StorageBufferBindInfo::SetDynamicOffset(Uint32 Arr
     m_ParentManager.m_ResourceCache.SetDynamicSSBOOffset(Attr.CacheOffset + ArrayIndex, Offset);
 }
 
-void ShaderVariableManagerGL::BindResources(IResourceMapping* pResourceMapping, Uint32 Flags)
+void ShaderVariableManagerGL::BindResources(IResourceMapping* pResourceMapping, BIND_SHADER_RESOURCES_FLAGS Flags)
 {
     if (pResourceMapping == nullptr)
     {
@@ -415,6 +415,35 @@ void ShaderVariableManagerGL::BindResources(IResourceMapping* pResourceMapping, 
         });
 }
 
+void ShaderVariableManagerGL::CheckResources(IResourceMapping*                    pResourceMapping,
+                                             BIND_SHADER_RESOURCES_FLAGS          Flags,
+                                             SHADER_RESOURCE_VARIABLE_TYPE_FLAGS& StaleVarTypes) const
+{
+    if ((Flags & BIND_SHADER_RESOURCES_UPDATE_ALL) == 0)
+        Flags |= BIND_SHADER_RESOURCES_UPDATE_ALL;
+
+    const auto AllowedTypes = m_ResourceCache.GetContentType() == ResourceCacheContentType::SRB ?
+        SHADER_RESOURCE_VARIABLE_TYPE_FLAG_MUT_DYN :
+        SHADER_RESOURCE_VARIABLE_TYPE_FLAG_STATIC;
+
+    HandleConstResources(
+        [&](const UniformBuffBindInfo& ub) {
+            ub.CheckResources(pResourceMapping, Flags, StaleVarTypes);
+            return (StaleVarTypes & AllowedTypes) != AllowedTypes;
+        },
+        [&](const TextureBindInfo& tex) {
+            tex.CheckResources(pResourceMapping, Flags, StaleVarTypes);
+            return (StaleVarTypes & AllowedTypes) != AllowedTypes;
+        },
+        [&](const ImageBindInfo& img) {
+            img.CheckResources(pResourceMapping, Flags, StaleVarTypes);
+            return (StaleVarTypes & AllowedTypes) != AllowedTypes;
+        },
+        [&](const StorageBufferBindInfo& ssbo) {
+            ssbo.CheckResources(pResourceMapping, Flags, StaleVarTypes);
+            return (StaleVarTypes & AllowedTypes) != AllowedTypes;
+        });
+}
 
 template <typename ResourceType>
 IShaderResourceVariable* ShaderVariableManagerGL::GetResourceByName(const Char* Name) const

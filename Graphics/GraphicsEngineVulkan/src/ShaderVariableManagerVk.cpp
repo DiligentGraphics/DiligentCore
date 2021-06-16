@@ -169,22 +169,16 @@ const ShaderVariableManagerVk::ResourceAttribs& ShaderVariableManagerVk::GetReso
     return m_pSignature->GetResourceAttribs(Index);
 }
 
-
-void ShaderVariableManagerVk::BindResources(IResourceMapping* pResourceMapping, Uint32 Flags) const
+void ShaderVariableManagerVk::BindResources(IResourceMapping* pResourceMapping, BIND_SHADER_RESOURCES_FLAGS Flags)
 {
-    if (!pResourceMapping)
-    {
-        LOG_ERROR_MESSAGE("Failed to bind resources: resource mapping is null");
-        return;
-    }
+    TBase::BindResources(pResourceMapping, Flags);
+}
 
-    if ((Flags & BIND_SHADER_RESOURCES_UPDATE_ALL) == 0)
-        Flags |= BIND_SHADER_RESOURCES_UPDATE_ALL;
-
-    for (Uint32 v = 0; v < m_NumVariables; ++v)
-    {
-        m_pVariables[v].BindResources(pResourceMapping, Flags);
-    }
+void ShaderVariableManagerVk::CheckResources(IResourceMapping*                    pResourceMapping,
+                                             BIND_SHADER_RESOURCES_FLAGS          Flags,
+                                             SHADER_RESOURCE_VARIABLE_TYPE_FLAGS& StaleVarTypes) const
+{
+    TBase::CheckResources(pResourceMapping, Flags, StaleVarTypes);
 }
 
 

@@ -176,19 +176,17 @@ Uint32 ShaderVariableManagerD3D12::GetVariableIndex(const ShaderVariableD3D12Imp
     }
 }
 
-void ShaderVariableManagerD3D12::BindResources(IResourceMapping* pResourceMapping, Uint32 Flags)
+void ShaderVariableManagerD3D12::BindResources(IResourceMapping* pResourceMapping, BIND_SHADER_RESOURCES_FLAGS Flags)
 {
-    DEV_CHECK_ERR(pResourceMapping != nullptr, "Failed to bind resources: resource mapping is null");
-
-    if ((Flags & BIND_SHADER_RESOURCES_UPDATE_ALL) == 0)
-        Flags |= BIND_SHADER_RESOURCES_UPDATE_ALL;
-
-    for (Uint32 v = 0; v < m_NumVariables; ++v)
-    {
-        m_pVariables[v].BindResources(pResourceMapping, Flags);
-    }
+    TBase::BindResources(pResourceMapping, Flags);
 }
 
+void ShaderVariableManagerD3D12::CheckResources(IResourceMapping*                    pResourceMapping,
+                                                BIND_SHADER_RESOURCES_FLAGS          Flags,
+                                                SHADER_RESOURCE_VARIABLE_TYPE_FLAGS& StaleVarTypes) const
+{
+    TBase::CheckResources(pResourceMapping, Flags, StaleVarTypes);
+}
 
 namespace
 {

@@ -190,7 +190,11 @@ public:
         void SetDynamicOffset(Uint32 ArrayIndex, Uint32 Offset);
     };
 
-    void BindResources(IResourceMapping* pResourceMapping, Uint32 Flags);
+    void BindResources(IResourceMapping* pResourceMapping, BIND_SHADER_RESOURCES_FLAGS Flags);
+
+    void CheckResources(IResourceMapping*                    pResourceMapping,
+                        BIND_SHADER_RESOURCES_FLAGS          Flags,
+                        SHADER_RESOURCE_VARIABLE_TYPE_FLAGS& StaleVarTypes) const;
 
     IShaderResourceVariable* GetVariable(const Char* Name) const;
     IShaderResourceVariable* GetVariable(Uint32 Index) const;
@@ -282,16 +286,20 @@ private:
                               THandleStorageBuffer HandleStorageBuffer) const
     {
         for (Uint32 ub = 0; ub < GetNumResources<UniformBuffBindInfo>(); ++ub)
-            HandleUB(GetConstResource<UniformBuffBindInfo>(ub));
+            if (!HandleUB(GetConstResource<UniformBuffBindInfo>(ub)))
+                return;
 
         for (Uint32 s = 0; s < GetNumResources<TextureBindInfo>(); ++s)
-            HandleTexture(GetConstResource<TextureBindInfo>(s));
+            if (!HandleTexture(GetConstResource<TextureBindInfo>(s)))
+                return;
 
         for (Uint32 i = 0; i < GetNumResources<ImageBindInfo>(); ++i)
-            HandleImage(GetConstResource<ImageBindInfo>(i));
+            if (!HandleImage(GetConstResource<ImageBindInfo>(i)))
+                return;
 
         for (Uint32 s = 0; s < GetNumResources<StorageBufferBindInfo>(); ++s)
-            HandleStorageBuffer(GetConstResource<StorageBufferBindInfo>(s));
+            if (!HandleStorageBuffer(GetConstResource<StorageBufferBindInfo>(s)))
+                return;
     }
 
     friend class ShaderVariableIndexLocator;

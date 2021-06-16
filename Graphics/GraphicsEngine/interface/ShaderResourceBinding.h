@@ -65,28 +65,64 @@ DILIGENT_BEGIN_INTERFACE(IShaderResourceBinding, IObject)
     VIRTUAL struct IPipelineResourceSignature* METHOD(GetPipelineResourceSignature)(THIS) CONST PURE;
 
 
-    /// Binds mutable and dynamice resources using the resource mapping
+    /// Binds SRB resources using the resource mapping
 
     /// \param [in] ShaderStages - Flags that specify shader stages, for which resources will be bound.
     ///                            Any combination of Diligent::SHADER_TYPE may be used.
-    /// \param [in] pResMapping  - Shader resource mapping, where required resources will be looked up.
+    /// \param [in] pResMapping  - Shader resource mapping where required resources will be looked up.
     /// \param [in] Flags        - Additional flags. See Diligent::BIND_SHADER_RESOURCES_FLAGS.
     VIRTUAL void METHOD(BindResources)(THIS_
-                                       SHADER_TYPE                  ShaderStages,
-                                       IResourceMapping*            pResMapping, 
-                                       BIND_SHADER_RESOURCES_FLAGS  Flags) PURE;
+                                       SHADER_TYPE                 ShaderStages,
+                                       IResourceMapping*           pResMapping,
+                                       BIND_SHADER_RESOURCES_FLAGS Flags) PURE;
+
+
+    /// Checks currently bound resources, see remarks.
+
+    /// \param [in] ShaderStages - Flags that specify shader stages, for which to check resources.
+    ///                            Any combination of Diligent::SHADER_TYPE may be used.
+    /// \param [in] pResMapping  - Optional shader resource mapping where resources will be looked up.
+    ///                            May be null.
+    /// \param [in] Flags        - Additional flags, see remarks.
+    ///
+    /// \return     Variable type flags that did not pass the checks and thus may need to be updated.
+    ///
+    /// \remarks    This method may be used to perform various checks of the currently bound resources:
+    ///
+    ///             - BIND_SHADER_RESOURCES_UPDATE_MUTABLE and BIND_SHADER_RESOURCES_UPDATE_DYNAMIC flags
+    ///               define which variable types to examine. Note that BIND_SHADER_RESOURCES_UPDATE_STATIC
+    ///               has no effect as static resources are accessed through the PSO.
+    ///
+    ///             - If BIND_SHADER_RESOURCES_KEEP_EXISTING flag is not set and pResMapping is not null,
+    ///               the method will compare currently bound resources with the ones in the resource mapping.
+    ///               If any mismatch is found, the method will return the types of the variables that
+    ///               contain mismatching resources.
+    ///               Note that the situation when non-null object is bound to the variable, but the resource
+    ///               mapping does not contain an object corresponding to the variable name, does not count as
+    ///               mismatch.
+    ///
+    ///             - If BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED flag is set, the method will check that
+    ///               all resources of the specified variable types are bound and return the types of the variables
+    ///               that are not bound.
+    VIRTUAL SHADER_RESOURCE_VARIABLE_TYPE_FLAGS METHOD(CheckResources)(
+                                        THIS_
+                                        SHADER_TYPE                 ShaderStages,
+                                        IResourceMapping*           pResMapping,
+                                        BIND_SHADER_RESOURCES_FLAGS Flags) CONST PURE;
+
 
     /// Returns the variable by its name.
 
     /// \param [in] ShaderType - Type of the shader to look up the variable.
     ///                          Must be one of Diligent::SHADER_TYPE.
-    /// \param [in] Name       - Variable name
+    /// \param [in] Name       - Variable name.
     ///
     /// \note  This operation may potentially be expensive. If the variable will be used often, it is
     ///        recommended to store and reuse the pointer as it never changes.
     VIRTUAL IShaderResourceVariable* METHOD(GetVariableByName)(THIS_
                                                                SHADER_TYPE ShaderType,
                                                                const char* Name) PURE;
+
 
     /// Returns the total variable count for the specific shader stage.
 

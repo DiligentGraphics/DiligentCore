@@ -95,7 +95,6 @@ IDeviceObject* ResourceMappingImpl::GetResource(const Char* Name, Uint32 ArrayIn
     auto LockHelper = Lock();
 
     // Find an object with the requested name
-    // Name will be implicitly converted to HashMapStringKey without making a copy
     auto It = m_HashTable.find(ResMappingHashKey{Name, false, ArrayIndex});
     return It != m_HashTable.end() ? It->second.RawPtr() : nullptr;
 }

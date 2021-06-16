@@ -207,12 +207,12 @@ TEST(ShaderResourceLayout, ResourceArray)
     // clang-format off
     ResourceMappingEntry ResMpEntries [] =
     {
-        ResourceMappingEntry("g_tex2DTest", pTextures[0]->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE), 0),
-        ResourceMappingEntry("g_tex2DTest", pTextures[1]->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE), 1),
-        ResourceMappingEntry("g_tex2DTest", pTextures[2]->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE), 2),
-        ResourceMappingEntry("g_tex2DTest2", pTextures[5]->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE), 0),
-        ResourceMappingEntry("g_tex2D", pTextures[6]->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE), 0),
-        ResourceMappingEntry()
+        ResourceMappingEntry{"g_tex2DTest", pTextures[0]->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE), 0},
+        ResourceMappingEntry{"g_tex2DTest", pTextures[1]->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE), 1},
+        ResourceMappingEntry{"g_tex2DTest", pTextures[2]->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE), 2},
+        ResourceMappingEntry{"g_tex2DTest2", pTextures[5]->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE), 0},
+        ResourceMappingEntry{"g_tex2D", pTextures[6]->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE), 0},
+        ResourceMappingEntry{}
     };
     // clang-format on
 
@@ -224,6 +224,9 @@ TEST(ShaderResourceLayout, ResourceArray)
     //pVS->BindResources(m_pResourceMapping, 0);
     IDeviceObject* ppSRVs[] = {pTextures[3]->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE)};
     pPSO->BindStaticResources(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, pResMapping, BIND_SHADER_RESOURCES_KEEP_EXISTING);
+    EXPECT_EQ(pSRB->CheckResources(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, pResMapping, BIND_SHADER_RESOURCES_UPDATE_ALL), SHADER_RESOURCE_VARIABLE_TYPE_FLAG_MUT_DYN);
+    EXPECT_EQ(pSRB->CheckResources(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, pResMapping, BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED), SHADER_RESOURCE_VARIABLE_TYPE_FLAG_MUT_DYN);
+
     pPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_tex2DTest2")->SetArray(ppSRVs, 1, 1);
 
     pPSO->InitializeStaticSRBResources(pSRB);
@@ -237,6 +240,16 @@ TEST(ShaderResourceLayout, ResourceArray)
     pContext->SetPipelineState(pPSO);
     ppSRVs[0] = {pTextures[7]->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE)};
     pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_tex2D")->SetArray(ppSRVs, 1, 1);
+
+    EXPECT_EQ(pSRB->CheckResources(SHADER_TYPE_PIXEL, pResMapping, BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED), SHADER_RESOURCE_VARIABLE_TYPE_FLAG_NONE);
+
+    pResMapping->AddResource("g_tex2DTest", pTextures[1]->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE), false);
+    EXPECT_EQ(pSRB->CheckResources(SHADER_TYPE_PIXEL, pResMapping, BIND_SHADER_RESOURCES_UPDATE_ALL), SHADER_RESOURCE_VARIABLE_TYPE_FLAG_MUTABLE);
+    EXPECT_EQ(pSRB->CheckResources(SHADER_TYPE_PIXEL, pResMapping, BIND_SHADER_RESOURCES_KEEP_EXISTING | BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED), SHADER_RESOURCE_VARIABLE_TYPE_FLAG_NONE);
+
+    pResMapping->AddResource("g_tex2D", pTextures[1]->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE), false);
+    EXPECT_EQ(pSRB->CheckResources(SHADER_TYPE_PIXEL, pResMapping, BIND_SHADER_RESOURCES_UPDATE_ALL), SHADER_RESOURCE_VARIABLE_TYPE_FLAG_MUT_DYN);
+    EXPECT_EQ(pSRB->CheckResources(SHADER_TYPE_PIXEL, pResMapping, BIND_SHADER_RESOURCES_KEEP_EXISTING | BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED), SHADER_RESOURCE_VARIABLE_TYPE_FLAG_NONE);
 
     pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 

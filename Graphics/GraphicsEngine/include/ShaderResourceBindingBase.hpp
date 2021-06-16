@@ -240,20 +240,29 @@ public:
                                                   IResourceMapping*           pResMapping,
                                                   BIND_SHADER_RESOURCES_FLAGS Flags) override final
     {
-        const auto PipelineType = GetPipelineType();
-        for (Int32 ShaderInd = 0; ShaderInd < static_cast<Int32>(m_ActiveShaderStageIndex.size()); ++ShaderInd)
-        {
-            auto VarMngrInd = m_ActiveShaderStageIndex[ShaderInd];
-            if (VarMngrInd >= 0)
-            {
-                // ShaderInd is the shader type pipeline index here
-                const auto ShaderType = GetShaderTypeFromPipelineIndex(ShaderInd, PipelineType);
-                if ((ShaderStages & ShaderType) != 0)
-                {
-                    m_pShaderVarMgrs[VarMngrInd].BindResources(pResMapping, Flags);
-                }
-            }
-        }
+        ProcessVariables(ShaderStages,
+                         [pResMapping, Flags](ShaderVariableManagerImplType& Mgr) //
+                         {
+                             Mgr.BindResources(pResMapping, Flags);
+                             return true;
+                         });
+    }
+
+    /// Implementation of IShaderResourceBinding::CheckResources().
+    virtual SHADER_RESOURCE_VARIABLE_TYPE_FLAGS DILIGENT_CALL_TYPE CheckResources(
+        SHADER_TYPE                 ShaderStages,
+        IResourceMapping*           pResMapping,
+        BIND_SHADER_RESOURCES_FLAGS Flags) const override final
+    {
+        SHADER_RESOURCE_VARIABLE_TYPE_FLAGS StaleVarTypes = SHADER_RESOURCE_VARIABLE_TYPE_FLAG_NONE;
+        ProcessVariables(ShaderStages,
+                         [&](const ShaderVariableManagerImplType& Mgr) //
+                         {
+                             Mgr.CheckResources(pResMapping, Flags, StaleVarTypes);
+                             // Stop when both mutable and dynamic variables are stale as there is no reason to check further.
+                             return (StaleVarTypes & SHADER_RESOURCE_VARIABLE_TYPE_FLAG_MUT_DYN) != SHADER_RESOURCE_VARIABLE_TYPE_FLAG_MUT_DYN;
+                         });
+        return StaleVarTypes;
     }
 
     ShaderResourceCacheImplType&       GetResourceCache() { return m_ShaderResourceCache; }
@@ -272,6 +281,27 @@ private:
                 m_pShaderVarMgrs[s].~ShaderVariableManagerImplType();
             }
             GetRawAllocator().Free(m_pShaderVarMgrs);
+        }
+    }
+
+    template <typename HandlerType>
+    void ProcessVariables(SHADER_TYPE ShaderStages,
+                          HandlerType Handler) const
+    {
+        const auto PipelineType = GetPipelineType();
+        for (size_t ShaderInd = 0; ShaderInd < m_ActiveShaderStageIndex.size(); ++ShaderInd)
+        {
+            const auto VarMngrInd = m_ActiveShaderStageIndex[ShaderInd];
+            if (VarMngrInd < 0)
+                continue;
+
+            // ShaderInd is the shader type pipeline index here
+            const auto ShaderType = GetShaderTypeFromPipelineIndex(static_cast<Int32>(ShaderInd), PipelineType);
+            if ((ShaderStages & ShaderType) == 0)
+                continue;
+
+            if (!Handler(m_pShaderVarMgrs[VarMngrInd]))
+                break;
         }
     }
 

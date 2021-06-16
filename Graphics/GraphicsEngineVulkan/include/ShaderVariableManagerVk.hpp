@@ -102,7 +102,11 @@ public:
     IDeviceObject* Get(Uint32 ArrayIndex,
                        Uint32 ResIndex) const;
 
-    void BindResources(IResourceMapping* pResourceMapping, Uint32 Flags) const;
+    void BindResources(IResourceMapping* pResourceMapping, BIND_SHADER_RESOURCES_FLAGS Flags);
+
+    void CheckResources(IResourceMapping*                    pResourceMapping,
+                        BIND_SHADER_RESOURCES_FLAGS          Flags,
+                        SHADER_RESOURCE_VARIABLE_TYPE_FLAGS& StaleVarTypes) const;
 
     static size_t GetRequiredMemorySize(const PipelineResourceSignatureVkImpl& Signature,
                                         const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes,
@@ -115,6 +119,7 @@ public:
     IObject& GetOwner() { return m_Owner; }
 
 private:
+    friend TBase;
     friend ShaderVariableVkImpl;
     friend ShaderVariableBase<ShaderVariableVkImpl, ShaderVariableManagerVk, IShaderResourceVariable>;
 

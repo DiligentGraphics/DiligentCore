@@ -1,5 +1,6 @@
 ## Current progress
 
+* Added `IShaderResourceBinding::CheckResources` method and `SHADER_RESOURCE_VARIABLE_TYPE_FLAGS` enum (API Version 250002)
 * Removed `IShaderResourceVariable::IsBound` with `IShaderResourceVariable::Get` (API Version 250001)
 
 ## v2.5

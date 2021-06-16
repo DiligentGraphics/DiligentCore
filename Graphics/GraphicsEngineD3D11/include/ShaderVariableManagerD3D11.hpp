@@ -183,7 +183,11 @@ public:
         __forceinline void BindResource(const BindResourceInfo& BindInfo);
     };
 
-    void BindResources(IResourceMapping* pResourceMapping, Uint32 Flags);
+    void BindResources(IResourceMapping* pResourceMapping, BIND_SHADER_RESOURCES_FLAGS Flags);
+
+    void CheckResources(IResourceMapping*                    pResourceMapping,
+                        BIND_SHADER_RESOURCES_FLAGS          Flags,
+                        SHADER_RESOURCE_VARIABLE_TYPE_FLAGS& StaleVarTypes) const;
 
     IShaderResourceVariable* GetVariable(const Char* Name) const;
     IShaderResourceVariable* GetVariable(Uint32 Index) const;
@@ -294,22 +298,28 @@ private:
                               THandleSampler HandleSampler) const
     {
         for (Uint32 cb = 0; cb < GetNumResources<ConstBuffBindInfo>(); ++cb)
-            HandleCB(GetConstResource<ConstBuffBindInfo>(cb));
+            if (!HandleCB(GetConstResource<ConstBuffBindInfo>(cb)))
+                return;
 
         for (Uint32 t = 0; t < GetNumResources<TexSRVBindInfo>(); ++t)
-            HandleTexSRV(GetConstResource<TexSRVBindInfo>(t));
+            if (!HandleTexSRV(GetConstResource<TexSRVBindInfo>(t)))
+                return;
 
         for (Uint32 u = 0; u < GetNumResources<TexUAVBindInfo>(); ++u)
-            HandleTexUAV(GetConstResource<TexUAVBindInfo>(u));
+            if (!HandleTexUAV(GetConstResource<TexUAVBindInfo>(u)))
+                return;
 
         for (Uint32 s = 0; s < GetNumResources<BuffSRVBindInfo>(); ++s)
-            HandleBufSRV(GetConstResource<BuffSRVBindInfo>(s));
+            if (!HandleBufSRV(GetConstResource<BuffSRVBindInfo>(s)))
+                return;
 
         for (Uint32 u = 0; u < GetNumResources<BuffUAVBindInfo>(); ++u)
-            HandleBufUAV(GetConstResource<BuffUAVBindInfo>(u));
+            if (!HandleBufUAV(GetConstResource<BuffUAVBindInfo>(u)))
+                return;
 
         for (Uint32 s = 0; s < GetNumResources<SamplerBindInfo>(); ++s)
-            HandleSampler(GetConstResource<SamplerBindInfo>(s));
+            if (!HandleSampler(GetConstResource<SamplerBindInfo>(s)))
+                return;
     }
 
     friend class ShaderVariableIndexLocator;

@@ -37,6 +37,7 @@
 #include "PipelineState.h"
 #include "StringTools.hpp"
 #include "GraphicsAccessories.hpp"
+#include "ShaderResourceCacheCommon.hpp"
 #include "RefCntAutoPtr.hpp"
 #include "EngineMemory.h"
 
@@ -713,7 +714,7 @@ struct ShaderVariableBase : public ResourceVariableBaseInterface
         return m_ParentManager.GetVariableIndex(*static_cast<const ThisImplType*>(this));
     }
 
-    void BindResources(IResourceMapping* pResourceMapping, Uint32 Flags)
+    void BindResources(IResourceMapping* pResourceMapping, BIND_SHADER_RESOURCES_FLAGS Flags)
     {
         auto* const pThis   = static_cast<ThisImplType*>(this);
         const auto& ResDesc = pThis->GetDesc();
@@ -743,6 +744,44 @@ struct ShaderVariableBase : public ResourceVariableBaseInterface
         }
     }
 
+    void CheckResources(IResourceMapping* pResourceMapping, BIND_SHADER_RESOURCES_FLAGS Flags, SHADER_RESOURCE_VARIABLE_TYPE_FLAGS& StaleVarTypes) const
+    {
+        auto* const pThis   = static_cast<const ThisImplType*>(this);
+        const auto& ResDesc = pThis->GetDesc();
+
+        const auto VarTypeFlag = static_cast<SHADER_RESOURCE_VARIABLE_TYPE_FLAGS>(1u << ResDesc.VarType);
+        if ((Flags & VarTypeFlag) == 0)
+            return; // This variable type is not being processed
+
+        if ((StaleVarTypes & VarTypeFlag) != 0)
+            return; // This variable type is already stale
+
+        for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
+        {
+            const auto* const pBoundObj = pThis->Get(ArrInd);
+            if ((pBoundObj != nullptr) && (Flags & BIND_SHADER_RESOURCES_KEEP_EXISTING) != 0)
+                continue;
+
+            if ((pBoundObj == nullptr) && (Flags & BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED) != 0)
+            {
+                StaleVarTypes |= VarTypeFlag;
+                return;
+            }
+
+            if (pResourceMapping != nullptr)
+            {
+                if (auto* pObj = pResourceMapping->GetResource(ResDesc.Name, ArrInd))
+                {
+                    if (pObj != pBoundObj)
+                    {
+                        StaleVarTypes |= VarTypeFlag;
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
     const PipelineResourceDesc& GetDesc() const { return m_ParentManager.GetResourceDesc(m_ResIndex); }
 
 protected:
@@ -759,6 +798,7 @@ class ShaderVariableManagerBase
 protected:
     using ShaderResourceCacheType       = typename EngineImplTraits::ShaderResourceCacheImplType;
     using PipelineResourceSignatureType = typename EngineImplTraits::PipelineResourceSignatureImplType;
+    using ThisImplType                  = typename EngineImplTraits::ShaderVariableManagerImplType;
 
     ShaderVariableManagerBase(IObject&                 Owner,
                               ShaderResourceCacheType& ResourceCache) noexcept :
@@ -799,6 +839,37 @@ protected:
         m_pDbgAllocator = nullptr;
 #endif
     }
+
+    void BindResources(IResourceMapping* pResourceMapping, BIND_SHADER_RESOURCES_FLAGS Flags)
+    {
+        DEV_CHECK_ERR(pResourceMapping != nullptr, "Failed to bind resources: resource mapping is null");
+
+        if ((Flags & BIND_SHADER_RESOURCES_UPDATE_ALL) == 0)
+            Flags |= BIND_SHADER_RESOURCES_UPDATE_ALL;
+
+        for (Uint32 v = 0; v < static_cast<ThisImplType*>(this)->m_NumVariables; ++v)
+        {
+            m_pVariables[v].BindResources(pResourceMapping, Flags);
+        }
+    }
+
+    void CheckResources(IResourceMapping*                    pResourceMapping,
+                        BIND_SHADER_RESOURCES_FLAGS          Flags,
+                        SHADER_RESOURCE_VARIABLE_TYPE_FLAGS& StaleVarTypes) const
+    {
+        if ((Flags & BIND_SHADER_RESOURCES_UPDATE_ALL) == 0)
+            Flags |= BIND_SHADER_RESOURCES_UPDATE_ALL;
+
+        const auto* pThis        = static_cast<const ThisImplType*>(this);
+        const auto  AllowedTypes = m_ResourceCache.GetContentType() == ResourceCacheContentType::SRB ?
+            SHADER_RESOURCE_VARIABLE_TYPE_FLAG_MUT_DYN :
+            SHADER_RESOURCE_VARIABLE_TYPE_FLAG_STATIC;
+        for (Uint32 v = 0; (v < pThis->m_NumVariables) && (StaleVarTypes & AllowedTypes) != AllowedTypes; ++v)
+        {
+            m_pVariables[v].CheckResources(pResourceMapping, Flags, StaleVarTypes);
+        }
+    }
+
 
 protected:
     IObject& m_Owner;
