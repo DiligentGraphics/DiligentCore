@@ -1667,7 +1667,7 @@ void ShaderBytecodeRemapper::PatchBytecode(Uint32* Token, const void* EndPtr) no
     VERIFY_EXPR(Token == static_cast<const void*>(&Header + 1));
     const void* Finish = reinterpret_cast<const char*>(&Header) + sizeof(ChunkHeader) + Header.Length;
 
-    VERIFY_EXPR(Header.VersionMajor >= 5);
+    VERIFY_EXPR(Header.VersionMajor >= 4);
     VERIFY_EXPR(Header.ProgramType < PROGRAM_TYPE_COUNT_SM5);
     VERIFY_EXPR(Header.NumDWords * 4 == Header.Length);
 
