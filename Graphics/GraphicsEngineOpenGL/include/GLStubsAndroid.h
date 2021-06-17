@@ -1037,6 +1037,23 @@ extern PFNGLMEMORYBARRIERPROC glMemoryBarrier;
 #   define GL_TIME_ELAPSED 0x88BF
 #endif
 
+/* ------------------------------ GL_ARB_compute_shader ----------------------------- */
+
+#ifndef GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS
+#   define GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS 0x90EB
+#endif
+
+#ifndef GL_MAX_COMPUTE_SHARED_MEMORY_SIZE
+#   define GL_MAX_COMPUTE_SHARED_MEMORY_SIZE 0x8262
+#endif
+
+#ifndef GL_MAX_COMPUTE_WORK_GROUP_COUNT
+#   define GL_MAX_COMPUTE_WORK_GROUP_COUNT 0x91BE
+#endif
+
+#ifndef GL_MAX_COMPUTE_WORK_GROUP_SIZE
+#   define GL_MAX_COMPUTE_WORK_GROUP_SIZE 0x91BF
+#endif
 
 
 // Define unsupported GL function stubs

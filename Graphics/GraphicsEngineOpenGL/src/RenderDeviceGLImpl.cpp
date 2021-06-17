@@ -878,6 +878,35 @@ void RenderDeviceGLImpl::InitAdapterInfo()
 #undef ENABLE_FEATURE
     }
 
+    // Compute shader properties
+#if GL_ARB_compute_shader
+    if (m_AdapterInfo.Features.ComputeShaders)
+    {
+        auto& CompProps{m_AdapterInfo.ComputeShader};
+        glGetIntegerv(GL_MAX_COMPUTE_SHARED_MEMORY_SIZE, reinterpret_cast<GLint*>(&CompProps.SharedMemorySize));
+        CHECK_GL_ERROR("glGetIntegerv(GL_MAX_COMPUTE_SHARED_MEMORY_SIZE)");
+        glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS, reinterpret_cast<GLint*>(&CompProps.MaxThreadGroupInvocations));
+        CHECK_GL_ERROR("glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS)");
+
+        glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 0, reinterpret_cast<GLint*>(&CompProps.MaxThreadGroupSizeX));
+        CHECK_GL_ERROR("glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 0)");
+        glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 1, reinterpret_cast<GLint*>(&CompProps.MaxThreadGroupSizeY));
+        CHECK_GL_ERROR("glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 1)");
+        glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 2, reinterpret_cast<GLint*>(&CompProps.MaxThreadGroupSizeZ));
+        CHECK_GL_ERROR("glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 2)");
+
+        glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 0, reinterpret_cast<GLint*>(&CompProps.MaxThreadGroupCountX));
+        CHECK_GL_ERROR("glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 0)");
+        glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 1, reinterpret_cast<GLint*>(&CompProps.MaxThreadGroupCountY));
+        CHECK_GL_ERROR("glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 1)");
+        glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 2, reinterpret_cast<GLint*>(&CompProps.MaxThreadGroupCountZ));
+        CHECK_GL_ERROR("glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 2)");
+#    if defined(_MSC_VER) && defined(_WIN64)
+        static_assert(sizeof(CompProps) == 32, "Did you add a new member to ComputeShaderProperties? Please initialize it here.");
+#    endif
+    }
+#endif
+
     // Set queue info
     {
         m_AdapterInfo.NumQueues = 1;

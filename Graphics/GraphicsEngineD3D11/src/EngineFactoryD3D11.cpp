@@ -481,6 +481,22 @@ GraphicsAdapterInfo EngineFactoryD3D11Impl::GetGraphicsAdapterInfo(void*        
 #endif
     }
 
+    // Compute shader properties
+    {
+        auto& CompProps{AdapterInfo.ComputeShader};
+        CompProps.SharedMemorySize          = 32u << 10; // in specs: 32Kb in D3D11 and 16Kb on downlevel hardware
+        CompProps.MaxThreadGroupInvocations = D3D11_CS_THREAD_GROUP_MAX_THREADS_PER_GROUP;
+        CompProps.MaxThreadGroupSizeX       = D3D11_CS_THREAD_GROUP_MAX_X;
+        CompProps.MaxThreadGroupSizeY       = D3D11_CS_THREAD_GROUP_MAX_Y;
+        CompProps.MaxThreadGroupSizeZ       = D3D11_CS_THREAD_GROUP_MAX_Z;
+        CompProps.MaxThreadGroupCountX      = D3D11_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
+        CompProps.MaxThreadGroupCountY      = D3D11_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
+        CompProps.MaxThreadGroupCountZ      = D3D11_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
+#if defined(_MSC_VER) && defined(_WIN64)
+        static_assert(sizeof(CompProps) == 32, "Did you add a new member to ComputeShaderProperties? Please initialize it here.");
+#endif
+    }
+
     return AdapterInfo;
 }
 

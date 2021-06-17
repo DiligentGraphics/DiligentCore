@@ -2057,6 +2057,35 @@ struct MeshShaderProperties
 typedef struct MeshShaderProperties MeshShaderProperties;
 
 
+/// Compute Shader Properties
+struct ComputeShaderProperties
+{
+    /// Amount of shared memory available to threads in one group.
+    Uint32 SharedMemorySize         DEFAULT_INITIALIZER(0);
+
+    /// The total mamximum number of threads in one group.
+    Uint32 MaxThreadGroupInvocations  DEFAULT_INITIALIZER(0);
+
+    /// The maximum number of threads in group X dimension.
+    Uint32 MaxThreadGroupSizeX        DEFAULT_INITIALIZER(0);
+    /// The maximum number of threads in group Y dimension.
+    Uint32 MaxThreadGroupSizeY        DEFAULT_INITIALIZER(0);
+    /// The maximum number of threads in group Z dimension.
+    Uint32 MaxThreadGroupSizeZ        DEFAULT_INITIALIZER(0);
+
+    /// The maximum number of thread groups that can be dispatched
+    /// in X dimension.
+    Uint32 MaxThreadGroupCountX       DEFAULT_INITIALIZER(0);
+    /// The maximum number of thread groups that can be dispatched
+    /// in Y dimension.
+    Uint32 MaxThreadGroupCountY       DEFAULT_INITIALIZER(0);
+    /// The maximum number of thread groups that can be dispatched
+    /// in Z dimension.
+    Uint32 MaxThreadGroupCountZ       DEFAULT_INITIALIZER(0);
+};
+typedef struct ComputeShaderProperties ComputeShaderProperties;
+
+
 /// Render device information
 struct RenderDeviceInfo
 {
@@ -2312,6 +2341,9 @@ struct GraphicsAdapterInfo
 
     /// Mesh shader properties, see Diligent::MeshShaderProperties.
     MeshShaderProperties MeshShader;
+
+    /// Compute shader properties, see Diligent::ComputeShaderProperties.
+    ComputeShaderProperties ComputeShader;
 
     /// Supported device features, see Diligent::DeviceFeatures.
 
