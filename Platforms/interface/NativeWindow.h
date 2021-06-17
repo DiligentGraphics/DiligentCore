@@ -89,7 +89,7 @@ typedef struct IOSNativeWindow NativeWindow;
 
 #elif PLATFORM_TVOS
 
-typedef struct AppleTVNativeWindow NativeWindow;
+typedef struct TVOSNativeWindow NativeWindow;
 
 #else
 #    error Unknown platform. Please define one of the following macros as 1: PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS, PLATFORM_TVOS.

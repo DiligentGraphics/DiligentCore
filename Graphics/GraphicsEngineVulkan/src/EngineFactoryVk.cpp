@@ -310,7 +310,7 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
 
             // In Metal, input attachment with memoryless texture must be used as an imageblock,
             // which is not supported in SPIRV to MSL translator.
-#if PLATFORM_MACOS || PLATFORM_IOS
+#if PLATFORM_MACOS || PLATFORM_IOS || PLATFORM_TVOS
             if (Mem.MemorylessTextureBindFlags != 0)
                 Mem.MemorylessTextureBindFlags = BIND_RENDER_TARGET | BIND_DEPTH_STENCIL;
 #endif

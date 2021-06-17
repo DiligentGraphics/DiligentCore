@@ -66,7 +66,7 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
             "#ifndef VULKAN\n"
             "#   define VULKAN 1\n"
             "#endif\n"
-#if PLATFORM_MACOS || PLATFORM_IOS
+#if PLATFORM_MACOS || PLATFORM_IOS || PLATFORM_TVOS
             "#ifndef METAL\n"
             "#   define METAL 1\n"
             "#endif\n"

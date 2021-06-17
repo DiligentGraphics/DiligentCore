@@ -1972,7 +1972,7 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
 #undef INIT_FEATURE
 
     // Not supported in Vulkan on top of Metal.
-#if PLATFORM_MACOS || PLATFORM_IOS
+#if PLATFORM_MACOS || PLATFORM_IOS || PLATFORM_TVOS
     Features.BinaryOcclusionQueries = DEVICE_FEATURE_STATE_DISABLED;
     Features.TimestampQueries       = DEVICE_FEATURE_STATE_DISABLED;
     Features.DurationQueries        = DEVICE_FEATURE_STATE_DISABLED;

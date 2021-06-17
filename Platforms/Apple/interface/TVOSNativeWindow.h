@@ -30,15 +30,15 @@
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
-struct AppleTVNativeWindow
+struct TVOSNativeWindow
 {
     void* pCALayer DEFAULT_INITIALIZER(nullptr);
 
 #if DILIGENT_CPP_INTERFACE
-    AppleTVNativeWindow() noexcept
+    TVOSNativeWindow() noexcept
     {}
 
-    explicit AppleTVNativeWindow(void* _pCALayer) noexcept :
+    explicit TVOSNativeWindow(void* _pCALayer) noexcept :
         pCALayer{_pCALayer}
     {}
 #endif
