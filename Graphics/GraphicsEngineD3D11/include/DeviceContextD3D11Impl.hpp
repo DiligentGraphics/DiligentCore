@@ -321,24 +321,24 @@ private:
     /// Unbinds a texture from shader resource view slots.
     /// \note The function only unbinds the texture from d3d11 device
     ///       context. All shader bindings are retained.
-    void UnbindTextureFromInput(TextureBaseD3D11* pTexture, ID3D11Resource* pd3d11Resource);
+    void UnbindTextureFromInput(TextureBaseD3D11& Texture, ID3D11Resource* pd3d11Resource);
 
     /// Unbinds a buffer from input (shader resource views slots, index
     /// and vertex buffer slots).
     /// \note The function only unbinds the buffer from d3d11 device
     ///       context. All shader bindings are retained.
-    void UnbindBufferFromInput(BufferD3D11Impl* pBuffer, ID3D11Resource* pd3d11Buffer);
+    void UnbindBufferFromInput(BufferD3D11Impl& Buffer, RESOURCE_STATE OldState, ID3D11Resource* pd3d11Buffer);
 
     /// Unbinds a resource from UAV slots.
     /// \note The function only unbinds the resource from d3d11 device
     ///       context. All shader bindings are retained.
-    void UnbindResourceFromUAV(IDeviceObject* pResource, ID3D11Resource* pd3d11Resource);
+    void UnbindResourceFromUAV(ID3D11Resource* pd3d11Resource);
 
     /// Unbinds a texture from render target slots.
-    void UnbindTextureFromRenderTarget(TextureBaseD3D11* pResource);
+    void UnbindTextureFromRenderTarget(TextureBaseD3D11& Resource);
 
     /// Unbinds a texture from depth-stencil.
-    void UnbindTextureFromDepthStencil(TextureBaseD3D11* pTexD3D11);
+    void UnbindTextureFromDepthStencil(TextureBaseD3D11& TexD3D11);
 
     /// Prepares for a draw command
     __forceinline void PrepareForDraw(DRAW_FLAGS Flags);

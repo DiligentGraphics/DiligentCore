@@ -1041,7 +1041,7 @@ void DeviceContextD3D11Impl::SetVertexBuffers(Uint32                         Sta
             {
                 if (pBuffD3D11Impl->IsInKnownState() && pBuffD3D11Impl->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
                 {
-                    UnbindResourceFromUAV(pBuffD3D11Impl, pBuffD3D11Impl->m_pd3d11Buffer);
+                    UnbindResourceFromUAV(pBuffD3D11Impl->m_pd3d11Buffer);
                     pBuffD3D11Impl->ClearState(RESOURCE_STATE_UNORDERED_ACCESS);
                 }
             }
@@ -1071,7 +1071,7 @@ void DeviceContextD3D11Impl::SetIndexBuffer(IBuffer* pIndexBuffer, Uint32 ByteOf
         {
             if (m_pIndexBuffer->IsInKnownState() && m_pIndexBuffer->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
             {
-                UnbindResourceFromUAV(m_pIndexBuffer, m_pIndexBuffer->m_pd3d11Buffer);
+                UnbindResourceFromUAV(m_pIndexBuffer->m_pd3d11Buffer);
                 m_pIndexBuffer->ClearState(RESOURCE_STATE_UNORDERED_ACCESS);
             }
         }
@@ -1280,29 +1280,25 @@ void DeviceContextD3D11Impl::UnbindResourceView(TD3D11ResourceViewType Committed
     }
 }
 
-void DeviceContextD3D11Impl::UnbindTextureFromInput(TextureBaseD3D11* pTexture, ID3D11Resource* pd3d11Resource)
+void DeviceContextD3D11Impl::UnbindTextureFromInput(TextureBaseD3D11& Texture, ID3D11Resource* pd3d11Resource)
 {
-    VERIFY(pTexture, "Null texture provided");
-    if (!pTexture) return;
-
     UnbindResourceView(m_CommittedRes.d3d11SRVs, m_CommittedRes.d3d11SRVResources, m_CommittedRes.NumSRVs, pd3d11Resource, SetSRVMethods);
-    pTexture->ClearState(RESOURCE_STATE_SHADER_RESOURCE | RESOURCE_STATE_INPUT_ATTACHMENT);
+    if (Texture.IsInKnownState())
+        Texture.ClearState(RESOURCE_STATE_SHADER_RESOURCE | RESOURCE_STATE_INPUT_ATTACHMENT);
 }
 
-void DeviceContextD3D11Impl::UnbindBufferFromInput(BufferD3D11Impl* pBuffer, ID3D11Resource* pd3d11Buffer)
+void DeviceContextD3D11Impl::UnbindBufferFromInput(BufferD3D11Impl& Buffer, RESOURCE_STATE OldState, ID3D11Resource* pd3d11Buffer)
 {
-    VERIFY(pBuffer, "Null buffer provided");
-    if (!pBuffer || !pBuffer->IsInKnownState()) return;
-
-    if (pBuffer->CheckState(RESOURCE_STATE_SHADER_RESOURCE))
+    if (OldState & RESOURCE_STATE_SHADER_RESOURCE)
     {
         UnbindResourceView(m_CommittedRes.d3d11SRVs, m_CommittedRes.d3d11SRVResources, m_CommittedRes.NumSRVs, pd3d11Buffer, SetSRVMethods);
-        pBuffer->ClearState(RESOURCE_STATE_SHADER_RESOURCE);
+        if (Buffer.IsInKnownState())
+            Buffer.ClearState(RESOURCE_STATE_SHADER_RESOURCE);
     }
 
-    if (pBuffer->CheckState(RESOURCE_STATE_INDEX_BUFFER))
+    if (OldState & RESOURCE_STATE_INDEX_BUFFER)
     {
-        auto pd3d11IndBuffer = pBuffer->GetD3D11Buffer();
+        auto pd3d11IndBuffer = Buffer.GetD3D11Buffer();
         if (pd3d11IndBuffer == m_CommittedD3D11IndexBuffer)
         {
             // Only unbind D3D11 buffer from the context!
@@ -1313,12 +1309,13 @@ void DeviceContextD3D11Impl::UnbindBufferFromInput(BufferD3D11Impl* pBuffer, ID3
             m_bCommittedD3D11IBUpToDate          = false;
             m_pd3d11DeviceContext->IASetIndexBuffer(nullptr, DXGI_FORMAT_R32_UINT, m_CommittedD3D11IndexDataStartOffset);
         }
-        pBuffer->ClearState(RESOURCE_STATE_INDEX_BUFFER);
+        if (Buffer.IsInKnownState())
+            Buffer.ClearState(RESOURCE_STATE_INDEX_BUFFER);
     }
 
-    if (pBuffer->CheckState(RESOURCE_STATE_VERTEX_BUFFER))
+    if (OldState & RESOURCE_STATE_VERTEX_BUFFER)
     {
-        auto pd3d11VB = pBuffer->GetD3D11Buffer();
+        auto pd3d11VB = Buffer.GetD3D11Buffer();
         for (Uint32 Slot = 0; Slot < m_NumCommittedD3D11VBs; ++Slot)
         {
             auto& CommittedD3D11VB = m_CommittedD3D11VertexBuffers[Slot];
@@ -1335,10 +1332,11 @@ void DeviceContextD3D11Impl::UnbindBufferFromInput(BufferD3D11Impl* pBuffer, ID3
                 m_pd3d11DeviceContext->IASetVertexBuffers(Slot, _countof(ppNullBuffer), ppNullBuffer, Zero, Zero);
             }
         }
-        pBuffer->ClearState(RESOURCE_STATE_VERTEX_BUFFER);
+        if (Buffer.IsInKnownState())
+            Buffer.ClearState(RESOURCE_STATE_VERTEX_BUFFER);
     }
 
-    if (pBuffer->CheckState(RESOURCE_STATE_CONSTANT_BUFFER))
+    if (OldState & RESOURCE_STATE_CONSTANT_BUFFER)
     {
         for (Int32 ShaderTypeInd = 0; ShaderTypeInd < NumShaderTypes; ++ShaderTypeInd)
         {
@@ -1355,29 +1353,24 @@ void DeviceContextD3D11Impl::UnbindBufferFromInput(BufferD3D11Impl* pBuffer, ID3
                 }
             }
         }
-        pBuffer->ClearState(RESOURCE_STATE_CONSTANT_BUFFER);
+        if (Buffer.IsInKnownState())
+            Buffer.ClearState(RESOURCE_STATE_CONSTANT_BUFFER);
     }
 }
 
-void DeviceContextD3D11Impl::UnbindResourceFromUAV(IDeviceObject* pResource, ID3D11Resource* pd3d11Resource)
+void DeviceContextD3D11Impl::UnbindResourceFromUAV(ID3D11Resource* pd3d11Resource)
 {
-    VERIFY(pResource, "Null resource provided");
-    if (!pResource) return;
-
     UnbindResourceView(m_CommittedRes.d3d11UAVs, m_CommittedRes.d3d11UAVResources, m_CommittedRes.NumUAVs, pd3d11Resource, SetUAVMethods);
 }
 
-void DeviceContextD3D11Impl::UnbindTextureFromRenderTarget(TextureBaseD3D11* pTexture)
+void DeviceContextD3D11Impl::UnbindTextureFromRenderTarget(TextureBaseD3D11& Texture)
 {
-    VERIFY(pTexture, "Null resource provided");
-    if (!pTexture) return;
-
     bool bCommitRenderTargets = false;
     for (Uint32 rt = 0; rt < m_NumBoundRenderTargets; ++rt)
     {
         if (auto* pTexView = m_pBoundRenderTargets[rt].RawPtr())
         {
-            if (pTexView->GetTexture() == pTexture)
+            if (pTexView->GetTexture() == &Texture)
             {
                 m_pBoundRenderTargets[rt].Release();
                 bCommitRenderTargets = true;
@@ -1393,20 +1386,19 @@ void DeviceContextD3D11Impl::UnbindTextureFromRenderTarget(TextureBaseD3D11* pTe
         CommitRenderTargets();
     }
 
-    pTexture->ClearState(RESOURCE_STATE_RENDER_TARGET);
+    if (Texture.IsInKnownState())
+        Texture.ClearState(RESOURCE_STATE_RENDER_TARGET);
 }
 
-void DeviceContextD3D11Impl::UnbindTextureFromDepthStencil(TextureBaseD3D11* pTexD3D11)
+void DeviceContextD3D11Impl::UnbindTextureFromDepthStencil(TextureBaseD3D11& TexD3D11)
 {
-    VERIFY(pTexD3D11, "Null resource provided");
-    if (!pTexD3D11) return;
-
-    if (m_pBoundDepthStencil && m_pBoundDepthStencil->GetTexture() == pTexD3D11)
+    if (m_pBoundDepthStencil && m_pBoundDepthStencil->GetTexture() == &TexD3D11)
     {
         m_pBoundDepthStencil.Release();
         CommitRenderTargets();
     }
-    pTexD3D11->ClearState(RESOURCE_STATE_DEPTH_WRITE);
+    if (TexD3D11.IsInKnownState())
+        TexD3D11.ClearState(RESOURCE_STATE_DEPTH_WRITE);
 }
 
 void DeviceContextD3D11Impl::ResetRenderTargets()
@@ -1437,7 +1429,7 @@ void DeviceContextD3D11Impl::SetRenderTargets(Uint32                         Num
                 auto* pTex = ValidatedCast<TextureBaseD3D11>(ppRenderTargets[RT]->GetTexture());
                 if (StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
                 {
-                    UnbindTextureFromInput(pTex, pTex->GetD3D11Texture());
+                    UnbindTextureFromInput(*pTex, pTex->GetD3D11Texture());
                     if (pTex->IsInKnownState())
                         pTex->SetState(RESOURCE_STATE_RENDER_TARGET);
                 }
@@ -1455,7 +1447,7 @@ void DeviceContextD3D11Impl::SetRenderTargets(Uint32                         Num
             auto* pTex = ValidatedCast<TextureBaseD3D11>(pDepthStencil->GetTexture());
             if (StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
             {
-                UnbindTextureFromInput(pTex, pTex->GetD3D11Texture());
+                UnbindTextureFromInput(*pTex, pTex->GetD3D11Texture());
                 if (pTex->IsInKnownState())
                     pTex->SetState(RESOURCE_STATE_DEPTH_WRITE);
             }
@@ -2029,21 +2021,22 @@ void DeviceContextD3D11Impl::TransitionResource(TextureBaseD3D11& Texture, RESOU
     if ((NewState & RESOURCE_STATE_UNORDERED_ACCESS) != 0)
     {
         DEV_CHECK_ERR((NewState & (RESOURCE_STATE_GENERIC_READ | RESOURCE_STATE_INPUT_ATTACHMENT)) == 0, "Unordered access state is not compatible with any input state");
-        UnbindTextureFromInput(&Texture, Texture.GetD3D11Texture());
+        UnbindTextureFromInput(Texture, Texture.GetD3D11Texture());
     }
 
     if ((NewState & (RESOURCE_STATE_GENERIC_READ | RESOURCE_STATE_INPUT_ATTACHMENT)) != 0)
     {
         if ((OldState & RESOURCE_STATE_RENDER_TARGET) != 0)
-            UnbindTextureFromRenderTarget(&Texture);
+            UnbindTextureFromRenderTarget(Texture);
 
         if ((OldState & RESOURCE_STATE_DEPTH_WRITE) != 0)
-            UnbindTextureFromDepthStencil(&Texture);
+            UnbindTextureFromDepthStencil(Texture);
 
         if ((OldState & RESOURCE_STATE_UNORDERED_ACCESS) != 0)
         {
-            UnbindResourceFromUAV(&Texture, Texture.GetD3D11Texture());
-            Texture.ClearState(RESOURCE_STATE_UNORDERED_ACCESS);
+            UnbindResourceFromUAV(Texture.GetD3D11Texture());
+            if (Texture.IsInKnownState())
+                Texture.ClearState(RESOURCE_STATE_UNORDERED_ACCESS);
         }
     }
 
@@ -2080,12 +2073,14 @@ void DeviceContextD3D11Impl::TransitionResource(BufferD3D11Impl& Buffer, RESOURC
     if ((NewState & RESOURCE_STATE_UNORDERED_ACCESS) != 0)
     {
         DEV_CHECK_ERR((NewState & RESOURCE_STATE_GENERIC_READ) == 0, "Unordered access state is not compatible with any input state");
-        UnbindBufferFromInput(&Buffer, Buffer.m_pd3d11Buffer);
+        UnbindBufferFromInput(Buffer, OldState, Buffer.m_pd3d11Buffer);
     }
 
     if ((NewState & RESOURCE_STATE_GENERIC_READ) != 0)
     {
-        UnbindResourceFromUAV(&Buffer, Buffer.m_pd3d11Buffer);
+        UnbindResourceFromUAV(Buffer.m_pd3d11Buffer);
+        if (Buffer.IsInKnownState())
+            Buffer.ClearState(RESOURCE_STATE_UNORDERED_ACCESS);
     }
 
     if (UpdateResourceState)
