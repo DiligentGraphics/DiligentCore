@@ -262,38 +262,12 @@ if(PLATFORM_WIN32)
     # Use Volk
 elseif(PLATFORM_MACOS)
     # Use Volk
-elseif(PLATFORM_IOS)
-    if(CMAKE_OSX_SYSROOT STREQUAL "iphonesimulator" OR PLATFORM_IOS_SIMULATOR)
-        list(APPEND PRIVATE_DEPENDENCIES
-            "${MoltenVK_FRAMEWORK}/ios-arm64_x86_64-simulator/libMoltenVK.a"
-        )
-    else()
-        list(APPEND PRIVATE_DEPENDENCIES
-            "${MoltenVK_FRAMEWORK}/ios-arm64/libMoltenVK.a"
-        )
-    endif()
-
+elseif(PLATFORM_IOS OR PLATFORM_TVOS)
     find_library(CORE_GRAPHICS CoreGraphics)
     find_library(METAL_LIBRARY Metal)
     find_library(QUARTZ_CORE QuartzCore)
     find_library(UI_KIT UIKit)
-    list(APPEND PRIVATE_DEPENDENCIES ${CORE_GRAPHICS} ${METAL_LIBRARY} ${QUARTZ_CORE} ${UI_KIT})
-elseif(PLATFORM_TVOS)
-    if(CMAKE_OSX_SYSROOT STREQUAL "appletvsimulator" OR PLATFORM_TVOS_SIMULATOR)
-        list(APPEND PRIVATE_DEPENDENCIES
-            "${MoltenVK_FRAMEWORK}/tvos-arm64_x86_64-simulator/libMoltenVK.a"
-        )
-    else()
-        list(APPEND PRIVATE_DEPENDENCIES
-            "${MoltenVK_FRAMEWORK}/tvos-arm64/libMoltenVK.a"
-        )
-    endif()
-
-    find_library(CORE_GRAPHICS CoreGraphics)
-    find_library(METAL_LIBRARY Metal)
-    find_library(QUARTZ_CORE QuartzCore)
-    find_library(UI_KIT UIKit)
-    list(APPEND PRIVATE_DEPENDENCIES ${CORE_GRAPHICS} ${METAL_LIBRARY} ${QUARTZ_CORE} ${UI_KIT})
+    list(APPEND PRIVATE_DEPENDENCIES ${MOLTENVK_LIBRARY} ${CORE_GRAPHICS} ${METAL_LIBRARY} ${QUARTZ_CORE} ${UI_KIT})
 elseif(PLATFORM_LINUX)
     # Use Volk
     list(APPEND PRIVATE_DEPENDENCIES dl)
