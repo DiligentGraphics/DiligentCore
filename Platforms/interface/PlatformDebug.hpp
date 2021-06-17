@@ -45,10 +45,10 @@ using PlatformDebug = AndroidDebug;
 #    include "../Linux/interface/LinuxDebug.hpp"
 using PlatformDebug = LinuxDebug;
 
-#elif PLATFORM_MACOS || PLATFORM_IOS || PLATFORM_APPLETV
+#elif PLATFORM_MACOS || PLATFORM_IOS || PLATFORM_TVOS
 #    include "../Apple/interface/AppleDebug.hpp"
 using PlatformDebug = AppleDebug;
 
 #else
-#    error Unknown platform. Please define one of the following macros as 1:  PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS, PLATFORM_APPLETV.
+#    error Unknown platform. Please define one of the following macros as 1:  PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS, PLATFORM_TVOS.
 #endif

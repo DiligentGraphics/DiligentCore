@@ -29,7 +29,7 @@
 
 #include "../../GraphicsEngine/interface/RenderDevice.h"
 
-#if PLATFORM_APPLETV
+#if PLATFORM_TVOS
 @protocol MTLAccelerationStructure; // Not available in tvOS
 #endif
 

@@ -80,7 +80,7 @@ String BuildGLSLSourceString(const ShaderCreateInfo&    ShaderCI,
         "#define DESKTOP_GL 1\n"
         "#define PLATFORM_MACOS 1\n");
 
-#elif PLATFORM_ANDROID || PLATFORM_IOS || PLATFORM_APPLETV
+#elif PLATFORM_ANDROID || PLATFORM_IOS || PLATFORM_TVOS
     bool IsES30        = false;
     bool IsES31OrAbove = false;
     bool IsES32OrAbove = false;
@@ -126,8 +126,8 @@ String BuildGLSLSourceString(const ShaderCreateInfo&    ShaderCI,
     GLSLSource.append("#define PLATFORM_ANDROID 1\n");
 #    elif PLATFORM_IOS
     GLSLSource.append("#define PLATFORM_IOS 1\n");
-#    elif PLATFORM_APPLETV
-    GLSLSource.append("#define PLATFORM_APPLETV 1\n");
+#    elif PLATFORM_TVOS
+    GLSLSource.append("#define PLATFORM_TVOS 1\n");
 #    else
 #        error "Unexpected platform"
 #    endif

@@ -89,7 +89,7 @@ inline std::wstring WidenString(const std::string& Str)
 
 inline int StrCmpNoCase(const char* Str1, const char* Str2, size_t NumChars)
 {
-#if PLATFORM_ANDROID || PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS || PLATFORM_APPLETV
+#if PLATFORM_ANDROID || PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS || PLATFORM_TVOS
 #    define _strnicmp strncasecmp
 #endif
 
@@ -98,7 +98,7 @@ inline int StrCmpNoCase(const char* Str1, const char* Str2, size_t NumChars)
 
 inline int StrCmpNoCase(const char* Str1, const char* Str2)
 {
-#if PLATFORM_ANDROID || PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS || PLATFORM_APPLETV
+#if PLATFORM_ANDROID || PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS || PLATFORM_TVOS
 #    define _stricmp strcasecmp
 #endif
 
