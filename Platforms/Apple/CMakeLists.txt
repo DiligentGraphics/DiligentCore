@@ -6,6 +6,8 @@ if(PLATFORM_MACOS)
     set(APPLE_NATIVE_WINDOW_H interface/MacOSNativeWindow.h)
 elseif(PLATFORM_IOS)
     set(APPLE_NATIVE_WINDOW_H interface/IOSNativeWindow.h)
+elseif(PLATFORM_APPLETV)
+    set(APPLE_NATIVE_WINDOW_H interface/TVOSNativeWindow.h)
 endif()
 
 set(INTERFACE
@@ -45,6 +47,12 @@ if(PLATFORM_MACOS)
         ${APP_KIT}
     )
 elseif(PLATFORM_IOS)
+    target_link_libraries(Diligent-ApplePlatform
+    PRIVATE
+        ${CORE_FOUNDATION}
+        ${FOUNDATION}
+    )
+elseif(PLATFORM_APPLETV)
     target_link_libraries(Diligent-ApplePlatform
     PRIVATE
         ${CORE_FOUNDATION}

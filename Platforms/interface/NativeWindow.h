@@ -53,8 +53,12 @@
 
 #    include "../Apple/interface/IOSNativeWindow.h"
 
+#elif PLATFORM_APPLETV
+
+#    include "../Apple/interface/TVOSNativeWindow.h"
+
 #else
-#    error Unknown platform. Please define one of the following macros as 1: PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS.
+#    error Unknown platform. Please define one of the following macros as 1: PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS, PLATFORM_APPLETV.
 #endif
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
@@ -83,8 +87,12 @@ typedef struct MacOSNativeWindow NativeWindow;
 
 typedef struct IOSNativeWindow NativeWindow;
 
+#elif PLATFORM_APPLETV
+
+typedef struct AppleTVNativeWindow NativeWindow;
+
 #else
-#    error Unknown platform. Please define one of the following macros as 1: PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS.
+#    error Unknown platform. Please define one of the following macros as 1: PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS, PLATFORM_APPLETV.
 #endif
 
 DILIGENT_END_NAMESPACE // namespace Diligent

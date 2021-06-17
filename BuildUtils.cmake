@@ -213,8 +213,8 @@ endfunction()
 function(get_backend_libraries_type _LIB_TYPE)
     if(PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_ANDROID OR PLATFORM_UNIVERSAL_WINDOWS OR PLATFORM_MACOS)
         set(LIB_TYPE "shared")
-    elseif(PLATFORM_IOS)
-        # Statically link with the engine on iOS.
+    elseif(PLATFORM_IOS OR PLATFORM_APPLETV)
+        # Statically link with the engine on iOS and tvOS.
         # It is also possible to link dynamically by
         # putting the library into the framework.
         set(LIB_TYPE "static")

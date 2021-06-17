@@ -15,7 +15,7 @@ set(INTERFACE
     interface/DebugUtilities.hpp
 )
 
-if(PLATFORM_LINUX OR PLATFORM_WIN32 OR PLATFORM_MACOS OR PLATFORM_IOS)
+if(PLATFORM_LINUX OR PLATFORM_WIN32 OR PLATFORM_APPLE)
     list(APPEND SOURCE src/StandardFile.cpp)
     list(APPEND INTERFACE interface/StandardFile.hpp)
 endif()

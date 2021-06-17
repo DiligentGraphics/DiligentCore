@@ -53,7 +53,7 @@ using CFile      = AndroidFile;
 using FileSystem = LinuxFileSystem;
 using CFile      = LinuxFile;
 
-#elif PLATFORM_MACOS || PLATFORM_IOS
+#elif PLATFORM_MACOS || PLATFORM_IOS || PLATFORM_APPLETV
 
 #    include "../Apple/interface/AppleFileSystem.hpp"
 using FileSystem = AppleFileSystem;
@@ -61,6 +61,6 @@ using CFile      = AppleFile;
 
 #else
 
-#    error Unknown platform. Please define one of the following macros as 1:  PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS.
+#    error Unknown platform. Please define one of the following macros as 1:  PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS, PLATFORM_APPLETV.
 
 #endif
