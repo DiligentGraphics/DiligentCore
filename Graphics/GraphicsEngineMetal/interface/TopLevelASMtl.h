@@ -48,7 +48,7 @@ static const INTERFACE_ID IID_TopLevelASMtl =
 DILIGENT_BEGIN_INTERFACE(ITopLevelASMtl, ITopLevelAS)
 {
     /// Returns a pointer to a Metal acceleration structure object.
-    VIRTUAL id<MTLAccelerationStructure> METHOD(GetMtlAccelerationStructure)(THIS) CONST API_AVAILABLE(ios(14), macosx(11.0)) PURE;
+    VIRTUAL id<MTLAccelerationStructure> METHOD(GetMtlAccelerationStructure)(THIS) CONST API_AVAILABLE(ios(14), macosx(11.0)) API_UNAVAILABLE(tvos) PURE;
 };
 DILIGENT_END_INTERFACE
 

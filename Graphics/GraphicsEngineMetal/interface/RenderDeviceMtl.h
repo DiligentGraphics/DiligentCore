@@ -72,14 +72,14 @@ DILIGENT_BEGIN_INTERFACE(IRenderDeviceMtl, IRenderDevice)
                                                    id<MTLAccelerationStructure> mtlBLAS,
                                                    const BottomLevelASDesc REF  Desc,
                                                    RESOURCE_STATE               InitialState,
-                                                   IBottomLevelAS**             ppBLAS) API_AVAILABLE(ios(14), macosx(11.0)) PURE;
+                                                   IBottomLevelAS**             ppBLAS) API_AVAILABLE(ios(14), macosx(11.0)) API_UNAVAILABLE(tvos) PURE;
 
     /// Creates a buffer from existing Metal resource
     VIRTUAL void METHOD(CreateTLASFromMtlResource)(THIS_
                                                    id<MTLAccelerationStructure> mtlTLAS,
                                                    const TopLevelASDesc REF     Desc,
                                                    RESOURCE_STATE               InitialState,
-                                                   ITopLevelAS**                ppTLAS) API_AVAILABLE(ios(14), macosx(11.0)) PURE;
+                                                   ITopLevelAS**                ppTLAS) API_AVAILABLE(ios(14), macosx(11.0)) API_UNAVAILABLE(tvos) PURE;
 };
 DILIGENT_END_INTERFACE
 
