@@ -142,19 +142,14 @@ public:
     {
         if (this->m_Desc.Type != QUERY_TYPE_TIMESTAMP)
         {
-            DEV_CHECK_ERR(m_State == QueryState::Querying,
+            DEV_CHECK_ERR(m_State == QueryState::Querying && m_pContext != nullptr,
                           "Attempting to end query '", this->m_Desc.Name, "' that has not been begun.");
-        }
-
-        if (m_pContext == nullptr)
-        {
-            DEV_CHECK_ERR(this->m_Desc.Type == QUERY_TYPE_TIMESTAMP,
-                          "Ending query '", this->m_Desc.Name, "' that has not been begun.");
-            m_pContext = pContext;
+            DEV_CHECK_ERR(m_pContext == pContext, "Query '", this->m_Desc.Name, "' has been begun by another context.");
         }
         else
         {
-            DEV_CHECK_ERR(m_pContext == pContext, "Query '", this->m_Desc.Name, "' has been begun by another context.");
+            // Timestamp queries are never begun
+            m_pContext = pContext;
         }
 
         m_State = QueryState::Ended;
