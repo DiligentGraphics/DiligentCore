@@ -6,7 +6,7 @@ jobs:
   build-tvos-clang:
     strategy:
       matrix:
-        config: [Debug, Release]
+        config: [Release]
 
     runs-on: macos-latest
     name: tvOS, ${{ matrix.config }}
