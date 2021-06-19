@@ -10,17 +10,16 @@ The module's cmake script defines a number of variables that are required to gen
 |<img src="media/windows-logo.png" width=24 valign="middle"> Win32               | [![Build Status](https://github.com/DiligentGraphics/DiligentCore/workflows/Windows/badge.svg?branch=master)](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/windows.yml?query=branch%3Amaster) |
 |<img src="media/uwindows-logo.png" width=24 valign="middle"> Universal Windows  | [![Build Status](https://github.com/DiligentGraphics/DiligentCore/workflows/UWP/badge.svg?branch=master)](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/uwp.yml?query=branch%3Amaster)         |
 |<img src="media/linux-logo.png" width=24 valign="middle"> Linux                 | [![Build Status](https://github.com/DiligentGraphics/DiligentCore/workflows/Linux/badge.svg?branch=master)](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/linux.yml?query=branch%3Amaster)     |
+|<img src="media/android-logo.png" width=24 valign="middle"> Android             | [![Build Status](https://github.com/DiligentGraphics/DiligentCore/workflows/Android/badge.svg?branch=master)](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/android.yml?query=branch%3Amaster) |
 |<img src="media/macos-logo.png" width=24 valign="middle"> MacOS                 | [![Build Status](https://github.com/DiligentGraphics/DiligentCore/workflows/MacOS/badge.svg?branch=master)](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/macos.yml?query=branch%3Amaster)     |
 |<img src="media/apple-logo.png" width=24 valign="middle"> iOS                   | [![Build Status](https://github.com/DiligentGraphics/DiligentCore/workflows/iOS/badge.svg?branch=master)](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/ios.yml?query=branch%3Amaster)         |
 |<img src="media/tvos-logo.png" width=24 valign="middle"> tvOS                   | [![Build Status](https://github.com/DiligentGraphics/DiligentCore/workflows/tvOS/badge.svg?branch=master)](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/tvos.yml?query=branch%3Amaster)       |
-|<img src="media/android-logo.png" width=24 valign="middle"> Android             | [![Build Status](https://github.com/DiligentGraphics/DiligentCore/workflows/Android/badge.svg?branch=master)](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/android.yml?query=branch%3Amaster) |
+
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](License.txt)
 [![Chat on gitter](https://badges.gitter.im/gitterHQ/gitter.png)](https://gitter.im/diligent-engine)
 [![Chat on Discord](https://img.shields.io/discord/730091778081947680?logo=discord)](https://discord.gg/t7HGBK7)
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/bb1c00eacb1740d68339d3a45f4c5756)](https://www.codacy.com/manual/DiligentGraphics/DiligentCore?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=DiligentGraphics/DiligentCore&amp;utm_campaign=Badge_Grade)
 [![Appveyor Build Status](https://ci.appveyor.com/api/projects/status/github/DiligentGraphics/DiligentCore?svg=true)](https://ci.appveyor.com/project/DiligentGraphics/diligentcore)
-[![Travis Build Status](https://travis-ci.org/DiligentGraphics/DiligentCore.svg?branch=master)](https://travis-ci.org/DiligentGraphics/DiligentCore)
 [![Lines of Code](https://tokei.rs/b1/github.com/DiligentGraphics/DiligentCore)](https://github.com/DiligentGraphics/DiligentCore)
 
 
