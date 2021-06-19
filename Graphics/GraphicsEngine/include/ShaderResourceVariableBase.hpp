@@ -673,7 +673,7 @@ struct ShaderVariableBase : public ResourceVariableBaseInterface
     virtual void DILIGENT_CALL_TYPE SetBufferRange(IDeviceObject* pObject,
                                                    Uint32         Offset,
                                                    Uint32         Size,
-                                                   Uint32         ArrayIndex) override final
+                                                   Uint32         ArrayIndex) override
     {
         DEV_CHECK_ERR(GetDesc().ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, "SetBufferRange() is only allowed for constant buffers.");
         static_cast<ThisImplType*>(this)->BindResource(BindResourceInfo{ArrayIndex, pObject, Offset, Size});

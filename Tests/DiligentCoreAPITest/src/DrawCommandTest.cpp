@@ -374,6 +374,58 @@ void main()
 // clang-format on
 } // namespace GLSL
 
+namespace MSL
+{
+// clang-format off
+const std::string DrawTest_ConstantBuffers{
+R"(
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct PosData
+{
+    float4 Positions[3];
+};
+
+struct ColData
+{
+    float4 Colors[3];
+};
+
+struct VSMain_out
+{
+    float3 Color    [[user(locn0)]];
+    float4 Position [[position]];
+};
+
+vertex VSMain_out VSMain(constant PosData& cbPositions [[buffer(0)]],
+                         constant ColData& cbColors    [[buffer(1)]],
+                         uint     VertexId             [[vertex_id]])
+{
+    VSMain_out out = {};
+    out.Position = cbPositions.Positions[VertexId];
+    out.Color    = cbColors.Colors[VertexId].xyz;
+    return out;
+}
+
+struct PS_out
+{
+    float4 Color [[color(0)]];
+};
+
+fragment PS_out PSMain(VSMain_out in [[stage_in]])
+{
+    PS_out out = {};
+    out.Color = float4(in.Color, 1.0);
+    return out;
+}
+)"
+};
+// clang-format on
+} // namespace MSL
+
 struct Vertex
 {
     float4 Pos;
@@ -2750,6 +2802,42 @@ TEST_F(DrawCommandTest, UniformBufferOffsets)
 TEST_F(DrawCommandTest, StructBufferOffsets)
 {
     TestUniOrStructBufferOffsets(BUFFER_MODE_STRUCTURED);
+}
+
+// Test uniform buffer offsets with MSL shaders
+TEST_F(DrawCommandTest, UniformBufferOffsets_MSL)
+{
+    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+    if (!pDevice->GetDeviceInfo().IsMetalDevice())
+        GTEST_SKIP() << "This is a Metal-specific test";
+
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_MSL;
+    ShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+
+    RefCntAutoPtr<IShader> pVS;
+    {
+        ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
+        ShaderCI.EntryPoint      = "VSMain";
+        ShaderCI.Desc.Name       = "Draw command test buffer offsets - VS";
+        ShaderCI.Source          = MSL::DrawTest_ConstantBuffers.c_str();
+        pDevice->CreateShader(ShaderCI, &pVS);
+        ASSERT_NE(pVS, nullptr);
+    }
+
+    RefCntAutoPtr<IShader> pPS;
+    {
+        ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
+        ShaderCI.EntryPoint      = "PSMain";
+        ShaderCI.Desc.Name       = "Draw command test buffer offsets - PS";
+        ShaderCI.Source          = MSL::DrawTest_ConstantBuffers.c_str();
+        pDevice->CreateShader(ShaderCI, &pPS);
+        ASSERT_NE(pPS, nullptr);
+    }
+
+    DrawWithUniOrStructBufferOffsets(pVS, pPS, BUFFER_MODE_UNDEFINED, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE,
+                                     USAGE_DYNAMIC, SHADER_VARIABLE_FLAG_NONE);
 }
 
 } // namespace
