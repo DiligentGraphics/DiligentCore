@@ -105,13 +105,17 @@ public:
     /// \param pRefCounters      - Reference counters object that controls the lifetime of this resource signature.
     /// \param pDevice           - Pointer to the device.
     /// \param Desc              - Resource signature description.
+    /// \param ShaderStages      - Active shader stages. This parameter is only provided for default resource signatures
+    ///                            created by PSOs and matches the active shader stages in the PSO.
     /// \param bIsDeviceInternal - Flag indicating if this resource signature is an internal device object and
     ///                            must not keep a strong reference to the device.
     PipelineResourceSignatureBase(IReferenceCounters*                  pRefCounters,
                                   RenderDeviceImplType*                pDevice,
                                   const PipelineResourceSignatureDesc& Desc,
+                                  SHADER_TYPE                          ShaderStages      = SHADER_TYPE_UNKNOWN,
                                   bool                                 bIsDeviceInternal = false) :
         TDeviceObjectBase{pRefCounters, pDevice, Desc, bIsDeviceInternal},
+        m_ShaderStages{ShaderStages},
         m_SRBMemAllocator{GetRawAllocator()}
     {
         // Don't read from m_Desc until it was allocated and copied in CopyDescription()

@@ -77,8 +77,9 @@ BINDING_RANGE PipelineResourceToBindingRange(const PipelineResourceDesc& Desc)
 PipelineResourceSignatureGLImpl::PipelineResourceSignatureGLImpl(IReferenceCounters*                  pRefCounters,
                                                                  RenderDeviceGLImpl*                  pDeviceGL,
                                                                  const PipelineResourceSignatureDesc& Desc,
+                                                                 SHADER_TYPE                          ShaderStages,
                                                                  bool                                 bIsDeviceInternal) :
-    TPipelineResourceSignatureBase{pRefCounters, pDeviceGL, Desc, bIsDeviceInternal}
+    TPipelineResourceSignatureBase{pRefCounters, pDeviceGL, Desc, ShaderStages, bIsDeviceInternal}
 {
     try
     {

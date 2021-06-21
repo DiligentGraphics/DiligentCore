@@ -140,8 +140,9 @@ inline PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID PipelineResourceSignat
 PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCounters*                  pRefCounters,
                                                                  RenderDeviceVkImpl*                  pDevice,
                                                                  const PipelineResourceSignatureDesc& Desc,
+                                                                 SHADER_TYPE                          ShaderStages,
                                                                  bool                                 bIsDeviceInternal) :
-    TPipelineResourceSignatureBase{pRefCounters, pDevice, Desc, bIsDeviceInternal}
+    TPipelineResourceSignatureBase{pRefCounters, pDevice, Desc, ShaderStages, bIsDeviceInternal}
 {
     try
     {

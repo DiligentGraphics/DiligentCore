@@ -78,6 +78,7 @@ public:
     PipelineResourceSignatureVkImpl(IReferenceCounters*                  pRefCounters,
                                     RenderDeviceVkImpl*                  pDevice,
                                     const PipelineResourceSignatureDesc& Desc,
+                                    SHADER_TYPE                          ShaderStages      = SHADER_TYPE_UNKNOWN,
                                     bool                                 bIsDeviceInternal = false);
     ~PipelineResourceSignatureVkImpl();
 

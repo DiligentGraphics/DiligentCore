@@ -729,7 +729,7 @@ RefCntAutoPtr<PipelineResourceSignatureVkImpl> PipelineStateVkImpl::CreateDefaul
     constexpr bool bIsDeviceInternal = true;
     // Use immutable samplers from ResourceLayout.
     constexpr ImmutableSamplerDesc* pImmutableSamplers = nullptr;
-    return TPipelineStateBase::CreateDefaultSignature(Resources, pCombinedSamplerSuffix, pImmutableSamplers, bIsDeviceInternal);
+    return TPipelineStateBase::CreateDefaultSignature(Resources, pCombinedSamplerSuffix, pImmutableSamplers, GetActiveShaderStages(), bIsDeviceInternal);
 }
 
 void PipelineStateVkImpl::InitPipelineLayout(TShaderStages& ShaderStages)

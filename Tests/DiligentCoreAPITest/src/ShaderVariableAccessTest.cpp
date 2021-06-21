@@ -1120,4 +1120,87 @@ TEST(ShaderResourceLayout, VariableAccess)
     pContext->Draw(DrawAttrs);
 }
 
+
+TEST(ShaderResourceLayout, NoResourcesPSO)
+{
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+
+    auto* const pEnv       = TestingEnvironment::GetInstance();
+    auto* const pDevice    = pEnv->GetDevice();
+    auto* const pContext   = pEnv->GetDeviceContext();
+    auto* const pSwapChain = pEnv->GetSwapChain();
+
+    constexpr char   DummyVS[] = R"(
+float4 main() : SV_Position
+{
+    return float4(0.0, 0.0, 0.0, 0.0);
+}
+)";
+    constexpr char   DummyPS[] = R"(
+float4 main() : SV_Target
+{
+    return float4(0.0, 0.0, 0.0, 0.0);
+}
+)";
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.EntryPoint                 = "main";
+    ShaderCI.UseCombinedTextureSamplers = true;
+    ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
+
+    RefCntAutoPtr<IShader> pVS;
+    ShaderCI.Source          = DummyVS;
+    ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
+    pDevice->CreateShader(ShaderCI, &pVS);
+    ASSERT_NE(pVS, nullptr);
+
+    RefCntAutoPtr<IShader> pPS;
+    ShaderCI.Source          = DummyPS;
+    ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
+    pDevice->CreateShader(ShaderCI, &pPS);
+    ASSERT_NE(pPS, nullptr);
+
+    GraphicsPipelineStateCreateInfo PSOCreateInfo;
+
+    auto& PSODesc          = PSOCreateInfo.PSODesc;
+    auto& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
+
+    PSODesc.Name                     = "No resources PSO";
+    PSODesc.SRBAllocationGranularity = 16;
+
+    GraphicsPipeline.NumRenderTargets = 1;
+    GraphicsPipeline.RTVFormats[0]    = TEX_FORMAT_RGBA8_UNORM;
+
+    PSOCreateInfo.pVS = pVS;
+    PSOCreateInfo.pPS = pPS;
+
+    RefCntAutoPtr<IPipelineState> pPSO;
+    pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);
+    ASSERT_NE(pPSO, nullptr);
+
+    EXPECT_EQ(pPSO->GetStaticVariableCount(SHADER_TYPE_VERTEX), 0u);
+    EXPECT_EQ(pPSO->GetStaticVariableCount(SHADER_TYPE_PIXEL), 0u);
+    EXPECT_EQ(pPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, "NonexistentResource"), nullptr);
+    EXPECT_EQ(pPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, "NonexistentResource"), nullptr);
+    EXPECT_EQ(pPSO->GetStaticVariableByIndex(SHADER_TYPE_VERTEX, 0), nullptr);
+    EXPECT_EQ(pPSO->GetStaticVariableByIndex(SHADER_TYPE_PIXEL, 0), nullptr);
+
+    RefCntAutoPtr<IShaderResourceBinding> pSRB;
+    pPSO->CreateShaderResourceBinding(&pSRB, true);
+
+    EXPECT_EQ(pSRB->GetVariableCount(SHADER_TYPE_VERTEX), 0u);
+    EXPECT_EQ(pSRB->GetVariableCount(SHADER_TYPE_PIXEL), 0u);
+    EXPECT_EQ(pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "NonexistentResource"), nullptr);
+    EXPECT_EQ(pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "NonexistentResource"), nullptr);
+
+    ITextureView* ppRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
+    pContext->SetRenderTargets(1, ppRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    float ClearColor[] = {0.125, 0.375, 0.125, 0.75};
+    pContext->ClearRenderTarget(ppRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    pContext->SetPipelineState(pPSO);
+    pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    pContext->Draw(DrawAttribs{3, DRAW_FLAG_VERIFY_ALL});
+}
+
 } // namespace

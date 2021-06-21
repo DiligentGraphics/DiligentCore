@@ -139,7 +139,7 @@ RefCntAutoPtr<PipelineResourceSignatureGLImpl> PipelineStateGLImpl::CreateDefaul
     // This is necessary to avoid cyclic references from TexRegionRenderer.
     // This may never be a problem as the PSO keeps the reference to the device if necessary.
     constexpr bool bIsDeviceInternal = true;
-    return TPipelineStateBase::CreateDefaultSignature(Resources, PipelineResourceSignatureDesc{}.CombinedSamplerSuffix, pImmutableSamplers, bIsDeviceInternal);
+    return TPipelineStateBase::CreateDefaultSignature(Resources, PipelineResourceSignatureDesc{}.CombinedSamplerSuffix, pImmutableSamplers, GetActiveShaderStages(), bIsDeviceInternal);
 }
 
 void PipelineStateGLImpl::InitResourceLayout(const TShaderStages& ShaderStages,

@@ -673,14 +673,15 @@ void RenderDeviceVkImpl::CreateSBT(const ShaderBindingTableDesc& Desc,
 void RenderDeviceVkImpl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
                                                          IPipelineResourceSignature**         ppSignature)
 {
-    CreatePipelineResourceSignature(Desc, ppSignature, false);
+    CreatePipelineResourceSignature(Desc, ppSignature, SHADER_TYPE_UNKNOWN, false);
 }
 
 void RenderDeviceVkImpl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
                                                          IPipelineResourceSignature**         ppSignature,
+                                                         SHADER_TYPE                          ShaderStages,
                                                          bool                                 IsDeviceInternal)
 {
-    CreatePipelineResourceSignatureImpl(ppSignature, Desc, IsDeviceInternal);
+    CreatePipelineResourceSignatureImpl(ppSignature, Desc, ShaderStages, IsDeviceInternal);
 }
 
 std::vector<uint32_t> RenderDeviceVkImpl::ConvertCmdQueueIdsToQueueFamilies(Uint64 CommandQueueMask) const

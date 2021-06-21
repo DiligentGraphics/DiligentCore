@@ -148,6 +148,7 @@ public:
 
     void CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
                                          IPipelineResourceSignature**         ppSignature,
+                                         SHADER_TYPE                          ShaderStages,
                                          bool                                 IsDeviceInternal);
 
     /// Implementation of IRenderDeviceD3D12::GetD3D12Device().

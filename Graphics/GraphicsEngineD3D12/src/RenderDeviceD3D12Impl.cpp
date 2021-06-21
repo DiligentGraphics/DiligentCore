@@ -569,14 +569,15 @@ void RenderDeviceD3D12Impl::CreateSBT(const ShaderBindingTableDesc& Desc,
 void RenderDeviceD3D12Impl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
                                                             IPipelineResourceSignature**         ppSignature)
 {
-    CreatePipelineResourceSignature(Desc, ppSignature, false);
+    CreatePipelineResourceSignature(Desc, ppSignature, SHADER_TYPE_UNKNOWN, false);
 }
 
 void RenderDeviceD3D12Impl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
                                                             IPipelineResourceSignature**         ppSignature,
+                                                            SHADER_TYPE                          ShaderStages,
                                                             bool                                 IsDeviceInternal)
 {
-    CreatePipelineResourceSignatureImpl(ppSignature, Desc, IsDeviceInternal);
+    CreatePipelineResourceSignatureImpl(ppSignature, Desc, ShaderStages, IsDeviceInternal);
 }
 
 DescriptorHeapAllocation RenderDeviceD3D12Impl::AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count /*= 1*/)

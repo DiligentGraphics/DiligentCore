@@ -57,6 +57,7 @@ public:
     PipelineResourceSignatureD3D11Impl(IReferenceCounters*                  pRefCounters,
                                        RenderDeviceD3D11Impl*               pDevice,
                                        const PipelineResourceSignatureDesc& Desc,
+                                       SHADER_TYPE                          ShaderStages      = SHADER_TYPE_UNKNOWN,
                                        bool                                 bIsDeviceInternal = false);
     ~PipelineResourceSignatureD3D11Impl();
 

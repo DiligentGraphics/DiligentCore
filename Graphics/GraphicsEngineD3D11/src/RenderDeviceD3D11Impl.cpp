@@ -300,14 +300,15 @@ void RenderDeviceD3D11Impl::CreateSBT(const ShaderBindingTableDesc& Desc,
 void RenderDeviceD3D11Impl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
                                                             IPipelineResourceSignature**         ppSignature)
 {
-    CreatePipelineResourceSignature(Desc, ppSignature, false);
+    CreatePipelineResourceSignature(Desc, ppSignature, SHADER_TYPE_UNKNOWN, false);
 }
 
 void RenderDeviceD3D11Impl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
                                                             IPipelineResourceSignature**         ppSignature,
+                                                            SHADER_TYPE                          ShaderStages,
                                                             bool                                 IsDeviceInternal)
 {
-    CreatePipelineResourceSignatureImpl(ppSignature, Desc, IsDeviceInternal);
+    CreatePipelineResourceSignatureImpl(ppSignature, Desc, ShaderStages, IsDeviceInternal);
 }
 
 void RenderDeviceD3D11Impl::IdleGPU()

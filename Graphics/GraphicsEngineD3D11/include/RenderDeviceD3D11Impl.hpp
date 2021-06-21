@@ -114,6 +114,7 @@ public:
 
     void CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
                                          IPipelineResourceSignature**         ppSignature,
+                                         SHADER_TYPE                          ShaderStages,
                                          bool                                 IsDeviceInternal);
 
     /// Implementation of IRenderDeviceD3D11::GetD3D11Device() in Direct3D11 backend.

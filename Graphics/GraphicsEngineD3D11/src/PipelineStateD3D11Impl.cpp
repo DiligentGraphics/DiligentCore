@@ -106,7 +106,8 @@ RefCntAutoPtr<PipelineResourceSignatureD3D11Impl> PipelineStateD3D11Impl::Create
 
     // Use immutable samplers from ResourceLayout.
     constexpr ImmutableSamplerDesc* pImmutableSamplers = nullptr;
-    return TPipelineStateBase::CreateDefaultSignature(Resources, pCombinedSamplerSuffix, pImmutableSamplers);
+    constexpr bool                  IsDeviceInternal   = false;
+    return TPipelineStateBase::CreateDefaultSignature(Resources, pCombinedSamplerSuffix, pImmutableSamplers, GetActiveShaderStages(), IsDeviceInternal);
 }
 
 void PipelineStateD3D11Impl::InitResourceLayouts(const std::vector<ShaderD3D11Impl*>& Shaders,

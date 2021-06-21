@@ -405,7 +405,7 @@ RefCntAutoPtr<PipelineResourceSignatureD3D12Impl> PipelineStateD3D12Impl::Create
     constexpr bool bIsDeviceInternal = true;
     // Use immutable samplers from ResourceLayout.
     constexpr ImmutableSamplerDesc* pImmutableSamplers = nullptr;
-    return TPipelineStateBase::CreateDefaultSignature(Resources, pCombinedSamplerSuffix, pImmutableSamplers, bIsDeviceInternal);
+    return TPipelineStateBase::CreateDefaultSignature(Resources, pCombinedSamplerSuffix, pImmutableSamplers, GetActiveShaderStages(), bIsDeviceInternal);
 }
 
 void PipelineStateD3D12Impl::InitRootSignature(TShaderStages&           ShaderStages,

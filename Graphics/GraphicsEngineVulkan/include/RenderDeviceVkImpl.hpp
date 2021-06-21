@@ -140,6 +140,7 @@ public:
 
     void CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
                                          IPipelineResourceSignature**         ppSignature,
+                                         SHADER_TYPE                          ShaderStages,
                                          bool                                 IsDeviceInternal);
 
     /// Implementation of IRenderDeviceVk::GetVkDevice().

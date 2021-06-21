@@ -114,8 +114,9 @@ void ValidatePipelineResourceSignatureDescD3D12(const PipelineResourceSignatureD
 PipelineResourceSignatureD3D12Impl::PipelineResourceSignatureD3D12Impl(IReferenceCounters*                  pRefCounters,
                                                                        RenderDeviceD3D12Impl*               pDevice,
                                                                        const PipelineResourceSignatureDesc& Desc,
+                                                                       SHADER_TYPE                          ShaderStages,
                                                                        bool                                 bIsDeviceInternal) :
-    TPipelineResourceSignatureBase{pRefCounters, pDevice, Desc, bIsDeviceInternal}
+    TPipelineResourceSignatureBase{pRefCounters, pDevice, Desc, ShaderStages, bIsDeviceInternal}
 {
     try
     {
