@@ -49,6 +49,8 @@ namespace Testing
 class TestingEnvironment : public ::testing::Environment
 {
 public:
+    static TestingEnvironment* Initialize(int argc, char** argv);
+
     struct CreateInfo
     {
         RENDER_DEVICE_TYPE deviceType                = RENDER_DEVICE_TYPE_UNDEFINED;

@@ -25,7 +25,7 @@
  *  of the possibility of such damages.
  */
 
-#include "../../include/GL/TestingEnvironmentGL.hpp"
+#include "../../../GPUTestFramework/include/GL/TestingEnvironmentGL.hpp"
 #include "../include/GLTypeConversions.hpp"
 
 #include "gtest/gtest.h"
