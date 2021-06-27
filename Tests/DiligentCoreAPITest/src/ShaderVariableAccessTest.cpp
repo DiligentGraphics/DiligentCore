@@ -1148,12 +1148,14 @@ float4 main() : SV_Target
     ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
 
     RefCntAutoPtr<IShader> pVS;
+    ShaderCI.Desc.Name       = "DummyVS";
     ShaderCI.Source          = DummyVS;
     ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
     pDevice->CreateShader(ShaderCI, &pVS);
     ASSERT_NE(pVS, nullptr);
 
     RefCntAutoPtr<IShader> pPS;
+    ShaderCI.Desc.Name       = "DummyPS";
     ShaderCI.Source          = DummyPS;
     ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
     pDevice->CreateShader(ShaderCI, &pPS);
