@@ -1974,6 +1974,9 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
                  TimelineSemaphoreFeats.timelineSemaphore != VK_FALSE);
 
     INIT_FEATURE(TileShaders, false); // Not currently supported
+
+    INIT_FEATURE(TransferQueueTimestampQueries,
+                 ExtFeatures.HostQueryReset.hostQueryReset != VK_FALSE);
 #undef INIT_FEATURE
 
     // Not supported in Vulkan on top of Metal.
@@ -1984,7 +1987,7 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
 #endif
 
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(DeviceFeatures) == 37, "Did you add a new feature to DeviceFeatures? Please handle its satus here (if necessary).");
+    static_assert(sizeof(DeviceFeatures) == 38, "Did you add a new feature to DeviceFeatures? Please handle its satus here (if necessary).");
 #endif
 
     return Features;

@@ -57,6 +57,9 @@ public:
     /// Implementation of IQuery::GetData().
     virtual bool DILIGENT_CALL_TYPE GetData(void* pData, Uint32 DataSize, bool AutoInvalidate) override final;
 
+    /// Implementation of IQuery::Invalidate().
+    virtual void DILIGENT_CALL_TYPE Invalidate() override final;
+
     /// Implementation of IQueryD3D12::GetD3D12QueryHeap().
     virtual ID3D12QueryHeap* DILIGENT_CALL_TYPE GetD3D12QueryHeap() override final;
 
@@ -67,9 +70,14 @@ public:
         return m_QueryHeapIndex[QueryId];
     }
 
+    bool OnBeginQuery(DeviceContextD3D12Impl* pContext);
     bool OnEndQuery(DeviceContextD3D12Impl* pContext);
 
 private:
+    bool AllocateQueries();
+    void DiscardQueries();
+
+    // Begin/end query indices
     std::array<Uint32, 2> m_QueryHeapIndex = {QueryManagerD3D12::InvalidIndex, QueryManagerD3D12::InvalidIndex};
 
     Uint64 m_QueryEndFenceValue = 0;

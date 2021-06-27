@@ -45,6 +45,7 @@
 #include "PipelineStateD3D12Impl.hpp"
 #include "BottomLevelASD3D12Impl.hpp"
 #include "TopLevelASD3D12Impl.hpp"
+#include "QueryManagerD3D12.hpp"
 
 #include "D3D12DynamicHeap.hpp"
 
@@ -347,6 +348,8 @@ public:
 
     size_t GetNumCommandsInCtx() const { return m_State.NumCommands; }
 
+    QueryManagerD3D12& GetQueryManager() { return *m_QueryMgr; }
+
 private:
     void CommitD3D12IndexBuffer(GraphicsContext& GraphCtx, VALUE_TYPE IndexType);
     void CommitD3D12VertexBuffers(GraphicsContext& GraphCtx);
@@ -493,6 +496,8 @@ private:
     std::vector<OptimizedClearValue> m_AttachmentClearValues;
 
     std::vector<D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS> m_AttachmentResolveInfo;
+
+    std::unique_ptr<QueryManagerD3D12> m_QueryMgr;
 };
 
 } // namespace Diligent

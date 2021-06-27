@@ -656,6 +656,18 @@ VkResult VulkanLogicalDevice::ResetDescriptorPool(VkDescriptorPool           vkD
     return err;
 }
 
+void VulkanLogicalDevice::ResetQueryPool(VkQueryPool queryPool,
+                                         uint32_t    firstQuery,
+                                         uint32_t    queryCount) const
+{
+#if DILIGENT_USE_VOLK
+    vkResetQueryPoolEXT(m_VkDevice, queryPool, firstQuery, queryCount);
+#else
+    UNSUPPORTED("Host query reset is not supported when vulkan library is linked statically");
+#endif
+}
+
+
 VkResult VulkanLogicalDevice::GetRayTracingShaderGroupHandles(VkPipeline pipeline, uint32_t firstGroup, uint32_t groupCount, size_t dataSize, void* pData) const
 {
 #if DILIGENT_USE_VOLK

@@ -29,10 +29,10 @@
 
 #include <mutex>
 #include <array>
-#include <deque>
 #include <vector>
 
 #include "Query.h"
+#include "IndexWrapper.hpp"
 
 namespace Diligent
 {
@@ -44,8 +44,9 @@ class CommandContext;
 class QueryManagerD3D12
 {
 public:
-    QueryManagerD3D12(ID3D12Device* pd3d12Device,
-                      const Uint32  QueryHeapSizes[]);
+    QueryManagerD3D12(class RenderDeviceD3D12Impl* pDeviceD3D12Impl,
+                      const Uint32                 QueryHeapSizes[],
+                      HardwareQueueIndex           HwQueueInd);
     ~QueryManagerD3D12();
 
     // clang-format off
@@ -73,7 +74,7 @@ private:
     struct QueryHeapInfo
     {
         CComPtr<ID3D12QueryHeap> pd3d12QueryHeap;
-        std::deque<Uint32>       AvailableQueries;
+        std::vector<Uint32>      AvailableQueries;
         std::vector<Uint32>      ResolveBufferOffsets;
 
         Uint32 HeapSize            = 0;

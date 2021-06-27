@@ -1478,7 +1478,7 @@ inline void DeviceContextBase<ImplementationTraits>::BeginQuery(IQuery* pQuery, 
     DEV_CHECK_ERR(QueryType != QUERY_TYPE_TIMESTAMP,
                   "BeginQuery() is disabled for timestamp queries. Call EndQuery() to set the timestamp.");
 
-    const auto QueueType = QueryType == QUERY_TYPE_DURATION ? COMMAND_QUEUE_TYPE_COMPUTE : COMMAND_QUEUE_TYPE_GRAPHICS;
+    const auto QueueType = QueryType == QUERY_TYPE_DURATION ? COMMAND_QUEUE_TYPE_TRANSFER : COMMAND_QUEUE_TYPE_GRAPHICS;
     DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(QueueType, "BeginQuery for query type ", GetQueryTypeString(QueryType));
 
     ValidatedCast<QueryImplType>(pQuery)->OnBeginQuery(static_cast<DeviceContextImplType*>(this));
@@ -1492,7 +1492,7 @@ inline void DeviceContextBase<ImplementationTraits>::EndQuery(IQuery* pQuery, in
     DEV_CHECK_ERR(!IsDeferred(), "IDeviceContext::EndQuery: Deferred contexts do not support queries");
 
     const auto QueryType = pQuery->GetDesc().Type;
-    const auto QueueType = QueryType == QUERY_TYPE_DURATION || QueryType == QUERY_TYPE_TIMESTAMP ? COMMAND_QUEUE_TYPE_COMPUTE : COMMAND_QUEUE_TYPE_GRAPHICS;
+    const auto QueueType = QueryType == QUERY_TYPE_DURATION || QueryType == QUERY_TYPE_TIMESTAMP ? COMMAND_QUEUE_TYPE_TRANSFER : COMMAND_QUEUE_TYPE_GRAPHICS;
     DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(QueueType, "EndQuery for query type ", GetQueryTypeString(QueryType));
 
     ValidatedCast<QueryImplType>(pQuery)->OnEndQuery(static_cast<DeviceContextImplType*>(this));

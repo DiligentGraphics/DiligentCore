@@ -222,6 +222,10 @@ public:
                                      dataSize, pData, stride, flags);
     }
 
+    void ResetQueryPool(VkQueryPool queryPool,
+                        uint32_t    firstQuery,
+                        uint32_t    queryCount) const;
+
     void GetAccelerationStructureBuildSizes(const VkAccelerationStructureBuildGeometryInfoKHR& BuildInfo, const uint32_t* pMaxPrimitiveCounts, VkAccelerationStructureBuildSizesInfoKHR& SizeInfo) const;
 
     VkResult GetRayTracingShaderGroupHandles(VkPipeline pipeline, uint32_t firstGroup, uint32_t groupCount, size_t dataSize, void* pData) const;

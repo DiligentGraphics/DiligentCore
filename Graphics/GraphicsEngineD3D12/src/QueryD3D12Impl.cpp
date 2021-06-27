@@ -43,37 +43,75 @@ QueryD3D12Impl::QueryD3D12Impl(IReferenceCounters*    pRefCounters,
                                const QueryDesc&       Desc) :
     TQueryBase{pRefCounters, pDevice, Desc}
 {
-    auto& QueryMgr = pDevice->GetQueryManager();
+}
+
+
+bool QueryD3D12Impl::AllocateQueries()
+{
+    DiscardQueries();
+    VERIFY_EXPR(m_pContext);
+    auto& QueryMgr = m_pContext->GetQueryManager();
     for (Uint32 i = 0; i < (m_Desc.Type == QUERY_TYPE_DURATION ? Uint32{2} : Uint32{1}); ++i)
     {
         m_QueryHeapIndex[i] = QueryMgr.AllocateQuery(m_Desc.Type);
         if (m_QueryHeapIndex[i] == QueryManagerD3D12::InvalidIndex)
         {
-            for (Uint32 j = 0; j < i; ++j)
-            {
-                QueryMgr.ReleaseQuery(m_Desc.Type, m_QueryHeapIndex[j]);
-            }
-            LOG_ERROR_AND_THROW("Failed to allocate D3D12 query for type ", GetQueryTypeString(m_Desc.Type),
-                                ". Increase the query pool size in EngineD3D12CreateInfo.");
+            LOG_ERROR_MESSAGE("Failed to allocate D3D12 query for type ", GetQueryTypeString(m_Desc.Type),
+                              ". Increase the query pool size in EngineD3D12CreateInfo.");
+            DiscardQueries();
+            return false;
         }
     }
+    return true;
 }
 
 QueryD3D12Impl::~QueryD3D12Impl()
 {
-    auto& QueryMgr = m_pDevice->GetQueryManager();
-    for (auto HeapIdx : m_QueryHeapIndex)
+    DiscardQueries();
+}
+
+void QueryD3D12Impl::DiscardQueries()
+{
+    for (auto& HeapIdx : m_QueryHeapIndex)
     {
         if (HeapIdx != QueryManagerD3D12::InvalidIndex)
         {
+            VERIFY_EXPR(m_pContext);
+            auto& QueryMgr = m_pContext->GetQueryManager();
             QueryMgr.ReleaseQuery(m_Desc.Type, HeapIdx);
+            HeapIdx = QueryManagerD3D12::InvalidIndex;
         }
     }
+}
+
+void QueryD3D12Impl::Invalidate()
+{
+    DiscardQueries();
+    TQueryBase::Invalidate();
+}
+
+bool QueryD3D12Impl::OnBeginQuery(DeviceContextD3D12Impl* pContext)
+{
+    TQueryBase::OnBeginQuery(pContext);
+
+    return AllocateQueries();
 }
 
 bool QueryD3D12Impl::OnEndQuery(DeviceContextD3D12Impl* pContext)
 {
     TQueryBase::OnEndQuery(pContext);
+
+    if (m_Desc.Type == QUERY_TYPE_TIMESTAMP)
+    {
+        if (!AllocateQueries())
+            return false;
+    }
+
+    if (m_QueryHeapIndex[0] == QueryManagerD3D12::InvalidIndex || (m_Desc.Type == QUERY_TYPE_DURATION && m_QueryHeapIndex[1] == QueryManagerD3D12::InvalidIndex))
+    {
+        LOG_ERROR_MESSAGE("Query '", m_Desc.Name, "' is invalid: D3D12 query allocation failed");
+        return false;
+    }
 
     auto CmdQueueId      = m_pContext->GetCommandQueueId();
     m_QueryEndFenceValue = m_pDevice->GetNextFenceValue(CmdQueueId);
@@ -89,7 +127,7 @@ bool QueryD3D12Impl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
     auto CompletedFenceValue = m_pDevice->GetCompletedFenceValue(CmdQueueId);
     if (CompletedFenceValue >= m_QueryEndFenceValue)
     {
-        auto& QueryMgr = m_pDevice->GetQueryManager();
+        auto& QueryMgr = m_pContext->GetQueryManager();
 
         auto GetTimestampFrequency = [this](SoftwareQueueIndex CmdQueueId) //
         {
@@ -199,9 +237,9 @@ bool QueryD3D12Impl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
 
 ID3D12QueryHeap* QueryD3D12Impl::GetD3D12QueryHeap()
 {
-    // This implementation can't be in the header because it requires
-    // definition of RenderDeviceD3D12Impl
-    return m_pDevice->GetQueryManager().GetQueryHeap(m_Desc.Type);
+    VERIFY_EXPR(m_pContext);
+    auto& QueryMgr = m_pContext->GetQueryManager();
+    return QueryMgr.GetQueryHeap(m_Desc.Type);
 }
 
 } // namespace Diligent

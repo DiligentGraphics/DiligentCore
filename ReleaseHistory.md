@@ -1,5 +1,6 @@
 ## Current progress
 
+* Added 'TransferQueueTimestampQueries' feature (API Version 250005)
 * Added 'RESOURCE_STATE_COMMON' state; added `STATE_TRANSITION_FLAGS` enum and replaced
   `StateTransitionDesc::UpdateResourceState` with `STATE_TRANSITION_FLAGS Flags` (API Version 250004)
 * Added `ComputeShaderProperties` struct (API Version 250003)

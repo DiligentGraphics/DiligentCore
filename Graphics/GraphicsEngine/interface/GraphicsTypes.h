@@ -1707,6 +1707,9 @@ struct DeviceFeatures
     /// Indicates if device supports tile shaders.
     DEVICE_FEATURE_STATE TileShaders                      DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
+    /// Indicates if device supports timestamp and duration queries in transfer queues.
+    DEVICE_FEATURE_STATE TransferQueueTimestampQueries    DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
 #if DILIGENT_CPP_INTERFACE
     DeviceFeatures() noexcept {}
 
@@ -1747,10 +1750,11 @@ struct DeviceFeatures
         WaveOp                            {State},
         InstanceDataStepRate              {State},
         NativeFence                       {State},
-        TileShaders                       {State}
+        TileShaders                       {State},
+        TransferQueueTimestampQueries     {State}
     {
 #   if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(*this) == 37, "Did you add a new feature to DeviceFeatures? Please handle its status above.");
+        static_assert(sizeof(*this) == 38, "Did you add a new feature to DeviceFeatures? Please handle its status above.");
 #   endif
     }
 #endif

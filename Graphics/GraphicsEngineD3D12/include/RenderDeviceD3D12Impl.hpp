@@ -40,7 +40,6 @@
 #include "CommandContext.hpp"
 #include "D3D12DynamicHeap.hpp"
 #include "GenerateMips.hpp"
-#include "QueryManagerD3D12.hpp"
 #include "DXCompiler.hpp"
 #include "RootSignature.hpp"
 
@@ -224,7 +223,6 @@ public:
     }
 
     const GenerateMipsHelper& GetMipsGenerator() const { return m_MipsGenerator; }
-    QueryManagerD3D12&        GetQueryManager() { return m_QueryMgr; }
 
     IDXCompiler* GetDxCompiler() const { return m_pDxCompiler.get(); }
 
@@ -273,8 +271,6 @@ private:
 
     // Note: mips generator must be released after the device has been idled
     GenerateMipsHelper m_MipsGenerator;
-
-    QueryManagerD3D12 m_QueryMgr;
 
     ShaderVersion m_MaxShaderVersion;
 

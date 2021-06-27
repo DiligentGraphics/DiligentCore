@@ -96,11 +96,12 @@ DeviceContextD3D12Impl::DeviceContextD3D12Impl(IReferenceCounters*          pRef
     m_CmdListAllocator{GetRawAllocator(), sizeof(CommandListD3D12Impl), 64}
 // clang-format on
 {
+    auto* pd3d12Device = pDeviceD3D12Impl->GetD3D12Device();
     if (!IsDeferred())
     {
         RequestCommandContext();
+        m_QueryMgr = std::make_unique<QueryManagerD3D12>(pDeviceD3D12Impl, EngineCI.QueryPoolSizes, GetHardwareQueueId());
     }
-    auto* pd3d12Device = pDeviceD3D12Impl->GetD3D12Device();
 
     D3D12_COMMAND_SIGNATURE_DESC CmdSignatureDesc = {};
     D3D12_INDIRECT_ARGUMENT_DESC IndirectArg      = {};
@@ -2193,7 +2194,7 @@ void DeviceContextD3D12Impl::BeginQuery(IQuery* pQuery)
     if (QueryType != QUERY_TYPE_TIMESTAMP)
         ++m_ActiveQueriesCounter;
 
-    auto& QueryMgr = m_pDevice->GetQueryManager();
+    auto& QueryMgr = GetQueryManager();
     auto& Ctx      = GetCmdContext();
     auto  Idx      = pQueryD3D12Impl->GetQueryHeapIndex(0);
     if (QueryType != QUERY_TYPE_DURATION)
@@ -2214,7 +2215,7 @@ void DeviceContextD3D12Impl::EndQuery(IQuery* pQuery)
         --m_ActiveQueriesCounter;
     }
 
-    auto& QueryMgr = m_pDevice->GetQueryManager();
+    auto& QueryMgr = GetQueryManager();
     auto& Ctx      = GetCmdContext();
     auto  Idx      = pQueryD3D12Impl->GetQueryHeapIndex(QueryType == QUERY_TYPE_DURATION ? 1 : 0);
     QueryMgr.EndQuery(Ctx, QueryType, Idx);

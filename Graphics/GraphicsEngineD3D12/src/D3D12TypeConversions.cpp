@@ -532,23 +532,31 @@ D3D12_QUERY_TYPE QueryTypeToD3D12QueryType(QUERY_TYPE QueryType)
     // clang-format on
 }
 
-D3D12_QUERY_HEAP_TYPE QueryTypeToD3D12QueryHeapType(QUERY_TYPE QueryType)
+D3D12_QUERY_HEAP_TYPE QueryTypeToD3D12QueryHeapType(QUERY_TYPE QueryType, HardwareQueueIndex QueueId)
 {
-    // clang-format off
     switch (QueryType)
     {
-        case QUERY_TYPE_OCCLUSION:           return D3D12_QUERY_HEAP_TYPE_OCCLUSION;
-        case QUERY_TYPE_BINARY_OCCLUSION:    return D3D12_QUERY_HEAP_TYPE_OCCLUSION;
-        case QUERY_TYPE_TIMESTAMP:           return D3D12_QUERY_HEAP_TYPE_TIMESTAMP;
-        case QUERY_TYPE_PIPELINE_STATISTICS: return D3D12_QUERY_HEAP_TYPE_PIPELINE_STATISTICS;
-        case QUERY_TYPE_DURATION:            return D3D12_QUERY_HEAP_TYPE_TIMESTAMP;
+        case QUERY_TYPE_OCCLUSION:
+            VERIFY(QueueId == D3D12HWQueueIndex_Graphics, "Occlusion queries are only supported in graphics queue");
+            return D3D12_QUERY_HEAP_TYPE_OCCLUSION;
 
-        static_assert(QUERY_TYPE_NUM_TYPES == 6, "Not all QUERY_TYPE enum values are handled");
+        case QUERY_TYPE_BINARY_OCCLUSION:
+            VERIFY(QueueId == D3D12HWQueueIndex_Graphics, "Occlusion queries are only supported in graphics queue");
+            return D3D12_QUERY_HEAP_TYPE_OCCLUSION;
+
+        case QUERY_TYPE_PIPELINE_STATISTICS:
+            VERIFY(QueueId == D3D12HWQueueIndex_Graphics, "Pipeline statistcis queries are only supported in graphics queue");
+            return D3D12_QUERY_HEAP_TYPE_PIPELINE_STATISTICS;
+
+        case QUERY_TYPE_DURATION:
+        case QUERY_TYPE_TIMESTAMP:
+            return QueueId == D3D12HWQueueIndex_Copy ? D3D12_QUERY_HEAP_TYPE_COPY_QUEUE_TIMESTAMP : D3D12_QUERY_HEAP_TYPE_TIMESTAMP;
+
+            static_assert(QUERY_TYPE_NUM_TYPES == 6, "Not all QUERY_TYPE enum values are handled");
         default:
             UNEXPECTED("Unexpected query type");
             return static_cast<D3D12_QUERY_HEAP_TYPE>(-1);
     }
-    // clang-format on
 }
 
 D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE AttachmentLoadOpToD3D12BeginningAccessType(ATTACHMENT_LOAD_OP LoadOp)
@@ -849,9 +857,9 @@ HardwareQueueIndex D3D12CommandListTypeToQueueId(D3D12_COMMAND_LIST_TYPE Type)
     switch (Type)
     {
         // clang-format off
-        case D3D12_COMMAND_LIST_TYPE_DIRECT:  return HardwareQueueIndex{0};
-        case D3D12_COMMAND_LIST_TYPE_COMPUTE: return HardwareQueueIndex{1};
-        case D3D12_COMMAND_LIST_TYPE_COPY:    return HardwareQueueIndex{2};
+        case D3D12_COMMAND_LIST_TYPE_DIRECT:  return D3D12HWQueueIndex_Graphics;
+        case D3D12_COMMAND_LIST_TYPE_COMPUTE: return D3D12HWQueueIndex_Compute;
+        case D3D12_COMMAND_LIST_TYPE_COPY:    return D3D12HWQueueIndex_Copy;
         // clang-format on
         default:
             UNEXPECTED("Unexpected command list type");
@@ -861,12 +869,12 @@ HardwareQueueIndex D3D12CommandListTypeToQueueId(D3D12_COMMAND_LIST_TYPE Type)
 
 D3D12_COMMAND_LIST_TYPE QueueIdToD3D12CommandListType(HardwareQueueIndex QueueId)
 {
-    switch (Uint32{QueueId})
+    switch (QueueId)
     {
         // clang-format off
-        case 0: return D3D12_COMMAND_LIST_TYPE_DIRECT;
-        case 1: return D3D12_COMMAND_LIST_TYPE_COMPUTE;
-        case 2: return D3D12_COMMAND_LIST_TYPE_COPY;
+        case D3D12HWQueueIndex_Graphics: return D3D12_COMMAND_LIST_TYPE_DIRECT;
+        case D3D12HWQueueIndex_Compute: return D3D12_COMMAND_LIST_TYPE_COMPUTE;
+        case D3D12HWQueueIndex_Copy: return D3D12_COMMAND_LIST_TYPE_COPY;
         // clang-format on
         default:
             UNEXPECTED("Unexpected queue id");

@@ -108,11 +108,12 @@ DeviceFeatures EnableDeviceFeatures(const DeviceFeatures& SupportedFeatures,
     ENABLE_FEATURE(InstanceDataStepRate,              "Instance data step rate is");
     ENABLE_FEATURE(NativeFence,                       "Native fence is");
     ENABLE_FEATURE(TileShaders,                       "Tile shaders are");
+    ENABLE_FEATURE(TransferQueueTimestampQueries,     "Timestamp queries in transfer queues are");
     // clang-format on
 #undef ENABLE_FEATURE
 
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(Diligent::DeviceFeatures) == 37, "Did you add a new feature to DeviceFeatures? Please handle its satus here (if necessary).");
+    static_assert(sizeof(Diligent::DeviceFeatures) == 38, "Did you add a new feature to DeviceFeatures? Please handle its satus here (if necessary).");
 #endif
     return EnabledFeatures;
 }

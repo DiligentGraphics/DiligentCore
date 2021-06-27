@@ -789,6 +789,13 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
                 }
             }
 
+            D3D12_FEATURE_DATA_D3D12_OPTIONS3 d3d12Features3 = {};
+            if (SUCCEEDED(d3d12Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS3, &d3d12Features3, sizeof(d3d12Features3))))
+            {
+                if (d3d12Features3.CopyQueueTimestampQueriesSupported)
+                    Features.TransferQueueTimestampQueries = DEVICE_FEATURE_STATE_ENABLED;
+            }
+
             D3D12_FEATURE_DATA_D3D12_OPTIONS4 d3d12Features4{};
             if (SUCCEEDED(d3d12Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS4, &d3d12Features4, sizeof(d3d12Features4))))
             {
@@ -892,7 +899,7 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
     }
 
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(DeviceFeatures) == 37, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+    static_assert(sizeof(DeviceFeatures) == 38, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 #endif
 
     return AdapterInfo;

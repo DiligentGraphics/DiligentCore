@@ -250,6 +250,14 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice      vkDevice,
             m_ExtProperties.TimelineSemaphore.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_PROPERTIES;
         }
 
+        if (IsExtensionSupported(VK_EXT_HOST_QUERY_RESET_EXTENSION_NAME))
+        {
+            *NextFeat = &m_ExtFeatures.HostQueryReset;
+            NextFeat  = &m_ExtFeatures.HostQueryReset.pNext;
+
+            m_ExtFeatures.HostQueryReset.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_QUERY_RESET_FEATURES;
+        }
+
         // make sure that last pNext is null
         *NextFeat = nullptr;
         *NextProp = nullptr;

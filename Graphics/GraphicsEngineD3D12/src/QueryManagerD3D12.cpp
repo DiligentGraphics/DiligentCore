@@ -35,6 +35,7 @@
 #include "GraphicsAccessories.hpp"
 #include "CommandContext.hpp"
 #include "Align.hpp"
+#include "RenderDeviceD3D12Impl.hpp"
 
 namespace Diligent
 {
@@ -64,9 +65,13 @@ static Uint32 GetQueryDataSize(QUERY_TYPE QueryType)
     // clang-format on
 }
 
-QueryManagerD3D12::QueryManagerD3D12(ID3D12Device* pd3d12Device,
-                                     const Uint32  QueryHeapSizes[])
+QueryManagerD3D12::QueryManagerD3D12(RenderDeviceD3D12Impl* pDeviceD3D12Impl,
+                                     const Uint32           QueryHeapSizes[],
+                                     HardwareQueueIndex     HwQueueInd)
 {
+    const auto& DevInfo      = pDeviceD3D12Impl->GetDeviceInfo();
+    auto*       pd3d12Device = pDeviceD3D12Impl->GetD3D12Device();
+
     Uint32 ResolveBufferOffset = 0;
     for (Uint32 QueryType = QUERY_TYPE_UNDEFINED + 1; QueryType < QUERY_TYPE_NUM_TYPES; ++QueryType)
     {
@@ -78,12 +83,23 @@ QueryManagerD3D12::QueryManagerD3D12(ID3D12Device* pd3d12Device,
         static_assert(QUERY_TYPE_DURATION           == 5, "Unexpected value of QUERY_TYPE_DURATION. EngineD3D12CreateInfo::QueryPoolSizes must be updated");
         static_assert(QUERY_TYPE_NUM_TYPES          == 6, "Unexpected value of QUERY_TYPE_NUM_TYPES. EngineD3D12CreateInfo::QueryPoolSizes must be updated");
         // clang-format on
+
+        // Time and duration queries are supported in all queues
+        if (QueryType == QUERY_TYPE_TIMESTAMP || QueryType == QUERY_TYPE_DURATION)
+        {
+            if (HwQueueInd == D3D12HWQueueIndex_Copy && !DevInfo.Features.TransferQueueTimestampQueries)
+                continue; // Not supported in transfer queue
+        }
+        // Other queries are only supported in graphics queue
+        else if (HwQueueInd != D3D12HWQueueIndex_Graphics)
+            continue;
+
         auto& HeapInfo = m_Heaps[QueryType];
 
         D3D12_QUERY_HEAP_DESC d3d12HeapDesc = {};
 
         HeapInfo.HeapSize   = QueryHeapSizes[QueryType];
-        d3d12HeapDesc.Type  = QueryTypeToD3D12QueryHeapType(static_cast<QUERY_TYPE>(QueryType));
+        d3d12HeapDesc.Type  = QueryTypeToD3D12QueryHeapType(static_cast<QUERY_TYPE>(QueryType), HwQueueInd);
         d3d12HeapDesc.Count = HeapInfo.HeapSize;
         if (QueryType == QUERY_TYPE_DURATION)
             d3d12HeapDesc.Count *= 2;
@@ -177,8 +193,8 @@ Uint32 QueryManagerD3D12::AllocateQuery(QUERY_TYPE Type)
     auto&  AvailableQueries = HeapInfo.AvailableQueries;
     if (!AvailableQueries.empty())
     {
-        Index = AvailableQueries.front();
-        AvailableQueries.pop_front();
+        Index = AvailableQueries.back();
+        AvailableQueries.pop_back();
         HeapInfo.MaxAllocatedQueries = std::max(HeapInfo.MaxAllocatedQueries, HeapInfo.HeapSize - static_cast<Uint32>(AvailableQueries.size()));
     }
 
@@ -202,14 +218,19 @@ void QueryManagerD3D12::ReleaseQuery(QUERY_TYPE Type, Uint32 Index)
 
 void QueryManagerD3D12::BeginQuery(CommandContext& Ctx, QUERY_TYPE Type, Uint32 Index)
 {
-    auto d3d12QueryType = QueryTypeToD3D12QueryType(Type);
-    Ctx.BeginQuery(m_Heaps[Type].pd3d12QueryHeap, d3d12QueryType, Index);
+    auto  d3d12QueryType = QueryTypeToD3D12QueryType(Type);
+    auto& HeapInfo       = m_Heaps[Type];
+    VERIFY(Index < HeapInfo.HeapSize, "Query index ", Index, " is out of range");
+
+    Ctx.BeginQuery(HeapInfo.pd3d12QueryHeap, d3d12QueryType, Index);
 }
 
 void QueryManagerD3D12::EndQuery(CommandContext& Ctx, QUERY_TYPE Type, Uint32 Index)
 {
     auto  d3d12QueryType = QueryTypeToD3D12QueryType(Type);
     auto& HeapInfo       = m_Heaps[Type];
+
+    VERIFY(Index < HeapInfo.HeapSize, "Query index ", Index, " is out of range");
     Ctx.EndQuery(HeapInfo.pd3d12QueryHeap, d3d12QueryType, Index);
 
     // https://microsoft.github.io/DirectX-Specs/d3d/CountersAndQueries.html#resolvequerydata

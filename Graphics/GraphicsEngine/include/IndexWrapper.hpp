@@ -50,10 +50,14 @@ public:
     {
     }
 
-    IndexWrapper(const IndexWrapper&) = default;
-    IndexWrapper(IndexWrapper&&)      = default;
+    explicit constexpr IndexWrapper(IndexType Value) :
+        m_Value{Value}
+    {}
 
-    operator Uint32() const
+    constexpr IndexWrapper(const IndexWrapper&) = default;
+    constexpr IndexWrapper(IndexWrapper&&)      = default;
+
+    constexpr operator Uint32() const
     {
         return m_Value;
     }
@@ -66,7 +70,7 @@ public:
         return *this;
     }
 
-    bool operator==(const IndexWrapper& Other) const
+    constexpr bool operator==(const IndexWrapper& Other) const
     {
         return m_Value == Other.m_Value;
     }

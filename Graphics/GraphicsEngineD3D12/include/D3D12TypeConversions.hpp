@@ -81,7 +81,7 @@ D3D12_RESOURCE_STATES     ResourceStateFlagsToD3D12ResourceStates(RESOURCE_STATE
 RESOURCE_STATE            D3D12ResourceStatesToResourceStateFlags(D3D12_RESOURCE_STATES StateFlags);
 D3D12_RESOURCE_STATES     GetSupportedD3D12ResourceStatesForCommandList(D3D12_COMMAND_LIST_TYPE CmdListType);
 
-D3D12_QUERY_HEAP_TYPE QueryTypeToD3D12QueryHeapType(QUERY_TYPE QueryType);
+D3D12_QUERY_HEAP_TYPE QueryTypeToD3D12QueryHeapType(QUERY_TYPE QueryType, HardwareQueueIndex QueueId);
 D3D12_QUERY_TYPE      QueryTypeToD3D12QueryType(QUERY_TYPE QueryType);
 
 D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE AttachmentLoadOpToD3D12BeginningAccessType(ATTACHMENT_LOAD_OP LoadOp);
@@ -110,5 +110,9 @@ HardwareQueueIndex           D3D12CommandListTypeToQueueId(D3D12_COMMAND_LIST_TY
 D3D12_COMMAND_LIST_TYPE      QueueIdToD3D12CommandListType(HardwareQueueIndex QueueId);
 COMMAND_QUEUE_TYPE           D3D12CommandListTypeToCmdQueueType(D3D12_COMMAND_LIST_TYPE ListType);
 D3D12_COMMAND_QUEUE_PRIORITY QueuePriorityToD3D12QueuePriority(QUEUE_PRIORITY Priority);
+
+static constexpr HardwareQueueIndex D3D12HWQueueIndex_Graphics{Uint8{0}};
+static constexpr HardwareQueueIndex D3D12HWQueueIndex_Compute{Uint8{1}};
+static constexpr HardwareQueueIndex D3D12HWQueueIndex_Copy{Uint8{2}};
 
 } // namespace Diligent

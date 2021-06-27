@@ -134,6 +134,9 @@ public:
                       "Attempting to begin query '", this->m_Desc.Name,
                       "' twice. A query must be ended before it can be begun again.");
 
+        if (m_pContext != nullptr && m_pContext != pContext)
+            Invalidate();
+
         m_pContext = pContext;
         m_State    = QueryState::Querying;
     }
@@ -149,6 +152,9 @@ public:
         else
         {
             // Timestamp queries are never begun
+            if (m_pContext != nullptr && m_pContext != pContext)
+                Invalidate();
+
             m_pContext = pContext;
         }
 
