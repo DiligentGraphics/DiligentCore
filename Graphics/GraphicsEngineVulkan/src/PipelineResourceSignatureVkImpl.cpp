@@ -580,6 +580,10 @@ void PipelineResourceSignatureVkImpl::CommitDynamicResources(const ShaderResourc
     VERIFY_EXPR(vkDynamicDescriptorSet != VK_NULL_HANDLE);
     VERIFY_EXPR(ResourceCache.GetContentType() == ResourceCacheContentType::SRB);
 
+#ifdef DILIGENT_DEVELOPMENT
+    DvpCheckNullResources(ResourceCache, SHADER_RESOURCE_VARIABLE_TYPE_FLAG_DYNAMIC);
+#endif
+
 #ifdef DILIGENT_DEBUG
     static constexpr size_t ImgUpdateBatchSize          = 4;
     static constexpr size_t BuffUpdateBatchSize         = 2;
@@ -903,6 +907,46 @@ bool PipelineResourceSignatureVkImpl::DvpValidateCommittedResource(const SPIRVSh
             default:
                 break;
                 // Nothing to do
+        }
+    }
+
+    return BindingsOK;
+}
+
+bool PipelineResourceSignatureVkImpl::DvpCheckNullResources(const ShaderResourceCacheVk&        ResourceCache,
+                                                            SHADER_RESOURCE_VARIABLE_TYPE_FLAGS VarTypes) const
+{
+    bool BindingsOK = true;
+    while (VarTypes != SHADER_RESOURCE_VARIABLE_TYPE_FLAG_NONE)
+    {
+        const auto VarTypeFlag = ExtractLSB(VarTypes);
+        const auto VarType     = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(PlatformMisc::GetLSB(VarTypeFlag));
+        VERIFY_EXPR(Uint32{VarTypeFlag} == (1u << VarType));
+
+        const auto ResRange = GetResourceIndexRange(VarType);
+        for (Uint32 ResIndex = ResRange.first; ResIndex < ResRange.second; ++ResIndex)
+        {
+            const auto& ResDesc = m_Desc.Resources[ResIndex];
+            VERIFY_EXPR(ResDesc.VarType == VarType);
+
+            const auto& ResAttribs = m_pResourceAttribs[ResIndex];
+            if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER && ResAttribs.IsImmutableSamplerAssigned())
+                continue; // Skip immutable separate samplers
+
+            const auto& DescrSetResources = ResourceCache.GetDescriptorSet(ResAttribs.DescrSet);
+            const auto  CacheType         = ResourceCache.GetContentType();
+            const auto  CacheOffset       = ResAttribs.CacheOffset(CacheType);
+
+            for (Uint32 ArrIndex = 0; ArrIndex < ResDesc.ArraySize; ++ArrIndex)
+            {
+                const auto& Res = DescrSetResources.GetResource(CacheOffset + ArrIndex);
+                if (Res.IsNull())
+                {
+                    LOG_ERROR_MESSAGE("No resource is bound to ", GetShaderVariableTypeLiteralName(ResDesc.VarType),
+                                      " variable '", GetShaderResourcePrintName(ResDesc, ArrIndex), "'");
+                    BindingsOK = false;
+                }
+            }
         }
     }
 
