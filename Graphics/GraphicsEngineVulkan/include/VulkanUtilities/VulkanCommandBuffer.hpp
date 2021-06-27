@@ -704,7 +704,9 @@ public:
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
         VERIFY_EXPR(Label.sType == VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT);
 
-        vkCmdBeginDebugUtilsLabelEXT(m_VkCmdBuffer, &Label);
+        // Pointer to the function may be null if validation layer is not enabled
+        if (vkCmdBeginDebugUtilsLabelEXT != nullptr)
+            vkCmdBeginDebugUtilsLabelEXT(m_VkCmdBuffer, &Label);
 #else
         LOG_WARNING_MESSAGE_ONCE("Debug utils are not supported when vulkan library is linked statically");
 #endif
@@ -713,7 +715,9 @@ public:
     __forceinline void EndDebugUtilsLabel()
     {
 #if DILIGENT_USE_VOLK
-        vkCmdEndDebugUtilsLabelEXT(m_VkCmdBuffer);
+        // Pointer to function may be null if validation layer is not enabled
+        if (vkCmdEndDebugUtilsLabelEXT != nullptr)
+            vkCmdEndDebugUtilsLabelEXT(m_VkCmdBuffer);
 #else
         LOG_WARNING_MESSAGE_ONCE("Debug utils are not supported when vulkan library is linked statically");
 #endif
@@ -725,7 +729,9 @@ public:
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
         VERIFY_EXPR(Label.sType == VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT);
 
-        vkCmdInsertDebugUtilsLabelEXT(m_VkCmdBuffer, &Label);
+        // Pointer to the function may be null if validation layer is not enabled
+        if (vkCmdInsertDebugUtilsLabelEXT != nullptr)
+            vkCmdInsertDebugUtilsLabelEXT(m_VkCmdBuffer, &Label);
 #else
         LOG_WARNING_MESSAGE_ONCE("Debug utils are not supported when vulkan library is linked statically");
 #endif

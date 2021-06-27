@@ -26,9 +26,6 @@ static PFN_vkSetDebugUtilsObjectTagEXT     SetDebugUtilsObjectTagEXT     = nullp
 static PFN_vkQueueBeginDebugUtilsLabelEXT  QueueBeginDebugUtilsLabelEXT  = nullptr;
 static PFN_vkQueueEndDebugUtilsLabelEXT    QueueEndDebugUtilsLabelEXT    = nullptr;
 static PFN_vkQueueInsertDebugUtilsLabelEXT QueueInsertDebugUtilsLabelEXT = nullptr;
-static PFN_vkCmdBeginDebugUtilsLabelEXT    CmdBeginDebugUtilsLabelEXT    = nullptr;
-static PFN_vkCmdEndDebugUtilsLabelEXT      CmdEndDebugUtilsLabelEXT      = nullptr;
-static PFN_vkCmdInsertDebugUtilsLabelEXT   CmdInsertDebugUtilsLabelEXT   = nullptr;
 
 static VkDebugUtilsMessengerEXT DbgMessenger = VK_NULL_HANDLE;
 
@@ -198,13 +195,6 @@ void SetupDebugging(VkInstance                          instance,
     VERIFY_EXPR(QueueEndDebugUtilsLabelEXT != nullptr);
     QueueInsertDebugUtilsLabelEXT = reinterpret_cast<PFN_vkQueueInsertDebugUtilsLabelEXT>(vkGetInstanceProcAddr(instance, "vkQueueInsertDebugUtilsLabelEXT"));
     VERIFY_EXPR(QueueInsertDebugUtilsLabelEXT != nullptr);
-
-    CmdBeginDebugUtilsLabelEXT = reinterpret_cast<PFN_vkCmdBeginDebugUtilsLabelEXT>(vkGetInstanceProcAddr(instance, "vkCmdBeginDebugUtilsLabelEXT"));
-    VERIFY_EXPR(CmdBeginDebugUtilsLabelEXT != nullptr);
-    CmdEndDebugUtilsLabelEXT = reinterpret_cast<PFN_vkCmdEndDebugUtilsLabelEXT>(vkGetInstanceProcAddr(instance, "vkCmdEndDebugUtilsLabelEXT"));
-    VERIFY_EXPR(CmdEndDebugUtilsLabelEXT != nullptr);
-    CmdInsertDebugUtilsLabelEXT = reinterpret_cast<PFN_vkCmdInsertDebugUtilsLabelEXT>(vkGetInstanceProcAddr(instance, "vkCmdInsertDebugUtilsLabelEXT"));
-    VERIFY_EXPR(CmdInsertDebugUtilsLabelEXT != nullptr);
 }
 
 void FreeDebugging(VkInstance instance)
@@ -242,39 +232,6 @@ void InsertCmdQueueLabel(VkQueue cmdQueue, const char* pLabelName, const float* 
 void EndCmdQueueLabelRegion(VkQueue cmdQueue)
 {
     QueueEndDebugUtilsLabelEXT(cmdQueue);
-}
-
-
-// Start a new label region
-void BeginCmdBufferLabelRegion(VkCommandBuffer cmdBuffer, const char* pLabelName, const float* color)
-{
-    VkDebugUtilsLabelEXT Label = {};
-
-    Label.sType      = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
-    Label.pNext      = nullptr;
-    Label.pLabelName = pLabelName;
-    for (int i = 0; i < 4; ++i)
-        Label.color[i] = color[i];
-    CmdBeginDebugUtilsLabelEXT(cmdBuffer, &Label);
-}
-
-// End the label region
-void EndCmdBufferLabelRegion(VkCommandBuffer cmdBuffer)
-{
-    CmdEndDebugUtilsLabelEXT(cmdBuffer);
-}
-
-// Start a single label
-void InsertCmdBufferLabel(VkCommandBuffer cmdBuffer, const char* pLabelName, const float* color)
-{
-    VkDebugUtilsLabelEXT Label = {};
-
-    Label.sType      = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
-    Label.pNext      = nullptr;
-    Label.pLabelName = pLabelName;
-    for (int i = 0; i < 4; ++i)
-        Label.color[i] = color[i];
-    CmdInsertDebugUtilsLabelEXT(cmdBuffer, &Label);
 }
 
 
