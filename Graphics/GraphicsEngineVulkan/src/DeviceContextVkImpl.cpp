@@ -1310,6 +1310,8 @@ void DeviceContextVkImpl::Flush(Uint32               NumCommandLists,
     for (auto& val_fence : m_WaitFences)
     {
         auto* pFenceVk = val_fence.second.RawPtr<FenceVkImpl>();
+        pFenceVk->DvpDeviceWait(val_fence.first);
+
         if (pFenceVk->IsTimelineSemaphore())
         {
             UsedTimelineSemaphore = true;
@@ -1324,7 +1326,6 @@ void DeviceContextVkImpl::Flush(Uint32               NumCommandLists,
                 }
             }
 #endif
-            pFenceVk->DvpDeviceWait(val_fence.first);
             m_VkWaitSemaphores.push_back(WaitSem);
             m_WaitDstStageMasks.push_back(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
             m_WaitSemaphoreValues.push_back(val_fence.first);

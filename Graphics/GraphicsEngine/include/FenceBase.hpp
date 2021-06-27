@@ -94,7 +94,7 @@ public:
         if (!this->GetDevice()->GetFeatures().NativeFence)
         {
             auto EnqueuedValue = m_EnqueuedFenceValue.load();
-            DEV_CHECK_ERR(Value < EnqueuedValue,
+            DEV_CHECK_ERR(Value <= EnqueuedValue,
                           "Can not wait for value ", Value, " that is greater than the last enqueued for signal value (", EnqueuedValue,
                           "). This is not supported when NativeFence feature is disabled.");
         }
