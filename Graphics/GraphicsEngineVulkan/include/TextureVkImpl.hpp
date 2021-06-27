@@ -95,8 +95,12 @@ public:
 
     void InvalidateStagingRange(VkDeviceSize Offset, VkDeviceSize Size);
 
-    // Buffer offset must be a multiple of 4 (18.4)
-    static constexpr Uint32 StagingBufferOffsetAlignment = 4;
+    // For non-compressed color format buffer, the offset must be a multiple of the format's texel block size.
+    // For compressed format buffer, the offset must be a multiple of the compressed texel block size in bytes.
+    // For depth-stencil format buffer, the offset must be a multiple of 4.
+    // If command buffer does not support graphics or compute commands, then the buffer offset must be a multiple of 4.
+    // ("Copying Data Between Buffers and Images")
+    static constexpr Uint32 StagingBufferOffsetAlignment = 16; // max texel size - 16 bytes (RGBA32F), max texel block size - 16 bytes.
 
 protected:
     void CreateViewInternal(const struct TextureViewDesc& ViewDesc, ITextureView** ppView, bool bIsDefaultView) override;

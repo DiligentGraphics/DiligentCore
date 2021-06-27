@@ -186,7 +186,7 @@ void TextureCube_GL::UpdateData(GLContextState&          ContextState,
 
     const auto& TransferAttribs = GetNativePixelTransferAttribs(m_Desc.Format);
 
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, PBOOffsetAlignment);
 
     if (TransferAttribs.IsCompressed)
     {

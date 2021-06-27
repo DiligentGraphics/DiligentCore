@@ -160,7 +160,7 @@ void Texture3D_GL::UpdateData(GLContextState&          ContextState,
 
     const auto& TransferAttribs = GetNativePixelTransferAttribs(m_Desc.Format);
 
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, PBOOffsetAlignment);
     glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
     glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
     glPixelStorei(GL_UNPACK_SKIP_IMAGES, 0);
