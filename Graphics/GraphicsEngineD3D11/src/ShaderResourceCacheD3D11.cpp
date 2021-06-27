@@ -39,6 +39,11 @@
 namespace Diligent
 {
 
+const char* ShaderResourceCacheD3D11::CachedResourceTraits<D3D11_RESOURCE_RANGE_CBV>::Name     = "Constant buffer";
+const char* ShaderResourceCacheD3D11::CachedResourceTraits<D3D11_RESOURCE_RANGE_SAMPLER>::Name = "Sampler";
+const char* ShaderResourceCacheD3D11::CachedResourceTraits<D3D11_RESOURCE_RANGE_SRV>::Name     = "Shader resource view";
+const char* ShaderResourceCacheD3D11::CachedResourceTraits<D3D11_RESOURCE_RANGE_UAV>::Name     = "Unordered access view";
+
 size_t ShaderResourceCacheD3D11::GetRequiredMemorySize(const D3D11ShaderResourceCounters& ResCount)
 {
     size_t MemSize = 0;

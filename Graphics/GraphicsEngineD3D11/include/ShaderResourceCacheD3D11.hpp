@@ -486,6 +486,7 @@ struct ShaderResourceCacheD3D11::CachedResourceTraits<D3D11_RESOURCE_RANGE_CBV>
 {
     using CachedResourceType = CachedCB;
     using D3D11ResourceType  = ID3D11Buffer;
+    static const char* Name;
 };
 
 template <>
@@ -493,6 +494,7 @@ struct ShaderResourceCacheD3D11::CachedResourceTraits<D3D11_RESOURCE_RANGE_SAMPL
 {
     using CachedResourceType = CachedSampler;
     using D3D11ResourceType  = ID3D11SamplerState;
+    static const char* Name;
 };
 
 template <>
@@ -500,6 +502,7 @@ struct ShaderResourceCacheD3D11::CachedResourceTraits<D3D11_RESOURCE_RANGE_SRV>
 {
     using CachedResourceType = CachedResource;
     using D3D11ResourceType  = ID3D11ShaderResourceView;
+    static const char* Name;
 };
 
 template <>
@@ -507,6 +510,7 @@ struct ShaderResourceCacheD3D11::CachedResourceTraits<D3D11_RESOURCE_RANGE_UAV>
 {
     using CachedResourceType = CachedResource;
     using D3D11ResourceType  = ID3D11UnorderedAccessView;
+    static const char* Name;
 };
 
 
@@ -580,7 +584,10 @@ inline ShaderResourceCacheD3D11::MinMaxSlot ShaderResourceCacheD3D11::BindResour
         if (CommittedD3D11Resources[Slot] != ResArrays.second[res])
             Slots.Add(Slot);
 
-        VERIFY_EXPR(ResArrays.second[res] != nullptr);
+#ifdef DILIGENT_DEVELOPMENT
+        if (ResArrays.second[res] == nullptr)
+            LOG_ERROR(CachedResourceTraits<Range>::Name, " at slot ", Slot, " is null.");
+#endif
         CommittedD3D11Resources[Slot] = ResArrays.second[res];
     }
 
@@ -606,7 +613,10 @@ inline ShaderResourceCacheD3D11::MinMaxSlot ShaderResourceCacheD3D11::BindResour
         if (CommittedD3D11Views[Slot] != ResArrays.second[res])
             Slots.Add(Slot);
 
-        VERIFY_EXPR(ResArrays.second[res] != nullptr);
+#ifdef DILIGENT_DEVELOPMENT
+        if (ResArrays.second[res] == nullptr)
+            LOG_ERROR(CachedResourceTraits<Range>::Name, " at slot ", Slot, " is null.");
+#endif
         CommittedD3D11Resources[Slot] = ResArrays.first[res].pd3d11Resource;
         CommittedD3D11Views[Slot]     = ResArrays.second[res];
     }
@@ -645,7 +655,10 @@ inline ShaderResourceCacheD3D11::MinMaxSlot ShaderResourceCacheD3D11::BindCBs(
             Slots.Add(Slot);
         }
 
-        VERIFY_EXPR(pd3d11CB != nullptr);
+#ifdef DILIGENT_DEVELOPMENT
+        if (pd3d11CB == nullptr)
+            LOG_ERROR(CachedResourceTraits<Range>::Name, " at slot ", Slot, " is null.");
+#endif
         CommittedD3D11Resources[Slot] = pd3d11CB;
         FirstConstants[Slot]          = FirstCBConstant;
         NumConstants[Slot]            = NumCBConstants;
@@ -686,7 +699,10 @@ inline void ShaderResourceCacheD3D11::BindDynamicCBs(Uint32                     
             NumConstants[Slot]            != NumCBConstants)
         // clang-format on
         {
-            VERIFY_EXPR(pd3d11CB != nullptr);
+#ifdef DILIGENT_DEVELOPMENT
+            if (pd3d11CB == nullptr)
+                LOG_ERROR(CachedResourceTraits<Range>::Name, " at slot ", Slot, " is null.");
+#endif
             CommittedD3D11Resources[Slot] = pd3d11CB;
             FirstConstants[Slot]          = FirstCBConstant;
             NumConstants[Slot]            = NumCBConstants;
