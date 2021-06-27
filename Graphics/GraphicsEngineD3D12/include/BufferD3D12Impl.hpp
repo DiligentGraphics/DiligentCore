@@ -41,6 +41,8 @@
 namespace Diligent
 {
 
+class DeviceContextD3D12Impl;
+
 /// Buffer object implementation in Direct3D12 backend.
 class BufferD3D12Impl final : public BufferBase<EngineD3D12ImplTraits>, public D3D12ResourceBase
 {
@@ -64,7 +66,7 @@ public:
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_BufferD3D12, TBufferBase)
 
 #ifdef DILIGENT_DEVELOPMENT
-    void DvpVerifyDynamicAllocation(class DeviceContextD3D12Impl* pCtx) const;
+    void DvpVerifyDynamicAllocation(const DeviceContextD3D12Impl* pCtx) const;
 #endif
 
     /// Implementation of IBufferD3D12::GetD3D12Buffer().
@@ -86,7 +88,7 @@ public:
     /// Implementation of IBufferD3D12::GetD3D12ResourceState().
     virtual D3D12_RESOURCE_STATES DILIGENT_CALL_TYPE GetD3D12ResourceState() const override final;
 
-    __forceinline D3D12_GPU_VIRTUAL_ADDRESS GetGPUAddress(DeviceContextIndex ContextId, class DeviceContextD3D12Impl* pCtx) const
+    __forceinline D3D12_GPU_VIRTUAL_ADDRESS GetGPUAddress(DeviceContextIndex ContextId, const DeviceContextD3D12Impl* pCtx) const
     {
         if (m_Desc.Usage == USAGE_DYNAMIC)
         {
@@ -132,7 +134,7 @@ private:
     };
     static_assert(sizeof(CtxDynamicData) == CacheLineSize, "Unexpected sizeof(CtxDynamicData)");
 
-    friend class DeviceContextD3D12Impl;
+    friend DeviceContextD3D12Impl;
     // Array of dynamic allocations for every device context.
     std::vector<CtxDynamicData, STDAllocatorRawMem<D3D12DynamicAllocation>> m_DynamicData;
 };

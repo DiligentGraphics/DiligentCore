@@ -421,7 +421,7 @@ ID3D12Resource* BufferD3D12Impl::GetD3D12Buffer(Uint64& DataStartByteOffset, IDe
 }
 
 #ifdef DILIGENT_DEVELOPMENT
-void BufferD3D12Impl::DvpVerifyDynamicAllocation(DeviceContextD3D12Impl* pCtx) const
+void BufferD3D12Impl::DvpVerifyDynamicAllocation(const DeviceContextD3D12Impl* pCtx) const
 {
     auto ContextId    = pCtx->GetContextId();
     auto CurrentFrame = pCtx->GetFrameNumber();

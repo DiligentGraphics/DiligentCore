@@ -310,11 +310,9 @@ void DeviceContextD3D12Impl::SetPipelineState(IPipelineState* pPipelineState)
 }
 
 template <bool IsCompute>
-void DeviceContextD3D12Impl::CommitRootTablesAndViews(RootTableInfo& RootInfo, Uint32 CommitSRBMask)
+void DeviceContextD3D12Impl::CommitRootTablesAndViews(RootTableInfo& RootInfo, Uint32 CommitSRBMask, CommandContext& CmdCtx) const
 {
     const auto& RootSig = m_pPipelineState->GetRootSignature();
-
-    auto& CmdCtx = GetCmdContext();
 
     VERIFY(CommitSRBMask != 0, "This method should not be called when there is nothing to commit");
     while (CommitSRBMask != 0)
@@ -326,7 +324,7 @@ void DeviceContextD3D12Impl::CommitRootTablesAndViews(RootTableInfo& RootInfo, U
         const auto* const pSignature = RootSig.GetResourceSignature(sign);
         VERIFY_EXPR(pSignature != nullptr && pSignature->GetTotalResourceCount() > 0);
 
-        auto* pResourceCache = RootInfo.ResourceCaches[sign];
+        const auto* pResourceCache = RootInfo.ResourceCaches[sign];
         DEV_CHECK_ERR(pResourceCache != nullptr, "Resource cache at index ", sign, " is null.");
 
         PipelineResourceSignatureD3D12Impl::CommitCacheResourcesAttribs CommitAttribs //
@@ -415,7 +413,7 @@ DeviceContextD3D12Impl::RootTableInfo& DeviceContextD3D12Impl::GetRootTableInfo(
 }
 
 #ifdef DILIGENT_DEVELOPMENT
-void DeviceContextD3D12Impl::DvpValidateCommittedShaderResources(RootTableInfo& RootInfo)
+void DeviceContextD3D12Impl::DvpValidateCommittedShaderResources(RootTableInfo& RootInfo) const
 {
     if (RootInfo.ResourcesValidated)
         return;
@@ -570,14 +568,13 @@ void DeviceContextD3D12Impl::PrepareForDraw(GraphicsContext& GraphCtx, DRAW_FLAG
 #endif
 
     auto& RootInfo = GetRootTableInfo(PIPELINE_TYPE_GRAPHICS);
-    if (Uint32 CommitSRBMask = RootInfo.GetCommitMask(Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT))
-    {
-        CommitRootTablesAndViews<false>(RootInfo, CommitSRBMask);
-    }
-
 #ifdef DILIGENT_DEVELOPMENT
     DvpValidateCommittedShaderResources(RootInfo);
 #endif
+    if (Uint32 CommitSRBMask = RootInfo.GetCommitMask(Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT))
+    {
+        CommitRootTablesAndViews<false>(RootInfo, CommitSRBMask, GraphCtx);
+    }
 }
 
 void DeviceContextD3D12Impl::PrepareForIndexedDraw(GraphicsContext& GraphCtx, DRAW_FLAGS Flags, VALUE_TYPE IndexType)
@@ -723,27 +720,25 @@ void DeviceContextD3D12Impl::DrawMeshIndirectCount(const DrawMeshIndirectCountAt
 void DeviceContextD3D12Impl::PrepareForDispatchCompute(ComputeContext& ComputeCtx)
 {
     auto& RootInfo = GetRootTableInfo(PIPELINE_TYPE_COMPUTE);
-    if (Uint32 CommitSRBMask = RootInfo.GetCommitMask())
-    {
-        CommitRootTablesAndViews<true>(RootInfo, CommitSRBMask);
-    }
-
 #ifdef DILIGENT_DEVELOPMENT
     DvpValidateCommittedShaderResources(RootInfo);
 #endif
+    if (Uint32 CommitSRBMask = RootInfo.GetCommitMask())
+    {
+        CommitRootTablesAndViews<true>(RootInfo, CommitSRBMask, ComputeCtx);
+    }
 }
 
 void DeviceContextD3D12Impl::PrepareForDispatchRays(GraphicsContext& GraphCtx)
 {
     auto& RootInfo = GetRootTableInfo(PIPELINE_TYPE_RAY_TRACING);
-    if (Uint32 CommitSRBMask = RootInfo.GetCommitMask())
-    {
-        CommitRootTablesAndViews<true>(RootInfo, CommitSRBMask);
-    }
-
 #ifdef DILIGENT_DEVELOPMENT
     DvpValidateCommittedShaderResources(RootInfo);
 #endif
+    if (Uint32 CommitSRBMask = RootInfo.GetCommitMask())
+    {
+        CommitRootTablesAndViews<true>(RootInfo, CommitSRBMask, GraphCtx);
+    }
 }
 
 void DeviceContextD3D12Impl::DispatchCompute(const DispatchComputeAttribs& Attribs)

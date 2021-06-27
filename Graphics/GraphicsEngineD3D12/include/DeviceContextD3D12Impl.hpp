@@ -403,10 +403,10 @@ private:
     __forceinline RootTableInfo& GetRootTableInfo(PIPELINE_TYPE PipelineType);
 
     template <bool IsCompute>
-    __forceinline void CommitRootTablesAndViews(RootTableInfo& RootInfo, Uint32 CommitSRBMask);
+    __forceinline void CommitRootTablesAndViews(RootTableInfo& RootInfo, Uint32 CommitSRBMask, CommandContext& CmdCtx) const;
 
 #ifdef DILIGENT_DEVELOPMENT
-    void DvpValidateCommittedShaderResources(RootTableInfo& RootInfo);
+    void DvpValidateCommittedShaderResources(RootTableInfo& RootInfo) const;
 #endif
 
     struct TextureUploadSpace

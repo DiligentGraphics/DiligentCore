@@ -729,6 +729,7 @@ void DeviceContextGLImpl::PrepareForDraw(DRAW_FLAGS Flags, bool IsIndexed, GLenu
     }
 
 #ifdef DILIGENT_DEVELOPMENT
+    // Must be called after BindProgramResources as it needs BaseBindings
     DvpValidateCommittedShaderResources();
 #endif
 
@@ -976,6 +977,7 @@ void DeviceContextGLImpl::DispatchCompute(const DispatchComputeAttribs& Attribs)
     }
 
 #    ifdef DILIGENT_DEVELOPMENT
+    // Must be called after BindProgramResources as it needs BaseBindings
     DvpValidateCommittedShaderResources();
 #    endif
 
@@ -1002,6 +1004,7 @@ void DeviceContextGLImpl::DispatchComputeIndirect(const DispatchComputeIndirectA
     }
 
 #    ifdef DILIGENT_DEVELOPMENT
+    // Must be called after BindProgramResources as it needs BaseBindings
     DvpValidateCommittedShaderResources();
 #    endif
 

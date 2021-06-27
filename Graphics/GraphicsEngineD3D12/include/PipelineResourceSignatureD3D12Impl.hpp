@@ -133,7 +133,7 @@ public:
     {
         const ShaderResourceCacheD3D12& ResourceCache;
         CommandContext&                 Ctx;
-        DeviceContextD3D12Impl*         pDeviceCtx;
+        const DeviceContextD3D12Impl*   pDeviceCtx;
         DeviceContextIndex              DeviceCtxId;
         bool                            IsCompute;
         Uint32                          BaseRootIndex;

@@ -409,7 +409,7 @@ void DeviceContextVkImpl::CommitDescriptorSets(ResourceBindInfo& BindInfo, Uint3
         VERIFY_EXPR(sign < m_pPipelineState->GetResourceSignatureCount());
         CommitSRBMask &= ~(Uint32{1} << sign);
 
-        auto* pResourceCache = BindInfo.ResourceCaches[sign];
+        const auto* pResourceCache = BindInfo.ResourceCaches[sign];
         DEV_CHECK_ERR(pResourceCache != nullptr, "Resource cache at index ", sign, " is null");
 
         auto& SetInfo = BindInfo.SetInfo[sign];
@@ -720,6 +720,10 @@ void DeviceContextVkImpl::PrepareForDraw(DRAW_FLAGS Flags)
     {
         CommitDescriptorSets(BindInfo, CommitMask);
     }
+#ifdef DILIGENT_DEVELOPMENT
+    // Must be called after CommitDescriptorSets as it needs SetInfo.BaseInd
+    DvpValidateCommittedShaderResources(BindInfo);
+#endif
 
     if (m_pPipelineState->GetGraphicsPipelineDesc().pRenderPass == nullptr)
     {
@@ -734,10 +738,6 @@ void DeviceContextVkImpl::PrepareForDraw(DRAW_FLAGS Flags)
 
         CommitRenderPassAndFramebuffer((Flags & DRAW_FLAG_VERIFY_STATES) != 0);
     }
-
-#ifdef DILIGENT_DEVELOPMENT
-    DvpValidateCommittedShaderResources(BindInfo);
-#endif
 }
 
 BufferVkImpl* DeviceContextVkImpl::PrepareIndirectAttribsBuffer(IBuffer*                       pAttribsBuffer,
@@ -881,6 +881,7 @@ void DeviceContextVkImpl::PrepareForDispatchCompute()
     }
 
 #ifdef DILIGENT_DEVELOPMENT
+    // Must be called after CommitDescriptorSets as it needs SetInfo.BaseInd
     DvpValidateCommittedShaderResources(BindInfo);
 #endif
 }
@@ -896,6 +897,7 @@ void DeviceContextVkImpl::PrepareForRayTracing()
     }
 
 #ifdef DILIGENT_DEVELOPMENT
+    // Must be called after CommitDescriptorSets as it needs SetInfo.BaseInd
     DvpValidateCommittedShaderResources(BindInfo);
 #endif
 }

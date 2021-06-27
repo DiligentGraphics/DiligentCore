@@ -392,7 +392,7 @@ void DeviceContextD3D11Impl::BindShaderResources(Uint32 BindSRBMask)
 #ifdef DILIGENT_DEVELOPMENT
         m_BindInfo.BaseBindings[sign] = BaseBindings;
 #endif
-        auto* pResourceCache = m_BindInfo.ResourceCaches[sign];
+        const auto* pResourceCache = m_BindInfo.ResourceCaches[sign];
         DEV_CHECK_ERR(pResourceCache != nullptr, "Shader resource cache at index ", sign, " is null.");
         if (m_BindInfo.StaleSRBMask & SignBit)
         {
@@ -597,6 +597,9 @@ void DeviceContextD3D11Impl::PrepareForDraw(DRAW_FLAGS Flags)
     }
 
 #ifdef DILIGENT_DEVELOPMENT
+    // Must be called after BindShaderResources as it needs BaseBindings
+    DvpValidateCommittedShaderResources();
+
     if ((Flags & DRAW_FLAG_VERIFY_STATES) != 0)
     {
         for (UINT Slot = 0; Slot < m_NumVertexStreams; ++Slot)
@@ -625,10 +628,6 @@ void DeviceContextD3D11Impl::PrepareForDraw(DRAW_FLAGS Flags)
             DvpVerifyCommittedShaders();
         }
     }
-#endif
-
-#ifdef DILIGENT_DEVELOPMENT
-    DvpValidateCommittedShaderResources();
 #endif
 }
 
@@ -728,6 +727,9 @@ void DeviceContextD3D11Impl::DispatchCompute(const DispatchComputeAttribs& Attri
     }
 
 #ifdef DILIGENT_DEVELOPMENT
+    // Must be called after BindShaderResources as it needs BaseBindings
+    DvpValidateCommittedShaderResources();
+
     if (m_D3D11ValidationFlags & D3D11_VALIDATION_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
     {
         // Verify bindings
@@ -737,10 +739,6 @@ void DeviceContextD3D11Impl::DispatchCompute(const DispatchComputeAttribs& Attri
         DvpVerifyCommittedCBs(SHADER_TYPE_COMPUTE);
         DvpVerifyCommittedShaders();
     }
-#endif
-
-#ifdef DILIGENT_DEVELOPMENT
-    DvpValidateCommittedShaderResources();
 #endif
 
     m_pd3d11DeviceContext->Dispatch(Attribs.ThreadGroupCountX, Attribs.ThreadGroupCountY, Attribs.ThreadGroupCountZ);
@@ -756,6 +754,9 @@ void DeviceContextD3D11Impl::DispatchComputeIndirect(const DispatchComputeIndire
     }
 
 #ifdef DILIGENT_DEVELOPMENT
+    // Must be called after BindShaderResources as it needs BaseBindings
+    DvpValidateCommittedShaderResources();
+
     if (m_D3D11ValidationFlags & D3D11_VALIDATION_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
     {
         // Verify bindings
@@ -765,10 +766,6 @@ void DeviceContextD3D11Impl::DispatchComputeIndirect(const DispatchComputeIndire
         DvpVerifyCommittedCBs(SHADER_TYPE_COMPUTE);
         DvpVerifyCommittedShaders();
     }
-#endif
-
-#ifdef DILIGENT_DEVELOPMENT
-    DvpValidateCommittedShaderResources();
 #endif
 
     auto* pd3d11Buff = ValidatedCast<BufferD3D11Impl>(pAttribsBuffer)->GetD3D11Buffer();
