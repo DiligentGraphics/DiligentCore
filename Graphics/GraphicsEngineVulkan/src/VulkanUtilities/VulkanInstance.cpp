@@ -26,6 +26,7 @@
  */
 
 #include "VulkanUtilities/VulkanInstance.hpp"
+#include "APIInfo.h"
 
 #include <vector>
 #include <cstring>
@@ -229,6 +230,8 @@ VulkanInstance::VulkanInstance(const CreateInfo& CI) :
             else
                 LOG_WARNING_MESSAGE("Failed to find '", pLayerName, "' layer. Validation will be disabled");
 
+            // Beta extensions may vary and result in a crash.
+            // New enums are not supported and may cause validation error.
             if (LayerVer < VK_HEADER_VERSION_COMPLETE)
             {
                 LOG_WARNING_MESSAGE("Layer '", pLayerName, "' version (", VK_VERSION_MAJOR(LayerVer), ".", VK_VERSION_MINOR(LayerVer), ".", VK_VERSION_PATCH(LayerVer),
@@ -245,7 +248,7 @@ VulkanInstance::VulkanInstance(const CreateInfo& CI) :
     appInfo.pApplicationName   = nullptr;
     appInfo.applicationVersion = 0; // Developer-supplied version number of the application
     appInfo.pEngineName        = "Diligent Engine";
-    appInfo.engineVersion      = 0; // Developer-supplied version number of the engine used to create the application.
+    appInfo.engineVersion      = DILIGENT_API_VERSION; // Developer-supplied version number of the engine used to create the application.
     appInfo.apiVersion         = ApiVersion;
 
     VkInstanceCreateInfo InstanceCreateInfo{};
