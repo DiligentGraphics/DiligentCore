@@ -1527,7 +1527,7 @@ struct StateTransitionDesc
     /// Resource state before transition.
     /// If this value is RESOURCE_STATE_UNKNOWN, internal resource state will be used, which must be defined in this case.
     /// If this value is RESOURCE_STATE_UNDEFINED, previous content of the resource will be invalidated.
-    /// Use RESOURCE_STATE_UNDEFINED if you don't know the previous state and will overwrite the resource content.
+    /// Use RESOURCE_STATE_UNDEFINED if the previous state is not known and the resource content will be overwritten.
     ///
     /// \note  Resource state must be compatible with the context type.
     RESOURCE_STATE OldState  DEFAULT_INITIALIZER(RESOURCE_STATE_UNKNOWN);

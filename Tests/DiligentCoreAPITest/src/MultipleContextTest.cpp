@@ -451,10 +451,6 @@ TEST_F(MultipleContextTest, GraphicsAndComputeQueue)
     ASSERT_NE(pTextureRT, nullptr);
     ASSERT_NE(pTextureUAV, nullptr);
 
-    // disable implicit state transitions
-    pTextureRT->SetState(RESOURCE_STATE_UNKNOWN);
-    pTextureUAV->SetState(RESOURCE_STATE_UNKNOWN);
-
     const Uint64 GraphicsFenceValue    = 11;
     const Uint64 ComputeFenceValue     = 22;
     const auto   DefaultTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE;
@@ -463,9 +459,10 @@ TEST_F(MultipleContextTest, GraphicsAndComputeQueue)
     {
         sm_pDrawProceduralSRB->GetVariableByName(SHADER_TYPE_PIXEL, "Constants")->Set(pConstants1);
 
-        // undefined -> render_target
-        const StateTransitionDesc Barriers1[] = {{pTextureRT, RESOURCE_STATE_UNDEFINED, RESOURCE_STATE_RENDER_TARGET}};
-        pGraphicsCtx->TransitionResourceStates(_countof(Barriers1), Barriers1);
+        // initial -> render_target
+        const StateTransitionDesc Barrier1 = {pTextureRT, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_RENDER_TARGET};
+        pGraphicsCtx->TransitionResourceStates(1, &Barrier1);
+        pTextureRT->SetState(RESOURCE_STATE_UNKNOWN); // disable implicit state transitions
 
         ITextureView* pRTVs[] = {pTextureRT->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET)};
         pGraphicsCtx->SetRenderTargets(1, pRTVs, nullptr, DefaultTransitionMode);
@@ -477,8 +474,8 @@ TEST_F(MultipleContextTest, GraphicsAndComputeQueue)
         pGraphicsCtx->SetRenderTargets(0, nullptr, nullptr, DefaultTransitionMode);
 
         // render_target -> shader_resource
-        const StateTransitionDesc Barriers2[] = {{pTextureRT, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE}};
-        pGraphicsCtx->TransitionResourceStates(_countof(Barriers2), Barriers2);
+        const StateTransitionDesc Barrier2 = {pTextureRT, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE};
+        pGraphicsCtx->TransitionResourceStates(1, &Barrier2);
 
         pGraphicsCtx->EnqueueSignal(pGraphicsFence, GraphicsFenceValue);
         pGraphicsCtx->Flush();
@@ -489,9 +486,10 @@ TEST_F(MultipleContextTest, GraphicsAndComputeQueue)
         sm_pCompProceduralSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "Constants")->Set(pConstants2);
         sm_pCompProceduralSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_DstTexture")->Set(pTextureUAV->GetDefaultView(TEXTURE_VIEW_UNORDERED_ACCESS));
 
-        // undefined -> UAV
-        const StateTransitionDesc Barriers1[] = {{pTextureUAV, RESOURCE_STATE_UNDEFINED, RESOURCE_STATE_UNORDERED_ACCESS}};
-        pComputeCtx->TransitionResourceStates(_countof(Barriers1), Barriers1);
+        // initial -> UAV
+        const StateTransitionDesc Barrier1 = {pTextureUAV, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_UNORDERED_ACCESS};
+        pComputeCtx->TransitionResourceStates(1, &Barrier1);
+        pTextureUAV->SetState(RESOURCE_STATE_UNKNOWN); // disable implicit state transitions
 
         pComputeCtx->SetPipelineState(sm_pCompProceduralPSO);
         pComputeCtx->CommitShaderResources(sm_pCompProceduralSRB, DefaultTransitionMode);
@@ -695,10 +693,6 @@ TEST_F(MultipleContextTest, GraphicsAndTransferQueue)
     ASSERT_NE(pTextureRT, nullptr);
     ASSERT_NE(pUploadTexture, nullptr);
 
-    // disable implicit state transitions
-    pTextureRT->SetState(RESOURCE_STATE_UNKNOWN);
-    pUploadTexture->SetState(RESOURCE_STATE_UNKNOWN);
-
     const Uint64 GraphicsFenceValue    = 11;
     const Uint64 TransferFenceValue    = 22;
     const auto   DefaultTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE;
@@ -707,9 +701,10 @@ TEST_F(MultipleContextTest, GraphicsAndTransferQueue)
     {
         sm_pDrawProceduralSRB->GetVariableByName(SHADER_TYPE_PIXEL, "Constants")->Set(pConstants);
 
-        // undefined -> render_target
-        const StateTransitionDesc Barriers1[] = {{pTextureRT, RESOURCE_STATE_UNDEFINED, RESOURCE_STATE_RENDER_TARGET}};
-        pGraphicsCtx->TransitionResourceStates(_countof(Barriers1), Barriers1);
+        // initial -> render_target
+        const StateTransitionDesc Barrier1 = {pTextureRT, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_RENDER_TARGET};
+        pGraphicsCtx->TransitionResourceStates(1, &Barrier1);
+        pTextureRT->SetState(RESOURCE_STATE_UNKNOWN); // disable implicit state transitions
 
         ITextureView* pRTVs[] = {pTextureRT->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET)};
         pGraphicsCtx->SetRenderTargets(1, pRTVs, nullptr, DefaultTransitionMode);
@@ -721,8 +716,8 @@ TEST_F(MultipleContextTest, GraphicsAndTransferQueue)
         pGraphicsCtx->SetRenderTargets(0, nullptr, nullptr, DefaultTransitionMode);
 
         // render_target -> shader_resource
-        const StateTransitionDesc Barriers2[] = {{pTextureRT, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE}};
-        pGraphicsCtx->TransitionResourceStates(_countof(Barriers2), Barriers2);
+        const StateTransitionDesc Barrier2 = {pTextureRT, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE};
+        pGraphicsCtx->TransitionResourceStates(1, &Barrier2);
 
         pGraphicsCtx->EnqueueSignal(pGraphicsFence, GraphicsFenceValue);
         pGraphicsCtx->Flush();
@@ -737,9 +732,10 @@ TEST_F(MultipleContextTest, GraphicsAndTransferQueue)
         VERIFY_EXPR(TexDim.x % BlockSize.x == 0);
         VERIFY_EXPR(TexDim.y % BlockSize.y == 0);
 
-        // undefined -> copy_dst
-        const StateTransitionDesc Barriers[] = {{pUploadTexture, RESOURCE_STATE_UNDEFINED, RESOURCE_STATE_COPY_DEST}};
-        pTransferCtx->TransitionResourceStates(_countof(Barriers), Barriers);
+        // initial -> copy_dst
+        const StateTransitionDesc Barrier1 = {pUploadTexture, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_DEST};
+        pTransferCtx->TransitionResourceStates(1, &Barrier1);
+        pUploadTexture->SetState(RESOURCE_STATE_UNKNOWN); // disable implicit state transitions
 
         TextureSubResData SubRes;
         SubRes.Stride = TexDim.x * 4;
@@ -758,6 +754,10 @@ TEST_F(MultipleContextTest, GraphicsAndTransferQueue)
             }
         }
 
+        // copy_dst -> common
+        const StateTransitionDesc Barrier2 = {pUploadTexture, RESOURCE_STATE_COPY_DEST, RESOURCE_STATE_COMMON};
+        pTransferCtx->TransitionResourceStates(1, &Barrier2);
+
         pTransferCtx->EnqueueSignal(pTransferFence, TransferFenceValue);
         pTransferCtx->Flush();
     }
@@ -774,7 +774,7 @@ TEST_F(MultipleContextTest, GraphicsAndTransferQueue)
 
         const StateTransitionDesc Barriers[] = {
             {pRTV->GetTexture(), RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_RENDER_TARGET, true}, // prev_state -> render_target
-            {pUploadTexture, RESOURCE_STATE_COPY_DEST, RESOURCE_STATE_SHADER_RESOURCE}        // copy_dst -> shader_resource
+            {pUploadTexture, RESOURCE_STATE_COMMON, RESOURCE_STATE_SHADER_RESOURCE}           // common -> shader_resource
         };
         pGraphicsCtx->TransitionResourceStates(_countof(Barriers), Barriers);
 

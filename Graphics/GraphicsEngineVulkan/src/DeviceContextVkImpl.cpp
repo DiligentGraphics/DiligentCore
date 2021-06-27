@@ -2606,7 +2606,7 @@ namespace
 {
 NODISCARD inline bool ResourceStateHasWriteAccess(RESOURCE_STATE State)
 {
-    static_assert(RESOURCE_STATE_MAX_BIT == RESOURCE_STATE_RAY_TRACING, "This function must be updated to handle new resource state flag");
+    static_assert(RESOURCE_STATE_MAX_BIT == (1u << 20), "This function must be updated to handle new resource state flag");
     constexpr RESOURCE_STATE WriteAccessStates =
         RESOURCE_STATE_RENDER_TARGET |
         RESOURCE_STATE_UNORDERED_ACCESS |

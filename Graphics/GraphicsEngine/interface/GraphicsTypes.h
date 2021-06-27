@@ -3359,88 +3359,94 @@ DEFINE_FLAG_ENUM_OPERATORS(ACCESS_FLAGS)
 DILIGENT_TYPED_ENUM(RESOURCE_STATE, Uint32)
 {
     /// The resource state is not known to the engine and is managed by the application
-    RESOURCE_STATE_UNKNOWN              = 0x00000,
+    RESOURCE_STATE_UNKNOWN              = 0,
 
     /// The resource state is known to the engine, but is undefined. A resource is typically in an undefined state right after initialization.
-    RESOURCE_STATE_UNDEFINED            = 0x00001,
+    RESOURCE_STATE_UNDEFINED            = 1u << 0,
 
     /// The resource is accessed as a vertex buffer
     /// \remarks Supported contexts: graphics.
-    RESOURCE_STATE_VERTEX_BUFFER        = 0x00002,
+    RESOURCE_STATE_VERTEX_BUFFER        = 1u << 1,
 
     /// The resource is accessed as a constant (uniform) buffer
     /// \remarks Supported contexts: graphics, compute.
-    RESOURCE_STATE_CONSTANT_BUFFER      = 0x00004,
+    RESOURCE_STATE_CONSTANT_BUFFER      = 1u << 2,
 
     /// The resource is accessed as an index buffer
     /// \remarks Supported contexts: graphics.
-    RESOURCE_STATE_INDEX_BUFFER         = 0x00008,
+    RESOURCE_STATE_INDEX_BUFFER         = 1u << 3,
 
     /// The resource is accessed as a render target
     /// \remarks Supported contexts: graphics.
-    RESOURCE_STATE_RENDER_TARGET        = 0x00010,
+    RESOURCE_STATE_RENDER_TARGET        = 1u << 4,
 
     /// The resource is used for unordered access
     /// \remarks Supported contexts: graphics, compute.
-    RESOURCE_STATE_UNORDERED_ACCESS     = 0x00020,
+    RESOURCE_STATE_UNORDERED_ACCESS     = 1u << 5,
 
     /// The resource is used in a writable depth-stencil view or in clear operation
     /// \remarks Supported contexts: graphics.
-    RESOURCE_STATE_DEPTH_WRITE          = 0x00040,
+    RESOURCE_STATE_DEPTH_WRITE          = 1u << 6,
 
     /// The resource is used in a read-only depth-stencil view
     /// \remarks Supported contexts: graphics.
-    RESOURCE_STATE_DEPTH_READ           = 0x00080,
+    RESOURCE_STATE_DEPTH_READ           = 1u << 7,
 
     /// The resource is accessed from a shader
     /// \remarks Supported contexts: graphics, compute.
-    RESOURCE_STATE_SHADER_RESOURCE      = 0x00100,
+    RESOURCE_STATE_SHADER_RESOURCE      = 1u << 8,
 
     /// The resource is used as the destination for stream output
-    RESOURCE_STATE_STREAM_OUT           = 0x00200,
+    RESOURCE_STATE_STREAM_OUT           = 1u << 9,
 
     /// The resource is used as an indirect draw/dispatch arguments buffer
     /// \remarks Supported contexts: graphics, compute.
-    RESOURCE_STATE_INDIRECT_ARGUMENT    = 0x00400,
+    RESOURCE_STATE_INDIRECT_ARGUMENT    = 1u << 10,
 
     /// The resource is used as the destination in a copy operation
     /// \remarks Supported contexts: graphics, compute, transfer.
-    RESOURCE_STATE_COPY_DEST            = 0x00800,
+    RESOURCE_STATE_COPY_DEST            = 1u << 11,
 
     /// The resource is used as the source in a copy operation 
     /// \remarks Supported contexts: graphics, compute, transfer.
-    RESOURCE_STATE_COPY_SOURCE          = 0x01000,
+    RESOURCE_STATE_COPY_SOURCE          = 1u << 12,
 
     /// The resource is used as the destination in a resolve operation 
     /// \remarks Supported contexts: graphics.
-    RESOURCE_STATE_RESOLVE_DEST         = 0x02000,
+    RESOURCE_STATE_RESOLVE_DEST         = 1u << 13,
 
     /// The resource is used as the source in a resolve operation 
     /// \remarks Supported contexts: graphics.
-    RESOURCE_STATE_RESOLVE_SOURCE       = 0x04000,
+    RESOURCE_STATE_RESOLVE_SOURCE       = 1u << 14,
 
     /// The resource is used as an input attachment in a render pass subpass
     /// \remarks Supported contexts: graphics.
-    RESOURCE_STATE_INPUT_ATTACHMENT     = 0x08000,
+    RESOURCE_STATE_INPUT_ATTACHMENT     = 1u << 15,
 
     /// The resource is used for present
     /// \remarks Supported contexts: graphics.
-    RESOURCE_STATE_PRESENT              = 0x10000,
+    RESOURCE_STATE_PRESENT              = 1u << 16,
 
     /// The resource is used as vertex/index/instance buffer in an AS building operation
     /// or as an acceleration structure source in an AS copy operation.
     /// \remarks Supported contexts: graphics, compute.
-    RESOURCE_STATE_BUILD_AS_READ        = 0x20000,
+    RESOURCE_STATE_BUILD_AS_READ        = 1u << 17,
 
     /// The resource is used as the target for AS building or AS copy operations.
     /// \remarks Supported contexts: graphics, compute.
-    RESOURCE_STATE_BUILD_AS_WRITE       = 0x40000,
+    RESOURCE_STATE_BUILD_AS_WRITE       = 1u << 18,
 
     /// The resource is used as a top-level AS shader resource in a trace rays operation.
     /// \remarks Supported contexts: graphics, compute.
-    RESOURCE_STATE_RAY_TRACING          = 0x80000,
+    RESOURCE_STATE_RAY_TRACING          = 1u << 19,
 
-    RESOURCE_STATE_MAX_BIT              = RESOURCE_STATE_RAY_TRACING,
+    /// The resource state is used for read operations, but access to the resource may be slower compared to the specialized state.
+    /// A transition to the COMMON state is always a pipeline stall and can often induce a cache flush and render target decompress operation.
+    /// \remarks In D3D12 backend, a resource must be in COMMON state for transition between graphics/compute queue and copy queue.
+    /// \remarks Supported contexts: graphics, compute, transfer.
+    RESOURCE_STATE_COMMON               = 1u << 20,
+
+    RESOURCE_STATE_MAX_BIT              = RESOURCE_STATE_COMMON,
 
     RESOURCE_STATE_GENERIC_READ         = RESOURCE_STATE_VERTEX_BUFFER     |
                                           RESOURCE_STATE_CONSTANT_BUFFER   |

@@ -1047,7 +1047,7 @@ String GetBufferDescString(const BufferDesc& Desc)
 const Char* GetResourceStateFlagString(RESOURCE_STATE State)
 {
     VERIFY((State & (State - 1)) == 0, "Single state is expected");
-    static_assert(RESOURCE_STATE_MAX_BIT == 0x80000, "Please update this function to handle the new resource state");
+    static_assert(RESOURCE_STATE_MAX_BIT == (1u << 20), "Please update this function to handle the new resource state");
     switch (State)
     {
         // clang-format off
@@ -1072,6 +1072,7 @@ const Char* GetResourceStateFlagString(RESOURCE_STATE State)
         case RESOURCE_STATE_BUILD_AS_READ:     return "BUILD_AS_READ";
         case RESOURCE_STATE_BUILD_AS_WRITE:    return "BUILD_AS_WRITE";
         case RESOURCE_STATE_RAY_TRACING:       return "RAY_TRACING";
+        case RESOURCE_STATE_COMMON:            return "COMMON";
         // clang-format on
         default:
             UNEXPECTED("Unknown resource state");
@@ -1293,7 +1294,7 @@ Uint32 ComputeMipLevelsCount(Uint32 Width, Uint32 Height, Uint32 Depth)
 
 bool VerifyResourceStates(RESOURCE_STATE State, bool IsTexture)
 {
-    static_assert(RESOURCE_STATE_MAX_BIT == 0x80000, "Please update this function to handle the new resource state");
+    static_assert(RESOURCE_STATE_MAX_BIT == (1u << 20), "Please update this function to handle the new resource state");
 
     // clang-format off
 #define VERIFY_EXCLUSIVE_STATE(ExclusiveState)\
@@ -1303,6 +1304,7 @@ if ( (State & ExclusiveState) != 0 && (State & ~ExclusiveState) != 0 )\
     return false;\
 }
 
+    VERIFY_EXCLUSIVE_STATE(RESOURCE_STATE_COMMON);
     VERIFY_EXCLUSIVE_STATE(RESOURCE_STATE_UNDEFINED);
     VERIFY_EXCLUSIVE_STATE(RESOURCE_STATE_UNORDERED_ACCESS);
     VERIFY_EXCLUSIVE_STATE(RESOURCE_STATE_RENDER_TARGET);

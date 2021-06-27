@@ -1766,10 +1766,10 @@ void DeviceContextD3D12Impl::CopyTextureRegion(ID3D12Resource*                pd
                                                const Box&                     DstBox,
                                                RESOURCE_STATE_TRANSITION_MODE TextureTransitionMode)
 {
-    const auto& TexDesc                 = TextureD3D12.GetDesc();
-    auto&       CmdCtx                  = GetCmdContext();
-    auto*       pCmdList                = CmdCtx.GetCommandList();
-    bool        StateTransitionRequired = false;
+    const auto& TexDesc = TextureD3D12.GetDesc();
+    auto&       CmdCtx  = GetCmdContext();
+
+    bool StateTransitionRequired = false;
     if (TextureTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
     {
         StateTransitionRequired = TextureD3D12.IsInKnownState() && !TextureD3D12.CheckState(RESOURCE_STATE_COPY_DEST);
@@ -1791,7 +1791,7 @@ void DeviceContextD3D12Impl::CopyTextureRegion(ID3D12Resource*                pd
         BarrierDesc.Transition.StateBefore = ResourceStateFlagsToD3D12ResourceStates(TextureD3D12.GetState()) & ResStateMask;
         BarrierDesc.Transition.StateAfter  = D3D12_RESOURCE_STATE_COPY_DEST;
         BarrierDesc.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-        pCmdList->ResourceBarrier(1, &BarrierDesc);
+        CmdCtx.ResourceBarrier(BarrierDesc);
     }
 
     D3D12_TEXTURE_COPY_LOCATION DstLocation;
@@ -1827,6 +1827,7 @@ void DeviceContextD3D12Impl::CopyTextureRegion(ID3D12Resource*                pd
     D3D12SrcBox.bottom = Footprint.Footprint.Height;
     D3D12SrcBox.front  = 0;
     D3D12SrcBox.back   = Footprint.Footprint.Depth;
+    CmdCtx.FlushResourceBarriers();
     CmdCtx.GetCommandList()->CopyTextureRegion(&DstLocation,
                                                static_cast<UINT>(DstBox.MinX),
                                                static_cast<UINT>(DstBox.MinY),
@@ -1838,7 +1839,7 @@ void DeviceContextD3D12Impl::CopyTextureRegion(ID3D12Resource*                pd
     if (StateTransitionRequired)
     {
         std::swap(BarrierDesc.Transition.StateBefore, BarrierDesc.Transition.StateAfter);
-        pCmdList->ResourceBarrier(1, &BarrierDesc);
+        CmdCtx.ResourceBarrier(BarrierDesc);
     }
 }
 

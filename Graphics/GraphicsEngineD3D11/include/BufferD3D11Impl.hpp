@@ -69,7 +69,7 @@ public:
 
     void AddState(RESOURCE_STATE State)
     {
-        m_State &= ~RESOURCE_STATE_UNDEFINED;
+        m_State &= ~(RESOURCE_STATE_COMMON | RESOURCE_STATE_UNDEFINED);
         m_State |= State;
     }
 

@@ -275,12 +275,13 @@ bool VarifyResourceState(RESOURCE_STATE States, COMMAND_QUEUE_TYPE QueueType, co
     {
         auto State = ExtractLSB(States);
 
-        static_assert(RESOURCE_STATE_MAX_BIT == 0x80000, "Please update the switch below to handle the new resource state");
+        static_assert(RESOURCE_STATE_MAX_BIT == (1u << 20), "Please update the switch below to handle the new resource state");
         switch (State)
         {
             case RESOURCE_STATE_UNDEFINED:
             case RESOURCE_STATE_COPY_DEST:
             case RESOURCE_STATE_COPY_SOURCE:
+            case RESOURCE_STATE_COMMON:
                 if ((QueueType & COMMAND_QUEUE_TYPE_TRANSFER) != COMMAND_QUEUE_TYPE_TRANSFER)
                 {
                     Result = false;
