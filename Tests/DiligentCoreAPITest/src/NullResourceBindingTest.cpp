@@ -24,10 +24,10 @@
  *  of the possibility of such damages.
  */
 
-#include "GraphicsAccessories.hpp"
-#include "../../../Graphics/GraphicsEngineD3DBase/interface/ShaderD3D.h"
-
 #include "TestingEnvironment.hpp"
+#include "GraphicsAccessories.hpp"
+
+#include <utility>
 
 #include "gtest/gtest.h"
 
@@ -488,10 +488,21 @@ TEST_P(NullSampler, Test)
         GTEST_SKIP() << "Separate samplers are not supported in GL";
 
     pEnv->SetErrorAllowance(4, "No worries, errors are expected: testing null resource bindings\n");
-    pEnv->PushExpectedErrorSubstring("No resource is bound to variable 'g_MissingPSTexture'");
-    pEnv->PushExpectedErrorSubstring("No resource is bound to variable 'g_MissingPSSampler'", false);
-    pEnv->PushExpectedErrorSubstring("No resource is bound to variable 'g_MissingVSTexture'", false);
-    pEnv->PushExpectedErrorSubstring("No resource is bound to variable 'g_MissingVSSampler'", false);
+    const char* Messages[] = //
+        {
+            "No resource is bound to variable 'g_MissingPSTexture'",
+            "No resource is bound to variable 'g_MissingPSSampler'",
+            "No resource is bound to variable 'g_MissingVSTexture'",
+            "No resource is bound to variable 'g_MissingVSSampler'" //
+        };
+    size_t MsgOrder[] = {0, 1, 2, 3};
+    if (DeviceInfo.IsMetalDevice())
+    {
+        std::swap(MsgOrder[0], MsgOrder[1]);
+        std::swap(MsgOrder[2], MsgOrder[3]);
+    }
+    for (size_t i = 0; i < _countof(MsgOrder); ++i)
+        pEnv->PushExpectedErrorSubstring(Messages[MsgOrder[i]], i == 0);
 
     if (DeviceInfo.Type == RENDER_DEVICE_TYPE_D3D11)
     {
