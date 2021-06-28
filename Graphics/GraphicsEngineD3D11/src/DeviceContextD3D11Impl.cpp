@@ -661,10 +661,13 @@ void DeviceContextD3D11Impl::Draw(const DrawAttribs& Attribs)
 
     PrepareForDraw(Attribs.Flags);
 
-    if (Attribs.NumInstances > 1 || Attribs.FirstInstanceLocation != 0)
-        m_pd3d11DeviceContext->DrawInstanced(Attribs.NumVertices, Attribs.NumInstances, Attribs.StartVertexLocation, Attribs.FirstInstanceLocation);
-    else
-        m_pd3d11DeviceContext->Draw(Attribs.NumVertices, Attribs.StartVertexLocation);
+    if (Attribs.NumVertices > 0 && Attribs.NumInstances > 0)
+    {
+        if (Attribs.NumInstances > 1 || Attribs.FirstInstanceLocation != 0)
+            m_pd3d11DeviceContext->DrawInstanced(Attribs.NumVertices, Attribs.NumInstances, Attribs.StartVertexLocation, Attribs.FirstInstanceLocation);
+        else
+            m_pd3d11DeviceContext->Draw(Attribs.NumVertices, Attribs.StartVertexLocation);
+    }
 }
 
 void DeviceContextD3D11Impl::DrawIndexed(const DrawIndexedAttribs& Attribs)
@@ -673,10 +676,13 @@ void DeviceContextD3D11Impl::DrawIndexed(const DrawIndexedAttribs& Attribs)
 
     PrepareForIndexedDraw(Attribs.Flags, Attribs.IndexType);
 
-    if (Attribs.NumInstances > 1 || Attribs.FirstInstanceLocation != 0)
-        m_pd3d11DeviceContext->DrawIndexedInstanced(Attribs.NumIndices, Attribs.NumInstances, Attribs.FirstIndexLocation, Attribs.BaseVertex, Attribs.FirstInstanceLocation);
-    else
-        m_pd3d11DeviceContext->DrawIndexed(Attribs.NumIndices, Attribs.FirstIndexLocation, Attribs.BaseVertex);
+    if (Attribs.NumIndices > 0 && Attribs.NumInstances > 0)
+    {
+        if (Attribs.NumInstances > 1 || Attribs.FirstInstanceLocation != 0)
+            m_pd3d11DeviceContext->DrawIndexedInstanced(Attribs.NumIndices, Attribs.NumInstances, Attribs.FirstIndexLocation, Attribs.BaseVertex, Attribs.FirstInstanceLocation);
+        else
+            m_pd3d11DeviceContext->DrawIndexed(Attribs.NumIndices, Attribs.FirstIndexLocation, Attribs.BaseVertex);
+    }
 }
 
 void DeviceContextD3D11Impl::DrawIndirect(const DrawIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
@@ -741,7 +747,10 @@ void DeviceContextD3D11Impl::DispatchCompute(const DispatchComputeAttribs& Attri
     }
 #endif
 
-    m_pd3d11DeviceContext->Dispatch(Attribs.ThreadGroupCountX, Attribs.ThreadGroupCountY, Attribs.ThreadGroupCountZ);
+    if (Attribs.ThreadGroupCountX > 0 && Attribs.ThreadGroupCountY > 0 && Attribs.ThreadGroupCountZ > 0)
+    {
+        m_pd3d11DeviceContext->Dispatch(Attribs.ThreadGroupCountX, Attribs.ThreadGroupCountY, Attribs.ThreadGroupCountZ);
+    }
 }
 
 void DeviceContextD3D11Impl::DispatchComputeIndirect(const DispatchComputeIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)

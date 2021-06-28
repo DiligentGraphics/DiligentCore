@@ -52,11 +52,10 @@ namespace Diligent
 
 bool VerifyDrawAttribs(const DrawAttribs& Attribs)
 {
-#define CHECK_DRAW_ATTRIBS(Expr, ...) CHECK_PARAMETER(Expr, "Draw attribs are invalid: ", __VA_ARGS__)
-
-    CHECK_DRAW_ATTRIBS(Attribs.NumVertices != 0, "NumVertices must not be zero.");
-
-#undef CHECK_DRAW_ATTRIBS
+    if (Attribs.NumVertices == 0)
+        LOG_INFO_MESSAGE("DrawAttribs.NumVertices is 0. This is OK as the draw command will be ignored, but may be unintentional.");
+    if (Attribs.NumInstances == 0)
+        LOG_INFO_MESSAGE("DrawAttribs.NumInstances is 0. This is OK as the draw command will be ignored, but may be unintentional.");
 
     return true;
 }
@@ -68,7 +67,10 @@ bool VerifyDrawIndexedAttribs(const DrawIndexedAttribs& Attribs)
     CHECK_DRAW_INDEXED_ATTRIBS(Attribs.IndexType == VT_UINT16 || Attribs.IndexType == VT_UINT32,
                                "IndexType (", GetValueTypeString(Attribs.IndexType), ") must be VT_UINT16 or VT_UINT32.");
 
-    CHECK_DRAW_INDEXED_ATTRIBS(Attribs.NumIndices != 0, "NumIndices must not be zero.");
+    if (Attribs.NumIndices == 0)
+        LOG_INFO_MESSAGE("DrawIndexedAttribs.NumIndices is 0. This is OK as the draw command will be ignored, but may be unintentional.");
+    if (Attribs.NumInstances == 0)
+        LOG_INFO_MESSAGE("DrawAttribs.NumInstances is 0. This is OK as the draw command will be ignored, but may be unintentional.");
 
 #undef CHECK_DRAW_INDEXED_ATTRIBS
 
@@ -79,7 +81,9 @@ bool VerifyDrawMeshAttribs(Uint32 MaxDrawMeshTasksCount, const DrawMeshAttribs& 
 {
 #define CHECK_DRAW_MESH_ATTRIBS(Expr, ...) CHECK_PARAMETER(Expr, "Draw mesh attribs are invalid: ", __VA_ARGS__)
 
-    CHECK_DRAW_MESH_ATTRIBS(Attribs.ThreadGroupCount != 0, "ThreadGroupCount must not be zero.");
+    if (Attribs.ThreadGroupCount == 0)
+        LOG_INFO_MESSAGE("DrawMeshAttribs.ThreadGroupCount is 0. This is OK as the draw command will be ignored, but may be unintentional.");
+
     CHECK_DRAW_MESH_ATTRIBS(Attribs.ThreadGroupCount <= MaxDrawMeshTasksCount,
                             "ThreadGroupCount (", Attribs.ThreadGroupCount, ") must not exceed ", MaxDrawMeshTasksCount);
 
@@ -159,13 +163,12 @@ bool VerifyDrawMeshIndirectCountAttribs(const DrawMeshIndirectCountAttribs& Attr
 
 bool VerifyDispatchComputeAttribs(const DispatchComputeAttribs& Attribs)
 {
-#define CHECK_DISPATCH_COMPUTE_ATTRIBS(Expr, ...) CHECK_PARAMETER(Expr, "Dispatch compute attribs are invalid: ", __VA_ARGS__)
-
-    CHECK_DISPATCH_COMPUTE_ATTRIBS(Attribs.ThreadGroupCountX != 0, "ThreadGroupCountX must no be zero.");
-    CHECK_DISPATCH_COMPUTE_ATTRIBS(Attribs.ThreadGroupCountY != 0, "ThreadGroupCountY must no be zero.");
-    CHECK_DISPATCH_COMPUTE_ATTRIBS(Attribs.ThreadGroupCountZ != 0, "ThreadGroupCountZ must no be zero.");
-
-#undef CHECK_DISPATCH_COMPUTE_ATTRIBS
+    if (Attribs.ThreadGroupCountX == 0)
+        LOG_INFO_MESSAGE("DispatchComputeAttribs.ThreadGroupCountX is 0. This is OK as the dispatch command will be ignored, but may be unintentional.");
+    if (Attribs.ThreadGroupCountY == 0)
+        LOG_INFO_MESSAGE("DispatchComputeAttribs.ThreadGroupCountY is 0. This is OK as the dispatch command will be ignored, but may be unintentional.");
+    if (Attribs.ThreadGroupCountZ == 0)
+        LOG_INFO_MESSAGE("DispatchComputeAttribs.ThreadGroupCountZ is 0. This is OK as the dispatch command will be ignored, but may be unintentional.");
 
     return true;
 }

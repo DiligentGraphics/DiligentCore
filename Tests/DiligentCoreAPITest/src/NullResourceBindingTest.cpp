@@ -39,12 +39,16 @@ namespace
 
 #ifdef DILIGENT_DEVELOPMENT
 
-RefCntAutoPtr<IShader> CreateShader(const char* Name, const char* Source, SHADER_TYPE ShaderType)
+RefCntAutoPtr<IShader> CreateShader(const char*            Name,
+                                    const char*            Source,
+                                    SHADER_TYPE            ShaderType,
+                                    bool                   UseCombinedSamplers = true,
+                                    SHADER_SOURCE_LANGUAGE Language            = SHADER_SOURCE_LANGUAGE_HLSL)
 {
     ShaderCreateInfo ShaderCI;
     ShaderCI.EntryPoint                 = "main";
-    ShaderCI.UseCombinedTextureSamplers = true;
-    ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.UseCombinedTextureSamplers = UseCombinedSamplers;
+    ShaderCI.SourceLanguage             = Language;
     ShaderCI.Source                     = Source;
 
     ShaderCI.Desc.Name       = Name;
@@ -56,7 +60,7 @@ RefCntAutoPtr<IShader> CreateShader(const char* Name, const char* Source, SHADER
 }
 
 
-void TestNullResourceBinding(IShader* pVS, IShader* pPS, SHADER_RESOURCE_VARIABLE_TYPE VarType)
+void DrawWithNullResources(IShader* pVS, IShader* pPS, SHADER_RESOURCE_VARIABLE_TYPE VarType)
 {
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
@@ -93,7 +97,34 @@ void TestNullResourceBinding(IShader* pVS, IShader* pPS, SHADER_RESOURCE_VARIABL
     pContext->SetPipelineState(pPSO);
     pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
-    pContext->Draw(DrawAttribs{3, DRAW_FLAG_VERIFY_ALL});
+    pContext->Draw(DrawAttribs{0, DRAW_FLAG_VERIFY_ALL});
+}
+
+void DispatchWithNullResources(IShader* pCS, SHADER_RESOURCE_VARIABLE_TYPE VarType)
+{
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+
+    auto* const pEnv     = TestingEnvironment::GetInstance();
+    auto* const pDevice  = pEnv->GetDevice();
+    auto* const pContext = pEnv->GetDeviceContext();
+
+    ComputePipelineStateCreateInfo PSOCreateInfo;
+
+    PSOCreateInfo.PSODesc.Name                               = "Null resource test PSO";
+    PSOCreateInfo.PSODesc.ResourceLayout.DefaultVariableType = VarType;
+    PSOCreateInfo.pCS                                        = pCS;
+
+    RefCntAutoPtr<IPipelineState> pPSO;
+    pDevice->CreateComputePipelineState(PSOCreateInfo, &pPSO);
+    ASSERT_NE(pPSO, nullptr);
+
+    RefCntAutoPtr<IShaderResourceBinding> pSRB;
+    pPSO->CreateShaderResourceBinding(&pSRB, false);
+
+    pContext->SetPipelineState(pPSO);
+    pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    pContext->DispatchCompute(DispatchComputeAttribs{0, 0, 0});
 }
 
 
@@ -142,15 +173,13 @@ RefCntAutoPtr<IShader> NullConstantBuffer::pPS;
 TEST_P(NullConstantBuffer, Test)
 {
     auto* const pEnv       = TestingEnvironment::GetInstance();
-    auto* const pDevice    = pEnv->GetDevice();
-    const auto& DeviceInfo = pDevice->GetDeviceInfo();
+    const auto& DeviceInfo = pEnv->GetDevice()->GetDeviceInfo();
+    const auto  VarType    = GetParam();
 
-    if (DeviceInfo.IsVulkanDevice())
-        GTEST_SKIP() << "Null resources result in device removal in Vulkan";
-    else if (DeviceInfo.IsMetalDevice())
-        GTEST_SKIP() << "Null resources result in debug break in Metal";
-    else if (DeviceInfo.Type == RENDER_DEVICE_TYPE_D3D12 && pDevice->GetAdapterInfo().Type != ADAPTER_TYPE_SOFTWARE)
-        GTEST_SKIP() << "Null resources result in device removal in HW D3D12";
+    if (DeviceInfo.IsVulkanDevice() && VarType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
+        GTEST_SKIP() << "Dynamic resources in Vulkan require non-null descriptors when SRB is committed";
+    if (!DeviceInfo.Features.SeparablePrograms)
+        GTEST_SKIP() << "Separable programs are required";
 
     pEnv->SetErrorAllowance(2, "No worries, errors are expected: testing null resource bindings\n");
     pEnv->PushExpectedErrorSubstring("No resource is bound to variable 'MissingPSBuffer'");
@@ -163,7 +192,7 @@ TEST_P(NullConstantBuffer, Test)
         pEnv->PushExpectedErrorSubstring("Constant buffer at slot 0 is null", false);
     }
 
-    TestNullResourceBinding(pVS, pPS, GetParam());
+    DrawWithNullResources(pVS, pPS, VarType);
 }
 
 INSTANTIATE_TEST_SUITE_P(NullResourceBindings,
@@ -224,15 +253,13 @@ RefCntAutoPtr<IShader> NullStructBuffer::pPS;
 TEST_P(NullStructBuffer, Test)
 {
     auto* const pEnv       = TestingEnvironment::GetInstance();
-    auto* const pDevice    = pEnv->GetDevice();
-    const auto& DeviceInfo = pDevice->GetDeviceInfo();
+    const auto& DeviceInfo = pEnv->GetDevice()->GetDeviceInfo();
+    const auto  VarType    = GetParam();
 
-    if (DeviceInfo.IsVulkanDevice())
-        GTEST_SKIP() << "Null resources result in device removal in Vulkan";
-    else if (DeviceInfo.IsMetalDevice())
-        GTEST_SKIP() << "Null resources result in debug break in Metal";
-    else if (DeviceInfo.Type == RENDER_DEVICE_TYPE_D3D12 && pDevice->GetAdapterInfo().Type != ADAPTER_TYPE_SOFTWARE)
-        GTEST_SKIP() << "Null structured buffer result in device removal in HW D3D12 and an exception in WARP";
+    if (DeviceInfo.IsVulkanDevice() && VarType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
+        GTEST_SKIP() << "Dynamic resources in Vulkan require non-null descriptors when SRB is committed";
+    if (!DeviceInfo.Features.SeparablePrograms)
+        GTEST_SKIP() << "Separable programs are required";
 
     pEnv->SetErrorAllowance(2, "No worries, errors are expected: testing null resource bindings\n");
     pEnv->PushExpectedErrorSubstring("No resource is bound to variable 'g_MissingPSStructBuffer'");
@@ -245,7 +272,7 @@ TEST_P(NullStructBuffer, Test)
         pEnv->PushExpectedErrorSubstring("Shader resource view at slot 0 is null", false);
     }
 
-    TestNullResourceBinding(pVS, pPS, GetParam());
+    DrawWithNullResources(pVS, pPS, VarType);
 }
 
 INSTANTIATE_TEST_SUITE_P(NullResourceBindings,
@@ -297,15 +324,13 @@ RefCntAutoPtr<IShader> NullFormattedBuffer::pPS;
 TEST_P(NullFormattedBuffer, Test)
 {
     auto* const pEnv       = TestingEnvironment::GetInstance();
-    auto* const pDevice    = pEnv->GetDevice();
-    const auto& DeviceInfo = pDevice->GetDeviceInfo();
+    const auto& DeviceInfo = pEnv->GetDevice()->GetDeviceInfo();
+    const auto  VarType    = GetParam();
 
-    if (DeviceInfo.IsVulkanDevice())
-        GTEST_SKIP() << "Null resources result in device removal in Vulkan";
-    else if (DeviceInfo.IsMetalDevice())
-        GTEST_SKIP() << "Null resources result in debug break in Metal";
-    else if (DeviceInfo.Type == RENDER_DEVICE_TYPE_D3D12)
-        GTEST_SKIP() << "Null buffer results in device removal in HW D3D12 and an exception in WARP";
+    if (DeviceInfo.IsVulkanDevice() && VarType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
+        GTEST_SKIP() << "Dynamic resources in Vulkan require non-null descriptors when SRB is committed";
+    if (!DeviceInfo.Features.SeparablePrograms)
+        GTEST_SKIP() << "Separable programs are required";
 
     pEnv->SetErrorAllowance(2, "No worries, errors are expected: testing null resource bindings\n");
     pEnv->PushExpectedErrorSubstring("No resource is bound to variable 'g_MissingPSFmtBuffer'");
@@ -318,7 +343,7 @@ TEST_P(NullFormattedBuffer, Test)
         pEnv->PushExpectedErrorSubstring("Shader resource view at slot 0 is null", false);
     }
 
-    TestNullResourceBinding(pVS, pPS, GetParam());
+    DrawWithNullResources(pVS, pPS, VarType);
 }
 
 INSTANTIATE_TEST_SUITE_P(NullResourceBindings,
@@ -345,13 +370,6 @@ float4 main() : SV_Position
 }
 )";
 
-        constexpr char DummyVS[] = R"(
-float4 main() : SV_Position
-{
-    return float4(0.0, 0.0, 0.0, 0.0);
-}
-)";
-
         constexpr char NullTexturePS[] = R"(
 Texture2D<float4> g_MissingPSTexture;
 float4 main() : SV_Target
@@ -360,15 +378,7 @@ float4 main() : SV_Target
 }
 )";
 
-        auto* const pEnv    = TestingEnvironment::GetInstance();
-        auto* const pDevice = pEnv->GetDevice();
-
-        // Using null texture in VS results in an exception in WARP, but works OK in PS
-        UseDummyVS =
-            pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_D3D12 &&
-            pDevice->GetAdapterInfo().Type == ADAPTER_TYPE_SOFTWARE;
-
-        pVS = CreateShader("Null texture binding VS", UseDummyVS ? DummyVS : NullTextureVS, SHADER_TYPE_VERTEX);
+        pVS = CreateShader("Null texture binding VS", NullTextureVS, SHADER_TYPE_VERTEX);
         pPS = CreateShader("Null texture binding PS", NullTexturePS, SHADER_TYPE_PIXEL);
     }
 
@@ -377,31 +387,28 @@ float4 main() : SV_Target
         pVS.Release();
         pPS.Release();
     }
-    static bool                   UseDummyVS;
+
     static RefCntAutoPtr<IShader> pVS;
     static RefCntAutoPtr<IShader> pPS;
 };
-bool                   NullTexture::UseDummyVS = false;
+
 RefCntAutoPtr<IShader> NullTexture::pVS;
 RefCntAutoPtr<IShader> NullTexture::pPS;
 
 TEST_P(NullTexture, Test)
 {
     auto* const pEnv       = TestingEnvironment::GetInstance();
-    auto* const pDevice    = pEnv->GetDevice();
-    const auto& DeviceInfo = pDevice->GetDeviceInfo();
+    const auto& DeviceInfo = pEnv->GetDevice()->GetDeviceInfo();
+    const auto  VarType    = GetParam();
 
-    if (DeviceInfo.IsVulkanDevice())
-        GTEST_SKIP() << "Null resources result in device removal in Vulkan";
-    else if (DeviceInfo.IsMetalDevice())
-        GTEST_SKIP() << "Null resources result in debug break in Metal";
-    else if (DeviceInfo.Type == RENDER_DEVICE_TYPE_D3D12 && pDevice->GetAdapterInfo().Type != ADAPTER_TYPE_SOFTWARE)
-        GTEST_SKIP() << "Null resources result in device removal in HW D3D12";
+    if (DeviceInfo.IsVulkanDevice() && VarType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
+        GTEST_SKIP() << "Dynamic resources in Vulkan require non-null descriptors when SRB is committed";
+    if (!DeviceInfo.Features.SeparablePrograms)
+        GTEST_SKIP() << "Separable programs are required";
 
-    pEnv->SetErrorAllowance(UseDummyVS ? 1 : 2, "No worries, errors are expected: testing null resource bindings\n");
+    pEnv->SetErrorAllowance(2, "No worries, errors are expected: testing null resource bindings\n");
     pEnv->PushExpectedErrorSubstring("No resource is bound to variable 'g_MissingPSTexture'");
-    if (!UseDummyVS)
-        pEnv->PushExpectedErrorSubstring("No resource is bound to variable 'g_MissingVSTexture'", false);
+    pEnv->PushExpectedErrorSubstring("No resource is bound to variable 'g_MissingVSTexture'", false);
 
     if (DeviceInfo.Type == RENDER_DEVICE_TYPE_D3D11)
     {
@@ -410,7 +417,7 @@ TEST_P(NullTexture, Test)
         pEnv->PushExpectedErrorSubstring("Shader resource view at slot 0 is null", false);
     }
 
-    TestNullResourceBinding(pVS, pPS, GetParam());
+    DrawWithNullResources(pVS, pPS, VarType);
 }
 
 INSTANTIATE_TEST_SUITE_P(NullResourceBindings,
@@ -424,25 +431,105 @@ INSTANTIATE_TEST_SUITE_P(NullResourceBindings,
 
 
 
-class NullRWResources : public testing::TestWithParam<SHADER_RESOURCE_VARIABLE_TYPE>
+class NullSampler : public testing::TestWithParam<SHADER_RESOURCE_VARIABLE_TYPE>
 {
 protected:
     static void SetUpTestSuite()
     {
-        constexpr char NullRWResourcesCS[] = R"(
+        constexpr char NullSamplerVS[] = R"(
+Texture2D<float4> g_MissingVSTexture;
+SamplerState      g_MissingVSSampler;
+float4 main() : SV_Position
+{
+    return g_MissingVSTexture.SampleLevel(g_MissingVSSampler, float2(0.0, 0.0), 0);
+}
+)";
+
+        constexpr char NullSamplerPS[] = R"(
+Texture2D<float4> g_MissingPSTexture;
+SamplerState      g_MissingPSSampler;
+float4 main() : SV_Target
+{
+    return g_MissingPSTexture.Sample(g_MissingPSSampler, float2(0.0, 0.0));
+}
+)";
+
+        auto* const pEnv       = TestingEnvironment::GetInstance();
+        const auto& DeviceInfo = pEnv->GetDevice()->GetDeviceInfo();
+        if (!DeviceInfo.IsGLDevice())
+        {
+            pVS = CreateShader("Null texture binding VS", NullSamplerVS, SHADER_TYPE_VERTEX, false);
+            pPS = CreateShader("Null texture binding PS", NullSamplerPS, SHADER_TYPE_PIXEL, false);
+        }
+    }
+
+    static void TearDownTestSuite()
+    {
+        pVS.Release();
+        pPS.Release();
+    }
+
+    static RefCntAutoPtr<IShader> pVS;
+    static RefCntAutoPtr<IShader> pPS;
+};
+
+RefCntAutoPtr<IShader> NullSampler::pVS;
+RefCntAutoPtr<IShader> NullSampler::pPS;
+
+TEST_P(NullSampler, Test)
+{
+    auto* const pEnv       = TestingEnvironment::GetInstance();
+    const auto& DeviceInfo = pEnv->GetDevice()->GetDeviceInfo();
+    const auto  VarType    = GetParam();
+
+    if (DeviceInfo.IsVulkanDevice() && VarType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
+        GTEST_SKIP() << "Dynamic resources in Vulkan require non-null descriptors when SRB is committed";
+    if (DeviceInfo.IsGLDevice())
+        GTEST_SKIP() << "Separate samplers are not supported in GL";
+
+    pEnv->SetErrorAllowance(4, "No worries, errors are expected: testing null resource bindings\n");
+    pEnv->PushExpectedErrorSubstring("No resource is bound to variable 'g_MissingPSTexture'");
+    pEnv->PushExpectedErrorSubstring("No resource is bound to variable 'g_MissingPSSampler'", false);
+    pEnv->PushExpectedErrorSubstring("No resource is bound to variable 'g_MissingVSTexture'", false);
+    pEnv->PushExpectedErrorSubstring("No resource is bound to variable 'g_MissingVSSampler'", false);
+
+    if (DeviceInfo.Type == RENDER_DEVICE_TYPE_D3D11)
+    {
+        pEnv->SetErrorAllowance(8);
+        pEnv->PushExpectedErrorSubstring("Sampler at slot 0 is null", false);
+        pEnv->PushExpectedErrorSubstring("Shader resource view at slot 0 is null", false);
+        pEnv->PushExpectedErrorSubstring("Sampler at slot 0 is null", false);
+        pEnv->PushExpectedErrorSubstring("Shader resource view at slot 0 is null", false);
+    }
+
+    DrawWithNullResources(pVS, pPS, VarType);
+}
+
+INSTANTIATE_TEST_SUITE_P(NullResourceBindings,
+                         NullSampler,
+                         testing::Values(SHADER_RESOURCE_VARIABLE_TYPE_STATIC, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC),
+                         [](const testing::TestParamInfo<SHADER_RESOURCE_VARIABLE_TYPE>& info) //
+                         {
+                             return GetShaderVariableTypeLiteralName(info.param);
+                         }); //
+
+
+
+class NullRWTexture : public testing::TestWithParam<SHADER_RESOURCE_VARIABLE_TYPE>
+{
+protected:
+    static void SetUpTestSuite()
+    {
+        constexpr char NullRWTextureCS[] = R"(
 RWTexture2D<float4 /*format=rgba32f*/> g_MissingRWTexture;
-RWBuffer<float4 /*format=rgba32f*/>    g_MissingRWBuffer;
 [numthreads(1, 1, 1)]
 void main()
 {
-    if (g_MissingRWTexture.Load(int2(0, 0)).x == 1.0)
-        GroupMemoryBarrierWithGroupSync();
-    if (g_MissingRWBuffer.Load(0).x == 1.0)
-        GroupMemoryBarrierWithGroupSync();
+    g_MissingRWTexture[int2(0, 0)] = float4(0.0, 0.0, 0.0, 0.0);
 }
 )";
-        // NB: writes to null images cause crash in GL. Reads seem to work fine
-        pCS = CreateShader("Null RW resource binding CS", NullRWResourcesCS, SHADER_TYPE_COMPUTE);
+
+        pCS = CreateShader("Null RW texture binding CS", NullRWTextureCS, SHADER_TYPE_COMPUTE);
     }
 
     static void TearDownTestSuite()
@@ -451,67 +538,175 @@ void main()
     }
     static RefCntAutoPtr<IShader> pCS;
 };
-RefCntAutoPtr<IShader> NullRWResources::pCS;
+RefCntAutoPtr<IShader> NullRWTexture::pCS;
 
-TEST_P(NullRWResources, Test)
+TEST_P(NullRWTexture, Test)
 {
     auto* const pEnv       = TestingEnvironment::GetInstance();
-    auto* const pDevice    = pEnv->GetDevice();
-    auto* const pContext   = pEnv->GetDeviceContext();
-    const auto& DeviceInfo = pDevice->GetDeviceInfo();
+    const auto& DeviceInfo = pEnv->GetDevice()->GetDeviceInfo();
+    const auto  VarType    = GetParam();
 
-    if (DeviceInfo.IsVulkanDevice())
-        GTEST_SKIP() << "Null resources result in device removal in Vulkan";
-    else if (DeviceInfo.IsMetalDevice())
-        GTEST_SKIP() << "Null resources result in debug break in Metal";
-    else if (DeviceInfo.Type == RENDER_DEVICE_TYPE_D3D12 && pDevice->GetAdapterInfo().Type != ADAPTER_TYPE_SOFTWARE)
-        GTEST_SKIP() << "Null resources result in device removal in HW D3D12";
+    if (DeviceInfo.IsVulkanDevice() && VarType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
+        GTEST_SKIP() << "Dynamic resources in Vulkan require non-null descriptors when SRB is committed";
 
-    ComputePipelineStateCreateInfo PSOCreateInfo;
-
-    PSOCreateInfo.PSODesc.Name                               = "Null resource test PSO";
-    PSOCreateInfo.PSODesc.ResourceLayout.DefaultVariableType = GetParam();
-    PSOCreateInfo.pCS                                        = pCS;
-
-    RefCntAutoPtr<IPipelineState> pPSO;
-    pDevice->CreateComputePipelineState(PSOCreateInfo, &pPSO);
-    ASSERT_NE(pPSO, nullptr);
-
-    RefCntAutoPtr<IShaderResourceBinding> pSRB;
-    pPSO->CreateShaderResourceBinding(&pSRB, false);
-
-    pEnv->SetErrorAllowance(2, "No worries, errors are expected: testing null resource bindings\n");
-    if (DeviceInfo.IsGLDevice())
-    {
-        pEnv->PushExpectedErrorSubstring("No resource is bound to variable 'g_MissingRWTexture'");
-        pEnv->PushExpectedErrorSubstring("No resource is bound to variable 'g_MissingRWBuffer'", false);
-    }
-    else
-    {
-        pEnv->PushExpectedErrorSubstring("No resource is bound to variable 'g_MissingRWBuffer'");
-        pEnv->PushExpectedErrorSubstring("No resource is bound to variable 'g_MissingRWTexture'", false);
-    }
+    pEnv->SetErrorAllowance(1, "No worries, errors are expected: testing null resource bindings\n");
+    pEnv->PushExpectedErrorSubstring("No resource is bound to variable 'g_MissingRWTexture'", false);
 
     if (DeviceInfo.Type == RENDER_DEVICE_TYPE_D3D11)
     {
-        pEnv->SetErrorAllowance(4);
-        pEnv->PushExpectedErrorSubstring("Unordered access view at slot 1 is null", false);
+        pEnv->SetErrorAllowance(2);
         pEnv->PushExpectedErrorSubstring("Unordered access view at slot 0 is null", false);
     }
 
-    pContext->SetPipelineState(pPSO);
-    pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-
-    pContext->DispatchCompute(DispatchComputeAttribs{1, 1, 1});
+    DispatchWithNullResources(pCS, VarType);
 }
 
 INSTANTIATE_TEST_SUITE_P(NullResourceBindings,
-                         NullRWResources,
+                         NullRWTexture,
                          testing::Values(SHADER_RESOURCE_VARIABLE_TYPE_STATIC, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC),
                          [](const testing::TestParamInfo<SHADER_RESOURCE_VARIABLE_TYPE>& info) //
                          {
                              return GetShaderVariableTypeLiteralName(info.param);
                          }); //
-#endif
+
+
+
+class NullRWFmtBuffer : public testing::TestWithParam<SHADER_RESOURCE_VARIABLE_TYPE>
+{
+protected:
+    static void SetUpTestSuite()
+    {
+        constexpr char NullRWFmtBufferCS[] = R"(
+RWBuffer<float4 /*format=rgba32f*/> g_MissingRWBuffer;
+[numthreads(1, 1, 1)]
+void main()
+{
+    g_MissingRWBuffer[0] = float4(0.0, 0.0, 0.0, 0.0);
+}
+)";
+
+        pCS = CreateShader("Null RW fmt buffer binding CS", NullRWFmtBufferCS, SHADER_TYPE_COMPUTE);
+    }
+
+    static void TearDownTestSuite()
+    {
+        pCS.Release();
+    }
+    static RefCntAutoPtr<IShader> pCS;
+};
+RefCntAutoPtr<IShader> NullRWFmtBuffer::pCS;
+
+TEST_P(NullRWFmtBuffer, Test)
+{
+    auto* const pEnv       = TestingEnvironment::GetInstance();
+    const auto& DeviceInfo = pEnv->GetDevice()->GetDeviceInfo();
+    const auto  VarType    = GetParam();
+
+    if (DeviceInfo.IsVulkanDevice() && VarType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
+        GTEST_SKIP() << "Dynamic resources in Vulkan require non-null descriptors when SRB is committed";
+
+    pEnv->SetErrorAllowance(1, "No worries, errors are expected: testing null resource bindings\n");
+    pEnv->PushExpectedErrorSubstring("No resource is bound to variable 'g_MissingRWBuffer'", false);
+
+    if (DeviceInfo.Type == RENDER_DEVICE_TYPE_D3D11)
+    {
+        pEnv->SetErrorAllowance(2);
+        pEnv->PushExpectedErrorSubstring("Unordered access view at slot 0 is null", false);
+    }
+
+    DispatchWithNullResources(pCS, VarType);
+}
+
+INSTANTIATE_TEST_SUITE_P(NullResourceBindings,
+                         NullRWFmtBuffer,
+                         testing::Values(SHADER_RESOURCE_VARIABLE_TYPE_STATIC, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC),
+                         [](const testing::TestParamInfo<SHADER_RESOURCE_VARIABLE_TYPE>& info) //
+                         {
+                             return GetShaderVariableTypeLiteralName(info.param);
+                         }); //
+
+
+
+class NullRWStructBuffer : public testing::TestWithParam<SHADER_RESOURCE_VARIABLE_TYPE>
+{
+protected:
+    static void SetUpTestSuite()
+    {
+        constexpr char NullRWFmtBufferCS_HLSL[] = R"(
+struct Data
+{
+    float4 Data;
+};
+RWStructuredBuffer<Data> g_MissingRWStructBuffer;
+[numthreads(1, 1, 1)]
+void main()
+{
+    g_MissingRWStructBuffer[0].Data = float4(0.0, 0.0, 0.0, 0.0);
+}
+)";
+
+        constexpr char NullRWFmtBufferCS_GLSL[] = R"(
+layout(std140, binding = 0) buffer g_MissingRWStructBuffer
+{
+    vec4 data[4];
+}g_StorageBuff;
+
+layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+void main()
+{
+    g_StorageBuff.data[0] = vec4(0.0, 0.0, 0.0, 0.0);
+}
+)";
+
+        auto* const pEnv       = TestingEnvironment::GetInstance();
+        const auto& DeviceInfo = pEnv->GetDevice()->GetDeviceInfo();
+
+        pCS = CreateShader("Null RW struct buffer binding CS",
+                           DeviceInfo.IsGLDevice() ? NullRWFmtBufferCS_GLSL : NullRWFmtBufferCS_HLSL,
+                           SHADER_TYPE_COMPUTE,
+                           true, // UseCombinedSamplers
+                           DeviceInfo.IsGLDevice() ? SHADER_SOURCE_LANGUAGE_GLSL : SHADER_SOURCE_LANGUAGE_HLSL);
+    }
+
+    static void TearDownTestSuite()
+    {
+        pCS.Release();
+    }
+    static RefCntAutoPtr<IShader> pCS;
+};
+RefCntAutoPtr<IShader> NullRWStructBuffer::pCS;
+
+TEST_P(NullRWStructBuffer, Test)
+{
+    auto* const pEnv       = TestingEnvironment::GetInstance();
+    const auto& DeviceInfo = pEnv->GetDevice()->GetDeviceInfo();
+    const auto  VarType    = GetParam();
+
+    if (DeviceInfo.IsVulkanDevice() && VarType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
+        GTEST_SKIP() << "Dynamic resources in Vulkan require non-null descriptors when SRB is committed";
+
+    pEnv->SetErrorAllowance(1, "No worries, errors are expected: testing null resource bindings\n");
+    pEnv->PushExpectedErrorSubstring("No resource is bound to variable 'g_MissingRWStructBuffer'", false);
+
+    if (DeviceInfo.Type == RENDER_DEVICE_TYPE_D3D11)
+    {
+        pEnv->SetErrorAllowance(2);
+        pEnv->PushExpectedErrorSubstring("Unordered access view at slot 0 is null", false);
+    }
+
+    DispatchWithNullResources(pCS, VarType);
+}
+
+INSTANTIATE_TEST_SUITE_P(NullResourceBindings,
+                         NullRWStructBuffer,
+                         testing::Values(SHADER_RESOURCE_VARIABLE_TYPE_STATIC, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC),
+                         [](const testing::TestParamInfo<SHADER_RESOURCE_VARIABLE_TYPE>& info) //
+                         {
+                             return GetShaderVariableTypeLiteralName(info.param);
+                         }); //
+
+
+
+#endif // DILIGENT_DEVELOPMENT
 
 } // namespace

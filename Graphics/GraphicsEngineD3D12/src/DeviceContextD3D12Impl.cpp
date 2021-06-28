@@ -600,8 +600,11 @@ void DeviceContextD3D12Impl::Draw(const DrawAttribs& Attribs)
 
     auto& GraphCtx = GetCmdContext().AsGraphicsContext();
     PrepareForDraw(GraphCtx, Attribs.Flags);
-    GraphCtx.Draw(Attribs.NumVertices, Attribs.NumInstances, Attribs.StartVertexLocation, Attribs.FirstInstanceLocation);
-    ++m_State.NumCommands;
+    if (Attribs.NumVertices > 0 && Attribs.NumInstances > 0)
+    {
+        GraphCtx.Draw(Attribs.NumVertices, Attribs.NumInstances, Attribs.StartVertexLocation, Attribs.FirstInstanceLocation);
+        ++m_State.NumCommands;
+    }
 }
 
 void DeviceContextD3D12Impl::DrawIndexed(const DrawIndexedAttribs& Attribs)
@@ -610,8 +613,11 @@ void DeviceContextD3D12Impl::DrawIndexed(const DrawIndexedAttribs& Attribs)
 
     auto& GraphCtx = GetCmdContext().AsGraphicsContext();
     PrepareForIndexedDraw(GraphCtx, Attribs.Flags, Attribs.IndexType);
-    GraphCtx.DrawIndexed(Attribs.NumIndices, Attribs.NumInstances, Attribs.FirstIndexLocation, Attribs.BaseVertex, Attribs.FirstInstanceLocation);
-    ++m_State.NumCommands;
+    if (Attribs.NumIndices > 0 && Attribs.NumInstances > 0)
+    {
+        GraphCtx.DrawIndexed(Attribs.NumIndices, Attribs.NumInstances, Attribs.FirstIndexLocation, Attribs.BaseVertex, Attribs.FirstInstanceLocation);
+        ++m_State.NumCommands;
+    }
 }
 
 void DeviceContextD3D12Impl::PrepareIndirectAttribsBuffer(CommandContext&                CmdCtx,
@@ -675,8 +681,11 @@ void DeviceContextD3D12Impl::DrawMesh(const DrawMeshAttribs& Attribs)
     auto& GraphCtx = GetCmdContext().AsGraphicsContext6();
     PrepareForDraw(GraphCtx, Attribs.Flags);
 
-    GraphCtx.DrawMesh(Attribs.ThreadGroupCount, 1, 1);
-    ++m_State.NumCommands;
+    if (Attribs.ThreadGroupCount > 0)
+    {
+        GraphCtx.DrawMesh(Attribs.ThreadGroupCount, 1, 1);
+        ++m_State.NumCommands;
+    }
 }
 
 void DeviceContextD3D12Impl::DrawMeshIndirect(const DrawMeshIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
@@ -747,8 +756,11 @@ void DeviceContextD3D12Impl::DispatchCompute(const DispatchComputeAttribs& Attri
 
     auto& ComputeCtx = GetCmdContext().AsComputeContext();
     PrepareForDispatchCompute(ComputeCtx);
-    ComputeCtx.Dispatch(Attribs.ThreadGroupCountX, Attribs.ThreadGroupCountY, Attribs.ThreadGroupCountZ);
-    ++m_State.NumCommands;
+    if (Attribs.ThreadGroupCountX > 0 && Attribs.ThreadGroupCountY > 0 && Attribs.ThreadGroupCountZ > 0)
+    {
+        ComputeCtx.Dispatch(Attribs.ThreadGroupCountX, Attribs.ThreadGroupCountY, Attribs.ThreadGroupCountZ);
+        ++m_State.NumCommands;
+    }
 }
 
 void DeviceContextD3D12Impl::DispatchComputeIndirect(const DispatchComputeIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)

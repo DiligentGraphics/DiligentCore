@@ -779,8 +779,11 @@ void DeviceContextVkImpl::Draw(const DrawAttribs& Attribs)
 
     PrepareForDraw(Attribs.Flags);
 
-    m_CommandBuffer.Draw(Attribs.NumVertices, Attribs.NumInstances, Attribs.StartVertexLocation, Attribs.FirstInstanceLocation);
-    ++m_State.NumCommands;
+    if (Attribs.NumVertices > 0 && Attribs.NumInstances > 0)
+    {
+        m_CommandBuffer.Draw(Attribs.NumVertices, Attribs.NumInstances, Attribs.StartVertexLocation, Attribs.FirstInstanceLocation);
+        ++m_State.NumCommands;
+    }
 }
 
 void DeviceContextVkImpl::DrawIndexed(const DrawIndexedAttribs& Attribs)
@@ -789,8 +792,11 @@ void DeviceContextVkImpl::DrawIndexed(const DrawIndexedAttribs& Attribs)
 
     PrepareForIndexedDraw(Attribs.Flags, Attribs.IndexType);
 
-    m_CommandBuffer.DrawIndexed(Attribs.NumIndices, Attribs.NumInstances, Attribs.FirstIndexLocation, Attribs.BaseVertex, Attribs.FirstInstanceLocation);
-    ++m_State.NumCommands;
+    if (Attribs.NumIndices > 0 && Attribs.NumInstances > 0)
+    {
+        m_CommandBuffer.DrawIndexed(Attribs.NumIndices, Attribs.NumInstances, Attribs.FirstIndexLocation, Attribs.BaseVertex, Attribs.FirstInstanceLocation);
+        ++m_State.NumCommands;
+    }
 }
 
 void DeviceContextVkImpl::DrawIndirect(const DrawIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
@@ -827,8 +833,11 @@ void DeviceContextVkImpl::DrawMesh(const DrawMeshAttribs& Attribs)
 
     PrepareForDraw(Attribs.Flags);
 
-    m_CommandBuffer.DrawMesh(Attribs.ThreadGroupCount, 0);
-    ++m_State.NumCommands;
+    if (Attribs.ThreadGroupCount > 0)
+    {
+        m_CommandBuffer.DrawMesh(Attribs.ThreadGroupCount, 0);
+        ++m_State.NumCommands;
+    }
 }
 
 void DeviceContextVkImpl::DrawMeshIndirect(const DrawMeshIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
@@ -907,8 +916,12 @@ void DeviceContextVkImpl::DispatchCompute(const DispatchComputeAttribs& Attribs)
     DvpVerifyDispatchArguments(Attribs);
 
     PrepareForDispatchCompute();
-    m_CommandBuffer.Dispatch(Attribs.ThreadGroupCountX, Attribs.ThreadGroupCountY, Attribs.ThreadGroupCountZ);
-    ++m_State.NumCommands;
+
+    if (Attribs.ThreadGroupCountX > 0 && Attribs.ThreadGroupCountY > 0 && Attribs.ThreadGroupCountZ > 0)
+    {
+        m_CommandBuffer.Dispatch(Attribs.ThreadGroupCountX, Attribs.ThreadGroupCountY, Attribs.ThreadGroupCountZ);
+        ++m_State.NumCommands;
+    }
 }
 
 void DeviceContextVkImpl::DispatchComputeIndirect(const DispatchComputeIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)

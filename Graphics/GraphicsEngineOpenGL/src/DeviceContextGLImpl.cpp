@@ -804,18 +804,21 @@ void DeviceContextGLImpl::Draw(const DrawAttribs& Attribs)
     GLenum GlTopology;
     PrepareForDraw(Attribs.Flags, false, GlTopology);
 
-    if (Attribs.NumInstances > 1 || Attribs.FirstInstanceLocation != 0)
+    if (Attribs.NumVertices > 0 && Attribs.NumInstances > 0)
     {
-        if (Attribs.FirstInstanceLocation != 0)
-            glDrawArraysInstancedBaseInstance(GlTopology, Attribs.StartVertexLocation, Attribs.NumVertices, Attribs.NumInstances, Attribs.FirstInstanceLocation);
+        if (Attribs.NumInstances > 1 || Attribs.FirstInstanceLocation != 0)
+        {
+            if (Attribs.FirstInstanceLocation != 0)
+                glDrawArraysInstancedBaseInstance(GlTopology, Attribs.StartVertexLocation, Attribs.NumVertices, Attribs.NumInstances, Attribs.FirstInstanceLocation);
+            else
+                glDrawArraysInstanced(GlTopology, Attribs.StartVertexLocation, Attribs.NumVertices, Attribs.NumInstances);
+        }
         else
-            glDrawArraysInstanced(GlTopology, Attribs.StartVertexLocation, Attribs.NumVertices, Attribs.NumInstances);
+        {
+            glDrawArrays(GlTopology, Attribs.StartVertexLocation, Attribs.NumVertices);
+        }
+        DEV_CHECK_GL_ERROR("OpenGL draw command failed");
     }
-    else
-    {
-        glDrawArrays(GlTopology, Attribs.StartVertexLocation, Attribs.NumVertices);
-    }
-    DEV_CHECK_GL_ERROR("OpenGL draw command failed");
 
     PostDraw();
 }
@@ -835,31 +838,34 @@ void DeviceContextGLImpl::DrawIndexed(const DrawIndexedAttribs& Attribs)
     // errors in case instance data is read from the same stream as vertex data. Thus handling
     // such cases is left to the application
 
-    if (Attribs.NumInstances > 1 || Attribs.FirstInstanceLocation != 0)
+    if (Attribs.NumIndices > 0 && Attribs.NumInstances > 0)
     {
-        if (Attribs.BaseVertex > 0)
+        if (Attribs.NumInstances > 1 || Attribs.FirstInstanceLocation != 0)
         {
-            if (Attribs.FirstInstanceLocation != 0)
-                glDrawElementsInstancedBaseVertexBaseInstance(GlTopology, Attribs.NumIndices, GLIndexType, reinterpret_cast<GLvoid*>(static_cast<size_t>(FirstIndexByteOffset)), Attribs.NumInstances, Attribs.BaseVertex, Attribs.FirstInstanceLocation);
+            if (Attribs.BaseVertex > 0)
+            {
+                if (Attribs.FirstInstanceLocation != 0)
+                    glDrawElementsInstancedBaseVertexBaseInstance(GlTopology, Attribs.NumIndices, GLIndexType, reinterpret_cast<GLvoid*>(static_cast<size_t>(FirstIndexByteOffset)), Attribs.NumInstances, Attribs.BaseVertex, Attribs.FirstInstanceLocation);
+                else
+                    glDrawElementsInstancedBaseVertex(GlTopology, Attribs.NumIndices, GLIndexType, reinterpret_cast<GLvoid*>(static_cast<size_t>(FirstIndexByteOffset)), Attribs.NumInstances, Attribs.BaseVertex);
+            }
             else
-                glDrawElementsInstancedBaseVertex(GlTopology, Attribs.NumIndices, GLIndexType, reinterpret_cast<GLvoid*>(static_cast<size_t>(FirstIndexByteOffset)), Attribs.NumInstances, Attribs.BaseVertex);
+            {
+                if (Attribs.FirstInstanceLocation != 0)
+                    glDrawElementsInstancedBaseInstance(GlTopology, Attribs.NumIndices, GLIndexType, reinterpret_cast<GLvoid*>(static_cast<size_t>(FirstIndexByteOffset)), Attribs.NumInstances, Attribs.FirstInstanceLocation);
+                else
+                    glDrawElementsInstanced(GlTopology, Attribs.NumIndices, GLIndexType, reinterpret_cast<GLvoid*>(static_cast<size_t>(FirstIndexByteOffset)), Attribs.NumInstances);
+            }
         }
         else
         {
-            if (Attribs.FirstInstanceLocation != 0)
-                glDrawElementsInstancedBaseInstance(GlTopology, Attribs.NumIndices, GLIndexType, reinterpret_cast<GLvoid*>(static_cast<size_t>(FirstIndexByteOffset)), Attribs.NumInstances, Attribs.FirstInstanceLocation);
+            if (Attribs.BaseVertex > 0)
+                glDrawElementsBaseVertex(GlTopology, Attribs.NumIndices, GLIndexType, reinterpret_cast<GLvoid*>(static_cast<size_t>(FirstIndexByteOffset)), Attribs.BaseVertex);
             else
-                glDrawElementsInstanced(GlTopology, Attribs.NumIndices, GLIndexType, reinterpret_cast<GLvoid*>(static_cast<size_t>(FirstIndexByteOffset)), Attribs.NumInstances);
+                glDrawElements(GlTopology, Attribs.NumIndices, GLIndexType, reinterpret_cast<GLvoid*>(static_cast<size_t>(FirstIndexByteOffset)));
         }
+        DEV_CHECK_GL_ERROR("OpenGL draw command failed");
     }
-    else
-    {
-        if (Attribs.BaseVertex > 0)
-            glDrawElementsBaseVertex(GlTopology, Attribs.NumIndices, GLIndexType, reinterpret_cast<GLvoid*>(static_cast<size_t>(FirstIndexByteOffset)), Attribs.BaseVertex);
-        else
-            glDrawElements(GlTopology, Attribs.NumIndices, GLIndexType, reinterpret_cast<GLvoid*>(static_cast<size_t>(FirstIndexByteOffset)));
-    }
-    DEV_CHECK_GL_ERROR("OpenGL draw command failed");
 
     PostDraw();
 }
@@ -981,8 +987,11 @@ void DeviceContextGLImpl::DispatchCompute(const DispatchComputeAttribs& Attribs)
     DvpValidateCommittedShaderResources();
 #    endif
 
-    glDispatchCompute(Attribs.ThreadGroupCountX, Attribs.ThreadGroupCountY, Attribs.ThreadGroupCountZ);
-    DEV_CHECK_GL_ERROR("glDispatchCompute() failed");
+    if (Attribs.ThreadGroupCountX > 0 && Attribs.ThreadGroupCountY > 0 && Attribs.ThreadGroupCountZ > 0)
+    {
+        glDispatchCompute(Attribs.ThreadGroupCountX, Attribs.ThreadGroupCountY, Attribs.ThreadGroupCountZ);
+        DEV_CHECK_GL_ERROR("glDispatchCompute() failed");
+    }
 
     PostDraw();
 #else
