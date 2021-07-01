@@ -1397,8 +1397,14 @@ void DeviceContextGLImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
         }
         else
         {
+            const auto& FmtAttribs = GetTextureFormatAttribs(SrcTexDesc.Format);
+
             TextureViewDesc SrcTexViewDesc;
-            SrcTexViewDesc.ViewType        = TEXTURE_VIEW_RENDER_TARGET;
+            SrcTexViewDesc.Format = SrcTexDesc.Format;
+            SrcTexViewDesc.ViewType =
+                (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH || FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL) ?
+                TEXTURE_VIEW_DEPTH_STENCIL :
+                TEXTURE_VIEW_RENDER_TARGET;
             SrcTexViewDesc.MostDetailedMip = CopyAttribs.SrcMipLevel;
             SrcTexViewDesc.FirstArraySlice = CopyAttribs.SrcSlice;
             SrcTexViewDesc.NumArraySlices  = 1;
@@ -1413,11 +1419,15 @@ void DeviceContextGLImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
                     false  // bIsDefaultView
                 };
 
-            auto  CurrentNativeGLContext = m_ContextState.GetCurrentGLContext();
-            auto& fboCache               = m_pDevice->GetFBOCache(CurrentNativeGLContext);
+            auto  CurrNativeGLCtx = m_ContextState.GetCurrentGLContext();
+            auto& fboCache        = m_pDevice->GetFBOCache(CurrNativeGLCtx);
 
             TextureViewGLImpl* pSrcViews[] = {&SrcTexView};
-            const auto&        SrcFBO      = fboCache.GetFBO(1, pSrcViews, nullptr, m_ContextState);
+
+            const auto& SrcFBO =
+                (SrcTexViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET) ?
+                fboCache.GetFBO(1, pSrcViews, nullptr, m_ContextState) :
+                fboCache.GetFBO(0, nullptr, pSrcViews[0], m_ContextState);
             glBindFramebuffer(GL_READ_FRAMEBUFFER, SrcFBO);
             DEV_CHECK_GL_ERROR("Failed to bind FBO as read framebuffer");
         }
