@@ -210,19 +210,22 @@ public:
         for (TEXTURE_FORMAT TexFmt = TEX_FORMAT_UNKNOWN; TexFmt < TEX_FORMAT_NUM_FORMATS; TexFmt = static_cast<TEXTURE_FORMAT>(static_cast<int>(TexFmt) + 1))
         {
             auto ComponentType = GetTextureFormatAttribs(TexFmt).ComponentType;
-            // clang-format off
-            if (ComponentType == COMPONENT_TYPE_UNDEFINED || 
-                ComponentType == COMPONENT_TYPE_DEPTH_STENCIL ||
-                TexFmt == TEX_FORMAT_RGB10A2_TYPELESS ||
+            if (ComponentType == COMPONENT_TYPE_UNDEFINED ||
+                ComponentType == COMPONENT_TYPE_DEPTH_STENCIL || // Skip depth-stencil
+                TexFmt == TEX_FORMAT_RGB10A2_TYPELESS ||         // and typeless formats
                 TexFmt == TEX_FORMAT_BC1_TYPELESS ||
                 TexFmt == TEX_FORMAT_BC2_TYPELESS ||
                 TexFmt == TEX_FORMAT_BC3_TYPELESS ||
                 TexFmt == TEX_FORMAT_BC4_TYPELESS ||
                 TexFmt == TEX_FORMAT_BC5_TYPELESS ||
                 TexFmt == TEX_FORMAT_BC6H_TYPELESS ||
-                TexFmt == TEX_FORMAT_BC7_TYPELESS)
-                continue; // Skip typeless and depth-stencil formats
-            // clang-format on
+                TexFmt == TEX_FORMAT_BC7_TYPELESS ||
+                TexFmt == TEX_FORMAT_A8_UNORM // Also skip A8 format as it is implemented as R8
+            )
+            {
+                continue;
+            }
+
             auto GlTexFormat = TexFormatToGLInternalTexFormat(TexFmt);
             if (GlTexFormat != 0)
             {
