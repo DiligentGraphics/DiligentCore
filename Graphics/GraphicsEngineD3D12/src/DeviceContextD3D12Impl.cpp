@@ -2107,11 +2107,30 @@ void DeviceContextD3D12Impl::GenerateMips(ITextureView* pTexView)
 {
     TDeviceContextBase::GenerateMips(pTexView);
 
+    PipelineStateD3D12Impl* pCurrPSO = nullptr;
+    if (m_pPipelineState)
+    {
+        const auto& PSODesc = m_pPipelineState->GetDesc();
+        if (PSODesc.IsComputePipeline() || PSODesc.IsRayTracingPipeline())
+        {
+            // Mips generator will set its own compute pipeline, root signature and root resources.
+            // We need to invalidate curent PSO and reset it afterwards.
+            pCurrPSO = m_pPipelineState;
+            m_pPipelineState.Release();
+            m_ComputeResources.pd3d12RootSig = nullptr;
+        }
+    }
+
     auto& Ctx = GetCmdContext();
 
     const auto& MipsGenerator = m_pDevice->GetMipsGenerator();
     MipsGenerator.GenerateMips(m_pDevice->GetD3D12Device(), ValidatedCast<TextureViewD3D12Impl>(pTexView), Ctx);
     ++m_State.NumCommands;
+
+    if (pCurrPSO != nullptr)
+    {
+        SetPipelineState(pCurrPSO);
+    }
 }
 
 void DeviceContextD3D12Impl::FinishCommandList(ICommandList** ppCommandList)

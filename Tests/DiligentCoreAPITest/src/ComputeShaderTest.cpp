@@ -184,4 +184,106 @@ TEST(ComputeShaderTest, FillTexture)
     pSwapChain->Present();
 }
 
+// Test that GenerateMips does not mess up compute pipeline in D3D12
+TEST(ComputeShaderTest, GenerateMips_CSInterference)
+{
+    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+    if (!pDevice->GetDeviceInfo().Features.ComputeShaders)
+    {
+        GTEST_SKIP() << "Compute shaders are not supported by this device";
+    }
+
+    auto* pSwapChain = pEnv->GetSwapChain();
+    auto* pContext   = pEnv->GetDeviceContext();
+
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_TestingSwapChain};
+    if (!pTestingSwapChain)
+    {
+        GTEST_SKIP() << "Compute shader test requires testing swap chain";
+    }
+
+    pContext->Flush();
+    pContext->InvalidateState();
+
+    ComputeShaderReference(pSwapChain);
+
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.ShaderCompiler             = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+    ShaderCI.UseCombinedTextureSamplers = true;
+    ShaderCI.Desc.ShaderType            = SHADER_TYPE_COMPUTE;
+    ShaderCI.EntryPoint                 = "main";
+    ShaderCI.Desc.Name                  = "Compute shader test";
+    ShaderCI.Source                     = HLSL::FillTextureCS2.c_str();
+    RefCntAutoPtr<IShader> pCS;
+    pDevice->CreateShader(ShaderCI, &pCS);
+    ASSERT_NE(pCS, nullptr);
+
+    ComputePipelineStateCreateInfo PSOCreateInfo;
+
+    PSOCreateInfo.PSODesc.Name         = "Generate Mips - CS interference test";
+    PSOCreateInfo.PSODesc.PipelineType = PIPELINE_TYPE_COMPUTE;
+    PSOCreateInfo.pCS                  = pCS;
+
+    PSOCreateInfo.PSODesc.ResourceLayout.DefaultVariableType = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE;
+
+    RefCntAutoPtr<IPipelineState> pPSO;
+    pDevice->CreateComputePipelineState(PSOCreateInfo, &pPSO);
+    ASSERT_NE(pPSO, nullptr);
+
+    const auto& SCDesc = pSwapChain->GetDesc();
+
+    RefCntAutoPtr<ITexture> pWhiteTex;
+    {
+        std::vector<Uint8> WhiteRGBA(SCDesc.Width * SCDesc.Width * 4, 255);
+        pWhiteTex = pEnv->CreateTexture("White Texture", TEX_FORMAT_RGBA8_UNORM, BIND_SHADER_RESOURCE, SCDesc.Width, SCDesc.Width, WhiteRGBA.data());
+        ASSERT_NE(pWhiteTex, nullptr);
+    }
+
+    RefCntAutoPtr<ITexture> pBlackTex;
+    {
+        TextureDesc TexDesc{"Black texture", RESOURCE_DIM_TEX_2D, SCDesc.Width, SCDesc.Height, 1, TEX_FORMAT_RGBA8_UNORM, 4, 1, USAGE_DEFAULT, BIND_SHADER_RESOURCE};
+        TexDesc.MiscFlags = MISC_TEXTURE_FLAG_GENERATE_MIPS;
+
+        std::vector<Uint8>             BlackRGBA(SCDesc.Width * SCDesc.Width * 4);
+        std::vector<TextureSubResData> MipData(TexDesc.MipLevels);
+        for (Uint32 i = 0; i < TexDesc.MipLevels; ++i)
+        {
+            MipData[i] = TextureSubResData{BlackRGBA.data(), SCDesc.Width * 4};
+        }
+        TextureData InitData{MipData.data(), TexDesc.MipLevels};
+
+        pDevice->CreateTexture(TexDesc, &InitData, &pBlackTex);
+        ASSERT_NE(pBlackTex, nullptr);
+    }
+
+    RefCntAutoPtr<IShaderResourceBinding> pSRB;
+    pPSO->CreateShaderResourceBinding(&pSRB, true);
+    ASSERT_NE(pSRB, nullptr);
+
+    pSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_tex2DWhiteTexture")->Set(pWhiteTex->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE));
+    pSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_tex2DUAV")->Set(pTestingSwapChain->GetCurrentBackBufferUAV());
+
+    pContext->SetPipelineState(pPSO);
+    pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    // Do not populate the entire texture
+    DispatchComputeAttribs DispatchAttribs;
+    DispatchAttribs.ThreadGroupCountX = 1;
+    DispatchAttribs.ThreadGroupCountY = 1;
+    pContext->DispatchCompute(DispatchAttribs);
+
+    // In D3D12 generate mips uses compute pipeline
+    pContext->GenerateMips(pBlackTex->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE));
+
+    DispatchAttribs.ThreadGroupCountX = (SCDesc.Width + 15) / 16;
+    DispatchAttribs.ThreadGroupCountY = (SCDesc.Height + 15) / 16;
+    pContext->DispatchCompute(DispatchAttribs);
+
+    pSwapChain->Present();
+}
+
 } // namespace
