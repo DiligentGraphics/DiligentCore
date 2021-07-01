@@ -128,37 +128,13 @@ set(VULKAN_UTILS_SRC
     src/VulkanUtilities/VulkanSyncObjectManager.cpp
 )
 
-set(GENERATE_MIPS_SHADER shaders/GenerateMipsCS.csh)
-
-# We must use the full path, otherwise the build system will not be able to properly detect
-# changes and shader conversion custom command will run every time
-set(GENERATE_MIPS_SHADER_INC ${CMAKE_CURRENT_SOURCE_DIR}/shaders/GenerateMipsCS_inc.h)
-set_source_files_properties(
-    ${GENERATE_MIPS_SHADER_INC}
-    PROPERTIES GENERATED TRUE
-)
-
-add_custom_command(OUTPUT ${GENERATE_MIPS_SHADER_INC} # We must use full path here!
-                   COMMAND ${FILE2STRING_PATH} ${GENERATE_MIPS_SHADER} shaders/GenerateMipsCS_inc.h
-                   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-                   COMMENT "Processing GenerateMipsCS.csh"
-                   MAIN_DEPENDENCY ${GENERATE_MIPS_SHADER}
-                   VERBATIM
-)
-
-
 add_library(Diligent-GraphicsEngineVkInterface INTERFACE)
 target_link_libraries     (Diligent-GraphicsEngineVkInterface INTERFACE Diligent-GraphicsEngineInterface)
 target_include_directories(Diligent-GraphicsEngineVkInterface INTERFACE interface)
 
 
 add_library(Diligent-GraphicsEngineVk-static STATIC 
-    ${SRC} ${VULKAN_UTILS_SRC} ${INTERFACE} ${INCLUDE} ${VULKAN_UTILS_INCLUDE} ${GENERATE_MIPS_SHADER}
-
-    # A target created in the same directory (CMakeLists.txt file) that specifies any output of the 
-    # custom command as a source file is given a rule to generate the file using the command at build time. 
-    ${GENERATE_MIPS_SHADER_INC}
-
+    ${SRC} ${VULKAN_UTILS_SRC} ${INTERFACE} ${INCLUDE} ${VULKAN_UTILS_INCLUDE}
     readme.md
 )
 
@@ -368,12 +344,6 @@ source_group("dll" FILES
 source_group("include" FILES ${INCLUDE})
 source_group("interface" FILES ${INTERFACE})
 source_group("include\\Vulkan Utilities" FILES ${VULKAN_UTILS_INCLUDE})
-source_group("shaders" FILES
-    ${GENERATE_MIPS_SHADER}
-)
-source_group("shaders\\generated" FILES
-    ${GENERATE_MIPS_SHADER_INC}
-)
 
 set_target_properties(Diligent-GraphicsEngineVk-static PROPERTIES
     FOLDER DiligentCore/Graphics

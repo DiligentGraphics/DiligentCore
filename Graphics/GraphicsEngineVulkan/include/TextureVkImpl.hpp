@@ -106,8 +106,6 @@ protected:
     void CreateViewInternal(const struct TextureViewDesc& ViewDesc, ITextureView** ppView, bool bIsDefaultView) override;
     //void PrepareVkInitData(const TextureData &InitData, Uint32 NumSubresources, std::vector<Vk_SUBRESOURCE_DATA> &VkInitData);
 
-    bool CheckCSBasedMipGenerationSupport(VkFormat vkFmt) const;
-
     void InitializeTextureContent(const TextureData&          InitData,
                                   const TextureFormatAttribs& FmtAttribs,
                                   const VkImageCreateInfo&    ImageCI);
@@ -120,7 +118,6 @@ protected:
     VulkanUtilities::BufferWrapper          m_StagingBuffer;
     VulkanUtilities::VulkanMemoryAllocation m_MemoryAllocation;
     VkDeviceSize                            m_StagingDataAlignedOffset;
-    bool                                    m_bCSBasedMipGenerationSupported = false;
 };
 
 } // namespace Diligent

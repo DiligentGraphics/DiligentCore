@@ -48,7 +48,6 @@
 #include "ShaderBindingTableVkImpl.hpp"
 #include "ShaderResourceBindingVkImpl.hpp"
 
-#include "GenerateMipsVkHelper.hpp"
 #include "PipelineLayoutVk.hpp"
 #include "VulkanUtilities/VulkanCommandBufferPool.hpp"
 #include "VulkanUtilities/VulkanCommandBuffer.hpp"
@@ -70,11 +69,10 @@ class DeviceContextVkImpl final : public DeviceContextNextGenBase<EngineVkImplTr
 public:
     using TDeviceContextBase = DeviceContextNextGenBase<EngineVkImplTraits>;
 
-    DeviceContextVkImpl(IReferenceCounters*                   pRefCounters,
-                        RenderDeviceVkImpl*                   pDevice,
-                        const EngineVkCreateInfo&             EngineCI,
-                        const DeviceContextDesc&              Desc,
-                        std::shared_ptr<GenerateMipsVkHelper> GenerateMipsHelper);
+    DeviceContextVkImpl(IReferenceCounters*       pRefCounters,
+                        RenderDeviceVkImpl*       pDevice,
+                        const EngineVkCreateInfo& EngineCI,
+                        const DeviceContextDesc&  Desc);
     ~DeviceContextVkImpl();
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_DeviceContextVk, TDeviceContextBase)
@@ -404,8 +402,7 @@ public:
 
     virtual void ResetRenderTargets() override final;
 
-    GenerateMipsVkHelper& GetGenerateMipsHelper() { return *m_GenerateMipsHelper; }
-    QueryManagerVk*       GetQueryManager() { return m_QueryMgr.get(); }
+    QueryManagerVk* GetQueryManager() { return m_QueryMgr.get(); }
 
 private:
     void               TransitionRenderTargets(RESOURCE_STATE_TRANSITION_MODE StateTransitionMode);
@@ -611,9 +608,6 @@ private:
     VulkanUploadHeap              m_UploadHeap;
     VulkanDynamicHeap             m_DynamicHeap;
     DynamicDescriptorSetAllocator m_DynamicDescrSetAllocator;
-
-    std::shared_ptr<GenerateMipsVkHelper> m_GenerateMipsHelper;
-    RefCntAutoPtr<IShaderResourceBinding> m_GenerateMipsSRB;
 
     // In Vulkan we can't bind null vertex buffer, so we have to create a dummy VB
     RefCntAutoPtr<BufferVkImpl> m_DummyVB;

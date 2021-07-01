@@ -971,8 +971,6 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
         if (OnRenderDeviceCreated != nullptr)
             OnRenderDeviceCreated(pRenderDeviceVk);
 
-        std::shared_ptr<GenerateMipsVkHelper> GenerateMipsHelper(new GenerateMipsVkHelper(*pRenderDeviceVk));
-
         for (Uint32 CtxInd = 0; CtxInd < NumImmediateContexts; ++CtxInd)
         {
             const auto  QueueId    = ppCommandQueues[CtxInd]->GetQueueFamilyIndex();
@@ -986,10 +984,9 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
                     DeviceContextDesc{
                         pImmediateContextInfo[CtxInd].Name,
                         QueueType,
-                        false,  // IsDeferred
-                        CtxInd, // Context id
-                        QueueId},
-                    GenerateMipsHelper //
+                        false,   // IsDeferred
+                        CtxInd,  // Context id
+                        QueueId} //
                     )};
             // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceVk will
             // keep a weak reference to the context
@@ -1008,8 +1005,7 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
                         COMMAND_QUEUE_TYPE_UNKNOWN,
                         true,                              // IsDeferred
                         NumImmediateContexts + DeferredCtx // Context id
-                    },
-                    GenerateMipsHelper //
+                    }                                      //
                     )};
             // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceVk will
             // keep a weak reference to the context

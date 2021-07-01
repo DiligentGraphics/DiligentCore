@@ -30,52 +30,15 @@
 /// \file
 /// Implementation of mipmap generation routines
 
-#include <array>
-#include <unordered_map>
-
-#include "VulkanUtilities/VulkanLogicalDevice.hpp"
-#include "VulkanUtilities/VulkanCommandBuffer.hpp"
-
 namespace Diligent
 {
 
-class RenderDeviceVkImpl;
 class TextureViewVkImpl;
 class DeviceContextVkImpl;
 
-class GenerateMipsVkHelper
+namespace GenerateMipsVkHelper
 {
-public:
-    GenerateMipsVkHelper(RenderDeviceVkImpl& DeviceVkImpl);
-
-    // clang-format off
-    GenerateMipsVkHelper             (const GenerateMipsVkHelper&)  = delete;
-    GenerateMipsVkHelper             (      GenerateMipsVkHelper&&) = delete;
-    GenerateMipsVkHelper& operator = (const GenerateMipsVkHelper&)  = delete;
-    GenerateMipsVkHelper& operator = (      GenerateMipsVkHelper&&) = delete;
-    // clang-format on
-
-    void GenerateMips(TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx, IShaderResourceBinding* pSRB);
-    void CreateSRB(IShaderResourceBinding** ppSRB);
-    void WarmUpCache(TEXTURE_FORMAT Fmt);
-
-private:
-    std::array<RefCntAutoPtr<IPipelineState>, 4>  CreatePSOs(TEXTURE_FORMAT Fmt);
-    std::array<RefCntAutoPtr<IPipelineState>, 4>& FindPSOs(TEXTURE_FORMAT Fmt);
-
-    VkImageLayout GenerateMipsCS(TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx, IShaderResourceBinding& SRB, VkImageSubresourceRange& SubresRange);
-    VkImageLayout GenerateMipsBlit(TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx, VkImageSubresourceRange& SubresRange) const;
-
-#if !DILIGENT_NO_GLSLANG
-    RenderDeviceVkImpl& m_DeviceVkImpl;
-#endif
-
-    std::mutex                                                                       m_PSOMutex;
-    std::unordered_map<TEXTURE_FORMAT, std::array<RefCntAutoPtr<IPipelineState>, 4>> m_PSOHash;
-
-    static void GetGlImageFormat(const TextureFormatAttribs& FmtAttribs, std::array<char, 16>& GlFmt);
-
-    RefCntAutoPtr<IBuffer> m_ConstantsCB;
-};
+void GenerateMips(TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx);
+}
 
 } // namespace Diligent

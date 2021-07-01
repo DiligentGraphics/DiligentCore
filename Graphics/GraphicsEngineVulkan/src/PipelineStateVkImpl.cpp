@@ -723,10 +723,7 @@ RefCntAutoPtr<PipelineResourceSignatureVkImpl> PipelineStateVkImpl::CreateDefaul
         }
     }
 
-    // Always initialize default resource signature as internal device object.
-    // This is necessary to avoid cyclic references.
-    // This may never be a problem as the PSO keeps the reference to the device if necessary.
-    constexpr bool bIsDeviceInternal = true;
+    constexpr bool bIsDeviceInternal = false;
     // Use immutable samplers from ResourceLayout.
     constexpr ImmutableSamplerDesc* pImmutableSamplers = nullptr;
     return TPipelineStateBase::CreateDefaultSignature(Resources, pCombinedSamplerSuffix, pImmutableSamplers, GetActiveShaderStages(), bIsDeviceInternal);

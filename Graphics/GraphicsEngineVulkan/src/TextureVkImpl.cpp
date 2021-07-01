@@ -161,25 +161,19 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
         if (m_Desc.MiscFlags & MISC_TEXTURE_FLAG_GENERATE_MIPS)
         {
             VERIFY_EXPR(!IsMemoryless);
-            if (CheckCSBasedMipGenerationSupport(ImageCI.format) && ImageView2DSupported)
-            {
-                ImageCI.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
-                m_bCSBasedMipGenerationSupported = true;
-            }
-            else
+#ifdef DILIGENT_DEVELOPMENT
             {
                 const auto& PhysicalDevice = pRenderDeviceVk->GetPhysicalDevice();
-                auto        FmtProperties  = PhysicalDevice.GetPhysicalDeviceFormatProperties(ImageCI.format);
-                (void)FmtProperties;
+                const auto  FmtProperties  = PhysicalDevice.GetPhysicalDeviceFormatProperties(ImageCI.format);
                 DEV_CHECK_ERR((FmtProperties.optimalTilingFeatures & (VK_FORMAT_FEATURE_BLIT_SRC_BIT | VK_FORMAT_FEATURE_BLIT_DST_BIT)) == (VK_FORMAT_FEATURE_BLIT_SRC_BIT | VK_FORMAT_FEATURE_BLIT_DST_BIT),
-                              "Texture format ", GetTextureFormatAttribs(InternalTexFmt).Name,
-                              " does not support blitting. Automatic mipmap generation can't be done neither by CS nor by blitting.");
+                              "Automatic mipmap generation is not supported for ", GetTextureFormatAttribs(InternalTexFmt).Name,
+                              " as the format does not support blitting.");
 
                 DEV_CHECK_ERR((FmtProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT) != 0,
-                              "Texture format ", GetTextureFormatAttribs(InternalTexFmt).Name,
-                              " does not support linear filtering. Automatic mipmap generation can't be "
-                              "done neither by CS nor by blitting.");
+                              "Automatic mipmap generation is not supported for ", GetTextureFormatAttribs(InternalTexFmt).Name,
+                              " as the format does not support linear filtering.");
             }
+#endif
         }
 
         ImageCI.sharingMode           = VK_SHARING_MODE_EXCLUSIVE;
@@ -544,52 +538,6 @@ void TextureVkImpl::CreateViewInternal(const TextureViewDesc& ViewDesc, ITexture
             *ppView = pViewVk;
         else
             pViewVk->QueryInterface(IID_TextureView, reinterpret_cast<IObject**>(ppView));
-
-
-        if ((UpdatedViewDesc.Flags & TEXTURE_VIEW_FLAG_ALLOW_MIP_MAP_GENERATION) != 0 &&
-            m_bCSBasedMipGenerationSupported &&
-            CheckCSBasedMipGenerationSupport(TexFormatToVkFormat(pViewVk->GetDesc().Format)))
-        {
-            auto* pMipLevelViews = ALLOCATE(GetRawAllocator(), "Raw memory for mip level views", TextureViewVkImpl::MipLevelViewAutoPtrType, UpdatedViewDesc.NumMipLevels * 2);
-            for (Uint32 MipLevel = 0; MipLevel < UpdatedViewDesc.NumMipLevels; ++MipLevel)
-            {
-                auto CreateMipLevelView = [&](TEXTURE_VIEW_TYPE ViewType, Uint32 MipLevel, TextureViewVkImpl::MipLevelViewAutoPtrType* ppMipLevelView) {
-                    TextureViewDesc MipLevelViewDesc = pViewVk->GetDesc();
-                    // Always create texture array views
-                    std::stringstream name_ss;
-                    name_ss << "Internal " << (ViewType == TEXTURE_VIEW_SHADER_RESOURCE ? "SRV" : "UAV")
-                            << " of mip level " << MipLevel << " of texture view '" << pViewVk->GetDesc().Name << "'";
-                    auto name                   = name_ss.str();
-                    MipLevelViewDesc.Name       = name.c_str();
-                    MipLevelViewDesc.TextureDim = RESOURCE_DIM_TEX_2D_ARRAY;
-                    MipLevelViewDesc.ViewType   = ViewType;
-                    MipLevelViewDesc.MostDetailedMip += MipLevel;
-                    MipLevelViewDesc.NumMipLevels = 1;
-
-                    if (ViewType == TEXTURE_VIEW_UNORDERED_ACCESS)
-                    {
-                        if (MipLevelViewDesc.Format == TEX_FORMAT_RGBA8_UNORM_SRGB)
-                            MipLevelViewDesc.Format = TEX_FORMAT_RGBA8_UNORM;
-                    }
-
-                    VulkanUtilities::ImageViewWrapper ImgView = CreateImageView(MipLevelViewDesc);
-                    // Attach to parent view
-                    auto pMipLevelViewVk = NEW_RC_OBJ(TexViewAllocator, "TextureViewVkImpl instance", TextureViewVkImpl, pViewVk)(GetDevice(), MipLevelViewDesc, this, std::move(ImgView), bIsDefaultView);
-                    new (ppMipLevelView) TextureViewVkImpl::MipLevelViewAutoPtrType(pMipLevelViewVk, STDDeleter<TextureViewVkImpl, FixedBlockMemoryAllocator>(TexViewAllocator));
-                };
-
-                CreateMipLevelView(TEXTURE_VIEW_SHADER_RESOURCE, MipLevel, &pMipLevelViews[MipLevel * 2]);
-                CreateMipLevelView(TEXTURE_VIEW_UNORDERED_ACCESS, MipLevel, &pMipLevelViews[MipLevel * 2 + 1]);
-            }
-
-            if (auto pImmediateCtx = m_pDevice->GetImmediateContext(PlatformMisc::GetLSB(m_Desc.ImmediateContextMask)))
-            {
-                auto& GenerateMipsHelper = pImmediateCtx.RawPtr<DeviceContextVkImpl>()->GetGenerateMipsHelper();
-                GenerateMipsHelper.WarmUpCache(pViewVk->GetDesc().Format);
-            }
-
-            pViewVk->AssignMipLevelViews(pMipLevelViews);
-        }
     }
     catch (const std::runtime_error&)
     {
@@ -759,24 +707,6 @@ VulkanUtilities::ImageViewWrapper TextureVkImpl::CreateImageView(TextureViewDesc
     ViewName += m_Desc.Name;
     ViewName += '\'';
     return LogicalDevice.CreateImageView(ImageViewCI, ViewName.c_str());
-}
-
-bool TextureVkImpl::CheckCSBasedMipGenerationSupport(VkFormat vkFmt) const
-{
-#if !DILIGENT_NO_GLSLANG
-    VERIFY_EXPR(m_Desc.MiscFlags & MISC_TEXTURE_FLAG_GENERATE_MIPS);
-    if (m_Desc.Type == RESOURCE_DIM_TEX_2D || m_Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY)
-    {
-        const auto& PhysicalDevice = m_pDevice->GetPhysicalDevice();
-        auto        FmtProperties  = PhysicalDevice.GetPhysicalDeviceFormatProperties(vkFmt);
-        if ((FmtProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT) != 0)
-        {
-            return true;
-        }
-    }
-#endif
-
-    return false;
 }
 
 void TextureVkImpl::SetLayout(VkImageLayout Layout)

@@ -42,6 +42,7 @@
 #include "VulkanTypeConversions.hpp"
 #include "CommandListVkImpl.hpp"
 #include "GraphicsAccessories.hpp"
+#include "GenerateMipsVkHelper.hpp"
 
 namespace Diligent
 {
@@ -57,11 +58,10 @@ static std::string GetContextObjectName(const char* Object, bool bIsDeferred, Ui
     return ss.str();
 }
 
-DeviceContextVkImpl::DeviceContextVkImpl(IReferenceCounters*                   pRefCounters,
-                                         RenderDeviceVkImpl*                   pDeviceVkImpl,
-                                         const EngineVkCreateInfo&             EngineCI,
-                                         const DeviceContextDesc&              Desc,
-                                         std::shared_ptr<GenerateMipsVkHelper> GenerateMipsHelper) :
+DeviceContextVkImpl::DeviceContextVkImpl(IReferenceCounters*       pRefCounters,
+                                         RenderDeviceVkImpl*       pDeviceVkImpl,
+                                         const EngineVkCreateInfo& EngineCI,
+                                         const DeviceContextDesc&  Desc) :
     // clang-format off
     TDeviceContextBase
     {
@@ -95,8 +95,7 @@ DeviceContextVkImpl::DeviceContextVkImpl(IReferenceCounters*                   p
     {
         pDeviceVkImpl->GetDynamicDescriptorPool(),
         GetContextObjectName("Dynamic descriptor set allocator", Desc.IsDeferred, Desc.ContextId),
-    },
-    m_GenerateMipsHelper{std::move(GenerateMipsHelper)}
+    }
 // clang-format on
 {
     if (!IsDeferred())
@@ -104,8 +103,6 @@ DeviceContextVkImpl::DeviceContextVkImpl(IReferenceCounters*                   p
         PrepareCommandPool(GetCommandQueueId());
         m_QueryMgr.reset(new QueryManagerVk{pDeviceVkImpl, EngineCI.QueryPoolSizes, GetCommandQueueId()});
     }
-
-    m_GenerateMipsHelper->CreateSRB(&m_GenerateMipsSRB);
 
     BufferDesc DummyVBDesc;
     DummyVBDesc.Name          = "Dummy vertex buffer";
@@ -2173,7 +2170,7 @@ void DeviceContextVkImpl::UpdateTextureRegion(const void*                    pSr
 void DeviceContextVkImpl::GenerateMips(ITextureView* pTexView)
 {
     TDeviceContextBase::GenerateMips(pTexView);
-    m_GenerateMipsHelper->GenerateMips(*ValidatedCast<TextureViewVkImpl>(pTexView), *this, m_GenerateMipsSRB);
+    GenerateMipsVkHelper::GenerateMips(*ValidatedCast<TextureViewVkImpl>(pTexView), *this);
 }
 
 static VkBufferImageCopy GetBufferImageCopyInfo(Uint32             BufferOffset,
