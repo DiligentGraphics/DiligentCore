@@ -136,7 +136,7 @@ private:
 
     friend DeviceContextD3D12Impl;
     // Array of dynamic allocations for every device context.
-    std::vector<CtxDynamicData, STDAllocatorRawMem<D3D12DynamicAllocation>> m_DynamicData;
+    std::vector<CtxDynamicData, STDAllocatorRawMem<CtxDynamicData>> m_DynamicData;
 };
 
 } // namespace Diligent

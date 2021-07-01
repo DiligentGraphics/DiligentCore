@@ -25,6 +25,10 @@
  *  of the possibility of such damages.
  */
 
+#ifdef _MSC_VER
+#    define _SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING
+#endif
+
 #include <memory>
 #include <mutex>
 #include <atomic>
