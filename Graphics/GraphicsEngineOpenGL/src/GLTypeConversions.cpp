@@ -123,7 +123,9 @@ public:
         m_FmtToGLFmtMap[TEX_FORMAT_R8_UINT]                = GL_R8UI;
         m_FmtToGLFmtMap[TEX_FORMAT_R8_SNORM]               = GL_R8_SNORM;
         m_FmtToGLFmtMap[TEX_FORMAT_R8_SINT]                = GL_R8I;
-        m_FmtToGLFmtMap[TEX_FORMAT_A8_UNORM]               = 0;
+        // To get the same behaviour as expected for TEX_FORMAT_A8_UNORM we swizzle the components
+        // appropriately using the GL_TEXTURE_SWIZZLE texture parameters in TextureBaseGL::SetDefaultGLParameters()
+        m_FmtToGLFmtMap[TEX_FORMAT_A8_UNORM]               = GL_R8;
 
         m_FmtToGLFmtMap[TEX_FORMAT_R1_UNORM]               = 0;
 
@@ -352,7 +354,9 @@ NativePixelAttribs GetNativePixelTransferAttribs(TEXTURE_FORMAT TexFormat)
         FmtToGLPixelFmt[TEX_FORMAT_R8_UINT]                = NativePixelAttribs(GL_RED_INTEGER,  GL_UNSIGNED_BYTE);
         FmtToGLPixelFmt[TEX_FORMAT_R8_SNORM]               = NativePixelAttribs(GL_RED,          GL_BYTE);
         FmtToGLPixelFmt[TEX_FORMAT_R8_SINT]                = NativePixelAttribs(GL_RED_INTEGER,  GL_BYTE);
-        FmtToGLPixelFmt[TEX_FORMAT_A8_UNORM]               = NativePixelAttribs();
+        // To get the same behaviour as expected for TEX_FORMAT_A8_UNORM we swizzle the components
+        // appropriately using the GL_TEXTURE_SWIZZLE texture parameters in TextureBaseGL::SetDefaultGLParameters()
+        FmtToGLPixelFmt[TEX_FORMAT_A8_UNORM]               = NativePixelAttribs(GL_RED,          GL_UNSIGNED_BYTE);
 
         FmtToGLPixelFmt[TEX_FORMAT_R1_UNORM]               = NativePixelAttribs();
 

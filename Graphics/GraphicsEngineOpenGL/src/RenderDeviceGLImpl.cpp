@@ -926,13 +926,16 @@ void RenderDeviceGLImpl::InitAdapterInfo()
 
 void RenderDeviceGLImpl::FlagSupportedTexFormats()
 {
-    const auto& DeviceInfo   = GetDeviceInfo();
-    const auto  bGL33OrAbove = DeviceInfo.Type == RENDER_DEVICE_TYPE_GL && DeviceInfo.APIVersion >= Version{3, 3};
+    const auto& DeviceInfo     = GetDeviceInfo();
+    const auto  bGL33OrAbove   = DeviceInfo.Type == RENDER_DEVICE_TYPE_GL && DeviceInfo.APIVersion >= Version{3, 3};
+    const auto  bGLES30OrAbove = DeviceInfo.Type == RENDER_DEVICE_TYPE_GLES && DeviceInfo.APIVersion >= Version{3, 0};
 
-    const bool bRGTC      = CheckExtension("GL_ARB_texture_compression_rgtc");
-    const bool bBPTC      = CheckExtension("GL_ARB_texture_compression_bptc");
-    const bool bS3TC      = CheckExtension("GL_EXT_texture_compression_s3tc");
-    const bool bTexNorm16 = CheckExtension("GL_EXT_texture_norm16"); // Only for ES3.1+
+    const bool bRGTC       = CheckExtension("GL_ARB_texture_compression_rgtc");
+    const bool bBPTC       = CheckExtension("GL_ARB_texture_compression_bptc");
+    const bool bS3TC       = CheckExtension("GL_EXT_texture_compression_s3tc");
+    const bool bTexNorm16  = CheckExtension("GL_EXT_texture_norm16"); // Only for ES3.1+
+    const bool bTexSwizzle = bGL33OrAbove || bGLES30OrAbove || CheckExtension("GL_ARB_texture_swizzle");
+
 
 #define FLAG_FORMAT(Fmt, IsSupported) \
     m_TextureFormatsInfo[Fmt].Supported = IsSupported
@@ -1005,7 +1008,7 @@ void RenderDeviceGLImpl::FlagSupportedTexFormats()
     FLAG_FORMAT(TEX_FORMAT_R8_UINT,                    true);
     FLAG_FORMAT(TEX_FORMAT_R8_SNORM,                   true);
     FLAG_FORMAT(TEX_FORMAT_R8_SINT,                    true);
-    FLAG_FORMAT(TEX_FORMAT_A8_UNORM,                   false); // Not supported in OpenGL
+    FLAG_FORMAT(TEX_FORMAT_A8_UNORM,                   bTexSwizzle);
     FLAG_FORMAT(TEX_FORMAT_R1_UNORM,                   false); // Not supported in OpenGL
     FLAG_FORMAT(TEX_FORMAT_RGB9E5_SHAREDEXP,           true);
     FLAG_FORMAT(TEX_FORMAT_RG8_B8G8_UNORM,             false); // Not supported in OpenGL
