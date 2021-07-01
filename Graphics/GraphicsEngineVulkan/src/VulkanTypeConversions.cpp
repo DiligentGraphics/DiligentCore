@@ -123,7 +123,9 @@ public:
         m_FmtToVkFmtMap[TEX_FORMAT_R8_UINT]     = VK_FORMAT_R8_UINT;
         m_FmtToVkFmtMap[TEX_FORMAT_R8_SNORM]    = VK_FORMAT_R8_SNORM;
         m_FmtToVkFmtMap[TEX_FORMAT_R8_SINT]     = VK_FORMAT_R8_SINT;
-        m_FmtToVkFmtMap[TEX_FORMAT_A8_UNORM]    = VK_FORMAT_UNDEFINED;
+        // To get the same behaviour as expected for TEX_FORMAT_A8_UNORM we
+        // swizzle the components appropriately using the VkImageViewCreateInfo struct
+        m_FmtToVkFmtMap[TEX_FORMAT_A8_UNORM]    = VK_FORMAT_R8_UNORM;
 
         m_FmtToVkFmtMap[TEX_FORMAT_R1_UNORM]    = VK_FORMAT_UNDEFINED;
 

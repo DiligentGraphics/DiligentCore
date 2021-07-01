@@ -674,6 +674,16 @@ void TextureBaseGL::SetDefaultGLParameters()
     }
 #endif
 
+    if (m_Desc.Format == TEX_FORMAT_A8_UNORM)
+    {
+        // We need to do channel swizzling since TEX_FORMAT_A8_UNORM
+        // is actually implemented using GL_RED
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, GL_ZERO);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, GL_ZERO);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, GL_ZERO);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_RED);
+    }
+
     if (m_BindTarget != GL_TEXTURE_2D_MULTISAMPLE &&
         m_BindTarget != GL_TEXTURE_2D_MULTISAMPLE_ARRAY)
     {
