@@ -48,13 +48,15 @@ QueryManagerVk::QueryManagerVk(RenderDeviceVkImpl*      pRenderDeviceVk,
     auto timestampPeriod = PhysicalDevice.GetProperties().limits.timestampPeriod;
     m_CounterFrequency   = static_cast<Uint64>(1000000000.0 / timestampPeriod);
 
-    const auto  QueueFamilyIndex = HardwareQueueIndex{pRenderDeviceVk->GetCommandQueue(CmdQueueInd).GetQueueFamilyIndex()};
-    const auto& EnabledFeatures  = LogicalDevice.GetEnabledFeatures();
-    const auto  StageMask        = LogicalDevice.GetSupportedStagesMask(QueueFamilyIndex);
-    const auto  QueueFlags       = PhysicalDevice.GetQueueProperties()[QueueFamilyIndex].queueFlags;
-    const auto& DevInfo          = pRenderDeviceVk->GetDeviceInfo();
+    const auto  QueueFamilyIndex       = HardwareQueueIndex{pRenderDeviceVk->GetCommandQueue(CmdQueueInd).GetQueueFamilyIndex()};
+    const auto& EnabledFeatures        = LogicalDevice.GetEnabledFeatures();
+    const auto  StageMask              = LogicalDevice.GetSupportedStagesMask(QueueFamilyIndex);
+    const auto  QueueFlags             = PhysicalDevice.GetQueueProperties()[QueueFamilyIndex].queueFlags;
+    const auto& DevInfo                = pRenderDeviceVk->GetDeviceInfo();
+    const bool  IsTransferQueue        = (QueueFlags & (VK_QUEUE_COMPUTE_BIT | VK_QUEUE_GRAPHICS_BIT)) == 0;
+    const bool  QueueSupportsTimestamp = PhysicalDevice.GetQueueProperties()[QueueFamilyIndex].timestampValidBits > 0;
 
-    m_HostQueryReset = LogicalDevice.GetEnabledExtFeatures().HostQueryReset.hostQueryReset != VK_FALSE;
+    m_HostQueryReset = IsTransferQueue && LogicalDevice.GetEnabledExtFeatures().HostQueryReset.hostQueryReset != VK_FALSE;
 
     VulkanUtilities::CommandPoolWrapper CmdPool;
     VkCommandBuffer                     vkCmdBuff = VK_NULL_HANDLE;
@@ -70,7 +72,10 @@ QueryManagerVk::QueryManagerVk(RenderDeviceVkImpl*      pRenderDeviceVk,
         // Time and duration queries supported in all queues
         if (QueryType == QUERY_TYPE_TIMESTAMP || QueryType == QUERY_TYPE_DURATION)
         {
-            if ((QueueFlags & VK_QUEUE_COMPUTE_BIT) == 0 && !DevInfo.Features.TransferQueueTimestampQueries)
+            if (!QueueSupportsTimestamp)
+                continue;
+
+            if (IsTransferQueue && !DevInfo.Features.TransferQueueTimestampQueries)
                 continue; // Not supported in transfer queue
         }
         // Other queries supported only in graphics queue
