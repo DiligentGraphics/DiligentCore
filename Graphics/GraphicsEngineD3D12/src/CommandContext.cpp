@@ -158,12 +158,11 @@ D3D12_RESOURCE_BARRIER_FLAGS TransitionTypeToD3D12ResourceBarrierFlag(STATE_TRAN
 class StateTransitionHelper
 {
 public:
-    StateTransitionHelper(const StateTransitionDesc&                                                       Barrier,
-                          std::vector<D3D12_RESOURCE_BARRIER, STDAllocatorRawMem<D3D12_RESOURCE_BARRIER>>& d3d12PendingBarriers,
-                          D3D12_COMMAND_LIST_TYPE                                                          CmdListType) :
+    StateTransitionHelper(const StateTransitionDesc& Barrier,
+                          CommandContext&            CmdCtx) :
         m_Barrier{Barrier},
-        m_d3d12PendingBarriers{d3d12PendingBarriers},
-        m_ResStateMask{GetSupportedD3D12ResourceStatesForCommandList(CmdListType)}
+        m_CmdCtx{CmdCtx},
+        m_ResStateMask{GetSupportedD3D12ResourceStatesForCommandList(m_CmdCtx.GetCommandListType())}
     {
         DEV_CHECK_ERR(m_Barrier.NewState != RESOURCE_STATE_UNKNOWN, "New resource state can't be unknown");
     }
@@ -181,10 +180,15 @@ public:
     template <typename ResourceType>
     void operator()(ResourceType& Resource);
 
+    void DiscardIfAppropriate(const TextureDesc&    TexDesc,
+                              D3D12_RESOURCE_STATES d3d12State,
+                              Uint32                EndMip   = REMAINING_MIP_LEVELS,
+                              Uint32                EndSlice = REMAINING_ARRAY_SLICES) const;
+
 private:
     const StateTransitionDesc& m_Barrier;
 
-    std::vector<D3D12_RESOURCE_BARRIER, STDAllocatorRawMem<D3D12_RESOURCE_BARRIER>>& m_d3d12PendingBarriers;
+    CommandContext& m_CmdCtx;
 
     RESOURCE_STATE  m_OldState       = RESOURCE_STATE_UNKNOWN;
     ID3D12Resource* m_pd3d12Resource = nullptr;
@@ -220,7 +224,77 @@ void StateTransitionHelper::GetD3D12ResourceAndState<BufferD3D12Impl>(BufferD3D1
     m_pd3d12Resource = Buffer.GetD3D12Resource();
 }
 
+void StateTransitionHelper::DiscardIfAppropriate(const TextureDesc&    TexDesc,
+                                                 D3D12_RESOURCE_STATES d3d12State,
+                                                 Uint32                EndMip,
+                                                 Uint32                EndSlice) const
+{
+    if (!m_Barrier.DiscardResourceContent)
+        return;
 
+    const auto d3d12CmdListType = m_CmdCtx.GetCommandListType();
+
+    bool DiscardAllowed = false;
+
+    // https://docs.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12graphicscommandlist-discardresource
+    if (d3d12CmdListType == D3D12_COMMAND_LIST_TYPE_DIRECT)
+    {
+        // For D3D12_COMMAND_LIST_TYPE_DIRECT, the following two rules apply:
+
+        // When a resource has the D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET flag, DiscardResource must be called when the
+        // discarded subresource regions are in the D3D12_RESOURCE_STATE_RENDER_TARGET resource barrier state.
+        if ((d3d12State & D3D12_RESOURCE_STATE_RENDER_TARGET) != 0)
+        {
+            VERIFY_EXPR((TexDesc.BindFlags & BIND_RENDER_TARGET) != 0);
+            DiscardAllowed = true;
+        }
+
+        // When a resource has the D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL flag, DiscardResource must be called when the
+        // discarded subresource regions are in the D3D12_RESOURCE_STATE_DEPTH_WRITE.
+        if ((d3d12State & D3D12_RESOURCE_STATE_DEPTH_WRITE) != 0)
+        {
+            VERIFY_EXPR((TexDesc.BindFlags & BIND_DEPTH_STENCIL) != 0);
+            DiscardAllowed = true;
+        }
+    }
+    else if (d3d12CmdListType == D3D12_COMMAND_LIST_TYPE_COMPUTE)
+    {
+        // For D3D12_COMMAND_LIST_TYPE_COMPUTE, the following rule applies:
+
+        // The resource must have the D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS flag, and DiscardResource must be called
+        // when the discarded subresource regions are in the D3D12_RESOURCE_STATE_UNORDERED_ACCESS resource barrier state.
+        if ((d3d12State & D3D12_RESOURCE_STATE_UNORDERED_ACCESS) != 0)
+        {
+            VERIFY_EXPR((TexDesc.BindFlags & BIND_UNORDERED_ACCESS) != 0);
+            DiscardAllowed = true;
+        }
+    }
+
+    if (DiscardAllowed)
+    {
+        m_CmdCtx.FlushResourceBarriers();
+        if (m_Barrier.FirstMipLevel == 0 && EndMip == REMAINING_MIP_LEVELS &&
+            m_Barrier.FirstArraySlice == 0 && EndSlice == REMAINING_ARRAY_SLICES)
+        {
+            m_CmdCtx.DiscardResource(m_pd3d12Resource, nullptr);
+        }
+        else
+        {
+            D3D12_DISCARD_REGION Region{};
+            Region.NumSubresources = EndMip - m_Barrier.FirstMipLevel;
+            for (Uint32 slice = m_Barrier.FirstArraySlice; slice < EndSlice; ++slice)
+            {
+                Region.FirstSubresource = D3D12CalcSubresource(m_Barrier.FirstMipLevel, slice, 0, TexDesc.MipLevels, TexDesc.ArraySize);
+#ifdef DILIGENT_DEBUG
+                for (Uint32 mip = m_Barrier.FirstMipLevel; mip < EndMip; ++mip)
+                    VERIFY_EXPR(D3D12CalcSubresource(mip, slice, 0, TexDesc.MipLevels, TexDesc.ArraySize) == Region.FirstSubresource + mip);
+#endif
+
+                m_CmdCtx.DiscardResource(m_pd3d12Resource, &Region);
+            }
+        }
+    }
+}
 
 void StateTransitionHelper::AddD3D12ResourceBarriers(TextureD3D12Impl& Tex, D3D12_RESOURCE_BARRIER& d3d12Barrier)
 {
@@ -239,21 +313,25 @@ void StateTransitionHelper::AddD3D12ResourceBarriers(TextureD3D12Impl& Tex, D3D1
         if (m_Barrier.FirstMipLevel == 0 && (m_Barrier.MipLevelsCount == REMAINING_MIP_LEVELS || m_Barrier.MipLevelsCount == TexDesc.MipLevels) &&
             m_Barrier.FirstArraySlice == 0 && (m_Barrier.ArraySliceCount == REMAINING_ARRAY_SLICES || m_Barrier.ArraySliceCount == TexDesc.ArraySize))
         {
+            DiscardIfAppropriate(TexDesc, d3d12Barrier.Transition.StateBefore);
             d3d12Barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-            m_d3d12PendingBarriers.emplace_back(d3d12Barrier);
+            m_CmdCtx.ResourceBarrier(d3d12Barrier);
+            DiscardIfAppropriate(TexDesc, d3d12Barrier.Transition.StateAfter);
         }
         else
         {
             Uint32 EndMip   = m_Barrier.MipLevelsCount == REMAINING_MIP_LEVELS ? TexDesc.MipLevels : m_Barrier.FirstMipLevel + m_Barrier.MipLevelsCount;
             Uint32 EndSlice = m_Barrier.ArraySliceCount == REMAINING_ARRAY_SLICES ? TexDesc.ArraySize : m_Barrier.FirstArraySlice + m_Barrier.ArraySliceCount;
+            DiscardIfAppropriate(TexDesc, d3d12Barrier.Transition.StateBefore, EndMip, EndSlice);
             for (Uint32 mip = m_Barrier.FirstMipLevel; mip < EndMip; ++mip)
             {
                 for (Uint32 slice = m_Barrier.FirstArraySlice; slice < EndSlice; ++slice)
                 {
                     d3d12Barrier.Transition.Subresource = D3D12CalcSubresource(mip, slice, 0, TexDesc.MipLevels, TexDesc.ArraySize);
-                    m_d3d12PendingBarriers.emplace_back(d3d12Barrier);
+                    m_CmdCtx.ResourceBarrier(d3d12Barrier);
                 }
             }
+            DiscardIfAppropriate(TexDesc, d3d12Barrier.Transition.StateAfter, EndMip, EndSlice);
         }
     }
 }
@@ -262,7 +340,7 @@ void StateTransitionHelper::AddD3D12ResourceBarriers(BufferD3D12Impl& Buff, D3D1
 {
     if (d3d12Barrier.Transition.StateBefore != d3d12Barrier.Transition.StateAfter)
     {
-        m_d3d12PendingBarriers.emplace_back(d3d12Barrier);
+        m_CmdCtx.ResourceBarrier(d3d12Barrier);
     }
 }
 
@@ -351,8 +429,9 @@ void StateTransitionHelper::operator()(ResourceType& Resource)
         // must complete before any future UAV accesses (reads or writes) can begin.
 
         DEV_CHECK_ERR(m_Barrier.TransitionType == STATE_TRANSITION_TYPE_IMMEDIATE, "UAV barriers must not be split");
-        m_d3d12PendingBarriers.emplace_back(D3D12_RESOURCE_BARRIER{D3D12_RESOURCE_BARRIER_TYPE_UAV, D3D12_RESOURCE_BARRIER_FLAG_NONE});
-        m_d3d12PendingBarriers.back().UAV.pResource = m_pd3d12Resource;
+        D3D12_RESOURCE_BARRIER d3d12Barrier{D3D12_RESOURCE_BARRIER_TYPE_UAV, D3D12_RESOURCE_BARRIER_FLAG_NONE};
+        d3d12Barrier.UAV.pResource = m_pd3d12Resource;
+        m_CmdCtx.ResourceBarrier(d3d12Barrier);
     }
 }
 
@@ -360,25 +439,25 @@ void StateTransitionHelper::operator()(ResourceType& Resource)
 
 void CommandContext::TransitionResource(TextureD3D12Impl& Texture, const StateTransitionDesc& Barrier)
 {
-    StateTransitionHelper Helper{Barrier, m_PendingResourceBarriers, GetCommandListType()};
+    StateTransitionHelper Helper{Barrier, *this};
     Helper(Texture);
 }
 
 void CommandContext::TransitionResource(BufferD3D12Impl& Buffer, const StateTransitionDesc& Barrier)
 {
-    StateTransitionHelper Helper{Barrier, m_PendingResourceBarriers, GetCommandListType()};
+    StateTransitionHelper Helper{Barrier, *this};
     Helper(Buffer);
 }
 
 void CommandContext::TransitionResource(BottomLevelASD3D12Impl& BLAS, const StateTransitionDesc& Barrier)
 {
-    StateTransitionHelper Helper{Barrier, m_PendingResourceBarriers, GetCommandListType()};
+    StateTransitionHelper Helper{Barrier, *this};
     Helper(BLAS);
 }
 
 void CommandContext::TransitionResource(TopLevelASD3D12Impl& TLAS, const StateTransitionDesc& Barrier)
 {
-    StateTransitionHelper Helper{Barrier, m_PendingResourceBarriers, GetCommandListType()};
+    StateTransitionHelper Helper{Barrier, *this};
     Helper(TLAS);
 }
 

@@ -230,6 +230,11 @@ public:
         m_pCommandList->ResolveQueryData(pQueryHeap, Type, StartIndex, NumQueries, pDestinationBuffer, AlignedDestinationBufferOffset);
     }
 
+    void DiscardResource(ID3D12Resource* pResource, const D3D12_DISCARD_REGION* pRegion)
+    {
+        m_pCommandList->DiscardResource(pResource, pRegion);
+    }
+
 #ifdef DILIGENT_USE_PIX
     void PixBeginEvent(const Char* Name, const float* pColor);
     void PixEndEvent();
