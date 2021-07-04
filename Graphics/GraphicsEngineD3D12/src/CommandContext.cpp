@@ -286,8 +286,8 @@ void StateTransitionHelper::DiscardIfAppropriate(const TextureDesc&    TexDesc,
             {
                 Region.FirstSubresource = D3D12CalcSubresource(m_Barrier.FirstMipLevel, slice, 0, TexDesc.MipLevels, TexDesc.ArraySize);
 #ifdef DILIGENT_DEBUG
-                for (Uint32 mip = m_Barrier.FirstMipLevel; mip < EndMip; ++mip)
-                    VERIFY_EXPR(D3D12CalcSubresource(mip, slice, 0, TexDesc.MipLevels, TexDesc.ArraySize) == Region.FirstSubresource + mip);
+                for (UINT mip = 0; mip < Region.NumSubresources; ++mip)
+                    VERIFY_EXPR(D3D12CalcSubresource(m_Barrier.FirstMipLevel + mip, slice, 0, TexDesc.MipLevels, TexDesc.ArraySize) == Region.FirstSubresource + mip);
 #endif
 
                 m_CmdCtx.DiscardResource(m_pd3d12Resource, &Region);
