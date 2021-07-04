@@ -1199,7 +1199,7 @@ static VkPipelineStageFlags ResourceStateFlagToVkPipelineStage(RESOURCE_STATE St
         case RESOURCE_STATE_BUILD_AS_READ:     return VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR;
         case RESOURCE_STATE_BUILD_AS_WRITE:    return VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR;
         case RESOURCE_STATE_RAY_TRACING:       return VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
-        case RESOURCE_STATE_COMMON:            return 0;
+        case RESOURCE_STATE_COMMON:            return VK_PIPELINE_STAGE_ALL_COMMANDS_BIT; // resource may be used in multiple states
             // clang-format on
 
         default:
@@ -1262,7 +1262,7 @@ static VkAccessFlags ResourceStateFlagToVkAccessFlags(RESOURCE_STATE StateFlag)
         case RESOURCE_STATE_BUILD_AS_READ:     return VK_ACCESS_SHADER_READ_BIT; // for vertex, index, transform, AABB, instance buffers
         case RESOURCE_STATE_BUILD_AS_WRITE:    return VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR; // for scratch buffer
         case RESOURCE_STATE_RAY_TRACING:       return VK_ACCESS_SHADER_READ_BIT; // for SBT
-        case RESOURCE_STATE_COMMON:            return 0;
+        case RESOURCE_STATE_COMMON:            return 0; // COMMON state must be used for queue to queue transition (linke in D3D12), queue to queue synchronization via semaphore creates a memory dependency
             // clang-format on
 
         default:

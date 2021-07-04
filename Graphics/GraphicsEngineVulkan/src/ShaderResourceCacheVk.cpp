@@ -605,7 +605,7 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl* pCtxVkImpl)
                         // to make sure that all UAV writes are complete and visible.
                         if (!IsInRequiredState || RequiredState == RESOURCE_STATE_UNORDERED_ACCESS)
                         {
-                            pCtxVkImpl->TransitionTextureState(*pTextureVk, RESOURCE_STATE_UNKNOWN, RequiredState, true);
+                            pCtxVkImpl->TransitionTextureState(*pTextureVk, RESOURCE_STATE_UNKNOWN, RequiredState, STATE_TRANSITION_FLAG_UPDATE_STATE);
                         }
                     }
                 }

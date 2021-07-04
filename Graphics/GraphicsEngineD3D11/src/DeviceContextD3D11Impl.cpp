@@ -1980,7 +1980,7 @@ void DeviceContextD3D11Impl::TransitionResourceStates(Uint32 BarrierCount, const
         if (Barrier.TransitionType == STATE_TRANSITION_TYPE_BEGIN)
         {
             // Skip begin-split barriers
-            VERIFY(!Barrier.UpdateResourceState, "Resource state can't be updated in begin-split barrier");
+            VERIFY((Barrier.Flags & STATE_TRANSITION_FLAG_UPDATE_STATE) == 0, "Resource state can't be updated in begin-split barrier");
             continue;
         }
         VERIFY(Barrier.TransitionType == STATE_TRANSITION_TYPE_IMMEDIATE || Barrier.TransitionType == STATE_TRANSITION_TYPE_END, "Unexpected barrier type");

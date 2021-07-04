@@ -422,7 +422,7 @@ bool VerifyStateTransitionDesc(const IRenderDevice*       pDevice,
 
     if (Barrier.TransitionType == STATE_TRANSITION_TYPE_BEGIN)
     {
-        CHECK_STATE_TRANSITION_DESC(!Barrier.UpdateResourceState, "resource state can't be updated in begin-split barrier.");
+        CHECK_STATE_TRANSITION_DESC((Barrier.Flags & STATE_TRANSITION_FLAG_UPDATE_STATE) == 0, "resource state can't be updated in begin-split barrier.");
     }
 
     CHECK_STATE_TRANSITION_DESC(Barrier.NewState != RESOURCE_STATE_UNKNOWN && Barrier.NewState != RESOURCE_STATE_UNDEFINED,

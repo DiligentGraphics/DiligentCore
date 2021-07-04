@@ -1885,8 +1885,8 @@ TEST_F(DrawCommandTest, DeferredContexts)
 
     StateTransitionDesc Barriers[] = //
         {
-            {pVB, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_VERTEX_BUFFER, true},
-            {pIB, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_INDEX_BUFFER, true} //
+            {pVB, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_VERTEX_BUFFER, STATE_TRANSITION_FLAG_UPDATE_STATE},
+            {pIB, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_INDEX_BUFFER, STATE_TRANSITION_FLAG_UPDATE_STATE} //
         };
     pImmediateCtx->TransitionResourceStates(_countof(Barriers), Barriers);
 

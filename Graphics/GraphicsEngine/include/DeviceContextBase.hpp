@@ -1305,7 +1305,7 @@ inline void DeviceContextBase<ImplementationTraits>::BeginRenderPass(const Begin
             {
                 if (pTex->IsInKnownState() && !pTex->CheckState(RequiredState))
                 {
-                    StateTransitionDesc Barrier{pTex, RESOURCE_STATE_UNKNOWN, RequiredState, true};
+                    StateTransitionDesc Barrier{pTex, RESOURCE_STATE_UNKNOWN, RequiredState, STATE_TRANSITION_FLAG_UPDATE_STATE};
                     this->TransitionResourceStates(1, &Barrier);
                 }
             }

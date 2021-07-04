@@ -93,7 +93,7 @@ void GenerateMips(TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx)
     SubresRange.baseMipLevel = ViewDesc.MostDetailedMip;
     SubresRange.levelCount   = 1;
     if (OriginalState != RESOURCE_STATE_COPY_SOURCE)
-        Ctx.TransitionTextureState(*pTexVk, OriginalState, RESOURCE_STATE_COPY_SOURCE, false /*UpdateTextureState*/, &SubresRange);
+        Ctx.TransitionTextureState(*pTexVk, OriginalState, RESOURCE_STATE_COPY_SOURCE, STATE_TRANSITION_FLAG_NONE, &SubresRange);
 
     auto& CmdBuffer = Ctx.GetCommandBuffer();
     for (uint32_t mip = ViewDesc.MostDetailedMip + 1; mip < ViewDesc.MostDetailedMip + ViewDesc.NumMipLevels; ++mip)

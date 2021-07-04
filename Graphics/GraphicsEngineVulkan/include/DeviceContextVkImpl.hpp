@@ -293,7 +293,7 @@ public:
     void TransitionTextureState(TextureVkImpl&           TextureVk,
                                 RESOURCE_STATE           OldState,
                                 RESOURCE_STATE           NewState,
-                                bool                     UpdateTextureState,
+                                STATE_TRANSITION_FLAGS   Flags,
                                 VkImageSubresourceRange* pSubresRange = nullptr);
 
     void TransitionImageLayout(TextureVkImpl&                 TextureVk,

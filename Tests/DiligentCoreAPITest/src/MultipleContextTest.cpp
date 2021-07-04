@@ -420,7 +420,7 @@ TEST_F(MultipleContextTest, GraphicsAndComputeQueue)
             pGraphicsCtx->SetRenderTargets(0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_NONE);
 
             // Transition to CopySrc state to use in TakeSnapshot()
-            StateTransitionDesc Barrier{pRTV->GetTexture(), RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, true};
+            StateTransitionDesc Barrier{pRTV->GetTexture(), RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE};
             pGraphicsCtx->TransitionResourceStates(1, &Barrier);
         }
 
@@ -510,8 +510,8 @@ TEST_F(MultipleContextTest, GraphicsAndComputeQueue)
         auto* pRTV = pSwapChain->GetCurrentBackBufferRTV();
 
         const StateTransitionDesc Barriers[] = {
-            {pRTV->GetTexture(), RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_RENDER_TARGET, true}, // prev_state -> render_target
-            {pTextureUAV, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE}    // UAV -> shader_resource
+            {pRTV->GetTexture(), RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_RENDER_TARGET, STATE_TRANSITION_FLAG_UPDATE_STATE}, // prev_state -> render_target
+            {pTextureUAV, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE}                                  // UAV -> shader_resource
         };
         pGraphicsCtx->TransitionResourceStates(_countof(Barriers), Barriers);
 
@@ -659,7 +659,7 @@ TEST_F(MultipleContextTest, GraphicsAndTransferQueue)
             pGraphicsCtx->SetRenderTargets(0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_NONE);
 
             // Transition to CopySrc state to use in TakeSnapshot()
-            StateTransitionDesc Barrier{pRTV->GetTexture(), RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, true};
+            StateTransitionDesc Barrier{pRTV->GetTexture(), RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE};
             pGraphicsCtx->TransitionResourceStates(1, &Barrier);
         }
 
@@ -773,8 +773,8 @@ TEST_F(MultipleContextTest, GraphicsAndTransferQueue)
         auto* pRTV = pSwapChain->GetCurrentBackBufferRTV();
 
         const StateTransitionDesc Barriers[] = {
-            {pRTV->GetTexture(), RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_RENDER_TARGET, true}, // prev_state -> render_target
-            {pUploadTexture, RESOURCE_STATE_COMMON, RESOURCE_STATE_SHADER_RESOURCE}           // common -> shader_resource
+            {pRTV->GetTexture(), RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_RENDER_TARGET, STATE_TRANSITION_FLAG_UPDATE_STATE}, // prev_state -> render_target
+            {pUploadTexture, RESOURCE_STATE_COMMON, RESOURCE_STATE_SHADER_RESOURCE}                                         // common -> shader_resource
         };
         pGraphicsCtx->TransitionResourceStates(_countof(Barriers), Barriers);
 

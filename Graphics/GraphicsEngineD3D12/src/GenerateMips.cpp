@@ -225,7 +225,7 @@ void GenerateMipsHelper::GenerateMips(ID3D12Device* pd3d12Device, TextureViewD3D
         pd3d12Device->CopyDescriptors(1, &DstDescriptorRange, &DstRangeSize, 1 + MaxMipsHandledByCS, SrcDescriptorRanges, SrcRangeSizes, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
         // Transition top mip level to the shader resource state
-        StateTransitionDesc SrcMipBarrier{pTexD3D12, TopMip == 0 ? OriginalState : RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE, false};
+        StateTransitionDesc SrcMipBarrier{pTexD3D12, TopMip == 0 ? OriginalState : RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE, STATE_TRANSITION_FLAG_NONE};
         if (SrcMipBarrier.OldState != SrcMipBarrier.NewState)
         {
             SrcMipBarrier.FirstMipLevel   = ViewDesc.MostDetailedMip + TopMip;
@@ -236,7 +236,7 @@ void GenerateMipsHelper::GenerateMips(ID3D12Device* pd3d12Device, TextureViewD3D
         }
 
         // Transition dst mip levels to UAV state
-        StateTransitionDesc DstMipsBarrier{pTexD3D12, OriginalState, RESOURCE_STATE_UNORDERED_ACCESS, false};
+        StateTransitionDesc DstMipsBarrier{pTexD3D12, OriginalState, RESOURCE_STATE_UNORDERED_ACCESS, STATE_TRANSITION_FLAG_NONE};
         if (DstMipsBarrier.OldState != DstMipsBarrier.NewState)
         {
             DstMipsBarrier.FirstMipLevel   = ViewDesc.MostDetailedMip + TopMip + 1;

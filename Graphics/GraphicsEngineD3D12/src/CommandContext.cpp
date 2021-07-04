@@ -112,25 +112,25 @@ ID3D12GraphicsCommandList* CommandContext::Close(CComPtr<ID3D12CommandAllocator>
 void CommandContext::TransitionResource(TextureD3D12Impl& TexD3D12, RESOURCE_STATE NewState)
 {
     VERIFY(TexD3D12.IsInKnownState(), "Texture state can't be unknown");
-    TransitionResource(TexD3D12, StateTransitionDesc{&TexD3D12, RESOURCE_STATE_UNKNOWN, NewState, true});
+    TransitionResource(TexD3D12, StateTransitionDesc{&TexD3D12, RESOURCE_STATE_UNKNOWN, NewState, STATE_TRANSITION_FLAG_UPDATE_STATE});
 }
 
 void CommandContext::TransitionResource(BufferD3D12Impl& BuffD3D12, RESOURCE_STATE NewState)
 {
     VERIFY(BuffD3D12.IsInKnownState(), "Buffer state can't be unknown");
-    TransitionResource(BuffD3D12, StateTransitionDesc{&BuffD3D12, RESOURCE_STATE_UNKNOWN, NewState, true});
+    TransitionResource(BuffD3D12, StateTransitionDesc{&BuffD3D12, RESOURCE_STATE_UNKNOWN, NewState, STATE_TRANSITION_FLAG_UPDATE_STATE});
 }
 
 void CommandContext::TransitionResource(BottomLevelASD3D12Impl& BlasD3D12, RESOURCE_STATE NewState)
 {
     VERIFY(BlasD3D12.IsInKnownState(), "BLAS state can't be unknown");
-    TransitionResource(BlasD3D12, StateTransitionDesc{&BlasD3D12, RESOURCE_STATE_UNKNOWN, NewState, true});
+    TransitionResource(BlasD3D12, StateTransitionDesc{&BlasD3D12, RESOURCE_STATE_UNKNOWN, NewState, STATE_TRANSITION_FLAG_UPDATE_STATE});
 }
 
 void CommandContext::TransitionResource(TopLevelASD3D12Impl& TlasD3D12, RESOURCE_STATE NewState)
 {
     VERIFY(TlasD3D12.IsInKnownState(), "TLAS state can't be unknown");
-    TransitionResource(TlasD3D12, StateTransitionDesc{&TlasD3D12, RESOURCE_STATE_UNKNOWN, NewState, true});
+    TransitionResource(TlasD3D12, StateTransitionDesc{&TlasD3D12, RESOURCE_STATE_UNKNOWN, NewState, STATE_TRANSITION_FLAG_UPDATE_STATE});
 }
 
 namespace
@@ -229,7 +229,7 @@ void StateTransitionHelper::DiscardIfAppropriate(const TextureDesc&    TexDesc,
                                                  Uint32                EndMip,
                                                  Uint32                EndSlice) const
 {
-    if (!m_Barrier.DiscardResourceContent)
+    if ((m_Barrier.Flags & STATE_TRANSITION_FLAG_DISCARD_CONTENT) == 0)
         return;
 
     const auto d3d12CmdListType = m_CmdCtx.GetCommandListType();
@@ -415,7 +415,7 @@ void StateTransitionHelper::operator()(ResourceType& Resource)
 
         AddD3D12ResourceBarriers(Resource, d3d12Barrier);
 
-        if (m_Barrier.UpdateResourceState)
+        if ((m_Barrier.Flags & STATE_TRANSITION_FLAG_UPDATE_STATE) != 0)
         {
             VERIFY(m_Barrier.TransitionType == STATE_TRANSITION_TYPE_IMMEDIATE || m_Barrier.TransitionType == STATE_TRANSITION_TYPE_END,
                    "Resource state can't be updated in begin-split barrier");

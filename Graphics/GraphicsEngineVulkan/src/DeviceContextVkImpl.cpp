@@ -2598,7 +2598,7 @@ void DeviceContextVkImpl::TransitionImageLayout(ITexture* pTexture, VkImageLayou
     auto NewState = VkImageLayoutToResourceState(NewLayout);
     if (!pTextureVk->CheckState(NewState))
     {
-        TransitionTextureState(*pTextureVk, RESOURCE_STATE_UNKNOWN, NewState, true);
+        TransitionTextureState(*pTextureVk, RESOURCE_STATE_UNKNOWN, NewState, STATE_TRANSITION_FLAG_UPDATE_STATE);
     }
 }
 
@@ -2621,7 +2621,7 @@ NODISCARD inline bool ResourceStateHasWriteAccess(RESOURCE_STATE State)
 void DeviceContextVkImpl::TransitionTextureState(TextureVkImpl&           TextureVk,
                                                  RESOURCE_STATE           OldState,
                                                  RESOURCE_STATE           NewState,
-                                                 bool                     UpdateTextureState,
+                                                 STATE_TRANSITION_FLAGS   Flags,
                                                  VkImageSubresourceRange* pSubresRange /* = nullptr*/)
 {
     VERIFY(m_pActiveRenderPass == nullptr, "State transitions are not allowed inside a render pass");
@@ -2683,7 +2683,7 @@ void DeviceContextVkImpl::TransitionTextureState(TextureVkImpl&           Textur
     // Always add barrier after writes.
     const bool AfterWrite = ResourceStateHasWriteAccess(OldState);
 
-    auto OldLayout = ResourceStateToVkImageLayout(OldState);
+    auto OldLayout = (Flags & STATE_TRANSITION_FLAG_DISCARD_CONTENT) != 0 ? VK_IMAGE_LAYOUT_UNDEFINED : ResourceStateToVkImageLayout(OldState);
     auto NewLayout = ResourceStateToVkImageLayout(NewState);
     auto OldStages = ResourceStateFlagsToVkPipelineStageFlags(OldState);
     auto NewStages = ResourceStateFlagsToVkPipelineStageFlags(NewState);
@@ -2691,7 +2691,7 @@ void DeviceContextVkImpl::TransitionTextureState(TextureVkImpl&           Textur
     if (((OldState & NewState) != NewState) || OldLayout != NewLayout || AfterWrite)
     {
         m_CommandBuffer.TransitionImageLayout(vkImg, OldLayout, NewLayout, *pSubresRange, OldStages, NewStages);
-        if (UpdateTextureState)
+        if ((Flags & STATE_TRANSITION_FLAG_UPDATE_STATE) != 0)
         {
             TextureVk.SetState(NewState);
             VERIFY_EXPR(TextureVk.GetLayout() == NewLayout);
@@ -2710,7 +2710,7 @@ void DeviceContextVkImpl::TransitionOrVerifyTextureState(TextureVkImpl&         
         VERIFY(m_pActiveRenderPass == nullptr, "State transitions are not allowed inside a render pass");
         if (Texture.IsInKnownState())
         {
-            TransitionTextureState(Texture, RESOURCE_STATE_UNKNOWN, RequiredState, true);
+            TransitionTextureState(Texture, RESOURCE_STATE_UNKNOWN, RequiredState, STATE_TRANSITION_FLAG_UPDATE_STATE);
             VERIFY_EXPR(Texture.GetLayout() == ExpectedLayout);
         }
     }
@@ -2993,7 +2993,7 @@ void DeviceContextVkImpl::TransitionResourceStates(Uint32 BarrierCount, const St
         if (Barrier.TransitionType == STATE_TRANSITION_TYPE_BEGIN)
         {
             // Skip begin-split barriers
-            VERIFY(!Barrier.UpdateResourceState, "Resource state can't be updated in begin-split barrier");
+            VERIFY((Barrier.Flags & STATE_TRANSITION_FLAG_UPDATE_STATE) == 0, "Resource state can't be updated in begin-split barrier");
             continue;
         }
         VERIFY(Barrier.TransitionType == STATE_TRANSITION_TYPE_IMMEDIATE || Barrier.TransitionType == STATE_TRANSITION_TYPE_END, "Unexpected barrier type");
@@ -3006,19 +3006,19 @@ void DeviceContextVkImpl::TransitionResourceStates(Uint32 BarrierCount, const St
             SubResRange.levelCount     = (Barrier.MipLevelsCount == REMAINING_MIP_LEVELS) ? VK_REMAINING_MIP_LEVELS : Barrier.MipLevelsCount;
             SubResRange.baseArrayLayer = Barrier.FirstArraySlice;
             SubResRange.layerCount     = (Barrier.ArraySliceCount == REMAINING_ARRAY_SLICES) ? VK_REMAINING_ARRAY_LAYERS : Barrier.ArraySliceCount;
-            TransitionTextureState(*pTexture, Barrier.DiscardResourceContent ? RESOURCE_STATE_UNDEFINED : Barrier.OldState, Barrier.NewState, Barrier.UpdateResourceState, &SubResRange);
+            TransitionTextureState(*pTexture, Barrier.OldState, Barrier.NewState, Barrier.Flags, &SubResRange);
         }
         else if (RefCntAutoPtr<BufferVkImpl> pBuffer{Barrier.pResource, IID_BufferVk})
         {
-            TransitionBufferState(*pBuffer, Barrier.OldState, Barrier.NewState, Barrier.UpdateResourceState);
+            TransitionBufferState(*pBuffer, Barrier.OldState, Barrier.NewState, (Barrier.Flags & STATE_TRANSITION_FLAG_UPDATE_STATE) != 0);
         }
         else if (RefCntAutoPtr<BottomLevelASVkImpl> pBottomLevelAS{Barrier.pResource, IID_BottomLevelAS})
         {
-            TransitionBLASState(*pBottomLevelAS, Barrier.OldState, Barrier.NewState, Barrier.UpdateResourceState);
+            TransitionBLASState(*pBottomLevelAS, Barrier.OldState, Barrier.NewState, (Barrier.Flags & STATE_TRANSITION_FLAG_UPDATE_STATE) != 0);
         }
         else if (RefCntAutoPtr<TopLevelASVkImpl> pTopLevelAS{Barrier.pResource, IID_TopLevelAS})
         {
-            TransitionTLASState(*pTopLevelAS, Barrier.OldState, Barrier.NewState, Barrier.UpdateResourceState);
+            TransitionTLASState(*pTopLevelAS, Barrier.OldState, Barrier.NewState, (Barrier.Flags & STATE_TRANSITION_FLAG_UPDATE_STATE) != 0);
         }
         else
         {

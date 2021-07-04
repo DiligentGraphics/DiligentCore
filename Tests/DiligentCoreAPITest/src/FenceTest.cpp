@@ -166,7 +166,7 @@ TEST_F(FenceTest, GPUWaitForCPU)
         pContext->DispatchCompute(DispatchComputeAttribs{sm_DispathSize.x, sm_DispathSize.y, 1});
 
         // Transition to CopySrc state to use in TakeSnapshot()
-        StateTransitionDesc Barrier{pBackBufferUAV->GetTexture(), RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, true};
+        StateTransitionDesc Barrier{pBackBufferUAV->GetTexture(), RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE};
         pContext->TransitionResourceStates(1, &Barrier);
         pContext->WaitForIdle();
 
@@ -282,7 +282,7 @@ TEST_F(FenceTest, ContextWaitForAnotherContext)
         pGraphicsCtx->DispatchCompute(DispatchComputeAttribs{sm_DispathSize.x, sm_DispathSize.y, 1});
 
         // Transition to CopySrc state to use in TakeSnapshot()
-        StateTransitionDesc Barrier{pBackBufferUAV->GetTexture(), RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, true};
+        StateTransitionDesc Barrier{pBackBufferUAV->GetTexture(), RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE};
         pGraphicsCtx->TransitionResourceStates(1, &Barrier);
         pGraphicsCtx->WaitForIdle();
 
