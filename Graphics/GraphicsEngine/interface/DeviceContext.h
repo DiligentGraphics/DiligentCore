@@ -1526,8 +1526,6 @@ struct StateTransitionDesc
 
     /// Resource state before transition.
     /// If this value is RESOURCE_STATE_UNKNOWN, internal resource state will be used, which must be defined in this case.
-    /// If this value is RESOURCE_STATE_UNDEFINED, previous content of the resource will be invalidated.
-    /// Use RESOURCE_STATE_UNDEFINED if the previous state is not known and the resource content will be overwritten.
     ///
     /// \note  Resource state must be compatible with the context type.
     RESOURCE_STATE OldState  DEFAULT_INITIALIZER(RESOURCE_STATE_UNKNOWN);
@@ -1552,6 +1550,11 @@ struct StateTransitionDesc
     /// \note When TransitionType is STATE_TRANSITION_TYPE_BEGIN, this member must be false.
     bool UpdateResourceState  DEFAULT_INITIALIZER(false);
 
+    /// If set to true, the contents of the resource will be discarded, when possible.
+    /// This may avoid potentially expensive operations such as render target decompression
+    /// or a pipeline stall when transitioning to COMMON or UAV state.
+    bool DiscardResourceContent DEFAULT_INITIALIZER(false);
+
 #if DILIGENT_CPP_INTERFACE
     StateTransitionDesc()noexcept{}
 
@@ -1563,22 +1566,25 @@ struct StateTransitionDesc
                         Uint32                _FirstArraySlice = 0,
                         Uint32                _ArraySliceCount = REMAINING_ARRAY_SLICES,
                         STATE_TRANSITION_TYPE _TransitionType  = STATE_TRANSITION_TYPE_IMMEDIATE,
-                        bool                  _UpdateState     = false)noexcept : 
-        pResource           {static_cast<IDeviceObject*>(_pTexture)},
-        FirstMipLevel       {_FirstMipLevel  },
-        MipLevelsCount      {_MipLevelsCount },
-        FirstArraySlice     {_FirstArraySlice},
-        ArraySliceCount     {_ArraySliceCount},
-        OldState            {_OldState       },
-        NewState            {_NewState       },
-        TransitionType      {_TransitionType },
-        UpdateResourceState {_UpdateState    }
+                        bool                  _UpdateState     = false,
+                        bool                  _DiscardResource = false) noexcept : 
+        pResource             {static_cast<IDeviceObject*>(_pTexture)},
+        FirstMipLevel         {_FirstMipLevel  },
+        MipLevelsCount        {_MipLevelsCount },
+        FirstArraySlice       {_FirstArraySlice},
+        ArraySliceCount       {_ArraySliceCount},
+        OldState              {_OldState       },
+        NewState              {_NewState       },
+        TransitionType        {_TransitionType },
+        UpdateResourceState   {_UpdateState    },
+        DiscardResourceContent{_DiscardResource}
     {}
 
     StateTransitionDesc(ITexture*      _pTexture, 
                         RESOURCE_STATE _OldState,
                         RESOURCE_STATE _NewState, 
-                        bool           _UpdateState)noexcept :
+                        bool           _UpdateState,
+                        bool           _DiscardResource = false) noexcept :
         StateTransitionDesc
         {
             _pTexture,
@@ -1589,24 +1595,27 @@ struct StateTransitionDesc
             0,
             REMAINING_ARRAY_SLICES,
             STATE_TRANSITION_TYPE_IMMEDIATE,
-            _UpdateState
+            _UpdateState,
+            _DiscardResource
         }
     {}
 
     StateTransitionDesc(IBuffer*       _pBuffer, 
                         RESOURCE_STATE _OldState,
                         RESOURCE_STATE _NewState,
-                        bool           _UpdateState)noexcept : 
-        pResource           {_pBuffer    },
-        OldState            {_OldState   },
-        NewState            {_NewState   },
-        UpdateResourceState {_UpdateState}
+                        bool           _UpdateState,
+                        bool           _DiscardResource = false) noexcept : 
+        pResource             {_pBuffer        },
+        OldState              {_OldState       },
+        NewState              {_NewState       },
+        UpdateResourceState   {_UpdateState    },
+        DiscardResourceContent{_DiscardResource}
     {}
 
     StateTransitionDesc(IBottomLevelAS* _pBLAS, 
                         RESOURCE_STATE  _OldState,
                         RESOURCE_STATE  _NewState,
-                        bool            _UpdateState)noexcept : 
+                        bool            _UpdateState) noexcept : 
         pResource           {_pBLAS      },
         OldState            {_OldState   },
         NewState            {_NewState   },
@@ -1616,7 +1625,7 @@ struct StateTransitionDesc
     StateTransitionDesc(ITopLevelAS*     _pTLAS, 
                         RESOURCE_STATE  _OldState,
                         RESOURCE_STATE  _NewState,
-                        bool            _UpdateState)noexcept : 
+                        bool            _UpdateState) noexcept : 
         pResource           {_pTLAS      },
         OldState            {_OldState   },
         NewState            {_NewState   },

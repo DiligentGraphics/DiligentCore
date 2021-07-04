@@ -3006,7 +3006,7 @@ void DeviceContextVkImpl::TransitionResourceStates(Uint32 BarrierCount, const St
             SubResRange.levelCount     = (Barrier.MipLevelsCount == REMAINING_MIP_LEVELS) ? VK_REMAINING_MIP_LEVELS : Barrier.MipLevelsCount;
             SubResRange.baseArrayLayer = Barrier.FirstArraySlice;
             SubResRange.layerCount     = (Barrier.ArraySliceCount == REMAINING_ARRAY_SLICES) ? VK_REMAINING_ARRAY_LAYERS : Barrier.ArraySliceCount;
-            TransitionTextureState(*pTexture, Barrier.OldState, Barrier.NewState, Barrier.UpdateResourceState, &SubResRange);
+            TransitionTextureState(*pTexture, Barrier.DiscardResourceContent ? RESOURCE_STATE_UNDEFINED : Barrier.OldState, Barrier.NewState, Barrier.UpdateResourceState, &SubResRange);
         }
         else if (RefCntAutoPtr<BufferVkImpl> pBuffer{Barrier.pResource, IID_BufferVk})
         {
