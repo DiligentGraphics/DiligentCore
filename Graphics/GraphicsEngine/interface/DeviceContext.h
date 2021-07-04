@@ -1505,6 +1505,26 @@ typedef struct UpdateIndirectRTBufferAttribs UpdateIndirectRTBufferAttribs;
 static const Uint32 REMAINING_MIP_LEVELS   = ~0u;
 static const Uint32 REMAINING_ARRAY_SLICES = ~0u;
 
+DILIGENT_TYPED_ENUM(RESOURCE_STATE_FLAGS, Uint8)
+{
+    RESOURCE_STATE_FLAG_NONE            = 0,
+
+    /// If used, the internal resource state will be set to NewState and the engine
+    /// will be able to take over the resource state management. In this case it is the 
+    /// responsibility of the application to make sure that all subresources are indeed in
+    /// designated state.
+    /// If not used, internal resource state will be unchanged.
+    /// \note This flag cannnot be used when TransitionType is STATE_TRANSITION_TYPE_BEGIN.
+    RESOURCE_STATE_FLAG_UPDATE_STATE    = 1 << 0,
+
+    /// If used, the contents of the resource will be discarded, when possible.
+    /// This may avoid potentially expensive operations such as render target decompression
+    /// or a pipeline stall when transitioning to COMMON or UAV state.
+    RESOURCE_STATE_FLAG_DISCARD_CONTENT = 1 << 1,
+};
+DEFINE_FLAG_ENUM_OPERATORS(RESOURCE_STATE_FLAGS);
+
+
 /// Resource state transition barrier description
 struct StateTransitionDesc
 {
@@ -1542,18 +1562,8 @@ struct StateTransitionDesc
     ///       TransitionType must be STATE_TRANSITION_TYPE_IMMEDIATE.
     STATE_TRANSITION_TYPE TransitionType DEFAULT_INITIALIZER(STATE_TRANSITION_TYPE_IMMEDIATE);
 
-    /// If set to true, the internal resource state will be set to NewState and the engine
-    /// will be able to take over the resource state management. In this case it is the 
-    /// responsibility of the application to make sure that all subresources are indeed in
-    /// designated state.
-    /// If set to false, internal resource state will be unchanged.
-    /// \note When TransitionType is STATE_TRANSITION_TYPE_BEGIN, this member must be false.
-    bool UpdateResourceState  DEFAULT_INITIALIZER(false);
-
-    /// If set to true, the contents of the resource will be discarded, when possible.
-    /// This may avoid potentially expensive operations such as render target decompression
-    /// or a pipeline stall when transitioning to COMMON or UAV state.
-    bool DiscardResourceContent DEFAULT_INITIALIZER(false);
+    /// 
+    RESOURCE_STATE_FLAGS Flags DEFAULT_INITIALIZER(RESOURCE_STATE_FLAG_NONE);
 
 #if DILIGENT_CPP_INTERFACE
     StateTransitionDesc()noexcept{}
@@ -1566,25 +1576,22 @@ struct StateTransitionDesc
                         Uint32                _FirstArraySlice = 0,
                         Uint32                _ArraySliceCount = REMAINING_ARRAY_SLICES,
                         STATE_TRANSITION_TYPE _TransitionType  = STATE_TRANSITION_TYPE_IMMEDIATE,
-                        bool                  _UpdateState     = false,
-                        bool                  _DiscardResource = false) noexcept : 
-        pResource             {static_cast<IDeviceObject*>(_pTexture)},
-        FirstMipLevel         {_FirstMipLevel  },
-        MipLevelsCount        {_MipLevelsCount },
-        FirstArraySlice       {_FirstArraySlice},
-        ArraySliceCount       {_ArraySliceCount},
-        OldState              {_OldState       },
-        NewState              {_NewState       },
-        TransitionType        {_TransitionType },
-        UpdateResourceState   {_UpdateState    },
-        DiscardResourceContent{_DiscardResource}
+                        RESOURCE_STATE_FLAGS  _Flags           = RESOURCE_STATE_FLAG_NONE) noexcept : 
+        pResource       {static_cast<IDeviceObject*>(_pTexture)},
+        FirstMipLevel   {_FirstMipLevel  },
+        MipLevelsCount  {_MipLevelsCount },
+        FirstArraySlice {_FirstArraySlice},
+        ArraySliceCount {_ArraySliceCount},
+        OldState        {_OldState       },
+        NewState        {_NewState       },
+        TransitionType  {_TransitionType },
+        Flags           {_Flags          }
     {}
 
-    StateTransitionDesc(ITexture*      _pTexture, 
-                        RESOURCE_STATE _OldState,
-                        RESOURCE_STATE _NewState, 
-                        bool           _UpdateState,
-                        bool           _DiscardResource = false) noexcept :
+    StateTransitionDesc(ITexture*            _pTexture, 
+                        RESOURCE_STATE       _OldState,
+                        RESOURCE_STATE       _NewState, 
+                        RESOURCE_STATE_FLAGS _Flags) noexcept :
         StateTransitionDesc
         {
             _pTexture,
@@ -1595,41 +1602,54 @@ struct StateTransitionDesc
             0,
             REMAINING_ARRAY_SLICES,
             STATE_TRANSITION_TYPE_IMMEDIATE,
-            _UpdateState,
-            _DiscardResource
+            _Flags
         }
     {}
 
+    StateTransitionDesc(IBuffer*             _pBuffer, 
+                        RESOURCE_STATE       _OldState,
+                        RESOURCE_STATE       _NewState,
+                        RESOURCE_STATE_FLAGS _Flags = RESOURCE_STATE_FLAG_NONE) noexcept : 
+        pResource {_pBuffer },
+        OldState  {_OldState},
+        NewState  {_NewState},
+        Flags     {_Flags   }
+    {}
+
+    StateTransitionDesc(IBottomLevelAS*      _pBLAS, 
+                        RESOURCE_STATE       _OldState,
+                        RESOURCE_STATE       _NewState,
+                        RESOURCE_STATE_FLAGS _Flags = RESOURCE_STATE_FLAG_NONE) noexcept : 
+        pResource {_pBLAS   },
+        OldState  {_OldState},
+        NewState  {_NewState},
+        Flags     {_Flags   }
+    {}
+
+    StateTransitionDesc(ITopLevelAS*         _pTLAS, 
+                        RESOURCE_STATE       _OldState,
+                        RESOURCE_STATE       _NewState,
+                        RESOURCE_STATE_FLAGS _Flags = RESOURCE_STATE_FLAG_NONE) noexcept : 
+        pResource {_pTLAS   },
+        OldState  {_OldState},
+        NewState  {_NewState},
+        Flags     {_Flags   }
+    {}
+    
+    // deprecated
+    StateTransitionDesc(ITexture*      _pTexture, 
+                        RESOURCE_STATE _OldState,
+                        RESOURCE_STATE _NewState, 
+                        bool           _UpdateState) noexcept :
+        StateTransitionDesc{_pTexture, _OldState, _NewState, _UpdateState ? RESOURCE_STATE_FLAG_UPDATE_STATE : RESOURCE_STATE_FLAG_NONE}
+    {}
+    
+    // deprecated
     StateTransitionDesc(IBuffer*       _pBuffer, 
                         RESOURCE_STATE _OldState,
                         RESOURCE_STATE _NewState,
-                        bool           _UpdateState,
-                        bool           _DiscardResource = false) noexcept : 
-        pResource             {_pBuffer        },
-        OldState              {_OldState       },
-        NewState              {_NewState       },
-        UpdateResourceState   {_UpdateState    },
-        DiscardResourceContent{_DiscardResource}
-    {}
-
-    StateTransitionDesc(IBottomLevelAS* _pBLAS, 
-                        RESOURCE_STATE  _OldState,
-                        RESOURCE_STATE  _NewState,
-                        bool            _UpdateState) noexcept : 
-        pResource           {_pBLAS      },
-        OldState            {_OldState   },
-        NewState            {_NewState   },
-        UpdateResourceState {_UpdateState}
-    {}
-
-    StateTransitionDesc(ITopLevelAS*     _pTLAS, 
-                        RESOURCE_STATE  _OldState,
-                        RESOURCE_STATE  _NewState,
-                        bool            _UpdateState) noexcept : 
-        pResource           {_pTLAS      },
-        OldState            {_OldState   },
-        NewState            {_NewState   },
-        UpdateResourceState {_UpdateState}
+                        bool           _UpdateState) noexcept :
+        StateTransitionDesc{_pBuffer, _OldState, _NewState, _UpdateState ? RESOURCE_STATE_FLAG_UPDATE_STATE : RESOURCE_STATE_FLAG_NONE}
     {}
 #endif
 };

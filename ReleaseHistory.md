@@ -1,5 +1,6 @@
 ## Current progress
 
+* Added 'RESOURCE_STATE_COMMON' state, added `RESOURCE_STATE_FLAGS` instead of `UpdateResourceState` in `StateTransitionDesc` struct (API Version 250004)
 * Added `ComputeShaderProperties` struct (API Version 250003)
 * Added `IShaderResourceBinding::CheckResources` method and `SHADER_RESOURCE_VARIABLE_TYPE_FLAGS` enum (API Version 250002)
 * Removed `IShaderResourceVariable::IsBound` with `IShaderResourceVariable::Get` (API Version 250001)
