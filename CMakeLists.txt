@@ -2,6 +2,21 @@ cmake_minimum_required (VERSION 3.6)
 
 project(DiligentCore)
 
+# Add possibility to get dependencies using conan:
+if(NOT EXISTS "${CMAKE_BINARY_DIR}/conan.cmake")
+   message(STATUS "Downloading conan.cmake from https://github.com/conan-io/cmake-conan")
+   file(DOWNLOAD "https://raw.githubusercontent.com/conan-io/cmake-conan/master/conan.cmake"
+                  "${CMAKE_BINARY_DIR}/conan.cmake")
+endif()
+include(${CMAKE_BINARY_DIR}/conan.cmake)
+
+if(PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_MACOS)
+
+conan_cmake_run(REQUIRES glew/2.2.0
+                OPTIONS glew:shared=False
+                BASIC_SETUP CMAKE_TARGETS)
+endif()
+
 # Define GNU standard installation directories such as CMAKE_INSTALL_INCLUDEDIR, CMAKE_INSTALL_LIBDIR, etc.
 include(GNUInstallDirs)
 
