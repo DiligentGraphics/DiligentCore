@@ -61,27 +61,70 @@ public:
     Uint32 AllocateQuery(QUERY_TYPE Type);
     void   ReleaseQuery(QUERY_TYPE Type, Uint32 Index);
 
-    ID3D12QueryHeap* GetQueryHeap(QUERY_TYPE Type)
+    ID3D12QueryHeap* GetQueryHeap(QUERY_TYPE Type) const
     {
-        return m_Heaps[Type].pd3d12QueryHeap;
+        return m_Heaps[Type].GetD3D12QueryHeap();
     }
 
-    void BeginQuery(CommandContext& Ctx, QUERY_TYPE Type, Uint32 Index);
-    void EndQuery(CommandContext& Ctx, QUERY_TYPE Type, Uint32 Index);
+    void BeginQuery(CommandContext& Ctx, QUERY_TYPE Type, Uint32 Index) const;
+    void EndQuery(CommandContext& Ctx, QUERY_TYPE Type, Uint32 Index) const;
     void ReadQueryData(QUERY_TYPE Type, Uint32 Index, void* pDataPtr, Uint32 DataSize) const;
 
 private:
-    struct QueryHeapInfo
+    class QueryHeapInfo
     {
-        CComPtr<ID3D12QueryHeap> pd3d12QueryHeap;
-        std::vector<Uint32>      AvailableQueries;
-        std::vector<Uint32>      ResolveBufferOffsets;
+    public:
+        void Init(ID3D12Device*                pd3d12Device,
+                  const D3D12_QUERY_HEAP_DESC& d3d12HeapDesc,
+                  QUERY_TYPE                   QueryType,
+                  Uint32&                      CurrResolveBufferOffset);
 
-        Uint32 HeapSize            = 0;
-        Uint32 MaxAllocatedQueries = 0;
+        ~QueryHeapInfo();
+
+        Uint32 Allocate();
+        void   Release(Uint32 Index);
+
+        Uint32 GetQueryCount() const
+        {
+            return m_QueryCount;
+        }
+        QUERY_TYPE GetType() const
+        {
+            return m_Type;
+        }
+        Uint32 GetMaxAllocatedQueries() const
+        {
+            return m_MaxAllocatedQueries;
+        }
+        Uint32 GetResolveBufferOffset(Uint32 QueryIdx) const
+        {
+            VERIFY_EXPR(QueryIdx < m_QueryCount);
+            return m_ResolveBufferBaseOffset + QueryIdx * m_AlignedQueryDataSize;
+        }
+        ID3D12QueryHeap* GetD3D12QueryHeap() const
+        {
+            return m_pd3d12QueryHeap;
+        }
+        bool IsNull() const
+        {
+            return m_pd3d12QueryHeap == nullptr;
+        }
+
+    private:
+        CComPtr<ID3D12QueryHeap> m_pd3d12QueryHeap;
+
+        std::mutex          m_AvailableQueriesMtx;
+        std::vector<Uint32> m_AvailableQueries;
+
+        QUERY_TYPE m_Type = QUERY_TYPE_UNDEFINED;
+
+        Uint32 m_QueryCount          = 0;
+        Uint32 m_MaxAllocatedQueries = 0;
+
+        Uint32 m_ResolveBufferBaseOffset = 0;
+        Uint32 m_AlignedQueryDataSize    = 0;
     };
 
-    std::mutex                                      m_HeapMutex;
     std::array<QueryHeapInfo, QUERY_TYPE_NUM_TYPES> m_Heaps;
 
     // Readback buffer that will contain the query data.
