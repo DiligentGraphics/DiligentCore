@@ -195,10 +195,15 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
     constexpr VkBufferUsageFlags UsageThatRequiresBackingBuffer =
         VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT |
         VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT |
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
         VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
 
-    if (m_Desc.Usage == USAGE_DYNAMIC && (VkBuffCI.usage & UsageThatRequiresBackingBuffer) == 0)
+    const bool RequiresBackingBuffer =
+        (VkBuffCI.usage & UsageThatRequiresBackingBuffer) != 0 ||
+        // We only need a backing buffer for the storage buffer if there is an unordered access bind flag (aka RW structured buffers).
+        // Read-only storage buffers (aka structured buffers) don't need a backing buffer.
+        ((VkBuffCI.usage & VK_BUFFER_USAGE_STORAGE_BUFFER_BIT) != 0 && (m_Desc.BindFlags & BIND_UNORDERED_ACCESS) != 0);
+
+    if (m_Desc.Usage == USAGE_DYNAMIC && !RequiresBackingBuffer)
     {
         VERIFY(VkBuffCI.sharingMode == VK_SHARING_MODE_EXCLUSIVE,
                "Sharing mode is not supported for dynamic buffers, must be handled by ValidateBufferDesc()");
@@ -216,7 +221,7 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
 
 #ifdef DILIGENT_DEBUG
         {
-            VkAccessFlags AccessFlags =
+            constexpr VkAccessFlags AccessFlags =
                 VK_ACCESS_INDIRECT_COMMAND_READ_BIT |
                 VK_ACCESS_INDEX_READ_BIT |
                 VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT |
