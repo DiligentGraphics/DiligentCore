@@ -630,27 +630,26 @@ VulkanUtilities::ImageViewWrapper TextureVkImpl::CreateImageView(TextureViewDesc
         default: UNEXPECTED("Unexpected view dimension");
     }
 
-    TEXTURE_FORMAT OriginalFormat      = ViewDesc.Format;
-    TEXTURE_FORMAT CorrectedViewFormat = OriginalFormat;
+    TEXTURE_FORMAT CorrectedViewFormat = ViewDesc.Format;
     if (m_Desc.BindFlags & BIND_DEPTH_STENCIL)
         CorrectedViewFormat = GetDefaultTextureViewFormat(CorrectedViewFormat, TEXTURE_VIEW_DEPTH_STENCIL, m_Desc.BindFlags);
     ImageViewCI.format = TexFormatToVkFormat(CorrectedViewFormat);
-    if (OriginalFormat != TEX_FORMAT_A8_UNORM)
-    {
-        ImageViewCI.components = {
-            VK_COMPONENT_SWIZZLE_IDENTITY,
-            VK_COMPONENT_SWIZZLE_IDENTITY,
-            VK_COMPONENT_SWIZZLE_IDENTITY,
-            VK_COMPONENT_SWIZZLE_IDENTITY //
-        };
-    }
-    else
+    if (ViewDesc.Format == TEX_FORMAT_A8_UNORM)
     {
         ImageViewCI.components = {
             VK_COMPONENT_SWIZZLE_ZERO,
             VK_COMPONENT_SWIZZLE_ZERO,
             VK_COMPONENT_SWIZZLE_ZERO,
             VK_COMPONENT_SWIZZLE_R //
+        };
+    }
+    else
+    {
+        ImageViewCI.components = {
+            VK_COMPONENT_SWIZZLE_IDENTITY,
+            VK_COMPONENT_SWIZZLE_IDENTITY,
+            VK_COMPONENT_SWIZZLE_IDENTITY,
+            VK_COMPONENT_SWIZZLE_IDENTITY //
         };
     }
 

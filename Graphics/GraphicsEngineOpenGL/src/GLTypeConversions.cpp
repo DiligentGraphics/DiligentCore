@@ -222,7 +222,8 @@ public:
                 TexFmt == TEX_FORMAT_BC5_TYPELESS ||
                 TexFmt == TEX_FORMAT_BC6H_TYPELESS ||
                 TexFmt == TEX_FORMAT_BC7_TYPELESS ||
-                TexFmt == TEX_FORMAT_A8_UNORM // Also skip A8 format as it is implemented as R8
+                TexFmt == TEX_FORMAT_A8_UNORM || // A8 is implemented by swizzling R8
+                TexFmt == TEX_FORMAT_BGRA8_UNORM // BGRA8 is implemented by swizzling RGBA8
             )
             {
                 continue;
@@ -277,132 +278,132 @@ NativePixelAttribs GetNativePixelTransferAttribs(TEXTURE_FORMAT TexFormat)
     {
         // clang-format off
         // http://www.opengl.org/wiki/Image_Format
-        FmtToGLPixelFmt[TEX_FORMAT_UNKNOWN]                = NativePixelAttribs();
+        FmtToGLPixelFmt[TEX_FORMAT_UNKNOWN]                = NativePixelAttribs{};
 
-        FmtToGLPixelFmt[TEX_FORMAT_RGBA32_TYPELESS]        = NativePixelAttribs(GL_RGBA,         GL_FLOAT);
-        FmtToGLPixelFmt[TEX_FORMAT_RGBA32_FLOAT]           = NativePixelAttribs(GL_RGBA,         GL_FLOAT);
-        FmtToGLPixelFmt[TEX_FORMAT_RGBA32_UINT]            = NativePixelAttribs(GL_RGBA_INTEGER, GL_UNSIGNED_INT);
-        FmtToGLPixelFmt[TEX_FORMAT_RGBA32_SINT]            = NativePixelAttribs(GL_RGBA_INTEGER, GL_INT);
+        FmtToGLPixelFmt[TEX_FORMAT_RGBA32_TYPELESS]        = NativePixelAttribs{GL_RGBA,         GL_FLOAT};
+        FmtToGLPixelFmt[TEX_FORMAT_RGBA32_FLOAT]           = NativePixelAttribs{GL_RGBA,         GL_FLOAT};
+        FmtToGLPixelFmt[TEX_FORMAT_RGBA32_UINT]            = NativePixelAttribs{GL_RGBA_INTEGER, GL_UNSIGNED_INT};
+        FmtToGLPixelFmt[TEX_FORMAT_RGBA32_SINT]            = NativePixelAttribs{GL_RGBA_INTEGER, GL_INT};
 
-        FmtToGLPixelFmt[TEX_FORMAT_RGB32_TYPELESS]         = NativePixelAttribs(GL_RGB,         GL_FLOAT);
-        FmtToGLPixelFmt[TEX_FORMAT_RGB32_FLOAT]            = NativePixelAttribs(GL_RGB,         GL_FLOAT);
-        FmtToGLPixelFmt[TEX_FORMAT_RGB32_UINT]             = NativePixelAttribs(GL_RGB_INTEGER, GL_UNSIGNED_INT);
-        FmtToGLPixelFmt[TEX_FORMAT_RGB32_SINT]             = NativePixelAttribs(GL_RGB_INTEGER, GL_INT);
+        FmtToGLPixelFmt[TEX_FORMAT_RGB32_TYPELESS]         = NativePixelAttribs{GL_RGB,         GL_FLOAT};
+        FmtToGLPixelFmt[TEX_FORMAT_RGB32_FLOAT]            = NativePixelAttribs{GL_RGB,         GL_FLOAT};
+        FmtToGLPixelFmt[TEX_FORMAT_RGB32_UINT]             = NativePixelAttribs{GL_RGB_INTEGER, GL_UNSIGNED_INT};
+        FmtToGLPixelFmt[TEX_FORMAT_RGB32_SINT]             = NativePixelAttribs{GL_RGB_INTEGER, GL_INT};
 
-        FmtToGLPixelFmt[TEX_FORMAT_RGBA16_TYPELESS]        = NativePixelAttribs(GL_RGBA,         GL_HALF_FLOAT);
-        FmtToGLPixelFmt[TEX_FORMAT_RGBA16_FLOAT]           = NativePixelAttribs(GL_RGBA,         GL_HALF_FLOAT);
-        FmtToGLPixelFmt[TEX_FORMAT_RGBA16_UNORM]           = NativePixelAttribs(GL_RGBA,         GL_UNSIGNED_SHORT);
-        FmtToGLPixelFmt[TEX_FORMAT_RGBA16_UINT]            = NativePixelAttribs(GL_RGBA_INTEGER, GL_UNSIGNED_SHORT);
-        FmtToGLPixelFmt[TEX_FORMAT_RGBA16_SNORM]           = NativePixelAttribs(GL_RGBA,         GL_SHORT);
-        FmtToGLPixelFmt[TEX_FORMAT_RGBA16_SINT]            = NativePixelAttribs(GL_RGBA_INTEGER, GL_SHORT);
+        FmtToGLPixelFmt[TEX_FORMAT_RGBA16_TYPELESS]        = NativePixelAttribs{GL_RGBA,         GL_HALF_FLOAT};
+        FmtToGLPixelFmt[TEX_FORMAT_RGBA16_FLOAT]           = NativePixelAttribs{GL_RGBA,         GL_HALF_FLOAT};
+        FmtToGLPixelFmt[TEX_FORMAT_RGBA16_UNORM]           = NativePixelAttribs{GL_RGBA,         GL_UNSIGNED_SHORT};
+        FmtToGLPixelFmt[TEX_FORMAT_RGBA16_UINT]            = NativePixelAttribs{GL_RGBA_INTEGER, GL_UNSIGNED_SHORT};
+        FmtToGLPixelFmt[TEX_FORMAT_RGBA16_SNORM]           = NativePixelAttribs{GL_RGBA,         GL_SHORT};
+        FmtToGLPixelFmt[TEX_FORMAT_RGBA16_SINT]            = NativePixelAttribs{GL_RGBA_INTEGER, GL_SHORT};
 
-        FmtToGLPixelFmt[TEX_FORMAT_RG32_TYPELESS]          = NativePixelAttribs(GL_RG,           GL_FLOAT);
-        FmtToGLPixelFmt[TEX_FORMAT_RG32_FLOAT]             = NativePixelAttribs(GL_RG,           GL_FLOAT);
-        FmtToGLPixelFmt[TEX_FORMAT_RG32_UINT]              = NativePixelAttribs(GL_RG_INTEGER,   GL_UNSIGNED_INT);
-        FmtToGLPixelFmt[TEX_FORMAT_RG32_SINT]              = NativePixelAttribs(GL_RG_INTEGER,   GL_INT);
+        FmtToGLPixelFmt[TEX_FORMAT_RG32_TYPELESS]          = NativePixelAttribs{GL_RG,           GL_FLOAT};
+        FmtToGLPixelFmt[TEX_FORMAT_RG32_FLOAT]             = NativePixelAttribs{GL_RG,           GL_FLOAT};
+        FmtToGLPixelFmt[TEX_FORMAT_RG32_UINT]              = NativePixelAttribs{GL_RG_INTEGER,   GL_UNSIGNED_INT};
+        FmtToGLPixelFmt[TEX_FORMAT_RG32_SINT]              = NativePixelAttribs{GL_RG_INTEGER,   GL_INT};
 
-        FmtToGLPixelFmt[TEX_FORMAT_R32G8X24_TYPELESS]      = NativePixelAttribs(GL_DEPTH_STENCIL, GL_FLOAT_32_UNSIGNED_INT_24_8_REV);
-        FmtToGLPixelFmt[TEX_FORMAT_D32_FLOAT_S8X24_UINT]   = NativePixelAttribs(GL_DEPTH_STENCIL, GL_FLOAT_32_UNSIGNED_INT_24_8_REV);
-        FmtToGLPixelFmt[TEX_FORMAT_R32_FLOAT_X8X24_TYPELESS]=NativePixelAttribs(GL_DEPTH_STENCIL, GL_FLOAT_32_UNSIGNED_INT_24_8_REV);
-        FmtToGLPixelFmt[TEX_FORMAT_X32_TYPELESS_G8X24_UINT]= NativePixelAttribs(GL_DEPTH_STENCIL, GL_FLOAT_32_UNSIGNED_INT_24_8_REV);
+        FmtToGLPixelFmt[TEX_FORMAT_R32G8X24_TYPELESS]      = NativePixelAttribs{GL_DEPTH_STENCIL, GL_FLOAT_32_UNSIGNED_INT_24_8_REV};
+        FmtToGLPixelFmt[TEX_FORMAT_D32_FLOAT_S8X24_UINT]   = NativePixelAttribs{GL_DEPTH_STENCIL, GL_FLOAT_32_UNSIGNED_INT_24_8_REV};
+        FmtToGLPixelFmt[TEX_FORMAT_R32_FLOAT_X8X24_TYPELESS]=NativePixelAttribs{GL_DEPTH_STENCIL, GL_FLOAT_32_UNSIGNED_INT_24_8_REV};
+        FmtToGLPixelFmt[TEX_FORMAT_X32_TYPELESS_G8X24_UINT]= NativePixelAttribs{GL_DEPTH_STENCIL, GL_FLOAT_32_UNSIGNED_INT_24_8_REV};
 
         // Components are normally packed with the first component in the most significant
         // bits of the bitfield, and successive component occupying progressively less
         // significant locations.Types whose token names end with _REV reverse the component
         // packing order from least to most significant locations.
-        FmtToGLPixelFmt[TEX_FORMAT_RGB10A2_TYPELESS]       = NativePixelAttribs(GL_RGBA,         GL_UNSIGNED_INT_2_10_10_10_REV);
-        FmtToGLPixelFmt[TEX_FORMAT_RGB10A2_UNORM]          = NativePixelAttribs(GL_RGBA,         GL_UNSIGNED_INT_2_10_10_10_REV);
-        FmtToGLPixelFmt[TEX_FORMAT_RGB10A2_UINT]           = NativePixelAttribs(GL_RGBA_INTEGER, GL_UNSIGNED_INT_2_10_10_10_REV);
-        FmtToGLPixelFmt[TEX_FORMAT_R11G11B10_FLOAT]        = NativePixelAttribs(GL_RGB,          GL_UNSIGNED_INT_10F_11F_11F_REV);
+        FmtToGLPixelFmt[TEX_FORMAT_RGB10A2_TYPELESS]       = NativePixelAttribs{GL_RGBA,         GL_UNSIGNED_INT_2_10_10_10_REV};
+        FmtToGLPixelFmt[TEX_FORMAT_RGB10A2_UNORM]          = NativePixelAttribs{GL_RGBA,         GL_UNSIGNED_INT_2_10_10_10_REV};
+        FmtToGLPixelFmt[TEX_FORMAT_RGB10A2_UINT]           = NativePixelAttribs{GL_RGBA_INTEGER, GL_UNSIGNED_INT_2_10_10_10_REV};
+        FmtToGLPixelFmt[TEX_FORMAT_R11G11B10_FLOAT]        = NativePixelAttribs{GL_RGB,          GL_UNSIGNED_INT_10F_11F_11F_REV};
 
-        FmtToGLPixelFmt[TEX_FORMAT_RGBA8_TYPELESS]         = NativePixelAttribs(GL_RGBA,         GL_UNSIGNED_BYTE);
-        FmtToGLPixelFmt[TEX_FORMAT_RGBA8_UNORM]            = NativePixelAttribs(GL_RGBA,         GL_UNSIGNED_BYTE);
-        FmtToGLPixelFmt[TEX_FORMAT_RGBA8_UNORM_SRGB]       = NativePixelAttribs(GL_RGBA,         GL_UNSIGNED_BYTE);
-        FmtToGLPixelFmt[TEX_FORMAT_RGBA8_UINT]             = NativePixelAttribs(GL_RGBA_INTEGER, GL_UNSIGNED_BYTE);
-        FmtToGLPixelFmt[TEX_FORMAT_RGBA8_SNORM]            = NativePixelAttribs(GL_RGBA,         GL_BYTE);
-        FmtToGLPixelFmt[TEX_FORMAT_RGBA8_SINT]             = NativePixelAttribs(GL_RGBA_INTEGER, GL_BYTE);
+        FmtToGLPixelFmt[TEX_FORMAT_RGBA8_TYPELESS]         = NativePixelAttribs{GL_RGBA,         GL_UNSIGNED_BYTE};
+        FmtToGLPixelFmt[TEX_FORMAT_RGBA8_UNORM]            = NativePixelAttribs{GL_RGBA,         GL_UNSIGNED_BYTE};
+        FmtToGLPixelFmt[TEX_FORMAT_RGBA8_UNORM_SRGB]       = NativePixelAttribs{GL_RGBA,         GL_UNSIGNED_BYTE};
+        FmtToGLPixelFmt[TEX_FORMAT_RGBA8_UINT]             = NativePixelAttribs{GL_RGBA_INTEGER, GL_UNSIGNED_BYTE};
+        FmtToGLPixelFmt[TEX_FORMAT_RGBA8_SNORM]            = NativePixelAttribs{GL_RGBA,         GL_BYTE};
+        FmtToGLPixelFmt[TEX_FORMAT_RGBA8_SINT]             = NativePixelAttribs{GL_RGBA_INTEGER, GL_BYTE};
 
-        FmtToGLPixelFmt[TEX_FORMAT_RG16_TYPELESS]          = NativePixelAttribs(GL_RG,           GL_HALF_FLOAT);
-        FmtToGLPixelFmt[TEX_FORMAT_RG16_FLOAT]             = NativePixelAttribs(GL_RG,           GL_HALF_FLOAT);
-        FmtToGLPixelFmt[TEX_FORMAT_RG16_UNORM]             = NativePixelAttribs(GL_RG,           GL_UNSIGNED_SHORT);
-        FmtToGLPixelFmt[TEX_FORMAT_RG16_UINT]              = NativePixelAttribs(GL_RG_INTEGER,   GL_UNSIGNED_SHORT);
-        FmtToGLPixelFmt[TEX_FORMAT_RG16_SNORM]             = NativePixelAttribs(GL_RG,           GL_SHORT);
-        FmtToGLPixelFmt[TEX_FORMAT_RG16_SINT]              = NativePixelAttribs(GL_RG_INTEGER,   GL_SHORT);
+        FmtToGLPixelFmt[TEX_FORMAT_RG16_TYPELESS]          = NativePixelAttribs{GL_RG,           GL_HALF_FLOAT};
+        FmtToGLPixelFmt[TEX_FORMAT_RG16_FLOAT]             = NativePixelAttribs{GL_RG,           GL_HALF_FLOAT};
+        FmtToGLPixelFmt[TEX_FORMAT_RG16_UNORM]             = NativePixelAttribs{GL_RG,           GL_UNSIGNED_SHORT};
+        FmtToGLPixelFmt[TEX_FORMAT_RG16_UINT]              = NativePixelAttribs{GL_RG_INTEGER,   GL_UNSIGNED_SHORT};
+        FmtToGLPixelFmt[TEX_FORMAT_RG16_SNORM]             = NativePixelAttribs{GL_RG,           GL_SHORT};
+        FmtToGLPixelFmt[TEX_FORMAT_RG16_SINT]              = NativePixelAttribs{GL_RG_INTEGER,   GL_SHORT};
 
-        FmtToGLPixelFmt[TEX_FORMAT_R32_TYPELESS]           = NativePixelAttribs(GL_RED,              GL_FLOAT);
-        FmtToGLPixelFmt[TEX_FORMAT_D32_FLOAT]              = NativePixelAttribs(GL_DEPTH_COMPONENT,  GL_FLOAT);
-        FmtToGLPixelFmt[TEX_FORMAT_R32_FLOAT]              = NativePixelAttribs(GL_RED,              GL_FLOAT);
-        FmtToGLPixelFmt[TEX_FORMAT_R32_UINT]               = NativePixelAttribs(GL_RED_INTEGER,      GL_UNSIGNED_INT);
-        FmtToGLPixelFmt[TEX_FORMAT_R32_SINT]               = NativePixelAttribs(GL_RED_INTEGER,      GL_INT);
+        FmtToGLPixelFmt[TEX_FORMAT_R32_TYPELESS]           = NativePixelAttribs{GL_RED,              GL_FLOAT};
+        FmtToGLPixelFmt[TEX_FORMAT_D32_FLOAT]              = NativePixelAttribs{GL_DEPTH_COMPONENT,  GL_FLOAT};
+        FmtToGLPixelFmt[TEX_FORMAT_R32_FLOAT]              = NativePixelAttribs{GL_RED,              GL_FLOAT};
+        FmtToGLPixelFmt[TEX_FORMAT_R32_UINT]               = NativePixelAttribs{GL_RED_INTEGER,      GL_UNSIGNED_INT};
+        FmtToGLPixelFmt[TEX_FORMAT_R32_SINT]               = NativePixelAttribs{GL_RED_INTEGER,      GL_INT};
 
-        FmtToGLPixelFmt[TEX_FORMAT_R24G8_TYPELESS]         = NativePixelAttribs(GL_DEPTH_STENCIL,    GL_UNSIGNED_INT_24_8);
-        FmtToGLPixelFmt[TEX_FORMAT_D24_UNORM_S8_UINT]      = NativePixelAttribs(GL_DEPTH_STENCIL,    GL_UNSIGNED_INT_24_8);
-        FmtToGLPixelFmt[TEX_FORMAT_R24_UNORM_X8_TYPELESS]  = NativePixelAttribs(GL_DEPTH_STENCIL,    GL_UNSIGNED_INT_24_8);
-        FmtToGLPixelFmt[TEX_FORMAT_X24_TYPELESS_G8_UINT]   = NativePixelAttribs(GL_DEPTH_STENCIL,    GL_UNSIGNED_INT_24_8);
+        FmtToGLPixelFmt[TEX_FORMAT_R24G8_TYPELESS]         = NativePixelAttribs{GL_DEPTH_STENCIL,    GL_UNSIGNED_INT_24_8};
+        FmtToGLPixelFmt[TEX_FORMAT_D24_UNORM_S8_UINT]      = NativePixelAttribs{GL_DEPTH_STENCIL,    GL_UNSIGNED_INT_24_8};
+        FmtToGLPixelFmt[TEX_FORMAT_R24_UNORM_X8_TYPELESS]  = NativePixelAttribs{GL_DEPTH_STENCIL,    GL_UNSIGNED_INT_24_8};
+        FmtToGLPixelFmt[TEX_FORMAT_X24_TYPELESS_G8_UINT]   = NativePixelAttribs{GL_DEPTH_STENCIL,    GL_UNSIGNED_INT_24_8};
 
-        FmtToGLPixelFmt[TEX_FORMAT_RG8_TYPELESS]           = NativePixelAttribs(GL_RG,           GL_UNSIGNED_BYTE);
-        FmtToGLPixelFmt[TEX_FORMAT_RG8_UNORM]              = NativePixelAttribs(GL_RG,           GL_UNSIGNED_BYTE);
-        FmtToGLPixelFmt[TEX_FORMAT_RG8_UINT]               = NativePixelAttribs(GL_RG_INTEGER,   GL_UNSIGNED_BYTE);
-        FmtToGLPixelFmt[TEX_FORMAT_RG8_SNORM]              = NativePixelAttribs(GL_RG,           GL_BYTE);
-        FmtToGLPixelFmt[TEX_FORMAT_RG8_SINT]               = NativePixelAttribs(GL_RG_INTEGER,   GL_BYTE);
+        FmtToGLPixelFmt[TEX_FORMAT_RG8_TYPELESS]           = NativePixelAttribs{GL_RG,           GL_UNSIGNED_BYTE};
+        FmtToGLPixelFmt[TEX_FORMAT_RG8_UNORM]              = NativePixelAttribs{GL_RG,           GL_UNSIGNED_BYTE};
+        FmtToGLPixelFmt[TEX_FORMAT_RG8_UINT]               = NativePixelAttribs{GL_RG_INTEGER,   GL_UNSIGNED_BYTE};
+        FmtToGLPixelFmt[TEX_FORMAT_RG8_SNORM]              = NativePixelAttribs{GL_RG,           GL_BYTE};
+        FmtToGLPixelFmt[TEX_FORMAT_RG8_SINT]               = NativePixelAttribs{GL_RG_INTEGER,   GL_BYTE};
 
-        FmtToGLPixelFmt[TEX_FORMAT_R16_TYPELESS]           = NativePixelAttribs(GL_RED,          GL_HALF_FLOAT);
-        FmtToGLPixelFmt[TEX_FORMAT_R16_FLOAT]              = NativePixelAttribs(GL_RED,          GL_HALF_FLOAT);
-        FmtToGLPixelFmt[TEX_FORMAT_D16_UNORM]              = NativePixelAttribs(GL_DEPTH_COMPONENT, GL_UNSIGNED_SHORT);
-        FmtToGLPixelFmt[TEX_FORMAT_R16_UNORM]              = NativePixelAttribs(GL_RED,          GL_UNSIGNED_SHORT);
-        FmtToGLPixelFmt[TEX_FORMAT_R16_UINT]               = NativePixelAttribs(GL_RED_INTEGER,  GL_UNSIGNED_SHORT);
-        FmtToGLPixelFmt[TEX_FORMAT_R16_SNORM]              = NativePixelAttribs(GL_RED,          GL_SHORT);
-        FmtToGLPixelFmt[TEX_FORMAT_R16_SINT]               = NativePixelAttribs(GL_RED_INTEGER,  GL_SHORT);
+        FmtToGLPixelFmt[TEX_FORMAT_R16_TYPELESS]           = NativePixelAttribs{GL_RED,          GL_HALF_FLOAT};
+        FmtToGLPixelFmt[TEX_FORMAT_R16_FLOAT]              = NativePixelAttribs{GL_RED,          GL_HALF_FLOAT};
+        FmtToGLPixelFmt[TEX_FORMAT_D16_UNORM]              = NativePixelAttribs{GL_DEPTH_COMPONENT, GL_UNSIGNED_SHORT};
+        FmtToGLPixelFmt[TEX_FORMAT_R16_UNORM]              = NativePixelAttribs{GL_RED,          GL_UNSIGNED_SHORT};
+        FmtToGLPixelFmt[TEX_FORMAT_R16_UINT]               = NativePixelAttribs{GL_RED_INTEGER,  GL_UNSIGNED_SHORT};
+        FmtToGLPixelFmt[TEX_FORMAT_R16_SNORM]              = NativePixelAttribs{GL_RED,          GL_SHORT};
+        FmtToGLPixelFmt[TEX_FORMAT_R16_SINT]               = NativePixelAttribs{GL_RED_INTEGER,  GL_SHORT};
 
-        FmtToGLPixelFmt[TEX_FORMAT_R8_TYPELESS]            = NativePixelAttribs(GL_RED,          GL_UNSIGNED_BYTE);
-        FmtToGLPixelFmt[TEX_FORMAT_R8_UNORM]               = NativePixelAttribs(GL_RED,          GL_UNSIGNED_BYTE);
-        FmtToGLPixelFmt[TEX_FORMAT_R8_UINT]                = NativePixelAttribs(GL_RED_INTEGER,  GL_UNSIGNED_BYTE);
-        FmtToGLPixelFmt[TEX_FORMAT_R8_SNORM]               = NativePixelAttribs(GL_RED,          GL_BYTE);
-        FmtToGLPixelFmt[TEX_FORMAT_R8_SINT]                = NativePixelAttribs(GL_RED_INTEGER,  GL_BYTE);
+        FmtToGLPixelFmt[TEX_FORMAT_R8_TYPELESS]            = NativePixelAttribs{GL_RED,          GL_UNSIGNED_BYTE};
+        FmtToGLPixelFmt[TEX_FORMAT_R8_UNORM]               = NativePixelAttribs{GL_RED,          GL_UNSIGNED_BYTE};
+        FmtToGLPixelFmt[TEX_FORMAT_R8_UINT]                = NativePixelAttribs{GL_RED_INTEGER,  GL_UNSIGNED_BYTE};
+        FmtToGLPixelFmt[TEX_FORMAT_R8_SNORM]               = NativePixelAttribs{GL_RED,          GL_BYTE};
+        FmtToGLPixelFmt[TEX_FORMAT_R8_SINT]                = NativePixelAttribs{GL_RED_INTEGER,  GL_BYTE};
         // To get the same behaviour as expected for TEX_FORMAT_A8_UNORM we swizzle the components
         // appropriately using the GL_TEXTURE_SWIZZLE texture parameters in TextureBaseGL::SetDefaultGLParameters()
-        FmtToGLPixelFmt[TEX_FORMAT_A8_UNORM]               = NativePixelAttribs(GL_RED,          GL_UNSIGNED_BYTE);
+        FmtToGLPixelFmt[TEX_FORMAT_A8_UNORM]               = NativePixelAttribs{GL_RED,          GL_UNSIGNED_BYTE};
 
-        FmtToGLPixelFmt[TEX_FORMAT_R1_UNORM]               = NativePixelAttribs();
+        FmtToGLPixelFmt[TEX_FORMAT_R1_UNORM]               = NativePixelAttribs{};
 
-        FmtToGLPixelFmt[TEX_FORMAT_RGB9E5_SHAREDEXP]       = NativePixelAttribs(GL_RGB, GL_UNSIGNED_INT_5_9_9_9_REV);
-        FmtToGLPixelFmt[TEX_FORMAT_RG8_B8G8_UNORM]         = NativePixelAttribs();
-        FmtToGLPixelFmt[TEX_FORMAT_G8R8_G8B8_UNORM]        = NativePixelAttribs();
+        FmtToGLPixelFmt[TEX_FORMAT_RGB9E5_SHAREDEXP]       = NativePixelAttribs{GL_RGB, GL_UNSIGNED_INT_5_9_9_9_REV};
+        FmtToGLPixelFmt[TEX_FORMAT_RG8_B8G8_UNORM]         = NativePixelAttribs{};
+        FmtToGLPixelFmt[TEX_FORMAT_G8R8_G8B8_UNORM]        = NativePixelAttribs{};
 
         // http://www.g-truc.net/post-0335.html
         // http://renderingpipeline.com/2012/07/texture-compression/
-        FmtToGLPixelFmt[TEX_FORMAT_BC1_TYPELESS]           = NativePixelAttribs(GL_RGB, 0, True);
-        FmtToGLPixelFmt[TEX_FORMAT_BC1_UNORM]              = NativePixelAttribs(GL_RGB, 0, True);
-        FmtToGLPixelFmt[TEX_FORMAT_BC1_UNORM_SRGB]         = NativePixelAttribs(GL_RGB, 0, True);
-        FmtToGLPixelFmt[TEX_FORMAT_BC2_TYPELESS]           = NativePixelAttribs(GL_RGBA, 0, True);
-        FmtToGLPixelFmt[TEX_FORMAT_BC2_UNORM]              = NativePixelAttribs(GL_RGBA, 0, True);
-        FmtToGLPixelFmt[TEX_FORMAT_BC2_UNORM_SRGB]         = NativePixelAttribs(GL_RGBA, 0, True);
-        FmtToGLPixelFmt[TEX_FORMAT_BC3_TYPELESS]           = NativePixelAttribs(GL_RGBA, 0, True);
-        FmtToGLPixelFmt[TEX_FORMAT_BC3_UNORM]              = NativePixelAttribs(GL_RGBA, 0, True);
-        FmtToGLPixelFmt[TEX_FORMAT_BC3_UNORM_SRGB]         = NativePixelAttribs(GL_RGBA, 0, True);
-        FmtToGLPixelFmt[TEX_FORMAT_BC4_TYPELESS]           = NativePixelAttribs(GL_RED, 0, True);
-        FmtToGLPixelFmt[TEX_FORMAT_BC4_UNORM]              = NativePixelAttribs(GL_RED, 0, True);
-        FmtToGLPixelFmt[TEX_FORMAT_BC4_SNORM]              = NativePixelAttribs(GL_RED, 0, True);
-        FmtToGLPixelFmt[TEX_FORMAT_BC5_TYPELESS]           = NativePixelAttribs(GL_RG, 0, True);
-        FmtToGLPixelFmt[TEX_FORMAT_BC5_UNORM]              = NativePixelAttribs(GL_RG, 0, True);
-        FmtToGLPixelFmt[TEX_FORMAT_BC5_SNORM]              = NativePixelAttribs(GL_RG, 0, True);
-        FmtToGLPixelFmt[TEX_FORMAT_B5G6R5_UNORM]           = NativePixelAttribs(GL_RGB, GL_UNSIGNED_SHORT_5_6_5_REV);
-        FmtToGLPixelFmt[TEX_FORMAT_B5G5R5A1_UNORM]         = NativePixelAttribs(GL_RGB, GL_UNSIGNED_SHORT_1_5_5_5_REV);
+        FmtToGLPixelFmt[TEX_FORMAT_BC1_TYPELESS]           = NativePixelAttribs{GL_RGB,  0, True};
+        FmtToGLPixelFmt[TEX_FORMAT_BC1_UNORM]              = NativePixelAttribs{GL_RGB,  0, True};
+        FmtToGLPixelFmt[TEX_FORMAT_BC1_UNORM_SRGB]         = NativePixelAttribs{GL_RGB,  0, True};
+        FmtToGLPixelFmt[TEX_FORMAT_BC2_TYPELESS]           = NativePixelAttribs{GL_RGBA, 0, True};
+        FmtToGLPixelFmt[TEX_FORMAT_BC2_UNORM]              = NativePixelAttribs{GL_RGBA, 0, True};
+        FmtToGLPixelFmt[TEX_FORMAT_BC2_UNORM_SRGB]         = NativePixelAttribs{GL_RGBA, 0, True};
+        FmtToGLPixelFmt[TEX_FORMAT_BC3_TYPELESS]           = NativePixelAttribs{GL_RGBA, 0, True};
+        FmtToGLPixelFmt[TEX_FORMAT_BC3_UNORM]              = NativePixelAttribs{GL_RGBA, 0, True};
+        FmtToGLPixelFmt[TEX_FORMAT_BC3_UNORM_SRGB]         = NativePixelAttribs{GL_RGBA, 0, True};
+        FmtToGLPixelFmt[TEX_FORMAT_BC4_TYPELESS]           = NativePixelAttribs{GL_RED,  0, True};
+        FmtToGLPixelFmt[TEX_FORMAT_BC4_UNORM]              = NativePixelAttribs{GL_RED,  0, True};
+        FmtToGLPixelFmt[TEX_FORMAT_BC4_SNORM]              = NativePixelAttribs{GL_RED,  0, True};
+        FmtToGLPixelFmt[TEX_FORMAT_BC5_TYPELESS]           = NativePixelAttribs{GL_RG,   0, True};
+        FmtToGLPixelFmt[TEX_FORMAT_BC5_UNORM]              = NativePixelAttribs{GL_RG,   0, True};
+        FmtToGLPixelFmt[TEX_FORMAT_BC5_SNORM]              = NativePixelAttribs{GL_RG,   0, True};
+        FmtToGLPixelFmt[TEX_FORMAT_B5G6R5_UNORM]           = NativePixelAttribs{GL_RGB,  GL_UNSIGNED_SHORT_5_6_5_REV};
+        FmtToGLPixelFmt[TEX_FORMAT_B5G5R5A1_UNORM]         = NativePixelAttribs{GL_RGB,  GL_UNSIGNED_SHORT_1_5_5_5_REV};
         // To get the same behaviour as expected for TEX_FORMAT_BGRA8_UNORM we swizzle the components
         // appropriately using the GL_TEXTURE_SWIZZLE texture parameters in TextureBaseGL::SetDefaultGLParameters()
-        FmtToGLPixelFmt[TEX_FORMAT_BGRA8_UNORM]            = NativePixelAttribs(GL_RGBA,         GL_UNSIGNED_BYTE);
-        FmtToGLPixelFmt[TEX_FORMAT_BGRX8_UNORM]            = NativePixelAttribs();
-        FmtToGLPixelFmt[TEX_FORMAT_R10G10B10_XR_BIAS_A2_UNORM] = NativePixelAttribs();
-        FmtToGLPixelFmt[TEX_FORMAT_BGRA8_TYPELESS]         = NativePixelAttribs();
-        FmtToGLPixelFmt[TEX_FORMAT_BGRA8_UNORM_SRGB]       = NativePixelAttribs();
-        FmtToGLPixelFmt[TEX_FORMAT_BGRX8_TYPELESS]         = NativePixelAttribs();
-        FmtToGLPixelFmt[TEX_FORMAT_BGRX8_UNORM_SRGB]       = NativePixelAttribs();
-        FmtToGLPixelFmt[TEX_FORMAT_BC6H_TYPELESS]          = NativePixelAttribs(GL_RGB,  0,  True);
-        FmtToGLPixelFmt[TEX_FORMAT_BC6H_UF16]              = NativePixelAttribs(GL_RGB,  0,  True);
-        FmtToGLPixelFmt[TEX_FORMAT_BC6H_SF16]              = NativePixelAttribs(GL_RGB,  0,  True);
-        FmtToGLPixelFmt[TEX_FORMAT_BC7_TYPELESS]           = NativePixelAttribs(GL_RGBA, 0,  True);
-        FmtToGLPixelFmt[TEX_FORMAT_BC7_UNORM]              = NativePixelAttribs(GL_RGBA, 0,  True);
-        FmtToGLPixelFmt[TEX_FORMAT_BC7_UNORM_SRGB]         = NativePixelAttribs(GL_RGBA, 0,  True);
+        FmtToGLPixelFmt[TEX_FORMAT_BGRA8_UNORM]            = NativePixelAttribs{GL_RGBA, GL_UNSIGNED_BYTE};
+        FmtToGLPixelFmt[TEX_FORMAT_BGRX8_UNORM]            = NativePixelAttribs{};
+        FmtToGLPixelFmt[TEX_FORMAT_R10G10B10_XR_BIAS_A2_UNORM] = NativePixelAttribs{};
+        FmtToGLPixelFmt[TEX_FORMAT_BGRA8_TYPELESS]         = NativePixelAttribs{};
+        FmtToGLPixelFmt[TEX_FORMAT_BGRA8_UNORM_SRGB]       = NativePixelAttribs{};
+        FmtToGLPixelFmt[TEX_FORMAT_BGRX8_TYPELESS]         = NativePixelAttribs{};
+        FmtToGLPixelFmt[TEX_FORMAT_BGRX8_UNORM_SRGB]       = NativePixelAttribs{};
+        FmtToGLPixelFmt[TEX_FORMAT_BC6H_TYPELESS]          = NativePixelAttribs{GL_RGB,  0,  True};
+        FmtToGLPixelFmt[TEX_FORMAT_BC6H_UF16]              = NativePixelAttribs{GL_RGB,  0,  True};
+        FmtToGLPixelFmt[TEX_FORMAT_BC6H_SF16]              = NativePixelAttribs{GL_RGB,  0,  True};
+        FmtToGLPixelFmt[TEX_FORMAT_BC7_TYPELESS]           = NativePixelAttribs{GL_RGBA, 0,  True};
+        FmtToGLPixelFmt[TEX_FORMAT_BC7_UNORM]              = NativePixelAttribs{GL_RGBA, 0,  True};
+        FmtToGLPixelFmt[TEX_FORMAT_BC7_UNORM_SRGB]         = NativePixelAttribs{GL_RGBA, 0,  True};
         // clang-format on
         bAttribsMapInitialized = true;
     }

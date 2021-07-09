@@ -7,7 +7,7 @@ cmake_minimum_required (VERSION 3.6)
 set(CMAKE_POLICY_DEFAULT_CMP0063 NEW)
 
 if(PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_MACOS)
-	add_subdirectory(glew)
+    add_subdirectory(glew)
     if(DILIGENT_INSTALL_CORE)
         install(TARGETS glew-static
                 ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}/${DILIGENT_CORE_DIR}/$<CONFIG>"
