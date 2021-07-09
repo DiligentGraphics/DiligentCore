@@ -43,6 +43,7 @@
 #include "CommandListVkImpl.hpp"
 #include "GraphicsAccessories.hpp"
 #include "GenerateMipsVkHelper.hpp"
+#include "QueryManagerVk.hpp"
 
 namespace Diligent
 {
@@ -101,7 +102,7 @@ DeviceContextVkImpl::DeviceContextVkImpl(IReferenceCounters*       pRefCounters,
     if (!IsDeferred())
     {
         PrepareCommandPool(GetCommandQueueId());
-        m_QueryMgr.reset(new QueryManagerVk{pDeviceVkImpl, EngineCI.QueryPoolSizes, GetCommandQueueId()});
+        m_pQueryMgr = &pDeviceVkImpl->GetQueryMgr(GetCommandQueueId());
     }
 
     BufferDesc DummyVBDesc;
@@ -201,9 +202,11 @@ void DeviceContextVkImpl::Begin(Uint32 ImmediateContextId)
 {
     DEV_CHECK_ERR(IsDeferred(), "Begin() should only be called for deferred contexts.");
     DEV_CHECK_ERR(!IsRecordingDeferredCommands(), "This context is already recording commands. Call FinishCommandList() before beginning new recording.");
-    PrepareCommandPool(SoftwareQueueIndex{ImmediateContextId});
+    const SoftwareQueueIndex CommandQueueId{ImmediateContextId};
+    PrepareCommandPool(CommandQueueId);
     m_DstImmediateContextId = static_cast<Uint8>(ImmediateContextId);
     VERIFY_EXPR(m_DstImmediateContextId == ImmediateContextId);
+    m_pQueryMgr = &m_pDevice->GetQueryMgr(CommandQueueId);
 }
 
 void DeviceContextVkImpl::DisposeVkCmdBuffer(SoftwareQueueIndex CmdQueue, VkCommandBuffer vkCmdBuff, Uint64 FenceValue)
@@ -1252,9 +1255,10 @@ void DeviceContextVkImpl::Flush(Uint32               NumCommandLists,
     auto vkCmdBuff = m_CommandBuffer.GetVkCmdBuffer();
     if (vkCmdBuff != VK_NULL_HANDLE)
     {
-        if (m_QueryMgr)
+        if (m_pQueryMgr != nullptr)
         {
-            m_State.NumCommands += m_QueryMgr->ResetStaleQueries(m_pDevice->GetLogicalDevice(), m_CommandBuffer);
+            VERIFY_EXPR(!IsDeferred());
+            m_State.NumCommands += m_pQueryMgr->ResetStaleQueries(m_pDevice->GetLogicalDevice(), m_CommandBuffer);
         }
 
         if (m_State.NumCommands != 0)
@@ -2450,12 +2454,13 @@ void DeviceContextVkImpl::FinishCommandList(ICommandList** ppCommandList)
     DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to end command buffer");
     (void)err;
 
-    CommandListVkImpl* pCmdListVk(NEW_RC_OBJ(m_CmdListAllocator, "CommandListVkImpl instance", CommandListVkImpl)(m_pDevice, this, vkCmdBuff));
+    CommandListVkImpl* pCmdListVk{NEW_RC_OBJ(m_CmdListAllocator, "CommandListVkImpl instance", CommandListVkImpl)(m_pDevice, this, vkCmdBuff)};
     pCmdListVk->QueryInterface(IID_CommandList, reinterpret_cast<IObject**>(ppCommandList));
 
     m_CommandBuffer.Reset();
     m_State          = ContextState{};
     m_pPipelineState = nullptr;
+    m_pQueryMgr      = nullptr;
 
     InvalidateState();
 
@@ -2499,9 +2504,12 @@ void DeviceContextVkImpl::BeginQuery(IQuery* pQuery)
 {
     TDeviceContextBase::BeginQuery(pQuery, 0);
 
+    VERIFY(m_pQueryMgr != nullptr || IsDeferred(), "Query manager should never be null for immediate contexts. This might be a bug.");
+    DEV_CHECK_ERR(m_pQueryMgr != nullptr, "Query manager is null, which indicates that this deferred context is not in a recording state");
+
     auto*      pQueryVkImpl = ValidatedCast<QueryVkImpl>(pQuery);
     const auto QueryType    = pQueryVkImpl->GetDesc().Type;
-    auto       vkQueryPool  = m_QueryMgr->GetQueryPool(QueryType);
+    auto       vkQueryPool  = m_pQueryMgr->GetQueryPool(QueryType);
     auto       Idx          = pQueryVkImpl->GetQueryPoolIndex(0);
 
     VERIFY(vkQueryPool != VK_NULL_HANDLE, "Query pool is not initialized for query type");
@@ -2544,9 +2552,12 @@ void DeviceContextVkImpl::EndQuery(IQuery* pQuery)
 {
     TDeviceContextBase::EndQuery(pQuery, 0);
 
+    VERIFY(m_pQueryMgr != nullptr || IsDeferred(), "Query manager should never be null for immediate contexts. This might be a bug.");
+    DEV_CHECK_ERR(m_pQueryMgr != nullptr, "Query manager is null, which indicates that this deferred context is not in a recording state");
+
     auto*      pQueryVkImpl = ValidatedCast<QueryVkImpl>(pQuery);
     const auto QueryType    = pQueryVkImpl->GetDesc().Type;
-    auto       vkQueryPool  = m_QueryMgr->GetQueryPool(QueryType);
+    auto       vkQueryPool  = m_pQueryMgr->GetQueryPool(QueryType);
     auto       Idx          = pQueryVkImpl->GetQueryPoolIndex(QueryType == QUERY_TYPE_DURATION ? 1 : 0);
 
     VERIFY(vkQueryPool != VK_NULL_HANDLE, "Query pool is not initialized for query type");

@@ -51,10 +51,10 @@ public:
     ~QueryManagerVk();
 
     // clang-format off
-    QueryManagerVk             (const QueryManagerVk&)  = delete;
-    QueryManagerVk             (      QueryManagerVk&&) = delete;
-    QueryManagerVk& operator = (const QueryManagerVk&)  = delete;
-    QueryManagerVk& operator = (      QueryManagerVk&&) = delete;
+    QueryManagerVk           (const QueryManagerVk&)  = delete;
+    QueryManagerVk           (      QueryManagerVk&&) = delete;
+    QueryManagerVk& operator=(const QueryManagerVk&)  = delete;
+    QueryManagerVk& operator=(      QueryManagerVk&&) = delete;
     // clang-format on
 
     static constexpr Uint32 InvalidIndex = static_cast<Uint32>(-1);
@@ -75,6 +75,11 @@ public:
     Uint32 ResetStaleQueries(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice,
                              VulkanUtilities::VulkanCommandBuffer&       CmdBuff);
 
+    SoftwareQueueIndex GetCommandQueueId() const
+    {
+        return m_CommandQueueId;
+    }
+
 private:
     class QueryPoolInfo
     {
@@ -84,7 +89,15 @@ private:
                   const VkQueryPoolCreateInfo&                QueryPoolCI,
                   QUERY_TYPE                                  Type);
 
+        QueryPoolInfo() noexcept {}
         ~QueryPoolInfo();
+
+        // clang-format off
+        QueryPoolInfo           (const QueryPoolInfo&)  = delete;
+        QueryPoolInfo           (      QueryPoolInfo&&) = delete;
+        QueryPoolInfo& operator=(const QueryPoolInfo&)  = delete;
+        QueryPoolInfo& operator=(      QueryPoolInfo&&) = delete;
+        // clang-format on
 
         Uint32 Allocate();
         void   Discard(Uint32 Index);
@@ -122,6 +135,8 @@ private:
         std::vector<Uint32> m_AvailableQueries;
         std::vector<Uint32> m_StaleQueries;
     };
+
+    const SoftwareQueueIndex m_CommandQueueId;
 
     std::array<QueryPoolInfo, QUERY_TYPE_NUM_TYPES> m_Pools;
 

@@ -56,6 +56,8 @@
 namespace Diligent
 {
 
+class QueryManagerVk;
+
 /// Render device implementation in Vulkan backend.
 class RenderDeviceVkImpl final : public RenderDeviceNextGenBase<RenderDeviceBase<EngineVkImplTraits>, ICommandQueueVk>
 {
@@ -248,6 +250,11 @@ public:
 
     HardwareQueueIndex GetQueueFamilyIndex(SoftwareQueueIndex CmdQueueInd) const;
 
+    QueryManagerVk& GetQueryMgr(SoftwareQueueIndex CmdQueueInd)
+    {
+        return *m_QueryMgrs[CmdQueueInd];
+    }
+
 private:
     virtual void TestTextureFormat(TEXTURE_FORMAT TexFormat) override final;
 
@@ -277,6 +284,10 @@ private:
     // issue copy commands. Vulkan requires that every command pool is used by one thread
     // at a time, so every constructor must allocate command buffer from its own pool.
     std::unordered_map<HardwareQueueIndex, CommandPoolManager, HardwareQueueIndex::Hasher> m_TransientCmdPoolMgrs;
+
+    // Each command queue needs its own query manager because different query pools may not
+    // be used by multiple queues simultaneously.
+    std::vector<std::unique_ptr<QueryManagerVk>> m_QueryMgrs;
 
     VulkanUtilities::VulkanMemoryManager m_MemoryMgr;
 

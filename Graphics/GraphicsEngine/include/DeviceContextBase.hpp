@@ -1472,8 +1472,6 @@ inline void DeviceContextBase<ImplementationTraits>::BeginQuery(IQuery* pQuery, 
 {
     DEV_CHECK_ERR(pQuery != nullptr, "IDeviceContext::BeginQuery: pQuery must not be null");
 
-    DEV_CHECK_ERR(!IsDeferred(), "IDeviceContext::BeginQuery: deferred contexts do not support queries");
-
     const auto QueryType = pQuery->GetDesc().Type;
     DEV_CHECK_ERR(QueryType != QUERY_TYPE_TIMESTAMP,
                   "BeginQuery() is disabled for timestamp queries. Call EndQuery() to set the timestamp.");
@@ -1488,8 +1486,6 @@ template <typename ImplementationTraits>
 inline void DeviceContextBase<ImplementationTraits>::EndQuery(IQuery* pQuery, int)
 {
     DEV_CHECK_ERR(pQuery != nullptr, "IDeviceContext::EndQuery: pQuery must not be null");
-
-    DEV_CHECK_ERR(!IsDeferred(), "IDeviceContext::EndQuery: Deferred contexts do not support queries");
 
     const auto QueryType = pQuery->GetDesc().Type;
     const auto QueueType = QueryType == QUERY_TYPE_DURATION || QueryType == QUERY_TYPE_TIMESTAMP ? COMMAND_QUEUE_TYPE_TRANSFER : COMMAND_QUEUE_TYPE_GRAPHICS;

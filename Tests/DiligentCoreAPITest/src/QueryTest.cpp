@@ -30,6 +30,7 @@
 #include <thread>
 
 #include "TestingEnvironment.hpp"
+#include "ThreadSignal.hpp"
 
 #include "gtest/gtest.h"
 
@@ -248,13 +249,13 @@ RefCntAutoPtr<IPipelineState> QueryTest::sm_pPSO;
 
 TEST_F(QueryTest, PipelineStats)
 {
-    const auto& deviceCaps = TestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
-    if (!deviceCaps.Features.PipelineStatisticsQueries)
+    const auto& DeviceInfo = TestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
+    if (!DeviceInfo.Features.PipelineStatisticsQueries)
     {
         GTEST_SKIP() << "Pipeline statistics queries are not supported by this device";
     }
 
-    const auto IsGL = deviceCaps.IsGLDevice();
+    const auto IsGL = DeviceInfo.IsGLDevice();
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
@@ -302,8 +303,8 @@ TEST_F(QueryTest, PipelineStats)
 
 TEST_F(QueryTest, Occlusion)
 {
-    const auto& deviceCaps = TestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
-    if (!deviceCaps.Features.OcclusionQueries)
+    const auto& DeviceInfo = TestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
+    if (!DeviceInfo.Features.OcclusionQueries)
     {
         GTEST_SKIP() << "Occlusion queries are not supported by this device";
     }
@@ -346,8 +347,8 @@ TEST_F(QueryTest, Occlusion)
 
 TEST_F(QueryTest, BinaryOcclusion)
 {
-    const auto& deviceCaps = TestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
-    if (!deviceCaps.Features.BinaryOcclusionQueries)
+    const auto& DeviceInfo = TestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
+    if (!DeviceInfo.Features.BinaryOcclusionQueries)
     {
         GTEST_SKIP() << "Binary occlusion queries are not supported by this device";
     }
@@ -390,8 +391,8 @@ TEST_F(QueryTest, Timestamp)
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
-    const auto& deviceCaps = pDevice->GetDeviceInfo();
-    if (!deviceCaps.Features.TimestampQueries)
+    const auto& DeviceInfo = pDevice->GetDeviceInfo();
+    if (!DeviceInfo.Features.TimestampQueries)
     {
         GTEST_SKIP() << "Timestamp queries are not supported by this device";
     }
@@ -456,8 +457,8 @@ TEST_F(QueryTest, Timestamp)
 
 TEST_F(QueryTest, Duration)
 {
-    const auto& deviceCaps = TestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
-    if (!deviceCaps.Features.DurationQueries)
+    const auto& DeviceInfo = TestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
+    if (!DeviceInfo.Features.DurationQueries)
     {
         GTEST_SKIP() << "Duration queries are not supported by this device";
     }
@@ -490,6 +491,173 @@ TEST_F(QueryTest, Duration)
                 Queries[i]->GetData(&QueryData, sizeof(QueryData));
                 ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
                 EXPECT_TRUE(QueryData.Frequency == 0 || QueryData.Duration > 0);
+            }
+        }
+    }
+}
+
+TEST_F(QueryTest, DeferredContexts)
+{
+    auto* const pEnv       = TestingEnvironment::GetInstance();
+    auto* const pDevice    = pEnv->GetDevice();
+    const auto& DeviceInfo = pDevice->GetDeviceInfo();
+    if (DeviceInfo.Type != RENDER_DEVICE_TYPE_VULKAN)
+    {
+        GTEST_SKIP() << "Queries in deferred contexts are not supported by this device";
+    }
+
+    if (!DeviceInfo.Features.DurationQueries && !DeviceInfo.Features.TimestampQueries)
+    {
+        GTEST_SKIP() << "Time queries are not supported by this device";
+    }
+
+    Uint32 NumDefferedCtx = static_cast<Uint32>(pEnv->GetNumDeferredContexts());
+    if (NumDefferedCtx == 0)
+    {
+        GTEST_SKIP() << "Deferred contexts are not supported by this device";
+    }
+
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+
+    std::vector<RefCntAutoPtr<IQuery>> pDurations;
+    if (DeviceInfo.Features.DurationQueries)
+    {
+        QueryDesc queryDesc;
+        queryDesc.Name = "Duration query";
+        queryDesc.Type = QUERY_TYPE_DURATION;
+        pDurations.resize(NumDefferedCtx);
+        for (Uint32 i = 0; i < NumDefferedCtx; ++i)
+        {
+            pDevice->CreateQuery(queryDesc, &pDurations[i]);
+            ASSERT_NE(pDurations[i], nullptr);
+        }
+    }
+
+    std::vector<RefCntAutoPtr<IQuery>> pStartTimestamps, pEndTimestamps;
+    if (DeviceInfo.Features.TimestampQueries)
+    {
+        QueryDesc queryDesc;
+        queryDesc.Type = QUERY_TYPE_TIMESTAMP;
+        pStartTimestamps.resize(NumDefferedCtx);
+        pEndTimestamps.resize(NumDefferedCtx);
+        for (Uint32 i = 0; i < NumDefferedCtx; ++i)
+        {
+            queryDesc.Name = "Start timestamp query";
+            pDevice->CreateQuery(queryDesc, &pStartTimestamps[i]);
+            ASSERT_NE(pStartTimestamps[i], nullptr);
+
+            queryDesc.Name = "End timestamp query";
+            pDevice->CreateQuery(queryDesc, &pEndTimestamps[i]);
+            ASSERT_NE(pEndTimestamps[i], nullptr);
+        }
+    }
+
+    auto* pSwapChain = pEnv->GetSwapChain();
+    for (Uint32 q = 0; q < pEnv->GetNumImmediateContexts(); ++q)
+    {
+        auto* pImmediateCtx = pEnv->GetDeviceContext(q);
+
+        if ((pImmediateCtx->GetDesc().QueueType & COMMAND_QUEUE_TYPE_GRAPHICS) != COMMAND_QUEUE_TYPE_GRAPHICS)
+            continue;
+
+        const float ClearColor[] = {0.25f, 0.5f, 0.75f, 1.0f};
+
+        ITextureView* pRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
+        pImmediateCtx->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        pImmediateCtx->ClearRenderTarget(pRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+        std::vector<std::thread>                 WorkerThreads(NumDefferedCtx);
+        std::vector<RefCntAutoPtr<ICommandList>> CmdLists(NumDefferedCtx);
+        std::vector<ICommandList*>               CmdListPtrs(NumDefferedCtx);
+
+        std::atomic_uint32_t   NumCmdListsReady{0};
+        ThreadingTools::Signal FinishFrameSignal;
+        ThreadingTools::Signal ExecuteCommandListsSignal;
+        for (Uint32 i = 0; i < NumDefferedCtx; ++i)
+        {
+            WorkerThreads[i] = std::thread(
+                [&](Uint32 thread_id) //
+                {
+                    auto* pCtx = pEnv->GetDeferredContext(thread_id);
+
+                    pCtx->Begin(pImmediateCtx->GetDesc().ContextId);
+                    pCtx->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+
+                    pCtx->SetPipelineState(sm_pPSO);
+
+                    if (DeviceInfo.Features.DurationQueries)
+                        pCtx->BeginQuery(pDurations[thread_id]);
+
+                    if (DeviceInfo.Features.TimestampQueries)
+                        pCtx->EndQuery(pStartTimestamps[thread_id]);
+
+                    DrawAttribs drawAttrs{4, DRAW_FLAG_VERIFY_ALL};
+                    pCtx->Draw(drawAttrs);
+
+                    if (DeviceInfo.Features.DurationQueries)
+                        pCtx->EndQuery(pDurations[thread_id]);
+
+                    if (DeviceInfo.Features.TimestampQueries)
+                        pCtx->EndQuery(pEndTimestamps[thread_id]);
+
+                    pCtx->FinishCommandList(&CmdLists[thread_id]);
+                    CmdListPtrs[thread_id] = CmdLists[thread_id];
+
+                    // Atomically increment the number of completed threads
+                    const auto NumReadyLists = NumCmdListsReady.fetch_add(1) + 1;
+                    if (NumReadyLists == NumDefferedCtx)
+                        ExecuteCommandListsSignal.Trigger();
+
+                    FinishFrameSignal.Wait(true, NumDefferedCtx);
+
+                    // IMPORTANT: In Metal backend FinishFrame must be called from the same
+                    //            thread that issued rendering commands.
+                    pCtx->FinishFrame();
+                },
+                i);
+        }
+
+        // Wait for the worker threads
+        ExecuteCommandListsSignal.Wait(true, 1);
+
+        pImmediateCtx->ExecuteCommandLists(NumDefferedCtx, CmdListPtrs.data());
+
+        FinishFrameSignal.Trigger(true);
+        for (auto& t : WorkerThreads)
+            t.join();
+
+        pImmediateCtx->WaitForIdle();
+
+        for (IQuery* pQuery : pDurations)
+        {
+            QueryDataDuration QueryData;
+
+            auto QueryReady = pQuery->GetData(nullptr, 0);
+            ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
+            pQuery->GetData(&QueryData, sizeof(QueryData));
+            ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
+            EXPECT_TRUE(QueryData.Frequency == 0 || QueryData.Duration > 0);
+        }
+
+        if (DeviceInfo.Features.TimestampQueries)
+        {
+            for (Uint32 i = 0; i < NumDefferedCtx; ++i)
+            {
+                IQuery* pQueryStart = pStartTimestamps[i];
+                IQuery* pQueryEnd   = pEndTimestamps[i];
+
+                QueryDataTimestamp QueryStartData, QueryEndData;
+
+                auto QueryReady = pQueryStart->GetData(nullptr, 0);
+                ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
+                QueryReady = pQueryStart->GetData(&QueryStartData, sizeof(QueryStartData));
+                ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
+
+                QueryReady = pQueryEnd->GetData(nullptr, 0);
+                ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
+                QueryReady = pQueryEnd->GetData(&QueryEndData, sizeof(QueryEndData), false);
+                ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
+                EXPECT_TRUE(QueryStartData.Frequency == 0 || QueryEndData.Frequency == 0 || QueryEndData.Counter > QueryStartData.Counter);
             }
         }
     }

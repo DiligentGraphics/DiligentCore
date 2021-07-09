@@ -48,6 +48,7 @@
 
 #include "VulkanTypeConversions.hpp"
 #include "EngineMemory.h"
+#include "QueryManagerVk.hpp"
 
 namespace Diligent
 {
@@ -155,7 +156,9 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
                                                        m_LogicalVkDevice->GetEnabledExtFeatures(),
                                                        m_PhysicalDevice->GetExtProperties());
 
-    // Every queue family needs its own command pool
+    // Every queue family needs its own command pool.
+    // Every queue needs its own query pool.
+    m_QueryMgrs.reserve(CommandQueueCount);
     for (Uint32 q = 0; q < CommandQueueCount; ++q)
     {
         auto QueueFamilyIndex = HardwareQueueIndex{GetCommandQueue(SoftwareQueueIndex{q}).GetQueueFamilyIndex()};
@@ -172,6 +175,8 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
                     VK_COMMAND_POOL_CREATE_TRANSIENT_BIT //
                 });
         }
+
+        m_QueryMgrs.emplace_back(std::make_unique<QueryManagerVk>(this, EngineCI.QueryPoolSizes, SoftwareQueueIndex{q}));
     }
 
     for (Uint32 fmt = 1; fmt < m_TextureFormatsInfo.size(); ++fmt)

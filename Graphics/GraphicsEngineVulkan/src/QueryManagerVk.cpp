@@ -139,9 +139,10 @@ Uint32 QueryManagerVk::QueryPoolInfo::ResetStaleQueries(const VulkanUtilities::V
     return NumQueriesReset;
 }
 
-QueryManagerVk::QueryManagerVk(RenderDeviceVkImpl*      pRenderDeviceVk,
-                               const Uint32             QueryHeapSizes[],
-                               const SoftwareQueueIndex CmdQueueInd)
+QueryManagerVk::QueryManagerVk(RenderDeviceVkImpl* pRenderDeviceVk,
+                               const Uint32        QueryHeapSizes[],
+                               SoftwareQueueIndex  CmdQueueInd) :
+    m_CommandQueueId{CmdQueueInd}
 {
     const auto& LogicalDevice  = pRenderDeviceVk->GetLogicalDevice();
     const auto& PhysicalDevice = pRenderDeviceVk->GetPhysicalDevice();

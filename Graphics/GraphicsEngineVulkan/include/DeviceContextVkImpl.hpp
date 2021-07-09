@@ -58,10 +58,11 @@
 #include "DescriptorPoolManager.hpp"
 #include "HashUtils.hpp"
 #include "ManagedVulkanObject.hpp"
-#include "QueryManagerVk.hpp"
 
 namespace Diligent
 {
+
+class QueryManagerVk;
 
 /// Device context implementation in Vulkan backend.
 class DeviceContextVkImpl final : public DeviceContextNextGenBase<EngineVkImplTraits>
@@ -402,7 +403,7 @@ public:
 
     virtual void ResetRenderTargets() override final;
 
-    QueryManagerVk* GetQueryManager() { return m_QueryMgr.get(); }
+    QueryManagerVk* GetQueryManager() { return m_pQueryMgr; }
 
 private:
     void               TransitionRenderTargets(RESOURCE_STATE_TRANSITION_MODE StateTransitionMode);
@@ -612,8 +613,8 @@ private:
     // In Vulkan we can't bind null vertex buffer, so we have to create a dummy VB
     RefCntAutoPtr<BufferVkImpl> m_DummyVB;
 
-    std::unique_ptr<QueryManagerVk> m_QueryMgr;
-    Int32                           m_ActiveQueriesCounter = 0;
+    QueryManagerVk* m_pQueryMgr            = nullptr;
+    Int32           m_ActiveQueriesCounter = 0;
 
     std::vector<VkClearValue> m_vkClearValues;
 

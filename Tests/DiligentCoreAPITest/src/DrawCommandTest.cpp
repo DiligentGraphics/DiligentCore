@@ -1907,7 +1907,7 @@ TEST_F(DrawCommandTest, DeferredContexts)
         WorkerThreads[i] = std::thread(
             [&](Uint32 thread_id) //
             {
-                auto* pCtx = pEnv->GetDeferredContext(thread_id + 1);
+                auto* pCtx = pEnv->GetDeferredContext(thread_id);
 
                 pCtx->Begin(0);
                 pCtx->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_VERIFY);

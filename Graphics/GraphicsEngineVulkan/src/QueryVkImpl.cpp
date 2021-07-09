@@ -62,13 +62,13 @@ void QueryVkImpl::DiscardQueries()
     {
         if (QueryPoolIdx != QueryManagerVk::InvalidIndex)
         {
-            VERIFY_EXPR(m_pContext);
-            auto* pQueryMgr = m_pContext.RawPtr<DeviceContextVkImpl>()->GetQueryManager();
-            VERIFY_EXPR(pQueryMgr != nullptr);
-            pQueryMgr->DiscardQuery(m_Desc.Type, QueryPoolIdx);
+            VERIFY_EXPR(m_pQueryMgr != nullptr);
+            m_pQueryMgr->DiscardQuery(m_Desc.Type, QueryPoolIdx);
             QueryPoolIdx = QueryManagerVk::InvalidIndex;
         }
     }
+    m_pQueryMgr          = nullptr;
+    m_QueryEndFenceValue = ~Uint64{0};
 }
 
 void QueryVkImpl::Invalidate()
@@ -80,15 +80,17 @@ void QueryVkImpl::Invalidate()
 bool QueryVkImpl::AllocateQueries()
 {
     DiscardQueries();
-    VERIFY_EXPR(m_pContext);
-    auto* pQueryMgr = m_pContext.RawPtr<DeviceContextVkImpl>()->GetQueryManager();
-    VERIFY_EXPR(pQueryMgr != nullptr);
+
+    VERIFY_EXPR(m_pQueryMgr == nullptr);
+    VERIFY_EXPR(m_pContext != nullptr);
+    m_pQueryMgr = m_pContext->GetQueryManager();
+    VERIFY_EXPR(m_pQueryMgr != nullptr);
     for (Uint32 i = 0; i < (m_Desc.Type == QUERY_TYPE_DURATION ? Uint32{2} : Uint32{1}); ++i)
     {
         auto& QueryPoolIdx = m_QueryPoolIndex[i];
         VERIFY_EXPR(QueryPoolIdx == QueryManagerVk::InvalidIndex);
 
-        QueryPoolIdx = pQueryMgr->AllocateQuery(m_Desc.Type);
+        QueryPoolIdx = m_pQueryMgr->AllocateQuery(m_Desc.Type);
         if (QueryPoolIdx == QueryManagerVk::InvalidIndex)
         {
             LOG_ERROR_MESSAGE("Failed to allocate Vulkan query for type ", GetQueryTypeString(m_Desc.Type),
@@ -124,7 +126,8 @@ bool QueryVkImpl::OnEndQuery(DeviceContextVkImpl* pContext)
         return false;
     }
 
-    auto CmdQueueId      = m_pContext->GetCommandQueueId();
+    VERIFY_EXPR(m_pQueryMgr != nullptr);
+    auto CmdQueueId      = m_pQueryMgr->GetCommandQueueId();
     m_QueryEndFenceValue = m_pDevice->GetNextFenceValue(CmdQueueId);
 
     return true;
@@ -134,16 +137,16 @@ bool QueryVkImpl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
 {
     TQueryBase::CheckQueryDataPtr(pData, DataSize);
 
-    const auto CmdQueueId          = m_pContext->GetCommandQueueId();
+    DEV_CHECK_ERR(m_pQueryMgr != nullptr, "Requesting data from query that has not been ended or has been invalidated");
+    const auto CmdQueueId          = m_pQueryMgr->GetCommandQueueId();
     const auto CompletedFenceValue = m_pDevice->GetCompletedFenceValue(CmdQueueId);
     bool       DataAvailable       = false;
     if (CompletedFenceValue >= m_QueryEndFenceValue)
     {
-        auto* pQueryMgr = m_pContext->GetQueryManager();
-        VERIFY_EXPR(pQueryMgr != nullptr);
-        const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
-        const auto  StageMask     = LogicalDevice.GetSupportedStagesMask(m_pContext->GetHardwareQueueId());
-        auto        vkQueryPool   = pQueryMgr->GetQueryPool(m_Desc.Type);
+        const auto  QueueFamiliyIndex = m_pDevice->GetQueueFamilyIndex(CmdQueueId);
+        const auto& LogicalDevice     = m_pDevice->GetLogicalDevice();
+        const auto  StageMask         = LogicalDevice.GetSupportedStagesMask(QueueFamiliyIndex);
+        auto        vkQueryPool       = m_pQueryMgr->GetQueryPool(m_Desc.Type);
 
         static_assert(QUERY_TYPE_NUM_TYPES == 6, "Not all QUERY_TYPE enum values are handled below");
         switch (m_Desc.Type)
@@ -205,7 +208,7 @@ bool QueryVkImpl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
                 {
                     auto& QueryData     = *reinterpret_cast<QueryDataTimestamp*>(pData);
                     QueryData.Counter   = Results[0];
-                    QueryData.Frequency = pQueryMgr->GetCounterFrequency();
+                    QueryData.Frequency = m_pQueryMgr->GetCounterFrequency();
                 }
             }
             break;
@@ -280,7 +283,7 @@ bool QueryVkImpl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
                     auto& QueryData = *reinterpret_cast<QueryDataDuration*>(pData);
                     VERIFY_EXPR(EndCounter >= StartCounter);
                     QueryData.Duration  = EndCounter - StartCounter;
-                    QueryData.Frequency = pQueryMgr->GetCounterFrequency();
+                    QueryData.Frequency = m_pQueryMgr->GetCounterFrequency();
                 }
             }
             break;
