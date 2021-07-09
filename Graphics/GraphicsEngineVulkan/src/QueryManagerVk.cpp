@@ -38,38 +38,17 @@
 namespace Diligent
 {
 
-static bool SupportsHostQueryReset(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice)
-{
-    const auto& EnabledExtFeatures = LogicalDevice.GetEnabledExtFeatures();
-    return EnabledExtFeatures.HostQueryReset.hostQueryReset != VK_FALSE;
-}
-
 void QueryManagerVk::QueryPoolInfo::Init(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice,
-                                         VkCommandBuffer                             vkCmdBuff,
                                          const VkQueryPoolCreateInfo&                QueryPoolCI,
                                          QUERY_TYPE                                  Type)
 {
-    m_Type       = Type;
-    m_QueryCount = QueryPoolCI.queryCount;
-
+    m_Type        = Type;
+    m_QueryCount  = QueryPoolCI.queryCount;
     m_vkQueryPool = LogicalDevice.CreateQueryPool(QueryPoolCI, "QueryManagerVk: query pool");
 
-    if (vkCmdBuff != VK_NULL_HANDLE)
-    {
-        // After query pool creation, each query must be reset before it is used.
-        // Queries must also be reset between uses (17.2).
-        vkCmdResetQueryPool(vkCmdBuff, m_vkQueryPool, 0, QueryPoolCI.queryCount);
-    }
-    else
-    {
-        LogicalDevice.ResetQueryPool(m_vkQueryPool, 0, QueryPoolCI.queryCount);
-    }
-
-    m_AvailableQueries.resize(m_QueryCount);
+    m_StaleQueries.resize(m_QueryCount);
     for (Uint32 i = 0; i < m_QueryCount; ++i)
-    {
-        m_AvailableQueries[i] = i;
-    }
+        m_StaleQueries[i] = i;
 }
 
 QueryManagerVk::QueryPoolInfo::~QueryPoolInfo()
@@ -119,24 +98,51 @@ void QueryManagerVk::QueryPoolInfo::Discard(Uint32 Index)
 Uint32 QueryManagerVk::QueryPoolInfo::ResetStaleQueries(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice,
                                                         VulkanUtilities::VulkanCommandBuffer&       CmdBuff)
 {
-    const bool HostQueryReset = SupportsHostQueryReset(LogicalDevice);
+    if (m_StaleQueries.empty())
+        return 0;
+
+    const auto& EnabledExtFeatures = LogicalDevice.GetEnabledExtFeatures();
+
+    auto ResetQueries = [&](uint32_t FirstQuery, uint32_t QueryCount) //
+    {
+        if (EnabledExtFeatures.HostQueryReset.hostQueryReset)
+        {
+            LogicalDevice.ResetQueryPool(m_vkQueryPool, FirstQuery, QueryCount);
+        }
+        else
+        {
+            // Note that vkCmdResetQueryPool must be called outside of a render pass,
+            // so it is suboptimal to postpone query reset until it is used.
+            CmdBuff.ResetQueryPool(m_vkQueryPool, FirstQuery, QueryCount);
+        }
+    };
 
     std::lock_guard<std::mutex> Lock{m_QueriesMtx};
-    VERIFY(m_StaleQueries.empty() || m_vkQueryPool != VK_NULL_HANDLE, "Query pool is not initialized");
+    VERIFY(!IsNull(), "Query pool is not initialized");
 
-    for (auto& StaleQuery : m_StaleQueries)
+    // After query pool creation, each query must be reset before it is used.
+    // Queries must also be reset between uses (17.2).
+    Uint32 NumCommands = 0;
+    if (m_StaleQueries.size() == m_QueryCount)
     {
-        if (HostQueryReset)
-            LogicalDevice.ResetQueryPool(m_vkQueryPool, StaleQuery, 1);
-        else
-            CmdBuff.ResetQueryPool(m_vkQueryPool, StaleQuery, 1);
-
-        m_AvailableQueries.push_back(StaleQuery);
+        ResetQueries(0, m_QueryCount);
+        m_AvailableQueries.resize(m_QueryCount);
+        for (Uint32 i = 0; i < m_QueryCount; ++i)
+            m_AvailableQueries[i] = i;
+        NumCommands = 1;
     }
-    const auto NumQueriesReset = static_cast<Uint32>(m_StaleQueries.size());
+    else
+    {
+        for (auto& StaleQuery : m_StaleQueries)
+        {
+            ResetQueries(StaleQuery, 1);
+            m_AvailableQueries.push_back(StaleQuery);
+        }
+        NumCommands = static_cast<Uint32>(m_StaleQueries.size());
+    }
     m_StaleQueries.clear();
 
-    return NumQueriesReset;
+    return NumCommands;
 }
 
 QueryManagerVk::QueryManagerVk(RenderDeviceVkImpl* pRenderDeviceVk,
@@ -155,11 +161,6 @@ QueryManagerVk::QueryManagerVk(RenderDeviceVkImpl* pRenderDeviceVk,
     const auto  StageMask        = LogicalDevice.GetSupportedStagesMask(QueueFamilyIndex);
     const auto  QueueFlags       = PhysicalDevice.GetQueueProperties()[QueueFamilyIndex].queueFlags;
     const auto& DeviceInfo       = pRenderDeviceVk->GetDeviceInfo();
-
-    VulkanUtilities::CommandPoolWrapper CmdPool;
-    VkCommandBuffer                     vkCmdBuff = VK_NULL_HANDLE;
-    if (!SupportsHostQueryReset(LogicalDevice))
-        pRenderDeviceVk->AllocateTransientCmdPool(CmdQueueInd, CmdPool, vkCmdBuff, "Transient command pool to reset queries before first use");
 
     for (Uint32 query_type = QUERY_TYPE_UNDEFINED + 1; query_type < QUERY_TYPE_NUM_TYPES; ++query_type)
     {
@@ -240,12 +241,9 @@ QueryManagerVk::QueryManagerVk(RenderDeviceVkImpl* pRenderDeviceVk,
             QueryPoolCI.queryCount *= 2;
 
         auto& PoolInfo = m_Pools[QueryType];
-        PoolInfo.Init(LogicalDevice, vkCmdBuff, QueryPoolCI, QueryType);
+        PoolInfo.Init(LogicalDevice, QueryPoolCI, QueryType);
         VERIFY_EXPR(!PoolInfo.IsNull() && PoolInfo.GetQueryCount() == QueryPoolCI.queryCount && PoolInfo.GetType() == QueryType);
     }
-
-    if (vkCmdBuff != VK_NULL_HANDLE)
-        pRenderDeviceVk->ExecuteAndDisposeTransientCmdBuff(CmdQueueInd, vkCmdBuff, std::move(CmdPool));
 }
 
 QueryManagerVk::~QueryManagerVk()

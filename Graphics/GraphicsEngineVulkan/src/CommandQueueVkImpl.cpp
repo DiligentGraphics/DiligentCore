@@ -190,9 +190,10 @@ Uint64 CommandQueueVkImpl::Submit(const VkSubmitInfo& InSubmitInfo)
     DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to submit command buffer to the command queue");
     (void)err;
 
+    VERIFY(m_pFence != nullptr, "Command queue fence has not been initialized");
     m_pFence->AddPendingSyncPoint(m_CommandQueueId, FenceValue, NewSyncPoint);
 
-    // Update last sync point
+    // Update the last sync point
     {
         ThreadingTools::LockHelper Lock2(m_LastSyncPointGuard);
         m_LastSyncPoint = std::move(NewSyncPoint);
@@ -203,8 +204,7 @@ Uint64 CommandQueueVkImpl::Submit(const VkSubmitInfo& InSubmitInfo)
 
 Uint64 CommandQueueVkImpl::SubmitCmdBuffer(VkCommandBuffer cmdBuffer)
 {
-    VkSubmitInfo SubmitInfo = {};
-
+    VkSubmitInfo SubmitInfo{};
     SubmitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     SubmitInfo.commandBufferCount = cmdBuffer != VK_NULL_HANDLE ? 1 : 0;
     SubmitInfo.pCommandBuffers    = &cmdBuffer;

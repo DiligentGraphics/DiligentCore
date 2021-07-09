@@ -103,6 +103,8 @@ DeviceContextVkImpl::DeviceContextVkImpl(IReferenceCounters*       pRefCounters,
     {
         PrepareCommandPool(GetCommandQueueId());
         m_pQueryMgr = &pDeviceVkImpl->GetQueryMgr(GetCommandQueueId());
+        EnsureVkCmdBuffer();
+        m_State.NumCommands += m_pQueryMgr->ResetStaleQueries(m_pDevice->GetLogicalDevice(), m_CommandBuffer);
     }
 
     BufferDesc DummyVBDesc;
@@ -1258,6 +1260,8 @@ void DeviceContextVkImpl::Flush(Uint32               NumCommandLists,
         if (m_pQueryMgr != nullptr)
         {
             VERIFY_EXPR(!IsDeferred());
+            // Note that vkCmdResetQueryPool must be called outside of a render pass,
+            // so it is better to reset all queries at once at the end of the command buffer.
             m_State.NumCommands += m_pQueryMgr->ResetStaleQueries(m_pDevice->GetLogicalDevice(), m_CommandBuffer);
         }
 

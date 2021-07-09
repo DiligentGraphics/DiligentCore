@@ -117,7 +117,7 @@ public:
 #endif
 
 private:
-    std::function<void(RenderDeviceVkImpl*)> OnRenderDeviceCreated = nullptr;
+    std::function<void(RenderDeviceVkImpl*)> m_OnRenderDeviceCreated = nullptr;
 
     // To track that there is only one render device
     RefCntWeakPtr<IRenderDevice> m_wpDevice;
@@ -911,7 +911,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
             CommandQueues[0]   = CommandQueuesVk[0];
         }
 
-        OnRenderDeviceCreated = [&](RenderDeviceVkImpl* pRenderDeviceVk) //
+        m_OnRenderDeviceCreated = [&](RenderDeviceVkImpl* pRenderDeviceVk) //
         {
             FenceDesc Desc;
             Desc.Name = "Command queue internal fence";
@@ -978,8 +978,10 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
         };
         pRenderDeviceVk->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice));
 
-        if (OnRenderDeviceCreated != nullptr)
-            OnRenderDeviceCreated(pRenderDeviceVk);
+        if (m_OnRenderDeviceCreated != nullptr)
+            m_OnRenderDeviceCreated(pRenderDeviceVk);
+
+
 
         for (Uint32 CtxInd = 0; CtxInd < NumImmediateContexts; ++CtxInd)
         {

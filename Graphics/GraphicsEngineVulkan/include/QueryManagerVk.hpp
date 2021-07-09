@@ -85,7 +85,6 @@ private:
     {
     public:
         void Init(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice,
-                  VkCommandBuffer                             vkCmdBuff,
                   const VkQueryPoolCreateInfo&                QueryPoolCI,
                   QUERY_TYPE                                  Type);
 
