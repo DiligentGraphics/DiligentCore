@@ -1030,7 +1030,7 @@ void RenderDeviceGLImpl::FlagSupportedTexFormats()
 
     FLAG_FORMAT(TEX_FORMAT_B5G6R5_UNORM,               false); // Not supported in OpenGL
     FLAG_FORMAT(TEX_FORMAT_B5G5R5A1_UNORM,             false); // Not supported in OpenGL
-    FLAG_FORMAT(TEX_FORMAT_BGRA8_UNORM,                false); // Not supported in OpenGL
+    FLAG_FORMAT(TEX_FORMAT_BGRA8_UNORM,                bTexSwizzle);
     FLAG_FORMAT(TEX_FORMAT_BGRX8_UNORM,                false); // Not supported in OpenGL
     FLAG_FORMAT(TEX_FORMAT_R10G10B10_XR_BIAS_A2_UNORM, false); // Not supported in OpenGL
     FLAG_FORMAT(TEX_FORMAT_BGRA8_TYPELESS,             false); // Not supported in OpenGL
