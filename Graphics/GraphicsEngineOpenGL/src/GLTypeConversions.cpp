@@ -152,7 +152,9 @@ public:
         m_FmtToGLFmtMap[TEX_FORMAT_BC5_SNORM]              = GL_COMPRESSED_SIGNED_RG_RGTC2;
         m_FmtToGLFmtMap[TEX_FORMAT_B5G6R5_UNORM]           = 0;
         m_FmtToGLFmtMap[TEX_FORMAT_B5G5R5A1_UNORM]         = 0;
-        m_FmtToGLFmtMap[TEX_FORMAT_BGRA8_UNORM]            = 0;
+        // To get the same behaviour as expected for TEX_FORMAT_BGRA8_UNORM we swizzle the components
+        // appropriately using the GL_TEXTURE_SWIZZLE texture parameters in TextureBaseGL::SetDefaultGLParameters()
+        m_FmtToGLFmtMap[TEX_FORMAT_BGRA8_UNORM]            = GL_RGBA8;
         m_FmtToGLFmtMap[TEX_FORMAT_BGRX8_UNORM]            = 0;
         m_FmtToGLFmtMap[TEX_FORMAT_R10G10B10_XR_BIAS_A2_UNORM] = 0;
         m_FmtToGLFmtMap[TEX_FORMAT_BGRA8_TYPELESS]         = 0;
@@ -386,7 +388,9 @@ NativePixelAttribs GetNativePixelTransferAttribs(TEXTURE_FORMAT TexFormat)
         FmtToGLPixelFmt[TEX_FORMAT_BC5_SNORM]              = NativePixelAttribs(GL_RG, 0, True);
         FmtToGLPixelFmt[TEX_FORMAT_B5G6R5_UNORM]           = NativePixelAttribs(GL_RGB, GL_UNSIGNED_SHORT_5_6_5_REV);
         FmtToGLPixelFmt[TEX_FORMAT_B5G5R5A1_UNORM]         = NativePixelAttribs(GL_RGB, GL_UNSIGNED_SHORT_1_5_5_5_REV);
-        FmtToGLPixelFmt[TEX_FORMAT_BGRA8_UNORM]            = NativePixelAttribs();
+        // To get the same behaviour as expected for TEX_FORMAT_BGRA8_UNORM we swizzle the components
+        // appropriately using the GL_TEXTURE_SWIZZLE texture parameters in TextureBaseGL::SetDefaultGLParameters()
+        FmtToGLPixelFmt[TEX_FORMAT_BGRA8_UNORM]            = NativePixelAttribs(GL_RGBA,         GL_UNSIGNED_BYTE);
         FmtToGLPixelFmt[TEX_FORMAT_BGRX8_UNORM]            = NativePixelAttribs();
         FmtToGLPixelFmt[TEX_FORMAT_R10G10B10_XR_BIAS_A2_UNORM] = NativePixelAttribs();
         FmtToGLPixelFmt[TEX_FORMAT_BGRA8_TYPELESS]         = NativePixelAttribs();

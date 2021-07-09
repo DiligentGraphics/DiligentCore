@@ -683,6 +683,15 @@ void TextureBaseGL::SetDefaultGLParameters()
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, GL_ZERO);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_RED);
     }
+    else if (m_Desc.Format == TEX_FORMAT_BGRA8_UNORM)
+    {
+        // We need to do channel swizzling since TEX_FORMAT_BGRA8_UNORM
+        // is actually implemented using GL_RGBA
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, GL_BLUE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, GL_GREEN);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, GL_RED);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_ALPHA);
+    }
 
     if (m_BindTarget != GL_TEXTURE_2D_MULTISAMPLE &&
         m_BindTarget != GL_TEXTURE_2D_MULTISAMPLE_ARRAY)
