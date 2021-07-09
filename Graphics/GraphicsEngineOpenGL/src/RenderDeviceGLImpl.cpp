@@ -272,10 +272,9 @@ void RenderDeviceGLImpl::InitTexRegionRender()
 
 void RenderDeviceGLImpl::CreateBuffer(const BufferDesc& BuffDesc, const BufferData* pBuffData, IBuffer** ppBuffer, bool bIsDeviceInternal)
 {
-    auto spDeviceContext = GetImmediateContext();
-    VERIFY(spDeviceContext, "Immediate device context has been destroyed");
-    auto* pDeviceContextGL = spDeviceContext.RawPtr<DeviceContextGLImpl>();
-    CreateBufferImpl(ppBuffer, BuffDesc, std::ref(pDeviceContextGL->GetContextState()), pBuffData, bIsDeviceInternal);
+    auto pDeviceContext = GetImmediateContext(0);
+    VERIFY(pDeviceContext, "Immediate device context has been destroyed");
+    CreateBufferImpl(ppBuffer, BuffDesc, std::ref(pDeviceContext->GetContextState()), pBuffData, bIsDeviceInternal);
 }
 
 void RenderDeviceGLImpl::CreateBuffer(const BufferDesc& BuffDesc, const BufferData* BuffData, IBuffer** ppBuffer)
@@ -287,11 +286,9 @@ void RenderDeviceGLImpl::CreateBufferFromGLHandle(Uint32 GLHandle, const BufferD
 {
     DEV_CHECK_ERR(GLHandle != 0, "GL buffer handle must not be null");
 
-    auto spDeviceContext = GetImmediateContext();
-    VERIFY(spDeviceContext, "Immediate device context has been destroyed");
-    auto* pDeviceContextGL = spDeviceContext.RawPtr<DeviceContextGLImpl>();
-
-    CreateBufferImpl(ppBuffer, BuffDesc, std::ref(pDeviceContextGL->GetContextState()), GLHandle, /*bIsDeviceInternal =*/false);
+    auto pDeviceContext = GetImmediateContext(0);
+    VERIFY(pDeviceContext, "Immediate device context has been destroyed");
+    CreateBufferImpl(ppBuffer, BuffDesc, std::ref(pDeviceContext->GetContextState()), GLHandle, /*bIsDeviceInternal =*/false);
 }
 
 void RenderDeviceGLImpl::CreateShader(const ShaderCreateInfo& ShaderCreateInfo, IShader** ppShader, bool bIsDeviceInternal)
@@ -310,9 +307,9 @@ void RenderDeviceGLImpl::CreateTexture(const TextureDesc& TexDesc, const Texture
         "texture", TexDesc, ppTexture,
         [&]() //
         {
-            auto spDeviceContext = GetImmediateContext();
-            VERIFY(spDeviceContext, "Immediate device context has been destroyed");
-            auto& GLState = spDeviceContext.RawPtr<DeviceContextGLImpl>()->GetContextState();
+            auto pDeviceContext = GetImmediateContext(0);
+            VERIFY(pDeviceContext, "Immediate device context has been destroyed");
+            auto& GLState = pDeviceContext->GetContextState();
 
             const auto& FmtInfo = GetTextureFormatInfo(TexDesc.Format);
             if (!FmtInfo.Supported)
@@ -376,9 +373,9 @@ void RenderDeviceGLImpl::CreateTextureFromGLHandle(Uint32             GLHandle,
         "texture", TexDesc, ppTexture,
         [&]() //
         {
-            auto spDeviceContext = GetImmediateContext();
-            VERIFY(spDeviceContext, "Immediate device context has been destroyed");
-            auto& GLState = spDeviceContext.RawPtr<DeviceContextGLImpl>()->GetContextState();
+            auto pDeviceContext = GetImmediateContext(0);
+            VERIFY(pDeviceContext, "Immediate device context has been destroyed");
+            auto& GLState = pDeviceContext->GetContextState();
 
             TextureBaseGL* pTextureOGL = nullptr;
             switch (TexDesc.Type)
@@ -495,9 +492,9 @@ void RenderDeviceGLImpl::CreateRenderPass(const RenderPassDesc& Desc, IRenderPas
 
 void RenderDeviceGLImpl::CreateFramebuffer(const FramebufferDesc& Desc, IFramebuffer** ppFramebuffer)
 {
-    auto spDeviceContext = GetImmediateContext();
-    VERIFY(spDeviceContext, "Immediate device context has been destroyed");
-    auto& GLState = spDeviceContext.RawPtr<DeviceContextGLImpl>()->GetContextState();
+    auto pDeviceContext = GetImmediateContext(0);
+    VERIFY(pDeviceContext, "Immediate device context has been destroyed");
+    auto& GLState = pDeviceContext->GetContextState();
 
     CreateFramebufferImpl(ppFramebuffer, Desc, std::ref(GLState));
 }
@@ -1158,10 +1155,9 @@ void RenderDeviceGLImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
     auto GLFmt = TexFormatToGLInternalTexFormat(TexFormat);
     VERIFY(GLFmt != 0, "Incorrect internal GL format");
 
-    auto spDeviceContext = GetImmediateContext();
-    VERIFY(spDeviceContext, "Immediate device context has been destroyed");
-    auto* pContextGL   = spDeviceContext.RawPtr<DeviceContextGLImpl>();
-    auto& ContextState = pContextGL->GetContextState();
+    auto pDeviceContext = GetImmediateContext(0);
+    VERIFY(pDeviceContext, "Immediate device context has been destroyed");
+    auto& ContextState = pDeviceContext->GetContextState();
 
     const int TestTextureDim   = 32;
     const int TestArraySlices  = 8;

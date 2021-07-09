@@ -112,11 +112,11 @@ RefCntAutoPtr<PipelineResourceSignatureGLImpl> PipelineStateGLImpl::CreateDefaul
     }
     else
     {
-        auto pImmediateCtx = m_pDevice->GetImmediateContext();
+        auto pImmediateCtx = m_pDevice->GetImmediateContext(0);
         VERIFY_EXPR(pImmediateCtx);
         VERIFY_EXPR(m_GLPrograms[0] != 0);
 
-        ProgramResources.LoadUniforms(ActiveStages, m_GLPrograms[0], pImmediateCtx.RawPtr<DeviceContextGLImpl>()->GetContextState());
+        ProgramResources.LoadUniforms(ActiveStages, m_GLPrograms[0], pImmediateCtx->GetContextState());
         ProgramResources.ProcessConstResources(HandleUB, HandleTexture, HandleImage, HandleSB);
     }
 
@@ -153,7 +153,7 @@ void PipelineStateGLImpl::InitResourceLayout(const TShaderStages& ShaderStages,
     }
 
     // Apply resource bindings to programs.
-    auto& CtxState = m_pDevice->GetImmediateContext().RawPtr<DeviceContextGLImpl>()->GetContextState();
+    auto& CtxState = m_pDevice->GetImmediateContext(0)->GetContextState();
 
     PipelineResourceSignatureGLImpl::TBindings Bindings = {};
     for (Uint32 s = 0; s < m_SignatureCount; ++s)
@@ -190,7 +190,7 @@ void PipelineStateGLImpl::InitResourceLayout(const TShaderStages& ShaderStages,
     }
     else
     {
-        auto* pImmediateCtx = m_pDevice->GetImmediateContext().RawPtr<DeviceContextGLImpl>();
+        auto pImmediateCtx = m_pDevice->GetImmediateContext(0);
         VERIFY_EXPR(pImmediateCtx != nullptr);
         VERIFY_EXPR(m_GLPrograms[0] != 0);
 

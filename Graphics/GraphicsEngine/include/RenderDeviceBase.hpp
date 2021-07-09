@@ -212,6 +212,7 @@ public:
     using TObjectBase   = ObjectBase<BaseInterface>;
 
     using RenderDeviceImplType              = typename EngineImplTraits::RenderDeviceImplType;
+    using DeviceContextImplType             = typename EngineImplTraits::DeviceContextImplType;
     using PipelineStateImplType             = typename EngineImplTraits::PipelineStateImplType;
     using ShaderResourceBindingImplType     = typename EngineImplTraits::ShaderResourceBindingImplType;
     using BufferImplType                    = typename EngineImplTraits::BufferImplType;
@@ -250,8 +251,8 @@ public:
         m_SamplersRegistry      {RawMemAllocator, "sampler"},
         m_TextureFormatsInfo    (TEX_FORMAT_NUM_FORMATS, TextureFormatInfoExt(), STD_ALLOCATOR_RAW_MEM(TextureFormatInfoExt, RawMemAllocator, "Allocator for vector<TextureFormatInfoExt>")),
         m_TexFmtInfoInitFlags   (TEX_FORMAT_NUM_FORMATS, false, STD_ALLOCATOR_RAW_MEM(bool, RawMemAllocator, "Allocator for vector<bool>")),
-        m_wpImmediateContexts   (std::max(1u, EngineCI.NumImmediateContexts), RefCntWeakPtr<IDeviceContext>(), STD_ALLOCATOR_RAW_MEM(RefCntWeakPtr<IDeviceContext>, RawMemAllocator, "Allocator for vector< RefCntWeakPtr<IDeviceContext> >")),
-        m_wpDeferredContexts    (EngineCI.NumDeferredContexts, RefCntWeakPtr<IDeviceContext>(), STD_ALLOCATOR_RAW_MEM(RefCntWeakPtr<IDeviceContext>, RawMemAllocator, "Allocator for vector< RefCntWeakPtr<IDeviceContext> >")),
+        m_wpImmediateContexts   (std::max(1u, EngineCI.NumImmediateContexts), RefCntWeakPtr<DeviceContextImplType>(), STD_ALLOCATOR_RAW_MEM(RefCntWeakPtr<DeviceContextImplType>, RawMemAllocator, "Allocator for vector<RefCntWeakPtr<DeviceContextImplType>>")),
+        m_wpDeferredContexts    (EngineCI.NumDeferredContexts, RefCntWeakPtr<DeviceContextImplType>(), STD_ALLOCATOR_RAW_MEM(RefCntWeakPtr<DeviceContextImplType>, RawMemAllocator, "Allocator for vector<RefCntWeakPtr<DeviceContextImplType>>")),
         m_RawMemAllocator       {RawMemAllocator},
         m_TexObjAllocator       {RawMemAllocator, sizeof(TextureImplType),                    64},
         m_TexViewObjAllocator   {RawMemAllocator, sizeof(TextureViewImplType),                64},
@@ -405,14 +406,14 @@ public:
     StateObjectsRegistry<SamplerDesc>& GetSamplerRegistry() { return m_SamplersRegistry; }
 
     /// Set weak reference to the immediate context
-    void SetImmediateContext(size_t Ctx, IDeviceContext* pImmediateContext)
+    void SetImmediateContext(size_t Ctx, DeviceContextImplType* pImmediateContext)
     {
         VERIFY(m_wpImmediateContexts[Ctx].Lock() == nullptr, "Immediate context has already been set");
         m_wpImmediateContexts[Ctx] = pImmediateContext;
     }
 
     /// Set weak reference to the deferred context
-    void SetDeferredContext(size_t Ctx, IDeviceContext* pDeferredCtx)
+    void SetDeferredContext(size_t Ctx, DeviceContextImplType* pDeferredCtx)
     {
         VERIFY(m_wpDeferredContexts[Ctx].Lock() == nullptr, "Deferred context has already been set");
         m_wpDeferredContexts[Ctx] = pDeferredCtx;
@@ -430,8 +431,8 @@ public:
         return m_wpDeferredContexts.size();
     }
 
-    RefCntAutoPtr<IDeviceContext> GetImmediateContext(size_t Ctx) { return m_wpImmediateContexts[Ctx].Lock(); }
-    RefCntAutoPtr<IDeviceContext> GetDeferredContext(size_t Ctx) { return m_wpDeferredContexts[Ctx].Lock(); }
+    RefCntAutoPtr<DeviceContextImplType> GetImmediateContext(size_t Ctx) { return m_wpImmediateContexts[Ctx].Lock(); }
+    RefCntAutoPtr<DeviceContextImplType> GetDeferredContext(size_t Ctx) { return m_wpDeferredContexts[Ctx].Lock(); }
 
     FixedBlockMemoryAllocator& GetTexViewObjAllocator() { return m_TexViewObjAllocator; }
     FixedBlockMemoryAllocator& GetBuffViewObjAllocator() { return m_BuffViewObjAllocator; }
@@ -667,10 +668,10 @@ protected:
 
     /// Weak references to immediate contexts. Immediate contexts hold strong reference
     /// to the device, so we must use weak references to avoid circular dependencies.
-    std::vector<RefCntWeakPtr<IDeviceContext>, STDAllocatorRawMem<RefCntWeakPtr<IDeviceContext>>> m_wpImmediateContexts;
+    std::vector<RefCntWeakPtr<DeviceContextImplType>, STDAllocatorRawMem<RefCntWeakPtr<DeviceContextImplType>>> m_wpImmediateContexts;
 
     /// Weak references to deferred contexts.
-    std::vector<RefCntWeakPtr<IDeviceContext>, STDAllocatorRawMem<RefCntWeakPtr<IDeviceContext>>> m_wpDeferredContexts;
+    std::vector<RefCntWeakPtr<DeviceContextImplType>, STDAllocatorRawMem<RefCntWeakPtr<DeviceContextImplType>>> m_wpDeferredContexts;
 
     IMemoryAllocator&         m_RawMemAllocator;      ///< Raw memory allocator
     FixedBlockMemoryAllocator m_TexObjAllocator;      ///< Allocator for texture objects

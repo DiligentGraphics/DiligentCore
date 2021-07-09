@@ -161,11 +161,12 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
 
     if (DeviceInfo.Features.SeparablePrograms)
     {
-        ShaderGLImpl* const            ThisShader[]  = {this};
-        GLObjectWrappers::GLProgramObj Program       = LinkProgram(ThisShader, 1, true);
-        auto                           pImmediateCtx = m_pDevice->GetImmediateContext();
+        ShaderGLImpl* const            ThisShader[] = {this};
+        GLObjectWrappers::GLProgramObj Program      = LinkProgram(ThisShader, 1, true);
+
+        auto pImmediateCtx = m_pDevice->GetImmediateContext(0);
         VERIFY_EXPR(pImmediateCtx);
-        auto& GLState = pImmediateCtx.RawPtr<DeviceContextGLImpl>()->GetContextState();
+        auto& GLState = pImmediateCtx->GetContextState();
 
         std::unique_ptr<ShaderResourcesGL> pResources{new ShaderResourcesGL{}};
         pResources->LoadUniforms(m_Desc.ShaderType, Program, GLState);

@@ -83,9 +83,19 @@ bool QueryD3D11Impl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
 {
     TQueryBase::CheckQueryDataPtr(pData, DataSize);
 
-    VERIFY_EXPR(!m_pContext->IsDeferred());
-
-    auto* pd3d11Ctx = m_pContext->GetD3D11DeviceContext();
+    // GetData may only be called on immediate context
+    // https://docs.microsoft.com/en-us/windows/win32/api/d3d11/nf-d3d11-id3d11devicecontext-getdata
+    ID3D11DeviceContext* pd3d11Ctx = nullptr;
+    if (!m_pContext->IsDeferred())
+    {
+        pd3d11Ctx = m_pContext->GetD3D11DeviceContext();
+    }
+    else
+    {
+        auto pImmediateCtx = m_pDevice->GetImmediateContext(0);
+        VERIFY(pImmediateCtx, "Immediate context has been released");
+        pd3d11Ctx = pImmediateCtx->GetD3D11DeviceContext();
+    }
 
     bool DataReady = false;
     switch (m_Desc.Type)

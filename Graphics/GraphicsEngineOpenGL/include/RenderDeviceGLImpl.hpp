@@ -187,8 +187,6 @@ public:
     };
     const GLDeviceLimits& GetDeviceLimits() const { return m_DeviceLimits; }
 
-    RefCntAutoPtr<IDeviceContext> GetImmediateContext() { return TRenderDeviceBase::GetImmediateContext(0); }
-
 protected:
     friend class DeviceContextGLImpl;
     friend class TextureBaseGL;

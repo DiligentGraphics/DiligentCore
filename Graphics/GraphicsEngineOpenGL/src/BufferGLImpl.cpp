@@ -370,9 +370,9 @@ void BufferGLImpl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, IBuffe
         auto& BuffViewAllocator = pDeviceGLImpl->GetBuffViewObjAllocator();
         VERIFY(&BuffViewAllocator == &m_dbgBuffViewAllocator, "Buff view allocator does not match allocator provided at buffer initialization");
 
-        auto pContext = pDeviceGLImpl->GetImmediateContext();
+        auto pContext = pDeviceGLImpl->GetImmediateContext(0);
         VERIFY(pContext, "Immediate context has been released");
-        auto& CtxState = pContext.RawPtr<DeviceContextGLImpl>()->GetContextState();
+        auto& CtxState = pContext->GetContextState();
 
         *ppView = NEW_RC_OBJ(BuffViewAllocator, "BufferViewGLImpl instance", BufferViewGLImpl, bIsDefaultView ? this : nullptr)(pDeviceGLImpl, CtxState, ViewDesc, this, bIsDefaultView);
 

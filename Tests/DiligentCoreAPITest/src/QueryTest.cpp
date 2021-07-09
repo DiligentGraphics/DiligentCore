@@ -501,11 +501,6 @@ TEST_F(QueryTest, DeferredContexts)
     auto* const pEnv       = TestingEnvironment::GetInstance();
     auto* const pDevice    = pEnv->GetDevice();
     const auto& DeviceInfo = pDevice->GetDeviceInfo();
-    if (DeviceInfo.Type != RENDER_DEVICE_TYPE_VULKAN && DeviceInfo.Type != RENDER_DEVICE_TYPE_D3D12)
-    {
-        GTEST_SKIP() << "Queries in deferred contexts are not supported by this device";
-    }
-
     if (!DeviceInfo.Features.DurationQueries && !DeviceInfo.Features.TimestampQueries)
     {
         GTEST_SKIP() << "Time queries are not supported by this device";
@@ -633,9 +628,9 @@ TEST_F(QueryTest, DeferredContexts)
             QueryDataDuration QueryData;
 
             auto QueryReady = pQuery->GetData(nullptr, 0);
-            ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
+            EXPECT_TRUE(QueryReady) << "Query data must be available after idling the context";
             pQuery->GetData(&QueryData, sizeof(QueryData));
-            ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
+            EXPECT_TRUE(QueryReady) << "Query data must be available after idling the context";
             EXPECT_TRUE(QueryData.Frequency == 0 || QueryData.Duration > 0);
         }
 
@@ -649,14 +644,14 @@ TEST_F(QueryTest, DeferredContexts)
                 QueryDataTimestamp QueryStartData, QueryEndData;
 
                 auto QueryReady = pQueryStart->GetData(nullptr, 0);
-                ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
+                EXPECT_TRUE(QueryReady) << "Query data must be available after idling the context";
                 QueryReady = pQueryStart->GetData(&QueryStartData, sizeof(QueryStartData));
-                ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
+                EXPECT_TRUE(QueryReady) << "Query data must be available after idling the context";
 
                 QueryReady = pQueryEnd->GetData(nullptr, 0);
-                ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
+                EXPECT_TRUE(QueryReady) << "Query data must be available after idling the context";
                 QueryReady = pQueryEnd->GetData(&QueryEndData, sizeof(QueryEndData), false);
-                ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
+                EXPECT_TRUE(QueryReady) << "Query data must be available after idling the context";
                 EXPECT_TRUE(QueryStartData.Frequency == 0 || QueryEndData.Frequency == 0 || QueryEndData.Counter > QueryStartData.Counter);
             }
         }
