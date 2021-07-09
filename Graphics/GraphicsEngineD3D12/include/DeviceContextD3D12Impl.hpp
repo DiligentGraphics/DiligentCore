@@ -45,7 +45,6 @@
 #include "PipelineStateD3D12Impl.hpp"
 #include "BottomLevelASD3D12Impl.hpp"
 #include "TopLevelASD3D12Impl.hpp"
-#include "QueryManagerD3D12.hpp"
 
 #include "D3D12DynamicHeap.hpp"
 
@@ -348,7 +347,12 @@ public:
 
     size_t GetNumCommandsInCtx() const { return m_State.NumCommands; }
 
-    QueryManagerD3D12& GetQueryManager() { return *m_QueryMgr; }
+    QueryManagerD3D12& GetQueryManager()
+    {
+        VERIFY(m_QueryMgr != nullptr || IsDeferred(), "Query manager should never be null for immediate contexts. This might be a bug.");
+        DEV_CHECK_ERR(m_QueryMgr != nullptr, "Query manager is null, which indicates that this deferred context is not in a recording state");
+        return *m_QueryMgr;
+    }
 
 private:
     void CommitD3D12IndexBuffer(GraphicsContext& GraphCtx, VALUE_TYPE IndexType);
@@ -497,7 +501,7 @@ private:
 
     std::vector<D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS> m_AttachmentResolveInfo;
 
-    std::unique_ptr<QueryManagerD3D12> m_QueryMgr;
+    QueryManagerD3D12* m_QueryMgr = nullptr;
 };
 
 } // namespace Diligent

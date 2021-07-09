@@ -134,7 +134,9 @@ QueryManagerD3D12::QueryHeapInfo::~QueryHeapInfo()
 
 QueryManagerD3D12::QueryManagerD3D12(RenderDeviceD3D12Impl* pDeviceD3D12Impl,
                                      const Uint32           QueryHeapSizes[],
-                                     HardwareQueueIndex     HwQueueInd)
+                                     SoftwareQueueIndex     CommandQueueId,
+                                     HardwareQueueIndex     HwQueueInd) :
+    m_CommandQueueId{CommandQueueId}
 {
     const auto& DevInfo      = pDeviceD3D12Impl->GetDeviceInfo();
     auto*       pd3d12Device = pDeviceD3D12Impl->GetD3D12Device();

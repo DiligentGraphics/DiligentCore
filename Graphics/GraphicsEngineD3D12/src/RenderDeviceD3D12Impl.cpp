@@ -51,6 +51,7 @@
 #include "EngineMemory.h"
 #include "D3D12TypeConversions.hpp"
 #include "DXGITypeConversions.hpp"
+#include "QueryManagerD3D12.hpp"
 
 
 namespace Diligent
@@ -183,6 +184,14 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
 
 #    undef CHECK_D3D12_DEVICE_VERSION
 #endif
+
+        m_QueryMgrs.reserve(CommandQueueCount);
+        for (Uint32 q = 0; q < CommandQueueCount; ++q)
+        {
+            const auto d3d12CmdListType = ppCmdQueues[q]->GetD3D12CommandQueueDesc().Type;
+            const auto HWQueueId        = D3D12CommandListTypeToQueueId(d3d12CmdListType);
+            m_QueryMgrs.emplace_back(std::make_unique<QueryManagerD3D12>(this, EngineCI.QueryPoolSizes, SoftwareQueueIndex{q}, HWQueueId));
+        }
     }
     catch (...)
     {

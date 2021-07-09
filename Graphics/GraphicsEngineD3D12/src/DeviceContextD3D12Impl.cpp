@@ -45,6 +45,7 @@
 #include "D3D12TypeConversions.hpp"
 #include "d3dx12_win.h"
 #include "D3D12DynamicHeap.hpp"
+#include "QueryManagerD3D12.hpp"
 #include "DXGITypeConversions.hpp"
 
 namespace Diligent
@@ -100,7 +101,7 @@ DeviceContextD3D12Impl::DeviceContextD3D12Impl(IReferenceCounters*          pRef
     if (!IsDeferred())
     {
         RequestCommandContext();
-        m_QueryMgr = std::make_unique<QueryManagerD3D12>(pDeviceD3D12Impl, EngineCI.QueryPoolSizes, GetHardwareQueueId());
+        m_QueryMgr = &pDeviceD3D12Impl->GetQueryMgr(GetCommandQueueId());
     }
 
     D3D12_COMMAND_SIGNATURE_DESC CmdSignatureDesc = {};
@@ -198,10 +199,12 @@ DeviceContextD3D12Impl::~DeviceContextD3D12Impl()
 void DeviceContextD3D12Impl::Begin(Uint32 ImmediateContextId)
 {
     DEV_CHECK_ERR(ImmediateContextId < m_pDevice->GetCommandQueueCount(), "ImmediateContextId is out of range");
-    const auto d3d12CmdListType = m_pDevice->GetCommandQueueType(SoftwareQueueIndex{ImmediateContextId});
-    const auto QueueType        = D3D12CommandListTypeToCmdQueueType(d3d12CmdListType);
+    SoftwareQueueIndex CommandQueueId{ImmediateContextId};
+    const auto         d3d12CmdListType = m_pDevice->GetCommandQueueType(CommandQueueId);
+    const auto         QueueType        = D3D12CommandListTypeToCmdQueueType(d3d12CmdListType);
     TDeviceContextBase::Begin(DeviceContextIndex{ImmediateContextId}, QueueType);
     RequestCommandContext();
+    m_QueryMgr = &m_pDevice->GetQueryMgr(CommandQueueId);
 }
 
 void DeviceContextD3D12Impl::SetPipelineState(IPipelineState* pPipelineState)
@@ -2147,6 +2150,7 @@ void DeviceContextD3D12Impl::FinishCommandList(ICommandList** ppCommandList)
     constexpr auto RequestNewCmdCtx = false;
     Flush(RequestNewCmdCtx);
 
+    m_QueryMgr = nullptr;
     InvalidateState();
 
     TDeviceContextBase::FinishCommandList();

@@ -501,7 +501,7 @@ TEST_F(QueryTest, DeferredContexts)
     auto* const pEnv       = TestingEnvironment::GetInstance();
     auto* const pDevice    = pEnv->GetDevice();
     const auto& DeviceInfo = pDevice->GetDeviceInfo();
-    if (DeviceInfo.Type != RENDER_DEVICE_TYPE_VULKAN)
+    if (DeviceInfo.Type != RENDER_DEVICE_TYPE_VULKAN && DeviceInfo.Type != RENDER_DEVICE_TYPE_D3D12)
     {
         GTEST_SKIP() << "Queries in deferred contexts are not supported by this device";
     }

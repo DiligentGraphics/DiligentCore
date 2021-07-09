@@ -31,6 +31,8 @@
 /// Declaration of Diligent::RenderDeviceD3D12Impl class
 
 #include <atomic>
+#include <vector>
+#include <memory>
 
 #include "EngineD3D12ImplTraits.hpp"
 #include "RenderDeviceD3DBase.hpp"
@@ -64,6 +66,8 @@
 
 namespace Diligent
 {
+
+class QueryManagerD3D12;
 
 /// Render device implementation in Direct3D12 backend.
 class RenderDeviceD3D12Impl final : public RenderDeviceNextGenBase<RenderDeviceD3DBase<EngineD3D12ImplTraits>, ICommandQueueD3D12>
@@ -246,6 +250,11 @@ public:
         return m_MaxShaderVersion;
     }
 
+    QueryManagerD3D12& GetQueryMgr(SoftwareQueueIndex CmdQueueInd)
+    {
+        return *m_QueryMgrs[CmdQueueInd];
+    }
+
 private:
     virtual void TestTextureFormat(TEXTURE_FORMAT TexFormat) override final;
     void         FreeCommandContext(PooledCommandContext&& Ctx);
@@ -278,6 +287,9 @@ private:
 
     FixedBlockMemoryAllocator m_RootSignatureAllocator;
     RootSignatureCacheD3D12   m_RootSignatureCache;
+
+    // Each command queue needs its own query manager to avoid race conditions.
+    std::vector<std::unique_ptr<QueryManagerD3D12>> m_QueryMgrs;
 
 #ifdef DILIGENT_DEVELOPMENT
     Uint32 m_MaxD3D12DeviceVersion = 0;

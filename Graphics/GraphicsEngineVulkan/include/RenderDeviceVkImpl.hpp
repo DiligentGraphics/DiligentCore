@@ -285,8 +285,7 @@ private:
     // at a time, so every constructor must allocate command buffer from its own pool.
     std::unordered_map<HardwareQueueIndex, CommandPoolManager, HardwareQueueIndex::Hasher> m_TransientCmdPoolMgrs;
 
-    // Each command queue needs its own query manager because different query pools may not
-    // be used by multiple queues simultaneously.
+    // Each command queue needs its own query manager to avoid race conditions.
     std::vector<std::unique_ptr<QueryManagerVk>> m_QueryMgrs;
 
     VulkanUtilities::VulkanMemoryManager m_MemoryMgr;

@@ -46,6 +46,7 @@ class QueryManagerD3D12
 public:
     QueryManagerD3D12(class RenderDeviceD3D12Impl* pDeviceD3D12Impl,
                       const Uint32                 QueryHeapSizes[],
+                      SoftwareQueueIndex           CommandQueueId,
                       HardwareQueueIndex           HwQueueInd);
     ~QueryManagerD3D12();
 
@@ -70,6 +71,11 @@ public:
     void EndQuery(CommandContext& Ctx, QUERY_TYPE Type, Uint32 Index) const;
     void ReadQueryData(QUERY_TYPE Type, Uint32 Index, void* pDataPtr, Uint32 DataSize) const;
 
+    SoftwareQueueIndex GetCommandQueueId() const
+    {
+        return m_CommandQueueId;
+    }
+
 private:
     class QueryHeapInfo
     {
@@ -79,7 +85,15 @@ private:
                   QUERY_TYPE                   QueryType,
                   Uint32&                      CurrResolveBufferOffset);
 
+        QueryHeapInfo() noexcept {}
         ~QueryHeapInfo();
+
+        // clang-format off
+        QueryHeapInfo             (const QueryHeapInfo&)  = delete;
+        QueryHeapInfo             (      QueryHeapInfo&&) = delete;
+        QueryHeapInfo& operator = (const QueryHeapInfo&)  = delete;
+        QueryHeapInfo& operator = (      QueryHeapInfo&&) = delete;
+        // clang-format on
 
         Uint32 Allocate();
         void   Release(Uint32 Index);
@@ -124,6 +138,8 @@ private:
         Uint32 m_ResolveBufferBaseOffset = 0;
         Uint32 m_AlignedQueryDataSize    = 0;
     };
+
+    const SoftwareQueueIndex m_CommandQueueId;
 
     std::array<QueryHeapInfo, QUERY_TYPE_NUM_TYPES> m_Heaps;
 

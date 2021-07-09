@@ -80,7 +80,9 @@ private:
     // Begin/end query indices
     std::array<Uint32, 2> m_QueryHeapIndex = {QueryManagerD3D12::InvalidIndex, QueryManagerD3D12::InvalidIndex};
 
-    Uint64 m_QueryEndFenceValue = 0;
+    Uint64 m_QueryEndFenceValue = ~Uint64{0};
+
+    QueryManagerD3D12* m_pQueryMgr = nullptr;
 };
 
 } // namespace Diligent
