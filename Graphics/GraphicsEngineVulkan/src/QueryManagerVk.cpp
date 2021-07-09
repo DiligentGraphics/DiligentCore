@@ -44,6 +44,101 @@ static bool SupportsHostQueryReset(const VulkanUtilities::VulkanLogicalDevice& L
     return EnabledExtFeatures.HostQueryReset.hostQueryReset != VK_FALSE;
 }
 
+void QueryManagerVk::QueryPoolInfo::Init(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice,
+                                         VkCommandBuffer                             vkCmdBuff,
+                                         const VkQueryPoolCreateInfo&                QueryPoolCI,
+                                         QUERY_TYPE                                  Type)
+{
+    m_Type       = Type;
+    m_QueryCount = QueryPoolCI.queryCount;
+
+    m_vkQueryPool = LogicalDevice.CreateQueryPool(QueryPoolCI, "QueryManagerVk: query pool");
+
+    if (vkCmdBuff != VK_NULL_HANDLE)
+    {
+        // After query pool creation, each query must be reset before it is used.
+        // Queries must also be reset between uses (17.2).
+        vkCmdResetQueryPool(vkCmdBuff, m_vkQueryPool, 0, QueryPoolCI.queryCount);
+    }
+    else
+    {
+        LogicalDevice.ResetQueryPool(m_vkQueryPool, 0, QueryPoolCI.queryCount);
+    }
+
+    m_AvailableQueries.resize(m_QueryCount);
+    for (Uint32 i = 0; i < m_QueryCount; ++i)
+    {
+        m_AvailableQueries[i] = i;
+    }
+}
+
+QueryManagerVk::QueryPoolInfo::~QueryPoolInfo()
+{
+    auto OutstandingQueries = GetQueryCount() - (m_AvailableQueries.size() + m_StaleQueries.size());
+    if (OutstandingQueries == 1)
+    {
+        LOG_ERROR_MESSAGE("One query of type ", GetQueryTypeString(m_Type),
+                          " has not been returned to the query manager");
+    }
+    else if (OutstandingQueries > 1)
+    {
+        LOG_ERROR_MESSAGE(OutstandingQueries, " queries of type ", GetQueryTypeString(m_Type),
+                          " have not been returned to the query manager");
+    }
+}
+
+Uint32 QueryManagerVk::QueryPoolInfo::Allocate()
+{
+    Uint32 Index = InvalidIndex;
+
+    std::lock_guard<std::mutex> Lock{m_QueriesMtx};
+    if (!m_AvailableQueries.empty())
+    {
+        Index = m_AvailableQueries.back();
+        m_AvailableQueries.pop_back();
+        m_MaxAllocatedQueries = std::max(m_MaxAllocatedQueries, m_QueryCount - static_cast<Uint32>(m_AvailableQueries.size()));
+    }
+
+    return Index;
+}
+
+void QueryManagerVk::QueryPoolInfo::Discard(Uint32 Index)
+{
+    std::lock_guard<std::mutex> Lock{m_QueriesMtx};
+
+    VERIFY(Index < m_QueryCount, "Query index ", Index, " is out of range");
+    VERIFY(m_vkQueryPool != VK_NULL_HANDLE, "Query pool is not initialized");
+    VERIFY(std::find(m_AvailableQueries.begin(), m_AvailableQueries.end(), Index) == m_AvailableQueries.end(),
+           "Index ", Index, " already present in available queries list");
+    VERIFY(std::find(m_StaleQueries.begin(), m_StaleQueries.end(), Index) == m_StaleQueries.end(),
+           "Index ", Index, " already present in stale queries list");
+
+    m_StaleQueries.push_back(Index);
+}
+
+Uint32 QueryManagerVk::QueryPoolInfo::ResetStaleQueries(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice,
+                                                        VulkanUtilities::VulkanCommandBuffer&       CmdBuff)
+{
+    const bool HostQueryReset = SupportsHostQueryReset(LogicalDevice);
+
+    std::lock_guard<std::mutex> Lock{m_QueriesMtx};
+    VERIFY(m_StaleQueries.empty() || m_vkQueryPool != VK_NULL_HANDLE, "Query pool is not initialized");
+
+    for (auto& StaleQuery : m_StaleQueries)
+    {
+        if (HostQueryReset)
+            LogicalDevice.ResetQueryPool(m_vkQueryPool, StaleQuery, 1);
+        else
+            CmdBuff.ResetQueryPool(m_vkQueryPool, StaleQuery, 1);
+
+        m_AvailableQueries.push_back(StaleQuery);
+    }
+    const auto NumQueriesReset = static_cast<Uint32>(m_StaleQueries.size());
+    m_StaleQueries.clear();
+
+    return NumQueriesReset;
+}
+
 QueryManagerVk::QueryManagerVk(RenderDeviceVkImpl*      pRenderDeviceVk,
                                const Uint32             QueryHeapSizes[],
                                const SoftwareQueueIndex CmdQueueInd)
@@ -65,8 +160,9 @@ QueryManagerVk::QueryManagerVk(RenderDeviceVkImpl*      pRenderDeviceVk,
     if (!SupportsHostQueryReset(LogicalDevice))
         pRenderDeviceVk->AllocateTransientCmdPool(CmdQueueInd, CmdPool, vkCmdBuff, "Transient command pool to reset queries before first use");
 
-    for (Uint32 QueryType = QUERY_TYPE_UNDEFINED + 1; QueryType < QUERY_TYPE_NUM_TYPES; ++QueryType)
+    for (Uint32 query_type = QUERY_TYPE_UNDEFINED + 1; query_type < QUERY_TYPE_NUM_TYPES; ++query_type)
     {
+        const auto QueryType = static_cast<QUERY_TYPE>(query_type);
         if ((QueryType == QUERY_TYPE_OCCLUSION && !EnabledFeatures.occlusionQueryPrecise) ||
             (QueryType == QUERY_TYPE_PIPELINE_STATISTICS && !EnabledFeatures.pipelineStatisticsQuery))
             continue;
@@ -91,11 +187,7 @@ QueryManagerVk::QueryManagerVk(RenderDeviceVkImpl*      pRenderDeviceVk,
         static_assert(QUERY_TYPE_NUM_TYPES          == 6, "Unexpected value of QUERY_TYPE_NUM_TYPES. EngineVkCreateInfo::QueryPoolSizes must be updated");
         // clang-format on
 
-        auto& HeapInfo    = m_Heaps[QueryType];
-        HeapInfo.PoolSize = QueryHeapSizes[QueryType];
-
-        VkQueryPoolCreateInfo QueryPoolCI = {};
-
+        VkQueryPoolCreateInfo QueryPoolCI{};
         QueryPoolCI.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
         QueryPoolCI.pNext = nullptr;
         QueryPoolCI.flags = 0;
@@ -142,28 +234,13 @@ QueryManagerVk::QueryManagerVk(RenderDeviceVkImpl*      pRenderDeviceVk,
                 UNEXPECTED("Unexpected query type");
         }
 
-        QueryPoolCI.queryCount = HeapInfo.PoolSize;
+        QueryPoolCI.queryCount = QueryHeapSizes[QueryType];
         if (QueryType == QUERY_TYPE_DURATION)
             QueryPoolCI.queryCount *= 2;
 
-        HeapInfo.vkQueryPool = LogicalDevice.CreateQueryPool(QueryPoolCI, "QueryManagerVk: query pool");
-
-        if (vkCmdBuff != VK_NULL_HANDLE)
-        {
-            // After query pool creation, each query must be reset before it is used.
-            // Queries must also be reset between uses (17.2).
-            vkCmdResetQueryPool(vkCmdBuff, HeapInfo.vkQueryPool, 0, QueryPoolCI.queryCount);
-        }
-        else
-        {
-            LogicalDevice.ResetQueryPool(HeapInfo.vkQueryPool, 0, QueryPoolCI.queryCount);
-        }
-
-        HeapInfo.AvailableQueries.resize(HeapInfo.PoolSize);
-        for (Uint32 i = 0; i < HeapInfo.PoolSize; ++i)
-        {
-            HeapInfo.AvailableQueries[i] = i;
-        }
+        auto& PoolInfo = m_Pools[QueryType];
+        PoolInfo.Init(LogicalDevice, vkCmdBuff, QueryPoolCI, QueryType);
+        VERIFY_EXPR(!PoolInfo.IsNull() && PoolInfo.GetQueryCount() == QueryPoolCI.queryCount && PoolInfo.GetType() == QueryType);
     }
 
     if (vkCmdBuff != VK_NULL_HANDLE)
@@ -176,94 +253,35 @@ QueryManagerVk::~QueryManagerVk()
     QueryUsageSS << "Vulkan query manager peak usage:";
     for (Uint32 QueryType = QUERY_TYPE_UNDEFINED + 1; QueryType < QUERY_TYPE_NUM_TYPES; ++QueryType)
     {
-        auto& HeapInfo = m_Heaps[QueryType];
-        if (HeapInfo.PoolSize == 0)
+        auto& PoolInfo = m_Pools[QueryType];
+        if (PoolInfo.IsNull())
             continue;
 
-        auto OutstandingQueries = HeapInfo.PoolSize - (HeapInfo.AvailableQueries.size() + HeapInfo.StaleQueries.size());
-        if (OutstandingQueries != 0)
-        {
-            if (OutstandingQueries == 1)
-            {
-                LOG_ERROR_MESSAGE("One query of type ", GetQueryTypeString(static_cast<QUERY_TYPE>(QueryType)),
-                                  " has not been returned to the query manager");
-            }
-            else
-            {
-                LOG_ERROR_MESSAGE(OutstandingQueries, " queries of type ",
-                                  GetQueryTypeString(static_cast<QUERY_TYPE>(QueryType)),
-                                  " have not been returned to the query manager");
-            }
-        }
         QueryUsageSS << std::endl
                      << std::setw(30) << std::left << GetQueryTypeString(static_cast<QUERY_TYPE>(QueryType)) << ": "
-                     << std::setw(4) << std::right << HeapInfo.MaxAllocatedQueries
-                     << '/' << std::setw(4) << HeapInfo.PoolSize;
+                     << std::setw(4) << std::right << PoolInfo.GetMaxAllocatedQueries()
+                     << '/' << std::setw(4) << PoolInfo.GetQueryCount();
     }
     LOG_INFO_MESSAGE(QueryUsageSS.str());
 }
 
 Uint32 QueryManagerVk::AllocateQuery(QUERY_TYPE Type)
 {
-    std::lock_guard<std::mutex> Lock(m_HeapMutex);
-
-    Uint32 Index            = InvalidIndex;
-    auto&  HeapInfo         = m_Heaps[Type];
-    auto&  AvailableQueries = HeapInfo.AvailableQueries;
-    if (!AvailableQueries.empty())
-    {
-        Index = HeapInfo.AvailableQueries.back();
-        AvailableQueries.pop_back();
-        HeapInfo.MaxAllocatedQueries = std::max(HeapInfo.MaxAllocatedQueries, HeapInfo.PoolSize - static_cast<Uint32>(AvailableQueries.size()));
-    }
-
-    return Index;
+    return m_Pools[Type].Allocate();
 }
 
 void QueryManagerVk::DiscardQuery(QUERY_TYPE Type, Uint32 Index)
 {
-    std::lock_guard<std::mutex> Lock(m_HeapMutex);
-
-    auto& HeapInfo = m_Heaps[Type];
-    VERIFY(Index < HeapInfo.PoolSize, "Query index ", Index, " is out of range");
-    VERIFY(HeapInfo.vkQueryPool != VK_NULL_HANDLE, "Query pool is not initialized");
-#ifdef DILIGENT_DEBUG
-    for (const auto& ind : HeapInfo.AvailableQueries)
-    {
-        VERIFY(ind != Index, "Index ", Index, " already present in available queries list");
-    }
-    for (const auto& ind : HeapInfo.StaleQueries)
-    {
-        VERIFY(ind != Index, "Index ", Index, " already present in stale queries list");
-    }
-#endif
-    HeapInfo.StaleQueries.push_back(Index);
+    m_Pools[Type].Discard(Index);
 }
 
 Uint32 QueryManagerVk::ResetStaleQueries(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice, VulkanUtilities::VulkanCommandBuffer& CmdBuff)
 {
-    std::lock_guard<std::mutex> Lock(m_HeapMutex);
-
-    const bool HostQueryReset = SupportsHostQueryReset(LogicalDevice);
-
     Uint32 NumQueriesReset = 0;
-    for (auto& HeapInfo : m_Heaps)
+    for (auto& PoolInfo : m_Pools)
     {
-        VERIFY(HeapInfo.StaleQueries.empty() || HeapInfo.vkQueryPool != VK_NULL_HANDLE, "Query pool is not initialized");
-
-        for (auto& StaleQuery : HeapInfo.StaleQueries)
-        {
-            if (HostQueryReset)
-                LogicalDevice.ResetQueryPool(HeapInfo.vkQueryPool, StaleQuery, 1);
-            else
-                CmdBuff.ResetQueryPool(HeapInfo.vkQueryPool, StaleQuery, 1);
-
-            HeapInfo.AvailableQueries.push_back(StaleQuery);
-            ++NumQueriesReset;
-        }
-        HeapInfo.StaleQueries.clear();
+        NumQueriesReset += PoolInfo.ResetStaleQueries(LogicalDevice, CmdBuff);
     }
-
     return NumQueriesReset;
 }
 

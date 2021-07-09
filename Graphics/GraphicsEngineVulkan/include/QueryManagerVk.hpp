@@ -62,9 +62,9 @@ public:
     Uint32 AllocateQuery(QUERY_TYPE Type);
     void   DiscardQuery(QUERY_TYPE Type, Uint32 Index);
 
-    VkQueryPool GetQueryPool(QUERY_TYPE Type)
+    VkQueryPool GetQueryPool(QUERY_TYPE Type) const
     {
-        return m_Heaps[Type].vkQueryPool;
+        return m_Pools[Type].GetVkQueryPool();
     }
 
     Uint64 GetCounterFrequency() const
@@ -76,19 +76,54 @@ public:
                              VulkanUtilities::VulkanCommandBuffer&       CmdBuff);
 
 private:
-    struct QueryHeapInfo
+    class QueryPoolInfo
     {
-        VulkanUtilities::QueryPoolWrapper vkQueryPool;
+    public:
+        void Init(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice,
+                  VkCommandBuffer                             vkCmdBuff,
+                  const VkQueryPoolCreateInfo&                QueryPoolCI,
+                  QUERY_TYPE                                  Type);
 
-        std::vector<Uint32> AvailableQueries;
-        std::vector<Uint32> StaleQueries;
+        ~QueryPoolInfo();
 
-        Uint32 PoolSize            = 0;
-        Uint32 MaxAllocatedQueries = 0;
+        Uint32 Allocate();
+        void   Discard(Uint32 Index);
+        Uint32 ResetStaleQueries(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice, VulkanUtilities::VulkanCommandBuffer& CmdBuff);
+
+        QUERY_TYPE GetType() const
+        {
+            return m_Type;
+        }
+        Uint32 GetQueryCount() const
+        {
+            return m_QueryCount;
+        }
+        VkQueryPool GetVkQueryPool() const
+        {
+            return m_vkQueryPool;
+        }
+        Uint32 GetMaxAllocatedQueries() const
+        {
+            return m_MaxAllocatedQueries;
+        }
+        bool IsNull() const
+        {
+            return m_vkQueryPool == VK_NULL_HANDLE;
+        }
+
+    private:
+        VulkanUtilities::QueryPoolWrapper m_vkQueryPool;
+
+        QUERY_TYPE m_Type                = QUERY_TYPE_UNDEFINED;
+        Uint32     m_QueryCount          = 0;
+        Uint32     m_MaxAllocatedQueries = 0;
+
+        std::mutex          m_QueriesMtx;
+        std::vector<Uint32> m_AvailableQueries;
+        std::vector<Uint32> m_StaleQueries;
     };
 
-    std::mutex                                      m_HeapMutex;
-    std::array<QueryHeapInfo, QUERY_TYPE_NUM_TYPES> m_Heaps;
+    std::array<QueryPoolInfo, QUERY_TYPE_NUM_TYPES> m_Pools;
 
     Uint64 m_CounterFrequency = 0;
 };
