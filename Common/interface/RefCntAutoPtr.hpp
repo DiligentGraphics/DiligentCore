@@ -406,6 +406,12 @@ public:
         return m_pObject != nullptr && m_pRefCounters != nullptr && m_pRefCounters->GetNumStrongRefs() > 0;
     }
 
+    /// Returns a raw pointer to the managed object.
+    /// \note The object may or may not be alive.
+    ///       Use Lock() to atomically obtain a strong reference.
+    T*       UnsafeRawPtr() noexcept { return m_pObject; }
+    const T* UnsafeRawPtr() const noexcept { return m_pObject; }
+
     /// Obtains a strong reference to the object
     RefCntAutoPtr<T> Lock()
     {
