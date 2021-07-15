@@ -54,6 +54,9 @@ void DynamicBuffer::CommitResize(IRenderDevice*  pDevice,
         pDevice->CreateBuffer(m_Desc, nullptr, &m_pBuffer);
         VERIFY_EXPR(m_pBuffer);
         ++m_Version;
+
+        LOG_INFO_MESSAGE("Dynamic buffer: expanding dynamic buffer '", m_Desc.Name,
+                         "' to ", FormatMemorySize(m_Desc.uiSizeInBytes, 1), ". Version: ", GetVersion());
     }
 
     if (m_pStaleBuffer && m_pBuffer && pContext != nullptr)
