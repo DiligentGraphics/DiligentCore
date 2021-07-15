@@ -43,7 +43,11 @@ if((PLATFORM_WIN32 AND NOT MINGW_BUILD) OR PLATFORM_UNIVERSAL_WINDOWS OR PLATFOR
     set(DXC_SUPPORTED TRUE)
 endif()
 
-if (DXC_SUPPORTED)
+if(NOT DILIGENT_NO_DIRECT3D11 OR NOT DILIGENT_NO_DIRECT3D12)
+  set(DXC_NEEDED TRUE)
+endif()
+
+if (DXC_SUPPORTED AND DXC_NEEDED)
     list(APPEND INCLUDE include/DXCompiler.hpp)
     list(APPEND SOURCE src/DXCompiler.cpp)
 
@@ -105,7 +109,7 @@ PRIVATE
     ../GraphicsEngine/include
 )
 
-if (DXC_SUPPORTED)
+if (DXC_SUPPORTED AND DXC_NEEDED)
     target_include_directories(Diligent-ShaderTools PUBLIC ../../ThirdParty/DirectXShaderCompiler)
 
     if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")

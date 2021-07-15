@@ -35,7 +35,6 @@
 #include "RenderDeviceVkImpl.hpp"
 #include "DataBlobImpl.hpp"
 #include "GLSLUtils.hpp"
-#include "DXCompiler.hpp"
 #include "ShaderToolsCommon.hpp"
 
 #if !DILIGENT_NO_GLSLANG
