@@ -100,4 +100,11 @@ void FormatStrSS(SSType& ss, const MemorySizeFormatter<Type>& Arg)
     }
 }
 
+template <typename StreamType, typename Type>
+StreamType& operator<<(StreamType& Stream, const MemorySizeFormatter<Type>& Arg)
+{
+    FormatStrSS(Stream, Arg);
+    return Stream;
+}
+
 } // namespace Diligent
