@@ -39,6 +39,7 @@ else()
     set(DILIGENT_CORE_PRO_EXISTS FALSE)
 endif()
 
+option(ENABLE_RTTI "Enables RTTI" OFF)
 
 set(PLATFORM_WIN32 FALSE CACHE INTERNAL "")
 set(PLATFORM_UNIVERSAL_WINDOWS FALSE CACHE INTERNAL "")
@@ -274,9 +275,17 @@ if(MSVC)
     # - w4505 - unreferenced local function has been removed
     # - w4201 - nonstandard extension used: nameless struct/union
     target_compile_options(Diligent-BuildSettings INTERFACE /W4 /WX /wd4100 /wd4505 /wd4201 /MP)
+    if(NOT ENABLE_RTTI)
+        string(FIND "${CMAKE_CXX_FLAGS}" "/GR" MSVC_HAS_GR)
+        if(MSVC_HAS_GR)
+            string(REGEX REPLACE "/GR" "/GR-" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+	        message("GR set to -")
+        else(MSVC_HAS_GR)
+            add_compile_options(/GR-) # Disable RTTI
+        endif(MSVC_HAS_GR)
+    endif(NOT ENABLE_RTTI)
     # In all release modes also:
     # - disable w4189 - local variable is initialized but not referenced
-    # - Disable RTTI (/GR-)
     # - Enable whole program optimization (/GL)
     # - Enable string pooling (/GF)
     set(MSVC_ALL_RELEASE_COMPILE_OPTIONS /wd4189 /GR- /GL /GF)
@@ -298,6 +307,9 @@ if(MSVC)
     # target_compile_options(Diligent-BuildSettings INTERFACE "$<$<CONFIG:RELEASE>:/Ot>")
     # does not work as expected
 else()
+    if(NOT ENABLE_RTTI)
+        add_compile_options(-fno-rtti)
+    endif(NOT ENABLE_RTTI)
     # Todo: use __attribute__((always_inline)), but it needs to be defined in a header file
     target_compile_definitions(Diligent-BuildSettings INTERFACE __forceinline=inline)
 endif(MSVC)
