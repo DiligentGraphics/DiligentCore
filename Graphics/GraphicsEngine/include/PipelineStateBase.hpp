@@ -344,7 +344,7 @@ public:
     {
         if (!m_UsingImplicitSignature)
         {
-            LOG_ERROR_MESSAGE("IPipelineState::CreateShaderResourceBinding is not allowed for pipelines that use explicit "
+            LOG_ERROR_MESSAGE("IPipelineState::GetStaticVariableByName is not allowed for pipelines that use explicit "
                               "resource signatures. Use IPipelineResourceSignature::GetStaticVariableByName instead.");
             return nullptr;
         }
