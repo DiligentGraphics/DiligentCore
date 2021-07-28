@@ -72,7 +72,7 @@ static std::vector<wchar_t> UTF8ToUTF16(LPCSTR lpUTF8)
 }
 
 WindowsFile::WindowsFile(const FileOpenAttribs& OpenAttribs) :
-    StandardFile(OpenAttribs, WindowsFileSystem::GetSlashSymbol())
+    StandardFile{OpenAttribs, WindowsFileSystem::GetSlashSymbol()}
 {
     VERIFY_EXPR(m_pFile == nullptr);
     auto OpenModeStr = WidenString(GetOpenModeStr());
@@ -362,21 +362,38 @@ std::string GetCurrentDirectoryImpl()
     return CurrDir;
 }
 
-bool WindowsFileSystem::GetRelativePath(const Diligent::Char* strPathFrom,
+bool WindowsFileSystem::GetRelativePath(const Diligent::Char* _strPathFrom,
                                         bool                  IsFromDirectory,
-                                        const Diligent::Char* strPathTo,
+                                        const Diligent::Char* _strPathTo,
                                         bool                  IsToDirectory,
                                         std::string&          RelativePath)
 {
-    VERIFY_EXPR(strPathTo != nullptr);
+    VERIFY(_strPathTo != nullptr, "Destination path must not be null");
+
+    const auto SlashSym = WindowsFileSystem::GetSlashSymbol();
+
+    std::string PathFrom;
+    if (_strPathFrom != nullptr)
+    {
+        PathFrom = _strPathFrom;
+        WindowsFileSystem::CorrectSlashes(PathFrom, SlashSym);
+    }
+    else
+    {
+        PathFrom        = GetCurrentDirectoryImpl();
+        IsFromDirectory = true;
+    }
+
+    std::string PathTo{_strPathTo};
+    WindowsFileSystem::CorrectSlashes(PathTo, SlashSym);
 
     // https://docs.microsoft.com/en-us/windows/win32/api/shlwapi/nf-shlwapi-pathrelativepathtoa
     char strRelativePath[MAX_PATH];
 
     auto Res = PathRelativePathToA(strRelativePath,
-                                   strPathFrom != nullptr ? strPathFrom : GetCurrentDirectoryImpl().c_str(),
-                                   (strPathFrom == nullptr || IsFromDirectory) ? FILE_ATTRIBUTE_DIRECTORY : FILE_ATTRIBUTE_NORMAL,
-                                   strPathTo,
+                                   PathFrom.c_str(),
+                                   IsFromDirectory ? FILE_ATTRIBUTE_DIRECTORY : FILE_ATTRIBUTE_NORMAL,
+                                   PathTo.c_str(),
                                    IsToDirectory ? FILE_ATTRIBUTE_DIRECTORY : FILE_ATTRIBUTE_NORMAL);
 
     if (Res != FALSE)
@@ -385,7 +402,7 @@ bool WindowsFileSystem::GetRelativePath(const Diligent::Char* strPathFrom,
     }
     else
     {
-        RelativePath = strPathFrom;
+        RelativePath = std::move(PathTo);
     }
 
     return Res != FALSE;
