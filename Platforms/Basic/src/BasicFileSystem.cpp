@@ -141,3 +141,56 @@ bool BasicFileSystem::IsPathAbsolute(const Diligent::Char* strPath)
 #    error Unknown platform.
 #endif
 }
+
+std::string BasicFileSystem::SimplifyPath(const Diligent::Char* Path, Diligent::Char SlashSymbol)
+{
+    if (Path == nullptr)
+        return "";
+
+    auto IsSlash = [](const Diligent::Char c) {
+        return c == '/' || c == '\\';
+    };
+
+    std::vector<std::string> PathComponents;
+
+    const auto* c = Path;
+    while (*c != '\0')
+    {
+        while (*c != '\0' && IsSlash(*c))
+            ++c;
+
+        if (*c == '\0')
+        {
+            // a/
+            break;
+        }
+
+        std::string PathCmp;
+        while (*c != '\0' && !IsSlash(*c))
+            PathCmp.push_back(*(c++));
+
+        if (PathCmp == ".")
+        {
+            // Skip /.
+            continue;
+        }
+        else if (PathCmp == ".." && !PathComponents.empty() && PathComponents.back() != "..")
+        {
+            // Pop previous subdirectory if /.. is found, but only if there is no .. already
+            PathComponents.pop_back();
+        }
+        else
+        {
+            PathComponents.emplace_back(std::move(PathCmp));
+        }
+    }
+
+    std::string SimplifiedPath;
+    for (const auto& Cmp : PathComponents)
+    {
+        if (!SimplifiedPath.empty())
+            SimplifiedPath.push_back(SlashSymbol);
+        SimplifiedPath.append(Cmp);
+    }
+    return SimplifiedPath;
+}

@@ -103,6 +103,17 @@ public:
 
     static bool IsPathAbsolute(const Diligent::Char* strPath);
 
+
+    /// Simplifies the path.
+
+    /// The function performs the following path simplifications:
+    /// - Normalizes slashes using the given slash symbol (a\b/c -> a/b/c)
+    /// - Removes redundant slashes (a///b -> a/b)
+    /// - Removes redundant . (a/./b -> a/b)
+    /// - Collapses .. (a/b/../c -> a/c)
+    /// - Removes leading and trailing slashes (/a/b/c/ -> a/b/c)
+    static std::string SimplifyPath(const Diligent::Char* Path, Diligent::Char SlashSymbol);
+
 protected:
     static Diligent::String m_strWorkingDirectory;
 };
