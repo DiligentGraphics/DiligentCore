@@ -45,11 +45,17 @@ TEST(GraphicsAccessories_VariableSizeGPUAllocationsManager, AllocateFree)
     {
         VariableSizeAllocationsManager ListMgr(128, Allocator);
         EXPECT_EQ(ListMgr.GetNumFreeBlocks(), size_t{1});
+        EXPECT_EQ(ListMgr.GetFreeSize(), size_t{128});
+        EXPECT_EQ(ListMgr.GetUsedSize(), size_t{0});
+        EXPECT_EQ(ListMgr.GetMaxFreeBlockSize(), size_t{128});
 
         auto a1 = ListMgr.Allocate(17, 4);
         EXPECT_EQ(a1.UnalignedOffset, OffsetType{0});
         EXPECT_EQ(a1.Size, OffsetType{20});
         EXPECT_EQ(ListMgr.GetNumFreeBlocks(), size_t{1});
+        EXPECT_EQ(ListMgr.GetFreeSize(), size_t{128 - 20});
+        EXPECT_EQ(ListMgr.GetUsedSize(), size_t{20});
+        EXPECT_EQ(ListMgr.GetMaxFreeBlockSize(), size_t{128 - 20});
 
         auto a2 = ListMgr.Allocate(17, 8);
         EXPECT_EQ(a2.UnalignedOffset, OffsetType{20});
@@ -99,6 +105,7 @@ TEST(GraphicsAccessories_VariableSizeGPUAllocationsManager, AllocateFree)
 
         ListMgr.Free(std::move(a9));
         EXPECT_EQ(ListMgr.GetNumFreeBlocks(), OffsetType{2});
+        EXPECT_EQ(ListMgr.GetMaxFreeBlockSize(), size_t{16});
 
         auto a10 = ListMgr.Allocate(16, 1);
         EXPECT_EQ(a10.UnalignedOffset, OffsetType{112});

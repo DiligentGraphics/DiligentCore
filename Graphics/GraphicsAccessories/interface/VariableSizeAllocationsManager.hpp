@@ -364,6 +364,11 @@ public:
         return m_FreeBlocksByOffset.size();
     }
 
+    OffsetType GetMaxFreeBlockSize() const
+    {
+        return !m_FreeBlocksBySize.empty() ? m_FreeBlocksBySize.rbegin()->first : 0;
+    }
+
     void Extend(size_t ExtraSize)
     {
         size_t NewBlockOffset = m_MaxSize;

@@ -78,6 +78,19 @@ struct IBufferSuballocation : public IObject
 };
 
 
+/// Buffer suballocator usage stats.
+struct BufferSuballocatorUsageStats
+{
+    /// The size of the internal buffer, in bytes.
+    Uint32 Size = 0;
+
+    /// The total used size, in bytes.
+    Uint32 UsedSize = 0;
+
+    /// The maximum size of the continuous free chunk in the buffer, in bytes.
+    Uint32 MaxFreeChunkSize = 0;
+};
+
 /// Buffer suballocator.
 struct IBufferSuballocator : public IObject
 {
@@ -108,11 +121,8 @@ struct IBufferSuballocator : public IObject
                           IBufferSuballocation** ppSuballocation) = 0;
 
 
-    /// Returns the total remaining free size.
-
-    /// \note   Due to fragmentation, total free size may be split between
-    ///         multiple free chunks.
-    virtual Uint32 GetFreeSize() = 0;
+    /// Returns the suballocator usage stats, see Diligent::BufferSuballocatorUsageStats.
+    virtual void GetUsageStats(BufferSuballocatorUsageStats& UsageStats) = 0;
 
 
     /// Returns internal buffer version. The version is incremented every time

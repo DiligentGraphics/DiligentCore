@@ -210,10 +210,12 @@ public:
         return m_Buffer.GetVersion();
     }
 
-    virtual Uint32 GetFreeSize() override final
+    virtual void GetUsageStats(BufferSuballocatorUsageStats& UsageStats) override final
     {
         std::lock_guard<std::mutex> Lock{m_MgrMtx};
-        return static_cast<Uint32>(m_Mgr.GetFreeSize());
+        UsageStats.Size             = static_cast<Uint32>(m_Mgr.GetMaxSize());
+        UsageStats.UsedSize         = static_cast<Uint32>(m_Mgr.GetUsedSize());
+        UsageStats.MaxFreeChunkSize = static_cast<Uint32>(m_Mgr.GetMaxFreeBlockSize());
     }
 
 private:
