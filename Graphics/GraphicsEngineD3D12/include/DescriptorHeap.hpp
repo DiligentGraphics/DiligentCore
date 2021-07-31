@@ -318,9 +318,9 @@ public:
     // clang-format on
 
 #ifdef DILIGENT_DEVELOPMENT
-    int32_t DvpGetAllocationsCounter() const
+    Int32 DvpGetAllocationsCounter() const
     {
-        return m_AllocationsCounter;
+        return m_AllocationsCounter.load();
     }
 #endif
 
@@ -357,7 +357,7 @@ private:
     size_t m_MaxAllocatedSize = 0;
 
 #ifdef DILIGENT_DEVELOPMENT
-    std::atomic_int32_t m_AllocationsCounter = 0;
+    std::atomic<Int32> m_AllocationsCounter = 0;
     // This descriptor heap is only used to copy invalid descriptors to
     // a new allocated region. Using these descriptors will result in device
     // removal. Note that using null descriptors is perfectly valid in D3D12

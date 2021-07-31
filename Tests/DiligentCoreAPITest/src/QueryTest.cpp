@@ -565,7 +565,7 @@ TEST_F(QueryTest, DeferredContexts)
         std::vector<RefCntAutoPtr<ICommandList>> CmdLists(NumDefferedCtx);
         std::vector<ICommandList*>               CmdListPtrs(NumDefferedCtx);
 
-        std::atomic_uint32_t   NumCmdListsReady{0};
+        std::atomic<Uint32>    NumCmdListsReady{0};
         ThreadingTools::Signal FinishFrameSignal;
         ThreadingTools::Signal ExecuteCommandListsSignal;
         for (Uint32 i = 0; i < NumDefferedCtx; ++i)

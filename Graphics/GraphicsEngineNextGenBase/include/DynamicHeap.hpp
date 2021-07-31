@@ -175,9 +175,9 @@ public:
     // clang-format on
 
 #ifdef DILIGENT_DEVELOPMENT
-    int32_t GetMasterBlockCounter() const
+    Int32 GetMasterBlockCounter() const
     {
-        return m_MasterBlockCounter;
+        return m_MasterBlockCounter.load();
     }
 #endif
 
@@ -200,7 +200,7 @@ private:
     VariableSizeAllocationsManager m_AllocationsMgr;
 
 #ifdef DILIGENT_DEVELOPMENT
-    std::atomic_int32_t m_MasterBlockCounter;
+    std::atomic<Int32> m_MasterBlockCounter;
 #endif
 };
 

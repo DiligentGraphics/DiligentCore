@@ -172,7 +172,7 @@ private:
     RefCntAutoPtr<FenceVkImpl> m_pFence;
 
     // A value that will be signaled by the command queue next
-    std::atomic_uint64_t m_NextFenceValue{1};
+    std::atomic<Uint64> m_NextFenceValue{1};
 
     // Protects access to the m_VkQueue internal data.
     std::mutex m_QueueMutex;

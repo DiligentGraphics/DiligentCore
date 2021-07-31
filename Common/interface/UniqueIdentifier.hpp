@@ -66,7 +66,7 @@ public:
     {
         if (m_ID == 0)
         {
-            static std::atomic_int32_t GlobalCounter{0};
+            static std::atomic<UniqueIdentifier> GlobalCounter{0};
             m_ID = GlobalCounter.fetch_add(1) + 1;
         }
         return m_ID;

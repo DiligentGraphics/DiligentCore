@@ -81,10 +81,10 @@ private:
 
     const D3D12_COMMAND_LIST_TYPE m_CmdListType;
 
-    std::atomic_int32_t m_NumAllocators{0}; // For logging only
+    std::atomic<Int32> m_NumAllocators{0}; // For logging only
 
 #ifdef DILIGENT_DEVELOPMENT
-    std::atomic_int32_t m_AllocatorCounter{0};
+    std::atomic<Int32> m_AllocatorCounter{0};
 #endif
 };
 

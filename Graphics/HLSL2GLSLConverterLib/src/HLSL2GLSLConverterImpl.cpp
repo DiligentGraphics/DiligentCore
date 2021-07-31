@@ -1771,7 +1771,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ParseSamplers(TokenListType::iter
         else
             ++Token;
     }
-    VERIFY_PARSER_STATE(Token, ScopeDepth == 1 && Token == m_Tokens.end() || ScopeDepth == 0, "Error parsing scope");
+    VERIFY_PARSER_STATE(Token, (ScopeDepth == 1 && Token == m_Tokens.end()) || ScopeDepth == 0, "Error parsing scope");
 }
 
 void ParseImageFormat(const String& Comment, String& ImageFormat)
@@ -3065,6 +3065,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessFunctionParameters(TokenLi
                     // ^
                     ParamInfo.GSAttribs.PrimType = ShaderParameterInfo::GSAttributes::PrimitiveType::TriangleAdj;
                     ++Token;
+                    break;
 
                 case TokenType::kw_TriangleStream:
                 case TokenType::kw_PointStream:

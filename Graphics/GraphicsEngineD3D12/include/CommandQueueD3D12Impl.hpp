@@ -80,10 +80,10 @@ public:
 
 private:
     // A value that will be signaled by the command queue next
-    std::atomic_uint64_t m_NextFenceValue{1};
+    std::atomic<Uint64> m_NextFenceValue{1};
 
     // Last fence value completed by the GPU
-    std::atomic_uint64_t m_LastCompletedFenceValue{0};
+    std::atomic<Uint64> m_LastCompletedFenceValue{0};
 
     std::mutex                  m_QueueMtx;
     CComPtr<ID3D12CommandQueue> m_pd3d12CmdQueue;

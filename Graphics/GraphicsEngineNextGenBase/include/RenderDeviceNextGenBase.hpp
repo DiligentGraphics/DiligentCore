@@ -314,7 +314,7 @@ protected:
         // clang-format on
 
         std::mutex                                        Mtx; // Protects access to the CmdQueue.
-        std::atomic_uint64_t                              NextCmdBufferNumber{0};
+        std::atomic<Uint64>                               NextCmdBufferNumber{0};
         RefCntAutoPtr<CommandQueueType>                   CmdQueue;
         ResourceReleaseQueue<DynamicStaleResourceWrapper> ReleaseQueue;
     };

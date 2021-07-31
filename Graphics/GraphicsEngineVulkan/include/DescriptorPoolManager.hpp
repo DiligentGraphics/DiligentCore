@@ -154,9 +154,9 @@ public:
     RenderDeviceVkImpl& GetDeviceVkImpl() { return m_DeviceVkImpl; }
 
 #ifdef DILIGENT_DEVELOPMENT
-    int32_t GetAllocatedPoolCounter() const
+    Int32 GetAllocatedPoolCounter() const
     {
-        return m_AllocatedPoolCounter;
+        return m_AllocatedPoolCounter.load();
     }
 #endif
 
@@ -177,7 +177,7 @@ private:
     void FreePool(VulkanUtilities::DescriptorPoolWrapper&& Pool);
 
 #ifdef DILIGENT_DEVELOPMENT
-    std::atomic_int32_t m_AllocatedPoolCounter;
+    std::atomic<Int32> m_AllocatedPoolCounter;
 #endif
 };
 
@@ -214,9 +214,9 @@ public:
     DescriptorSetAllocation Allocate(Uint64 CommandQueueMask, VkDescriptorSetLayout SetLayout, const char* DebugName = "");
 
 #ifdef DILIGENT_DEVELOPMENT
-    int32_t GetAllocatedDescriptorSetCounter() const
+    Int32 GetAllocatedDescriptorSetCounter() const
     {
-        return m_AllocatedSetCounter;
+        return m_AllocatedSetCounter.load();
     }
 #endif
 
@@ -224,7 +224,7 @@ private:
     void FreeDescriptorSet(VkDescriptorSet Set, VkDescriptorPool Pool, Uint64 QueueMask);
 
 #ifdef DILIGENT_DEVELOPMENT
-    std::atomic_int32_t m_AllocatedSetCounter;
+    std::atomic<Int32> m_AllocatedSetCounter;
 #endif
 };
 

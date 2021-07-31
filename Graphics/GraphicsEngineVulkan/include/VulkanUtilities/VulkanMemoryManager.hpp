@@ -175,12 +175,12 @@ public:
         m_PhysicalDevice  {rhs.m_PhysicalDevice    },
         m_Allocator       {rhs.m_Allocator         },
         m_Pages           {std::move(rhs.m_Pages)  },
-    
+
         m_DeviceLocalPageSize    {rhs.m_DeviceLocalPageSize   },
         m_HostVisiblePageSize    {rhs.m_HostVisiblePageSize   },
         m_DeviceLocalReserveSize {rhs.m_DeviceLocalReserveSize},
         m_HostVisibleReserveSize {rhs.m_HostVisibleReserveSize},
-    
+
         //m_CurrUsedSize      {rhs.m_CurrUsedSize},
         m_PeakUsedSize      {rhs.m_PeakUsedSize     },
         m_CurrAllocatedSize {rhs.m_CurrAllocatedSize},
@@ -258,10 +258,10 @@ protected:
     void OnFreeAllocation(VkDeviceSize Size, bool IsHostVisble);
 
     // 0 == Device local, 1 == Host-visible
-    std::array<std::atomic_int64_t, 2> m_CurrUsedSize      = {};
-    std::array<VkDeviceSize, 2>        m_PeakUsedSize      = {};
-    std::array<VkDeviceSize, 2>        m_CurrAllocatedSize = {};
-    std::array<VkDeviceSize, 2>        m_PeakAllocatedSize = {};
+    std::array<std::atomic<int64_t>, 2> m_CurrUsedSize      = {};
+    std::array<VkDeviceSize, 2>         m_PeakUsedSize      = {};
+    std::array<VkDeviceSize, 2>         m_CurrAllocatedSize = {};
+    std::array<VkDeviceSize, 2>         m_PeakAllocatedSize = {};
 
     // If adding new member, do not forget to update move ctor
 };

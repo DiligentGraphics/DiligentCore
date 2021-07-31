@@ -60,6 +60,8 @@ public:
     {
     }
 
+    virtual ~EngineFactoryBase() = default;
+
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final
     {
         if (ppInterface == nullptr)

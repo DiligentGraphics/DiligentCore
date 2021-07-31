@@ -142,9 +142,9 @@ public:
     D3D12DynamicPage AllocatePage(Uint64 SizeInBytes);
 
 #ifdef DILIGENT_DEVELOPMENT
-    int32_t GetAllocatedPageCounter() const
+    Int32 GetAllocatedPageCounter() const
     {
-        return m_AllocatedPageCounter;
+        return m_AllocatedPageCounter.load();
     }
 #endif
 
@@ -156,7 +156,7 @@ private:
     std::multimap<Uint64, D3D12DynamicPage, std::less<Uint64>, STDAllocatorRawMem<AvailablePagesMapElemType>> m_AvailablePages;
 
 #ifdef DILIGENT_DEVELOPMENT
-    std::atomic_int32_t m_AllocatedPageCounter = 0;
+    std::atomic<Int32> m_AllocatedPageCounter = 0;
 #endif
 };
 

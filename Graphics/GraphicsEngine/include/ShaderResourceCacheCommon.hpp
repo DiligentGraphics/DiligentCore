@@ -66,7 +66,7 @@ protected:
     }
 
 #ifdef DILIGENT_DEVELOPMENT
-    std::atomic_uint32_t m_DvpRevision{0};
+    std::atomic<uint32_t> m_DvpRevision{0};
 #endif
 };
 

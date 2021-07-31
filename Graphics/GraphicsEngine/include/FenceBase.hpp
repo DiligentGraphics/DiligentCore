@@ -102,7 +102,7 @@ public:
     }
 
 protected:
-    void UpdateLastCompletedFenceValue(uint64_t NewValue)
+    void UpdateLastCompletedFenceValue(Uint64 NewValue)
     {
         auto LastCompletedValue = m_LastCompletedFenceValue.load();
         while (!m_LastCompletedFenceValue.compare_exchange_weak(LastCompletedValue, std::max(LastCompletedValue, NewValue)))
@@ -111,10 +111,10 @@ protected:
         }
     }
 
-    std::atomic_uint64_t m_LastCompletedFenceValue{0};
+    std::atomic<Uint64> m_LastCompletedFenceValue{0};
 
 #ifdef DILIGENT_DEVELOPMENT
-    std::atomic_uint64_t m_EnqueuedFenceValue{0};
+    std::atomic<Uint64> m_EnqueuedFenceValue{0};
 #endif
 };
 
