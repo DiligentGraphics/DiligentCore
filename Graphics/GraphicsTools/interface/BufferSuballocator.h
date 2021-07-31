@@ -89,6 +89,9 @@ struct BufferSuballocatorUsageStats
 
     /// The maximum size of the continuous free chunk in the buffer, in bytes.
     Uint32 MaxFreeChunkSize = 0;
+
+    /// The current number of allocations.
+    Uint32 AllocationCount = 0;
 };
 
 /// Buffer suballocator.

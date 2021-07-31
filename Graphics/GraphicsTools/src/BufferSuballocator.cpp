@@ -28,6 +28,7 @@
 #include "BufferSuballocator.h"
 
 #include <mutex>
+#include <atomic>
 
 #include "DebugUtilities.hpp"
 #include "ObjectBase.hpp"
@@ -137,6 +138,11 @@ public:
     // clang-format on
     {}
 
+    ~BufferSuballocatorImpl()
+    {
+        VERIFY_EXPR(m_AllocationCount.load() == 0);
+    }
+
     virtual IBuffer* GetBuffer(IRenderDevice* pDevice, IDeviceContext* pContext) override final
     {
         Uint32 Size = 0;
@@ -197,12 +203,14 @@ public:
         // clang-format on
 
         pSuballocation->QueryInterface(IID_BufferSuballocation, reinterpret_cast<IObject**>(ppSuballocation));
+        m_AllocationCount.fetch_add(1);
     }
 
     void Free(VariableSizeAllocationsManager::Allocation&& Subregion)
     {
         std::lock_guard<std::mutex> Lock{m_MgrMtx};
         m_Mgr.Free(std::move(Subregion));
+        m_AllocationCount.fetch_add(-1);
     }
 
     virtual Uint32 GetVersion() const override final
@@ -216,6 +224,7 @@ public:
         UsageStats.Size             = static_cast<Uint32>(m_Mgr.GetMaxSize());
         UsageStats.UsedSize         = static_cast<Uint32>(m_Mgr.GetUsedSize());
         UsageStats.MaxFreeChunkSize = static_cast<Uint32>(m_Mgr.GetMaxFreeBlockSize());
+        UsageStats.AllocationCount  = m_AllocationCount.load();
     }
 
 private:
@@ -225,6 +234,8 @@ private:
     DynamicBuffer m_Buffer;
 
     const Uint32 m_ExpansionSize;
+
+    std::atomic<Int32> m_AllocationCount{0};
 
     FixedBlockMemoryAllocator m_SuballocationsAllocator;
 };
