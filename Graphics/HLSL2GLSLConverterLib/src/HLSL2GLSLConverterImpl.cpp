@@ -3065,6 +3065,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessFunctionParameters(TokenLi
                     // ^
                     ParamInfo.GSAttribs.PrimType = ShaderParameterInfo::GSAttributes::PrimitiveType::TriangleAdj;
                     ++Token;
+                    break;
 
                 case TokenType::kw_TriangleStream:
                 case TokenType::kw_PointStream:
