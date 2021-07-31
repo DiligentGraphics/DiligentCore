@@ -185,6 +185,13 @@ public:
         m_Version.store(0);
     }
 
+    ~DynamicTextureAtlasImpl()
+    {
+        VERIFY_EXPR(m_AllocatedArea.load() == 0);
+        VERIFY_EXPR(m_UsedArea.load() == 0);
+        VERIFY_EXPR(m_AllocationCount.load() == 0);
+    }
+
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_DynamicTextureAtlas, TBase)
 
     virtual ITexture* GetTexture(IRenderDevice* pDevice, IDeviceContext* pContext) override final
@@ -291,6 +298,10 @@ public:
             return;
         }
 
+        m_AllocatedArea.fetch_add(Int64{Width} * Int64{Height});
+        m_UsedArea.fetch_add(Int64{Subregion.width * m_Granularity} * Int64{Subregion.height * m_Granularity});
+        m_AllocationCount.fetch_add(1);
+
         // clang-format off
         TextureAtlasSuballocationImpl* pSuballocation{
             NEW_RC_OBJ(m_SuballocationsAllocator, "TextureAtlasSuballocationImpl instance", TextureAtlasSuballocationImpl)
@@ -306,8 +317,12 @@ public:
         pSuballocation->QueryInterface(IID_TextureAtlasSuballocation, reinterpret_cast<IObject**>(ppSuballocation));
     }
 
-    virtual void Free(Uint32 Slice, DynamicAtlasManager::Region&& Subregion)
+    virtual void Free(Uint32 Slice, DynamicAtlasManager::Region&& Subregion, Uint32 Width, Uint32 Height)
     {
+        m_AllocatedArea.fetch_add(-Int64{Width} * Int64{Height});
+        m_UsedArea.fetch_add(-Int64{Subregion.width * m_Granularity} * Int64{Subregion.height * m_Granularity});
+        m_AllocationCount.fetch_add(-1);
+
         SliceManager* pSliceMgr = nullptr;
         {
             std::lock_guard<std::mutex> Lock{m_SlicesMtx};
@@ -324,6 +339,20 @@ public:
     virtual Uint32 GetVersion() const override final
     {
         return m_Version.load();
+    }
+
+    void GetUsageStats(DynamicTextureAtlasUsageStats& Stats) const override final
+    {
+        Stats.Size = 0;
+        for (Uint32 mip = 0; mip < m_Desc.MipLevels; ++mip)
+            Stats.Size += GetMipLevelProperties(m_Desc, mip).MipSize;
+        Stats.Size *= m_Desc.ArraySize;
+
+        Stats.AllocationCount = m_AllocationCount.load();
+
+        Stats.TotalArea     = Uint64{m_Desc.Width} * Uint64{m_Desc.Height} * Uint64{m_Desc.ArraySize};
+        Stats.AllocatedArea = m_AllocatedArea.load();
+        Stats.UsedArea      = m_UsedArea.load();
     }
 
     Uint32 GetGranularity() const
@@ -343,7 +372,11 @@ private:
 
     FixedBlockMemoryAllocator m_SuballocationsAllocator;
 
-    std::atomic<Uint32> m_Version = {};
+    std::atomic<Uint32> m_Version{0};
+    std::atomic<Int32>  m_AllocationCount{0};
+
+    std::atomic<Int64> m_AllocatedArea{0};
+    std::atomic<Int64> m_UsedArea{0};
 
 
     struct SliceManager
@@ -374,7 +407,7 @@ private:
 
 TextureAtlasSuballocationImpl::~TextureAtlasSuballocationImpl()
 {
-    m_pParentAtlas->Free(m_Slice, std::move(m_Subregion));
+    m_pParentAtlas->Free(m_Slice, std::move(m_Subregion), m_Size.x, m_Size.y);
 }
 
 uint2 TextureAtlasSuballocationImpl::GetOrigin() const

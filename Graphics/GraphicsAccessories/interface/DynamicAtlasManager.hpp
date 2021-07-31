@@ -119,6 +119,7 @@ public:
 
     Uint32 GetWidth() const { return m_Width; }
     Uint32 GetHeight() const { return m_Height; }
+    Uint64 GetTotalFreeArea() const { return m_TotalFreeArea; }
 
 #define CMP(Member)                 \
     if (R0.Member < R1.Member)      \
@@ -160,6 +161,8 @@ private:
 
     const Uint32 m_Width;
     const Uint32 m_Height;
+
+    Uint64 m_TotalFreeArea = 0;
 
     struct Node
     {

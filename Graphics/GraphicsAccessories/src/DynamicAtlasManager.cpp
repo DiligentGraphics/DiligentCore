@@ -112,7 +112,8 @@ void DynamicAtlasManager::Node::MergeChildren()
 
 DynamicAtlasManager::DynamicAtlasManager(Uint32 Width, Uint32 Height) :
     m_Width{Width},
-    m_Height{Height}
+    m_Height{Height},
+    m_TotalFreeArea{Uint64{Width} * Uint64{Height}}
 {
     m_Root->R = Region{0, 0, Width, Height};
     RegisterNode(*m_Root);
@@ -315,6 +316,9 @@ DynamicAtlasManager::Region DynamicAtlasManager::Allocate(Uint32 Width, Uint32 H
         RegisterNode(*pSrcNode);
     }
 
+    VERIFY_EXPR(m_TotalFreeArea >= Uint64{R.width} * Uint64{R.height});
+    m_TotalFreeArea -= Uint64{R.width} * Uint64{R.height};
+
 #if DILIGENT_DEBUG
     DbgVerifyConsistency();
 #endif
@@ -355,6 +359,8 @@ void DynamicAtlasManager::Free(Region&& R)
 
         N = N->Parent;
     }
+
+    m_TotalFreeArea += Uint64{R.width} * Uint64{R.height};
 
 #if DILIGENT_DEBUG
     DbgVerifyConsistency();
@@ -419,6 +425,19 @@ void DynamicAtlasManager::DbgVerifyConsistency() const
     DbgRecursiveVerifyConsistency(*m_Root, Area);
 
     VERIFY(Area == m_Width * m_Height, "Not entire atlas area has been covered");
+
+    {
+        Uint64 FreeArea = 0;
+        for (const auto& it : m_FreeRegionsByWidth)
+            FreeArea += Uint64{it.second->R.width} * Uint64{it.second->R.height};
+        VERIFY_EXPR(FreeArea == m_TotalFreeArea);
+    }
+    {
+        Uint32 FreeArea = 0;
+        for (const auto& it : m_FreeRegionsByHeight)
+            FreeArea += Uint64{it.second->R.width} * Uint64{it.second->R.height};
+        VERIFY_EXPR(FreeArea == m_TotalFreeArea);
+    }
 }
 #endif // DILIGENT_DEBUG
 

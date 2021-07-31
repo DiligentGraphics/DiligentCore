@@ -84,6 +84,33 @@ struct ITextureAtlasSuballocation : public IObject
     virtual IObject* GetUserData() const = 0;
 };
 
+
+/// Dynamic texture atlas usage stats.
+struct DynamicTextureAtlasUsageStats
+{
+    /// The total size of the atlas, in bytes.
+    Uint32 Size = 0;
+
+    /// The total number of allocations in the atlas.
+    Uint32 AllocationCount = 0;
+
+    /// The total area of the texture atlas, e.g.
+    /// the total number of texels in all slices.
+    Uint64 TotalArea = 0;
+
+    /// The total allocated area, e.g. the total
+    /// number of texels in all allocations.
+    Uint64 AllocatedArea = 0;
+
+    /// The total used area, e.g. the total number
+    /// of texels actually used by all allocations.
+
+    /// Used area is always equal to or larger than the
+    /// allocated area due to alignment requirements.
+    Uint64 UsedArea = 0;
+};
+
+
 /// Dynamic texture atlas.
 struct IDynamicTextureAtlas : public IObject
 {
@@ -126,6 +153,9 @@ struct IDynamicTextureAtlas : public IObject
     /// Returns internal texture array version. The version is incremented every time
     /// the array is expanded.
     virtual Uint32 GetVersion() const = 0;
+
+    /// Returns the usage stats, see Diligent::DynamicTextureAtlasUsageStats.
+    virtual void GetUsageStats(DynamicTextureAtlasUsageStats& Stats) const = 0;
 };
 
 
