@@ -85,7 +85,7 @@ private:
     std::deque<VulkanUtilities::CommandPoolWrapper, STDAllocatorRawMem<VulkanUtilities::CommandPoolWrapper>> m_CmdPools;
 
 #ifdef DILIGENT_DEVELOPMENT
-    std::atomic_int32_t m_AllocatedPoolCounter{0};
+    std::atomic<Int32> m_AllocatedPoolCounter{0};
 #endif
 };
 

@@ -71,7 +71,7 @@ private:
     const VkPipelineStageFlags  m_SupportedStagesMask;
 
 #ifdef DILIGENT_DEVELOPMENT
-    std::atomic_int32_t m_BuffCounter{0};
+    std::atomic<int32_t> m_BuffCounter{0};
 #endif
 };
 
