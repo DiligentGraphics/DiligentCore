@@ -1771,7 +1771,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ParseSamplers(TokenListType::iter
         else
             ++Token;
     }
-    VERIFY_PARSER_STATE(Token, ScopeDepth == 1 && Token == m_Tokens.end() || ScopeDepth == 0, "Error parsing scope");
+    VERIFY_PARSER_STATE(Token, (ScopeDepth == 1 && Token == m_Tokens.end()) || ScopeDepth == 0, "Error parsing scope");
 }
 
 void ParseImageFormat(const String& Comment, String& ImageFormat)
@@ -3065,7 +3065,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessFunctionParameters(TokenLi
                     // ^
                     ParamInfo.GSAttribs.PrimType = ShaderParameterInfo::GSAttributes::PrimitiveType::TriangleAdj;
                     ++Token;
-
+                // fall through
                 case TokenType::kw_TriangleStream:
                 case TokenType::kw_PointStream:
                 case TokenType::kw_LineStream:
@@ -3975,6 +3975,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessHullShaderArguments(TokenL
         quad,
         isoline
     } domain = Domain::undefined;
+    (void)domain;
     enum class Partitioning
     {
         undefined,
@@ -3983,6 +3984,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessHullShaderArguments(TokenL
         fractional_odd,
         pow2
     } partitioning = Partitioning::undefined;
+    (void)partitioning;
     enum class OutputTopology
     {
         undefined,
@@ -3991,6 +3993,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessHullShaderArguments(TokenL
         triangle_cw,
         triangle_ccw
     } topology = OutputTopology::undefined;
+    (void)topology;
 
     std::unordered_map<HashMapStringKey, String, HashMapStringKey::Hasher> Attributes;
     ProcessShaderAttributes(Token, Attributes);

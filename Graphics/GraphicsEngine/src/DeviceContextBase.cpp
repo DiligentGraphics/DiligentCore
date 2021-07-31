@@ -675,10 +675,12 @@ bool VerifyBuildTLASAttribs(const BuildTLASAttribs& Attribs, const RayTracingPro
     // Calculate instance data size
     for (Uint32 i = 0; i < Attribs.InstanceCount; ++i)
     {
-        constexpr Uint32 BitMask = (1u << 24) - 1;
-        const auto&      Inst    = Attribs.pInstances[i];
+        const auto& Inst = Attribs.pInstances[i];
 
+#ifdef DILIGENT_DEBUG
+        constexpr Uint32 BitMask = (1u << 24) - 1);
         VERIFY((Inst.CustomId & ~BitMask) == 0, "Only the lower 24 bits are used.");
+#endif
 
         VERIFY(Inst.ContributionToHitGroupIndex == TLAS_INSTANCE_OFFSET_AUTO ||
                    (Inst.ContributionToHitGroupIndex & ~BitMask) == 0,

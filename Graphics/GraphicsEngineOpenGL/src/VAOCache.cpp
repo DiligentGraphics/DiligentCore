@@ -177,7 +177,9 @@ VAOCache::VAOHashKey::VAOHashKey(const VAOAttribs& Attribs) :
         }
         else
         {
+#ifdef DILIGENT_DEBUG
             const auto& DstStream = Streams[BufferSlot];
+#endif
             // The slot has already been initialized
             VERIFY_EXPR(DstStream.BufferUId == BuffId);
             VERIFY_EXPR(DstStream.Offset == SrcStream.Offset);

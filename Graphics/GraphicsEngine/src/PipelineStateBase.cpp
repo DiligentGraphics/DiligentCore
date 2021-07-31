@@ -584,18 +584,21 @@ void CopyRTShaderGroupNames(std::unordered_map<HashMapStringKey, Uint32, HashMap
     {
         const auto* Name      = CreateInfo.pGeneralShaders[i].Name;
         const bool  IsNewName = NameToGroupIndex.emplace(HashMapStringKey{MemPool.CopyString(Name)}, GroupIndex++).second;
+        (void)IsNewName;
         VERIFY(IsNewName, "All group names must be unique. ValidateRayTracingPipelineCreateInfo() should've caught this error.");
     }
     for (Uint32 i = 0; i < CreateInfo.TriangleHitShaderCount; ++i)
     {
         const auto* Name      = CreateInfo.pTriangleHitShaders[i].Name;
         const bool  IsNewName = NameToGroupIndex.emplace(HashMapStringKey{MemPool.CopyString(Name)}, GroupIndex++).second;
+        (void)IsNewName;
         VERIFY(IsNewName, "All group names must be unique. ValidateRayTracingPipelineCreateInfo() should've caught this error.");
     }
     for (Uint32 i = 0; i < CreateInfo.ProceduralHitShaderCount; ++i)
     {
         const auto* Name      = CreateInfo.pProceduralHitShaders[i].Name;
         const bool  IsNewName = NameToGroupIndex.emplace(HashMapStringKey{MemPool.CopyString(Name)}, GroupIndex++).second;
+        (void)IsNewName;
         VERIFY(IsNewName, "All group names must be unique. ValidateRayTracingPipelineCreateInfo() should've caught this error.");
     }
 

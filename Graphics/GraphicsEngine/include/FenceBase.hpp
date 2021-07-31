@@ -111,10 +111,10 @@ protected:
         }
     }
 
-    std::atomic_uint64_t m_LastCompletedFenceValue{0};
+    std::atomic<uint64_t> m_LastCompletedFenceValue{0};
 
 #ifdef DILIGENT_DEVELOPMENT
-    std::atomic_uint64_t m_EnqueuedFenceValue{0};
+    std::atomic<uint64_t> m_EnqueuedFenceValue{0};
 #endif
 };
 

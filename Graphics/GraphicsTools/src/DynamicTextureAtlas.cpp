@@ -343,8 +343,7 @@ private:
 
     FixedBlockMemoryAllocator m_SuballocationsAllocator;
 
-    std::atomic_uint32_t m_Version = {};
-
+    std::atomic<uint32_t> m_Version = {};
 
     struct SliceManager
     {

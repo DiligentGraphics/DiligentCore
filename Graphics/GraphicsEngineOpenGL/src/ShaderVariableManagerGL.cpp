@@ -187,8 +187,11 @@ void ShaderVariableManagerGL::Destroy(IMemoryAllocator& Allocator)
 
 void ShaderVariableManagerGL::UniformBuffBindInfo::BindResource(const BindResourceInfo& BindInfo)
 {
+#if (DILIGENT_DEVELOPMENT || DILIGENT_DEBUG)
     const auto& Desc = GetDesc();
+#endif
     const auto& Attr = GetAttribs();
+
 
     VERIFY(BindInfo.ArrayIndex < Desc.ArraySize, "Index is out of range, but it should've been corrected by ShaderVariableBase::SetArray()");
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER);
@@ -212,7 +215,9 @@ void ShaderVariableManagerGL::UniformBuffBindInfo::BindResource(const BindResour
 void ShaderVariableManagerGL::UniformBuffBindInfo::SetDynamicOffset(Uint32 ArrayIndex, Uint32 Offset)
 {
     const auto& Attr = GetAttribs();
+#if (DILIGENT_DEVELOPMENT || DILIGENT_DEBUG)
     const auto& Desc = GetDesc();
+#endif
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER);
 #ifdef DILIGENT_DEVELOPMENT
     {
@@ -344,7 +349,9 @@ void ShaderVariableManagerGL::ImageBindInfo::BindResource(const BindResourceInfo
 
 void ShaderVariableManagerGL::StorageBufferBindInfo::BindResource(const BindResourceInfo& BindInfo)
 {
+#if (DILIGENT_DEVELOPMENT || DILIGENT_DEBUG)
     const auto& Desc = GetDesc();
+#endif
     const auto& Attr = GetAttribs();
 
     VERIFY(BindInfo.ArrayIndex < Desc.ArraySize, "Index is out of range, but it should've been corrected by ShaderVariableBase::SetArray()");
@@ -376,7 +383,9 @@ void ShaderVariableManagerGL::StorageBufferBindInfo::BindResource(const BindReso
 void ShaderVariableManagerGL::StorageBufferBindInfo::SetDynamicOffset(Uint32 ArrayIndex, Uint32 Offset)
 {
     const auto& Attr = GetAttribs();
+#if (DILIGENT_DEVELOPMENT || DILIGENT_DEBUG)
     const auto& Desc = GetDesc();
+#endif
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_SRV ||
                 Desc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_UAV);
 #ifdef DILIGENT_DEVELOPMENT

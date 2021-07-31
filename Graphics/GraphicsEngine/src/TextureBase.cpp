@@ -100,6 +100,7 @@ void ValidateTextureDesc(const TextureDesc& Desc, const IRenderDevice* pDevice) 
             LOG_TEXTURE_ERROR_AND_THROW("Texture cube/cube array must have at least 6 slices (", Desc.ArraySize, " provided).");
     }
 
+#ifdef DILIGENT_DEBUG
     Uint32 MaxDim = 0;
     if (Desc.Type == RESOURCE_DIM_TEX_1D || Desc.Type == RESOURCE_DIM_TEX_1D_ARRAY)
         MaxDim = Desc.Width;
@@ -108,6 +109,7 @@ void ValidateTextureDesc(const TextureDesc& Desc, const IRenderDevice* pDevice) 
     else if (Desc.Type == RESOURCE_DIM_TEX_3D)
         MaxDim = std::max(std::max(Desc.Width, Desc.Height), Desc.Depth);
     VERIFY(MaxDim >= (1U << (Desc.MipLevels - 1)), "Texture '", Desc.Name ? Desc.Name : "", "': Incorrect number of Mip levels (", Desc.MipLevels, ").");
+#endif
 
     if (Desc.SampleCount > 1)
     {
