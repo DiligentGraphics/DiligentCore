@@ -2157,7 +2157,7 @@ inline void DeviceContextBase<ImplementationTraits>::DvpVerifyRenderTargets() co
     {
         auto BoundFmt = BoundRTVFormats[rt];
         auto PSOFmt   = PipelineRTVFormats[rt];
-        if (BoundFmt != PSOFmt)
+        if (PSOFmt != TEX_FORMAT_UNKNOWN && BoundFmt != PSOFmt)
         {
             LOG_WARNING_MESSAGE("Render target bound to slot ", rt, " (", GetTextureFormatAttribs(BoundFmt).Name,
                                 ") does not match the RTV format specified by the PSO '", PSODesc.Name,

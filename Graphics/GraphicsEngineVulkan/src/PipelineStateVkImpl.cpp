@@ -585,8 +585,6 @@ RenderPassDesc PipelineStateVkImpl::GetImplicitRenderPassDesc(
 
     RenderPassDesc RPDesc;
 
-    RPDesc.AttachmentCount = (DSVFormat != TEX_FORMAT_UNKNOWN ? 1 : 0) + NumRenderTargets;
-
     uint32_t             AttachmentInd             = 0;
     AttachmentReference* pDepthAttachmentReference = nullptr;
     if (DSVFormat != TEX_FORMAT_UNKNOWN)
@@ -614,8 +612,16 @@ RenderPassDesc PipelineStateVkImpl::GetImplicitRenderPassDesc(
     }
 
     AttachmentReference* pColorAttachmentsReference = NumRenderTargets > 0 ? &AttachmentReferences[AttachmentInd] : nullptr;
-    for (Uint32 rt = 0; rt < NumRenderTargets; ++rt, ++AttachmentInd)
+    for (Uint32 rt = 0; rt < NumRenderTargets; ++rt)
     {
+        auto& ColorAttachmentRef = pColorAttachmentsReference[rt];
+
+        if (RTVFormats[rt] == TEX_FORMAT_UNKNOWN)
+        {
+            ColorAttachmentRef.AttachmentIndex = ATTACHMENT_UNUSED;
+            continue;
+        }
+
         auto& ColorAttachment = Attachments[AttachmentInd];
 
         ColorAttachment.Format      = RTVFormats[rt];
@@ -631,11 +637,13 @@ RenderPassDesc PipelineStateVkImpl::GetImplicitRenderPassDesc(
         ColorAttachment.InitialState   = RESOURCE_STATE_RENDER_TARGET;
         ColorAttachment.FinalState     = RESOURCE_STATE_RENDER_TARGET;
 
-        auto& ColorAttachmentRef           = AttachmentReferences[AttachmentInd];
         ColorAttachmentRef.AttachmentIndex = AttachmentInd;
         ColorAttachmentRef.State           = RESOURCE_STATE_RENDER_TARGET;
+
+        ++AttachmentInd;
     }
 
+    RPDesc.AttachmentCount = AttachmentInd;
     RPDesc.pAttachments    = Attachments.data();
     RPDesc.SubpassCount    = 1;
     RPDesc.pSubpasses      = &SubpassDesc;
