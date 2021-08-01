@@ -11,8 +11,8 @@ struct VSOut
     float2 f2UV	: UV;
 };
 
- 
-void main(in float4 f4Position : SV_Position, 
+
+void main(in float4 f4Position : SV_Position,
           in VSOut vsOut,
           out float4 Color : SV_Target)
 {

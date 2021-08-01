@@ -35,7 +35,7 @@ PUBLIC
 
 target_link_libraries(Diligent-ApplePlatform
 PRIVATE
-    Diligent-BuildSettings 
+    Diligent-BuildSettings
 PUBLIC
     Diligent-BasicPlatform
     Diligent-PlatformInterface

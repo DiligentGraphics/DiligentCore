@@ -184,7 +184,7 @@ int Texture2DMSArr;
 void TestGetDimensions()
 {
 #ifndef GL_ES
-    // Texture1D 
+    // Texture1D
     {
         uint uWidth, uMipLevels;
         int iWidth, iMipLevels;
@@ -482,7 +482,7 @@ void TestSample()
     float4 f4UVWQ = float4(0.2, 0.3, 0.5, 10.0);
 
 #ifndef GL_ES
-    // Texture1D 
+    // Texture1D
     Tex1D_F1.Sample(Tex1D_F1_sampler, f3UVW.x);
     Tex1D_F1.Sample(Tex1D_F1_sampler, f3UVW.x, Offset.x);
 
@@ -504,7 +504,7 @@ void TestSample()
     //Texture3D
     Tex3D_F1.Sample(Tex3D_F1_sampler, f3UVW.xyz );
     Tex3D_F1.Sample(Tex3D_F1_sampler, f3UVW.xyz, Offset.xyz );
-    
+
     //TextureCube
     TexC_F1.Sample(TexC_F1_sampler, f3UVW.xyz );
     // Offset not supported
@@ -527,7 +527,7 @@ void TestSampleBias()
     float4 f4UVWQ = float4(0.2, 0.3, 0.5, 10.0);
 
 #ifndef GL_ES
-    // Texture1D 
+    // Texture1D
     Tex1D_F1.SampleBias(Tex1D_F1_sampler, f3UVW.x, 1.5);
     Tex1D_F1.SampleBias(Tex1D_F1_sampler, f3UVW.x, 1.5, Offset.x);
 
@@ -549,7 +549,7 @@ void TestSampleBias()
     //Texture3D
     Tex3D_F1.SampleBias(Tex3D_F1_sampler, f3UVW.xyz, 1.5 );
     Tex3D_F1.SampleBias(Tex3D_F1_sampler, f3UVW.xyz, 1.5, Offset.xyz );
-    
+
     //TextureCube
     TexC_F1.SampleBias(TexC_F1_sampler, f3UVW.xyz, 1.5 );
     // Offset not supported
@@ -571,7 +571,7 @@ void TestSampleLevel()
     float4 f4UVWQ = float4(0.2, 0.3, 0.5, 10.0);
 
 #ifndef GL_ES
-    // Texture1D 
+    // Texture1D
     Tex1D_F1.SampleLevel(Tex1D_F1_sampler, f3UVW.x, Level);
     Tex1D_F1.SampleLevel(Tex1D_F1_sampler, f3UVW.x, Level, Offset.x);
 
@@ -594,7 +594,7 @@ void TestSampleLevel()
     //Texture3D
     Tex3D_F1.SampleLevel(Tex3D_F1_sampler, f3UVW.xyz, Level );
     Tex3D_F1.SampleLevel(Tex3D_F1_sampler, f3UVW.xyz, Level, Offset.xyz );
-    
+
     //TextureCube
     TexC_F1.SampleLevel(TexC_F1_sampler, f3UVW.xyz, Level );
     // Offset not supported
@@ -620,7 +620,7 @@ void TestSampleGrad()
     float4 f4UVWQ = float4(0.2, 0.3, 0.5, 10.0);
 
 #ifndef GL_ES
-    // Texture1D 
+    // Texture1D
     Tex1D_F1.SampleGrad(Tex1D_F1_sampler, f3UVW.x, f2ddxUV.x, f2ddyUV.x);
     Tex1D_F1.SampleGrad(Tex1D_F1_sampler, f3UVW.x, f2ddxUV.x, f2ddyUV.x, Offset.x);
 
@@ -642,7 +642,7 @@ void TestSampleGrad()
     //Texture3D
     Tex3D_F1.SampleGrad(Tex3D_F1_sampler, f3UVW.xyz, f3ddxUVW.xyz, f3ddyUVW.xyz );
     Tex3D_F1.SampleGrad(Tex3D_F1_sampler, f3UVW.xyz, f3ddxUVW.xyz, f3ddyUVW.xyz, Offset.xyz );
-    
+
     //TextureCube
     TexC_F1.SampleGrad(TexC_F1_sampler, f3UVW.xyz, f3ddxUVW.xyz, f3ddyUVW.xyz );
     // Offset not supported
@@ -665,7 +665,7 @@ void TestSampleCmp()
     float CompareVal = 0.7;
 
 #ifndef GL_ES
-    // Texture1D 
+    // Texture1D
     Tex1DS1.SampleCmp(Tex1DS1_sampler, f3UVW.x, CompareVal);
     Tex1DS1.SampleCmp(Tex1DS1_sampler, f3UVW.x, CompareVal, Offset.x);
 
@@ -708,7 +708,7 @@ void TestSampleCmpLevelZero()
     float CompareVal = 0.7;
 
 #ifndef GL_ES
-    // Texture1D 
+    // Texture1D
     Tex1DS1.SampleCmpLevelZero(Tex1DS1_sampler, f3UVW.x, CompareVal);
     Tex1DS1.SampleCmpLevelZero(Tex1DS1_sampler, f3UVW.x, CompareVal, Offset.x);
 
@@ -748,7 +748,7 @@ void TestLoad()
     const int3 Offset = int3(5, 7, -6);
 
 #ifndef GL_ES
-    // Texture1D 
+    // Texture1D
     {
         Tex1D_F1.Load(Location.xy);
         Tex1D_F1.Load(Location.xy, Offset.x);
@@ -841,7 +841,7 @@ void TestGather()
 #if !GLES30 // no textureGather in GLES3.0
     float4 Location = float4(0.2, 0.5, 0.1, 0.7);
     const int3 Offset = int3(5, 10, 20);
-    
+
     //Texture2D
     {
         Tex2D_F1.Gather(Tex2D_F1_sampler, Location.xy);
@@ -868,7 +868,7 @@ void TestGather()
         //TexC_I.Gather(Location.xyz);
         //TexC_U.Gather(Location.xyz);
     }
-#ifndef GL_ES 
+#ifndef GL_ES
     // TextureCubeArray
     {
         TexC_F_A1.Gather(TexC_F_A1_sampler, Location.xyzw);
@@ -905,7 +905,7 @@ void TestGatherCmp()
     {
         TexCS1.GatherCmp(TexCS1_sampler, Location.xyz, CompareVal);
     }
-#ifndef GL_ES 
+#ifndef GL_ES
     // TextureCubeArray
     {
         TexCAS1.GatherCmp(TexCAS1_sampler, Location.xyzw, CompareVal);
@@ -965,7 +965,7 @@ struct VSOutput
 void TestVS  ( VSInput In,
                in float3 f3UV  : ATTRIB3,
                in uint InstID : SV_InstanceID,
-               out VSOutput Out, 
+               out VSOutput Out,
                out float  fAttrib : F_ATTRIB,
                out int4 i4Attrib : I4_ATTRIB)
 {
@@ -974,7 +974,7 @@ void TestVS  ( VSInput In,
     Out.f2Attrib = float2(5.0, 6.0) + In.f2UV;
     Out.f3Attrib = float3(7.0, 8.0, 9.0) + In.f3PosWS + f3UV + In.SubStruct.f3Normal;
     Out.f4Attrib = float4(10.0, 11.0, 12.0, 13.0);
-    
+
     Out.SubStruct.f4Attrib = float4(10.0, 11.0, 12.0, 13.0);
     Out.uiAttrib = 1u;
     Out.ui3Attrib = uint3(2u, 3u, 4u);
@@ -994,7 +994,7 @@ void TestVS  ( VSInput In,
 
 void TestFuncArgs1( Texture2D<float4> Arg1,
                     SamplerState Arg1_sampler,
-                    Texture2D<float> Arg2, 
+                    Texture2D<float> Arg2,
                     SamplerComparisonState Arg2_sampler,
                     Texture3D<float> Arg3)
 {
@@ -1002,12 +1002,12 @@ void TestFuncArgs1( Texture2D<float4> Arg1,
     Arg1.GetDimensions(uWidth, uHeight);
 
     Arg2.SampleCmp( Arg2_sampler, float2(0.5,0.5), 0.1 );
-    
+
     Arg3.Load( int4(1, 2, 3, 0) );
 }
 
 void TestFuncArgs2( Texture3D<int> Arg1,
-                    Texture2DArray<float4> Arg2, 
+                    Texture2DArray<float4> Arg2,
                     SamplerState Arg2_sampler,
                     Texture2D<float> Arg3)
 {
@@ -1041,11 +1041,11 @@ void TestPS  ( in VSOutput In,
 
     TestFuncArgs1( Tex2D_F6,
                    Tex2D_F6_sampler,
-                   Tex2DS_F5, 
+                   Tex2DS_F5,
                    Tex2DS_F5_sampler,
                    Tex3D_F3);
     TestFuncArgs2( Tex3D_I,
-                   Tex2D_F_A3, 
+                   Tex2D_F_A3,
                    Tex2D_F_A3_sampler,
                    Tex2D_F2);
     {
@@ -1171,7 +1171,7 @@ void TestPS  ( in VSOutput In,
         f1 = trunc ( f1 ); f2 = trunc( f2 ); f3 = trunc( f3 ); f4 = trunc( f4 );
         f1 = round ( f1 ); f2 = round( f2 ); f3 = round( f3 ); f4 = round( f4 );
         f1 = frac  ( f1 ); f2 = frac ( f2 ); f3 = frac ( f3 ); f4 = frac ( f4 );
-        
+
         f1 = 1.0;
         f2 = float2(1.0, 2.0);
         f3 = float3(1.0, 2.0, 3.0);
@@ -1182,7 +1182,7 @@ void TestPS  ( in VSOutput In,
         f1 = min(f1,f1); f2 = min(f2,f2); f3 = min(f3,f3); f4 = min(f4,f4);
         i1 = min(i1,i1); i2 = min(i2,i2); i3 = min(i3,i3); i4 = min(i4,i4);
         u1 = min(u1,u1); u2 = min(u2,u2); u3 = min(u3,u3); u4 = min(u4,u4);
-        
+
         f1 = max(f1,f1); f2 = max(f2,f2); f3 = max(f3,f3); f4 = max(f4,f4);
         i1 = max(i1,i1); i2 = max(i2,i2); i3 = max(i3,i3); i4 = max(i4,i4);
         u1 = max(u1,u1); u2 = max(u2,u2); u3 = max(u3,u3); u4 = max(u4,u4);

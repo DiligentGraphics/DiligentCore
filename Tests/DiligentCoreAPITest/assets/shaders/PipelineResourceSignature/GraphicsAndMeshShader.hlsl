@@ -36,7 +36,7 @@ void VSMain(in  uint     VertId : SV_VertexID,
     Pos[2] = float4( 0.0, -0.5, 0.0, 1.0);
 
     Out.f4Position = Pos[VertId];
-    Out.f4Color = float4(VertId % 3 == 0 ? 1.0 : 0.0, 
+    Out.f4Color = float4(VertId % 3 == 0 ? 1.0 : 0.0,
                          VertId % 3 == 1 ? 1.0 : 0.0,
                          VertId % 3 == 2 ? 1.0 : 0.0,
                          1.0) * VerifyResourcesVS();
@@ -52,14 +52,14 @@ void MSMain(             uint     I      : SV_GroupIndex,
 
     if (I == 0)
 		tris[0] = uint3(0, 1, 2);
-		
+
     float4 Pos[3];
     Pos[0] = float4(+0.0, -0.5, 0.0, 1.0);
     Pos[1] = float4(+0.5, +0.5, 0.0, 1.0);
     Pos[2] = float4(+1.0, -0.5, 0.0, 1.0);
-	
+
 	verts[I].f4Position = Pos[I];
-    verts[I].f4Color    = float4(I % 3 == 0 ? 1.0 : 0.0, 
+    verts[I].f4Color    = float4(I % 3 == 0 ? 1.0 : 0.0,
                                  I % 3 == 1 ? 1.0 : 0.0,
                                  I % 3 == 2 ? 1.0 : 0.0,
                                  1.0) * VerifyResourcesVS();
@@ -75,7 +75,7 @@ float4 VerifyResourcesPS()
 {
     float4 AllCorrect = float4(1.0, 1.0, 1.0, 1.0);
     float2 UV         = float2(2.5, 3.5);
-    
+
     AllCorrect *= CheckValue(g_Texture.SampleLevel(g_Texture_sampler, UV.xy, 0.0), Tex2D_Ref);
 	return AllCorrect;
 }

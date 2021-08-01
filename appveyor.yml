@@ -9,7 +9,7 @@ branches:
 image:
 - Visual Studio 2019
 
-environment: 
+environment:
   matrix:
     # Win32/x64/Debug
     - platform: x64

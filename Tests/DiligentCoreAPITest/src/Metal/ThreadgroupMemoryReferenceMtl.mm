@@ -13,14 +13,14 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *
- *  In no event and under no legal theory, whether in tort (including negligence), 
- *  contract, or otherwise, unless required by applicable law (such as deliberate 
+ *  In no event and under no legal theory, whether in tort (including negligence),
+ *  contract, or otherwise, unless required by applicable law (such as deliberate
  *  and grossly negligent acts) or agreed to in writing, shall any Contributor be
- *  liable for any damages, including any direct, indirect, special, incidental, 
- *  or consequential damages of any character arising as a result of this License or 
- *  out of the use or inability to use the software (including but not limited to damages 
- *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and 
- *  all other commercial damages or losses), even if such Contributor has been advised 
+ *  liable for any damages, including any direct, indirect, special, incidental,
+ *  or consequential damages of any character arising as a result of this License or
+ *  out of the use or inability to use the software (including but not limited to damages
+ *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and
+ *  all other commercial damages or losses), even if such Contributor has been advised
  *  of the possibility of such damages.
  */
 
@@ -43,7 +43,7 @@ void SetComputeThreadgroupMemoryLengthReferenceMtl(ISwapChain* pSwapChain)
 {
     auto* const pEnv      = TestingEnvironmentMtl::GetInstance();
     auto const  mtlDevice = pEnv->GetMtlDevice();
-    
+
     @autoreleasepool
     {
         auto* progSrc = [NSString stringWithUTF8String:MSL::SetComputeThreadgroupMemoryLength_CS.c_str()]; // Autoreleased
@@ -59,17 +59,17 @@ void SetComputeThreadgroupMemoryLengthReferenceMtl(ISwapChain* pSwapChain)
         auto* computePipeline = [mtlDevice newComputePipelineStateWithFunction:computeFunc error:&errors];
         ASSERT_TRUE(computePipeline != nil);
         [computePipeline autorelease];
-        
+
         auto* pTestingSwapChainMtl = ValidatedCast<TestingSwapChainMtl>(pSwapChain);
         auto* pUAV = pTestingSwapChainMtl->GetCurrentBackBufferUAV();
         auto* mtlTexture = ValidatedCast<ITextureViewMtl>(pUAV)->GetMtlTexture();
         const auto& SCDesc = pTestingSwapChainMtl->GetDesc();
-        
+
         auto* mtlCommandQueue  = pEnv->GetMtlCommandQueue();
         auto* mtlCommandBuffer = [mtlCommandQueue commandBuffer]; // Autoreleased
         auto* cmdEncoder       = [mtlCommandBuffer computeCommandEncoder]; // Autoreleased
         ASSERT_TRUE(cmdEncoder != nil);
-        
+
         const Uint32 LocalSize = 8;
 
         [cmdEncoder setComputePipelineState: computePipeline];
