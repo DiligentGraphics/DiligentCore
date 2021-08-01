@@ -1,27 +1,27 @@
 /*
  *  Copyright 2019-2021 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
- *  
+ *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
- *  
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS,
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *
- *  In no event and under no legal theory, whether in tort (including negligence), 
- *  contract, or otherwise, unless required by applicable law (such as deliberate 
+ *  In no event and under no legal theory, whether in tort (including negligence),
+ *  contract, or otherwise, unless required by applicable law (such as deliberate
  *  and grossly negligent acts) or agreed to in writing, shall any Contributor be
- *  liable for any damages, including any direct, indirect, special, incidental, 
- *  or consequential damages of any character arising as a result of this License or 
- *  out of the use or inability to use the software (including but not limited to damages 
- *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and 
- *  all other commercial damages or losses), even if such Contributor has been advised 
+ *  liable for any damages, including any direct, indirect, special, incidental,
+ *  or consequential damages of any character arising as a result of this License or
+ *  out of the use or inability to use the software (including but not limited to damages
+ *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and
+ *  all other commercial damages or losses), even if such Contributor has been advised
  *  of the possibility of such damages.
  */
 
@@ -123,7 +123,7 @@ struct DeviceContextDesc
                       COMMAND_QUEUE_TYPE _QueueType,
                       Bool               _IsDeferred,
                       Uint32             _ContextId,
-                      Uint32             _QueueId = DeviceContextDesc{}.QueueId) noexcept : 
+                      Uint32             _QueueId = DeviceContextDesc{}.QueueId) noexcept :
         Name      {_Name      },
         QueueType {_QueueType },
         IsDeferred{_IsDeferred},
@@ -152,8 +152,8 @@ DILIGENT_TYPED_ENUM(DRAW_FLAGS, Uint8)
     /// No flags.
     DRAW_FLAG_NONE                            = 0x00,
 
-    /// Verify the state of index and vertex buffers (if any) used by the draw 
-    /// command. State validation is only performed in debug and development builds 
+    /// Verify the state of index and vertex buffers (if any) used by the draw
+    /// command. State validation is only performed in debug and development builds
     /// and the flag has no effect in release build.
     DRAW_FLAG_VERIFY_STATES                   = 0x01,
 
@@ -173,7 +173,7 @@ DILIGENT_TYPED_ENUM(DRAW_FLAGS, Uint8)
     ///          series of draw commands that use the same pipeline state and shader resources and
     ///          no dynamic buffers (constant or bound as shader resources) are updated between the
     ///          commands.
-    ///          Any buffer variable not created with SHADER_VARIABLE_FLAG_NO_DYNAMIC_BUFFERS or 
+    ///          Any buffer variable not created with SHADER_VARIABLE_FLAG_NO_DYNAMIC_BUFFERS or
     ///          PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS flags is counted as dynamic.
     ///          The flag has no effect on dynamic vertex and index buffers.
     ///
@@ -184,8 +184,8 @@ DILIGENT_TYPED_ENUM(DRAW_FLAGS, Uint8)
     ///          new memory and assigns a new GPU address to this buffer. When a draw command is issued,
     ///          this GPU address needs to be used. By default the engine assumes that the CPU may
     ///          map the buffer before any command (to write new transformation matrices for example)
-    ///          and that all GPU addresses need to always be refreshed. This is not always the case, 
-    ///          and the application may use the flag to inform the engine that the data in the buffer 
+    ///          and that all GPU addresses need to always be refreshed. This is not always the case,
+    ///          and the application may use the flag to inform the engine that the data in the buffer
     ///          stay intact to avoid extra work.\n
     ///          Note that after a new PSO is bound or an SRB is committed, the engine will always set all
     ///          required buffer addresses/offsets regardless of the flag. The flag will only take effect
@@ -194,7 +194,7 @@ DILIGENT_TYPED_ENUM(DRAW_FLAGS, Uint8)
     ///
     ///          Implementation details
     ///
-    ///          Vulkan backend allocates VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC descriptors for all uniform (constant), 
+    ///          Vulkan backend allocates VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC descriptors for all uniform (constant),
     ///          buffers and VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC descriptors for storage buffers.
     ///          Note that HLSL structured buffers are mapped to read-only storage buffers in SPIRV and RW buffers
     ///          are mapped to RW-storage buffers.
@@ -203,7 +203,7 @@ DILIGENT_TYPED_ENUM(DRAW_FLAGS, Uint8)
     ///          is specified, dynamic descriptor sets are only bound by the first draw command that uses the PSO and the SRB.
     ///          The flag avoids binding descriptors with the same offsets if none of the dynamic offsets have changed.
     ///
-    ///          Direct3D12 backend binds constant buffers to root views. By default the engine assumes that virtual GPU addresses 
+    ///          Direct3D12 backend binds constant buffers to root views. By default the engine assumes that virtual GPU addresses
     ///          of all dynamic buffers may change between the draw commands and always binds dynamic buffers to root views
     ///          (see RootSignature::CommitRootViews). When DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT is set, root views are only bound
     ///          by the first draw command that uses the PSO + SRB pair. The flag avoids setting the same GPU virtual addresses when
@@ -219,7 +219,7 @@ DEFINE_FLAG_ENUM_OPERATORS(DRAW_FLAGS)
 /// of resource state management in Diligent Engine.
 DILIGENT_TYPED_ENUM(RESOURCE_STATE_TRANSITION_MODE, Uint8)
 {
-    /// Perform no state transitions and no state validation. 
+    /// Perform no state transitions and no state validation.
     /// Resource states are not accessed (either read or written) by the command.
     RESOURCE_STATE_TRANSITION_MODE_NONE = 0,
 
@@ -228,8 +228,8 @@ DILIGENT_TYPED_ENUM(RESOURCE_STATE_TRANSITION_MODE, Uint8)
     ///
     /// \note    Any method that uses this mode may alter the state of the resources it works with.
     ///          As automatic state management is not thread-safe, no other thread is allowed to read
-    ///          or write the state of the resources being transitioned. 
-    ///          If the application intends to use the same resources in other threads simultaneously, it needs to 
+    ///          or write the state of the resources being transitioned.
+    ///          If the application intends to use the same resources in other threads simultaneously, it needs to
     ///          explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
     ///          Refer to http://diligentgraphics.com/2018/12/09/resource-state-management/ for detailed explanation
     ///          of resource state management in Diligent Engine.
@@ -240,7 +240,7 @@ DILIGENT_TYPED_ENUM(RESOURCE_STATE_TRANSITION_MODE, Uint8)
 
     /// Do not transition, but verify that states are correct.
     /// No validation is performed if the state is unknown to the engine.
-    /// This mode only has effect in debug and development builds. No validation 
+    /// This mode only has effect in debug and development builds. No validation
     /// is performed in release build.
     ///
     /// \note    Any method that uses this mode will read the state of resources it works with.
@@ -293,7 +293,7 @@ struct DrawAttribs
                 DRAW_FLAGS _Flags,
                 Uint32     _NumInstances          = 1,
                 Uint32     _StartVertexLocation   = 0,
-                Uint32     _FirstInstanceLocation = 0)noexcept : 
+                Uint32     _FirstInstanceLocation = 0)noexcept :
         NumVertices          {_NumVertices          },
         Flags                {_Flags                },
         NumInstances         {_NumInstances         },
@@ -358,7 +358,7 @@ struct DrawIndexedAttribs
                        Uint32      _NumInstances          = 1,
                        Uint32      _FirstIndexLocation    = 0,
                        Uint32      _BaseVertex            = 0,
-                       Uint32      _FirstInstanceLocation = 0)noexcept : 
+                       Uint32      _FirstInstanceLocation = 0)noexcept :
         NumIndices           {_NumIndices           },
         IndexType            {_IndexType            },
         Flags                {_Flags                },
@@ -446,7 +446,7 @@ struct DrawIndexedIndirectAttribs
     DrawIndexedIndirectAttribs(VALUE_TYPE                     _IndexType,
                                DRAW_FLAGS                     _Flags,
                                RESOURCE_STATE_TRANSITION_MODE _IndirectAttribsBufferStateTransitionMode,
-                               Uint32                         _IndirectDrawArgsOffset = 0)noexcept : 
+                               Uint32                         _IndirectDrawArgsOffset = 0)noexcept :
         IndexType                               {_IndexType                               },
         Flags                                   {_Flags                                   },
         IndirectAttribsBufferStateTransitionMode{_IndirectAttribsBufferStateTransitionMode},
@@ -490,7 +490,7 @@ struct DrawMeshIndirectAttribs
 {
     /// Additional flags, see Diligent::DRAW_FLAGS.
     DRAW_FLAGS Flags                DEFAULT_INITIALIZER(DRAW_FLAG_NONE);
-    
+
     /// State transition mode for indirect draw arguments buffer.
     RESOURCE_STATE_TRANSITION_MODE IndirectAttribsBufferStateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
 
@@ -511,7 +511,7 @@ struct DrawMeshIndirectAttribs
     /// Initializes the structure members with user-specified values.
     DrawMeshIndirectAttribs(DRAW_FLAGS                     _Flags,
                             RESOURCE_STATE_TRANSITION_MODE _IndirectAttribsBufferStateTransitionMode,
-                            Uint32                         _IndirectDrawArgsOffset = 0)noexcept : 
+                            Uint32                         _IndirectDrawArgsOffset = 0)noexcept :
         Flags                                   {_Flags                                   },
         IndirectAttribsBufferStateTransitionMode{_IndirectAttribsBufferStateTransitionMode},
         IndirectDrawArgsOffset                  {_IndirectDrawArgsOffset                  }
@@ -552,7 +552,7 @@ struct DrawMeshIndirectCountAttribs
                                  RESOURCE_STATE_TRANSITION_MODE _IndirectAttribsBufferStateTransitionMode,
                                  Uint32                         _IndirectDrawArgsOffset,
                                  RESOURCE_STATE_TRANSITION_MODE _CountBufferStateTransitionMode,
-                                 Uint32                         _CountBufferOffset)noexcept : 
+                                 Uint32                         _CountBufferOffset)noexcept :
         Flags                                   {_Flags                                   },
         IndirectAttribsBufferStateTransitionMode{_IndirectAttribsBufferStateTransitionMode},
         IndirectDrawArgsOffset                  {_IndirectDrawArgsOffset                  },
@@ -570,13 +570,13 @@ typedef struct DrawMeshIndirectCountAttribs DrawMeshIndirectCountAttribs;
 DILIGENT_TYPED_ENUM(CLEAR_DEPTH_STENCIL_FLAGS, Uint32)
 {
     /// Perform no clear.
-    CLEAR_DEPTH_FLAG_NONE = 0x00,  
+    CLEAR_DEPTH_FLAG_NONE = 0x00,
 
     /// Clear depth part of the buffer.
-    CLEAR_DEPTH_FLAG      = 0x01,  
+    CLEAR_DEPTH_FLAG      = 0x01,
 
     /// Clear stencil part of the buffer.
-    CLEAR_STENCIL_FLAG    = 0x02   
+    CLEAR_STENCIL_FLAG    = 0x02
 };
 DEFINE_FLAG_ENUM_OPERATORS(CLEAR_DEPTH_STENCIL_FLAGS)
 
@@ -800,7 +800,7 @@ struct Rect
 
 #if DILIGENT_CPP_INTERFACE
     /// Initializes the structure
-    Rect(Int32 _left, Int32 _top, Int32 _right, Int32 _bottom)noexcept : 
+    Rect(Int32 _left, Int32 _top, Int32 _right, Int32 _bottom)noexcept :
         left   {_left  },
         top    {_top   },
         right  {_right },
@@ -928,7 +928,7 @@ DILIGENT_TYPED_ENUM(RAYTRACING_INSTANCE_FLAGS, Uint8)
     /// space, an instance transform matrix does not change the winding, but a geometry transform does.
     RAYTRACING_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE = 0x02,
 
-    /// Causes this instance to act as though RAYTRACING_GEOMETRY_FLAGS_OPAQUE were specified on all 
+    /// Causes this instance to act as though RAYTRACING_GEOMETRY_FLAGS_OPAQUE were specified on all
     /// geometries referenced by this instance. This behavior can be overridden in the shader with ray flags.
     RAYTRACING_INSTANCE_FORCE_OPAQUE = 0x04,
 
@@ -1005,11 +1005,11 @@ struct BLASBuildTriangleData
     Uint32      VertexCount           DEFAULT_INITIALIZER(0);
 
     /// The type of the vertex components.
-    /// This is an optional value. Must be undefined or same as in BLASTriangleDesc. 
+    /// This is an optional value. Must be undefined or same as in BLASTriangleDesc.
     VALUE_TYPE  VertexValueType       DEFAULT_INITIALIZER(VT_UNDEFINED);
 
     /// The number of vertex components.
-    /// This is an optional value. Must be undefined or same as in BLASTriangleDesc. 
+    /// This is an optional value. Must be undefined or same as in BLASTriangleDesc.
     Uint8       VertexComponentCount  DEFAULT_INITIALIZER(0);
 
     /// The number of triangles.
@@ -1150,7 +1150,7 @@ typedef struct BuildBLASAttribs BuildBLASAttribs;
 
 /// Can be used to calculate the TLASBuildInstanceData::ContributionToHitGroupIndex depending on instance count,
 /// geometry count in each instance (in TLASBuildInstanceData::pBLAS) and shader binding mode in BuildTLASAttribs::BindingMode.
-/// 
+///
 /// Example:
 ///  InstanceOffset = BaseContributionToHitGroupIndex;
 ///  For each instance in TLAS
@@ -1161,7 +1161,7 @@ typedef struct BuildBLASAttribs BuildBLASAttribs;
 static const Uint32 TLAS_INSTANCE_OFFSET_AUTO = ~0u;
 
 
-/// Row-major matrix 
+/// Row-major matrix
 struct InstanceMatrix
 {
     ///        rotation        translation
@@ -1337,22 +1337,22 @@ struct CopyBLASAttribs
     /// Source bottom-level AS.
     /// Access to the BLAS must be externally synchronized.
     IBottomLevelAS*                pSrc              DEFAULT_INITIALIZER(nullptr);
-    
+
     /// Destination bottom-level AS.
     /// If Mode is COPY_AS_MODE_COMPACT then pDst must be created with CompactedSize
     /// that is greater or equal to the size returned by IDeviceContext::WriteBLASCompactedSize.
     /// Access to the BLAS must be externally synchronized.
     IBottomLevelAS*                pDst              DEFAULT_INITIALIZER(nullptr);
-    
+
     /// Acceleration structure copy mode, see Diligent::COPY_AS_MODE.
     COPY_AS_MODE                   Mode              DEFAULT_INITIALIZER(COPY_AS_MODE_CLONE);
-    
+
     /// Source bottom-level AS state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
     RESOURCE_STATE_TRANSITION_MODE SrcTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
-    
+
     /// Destination bottom-level AS state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
     RESOURCE_STATE_TRANSITION_MODE DstTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
-    
+
 #if DILIGENT_CPP_INTERFACE
     CopyBLASAttribs() noexcept {}
 #endif
@@ -1571,15 +1571,15 @@ struct StateTransitionDesc
 #if DILIGENT_CPP_INTERFACE
     StateTransitionDesc()noexcept{}
 
-    StateTransitionDesc(ITexture*              _pTexture, 
+    StateTransitionDesc(ITexture*              _pTexture,
                         RESOURCE_STATE         _OldState,
-                        RESOURCE_STATE         _NewState, 
+                        RESOURCE_STATE         _NewState,
                         Uint32                 _FirstMipLevel   = 0,
                         Uint32                 _MipLevelsCount  = REMAINING_MIP_LEVELS,
                         Uint32                 _FirstArraySlice = 0,
                         Uint32                 _ArraySliceCount = REMAINING_ARRAY_SLICES,
                         STATE_TRANSITION_TYPE  _TransitionType  = STATE_TRANSITION_TYPE_IMMEDIATE,
-                        STATE_TRANSITION_FLAGS _Flags           = STATE_TRANSITION_FLAG_NONE) noexcept : 
+                        STATE_TRANSITION_FLAGS _Flags           = STATE_TRANSITION_FLAG_NONE) noexcept :
         pResource       {static_cast<IDeviceObject*>(_pTexture)},
         FirstMipLevel   {_FirstMipLevel  },
         MipLevelsCount  {_MipLevelsCount },
@@ -1591,9 +1591,9 @@ struct StateTransitionDesc
         Flags           {_Flags          }
     {}
 
-    StateTransitionDesc(ITexture*              _pTexture, 
+    StateTransitionDesc(ITexture*              _pTexture,
                         RESOURCE_STATE         _OldState,
-                        RESOURCE_STATE         _NewState, 
+                        RESOURCE_STATE         _NewState,
                         STATE_TRANSITION_FLAGS _Flags) noexcept :
         StateTransitionDesc
         {
@@ -1609,30 +1609,30 @@ struct StateTransitionDesc
         }
     {}
 
-    StateTransitionDesc(IBuffer*               _pBuffer, 
+    StateTransitionDesc(IBuffer*               _pBuffer,
                         RESOURCE_STATE         _OldState,
                         RESOURCE_STATE         _NewState,
-                        STATE_TRANSITION_FLAGS _Flags = STATE_TRANSITION_FLAG_NONE) noexcept : 
+                        STATE_TRANSITION_FLAGS _Flags = STATE_TRANSITION_FLAG_NONE) noexcept :
         pResource {_pBuffer },
         OldState  {_OldState},
         NewState  {_NewState},
         Flags     {_Flags   }
     {}
 
-    StateTransitionDesc(IBottomLevelAS*        _pBLAS, 
+    StateTransitionDesc(IBottomLevelAS*        _pBLAS,
                         RESOURCE_STATE         _OldState,
                         RESOURCE_STATE         _NewState,
-                        STATE_TRANSITION_FLAGS _Flags = STATE_TRANSITION_FLAG_NONE) noexcept : 
+                        STATE_TRANSITION_FLAGS _Flags = STATE_TRANSITION_FLAG_NONE) noexcept :
         pResource {_pBLAS   },
         OldState  {_OldState},
         NewState  {_NewState},
         Flags     {_Flags   }
     {}
 
-    StateTransitionDesc(ITopLevelAS*           _pTLAS, 
+    StateTransitionDesc(ITopLevelAS*           _pTLAS,
                         RESOURCE_STATE         _OldState,
                         RESOURCE_STATE         _NewState,
-                        STATE_TRANSITION_FLAGS _Flags = STATE_TRANSITION_FLAG_NONE) noexcept : 
+                        STATE_TRANSITION_FLAGS _Flags = STATE_TRANSITION_FLAG_NONE) noexcept :
         pResource {_pTLAS   },
         OldState  {_OldState},
         NewState  {_NewState},
@@ -1652,7 +1652,7 @@ typedef struct StateTransitionDesc StateTransitionDesc;
 
 /// Device context interface.
 
-/// \remarks Device context keeps strong references to all objects currently bound to 
+/// \remarks Device context keeps strong references to all objects currently bound to
 ///          the pipeline: buffers, states, samplers, shaders, etc.
 ///          The context also keeps strong reference to the device and
 ///          the swap chain.
@@ -1666,9 +1666,9 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// This method must be called before any command in the deferred context may be recorded.
     ///
     /// \param [in] ImmediateContextId - the ID of the immediate context where commands from this
-    ///                                  deferred context will be executed, 
+    ///                                  deferred context will be executed,
     ///                                  see Diligent::DeviceContextDesc::ContextId.
-    /// 
+    ///
     /// \warning Command list recorded by the context must not be submitted to any other immediate context
     ///          other than one identified by ImmediateContextId.
     VIRTUAL void METHOD(Begin)(THIS_
@@ -1689,21 +1689,21 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// \param [in] pPipelineState         - Pipeline state object that was used to create the shader resource binding.
     /// \param [in] pShaderResourceBinding - Shader resource binding whose resources will be transitioned.
     ///
-    /// \remarks This method explicitly transitiones all resources except ones in unknown state to the states required 
+    /// \remarks This method explicitly transitiones all resources except ones in unknown state to the states required
     ///          by Draw or Dispatch command.
     ///          If this method was called, there is no need to use Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION
     ///          when calling IDeviceContext::CommitShaderResources()
     ///
-    /// \remarks Resource state transitioning is not thread safe. As the method may alter the states 
-    ///          of resources referenced by the shader resource binding, no other thread is allowed to read or 
+    /// \remarks Resource state transitioning is not thread safe. As the method may alter the states
+    ///          of resources referenced by the shader resource binding, no other thread is allowed to read or
     ///          write these states.
     ///
-    ///          If the application intends to use the same resources in other threads simultaneously, it needs to 
+    ///          If the application intends to use the same resources in other threads simultaneously, it needs to
     ///          explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
     ///          Refer to http://diligentgraphics.com/2018/12/09/resource-state-management/ for detailed explanation
     ///          of resource state management in Diligent Engine.
-    VIRTUAL void METHOD(TransitionShaderResources)(THIS_ 
-                                                   IPipelineState*         pPipelineState, 
+    VIRTUAL void METHOD(TransitionShaderResources)(THIS_
+                                                   IPipelineState*         pPipelineState,
                                                    IShaderResourceBinding* pShaderResourceBinding) PURE;
 
     /// Commits shader resources to the device context.
@@ -1716,12 +1716,12 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// \remarks If Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION mode is used,
     ///          the engine will also transition all shader resources to required states. If the flag
     ///          is not set, it is assumed that all resources are already in correct states.\n
-    ///          Resources can be explicitly transitioned to required states by calling 
+    ///          Resources can be explicitly transitioned to required states by calling
     ///          IDeviceContext::TransitionShaderResources() or IDeviceContext::TransitionResourceStates().\n
     ///
     /// \remarks Automatic resource state transitioning is not thread-safe.
     ///
-    ///          - If Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION mode is used, the method may alter the states 
+    ///          - If Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION mode is used, the method may alter the states
     ///            of resources referenced by the shader resource binding and no other thread is allowed to read or write these states.
     ///
     ///          - If Diligent::RESOURCE_STATE_TRANSITION_MODE_VERIFY mode is used, the method will read the states, so no other thread
@@ -1731,8 +1731,8 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     ///          - If Diligent::RESOURCE_STATE_TRANSITION_MODE_NONE mode is used, the method does not access the states of resources.
     ///
     ///          If the application intends to use the same resources in other threads simultaneously, it should manage the states
-    ///          manually by setting the state to Diligent::RESOURCE_STATE_UNKNOWN (which will disable automatic state 
-    ///          management) using IBuffer::SetState() or ITexture::SetState() and explicitly transitioning the states with 
+    ///          manually by setting the state to Diligent::RESOURCE_STATE_UNKNOWN (which will disable automatic state
+    ///          management) using IBuffer::SetState() or ITexture::SetState() and explicitly transitioning the states with
     ///          IDeviceContext::TransitionResourceStates().
     ///          Refer to http://diligentgraphics.com/2018/12/09/resource-state-management/ for detailed explanation
     ///          of resource state management in Diligent Engine.
@@ -1753,10 +1753,10 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
                                        Uint32 StencilRef) PURE;
 
 
-    /// \param [in] pBlendFactors - Array of four blend factors, one for each RGBA component. 
-    ///                             These factors are used if the blend state uses one of the 
-    ///                             Diligent::BLEND_FACTOR_BLEND_FACTOR or 
-    ///                             Diligent::BLEND_FACTOR_INV_BLEND_FACTOR 
+    /// \param [in] pBlendFactors - Array of four blend factors, one for each RGBA component.
+    ///                             These factors are used if the blend state uses one of the
+    ///                             Diligent::BLEND_FACTOR_BLEND_FACTOR or
+    ///                             Diligent::BLEND_FACTOR_INV_BLEND_FACTOR
     ///                             blend factors. If nullptr is provided,
     ///                             default blend factors array {1,1,1,1} will be used.
     ///
@@ -1767,15 +1767,15 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
 
     /// Binds vertex buffers to the pipeline.
 
-    /// \param [in] StartSlot           - The first input slot for binding. The first vertex buffer is 
-    ///                                   explicitly bound to the start slot; each additional vertex buffer 
-    ///                                   in the array is implicitly bound to each subsequent input slot. 
+    /// \param [in] StartSlot           - The first input slot for binding. The first vertex buffer is
+    ///                                   explicitly bound to the start slot; each additional vertex buffer
+    ///                                   in the array is implicitly bound to each subsequent input slot.
     /// \param [in] NumBuffersSet       - The number of vertex buffers in the array.
-    /// \param [in] ppBuffers           - A pointer to an array of vertex buffers. 
+    /// \param [in] ppBuffers           - A pointer to an array of vertex buffers.
     ///                                   The buffers must have been created with the Diligent::BIND_VERTEX_BUFFER flag.
-    /// \param [in] pOffsets            - Pointer to an array of offset values; one offset value for each buffer 
-    ///                                   in the vertex-buffer array. Each offset is the number of bytes between 
-    ///                                   the first element of a vertex buffer and the first element that will be 
+    /// \param [in] pOffsets            - Pointer to an array of offset values; one offset value for each buffer
+    ///                                   in the vertex-buffer array. Each offset is the number of bytes between
+    ///                                   the first element of a vertex buffer and the first element that will be
     ///                                   used. If this parameter is nullptr, zero offsets for all buffers will be used.
     /// \param [in] StateTransitionMode - State transition mode for buffers being set (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
     /// \param [in] Flags               - Additional flags. See Diligent::SET_VERTEX_BUFFERS_FLAGS for a list of allowed values.
@@ -1786,21 +1786,21 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     ///          whenever possible. This will assure that no buffers from previous draw calls
     ///          are bound to the pipeline.
     ///
-    /// \remarks When StateTransitionMode is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION, the method will 
-    ///          transition all buffers in known states to Diligent::RESOURCE_STATE_VERTEX_BUFFER. Resource state 
-    ///          transitioning is not thread safe, so no other thread is allowed to read or write the states of 
+    /// \remarks When StateTransitionMode is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION, the method will
+    ///          transition all buffers in known states to Diligent::RESOURCE_STATE_VERTEX_BUFFER. Resource state
+    ///          transitioning is not thread safe, so no other thread is allowed to read or write the states of
     ///          these buffers.
     ///
-    ///          If the application intends to use the same resources in other threads simultaneously, it needs to 
+    ///          If the application intends to use the same resources in other threads simultaneously, it needs to
     ///          explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
     ///          Refer to http://diligentgraphics.com/2018/12/09/resource-state-management/ for detailed explanation
     ///          of resource state management in Diligent Engine.
     ///
     /// \remarks Supported contexts: graphics.
     VIRTUAL void METHOD(SetVertexBuffers)(THIS_
-                                          Uint32                         StartSlot, 
-                                          Uint32                         NumBuffersSet, 
-                                          IBuffer**                      ppBuffers, 
+                                          Uint32                         StartSlot,
+                                          Uint32                         NumBuffersSet,
+                                          IBuffer**                      ppBuffers,
                                           const Uint32*                  pOffsets,
                                           RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
                                           SET_VERTEX_BUFFERS_FLAGS       Flags) PURE;
@@ -1808,29 +1808,29 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
 
     /// Invalidates the cached context state.
 
-    /// This method should be called by an application to invalidate 
+    /// This method should be called by an application to invalidate
     /// internal cached states.
     VIRTUAL void METHOD(InvalidateState)(THIS) PURE;
 
 
     /// Binds an index buffer to the pipeline.
 
-    /// \param [in] pIndexBuffer        - Pointer to the index buffer. The buffer must have been created 
+    /// \param [in] pIndexBuffer        - Pointer to the index buffer. The buffer must have been created
     ///                                   with the Diligent::BIND_INDEX_BUFFER flag.
-    /// \param [in] ByteOffset          - Offset from the beginning of the buffer to 
+    /// \param [in] ByteOffset          - Offset from the beginning of the buffer to
     ///                                   the start of index data.
     /// \param [in] StateTransitionMode - State transition mode for the index buffer to bind (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
     ///
     /// \remarks The device context keeps strong reference to the index buffer.
-    ///          Thus an index buffer object cannot be released until it is unbound 
+    ///          Thus an index buffer object cannot be released until it is unbound
     ///          from the context.
     ///
-    /// \remarks When StateTransitionMode is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION, the method will 
-    ///          transition the buffer to Diligent::RESOURCE_STATE_INDEX_BUFFER (if its state is not unknown). Resource 
-    ///          state transitioning is not thread safe, so no other thread is allowed to read or write the state of 
+    /// \remarks When StateTransitionMode is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION, the method will
+    ///          transition the buffer to Diligent::RESOURCE_STATE_INDEX_BUFFER (if its state is not unknown). Resource
+    ///          state transitioning is not thread safe, so no other thread is allowed to read or write the state of
     ///          the buffer.
     ///
-    ///          If the application intends to use the same resource in other threads simultaneously, it needs to 
+    ///          If the application intends to use the same resource in other threads simultaneously, it needs to
     ///          explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
     ///          Refer to http://diligentgraphics.com/2018/12/09/resource-state-management/ for detailed explanation
     ///          of resource state management in Diligent Engine.
@@ -1852,9 +1852,9 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// \remarks
     /// DirectX and OpenGL use different window coordinate systems. In DirectX, the coordinate system origin
     /// is in the left top corner of the screen with Y axis pointing down. In OpenGL, the origin
-    /// is in the left bottom corner of the screen with Y axis pointing up. Render target size is 
+    /// is in the left bottom corner of the screen with Y axis pointing up. Render target size is
     /// required to convert viewport from DirectX to OpenGL coordinate system if OpenGL device is used.\n\n
-    /// All viewports must be set atomically as one operation. Any viewports not 
+    /// All viewports must be set atomically as one operation. Any viewports not
     /// defined by the call are disabled.\n\n
     /// You can set the viewport size to match the currently bound render target using the
     /// following call:
@@ -1864,8 +1864,8 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// \remarks Supported contexts: graphics.
     VIRTUAL void METHOD(SetViewports)(THIS_
                                       Uint32          NumViewports,
-                                      const Viewport* pViewports, 
-                                      Uint32          RTWidth, 
+                                      const Viewport* pViewports,
+                                      Uint32          RTWidth,
                                       Uint32          RTHeight) PURE;
 
 
@@ -1879,9 +1879,9 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// \remarks
     /// DirectX and OpenGL use different window coordinate systems. In DirectX, the coordinate system origin
     /// is in the left top corner of the screen with Y axis pointing down. In OpenGL, the origin
-    /// is in the left bottom corner of the screen with Y axis pointing up. Render target size is 
+    /// is in the left bottom corner of the screen with Y axis pointing up. Render target size is
     /// required to convert viewport from DirectX to OpenGL coordinate system if OpenGL device is used.\n\n
-    /// All scissor rects must be set atomically as one operation. Any rects not 
+    /// All scissor rects must be set atomically as one operation. Any rects not
     /// defined by the call are disabled.
     ///
     /// \remarks Supported contexts: graphics.
@@ -1896,26 +1896,26 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// sets the viewport to match the first non-null render target or depth-stencil buffer.
 
     /// \param [in] NumRenderTargets    - Number of render targets to bind.
-    /// \param [in] ppRenderTargets     - Array of pointers to ITextureView that represent the render 
-    ///                                   targets to bind to the device. The type of each view in the 
+    /// \param [in] ppRenderTargets     - Array of pointers to ITextureView that represent the render
+    ///                                   targets to bind to the device. The type of each view in the
     ///                                   array must be Diligent::TEXTURE_VIEW_RENDER_TARGET.
-    /// \param [in] pDepthStencil       - Pointer to the ITextureView that represents the depth stencil to 
+    /// \param [in] pDepthStencil       - Pointer to the ITextureView that represents the depth stencil to
     ///                                   bind to the device. The view type must be
     ///                                   Diligent::TEXTURE_VIEW_DEPTH_STENCIL.
     /// \param [in] StateTransitionMode - State transition mode of the render targets and depth stencil buffer being set (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
     ///
-    /// \remarks     The device context will keep strong references to all bound render target 
-    ///              and depth-stencil views. Thus these views (and consequently referenced textures) 
+    /// \remarks     The device context will keep strong references to all bound render target
+    ///              and depth-stencil views. Thus these views (and consequently referenced textures)
     ///              cannot be released until they are unbound from the context.\n
     ///              Any render targets not defined by this call are set to nullptr.\n\n
     ///
-    /// \remarks When StateTransitionMode is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION, the method will 
+    /// \remarks When StateTransitionMode is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION, the method will
     ///          transition all render targets in known states to Diligent::RESOURCE_STATE_REDER_TARGET,
     ///          and the depth-stencil buffer to Diligent::RESOURCE_STATE_DEPTH_WRITE state.
-    ///          Resource state transitioning is not thread safe, so no other thread is allowed to read or write 
+    ///          Resource state transitioning is not thread safe, so no other thread is allowed to read or write
     ///          the states of resources used by the command.
     ///
-    ///          If the application intends to use the same resource in other threads simultaneously, it needs to 
+    ///          If the application intends to use the same resource in other threads simultaneously, it needs to
     ///          explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
     ///          Refer to http://diligentgraphics.com/2018/12/09/resource-state-management/ for detailed explanation
     ///          of resource state management in Diligent Engine.
@@ -1957,7 +1957,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     ///           buffers, so no other threads are allowed to alter the states of the same resources.
     ///           It is OK to read these states.
     ///
-    ///           If the application intends to use the same resources in other threads simultaneously, it needs to 
+    ///           If the application intends to use the same resources in other threads simultaneously, it needs to
     ///           explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
     ///
     /// \remarks Supported contexts: graphics.
@@ -1973,7 +1973,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     ///           buffers, so no other threads are allowed to alter the states of the same resources.
     ///           It is OK to read these states.
     ///
-    ///           If the application intends to use the same resources in other threads simultaneously, it needs to 
+    ///           If the application intends to use the same resources in other threads simultaneously, it needs to
     ///           explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
     ///
     /// \remarks Supported contexts: graphics.
@@ -1992,14 +1992,14 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     ///                                  Uint32 FirstInstanceLocation;
     ///
     /// \remarks  If IndirectAttribsBufferStateTransitionMode member is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
-    ///           the method may transition the state of the indirect draw arguments buffer. This is not a thread safe operation, 
+    ///           the method may transition the state of the indirect draw arguments buffer. This is not a thread safe operation,
     ///           so no other thread is allowed to read or write the state of the buffer.
     ///
     ///           If Diligent::DRAW_FLAG_VERIFY_STATES flag is set, the method reads the state of vertex/index
     ///           buffers, so no other threads are allowed to alter the states of the same resources.
     ///           It is OK to read these states.
     ///
-    ///           If the application intends to use the same resources in other threads simultaneously, it needs to 
+    ///           If the application intends to use the same resources in other threads simultaneously, it needs to
     ///           explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
     ///
     /// \remarks Supported contexts: graphics.
@@ -2020,14 +2020,14 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     ///                                  Uint32 FirstInstanceLocation
     ///
     /// \remarks  If IndirectAttribsBufferStateTransitionMode member is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
-    ///           the method may transition the state of the indirect draw arguments buffer. This is not a thread safe operation, 
+    ///           the method may transition the state of the indirect draw arguments buffer. This is not a thread safe operation,
     ///           so no other thread is allowed to read or write the state of the buffer.
     ///
     ///           If Diligent::DRAW_FLAG_VERIFY_STATES flag is set, the method reads the state of vertex/index
     ///           buffers, so no other threads are allowed to alter the states of the same resources.
     ///           It is OK to read these states.
     ///
-    ///           If the application intends to use the same resources in other threads simultaneously, it needs to 
+    ///           If the application intends to use the same resources in other threads simultaneously, it needs to
     ///           explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
     ///
     /// \remarks Supported contexts: graphics.
@@ -2039,7 +2039,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// Executes a mesh draw command.
 
     /// \param [in] Attribs - Draw command attributes, see Diligent::DrawMeshAttribs for details.
-    /// 
+    ///
     /// \remarks  For compatibility between Direct3D12 and Vulkan, only a single work group dimension is used.
     ///           Also in the shader, 'numthreads' and 'local_size' attributes must define only the first dimension,
     ///           for example: '[numthreads(ThreadCount, 1, 1)]' or 'layout(local_size_x = ThreadCount) in'.
@@ -2066,10 +2066,10 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     ///           for example: Direct3D12 {TaskCount, 1, 1}, Vulkan {TaskCount, 0}.
     ///
     /// \remarks  If IndirectAttribsBufferStateTransitionMode member is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
-    ///           the method may transition the state of the indirect draw arguments buffer. This is not a thread safe operation, 
+    ///           the method may transition the state of the indirect draw arguments buffer. This is not a thread safe operation,
     ///           so no other thread is allowed to read or write the state of the buffer.
     ///
-    ///           If the application intends to use the same resources in other threads simultaneously, it needs to 
+    ///           If the application intends to use the same resources in other threads simultaneously, it needs to
     ///           explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
     ///
     /// \remarks Supported contexts: graphics.
@@ -2097,10 +2097,10 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     ///           for example: Direct3D12 {TaskCount, 1, 1}, Vulkan {TaskCount, 0}.
     ///
     /// \remarks  If IndirectAttribsBufferStateTransitionMode member is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
-    ///           the method may transition the state of the indirect draw arguments buffer. This is not a thread safe operation, 
+    ///           the method may transition the state of the indirect draw arguments buffer. This is not a thread safe operation,
     ///           so no other thread is allowed to read or write the state of the buffer.
     ///
-    ///           If the application intends to use the same resources in other threads simultaneously, it needs to 
+    ///           If the application intends to use the same resources in other threads simultaneously, it needs to
     ///           explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
     ///
     /// \remarks Supported contexts: graphics.
@@ -2117,7 +2117,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// \remarks    In Metal, the compute group sizes are defined by the dispatch command rather than by
     ///             the compute shader. When the shader is compiled from HLSL or GLSL, the engine will
     ///             use the group size information from the shader. When using MSL, an application should
-    ///             provide the compute group dimensions through MtlThreadGroupSizeX, MtlThreadGroupSizeY, 
+    ///             provide the compute group dimensions through MtlThreadGroupSizeX, MtlThreadGroupSizeY,
     ///             and MtlThreadGroupSizeZ members.
     ///
     /// \remarks Supported contexts: graphics, compute.
@@ -2135,16 +2135,16 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     ///                                 Uint32 ThreadGroupCountZ;
     ///
     /// \remarks  If IndirectAttribsBufferStateTransitionMode member is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
-    ///           the method may transition the state of indirect dispatch arguments buffer. This is not a thread safe operation, 
+    ///           the method may transition the state of indirect dispatch arguments buffer. This is not a thread safe operation,
     ///           so no other thread is allowed to read or write the state of the same resource.
     ///
-    ///           If the application intends to use the same resources in other threads simultaneously, it needs to 
+    ///           If the application intends to use the same resources in other threads simultaneously, it needs to
     ///           explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
     ///
     ///           In Metal, the compute group sizes are defined by the dispatch command rather than by
     ///           the compute shader. When the shader is compiled from HLSL or GLSL, the engine will
     ///           use the group size information from the shader. When using MSL, an application should
-    ///           provide the compute group dimensions through MtlThreadGroupSizeX, MtlThreadGroupSizeY, 
+    ///           provide the compute group dimensions through MtlThreadGroupSizeX, MtlThreadGroupSizeY,
     ///           and MtlThreadGroupSizeZ members.
     ///
     /// \remarks Supported contexts: graphics, compute.
@@ -2173,7 +2173,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
 
     /// Clears a depth-stencil view.
 
-    /// \param [in] pView               - Pointer to ITextureView interface to clear. The view type must be 
+    /// \param [in] pView               - Pointer to ITextureView interface to clear. The view type must be
     ///                                   Diligent::TEXTURE_VIEW_DEPTH_STENCIL.
     /// \param [in] StateTransitionMode - state transition mode of the depth-stencil buffer to clear.
     /// \param [in] ClearFlags          - Indicates which parts of the buffer to clear, see Diligent::CLEAR_DEPTH_STENCIL_FLAGS.
@@ -2183,12 +2183,12 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// \remarks The full extent of the view is always cleared. Viewport and scissor settings are not applied.
     /// \note The depth-stencil view must be bound to the pipeline for clear operation to be performed.
     ///
-    /// \remarks When StateTransitionMode is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION, the method will 
-    ///          transition the state of the texture to the state required by clear operation. 
+    /// \remarks When StateTransitionMode is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION, the method will
+    ///          transition the state of the texture to the state required by clear operation.
     ///          In Direct3D12, this satate is always Diligent::RESOURCE_STATE_DEPTH_WRITE, however in Vulkan
     ///          the state depends on whether the depth buffer is bound to the pipeline.
     ///
-    ///          Resource state transitioning is not thread safe, so no other thread is allowed to read or write 
+    ///          Resource state transitioning is not thread safe, so no other thread is allowed to read or write
     ///          the state of resources used by the command.
     ///          Refer to http://diligentgraphics.com/2018/12/09/resource-state-management/ for detailed explanation
     ///          of resource state management in Diligent Engine.
@@ -2204,7 +2204,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
 
     /// Clears a render target view
 
-    /// \param [in] pView               - Pointer to ITextureView interface to clear. The view type must be 
+    /// \param [in] pView               - Pointer to ITextureView interface to clear. The view type must be
     ///                                   Diligent::TEXTURE_VIEW_RENDER_TARGET.
     /// \param [in] RGBA                - A 4-component array that represents the color to fill the render target with.
     ///                                   If nullptr is provided, the default array {0,0,0,0} will be used.
@@ -2214,15 +2214,15 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     ///
     ///          The render target view must be bound to the pipeline for clear operation to be performed in OpenGL backend.
     ///
-    /// \remarks When StateTransitionMode is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION, the method will 
-    ///          transition the texture to the state required by the command. Resource state transitioning is not 
+    /// \remarks When StateTransitionMode is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION, the method will
+    ///          transition the texture to the state required by the command. Resource state transitioning is not
     ///          thread safe, so no other thread is allowed to read or write the states of the same textures.
     ///
-    ///          If the application intends to use the same resource in other threads simultaneously, it needs to 
+    ///          If the application intends to use the same resource in other threads simultaneously, it needs to
     ///          explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
     ///
-    /// \note    In D3D12 backend clearing render targets requires textures to always be transitioned to 
-    ///          Diligent::RESOURCE_STATE_RENDER_TARGET state. In Vulkan backend however this depends on whether a 
+    /// \note    In D3D12 backend clearing render targets requires textures to always be transitioned to
+    ///          Diligent::RESOURCE_STATE_RENDER_TARGET state. In Vulkan backend however this depends on whether a
     ///          render pass has been started. To clear render target outside of a render pass, the texture must be transitioned to
     ///          Diligent::RESOURCE_STATE_COPY_DEST state. Inside a render pass it must be in Diligent::RESOURCE_STATE_RENDER_TARGET
     ///          state. When using Diligent::RESOURCE_STATE_TRANSITION_TRANSITION mode, the engine takes care of proper
@@ -2231,12 +2231,12 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// \remarks Supported contexts: graphics.
     VIRTUAL void METHOD(ClearRenderTarget)(THIS_
                                            ITextureView*                  pView,
-                                           const float*                   RGBA, 
+                                           const float*                   RGBA,
                                            RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) PURE;
 
 
     /// Finishes recording commands and generates a command list.
-    
+
     /// \param [out] ppCommandList - Memory location where pointer to the recorded command list will be written.
     VIRTUAL void METHOD(FinishCommandList)(THIS_
                                            ICommandList** ppCommandList) PURE;
@@ -2257,7 +2257,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// \param [in] pFence - The fence to signal.
     /// \param [in] Value  - The value to set the fence to. This value must be greater than the
     ///                      previously signaled value on the same fence.
-    /// 
+    ///
     /// \note The method does not flush the context (an application can do this explcitly if needed)
     ///       and the fence will be signaled only when the command context is flushed next time.
     ///       If an application needs to wait for the fence in a loop, it must flush the context
@@ -2296,8 +2296,8 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// \note The method blocks the execution of the calling thread until the wait is complete.
     ///
     /// \remarks    Only immediate contexts can be idled.\n
-    ///             The methods implicitly flushes the context (see IDeviceContext::Flush()), so an 
-    ///             application must explicitly reset the PSO and bind all required shader resources after 
+    ///             The methods implicitly flushes the context (see IDeviceContext::Flush()), so an
+    ///             application must explicitly reset the PSO and bind all required shader resources after
     ///             idling the context.\n
     VIRTUAL void METHOD(WaitForIdle)(THIS) PURE;
 
@@ -2341,7 +2341,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     ///             cannot span command list boundaries, so the engine will never flush
     ///             the context even if the number of commands exceeds the user-specified limit
     ///             when there is an active query.
-    ///             It is an error to explicitly flush the context while a query is active. 
+    ///             It is an error to explicitly flush the context while a query is active.
     ///
     ///             All queries must be ended when IDeviceContext::FinishFrame() is called.
     ///
@@ -2354,10 +2354,10 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
 
     /// \remarks    Only immediate contexts can be flushed.\n
     ///             Internally the method resets the state of the current command list/buffer.
-    ///             When the next draw command is issued, the engine will restore all states 
+    ///             When the next draw command is issued, the engine will restore all states
     ///             (rebind render targets and depth-stencil buffer as well as index and vertex buffers,
     ///             restore viewports and scissor rects, etc.) except for the pipeline state and shader resource
-    ///             bindings. An application must explicitly reset the PSO and bind all required shader 
+    ///             bindings. An application must explicitly reset the PSO and bind all required shader
     ///             resources after flushing the context.
     VIRTUAL void METHOD(Flush)(THIS) PURE;
 
@@ -2385,7 +2385,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// \param [in] SrcOffset               - Offset in bytes from the beginning of the source buffer to the beginning of data to copy.
     /// \param [in] SrcBufferTransitionMode - State transition mode of the source buffer (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
     /// \param [in] pDstBuffer              - Destination buffer to copy data to.
-    /// \param [in] DstOffset               - Offset in bytes from the beginning of the destination buffer to the beginning 
+    /// \param [in] DstOffset               - Offset in bytes from the beginning of the destination buffer to the beginning
     ///                                       of the destination region.
     /// \param [in] Size                    - Size in bytes of data to copy.
     /// \param [in] DstBufferTransitionMode - State transition mode of the destination buffer (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
@@ -2419,8 +2419,8 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// Unmaps the previously mapped buffer.
 
     /// \param [in] pBuffer - Pointer to the buffer to unmap.
-    /// \param [in] MapType - Type of the map operation. This parameter must match the type that was 
-    ///                       provided to the Map() method. 
+    /// \param [in] MapType - Type of the map operation. This parameter must match the type that was
+    ///                       provided to the Map() method.
     ///
     /// \remarks Supported contexts: graphics, compute, transfer.
     VIRTUAL void METHOD(UnmapBuffer)(THIS_
@@ -2435,8 +2435,8 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// \param [in] Slice       - Array slice. Should be 0 for non-array textures.
     /// \param [in] DstBox      - Destination region on the texture to update.
     /// \param [in] SubresData  - Source data to copy to the texture.
-    /// \param [in] SrcBufferTransitionMode - If pSrcBuffer member of TextureSubResData structure is not null, this 
-    ///                                       parameter defines state transition mode of the source buffer. 
+    /// \param [in] SrcBufferTransitionMode - If pSrcBuffer member of TextureSubResData structure is not null, this
+    ///                                       parameter defines state transition mode of the source buffer.
     ///                                       If pSrcBuffer is null, this parameter is ignored.
     /// \param [in] TextureTransitionMode   - Texture state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE)
     ///
@@ -2470,9 +2470,9 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// \param [in] pMapRegion  - Texture region to map. If this parameter is null, the entire subresource is mapped.
     /// \param [out] MappedData - Mapped texture region data
     ///
-    /// \remarks This method is supported in D3D11, D3D12 and Vulkan backends. In D3D11 backend, only the entire 
+    /// \remarks This method is supported in D3D11, D3D12 and Vulkan backends. In D3D11 backend, only the entire
     ///          subresource can be mapped, so pMapRegion must either be null, or cover the entire subresource.
-    ///          In D3D11 and Vulkan backends, dynamic textures are no different from non-dynamic textures, and mapping 
+    ///          In D3D11 and Vulkan backends, dynamic textures are no different from non-dynamic textures, and mapping
     ///          with MAP_FLAG_DISCARD has exactly the same behavior.
     ///
     /// \remarks Supported contexts: graphics, compute, transfer.
@@ -2491,7 +2491,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// \param [in] pTexture    - Pointer to the texture to unmap.
     /// \param [in] MipLevel    - Mip level to unmap.
     /// \param [in] ArraySlice  - Array slice to unmap. This parameter must be 0 for non-array textures.
-    /// 
+    ///
     /// \remarks Supported contexts: graphics, compute, transfer.
     VIRTUAL void METHOD(UnmapTextureSubresource)(THIS_
                                                  ITexture* pTexture,
@@ -2517,7 +2517,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// application to release dynamic resources. The method has some overhead, so it is better to call it once
     /// per frame, though it can be called with different frequency. Note that unless the GPU is idled,
     /// the resources may actually be released several frames after the one they were used in last time.
-    /// \note After the call all dynamic resources become invalid and must be written again before the next use. 
+    /// \note After the call all dynamic resources become invalid and must be written again before the next use.
     ///       Also, all committed resources become invalid.\n
     ///       For deferred contexts, this method must be called after all command lists referencing dynamic resources
     ///       have been executed through immediate context.\n
@@ -2536,7 +2536,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// \param [in] BarrierCount      - Number of barriers in pResourceBarriers array
     /// \param [in] pResourceBarriers - Pointer to the array of resource barriers
     /// \remarks When both old and new states are RESOURCE_STATE_UNORDERED_ACCESS, the engine
-    ///          executes UAV barrier on the resource. The barrier makes sure that all UAV accesses 
+    ///          executes UAV barrier on the resource. The barrier makes sure that all UAV accesses
     ///          (reads or writes) are complete before any future UAV accesses (read or write) can begin.\n
     ///
     ///          There are two main usage scenarios for this method:
@@ -2549,7 +2549,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     ///          (Diligent::RESOURCE_STATE_UNKNOWN) to disable automatic state management in the engine.
     ///
     ///          When StateTransitionDesc::UpdateResourceState is set to true, the method may update the state of the
-    ///          corresponding resource which is not thread safe. No other threads should read or write the state of that 
+    ///          corresponding resource which is not thread safe. No other threads should read or write the state of that
     ///          resource.
     ///
     /// \note  Resource states for shader access (e.g. RESOURCE_STATE_CONSTANT_BUFFER, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE)
@@ -2574,55 +2574,55 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
                                                    ITexture*                                  pSrcTexture,
                                                    ITexture*                                  pDstTexture,
                                                    const ResolveTextureSubresourceAttribs REF ResolveAttribs) PURE;
-    
+
 
     /// Builds a bottom-level acceleration structure with the specified geometries.
 
     /// \param [in] Attribs - Structure describing build BLAS command attributes, see Diligent::BuildBLASAttribs for details.
-    /// 
+    ///
     /// \note Don't call build or copy operation on the same BLAS in a different contexts, because BLAS has CPU-side data
     ///       that will not match with GPU-side, so shader binding were incorrect.
     ///
     /// \remarks Supported contexts: graphics, compute.
     VIRTUAL void METHOD(BuildBLAS)(THIS_
                                    const BuildBLASAttribs REF Attribs) PURE;
-    
+
 
     /// Builds a top-level acceleration structure with the specified instances.
 
     /// \param [in] Attribs - Structure describing build TLAS command attributes, see Diligent::BuildTLASAttribs for details.
-    /// 
+    ///
     /// \note Don't call build or copy operation on the same TLAS in a different contexts, because TLAS has CPU-side data
     ///       that will not match with GPU-side, so shader binding were incorrect.
     ///
     /// \remarks Supported contexts: graphics, compute.
     VIRTUAL void METHOD(BuildTLAS)(THIS_
                                    const BuildTLASAttribs REF Attribs) PURE;
-    
+
 
     /// Copies data from one acceleration structure to another.
 
     /// \param [in] Attribs - Structure describing copy BLAS command attributes, see Diligent::CopyBLASAttribs for details.
-    /// 
+    ///
     /// \note Don't call build or copy operation on the same BLAS in a different contexts, because BLAS has CPU-side data
     ///       that will not match with GPU-side, so shader binding were incorrect.
     ///
     /// \remarks Supported contexts: graphics, compute.
     VIRTUAL void METHOD(CopyBLAS)(THIS_
                                   const CopyBLASAttribs REF Attribs) PURE;
-    
+
 
     /// Copies data from one acceleration structure to another.
 
     /// \param [in] Attribs - Structure describing copy TLAS command attributes, see Diligent::CopyTLASAttribs for details.
-    /// 
+    ///
     /// \note Don't call build or copy operation on the same TLAS in a different contexts, because TLAS has CPU-side data
     ///       that will not match with GPU-side, so shader binding were incorrect.
     ///
     /// \remarks Supported contexts: graphics, compute.
     VIRTUAL void METHOD(CopyTLAS)(THIS_
                                   const CopyTLASAttribs REF Attribs) PURE;
-    
+
 
     /// Writes a bottom-level acceleration structure memory size required for compacting operation to a buffer.
 
@@ -2631,7 +2631,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// \remarks Supported contexts: graphics, compute.
     VIRTUAL void METHOD(WriteBLASCompactedSize)(THIS_
                                                 const WriteBLASCompactedSizeAttribs REF Attribs) PURE;
-    
+
 
     /// Writes a top-level acceleration structure memory size required for compacting operation to a buffer.
 
@@ -2640,10 +2640,10 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// \remarks Supported contexts: graphics, compute.
     VIRTUAL void METHOD(WriteTLASCompactedSize)(THIS_
                                                 const WriteTLASCompactedSizeAttribs REF Attribs) PURE;
-    
+
 
     /// Executes a trace rays command.
-    
+
     /// \param [in] Attribs - Trace rays command attributes, see Diligent::TraceRaysAttribs for details.
     ///
     /// \remarks  The method is not thread-safe. An application must externally synchronize the access
@@ -2654,10 +2654,10 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// \remarks Supported contexts: graphics, compute.
     VIRTUAL void METHOD(TraceRays)(THIS_
                                    const TraceRaysAttribs REF Attribs) PURE;
-    
+
 
     /// Executes an indirect trace rays command.
-    
+
     /// \param [in] pAttribsBuffer - Pointer to the buffer containing indirect trace rays attributes.
     ///                              The buffer must contain the following arguments at the specified offset:
     ///                                 [88 bytes reserved] - for Direct3D12 backend
@@ -2666,7 +2666,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     ///                                 Uint32 DimensionZ;
     ///                              You must call IDeviceContext::UpdateSBT() to initialize the first 88 bytes with the
     ///                              same shader binding table as specified in TraceRaysIndirectAttribs::pSBT.
-    /// 
+    ///
     /// \remarks  The method is not thread-safe. An application must externally synchronize the access
     ///           to the shader binding table (SBT) passed as an argument to the function.
     ///           The function does not modify the state of the SBT and can be executed in parallel with other
@@ -2682,7 +2682,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
 
     /// \param [in] pSBT                         - Shader binding table that will be updated if there are pending data.
     /// \param [in] pUpdateIndirectBufferAttribs - Indirect ray tracing attributes buffer update attributes (optional, may be null).
-    /// 
+    ///
     /// \note  When pUpdateIndirectBufferAttribs is not null, the indirect ray tracing attributes will be written to the pAttribsBuffer buffer
     ///        specified by the structure and can be used by IDeviceContext::TraceRaysIndirect() command.
     ///        In Direct3D12 backend, the pAttribsBuffer buffer will be initialized with D3D12_DISPATCH_RAYS_DESC structure that contains
@@ -2690,7 +2690,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     ///        (see IDeviceContext::TraceRaysIndirect() description).
     ///        In Vulkan backend, the pAttribsBuffer buffer will not be modified, because the SBT is used directly
     ///        in IDeviceContext::TraceRaysIndirect().
-    /// 
+    ///
     /// \remarks  The method is not thread-safe. An application must externally synchronize the access
     ///           to the shader binding table (SBT) passed as an argument to the function.
     ///           The function modifies the data in the SBT and must not run in parallel with any other command that uses the same SBT.

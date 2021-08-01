@@ -1,27 +1,27 @@
 /*
  *  Copyright 2019-2021 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
- *  
+ *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
- *  
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS,
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *
- *  In no event and under no legal theory, whether in tort (including negligence), 
- *  contract, or otherwise, unless required by applicable law (such as deliberate 
+ *  In no event and under no legal theory, whether in tort (including negligence),
+ *  contract, or otherwise, unless required by applicable law (such as deliberate
  *  and grossly negligent acts) or agreed to in writing, shall any Contributor be
- *  liable for any damages, including any direct, indirect, special, incidental, 
- *  or consequential damages of any character arising as a result of this License or 
- *  out of the use or inability to use the software (including but not limited to damages 
- *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and 
- *  all other commercial damages or losses), even if such Contributor has been advised 
+ *  liable for any damages, including any direct, indirect, special, incidental,
+ *  or consequential damages of any character arising as a result of this License or
+ *  out of the use or inability to use the software (including but not limited to damages
+ *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and
+ *  all other commercial damages or losses), even if such Contributor has been advised
  *  of the possibility of such damages.
  */
 
@@ -901,8 +901,8 @@ template <class T> struct Matrix3x3
     Matrix3x3(T i11, T i12, T i13,
               T i21, T i22, T i23,
               T i31, T i32, T i33) :
-        _11{i11}, _12{i12}, _13{i13}, 
-        _21{i21}, _22{i22}, _23{i23}, 
+        _11{i11}, _12{i12}, _13{i13},
+        _21{i21}, _22{i22}, _23{i23},
         _31{i31}, _32{i32}, _33{i33}
     // clang-format on
     {
@@ -1179,9 +1179,9 @@ template <class T> struct Matrix4x4
               T i21, T i22, T i23, T i24,
               T i31, T i32, T i33, T i34,
               T i41, T i42, T i43, T i44) :
-        _11{i11}, _12{i12}, _13{i13}, _14{i14}, 
-        _21{i21}, _22{i22}, _23{i23}, _24{i24}, 
-        _31{i31}, _32{i32}, _33{i33}, _34{i34}, 
+        _11{i11}, _12{i12}, _13{i13}, _14{i14},
+        _21{i21}, _22{i22}, _23{i23}, _24{i24},
+        _31{i31}, _32{i32}, _33{i33}, _34{i34},
         _41{i41}, _42{i42}, _43{i43}, _44{i44}
     {
     }
@@ -1192,9 +1192,9 @@ template <class T> struct Matrix4x4
               const Vector4<T>& Row1,
               const Vector4<T>& Row2,
               const Vector4<T>& Row3) :
-        _11{Row0.x}, _12{Row0.y}, _13{Row0.z}, _14{Row0.w}, 
-        _21{Row1.x}, _22{Row1.y}, _23{Row1.z}, _24{Row1.w}, 
-        _31{Row2.x}, _32{Row2.y}, _33{Row2.z}, _34{Row2.w}, 
+        _11{Row0.x}, _12{Row0.y}, _13{Row0.z}, _14{Row0.w},
+        _21{Row1.x}, _22{Row1.y}, _23{Row1.z}, _24{Row1.w},
+        _31{Row2.x}, _32{Row2.y}, _33{Row2.z}, _34{Row2.w},
         _41{Row3.x}, _42{Row3.y}, _43{Row3.z}, _44{Row3.w}
     {
     }
@@ -1481,7 +1481,7 @@ template <class T> struct Matrix4x4
             {
                          2   / (right - left),                                 0,     0,    0,
                                             0,                2 / (top - bottom),     0,    0,
-                                            0,                                 0,   _22,    0,                
+                                            0,                                 0,   _22,    0,
                 (left + right)/(left - right),   (top + bottom) / (bottom - top),   _32,    1
             };
         // clang-format on

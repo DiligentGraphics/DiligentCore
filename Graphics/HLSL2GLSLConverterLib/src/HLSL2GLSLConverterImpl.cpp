@@ -1,27 +1,27 @@
 /*
  *  Copyright 2019-2021 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
- *  
+ *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
- *  
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS,
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *
- *  In no event and under no legal theory, whether in tort (including negligence), 
- *  contract, or otherwise, unless required by applicable law (such as deliberate 
+ *  In no event and under no legal theory, whether in tort (including negligence),
+ *  contract, or otherwise, unless required by applicable law (such as deliberate
  *  and grossly negligent acts) or agreed to in writing, shall any Contributor be
- *  liable for any damages, including any direct, indirect, special, incidental, 
- *  or consequential damages of any character arising as a result of this License or 
- *  out of the use or inability to use the software (including but not limited to damages 
- *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and 
- *  all other commercial damages or losses), even if such Contributor has been advised 
+ *  liable for any damages, including any direct, indirect, special, incidental,
+ *  or consequential damages of any character arising as a result of this License or
+ *  out of the use or inability to use the software (including but not limited to damages
+ *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and
+ *  all other commercial damages or losses), even if such Contributor has been advised
  *  of the possibility of such damages.
  */
 
@@ -1114,7 +1114,7 @@ void ReadNumericConstant(const String& Source, String::const_iterator& Pos, Stri
 }
 
 
-// The function convertes source code into a token list
+// The function converts source code into a token list
 void HLSL2GLSLConverterImpl::ConversionStream::Tokenize(const String& Source)
 {
 #define CHECK_END(...)                      \
@@ -1290,7 +1290,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::Tokenize(const String& Source)
             case '"':
                 //[domain("quad")]
                 //        ^
-                NewToken.Type = TokenType::SrtingConstant;
+                NewToken.Type = TokenType::StringConstant;
                 ++SrcPos;
                 //[domain("quad")]
                 //         ^
@@ -1742,7 +1742,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ParseSamplers(TokenListType::iter
 
                 if (IsFunctionArgumentList)
                 {
-                    // In function argument list, every arument
+                    // In function argument list, every argument
                     // has its own type declaration
                     break;
                 }
@@ -2205,7 +2205,7 @@ Uint32 HLSL2GLSLConverterImpl::ConversionStream::CountFunctionArguments(TokenLis
     ProcessScope(
         Token, ScopeEnd, TokenType::OpenBracket, TokenType::ClosingBracket,
         [&](TokenListType::iterator& tkn, int ScopeDepth) {
-            // Argument list is not empty, so there is at least one arument.
+            // Argument list is not empty, so there is at least one argument.
             if (NumArguments == 0)
                 NumArguments = 1;
             // Number of additional arguments equals the number of commas
@@ -3099,17 +3099,17 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessFunctionParameters(TokenLi
                         VERIFY_PARSER_STATE(Token, Token != m_Tokens.end() && Token->Literal == "<", "Angle bracket expected");
                         // inout LineStream<GSOut> lnStream
                         //                 ^
-                        auto OpenAngleBarcket = Token++;
-                        m_Tokens.erase(OpenAngleBarcket);
+                        auto OpenAngleBracket = Token++;
+                        m_Tokens.erase(OpenAngleBracket);
                         // inout LineStream GSOut> lnStream
                         //                  ^
 
                         VERIFY_PARSER_STATE(Token, Token != m_Tokens.end(), "Unexpected EOF");
 
-                        auto ClosingAngleBarcket = Token;
-                        ++ClosingAngleBarcket;
-                        VERIFY_PARSER_STATE(ClosingAngleBarcket, ClosingAngleBarcket != m_Tokens.end() && ClosingAngleBarcket->Literal == ">", "Angle bracket expected");
-                        m_Tokens.erase(ClosingAngleBarcket);
+                        auto ClosingAngleBracket = Token;
+                        ++ClosingAngleBracket;
+                        VERIFY_PARSER_STATE(ClosingAngleBracket, ClosingAngleBracket != m_Tokens.end() && ClosingAngleBracket->Literal == ">", "Angle bracket expected");
+                        m_Tokens.erase(ClosingAngleBracket);
                         // inout LineStream GSOut lnStream
                         //                  ^
                     }
@@ -3125,8 +3125,8 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessFunctionParameters(TokenLi
                     VERIFY_PARSER_STATE(Token, Token != m_Tokens.end() && Token->Literal == "<", "Angle bracket expected");
                     // HSOutput main(InputPatch<VSOutput, 1> inputPatch, uint uCPID : SV_OutputControlPointID)
                     //                         ^
-                    auto OpenAngleBarcket = Token++;
-                    m_Tokens.erase(OpenAngleBarcket);
+                    auto OpenAngleBracket = Token++;
+                    m_Tokens.erase(OpenAngleBracket);
                     // HSOutput main(InputPatch VSOutput, 1> inputPatch, uint uCPID : SV_OutputControlPointID)
                     //                          ^
 
@@ -3190,7 +3190,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessFunctionParameters(TokenLi
             //                                     ^
             //                                SemanticToken
             VERIFY_PARSER_STATE(SemanticToken, SemanticToken != m_Tokens.end(), "Unexpected EOF");
-            VERIFY_PARSER_STATE(SemanticToken, SemanticToken->Type == TokenType::Identifier, "Exepcted semantic for the return argument ");
+            VERIFY_PARSER_STATE(SemanticToken, SemanticToken->Type == TokenType::Identifier, "Expected semantic for the return argument ");
             // Transform to lower case -  semantics are case-insensitive
             RetParam.Semantic = StrToLower(SemanticToken->Literal);
             ++SemanticToken;
@@ -4070,7 +4070,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessHullShaderArguments(TokenL
         case Partitioning::integer:         GlobalsSS << ", equal_spacing";           break;
         case Partitioning::fractional_even: GlobalsSS << ", fractional_even_spacing"; break;
         case Partitioning::fractional_odd:  GlobalsSS << ", fractional_odd_spacing";  break;
-        case Partitioning::pow2:            
+        case Partitioning::pow2:
             LOG_WARNING_MESSAGE( "OpenGL does not support pow2 partitioning. Using integer instead" );
             GlobalsSS << ", equal_spacing";
         break;
@@ -4694,7 +4694,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::RemoveSemantics()
                 }
                 else if (Token->Type == TokenType::Identifier)
                 {
-                    // Searh for "Identifier(" pattern
+                    // Search for "Identifier(" pattern
                     // In global scope this should be texture declaration
                     // It can also be other things like macro. But this is not a problem.
                     ++Token;

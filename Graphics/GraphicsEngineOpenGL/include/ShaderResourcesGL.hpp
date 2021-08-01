@@ -1,27 +1,27 @@
 /*
  *  Copyright 2019-2021 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
- *  
+ *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
- *  
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS,
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *
- *  In no event and under no legal theory, whether in tort (including negligence), 
- *  contract, or otherwise, unless required by applicable law (such as deliberate 
+ *  In no event and under no legal theory, whether in tort (including negligence),
+ *  contract, or otherwise, unless required by applicable law (such as deliberate
  *  and grossly negligent acts) or agreed to in writing, shall any Contributor be
- *  liable for any damages, including any direct, indirect, special, incidental, 
- *  or consequential damages of any character arising as a result of this License or 
- *  out of the use or inability to use the software (including but not limited to damages 
- *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and 
- *  all other commercial damages or losses), even if such Contributor has been advised 
+ *  liable for any damages, including any direct, indirect, special, incidental,
+ *  or consequential damages of any character arising as a result of this License or
+ *  out of the use or inability to use the software (including but not limited to damages
+ *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and
+ *  all other commercial damages or losses), even if such Contributor has been advised
  *  of the possibility of such damages.
  */
 
@@ -104,7 +104,7 @@ public:
                 Attribs.ResourceType,
                 Attribs.ArraySize
             }
-            // clang-format on 
+            // clang-format on
         {
         }
 
@@ -126,7 +126,7 @@ public:
         UniformBufferInfo            (      UniformBufferInfo&&) = default;
         UniformBufferInfo& operator= (      UniformBufferInfo&&) = delete;
 
-        UniformBufferInfo(const Char*           _Name, 
+        UniformBufferInfo(const Char*           _Name,
                           SHADER_TYPE           _ShaderStages,
                           SHADER_RESOURCE_TYPE  _ResourceType,
                           Uint32                _ArraySize,
@@ -155,7 +155,7 @@ public:
         TextureInfo            (      TextureInfo&&) = default;
         TextureInfo& operator= (      TextureInfo&&) = delete;
 
-        TextureInfo(const Char*           _Name, 
+        TextureInfo(const Char*           _Name,
                     SHADER_TYPE           _ShaderStages,
                     SHADER_RESOURCE_TYPE  _ResourceType,
                     Uint32                _ArraySize,
@@ -192,7 +192,7 @@ public:
         ImageInfo            (      ImageInfo&&) = default;
         ImageInfo& operator= (      ImageInfo&&) = delete;
 
-        ImageInfo(const Char*           _Name, 
+        ImageInfo(const Char*           _Name,
                   SHADER_TYPE           _ShaderStages,
                   SHADER_RESOURCE_TYPE  _ResourceType,
                   Uint32                _ArraySize,
@@ -205,7 +205,7 @@ public:
             IsMultisample    {_IsMultisample}
         {}
 
-        ImageInfo(const ImageInfo& Img, 
+        ImageInfo(const ImageInfo& Img,
                   StringPool&      NamesPool) noexcept :
             GLResourceAttribs{Img, NamesPool},
             ImageType        {Img.ImageType},
@@ -229,7 +229,7 @@ public:
         StorageBlockInfo            (      StorageBlockInfo&&) = default;
         StorageBlockInfo& operator= (      StorageBlockInfo&&) = delete;
 
-        StorageBlockInfo(const Char*            _Name, 
+        StorageBlockInfo(const Char*            _Name,
                          SHADER_TYPE            _ShaderStages,
                          SHADER_RESOURCE_TYPE   _ResourceType,
                          Uint32                 _ArraySize,
@@ -399,10 +399,10 @@ private:
 
     // clang-format off
     // There could be more than one stage if using non-separable programs
-    SHADER_TYPE         m_ShaderStages = SHADER_TYPE_UNKNOWN; 
+    SHADER_TYPE         m_ShaderStages = SHADER_TYPE_UNKNOWN;
 
     // Memory layout:
-    // 
+    //
     //  |  Uniform buffers  |   Textures  |   Images   |   Storage Blocks   |    String Pool Data   |
     //
 

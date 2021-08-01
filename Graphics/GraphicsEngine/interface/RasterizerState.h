@@ -1,27 +1,27 @@
 /*
  *  Copyright 2019-2021 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
- *  
+ *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
- *  
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS,
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *
- *  In no event and under no legal theory, whether in tort (including negligence), 
- *  contract, or otherwise, unless required by applicable law (such as deliberate 
+ *  In no event and under no legal theory, whether in tort (including negligence),
+ *  contract, or otherwise, unless required by applicable law (such as deliberate
  *  and grossly negligent acts) or agreed to in writing, shall any Contributor be
- *  liable for any damages, including any direct, indirect, special, incidental, 
- *  or consequential damages of any character arising as a result of this License or 
- *  out of the use or inability to use the software (including but not limited to damages 
- *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and 
- *  all other commercial damages or losses), even if such Contributor has been advised 
+ *  liable for any damages, including any direct, indirect, special, incidental,
+ *  or consequential damages of any character arising as a result of this License or
+ *  out of the use or inability to use the software (including but not limited to damages
+ *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and
+ *  all other commercial damages or losses), even if such Contributor has been advised
  *  of the possibility of such damages.
  */
 
@@ -41,7 +41,7 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 /// [D3D11_FILL_MODE]: https://msdn.microsoft.com/en-us/library/windows/desktop/ff476131(v=vs.85).aspx
 /// [D3D12_FILL_MODE]: https://msdn.microsoft.com/en-us/library/windows/desktop/dn770366(v=vs.85).aspx
-/// This enumeration determines the fill mode to use when rendering triangles and mirrors the 
+/// This enumeration determines the fill mode to use when rendering triangles and mirrors the
 /// [D3D11_FILL_MODE][]/[D3D12_FILL_MODE][] enum. It is used by RasterizerStateDesc structure to define the fill mode.
 DILIGENT_TYPED_ENUM(FILL_MODE, Int8)
 {
@@ -50,14 +50,14 @@ DILIGENT_TYPED_ENUM(FILL_MODE, Int8)
 
     /// Rasterize triangles using wireframe fill. \n
     /// Direct3D counterpart: D3D11_FILL_WIREFRAME/D3D12_FILL_MODE_WIREFRAME. OpenGL counterpart: GL_LINE.
-    FILL_MODE_WIREFRAME,    
+    FILL_MODE_WIREFRAME,
 
     /// Rasterize triangles using solid fill. \n
     /// Direct3D counterpart: D3D11_FILL_SOLID/D3D12_FILL_MODE_SOLID. OpenGL counterpart: GL_FILL.
-    FILL_MODE_SOLID,        
+    FILL_MODE_SOLID,
 
     /// Helper value that stores the total number of fill modes in the enumeration.
-    FILL_MODE_NUM_MODES     
+    FILL_MODE_NUM_MODES
 };
 
 /// Cull mode
@@ -103,9 +103,9 @@ struct RasterizerStateDesc
     /// Default value: Diligent::CULL_MODE_BACK.
     CULL_MODE CullMode              DEFAULT_INITIALIZER(CULL_MODE_BACK);
 
-    /// Determines if a triangle is front- or back-facing. If this parameter is True, 
-    /// a triangle will be considered front-facing if its vertices are counter-clockwise 
-    /// on the render target and considered back-facing if they are clockwise. 
+    /// Determines if a triangle is front- or back-facing. If this parameter is True,
+    /// a triangle will be considered front-facing if its vertices are counter-clockwise
+    /// on the render target and considered back-facing if they are clockwise.
     /// If this parameter is False, the opposite is true.
     /// Default value: False.
     Bool      FrontCounterClockwise DEFAULT_INITIALIZER(False);
@@ -148,7 +148,7 @@ struct RasterizerStateDesc
                         Bool      _AntialiasedLineEnable = RasterizerStateDesc{}.AntialiasedLineEnable,
                         Int32     _DepthBias             = RasterizerStateDesc{}.DepthBias,
                         Float32   _DepthBiasClamp        = RasterizerStateDesc{}.DepthBiasClamp,
-                        Float32   _SlopeScaledDepthBias  = RasterizerStateDesc{}.SlopeScaledDepthBias)noexcept : 
+                        Float32   _SlopeScaledDepthBias  = RasterizerStateDesc{}.SlopeScaledDepthBias)noexcept :
         FillMode              {_FillMode             },
         CullMode              {_CullMode             },
         FrontCounterClockwise {_FrontCounterClockwise},
@@ -164,7 +164,7 @@ struct RasterizerStateDesc
     /// Tests if two structures are equivalent
 
     /// \param [in] RHS - reference to the structure to perform comparison with
-    /// \return 
+    /// \return
     /// - True if all members of the two structures are equal.
     /// - False otherwise
     bool operator == (const RasterizerStateDesc& RHS)const

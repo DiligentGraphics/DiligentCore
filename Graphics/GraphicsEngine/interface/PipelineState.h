@@ -1,27 +1,27 @@
 /*
  *  Copyright 2019-2021 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
- *  
+ *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
- *  
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS,
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *
- *  In no event and under no legal theory, whether in tort (including negligence), 
- *  contract, or otherwise, unless required by applicable law (such as deliberate 
+ *  In no event and under no legal theory, whether in tort (including negligence),
+ *  contract, or otherwise, unless required by applicable law (such as deliberate
  *  and grossly negligent acts) or agreed to in writing, shall any Contributor be
- *  liable for any damages, including any direct, indirect, special, incidental, 
- *  or consequential damages of any character arising as a result of this License or 
- *  out of the use or inability to use the software (including but not limited to damages 
- *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and 
- *  all other commercial damages or losses), even if such Contributor has been advised 
+ *  liable for any damages, including any direct, indirect, special, incidental,
+ *  or consequential damages of any character arising as a result of this License or
+ *  out of the use or inability to use the software (including but not limited to damages
+ *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and
+ *  all other commercial damages or losses), even if such Contributor has been advised
  *  of the possibility of such damages.
  */
 
@@ -48,7 +48,7 @@
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
-    
+
 /// Sample description
 
 /// This structure is used by GraphicsPipelineDesc to describe multisampling parameters
@@ -63,7 +63,7 @@ struct SampleDesc
 #if DILIGENT_CPP_INTERFACE
     SampleDesc()noexcept{}
 
-    SampleDesc(Uint8 _Count, Uint8 _Quality) noexcept : 
+    SampleDesc(Uint8 _Count, Uint8 _Quality) noexcept :
         Count   {_Count  },
         Quality {_Quality}
     {}
@@ -110,7 +110,7 @@ struct ShaderResourceVariableDesc
 #if DILIGENT_CPP_INTERFACE
     ShaderResourceVariableDesc()noexcept{}
 
-    ShaderResourceVariableDesc(SHADER_TYPE                   _ShaderStages, 
+    ShaderResourceVariableDesc(SHADER_TYPE                   _ShaderStages,
                                const Char*                   _Name,
                                SHADER_RESOURCE_VARIABLE_TYPE _Type,
                                SHADER_VARIABLE_FLAGS         _Flags = SHADER_VARIABLE_FLAG_NONE) noexcept :
@@ -143,19 +143,19 @@ struct PipelineResourceLayoutDesc
     /// This memeber has no effect on variables defined in Variables array.
     SHADER_TYPE                         DefaultVariableMergeStages DEFAULT_INITIALIZER(SHADER_TYPE_UNKNOWN);
 
-    /// Number of elements in Variables array            
+    /// Number of elements in Variables array
     Uint32                              NumVariables         DEFAULT_INITIALIZER(0);
 
-    /// Array of shader resource variable descriptions               
+    /// Array of shader resource variable descriptions
 
     /// There may be multiple variables with the same name that use different shader stages,
     /// but the stages must not overlap.
     const ShaderResourceVariableDesc*   Variables            DEFAULT_INITIALIZER(nullptr);
-                                                            
-    /// Number of immutable samplers in ImmutableSamplers array   
+
+    /// Number of immutable samplers in ImmutableSamplers array
     Uint32                              NumImmutableSamplers DEFAULT_INITIALIZER(0);
-                                                            
-    /// Array of immutable sampler descriptions                
+
+    /// Array of immutable sampler descriptions
     const ImmutableSamplerDesc*         ImmutableSamplers    DEFAULT_INITIALIZER(nullptr);
 };
 typedef struct PipelineResourceLayoutDesc PipelineResourceLayoutDesc;
@@ -169,9 +169,9 @@ struct GraphicsPipelineDesc
     /// Blend state description.
     BlendStateDesc BlendDesc;
 
-    /// 32-bit sample mask that determines which samples get updated 
-    /// in all the active render targets. A sample mask is always applied; 
-    /// it is independent of whether multisampling is enabled, and does not 
+    /// 32-bit sample mask that determines which samples get updated
+    /// in all the active render targets. A sample mask is always applied;
+    /// it is independent of whether multisampling is enabled, and does not
     /// depend on whether an application uses multisample render targets.
     Uint32 SampleMask DEFAULT_INITIALIZER(0xFFFFFFFF);
 
@@ -423,7 +423,7 @@ struct PipelineStateCreateInfo
     /// Pipeline state creation flags, see Diligent::PSO_CREATE_FLAGS.
     PSO_CREATE_FLAGS  Flags      DEFAULT_INITIALIZER(PSO_CREATE_FLAG_NONE);
 
-    /// An array of ResourceSignaturesCount shader resource signatures that 
+    /// An array of ResourceSignaturesCount shader resource signatures that
     /// define the layout of shader resources in this pipeline state object.
     /// See Diligent::IPipelineResourceSignature.
     ///
@@ -451,7 +451,7 @@ typedef struct PipelineStateCreateInfo PipelineStateCreateInfo;
 struct GraphicsPipelineStateCreateInfo DILIGENT_DERIVE(PipelineStateCreateInfo)
 
     /// Graphics pipeline state description.
-    GraphicsPipelineDesc GraphicsPipeline; 
+    GraphicsPipelineDesc GraphicsPipeline;
 
     /// Vertex shader to be used with the pipeline.
     IShader* pVS DEFAULT_INITIALIZER(nullptr);
@@ -645,7 +645,7 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
     /// Returns static shader resource variable. If the variable is not found,
     /// returns nullptr.
 
-    /// \param [in] ShaderType - The type of the shader to look up the variable. 
+    /// \param [in] ShaderType - The type of the shader to look up the variable.
     ///                          Must be one of Diligent::SHADER_TYPE.
     /// \param [in] Name       - Name of the variable.
     ///
@@ -663,14 +663,14 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
 
     /// Returns static shader resource variable by its index.
 
-    /// \param [in] ShaderType - The type of the shader to look up the variable. 
+    /// \param [in] ShaderType - The type of the shader to look up the variable.
     ///                          Must be one of Diligent::SHADER_TYPE.
     /// \param [in] Index      - Shader variable index. The index must be between
-    ///                          0 and the total number of variables returned by 
+    ///                          0 and the total number of variables returned by
     ///                          GetStaticVariableCount().
     ///
     /// \remarks    Only static shader resource variables can be accessed through this method.
-    ///             Mutable and dynamic variables are accessed through Shader Resource 
+    ///             Mutable and dynamic variables are accessed through Shader Resource
     ///             Binding object.
     ///
     ///             This method is only allowed for pipelines that use implicit resource signature
@@ -687,7 +687,7 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
     /// \param [out] ppShaderResourceBinding - Memory location where pointer to the new shader resource
     ///                                        binding object is written.
     /// \param [in] InitStaticResources      - If set to true, the method will initialize static resources in
-    ///                                        the created object, which has the exact same effect as calling 
+    ///                                        the created object, which has the exact same effect as calling
     ///                                        IPipelineState::InitializeStaticSRBResources().
     ///
     /// \remarks    This method is only allowed for pipelines that use implicit resource signature
@@ -729,20 +729,20 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
     /// when another PSO is bound.
     /// \param [in] pPSO - Pointer to the pipeline state object to check compatibility with.
     /// \return     true if this PSO is compatible with pPSO. false otherwise.
-    /// \remarks    The function only checks that shader resource layouts are compatible, but 
+    /// \remarks    The function only checks that shader resource layouts are compatible, but
     ///             does not check if resource types match. For instance, if a pixel shader in one PSO
     ///             uses a texture at slot 0, and a pixel shader in another PSO uses texture array at slot 0,
     ///             the pipelines will be compatible. However, if you try to use SRB object from the first pipeline
     ///             to commit resources for the second pipeline, a runtime error will occur.\n
     ///             The function only checks compatibility of shader resource layouts. It does not take
     ///             into account vertex shader input layout, number of outputs, etc.
-    /// 
+    ///
     ///             *Technical details*
     ///
     ///             PSOs may be partially compatible when some, but not all pipeline resource signatures are compatible.
     ///             In Vulkan backend, switching PSOs that are partially compatible may increase performance
-    ///             as shader resource bindings (that map to descriptor sets) from compatible signatures may be preserved. 
-    ///             In Direct3D12 backend, only switching between fully compatible PSOs preserves shader resource bindings, 
+    ///             as shader resource bindings (that map to descriptor sets) from compatible signatures may be preserved.
+    ///             In Direct3D12 backend, only switching between fully compatible PSOs preserves shader resource bindings,
     ///             while switching partially compatible PSOs still requires re-binding all resource bindigns from all signatures.
     ///             In other backends the behavior is emualted. Usually, the bindigs from the first N compatible resource signatures
     ///             may be preserved.

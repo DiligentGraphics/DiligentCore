@@ -2,7 +2,7 @@ cmake_minimum_required (VERSION 3.11)
 
 project(Diligent-GraphicsEngineD3D12 CXX)
 
-set(INCLUDE 
+set(INCLUDE
     include/BufferD3D12Impl.hpp
     include/BufferViewD3D12Impl.hpp
     include/CommandContext.hpp
@@ -45,7 +45,7 @@ set(INCLUDE
     include/PipelineResourceAttribsD3D12.hpp
 )
 
-set(INTERFACE 
+set(INTERFACE
     interface/BufferD3D12.h
     interface/BufferViewD3D12.h
     interface/CommandQueueD3D12.h
@@ -67,7 +67,7 @@ set(INTERFACE
 )
 
 
-set(SRC 
+set(SRC
     src/BufferD3D12Impl.cpp
     src/BufferViewD3D12Impl.cpp
     src/CommandContext.cpp
@@ -126,7 +126,7 @@ set(SHADERS
 set(COMPILED_SHADERS_DIR ${CMAKE_CURRENT_BINARY_DIR}/CompiledShaders/GenerateMips)
 file(MAKE_DIRECTORY "${COMPILED_SHADERS_DIR}")
 
-set_source_files_properties(${SHADERS} PROPERTIES 
+set_source_files_properties(${SHADERS} PROPERTIES
     VS_SHADER_TYPE Compute
     VS_SHADER_ENTRYPOINT main
     VS_SHADER_MODEL 5.0
@@ -140,19 +140,19 @@ target_link_libraries     (Diligent-GraphicsEngineD3D12Interface INTERFACE Dilig
 target_include_directories(Diligent-GraphicsEngineD3D12Interface INTERFACE interface)
 
 
-add_library(Diligent-GraphicsEngineD3D12-static STATIC 
+add_library(Diligent-GraphicsEngineD3D12-static STATIC
     ${SRC} ${INTERFACE} ${INCLUDE} ${SHADERS}
     readme.md
     shaders/GenerateMips/GenerateMipsCS.hlsli
 )
 
-add_library(Diligent-GraphicsEngineD3D12-shared SHARED 
+add_library(Diligent-GraphicsEngineD3D12-shared SHARED
     src/DLLMain.cpp
     src/GraphicsEngineD3D12.def
     readme.md
 )
 
-target_include_directories(Diligent-GraphicsEngineD3D12-static 
+target_include_directories(Diligent-GraphicsEngineD3D12-static
 PRIVATE
     ${CMAKE_CURRENT_BINARY_DIR}/CompiledShaders
     include
@@ -160,11 +160,11 @@ PRIVATE
 
 target_link_libraries(Diligent-GraphicsEngineD3D12-static
 PRIVATE
-    Diligent-BuildSettings 
-    Diligent-Common 
+    Diligent-BuildSettings
+    Diligent-Common
     Diligent-GraphicsEngineD3DBase
     Diligent-GraphicsEngineNextGenBase
-    Diligent-TargetPlatform 
+    Diligent-TargetPlatform
     Diligent-ShaderTools
     dxgi.lib
     d3dcompiler.lib
@@ -200,14 +200,14 @@ set_common_target_properties(Diligent-GraphicsEngineD3D12-static)
 
 source_group("src" FILES ${SRC})
 
-source_group("dll" FILES 
+source_group("dll" FILES
     src/DLLMain.cpp
     src/GraphicsEngineD3D12.def
 )
 
 source_group("include" FILES ${INCLUDE})
 source_group("interface" FILES ${INTERFACE})
-source_group("shaders" FILES 
+source_group("shaders" FILES
     ${SHADERS}
     shaders/GenerateMips/GenerateMipsCS.hlsli
 )

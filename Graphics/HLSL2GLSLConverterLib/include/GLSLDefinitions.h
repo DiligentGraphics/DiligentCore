@@ -1,27 +1,27 @@
 /*
  *  Copyright 2019-2021 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
- *  
+ *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
- *  
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS,
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *
- *  In no event and under no legal theory, whether in tort (including negligence), 
- *  contract, or otherwise, unless required by applicable law (such as deliberate 
+ *  In no event and under no legal theory, whether in tort (including negligence),
+ *  contract, or otherwise, unless required by applicable law (such as deliberate
  *  and grossly negligent acts) or agreed to in writing, shall any Contributor be
- *  liable for any damages, including any direct, indirect, special, incidental, 
- *  or consequential damages of any character arising as a result of this License or 
- *  out of the use or inability to use the software (including but not limited to damages 
- *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and 
- *  all other commercial damages or losses), even if such Contributor has been advised 
+ *  liable for any damages, including any direct, indirect, special, incidental,
+ *  or consequential damages of any character arising as a result of this License or
+ *  out of the use or inability to use the software (including but not limited to damages
+ *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and
+ *  all other commercial damages or losses), even if such Contributor has been advised
  *  of the possibility of such damages.
  */
 
@@ -37,7 +37,7 @@
 #   define IMAGE_WRITEONLY writeonly
 #else
 #   define IMAGE_WRITEONLY
-#endif 
+#endif
 
 #define float4 vec4
 #define float3 vec3
@@ -55,7 +55,7 @@
 #define bool3 bvec3
 #define bool2 bvec2
 
-// OpenGL matrices in GLSL are always as column-major 
+// OpenGL matrices in GLSL are always as column-major
 // (this is not related to how they are stored)
 #define float2x2 mat2x2
 #define float2x3 mat3x2
@@ -76,10 +76,10 @@
 #define SamplerComparisonState int
 
 // https://www.opengl.org/wiki/Memory_Model#Incoherent_memory_access
-// Shared variable access uses the rules for incoherent memory access. 
-// This means that the user must perform certain synchronization in 
+// Shared variable access uses the rules for incoherent memory access.
+// This means that the user must perform certain synchronization in
 // order to ensure that shared variables are visible.
-// At the same time, shared variables are all implicitly declared coherent, 
+// At the same time, shared variables are all implicitly declared coherent,
 // so one don't need to (and can't) use that qualifier.
 #define groupshared shared
 
@@ -87,7 +87,7 @@
 #   define ddx dFdx
 #   define ddy dFdy
 #else
-#   define ddx(x) (x) // GLSL compiler fails when it sees derivatives 
+#   define ddx(x) (x) // GLSL compiler fails when it sees derivatives
 #   define ddy(x) (x) // in any shader but fragment
 #endif
 
@@ -179,16 +179,16 @@ float f16tof32( uint u1 )
     return unpackHalf2x16( u1 ).x;
 }
 vec2 f16tof32( uvec2 u2 )
-{ 
+{
     uint u2PackedHalf = (u2.x & 0x0ffffu) | ((u2.y & 0x0ffffu) << 16u);
-    return unpackHalf2x16( u2PackedHalf ); 
+    return unpackHalf2x16( u2PackedHalf );
 }
 vec3 f16tof32( uvec3 u3 )
-{ 
+{
     return vec3( f16tof32( u3.xy ), f16tof32( u3.z ) );
 }
 vec4 f16tof32( uvec4 u4 )
-{ 
+{
     return vec4( f16tof32( u4.xy ), f16tof32( u4.zw ) );
 }
 float f16tof32( int   i1 ){ return f16tof32( uint ( i1 ) ); }
@@ -197,11 +197,11 @@ vec3  f16tof32( ivec3 i3 ){ return f16tof32( uvec3( i3 ) ); }
 vec4  f16tof32( ivec4 i4 ){ return f16tof32( uvec4( i4 ) ); }
 
 uint _f32tof16( float f )
-{ 
+{
     return packHalf2x16( vec2( f, 0.0 ) ) & 0x0ffffu;
 }
 uvec2 _f32tof16( vec2 f2 )
-{ 
+{
     uint u2PackedHalf = packHalf2x16( f2 );
     return uvec2( u2PackedHalf & 0x0ffffu, u2PackedHalf >> 16u );
 }
@@ -356,26 +356,26 @@ float BoolToFloat( bool b )
 
 // https://www.opengl.org/wiki/Memory_Model#Incoherent_memory_access
 
-// MSDN: GroupMemoryBarrier() blocks execution of all threads 
+// MSDN: GroupMemoryBarrier() blocks execution of all threads
 // in a group until all group SHARED accesses have been completed.
 void GroupMemoryBarrier()
 {
-    // OpenGL.org: groupMemoryBarrier() waits on the completion of all memory accesses 
-    // performed by an invocation of a compute shader relative to the same access performed 
+    // OpenGL.org: groupMemoryBarrier() waits on the completion of all memory accesses
+    // performed by an invocation of a compute shader relative to the same access performed
     // by other invocations in the same work group and then returns with no other effect.
 
-    // groupMemoryBarrier() acts like memoryBarrier(), ordering memory writes for all kinds 
+    // groupMemoryBarrier() acts like memoryBarrier(), ordering memory writes for all kinds
     // of variables, but it only orders read/writes for the current work group.
     groupMemoryBarrier();
 
-    // OpenGL.org: memoryBarrierShared() waits on the completion of 
+    // OpenGL.org: memoryBarrierShared() waits on the completion of
     // all memory accesses resulting from the use of SHARED variables
-    // and then returns with no other effect. 
+    // and then returns with no other effect.
     memoryBarrierShared();
 }
 
-// MSDN: GroupMemoryBarrierWithGroupSync() blocks execution of all 
-// threads in a group until all memory accesses have been completed 
+// MSDN: GroupMemoryBarrierWithGroupSync() blocks execution of all
+// threads in a group until all memory accesses have been completed
 // and all threads in the group have reached this call.
 void GroupMemoryBarrierWithGroupSync()
 {
@@ -384,32 +384,32 @@ void GroupMemoryBarrierWithGroupSync()
     barrier();
 }
 
-// MSDN: DeviceMemoryBarrier() blocks execution of all threads 
+// MSDN: DeviceMemoryBarrier() blocks execution of all threads
 // in a group until all device memory accesses have been completed.
 void DeviceMemoryBarrier()
 {
     // Call all memory barriers except for shared memory
-    
-    // Do we need to call groupMemoryBarrier() ????? 
 
-    // OpenGL.org: memoryBarrierBuffer() waits on the completion of 
-    // all memory accesses resulting from the use of BUFFER variables 
+    // Do we need to call groupMemoryBarrier() ?????
+
+    // OpenGL.org: memoryBarrierBuffer() waits on the completion of
+    // all memory accesses resulting from the use of BUFFER variables
     // and then returns with no other effect
     memoryBarrierBuffer();
 
-    // OpenGL.org: memoryBarrierImage() waits on the completion of all 
-    // memory accesses resulting from the use of IMAGE variables and then 
-    // returns with no other effect. 
+    // OpenGL.org: memoryBarrierImage() waits on the completion of all
+    // memory accesses resulting from the use of IMAGE variables and then
+    // returns with no other effect.
     memoryBarrierImage();
 
-    // OpenGL.org: memoryBarrierAtomicCounter() waits on the completion of 
-    // all accesses resulting from the use of ATOMIC COUNTERS and then returns 
-    // with no other effect. 
+    // OpenGL.org: memoryBarrierAtomicCounter() waits on the completion of
+    // all accesses resulting from the use of ATOMIC COUNTERS and then returns
+    // with no other effect.
     memoryBarrierAtomicCounter();
 }
 
-// MSDN: DeviceMemoryBarrierWithGroupSync() blocks execution of 
-// all threads in a group until all device memory accesses have 
+// MSDN: DeviceMemoryBarrierWithGroupSync() blocks execution of
+// all threads in a group until all device memory accesses have
 // been completed and all threads in the group have reached this call.
 void DeviceMemoryBarrierWithGroupSync()
 {
@@ -417,48 +417,48 @@ void DeviceMemoryBarrierWithGroupSync()
     barrier();
 }
 
-// MSDN: AllMemoryBarrier() blocks execution of all threads in a 
+// MSDN: AllMemoryBarrier() blocks execution of all threads in a
 // group until all memory accesses have been completed.
 void AllMemoryBarrier()
 {
-    // OpenGL.org: memoryBarrier() waits on the completion of ALL 
-    // memory accesses resulting from the use of IMAGE variables or 
+    // OpenGL.org: memoryBarrier() waits on the completion of ALL
+    // memory accesses resulting from the use of IMAGE variables or
     // ATOMIC COUNTERS and then returns with no other effect.
     memoryBarrier();
     // NOTE: nothing is said about buffer memory and shared memory,
     // so call memoryBarrierBuffer() and memoryBarrierShared() for safety
 
-    // OpenGL.org: memoryBarrierBuffer() waits on the completion of 
-    // all memory accesses resulting from the use of BUFFER variables 
+    // OpenGL.org: memoryBarrierBuffer() waits on the completion of
+    // all memory accesses resulting from the use of BUFFER variables
     // and then returns with no other effect
     memoryBarrierBuffer();
 
-    // OpenGL.org: memoryBarrierShared() waits on the completion of 
+    // OpenGL.org: memoryBarrierShared() waits on the completion of
     // all memory accesses resulting from the use of SHARED variables
-    // and then returns with no other effect. 
+    // and then returns with no other effect.
     memoryBarrierShared();
 
     // Call all memory barrier functions. They should have no effect
     // if everything is synchronized.
-    
-    // OpenGL.org: memoryBarrierImage() waits on the completion of all 
-    // memory accesses resulting from the use of IMAGE variables and then 
-    // returns with no other effect. 
+
+    // OpenGL.org: memoryBarrierImage() waits on the completion of all
+    // memory accesses resulting from the use of IMAGE variables and then
+    // returns with no other effect.
     memoryBarrierImage();
 
-    // OpenGL.org: memoryBarrierAtomicCounter() waits on the completion of 
-    // all accesses resulting from the use of ATOMIC COUNTERS and then returns 
-    // with no other effect. 
+    // OpenGL.org: memoryBarrierAtomicCounter() waits on the completion of
+    // all accesses resulting from the use of ATOMIC COUNTERS and then returns
+    // with no other effect.
     memoryBarrierAtomicCounter();
 
-    // groupMemoryBarrier waits on the completion of all memory accesses performed 
-    // by an invocation of a compute shader relative to the same access performed by 
+    // groupMemoryBarrier waits on the completion of all memory accesses performed
+    // by an invocation of a compute shader relative to the same access performed by
     // other invocations in the same work group and then returns with no other effect.
     groupMemoryBarrier();
 }
 
-// MSDN: AllMemoryBarrierWithGroupSync() blocks execution of all 
-// threads in a group until all memory accesses have been completed 
+// MSDN: AllMemoryBarrierWithGroupSync() blocks execution of all
+// threads in a group until all memory accesses have been completed
 // and all threads in the group have reached this call.
 void AllMemoryBarrierWithGroupSync()
 {
@@ -633,12 +633,12 @@ float _ToVec( uint  u1 ){ return _ToFloat(u1); }
 vec2  _ToVec( uvec2 u2 ){ return _ToVec2( u2.x, u2.y ); }
 vec3  _ToVec( uvec3 u3 ){ return _ToVec3( u3.x, u3.y, u3.z ); }
 vec4  _ToVec( uvec4 u4 ){ return _ToVec4( u4.x, u4.y, u4.z, u4.w ); }
-         
+
 float _ToVec( int   i1 ){ return _ToFloat(i1); }
 vec2  _ToVec( ivec2 i2 ){ return _ToVec2( i2.x, i2.y ); }
 vec3  _ToVec( ivec3 i3 ){ return _ToVec3( i3.x, i3.y, i3.z ); }
 vec4  _ToVec( ivec4 i4 ){ return _ToVec4( i4.x, i4.y, i4.z, i4.w ); }
-         
+
 float _ToVec( float f1 ){ return f1; }
 vec2  _ToVec( vec2  f2 ){ return f2; }
 vec3  _ToVec( vec3  f3 ){ return f3; }
@@ -649,12 +649,12 @@ uint   _ToUvec( uint  u1 ){ return u1; }
 uvec2  _ToUvec( uvec2 u2 ){ return u2; }
 uvec3  _ToUvec( uvec3 u3 ){ return u3; }
 uvec4  _ToUvec( uvec4 u4 ){ return u4; }
-         
+
 uint   _ToUvec( int   i1 ){ return _ToUint(  i1 ); }
 uvec2  _ToUvec( ivec2 i2 ){ return _ToUvec2( i2.x, i2.y ); }
 uvec3  _ToUvec( ivec3 i3 ){ return _ToUvec3( i3.x, i3.y, i3.z ); }
 uvec4  _ToUvec( ivec4 i4 ){ return _ToUvec4( i4.x, i4.y, i4.z, i4.w ); }
-         
+
 uint   _ToUvec( float f1 ){ return _ToUint(  f1 ); }
 uvec2  _ToUvec( vec2  f2 ){ return _ToUvec2( f2.x, f2.y ); }
 uvec3  _ToUvec( vec3  f3 ){ return _ToUvec3( f3.x, f3.y, f3.z ); }
@@ -702,9 +702,9 @@ vec4 _frexp(vec4 f4, out vec4 fexp4)
 
 // Texture size queries
 // https://www.opengl.org/sdk/docs/man/html/textureSize.xhtml
-// textureSize returns the dimensions of level lod (if present) of the texture bound to sampler. 
-// The components in the return value are filled in, in order, with the width, height and depth 
-// of the texture. For the array forms, the last component of the return value is the number of 
+// textureSize returns the dimensions of level lod (if present) of the texture bound to sampler.
+// The components in the return value are filled in, in order, with the width, height and depth
+// of the texture. For the array forms, the last component of the return value is the number of
 // layers in the texture array.
 
 //#if !(defined(DESKTOP_GL) && __VERSION__ >= 430)
@@ -810,9 +810,9 @@ vec4 _frexp(vec4 f4, out vec4 fexp4)
 
 
 // https://www.opengl.org/sdk/docs/man/html/imageSize.xhtml
-// imageSize returns the dimensions of the image bound to image. The components in the 
-// return value are filled in, in order, with the width, height and depth of the image. 
-// For the array forms, the last component of the return value is the number of layers 
+// imageSize returns the dimensions of the image bound to image. The components in the
+// return value are filled in, in order, with the width, height and depth of the image.
+// For the array forms, the last component of the return value is the number of layers
 // in the texture array.
 
 #define GetRWTex1DDimensions_1(Tex, Width)\
@@ -861,26 +861,26 @@ vec4 _frexp(vec4 f4, out vec4 fexp4)
 
 //                             IMPORTANT NOTE ABOUT OFFSET
 // Offset parameter to all texture sampling functions must be a constant expression.
-// If it is not, the shader will be successfully compiled, HOWEVER the value of Offset 
-// will silently be zero. 
+// If it is not, the shader will be successfully compiled, HOWEVER the value of Offset
+// will silently be zero.
 //
 // A constant expression in GLSL is defined as follows:
 // * A literal value.
 // * A const-qualified variable with an explicit initializer (so not a function parameter).
 // * The result of the length() function of an array, but only if the array has an explicit size.
-// * The result of most operators, so long as all the operands are themselves constant expressions. 
+// * The result of most operators, so long as all the operands are themselves constant expressions.
 //   The operators not on this list are any assignment operators (+= and so forth), and the comma operator.
-// * The result of a constructor for a type, but only if all of the arguments to the constructor are 
+// * The result of a constructor for a type, but only if all of the arguments to the constructor are
 //   themselves constant expressions.
-// * The return value of any built-in function, but only if all of the arguments to the function are 
-//   themselves constant expressions. Opaque Types are never constant expressions. Note that the 
-//   functions dFdx, dFdy, and fwidth will return 0, when used in a context that requires a constant 
+// * The return value of any built-in function, but only if all of the arguments to the function are
+//   themselves constant expressions. Opaque Types are never constant expressions. Note that the
+//   functions dFdx, dFdy, and fwidth will return 0, when used in a context that requires a constant
 //   expression (such as a const variable initializer).
-// 
+//
 // The list above does not include return value of a function, even when the value is compile-time expression.
 // As a result, we cannot use type conversion functions for Offset parameter.
 
-// In all texture sampling functions, the last component of Coords is used as Dsub and the array layer is specified 
+// In all texture sampling functions, the last component of Coords is used as Dsub and the array layer is specified
 // in the second to last component of Coords. (The second component of Coords is unused for 1D shadow lookups.)
 // For cube array textures, Dsub is specified as a separate parameter
 //                                                                                                                                     mip
@@ -936,7 +936,7 @@ vec4 _frexp(vec4 f4, out vec4 fexp4)
 #   define SampleCmpTex2DArr_3     SampleCmpLevel0Tex2DArr_3
 #   define SampleCmpTexCube_3      SampleCmpLevel0TexCube_3
 #   define SampleCmpTexCubeArr_3   SampleCmpLevel0TexCubeArr_3
-                                            
+
 #   define SampleCmpTex1D_4        SampleCmpLevel0Tex1D_4
 #   define SampleCmpTex1DArr_4     SampleCmpLevel0Tex1DArr_4
 #   define SampleCmpTex2D_4        SampleCmpLevel0Tex2D_4
@@ -953,10 +953,10 @@ vec4 _frexp(vec4 f4, out vec4 fexp4)
 #define SampleGrad_5(Tex, Sampler, Coords, DDX, DDY, Offset) textureGradOffset(Tex, _ToVec(Coords), _ToVec(DDX), _ToVec(DDY), Offset)
 
 
-// texelFetch performs a lookup of a single texel from texture coordinate P in the texture 
-// bound to sampler. The array layer is specified in the last component of P for array forms. 
-// The lod parameter (if present) specifies the level-of-detail from which the texel will be fetched. 
-// The sample specifies which sample within the texel will be returned when reading from a multi-sample texure.
+// texelFetch performs a lookup of a single texel from texture coordinate P in the texture
+// bound to sampler. The array layer is specified in the last component of P for array forms.
+// The lod parameter (if present) specifies the level-of-detail from which the texel will be fetched.
+// The sample specifies which sample within the texel will be returned when reading from a multi-sample texture.
 
 #define LoadTex1D_1(Tex, Location)        texelFetch      (Tex, _ToInt((Location).x), _ToInt((Location).y))
 #define LoadTex1D_2(Tex, Location, Offset)texelFetchOffset(Tex, _ToInt((Location).x), _ToInt((Location).y), int(Offset))
@@ -1049,7 +1049,7 @@ vec4 _frexp(vec4 f4, out vec4 fexp4)
 
 // Note that Vulkan itself does not invert Y coordinate when transforming
 // normalized device Y to window space. However, we use negative viewport
-// height which achieves the same effect as in D3D, thererfore we need to
+// height which achieves the same effect as in D3D, therefore we need to
 // invert y (see comments in DeviceContextVkImpl::CommitViewports() for details)
 #define F3NDC_XYZ_TO_UVD_SCALE float3(0.5, -0.5, 1.0)
 

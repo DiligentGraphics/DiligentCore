@@ -1,27 +1,27 @@
 /*
  *  Copyright 2019-2021 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
- *  
+ *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
- *  
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS,
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *
- *  In no event and under no legal theory, whether in tort (including negligence), 
- *  contract, or otherwise, unless required by applicable law (such as deliberate 
+ *  In no event and under no legal theory, whether in tort (including negligence),
+ *  contract, or otherwise, unless required by applicable law (such as deliberate
  *  and grossly negligent acts) or agreed to in writing, shall any Contributor be
- *  liable for any damages, including any direct, indirect, special, incidental, 
- *  or consequential damages of any character arising as a result of this License or 
- *  out of the use or inability to use the software (including but not limited to damages 
- *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and 
- *  all other commercial damages or losses), even if such Contributor has been advised 
+ *  liable for any damages, including any direct, indirect, special, incidental,
+ *  or consequential damages of any character arising as a result of this License or
+ *  out of the use or inability to use the software (including but not limited to damages
+ *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and
+ *  all other commercial damages or losses), even if such Contributor has been advised
  *  of the possibility of such damages.
  */
 
@@ -74,7 +74,7 @@ DeviceContextVkImpl::DeviceContextVkImpl(IReferenceCounters*       pRefCounters,
     // Upload heap must always be thread-safe as Finish() may be called from another thread
     m_QueueFamilyCmdPools
     {
-        new std::unique_ptr<VulkanUtilities::VulkanCommandBufferPool>[ 
+        new std::unique_ptr<VulkanUtilities::VulkanCommandBufferPool>[
             // Note that for immediate contexts we will always use one pool,
             // but we still allocate space for all queue families for consistency.
             pDeviceVkImpl->GetPhysicalDevice().GetQueueProperties().size()
@@ -219,7 +219,7 @@ void DeviceContextVkImpl::DisposeVkCmdBuffer(SoftwareQueueIndex CmdQueue, VkComm
     {
     public:
         // clang-format off
-        CmdBufferRecycler(VkCommandBuffer                           _vkCmdBuff, 
+        CmdBufferRecycler(VkCommandBuffer                           _vkCmdBuff,
                          VulkanUtilities::VulkanCommandBufferPool& _Pool) noexcept :
             vkCmdBuff {_vkCmdBuff},
             Pool      {&_Pool    }
@@ -231,7 +231,7 @@ void DeviceContextVkImpl::DisposeVkCmdBuffer(SoftwareQueueIndex CmdQueue, VkComm
         CmdBufferRecycler& operator = (const CmdBufferRecycler&)  = delete;
         CmdBufferRecycler& operator = (      CmdBufferRecycler&&) = delete;
 
-        CmdBufferRecycler(CmdBufferRecycler&& rhs) noexcept : 
+        CmdBufferRecycler(CmdBufferRecycler&& rhs) noexcept :
             vkCmdBuff {rhs.vkCmdBuff},
             Pool      {rhs.Pool     }
         {
@@ -648,7 +648,7 @@ void DeviceContextVkImpl::DvpLogRenderPass_PSOMismatch()
     std::stringstream ss;
     ss << "Active render pass is incompatible with PSO '" << Desc.Name
        << "'. This indicates the mismatch between the number and/or format of bound render "
-          "targets and/or depth stencil buffer and the PSO. Vulkand requires exact match.\n"
+          "targets and/or depth stencil buffer and the PSO. Vulkan requires exact match.\n"
           "    Bound render targets ("
        << m_NumBoundRenderTargets << "):";
     Uint32 SampleCount = 0;
@@ -717,7 +717,7 @@ void DeviceContextVkImpl::PrepareForDraw(DRAW_FLAGS Flags)
     auto& BindInfo = GetBindInfo(PIPELINE_TYPE_GRAPHICS);
     // First time we must always bind descriptor sets with dynamic offsets as SRBs are stale.
     // If there are no dynamic buffers bound in the resource cache, for all subsequent
-    // cals we do not need to bind the sets again.
+    // calls we do not need to bind the sets again.
     if (Uint32 CommitMask = BindInfo.GetCommitMask(Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT))
     {
         CommitDescriptorSets(BindInfo, CommitMask);
@@ -743,7 +743,7 @@ void DeviceContextVkImpl::PrepareForDraw(DRAW_FLAGS Flags)
 }
 
 BufferVkImpl* DeviceContextVkImpl::PrepareIndirectAttribsBuffer(IBuffer*                       pAttribsBuffer,
-                                                                RESOURCE_STATE_TRANSITION_MODE TransitonMode,
+                                                                RESOURCE_STATE_TRANSITION_MODE TransitionMode,
                                                                 const char*                    OpName)
 {
     DEV_CHECK_ERR(pAttribsBuffer, "Indirect draw attribs buffer must not be null");
@@ -755,7 +755,7 @@ BufferVkImpl* DeviceContextVkImpl::PrepareIndirectAttribsBuffer(IBuffer*        
 #endif
 
     // Buffer memory barries must be executed outside of render pass
-    TransitionOrVerifyBufferState(*pIndirectDrawAttribsVk, TransitonMode, RESOURCE_STATE_INDIRECT_ARGUMENT,
+    TransitionOrVerifyBufferState(*pIndirectDrawAttribsVk, TransitionMode, RESOURCE_STATE_INDIRECT_ARGUMENT,
                                   VK_ACCESS_INDIRECT_COMMAND_READ_BIT, OpName);
     return pIndirectDrawAttribsVk;
 }
@@ -1490,7 +1490,7 @@ void DeviceContextVkImpl::CommitViewports()
         VkViewports[vp].maxDepth = m_Viewports[vp].MaxDepth;
 
         // Turn the viewport upside down to be consistent with Direct3D. Note that in both APIs,
-        // the viewport covers the same texture rows. The difference is that Direct3D invertes
+        // the viewport covers the same texture rows. The difference is that Direct3D inverts
         // normalized device Y coordinate when transforming NDC to window coordinates. In Vulkan
         // we achieve the same effect by using negative viewport height. Therefore we need to
         // invert normalized device Y coordinate when transforming to texture V
@@ -1941,9 +1941,9 @@ void DeviceContextVkImpl::UpdateTexture(ITexture*                      pTexture,
                                         const Box&                     DstBox,
                                         const TextureSubResData&       SubresData,
                                         RESOURCE_STATE_TRANSITION_MODE SrcBufferStateTransitionMode,
-                                        RESOURCE_STATE_TRANSITION_MODE TextureStateTransitionModee)
+                                        RESOURCE_STATE_TRANSITION_MODE TextureStateTransitionMode)
 {
-    TDeviceContextBase::UpdateTexture(pTexture, MipLevel, Slice, DstBox, SubresData, SrcBufferStateTransitionMode, TextureStateTransitionModee);
+    TDeviceContextBase::UpdateTexture(pTexture, MipLevel, Slice, DstBox, SubresData, SrcBufferStateTransitionMode, TextureStateTransitionMode);
 
     auto* pTexVk = ValidatedCast<TextureVkImpl>(pTexture);
     // OpenGL backend uses UpdateData() to initialize textures, so we can't check the usage in ValidateUpdateTextureParams()
@@ -1956,7 +1956,7 @@ void DeviceContextVkImpl::UpdateTexture(ITexture*                      pTexture,
     else
     {
         UpdateTextureRegion(SubresData.pData, SubresData.Stride, SubresData.DepthStride, *pTexVk,
-                            MipLevel, Slice, DstBox, TextureStateTransitionModee);
+                            MipLevel, Slice, DstBox, TextureStateTransitionMode);
     }
 }
 
@@ -2373,7 +2373,7 @@ void DeviceContextVkImpl::MapTextureSubresource(ITexture*                 pTextu
             }
 
             DEV_CHECK_ERR((TexDesc.CPUAccessFlags & CPU_ACCESS_READ), "Texture '", TexDesc.Name, "' was not created with CPU_ACCESS_READ flag and can't be mapped for reading");
-            // Reaback memory is not created with HOST_COHERENT flag, so we have to explicitly invalidate the mapped range
+            // Readback memory is not created with HOST_COHERENT flag, so we have to explicitly invalidate the mapped range
             // to make device writes visible to CPU reads
             VERIFY_EXPR(pMapRegion->MaxZ >= 1 && pMapRegion->MaxY >= 1);
             auto BlockAlignedMaxX = AlignUp(pMapRegion->MaxX, Uint32{FmtAttribs.BlockWidth});

@@ -2,13 +2,13 @@ cmake_minimum_required (VERSION 3.6)
 
 project(Diligent-GraphicsEngineNextGenBase CXX)
 
-set(INCLUDE 
+set(INCLUDE
     include/DeviceContextNextGenBase.hpp
     include/DynamicHeap.hpp
     include/RenderDeviceNextGenBase.hpp
 )
 
-set(SOURCE 
+set(SOURCE
     src/dummy.cpp
 )
 
@@ -20,7 +20,7 @@ PUBLIC
     include
 )
 
-target_link_libraries(Diligent-GraphicsEngineNextGenBase 
+target_link_libraries(Diligent-GraphicsEngineNextGenBase
 PRIVATE
     Diligent-BuildSettings
 PUBLIC

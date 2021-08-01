@@ -18,7 +18,7 @@ set(INTERFACE
     interface/TextureUploaderBase.hpp
 )
 
-set(SOURCE 
+set(SOURCE
     src/BufferSuballocator.cpp
     src/DurationQueryHelper.cpp
     src/DynamicBuffer.cpp
@@ -50,16 +50,16 @@ endif()
 
 add_library(Diligent-GraphicsTools STATIC ${SOURCE} ${INTERFACE})
 
-target_include_directories(Diligent-GraphicsTools 
+target_include_directories(Diligent-GraphicsTools
 PUBLIC
     interface
 PRIVATE
     ../GraphicsEngineD3DBase/include
 )
 
-target_link_libraries(Diligent-GraphicsTools 
-PRIVATE 
-    Diligent-Common 
+target_link_libraries(Diligent-GraphicsTools
+PRIVATE
+    Diligent-Common
     Diligent-BuildSettings
     Diligent-PlatformInterface
     Diligent-GraphicsAccessories
@@ -69,8 +69,8 @@ PUBLIC
 )
 
 if(D3D11_SUPPORTED OR D3D12_SUPPORTED)
-    target_link_libraries(Diligent-GraphicsTools 
-    PRIVATE 
+    target_link_libraries(Diligent-GraphicsTools
+    PRIVATE
         Diligent-GraphicsEngineD3DBase
     )
 endif()

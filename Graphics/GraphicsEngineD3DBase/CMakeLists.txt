@@ -2,7 +2,7 @@ cmake_minimum_required (VERSION 3.10)
 
 project(Diligent-GraphicsEngineD3DBase CXX)
 
-set(INCLUDE 
+set(INCLUDE
     include/D3DCommonTypeConversions.hpp
     include/D3DErrors.hpp
     include/D3DShaderResourceLoader.hpp
@@ -22,7 +22,7 @@ set(INTERFACE
     interface/ShaderD3D.h
 )
 
-set(SOURCE 
+set(SOURCE
     src/D3DCommonTypeConversions.cpp
     src/DXGITypeConversions.cpp
     src/ShaderD3DBase.cpp
@@ -36,11 +36,11 @@ set(HLSL_DEFINITIONS include/HLSLDefinitions.fxh)
 set(HLSL_DEFINITIONS_INC ${CMAKE_CURRENT_SOURCE_DIR}/include/HLSLDefinitions_inc.fxh)
 set_source_files_properties(${HLSL_DEFINITIONS_INC} PROPERTIES GENERATED TRUE)
 
-add_library(Diligent-GraphicsEngineD3DBase STATIC 
+add_library(Diligent-GraphicsEngineD3DBase STATIC
     ${SOURCE} ${INCLUDE} ${INTERFACE}
 
-    # A target created in the same directory (CMakeLists.txt file) that specifies any output of the 
-    # custom command as a source file is given a rule to generate the file using the command at build time. 
+    # A target created in the same directory (CMakeLists.txt file) that specifies any output of the
+    # custom command as a source file is given a rule to generate the file using the command at build time.
     ${HLSL_DEFINITIONS_INC}
 )
 
@@ -111,7 +111,7 @@ if(MSVC)
         endif()
     elseif(CMAKE_SYSTEM_VERSION VERSION_EQUAL "8.1")
         # D3Dcompiler_47.dll from Win8.1 SDK is ancient (from 2013) and fails to
-        # compile a number of test shaders. Use the compiler from Visual Studio 
+        # compile a number of test shaders. Use the compiler from Visual Studio
         # executable path instead
         set(VS_D3D_COMPILER_PATH "\"$(VC_ExecutablePath_x64_${ARCH_SUFFIX})\\D3Dcompiler_47.dll\"" CACHE INTERNAL "D3Dcompiler_47.dll path")
     endif()
