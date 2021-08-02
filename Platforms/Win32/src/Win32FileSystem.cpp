@@ -29,7 +29,7 @@
 #include "Errors.hpp"
 #include "../../Common/interface/StringTools.hpp"
 
-// We can't use namespace Diligent before #including <Windows.h> because Diligent::INTERFACE_ID will confilct with windows InterfaceID
+// We can't use namespace Diligent before #including <Windows.h> because Diligent::INTERFACE_ID will conflict with windows InterfaceID
 //using namespace Diligent;
 
 // Windows.h defines CreateDirectory and DeleteFile as macros.

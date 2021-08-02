@@ -80,11 +80,11 @@ public:
 
     ID3D12Resource* GetD3D12RenderTarget()
     {
-        return m_pd3d12RenderTaget;
+        return m_pd3d12RenderTarget;
     }
 
 private:
-    CComPtr<ID3D12Resource> m_pd3d12RenderTaget;
+    CComPtr<ID3D12Resource> m_pd3d12RenderTarget;
     CComPtr<ID3D12Resource> m_pd3d12DepthBuffer;
     CComPtr<ID3D12Resource> m_pd3d12StagingBuffer;
 

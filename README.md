@@ -527,12 +527,12 @@ m_pSRB->GetVariable(SHADER_TYPE_PIXEL,  "tex2DDiffuse")->Set(pDiffuseTexSRV);
 m_pSRB->GetVariable(SHADER_TYPE_VERTEX, "cbRandomAttribs")->Set(pRandomAttrsCB);
 ```
 
-The difference between mutable and dynamic resources is that mutable ones can only be set once for every instance
+The difference between mutable and dynamic resources is that mutable resources can only be set once per instance
 of a shader resource binding. Dynamic resources can be set multiple times. It is important to properly set the variable type as
-this affects performance. Static and mutable variabls are more efficient. Dynamic variables are more expensive
-and itroduce some run-time overhead.
+this affects performance. Static and mutable variables are more efficient. Dynamic variables are more expensive
+and introduce some run-time overhead.
 
-An alternative way to bind shader resources is to create `IResourceMapping` interface that maps resource literal names to the
+An alternative way to bind shader resources is to create an `IResourceMapping` interface that maps resource literal names to the
 actual resources:
 
 ```cpp

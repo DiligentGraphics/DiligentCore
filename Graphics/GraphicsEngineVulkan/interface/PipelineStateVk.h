@@ -28,7 +28,7 @@
 #pragma once
 
 /// \file
-/// Definition of the Diligent::IPipeplineStateVk interface
+/// Definition of the Diligent::IPipelineStateVk interface
 
 #include "../../GraphicsEngine/interface/PipelineState.h"
 #include "RenderPassVk.h"

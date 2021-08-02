@@ -103,9 +103,9 @@ void TestingEnvironmentD3D12::IdleCommandQueue(ID3D12CommandQueue* pd3d12Queue)
 
 void TestingEnvironmentD3D12::ExecuteCommandList(ID3D12CommandList* pCmdList, bool WaitForIdle)
 {
-    RefCntAutoPtr<ICommandQueueD3D12> pQeueD3D12{GetDeviceContext()->LockCommandQueue(), IID_CommandQueueD3D12};
+    RefCntAutoPtr<ICommandQueueD3D12> pQueueD3D12{GetDeviceContext()->LockCommandQueue(), IID_CommandQueueD3D12};
 
-    auto* pd3d12Queue = pQeueD3D12->GetD3D12CommandQueue();
+    auto* pd3d12Queue = pQueueD3D12->GetD3D12CommandQueue();
 
     ID3D12CommandList* pCmdLits[] = {pCmdList};
     pd3d12Queue->ExecuteCommandLists(_countof(pCmdLits), pCmdLits);

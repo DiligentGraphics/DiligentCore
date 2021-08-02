@@ -1240,8 +1240,8 @@ TEST(Common_AdvancedMath, Planes)
     ViewFrustum frustum = {};
     EXPECT_NE(std::hash<ViewFrustum>{}(frustum), size_t{0});
 
-    ViewFrustumExt frustm_ext = {};
-    EXPECT_NE(std::hash<ViewFrustumExt>{}(frustm_ext), size_t{0});
+    ViewFrustumExt frustum_ext = {};
+    EXPECT_NE(std::hash<ViewFrustumExt>{}(frustum_ext), size_t{0});
 }
 
 TEST(Common_AdvancedMath, HermiteSpline)

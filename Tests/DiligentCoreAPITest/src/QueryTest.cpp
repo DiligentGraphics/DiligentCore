@@ -506,8 +506,8 @@ TEST_F(QueryTest, DeferredContexts)
         GTEST_SKIP() << "Time queries are not supported by this device";
     }
 
-    Uint32 NumDefferedCtx = static_cast<Uint32>(pEnv->GetNumDeferredContexts());
-    if (NumDefferedCtx == 0)
+    Uint32 NumDeferredCtx = static_cast<Uint32>(pEnv->GetNumDeferredContexts());
+    if (NumDeferredCtx == 0)
     {
         GTEST_SKIP() << "Deferred contexts are not supported by this device";
     }
@@ -520,8 +520,8 @@ TEST_F(QueryTest, DeferredContexts)
         QueryDesc queryDesc;
         queryDesc.Name = "Duration query";
         queryDesc.Type = QUERY_TYPE_DURATION;
-        pDurations.resize(NumDefferedCtx);
-        for (Uint32 i = 0; i < NumDefferedCtx; ++i)
+        pDurations.resize(NumDeferredCtx);
+        for (Uint32 i = 0; i < NumDeferredCtx; ++i)
         {
             pDevice->CreateQuery(queryDesc, &pDurations[i]);
             ASSERT_NE(pDurations[i], nullptr);
@@ -533,9 +533,9 @@ TEST_F(QueryTest, DeferredContexts)
     {
         QueryDesc queryDesc;
         queryDesc.Type = QUERY_TYPE_TIMESTAMP;
-        pStartTimestamps.resize(NumDefferedCtx);
-        pEndTimestamps.resize(NumDefferedCtx);
-        for (Uint32 i = 0; i < NumDefferedCtx; ++i)
+        pStartTimestamps.resize(NumDeferredCtx);
+        pEndTimestamps.resize(NumDeferredCtx);
+        for (Uint32 i = 0; i < NumDeferredCtx; ++i)
         {
             queryDesc.Name = "Start timestamp query";
             pDevice->CreateQuery(queryDesc, &pStartTimestamps[i]);
@@ -561,14 +561,14 @@ TEST_F(QueryTest, DeferredContexts)
         pImmediateCtx->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
         pImmediateCtx->ClearRenderTarget(pRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
-        std::vector<std::thread>                 WorkerThreads(NumDefferedCtx);
-        std::vector<RefCntAutoPtr<ICommandList>> CmdLists(NumDefferedCtx);
-        std::vector<ICommandList*>               CmdListPtrs(NumDefferedCtx);
+        std::vector<std::thread>                 WorkerThreads(NumDeferredCtx);
+        std::vector<RefCntAutoPtr<ICommandList>> CmdLists(NumDeferredCtx);
+        std::vector<ICommandList*>               CmdListPtrs(NumDeferredCtx);
 
         std::atomic<Uint32>    NumCmdListsReady{0};
         ThreadingTools::Signal FinishFrameSignal;
         ThreadingTools::Signal ExecuteCommandListsSignal;
-        for (Uint32 i = 0; i < NumDefferedCtx; ++i)
+        for (Uint32 i = 0; i < NumDeferredCtx; ++i)
         {
             WorkerThreads[i] = std::thread(
                 [&](Uint32 thread_id) //
@@ -600,10 +600,10 @@ TEST_F(QueryTest, DeferredContexts)
 
                     // Atomically increment the number of completed threads
                     const auto NumReadyLists = NumCmdListsReady.fetch_add(1) + 1;
-                    if (NumReadyLists == NumDefferedCtx)
+                    if (NumReadyLists == NumDeferredCtx)
                         ExecuteCommandListsSignal.Trigger();
 
-                    FinishFrameSignal.Wait(true, NumDefferedCtx);
+                    FinishFrameSignal.Wait(true, NumDeferredCtx);
 
                     // IMPORTANT: In Metal backend FinishFrame must be called from the same
                     //            thread that issued rendering commands.
@@ -615,7 +615,7 @@ TEST_F(QueryTest, DeferredContexts)
         // Wait for the worker threads
         ExecuteCommandListsSignal.Wait(true, 1);
 
-        pImmediateCtx->ExecuteCommandLists(NumDefferedCtx, CmdListPtrs.data());
+        pImmediateCtx->ExecuteCommandLists(NumDeferredCtx, CmdListPtrs.data());
 
         FinishFrameSignal.Trigger(true);
         for (auto& t : WorkerThreads)
@@ -636,7 +636,7 @@ TEST_F(QueryTest, DeferredContexts)
 
         if (DeviceInfo.Features.TimestampQueries)
         {
-            for (Uint32 i = 0; i < NumDefferedCtx; ++i)
+            for (Uint32 i = 0; i < NumDeferredCtx; ++i)
             {
                 IQuery* pQueryStart = pStartTimestamps[i];
                 IQuery* pQueryEnd   = pEndTimestamps[i];

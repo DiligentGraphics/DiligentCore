@@ -49,7 +49,7 @@
 * Added `DefaultVariableMergeStages` member to `PipelineResourceLayoutDesc` struct (API240094)
 * Added `IShaderResourceVariable::SetBufferRange` and `IShaderResourceVariable::SetBufferOffset` methods,
   added `DeviceLimits` struct (API240093)
-* Updated API to allow explicitly flushing/invlidating mapped buffer memory range :
+* Updated API to allow explicitly flushing/invalidating mapped buffer memory range :
   added `MEMORY_PROPERTIES` enum, `IBuffer::GetMemoryProperties()`, `IBuffer::FlushMappedRange()`,
   and `IBuffer::InvalidateMappedRange()` methods (API240092)
 * Added `IDeviceContext::SetUserData()` and `IDeviceContext::GetUserData()` methods (API240091)
@@ -146,7 +146,7 @@
    * Added `ADAPTER_VENDOR` enum
    * Added `GraphicsAdapterInfo` struct
    * Added `GraphicsAdapterInfo AdapterInfo` member to `DeviceCaps` struct
-   * Removed `ADAPTER_TYPE AdaterType` from `DeviceCaps` struct 
+   * Removed `ADAPTER_TYPE AdapterType` from `DeviceCaps` struct
 * Reworked texture format properties (API Version 240070)
    * Added `RESOURCE_DIMENSION_SUPPORT` enum
    * Reworked `TextureFormatInfoExt` struct
@@ -156,7 +156,7 @@
    * Added `DeviceFeatures Features` member to `EngineCreateInfo` struct
 * Enabled mesh shaders (API Version 240068)
    * Added `PIPELINE_TYPE` enum
-   * Replaced `IsComputePipline` member of `PipelineStateDesc` struct with `PIPELINE_TYPE PipelineType`
+   * Replaced `IsComputePipeline` member of `PipelineStateDesc` struct with `PIPELINE_TYPE PipelineType`
    * Added new mesh shader types
    * Added mesh shader draw commands
 * Added `QUERY_TYPE_DURATION` query type (API Version 240067)
@@ -228,7 +228,7 @@
 * Added `HLSLVersion`, `GLSLVersion` and `GLESSLVersion` to `ShaderCreateInfo` struct (API Version 240035)
 * Renamed `EngineD3D11DebugFlags` to `D3D11_DEBUG_FLAGS` (API Version 240034)
 * Split up `Draw` command into `Draw`, `DrawIndexed`, `DrawIndirect` and `DrawIndexedIndirect`.
-  Split up `DispatchCompute` command into `DispatchCompute` and `DispatchComputeInidrect` (API Version 240033).
+  Split up `DispatchCompute` command into `DispatchCompute` and `DispatchComputeIndirect` (API Version 240033).
 * Enabled bindless resources
 * Removed `SHADER_PROFILE` enum (API Version 240032)
 * Added `DIRECT3D_FEATURE_LEVEL` and `DIRECT3D_FEATURE_LEVEL MinimumFeatureLevel` member to 
@@ -447,7 +447,7 @@ m_pPSO->GetStaticShaderVariable(SHADER_TYPE_VERTEX, "Constants")->Set(m_VSConsta
     Added `GetVariableCount` and `GetVariable(SHADER_TYPE ShaderType, Uint32 Index)` to `IShaderResourceBinding` interface.
   * Added `BUFFER_MODE_RAW` mode allowing raw buffer views in D3D11/D3D12.
   * Moved `Format` member from `BufferDesc` to `BufferViewDesc`
-  * Removed `IsIndirect` member from `DrawAttrbis` as setting `pIndirectDrawAttribs` to a non-null buffer already indicates indirect rendering
+  * Removed `IsIndirect` member from `DrawAttribs` as setting `pIndirectDrawAttribs` to a non-null buffer already indicates indirect rendering
 
 ## v2.3
 
@@ -508,7 +508,7 @@ m_pPSO->GetStaticShaderVariable(SHADER_TYPE_VERTEX, "Constants")->Set(m_VSConsta
   * Creating diligent engine buffers/textures from native resources
   * Attaching to existing D3D11/D3D12 device or GL context
   * Resource state and command queue synchronization for D3D12
-* Integraion with Unity
+* Integration with Unity
 * Geometry shader support
 * Tessellation support
 * Performance optimizations

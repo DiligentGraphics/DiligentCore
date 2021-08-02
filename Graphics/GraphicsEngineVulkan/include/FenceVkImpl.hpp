@@ -50,11 +50,11 @@ public:
     using TFenceBase = FenceBase<EngineVkImplTraits>;
 
     FenceVkImpl(IReferenceCounters* pRefCounters,
-                RenderDeviceVkImpl* pRendeDeviceVkImpl,
+                RenderDeviceVkImpl* pRenderDeviceVkImpl,
                 const FenceDesc&    Desc,
                 bool                IsDeviceInternal = false);
     FenceVkImpl(IReferenceCounters* pRefCounters,
-                RenderDeviceVkImpl* pRendeDeviceVkImpl,
+                RenderDeviceVkImpl* pRenderDeviceVkImpl,
                 const FenceDesc&    Desc,
                 VkSemaphore         vkTimelineSemaphore);
     ~FenceVkImpl();

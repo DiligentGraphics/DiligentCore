@@ -65,7 +65,7 @@ TestingSwapChainVk::TestingSwapChainVk(IReferenceCounters*   pRefCounters,
     }
     pEnv->CreateImage2D(m_SwapChainDesc.Width, m_SwapChainDesc.Height, ColorFormat,
                         VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-                        m_vkRenerTargetLayout,
+                        m_vkRenderTargetLayout,
                         m_vkRenderTargetMemory, m_vkRenderTargetImage);
 
 
@@ -191,7 +191,7 @@ void TestingSwapChainVk::TransitionRenderTarget(VkCommandBuffer vkCmdBuffer, VkI
     SubresRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     SubresRange.layerCount = 1;
     SubresRange.levelCount = 1;
-    TestingEnvironmentVk::TransitionImageLayout(vkCmdBuffer, m_vkRenderTargetImage, m_vkRenerTargetLayout,
+    TestingEnvironmentVk::TransitionImageLayout(vkCmdBuffer, m_vkRenderTargetImage, m_vkRenderTargetLayout,
                                                 Layout, SubresRange, GraphicsShaderStages);
 }
 

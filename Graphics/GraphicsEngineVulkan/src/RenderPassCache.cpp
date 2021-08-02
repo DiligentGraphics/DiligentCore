@@ -68,7 +68,7 @@ RenderPassVkImpl* RenderPassCache::GetRenderPass(const RenderPassCacheKey& Key)
     auto                        it = m_Cache.find(Key);
     if (it == m_Cache.end())
     {
-        // Do not zero-intitialize arrays
+        // Do not zero-initialize arrays
         std::array<RenderPassAttachmentDesc, MAX_RENDER_TARGETS + 1> Attachments;
         std::array<AttachmentReference, MAX_RENDER_TARGETS + 1>      AttachmentReferences;
 

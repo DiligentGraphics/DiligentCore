@@ -36,43 +36,43 @@ namespace Diligent
 {
 
 FenceVkImpl::FenceVkImpl(IReferenceCounters* pRefCounters,
-                         RenderDeviceVkImpl* pRendeDeviceVkImpl,
+                         RenderDeviceVkImpl* pRenderDeviceVkImpl,
                          const FenceDesc&    Desc,
                          bool                IsDeviceInternal) :
     // clang-format off
     TFenceBase
     {
         pRefCounters,
-        pRendeDeviceVkImpl,
+        pRenderDeviceVkImpl,
         Desc,
         IsDeviceInternal
     }
 // clang-format on
 {
     if (m_Desc.Type == FENCE_TYPE_GENERAL &&
-        pRendeDeviceVkImpl->GetFeatures().NativeFence)
+        pRenderDeviceVkImpl->GetFeatures().NativeFence)
     {
-        const auto& LogicalDevice = pRendeDeviceVkImpl->GetLogicalDevice();
+        const auto& LogicalDevice = pRenderDeviceVkImpl->GetLogicalDevice();
         m_TimelineSemaphore       = LogicalDevice.CreateTimelineSemaphore(0, m_Desc.Name);
     }
 }
 
 FenceVkImpl::FenceVkImpl(IReferenceCounters* pRefCounters,
-                         RenderDeviceVkImpl* pRendeDeviceVkImpl,
+                         RenderDeviceVkImpl* pRenderDeviceVkImpl,
                          const FenceDesc&    Desc,
                          VkSemaphore         vkTimelineSemaphore) :
     // clang-format off
     TFenceBase
     {
         pRefCounters,
-        pRendeDeviceVkImpl,
+        pRenderDeviceVkImpl,
         Desc,
         false
     },
     m_TimelineSemaphore{vkTimelineSemaphore}
 // clang-format on
 {
-    if (!pRendeDeviceVkImpl->GetFeatures().NativeFence)
+    if (!pRenderDeviceVkImpl->GetFeatures().NativeFence)
         LOG_ERROR_AND_THROW("Feature NativeFence is not enabled, can not create fence from Vulkan timeline semaphore.");
 }
 

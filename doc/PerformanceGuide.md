@@ -25,10 +25,10 @@ is the case, an application should use `DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTAC
 none of the dynamic buffers have been updated between the commands. Note that the first time an SRB is bound,
 dynamic buffers are properly bound regardless of the `DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT` flag.
 
-Constant and structured buffers set with `IShaderResoruceBinding::SetBufferRange` method count as
+Constant and structured buffers set with `IShaderResourceBinding::SetBufferRange` method count as
 dynamic buffers when the specified range does not cover the entire buffer *regardless of the buffer usage*,
 unless the variable was created with `NO_DYNAMIC_BUFFERS` flag. Note that in the latter case,
-`IShaderResoruceBinding::SetBufferOffset` method can't be used to set dynamic offset.
+`IShaderResourceBinding::SetBufferOffset` method can't be used to set dynamic offset.
 Similar to `USAGE_DYNAMIC` buffers, if an applications knows that none of the dynamic offsets have changed
 between the draw calls, it may use `DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT` flag.
 

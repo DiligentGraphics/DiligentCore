@@ -83,7 +83,7 @@ TexRegionRender::TexRegionRender(class RenderDeviceGLImpl* pDeviceGL)
     SamplerType[RESOURCE_DIM_TEX_3D]       = "sampler3D";
     // There is no texelFetch() for texture cube [array]
     //SamplerType[RESOURCE_DIM_TEX_CUBE]         = "samplerCube";
-    //SamplerType[RESOURCE_DIM_TEX_CUBE_ARRAY]   = "smaplerCubeArray";
+    //SamplerType[RESOURCE_DIM_TEX_CUBE_ARRAY]   = "samplerCubeArray";
 
 
     static const char* SrcLocations[RESOURCE_DIM_NUM_DIMENSIONS] = {};

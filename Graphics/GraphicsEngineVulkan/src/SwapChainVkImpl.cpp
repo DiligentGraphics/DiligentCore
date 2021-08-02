@@ -821,7 +821,7 @@ void SwapChainVkImpl::ReleaseSwapChainResources(DeviceContextVkImpl* pImmediateC
     m_ImageAcquiredFenceSubmitted.clear();
     m_pDepthBufferDSV.Release();
 
-    // We must wait unitl GPU is idled before destroying the fences as they
+    // We must wait until GPU is idled before destroying the fences as they
     // are destroyed immediately. The semaphores are managed and will be kept alive
     // by the device context they are submitted to.
     m_ImageAcquiredSemaphores.clear();

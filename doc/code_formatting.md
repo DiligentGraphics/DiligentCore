@@ -3,7 +3,7 @@
 Diligent Engine uses [clang-format](https://clang.llvm.org/docs/ClangFormat.html) to ensure
 consistent source code formatting style throughout the code base. The format is validated by appveyor and travis
 for each commit and pull request, and the build will fail if any code formatting issue is found. You can check the
-logs to find the exact problem. It is, however, may be hard to strictly follow the formatting rules, so using 
+logs to find the exact problem. However, it may be hard to strictly follow the formatting rules, so using
 clang-format to automatically correct all issues when working with the source code is recommended.
 
 :warning: The output of the clang-format tool may vary between versions even if the configuration file stays unchanged. 
@@ -28,7 +28,7 @@ clang-format -i src/*.cpp include/*.h
 
 Please refer to [this page](https://clang.llvm.org/docs/ClangFormat.html) for more details.
 
-If you have clang-format installed and python in your path, there will be a new git command
+If you have clang-format and python in your path, there will be a new git command
 that will check if your currently modified files need to be formatted:
 
 ```

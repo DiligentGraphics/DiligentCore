@@ -918,7 +918,7 @@ void RayTracingTriangleAnyHitReferenceVk(ISwapChain* pSwapChain)
                             rtGroups.SetTriangleHitGroup(HIT_GROUP, HIT_SHADER, ANY_HIT_SHADER);
                         });
 
-    // Create acceleration structurea
+    // Create acceleration structure
     {
         const auto& Vertices = TestingConstants::TriangleAnyHit::Vertices;
 

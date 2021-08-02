@@ -36,7 +36,7 @@ using namespace Diligent::Testing;
 namespace
 {
 
-TEST(StreamingBufferTest, MapUnamp)
+TEST(StreamingBufferTest, MapUnmap)
 {
     auto* pEnv     = TestingEnvironment::GetInstance();
     auto* pDevice  = pEnv->GetDevice();

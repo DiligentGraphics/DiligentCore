@@ -82,7 +82,7 @@ private:
 
     VkDeviceMemory m_vkRenderTargetMemory = VK_NULL_HANDLE;
     VkImage        m_vkRenderTargetImage  = VK_NULL_HANDLE;
-    VkImageLayout  m_vkRenerTargetLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
+    VkImageLayout  m_vkRenderTargetLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     VkImageView    m_vkRenderTargetView   = VK_NULL_HANDLE;
 
     VkDeviceMemory m_vkDepthBufferMemory = VK_NULL_HANDLE;
