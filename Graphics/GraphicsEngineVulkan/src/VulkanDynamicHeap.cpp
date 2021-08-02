@@ -127,7 +127,7 @@ void VulkanDynamicMemoryManager::Destroy()
 
 VulkanDynamicMemoryManager::~VulkanDynamicMemoryManager()
 {
-    VERIFY(m_BufferMemory == VK_NULL_HANDLE && m_VkBuffer == VK_NULL_HANDLE, "Vulkan resources must be explcitly released with Destroy()");
+    VERIFY(m_BufferMemory == VK_NULL_HANDLE && m_VkBuffer == VK_NULL_HANDLE, "Vulkan resources must be explicitly released with Destroy()");
     auto Size = GetSize();
     LOG_INFO_MESSAGE("Dynamic memory manager usage stats:\n"
                      "                       Total size: ",

@@ -265,7 +265,7 @@ void ShaderResourceCacheVk::Resource::SetStorageBuffer(RefCntAutoPtr<IDeviceObje
         // require buffer to be created with VK_BUFFER_USAGE_STORAGE_BUFFER_BIT (13.2.4)
         if (Type == DescriptorType::StorageBuffer_ReadOnly || Type == DescriptorType::StorageBufferDynamic_ReadOnly)
         {
-            // HLSL buffer SRVs are mapped to read-only storge buffers in SPIR-V
+            // HLSL buffer SRVs are mapped to read-only storage buffers in SPIR-V
             VERIFY(ViewDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE, "Attempting to bind buffer view '", ViewDesc.Name,
                    "' as read-only storage buffer. Expected view type is BUFFER_VIEW_SHADER_RESOURCE. Actual type: ",
                    GetBufferViewTypeLiteralName(ViewDesc.ViewType));

@@ -428,9 +428,9 @@ VkCommandBuffer TestingEnvironmentVk::AllocateCommandBuffer()
 
 void TestingEnvironmentVk::SubmitCommandBuffer(VkCommandBuffer vkCmdBuffer, bool WaitForIdle)
 {
-    RefCntAutoPtr<ICommandQueueVk> pQeueVk{GetDeviceContext()->LockCommandQueue(), IID_CommandQueueVk};
+    RefCntAutoPtr<ICommandQueueVk> pQueueVk{GetDeviceContext()->LockCommandQueue(), IID_CommandQueueVk};
 
-    auto vkQueue = pQeueVk->GetVkQueue();
+    auto vkQueue = pQueueVk->GetVkQueue();
 
     VkSubmitInfo SubmitInfo       = {};
     SubmitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;

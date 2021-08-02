@@ -76,8 +76,8 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
         auto ShaderCompiler = ShaderCI.ShaderCompiler;
         if (ShaderCompiler == SHADER_COMPILER_DXC)
         {
-            auto* pDXComiler = pRenderDeviceVk->GetDxCompiler();
-            if (pDXComiler == nullptr || !pDXComiler->IsLoaded())
+            auto* pDXCompiler = pRenderDeviceVk->GetDxCompiler();
+            if (pDXCompiler == nullptr || !pDXCompiler->IsLoaded())
             {
                 LOG_WARNING_MESSAGE("DX Compiler is not loaded. Using default shader compiler");
                 ShaderCompiler = SHADER_COMPILER_DEFAULT;
@@ -88,9 +88,9 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
         {
             case SHADER_COMPILER_DXC:
             {
-                auto* pDXComiler = pRenderDeviceVk->GetDxCompiler();
-                VERIFY_EXPR(pDXComiler != nullptr && pDXComiler->IsLoaded());
-                pDXComiler->Compile(ShaderCI, ShaderVersion{}, VulkanDefine, nullptr, &m_SPIRV, ShaderCI.ppCompilerOutput);
+                auto* pDXCompiler = pRenderDeviceVk->GetDxCompiler();
+                VERIFY_EXPR(pDXCompiler != nullptr && pDXCompiler->IsLoaded());
+                pDXCompiler->Compile(ShaderCI, ShaderVersion{}, VulkanDefine, nullptr, &m_SPIRV, ShaderCI.ppCompilerOutput);
             }
             break;
 

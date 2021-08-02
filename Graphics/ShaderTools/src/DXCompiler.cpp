@@ -39,7 +39,7 @@
 #elif PLATFORM_UNIVERSAL_WINDOWS
 #    include "DXCompilerBaseUWP.hpp"
 #elif PLATFORM_LINUX
-#    include "DXCompilerBaseLiunx.hpp"
+#    include "DXCompilerBaseLinux.hpp"
 #else
 #    error DXC is not supported on this platform
 #endif

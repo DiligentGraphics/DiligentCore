@@ -88,7 +88,7 @@ String GetHLSLProfileString(SHADER_TYPE ShaderType, ShaderVersion ShaderModel)
         case SHADER_TYPE_RAY_INTERSECTION:
         case SHADER_TYPE_CALLABLE:         strShaderProfile = "lib"; break;
         case SHADER_TYPE_TILE:
-            UNSUPPORTED("Unsupoorted shader type");
+            UNSUPPORTED("Unsupported shader type");
             break;
         // clang-format on
         default: UNEXPECTED("Unknown shader type");

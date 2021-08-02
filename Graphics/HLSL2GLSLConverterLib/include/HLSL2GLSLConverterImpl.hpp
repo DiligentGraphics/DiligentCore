@@ -235,7 +235,7 @@ private:
         ClosingAngleBracket,
         Identifier,
         NumericConstant,
-        SrtingConstant,
+        StringConstant,
         Semicolon,
         Comma,
         TextBlock,
@@ -567,7 +567,7 @@ private:
 // The entire shader development can thus be performed using HLSL tools. Since no intermediate
 // representation is used, shader files can be directly compiled by the HLSL compiler.
 // All tools available for HLSL shader development, analysis and optimization can be
-// used. The source can then be transaprently converted to GLSL.
+// used. The source can then be transparently converted to GLSL.
 //
 //
 //  Using HLSL Converter
@@ -597,7 +597,7 @@ private:
 //     RWTexture2D<float /* format=r32f */ > Tex2D;
 // * In OpenGL tessellation, domain, partitioning, and topology are properties of tessellation evaluation
 //   shader rather than tessellation control shader. The following specially formatted comment should be placed
-//   on top of domain shader declararion to specify the attributes
+//   on top of domain shader declaration to specify the attributes
 //       /* partitioning = {integer|fractional_even|fractional_odd}, outputtopology = {triangle_cw|triangle_ccw} */
 //   Example:
 //       /* partitioning = fractional_even, outputtopology = triangle_cw */

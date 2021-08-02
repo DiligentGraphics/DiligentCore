@@ -1049,9 +1049,9 @@ vec4 _frexp(vec4 f4, out vec4 fexp4)
 
 // Note that Vulkan itself does not invert Y coordinate when transforming
 // normalized device Y to window space. However, we use negative viewport
-// height which achieves the same effect as in D3D, thererfore we need to
+// height which achieves the same effect as in D3D, therefore we need to
 // invert y (see comments in DeviceContextVkImpl::CommitViewports() for details)
-#define F3NDC_XYZ_TO_UVD_SCALE float3(0.5, -0.5, 1.0)
+#    define F3NDC_XYZ_TO_UVD_SCALE float3(0.5, -0.5, 1.0)
 
 #else
 
