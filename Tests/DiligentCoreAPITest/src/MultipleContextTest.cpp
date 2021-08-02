@@ -13,14 +13,14 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *
- *  In no event and under no legal theory, whether in tort (including negligence), 
- *  contract, or otherwise, unless required by applicable law (such as deliberate 
+ *  In no event and under no legal theory, whether in tort (including negligence),
+ *  contract, or otherwise, unless required by applicable law (such as deliberate
  *  and grossly negligent acts) or agreed to in writing, shall any Contributor be
- *  liable for any damages, including any direct, indirect, special, incidental, 
- *  or consequential damages of any character arising as a result of this License or 
- *  out of the use or inability to use the software (including but not limited to damages 
- *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and 
- *  all other commercial damages or losses), even if such Contributor has been advised 
+ *  liable for any damages, including any direct, indirect, special, incidental,
+ *  or consequential damages of any character arising as a result of this License or
+ *  out of the use or inability to use the software (including but not limited to damages
+ *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and
+ *  all other commercial damages or losses), even if such Contributor has been advised
  *  of the possibility of such damages.
  */
 
@@ -39,15 +39,15 @@ namespace
 
 // clang-format off
 const std::string MultipleContextTest_QuadVS{R"(
-struct PSInput 
-{ 
+struct PSInput
+{
     float4 Pos   : SV_POSITION;
     float3 Color : COLOR;
     float2 UV    : TEXCOORD;
 };
 
 void main(in uint vid : SV_VertexID,
-          out PSInput PSIn) 
+          out PSInput PSIn)
 {
     float2 uv  = float2(vid & 1, vid >> 1);
     PSIn.Pos   = float4(uv * 2.0 - 1.0, 0.0, 1.0);
@@ -57,8 +57,8 @@ void main(in uint vid : SV_VertexID,
 )"};
 
 const std::string MultipleContextTest_BlendPS{R"(
-struct PSInput 
-{ 
+struct PSInput
+{
     float4 Pos   : SV_POSITION;
     float3 Color : COLOR;
     float2 UV    : TEXCOORD;
@@ -95,8 +95,8 @@ float4 GenColor(float2 uv)
 )"};
 
 const std::string MultipleContextTest_ProceduralPS = R"(
-struct PSInput 
-{ 
+struct PSInput
+{
     float4 Pos   : SV_POSITION;
     float3 Color : COLOR;
     float2 UV    : TEXCOORD;

@@ -1,27 +1,27 @@
 /*
  *  Copyright 2019-2021 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
- *  
+ *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
- *  
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS,
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *
- *  In no event and under no legal theory, whether in tort (including negligence), 
- *  contract, or otherwise, unless required by applicable law (such as deliberate 
+ *  In no event and under no legal theory, whether in tort (including negligence),
+ *  contract, or otherwise, unless required by applicable law (such as deliberate
  *  and grossly negligent acts) or agreed to in writing, shall any Contributor be
- *  liable for any damages, including any direct, indirect, special, incidental, 
- *  or consequential damages of any character arising as a result of this License or 
- *  out of the use or inability to use the software (including but not limited to damages 
- *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and 
- *  all other commercial damages or losses), even if such Contributor has been advised 
+ *  liable for any damages, including any direct, indirect, special, incidental,
+ *  or consequential damages of any character arising as a result of this License or
+ *  out of the use or inability to use the software (including but not limited to damages
+ *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and
+ *  all other commercial damages or losses), even if such Contributor has been advised
  *  of the possibility of such damages.
  */
 
@@ -91,13 +91,13 @@ TEST(GraphicsTools_CalculateMipLevel, UINT8)
 TEST(GraphicsTools_CalculateMipLevel, INT8)
 {
     // clang-format off
-    const Int8 FineData[] = 
+    const Int8 FineData[] =
         {
               0,    2, 126, 127,  127,
               4,    5, 124, 125, -128,
            -128, -126,  61,  62,  -63,
            -127, -125,  63,  64,  -61,
-             -8, -100, 101, 127,   31 
+             -8, -100, 101, 127,   31
         };
 
     const Int8 RefCoarseData[] =
@@ -144,13 +144,13 @@ TEST(GraphicsTools_CalculateMipLevel, INT8)
 TEST(GraphicsTools_CalculateMipLevel, UINT16)
 {
     // clang-format off
-    const Uint16 FineData[] = 
+    const Uint16 FineData[] =
         {
               0,     2, 65532, 65533,  32767,
               4,     5, 65534, 65535,      0,
           32767, 32768,    61,    62,  65000,
           32765, 32769,    63,    64,  16000,
-           1024,   100,  1010,  1270,     31 
+           1024,   100,  1010,  1270,     31
         };
 
     const Uint16 RefCoarseData[] =
@@ -196,13 +196,13 @@ TEST(GraphicsTools_CalculateMipLevel, UINT16)
 TEST(GraphicsTools_CalculateMipLevel, SINT16)
 {
     // clang-format off
-    const Int16 FineData[] = 
+    const Int16 FineData[] =
         {
               0,      2, 32766, 32767,  32767,
               4,      5, 32761, 32763, -32768,
          -32767, -32768,    61,    62,  32000,
          -32766, -32762,    63,    64, -16000,
-          -1024,    100, -1010, -1270,     31 
+          -1024,    100, -1010, -1270,     31
         };
 
     const Int16 RefCoarseData[] =
@@ -248,13 +248,13 @@ TEST(GraphicsTools_CalculateMipLevel, SINT16)
 TEST(GraphicsTools_CalculateMipLevel, UINT32)
 {
     // clang-format off
-    const Uint32 FineData[] = 
+    const Uint32 FineData[] =
         {
                  0,      2, 100000, 100001,  200000,
                  4,      5, 100003, 100005,  100000,
             200000, 200002,     61,     62,   65000,
             200005, 200003,     63,     64,   16000,
-            300000, 400000,   1010,   1270,   31 
+            300000, 400000,   1010,   1270,   31
         };
 
     const Uint32 RefCoarseData[] =
@@ -298,13 +298,13 @@ TEST(GraphicsTools_CalculateMipLevel, UINT32)
 TEST(GraphicsTools_CalculateMipLevel, INT32)
 {
     // clang-format off
-    const Int32 FineData[] = 
+    const Int32 FineData[] =
         {
                   0,       2, 100000, 100001,  200000,
                   4,       5, 100003, 100005, -100000,
             -200000, -200002,     61,     62,   65000,
             -200005, -200003,     63,     64,  -16000,
-            -300000,  400000,   1010,  -1270,   31 
+            -300000,  400000,   1010,  -1270,   31
         };
 
     const Int32 RefCoarseData[] =
@@ -348,13 +348,13 @@ TEST(GraphicsTools_CalculateMipLevel, INT32)
 TEST(GraphicsTools_CalculateMipLevel, FLOAT32)
 {
     // clang-format off
-    const Float32 FineData[] = 
+    const Float32 FineData[] =
         {
              0,      1,      128.50f,   129.25f,  200000,
              4,      6,      130.25f,   131.50f, -100000,
             -1.50f, -3.25f,   61,        62,       65000,
             -2.25f, -4.50f,   63,        64,      -16000,
-            -3.50f,  4.25f, -110,     -1270,          31 
+            -3.50f,  4.25f, -110,     -1270,          31
         };
 
     const Float32 RefCoarseData[] =

@@ -12,7 +12,7 @@
  *  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF ANY PROPRIETARY RIGHTS.
  *
  *  In no event and under no legal theory, whether in tort (including negligence),
- *  contract, or otherwise, unless required by applicable law (such as deliberate 
+ *  contract, or otherwise, unless required by applicable law (such as deliberate
  *  and grossly negligent acts) or agreed to in writing, shall any Contributor be
  *  liable for any damages, including any direct, indirect, special, incidental,
  *  or consequential damages of any character arising as a result of this License or

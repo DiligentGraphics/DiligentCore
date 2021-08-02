@@ -17,7 +17,7 @@ float4 VerifyResources()
     float4 AllCorrect = float4(1.0, 1.0, 1.0, 1.0);
 
     float2 UV = float2(0.5, 0.5);
-    
+
     AllCorrect *= CheckValue(g_Tex2D_Static.SampleLevel(g_Sampler, UV.xy, 0.0), Tex2D_1_Ref);
     AllCorrect *= CheckValue(g_Tex2D_Mut.   SampleLevel(g_Sampler, UV.xy, 0.0), Tex2D_2_Ref);
     AllCorrect *= CheckValue(g_Tex2D_Dyn.   SampleLevel(g_Sampler, UV.xy, 0.0), Tex2D_3_Ref);
@@ -38,7 +38,7 @@ void VSMain(in  uint    VertId    : SV_VertexID,
     Pos[4] = float4(+0.5, +0.5, 0.0, 1.0);
     Pos[5] = float4(+1.0, -0.5, 0.0, 1.0);
 
-    f4Color = float4(VertId % 3 == 0 ? 1.0 : 0.0, 
+    f4Color = float4(VertId % 3 == 0 ? 1.0 : 0.0,
                      VertId % 3 == 1 ? 1.0 : 0.0,
                      VertId % 3 == 2 ? 1.0 : 0.0,
                      1.0) * VerifyResources();

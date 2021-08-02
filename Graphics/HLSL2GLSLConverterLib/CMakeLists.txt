@@ -2,18 +2,18 @@ cmake_minimum_required (VERSION 3.6)
 
 project(Diligent-HLSL2GLSLConverterLib CXX)
 
-set(INCLUDE 
+set(INCLUDE
     include/GLSLDefinitions.h
     include/HLSL2GLSLConverterImpl.hpp
     include/HLSL2GLSLConverterObject.hpp
     include/HLSLKeywords.h
 )
 
-set(INTERFACE 
+set(INTERFACE
     interface/HLSL2GLSLConverter.h
 )
 
-set(SOURCE 
+set(SOURCE
     src/HLSL2GLSLConverterImpl.cpp
     src/HLSL2GLSLConverterObject.cpp
 )
@@ -28,24 +28,24 @@ set_source_files_properties(${GLSL_DEFINITIONS_INC} PROPERTIES GENERATED TRUE)
 add_library(Diligent-HLSL2GLSLConverterLib STATIC
     ${SOURCE} ${INTERFACE} ${INCLUDE}
 
-    # A target created in the same directory (CMakeLists.txt file) that specifies any output of the 
-    # custom command as a source file is given a rule to generate the file using the command at build time. 
+    # A target created in the same directory (CMakeLists.txt file) that specifies any output of the
+    # custom command as a source file is given a rule to generate the file using the command at build time.
     ${GLSL_DEFINITIONS_INC}
 )
 set_common_target_properties(Diligent-HLSL2GLSLConverterLib)
 
-target_include_directories(Diligent-HLSL2GLSLConverterLib 
-PUBLIC 
+target_include_directories(Diligent-HLSL2GLSLConverterLib
+PUBLIC
     interface
 PRIVATE
     include
 )
 
-target_link_libraries(Diligent-HLSL2GLSLConverterLib 
-PRIVATE 
-    Diligent-BuildSettings 
-    Diligent-Common 
-    Diligent-PlatformInterface 
+target_link_libraries(Diligent-HLSL2GLSLConverterLib
+PRIVATE
+    Diligent-BuildSettings
+    Diligent-Common
+    Diligent-PlatformInterface
     Diligent-GraphicsEngine
 PUBLIC
     Diligent-GraphicsEngineInterface

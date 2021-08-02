@@ -59,7 +59,7 @@ git clone --recursive https://github.com/DiligentGraphics/DiligentCore.git
 To build the module, see 
 [build instructions](https://github.com/DiligentGraphics/DiligentEngine/blob/master/README.md#build-and-run-instructions) 
 in the master repository.
- 
+
 <a name="api_basics"></a>
 # API Basics
 

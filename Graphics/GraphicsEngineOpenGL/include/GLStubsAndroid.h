@@ -1,27 +1,27 @@
 /*
  *  Copyright 2019-2021 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
- *  
+ *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
- *  
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS,
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *
- *  In no event and under no legal theory, whether in tort (including negligence), 
- *  contract, or otherwise, unless required by applicable law (such as deliberate 
+ *  In no event and under no legal theory, whether in tort (including negligence),
+ *  contract, or otherwise, unless required by applicable law (such as deliberate
  *  and grossly negligent acts) or agreed to in writing, shall any Contributor be
- *  liable for any damages, including any direct, indirect, special, incidental, 
- *  or consequential damages of any character arising as a result of this License or 
- *  out of the use or inability to use the software (including but not limited to damages 
- *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and 
- *  all other commercial damages or losses), even if such Contributor has been advised 
+ *  liable for any damages, including any direct, indirect, special, incidental,
+ *  or consequential damages of any character arising as a result of this License or
+ *  out of the use or inability to use the software (including but not limited to damages
+ *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and
+ *  all other commercial damages or losses), even if such Contributor has been advised
  *  of the possibility of such damages.
  */
 
@@ -267,7 +267,7 @@
     #define GL_SAMPLER_1D_SHADOW 0x8B61
 #endif
 
-#ifndef GL_SAMPLER_1D_ARRAY 
+#ifndef GL_SAMPLER_1D_ARRAY
     #define GL_SAMPLER_1D_ARRAY 0x8DC0
 #endif
 
@@ -323,7 +323,7 @@
     #define GL_SAMPLER_2D_MULTISAMPLE 0x9108
 #endif
 
-#ifndef GL_INT_SAMPLER_2D_MULTISAMPLE 
+#ifndef GL_INT_SAMPLER_2D_MULTISAMPLE
     #define GL_INT_SAMPLER_2D_MULTISAMPLE 0x9109
 #endif
 
@@ -511,7 +511,7 @@ extern PFNGLBINDIMAGETEXTUREPROC glBindImageTexture;
 typedef void (GL_APIENTRY* PFNGLDISPATCHCOMPUTEPROC) (GLuint num_groups_x, GLuint num_groups_y, GLuint num_groups_z);
 extern PFNGLDISPATCHCOMPUTEPROC glDispatchCompute;
 
-#define LOAD_GL_MEMORY_BARRIER 
+#define LOAD_GL_MEMORY_BARRIER
 typedef void (GL_APIENTRY* PFNGLMEMORYBARRIERPROC) (GLbitfield barriers);
 extern PFNGLMEMORYBARRIERPROC glMemoryBarrier;
 #endif // GL_ES_VERSION_3_1
@@ -857,13 +857,13 @@ extern PFNGLMEMORYBARRIERPROC glMemoryBarrier;
 // Polygon mode
 #ifndef GL_POINT
 #   define GL_POINT 0x1B00
-#endif              
-                    
-#ifndef GL_LINE     
+#endif
+
+#ifndef GL_LINE
 #   define GL_LINE  0x1B01
-#endif              
-                    
-#ifndef GL_FILL     
+#endif
+
+#ifndef GL_FILL
 #   define GL_FILL  0x1B02
 #endif
 
@@ -1069,7 +1069,7 @@ void UnsupportedGLFunctionStub( const T &Name )
 #ifndef GL_ES_VERSION_3_1
 
     #define LOAD_GEN_PROGRAM_PIPELINES
-    typedef void (GL_APIENTRY* PFNGLGENPROGRAMPIPELINESPROC) (GLsizei n, GLuint* pipelines);    
+    typedef void (GL_APIENTRY* PFNGLGENPROGRAMPIPELINESPROC) (GLsizei n, GLuint* pipelines);
     extern PFNGLGENPROGRAMPIPELINESPROC glGenProgramPipelines;
 
     #define LOAD_GL_DELETE_PROGRAM_PIPELINES

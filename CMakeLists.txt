@@ -235,7 +235,7 @@ message("GLES_SUPPORTED:   " ${GLES_SUPPORTED})
 message("VULKAN_SUPPORTED: " ${VULKAN_SUPPORTED})
 message("METAL_SUPPORTED:  " ${METAL_SUPPORTED})
 
-target_compile_definitions(Diligent-PublicBuildSettings 
+target_compile_definitions(Diligent-PublicBuildSettings
 INTERFACE
     D3D11_SUPPORTED=$<BOOL:${D3D11_SUPPORTED}>
     D3D12_SUPPORTED=$<BOOL:${D3D12_SUPPORTED}>

@@ -2,7 +2,7 @@ cmake_minimum_required (VERSION 3.10)
 
 project(Diligent-GraphicsEngineVk CXX)
 
-set(INCLUDE 
+set(INCLUDE
     include/BufferVkImpl.hpp
     include/BufferViewVkImpl.hpp
     include/CommandListVkImpl.hpp
@@ -43,7 +43,7 @@ set(INCLUDE
     include/PipelineResourceAttribsVk.hpp
 )
 
-set(VULKAN_UTILS_INCLUDE 
+set(VULKAN_UTILS_INCLUDE
     include/VulkanUtilities/VulkanCommandBuffer.hpp
     include/VulkanUtilities/VulkanCommandBufferPool.hpp
     include/VulkanUtilities/VulkanDebug.hpp
@@ -57,7 +57,7 @@ set(VULKAN_UTILS_INCLUDE
 )
 
 
-set(INTERFACE 
+set(INTERFACE
     interface/BufferVk.h
     interface/BufferViewVk.h
     interface/CommandQueueVk.h
@@ -81,7 +81,7 @@ set(INTERFACE
 )
 
 
-set(SRC 
+set(SRC
     src/BufferVkImpl.cpp
     src/BufferViewVkImpl.cpp
     src/CommandPoolManager.cpp
@@ -133,12 +133,12 @@ target_link_libraries     (Diligent-GraphicsEngineVkInterface INTERFACE Diligent
 target_include_directories(Diligent-GraphicsEngineVkInterface INTERFACE interface)
 
 
-add_library(Diligent-GraphicsEngineVk-static STATIC 
+add_library(Diligent-GraphicsEngineVk-static STATIC
     ${SRC} ${VULKAN_UTILS_SRC} ${INTERFACE} ${INCLUDE} ${VULKAN_UTILS_INCLUDE}
     readme.md
 )
 
-add_library(Diligent-GraphicsEngineVk-shared SHARED 
+add_library(Diligent-GraphicsEngineVk-shared SHARED
     readme.md
 )
 
@@ -149,16 +149,16 @@ if(MSVC)
     )
 endif()
 
-target_include_directories(Diligent-GraphicsEngineVk-static 
+target_include_directories(Diligent-GraphicsEngineVk-static
 PRIVATE
     include
     ../../ThirdParty
     ../../ThirdParty/Vulkan-Headers/include
 )
 
-set(PRIVATE_DEPENDENCIES 
-    Diligent-BuildSettings 
-    Diligent-Common 
+set(PRIVATE_DEPENDENCIES
+    Diligent-BuildSettings
+    Diligent-Common
     Diligent-TargetPlatform
     Diligent-GraphicsEngineNextGenBase
     Diligent-ShaderTools
@@ -254,7 +254,7 @@ else()
     list(APPEND PRIVATE_DEPENDENCIES ${Vulkan_LIBRARY})
 endif()
 
-set(PUBLIC_DEPENDENCIES 
+set(PUBLIC_DEPENDENCIES
     Diligent-GraphicsEngineVkInterface
 )
 
@@ -336,7 +336,7 @@ set_common_target_properties(Diligent-GraphicsEngineVk-static)
 source_group("src" FILES ${SRC})
 source_group("src\\Vulkan Utilities" FILES ${VULKAN_UTILS_SRC})
 
-source_group("dll" FILES 
+source_group("dll" FILES
     src/DLLMain.cpp
     src/GraphicsEngineVk.def
 )

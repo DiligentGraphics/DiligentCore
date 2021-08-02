@@ -1,27 +1,27 @@
 /*
  *  Copyright 2019-2021 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
- *  
+ *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
- *  
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS,
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *
- *  In no event and under no legal theory, whether in tort (including negligence), 
- *  contract, or otherwise, unless required by applicable law (such as deliberate 
+ *  In no event and under no legal theory, whether in tort (including negligence),
+ *  contract, or otherwise, unless required by applicable law (such as deliberate
  *  and grossly negligent acts) or agreed to in writing, shall any Contributor be
- *  liable for any damages, including any direct, indirect, special, incidental, 
- *  or consequential damages of any character arising as a result of this License or 
- *  out of the use or inability to use the software (including but not limited to damages 
- *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and 
- *  all other commercial damages or losses), even if such Contributor has been advised 
+ *  liable for any damages, including any direct, indirect, special, incidental,
+ *  or consequential damages of any character arising as a result of this License or
+ *  out of the use or inability to use the software (including but not limited to damages
+ *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and
+ *  all other commercial damages or losses), even if such Contributor has been advised
  *  of the possibility of such damages.
  */
 
@@ -85,7 +85,7 @@ struct TextureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// Multisampled textures cannot have Diligent::BIND_UNORDERED_ACCESS flag set
     BIND_FLAGS      BindFlags   DEFAULT_INITIALIZER(BIND_NONE);
 
-    /// CPU access flags or 0 if no CPU access is allowed, 
+    /// CPU access flags or 0 if no CPU access is allowed,
     /// see Diligent::CPU_ACCESS_FLAGS for details.
     CPU_ACCESS_FLAGS CPUAccessFlags     DEFAULT_INITIALIZER(CPU_ACCESS_NONE);
 
@@ -111,7 +111,7 @@ struct TextureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     TextureDesc()noexcept{}
 
     TextureDesc(const Char*         _Name,
-                RESOURCE_DIMENSION  _Type, 
+                RESOURCE_DIMENSION  _Type,
                 Uint32              _Width,
                 Uint32              _Height,
                 Uint32              _ArraySizeOrDepth,
@@ -123,9 +123,9 @@ struct TextureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
                 CPU_ACCESS_FLAGS    _CPUAccessFlags       = TextureDesc{}.CPUAccessFlags,
                 MISC_TEXTURE_FLAGS  _MiscFlags            = TextureDesc{}.MiscFlags,
                 OptimizedClearValue _ClearValue           = TextureDesc{}.ClearValue,
-                Uint64              _ImmediateContextMask = TextureDesc{}.ImmediateContextMask) noexcept : 
+                Uint64              _ImmediateContextMask = TextureDesc{}.ImmediateContextMask) noexcept :
         DeviceObjectAttribs  {_Name            },
-        Type                 {_Type            }, 
+        Type                 {_Type            },
         Width                {_Width           },
         Height               {_Height          },
         ArraySize            {_ArraySizeOrDepth},
@@ -143,10 +143,10 @@ struct TextureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// Tests if two structures are equivalent
 
     /// \param [in] RHS - reference to the structure to perform comparison with
-    /// \return 
+    /// \return
     /// - True if all members of the two structures except for the Name are equal.
     /// - False otherwise.
-    /// The operator ignores DeviceObjectAttribs::Name field as it does not affect 
+    /// The operator ignores DeviceObjectAttribs::Name field as it does not affect
     /// the texture description state.
     bool operator ==(const TextureDesc& RHS)const
     {
@@ -205,7 +205,7 @@ struct TextureSubResData
     /// Stride          | 0
     /// DepthStride     | 0
     TextureSubResData()noexcept{}
-    
+
     /// Initializes the structure members to perform copy from the CPU memory
     TextureSubResData(const void* _pData, Uint32 _Stride, Uint32 _DepthStride = 0)noexcept :
         pData       (_pData),
@@ -302,9 +302,9 @@ DILIGENT_BEGIN_INTERFACE(ITexture, IDeviceObject)
 
     /// \param [in] ViewDesc - View description. See Diligent::TextureViewDesc for details.
     /// \param [out] ppView - Address of the memory location where the pointer to the view interface will be written to.
-    /// 
-    /// \remarks To create a shader resource view addressing the entire texture, set only TextureViewDesc::ViewType 
-    ///          member of the ViewDesc parameter to Diligent::TEXTURE_VIEW_SHADER_RESOURCE and leave all other 
+    ///
+    /// \remarks To create a shader resource view addressing the entire texture, set only TextureViewDesc::ViewType
+    ///          member of the ViewDesc parameter to Diligent::TEXTURE_VIEW_SHADER_RESOURCE and leave all other
     ///          members in their default values. Using the same method, you can create render target or depth stencil
     ///          view addressing the largest mip level.\n
     ///          If texture view format is Diligent::TEX_FORMAT_UNKNOWN, the view format will match the texture format.\n
@@ -322,7 +322,7 @@ DILIGENT_BEGIN_INTERFACE(ITexture, IDeviceObject)
                                     ITextureView**            ppView) PURE;
 
     /// Returns the pointer to the default view.
-    
+
     /// \param [in] ViewType - Type of the requested view. See Diligent::TEXTURE_VIEW_TYPE.
     /// \return Pointer to the interface
     ///

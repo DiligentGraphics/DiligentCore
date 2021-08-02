@@ -1,27 +1,27 @@
 /*
  *  Copyright 2019-2021 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
- *  
+ *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
- *  
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS,
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *
- *  In no event and under no legal theory, whether in tort (including negligence), 
- *  contract, or otherwise, unless required by applicable law (such as deliberate 
+ *  In no event and under no legal theory, whether in tort (including negligence),
+ *  contract, or otherwise, unless required by applicable law (such as deliberate
  *  and grossly negligent acts) or agreed to in writing, shall any Contributor be
- *  liable for any damages, including any direct, indirect, special, incidental, 
- *  or consequential damages of any character arising as a result of this License or 
- *  out of the use or inability to use the software (including but not limited to damages 
- *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and 
- *  all other commercial damages or losses), even if such Contributor has been advised 
+ *  liable for any damages, including any direct, indirect, special, incidental,
+ *  or consequential damages of any character arising as a result of this License or
+ *  out of the use or inability to use the software (including but not limited to damages
+ *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and
+ *  all other commercial damages or losses), even if such Contributor has been advised
  *  of the possibility of such damages.
  */
 
@@ -86,36 +86,36 @@ public:
             m_ViewFormats[ TexFmt ][TEXTURE_VIEW_DEPTH_STENCIL-1]    = TEX_FORMAT_##DSVFmt; \
             m_ViewFormats[ TexFmt ][TEXTURE_VIEW_UNORDERED_ACCESS-1] = TEX_FORMAT_##UAVFmt; \
         }
-        
+
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_UNKNOWN,                 UNKNOWN, UNKNOWN, UNKNOWN, UNKNOWN);
 
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGBA32_TYPELESS,         RGBA32_FLOAT, RGBA32_FLOAT, UNKNOWN, RGBA32_FLOAT);
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGBA32_FLOAT,            RGBA32_FLOAT, RGBA32_FLOAT, UNKNOWN, RGBA32_FLOAT);
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGBA32_UINT,             RGBA32_UINT,  RGBA32_UINT,  UNKNOWN, RGBA32_UINT);
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGBA32_SINT,             RGBA32_SINT,  RGBA32_SINT,  UNKNOWN, RGBA32_SINT);
-                                                                       
+
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGB32_TYPELESS,          RGB32_FLOAT, RGB32_FLOAT, UNKNOWN, RGB32_FLOAT);
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGB32_FLOAT,             RGB32_FLOAT, RGB32_FLOAT, UNKNOWN, RGB32_FLOAT);
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGB32_UINT,              RGB32_UINT,  RGB32_UINT,  UNKNOWN, RGB32_UINT);
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGB32_SINT,              RGB32_SINT,  RGB32_SINT,  UNKNOWN, RGB32_SINT);
-                                                                      
+
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGBA16_TYPELESS,         RGBA16_FLOAT, RGBA16_FLOAT, UNKNOWN, RGBA16_FLOAT);
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGBA16_FLOAT,            RGBA16_FLOAT, RGBA16_FLOAT, UNKNOWN, RGBA16_FLOAT);
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGBA16_UNORM,            RGBA16_UNORM, RGBA16_UNORM, UNKNOWN, RGBA16_UNORM);
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGBA16_UINT,             RGBA16_UINT,  RGBA16_UINT,  UNKNOWN, RGBA16_UINT);
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGBA16_SNORM,            RGBA16_SNORM, RGBA16_SNORM, UNKNOWN, RGBA16_SNORM);
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGBA16_SINT,             RGBA16_SINT,  RGBA16_SINT,  UNKNOWN, RGBA16_SINT);
-                                                                       
+
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RG32_TYPELESS,           RG32_FLOAT, RG32_FLOAT, UNKNOWN, RG32_FLOAT);
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RG32_FLOAT,              RG32_FLOAT, RG32_FLOAT, UNKNOWN, RG32_FLOAT);
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RG32_UINT,               RG32_UINT,  RG32_UINT,  UNKNOWN, RG32_UINT);
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RG32_SINT,               RG32_SINT,  RG32_SINT,  UNKNOWN, RG32_SINT);
-                                                                       
+
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_R32G8X24_TYPELESS,       R32_FLOAT_X8X24_TYPELESS, UNKNOWN, D32_FLOAT_S8X24_UINT, UNKNOWN);
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_D32_FLOAT_S8X24_UINT,    R32_FLOAT_X8X24_TYPELESS, UNKNOWN, D32_FLOAT_S8X24_UINT, UNKNOWN);
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_R32_FLOAT_X8X24_TYPELESS,R32_FLOAT_X8X24_TYPELESS, UNKNOWN, D32_FLOAT_S8X24_UINT, R32_FLOAT_X8X24_TYPELESS);
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_X32_TYPELESS_G8X24_UINT, X32_TYPELESS_G8X24_UINT,  UNKNOWN, D32_FLOAT_S8X24_UINT, X32_TYPELESS_G8X24_UINT);
-                                                                       
+
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGB10A2_TYPELESS,        RGB10A2_UNORM, RGB10A2_UNORM, UNKNOWN, RGB10A2_UNORM);
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGB10A2_UNORM,           RGB10A2_UNORM, RGB10A2_UNORM, UNKNOWN, RGB10A2_UNORM);
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGB10A2_UINT,            RGB10A2_UINT,  RGB10A2_UINT,  UNKNOWN, RGB10A2_UINT);
@@ -222,7 +222,7 @@ public:
                 if (BindFlags & BIND_DEPTH_STENCIL)
                 {
                     // clang-format off
-                    static TEXTURE_FORMAT D16_ViewFmts[] = 
+                    static TEXTURE_FORMAT D16_ViewFmts[] =
                     {
                         TEX_FORMAT_R16_UNORM, TEX_FORMAT_R16_UNORM, TEX_FORMAT_D16_UNORM, TEX_FORMAT_R16_UNORM
                     };

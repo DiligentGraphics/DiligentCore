@@ -1,27 +1,27 @@
 /*
  *  Copyright 2019-2021 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
- *  
+ *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
- *  
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS,
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *
- *  In no event and under no legal theory, whether in tort (including negligence), 
- *  contract, or otherwise, unless required by applicable law (such as deliberate 
+ *  In no event and under no legal theory, whether in tort (including negligence),
+ *  contract, or otherwise, unless required by applicable law (such as deliberate
  *  and grossly negligent acts) or agreed to in writing, shall any Contributor be
- *  liable for any damages, including any direct, indirect, special, incidental, 
- *  or consequential damages of any character arising as a result of this License or 
- *  out of the use or inability to use the software (including but not limited to damages 
- *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and 
- *  all other commercial damages or losses), even if such Contributor has been advised 
+ *  liable for any damages, including any direct, indirect, special, incidental,
+ *  or consequential damages of any character arising as a result of this License or
+ *  out of the use or inability to use the software (including but not limited to damages
+ *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and
+ *  all other commercial damages or losses), even if such Contributor has been advised
  *  of the possibility of such damages.
  */
 
@@ -137,20 +137,20 @@ namespace HLSL
 // clang-format off
 const std::string DrawTest_VS{
 R"(
-struct PSInput 
-{ 
-    float4 Pos   : SV_POSITION; 
-    float3 Color : COLOR; 
+struct PSInput
+{
+    float4 Pos   : SV_POSITION;
+    float3 Color : COLOR;
 };
 
 struct VSInput
 {
     float4 Pos   : ATTRIB0;
-    float3 Color : ATTRIB1; 
+    float3 Color : ATTRIB1;
 };
 
 void main(in  VSInput VSIn,
-          out PSInput PSIn) 
+          out PSInput PSIn)
 {
     PSIn.Pos   = VSIn.Pos;
     PSIn.Color = VSIn.Color;
@@ -161,21 +161,21 @@ void main(in  VSInput VSIn,
 
 const std::string DrawTest_VSInstanced{
 R"(
-struct PSInput 
-{ 
-    float4 Pos   : SV_POSITION; 
-    float3 Color : COLOR; 
+struct PSInput
+{
+    float4 Pos   : SV_POSITION;
+    float3 Color : COLOR;
 };
 
 struct VSInput
 {
     float4 Pos       : ATTRIB0;
-    float3 Color     : ATTRIB1; 
-    float4 ScaleBias : ATTRIB2; 
+    float3 Color     : ATTRIB1;
+    float4 ScaleBias : ATTRIB2;
 };
 
 void main(in  VSInput VSIn,
-          out PSInput PSIn) 
+          out PSInput PSIn)
 {
     PSIn.Pos.xy = VSIn.Pos.xy * VSIn.ScaleBias.xy + VSIn.ScaleBias.zw;
     PSIn.Pos.zw = VSIn.Pos.zw;
@@ -202,14 +202,14 @@ cbuffer ImmutableCB
     float4 PositionZW;
 }
 
-struct PSInput 
-{ 
-    float4 Pos   : SV_POSITION; 
-    float3 Color : COLOR; 
+struct PSInput
+{
+    float4 Pos   : SV_POSITION;
+    float3 Color : COLOR;
 };
 
 void main(in  uint    VertId : SV_VertexID,
-          out PSInput PSIn) 
+          out PSInput PSIn)
 {
     PSIn.Pos   = float4(Positions[VertId].xy, PositionZW.xy);
     PSIn.Color = Colors[VertId].rgb;
@@ -231,14 +231,14 @@ struct ColData
 StructuredBuffer<PosData> g_Positions;
 StructuredBuffer<ColData> g_Colors;
 
-struct PSInput 
-{ 
-    float4 Pos   : SV_POSITION; 
-    float3 Color : COLOR; 
+struct PSInput
+{
+    float4 Pos   : SV_POSITION;
+    float3 Color : COLOR;
 };
 
 void main(in  uint    VertId : SV_VertexID,
-          out PSInput PSIn) 
+          out PSInput PSIn)
 {
     PSIn.Pos   = g_Positions[VertId].data;
     PSIn.Color = g_Colors[VertId].data.rgb;
@@ -255,14 +255,14 @@ struct BufferData
 
 StructuredBuffer<BufferData> g_Buffers[2];
 
-struct PSInput 
-{ 
-    float4 Pos   : SV_POSITION; 
-    float3 Color : COLOR; 
+struct PSInput
+{
+    float4 Pos   : SV_POSITION;
+    float3 Color : COLOR;
 };
 
 void main(in  uint    VertId : SV_VertexID,
-          out PSInput PSIn) 
+          out PSInput PSIn)
 {
     PSIn.Pos   = g_Buffers[0][VertId].data;
     PSIn.Color = g_Buffers[1][VertId].data.rgb;
@@ -276,14 +276,14 @@ R"(
 Buffer<float4> g_Positions;
 Buffer<float4> g_Colors;
 
-struct PSInput 
-{ 
-    float4 Pos   : SV_POSITION; 
-    float3 Color : COLOR; 
+struct PSInput
+{
+    float4 Pos   : SV_POSITION;
+    float3 Color : COLOR;
 };
 
 void main(in  uint    VertId : SV_VertexID,
-          out PSInput PSIn) 
+          out PSInput PSIn)
 {
     PSIn.Pos   = g_Positions.Load(VertId);
     PSIn.Color = g_Colors.Load(VertId).rgb;
@@ -296,14 +296,14 @@ const std::string DrawTest_VSFormattedBufferArray{
 R"(
 Buffer<float4> g_Buffers[2];
 
-struct PSInput 
-{ 
-    float4 Pos   : SV_POSITION; 
-    float3 Color : COLOR; 
+struct PSInput
+{
+    float4 Pos   : SV_POSITION;
+    float3 Color : COLOR;
 };
 
 void main(in  uint    VertId : SV_VertexID,
-          out PSInput PSIn) 
+          out PSInput PSIn)
 {
     PSIn.Pos   = g_Buffers[0].Load(VertId);
     PSIn.Color = g_Buffers[1].Load(VertId).rgb;
@@ -325,14 +325,14 @@ cbuffer cbColors
     float4 Colors[3];
 }
 
-struct PSInput 
-{ 
-    float4 Pos   : SV_POSITION; 
-    float3 Color : COLOR; 
+struct PSInput
+{
+    float4 Pos   : SV_POSITION;
+    float3 Color : COLOR;
 };
 
 void main(in  uint    VertId : SV_VertexID,
-          out PSInput PSIn) 
+          out PSInput PSIn)
 {
     PSIn.Pos   = Positions[VertId];
     PSIn.Color = Colors[VertId].rgb;
@@ -433,7 +433,7 @@ struct Vertex
 };
 
 // clang-format off
-float4 Pos[] = 
+float4 Pos[] =
 {
     float4(-1.0f,  -0.5f,  0.f,  1.f),
     float4(-0.5f,  +0.5f,  0.f,  1.f),
@@ -451,7 +451,7 @@ float3 Color[] =
     float3(0.f,  0.f,  1.f),
 };
 
-Vertex Vert[] = 
+Vertex Vert[] =
 {
     {Pos[0], Color[0]},
     {Pos[1], Color[1]},
@@ -462,7 +462,7 @@ Vertex Vert[] =
     {Pos[5], Color[2]}
 };
 
-Vertex VertInst[] = 
+Vertex VertInst[] =
 {
     {float4(-1.0,  0.0,  0.0,  1.0), Color[0]},
     {float4( 0.0, +2.0,  0.0,  1.0), Color[1]},
@@ -871,7 +871,7 @@ TEST_F(DrawCommandTest, Draw_StartVertex_VBOffset_2xStride)
     {
         {}, {}, {},     // Skip 3 * sizeof(Vertex) using buffer offset
         {}, {}, {}, {}, // Skip 2 vertices using StartVertexLocation
-        Vert[0], {}, Vert[1], {}, Vert[2], {}, 
+        Vert[0], {}, Vert[1], {}, Vert[2], {},
         Vert[3], {}, Vert[4], {}, Vert[5], {}
     };
     // clang-format on
@@ -1002,7 +1002,7 @@ TEST_F(DrawCommandTest, DrawInstanced)
     {
         VertInst[0], VertInst[1], VertInst[2]
     };
-    const float4 InstancedData[] = 
+    const float4 InstancedData[] =
     {
         float4{0.5f,  0.5f,  -0.5f, -0.5f},
         float4{0.5f,  0.5f,  +0.5f, -0.5f}
@@ -1036,7 +1036,7 @@ TEST_F(DrawCommandTest, DrawInstanced_VBOffset)
         {}, {}, // Skip 2 vertices with VB offset
         VertInst[0], VertInst[1], VertInst[2]
     };
-    const float4 InstancedData[] = 
+    const float4 InstancedData[] =
     {
         {}, {}, {}, // Skip 3 instances with VB offset
         float4{0.5f,  0.5f,  -0.5f, -0.5f},
@@ -1071,7 +1071,7 @@ TEST_F(DrawCommandTest, DrawInstanced_StartVertex)
         {}, {}, {}, {}, // Skip 4 vertices with start vertex
         VertInst[0], VertInst[1], VertInst[2]
     };
-    const float4 InstancedData[] = 
+    const float4 InstancedData[] =
     {
         float4{0.5f,  0.5f,  -0.5f, -0.5f},
         float4{0.5f,  0.5f,  +0.5f, -0.5f}
@@ -1108,7 +1108,7 @@ TEST_F(DrawCommandTest, DrawInstanced_FirstInstance)
     {
         VertInst[0], VertInst[1], VertInst[2]
     };
-    const float4 InstancedData[] = 
+    const float4 InstancedData[] =
     {
         {}, {}, {}, {}, // Skip 4 instances with FirstInstanceLocation
         float4{0.5f,  0.5f,  -0.5f, -0.5f},
@@ -1144,7 +1144,7 @@ TEST_F(DrawCommandTest, DrawInstanced_FirstInstance_VBOffset)
         {}, {}, {}, // Skip 3 vertices with buffer offset
         VertInst[0], VertInst[1], VertInst[2]
     };
-    const float4 InstancedData[] = 
+    const float4 InstancedData[] =
     {
         {}, {},         // Skip 2 instances with buffer offset
         {}, {}, {}, {}, // Skip 4 instances with FirstInstanceLocation
@@ -1183,7 +1183,7 @@ TEST_F(DrawCommandTest, DrawInstanced_FirstInstance_BaseVertex_FirstIndex_VBOffs
         {}, {}, {},     // Skip 3 vertices with StartVertexLocation
         VertInst[0], VertInst[1], VertInst[2]
     };
-    const float4 InstancedData[] = 
+    const float4 InstancedData[] =
     {
         {}, {}, {}, {}, {}, // Skip 5 instances with VB offset
         {}, {}, {}, {},     // Skip 4 instances with FirstInstance
@@ -1224,7 +1224,7 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced)
         VertInst[1], {}, VertInst[0], {}, {}, VertInst[2]
     };
     Uint32 Indices[] = {4, 2, 7};
-    const float4 InstancedData[] = 
+    const float4 InstancedData[] =
     {
         float4{0.5f,  0.5f,  -0.5f, -0.5f},
         float4{0.5f,  0.5f,  +0.5f, -0.5f}
@@ -1262,7 +1262,7 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_IBOffset)
         VertInst[1], {}, VertInst[0], {}, {}, VertInst[2]
     };
     Uint32 Indices[] = {0,0,0,0,0, 4, 2, 7};
-    const float4 InstancedData[] = 
+    const float4 InstancedData[] =
     {
         float4{0.5f,  0.5f,  -0.5f, -0.5f},
         float4{0.5f,  0.5f,  +0.5f, -0.5f}
@@ -1301,7 +1301,7 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_VBOffset)
         VertInst[1], {}, VertInst[0], {}, {}, VertInst[2]
     };
     Uint32 Indices[] = {4, 2, 7};
-    const float4 InstancedData[] = 
+    const float4 InstancedData[] =
     {
         {}, {}, {}, {}, // Skip 4 instances with VB offset
         float4{0.5f,  0.5f,  -0.5f, -0.5f},
@@ -1340,7 +1340,7 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstIndex)
         VertInst[1], {}, VertInst[0], {}, {}, VertInst[2]
     };
     Uint32 Indices[] = {0,0,0,0,0, 4, 2, 7};
-    const float4 InstancedData[] = 
+    const float4 InstancedData[] =
     {
         float4{0.5f,  0.5f,  -0.5f, -0.5f},
         float4{0.5f,  0.5f,  +0.5f, -0.5f}
@@ -1382,7 +1382,7 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance)
         VertInst[1], {}, VertInst[0], {}, {}, VertInst[2]
     };
     Uint32 Indices[] = {4, 2, 7};
-    const float4 InstancedData[] = 
+    const float4 InstancedData[] =
     {
         {}, {}, {}, {}, // Skip 4 instances with FirstInstance
         float4{0.5f,  0.5f,  -0.5f, -0.5f},
@@ -1421,7 +1421,7 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_IBOffset)
         VertInst[1], {}, VertInst[0], {}, {}, VertInst[2]
     };
     Uint32 Indices[] = {0,0,0,0, 4, 2, 7};
-    const float4 InstancedData[] = 
+    const float4 InstancedData[] =
     {
         {}, {}, {}, {}, // Skip 4 instances with FirstInstance
         float4{0.5f,  0.5f,  -0.5f, -0.5f},
@@ -1461,7 +1461,7 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_VBOffset)
         VertInst[1], {}, VertInst[0], {}, {}, VertInst[2]
     };
     Uint32 Indices[] = {4, 2, 7};
-    const float4 InstancedData[] = 
+    const float4 InstancedData[] =
     {
         {}, {}, {}, {}, {}, // Skip 5 instances with VB offset
         {}, {}, {}, {}, // Skip 4 instances with FirstInstance
@@ -1502,7 +1502,7 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_IBOffset_FirstIndex)
         VertInst[1], {}, VertInst[0], {}, {}, VertInst[2]
     };
     Uint32 Indices[] = {0,0,0,0, 0,0,0, 4, 2, 7};
-    const float4 InstancedData[] = 
+    const float4 InstancedData[] =
     {
         {}, {}, {}, {}, // Skip 4 instances with FirstInstance
         float4{0.5f,  0.5f,  -0.5f, -0.5f},
@@ -1547,7 +1547,7 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_BaseVertex)
         VertInst[1], {}, VertInst[0], {}, {}, VertInst[2]
     };
     Uint32 Indices[] = {4, 2, 7};
-    const float4 InstancedData[] = 
+    const float4 InstancedData[] =
     {
         float4{0.5f,  0.5f,  -0.5f, -0.5f},
         float4{0.5f,  0.5f,  +0.5f, -0.5f}
@@ -1587,7 +1587,7 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_BaseVertex_VBOffset)
         VertInst[1], {}, VertInst[0], {}, {}, VertInst[2]
     };
     Uint32 Indices[] = {4, 2, 7};
-    const float4 InstancedData[] = 
+    const float4 InstancedData[] =
     {
         {}, {}, {}, {}, {}, // Skip 5 instances with VB offset
         {}, {}, {}, {}, // Skip 4 instances with FirstInstance
@@ -1631,7 +1631,7 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_BaseVertex_FirstIndex
         VertInst[1], {}, VertInst[0], {}, {}, VertInst[2]
     };
     Uint32 Indices[] = {0,0,0,0, 0,0,0, 4, 2, 7};
-    const float4 InstancedData[] = 
+    const float4 InstancedData[] =
     {
         {}, {}, {}, {}, {}, // Skip 5 instances with VB offset
         {}, {}, {}, {}, // Skip 4 instances with FirstInstance
@@ -1680,7 +1680,7 @@ TEST_F(DrawCommandTest, DrawInstancedIndirect_FirstInstance_BaseVertex_FirstInde
         {}, {}, {},     // Skip 3 vertices with StartVertexLocation
         VertInst[0], VertInst[1], VertInst[2]
     };
-    const float4 InstancedData[] = 
+    const float4 InstancedData[] =
     {
         {}, {}, {}, {}, {}, // Skip 5 instances with VB offset
         {}, {}, {}, {},     // Skip 4 instances with FirstInstance
@@ -1730,7 +1730,7 @@ TEST_F(DrawCommandTest, DrawIndexedInstancedIndirect_FirstInstance_BaseVertex_Fi
         VertInst[1], {}, VertInst[0], {}, {}, VertInst[2]
     };
     Uint32 Indices[] = {0,0,0, 0,0,0,0, 4, 2, 7};
-    const float4 InstancedData[] = 
+    const float4 InstancedData[] =
     {
         {}, {}, {}, {},     // Skip 4 instances with VB offset
         {}, {}, {}, {}, {}, // Skip 5 instances with FirstInstance
@@ -1841,11 +1841,11 @@ TEST_F(DrawCommandTest, Draw_InstanceDataStepRate)
     {
         VertInst[0], VertInst[1], VertInst[2]
     };
-    const float4 InstancedData[] = 
+    const float4 InstancedData[] =
     {
         float4{0.5f,  0.5f,  -0.5f, -0.5f},
         float4{0.5f,  0.5f,  +0.5f, -0.5f},
-        float4{0.1f,  0.1f,  -0.5f, -0.75f}, // These should not 
+        float4{0.1f,  0.1f,  -0.5f, -0.75f}, // These should not
         float4{0.1f,  0.1f,  +0.5f, -0.75f}  // be used
     };
     // clang-format on
