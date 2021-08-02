@@ -1,11 +1,11 @@
 RWTexture2D<int/* format = r32i */>Tex2D_I1: register(u0);
 RWTexture2D<uint/* format = r32ui */>Tex2D_U1/*comment*/:/*comment*/register(u1)/*comment*/;
 
-RWTexture2DArray <float// format = r32f 
+RWTexture2DArray <float// format = r32f
                   >  Tex2D_F_A;
-RWTexture2DArray <int2// format = rg8i 
+RWTexture2DArray <int2// format = rg8i
                   >   Tex2D_I_A;
-RWTexture2DArray <uint4// format = rgba8ui 
+RWTexture2DArray <uint4// format = rgba8ui
                   >  Tex2D_U_A;
 
 RWTexture3D< float4/*

@@ -1,27 +1,27 @@
 /*
  *  Copyright 2019-2021 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
- *  
+ *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
- *  
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS,
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *
- *  In no event and under no legal theory, whether in tort (including negligence), 
- *  contract, or otherwise, unless required by applicable law (such as deliberate 
+ *  In no event and under no legal theory, whether in tort (including negligence),
+ *  contract, or otherwise, unless required by applicable law (such as deliberate
  *  and grossly negligent acts) or agreed to in writing, shall any Contributor be
- *  liable for any damages, including any direct, indirect, special, incidental, 
- *  or consequential damages of any character arising as a result of this License or 
- *  out of the use or inability to use the software (including but not limited to damages 
- *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and 
- *  all other commercial damages or losses), even if such Contributor has been advised 
+ *  liable for any damages, including any direct, indirect, special, incidental,
+ *  or consequential damages of any character arising as a result of this License or
+ *  out of the use or inability to use the software (including but not limited to damages
+ *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and
+ *  all other commercial damages or losses), even if such Contributor has been advised
  *  of the possibility of such damages.
  */
 #include <unordered_map>
@@ -284,7 +284,7 @@ void ShaderResourceLayoutTest::TestTexturesAndImtblSamplers(bool TestImtblSample
     VERIFY_EXPR(deviceCaps.IsGLDevice() || PSResArrId != VSResArrId);
 
     // clang-format off
-    std::vector<ShaderResourceDesc> Resources = 
+    std::vector<ShaderResourceDesc> Resources =
     {
         ShaderResourceDesc{"g_Tex2D_Static",      SHADER_RESOURCE_TYPE_TEXTURE_SRV, 1},
         ShaderResourceDesc{"g_Tex2D_Mut",         SHADER_RESOURCE_TYPE_TEXTURE_SRV, 1},
@@ -557,7 +557,7 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
     const auto UseArraysInPSOnly = !IsFormatted && (DeviceInfo.IsVulkanDevice() || DeviceInfo.IsMetalDevice());
 
     // clang-format off
-    std::vector<ShaderResourceDesc> Resources = 
+    std::vector<ShaderResourceDesc> Resources =
     {
         {"g_Buff_Static", SHADER_RESOURCE_TYPE_BUFFER_SRV, 1},
         {"g_Buff_Mut",    SHADER_RESOURCE_TYPE_BUFFER_SRV, 1},
@@ -817,7 +817,7 @@ void ShaderResourceLayoutTest::TestRWStructuredOrFormattedBuffer(bool IsFormatte
     static constexpr size_t BuffArr_DynIdx    = 10;
 
     // clang-format off
-    ShaderResourceDesc Resources[] = 
+    ShaderResourceDesc Resources[] =
     {
         {"g_tex2DUAV",         SHADER_RESOURCE_TYPE_TEXTURE_UAV, 1},
         {"g_RWBuff_Static",    SHADER_RESOURCE_TYPE_BUFFER_UAV, 1},
@@ -1046,7 +1046,7 @@ TEST_F(ShaderResourceLayoutTest, RWTextures)
         Macros.AddShaderMacro((std::string{"Tex2DArr_Dyn_Ref"} + std::to_string(i)).c_str(), RefTextures.GetColor(Tex2DArr_DynIdx + i));
 
     // clang-format off
-    ShaderResourceDesc Resources[] = 
+    ShaderResourceDesc Resources[] =
     {
         {"g_tex2DUAV",          SHADER_RESOURCE_TYPE_TEXTURE_UAV, 1},
         {"g_RWTex2D_Static",    SHADER_RESOURCE_TYPE_TEXTURE_UAV, 1},
@@ -1204,7 +1204,7 @@ TEST_F(ShaderResourceLayoutTest, ConstantBuffers)
     };
 
     // clang-format off
-    std::vector<ShaderResourceDesc> Resources = 
+    std::vector<ShaderResourceDesc> Resources =
     {
         ShaderResourceDesc{"UniformBuff_Stat", SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, 1},
         ShaderResourceDesc{"UniformBuff_Mut",  SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, 1},
@@ -1352,7 +1352,7 @@ TEST_F(ShaderResourceLayoutTest, Samplers)
     RefCntAutoPtr<IPipelineState>         pPSO;
     RefCntAutoPtr<IShaderResourceBinding> pSRB;
     // clang-format off
-    ShaderResourceDesc Resources[] = 
+    ShaderResourceDesc Resources[] =
     {
         {"g_Sam_Static",      SHADER_RESOURCE_TYPE_SAMPLER,     1},
         {"g_Sam_Mut",         SHADER_RESOURCE_TYPE_SAMPLER,     1},
@@ -1516,7 +1516,7 @@ TEST_F(ShaderResourceLayoutTest, MergedVarStages)
 
 
     // clang-format off
-    std::vector<ShaderResourceDesc> Resources = 
+    std::vector<ShaderResourceDesc> Resources =
     {
         ShaderResourceDesc{"UniformBuff_Stat", SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, 1},
         ShaderResourceDesc{"UniformBuff_Mut",  SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, 1},

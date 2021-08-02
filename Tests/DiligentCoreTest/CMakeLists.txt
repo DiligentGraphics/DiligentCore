@@ -21,10 +21,10 @@ endif()
 add_executable(DiligentCoreTest ${SOURCE} ${INCLUDE})
 set_common_target_properties(DiligentCoreTest)
 
-target_link_libraries(DiligentCoreTest 
-PRIVATE 
+target_link_libraries(DiligentCoreTest
+PRIVATE
     gtest_main
-    Diligent-BuildSettings 
+    Diligent-BuildSettings
     Diligent-TargetPlatform
     Diligent-GraphicsAccessories
     Diligent-Common

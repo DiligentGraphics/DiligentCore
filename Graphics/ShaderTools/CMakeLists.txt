@@ -2,11 +2,11 @@ cmake_minimum_required (VERSION 3.6)
 
 project(Diligent-ShaderTools CXX)
 
-set(INCLUDE 
+set(INCLUDE
     include/ShaderToolsCommon.hpp
 )
 
-set(SOURCE 
+set(SOURCE
     src/ShaderToolsCommon.cpp
 )
 
@@ -98,7 +98,7 @@ endif()
 
 add_library(Diligent-ShaderTools STATIC ${SOURCE} ${INCLUDE} ${DXBC_CHECKSUM_SOURCE})
 
-target_include_directories(Diligent-ShaderTools 
+target_include_directories(Diligent-ShaderTools
 PUBLIC
     include
 PRIVATE
@@ -114,8 +114,8 @@ if (DXC_SUPPORTED)
     endif()
 endif()
 
-target_link_libraries(Diligent-ShaderTools 
-PRIVATE 
+target_link_libraries(Diligent-ShaderTools
+PRIVATE
     Diligent-BuildSettings
     Diligent-GraphicsAccessories
     Diligent-Common
@@ -131,26 +131,26 @@ else()
 endif()
 
 if(ENABLE_SPIRV)
-    target_link_libraries(Diligent-ShaderTools 
+    target_link_libraries(Diligent-ShaderTools
     PRIVATE
         spirv-cross-core
     )
 
     if (${USE_SPIRV_TOOLS})
-        target_link_libraries(Diligent-ShaderTools 
+        target_link_libraries(Diligent-ShaderTools
         PRIVATE
             SPIRV-Tools-opt
         )
     endif()
 
     if (${USE_GLSLANG})
-        target_link_libraries(Diligent-ShaderTools 
+        target_link_libraries(Diligent-ShaderTools
         PRIVATE
             SPIRV
             glslang
         )
 
-        target_include_directories(Diligent-ShaderTools 
+        target_include_directories(Diligent-ShaderTools
         PRIVATE
             ../../ThirdParty/glslang
         )

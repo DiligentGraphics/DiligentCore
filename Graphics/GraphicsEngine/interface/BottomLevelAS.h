@@ -1,27 +1,27 @@
 /*
  *  Copyright 2019-2021 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
- *  
+ *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
- *  
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS,
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *
- *  In no event and under no legal theory, whether in tort (including negligence), 
- *  contract, or otherwise, unless required by applicable law (such as deliberate 
+ *  In no event and under no legal theory, whether in tort (including negligence),
+ *  contract, or otherwise, unless required by applicable law (such as deliberate
  *  and grossly negligent acts) or agreed to in writing, shall any Contributor be
- *  liable for any damages, including any direct, indirect, special, incidental, 
- *  or consequential damages of any character arising as a result of this License or 
- *  out of the use or inability to use the software (including but not limited to damages 
- *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and 
- *  all other commercial damages or losses), even if such Contributor has been advised 
+ *  liable for any damages, including any direct, indirect, special, incidental,
+ *  or consequential damages of any character arising as a result of this License or
+ *  out of the use or inability to use the software (including but not limited to damages
+ *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and
+ *  all other commercial damages or losses), even if such Contributor has been advised
  *  of the possibility of such damages.
  */
 
@@ -61,13 +61,13 @@ struct BLASTriangleDesc
     Uint32                    MaxVertexCount        DEFAULT_INITIALIZER(0);
 
     /// The type of vertices in this geometry, see Diligent::VALUE_TYPE.
-    /// 
+    ///
     /// \remarks Only the following values are allowed: VT_FLOAT32, VT_FLOAT16, VT_INT16.
     ///          VT_INT16 defines 16-bit signed normalized vertex components.
     VALUE_TYPE                VertexValueType       DEFAULT_INITIALIZER(VT_UNDEFINED);
 
     /// The number of components in the vertex.
-    /// 
+    ///
     /// \remarks Only 2 or 3 are allowed values. For 2-component formats, the third component is assumed 0.
     Uint8                     VertexComponentCount  DEFAULT_INITIALIZER(0);
 
@@ -82,7 +82,7 @@ struct BLASTriangleDesc
 
     /// Vulkan only, allows to use transformations in BLASBuildTriangleData.
     Bool                      AllowsTransforms      DEFAULT_INITIALIZER(False);
-    
+
 #if DILIGENT_CPP_INTERFACE
     BLASTriangleDesc() noexcept {}
 #endif
@@ -98,11 +98,11 @@ struct BLASBoundingBoxDesc
     /// Geometry name.
     /// The name is used to map AABB data (BLASBuildBoundingBoxData) to this geometry.
     const char*               GeometryName  DEFAULT_INITIALIZER(nullptr);
-    
+
     /// The maximum AABB count.
-    /// Current number of AABBs is defined in BLASBuildBoundingBoxData::BoxCount. 
+    /// Current number of AABBs is defined in BLASBuildBoundingBoxData::BoxCount.
     Uint32                    MaxBoxCount   DEFAULT_INITIALIZER(0);
-    
+
 #if DILIGENT_CPP_INTERFACE
     BLASBoundingBoxDesc() noexcept {}
 #endif
@@ -188,13 +188,13 @@ struct ScratchBufferSizes
     /// see IDeviceContext::BuildBLAS(), IDeviceContext::BuildTLAS().
     /// May be zero if the acceleration structure was created with non-zero CompactedSize.
     Uint32 Build  DEFAULT_INITIALIZER(0);
-    
+
     /// Scratch buffer size for acceleration structure updating,
     /// see IDeviceContext::BuildBLAS(), IDeviceContext::BuildTLAS().
     /// May be zero if acceleration structure was created without RAYTRACING_BUILD_AS_ALLOW_UPDATE flag.
     /// May be zero if acceleration structure was created with non-zero CompactedSize.
     Uint32 Update DEFAULT_INITIALIZER(0);
-    
+
 #if DILIGENT_CPP_INTERFACE
     ScratchBufferSizes() noexcept {}
 #endif
@@ -223,17 +223,17 @@ DILIGENT_BEGIN_INTERFACE(IBottomLevelAS, IDeviceObject)
 
     /// \param [in] Name - Geometry name that is specified in BLASTriangleDesc or BLASBoundingBoxDesc.
     /// \return Geometry index or INVALID_INDEX if geometry does not exist.
-    /// 
+    ///
     /// \note Access to the BLAS must be externally synchronized.
     VIRTUAL Uint32 METHOD(GetGeometryDescIndex)(THIS_
                                                 const char* Name) CONST PURE;
 
 
     /// Returns the geometry index that can be used in a shader binding table.
-    
+
     /// \param [in] Name - Geometry name that is specified in BLASTriangleDesc or BLASBoundingBoxDesc.
     /// \return Geometry index or INVALID_INDEX if geometry does not exist.
-    /// 
+    ///
     /// \note Access to the BLAS must be externally synchronized.
     VIRTUAL Uint32 METHOD(GetGeometryIndex)(THIS_
                                             const char* Name) CONST PURE;
@@ -243,13 +243,13 @@ DILIGENT_BEGIN_INTERFACE(IBottomLevelAS, IDeviceObject)
     /// Same as BuildBLASAttribs::TriangleDataCount or BuildBLASAttribs::BoxDataCount.
 
     /// \return The number of geometries that was used to build AS.
-    /// 
+    ///
     /// \note Access to the BLAS must be externally synchronized.
     VIRTUAL Uint32 METHOD(GetActualGeometryCount)(THIS) CONST PURE;
 
 
     /// Returns the scratch buffer info for the current acceleration structure.
-    
+
     /// \return ScratchBufferSizes object, see Diligent::ScratchBufferSizes.
     VIRTUAL ScratchBufferSizes METHOD(GetScratchBufferSizes)(THIS) CONST PURE;
 

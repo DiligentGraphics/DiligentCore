@@ -47,7 +47,7 @@ void VSMain(in  uint    VertId    : SV_VertexID,
     Pos[4] = float4(+0.5, +0.5, 0.0, 1.0);
     Pos[5] = float4(+1.0, -0.5, 0.0, 1.0);
 
-    f4Color = float4(VertId % 3 == 0 ? 1.0 : 0.0, 
+    f4Color = float4(VertId % 3 == 0 ? 1.0 : 0.0,
                      VertId % 3 == 1 ? 1.0 : 0.0,
                      VertId % 3 == 2 ? 1.0 : 0.0,
                      1.0) * VerifyResources();

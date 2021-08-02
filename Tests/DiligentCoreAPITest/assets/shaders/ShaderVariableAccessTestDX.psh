@@ -54,7 +54,7 @@ struct VSOut
     float4 f4Color	: COLOR;
 };
 
- 
+
 float4 main(VSOut In) : SV_Target
 {
     float4 Color = In.f4Color;

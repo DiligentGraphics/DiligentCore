@@ -11,7 +11,7 @@ struct GSOutput
 };
 
 [maxvertexcount(3)]
-void main(triangle VSOutput In[3], 
+void main(triangle VSOutput In[3],
           inout TriangleStream<GSOutput> triStream,
           uint PrimID : SV_PrimitiveID)
 {

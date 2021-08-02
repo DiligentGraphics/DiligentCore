@@ -11,7 +11,7 @@ set(INTERFACE
     interface/Win32NativeWindow.h
 )
 
-set(SOURCE 
+set(SOURCE
     src/Win32Atomics.cpp
     src/Win32Debug.cpp
     src/Win32FileSystem.cpp
@@ -20,12 +20,12 @@ set(SOURCE
 add_library(Diligent-Win32Platform ${SOURCE} ${INTERFACE} ${PLATFORM_INTERFACE_HEADERS})
 set_common_target_properties(Diligent-Win32Platform)
 
-target_include_directories(Diligent-Win32Platform 
+target_include_directories(Diligent-Win32Platform
 PUBLIC
     interface
 )
 
-target_link_libraries(Diligent-Win32Platform 
+target_link_libraries(Diligent-Win32Platform
 PUBLIC
     Diligent-BasicPlatform
     Diligent-PlatformInterface

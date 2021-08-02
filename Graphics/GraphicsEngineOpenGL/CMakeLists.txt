@@ -2,11 +2,11 @@ cmake_minimum_required (VERSION 3.3)
 
 project(Diligent-GraphicsEngineOpenGL CXX)
 
-set(INCLUDE 
+set(INCLUDE
     include/AsyncWritableResource.hpp
     include/BufferGLImpl.hpp
     include/BufferViewGLImpl.hpp
-    include/DeviceContextGLImpl.hpp 
+    include/DeviceContextGLImpl.hpp
     include/EngineGLImplTraits.hpp
     include/FBOCache.hpp
     include/FenceGLImpl.hpp
@@ -43,7 +43,7 @@ set(INCLUDE
     include/VAOCache.hpp
 )
 
-set(INTERFACE 
+set(INTERFACE
     interface/BaseInterfacesGL.h
     interface/BufferGL.h
     interface/BufferViewGL.h
@@ -61,7 +61,7 @@ set(INTERFACE
     interface/TextureViewGL.h
 )
 
-set(SOURCE 
+set(SOURCE
     src/BufferGLImpl.cpp
     src/BufferViewGLImpl.cpp
     src/DeviceContextGLImpl.cpp
@@ -138,16 +138,16 @@ target_link_libraries     (Diligent-GraphicsEngineOpenGLInterface INTERFACE Dili
 target_include_directories(Diligent-GraphicsEngineOpenGLInterface INTERFACE interface)
 
 
-add_library(Diligent-GraphicsEngineOpenGL-static STATIC 
+add_library(Diligent-GraphicsEngineOpenGL-static STATIC
     ${SOURCE} ${INTERFACE} ${INCLUDE}
     readme.md
 )
 
-add_library(Diligent-GraphicsEngineOpenGL-shared SHARED 
+add_library(Diligent-GraphicsEngineOpenGL-shared SHARED
     readme.md
 )
 if(MSVC)
-    target_sources(Diligent-GraphicsEngineOpenGL-shared 
+    target_sources(Diligent-GraphicsEngineOpenGL-shared
     PRIVATE
         src/DLLMain.cpp
         src/GraphicsEngineOpenGL.def
@@ -159,7 +159,7 @@ PRIVATE
     include
 )
 
-set(PRIVATE_DEPENDENCIES 
+set(PRIVATE_DEPENDENCIES
     Diligent-BuildSettings
     Diligent-Common
     Diligent-TargetPlatform
@@ -175,7 +175,7 @@ else()
     target_compile_definitions(Diligent-GraphicsEngineOpenGL-static PRIVATE DILIGENT_NO_HLSL=1)
 endif()
 
-set(PUBLIC_DEPENDENCIES 
+set(PUBLIC_DEPENDENCIES
     Diligent-GraphicsEngineOpenGLInterface
 )
 
@@ -279,7 +279,7 @@ set_common_target_properties(Diligent-GraphicsEngineOpenGL-static)
 
 source_group("src" FILES ${SOURCE})
 if(PLATFORM_WIN32)
-    source_group("dll" FILES 
+    source_group("dll" FILES
         src/DLLMain.cpp
         src/GraphicsEngineOpenGL.def
     )

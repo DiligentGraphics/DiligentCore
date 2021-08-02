@@ -3,7 +3,7 @@ cmake_minimum_required (VERSION 3.6)
 if(PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_MACOS)
     project(File2Include)
 
-    set(SOURCE 
+    set(SOURCE
         File2String.cpp
     )
 

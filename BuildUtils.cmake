@@ -33,7 +33,7 @@ if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
             endif()
 
             if(D3D12_SUPPORTED AND VS_DXC_COMPILER_PATH AND VS_DXIL_SIGNER_PATH)
-                # For the compiler to sign the bytecode, you have to have a copy of dxil.dll in 
+                # For the compiler to sign the bytecode, you have to have a copy of dxil.dll in
                 # the same folder as the dxcompiler.dll at runtime.
 
                 # Note that VS_DXC_COMPILER_PATH and VS_DXIL_SIGNER_PATH can only be used in a Visual Studio command
@@ -89,7 +89,7 @@ if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
             target_sources(${TARGET_NAME} PRIVATE ${DLLS})
 
             # Label them as content
-            set_source_files_properties(${DLLS} PROPERTIES 
+            set_source_files_properties(${DLLS} PROPERTIES
                 GENERATED TRUE
                 VS_DEPLOYMENT_CONTENT 1
                 VS_DEPLOYMENT_LOCATION ".")
@@ -126,7 +126,7 @@ function(set_common_target_properties TARGET)
     get_target_property(TARGET_TYPE ${TARGET} TYPE)
 
     if(MSVC)
-        # For msvc, enable link-time code generation for release builds (I was not able to 
+        # For msvc, enable link-time code generation for release builds (I was not able to
         # find any way to set these settings through interface library BuildSettings)
         if(TARGET_TYPE STREQUAL STATIC_LIBRARY)
 
@@ -160,8 +160,8 @@ function(set_common_target_properties TARGET)
             VISIBILITY_INLINES_HIDDEN TRUE
 
             # Without -fPIC option GCC fails to link static libraries into dynamic library:
-            #  -fPIC  
-            #      If supported for the target machine, emit position-independent code, suitable for 
+            #  -fPIC
+            #      If supported for the target machine, emit position-independent code, suitable for
             #      dynamic linking and avoiding any limit on the size of the global offset table.
             POSITION_INDEPENDENT_CODE ON
 

@@ -2,7 +2,7 @@ cmake_minimum_required (VERSION 3.8)
 
 project(Diligent-UniversalWindowsPlatform CXX)
 
-set(INTERFACE 
+set(INTERFACE
     interface/UWPDebug.hpp
     interface/UWPFileSystem.hpp
     interface/UWPDefinitions.h
@@ -10,7 +10,7 @@ set(INTERFACE
     ../Win32/interface/Win32Atomics.hpp
 )
 
-set(SOURCE 
+set(SOURCE
     src/UWPDebug.cpp
     src/UWPFileSystem.cpp
     ../Win32/src/Win32Atomics.cpp
@@ -19,15 +19,15 @@ set(SOURCE
 add_library(Diligent-UniversalWindowsPlatform ${SOURCE} ${INTERFACE} ${PLATFORM_INTERFACE_HEADERS})
 set_common_target_properties(Diligent-UniversalWindowsPlatform)
 
-target_include_directories(Diligent-UniversalWindowsPlatform 
+target_include_directories(Diligent-UniversalWindowsPlatform
 PUBLIC
     ../Win32/interface
     interface
 )
 
-target_link_libraries(Diligent-UniversalWindowsPlatform 
+target_link_libraries(Diligent-UniversalWindowsPlatform
 PRIVATE
-    Diligent-BuildSettings 
+    Diligent-BuildSettings
 PUBLIC
     Diligent-BasicPlatform
     Diligent-PlatformInterface

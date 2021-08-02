@@ -51,7 +51,7 @@ uniform samplerBuffer  g_Buffer_Dyn;
 uniform samplerBuffer  g_Buffer_DynArr[2];
 
 layout(location = 0) in vec4 f4Color;
- 
+
 layout(location = 0) out vec4 out_Color;
 
 void main()
@@ -75,7 +75,7 @@ void main()
     rwBuff_Static.data[0] = vec4(0.0, 0.0, 0.0, 0.0);
     imageStore(g_rwBuff_Mut, 0, vec4(0.0, 0.0, 0.0, 0.0));
     imageStore(g_rwBuff_Dyn, 0, vec4(0.0, 0.0, 0.0, 0.0));
-    
+
     out_Color += texelFetch(g_Buffer_Static, 0);
     out_Color += texelFetch(g_Buffer_StaticArr[0], 0) + texelFetch(g_Buffer_StaticArr[1],0);
     out_Color += Buff_Mut.data[0];

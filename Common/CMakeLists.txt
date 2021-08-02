@@ -2,11 +2,11 @@ cmake_minimum_required (VERSION 3.6)
 
 project(Diligent-Common CXX)
 
-set(INCLUDE 
+set(INCLUDE
     include/pch.h
 )
 
-set(INTERFACE 
+set(INTERFACE
     interface/AdvancedMath.hpp
     interface/Align.hpp
     interface/BasicMath.hpp
@@ -18,10 +18,10 @@ set(INTERFACE
     interface/FilteringTools.hpp
     interface/FixedBlockMemoryAllocator.hpp
     interface/HashUtils.hpp
-    interface/LockHelper.hpp 
-    interface/FixedLinearAllocator.hpp 
-    interface/DynamicLinearAllocator.hpp 
-    interface/MemoryFileStream.hpp 
+    interface/LockHelper.hpp
+    interface/FixedLinearAllocator.hpp
+    interface/DynamicLinearAllocator.hpp
+    interface/MemoryFileStream.hpp
     interface/ObjectBase.hpp
     interface/RefCntAutoPtr.hpp
     interface/RefCountedObjectImpl.hpp
@@ -36,7 +36,7 @@ set(INTERFACE
     interface/CompilerDefinitions.h
 )
 
-set(SOURCE 
+set(SOURCE
     src/BasicFileStream.cpp
     src/DataBlobImpl.cpp
     src/DefaultRawMemoryAllocator.cpp
@@ -48,18 +48,18 @@ set(SOURCE
 
 add_library(Diligent-Common STATIC ${SOURCE} ${INCLUDE} ${INTERFACE})
 
-target_include_directories(Diligent-Common 
+target_include_directories(Diligent-Common
 PRIVATE
     include
-PUBLIC 
+PUBLIC
     interface
 )
 
-target_link_libraries(Diligent-Common 
+target_link_libraries(Diligent-Common
 PRIVATE
     Diligent-BuildSettings
 PUBLIC
-    Diligent-TargetPlatform 
+    Diligent-TargetPlatform
 )
 set_common_target_properties(Diligent-Common)
 

@@ -1,27 +1,27 @@
 /*
  *  Copyright 2019-2021 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
- *  
+ *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
- *  
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS,
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *
- *  In no event and under no legal theory, whether in tort (including negligence), 
- *  contract, or otherwise, unless required by applicable law (such as deliberate 
+ *  In no event and under no legal theory, whether in tort (including negligence),
+ *  contract, or otherwise, unless required by applicable law (such as deliberate
  *  and grossly negligent acts) or agreed to in writing, shall any Contributor be
- *  liable for any damages, including any direct, indirect, special, incidental, 
- *  or consequential damages of any character arising as a result of this License or 
- *  out of the use or inability to use the software (including but not limited to damages 
- *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and 
- *  all other commercial damages or losses), even if such Contributor has been advised 
+ *  liable for any damages, including any direct, indirect, special, incidental,
+ *  or consequential damages of any character arising as a result of this License or
+ *  out of the use or inability to use the software (including but not limited to damages
+ *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and
+ *  all other commercial damages or losses), even if such Contributor has been advised
  *  of the possibility of such damages.
  */
 
@@ -51,7 +51,7 @@ inline GLenum PrimitiveTopologyToGLTopology(PRIMITIVE_TOPOLOGY PrimTopology)
 inline GLenum TypeToGLType(VALUE_TYPE Value)
 {
     // clang-format off
-    static constexpr GLenum TypeToGLTypeMap[] = 
+    static constexpr GLenum TypeToGLTypeMap[] =
     {
         0,                  // VT_UNDEFINED = 0
         GL_BYTE,            // VT_INT8
@@ -169,7 +169,7 @@ inline GLenum CorrectGLTexFormat(GLenum GLTexFormat, Uint32 BindFlags)
 inline GLenum TexAddressModeToGLAddressMode(TEXTURE_ADDRESS_MODE Mode)
 {
     // clang-format off
-    static constexpr GLenum TexAddressModeToGLAddressModeMap[] = 
+    static constexpr GLenum TexAddressModeToGLAddressModeMap[] =
     {
         0,                       // TEXTURE_ADDRESS_UNKNOWN = 0
         GL_REPEAT,               // TEXTURE_ADDRESS_WRAP
@@ -179,9 +179,9 @@ inline GLenum TexAddressModeToGLAddressMode(TEXTURE_ADDRESS_MODE Mode)
 
         // Only available in OpenGL 4.4+
         // This mode seems to be different from D3D11_TEXTURE_ADDRESS_MIRROR_ONCE
-        // The texture coord is clamped to the [-1, 1] range, but mirrors the 
+        // The texture coord is clamped to the [-1, 1] range, but mirrors the
         // negative direction with the positive. Basically, it acts as
-        // GL_CLAMP_TO_EDGE except that it takes the absolute value of the texture 
+        // GL_CLAMP_TO_EDGE except that it takes the absolute value of the texture
         // coordinates before clamping.
         GL_MIRROR_CLAMP_TO_EDGE  // TEXTURE_ADDRESS_MIRROR_ONCE
     };
@@ -194,7 +194,7 @@ inline GLenum TexAddressModeToGLAddressMode(TEXTURE_ADDRESS_MODE Mode)
 inline GLenum CompareFuncToGLCompareFunc(COMPARISON_FUNCTION Func)
 {
     // clang-format off
-    static constexpr GLenum CompareFuncToGLCompareFuncMap[] = 
+    static constexpr GLenum CompareFuncToGLCompareFuncMap[] =
     {
         0,              // COMPARISON_FUNC_UNKNOWN = 0
         GL_NEVER,       // COMPARISON_FUNC_NEVER
@@ -260,13 +260,13 @@ inline Uint32 GetPixelTypeSize(GLenum Type)
         // clang-format off
         case GL_FLOAT:          return sizeof(GLfloat);
 
-        case GL_UNSIGNED_INT_10_10_10_2: 
+        case GL_UNSIGNED_INT_10_10_10_2:
         case GL_UNSIGNED_INT_2_10_10_10_REV:
         case GL_UNSIGNED_INT_10F_11F_11F_REV:
         case GL_UNSIGNED_INT_24_8:
         case GL_UNSIGNED_INT_5_9_9_9_REV:
         case GL_UNSIGNED_INT:   return sizeof(GLuint);
-        
+
         case GL_INT:            return sizeof(GLint);
         case GL_HALF_FLOAT:     return sizeof(GLhalf);
 
@@ -279,7 +279,7 @@ inline Uint32 GetPixelTypeSize(GLenum Type)
         case GL_SHORT:          return sizeof(GLshort);
         case GL_UNSIGNED_BYTE:  return sizeof(GLubyte);
         case GL_BYTE:           return sizeof(GLbyte);
-        
+
         case GL_FLOAT_32_UNSIGNED_INT_24_8_REV:return sizeof(GLfloat) + sizeof(GLuint);
 
         default: UNEXPECTED( "Unknown pixel type" ); return 0;
@@ -290,7 +290,7 @@ inline Uint32 GetPixelTypeSize(GLenum Type)
 inline GLenum AccessFlags2GLAccess(UAV_ACCESS_FLAG UAVAccessFlags)
 {
     // clang-format off
-    static constexpr GLenum AccessFlags2GLAccessMap[] = 
+    static constexpr GLenum AccessFlags2GLAccessMap[] =
     {
         0,             // UAV_ACCESS_UNSPECIFIED == 0
         GL_READ_ONLY,  // UAV_ACCESS_FLAG_READ
@@ -306,7 +306,7 @@ inline GLenum AccessFlags2GLAccess(UAV_ACCESS_FLAG UAVAccessFlags)
 inline GLenum StencilOp2GlStencilOp(STENCIL_OP StencilOp)
 {
     // clang-format off
-    static constexpr GLenum StencilOp2GlStencilOpMap[] = 
+    static constexpr GLenum StencilOp2GlStencilOpMap[] =
     {
         0,             // STENCIL_OP_UNDEFINED == 0
         GL_KEEP,       // STENCIL_OP_KEEP
@@ -327,7 +327,7 @@ inline GLenum StencilOp2GlStencilOp(STENCIL_OP StencilOp)
 inline GLenum BlendFactor2GLBlend(BLEND_FACTOR bf)
 {
     // clang-format off
-    static constexpr GLenum BlendFactor2GLBlendMap[] = 
+    static constexpr GLenum BlendFactor2GLBlendMap[] =
     {
         0,                           // BLEND_FACTOR_UNDEFINED == 0
         GL_ZERO,                     // BLEND_FACTOR_ZERO
@@ -357,7 +357,7 @@ inline GLenum BlendFactor2GLBlend(BLEND_FACTOR bf)
 inline GLenum BlendOperation2GLBlendOp(BLEND_OPERATION BlendOp)
 {
     // clang-format off
-    static constexpr GLenum BlendOperation2GLBlendOpMap[] = 
+    static constexpr GLenum BlendOperation2GLBlendOpMap[] =
     {
         0,                        // BLEND_OPERATION_UNDEFINED
         GL_FUNC_ADD,              // BLEND_OPERATION_ADD
