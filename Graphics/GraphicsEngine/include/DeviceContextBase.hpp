@@ -2157,8 +2157,10 @@ inline void DeviceContextBase<ImplementationTraits>::DvpVerifyRenderTargets() co
     {
         auto BoundFmt = BoundRTVFormats[rt];
         auto PSOFmt   = PipelineRTVFormats[rt];
-        if (PSOFmt != TEX_FORMAT_UNKNOWN && BoundFmt != PSOFmt)
+        if (BoundFmt != PSOFmt)
         {
+            // NB: Vulkan requires exact match. In particular, if a PSO does not use an RTV, this RTV
+            //     must be null.
             LOG_WARNING_MESSAGE("Render target bound to slot ", rt, " (", GetTextureFormatAttribs(BoundFmt).Name,
                                 ") does not match the RTV format specified by the PSO '", PSODesc.Name,
                                 "' (", GetTextureFormatAttribs(PSOFmt).Name, ").");
