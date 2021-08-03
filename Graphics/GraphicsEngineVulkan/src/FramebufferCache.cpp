@@ -75,26 +75,27 @@ VkFramebuffer FramebufferCache::GetFramebuffer(const FramebufferCacheKey& Key, u
     }
     else
     {
-        VkFramebufferCreateInfo FramebufferCI = {};
-
-        FramebufferCI.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        FramebufferCI.pNext           = nullptr;
-        FramebufferCI.flags           = 0; // reserved for future use
-        FramebufferCI.renderPass      = Key.Pass;
-        FramebufferCI.attachmentCount = (Key.DSV != VK_NULL_HANDLE ? 1 : 0) + Key.NumRenderTargets;
+        VkFramebufferCreateInfo FramebufferCI{};
+        FramebufferCI.sType      = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        FramebufferCI.pNext      = nullptr;
+        FramebufferCI.flags      = 0; // reserved for future use
+        FramebufferCI.renderPass = Key.Pass;
         VkImageView Attachments[1 + MAX_RENDER_TARGETS];
         uint32_t    attachment = 0;
         if (Key.DSV != VK_NULL_HANDLE)
             Attachments[attachment++] = Key.DSV;
         for (Uint32 rt = 0; rt < Key.NumRenderTargets; ++rt)
-            Attachments[attachment++] = Key.RTVs[rt];
-        VERIFY_EXPR(attachment == FramebufferCI.attachmentCount);
-        FramebufferCI.pAttachments = Attachments;
-        FramebufferCI.width        = width;
-        FramebufferCI.height       = height;
-        FramebufferCI.layers       = layers;
-        auto          Framebuffer  = m_DeviceVk.GetLogicalDevice().CreateFramebuffer(FramebufferCI);
-        VkFramebuffer fb           = Framebuffer;
+        {
+            if (Key.RTVs[rt] != VK_NULL_HANDLE)
+                Attachments[attachment++] = Key.RTVs[rt];
+        }
+        FramebufferCI.attachmentCount = attachment;
+        FramebufferCI.pAttachments    = Attachments;
+        FramebufferCI.width           = width;
+        FramebufferCI.height          = height;
+        FramebufferCI.layers          = layers;
+        auto          Framebuffer     = m_DeviceVk.GetLogicalDevice().CreateFramebuffer(FramebufferCI);
+        VkFramebuffer fb              = Framebuffer;
 
         auto new_it = m_Cache.insert(std::make_pair(Key, std::move(Framebuffer)));
         VERIFY(new_it.second, "New framebuffer must be inserted into the map");
