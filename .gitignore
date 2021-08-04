@@ -1,10 +1,6 @@
 .vs
 build
 
-# CMake
-CMakeLists.txt.user
-CMakeCache.txt
-
 # VSCode
 .vscode
 *.code-workspace
