@@ -434,6 +434,16 @@ public:
 
 class GraphicsContext5 : public GraphicsContext4
 {
+public:
+    void SetShadingRate(D3D12_SHADING_RATE BaseRate, const D3D12_SHADING_RATE_COMBINER Combiners[2])
+    {
+        static_cast<ID3D12GraphicsCommandList5*>(m_pCommandList.p)->RSSetShadingRate(BaseRate, Combiners);
+    }
+
+    void SetShadingRateImage(ID3D12Resource* pTexture)
+    {
+        static_cast<ID3D12GraphicsCommandList5*>(m_pCommandList.p)->RSSetShadingRateImage(pTexture);
+    }
 };
 
 class GraphicsContext6 : public GraphicsContext5

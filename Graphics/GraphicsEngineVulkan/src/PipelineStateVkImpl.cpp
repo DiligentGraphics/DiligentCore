@@ -334,6 +334,15 @@ void CreateGraphicsPipeline(RenderDeviceVkImpl*                           pDevic
         // VkPipelineViewportStateCreateInfo.
         DynamicStates.push_back(VK_DYNAMIC_STATE_SCISSOR);
     }
+
+    if (GraphicsPipeline.EnableVRS &&
+        pDeviceVk->GetLogicalDevice().GetEnabledExtFeatures().ShadingRate.attachmentFragmentShadingRate != VK_FALSE)
+    {
+        // VkPipelineFragmentShadingRateStateCreateInfoKHR will be ignored
+        // and must be set dynamically with vkCmdSetFragmentShadingRateKHR before any drawing commands.
+        DynamicStates.push_back(VK_DYNAMIC_STATE_FRAGMENT_SHADING_RATE_KHR);
+    }
+
     DynamicStateCI.dynamicStateCount = static_cast<uint32_t>(DynamicStates.size());
     DynamicStateCI.pDynamicStates    = DynamicStates.data();
     PipelineCI.pDynamicState         = &DynamicStateCI;
@@ -569,99 +578,6 @@ size_t PipelineStateVkImpl::ShaderStageInfo::Count() const
 {
     VERIFY_EXPR(Shaders.size() == SPIRVs.size());
     return Shaders.size();
-}
-
-
-RenderPassDesc PipelineStateVkImpl::GetImplicitRenderPassDesc(
-    Uint32                                                        NumRenderTargets,
-    const TEXTURE_FORMAT                                          RTVFormats[],
-    TEXTURE_FORMAT                                                DSVFormat,
-    Uint8                                                         SampleCount,
-    std::array<RenderPassAttachmentDesc, MAX_RENDER_TARGETS + 1>& Attachments,
-    std::array<AttachmentReference, MAX_RENDER_TARGETS + 1>&      AttachmentReferences,
-    SubpassDesc&                                                  SubpassDesc)
-{
-    VERIFY_EXPR(NumRenderTargets <= MAX_RENDER_TARGETS);
-
-    RenderPassDesc RPDesc;
-
-    uint32_t             AttachmentInd             = 0;
-    AttachmentReference* pDepthAttachmentReference = nullptr;
-    if (DSVFormat != TEX_FORMAT_UNKNOWN)
-    {
-        auto& DepthAttachment = Attachments[AttachmentInd];
-
-        DepthAttachment.Format      = DSVFormat;
-        DepthAttachment.SampleCount = SampleCount;
-        DepthAttachment.LoadOp      = ATTACHMENT_LOAD_OP_LOAD; // previous contents of the image within the render area
-                                                               // will be preserved. For attachments with a depth/stencil format,
-                                                               // this uses the access type VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT.
-        DepthAttachment.StoreOp = ATTACHMENT_STORE_OP_STORE;   // the contents generated during the render pass and within the render
-                                                               // area are written to memory. For attachments with a depth/stencil format,
-                                                               // this uses the access type VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT.
-        DepthAttachment.StencilLoadOp  = ATTACHMENT_LOAD_OP_LOAD;
-        DepthAttachment.StencilStoreOp = ATTACHMENT_STORE_OP_STORE;
-        DepthAttachment.InitialState   = RESOURCE_STATE_DEPTH_WRITE;
-        DepthAttachment.FinalState     = RESOURCE_STATE_DEPTH_WRITE;
-
-        pDepthAttachmentReference                  = &AttachmentReferences[AttachmentInd];
-        pDepthAttachmentReference->AttachmentIndex = AttachmentInd;
-        pDepthAttachmentReference->State           = RESOURCE_STATE_DEPTH_WRITE;
-
-        ++AttachmentInd;
-    }
-
-    AttachmentReference* pColorAttachmentsReference = NumRenderTargets > 0 ? &AttachmentReferences[AttachmentInd] : nullptr;
-    for (Uint32 rt = 0; rt < NumRenderTargets; ++rt)
-    {
-        auto& ColorAttachmentRef = pColorAttachmentsReference[rt];
-
-        if (RTVFormats[rt] == TEX_FORMAT_UNKNOWN)
-        {
-            ColorAttachmentRef.AttachmentIndex = ATTACHMENT_UNUSED;
-            continue;
-        }
-
-        auto& ColorAttachment = Attachments[AttachmentInd];
-
-        ColorAttachment.Format      = RTVFormats[rt];
-        ColorAttachment.SampleCount = SampleCount;
-        ColorAttachment.LoadOp      = ATTACHMENT_LOAD_OP_LOAD; // previous contents of the image within the render area
-                                                               // will be preserved. For attachments with a depth/stencil format,
-                                                               // this uses the access type VK_ACCESS_COLOR_ATTACHMENT_READ_BIT.
-        ColorAttachment.StoreOp = ATTACHMENT_STORE_OP_STORE;   // the contents generated during the render pass and within the render
-                                                               // area are written to memory. For attachments with a color format,
-                                                               // this uses the access type VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT.
-        ColorAttachment.StencilLoadOp  = ATTACHMENT_LOAD_OP_DISCARD;
-        ColorAttachment.StencilStoreOp = ATTACHMENT_STORE_OP_DISCARD;
-        ColorAttachment.InitialState   = RESOURCE_STATE_RENDER_TARGET;
-        ColorAttachment.FinalState     = RESOURCE_STATE_RENDER_TARGET;
-
-        ColorAttachmentRef.AttachmentIndex = AttachmentInd;
-        ColorAttachmentRef.State           = RESOURCE_STATE_RENDER_TARGET;
-
-        ++AttachmentInd;
-    }
-
-    RPDesc.AttachmentCount = AttachmentInd;
-    RPDesc.pAttachments    = Attachments.data();
-    RPDesc.SubpassCount    = 1;
-    RPDesc.pSubpasses      = &SubpassDesc;
-    RPDesc.DependencyCount = 0;       // the number of dependencies between pairs of subpasses, or zero indicating no dependencies.
-    RPDesc.pDependencies   = nullptr; // an array of dependencyCount number of VkSubpassDependency structures describing
-                                      // dependencies between pairs of subpasses, or NULL if dependencyCount is zero.
-
-
-    SubpassDesc.InputAttachmentCount        = 0;
-    SubpassDesc.pInputAttachments           = nullptr;
-    SubpassDesc.RenderTargetAttachmentCount = NumRenderTargets;
-    SubpassDesc.pRenderTargetAttachments    = pColorAttachmentsReference;
-    SubpassDesc.pResolveAttachments         = nullptr;
-    SubpassDesc.pDepthStencilAttachment     = pDepthAttachmentReference;
-    SubpassDesc.PreserveAttachmentCount     = 0;
-    SubpassDesc.pPreserveAttachments        = nullptr;
-
-    return RPDesc;
 }
 
 RefCntAutoPtr<PipelineResourceSignatureVkImpl> PipelineStateVkImpl::CreateDefaultSignature(const TShaderStages& ShaderStages)

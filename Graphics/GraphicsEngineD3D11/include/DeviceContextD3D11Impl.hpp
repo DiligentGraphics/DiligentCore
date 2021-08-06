@@ -282,6 +282,12 @@ public:
     /// Implementation of IDeviceContext::UnlockCommandQueue() in Direct3D11 backend.
     virtual void DILIGENT_CALL_TYPE UnlockCommandQueue() override final {}
 
+    /// Implementation of IDeviceContext::SetShadingRate() in Direct3D11 backend.
+    void DILIGENT_CALL_TYPE SetShadingRate(SHADING_RATE BaseRate, SHADING_RATE_COMBINER PrimitiveCombiner, SHADING_RATE_COMBINER TextureCombiner) override final {}
+
+    /// Implementation of IDeviceContext::SetShadingRateTexture() in Direct3D11 backend.
+    void DILIGENT_CALL_TYPE SetShadingRateTexture(ITextureView* pShadingRateView, Uint32 TileWidth, Uint32 TileHeight, RESOURCE_STATE_TRANSITION_MODE TransitionMode) override final {}
+
     /// Implementation of IDeviceContextD3D11::GetD3D11DeviceContext().
     virtual ID3D11DeviceContext* DILIGENT_CALL_TYPE GetD3D11DeviceContext() override final { return m_pd3d11DeviceContext; }
 

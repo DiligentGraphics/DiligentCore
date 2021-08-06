@@ -85,6 +85,10 @@ VulkanLogicalDevice::VulkanLogicalDevice(const VulkanPhysicalDevice&  PhysicalDe
         GraphicsStages |= VK_PIPELINE_STAGE_TASK_SHADER_BIT_NV | VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV;
     if (m_EnabledExtFeatures.RayTracingPipeline.rayTracingPipeline != VK_FALSE)
         ComputeStages |= VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR | VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR;
+    if (m_EnabledExtFeatures.ShadingRate.attachmentFragmentShadingRate != VK_FALSE)
+        GraphicsStages |= VK_PIPELINE_STAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR;
+    if (m_EnabledExtFeatures.FragmentDensityMap.fragmentDensityMap != VK_FALSE)
+        GraphicsStages |= VK_PIPELINE_STAGE_FRAGMENT_DENSITY_PROCESS_BIT_EXT;
 
     const auto QueueCount = PhysicalDevice.GetQueueProperties().size();
     m_SupportedStagesMask.resize(QueueCount, 0);
@@ -190,10 +194,10 @@ FenceWrapper VulkanLogicalDevice::CreateFence(const VkFenceCreateInfo& FenceCI, 
     return CreateVulkanObject<VkFence, VulkanHandleTypeId::Fence>(vkCreateFence, FenceCI, DebugName, "fence");
 }
 
-RenderPassWrapper VulkanLogicalDevice::CreateRenderPass(const VkRenderPassCreateInfo& RenderPassCI, const char* DebugName) const
+RenderPassWrapper VulkanLogicalDevice::CreateRenderPass(const VkRenderPassCreateInfo2& RenderPassCI, const char* DebugName) const
 {
-    VERIFY_EXPR(RenderPassCI.sType == VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO);
-    return CreateVulkanObject<VkRenderPass, VulkanHandleTypeId::RenderPass>(vkCreateRenderPass, RenderPassCI, DebugName, "render pass");
+    VERIFY_EXPR(RenderPassCI.sType == VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO_2);
+    return CreateVulkanObject<VkRenderPass, VulkanHandleTypeId::RenderPass>(vkCreateRenderPass2, RenderPassCI, DebugName, "render pass");
 }
 
 DeviceMemoryWrapper VulkanLogicalDevice::AllocateDeviceMemory(const VkMemoryAllocateInfo& AllocInfo,

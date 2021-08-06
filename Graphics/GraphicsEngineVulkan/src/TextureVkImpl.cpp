@@ -62,6 +62,7 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
 
     const auto& FmtAttribs    = GetTextureFormatAttribs(m_Desc.Format);
     const auto& LogicalDevice = pRenderDeviceVk->GetLogicalDevice();
+    const auto& ExtFeatures   = LogicalDevice.GetEnabledExtFeatures();
 
     const bool ImageView2DSupported =
         (m_Desc.Type == RESOURCE_DIM_TEX_3D && LogicalDevice.GetEnabledExtFeatures().HasPortabilitySubset) ?
@@ -156,6 +157,20 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
         if (m_Desc.BindFlags & BIND_INPUT_ATTACHMENT)
         {
             ImageCI.usage |= VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
+        }
+        if (m_Desc.BindFlags & BIND_SHADING_RATE)
+        {
+            if (ExtFeatures.ShadingRate.attachmentFragmentShadingRate != VK_FALSE)
+            {
+                ImageCI.usage |= VK_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR;
+            }
+            else if (ExtFeatures.FragmentDensityMap.fragmentDensityMap != VK_FALSE)
+            {
+                //ImageCI.flags |= VK_IMAGE_CREATE_SUBSAMPLED_BIT_EXT; // AZ TODO
+                ImageCI.usage |= VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT;
+            }
+            else
+                UNEXPECTED("BIND_SHADING_RATE requires ShadingRate or FragmentDensityMap vulkan features");
         }
 
         if (m_Desc.MiscFlags & MISC_TEXTURE_FLAG_GENERATE_MIPS)
@@ -563,7 +578,8 @@ VulkanUtilities::ImageViewWrapper TextureVkImpl::CreateImageView(TextureViewDesc
     VERIFY(ViewDesc.ViewType == TEXTURE_VIEW_SHADER_RESOURCE ||
            ViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET ||
            ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL ||
-           ViewDesc.ViewType == TEXTURE_VIEW_UNORDERED_ACCESS,
+           ViewDesc.ViewType == TEXTURE_VIEW_UNORDERED_ACCESS ||
+           ViewDesc.ViewType == TEXTURE_VIEW_SHADING_RATE,
            "Unexpected view type");
     // clang-format on
     if (ViewDesc.Format == TEX_FORMAT_UNKNOWN)

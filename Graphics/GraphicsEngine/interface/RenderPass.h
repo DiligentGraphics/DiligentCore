@@ -182,6 +182,34 @@ struct AttachmentReference
 typedef struct AttachmentReference AttachmentReference;
 
 
+/// AZ TODO
+struct ShadingRateAttachment
+{
+    AttachmentReference Attachment  DEFAULT_INITIALIZER({});
+
+    // only for desktop Vulkan
+    Uint32              TileWidth   DEFAULT_INITIALIZER(0);
+    Uint32              TileHeight  DEFAULT_INITIALIZER(0);
+
+#if DILIGENT_CPP_INTERFACE
+    ShadingRateAttachment() noexcept {}
+
+    bool operator == (const ShadingRateAttachment& RHS) const
+    {
+        return  Attachment == RHS.Attachment &&
+                TileWidth  == RHS.TileWidth  &&
+                TileHeight == RHS.TileHeight;
+    }
+
+    bool operator != (const ShadingRateAttachment& RHS) const
+    {
+        return !(*this == RHS);
+    }
+#endif
+};
+typedef struct ShadingRateAttachment ShadingRateAttachment;
+
+
 /// Render pass subpass description.
 struct SubpassDesc
 {
@@ -219,6 +247,9 @@ struct SubpassDesc
 
     /// Pointer to the array of preserve attachments, see Diligent::AttachmentReference.
     const Uint32*               pPreserveAttachments        DEFAULT_INITIALIZER(nullptr);
+
+    /// AZ TODO
+    const ShadingRateAttachment* pShadingRateAttachment     DEFAULT_INITIALIZER(nullptr);
 
 #if DILIGENT_CPP_INTERFACE
     /// Tests if two structures are equivalent
@@ -259,8 +290,7 @@ struct SubpassDesc
             }
         }
 
-        if ((pDepthStencilAttachment == nullptr && RHS.pDepthStencilAttachment != nullptr) ||
-            (pDepthStencilAttachment != nullptr && RHS.pDepthStencilAttachment == nullptr))
+        if ((pDepthStencilAttachment == nullptr) != (RHS.pDepthStencilAttachment == nullptr))
             return false;
 
         if (pDepthStencilAttachment != nullptr && RHS.pDepthStencilAttachment != nullptr)
@@ -280,6 +310,15 @@ struct SubpassDesc
                 if (pPreserveAttachments[i] != RHS.pPreserveAttachments[i])
                     return false;
             }
+        }
+
+        if ((pShadingRateAttachment == nullptr) != (RHS.pShadingRateAttachment == nullptr))
+            return false;
+
+        if (pShadingRateAttachment != nullptr && RHS.pShadingRateAttachment != nullptr)
+        {
+            if (*pShadingRateAttachment != *RHS.pShadingRateAttachment)
+                return false;
         }
 
         return true;

@@ -1612,6 +1612,63 @@ void DeviceContextVkImpl::CommitRenderPassAndFramebuffer(bool VerifyStates)
     }
 }
 
+void DeviceContextVkImpl::ChooseRenderPassAndFramebuffer(bool EnableVRS)
+{
+    FramebufferCache::FramebufferCacheKey FBKey;
+    RenderPassCache::RenderPassCacheKey   RenderPassKey;
+    if (m_pBoundDepthStencil)
+    {
+        auto* pDepthBuffer        = m_pBoundDepthStencil->GetTexture();
+        FBKey.DSV                 = m_pBoundDepthStencil->GetVulkanImageView();
+        RenderPassKey.DSVFormat   = m_pBoundDepthStencil->GetDesc().Format;
+        RenderPassKey.SampleCount = static_cast<Uint8>(pDepthBuffer->GetDesc().SampleCount);
+    }
+    else
+    {
+        FBKey.DSV               = VK_NULL_HANDLE;
+        RenderPassKey.DSVFormat = TEX_FORMAT_UNKNOWN;
+    }
+
+    FBKey.NumRenderTargets         = m_NumBoundRenderTargets;
+    RenderPassKey.NumRenderTargets = static_cast<Uint8>(m_NumBoundRenderTargets);
+
+    for (Uint32 rt = 0; rt < m_NumBoundRenderTargets; ++rt)
+    {
+        if (auto* pRTVVk = m_pBoundRenderTargets[rt].RawPtr())
+        {
+            auto* pRenderTarget          = pRTVVk->GetTexture();
+            FBKey.RTVs[rt]               = pRTVVk->GetVulkanImageView();
+            RenderPassKey.RTVFormats[rt] = pRenderTarget->GetDesc().Format;
+            if (RenderPassKey.SampleCount == 0)
+                RenderPassKey.SampleCount = static_cast<Uint8>(pRenderTarget->GetDesc().SampleCount);
+            else
+                VERIFY(RenderPassKey.SampleCount == pRenderTarget->GetDesc().SampleCount, "Inconsistent sample count");
+        }
+        else
+        {
+            FBKey.RTVs[rt]               = VK_NULL_HANDLE;
+            RenderPassKey.RTVFormats[rt] = TEX_FORMAT_UNKNOWN;
+        }
+    }
+
+    if (EnableVRS)
+    {
+        FBKey.ShadingRate       = m_pBoundShadingRateTexture->GetVulkanImageView();
+        RenderPassKey.EnableVRS = true;
+    }
+
+    auto& FBCache = m_pDevice->GetFramebufferCache();
+    auto& RPCache = m_pDevice->GetImplicitRenderPassCache();
+
+    m_vkRenderPass         = RPCache.GetRenderPass(RenderPassKey)->GetVkRenderPass();
+    FBKey.Pass             = m_vkRenderPass;
+    FBKey.CommandQueueMask = ~Uint64{0};
+    m_vkFramebuffer        = FBCache.GetFramebuffer(FBKey, m_FramebufferWidth, m_FramebufferHeight, m_FramebufferSlices);
+
+    // Set the viewport to match the render target size
+    SetViewports(1, nullptr, 0, 0);
+}
+
 void DeviceContextVkImpl::SetRenderTargets(Uint32                         NumRenderTargets,
                                            ITextureView*                  ppRenderTargets[],
                                            ITextureView*                  pDepthStencil,
@@ -1621,53 +1678,7 @@ void DeviceContextVkImpl::SetRenderTargets(Uint32                         NumRen
 
     if (TDeviceContextBase::SetRenderTargets(NumRenderTargets, ppRenderTargets, pDepthStencil))
     {
-        FramebufferCache::FramebufferCacheKey FBKey;
-        RenderPassCache::RenderPassCacheKey   RenderPassKey;
-        if (m_pBoundDepthStencil)
-        {
-            auto* pDepthBuffer        = m_pBoundDepthStencil->GetTexture();
-            FBKey.DSV                 = m_pBoundDepthStencil->GetVulkanImageView();
-            RenderPassKey.DSVFormat   = m_pBoundDepthStencil->GetDesc().Format;
-            RenderPassKey.SampleCount = static_cast<Uint8>(pDepthBuffer->GetDesc().SampleCount);
-        }
-        else
-        {
-            FBKey.DSV               = VK_NULL_HANDLE;
-            RenderPassKey.DSVFormat = TEX_FORMAT_UNKNOWN;
-        }
-
-        FBKey.NumRenderTargets         = m_NumBoundRenderTargets;
-        RenderPassKey.NumRenderTargets = static_cast<Uint8>(m_NumBoundRenderTargets);
-
-        for (Uint32 rt = 0; rt < m_NumBoundRenderTargets; ++rt)
-        {
-            if (auto* pRTVVk = m_pBoundRenderTargets[rt].RawPtr())
-            {
-                auto* pRenderTarget          = pRTVVk->GetTexture();
-                FBKey.RTVs[rt]               = pRTVVk->GetVulkanImageView();
-                RenderPassKey.RTVFormats[rt] = pRenderTarget->GetDesc().Format;
-                if (RenderPassKey.SampleCount == 0)
-                    RenderPassKey.SampleCount = static_cast<Uint8>(pRenderTarget->GetDesc().SampleCount);
-                else
-                    VERIFY(RenderPassKey.SampleCount == pRenderTarget->GetDesc().SampleCount, "Inconsistent sample count");
-            }
-            else
-            {
-                FBKey.RTVs[rt]               = VK_NULL_HANDLE;
-                RenderPassKey.RTVFormats[rt] = TEX_FORMAT_UNKNOWN;
-            }
-        }
-
-        auto& FBCache = m_pDevice->GetFramebufferCache();
-        auto& RPCache = m_pDevice->GetImplicitRenderPassCache();
-
-        m_vkRenderPass         = RPCache.GetRenderPass(RenderPassKey)->GetVkRenderPass();
-        FBKey.Pass             = m_vkRenderPass;
-        FBKey.CommandQueueMask = ~Uint64{0};
-        m_vkFramebuffer        = FBCache.GetFramebuffer(FBKey, m_FramebufferWidth, m_FramebufferHeight, m_FramebufferSlices);
-
-        // Set the viewport to match the render target size
-        SetViewports(1, nullptr, 0, 0);
+        ChooseRenderPassAndFramebuffer(false);
     }
 
     // Layout transitions can only be performed outside of render pass, so defer
@@ -2621,7 +2632,7 @@ namespace
 {
 NODISCARD inline bool ResourceStateHasWriteAccess(RESOURCE_STATE State)
 {
-    static_assert(RESOURCE_STATE_MAX_BIT == (1u << 20), "This function must be updated to handle new resource state flag");
+    static_assert(RESOURCE_STATE_MAX_BIT == (1u << 21), "This function must be updated to handle new resource state flag");
     constexpr RESOURCE_STATE WriteAccessStates =
         RESOURCE_STATE_RENDER_TARGET |
         RESOURCE_STATE_UNORDERED_ACCESS |
@@ -3593,6 +3604,35 @@ void DeviceContextVkImpl::InsertDebugLabel(const Char* Label, const float* pColo
 
     EnsureVkCmdBuffer();
     m_CommandBuffer.InsertDebugUtilsLabel(Info);
+}
+
+void DeviceContextVkImpl::SetShadingRate(SHADING_RATE BaseRate, SHADING_RATE_COMBINER PrimitiveCombiner, SHADING_RATE_COMBINER TextureCombiner)
+{
+    TDeviceContextBase::SetShadingRate(BaseRate, PrimitiveCombiner, TextureCombiner, 0);
+
+#if PLATFORM_ANDROID
+    // AZ TODO
+#else
+    const VkFragmentShadingRateCombinerOpKHR CombinerOps[2] =
+        {
+            ShadingRateCombinerToVkFragmentShadingRateCombinerOp(PrimitiveCombiner),
+            ShadingRateCombinerToVkFragmentShadingRateCombinerOp(TextureCombiner) //
+        };
+
+    EnsureVkCmdBuffer();
+    m_CommandBuffer.SetFragmentShadingRate(ShadingRateToVkFragmentSize(BaseRate), CombinerOps);
+#endif
+}
+
+void DeviceContextVkImpl::SetShadingRateTexture(ITextureView* pShadingRateView, Uint32 TileWidth, Uint32 TileHeight, RESOURCE_STATE_TRANSITION_MODE TransitionMode)
+{
+    TDeviceContextBase::SetShadingRateTexture(pShadingRateView, TileWidth, TileHeight, TransitionMode, 0);
+
+    auto* pTexViewVk = ValidatedCast<TextureViewVkImpl>(pShadingRateView);
+    auto* pTexVk     = ValidatedCast<TextureVkImpl>(pTexViewVk->GetTexture());
+    TransitionOrVerifyTextureState(*pTexVk, TransitionMode, RESOURCE_STATE_SHADING_RATE, VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR, "Shading rate texture (DeviceContextD3D12Impl::SetShadingRateTexture)");
+
+    ChooseRenderPassAndFramebuffer(true);
 }
 
 } // namespace Diligent

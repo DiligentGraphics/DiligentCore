@@ -2826,4 +2826,28 @@ void DeviceContextD3D12Impl::InsertDebugLabel(const Char* Label, const float* pC
     GetCmdContext().PixSetMarker(Label, pColor);
 }
 
+void DeviceContextD3D12Impl::SetShadingRate(SHADING_RATE BaseRate, SHADING_RATE_COMBINER PrimitiveCombiner, SHADING_RATE_COMBINER TextureCombiner)
+{
+    TDeviceContextBase::SetShadingRate(BaseRate, PrimitiveCombiner, TextureCombiner, 0);
+
+    const D3D12_SHADING_RATE_COMBINER Combiners[] =
+        {
+            ShadingRateCombinerToD3D12ShadingRateCombiner(PrimitiveCombiner),
+            ShadingRateCombinerToD3D12ShadingRateCombiner(TextureCombiner) //
+        };
+    GetCmdContext().AsGraphicsContext5().SetShadingRate(ShadingRateToD3D12ShadingRate(BaseRate), Combiners);
+}
+
+void DeviceContextD3D12Impl::SetShadingRateTexture(ITextureView* pShadingRateView, Uint32 TileWidth, Uint32 TileHeight, RESOURCE_STATE_TRANSITION_MODE TransitionMode)
+{
+    TDeviceContextBase::SetShadingRateTexture(pShadingRateView, TileWidth, TileHeight, TransitionMode, 0);
+
+    auto* pTexViewD3D12 = ValidatedCast<TextureViewD3D12Impl>(pShadingRateView);
+    auto* pTexD3D12     = ValidatedCast<TextureD3D12Impl>(pTexViewD3D12->GetTexture());
+    auto& CmdCtx        = GetCmdContext();
+    TransitionOrVerifyTextureState(CmdCtx, *pTexD3D12, TransitionMode, RESOURCE_STATE_SHADING_RATE, "Shading rate texture (DeviceContextD3D12Impl::SetShadingRateTexture)");
+
+    CmdCtx.AsGraphicsContext5().SetShadingRateImage(pTexD3D12->GetD3D12Resource());
+}
+
 } // namespace Diligent

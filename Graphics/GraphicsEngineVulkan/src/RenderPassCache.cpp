@@ -61,6 +61,117 @@ void RenderPassCache::Destroy()
     m_Cache.clear();
 }
 
+static RenderPassDesc GetImplicitRenderPassDesc(
+    Uint32                                                        NumRenderTargets,
+    const TEXTURE_FORMAT                                          RTVFormats[],
+    TEXTURE_FORMAT                                                DSVFormat,
+    Uint8                                                         SampleCount,
+    TEXTURE_FORMAT                                                ShadingRateTexFormat,
+    uint2                                                         ShadingRateTileSize,
+    std::array<RenderPassAttachmentDesc, MAX_RENDER_TARGETS + 2>& Attachments,
+    std::array<AttachmentReference, MAX_RENDER_TARGETS + 2>&      AttachmentReferences,
+    SubpassDesc&                                                  SubpassDesc,
+    ShadingRateAttachment&                                        ShadingRateAttachment)
+{
+    VERIFY_EXPR(NumRenderTargets <= MAX_RENDER_TARGETS);
+
+    RenderPassDesc RPDesc;
+
+    RPDesc.AttachmentCount = (DSVFormat != TEX_FORMAT_UNKNOWN ? 1 : 0) + NumRenderTargets + (ShadingRateTexFormat != TEX_FORMAT_UNKNOWN ? 1 : 0);
+
+    uint32_t             AttachmentInd             = 0;
+    AttachmentReference* pDepthAttachmentReference = nullptr;
+    if (DSVFormat != TEX_FORMAT_UNKNOWN)
+    {
+        auto& DepthAttachment = Attachments[AttachmentInd];
+
+        DepthAttachment.Format      = DSVFormat;
+        DepthAttachment.SampleCount = SampleCount;
+        DepthAttachment.LoadOp      = ATTACHMENT_LOAD_OP_LOAD; // previous contents of the image within the render area
+                                                               // will be preserved. For attachments with a depth/stencil format,
+                                                               // this uses the access type VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT.
+        DepthAttachment.StoreOp = ATTACHMENT_STORE_OP_STORE;   // the contents generated during the render pass and within the render
+                                                               // area are written to memory. For attachments with a depth/stencil format,
+                                                               // this uses the access type VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT.
+        DepthAttachment.StencilLoadOp  = ATTACHMENT_LOAD_OP_LOAD;
+        DepthAttachment.StencilStoreOp = ATTACHMENT_STORE_OP_STORE;
+        DepthAttachment.InitialState   = RESOURCE_STATE_DEPTH_WRITE;
+        DepthAttachment.FinalState     = RESOURCE_STATE_DEPTH_WRITE;
+
+        pDepthAttachmentReference                  = &AttachmentReferences[AttachmentInd];
+        pDepthAttachmentReference->AttachmentIndex = AttachmentInd;
+        pDepthAttachmentReference->State           = RESOURCE_STATE_DEPTH_WRITE;
+
+        ++AttachmentInd;
+    }
+
+    AttachmentReference* pColorAttachmentsReference = NumRenderTargets > 0 ? &AttachmentReferences[AttachmentInd] : nullptr;
+    for (Uint32 rt = 0; rt < NumRenderTargets; ++rt, ++AttachmentInd)
+    {
+        auto& ColorAttachment = Attachments[AttachmentInd];
+
+        ColorAttachment.Format      = RTVFormats[rt];
+        ColorAttachment.SampleCount = SampleCount;
+        ColorAttachment.LoadOp      = ATTACHMENT_LOAD_OP_LOAD; // previous contents of the image within the render area
+                                                               // will be preserved. For attachments with a depth/stencil format,
+                                                               // this uses the access type VK_ACCESS_COLOR_ATTACHMENT_READ_BIT.
+        ColorAttachment.StoreOp = ATTACHMENT_STORE_OP_STORE;   // the contents generated during the render pass and within the render
+                                                               // area are written to memory. For attachments with a color format,
+                                                               // this uses the access type VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT.
+        ColorAttachment.StencilLoadOp  = ATTACHMENT_LOAD_OP_DISCARD;
+        ColorAttachment.StencilStoreOp = ATTACHMENT_STORE_OP_DISCARD;
+        ColorAttachment.InitialState   = RESOURCE_STATE_RENDER_TARGET;
+        ColorAttachment.FinalState     = RESOURCE_STATE_RENDER_TARGET;
+
+        auto& ColorAttachmentRef           = AttachmentReferences[AttachmentInd];
+        ColorAttachmentRef.AttachmentIndex = AttachmentInd;
+        ColorAttachmentRef.State           = RESOURCE_STATE_RENDER_TARGET;
+    }
+
+    if (ShadingRateTexFormat != TEX_FORMAT_UNKNOWN)
+    {
+        auto& SRAttachment = Attachments[AttachmentInd];
+
+        SRAttachment.Format         = ShadingRateTexFormat;
+        SRAttachment.SampleCount    = 1;
+        SRAttachment.LoadOp         = ATTACHMENT_LOAD_OP_LOAD;
+        SRAttachment.StoreOp        = ATTACHMENT_STORE_OP_DISCARD; // AZ TODO
+        SRAttachment.StencilLoadOp  = ATTACHMENT_LOAD_OP_DISCARD;
+        SRAttachment.StencilStoreOp = ATTACHMENT_STORE_OP_DISCARD;
+        SRAttachment.InitialState   = RESOURCE_STATE_SHADING_RATE;
+        SRAttachment.FinalState     = RESOURCE_STATE_SHADING_RATE;
+
+        ShadingRateAttachment.Attachment.AttachmentIndex = AttachmentInd;
+        ShadingRateAttachment.Attachment.State           = RESOURCE_STATE_SHADING_RATE;
+
+        ShadingRateAttachment.TileWidth  = ShadingRateTileSize.x;
+        ShadingRateAttachment.TileHeight = ShadingRateTileSize.y;
+
+        SubpassDesc.pShadingRateAttachment = &ShadingRateAttachment;
+
+        ++AttachmentInd;
+    }
+    VERIFY_EXPR(RPDesc.AttachmentCount == AttachmentInd);
+
+    RPDesc.pAttachments    = Attachments.data();
+    RPDesc.SubpassCount    = 1;
+    RPDesc.pSubpasses      = &SubpassDesc;
+    RPDesc.DependencyCount = 0;       // the number of dependencies between pairs of subpasses, or zero indicating no dependencies.
+    RPDesc.pDependencies   = nullptr; // an array of dependencyCount number of VkSubpassDependency structures describing
+                                      // dependencies between pairs of subpasses, or NULL if dependencyCount is zero.
+
+
+    SubpassDesc.InputAttachmentCount        = 0;
+    SubpassDesc.pInputAttachments           = nullptr;
+    SubpassDesc.RenderTargetAttachmentCount = NumRenderTargets;
+    SubpassDesc.pRenderTargetAttachments    = pColorAttachmentsReference;
+    SubpassDesc.pResolveAttachments         = nullptr;
+    SubpassDesc.pDepthStencilAttachment     = pDepthAttachmentReference;
+    SubpassDesc.PreserveAttachmentCount     = 0;
+    SubpassDesc.pPreserveAttachments        = nullptr;
+
+    return RPDesc;
+}
 
 RenderPassVkImpl* RenderPassCache::GetRenderPass(const RenderPassCacheKey& Key)
 {
@@ -69,14 +180,30 @@ RenderPassVkImpl* RenderPassCache::GetRenderPass(const RenderPassCacheKey& Key)
     if (it == m_Cache.end())
     {
         // Do not zero-initialize arrays
-        std::array<RenderPassAttachmentDesc, MAX_RENDER_TARGETS + 1> Attachments;
-        std::array<AttachmentReference, MAX_RENDER_TARGETS + 1>      AttachmentReferences;
+        std::array<RenderPassAttachmentDesc, MAX_RENDER_TARGETS + 2> Attachments;
+        std::array<AttachmentReference, MAX_RENDER_TARGETS + 2>      AttachmentReferences;
 
-        SubpassDesc Subpass;
+        TEXTURE_FORMAT SRFormat = TEX_FORMAT_UNKNOWN;
+        uint2          SRTileSize;
+        if (Key.EnableVRS)
+        {
+            const auto& SRProps = m_DeviceVkImpl.GetAdapterInfo().ShadingRate;
+            switch (SRProps.Format)
+            {
+                case SHADING_RATE_FORMAT_PALETTE: SRFormat = TEX_FORMAT_R8_UINT; break;
+                case SHADING_RATE_FORMAT_UNORM8: SRFormat = TEX_FORMAT_RG8_UNORM; break;
+                default:
+                    UNEXPECTED("Unexpected shading rate format");
+            }
+            SRTileSize = {SRProps.MaxTileWidth, SRProps.MaxTileHeight};
+        }
 
-        auto RPDesc =
-            PipelineStateVkImpl::GetImplicitRenderPassDesc(Key.NumRenderTargets, Key.RTVFormats, Key.DSVFormat,
-                                                           Key.SampleCount, Attachments, AttachmentReferences, Subpass);
+        SubpassDesc           Subpass;
+        ShadingRateAttachment ShadingRate;
+
+        auto RPDesc = GetImplicitRenderPassDesc(Key.NumRenderTargets, Key.RTVFormats, Key.DSVFormat, Key.SampleCount, SRFormat, SRTileSize,
+                                                Attachments, AttachmentReferences, Subpass, ShadingRate);
+
         std::stringstream PassNameSS;
         PassNameSS << "Implicit render pass: RT count: " << Uint32{Key.NumRenderTargets} << "; sample count: " << Uint32{Key.SampleCount}
                    << "; DSV Format: " << GetTextureFormatAttribs(Key.DSVFormat).Name;
@@ -88,6 +215,11 @@ RenderPassVkImpl* RenderPassCache::GetRenderPass(const RenderPassCacheKey& Key)
                 PassNameSS << (rt > 0 ? ", " : "") << GetTextureFormatAttribs(Key.RTVFormats[rt]).Name;
             }
         }
+        if (Key.EnableVRS)
+            PassNameSS << "; VRS";
+
+        const String PassName{PassNameSS.str()};
+        RPDesc.Name = PassName.c_str();
 
         RefCntAutoPtr<RenderPassVkImpl> pRenderPass;
         m_DeviceVkImpl.CreateRenderPass(RPDesc, pRenderPass.RawDblPtr<IRenderPass>(), /* IsDeviceInternal = */ true);

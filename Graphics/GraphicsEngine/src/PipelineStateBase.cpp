@@ -448,6 +448,9 @@ void ValidateGraphicsPipelineCreateInfo(const GraphicsPipelineStateCreateInfo& C
         if (GraphicsPipeline.SubpassIndex != 0)
             LOG_PSO_ERROR_AND_THROW("Subpass index (", Uint32{GraphicsPipeline.SubpassIndex}, ") must be 0 when explicit render pass is not used.");
     }
+
+    if (CreateInfo.GraphicsPipeline.EnableVRS && !Features.VariableRateShading)
+        LOG_PSO_ERROR_AND_THROW("EnableVRS requires VariableRateShading feature");
 }
 
 void ValidateComputePipelineCreateInfo(const ComputePipelineStateCreateInfo& CreateInfo,

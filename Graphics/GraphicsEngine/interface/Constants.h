@@ -50,6 +50,12 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 /// The maximum number of queues in graphics adapter description.
 #define DILIGENT_MAX_ADAPTER_QUEUES 16
 
+/// AZ TODO
+#define DILIGENT_MAX_SHADING_RATES 16
+
+/// AZ TODO
+#define DILIGENT_SHADING_RATE_X_SHIFT 2
+
 static const Uint32 MAX_BUFFER_SLOTS        = DILIGENT_MAX_BUFFER_SLOTS;
 static const Uint32 MAX_RENDER_TARGETS      = DILIGENT_MAX_RENDER_TARGETS;
 static const Uint32 MAX_VIEWPORTS           = DILIGENT_MAX_VIEWPORTS;
@@ -57,5 +63,6 @@ static const Uint32 MAX_RESOURCE_SIGNATURES = DILIGENT_MAX_RESOURCE_SIGNATURES;
 static const Uint32 MAX_ADAPTER_QUEUES      = DILIGENT_MAX_ADAPTER_QUEUES;
 static const Uint32 DEFAULT_ADAPTER_ID      = 0xFFFFFFFFU;
 static const Uint8  DEFAULT_QUEUE_ID        = 0xFF;
+static const Uint32 MAX_SHADING_RATES       = DILIGENT_MAX_SHADING_RATES;
 
 DILIGENT_END_NAMESPACE // namespace Diligent

@@ -506,6 +506,15 @@ void TextureD3D12Impl::CreateViewInternal(const struct TextureViewDesc& ViewDesc
             }
             break;
 
+            case TEXTURE_VIEW_SHADING_RATE:
+            {
+                // In D2D12 there is no specified shading rate view, use SRV instead because it enabled by default
+                VERIFY(m_Desc.BindFlags & BIND_SHADING_RATE, "BIND_SHADING_RATE flag is not set");
+                ViewDescriptor = pDeviceD3D12Impl->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+                CreateVRSView(UpdatedViewDesc, ViewDescriptor.GetCpuHandle());
+            }
+            break;
+
             default: UNEXPECTED("Unknown view type"); break;
         }
 
@@ -625,6 +634,21 @@ void TextureD3D12Impl::CreateUAV(TextureViewDesc& UAVDesc, D3D12_CPU_DESCRIPTOR_
 
     auto* pd3d12Device = GetDevice()->GetD3D12Device();
     pd3d12Device->CreateUnorderedAccessView(m_pd3d12Resource, nullptr, &D3D12_UAVDesc, UAVHandle);
+}
+
+void TextureD3D12Impl::CreateVRSView(TextureViewDesc& SRVDesc, D3D12_CPU_DESCRIPTOR_HANDLE SRVHandle)
+{
+    VERIFY(SRVDesc.ViewType == TEXTURE_VIEW_SHADING_RATE, "Incorrect view type: shading rate is expected");
+
+    if (SRVDesc.Format == TEX_FORMAT_UNKNOWN)
+    {
+        SRVDesc.Format = m_Desc.Format;
+    }
+    D3D12_SHADER_RESOURCE_VIEW_DESC D3D12_SRVDesc;
+    TextureViewDesc_to_D3D12_SRV_DESC(SRVDesc, D3D12_SRVDesc, m_Desc.SampleCount);
+
+    auto* pd3d12Device = GetDevice()->GetD3D12Device();
+    pd3d12Device->CreateShaderResourceView(m_pd3d12Resource, &D3D12_SRVDesc, SRVHandle);
 }
 
 void TextureD3D12Impl::SetD3D12ResourceState(D3D12_RESOURCE_STATES state)

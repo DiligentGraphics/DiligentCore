@@ -848,6 +848,55 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
                 static_assert(sizeof(RayTracingProps) == 60, "Did you add a new member to RayTracingProperites? Please initialize it here.");
 #endif
             }
+
+            D3D12_FEATURE_DATA_D3D12_OPTIONS6 d3d12Features6{};
+            if (SUCCEEDED(d3d12Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS6, &d3d12Features6, sizeof(d3d12Features6))))
+            {
+                auto& ShadingRateProps{AdapterInfo.ShadingRate};
+                auto  AddShadingRate = [&ShadingRateProps](SHADING_RATE Rate, Uint8 SampleBits) {
+                    VERIFY_EXPR(ShadingRateProps.NumShadingRates < DILIGENT_MAX_SHADING_RATES);
+                    ShadingRateProps.ShadingRates[ShadingRateProps.NumShadingRates++] = {Rate, SampleBits};
+                };
+                if (d3d12Features6.VariableShadingRateTier >= D3D12_VARIABLE_SHADING_RATE_TIER_1)
+                {
+                    Features.VariableRateShading = DEVICE_FEATURE_STATE_ENABLED;
+
+                    ShadingRateProps.Format = SHADING_RATE_FORMAT_PALETTE;
+                    ShadingRateProps.Combiners |= SHADING_RATE_COMBINER_PASSTHROUGH;
+                    ShadingRateProps.CapFlags |= SHADING_RATE_CAP_FLAG_PER_DRAW | SHADING_RATE_CAP_FLAG_DEPTH_STENCIL_WRITE;
+
+                    // 1x1, 1x2, 2x1, 2x2 is always supported
+                    AddShadingRate(SHADING_RATE_2x2, 1 | 2 | 4);
+                    AddShadingRate(SHADING_RATE_2x1, 1 | 2 | 4);
+                    AddShadingRate(SHADING_RATE_1x2, 1 | 2 | 4);
+                    AddShadingRate(SHADING_RATE_1x1, 0xFF);
+                }
+                if (d3d12Features6.VariableShadingRateTier >= D3D12_VARIABLE_SHADING_RATE_TIER_2)
+                {
+                    ShadingRateProps.CapFlags |=
+                        SHADING_RATE_CAP_FLAG_PER_PRIMITIVE | SHADING_RATE_CAP_FLAG_TEXTURE_BASED |
+                        SHADING_RATE_CAP_FLAG_SAMPLE_MASK | SHADING_RATE_CAP_FLAG_COVERAGE_SAMPLES;
+                    ShadingRateProps.MinTileWidth  = 1;
+                    ShadingRateProps.MinTileHeight = 1;
+                    ShadingRateProps.MaxTileWidth  = d3d12Features6.ShadingRateImageTileSize;
+                    ShadingRateProps.MaxTileHeight = d3d12Features6.ShadingRateImageTileSize;
+                    ShadingRateProps.Combiners |= SHADING_RATE_COMBINER_OVERRIDE |
+                        SHADING_RATE_COMBINER_MIN | SHADING_RATE_COMBINER_MAX | SHADING_RATE_COMBINER_SUM;
+                }
+                if (d3d12Features6.AdditionalShadingRatesSupported != FALSE)
+                {
+                    AddShadingRate(SHADING_RATE_4x4, 1);
+                    AddShadingRate(SHADING_RATE_4x2, 1 | 2);
+                    AddShadingRate(SHADING_RATE_2x4, 1 | 2);
+                }
+                if (d3d12Features6.PerPrimitiveShadingRateSupportedWithViewportIndexing != FALSE)
+                {
+                    ShadingRateProps.CapFlags |= SHADING_RATE_CAP_FLAG_PER_PRIMITIVE_WITH_MULTIPLE_VIEWPORTS;
+                }
+#if defined(_MSC_VER) && defined(_WIN64)
+                static_assert(sizeof(ShadingRateProps) == 56, "Did you add a new member to ShadingRateProperties? Please initialize it here.");
+#endif
+            }
         }
 
         // Buffer properties
@@ -908,7 +957,7 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
     }
 
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(DeviceFeatures) == 38, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+    static_assert(sizeof(DeviceFeatures) == 39, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 #endif
 
     return AdapterInfo;

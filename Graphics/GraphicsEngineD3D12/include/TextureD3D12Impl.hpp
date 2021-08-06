@@ -92,6 +92,7 @@ protected:
     void CreateRTV(TextureViewDesc& RTVDesc, D3D12_CPU_DESCRIPTOR_HANDLE RTVHandle);
     void CreateDSV(TextureViewDesc& DSVDesc, D3D12_CPU_DESCRIPTOR_HANDLE DSVHandle);
     void CreateUAV(TextureViewDesc& UAVDesc, D3D12_CPU_DESCRIPTOR_HANDLE UAVHandle);
+    void CreateVRSView(TextureViewDesc& SRVDesc, D3D12_CPU_DESCRIPTOR_HANDLE SRVHandle);
 
     D3D12_PLACED_SUBRESOURCE_FOOTPRINT* m_StagingFootprints = nullptr;
 };

@@ -39,6 +39,17 @@
 namespace Diligent
 {
 
+
+#if PLATFORM_ANDROID
+static constexpr auto VK_IMAGE_LAYOUT_SHADING_RATE_OPTIMAL = VK_IMAGE_LAYOUT_FRAGMENT_DENSITY_MAP_OPTIMAL_EXT;
+static constexpr auto VK_PIPELINE_STAGE_SHADING_RATE_BIT   = VK_PIPELINE_STAGE_FRAGMENT_DENSITY_PROCESS_BIT_EXT;
+static constexpr auto VK_ACCESS_SHADING_RATE_MAP_READ_BIT  = VK_ACCESS_FRAGMENT_DENSITY_MAP_READ_BIT_EXT;
+#else
+static constexpr auto VK_IMAGE_LAYOUT_SHADING_RATE_OPTIMAL = VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR;
+static constexpr auto VK_PIPELINE_STAGE_SHADING_RATE_BIT   = VK_PIPELINE_STAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR;
+static constexpr auto VK_ACCESS_SHADING_RATE_MAP_READ_BIT  = VK_ACCESS_FRAGMENT_SHADING_RATE_ATTACHMENT_READ_BIT_KHR;
+#endif
+
 class TexFormatToVkFormatMapper
 {
 public:
@@ -1174,7 +1185,7 @@ VkBorderColor BorderColorToVkBorderColor(const Float32 BorderColor[])
 
 static VkPipelineStageFlags ResourceStateFlagToVkPipelineStage(RESOURCE_STATE StateFlag)
 {
-    static_assert(RESOURCE_STATE_MAX_BIT == (1u << 20), "This function must be updated to handle new resource state flag");
+    static_assert(RESOURCE_STATE_MAX_BIT == (1u << 21), "This function must be updated to handle new resource state flag");
     VERIFY((StateFlag & (StateFlag - 1)) == 0, "Only single bit must be set");
     switch (StateFlag)
     {
@@ -1200,6 +1211,7 @@ static VkPipelineStageFlags ResourceStateFlagToVkPipelineStage(RESOURCE_STATE St
         case RESOURCE_STATE_BUILD_AS_WRITE:    return VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR;
         case RESOURCE_STATE_RAY_TRACING:       return VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
         case RESOURCE_STATE_COMMON:            return VK_PIPELINE_STAGE_ALL_COMMANDS_BIT; // resource may be used in multiple states
+        case RESOURCE_STATE_SHADING_RATE:      return VK_PIPELINE_STAGE_SHADING_RATE_BIT;
             // clang-format on
 
         default:
@@ -1237,7 +1249,7 @@ static VkAccessFlags ResourceStateFlagToVkAccessFlags(RESOURCE_STATE StateFlag)
     //VK_ACCESS_COLOR_ATTACHMENT_READ_NONCOHERENT_BIT_EXT
     //VK_ACCESS_SHADING_RATE_IMAGE_READ_BIT_NV
 
-    static_assert(RESOURCE_STATE_MAX_BIT == (1u << 20), "This function must be updated to handle new resource state flag");
+    static_assert(RESOURCE_STATE_MAX_BIT == (1u << 21), "This function must be updated to handle new resource state flag");
     VERIFY((StateFlag & (StateFlag - 1)) == 0, "Only single bit must be set");
     switch (StateFlag)
     {
@@ -1262,7 +1274,8 @@ static VkAccessFlags ResourceStateFlagToVkAccessFlags(RESOURCE_STATE StateFlag)
         case RESOURCE_STATE_BUILD_AS_READ:     return VK_ACCESS_SHADER_READ_BIT; // for vertex, index, transform, AABB, instance buffers
         case RESOURCE_STATE_BUILD_AS_WRITE:    return VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR; // for scratch buffer
         case RESOURCE_STATE_RAY_TRACING:       return VK_ACCESS_SHADER_READ_BIT; // for SBT
-        case RESOURCE_STATE_COMMON:            return 0; // COMMON state must be used for queue to queue transition (like in D3D12), queue to queue synchronization via semaphore creates a memory dependency
+        case RESOURCE_STATE_COMMON:            return 0; // COMMON state must be used for queue to queue transition (linke in D3D12), queue to queue synchronization via semaphore creates a memory dependency
+        case RESOURCE_STATE_SHADING_RATE:      return VK_ACCESS_SHADING_RATE_MAP_READ_BIT;
             // clang-format on
 
         default:
@@ -1290,7 +1303,7 @@ public:
     }
 
 private:
-    static constexpr const Uint32                MaxFlagBitPos = 20;
+    static constexpr const Uint32                MaxFlagBitPos = 21;
     std::array<VkAccessFlags, MaxFlagBitPos + 1> FlagBitPosToVkAccessFlagsMap;
 };
 
@@ -1314,7 +1327,7 @@ VkAccessFlags ResourceStateFlagsToVkAccessFlags(RESOURCE_STATE StateFlags)
 VkAccessFlags AccelStructStateFlagsToVkAccessFlags(RESOURCE_STATE StateFlags)
 {
     VERIFY(Uint32{StateFlags} < (RESOURCE_STATE_MAX_BIT << 1), "Resource state flags are out of range");
-    static_assert(RESOURCE_STATE_MAX_BIT == (1u << 20), "This function must be updated to handle new resource state flag");
+    static_assert(RESOURCE_STATE_MAX_BIT == (1u << 21), "This function must be updated to handle new resource state flag");
 
     VkAccessFlags AccessFlags = 0;
     Uint32        Bits        = StateFlags;
@@ -1426,7 +1439,7 @@ VkImageLayout ResourceStateToVkImageLayout(RESOURCE_STATE StateFlag, bool IsInsi
     //VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL_KHR = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL,
     //VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL_KHR = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL,
 
-    static_assert(RESOURCE_STATE_MAX_BIT == (1u << 20), "This function must be updated to handle new resource state flag");
+    static_assert(RESOURCE_STATE_MAX_BIT == (1u << 21), "This function must be updated to handle new resource state flag");
     VERIFY((StateFlag & (StateFlag - 1)) == 0, "Only single bit must be set");
     switch (StateFlag)
     {
@@ -1452,6 +1465,7 @@ VkImageLayout ResourceStateToVkImageLayout(RESOURCE_STATE StateFlag, bool IsInsi
         case RESOURCE_STATE_BUILD_AS_WRITE:    UNEXPECTED("Invalid resource state"); return VK_IMAGE_LAYOUT_UNDEFINED;
         case RESOURCE_STATE_RAY_TRACING:       UNEXPECTED("Invalid resource state"); return VK_IMAGE_LAYOUT_UNDEFINED;
         case RESOURCE_STATE_COMMON:            return VK_IMAGE_LAYOUT_GENERAL;
+        case RESOURCE_STATE_SHADING_RATE:      return VK_IMAGE_LAYOUT_SHADING_RATE_OPTIMAL;
             // clang-format on
 
         default:
@@ -1462,28 +1476,29 @@ VkImageLayout ResourceStateToVkImageLayout(RESOURCE_STATE StateFlag, bool IsInsi
 
 RESOURCE_STATE VkImageLayoutToResourceState(VkImageLayout Layout)
 {
-    static_assert(RESOURCE_STATE_MAX_BIT == (1u << 20), "This function must be updated to handle new resource state flag");
+    static_assert(RESOURCE_STATE_MAX_BIT == (1u << 21), "This function must be updated to handle new resource state flag");
     switch (Layout)
     {
         // clang-format off
-        case VK_IMAGE_LAYOUT_UNDEFINED:                                  return RESOURCE_STATE_UNDEFINED;
-        case VK_IMAGE_LAYOUT_GENERAL:                                    return RESOURCE_STATE_UNORDERED_ACCESS;
-        case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:                   return RESOURCE_STATE_RENDER_TARGET;
-        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:           return RESOURCE_STATE_DEPTH_WRITE;
-        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:            return RESOURCE_STATE_DEPTH_READ;
-        case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:                   return RESOURCE_STATE_SHADER_RESOURCE;
-        case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:                       return RESOURCE_STATE_COPY_SOURCE;
-        case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:                       return RESOURCE_STATE_COPY_DEST;
-        case VK_IMAGE_LAYOUT_PREINITIALIZED:                             UNEXPECTED("This layout is not supported"); return RESOURCE_STATE_UNDEFINED;
-        case VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL: UNEXPECTED("This layout is not supported"); return RESOURCE_STATE_UNDEFINED;
-        case VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL: UNEXPECTED("This layout is not supported"); return RESOURCE_STATE_UNDEFINED;
-        case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:                            return RESOURCE_STATE_PRESENT;
-        case VK_IMAGE_LAYOUT_SHARED_PRESENT_KHR:                         UNEXPECTED("This layout is not supported"); return RESOURCE_STATE_UNDEFINED;
-        case VK_IMAGE_LAYOUT_SHADING_RATE_OPTIMAL_NV:                    UNEXPECTED("This layout is not supported"); return RESOURCE_STATE_UNDEFINED;
+        case VK_IMAGE_LAYOUT_UNDEFINED:                                    return RESOURCE_STATE_UNDEFINED;
+        case VK_IMAGE_LAYOUT_GENERAL:                                      return RESOURCE_STATE_UNORDERED_ACCESS;
+        case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:                     return RESOURCE_STATE_RENDER_TARGET;
+        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:             return RESOURCE_STATE_DEPTH_WRITE;
+        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:              return RESOURCE_STATE_DEPTH_READ;
+        case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:                     return RESOURCE_STATE_SHADER_RESOURCE;
+        case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:                         return RESOURCE_STATE_COPY_SOURCE;
+        case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:                         return RESOURCE_STATE_COPY_DEST;
+        case VK_IMAGE_LAYOUT_PREINITIALIZED:                               UNEXPECTED("This layout is not supported"); return RESOURCE_STATE_UNDEFINED;
+        case VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL:   UNEXPECTED("This layout is not supported"); return RESOURCE_STATE_UNDEFINED;
+        case VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL:   UNEXPECTED("This layout is not supported"); return RESOURCE_STATE_UNDEFINED;
+        case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:                              return RESOURCE_STATE_PRESENT;
+        case VK_IMAGE_LAYOUT_SHARED_PRESENT_KHR:                           UNEXPECTED("This layout is not supported"); return RESOURCE_STATE_UNDEFINED;
+        case VK_IMAGE_LAYOUT_FRAGMENT_DENSITY_MAP_OPTIMAL_EXT:
+        case VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR: return RESOURCE_STATE_SHADING_RATE;
+        // clang-format on
         default:
             UNEXPECTED("Unknown image layout (", Layout, ")");
             return RESOURCE_STATE_UNDEFINED;
-            // clang-format on
     }
 }
 
@@ -1875,6 +1890,47 @@ VkQueueGlobalPriorityEXT QueuePriorityToVkQueueGlobalPriority(QUEUE_PRIORITY Pri
     }
 }
 
+VkExtent2D ShadingRateToVkFragmentSize(SHADING_RATE Rate)
+{
+    VkExtent2D Result;
+    Result.width  = 1u << ((Uint32{Rate} >> DILIGENT_SHADING_RATE_X_SHIFT) & 0x3u);
+    Result.height = 1u << (Uint32{Rate} & 0x3u);
+    VERIFY_EXPR(Result.width > 0 && Result.height > 0);
+    VERIFY_EXPR(Result.width <= (1u << AXIS_SHADING_RATE_MAX) && Result.height <= (1u << AXIS_SHADING_RATE_MAX));
+    VERIFY_EXPR(IsPowerOfTwo(Result.width) && IsPowerOfTwo(Result.height));
+    return Result;
+}
+
+SHADING_RATE VkFragmentSizeToShadingRate(const VkExtent2D& Size)
+{
+    VERIFY_EXPR(IsPowerOfTwo(Size.width) && IsPowerOfTwo(Size.height));
+    auto X = PlatformMisc::GetMSB(Size.width);
+    auto Y = PlatformMisc::GetMSB(Size.height);
+    VERIFY_EXPR((1u << X) == Size.width);
+    VERIFY_EXPR((1u << Y) == Size.height);
+    return static_cast<SHADING_RATE>((X << DILIGENT_SHADING_RATE_X_SHIFT) | Y);
+}
+
+VkFragmentShadingRateCombinerOpKHR ShadingRateCombinerToVkFragmentShadingRateCombinerOp(SHADING_RATE_COMBINER Combiner)
+{
+    static_assert(SHADING_RATE_COMBINER_LAST == (1u << 5), "Please update the switch below to handle the new shading rate combiner");
+    VERIFY(IsPowerOfTwo(Uint32{Combiner}), "Only single combiner should be provided");
+    switch (Combiner)
+    {
+        // clang-format off
+        case SHADING_RATE_COMBINER_PASSTHROUGH: return VK_FRAGMENT_SHADING_RATE_COMBINER_OP_KEEP_KHR;
+        case SHADING_RATE_COMBINER_OVERRIDE:    return VK_FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE_KHR;
+        case SHADING_RATE_COMBINER_MIN:         return VK_FRAGMENT_SHADING_RATE_COMBINER_OP_MIN_KHR;
+        case SHADING_RATE_COMBINER_MAX:         return VK_FRAGMENT_SHADING_RATE_COMBINER_OP_MAX_KHR;
+        case SHADING_RATE_COMBINER_SUM:
+        case SHADING_RATE_COMBINER_MUL:         return VK_FRAGMENT_SHADING_RATE_COMBINER_OP_MUL_KHR;
+        // clang-format on
+        default:
+            UNEXPECTED("Unexpected shading rate combiner");
+            return VK_FRAGMENT_SHADING_RATE_COMBINER_OP_MAX_ENUM_KHR;
+    }
+}
+
 DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                                                          vkVersion,
                                           const VkPhysicalDeviceFeatures&                                   vkFeatures,
                                           const VkPhysicalDeviceProperties&                                 vkDeviceProps,
@@ -1977,6 +2033,12 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
 
     INIT_FEATURE(TransferQueueTimestampQueries,
                  ExtFeatures.HostQueryReset.hostQueryReset != VK_FALSE);
+
+    INIT_FEATURE(VariableRateShading,
+                 (ExtFeatures.ShadingRate.pipelineFragmentShadingRate != VK_FALSE ||
+                  ExtFeatures.ShadingRate.primitiveFragmentShadingRate != VK_FALSE ||
+                  ExtFeatures.ShadingRate.attachmentFragmentShadingRate != VK_FALSE ||
+                  ExtFeatures.FragmentDensityMap.fragmentDensityMap != VK_FALSE));
 #undef INIT_FEATURE
 
     // Not supported in Vulkan on top of Metal.
@@ -1987,7 +2049,7 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
 #endif
 
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(DeviceFeatures) == 38, "Did you add a new feature to DeviceFeatures? Please handle its status here (if necessary).");
+    static_assert(sizeof(DeviceFeatures) == 39, "Did you add a new feature to DeviceFeatures? Please handle its satus here (if necessary).");
 #endif
 
     return Features;

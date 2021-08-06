@@ -570,6 +570,9 @@ protected:
     void EndDebugGroup(int);
     void InsertDebugLabel(const Char* Label, const float* pColor, int) const;
 
+    void SetShadingRate(SHADING_RATE BaseRate, SHADING_RATE_COMBINER PrimitiveCombiner, SHADING_RATE_COMBINER TextureCombiner, int) const;
+    void SetShadingRateTexture(ITextureView* pShadingRateView, Uint32 TileWidth, Uint32 TileHeight, RESOURCE_STATE_TRANSITION_MODE TransitionMode, int);
+
 protected:
     static constexpr Uint32 DrawMeshIndirectCommandStride = sizeof(Uint32) * 3; // D3D12: 12 bytes (x, y, z dimension)
                                                                                 // Vulkan: 8 bytes (task count, first task)
@@ -638,6 +641,9 @@ protected:
 
     /// Strong reference to the render pass.
     RefCntAutoPtr<RenderPassImplType> m_pActiveRenderPass;
+
+    /// AZ TODO
+    RefCntAutoPtr<TextureViewImplType> m_pBoundShadingRateTexture;
 
     /// Current subpass index.
     Uint32 m_SubpassIndex = 0;
@@ -1267,6 +1273,7 @@ void DeviceContextBase<ImplementationTraits>::ResetRenderTargets()
     m_FramebufferSamples    = 0;
 
     m_pBoundDepthStencil.Release();
+    m_pBoundShadingRateTexture.Release();
 
     // Do not reset framebuffer here as there may potentially
     // be a subpass without any render target attachments.
@@ -1888,6 +1895,68 @@ template <typename ImplementationTraits>
 void DeviceContextBase<ImplementationTraits>::InsertDebugLabel(const Char* Label, const float* pColor, int) const
 {
     DEV_CHECK_ERR(Label != nullptr, "Label must not be null");
+}
+
+template <typename ImplementationTraits>
+void DeviceContextBase<ImplementationTraits>::SetShadingRate(SHADING_RATE BaseRate, SHADING_RATE_COMBINER PrimitiveCombiner, SHADING_RATE_COMBINER TextureCombiner, int) const
+{
+#ifdef DILIGENT_DEVELOPMENT
+    DEV_CHECK_ERR(m_pDevice->GetDeviceInfo().Features.VariableRateShading, "IDeviceContext::SetShadingRate: VariableRateShading feature must be enabled");
+
+    const auto& Props = m_pDevice->GetAdapterInfo().ShadingRate;
+    DEV_CHECK_ERR(Props.CapFlags & (SHADING_RATE_CAP_FLAG_PER_DRAW | SHADING_RATE_CAP_FLAG_PER_PRIMITIVE | SHADING_RATE_CAP_FLAG_TEXTURE_BASED),
+                  "IDeviceContext::SetShadingRate: requires one of flags SHADING_RATE_CAP_FLAG_PER_PRIMITIVE or SHADING_RATE_CAP_FLAG_TEXTURE_BASED");
+    if (Props.CapFlags & SHADING_RATE_CAP_FLAG_PER_PRIMITIVE)
+        DEV_CHECK_ERR(Props.Combiners & PrimitiveCombiner, "IDeviceContext::SetShadingRate: PrimitiveCombiner must be one of supported Combiners");
+    else
+        DEV_CHECK_ERR(PrimitiveCombiner == SHADING_RATE_COMBINER_PASSTHROUGH, "IDeviceContext::SetShadingRate: PrimitiveCombiner must be UNKNOWN if per primitive shading is not supported");
+
+    if (Props.CapFlags & SHADING_RATE_CAP_FLAG_TEXTURE_BASED)
+        DEV_CHECK_ERR(Props.Combiners & TextureCombiner, "IDeviceContext::SetShadingRate: TextureCombiner must be one of supported Combiners");
+    else
+        DEV_CHECK_ERR(TextureCombiner == SHADING_RATE_COMBINER_PASSTHROUGH, "IDeviceContext::SetShadingRate: TextureCombiner must be UNKNOWN if texture based shading is not supported");
+
+    bool IsSupported = false;
+    for (Uint32 i = 0; i < Props.NumShadingRates; ++i)
+    {
+        if (Props.ShadingRates[i].Rate == BaseRate)
+        {
+            IsSupported = true;
+            break;
+        }
+    }
+    DEV_CHECK_ERR(IsSupported, "IDeviceContext::SetShadingRate: BaseRate must be one of supported shading rates");
+#endif
+}
+
+template <typename ImplementationTraits>
+void DeviceContextBase<ImplementationTraits>::SetShadingRateTexture(ITextureView* pShadingRateView, Uint32 TileWidth, Uint32 TileHeight, RESOURCE_STATE_TRANSITION_MODE TransitionMode, int)
+{
+    DEV_CHECK_ERR(m_pDevice->GetDeviceInfo().Features.VariableRateShading, "IDeviceContext::SetShadingRateTexture: VariableRateShading feature must be enabled");
+#ifdef DILIGENT_DEVELOPMENT
+    if (pShadingRateView != nullptr)
+    {
+        const auto& ViewDesc = pShadingRateView->GetDesc();
+        const auto& TexDesc  = pShadingRateView->GetTexture()->GetDesc();
+        DEV_CHECK_ERR(TexDesc.BindFlags & BIND_SHADING_RATE, "IDeviceContext::SetShadingRateTexture: pShadingRateView must be created with BIND_SHADING_RATE flag");
+        DEV_CHECK_ERR(ViewDesc.ViewType == TEXTURE_VIEW_SHADING_RATE, "IDeviceContext::SetShadingRateTexture: pShadingRateView must be created with TEXTURE_VIEW_SHADING_RATE type");
+        switch (m_pDevice->GetAdapterInfo().ShadingRate.Format)
+        {
+            case SHADING_RATE_FORMAT_PALETTE:
+                DEV_CHECK_ERR(TexDesc.Format == TEX_FORMAT_R8_UINT, "IDeviceContext::SetShadingRateTexture: pShadingRateView format must be R8_UINT");
+                break;
+            case SHADING_RATE_FORMAT_UNORM8:
+                DEV_CHECK_ERR(TexDesc.Format == TEX_FORMAT_RG8_UNORM, "IDeviceContext::SetShadingRateTexture: pShadingRateView format must be RG8_UNORM");
+                break;
+            default:
+                DEV_ERROR("IDeviceContext::SetShadingRateTexture: unexpected shading rate format");
+        }
+
+        //DEV_CHECK_ERR(TileWidth > 0 && TileHeight > 0, "IDeviceContext::SetShadingRateTexture: ");
+        // AZ TODO
+    }
+#endif
+    m_pBoundShadingRateTexture = ValidatedCast<TextureViewImplType>(pShadingRateView);
 }
 
 template <typename ImplementationTraits>

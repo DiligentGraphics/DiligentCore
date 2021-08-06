@@ -285,6 +285,12 @@ public:
     /// Implementation of IDeviceContext::UnlockCommandQueue() in OpenGL backend.
     virtual void DILIGENT_CALL_TYPE UnlockCommandQueue() override final {}
 
+    /// Implementation of IDeviceContext::SetShadingRate() in OpenGL backend.
+    virtual void DILIGENT_CALL_TYPE SetShadingRate(SHADING_RATE BaseRate, SHADING_RATE_COMBINER PrimitiveCombiner, SHADING_RATE_COMBINER TextureCombiner) override final {}
+
+    /// Implementation of IDeviceContext::SetShadingRateTexture() in OpenGL backend.
+    virtual void DILIGENT_CALL_TYPE SetShadingRateTexture(ITextureView* pShadingRateView, Uint32 TileWidth, Uint32 TileHeight, RESOURCE_STATE_TRANSITION_MODE TransitionMode) override final {}
+
     /// Implementation of IDeviceContextGL::UpdateCurrentGLContext().
     virtual bool DILIGENT_CALL_TYPE UpdateCurrentGLContext() override final;
 

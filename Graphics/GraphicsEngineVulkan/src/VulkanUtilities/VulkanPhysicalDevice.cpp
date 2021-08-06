@@ -250,6 +250,63 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice      vkDevice,
             m_ExtProperties.TimelineSemaphore.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_PROPERTIES;
         }
 
+        if (IsExtensionSupported(VK_KHR_MULTIVIEW_EXTENSION_NAME))
+        {
+            *NextFeat = &m_ExtFeatures.Multiview;
+            NextFeat  = &m_ExtFeatures.Multiview.pNext;
+
+            m_ExtFeatures.Multiview.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES_KHR;
+
+            *NextProp = &m_ExtProperties.Multiview;
+            NextProp  = &m_ExtProperties.Multiview.pNext;
+
+            m_ExtProperties.Multiview.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_PROPERTIES_KHR;
+        }
+
+        if (IsExtensionSupported(VK_KHR_CREATE_RENDERPASS_2_EXTENSION_NAME))
+        {
+            m_ExtFeatures.RenderPass2 = true;
+        }
+
+        if (IsExtensionSupported(VK_KHR_FRAGMENT_SHADING_RATE_EXTENSION_NAME))
+        {
+            *NextFeat = &m_ExtFeatures.ShadingRate;
+            NextFeat  = &m_ExtFeatures.ShadingRate.pNext;
+
+            m_ExtFeatures.ShadingRate.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADING_RATE_FEATURES_KHR;
+
+            *NextProp = &m_ExtProperties.ShadingRate;
+            NextProp  = &m_ExtProperties.ShadingRate.pNext;
+
+            m_ExtProperties.ShadingRate.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADING_RATE_PROPERTIES_KHR;
+        }
+
+        if (IsExtensionSupported(VK_EXT_FRAGMENT_DENSITY_MAP_EXTENSION_NAME))
+        {
+            *NextFeat = &m_ExtFeatures.FragmentDensityMap;
+            NextFeat  = &m_ExtFeatures.FragmentDensityMap.pNext;
+
+            m_ExtFeatures.FragmentDensityMap.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_FEATURES_EXT;
+
+            *NextProp = &m_ExtProperties.FragmentDensityMap;
+            NextProp  = &m_ExtProperties.FragmentDensityMap.pNext;
+
+            m_ExtProperties.FragmentDensityMap.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_PROPERTIES_EXT;
+        }
+
+        if (IsExtensionSupported(VK_EXT_FRAGMENT_DENSITY_MAP_2_EXTENSION_NAME))
+        {
+            *NextFeat = &m_ExtFeatures.FragmentDensityMap2;
+            NextFeat  = &m_ExtFeatures.FragmentDensityMap2.pNext;
+
+            m_ExtFeatures.FragmentDensityMap2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_2_FEATURES_EXT;
+
+            *NextProp = &m_ExtProperties.FragmentDensityMap2;
+            NextProp  = &m_ExtProperties.FragmentDensityMap2.pNext;
+
+            m_ExtProperties.FragmentDensityMap2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_2_PROPERTIES_EXT;
+        }
+
         if (IsExtensionSupported(VK_EXT_HOST_QUERY_RESET_EXTENSION_NAME))
         {
             *NextFeat = &m_ExtFeatures.HostQueryReset;
@@ -266,6 +323,35 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice      vkDevice,
         // Some flags may not be supported by hardware.
         vkGetPhysicalDeviceFeatures2KHR(m_VkDevice, &Feats2);
         vkGetPhysicalDeviceProperties2KHR(m_VkDevice, &Props2);
+
+
+        // Check texture formats
+        if (m_ExtFeatures.ShadingRate.attachmentFragmentShadingRate != VK_FALSE)
+        {
+            VkFormatProperties FmtProps{};
+            vkGetPhysicalDeviceFormatProperties(m_VkDevice, VK_FORMAT_R8_UINT, &FmtProps);
+
+            // Disable feature if image format is not supported
+            if (!(FmtProps.optimalTilingFeatures & VK_FORMAT_FEATURE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR))
+            {
+                m_ExtFeatures.ShadingRate   = {};
+                m_ExtProperties.ShadingRate = {};
+            }
+        }
+        if (m_ExtFeatures.FragmentDensityMap.fragmentDensityMap != VK_FALSE)
+        {
+            VkFormatProperties FmtProps{};
+            vkGetPhysicalDeviceFormatProperties(m_VkDevice, VK_FORMAT_R8G8_UNORM, &FmtProps);
+
+            // Disable feature if image format is not supported
+            if (!(FmtProps.optimalTilingFeatures & VK_FORMAT_FEATURE_FRAGMENT_DENSITY_MAP_BIT_EXT))
+            {
+                m_ExtFeatures.FragmentDensityMap    = {};
+                m_ExtFeatures.FragmentDensityMap2   = {};
+                m_ExtProperties.FragmentDensityMap  = {};
+                m_ExtProperties.FragmentDensityMap2 = {};
+            }
+        }
     }
 #endif // DILIGENT_USE_VOLK
 }

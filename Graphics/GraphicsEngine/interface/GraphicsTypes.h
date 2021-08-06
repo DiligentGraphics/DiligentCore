@@ -131,7 +131,8 @@ DILIGENT_TYPED_ENUM(BIND_FLAGS, Uint32)
     BIND_INPUT_ATTACHMENT    = 0x200, ///< A texture can be used as render pass input attachment
     BIND_RAY_TRACING         = 0x400, ///< A buffer can be used as a scratch buffer or as the source of primitive data
                                       ///  for acceleration structure building
-    BIND_FLAGS_LAST          = 0x400
+    BIND_SHADING_RATE        = 0x800, ///< A texture can be used as shading rate texture
+    BIND_FLAGS_LAST          = BIND_SHADING_RATE
 };
 DEFINE_FLAG_ENUM_OPERATORS(BIND_FLAGS)
 
@@ -293,6 +294,9 @@ DILIGENT_TYPED_ENUM(TEXTURE_VIEW_TYPE, Uint8)
     /// A texture view will define an unordered access view that will be used
     /// for unordered read/write operations from the shaders
     TEXTURE_VIEW_UNORDERED_ACCESS,
+
+    /// AZ TODO
+    TEXTURE_VIEW_SHADING_RATE,
 
     /// Helper value that stores that total number of texture views
     TEXTURE_VIEW_NUM_VIEWS
@@ -1710,6 +1714,9 @@ struct DeviceFeatures
     /// Indicates if device supports timestamp and duration queries in transfer queues.
     DEVICE_FEATURE_STATE TransferQueueTimestampQueries    DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
+    /// Indicates if device supports variable rate shading.
+    DEVICE_FEATURE_STATE VariableRateShading              DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
 #if DILIGENT_CPP_INTERFACE
     DeviceFeatures() noexcept {}
 
@@ -1751,10 +1758,11 @@ struct DeviceFeatures
         InstanceDataStepRate              {State},
         NativeFence                       {State},
         TileShaders                       {State},
-        TransferQueueTimestampQueries     {State}
+        TransferQueueTimestampQueries     {State},
+        VariableRateShading               {State}
     {
 #   if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(*this) == 38, "Did you add a new feature to DeviceFeatures? Please handle its status above.");
+        static_assert(sizeof(*this) == 39, "Did you add a new feature to DeviceFeatures? Please handle its status above.");
 #   endif
     }
 #endif
@@ -2284,6 +2292,139 @@ struct AdapterMemoryInfo
 typedef struct AdapterMemoryInfo AdapterMemoryInfo;
 
 
+/// Defines how shading rates coming from the different sources (base rate,
+/// primitive rate and VRS image rate) are combined
+DILIGENT_TYPED_ENUM(SHADING_RATE_COMBINER, Uint8)
+{
+    // TODO
+    SHADING_RATE_COMBINER_PASSTHROUGH = 1 << 0, // keep
+    SHADING_RATE_COMBINER_OVERRIDE    = 1 << 1, // replace
+    SHADING_RATE_COMBINER_MIN         = 1 << 2,
+    SHADING_RATE_COMBINER_MAX         = 1 << 3,
+    /// DX only, Vulkan: if fragmentShadingRateStrictMultiplyCombiner = false
+    SHADING_RATE_COMBINER_SUM         = 1 << 4,
+    /// Vulkan only if fragmentShadingRateStrictMultiplyCombiner = true
+    SHADING_RATE_COMBINER_MUL         = 1 << 5,
+    SHADING_RATE_COMBINER_LAST        = SHADING_RATE_COMBINER_MUL
+};
+DEFINE_FLAG_ENUM_OPERATORS(SHADING_RATE_COMBINER);
+
+// Shading rate texture format
+DILIGENT_TYPED_ENUM(SHADING_RATE_FORMAT, Uint8)
+{
+    SHADING_RATE_FORMAT_UNKNOWN = 0,
+
+    /// Single-channel 8-bit surface that contains SHADING_RATE values.
+    /// Only 2D and 2D array textures with R8_UNORM format are allowed.
+    SHADING_RATE_FORMAT_PALETTE = 1,
+
+    /// RG 8-bit UNORM texture that defines shading rate (0.5, 0.25 etc.)
+    /// R channel is used for X axis, G channel is used for Y axis.
+    SHADING_RATE_FORMAT_UNORM8  = 2,
+
+    /// 32-bit floating point column and row that defines shading rate (0.5, 0.25 etc.).
+    /// Allowed values are [0, 1].
+    /// This format is only used in Metal when shading rate is defined by column/row rates instead
+    /// of a 2D texture.
+    SHADING_RATE_FORMAT_FP32    = 3,
+};
+
+/// Specifies the base shading rate along a horizontal or vertical axis
+DILIGENT_TYPED_ENUM(AXIS_SHADING_RATE, Uint8)
+{
+    /// TODO
+    AXIS_SHADING_RATE_1X  = 0x0,
+    AXIS_SHADING_RATE_2X  = 0x1,
+    AXIS_SHADING_RATE_4X  = 0x2,
+    AXIS_SHADING_RATE_MAX = AXIS_SHADING_RATE_4X,
+};
+
+/// Defines the base shading rate that can be set for the entire draw call
+DILIGENT_TYPED_ENUM(SHADING_RATE, Uint8)
+{
+    /// TODO
+    SHADING_RATE_UNKNOWN = 0xFF,
+    SHADING_RATE_1x1     = ((AXIS_SHADING_RATE_1X << DILIGENT_SHADING_RATE_X_SHIFT) | AXIS_SHADING_RATE_1X),
+    SHADING_RATE_1x2     = ((AXIS_SHADING_RATE_1X << DILIGENT_SHADING_RATE_X_SHIFT) | AXIS_SHADING_RATE_2X),
+    SHADING_RATE_1x4     = ((AXIS_SHADING_RATE_1X << DILIGENT_SHADING_RATE_X_SHIFT) | AXIS_SHADING_RATE_4X),
+    SHADING_RATE_2x1     = ((AXIS_SHADING_RATE_2X << DILIGENT_SHADING_RATE_X_SHIFT) | AXIS_SHADING_RATE_1X),
+    SHADING_RATE_2x2     = ((AXIS_SHADING_RATE_2X << DILIGENT_SHADING_RATE_X_SHIFT) | AXIS_SHADING_RATE_2X),
+    SHADING_RATE_2x4     = ((AXIS_SHADING_RATE_2X << DILIGENT_SHADING_RATE_X_SHIFT) | AXIS_SHADING_RATE_4X),
+    SHADING_RATE_4x1     = ((AXIS_SHADING_RATE_4X << DILIGENT_SHADING_RATE_X_SHIFT) | AXIS_SHADING_RATE_1X),
+    SHADING_RATE_4x2     = ((AXIS_SHADING_RATE_4X << DILIGENT_SHADING_RATE_X_SHIFT) | AXIS_SHADING_RATE_2X),
+    SHADING_RATE_4x4     = ((AXIS_SHADING_RATE_4X << DILIGENT_SHADING_RATE_X_SHIFT) | AXIS_SHADING_RATE_4X)
+};
+
+/// Combination of shading rate and multi-samples.
+struct ShadingRateMode
+{
+    /// Supported shading rate.
+    SHADING_RATE Rate        DEFAULT_INITIALIZER(SHADING_RATE_UNKNOWN);
+
+    /// Number of samples is a power-of-two value, this field is a combination of supported sample count.
+    /// Example: 1 | 2 | 4
+    Uint8        SampleBits  DEFAULT_INITIALIZER(0);
+};
+typedef struct ShadingRateMode ShadingRateMode;
+
+/// Defines the shading rate capability flags.
+DILIGENT_TYPED_ENUM(SHADING_RATE_CAP_FLAGS, Uint8)
+{
+    SHADING_RATE_CAP_FLAG_NONE                = 0,
+
+    /// Shading rate can be specified only for whole draw call using IDeviceContext::SetShadingRate().
+    SHADING_RATE_CAP_FLAG_PER_DRAW            = 1u << 0,
+
+    /// Shading rate can be specified in shader for each primitive and combined with base rate.
+    /// Use IDeviceContext::SetShadingRate() to set base rate and per-primitive combiner.
+    SHADING_RATE_CAP_FLAG_PER_PRIMITIVE       = 1u << 1,
+
+    /// Shading rate is specified by a texture, each pixel defines a shading rate for the tile.
+    /// Supported tile size is specified in ShadingRateProperties::Min/MaxTileWidth/Height.
+    /// Use IDeviceContext::SetShadingRate() to set the base rate and texture combiner.
+    /// Use IDeviceContext::SetShadingRateTexture() to set the shading rate texture.
+    SHADING_RATE_CAP_FLAG_TEXTURE_BASED       = 1u << 2,
+
+    /// AZ TODO
+    SHADING_RATE_CAP_FLAG_SAMPLE_MASK         = 1u << 3,
+
+    /// AZ TODO
+    SHADING_RATE_CAP_FLAG_COVERAGE_SAMPLES    = 1u << 4,
+
+    /// AZ TODO
+    SHADING_RATE_CAP_FLAG_DEPTH_STENCIL_WRITE = 1u << 5,
+
+    /// AZ TODO
+    SHADING_RATE_CAP_FLAG_PER_PRIMITIVE_WITH_MULTIPLE_VIEWPORTS = 1u << 6,
+
+    /// AZ TODO
+    SHADING_RATE_CAP_FLAG_LAYERED_TEXTURE     = 1u << 7,
+};
+DEFINE_FLAG_ENUM_OPERATORS(SHADING_RATE_CAP_FLAGS);
+
+/// Shading rate properties
+struct ShadingRateProperties
+{
+    /// TODO
+    ShadingRateMode        ShadingRates [DILIGENT_MAX_SHADING_RATES]  DEFAULT_INITIALIZER({});
+    Uint32                 NumShadingRates                   DEFAULT_INITIALIZER(0);
+
+    SHADING_RATE_CAP_FLAGS CapFlags       DEFAULT_INITIALIZER(SHADING_RATE_CAP_FLAG_NONE);
+
+    /// Combination of all supported shading rate combiners (See Diligent::SHADING_RATE_COMBINER).
+    SHADING_RATE_COMBINER  Combiners      DEFAULT_INITIALIZER(SHADING_RATE_COMBINER_PASSTHROUGH);
+
+    // Indicates which shading rate texture format is used by this device.
+    SHADING_RATE_FORMAT    Format         DEFAULT_INITIALIZER(SHADING_RATE_FORMAT_UNKNOWN);
+
+    Uint32                 MinTileWidth   DEFAULT_INITIALIZER(0);
+    Uint32                 MinTileHeight  DEFAULT_INITIALIZER(0);
+    Uint32                 MaxTileWidth   DEFAULT_INITIALIZER(0);
+    Uint32                 MaxTileHeight  DEFAULT_INITIALIZER(0); // AZ TODO: tile size depends on sample count
+};
+typedef struct ShadingRateProperties ShadingRateProperties;
+
+
 /// Command queue properties
 struct CommandQueueInfo
 {
@@ -2346,6 +2487,9 @@ struct GraphicsAdapterInfo
 
     /// Mesh shader properties, see Diligent::MeshShaderProperties.
     MeshShaderProperties MeshShader;
+
+    /// Shading rate properties, see Diligent::ShadingRateProperties.
+    ShadingRateProperties ShadingRate;
 
     /// Compute shader properties, see Diligent::ComputeShaderProperties.
     ComputeShaderProperties ComputeShader;
@@ -3450,7 +3594,10 @@ DILIGENT_TYPED_ENUM(RESOURCE_STATE, Uint32)
     /// \remarks Supported contexts: graphics, compute, transfer.
     RESOURCE_STATE_COMMON               = 1u << 20,
 
-    RESOURCE_STATE_MAX_BIT              = RESOURCE_STATE_COMMON,
+    /// AZ TODO
+    RESOURCE_STATE_SHADING_RATE         = 1u << 21,
+
+    RESOURCE_STATE_MAX_BIT              = RESOURCE_STATE_SHADING_RATE,
 
     RESOURCE_STATE_GENERIC_READ         = RESOURCE_STATE_VERTEX_BUFFER     |
                                           RESOURCE_STATE_CONSTANT_BUFFER   |

@@ -104,6 +104,11 @@ ADAPTER_TYPE VkPhysicalDeviceTypeToAdapterType(VkPhysicalDeviceType DeviceType);
 COMMAND_QUEUE_TYPE       VkQueueFlagsToCmdQueueType(VkQueueFlags QueueFlags);
 VkQueueGlobalPriorityEXT QueuePriorityToVkQueueGlobalPriority(QUEUE_PRIORITY Priority);
 
+VkExtent2D   ShadingRateToVkFragmentSize(SHADING_RATE Rate);
+SHADING_RATE VkFragmentSizeToShadingRate(const VkExtent2D& Size);
+
+VkFragmentShadingRateCombinerOpKHR ShadingRateCombinerToVkFragmentShadingRateCombinerOp(SHADING_RATE_COMBINER Combiner);
+
 DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                                                          vkVersion,
                                           const VkPhysicalDeviceFeatures&                                   vkFeatures,
                                           const VkPhysicalDeviceProperties&                                 vkDeviceProps,

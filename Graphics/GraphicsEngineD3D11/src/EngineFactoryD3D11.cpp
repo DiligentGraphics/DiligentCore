@@ -435,7 +435,7 @@ GraphicsAdapterInfo EngineFactoryD3D11Impl::GetGraphicsAdapterInfo(void*        
         Features.ShaderFloat16 = ShaderFloat16Supported ? DEVICE_FEATURE_STATE_ENABLED : DEVICE_FEATURE_STATE_DISABLED;
     }
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(Features) == 38, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+    static_assert(sizeof(Features) == 39, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 #endif
 
 

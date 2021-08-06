@@ -70,16 +70,6 @@ public:
 
     const PipelineLayoutVk& GetPipelineLayout() const { return m_PipelineLayout; }
 
-    static RenderPassDesc GetImplicitRenderPassDesc(Uint32                                                        NumRenderTargets,
-                                                    const TEXTURE_FORMAT                                          RTVFormats[],
-                                                    TEXTURE_FORMAT                                                DSVFormat,
-                                                    Uint8                                                         SampleCount,
-                                                    std::array<RenderPassAttachmentDesc, MAX_RENDER_TARGETS + 1>& Attachments,
-                                                    std::array<AttachmentReference, MAX_RENDER_TARGETS + 1>&      AttachmentReferences,
-                                                    SubpassDesc&                                                  SubpassDesc);
-
-
-
     struct ShaderStageInfo
     {
         ShaderStageInfo() {}

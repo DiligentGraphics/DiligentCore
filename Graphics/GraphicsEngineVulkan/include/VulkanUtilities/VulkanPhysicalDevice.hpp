@@ -54,10 +54,15 @@ public:
         VkPhysicalDeviceVertexAttributeDivisorFeaturesEXT VertexAttributeDivisor = {};
         VkPhysicalDeviceTimelineSemaphoreFeaturesKHR      TimelineSemaphore      = {};
         VkPhysicalDeviceHostQueryResetFeatures            HostQueryReset         = {};
+        VkPhysicalDeviceFragmentShadingRateFeaturesKHR    ShadingRate            = {};
+        VkPhysicalDeviceFragmentDensityMapFeaturesEXT     FragmentDensityMap     = {};    // Only for desktop devices
+        VkPhysicalDeviceFragmentDensityMap2FeaturesEXT    FragmentDensityMap2    = {};    // Only for mobile devices
+        VkPhysicalDeviceMultiviewFeaturesKHR              Multiview              = {};    // Required for RenderPass2
         bool                                              Spirv14                = false; // Ray tracing requires Vulkan 1.2 or SPIRV 1.4 extension
         bool                                              Spirv15                = false; // DXC shaders with ray tracing requires Vulkan 1.2 with SPIRV 1.5
         bool                                              SubgroupOps            = false; // Requires Vulkan 1.1
         bool                                              HasPortabilitySubset   = false;
+        bool                                              RenderPass2            = false;
     };
 
     struct ExtensionProperties
@@ -70,6 +75,10 @@ public:
         VkPhysicalDeviceSubgroupProperties                  Subgroup               = {};
         VkPhysicalDeviceVertexAttributeDivisorPropertiesEXT VertexAttributeDivisor = {};
         VkPhysicalDeviceTimelineSemaphorePropertiesKHR      TimelineSemaphore      = {};
+        VkPhysicalDeviceFragmentShadingRatePropertiesKHR    ShadingRate            = {};
+        VkPhysicalDeviceFragmentDensityMapPropertiesEXT     FragmentDensityMap     = {};
+        VkPhysicalDeviceFragmentDensityMap2PropertiesEXT    FragmentDensityMap2    = {};
+        VkPhysicalDeviceMultiviewPropertiesKHR              Multiview              = {};
     };
 
 public:

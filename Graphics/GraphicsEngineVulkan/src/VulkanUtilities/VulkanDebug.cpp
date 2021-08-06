@@ -49,26 +49,6 @@ VKAPI_ATTR VkBool32 VKAPI_CALL DebugMessengerCallback(VkDebugUtilsMessageSeverit
         }
     }
 
-    // Temporarily disable false warnings from validation layers (1.2.170).
-    // TODO: check in next Vulkan SDK
-#if 1
-    if (callbackData->pMessageIdName)
-    {
-        if (strcmp("VUID-vkCmdPipelineBarrier-srcAccessMask-02815", callbackData->pMessageIdName) == 0)
-        {
-            std::string msg{callbackData->pMessage};
-            if (msg.find("srcAccessMask bit VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR is not supported by stage mask (VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR)") != std::string::npos)
-                return VK_FALSE;
-        }
-        if (strcmp("VUID-vkCmdPipelineBarrier-dstAccessMask-02816", callbackData->pMessageIdName) == 0)
-        {
-            std::string msg{callbackData->pMessage};
-            if (msg.find("dstAccessMask bit VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR is not supported by stage mask (VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR)") != std::string::npos)
-                return VK_FALSE;
-        }
-    }
-#endif
-
     Diligent::DEBUG_MESSAGE_SEVERITY MsgSeverity = Diligent::DEBUG_MESSAGE_SEVERITY_INFO;
     if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT)
     {

@@ -27,6 +27,9 @@
 
 #include "pch.h"
 #include "FramebufferCache.hpp"
+
+#include <array>
+
 #include "RenderDeviceVkImpl.hpp"
 #include "HashUtils.hpp"
 
@@ -41,6 +44,7 @@ bool FramebufferCache::FramebufferCacheKey::operator==(const FramebufferCacheKey
         Pass             != rhs.Pass             ||
         NumRenderTargets != rhs.NumRenderTargets ||
         DSV              != rhs.DSV              ||
+        ShadingRate      != rhs.ShadingRate      ||
         CommandQueueMask != rhs.CommandQueueMask)
     {
         return false;
@@ -58,7 +62,7 @@ size_t FramebufferCache::FramebufferCacheKey::GetHash() const
 {
     if (Hash == 0)
     {
-        Hash = ComputeHash(Pass, NumRenderTargets, DSV, CommandQueueMask);
+        Hash = ComputeHash(Pass, NumRenderTargets, DSV, ShadingRate, CommandQueueMask);
         for (Uint32 rt = 0; rt < NumRenderTargets; ++rt)
             HashCombine(Hash, RTVs[rt]);
     }
@@ -75,13 +79,16 @@ VkFramebuffer FramebufferCache::GetFramebuffer(const FramebufferCacheKey& Key, u
     }
     else
     {
-        VkFramebufferCreateInfo FramebufferCI{};
+        VkFramebufferCreateInfo FramebufferCI = {};
+
         FramebufferCI.sType      = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
         FramebufferCI.pNext      = nullptr;
         FramebufferCI.flags      = 0; // reserved for future use
         FramebufferCI.renderPass = Key.Pass;
-        VkImageView Attachments[1 + MAX_RENDER_TARGETS];
-        uint32_t    attachment = 0;
+
+        std::array<VkImageView, 2 + MAX_RENDER_TARGETS> Attachments;
+
+        auto& attachment = FramebufferCI.attachmentCount;
         if (Key.DSV != VK_NULL_HANDLE)
             Attachments[attachment++] = Key.DSV;
         for (Uint32 rt = 0; rt < Key.NumRenderTargets; ++rt)
@@ -89,13 +96,15 @@ VkFramebuffer FramebufferCache::GetFramebuffer(const FramebufferCacheKey& Key, u
             if (Key.RTVs[rt] != VK_NULL_HANDLE)
                 Attachments[attachment++] = Key.RTVs[rt];
         }
-        FramebufferCI.attachmentCount = attachment;
-        FramebufferCI.pAttachments    = Attachments;
-        FramebufferCI.width           = width;
-        FramebufferCI.height          = height;
-        FramebufferCI.layers          = layers;
-        auto          Framebuffer     = m_DeviceVk.GetLogicalDevice().CreateFramebuffer(FramebufferCI);
-        VkFramebuffer fb              = Framebuffer;
+        if (Key.ShadingRate != VK_NULL_HANDLE)
+            Attachments[attachment++] = Key.ShadingRate;
+
+        FramebufferCI.pAttachments = Attachments.data();
+        FramebufferCI.width        = width;
+        FramebufferCI.height       = height;
+        FramebufferCI.layers       = layers;
+        auto          Framebuffer  = m_DeviceVk.GetLogicalDevice().CreateFramebuffer(FramebufferCI);
+        VkFramebuffer fb           = Framebuffer;
 
         auto new_it = m_Cache.insert(std::make_pair(Key, std::move(Framebuffer)));
         VERIFY(new_it.second, "New framebuffer must be inserted into the map");
@@ -104,6 +113,8 @@ VkFramebuffer FramebufferCache::GetFramebuffer(const FramebufferCacheKey& Key, u
         m_RenderPassToKeyMap.emplace(Key.Pass, Key);
         if (Key.DSV != VK_NULL_HANDLE)
             m_ViewToKeyMap.emplace(Key.DSV, Key);
+        if (Key.ShadingRate != VK_NULL_HANDLE)
+            m_ViewToKeyMap.emplace(Key.ShadingRate, Key);
         for (Uint32 rt = 0; rt < Key.NumRenderTargets; ++rt)
             if (Key.RTVs[rt] != VK_NULL_HANDLE)
                 m_ViewToKeyMap.emplace(Key.RTVs[rt], Key);

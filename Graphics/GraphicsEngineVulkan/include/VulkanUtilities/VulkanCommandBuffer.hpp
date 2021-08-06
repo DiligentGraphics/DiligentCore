@@ -737,6 +737,18 @@ public:
 #endif
     }
 
+    __forceinline void SetFragmentShadingRate(const VkExtent2D&                        FragSize,
+                                              const VkFragmentShadingRateCombinerOpKHR CombinerOps[2])
+    {
+#if DILIGENT_USE_VOLK
+        VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
+
+        vkCmdSetFragmentShadingRateKHR(m_VkCmdBuffer, &FragSize, CombinerOps);
+#else
+        LOG_WARNING_MESSAGE_ONCE("Shading rate is not supported when vulkan library is linked statically");
+#endif
+    }
+
     void FlushBarriers();
 
     __forceinline void SetVkCmdBuffer(VkCommandBuffer VkCmdBuffer, VkPipelineStageFlags StageMask)

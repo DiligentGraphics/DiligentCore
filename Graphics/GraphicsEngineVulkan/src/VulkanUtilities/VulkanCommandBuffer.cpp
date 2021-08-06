@@ -146,6 +146,16 @@ static VkPipelineStageFlags PipelineStageFromAccessFlags(VkAccessFlags AccessFla
                 Stages |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR;
                 break;
 
+            // AZ TODO
+            case VK_ACCESS_FRAGMENT_SHADING_RATE_ATTACHMENT_READ_BIT_KHR:
+                Stages |= VK_PIPELINE_STAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR;
+                break;
+
+            // AZ TODO
+            case VK_ACCESS_FRAGMENT_DENSITY_MAP_READ_BIT_EXT:
+                Stages |= VK_PIPELINE_STAGE_FRAGMENT_DENSITY_PROCESS_BIT_EXT;
+                break;
+
             default:
                 UNEXPECTED("Unknown memory access flag");
         }
@@ -241,6 +251,14 @@ static VkAccessFlags AccessMaskFromImageLayout(VkImageLayout Layout,
         // should be set to 0, and the dstStageMask parameter should be set to VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT.
         case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
             AccessMask = 0;
+            break;
+
+        case VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR:
+            AccessMask = VK_ACCESS_FRAGMENT_SHADING_RATE_ATTACHMENT_READ_BIT_KHR;
+            break;
+
+        case VK_IMAGE_LAYOUT_FRAGMENT_DENSITY_MAP_OPTIMAL_EXT:
+            AccessMask = VK_ACCESS_FRAGMENT_DENSITY_MAP_READ_BIT_EXT;
             break;
 
         default:

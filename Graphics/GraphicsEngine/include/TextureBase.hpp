@@ -104,7 +104,8 @@ public:
         m_pDefaultSRV{nullptr, STDDeleter<TextureViewImplType, TexViewObjAllocatorType>(TexViewObjAllocator)},
         m_pDefaultRTV{nullptr, STDDeleter<TextureViewImplType, TexViewObjAllocatorType>(TexViewObjAllocator)},
         m_pDefaultDSV{nullptr, STDDeleter<TextureViewImplType, TexViewObjAllocatorType>(TexViewObjAllocator)},
-        m_pDefaultUAV{nullptr, STDDeleter<TextureViewImplType, TexViewObjAllocatorType>(TexViewObjAllocator)}
+        m_pDefaultUAV{nullptr, STDDeleter<TextureViewImplType, TexViewObjAllocatorType>(TexViewObjAllocator)},
+        m_pDefaultVRS{nullptr, STDDeleter<TextureViewImplType, TexViewObjAllocatorType>(TexViewObjAllocator)}
     {
         if (this->m_Desc.MipLevels == 0)
         {
@@ -211,6 +212,12 @@ public:
                     ViewName = "Default UAV of texture '";
                     break;
 
+                case TEXTURE_VIEW_SHADING_RATE:
+                    ViewDesc.AccessFlags = UAV_ACCESS_FLAG_READ_WRITE;
+
+                    ViewName = "Default VRS view of texture '";
+                    break;
+
                 default:
                     UNEXPECTED("Unexpected texture type");
             }
@@ -244,6 +251,11 @@ public:
         if (this->m_Desc.BindFlags & BIND_UNORDERED_ACCESS)
         {
             m_pDefaultUAV.reset(CreateDefaultView(TEXTURE_VIEW_UNORDERED_ACCESS));
+        }
+
+        if (this->m_Desc.BindFlags & BIND_SHADING_RATE)
+        {
+            m_pDefaultVRS.reset(CreateDefaultView(TEXTURE_VIEW_SHADING_RATE));
         }
     }
 
@@ -285,6 +297,7 @@ public:
             case TEXTURE_VIEW_RENDER_TARGET:    return m_pDefaultRTV.get();
             case TEXTURE_VIEW_DEPTH_STENCIL:    return m_pDefaultDSV.get();
             case TEXTURE_VIEW_UNORDERED_ACCESS: return m_pDefaultUAV.get();
+            case TEXTURE_VIEW_SHADING_RATE:     return m_pDefaultVRS.get();
             // clang-format on
             default: UNEXPECTED("Unknown view type"); return nullptr;
         }
@@ -306,6 +319,8 @@ protected:
     std::unique_ptr<TextureViewImplType, STDDeleter<TextureViewImplType, TexViewObjAllocatorType>> m_pDefaultDSV;
     /// Default UAV addressing the entire texture
     std::unique_ptr<TextureViewImplType, STDDeleter<TextureViewImplType, TexViewObjAllocatorType>> m_pDefaultUAV;
+    /// Default VRS addressing the entire texture
+    std::unique_ptr<TextureViewImplType, STDDeleter<TextureViewImplType, TexViewObjAllocatorType>> m_pDefaultVRS;
 
     RESOURCE_STATE m_State = RESOURCE_STATE_UNKNOWN;
 };

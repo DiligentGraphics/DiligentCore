@@ -288,6 +288,12 @@ public:
     /// Implementation of IDeviceContext::InsertDebugLabel() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE InsertDebugLabel(const Char* Label, const float* pColor) override final;
 
+    /// Implementation of IDeviceContext::SetShadingRate() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE SetShadingRate(SHADING_RATE BaseRate, SHADING_RATE_COMBINER PrimitiveCombiner, SHADING_RATE_COMBINER TextureCombiner) override final;
+
+    /// Implementation of IDeviceContext::SetShadingRateTexture() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE SetShadingRateTexture(ITextureView* pShadingRateView, Uint32 TileWidth, Uint32 TileHeight, RESOURCE_STATE_TRANSITION_MODE TransitionMode) override final;
+
     // Transitions texture subresources from OldState to NewState, and optionally updates
     // internal texture state.
     // If OldState == RESOURCE_STATE_UNKNOWN, internal texture state is used as old state.
@@ -483,6 +489,8 @@ private:
     void CreateASCompactedSizeQueryPool();
 
     void PrepareCommandPool(SoftwareQueueIndex CommandQueueId);
+
+    void ChooseRenderPassAndFramebuffer(bool EnableVRS);
 
     VulkanUtilities::VulkanCommandBuffer m_CommandBuffer;
 

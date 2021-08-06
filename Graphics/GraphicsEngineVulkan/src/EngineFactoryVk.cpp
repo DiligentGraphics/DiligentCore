@@ -286,6 +286,70 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
 #endif
     }
 
+    // Shading rate properties
+    if (AdapterInfo.Features.VariableRateShading)
+    {
+        auto& ShadingRateProps{AdapterInfo.ShadingRate};
+        // VK_KHR_fragment_shading_rate
+        if (vkExtFeatures.ShadingRate.pipelineFragmentShadingRate != VK_FALSE ||
+            vkExtFeatures.ShadingRate.primitiveFragmentShadingRate != VK_FALSE ||
+            vkExtFeatures.ShadingRate.attachmentFragmentShadingRate != VK_FALSE)
+        {
+            ShadingRateProps.CapFlags =
+                (vkExtFeatures.ShadingRate.pipelineFragmentShadingRate != VK_FALSE ? SHADING_RATE_CAP_FLAG_PER_DRAW : SHADING_RATE_CAP_FLAG_NONE) |
+                (vkExtFeatures.ShadingRate.primitiveFragmentShadingRate != VK_FALSE ? SHADING_RATE_CAP_FLAG_PER_PRIMITIVE : SHADING_RATE_CAP_FLAG_NONE) |
+                (vkExtFeatures.ShadingRate.attachmentFragmentShadingRate != VK_FALSE ? SHADING_RATE_CAP_FLAG_TEXTURE_BASED : SHADING_RATE_CAP_FLAG_NONE) |
+                (vkDeviceExtProps.ShadingRate.fragmentShadingRateWithSampleMask != VK_FALSE ? SHADING_RATE_CAP_FLAG_SAMPLE_MASK : SHADING_RATE_CAP_FLAG_NONE) |
+                (vkDeviceExtProps.ShadingRate.fragmentShadingRateWithShaderSampleMask != VK_FALSE ? SHADING_RATE_CAP_FLAG_COVERAGE_SAMPLES : SHADING_RATE_CAP_FLAG_NONE) |
+                (vkDeviceExtProps.ShadingRate.fragmentShadingRateWithShaderDepthStencilWrites != VK_FALSE ? SHADING_RATE_CAP_FLAG_DEPTH_STENCIL_WRITE : SHADING_RATE_CAP_FLAG_NONE) |
+                (vkDeviceExtProps.ShadingRate.primitiveFragmentShadingRateWithMultipleViewports != VK_FALSE ? SHADING_RATE_CAP_FLAG_PER_PRIMITIVE_WITH_MULTIPLE_VIEWPORTS : SHADING_RATE_CAP_FLAG_NONE) |
+                (vkDeviceExtProps.ShadingRate.layeredShadingRateAttachments != VK_FALSE ? SHADING_RATE_CAP_FLAG_LAYERED_TEXTURE : SHADING_RATE_CAP_FLAG_NONE);
+
+            ShadingRateProps.Combiners = SHADING_RATE_COMBINER_PASSTHROUGH | SHADING_RATE_COMBINER_OVERRIDE;
+
+            if (vkDeviceExtProps.ShadingRate.fragmentShadingRateNonTrivialCombinerOps != VK_FALSE)
+            {
+                ShadingRateProps.Combiners |= SHADING_RATE_COMBINER_MIN | SHADING_RATE_COMBINER_MAX |
+                    ((vkDeviceExtProps.ShadingRate.fragmentShadingRateStrictMultiplyCombiner != VK_FALSE) ? SHADING_RATE_COMBINER_MUL : SHADING_RATE_COMBINER_SUM);
+            }
+            if (vkExtFeatures.ShadingRate.attachmentFragmentShadingRate != VK_FALSE)
+            {
+                ShadingRateProps.Format        = SHADING_RATE_FORMAT_PALETTE;
+                ShadingRateProps.MinTileWidth  = vkDeviceExtProps.ShadingRate.minFragmentShadingRateAttachmentTexelSize.width;
+                ShadingRateProps.MinTileHeight = vkDeviceExtProps.ShadingRate.minFragmentShadingRateAttachmentTexelSize.height;
+                ShadingRateProps.MaxTileWidth  = vkDeviceExtProps.ShadingRate.maxFragmentShadingRateAttachmentTexelSize.width;
+                ShadingRateProps.MaxTileHeight = vkDeviceExtProps.ShadingRate.maxFragmentShadingRateAttachmentTexelSize.height;
+            }
+
+            Uint32 ShadingRateCount = 0;
+            vkGetPhysicalDeviceFragmentShadingRatesKHR(PhysicalDevice.GetVkDeviceHandle(), &ShadingRateCount, nullptr);
+            VERIFY_EXPR(ShadingRateCount >= 3); // Spec says that implementation must support at least 3 modes.
+
+            std::vector<VkPhysicalDeviceFragmentShadingRateKHR> ShadingRates{ShadingRateCount};
+            for (auto& SR : ShadingRates)
+                SR.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADING_RATE_KHR;
+            vkGetPhysicalDeviceFragmentShadingRatesKHR(PhysicalDevice.GetVkDeviceHandle(), &ShadingRateCount, ShadingRates.data());
+
+            ShadingRateProps.NumShadingRates = static_cast<Uint32>(std::min(ShadingRates.size(), size_t{MAX_SHADING_RATES}));
+            for (Uint32 i = 0; i < ShadingRateProps.NumShadingRates; ++i)
+            {
+                const auto& Src = ShadingRates[i];
+                auto&       Dst = ShadingRateProps.ShadingRates[i];
+                Dst.SampleBits  = static_cast<Uint8>(Src.sampleCounts); // AZ TODO
+                Dst.Rate        = VkFragmentSizeToShadingRate(Src.fragmentSize);
+            }
+        }
+        // VK_EXT_fragment_density_map
+        else if (vkExtFeatures.FragmentDensityMap.fragmentDensityMap != VK_FALSE)
+        {
+            ShadingRateProps.Format = SHADING_RATE_FORMAT_UNORM8;
+            // AZ TODO
+        }
+#if defined(_MSC_VER) && defined(_WIN64)
+        static_assert(sizeof(ShadingRateProps) == 56, "Did you add a new member to ShadingRateProperties? Please initialize it here.");
+#endif
+    }
+
     // Set memory properties
     {
         auto& Mem{AdapterInfo.Memory};
@@ -836,6 +900,62 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
                 *NextExt = &EnabledExtFeats.HostQueryReset;
                 NextExt  = &EnabledExtFeats.HostQueryReset.pNext;
             }
+
+            if (EnabledFeatures.VariableRateShading != DEVICE_FEATURE_STATE_DISABLED)
+            {
+                if (DeviceExtFeatures.ShadingRate.pipelineFragmentShadingRate != VK_FALSE ||
+                    DeviceExtFeatures.ShadingRate.primitiveFragmentShadingRate != VK_FALSE ||
+                    DeviceExtFeatures.ShadingRate.attachmentFragmentShadingRate != VK_FALSE)
+                {
+                    VERIFY_EXPR(PhysicalDevice->IsExtensionSupported(VK_KHR_MAINTENANCE2_EXTENSION_NAME));
+                    VERIFY_EXPR(PhysicalDevice->IsExtensionSupported(VK_KHR_MULTIVIEW_EXTENSION_NAME));
+                    VERIFY_EXPR(PhysicalDevice->IsExtensionSupported(VK_KHR_CREATE_RENDERPASS_2_EXTENSION_NAME));
+                    VERIFY_EXPR(PhysicalDevice->IsExtensionSupported(VK_KHR_FRAGMENT_SHADING_RATE_EXTENSION_NAME));
+
+                    DeviceExtensions.push_back(VK_KHR_MAINTENANCE2_EXTENSION_NAME);        // Required for RenderPass2
+                    DeviceExtensions.push_back(VK_KHR_MULTIVIEW_EXTENSION_NAME);           // Required for RenderPass2
+                    DeviceExtensions.push_back(VK_KHR_CREATE_RENDERPASS_2_EXTENSION_NAME); // Required for ShadingRate
+                    DeviceExtensions.push_back(VK_KHR_FRAGMENT_SHADING_RATE_EXTENSION_NAME);
+
+                    EnabledExtFeats.Multiview   = DeviceExtFeatures.Multiview;
+                    EnabledExtFeats.RenderPass2 = DeviceExtFeatures.RenderPass2;
+                    EnabledExtFeats.ShadingRate = DeviceExtFeatures.ShadingRate;
+
+                    *NextExt = &EnabledExtFeats.Multiview;
+                    NextExt  = &EnabledExtFeats.Multiview.pNext;
+
+                    *NextExt = &EnabledExtFeats.ShadingRate;
+                    NextExt  = &EnabledExtFeats.ShadingRate.pNext;
+                }
+                else if (DeviceExtFeatures.FragmentDensityMap.fragmentDensityMap != VK_FALSE)
+                {
+                    VERIFY_EXPR(PhysicalDevice->IsExtensionSupported(VK_EXT_FRAGMENT_DENSITY_MAP_EXTENSION_NAME));
+                    DeviceExtensions.push_back(VK_EXT_FRAGMENT_DENSITY_MAP_EXTENSION_NAME);
+
+                    EnabledExtFeats.FragmentDensityMap = DeviceExtFeatures.FragmentDensityMap;
+
+                    *NextExt = &EnabledExtFeats.FragmentDensityMap;
+                    NextExt  = &EnabledExtFeats.FragmentDensityMap.pNext;
+
+                    if (DeviceExtFeatures.FragmentDensityMap2.fragmentDensityMapDeferred != VK_FALSE)
+                    {
+                        VERIFY_EXPR(PhysicalDevice->IsExtensionSupported(VK_EXT_FRAGMENT_DENSITY_MAP_2_EXTENSION_NAME));
+                        DeviceExtensions.push_back(VK_EXT_FRAGMENT_DENSITY_MAP_2_EXTENSION_NAME);
+
+                        EnabledExtFeats.FragmentDensityMap2 = DeviceExtFeatures.FragmentDensityMap2;
+
+                        *NextExt = &EnabledExtFeats.FragmentDensityMap2;
+                        NextExt  = &EnabledExtFeats.FragmentDensityMap2.pNext;
+                    }
+
+                    // AZ TODO
+                }
+                else
+                {
+                    UNEXPECTED("");
+                }
+            }
+
             // Append user-defined features
             *NextExt = EngineCI.pDeviceExtensionFeatures;
         }
@@ -846,7 +966,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
         }
 
 #if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(Diligent::DeviceFeatures) == 38, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+        static_assert(sizeof(Diligent::DeviceFeatures) == 39, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 #endif
 
         for (Uint32 i = 0; i < EngineCI.DeviceExtensionCount; ++i)

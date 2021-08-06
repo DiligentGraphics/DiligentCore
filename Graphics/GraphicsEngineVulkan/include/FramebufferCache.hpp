@@ -59,11 +59,12 @@ public:
     struct FramebufferCacheKey
     {
         // Default member initialization is intentionally omitted
-        VkRenderPass Pass;
-        Uint32       NumRenderTargets;
-        VkImageView  DSV;
-        VkImageView  RTVs[MAX_RENDER_TARGETS];
-        Uint64       CommandQueueMask;
+        VkRenderPass Pass                     = VK_NULL_HANDLE;
+        Uint32       NumRenderTargets         = 0;
+        VkImageView  DSV                      = VK_NULL_HANDLE;
+        VkImageView  RTVs[MAX_RENDER_TARGETS] = {};
+        VkImageView  ShadingRate              = VK_NULL_HANDLE;
+        Uint64       CommandQueueMask         = 0;
 
         bool   operator==(const FramebufferCacheKey& rhs) const;
         size_t GetHash() const;

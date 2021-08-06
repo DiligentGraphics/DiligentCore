@@ -275,7 +275,7 @@ bool VarifyResourceState(RESOURCE_STATE States, COMMAND_QUEUE_TYPE QueueType, co
     {
         auto State = ExtractLSB(States);
 
-        static_assert(RESOURCE_STATE_MAX_BIT == (1u << 20), "Please update the switch below to handle the new resource state");
+        static_assert(RESOURCE_STATE_MAX_BIT == (1u << 21), "Please update the switch below to handle the new resource state");
         switch (State)
         {
             case RESOURCE_STATE_UNDEFINED:
@@ -313,6 +313,7 @@ bool VarifyResourceState(RESOURCE_STATE States, COMMAND_QUEUE_TYPE QueueType, co
             case RESOURCE_STATE_RESOLVE_SOURCE:
             case RESOURCE_STATE_INPUT_ATTACHMENT:
             case RESOURCE_STATE_PRESENT:
+            case RESOURCE_STATE_SHADING_RATE:
                 if ((QueueType & COMMAND_QUEUE_TYPE_GRAPHICS) != COMMAND_QUEUE_TYPE_GRAPHICS)
                 {
                     Result = false;

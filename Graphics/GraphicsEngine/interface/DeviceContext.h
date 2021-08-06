@@ -2773,6 +2773,20 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
 
     /// Unlocks the command queue that was previously locked by IDeviceContext::LockCommandQueue().
     VIRTUAL void METHOD(UnlockCommandQueue)(THIS) PURE;
+
+
+    /// AZ TODO
+    VIRTUAL void METHOD(SetShadingRate)(THIS_
+                                        SHADING_RATE          BaseRate,
+                                        SHADING_RATE_COMBINER PrimitiveCombiner,
+                                        SHADING_RATE_COMBINER TextureCombiner) PURE;
+
+    /// AZ TODO
+    VIRTUAL void METHOD(SetShadingRateTexture)(THIS_
+                                               ITextureView*                  pShadingRateView,
+                                               Uint32                         TileWidth,
+                                               Uint32                         TileHeight,
+                                               RESOURCE_STATE_TRANSITION_MODE TransitionMode) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -2848,6 +2862,8 @@ DILIGENT_END_INTERFACE
 #    define IDeviceContext_InsertDebugLabel(This, ...)          CALL_IFACE_METHOD(DeviceContext, InsertDebugLabel,          This, __VA_ARGS__)
 #    define IDeviceContext_LockCommandQueue(This)               CALL_IFACE_METHOD(DeviceContext, LockCommandQueue,          This)
 #    define IDeviceContext_UnlockCommandQueue(This)             CALL_IFACE_METHOD(DeviceContext, UnlockCommandQueue,        This)
+#    define IDeviceContext_SetShadingRate(This, ...)            CALL_IFACE_METHOD(DeviceContext, SetShadingRate,            This, __VA_ARGS__)
+#    define IDeviceContext_SetShadingRateTexture(This, ...)     CALL_IFACE_METHOD(DeviceContext, SetShadingRateTexture,     This, __VA_ARGS__)
 
 // clang-format on
 

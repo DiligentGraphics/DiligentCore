@@ -422,9 +422,10 @@ const Char* GetTexViewTypeLiteralName(TEXTURE_VIEW_TYPE ViewType)
         INIT_TEX_VIEW_TYPE_NAME( TEXTURE_VIEW_RENDER_TARGET );
         INIT_TEX_VIEW_TYPE_NAME( TEXTURE_VIEW_DEPTH_STENCIL );
         INIT_TEX_VIEW_TYPE_NAME( TEXTURE_VIEW_UNORDERED_ACCESS );
+        INIT_TEX_VIEW_TYPE_NAME( TEXTURE_VIEW_SHADING_RATE );
 #undef  INIT_TEX_VIEW_TYPE_NAME
         // clang-format on
-        static_assert(TEXTURE_VIEW_NUM_VIEWS == TEXTURE_VIEW_UNORDERED_ACCESS + 1, "Not all texture views names initialized.");
+        static_assert(TEXTURE_VIEW_NUM_VIEWS == TEXTURE_VIEW_SHADING_RATE + 1, "Not all texture views names initialized.");
 
         bIsInit = true;
     }
@@ -834,7 +835,7 @@ const Char* GetBindFlagString(Uint32 BindFlag)
 {
     VERIFY((BindFlag & (BindFlag - 1)) == 0, "More than one bind flag is specified");
 
-    static_assert(BIND_FLAGS_LAST == 0x400L, "Please handle the new bind flag in the switch below");
+    static_assert(BIND_FLAGS_LAST == 0x800L, "Please handle the new bind flag in the switch below");
     switch (BindFlag)
     {
 #define BIND_FLAG_STR_CASE(Flag) \
@@ -850,6 +851,7 @@ const Char* GetBindFlagString(Uint32 BindFlag)
         BIND_FLAG_STR_CASE(BIND_INDIRECT_DRAW_ARGS)
         BIND_FLAG_STR_CASE(BIND_INPUT_ATTACHMENT)
         BIND_FLAG_STR_CASE(BIND_RAY_TRACING)
+        BIND_FLAG_STR_CASE(BIND_SHADING_RATE)
 #undef BIND_FLAG_STR_CASE
         default: UNEXPECTED("Unexpected bind flag ", BindFlag); return "";
     }
@@ -1047,7 +1049,7 @@ String GetBufferDescString(const BufferDesc& Desc)
 const Char* GetResourceStateFlagString(RESOURCE_STATE State)
 {
     VERIFY((State & (State - 1)) == 0, "Single state is expected");
-    static_assert(RESOURCE_STATE_MAX_BIT == (1u << 20), "Please update this function to handle the new resource state");
+    static_assert(RESOURCE_STATE_MAX_BIT == (1u << 21), "Please update this function to handle the new resource state");
     switch (State)
     {
         // clang-format off
@@ -1073,6 +1075,7 @@ const Char* GetResourceStateFlagString(RESOURCE_STATE State)
         case RESOURCE_STATE_BUILD_AS_WRITE:    return "BUILD_AS_WRITE";
         case RESOURCE_STATE_RAY_TRACING:       return "RAY_TRACING";
         case RESOURCE_STATE_COMMON:            return "COMMON";
+        case RESOURCE_STATE_SHADING_RATE:      return "SHADING_RATE";
         // clang-format on
         default:
             UNEXPECTED("Unknown resource state");
@@ -1294,7 +1297,7 @@ Uint32 ComputeMipLevelsCount(Uint32 Width, Uint32 Height, Uint32 Depth)
 
 bool VerifyResourceStates(RESOURCE_STATE State, bool IsTexture)
 {
-    static_assert(RESOURCE_STATE_MAX_BIT == (1u << 20), "Please update this function to handle the new resource state");
+    static_assert(RESOURCE_STATE_MAX_BIT == (1u << 21), "Please update this function to handle the new resource state");
 
     // clang-format off
 #define VERIFY_EXCLUSIVE_STATE(ExclusiveState)\
@@ -1314,6 +1317,7 @@ if ( (State & ExclusiveState) != 0 && (State & ~ExclusiveState) != 0 )\
     VERIFY_EXCLUSIVE_STATE(RESOURCE_STATE_PRESENT);
     VERIFY_EXCLUSIVE_STATE(RESOURCE_STATE_BUILD_AS_WRITE);
     VERIFY_EXCLUSIVE_STATE(RESOURCE_STATE_RAY_TRACING);
+    VERIFY_EXCLUSIVE_STATE(RESOURCE_STATE_SHADING_RATE);
 #undef VERIFY_EXCLUSIVE_STATE
     // clang-format on
 
@@ -1344,11 +1348,12 @@ if ( (State & ExclusiveState) != 0 && (State & ~ExclusiveState) != 0 )\
              RESOURCE_STATE_RESOLVE_SOURCE |
              RESOURCE_STATE_RESOLVE_DEST   |
              RESOURCE_STATE_PRESENT        |
+             RESOURCE_STATE_SHADING_RATE   |
              RESOURCE_STATE_INPUT_ATTACHMENT))
         {
             LOG_ERROR_MESSAGE("State ", GetResourceStateString(State), " is invalid: states RESOURCE_STATE_RENDER_TARGET, "
                               "RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_DEPTH_READ, RESOURCE_STATE_RESOLVE_SOURCE, "
-                              "RESOURCE_STATE_RESOLVE_DEST, RESOURCE_STATE_PRESENT, RESOURCE_STATE_INPUT_ATTACHMENT "
+                              "RESOURCE_STATE_RESOLVE_DEST, RESOURCE_STATE_PRESENT, RESOURCE_STATE_INPUT_ATTACHMENT, RESOURCE_STATE_SHADING_RATE "
                               "are not applicable to buffers");
             return false;
         }

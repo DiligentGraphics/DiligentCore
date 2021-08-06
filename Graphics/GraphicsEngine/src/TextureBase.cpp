@@ -175,6 +175,31 @@ void ValidateTextureDesc(const TextureDesc& Desc, const IRenderDevice* pDevice) 
         // in map/unamp operations, which is not safe in multiple contexts.
         LOG_TEXTURE_ERROR_AND_THROW("USAGE_DYNAMIC textures may only be used in one immediate device context.");
     }
+
+    if (Desc.BindFlags & BIND_SHADING_RATE)
+    {
+        if (!pDevice->GetDeviceInfo().Features.VariableRateShading)
+            LOG_TEXTURE_ERROR_AND_THROW("BIND_FLAG_SHADING_RATE requires VariableRateShading feature.");
+
+        switch (pDevice->GetAdapterInfo().ShadingRate.Format)
+        {
+            case SHADING_RATE_FORMAT_PALETTE:
+                if (Desc.Format != TEX_FORMAT_R8_UINT)
+                    LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture format must be R8_UINT");
+                if (Desc.Type != RESOURCE_DIM_TEX_2D && Desc.Type != RESOURCE_DIM_TEX_2D_ARRAY)
+                    LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture must be 2D or 2D Array");
+                break;
+            case SHADING_RATE_FORMAT_UNORM8:
+                if (Desc.Format != TEX_FORMAT_RG8_UNORM)
+                    LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture format must be RG8_UNORM");
+                if (Desc.Type != RESOURCE_DIM_TEX_2D)
+                    LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture must be 2D");
+                break;
+            case SHADING_RATE_FORMAT_FP32:
+            default:
+                LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture is not supported");
+        }
+    }
 }
 
 

@@ -62,13 +62,7 @@ public:
     // This structure is used as the key to find framebuffer
     struct RenderPassCacheKey
     {
-        // clang-format off
-        RenderPassCacheKey() :
-            NumRenderTargets{0},
-            SampleCount     {0},
-            DSVFormat       {TEX_FORMAT_UNKNOWN}
-        {}
-        // clang-format on
+        RenderPassCacheKey() {}
 
         RenderPassCacheKey(Uint32               _NumRenderTargets,
                            Uint32               _SampleCount,
@@ -86,9 +80,10 @@ public:
                 RTVFormats[rt] = _RTVFormats[rt];
         }
         // Default member initialization is intentionally omitted
-        Uint8          NumRenderTargets;
-        Uint8          SampleCount;
-        TEXTURE_FORMAT DSVFormat;
+        Uint8          NumRenderTargets = 0;
+        Uint8          SampleCount      = 0;
+        bool           EnableVRS        = false;
+        TEXTURE_FORMAT DSVFormat        = TEX_FORMAT_UNKNOWN;
         TEXTURE_FORMAT RTVFormats[MAX_RENDER_TARGETS];
 
         bool operator==(const RenderPassCacheKey& rhs) const
@@ -97,7 +92,8 @@ public:
             if (GetHash()        != rhs.GetHash()        ||
                 NumRenderTargets != rhs.NumRenderTargets ||
                 SampleCount      != rhs.SampleCount      ||
-                DSVFormat        != rhs.DSVFormat)
+                DSVFormat        != rhs.DSVFormat        ||
+                EnableVRS        != rhs.EnableVRS)
             {
                 return false;
             }
@@ -114,7 +110,7 @@ public:
         {
             if (Hash == 0)
             {
-                Hash = ComputeHash(NumRenderTargets, SampleCount, DSVFormat);
+                Hash = ComputeHash(NumRenderTargets, SampleCount, DSVFormat, EnableVRS);
                 for (Uint32 rt = 0; rt < NumRenderTargets; ++rt)
                     HashCombine(Hash, RTVFormats[rt]);
             }

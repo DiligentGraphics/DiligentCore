@@ -332,7 +332,7 @@ D3D12_STATIC_BORDER_COLOR BorderColorToD3D12StaticBorderColor(const Float32 Bord
 
 static D3D12_RESOURCE_STATES ResourceStateFlagToD3D12ResourceState(RESOURCE_STATE StateFlag)
 {
-    static_assert(RESOURCE_STATE_MAX_BIT == (1u << 20), "This function must be updated to handle new resource state flag");
+    static_assert(RESOURCE_STATE_MAX_BIT == (1u << 21), "This function must be updated to handle new resource state flag");
     VERIFY((StateFlag & (StateFlag - 1)) == 0, "Only single bit must be set");
     switch (StateFlag)
     {
@@ -358,6 +358,7 @@ static D3D12_RESOURCE_STATES ResourceStateFlagToD3D12ResourceState(RESOURCE_STAT
         case RESOURCE_STATE_BUILD_AS_WRITE:    return D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
         case RESOURCE_STATE_RAY_TRACING:       return D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
         case RESOURCE_STATE_COMMON:            return D3D12_RESOURCE_STATE_COMMON;
+        case RESOURCE_STATE_SHADING_RATE:      return D3D12_RESOURCE_STATE_SHADING_RATE_SOURCE;
         // clang-format on
         default:
             UNEXPECTED("Unexpected resource state flag");
@@ -384,7 +385,7 @@ public:
     }
 
 private:
-    static constexpr Uint32                              MaxFlagBitPos = 20;
+    static constexpr Uint32                              MaxFlagBitPos = 21;
     std::array<D3D12_RESOURCE_STATES, MaxFlagBitPos + 1> FlagBitPosToResStateMap;
 };
 
@@ -427,7 +428,8 @@ D3D12_RESOURCE_STATES GetSupportedD3D12ResourceStatesForCommandList(D3D12_COMMAN
         D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE |
         D3D12_RESOURCE_STATE_STREAM_OUT |
         D3D12_RESOURCE_STATE_RESOLVE_DEST |
-        D3D12_RESOURCE_STATE_RESOLVE_SOURCE;
+        D3D12_RESOURCE_STATE_RESOLVE_SOURCE |
+        D3D12_RESOURCE_STATE_SHADING_RATE_SOURCE;
 
     switch (CmdListType)
     {
@@ -444,7 +446,7 @@ D3D12_RESOURCE_STATES GetSupportedD3D12ResourceStatesForCommandList(D3D12_COMMAN
 
 static RESOURCE_STATE D3D12ResourceStateToResourceStateFlags(D3D12_RESOURCE_STATES state)
 {
-    static_assert(RESOURCE_STATE_MAX_BIT == (1u << 20), "This function must be updated to handle new resource state flag");
+    static_assert(RESOURCE_STATE_MAX_BIT == (1u << 21), "This function must be updated to handle new resource state flag");
     VERIFY((state & (state - 1)) == 0, "Only single state must be set");
     switch (state)
     {
@@ -465,6 +467,7 @@ static RESOURCE_STATE D3D12ResourceStateToResourceStateFlags(D3D12_RESOURCE_STAT
         case D3D12_RESOURCE_STATE_COPY_SOURCE:                return RESOURCE_STATE_COPY_SOURCE;
         case D3D12_RESOURCE_STATE_RESOLVE_DEST:               return RESOURCE_STATE_RESOLVE_DEST;
         case D3D12_RESOURCE_STATE_RESOLVE_SOURCE:             return RESOURCE_STATE_RESOLVE_SOURCE;
+        case D3D12_RESOURCE_STATE_SHADING_RATE_SOURCE:        return RESOURCE_STATE_SHADING_RATE;
         // clang-format on
         default:
             UNEXPECTED("Unexpected D3D12 resource state");
@@ -912,6 +915,46 @@ D3D12_COMMAND_QUEUE_PRIORITY QueuePriorityToD3D12QueuePriority(QUEUE_PRIORITY Pr
         default:
             UNEXPECTED("Unexpected queue priority");
             return D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
+    }
+}
+
+D3D12_SHADING_RATE ShadingRateToD3D12ShadingRate(SHADING_RATE Rate)
+{
+#ifdef DILIGENT_DEBUG
+    switch (Rate)
+    {
+        // clang-format off
+        case SHADING_RATE_1x1: VERIFY_EXPR(static_cast<D3D12_SHADING_RATE>(Rate) == D3D12_SHADING_RATE_1X1); break;
+        case SHADING_RATE_1x2: VERIFY_EXPR(static_cast<D3D12_SHADING_RATE>(Rate) == D3D12_SHADING_RATE_1X2); break;
+        case SHADING_RATE_2x1: VERIFY_EXPR(static_cast<D3D12_SHADING_RATE>(Rate) == D3D12_SHADING_RATE_2X1); break;
+        case SHADING_RATE_2x2: VERIFY_EXPR(static_cast<D3D12_SHADING_RATE>(Rate) == D3D12_SHADING_RATE_2X2); break;
+        case SHADING_RATE_2x4: VERIFY_EXPR(static_cast<D3D12_SHADING_RATE>(Rate) == D3D12_SHADING_RATE_2X4); break;
+        case SHADING_RATE_4x2: VERIFY_EXPR(static_cast<D3D12_SHADING_RATE>(Rate) == D3D12_SHADING_RATE_4X2); break;
+        case SHADING_RATE_4x4: VERIFY_EXPR(static_cast<D3D12_SHADING_RATE>(Rate) == D3D12_SHADING_RATE_4X4); break;
+        // clang-format on
+        default:
+            UNEXPECTED("Unexpected shading rate");
+    }
+#endif
+    return static_cast<D3D12_SHADING_RATE>(Rate);
+}
+
+D3D12_SHADING_RATE_COMBINER ShadingRateCombinerToD3D12ShadingRateCombiner(SHADING_RATE_COMBINER Combiner)
+{
+    static_assert(SHADING_RATE_COMBINER_LAST == (1u << 5), "Please update the switch below to handle the shading rate combiner");
+    VERIFY(IsPowerOfTwo(Uint32{Combiner}), "Only a single combiner should be provided");
+    switch (Combiner)
+    {
+        // clang-format off
+        case SHADING_RATE_COMBINER_PASSTHROUGH: return D3D12_SHADING_RATE_COMBINER_PASSTHROUGH;
+        case SHADING_RATE_COMBINER_OVERRIDE:    return D3D12_SHADING_RATE_COMBINER_OVERRIDE;
+        case SHADING_RATE_COMBINER_MIN:         return D3D12_SHADING_RATE_COMBINER_MIN;
+        case SHADING_RATE_COMBINER_MAX:         return D3D12_SHADING_RATE_COMBINER_MAX;
+        case SHADING_RATE_COMBINER_SUM:         return D3D12_SHADING_RATE_COMBINER_SUM;
+        // clang-format on
+        default:
+            UNEXPECTED("Unexpected shading rate combiner");
+            return D3D12_SHADING_RATE_COMBINER_PASSTHROUGH;
     }
 }
 

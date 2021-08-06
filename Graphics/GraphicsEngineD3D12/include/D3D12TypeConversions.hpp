@@ -106,6 +106,9 @@ D3D12_DESCRIPTOR_HEAP_TYPE D3D12DescriptorRangeTypeToD3D12HeapType(D3D12_DESCRIP
 
 D3D12_SHADER_VISIBILITY ShaderStagesToD3D12ShaderVisibility(SHADER_TYPE Stages);
 
+D3D12_SHADING_RATE          ShadingRateToD3D12ShadingRate(SHADING_RATE Rate);
+D3D12_SHADING_RATE_COMBINER ShadingRateCombinerToD3D12ShadingRateCombiner(SHADING_RATE_COMBINER Combiner);
+
 HardwareQueueIndex           D3D12CommandListTypeToQueueId(D3D12_COMMAND_LIST_TYPE Type);
 D3D12_COMMAND_LIST_TYPE      QueueIdToD3D12CommandListType(HardwareQueueIndex QueueId);
 COMMAND_QUEUE_TYPE           D3D12CommandListTypeToCmdQueueType(D3D12_COMMAND_LIST_TYPE ListType);

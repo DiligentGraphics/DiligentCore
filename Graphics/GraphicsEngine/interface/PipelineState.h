@@ -200,6 +200,10 @@ struct GraphicsPipelineDesc
     /// When pRenderPass is null, this member must be 0.
     Uint8 SubpassIndex           DEFAULT_INITIALIZER(0);
 
+    /// AZ TODO
+    /// required for Vulkan
+    Bool  EnableVRS              DEFAULT_INITIALIZER(False);
+
     /// Render target formats.
     /// All formats must be TEX_FORMAT_UNKNOWN when pRenderPass is not null.
     TEXTURE_FORMAT RTVFormats[DILIGENT_MAX_RENDER_TARGETS] DEFAULT_INITIALIZER({});
