@@ -648,4 +648,6 @@ String GetShaderResourcePrintName(const DescType& ResDesc, Uint32 ArrayIndex = 0
     return GetShaderResourcePrintName(ResDesc.Name, ResDesc.ArraySize, ArrayIndex);
 }
 
+TEXTURE_FORMAT TexFormatToSRGB(TEXTURE_FORMAT Fmt);
+
 } // namespace Diligent

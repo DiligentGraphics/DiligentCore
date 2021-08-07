@@ -26,17 +26,22 @@
  */
 
 #include "pch.h"
-
-
 #include "DataBlobImpl.hpp"
+
+#include <cstring>
 
 namespace Diligent
 {
 
-DataBlobImpl::DataBlobImpl(IReferenceCounters* pRefCounters, size_t InitialSize) :
+DataBlobImpl::DataBlobImpl(IReferenceCounters* pRefCounters, size_t InitialSize, const void* pData) :
     TBase{pRefCounters},
     m_DataBuff(InitialSize)
-{}
+{
+    if (!m_DataBuff.empty() && pData != nullptr)
+    {
+        std::memcpy(m_DataBuff.data(), pData, InitialSize);
+    }
+}
 
 /// Sets the size of the internal data buffer
 void DataBlobImpl::Resize(size_t NewSize)

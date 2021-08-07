@@ -44,7 +44,7 @@ class DataBlobImpl : public Diligent::ObjectBase<IDataBlob>
 public:
     typedef ObjectBase<IDataBlob> TBase;
 
-    DataBlobImpl(IReferenceCounters* pRefCounters, size_t InitialSize = 0);
+    DataBlobImpl(IReferenceCounters* pRefCounters, size_t InitialSize = 0, const void* pData = nullptr);
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override;
 
