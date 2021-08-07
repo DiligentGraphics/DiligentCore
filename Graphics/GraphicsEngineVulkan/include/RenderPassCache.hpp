@@ -67,11 +67,13 @@ public:
         RenderPassCacheKey(Uint32               _NumRenderTargets,
                            Uint32               _SampleCount,
                            const TEXTURE_FORMAT _RTVFormats[],
-                           TEXTURE_FORMAT       _DSVFormat) :
+                           TEXTURE_FORMAT       _DSVFormat,
+                           bool                 _EnableVRS) :
             // clang-format off
             NumRenderTargets{static_cast<decltype(NumRenderTargets)>(_NumRenderTargets)},
             SampleCount     {static_cast<decltype(SampleCount)>     (_SampleCount)     },
-            DSVFormat       {_DSVFormat                                                }
+            DSVFormat       {_DSVFormat                                                },
+            EnableVRS       {_EnableVRS                                                }
         // clang-format on
         {
             VERIFY_EXPR(_NumRenderTargets <= std::numeric_limits<decltype(NumRenderTargets)>::max());

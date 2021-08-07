@@ -2784,8 +2784,6 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// AZ TODO
     VIRTUAL void METHOD(SetShadingRateTexture)(THIS_
                                                ITextureView*                  pShadingRateView,
-                                               Uint32                         TileWidth,
-                                               Uint32                         TileHeight,
                                                RESOURCE_STATE_TRANSITION_MODE TransitionMode) PURE;
 };
 DILIGENT_END_INTERFACE

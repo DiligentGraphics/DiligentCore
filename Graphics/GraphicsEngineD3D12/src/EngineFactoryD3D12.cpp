@@ -875,11 +875,11 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
                 {
                     ShadingRateProps.CapFlags |=
                         SHADING_RATE_CAP_FLAG_PER_PRIMITIVE | SHADING_RATE_CAP_FLAG_TEXTURE_BASED |
-                        SHADING_RATE_CAP_FLAG_SAMPLE_MASK | SHADING_RATE_CAP_FLAG_COVERAGE_SAMPLES;
-                    ShadingRateProps.MinTileWidth  = 1;
-                    ShadingRateProps.MinTileHeight = 1;
-                    ShadingRateProps.MaxTileWidth  = d3d12Features6.ShadingRateImageTileSize;
-                    ShadingRateProps.MaxTileHeight = d3d12Features6.ShadingRateImageTileSize;
+                        SHADING_RATE_CAP_FLAG_SAMPLE_MASK | SHADING_RATE_CAP_FLAG_SHADER_SAMPLE_MASK;
+                    ShadingRateProps.MinTileSize[0] = 1;
+                    ShadingRateProps.MinTileSize[1] = 1;
+                    ShadingRateProps.MaxTileSize[0] = d3d12Features6.ShadingRateImageTileSize;
+                    ShadingRateProps.MaxTileSize[1] = d3d12Features6.ShadingRateImageTileSize;
                     ShadingRateProps.Combiners |= SHADING_RATE_COMBINER_OVERRIDE |
                         SHADING_RATE_COMBINER_MIN | SHADING_RATE_COMBINER_MAX | SHADING_RATE_COMBINER_SUM;
                 }

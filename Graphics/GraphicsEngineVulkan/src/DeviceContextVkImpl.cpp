@@ -675,11 +675,17 @@ void DeviceContextVkImpl::DvpLogRenderPass_PSOMismatch()
         ss << "<Not set>";
     ss << "; Sample count: " << SampleCount;
 
+    if (m_pBoundShadingRateTexture)
+        ss << "; VRS";
+
     ss << "\n    PSO: render targets (" << Uint32{GrPipeline.NumRenderTargets} << "): ";
     for (Uint32 rt = 0; rt < GrPipeline.NumRenderTargets; ++rt)
         ss << ' ' << GetTextureFormatAttribs(GrPipeline.RTVFormats[rt]).Name;
     ss << "; DSV: " << GetTextureFormatAttribs(GrPipeline.DSVFormat).Name;
     ss << "; Sample count: " << Uint32{GrPipeline.SmplDesc.Count};
+
+    if (GrPipeline.ShadingRateFlags & PIPELINE_SHADING_RATE_TEXTURE_BASED)
+        ss << "; VRS";
 
     LOG_ERROR_MESSAGE(ss.str());
 }
@@ -692,6 +698,8 @@ void DeviceContextVkImpl::PrepareForDraw(DRAW_FLAGS Flags)
 
     VERIFY(m_vkRenderPass != VK_NULL_HANDLE, "No render pass is active while executing draw command");
     VERIFY(m_vkFramebuffer != VK_NULL_HANDLE, "No framebuffer is bound while executing draw command");
+
+    DvpVerifyShadingRateMode();
 #endif
 
     EnsureVkCmdBuffer();
@@ -2709,10 +2717,11 @@ void DeviceContextVkImpl::TransitionTextureState(TextureVkImpl&           Textur
     // Always add barrier after writes.
     const bool AfterWrite = ResourceStateHasWriteAccess(OldState);
 
-    auto OldLayout = (Flags & STATE_TRANSITION_FLAG_DISCARD_CONTENT) != 0 ? VK_IMAGE_LAYOUT_UNDEFINED : ResourceStateToVkImageLayout(OldState);
-    auto NewLayout = ResourceStateToVkImageLayout(NewState);
-    auto OldStages = ResourceStateFlagsToVkPipelineStageFlags(OldState);
-    auto NewStages = ResourceStateFlagsToVkPipelineStageFlags(NewState);
+    const bool FragDensityMap = m_pDevice->GetLogicalDevice().GetEnabledExtFeatures().FragmentDensityMap.fragmentDensityMap != VK_FALSE;
+    const auto OldLayout      = (Flags & STATE_TRANSITION_FLAG_DISCARD_CONTENT) != 0 ? VK_IMAGE_LAYOUT_UNDEFINED : ResourceStateToVkImageLayout(OldState, /*IsInsideRenderPass = */ false, FragDensityMap);
+    const auto NewLayout      = ResourceStateToVkImageLayout(NewState, /*IsInsideRenderPass = */ false, FragDensityMap);
+    const auto OldStages      = ResourceStateFlagsToVkPipelineStageFlags(OldState, FragDensityMap);
+    const auto NewStages      = ResourceStateFlagsToVkPipelineStageFlags(NewState, FragDensityMap);
 
     if (((OldState & NewState) != NewState) || OldLayout != NewLayout || AfterWrite)
     {
@@ -3610,29 +3619,49 @@ void DeviceContextVkImpl::SetShadingRate(SHADING_RATE BaseRate, SHADING_RATE_COM
 {
     TDeviceContextBase::SetShadingRate(BaseRate, PrimitiveCombiner, TextureCombiner, 0);
 
-#if PLATFORM_ANDROID
-    // AZ TODO
-#else
-    const VkFragmentShadingRateCombinerOpKHR CombinerOps[2] =
-        {
-            ShadingRateCombinerToVkFragmentShadingRateCombinerOp(PrimitiveCombiner),
-            ShadingRateCombinerToVkFragmentShadingRateCombinerOp(TextureCombiner) //
-        };
+    const auto& ExtFeatures = m_pDevice->GetLogicalDevice().GetEnabledExtFeatures();
+    if (ExtFeatures.ShadingRate.attachmentFragmentShadingRate != VK_FALSE)
+    {
+        const VkFragmentShadingRateCombinerOpKHR CombinerOps[2] =
+            {
+                ShadingRateCombinerToVkFragmentShadingRateCombinerOp(PrimitiveCombiner),
+                ShadingRateCombinerToVkFragmentShadingRateCombinerOp(TextureCombiner) //
+            };
 
-    EnsureVkCmdBuffer();
-    m_CommandBuffer.SetFragmentShadingRate(ShadingRateToVkFragmentSize(BaseRate), CombinerOps);
-#endif
+        EnsureVkCmdBuffer();
+        m_CommandBuffer.SetFragmentShadingRate(ShadingRateToVkFragmentSize(BaseRate), CombinerOps);
+    }
+    else if (ExtFeatures.FragmentDensityMap.fragmentDensityMap != VK_FALSE)
+    {
+        // ignored
+        DEV_CHECK_ERR(BaseRate == SHADING_RATE_1x1, "IDeviceContext::SetShadingRate: BaseRate must be SHADING_RATE_1x1");
+        DEV_CHECK_ERR(PrimitiveCombiner == SHADING_RATE_COMBINER_PASSTHROUGH, "IDeviceContext::SetShadingRate: PrimitiveCombiner must be SHADING_RATE_COMBINER_PASSTHROUGH");
+        DEV_CHECK_ERR(TextureCombiner == SHADING_RATE_COMBINER_OVERRIDE, "IDeviceContext::SetShadingRate: TextureCombiner must be SHADING_RATE_COMBINER_OVERRIDE");
+    }
+    else
+        UNEXPECTED("VariableRateShading device feature is not enabled");
 }
 
-void DeviceContextVkImpl::SetShadingRateTexture(ITextureView* pShadingRateView, Uint32 TileWidth, Uint32 TileHeight, RESOURCE_STATE_TRANSITION_MODE TransitionMode)
+void DeviceContextVkImpl::SetShadingRateTexture(ITextureView* pShadingRateView, RESOURCE_STATE_TRANSITION_MODE TransitionMode)
 {
-    TDeviceContextBase::SetShadingRateTexture(pShadingRateView, TileWidth, TileHeight, TransitionMode, 0);
+    TDeviceContextBase::SetShadingRateTexture(pShadingRateView, TransitionMode, 0);
 
-    auto* pTexViewVk = ValidatedCast<TextureViewVkImpl>(pShadingRateView);
-    auto* pTexVk     = ValidatedCast<TextureVkImpl>(pTexViewVk->GetTexture());
-    TransitionOrVerifyTextureState(*pTexVk, TransitionMode, RESOURCE_STATE_SHADING_RATE, VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR, "Shading rate texture (DeviceContextD3D12Impl::SetShadingRateTexture)");
+    auto*       pTexViewVk  = ValidatedCast<TextureViewVkImpl>(pShadingRateView);
+    auto*       pTexVk      = ValidatedCast<TextureVkImpl>(pTexViewVk->GetTexture());
+    const auto& ExtFeatures = m_pDevice->GetLogicalDevice().GetEnabledExtFeatures();
 
-    ChooseRenderPassAndFramebuffer(true);
+    if (ExtFeatures.ShadingRate.attachmentFragmentShadingRate != VK_FALSE)
+    {
+        TransitionOrVerifyTextureState(*pTexVk, TransitionMode, RESOURCE_STATE_SHADING_RATE, VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR, "Shading rate texture (IDeviceContext::SetShadingRateTexture)");
+        ChooseRenderPassAndFramebuffer(true);
+    }
+    else if (ExtFeatures.FragmentDensityMap.fragmentDensityMap != VK_FALSE)
+    {
+        TransitionOrVerifyTextureState(*pTexVk, TransitionMode, RESOURCE_STATE_SHADING_RATE, VK_IMAGE_LAYOUT_FRAGMENT_DENSITY_MAP_OPTIMAL_EXT, "Fragment density map (IDeviceContext::SetShadingRateTexture)");
+        ChooseRenderPassAndFramebuffer(true);
+    }
+    else
+        UNEXPECTED("VariableRateShading device feature is not enabled");
 }
 
 } // namespace Diligent

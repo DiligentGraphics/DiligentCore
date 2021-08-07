@@ -146,12 +146,12 @@ static VkPipelineStageFlags PipelineStageFromAccessFlags(VkAccessFlags AccessFla
                 Stages |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR;
                 break;
 
-            // AZ TODO
+            // Read access to a fragment shading rate attachment during rasterization.
             case VK_ACCESS_FRAGMENT_SHADING_RATE_ATTACHMENT_READ_BIT_KHR:
                 Stages |= VK_PIPELINE_STAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR;
                 break;
 
-            // AZ TODO
+            // Read access to a fragment density map attachment during dynamic fragment density map operations.
             case VK_ACCESS_FRAGMENT_DENSITY_MAP_READ_BIT_EXT:
                 Stages |= VK_PIPELINE_STAGE_FRAGMENT_DENSITY_PROCESS_BIT_EXT;
                 break;

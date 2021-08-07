@@ -295,7 +295,8 @@ DILIGENT_TYPED_ENUM(TEXTURE_VIEW_TYPE, Uint8)
     /// for unordered read/write operations from the shaders
     TEXTURE_VIEW_UNORDERED_ACCESS,
 
-    /// AZ TODO
+    /// A texture view will define a variable shading rate view that will be used
+    /// for shading rate source for render pass
     TEXTURE_VIEW_SHADING_RATE,
 
     /// Helper value that stores that total number of texture views
@@ -2385,11 +2386,15 @@ DILIGENT_TYPED_ENUM(SHADING_RATE_CAP_FLAGS, Uint8)
     /// Use IDeviceContext::SetShadingRateTexture() to set the shading rate texture.
     SHADING_RATE_CAP_FLAG_TEXTURE_BASED       = 1u << 2,
 
-    /// AZ TODO
+    /// Allows to set zero bits to GraphicsPipelineDesc::SampleMask
+    /// with enabled variable rate shading.
     SHADING_RATE_CAP_FLAG_SAMPLE_MASK         = 1u << 3,
 
+    /// Allows to use SampleMask in shader with enabled variable rate shading.
+    SHADING_RATE_CAP_FLAG_SHADER_SAMPLE_MASK  = 1u << 4,
+
     /// AZ TODO
-    SHADING_RATE_CAP_FLAG_COVERAGE_SAMPLES    = 1u << 4,
+    //SHADING_RATE_CAP_FLAG_COVERAGE_SAMPLES    = 1u << 5,
 
     /// AZ TODO
     SHADING_RATE_CAP_FLAG_DEPTH_STENCIL_WRITE = 1u << 5,
@@ -2409,18 +2414,17 @@ struct ShadingRateProperties
     ShadingRateMode        ShadingRates [DILIGENT_MAX_SHADING_RATES]  DEFAULT_INITIALIZER({});
     Uint32                 NumShadingRates                   DEFAULT_INITIALIZER(0);
 
+    /// Shading rate capability flags, see Diligent::SHADING_RATE_CAP_FLAGS.
     SHADING_RATE_CAP_FLAGS CapFlags       DEFAULT_INITIALIZER(SHADING_RATE_CAP_FLAG_NONE);
 
     /// Combination of all supported shading rate combiners (See Diligent::SHADING_RATE_COMBINER).
     SHADING_RATE_COMBINER  Combiners      DEFAULT_INITIALIZER(SHADING_RATE_COMBINER_PASSTHROUGH);
 
-    // Indicates which shading rate texture format is used by this device.
+    /// Indicates which shading rate texture format is used by this device.
     SHADING_RATE_FORMAT    Format         DEFAULT_INITIALIZER(SHADING_RATE_FORMAT_UNKNOWN);
 
-    Uint32                 MinTileWidth   DEFAULT_INITIALIZER(0);
-    Uint32                 MinTileHeight  DEFAULT_INITIALIZER(0);
-    Uint32                 MaxTileWidth   DEFAULT_INITIALIZER(0);
-    Uint32                 MaxTileHeight  DEFAULT_INITIALIZER(0); // AZ TODO: tile size depends on sample count
+    Uint32                 MinTileSize[2] DEFAULT_INITIALIZER({});
+    Uint32                 MaxTileSize[2] DEFAULT_INITIALIZER({});
 };
 typedef struct ShadingRateProperties ShadingRateProperties;
 
@@ -3594,7 +3598,8 @@ DILIGENT_TYPED_ENUM(RESOURCE_STATE, Uint32)
     /// \remarks Supported contexts: graphics, compute, transfer.
     RESOURCE_STATE_COMMON               = 1u << 20,
 
-    /// AZ TODO
+    /// The resource is used as the source when variable shading rate rendering.
+    /// \remarks Supported contexts: graphics.
     RESOURCE_STATE_SHADING_RATE         = 1u << 21,
 
     RESOURCE_STATE_MAX_BIT              = RESOURCE_STATE_SHADING_RATE,

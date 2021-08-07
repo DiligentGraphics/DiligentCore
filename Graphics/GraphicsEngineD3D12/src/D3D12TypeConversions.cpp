@@ -920,27 +920,24 @@ D3D12_COMMAND_QUEUE_PRIORITY QueuePriorityToD3D12QueuePriority(QUEUE_PRIORITY Pr
 
 D3D12_SHADING_RATE ShadingRateToD3D12ShadingRate(SHADING_RATE Rate)
 {
-#ifdef DILIGENT_DEBUG
-    switch (Rate)
-    {
-        // clang-format off
-        case SHADING_RATE_1x1: VERIFY_EXPR(static_cast<D3D12_SHADING_RATE>(Rate) == D3D12_SHADING_RATE_1X1); break;
-        case SHADING_RATE_1x2: VERIFY_EXPR(static_cast<D3D12_SHADING_RATE>(Rate) == D3D12_SHADING_RATE_1X2); break;
-        case SHADING_RATE_2x1: VERIFY_EXPR(static_cast<D3D12_SHADING_RATE>(Rate) == D3D12_SHADING_RATE_2X1); break;
-        case SHADING_RATE_2x2: VERIFY_EXPR(static_cast<D3D12_SHADING_RATE>(Rate) == D3D12_SHADING_RATE_2X2); break;
-        case SHADING_RATE_2x4: VERIFY_EXPR(static_cast<D3D12_SHADING_RATE>(Rate) == D3D12_SHADING_RATE_2X4); break;
-        case SHADING_RATE_4x2: VERIFY_EXPR(static_cast<D3D12_SHADING_RATE>(Rate) == D3D12_SHADING_RATE_4X2); break;
-        case SHADING_RATE_4x4: VERIFY_EXPR(static_cast<D3D12_SHADING_RATE>(Rate) == D3D12_SHADING_RATE_4X4); break;
-        // clang-format on
-        default:
-            UNEXPECTED("Unexpected shading rate");
-    }
-#endif
+#ifdef NTDDI_WIN10_19H1
+    static_assert(static_cast<D3D12_SHADING_RATE>(SHADING_RATE_1x1) == D3D12_SHADING_RATE_1X1, "SHADING_RATE_1x1 constant dosn't match with D3D12 constant");
+    static_assert(static_cast<D3D12_SHADING_RATE>(SHADING_RATE_1x2) == D3D12_SHADING_RATE_1X2, "SHADING_RATE_1x2 constant dosn't match with D3D12 constant");
+    static_assert(static_cast<D3D12_SHADING_RATE>(SHADING_RATE_2x1) == D3D12_SHADING_RATE_2X1, "SHADING_RATE_2x1 constant dosn't match with D3D12 constant");
+    static_assert(static_cast<D3D12_SHADING_RATE>(SHADING_RATE_2x2) == D3D12_SHADING_RATE_2X2, "SHADING_RATE_2x2 constant dosn't match with D3D12 constant");
+    static_assert(static_cast<D3D12_SHADING_RATE>(SHADING_RATE_2x4) == D3D12_SHADING_RATE_2X4, "SHADING_RATE_2x4 constant dosn't match with D3D12 constant");
+    static_assert(static_cast<D3D12_SHADING_RATE>(SHADING_RATE_4x2) == D3D12_SHADING_RATE_4X2, "SHADING_RATE_4x2 constant dosn't match with D3D12 constant");
+    static_assert(static_cast<D3D12_SHADING_RATE>(SHADING_RATE_4x4) == D3D12_SHADING_RATE_4X4, "SHADING_RATE_4x4 constant dosn't match with D3D12 constant");
+
     return static_cast<D3D12_SHADING_RATE>(Rate);
+#else
+    return static_cast<D3D12_SHADING_RATE>(0);
+#endif
 }
 
 D3D12_SHADING_RATE_COMBINER ShadingRateCombinerToD3D12ShadingRateCombiner(SHADING_RATE_COMBINER Combiner)
 {
+#ifdef NTDDI_WIN10_19H1
     static_assert(SHADING_RATE_COMBINER_LAST == (1u << 5), "Please update the switch below to handle the shading rate combiner");
     VERIFY(IsPowerOfTwo(Uint32{Combiner}), "Only a single combiner should be provided");
     switch (Combiner)
@@ -956,6 +953,9 @@ D3D12_SHADING_RATE_COMBINER ShadingRateCombinerToD3D12ShadingRateCombiner(SHADIN
             UNEXPECTED("Unexpected shading rate combiner");
             return D3D12_SHADING_RATE_COMBINER_PASSTHROUGH;
     }
+#else
+    return static_cast<D3D12_SHADING_RATE_COMBINER>(0);
+#endif
 }
 
 } // namespace Diligent

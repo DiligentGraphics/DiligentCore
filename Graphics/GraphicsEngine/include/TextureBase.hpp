@@ -319,7 +319,7 @@ protected:
     std::unique_ptr<TextureViewImplType, STDDeleter<TextureViewImplType, TexViewObjAllocatorType>> m_pDefaultDSV;
     /// Default UAV addressing the entire texture
     std::unique_ptr<TextureViewImplType, STDDeleter<TextureViewImplType, TexViewObjAllocatorType>> m_pDefaultUAV;
-    /// Default VRS addressing the entire texture
+    /// Default VRS view addressing the entire texture
     std::unique_ptr<TextureViewImplType, STDDeleter<TextureViewImplType, TexViewObjAllocatorType>> m_pDefaultVRS;
 
     RESOURCE_STATE m_State = RESOURCE_STATE_UNKNOWN;

@@ -65,8 +65,8 @@ RenderPassVkImpl::RenderPassVkImpl(IReferenceCounters*   pRefCounters,
         vkAttachment.storeOp        = AttachmentStoreOpToVkAttachmentStoreOp(Attachment.StoreOp);
         vkAttachment.stencilLoadOp  = AttachmentLoadOpToVkAttachmentLoadOp(Attachment.StencilLoadOp);
         vkAttachment.stencilStoreOp = AttachmentStoreOpToVkAttachmentStoreOp(Attachment.StencilStoreOp);
-        vkAttachment.initialLayout  = ResourceStateToVkImageLayout(Attachment.InitialState, /*IsInsideRenderPass = */ false);
-        vkAttachment.finalLayout    = ResourceStateToVkImageLayout(Attachment.FinalState, /*IsInsideRenderPass = */ true);
+        vkAttachment.initialLayout  = ResourceStateToVkImageLayout(Attachment.InitialState, /*IsInsideRenderPass = */ false, FragDensityMapEnabled);
+        vkAttachment.finalLayout    = ResourceStateToVkImageLayout(Attachment.FinalState, /*IsInsideRenderPass = */ true, FragDensityMapEnabled);
     }
     RenderPassCI.attachmentCount = Desc.AttachmentCount;
     RenderPassCI.pAttachments    = vkAttachments.data();
@@ -119,7 +119,7 @@ RenderPassVkImpl::RenderPassVkImpl(IReferenceCounters*   pRefCounters,
                 DstAttachmnetRef.sType      = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2;
                 DstAttachmnetRef.pNext      = nullptr;
                 DstAttachmnetRef.attachment = SrcAttachmnetRef.AttachmentIndex;
-                DstAttachmnetRef.layout     = ResourceStateToVkImageLayout(SrcAttachmnetRef.State, /*IsInsideRenderPass = */ true);
+                DstAttachmnetRef.layout     = ResourceStateToVkImageLayout(SrcAttachmnetRef.State, /*IsInsideRenderPass = */ true, FragDensityMapEnabled);
                 DstAttachmnetRef.aspectMask = AspectMask;
             }
             return pCurrVkAttachmentReference;
@@ -240,6 +240,7 @@ RenderPassVkImpl::RenderPassVkImpl(IReferenceCounters*   pRefCounters,
 RenderPassVkImpl::~RenderPassVkImpl()
 {
     m_pDevice->SafeReleaseDeviceObject(std::move(m_VkRenderPass), ~Uint64{0});
+    Destruct();
 }
 
 } // namespace Diligent

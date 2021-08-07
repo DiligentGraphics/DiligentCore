@@ -117,4 +117,7 @@ void TestDeviceContextCInterface(struct IDeviceContext* pCtx)
 
     IDeviceContext_DispatchTile(pCtx, (const struct DispatchTileAttribs*)NULL);
     IDeviceContext_GetTileSize(pCtx, (Uint32*)NULL, (Uint32*)NULL);
+
+    IDeviceContext_SetShadingRate(pCtx, SHADING_RATE_1x1, SHADING_RATE_COMBINER_PASSTHROUGH, SHADING_RATE_COMBINER_PASSTHROUGH);
+    IDeviceContext_SetShadingRateTexture(pCtx, (ITextureView*)NULL, RESOURCE_STATE_TRANSITION_MODE_NONE);
 }

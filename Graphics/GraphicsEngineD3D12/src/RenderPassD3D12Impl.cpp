@@ -42,6 +42,7 @@ RenderPassD3D12Impl::RenderPassD3D12Impl(IReferenceCounters*    pRefCounters,
 
 RenderPassD3D12Impl::~RenderPassD3D12Impl()
 {
+    Destruct();
 }
 
 } // namespace Diligent

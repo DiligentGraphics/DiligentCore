@@ -195,7 +195,7 @@ RenderPassVkImpl* RenderPassCache::GetRenderPass(const RenderPassCacheKey& Key)
                 default:
                     UNEXPECTED("Unexpected shading rate format");
             }
-            SRTileSize = {SRProps.MaxTileWidth, SRProps.MaxTileHeight};
+            SRTileSize = {SRProps.MaxTileSize[0], SRProps.MaxTileSize[1]};
         }
 
         SubpassDesc           Subpass;

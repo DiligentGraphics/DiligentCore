@@ -124,6 +124,15 @@ struct ShaderResourceVariableDesc
 typedef struct ShaderResourceVariableDesc ShaderResourceVariableDesc;
 
 
+/// AZ TODO
+DILIGENT_TYPED_ENUM(PIPELINE_SHADING_RATE_FLAGS, Uint8)
+{
+    PIPELINE_SHADING_RATE_NONE          = 0x00,
+    PIPELINE_SHADING_RATE_PER_PRIMITIVE = 0x01,
+    PIPELINE_SHADING_RATE_TEXTURE_BASED = 0x02,
+};
+
+
 /// Pipeline layout description
 struct PipelineResourceLayoutDesc
 {
@@ -202,7 +211,7 @@ struct GraphicsPipelineDesc
 
     /// AZ TODO
     /// required for Vulkan
-    Bool  EnableVRS              DEFAULT_INITIALIZER(False);
+    PIPELINE_SHADING_RATE_FLAGS ShadingRateFlags DEFAULT_INITIALIZER(PIPELINE_SHADING_RATE_NONE);
 
     /// Render target formats.
     /// All formats must be TEX_FORMAT_UNKNOWN when pRenderPass is not null.

@@ -532,6 +532,8 @@ protected:
     void DvpVerifySRBCompatibility(
         CommittedShaderResources&                                 Resources,
         std::function<PipelineResourceSignatureImplType*(Uint32)> CustomGetSignature = nullptr) const;
+
+    void DvpVerifyShadingRateMode() const;
 #else
     // clang-format off
     void DvpVerifyDrawArguments                 (const DrawAttribs&                  Attribs)const {}
@@ -553,6 +555,8 @@ protected:
     void DvpVerifyBufferState (const BufferImplType&    Buffer,  RESOURCE_STATE RequiredState, const char* OperationName)const {}
     void DvpVerifyBLASState   (const BottomLevelASType& BLAS,    RESOURCE_STATE RequiredState, const char* OperationName)const {}
     void DvpVerifyTLASState   (const TopLevelASType&    TLAS,    RESOURCE_STATE RequiredState, const char* OperationName)const {}
+
+    void DvpVerifyShadingRateMode() const {}
     // clang-format on
 #endif
 
@@ -571,7 +575,7 @@ protected:
     void InsertDebugLabel(const Char* Label, const float* pColor, int) const;
 
     void SetShadingRate(SHADING_RATE BaseRate, SHADING_RATE_COMBINER PrimitiveCombiner, SHADING_RATE_COMBINER TextureCombiner, int) const;
-    void SetShadingRateTexture(ITextureView* pShadingRateView, Uint32 TileWidth, Uint32 TileHeight, RESOURCE_STATE_TRANSITION_MODE TransitionMode, int);
+    void SetShadingRateTexture(ITextureView* pShadingRateView, RESOURCE_STATE_TRANSITION_MODE TransitionMode, int);
 
 protected:
     static constexpr Uint32 DrawMeshIndirectCommandStride = sizeof(Uint32) * 3; // D3D12: 12 bytes (x, y, z dimension)
@@ -642,7 +646,7 @@ protected:
     /// Strong reference to the render pass.
     RefCntAutoPtr<RenderPassImplType> m_pActiveRenderPass;
 
-    /// AZ TODO
+    /// Strong reference to the variable rate shading view.
     RefCntAutoPtr<TextureViewImplType> m_pBoundShadingRateTexture;
 
     /// Current subpass index.
@@ -936,6 +940,8 @@ inline bool DeviceContextBase<ImplementationTraits>::SetRenderTargets(
         ResetRenderTargets();
         return false;
     }
+
+    m_pBoundShadingRateTexture = nullptr;
 
     bool bBindRenderTargets = false;
     m_FramebufferWidth      = 0;
@@ -1903,23 +1909,23 @@ void DeviceContextBase<ImplementationTraits>::SetShadingRate(SHADING_RATE BaseRa
 #ifdef DILIGENT_DEVELOPMENT
     DEV_CHECK_ERR(m_pDevice->GetDeviceInfo().Features.VariableRateShading, "IDeviceContext::SetShadingRate: VariableRateShading feature must be enabled");
 
-    const auto& Props = m_pDevice->GetAdapterInfo().ShadingRate;
-    DEV_CHECK_ERR(Props.CapFlags & (SHADING_RATE_CAP_FLAG_PER_DRAW | SHADING_RATE_CAP_FLAG_PER_PRIMITIVE | SHADING_RATE_CAP_FLAG_TEXTURE_BASED),
+    const auto& SRProps = m_pDevice->GetAdapterInfo().ShadingRate;
+    DEV_CHECK_ERR(SRProps.CapFlags & (SHADING_RATE_CAP_FLAG_PER_DRAW | SHADING_RATE_CAP_FLAG_PER_PRIMITIVE | SHADING_RATE_CAP_FLAG_TEXTURE_BASED),
                   "IDeviceContext::SetShadingRate: requires one of flags SHADING_RATE_CAP_FLAG_PER_PRIMITIVE or SHADING_RATE_CAP_FLAG_TEXTURE_BASED");
-    if (Props.CapFlags & SHADING_RATE_CAP_FLAG_PER_PRIMITIVE)
-        DEV_CHECK_ERR(Props.Combiners & PrimitiveCombiner, "IDeviceContext::SetShadingRate: PrimitiveCombiner must be one of supported Combiners");
+    if (SRProps.CapFlags & SHADING_RATE_CAP_FLAG_PER_PRIMITIVE)
+        DEV_CHECK_ERR(SRProps.Combiners & PrimitiveCombiner, "IDeviceContext::SetShadingRate: PrimitiveCombiner must be one of supported Combiners");
     else
         DEV_CHECK_ERR(PrimitiveCombiner == SHADING_RATE_COMBINER_PASSTHROUGH, "IDeviceContext::SetShadingRate: PrimitiveCombiner must be UNKNOWN if per primitive shading is not supported");
 
-    if (Props.CapFlags & SHADING_RATE_CAP_FLAG_TEXTURE_BASED)
-        DEV_CHECK_ERR(Props.Combiners & TextureCombiner, "IDeviceContext::SetShadingRate: TextureCombiner must be one of supported Combiners");
+    if (SRProps.CapFlags & SHADING_RATE_CAP_FLAG_TEXTURE_BASED)
+        DEV_CHECK_ERR(SRProps.Combiners & TextureCombiner, "IDeviceContext::SetShadingRate: TextureCombiner must be one of supported Combiners");
     else
         DEV_CHECK_ERR(TextureCombiner == SHADING_RATE_COMBINER_PASSTHROUGH, "IDeviceContext::SetShadingRate: TextureCombiner must be UNKNOWN if texture based shading is not supported");
 
     bool IsSupported = false;
-    for (Uint32 i = 0; i < Props.NumShadingRates; ++i)
+    for (Uint32 i = 0; i < SRProps.NumShadingRates; ++i)
     {
-        if (Props.ShadingRates[i].Rate == BaseRate)
+        if (SRProps.ShadingRates[i].Rate == BaseRate)
         {
             IsSupported = true;
             break;
@@ -1930,16 +1936,19 @@ void DeviceContextBase<ImplementationTraits>::SetShadingRate(SHADING_RATE BaseRa
 }
 
 template <typename ImplementationTraits>
-void DeviceContextBase<ImplementationTraits>::SetShadingRateTexture(ITextureView* pShadingRateView, Uint32 TileWidth, Uint32 TileHeight, RESOURCE_STATE_TRANSITION_MODE TransitionMode, int)
+void DeviceContextBase<ImplementationTraits>::SetShadingRateTexture(ITextureView* pShadingRateView, RESOURCE_STATE_TRANSITION_MODE TransitionMode, int)
 {
-    DEV_CHECK_ERR(m_pDevice->GetDeviceInfo().Features.VariableRateShading, "IDeviceContext::SetShadingRateTexture: VariableRateShading feature must be enabled");
 #ifdef DILIGENT_DEVELOPMENT
+    DEV_CHECK_ERR(m_pDevice->GetDeviceInfo().Features.VariableRateShading, "IDeviceContext::SetShadingRateTexture: VariableRateShading feature must be enabled");
     if (pShadingRateView != nullptr)
     {
+        const auto& SRProps  = m_pDevice->GetAdapterInfo().ShadingRate;
         const auto& ViewDesc = pShadingRateView->GetDesc();
         const auto& TexDesc  = pShadingRateView->GetTexture()->GetDesc();
         DEV_CHECK_ERR(TexDesc.BindFlags & BIND_SHADING_RATE, "IDeviceContext::SetShadingRateTexture: pShadingRateView must be created with BIND_SHADING_RATE flag");
         DEV_CHECK_ERR(ViewDesc.ViewType == TEXTURE_VIEW_SHADING_RATE, "IDeviceContext::SetShadingRateTexture: pShadingRateView must be created with TEXTURE_VIEW_SHADING_RATE type");
+        DEV_CHECK_ERR(SRProps.CapFlags & SHADING_RATE_CAP_FLAG_TEXTURE_BASED, "IDeviceContext::SetShadingRateTexture: SHADING_RATE_CAP_FLAG_TEXTURE_BASED capability must be supported");
+
         switch (m_pDevice->GetAdapterInfo().ShadingRate.Format)
         {
             case SHADING_RATE_FORMAT_PALETTE:
@@ -1952,8 +1961,10 @@ void DeviceContextBase<ImplementationTraits>::SetShadingRateTexture(ITextureView
                 DEV_ERROR("IDeviceContext::SetShadingRateTexture: unexpected shading rate format");
         }
 
-        //DEV_CHECK_ERR(TileWidth > 0 && TileHeight > 0, "IDeviceContext::SetShadingRateTexture: ");
-        // AZ TODO
+        DEV_CHECK_ERR(TexDesc.Width <= m_FramebufferWidth / SRProps.MinTileSize[0] && TexDesc.Height <= m_FramebufferHeight / SRProps.MinTileSize[1],
+                      "IDeviceContext::SetShadingRateTexture: pShadingRateView size must be <= framebuffer size / ShadingRate::MinTileSize");
+        DEV_CHECK_ERR(TexDesc.Width >= m_FramebufferWidth / SRProps.MaxTileSize[0] && TexDesc.Height >= m_FramebufferHeight / SRProps.MaxTileSize[1],
+                      "IDeviceContext::SetShadingRateTexture: pShadingRateView size must be >= framebuffer size / ShadingRate::MaxTileSize");
     }
 #endif
     m_pBoundShadingRateTexture = ValidatedCast<TextureViewImplType>(pShadingRateView);
@@ -2385,6 +2396,17 @@ void DeviceContextBase<ImplementationTraits>::DvpVerifySRBCompatibility(
     }
 }
 
+template <typename ImplementationTraits>
+void DeviceContextBase<ImplementationTraits>::DvpVerifyShadingRateMode() const
+{
+    if ((m_pPipelineState->GetGraphicsPipelineDesc().ShadingRateFlags & PIPELINE_SHADING_RATE_TEXTURE_BASED) != 0)
+    {
+        DEV_CHECK_ERR(m_pBoundShadingRateTexture != nullptr,
+                      "Draw command use pipeline state with name '", m_pPipelineState->GetDesc().Name,
+                      "' which was created with ShadingRateFlags = PIPELINE_SHADING_RATE_TEXTURE_BASED, ",
+                      "but shading rate texture is not bound; use IDeviceContext::SetShadingRateTexture()");
+    }
+}
 #endif // DILIGENT_DEVELOPMENT
 
 #undef DVP_CHECK_QUEUE_TYPE_COMPATIBILITY

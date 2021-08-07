@@ -75,6 +75,20 @@ void ValidateDepthStencilDesc(const PipelineStateDesc& PSODesc, const GraphicsPi
     CheckStencilOpDesc(DSSDesc.BackFace, "BackFace");
 }
 
+void ValidateMultiSampleDesc(const PipelineStateDesc& PSODesc, const GraphicsPipelineDesc& GraphicsPipeline, const ShadingRateProperties& SRProps) noexcept(false)
+{
+    if (GraphicsPipeline.ShadingRateFlags != PIPELINE_SHADING_RATE_NONE)
+    {
+        if ((SRProps.CapFlags & SHADING_RATE_CAP_FLAG_SAMPLE_MASK) == 0)
+        {
+            const Uint32 RequiredMask = (1u << GraphicsPipeline.SmplDesc.Count);
+
+            if ((GraphicsPipeline.SampleMask & RequiredMask) != RequiredMask)
+                LOG_PSO_ERROR_AND_THROW("SampleMask with zero bits used with EnableVRS which requires SHADING_RATE_CAP_FLAG_SAMPLE_MASK flag");
+        }
+    }
+}
+
 void CorrectDepthStencilDesc(GraphicsPipelineDesc& GraphicsPipeline) noexcept
 {
     auto& DSSDesc = GraphicsPipeline.DepthStencilDesc;
@@ -370,7 +384,8 @@ void ValidatePipelineResourceLayoutDesc(const PipelineStateDesc& PSODesc, const 
     }
 
 void ValidateGraphicsPipelineCreateInfo(const GraphicsPipelineStateCreateInfo& CreateInfo,
-                                        const DeviceFeatures&                  Features) noexcept(false)
+                                        const DeviceFeatures&                  Features,
+                                        const GraphicsAdapterInfo&             AdapterInfo) noexcept(false)
 {
     const auto& PSODesc = CreateInfo.PSODesc;
     if (PSODesc.PipelineType != PIPELINE_TYPE_GRAPHICS && PSODesc.PipelineType != PIPELINE_TYPE_MESH)
@@ -383,6 +398,7 @@ void ValidateGraphicsPipelineCreateInfo(const GraphicsPipelineStateCreateInfo& C
     ValidateBlendStateDesc(PSODesc, GraphicsPipeline);
     ValidateRasterizerStateDesc(PSODesc, GraphicsPipeline);
     ValidateDepthStencilDesc(PSODesc, GraphicsPipeline);
+    ValidateMultiSampleDesc(PSODesc, GraphicsPipeline, AdapterInfo.ShadingRate);
     ValidatePipelineResourceLayoutDesc(PSODesc, Features);
 
 
@@ -449,7 +465,7 @@ void ValidateGraphicsPipelineCreateInfo(const GraphicsPipelineStateCreateInfo& C
             LOG_PSO_ERROR_AND_THROW("Subpass index (", Uint32{GraphicsPipeline.SubpassIndex}, ") must be 0 when explicit render pass is not used.");
     }
 
-    if (CreateInfo.GraphicsPipeline.EnableVRS && !Features.VariableRateShading)
+    if (CreateInfo.GraphicsPipeline.ShadingRateFlags != PIPELINE_SHADING_RATE_NONE && !Features.VariableRateShading)
         LOG_PSO_ERROR_AND_THROW("EnableVRS requires VariableRateShading feature");
 }
 
@@ -704,7 +720,7 @@ void ValidatePSOCreateInfo<GraphicsPipelineStateCreateInfo>(IRenderDevice*      
                                                             const GraphicsPipelineStateCreateInfo& CreateInfo) noexcept(false)
 {
     VERIFY_EXPR(pDevice != nullptr);
-    ValidateGraphicsPipelineCreateInfo(CreateInfo, pDevice->GetDeviceInfo().Features);
+    ValidateGraphicsPipelineCreateInfo(CreateInfo, pDevice->GetDeviceInfo().Features, pDevice->GetAdapterInfo());
 }
 
 template <>

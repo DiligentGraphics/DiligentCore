@@ -548,6 +548,8 @@ void DeviceContextD3D12Impl::PrepareForDraw(GraphicsContext& GraphCtx, DRAW_FLAG
 #ifdef DILIGENT_DEVELOPMENT
     if ((Flags & DRAW_FLAG_VERIFY_RENDER_TARGETS) != 0)
         DvpVerifyRenderTargets();
+
+    DvpVerifyShadingRateMode();
 #endif
 
     if (!m_State.bCommittedD3D12VBsUpToDate && m_pPipelineState->GetNumBufferSlotsUsed() > 0)
@@ -2838,9 +2840,9 @@ void DeviceContextD3D12Impl::SetShadingRate(SHADING_RATE BaseRate, SHADING_RATE_
     GetCmdContext().AsGraphicsContext5().SetShadingRate(ShadingRateToD3D12ShadingRate(BaseRate), Combiners);
 }
 
-void DeviceContextD3D12Impl::SetShadingRateTexture(ITextureView* pShadingRateView, Uint32 TileWidth, Uint32 TileHeight, RESOURCE_STATE_TRANSITION_MODE TransitionMode)
+void DeviceContextD3D12Impl::SetShadingRateTexture(ITextureView* pShadingRateView, RESOURCE_STATE_TRANSITION_MODE TransitionMode)
 {
-    TDeviceContextBase::SetShadingRateTexture(pShadingRateView, TileWidth, TileHeight, TransitionMode, 0);
+    TDeviceContextBase::SetShadingRateTexture(pShadingRateView, TransitionMode, 0);
 
     auto* pTexViewD3D12 = ValidatedCast<TextureViewD3D12Impl>(pShadingRateView);
     auto* pTexD3D12     = ValidatedCast<TextureD3D12Impl>(pTexViewD3D12->GetTexture());

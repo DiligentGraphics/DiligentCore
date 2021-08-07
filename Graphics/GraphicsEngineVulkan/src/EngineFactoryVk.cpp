@@ -300,7 +300,7 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
                 (vkExtFeatures.ShadingRate.primitiveFragmentShadingRate != VK_FALSE ? SHADING_RATE_CAP_FLAG_PER_PRIMITIVE : SHADING_RATE_CAP_FLAG_NONE) |
                 (vkExtFeatures.ShadingRate.attachmentFragmentShadingRate != VK_FALSE ? SHADING_RATE_CAP_FLAG_TEXTURE_BASED : SHADING_RATE_CAP_FLAG_NONE) |
                 (vkDeviceExtProps.ShadingRate.fragmentShadingRateWithSampleMask != VK_FALSE ? SHADING_RATE_CAP_FLAG_SAMPLE_MASK : SHADING_RATE_CAP_FLAG_NONE) |
-                (vkDeviceExtProps.ShadingRate.fragmentShadingRateWithShaderSampleMask != VK_FALSE ? SHADING_RATE_CAP_FLAG_COVERAGE_SAMPLES : SHADING_RATE_CAP_FLAG_NONE) |
+                (vkDeviceExtProps.ShadingRate.fragmentShadingRateWithShaderSampleMask != VK_FALSE ? SHADING_RATE_CAP_FLAG_SHADER_SAMPLE_MASK : SHADING_RATE_CAP_FLAG_NONE) |
                 (vkDeviceExtProps.ShadingRate.fragmentShadingRateWithShaderDepthStencilWrites != VK_FALSE ? SHADING_RATE_CAP_FLAG_DEPTH_STENCIL_WRITE : SHADING_RATE_CAP_FLAG_NONE) |
                 (vkDeviceExtProps.ShadingRate.primitiveFragmentShadingRateWithMultipleViewports != VK_FALSE ? SHADING_RATE_CAP_FLAG_PER_PRIMITIVE_WITH_MULTIPLE_VIEWPORTS : SHADING_RATE_CAP_FLAG_NONE) |
                 (vkDeviceExtProps.ShadingRate.layeredShadingRateAttachments != VK_FALSE ? SHADING_RATE_CAP_FLAG_LAYERED_TEXTURE : SHADING_RATE_CAP_FLAG_NONE);
@@ -314,16 +314,16 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
             }
             if (vkExtFeatures.ShadingRate.attachmentFragmentShadingRate != VK_FALSE)
             {
-                ShadingRateProps.Format        = SHADING_RATE_FORMAT_PALETTE;
-                ShadingRateProps.MinTileWidth  = vkDeviceExtProps.ShadingRate.minFragmentShadingRateAttachmentTexelSize.width;
-                ShadingRateProps.MinTileHeight = vkDeviceExtProps.ShadingRate.minFragmentShadingRateAttachmentTexelSize.height;
-                ShadingRateProps.MaxTileWidth  = vkDeviceExtProps.ShadingRate.maxFragmentShadingRateAttachmentTexelSize.width;
-                ShadingRateProps.MaxTileHeight = vkDeviceExtProps.ShadingRate.maxFragmentShadingRateAttachmentTexelSize.height;
+                ShadingRateProps.Format         = SHADING_RATE_FORMAT_PALETTE;
+                ShadingRateProps.MinTileSize[0] = vkDeviceExtProps.ShadingRate.minFragmentShadingRateAttachmentTexelSize.width;
+                ShadingRateProps.MinTileSize[1] = vkDeviceExtProps.ShadingRate.minFragmentShadingRateAttachmentTexelSize.height;
+                ShadingRateProps.MaxTileSize[0] = vkDeviceExtProps.ShadingRate.maxFragmentShadingRateAttachmentTexelSize.width;
+                ShadingRateProps.MaxTileSize[1] = vkDeviceExtProps.ShadingRate.maxFragmentShadingRateAttachmentTexelSize.height;
             }
 
             Uint32 ShadingRateCount = 0;
             vkGetPhysicalDeviceFragmentShadingRatesKHR(PhysicalDevice.GetVkDeviceHandle(), &ShadingRateCount, nullptr);
-            VERIFY_EXPR(ShadingRateCount >= 3); // Spec says that implementation must support at least 3 modes.
+            VERIFY_EXPR(ShadingRateCount >= 3); // Spec says that implementation must support at least 3 predefined modes.
 
             std::vector<VkPhysicalDeviceFragmentShadingRateKHR> ShadingRates{ShadingRateCount};
             for (auto& SR : ShadingRates)
@@ -335,14 +335,27 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
             {
                 const auto& Src = ShadingRates[i];
                 auto&       Dst = ShadingRateProps.ShadingRates[i];
-                Dst.SampleBits  = static_cast<Uint8>(Src.sampleCounts); // AZ TODO
-                Dst.Rate        = VkFragmentSizeToShadingRate(Src.fragmentSize);
+
+                // maxFragmentShadingRateRasterizationSamples - contains only maximum bit
+                // sampleCounts - contains all supported bits
+                VERIFY_EXPR((Src.fragmentSize.width == 1 && Src.fragmentSize.height == 1) ||
+                            (Uint32{Src.sampleCounts} <= ((static_cast<Uint32>(vkDeviceExtProps.ShadingRate.maxFragmentShadingRateRasterizationSamples) << 1) - 1)));
+
+                Dst.SampleBits = static_cast<Uint8>(Src.sampleCounts); // AZ TODO
+                Dst.Rate       = VkFragmentSizeToShadingRate(Src.fragmentSize);
             }
         }
         // VK_EXT_fragment_density_map
         else if (vkExtFeatures.FragmentDensityMap.fragmentDensityMap != VK_FALSE)
         {
-            ShadingRateProps.Format = SHADING_RATE_FORMAT_UNORM8;
+            ShadingRateProps.Format    = SHADING_RATE_FORMAT_UNORM8;
+            ShadingRateProps.Combiners = SHADING_RATE_COMBINER_PASSTHROUGH | SHADING_RATE_COMBINER_OVERRIDE;
+            ShadingRateProps.CapFlags  = SHADING_RATE_CAP_FLAG_TEXTURE_BASED | SHADING_RATE_CAP_FLAG_LAYERED_TEXTURE;
+
+            ShadingRateProps.MinTileSize[0] = vkDeviceExtProps.FragmentDensityMap.minFragmentDensityTexelSize.width;
+            ShadingRateProps.MinTileSize[1] = vkDeviceExtProps.FragmentDensityMap.minFragmentDensityTexelSize.height;
+            ShadingRateProps.MaxTileSize[0] = vkDeviceExtProps.FragmentDensityMap.maxFragmentDensityTexelSize.width;
+            ShadingRateProps.MaxTileSize[1] = vkDeviceExtProps.FragmentDensityMap.maxFragmentDensityTexelSize.height;
             // AZ TODO
         }
 #if defined(_MSC_VER) && defined(_WIN64)

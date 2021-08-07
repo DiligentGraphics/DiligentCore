@@ -39,17 +39,6 @@
 namespace Diligent
 {
 
-
-#if PLATFORM_ANDROID
-static constexpr auto VK_IMAGE_LAYOUT_SHADING_RATE_OPTIMAL = VK_IMAGE_LAYOUT_FRAGMENT_DENSITY_MAP_OPTIMAL_EXT;
-static constexpr auto VK_PIPELINE_STAGE_SHADING_RATE_BIT   = VK_PIPELINE_STAGE_FRAGMENT_DENSITY_PROCESS_BIT_EXT;
-static constexpr auto VK_ACCESS_SHADING_RATE_MAP_READ_BIT  = VK_ACCESS_FRAGMENT_DENSITY_MAP_READ_BIT_EXT;
-#else
-static constexpr auto VK_IMAGE_LAYOUT_SHADING_RATE_OPTIMAL = VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR;
-static constexpr auto VK_PIPELINE_STAGE_SHADING_RATE_BIT   = VK_PIPELINE_STAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR;
-static constexpr auto VK_ACCESS_SHADING_RATE_MAP_READ_BIT  = VK_ACCESS_FRAGMENT_SHADING_RATE_ATTACHMENT_READ_BIT_KHR;
-#endif
-
 class TexFormatToVkFormatMapper
 {
 public:
@@ -1183,7 +1172,7 @@ VkBorderColor BorderColorToVkBorderColor(const Float32 BorderColor[])
 }
 
 
-static VkPipelineStageFlags ResourceStateFlagToVkPipelineStage(RESOURCE_STATE StateFlag)
+static VkPipelineStageFlags ResourceStateFlagToVkPipelineStage(RESOURCE_STATE StateFlag, bool FragDensityMapInsteadOfShadingRate)
 {
     static_assert(RESOURCE_STATE_MAX_BIT == (1u << 21), "This function must be updated to handle new resource state flag");
     VERIFY((StateFlag & (StateFlag - 1)) == 0, "Only single bit must be set");
@@ -1211,7 +1200,7 @@ static VkPipelineStageFlags ResourceStateFlagToVkPipelineStage(RESOURCE_STATE St
         case RESOURCE_STATE_BUILD_AS_WRITE:    return VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR;
         case RESOURCE_STATE_RAY_TRACING:       return VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
         case RESOURCE_STATE_COMMON:            return VK_PIPELINE_STAGE_ALL_COMMANDS_BIT; // resource may be used in multiple states
-        case RESOURCE_STATE_SHADING_RATE:      return VK_PIPELINE_STAGE_SHADING_RATE_BIT;
+        case RESOURCE_STATE_SHADING_RATE:      return FragDensityMapInsteadOfShadingRate ? VK_PIPELINE_STAGE_FRAGMENT_DENSITY_PROCESS_BIT_EXT : VK_PIPELINE_STAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR;
             // clang-format on
 
         default:
@@ -1220,7 +1209,7 @@ static VkPipelineStageFlags ResourceStateFlagToVkPipelineStage(RESOURCE_STATE St
     }
 }
 
-VkPipelineStageFlags ResourceStateFlagsToVkPipelineStageFlags(RESOURCE_STATE StateFlags)
+VkPipelineStageFlags ResourceStateFlagsToVkPipelineStageFlags(RESOURCE_STATE StateFlags, bool FragDensityMapInsteadOfShadingRate)
 {
     VERIFY(Uint32{StateFlags} < (RESOURCE_STATE_MAX_BIT << 1), "Resource state flags are out of range");
 
@@ -1228,13 +1217,13 @@ VkPipelineStageFlags ResourceStateFlagsToVkPipelineStageFlags(RESOURCE_STATE Sta
     while (StateFlags != RESOURCE_STATE_UNKNOWN)
     {
         auto StateBit = ExtractLSB(StateFlags);
-        vkPipelineStages |= ResourceStateFlagToVkPipelineStage(StateBit);
+        vkPipelineStages |= ResourceStateFlagToVkPipelineStage(StateBit, FragDensityMapInsteadOfShadingRate);
     }
     return vkPipelineStages;
 }
 
 
-static VkAccessFlags ResourceStateFlagToVkAccessFlags(RESOURCE_STATE StateFlag)
+static VkAccessFlags ResourceStateFlagToVkAccessFlags(RESOURCE_STATE StateFlag, bool FragDensityMapInsteadOfShadingRate)
 {
     // Currently not used:
     //VK_ACCESS_HOST_READ_BIT
@@ -1275,7 +1264,7 @@ static VkAccessFlags ResourceStateFlagToVkAccessFlags(RESOURCE_STATE StateFlag)
         case RESOURCE_STATE_BUILD_AS_WRITE:    return VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR; // for scratch buffer
         case RESOURCE_STATE_RAY_TRACING:       return VK_ACCESS_SHADER_READ_BIT; // for SBT
         case RESOURCE_STATE_COMMON:            return 0; // COMMON state must be used for queue to queue transition (linke in D3D12), queue to queue synchronization via semaphore creates a memory dependency
-        case RESOURCE_STATE_SHADING_RATE:      return VK_ACCESS_SHADING_RATE_MAP_READ_BIT;
+        case RESOURCE_STATE_SHADING_RATE:      return FragDensityMapInsteadOfShadingRate ? VK_ACCESS_FRAGMENT_DENSITY_MAP_READ_BIT_EXT : VK_ACCESS_FRAGMENT_SHADING_RATE_ATTACHMENT_READ_BIT_KHR;
             // clang-format on
 
         default:
@@ -1284,45 +1273,19 @@ static VkAccessFlags ResourceStateFlagToVkAccessFlags(RESOURCE_STATE StateFlag)
     }
 }
 
-class StateFlagBitPosToVkAccessFlags
-{
-public:
-    StateFlagBitPosToVkAccessFlags()
-    {
-        static_assert((1 << MaxFlagBitPos) == RESOURCE_STATE_MAX_BIT, "This function must be updated to handle new resource state flag");
-        for (Uint32 bit = 0; bit < FlagBitPosToVkAccessFlagsMap.size(); ++bit)
-        {
-            FlagBitPosToVkAccessFlagsMap[bit] = ResourceStateFlagToVkAccessFlags(static_cast<RESOURCE_STATE>(1 << bit));
-        }
-    }
-
-    VkAccessFlags operator()(Uint32 BitPos) const
-    {
-        VERIFY(BitPos <= MaxFlagBitPos, "Resource state flag bit position (", BitPos, ") exceeds max bit position (", Uint32{MaxFlagBitPos}, ")");
-        return FlagBitPosToVkAccessFlagsMap[BitPos];
-    }
-
-private:
-    static constexpr const Uint32                MaxFlagBitPos = 21;
-    std::array<VkAccessFlags, MaxFlagBitPos + 1> FlagBitPosToVkAccessFlagsMap;
-};
-
-
-VkAccessFlags ResourceStateFlagsToVkAccessFlags(RESOURCE_STATE StateFlags)
+VkPipelineStageFlags ResourceStateFlagsToVkAccessFlags(RESOURCE_STATE StateFlags, bool FragDensityMapInsteadOfShadingRate)
 {
     VERIFY(Uint32{StateFlags} < (RESOURCE_STATE_MAX_BIT << 1), "Resource state flags are out of range");
-    static const StateFlagBitPosToVkAccessFlags BitPosToAccessFlags;
 
     VkAccessFlags AccessFlags = 0;
-    Uint32        Bits        = StateFlags;
-    while (Bits != 0)
+    while (StateFlags != RESOURCE_STATE_UNKNOWN)
     {
-        auto lsb = PlatformMisc::GetLSB(Bits);
-        AccessFlags |= BitPosToAccessFlags(lsb);
-        Bits &= ~(1 << lsb);
+        auto StateBit = ExtractLSB(StateFlags);
+        AccessFlags |= ResourceStateFlagToVkAccessFlags(StateBit, FragDensityMapInsteadOfShadingRate);
     }
     return AccessFlags;
 }
+
 
 VkAccessFlags AccelStructStateFlagsToVkAccessFlags(RESOURCE_STATE StateFlags)
 {
@@ -1426,7 +1389,7 @@ RESOURCE_STATE VkAccessFlagsToResourceStates(VkAccessFlags AccessFlags)
 
 
 
-VkImageLayout ResourceStateToVkImageLayout(RESOURCE_STATE StateFlag, bool IsInsideRenderPass)
+VkImageLayout ResourceStateToVkImageLayout(RESOURCE_STATE StateFlag, bool IsInsideRenderPass, bool FragDensityMapInsteadOfShadingRate)
 {
     if (StateFlag == RESOURCE_STATE_UNKNOWN)
     {
@@ -1465,7 +1428,7 @@ VkImageLayout ResourceStateToVkImageLayout(RESOURCE_STATE StateFlag, bool IsInsi
         case RESOURCE_STATE_BUILD_AS_WRITE:    UNEXPECTED("Invalid resource state"); return VK_IMAGE_LAYOUT_UNDEFINED;
         case RESOURCE_STATE_RAY_TRACING:       UNEXPECTED("Invalid resource state"); return VK_IMAGE_LAYOUT_UNDEFINED;
         case RESOURCE_STATE_COMMON:            return VK_IMAGE_LAYOUT_GENERAL;
-        case RESOURCE_STATE_SHADING_RATE:      return VK_IMAGE_LAYOUT_SHADING_RATE_OPTIMAL;
+        case RESOURCE_STATE_SHADING_RATE:      return FragDensityMapInsteadOfShadingRate ? VK_IMAGE_LAYOUT_FRAGMENT_DENSITY_MAP_OPTIMAL_EXT : VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR;
             // clang-format on
 
         default:
@@ -1893,8 +1856,8 @@ VkQueueGlobalPriorityEXT QueuePriorityToVkQueueGlobalPriority(QUEUE_PRIORITY Pri
 VkExtent2D ShadingRateToVkFragmentSize(SHADING_RATE Rate)
 {
     VkExtent2D Result;
-    Result.width  = 1u << ((Uint32{Rate} >> DILIGENT_SHADING_RATE_X_SHIFT) & 0x3u);
-    Result.height = 1u << (Uint32{Rate} & 0x3u);
+    Result.width  = 1u << ((Uint32{Rate} >> SHADING_RATE_X_SHIFT) & 0x3);
+    Result.height = 1u << (Uint32{Rate} & 0x3);
     VERIFY_EXPR(Result.width > 0 && Result.height > 0);
     VERIFY_EXPR(Result.width <= (1u << AXIS_SHADING_RATE_MAX) && Result.height <= (1u << AXIS_SHADING_RATE_MAX));
     VERIFY_EXPR(IsPowerOfTwo(Result.width) && IsPowerOfTwo(Result.height));
@@ -1908,7 +1871,7 @@ SHADING_RATE VkFragmentSizeToShadingRate(const VkExtent2D& Size)
     auto Y = PlatformMisc::GetMSB(Size.height);
     VERIFY_EXPR((1u << X) == Size.width);
     VERIFY_EXPR((1u << Y) == Size.height);
-    return static_cast<SHADING_RATE>((X << DILIGENT_SHADING_RATE_X_SHIFT) | Y);
+    return static_cast<SHADING_RATE>((X << SHADING_RATE_X_SHIFT) | Y);
 }
 
 VkFragmentShadingRateCombinerOpKHR ShadingRateCombinerToVkFragmentShadingRateCombinerOp(SHADING_RATE_COMBINER Combiner)

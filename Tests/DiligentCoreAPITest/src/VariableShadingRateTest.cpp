@@ -39,19 +39,18 @@ namespace Testing
 {
 
 #if D3D12_SUPPORTED
-void VariableShadingRatePerPipelineTestReferenceD3D12(ISwapChain* pSwapChain);
+void VariableShadingRatePerDrawTestReferenceD3D12(ISwapChain* pSwapChain);
 void VariableShadingRatePerPrimitiveTestReferenceD3D12(ISwapChain* pSwapChain);
 void VariableShadingRateTextureBasedTestReferenceD3D12(ISwapChain* pSwapChain);
 #endif
 
 #if VULKAN_SUPPORTED
-void VariableShadingRatePerPipelineTestReferenceVk(ISwapChain* pSwapChain);
+void VariableShadingRatePerDrawTestReferenceVk(ISwapChain* pSwapChain);
 void VariableShadingRatePerPrimitiveTestReferenceVk(ISwapChain* pSwapChain);
 void VariableShadingRateTextureBasedTestReferenceVk(ISwapChain* pSwapChain);
 #endif
 
 #if METAL_SUPPORTED
-void VariableShadingRateTestReferenceMtl(ISwapChain* pSwapChain);
 #endif
 
 } // namespace Testing
@@ -64,7 +63,7 @@ using namespace Diligent::Testing;
 namespace
 {
 
-TEST(VariableShadingRateTest, PerPipeline)
+TEST(VariableShadingRateTest, PerDraw)
 {
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
@@ -76,7 +75,7 @@ TEST(VariableShadingRateTest, PerPipeline)
     const auto& SRProps = pDevice->GetAdapterInfo().ShadingRate;
     if (!(SRProps.CapFlags & SHADING_RATE_CAP_FLAG_PER_DRAW))
     {
-        GTEST_SKIP() << "Per pipeline shading rate is not supported by this device";
+        GTEST_SKIP() << "Per draw shading rate is not supported by this device";
     }
 
     auto* pSwapChain = pEnv->GetSwapChain();
@@ -93,13 +92,13 @@ TEST(VariableShadingRateTest, PerPipeline)
         {
 #if D3D12_SUPPORTED
             case RENDER_DEVICE_TYPE_D3D12:
-                VariableShadingRatePerPipelineTestReferenceD3D12(pSwapChain);
+                VariableShadingRatePerDrawTestReferenceD3D12(pSwapChain);
                 break;
 #endif
 
 #if VULKAN_SUPPORTED
             case RENDER_DEVICE_TYPE_VULKAN:
-                VariableShadingRatePerPipelineTestReferenceVk(pSwapChain);
+                VariableShadingRatePerDrawTestReferenceVk(pSwapChain);
                 break;
 #endif
 
@@ -126,6 +125,7 @@ TEST(VariableShadingRateTest, PerPipeline)
     GraphicsPipeline.RasterizerDesc.FrontCounterClockwise = False;
 
     GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+    GraphicsPipeline.ShadingRateFlags             = PIPELINE_SHADING_RATE_PER_PRIMITIVE;
 
     ShaderCreateInfo ShaderCI;
     ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
@@ -238,6 +238,7 @@ TEST(VariableShadingRateTest, PerPrimitive)
     GraphicsPipeline.RasterizerDesc.FrontCounterClockwise = False;
 
     GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+    GraphicsPipeline.ShadingRateFlags             = PIPELINE_SHADING_RATE_PER_PRIMITIVE;
 
     const LayoutElement Elements[] = {
         {0, 0, 2, VT_FLOAT32, False, offsetof(PosAndRate, Pos)},
@@ -323,6 +324,10 @@ TEST(VariableShadingRateTest, TextureBased)
     }
 
     const auto& SRProps = pDevice->GetAdapterInfo().ShadingRate;
+    if (SRProps.Format != SHADING_RATE_FORMAT_PALETTE)
+    {
+        GTEST_SKIP() << "Palette shading rate format is not supported by this device";
+    }
     if (!(SRProps.CapFlags & SHADING_RATE_CAP_FLAG_TEXTURE_BASED))
     {
         GTEST_SKIP() << "Shading rate texture is not supported by this device";
@@ -377,6 +382,7 @@ TEST(VariableShadingRateTest, TextureBased)
     GraphicsPipeline.RasterizerDesc.FrontCounterClockwise = False;
 
     GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+    GraphicsPipeline.ShadingRateFlags             = PIPELINE_SHADING_RATE_TEXTURE_BASED;
 
     ShaderCreateInfo ShaderCI;
     ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
@@ -413,8 +419,8 @@ TEST(VariableShadingRateTest, TextureBased)
     TextureDesc TexDesc;
     TexDesc.Name      = "Shading rate texture";
     TexDesc.Type      = RESOURCE_DIM_TEX_2D;
-    TexDesc.Width     = SCDesc.Width / SRProps.MaxTileWidth;
-    TexDesc.Height    = SCDesc.Height / SRProps.MaxTileHeight;
+    TexDesc.Width     = SCDesc.Width / SRProps.MaxTileSize[0];
+    TexDesc.Height    = SCDesc.Height / SRProps.MaxTileSize[1];
     TexDesc.Format    = TEX_FORMAT_R8_UINT;
     TexDesc.BindFlags = BIND_SHADING_RATE;
     TexDesc.Usage     = USAGE_IMMUTABLE;
@@ -451,7 +457,7 @@ TEST(VariableShadingRateTest, TextureBased)
     pContext->ClearRenderTarget(pRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
     pContext->SetShadingRate(SHADING_RATE_1x1, SHADING_RATE_COMBINER_PASSTHROUGH, SHADING_RATE_COMBINER_OVERRIDE);
-    pContext->SetShadingRateTexture(pSRView, SRProps.MaxTileWidth, SRProps.MaxTileHeight, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    pContext->SetShadingRateTexture(pSRView, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
     pContext->SetPipelineState(pPSO);
 

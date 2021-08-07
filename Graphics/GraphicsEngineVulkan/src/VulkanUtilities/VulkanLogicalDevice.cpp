@@ -197,7 +197,7 @@ FenceWrapper VulkanLogicalDevice::CreateFence(const VkFenceCreateInfo& FenceCI, 
 RenderPassWrapper VulkanLogicalDevice::CreateRenderPass(const VkRenderPassCreateInfo2& RenderPassCI, const char* DebugName) const
 {
     VERIFY_EXPR(RenderPassCI.sType == VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO_2);
-    return CreateVulkanObject<VkRenderPass, VulkanHandleTypeId::RenderPass>(vkCreateRenderPass2, RenderPassCI, DebugName, "render pass");
+    return CreateVulkanObject<VkRenderPass, VulkanHandleTypeId::RenderPass>(vkCreateRenderPass2KHR, RenderPassCI, DebugName, "render pass");
 }
 
 DeviceMemoryWrapper VulkanLogicalDevice::AllocateDeviceMemory(const VkMemoryAllocateInfo& AllocInfo,

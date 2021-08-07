@@ -43,6 +43,7 @@ RenderPassGLImpl::RenderPassGLImpl(IReferenceCounters*   pRefCounters,
 
 RenderPassGLImpl::~RenderPassGLImpl()
 {
+    Destruct();
 }
 
 } // namespace Diligent

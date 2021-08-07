@@ -60,7 +60,6 @@ void main(in  uint    vid : SV_VertexID,
 
 
 const std::string PerDrawShadingRate_PS = ShadingRatePallete + R"hlsl(
-
 struct PSInput
 {
                     float4 Pos  : SV_POSITION;
@@ -128,7 +127,6 @@ void main(in  uint    vid : SV_VertexID,
 
 
 const std::string TextureBasedShadingRate_PS = ShadingRatePallete + R"hlsl(
-
 struct PSInput
 {
                     float4 Pos  : SV_POSITION;

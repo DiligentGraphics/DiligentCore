@@ -745,7 +745,9 @@ void TextureVkImpl::SetLayout(VkImageLayout Layout)
 
 VkImageLayout TextureVkImpl::GetLayout() const
 {
-    return ResourceStateToVkImageLayout(GetState());
+    return ResourceStateToVkImageLayout(GetState(),
+                                        /*IsInsideRenderPass = */ false,
+                                        m_pDevice->GetLogicalDevice().GetEnabledExtFeatures().FragmentDensityMap.fragmentDensityMap != VK_FALSE);
 }
 
 void TextureVkImpl::InvalidateStagingRange(VkDeviceSize Offset, VkDeviceSize Size)

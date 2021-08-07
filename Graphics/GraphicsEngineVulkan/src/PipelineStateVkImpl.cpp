@@ -179,7 +179,8 @@ void CreateGraphicsPipeline(RenderDeviceVkImpl*                           pDevic
             GraphicsPipeline.NumRenderTargets,
             GraphicsPipeline.SmplDesc.Count,
             GraphicsPipeline.RTVFormats,
-            GraphicsPipeline.DSVFormat};
+            GraphicsPipeline.DSVFormat,
+            (GraphicsPipeline.ShadingRateFlags & PIPELINE_SHADING_RATE_TEXTURE_BASED) != 0};
         pRenderPass = RPCache.GetRenderPass(Key);
     }
 
@@ -335,7 +336,7 @@ void CreateGraphicsPipeline(RenderDeviceVkImpl*                           pDevic
         DynamicStates.push_back(VK_DYNAMIC_STATE_SCISSOR);
     }
 
-    if (GraphicsPipeline.EnableVRS &&
+    if (GraphicsPipeline.ShadingRateFlags != PIPELINE_SHADING_RATE_NONE &&
         pDeviceVk->GetLogicalDevice().GetEnabledExtFeatures().ShadingRate.attachmentFragmentShadingRate != VK_FALSE)
     {
         // VkPipelineFragmentShadingRateStateCreateInfoKHR will be ignored

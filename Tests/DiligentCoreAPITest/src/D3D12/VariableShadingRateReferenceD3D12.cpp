@@ -42,7 +42,7 @@ namespace Diligent
 namespace Testing
 {
 
-void VariableShadingRatePerPipelineTestReferenceD3D12(ISwapChain* pSwapChain)
+void VariableShadingRatePerDrawTestReferenceD3D12(ISwapChain* pSwapChain)
 {
     auto* pEnv                   = TestingEnvironmentD3D12::GetInstance();
     auto* pd3d12Device           = pEnv->GetD3D12Device();
@@ -305,8 +305,8 @@ void VariableShadingRateTextureBasedTestReferenceD3D12(ISwapChain* pSwapChain)
         TextureDesc TexDesc;
         TexDesc.Name      = "Shading rate texture";
         TexDesc.Type      = RESOURCE_DIM_TEX_2D;
-        TexDesc.Width     = SCDesc.Width / SRProps.MaxTileWidth;
-        TexDesc.Height    = SCDesc.Height / SRProps.MaxTileHeight;
+        TexDesc.Width     = SCDesc.Width / SRProps.MaxTileSize[0];
+        TexDesc.Height    = SCDesc.Height / SRProps.MaxTileSize[1];
         TexDesc.Format    = TEX_FORMAT_R8_UINT;
         TexDesc.BindFlags = BIND_SHADING_RATE;
         TexDesc.Usage     = USAGE_IMMUTABLE;

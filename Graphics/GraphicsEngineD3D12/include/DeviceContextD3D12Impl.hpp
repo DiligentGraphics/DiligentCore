@@ -301,7 +301,7 @@ public:
     virtual void DILIGENT_CALL_TYPE SetShadingRate(SHADING_RATE BaseRate, SHADING_RATE_COMBINER PrimitiveCombiner, SHADING_RATE_COMBINER TextureCombiner) override final;
 
     /// Implementation of IDeviceContext::SetShadingRateTexture() in Direct3D12 backend.
-    virtual void DILIGENT_CALL_TYPE SetShadingRateTexture(ITextureView* pShadingRateView, Uint32 TileWidth, Uint32 TileHeight, RESOURCE_STATE_TRANSITION_MODE TransitionMode) override final;
+    virtual void DILIGENT_CALL_TYPE SetShadingRateTexture(ITextureView* pShadingRateView, RESOURCE_STATE_TRANSITION_MODE TransitionMode) override final;
 
     void UpdateBufferRegion(class BufferD3D12Impl*         pBuffD3D12,
                             D3D12DynamicAllocation&        Allocation,

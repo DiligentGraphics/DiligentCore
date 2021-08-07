@@ -62,7 +62,7 @@ namespace TestingConstants
         auto XRate = AXIS_SHADING_RATE_MAX - clamp(static_cast<Uint32>(XDist * AXIS_SHADING_RATE_MAX + 0.5f), 0u, Uint32{AXIS_SHADING_RATE_MAX});
         auto YRate = AXIS_SHADING_RATE_MAX - clamp(static_cast<Uint32>(YDist * AXIS_SHADING_RATE_MAX + 0.5f), 0u, Uint32{AXIS_SHADING_RATE_MAX});
 
-        return static_cast<SHADING_RATE>((XRate << DILIGENT_SHADING_RATE_X_SHIFT) | YRate);
+        return static_cast<SHADING_RATE>((XRate << SHADING_RATE_X_SHIFT) | YRate);
     }
 
     } // namespace TextureBased

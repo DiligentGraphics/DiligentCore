@@ -68,10 +68,10 @@ VkSamplerMipmapMode  FilterTypeToVkMipmapMode(FILTER_TYPE FilterType);
 VkSamplerAddressMode AddressModeToVkAddressMode(TEXTURE_ADDRESS_MODE AddressMode);
 VkBorderColor        BorderColorToVkBorderColor(const Float32 BorderColor[]);
 
-VkPipelineStageFlags ResourceStateFlagsToVkPipelineStageFlags(RESOURCE_STATE StateFlags);
-VkAccessFlags        ResourceStateFlagsToVkAccessFlags(RESOURCE_STATE StateFlags);
+VkPipelineStageFlags ResourceStateFlagsToVkPipelineStageFlags(RESOURCE_STATE StateFlags, bool FragDensityMapInsteadOfShadingRate = false);
+VkAccessFlags        ResourceStateFlagsToVkAccessFlags(RESOURCE_STATE StateFlags, bool FragDensityMapInsteadOfShadingRate = false);
 VkAccessFlags        AccelStructStateFlagsToVkAccessFlags(RESOURCE_STATE StateFlags);
-VkImageLayout        ResourceStateToVkImageLayout(RESOURCE_STATE StateFlag, bool IsInsideRenderPass = false);
+VkImageLayout        ResourceStateToVkImageLayout(RESOURCE_STATE StateFlag, bool IsInsideRenderPass = false, bool FragDensityMapInsteadOfShadingRate = false);
 
 RESOURCE_STATE VkAccessFlagsToResourceStates(VkAccessFlags AccessFlags);
 RESOURCE_STATE VkImageLayoutToResourceState(VkImageLayout Layout);
