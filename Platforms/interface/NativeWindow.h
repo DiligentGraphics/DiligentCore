@@ -90,17 +90,16 @@ typedef struct MacOSNativeWindow NativeWindow;
 
 typedef struct IOSNativeWindow NativeWindow;
 
-<<<<<<< HEAD
 #elif PLATFORM_TVOS
 
-    typedef struct TVOSNativeWindow NativeWindow;
+typedef struct TVOSNativeWindow NativeWindow;
 
-#    elif PLATFORM_EMSCRIPTEN
+#elif PLATFORM_EMSCRIPTEN
 
 typedef struct EmscriptenNativeWindow NativeWindow;
 
-#    else
-#        error Unknown platform. Please define one of the following macros as 1: PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS, PLATFORM_TVOS, PLATFORM_EMSCRIPTEN.
-#    endif
+#else
+#    error Unknown platform. Please define one of the following macros as 1: PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS, PLATFORM_TVOS, PLATFORM_EMSCRIPTEN.
+#endif
 
 DILIGENT_END_NAMESPACE // namespace Diligent
