@@ -2,7 +2,7 @@ cmake_minimum_required (VERSION 3.6)
 
 project(Diligent-EmscriptenPlatform CXX)
 
-set(INTERFACE 
+set(INTERFACE
     interface/EmscriptenDebug.hpp
     interface/EmscriptenFileSystem.hpp
     interface/EmscriptenPlatformDefinitions.h
@@ -10,7 +10,7 @@ set(INTERFACE
     interface/EmscriptenNativeWindow.h
 )
 
-set(SOURCE 
+set(SOURCE
     src/EmscriptenDebug.cpp
     src/EmscriptenFileSystem.cpp
 )
@@ -18,14 +18,14 @@ set(SOURCE
 add_library(Diligent-EmscriptenPlatform ${SOURCE} ${INTERFACE} ${PLATFORM_INTERFACE_HEADERS})
 set_common_target_properties(Diligent-EmscriptenPlatform)
 
-target_include_directories(Diligent-EmscriptenPlatform 
+target_include_directories(Diligent-EmscriptenPlatform
 PUBLIC
     interface
 )
 
-target_link_libraries(Diligent-EmscriptenPlatform 
+target_link_libraries(Diligent-EmscriptenPlatform
 PRIVATE
-    Diligent-BuildSettings 
+    Diligent-BuildSettings
 PUBLIC
     Diligent-BasicPlatform
     Diligent-PlatformInterface
