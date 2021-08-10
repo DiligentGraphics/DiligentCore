@@ -48,15 +48,15 @@ TEST(DynamicTextureAtlas, Create)
     TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     DynamicTextureAtlasCreateInfo CI;
-    CI.ExtraSliceCount    = 2;
-    CI.TextureGranularity = 16;
-    CI.Desc.Format        = TEX_FORMAT_RGBA8_UNORM;
-    CI.Desc.Name          = "Dynamic Texture Atlas Test";
-    CI.Desc.Type          = RESOURCE_DIM_TEX_2D_ARRAY;
-    CI.Desc.BindFlags     = BIND_SHADER_RESOURCE;
-    CI.Desc.Width         = 512;
-    CI.Desc.Height        = 512;
-    CI.Desc.ArraySize     = 0;
+    CI.ExtraSliceCount = 2;
+    CI.MinAlignment    = 16;
+    CI.Desc.Format     = TEX_FORMAT_RGBA8_UNORM;
+    CI.Desc.Name       = "Dynamic Texture Atlas Test";
+    CI.Desc.Type       = RESOURCE_DIM_TEX_2D_ARRAY;
+    CI.Desc.BindFlags  = BIND_SHADER_RESOURCE;
+    CI.Desc.Width      = 512;
+    CI.Desc.Height     = 512;
+    CI.Desc.ArraySize  = 0;
 
     {
         RefCntAutoPtr<IDynamicTextureAtlas> pAtlas;
@@ -108,15 +108,15 @@ TEST(DynamicTextureAtlas, Allocate)
     TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     DynamicTextureAtlasCreateInfo CI;
-    CI.ExtraSliceCount    = 2;
-    CI.TextureGranularity = 16;
-    CI.Desc.Format        = TEX_FORMAT_RGBA8_UNORM;
-    CI.Desc.Name          = "Dynamic Texture Atlas Test";
-    CI.Desc.Type          = RESOURCE_DIM_TEX_2D_ARRAY;
-    CI.Desc.BindFlags     = BIND_SHADER_RESOURCE;
-    CI.Desc.Width         = 512;
-    CI.Desc.Height        = 512;
-    CI.Desc.ArraySize     = 1;
+    CI.ExtraSliceCount = 2;
+    CI.MinAlignment    = 16;
+    CI.Desc.Format     = TEX_FORMAT_RGBA8_UNORM;
+    CI.Desc.Name       = "Dynamic Texture Atlas Test";
+    CI.Desc.Type       = RESOURCE_DIM_TEX_2D_ARRAY;
+    CI.Desc.BindFlags  = BIND_SHADER_RESOURCE;
+    CI.Desc.Width      = 512;
+    CI.Desc.Height     = 512;
+    CI.Desc.ArraySize  = 1;
 
     RefCntAutoPtr<IDynamicTextureAtlas> pAtlas;
     CreateDynamicTextureAtlas(pDevice, CI, &pAtlas);

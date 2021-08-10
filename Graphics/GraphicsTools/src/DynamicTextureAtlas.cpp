@@ -30,6 +30,7 @@
 #include <mutex>
 #include <algorithm>
 #include <atomic>
+#include <unordered_map>
 
 #include "DynamicAtlasManager.hpp"
 #include "ObjectBase.hpp"
@@ -52,12 +53,14 @@ public:
                                   DynamicTextureAtlasImpl*      pParentAtlas,
                                   DynamicAtlasManager::Region&& Subregion,
                                   Uint32                        Slice,
+                                  Uint32                        Alignment,
                                   const uint2&                  Size) noexcept :
         // clang-format off
         TBase         {pRefCounters},
         m_pParentAtlas{pParentAtlas},
         m_Subregion   {std::move(Subregion)},
         m_Slice       {Slice},
+        m_Alignment   {Alignment},
         m_Size        {Size}
     // clang-format on
     {
@@ -81,7 +84,14 @@ public:
             });
     }
 
-    virtual uint2 GetOrigin() const override final;
+    virtual uint2 GetOrigin() const override final
+    {
+        return uint2 //
+            {
+                m_Subregion.x * m_Alignment,
+                m_Subregion.y * m_Alignment //
+            };
+    }
 
     virtual Uint32 GetSlice() const override final
     {
@@ -113,6 +123,7 @@ private:
     DynamicAtlasManager::Region m_Subregion;
 
     const Uint32 m_Slice;
+    const Uint32 m_Alignment;
     const uint2  m_Size;
 
     RefCntAutoPtr<IObject> m_pUserData;
@@ -131,7 +142,7 @@ public:
         TBase             {pRefCounters},
         m_Desc            {CreateInfo.Desc},
         m_Name            {CreateInfo.Desc.Name != nullptr ? CreateInfo.Desc.Name : "Dynamic texture atlas"},
-        m_Granularity     {CreateInfo.TextureGranularity},
+        m_MinAlignment    {CreateInfo.MinAlignment},
         m_ExtraSliceCount {CreateInfo.ExtraSliceCount},
         m_MaxSliceCount   {CreateInfo.Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY ? std::min(CreateInfo.MaxSliceCount, Uint32{2048}) : 1},
         m_SuballocationsAllocator
@@ -148,30 +159,26 @@ public:
         if (m_Desc.Format == TEX_FORMAT_UNKNOWN)
             LOG_ERROR_AND_THROW("Texture format must not be UNKNOWN");
 
-        if (m_Granularity == 0)
-            LOG_ERROR_AND_THROW("Texture granularity can't be zero");
-
-        if (!IsPowerOfTwo(m_Granularity))
-            LOG_ERROR_AND_THROW("Texture granularity (", m_Granularity, ") is not power of two");
-
         if (m_Desc.Width == 0)
             LOG_ERROR_AND_THROW("Texture width must not be zero");
 
         if (m_Desc.Height == 0)
             LOG_ERROR_AND_THROW("Texture height must not be zero");
 
-        if ((m_Desc.Width % m_Granularity) != 0)
-            LOG_ERROR_AND_THROW("Texture width (", m_Desc.Width, ") is not a multiple of granularity (", m_Granularity, ")");
+        if (m_MinAlignment != 0)
+        {
+            if (!IsPowerOfTwo(m_MinAlignment))
+                LOG_ERROR_AND_THROW("Minimum alignment (", m_MinAlignment, ") is not a power of two");
 
-        if ((m_Desc.Height % m_Granularity) != 0)
-            LOG_ERROR_AND_THROW("Texture height (", m_Desc.Height, ") is not a multiple of granularity (", m_Granularity, ")");
+            if ((m_Desc.Width % m_MinAlignment) != 0)
+                LOG_ERROR_AND_THROW("Texture width (", m_Desc.Width, ") is not a multiple of minimum alignment (", m_MinAlignment, ")");
+
+            if ((m_Desc.Height % m_MinAlignment) != 0)
+                LOG_ERROR_AND_THROW("Texture height (", m_Desc.Height, ") is not a multiple of minimum alignment (", m_MinAlignment, ")");
+        }
 
         m_Desc.Name = m_Name.c_str();
-
-        for (Uint32 slice = 0; slice < m_Desc.ArraySize; ++slice)
-        {
-            m_Slices.emplace_back(new SliceManager{m_Desc.Width / m_Granularity, m_Desc.Height / m_Granularity});
-        }
+        m_Slices.resize(m_Desc.ArraySize);
 
         if (pDevice == nullptr)
             m_Desc.ArraySize = 0;
@@ -262,6 +269,19 @@ public:
             return;
         }
 
+        Uint32 Alignment = m_MinAlignment;
+        if (Alignment > 0)
+        {
+            while (std::min(Width, Height) > Alignment)
+                Alignment *= 2;
+        }
+        else
+        {
+            Alignment = 1;
+        }
+        const auto AlignedWidth  = AlignUp(Width, Alignment);
+        const auto AlignedHeight = AlignUp(Height, Alignment);
+
         DynamicAtlasManager::Region Subregion;
 
         Uint32 Slice = 0;
@@ -270,26 +290,54 @@ public:
             SliceManager* pSliceMgr = nullptr;
             {
                 std::lock_guard<std::mutex> Lock{m_SlicesMtx};
-                if (Slice == m_Slices.size())
-                {
-                    const auto ExtraSliceCount = m_ExtraSliceCount != 0 ?
-                        m_ExtraSliceCount :
-                        static_cast<Uint32>(m_Slices.size());
 
-                    for (Uint32 ExtraSlice = 0; ExtraSlice < ExtraSliceCount && Slice + ExtraSlice < m_MaxSliceCount; ++ExtraSlice)
+                // Get the list of slices for this alignment
+                auto SlicesIt = m_AlignmentToSlice.find(Alignment);
+                if (SlicesIt == m_AlignmentToSlice.end())
+                    SlicesIt = m_AlignmentToSlice.emplace(Alignment, std::vector<Uint32>{}).first;
+
+                // Find the next slice in the list
+                auto& Slices  = SlicesIt->second;
+                auto  SliceIt = Slices.begin();
+                while (SliceIt != Slices.end() && Slice > *SliceIt)
+                    ++SliceIt;
+                Slice = SliceIt != Slices.end() ? *SliceIt : m_NextUnusedSlice;
+
+                if (Slice == m_NextUnusedSlice)
+                {
+                    if (Slice == m_MaxSliceCount)
+                        break;
+
+                    while (Slice >= m_Slices.size())
                     {
-                        m_Slices.emplace_back(new SliceManager{m_Desc.Width / m_Granularity, m_Desc.Height / m_Granularity});
+                        const auto ExtraSliceCount = m_ExtraSliceCount != 0 ?
+                            m_ExtraSliceCount :
+                            static_cast<Uint32>(m_Slices.size());
+
+                        m_Slices.resize(std::min(Slice + ExtraSliceCount, m_MaxSliceCount));
                     }
+
+                    VERIFY(std::find(Slices.begin(), Slices.end(), Slice) == Slices.end(), "Slice ", Slice, " is already in the list for this alignment. This is a bug");
+                    Slices.push_back(Slice);
+
+                    VERIFY(!m_Slices[Slice], "Slice ", Slice, " has already been initialized. This is a bug.");
+                    VERIFY_EXPR(m_Desc.Width >= Alignment && m_Desc.Height >= Alignment);
+                    m_Slices[Slice] = std::make_unique<SliceManager>(m_Desc.Width / Alignment, m_Desc.Height / Alignment);
+
+                    ++m_NextUnusedSlice;
                 }
+
                 pSliceMgr = m_Slices[Slice].get();
             }
 
-            Subregion = pSliceMgr->Allocate((Width + m_Granularity - 1) / m_Granularity,
-                                            (Height + m_Granularity - 1) / m_Granularity);
-            if (!Subregion.IsEmpty())
-                break;
-            else
-                ++Slice;
+            if (pSliceMgr != nullptr)
+            {
+                Subregion = pSliceMgr->Allocate(AlignedWidth / Alignment, AlignedHeight / Alignment);
+                if (!Subregion.IsEmpty())
+                    break;
+            }
+
+            ++Slice;
         }
 
         if (Subregion.IsEmpty())
@@ -299,7 +347,7 @@ public:
         }
 
         m_AllocatedArea.fetch_add(Int64{Width} * Int64{Height});
-        m_UsedArea.fetch_add(Int64{Subregion.width * m_Granularity} * Int64{Subregion.height * m_Granularity});
+        m_UsedArea.fetch_add(Int64{AlignedWidth} * Int64{AlignedHeight});
         m_AllocationCount.fetch_add(1);
 
         // clang-format off
@@ -309,6 +357,7 @@ public:
                 this,
                 std::move(Subregion),
                 Slice,
+                Alignment,
                 uint2{Width, Height}
             )
         };
@@ -317,15 +366,23 @@ public:
         pSuballocation->QueryInterface(IID_TextureAtlasSuballocation, reinterpret_cast<IObject**>(ppSuballocation));
     }
 
-    virtual void Free(Uint32 Slice, DynamicAtlasManager::Region&& Subregion, Uint32 Width, Uint32 Height)
+    void Free(Uint32 Slice, Uint32 Alignment, DynamicAtlasManager::Region&& Subregion, Uint32 Width, Uint32 Height)
     {
         m_AllocatedArea.fetch_add(-Int64{Width} * Int64{Height});
-        m_UsedArea.fetch_add(-Int64{Subregion.width * m_Granularity} * Int64{Subregion.height * m_Granularity});
+        m_UsedArea.fetch_add(-Int64{Subregion.width * Alignment} * Int64{Subregion.height * Alignment});
         m_AllocationCount.fetch_add(-1);
 
         SliceManager* pSliceMgr = nullptr;
         {
             std::lock_guard<std::mutex> Lock{m_SlicesMtx};
+#ifdef DILIGENT_DEBUG
+            {
+                auto SlicesIt = m_AlignmentToSlice.find(Alignment);
+                VERIFY(SlicesIt != m_AlignmentToSlice.end(), "There are no slices with alignment ", Alignment);
+                const auto& Slices = SlicesIt->second;
+                VERIFY(std::find(Slices.begin(), Slices.end(), Slice) != Slices.end(), "Slice ", Slice, " does not use alignment ", Alignment);
+            }
+#endif
             pSliceMgr = m_Slices[Slice].get();
         }
         pSliceMgr->Free(std::move(Subregion));
@@ -355,16 +412,11 @@ public:
         Stats.UsedArea      = m_UsedArea.load();
     }
 
-    Uint32 GetGranularity() const
-    {
-        return m_Granularity;
-    }
-
 private:
     TextureDesc       m_Desc;
     const std::string m_Name;
 
-    const Uint32 m_Granularity;
+    const Uint32 m_MinAlignment;
     const Uint32 m_ExtraSliceCount;
     const Uint32 m_MaxSliceCount;
 
@@ -400,24 +452,16 @@ private:
         std::mutex          Mtx;
         DynamicAtlasManager Mgr;
     };
-    std::mutex                                 m_SlicesMtx;
-    std::vector<std::unique_ptr<SliceManager>> m_Slices;
+    std::mutex                                      m_SlicesMtx;
+    std::vector<std::unique_ptr<SliceManager>>      m_Slices;
+    std::unordered_map<Uint32, std::vector<Uint32>> m_AlignmentToSlice;
+    Uint32                                          m_NextUnusedSlice = 0;
 };
 
 
 TextureAtlasSuballocationImpl::~TextureAtlasSuballocationImpl()
 {
-    m_pParentAtlas->Free(m_Slice, std::move(m_Subregion), m_Size.x, m_Size.y);
-}
-
-uint2 TextureAtlasSuballocationImpl::GetOrigin() const
-{
-    const auto Granularity = m_pParentAtlas->GetGranularity();
-    return uint2 //
-        {
-            m_Subregion.x * Granularity,
-            m_Subregion.y * Granularity //
-        };
+    m_pParentAtlas->Free(m_Slice, m_Alignment, std::move(m_Subregion), m_Size.x, m_Size.y);
 }
 
 IDynamicTextureAtlas* TextureAtlasSuballocationImpl::GetAtlas()
