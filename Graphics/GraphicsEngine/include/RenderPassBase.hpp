@@ -41,7 +41,7 @@
 namespace Diligent
 {
 
-void ValidateRenderPassDesc(const RenderPassDesc& Desc) noexcept(false);
+void ValidateRenderPassDesc(const RenderPassDesc& Desc, IRenderDevice* pDevice) noexcept(false);
 
 template <typename RenderDeviceImplType>
 void _CorrectAttachmentState(RESOURCE_STATE& State) {}
@@ -86,7 +86,7 @@ public:
     {
         try
         {
-            ValidateRenderPassDesc(this->m_Desc);
+            ValidateRenderPassDesc(this->m_Desc, pDevice);
 
             auto&                RawAllocator = GetRawAllocator();
             FixedLinearAllocator MemPool{RawAllocator};

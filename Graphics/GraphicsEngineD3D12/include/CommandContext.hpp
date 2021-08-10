@@ -435,10 +435,11 @@ public:
 class GraphicsContext5 : public GraphicsContext4
 {
 public:
-    void SetShadingRate(D3D12_SHADING_RATE BaseRate, const D3D12_SHADING_RATE_COMBINER Combiners[2])
+    void SetShadingRate(D3D12_SHADING_RATE BaseRate, const D3D12_SHADING_RATE_COMBINER* pCombiners)
     {
 #ifdef NTDDI_WIN10_19H1
-        static_cast<ID3D12GraphicsCommandList5*>(m_pCommandList.p)->RSSetShadingRate(BaseRate, Combiners);
+        // pCombiners must be null or array of 2 elements
+        static_cast<ID3D12GraphicsCommandList5*>(m_pCommandList.p)->RSSetShadingRate(BaseRate, pCombiners);
 #else
         UNSUPPORTED("RSSetShadingRate is not supported in current D3D12 header");
 #endif

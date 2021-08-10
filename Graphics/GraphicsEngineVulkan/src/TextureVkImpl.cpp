@@ -166,7 +166,6 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
             }
             else if (ExtFeatures.FragmentDensityMap.fragmentDensityMap != VK_FALSE)
             {
-                //ImageCI.flags |= VK_IMAGE_CREATE_SUBSAMPLED_BIT_EXT; // AZ TODO
                 ImageCI.usage |= VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT;
             }
             else

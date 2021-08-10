@@ -2294,18 +2294,41 @@ typedef struct AdapterMemoryInfo AdapterMemoryInfo;
 
 
 /// Defines how shading rates coming from the different sources (base rate,
-/// primitive rate and VRS image rate) are combined
+/// primitive rate and VRS image rate) are combined.
+/// See IDeviceContext::SetShadingRate().
+/// Defines which rate returns function ApplyCombiner(SHADING_RATE_COMBINER Combiner, SHADING_RATE Lhs, SHADING_RATE Rhs).
 DILIGENT_TYPED_ENUM(SHADING_RATE_COMBINER, Uint8)
 {
-    // TODO
-    SHADING_RATE_COMBINER_PASSTHROUGH = 1 << 0, // keep
-    SHADING_RATE_COMBINER_OVERRIDE    = 1 << 1, // replace
+    /// Returns the original shading rate value:
+    ///  - for PrimitiveCombiner, returns BaseRate.
+    ///  - for TextureCombiner, returns PrimitiveRate.
+    SHADING_RATE_COMBINER_PASSTHROUGH = 1 << 0,
+
+    /// Returns the new shading rate value:
+    ///   - for PrimitiveCombiner, returns PrimitiveRate.
+    ///   - for TextureCombiner, returns TextureRate.
+    SHADING_RATE_COMBINER_OVERRIDE    = 1 << 1,
+
+    /// Returns the minimum shading rate value:
+    ///   - for PrimitiveCombiner, returns Min(BaseRate, PrimitiveRate).
+    ///   - for TextureCombiner, returns Min(PrimitiveRate, TextureRate).
     SHADING_RATE_COMBINER_MIN         = 1 << 2,
+
+    /// Returns the maximum shading rate value:
+    ///   - for PrimitiveCombiner, returns Max(BaseRate, PrimitiveRate).
+    ///   - for TextureCombiner, returns Max(PrimitiveRate, TextureRate).
     SHADING_RATE_COMBINER_MAX         = 1 << 3,
-    /// DX only, Vulkan: if fragmentShadingRateStrictMultiplyCombiner = false
+
+    /// Returns the sum of the shading rates:
+    ///   - for PrimitiveCombiner, returns BaseRate + PrimitiveRate.
+    ///   - for TextureCombiner, returns PrimitiveRate + TextureRate.
     SHADING_RATE_COMBINER_SUM         = 1 << 4,
-    /// Vulkan only if fragmentShadingRateStrictMultiplyCombiner = true
+
+    /// Returns product of shading rates:
+    ///  - for PrimitiveCombiner, returns BaseRate * PrimitiveRate.
+    ///  - for TextureCombiner, returns PrimitiveRate * TextureRate.
     SHADING_RATE_COMBINER_MUL         = 1 << 5,
+
     SHADING_RATE_COMBINER_LAST        = SHADING_RATE_COMBINER_MUL
 };
 DEFINE_FLAG_ENUM_OPERATORS(SHADING_RATE_COMBINER);
@@ -2333,34 +2356,56 @@ DILIGENT_TYPED_ENUM(SHADING_RATE_FORMAT, Uint8)
 /// Specifies the base shading rate along a horizontal or vertical axis
 DILIGENT_TYPED_ENUM(AXIS_SHADING_RATE, Uint8)
 {
-    /// TODO
+    /// Default shading rate
     AXIS_SHADING_RATE_1X  = 0x0,
+
+    /// 2x resolution reduction per axis
     AXIS_SHADING_RATE_2X  = 0x1,
+
+    /// 4x resolution reduction per axis
     AXIS_SHADING_RATE_4X  = 0x2,
+
     AXIS_SHADING_RATE_MAX = AXIS_SHADING_RATE_4X,
 };
 
 /// Defines the base shading rate that can be set for the entire draw call
 DILIGENT_TYPED_ENUM(SHADING_RATE, Uint8)
 {
-    /// TODO
-    SHADING_RATE_UNKNOWN = 0xFF,
-    SHADING_RATE_1x1     = ((AXIS_SHADING_RATE_1X << DILIGENT_SHADING_RATE_X_SHIFT) | AXIS_SHADING_RATE_1X),
-    SHADING_RATE_1x2     = ((AXIS_SHADING_RATE_1X << DILIGENT_SHADING_RATE_X_SHIFT) | AXIS_SHADING_RATE_2X),
-    SHADING_RATE_1x4     = ((AXIS_SHADING_RATE_1X << DILIGENT_SHADING_RATE_X_SHIFT) | AXIS_SHADING_RATE_4X),
-    SHADING_RATE_2x1     = ((AXIS_SHADING_RATE_2X << DILIGENT_SHADING_RATE_X_SHIFT) | AXIS_SHADING_RATE_1X),
-    SHADING_RATE_2x2     = ((AXIS_SHADING_RATE_2X << DILIGENT_SHADING_RATE_X_SHIFT) | AXIS_SHADING_RATE_2X),
-    SHADING_RATE_2x4     = ((AXIS_SHADING_RATE_2X << DILIGENT_SHADING_RATE_X_SHIFT) | AXIS_SHADING_RATE_4X),
-    SHADING_RATE_4x1     = ((AXIS_SHADING_RATE_4X << DILIGENT_SHADING_RATE_X_SHIFT) | AXIS_SHADING_RATE_1X),
-    SHADING_RATE_4x2     = ((AXIS_SHADING_RATE_4X << DILIGENT_SHADING_RATE_X_SHIFT) | AXIS_SHADING_RATE_2X),
-    SHADING_RATE_4x4     = ((AXIS_SHADING_RATE_4X << DILIGENT_SHADING_RATE_X_SHIFT) | AXIS_SHADING_RATE_4X)
+    /// Specifies no change to the shading rate.
+    SHADING_RATE_1X1 = ((AXIS_SHADING_RATE_1X << DILIGENT_SHADING_RATE_X_SHIFT) | AXIS_SHADING_RATE_1X),
+
+    /// Specifies 1/2 vertical shading rate and normal horizontal rate.
+    SHADING_RATE_1X2 = ((AXIS_SHADING_RATE_1X << DILIGENT_SHADING_RATE_X_SHIFT) | AXIS_SHADING_RATE_2X),
+
+    /// Specifies 1/4 vertical shading rate and normal horizontal rate.
+    SHADING_RATE_1X4 = ((AXIS_SHADING_RATE_1X << DILIGENT_SHADING_RATE_X_SHIFT) | AXIS_SHADING_RATE_4X),
+
+    /// Specifies 1/2 horizontal shading rate and normal vertical rate.
+    SHADING_RATE_2X1 = ((AXIS_SHADING_RATE_2X << DILIGENT_SHADING_RATE_X_SHIFT) | AXIS_SHADING_RATE_1X),
+
+    /// Specifies 1/2 horizontal and vertical shading rate.
+    SHADING_RATE_2X2 = ((AXIS_SHADING_RATE_2X << DILIGENT_SHADING_RATE_X_SHIFT) | AXIS_SHADING_RATE_2X),
+
+    /// Specifies 1/2 horizontal and 1/4 vertical shading rate.
+    SHADING_RATE_2X4 = ((AXIS_SHADING_RATE_2X << DILIGENT_SHADING_RATE_X_SHIFT) | AXIS_SHADING_RATE_4X),
+
+    /// Specifies 1/4 horizontal shading rate and normal vertical rate.
+    SHADING_RATE_4X1 = ((AXIS_SHADING_RATE_4X << DILIGENT_SHADING_RATE_X_SHIFT) | AXIS_SHADING_RATE_1X),
+
+    /// Specifies 1/4 horizontal shading rate and 1/2 vertical rate.
+    SHADING_RATE_4X2 = ((AXIS_SHADING_RATE_4X << DILIGENT_SHADING_RATE_X_SHIFT) | AXIS_SHADING_RATE_2X),
+
+    /// Specifies 1/4 horizontal and vertical shading rate.
+    SHADING_RATE_4X4 = ((AXIS_SHADING_RATE_4X << DILIGENT_SHADING_RATE_X_SHIFT) | AXIS_SHADING_RATE_4X),
+
+    SHADING_RATE_MAX = SHADING_RATE_4X4
 };
 
 /// Combination of shading rate and multi-samples.
 struct ShadingRateMode
 {
     /// Supported shading rate.
-    SHADING_RATE Rate        DEFAULT_INITIALIZER(SHADING_RATE_UNKNOWN);
+    SHADING_RATE Rate        DEFAULT_INITIALIZER(SHADING_RATE_1X1);
 
     /// Number of samples is a power-of-two value, this field is a combination of supported sample count.
     /// Example: 1 | 2 | 4
@@ -2369,7 +2414,7 @@ struct ShadingRateMode
 typedef struct ShadingRateMode ShadingRateMode;
 
 /// Defines the shading rate capability flags.
-DILIGENT_TYPED_ENUM(SHADING_RATE_CAP_FLAGS, Uint8)
+DILIGENT_TYPED_ENUM(SHADING_RATE_CAP_FLAGS, Uint16)
 {
     SHADING_RATE_CAP_FLAG_NONE                = 0,
 
@@ -2390,29 +2435,38 @@ DILIGENT_TYPED_ENUM(SHADING_RATE_CAP_FLAGS, Uint8)
     /// with enabled variable rate shading.
     SHADING_RATE_CAP_FLAG_SAMPLE_MASK         = 1u << 3,
 
-    /// Allows to use SampleMask in shader with enabled variable rate shading.
+    /// Allows to get or set SampleMask in the shader with enabled variable rate shading.
+    /// HLSL: SV_Coverage, GLSL: gl_SampleMaskIn, gl_SampleMask.
     SHADING_RATE_CAP_FLAG_SHADER_SAMPLE_MASK  = 1u << 4,
 
-    /// AZ TODO
-    //SHADING_RATE_CAP_FLAG_COVERAGE_SAMPLES    = 1u << 5,
+    /// Allows to write depth and stencil from the pixel shader.
+    SHADING_RATE_CAP_FLAG_SHADER_DEPTH_STENCIL_WRITE = 1u << 5,
 
-    /// AZ TODO
-    SHADING_RATE_CAP_FLAG_DEPTH_STENCIL_WRITE = 1u << 5,
-
-    /// AZ TODO
+    /// Allows to use per primitive shading rate when multiple viewports are used.
     SHADING_RATE_CAP_FLAG_PER_PRIMITIVE_WITH_MULTIPLE_VIEWPORTS = 1u << 6,
 
-    /// AZ TODO
-    SHADING_RATE_CAP_FLAG_LAYERED_TEXTURE     = 1u << 7,
+    /// Shading rate attachment for render pass must be the same for all subpasses.
+    /// See SubpassDesc::pShadingRateAttachment.
+    SHADING_RATE_CAP_FLAG_SAME_TEXTURE_FOR_WHOLE_RENDERPASS = 1u << 7,
+
+    /// Allows to use texture 2D array for shading rate.
+    SHADING_RATE_CAP_FLAG_LAYERED_TEXTURE           = 1u << 8,
+
+    /// Allows to read current shading rate in pixel shader.
+    /// HLSL: in SV_ShadingRate, GLSL: gl_ShadingRate.
+    SHADING_RATE_CAP_FLAG_SHADER_SHADING_RATE_INPUT = 1u << 9,
 };
 DEFINE_FLAG_ENUM_OPERATORS(SHADING_RATE_CAP_FLAGS);
 
 /// Shading rate properties
 struct ShadingRateProperties
 {
-    /// TODO
+    /// Contains a list of supported combination of shading rate and number of samples.
+    /// List is sorted from lower to higher rate.
     ShadingRateMode        ShadingRates [DILIGENT_MAX_SHADING_RATES]  DEFAULT_INITIALIZER({});
-    Uint32                 NumShadingRates                   DEFAULT_INITIALIZER(0);
+
+    /// The number elements in ShadingRates array.
+    Uint32                 NumShadingRates DEFAULT_INITIALIZER(0);
 
     /// Shading rate capability flags, see Diligent::SHADING_RATE_CAP_FLAGS.
     SHADING_RATE_CAP_FLAGS CapFlags       DEFAULT_INITIALIZER(SHADING_RATE_CAP_FLAG_NONE);
@@ -2423,7 +2477,12 @@ struct ShadingRateProperties
     /// Indicates which shading rate texture format is used by this device.
     SHADING_RATE_FORMAT    Format         DEFAULT_INITIALIZER(SHADING_RATE_FORMAT_UNKNOWN);
 
+    /// Minimal supported tile size.
+    /// Shading rate texture size must be less than or equal to (framebuffer_size / MinTileSize).
     Uint32                 MinTileSize[2] DEFAULT_INITIALIZER({});
+
+    /// Maximum supported tile size.
+    /// Shading rate texture size must be greater than or equal to (framebuffer_size / MaxTileSize).
     Uint32                 MaxTileSize[2] DEFAULT_INITIALIZER({});
 };
 typedef struct ShadingRateProperties ShadingRateProperties;

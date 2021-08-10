@@ -50,10 +50,10 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 /// The maximum number of queues in graphics adapter description.
 #define DILIGENT_MAX_ADAPTER_QUEUES 16
 
-/// AZ TODO
-#define DILIGENT_MAX_SHADING_RATES 16
+/// The maximum number of shading rate modes.
+#define DILIGENT_MAX_SHADING_RATES 9
 
-/// AZ TODO
+/// Bit shift for the the shading X-axis rate.
 #define DILIGENT_SHADING_RATE_X_SHIFT 2
 
 static const Uint32 MAX_BUFFER_SLOTS        = DILIGENT_MAX_BUFFER_SLOTS;

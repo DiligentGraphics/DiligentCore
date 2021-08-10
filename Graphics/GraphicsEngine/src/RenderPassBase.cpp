@@ -33,9 +33,12 @@
 namespace Diligent
 {
 
-void ValidateRenderPassDesc(const RenderPassDesc& Desc) noexcept(false)
+void ValidateRenderPassDesc(const RenderPassDesc& Desc, IRenderDevice* pDevice) noexcept(false)
 {
 #define LOG_RENDER_PASS_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of render pass '", (Desc.Name ? Desc.Name : ""), "' is invalid: ", ##__VA_ARGS__)
+
+    const auto& Features = pDevice->GetDeviceInfo().Features;
+    const auto& SRProps  = pDevice->GetAdapterInfo().ShadingRate;
 
     if (Desc.AttachmentCount != 0 && Desc.pAttachments == nullptr)
     {
@@ -116,6 +119,7 @@ void ValidateRenderPassDesc(const RenderPassDesc& Desc) noexcept(false)
                 Attachment.InitialState != RESOURCE_STATE_RESOLVE_DEST &&
                 Attachment.InitialState != RESOURCE_STATE_RESOLVE_SOURCE &&
                 Attachment.InitialState != RESOURCE_STATE_COPY_SOURCE &&
+                Attachment.InitialState != RESOURCE_STATE_COPY_DEST &&
                 Attachment.InitialState != RESOURCE_STATE_INPUT_ATTACHMENT &&
                 Attachment.InitialState != RESOURCE_STATE_PRESENT &&
                 Attachment.InitialState != RESOURCE_STATE_SHADING_RATE)
@@ -129,6 +133,7 @@ void ValidateRenderPassDesc(const RenderPassDesc& Desc) noexcept(false)
                 Attachment.FinalState != RESOURCE_STATE_RESOLVE_DEST &&
                 Attachment.FinalState != RESOURCE_STATE_RESOLVE_SOURCE &&
                 Attachment.FinalState != RESOURCE_STATE_COPY_SOURCE &&
+                Attachment.FinalState != RESOURCE_STATE_COPY_DEST &&
                 Attachment.FinalState != RESOURCE_STATE_INPUT_ATTACHMENT &&
                 Attachment.FinalState != RESOURCE_STATE_PRESENT &&
                 Attachment.FinalState != RESOURCE_STATE_SHADING_RATE)
@@ -138,6 +143,7 @@ void ValidateRenderPassDesc(const RenderPassDesc& Desc) noexcept(false)
         }
     }
 
+    const ShadingRateAttachment* pShadingRateAttachment = nullptr;
     for (Uint32 subpass = 0; subpass < Desc.SubpassCount; ++subpass)
     {
         const auto& Subpass = Desc.pSubpasses[subpass];
@@ -296,6 +302,40 @@ void ValidateRenderPassDesc(const RenderPassDesc& Desc) noexcept(false)
                                                     ") of the corresponding resolve attachment at index ",
                                                     RslvAttachmentRef.AttachmentIndex, ".");
                 }
+            }
+        }
+
+        if (Subpass.pShadingRateAttachment != nullptr)
+        {
+            pShadingRateAttachment = pShadingRateAttachment ? pShadingRateAttachment : Subpass.pShadingRateAttachment;
+            const auto& AttchRef   = Subpass.pShadingRateAttachment->Attachment;
+            if (AttchRef.AttachmentIndex != ATTACHMENT_UNUSED)
+            {
+                if (AttchRef.AttachmentIndex >= Desc.AttachmentCount)
+                {
+                    LOG_RENDER_PASS_ERROR_AND_THROW("the attachment index (", AttchRef.AttachmentIndex, ") of shading rate attachment reference of subpass ", subpass,
+                                                    " must be less than the number of attachments (", Desc.AttachmentCount, ").");
+                }
+            }
+
+            if (!Features.VariableRateShading)
+                LOG_RENDER_PASS_ERROR_AND_THROW("subpass ", subpass, " has shading rate attachment, but VariableRateShading device feature is not enabled");
+        }
+    }
+
+    if (pShadingRateAttachment != nullptr && SRProps.CapFlags & SHADING_RATE_CAP_FLAG_SAME_TEXTURE_FOR_WHOLE_RENDERPASS)
+    {
+        for (Uint32 subpass = 0; subpass < Desc.SubpassCount; ++subpass)
+        {
+            const auto& Subpass = Desc.pSubpasses[subpass];
+
+            if (Subpass.pShadingRateAttachment == nullptr)
+                LOG_RENDER_PASS_ERROR_AND_THROW("render pass has shading rate attachment, but subpass ", subpass, " has not shading rate attachment");
+
+            if (*Subpass.pShadingRateAttachment == *pShadingRateAttachment)
+            {
+                VERIFY_EXPR(subpass > 0);
+                LOG_RENDER_PASS_ERROR_AND_THROW("shading rate attachment in subpass ", subpass, " does not match the shading rate attachment in previous subpasses");
             }
         }
     }

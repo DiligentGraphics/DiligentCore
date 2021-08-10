@@ -921,16 +921,34 @@ D3D12_COMMAND_QUEUE_PRIORITY QueuePriorityToD3D12QueuePriority(QUEUE_PRIORITY Pr
 D3D12_SHADING_RATE ShadingRateToD3D12ShadingRate(SHADING_RATE Rate)
 {
 #ifdef NTDDI_WIN10_19H1
-    static_assert(static_cast<D3D12_SHADING_RATE>(SHADING_RATE_1x1) == D3D12_SHADING_RATE_1X1, "SHADING_RATE_1x1 constant dosn't match with D3D12 constant");
-    static_assert(static_cast<D3D12_SHADING_RATE>(SHADING_RATE_1x2) == D3D12_SHADING_RATE_1X2, "SHADING_RATE_1x2 constant dosn't match with D3D12 constant");
-    static_assert(static_cast<D3D12_SHADING_RATE>(SHADING_RATE_2x1) == D3D12_SHADING_RATE_2X1, "SHADING_RATE_2x1 constant dosn't match with D3D12 constant");
-    static_assert(static_cast<D3D12_SHADING_RATE>(SHADING_RATE_2x2) == D3D12_SHADING_RATE_2X2, "SHADING_RATE_2x2 constant dosn't match with D3D12 constant");
-    static_assert(static_cast<D3D12_SHADING_RATE>(SHADING_RATE_2x4) == D3D12_SHADING_RATE_2X4, "SHADING_RATE_2x4 constant dosn't match with D3D12 constant");
-    static_assert(static_cast<D3D12_SHADING_RATE>(SHADING_RATE_4x2) == D3D12_SHADING_RATE_4X2, "SHADING_RATE_4x2 constant dosn't match with D3D12 constant");
-    static_assert(static_cast<D3D12_SHADING_RATE>(SHADING_RATE_4x4) == D3D12_SHADING_RATE_4X4, "SHADING_RATE_4x4 constant dosn't match with D3D12 constant");
+    static constexpr D3D12_SHADING_RATE d3d12Rates[] =
+        {
+            D3D12_SHADING_RATE_1X1,
+            D3D12_SHADING_RATE_1X2,
+            D3D12_SHADING_RATE_2X4, // replacement for 1x4
+            D3D12_SHADING_RATE_1X1, // unused
+            D3D12_SHADING_RATE_2X1,
+            D3D12_SHADING_RATE_2X2,
+            D3D12_SHADING_RATE_2X4,
+            D3D12_SHADING_RATE_1X1, // unused
+            D3D12_SHADING_RATE_4X2, // replacement for 4x1
+            D3D12_SHADING_RATE_4X2,
+            D3D12_SHADING_RATE_4X4};
+    static_assert(d3d12Rates[SHADING_RATE_1X1] == D3D12_SHADING_RATE_1X1, "incorrect mapping to D3D12 shading rate");
+    static_assert(d3d12Rates[SHADING_RATE_1X2] == D3D12_SHADING_RATE_1X2, "incorrect mapping to D3D12 shading rate");
+    static_assert(d3d12Rates[SHADING_RATE_1X4] == D3D12_SHADING_RATE_2X4, "incorrect mapping to D3D12 shading rate");
+    static_assert(d3d12Rates[SHADING_RATE_2X1] == D3D12_SHADING_RATE_2X1, "incorrect mapping to D3D12 shading rate");
+    static_assert(d3d12Rates[SHADING_RATE_2X2] == D3D12_SHADING_RATE_2X2, "incorrect mapping to D3D12 shading rate");
+    static_assert(d3d12Rates[SHADING_RATE_2X4] == D3D12_SHADING_RATE_2X4, "incorrect mapping to D3D12 shading rate");
+    static_assert(d3d12Rates[SHADING_RATE_4X1] == D3D12_SHADING_RATE_4X2, "incorrect mapping to D3D12 shading rate");
+    static_assert(d3d12Rates[SHADING_RATE_4X2] == D3D12_SHADING_RATE_4X2, "incorrect mapping to D3D12 shading rate");
+    static_assert(d3d12Rates[SHADING_RATE_4X4] == D3D12_SHADING_RATE_4X4, "incorrect mapping to D3D12 shading rate");
+    static_assert(_countof(d3d12Rates) == SHADING_RATE_MAX + 1, "Invalid number of elements in d3d12Rates");
 
-    return static_cast<D3D12_SHADING_RATE>(Rate);
+    VERIFY_EXPR(Rate <= SHADING_RATE_MAX);
+    return d3d12Rates[Rate];
 #else
+    UNEXPECTED("Requires WinSDK 10.1903");
     return static_cast<D3D12_SHADING_RATE>(0);
 #endif
 }
@@ -954,6 +972,7 @@ D3D12_SHADING_RATE_COMBINER ShadingRateCombinerToD3D12ShadingRateCombiner(SHADIN
             return D3D12_SHADING_RATE_COMBINER_PASSTHROUGH;
     }
 #else
+    UNEXPECTED("Requires WinSDK 10.1903");
     return static_cast<D3D12_SHADING_RATE_COMBINER>(0);
 #endif
 }

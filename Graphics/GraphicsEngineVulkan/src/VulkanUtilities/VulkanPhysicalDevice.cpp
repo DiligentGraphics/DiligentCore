@@ -328,6 +328,7 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice      vkDevice,
         // Check texture formats
         if (m_ExtFeatures.ShadingRate.attachmentFragmentShadingRate != VK_FALSE)
         {
+            // For compatibility with D3D12, shading rate texture must support R8_UINT format
             VkFormatProperties FmtProps{};
             vkGetPhysicalDeviceFormatProperties(m_VkDevice, VK_FORMAT_R8_UINT, &FmtProps);
 

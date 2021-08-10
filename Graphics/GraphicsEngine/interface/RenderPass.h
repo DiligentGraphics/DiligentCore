@@ -182,23 +182,31 @@ struct AttachmentReference
 typedef struct AttachmentReference AttachmentReference;
 
 
-/// AZ TODO
+/// Shading rate attachment description.
 struct ShadingRateAttachment
 {
+    /// Shading rate attachment reference, see Diligent::AttachmentReference.
     AttachmentReference Attachment  DEFAULT_INITIALIZER({});
 
-    // only for desktop Vulkan
-    Uint32              TileWidth   DEFAULT_INITIALIZER(0);
-    Uint32              TileHeight  DEFAULT_INITIALIZER(0);
+    /// Each texel in the attachment contains shading rate for the whole tile.
+    /// The size must be between ShadingRateProperties::MinTileSize and ShadingRateProperties::MaxTileSize.
+    Uint32              TileSize[2] DEFAULT_INITIALIZER({});
 
 #if DILIGENT_CPP_INTERFACE
     ShadingRateAttachment() noexcept {}
 
+    ShadingRateAttachment(const AttachmentReference& _Attachment,
+                          Uint32                     TileWidth,
+                          Uint32                     TileHeight) noexcept :
+        Attachment{_Attachment},
+        TileSize{TileWidth, TileHeight}
+    {}
+
     bool operator == (const ShadingRateAttachment& RHS) const
     {
-        return  Attachment == RHS.Attachment &&
-                TileWidth  == RHS.TileWidth  &&
-                TileHeight == RHS.TileHeight;
+        return  Attachment  == RHS.Attachment  &&
+                TileSize[0] == RHS.TileSize[0] &&
+                TileSize[1] == RHS.TileSize[1];
     }
 
     bool operator != (const ShadingRateAttachment& RHS) const
@@ -248,7 +256,7 @@ struct SubpassDesc
     /// Pointer to the array of preserve attachments, see Diligent::AttachmentReference.
     const Uint32*               pPreserveAttachments        DEFAULT_INITIALIZER(nullptr);
 
-    /// AZ TODO
+    /// Pointer to the shading rate attachment, see Diligent::ShadingRateAttachment.
     const ShadingRateAttachment* pShadingRateAttachment     DEFAULT_INITIALIZER(nullptr);
 
 #if DILIGENT_CPP_INTERFACE

@@ -135,7 +135,7 @@ static RenderPassDesc GetImplicitRenderPassDesc(
         SRAttachment.Format         = ShadingRateTexFormat;
         SRAttachment.SampleCount    = 1;
         SRAttachment.LoadOp         = ATTACHMENT_LOAD_OP_LOAD;
-        SRAttachment.StoreOp        = ATTACHMENT_STORE_OP_DISCARD; // AZ TODO
+        SRAttachment.StoreOp        = ATTACHMENT_STORE_OP_DISCARD;
         SRAttachment.StencilLoadOp  = ATTACHMENT_LOAD_OP_DISCARD;
         SRAttachment.StencilStoreOp = ATTACHMENT_STORE_OP_DISCARD;
         SRAttachment.InitialState   = RESOURCE_STATE_SHADING_RATE;
@@ -144,8 +144,8 @@ static RenderPassDesc GetImplicitRenderPassDesc(
         ShadingRateAttachment.Attachment.AttachmentIndex = AttachmentInd;
         ShadingRateAttachment.Attachment.State           = RESOURCE_STATE_SHADING_RATE;
 
-        ShadingRateAttachment.TileWidth  = ShadingRateTileSize.x;
-        ShadingRateAttachment.TileHeight = ShadingRateTileSize.y;
+        ShadingRateAttachment.TileSize[0] = ShadingRateTileSize.x;
+        ShadingRateAttachment.TileSize[1] = ShadingRateTileSize.y;
 
         SubpassDesc.pShadingRateAttachment = &ShadingRateAttachment;
 

@@ -301,7 +301,7 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
                 (vkExtFeatures.ShadingRate.attachmentFragmentShadingRate != VK_FALSE ? SHADING_RATE_CAP_FLAG_TEXTURE_BASED : SHADING_RATE_CAP_FLAG_NONE) |
                 (vkDeviceExtProps.ShadingRate.fragmentShadingRateWithSampleMask != VK_FALSE ? SHADING_RATE_CAP_FLAG_SAMPLE_MASK : SHADING_RATE_CAP_FLAG_NONE) |
                 (vkDeviceExtProps.ShadingRate.fragmentShadingRateWithShaderSampleMask != VK_FALSE ? SHADING_RATE_CAP_FLAG_SHADER_SAMPLE_MASK : SHADING_RATE_CAP_FLAG_NONE) |
-                (vkDeviceExtProps.ShadingRate.fragmentShadingRateWithShaderDepthStencilWrites != VK_FALSE ? SHADING_RATE_CAP_FLAG_DEPTH_STENCIL_WRITE : SHADING_RATE_CAP_FLAG_NONE) |
+                (vkDeviceExtProps.ShadingRate.fragmentShadingRateWithShaderDepthStencilWrites != VK_FALSE ? SHADING_RATE_CAP_FLAG_SHADER_DEPTH_STENCIL_WRITE : SHADING_RATE_CAP_FLAG_NONE) |
                 (vkDeviceExtProps.ShadingRate.primitiveFragmentShadingRateWithMultipleViewports != VK_FALSE ? SHADING_RATE_CAP_FLAG_PER_PRIMITIVE_WITH_MULTIPLE_VIEWPORTS : SHADING_RATE_CAP_FLAG_NONE) |
                 (vkDeviceExtProps.ShadingRate.layeredShadingRateAttachments != VK_FALSE ? SHADING_RATE_CAP_FLAG_LAYERED_TEXTURE : SHADING_RATE_CAP_FLAG_NONE);
 
@@ -350,7 +350,7 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
         {
             ShadingRateProps.Format    = SHADING_RATE_FORMAT_UNORM8;
             ShadingRateProps.Combiners = SHADING_RATE_COMBINER_PASSTHROUGH | SHADING_RATE_COMBINER_OVERRIDE;
-            ShadingRateProps.CapFlags  = SHADING_RATE_CAP_FLAG_TEXTURE_BASED | SHADING_RATE_CAP_FLAG_LAYERED_TEXTURE;
+            ShadingRateProps.CapFlags  = SHADING_RATE_CAP_FLAG_TEXTURE_BASED | SHADING_RATE_CAP_FLAG_SAME_TEXTURE_FOR_WHOLE_RENDERPASS;
 
             ShadingRateProps.MinTileSize[0] = vkDeviceExtProps.FragmentDensityMap.minFragmentDensityTexelSize.width;
             ShadingRateProps.MinTileSize[1] = vkDeviceExtProps.FragmentDensityMap.minFragmentDensityTexelSize.height;
@@ -359,7 +359,7 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
             // AZ TODO
         }
 #if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(ShadingRateProps) == 56, "Did you add a new member to ShadingRateProperties? Please initialize it here.");
+        static_assert(sizeof(ShadingRateProps) == 44, "Did you add a new member to ShadingRateProperties? Please initialize it here.");
 #endif
     }
 
@@ -960,12 +960,10 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
                         *NextExt = &EnabledExtFeats.FragmentDensityMap2;
                         NextExt  = &EnabledExtFeats.FragmentDensityMap2.pNext;
                     }
-
-                    // AZ TODO
                 }
                 else
                 {
-                    UNEXPECTED("");
+                    UNEXPECTED("One of vulkan features: fragment shading rate or fragment density map must be enabled");
                 }
             }
 

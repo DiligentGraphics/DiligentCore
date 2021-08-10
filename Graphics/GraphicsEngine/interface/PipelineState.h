@@ -124,12 +124,21 @@ struct ShaderResourceVariableDesc
 typedef struct ShaderResourceVariableDesc ShaderResourceVariableDesc;
 
 
-/// AZ TODO
+/// Pipeline state shading rate flags.
 DILIGENT_TYPED_ENUM(PIPELINE_SHADING_RATE_FLAGS, Uint8)
 {
-    PIPELINE_SHADING_RATE_NONE          = 0x00,
-    PIPELINE_SHADING_RATE_PER_PRIMITIVE = 0x01,
-    PIPELINE_SHADING_RATE_TEXTURE_BASED = 0x02,
+    /// Shading rate is not used.
+    PIPELINE_SHADING_RATE_FLAG_NONE          = 0x00,
+
+    /// Indicates that the pipeline state will be used with per draw or per primitive shading rate.
+    /// See IDeviceContext::SetShadingRate().
+    PIPELINE_SHADING_RATE_FLAG_PER_PRIMITIVE = 0x01,
+
+    /// Indicates that the pipeline state will be used with texture-based shading rate.
+    /// See IDeviceContext::SetShadingRate() and IDeviceContext::SetShadingRateTexture().
+    PIPELINE_SHADING_RATE_FLAG_TEXTURE_BASED = 0x02,
+
+    PIPELINE_SHADING_RATE_FLAG_LAST          = PIPELINE_SHADING_RATE_FLAG_TEXTURE_BASED,
 };
 
 
@@ -209,9 +218,8 @@ struct GraphicsPipelineDesc
     /// When pRenderPass is null, this member must be 0.
     Uint8 SubpassIndex           DEFAULT_INITIALIZER(0);
 
-    /// AZ TODO
-    /// required for Vulkan
-    PIPELINE_SHADING_RATE_FLAGS ShadingRateFlags DEFAULT_INITIALIZER(PIPELINE_SHADING_RATE_NONE);
+    /// Shading rate flags specify which type of the shading rate will be used with this pipeline.
+    PIPELINE_SHADING_RATE_FLAGS ShadingRateFlags DEFAULT_INITIALIZER(PIPELINE_SHADING_RATE_FLAG_NONE);
 
     /// Render target formats.
     /// All formats must be TEX_FORMAT_UNKNOWN when pRenderPass is not null.

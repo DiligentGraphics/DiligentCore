@@ -75,16 +75,26 @@ void ValidateDepthStencilDesc(const PipelineStateDesc& PSODesc, const GraphicsPi
     CheckStencilOpDesc(DSSDesc.BackFace, "BackFace");
 }
 
-void ValidateMultiSampleDesc(const PipelineStateDesc& PSODesc, const GraphicsPipelineDesc& GraphicsPipeline, const ShadingRateProperties& SRProps) noexcept(false)
+void ValidateGraphicsPipelineDesc(const PipelineStateDesc& PSODesc, const GraphicsPipelineDesc& GraphicsPipeline, const ShadingRateProperties& SRProps) noexcept(false)
 {
-    if (GraphicsPipeline.ShadingRateFlags != PIPELINE_SHADING_RATE_NONE)
+    if (GraphicsPipeline.NumViewports == 0)
+        LOG_PSO_ERROR_AND_THROW("NumViewports must be greater than 0");
+
+    if (GraphicsPipeline.ShadingRateFlags != PIPELINE_SHADING_RATE_FLAG_NONE)
     {
         if ((SRProps.CapFlags & SHADING_RATE_CAP_FLAG_SAMPLE_MASK) == 0)
         {
-            const Uint32 RequiredMask = (1u << GraphicsPipeline.SmplDesc.Count);
+            const Uint32 RequiredMask = (1u << GraphicsPipeline.SmplDesc.Count) - 1;
 
             if ((GraphicsPipeline.SampleMask & RequiredMask) != RequiredMask)
-                LOG_PSO_ERROR_AND_THROW("SampleMask with zero bits used with EnableVRS which requires SHADING_RATE_CAP_FLAG_SAMPLE_MASK flag");
+                LOG_PSO_ERROR_AND_THROW("SampleMask with zero bits is used with ShadingRateFlags, which requires SHADING_RATE_CAP_FLAG_SAMPLE_MASK capability");
+        }
+
+        if ((GraphicsPipeline.ShadingRateFlags & PIPELINE_SHADING_RATE_FLAG_PER_PRIMITIVE) != 0 &&
+            GraphicsPipeline.NumViewports > 1 &&
+            (SRProps.CapFlags & SHADING_RATE_CAP_FLAG_PER_PRIMITIVE_WITH_MULTIPLE_VIEWPORTS) == 0)
+        {
+            LOG_PSO_ERROR_AND_THROW("Multiple viewports with variable shading rate require SHADING_RATE_CAP_FLAG_PER_PRIMITIVE_WITH_MULTIPLE_VIEWPORTS capability");
         }
     }
 }
@@ -398,7 +408,7 @@ void ValidateGraphicsPipelineCreateInfo(const GraphicsPipelineStateCreateInfo& C
     ValidateBlendStateDesc(PSODesc, GraphicsPipeline);
     ValidateRasterizerStateDesc(PSODesc, GraphicsPipeline);
     ValidateDepthStencilDesc(PSODesc, GraphicsPipeline);
-    ValidateMultiSampleDesc(PSODesc, GraphicsPipeline, AdapterInfo.ShadingRate);
+    ValidateGraphicsPipelineDesc(PSODesc, GraphicsPipeline, AdapterInfo.ShadingRate);
     ValidatePipelineResourceLayoutDesc(PSODesc, Features);
 
 
@@ -465,8 +475,11 @@ void ValidateGraphicsPipelineCreateInfo(const GraphicsPipelineStateCreateInfo& C
             LOG_PSO_ERROR_AND_THROW("Subpass index (", Uint32{GraphicsPipeline.SubpassIndex}, ") must be 0 when explicit render pass is not used.");
     }
 
-    if (CreateInfo.GraphicsPipeline.ShadingRateFlags != PIPELINE_SHADING_RATE_NONE && !Features.VariableRateShading)
-        LOG_PSO_ERROR_AND_THROW("EnableVRS requires VariableRateShading feature");
+    if (CreateInfo.GraphicsPipeline.ShadingRateFlags != PIPELINE_SHADING_RATE_FLAG_NONE)
+    {
+        if (!Features.VariableRateShading)
+            LOG_PSO_ERROR_AND_THROW("ShadingRateFlags (", GetPipelineShadingRateFlagsString(CreateInfo.GraphicsPipeline.ShadingRateFlags), ") require VariableRateShading feature");
+    }
 }
 
 void ValidateComputePipelineCreateInfo(const ComputePipelineStateCreateInfo& CreateInfo,

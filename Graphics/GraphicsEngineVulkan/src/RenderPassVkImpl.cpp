@@ -167,20 +167,32 @@ RenderPassVkImpl::RenderPassVkImpl(IReferenceCounters*   pRefCounters,
 
                 vkSRAttachment.sType                          = VK_STRUCTURE_TYPE_FRAGMENT_SHADING_RATE_ATTACHMENT_INFO_KHR;
                 vkSRAttachment.pFragmentShadingRateAttachment = ConvertAttachmentReferences(1, &SRAttachment.Attachment, VK_IMAGE_ASPECT_COLOR_BIT);
-                vkSRAttachment.shadingRateAttachmentTexelSize = {SRAttachment.TileWidth, SRAttachment.TileHeight};
+                vkSRAttachment.shadingRateAttachmentTexelSize = {SRAttachment.TileSize[0], SRAttachment.TileSize[1]};
             }
             else
             {
                 VERIFY_EXPR(FragDensityMapEnabled);
-                if (pMainSRA != nullptr)
-                    VERIFY_EXPR(*pMainSRA == *SubpassDesc.pShadingRateAttachment);
-                else
-                    pMainSRA = SubpassDesc.pShadingRateAttachment;
+                pMainSRA = pMainSRA ? pMainSRA : SubpassDesc.pShadingRateAttachment;
             }
         }
 
         *ppSubpassNext = nullptr;
     }
+
+    if (FragDensityMapEnabled && pMainSRA != nullptr)
+    {
+        for (Uint32 i = 0; i < m_Desc.SubpassCount; ++i)
+        {
+            const auto& SubpassDesc = m_Desc.pSubpasses[i];
+
+            if (SubpassDesc.pShadingRateAttachment == nullptr)
+                LOG_ERROR_AND_THROW("Vk_EXT_fragment_density_map extension requires that shading rate attachment is specified for all subpasses");
+
+            if (*pMainSRA != *SubpassDesc.pShadingRateAttachment)
+                LOG_ERROR_AND_THROW("Vk_EXT_fragment_density_map extension requires that shading rate attachment is the same for all subpasses");
+        }
+    }
+
     VERIFY_EXPR(CurrAttachmentReferenceInd == vkAttachmentReferences.size());
     VERIFY_EXPR(CurrPreserveAttachmentInd == vkPreserveAttachments.size());
     RenderPassCI.subpassCount = Desc.SubpassCount;
@@ -218,7 +230,7 @@ RenderPassVkImpl::RenderPassVkImpl(IReferenceCounters*   pRefCounters,
     RenderPassCI.correlatedViewMaskCount = 0;
     RenderPassCI.pCorrelatedViewMasks    = nullptr;
 
-    // AZ TODO
+    // Enable fragment density map
     VkRenderPassFragmentDensityMapCreateInfoEXT FragDensityMapCI{};
     if (FragDensityMapEnabled && pMainSRA != nullptr)
     {

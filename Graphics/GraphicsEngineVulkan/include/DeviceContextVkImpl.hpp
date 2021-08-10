@@ -502,6 +502,10 @@ private:
         /// Flag indicating if currently committed index buffer is up to date
         bool CommittedIBUpToDate = false;
 
+        /// If PSO was created with shading rate dynamic state, then
+        /// vkCmdSetFragmentShadingRateKHR must be called before the draw.
+        bool ShadingRateIsSet = false;
+
         Uint32 NumCommands = 0;
 
         VkPipelineBindPoint vkPipelineBindPoint = VK_PIPELINE_BIND_POINT_MAX_ENUM;

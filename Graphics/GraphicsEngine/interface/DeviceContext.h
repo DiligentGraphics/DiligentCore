@@ -2775,13 +2775,48 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     VIRTUAL void METHOD(UnlockCommandQueue)(THIS) PURE;
 
 
-    /// AZ TODO
+    /// Sets the shading base rate and combiners.
+
+    /// \param [in] BaseRate          - Base shading rate used for combiner operations.
+    /// \param [in] PrimitiveCombiner - Combiner operation for the per primitive shading rate (the output of the vertex shader).
+    /// \param [in] TextureCombiner   - Combiner operation for texture based shading rate (fetched from the shading rate texture),
+    ///                                 see IDeviceContext::SetShadingRateTexture() and SubpassDesc::pShadingRateAttachment.
+    ///
+    /// \remarks  Final shading rate calculated before the triangle rasterization by following algorithm:
+    ///               PrimitiveRate = ApplyCombiner(PrimitiveCombiner, BaseRate, PerPrimitiveRate)
+    ///               FinalRate     = ApplyCombiner(TextureCombiner, PrimitiveRate, ShadingRateTexture)
+    ///           Where
+    ///               PerPrimitiveRate   - vertex shader output value (HLSL: SV_ShadingRate; GLSL: gl_PrimitiveShadingRateEXT).
+    ///               ShadingRateTexture - texel value from the shading rate texture, see IDeviceContext::SetShadingRateTexture().
+    /// 
+    ///               SHADING_RATE ApplyCombiner(SHADING_RATE_COMBINER Combiner, SHADING_RATE Lhs, SHADING_RATE Rhs)
+    ///               {
+    ///                   switch (Combiner)
+    ///                   {
+    ///                       case SHADING_RATE_COMBINER_PASSTHROUGH: return Lhs;
+    ///                       case SHADING_RATE_COMBINER_OVERRIDE:    return Rhs;
+    ///                       case SHADING_RATE_COMBINER_MIN:         return Min(Lhs, Rhs);
+    ///                       case SHADING_RATE_COMBINER_MAX:         return Max(Lhs, Rhs);
+    ///                       case SHADING_RATE_COMBINER_SUM:         return Lhs + Rhs;
+    ///                       case SHADING_RATE_COMBINER_MUL:         return Lhs * Rhs;
+    ///                   }
+    ///               }
+    /// 
+    /// \remarks If SHADING_RATE_CAP_FLAG_PER_PRIMITIVE capability is not supported, then PrimitiveCombiner must be SHADING_RATE_COMBINER_PASSTHROUGH.
+    ///          if SHADING_RATE_CAP_FLAG_TEXTURE_BASED capability is not supported, then TextureCombiner must be SHADING_RATE_COMBINER_PASSTHROUGH.
+    /// 
+    /// \remarks Supported contexts: graphics.
     VIRTUAL void METHOD(SetShadingRate)(THIS_
                                         SHADING_RATE          BaseRate,
                                         SHADING_RATE_COMBINER PrimitiveCombiner,
                                         SHADING_RATE_COMBINER TextureCombiner) PURE;
 
-    /// AZ TODO
+    /// Sets the shading rate texture.
+
+    /// \param [in] pShadingRateView - shading rate texture view. Set null to disable variable shading rate.
+    /// \param [in] TransitionMode   - Texture state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
+    /// 
+    /// \remarks Supported contexts: graphics.
     VIRTUAL void METHOD(SetShadingRateTexture)(THIS_
                                                ITextureView*                  pShadingRateView,
                                                RESOURCE_STATE_TRANSITION_MODE TransitionMode) PURE;

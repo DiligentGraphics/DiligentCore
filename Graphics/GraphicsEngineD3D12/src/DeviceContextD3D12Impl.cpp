@@ -580,6 +580,15 @@ void DeviceContextD3D12Impl::PrepareForDraw(GraphicsContext& GraphCtx, DRAW_FLAG
     {
         CommitRootTablesAndViews<false>(RootInfo, CommitSRBMask, GraphCtx);
     }
+
+    // In Vulkan, shading rate is applied to a PSO created with shading rate dynamic state.
+    // In D3D12, shading rate is applied to all subsequent draw commands, but for compatibility with Vulkan
+    // we need to reset shading rate to default state.
+    if (m_State.CustomShadingRate && m_pPipelineState->GetGraphicsPipelineDesc().ShadingRateFlags == PIPELINE_SHADING_RATE_FLAG_NONE)
+    {
+        m_State.CustomShadingRate = false;
+        GraphCtx.AsGraphicsContext5().SetShadingRate(D3D12_SHADING_RATE_1X1, nullptr);
+    }
 }
 
 void DeviceContextD3D12Impl::PrepareForIndexedDraw(GraphicsContext& GraphCtx, DRAW_FLAGS Flags, VALUE_TYPE IndexType)
@@ -1405,6 +1414,12 @@ void DeviceContextD3D12Impl::CommitSubpassRenderTargets()
 
     // Set the viewport to match the framebuffer size
     SetViewports(1, nullptr, 0, 0);
+
+    if (m_pBoundShadingRateTexture != nullptr)
+    {
+        auto* pTexD3D12 = ValidatedCast<TextureD3D12Impl>(m_pBoundShadingRateTexture->GetTexture());
+        CmdCtx.AsGraphicsContext5().SetShadingRateImage(pTexD3D12->GetD3D12Resource());
+    }
 }
 
 void DeviceContextD3D12Impl::BeginRenderPass(const BeginRenderPassAttribs& Attribs)
@@ -1433,6 +1448,8 @@ void DeviceContextD3D12Impl::EndRenderPass()
     auto& CmdCtx = GetCmdContext();
     CmdCtx.AsGraphicsContext4().EndRenderPass();
     TransitionSubpassAttachments(m_SubpassIndex + 1);
+    if (m_pBoundShadingRateTexture)
+        CmdCtx.AsGraphicsContext5().SetShadingRateImage(nullptr);
     TDeviceContextBase::EndRenderPass();
 }
 
@@ -2838,18 +2855,27 @@ void DeviceContextD3D12Impl::SetShadingRate(SHADING_RATE BaseRate, SHADING_RATE_
             ShadingRateCombinerToD3D12ShadingRateCombiner(TextureCombiner) //
         };
     GetCmdContext().AsGraphicsContext5().SetShadingRate(ShadingRateToD3D12ShadingRate(BaseRate), Combiners);
+
+    m_State.CustomShadingRate = !(BaseRate == SHADING_RATE_1X1 && PrimitiveCombiner == SHADING_RATE_COMBINER_PASSTHROUGH && TextureCombiner == SHADING_RATE_COMBINER_PASSTHROUGH);
 }
 
 void DeviceContextD3D12Impl::SetShadingRateTexture(ITextureView* pShadingRateView, RESOURCE_STATE_TRANSITION_MODE TransitionMode)
 {
     TDeviceContextBase::SetShadingRateTexture(pShadingRateView, TransitionMode, 0);
 
-    auto* pTexViewD3D12 = ValidatedCast<TextureViewD3D12Impl>(pShadingRateView);
-    auto* pTexD3D12     = ValidatedCast<TextureD3D12Impl>(pTexViewD3D12->GetTexture());
-    auto& CmdCtx        = GetCmdContext();
-    TransitionOrVerifyTextureState(CmdCtx, *pTexD3D12, TransitionMode, RESOURCE_STATE_SHADING_RATE, "Shading rate texture (DeviceContextD3D12Impl::SetShadingRateTexture)");
+    auto&           CmdCtx      = GetCmdContext();
+    ID3D12Resource* pSRResource = nullptr;
 
-    CmdCtx.AsGraphicsContext5().SetShadingRateImage(pTexD3D12->GetD3D12Resource());
+    if (pShadingRateView != nullptr)
+    {
+        auto* pTexViewD3D12 = ValidatedCast<TextureViewD3D12Impl>(pShadingRateView);
+        auto* pTexD3D12     = ValidatedCast<TextureD3D12Impl>(pTexViewD3D12->GetTexture());
+        TransitionOrVerifyTextureState(CmdCtx, *pTexD3D12, TransitionMode, RESOURCE_STATE_SHADING_RATE, "Shading rate texture (DeviceContextD3D12Impl::SetShadingRateTexture)");
+
+        pSRResource = pTexD3D12->GetD3D12Resource();
+    }
+
+    CmdCtx.AsGraphicsContext5().SetShadingRateImage(pSRResource);
 }
 
 } // namespace Diligent

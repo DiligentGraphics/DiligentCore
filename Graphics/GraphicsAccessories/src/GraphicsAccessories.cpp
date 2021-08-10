@@ -1869,4 +1869,29 @@ TEXTURE_FORMAT TexFormatToSRGB(TEXTURE_FORMAT Fmt)
     }
 }
 
+String GetPipelineShadingRateFlagsString(PIPELINE_SHADING_RATE_FLAGS Flags)
+{
+    String Result;
+    while (Flags != PIPELINE_SHADING_RATE_FLAG_NONE)
+    {
+        auto Bit = ExtractLSB(Flags);
+
+        if (!Result.empty())
+            Result += " | ";
+
+        static_assert(PIPELINE_SHADING_RATE_FLAG_LAST == 0x02, "Please update the switch below to handle the new pipeline shading rate flag");
+        switch (Bit)
+        {
+            // clang-format off
+            case PIPELINE_SHADING_RATE_FLAG_PER_PRIMITIVE: Result += "PER_PRIMITIVE"; break;
+            case PIPELINE_SHADING_RATE_FLAG_TEXTURE_BASED: Result += "TEXTURE_BASED"; break;
+            // clang-format on
+            default:
+                UNEXPECTED("Unexpected pipeline shading rate");
+                Result += "Unknown";
+        }
+    }
+    return Result;
+}
+
 } // namespace Diligent

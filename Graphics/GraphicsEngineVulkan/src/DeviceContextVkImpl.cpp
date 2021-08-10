@@ -684,7 +684,7 @@ void DeviceContextVkImpl::DvpLogRenderPass_PSOMismatch()
     ss << "; DSV: " << GetTextureFormatAttribs(GrPipeline.DSVFormat).Name;
     ss << "; Sample count: " << Uint32{GrPipeline.SmplDesc.Count};
 
-    if (GrPipeline.ShadingRateFlags & PIPELINE_SHADING_RATE_TEXTURE_BASED)
+    if (GrPipeline.ShadingRateFlags & PIPELINE_SHADING_RATE_FLAG_TEXTURE_BASED)
         ss << "; VRS";
 
     LOG_ERROR_MESSAGE(ss.str());
@@ -1703,6 +1703,7 @@ void DeviceContextVkImpl::ResetRenderTargets()
     m_vkFramebuffer = VK_NULL_HANDLE;
     if (m_CommandBuffer.GetVkCmdBuffer() != VK_NULL_HANDLE && m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE)
         m_CommandBuffer.EndRenderPass();
+    m_State.ShadingRateIsSet = false;
 }
 
 void DeviceContextVkImpl::BeginRenderPass(const BeginRenderPassAttribs& Attribs)
@@ -1750,6 +1751,8 @@ void DeviceContextVkImpl::BeginRenderPass(const BeginRenderPassAttribs& Attribs)
 
     // Set the viewport to match the framebuffer size
     SetViewports(1, nullptr, 0, 0);
+
+    m_State.ShadingRateIsSet = false;
 }
 
 void DeviceContextVkImpl::NextSubpass()
@@ -3630,11 +3633,12 @@ void DeviceContextVkImpl::SetShadingRate(SHADING_RATE BaseRate, SHADING_RATE_COM
 
         EnsureVkCmdBuffer();
         m_CommandBuffer.SetFragmentShadingRate(ShadingRateToVkFragmentSize(BaseRate), CombinerOps);
+        m_State.ShadingRateIsSet = true;
     }
     else if (ExtFeatures.FragmentDensityMap.fragmentDensityMap != VK_FALSE)
     {
         // ignored
-        DEV_CHECK_ERR(BaseRate == SHADING_RATE_1x1, "IDeviceContext::SetShadingRate: BaseRate must be SHADING_RATE_1x1");
+        DEV_CHECK_ERR(BaseRate == SHADING_RATE_1X1, "IDeviceContext::SetShadingRate: BaseRate must be SHADING_RATE_1X1");
         DEV_CHECK_ERR(PrimitiveCombiner == SHADING_RATE_COMBINER_PASSTHROUGH, "IDeviceContext::SetShadingRate: PrimitiveCombiner must be SHADING_RATE_COMBINER_PASSTHROUGH");
         DEV_CHECK_ERR(TextureCombiner == SHADING_RATE_COMBINER_OVERRIDE, "IDeviceContext::SetShadingRate: TextureCombiner must be SHADING_RATE_COMBINER_OVERRIDE");
     }

@@ -178,26 +178,51 @@ void ValidateTextureDesc(const TextureDesc& Desc, const IRenderDevice* pDevice) 
 
     if (Desc.BindFlags & BIND_SHADING_RATE)
     {
+        const auto& SRProps = pDevice->GetAdapterInfo().ShadingRate;
+
         if (!pDevice->GetDeviceInfo().Features.VariableRateShading)
             LOG_TEXTURE_ERROR_AND_THROW("BIND_FLAG_SHADING_RATE requires VariableRateShading feature.");
 
-        switch (pDevice->GetAdapterInfo().ShadingRate.Format)
+        if ((SRProps.CapFlags & SHADING_RATE_CAP_FLAG_TEXTURE_BASED) == 0)
+            LOG_TEXTURE_ERROR_AND_THROW("BIND_FLAG_SHADING_RATE requires SHADING_RATE_CAP_FLAG_TEXTURE_BASED capability.");
+
+        if (Desc.SampleCount != 1)
+            LOG_TEXTURE_ERROR_AND_THROW("BIND_FLAG_SHADING_RATE is not allowed for multisample texture.");
+
+        if (Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY && Desc.ArraySize > 1 && (SRProps.CapFlags & SHADING_RATE_CAP_FLAG_LAYERED_TEXTURE) == 0)
+            LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture arrays require SHADING_RATE_CAP_FLAG_LAYERED_TEXTURE capability");
+
+        if (Desc.Usage != USAGE_DEFAULT && Desc.Usage != USAGE_IMMUTABLE)
+            LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture requires USAGE_DEFAULT or USAGE_IMMUTABLE.");
+
+        if (pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_D3D12)
+        {
+            if (Desc.BindFlags & BIND_UNORDERED_ACCESS)
+                LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture is not compatible with BIND_UNORDERED_ACCESS.");
+
+            if (Desc.MipLevels != 1)
+                LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture must have 1 mip level.");
+        }
+
+        switch (SRProps.Format)
         {
             case SHADING_RATE_FORMAT_PALETTE:
-                if (Desc.Format != TEX_FORMAT_R8_UINT)
-                    LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture format must be R8_UINT");
+                if (Desc.Format != TEX_FORMAT_R8_UINT && Desc.Format != TEX_FORMAT_R8_TYPELESS)
+                    LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture format must be R8_UINT or TEX_FORMAT_R8_TYPELESS.");
                 if (Desc.Type != RESOURCE_DIM_TEX_2D && Desc.Type != RESOURCE_DIM_TEX_2D_ARRAY)
-                    LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture must be 2D or 2D Array");
+                    LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture must be 2D or 2D Array.");
                 break;
+
             case SHADING_RATE_FORMAT_UNORM8:
-                if (Desc.Format != TEX_FORMAT_RG8_UNORM)
-                    LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture format must be RG8_UNORM");
+                if (Desc.Format != TEX_FORMAT_RG8_UNORM && Desc.Format != TEX_FORMAT_RG8_TYPELESS)
+                    LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture format must be RG8_UNORM or TEX_FORMAT_RG8_TYPELESS.");
                 if (Desc.Type != RESOURCE_DIM_TEX_2D)
-                    LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture must be 2D");
+                    LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture must be 2D.");
                 break;
+
             case SHADING_RATE_FORMAT_FP32:
             default:
-                LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture is not supported");
+                LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture is not supported.");
         }
     }
 }

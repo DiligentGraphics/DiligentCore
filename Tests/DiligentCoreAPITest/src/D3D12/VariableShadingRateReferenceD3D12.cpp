@@ -246,14 +246,15 @@ void VariableShadingRatePerPrimitiveTestReferenceD3D12(ISwapChain* pSwapChain)
 }
 
 
+RefCntAutoPtr<ITextureView> CreateShadingRateTexture(IRenderDevice* pDevice, ISwapChain* pSwapChain, Uint32 SampleCount);
+
 void VariableShadingRateTextureBasedTestReferenceD3D12(ISwapChain* pSwapChain)
 {
     auto* pEnv                   = TestingEnvironmentD3D12::GetInstance();
     auto* pd3d12Device           = pEnv->GetD3D12Device();
     auto* pTestingSwapChainD3D12 = ValidatedCast<TestingSwapChainD3D12>(pSwapChain);
 
-    const auto& SRProps = pEnv->GetDevice()->GetAdapterInfo().ShadingRate;
-    const auto& SCDesc  = pSwapChain->GetDesc();
+    const auto& SCDesc = pSwapChain->GetDesc();
 
     CComPtr<ID3DBlob> pVSByteCode, pPSByteCode;
 
@@ -300,39 +301,10 @@ void VariableShadingRateTextureBasedTestReferenceD3D12(ISwapChain* pSwapChain)
     hr = pd3d12Device->CreateGraphicsPipelineState(&PSODesc, __uuidof(pd3d12PSO), reinterpret_cast<void**>(static_cast<ID3D12PipelineState**>(&pd3d12PSO)));
     VERIFY_EXPR(SUCCEEDED(hr));
 
-    RefCntAutoPtr<ITexture> pSRTex;
-    {
-        TextureDesc TexDesc;
-        TexDesc.Name      = "Shading rate texture";
-        TexDesc.Type      = RESOURCE_DIM_TEX_2D;
-        TexDesc.Width     = SCDesc.Width / SRProps.MaxTileSize[0];
-        TexDesc.Height    = SCDesc.Height / SRProps.MaxTileSize[1];
-        TexDesc.Format    = TEX_FORMAT_R8_UINT;
-        TexDesc.BindFlags = BIND_SHADING_RATE;
-        TexDesc.Usage     = USAGE_IMMUTABLE;
+    auto pVRSView = CreateShadingRateTexture(pEnv->GetDevice(), pSwapChain, 1);
+    ASSERT_NE(pVRSView, nullptr);
 
-        std::vector<Uint8> SRData;
-        SRData.resize(TexDesc.Width * TexDesc.Height);
-        for (Uint32 y = 0; y < TexDesc.Height; ++y)
-        {
-            for (Uint32 x = 0; x < TexDesc.Width; ++x)
-            {
-                SRData[x + y * TexDesc.Width] = TestingConstants::TextureBased::GenTexture(x, y, TexDesc.Width, TexDesc.Height);
-            }
-        }
-
-        TextureSubResData SubResData;
-        SubResData.pData  = SRData.data();
-        SubResData.Stride = TexDesc.Width;
-
-        TextureData TexData;
-        TexData.pSubResources   = &SubResData;
-        TexData.NumSubresources = 1;
-
-        pEnv->GetDevice()->CreateTexture(TexDesc, &TexData, &pSRTex);
-        ASSERT_NE(pSRTex, nullptr);
-    }
-    auto* pSRTexD3D12 = static_cast<ID3D12Resource*>(pSRTex->GetNativeHandle());
+    auto* pSRTexD3D12 = static_cast<ID3D12Resource*>(pVRSView->GetTexture()->GetNativeHandle());
 
     auto pCmdList = pEnv->CreateGraphicsCommandList();
     pTestingSwapChainD3D12->TransitionRenderTarget(pCmdList, D3D12_RESOURCE_STATE_RENDER_TARGET);

@@ -459,6 +459,9 @@ private:
 
         // Indicates if currently committed D3D12 index buffer is up to date
         bool bCommittedD3D12IBUpToDate = false;
+
+        // Indicates if custom shading rate is set in the command list
+        bool CustomShadingRate = false;
     } m_State;
 
     RootTableInfo m_GraphicsResources;

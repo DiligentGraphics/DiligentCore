@@ -650,4 +650,6 @@ String GetShaderResourcePrintName(const DescType& ResDesc, Uint32 ArrayIndex = 0
 
 TEXTURE_FORMAT TexFormatToSRGB(TEXTURE_FORMAT Fmt);
 
+String GetPipelineShadingRateFlagsString(PIPELINE_SHADING_RATE_FLAGS Flags);
+
 } // namespace Diligent

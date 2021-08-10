@@ -355,6 +355,8 @@ void VariableShadingRatePerPrimitiveTestReferenceVk(ISwapChain* pSwapChain)
 }
 
 
+RefCntAutoPtr<ITextureView> CreateShadingRateTexture(IRenderDevice* pDevice, ISwapChain* pSwapChain, Uint32 SampleCount);
+
 void VariableShadingRateTextureBasedTestReferenceVk(ISwapChain* pSwapChain)
 {
     auto* pEnv                = TestingEnvironmentVk::GetInstance();
@@ -452,35 +454,9 @@ void VariableShadingRateTextureBasedTestReferenceVk(ISwapChain* pSwapChain)
     RefCntAutoPtr<ITexture> pSRTex;
     VkImageView             vkShadingRateView = VK_NULL_HANDLE;
     {
-        TextureDesc TexDesc;
-        TexDesc.Name      = "Shading rate texture";
-        TexDesc.Type      = RESOURCE_DIM_TEX_2D;
-        TexDesc.Width     = SCDesc.Width / SRProps.MaxTileSize[0];
-        TexDesc.Height    = SCDesc.Height / SRProps.MaxTileSize[1];
-        TexDesc.Format    = TEX_FORMAT_R8_UINT;
-        TexDesc.BindFlags = BIND_SHADING_RATE;
-        TexDesc.Usage     = USAGE_IMMUTABLE;
-
-        std::vector<Uint8> SRData;
-        SRData.resize(TexDesc.Width * TexDesc.Height);
-        for (Uint32 y = 0; y < TexDesc.Height; ++y)
-        {
-            for (Uint32 x = 0; x < TexDesc.Width; ++x)
-            {
-                SRData[x + y * TexDesc.Width] = TestingConstants::TextureBased::GenTexture(x, y, TexDesc.Width, TexDesc.Height);
-            }
-        }
-
-        TextureSubResData SubResData;
-        SubResData.pData  = SRData.data();
-        SubResData.Stride = TexDesc.Width;
-
-        TextureData TexData;
-        TexData.pSubResources   = &SubResData;
-        TexData.NumSubresources = 1;
-
-        pEnv->GetDevice()->CreateTexture(TexDesc, &TexData, &pSRTex);
-        ASSERT_NE(pSRTex, nullptr);
+        auto pVRSView = CreateShadingRateTexture(pEnv->GetDevice(), pSwapChain, 1);
+        ASSERT_NE(pVRSView, nullptr);
+        pSRTex = pVRSView->GetTexture();
 
         auto vkShadingRateImage = static_cast<VkImage>(pSRTex->GetNativeHandle());
 
