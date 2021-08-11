@@ -195,6 +195,7 @@ public:
         DynamicAtlasManager::Region Allocate(Uint32 Width, Uint32 Height)
         {
             VERIFY_EXPR(pAtlasMgr != nullptr);
+            VERIFY_EXPR(pAtlasMgr->UseCount > 0);
             std::lock_guard<std::mutex> Lock{pAtlasMgr->Mtx};
             return pAtlasMgr->Mgr.Allocate(Width, Height);
         }
@@ -202,6 +203,7 @@ public:
         bool Free(DynamicAtlasManager::Region&& R)
         {
             VERIFY_EXPR(pAtlasMgr != nullptr);
+            VERIFY_EXPR(pAtlasMgr->UseCount > 0);
             std::lock_guard<std::mutex> Lock{pAtlasMgr->Mtx};
             pAtlasMgr->Mgr.Free(std::move(R));
             return pAtlasMgr->Mgr.IsEmpty();
@@ -210,6 +212,7 @@ public:
         bool IsEmpty()
         {
             VERIFY_EXPR(pAtlasMgr != nullptr);
+            VERIFY_EXPR(pAtlasMgr->UseCount > 0);
             std::lock_guard<std::mutex> Lock{pAtlasMgr->Mtx};
             return pAtlasMgr->Mgr.IsEmpty();
         }
@@ -277,7 +280,7 @@ struct SliceBatch
         std::lock_guard<std::mutex> Lock{m_Mtx};
 
         auto it = m_Slices.find(Slice);
-        // NB: Lock atomically increases the use count of the slice manager while we hold the mutex.
+        // NB: Lock atomically increases the use count of the slice while we hold the mutex.
         return it != m_Slices.end() ? it->second.Lock() : ThreadSafeAtlasManager::ManagerLock{};
     }
 
@@ -289,7 +292,7 @@ struct SliceBatch
         if (it != m_Slices.end())
         {
             Slice = it->first;
-            // NB: Lock atomically increases the use count of the slice manager while we hold the mutex.
+            // NB: Lock atomically increases the use count of the slice while we hold the mutex.
             return it->second.Lock();
         }
 
@@ -302,7 +305,7 @@ struct SliceBatch
 
         VERIFY(m_Slices.find(Slice) == m_Slices.end(), "Slice ", Slice, " already present in the batch.");
         auto it = m_Slices.emplace(Slice, m_AtlasDim).first;
-        // NB: Lock() atomically increases the use count of the slice manager while we hold the mutex
+        // NB: Lock() atomically increases the use count of the slice while we hold the mutex
         return it->second.Lock();
     }
 
@@ -315,6 +318,7 @@ struct SliceBatch
         {
             auto MgrLock = it->second.Lock();
             VERIFY_EXPR(MgrLock);
+            // The slice could've been used by another thread and may not be empty anymore
             if (MgrLock.IsEmpty())
             {
                 // Use count may only be increased while we hold the mutex.
@@ -335,7 +339,7 @@ private:
     const uint2 m_AtlasDim;
 
     std::mutex m_Mtx;
-    // For every alignment, we keep a list of slice managers sorted by the slice number.
+    // For every alignment, we keep a list of slice managers sorted by the slice index.
     std::map<Uint32, ThreadSafeAtlasManager> m_Slices;
 };
 
