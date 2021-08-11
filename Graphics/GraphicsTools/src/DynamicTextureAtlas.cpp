@@ -234,6 +234,11 @@ public:
         return ManagerLock{*this};
     }
 
+    int GetUseCount() const
+    {
+        return UseCount.load();
+    }
+
 private:
     friend ManagerLock;
 
@@ -316,19 +321,32 @@ struct SliceBatch
         auto it = m_Slices.find(Slice);
         if (it != m_Slices.end())
         {
-            auto MgrLock = it->second.Lock();
-            VERIFY_EXPR(MgrLock);
-            // The slice could've been used by another thread and may not be empty anymore
-            if (MgrLock.IsEmpty())
+            // Use count may only be incremented under the mutex. If use count is zero,
+            // no other thread may be accessing this slice since we hold the mutex.
+            if (it->second.GetUseCount() == 0)
             {
-                // Use count may only be increased while we hold the mutex.
-                // If use count returned by Release() is zero, no other thread may be
-                // accessing this slice, so we can safely remove it.
-                if (MgrLock.Release() == 0)
+                // Check that the slice is empty. It is very important to check this only
+                // after we checked the use count.
+                // If the slice is empty, but the use count is not zero, another thread may
+                // allocate from this slice after we checked if it is empty.
+                auto MgrLock = it->second.Lock();
+                VERIFY_EXPR(MgrLock);
+                // The slice could've been used by another thread and may not be empty anymore
+                if (MgrLock.IsEmpty())
                 {
+                    auto UseCnt = MgrLock.Release();
+                    VERIFY(UseCnt == 0, "There must be no other uses of this slice since we checked the use count already.");
                     m_Slices.erase(it);
                     return true;
                 }
+                else
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                return false;
             }
         }
 
