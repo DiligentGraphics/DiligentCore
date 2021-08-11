@@ -200,6 +200,7 @@ public:
             return pAtlasMgr->Mgr.Allocate(Width, Height);
         }
 
+        // Frees a region and returns true if the atlas is empty
         bool Free(DynamicAtlasManager::Region&& R)
         {
             VERIFY_EXPR(pAtlasMgr != nullptr);
@@ -244,7 +245,9 @@ private:
 
     int AddUse()
     {
-        return UseCount.fetch_add(1) + 1;
+        auto Uses = UseCount.fetch_add(1) + 1;
+        VERIFY_EXPR(Uses > 0);
+        return Uses;
     }
 
     int ReleaseUse()
@@ -285,7 +288,7 @@ struct SliceBatch
         std::lock_guard<std::mutex> Lock{m_Mtx};
 
         auto it = m_Slices.find(Slice);
-        // NB: Lock atomically increases the use count of the slice while we hold the mutex.
+        // NB: Lock() atomically increases the use count of the slice while we hold the mutex.
         return it != m_Slices.end() ? it->second.Lock() : ThreadSafeAtlasManager::ManagerLock{};
     }
 
@@ -297,7 +300,7 @@ struct SliceBatch
         if (it != m_Slices.end())
         {
             Slice = it->first;
-            // NB: Lock atomically increases the use count of the slice while we hold the mutex.
+            // NB: Lock() atomically increases the use count of the slice while we hold the mutex.
             return it->second.Lock();
         }
 
@@ -310,7 +313,7 @@ struct SliceBatch
 
         VERIFY(m_Slices.find(Slice) == m_Slices.end(), "Slice ", Slice, " already present in the batch.");
         auto it = m_Slices.emplace(Slice, m_AtlasDim).first;
-        // NB: Lock() atomically increases the use count of the slice while we hold the mutex
+        // NB: Lock() atomically increases the use count of the slice while we hold the mutex.
         return it->second.Lock();
     }
 
@@ -516,14 +519,14 @@ public:
         const auto AlignedWidth  = AlignUp(Width, Alignment);
         const auto AlignedHeight = AlignUp(Height, Alignment);
 
+        auto* pBatch = GetSliceBatch(Alignment, m_Desc.Width / Alignment, m_Desc.Height / Alignment);
+        VERIFY_EXPR(pBatch != nullptr);
+
         DynamicAtlasManager::Region Subregion;
 
         Uint32 Slice = 0;
         while (Slice < m_MaxSliceCount)
         {
-            auto* pBatch = GetSliceBatch(Alignment, m_Desc.Width / Alignment, m_Desc.Height / Alignment);
-            VERIFY_EXPR(pBatch != nullptr);
-
             // Lock the first available slice with index >= Slice
             auto SliceLock = pBatch->LockSliceAfter(Slice);
             if (!SliceLock)
