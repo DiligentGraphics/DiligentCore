@@ -220,6 +220,9 @@ struct DynamicTextureAtlasCreateInfo
     /// of ITextureAtlasSuballocation implementation class. This member defines
     /// the number of objects in one page.
     Uint32 SuballocationObjAllocationGranularity = 64;
+
+    /// Silence allocation errors.
+    bool Silent = false;
 };
 
 /// Creates a new dynamic texture atlas.

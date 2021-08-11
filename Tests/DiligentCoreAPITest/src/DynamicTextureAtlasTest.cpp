@@ -188,4 +188,65 @@ TEST(DynamicTextureAtlas, Allocate)
     }
 }
 
+
+TEST(DynamicTextureAtlas, Overflow)
+{
+    auto* const pEnv     = TestingEnvironment::GetInstance();
+    auto* const pDevice  = pEnv->GetDevice();
+    auto* const pContext = pEnv->GetDeviceContext();
+
+    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+
+    DynamicTextureAtlasCreateInfo CI;
+    CI.ExtraSliceCount = 2;
+    CI.MaxSliceCount   = 2;
+    CI.MinAlignment    = 16;
+    CI.Silent          = true;
+    CI.Desc.Format     = TEX_FORMAT_RGBA8_UNORM;
+    CI.Desc.Name       = "Dynamic Texture Atlas Test";
+    CI.Desc.Type       = RESOURCE_DIM_TEX_2D_ARRAY;
+    CI.Desc.BindFlags  = BIND_SHADER_RESOURCE;
+    CI.Desc.Width      = 512;
+    CI.Desc.Height     = 512;
+    CI.Desc.ArraySize  = 2;
+
+    RefCntAutoPtr<IDynamicTextureAtlas> pAtlas;
+    CreateDynamicTextureAtlas(pDevice, CI, &pAtlas);
+
+#ifdef DILIGENT_DEBUG
+    constexpr size_t NumIterations = 8;
+#else
+    constexpr size_t NumIterations = 32;
+#endif
+
+    for (size_t i = 0; i < NumIterations; ++i)
+    {
+        const size_t NumThreads = std::max(4u, std::thread::hardware_concurrency());
+
+        {
+            std::vector<std::thread> Threads(NumThreads);
+            for (size_t t = 0; t < Threads.size(); ++t)
+            {
+                Threads[t] = std::thread{
+                    [&]() //
+                    {
+                        constexpr size_t NumAllocations = 8;
+
+                        std::vector<RefCntAutoPtr<ITextureAtlasSuballocation>> pSubAllocations(NumAllocations);
+
+                        for (auto& pSubAlloc : pSubAllocations)
+                            pAtlas->Allocate(256, 256, &pSubAlloc);
+                    } //
+                };
+            }
+
+            for (auto& Thread : Threads)
+                Thread.join();
+        }
+
+        auto* pTexture = pAtlas->GetTexture(pDevice, pContext);
+        EXPECT_NE(pTexture, nullptr);
+    }
+}
+
 } // namespace

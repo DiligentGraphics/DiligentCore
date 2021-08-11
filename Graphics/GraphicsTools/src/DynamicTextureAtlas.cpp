@@ -31,6 +31,8 @@
 #include <algorithm>
 #include <atomic>
 #include <unordered_map>
+#include <map>
+#include <set>
 
 #include "DynamicAtlasManager.hpp"
 #include "ObjectBase.hpp"
@@ -129,6 +131,216 @@ private:
     RefCntAutoPtr<IObject> m_pUserData;
 };
 
+namespace
+{
+
+class ThreadSafeAtlasManager
+{
+public:
+    ThreadSafeAtlasManager(const uint2& Dim) noexcept :
+        Mgr{Dim.x, Dim.y}
+    {}
+
+    // clang-format off
+    ThreadSafeAtlasManager           (const ThreadSafeAtlasManager&)  = delete;
+    ThreadSafeAtlasManager           (      ThreadSafeAtlasManager&&) = delete;
+    ThreadSafeAtlasManager& operator=(const ThreadSafeAtlasManager&)  = delete;
+    ThreadSafeAtlasManager& operator=(      ThreadSafeAtlasManager&&) = delete;
+    // clang-format on
+
+    class ManagerLock
+    {
+    public:
+        ManagerLock() noexcept {}
+
+        // clang-format off
+        ManagerLock           (const ManagerLock&) = delete;
+        ManagerLock& operator=(const ManagerLock&) = delete;
+        // clang-format on
+
+        ManagerLock(ManagerLock&& Other) noexcept :
+            pAtlasMgr{Other.pAtlasMgr}
+        {
+            Other.pAtlasMgr = nullptr;
+        }
+
+        ManagerLock& operator=(ManagerLock&& Other) noexcept
+        {
+            pAtlasMgr       = Other.pAtlasMgr;
+            Other.pAtlasMgr = nullptr;
+            return *this;
+        }
+
+        int Release()
+        {
+            int UseCnt = -1;
+            if (pAtlasMgr != nullptr)
+            {
+                UseCnt    = pAtlasMgr->ReleaseUse();
+                pAtlasMgr = nullptr;
+            }
+            return UseCnt;
+        }
+
+        ~ManagerLock()
+        {
+            Release();
+        }
+
+        explicit operator bool() const
+        {
+            return pAtlasMgr != nullptr;
+        }
+
+        DynamicAtlasManager::Region Allocate(Uint32 Width, Uint32 Height)
+        {
+            VERIFY_EXPR(pAtlasMgr != nullptr);
+            std::lock_guard<std::mutex> Lock{pAtlasMgr->Mtx};
+            return pAtlasMgr->Mgr.Allocate(Width, Height);
+        }
+
+        bool Free(DynamicAtlasManager::Region&& R)
+        {
+            VERIFY_EXPR(pAtlasMgr != nullptr);
+            std::lock_guard<std::mutex> Lock{pAtlasMgr->Mtx};
+            pAtlasMgr->Mgr.Free(std::move(R));
+            return pAtlasMgr->Mgr.IsEmpty();
+        }
+
+        bool IsEmpty()
+        {
+            VERIFY_EXPR(pAtlasMgr != nullptr);
+            std::lock_guard<std::mutex> Lock{pAtlasMgr->Mtx};
+            return pAtlasMgr->Mgr.IsEmpty();
+        }
+
+    private:
+        friend class ThreadSafeAtlasManager;
+
+        explicit ManagerLock(ThreadSafeAtlasManager& AtlasMg) :
+            pAtlasMgr{&AtlasMg}
+        {
+            AtlasMg.AddUse();
+        }
+
+        ThreadSafeAtlasManager* pAtlasMgr = nullptr;
+    };
+
+    ManagerLock Lock()
+    {
+        return ManagerLock{*this};
+    }
+
+private:
+    friend ManagerLock;
+
+    int AddUse()
+    {
+        return UseCount.fetch_add(1) + 1;
+    }
+
+    int ReleaseUse()
+    {
+        auto Uses = UseCount.fetch_add(-1) - 1;
+        VERIFY_EXPR(Uses >= 0);
+        return Uses;
+    }
+
+private:
+    std::mutex          Mtx;
+    DynamicAtlasManager Mgr;
+
+    std::atomic_int UseCount{0};
+};
+
+
+struct SliceBatch
+{
+    SliceBatch(const uint2 AtlasDim) noexcept :
+        m_AtlasDim{AtlasDim}
+    {}
+
+    ~SliceBatch()
+    {
+        VERIFY(m_Slices.empty(), "Not all slice managers have been released.");
+    }
+
+    // clang-format off
+    SliceBatch           (const SliceBatch&)  = delete;
+    SliceBatch           (      SliceBatch&&) = delete;
+    SliceBatch& operator=(const SliceBatch&)  = delete;
+    SliceBatch& operator=(      SliceBatch&&) = delete;
+    // clang-format on
+
+    ThreadSafeAtlasManager::ManagerLock LockSlice(Uint32 Slice)
+    {
+        std::lock_guard<std::mutex> Lock{m_Mtx};
+
+        auto it = m_Slices.find(Slice);
+        // NB: Lock atomically increases the use count of the slice manager while we hold the mutex.
+        return it != m_Slices.end() ? it->second.Lock() : ThreadSafeAtlasManager::ManagerLock{};
+    }
+
+    ThreadSafeAtlasManager::ManagerLock LockSliceAfter(Uint32& Slice)
+    {
+        std::lock_guard<std::mutex> Lock{m_Mtx};
+
+        auto it = m_Slices.lower_bound(Slice);
+        if (it != m_Slices.end())
+        {
+            Slice = it->first;
+            // NB: Lock atomically increases the use count of the slice manager while we hold the mutex.
+            return it->second.Lock();
+        }
+
+        return {};
+    }
+
+    ThreadSafeAtlasManager::ManagerLock AddSlice(Uint32 Slice)
+    {
+        std::lock_guard<std::mutex> Lock{m_Mtx};
+
+        VERIFY(m_Slices.find(Slice) == m_Slices.end(), "Slice ", Slice, " already present in the batch.");
+        auto it = m_Slices.emplace(Slice, m_AtlasDim).first;
+        // NB: Lock() atomically increases the use count of the slice manager while we hold the mutex
+        return it->second.Lock();
+    }
+
+    bool Purge(Uint32 Slice)
+    {
+        std::lock_guard<std::mutex> Lock{m_Mtx};
+
+        auto it = m_Slices.find(Slice);
+        if (it != m_Slices.end())
+        {
+            auto MgrLock = it->second.Lock();
+            VERIFY_EXPR(MgrLock);
+            if (MgrLock.IsEmpty())
+            {
+                // Use count may only be increased while we hold the mutex.
+                // If use count returned by Release() is zero, no other thread may be
+                // accessing this slice, so we can safely remove it.
+                if (MgrLock.Release() == 0)
+                {
+                    m_Slices.erase(it);
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+private:
+    const uint2 m_AtlasDim;
+
+    std::mutex m_Mtx;
+    // For every alignment, we keep a list of slice managers sorted by the slice number.
+    std::map<Uint32, ThreadSafeAtlasManager> m_Slices;
+};
+
+} // namespace
+
 
 class DynamicTextureAtlasImpl final : public ObjectBase<IDynamicTextureAtlas>
 {
@@ -145,6 +357,7 @@ public:
         m_MinAlignment    {CreateInfo.MinAlignment},
         m_ExtraSliceCount {CreateInfo.ExtraSliceCount},
         m_MaxSliceCount   {CreateInfo.Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY ? std::min(CreateInfo.MaxSliceCount, Uint32{2048}) : 1},
+        m_Silent          {CreateInfo.Silent},
         m_SuballocationsAllocator
         {
             DefaultRawMemoryAllocator::GetAllocator(),
@@ -178,8 +391,10 @@ public:
         }
 
         m_Desc.Name = m_Name.c_str();
-        m_Slices.resize(m_Desc.ArraySize);
+        for (Uint32 i = 0; i < m_MaxSliceCount; ++i)
+            m_AvailableSlices.insert(i);
 
+        m_TexArraySize.store(m_Desc.ArraySize);
         if (pDevice == nullptr)
             m_Desc.ArraySize = 0;
         if (m_Desc.ArraySize > 0)
@@ -197,18 +412,15 @@ public:
         VERIFY_EXPR(m_AllocatedArea.load() == 0);
         VERIFY_EXPR(m_UsedArea.load() == 0);
         VERIFY_EXPR(m_AllocationCount.load() == 0);
+        VERIFY_EXPR(m_AvailableSlices.size() == m_MaxSliceCount);
     }
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_DynamicTextureAtlas, TBase)
 
     virtual ITexture* GetTexture(IRenderDevice* pDevice, IDeviceContext* pContext) override final
     {
-        Uint32 ArraySize = 0;
-        {
-            std::lock_guard<std::mutex> Lock{m_SlicesMtx};
-            ArraySize = static_cast<Uint32>(m_Slices.size());
-        }
-        if (m_Desc.ArraySize != ArraySize)
+        Uint32 ArraySize = m_TexArraySize.load();
+        if (m_Desc.ArraySize < ArraySize)
         {
             DEV_CHECK_ERR(pDevice != nullptr && pContext != nullptr,
                           "Texture atlas must be resized, but pDevice or pContext is null");
@@ -287,62 +499,38 @@ public:
         Uint32 Slice = 0;
         while (Slice < m_MaxSliceCount)
         {
-            SliceManager* pSliceMgr = nullptr;
+            auto* pBatch = GetSliceBatch(Alignment, m_Desc.Width / Alignment, m_Desc.Height / Alignment);
+            VERIFY_EXPR(pBatch != nullptr);
+
+            // Lock the first available slice with index >= Slice
+            auto SliceLock = pBatch->LockSliceAfter(Slice);
+            if (!SliceLock)
             {
-                std::lock_guard<std::mutex> Lock{m_SlicesMtx};
+                Slice = GetNextAvailableSlice();
+                if (Slice == ~Uint32{0})
+                    break;
 
-                // Get the list of slices for this alignment
-                auto SlicesIt = m_AlignmentToSlice.find(Alignment);
-                if (SlicesIt == m_AlignmentToSlice.end())
-                    SlicesIt = m_AlignmentToSlice.emplace(Alignment, std::vector<Uint32>{}).first;
-
-                // Find the next slice in the list
-                auto& Slices  = SlicesIt->second;
-                auto  SliceIt = Slices.begin();
-                while (SliceIt != Slices.end() && Slice > *SliceIt)
-                    ++SliceIt;
-                Slice = SliceIt != Slices.end() ? *SliceIt : m_NextUnusedSlice;
-
-                if (Slice == m_NextUnusedSlice)
-                {
-                    if (Slice == m_MaxSliceCount)
-                        break;
-
-                    while (Slice >= m_Slices.size())
-                    {
-                        const auto ExtraSliceCount = m_ExtraSliceCount != 0 ?
-                            m_ExtraSliceCount :
-                            static_cast<Uint32>(m_Slices.size());
-
-                        m_Slices.resize(std::min(Slice + ExtraSliceCount, m_MaxSliceCount));
-                    }
-
-                    VERIFY(std::find(Slices.begin(), Slices.end(), Slice) == Slices.end(), "Slice ", Slice, " is already in the list for this alignment. This is a bug");
-                    Slices.push_back(Slice);
-
-                    VERIFY(!m_Slices[Slice], "Slice ", Slice, " has already been initialized. This is a bug.");
-                    VERIFY_EXPR(m_Desc.Width >= Alignment && m_Desc.Height >= Alignment);
-                    m_Slices[Slice] = std::make_unique<SliceManager>(m_Desc.Width / Alignment, m_Desc.Height / Alignment);
-
-                    ++m_NextUnusedSlice;
-                }
-
-                pSliceMgr = m_Slices[Slice].get();
+                SliceLock = pBatch->AddSlice(Slice);
+                VERIFY_EXPR(SliceLock);
             }
 
-            if (pSliceMgr != nullptr)
+            if (SliceLock)
             {
-                Subregion = pSliceMgr->Allocate(AlignedWidth / Alignment, AlignedHeight / Alignment);
+                Subregion = SliceLock.Allocate(AlignedWidth / Alignment, AlignedHeight / Alignment);
                 if (!Subregion.IsEmpty())
                     break;
             }
 
+            // Failed to allocate the region - try the next slice
             ++Slice;
         }
 
         if (Subregion.IsEmpty())
         {
-            LOG_ERROR_MESSAGE("Failed to suballocate texture subregion ", Width, " x ", Height, " from texture atlas");
+            if (!m_Silent)
+            {
+                LOG_ERROR_MESSAGE("Failed to suballocate texture subregion ", Width, " x ", Height, " from texture atlas");
+            }
             return;
         }
 
@@ -372,20 +560,26 @@ public:
         m_UsedArea.fetch_add(-Int64{Subregion.width * Alignment} * Int64{Subregion.height * Alignment});
         m_AllocationCount.fetch_add(-1);
 
-        SliceManager* pSliceMgr = nullptr;
+        auto* pBatch = GetSliceBatch(Alignment);
+        VERIFY(pBatch != nullptr,
+               "There are no slices with alignment ", Alignment,
+               ". This may only happen when double-freeing the allocation or "
+               "freeing an allocation that was not allocated from this atlas.");
+
+        bool DeleteSlice = false;
         {
-            std::lock_guard<std::mutex> Lock{m_SlicesMtx};
-#ifdef DILIGENT_DEBUG
-            {
-                auto SlicesIt = m_AlignmentToSlice.find(Alignment);
-                VERIFY(SlicesIt != m_AlignmentToSlice.end(), "There are no slices with alignment ", Alignment);
-                const auto& Slices = SlicesIt->second;
-                VERIFY(std::find(Slices.begin(), Slices.end(), Slice) != Slices.end(), "Slice ", Slice, " does not use alignment ", Alignment);
-            }
-#endif
-            pSliceMgr = m_Slices[Slice].get();
+            auto SliceLock = pBatch->LockSlice(Slice);
+            VERIFY(SliceLock, "Slice ", Slice, " is not found in the batch of slices with alignment ", Alignment);
+            DeleteSlice = SliceLock.Free(std::move(Subregion));
         }
-        pSliceMgr->Free(std::move(Subregion));
+
+        if (DeleteSlice)
+        {
+            if (pBatch->Purge(Slice))
+            {
+                RecycleSlice(Slice);
+            }
+        }
     }
 
     virtual const TextureDesc& GetAtlasDesc() const override final
@@ -413,12 +607,57 @@ public:
     }
 
 private:
+    Uint32 GetNextAvailableSlice()
+    {
+        std::lock_guard<std::mutex> Lock{m_AvailableSlicesMtx};
+        if (m_AvailableSlices.empty())
+            return ~Uint32{0};
+
+        auto FirstFreeSlice = *m_AvailableSlices.begin();
+        VERIFY_EXPR(FirstFreeSlice < m_MaxSliceCount);
+        m_AvailableSlices.erase(m_AvailableSlices.begin());
+
+        while (m_TexArraySize <= FirstFreeSlice)
+        {
+            const auto ExtraSliceCount = m_ExtraSliceCount != 0 ?
+                m_ExtraSliceCount :
+                std::max(m_TexArraySize.load(), 1u);
+
+            m_TexArraySize.store(std::min(m_TexArraySize + ExtraSliceCount, m_MaxSliceCount));
+        }
+
+        return FirstFreeSlice;
+    }
+
+    void RecycleSlice(Uint32 Slice)
+    {
+        std::lock_guard<std::mutex> Lock{m_AvailableSlicesMtx};
+        VERIFY(m_AvailableSlices.find(Slice) == m_AvailableSlices.end(), "Slice ", Slice, " is already in the available slices list. This is a bug.");
+        m_AvailableSlices.insert(Slice);
+    }
+
+    SliceBatch* GetSliceBatch(Uint32 Alignment, Uint32 AtlasWidth = 0, Uint32 AtlasHeight = 0)
+    {
+        std::lock_guard<std::mutex> Lock{m_SliceBatchesByAlignmentMtx};
+
+        // Get the list of slices for this alignment
+        auto BatchIt = m_SliceBatchesByAlignment.find(Alignment);
+        if (BatchIt == m_SliceBatchesByAlignment.end() && AtlasWidth != 0 && AtlasHeight != 0)
+            BatchIt = m_SliceBatchesByAlignment.emplace(Alignment, uint2{AtlasWidth, AtlasHeight}).first;
+
+        return BatchIt != m_SliceBatchesByAlignment.end() ? &BatchIt->second : nullptr;
+    }
+
+private:
     TextureDesc       m_Desc;
     const std::string m_Name;
 
     const Uint32 m_MinAlignment;
     const Uint32 m_ExtraSliceCount;
     const Uint32 m_MaxSliceCount;
+    const bool   m_Silent;
+
+    std::atomic<Uint32> m_TexArraySize{0};
 
     RefCntAutoPtr<ITexture> m_pTexture;
 
@@ -430,32 +669,13 @@ private:
     std::atomic<Int64> m_AllocatedArea{0};
     std::atomic<Int64> m_UsedArea{0};
 
+    std::mutex m_SliceBatchesByAlignmentMtx;
+    // Alignment -> slice batch
+    std::unordered_map<Uint32, SliceBatch> m_SliceBatchesByAlignment;
 
-    struct SliceManager
-    {
-        SliceManager(Uint32 Width, Uint32 Height) :
-            Mgr{Width, Height}
-        {}
-
-        DynamicAtlasManager::Region Allocate(Uint32 Width, Uint32 Height)
-        {
-            std::lock_guard<std::mutex> Lock{Mtx};
-            return Mgr.Allocate(Width, Height);
-        }
-        void Free(DynamicAtlasManager::Region&& Region)
-        {
-            std::lock_guard<std::mutex> Lock{Mtx};
-            Mgr.Free(std::move(Region));
-        }
-
-    private:
-        std::mutex          Mtx;
-        DynamicAtlasManager Mgr;
-    };
-    std::mutex                                      m_SlicesMtx;
-    std::vector<std::unique_ptr<SliceManager>>      m_Slices;
-    std::unordered_map<Uint32, std::vector<Uint32>> m_AlignmentToSlice;
-    Uint32                                          m_NextUnusedSlice = 0;
+    // Keep available slice indices sorted.
+    std::mutex       m_AvailableSlicesMtx;
+    std::set<Uint32> m_AvailableSlices;
 };
 
 
