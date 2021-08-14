@@ -121,6 +121,13 @@ public:
     Uint32 GetHeight() const { return m_Height; }
     Uint64 GetTotalFreeArea() const { return m_TotalFreeArea; }
 
+    bool IsEmpty() const
+    {
+        VERIFY_EXPR(m_AllocatedRegions.empty() && (m_TotalFreeArea == Uint64{m_Width} * Uint64{m_Height}) ||
+                    !m_AllocatedRegions.empty() && (m_TotalFreeArea < Uint64{m_Width} * Uint64{m_Height}));
+        return m_AllocatedRegions.empty();
+    }
+
 #define CMP(Member)                 \
     if (R0.Member < R1.Member)      \
         return true;                \

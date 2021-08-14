@@ -210,7 +210,7 @@ public:
                                                   const Box&                     DstBox,
                                                   const TextureSubResData&       SubresData,
                                                   RESOURCE_STATE_TRANSITION_MODE SrcBufferStateTransitionMode,
-                                                  RESOURCE_STATE_TRANSITION_MODE TextureStateTransitionModee) override final;
+                                                  RESOURCE_STATE_TRANSITION_MODE TextureStateTransitionMode) override final;
 
     /// Implementation of IDeviceContext::CopyTexture() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE CopyTexture(const CopyTextureAttribs& CopyAttribs) override final;
@@ -474,7 +474,7 @@ private:
 
     __forceinline void          PrepareForDraw(DRAW_FLAGS Flags);
     __forceinline void          PrepareForIndexedDraw(DRAW_FLAGS Flags, VALUE_TYPE IndexType);
-    __forceinline BufferVkImpl* PrepareIndirectAttribsBuffer(IBuffer* pAttribsBuffer, RESOURCE_STATE_TRANSITION_MODE TransitonMode, const char* OpName);
+    __forceinline BufferVkImpl* PrepareIndirectAttribsBuffer(IBuffer* pAttribsBuffer, RESOURCE_STATE_TRANSITION_MODE TransitionMode, const char* OpName);
     __forceinline void          PrepareForDispatchCompute();
     __forceinline void          PrepareForRayTracing();
 

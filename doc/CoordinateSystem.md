@@ -19,7 +19,7 @@ mapping NDC to Window coordinates. This, however, can be circumvented by using t
 Direct3D11 and Direct3D12.
 
 OpenGL as always is a headache. First of all, at some point somebody decided that symmetry should prevail over common sense, and as a result the default
-NDC space in OpenGL is [-1, +1] x [-1, +1] x [-1, +1]. After a bit of web search you can easily find what disastorous consequences this has for the
+NDC space in OpenGL is [-1, +1] x [-1, +1] x [-1, +1]. After a bit of web search you can easily find what disastrous consequences this has for the
 precision of floating point numbers when using inverse depth buffering. Note that there is an OpenGL extension that allows using the normal [0, +1] z range, 
 but it is not widely supported on all mobile devices, so Diligent does not use it.
  

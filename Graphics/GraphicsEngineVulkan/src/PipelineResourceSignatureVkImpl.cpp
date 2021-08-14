@@ -373,7 +373,7 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts()
         // If static/mutable descriptor set layout is empty, then add samplers to dynamic set.
         const auto SetId = (DSMapping[DESCRIPTOR_SET_ID_STATIC_MUTABLE] < MAX_DESCRIPTOR_SETS ? DESCRIPTOR_SET_ID_STATIC_MUTABLE : DESCRIPTOR_SET_ID_DYNAMIC);
         DEV_CHECK_ERR(DSMapping[SetId] < MAX_DESCRIPTOR_SETS,
-                      "There are no descriptor sets in this singature, which indicates there are no other "
+                      "There are no descriptor sets in this signature, which indicates there are no other "
                       "resources besides immutable samplers. This is not currently allowed.");
 
         GetDevice()->CreateSampler(SamplerDesc.Desc, &ImmutableSampler.Ptr);

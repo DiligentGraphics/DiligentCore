@@ -443,7 +443,7 @@ void BindResourceHelper::CacheStorageBuffer(const BindResourceInfo& BindInfo) co
     RefCntAutoPtr<BufferViewVkImpl> pBufferViewVk{BindInfo.pObject, IID_BufferViewVk};
 #ifdef DILIGENT_DEVELOPMENT
     {
-        // HLSL buffer SRVs are mapped to storge buffers in GLSL
+        // HLSL buffer SRVs are mapped to storage buffers in GLSL
         const auto RequiredViewType = DvpDescriptorTypeToBufferView(m_DstRes.Type);
         VerifyResourceViewBinding(m_ResDesc, BindInfo, pBufferViewVk.RawPtr(),
                                   {RequiredViewType},
@@ -501,7 +501,7 @@ void BindResourceHelper::CacheImage(const BindResourceInfo& BindInfo) const
     RefCntAutoPtr<TextureViewVkImpl> pTexViewVk0{BindInfo.pObject, IID_TextureViewVk};
 #ifdef DILIGENT_DEVELOPMENT
     {
-        // HLSL buffer SRVs are mapped to storge buffers in GLSL
+        // HLSL buffer SRVs are mapped to storage buffers in GLSL
         auto RequiredViewType = DvpDescriptorTypeToTextureView(m_DstRes.Type);
         VerifyResourceViewBinding(m_ResDesc, BindInfo, pTexViewVk0.RawPtr(),
                                   {RequiredViewType},

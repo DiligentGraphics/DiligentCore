@@ -149,6 +149,7 @@ TEST(GraphicsAccessories_DynamicAtlasManager, Region_Hasher)
 TEST(GraphicsAccessories_DynamicAtlasManager, Empty)
 {
     DynamicAtlasManager Mgr{16, 8};
+    EXPECT_TRUE(Mgr.IsEmpty());
 }
 
 TEST(GraphicsAccessories_DynamicAtlasManager, Move)
@@ -165,9 +166,12 @@ TEST(GraphicsAccessories_DynamicAtlasManager, Allocate)
 {
     {
         DynamicAtlasManager Mgr{16, 8};
+        EXPECT_TRUE(Mgr.IsEmpty());
 
         auto R = Mgr.Allocate(16, 8);
+        EXPECT_FALSE(Mgr.IsEmpty());
         Mgr.Free(std::move(R));
+        EXPECT_TRUE(Mgr.IsEmpty());
     }
 
     {

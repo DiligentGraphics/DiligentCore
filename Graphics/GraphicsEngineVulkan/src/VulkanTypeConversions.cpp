@@ -486,7 +486,7 @@ VkFormat TypeToVkFormat(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNormal
                 case 2: return VK_FORMAT_R16G16_SFLOAT;
                 case 3: return VK_FORMAT_R16G16B16_SFLOAT;
                 case 4: return VK_FORMAT_R16G16B16A16_SFLOAT;
-                default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
+                default: UNEXPECTED("Unsupported number of components"); return VK_FORMAT_UNDEFINED;
             }
         }
 
@@ -499,7 +499,7 @@ VkFormat TypeToVkFormat(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNormal
                 case 2: return VK_FORMAT_R32G32_SFLOAT;
                 case 3: return VK_FORMAT_R32G32B32_SFLOAT;
                 case 4: return VK_FORMAT_R32G32B32A32_SFLOAT;
-                default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
+                default: UNEXPECTED("Unsupported number of components"); return VK_FORMAT_UNDEFINED;
             }
         }
 
@@ -512,7 +512,7 @@ VkFormat TypeToVkFormat(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNormal
                 case 2: return VK_FORMAT_R32G32_SINT;
                 case 3: return VK_FORMAT_R32G32B32_SINT;
                 case 4: return VK_FORMAT_R32G32B32A32_SINT;
-                default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
+                default: UNEXPECTED("Unsupported number of components"); return VK_FORMAT_UNDEFINED;
             }
         }
 
@@ -525,7 +525,7 @@ VkFormat TypeToVkFormat(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNormal
                 case 2: return VK_FORMAT_R32G32_UINT;
                 case 3: return VK_FORMAT_R32G32B32_UINT;
                 case 4: return VK_FORMAT_R32G32B32A32_UINT;
-                default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
+                default: UNEXPECTED("Unsupported number of components"); return VK_FORMAT_UNDEFINED;
             }
         }
 
@@ -539,7 +539,7 @@ VkFormat TypeToVkFormat(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNormal
                     case 2: return VK_FORMAT_R16G16_SNORM;
                     case 3: return VK_FORMAT_R16G16B16_SNORM;
                     case 4: return VK_FORMAT_R16G16B16A16_SNORM;
-                    default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
+                    default: UNEXPECTED("Unsupported number of components"); return VK_FORMAT_UNDEFINED;
                 }
             }
             else
@@ -550,7 +550,7 @@ VkFormat TypeToVkFormat(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNormal
                     case 2: return VK_FORMAT_R16G16_SINT;
                     case 3: return VK_FORMAT_R16G16B16_SINT;
                     case 4: return VK_FORMAT_R16G16B16A16_SINT;
-                    default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
+                    default: UNEXPECTED("Unsupported number of components"); return VK_FORMAT_UNDEFINED;
                 }
             }
         }
@@ -565,7 +565,7 @@ VkFormat TypeToVkFormat(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNormal
                     case 2: return VK_FORMAT_R16G16_UNORM;
                     case 3: return VK_FORMAT_R16G16B16_UNORM;
                     case 4: return VK_FORMAT_R16G16B16A16_UNORM;
-                    default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
+                    default: UNEXPECTED("Unsupported number of components"); return VK_FORMAT_UNDEFINED;
                 }
             }
             else
@@ -576,7 +576,7 @@ VkFormat TypeToVkFormat(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNormal
                     case 2: return VK_FORMAT_R16G16_UINT;
                     case 3: return VK_FORMAT_R16G16B16_UINT;
                     case 4: return VK_FORMAT_R16G16B16A16_UINT;
-                    default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
+                    default: UNEXPECTED("Unsupported number of components"); return VK_FORMAT_UNDEFINED;
                 }
             }
         }
@@ -591,7 +591,7 @@ VkFormat TypeToVkFormat(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNormal
                     case 2: return VK_FORMAT_R8G8_SNORM;
                     case 3: return VK_FORMAT_R8G8B8_SNORM;
                     case 4: return VK_FORMAT_R8G8B8A8_SNORM;
-                    default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
+                    default: UNEXPECTED("Unsupported number of components"); return VK_FORMAT_UNDEFINED;
                 }
             }
             else
@@ -602,7 +602,7 @@ VkFormat TypeToVkFormat(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNormal
                     case 2: return VK_FORMAT_R8G8_SINT;
                     case 3: return VK_FORMAT_R8G8B8_SINT;
                     case 4: return VK_FORMAT_R8G8B8A8_SINT;
-                    default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
+                    default: UNEXPECTED("Unsupported number of components"); return VK_FORMAT_UNDEFINED;
                 }
             }
         }
@@ -617,7 +617,7 @@ VkFormat TypeToVkFormat(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNormal
                     case 2: return VK_FORMAT_R8G8_UNORM;
                     case 3: return VK_FORMAT_R8G8B8_UNORM;
                     case 4: return VK_FORMAT_R8G8B8A8_UNORM;
-                    default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
+                    default: UNEXPECTED("Unsupported number of components"); return VK_FORMAT_UNDEFINED;
                 }
             }
             else
@@ -628,12 +628,12 @@ VkFormat TypeToVkFormat(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNormal
                     case 2: return VK_FORMAT_R8G8_UINT;
                     case 3: return VK_FORMAT_R8G8B8_UINT;
                     case 4: return VK_FORMAT_R8G8B8A8_UINT;
-                    default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
+                    default: UNEXPECTED("Unsupported number of components"); return VK_FORMAT_UNDEFINED;
                 }
             }
         }
 
-        default: UNEXPECTED("Unusupported format"); return VK_FORMAT_UNDEFINED;
+        default: UNEXPECTED("Unsupported format"); return VK_FORMAT_UNDEFINED;
     }
 }
 
@@ -1262,7 +1262,7 @@ static VkAccessFlags ResourceStateFlagToVkAccessFlags(RESOURCE_STATE StateFlag)
         case RESOURCE_STATE_BUILD_AS_READ:     return VK_ACCESS_SHADER_READ_BIT; // for vertex, index, transform, AABB, instance buffers
         case RESOURCE_STATE_BUILD_AS_WRITE:    return VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR; // for scratch buffer
         case RESOURCE_STATE_RAY_TRACING:       return VK_ACCESS_SHADER_READ_BIT; // for SBT
-        case RESOURCE_STATE_COMMON:            return 0; // COMMON state must be used for queue to queue transition (linke in D3D12), queue to queue synchronization via semaphore creates a memory dependency
+        case RESOURCE_STATE_COMMON:            return 0; // COMMON state must be used for queue to queue transition (like in D3D12), queue to queue synchronization via semaphore creates a memory dependency
             // clang-format on
 
         default:
@@ -1987,7 +1987,7 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
 #endif
 
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(DeviceFeatures) == 38, "Did you add a new feature to DeviceFeatures? Please handle its satus here (if necessary).");
+    static_assert(sizeof(DeviceFeatures) == 38, "Did you add a new feature to DeviceFeatures? Please handle its status here (if necessary).");
 #endif
 
     return Features;

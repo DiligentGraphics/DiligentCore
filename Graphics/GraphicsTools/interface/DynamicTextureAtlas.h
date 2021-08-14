@@ -169,12 +169,38 @@ struct DynamicTextureAtlasCreateInfo
     TextureDesc Desc;
 
 
-    /// Texture region allocation granularity.
+    /// Minimum region placement alignment.
 
-    /// The width and height of the texture region will be aligned to the
-    /// TextureGranularity value.
-    /// Texture granularity must be power of two.
-    Uint32 TextureGranularity = 128;
+    /// The minimum alignment must be zero or a power of two.
+    /// When alignment is zero, the atlas may allocate the region in any suitable location.
+    ///
+    /// When alignment is non-zero, the region placement is aligned as follows:
+    /// - If min(Widht, Height) <= MinAlignment, the region placement is aligned by MinAlignment
+    /// - If min(Widht, Height) > MinAlignment, the alignment is doubled until it satisfies
+    ///   the requirement above.
+    ///
+    /// Examples (when MinAlignment equals 64):
+    /// - A 16x32 region will be aligned by 64 (it may be placed at e.g. (64, 128))
+    /// - A 48x96 region will be aligned by 64 (it may be placed at e.g. (64, 0))
+    /// - A 96x192 region will be aligned by 128 (it may be placed at e.g. (128, 256))
+    /// - A 2048x1024 region will be aligned by 1024 (it may be placed at e.g. (1024, 0))
+    ///
+    /// Note that if minimum alignemnt is zero, the region placement will not be aligned at all,
+    /// which may result in biasing issues in coarser mip levels. For example, if 128x128
+    /// region is placed at (4, 12) coordinates in the atlas (i.e. R = [4, 132] x [12, 140]), all
+    /// mip levels of R starting with level 3 will not be aligned with the mip 0.
+    ///
+    /// The atlas uses the minimum dimension of the region to align it. This is done to reduce
+    /// the space waste. A 256 x 1024 region will be aligned by 256, so all mip levels up to 8
+    /// will be properly aligned with mip 0. The last two mip levels however, may not be properly
+    /// aligned.
+    ///
+    /// Compressed texture considerations.
+    /// Every mip level of a compressed texture may only be updated at block granularity (typically, 4x4).
+    /// Be aware that coarse mip levels may not be 4-aligned (even though their placement is properly aligned with mip 0).
+    /// Consider a [256, 512] x [512, 768] region. Its mip levels 7, 8 will be [2, 4] x [4, 6] and [1, 2] x [2, 3].
+    /// These mip-levels are not block-aligned. Moreover, they are smaller than the block.
+    Uint32 MinAlignment = 64;
 
     /// The number of extra slices.
 
@@ -194,6 +220,9 @@ struct DynamicTextureAtlasCreateInfo
     /// of ITextureAtlasSuballocation implementation class. This member defines
     /// the number of objects in one page.
     Uint32 SuballocationObjAllocationGranularity = 64;
+
+    /// Silence allocation errors.
+    bool Silent = false;
 };
 
 /// Creates a new dynamic texture atlas.

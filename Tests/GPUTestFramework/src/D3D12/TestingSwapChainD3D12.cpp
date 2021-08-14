@@ -81,8 +81,8 @@ TestingSwapChainD3D12::TestingSwapChainD3D12(IReferenceCounters*  pRefCounters,
     ClearColorValue.Format            = TexDesc.Format;
     auto hr =
         pd3d12Device->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE, &TexDesc, m_RenderTargetState, &ClearColorValue,
-                                              __uuidof(m_pd3d12RenderTaget),
-                                              reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&m_pd3d12RenderTaget)));
+                                              __uuidof(m_pd3d12RenderTarget),
+                                              reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&m_pd3d12RenderTarget)));
     VERIFY(SUCCEEDED(hr), "Failed to create D3D12 render target");
 
     {
@@ -142,7 +142,7 @@ TestingSwapChainD3D12::TestingSwapChainD3D12(IReferenceCounters*  pRefCounters,
                                            reinterpret_cast<void**>(static_cast<ID3D12DescriptorHeap**>(&m_pd3d12RTVDescriptorHeap)));
     VERIFY(SUCCEEDED(hr), "Failed to create D3D12 RTV descriptor heap");
     m_RTVDescriptorHandle = m_pd3d12RTVDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-    pd3d12Device->CreateRenderTargetView(m_pd3d12RenderTaget, nullptr, m_RTVDescriptorHandle);
+    pd3d12Device->CreateRenderTargetView(m_pd3d12RenderTarget, nullptr, m_RTVDescriptorHandle);
 
     DescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
     hr =
@@ -161,7 +161,7 @@ TestingSwapChainD3D12::TestingSwapChainD3D12(IReferenceCounters*  pRefCounters,
                                            reinterpret_cast<void**>(static_cast<ID3D12DescriptorHeap**>(&m_pd3d12CbvSrvUavDescriptorHeap)));
     VERIFY(SUCCEEDED(hr), "Failed to create D3D12 UAV descriptor heap");
     m_UAVDescriptorHandle = m_pd3d12CbvSrvUavDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-    pd3d12Device->CreateUnorderedAccessView(m_pd3d12RenderTaget, nullptr, nullptr, m_UAVDescriptorHandle);
+    pd3d12Device->CreateUnorderedAccessView(m_pd3d12RenderTarget, nullptr, nullptr, m_UAVDescriptorHandle);
 }
 
 void TestingSwapChainD3D12::TransitionBuffers(ID3D12GraphicsCommandList* pCmdList,
@@ -173,7 +173,7 @@ void TestingSwapChainD3D12::TransitionBuffers(ID3D12GraphicsCommandList* pCmdLis
     {
         D3D12_RESOURCE_BARRIER Barrier = {};
         Barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-        Barrier.Transition.pResource   = m_pd3d12RenderTaget;
+        Barrier.Transition.pResource   = m_pd3d12RenderTarget;
         Barrier.Transition.StateBefore = m_RenderTargetState;
         Barrier.Transition.StateAfter  = RTVState;
         Barrier.Transition.Subresource = 0;
@@ -221,7 +221,7 @@ void TestingSwapChainD3D12::TakeSnapshot(ITexture* pCopyFrom)
     if (pCopyFrom == nullptr)
     {
         TransitionRenderTarget(pCmdList, D3D12_RESOURCE_STATE_COPY_SOURCE);
-        SrcLocation.pResource = m_pd3d12RenderTaget;
+        SrcLocation.pResource = m_pd3d12RenderTarget;
     }
     else
     {
