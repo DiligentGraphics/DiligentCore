@@ -1,27 +1,27 @@
 /*
  *  Copyright 2019-2021 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
- *  
+ *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
- *  
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS,
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *
- *  In no event and under no legal theory, whether in tort (including negligence), 
- *  contract, or otherwise, unless required by applicable law (such as deliberate 
+ *  In no event and under no legal theory, whether in tort (including negligence),
+ *  contract, or otherwise, unless required by applicable law (such as deliberate
  *  and grossly negligent acts) or agreed to in writing, shall any Contributor be
- *  liable for any damages, including any direct, indirect, special, incidental, 
- *  or consequential damages of any character arising as a result of this License or 
- *  out of the use or inability to use the software (including but not limited to damages 
- *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and 
- *  all other commercial damages or losses), even if such Contributor has been advised 
+ *  liable for any damages, including any direct, indirect, special, incidental,
+ *  or consequential damages of any character arising as a result of this License or
+ *  out of the use or inability to use the software (including but not limited to damages
+ *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and
+ *  all other commercial damages or losses), even if such Contributor has been advised
  *  of the possibility of such damages.
  */
 
@@ -86,36 +86,36 @@ public:
             m_ViewFormats[ TexFmt ][TEXTURE_VIEW_DEPTH_STENCIL-1]    = TEX_FORMAT_##DSVFmt; \
             m_ViewFormats[ TexFmt ][TEXTURE_VIEW_UNORDERED_ACCESS-1] = TEX_FORMAT_##UAVFmt; \
         }
-        
+
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_UNKNOWN,                 UNKNOWN, UNKNOWN, UNKNOWN, UNKNOWN);
 
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGBA32_TYPELESS,         RGBA32_FLOAT, RGBA32_FLOAT, UNKNOWN, RGBA32_FLOAT);
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGBA32_FLOAT,            RGBA32_FLOAT, RGBA32_FLOAT, UNKNOWN, RGBA32_FLOAT);
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGBA32_UINT,             RGBA32_UINT,  RGBA32_UINT,  UNKNOWN, RGBA32_UINT);
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGBA32_SINT,             RGBA32_SINT,  RGBA32_SINT,  UNKNOWN, RGBA32_SINT);
-                                                                       
+
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGB32_TYPELESS,          RGB32_FLOAT, RGB32_FLOAT, UNKNOWN, RGB32_FLOAT);
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGB32_FLOAT,             RGB32_FLOAT, RGB32_FLOAT, UNKNOWN, RGB32_FLOAT);
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGB32_UINT,              RGB32_UINT,  RGB32_UINT,  UNKNOWN, RGB32_UINT);
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGB32_SINT,              RGB32_SINT,  RGB32_SINT,  UNKNOWN, RGB32_SINT);
-                                                                      
+
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGBA16_TYPELESS,         RGBA16_FLOAT, RGBA16_FLOAT, UNKNOWN, RGBA16_FLOAT);
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGBA16_FLOAT,            RGBA16_FLOAT, RGBA16_FLOAT, UNKNOWN, RGBA16_FLOAT);
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGBA16_UNORM,            RGBA16_UNORM, RGBA16_UNORM, UNKNOWN, RGBA16_UNORM);
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGBA16_UINT,             RGBA16_UINT,  RGBA16_UINT,  UNKNOWN, RGBA16_UINT);
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGBA16_SNORM,            RGBA16_SNORM, RGBA16_SNORM, UNKNOWN, RGBA16_SNORM);
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGBA16_SINT,             RGBA16_SINT,  RGBA16_SINT,  UNKNOWN, RGBA16_SINT);
-                                                                       
+
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RG32_TYPELESS,           RG32_FLOAT, RG32_FLOAT, UNKNOWN, RG32_FLOAT);
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RG32_FLOAT,              RG32_FLOAT, RG32_FLOAT, UNKNOWN, RG32_FLOAT);
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RG32_UINT,               RG32_UINT,  RG32_UINT,  UNKNOWN, RG32_UINT);
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RG32_SINT,               RG32_SINT,  RG32_SINT,  UNKNOWN, RG32_SINT);
-                                                                       
+
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_R32G8X24_TYPELESS,       R32_FLOAT_X8X24_TYPELESS, UNKNOWN, D32_FLOAT_S8X24_UINT, UNKNOWN);
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_D32_FLOAT_S8X24_UINT,    R32_FLOAT_X8X24_TYPELESS, UNKNOWN, D32_FLOAT_S8X24_UINT, UNKNOWN);
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_R32_FLOAT_X8X24_TYPELESS,R32_FLOAT_X8X24_TYPELESS, UNKNOWN, D32_FLOAT_S8X24_UINT, R32_FLOAT_X8X24_TYPELESS);
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_X32_TYPELESS_G8X24_UINT, X32_TYPELESS_G8X24_UINT,  UNKNOWN, D32_FLOAT_S8X24_UINT, X32_TYPELESS_G8X24_UINT);
-                                                                       
+
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGB10A2_TYPELESS,        RGB10A2_UNORM, RGB10A2_UNORM, UNKNOWN, RGB10A2_UNORM);
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGB10A2_UNORM,           RGB10A2_UNORM, RGB10A2_UNORM, UNKNOWN, RGB10A2_UNORM);
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGB10A2_UINT,            RGB10A2_UINT,  RGB10A2_UINT,  UNKNOWN, RGB10A2_UINT);
@@ -222,7 +222,7 @@ public:
                 if (BindFlags & BIND_DEPTH_STENCIL)
                 {
                     // clang-format off
-                    static TEXTURE_FORMAT D16_ViewFmts[] = 
+                    static TEXTURE_FORMAT D16_ViewFmts[] =
                     {
                         TEX_FORMAT_R16_UNORM, TEX_FORMAT_R16_UNORM, TEX_FORMAT_D16_UNORM, TEX_FORMAT_R16_UNORM
                     };
@@ -261,124 +261,124 @@ const TextureFormatAttribs& GetTextureFormatAttribs(TEXTURE_FORMAT Format)
 #define INIT_TEX_FORMAT_INFO(TexFmt, ComponentSize, NumComponents, ComponentType, IsTypeless, BlockWidth, BlockHeight) \
         FmtAttribs[ TexFmt ] = TextureFormatAttribs(#TexFmt, TexFmt, ComponentSize, NumComponents, ComponentType, IsTypeless, BlockWidth, BlockHeight);
 
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_RGBA32_TYPELESS,         4, 4, COMPONENT_TYPE_UNDEFINED,  true, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_RGBA32_FLOAT,            4, 4, COMPONENT_TYPE_FLOAT,     false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_RGBA32_UINT,             4, 4, COMPONENT_TYPE_UINT,      false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_RGBA32_SINT,             4, 4, COMPONENT_TYPE_SINT,      false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_RGBA32_TYPELESS,         4, 4, COMPONENT_TYPE_UNDEFINED,  true, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_RGBA32_FLOAT,            4, 4, COMPONENT_TYPE_FLOAT,     false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_RGBA32_UINT,             4, 4, COMPONENT_TYPE_UINT,      false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_RGBA32_SINT,             4, 4, COMPONENT_TYPE_SINT,      false, 1,1);
 
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_RGB32_TYPELESS,          4, 3, COMPONENT_TYPE_UNDEFINED,  true, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_RGB32_FLOAT,             4, 3, COMPONENT_TYPE_FLOAT,     false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_RGB32_UINT,              4, 3, COMPONENT_TYPE_UINT,      false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_RGB32_SINT,              4, 3, COMPONENT_TYPE_SINT,      false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_RGB32_TYPELESS,          4, 3, COMPONENT_TYPE_UNDEFINED,  true, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_RGB32_FLOAT,             4, 3, COMPONENT_TYPE_FLOAT,     false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_RGB32_UINT,              4, 3, COMPONENT_TYPE_UINT,      false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_RGB32_SINT,              4, 3, COMPONENT_TYPE_SINT,      false, 1,1);
 
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_RGBA16_TYPELESS,         2, 4, COMPONENT_TYPE_UNDEFINED,  true, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_RGBA16_FLOAT,            2, 4, COMPONENT_TYPE_FLOAT,     false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_RGBA16_UNORM,            2, 4, COMPONENT_TYPE_UNORM,     false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_RGBA16_UINT,             2, 4, COMPONENT_TYPE_UINT,      false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_RGBA16_SNORM,            2, 4, COMPONENT_TYPE_SNORM,     false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_RGBA16_SINT,             2, 4, COMPONENT_TYPE_SINT,      false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_RGBA16_TYPELESS,         2, 4, COMPONENT_TYPE_UNDEFINED,  true, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_RGBA16_FLOAT,            2, 4, COMPONENT_TYPE_FLOAT,     false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_RGBA16_UNORM,            2, 4, COMPONENT_TYPE_UNORM,     false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_RGBA16_UINT,             2, 4, COMPONENT_TYPE_UINT,      false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_RGBA16_SNORM,            2, 4, COMPONENT_TYPE_SNORM,     false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_RGBA16_SINT,             2, 4, COMPONENT_TYPE_SINT,      false, 1,1);
 
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_RG32_TYPELESS,           4, 2, COMPONENT_TYPE_UNDEFINED,  true, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_RG32_FLOAT,              4, 2, COMPONENT_TYPE_FLOAT,     false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_RG32_UINT,               4, 2, COMPONENT_TYPE_UINT,      false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_RG32_SINT,               4, 2, COMPONENT_TYPE_SINT,      false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_RG32_TYPELESS,           4, 2, COMPONENT_TYPE_UNDEFINED,  true, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_RG32_FLOAT,              4, 2, COMPONENT_TYPE_FLOAT,     false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_RG32_UINT,               4, 2, COMPONENT_TYPE_UINT,      false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_RG32_SINT,               4, 2, COMPONENT_TYPE_SINT,      false, 1,1);
 
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_R32G8X24_TYPELESS,       4, 2, COMPONENT_TYPE_DEPTH_STENCIL,  true, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_D32_FLOAT_S8X24_UINT,    4, 2, COMPONENT_TYPE_DEPTH_STENCIL, false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_R32_FLOAT_X8X24_TYPELESS,4, 2, COMPONENT_TYPE_DEPTH_STENCIL, false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_X32_TYPELESS_G8X24_UINT, 4, 2, COMPONENT_TYPE_DEPTH_STENCIL, false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_R32G8X24_TYPELESS,       4, 2, COMPONENT_TYPE_DEPTH_STENCIL,  true, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_D32_FLOAT_S8X24_UINT,    4, 2, COMPONENT_TYPE_DEPTH_STENCIL, false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_R32_FLOAT_X8X24_TYPELESS,4, 2, COMPONENT_TYPE_DEPTH_STENCIL, false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_X32_TYPELESS_G8X24_UINT, 4, 2, COMPONENT_TYPE_DEPTH_STENCIL, false, 1,1);
 
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_RGB10A2_TYPELESS,        4, 1, COMPONENT_TYPE_COMPOUND,  true, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_RGB10A2_UNORM,           4, 1, COMPONENT_TYPE_COMPOUND, false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_RGB10A2_UINT,            4, 1, COMPONENT_TYPE_COMPOUND, false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_R11G11B10_FLOAT,         4, 1, COMPONENT_TYPE_COMPOUND, false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_RGB10A2_TYPELESS,        4, 1, COMPONENT_TYPE_COMPOUND,  true, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_RGB10A2_UNORM,           4, 1, COMPONENT_TYPE_COMPOUND, false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_RGB10A2_UINT,            4, 1, COMPONENT_TYPE_COMPOUND, false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_R11G11B10_FLOAT,         4, 1, COMPONENT_TYPE_COMPOUND, false, 1,1);
 
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_RGBA8_TYPELESS,          1, 4, COMPONENT_TYPE_UNDEFINED,   true, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_RGBA8_UNORM,             1, 4, COMPONENT_TYPE_UNORM,      false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_RGBA8_UNORM_SRGB,        1, 4, COMPONENT_TYPE_UNORM_SRGB, false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_RGBA8_UINT,              1, 4, COMPONENT_TYPE_UINT,       false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_RGBA8_SNORM,             1, 4, COMPONENT_TYPE_SNORM,      false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_RGBA8_SINT,              1, 4, COMPONENT_TYPE_SINT,       false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_RGBA8_TYPELESS,          1, 4, COMPONENT_TYPE_UNDEFINED,   true, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_RGBA8_UNORM,             1, 4, COMPONENT_TYPE_UNORM,      false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_RGBA8_UNORM_SRGB,        1, 4, COMPONENT_TYPE_UNORM_SRGB, false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_RGBA8_UINT,              1, 4, COMPONENT_TYPE_UINT,       false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_RGBA8_SNORM,             1, 4, COMPONENT_TYPE_SNORM,      false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_RGBA8_SINT,              1, 4, COMPONENT_TYPE_SINT,       false, 1,1);
 
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_RG16_TYPELESS,           2, 2, COMPONENT_TYPE_UNDEFINED,  true, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_RG16_FLOAT,              2, 2, COMPONENT_TYPE_FLOAT,     false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_RG16_UNORM,              2, 2, COMPONENT_TYPE_UNORM,     false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_RG16_UINT,               2, 2, COMPONENT_TYPE_UINT,      false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_RG16_SNORM,              2, 2, COMPONENT_TYPE_SNORM,     false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_RG16_SINT,               2, 2, COMPONENT_TYPE_SINT,      false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_RG16_TYPELESS,           2, 2, COMPONENT_TYPE_UNDEFINED,  true, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_RG16_FLOAT,              2, 2, COMPONENT_TYPE_FLOAT,     false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_RG16_UNORM,              2, 2, COMPONENT_TYPE_UNORM,     false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_RG16_UINT,               2, 2, COMPONENT_TYPE_UINT,      false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_RG16_SNORM,              2, 2, COMPONENT_TYPE_SNORM,     false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_RG16_SINT,               2, 2, COMPONENT_TYPE_SINT,      false, 1,1);
 
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_R32_TYPELESS,            4, 1, COMPONENT_TYPE_UNDEFINED,  true, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_D32_FLOAT,               4, 1, COMPONENT_TYPE_DEPTH,     false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_R32_FLOAT,               4, 1, COMPONENT_TYPE_FLOAT,     false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_R32_UINT,                4, 1, COMPONENT_TYPE_UINT,      false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_R32_SINT,                4, 1, COMPONENT_TYPE_SINT,      false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_R32_TYPELESS,            4, 1, COMPONENT_TYPE_UNDEFINED,  true, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_D32_FLOAT,               4, 1, COMPONENT_TYPE_DEPTH,     false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_R32_FLOAT,               4, 1, COMPONENT_TYPE_FLOAT,     false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_R32_UINT,                4, 1, COMPONENT_TYPE_UINT,      false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_R32_SINT,                4, 1, COMPONENT_TYPE_SINT,      false, 1,1);
 
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_R24G8_TYPELESS,          4, 1, COMPONENT_TYPE_DEPTH_STENCIL,  true, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_D24_UNORM_S8_UINT,       4, 1, COMPONENT_TYPE_DEPTH_STENCIL, false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_R24_UNORM_X8_TYPELESS,   4, 1, COMPONENT_TYPE_DEPTH_STENCIL, false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_X24_TYPELESS_G8_UINT,    4, 1, COMPONENT_TYPE_DEPTH_STENCIL, false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_R24G8_TYPELESS,          4, 1, COMPONENT_TYPE_DEPTH_STENCIL,  true, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_D24_UNORM_S8_UINT,       4, 1, COMPONENT_TYPE_DEPTH_STENCIL, false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_R24_UNORM_X8_TYPELESS,   4, 1, COMPONENT_TYPE_DEPTH_STENCIL, false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_X24_TYPELESS_G8_UINT,    4, 1, COMPONENT_TYPE_DEPTH_STENCIL, false, 1,1);
 
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_RG8_TYPELESS,            1, 2, COMPONENT_TYPE_UNDEFINED,  true, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_RG8_UNORM,               1, 2, COMPONENT_TYPE_UNORM,     false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_RG8_UINT,                1, 2, COMPONENT_TYPE_UINT,      false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_RG8_SNORM,               1, 2, COMPONENT_TYPE_SNORM,     false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_RG8_SINT,                1, 2, COMPONENT_TYPE_SINT,      false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_RG8_TYPELESS,            1, 2, COMPONENT_TYPE_UNDEFINED,  true, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_RG8_UNORM,               1, 2, COMPONENT_TYPE_UNORM,     false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_RG8_UINT,                1, 2, COMPONENT_TYPE_UINT,      false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_RG8_SNORM,               1, 2, COMPONENT_TYPE_SNORM,     false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_RG8_SINT,                1, 2, COMPONENT_TYPE_SINT,      false, 1,1);
 
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_R16_TYPELESS,            2, 1, COMPONENT_TYPE_UNDEFINED,  true, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_R16_FLOAT,               2, 1, COMPONENT_TYPE_FLOAT,     false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_D16_UNORM,               2, 1, COMPONENT_TYPE_DEPTH,     false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_R16_UNORM,               2, 1, COMPONENT_TYPE_UNORM,     false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_R16_UINT,                2, 1, COMPONENT_TYPE_UINT,      false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_R16_SNORM,               2, 1, COMPONENT_TYPE_SNORM,     false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_R16_SINT,                2, 1, COMPONENT_TYPE_SINT,      false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_R16_TYPELESS,            2, 1, COMPONENT_TYPE_UNDEFINED,  true, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_R16_FLOAT,               2, 1, COMPONENT_TYPE_FLOAT,     false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_D16_UNORM,               2, 1, COMPONENT_TYPE_DEPTH,     false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_R16_UNORM,               2, 1, COMPONENT_TYPE_UNORM,     false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_R16_UINT,                2, 1, COMPONENT_TYPE_UINT,      false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_R16_SNORM,               2, 1, COMPONENT_TYPE_SNORM,     false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_R16_SINT,                2, 1, COMPONENT_TYPE_SINT,      false, 1,1);
 
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_R8_TYPELESS,             1, 1, COMPONENT_TYPE_UNDEFINED,  true, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_R8_UNORM,                1, 1, COMPONENT_TYPE_UNORM,     false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_R8_UINT,                 1, 1, COMPONENT_TYPE_UINT,      false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_R8_SNORM,                1, 1, COMPONENT_TYPE_SNORM,     false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_R8_SINT,                 1, 1, COMPONENT_TYPE_SINT,      false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_A8_UNORM,                1, 1, COMPONENT_TYPE_UNORM,     false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_R8_TYPELESS,             1, 1, COMPONENT_TYPE_UNDEFINED,  true, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_R8_UNORM,                1, 1, COMPONENT_TYPE_UNORM,     false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_R8_UINT,                 1, 1, COMPONENT_TYPE_UINT,      false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_R8_SNORM,                1, 1, COMPONENT_TYPE_SNORM,     false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_R8_SINT,                 1, 1, COMPONENT_TYPE_SINT,      false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_A8_UNORM,                1, 1, COMPONENT_TYPE_UNORM,     false, 1,1);
 
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_R1_UNORM,                1, 1, COMPONENT_TYPE_UNORM,    false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_R1_UNORM,                1, 1, COMPONENT_TYPE_UNORM,    false, 1,1);
 
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_RGB9E5_SHAREDEXP,        4, 1, COMPONENT_TYPE_COMPOUND, false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_RG8_B8G8_UNORM,          1, 4, COMPONENT_TYPE_UNORM,    false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_G8R8_G8B8_UNORM,         1, 4, COMPONENT_TYPE_UNORM,    false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_RGB9E5_SHAREDEXP,        4, 1, COMPONENT_TYPE_COMPOUND, false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_RG8_B8G8_UNORM,          1, 4, COMPONENT_TYPE_UNORM,    false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_G8R8_G8B8_UNORM,         1, 4, COMPONENT_TYPE_UNORM,    false, 1,1);
 
         // http://www.g-truc.net/post-0335.html
         // http://renderingpipeline.com/2012/07/texture-compression/
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_BC1_TYPELESS,            8,  3, COMPONENT_TYPE_COMPRESSED,  true, 4,4);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_BC1_UNORM,               8,  3, COMPONENT_TYPE_COMPRESSED, false, 4,4);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_BC1_UNORM_SRGB,          8,  3, COMPONENT_TYPE_COMPRESSED, false, 4,4);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_BC2_TYPELESS,            16, 4, COMPONENT_TYPE_COMPRESSED,  true, 4,4);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_BC2_UNORM,               16, 4, COMPONENT_TYPE_COMPRESSED, false, 4,4);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_BC2_UNORM_SRGB,          16, 4, COMPONENT_TYPE_COMPRESSED, false, 4,4);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_BC3_TYPELESS,            16, 4, COMPONENT_TYPE_COMPRESSED,  true, 4,4);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_BC3_UNORM,               16, 4, COMPONENT_TYPE_COMPRESSED, false, 4,4);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_BC3_UNORM_SRGB,          16, 4, COMPONENT_TYPE_COMPRESSED, false, 4,4);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_BC4_TYPELESS,            8,  1, COMPONENT_TYPE_COMPRESSED,  true, 4,4);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_BC4_UNORM,               8,  1, COMPONENT_TYPE_COMPRESSED, false, 4,4);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_BC4_SNORM,               8,  1, COMPONENT_TYPE_COMPRESSED, false, 4,4);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_BC5_TYPELESS,            16, 2, COMPONENT_TYPE_COMPRESSED,  true, 4,4);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_BC5_UNORM,               16, 2, COMPONENT_TYPE_COMPRESSED, false, 4,4);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_BC5_SNORM,               16, 2, COMPONENT_TYPE_COMPRESSED, false, 4,4);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_BC1_TYPELESS,            8,  3, COMPONENT_TYPE_COMPRESSED,  true, 4,4);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_BC1_UNORM,               8,  3, COMPONENT_TYPE_COMPRESSED, false, 4,4);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_BC1_UNORM_SRGB,          8,  3, COMPONENT_TYPE_COMPRESSED, false, 4,4);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_BC2_TYPELESS,            16, 4, COMPONENT_TYPE_COMPRESSED,  true, 4,4);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_BC2_UNORM,               16, 4, COMPONENT_TYPE_COMPRESSED, false, 4,4);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_BC2_UNORM_SRGB,          16, 4, COMPONENT_TYPE_COMPRESSED, false, 4,4);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_BC3_TYPELESS,            16, 4, COMPONENT_TYPE_COMPRESSED,  true, 4,4);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_BC3_UNORM,               16, 4, COMPONENT_TYPE_COMPRESSED, false, 4,4);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_BC3_UNORM_SRGB,          16, 4, COMPONENT_TYPE_COMPRESSED, false, 4,4);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_BC4_TYPELESS,            8,  1, COMPONENT_TYPE_COMPRESSED,  true, 4,4);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_BC4_UNORM,               8,  1, COMPONENT_TYPE_COMPRESSED, false, 4,4);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_BC4_SNORM,               8,  1, COMPONENT_TYPE_COMPRESSED, false, 4,4);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_BC5_TYPELESS,            16, 2, COMPONENT_TYPE_COMPRESSED,  true, 4,4);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_BC5_UNORM,               16, 2, COMPONENT_TYPE_COMPRESSED, false, 4,4);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_BC5_SNORM,               16, 2, COMPONENT_TYPE_COMPRESSED, false, 4,4);
 
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_B5G6R5_UNORM,            2, 1, COMPONENT_TYPE_COMPOUND, false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_B5G5R5A1_UNORM,          2, 1, COMPONENT_TYPE_COMPOUND, false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_BGRA8_UNORM,             1, 4, COMPONENT_TYPE_UNORM,    false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_BGRX8_UNORM,             1, 4, COMPONENT_TYPE_UNORM,    false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_R10G10B10_XR_BIAS_A2_UNORM,  4, 1, COMPONENT_TYPE_COMPOUND, false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_BGRA8_TYPELESS,          1, 4, COMPONENT_TYPE_UNDEFINED,     true, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_BGRA8_UNORM_SRGB,        1, 4, COMPONENT_TYPE_UNORM_SRGB,   false, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_BGRX8_TYPELESS,          1, 4, COMPONENT_TYPE_UNDEFINED,     true, 1,1);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_BGRX8_UNORM_SRGB,        1, 4, COMPONENT_TYPE_UNORM_SRGB,   false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_B5G6R5_UNORM,            2, 1, COMPONENT_TYPE_COMPOUND, false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_B5G5R5A1_UNORM,          2, 1, COMPONENT_TYPE_COMPOUND, false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_BGRA8_UNORM,             1, 4, COMPONENT_TYPE_UNORM,    false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_BGRX8_UNORM,             1, 4, COMPONENT_TYPE_UNORM,    false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_R10G10B10_XR_BIAS_A2_UNORM,  4, 1, COMPONENT_TYPE_COMPOUND, false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_BGRA8_TYPELESS,          1, 4, COMPONENT_TYPE_UNDEFINED,     true, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_BGRA8_UNORM_SRGB,        1, 4, COMPONENT_TYPE_UNORM_SRGB,   false, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_BGRX8_TYPELESS,          1, 4, COMPONENT_TYPE_UNDEFINED,     true, 1,1);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_BGRX8_UNORM_SRGB,        1, 4, COMPONENT_TYPE_UNORM_SRGB,   false, 1,1);
 
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_BC6H_TYPELESS,           16, 3, COMPONENT_TYPE_COMPRESSED,  true, 4,4);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_BC6H_UF16,               16, 3, COMPONENT_TYPE_COMPRESSED, false, 4,4);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_BC6H_SF16,               16, 3, COMPONENT_TYPE_COMPRESSED, false, 4,4);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_BC7_TYPELESS,            16, 4, COMPONENT_TYPE_COMPRESSED,  true, 4,4);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_BC7_UNORM,               16, 4, COMPONENT_TYPE_COMPRESSED, false, 4,4);
-        INIT_TEX_FORMAT_INFO( TEX_FORMAT_BC7_UNORM_SRGB,          16, 4, COMPONENT_TYPE_COMPRESSED, false, 4,4);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_BC6H_TYPELESS,           16, 3, COMPONENT_TYPE_COMPRESSED,  true, 4,4);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_BC6H_UF16,               16, 3, COMPONENT_TYPE_COMPRESSED, false, 4,4);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_BC6H_SF16,               16, 3, COMPONENT_TYPE_COMPRESSED, false, 4,4);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_BC7_TYPELESS,            16, 4, COMPONENT_TYPE_COMPRESSED,  true, 4,4);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_BC7_UNORM,               16, 4, COMPONENT_TYPE_COMPRESSED, false, 4,4);
+        INIT_TEX_FORMAT_INFO(TEX_FORMAT_BC7_UNORM_SRGB,          16, 4, COMPONENT_TYPE_COMPRESSED, false, 4,4);
 #undef  INIT_TEX_FORMAT_INFO
         // clang-format on
         static_assert(TEX_FORMAT_NUM_FORMATS == TEX_FORMAT_BC7_UNORM_SRGB + 1, "Not all texture formats initialized.");
@@ -1831,6 +1831,36 @@ const Char* GetFenceTypeString(FENCE_TYPE Type)
         default:
             UNEXPECTED("Unexpected fence type");
             return "Unknown";
+    }
+}
+
+TEXTURE_FORMAT TexFormatToSRGB(TEXTURE_FORMAT Fmt)
+{
+    switch (Fmt)
+    {
+        case TEX_FORMAT_RGBA8_UNORM:
+            return TEX_FORMAT_RGBA8_UNORM_SRGB;
+
+        case TEX_FORMAT_BC1_UNORM:
+            return TEX_FORMAT_BC1_UNORM_SRGB;
+
+        case TEX_FORMAT_BC2_UNORM:
+            return TEX_FORMAT_BC2_UNORM_SRGB;
+
+        case TEX_FORMAT_BC3_UNORM:
+            return TEX_FORMAT_BC3_UNORM_SRGB;
+
+        case TEX_FORMAT_BGRA8_UNORM:
+            return TEX_FORMAT_BGRA8_UNORM_SRGB;
+
+        case TEX_FORMAT_BGRX8_UNORM:
+            return TEX_FORMAT_BGRX8_UNORM_SRGB;
+
+        case TEX_FORMAT_BC7_UNORM:
+            return TEX_FORMAT_BC7_UNORM_SRGB;
+
+        default:
+            return Fmt;
     }
 }
 

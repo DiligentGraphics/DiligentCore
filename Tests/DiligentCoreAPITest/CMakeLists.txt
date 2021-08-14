@@ -66,9 +66,9 @@ set_common_target_properties(DiligentCoreAPITest)
 
 get_supported_backends(ENGINE_LIBRARIES)
 
-target_link_libraries(DiligentCoreAPITest 
-PRIVATE 
-    Diligent-BuildSettings 
+target_link_libraries(DiligentCoreAPITest
+PRIVATE
+    Diligent-BuildSettings
     Diligent-TargetPlatform
     Diligent-GPUTestFramework
     Diligent-GraphicsAccessories

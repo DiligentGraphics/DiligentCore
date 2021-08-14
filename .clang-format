@@ -102,8 +102,8 @@ AllowShortBlocksOnASingleLine: Always
 AllowShortCaseLabelsOnASingleLine: true
 # true:
 # switch (a)
-# {  
-#     case 1: x = 1; break;  
+# {
+#     case 1: x = 1; break;
 
 
 AllowShortFunctionsOnASingleLine: All
@@ -165,7 +165,7 @@ BraceWrapping:
   #     quux();
   # }
   # while (foo || bar)
-  # {}    
+  # {}
 
 
   AfterEnum: true
@@ -224,7 +224,7 @@ BraceWrapping:
   # true:
   # }
   # catch ()
-  
+
 
   BeforeElse: true
   # true:
@@ -240,7 +240,7 @@ BraceWrapping:
   #    foo();
   #    bar();
   #  });
-  
+
 
   # Indent the wrapped braces themselves.
   IndentBraces: false
@@ -426,7 +426,7 @@ SpaceBeforeCtorInitializerColon: true
 
 SpaceBeforeInheritanceColon: true
 # true:
-# class Foo : Bar {}  
+# class Foo : Bar {}
 
 
 # Put a space before opening parentheses only after control statement keywords (for/if/while...)

@@ -8,7 +8,7 @@ errcho(){ echo "$@" 1>&2; }
 
 function find_validator_bin() {
   local BIN=$(find "$VALIDATE_FORMAT_DIR" -name 'clang-format_linux_*')
-  
+
   ## Try to launch the bin
   eval "$BIN --version >/dev/null 2> /dev/null"
   if [ $? -ne 0 ]; then
@@ -42,7 +42,7 @@ function validate_format() {
 ## Example usage:
 #
 # #!/bin/bash
-# source /PATH/TO/THIS/FILE/validate_format_linux_implementation.sh 
+# source /PATH/TO/THIS/FILE/validate_format_linux_implementation.sh
 #
 # validate_format ../../Common ../../Graphics ../../Platforms ../../Primitives ../../Tests \
 #   --exclude ../../Graphics/HLSL2GLSLConverterLib/include/GLSLDefinitions.h \

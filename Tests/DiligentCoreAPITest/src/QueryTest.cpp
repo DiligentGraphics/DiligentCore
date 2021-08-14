@@ -1,27 +1,27 @@
 /*
  *  Copyright 2019-2021 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
- *  
+ *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
- *  
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS,
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *
- *  In no event and under no legal theory, whether in tort (including negligence), 
- *  contract, or otherwise, unless required by applicable law (such as deliberate 
+ *  In no event and under no legal theory, whether in tort (including negligence),
+ *  contract, or otherwise, unless required by applicable law (such as deliberate
  *  and grossly negligent acts) or agreed to in writing, shall any Contributor be
- *  liable for any damages, including any direct, indirect, special, incidental, 
- *  or consequential damages of any character arising as a result of this License or 
- *  out of the use or inability to use the software (including but not limited to damages 
- *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and 
- *  all other commercial damages or losses), even if such Contributor has been advised 
+ *  liable for any damages, including any direct, indirect, special, incidental,
+ *  or consequential damages of any character arising as a result of this License or
+ *  out of the use or inability to use the software (including but not limited to damages
+ *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and
+ *  all other commercial damages or losses), even if such Contributor has been advised
  *  of the possibility of such damages.
  */
 
@@ -48,13 +48,13 @@ namespace
 // clang-format off
 const std::string QueryTest_ProceduralQuadVS{
 R"(
-struct PSInput 
-{ 
-    float4 Pos   : SV_POSITION; 
+struct PSInput
+{
+    float4 Pos   : SV_POSITION;
 };
 
 void main(in uint VertId : SV_VertexID,
-          out PSInput PSIn) 
+          out PSInput PSIn)
 {
     float HalfTexel = 0.5 / 512.0;
     float size = 0.25;
@@ -72,9 +72,9 @@ void main(in uint VertId : SV_VertexID,
 
 const std::string QueryTest_PS{
 R"(
-struct PSInput 
-{ 
-    float4 Pos   : SV_POSITION; 
+struct PSInput
+{
+    float4 Pos   : SV_POSITION;
 };
 
 float4 main(in PSInput PSIn) : SV_Target
@@ -506,8 +506,8 @@ TEST_F(QueryTest, DeferredContexts)
         GTEST_SKIP() << "Time queries are not supported by this device";
     }
 
-    Uint32 NumDefferedCtx = static_cast<Uint32>(pEnv->GetNumDeferredContexts());
-    if (NumDefferedCtx == 0)
+    Uint32 NumDeferredCtx = static_cast<Uint32>(pEnv->GetNumDeferredContexts());
+    if (NumDeferredCtx == 0)
     {
         GTEST_SKIP() << "Deferred contexts are not supported by this device";
     }
@@ -520,8 +520,8 @@ TEST_F(QueryTest, DeferredContexts)
         QueryDesc queryDesc;
         queryDesc.Name = "Duration query";
         queryDesc.Type = QUERY_TYPE_DURATION;
-        pDurations.resize(NumDefferedCtx);
-        for (Uint32 i = 0; i < NumDefferedCtx; ++i)
+        pDurations.resize(NumDeferredCtx);
+        for (Uint32 i = 0; i < NumDeferredCtx; ++i)
         {
             pDevice->CreateQuery(queryDesc, &pDurations[i]);
             ASSERT_NE(pDurations[i], nullptr);
@@ -533,9 +533,9 @@ TEST_F(QueryTest, DeferredContexts)
     {
         QueryDesc queryDesc;
         queryDesc.Type = QUERY_TYPE_TIMESTAMP;
-        pStartTimestamps.resize(NumDefferedCtx);
-        pEndTimestamps.resize(NumDefferedCtx);
-        for (Uint32 i = 0; i < NumDefferedCtx; ++i)
+        pStartTimestamps.resize(NumDeferredCtx);
+        pEndTimestamps.resize(NumDeferredCtx);
+        for (Uint32 i = 0; i < NumDeferredCtx; ++i)
         {
             queryDesc.Name = "Start timestamp query";
             pDevice->CreateQuery(queryDesc, &pStartTimestamps[i]);
@@ -561,14 +561,14 @@ TEST_F(QueryTest, DeferredContexts)
         pImmediateCtx->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
         pImmediateCtx->ClearRenderTarget(pRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
-        std::vector<std::thread>                 WorkerThreads(NumDefferedCtx);
-        std::vector<RefCntAutoPtr<ICommandList>> CmdLists(NumDefferedCtx);
-        std::vector<ICommandList*>               CmdListPtrs(NumDefferedCtx);
+        std::vector<std::thread>                 WorkerThreads(NumDeferredCtx);
+        std::vector<RefCntAutoPtr<ICommandList>> CmdLists(NumDeferredCtx);
+        std::vector<ICommandList*>               CmdListPtrs(NumDeferredCtx);
 
         std::atomic<Uint32>    NumCmdListsReady{0};
         ThreadingTools::Signal FinishFrameSignal;
         ThreadingTools::Signal ExecuteCommandListsSignal;
-        for (Uint32 i = 0; i < NumDefferedCtx; ++i)
+        for (Uint32 i = 0; i < NumDeferredCtx; ++i)
         {
             WorkerThreads[i] = std::thread(
                 [&](Uint32 thread_id) //
@@ -600,10 +600,10 @@ TEST_F(QueryTest, DeferredContexts)
 
                     // Atomically increment the number of completed threads
                     const auto NumReadyLists = NumCmdListsReady.fetch_add(1) + 1;
-                    if (NumReadyLists == NumDefferedCtx)
+                    if (NumReadyLists == NumDeferredCtx)
                         ExecuteCommandListsSignal.Trigger();
 
-                    FinishFrameSignal.Wait(true, NumDefferedCtx);
+                    FinishFrameSignal.Wait(true, NumDeferredCtx);
 
                     // IMPORTANT: In Metal backend FinishFrame must be called from the same
                     //            thread that issued rendering commands.
@@ -615,7 +615,7 @@ TEST_F(QueryTest, DeferredContexts)
         // Wait for the worker threads
         ExecuteCommandListsSignal.Wait(true, 1);
 
-        pImmediateCtx->ExecuteCommandLists(NumDefferedCtx, CmdListPtrs.data());
+        pImmediateCtx->ExecuteCommandLists(NumDeferredCtx, CmdListPtrs.data());
 
         FinishFrameSignal.Trigger(true);
         for (auto& t : WorkerThreads)
@@ -636,7 +636,7 @@ TEST_F(QueryTest, DeferredContexts)
 
         if (DeviceInfo.Features.TimestampQueries)
         {
-            for (Uint32 i = 0; i < NumDefferedCtx; ++i)
+            for (Uint32 i = 0; i < NumDeferredCtx; ++i)
             {
                 IQuery* pQueryStart = pStartTimestamps[i];
                 IQuery* pQueryEnd   = pEndTimestamps[i];

@@ -58,8 +58,8 @@ set_common_target_properties(Diligent-GPUTestFramework)
 get_supported_backends(ENGINE_LIBRARIES)
 
 target_link_libraries(Diligent-GPUTestFramework
-PRIVATE 
-    Diligent-BuildSettings 
+PRIVATE
+    Diligent-BuildSettings
     Diligent-Common
     Diligent-ShaderTools
 PUBLIC

@@ -2,7 +2,7 @@ cmake_minimum_required (VERSION 3.6)
 
 project(Diligent-LinuxPlatform CXX)
 
-set(INTERFACE 
+set(INTERFACE
     interface/LinuxDebug.hpp
     interface/LinuxFileSystem.hpp
     interface/LinuxPlatformDefinitions.h
@@ -10,7 +10,7 @@ set(INTERFACE
     interface/LinuxNativeWindow.h
 )
 
-set(SOURCE 
+set(SOURCE
     src/LinuxDebug.cpp
     src/LinuxFileSystem.cpp
 )
@@ -18,14 +18,14 @@ set(SOURCE
 add_library(Diligent-LinuxPlatform ${SOURCE} ${INTERFACE} ${PLATFORM_INTERFACE_HEADERS})
 set_common_target_properties(Diligent-LinuxPlatform)
 
-target_include_directories(Diligent-LinuxPlatform 
+target_include_directories(Diligent-LinuxPlatform
 PUBLIC
     interface
 )
 
-target_link_libraries(Diligent-LinuxPlatform 
+target_link_libraries(Diligent-LinuxPlatform
 PRIVATE
-    Diligent-BuildSettings 
+    Diligent-BuildSettings
 PUBLIC
     Diligent-BasicPlatform
     Diligent-PlatformInterface

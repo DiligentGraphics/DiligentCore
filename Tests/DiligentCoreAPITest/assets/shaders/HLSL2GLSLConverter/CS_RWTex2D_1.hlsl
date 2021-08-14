@@ -125,7 +125,7 @@ void TestLoad()
         f += Tex2D_F3[Location.xy].x;
         f += Tex2D_F4[int2(idx[idx[min(Location.x,1)]],idx[idx[min(Location.y,1)]])].x;
         f += Tex2D_F5[Location.xy].x;
-       
+
         uint u  = Tex2D_U[Location.xy].x;
 #endif
     }
@@ -157,11 +157,11 @@ void TestStore(uint2 Location)
         Tex2D_F1[
                  idx[
                      Tex2D_I[
-                             int2(Tex2D_I[idx[Location.x]].x, idx[Location.y].y) 
+                             int2(Tex2D_I[idx[Location.x]].x, idx[Location.y].y)
                             ].x
-                    ] + 
+                    ] +
                  idx[
-                     Tex2D_I[ 
+                     Tex2D_I[
                              int2(Tex2D_I[idx[Location.y]].x, idx[Location.x].y)
                             ].x
                     ]
@@ -237,19 +237,19 @@ void TestCS(CSInput In,
     InterlockedAnd(g_i4TestSharedArr[GTid.x].x, 1, iOldVal);
     InterlockedAnd(g_u4TestSharedArr[Gid.x].x, 1u, uOldVal);
     InterlockedAnd(Tex2D_U[Gid.xy], 1u, uOldVal);
-                
+
     InterlockedOr(g_i4TestSharedVar.x, 1);
     InterlockedOr(g_u4TestSharedVar.x, 1u);
     InterlockedOr(g_i4TestSharedArr[GTid.x].x, 1, iOldVal);
     InterlockedOr(g_u4TestSharedArr[Gid.x].x, 1u, uOldVal);
     InterlockedOr(Tex2D_U[Gid.xy], 1u, uOldVal);
-                
+
     InterlockedXor(g_i4TestSharedVar.x, 1);
     InterlockedXor(g_u4TestSharedVar.x, 1u);
     InterlockedXor(g_i4TestSharedArr[GTid.x].x, 1, iOldVal);
     InterlockedXor(g_u4TestSharedArr[Gid.x].x, 1u, uOldVal);
     InterlockedXor(Tex2D_U[Gid.xy], 1u, uOldVal);
-   
+
     InterlockedMax(g_i4TestSharedVar.x, 1);
     InterlockedMax(g_u4TestSharedVar.x, 1u);
     InterlockedMax(g_i4TestSharedArr[GTid.x].x, 1, iOldVal);
@@ -262,20 +262,20 @@ void TestCS(CSInput In,
     InterlockedMin(g_u4TestSharedArr[Gid.x].x, 1u, uOldVal);
     InterlockedMin(Tex2D_U[Gid.xy], 1u, uOldVal);
 
-                
+
     // There is actually no InterlockedExchange() with 2 arguments
     //InterlockedExchange(g_i4TestSharedVar.x, 1);
     //InterlockedExchange(g_u4TestSharedVar.x, 1u);
     InterlockedExchange(g_i4TestSharedArr[GTid.x].x, 1, iOldVal);
     InterlockedExchange(g_u4TestSharedArr[Gid.x].x, 1u, uOldVal);
     InterlockedExchange(Tex2D_U[Gid.xy], 1u, uOldVal);
-                
+
     InterlockedCompareStore(g_i4TestSharedVar.x, 1, 10);
     InterlockedCompareStore(g_u4TestSharedVar.x, 1u, 10u);
     InterlockedCompareExchange(g_i4TestSharedArr[GTid.x].x, 1, 10, iOldVal);
     InterlockedCompareExchange(g_u4TestSharedArr[Gid.x].x, 1u, 10u, uOldVal);
     InterlockedCompareExchange(Tex2D_U[Gid.xy], 1u, 10u, uOldVal);
-                
+
 	//uint2 ui2Dim;
 	//g_tex2DTestUAV.GetDimensions(ui2Dim.x, ui2Dim.y);
 	//if( DTid.x >= ui2Dim.x || DTid.y >= ui2Dim.y )return;

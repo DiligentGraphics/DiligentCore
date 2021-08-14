@@ -54,7 +54,7 @@ vec4 VerifyResources()
     g_StorageBuff_Dyn   .data[0] = Data;
 
     // glslang is not smart enough to unroll the loops even when explicitly told to do so
-    
+
     AllCorrect *= CheckValue(g_StorageBuffArr_Static[0].data[1], BuffArr_Static_Ref0);
 
     g_StorageBuffArr_Static[0].data[0] = Data;
@@ -91,7 +91,7 @@ vec4 VerifyResources()
 layout(rgba8, binding = 0) uniform writeonly image2D g_tex2DUAV;
 
 layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
- 
+
 void main()
 {
 	ivec2 Dim = imageSize(g_tex2DUAV);

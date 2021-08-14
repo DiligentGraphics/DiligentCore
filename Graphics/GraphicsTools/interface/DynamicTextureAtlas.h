@@ -1,27 +1,27 @@
 /*
  *  Copyright 2019-2021 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
- *  
+ *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
- *  
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS,
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *
- *  In no event and under no legal theory, whether in tort (including negligence), 
- *  contract, or otherwise, unless required by applicable law (such as deliberate 
+ *  In no event and under no legal theory, whether in tort (including negligence),
+ *  contract, or otherwise, unless required by applicable law (such as deliberate
  *  and grossly negligent acts) or agreed to in writing, shall any Contributor be
- *  liable for any damages, including any direct, indirect, special, incidental, 
- *  or consequential damages of any character arising as a result of this License or 
- *  out of the use or inability to use the software (including but not limited to damages 
- *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and 
- *  all other commercial damages or losses), even if such Contributor has been advised 
+ *  liable for any damages, including any direct, indirect, special, incidental,
+ *  or consequential damages of any character arising as a result of this License or
+ *  out of the use or inability to use the software (including but not limited to damages
+ *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and
+ *  all other commercial damages or losses), even if such Contributor has been advised
  *  of the possibility of such damages.
  */
 
@@ -84,6 +84,33 @@ struct ITextureAtlasSuballocation : public IObject
     virtual IObject* GetUserData() const = 0;
 };
 
+
+/// Dynamic texture atlas usage stats.
+struct DynamicTextureAtlasUsageStats
+{
+    /// The total size of the atlas, in bytes.
+    Uint32 Size = 0;
+
+    /// The total number of allocations in the atlas.
+    Uint32 AllocationCount = 0;
+
+    /// The total area of the texture atlas, e.g.
+    /// the total number of texels in all slices.
+    Uint64 TotalArea = 0;
+
+    /// The total allocated area, e.g. the total
+    /// number of texels in all allocations.
+    Uint64 AllocatedArea = 0;
+
+    /// The total used area, e.g. the total number
+    /// of texels actually used by all allocations.
+
+    /// Used area is always equal to or larger than the
+    /// allocated area due to alignment requirements.
+    Uint64 UsedArea = 0;
+};
+
+
 /// Dynamic texture atlas.
 struct IDynamicTextureAtlas : public IObject
 {
@@ -126,6 +153,9 @@ struct IDynamicTextureAtlas : public IObject
     /// Returns internal texture array version. The version is incremented every time
     /// the array is expanded.
     virtual Uint32 GetVersion() const = 0;
+
+    /// Returns the usage stats, see Diligent::DynamicTextureAtlasUsageStats.
+    virtual void GetUsageStats(DynamicTextureAtlasUsageStats& Stats) const = 0;
 };
 
 
@@ -139,12 +169,38 @@ struct DynamicTextureAtlasCreateInfo
     TextureDesc Desc;
 
 
-    /// Texture region allocation granularity.
+    /// Minimum region placement alignment.
 
-    /// The width and height of the texture region will be aligned to the
-    /// TextureGranularity value.
-    /// Texture granularity must be power of two.
-    Uint32 TextureGranularity = 128;
+    /// The minimum alignment must be zero or a power of two.
+    /// When alignment is zero, the atlas may allocate the region in any suitable location.
+    ///
+    /// When alignment is non-zero, the region placement is aligned as follows:
+    /// - If min(Widht, Height) <= MinAlignment, the region placement is aligned by MinAlignment
+    /// - If min(Widht, Height) > MinAlignment, the alignment is doubled until it satisfies
+    ///   the requirement above.
+    ///
+    /// Examples (when MinAlignment equals 64):
+    /// - A 16x32 region will be aligned by 64 (it may be placed at e.g. (64, 128))
+    /// - A 48x96 region will be aligned by 64 (it may be placed at e.g. (64, 0))
+    /// - A 96x192 region will be aligned by 128 (it may be placed at e.g. (128, 256))
+    /// - A 2048x1024 region will be aligned by 1024 (it may be placed at e.g. (1024, 0))
+    ///
+    /// Note that if minimum alignemnt is zero, the region placement will not be aligned at all,
+    /// which may result in biasing issues in coarser mip levels. For example, if 128x128
+    /// region is placed at (4, 12) coordinates in the atlas (i.e. R = [4, 132] x [12, 140]), all
+    /// mip levels of R starting with level 3 will not be aligned with the mip 0.
+    ///
+    /// The atlas uses the minimum dimension of the region to align it. This is done to reduce
+    /// the space waste. A 256 x 1024 region will be aligned by 256, so all mip levels up to 8
+    /// will be properly aligned with mip 0. The last two mip levels however, may not be properly
+    /// aligned.
+    ///
+    /// Compressed texture considerations.
+    /// Every mip level of a compressed texture may only be updated at block granularity (typically, 4x4).
+    /// Be aware that coarse mip levels may not be 4-aligned (even though their placement is properly aligned with mip 0).
+    /// Consider a [256, 512] x [512, 768] region. Its mip levels 7, 8 will be [2, 4] x [4, 6] and [1, 2] x [2, 3].
+    /// These mip-levels are not block-aligned. Moreover, they are smaller than the block.
+    Uint32 MinAlignment = 64;
 
     /// The number of extra slices.
 
@@ -164,6 +220,9 @@ struct DynamicTextureAtlasCreateInfo
     /// of ITextureAtlasSuballocation implementation class. This member defines
     /// the number of objects in one page.
     Uint32 SuballocationObjAllocationGranularity = 64;
+
+    /// Silence allocation errors.
+    bool Silent = false;
 };
 
 /// Creates a new dynamic texture atlas.

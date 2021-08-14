@@ -1,27 +1,27 @@
 /*
  *  Copyright 2019-2021 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
- *  
+ *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
- *  
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS,
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *
- *  In no event and under no legal theory, whether in tort (including negligence), 
- *  contract, or otherwise, unless required by applicable law (such as deliberate 
+ *  In no event and under no legal theory, whether in tort (including negligence),
+ *  contract, or otherwise, unless required by applicable law (such as deliberate
  *  and grossly negligent acts) or agreed to in writing, shall any Contributor be
- *  liable for any damages, including any direct, indirect, special, incidental, 
- *  or consequential damages of any character arising as a result of this License or 
- *  out of the use or inability to use the software (including but not limited to damages 
- *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and 
- *  all other commercial damages or losses), even if such Contributor has been advised 
+ *  liable for any damages, including any direct, indirect, special, incidental,
+ *  or consequential damages of any character arising as a result of this License or
+ *  out of the use or inability to use the software (including but not limited to damages
+ *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and
+ *  all other commercial damages or losses), even if such Contributor has been advised
  *  of the possibility of such damages.
  */
 
@@ -81,9 +81,9 @@ struct LayoutElement
     /// Type of the element components, see Diligent::VALUE_TYPE for details.
     VALUE_TYPE ValueType     DEFAULT_INITIALIZER(VT_FLOAT32);
 
-    /// For signed and unsigned integer value types 
+    /// For signed and unsigned integer value types
     /// (VT_INT8, VT_INT16, VT_INT32, VT_UINT8, VT_UINT16, VT_UINT32)
-    /// indicates if the value should be normalized to [-1,+1] or 
+    /// indicates if the value should be normalized to [-1,+1] or
     /// [0, 1] range respectively. For floating point types
     /// (VT_FLOAT16 and VT_FLOAT32), this member is ignored.
     Bool IsNormalized        DEFAULT_INITIALIZER(True);
@@ -101,8 +101,8 @@ struct LayoutElement
     Uint32 Stride            DEFAULT_INITIALIZER(LAYOUT_ELEMENT_AUTO_STRIDE);
 
     enum INPUT_ELEMENT_FREQUENCY Frequency DEFAULT_INITIALIZER(INPUT_ELEMENT_FREQUENCY_PER_VERTEX);
-    
-    /// The number of instances to draw using the same per-instance data before advancing 
+
+    /// The number of instances to draw using the same per-instance data before advancing
     /// in the buffer by one element.
     Uint32 InstanceDataStepRate DEFAULT_INITIALIZER(1);
 
@@ -112,15 +112,15 @@ struct LayoutElement
     LayoutElement()noexcept{}
 
     /// Initializes the structure
-    LayoutElement(Uint32                   _InputIndex, 
-                  Uint32                   _BufferSlot, 
-                  Uint32                   _NumComponents, 
+    LayoutElement(Uint32                   _InputIndex,
+                  Uint32                   _BufferSlot,
+                  Uint32                   _NumComponents,
                   VALUE_TYPE               _ValueType,
-                  Bool                     _IsNormalized         = LayoutElement{}.IsNormalized, 
+                  Bool                     _IsNormalized         = LayoutElement{}.IsNormalized,
                   Uint32                   _RelativeOffset       = LayoutElement{}.RelativeOffset,
                   Uint32                   _Stride               = LayoutElement{}.Stride,
                   INPUT_ELEMENT_FREQUENCY  _Frequency            = LayoutElement{}.Frequency,
-                  Uint32                   _InstanceDataStepRate = LayoutElement{}.InstanceDataStepRate)noexcept : 
+                  Uint32                   _InstanceDataStepRate = LayoutElement{}.InstanceDataStepRate)noexcept :
         InputIndex          {_InputIndex          },
         BufferSlot          {_BufferSlot          },
         NumComponents       {_NumComponents       },
@@ -134,11 +134,11 @@ struct LayoutElement
 
     /// Initializes the structure
     LayoutElement(const char*               _HLSLSemantic,
-                  Uint32                    _InputIndex, 
-                  Uint32                    _BufferSlot, 
-                  Uint32                    _NumComponents, 
+                  Uint32                    _InputIndex,
+                  Uint32                    _BufferSlot,
+                  Uint32                    _NumComponents,
                   VALUE_TYPE                _ValueType,
-                  Bool                      _IsNormalized         = LayoutElement{}.IsNormalized, 
+                  Bool                      _IsNormalized         = LayoutElement{}.IsNormalized,
                   Uint32                    _RelativeOffset       = LayoutElement{}.RelativeOffset,
                   Uint32                    _Stride               = LayoutElement{}.Stride,
                   INPUT_ELEMENT_FREQUENCY   _Frequency            = LayoutElement{}.Frequency,
@@ -156,11 +156,11 @@ struct LayoutElement
     {}
 
     /// Initializes the structure
-    LayoutElement(Uint32                   _InputIndex, 
-                  Uint32                   _BufferSlot, 
-                  Uint32                   _NumComponents, 
+    LayoutElement(Uint32                   _InputIndex,
+                  Uint32                   _BufferSlot,
+                  Uint32                   _NumComponents,
                   VALUE_TYPE               _ValueType,
-                  Bool                     _IsNormalized, 
+                  Bool                     _IsNormalized,
                   INPUT_ELEMENT_FREQUENCY  _Frequency,
                   Uint32                   _InstanceDataStepRate = LayoutElement{}.InstanceDataStepRate)noexcept :
         InputIndex          {_InputIndex                   },
@@ -210,7 +210,7 @@ struct InputLayoutDesc
 #if DILIGENT_CPP_INTERFACE
     InputLayoutDesc()noexcept{}
 
-    InputLayoutDesc(const LayoutElement* _LayoutElements, 
+    InputLayoutDesc(const LayoutElement* _LayoutElements,
                     Uint32               _NumElements)noexcept :
         LayoutElements{_LayoutElements},
         NumElements   {_NumElements   }

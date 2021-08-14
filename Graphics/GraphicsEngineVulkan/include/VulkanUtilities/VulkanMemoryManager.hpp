@@ -1,27 +1,27 @@
 /*
  *  Copyright 2019-2021 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
- *  
+ *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
- *  
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS,
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *
- *  In no event and under no legal theory, whether in tort (including negligence), 
- *  contract, or otherwise, unless required by applicable law (such as deliberate 
+ *  In no event and under no legal theory, whether in tort (including negligence),
+ *  contract, or otherwise, unless required by applicable law (such as deliberate
  *  and grossly negligent acts) or agreed to in writing, shall any Contributor be
- *  liable for any damages, including any direct, indirect, special, incidental, 
- *  or consequential damages of any character arising as a result of this License or 
- *  out of the use or inability to use the software (including but not limited to damages 
- *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and 
- *  all other commercial damages or losses), even if such Contributor has been advised 
+ *  liable for any damages, including any direct, indirect, special, incidental,
+ *  or consequential damages of any character arising as a result of this License or
+ *  out of the use or inability to use the software (including but not limited to damages
+ *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and
+ *  all other commercial damages or losses), even if such Contributor has been advised
  *  of the possibility of such damages.
  */
 
@@ -53,12 +53,12 @@ struct VulkanMemoryAllocation
     VulkanMemoryAllocation            (const VulkanMemoryAllocation&) = delete;
     VulkanMemoryAllocation& operator= (const VulkanMemoryAllocation&) = delete;
 
-	VulkanMemoryAllocation(VulkanMemoryPage* _Page, VkDeviceSize _UnalignedOffset, VkDeviceSize _Size)noexcept : 
-        Page           {_Page           }, 
-        UnalignedOffset{_UnalignedOffset}, 
+	VulkanMemoryAllocation(VulkanMemoryPage* _Page, VkDeviceSize _UnalignedOffset, VkDeviceSize _Size)noexcept :
+        Page           {_Page           },
+        UnalignedOffset{_UnalignedOffset},
         Size           {_Size           }
     {}
-    
+
     VulkanMemoryAllocation(VulkanMemoryAllocation&& rhs)noexcept :
         Page           {rhs.Page           },
         UnalignedOffset{rhs.UnalignedOffset},
@@ -115,7 +115,7 @@ public:
     VulkanMemoryPage            (const VulkanMemoryPage&) = delete;
     VulkanMemoryPage& operator= (VulkanMemoryPage&)       = delete;
     VulkanMemoryPage& operator= (VulkanMemoryPage&& rhs)  = delete;
-    
+
     bool IsEmpty() const { return m_AllocationMgr.IsEmpty(); }
     bool IsFull()  const { return m_AllocationMgr.IsFull();  }
     VkDeviceSize GetPageSize() const { return m_AllocationMgr.GetMaxSize();  }
@@ -148,13 +148,13 @@ class VulkanMemoryManager
 public:
     // clang-format off
 	VulkanMemoryManager(std::string                  MgrName,
-                        const VulkanLogicalDevice&   LogicalDevice, 
-                        const VulkanPhysicalDevice&  PhysicalDevice, 
-                        Diligent::IMemoryAllocator&  Allocator, 
+                        const VulkanLogicalDevice&   LogicalDevice,
+                        const VulkanPhysicalDevice&  PhysicalDevice,
+                        Diligent::IMemoryAllocator&  Allocator,
                         VkDeviceSize                 DeviceLocalPageSize,
                         VkDeviceSize                 HostVisiblePageSize,
                         VkDeviceSize                 DeviceLocalReserveSize,
-                        VkDeviceSize                 HostVisibleReserveSize) : 
+                        VkDeviceSize                 HostVisibleReserveSize) :
         m_MgrName               {std::move(MgrName)    },
         m_LogicalDevice         {LogicalDevice         },
         m_PhysicalDevice        {PhysicalDevice        },
@@ -169,7 +169,7 @@ public:
     // We have to write this constructor because on msvc default
     // constructor is not labeled with noexcept, which makes all
     // std containers use copy instead of move
-    VulkanMemoryManager(VulkanMemoryManager&& rhs)noexcept : 
+    VulkanMemoryManager(VulkanMemoryManager&& rhs)noexcept :
         m_MgrName         {std::move(rhs.m_MgrName)},
         m_LogicalDevice   {rhs.m_LogicalDevice     },
         m_PhysicalDevice  {rhs.m_PhysicalDevice    },
@@ -226,7 +226,7 @@ protected:
         // clang-format off
         MemoryPageIndex(uint32_t              _MemoryTypeIndex,
                         bool                  _IsHostVisible,
-                        VkMemoryAllocateFlags _AllocateFlags) : 
+                        VkMemoryAllocateFlags _AllocateFlags) :
             MemoryTypeIndex{_MemoryTypeIndex},
             AllocateFlags  {_AllocateFlags},
             IsHostVisible  {_IsHostVisible}

@@ -1,27 +1,27 @@
 /*
  *  Copyright 2019-2021 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
- *  
+ *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
- *  
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS,
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *
- *  In no event and under no legal theory, whether in tort (including negligence), 
- *  contract, or otherwise, unless required by applicable law (such as deliberate 
+ *  In no event and under no legal theory, whether in tort (including negligence),
+ *  contract, or otherwise, unless required by applicable law (such as deliberate
  *  and grossly negligent acts) or agreed to in writing, shall any Contributor be
- *  liable for any damages, including any direct, indirect, special, incidental, 
- *  or consequential damages of any character arising as a result of this License or 
- *  out of the use or inability to use the software (including but not limited to damages 
- *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and 
- *  all other commercial damages or losses), even if such Contributor has been advised 
+ *  liable for any damages, including any direct, indirect, special, incidental,
+ *  or consequential damages of any character arising as a result of this License or
+ *  out of the use or inability to use the software (including but not limited to damages
+ *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and
+ *  all other commercial damages or losses), even if such Contributor has been advised
  *  of the possibility of such damages.
  */
 
@@ -87,7 +87,7 @@ struct BufferDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// Buffer usage, see Diligent::USAGE for details
     USAGE Usage                     DEFAULT_INITIALIZER(USAGE_DEFAULT);
 
-    /// CPU access flags or 0 if no CPU access is allowed, 
+    /// CPU access flags or 0 if no CPU access is allowed,
     /// see Diligent::CPU_ACCESS_FLAGS for details.
     CPU_ACCESS_FLAGS CPUAccessFlags DEFAULT_INITIALIZER(CPU_ACCESS_NONE);
 
@@ -96,10 +96,10 @@ struct BufferDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
     /// Buffer element stride, in bytes.
 
-    /// For a structured buffer (BufferDesc::Mode equals Diligent::BUFFER_MODE_STRUCTURED) this member 
+    /// For a structured buffer (BufferDesc::Mode equals Diligent::BUFFER_MODE_STRUCTURED) this member
     /// defines the size of each buffer element. For a formatted buffer
-    /// (BufferDesc::Mode equals Diligent::BUFFER_MODE_FORMATTED) and optionally for a raw buffer 
-    /// (Diligent::BUFFER_MODE_RAW), this member defines the size of the format that will be used for views 
+    /// (BufferDesc::Mode equals Diligent::BUFFER_MODE_FORMATTED) and optionally for a raw buffer
+    /// (Diligent::BUFFER_MODE_RAW), this member defines the size of the format that will be used for views
     /// created for this buffer.
     Uint32 ElementByteStride        DEFAULT_INITIALIZER(0);
 
@@ -122,13 +122,13 @@ struct BufferDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     BufferDesc()noexcept{}
 
     BufferDesc(const Char*      _Name,
-               Uint32           _uiSizeInBytes, 
+               Uint32           _uiSizeInBytes,
                BIND_FLAGS       _BindFlags,
                USAGE            _Usage                = BufferDesc{}.Usage,
                CPU_ACCESS_FLAGS _CPUAccessFlags       = BufferDesc{}.CPUAccessFlags,
                BUFFER_MODE      _Mode                 = BufferDesc{}.Mode,
                Uint32           _ElementByteStride    = BufferDesc{}.ElementByteStride,
-               Uint64           _ImmediateContextMask = BufferDesc{}.ImmediateContextMask) noexcept : 
+               Uint64           _ImmediateContextMask = BufferDesc{}.ImmediateContextMask) noexcept :
         DeviceObjectAttribs  {_Name             },
         uiSizeInBytes        {_uiSizeInBytes    },
         BindFlags            {_BindFlags        },
@@ -143,22 +143,22 @@ struct BufferDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// Tests if two structures are equivalent
 
     /// \param [in] RHS - reference to the structure to perform comparison with
-    /// \return 
+    /// \return
     /// - True if all members of the two structures except for the Name are equal.
     /// - False otherwise.
-    /// The operator ignores DeviceObjectAttribs::Name field as it does not affect 
+    /// The operator ignores DeviceObjectAttribs::Name field as it does not affect
     /// the buffer description.
     bool operator == (const BufferDesc& RHS)const
     {
                 // Name is primarily used for debug purposes and does not affect the state.
                 // It is ignored in comparison operation.
         return  // strcmp(Name, RHS.Name) == 0          &&
-                uiSizeInBytes        == RHS.uiSizeInBytes     && 
+                uiSizeInBytes        == RHS.uiSizeInBytes     &&
                 BindFlags            == RHS.BindFlags         &&
                 Usage                == RHS.Usage             &&
                 CPUAccessFlags       == RHS.CPUAccessFlags    &&
                 Mode                 == RHS.Mode              &&
-                ElementByteStride    == RHS.ElementByteStride && 
+                ElementByteStride    == RHS.ElementByteStride &&
                 ImmediateContextMask == RHS.ImmediateContextMask;
     }
 #endif
