@@ -2169,26 +2169,26 @@ T FastCeil(T x)
 
 
 template <typename T>
-Diligent::Vector2<T> FastFloor(const Diligent::Vector2<T>& vec)
+Vector2<T> FastFloor(const Vector2<T>& vec)
 {
-    return Diligent::Vector2<T>{
+    return Vector2<T>{
         FastFloor(vec.x),
         FastFloor(vec.y)};
 }
 
 template <typename T>
-Diligent::Vector3<T> FastFloor(const Diligent::Vector3<T>& vec)
+Vector3<T> FastFloor(const Vector3<T>& vec)
 {
-    return Diligent::Vector3<T>{
+    return Vector3<T>{
         FastFloor(vec.x),
         FastFloor(vec.y),
         FastFloor(vec.z)};
 }
 
 template <typename T>
-Diligent::Vector4<T> FastFloor(const Diligent::Vector4<T>& vec)
+Vector4<T> FastFloor(const Vector4<T>& vec)
 {
-    return Diligent::Vector4<T>{
+    return Vector4<T>{
         FastFloor(vec.x),
         FastFloor(vec.y),
         FastFloor(vec.z),
@@ -2197,30 +2197,36 @@ Diligent::Vector4<T> FastFloor(const Diligent::Vector4<T>& vec)
 
 
 template <typename T>
-Diligent::Vector2<T> FastCeil(const Diligent::Vector2<T>& vec)
+Vector2<T> FastCeil(const Vector2<T>& vec)
 {
-    return Diligent::Vector2<T>{
+    return Vector2<T>{
         FastCeil(vec.x),
         FastCeil(vec.y)};
 }
 
 template <typename T>
-Diligent::Vector3<T> FastCeil(const Diligent::Vector3<T>& vec)
+Vector3<T> FastCeil(const Vector3<T>& vec)
 {
-    return Diligent::Vector3<T>{
+    return Vector3<T>{
         FastCeil(vec.x),
         FastCeil(vec.y),
         FastCeil(vec.z)};
 }
 
 template <typename T>
-Diligent::Vector4<T> FastCeil(const Diligent::Vector4<T>& vec)
+Vector4<T> FastCeil(const Vector4<T>& vec)
 {
-    return Diligent::Vector4<T>{
+    return Vector4<T>{
         FastCeil(vec.x),
         FastCeil(vec.y),
         FastCeil(vec.z),
         FastCeil(vec.w)};
+}
+
+template <typename Type>
+Type FastFrac(const Type& val)
+{
+    return val - FastFloor(val);
 }
 
 inline Uint32 BitInterleave16(Uint16 _x, Uint16 _y)
@@ -2487,7 +2493,19 @@ struct hash<Diligent::Matrix4x4<T>>
             m.m30, m.m31, m.m32, m.m33);
     }
 };
+
 } // namespace std
+
+namespace Diligent
+{
+
+template <typename Type>
+Type Frac(const Type& val)
+{
+    return val - std::floor(val);
+}
+
+} // namespace Diligent
 
 #ifdef _MSC_VER
 #    pragma warning(pop)

@@ -1179,6 +1179,19 @@ TEST(Common_BasicMath, FastFloorCeilVector)
     EXPECT_EQ(FastCeil(float4(-2.f, -0.875f, 0.f, 0.125f)), float4(-2, 0, 0, 1));
 }
 
+
+TEST(Common_BasicMath, FracVector)
+{
+    EXPECT_EQ(Frac(float2(0.125f, 1.25f)), float2(0.125f, 0.25f));
+    EXPECT_EQ(Frac(float3(0.125f, 1.25f, -2.25f)), float3(0.125f, 0.25f, 0.75f));
+    EXPECT_EQ(Frac(float4(0.125f, 1.25f, -2.25f, -3.0f)), float4(0.125f, 0.25f, 0.75f, 0.f));
+
+    EXPECT_EQ(FastFrac(float2(0.125f, 1.25f)), float2(0.125f, 0.25f));
+    EXPECT_EQ(FastFrac(float3(0.125f, 1.25f, -2.25f)), float3(0.125f, 0.25f, 0.75f));
+    EXPECT_EQ(FastFrac(float4(0.125f, 1.25f, -2.25f, -3.0f)), float4(0.125f, 0.25f, 0.75f, 0.f));
+}
+
+
 TEST(Common_BasicMath, HighPrecisionCross)
 {
     {
@@ -1639,6 +1652,65 @@ TEST(Common_BasicMath, FastCeil)
     EXPECT_EQ(FastCeil(1.0), 1.0);
     EXPECT_EQ(FastCeil(1.03125), 2.0);
 }
+
+TEST(Common_BasicMath, Frac)
+{
+    // float
+    EXPECT_EQ(Frac(0.f), 0.f);
+
+    EXPECT_EQ(Frac(-0.0625f), 1.f - 0.0625f);
+    EXPECT_EQ(Frac(-0.975f), 1.f - 0.975f);
+    EXPECT_EQ(Frac(-1.f), 0.f);
+    EXPECT_EQ(Frac(-1.125f), 1.f - 0.125f);
+
+    EXPECT_EQ(Frac(0.0625f), 0.0625f);
+    EXPECT_EQ(Frac(0.975f), 0.975f);
+    EXPECT_EQ(Frac(1.f), 0.f);
+    EXPECT_EQ(Frac(1.125f), 0.125f);
+
+    // double
+    EXPECT_EQ(Frac(0.0), 0.0);
+
+    EXPECT_EQ(Frac(-0.0625), 1 - 0.0625);
+    EXPECT_EQ(Frac(-0.975), 1 - 0.975);
+    EXPECT_EQ(Frac(-1.0), 0.0);
+    EXPECT_EQ(Frac(-1.125), 1.0 - 0.125);
+
+    EXPECT_EQ(Frac(0.0625), 0.0625);
+    EXPECT_EQ(Frac(0.975), 0.975);
+    EXPECT_EQ(Frac(1.0), 0.0);
+    EXPECT_EQ(Frac(1.125), 0.125);
+}
+
+TEST(Common_BasicMath, FastFrac)
+{
+    // float
+    EXPECT_EQ(FastFrac(0.f), 0.f);
+
+    EXPECT_EQ(FastFrac(-0.0625f), 1.f - 0.0625f);
+    EXPECT_EQ(FastFrac(-0.975f), 1.f - 0.975f);
+    EXPECT_EQ(FastFrac(-1.f), 0.f);
+    EXPECT_EQ(FastFrac(-1.125f), 1.f - 0.125f);
+
+    EXPECT_EQ(FastFrac(0.0625f), 0.0625f);
+    EXPECT_EQ(FastFrac(0.975f), 0.975f);
+    EXPECT_EQ(FastFrac(1.f), 0.f);
+    EXPECT_EQ(FastFrac(1.125f), 0.125f);
+
+    // double
+    EXPECT_EQ(FastFrac(0.0), 0.0);
+
+    EXPECT_EQ(FastFrac(-0.0625), 1 - 0.0625);
+    EXPECT_EQ(FastFrac(-0.975), 1 - 0.975);
+    EXPECT_EQ(FastFrac(-1.0), 0.0);
+    EXPECT_EQ(FastFrac(-1.125), 1.0 - 0.125);
+
+    EXPECT_EQ(FastFrac(0.0625), 0.0625);
+    EXPECT_EQ(FastFrac(0.975), 0.975);
+    EXPECT_EQ(FastFrac(1.0), 0.0);
+    EXPECT_EQ(FastFrac(1.125), 0.125);
+}
+
 
 TEST(Common_BasicMath, BitInterleave16)
 {
