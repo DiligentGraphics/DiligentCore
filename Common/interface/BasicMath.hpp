@@ -93,7 +93,7 @@ template <class T> struct Vector2
     };
 
 
-    Vector2 operator-(const Vector2<T>& right) const
+    constexpr Vector2 operator-(const Vector2<T>& right) const
     {
         return Vector2{x - right.x, y - right.y};
     }
@@ -105,12 +105,12 @@ template <class T> struct Vector2
         return *this;
     }
 
-    Vector2 operator-() const
+    constexpr Vector2 operator-() const
     {
         return Vector2{-x, -y};
     }
 
-    Vector2 operator+(const Vector2<T>& right) const
+    constexpr Vector2 operator+(const Vector2<T>& right) const
     {
         return Vector2{x + right.x, y + right.y};
     }
@@ -122,12 +122,12 @@ template <class T> struct Vector2
         return *this;
     }
 
-    Vector2 operator*(T s) const
+    constexpr Vector2 operator*(T s) const
     {
         return Vector2{x * s, y * s};
     }
 
-    Vector2 operator*(const Vector2& right) const
+    constexpr Vector2 operator*(const Vector2& right) const
     {
         return Vector2{x * right.x, y * right.y};
     }
@@ -146,7 +146,7 @@ template <class T> struct Vector2
         return *this;
     }
 
-    Vector2 operator*(const Matrix2x2<T>& m) const
+    constexpr Vector2 operator*(const Matrix2x2<T>& m) const
     {
         Vector2 out;
         out[0] = x * m[0][0] + y * m[1][0];
@@ -154,19 +154,19 @@ template <class T> struct Vector2
         return out;
     }
 
-    Vector2 operator/(const Vector2& right) const
+    constexpr Vector2 operator/(const Vector2& right) const
     {
         return Vector2{x / right.x, y / right.y};
     }
 
-    Vector2& operator/=(const Vector2& right)
+    constexpr Vector2& operator/=(const Vector2& right)
     {
         x /= right.x;
         y /= right.y;
         return *this;
     }
 
-    Vector2 operator/(T s) const
+    constexpr Vector2 operator/(T s) const
     {
         return Vector2{x / s, y / s};
     }
@@ -178,35 +178,35 @@ template <class T> struct Vector2
         return *this;
     }
 
-    bool operator==(const Vector2& right) const
+    constexpr bool operator==(const Vector2& right) const
     {
         return x == right.x && y == right.y;
     }
 
-    bool operator!=(const Vector2& right) const
+    constexpr bool operator!=(const Vector2& right) const
     {
         return !(*this == right);
     }
 
-    Vector2 operator<(const Vector2& right) const
+    constexpr Vector2 operator<(const Vector2& right) const
     {
         return Vector2{x < right.x ? static_cast<T>(1) : static_cast<T>(0),
                        y < right.y ? static_cast<T>(1) : static_cast<T>(0)};
     }
 
-    Vector2 operator>(const Vector2& right) const
+    constexpr Vector2 operator>(const Vector2& right) const
     {
         return Vector2{x > right.x ? static_cast<T>(1) : static_cast<T>(0),
                        y > right.y ? static_cast<T>(1) : static_cast<T>(0)};
     }
 
-    Vector2 operator<=(const Vector2& right) const
+    constexpr Vector2 operator<=(const Vector2& right) const
     {
         return Vector2{x <= right.x ? static_cast<T>(1) : static_cast<T>(0),
                        y <= right.y ? static_cast<T>(1) : static_cast<T>(0)};
     }
 
-    Vector2 operator>=(const Vector2& right) const
+    constexpr Vector2 operator>=(const Vector2& right) const
     {
         return Vector2{x >= right.x ? static_cast<T>(1) : static_cast<T>(0),
                        y >= right.y ? static_cast<T>(1) : static_cast<T>(0)};
@@ -226,15 +226,15 @@ template <class T> struct Vector2
         return Data()[index];
     }
 
-    Vector2() :
+    constexpr Vector2() noexcept :
         x{0}, y{0} {}
-    explicit Vector2(T s) :
+    constexpr explicit Vector2(T s) noexcept :
         x{s}, y{s} {}
-    Vector2(T _x, T _y) :
+    constexpr Vector2(T _x, T _y) noexcept :
         x{_x}, y{_y} {}
 
     template <typename Y>
-    static Vector2 MakeVector(const Y& vals)
+    static constexpr Vector2 MakeVector(const Y& vals)
     {
         return Vector2 //
             {
@@ -244,7 +244,7 @@ template <class T> struct Vector2
     }
 
     template <typename Y>
-    Vector2<Y> Recast() const
+    constexpr Vector2<Y> Recast() const
     {
         return Vector2<Y>{static_cast<Y>(x),
                           static_cast<Y>(y)};
@@ -252,7 +252,7 @@ template <class T> struct Vector2
 };
 
 template <class T>
-Vector2<T> operator*(T s, const Vector2<T>& a)
+constexpr Vector2<T> operator*(T s, const Vector2<T>& a)
 {
     return a * s;
 }
@@ -283,12 +283,12 @@ template <class T> struct Vector3
     };
 
 
-    Vector3 operator-(const Vector3& right) const
+    constexpr Vector3 operator-(const Vector3& right) const
     {
         return Vector3{x - right.x, y - right.y, z - right.z};
     }
 
-    Vector3 operator-() const
+    constexpr Vector3 operator-() const
     {
         return Vector3{-x, -y, -z};
     }
@@ -301,7 +301,7 @@ template <class T> struct Vector3
         return *this;
     }
 
-    Vector3 operator+(const Vector3& right) const
+    constexpr Vector3 operator+(const Vector3& right) const
     {
         return Vector3{x + right.x, y + right.y, z + right.z};
     }
@@ -314,7 +314,7 @@ template <class T> struct Vector3
         return *this;
     }
 
-    Vector3 operator*(T s) const
+    constexpr Vector3 operator*(T s) const
     {
         return Vector3{x * s, y * s, z * s};
     }
@@ -327,12 +327,12 @@ template <class T> struct Vector3
         return *this;
     }
 
-    Vector3 operator*(const Vector3& right) const
+    constexpr Vector3 operator*(const Vector3& right) const
     {
         return Vector3{x * right.x, y * right.y, z * right.z};
     }
 
-    Vector3 operator*(const Matrix4x4<T>& m) const
+    constexpr Vector3 operator*(const Matrix4x4<T>& m) const
     {
         Vector4<T> out4 = Vector4<T>(x, y, z, 1) * m;
         return Vector3{out4.x / out4.w, out4.y / out4.w, out4.z / out4.w};
@@ -346,7 +346,7 @@ template <class T> struct Vector3
         return *this;
     }
 
-    Vector3 operator*(const Matrix3x3<T>& m) const
+    constexpr Vector3 operator*(const Matrix3x3<T>& m) const
     {
         Vector3 out;
         out[0] = x * m[0][0] + y * m[1][0] + z * m[2][0];
@@ -355,7 +355,7 @@ template <class T> struct Vector3
         return out;
     }
 
-    Vector3 operator/(T s) const
+    constexpr Vector3 operator/(T s) const
     {
         return Vector3{x / s, y / s, z / s};
     }
@@ -368,7 +368,7 @@ template <class T> struct Vector3
         return *this;
     }
 
-    Vector3 operator/(const Vector3& right) const
+    constexpr Vector3 operator/(const Vector3& right) const
     {
         return Vector3{x / right.x, y / right.y, z / right.z};
     }
@@ -381,38 +381,38 @@ template <class T> struct Vector3
         return *this;
     }
 
-    bool operator==(const Vector3& right) const
+    constexpr bool operator==(const Vector3& right) const
     {
         return x == right.x && y == right.y && z == right.z;
     }
 
-    bool operator!=(const Vector3& right) const
+    constexpr bool operator!=(const Vector3& right) const
     {
         return !(*this == right);
     }
 
-    Vector3 operator<(const Vector3& right) const
+    constexpr Vector3 operator<(const Vector3& right) const
     {
         return Vector3{x < right.x ? static_cast<T>(1) : static_cast<T>(0),
                        y < right.y ? static_cast<T>(1) : static_cast<T>(0),
                        z < right.z ? static_cast<T>(1) : static_cast<T>(0)};
     }
 
-    Vector3 operator>(const Vector3& right) const
+    constexpr Vector3 operator>(const Vector3& right) const
     {
         return Vector3{x > right.x ? static_cast<T>(1) : static_cast<T>(0),
                        y > right.y ? static_cast<T>(1) : static_cast<T>(0),
                        z > right.z ? static_cast<T>(1) : static_cast<T>(0)};
     }
 
-    Vector3 operator<=(const Vector3& right) const
+    constexpr Vector3 operator<=(const Vector3& right) const
     {
         return Vector3{x <= right.x ? static_cast<T>(1) : static_cast<T>(0),
                        y <= right.y ? static_cast<T>(1) : static_cast<T>(0),
                        z <= right.z ? static_cast<T>(1) : static_cast<T>(0)};
     }
 
-    Vector3 operator>=(const Vector3& right) const
+    constexpr Vector3 operator>=(const Vector3& right) const
     {
         return Vector3{x >= right.x ? static_cast<T>(1) : static_cast<T>(0),
                        y >= right.y ? static_cast<T>(1) : static_cast<T>(0),
@@ -433,15 +433,15 @@ template <class T> struct Vector3
         return Data()[index];
     }
 
-    Vector3() :
+    constexpr Vector3() noexcept :
         x{0}, y{0}, z{0} {}
-    explicit Vector3(T s) :
+    constexpr explicit Vector3(T s) noexcept :
         x{s}, y{s}, z{s} {}
-    Vector3(T _x, T _y, T _z) :
+    constexpr Vector3(T _x, T _y, T _z) noexcept :
         x{_x}, y{_y}, z{_z} {}
 
     template <typename Y>
-    static Vector3 MakeVector(const Y& vals)
+    constexpr static Vector3 MakeVector(const Y& vals)
     {
         return Vector3 //
             {
@@ -452,18 +452,18 @@ template <class T> struct Vector3
     }
 
     template <typename Y>
-    Vector3<Y> Recast() const
+    constexpr Vector3<Y> Recast() const
     {
         return Vector3<Y>{static_cast<Y>(x),
                           static_cast<Y>(y),
                           static_cast<Y>(z)};
     }
 
-    operator Vector2<T>() const { return Vector2<T>(x, y); }
+    constexpr operator Vector2<T>() const { return Vector2<T>(x, y); }
 };
 
 template <class T>
-Vector3<T> operator*(T s, const Vector3<T>& a)
+constexpr Vector3<T> operator*(T s, const Vector3<T>& a)
 {
     return a * s;
 }
@@ -489,12 +489,12 @@ template <class T> struct Vector4
         };
     };
 
-    Vector4 operator-(const Vector4& right) const
+    constexpr Vector4 operator-(const Vector4& right) const
     {
         return Vector4{x - right.x, y - right.y, z - right.z, w - right.w};
     }
 
-    Vector4 operator-() const
+    constexpr Vector4 operator-() const
     {
         return Vector4{-x, -y, -z, -w};
     }
@@ -508,7 +508,7 @@ template <class T> struct Vector4
         return *this;
     }
 
-    Vector4 operator+(const Vector4& right) const
+    constexpr Vector4 operator+(const Vector4& right) const
     {
         return Vector4{x + right.x, y + right.y, z + right.z, w + right.w};
     }
@@ -522,7 +522,7 @@ template <class T> struct Vector4
         return *this;
     }
 
-    Vector4 operator*(T s) const
+    constexpr Vector4 operator*(T s) const
     {
         return Vector4{x * s, y * s, z * s, w * s};
     }
@@ -536,7 +536,7 @@ template <class T> struct Vector4
         return *this;
     }
 
-    Vector4 operator*(const Vector4& right) const
+    constexpr Vector4 operator*(const Vector4& right) const
     {
         return Vector4{x * right.x, y * right.y, z * right.z, w * right.w};
     }
@@ -550,7 +550,7 @@ template <class T> struct Vector4
         return *this;
     }
 
-    Vector4 operator/(T s) const
+    constexpr Vector4 operator/(T s) const
     {
         return Vector4{x / s, y / s, z / s, w / s};
     }
@@ -564,7 +564,7 @@ template <class T> struct Vector4
         return *this;
     }
 
-    Vector4 operator/(const Vector4& right) const
+    constexpr Vector4 operator/(const Vector4& right) const
     {
         return Vector4{x / right.x, y / right.y, z / right.z, w / right.w};
     }
@@ -578,17 +578,17 @@ template <class T> struct Vector4
         return *this;
     }
 
-    bool operator==(const Vector4& right) const
+    constexpr bool operator==(const Vector4& right) const
     {
         return x == right.x && y == right.y && z == right.z && w == right.w;
     }
 
-    bool operator!=(const Vector4& right) const
+    constexpr bool operator!=(const Vector4& right) const
     {
         return !(*this == right);
     }
 
-    Vector4 operator*(const Matrix4x4<T>& m) const
+    constexpr Vector4 operator*(const Matrix4x4<T>& m) const
     {
         Vector4 out;
         out[0] = x * m[0][0] + y * m[1][0] + z * m[2][0] + w * m[3][0];
@@ -608,7 +608,7 @@ template <class T> struct Vector4
     }
     Vector4& operator=(const Vector4&) = default;
 
-    Vector4 operator<(const Vector4& right) const
+    constexpr Vector4 operator<(const Vector4& right) const
     {
         return Vector4{x < right.x ? static_cast<T>(1) : static_cast<T>(0),
                        y < right.y ? static_cast<T>(1) : static_cast<T>(0),
@@ -616,7 +616,7 @@ template <class T> struct Vector4
                        w < right.w ? static_cast<T>(1) : static_cast<T>(0)};
     }
 
-    Vector4 operator>(const Vector4& right) const
+    constexpr Vector4 operator>(const Vector4& right) const
     {
         return Vector4{x > right.x ? static_cast<T>(1) : static_cast<T>(0),
                        y > right.y ? static_cast<T>(1) : static_cast<T>(0),
@@ -624,7 +624,7 @@ template <class T> struct Vector4
                        w > right.w ? static_cast<T>(1) : static_cast<T>(0)};
     }
 
-    Vector4 operator<=(const Vector4& right) const
+    constexpr Vector4 operator<=(const Vector4& right) const
     {
         return Vector4{x <= right.x ? static_cast<T>(1) : static_cast<T>(0),
                        y <= right.y ? static_cast<T>(1) : static_cast<T>(0),
@@ -632,7 +632,7 @@ template <class T> struct Vector4
                        w <= right.w ? static_cast<T>(1) : static_cast<T>(0)};
     }
 
-    Vector4 operator>=(const Vector4& right) const
+    constexpr Vector4 operator>=(const Vector4& right) const
     {
         return Vector4{x >= right.x ? static_cast<T>(1) : static_cast<T>(0),
                        y >= right.y ? static_cast<T>(1) : static_cast<T>(0),
@@ -654,17 +654,17 @@ template <class T> struct Vector4
         return Data()[index];
     }
 
-    Vector4() :
+    constexpr Vector4() noexcept :
         x{0}, y{0}, z{0}, w{0} {}
-    explicit Vector4(T s) :
+    constexpr explicit Vector4(T s) noexcept :
         x{s}, y{s}, z{s}, w{s} {}
-    Vector4(T _x, T _y, T _z, T _w) :
+    constexpr Vector4(T _x, T _y, T _z, T _w) noexcept :
         x{_x}, y{_y}, z{_z}, w{_w} {}
-    Vector4(const Vector3<T>& v3, T _w) :
+    constexpr Vector4(const Vector3<T>& v3, T _w) noexcept :
         x{v3.x}, y{v3.y}, z{v3.z}, w{_w} {}
 
     template <typename Y>
-    static Vector4 MakeVector(const Y& vals)
+    constexpr static Vector4 MakeVector(const Y& vals)
     {
         return Vector4 //
             {
@@ -676,7 +676,7 @@ template <class T> struct Vector4
     }
 
     template <typename Y>
-    Vector4<Y> Recast() const
+    constexpr Vector4<Y> Recast() const
     {
         return Vector4<Y>{static_cast<Y>(x),
                           static_cast<Y>(y),
@@ -684,7 +684,7 @@ template <class T> struct Vector4
                           static_cast<Y>(w)};
     }
 
-    operator Vector3<T>() const
+    constexpr operator Vector3<T>() const
     {
         return Vector3<T>(x, y, z);
     }
@@ -692,7 +692,7 @@ template <class T> struct Vector4
 
 
 template <class T>
-Vector4<T> operator*(T s, const Vector4<T>& a)
+constexpr Vector4<T> operator*(T s, const Vector4<T>& a)
 {
     return a * s;
 }
@@ -719,7 +719,7 @@ template <class T> struct Matrix2x2
         T m[2][2];
     };
 
-    explicit Matrix2x2(T value) :
+    constexpr explicit Matrix2x2(T value) noexcept :
         // clang-format off
         _11{value}, _12{value},
         _21{value}, _22{value}
@@ -727,12 +727,12 @@ template <class T> struct Matrix2x2
     {
     }
 
-    Matrix2x2() :
+    constexpr Matrix2x2() noexcept :
         Matrix2x2{0} {}
 
     // clang-format off
-    Matrix2x2(T i11, T i12,
-              T i21, T i22) :
+    constexpr Matrix2x2(T i11, T i12,
+                        T i21, T i22) noexcept:
         _11{i11}, _12{i12},
         _21{i21}, _22{i22}
     // clang-format on
@@ -740,7 +740,7 @@ template <class T> struct Matrix2x2
     }
 
     template <typename Y>
-    static Matrix2x2 MakeMatrix(const Y& vals)
+    constexpr static Matrix2x2 MakeMatrix(const Y& vals)
     {
         return Matrix2x2 //
             {
@@ -749,7 +749,7 @@ template <class T> struct Matrix2x2
             };
     }
 
-    bool operator==(const Matrix2x2& r) const
+    constexpr bool operator==(const Matrix2x2& r) const
     {
         for (int i = 0; i < 2; ++i)
             for (int j = 0; j < 2; ++j)
@@ -759,7 +759,7 @@ template <class T> struct Matrix2x2
         return true;
     }
 
-    bool operator!=(const Matrix2x2& r) const
+    constexpr bool operator!=(const Matrix2x2& r) const
     {
         return !(*this == r);
     }
@@ -793,21 +793,21 @@ template <class T> struct Matrix2x2
         return *this;
     }
 
-    Matrix2x2 Transpose() const
+    constexpr Matrix2x2 Transpose() const
     {
         return Matrix2x2{
             _11, _21,
             _12, _22};
     }
 
-    static Matrix2x2 Identity()
+    constexpr static Matrix2x2 Identity()
     {
         return Matrix2x2{
             1, 0,
             0, 1};
     }
 
-    static Matrix2x2 Mul(const Matrix2x2& m1, const Matrix2x2& m2)
+    constexpr static Matrix2x2 Mul(const Matrix2x2& m1, const Matrix2x2& m2)
     {
         Matrix2x2 mOut;
         for (int i = 0; i < 2; i++)
@@ -823,7 +823,7 @@ template <class T> struct Matrix2x2
         return mOut;
     }
 
-    static Matrix2x2 Rotation(T angleInRadians)
+    constexpr static Matrix2x2 Rotation(T angleInRadians)
     {
         auto s = std::sin(angleInRadians);
         auto c = std::cos(angleInRadians);
@@ -835,12 +835,12 @@ template <class T> struct Matrix2x2
             };
     }
 
-    T Determinant() const
+    constexpr T Determinant() const
     {
         return _11 * _22 - _12 * _21;
     }
 
-    Matrix2x2 Inverse() const
+    constexpr Matrix2x2 Inverse() const
     {
         Matrix2x2 Inv //
             {
@@ -885,7 +885,7 @@ template <class T> struct Matrix3x3
         T m[3][3];
     };
 
-    explicit Matrix3x3(T value) :
+    constexpr explicit Matrix3x3(T value) noexcept :
         // clang-format off
         _11{value}, _12{value}, _13{value},
         _21{value}, _22{value}, _23{value},
@@ -894,13 +894,13 @@ template <class T> struct Matrix3x3
     {
     }
 
-    Matrix3x3() :
+    constexpr Matrix3x3() noexcept :
         Matrix3x3{0} {}
 
     // clang-format off
-    Matrix3x3(T i11, T i12, T i13,
-              T i21, T i22, T i23,
-              T i31, T i32, T i33) :
+    constexpr Matrix3x3(T i11, T i12, T i13,
+                        T i21, T i22, T i23,
+                        T i31, T i32, T i33) noexcept :
         _11{i11}, _12{i12}, _13{i13},
         _21{i21}, _22{i22}, _23{i23},
         _31{i31}, _32{i32}, _33{i33}
@@ -909,7 +909,7 @@ template <class T> struct Matrix3x3
     }
 
     template <typename Y>
-    static Matrix3x3 MakeMatrix(const Y& vals)
+    constexpr static Matrix3x3 MakeMatrix(const Y& vals)
     {
         return Matrix3x3 //
             {
@@ -919,7 +919,7 @@ template <class T> struct Matrix3x3
             };
     }
 
-    bool operator==(const Matrix3x3& r) const
+    constexpr bool operator==(const Matrix3x3& r) const
     {
         for (int i = 0; i < 3; ++i)
             for (int j = 0; j < 3; ++j)
@@ -929,7 +929,7 @@ template <class T> struct Matrix3x3
         return true;
     }
 
-    bool operator!=(const Matrix3x3& r) const
+    constexpr bool operator!=(const Matrix3x3& r) const
     {
         return !(*this == r);
     }
@@ -962,7 +962,7 @@ template <class T> struct Matrix3x3
         return *this;
     }
 
-    Matrix3x3 Transpose() const
+    constexpr Matrix3x3 Transpose() const
     {
         return Matrix3x3 //
             {
@@ -972,7 +972,7 @@ template <class T> struct Matrix3x3
             };
     }
 
-    static Matrix3x3 Identity()
+    constexpr static Matrix3x3 Identity()
     {
         return Matrix3x3 //
             {
@@ -982,7 +982,7 @@ template <class T> struct Matrix3x3
             };
     }
 
-    static Matrix3x3 Scale(T x, T y, T z)
+    constexpr static Matrix3x3 Scale(T x, T y, T z)
     {
         return Matrix3x3 //
             {
@@ -1040,7 +1040,7 @@ template <class T> struct Matrix3x3
             };
     }
 
-    static Matrix3x3 Mul(const Matrix3x3& m1, const Matrix3x3& m2)
+    constexpr static Matrix3x3 Mul(const Matrix3x3& m1, const Matrix3x3& m2)
     {
         Matrix3x3 mOut;
         for (int i = 0; i < 3; i++)
@@ -1057,7 +1057,7 @@ template <class T> struct Matrix3x3
         return mOut;
     }
 
-    T Determinant() const
+    constexpr T Determinant() const
     {
         T det = 0;
         det += _11 * (_22 * _33 - _32 * _23);
@@ -1066,7 +1066,7 @@ template <class T> struct Matrix3x3
         return det;
     }
 
-    Matrix3x3 Inverse() const
+    constexpr Matrix3x3 Inverse() const
     {
         Matrix3x3 Inv;
 
@@ -1161,7 +1161,7 @@ template <class T> struct Matrix4x4
         T m[4][4];
     };
 
-    explicit Matrix4x4(T value) :
+    constexpr explicit Matrix4x4(T value) noexcept :
         // clang-format off
         _11{value}, _12{value}, _13{value}, _14{value},
         _21{value}, _22{value}, _23{value}, _24{value},
@@ -1171,14 +1171,14 @@ template <class T> struct Matrix4x4
     {
     }
 
-    Matrix4x4() :
+    constexpr Matrix4x4() noexcept :
         Matrix4x4{0} {}
 
     // clang-format off
-    Matrix4x4(T i11, T i12, T i13, T i14,
-              T i21, T i22, T i23, T i24,
-              T i31, T i32, T i33, T i34,
-              T i41, T i42, T i43, T i44) :
+    constexpr Matrix4x4(T i11, T i12, T i13, T i14,
+                        T i21, T i22, T i23, T i24,
+                        T i31, T i32, T i33, T i34,
+                        T i41, T i42, T i43, T i44) noexcept :
         _11{i11}, _12{i12}, _13{i13}, _14{i14},
         _21{i21}, _22{i22}, _23{i23}, _24{i24},
         _31{i31}, _32{i32}, _33{i33}, _34{i34},
@@ -1188,10 +1188,10 @@ template <class T> struct Matrix4x4
     // clang-format on
 
     // clang-format off
-    Matrix4x4(const Vector4<T>& Row0,
-              const Vector4<T>& Row1,
-              const Vector4<T>& Row2,
-              const Vector4<T>& Row3) :
+    constexpr Matrix4x4(const Vector4<T>& Row0,
+                        const Vector4<T>& Row1,
+                        const Vector4<T>& Row2,
+                        const Vector4<T>& Row3) noexcept :
         _11{Row0.x}, _12{Row0.y}, _13{Row0.z}, _14{Row0.w},
         _21{Row1.x}, _22{Row1.y}, _23{Row1.z}, _24{Row1.w},
         _31{Row2.x}, _32{Row2.y}, _33{Row2.z}, _34{Row2.w},
@@ -1201,7 +1201,7 @@ template <class T> struct Matrix4x4
     // clang-format on
 
     template <typename Y>
-    static Matrix4x4 MakeMatrix(const Y& vals)
+    constexpr static Matrix4x4 MakeMatrix(const Y& vals)
     {
         // clang-format off
         return Matrix4x4
@@ -1214,7 +1214,7 @@ template <class T> struct Matrix4x4
         // clang-format on
     }
 
-    bool operator==(const Matrix4x4& r) const
+    constexpr bool operator==(const Matrix4x4& r) const
     {
         for (int i = 0; i < 4; ++i)
             for (int j = 0; j < 4; ++j)
@@ -1224,7 +1224,7 @@ template <class T> struct Matrix4x4
         return true;
     }
 
-    bool operator!=(const Matrix4x4& r) const
+    constexpr bool operator!=(const Matrix4x4& r) const
     {
         return !(*this == r);
     }
@@ -1257,7 +1257,7 @@ template <class T> struct Matrix4x4
         return *this;
     }
 
-    Matrix4x4 Transpose() const
+    constexpr Matrix4x4 Transpose() const
     {
         return Matrix4x4 //
             {
@@ -1268,7 +1268,7 @@ template <class T> struct Matrix4x4
             };
     }
 
-    static Matrix4x4 Identity()
+    constexpr static Matrix4x4 Identity()
     {
         return Matrix4x4 //
             {
@@ -1279,7 +1279,7 @@ template <class T> struct Matrix4x4
             };
     }
 
-    static Matrix4x4 Translation(T x, T y, T z)
+    constexpr static Matrix4x4 Translation(T x, T y, T z)
     {
         return Matrix4x4 //
             {
@@ -1290,12 +1290,12 @@ template <class T> struct Matrix4x4
             };
     }
 
-    static Matrix4x4 Translation(const Vector3<T>& v)
+    constexpr static Matrix4x4 Translation(const Vector3<T>& v)
     {
         return Translation(v.x, v.y, v.z);
     }
 
-    static Matrix4x4 Scale(T x, T y, T z)
+    constexpr static Matrix4x4 Scale(T x, T y, T z)
     {
         return Matrix4x4 //
             {
@@ -1306,12 +1306,12 @@ template <class T> struct Matrix4x4
             };
     }
 
-    static Matrix4x4 Scale(const Vector3<T>& v)
+    constexpr static Matrix4x4 Scale(const Vector3<T>& v)
     {
         return Scale(v.x, v.y, v.z);
     }
 
-    static Matrix4x4 Scale(T s)
+    constexpr static Matrix4x4 Scale(T s)
     {
         return Scale(s, s, s);
     }
@@ -1514,7 +1514,7 @@ template <class T> struct Matrix4x4
     }
 
 
-    T Determinant() const
+    constexpr T Determinant() const
     {
         T det = 0.f;
 
@@ -1545,7 +1545,7 @@ template <class T> struct Matrix4x4
         return det;
     }
 
-    Matrix4x4 Inverse() const
+    constexpr Matrix4x4 Inverse() const
     {
         Matrix4x4 inv;
 
@@ -1659,7 +1659,7 @@ template <class T> struct Matrix4x4
         return inv;
     }
 
-    Matrix4x4 RemoveTranslation() const
+    constexpr Matrix4x4 RemoveTranslation() const
     {
         return Matrix4x4 // clang-format off
             {
@@ -1675,56 +1675,56 @@ template <class T> struct Matrix4x4
 
 
 template <class T>
-T dot(const Vector2<T>& a, const Vector2<T>& b)
+constexpr T dot(const Vector2<T>& a, const Vector2<T>& b)
 {
     return a.x * b.x + a.y * b.y;
 }
 
 template <class T>
-T dot(const Vector3<T>& a, const Vector3<T>& b)
+constexpr T dot(const Vector3<T>& a, const Vector3<T>& b)
 {
     return a.x * b.x + a.y * b.y + a.z * b.z;
 }
 
 template <class T>
-T dot(const Vector4<T>& a, const Vector4<T>& b)
+constexpr T dot(const Vector4<T>& a, const Vector4<T>& b)
 {
     return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
 }
 
 template <class VectorType>
-auto length(const VectorType& a) -> decltype(dot(a, a))
+constexpr auto length(const VectorType& a) -> decltype(dot(a, a))
 {
     return sqrt(dot(a, a));
 }
 
 
 template <class T>
-Vector3<T> min(const Vector3<T>& a, const Vector3<T>& b)
+constexpr Vector3<T> min(const Vector3<T>& a, const Vector3<T>& b)
 {
     return Vector3<T>(std::min(a.x, b.x), std::min(a.y, b.y), std::min(a.z, b.z));
 }
 
 template <class T>
-Vector4<T> min(const Vector4<T>& a, const Vector4<T>& b)
+constexpr Vector4<T> min(const Vector4<T>& a, const Vector4<T>& b)
 {
     return Vector4<T>(std::min(a.x, b.x), std::min(a.y, b.y), std::min(a.z, b.z), std::min(a.w, b.w));
 }
 
 template <class T>
-Vector3<T> max(const Vector3<T>& a, const Vector3<T>& b)
+constexpr Vector3<T> max(const Vector3<T>& a, const Vector3<T>& b)
 {
     return Vector3<T>(std::max(a.x, b.x), std::max(a.y, b.y), std::max(a.z, b.z));
 }
 
 template <class T>
-Vector4<T> max(const Vector4<T>& a, const Vector4<T>& b)
+constexpr Vector4<T> max(const Vector4<T>& a, const Vector4<T>& b)
 {
     return Vector4<T>(std::max(a.x, b.x), std::max(a.y, b.y), std::max(a.z, b.z), std::max(a.w, b.w));
 }
 
 template <class T>
-Vector2<T> abs(const Vector2<T>& a)
+constexpr Vector2<T> abs(const Vector2<T>& a)
 {
     // WARNING: abs() on gcc is for integers only!
     return Vector2<T>(a.x < 0 ? -a.x : a.x,
@@ -1732,7 +1732,7 @@ Vector2<T> abs(const Vector2<T>& a)
 }
 
 template <class T>
-Vector3<T> abs(const Vector3<T>& a)
+constexpr Vector3<T> abs(const Vector3<T>& a)
 {
     // WARNING: abs() on gcc is for integers only!
     return Vector3<T>(a.x < 0 ? -a.x : a.x,
@@ -1741,7 +1741,7 @@ Vector3<T> abs(const Vector3<T>& a)
 }
 
 template <class T>
-Vector4<T> abs(const Vector4<T>& a)
+constexpr Vector4<T> abs(const Vector4<T>& a)
 {
     // WARNING: abs() on gcc is for integers only!
     return Vector4<T>(a.x < 0 ? -a.x : a.x,
@@ -1752,20 +1752,20 @@ Vector4<T> abs(const Vector4<T>& a)
 
 
 template <typename T>
-T clamp(T val, T _min, T _max)
+constexpr T clamp(T val, T _min, T _max)
 {
     return val < _min ? _min : (val > _max ? _max : val);
 }
 
 template <class T>
-Vector2<T> clamp(const Vector2<T>& a, const Vector2<T>& _min, const Vector2<T>& _max)
+constexpr Vector2<T> clamp(const Vector2<T>& a, const Vector2<T>& _min, const Vector2<T>& _max)
 {
     return Vector2<T>(clamp(a.x, _min.x, _max.x),
                       clamp(a.y, _min.y, _max.y));
 }
 
 template <class T>
-Vector3<T> clamp(const Vector3<T>& a, const Vector3<T>& _min, const Vector3<T>& _max)
+constexpr Vector3<T> clamp(const Vector3<T>& a, const Vector3<T>& _min, const Vector3<T>& _max)
 {
     return Vector3<T>(clamp(a.x, _min.x, _max.x),
                       clamp(a.y, _min.y, _max.y),
@@ -1773,7 +1773,7 @@ Vector3<T> clamp(const Vector3<T>& a, const Vector3<T>& _min, const Vector3<T>& 
 }
 
 template <class T>
-Vector4<T> clamp(const Vector4<T>& a, const Vector4<T>& _min, const Vector4<T>& _max)
+constexpr Vector4<T> clamp(const Vector4<T>& a, const Vector4<T>& _min, const Vector4<T>& _max)
 {
     return Vector4<T>(clamp(a.x, _min.x, _max.x),
                       clamp(a.y, _min.y, _max.y),
@@ -1783,7 +1783,7 @@ Vector4<T> clamp(const Vector4<T>& a, const Vector4<T>& _min, const Vector4<T>& 
 
 
 template <class T>
-Vector3<T> cross(const Vector3<T>& a, const Vector3<T>& b)
+constexpr Vector3<T> cross(const Vector3<T>& a, const Vector3<T>& b)
 {
     // |   i    j    k   |
     // |  a.x  a.y  a.z  |
@@ -1792,7 +1792,7 @@ Vector3<T> cross(const Vector3<T>& a, const Vector3<T>& b)
 }
 
 template <class T, class Y>
-Vector3<T> cross(const Vector3<T>& a, const Vector3<T>& b)
+constexpr Vector3<T> cross(const Vector3<T>& a, const Vector3<T>& b)
 {
     // |   i    j    k   |
     // |  a.x  a.y  a.z  |
@@ -1805,18 +1805,18 @@ Vector3<T> cross(const Vector3<T>& a, const Vector3<T>& b)
         };
 }
 
-inline Vector3<float> high_precision_cross(const Vector3<float>& a, const Vector3<float>& b)
+constexpr inline Vector3<float> high_precision_cross(const Vector3<float>& a, const Vector3<float>& b)
 {
     return cross<float, double>(a, b);
 }
 
-inline Vector3<int32_t> high_precision_cross(const Vector3<int32_t>& a, const Vector3<int32_t>& b)
+constexpr inline Vector3<int32_t> high_precision_cross(const Vector3<int32_t>& a, const Vector3<int32_t>& b)
 {
     return cross<int32_t, int64_t>(a, b);
 }
 
 template <class VectorType>
-VectorType normalize(const VectorType& a)
+constexpr VectorType normalize(const VectorType& a)
 {
     auto len = length(a);
     return a / len;
@@ -1826,19 +1826,19 @@ VectorType normalize(const VectorType& a)
 // Template Matrix-Matrix multiplications
 
 template <class T>
-Matrix4x4<T> operator*(const Matrix4x4<T>& m1, const Matrix4x4<T>& m2)
+constexpr Matrix4x4<T> operator*(const Matrix4x4<T>& m1, const Matrix4x4<T>& m2)
 {
     return Matrix4x4<T>::Mul(m1, m2);
 }
 
 template <class T>
-Matrix3x3<T> operator*(const Matrix3x3<T>& m1, const Matrix3x3<T>& m2)
+constexpr Matrix3x3<T> operator*(const Matrix3x3<T>& m1, const Matrix3x3<T>& m2)
 {
     return Matrix3x3<T>::Mul(m1, m2);
 }
 
 template <class T>
-Matrix2x2<T> operator*(const Matrix2x2<T>& m1, const Matrix2x2<T>& m2)
+constexpr Matrix2x2<T> operator*(const Matrix2x2<T>& m1, const Matrix2x2<T>& m2)
 {
     return Matrix2x2<T>::Mul(m1, m2);
 }
@@ -1847,7 +1847,7 @@ Matrix2x2<T> operator*(const Matrix2x2<T>& m1, const Matrix2x2<T>& m2)
 // Template Matrix-Vector multiplications
 
 template <class T>
-Vector4<T> operator*(const Matrix4x4<T>& m, const Vector4<T>& v)
+constexpr Vector4<T> operator*(const Matrix4x4<T>& m, const Vector4<T>& v)
 {
     Vector4<T> out;
     out[0] = m[0][0] * v.x + m[0][1] * v.y + m[0][2] * v.z + m[0][3] * v.w;
@@ -1858,7 +1858,7 @@ Vector4<T> operator*(const Matrix4x4<T>& m, const Vector4<T>& v)
 }
 
 template <class T>
-Vector3<T> operator*(const Matrix3x3<T>& m, Vector3<T>& v)
+constexpr Vector3<T> operator*(const Matrix3x3<T>& m, Vector3<T>& v)
 {
     Vector3<T> out;
     out[0] = m[0][0] * v.x + m[0][1] * v.y + m[0][2] * v.z;
@@ -1868,7 +1868,7 @@ Vector3<T> operator*(const Matrix3x3<T>& m, Vector3<T>& v)
 }
 
 template <class T>
-Vector2<T> operator*(const Matrix2x2<T>& m, const Vector2<T>& v)
+constexpr Vector2<T> operator*(const Matrix2x2<T>& m, const Vector2<T>& v)
 {
     Vector2<T> out;
     out[0] = m[0][0] * v.x + m[0][1] * v.y;
@@ -1908,24 +1908,24 @@ struct Quaternion
 {
     float4 q;
 
-    Quaternion(const float4& _q) noexcept :
+    constexpr Quaternion(const float4& _q) noexcept :
         q{_q}
     {}
-    Quaternion(float x, float y, float z, float w) noexcept :
+    constexpr Quaternion(float x, float y, float z, float w) noexcept :
         q{x, y, z, w}
     {
     }
-    Quaternion() noexcept {}
+    constexpr Quaternion() noexcept {}
 
-    Quaternion(const Quaternion&) noexcept = default;
+    constexpr Quaternion(const Quaternion&) noexcept = default;
 
-    bool operator==(const Quaternion& right) const
+    constexpr bool operator==(const Quaternion& right) const
     {
         return q == right.q;
     }
 
     template <typename Y>
-    static Quaternion MakeQuaternion(const Y& vals)
+    constexpr static Quaternion MakeQuaternion(const Y& vals)
     {
         return Quaternion{float4::MakeVector(vals)};
     }
@@ -1984,7 +1984,7 @@ struct Quaternion
         return out;
     }
 
-    static Quaternion Mul(const Quaternion& q1, const Quaternion& q2)
+    constexpr static Quaternion Mul(const Quaternion& q1, const Quaternion& q2)
     {
         Quaternion q1_q2;
         q1_q2.q.x = +q1.q.x * q2.q.w + q1.q.y * q2.q.z - q1.q.z * q2.q.y + q1.q.w * q2.q.x;
@@ -2013,12 +2013,12 @@ struct Quaternion
     }
 };
 
-inline Quaternion operator*(const Quaternion& q1, const Quaternion& q2)
+constexpr inline Quaternion operator*(const Quaternion& q1, const Quaternion& q2)
 {
     return Quaternion::Mul(q1, q2);
 }
 
-inline Quaternion normalize(const Quaternion& q)
+constexpr inline Quaternion normalize(const Quaternion& q)
 {
     return Quaternion{normalize(q.q)};
 }
@@ -2077,19 +2077,19 @@ inline Quaternion slerp(Quaternion v0, Quaternion v1, float t, bool DoNotNormali
 
 
 template <typename T>
-T lerp(const T& Left, const T& Right, float w)
+constexpr T lerp(const T& Left, const T& Right, float w)
 {
     return Left * (1.f - w) + Right * w;
 }
 
 template <typename T>
-T SmoothStep(T Left, T Right, T w)
+constexpr T SmoothStep(T Left, T Right, T w)
 {
     auto t = clamp((w - Left) / (Right - Left), static_cast<T>(0), static_cast<T>(1));
     return t * t * (static_cast<T>(3) - static_cast<T>(2) * t);
 }
 
-inline float4 RGBA8Unorm_To_F4Color(Uint32 RGBA8)
+constexpr inline float4 RGBA8Unorm_To_F4Color(Uint32 RGBA8)
 {
     // clang-format off
     return float4
@@ -2102,13 +2102,13 @@ inline float4 RGBA8Unorm_To_F4Color(Uint32 RGBA8)
     // clang-format on
 }
 
-inline Uint32 F4Color_To_RGBA8Unorm(const float4& f4Color)
+constexpr inline Uint32 F4Color_To_RGBA8Unorm(const float4& f4Color)
 {
     Uint32 RGBA8U = 0;
-    RGBA8U |= static_cast<Uint32>(clamp(f4Color.r, 0.f, 1.f) * 255.f) << 0u;
-    RGBA8U |= static_cast<Uint32>(clamp(f4Color.g, 0.f, 1.f) * 255.f) << 8u;
-    RGBA8U |= static_cast<Uint32>(clamp(f4Color.b, 0.f, 1.f) * 255.f) << 16u;
-    RGBA8U |= static_cast<Uint32>(clamp(f4Color.a, 0.f, 1.f) * 255.f) << 24u;
+    RGBA8U |= static_cast<Uint32>(clamp(f4Color.x, 0.f, 1.f) * 255.f) << 0u;
+    RGBA8U |= static_cast<Uint32>(clamp(f4Color.y, 0.f, 1.f) * 255.f) << 8u;
+    RGBA8U |= static_cast<Uint32>(clamp(f4Color.z, 0.f, 1.f) * 255.f) << 16u;
+    RGBA8U |= static_cast<Uint32>(clamp(f4Color.w, 0.f, 1.f) * 255.f) << 24u;
     return RGBA8U;
 }
 
@@ -2135,7 +2135,7 @@ struct _FastFloatIntermediateType<double>
 // All floats/doubles that have fractional parts also fit into integer
 // representable range, so we can do much better.
 template <typename T>
-T FastFloor(T x)
+constexpr T FastFloor(T x)
 {
     auto i   = static_cast<typename _FastFloatIntermediateType<T>::Type>(x);
     auto flr = static_cast<T>(i);
@@ -2150,14 +2150,14 @@ T FastFloor(T x)
 }
 
 template <typename T>
-T FastCeil(T x)
+constexpr T FastCeil(T x)
 {
     return -FastFloor(-x);
 }
 
 
 template <typename T>
-Vector2<T> FastFloor(const Vector2<T>& vec)
+constexpr Vector2<T> FastFloor(const Vector2<T>& vec)
 {
     return Vector2<T>{
         FastFloor(vec.x),
@@ -2165,7 +2165,7 @@ Vector2<T> FastFloor(const Vector2<T>& vec)
 }
 
 template <typename T>
-Vector3<T> FastFloor(const Vector3<T>& vec)
+constexpr Vector3<T> FastFloor(const Vector3<T>& vec)
 {
     return Vector3<T>{
         FastFloor(vec.x),
@@ -2174,7 +2174,7 @@ Vector3<T> FastFloor(const Vector3<T>& vec)
 }
 
 template <typename T>
-Vector4<T> FastFloor(const Vector4<T>& vec)
+constexpr Vector4<T> FastFloor(const Vector4<T>& vec)
 {
     return Vector4<T>{
         FastFloor(vec.x),
@@ -2185,7 +2185,7 @@ Vector4<T> FastFloor(const Vector4<T>& vec)
 
 
 template <typename T>
-Vector2<T> FastCeil(const Vector2<T>& vec)
+constexpr Vector2<T> FastCeil(const Vector2<T>& vec)
 {
     return Vector2<T>{
         FastCeil(vec.x),
@@ -2193,7 +2193,7 @@ Vector2<T> FastCeil(const Vector2<T>& vec)
 }
 
 template <typename T>
-Vector3<T> FastCeil(const Vector3<T>& vec)
+constexpr Vector3<T> FastCeil(const Vector3<T>& vec)
 {
     return Vector3<T>{
         FastCeil(vec.x),
@@ -2202,7 +2202,7 @@ Vector3<T> FastCeil(const Vector3<T>& vec)
 }
 
 template <typename T>
-Vector4<T> FastCeil(const Vector4<T>& vec)
+constexpr Vector4<T> FastCeil(const Vector4<T>& vec)
 {
     return Vector4<T>{
         FastCeil(vec.x),
@@ -2212,12 +2212,12 @@ Vector4<T> FastCeil(const Vector4<T>& vec)
 }
 
 template <typename Type>
-Type FastFrac(const Type& val)
+constexpr Type FastFrac(const Type& val)
 {
     return val - FastFloor(val);
 }
 
-inline Uint32 BitInterleave16(Uint16 _x, Uint16 _y)
+constexpr inline Uint32 BitInterleave16(Uint16 _x, Uint16 _y)
 {
     // https://graphics.stanford.edu/~seander/bithacks.html#InterleaveBMN
 
@@ -2309,7 +2309,7 @@ inline std::ostream& operator<<(std::ostream& os, const uint2& vec)
 namespace std
 {
 template <typename T>
-Diligent::Vector2<T> max(const Diligent::Vector2<T>& Left, const Diligent::Vector2<T>& Right)
+constexpr Diligent::Vector2<T> max(const Diligent::Vector2<T>& Left, const Diligent::Vector2<T>& Right)
 {
     return Diligent::Vector2<T>(
         std::max(Left.x, Right.x),
@@ -2317,7 +2317,7 @@ Diligent::Vector2<T> max(const Diligent::Vector2<T>& Left, const Diligent::Vecto
 }
 
 template <typename T>
-Diligent::Vector3<T> max(const Diligent::Vector3<T>& Left, const Diligent::Vector3<T>& Right)
+constexpr Diligent::Vector3<T> max(const Diligent::Vector3<T>& Left, const Diligent::Vector3<T>& Right)
 {
     return Diligent::Vector3<T>(
         std::max(Left.x, Right.x),
@@ -2326,7 +2326,7 @@ Diligent::Vector3<T> max(const Diligent::Vector3<T>& Left, const Diligent::Vecto
 }
 
 template <typename T>
-Diligent::Vector4<T> max(const Diligent::Vector4<T>& Left, const Diligent::Vector4<T>& Right)
+constexpr Diligent::Vector4<T> max(const Diligent::Vector4<T>& Left, const Diligent::Vector4<T>& Right)
 {
     return Diligent::Vector4<T>(
         std::max(Left.x, Right.x),
@@ -2337,7 +2337,7 @@ Diligent::Vector4<T> max(const Diligent::Vector4<T>& Left, const Diligent::Vecto
 
 
 template <typename T>
-Diligent::Vector2<T> min(const Diligent::Vector2<T>& Left, const Diligent::Vector2<T>& Right)
+constexpr Diligent::Vector2<T> min(const Diligent::Vector2<T>& Left, const Diligent::Vector2<T>& Right)
 {
     return Diligent::Vector2<T>(
         std::min(Left.x, Right.x),
@@ -2345,7 +2345,7 @@ Diligent::Vector2<T> min(const Diligent::Vector2<T>& Left, const Diligent::Vecto
 }
 
 template <typename T>
-Diligent::Vector3<T> min(const Diligent::Vector3<T>& Left, const Diligent::Vector3<T>& Right)
+constexpr Diligent::Vector3<T> min(const Diligent::Vector3<T>& Left, const Diligent::Vector3<T>& Right)
 {
     return Diligent::Vector3<T>(
         std::min(Left.x, Right.x),
@@ -2354,7 +2354,7 @@ Diligent::Vector3<T> min(const Diligent::Vector3<T>& Left, const Diligent::Vecto
 }
 
 template <typename T>
-Diligent::Vector4<T> min(const Diligent::Vector4<T>& Left, const Diligent::Vector4<T>& Right)
+constexpr Diligent::Vector4<T> min(const Diligent::Vector4<T>& Left, const Diligent::Vector4<T>& Right)
 {
     return Diligent::Vector4<T>(
         std::min(Left.x, Right.x),
@@ -2364,7 +2364,7 @@ Diligent::Vector4<T> min(const Diligent::Vector4<T>& Left, const Diligent::Vecto
 }
 
 template <typename T>
-Diligent::Vector2<T> floor(const Diligent::Vector2<T>& vec)
+constexpr Diligent::Vector2<T> floor(const Diligent::Vector2<T>& vec)
 {
     return Diligent::Vector2<T>(
         std::floor(vec.x),
@@ -2372,7 +2372,7 @@ Diligent::Vector2<T> floor(const Diligent::Vector2<T>& vec)
 }
 
 template <typename T>
-Diligent::Vector3<T> floor(const Diligent::Vector3<T>& vec)
+constexpr Diligent::Vector3<T> floor(const Diligent::Vector3<T>& vec)
 {
     return Diligent::Vector3<T>(
         std::floor(vec.x),
@@ -2381,7 +2381,7 @@ Diligent::Vector3<T> floor(const Diligent::Vector3<T>& vec)
 }
 
 template <typename T>
-Diligent::Vector4<T> floor(const Diligent::Vector4<T>& vec)
+constexpr Diligent::Vector4<T> floor(const Diligent::Vector4<T>& vec)
 {
     return Diligent::Vector4<T>(
         std::floor(vec.x),
@@ -2392,7 +2392,7 @@ Diligent::Vector4<T> floor(const Diligent::Vector4<T>& vec)
 
 
 template <typename T>
-Diligent::Vector2<T> ceil(const Diligent::Vector2<T>& vec)
+constexpr Diligent::Vector2<T> ceil(const Diligent::Vector2<T>& vec)
 {
     return Diligent::Vector2<T>(
         std::ceil(vec.x),
@@ -2400,7 +2400,7 @@ Diligent::Vector2<T> ceil(const Diligent::Vector2<T>& vec)
 }
 
 template <typename T>
-Diligent::Vector3<T> ceil(const Diligent::Vector3<T>& vec)
+constexpr Diligent::Vector3<T> ceil(const Diligent::Vector3<T>& vec)
 {
     return Diligent::Vector3<T>(
         std::ceil(vec.x),
@@ -2409,7 +2409,7 @@ Diligent::Vector3<T> ceil(const Diligent::Vector3<T>& vec)
 }
 
 template <typename T>
-Diligent::Vector4<T> ceil(const Diligent::Vector4<T>& vec)
+constexpr Diligent::Vector4<T> ceil(const Diligent::Vector4<T>& vec)
 {
     return Diligent::Vector4<T>(
         std::ceil(vec.x),
@@ -2488,44 +2488,44 @@ namespace Diligent
 {
 
 template <typename Type>
-Type Frac(const Type& val)
+constexpr Type Frac(const Type& val)
 {
     return val - std::floor(val);
 }
 
 
 template <typename T>
-T max_n(const T& x, const T& y)
+constexpr T max_n(const T& x, const T& y)
 {
     return std::max(x, y);
 }
 
 template <typename T, typename... RestArgsType>
-T max_n(const T& x, const RestArgsType&... RestArgs)
+constexpr T max_n(const T& x, const RestArgsType&... RestArgs)
 {
     return std::max(x, max_n(RestArgs...));
 }
 
 template <typename T>
-T min_n(const T& x, const T& y)
+constexpr T min_n(const T& x, const T& y)
 {
     return std::min(x, y);
 }
 
 template <typename T, typename... RestArgsType>
-T min_n(const T& x, const RestArgsType&... RestArgs)
+constexpr T min_n(const T& x, const RestArgsType&... RestArgs)
 {
     return std::min(x, min_n(RestArgs...));
 }
 
 template <typename T, typename... RestArgsType>
-T max(const T& x, const T& y, const T& z, const RestArgsType&... RestArgs)
+constexpr T max(const T& x, const T& y, const T& z, const RestArgsType&... RestArgs)
 {
     return max_n(x, y, z, RestArgs...);
 }
 
 template <typename T, typename... RestArgsType>
-T min(const T& x, const T& y, const T& z, const RestArgsType&... RestArgs)
+constexpr T min(const T& x, const T& y, const T& z, const RestArgsType&... RestArgs)
 {
     return min_n(x, y, z, RestArgs...);
 }
