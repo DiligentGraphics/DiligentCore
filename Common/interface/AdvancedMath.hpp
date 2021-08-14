@@ -535,8 +535,8 @@ inline bool IntersectRayBox3D(const float3& RayOrigin,
             AbsRayDir.z > Epsilon ? BoxMax.z / RayDirection.z : -FLT_MAX //
         };
 
-    EnterDist = max3(std::min(t_min.x, t_max.x), std::min(t_min.y, t_max.y), std::min(t_min.z, t_max.z));
-    ExitDist  = min3(std::max(t_min.x, t_max.x), std::max(t_min.y, t_max.y), std::max(t_min.z, t_max.z));
+    EnterDist = max(std::min(t_min.x, t_max.x), std::min(t_min.y, t_max.y), std::min(t_min.z, t_max.z));
+    ExitDist  = min(std::max(t_min.x, t_max.x), std::max(t_min.y, t_max.y), std::max(t_min.z, t_max.z));
 
     // if ExitDist < 0, the ray intersects AABB, but the whole AABB is behind it
     // if EnterDist > ExitDist, the ray doesn't intersect AABB
@@ -874,8 +874,8 @@ void RasterizeTriangle(Vector2<T> V0,
 
     if (iStartRow == iEndRow)
     {
-        auto iStartCol = static_cast<int>(FastCeil(min3(V0.x, V1.x, V2.x)));
-        auto iEndCol   = static_cast<int>(FastFloor(max3(V0.x, V1.x, V2.x)));
+        auto iStartCol = static_cast<int>(FastCeil(min(V0.x, V1.x, V2.x)));
+        auto iEndCol   = static_cast<int>(FastFloor(max(V0.x, V1.x, V2.x)));
         for (int iCol = iStartCol; iCol <= iEndCol; ++iCol)
         {
             Callback(int2{iCol, iStartRow});

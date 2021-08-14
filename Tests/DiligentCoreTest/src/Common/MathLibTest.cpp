@@ -573,6 +573,32 @@ TEST(Common_BasicMath, StdMin)
     }
 }
 
+// max(x, y, z, ...)
+TEST(Common_BasicMath, Max_N)
+{
+    EXPECT_EQ(max(10, 2, 3), 10);
+    EXPECT_EQ(max(1, 20, 3), 20);
+    EXPECT_EQ(max(1, 2, 30), 30);
+
+    EXPECT_EQ(max(10, 2, 3, 4), 10);
+    EXPECT_EQ(max(1, 20, 3, 4), 20);
+    EXPECT_EQ(max(1, 2, 30, 4), 30);
+    EXPECT_EQ(max(1, 2, 3, 40), 40);
+}
+
+// min(x, y, z, ...)
+TEST(Common_BasicMath, Min_N)
+{
+    EXPECT_EQ(min(1, 20, 30), 1);
+    EXPECT_EQ(min(10, 2, 30), 2);
+    EXPECT_EQ(min(10, 20, 3), 3);
+
+    EXPECT_EQ(min(1, 20, 30, 40), 1);
+    EXPECT_EQ(min(10, 2, 30, 40), 2);
+    EXPECT_EQ(min(10, 20, 3, 40), 3);
+    EXPECT_EQ(min(10, 20, 30, 4), 4);
+}
+
 // a == b
 TEST(Common_BasicMath, ComparisonOperators)
 {
@@ -1189,6 +1215,16 @@ TEST(Common_BasicMath, FracVector)
     EXPECT_EQ(FastFrac(float2(0.125f, 1.25f)), float2(0.125f, 0.25f));
     EXPECT_EQ(FastFrac(float3(0.125f, 1.25f, -2.25f)), float3(0.125f, 0.25f, 0.75f));
     EXPECT_EQ(FastFrac(float4(0.125f, 1.25f, -2.25f, -3.0f)), float4(0.125f, 0.25f, 0.75f, 0.f));
+}
+
+
+TEST(Common_BasicMath, MinMaxVector)
+{
+    EXPECT_EQ(max(float3(1, 2, 30), float3(4, 50, 6), float3(70, 8, 9)), float3(70, 50, 30));
+    EXPECT_EQ(max(float4(1, 2, 3, 40), float4(5, 6, 70, 8), float4(9, 100, 11, 12), float4(130, 14, 15, 16)), float4(130, 100, 70, 40));
+
+    EXPECT_EQ(min(float3(1, 20, 30), float3(40, 5, 60), float3(70, 80, 9)), float3(1, 5, 9));
+    EXPECT_EQ(min(float4(1, 20, 30, 40), float4(50, 6, 70, 80), float4(90, 100, 11, 120), float4(130, 140, 150, 16)), float4(1, 6, 11, 16));
 }
 
 

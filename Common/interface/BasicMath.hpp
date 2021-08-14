@@ -2089,18 +2089,6 @@ T SmoothStep(T Left, T Right, T w)
     return t * t * (static_cast<T>(3) - static_cast<T>(2) * t);
 }
 
-template <typename T>
-T max3(const T& x, const T& y, const T& z)
-{
-    return std::max(std::max(x, y), z);
-}
-
-template <typename T>
-T min3(const T& x, const T& y, const T& z)
-{
-    return std::min(std::min(x, y), z);
-}
-
 inline float4 RGBA8Unorm_To_F4Color(Uint32 RGBA8)
 {
     // clang-format off
@@ -2503,6 +2491,43 @@ template <typename Type>
 Type Frac(const Type& val)
 {
     return val - std::floor(val);
+}
+
+
+template <typename T>
+T max_n(const T& x, const T& y)
+{
+    return std::max(x, y);
+}
+
+template <typename T, typename... RestArgsType>
+T max_n(const T& x, const RestArgsType&... RestArgs)
+{
+    return std::max(x, max_n(RestArgs...));
+}
+
+template <typename T>
+T min_n(const T& x, const T& y)
+{
+    return std::min(x, y);
+}
+
+template <typename T, typename... RestArgsType>
+T min_n(const T& x, const RestArgsType&... RestArgs)
+{
+    return std::min(x, min_n(RestArgs...));
+}
+
+template <typename T, typename... RestArgsType>
+T max(const T& x, const T& y, const T& z, const RestArgsType&... RestArgs)
+{
+    return max_n(x, y, z, RestArgs...);
+}
+
+template <typename T, typename... RestArgsType>
+T min(const T& x, const T& y, const T& z, const RestArgsType&... RestArgs)
+{
+    return min_n(x, y, z, RestArgs...);
 }
 
 } // namespace Diligent
