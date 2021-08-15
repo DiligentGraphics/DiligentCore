@@ -72,8 +72,8 @@ public:
             // clang-format off
             NumRenderTargets{static_cast<decltype(NumRenderTargets)>(_NumRenderTargets)},
             SampleCount     {static_cast<decltype(SampleCount)>     (_SampleCount)     },
-            DSVFormat       {_DSVFormat                                                },
-            EnableVRS       {_EnableVRS                                                }
+            EnableVRS       {_EnableVRS                                                },
+            DSVFormat       {_DSVFormat                                                }
         // clang-format on
         {
             VERIFY_EXPR(_NumRenderTargets <= std::numeric_limits<decltype(NumRenderTargets)>::max());

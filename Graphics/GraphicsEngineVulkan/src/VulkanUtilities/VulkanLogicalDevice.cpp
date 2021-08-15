@@ -194,10 +194,22 @@ FenceWrapper VulkanLogicalDevice::CreateFence(const VkFenceCreateInfo& FenceCI, 
     return CreateVulkanObject<VkFence, VulkanHandleTypeId::Fence>(vkCreateFence, FenceCI, DebugName, "fence");
 }
 
+RenderPassWrapper VulkanLogicalDevice::CreateRenderPass(const VkRenderPassCreateInfo& RenderPassCI, const char* DebugName) const
+{
+    VERIFY_EXPR(RenderPassCI.sType == VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO);
+    return CreateVulkanObject<VkRenderPass, VulkanHandleTypeId::RenderPass>(vkCreateRenderPass, RenderPassCI, DebugName, "render pass");
+}
+
 RenderPassWrapper VulkanLogicalDevice::CreateRenderPass(const VkRenderPassCreateInfo2& RenderPassCI, const char* DebugName) const
 {
+#if DILIGENT_USE_VOLK
     VERIFY_EXPR(RenderPassCI.sType == VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO_2);
+    VERIFY_EXPR(GetEnabledExtFeatures().RenderPass2 != VK_FALSE);
     return CreateVulkanObject<VkRenderPass, VulkanHandleTypeId::RenderPass>(vkCreateRenderPass2KHR, RenderPassCI, DebugName, "render pass");
+#else
+    UNSUPPORTED("vkCreateRenderPass2KHR is only available through Volk");
+    return RenderPassWrapper{};
+#endif
 }
 
 DeviceMemoryWrapper VulkanLogicalDevice::AllocateDeviceMemory(const VkMemoryAllocateInfo& AllocInfo,

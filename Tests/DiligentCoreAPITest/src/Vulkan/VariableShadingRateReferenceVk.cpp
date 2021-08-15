@@ -327,7 +327,7 @@ void VariableShadingRatePerPrimitiveTestReferenceVk(ISwapChain* pSwapChain)
         pEnv->GetDevice()->CreateBuffer(BuffDesc, &BuffData, &pVB);
         ASSERT_NE(pVB, nullptr);
     }
-    const VkBuffer     vkVB     = static_cast<VkBuffer>(pVB->GetNativeHandle());
+    const VkBuffer     vkVB     = reinterpret_cast<VkBuffer>(pVB->GetNativeHandle());
     const VkDeviceSize VBOffset = 0;
 
     VkCommandBuffer vkCmdBuffer = pEnv->AllocateCommandBuffer();
@@ -458,7 +458,7 @@ void VariableShadingRateTextureBasedTestReferenceVk(ISwapChain* pSwapChain)
         ASSERT_NE(pVRSView, nullptr);
         pSRTex = pVRSView->GetTexture();
 
-        auto vkShadingRateImage = static_cast<VkImage>(pSRTex->GetNativeHandle());
+        auto vkShadingRateImage = reinterpret_cast<VkImage>(pSRTex->GetNativeHandle());
 
         VkImageViewCreateInfo ViewCI{};
         ViewCI.sType      = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -622,7 +622,7 @@ void VariableShadingRateTextureBasedTestReferenceVk(ISwapChain* pSwapChain)
                                                     VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 
         VkImageLayout CurrentLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        TestingEnvironmentVk::TransitionImageLayout(vkCmdBuffer, static_cast<VkImage>(pSRTex->GetNativeHandle()),
+        TestingEnvironmentVk::TransitionImageLayout(vkCmdBuffer, reinterpret_cast<VkImage>(pSRTex->GetNativeHandle()),
                                                     CurrentLayout, VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR,
                                                     SubresRange, 0,
                                                     VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR);

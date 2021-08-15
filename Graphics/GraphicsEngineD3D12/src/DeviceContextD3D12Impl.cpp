@@ -581,7 +581,8 @@ void DeviceContextD3D12Impl::PrepareForDraw(GraphicsContext& GraphCtx, DRAW_FLAG
         CommitRootTablesAndViews<false>(RootInfo, CommitSRBMask, GraphCtx);
     }
 
-    // In Vulkan, shading rate is applied to a PSO created with shading rate dynamic state.
+#ifdef NTDDI_WIN10_19H1
+    // In Vulkan, shading rate is applied to a PSO created with the shading rate dynamic state.
     // In D3D12, shading rate is applied to all subsequent draw commands, but for compatibility with Vulkan
     // we need to reset shading rate to default state.
     if (m_State.CustomShadingRate && m_pPipelineState->GetGraphicsPipelineDesc().ShadingRateFlags == PIPELINE_SHADING_RATE_FLAG_NONE)
@@ -589,6 +590,7 @@ void DeviceContextD3D12Impl::PrepareForDraw(GraphicsContext& GraphCtx, DRAW_FLAG
         m_State.CustomShadingRate = false;
         GraphCtx.AsGraphicsContext5().SetShadingRate(D3D12_SHADING_RATE_1X1, nullptr);
     }
+#endif
 }
 
 void DeviceContextD3D12Impl::PrepareForIndexedDraw(GraphicsContext& GraphCtx, DRAW_FLAGS Flags, VALUE_TYPE IndexType)

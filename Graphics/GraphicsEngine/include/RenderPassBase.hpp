@@ -118,7 +118,6 @@ public:
 
         m_AttachmentStates       = nullptr;
         m_AttachmentFirstLastUse = nullptr;
-        this->m_Desc             = {};
 
 #if DILIGENT_DEBUG
         m_IsDestructed = true;

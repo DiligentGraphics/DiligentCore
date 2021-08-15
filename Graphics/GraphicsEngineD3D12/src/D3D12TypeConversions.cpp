@@ -333,7 +333,7 @@ D3D12_STATIC_BORDER_COLOR BorderColorToD3D12StaticBorderColor(const Float32 Bord
 static D3D12_RESOURCE_STATES ResourceStateFlagToD3D12ResourceState(RESOURCE_STATE StateFlag)
 {
     static_assert(RESOURCE_STATE_MAX_BIT == (1u << 21), "This function must be updated to handle new resource state flag");
-    VERIFY((StateFlag & (StateFlag - 1)) == 0, "Only single bit must be set");
+    VERIFY(IsPowerOfTwo(Uint32{StateFlag}), "Only single bit must be set");
     switch (StateFlag)
     {
         // clang-format off
@@ -447,7 +447,7 @@ D3D12_RESOURCE_STATES GetSupportedD3D12ResourceStatesForCommandList(D3D12_COMMAN
 static RESOURCE_STATE D3D12ResourceStateToResourceStateFlags(D3D12_RESOURCE_STATES state)
 {
     static_assert(RESOURCE_STATE_MAX_BIT == (1u << 21), "This function must be updated to handle new resource state flag");
-    VERIFY((state & (state - 1)) == 0, "Only single state must be set");
+    VERIFY(IsPowerOfTwo(int{state}), "Only single state must be set");
     switch (state)
     {
         // clang-format off
@@ -467,7 +467,9 @@ static RESOURCE_STATE D3D12ResourceStateToResourceStateFlags(D3D12_RESOURCE_STAT
         case D3D12_RESOURCE_STATE_COPY_SOURCE:                return RESOURCE_STATE_COPY_SOURCE;
         case D3D12_RESOURCE_STATE_RESOLVE_DEST:               return RESOURCE_STATE_RESOLVE_DEST;
         case D3D12_RESOURCE_STATE_RESOLVE_SOURCE:             return RESOURCE_STATE_RESOLVE_SOURCE;
-        case D3D12_RESOURCE_STATE_SHADING_RATE_SOURCE:        return RESOURCE_STATE_SHADING_RATE;
+#ifdef NTDDI_WIN10_19H1
+        case D3D12_RESOURCE_STATE_SHADING_RATE_SOURCE:        return RESOURCE_STATE_SHADING_RATE; // First defined in Win SDK 10.0.18362.0
+#endif
         // clang-format on
         default:
             UNEXPECTED("Unexpected D3D12 resource state");

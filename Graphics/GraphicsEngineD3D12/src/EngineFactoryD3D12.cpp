@@ -849,6 +849,7 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
 #endif
             }
 
+#ifdef NTDDI_WIN10_19H1
             D3D12_FEATURE_DATA_D3D12_OPTIONS6 d3d12Features6{};
             if (SUCCEEDED(d3d12Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS6, &d3d12Features6, sizeof(d3d12Features6))))
             {
@@ -894,10 +895,11 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
                 {
                     ShadingRateProps.CapFlags |= SHADING_RATE_CAP_FLAG_PER_PRIMITIVE_WITH_MULTIPLE_VIEWPORTS;
                 }
-#if defined(_MSC_VER) && defined(_WIN64)
+#    if defined(_MSC_VER) && defined(_WIN64)
                 static_assert(sizeof(ShadingRateProps) == 44, "Did you add a new member to ShadingRateProperties? Please initialize it here.");
-#endif
+#    endif
             }
+#endif // NTDDI_WIN10_19H1
         }
 
         // Buffer properties

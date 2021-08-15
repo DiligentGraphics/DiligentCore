@@ -41,23 +41,80 @@ RenderPassVkImpl::RenderPassVkImpl(IReferenceCounters*   pRefCounters,
                                    bool                  IsDeviceInternal) :
     TRenderPassBase{pRefCounters, pDevice, Desc, IsDeviceInternal}
 {
-    const auto& LogicalDevice         = pDevice->GetLogicalDevice();
+#if DILIGENT_USE_VOLK
+    if (pDevice->GetLogicalDevice().GetEnabledExtFeatures().RenderPass2 != VK_FALSE)
+        CreateRenderPass<true>();
+    else
+        CreateRenderPass<false>();
+#else
+    CreateRenderPass<false>();
+#endif
+}
+
+inline void InitAttachmentDescription(VkAttachmentDescription&) {}
+inline void InitAttachmentDescription(VkAttachmentDescription2& Attachment)
+{
+    Attachment.sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2;
+    Attachment.pNext = nullptr;
+}
+
+inline void InitAttachmentReference(VkAttachmentReference&, VkImageAspectFlags) {}
+inline void InitAttachmentReference(VkAttachmentReference2& AttachmnetRef, VkImageAspectFlags AspectMask)
+{
+    AttachmnetRef.sType      = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2;
+    AttachmnetRef.pNext      = nullptr;
+    AttachmnetRef.aspectMask = AspectMask;
+}
+
+inline void InitSubpassDescription(VkSubpassDescription&) {}
+inline void InitSubpassDescription(VkSubpassDescription2& Subpass)
+{
+    Subpass.sType = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION_2;
+    Subpass.pNext = nullptr;
+}
+
+inline void SetSubpassDescriptionNext(VkSubpassDescription&, const void*) {}
+inline void SetSubpassDescriptionNext(VkSubpassDescription2& Subpass, const void* pNext)
+{
+    Subpass.pNext = pNext;
+}
+
+inline void InitSubpassDependency(VkSubpassDependency&) {}
+inline void InitSubpassDependency(VkSubpassDependency2& Dependency)
+{
+    Dependency.sType = VK_STRUCTURE_TYPE_SUBPASS_DEPENDENCY_2;
+    Dependency.pNext = nullptr;
+
+    // For multiview
+    Dependency.viewOffset = 0;
+}
+
+template <bool UseRenderPass2>
+void RenderPassVkImpl::CreateRenderPass() noexcept(false)
+{
+    using RenderPassCIType          = std::conditional_t<UseRenderPass2, VkRenderPassCreateInfo2, VkRenderPassCreateInfo>;
+    using SubpassDescriptionType    = std::conditional_t<UseRenderPass2, VkSubpassDescription2, VkSubpassDescription>;
+    using AttachmentDescriptionType = std::conditional_t<UseRenderPass2, VkAttachmentDescription2, VkAttachmentDescription>;
+    using AttachmentReferenceType   = std::conditional_t<UseRenderPass2, VkAttachmentReference2, VkAttachmentReference>;
+    using SubpassDependencyType     = std::conditional_t<UseRenderPass2, VkSubpassDependency2, VkSubpassDependency>;
+
+    const auto& LogicalDevice         = m_pDevice->GetLogicalDevice();
     const auto& ExtFeats              = LogicalDevice.GetEnabledExtFeatures();
     const bool  ShadingRateEnabled    = ExtFeats.ShadingRate.attachmentFragmentShadingRate != VK_FALSE;
     const bool  FragDensityMapEnabled = ExtFeats.FragmentDensityMap.fragmentDensityMap != VK_FALSE;
 
-    VkRenderPassCreateInfo2 RenderPassCI{};
-    RenderPassCI.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO_2;
+    RenderPassCIType RenderPassCI{};
+    RenderPassCI.sType = UseRenderPass2 ? VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO_2 : VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     RenderPassCI.pNext = nullptr;
     RenderPassCI.flags = 0;
 
-    std::vector<VkAttachmentDescription2> vkAttachments(m_Desc.AttachmentCount);
+    std::vector<AttachmentDescriptionType> vkAttachments(m_Desc.AttachmentCount);
     for (Uint32 i = 0; i < m_Desc.AttachmentCount; ++i)
     {
-        const auto& Attachment      = m_Desc.pAttachments[i];
-        auto&       vkAttachment    = vkAttachments[i];
-        vkAttachment.sType          = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2;
-        vkAttachment.pNext          = nullptr;
+        const auto& Attachment   = m_Desc.pAttachments[i];
+        auto&       vkAttachment = vkAttachments[i];
+
+        InitAttachmentDescription(vkAttachment);
         vkAttachment.flags          = 0;
         vkAttachment.format         = TexFormatToVkFormat(Attachment.Format);
         vkAttachment.samples        = static_cast<VkSampleCountFlagBits>(Attachment.SampleCount);
@@ -68,7 +125,7 @@ RenderPassVkImpl::RenderPassVkImpl(IReferenceCounters*   pRefCounters,
         vkAttachment.initialLayout  = ResourceStateToVkImageLayout(Attachment.InitialState, /*IsInsideRenderPass = */ false, FragDensityMapEnabled);
         vkAttachment.finalLayout    = ResourceStateToVkImageLayout(Attachment.FinalState, /*IsInsideRenderPass = */ true, FragDensityMapEnabled);
     }
-    RenderPassCI.attachmentCount = Desc.AttachmentCount;
+    RenderPassCI.attachmentCount = m_Desc.AttachmentCount;
     RenderPassCI.pAttachments    = vkAttachments.data();
 
     Uint32 TotalAttachmentReferencesCount   = 0;
@@ -88,7 +145,7 @@ RenderPassVkImpl::RenderPassVkImpl(IReferenceCounters*   pRefCounters,
         TotalPreserveAttachmentsCount += Subpass.PreserveAttachmentCount;
     }
 
-    std::vector<VkAttachmentReference2>                 vkAttachmentReferences(TotalAttachmentReferencesCount + TotalShadingRateAttachmentsCount);
+    std::vector<AttachmentReferenceType>                vkAttachmentReferences(TotalAttachmentReferencesCount + TotalShadingRateAttachmentsCount);
     std::vector<Uint32>                                 vkPreserveAttachments(TotalPreserveAttachmentsCount);
     std::vector<VkFragmentShadingRateAttachmentInfoKHR> vkShadingRate{TotalShadingRateAttachmentsCount};
     const ShadingRateAttachment*                        pMainSRA = nullptr;
@@ -96,14 +153,13 @@ RenderPassVkImpl::RenderPassVkImpl(IReferenceCounters*   pRefCounters,
     Uint32 CurrAttachmentReferenceInd = 0;
     Uint32 CurrPreserveAttachmentInd  = 0;
 
-    std::vector<VkSubpassDescription2> vkSubpasses{Desc.SubpassCount};
+    std::vector<SubpassDescriptionType> vkSubpasses{m_Desc.SubpassCount};
     for (Uint32 i = 0, SRInd = 0; i < m_Desc.SubpassCount; ++i)
     {
-        const auto&  SubpassDesc   = m_Desc.pSubpasses[i];
-        auto&        vkSubpass     = vkSubpasses[i];
-        const void** ppSubpassNext = &vkSubpass.pNext;
+        const auto& SubpassDesc = m_Desc.pSubpasses[i];
+        auto&       vkSubpass   = vkSubpasses[i];
 
-        vkSubpass.sType                = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION_2;
+        InitSubpassDescription(vkSubpass);
         vkSubpass.flags                = 0;
         vkSubpass.pipelineBindPoint    = VK_PIPELINE_BIND_POINT_GRAPHICS;
         vkSubpass.inputAttachmentCount = SubpassDesc.InputAttachmentCount;
@@ -116,11 +172,9 @@ RenderPassVkImpl::RenderPassVkImpl(IReferenceCounters*   pRefCounters,
                 const auto& SrcAttachmnetRef = pSrcAttachments[attachment];
                 auto&       DstAttachmnetRef = vkAttachmentReferences[CurrAttachmentReferenceInd];
 
-                DstAttachmnetRef.sType      = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2;
-                DstAttachmnetRef.pNext      = nullptr;
+                InitAttachmentReference(DstAttachmnetRef, AspectMask);
                 DstAttachmnetRef.attachment = SrcAttachmnetRef.AttachmentIndex;
                 DstAttachmnetRef.layout     = ResourceStateToVkImageLayout(SrcAttachmnetRef.State, /*IsInsideRenderPass = */ true, FragDensityMapEnabled);
-                DstAttachmnetRef.aspectMask = AspectMask;
             }
             return pCurrVkAttachmentReference;
         };
@@ -162,11 +216,10 @@ RenderPassVkImpl::RenderPassVkImpl(IReferenceCounters*   pRefCounters,
                 const auto& SRAttachment   = *SubpassDesc.pShadingRateAttachment;
                 auto&       vkSRAttachment = vkShadingRate[SRInd++];
 
-                *ppSubpassNext = &vkSRAttachment;
-                ppSubpassNext  = &vkSRAttachment.pNext;
-
+                SetSubpassDescriptionNext(vkSubpass, &vkSRAttachment);
+                vkSRAttachment.pNext                          = nullptr;
                 vkSRAttachment.sType                          = VK_STRUCTURE_TYPE_FRAGMENT_SHADING_RATE_ATTACHMENT_INFO_KHR;
-                vkSRAttachment.pFragmentShadingRateAttachment = ConvertAttachmentReferences(1, &SRAttachment.Attachment, VK_IMAGE_ASPECT_COLOR_BIT);
+                vkSRAttachment.pFragmentShadingRateAttachment = reinterpret_cast<const VkAttachmentReference2*>(ConvertAttachmentReferences(1, &SRAttachment.Attachment, VK_IMAGE_ASPECT_COLOR_BIT));
                 vkSRAttachment.shadingRateAttachmentTexelSize = {SRAttachment.TileSize[0], SRAttachment.TileSize[1]};
             }
             else
@@ -175,8 +228,6 @@ RenderPassVkImpl::RenderPassVkImpl(IReferenceCounters*   pRefCounters,
                 pMainSRA = pMainSRA ? pMainSRA : SubpassDesc.pShadingRateAttachment;
             }
         }
-
-        *ppSubpassNext = nullptr;
     }
 
     if (FragDensityMapEnabled && pMainSRA != nullptr)
@@ -195,16 +246,16 @@ RenderPassVkImpl::RenderPassVkImpl(IReferenceCounters*   pRefCounters,
 
     VERIFY_EXPR(CurrAttachmentReferenceInd == vkAttachmentReferences.size());
     VERIFY_EXPR(CurrPreserveAttachmentInd == vkPreserveAttachments.size());
-    RenderPassCI.subpassCount = Desc.SubpassCount;
+    RenderPassCI.subpassCount = m_Desc.SubpassCount;
     RenderPassCI.pSubpasses   = vkSubpasses.data();
 
-    std::vector<VkSubpassDependency2> vkDependencies(Desc.DependencyCount);
-    for (Uint32 i = 0; i < Desc.DependencyCount; ++i)
+    std::vector<SubpassDependencyType> vkDependencies(m_Desc.DependencyCount);
+    for (Uint32 i = 0; i < m_Desc.DependencyCount; ++i)
     {
         const auto& DependencyDesc = m_Desc.pDependencies[i];
         auto&       vkDependency   = vkDependencies[i];
-        vkDependency.sType         = VK_STRUCTURE_TYPE_SUBPASS_DEPENDENCY_2;
-        vkDependency.pNext         = nullptr;
+
+        InitSubpassDependency(vkDependency);
         vkDependency.srcSubpass    = DependencyDesc.SrcSubpass;
         vkDependency.dstSubpass    = DependencyDesc.DstSubpass;
         vkDependency.srcStageMask  = DependencyDesc.SrcStageMask;
@@ -219,16 +270,9 @@ RenderPassVkImpl::RenderPassVkImpl(IReferenceCounters*   pRefCounters,
         // dependency in your rendering will usually force all implementations to flush data to memory,
         // or to a higher level cache, breaking any potential locality optimizations.
         vkDependency.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-
-        // For multiview
-        vkDependency.viewOffset = 0;
     }
-    RenderPassCI.dependencyCount = Desc.DependencyCount;
+    RenderPassCI.dependencyCount = m_Desc.DependencyCount;
     RenderPassCI.pDependencies   = vkDependencies.data();
-
-    // For multiview
-    RenderPassCI.correlatedViewMaskCount = 0;
-    RenderPassCI.pCorrelatedViewMasks    = nullptr;
 
     // Enable fragment density map
     VkRenderPassFragmentDensityMapCreateInfoEXT FragDensityMapCI{};
@@ -242,7 +286,7 @@ RenderPassVkImpl::RenderPassVkImpl(IReferenceCounters*   pRefCounters,
         FragDensityMapCI.fragmentDensityMapAttachment.layout     = VK_IMAGE_LAYOUT_FRAGMENT_DENSITY_MAP_OPTIMAL_EXT;
     }
 
-    m_VkRenderPass = LogicalDevice.CreateRenderPass(RenderPassCI, Desc.Name);
+    m_VkRenderPass = LogicalDevice.CreateRenderPass(RenderPassCI, m_Desc.Name);
     if (!m_VkRenderPass)
     {
         LOG_ERROR_AND_THROW("Failed to create Vulkan render pass");

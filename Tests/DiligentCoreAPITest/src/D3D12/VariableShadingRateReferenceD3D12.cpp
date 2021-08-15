@@ -42,6 +42,8 @@ namespace Diligent
 namespace Testing
 {
 
+#ifdef NTDDI_WIN10_19H1
+
 void VariableShadingRatePerDrawTestReferenceD3D12(ISwapChain* pSwapChain)
 {
     auto* pEnv                   = TestingEnvironmentD3D12::GetInstance();
@@ -348,6 +350,15 @@ void VariableShadingRateTextureBasedTestReferenceD3D12(ISwapChain* pSwapChain)
     pCmdList->Close();
     pEnv->ExecuteCommandList(pCmdList);
 }
+
+#else
+
+void VariableShadingRatePerDrawTestReferenceD3D12(ISwapChain* pSwapChain)
+{}
+void VariableShadingRatePerPrimitiveTestReferenceD3D12(ISwapChain* pSwapChain) {}
+void VariableShadingRateTextureBasedTestReferenceD3D12(ISwapChain* pSwapChain) {}
+
+#endif // NTDDI_WIN10_19H1
 
 } // namespace Testing
 } // namespace Diligent

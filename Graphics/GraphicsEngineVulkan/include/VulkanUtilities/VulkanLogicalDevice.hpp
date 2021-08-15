@@ -131,6 +131,7 @@ public:
     ImageViewWrapper    CreateImageView     (const VkImageViewCreateInfo&   ImageViewCI, const char* DebugName = "") const;
     SamplerWrapper      CreateSampler       (const VkSamplerCreateInfo&     SamplerCI,   const char* DebugName = "") const;
     FenceWrapper        CreateFence         (const VkFenceCreateInfo&       FenceCI,     const char* DebugName = "") const;
+    RenderPassWrapper   CreateRenderPass    (const VkRenderPassCreateInfo&  RenderPassCI,const char* DebugName = "") const;
     RenderPassWrapper   CreateRenderPass    (const VkRenderPassCreateInfo2& RenderPassCI,const char* DebugName = "") const;
     DeviceMemoryWrapper AllocateDeviceMemory(const VkMemoryAllocateInfo &   AllocInfo,   const char* DebugName = "") const;
 

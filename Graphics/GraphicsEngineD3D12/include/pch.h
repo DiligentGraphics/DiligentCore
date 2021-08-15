@@ -46,13 +46,15 @@
 #    define D3D12_RAYTRACING_TIER_1_1                  static_cast<D3D12_RAYTRACING_TIER>(11)
 #endif
 
-#ifndef NTDDI_WIN10_19H1 // First defined in Win SDK 10.1903
+#ifndef NTDDI_WIN10_19H1 // First defined in Win SDK 10.0.18362.0
 enum D3D12_SHADING_RATE
 {
 };
 enum D3D12_SHADING_RATE_COMBINER
 {
 };
+
+constexpr D3D12_RESOURCE_STATES D3D12_RESOURCE_STATE_SHADING_RATE_SOURCE = static_cast<D3D12_RESOURCE_STATES>(0x1000000);
 #endif
 
 #include "PlatformDefinitions.h"

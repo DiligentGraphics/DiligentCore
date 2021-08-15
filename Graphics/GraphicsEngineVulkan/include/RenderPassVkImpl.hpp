@@ -53,6 +53,9 @@ public:
     virtual VkRenderPass DILIGENT_CALL_TYPE GetVkRenderPass() const override final { return m_VkRenderPass; }
 
 private:
+    template <bool UseRenderPass2>
+    void CreateRenderPass() noexcept(false);
+
     VulkanUtilities::RenderPassWrapper m_VkRenderPass;
 };
 

@@ -79,13 +79,19 @@ BottomLevelASVkImpl::BottomLevelASVkImpl(IReferenceCounters*      pRefCounters,
                 MaxPrimitiveCount += src.MaxPrimitiveCount;
 
 #ifdef DILIGENT_DEVELOPMENT
-                VkFormatProperties2 vkProps{};
-                vkProps.sType = VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2;
-                vkGetPhysicalDeviceFormatProperties2KHR(PhysicalDevice.GetVkDeviceHandle(), tri.vertexFormat, &vkProps);
+#    if DILIGENT_USE_VOLK
+                {
+                    VkFormatProperties2 vkProps{};
+                    vkProps.sType = VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2;
+                    vkGetPhysicalDeviceFormatProperties2KHR(PhysicalDevice.GetVkDeviceHandle(), tri.vertexFormat, &vkProps);
 
-                DEV_CHECK_ERR((vkProps.formatProperties.bufferFeatures & VK_FORMAT_FEATURE_ACCELERATION_STRUCTURE_VERTEX_BUFFER_BIT_KHR) != 0,
-                              "combination of pTriangles[", i, "].VertexValueType (", GetValueTypeString(src.VertexValueType),
-                              ") and pTriangles[", i, "].VertexComponentCount (", src.VertexComponentCount, ") is not supported by this device.");
+                    DEV_CHECK_ERR((vkProps.formatProperties.bufferFeatures & VK_FORMAT_FEATURE_ACCELERATION_STRUCTURE_VERTEX_BUFFER_BIT_KHR) != 0,
+                                  "combination of pTriangles[", i, "].VertexValueType (", GetValueTypeString(src.VertexValueType),
+                                  ") and pTriangles[", i, "].VertexComponentCount (", src.VertexComponentCount, ") is not supported by this device.");
+                }
+#    else
+                UNSUPPORTED("vkGetPhysicalDeviceFormatProperties2KHR is only available through Volk");
+#    endif
 #endif
             }
             DEV_CHECK_ERR(MaxPrimitiveCount <= RTProps.MaxPrimitivesPerBLAS,

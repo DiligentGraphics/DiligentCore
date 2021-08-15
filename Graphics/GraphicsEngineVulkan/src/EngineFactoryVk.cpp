@@ -321,15 +321,21 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
                 ShadingRateProps.MaxTileSize[1] = vkDeviceExtProps.ShadingRate.maxFragmentShadingRateAttachmentTexelSize.height;
             }
 
-            Uint32 ShadingRateCount = 0;
-            vkGetPhysicalDeviceFragmentShadingRatesKHR(PhysicalDevice.GetVkDeviceHandle(), &ShadingRateCount, nullptr);
-            VERIFY_EXPR(ShadingRateCount >= 3); // Spec says that implementation must support at least 3 predefined modes.
+            std::vector<VkPhysicalDeviceFragmentShadingRateKHR> ShadingRates;
+#if DILIGENT_USE_VOLK
+            {
+                Uint32 ShadingRateCount = 0;
+                vkGetPhysicalDeviceFragmentShadingRatesKHR(PhysicalDevice.GetVkDeviceHandle(), &ShadingRateCount, nullptr);
+                VERIFY_EXPR(ShadingRateCount >= 3); // Spec says that implementation must support at least 3 predefined modes.
 
-            std::vector<VkPhysicalDeviceFragmentShadingRateKHR> ShadingRates{ShadingRateCount};
-            for (auto& SR : ShadingRates)
-                SR.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADING_RATE_KHR;
-            vkGetPhysicalDeviceFragmentShadingRatesKHR(PhysicalDevice.GetVkDeviceHandle(), &ShadingRateCount, ShadingRates.data());
-
+                ShadingRates.resize(ShadingRateCount);
+                for (auto& SR : ShadingRates)
+                    SR.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADING_RATE_KHR;
+                vkGetPhysicalDeviceFragmentShadingRatesKHR(PhysicalDevice.GetVkDeviceHandle(), &ShadingRateCount, ShadingRates.data());
+            }
+#else
+            UNSUPPORTED("vkGetPhysicalDeviceFragmentShadingRatesKHR is only available through Volk");
+#endif
             ShadingRateProps.NumShadingRates = static_cast<Uint32>(std::min(ShadingRates.size(), size_t{MAX_SHADING_RATES}));
             for (Uint32 i = 0; i < ShadingRateProps.NumShadingRates; ++i)
             {
