@@ -140,7 +140,7 @@ struct PipelineResourceLayoutDesc
     /// then both resources in the example above will be combined into a single one.
     /// If there is another "g_Texture" in geometry shader, it will be separate from combined
     /// vertex-pixel "g_Texture".
-    /// This memeber has no effect on variables defined in Variables array.
+    /// This member has no effect on variables defined in Variables array.
     SHADER_TYPE                         DefaultVariableMergeStages DEFAULT_INITIALIZER(SHADER_TYPE_UNKNOWN);
 
     /// Number of elements in Variables array
@@ -373,7 +373,7 @@ struct PipelineStateDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// through that immediate context.
     ///
     /// \remarks    Only specify these bits that will indicate those immediate contexts where the PSO
-    ///             will actually be used. Do not set unncessary bits as this will result in extra overhead.
+    ///             will actually be used. Do not set unnecessary bits as this will result in extra overhead.
     Uint64 ImmediateContextMask     DEFAULT_INITIALIZER(1);
 
     /// Pipeline layout description

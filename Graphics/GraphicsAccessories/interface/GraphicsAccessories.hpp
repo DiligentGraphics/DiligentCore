@@ -531,9 +531,9 @@ PIPELINE_TYPE PipelineTypeFromShaderStages(SHADER_TYPE ShaderStages);
 ///                           to whole subresources only, but not to the row/depth strides.
 ///                           In other words, there may be padding between subresources, but
 ///                           texels in every subresource are assumed to be tightly packed.
-/// \param [in] LocationX   - X location within the subresoure.
-/// \param [in] LocationY   - Y location within the subresoure.
-/// \param [in] LocationZ   - Z location within the subresoure.
+/// \param [in] LocationX   - X location within the subresource.
+/// \param [in] LocationY   - Y location within the subresource.
+/// \param [in] LocationZ   - Z location within the subresource.
 ///
 /// \return     Offset from the beginning of the buffer to the given location.
 ///

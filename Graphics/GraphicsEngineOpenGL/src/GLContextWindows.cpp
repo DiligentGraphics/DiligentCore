@@ -218,7 +218,7 @@ GLContext::GLContext(const EngineGLCreateInfo& InitAttribs,
     DevType    = RENDER_DEVICE_TYPE_GL;
     APIVersion = Version{MajorVersion, MinorVersion};
     VERIFY(static_cast<int>(APIVersion.Major) == MajorVersion && static_cast<int>(APIVersion.Minor) == MinorVersion,
-           "Not enought bits to store version number");
+           "Not enough bits to store version number");
 }
 
 GLContext::~GLContext()

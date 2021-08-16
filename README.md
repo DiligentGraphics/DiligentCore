@@ -449,7 +449,7 @@ classification of shader variables:
 
 * **Static variables** (`SHADER_RESOURCE_VARIABLE_TYPE_STATIC`) are variables that are expected to be set only once.
   They may not be changed once a resource is bound to the variable. Such variables are intended to hold global constants such 
-  as camera attributes or global light attributes constant buffers. Note that it is the *resource binding* that may not chage,
+  as camera attributes or global light attributes constant buffers. Note that it is the *resource binding* that may not change,
   while the contents of the resource is allowed to change according to its usage.
 * **Mutable variables** (`SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE`) define resources that are expected to change on a per-material frequency.
   Examples may include diffuse textures, normal maps etc. Again updates to the contents of the resource are orthogobal

@@ -175,8 +175,8 @@ struct DynamicTextureAtlasCreateInfo
     /// When alignment is zero, the atlas may allocate the region in any suitable location.
     ///
     /// When alignment is non-zero, the region placement is aligned as follows:
-    /// - If min(Widht, Height) <= MinAlignment, the region placement is aligned by MinAlignment
-    /// - If min(Widht, Height) > MinAlignment, the alignment is doubled until it satisfies
+    /// - If min(Width, Height) <= MinAlignment, the region placement is aligned by MinAlignment
+    /// - If min(Width, Height) > MinAlignment, the alignment is doubled until it satisfies
     ///   the requirement above.
     ///
     /// Examples (when MinAlignment equals 64):
@@ -185,7 +185,7 @@ struct DynamicTextureAtlasCreateInfo
     /// - A 96x192 region will be aligned by 128 (it may be placed at e.g. (128, 256))
     /// - A 2048x1024 region will be aligned by 1024 (it may be placed at e.g. (1024, 0))
     ///
-    /// Note that if minimum alignemnt is zero, the region placement will not be aligned at all,
+    /// Note that if minimum alignment is zero, the region placement will not be aligned at all,
     /// which may result in biasing issues in coarser mip levels. For example, if 128x128
     /// region is placed at (4, 12) coordinates in the atlas (i.e. R = [4, 132] x [12, 140]), all
     /// mip levels of R starting with level 3 will not be aligned with the mip 0.

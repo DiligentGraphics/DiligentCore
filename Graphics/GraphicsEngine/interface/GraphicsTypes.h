@@ -2270,7 +2270,7 @@ struct AdapterMemoryInfo
     /// The amount of unified memory that can be directly accessed by both CPU and GPU, in bytes.
 
     /// \note Unified memory is where USAGE_UNIFIED resources are typically allocated, but
-    ///       resourecs with other usages may be allocated as well if there is no corresponding
+    ///       resources with other usages may be allocated as well if there is no corresponding
     ///       memory type.
     Uint64  UnifiedMemory       DEFAULT_INITIALIZER(0);
 
@@ -2416,7 +2416,7 @@ struct EngineCreateInfo
     /// Minimum required graphics API version (feature level for Direct3D).
     Version                  GraphicsAPIVersion     DEFAULT_INITIALIZER({});
 
-    /// A pointer to the array of NumImmediateContexts structs decribing immediate
+    /// A pointer to the array of NumImmediateContexts structs describing immediate
     /// device contexts to create. See Diligent::ImmediateContextCreateInfo.
 
     /// Every immediate device contexts encompases a command queue of a specific type.
@@ -2424,7 +2424,7 @@ struct EngineCreateInfo
     ///
     /// If not specified, single graphics context will be created.
     ///
-    /// Recomended configuration:
+    /// Recommended configuration:
     ///   * Modern discrete GPU:      1 graphics, 1 compute, 1 transfer context.
     ///   * Integrated or mobile GPU: 1..2 graphics contexts.
     const ImmediateContextCreateInfo* pImmediateContextInfo DEFAULT_INITIALIZER(nullptr);
@@ -2456,7 +2456,7 @@ struct EngineCreateInfo
     ///             the engine will successfully be initialized, but the feature will be disabled.
     ///             The actual feature state can be queried from DeviceCaps structure.
     ///
-    ///             Applications can query available device features for each graphics adpater with
+    ///             Applications can query available device features for each graphics adapter with
     ///             IEngineFactory::EnumerateAdapters().
     DeviceFeatures Features;
 
