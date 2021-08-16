@@ -603,7 +603,7 @@ private:
 
     // Command pools for every queue family
     std::unique_ptr<std::unique_ptr<VulkanUtilities::VulkanCommandBufferPool>[]> m_QueueFamilyCmdPools;
-    // Command pool for the familiy for which we are recording commands
+    // Command pool for the family for which we are recording commands
     VulkanUtilities::VulkanCommandBufferPool* m_CmdPool = nullptr;
 
     VulkanUploadHeap              m_UploadHeap;

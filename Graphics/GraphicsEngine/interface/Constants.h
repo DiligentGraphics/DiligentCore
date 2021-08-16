@@ -47,7 +47,7 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 /// The maximum number of resource signatures that one pipeline can use
 #define DILIGENT_MAX_RESOURCE_SIGNATURES 8
 
-/// The maximim number of queues in graphics adapter description.
+/// The maximum number of queues in graphics adapter description.
 #define DILIGENT_MAX_ADAPTER_QUEUES 16
 
 static const Uint32 MAX_BUFFER_SLOTS        = DILIGENT_MAX_BUFFER_SLOTS;

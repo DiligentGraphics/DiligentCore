@@ -412,11 +412,11 @@ TEST_F(QueryTest, Timestamp)
 
         RefCntAutoPtr<IQuery> pQueryStart;
         pDevice->CreateQuery(queryDesc, &pQueryStart);
-        ASSERT_NE(pQueryStart, nullptr) << "Failed to create tiemstamp query";
+        ASSERT_NE(pQueryStart, nullptr) << "Failed to create timestamp query";
 
         RefCntAutoPtr<IQuery> pQueryEnd;
         pDevice->CreateQuery(queryDesc, &pQueryEnd);
-        ASSERT_NE(pQueryEnd, nullptr) << "Failed to create tiemstamp query";
+        ASSERT_NE(pQueryEnd, nullptr) << "Failed to create timestamp query";
 
         for (Uint32 frame = 0; frame < sm_NumFrames; ++frame)
         {

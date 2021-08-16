@@ -171,7 +171,7 @@ struct BottomLevelASDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// through that immediate context.
     ///
     /// \remarks    Only specify these bits that will indicate those immediate contexts where the BLAS
-    ///             will actually be used. Do not set unncessary bits as this will result in extra overhead.
+    ///             will actually be used. Do not set unnecessary bits as this will result in extra overhead.
     Uint64                     ImmediateContextMask    DEFAULT_INITIALIZER(1);
 
 #if DILIGENT_CPP_INTERFACE

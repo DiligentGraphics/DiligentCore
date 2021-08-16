@@ -119,7 +119,7 @@ void VulkanSyncObjectManager::Recycle(VkFenceType vkFence, bool IsUnsignaled)
 {
     if (!IsUnsignaled)
     {
-        // Acces to vkFence must be externally synchronized, we assume that vkFence is not used anywhere else.
+        // Access to vkFence must be externally synchronized, we assume that vkFence is not used anywhere else.
         vkResetFences(m_LogicalDevice.GetVkDevice(), 1, &vkFence.Value);
     }
 

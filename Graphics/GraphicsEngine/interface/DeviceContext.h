@@ -82,7 +82,7 @@ struct DeviceContextDesc
     /// Indicates if this is a deferred context.
     Bool         IsDeferred      DEFAULT_INITIALIZER(False);
 
-    /// Device contex ID. This value corresponds to the index of the device context
+    /// Device context ID. This value corresponds to the index of the device context
     /// in ppContexts array when the engine was initialized.
     /// When starting recording commands with a deferred context, the context id
     /// of the immediate context where the command list will be executed should be
@@ -1517,7 +1517,7 @@ DILIGENT_TYPED_ENUM(STATE_TRANSITION_FLAGS, Uint8)
     /// responsible for making sure that all subresources are indeed in the designated state.
     /// If not used, internal resource state will be unchanged.
     ///
-    /// \note This flag cannnot be used when StateTransitionDesc.TransitionType is STATE_TRANSITION_TYPE_BEGIN.
+    /// \note This flag cannot be used when StateTransitionDesc.TransitionType is STATE_TRANSITION_TYPE_BEGIN.
     STATE_TRANSITION_FLAG_UPDATE_STATE    = 1u << 0,
 
     /// If set, the contents of the resource will be discarded, when possible.
