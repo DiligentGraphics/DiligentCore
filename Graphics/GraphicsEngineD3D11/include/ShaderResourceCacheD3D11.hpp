@@ -584,10 +584,10 @@ inline ShaderResourceCacheD3D11::MinMaxSlot ShaderResourceCacheD3D11::BindResour
         if (CommittedD3D11Resources[Slot] != ResArrays.second[res])
             Slots.Add(Slot);
 
-#ifdef DILIGENT_DEVELOPMENT
-        if (ResArrays.second[res] == nullptr)
-            LOG_ERROR(CachedResourceTraits<Range>::Name, " at slot ", Slot, " is null.");
-#endif
+        // Note that a resource is allowed to be null if it is not used by the PSO.
+        // Resources actually used by the PSO will be validated by PipelineStateD3D11Impl::DvpVerifySRBResources and
+        // null resources will be reported.
+
         CommittedD3D11Resources[Slot] = ResArrays.second[res];
     }
 
@@ -613,10 +613,10 @@ inline ShaderResourceCacheD3D11::MinMaxSlot ShaderResourceCacheD3D11::BindResour
         if (CommittedD3D11Views[Slot] != ResArrays.second[res])
             Slots.Add(Slot);
 
-#ifdef DILIGENT_DEVELOPMENT
-        if (ResArrays.second[res] == nullptr)
-            LOG_ERROR(CachedResourceTraits<Range>::Name, " at slot ", Slot, " is null.");
-#endif
+        // Note that a resource is allowed to be null if it is not used by the PSO.
+        // Resources actually used by the PSO will be validated by PipelineStateD3D11Impl::DvpVerifySRBResources and
+        // null resources will be reported.
+
         CommittedD3D11Resources[Slot] = ResArrays.first[res].pd3d11Resource;
         CommittedD3D11Views[Slot]     = ResArrays.second[res];
     }
@@ -655,7 +655,7 @@ inline ShaderResourceCacheD3D11::MinMaxSlot ShaderResourceCacheD3D11::BindCBs(
             Slots.Add(Slot);
         }
 
-        // Note that a dynamic constant buffer is allowed to be null if it is not used by the PSO.
+        // Note that a constant buffer is allowed to be null if it is not used by the PSO.
         // Resources actually used by the PSO will be validated by PipelineStateD3D11Impl::DvpVerifySRBResources and
         // null resources will be reported.
 
@@ -699,7 +699,7 @@ inline void ShaderResourceCacheD3D11::BindDynamicCBs(Uint32                     
             NumConstants[Slot]            != NumCBConstants)
         // clang-format on
         {
-            // Note that a dynamic constant buffer is allowed to be null if it is not used by the PSO.
+            // Note that a constant buffer is allowed to be null if it is not used by the PSO.
             // Resources actually used by the PSO will be validated by PipelineStateD3D11Impl::DvpVerifySRBResources and
             // null resources will be reported.
 

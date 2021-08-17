@@ -133,6 +133,8 @@ public:
         void SetStorageBuffer(RefCntAutoPtr<IDeviceObject>&& _pBufferView);
 
         bool IsNull() const { return pObject == nullptr; }
+
+        explicit operator bool() const { return !IsNull(); }
     };
 
     // sizeof(DescriptorSet) == 48 (x64, msvc, Release)

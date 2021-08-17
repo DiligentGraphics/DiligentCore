@@ -127,10 +127,6 @@ public:
                                       const ShaderResourceCacheVk&      ResourceCache,
                                       const char*                       ShaderName,
                                       const char*                       PSOName) const;
-
-    /// Verifies cache resources are not null for the specified variable types.
-    bool DvpCheckNullResources(const ShaderResourceCacheVk&        ResourceCache,
-                               SHADER_RESOURCE_VARIABLE_TYPE_FLAGS VarTypes) const;
 #endif
 
     // Returns the descriptor set index in the resource cache

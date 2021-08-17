@@ -1815,14 +1815,12 @@ TEST_F(PipelineResourceSignatureTest, RunTimeResourceArray_HLSL)
 }
 
 
-TEST_F(PipelineResourceSignatureTest, UnusedDynamicBuffer)
+TEST_F(PipelineResourceSignatureTest, UnusedNullResources)
 {
     auto* pEnv       = TestingEnvironment::GetInstance();
     auto* pDevice    = pEnv->GetDevice();
     auto* pContext   = pEnv->GetDeviceContext();
     auto* pSwapChain = pEnv->GetSwapChain();
-
-    const auto& DeviceInfo = pDevice->GetDeviceInfo();
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
@@ -1864,7 +1862,15 @@ TEST_F(PipelineResourceSignatureTest, UnusedDynamicBuffer)
         {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_UnmappedMutableBuffer", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
         {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_UnmappedDynamicBuffer", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC},
         {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_NullMutableBuffer",     1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
-        {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_NullDynamicBuffer",     1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC}
+        {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_NullDynamicBuffer",     1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC},
+        {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_NullMutableTexture",    1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+        {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_NullDynamicTexture",    1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC},
+        {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_NullMutableBuffSRV",    1, SHADER_RESOURCE_TYPE_BUFFER_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+        {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_NullDynamicBuffSRV",    1, SHADER_RESOURCE_TYPE_BUFFER_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC},
+        {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_NullMutableNoDynBuffSRV",    1, SHADER_RESOURCE_TYPE_BUFFER_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS},
+        {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_NullDynamicNoDynBuffSRV",    1, SHADER_RESOURCE_TYPE_BUFFER_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC, PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS},
+        {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_NullMutableFormattedBuffSRV",  1, SHADER_RESOURCE_TYPE_BUFFER_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER},
+        {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_NullDynamicFormattedBuffSRV",  1, SHADER_RESOURCE_TYPE_BUFFER_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC, PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER}
     };
     // clang-format on
 
@@ -1892,13 +1898,6 @@ TEST_F(PipelineResourceSignatureTest, UnusedDynamicBuffer)
 
     pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "g_UnmappedMutableBuffer")->Set(pBuffer);
     pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "g_UnmappedDynamicBuffer")->Set(pBuffer);
-
-    if (DeviceInfo.IsVulkanDevice())
-    {
-        // In Vulkan, dynamic variables can't be null
-        pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "g_NullMutableBuffer")->Set(pBuffer);
-        pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "g_NullDynamicBuffer")->Set(pBuffer);
-    }
 
     pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 

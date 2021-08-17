@@ -580,10 +580,6 @@ void PipelineResourceSignatureVkImpl::CommitDynamicResources(const ShaderResourc
     VERIFY_EXPR(vkDynamicDescriptorSet != VK_NULL_HANDLE);
     VERIFY_EXPR(ResourceCache.GetContentType() == ResourceCacheContentType::SRB);
 
-#ifdef DILIGENT_DEVELOPMENT
-    DvpCheckNullResources(ResourceCache, SHADER_RESOURCE_VARIABLE_TYPE_FLAG_DYNAMIC);
-#endif
-
 #ifdef DILIGENT_DEBUG
     static constexpr size_t ImgUpdateBatchSize          = 4;
     static constexpr size_t BuffUpdateBatchSize         = 2;
@@ -642,7 +638,8 @@ void PipelineResourceSignatureVkImpl::CommitDynamicResources(const ShaderResourc
         WriteDescrSetIt->dstArrayElement = ArrElem;
         // descriptorType must be the same type as that specified in VkDescriptorSetLayoutBinding for dstSet at dstBinding.
         // The type of the descriptor also controls which array the descriptors are taken from. (13.2.4)
-        WriteDescrSetIt->descriptorType = DescriptorTypeToVkDescriptorType(DescrType);
+        WriteDescrSetIt->descriptorType  = DescriptorTypeToVkDescriptorType(DescrType);
+        WriteDescrSetIt->descriptorCount = 0;
 
         // For every resource type, try to batch as many descriptor updates as we can
         static_assert(static_cast<Uint32>(DescriptorType::Count) == 15, "Please update the switch below to handle the new descriptor type");
@@ -653,9 +650,12 @@ void PipelineResourceSignatureVkImpl::CommitDynamicResources(const ShaderResourc
                 WriteDescrSetIt->pBufferInfo = &(*DescrBuffIt);
                 while (ArrElem < ArraySize && DescrBuffIt != DescrBuffInfoArr.end())
                 {
-                    const auto& CachedRes = SetResources.GetResource(CacheOffset + ArrElem);
-                    *DescrBuffIt          = CachedRes.GetUniformBufferDescriptorWriteInfo();
-                    ++DescrBuffIt;
+                    if (const auto& CachedRes = SetResources.GetResource(CacheOffset + ArrElem))
+                    {
+                        *DescrBuffIt = CachedRes.GetUniformBufferDescriptorWriteInfo();
+                        ++DescrBuffIt;
+                        ++WriteDescrSetIt->descriptorCount;
+                    }
                     ++ArrElem;
                 }
                 break;
@@ -667,9 +667,12 @@ void PipelineResourceSignatureVkImpl::CommitDynamicResources(const ShaderResourc
                 WriteDescrSetIt->pBufferInfo = &(*DescrBuffIt);
                 while (ArrElem < ArraySize && DescrBuffIt != DescrBuffInfoArr.end())
                 {
-                    const auto& CachedRes = SetResources.GetResource(CacheOffset + ArrElem);
-                    *DescrBuffIt          = CachedRes.GetStorageBufferDescriptorWriteInfo();
-                    ++DescrBuffIt;
+                    if (const auto& CachedRes = SetResources.GetResource(CacheOffset + ArrElem))
+                    {
+                        *DescrBuffIt = CachedRes.GetStorageBufferDescriptorWriteInfo();
+                        ++DescrBuffIt;
+                        ++WriteDescrSetIt->descriptorCount;
+                    }
                     ++ArrElem;
                 }
                 break;
@@ -680,9 +683,12 @@ void PipelineResourceSignatureVkImpl::CommitDynamicResources(const ShaderResourc
                 WriteDescrSetIt->pTexelBufferView = &(*BuffViewIt);
                 while (ArrElem < ArraySize && BuffViewIt != DescrBuffViewArr.end())
                 {
-                    const auto& CachedRes = SetResources.GetResource(CacheOffset + ArrElem);
-                    *BuffViewIt           = CachedRes.GetBufferViewWriteInfo();
-                    ++BuffViewIt;
+                    if (const auto& CachedRes = SetResources.GetResource(CacheOffset + ArrElem))
+                    {
+                        *BuffViewIt = CachedRes.GetBufferViewWriteInfo();
+                        ++BuffViewIt;
+                        ++WriteDescrSetIt->descriptorCount;
+                    }
                     ++ArrElem;
                 }
                 break;
@@ -694,9 +700,12 @@ void PipelineResourceSignatureVkImpl::CommitDynamicResources(const ShaderResourc
                 WriteDescrSetIt->pImageInfo = &(*DescrImgIt);
                 while (ArrElem < ArraySize && DescrImgIt != DescrImgInfoArr.end())
                 {
-                    const auto& CachedRes = SetResources.GetResource(CacheOffset + ArrElem);
-                    *DescrImgIt           = CachedRes.GetImageDescriptorWriteInfo();
-                    ++DescrImgIt;
+                    if (const auto& CachedRes = SetResources.GetResource(CacheOffset + ArrElem))
+                    {
+                        *DescrImgIt = CachedRes.GetImageDescriptorWriteInfo();
+                        ++DescrImgIt;
+                        ++WriteDescrSetIt->descriptorCount;
+                    }
                     ++ArrElem;
                 }
                 break;
@@ -709,9 +718,12 @@ void PipelineResourceSignatureVkImpl::CommitDynamicResources(const ShaderResourc
                     WriteDescrSetIt->pImageInfo = &(*DescrImgIt);
                     while (ArrElem < ArraySize && DescrImgIt != DescrImgInfoArr.end())
                     {
-                        const auto& CachedRes = SetResources.GetResource(CacheOffset + ArrElem);
-                        *DescrImgIt           = CachedRes.GetSamplerDescriptorWriteInfo();
-                        ++DescrImgIt;
+                        if (const auto& CachedRes = SetResources.GetResource(CacheOffset + ArrElem))
+                        {
+                            *DescrImgIt = CachedRes.GetSamplerDescriptorWriteInfo();
+                            ++DescrImgIt;
+                            ++WriteDescrSetIt->descriptorCount;
+                        }
                         ++ArrElem;
                     }
                 }
@@ -727,9 +739,12 @@ void PipelineResourceSignatureVkImpl::CommitDynamicResources(const ShaderResourc
                 WriteDescrSetIt->pNext = &(*AccelStructIt);
                 while (ArrElem < ArraySize && AccelStructIt != DescrAccelStructArr.end())
                 {
-                    const auto& CachedRes = SetResources.GetResource(CacheOffset + ArrElem);
-                    *AccelStructIt        = CachedRes.GetAccelerationStructureWriteInfo();
-                    ++AccelStructIt;
+                    if (const auto& CachedRes = SetResources.GetResource(CacheOffset + ArrElem))
+                    {
+                        *AccelStructIt = CachedRes.GetAccelerationStructureWriteInfo();
+                        ++AccelStructIt;
+                        ++WriteDescrSetIt->descriptorCount;
+                    }
                     ++ArrElem;
                 }
                 break;
@@ -738,13 +753,13 @@ void PipelineResourceSignatureVkImpl::CommitDynamicResources(const ShaderResourc
                 UNEXPECTED("Unexpected resource type");
         }
 
-        WriteDescrSetIt->descriptorCount = ArrElem - WriteDescrSetIt->dstArrayElement;
         if (ArrElem == ArraySize)
         {
             ArrElem = 0;
             ++ResIdx;
         }
-        // descriptorCount == 0 for immutable separate samplers
+
+        // descriptorCount == 0 for immutable separate samplers or null resources
         if (WriteDescrSetIt->descriptorCount > 0)
             ++WriteDescrSetIt;
 
@@ -912,46 +927,6 @@ bool PipelineResourceSignatureVkImpl::DvpValidateCommittedResource(const DeviceC
             default:
                 break;
                 // Nothing to do
-        }
-    }
-
-    return BindingsOK;
-}
-
-bool PipelineResourceSignatureVkImpl::DvpCheckNullResources(const ShaderResourceCacheVk&        ResourceCache,
-                                                            SHADER_RESOURCE_VARIABLE_TYPE_FLAGS VarTypes) const
-{
-    bool BindingsOK = true;
-    while (VarTypes != SHADER_RESOURCE_VARIABLE_TYPE_FLAG_NONE)
-    {
-        const auto VarTypeFlag = ExtractLSB(VarTypes);
-        const auto VarType     = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(PlatformMisc::GetLSB(VarTypeFlag));
-        VERIFY_EXPR(Uint32{VarTypeFlag} == (1u << VarType));
-
-        const auto ResRange = GetResourceIndexRange(VarType);
-        for (Uint32 ResIndex = ResRange.first; ResIndex < ResRange.second; ++ResIndex)
-        {
-            const auto& ResDesc = m_Desc.Resources[ResIndex];
-            VERIFY_EXPR(ResDesc.VarType == VarType);
-
-            const auto& ResAttribs = m_pResourceAttribs[ResIndex];
-            if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER && ResAttribs.IsImmutableSamplerAssigned())
-                continue; // Skip immutable separate samplers
-
-            const auto& DescrSetResources = ResourceCache.GetDescriptorSet(ResAttribs.DescrSet);
-            const auto  CacheType         = ResourceCache.GetContentType();
-            const auto  CacheOffset       = ResAttribs.CacheOffset(CacheType);
-
-            for (Uint32 ArrIndex = 0; ArrIndex < ResDesc.ArraySize; ++ArrIndex)
-            {
-                const auto& Res = DescrSetResources.GetResource(CacheOffset + ArrIndex);
-                if (Res.IsNull())
-                {
-                    LOG_ERROR_MESSAGE("No resource is bound to ", GetShaderVariableTypeLiteralName(ResDesc.VarType),
-                                      " variable '", GetShaderResourcePrintName(ResDesc, ArrIndex), "'");
-                    BindingsOK = false;
-                }
-            }
         }
     }
 

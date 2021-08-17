@@ -258,13 +258,6 @@ TEST_P(NullStructBuffer, Test)
     pEnv->PushExpectedErrorSubstring("No resource is bound to variable 'g_MissingPSStructBuffer'");
     pEnv->PushExpectedErrorSubstring("No resource is bound to variable 'g_MissingVSStructBuffer'", false);
 
-    if (DeviceInfo.Type == RENDER_DEVICE_TYPE_D3D11)
-    {
-        pEnv->SetErrorAllowance(4);
-        pEnv->PushExpectedErrorSubstring("Shader resource view at slot 0 is null", false);
-        pEnv->PushExpectedErrorSubstring("Shader resource view at slot 0 is null", false);
-    }
-
     DrawWithNullResources(pVS, pPS, VarType);
 }
 
@@ -328,13 +321,6 @@ TEST_P(NullFormattedBuffer, Test)
     pEnv->SetErrorAllowance(2, "No worries, errors are expected: testing null resource bindings\n");
     pEnv->PushExpectedErrorSubstring("No resource is bound to variable 'g_MissingPSFmtBuffer'");
     pEnv->PushExpectedErrorSubstring("No resource is bound to variable 'g_MissingVSFmtBuffer'", false);
-
-    if (DeviceInfo.Type == RENDER_DEVICE_TYPE_D3D11)
-    {
-        pEnv->SetErrorAllowance(4);
-        pEnv->PushExpectedErrorSubstring("Shader resource view at slot 0 is null", false);
-        pEnv->PushExpectedErrorSubstring("Shader resource view at slot 0 is null", false);
-    }
 
     DrawWithNullResources(pVS, pPS, VarType);
 }
@@ -402,13 +388,6 @@ TEST_P(NullTexture, Test)
     pEnv->SetErrorAllowance(2, "No worries, errors are expected: testing null resource bindings\n");
     pEnv->PushExpectedErrorSubstring("No resource is bound to variable 'g_MissingPSTexture'");
     pEnv->PushExpectedErrorSubstring("No resource is bound to variable 'g_MissingVSTexture'", false);
-
-    if (DeviceInfo.Type == RENDER_DEVICE_TYPE_D3D11)
-    {
-        pEnv->SetErrorAllowance(4);
-        pEnv->PushExpectedErrorSubstring("Shader resource view at slot 0 is null", false);
-        pEnv->PushExpectedErrorSubstring("Shader resource view at slot 0 is null", false);
-    }
 
     DrawWithNullResources(pVS, pPS, VarType);
 }
@@ -497,15 +476,6 @@ TEST_P(NullSampler, Test)
     for (size_t i = 0; i < _countof(MsgOrder); ++i)
         pEnv->PushExpectedErrorSubstring(Messages[MsgOrder[i]], i == 0);
 
-    if (DeviceInfo.Type == RENDER_DEVICE_TYPE_D3D11)
-    {
-        pEnv->SetErrorAllowance(8);
-        pEnv->PushExpectedErrorSubstring("Sampler at slot 0 is null", false);
-        pEnv->PushExpectedErrorSubstring("Shader resource view at slot 0 is null", false);
-        pEnv->PushExpectedErrorSubstring("Sampler at slot 0 is null", false);
-        pEnv->PushExpectedErrorSubstring("Shader resource view at slot 0 is null", false);
-    }
-
     DrawWithNullResources(pVS, pPS, VarType);
 }
 
@@ -556,12 +526,6 @@ TEST_P(NullRWTexture, Test)
     pEnv->SetErrorAllowance(1, "No worries, errors are expected: testing null resource bindings\n");
     pEnv->PushExpectedErrorSubstring("No resource is bound to variable 'g_MissingRWTexture'", false);
 
-    if (DeviceInfo.Type == RENDER_DEVICE_TYPE_D3D11)
-    {
-        pEnv->SetErrorAllowance(2);
-        pEnv->PushExpectedErrorSubstring("Unordered access view at slot 0 is null", false);
-    }
-
     DispatchWithNullResources(pCS, VarType);
 }
 
@@ -611,12 +575,6 @@ TEST_P(NullRWFmtBuffer, Test)
 
     pEnv->SetErrorAllowance(1, "No worries, errors are expected: testing null resource bindings\n");
     pEnv->PushExpectedErrorSubstring("No resource is bound to variable 'g_MissingRWBuffer'", false);
-
-    if (DeviceInfo.Type == RENDER_DEVICE_TYPE_D3D11)
-    {
-        pEnv->SetErrorAllowance(2);
-        pEnv->PushExpectedErrorSubstring("Unordered access view at slot 0 is null", false);
-    }
 
     DispatchWithNullResources(pCS, VarType);
 }
@@ -691,12 +649,6 @@ TEST_P(NullRWStructBuffer, Test)
 
     pEnv->SetErrorAllowance(1, "No worries, errors are expected: testing null resource bindings\n");
     pEnv->PushExpectedErrorSubstring("No resource is bound to variable 'g_MissingRWStructBuffer'", false);
-
-    if (DeviceInfo.Type == RENDER_DEVICE_TYPE_D3D11)
-    {
-        pEnv->SetErrorAllowance(2);
-        pEnv->PushExpectedErrorSubstring("Unordered access view at slot 0 is null", false);
-    }
 
     DispatchWithNullResources(pCS, VarType);
 }
