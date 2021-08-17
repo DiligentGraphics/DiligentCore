@@ -156,11 +156,13 @@ QueryManagerVk::QueryManagerVk(RenderDeviceVkImpl* pRenderDeviceVk,
     auto timestampPeriod = PhysicalDevice.GetProperties().limits.timestampPeriod;
     m_CounterFrequency   = static_cast<Uint64>(1000000000.0 / timestampPeriod);
 
-    const auto  QueueFamilyIndex = HardwareQueueIndex{pRenderDeviceVk->GetCommandQueue(CmdQueueInd).GetQueueFamilyIndex()};
-    const auto& EnabledFeatures  = LogicalDevice.GetEnabledFeatures();
-    const auto  StageMask        = LogicalDevice.GetSupportedStagesMask(QueueFamilyIndex);
-    const auto  QueueFlags       = PhysicalDevice.GetQueueProperties()[QueueFamilyIndex].queueFlags;
-    const auto& DeviceInfo       = pRenderDeviceVk->GetDeviceInfo();
+    const auto  QueueFamilyIndex       = HardwareQueueIndex{pRenderDeviceVk->GetCommandQueue(CmdQueueInd).GetQueueFamilyIndex()};
+    const auto& EnabledFeatures        = LogicalDevice.GetEnabledFeatures();
+    const auto  StageMask              = LogicalDevice.GetSupportedStagesMask(QueueFamilyIndex);
+    const auto  QueueFlags             = PhysicalDevice.GetQueueProperties()[QueueFamilyIndex].queueFlags;
+    const auto& DeviceInfo             = pRenderDeviceVk->GetDeviceInfo();
+    const bool  IsTransferQueue        = (QueueFlags & (VK_QUEUE_COMPUTE_BIT | VK_QUEUE_GRAPHICS_BIT)) == 0;
+    const bool  QueueSupportsTimestamp = PhysicalDevice.GetQueueProperties()[QueueFamilyIndex].timestampValidBits > 0;
 
     for (Uint32 query_type = QUERY_TYPE_UNDEFINED + 1; query_type < QUERY_TYPE_NUM_TYPES; ++query_type)
     {
@@ -172,7 +174,10 @@ QueryManagerVk::QueryManagerVk(RenderDeviceVkImpl* pRenderDeviceVk,
         // Time and duration queries are supported in all queues
         if (QueryType == QUERY_TYPE_TIMESTAMP || QueryType == QUERY_TYPE_DURATION)
         {
-            if ((QueueFlags & VK_QUEUE_COMPUTE_BIT) == 0 && !DeviceInfo.Features.TransferQueueTimestampQueries)
+            if (!QueueSupportsTimestamp)
+                continue;
+
+            if (IsTransferQueue && !DeviceInfo.Features.TransferQueueTimestampQueries)
                 continue; // Not supported in transfer queue
         }
         // Other queries are supported only in graphics queue
