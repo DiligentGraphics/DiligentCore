@@ -641,6 +641,26 @@ void PipelineResourceSignatureVkImpl::CommitDynamicResources(const ShaderResourc
         WriteDescrSetIt->descriptorType  = DescriptorTypeToVkDescriptorType(DescrType);
         WriteDescrSetIt->descriptorCount = 0;
 
+        auto WriteArrayElements = [&](auto DescrType, auto& DescrIt, const auto& DescrArr) //
+        {
+            while (ArrElem < ArraySize && DescrIt != DescrArr.end())
+            {
+                if (const auto& CachedRes = SetResources.GetResource(CacheOffset + (ArrElem++)))
+                {
+                    *DescrIt = CachedRes.GetDescriptorWriteInfo<DescrType>();
+                    ++DescrIt;
+                    ++WriteDescrSetIt->descriptorCount;
+                }
+                else
+                {
+                    if (WriteDescrSetIt->descriptorCount == 0)
+                        WriteDescrSetIt->dstArrayElement = ArrElem; // No elements have been written yet
+                    else
+                        break; // We need to use a new VkWriteDescriptorSet since we skipped an array element
+                }
+            }
+        };
+
         // For every resource type, try to batch as many descriptor updates as we can
         static_assert(static_cast<Uint32>(DescriptorType::Count) == 15, "Please update the switch below to handle the new descriptor type");
         switch (DescrType)
@@ -648,16 +668,7 @@ void PipelineResourceSignatureVkImpl::CommitDynamicResources(const ShaderResourc
             case DescriptorType::UniformBuffer:
             case DescriptorType::UniformBufferDynamic:
                 WriteDescrSetIt->pBufferInfo = &(*DescrBuffIt);
-                while (ArrElem < ArraySize && DescrBuffIt != DescrBuffInfoArr.end())
-                {
-                    if (const auto& CachedRes = SetResources.GetResource(CacheOffset + ArrElem))
-                    {
-                        *DescrBuffIt = CachedRes.GetUniformBufferDescriptorWriteInfo();
-                        ++DescrBuffIt;
-                        ++WriteDescrSetIt->descriptorCount;
-                    }
-                    ++ArrElem;
-                }
+                WriteArrayElements(std::integral_constant<DescriptorType, DescriptorType::UniformBuffer>{}, DescrBuffIt, DescrBuffInfoArr);
                 break;
 
             case DescriptorType::StorageBuffer:
@@ -665,32 +676,14 @@ void PipelineResourceSignatureVkImpl::CommitDynamicResources(const ShaderResourc
             case DescriptorType::StorageBuffer_ReadOnly:
             case DescriptorType::StorageBufferDynamic_ReadOnly:
                 WriteDescrSetIt->pBufferInfo = &(*DescrBuffIt);
-                while (ArrElem < ArraySize && DescrBuffIt != DescrBuffInfoArr.end())
-                {
-                    if (const auto& CachedRes = SetResources.GetResource(CacheOffset + ArrElem))
-                    {
-                        *DescrBuffIt = CachedRes.GetStorageBufferDescriptorWriteInfo();
-                        ++DescrBuffIt;
-                        ++WriteDescrSetIt->descriptorCount;
-                    }
-                    ++ArrElem;
-                }
+                WriteArrayElements(std::integral_constant<DescriptorType, DescriptorType::StorageBuffer>{}, DescrBuffIt, DescrBuffInfoArr);
                 break;
 
             case DescriptorType::UniformTexelBuffer:
             case DescriptorType::StorageTexelBuffer:
             case DescriptorType::StorageTexelBuffer_ReadOnly:
                 WriteDescrSetIt->pTexelBufferView = &(*BuffViewIt);
-                while (ArrElem < ArraySize && BuffViewIt != DescrBuffViewArr.end())
-                {
-                    if (const auto& CachedRes = SetResources.GetResource(CacheOffset + ArrElem))
-                    {
-                        *BuffViewIt = CachedRes.GetBufferViewWriteInfo();
-                        ++BuffViewIt;
-                        ++WriteDescrSetIt->descriptorCount;
-                    }
-                    ++ArrElem;
-                }
+                WriteArrayElements(std::integral_constant<DescriptorType, DescriptorType::UniformTexelBuffer>{}, BuffViewIt, DescrBuffViewArr);
                 break;
 
             case DescriptorType::CombinedImageSampler:
@@ -698,16 +691,7 @@ void PipelineResourceSignatureVkImpl::CommitDynamicResources(const ShaderResourc
             case DescriptorType::StorageImage:
             case DescriptorType::InputAttachment:
                 WriteDescrSetIt->pImageInfo = &(*DescrImgIt);
-                while (ArrElem < ArraySize && DescrImgIt != DescrImgInfoArr.end())
-                {
-                    if (const auto& CachedRes = SetResources.GetResource(CacheOffset + ArrElem))
-                    {
-                        *DescrImgIt = CachedRes.GetImageDescriptorWriteInfo();
-                        ++DescrImgIt;
-                        ++WriteDescrSetIt->descriptorCount;
-                    }
-                    ++ArrElem;
-                }
+                WriteArrayElements(std::integral_constant<DescriptorType, DescriptorType::SeparateImage>{}, DescrImgIt, DescrImgInfoArr);
                 break;
 
             case DescriptorType::Sampler:
@@ -716,16 +700,7 @@ void PipelineResourceSignatureVkImpl::CommitDynamicResources(const ShaderResourc
                 if (!Attr.IsImmutableSamplerAssigned())
                 {
                     WriteDescrSetIt->pImageInfo = &(*DescrImgIt);
-                    while (ArrElem < ArraySize && DescrImgIt != DescrImgInfoArr.end())
-                    {
-                        if (const auto& CachedRes = SetResources.GetResource(CacheOffset + ArrElem))
-                        {
-                            *DescrImgIt = CachedRes.GetSamplerDescriptorWriteInfo();
-                            ++DescrImgIt;
-                            ++WriteDescrSetIt->descriptorCount;
-                        }
-                        ++ArrElem;
-                    }
+                    WriteArrayElements(std::integral_constant<DescriptorType, DescriptorType::Sampler>{}, DescrImgIt, DescrImgInfoArr);
                 }
                 else
                 {
@@ -737,16 +712,7 @@ void PipelineResourceSignatureVkImpl::CommitDynamicResources(const ShaderResourc
 
             case DescriptorType::AccelerationStructure:
                 WriteDescrSetIt->pNext = &(*AccelStructIt);
-                while (ArrElem < ArraySize && AccelStructIt != DescrAccelStructArr.end())
-                {
-                    if (const auto& CachedRes = SetResources.GetResource(CacheOffset + ArrElem))
-                    {
-                        *AccelStructIt = CachedRes.GetAccelerationStructureWriteInfo();
-                        ++AccelStructIt;
-                        ++WriteDescrSetIt->descriptorCount;
-                    }
-                    ++ArrElem;
-                }
+                WriteArrayElements(std::integral_constant<DescriptorType, DescriptorType::AccelerationStructure>{}, AccelStructIt, DescrAccelStructArr);
                 break;
 
             default:

@@ -129,6 +129,9 @@ public:
         VkWriteDescriptorSetAccelerationStructureKHR GetAccelerationStructureWriteInfo() const;
         // clang-format on
 
+        template <DescriptorType DescrType>
+        auto GetDescriptorWriteInfo() const;
+
         void SetUniformBuffer(RefCntAutoPtr<IDeviceObject>&& _pBuffer, Uint32 _RangeOffset, Uint32 _RangeSize);
         void SetStorageBuffer(RefCntAutoPtr<IDeviceObject>&& _pBufferView);
 
@@ -292,6 +295,23 @@ private:
     std::vector<std::vector<bool>> m_DbgInitializedResources;
 #endif
 };
+
+
+template <>
+__forceinline auto ShaderResourceCacheVk::Resource::GetDescriptorWriteInfo<DescriptorType::UniformBuffer>() const { return GetUniformBufferDescriptorWriteInfo(); }
+template <>
+__forceinline auto ShaderResourceCacheVk::Resource::GetDescriptorWriteInfo<DescriptorType::StorageBuffer>() const { return GetStorageBufferDescriptorWriteInfo(); }
+template <>
+__forceinline auto ShaderResourceCacheVk::Resource::GetDescriptorWriteInfo<DescriptorType::SeparateImage>() const { return GetImageDescriptorWriteInfo(); }
+template <>
+__forceinline auto ShaderResourceCacheVk::Resource::GetDescriptorWriteInfo<DescriptorType::UniformTexelBuffer>() const { return GetBufferViewWriteInfo(); }
+template <>
+__forceinline auto ShaderResourceCacheVk::Resource::GetDescriptorWriteInfo<DescriptorType::Sampler>() const { return GetSamplerDescriptorWriteInfo(); }
+template <>
+__forceinline auto ShaderResourceCacheVk::Resource::GetDescriptorWriteInfo<DescriptorType::InputAttachment>() const { return GetInputAttachmentDescriptorWriteInfo(); }
+template <>
+__forceinline auto ShaderResourceCacheVk::Resource::GetDescriptorWriteInfo<DescriptorType::AccelerationStructure>() const { return GetAccelerationStructureWriteInfo(); }
+
 
 __forceinline Uint32 ShaderResourceCacheVk::GetDynamicBufferOffsets(DeviceContextIndex     CtxId,
                                                                     std::vector<uint32_t>& Offsets) const
