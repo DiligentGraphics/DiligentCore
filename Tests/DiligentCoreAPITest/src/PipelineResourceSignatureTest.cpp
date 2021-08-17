@@ -40,6 +40,8 @@
 
 #include "gtest/gtest.h"
 
+#include "InlineShaders/DrawCommandTestHLSL.h"
+
 using namespace Diligent;
 using namespace Diligent::Testing;
 
@@ -1810,6 +1812,89 @@ TEST_F(PipelineResourceSignatureTest, RunTimeResourceArray_GLSL)
 TEST_F(PipelineResourceSignatureTest, RunTimeResourceArray_HLSL)
 {
     TestRunTimeResourceArray(false, pShaderSourceFactory);
+}
+
+
+TEST_F(PipelineResourceSignatureTest, UnusedDynamicBuffer)
+{
+    auto* pEnv       = TestingEnvironment::GetInstance();
+    auto* pDevice    = pEnv->GetDevice();
+    auto* pContext   = pEnv->GetDeviceContext();
+    auto* pSwapChain = pEnv->GetSwapChain();
+
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+
+    float ClearColor[] = {0.875, 0.375, 0.125, 0.25};
+    RenderDrawCommandReference(pSwapChain, ClearColor);
+
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.ShaderCompiler             = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+    ShaderCI.UseCombinedTextureSamplers = true;
+
+    RefCntAutoPtr<IShader> pVS;
+    {
+        ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
+        ShaderCI.EntryPoint      = "main";
+        ShaderCI.Desc.Name       = "Triangle VS";
+        ShaderCI.Source          = HLSL::DrawTest_ProceduralTriangleVS.c_str();
+        pDevice->CreateShader(ShaderCI, &pVS);
+        ASSERT_NE(pVS, nullptr);
+    }
+
+    RefCntAutoPtr<IShader> pPS;
+    {
+        ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
+        ShaderCI.EntryPoint      = "main";
+        ShaderCI.Desc.Name       = "Triangle PS";
+        ShaderCI.Source          = HLSL::DrawTest_PS.c_str();
+        pDevice->CreateShader(ShaderCI, &pPS);
+        ASSERT_NE(pPS, nullptr);
+    }
+
+    PipelineResourceSignatureDesc PRSDesc;
+    PRSDesc.Name = "Unused dynamic buffer test";
+
+    // clang-format off
+    PipelineResourceDesc Resources[]
+    {
+        {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Buffer", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_STATIC}
+    };
+    // clang-format on
+    PRSDesc.Resources    = Resources;
+    PRSDesc.NumResources = _countof(Resources);
+
+    RefCntAutoPtr<IPipelineResourceSignature> pPRS;
+    pDevice->CreatePipelineResourceSignature(PRSDesc, &pPRS);
+    ASSERT_TRUE(pPRS);
+
+    auto pPSO = CreateGraphicsPSO(pVS, pPS, {pPRS});
+    ASSERT_TRUE(pPSO);
+
+    RefCntAutoPtr<IBuffer> pBuffer;
+    {
+        BufferDesc BuffDesc{"Unused dynamic buffer", 512, BIND_UNIFORM_BUFFER, USAGE_DYNAMIC, CPU_ACCESS_WRITE};
+        pDevice->CreateBuffer(BuffDesc, nullptr, &pBuffer);
+    }
+    ASSERT_TRUE(pBuffer);
+
+    pPRS->GetStaticVariableByName(SHADER_TYPE_VERTEX, "g_Buffer")->Set(pBuffer);
+
+    RefCntAutoPtr<IShaderResourceBinding> pSRB;
+    pPRS->CreateShaderResourceBinding(&pSRB, true);
+
+    pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    ITextureView* ppRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
+    pContext->SetRenderTargets(1, ppRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    pContext->ClearRenderTarget(ppRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    pContext->SetPipelineState(pPSO);
+
+    DrawAttribs DrawAttrs{6, DRAW_FLAG_VERIFY_ALL};
+    pContext->Draw(DrawAttrs);
+
+    pSwapChain->Present();
 }
 
 } // namespace Diligent

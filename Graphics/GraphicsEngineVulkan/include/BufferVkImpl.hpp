@@ -65,10 +65,10 @@ public:
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_BufferVk, TBufferBase)
 
 #ifdef DILIGENT_DEVELOPMENT
-    void DvpVerifyDynamicAllocation(DeviceContextVkImpl* pCtx) const;
+    void DvpVerifyDynamicAllocation(const DeviceContextVkImpl* pCtx) const;
 #endif
 
-    Uint32 GetDynamicOffset(DeviceContextIndex CtxId, DeviceContextVkImpl* pCtx) const
+    Uint32 GetDynamicOffset(DeviceContextIndex CtxId, const DeviceContextVkImpl* pCtx) const
     {
         if (m_VulkanBuffer != VK_NULL_HANDLE)
         {
@@ -79,7 +79,10 @@ public:
             VERIFY(m_Desc.Usage == USAGE_DYNAMIC, "Dynamic buffer is expected");
             VERIFY_EXPR(!m_DynamicData.empty());
 #ifdef DILIGENT_DEVELOPMENT
-            DvpVerifyDynamicAllocation(pCtx);
+            if (pCtx != nullptr)
+            {
+                DvpVerifyDynamicAllocation(pCtx);
+            }
 #endif
             auto& DynAlloc = m_DynamicData[CtxId];
             return static_cast<Uint32>(DynAlloc.AlignedOffset);

@@ -47,6 +47,8 @@
 namespace Diligent
 {
 
+class DeviceContextVkImpl;
+
 /// Pipeline state object implementation in Vulkan backend.
 class PipelineStateVkImpl final : public PipelineStateBase<EngineVkImplTraits>
 {
@@ -100,7 +102,7 @@ public:
     // Performs validation of SRB resource parameters that are not possible to validate
     // when resource is bound.
     using ShaderResourceCacheArrayType = std::array<ShaderResourceCacheVk*, MAX_RESOURCE_SIGNATURES>;
-    void DvpVerifySRBResources(const ShaderResourceCacheArrayType& ResourceCaches) const;
+    void DvpVerifySRBResources(const DeviceContextVkImpl* pCtx, const ShaderResourceCacheArrayType& ResourceCaches) const;
 
     void DvpValidateResourceLimits() const;
 #endif

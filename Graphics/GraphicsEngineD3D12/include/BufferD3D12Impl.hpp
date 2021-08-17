@@ -93,7 +93,10 @@ public:
         if (m_Desc.Usage == USAGE_DYNAMIC)
         {
 #ifdef DILIGENT_DEVELOPMENT
-            DvpVerifyDynamicAllocation(pCtx);
+            if (pCtx != nullptr)
+            {
+                DvpVerifyDynamicAllocation(pCtx);
+            }
 #endif
             return m_DynamicData[ContextId].GPUAddress;
         }

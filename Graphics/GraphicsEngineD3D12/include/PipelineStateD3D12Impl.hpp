@@ -71,7 +71,8 @@ public:
 
 #ifdef DILIGENT_DEVELOPMENT
     using ShaderResourceCacheArrayType = std::array<ShaderResourceCacheD3D12*, MAX_RESOURCE_SIGNATURES>;
-    void DvpVerifySRBResources(const ShaderResourceCacheArrayType& ResourceCaches) const;
+    void DvpVerifySRBResources(const DeviceContextD3D12Impl*       pDeviceCtx,
+                               const ShaderResourceCacheArrayType& ResourceCaches) const;
 #endif
 
 private:

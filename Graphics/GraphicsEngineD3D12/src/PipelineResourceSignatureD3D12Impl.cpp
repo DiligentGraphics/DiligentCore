@@ -454,8 +454,13 @@ void PipelineResourceSignatureD3D12Impl::CommitRootViews(const CommitCacheResour
         }
         VERIFY_EXPR(pBuffer != nullptr);
 
-        auto BufferGPUAddress = pBuffer->GetGPUAddress(CommitAttribs.DeviceCtxId, CommitAttribs.pDeviceCtx);
-        VERIFY_EXPR(BufferGPUAddress != 0);
+        auto BufferGPUAddress = pBuffer->GetGPUAddress(CommitAttribs.DeviceCtxId, nullptr /* Do not verify dynamic allocation here*/);
+        if (BufferGPUAddress == 0)
+        {
+            // GPU address may be null if a dynamic buffer that is not used by the PSO has not been mapped yet.
+            // Dynamic allocations will be checked by DvpValidateCommittedResource()
+            return;
+        }
 
         BufferGPUAddress += UINT64{Res.BufferBaseOffset} + UINT64{Res.BufferDynamicOffset};
 
@@ -683,7 +688,8 @@ bool PipelineResourceSignatureD3D12Impl::HasImmutableSamplerArray(SHADER_TYPE Sh
 }
 
 #ifdef DILIGENT_DEVELOPMENT
-bool PipelineResourceSignatureD3D12Impl::DvpValidateCommittedResource(const D3DShaderResourceAttribs& D3DAttribs,
+bool PipelineResourceSignatureD3D12Impl::DvpValidateCommittedResource(const DeviceContextD3D12Impl*   pCtx,
+                                                                      const D3DShaderResourceAttribs& D3DAttribs,
                                                                       Uint32                          ResIndex,
                                                                       const ShaderResourceCacheD3D12& ResourceCache,
                                                                       const char*                     ShaderName,
@@ -758,6 +764,10 @@ bool PipelineResourceSignatureD3D12Impl::DvpValidateCommittedResource(const D3DS
                     if (const auto* pBuffD3D12 = CachedRes.pObject.RawPtr<BufferD3D12Impl>())
                     {
                         const auto& BuffDesc = pBuffD3D12->GetDesc();
+
+                        if (BuffDesc.Usage == USAGE_DYNAMIC)
+                            pBuffD3D12->DvpVerifyDynamicAllocation(pCtx);
+
                         if (BuffDesc.Usage == USAGE_DYNAMIC || CachedRes.BufferRangeSize != 0 && CachedRes.BufferRangeSize < BuffDesc.uiSizeInBytes)
                             VERIFY_EXPR((ResourceCache.GetDynamicRootBuffersMask() & (Uint64{1} << RootIndex)) != 0);
                         else
@@ -779,6 +789,10 @@ bool PipelineResourceSignatureD3D12Impl::DvpValidateCommittedResource(const D3DS
                         const auto* pBuffD3D12 = pBuffViewD3D12->GetBuffer<BufferD3D12Impl>();
                         VERIFY_EXPR(pBuffD3D12 != nullptr);
                         const auto& BuffDesc = pBuffD3D12->GetDesc();
+
+                        if (BuffDesc.Usage == USAGE_DYNAMIC)
+                            pBuffD3D12->DvpVerifyDynamicAllocation(pCtx);
+
                         if (BuffDesc.Usage == USAGE_DYNAMIC || CachedRes.BufferRangeSize != 0 && CachedRes.BufferRangeSize < BuffDesc.uiSizeInBytes)
                             VERIFY_EXPR((ResourceCache.GetDynamicRootBuffersMask() & (Uint64{1} << RootIndex)) != 0);
                         else

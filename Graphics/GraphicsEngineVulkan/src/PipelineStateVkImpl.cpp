@@ -938,7 +938,7 @@ void PipelineStateVkImpl::Destruct()
 }
 
 #ifdef DILIGENT_DEVELOPMENT
-void PipelineStateVkImpl::DvpVerifySRBResources(const ShaderResourceCacheArrayType& ResourceCaches) const
+void PipelineStateVkImpl::DvpVerifySRBResources(const DeviceContextVkImpl* pCtx, const ShaderResourceCacheArrayType& ResourceCaches) const
 {
     auto res_info = m_ResourceAttibutions.begin();
     for (const auto& pResources : m_ShaderResources)
@@ -952,7 +952,7 @@ void PipelineStateVkImpl::DvpVerifySRBResources(const ShaderResourceCacheArrayTy
                     VERIFY_EXPR(res_info->pSignature->GetDesc().BindingIndex == res_info->SignatureIndex);
                     const auto* pResourceCache = ResourceCaches[res_info->SignatureIndex];
                     DEV_CHECK_ERR(pResourceCache != nullptr, "Resource cache at index ", res_info->SignatureIndex, " is null.");
-                    res_info->pSignature->DvpValidateCommittedResource(ResAttribs, res_info->ResourceIndex, *pResourceCache,
+                    res_info->pSignature->DvpValidateCommittedResource(pCtx, ResAttribs, res_info->ResourceIndex, *pResourceCache,
                                                                        pResources->GetShaderName(), m_Desc.Name);
                 }
                 ++res_info;

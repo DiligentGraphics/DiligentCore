@@ -49,6 +49,7 @@ namespace Diligent
 {
 
 struct SPIRVShaderResourceAttribs;
+class DeviceContextVkImpl;
 
 /// Implementation of the Diligent::PipelineResourceSignatureVkImpl class
 class PipelineResourceSignatureVkImpl final : public PipelineResourceSignatureBase<EngineVkImplTraits>
@@ -120,7 +121,8 @@ public:
 
 #ifdef DILIGENT_DEVELOPMENT
     /// Verifies committed resource using the SPIRV resource attributes from the PSO.
-    bool DvpValidateCommittedResource(const SPIRVShaderResourceAttribs& SPIRVAttribs,
+    bool DvpValidateCommittedResource(const DeviceContextVkImpl*        pDeviceCtx,
+                                      const SPIRVShaderResourceAttribs& SPIRVAttribs,
                                       Uint32                            ResIndex,
                                       const ShaderResourceCacheVk&      ResourceCache,
                                       const char*                       ShaderName,

@@ -583,7 +583,8 @@ void PipelineStateD3D12Impl::ValidateShaderResources(const ShaderD3D12Impl* pSha
 }
 
 #ifdef DILIGENT_DEVELOPMENT
-void PipelineStateD3D12Impl::DvpVerifySRBResources(const ShaderResourceCacheArrayType& ResourceCaches) const
+void PipelineStateD3D12Impl::DvpVerifySRBResources(const DeviceContextD3D12Impl*       pDeviceCtx,
+                                                   const ShaderResourceCacheArrayType& ResourceCaches) const
 {
     auto attrib_it = m_ResourceAttibutions.begin();
     for (const auto& pResources : m_ShaderResources)
@@ -597,7 +598,7 @@ void PipelineStateD3D12Impl::DvpVerifySRBResources(const ShaderResourceCacheArra
                     VERIFY_EXPR(attrib_it->pSignature->GetDesc().BindingIndex == attrib_it->SignatureIndex);
                     const auto* pResourceCache = ResourceCaches[attrib_it->SignatureIndex];
                     DEV_CHECK_ERR(pResourceCache != nullptr, "Resource cache at index ", attrib_it->SignatureIndex, " is null.");
-                    attrib_it->pSignature->DvpValidateCommittedResource(Attribs, attrib_it->ResourceIndex, *pResourceCache,
+                    attrib_it->pSignature->DvpValidateCommittedResource(pDeviceCtx, Attribs, attrib_it->ResourceIndex, *pResourceCache,
                                                                         pResources->GetShaderName(), m_Desc.Name);
                 }
                 ++attrib_it;

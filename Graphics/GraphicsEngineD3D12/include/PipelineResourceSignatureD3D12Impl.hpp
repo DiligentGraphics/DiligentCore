@@ -133,7 +133,6 @@ public:
     {
         const ShaderResourceCacheD3D12& ResourceCache;
         CommandContext&                 Ctx;
-        const DeviceContextD3D12Impl*   pDeviceCtx;
         DeviceContextIndex              DeviceCtxId;
         bool                            IsCompute;
         Uint32                          BaseRootIndex;
@@ -154,7 +153,8 @@ public:
 
 #ifdef DILIGENT_DEVELOPMENT
     /// Verifies committed resource using the resource attributes from the PSO.
-    bool DvpValidateCommittedResource(const D3DShaderResourceAttribs& D3DAttribs,
+    bool DvpValidateCommittedResource(const DeviceContextD3D12Impl*   pDeviceCtx,
+                                      const D3DShaderResourceAttribs& D3DAttribs,
                                       Uint32                          ResIndex,
                                       const ShaderResourceCacheD3D12& ResourceCache,
                                       const char*                     ShaderName,

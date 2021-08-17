@@ -335,7 +335,6 @@ void DeviceContextD3D12Impl::CommitRootTablesAndViews(RootTableInfo& RootInfo, U
             {
                 *pResourceCache,
                 CmdCtx,
-                this,
                 GetContextId(),
                 IsCompute,
                 RootSig.GetBaseRootIndex(sign) //
@@ -428,7 +427,7 @@ void DeviceContextD3D12Impl::DvpValidateCommittedShaderResources(RootTableInfo& 
                                   return m_pPipelineState->GetRootSignature().GetResourceSignature(idx);
                               });
 
-    m_pPipelineState->DvpVerifySRBResources(RootInfo.ResourceCaches);
+    m_pPipelineState->DvpVerifySRBResources(this, RootInfo.ResourceCaches);
     RootInfo.ResourcesValidated = true;
 }
 #endif

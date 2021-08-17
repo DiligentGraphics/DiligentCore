@@ -775,7 +775,8 @@ void PipelineResourceSignatureVkImpl::CommitDynamicResources(const ShaderResourc
 
 
 #ifdef DILIGENT_DEVELOPMENT
-bool PipelineResourceSignatureVkImpl::DvpValidateCommittedResource(const SPIRVShaderResourceAttribs& SPIRVAttribs,
+bool PipelineResourceSignatureVkImpl::DvpValidateCommittedResource(const DeviceContextVkImpl*        pDeviceCtx,
+                                                                   const SPIRVShaderResourceAttribs& SPIRVAttribs,
                                                                    Uint32                            ResIndex,
                                                                    const ShaderResourceCacheVk&      ResourceCache,
                                                                    const char*                       ShaderName,
@@ -839,6 +840,8 @@ bool PipelineResourceSignatureVkImpl::DvpValidateCommittedResource(const SPIRVSh
                 // is bound. It will be null if the type is incorrect.
                 if (const auto* pBufferVk = Res.pObject.RawPtr<BufferVkImpl>())
                 {
+                    pBufferVk->DvpVerifyDynamicAllocation(pDeviceCtx);
+
                     if ((pBufferVk->GetDesc().uiSizeInBytes < SPIRVAttribs.BufferStaticSize) &&
                         (GetDevice()->GetValidationFlags() & VALIDATION_FLAG_CHECK_SHADER_BUFFER_SIZE) != 0)
                     {
@@ -864,6 +867,8 @@ bool PipelineResourceSignatureVkImpl::DvpValidateCommittedResource(const SPIRVSh
                     const auto* pBufferVk = ValidatedCast<BufferVkImpl>(pBufferViewVk->GetBuffer());
                     const auto& ViewDesc  = pBufferViewVk->GetDesc();
                     const auto& BuffDesc  = pBufferVk->GetDesc();
+
+                    pBufferVk->DvpVerifyDynamicAllocation(pDeviceCtx);
 
                     if (BuffDesc.ElementByteStride == 0)
                     {

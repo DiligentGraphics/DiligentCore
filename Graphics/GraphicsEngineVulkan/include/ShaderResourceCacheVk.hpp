@@ -255,7 +255,7 @@ public:
     template <bool VerifyOnly>
     void TransitionResources(DeviceContextVkImpl* pCtxVkImpl);
 
-    __forceinline Uint32 GetDynamicBufferOffsets(DeviceContextIndex CtxId, DeviceContextVkImpl* pCtxVkImpl, std::vector<uint32_t>& Offsets) const;
+    __forceinline Uint32 GetDynamicBufferOffsets(DeviceContextIndex CtxId, std::vector<uint32_t>& Offsets) const;
 
 private:
     Resource* GetFirstResourcePtr()
@@ -292,7 +292,6 @@ private:
 };
 
 __forceinline Uint32 ShaderResourceCacheVk::GetDynamicBufferOffsets(DeviceContextIndex     CtxId,
-                                                                    DeviceContextVkImpl*   pCtxVkImpl,
                                                                     std::vector<uint32_t>& Offsets) const
 {
     // If any of the sets being bound include dynamic uniform or storage buffers, then
@@ -319,7 +318,10 @@ __forceinline Uint32 ShaderResourceCacheVk::GetDynamicBufferOffsets(DeviceContex
             if (Res.Type == DescriptorType::UniformBufferDynamic)
             {
                 const auto* pBufferVk = Res.pObject.RawPtr<const BufferVkImpl>();
-                const auto  Offset    = pBufferVk != nullptr ? pBufferVk->GetDynamicOffset(CtxId, pCtxVkImpl) : 0;
+                // Do not verify dynamic allocation here as there may be some buffers that are not used by the PSO.
+                // The allocations of the buffers that are actually used will be verified by
+                // PipelineResourceSignatureVkImpl::DvpValidateCommittedResource().
+                const auto Offset = pBufferVk != nullptr ? pBufferVk->GetDynamicOffset(CtxId, nullptr /* Do not verify allocation*/) : 0;
                 // The effective offset used for dynamic uniform and storage buffer bindings is the sum of the relative
                 // offset taken from pDynamicOffsets, and the base address of the buffer plus base offset in the descriptor set.
                 // The range of the dynamic uniform and storage buffer bindings is the buffer range as specified in the descriptor set.
@@ -338,7 +340,10 @@ __forceinline Uint32 ShaderResourceCacheVk::GetDynamicBufferOffsets(DeviceContex
             {
                 const auto* pBufferVkView = Res.pObject.RawPtr<const BufferViewVkImpl>();
                 const auto* pBufferVk     = pBufferVkView != nullptr ? pBufferVkView->GetBuffer<const BufferVkImpl>() : nullptr;
-                const auto  Offset        = pBufferVk != nullptr ? pBufferVk->GetDynamicOffset(CtxId, pCtxVkImpl) : 0;
+                // Do not verify dynamic allocation here as there may be some buffers that are not used by the PSO.
+                // The allocations of the buffers that are actually used will be verified by
+                // PipelineResourceSignatureVkImpl::DvpValidateCommittedResource().
+                const auto Offset = pBufferVk != nullptr ? pBufferVk->GetDynamicOffset(CtxId, nullptr /* Do not verify allocation*/) : 0;
                 // The effective offset used for dynamic uniform and storage buffer bindings is the sum of the relative
                 // offset taken from pDynamicOffsets, and the base address of the buffer plus base offset in the descriptor set.
                 // The range of the dynamic uniform and storage buffer bindings is the buffer range as specified in the descriptor set.

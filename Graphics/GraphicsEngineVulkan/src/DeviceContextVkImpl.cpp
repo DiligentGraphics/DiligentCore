@@ -426,7 +426,7 @@ void DeviceContextVkImpl::CommitDescriptorSets(ResourceBindInfo& BindInfo, Uint3
             VERIFY(m_DynamicBufferOffsets.size() >= SetInfo.DynamicOffsetCount,
                    "m_DynamicBufferOffsets must've been resized by CommitShaderResources() to have enough space");
 
-            auto NumOffsetsWritten = pResourceCache->GetDynamicBufferOffsets(GetContextId(), this, m_DynamicBufferOffsets);
+            auto NumOffsetsWritten = pResourceCache->GetDynamicBufferOffsets(GetContextId(), m_DynamicBufferOffsets);
             VERIFY_EXPR(NumOffsetsWritten == SetInfo.DynamicOffsetCount);
         }
 
@@ -482,7 +482,7 @@ void DeviceContextVkImpl::DvpValidateCommittedShaderResources(ResourceBindInfo& 
                       "; one of the resource signatures with lower binding index is not compatible.");
     }
 
-    m_pPipelineState->DvpVerifySRBResources(BindInfo.ResourceCaches);
+    m_pPipelineState->DvpVerifySRBResources(this, BindInfo.ResourceCaches);
 
     BindInfo.ResourcesValidated = true;
 }
