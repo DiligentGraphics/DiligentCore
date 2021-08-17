@@ -655,10 +655,10 @@ inline ShaderResourceCacheD3D11::MinMaxSlot ShaderResourceCacheD3D11::BindCBs(
             Slots.Add(Slot);
         }
 
-#ifdef DILIGENT_DEVELOPMENT
-        if (pd3d11CB == nullptr)
-            LOG_ERROR(CachedResourceTraits<Range>::Name, " at slot ", Slot, " is null.");
-#endif
+        // Note that a dynamic constant buffer is allowed to be null if it is not used by the PSO.
+        // Resources actually used by the PSO will be validated by PipelineStateD3D11Impl::DvpVerifySRBResources and
+        // null resources will be reported.
+
         CommittedD3D11Resources[Slot] = pd3d11CB;
         FirstConstants[Slot]          = FirstCBConstant;
         NumConstants[Slot]            = NumCBConstants;
@@ -699,10 +699,10 @@ inline void ShaderResourceCacheD3D11::BindDynamicCBs(Uint32                     
             NumConstants[Slot]            != NumCBConstants)
         // clang-format on
         {
-#ifdef DILIGENT_DEVELOPMENT
-            if (pd3d11CB == nullptr)
-                LOG_ERROR(CachedResourceTraits<Range>::Name, " at slot ", Slot, " is null.");
-#endif
+            // Note that a dynamic constant buffer is allowed to be null if it is not used by the PSO.
+            // Resources actually used by the PSO will be validated by PipelineStateD3D11Impl::DvpVerifySRBResources and
+            // null resources will be reported.
+
             CommittedD3D11Resources[Slot] = pd3d11CB;
             FirstConstants[Slot]          = FirstCBConstant;
             NumConstants[Slot]            = NumCBConstants;

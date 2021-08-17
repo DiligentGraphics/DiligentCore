@@ -185,13 +185,6 @@ TEST_P(NullConstantBuffer, Test)
     pEnv->PushExpectedErrorSubstring("No resource is bound to variable 'MissingPSBuffer'");
     pEnv->PushExpectedErrorSubstring("No resource is bound to variable 'MissingVSBuffer'", false);
 
-    if (DeviceInfo.Type == RENDER_DEVICE_TYPE_D3D11)
-    {
-        pEnv->SetErrorAllowance(4);
-        pEnv->PushExpectedErrorSubstring("Constant buffer at slot 0 is null", false);
-        pEnv->PushExpectedErrorSubstring("Constant buffer at slot 0 is null", false);
-    }
-
     DrawWithNullResources(pVS, pPS, VarType);
 }
 
