@@ -107,19 +107,16 @@ public:
                                                     Uint32      RTWidth,
                                                     Uint32      RTHeight) override final;
 
-    /// Implementation of IDeviceContext::SetRenderTargets() in OpenGL backend.
-    virtual void DILIGENT_CALL_TYPE SetRenderTargets(Uint32                         NumRenderTargets,
-                                                     ITextureView*                  ppRenderTargets[],
-                                                     ITextureView*                  pDepthStencil,
-                                                     RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) override final;
+    /// Implementation of IDeviceContext::SetRenderTargetsExt() in OpenGL backend.
+    virtual void DILIGENT_CALL_TYPE SetRenderTargetsExt(const SetRenderTargetsAttribs& Attribs) override final;
 
-    /// Implementation of IDeviceContext::BeginRenderPass() in Direct3D11 backend.
+    /// Implementation of IDeviceContext::BeginRenderPass() in OpenGL backend.
     virtual void DILIGENT_CALL_TYPE BeginRenderPass(const BeginRenderPassAttribs& Attribs) override final;
 
-    /// Implementation of IDeviceContext::NextSubpass() in Direct3D11 backend.
+    /// Implementation of IDeviceContext::NextSubpass() in OpenGL backend.
     virtual void DILIGENT_CALL_TYPE NextSubpass() override final;
 
-    /// Implementation of IDeviceContext::EndRenderPass() in Direct3D11 backend.
+    /// Implementation of IDeviceContext::EndRenderPass() in OpenGL backend.
     virtual void DILIGENT_CALL_TYPE EndRenderPass() override final;
 
     // clang-format off
@@ -289,10 +286,6 @@ public:
     virtual void DILIGENT_CALL_TYPE SetShadingRate(SHADING_RATE          BaseRate,
                                                    SHADING_RATE_COMBINER PrimitiveCombiner,
                                                    SHADING_RATE_COMBINER TextureCombiner) override final;
-
-    /// Implementation of IDeviceContext::SetShadingRateTexture() in OpenGL backend.
-    virtual void DILIGENT_CALL_TYPE SetShadingRateTexture(ITextureView*                  pShadingRateView,
-                                                          RESOURCE_STATE_TRANSITION_MODE TransitionMode) override final;
 
     /// Implementation of IDeviceContextGL::UpdateCurrentGLContext().
     virtual bool DILIGENT_CALL_TYPE UpdateCurrentGLContext() override final;

@@ -698,8 +698,6 @@ void DeviceContextVkImpl::PrepareForDraw(DRAW_FLAGS Flags)
 
     VERIFY(m_vkRenderPass != VK_NULL_HANDLE, "No render pass is active while executing draw command");
     VERIFY(m_vkFramebuffer != VK_NULL_HANDLE, "No framebuffer is bound while executing draw command");
-
-    DvpVerifyShadingRateMode();
 #endif
 
     EnsureVkCmdBuffer();
@@ -1580,19 +1578,31 @@ void DeviceContextVkImpl::TransitionRenderTargets(RESOURCE_STATE_TRANSITION_MODE
 
     if (m_pBoundDepthStencil)
     {
-        auto* pDepthBufferVk = ValidatedCast<TextureVkImpl>(m_pBoundDepthStencil->GetTexture());
+        auto* pDepthBufferVk = m_pBoundDepthStencil->GetTexture<TextureVkImpl>();
         TransitionOrVerifyTextureState(*pDepthBufferVk, StateTransitionMode, RESOURCE_STATE_DEPTH_WRITE, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
                                        "Binding depth-stencil buffer (DeviceContextVkImpl::TransitionRenderTargets)");
     }
 
     for (Uint32 rt = 0; rt < m_NumBoundRenderTargets; ++rt)
     {
-        if (ITextureView* pRTVVk = m_pBoundRenderTargets[rt].RawPtr())
+        if (auto& pRTVVk = m_pBoundRenderTargets[rt])
         {
-            auto* pRenderTargetVk = ValidatedCast<TextureVkImpl>(pRTVVk->GetTexture());
+            auto* pRenderTargetVk = pRTVVk->GetTexture<TextureVkImpl>();
             TransitionOrVerifyTextureState(*pRenderTargetVk, StateTransitionMode, RESOURCE_STATE_RENDER_TARGET, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                                            "Binding render targets (DeviceContextVkImpl::TransitionRenderTargets)");
         }
+    }
+
+    if (m_pBoundShadingRateTexture)
+    {
+        const auto& ExtFeatures       = m_pDevice->GetLogicalDevice().GetEnabledExtFeatures();
+        auto*       pShadingRateMapVk = m_pBoundShadingRateTexture->GetTexture<TextureVkImpl>();
+        VERIFY_EXPR((ExtFeatures.ShadingRate.attachmentFragmentShadingRate != VK_FALSE) ^ (ExtFeatures.FragmentDensityMap.fragmentDensityMap != VK_FALSE));
+        const auto vkRequiredLayout = ExtFeatures.ShadingRate.attachmentFragmentShadingRate ?
+            VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR :
+            VK_IMAGE_LAYOUT_FRAGMENT_DENSITY_MAP_OPTIMAL_EXT;
+        TransitionOrVerifyTextureState(*pShadingRateMapVk, StateTransitionMode, RESOURCE_STATE_SHADING_RATE, vkRequiredLayout,
+                                       "Binding shading rate map (DeviceContextVkImpl::TransitionRenderTargets)");
     }
 }
 
@@ -1666,7 +1676,8 @@ void DeviceContextVkImpl::ChooseRenderPassAndFramebuffer()
     }
     else
     {
-        FBKey.ShadingRate = VK_NULL_HANDLE;
+        FBKey.ShadingRate       = VK_NULL_HANDLE;
+        RenderPassKey.EnableVRS = false;
     }
 
     auto& FBCache = m_pDevice->GetFramebufferCache();
@@ -1678,14 +1689,11 @@ void DeviceContextVkImpl::ChooseRenderPassAndFramebuffer()
     m_vkFramebuffer        = FBCache.GetFramebuffer(FBKey, m_FramebufferWidth, m_FramebufferHeight, m_FramebufferSlices);
 }
 
-void DeviceContextVkImpl::SetRenderTargets(Uint32                         NumRenderTargets,
-                                           ITextureView*                  ppRenderTargets[],
-                                           ITextureView*                  pDepthStencil,
-                                           RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
+void DeviceContextVkImpl::SetRenderTargetsExt(const SetRenderTargetsAttribs& Attribs)
 {
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "Calling SetRenderTargets inside active render pass is invalid. End the render pass first");
 
-    if (TDeviceContextBase::SetRenderTargets(NumRenderTargets, ppRenderTargets, pDepthStencil))
+    if (TDeviceContextBase::SetRenderTargets(Attribs))
     {
         ChooseRenderPassAndFramebuffer();
 
@@ -1697,7 +1705,7 @@ void DeviceContextVkImpl::SetRenderTargets(Uint32                         NumRen
     // CommitRenderPassAndFramebuffer() until draw call, otherwise we may have to
     // to end render pass and begin it again if we need to transition any resource
     // (for instance when CommitShaderResources() is called after SetRenderTargets())
-    TransitionRenderTargets(StateTransitionMode);
+    TransitionRenderTargets(Attribs.StateTransitionMode);
 }
 
 void DeviceContextVkImpl::ResetRenderTargets()
@@ -3649,30 +3657,6 @@ void DeviceContextVkImpl::SetShadingRate(SHADING_RATE BaseRate, SHADING_RATE_COM
     }
     else
         UNEXPECTED("VariableRateShading device feature is not enabled");
-}
-
-void DeviceContextVkImpl::SetShadingRateTexture(ITextureView* pShadingRateView, RESOURCE_STATE_TRANSITION_MODE TransitionMode)
-{
-    TDeviceContextBase::SetShadingRateTexture(pShadingRateView, TransitionMode, 0);
-
-    auto* const pTexViewVk  = ValidatedCast<TextureViewVkImpl>(pShadingRateView);
-    auto* const pTexVk      = pTexViewVk->GetTexture<TextureVkImpl>();
-    const auto& ExtFeatures = m_pDevice->GetLogicalDevice().GetEnabledExtFeatures();
-
-    if (ExtFeatures.ShadingRate.attachmentFragmentShadingRate != VK_FALSE ||
-        ExtFeatures.FragmentDensityMap.fragmentDensityMap != VK_FALSE)
-    {
-        VERIFY_EXPR((ExtFeatures.ShadingRate.attachmentFragmentShadingRate != VK_FALSE) ^ (ExtFeatures.FragmentDensityMap.fragmentDensityMap != VK_FALSE));
-        const auto vkRequiredLayout = ExtFeatures.ShadingRate.attachmentFragmentShadingRate ?
-            VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR :
-            VK_IMAGE_LAYOUT_FRAGMENT_DENSITY_MAP_OPTIMAL_EXT;
-        TransitionOrVerifyTextureState(*pTexVk, TransitionMode, RESOURCE_STATE_SHADING_RATE, vkRequiredLayout, "Shading rate texture (IDeviceContext::SetShadingRateTexture)");
-        ChooseRenderPassAndFramebuffer();
-    }
-    else
-    {
-        UNEXPECTED("VariableRateShading device feature is not enabled");
-    }
 }
 
 } // namespace Diligent

@@ -510,14 +510,18 @@ TEST(VariableShadingRateTest, TextureBased)
     auto pSRView = CreateShadingRateTexture(pDevice, pSwapChain);
     ASSERT_NE(pSRView, nullptr);
 
-    ITextureView* pRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
-    pContext->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    ITextureView*           pRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
+    SetRenderTargetsAttribs RTAttrs;
+    RTAttrs.NumRenderTargets    = 1;
+    RTAttrs.ppRenderTargets     = pRTVs;
+    RTAttrs.pShadingRateMap     = pSRView;
+    RTAttrs.StateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+    pContext->SetRenderTargetsExt(RTAttrs);
 
     const float ClearColor[] = {0.f, 0.f, 0.f, 0.f};
     pContext->ClearRenderTarget(pRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
     pContext->SetShadingRate(SHADING_RATE_1X1, SHADING_RATE_COMBINER_PASSTHROUGH, SHADING_RATE_COMBINER_OVERRIDE);
-    pContext->SetShadingRateTexture(pSRView, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
     pContext->SetPipelineState(pPSO);
 
@@ -666,14 +670,18 @@ TEST(VariableShadingRateTest, TextureBasedMultiViewport)
 
     // Draw
     {
-        ITextureView* pRTVs[] = {pRTArray->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET)};
-        pContext->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        ITextureView*           pRTVs[] = {pRTArray->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET)};
+        SetRenderTargetsAttribs RTAttrs;
+        RTAttrs.NumRenderTargets    = 1;
+        RTAttrs.ppRenderTargets     = pRTVs;
+        RTAttrs.pShadingRateMap     = pSRView;
+        RTAttrs.StateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+        pContext->SetRenderTargetsExt(RTAttrs);
 
         const float ClearColor[] = {0.f, 0.f, 0.f, 0.f};
         pContext->ClearRenderTarget(pRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
         pContext->SetShadingRate(SHADING_RATE_1X1, SHADING_RATE_COMBINER_PASSTHROUGH, SHADING_RATE_COMBINER_OVERRIDE);
-        pContext->SetShadingRateTexture(pSRView, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
         pContext->SetPipelineState(pPSO);
 

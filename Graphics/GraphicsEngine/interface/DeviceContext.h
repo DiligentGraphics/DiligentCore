@@ -877,6 +877,51 @@ struct CopyTextureAttribs
 typedef struct CopyTextureAttribs CopyTextureAttribs;
 
 
+/// SetRenderTargetsExt command attributes.
+
+/// This structure is used by IDeviceContext::SetRenderTargetsExt().
+struct SetRenderTargetsAttribs
+{
+    /// Number of render targets to bind.
+    Uint32                         NumRenderTargets     DEFAULT_INITIALIZER(0);
+    
+    /// Array of pointers to ITextureView that represent the render
+    /// targets to bind to the device. The type of each view in the
+    /// array must be Diligent::TEXTURE_VIEW_RENDER_TARGET.
+    ITextureView**                 ppRenderTargets      DEFAULT_INITIALIZER(nullptr);
+    
+    /// Pointer to the ITextureView that represents the depth stencil to
+    /// bind to the device. The view type must be
+    /// Diligent::TEXTURE_VIEW_DEPTH_STENCIL.
+    ITextureView*                  pDepthStencil        DEFAULT_INITIALIZER(nullptr);
+    
+    /// Shading rate texture view. Set null to disable variable rate shading.
+    /// ITextureView for Direct3D12 and Vulkan, IRasterizationRateMapMtl for Metal.
+    IDeviceObject*                 pShadingRateMap      DEFAULT_INITIALIZER(nullptr);
+    
+    /// State transition mode of the render targets, depth stencil buffer 
+    /// and shading rate map being set (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
+    RESOURCE_STATE_TRANSITION_MODE StateTransitionMode  DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
+    
+#if DILIGENT_CPP_INTERFACE
+    SetRenderTargetsAttribs() noexcept {}
+
+    SetRenderTargetsAttribs(Uint32                         _NumRenderTargets,
+                            ITextureView*                  _ppRenderTargets[],
+                            ITextureView*                  _pDepthStencil       = nullptr,
+                            RESOURCE_STATE_TRANSITION_MODE _StateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE,
+                            IDeviceObject*                 _pShadingRateMap     = nullptr) noexcept :
+        NumRenderTargets   {_NumRenderTargets   },
+        ppRenderTargets    {_ppRenderTargets    },
+        pDepthStencil      {_pDepthStencil      },
+        pShadingRateMap    {_pShadingRateMap    },
+        StateTransitionMode{_StateTransitionMode}
+    {}
+#endif
+};
+typedef struct SetRenderTargetsAttribs SetRenderTargetsAttribs;
+
+
 /// BeginRenderPass command attributes.
 
 /// This structure is used by IDeviceContext::BeginRenderPass().
@@ -1926,6 +1971,22 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
                                           ITextureView*                  ppRenderTargets[],
                                           ITextureView*                  pDepthStencil,
                                           RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) PURE;
+    
+
+    /// Binds one or more render targets, the depth-stencil buffer and shading rate map to the context.
+    /// It also sets the viewport to match the first non-null render target or depth-stencil buffer.
+    
+    /// \param [in] Attribs - The command attributes, see Diligent::SetRenderTargetsAttribs for details.
+    /// 
+    /// \remarks     The device context will keep strong references to all bound render target
+    ///              and depth-stencil views as well as to shading rate map. Thus these views
+    ///              (and consequently referenced textures) cannot be released until they are
+    ///              unbound from the context.\n
+    ///              Any render targets not defined by this call are set to nullptr.
+    ///
+    /// \remarks Supported contexts: graphics.
+    VIRTUAL void METHOD(SetRenderTargetsExt)(THIS_
+                                             const SetRenderTargetsAttribs REF Attribs) PURE;
 
 
     /// Begins a new render pass.
@@ -2780,14 +2841,14 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// \param [in] BaseRate          - Base shading rate used for combiner operations.
     /// \param [in] PrimitiveCombiner - Combiner operation for the per primitive shading rate (the output of the vertex shader).
     /// \param [in] TextureCombiner   - Combiner operation for texture-based shading rate (fetched from the shading rate texture),
-    ///                                 see IDeviceContext::SetShadingRateTexture() and SubpassDesc::pShadingRateAttachment.
+    ///                                 see SetRenderTargetsAttribs::pShadingRateMap and SubpassDesc::pShadingRateAttachment.
     ///
     /// \remarks  The final shading rate is calculated before the triangle is rasterized by the following algorithm:
     ///               PrimitiveRate = ApplyCombiner(PrimitiveCombiner, BaseRate, PerPrimitiveRate)
     ///               FinalRate     = ApplyCombiner(TextureCombiner, PrimitiveRate, TextureRate)
     ///           Where
     ///               PerPrimitiveRate - vertex shader output value (HLSL: SV_ShadingRate; GLSL: gl_PrimitiveShadingRateEXT).
-    ///               TextureRate      - texel value from the shading rate texture, see IDeviceContext::SetShadingRateTexture().
+    ///               TextureRate      - texel value from the shading rate texture, see SetRenderTargetsAttribs::pShadingRateMap.
     /// 
     ///               SHADING_RATE ApplyCombiner(SHADING_RATE_COMBINER Combiner, SHADING_RATE OriginalRate, SHADING_RATE NewRate)
     ///               {
@@ -2810,16 +2871,6 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
                                         SHADING_RATE          BaseRate,
                                         SHADING_RATE_COMBINER PrimitiveCombiner,
                                         SHADING_RATE_COMBINER TextureCombiner) PURE;
-
-    /// Sets the shading rate texture.
-
-    /// \param [in] pShadingRateView - Shading rate texture view. Set null to disable variable shading rate.
-    /// \param [in] TransitionMode   - Texture state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
-    ///
-    /// \remarks Supported contexts: graphics.
-    VIRTUAL void METHOD(SetShadingRateTexture)(THIS_
-                                               ITextureView*                  pShadingRateView,
-                                               RESOURCE_STATE_TRANSITION_MODE TransitionMode) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -2842,6 +2893,7 @@ DILIGENT_END_INTERFACE
 #    define IDeviceContext_SetViewports(This, ...)              CALL_IFACE_METHOD(DeviceContext, SetViewports,              This, __VA_ARGS__)
 #    define IDeviceContext_SetScissorRects(This, ...)           CALL_IFACE_METHOD(DeviceContext, SetScissorRects,           This, __VA_ARGS__)
 #    define IDeviceContext_SetRenderTargets(This, ...)          CALL_IFACE_METHOD(DeviceContext, SetRenderTargets,          This, __VA_ARGS__)
+#    define IDeviceContext_SetRenderTargetsExt(This, ...)       CALL_IFACE_METHOD(DeviceContext, SetRenderTargetsExt,       This, __VA_ARGS__)
 #    define IDeviceContext_BeginRenderPass(This, ...)           CALL_IFACE_METHOD(DeviceContext, BeginRenderPass,           This, __VA_ARGS__)
 #    define IDeviceContext_NextSubpass(This)                    CALL_IFACE_METHOD(DeviceContext, NextSubpass,               This)
 #    define IDeviceContext_EndRenderPass(This)                  CALL_IFACE_METHOD(DeviceContext, EndRenderPass,             This)
@@ -2896,7 +2948,6 @@ DILIGENT_END_INTERFACE
 #    define IDeviceContext_LockCommandQueue(This)               CALL_IFACE_METHOD(DeviceContext, LockCommandQueue,          This)
 #    define IDeviceContext_UnlockCommandQueue(This)             CALL_IFACE_METHOD(DeviceContext, UnlockCommandQueue,        This)
 #    define IDeviceContext_SetShadingRate(This, ...)            CALL_IFACE_METHOD(DeviceContext, SetShadingRate,            This, __VA_ARGS__)
-#    define IDeviceContext_SetShadingRateTexture(This, ...)     CALL_IFACE_METHOD(DeviceContext, SetShadingRateTexture,     This, __VA_ARGS__)
 
 // clang-format on
 

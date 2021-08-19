@@ -50,6 +50,7 @@ void TestDeviceContextCInterface(struct IDeviceContext* pCtx)
     IDeviceContext_SetViewports(pCtx, 1u, (const struct Viewport*)NULL, 512u, 512u);
     IDeviceContext_SetScissorRects(pCtx, 1u, (const struct Rect*)NULL, 512u, 512u);
     IDeviceContext_SetRenderTargets(pCtx, 1u, (struct ITextureView**)NULL, (struct ITextureView*)NULL, RESOURCE_STATE_TRANSITION_MODE_NONE);
+    IDeviceContext_SetRenderTargetsExt(pCtx, (struct SetRenderTargetsAttribs*)NULL);
     IDeviceContext_BeginRenderPass(pCtx, (const struct BeginRenderPassAttribs*)NULL);
     IDeviceContext_NextSubpass(pCtx);
     IDeviceContext_EndRenderPass(pCtx);
@@ -119,5 +120,4 @@ void TestDeviceContextCInterface(struct IDeviceContext* pCtx)
     IDeviceContext_GetTileSize(pCtx, (Uint32*)NULL, (Uint32*)NULL);
 
     IDeviceContext_SetShadingRate(pCtx, SHADING_RATE_1X1, SHADING_RATE_COMBINER_PASSTHROUGH, SHADING_RATE_COMBINER_PASSTHROUGH);
-    IDeviceContext_SetShadingRateTexture(pCtx, (ITextureView*)NULL, RESOURCE_STATE_TRANSITION_MODE_NONE);
 }

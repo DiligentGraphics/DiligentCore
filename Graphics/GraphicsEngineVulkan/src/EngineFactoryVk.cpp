@@ -355,7 +355,7 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
                 VERIFY_EXPR((Src.fragmentSize.width == 1 && Src.fragmentSize.height == 1) ||
                             (Uint32{Src.sampleCounts} <= ((static_cast<Uint32>(vkDeviceExtProps.ShadingRate.maxFragmentShadingRateRasterizationSamples) << 1) - 1)));
 
-                Dst.SampleBits = static_cast<Uint8>(Src.sampleCounts); // AZ TODO
+                Dst.SampleBits = static_cast<Uint8>(Src.sampleCounts);
                 Dst.Rate       = VkFragmentSizeToShadingRate(Src.fragmentSize);
             }
         }

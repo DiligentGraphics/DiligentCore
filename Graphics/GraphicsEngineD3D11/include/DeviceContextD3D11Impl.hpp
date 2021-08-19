@@ -110,11 +110,8 @@ public:
                                                     Uint32      RTWidth,
                                                     Uint32      RTHeight) override final;
 
-    /// Implementation of IDeviceContext::SetRenderTargets() in Direct3D11 backend.
-    virtual void DILIGENT_CALL_TYPE SetRenderTargets(Uint32                         NumRenderTargets,
-                                                     ITextureView*                  ppRenderTargets[],
-                                                     ITextureView*                  pDepthStencil,
-                                                     RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) override final;
+    /// Implementation of IDeviceContext::SetRenderTargetsExt() in Direct3D11 backend.
+    virtual void DILIGENT_CALL_TYPE SetRenderTargetsExt(const SetRenderTargetsAttribs& Attribs) override final;
 
     /// Implementation of IDeviceContext::BeginRenderPass() in Direct3D11 backend.
     virtual void DILIGENT_CALL_TYPE BeginRenderPass(const BeginRenderPassAttribs& Attribs) override final;
@@ -286,10 +283,6 @@ public:
     void DILIGENT_CALL_TYPE SetShadingRate(SHADING_RATE          BaseRate,
                                            SHADING_RATE_COMBINER PrimitiveCombiner,
                                            SHADING_RATE_COMBINER TextureCombiner) override final;
-
-    /// Implementation of IDeviceContext::SetShadingRateTexture() in Direct3D11 backend.
-    void DILIGENT_CALL_TYPE SetShadingRateTexture(ITextureView*                  pShadingRateView,
-                                                  RESOURCE_STATE_TRANSITION_MODE TransitionMode) override final;
 
     /// Implementation of IDeviceContextD3D11::GetD3D11DeviceContext().
     virtual ID3D11DeviceContext* DILIGENT_CALL_TYPE GetD3D11DeviceContext() override final { return m_pd3d11DeviceContext; }

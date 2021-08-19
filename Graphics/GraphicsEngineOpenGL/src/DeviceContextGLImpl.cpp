@@ -395,14 +395,11 @@ void DeviceContextGLImpl::CommitRenderTargets()
     SetViewports(1, nullptr, 0, 0);
 }
 
-void DeviceContextGLImpl::SetRenderTargets(Uint32                         NumRenderTargets,
-                                           ITextureView*                  ppRenderTargets[],
-                                           ITextureView*                  pDepthStencil,
-                                           RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
+void DeviceContextGLImpl::SetRenderTargetsExt(const SetRenderTargetsAttribs& Attribs)
 {
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "Calling SetRenderTargets inside active render pass is invalid. End the render pass first");
 
-    if (TDeviceContextBase::SetRenderTargets(NumRenderTargets, ppRenderTargets, pDepthStencil))
+    if (TDeviceContextBase::SetRenderTargets(Attribs))
     {
         if (m_NumBoundRenderTargets == 1 && m_pBoundRenderTargets[0] && m_pBoundRenderTargets[0]->GetTexture<TextureBaseGL>()->GetGLHandle() == 0)
         {
@@ -1646,11 +1643,6 @@ void DeviceContextGLImpl::UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndir
 void DeviceContextGLImpl::SetShadingRate(SHADING_RATE BaseRate, SHADING_RATE_COMBINER PrimitiveCombiner, SHADING_RATE_COMBINER TextureCombiner)
 {
     UNSUPPORTED("SetShadingRate is not supported in OpenGL");
-}
-
-void DeviceContextGLImpl::SetShadingRateTexture(ITextureView* pShadingRateView, RESOURCE_STATE_TRANSITION_MODE TransitionMode)
-{
-    UNSUPPORTED("SetShadingRateTexture is not supported in OpenGL");
 }
 
 void DeviceContextGLImpl::BeginDebugGroup(const Char* Name, const float* pColor)

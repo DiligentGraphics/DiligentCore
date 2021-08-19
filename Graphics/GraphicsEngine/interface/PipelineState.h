@@ -135,7 +135,7 @@ DILIGENT_TYPED_ENUM(PIPELINE_SHADING_RATE_FLAGS, Uint8)
     PIPELINE_SHADING_RATE_FLAG_PER_PRIMITIVE = 1u << 0u,
 
     /// Indicates that the pipeline state will be used with texture-based shading rate.
-    /// See IDeviceContext::SetShadingRate() and IDeviceContext::SetShadingRateTexture().
+    /// See IDeviceContext::SetShadingRate() and IDeviceContext::SetRenderTargetsExt().
     PIPELINE_SHADING_RATE_FLAG_TEXTURE_BASED = 1u << 1u,
 
     PIPELINE_SHADING_RATE_FLAG_LAST          = PIPELINE_SHADING_RATE_FLAG_TEXTURE_BASED,

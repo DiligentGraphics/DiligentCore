@@ -548,8 +548,6 @@ void DeviceContextD3D12Impl::PrepareForDraw(GraphicsContext& GraphCtx, DRAW_FLAG
 #ifdef DILIGENT_DEVELOPMENT
     if ((Flags & DRAW_FLAG_VERIFY_RENDER_TARGETS) != 0)
         DvpVerifyRenderTargets();
-
-    DvpVerifyShadingRateMode();
 #endif
 
     if (!m_State.bCommittedD3D12VBsUpToDate && m_pPipelineState->GetNumBufferSlotsUsed() > 0)
@@ -1176,18 +1174,31 @@ void DeviceContextD3D12Impl::CommitRenderTargets(RESOURCE_STATE_TRANSITION_MODE 
         // No need to flush resource barriers as this is a CPU-side command
         CmdCtx.AsGraphicsContext().GetCommandList()->OMSetRenderTargets(NumRenderTargets, RTVHandles, FALSE, DSVHandle.ptr != 0 ? &DSVHandle : nullptr);
     }
+
+#ifdef NTDDI_WIN10_19H1
+    if (m_pBoundShadingRateTexture != nullptr)
+    {
+        auto* pTexD3D12 = m_pBoundShadingRateTexture->GetTexture<TextureD3D12Impl>();
+        TransitionOrVerifyTextureState(CmdCtx, *pTexD3D12, StateTransitionMode, RESOURCE_STATE_SHADING_RATE, "Shading rate texture (DeviceContextD3D12Impl::CommitRenderTargets)");
+
+        m_State.bShadingRateMapBound = true;
+        CmdCtx.AsGraphicsContext5().SetShadingRateImage(pTexD3D12->GetD3D12Resource());
+    }
+    else if (m_State.bShadingRateMapBound)
+    {
+        m_State.bShadingRateMapBound = false;
+        CmdCtx.AsGraphicsContext5().SetShadingRateImage(nullptr);
+    }
+#endif
 }
 
-void DeviceContextD3D12Impl::SetRenderTargets(Uint32                         NumRenderTargets,
-                                              ITextureView*                  ppRenderTargets[],
-                                              ITextureView*                  pDepthStencil,
-                                              RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
+void DeviceContextD3D12Impl::SetRenderTargetsExt(const SetRenderTargetsAttribs& Attribs)
 {
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "Calling SetRenderTargets inside active render pass is invalid. End the render pass first");
 
-    if (TDeviceContextBase::SetRenderTargets(NumRenderTargets, ppRenderTargets, pDepthStencil))
+    if (TDeviceContextBase::SetRenderTargets(Attribs))
     {
-        CommitRenderTargets(StateTransitionMode);
+        CommitRenderTargets(Attribs.StateTransitionMode);
 
         // Set the viewport to match the render target size
         SetViewports(1, nullptr, 0, 0);
@@ -2859,24 +2870,6 @@ void DeviceContextD3D12Impl::SetShadingRate(SHADING_RATE BaseRate, SHADING_RATE_
     GetCmdContext().AsGraphicsContext5().SetShadingRate(ShadingRateToD3D12ShadingRate(BaseRate), Combiners);
 
     m_State.bUsingShadingRate = !(BaseRate == SHADING_RATE_1X1 && PrimitiveCombiner == SHADING_RATE_COMBINER_PASSTHROUGH && TextureCombiner == SHADING_RATE_COMBINER_PASSTHROUGH);
-}
-
-void DeviceContextD3D12Impl::SetShadingRateTexture(ITextureView* pShadingRateView, RESOURCE_STATE_TRANSITION_MODE TransitionMode)
-{
-    TDeviceContextBase::SetShadingRateTexture(pShadingRateView, TransitionMode, 0);
-
-    auto&           CmdCtx      = GetCmdContext();
-    ID3D12Resource* pSRResource = nullptr;
-    if (pShadingRateView != nullptr)
-    {
-        auto* pTexViewD3D12 = ValidatedCast<TextureViewD3D12Impl>(pShadingRateView);
-        auto* pTexD3D12     = pTexViewD3D12->GetTexture<TextureD3D12Impl>();
-        TransitionOrVerifyTextureState(CmdCtx, *pTexD3D12, TransitionMode, RESOURCE_STATE_SHADING_RATE, "Shading rate texture (DeviceContextD3D12Impl::SetShadingRateTexture)");
-
-        pSRResource = pTexD3D12->GetD3D12Resource();
-    }
-
-    CmdCtx.AsGraphicsContext5().SetShadingRateImage(pSRResource);
 }
 
 } // namespace Diligent

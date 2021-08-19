@@ -117,11 +117,8 @@ public:
                                                     Uint32      RTWidth,
                                                     Uint32      RTHeight) override final;
 
-    /// Implementation of IDeviceContext::SetRenderTargets() in Direct3D12 backend.
-    virtual void DILIGENT_CALL_TYPE SetRenderTargets(Uint32                         NumRenderTargets,
-                                                     ITextureView*                  ppRenderTargets[],
-                                                     ITextureView*                  pDepthStencil,
-                                                     RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) override final;
+    /// Implementation of IDeviceContext::SetRenderTargetsExt() in Direct3D12 backend.
+    virtual void DILIGENT_CALL_TYPE SetRenderTargetsExt(const SetRenderTargetsAttribs& Attribs) override final;
 
     /// Implementation of IDeviceContext::BeginRenderPass() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE BeginRenderPass(const BeginRenderPassAttribs& Attribs) override final;
@@ -302,10 +299,6 @@ public:
                                                    SHADING_RATE_COMBINER PrimitiveCombiner,
                                                    SHADING_RATE_COMBINER TextureCombiner) override final;
 
-    /// Implementation of IDeviceContext::SetShadingRateTexture() in Direct3D12 backend.
-    virtual void DILIGENT_CALL_TYPE SetShadingRateTexture(ITextureView*                  pShadingRateView,
-                                                          RESOURCE_STATE_TRANSITION_MODE TransitionMode) override final;
-
     void UpdateBufferRegion(class BufferD3D12Impl*         pBuffD3D12,
                             D3D12DynamicAllocation&        Allocation,
                             Uint64                         DstOffset,
@@ -465,6 +458,9 @@ private:
 
         // Indicates if custom shading rate is set in the command list
         bool bUsingShadingRate = false;
+
+        // Indicates if shading rate map was bound in previous CommitRenderTargets() call
+        bool bShadingRateMapBound = false;
     } m_State;
 
     RootTableInfo m_GraphicsResources;

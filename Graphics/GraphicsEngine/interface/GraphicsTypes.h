@@ -2371,10 +2371,16 @@ DILIGENT_TYPED_ENUM(SHADING_RATE_FORMAT, Uint8)
 
     /// Single-channel 8-bit surface that contains Diligent::SHADING_RATE values.
     /// Only 2D and 2D array textures with R8_UNORM format are allowed.
+    ///
+    /// \remarks  Vulkan backend uses VK_KHR_fragment_shading_rate extension
+    ///           and GLSL_EXT_fragment_shading_rate extension for GLSL.
     SHADING_RATE_FORMAT_PALETTE = 1,
 
     /// RG 8-bit UNORM texture that defines shading rate (0.5, 0.25 etc.)
     /// R channel is used for X axis, G channel is used for Y axis.
+    ///
+    /// \remarks  Vulkan backend uses VK_EXT_fragment_density_map extension
+    ///           and GLSL_EXT_fragment_invocation_density extension for GLSL.
     SHADING_RATE_FORMAT_UNORM8  = 2,
 
     /// This format is only used in Metal when shading rate is defined by column/row rates instead
@@ -2467,7 +2473,7 @@ DILIGENT_TYPED_ENUM(SHADING_RATE_CAP_FLAGS, Uint16)
     /// Shading rate is specified by a texture, each texel defines a shading rate for the tile.
     /// Supported tile size is specified in ShadingRateProperties::MinTileSize/MaxTileSize.
     /// Use IDeviceContext::SetShadingRate() to set the base rate and texture combiner.
-    /// Use IDeviceContext::SetShadingRateTexture() to set the shading rate texture.
+    /// Use IDeviceContext::SetRenderTargetsExt() to set the shading rate texture.
     SHADING_RATE_CAP_FLAG_TEXTURE_BASED       = 1u << 2,
 
     /// Allows to set zero bits in GraphicsPipelineDesc::SampleMask

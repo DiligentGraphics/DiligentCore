@@ -1413,10 +1413,7 @@ void DeviceContextD3D11Impl::ResetRenderTargets()
     m_pd3d11DeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
 }
 
-void DeviceContextD3D11Impl::SetRenderTargets(Uint32                         NumRenderTargets,
-                                              ITextureView*                  ppRenderTargets[],
-                                              ITextureView*                  pDepthStencil,
-                                              RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
+void DeviceContextD3D11Impl::SetRenderTargetsExt(const SetRenderTargetsAttribs& Attribs)
 {
 #ifdef DILIGENT_DEVELOPMENT
     if (m_pActiveRenderPass != nullptr)
@@ -1426,21 +1423,21 @@ void DeviceContextD3D11Impl::SetRenderTargets(Uint32                         Num
     }
 #endif
 
-    if (TDeviceContextBase::SetRenderTargets(NumRenderTargets, ppRenderTargets, pDepthStencil))
+    if (TDeviceContextBase::SetRenderTargets(Attribs))
     {
-        for (Uint32 RT = 0; RT < NumRenderTargets; ++RT)
+        for (Uint32 RT = 0; RT < m_NumBoundRenderTargets; ++RT)
         {
-            if (ppRenderTargets[RT])
+            if (m_pBoundRenderTargets[RT])
             {
-                auto* pTex = ValidatedCast<TextureBaseD3D11>(ppRenderTargets[RT]->GetTexture());
-                if (StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
+                auto* pTex = m_pBoundRenderTargets[RT]->GetTexture<TextureBaseD3D11>();
+                if (Attribs.StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
                 {
                     UnbindTextureFromInput(*pTex, pTex->GetD3D11Texture());
                     if (pTex->IsInKnownState())
                         pTex->SetState(RESOURCE_STATE_RENDER_TARGET);
                 }
 #ifdef DILIGENT_DEVELOPMENT
-                else if (StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_VERIFY)
+                else if (Attribs.StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_VERIFY)
                 {
                     DvpVerifyTextureState(*pTex, RESOURCE_STATE_RENDER_TARGET, "Setting render targets (DeviceContextD3D11Impl::SetRenderTargets)");
                 }
@@ -1448,17 +1445,17 @@ void DeviceContextD3D11Impl::SetRenderTargets(Uint32                         Num
             }
         }
 
-        if (pDepthStencil)
+        if (m_pBoundDepthStencil)
         {
-            auto* pTex = ValidatedCast<TextureBaseD3D11>(pDepthStencil->GetTexture());
-            if (StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
+            auto* pTex = m_pBoundDepthStencil->GetTexture<TextureBaseD3D11>();
+            if (Attribs.StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
             {
                 UnbindTextureFromInput(*pTex, pTex->GetD3D11Texture());
                 if (pTex->IsInKnownState())
                     pTex->SetState(RESOURCE_STATE_DEPTH_WRITE);
             }
 #ifdef DILIGENT_DEVELOPMENT
-            else if (StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_VERIFY)
+            else if (Attribs.StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_VERIFY)
             {
                 DvpVerifyTextureState(*pTex, RESOURCE_STATE_DEPTH_WRITE, "Setting depth-stencil buffer (DeviceContextD3D11Impl::SetRenderTargets)");
             }
@@ -2176,11 +2173,6 @@ void DeviceContextD3D11Impl::UpdateSBT(IShaderBindingTable* pSBT, const UpdateIn
 void DeviceContextD3D11Impl::SetShadingRate(SHADING_RATE BaseRate, SHADING_RATE_COMBINER PrimitiveCombiner, SHADING_RATE_COMBINER TextureCombiner)
 {
     UNSUPPORTED("SetShadingRate is not supported in DirectX 11");
-}
-
-void DeviceContextD3D11Impl::SetShadingRateTexture(ITextureView* pShadingRateView, RESOURCE_STATE_TRANSITION_MODE TransitionMode)
-{
-    UNSUPPORTED("SetShadingRateTexture is not supported in DirectX 11");
 }
 
 
