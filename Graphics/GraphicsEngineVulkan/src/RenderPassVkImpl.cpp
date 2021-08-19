@@ -41,14 +41,19 @@ RenderPassVkImpl::RenderPassVkImpl(IReferenceCounters*   pRefCounters,
                                    bool                  IsDeviceInternal) :
     TRenderPassBase{pRefCounters, pDevice, Desc, IsDeviceInternal}
 {
-#if DILIGENT_USE_VOLK
-    if (pDevice->GetLogicalDevice().GetEnabledExtFeatures().RenderPass2 != VK_FALSE)
+    bool UseRenderPass2 = false;
+    for (Uint32 i = 0; i < m_Desc.SubpassCount && !UseRenderPass2; ++i)
+    {
+        const auto& Subpass{m_Desc.pSubpasses[i]};
+        UseRenderPass2 = (Subpass.pShadingRateAttachment != nullptr);
+    }
+    DEV_CHECK_ERR(!UseRenderPass2 || pDevice->GetLogicalDevice().GetEnabledExtFeatures().RenderPass2 != VK_FALSE,
+                  "This render pass requires RenderPass2 Vulkan feature that is not enabled");
+
+    if (UseRenderPass2)
         CreateRenderPass<true>();
     else
         CreateRenderPass<false>();
-#else
-    CreateRenderPass<false>();
-#endif
 }
 
 inline void InitAttachmentDescription(VkAttachmentDescription&) {}
