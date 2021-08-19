@@ -77,9 +77,8 @@ static RenderPassDesc GetImplicitRenderPassDesc(
 
     RenderPassDesc RPDesc;
 
-    RPDesc.AttachmentCount = (DSVFormat != TEX_FORMAT_UNKNOWN ? 1 : 0) + NumRenderTargets + (ShadingRateTexFormat != TEX_FORMAT_UNKNOWN ? 1 : 0);
+    auto& AttachmentInd{RPDesc.AttachmentCount};
 
-    uint32_t             AttachmentInd             = 0;
     AttachmentReference* pDepthAttachmentReference = nullptr;
     if (DSVFormat != TEX_FORMAT_UNKNOWN)
     {
@@ -106,8 +105,16 @@ static RenderPassDesc GetImplicitRenderPassDesc(
     }
 
     AttachmentReference* pColorAttachmentsReference = NumRenderTargets > 0 ? &AttachmentReferences[AttachmentInd] : nullptr;
-    for (Uint32 rt = 0; rt < NumRenderTargets; ++rt, ++AttachmentInd)
+    for (Uint32 rt = 0; rt < NumRenderTargets; ++rt)
     {
+        auto& ColorAttachmentRef = pColorAttachmentsReference[rt];
+
+        if (RTVFormats[rt] == TEX_FORMAT_UNKNOWN)
+        {
+            ColorAttachmentRef.AttachmentIndex = ATTACHMENT_UNUSED;
+            continue;
+        }
+
         auto& ColorAttachment = Attachments[AttachmentInd];
 
         ColorAttachment.Format      = RTVFormats[rt];
@@ -123,9 +130,10 @@ static RenderPassDesc GetImplicitRenderPassDesc(
         ColorAttachment.InitialState   = RESOURCE_STATE_RENDER_TARGET;
         ColorAttachment.FinalState     = RESOURCE_STATE_RENDER_TARGET;
 
-        auto& ColorAttachmentRef           = AttachmentReferences[AttachmentInd];
         ColorAttachmentRef.AttachmentIndex = AttachmentInd;
         ColorAttachmentRef.State           = RESOURCE_STATE_RENDER_TARGET;
+
+        ++AttachmentInd;
     }
 
     if (ShadingRateTexFormat != TEX_FORMAT_UNKNOWN)
@@ -151,7 +159,6 @@ static RenderPassDesc GetImplicitRenderPassDesc(
 
         ++AttachmentInd;
     }
-    VERIFY_EXPR(RPDesc.AttachmentCount == AttachmentInd);
 
     RPDesc.pAttachments    = Attachments.data();
     RPDesc.SubpassCount    = 1;
@@ -218,7 +225,7 @@ RenderPassVkImpl* RenderPassCache::GetRenderPass(const RenderPassCacheKey& Key)
         if (Key.EnableVRS)
             PassNameSS << "; VRS";
 
-        const String PassName{PassNameSS.str()};
+        const auto PassName{PassNameSS.str()};
         RPDesc.Name = PassName.c_str();
 
         RefCntAutoPtr<RenderPassVkImpl> pRenderPass;

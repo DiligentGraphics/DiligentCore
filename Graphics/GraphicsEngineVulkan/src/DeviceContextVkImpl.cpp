@@ -1620,7 +1620,7 @@ void DeviceContextVkImpl::CommitRenderPassAndFramebuffer(bool VerifyStates)
     }
 }
 
-void DeviceContextVkImpl::ChooseRenderPassAndFramebuffer(bool EnableVRS)
+void DeviceContextVkImpl::ChooseRenderPassAndFramebuffer()
 {
     FramebufferCache::FramebufferCacheKey FBKey;
     RenderPassCache::RenderPassCacheKey   RenderPassKey;
@@ -1659,10 +1659,14 @@ void DeviceContextVkImpl::ChooseRenderPassAndFramebuffer(bool EnableVRS)
         }
     }
 
-    if (EnableVRS)
+    if (m_pBoundShadingRateTexture)
     {
         FBKey.ShadingRate       = m_pBoundShadingRateTexture->GetVulkanImageView();
         RenderPassKey.EnableVRS = true;
+    }
+    else
+    {
+        FBKey.ShadingRate = VK_NULL_HANDLE;
     }
 
     auto& FBCache = m_pDevice->GetFramebufferCache();
@@ -1672,9 +1676,6 @@ void DeviceContextVkImpl::ChooseRenderPassAndFramebuffer(bool EnableVRS)
     FBKey.Pass             = m_vkRenderPass;
     FBKey.CommandQueueMask = ~Uint64{0};
     m_vkFramebuffer        = FBCache.GetFramebuffer(FBKey, m_FramebufferWidth, m_FramebufferHeight, m_FramebufferSlices);
-
-    // Set the viewport to match the render target size
-    SetViewports(1, nullptr, 0, 0);
 }
 
 void DeviceContextVkImpl::SetRenderTargets(Uint32                         NumRenderTargets,
@@ -1686,7 +1687,10 @@ void DeviceContextVkImpl::SetRenderTargets(Uint32                         NumRen
 
     if (TDeviceContextBase::SetRenderTargets(NumRenderTargets, ppRenderTargets, pDepthStencil))
     {
-        ChooseRenderPassAndFramebuffer(false);
+        ChooseRenderPassAndFramebuffer();
+
+        // Set the viewport to match the render target size
+        SetViewports(1, nullptr, 0, 0);
     }
 
     // Layout transitions can only be performed outside of render pass, so defer
@@ -2720,11 +2724,12 @@ void DeviceContextVkImpl::TransitionTextureState(TextureVkImpl&           Textur
     // Always add barrier after writes.
     const bool AfterWrite = ResourceStateHasWriteAccess(OldState);
 
-    const bool FragDensityMap = m_pDevice->GetLogicalDevice().GetEnabledExtFeatures().FragmentDensityMap.fragmentDensityMap != VK_FALSE;
-    const auto OldLayout      = (Flags & STATE_TRANSITION_FLAG_DISCARD_CONTENT) != 0 ? VK_IMAGE_LAYOUT_UNDEFINED : ResourceStateToVkImageLayout(OldState, /*IsInsideRenderPass = */ false, FragDensityMap);
-    const auto NewLayout      = ResourceStateToVkImageLayout(NewState, /*IsInsideRenderPass = */ false, FragDensityMap);
-    const auto OldStages      = ResourceStateFlagsToVkPipelineStageFlags(OldState, FragDensityMap);
-    const auto NewStages      = ResourceStateFlagsToVkPipelineStageFlags(NewState, FragDensityMap);
+    const auto& ExtFeatures    = m_pDevice->GetLogicalDevice().GetEnabledExtFeatures();
+    const auto  FragDensityMap = ExtFeatures.FragmentDensityMap.fragmentDensityMap != VK_FALSE;
+    const auto  OldLayout      = (Flags & STATE_TRANSITION_FLAG_DISCARD_CONTENT) != 0 ? VK_IMAGE_LAYOUT_UNDEFINED : ResourceStateToVkImageLayout(OldState, /*IsInsideRenderPass = */ false, FragDensityMap);
+    const auto  NewLayout      = ResourceStateToVkImageLayout(NewState, /*IsInsideRenderPass = */ false, FragDensityMap);
+    const auto  OldStages      = ResourceStateFlagsToVkPipelineStageFlags(OldState, FragDensityMap);
+    const auto  NewStages      = ResourceStateFlagsToVkPipelineStageFlags(NewState, FragDensityMap);
 
     if (((OldState & NewState) != NewState) || OldLayout != NewLayout || AfterWrite)
     {
@@ -3637,7 +3642,7 @@ void DeviceContextVkImpl::SetShadingRate(SHADING_RATE BaseRate, SHADING_RATE_COM
     }
     else if (ExtFeatures.FragmentDensityMap.fragmentDensityMap != VK_FALSE)
     {
-        // ignored
+        // Ignored
         DEV_CHECK_ERR(BaseRate == SHADING_RATE_1X1, "IDeviceContext::SetShadingRate: BaseRate must be SHADING_RATE_1X1");
         DEV_CHECK_ERR(PrimitiveCombiner == SHADING_RATE_COMBINER_PASSTHROUGH, "IDeviceContext::SetShadingRate: PrimitiveCombiner must be SHADING_RATE_COMBINER_PASSTHROUGH");
         DEV_CHECK_ERR(TextureCombiner == SHADING_RATE_COMBINER_OVERRIDE, "IDeviceContext::SetShadingRate: TextureCombiner must be SHADING_RATE_COMBINER_OVERRIDE");
@@ -3650,22 +3655,24 @@ void DeviceContextVkImpl::SetShadingRateTexture(ITextureView* pShadingRateView, 
 {
     TDeviceContextBase::SetShadingRateTexture(pShadingRateView, TransitionMode, 0);
 
-    auto*       pTexViewVk  = ValidatedCast<TextureViewVkImpl>(pShadingRateView);
-    auto*       pTexVk      = ValidatedCast<TextureVkImpl>(pTexViewVk->GetTexture());
+    auto* const pTexViewVk  = ValidatedCast<TextureViewVkImpl>(pShadingRateView);
+    auto* const pTexVk      = pTexViewVk->GetTexture<TextureVkImpl>();
     const auto& ExtFeatures = m_pDevice->GetLogicalDevice().GetEnabledExtFeatures();
 
-    if (ExtFeatures.ShadingRate.attachmentFragmentShadingRate != VK_FALSE)
+    if (ExtFeatures.ShadingRate.attachmentFragmentShadingRate != VK_FALSE ||
+        ExtFeatures.FragmentDensityMap.fragmentDensityMap != VK_FALSE)
     {
-        TransitionOrVerifyTextureState(*pTexVk, TransitionMode, RESOURCE_STATE_SHADING_RATE, VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR, "Shading rate texture (IDeviceContext::SetShadingRateTexture)");
-        ChooseRenderPassAndFramebuffer(true);
-    }
-    else if (ExtFeatures.FragmentDensityMap.fragmentDensityMap != VK_FALSE)
-    {
-        TransitionOrVerifyTextureState(*pTexVk, TransitionMode, RESOURCE_STATE_SHADING_RATE, VK_IMAGE_LAYOUT_FRAGMENT_DENSITY_MAP_OPTIMAL_EXT, "Fragment density map (IDeviceContext::SetShadingRateTexture)");
-        ChooseRenderPassAndFramebuffer(true);
+        VERIFY_EXPR((ExtFeatures.ShadingRate.attachmentFragmentShadingRate != VK_FALSE) ^ (ExtFeatures.FragmentDensityMap.fragmentDensityMap != VK_FALSE));
+        const auto vkRequiredLayout = ExtFeatures.ShadingRate.attachmentFragmentShadingRate ?
+            VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR :
+            VK_IMAGE_LAYOUT_FRAGMENT_DENSITY_MAP_OPTIMAL_EXT;
+        TransitionOrVerifyTextureState(*pTexVk, TransitionMode, RESOURCE_STATE_SHADING_RATE, vkRequiredLayout, "Shading rate texture (IDeviceContext::SetShadingRateTexture)");
+        ChooseRenderPassAndFramebuffer();
     }
     else
+    {
         UNEXPECTED("VariableRateShading device feature is not enabled");
+    }
 }
 
 } // namespace Diligent

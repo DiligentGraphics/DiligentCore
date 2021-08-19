@@ -154,7 +154,7 @@ private:
             MemPool.AddSpace<AttachmentReference>(SrcSubpass.InputAttachmentCount);        // Subpass.pInputAttachments
             MemPool.AddSpace<AttachmentReference>(SrcSubpass.RenderTargetAttachmentCount); // Subpass.pRenderTargetAttachments
 
-            if (SrcSubpass.pResolveAttachments)
+            if (SrcSubpass.pResolveAttachments != nullptr)
                 MemPool.AddSpace<AttachmentReference>(SrcSubpass.RenderTargetAttachmentCount); // Subpass.pResolveAttachments
 
             if (SrcSubpass.pDepthStencilAttachment != nullptr)
@@ -288,6 +288,7 @@ private:
             Desc.pDependencies = MemPool.CopyArray(Desc.pDependencies, Desc.DependencyCount);
     }
 
+private:
     std::unique_ptr<void, STDDeleterRawMem<void>> m_pRawMemory;
 
     // Attachment states during each subpass

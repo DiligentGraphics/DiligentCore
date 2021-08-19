@@ -307,7 +307,7 @@ void ValidateRenderPassDesc(const RenderPassDesc& Desc, IRenderDevice* pDevice) 
 
         if (Subpass.pShadingRateAttachment != nullptr)
         {
-            pShadingRateAttachment = pShadingRateAttachment ? pShadingRateAttachment : Subpass.pShadingRateAttachment;
+            pShadingRateAttachment = pShadingRateAttachment != nullptr ? pShadingRateAttachment : Subpass.pShadingRateAttachment;
             const auto& AttchRef   = Subpass.pShadingRateAttachment->Attachment;
             if (AttchRef.AttachmentIndex != ATTACHMENT_UNUSED)
             {
@@ -319,23 +319,30 @@ void ValidateRenderPassDesc(const RenderPassDesc& Desc, IRenderDevice* pDevice) 
             }
 
             if (!Features.VariableRateShading)
-                LOG_RENDER_PASS_ERROR_AND_THROW("subpass ", subpass, " has shading rate attachment, but VariableRateShading device feature is not enabled");
+                LOG_RENDER_PASS_ERROR_AND_THROW("subpass ", subpass, " uses a shading rate attachment, but VariableRateShading device feature is not enabled");
         }
     }
 
-    if (pShadingRateAttachment != nullptr && SRProps.CapFlags & SHADING_RATE_CAP_FLAG_SAME_TEXTURE_FOR_WHOLE_RENDERPASS)
+    if (pShadingRateAttachment != nullptr && (SRProps.CapFlags & SHADING_RATE_CAP_FLAG_SAME_TEXTURE_FOR_WHOLE_RENDERPASS) != SHADING_RATE_CAP_FLAG_NONE)
     {
         for (Uint32 subpass = 0; subpass < Desc.SubpassCount; ++subpass)
         {
             const auto& Subpass = Desc.pSubpasses[subpass];
 
             if (Subpass.pShadingRateAttachment == nullptr)
-                LOG_RENDER_PASS_ERROR_AND_THROW("render pass has shading rate attachment, but subpass ", subpass, " has not shading rate attachment");
+            {
+                LOG_RENDER_PASS_ERROR_AND_THROW("render pass uses a shading rate attachment, but subpass ", subpass,
+                                                " uses no shading rate attachment. A device with SHADING_RATE_CAP_FLAG_SAME_TEXTURE_FOR_WHOLE_RENDERPASS "
+                                                "capability requires that all subpasses of a render pass use the same shading rate attachment.");
+            }
 
-            if (*Subpass.pShadingRateAttachment == *pShadingRateAttachment)
+            if (*Subpass.pShadingRateAttachment != *pShadingRateAttachment)
             {
                 VERIFY_EXPR(subpass > 0);
-                LOG_RENDER_PASS_ERROR_AND_THROW("shading rate attachment in subpass ", subpass, " does not match the shading rate attachment in previous subpasses");
+                LOG_RENDER_PASS_ERROR_AND_THROW("shading rate attachment in subpass ", subpass,
+                                                " does not match the shading rate attachment used by previous subpasses. "
+                                                "A device with SHADING_RATE_CAP_FLAG_SAME_TEXTURE_FOR_WHOLE_RENDERPASS capability "
+                                                "requires that all subpasses of a render pass use the same shading rate attachment.");
             }
         }
     }

@@ -169,7 +169,7 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
                 ImageCI.usage |= VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT;
             }
             else
-                UNEXPECTED("BIND_SHADING_RATE requires ShadingRate or FragmentDensityMap vulkan features");
+                UNEXPECTED("BIND_SHADING_RATE requires ShadingRate or FragmentDensityMap Vulkan features");
         }
 
         if (m_Desc.MiscFlags & MISC_TEXTURE_FLAG_GENERATE_MIPS)
@@ -744,9 +744,8 @@ void TextureVkImpl::SetLayout(VkImageLayout Layout)
 
 VkImageLayout TextureVkImpl::GetLayout() const
 {
-    return ResourceStateToVkImageLayout(GetState(),
-                                        /*IsInsideRenderPass = */ false,
-                                        m_pDevice->GetLogicalDevice().GetEnabledExtFeatures().FragmentDensityMap.fragmentDensityMap != VK_FALSE);
+    const auto fragmentDensityMap = m_pDevice->GetLogicalDevice().GetEnabledExtFeatures().FragmentDensityMap.fragmentDensityMap;
+    return ResourceStateToVkImageLayout(GetState(), /*IsInsideRenderPass = */ false, fragmentDensityMap != VK_FALSE);
 }
 
 void TextureVkImpl::InvalidateStagingRange(VkDeviceSize Offset, VkDeviceSize Size)

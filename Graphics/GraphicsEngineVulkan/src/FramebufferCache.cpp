@@ -72,15 +72,15 @@ size_t FramebufferCache::FramebufferCacheKey::GetHash() const
 VkFramebuffer FramebufferCache::GetFramebuffer(const FramebufferCacheKey& Key, uint32_t width, uint32_t height, uint32_t layers)
 {
     std::lock_guard<std::mutex> Lock{m_Mutex};
-    auto                        it = m_Cache.find(Key);
+
+    auto it = m_Cache.find(Key);
     if (it != m_Cache.end())
     {
         return it->second;
     }
     else
     {
-        VkFramebufferCreateInfo FramebufferCI = {};
-
+        VkFramebufferCreateInfo FramebufferCI{};
         FramebufferCI.sType      = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
         FramebufferCI.pNext      = nullptr;
         FramebufferCI.flags      = 0; // reserved for future use
@@ -91,11 +91,13 @@ VkFramebuffer FramebufferCache::GetFramebuffer(const FramebufferCacheKey& Key, u
         auto& attachment = FramebufferCI.attachmentCount;
         if (Key.DSV != VK_NULL_HANDLE)
             Attachments[attachment++] = Key.DSV;
+
         for (Uint32 rt = 0; rt < Key.NumRenderTargets; ++rt)
         {
             if (Key.RTVs[rt] != VK_NULL_HANDLE)
                 Attachments[attachment++] = Key.RTVs[rt];
         }
+
         if (Key.ShadingRate != VK_NULL_HANDLE)
             Attachments[attachment++] = Key.ShadingRate;
 

@@ -28,46 +28,49 @@
 
 namespace Diligent
 {
+
 struct PosAndRate
 {
     float2 Pos;
     Uint32 Rate;
 };
 
-namespace TestingConstants
+namespace VRSTestingConstants
+{
+
+namespace PerPrimitive
 {
 
 // clang-format off
-    namespace PerPrimitive
-    {
-        static const PosAndRate Vertices[] =
-        {
-            PosAndRate{{-0.9f,  0.0f}, SHADING_RATE_4X4},  PosAndRate{{-0.9f,  0.9f}, SHADING_RATE_4X4},  PosAndRate{{-0.2f,  0.9f}, SHADING_RATE_4X4},
-            PosAndRate{{-1.0f, -0.3f}, SHADING_RATE_2X2},  PosAndRate{{ 0.0f,  1.0f}, SHADING_RATE_2X2},  PosAndRate{{ 0.0f, -0.3f}, SHADING_RATE_2X2},
-            PosAndRate{{ 0.1f, -0.1f}, SHADING_RATE_2X4},  PosAndRate{{ 0.1f,  0.9f}, SHADING_RATE_2X4},  PosAndRate{{ 0.9f, -0.1f}, SHADING_RATE_2X4},
-            PosAndRate{{ 0.1f,  1.0f}, SHADING_RATE_4X2},  PosAndRate{{ 1.0f,  1.0f}, SHADING_RATE_4X2},  PosAndRate{{ 1.0f, -0.1f}, SHADING_RATE_4X2},
-            PosAndRate{{-0.9f, -1.0f}, SHADING_RATE_1X1},  PosAndRate{{-0.9f, -0.4f}, SHADING_RATE_1X1},  PosAndRate{{ 0.2f, -0.4f}, SHADING_RATE_1X1},
-            PosAndRate{{ 1.0f, -0.1f}, SHADING_RATE_1X2},  PosAndRate{{ 1.0f, -1.0f}, SHADING_RATE_1X2},  PosAndRate{{-0.5f, -1.0f}, SHADING_RATE_1X2}
-        };
-
-    } // namespace PerPrimitive
-
-    namespace TextureBased
-    {
-    inline SHADING_RATE GenTexture(Uint32 X, Uint32 Y, Uint32 W, Uint32 H)
-    {
-        auto XDist = std::abs(0.5f - static_cast<float>(X) / W) * 2.0f;
-        auto YDist = std::abs(0.5f - static_cast<float>(Y) / H) * 2.0f;
-
-        auto XRate = AXIS_SHADING_RATE_MAX - clamp(static_cast<Uint32>(XDist * AXIS_SHADING_RATE_MAX + 0.5f), 0u, Uint32{AXIS_SHADING_RATE_MAX});
-        auto YRate = AXIS_SHADING_RATE_MAX - clamp(static_cast<Uint32>(YDist * AXIS_SHADING_RATE_MAX + 0.5f), 0u, Uint32{AXIS_SHADING_RATE_MAX});
-
-        return static_cast<SHADING_RATE>((XRate << SHADING_RATE_X_SHIFT) | YRate);
-    }
-
-    } // namespace TextureBased
+static const PosAndRate Vertices[] =
+{
+    PosAndRate{{-0.9f,  0.0f}, SHADING_RATE_4X4},  PosAndRate{{-0.9f,  0.9f}, SHADING_RATE_4X4},  PosAndRate{{-0.2f,  0.9f}, SHADING_RATE_4X4},
+    PosAndRate{{-1.0f, -0.3f}, SHADING_RATE_2X2},  PosAndRate{{ 0.0f,  1.0f}, SHADING_RATE_2X2},  PosAndRate{{ 0.0f, -0.3f}, SHADING_RATE_2X2},
+    PosAndRate{{ 0.1f, -0.1f}, SHADING_RATE_2X4},  PosAndRate{{ 0.1f,  0.9f}, SHADING_RATE_2X4},  PosAndRate{{ 0.9f, -0.1f}, SHADING_RATE_2X4},
+    PosAndRate{{ 0.1f,  1.0f}, SHADING_RATE_4X2},  PosAndRate{{ 1.0f,  1.0f}, SHADING_RATE_4X2},  PosAndRate{{ 1.0f, -0.1f}, SHADING_RATE_4X2},
+    PosAndRate{{-0.9f, -1.0f}, SHADING_RATE_1X1},  PosAndRate{{-0.9f, -0.4f}, SHADING_RATE_1X1},  PosAndRate{{ 0.2f, -0.4f}, SHADING_RATE_1X1},
+    PosAndRate{{ 1.0f, -0.1f}, SHADING_RATE_1X2},  PosAndRate{{ 1.0f, -1.0f}, SHADING_RATE_1X2},  PosAndRate{{-0.5f, -1.0f}, SHADING_RATE_1X2}
+};
 // clang-format on
 
-} // namespace TestingConstants
+} // namespace PerPrimitive
+
+namespace TextureBased
+{
+
+inline SHADING_RATE GenTexture(Uint32 X, Uint32 Y, Uint32 W, Uint32 H)
+{
+    auto XDist = std::abs(0.5f - static_cast<float>(X) / W) * 2.0f;
+    auto YDist = std::abs(0.5f - static_cast<float>(Y) / H) * 2.0f;
+
+    auto XRate = AXIS_SHADING_RATE_MAX - clamp(static_cast<Uint32>(XDist * AXIS_SHADING_RATE_MAX + 0.5f), 0u, Uint32{AXIS_SHADING_RATE_MAX});
+    auto YRate = AXIS_SHADING_RATE_MAX - clamp(static_cast<Uint32>(YDist * AXIS_SHADING_RATE_MAX + 0.5f), 0u, Uint32{AXIS_SHADING_RATE_MAX});
+
+    return static_cast<SHADING_RATE>((XRate << SHADING_RATE_X_SHIFT) | YRate);
+}
+
+} // namespace TextureBased
+
+} // namespace VRSTestingConstants
 
 } // namespace Diligent

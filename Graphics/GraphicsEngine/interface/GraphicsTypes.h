@@ -116,22 +116,50 @@ DEFINE_FLAG_ENUM_OPERATORS(SHADER_TYPE);
 /// - TextureDesc to describe bind flags for a texture
 DILIGENT_TYPED_ENUM(BIND_FLAGS, Uint32)
 {
-    BIND_NONE                = 0x0,   ///< Undefined binding
-    BIND_VERTEX_BUFFER       = 0x1,   ///< A buffer can be bound as a vertex buffer
-    BIND_INDEX_BUFFER        = 0x2,   ///< A buffer can be bound as an index buffer
-    BIND_UNIFORM_BUFFER      = 0x4,   ///< A buffer can be bound as a uniform buffer
-                                       ///  \warning This flag may not be combined with any other bind flag
-    BIND_SHADER_RESOURCE     = 0x8,   ///< A buffer or a texture can be bound as a shader resource
-                                       ///  \warning This flag cannot be used with MAP_WRITE_NO_OVERWRITE flag
-    BIND_STREAM_OUTPUT       = 0x10,  ///< A buffer can be bound as a target for stream output stage
-    BIND_RENDER_TARGET       = 0x20,  ///< A texture can be bound as a render target
-    BIND_DEPTH_STENCIL       = 0x40,  ///< A texture can be bound as a depth-stencil target
-    BIND_UNORDERED_ACCESS    = 0x80,  ///< A buffer or a texture can be bound as an unordered access view
-    BIND_INDIRECT_DRAW_ARGS  = 0x100, ///< A buffer can be bound as the source buffer for indirect draw commands
-    BIND_INPUT_ATTACHMENT    = 0x200, ///< A texture can be used as render pass input attachment
-    BIND_RAY_TRACING         = 0x400, ///< A buffer can be used as a scratch buffer or as the source of primitive data
-                                      ///  for acceleration structure building
-    BIND_SHADING_RATE        = 0x800, ///< A texture can be used as shading rate texture
+    /// Undefined binding.
+    BIND_NONE                = 0,
+
+    /// A buffer can be bound as a vertex buffer.
+    BIND_VERTEX_BUFFER       = 1u << 0u,
+
+    /// A buffer can be bound as an index buffer.
+    BIND_INDEX_BUFFER        = 1u << 1u,
+
+    /// A buffer can be bound as a uniform buffer.
+    ///
+    /// \warning This flag may not be combined with any other bind flag.
+    BIND_UNIFORM_BUFFER      = 1u << 2u,
+
+    /// A buffer or a texture can be bound as a shader resource.
+    //
+    /// \warning This flag cannot be used with MAP_WRITE_NO_OVERWRITE flag.
+    BIND_SHADER_RESOURCE     = 1u << 3u,
+
+    /// A buffer can be bound as a target for stream output stage.
+    BIND_STREAM_OUTPUT       = 1u << 4u,
+
+    /// A texture can be bound as a render target.
+    BIND_RENDER_TARGET       = 1u << 5u,
+
+    /// A texture can be bound as a depth-stencil target.
+    BIND_DEPTH_STENCIL       = 1u << 6u,
+
+    /// A buffer or a texture can be bound as an unordered access view.
+    BIND_UNORDERED_ACCESS    = 1u << 7u,
+
+    /// A buffer can be bound as the source buffer for indirect draw commands.
+    BIND_INDIRECT_DRAW_ARGS  = 1u << 8u,
+
+    /// A texture can be used as render pass input attachment.
+    BIND_INPUT_ATTACHMENT    = 1u << 9u,
+
+    /// A buffer can be used as a scratch buffer or as the source of primitive data
+    /// for acceleration structure building.
+    BIND_RAY_TRACING         = 1u << 10u,
+
+    ///< A texture can be used as shading rate texture.
+    BIND_SHADING_RATE        = 1u << 11u,
+
     BIND_FLAGS_LAST          = BIND_SHADING_RATE
 };
 DEFINE_FLAG_ENUM_OPERATORS(BIND_FLAGS)
@@ -296,7 +324,7 @@ DILIGENT_TYPED_ENUM(TEXTURE_VIEW_TYPE, Uint8)
     TEXTURE_VIEW_UNORDERED_ACCESS,
 
     /// A texture view will define a variable shading rate view that will be used
-    /// for shading rate source for render pass
+    /// as the shading rate source for rendering operations
     TEXTURE_VIEW_SHADING_RATE,
 
     /// Helper value that stores that total number of texture views
@@ -2295,8 +2323,9 @@ typedef struct AdapterMemoryInfo AdapterMemoryInfo;
 
 /// Defines how shading rates coming from the different sources (base rate,
 /// primitive rate and VRS image rate) are combined.
-/// See IDeviceContext::SetShadingRate().
-/// Defines which rate returns function ApplyCombiner(SHADING_RATE_COMBINER Combiner, SHADING_RATE Lhs, SHADING_RATE Rhs).
+/// The combiner may be described by the following function: 
+///     ApplyCombiner(SHADING_RATE_COMBINER Combiner, SHADING_RATE OriginalRate, SHADING_RATE NewRate).
+/// See IDeviceContext::SetShadingRate() for details.
 DILIGENT_TYPED_ENUM(SHADING_RATE_COMBINER, Uint8)
 {
     /// Returns the original shading rate value:
@@ -2324,7 +2353,7 @@ DILIGENT_TYPED_ENUM(SHADING_RATE_COMBINER, Uint8)
     ///   - for TextureCombiner, returns PrimitiveRate + TextureRate.
     SHADING_RATE_COMBINER_SUM         = 1 << 4,
 
-    /// Returns product of shading rates:
+    /// Returns the product of shading rates:
     ///  - for PrimitiveCombiner, returns BaseRate * PrimitiveRate.
     ///  - for TextureCombiner, returns PrimitiveRate * TextureRate.
     SHADING_RATE_COMBINER_MUL         = 1 << 5,
@@ -2333,12 +2362,14 @@ DILIGENT_TYPED_ENUM(SHADING_RATE_COMBINER, Uint8)
 };
 DEFINE_FLAG_ENUM_OPERATORS(SHADING_RATE_COMBINER);
 
-// Shading rate texture format
+
+/// Shading rate texture format supported by the device
 DILIGENT_TYPED_ENUM(SHADING_RATE_FORMAT, Uint8)
 {
+    /// Variable rate shading is not supported.
     SHADING_RATE_FORMAT_UNKNOWN = 0,
 
-    /// Single-channel 8-bit surface that contains SHADING_RATE values.
+    /// Single-channel 8-bit surface that contains Diligent::SHADING_RATE values.
     /// Only 2D and 2D array textures with R8_UNORM format are allowed.
     SHADING_RATE_FORMAT_PALETTE = 1,
 
@@ -2346,11 +2377,9 @@ DILIGENT_TYPED_ENUM(SHADING_RATE_FORMAT, Uint8)
     /// R channel is used for X axis, G channel is used for Y axis.
     SHADING_RATE_FORMAT_UNORM8  = 2,
 
-    /// 32-bit floating point column and row that defines shading rate (0.5, 0.25 etc.).
-    /// Allowed values are [0, 1].
     /// This format is only used in Metal when shading rate is defined by column/row rates instead
-    /// of a 2D texture.
-    SHADING_RATE_FORMAT_FP32    = 3,
+    /// of a texture. The values are 32-bit floating point values in 0 to 1 range (0.5, 0.25 etc.).
+    SHADING_RATE_FORMAT_FP32    = 3
 };
 
 /// Specifies the base shading rate along a horizontal or vertical axis
@@ -2365,49 +2394,49 @@ DILIGENT_TYPED_ENUM(AXIS_SHADING_RATE, Uint8)
     /// 4x resolution reduction per axis
     AXIS_SHADING_RATE_4X  = 0x2,
 
-    AXIS_SHADING_RATE_MAX = AXIS_SHADING_RATE_4X,
+    AXIS_SHADING_RATE_MAX = AXIS_SHADING_RATE_4X
 };
 
-/// Defines the base shading rate that can be set for the entire draw call
+/// Defines the shading rate for both axes
 DILIGENT_TYPED_ENUM(SHADING_RATE, Uint8)
 {
     /// Specifies no change to the shading rate.
     SHADING_RATE_1X1 = ((AXIS_SHADING_RATE_1X << DILIGENT_SHADING_RATE_X_SHIFT) | AXIS_SHADING_RATE_1X),
 
-    /// Specifies 1/2 vertical shading rate and normal horizontal rate.
+    /// Specifies default horizontal rate and 1/2 vertical shading rate.
     SHADING_RATE_1X2 = ((AXIS_SHADING_RATE_1X << DILIGENT_SHADING_RATE_X_SHIFT) | AXIS_SHADING_RATE_2X),
 
-    /// Specifies 1/4 vertical shading rate and normal horizontal rate.
+    /// Specifies default horizontal rate and 1/4 vertical shading rate.
     SHADING_RATE_1X4 = ((AXIS_SHADING_RATE_1X << DILIGENT_SHADING_RATE_X_SHIFT) | AXIS_SHADING_RATE_4X),
 
-    /// Specifies 1/2 horizontal shading rate and normal vertical rate.
+    /// Specifies 1/2 horizontal shading rate and default vertical rate.
     SHADING_RATE_2X1 = ((AXIS_SHADING_RATE_2X << DILIGENT_SHADING_RATE_X_SHIFT) | AXIS_SHADING_RATE_1X),
 
-    /// Specifies 1/2 horizontal and vertical shading rate.
+    /// Specifies 1/2 horizontal and 1/2 vertical shading rate.
     SHADING_RATE_2X2 = ((AXIS_SHADING_RATE_2X << DILIGENT_SHADING_RATE_X_SHIFT) | AXIS_SHADING_RATE_2X),
 
     /// Specifies 1/2 horizontal and 1/4 vertical shading rate.
     SHADING_RATE_2X4 = ((AXIS_SHADING_RATE_2X << DILIGENT_SHADING_RATE_X_SHIFT) | AXIS_SHADING_RATE_4X),
 
-    /// Specifies 1/4 horizontal shading rate and normal vertical rate.
+    /// Specifies 1/4 horizontal and default vertical rate.
     SHADING_RATE_4X1 = ((AXIS_SHADING_RATE_4X << DILIGENT_SHADING_RATE_X_SHIFT) | AXIS_SHADING_RATE_1X),
 
-    /// Specifies 1/4 horizontal shading rate and 1/2 vertical rate.
+    /// Specifies 1/4 horizontal and 1/2 vertical rate.
     SHADING_RATE_4X2 = ((AXIS_SHADING_RATE_4X << DILIGENT_SHADING_RATE_X_SHIFT) | AXIS_SHADING_RATE_2X),
 
-    /// Specifies 1/4 horizontal and vertical shading rate.
+    /// Specifies 1/4 horizontal and 1/4 vertical shading rate.
     SHADING_RATE_4X4 = ((AXIS_SHADING_RATE_4X << DILIGENT_SHADING_RATE_X_SHIFT) | AXIS_SHADING_RATE_4X),
 
     SHADING_RATE_MAX = SHADING_RATE_4X4
 };
 
-/// Combination of shading rate and multi-samples.
+/// Combination of a shading rate and supported multi-sampling mode.
 struct ShadingRateMode
 {
     /// Supported shading rate.
     SHADING_RATE Rate        DEFAULT_INITIALIZER(SHADING_RATE_1X1);
 
-    /// Number of samples is a power-of-two value, this field is a combination of supported sample count.
+    /// Number of samples is a power-of-two value, this field is a combination of supported sample counts.
     /// Example: 1 | 2 | 4
     Uint8        SampleBits  DEFAULT_INITIALIZER(0);
 };
@@ -2416,23 +2445,24 @@ typedef struct ShadingRateMode ShadingRateMode;
 /// Defines the shading rate capability flags.
 DILIGENT_TYPED_ENUM(SHADING_RATE_CAP_FLAGS, Uint16)
 {
+    /// No shading rate capabilities.
     SHADING_RATE_CAP_FLAG_NONE                = 0,
 
-    /// Shading rate can be specified only for whole draw call using IDeviceContext::SetShadingRate().
+    /// Shading rate can be specified for the whole draw call using IDeviceContext::SetShadingRate().
     SHADING_RATE_CAP_FLAG_PER_DRAW            = 1u << 0,
 
-    /// Shading rate can be specified in shader for each primitive and combined with base rate.
+    /// Shading rate can be specified in the vertex shader for each primitive and combined with the base rate.
     /// Use IDeviceContext::SetShadingRate() to set base rate and per-primitive combiner.
     SHADING_RATE_CAP_FLAG_PER_PRIMITIVE       = 1u << 1,
 
-    /// Shading rate is specified by a texture, each pixel defines a shading rate for the tile.
-    /// Supported tile size is specified in ShadingRateProperties::Min/MaxTileWidth/Height.
+    /// Shading rate is specified by a texture, each texel defines a shading rate for the tile.
+    /// Supported tile size is specified in ShadingRateProperties::MinTileSize/MaxTileSize.
     /// Use IDeviceContext::SetShadingRate() to set the base rate and texture combiner.
     /// Use IDeviceContext::SetShadingRateTexture() to set the shading rate texture.
     SHADING_RATE_CAP_FLAG_TEXTURE_BASED       = 1u << 2,
 
-    /// Allows to set zero bits to GraphicsPipelineDesc::SampleMask
-    /// with enabled variable rate shading.
+    /// Allows to set zero bits in GraphicsPipelineDesc::SampleMask
+    /// with the enabled variable rate shading.
     SHADING_RATE_CAP_FLAG_SAMPLE_MASK         = 1u << 3,
 
     /// Allows to get or set SampleMask in the shader with enabled variable rate shading.
@@ -2450,7 +2480,7 @@ DILIGENT_TYPED_ENUM(SHADING_RATE_CAP_FLAGS, Uint16)
     SHADING_RATE_CAP_FLAG_SAME_TEXTURE_FOR_WHOLE_RENDERPASS = 1u << 7,
 
     /// Allows to use texture 2D array for shading rate.
-    SHADING_RATE_CAP_FLAG_LAYERED_TEXTURE           = 1u << 8,
+    SHADING_RATE_CAP_FLAG_TEXTURE_ARRAY            = 1u << 8,
 
     /// Allows to read current shading rate in pixel shader.
     /// HLSL: in SV_ShadingRate, GLSL: gl_ShadingRate.
@@ -2461,20 +2491,20 @@ DEFINE_FLAG_ENUM_OPERATORS(SHADING_RATE_CAP_FLAGS);
 /// Shading rate properties
 struct ShadingRateProperties
 {
-    /// Contains a list of supported combination of shading rate and number of samples.
-    /// List is sorted from lower to higher rate.
+    /// Contains a list of supported combinations of shading rate and number of samples.
+    /// The list is sorted from the lower to higher rate.
     ShadingRateMode        ShadingRates [DILIGENT_MAX_SHADING_RATES]  DEFAULT_INITIALIZER({});
 
-    /// The number elements in ShadingRates array.
+    /// The number of valid elements in ShadingRates array.
     Uint32                 NumShadingRates DEFAULT_INITIALIZER(0);
 
     /// Shading rate capability flags, see Diligent::SHADING_RATE_CAP_FLAGS.
     SHADING_RATE_CAP_FLAGS CapFlags       DEFAULT_INITIALIZER(SHADING_RATE_CAP_FLAG_NONE);
 
-    /// Combination of all supported shading rate combiners (See Diligent::SHADING_RATE_COMBINER).
+    /// Combination of all supported shading rate combiners (see Diligent::SHADING_RATE_COMBINER).
     SHADING_RATE_COMBINER  Combiners      DEFAULT_INITIALIZER(SHADING_RATE_COMBINER_PASSTHROUGH);
 
-    /// Indicates which shading rate texture format is used by this device.
+    /// Indicates which shading rate texture format is used by this device (see Diligent::SHADING_RATE_FORMAT).
     SHADING_RATE_FORMAT    Format         DEFAULT_INITIALIZER(SHADING_RATE_FORMAT_UNKNOWN);
 
     /// Minimal supported tile size.

@@ -194,7 +194,7 @@ void VariableShadingRatePerPrimitiveTestReferenceVk(ISwapChain* pSwapChain)
     const auto& SRProps = pEnv->GetDevice()->GetAdapterInfo().ShadingRate;
     ASSERT_TRUE(SRProps.Format == SHADING_RATE_FORMAT_PALETTE);
 
-    const auto& Verts = TestingConstants::PerPrimitive::Vertices;
+    const auto& Verts = VRSTestingConstants::PerPrimitive::Vertices;
 
     VkResult res = VK_SUCCESS;
     (void)res;

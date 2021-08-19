@@ -192,7 +192,7 @@ void VariableShadingRatePerPrimitiveTestReferenceD3D12(ISwapChain* pSwapChain)
     hr = pd3d12Device->CreateGraphicsPipelineState(&PSODesc, __uuidof(pd3d12PSO), reinterpret_cast<void**>(static_cast<ID3D12PipelineState**>(&pd3d12PSO)));
     VERIFY_EXPR(SUCCEEDED(hr));
 
-    const auto& Verts = TestingConstants::PerPrimitive::Vertices;
+    const auto& Verts = VRSTestingConstants::PerPrimitive::Vertices;
 
     RefCntAutoPtr<IBuffer> pVB;
     {

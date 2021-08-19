@@ -89,7 +89,7 @@ RefCntAutoPtr<ITextureView> CreateShadingRateTexture(IRenderDevice* pDevice, ISw
     {
         for (Uint32 x = 0; x < TexDesc.Width; ++x)
         {
-            auto SR = TestingConstants::TextureBased::GenTexture(x, y, TexDesc.Width, TexDesc.Height);
+            auto SR = VRSTestingConstants::TextureBased::GenTexture(x, y, TexDesc.Width, TexDesc.Height);
 
             SRData[x + y * TexDesc.Width] = RemapShadingRate[SR];
         }
@@ -341,7 +341,7 @@ TEST(VariableShadingRateTest, PerPrimitive)
     pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);
     ASSERT_NE(pPSO, nullptr);
 
-    const auto& Verts = TestingConstants::PerPrimitive::Vertices;
+    const auto& Verts = VRSTestingConstants::PerPrimitive::Vertices;
 
     BufferData BuffData{Verts, sizeof(Verts)};
     BufferDesc BuffDesc;

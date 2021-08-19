@@ -295,22 +295,30 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
             vkExtFeatures.ShadingRate.primitiveFragmentShadingRate != VK_FALSE ||
             vkExtFeatures.ShadingRate.attachmentFragmentShadingRate != VK_FALSE)
         {
-            ShadingRateProps.CapFlags =
-                (vkExtFeatures.ShadingRate.pipelineFragmentShadingRate != VK_FALSE ? SHADING_RATE_CAP_FLAG_PER_DRAW : SHADING_RATE_CAP_FLAG_NONE) |
-                (vkExtFeatures.ShadingRate.primitiveFragmentShadingRate != VK_FALSE ? SHADING_RATE_CAP_FLAG_PER_PRIMITIVE : SHADING_RATE_CAP_FLAG_NONE) |
-                (vkExtFeatures.ShadingRate.attachmentFragmentShadingRate != VK_FALSE ? SHADING_RATE_CAP_FLAG_TEXTURE_BASED : SHADING_RATE_CAP_FLAG_NONE) |
-                (vkDeviceExtProps.ShadingRate.fragmentShadingRateWithSampleMask != VK_FALSE ? SHADING_RATE_CAP_FLAG_SAMPLE_MASK : SHADING_RATE_CAP_FLAG_NONE) |
-                (vkDeviceExtProps.ShadingRate.fragmentShadingRateWithShaderSampleMask != VK_FALSE ? SHADING_RATE_CAP_FLAG_SHADER_SAMPLE_MASK : SHADING_RATE_CAP_FLAG_NONE) |
-                (vkDeviceExtProps.ShadingRate.fragmentShadingRateWithShaderDepthStencilWrites != VK_FALSE ? SHADING_RATE_CAP_FLAG_SHADER_DEPTH_STENCIL_WRITE : SHADING_RATE_CAP_FLAG_NONE) |
-                (vkDeviceExtProps.ShadingRate.primitiveFragmentShadingRateWithMultipleViewports != VK_FALSE ? SHADING_RATE_CAP_FLAG_PER_PRIMITIVE_WITH_MULTIPLE_VIEWPORTS : SHADING_RATE_CAP_FLAG_NONE) |
-                (vkDeviceExtProps.ShadingRate.layeredShadingRateAttachments != VK_FALSE ? SHADING_RATE_CAP_FLAG_LAYERED_TEXTURE : SHADING_RATE_CAP_FLAG_NONE);
+            auto SetShadingRateCap = [&ShadingRateProps](VkBool32 vkFlag, SHADING_RATE_CAP_FLAGS CapFlag) {
+                if (vkFlag != VK_FALSE)
+                    ShadingRateProps.CapFlags |= CapFlag;
+            };
+
+            // clang-format off
+            SetShadingRateCap(vkExtFeatures.ShadingRate.pipelineFragmentShadingRate,                          SHADING_RATE_CAP_FLAG_PER_DRAW);
+            SetShadingRateCap(vkExtFeatures.ShadingRate.primitiveFragmentShadingRate,                         SHADING_RATE_CAP_FLAG_PER_PRIMITIVE);
+            SetShadingRateCap(vkExtFeatures.ShadingRate.attachmentFragmentShadingRate,                        SHADING_RATE_CAP_FLAG_TEXTURE_BASED);
+            SetShadingRateCap(vkDeviceExtProps.ShadingRate.fragmentShadingRateWithSampleMask,                 SHADING_RATE_CAP_FLAG_SAMPLE_MASK);
+            SetShadingRateCap(vkDeviceExtProps.ShadingRate.fragmentShadingRateWithShaderSampleMask,           SHADING_RATE_CAP_FLAG_SHADER_SAMPLE_MASK);
+            SetShadingRateCap(vkDeviceExtProps.ShadingRate.fragmentShadingRateWithShaderDepthStencilWrites,   SHADING_RATE_CAP_FLAG_SHADER_DEPTH_STENCIL_WRITE);
+            SetShadingRateCap(vkDeviceExtProps.ShadingRate.primitiveFragmentShadingRateWithMultipleViewports, SHADING_RATE_CAP_FLAG_PER_PRIMITIVE_WITH_MULTIPLE_VIEWPORTS);
+            SetShadingRateCap(vkDeviceExtProps.ShadingRate.layeredShadingRateAttachments,                     SHADING_RATE_CAP_FLAG_TEXTURE_ARRAY);
+            // clang-format on
 
             ShadingRateProps.Combiners = SHADING_RATE_COMBINER_PASSTHROUGH | SHADING_RATE_COMBINER_OVERRIDE;
 
             if (vkDeviceExtProps.ShadingRate.fragmentShadingRateNonTrivialCombinerOps != VK_FALSE)
             {
-                ShadingRateProps.Combiners |= SHADING_RATE_COMBINER_MIN | SHADING_RATE_COMBINER_MAX |
-                    ((vkDeviceExtProps.ShadingRate.fragmentShadingRateStrictMultiplyCombiner != VK_FALSE) ? SHADING_RATE_COMBINER_MUL : SHADING_RATE_COMBINER_SUM);
+                ShadingRateProps.Combiners |= SHADING_RATE_COMBINER_MIN | SHADING_RATE_COMBINER_MAX;
+                ShadingRateProps.Combiners |= (vkDeviceExtProps.ShadingRate.fragmentShadingRateStrictMultiplyCombiner != VK_FALSE) ?
+                    SHADING_RATE_COMBINER_MUL :
+                    SHADING_RATE_COMBINER_SUM;
             }
             if (vkExtFeatures.ShadingRate.attachmentFragmentShadingRate != VK_FALSE)
             {

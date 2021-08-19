@@ -508,7 +508,7 @@ void TextureD3D12Impl::CreateViewInternal(const struct TextureViewDesc& ViewDesc
 
             case TEXTURE_VIEW_SHADING_RATE:
             {
-                // In D2D12 there is no specified shading rate view, use SRV instead because it enabled by default
+                // In Direct3D12 there is no special shading rate view, so use SRV instead because it is enabled by default
                 VERIFY(m_Desc.BindFlags & BIND_SHADING_RATE, "BIND_SHADING_RATE flag is not set");
                 ViewDescriptor = pDeviceD3D12Impl->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
                 CreateVRSView(UpdatedViewDesc, ViewDescriptor.GetCpuHandle());

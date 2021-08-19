@@ -833,13 +833,14 @@ const Char* GetResourceDimString(RESOURCE_DIMENSION TexType)
 
 const Char* GetBindFlagString(Uint32 BindFlag)
 {
-    VERIFY((BindFlag & (BindFlag - 1)) == 0, "More than one bind flag is specified");
+    VERIFY(BindFlag == BIND_NONE || IsPowerOfTwo(BindFlag), "More than one bind flag is specified");
 
     static_assert(BIND_FLAGS_LAST == 0x800L, "Please handle the new bind flag in the switch below");
     switch (BindFlag)
     {
 #define BIND_FLAG_STR_CASE(Flag) \
     case Flag: return #Flag;
+        BIND_FLAG_STR_CASE(BIND_NONE)
         BIND_FLAG_STR_CASE(BIND_VERTEX_BUFFER)
         BIND_FLAG_STR_CASE(BIND_INDEX_BUFFER)
         BIND_FLAG_STR_CASE(BIND_UNIFORM_BUFFER)
@@ -879,13 +880,14 @@ String GetBindFlagsString(Uint32 BindFlags, const char* Delimeter)
 
 static const Char* GetSingleCPUAccessFlagString(Uint32 CPUAccessFlag)
 {
-    VERIFY((CPUAccessFlag & (CPUAccessFlag - 1)) == 0, "More than one access flag specified");
+    VERIFY(CPUAccessFlag == CPU_ACCESS_NONE || IsPowerOfTwo(CPUAccessFlag), "More than one access flag is specified");
     switch (CPUAccessFlag)
     {
         // clang-format off
 #define CPU_ACCESS_FLAG_STR_CASE(Flag) case Flag: return #Flag;
-        CPU_ACCESS_FLAG_STR_CASE( CPU_ACCESS_READ )
-        CPU_ACCESS_FLAG_STR_CASE( CPU_ACCESS_WRITE  )
+        CPU_ACCESS_FLAG_STR_CASE(CPU_ACCESS_NONE)
+        CPU_ACCESS_FLAG_STR_CASE(CPU_ACCESS_READ)
+        CPU_ACCESS_FLAG_STR_CASE(CPU_ACCESS_WRITE)
 #undef  CPU_ACCESS_FLAG_STR_CASE
         // clang-format on
         default: UNEXPECTED("Unexpected CPU access flag ", CPUAccessFlag); return "";
@@ -1048,7 +1050,7 @@ String GetBufferDescString(const BufferDesc& Desc)
 
 const Char* GetResourceStateFlagString(RESOURCE_STATE State)
 {
-    VERIFY((State & (State - 1)) == 0, "Single state is expected");
+    VERIFY(State == RESOURCE_STATE_UNKNOWN || IsPowerOfTwo(State), "Single state is expected");
     static_assert(RESOURCE_STATE_MAX_BIT == (1u << 21), "Please update this function to handle the new resource state");
     switch (State)
     {
@@ -1506,7 +1508,7 @@ Int32 GetShaderTypePipelineIndex(SHADER_TYPE ShaderType, PIPELINE_TYPE PipelineT
 {
     VERIFY(IsConsistentShaderType(ShaderType, PipelineType), "Shader type ", GetShaderTypeLiteralName(ShaderType),
            " is inconsistent with pipeline type ", GetPipelineTypeString(PipelineType));
-    VERIFY(IsPowerOfTwo(Uint32{ShaderType}), "More than one shader type is specified");
+    VERIFY(ShaderType == SHADER_TYPE_UNKNOWN || IsPowerOfTwo(ShaderType), "More than one shader type is specified");
 
     static_assert(SHADER_TYPE_LAST == 0x4000, "Please update the switch below to handle the new shader type");
     switch (ShaderType)
@@ -1871,6 +1873,9 @@ TEXTURE_FORMAT TexFormatToSRGB(TEXTURE_FORMAT Fmt)
 
 String GetPipelineShadingRateFlagsString(PIPELINE_SHADING_RATE_FLAGS Flags)
 {
+    if (Flags == PIPELINE_SHADING_RATE_FLAG_NONE)
+        return "NONE";
+
     String Result;
     while (Flags != PIPELINE_SHADING_RATE_FLAG_NONE)
     {

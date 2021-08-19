@@ -128,19 +128,19 @@ typedef struct ShaderResourceVariableDesc ShaderResourceVariableDesc;
 DILIGENT_TYPED_ENUM(PIPELINE_SHADING_RATE_FLAGS, Uint8)
 {
     /// Shading rate is not used.
-    PIPELINE_SHADING_RATE_FLAG_NONE          = 0x00,
+    PIPELINE_SHADING_RATE_FLAG_NONE          = 0,
 
     /// Indicates that the pipeline state will be used with per draw or per primitive shading rate.
     /// See IDeviceContext::SetShadingRate().
-    PIPELINE_SHADING_RATE_FLAG_PER_PRIMITIVE = 0x01,
+    PIPELINE_SHADING_RATE_FLAG_PER_PRIMITIVE = 1u << 0u,
 
     /// Indicates that the pipeline state will be used with texture-based shading rate.
     /// See IDeviceContext::SetShadingRate() and IDeviceContext::SetShadingRateTexture().
-    PIPELINE_SHADING_RATE_FLAG_TEXTURE_BASED = 0x02,
+    PIPELINE_SHADING_RATE_FLAG_TEXTURE_BASED = 1u << 1u,
 
     PIPELINE_SHADING_RATE_FLAG_LAST          = PIPELINE_SHADING_RATE_FLAG_TEXTURE_BASED,
 };
-
+DEFINE_FLAG_ENUM_OPERATORS(PIPELINE_SHADING_RATE_FLAGS);
 
 /// Pipeline layout description
 struct PipelineResourceLayoutDesc
@@ -218,7 +218,7 @@ struct GraphicsPipelineDesc
     /// When pRenderPass is null, this member must be 0.
     Uint8 SubpassIndex           DEFAULT_INITIALIZER(0);
 
-    /// Shading rate flags specify which type of the shading rate will be used with this pipeline.
+    /// Shading rate flags that specify which type of the shading rate will be used with this pipeline.
     PIPELINE_SHADING_RATE_FLAGS ShadingRateFlags DEFAULT_INITIALIZER(PIPELINE_SHADING_RATE_FLAG_NONE);
 
     /// Render target formats.

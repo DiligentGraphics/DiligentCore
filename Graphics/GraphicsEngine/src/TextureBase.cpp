@@ -189,16 +189,16 @@ void ValidateTextureDesc(const TextureDesc& Desc, const IRenderDevice* pDevice) 
         if (Desc.SampleCount != 1)
             LOG_TEXTURE_ERROR_AND_THROW("BIND_FLAG_SHADING_RATE is not allowed for multisample texture.");
 
-        if (Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY && Desc.ArraySize > 1 && (SRProps.CapFlags & SHADING_RATE_CAP_FLAG_LAYERED_TEXTURE) == 0)
-            LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture arrays require SHADING_RATE_CAP_FLAG_LAYERED_TEXTURE capability");
+        if (Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY && Desc.ArraySize > 1 && (SRProps.CapFlags & SHADING_RATE_CAP_FLAG_TEXTURE_ARRAY) == 0)
+            LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture arrays require SHADING_RATE_CAP_FLAG_TEXTURE_ARRAY capability");
 
         if (Desc.Usage != USAGE_DEFAULT && Desc.Usage != USAGE_IMMUTABLE)
-            LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture requires USAGE_DEFAULT or USAGE_IMMUTABLE.");
+            LOG_TEXTURE_ERROR_AND_THROW("Shading rate textures only allow USAGE_DEFAULT or USAGE_IMMUTABLE.");
 
         if (pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_D3D12)
         {
             if (Desc.BindFlags & BIND_UNORDERED_ACCESS)
-                LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture is not compatible with BIND_UNORDERED_ACCESS.");
+                LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture is not compatible with BIND_UNORDERED_ACCESS in Direct3D12.");
 
             if (Desc.MipLevels != 1)
                 LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture must have 1 mip level.");

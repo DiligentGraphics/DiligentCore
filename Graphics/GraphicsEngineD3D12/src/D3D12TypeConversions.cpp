@@ -333,7 +333,7 @@ D3D12_STATIC_BORDER_COLOR BorderColorToD3D12StaticBorderColor(const Float32 Bord
 static D3D12_RESOURCE_STATES ResourceStateFlagToD3D12ResourceState(RESOURCE_STATE StateFlag)
 {
     static_assert(RESOURCE_STATE_MAX_BIT == (1u << 21), "This function must be updated to handle new resource state flag");
-    VERIFY(IsPowerOfTwo(Uint32{StateFlag}), "Only single bit must be set");
+    VERIFY(IsPowerOfTwo(StateFlag), "Only single bit must be set");
     switch (StateFlag)
     {
         // clang-format off
@@ -447,7 +447,7 @@ D3D12_RESOURCE_STATES GetSupportedD3D12ResourceStatesForCommandList(D3D12_COMMAN
 static RESOURCE_STATE D3D12ResourceStateToResourceStateFlags(D3D12_RESOURCE_STATES state)
 {
     static_assert(RESOURCE_STATE_MAX_BIT == (1u << 21), "This function must be updated to handle new resource state flag");
-    VERIFY(IsPowerOfTwo(int{state}), "Only single state must be set");
+    VERIFY(IsPowerOfTwo(state), "Only single state must be set");
     switch (state)
     {
         // clang-format off
@@ -468,7 +468,8 @@ static RESOURCE_STATE D3D12ResourceStateToResourceStateFlags(D3D12_RESOURCE_STAT
         case D3D12_RESOURCE_STATE_RESOLVE_DEST:               return RESOURCE_STATE_RESOLVE_DEST;
         case D3D12_RESOURCE_STATE_RESOLVE_SOURCE:             return RESOURCE_STATE_RESOLVE_SOURCE;
 #ifdef NTDDI_WIN10_19H1
-        case D3D12_RESOURCE_STATE_SHADING_RATE_SOURCE:        return RESOURCE_STATE_SHADING_RATE; // First defined in Win SDK 10.0.18362.0
+        // First defined in Win SDK 10.0.18362.0
+        case D3D12_RESOURCE_STATE_SHADING_RATE_SOURCE:        return RESOURCE_STATE_SHADING_RATE;
 #endif
         // clang-format on
         default:
@@ -935,22 +936,23 @@ D3D12_SHADING_RATE ShadingRateToD3D12ShadingRate(SHADING_RATE Rate)
             D3D12_SHADING_RATE_1X1, // unused
             D3D12_SHADING_RATE_4X2, // replacement for 4x1
             D3D12_SHADING_RATE_4X2,
-            D3D12_SHADING_RATE_4X4};
-    static_assert(d3d12Rates[SHADING_RATE_1X1] == D3D12_SHADING_RATE_1X1, "incorrect mapping to D3D12 shading rate");
-    static_assert(d3d12Rates[SHADING_RATE_1X2] == D3D12_SHADING_RATE_1X2, "incorrect mapping to D3D12 shading rate");
-    static_assert(d3d12Rates[SHADING_RATE_1X4] == D3D12_SHADING_RATE_2X4, "incorrect mapping to D3D12 shading rate");
-    static_assert(d3d12Rates[SHADING_RATE_2X1] == D3D12_SHADING_RATE_2X1, "incorrect mapping to D3D12 shading rate");
-    static_assert(d3d12Rates[SHADING_RATE_2X2] == D3D12_SHADING_RATE_2X2, "incorrect mapping to D3D12 shading rate");
-    static_assert(d3d12Rates[SHADING_RATE_2X4] == D3D12_SHADING_RATE_2X4, "incorrect mapping to D3D12 shading rate");
-    static_assert(d3d12Rates[SHADING_RATE_4X1] == D3D12_SHADING_RATE_4X2, "incorrect mapping to D3D12 shading rate");
-    static_assert(d3d12Rates[SHADING_RATE_4X2] == D3D12_SHADING_RATE_4X2, "incorrect mapping to D3D12 shading rate");
-    static_assert(d3d12Rates[SHADING_RATE_4X4] == D3D12_SHADING_RATE_4X4, "incorrect mapping to D3D12 shading rate");
+            D3D12_SHADING_RATE_4X4 //
+        };
+    static_assert(d3d12Rates[SHADING_RATE_1X1] == D3D12_SHADING_RATE_1X1, "Incorrect mapping to D3D12 shading rate");
+    static_assert(d3d12Rates[SHADING_RATE_1X2] == D3D12_SHADING_RATE_1X2, "Incorrect mapping to D3D12 shading rate");
+    static_assert(d3d12Rates[SHADING_RATE_1X4] == D3D12_SHADING_RATE_2X4, "Incorrect mapping to D3D12 shading rate");
+    static_assert(d3d12Rates[SHADING_RATE_2X1] == D3D12_SHADING_RATE_2X1, "Incorrect mapping to D3D12 shading rate");
+    static_assert(d3d12Rates[SHADING_RATE_2X2] == D3D12_SHADING_RATE_2X2, "Incorrect mapping to D3D12 shading rate");
+    static_assert(d3d12Rates[SHADING_RATE_2X4] == D3D12_SHADING_RATE_2X4, "Incorrect mapping to D3D12 shading rate");
+    static_assert(d3d12Rates[SHADING_RATE_4X1] == D3D12_SHADING_RATE_4X2, "Incorrect mapping to D3D12 shading rate");
+    static_assert(d3d12Rates[SHADING_RATE_4X2] == D3D12_SHADING_RATE_4X2, "Incorrect mapping to D3D12 shading rate");
+    static_assert(d3d12Rates[SHADING_RATE_4X4] == D3D12_SHADING_RATE_4X4, "Incorrect mapping to D3D12 shading rate");
     static_assert(_countof(d3d12Rates) == SHADING_RATE_MAX + 1, "Invalid number of elements in d3d12Rates");
 
     VERIFY_EXPR(Rate <= SHADING_RATE_MAX);
     return d3d12Rates[Rate];
 #else
-    UNEXPECTED("Requires WinSDK 10.1903");
+    UNEXPECTED("Requires WinSDK 10.0.18362.0");
     return static_cast<D3D12_SHADING_RATE>(0);
 #endif
 }
@@ -958,8 +960,8 @@ D3D12_SHADING_RATE ShadingRateToD3D12ShadingRate(SHADING_RATE Rate)
 D3D12_SHADING_RATE_COMBINER ShadingRateCombinerToD3D12ShadingRateCombiner(SHADING_RATE_COMBINER Combiner)
 {
 #ifdef NTDDI_WIN10_19H1
-    static_assert(SHADING_RATE_COMBINER_LAST == (1u << 5), "Please update the switch below to handle the shading rate combiner");
-    VERIFY(IsPowerOfTwo(Uint32{Combiner}), "Only a single combiner should be provided");
+    static_assert(SHADING_RATE_COMBINER_LAST == (1u << 5), "Please update the switch below to handle the new shading rate combiner");
+    VERIFY(IsPowerOfTwo(Combiner), "Only a single combiner should be provided");
     switch (Combiner)
     {
         // clang-format off
@@ -974,7 +976,7 @@ D3D12_SHADING_RATE_COMBINER ShadingRateCombinerToD3D12ShadingRateCombiner(SHADIN
             return D3D12_SHADING_RATE_COMBINER_PASSTHROUGH;
     }
 #else
-    UNEXPECTED("Requires WinSDK 10.1903");
+    UNEXPECTED("Requires WinSDK 10.0.18362.0");
     return static_cast<D3D12_SHADING_RATE_COMBINER>(0);
 #endif
 }

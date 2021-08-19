@@ -58,7 +58,6 @@ public:
     // This structure is used as the key to find framebuffer
     struct FramebufferCacheKey
     {
-        // Default member initialization is intentionally omitted
         VkRenderPass Pass                     = VK_NULL_HANDLE;
         Uint32       NumRenderTargets         = 0;
         VkImageView  DSV                      = VK_NULL_HANDLE;

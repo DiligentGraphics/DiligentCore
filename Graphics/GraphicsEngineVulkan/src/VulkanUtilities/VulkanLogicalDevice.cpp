@@ -205,7 +205,7 @@ RenderPassWrapper VulkanLogicalDevice::CreateRenderPass(const VkRenderPassCreate
 #if DILIGENT_USE_VOLK
     VERIFY_EXPR(RenderPassCI.sType == VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO_2);
     VERIFY_EXPR(GetEnabledExtFeatures().RenderPass2 != VK_FALSE);
-    return CreateVulkanObject<VkRenderPass, VulkanHandleTypeId::RenderPass>(vkCreateRenderPass2KHR, RenderPassCI, DebugName, "render pass");
+    return CreateVulkanObject<VkRenderPass, VulkanHandleTypeId::RenderPass>(vkCreateRenderPass2KHR, RenderPassCI, DebugName, "render pass 2");
 #else
     UNSUPPORTED("vkCreateRenderPass2KHR is only available through Volk");
     return RenderPassWrapper{};

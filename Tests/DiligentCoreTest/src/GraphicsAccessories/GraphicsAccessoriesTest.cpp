@@ -726,4 +726,14 @@ TEST(GraphicsAccessories_GraphicsAccessories, GetPipelineResourceFlagsString)
     EXPECT_STREQ(GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY).c_str(), "RUNTIME_ARRAY");
 }
 
+TEST(GraphicsAccessories_GraphicsAccessories, GetPipelineShadingRateFlagsString)
+{
+    static_assert(PIPELINE_SHADING_RATE_FLAG_LAST == 0x02, "Please update the switch below to handle the new pipeline shading rate flag");
+
+    EXPECT_STREQ(GetPipelineShadingRateFlagsString(PIPELINE_SHADING_RATE_FLAG_NONE).c_str(), "NONE");
+    EXPECT_STREQ(GetPipelineShadingRateFlagsString(PIPELINE_SHADING_RATE_FLAG_PER_PRIMITIVE).c_str(), "PER_PRIMITIVE");
+    EXPECT_STREQ(GetPipelineShadingRateFlagsString(PIPELINE_SHADING_RATE_FLAG_TEXTURE_BASED).c_str(), "TEXTURE_BASED");
+    EXPECT_STREQ(GetPipelineShadingRateFlagsString(PIPELINE_SHADING_RATE_FLAG_PER_PRIMITIVE | PIPELINE_SHADING_RATE_FLAG_TEXTURE_BASED).c_str(), "PER_PRIMITIVE | TEXTURE_BASED");
+}
+
 } // namespace

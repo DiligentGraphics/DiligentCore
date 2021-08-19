@@ -81,12 +81,11 @@ public:
             for (Uint32 rt = 0; rt < NumRenderTargets; ++rt)
                 RTVFormats[rt] = _RTVFormats[rt];
         }
-        // Default member initialization is intentionally omitted
-        Uint8          NumRenderTargets = 0;
-        Uint8          SampleCount      = 0;
-        bool           EnableVRS        = false;
-        TEXTURE_FORMAT DSVFormat        = TEX_FORMAT_UNKNOWN;
-        TEXTURE_FORMAT RTVFormats[MAX_RENDER_TARGETS];
+        Uint8          NumRenderTargets               = 0;
+        Uint8          SampleCount                    = 0;
+        bool           EnableVRS                      = false;
+        TEXTURE_FORMAT DSVFormat                      = TEX_FORMAT_UNKNOWN;
+        TEXTURE_FORMAT RTVFormats[MAX_RENDER_TARGETS] = {};
 
         bool operator==(const RenderPassCacheKey& rhs) const
         {
@@ -94,8 +93,8 @@ public:
             if (GetHash()        != rhs.GetHash()        ||
                 NumRenderTargets != rhs.NumRenderTargets ||
                 SampleCount      != rhs.SampleCount      ||
-                DSVFormat        != rhs.DSVFormat        ||
-                EnableVRS        != rhs.EnableVRS)
+                EnableVRS        != rhs.EnableVRS        ||
+                DSVFormat        != rhs.DSVFormat)
             {
                 return false;
             }

@@ -1643,6 +1643,16 @@ void DeviceContextGLImpl::UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndir
     UNSUPPORTED("UpdateSBT is not supported in OpenGL");
 }
 
+void DeviceContextGLImpl::SetShadingRate(SHADING_RATE BaseRate, SHADING_RATE_COMBINER PrimitiveCombiner, SHADING_RATE_COMBINER TextureCombiner)
+{
+    UNSUPPORTED("SetShadingRate is not supported in OpenGL");
+}
+
+void DeviceContextGLImpl::SetShadingRateTexture(ITextureView* pShadingRateView, RESOURCE_STATE_TRANSITION_MODE TransitionMode)
+{
+    UNSUPPORTED("SetShadingRateTexture is not supported in OpenGL");
+}
+
 void DeviceContextGLImpl::BeginDebugGroup(const Char* Name, const float* pColor)
 {
     TDeviceContextBase::BeginDebugGroup(Name, pColor, 0);

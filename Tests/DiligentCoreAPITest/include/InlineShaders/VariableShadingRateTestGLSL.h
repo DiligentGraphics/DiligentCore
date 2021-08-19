@@ -31,8 +31,7 @@ namespace
 
 namespace GLSL
 {
-// clang-format off
-    
+
 const std::string ShadingRateToColor{R"glsl(
 #version 460
 #extension GL_EXT_fragment_shading_rate : require
@@ -120,8 +119,6 @@ void main()
     out_Color = ShadingRateToColor();
 }
 )glsl";
-
-// clang-format on
 
 } // namespace GLSL
 

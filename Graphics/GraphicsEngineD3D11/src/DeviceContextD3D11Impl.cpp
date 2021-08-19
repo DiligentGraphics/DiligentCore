@@ -2173,6 +2173,17 @@ void DeviceContextD3D11Impl::UpdateSBT(IShaderBindingTable* pSBT, const UpdateIn
     UNSUPPORTED("UpdateSBT is not supported in DirectX 11");
 }
 
+void DeviceContextD3D11Impl::SetShadingRate(SHADING_RATE BaseRate, SHADING_RATE_COMBINER PrimitiveCombiner, SHADING_RATE_COMBINER TextureCombiner)
+{
+    UNSUPPORTED("SetShadingRate is not supported in DirectX 11");
+}
+
+void DeviceContextD3D11Impl::SetShadingRateTexture(ITextureView* pShadingRateView, RESOURCE_STATE_TRANSITION_MODE TransitionMode)
+{
+    UNSUPPORTED("SetShadingRateTexture is not supported in DirectX 11");
+}
+
+
 void DeviceContextD3D11Impl::BeginDebugGroup(const Char* Name, const float* pColor)
 {
     TDeviceContextBase::BeginDebugGroup(Name, pColor, 0);

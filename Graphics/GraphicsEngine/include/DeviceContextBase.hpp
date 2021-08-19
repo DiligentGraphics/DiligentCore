@@ -47,6 +47,7 @@
 #include "IndexWrapper.hpp"
 #include "BasicMath.hpp"
 #include "PlatformMisc.hpp"
+#include "Align.hpp"
 
 namespace Diligent
 {
@@ -1917,31 +1918,30 @@ template <typename ImplementationTraits>
 void DeviceContextBase<ImplementationTraits>::SetShadingRate(SHADING_RATE BaseRate, SHADING_RATE_COMBINER PrimitiveCombiner, SHADING_RATE_COMBINER TextureCombiner, int) const
 {
 #ifdef DILIGENT_DEVELOPMENT
+    DEV_CHECK_ERR(IsPowerOfTwo(PrimitiveCombiner), "Only one primitive combiner must be specified");
+    DEV_CHECK_ERR(IsPowerOfTwo(TextureCombiner), "Only one texture combiner must be specified");
     DEV_CHECK_ERR(m_pDevice->GetDeviceInfo().Features.VariableRateShading, "IDeviceContext::SetShadingRate: VariableRateShading feature must be enabled");
 
     const auto& SRProps = m_pDevice->GetAdapterInfo().ShadingRate;
     DEV_CHECK_ERR(SRProps.CapFlags & (SHADING_RATE_CAP_FLAG_PER_DRAW | SHADING_RATE_CAP_FLAG_PER_PRIMITIVE | SHADING_RATE_CAP_FLAG_TEXTURE_BASED),
-                  "IDeviceContext::SetShadingRate: requires one of flags SHADING_RATE_CAP_FLAG_PER_PRIMITIVE or SHADING_RATE_CAP_FLAG_TEXTURE_BASED");
+                  "IDeviceContext::SetShadingRate: requires one of the following capabilities: SHADING_RATE_CAP_FLAG_PER_DRAW, "
+                  "SHADING_RATE_CAP_FLAG_PER_PRIMITIVE, or SHADING_RATE_CAP_FLAG_TEXTURE_BASED");
     if (SRProps.CapFlags & SHADING_RATE_CAP_FLAG_PER_PRIMITIVE)
-        DEV_CHECK_ERR(SRProps.Combiners & PrimitiveCombiner, "IDeviceContext::SetShadingRate: PrimitiveCombiner must be one of supported Combiners");
+        DEV_CHECK_ERR(SRProps.Combiners & PrimitiveCombiner, "IDeviceContext::SetShadingRate: PrimitiveCombiner must be one of the supported combiners");
     else
-        DEV_CHECK_ERR(PrimitiveCombiner == SHADING_RATE_COMBINER_PASSTHROUGH, "IDeviceContext::SetShadingRate: PrimitiveCombiner must be UNKNOWN if per primitive shading is not supported");
+        DEV_CHECK_ERR(PrimitiveCombiner == SHADING_RATE_COMBINER_PASSTHROUGH, "IDeviceContext::SetShadingRate: PrimitiveCombiner must be PASSTHROUGH when per primitive shading is not supported");
 
     if (SRProps.CapFlags & SHADING_RATE_CAP_FLAG_TEXTURE_BASED)
-        DEV_CHECK_ERR(SRProps.Combiners & TextureCombiner, "IDeviceContext::SetShadingRate: TextureCombiner must be one of supported Combiners");
+        DEV_CHECK_ERR(SRProps.Combiners & TextureCombiner, "IDeviceContext::SetShadingRate: TextureCombiner must be one of the supported combiners");
     else
-        DEV_CHECK_ERR(TextureCombiner == SHADING_RATE_COMBINER_PASSTHROUGH, "IDeviceContext::SetShadingRate: TextureCombiner must be UNKNOWN if texture based shading is not supported");
+        DEV_CHECK_ERR(TextureCombiner == SHADING_RATE_COMBINER_PASSTHROUGH, "IDeviceContext::SetShadingRate: TextureCombiner must be PASSTHROUGH when texture based shading is not supported");
 
     bool IsSupported = false;
-    for (Uint32 i = 0; i < SRProps.NumShadingRates; ++i)
+    for (Uint32 i = 0; i < SRProps.NumShadingRates && !IsSupported; ++i)
     {
-        if (SRProps.ShadingRates[i].Rate == BaseRate)
-        {
-            IsSupported = true;
-            break;
-        }
+        IsSupported = (SRProps.ShadingRates[i].Rate == BaseRate);
     }
-    DEV_CHECK_ERR(IsSupported, "IDeviceContext::SetShadingRate: BaseRate must be one of supported shading rates");
+    DEV_CHECK_ERR(IsSupported, "IDeviceContext::SetShadingRate: BaseRate must be one of the supported shading rates");
 #endif
 }
 
@@ -1949,10 +1949,11 @@ template <typename ImplementationTraits>
 void DeviceContextBase<ImplementationTraits>::SetShadingRateTexture(ITextureView* pShadingRateView, RESOURCE_STATE_TRANSITION_MODE TransitionMode, int)
 {
 #ifdef DILIGENT_DEVELOPMENT
-    DEV_CHECK_ERR(m_pDevice->GetDeviceInfo().Features.VariableRateShading, "IDeviceContext::SetShadingRateTexture: VariableRateShading feature must be enabled");
-    DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "IDeviceContext::SetShadingRateTexture can not be used with render pass, use shading rate attachment in render pass");
+    DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "IDeviceContext::SetShadingRateTexture can not be used within render pass, use shading rate attachment in render pass");
     if (pShadingRateView != nullptr)
     {
+        DEV_CHECK_ERR(m_pDevice->GetDeviceInfo().Features.VariableRateShading, "IDeviceContext::SetShadingRateTexture: VariableRateShading feature must be enabled");
+
         const auto& SRProps  = m_pDevice->GetAdapterInfo().ShadingRate;
         const auto& ViewDesc = pShadingRateView->GetDesc();
         const auto& TexDesc  = pShadingRateView->GetTexture()->GetDesc();
@@ -1963,21 +1964,38 @@ void DeviceContextBase<ImplementationTraits>::SetShadingRateTexture(ITextureView
         switch (m_pDevice->GetAdapterInfo().ShadingRate.Format)
         {
             case SHADING_RATE_FORMAT_PALETTE:
-                DEV_CHECK_ERR(ViewDesc.Format == TEX_FORMAT_R8_UINT, "IDeviceContext::SetShadingRateTexture: pShadingRateView format must be R8_UINT");
+                DEV_CHECK_ERR(ViewDesc.Format == TEX_FORMAT_R8_UINT,
+                              "IDeviceContext::SetShadingRateTexture: pShadingRateView format must be R8_UINT. "
+                              "Check supported shading rate format in adapter info.");
                 break;
             case SHADING_RATE_FORMAT_UNORM8:
-                DEV_CHECK_ERR(ViewDesc.Format == TEX_FORMAT_RG8_UNORM, "IDeviceContext::SetShadingRateTexture: pShadingRateView format must be RG8_UNORM");
+                DEV_CHECK_ERR(ViewDesc.Format == TEX_FORMAT_RG8_UNORM,
+                              "IDeviceContext::SetShadingRateTexture: pShadingRateView format must be RG8_UNORM. "
+                              "Check supported shading rate format in adapter info.");
                 break;
             default:
                 DEV_ERROR("IDeviceContext::SetShadingRateTexture: unexpected shading rate format");
         }
 
-        const auto Width  = std::max(TexDesc.Width >> ViewDesc.MostDetailedMip, 1u);
-        const auto Height = std::max(TexDesc.Height >> ViewDesc.MostDetailedMip, 1u);
-        DEV_CHECK_ERR(Width <= m_FramebufferWidth / SRProps.MinTileSize[0] && Height <= m_FramebufferHeight / SRProps.MinTileSize[1],
-                      "IDeviceContext::SetShadingRateTexture: pShadingRateView size must be <= framebuffer size / ShadingRate::MinTileSize");
-        DEV_CHECK_ERR(Width >= m_FramebufferWidth / SRProps.MaxTileSize[0] && Height >= m_FramebufferHeight / SRProps.MaxTileSize[1],
-                      "IDeviceContext::SetShadingRateTexture: pShadingRateView size must be >= framebuffer size / ShadingRate::MaxTileSize");
+        const auto Width     = std::max(TexDesc.Width >> ViewDesc.MostDetailedMip, 1u);
+        const auto Height    = std::max(TexDesc.Height >> ViewDesc.MostDetailedMip, 1u);
+        const auto MaxWidth  = m_FramebufferWidth / SRProps.MinTileSize[0];
+        const auto MaxHeight = m_FramebufferHeight / SRProps.MinTileSize[1];
+        const auto MinWidth  = m_FramebufferWidth / SRProps.MaxTileSize[0];
+        const auto MinHeight = m_FramebufferHeight / SRProps.MaxTileSize[1];
+        DEV_CHECK_ERR(Width <= MaxWidth,
+                      "IDeviceContext::SetShadingRateTexture: shading rate texture width (", Width, ") exceeds maximum allowed width (",
+                      MaxWidth, "). Note: maximum width is defined by (framebuffer width) / ShadingRate::MinTileSize[0].");
+        DEV_CHECK_ERR(Height <= MaxHeight,
+                      "IDeviceContext::SetShadingRateTexture: shading rate texture height (", Height, ") exceeds maximum allowed height (",
+                      MaxHeight, "). Note: maximum height is defined by (framebuffer height) / ShadingRate::MinTileSize[1].");
+
+        DEV_CHECK_ERR(Width >= MinWidth,
+                      "IDeviceContext::SetShadingRateTexture: shading rate texture width (", Width, ") must be at least ",
+                      MinWidth, "). Note: minimum width is defined by (framebuffer width) / ShadingRate::MaxTileSize[0].");
+        DEV_CHECK_ERR(Height >= MinHeight,
+                      "IDeviceContext::SetShadingRateTexture: shading rate texture height (", Height, ") must be at least",
+                      MinHeight, "). Note: minimum height is defined by (framebuffer height) / ShadingRate::MaxTileSize[1].");
     }
 #endif
     m_pBoundShadingRateTexture = ValidatedCast<TextureViewImplType>(pShadingRateView);
@@ -2417,16 +2435,18 @@ void DeviceContextBase<ImplementationTraits>::DvpVerifyShadingRateMode() const
     if (PipelineWithVRSTexture)
     {
         DEV_CHECK_ERR(m_pBoundShadingRateTexture != nullptr,
-                      "Draw command use pipeline state with name '", m_pPipelineState->GetDesc().Name,
-                      "' which was created with ShadingRateFlags = PIPELINE_SHADING_RATE_TEXTURE_BASED, ",
-                      "but shading rate texture is not bound; use IDeviceContext::SetShadingRateTexture()");
+                      "Draw command uses pipeline state '", m_pPipelineState->GetDesc().Name,
+                      "' that was created with ShadingRateFlags = PIPELINE_SHADING_RATE_TEXTURE_BASED, ",
+                      "but shading rate texture is not bound; use IDeviceContext::SetShadingRateTexture() "
+                      "to bind the shading rate texture.");
     }
     else if (m_pBoundShadingRateTexture != nullptr)
     {
         DEV_CHECK_ERR(PipelineWithVRSTexture,
-                      "Draw command uses pipeline state with name '", m_pPipelineState->GetDesc().Name,
-                      "' which was created without PIPELINE_SHADING_RATE_TEXTURE_BASED flag, ",
-                      "but shading rate texture is bound");
+                      "Draw command uses pipeline state '", m_pPipelineState->GetDesc().Name,
+                      "' that was created without PIPELINE_SHADING_RATE_TEXTURE_BASED flag, ",
+                      "but shading rate texture is bound; use IDeviceContext::SetShadingRateTexture(nullptr) "
+                      "to unbind the shading rate texture.");
     }
 }
 #endif // DILIGENT_DEVELOPMENT

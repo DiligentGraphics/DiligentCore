@@ -31,7 +31,6 @@ namespace
 
 namespace HLSL
 {
-// clang-format off
 
 const std::string ShadingRatePallete{R"hlsl(
 float4 ShadingRateToColor(uint ShadingRate)
@@ -183,8 +182,6 @@ float4 main(in PSInput PSIn) : SV_Target
     return Color / float(Samp);
 }
 )hlsl"};
-
-// clang-format on
 
 } // namespace HLSL
 
