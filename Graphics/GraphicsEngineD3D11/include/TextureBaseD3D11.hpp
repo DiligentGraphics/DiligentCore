@@ -83,10 +83,10 @@ protected:
                               std::vector<D3D11_SUBRESOURCE_DATA, STDAllocatorRawMem<D3D11_SUBRESOURCE_DATA>>& D3D11InitData);
 
     // clang-format off
-    virtual void CreateSRV(TextureViewDesc& SRVDesc, ID3D11ShaderResourceView**  ppD3D11SRV) = 0;
-    virtual void CreateRTV(TextureViewDesc& RTVDesc, ID3D11RenderTargetView**    ppD3D11RTV) = 0;
-    virtual void CreateDSV(TextureViewDesc& DSVDesc, ID3D11DepthStencilView**    ppD3D11DSV) = 0;
-    virtual void CreateUAV(TextureViewDesc& UAVDesc, ID3D11UnorderedAccessView** ppD3D11UAV) = 0;
+    virtual void CreateSRV(const TextureViewDesc& SRVDesc, ID3D11ShaderResourceView**  ppD3D11SRV) = 0;
+    virtual void CreateRTV(const TextureViewDesc& RTVDesc, ID3D11RenderTargetView**    ppD3D11RTV) = 0;
+    virtual void CreateDSV(const TextureViewDesc& DSVDesc, ID3D11DepthStencilView**    ppD3D11DSV) = 0;
+    virtual void CreateUAV(const TextureViewDesc& UAVDesc, ID3D11UnorderedAccessView** ppD3D11UAV) = 0;
     // clang-format on
 
     friend class RenderDeviceD3D11Impl;

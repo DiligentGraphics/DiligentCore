@@ -146,7 +146,7 @@ Texture1D_D3D11::~Texture1D_D3D11()
 {
 }
 
-void Texture1D_D3D11::CreateSRV(TextureViewDesc& SRVDesc, ID3D11ShaderResourceView** ppD3D11SRV)
+void Texture1D_D3D11::CreateSRV(const TextureViewDesc& SRVDesc, ID3D11ShaderResourceView** ppD3D11SRV)
 {
     VERIFY(ppD3D11SRV && *ppD3D11SRV == nullptr, "SRV pointer address is null or contains non-null pointer to an existing object");
 
@@ -154,10 +154,7 @@ void Texture1D_D3D11::CreateSRV(TextureViewDesc& SRVDesc, ID3D11ShaderResourceVi
     if (!(SRVDesc.TextureDim == RESOURCE_DIM_TEX_1D || SRVDesc.TextureDim == RESOURCE_DIM_TEX_1D_ARRAY))
         LOG_ERROR_AND_THROW("Unsupported texture type. Only RESOURCE_DIM_TEX_1D or RESOURCE_DIM_TEX_1D_ARRAY is allowed");
 
-    if (SRVDesc.Format == TEX_FORMAT_UNKNOWN)
-    {
-        SRVDesc.Format = m_Desc.Format;
-    }
+    VERIFY_EXPR(SRVDesc.Format != TEX_FORMAT_UNKNOWN);
 
     D3D11_SHADER_RESOURCE_VIEW_DESC D3D11_SRVDesc;
     TextureViewDesc_to_D3D11_SRV_DESC(SRVDesc, D3D11_SRVDesc, m_Desc.SampleCount);
@@ -167,7 +164,7 @@ void Texture1D_D3D11::CreateSRV(TextureViewDesc& SRVDesc, ID3D11ShaderResourceVi
                            "Failed to create D3D11 shader resource view");
 }
 
-void Texture1D_D3D11::CreateRTV(TextureViewDesc& RTVDesc, ID3D11RenderTargetView** ppD3D11RTV)
+void Texture1D_D3D11::CreateRTV(const TextureViewDesc& RTVDesc, ID3D11RenderTargetView** ppD3D11RTV)
 {
     VERIFY(ppD3D11RTV && *ppD3D11RTV == nullptr, "RTV pointer address is null or contains non-null pointer to an existing object");
 
@@ -175,10 +172,7 @@ void Texture1D_D3D11::CreateRTV(TextureViewDesc& RTVDesc, ID3D11RenderTargetView
     if (!(RTVDesc.TextureDim == RESOURCE_DIM_TEX_1D || RTVDesc.TextureDim == RESOURCE_DIM_TEX_1D_ARRAY))
         LOG_ERROR_AND_THROW("Unsupported texture type. Only RESOURCE_DIM_TEX_1D or RESOURCE_DIM_TEX_1D_ARRAY is allowed");
 
-    if (RTVDesc.Format == TEX_FORMAT_UNKNOWN)
-    {
-        RTVDesc.Format = m_Desc.Format;
-    }
+    VERIFY_EXPR(RTVDesc.Format != TEX_FORMAT_UNKNOWN);
 
     D3D11_RENDER_TARGET_VIEW_DESC D3D11_RTVDesc;
     TextureViewDesc_to_D3D11_RTV_DESC(RTVDesc, D3D11_RTVDesc, m_Desc.SampleCount);
@@ -188,7 +182,7 @@ void Texture1D_D3D11::CreateRTV(TextureViewDesc& RTVDesc, ID3D11RenderTargetView
                            "Failed to create D3D11 render target view");
 }
 
-void Texture1D_D3D11::CreateDSV(TextureViewDesc& DSVDesc, ID3D11DepthStencilView** ppD3D11DSV)
+void Texture1D_D3D11::CreateDSV(const TextureViewDesc& DSVDesc, ID3D11DepthStencilView** ppD3D11DSV)
 {
     VERIFY(ppD3D11DSV && *ppD3D11DSV == nullptr, "DSV pointer address is null or contains non-null pointer to an existing object");
 
@@ -196,10 +190,7 @@ void Texture1D_D3D11::CreateDSV(TextureViewDesc& DSVDesc, ID3D11DepthStencilView
     if (!(DSVDesc.TextureDim == RESOURCE_DIM_TEX_1D || DSVDesc.TextureDim == RESOURCE_DIM_TEX_1D_ARRAY))
         LOG_ERROR_AND_THROW("Unsupported texture type. Only RESOURCE_DIM_TEX_1D or RESOURCE_DIM_TEX_1D_ARRAY is allowed");
 
-    if (DSVDesc.Format == TEX_FORMAT_UNKNOWN)
-    {
-        DSVDesc.Format = m_Desc.Format;
-    }
+    VERIFY_EXPR(DSVDesc.Format != TEX_FORMAT_UNKNOWN);
 
     D3D11_DEPTH_STENCIL_VIEW_DESC D3D11_DSVDesc;
     TextureViewDesc_to_D3D11_DSV_DESC(DSVDesc, D3D11_DSVDesc, m_Desc.SampleCount);
@@ -209,7 +200,7 @@ void Texture1D_D3D11::CreateDSV(TextureViewDesc& DSVDesc, ID3D11DepthStencilView
                            "Failed to create D3D11 depth stencil view");
 }
 
-void Texture1D_D3D11::CreateUAV(TextureViewDesc& UAVDesc, ID3D11UnorderedAccessView** ppD3D11UAV)
+void Texture1D_D3D11::CreateUAV(const TextureViewDesc& UAVDesc, ID3D11UnorderedAccessView** ppD3D11UAV)
 {
     VERIFY(ppD3D11UAV && *ppD3D11UAV == nullptr, "UAV pointer address is null or contains non-null pointer to an existing object");
 
@@ -217,10 +208,7 @@ void Texture1D_D3D11::CreateUAV(TextureViewDesc& UAVDesc, ID3D11UnorderedAccessV
     if (!(UAVDesc.TextureDim == RESOURCE_DIM_TEX_1D || UAVDesc.TextureDim == RESOURCE_DIM_TEX_1D_ARRAY))
         LOG_ERROR_AND_THROW("Unsupported texture type. Only RESOURCE_DIM_TEX_1D or RESOURCE_DIM_TEX_1D_ARRAY is allowed");
 
-    if (UAVDesc.Format == TEX_FORMAT_UNKNOWN)
-    {
-        UAVDesc.Format = m_Desc.Format;
-    }
+    VERIFY_EXPR(UAVDesc.Format != TEX_FORMAT_UNKNOWN);
 
     D3D11_UNORDERED_ACCESS_VIEW_DESC D3D11_UAVDesc;
     TextureViewDesc_to_D3D11_UAV_DESC(UAVDesc, D3D11_UAVDesc);

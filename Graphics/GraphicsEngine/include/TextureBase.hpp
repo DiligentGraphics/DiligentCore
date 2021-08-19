@@ -31,6 +31,7 @@
 /// Implementation of the Diligent::TextureBase template class
 
 #include <memory>
+#include <array>
 
 #include "Texture.h"
 #include "GraphicsTypes.h"
@@ -38,6 +39,7 @@
 #include "GraphicsAccessories.hpp"
 #include "STDAllocator.hpp"
 #include "FormatString.hpp"
+#include "PlatformMisc.hpp"
 
 namespace Diligent
 {
@@ -97,16 +99,15 @@ public:
                 RenderDeviceImplType*    pDevice,
                 const TextureDesc&       Desc,
                 bool                     bIsDeviceInternal = false) :
-        TDeviceObjectBase(pRefCounters, pDevice, Desc, bIsDeviceInternal),
+        // clang-format off
+        TDeviceObjectBase{pRefCounters, pDevice, Desc, bIsDeviceInternal}
 #ifdef DILIGENT_DEBUG
-        m_dbgTexViewObjAllocator(TexViewObjAllocator),
+        , m_dbgTexViewObjAllocator{TexViewObjAllocator}
 #endif
-        m_pDefaultSRV{nullptr, STDDeleter<TextureViewImplType, TexViewObjAllocatorType>(TexViewObjAllocator)},
-        m_pDefaultRTV{nullptr, STDDeleter<TextureViewImplType, TexViewObjAllocatorType>(TexViewObjAllocator)},
-        m_pDefaultDSV{nullptr, STDDeleter<TextureViewImplType, TexViewObjAllocatorType>(TexViewObjAllocator)},
-        m_pDefaultUAV{nullptr, STDDeleter<TextureViewImplType, TexViewObjAllocatorType>(TexViewObjAllocator)},
-        m_pDefaultVRS{nullptr, STDDeleter<TextureViewImplType, TexViewObjAllocatorType>(TexViewObjAllocator)}
+    // clang-format on
     {
+        m_ViewIndices.fill(Uint8{InvalidViewIndex});
+
         if (this->m_Desc.MipLevels == 0)
         {
             // Compute the number of levels in the full mipmap chain
@@ -166,6 +167,12 @@ public:
         CreateViewInternal(ViewDesc, ppView, false);
     }
 
+    ~TextureBase()
+    {
+        DestroyDefaultViews();
+    }
+
+
     /// Creates default texture views.
 
     ///
@@ -173,16 +180,32 @@ public:
     /// - Creates default render target view addressing the most detailed mip level if Diligent::BIND_RENDER_TARGET flag is set.
     /// - Creates default depth-stencil view addressing the most detailed mip level if Diligent::BIND_DEPTH_STENCIL flag is set.
     /// - Creates default unordered access view addressing the entire texture if Diligent::BIND_UNORDERED_ACCESS flag is set.
+    /// - Creates default shading rate view addressing the most detailed mip if Diligent::BIND_SHADING_RATE flag is set.
     ///
     /// The function calls CreateViewInternal().
     void CreateDefaultViews()
     {
+        VERIFY(m_pDefaultViews == nullptr, "Default views have already been initialized");
+
         const auto& TexFmtAttribs = GetTextureFormatAttribs(this->m_Desc.Format);
         if (TexFmtAttribs.ComponentType == COMPONENT_TYPE_UNDEFINED)
         {
             // Cannot create default view for TYPELESS formats
             return;
         }
+
+        const Uint32 NumDefaultViews = GetNumDefaultViews();
+        if (NumDefaultViews == 0)
+            return;
+
+        if (NumDefaultViews > 1)
+        {
+            m_pDefaultViews = ALLOCATE(GetRawAllocator(), "Default texture view array", TextureViewImplType*, NumDefaultViews);
+            memset(m_pDefaultViews, 0, sizeof(TextureViewImplType*) * NumDefaultViews);
+        }
+        auto** ppDefaultViews = GetDefaultViewsArrayPtr();
+
+        Uint8 ViewIdx = 0;
 
         auto CreateDefaultView = [&](TEXTURE_VIEW_TYPE ViewType) //
         {
@@ -225,38 +248,41 @@ public:
             ViewName += '\'';
             ViewDesc.Name = ViewName.c_str();
 
-            ITextureView* pView = nullptr;
-            CreateViewInternal(ViewDesc, &pView, true);
-            VERIFY(pView != nullptr, "Failed to create default view for texture '", this->m_Desc.Name, "'.");
-            VERIFY(pView->GetDesc().ViewType == ViewType, "Unexpected view type.");
+            VERIFY_EXPR(ViewIdx < NumDefaultViews);
+            auto& pView = ppDefaultViews[ViewIdx];
+            CreateViewInternal(ViewDesc, reinterpret_cast<ITextureView**>(&pView), true);
+            DEV_CHECK_ERR(pView != nullptr, "Failed to create default view for texture '", this->m_Desc.Name, "'.");
+            DEV_CHECK_ERR(pView->GetDesc().ViewType == ViewType, "Unexpected view type.");
 
-            return static_cast<TextureViewImplType*>(pView);
+            m_ViewIndices[ViewType] = ViewIdx++;
         };
 
         if (this->m_Desc.BindFlags & BIND_SHADER_RESOURCE)
         {
-            m_pDefaultSRV.reset(CreateDefaultView(TEXTURE_VIEW_SHADER_RESOURCE));
+            CreateDefaultView(TEXTURE_VIEW_SHADER_RESOURCE);
         }
 
         if (this->m_Desc.BindFlags & BIND_RENDER_TARGET)
         {
-            m_pDefaultRTV.reset(CreateDefaultView(TEXTURE_VIEW_RENDER_TARGET));
+            CreateDefaultView(TEXTURE_VIEW_RENDER_TARGET);
         }
 
         if (this->m_Desc.BindFlags & BIND_DEPTH_STENCIL)
         {
-            m_pDefaultDSV.reset(CreateDefaultView(TEXTURE_VIEW_DEPTH_STENCIL));
+            CreateDefaultView(TEXTURE_VIEW_DEPTH_STENCIL);
         }
 
         if (this->m_Desc.BindFlags & BIND_UNORDERED_ACCESS)
         {
-            m_pDefaultUAV.reset(CreateDefaultView(TEXTURE_VIEW_UNORDERED_ACCESS));
+            CreateDefaultView(TEXTURE_VIEW_UNORDERED_ACCESS);
         }
 
         if (this->m_Desc.BindFlags & BIND_SHADING_RATE)
         {
-            m_pDefaultVRS.reset(CreateDefaultView(TEXTURE_VIEW_SHADING_RATE));
+            CreateDefaultView(TEXTURE_VIEW_SHADING_RATE);
         }
+
+        VERIFY_EXPR(ViewIdx == NumDefaultViews);
     }
 
     virtual void DILIGENT_CALL_TYPE SetState(RESOURCE_STATE State) override final
@@ -290,37 +316,78 @@ public:
     /// Implementation of ITexture::GetDefaultView().
     virtual ITextureView* DILIGENT_CALL_TYPE GetDefaultView(TEXTURE_VIEW_TYPE ViewType) override
     {
-        switch (ViewType)
+        auto ViewIdx = m_ViewIndices[ViewType];
+        if (ViewIdx == InvalidViewIndex)
+            return nullptr;
+
+        VERIFY_EXPR(ViewIdx < GetNumDefaultViews());
+        auto** ppDefaultViews = GetDefaultViewsArrayPtr();
+        return ppDefaultViews[ViewIdx];
+    }
+
+private:
+    void DestroyDefaultViews()
+    {
+        if (m_pDefaultViews == nullptr)
+            return;
+
+        const auto NumViews       = GetNumDefaultViews();
+        auto**     ppDefaultViews = GetDefaultViewsArrayPtr();
+
+        auto& TexViewAllocator = this->m_pDevice->GetTexViewObjAllocator();
+        VERIFY(&TexViewAllocator == &m_dbgTexViewObjAllocator, "Texture view allocator does not match allocator provided during texture initialization");
+
+        for (Uint32 i = 0; i < NumViews; ++i)
         {
-            // clang-format off
-            case TEXTURE_VIEW_SHADER_RESOURCE:  return m_pDefaultSRV.get();
-            case TEXTURE_VIEW_RENDER_TARGET:    return m_pDefaultRTV.get();
-            case TEXTURE_VIEW_DEPTH_STENCIL:    return m_pDefaultDSV.get();
-            case TEXTURE_VIEW_UNORDERED_ACCESS: return m_pDefaultUAV.get();
-            case TEXTURE_VIEW_SHADING_RATE:     return m_pDefaultVRS.get();
-            // clang-format on
-            default: UNEXPECTED("Unknown view type"); return nullptr;
+            if (auto* pView = ppDefaultViews[i])
+            {
+                pView->~TextureViewImplType();
+                TexViewAllocator.Free(pView);
+            }
         }
+
+        if (NumViews > 1)
+        {
+            GetRawAllocator().Free(m_pDefaultViews);
+        }
+
+        m_pDefaultViews = nullptr;
     }
 
 protected:
-    /// Pure virtual function that creates texture view for the specific engine implementation.
+    /// Pure virtual function that is implemented in every backend.
     virtual void CreateViewInternal(const struct TextureViewDesc& ViewDesc, ITextureView** ppView, bool bIsDefaultView) = 0;
+
+    Uint32 GetNumDefaultViews() const
+    {
+        constexpr auto BindFlagsWithViews =
+            BIND_SHADER_RESOURCE |
+            BIND_RENDER_TARGET |
+            BIND_DEPTH_STENCIL |
+            BIND_UNORDERED_ACCESS |
+            BIND_SHADING_RATE;
+        return PlatformMisc::CountOneBits(Uint32{this->m_Desc.BindFlags & BindFlagsWithViews});
+    }
+
+    TextureViewImplType** GetDefaultViewsArrayPtr()
+    {
+        const auto NumDefaultViews = GetNumDefaultViews();
+        return NumDefaultViews > 1 ?
+            reinterpret_cast<TextureViewImplType**>(m_pDefaultViews) :
+            reinterpret_cast<TextureViewImplType**>(&m_pDefaultViews);
+    }
+
+protected:
+    // When NumDefaultViews > 1, a TextureViewImplType** pointer to the array of views
+    // When NumDefaultViews == 1, a TextureViewImplType* pointer to the view itself
+    void* m_pDefaultViews = nullptr;
 
 #ifdef DILIGENT_DEBUG
     TexViewObjAllocatorType& m_dbgTexViewObjAllocator;
 #endif
-    // WARNING! We cannot use ITextureView here, because ITextureView has no virtual dtor!
-    /// Default SRV addressing the entire texture
-    std::unique_ptr<TextureViewImplType, STDDeleter<TextureViewImplType, TexViewObjAllocatorType>> m_pDefaultSRV;
-    /// Default RTV addressing the most detailed mip level
-    std::unique_ptr<TextureViewImplType, STDDeleter<TextureViewImplType, TexViewObjAllocatorType>> m_pDefaultRTV;
-    /// Default DSV addressing the most detailed mip level
-    std::unique_ptr<TextureViewImplType, STDDeleter<TextureViewImplType, TexViewObjAllocatorType>> m_pDefaultDSV;
-    /// Default UAV addressing the entire texture
-    std::unique_ptr<TextureViewImplType, STDDeleter<TextureViewImplType, TexViewObjAllocatorType>> m_pDefaultUAV;
-    /// Default VRS view addressing the entire texture
-    std::unique_ptr<TextureViewImplType, STDDeleter<TextureViewImplType, TexViewObjAllocatorType>> m_pDefaultVRS;
+
+    static constexpr Uint8                    InvalidViewIndex = 0xFFu;
+    std::array<Uint8, TEXTURE_VIEW_NUM_VIEWS> m_ViewIndices{};
 
     RESOURCE_STATE m_State = RESOURCE_STATE_UNKNOWN;
 };

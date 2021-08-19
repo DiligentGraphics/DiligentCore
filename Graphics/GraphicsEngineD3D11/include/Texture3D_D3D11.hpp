@@ -54,10 +54,10 @@ public:
 
 protected:
     // clang-format off
-    virtual void CreateSRV(TextureViewDesc& SRVDesc, ID3D11ShaderResourceView**  ppD3D11SRV) override final;
-    virtual void CreateRTV(TextureViewDesc& RTVDesc, ID3D11RenderTargetView**    ppD3D11RTV) override final;
-    virtual void CreateDSV(TextureViewDesc& DSVDesc, ID3D11DepthStencilView**    ppD3D11DSV) override final;
-    virtual void CreateUAV(TextureViewDesc& UAVDesc, ID3D11UnorderedAccessView** ppD3D11UAV) override final;
+    virtual void CreateSRV(const TextureViewDesc& SRVDesc, ID3D11ShaderResourceView**  ppD3D11SRV) override final;
+    virtual void CreateRTV(const TextureViewDesc& RTVDesc, ID3D11RenderTargetView**    ppD3D11RTV) override final;
+    virtual void CreateDSV(const TextureViewDesc& DSVDesc, ID3D11DepthStencilView**    ppD3D11DSV) override final;
+    virtual void CreateUAV(const TextureViewDesc& UAVDesc, ID3D11UnorderedAccessView** ppD3D11UAV) override final;
     // clang-format on
 };
 

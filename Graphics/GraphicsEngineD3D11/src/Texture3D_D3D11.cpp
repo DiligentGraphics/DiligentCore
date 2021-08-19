@@ -151,7 +151,7 @@ Texture3D_D3D11::Texture3D_D3D11(IReferenceCounters*        pRefCounters,
     SetState(InitialState);
 }
 
-void Texture3D_D3D11::CreateSRV(TextureViewDesc& SRVDesc, ID3D11ShaderResourceView** ppD3D11SRV)
+void Texture3D_D3D11::CreateSRV(const TextureViewDesc& SRVDesc, ID3D11ShaderResourceView** ppD3D11SRV)
 {
     VERIFY(ppD3D11SRV && *ppD3D11SRV == nullptr, "SRV pointer address is null or contains non-null pointer to an existing object");
 
@@ -159,10 +159,7 @@ void Texture3D_D3D11::CreateSRV(TextureViewDesc& SRVDesc, ID3D11ShaderResourceVi
     if (SRVDesc.TextureDim != RESOURCE_DIM_TEX_3D)
         LOG_ERROR_AND_THROW("Unsupported texture view type. Only RESOURCE_DIM_TEX_3D is allowed");
 
-    if (SRVDesc.Format == TEX_FORMAT_UNKNOWN)
-    {
-        SRVDesc.Format = m_Desc.Format;
-    }
+    VERIFY_EXPR(SRVDesc.Format != TEX_FORMAT_UNKNOWN);
 
     D3D11_SHADER_RESOURCE_VIEW_DESC D3D11_SRVDesc;
     TextureViewDesc_to_D3D11_SRV_DESC(SRVDesc, D3D11_SRVDesc, m_Desc.SampleCount);
@@ -172,7 +169,7 @@ void Texture3D_D3D11::CreateSRV(TextureViewDesc& SRVDesc, ID3D11ShaderResourceVi
                            "Failed to create D3D11 shader resource view");
 }
 
-void Texture3D_D3D11::CreateRTV(TextureViewDesc& RTVDesc, ID3D11RenderTargetView** ppD3D11RTV)
+void Texture3D_D3D11::CreateRTV(const TextureViewDesc& RTVDesc, ID3D11RenderTargetView** ppD3D11RTV)
 {
     VERIFY(ppD3D11RTV && *ppD3D11RTV == nullptr, "RTV pointer address is null or contains non-null pointer to an existing object");
 
@@ -180,10 +177,7 @@ void Texture3D_D3D11::CreateRTV(TextureViewDesc& RTVDesc, ID3D11RenderTargetView
     if (RTVDesc.TextureDim != RESOURCE_DIM_TEX_3D)
         LOG_ERROR_AND_THROW("Unsupported texture view type. Only RESOURCE_DIM_TEX_3D is allowed");
 
-    if (RTVDesc.Format == TEX_FORMAT_UNKNOWN)
-    {
-        RTVDesc.Format = m_Desc.Format;
-    }
+    VERIFY_EXPR(RTVDesc.Format != TEX_FORMAT_UNKNOWN);
 
     D3D11_RENDER_TARGET_VIEW_DESC D3D11_RTVDesc;
     TextureViewDesc_to_D3D11_RTV_DESC(RTVDesc, D3D11_RTVDesc, m_Desc.SampleCount);
@@ -193,12 +187,12 @@ void Texture3D_D3D11::CreateRTV(TextureViewDesc& RTVDesc, ID3D11RenderTargetView
                            "Failed to create D3D11 render target view");
 }
 
-void Texture3D_D3D11::CreateDSV(TextureViewDesc& DSVDesc, ID3D11DepthStencilView** ppD3D11DSV)
+void Texture3D_D3D11::CreateDSV(const TextureViewDesc& DSVDesc, ID3D11DepthStencilView** ppD3D11DSV)
 {
     LOG_ERROR_AND_THROW("Depth stencil views are not supported for 3D textures");
 }
 
-void Texture3D_D3D11::CreateUAV(TextureViewDesc& UAVDesc, ID3D11UnorderedAccessView** ppD3D11UAV)
+void Texture3D_D3D11::CreateUAV(const TextureViewDesc& UAVDesc, ID3D11UnorderedAccessView** ppD3D11UAV)
 {
     VERIFY(ppD3D11UAV && *ppD3D11UAV == nullptr, "UAV pointer address is null or contains non-null pointer to an existing object");
 
@@ -206,10 +200,7 @@ void Texture3D_D3D11::CreateUAV(TextureViewDesc& UAVDesc, ID3D11UnorderedAccessV
     if (UAVDesc.TextureDim != RESOURCE_DIM_TEX_3D)
         LOG_ERROR_AND_THROW("Unsupported texture view type. Only RESOURCE_DIM_TEX_3D is allowed");
 
-    if (UAVDesc.Format == TEX_FORMAT_UNKNOWN)
-    {
-        UAVDesc.Format = m_Desc.Format;
-    }
+    VERIFY_EXPR(UAVDesc.Format != TEX_FORMAT_UNKNOWN);
 
     D3D11_UNORDERED_ACCESS_VIEW_DESC D3D11_UAVDesc;
     TextureViewDesc_to_D3D11_UAV_DESC(UAVDesc, D3D11_UAVDesc);
