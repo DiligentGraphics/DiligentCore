@@ -510,8 +510,7 @@ void TextureD3D12Impl::CreateViewInternal(const struct TextureViewDesc& ViewDesc
             {
                 // In Direct3D12 there is no special shading rate view, so use SRV instead because it is enabled by default
                 VERIFY(m_Desc.BindFlags & BIND_SHADING_RATE, "BIND_SHADING_RATE flag is not set");
-                ViewDescriptor = pDeviceD3D12Impl->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-                CreateVRSView(UpdatedViewDesc, ViewDescriptor.GetCpuHandle());
+                // Descriptor handle is not needed
             }
             break;
 
@@ -548,7 +547,8 @@ void TextureD3D12Impl::CreateViewInternal(const struct TextureViewDesc& ViewDesc
                 CreateUAV(UAVDesc, MipUAVDescriptors.GetCpuHandle(MipLevel));
             }
         }
-        auto pViewD3D12 = NEW_RC_OBJ(TexViewAllocator, "TextureViewD3D12Impl instance", TextureViewD3D12Impl, bIsDefaultView ? this : nullptr)(GetDevice(), UpdatedViewDesc, this, std::move(ViewDescriptor), std::move(TexArraySRVDescriptor), std::move(MipUAVDescriptors), bIsDefaultView);
+        auto pViewD3D12 = NEW_RC_OBJ(TexViewAllocator, "TextureViewD3D12Impl instance", TextureViewD3D12Impl, bIsDefaultView ? this : nullptr)(
+            GetDevice(), UpdatedViewDesc, this, std::move(ViewDescriptor), std::move(TexArraySRVDescriptor), std::move(MipUAVDescriptors), bIsDefaultView);
         VERIFY(pViewD3D12->GetDesc().ViewType == ViewDesc.ViewType, "Incorrect view type");
 
         if (bIsDefaultView)
@@ -573,14 +573,11 @@ TextureD3D12Impl::~TextureD3D12Impl()
     }
 }
 
-void TextureD3D12Impl::CreateSRV(TextureViewDesc& SRVDesc, D3D12_CPU_DESCRIPTOR_HANDLE SRVHandle)
+void TextureD3D12Impl::CreateSRV(const TextureViewDesc& SRVDesc, D3D12_CPU_DESCRIPTOR_HANDLE SRVHandle)
 {
     VERIFY(SRVDesc.ViewType == TEXTURE_VIEW_SHADER_RESOURCE, "Incorrect view type: shader resource is expected");
+    VERIFY_EXPR(SRVDesc.Format != TEX_FORMAT_UNKNOWN);
 
-    if (SRVDesc.Format == TEX_FORMAT_UNKNOWN)
-    {
-        SRVDesc.Format = m_Desc.Format;
-    }
     D3D12_SHADER_RESOURCE_VIEW_DESC D3D12_SRVDesc;
     TextureViewDesc_to_D3D12_SRV_DESC(SRVDesc, D3D12_SRVDesc, m_Desc.SampleCount);
 
@@ -588,14 +585,10 @@ void TextureD3D12Impl::CreateSRV(TextureViewDesc& SRVDesc, D3D12_CPU_DESCRIPTOR_
     pd3d12Device->CreateShaderResourceView(m_pd3d12Resource, &D3D12_SRVDesc, SRVHandle);
 }
 
-void TextureD3D12Impl::CreateRTV(TextureViewDesc& RTVDesc, D3D12_CPU_DESCRIPTOR_HANDLE RTVHandle)
+void TextureD3D12Impl::CreateRTV(const TextureViewDesc& RTVDesc, D3D12_CPU_DESCRIPTOR_HANDLE RTVHandle)
 {
     VERIFY(RTVDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET, "Incorrect view type: render target is expected");
-
-    if (RTVDesc.Format == TEX_FORMAT_UNKNOWN)
-    {
-        RTVDesc.Format = m_Desc.Format;
-    }
+    VERIFY_EXPR(RTVDesc.Format != TEX_FORMAT_UNKNOWN);
 
     D3D12_RENDER_TARGET_VIEW_DESC D3D12_RTVDesc;
     TextureViewDesc_to_D3D12_RTV_DESC(RTVDesc, D3D12_RTVDesc, m_Desc.SampleCount);
@@ -604,14 +597,10 @@ void TextureD3D12Impl::CreateRTV(TextureViewDesc& RTVDesc, D3D12_CPU_DESCRIPTOR_
     pd3d12Device->CreateRenderTargetView(m_pd3d12Resource, &D3D12_RTVDesc, RTVHandle);
 }
 
-void TextureD3D12Impl::CreateDSV(TextureViewDesc& DSVDesc, D3D12_CPU_DESCRIPTOR_HANDLE DSVHandle)
+void TextureD3D12Impl::CreateDSV(const TextureViewDesc& DSVDesc, D3D12_CPU_DESCRIPTOR_HANDLE DSVHandle)
 {
     VERIFY(DSVDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL, "Incorrect view type: depth stencil is expected");
-
-    if (DSVDesc.Format == TEX_FORMAT_UNKNOWN)
-    {
-        DSVDesc.Format = m_Desc.Format;
-    }
+    VERIFY_EXPR(DSVDesc.Format != TEX_FORMAT_UNKNOWN);
 
     D3D12_DEPTH_STENCIL_VIEW_DESC D3D12_DSVDesc;
     TextureViewDesc_to_D3D12_DSV_DESC(DSVDesc, D3D12_DSVDesc, m_Desc.SampleCount);
@@ -620,35 +609,16 @@ void TextureD3D12Impl::CreateDSV(TextureViewDesc& DSVDesc, D3D12_CPU_DESCRIPTOR_
     pd3d12Device->CreateDepthStencilView(m_pd3d12Resource, &D3D12_DSVDesc, DSVHandle);
 }
 
-void TextureD3D12Impl::CreateUAV(TextureViewDesc& UAVDesc, D3D12_CPU_DESCRIPTOR_HANDLE UAVHandle)
+void TextureD3D12Impl::CreateUAV(const TextureViewDesc& UAVDesc, D3D12_CPU_DESCRIPTOR_HANDLE UAVHandle)
 {
     VERIFY(UAVDesc.ViewType == TEXTURE_VIEW_UNORDERED_ACCESS, "Incorrect view type: unordered access is expected");
-
-    if (UAVDesc.Format == TEX_FORMAT_UNKNOWN)
-    {
-        UAVDesc.Format = m_Desc.Format;
-    }
+    VERIFY_EXPR(UAVDesc.Format != TEX_FORMAT_UNKNOWN);
 
     D3D12_UNORDERED_ACCESS_VIEW_DESC D3D12_UAVDesc;
     TextureViewDesc_to_D3D12_UAV_DESC(UAVDesc, D3D12_UAVDesc);
 
     auto* pd3d12Device = GetDevice()->GetD3D12Device();
     pd3d12Device->CreateUnorderedAccessView(m_pd3d12Resource, nullptr, &D3D12_UAVDesc, UAVHandle);
-}
-
-void TextureD3D12Impl::CreateVRSView(TextureViewDesc& SRVDesc, D3D12_CPU_DESCRIPTOR_HANDLE SRVHandle)
-{
-    VERIFY(SRVDesc.ViewType == TEXTURE_VIEW_SHADING_RATE, "Incorrect view type: shading rate is expected");
-
-    if (SRVDesc.Format == TEX_FORMAT_UNKNOWN)
-    {
-        SRVDesc.Format = m_Desc.Format;
-    }
-    D3D12_SHADER_RESOURCE_VIEW_DESC D3D12_SRVDesc;
-    TextureViewDesc_to_D3D12_SRV_DESC(SRVDesc, D3D12_SRVDesc, m_Desc.SampleCount);
-
-    auto* pd3d12Device = GetDevice()->GetD3D12Device();
-    pd3d12Device->CreateShaderResourceView(m_pd3d12Resource, &D3D12_SRVDesc, SRVHandle);
 }
 
 void TextureD3D12Impl::SetD3D12ResourceState(D3D12_RESOURCE_STATES state)
