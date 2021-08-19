@@ -140,6 +140,67 @@ float4 main(in PSInput PSIn) : SV_Target
 )hlsl";
 
 
+const std::string TextureBasedShadingRateWithMultiViewport_VS{R"hlsl(
+struct GSInput
+{
+    float4 Pos : SV_POSITION;
+};
+
+void main(in  uint    vid : SV_VertexID,
+          out GSInput GSIn) 
+{
+    GSIn.Pos  = float4(float2(vid >> 1, vid & 1) * 4.0 - 1.0, 0.0, 1.0);
+}
+)hlsl"};
+
+const std::string TextureBasedShadingRateWithMultiViewport_GS{R"hlsl(
+struct GSInput
+{
+    float4 Pos : SV_POSITION;
+};
+
+struct PSInput
+{
+    float4 Pos   : SV_POSITION;
+	uint   Layer : SV_RenderTargetArrayIndex;
+
+    nointerpolation uint Rate : SV_ShadingRate;
+};
+
+[maxvertexcount(3)]
+[instance(2)]
+void main(          uint                    InstanceID : SV_GSInstanceID, 
+          triangle  GSInput                 GSIn[3],
+          inout     TriangleStream<PSInput> triStream) 
+{
+    for (int i = 0; i < 3; ++i)
+    {
+        PSInput PSIn;
+        PSIn.Pos   = GSIn[i].Pos;
+        PSIn.Layer = InstanceID;
+        PSIn.Rate  = 0; // ignored if combiner is PASSTHROUGH
+        triStream.Append(PSIn);
+    }
+}
+)hlsl"};
+
+const std::string TextureBasedShadingRateWithMultiViewport_PS = ShadingRatePallete + R"hlsl(
+struct PSInput
+{
+    float4 Pos   : SV_POSITION;
+	uint   Layer : SV_RenderTargetArrayIndex;
+
+    nointerpolation uint Rate : SV_ShadingRate;
+};
+
+float4 main(in PSInput PSIn) : SV_Target
+{
+    // Rate was overrided by shading rate texture
+    return ShadingRateToColor(PSIn.Rate);
+}
+)hlsl";
+
+/*
 const std::string MSResolve_VS{R"hlsl(
 struct PSInput 
 { 
@@ -182,7 +243,7 @@ float4 main(in PSInput PSIn) : SV_Target
     return Color / float(Samp);
 }
 )hlsl"};
-
+*/
 } // namespace HLSL
 
 } // namespace

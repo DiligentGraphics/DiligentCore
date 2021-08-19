@@ -355,7 +355,7 @@ void VariableShadingRatePerPrimitiveTestReferenceVk(ISwapChain* pSwapChain)
 }
 
 
-RefCntAutoPtr<ITextureView> CreateShadingRateTexture(IRenderDevice* pDevice, ISwapChain* pSwapChain, Uint32 SampleCount);
+RefCntAutoPtr<ITextureView> CreateShadingRateTexture(IRenderDevice* pDevice, ISwapChain* pSwapChain, Uint32 SampleCount = 1, Uint32 ArraySize = 1);
 
 void VariableShadingRateTextureBasedTestReferenceVk(ISwapChain* pSwapChain)
 {
@@ -454,7 +454,7 @@ void VariableShadingRateTextureBasedTestReferenceVk(ISwapChain* pSwapChain)
     RefCntAutoPtr<ITexture> pSRTex;
     VkImageView             vkShadingRateView = VK_NULL_HANDLE;
     {
-        auto pVRSView = CreateShadingRateTexture(pEnv->GetDevice(), pSwapChain, 1);
+        auto pVRSView = CreateShadingRateTexture(pEnv->GetDevice(), pSwapChain);
         ASSERT_NE(pVRSView, nullptr);
         pSRTex = pVRSView->GetTexture();
 

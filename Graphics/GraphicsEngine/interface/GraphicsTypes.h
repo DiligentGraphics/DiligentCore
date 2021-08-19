@@ -2436,9 +2436,18 @@ struct ShadingRateMode
     /// Supported shading rate.
     SHADING_RATE Rate        DEFAULT_INITIALIZER(SHADING_RATE_1X1);
 
-    /// Number of samples is a power-of-two value, this field is a combination of supported sample counts.
-    /// Example: 1 | 2 | 4
+    /// A combination of supported sample counts.
+    /// \note Since the number of samples is a power-of-two value, this field is bitmask
+    ///       of supported values.
+    ///       Example: 1 | 2 | 4
     Uint8        SampleBits  DEFAULT_INITIALIZER(0);
+    
+#if DILIGENT_CPP_INTERFACE
+    bool HasSampleCount(Uint32 SampleCount) const
+    {
+        return (SampleBits & SampleCount) != 0;
+    }
+#endif
 };
 typedef struct ShadingRateMode ShadingRateMode;
 

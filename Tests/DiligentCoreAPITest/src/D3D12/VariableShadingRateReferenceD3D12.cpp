@@ -248,7 +248,7 @@ void VariableShadingRatePerPrimitiveTestReferenceD3D12(ISwapChain* pSwapChain)
 }
 
 
-RefCntAutoPtr<ITextureView> CreateShadingRateTexture(IRenderDevice* pDevice, ISwapChain* pSwapChain, Uint32 SampleCount);
+RefCntAutoPtr<ITextureView> CreateShadingRateTexture(IRenderDevice* pDevice, ISwapChain* pSwapChain, Uint32 SampleCount = 1, Uint32 ArraySize = 1);
 
 void VariableShadingRateTextureBasedTestReferenceD3D12(ISwapChain* pSwapChain)
 {
@@ -303,7 +303,7 @@ void VariableShadingRateTextureBasedTestReferenceD3D12(ISwapChain* pSwapChain)
     hr = pd3d12Device->CreateGraphicsPipelineState(&PSODesc, __uuidof(pd3d12PSO), reinterpret_cast<void**>(static_cast<ID3D12PipelineState**>(&pd3d12PSO)));
     VERIFY_EXPR(SUCCEEDED(hr));
 
-    auto pVRSView = CreateShadingRateTexture(pEnv->GetDevice(), pSwapChain, 1);
+    auto pVRSView = CreateShadingRateTexture(pEnv->GetDevice(), pSwapChain);
     ASSERT_NE(pVRSView, nullptr);
 
     auto* pSRTexD3D12 = static_cast<ID3D12Resource*>(pVRSView->GetTexture()->GetNativeHandle());

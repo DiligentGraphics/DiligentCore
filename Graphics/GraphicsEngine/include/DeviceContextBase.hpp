@@ -881,6 +881,7 @@ inline void DeviceContextBase<ImplementationTraits>::SetViewports(
     {
         pViewports = &DefaultVP;
     }
+    DEV_CHECK_ERR(pViewports != nullptr, "pViewports must not be null");
 
     for (Uint32 vp = 0; vp < m_NumViewports; ++vp)
     {

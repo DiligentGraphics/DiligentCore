@@ -53,7 +53,7 @@ void VariableShadingRateTextureBasedTestReferenceVk(ISwapChain* pSwapChain);
 #if METAL_SUPPORTED
 #endif
 
-RefCntAutoPtr<ITextureView> CreateShadingRateTexture(IRenderDevice* pDevice, ISwapChain* pSwapChain, Uint32 SampleCount)
+RefCntAutoPtr<ITextureView> CreateShadingRateTexture(IRenderDevice* pDevice, ISwapChain* pSwapChain, Uint32 SampleCount = 1, Uint32 ArraySize = 1)
 {
     const auto& SCDesc  = pSwapChain->GetDesc();
     const auto& SRProps = pDevice->GetAdapterInfo().ShadingRate;
@@ -65,7 +65,7 @@ RefCntAutoPtr<ITextureView> CreateShadingRateTexture(IRenderDevice* pDevice, ISw
         // ShadingRates is sorted from largest to lower rate.
         for (Uint32 j = 0; j < SRProps.NumShadingRates; ++j)
         {
-            if (static_cast<SHADING_RATE>(i) >= SRProps.ShadingRates[j].Rate && (SRProps.ShadingRates[j].SampleBits & SampleCount) != 0)
+            if (static_cast<SHADING_RATE>(i) >= SRProps.ShadingRates[j].Rate && SRProps.ShadingRates[j].HasSampleCount(SampleCount))
             {
                 RemapShadingRate[i] = SRProps.ShadingRates[j].Rate;
                 break;
@@ -75,33 +75,41 @@ RefCntAutoPtr<ITextureView> CreateShadingRateTexture(IRenderDevice* pDevice, ISw
 
     TextureDesc TexDesc;
     TexDesc.Name        = "Shading rate texture";
-    TexDesc.Type        = RESOURCE_DIM_TEX_2D;
+    TexDesc.Type        = ArraySize > 1 ? RESOURCE_DIM_TEX_2D_ARRAY : RESOURCE_DIM_TEX_2D;
     TexDesc.Width       = SCDesc.Width / SRProps.MaxTileSize[0];
     TexDesc.Height      = SCDesc.Height / SRProps.MaxTileSize[1];
+    TexDesc.ArraySize   = ArraySize;
     TexDesc.Format      = TEX_FORMAT_R8_UINT;
     TexDesc.BindFlags   = BIND_SHADING_RATE;
     TexDesc.Usage       = USAGE_IMMUTABLE;
     TexDesc.SampleCount = 1;
 
     std::vector<Uint8> SRData;
-    SRData.resize(TexDesc.Width * TexDesc.Height);
-    for (Uint32 y = 0; y < TexDesc.Height; ++y)
+    SRData.resize(TexDesc.Width * TexDesc.Height * ArraySize);
+    for (Uint32 a = 0; a < ArraySize; ++a)
     {
-        for (Uint32 x = 0; x < TexDesc.Width; ++x)
+        for (Uint32 y = 0; y < TexDesc.Height; ++y)
         {
-            auto SR = VRSTestingConstants::TextureBased::GenTexture(x, y, TexDesc.Width, TexDesc.Height);
+            for (Uint32 x = 0; x < TexDesc.Width; ++x)
+            {
+                auto SR  = VRSTestingConstants::TextureBased::GenTexture(x, y, TexDesc.Width, TexDesc.Height);
+                auto Idx = x + y * TexDesc.Width + a * TexDesc.Width * TexDesc.Height;
 
-            SRData[x + y * TexDesc.Width] = RemapShadingRate[SR];
+                SRData[Idx] = RemapShadingRate[SR];
+            }
         }
     }
 
-    TextureSubResData SubResData;
-    SubResData.pData  = SRData.data();
-    SubResData.Stride = TexDesc.Width;
+    std::vector<TextureSubResData> SubResData(ArraySize);
+    for (Uint32 a = 0; a < ArraySize; ++a)
+    {
+        SubResData[a].pData  = SRData.data() + (a * TexDesc.Width * TexDesc.Height);
+        SubResData[a].Stride = TexDesc.Width;
+    }
 
     TextureData TexData;
-    TexData.pSubResources   = &SubResData;
-    TexData.NumSubresources = 1;
+    TexData.pSubResources   = SubResData.data();
+    TexData.NumSubresources = ArraySize;
 
     RefCntAutoPtr<ITexture> pSRTex;
     pDevice->CreateTexture(TexDesc, &TexData, &pSRTex);
@@ -124,6 +132,27 @@ using namespace Diligent::Testing;
 
 namespace
 {
+
+TEST(VariableShadingRateTest, ValidateSupportedShadingRates)
+{
+    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+    if (!pDevice->GetDeviceInfo().Features.VariableRateShading)
+    {
+        GTEST_SKIP() << "Variable shading rate is not supported by this device";
+    }
+
+    const auto& SRProps = pDevice->GetAdapterInfo().ShadingRate;
+
+    for (Uint32 i = 1; i < SRProps.NumShadingRates; ++i)
+    {
+        const auto& Prev = SRProps.ShadingRates[i - 1];
+        const auto& Curr = SRProps.ShadingRates[i];
+
+        ASSERT_GT(Prev.Rate, Curr.Rate);
+    }
+}
+
 
 TEST(VariableShadingRateTest, PerDraw)
 {
@@ -478,7 +507,7 @@ TEST(VariableShadingRateTest, TextureBased)
     pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);
     ASSERT_NE(pPSO, nullptr);
 
-    auto pSRView = CreateShadingRateTexture(pDevice, pSwapChain, 1);
+    auto pSRView = CreateShadingRateTexture(pDevice, pSwapChain);
     ASSERT_NE(pSRView, nullptr);
 
     ITextureView* pRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
@@ -494,6 +523,178 @@ TEST(VariableShadingRateTest, TextureBased)
 
     DrawAttribs drawAttrs{3, DRAW_FLAG_VERIFY_ALL};
     pContext->Draw(drawAttrs);
+
+    pSwapChain->Present();
+}
+
+
+TEST(VariableShadingRateTest, TextureBasedMultiViewport)
+{
+    auto*       pEnv     = TestingEnvironment::GetInstance();
+    auto*       pDevice  = pEnv->GetDevice();
+    const auto& Features = pDevice->GetDeviceInfo().Features;
+    if (!Features.VariableRateShading || !Features.MultiViewport)
+    {
+        GTEST_SKIP() << "Variable shading rate or multiple viewports are not supported by this device";
+    }
+
+    const auto& SRProps = pDevice->GetAdapterInfo().ShadingRate;
+    if (SRProps.Format != SHADING_RATE_FORMAT_PALETTE)
+    {
+        GTEST_SKIP() << "Palette shading rate format is not supported by this device";
+    }
+    if ((SRProps.CapFlags & SHADING_RATE_CAP_FLAG_TEXTURE_BASED) == 0 || (SRProps.CapFlags & SHADING_RATE_CAP_FLAG_TEXTURE_ARRAY) == 0)
+    {
+        GTEST_SKIP() << "Shading rate texture array is not supported by this device";
+    }
+
+    auto* pSwapChain = pEnv->GetSwapChain();
+    auto* pContext   = pEnv->GetDeviceContext();
+
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+    if (pTestingSwapChain)
+    {
+        pContext->Flush();
+        pContext->InvalidateState();
+
+        auto deviceType = pDevice->GetDeviceInfo().Type;
+        switch (deviceType)
+        {
+#if D3D12_SUPPORTED
+            case RENDER_DEVICE_TYPE_D3D12:
+                VariableShadingRateTextureBasedTestReferenceD3D12(pSwapChain);
+                break;
+#endif
+
+#if VULKAN_SUPPORTED
+            case RENDER_DEVICE_TYPE_VULKAN:
+                VariableShadingRateTextureBasedTestReferenceVk(pSwapChain);
+                break;
+#endif
+
+            default:
+                LOG_ERROR_AND_THROW("Unsupported device type");
+        }
+
+        pTestingSwapChain->TakeSnapshot();
+    }
+    TestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
+
+    const auto&  SCDesc    = pSwapChain->GetDesc();
+    const Uint32 ArraySize = 2;
+
+    RefCntAutoPtr<IPipelineState> pPSO;
+    {
+        GraphicsPipelineStateCreateInfo PSOCreateInfo;
+
+        auto& PSODesc          = PSOCreateInfo.PSODesc;
+        auto& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
+
+        PSODesc.Name = "Texture based shading test";
+
+        GraphicsPipeline.NumRenderTargets                     = 1;
+        GraphicsPipeline.RTVFormats[0]                        = SCDesc.ColorBufferFormat;
+        GraphicsPipeline.PrimitiveTopology                    = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        GraphicsPipeline.RasterizerDesc.CullMode              = CULL_MODE_BACK;
+        GraphicsPipeline.RasterizerDesc.FillMode              = FILL_MODE_SOLID;
+        GraphicsPipeline.RasterizerDesc.FrontCounterClockwise = False;
+
+        GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+        GraphicsPipeline.ShadingRateFlags             = PIPELINE_SHADING_RATE_FLAG_TEXTURE_BASED;
+
+        ShaderCreateInfo ShaderCI;
+        ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
+        ShaderCI.ShaderCompiler = SHADER_COMPILER_DXC;
+
+        RefCntAutoPtr<IShader> pVS;
+        {
+            ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
+            ShaderCI.EntryPoint      = "main";
+            ShaderCI.Desc.Name       = "Texture based shading test - VS";
+            ShaderCI.Source          = HLSL::TextureBasedShadingRateWithMultiViewport_VS.c_str();
+
+            pDevice->CreateShader(ShaderCI, &pVS);
+            ASSERT_NE(pVS, nullptr);
+        }
+
+        RefCntAutoPtr<IShader> pGS;
+        {
+            ShaderCI.Desc.ShaderType = SHADER_TYPE_GEOMETRY;
+            ShaderCI.EntryPoint      = "main";
+            ShaderCI.Desc.Name       = "Texture based shading test - GS";
+            ShaderCI.Source          = HLSL::TextureBasedShadingRateWithMultiViewport_GS.c_str();
+
+            pDevice->CreateShader(ShaderCI, &pGS);
+            ASSERT_NE(pGS, nullptr);
+        }
+
+        RefCntAutoPtr<IShader> pPS;
+        {
+            ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
+            ShaderCI.EntryPoint      = "main";
+            ShaderCI.Desc.Name       = "Texture based shading test - PS";
+            ShaderCI.Source          = HLSL::TextureBasedShadingRateWithMultiViewport_PS.c_str();
+
+            pDevice->CreateShader(ShaderCI, &pPS);
+            ASSERT_NE(pPS, nullptr);
+        }
+
+        PSOCreateInfo.pVS = pVS;
+        PSOCreateInfo.pGS = pGS;
+        PSOCreateInfo.pPS = pPS;
+        pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);
+        ASSERT_NE(pPSO, nullptr);
+    }
+
+    RefCntAutoPtr<ITexture> pRTArray;
+    {
+        TextureDesc TexDesc;
+        TexDesc.Name      = "Render target texture array";
+        TexDesc.Type      = RESOURCE_DIM_TEX_2D_ARRAY;
+        TexDesc.Width     = SCDesc.Width;
+        TexDesc.Height    = SCDesc.Height;
+        TexDesc.ArraySize = ArraySize;
+        TexDesc.Format    = SCDesc.ColorBufferFormat;
+        TexDesc.BindFlags = BIND_RENDER_TARGET;
+
+        pDevice->CreateTexture(TexDesc, nullptr, &pRTArray);
+        ASSERT_NE(pRTArray, nullptr);
+    }
+
+    auto pSRView = CreateShadingRateTexture(pDevice, pSwapChain, /*SampleCount*/ 1, /*ArraySize*/ ArraySize);
+    ASSERT_NE(pSRView, nullptr);
+
+    // Draw
+    {
+        ITextureView* pRTVs[] = {pRTArray->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET)};
+        pContext->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+        const float ClearColor[] = {0.f, 0.f, 0.f, 0.f};
+        pContext->ClearRenderTarget(pRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+        pContext->SetShadingRate(SHADING_RATE_1X1, SHADING_RATE_COMBINER_PASSTHROUGH, SHADING_RATE_COMBINER_OVERRIDE);
+        pContext->SetShadingRateTexture(pSRView, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+        pContext->SetPipelineState(pPSO);
+
+        DrawAttribs drawAttrs{3, DRAW_FLAG_VERIFY_ALL};
+        pContext->Draw(drawAttrs);
+
+        pContext->SetRenderTargets(0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_NONE);
+    }
+
+    // Copy to swapchain
+    {
+        CopyTextureAttribs CopyAttrs;
+        CopyAttrs.pSrcTexture              = pRTArray;
+        CopyAttrs.SrcSlice                 = 1;
+        CopyAttrs.SrcTextureTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+        CopyAttrs.pDstTexture              = pSwapChain->GetCurrentBackBufferRTV()->GetTexture();
+        CopyAttrs.DstSlice                 = 0;
+        CopyAttrs.DstTextureTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+
+        pContext->CopyTexture(CopyAttrs);
+    }
 
     pSwapChain->Present();
 }
@@ -550,7 +751,7 @@ TEST(VariableShadingRateTest, TextureBasedWithRenderPass)
     }
     TestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
 
-    auto pSRView = CreateShadingRateTexture(pDevice, pSwapChain, 1);
+    auto pSRView = CreateShadingRateTexture(pDevice, pSwapChain);
     ASSERT_NE(pSRView, nullptr);
 
     RefCntAutoPtr<IRenderPass> pRenderPass;

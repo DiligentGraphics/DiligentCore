@@ -197,27 +197,30 @@ void ValidateTextureDesc(const TextureDesc& Desc, const IRenderDevice* pDevice) 
 
         if (pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_D3D12)
         {
-            if (Desc.BindFlags & BIND_UNORDERED_ACCESS)
-                LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture is not compatible with BIND_UNORDERED_ACCESS in Direct3D12.");
+            if (Desc.BindFlags & (BIND_RENDER_TARGET | BIND_DEPTH_STENCIL))
+                LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture is not compatible with BIND_RENDER_TARGET and BIND_DEPTH_STENCIL in Direct3D12.");
 
             if (Desc.MipLevels != 1)
-                LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture must have 1 mip level.");
+                LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture must have 1 mip level in Direct3D12.");
+
+            if (Desc.Format != TEX_FORMAT_R8_UINT)
+                LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture format must be R8_UINT.");
         }
+
+        // TODO: Vulkan allows to create 2D texture array and then use single slice for view even if SHADING_RATE_CAP_FLAG_TEXTURE_ARRAY capability is not supported
+        if (Desc.Type != RESOURCE_DIM_TEX_2D && !(Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY && (SRProps.CapFlags & SHADING_RATE_CAP_FLAG_TEXTURE_ARRAY) != 0))
+            LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture must be 2D or 2D Array with SHADING_RATE_CAP_FLAG_TEXTURE_ARRAY capability.");
 
         switch (SRProps.Format)
         {
             case SHADING_RATE_FORMAT_PALETTE:
                 if (Desc.Format != TEX_FORMAT_R8_UINT && Desc.Format != TEX_FORMAT_R8_TYPELESS)
                     LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture format must be R8_UINT or TEX_FORMAT_R8_TYPELESS.");
-                if (Desc.Type != RESOURCE_DIM_TEX_2D && Desc.Type != RESOURCE_DIM_TEX_2D_ARRAY)
-                    LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture must be 2D or 2D Array.");
                 break;
 
             case SHADING_RATE_FORMAT_UNORM8:
                 if (Desc.Format != TEX_FORMAT_RG8_UNORM && Desc.Format != TEX_FORMAT_RG8_TYPELESS)
                     LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture format must be RG8_UNORM or TEX_FORMAT_RG8_TYPELESS.");
-                if (Desc.Type != RESOURCE_DIM_TEX_2D)
-                    LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture must be 2D.");
                 break;
 
             case SHADING_RATE_FORMAT_FP32:
