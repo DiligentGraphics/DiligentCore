@@ -296,7 +296,6 @@ void RenderPassVkImpl::CreateRenderPass() noexcept(false)
 RenderPassVkImpl::~RenderPassVkImpl()
 {
     m_pDevice->SafeReleaseDeviceObject(std::move(m_VkRenderPass), ~Uint64{0});
-    Destruct();
 }
 
 } // namespace Diligent

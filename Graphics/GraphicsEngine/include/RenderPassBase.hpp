@@ -107,7 +107,7 @@ public:
 
     ~RenderPassBase()
     {
-        VERIFY(m_IsDestructed, "This object must be explicitly destructed with Destruct()");
+        Destruct();
     }
 
     void Destruct()
