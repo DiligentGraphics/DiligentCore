@@ -660,6 +660,14 @@ void ValidatePipelineResourceCompatibility(const PipelineResourceDesc& ResDesc,
                             " labeled as such.");
     }
 
+    if ((ResourceFlags & PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER) != (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER))
+    {
+        LOG_ERROR_AND_THROW("Shader '", ShaderName, "' contains ",
+                            ((ResourceFlags & PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER) ? "combined image sampler" : "separate image"),
+                            " '", ResDesc.Name, "', while the same resource is defined by the pipeline resource signature '",
+                            SignatureName, "' as ", ((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER) ? "combined image sampler." : "separate image."));
+    }
+
     VERIFY(ResDesc.ArraySize > 0, "ResDesc.ArraySize can't be zero. This error should've be caught by ValidatePipelineResourceSignatureDesc().");
 
     if (ArraySize == 0)

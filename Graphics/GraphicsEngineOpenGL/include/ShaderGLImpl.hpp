@@ -59,7 +59,10 @@ public:
 
     const std::shared_ptr<const ShaderResourcesGL>& GetShaderResources() const { return m_pShaderResources; }
 
+    SHADER_SOURCE_LANGUAGE GetSourceLanguage() const { return m_SourceLanguage; }
+
 private:
+    const SHADER_SOURCE_LANGUAGE             m_SourceLanguage;
     GLObjectWrappers::GLShaderObj            m_GLShaderObj;
     std::shared_ptr<const ShaderResourcesGL> m_pShaderResources;
 };

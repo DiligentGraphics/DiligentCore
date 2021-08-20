@@ -207,9 +207,13 @@ ShaderResourcesGL::~ShaderResourcesGL()
 
 
 void ShaderResourcesGL::LoadUniforms(SHADER_TYPE                           ShaderStages,
+                                     PIPELINE_RESOURCE_FLAGS               SamplerResourceFlag,
                                      const GLObjectWrappers::GLProgramObj& GLProgram,
                                      GLContextState&                       State)
 {
+    VERIFY(SamplerResourceFlag == PIPELINE_RESOURCE_FLAG_NONE || SamplerResourceFlag == PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER,
+           "Only NONE (for GLSL source) and COMBINED_SAMPLER (for HLSL source) are valid sampler resource flags");
+
     // Load uniforms to temporary arrays. We will then pack all variables into a single chunk of memory.
     std::vector<UniformBufferInfo> UniformBlocks;
     std::vector<TextureInfo>       Textures;
@@ -344,14 +348,18 @@ void ShaderResourcesGL::LoadUniforms(SHADER_TYPE                           Shade
             case GL_INT_SAMPLER_BUFFER:
             case GL_UNSIGNED_INT_SAMPLER_BUFFER:
             {
-                // clang-format off
-                const auto ResourceType =
-                        dataType == GL_SAMPLER_BUFFER     ||
-                        dataType == GL_INT_SAMPLER_BUFFER ||
-                        dataType == GL_UNSIGNED_INT_SAMPLER_BUFFER ?
+                const auto IsBuffer =
+                    dataType == GL_SAMPLER_BUFFER ||
+                    dataType == GL_INT_SAMPLER_BUFFER ||
+                    dataType == GL_UNSIGNED_INT_SAMPLER_BUFFER;
+                const auto ResourceType = IsBuffer ?
                     SHADER_RESOURCE_TYPE_BUFFER_SRV :
                     SHADER_RESOURCE_TYPE_TEXTURE_SRV;
-                // clang-format on
+                const auto ResourceFlags = IsBuffer ?
+                    PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER :
+                    SamplerResourceFlag // PIPELINE_RESOURCE_FLAG_NONE for HLSL source or
+                                        // PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER for GLSL source
+                    ;
 
                 RemoveArrayBrackets(Name.data());
 
@@ -359,6 +367,7 @@ void ShaderResourcesGL::LoadUniforms(SHADER_TYPE                           Shade
                     NamesPool.emplace(Name.data()).first->c_str(),
                     ShaderStages,
                     ResourceType,
+                    ResourceFlags,
                     static_cast<Uint32>(size),
                     dataType,
                     ResDim,
@@ -402,14 +411,16 @@ void ShaderResourcesGL::LoadUniforms(SHADER_TYPE                           Shade
             case GL_UNSIGNED_INT_IMAGE_2D_MULTISAMPLE:
             case GL_UNSIGNED_INT_IMAGE_2D_MULTISAMPLE_ARRAY:
             {
-                // clang-format off
-                const auto ResourceType =
-                        dataType == GL_IMAGE_BUFFER     ||
-                        dataType == GL_INT_IMAGE_BUFFER ||
-                        dataType == GL_UNSIGNED_INT_IMAGE_BUFFER ?
+                const auto IsBuffer =
+                    dataType == GL_IMAGE_BUFFER ||
+                    dataType == GL_INT_IMAGE_BUFFER ||
+                    dataType == GL_UNSIGNED_INT_IMAGE_BUFFER;
+                const auto ResourceType = IsBuffer ?
                     SHADER_RESOURCE_TYPE_BUFFER_UAV :
                     SHADER_RESOURCE_TYPE_TEXTURE_UAV;
-                // clang-format on
+                const auto ResourceFlags = IsBuffer ?
+                    PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER :
+                    PIPELINE_RESOURCE_FLAG_NONE;
 
                 RemoveArrayBrackets(Name.data());
 
@@ -417,6 +428,7 @@ void ShaderResourcesGL::LoadUniforms(SHADER_TYPE                           Shade
                     NamesPool.emplace(Name.data()).first->c_str(),
                     ShaderStages,
                     ResourceType,
+                    ResourceFlags,
                     static_cast<Uint32>(size),
                     dataType,
                     ResDim,

@@ -98,6 +98,10 @@ private:
 
     void ValidateShaderResources(std::shared_ptr<const ShaderResourcesGL> pShaderResources, const char* ShaderName, SHADER_TYPE ShaderStages);
 
+    // Determines the required pipeline resource flag (NONE or COMBINED_SAMPLER) for the set of shaders.
+    // Prints a warning in case of a conflict.
+    PIPELINE_RESOURCE_FLAGS GetSamplerResourceFlag(const TShaderStages& Stages, bool SilenceWarning) const;
+
 private:
     // Linked GL programs for every shader stage. Every pipeline needs to have its own programs
     // because resource bindings assigned by PipelineResourceSignatureGLImpl::ApplyBindings depend on other

@@ -64,6 +64,7 @@ public:
 
     /// Loads program uniforms and assigns bindings
     void LoadUniforms(SHADER_TYPE                           ShaderStages,
+                      PIPELINE_RESOURCE_FLAGS               SamplerResourceFlag,
                       const GLObjectWrappers::GLProgramObj& GLProgram,
                       class GLContextState&                 State);
 
@@ -73,25 +74,33 @@ public:
 /*  0 */    const Char*                             Name;
 /*  8 */    const SHADER_TYPE                       ShaderStages;
 /* 12 */    const SHADER_RESOURCE_TYPE              ResourceType;
+/* 13 */    const PIPELINE_RESOURCE_FLAGS           ResourceFlags;
+/* 14 */
 /* 16 */          Uint32                            ArraySize;
 /* 20 */
 /* 24 */    // End of data
         // clang-format on
 
-        GLResourceAttribs(const Char*          _Name,
-                          SHADER_TYPE          _ShaderStages,
-                          SHADER_RESOURCE_TYPE _ResourceType,
-                          Uint32               _ArraySize) noexcept :
+        GLResourceAttribs(const Char*             _Name,
+                          SHADER_TYPE             _ShaderStages,
+                          SHADER_RESOURCE_TYPE    _ResourceType,
+                          PIPELINE_RESOURCE_FLAGS _ResourceFlags,
+                          Uint32                  _ArraySize) noexcept :
             // clang-format off
-            Name         {_Name        },
-            ShaderStages {_ShaderStages},
-            ResourceType {_ResourceType},
-            ArraySize    {_ArraySize   }
+            Name         {_Name         },
+            ShaderStages {_ShaderStages },
+            ResourceType {_ResourceType },
+            ResourceFlags{_ResourceFlags},
+            ArraySize    {_ArraySize    }
         // clang-format on
         {
             VERIFY(_ShaderStages != SHADER_TYPE_UNKNOWN, "At least one shader stage must be specified");
             VERIFY(_ResourceType != SHADER_RESOURCE_TYPE_UNKNOWN, "Unknown shader resource type");
             VERIFY(_ArraySize >= 1, "Array size must be greater than 1");
+            VERIFY((ResourceFlags & PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER) == 0 || ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV,
+                   "PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER is only allowed for texture SRVs");
+            VERIFY((ResourceFlags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) == 0 || ResourceType == SHADER_RESOURCE_TYPE_BUFFER_SRV || ResourceType == SHADER_RESOURCE_TYPE_BUFFER_UAV,
+                   "PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER is only allowed for buffer SRVs and UAVs");
         }
 
         GLResourceAttribs(const GLResourceAttribs& Attribs,
@@ -102,6 +111,7 @@ public:
                 NamesPool.CopyString(Attribs.Name),
                 Attribs.ShaderStages,
                 Attribs.ResourceType,
+                Attribs.ResourceFlags,
                 Attribs.ArraySize
             }
         // clang-format on
@@ -131,7 +141,7 @@ public:
                           SHADER_RESOURCE_TYPE  _ResourceType,
                           Uint32                _ArraySize,
                           GLuint                _UBIndex)noexcept :
-            GLResourceAttribs{_Name, _ShaderStages, _ResourceType, _ArraySize},
+            GLResourceAttribs{_Name, _ShaderStages, _ResourceType, PIPELINE_RESOURCE_FLAG_NONE, _ArraySize},
             UBIndex          {_UBIndex}
         {}
 
@@ -155,14 +165,15 @@ public:
         TextureInfo            (      TextureInfo&&) = default;
         TextureInfo& operator= (      TextureInfo&&) = delete;
 
-        TextureInfo(const Char*           _Name,
-                    SHADER_TYPE           _ShaderStages,
-                    SHADER_RESOURCE_TYPE  _ResourceType,
-                    Uint32                _ArraySize,
-                    GLenum                _TextureType,
-                    RESOURCE_DIMENSION    _ResourceDim,
-                    bool                  _IsMultisample) noexcept :
-            GLResourceAttribs{_Name, _ShaderStages, _ResourceType, _ArraySize},
+        TextureInfo(const Char*             _Name,
+                    SHADER_TYPE             _ShaderStages,
+                    SHADER_RESOURCE_TYPE    _ResourceType,
+                    PIPELINE_RESOURCE_FLAGS _ResourceFlags,
+                    Uint32                  _ArraySize,
+                    GLenum                  _TextureType,
+                    RESOURCE_DIMENSION      _ResourceDim,
+                    bool                    _IsMultisample) noexcept :
+            GLResourceAttribs{_Name, _ShaderStages, _ResourceType, _ResourceFlags, _ArraySize},
             TextureType      {_TextureType},
             ResourceDim      {_ResourceDim},
             IsMultisample    {_IsMultisample}
@@ -192,14 +203,15 @@ public:
         ImageInfo            (      ImageInfo&&) = default;
         ImageInfo& operator= (      ImageInfo&&) = delete;
 
-        ImageInfo(const Char*           _Name,
-                  SHADER_TYPE           _ShaderStages,
-                  SHADER_RESOURCE_TYPE  _ResourceType,
-                  Uint32                _ArraySize,
-                  GLenum                _ImageType,
-                  RESOURCE_DIMENSION    _ResourceDim,
-                  bool                  _IsMultisample) noexcept :
-            GLResourceAttribs{_Name,  _ShaderStages, _ResourceType, _ArraySize},
+        ImageInfo(const Char*             _Name,
+                  SHADER_TYPE             _ShaderStages,
+                  SHADER_RESOURCE_TYPE    _ResourceType,
+                  PIPELINE_RESOURCE_FLAGS _ResourceFlags,
+                  Uint32                  _ArraySize,
+                  GLenum                  _ImageType,
+                  RESOURCE_DIMENSION      _ResourceDim,
+                  bool                    _IsMultisample) noexcept :
+            GLResourceAttribs{_Name,  _ShaderStages, _ResourceType, _ResourceFlags, _ArraySize},
             ImageType        {_ImageType},
             ResourceDim      {_ResourceDim},
             IsMultisample    {_IsMultisample}
@@ -229,12 +241,12 @@ public:
         StorageBlockInfo            (      StorageBlockInfo&&) = default;
         StorageBlockInfo& operator= (      StorageBlockInfo&&) = delete;
 
-        StorageBlockInfo(const Char*            _Name,
-                         SHADER_TYPE            _ShaderStages,
-                         SHADER_RESOURCE_TYPE   _ResourceType,
-                         Uint32                 _ArraySize,
-                         GLint                  _SBIndex)noexcept :
-            GLResourceAttribs{_Name, _ShaderStages, _ResourceType, _ArraySize},
+        StorageBlockInfo(const Char*          _Name,
+                         SHADER_TYPE          _ShaderStages,
+                         SHADER_RESOURCE_TYPE _ResourceType,
+                         Uint32               _ArraySize,
+                         GLint                _SBIndex)noexcept :
+            GLResourceAttribs{_Name, _ShaderStages, _ResourceType, PIPELINE_RESOURCE_FLAG_NONE, _ArraySize},
             SBIndex          {_SBIndex}
         {}
 

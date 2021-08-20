@@ -1512,4 +1512,86 @@ TEST_F(PSOCreationFailureTest, NonSeparablePrograms_SeparateImmutableSamplers)
 }
 
 
+TEST_F(PSOCreationFailureTest, MissingCombinedImageSampler)
+{
+    auto* const pEnv       = TestingEnvironment::GetInstance();
+    auto* const pDevice    = pEnv->GetDevice();
+    const auto& DeviceInfo = pDevice->GetDeviceInfo();
+
+    if (!DeviceInfo.IsVulkanDevice() && !DeviceInfo.IsGLDevice())
+    {
+        GTEST_SKIP() << "Combined image samplers are only available in GL and Vulkan";
+    }
+
+    static constexpr char VSSource_GLSL[] = R"(
+    #ifndef GL_ES
+    out gl_PerVertex
+    {
+        vec4 gl_Position;
+    };
+    #endif
+
+    void main()
+    {
+        gl_Position = vec4(0.0, 0.0, 0.0, 1.0);
+    }
+    )";
+
+    static constexpr char PSSource_GLSL[] = R"(
+    uniform sampler2D g_Texture;
+    layout(location=0) out vec4 out_Color;
+    void main()
+    {
+        out_Color = texture(g_Texture, vec2(0.5, 0.5));
+    }
+    )";
+
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_GLSL;
+    ShaderCI.UseCombinedTextureSamplers = true;
+
+    RefCntAutoPtr<IShader> pVS;
+    {
+        ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
+        ShaderCI.Desc.Name       = "Missing combined image sampler (PSOCreationFailureTest) VS";
+        ShaderCI.Source          = VSSource_GLSL;
+        pDevice->CreateShader(ShaderCI, &pVS);
+        ASSERT_TRUE(pVS);
+    }
+
+    RefCntAutoPtr<IShader> pPS;
+    {
+        ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
+        ShaderCI.Desc.Name       = "Missing combined image sampler (PSOCreationFailureTest) PS";
+        ShaderCI.Source          = PSSource_GLSL;
+        pDevice->CreateShader(ShaderCI, &pPS);
+        ASSERT_TRUE(pPS);
+    }
+
+    PipelineResourceSignatureDesc PRSDesc;
+    PRSDesc.Name = "PSO Create Failure - Missing Combined Image Sampler";
+    PipelineResourceDesc Resources[]{
+        {SHADER_TYPE_PIXEL, "g_Texture", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE}};
+
+    PRSDesc.UseCombinedTextureSamplers = true;
+    PRSDesc.Resources                  = Resources;
+    PRSDesc.NumResources               = _countof(Resources);
+
+    RefCntAutoPtr<IPipelineResourceSignature> pPRS;
+    pDevice->CreatePipelineResourceSignature(PRSDesc, &pPRS);
+    ASSERT_NE(pPRS, nullptr);
+
+    IPipelineResourceSignature* ppSignatures[] = {pPRS};
+
+    auto PsoCI{GetGraphicsPSOCreateInfo("PSO Create Failure - Missing Combined Image Sampler")};
+    PsoCI.ppResourceSignatures    = ppSignatures;
+    PsoCI.ResourceSignaturesCount = _countof(ppSignatures);
+
+    PsoCI.pVS = pVS;
+    PsoCI.pPS = pPS;
+
+    TestCreatePSOFailure(PsoCI, "contains combined image sampler 'g_Texture', while the same resource is defined by the pipeline "
+                                "resource signature 'PSO Create Failure - Missing Combined Image Sampler' as separate image");
+}
+
 } // namespace

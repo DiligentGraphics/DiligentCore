@@ -64,6 +64,38 @@ static void VerifyResourceMerge(const PipelineStateDesc&                    PSOD
 #undef LOG_RESOURCE_MERGE_ERROR_AND_THROW
 }
 
+PIPELINE_RESOURCE_FLAGS PipelineStateGLImpl::GetSamplerResourceFlag(const TShaderStages& Stages, bool SilenceWarning) const
+{
+    VERIFY_EXPR(!Stages.empty());
+
+    constexpr auto UndefinedFlag = static_cast<PIPELINE_RESOURCE_FLAGS>(0xFF);
+
+    auto SamplerResourceFlag = UndefinedFlag;
+    bool ConflictsFound      = false;
+    for (auto& Stage : Stages)
+    {
+        auto Lang = Stage->GetSourceLanguage();
+        auto Flag = Lang == SHADER_SOURCE_LANGUAGE_HLSL ?
+            PIPELINE_RESOURCE_FLAG_NONE :
+            PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER;
+
+        if (SamplerResourceFlag == UndefinedFlag)
+            SamplerResourceFlag = Flag;
+        else if (SamplerResourceFlag != Flag)
+            ConflictsFound = true;
+    }
+
+    if (ConflictsFound && !SilenceWarning)
+    {
+        LOG_WARNING_MESSAGE("Pipeline state '", m_Desc.Name,
+                            "' uses shaders compiled from different source languages. When separable programs are not available, this "
+                            "may result in incorrect pipeline resource flags (NONE vs COMBINED_SAMPLER) determined for textures.");
+    }
+
+    return SamplerResourceFlag;
+}
+
+
 RefCntAutoPtr<PipelineResourceSignatureGLImpl> PipelineStateGLImpl::CreateDefaultSignature(
     const TShaderStages& ShaderStages,
     SHADER_TYPE          ActiveStages)
@@ -74,31 +106,19 @@ RefCntAutoPtr<PipelineResourceSignatureGLImpl> PipelineStateGLImpl::CreateDefaul
 
     std::unordered_map<ShaderResourceHashKey, const ShaderResourcesGL::GLResourceAttribs&, ShaderResourceHashKey::Hasher> UniqueResources;
 
-    const auto HandleResource = [&](const ShaderResourcesGL::GLResourceAttribs& Attribs, PIPELINE_RESOURCE_FLAGS Flags) //
+    const auto HandleResource = [&](const ShaderResourcesGL::GLResourceAttribs& Attribs) //
     {
         const auto VarDesc     = FindPipelineResourceLayoutVariable(LayoutDesc, Attribs.Name, Attribs.ShaderStages, nullptr);
         const auto it_assigned = UniqueResources.emplace(ShaderResourceHashKey{Attribs.Name, VarDesc.ShaderStages}, Attribs);
         if (it_assigned.second)
         {
-            Flags |= ShaderVariableFlagsToPipelineResourceFlags(VarDesc.Flags);
+            const auto Flags = Attribs.ResourceFlags | ShaderVariableFlagsToPipelineResourceFlags(VarDesc.Flags);
             Resources.emplace_back(VarDesc.ShaderStages, Attribs.Name, Attribs.ArraySize, Attribs.ResourceType, VarDesc.Type, Flags);
         }
         else
         {
             VerifyResourceMerge(m_Desc, it_assigned.first->second, Attribs);
         }
-    };
-    const auto HandleUB = [&](const ShaderResourcesGL::UniformBufferInfo& Attribs) {
-        HandleResource(Attribs, PIPELINE_RESOURCE_FLAG_NONE);
-    };
-    const auto HandleTexture = [&](const ShaderResourcesGL::TextureInfo& Attribs) {
-        HandleResource(Attribs, Attribs.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV ? PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER : PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER);
-    };
-    const auto HandleImage = [&](const ShaderResourcesGL::ImageInfo& Attribs) {
-        HandleResource(Attribs, Attribs.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_UAV ? PIPELINE_RESOURCE_FLAG_NONE : PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER);
-    };
-    const auto HandleSB = [&](const ShaderResourcesGL::StorageBlockInfo& Attribs) {
-        HandleResource(Attribs, PIPELINE_RESOURCE_FLAG_NONE);
     };
 
     ShaderResourcesGL ProgramResources;
@@ -107,7 +127,7 @@ RefCntAutoPtr<PipelineResourceSignatureGLImpl> PipelineStateGLImpl::CreateDefaul
         for (size_t i = 0; i < ShaderStages.size(); ++i)
         {
             auto* pShaderGL = ShaderStages[i];
-            pShaderGL->GetShaderResources()->ProcessConstResources(HandleUB, HandleTexture, HandleImage, HandleSB);
+            pShaderGL->GetShaderResources()->ProcessConstResources(HandleResource, HandleResource, HandleResource, HandleResource);
         }
     }
     else
@@ -116,8 +136,9 @@ RefCntAutoPtr<PipelineResourceSignatureGLImpl> PipelineStateGLImpl::CreateDefaul
         VERIFY_EXPR(pImmediateCtx);
         VERIFY_EXPR(m_GLPrograms[0] != 0);
 
-        ProgramResources.LoadUniforms(ActiveStages, m_GLPrograms[0], pImmediateCtx->GetContextState());
-        ProgramResources.ProcessConstResources(HandleUB, HandleTexture, HandleImage, HandleSB);
+        const auto SamplerResFlag = GetSamplerResourceFlag(ShaderStages, true /*SilenceWarning*/);
+        ProgramResources.LoadUniforms(ActiveStages, SamplerResFlag, m_GLPrograms[0], pImmediateCtx->GetContextState());
+        ProgramResources.ProcessConstResources(HandleResource, HandleResource, HandleResource, HandleResource);
     }
 
     const auto* pImmutableSamplers = LayoutDesc.ImmutableSamplers;
@@ -152,6 +173,27 @@ void PipelineStateGLImpl::InitResourceLayout(const TShaderStages& ShaderStages,
         VERIFY_EXPR(!m_Signatures[0] || m_Signatures[0]->GetDesc().BindingIndex == 0);
     }
 
+    if (m_IsProgramPipelineSupported)
+    {
+        for (size_t i = 0; i < ShaderStages.size(); ++i)
+        {
+            auto* pShaderGL = ShaderStages[i];
+            ValidateShaderResources(pShaderGL->GetShaderResources(), pShaderGL->GetDesc().Name, pShaderGL->GetDesc().ShaderType);
+        }
+    }
+    else
+    {
+        auto pImmediateCtx = m_pDevice->GetImmediateContext(0);
+        VERIFY_EXPR(pImmediateCtx != nullptr);
+        VERIFY_EXPR(m_GLPrograms[0] != 0);
+
+        const auto SamplerResFlag = GetSamplerResourceFlag(ShaderStages, false /*SilenceWarning*/);
+
+        std::shared_ptr<ShaderResourcesGL> pResources{new ShaderResourcesGL{}};
+        pResources->LoadUniforms(ActiveStages, GetSamplerResourceFlag(ShaderStages, SamplerResFlag), m_GLPrograms[0], pImmediateCtx->GetContextState());
+        ValidateShaderResources(std::move(pResources), m_Desc.Name, ActiveStages);
+    }
+
     // Apply resource bindings to programs.
     auto& CtxState = m_pDevice->GetImmediateContext(0)->GetContextState();
 
@@ -179,25 +221,6 @@ void PipelineStateGLImpl::InitResourceLayout(const TShaderStages& ShaderStages,
         LOG_ERROR_AND_THROW("The number of bindings in range '", GetBindingRangeName(BINDING_RANGE_STORAGE_BUFFER), "' is greater than the maximum allowed (", Limits.MaxStorageBlock, ").");
     if (Bindings[BINDING_RANGE_IMAGE] > static_cast<Uint32>(Limits.MaxImagesUnits))
         LOG_ERROR_AND_THROW("The number of bindings in range '", GetBindingRangeName(BINDING_RANGE_IMAGE), "' is greater than the maximum allowed (", Limits.MaxImagesUnits, ").");
-
-    if (m_IsProgramPipelineSupported)
-    {
-        for (size_t i = 0; i < ShaderStages.size(); ++i)
-        {
-            auto* pShaderGL = ShaderStages[i];
-            ValidateShaderResources(pShaderGL->GetShaderResources(), pShaderGL->GetDesc().Name, pShaderGL->GetDesc().ShaderType);
-        }
-    }
-    else
-    {
-        auto pImmediateCtx = m_pDevice->GetImmediateContext(0);
-        VERIFY_EXPR(pImmediateCtx != nullptr);
-        VERIFY_EXPR(m_GLPrograms[0] != 0);
-
-        std::shared_ptr<ShaderResourcesGL> pResources{new ShaderResourcesGL{}};
-        pResources->LoadUniforms(ActiveStages, m_GLPrograms[0], pImmediateCtx->GetContextState());
-        ValidateShaderResources(std::move(pResources), m_Desc.Name, ActiveStages);
-    }
 }
 
 template <typename PSOCreateInfoType>
@@ -409,8 +432,7 @@ GLObjectWrappers::GLPipelineObj& PipelineStateGLImpl::GetGLProgramPipeline(GLCon
 void PipelineStateGLImpl::ValidateShaderResources(std::shared_ptr<const ShaderResourcesGL> pShaderResources, const char* ShaderName, SHADER_TYPE ShaderStages)
 {
     const auto HandleResource = [&](const ShaderResourcesGL::GLResourceAttribs& Attribs,
-                                    SHADER_RESOURCE_TYPE                        AltResourceType,
-                                    PIPELINE_RESOURCE_FLAGS                     Flags) //
+                                    SHADER_RESOURCE_TYPE                        AltResourceType) //
     {
         const auto ResAttribution = GetResourceAttribution(Attribs.Name, ShaderStages);
 
@@ -436,7 +458,7 @@ void PipelineStateGLImpl::ValidateShaderResources(std::shared_ptr<const ShaderRe
             // Texture SRV is the same as input attachment.
             const auto Type = (AltResourceType == ResDesc.ResourceType ? AltResourceType : Attribs.ResourceType);
 
-            ValidatePipelineResourceCompatibility(ResDesc, Type, Flags, Attribs.ArraySize, ShaderName, pSignature->GetDesc().Name);
+            ValidatePipelineResourceCompatibility(ResDesc, Type, Attribs.ResourceFlags, Attribs.ArraySize, ShaderName, pSignature->GetDesc().Name);
         }
         else
         {
@@ -445,25 +467,21 @@ void PipelineStateGLImpl::ValidateShaderResources(std::shared_ptr<const ShaderRe
     };
 
     const auto HandleUB = [&](const ShaderResourcesGL::UniformBufferInfo& Attribs) {
-        HandleResource(Attribs, Attribs.ResourceType, PIPELINE_RESOURCE_FLAG_NONE);
+        HandleResource(Attribs, Attribs.ResourceType);
     };
 
     const auto HandleTexture = [&](const ShaderResourcesGL::TextureInfo& Attribs) {
         const bool IsTexelBuffer = (Attribs.ResourceType != SHADER_RESOURCE_TYPE_TEXTURE_SRV);
-        HandleResource(Attribs,
-                       IsTexelBuffer ? Attribs.ResourceType : SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT,
-                       IsTexelBuffer ? PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER : PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER);
+        HandleResource(Attribs, IsTexelBuffer ? Attribs.ResourceType : SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT);
     };
 
     const auto HandleImage = [&](const ShaderResourcesGL::ImageInfo& Attribs) {
         const bool IsImageBuffer = (Attribs.ResourceType != SHADER_RESOURCE_TYPE_TEXTURE_UAV);
-        HandleResource(Attribs,
-                       IsImageBuffer ? SHADER_RESOURCE_TYPE_BUFFER_SRV : SHADER_RESOURCE_TYPE_TEXTURE_SRV,
-                       IsImageBuffer ? PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER : PIPELINE_RESOURCE_FLAG_NONE);
+        HandleResource(Attribs, IsImageBuffer ? SHADER_RESOURCE_TYPE_BUFFER_SRV : SHADER_RESOURCE_TYPE_TEXTURE_SRV);
     };
 
     const auto HandleSB = [&](const ShaderResourcesGL::StorageBlockInfo& Attribs) {
-        HandleResource(Attribs, SHADER_RESOURCE_TYPE_BUFFER_SRV, PIPELINE_RESOURCE_FLAG_NONE);
+        HandleResource(Attribs, SHADER_RESOURCE_TYPE_BUFFER_SRV);
     };
 
     pShaderResources->ProcessConstResources(HandleUB, HandleTexture, HandleImage, HandleSB);

@@ -55,6 +55,7 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
         ShaderCI.Desc,
         bIsDeviceInternal
     },
+    m_SourceLanguage{ShaderCI.SourceLanguage},
     m_GLShaderObj{true, GLObjectWrappers::GLShaderObjCreateReleaseHelper{GetGLShaderType(m_Desc.ShaderType)}}
 // clang-format on
 {
@@ -169,7 +170,11 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
         auto& GLState = pImmediateCtx->GetContextState();
 
         std::unique_ptr<ShaderResourcesGL> pResources{new ShaderResourcesGL{}};
-        pResources->LoadUniforms(m_Desc.ShaderType, Program, GLState);
+        pResources->LoadUniforms(m_Desc.ShaderType,
+                                 m_SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL ?
+                                     PIPELINE_RESOURCE_FLAG_NONE :            // Reflect samplers as separate for consistency with othe backends
+                                     PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER, // Reflect samplers as combined
+                                 Program, GLState);
         m_pShaderResources.reset(pResources.release());
     }
 }
