@@ -174,7 +174,7 @@ protected:
 
         pContext->SetPipelineState(sm_pPSO);
 
-        DrawAttribs drawAttrs{4, DRAW_FLAG_VERIFY_ALL};
+        DrawAttribs drawAttrs{4, DRAW_FLAG_VERIFY_ALL, 32};
         pContext->Draw(drawAttrs);
     }
 
@@ -586,7 +586,7 @@ TEST_F(QueryTest, DeferredContexts)
                     if (DeviceInfo.Features.TimestampQueries)
                         pCtx->EndQuery(pStartTimestamps[thread_id]);
 
-                    DrawAttribs drawAttrs{4, DRAW_FLAG_VERIFY_ALL};
+                    DrawAttribs drawAttrs{4, DRAW_FLAG_VERIFY_ALL, 32};
                     pCtx->Draw(drawAttrs);
 
                     if (DeviceInfo.Features.DurationQueries)
