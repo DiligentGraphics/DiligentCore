@@ -173,12 +173,14 @@ void PipelineStateGLImpl::InitResourceLayout(const TShaderStages& ShaderStages,
         VERIFY_EXPR(!m_Signatures[0] || m_Signatures[0]->GetDesc().BindingIndex == 0);
     }
 
+    std::vector<std::shared_ptr<const ShaderResourcesGL>> ProgResources(m_NumPrograms);
     if (m_IsProgramPipelineSupported)
     {
         for (size_t i = 0; i < ShaderStages.size(); ++i)
         {
-            auto* pShaderGL = ShaderStages[i];
-            ValidateShaderResources(pShaderGL->GetShaderResources(), pShaderGL->GetDesc().Name, pShaderGL->GetDesc().ShaderType);
+            auto* pShaderGL  = ShaderStages[i];
+            ProgResources[i] = pShaderGL->GetShaderResources();
+            ValidateShaderResources(ProgResources[i], pShaderGL->GetDesc().Name, pShaderGL->GetDesc().ShaderType);
         }
     }
     else
@@ -189,8 +191,9 @@ void PipelineStateGLImpl::InitResourceLayout(const TShaderStages& ShaderStages,
 
         const auto SamplerResFlag = GetSamplerResourceFlag(ShaderStages, false /*SilenceWarning*/);
 
-        std::shared_ptr<ShaderResourcesGL> pResources{new ShaderResourcesGL{}};
+        auto pResources = std::make_shared<ShaderResourcesGL>();
         pResources->LoadUniforms(ActiveStages, GetSamplerResourceFlag(ShaderStages, SamplerResFlag), m_GLPrograms[0], pImmediateCtx->GetContextState());
+        ProgResources[0] = pResources;
         ValidateShaderResources(std::move(pResources), m_Desc.Name, ActiveStages);
     }
 
@@ -206,7 +209,7 @@ void PipelineStateGLImpl::InitResourceLayout(const TShaderStages& ShaderStages,
 
         m_BaseBindings[s] = Bindings;
         for (Uint32 p = 0; p < m_NumPrograms; ++p)
-            pSignature->ApplyBindings(m_GLPrograms[p], CtxState, GetShaderStageType(p), Bindings);
+            pSignature->ApplyBindings(m_GLPrograms[p], *ProgResources[p], CtxState, Bindings);
 
         pSignature->ShiftBindings(Bindings);
     }

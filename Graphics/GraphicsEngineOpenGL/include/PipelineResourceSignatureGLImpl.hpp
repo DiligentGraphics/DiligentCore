@@ -79,8 +79,8 @@ public:
     // Applies bindings for resources in this signature to GLProgram.
     // The bindings are biased by BaseBindings.
     void ApplyBindings(GLObjectWrappers::GLProgramObj& GLProgram,
+                       const ShaderResourcesGL&        Resources,
                        class GLContextState&           State,
-                       SHADER_TYPE                     Stages,
                        const TBindings&                BaseBindings) const;
 
     __forceinline void ShiftBindings(TBindings& Bindings) const

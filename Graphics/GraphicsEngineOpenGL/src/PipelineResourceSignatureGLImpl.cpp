@@ -30,6 +30,7 @@
 
 #include <algorithm>
 #include <limits>
+#include <functional>
 
 #include "RenderDeviceGLImpl.hpp"
 
@@ -200,25 +201,27 @@ void PipelineResourceSignatureGLImpl::Destruct()
 }
 
 void PipelineResourceSignatureGLImpl::ApplyBindings(GLObjectWrappers::GLProgramObj& GLProgram,
+                                                    const ShaderResourcesGL&        ProgResources,
                                                     GLContextState&                 State,
-                                                    SHADER_TYPE                     Stages,
                                                     const TBindings&                BaseBindings) const
 {
     VERIFY(GLProgram != 0, "Null GL program");
     State.SetProgram(GLProgram);
 
-    for (Uint32 r = 0; r < GetTotalResourceCount(); ++r)
+    auto AssignBinding = [&](const ShaderResourcesGL::GLResourceAttribs& Attribs, BINDING_RANGE Range) //
     {
-        const auto& ResDesc = m_Desc.Resources[r];
-        const auto& ResAttr = m_pResourceAttribs[r];
+        const auto ResIdx = FindResource(Attribs.ShaderStages, Attribs.Name);
+        if (ResIdx == InvalidResourceIndex)
+            return; // The resource is defined in another signature
 
-        if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER)
-            continue;
+        const auto& ResDesc = m_Desc.Resources[ResIdx];
+        const auto& ResAttr = m_pResourceAttribs[ResIdx];
 
-        if ((ResDesc.ShaderStages & Stages) == 0)
-            continue;
+        VERIFY_EXPR(strcmp(ResDesc.Name, Attribs.Name) == 0);
+        VERIFY_EXPR(ResDesc.ResourceType != SHADER_RESOURCE_TYPE_SAMPLER);
+        VERIFY_EXPR(Attribs.ArraySize <= ResDesc.ArraySize);
 
-        const auto   Range        = PipelineResourceToBindingRange(ResDesc);
+        VERIFY_EXPR(Range == PipelineResourceToBindingRange(ResDesc));
         const Uint32 BindingIndex = BaseBindings[Range] + ResAttr.CacheOffset;
 
         static_assert(BINDING_RANGE_COUNT == 4, "Please update the switch below to handle the new shader resource range");
@@ -226,11 +229,12 @@ void PipelineResourceSignatureGLImpl::ApplyBindings(GLObjectWrappers::GLProgramO
         {
             case BINDING_RANGE_UNIFORM_BUFFER:
             {
-                auto UniformBlockIndex = glGetUniformBlockIndex(GLProgram, ResDesc.Name);
-                if (UniformBlockIndex == GL_INVALID_INDEX)
-                    break; // Uniform block is defined in the resource signature, but is not presented in the shader program.
+                const auto UniformBlockIndex = glGetUniformBlockIndex(GLProgram, ResDesc.Name);
+                VERIFY(UniformBlockIndex != GL_INVALID_INDEX,
+                       "Failed to find uniform buffer '", ResDesc.Name,
+                       "', which is unexpected as it is present in the list of program resources.");
 
-                for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
+                for (Uint32 ArrInd = 0; ArrInd < Attribs.ArraySize; ++ArrInd)
                 {
                     glUniformBlockBinding(GLProgram, UniformBlockIndex + ArrInd, BindingIndex + ArrInd);
                     CHECK_GL_ERROR("glUniformBlockBinding() failed");
@@ -239,11 +243,11 @@ void PipelineResourceSignatureGLImpl::ApplyBindings(GLObjectWrappers::GLProgramO
             }
             case BINDING_RANGE_TEXTURE:
             {
-                auto UniformLocation = glGetUniformLocation(GLProgram, ResDesc.Name);
-                if (UniformLocation < 0)
-                    break; // Uniform is defined in the resource signature, but is not presented in the shader program.
+                const auto UniformLocation = glGetUniformLocation(GLProgram, ResDesc.Name);
+                VERIFY(UniformLocation >= 0, "Failed to find texture '", ResDesc.Name,
+                       "', which is unexpected as it is present in the list of program resources.");
 
-                for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
+                for (Uint32 ArrInd = 0; ArrInd < Attribs.ArraySize; ++ArrInd)
                 {
                     glUniform1i(UniformLocation + ArrInd, BindingIndex + ArrInd);
                     CHECK_GL_ERROR("Failed to set binding point for sampler uniform '", ResDesc.Name, '\'');
@@ -253,11 +257,11 @@ void PipelineResourceSignatureGLImpl::ApplyBindings(GLObjectWrappers::GLProgramO
 #if GL_ARB_shader_image_load_store
             case BINDING_RANGE_IMAGE:
             {
-                auto UniformLocation = glGetUniformLocation(GLProgram, ResDesc.Name);
-                if (UniformLocation < 0)
-                    break; // Uniform defined in the resource signature, but isnot presented in the shader program.
+                const auto UniformLocation = glGetUniformLocation(GLProgram, ResDesc.Name);
+                VERIFY(UniformLocation >= 0, "Failed to find image '", ResDesc.Name,
+                       "', which is unexpected as it is present in the list of program resources.");
 
-                for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
+                for (Uint32 ArrInd = 0; ArrInd < Attribs.ArraySize; ++ArrInd)
                 {
                     // glUniform1i for image uniforms is not supported in at least GLES3.2.
                     // glProgramUniform1i is not available in GLES3.0
@@ -265,7 +269,7 @@ void PipelineResourceSignatureGLImpl::ApplyBindings(GLObjectWrappers::GLProgramO
                     glUniform1i(UniformLocation + ArrInd, ImgBinding);
                     if (glGetError() != GL_NO_ERROR)
                     {
-                        if (ResDesc.ArraySize > 1)
+                        if (Attribs.ArraySize > 1)
                         {
                             LOG_WARNING_MESSAGE("Failed to set binding for image uniform '", ResDesc.Name, "'[", ArrInd,
                                                 "]. Expected binding: ", ImgBinding,
@@ -291,13 +295,13 @@ void PipelineResourceSignatureGLImpl::ApplyBindings(GLObjectWrappers::GLProgramO
 #if GL_ARB_shader_storage_buffer_object
             case BINDING_RANGE_STORAGE_BUFFER:
             {
-                auto SBIndex = glGetProgramResourceIndex(GLProgram, GL_SHADER_STORAGE_BLOCK, ResDesc.Name);
-                if (SBIndex == GL_INVALID_INDEX)
-                    break; // Storage block is defined in the resource signature, but is not presented in the shader program.
+                const auto SBIndex = glGetProgramResourceIndex(GLProgram, GL_SHADER_STORAGE_BLOCK, ResDesc.Name);
+                VERIFY(SBIndex != GL_INVALID_INDEX, "Failed to storage buffer '", ResDesc.Name,
+                       "', which is unexpected as it is present in the list of program resources.");
 
                 if (glShaderStorageBlockBinding)
                 {
-                    for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
+                    for (Uint32 ArrInd = 0; ArrInd < Attribs.ArraySize; ++ArrInd)
                     {
                         glShaderStorageBlockBinding(GLProgram, SBIndex + ArrInd, BindingIndex + ArrInd);
                         CHECK_GL_ERROR("glShaderStorageBlockBinding() failed");
@@ -327,7 +331,14 @@ void PipelineResourceSignatureGLImpl::ApplyBindings(GLObjectWrappers::GLProgramO
             default:
                 UNEXPECTED("Unsupported shader resource range type.");
         }
-    }
+    };
+
+
+    ProgResources.ProcessConstResources(
+        std::bind(AssignBinding, std::placeholders::_1, BINDING_RANGE_UNIFORM_BUFFER),
+        std::bind(AssignBinding, std::placeholders::_1, BINDING_RANGE_TEXTURE),
+        std::bind(AssignBinding, std::placeholders::_1, BINDING_RANGE_IMAGE),
+        std::bind(AssignBinding, std::placeholders::_1, BINDING_RANGE_STORAGE_BUFFER));
 
     State.SetProgram(GLObjectWrappers::GLProgramObj::Null());
 }
