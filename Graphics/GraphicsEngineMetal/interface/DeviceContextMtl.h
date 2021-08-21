@@ -29,6 +29,7 @@
 
 #include "../../GraphicsEngine/interface/DeviceContext.h"
 #include "CommandQueueMtl.h"
+#include "RasterizationRateMapMtl.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 

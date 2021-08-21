@@ -544,14 +544,14 @@ TEST(VariableShadingRateTest, TextureBased)
 }
 
 
-TEST(VariableShadingRateTest, TextureBasedMultiViewport)
+TEST(VariableShadingRateTest, TextureBasedWithTextureArray)
 {
     auto*       pEnv     = TestingEnvironment::GetInstance();
     auto*       pDevice  = pEnv->GetDevice();
     const auto& Features = pDevice->GetDeviceInfo().Features;
-    if (!Features.VariableRateShading || !Features.MultiViewport)
+    if (!Features.VariableRateShading)
     {
-        GTEST_SKIP() << "Variable shading rate or multiple viewports are not supported by this device";
+        GTEST_SKIP() << "Variable shading rate is not supported by this device";
     }
 
     const auto& SRProps = pDevice->GetAdapterInfo().ShadingRate;
@@ -631,7 +631,7 @@ TEST(VariableShadingRateTest, TextureBasedMultiViewport)
             ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
             ShaderCI.EntryPoint      = "main";
             ShaderCI.Desc.Name       = "Texture based shading test - VS";
-            ShaderCI.Source          = HLSL::TextureBasedShadingRateWithMultiViewport_VS.c_str();
+            ShaderCI.Source          = HLSL::TextureBasedShadingRateWithTextureArray_VS.c_str();
 
             pDevice->CreateShader(ShaderCI, &pVS);
             ASSERT_NE(pVS, nullptr);
@@ -642,7 +642,7 @@ TEST(VariableShadingRateTest, TextureBasedMultiViewport)
             ShaderCI.Desc.ShaderType = SHADER_TYPE_GEOMETRY;
             ShaderCI.EntryPoint      = "main";
             ShaderCI.Desc.Name       = "Texture based shading test - GS";
-            ShaderCI.Source          = HLSL::TextureBasedShadingRateWithMultiViewport_GS.c_str();
+            ShaderCI.Source          = HLSL::TextureBasedShadingRateWithTextureArray_GS.c_str();
 
             pDevice->CreateShader(ShaderCI, &pGS);
             ASSERT_NE(pGS, nullptr);
@@ -653,7 +653,7 @@ TEST(VariableShadingRateTest, TextureBasedMultiViewport)
             ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
             ShaderCI.EntryPoint      = "main";
             ShaderCI.Desc.Name       = "Texture based shading test - PS";
-            ShaderCI.Source          = HLSL::TextureBasedShadingRateWithMultiViewport_PS.c_str();
+            ShaderCI.Source          = HLSL::TextureBasedShadingRateWithTextureArray_PS.c_str();
 
             pDevice->CreateShader(ShaderCI, &pPS);
             ASSERT_NE(pPS, nullptr);

@@ -140,7 +140,7 @@ float4 main(in PSInput PSIn) : SV_Target
 )hlsl";
 
 
-const std::string TextureBasedShadingRateWithMultiViewport_VS{R"hlsl(
+const std::string TextureBasedShadingRateWithTextureArray_VS{R"hlsl(
 struct GSInput
 {
     float4 Pos : SV_POSITION;
@@ -153,7 +153,7 @@ void main(in  uint    vid : SV_VertexID,
 }
 )hlsl"};
 
-const std::string TextureBasedShadingRateWithMultiViewport_GS{R"hlsl(
+const std::string TextureBasedShadingRateWithTextureArray_GS{R"hlsl(
 struct GSInput
 {
     float4 Pos : SV_POSITION;
@@ -184,7 +184,7 @@ void main(          uint                    InstanceID : SV_GSInstanceID,
 }
 )hlsl"};
 
-const std::string TextureBasedShadingRateWithMultiViewport_PS = ShadingRatePallete + R"hlsl(
+const std::string TextureBasedShadingRateWithTextureArray_PS = ShadingRatePallete + R"hlsl(
 struct PSInput
 {
     float4 Pos   : SV_POSITION;
@@ -200,50 +200,6 @@ float4 main(in PSInput PSIn) : SV_Target
 }
 )hlsl";
 
-/*
-const std::string MSResolve_VS{R"hlsl(
-struct PSInput 
-{ 
-    float4 Pos : SV_POSITION; 
-    float2 UV  : TEX_COORD; 
-};
-
-void main(in uint vid : SV_VertexID,
-          out PSInput PSIn) 
-{
-    // fullscreen triangle
-    PSIn.UV  = float2(vid >> 1, vid & 1) * 2.0;
-    PSIn.Pos = float4(PSIn.UV * 2.0 - 1.0, 0.0, 1.0);
-}
-)hlsl"};
-
-const std::string MSResolve_PS{R"hlsl(
-struct PSInput
-{
-    float4 Pos : SV_POSITION;
-    float2 UV  : TEX_COORD; 
-};
-
-Texture2DMS<float4> g_Texture;
-
-float4 main(in PSInput PSIn) : SV_Target
-{
-    uint W, H, Samp;
-    g_Texture.GetDimensions(W, H, Samp);
-
-    float2 ScreenUV = float2(PSIn.UV.x, 1.0 - PSIn.UV.y);
-    int2   TexelPos = int2(ScreenUV * float2(W, H));
-    float4 Color    = float4(0., 0., 0., 0.);
-
-    for (uint s = 0; s < Samp; ++s)
-    {
-        Color += g_Texture.Load(TexelPos, s);
-    }
-    
-    return Color / float(Samp);
-}
-)hlsl"};
-*/
 } // namespace HLSL
 
 } // namespace

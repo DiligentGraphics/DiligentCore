@@ -223,7 +223,7 @@ void ValidateTextureDesc(const TextureDesc& Desc, const IRenderDevice* pDevice) 
                     LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture format must be RG8_UNORM or TEX_FORMAT_RG8_TYPELESS.");
                 break;
 
-            case SHADING_RATE_FORMAT_FP32:
+            case SHADING_RATE_FORMAT_COL_ROW_FP32:
             default:
                 LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture is not supported.");
         }

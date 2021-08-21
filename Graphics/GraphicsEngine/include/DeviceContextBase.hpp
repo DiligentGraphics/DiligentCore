@@ -2284,23 +2284,26 @@ inline void DeviceContextBase<ImplementationTraits>::DvpVerifyRenderTargets() co
         }
     }
 
-    const bool PipelineWithVRSTexture = (m_pPipelineState->GetGraphicsPipelineDesc().ShadingRateFlags & PIPELINE_SHADING_RATE_FLAG_TEXTURE_BASED) != 0;
+    if (m_pDevice->GetDeviceInfo().Type != RENDER_DEVICE_TYPE_METAL)
+    {
+        const bool PipelineWithVRSTexture = (m_pPipelineState->GetGraphicsPipelineDesc().ShadingRateFlags & PIPELINE_SHADING_RATE_FLAG_TEXTURE_BASED) != 0;
 
-    if (PipelineWithVRSTexture)
-    {
-        DEV_CHECK_ERR(m_pBoundShadingRateTexture != nullptr,
-                      "Draw command uses pipeline state '", m_pPipelineState->GetDesc().Name,
-                      "' that was created with ShadingRateFlags = PIPELINE_SHADING_RATE_TEXTURE_BASED, ",
-                      "but shading rate texture is not bound; use IDeviceContext::SetRenderTargetsExt() with non-null pShadingRateMap "
-                      "to bind the shading rate texture.");
-    }
-    else if (m_pBoundShadingRateTexture != nullptr)
-    {
-        DEV_CHECK_ERR(PipelineWithVRSTexture,
-                      "Draw command uses pipeline state '", m_pPipelineState->GetDesc().Name,
-                      "' that was created without PIPELINE_SHADING_RATE_TEXTURE_BASED flag, ",
-                      "but shading rate texture is bound; use IDeviceContext::SetRenderTargetsExt() with pShadingRateMap = null "
-                      "to unbind the shading rate texture.");
+        if (PipelineWithVRSTexture)
+        {
+            DEV_CHECK_ERR(m_pBoundShadingRateTexture != nullptr,
+                          "Draw command uses pipeline state '", m_pPipelineState->GetDesc().Name,
+                          "' that was created with ShadingRateFlags = PIPELINE_SHADING_RATE_TEXTURE_BASED, ",
+                          "but shading rate texture is not bound; use IDeviceContext::SetRenderTargetsExt() with non-null pShadingRateMap "
+                          "to bind the shading rate texture.");
+        }
+        else if (m_pBoundShadingRateTexture != nullptr)
+        {
+            DEV_CHECK_ERR(PipelineWithVRSTexture,
+                          "Draw command uses pipeline state '", m_pPipelineState->GetDesc().Name,
+                          "' that was created without PIPELINE_SHADING_RATE_TEXTURE_BASED flag, ",
+                          "but shading rate texture is bound; use IDeviceContext::SetRenderTargetsExt() with pShadingRateMap = null "
+                          "to unbind the shading rate texture.");
+        }
     }
 }
 

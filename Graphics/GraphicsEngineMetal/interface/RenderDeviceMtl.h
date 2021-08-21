@@ -28,6 +28,7 @@
 /// Definition of the Diligent::IRenderDeviceMtl interface
 
 #include "../../GraphicsEngine/interface/RenderDevice.h"
+#include "RasterizationRateMapMtl.h"
 
 #if PLATFORM_TVOS
 @protocol MTLAccelerationStructure; // Not available in tvOS
@@ -80,6 +81,16 @@ DILIGENT_BEGIN_INTERFACE(IRenderDeviceMtl, IRenderDevice)
                                                    const TopLevelASDesc REF     Desc,
                                                    RESOURCE_STATE               InitialState,
                                                    ITopLevelAS**                ppTLAS) API_AVAILABLE(ios(14), macosx(11.0)) API_UNAVAILABLE(tvos) PURE;
+    
+    /// Creates a rasterization rate map from existing Metal resource
+    VIRTUAL void METHOD(CreateRasterizationRateMapFromMtlResource)(THIS_
+                                                                   id<MTLRasterizationRateMap> mtlRRM,
+                                                                   IRasterizationRateMapMtl**  ppRRM) API_AVAILABLE(ios(13), macosx(10.15.4)) PURE;
+
+    /// Creates a rasterization rate map
+    VIRTUAL void METHOD(CreateRasterizationRateMap)(THIS_
+                                                    const RasterizationRateMapCreateInfo REF CreateInfo,
+                                                    IRasterizationRateMapMtl**               ppRRM) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -89,12 +100,14 @@ DILIGENT_END_INTERFACE
 
 // clang-format off
 
-#    define IRenderDeviceMtl_GetMtlDevice(This)                      CALL_IFACE_METHOD(RenderDeviceMtl, GetMtlDevice,                 This)
-#    define IRenderDeviceMtl_GetMtlCommandQueue(This)                CALL_IFACE_METHOD(RenderDeviceMtl, GetMtlCommandQueue,           This)
-#    define IRenderDeviceMtl_CreateTextureFromMtlResource(This, ...) CALL_IFACE_METHOD(RenderDeviceMtl, CreateTextureFromMtlResource, This, __VA_ARGS__)
-#    define IRenderDeviceMtl_CreateBufferFromMtlResource(This, ...)  CALL_IFACE_METHOD(RenderDeviceMtl, CreateBufferFromMtlResource,  This, __VA_ARGS__)
-#    define IRenderDeviceMtl_CreateBLASFromMtlResource(This, ...)    CALL_IFACE_METHOD(RenderDeviceMtl, CreateBLASFromMtlResource,    This, __VA_ARGS__)
-#    define IRenderDeviceMtl_CreateTLASFromMtlResource(This, ...)    CALL_IFACE_METHOD(RenderDeviceMtl, CreateTLASFromMtlResource,    This, __VA_ARGS__)
+#    define IRenderDeviceMtl_GetMtlDevice(This)                                   CALL_IFACE_METHOD(RenderDeviceMtl, GetMtlDevice,                              This)
+#    define IRenderDeviceMtl_GetMtlCommandQueue(This)                             CALL_IFACE_METHOD(RenderDeviceMtl, GetMtlCommandQueue,                        This)
+#    define IRenderDeviceMtl_CreateTextureFromMtlResource(This, ...)              CALL_IFACE_METHOD(RenderDeviceMtl, CreateTextureFromMtlResource,              This, __VA_ARGS__)
+#    define IRenderDeviceMtl_CreateBufferFromMtlResource(This, ...)               CALL_IFACE_METHOD(RenderDeviceMtl, CreateBufferFromMtlResource,               This, __VA_ARGS__)
+#    define IRenderDeviceMtl_CreateBLASFromMtlResource(This, ...)                 CALL_IFACE_METHOD(RenderDeviceMtl, CreateBLASFromMtlResource,                 This, __VA_ARGS__)
+#    define IRenderDeviceMtl_CreateTLASFromMtlResource(This, ...)                 CALL_IFACE_METHOD(RenderDeviceMtl, CreateTLASFromMtlResource,                 This, __VA_ARGS__)
+#    define IRenderDeviceMtl_CreateRasterizationRateMap(This, ...)                CALL_IFACE_METHOD(RenderDeviceMtl, CreateRasterizationRateMap,                This, __VA_ARGS__)
+#    define IRenderDeviceMtl_CreateRasterizationRateMapFromMtlResource(This, ...) CALL_IFACE_METHOD(RenderDeviceMtl, CreateRasterizationRateMapFromMtlResource, This, __VA_ARGS__)
 
 // clang-format on
 

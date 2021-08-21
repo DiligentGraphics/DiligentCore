@@ -41,4 +41,10 @@ void TestRenderDeviceMtl_CInterface(IRenderDeviceMtl* pDevice)
         IRenderDeviceMtl_CreateBLASFromMtlResource(pDevice, (id<MTLAccelerationStructure>)nil, (const BottomLevelASDesc*)NULL, RESOURCE_STATE_RAY_TRACING, (IBottomLevelAS**)NULL);
         IRenderDeviceMtl_CreateTLASFromMtlResource(pDevice, (id<MTLAccelerationStructure>)nil, (const TopLevelASDesc*)NULL, RESOURCE_STATE_RAY_TRACING, (ITopLevelAS**)NULL);
     }
+    
+    if (@available(macos 10.15.4, ios 13.0, *))
+    {
+        IRenderDeviceMtl_CreateRasterizationRateMap(pDevice, (MTLRasterizationRateMapDescriptor*)nil, (IRasterizationRateMapMtl**)NULL);
+        IRenderDeviceMtl_CreateRasterizationRateMapFromMtlResource(pDevice, (id<MTLRasterizationRateMap>)nil, (IRasterizationRateMapMtl**)NULL);
+    }
 }

@@ -370,7 +370,10 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
             ShadingRateProps.MinTileSize[1] = vkDeviceExtProps.FragmentDensityMap.minFragmentDensityTexelSize.height;
             ShadingRateProps.MaxTileSize[0] = vkDeviceExtProps.FragmentDensityMap.maxFragmentDensityTexelSize.width;
             ShadingRateProps.MaxTileSize[1] = vkDeviceExtProps.FragmentDensityMap.maxFragmentDensityTexelSize.height;
-            // AZ TODO
+
+            ShadingRateProps.NumShadingRates            = 1;
+            ShadingRateProps.ShadingRates[0].Rate       = SHADING_RATE_1X1;
+            ShadingRateProps.ShadingRates[0].SampleBits = 0xFF;
         }
 #if defined(_MSC_VER) && defined(_WIN64)
         static_assert(sizeof(ShadingRateProps) == 44, "Did you add a new member to ShadingRateProperties? Please initialize it here.");

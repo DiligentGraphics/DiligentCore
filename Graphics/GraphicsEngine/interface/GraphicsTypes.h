@@ -2385,7 +2385,7 @@ DILIGENT_TYPED_ENUM(SHADING_RATE_FORMAT, Uint8)
 
     /// This format is only used in Metal when shading rate is defined by column/row rates instead
     /// of a texture. The values are 32-bit floating point values in 0 to 1 range (0.5, 0.25 etc.).
-    SHADING_RATE_FORMAT_FP32    = 3
+    SHADING_RATE_FORMAT_COL_ROW_FP32 = 3
 };
 
 /// Specifies the base shading rate along a horizontal or vertical axis
