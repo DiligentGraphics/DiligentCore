@@ -168,6 +168,10 @@ TEST(VariableShadingRateTest, PerDraw)
     {
         GTEST_SKIP() << "Per draw shading rate is not supported by this device";
     }
+    if (!(SRProps.CapFlags & SHADING_RATE_CAP_FLAG_SHADER_SHADING_RATE_INPUT))
+    {
+        GTEST_SKIP() << "SV_ShadingRate pixel shader input is not supported by this device";
+    }
 
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
@@ -280,6 +284,10 @@ TEST(VariableShadingRateTest, PerPrimitive)
     if (!(SRProps.CapFlags & SHADING_RATE_CAP_FLAG_PER_PRIMITIVE))
     {
         GTEST_SKIP() << "Per primitive shading rate is not supported by this device";
+    }
+    if (!(SRProps.CapFlags & SHADING_RATE_CAP_FLAG_SHADER_SHADING_RATE_INPUT))
+    {
+        GTEST_SKIP() << "SV_ShadingRate pixel shader input is not supported by this device";
     }
 
     auto* pSwapChain = pEnv->GetSwapChain();
@@ -423,6 +431,10 @@ TEST(VariableShadingRateTest, TextureBased)
     {
         GTEST_SKIP() << "Shading rate texture is not supported by this device";
     }
+    if (!(SRProps.CapFlags & SHADING_RATE_CAP_FLAG_SHADER_SHADING_RATE_INPUT))
+    {
+        GTEST_SKIP() << "SV_ShadingRate pixel shader input is not supported by this device";
+    }
 
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
@@ -550,6 +562,10 @@ TEST(VariableShadingRateTest, TextureBasedMultiViewport)
     if ((SRProps.CapFlags & SHADING_RATE_CAP_FLAG_TEXTURE_BASED) == 0 || (SRProps.CapFlags & SHADING_RATE_CAP_FLAG_TEXTURE_ARRAY) == 0)
     {
         GTEST_SKIP() << "Shading rate texture array is not supported by this device";
+    }
+    if (!(SRProps.CapFlags & SHADING_RATE_CAP_FLAG_SHADER_SHADING_RATE_INPUT))
+    {
+        GTEST_SKIP() << "SV_ShadingRate pixel shader input is not supported by this device";
     }
 
     auto* pSwapChain = pEnv->GetSwapChain();
@@ -725,6 +741,10 @@ TEST(VariableShadingRateTest, TextureBasedWithRenderPass)
     if (!(SRProps.CapFlags & SHADING_RATE_CAP_FLAG_TEXTURE_BASED))
     {
         GTEST_SKIP() << "Shading rate texture is not supported by this device";
+    }
+    if (!(SRProps.CapFlags & SHADING_RATE_CAP_FLAG_SHADER_SHADING_RATE_INPUT))
+    {
+        GTEST_SKIP() << "SV_ShadingRate pixel shader input is not supported by this device";
     }
 
     auto* pSwapChain = pEnv->GetSwapChain();
