@@ -165,7 +165,7 @@ TEST(VariableShadingRateTest, PerDraw)
     {
         GTEST_SKIP() << "Per draw shading rate is not supported by this device";
     }
-    if (!(SRProps.CapFlags & SHADING_RATE_CAP_FLAG_SHADER_SHADING_RATE_INPUT))
+    if (!(SRProps.CapFlags & SHADING_RATE_CAP_FLAG_SHADING_RATE_SHADER_INPUT))
     {
         GTEST_SKIP() << "SV_ShadingRate pixel shader input is not supported by this device";
     }
@@ -282,7 +282,7 @@ TEST(VariableShadingRateTest, PerPrimitive)
     {
         GTEST_SKIP() << "Per primitive shading rate is not supported by this device";
     }
-    if (!(SRProps.CapFlags & SHADING_RATE_CAP_FLAG_SHADER_SHADING_RATE_INPUT))
+    if (!(SRProps.CapFlags & SHADING_RATE_CAP_FLAG_SHADING_RATE_SHADER_INPUT))
     {
         GTEST_SKIP() << "SV_ShadingRate pixel shader input is not supported by this device";
     }
@@ -428,7 +428,7 @@ TEST(VariableShadingRateTest, TextureBased)
     {
         GTEST_SKIP() << "Shading rate texture is not supported by this device";
     }
-    if (!(SRProps.CapFlags & SHADING_RATE_CAP_FLAG_SHADER_SHADING_RATE_INPUT))
+    if (!(SRProps.CapFlags & SHADING_RATE_CAP_FLAG_SHADING_RATE_SHADER_INPUT))
     {
         GTEST_SKIP() << "SV_ShadingRate pixel shader input is not supported by this device";
     }
@@ -560,7 +560,7 @@ TEST(VariableShadingRateTest, TextureBasedWithTextureArray)
     {
         GTEST_SKIP() << "Shading rate texture array is not supported by this device";
     }
-    if (!(SRProps.CapFlags & SHADING_RATE_CAP_FLAG_SHADER_SHADING_RATE_INPUT))
+    if (!(SRProps.CapFlags & SHADING_RATE_CAP_FLAG_SHADING_RATE_SHADER_INPUT))
     {
         GTEST_SKIP() << "SV_ShadingRate pixel shader input is not supported by this device";
     }
@@ -739,7 +739,7 @@ TEST(VariableShadingRateTest, TextureBasedWithRenderPass)
     {
         GTEST_SKIP() << "Shading rate texture is not supported by this device";
     }
-    if (!(SRProps.CapFlags & SHADING_RATE_CAP_FLAG_SHADER_SHADING_RATE_INPUT))
+    if (!(SRProps.CapFlags & SHADING_RATE_CAP_FLAG_SHADING_RATE_SHADER_INPUT))
     {
         GTEST_SKIP() << "SV_ShadingRate pixel shader input is not supported by this device";
     }

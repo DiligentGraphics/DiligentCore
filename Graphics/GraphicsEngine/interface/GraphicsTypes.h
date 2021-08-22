@@ -2497,9 +2497,9 @@ DILIGENT_TYPED_ENUM(SHADING_RATE_CAP_FLAGS, Uint16)
     /// Allows to use texture 2D array for shading rate.
     SHADING_RATE_CAP_FLAG_TEXTURE_ARRAY            = 1u << 8,
 
-    /// Allows to read current shading rate in pixel shader.
+    /// Allows to read current shading rate in the pixel shader.
     /// HLSL: in SV_ShadingRate, GLSL: gl_ShadingRate.
-    SHADING_RATE_CAP_FLAG_SHADER_SHADING_RATE_INPUT = 1u << 9,
+    SHADING_RATE_CAP_FLAG_SHADING_RATE_SHADER_INPUT = 1u << 9,
 };
 DEFINE_FLAG_ENUM_OPERATORS(SHADING_RATE_CAP_FLAGS);
 

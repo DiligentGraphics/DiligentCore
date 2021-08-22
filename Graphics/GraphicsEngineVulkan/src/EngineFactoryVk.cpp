@@ -311,6 +311,9 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
             SetShadingRateCap(vkDeviceExtProps.ShadingRate.layeredShadingRateAttachments,                     SHADING_RATE_CAP_FLAG_TEXTURE_ARRAY);
             // clang-format on
 
+            // Always enabled in Vulkan
+            ShadingRateProps.CapFlags |= SHADING_RATE_CAP_FLAG_SHADING_RATE_SHADER_INPUT;
+
             ShadingRateProps.Combiners = SHADING_RATE_COMBINER_PASSTHROUGH | SHADING_RATE_COMBINER_OVERRIDE;
 
             if (vkDeviceExtProps.ShadingRate.fragmentShadingRateNonTrivialCombinerOps != VK_FALSE)
