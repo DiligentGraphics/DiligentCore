@@ -2284,7 +2284,7 @@ inline void DeviceContextBase<ImplementationTraits>::DvpVerifyRenderTargets() co
         }
     }
 
-    if (m_pDevice->GetDeviceInfo().Type != RENDER_DEVICE_TYPE_METAL)
+    if (!m_pDevice->GetDeviceInfo().IsMetalDevice())
     {
         const bool PipelineWithVRSTexture = (m_pPipelineState->GetGraphicsPipelineDesc().ShadingRateFlags & PIPELINE_SHADING_RATE_FLAG_TEXTURE_BASED) != 0;
 

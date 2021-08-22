@@ -55,7 +55,7 @@ struct RasterizationRateMapDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// Height of the final render target
     Uint32 ScreenHeight DEFAULT_INITIALIZER(0);
     
-    /// Number of layers
+    /// The number of layers (aka array size)
     Uint32 LayerCount   DEFAULT_INITIALIZER(0);
 };
 typedef struct RasterizationRateMapDesc RasterizationRateMapDesc;
@@ -64,16 +64,18 @@ typedef struct RasterizationRateMapDesc RasterizationRateMapDesc;
 /// Rasterization rate map layer description
 struct RasterizationRateLayerDesc
 {
-    /// Number of elements in pHorizontal
+    /// The number of elements in pHorizontal array
     Uint32       HorizontalCount DEFAULT_INITIALIZER(0);
 
-    /// Number of elements in pVertical
+    /// The number of elements in pVertical array
     Uint32       VerticalCount   DEFAULT_INITIALIZER(0);
 
-    /// Shading rates in row
+    /// A pointer to the array of HorizontalCount horizontal rasterization rates
+    /// for the layer map's rows.
     const float* pHorizontal     DEFAULT_INITIALIZER(nullptr);
 
-    /// Shading rates in column
+    /// A pointer to the array of VerticalCount vertical rasterization rates
+    /// for the layer map's columns.
     const float* pVertical       DEFAULT_INITIALIZER(nullptr);
 };
 typedef struct RasterizationRateLayerDesc RasterizationRateLayerDesc;
@@ -95,26 +97,26 @@ typedef struct RasterizationRateMapCreateInfo RasterizationRateMapCreateInfo;
 DILIGENT_BEGIN_INTERFACE(IRasterizationRateMapMtl, IDeviceObject)
 {
 #if DILIGENT_CPP_INTERFACE
-    /// Returns the buffer description used to create the object
+    /// Returns the rasterization map description used to create the object
     virtual const RasterizationRateMapDesc& METHOD(GetDesc)() const override = 0;
 #endif
 
-    /// Returns a pointer to a Metal rasterization rate map object.
+    /// Returns a pointer to the Metal rasterization rate map object.
     VIRTUAL id<MTLRasterizationRateMap> METHOD(GetMtlResource)(THIS) CONST API_AVAILABLE(ios(13), macosx(10.15.4)) PURE;
 
-    /// Returns size of the attachments for specified layer.
+    /// Returns the physical size of the specified layer.
     VIRTUAL void METHOD(GetPhysicalSizeForLayer)(THIS_
                                                  Uint32     LayerIndex,
                                                  Uint32 REF PhysicalWidth,
                                                  Uint32 REF PhysicalHeight) CONST PURE;
 
     /// The granularity, in physical pixels, at which the rasterization rate varies.
-    /// For better performance tile size should be multiple of physical granularity.
+    /// For better performance, tile size should be a multiple of physical granularity.
     VIRTUAL void METHOD(GetPhysicalGranularity)(THIS_
                                                 Uint32 REF XGranularity,
                                                 Uint32 REF YGranularity) CONST PURE;
     
-    /// Converts a point in logical viewport coordinates to the corresponding physical coordinates in a render layer.
+    /// Converts a point in logical viewport coordinates to the corresponding physical coordinates in the layer.
     VIRTUAL void METHOD(MapScreenToPhysicalCoordinates)(THIS_
                                                         Uint32    LayerIndex,
                                                         float     ScreenCoordX,
@@ -130,16 +132,17 @@ DILIGENT_BEGIN_INTERFACE(IRasterizationRateMapMtl, IDeviceObject)
                                                         float REF ScreenCoordX,
                                                         float REF ScreenCoordY) CONST PURE;
 
-    /// Returns requirements for parameter buffer which used for resolve pass.
+    /// Returns the size and alignment of the parameter buffer that will be used in the resolve pass.
     VIRTUAL void METHOD(GetParameterBufferSizeAndAlign)(THIS_
                                                         Uint32 REF Size,
                                                         Uint32 REF Align) CONST PURE;
     
     /// Copy rasterization rate map parameters to the buffer.
     
-    /// \param [in] pDstBuffer - Parameter buffer which will be used for resolve pass.
-    ///                          Buffer must be created with USAGE_UNIFIED.
-    /// \param [in] Offset     - Offset in buffer, must be multiple of align which returned by GetParameterBufferSizeAndAlign().
+    /// \param [in] pDstBuffer - Parameter buffer that will be used in the resolve pass.
+    ///                          The buffer must be created with USAGE_UNIFIED.
+    /// \param [in] Offset     - Offset in the buffer; must be a multiple of alignment returned by
+    ///                          GetParameterBufferSizeAndAlign().
     VIRTUAL void METHOD(CopyParameterDataToBuffer)(THIS_
                                                    IBuffer* pDstBuffer,
                                                    Uint32   Offset) CONST PURE;
