@@ -2611,22 +2611,22 @@ static void RayTracingPRSTest(const int Mode)
 }
 
 
-TEST(RayTracingTest, RayTracingWithoutPRS)
+TEST(RayTracingTest, Mtl_RayTracingWithoutPRS)
 {
     RayTracingPRSTest(0);
 }
 
-TEST(RayTracingTest, RayTracingWithSinglePRS)
+TEST(RayTracingTest, Mtl_RayTracingWithSinglePRS)
 {
     RayTracingPRSTest(1);
 }
 
-TEST(RayTracingTest, RayTracingWithMultiplePRS)
+TEST(RayTracingTest, Mtl_RayTracingWithMultiplePRS)
 {
     RayTracingPRSTest(2);
 }
 
-TEST(RayTracingTest, RayTracingWithMultiplePRSWithStaticRes)
+TEST(RayTracingTest, Mtl_RayTracingWithMultiplePRSWithStaticRes)
 {
     RayTracingPRSTest(3);
 }

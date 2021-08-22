@@ -176,8 +176,6 @@ TEST_P(NullConstantBuffer, Test)
     const auto& DeviceInfo = pEnv->GetDevice()->GetDeviceInfo();
     const auto  VarType    = GetParam();
 
-    if (DeviceInfo.IsVulkanDevice() && VarType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
-        GTEST_SKIP() << "Dynamic resources in Vulkan require non-null descriptors when SRB is committed";
     if (!DeviceInfo.Features.SeparablePrograms)
         GTEST_SKIP() << "Separable programs are required";
 
@@ -249,8 +247,6 @@ TEST_P(NullStructBuffer, Test)
     const auto& DeviceInfo = pEnv->GetDevice()->GetDeviceInfo();
     const auto  VarType    = GetParam();
 
-    if (DeviceInfo.IsVulkanDevice() && VarType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
-        GTEST_SKIP() << "Dynamic resources in Vulkan require non-null descriptors when SRB is committed";
     if (!DeviceInfo.Features.SeparablePrograms)
         GTEST_SKIP() << "Separable programs are required";
 
@@ -313,8 +309,6 @@ TEST_P(NullFormattedBuffer, Test)
     const auto& DeviceInfo = pEnv->GetDevice()->GetDeviceInfo();
     const auto  VarType    = GetParam();
 
-    if (DeviceInfo.IsVulkanDevice() && VarType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
-        GTEST_SKIP() << "Dynamic resources in Vulkan require non-null descriptors when SRB is committed";
     if (!DeviceInfo.Features.SeparablePrograms)
         GTEST_SKIP() << "Separable programs are required";
 
@@ -380,8 +374,6 @@ TEST_P(NullTexture, Test)
     const auto& DeviceInfo = pEnv->GetDevice()->GetDeviceInfo();
     const auto  VarType    = GetParam();
 
-    if (DeviceInfo.IsVulkanDevice() && VarType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
-        GTEST_SKIP() << "Dynamic resources in Vulkan require non-null descriptors when SRB is committed";
     if (!DeviceInfo.Features.SeparablePrograms)
         GTEST_SKIP() << "Separable programs are required";
 
@@ -454,8 +446,6 @@ TEST_P(NullSampler, Test)
     const auto& DeviceInfo = pEnv->GetDevice()->GetDeviceInfo();
     const auto  VarType    = GetParam();
 
-    if (DeviceInfo.IsVulkanDevice() && VarType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
-        GTEST_SKIP() << "Dynamic resources in Vulkan require non-null descriptors when SRB is committed";
     if (DeviceInfo.IsGLDevice())
         GTEST_SKIP() << "Separate samplers are not supported in GL";
 
@@ -516,12 +506,8 @@ RefCntAutoPtr<IShader> NullRWTexture::pCS;
 
 TEST_P(NullRWTexture, Test)
 {
-    auto* const pEnv       = TestingEnvironment::GetInstance();
-    const auto& DeviceInfo = pEnv->GetDevice()->GetDeviceInfo();
-    const auto  VarType    = GetParam();
-
-    if (DeviceInfo.IsVulkanDevice() && VarType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
-        GTEST_SKIP() << "Dynamic resources in Vulkan require non-null descriptors when SRB is committed";
+    auto* const pEnv    = TestingEnvironment::GetInstance();
+    const auto  VarType = GetParam();
 
     pEnv->SetErrorAllowance(1, "No worries, errors are expected: testing null resource bindings\n");
     pEnv->PushExpectedErrorSubstring("No resource is bound to variable 'g_MissingRWTexture'", false);
@@ -566,12 +552,8 @@ RefCntAutoPtr<IShader> NullRWFmtBuffer::pCS;
 
 TEST_P(NullRWFmtBuffer, Test)
 {
-    auto* const pEnv       = TestingEnvironment::GetInstance();
-    const auto& DeviceInfo = pEnv->GetDevice()->GetDeviceInfo();
-    const auto  VarType    = GetParam();
-
-    if (DeviceInfo.IsVulkanDevice() && VarType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
-        GTEST_SKIP() << "Dynamic resources in Vulkan require non-null descriptors when SRB is committed";
+    auto* const pEnv    = TestingEnvironment::GetInstance();
+    const auto  VarType = GetParam();
 
     pEnv->SetErrorAllowance(1, "No worries, errors are expected: testing null resource bindings\n");
     pEnv->PushExpectedErrorSubstring("No resource is bound to variable 'g_MissingRWBuffer'", false);
@@ -640,12 +622,8 @@ RefCntAutoPtr<IShader> NullRWStructBuffer::pCS;
 
 TEST_P(NullRWStructBuffer, Test)
 {
-    auto* const pEnv       = TestingEnvironment::GetInstance();
-    const auto& DeviceInfo = pEnv->GetDevice()->GetDeviceInfo();
-    const auto  VarType    = GetParam();
-
-    if (DeviceInfo.IsVulkanDevice() && VarType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
-        GTEST_SKIP() << "Dynamic resources in Vulkan require non-null descriptors when SRB is committed";
+    auto* const pEnv    = TestingEnvironment::GetInstance();
+    const auto  VarType = GetParam();
 
     pEnv->SetErrorAllowance(1, "No worries, errors are expected: testing null resource bindings\n");
     pEnv->PushExpectedErrorSubstring("No resource is bound to variable 'g_MissingRWStructBuffer'", false);
