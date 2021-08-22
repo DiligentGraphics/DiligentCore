@@ -69,6 +69,11 @@ inline SHADING_RATE GenTexture(Uint32 X, Uint32 Y, Uint32 W, Uint32 H)
     return static_cast<SHADING_RATE>((XRate << SHADING_RATE_X_SHIFT) | YRate);
 }
 
+inline float GenColRowFp32(size_t X, size_t W)
+{
+    return 1.0f - clamp(std::abs(static_cast<float>(X) / W), 0.f, 1.0f);
+}
+
 } // namespace TextureBased
 
 } // namespace VRSTestingConstants

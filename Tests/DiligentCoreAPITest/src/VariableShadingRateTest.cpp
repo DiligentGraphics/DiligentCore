@@ -50,9 +50,6 @@ void VariableShadingRatePerPrimitiveTestReferenceVk(ISwapChain* pSwapChain);
 void VariableShadingRateTextureBasedTestReferenceVk(ISwapChain* pSwapChain);
 #endif
 
-#if METAL_SUPPORTED
-#endif
-
 RefCntAutoPtr<ITextureView> CreateShadingRateTexture(IRenderDevice* pDevice, ISwapChain* pSwapChain, Uint32 SampleCount = 1, Uint32 ArraySize = 1)
 {
     const auto& SCDesc  = pSwapChain->GetDesc();

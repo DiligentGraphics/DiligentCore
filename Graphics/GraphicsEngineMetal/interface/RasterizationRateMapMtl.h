@@ -100,7 +100,7 @@ DILIGENT_BEGIN_INTERFACE(IRasterizationRateMapMtl, IDeviceObject)
 #endif
 
     /// Returns a pointer to a Metal rasterization rate map object.
-    VIRTUAL id<MTLRasterizationRateMap> METHOD(GetMtlResource)(THIS) CONST PURE;
+    VIRTUAL id<MTLRasterizationRateMap> METHOD(GetMtlResource)(THIS) CONST API_AVAILABLE(ios(13), macosx(10.15.4)) PURE;
 
     /// Returns size of the attachments for specified layer.
     VIRTUAL void METHOD(GetPhysicalSizeForLayer)(THIS_
