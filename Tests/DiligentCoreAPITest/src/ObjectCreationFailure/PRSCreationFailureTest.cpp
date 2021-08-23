@@ -242,7 +242,7 @@ TEST(PRSCreationFailureTest, InvalidInputAttachmentFlag)
     if (TestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Features.ShaderResourceRuntimeArray)
         ExpectedErrorSubstring = "Incorrect Desc.Resources[1].Flags (RUNTIME_ARRAY). Only the following flags are valid for a input attachment: UNKNOWN";
     else
-        ExpectedErrorSubstring = "Incorrect Desc.Resources[1].Flags (RUNTIME_ARRAY) can only be used if ShaderResourceRuntimeArray device feature is enabled";
+        ExpectedErrorSubstring = "Incorrect Desc.Resources[1].Flags (RUNTIME_ARRAY). The flag can only be used if ShaderResourceRuntimeArray device feature is enabled";
 
     TestCreatePRSFailure(PRSDesc, ExpectedErrorSubstring);
 }
@@ -263,6 +263,24 @@ TEST(PRSCreationFailureTest, InvalidAccelStructFlag)
         ExpectedErrorSubstring = "Incorrect Desc.Resources[1].ResourceType (ACCEL_STRUCT): ray tracing is not supported by device";
 
     TestCreatePRSFailure(PRSDesc, ExpectedErrorSubstring);
+}
+
+TEST(PRSCreationFailureTest, InvalidCombinedSamplerFlag)
+{
+    const auto& DeviceInfo = TestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
+    if (!(DeviceInfo.IsD3DDevice() || DeviceInfo.IsMetalDevice()))
+    {
+        GTEST_SKIP() << "Direct3D11, Direct3D12 and Metal only";
+    }
+
+    PipelineResourceSignatureDesc PRSDesc;
+    PRSDesc.Name                       = "Invalid combined sampler Flag";
+    PRSDesc.UseCombinedTextureSamplers = false;
+    PipelineResourceDesc Resources[]{
+        {SHADER_TYPE_PIXEL, "g_Texture", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC, PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER}};
+    PRSDesc.Resources    = Resources;
+    PRSDesc.NumResources = _countof(Resources);
+    TestCreatePRSFailure(PRSDesc, "Desc.Resources[0].Flags contain COMBINED_SAMPLER flag, but Desc.UseCombinedTextureSamplers is false");
 }
 
 TEST(PRSCreationFailureTest, InvalidAssignedSamplerResourceType)

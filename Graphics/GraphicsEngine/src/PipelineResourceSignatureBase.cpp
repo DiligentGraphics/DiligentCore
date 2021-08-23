@@ -38,8 +38,11 @@ namespace Diligent
 #define LOG_PRS_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of a pipeline resource signature '", (Desc.Name ? Desc.Name : ""), "' is invalid: ", ##__VA_ARGS__)
 
 void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& Desc,
-                                           const DeviceFeatures&                Features) noexcept(false)
+                                           const IRenderDevice*                 pDevice) noexcept(false)
 {
+    const auto& DeviceInfo = pDevice->GetDeviceInfo();
+    const auto& Features   = DeviceInfo.Features;
+
     if (Desc.BindingIndex >= MAX_RESOURCE_SIGNATURES)
         LOG_PRS_ERROR_AND_THROW("Desc.BindingIndex (", Uint32{Desc.BindingIndex}, ") exceeds the maximum allowed value (", MAX_RESOURCE_SIGNATURES - 1, ").");
 
@@ -98,7 +101,7 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
 
         if ((Res.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) != 0 && !Features.ShaderResourceRuntimeArray)
         {
-            LOG_PRS_ERROR_AND_THROW("Incorrect Desc.Resources[", i, "].Flags (RUNTIME_ARRAY) can only be used if ShaderResourceRuntimeArray device feature is enabled.");
+            LOG_PRS_ERROR_AND_THROW("Incorrect Desc.Resources[", i, "].Flags (RUNTIME_ARRAY). The flag can only be used if ShaderResourceRuntimeArray device feature is enabled.");
         }
 
         if (Res.ResourceType == SHADER_RESOURCE_TYPE_ACCEL_STRUCT && !Features.RayTracing)
@@ -112,6 +115,16 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
             LOG_PRS_ERROR_AND_THROW("Incorrect Desc.Resources[", i, "].Flags (", GetPipelineResourceFlagsString(Res.Flags),
                                     "). Only the following flags are valid for a ", GetShaderResourceTypeLiteralName(Res.ResourceType),
                                     ": ", GetPipelineResourceFlagsString(AllowedResourceFlags, false, ", "), ".");
+        }
+
+        if (DeviceInfo.IsD3DDevice() || DeviceInfo.IsMetalDevice())
+        {
+            if ((Res.Flags & PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER) != 0 && !Desc.UseCombinedTextureSamplers)
+            {
+                LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i,
+                                        "].Flags contain COMBINED_SAMPLER flag, but Desc.UseCombinedTextureSamplers is false. "
+                                        "In Direct3D and Metal backends, COMBINED_SAMPLER flag may only be used when UseCombinedTextureSamplers is true.");
+            }
         }
 
         Resources.emplace(Res.Name, Res);
