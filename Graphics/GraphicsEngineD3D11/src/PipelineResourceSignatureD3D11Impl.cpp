@@ -92,7 +92,7 @@ PipelineResourceSignatureD3D11Impl::PipelineResourceSignatureD3D11Impl(IReferenc
         ValidatePipelineResourceSignatureDescD3D11(Desc);
 
         Initialize(
-            GetRawAllocator(), Desc, m_ImmutableSamplers,
+            GetRawAllocator(), DecoupleCombinedSamplers(Desc), m_ImmutableSamplers,
             [this]() //
             {
                 CreateLayout();

@@ -211,7 +211,7 @@ void PipelineResourceSignatureGLImpl::ApplyBindings(GLObjectWrappers::GLProgramO
     auto AssignBinding = [&](const ShaderResourcesGL::GLResourceAttribs& Attribs, BINDING_RANGE Range) //
     {
         const auto ResIdx = FindResource(Attribs.ShaderStages, Attribs.Name);
-        if (ResIdx == InvalidResourceIndex)
+        if (ResIdx == InvalidPipelineResourceIndex)
             return; // The resource is defined in another signature
 
         const auto& ResDesc = m_Desc.Resources[ResIdx];

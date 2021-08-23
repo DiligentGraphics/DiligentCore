@@ -76,3 +76,7 @@ template <> struct hash<VkFormat>
 #include "VulkanErrors.hpp"
 #include "RenderDeviceBase.hpp"
 #include "ValidatedCast.hpp"
+
+#ifdef FindResource
+#    undef FindResource /// Leaks from WinBase.h
+#endif

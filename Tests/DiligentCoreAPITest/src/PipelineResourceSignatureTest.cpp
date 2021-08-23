@@ -1271,15 +1271,11 @@ TEST_F(PipelineResourceSignatureTest, GraphicsAndMeshShader)
 
 TEST_F(PipelineResourceSignatureTest, CombinedImageSamplers)
 {
-    auto* const pEnv    = TestingEnvironment::GetInstance();
-    auto* const pDevice = pEnv->GetDevice();
-    if (!pDevice->GetDeviceInfo().IsVulkanDevice() && !pDevice->GetDeviceInfo().IsGLDevice())
-    {
-        GTEST_SKIP();
-    }
-
-    auto* pContext   = pEnv->GetDeviceContext();
-    auto* pSwapChain = pEnv->GetSwapChain();
+    auto* const pEnv       = TestingEnvironment::GetInstance();
+    auto* const pDevice    = pEnv->GetDevice();
+    const auto& DeviceInfo = pDevice->GetDeviceInfo();
+    auto*       pContext   = pEnv->GetDeviceContext();
+    auto*       pSwapChain = pEnv->GetSwapChain();
 
     float ClearColor[] = {0.625, 0.25, 0.375, 1.0};
     RenderDrawCommandReference(pSwapChain, ClearColor);
@@ -1294,8 +1290,11 @@ TEST_F(PipelineResourceSignatureTest, CombinedImageSamplers)
         TEXTURE_VIEW_SHADER_RESOURCE //
     };
 
+    const auto IsDirect3D = DeviceInfo.IsD3DDevice();
+
     ShaderMacroHelper Macros;
-    Macros.AddShaderMacro("float4", "vec4");
+    if (!IsDirect3D)
+        Macros.AddShaderMacro("float4", "vec4");
     Macros.AddShaderMacro("Tex2D_Static_Ref", RefTextures.GetColor(0));
     Macros.AddShaderMacro("Tex2DArr_Static_Ref0", RefTextures.GetColor(1));
     Macros.AddShaderMacro("Tex2DArr_Static_Ref1", RefTextures.GetColor(2));
@@ -1308,15 +1307,17 @@ TEST_F(PipelineResourceSignatureTest, CombinedImageSamplers)
 
     ShaderCreateInfo ShaderCI;
     ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
-    ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_GLSL;
+    ShaderCI.SourceLanguage             = IsDirect3D ? SHADER_SOURCE_LANGUAGE_HLSL : SHADER_SOURCE_LANGUAGE_GLSL;
     ShaderCI.UseCombinedTextureSamplers = true;
     ShaderCI.Macros                     = Macros;
-    ShaderCI.ShaderCompiler             = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+    ShaderCI.ShaderCompiler             = IsDirect3D ? SHADER_COMPILER_DEFAULT : pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+    ShaderCI.HLSLVersion                = {5, 0};
 
     RefCntAutoPtr<IShader> pVS;
     {
         ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
-        ShaderCI.FilePath        = "CombinedImageSamplersGL.vsh";
+        ShaderCI.FilePath        = IsDirect3D ? "CombinedImageSamplers.hlsl" : "CombinedImageSamplersGL.vsh";
+        ShaderCI.EntryPoint      = IsDirect3D ? "VSMain" : "main";
         ShaderCI.Desc.Name       = "CombinedImageSamplers - VS";
         pDevice->CreateShader(ShaderCI, &pVS);
     }
@@ -1325,7 +1326,8 @@ TEST_F(PipelineResourceSignatureTest, CombinedImageSamplers)
     RefCntAutoPtr<IShader> pPS;
     {
         ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
-        ShaderCI.FilePath        = "CombinedImageSamplersGL.psh";
+        ShaderCI.FilePath        = IsDirect3D ? "CombinedImageSamplers.hlsl" : "CombinedImageSamplersGL.psh";
+        ShaderCI.EntryPoint      = IsDirect3D ? "PSMain" : "main";
         ShaderCI.Desc.Name       = "CombinedImageSamplers - PS";
         pDevice->CreateShader(ShaderCI, &pPS);
     }
@@ -1333,6 +1335,8 @@ TEST_F(PipelineResourceSignatureTest, CombinedImageSamplers)
 
     PipelineResourceSignatureDesc PRSDesc;
     PRSDesc.Name = "Combined image samplers test";
+
+    PRSDesc.UseCombinedTextureSamplers = true;
 
     constexpr auto SHADER_TYPE_VS_PS = SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL;
     // clang-format off

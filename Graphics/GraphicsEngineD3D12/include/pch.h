@@ -65,10 +65,12 @@ constexpr D3D12_RESOURCE_STATES D3D12_RESOURCE_STATE_SHADING_RATE_SOURCE = stati
 #include "ValidatedCast.hpp"
 #include "STDAllocator.hpp"
 
-#include <atlcomcli.h>
+#include <atlbase.h>
 
 #if USE_D3D12_LOADER
 // On Win32 we manually load d3d12.dll and get entry points,
 // but UWP does not support this, so we link with d3d12.lib
 #    include "D3D12Loader.hpp"
 #endif
+
+#undef FindResource // Leaks from WinBase.h

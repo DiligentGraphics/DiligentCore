@@ -152,3 +152,7 @@
         {                           \
         } while (false)
 #endif
+
+#ifdef FindResource
+#    undef FindResource /// Leaks from WinBase.h
+#endif

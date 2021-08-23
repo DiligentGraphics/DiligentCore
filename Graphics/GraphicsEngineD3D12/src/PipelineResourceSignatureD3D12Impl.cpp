@@ -123,7 +123,7 @@ PipelineResourceSignatureD3D12Impl::PipelineResourceSignatureD3D12Impl(IReferenc
         ValidatePipelineResourceSignatureDescD3D12(Desc);
 
         Initialize(
-            GetRawAllocator(), Desc, m_ImmutableSamplers,
+            GetRawAllocator(), DecoupleCombinedSamplers(Desc), m_ImmutableSamplers,
             [this]() //
             {
                 AllocateRootParameters();

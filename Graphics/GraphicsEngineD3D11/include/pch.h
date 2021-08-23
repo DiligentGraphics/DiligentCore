@@ -77,4 +77,6 @@
 #include "RenderDeviceBase.hpp"
 #include "D3D11TypeConversions.hpp"
 #include "ValidatedCast.hpp"
-#include <atlcomcli.h>
+
+#include <atlbase.h>
+#undef FindResource // Leaks from WinBase.h

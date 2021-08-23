@@ -32,8 +32,9 @@
 
 #include <mutex>
 #include <unordered_map>
-#include <atlbase.h>
 #include <cstring>
+
+#include <atlbase.h>
 
 #include "EngineD3D11ImplTraits.hpp"
 #include "ShaderBase.hpp"

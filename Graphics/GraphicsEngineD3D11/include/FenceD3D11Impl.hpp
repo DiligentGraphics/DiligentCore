@@ -32,6 +32,7 @@
 
 #include <deque>
 #include <algorithm>
+
 #include <atlbase.h>
 
 #include "EngineD3D11ImplTraits.hpp"

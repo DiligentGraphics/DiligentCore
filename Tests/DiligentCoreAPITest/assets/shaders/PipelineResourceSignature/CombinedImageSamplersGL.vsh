@@ -18,18 +18,20 @@ vec4 VerifyResources()
 {
     vec4 AllCorrect = vec4(1.0, 1.0, 1.0, 1.0);
 
-    AllCorrect *= CheckValue(textureLod(g_tex2D_Static, vec2(0.5, 0.5), 0.0), Tex2D_Static_Ref);
-    AllCorrect *= CheckValue(textureLod(g_tex2D_Mut, vec2(0.5, 0.5), 0.0), Tex2D_Mut_Ref);
-    AllCorrect *= CheckValue(textureLod(g_tex2D_Dyn, vec2(0.5, 0.5), 0.0), Tex2D_Dyn_Ref);
+    vec2 UV = vec2(0.5, 0.5);
 
-    AllCorrect *= CheckValue(textureLod(g_tex2D_StaticArr[0], vec2(0.5,0.5), 0.0), Tex2DArr_Static_Ref0);
-    AllCorrect *= CheckValue(textureLod(g_tex2D_StaticArr[1], vec2(0.5,0.5), 0.0), Tex2DArr_Static_Ref1);
+    AllCorrect *= CheckValue(textureLod(g_tex2D_Static, UV, 0.0), Tex2D_Static_Ref);
+    AllCorrect *= CheckValue(textureLod(g_tex2D_Mut,    UV, 0.0), Tex2D_Mut_Ref);
+    AllCorrect *= CheckValue(textureLod(g_tex2D_Dyn,    UV, 0.0), Tex2D_Dyn_Ref);
 
-    AllCorrect *= CheckValue(textureLod(g_tex2D_MutArr[0], vec2(0.5, 0.5), 0.0), Tex2DArr_Mut_Ref0);
-    AllCorrect *= CheckValue(textureLod(g_tex2D_MutArr[1], vec2(0.5, 0.5), 0.0), Tex2DArr_Mut_Ref1);
+    AllCorrect *= CheckValue(textureLod(g_tex2D_StaticArr[0], UV, 0.0), Tex2DArr_Static_Ref0);
+    AllCorrect *= CheckValue(textureLod(g_tex2D_StaticArr[1], UV, 0.0), Tex2DArr_Static_Ref1);
 
-    AllCorrect *= CheckValue(textureLod(g_tex2D_DynArr[0], vec2(0.5, 0.5), 0.0), Tex2DArr_Dyn_Ref0);
-    AllCorrect *= CheckValue(textureLod(g_tex2D_DynArr[1], vec2(0.5, 0.5), 0.0), Tex2DArr_Dyn_Ref1);
+    AllCorrect *= CheckValue(textureLod(g_tex2D_MutArr[0], UV, 0.0), Tex2DArr_Mut_Ref0);
+    AllCorrect *= CheckValue(textureLod(g_tex2D_MutArr[1], UV, 0.0), Tex2DArr_Mut_Ref1);
+
+    AllCorrect *= CheckValue(textureLod(g_tex2D_DynArr[0], UV, 0.0), Tex2DArr_Dyn_Ref0);
+    AllCorrect *= CheckValue(textureLod(g_tex2D_DynArr[1], UV, 0.0), Tex2DArr_Dyn_Ref1);
 
     return AllCorrect;
 }

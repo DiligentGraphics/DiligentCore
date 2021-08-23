@@ -869,7 +869,7 @@ protected:
     struct ResourceAttribution
     {
         static constexpr Uint32 InvalidSignatureIndex = ~0u;
-        static constexpr Uint32 InvalidResourceIndex  = PipelineResourceSignatureImplType::InvalidResourceIndex;
+        static constexpr Uint32 InvalidResourceIndex  = InvalidPipelineResourceIndex;
         static constexpr Uint32 InvalidSamplerIndex   = InvalidImmutableSamplerIndex;
 
         const PipelineResourceSignatureImplType* pSignature = nullptr;

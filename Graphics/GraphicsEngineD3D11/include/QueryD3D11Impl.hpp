@@ -31,6 +31,7 @@
 /// Declaration of Diligent::QueryD3D11Impl class
 
 #include <memory>
+
 #include <atlbase.h>
 
 #include "EngineD3D11ImplTraits.hpp"

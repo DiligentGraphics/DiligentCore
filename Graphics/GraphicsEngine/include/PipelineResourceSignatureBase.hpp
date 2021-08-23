@@ -35,6 +35,8 @@
 #include <algorithm>
 #include <memory>
 #include <functional>
+#include <vector>
+#include <unordered_set>
 
 #include "PrivateConstants.h"
 #include "PipelineResourceSignature.h"
@@ -59,11 +61,19 @@ static constexpr Uint32 InvalidImmutableSamplerIndex = ~0u;
 /// Finds an immutable sampler for the resource name 'ResourceName' that is defined in shader stages 'ShaderStages'.
 /// If 'SamplerSuffix' is not null, it will be appended to the 'ResourceName'.
 /// Returns an index of the sampler in ImtblSamplers array, or InvalidImmutableSamplerIndex if there is no suitable sampler.
-Uint32 FindImmutableSampler(const ImmutableSamplerDesc* ImtblSamplers,
-                            Uint32                      NumImtblSamplers,
-                            SHADER_TYPE                 ShaderStages,
-                            const char*                 ResourceName,
-                            const char*                 SamplerSuffix);
+Uint32 FindImmutableSampler(const ImmutableSamplerDesc ImtblSamplers[],
+                            Uint32                     NumImtblSamplers,
+                            SHADER_TYPE                ShaderStages,
+                            const char*                ResourceName,
+                            const char*                SamplerSuffix);
+
+static constexpr Uint32 InvalidPipelineResourceIndex = ~0u;
+/// Finds a resource with the given name in the specified shader stage and returns its
+/// index in Resources[], or InvalidPipelineResourceIndex if the resource is not found.
+Uint32 FindResource(const PipelineResourceDesc Resources[],
+                    Uint32                     NumResources,
+                    SHADER_TYPE                ShaderStage,
+                    const char*                ResourceName);
 
 /// Returns true if two pipeline resource signature descriptions are compatible, and false otherwise
 bool PipelineResourceSignaturesCompatible(const PipelineResourceSignatureDesc& Desc0,
@@ -363,19 +373,11 @@ public:
         return SHADER_TYPE_UNKNOWN;
     }
 
-    static constexpr Uint32 InvalidResourceIndex = ~0u;
     /// Finds a resource with the given name in the specified shader stage and returns its
-    /// index in m_Desc.Resources[], or InvalidResourceIndex if the resource is not found.
+    /// index in m_Desc.Resources[], or InvalidPipelineResourceIndex if the resource is not found.
     Uint32 FindResource(SHADER_TYPE ShaderStage, const char* ResourceName) const
     {
-        for (Uint32 r = 0; r < this->m_Desc.NumResources; ++r)
-        {
-            const auto& ResDesc = this->m_Desc.Resources[r];
-            if ((ResDesc.ShaderStages & ShaderStage) != 0 && strcmp(ResDesc.Name, ResourceName) == 0)
-                return r;
-        }
-
-        return InvalidResourceIndex;
+        return Diligent::FindResource(this->m_Desc.Resources, this->m_Desc.NumResources, ShaderStage, ResourceName);
     }
 
     /// Finds an immutable with the given name in the specified shader stage and returns its
@@ -539,6 +541,61 @@ protected:
         }
 
         pThisImpl->CalculateHash();
+    }
+
+    struct PRSDescWrapper
+    {
+        PipelineResourceSignatureDesc     Desc;
+        std::vector<PipelineResourceDesc> Resources;
+        std::unordered_set<std::string>   Names;
+
+        operator const PipelineResourceSignatureDesc&() const { return Desc; }
+    };
+    // Decouples combined image samplers into texture SRV + sampler pairs.
+    PRSDescWrapper DecoupleCombinedSamplers(const PipelineResourceSignatureDesc& Desc)
+    {
+        PRSDescWrapper UpdatedDesc{Desc};
+
+        bool HasCombinedSamplers = false;
+        for (Uint32 r = 0; r < Desc.NumResources; ++r)
+        {
+            const auto& Res{Desc.Resources[r]};
+            if ((Res.Flags & PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER) == 0)
+                continue;
+
+            VERIFY(Res.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV,
+                   "COMBINED_SAMPLER flag is only valid for texture SRVs. This error should've been caught by ValidatePipelineResourceSignatureDesc().");
+            VERIFY(Desc.UseCombinedTextureSamplers && Desc.CombinedSamplerSuffix != nullptr,
+                   "UseCombinedTextureSamplers must be true and CombinedSamplerSuffix must not be null when COMBINED_SAMPLER flag is used. "
+                   "This error should've been caught by ValidatePipelineResourceSignatureDesc().");
+
+            HasCombinedSamplers = true;
+
+            auto SamplerName = std::string{Res.Name} + Desc.CombinedSamplerSuffix;
+            // Check if the sampler is already defined.
+            if (Diligent::FindResource(Desc.Resources, Desc.NumResources, Res.ShaderStages, SamplerName.c_str()) == InvalidPipelineResourceIndex)
+            {
+                //  Add sampler to the list of resources.
+                auto NameIt = UpdatedDesc.Names.emplace(std::move(SamplerName)).first;
+                UpdatedDesc.Resources.emplace_back(Res.ShaderStages, NameIt->c_str(), Res.ArraySize, SHADER_RESOURCE_TYPE_SAMPLER, Res.VarType);
+            }
+        }
+
+        if (HasCombinedSamplers)
+        {
+            // Add original resources
+            UpdatedDesc.Resources.insert(UpdatedDesc.Resources.begin(), Desc.Resources, Desc.Resources + Desc.NumResources);
+            // Clear COMBINED_SAMPLER flag
+            for (auto& Res : UpdatedDesc.Resources)
+                Res.Flags &= ~PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER;
+
+            UpdatedDesc.Desc.Resources    = UpdatedDesc.Resources.data();
+            UpdatedDesc.Desc.NumResources = static_cast<Uint32>(UpdatedDesc.Resources.size());
+
+            this->m_Desc.NumResources = UpdatedDesc.Desc.NumResources;
+        }
+
+        return UpdatedDesc;
     }
 
 private:
