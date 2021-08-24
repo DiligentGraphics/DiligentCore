@@ -156,6 +156,8 @@ public:
         FLAG_FORMAT(TEX_FORMAT_BC7_UNORM_SRGB,             true);
 #undef FLAG_FORMAT
         // clang-format on
+
+        m_DeviceInfo.NDC = NDCAttribs{0.0f, 1.0f, -0.5f};
     }
 };
 

@@ -99,9 +99,13 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
     }
     else
     {
+        static constexpr char NDCDefine[] = "#define _NDC_ZERO_TO_ONE 1\n";
+
         // Build the full source code string that will contain GLSL version declaration,
         // platform definitions, user-provided shader macros, etc.
-        GLSLSourceString = BuildGLSLSourceString(ShaderCI, DeviceInfo, AdapterInfo, TargetGLSLCompiler::driver);
+        GLSLSourceString = BuildGLSLSourceString(
+            ShaderCI, DeviceInfo, AdapterInfo, TargetGLSLCompiler::driver,
+            (pDeviceGL->GetDeviceInfo().NDC.MinZ >= 0 ? NDCDefine : nullptr));
         ShaderStrings[0] = GLSLSourceString.c_str();
         Lengths[0]       = static_cast<GLint>(GLSLSourceString.length());
     }

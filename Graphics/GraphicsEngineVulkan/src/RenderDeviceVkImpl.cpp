@@ -156,6 +156,12 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
                                                        m_LogicalVkDevice->GetEnabledExtFeatures(),
                                                        m_PhysicalDevice->GetExtProperties());
 
+    // Note that Vulkan itself does not invert Y coordinate when transforming
+    // normalized device Y to window space. However, we use negative viewport
+    // height which achieves the same effect as in D3D, thererfore we need to
+    // invert y (see comments in DeviceContextVkImpl::CommitViewports() for details)
+    m_DeviceInfo.NDC = NDCAttribs{0.0f, 1.0f, -0.5f};
+
     // Every queue family needs its own command pool.
     // Every queue needs its own query pool.
     m_QueryMgrs.reserve(CommandQueueCount);

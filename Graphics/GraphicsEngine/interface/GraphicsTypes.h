@@ -2128,6 +2128,26 @@ struct ComputeShaderProperties
 typedef struct ComputeShaderProperties ComputeShaderProperties;
 
 
+/// Normalized device coordinates attributes
+struct NDCAttribs
+{
+    float MinZ          DEFAULT_INITIALIZER(0.f); // Minimum z value of the normalized device coordinate space
+    float ZtoDepthScale DEFAULT_INITIALIZER(0.f); // NDC z to depth scale
+    float YtoVScale     DEFAULT_INITIALIZER(0.f); // Scale to transform NDC y coordinate to texture V coordinate
+
+#if DILIGENT_CPP_INTERFACE
+    float GetZtoDepthBias() const
+    {
+        // Returns ZtoDepthBias such that given NDC z coordinate, depth value can be
+        // computed as follows:
+        // d = z * ZtoDepthScale + ZtoDepthBias
+        return -MinZ * ZtoDepthScale;
+    }
+#endif
+};
+typedef struct NDCAttribs NDCAttribs;
+
+
 /// Render device information
 struct RenderDeviceInfo
 {
@@ -2149,6 +2169,9 @@ struct RenderDeviceInfo
     ///       feature, but if it is not enabled, an application must not use it.
     DeviceFeatures Features;
 
+    /// Normalized device coordinates
+    NDCAttribs NDC DEFAULT_INITIALIZER({});
+
 #if DILIGENT_CPP_INTERFACE
     bool IsGLDevice()const
     {
@@ -2167,47 +2190,10 @@ struct RenderDeviceInfo
         return Type == RENDER_DEVICE_TYPE_METAL;
     }
 
-    struct NDCAttribs
-    {
-        const float MinZ;          // Minimum z value of normalized device coordinate space
-        const float ZtoDepthScale; // NDC z to depth scale
-        const float YtoVScale;     // Scale to transform NDC y coordinate to texture V coordinate
-
-        float GetZtoDepthBias() const
-        {
-            // Returns ZtoDepthBias such that given NDC z coordinate, depth value can be
-            // computed as follows:
-            // d = z * ZtoDepthScale + ZtoDepthBias
-            return -MinZ * ZtoDepthScale;
-        }
-    };
-
+    // for backward compatibility
     const NDCAttribs& GetNDCAttribs()const
     {
-        if (IsVulkanDevice())
-        {
-            // Note that Vulkan itself does not invert Y coordinate when transforming
-            // normalized device Y to window space. However, we use negative viewport
-            // height which achieves the same effect as in D3D, thererfore we need to
-            // invert y (see comments in DeviceContextVkImpl::CommitViewports() for details)
-            static constexpr const NDCAttribs NDCAttribsVk {0.0f, 1.0f, -0.5f};
-            return NDCAttribsVk;
-        }
-        else if (IsD3DDevice())
-        {
-            static constexpr const NDCAttribs NDCAttribsD3D {0.0f, 1.0f, -0.5f};
-            return NDCAttribsD3D;
-        }
-        else if (IsGLDevice())
-        {
-            static constexpr const NDCAttribs NDCAttribsGL {-1.0f, 0.5f, 0.5f};
-            return NDCAttribsGL;
-        }
-        else
-        {
-            static constexpr const NDCAttribs NDCAttribsDefault {0.0f, 1.0f, 0.5f};
-            return NDCAttribsDefault;
-        }
+        return NDC;
     }
 #endif
 };
@@ -2756,6 +2742,10 @@ struct EngineGLCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
 
     /// Native window wrapper
     NativeWindow Window;
+
+    /// Enable 0..1 NDC Z range if required extension is supported; -1..+1 otherwise.
+    /// Use IRenderDevice::GetDeviceInfo().NDC to get current NDC.
+    bool         ZeroToOneNDC DEFAULT_INITIALIZER(false);
 
 #if DILIGENT_CPP_INTERFACE
     EngineGLCreateInfo() noexcept : EngineGLCreateInfo{EngineCreateInfo{}}

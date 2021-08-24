@@ -1055,10 +1055,15 @@ vec4 _frexp(vec4 f4, out vec4 fexp4)
 
 #else
 
-#define NDC_MIN_Z -1.0 // Minimal z in the normalized device space
-#define F3NDC_XYZ_TO_UVD_SCALE float3(0.5, 0.5, 0.5)
+# ifdef _NDC_ZERO_TO_ONE
+#   define NDC_MIN_Z 0.0 // Minimal z in the normalized device space
+#   define F3NDC_XYZ_TO_UVD_SCALE float3(0.5, 0.5, 1.0)
+# else
+#   define NDC_MIN_Z -1.0 // Minimal z in the normalized device space
+#   define F3NDC_XYZ_TO_UVD_SCALE float3(0.5, 0.5, 0.5)
+# endif // _NDC_ZERO_TO_ONE
 
-#endif
+#endif // VULKAN
 
 float2 NormalizedDeviceXYToTexUV( float2 f2ProjSpaceXY )
 {

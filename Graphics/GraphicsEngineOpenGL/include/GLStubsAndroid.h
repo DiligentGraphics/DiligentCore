@@ -1042,6 +1042,21 @@
 #   define GL_MAX_COMPUTE_WORK_GROUP_SIZE 0x91BF
 #endif
 
+/* ------------------------------ GL_EXT_clip_control ----------------------------- */
+
+#ifdef GL_EXT_clip_control
+#   define GL_LOWER_LEFT  GL_LOWER_LEFT_EXT
+#   define GL_ZERO_TO_ONE GL_ZERO_TO_ONE_EXT
+#endif
+
+#ifndef GL_LOWER_LEFT
+#   define GL_LOWER_LEFT 0x8CA1
+#endif
+
+#ifndef GL_ZERO_TO_ONE
+#   define GL_ZERO_TO_ONE 0x935F
+#endif
+
 
 // Define unsupported GL function stubs
 template<typename T>

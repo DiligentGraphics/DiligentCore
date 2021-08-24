@@ -525,6 +525,14 @@
 #    define GL_PRIMITIVES_GENERATED 0
 #endif
 
+#ifndef GL_LOWER_LEFT
+#    define GL_LOWER_LEFT 0
+#endif
+
+#ifndef GL_ZERO_TO_ONE
+#    define GL_ZERO_TO_ONE 0
+#endif
+
 
 // Define unsupported GL function stubs
 template <typename T>
@@ -553,6 +561,7 @@ static void (*glPolygonMode)(GLenum face, GLenum mode) = nullptr;
 #define glColorMaski(...)             UnsupportedGLFunctionStub("glColorMaski")
 #define glFramebufferTexture(...)     UnsupportedGLFunctionStub("glFramebufferTexture")
 #define glFramebufferTexture1D(...)   UnsupportedGLFunctionStub("glFramebufferTexture1D")
+#define glClipControl(...)            UnsupportedGLFunctionStub("glClipControl")
 static void (*glGetQueryObjectui64v)(GLuint id, GLenum pname, GLuint64* params) = nullptr;
 
 #ifndef GL_BUFFER
