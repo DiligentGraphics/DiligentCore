@@ -289,7 +289,7 @@ void DeviceContextGLImpl::SetViewports(Uint32 NumViewports, const Viewport* pVie
             float       BottomLeftX = vp.TopLeftX;
             glViewportIndexedf(i, BottomLeftX, BottomLeftY, vp.Width, vp.Height);
             DEV_CHECK_GL_ERROR("Failed to set viewport #", i);
-            glDepthRangef(vp.MinDepth, vp.MaxDepth);
+            glDepthRangeIndexed(i, vp.MinDepth, vp.MaxDepth);
             DEV_CHECK_GL_ERROR("Failed to set depth range for viewport #", i);
         }
     }

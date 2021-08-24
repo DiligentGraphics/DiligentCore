@@ -871,6 +871,11 @@ inline void DeviceContextBase<ImplementationTraits>::SetViewports(
 {
     DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_GRAPHICS, "SetViewports");
 
+    if (NumViewports > 1)
+    {
+        DEV_CHECK_ERR(m_pDevice->GetFeatures().MultiViewport,
+                      "IDeviceContext::SetViewports: multi viewport is not supported by this device");
+    }
     if (RTWidth == 0 || RTHeight == 0)
     {
         RTWidth  = m_FramebufferWidth;
@@ -917,6 +922,11 @@ inline void DeviceContextBase<ImplementationTraits>::SetScissorRects(
 {
     DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_GRAPHICS, "SetScissorRects");
 
+    if (NumRects > 1)
+    {
+        DEV_CHECK_ERR(m_pDevice->GetFeatures().MultiViewport,
+                      "IDeviceContext::SetScissorRects: multi viewport is not supported by this device");
+    }
     if (RTWidth == 0 || RTHeight == 0)
     {
         RTWidth  = m_FramebufferWidth;

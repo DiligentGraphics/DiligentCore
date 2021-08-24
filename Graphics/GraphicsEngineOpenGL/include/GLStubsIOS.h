@@ -544,6 +544,7 @@ void UnsupportedGLFunctionStub(const T& Name)
 #define glTexStorage3DMultisample(...)                     UnsupportedGLFunctionStub("glTexStorage3DMultisample")
 #define glViewportIndexedf(...)                            UnsupportedGLFunctionStub("glViewportIndexedf")
 #define glScissorIndexed(...)                              UnsupportedGLFunctionStub("glScissorIndexed")
+#define glDepthRangeIndexed(...)                           UnsupportedGLFunctionStub("glDepthRangeIndexed")
 static void (*glPolygonMode)(GLenum face, GLenum mode) = nullptr;
 #define glEnablei(...)                UnsupportedGLFunctionStub("glEnablei")
 #define glBlendFuncSeparatei(...)     UnsupportedGLFunctionStub("glBlendFuncSeparatei")

@@ -192,7 +192,10 @@ void TexRegionRender::RestoreStates(DeviceContextGLImpl* pCtxGL)
     }
     m_pOrigDSV.Release();
 
-    pCtxGL->SetViewports((Uint32)m_OrigViewports.size(), m_OrigViewports.data(), 0, 0);
+    if (m_OrigViewports.size())
+        pCtxGL->SetViewports((Uint32)m_OrigViewports.size(), m_OrigViewports.data(), 0, 0);
+    else
+        pCtxGL->SetViewports(1, nullptr, 0, 0); // set default
 
     if (m_pOrigPSO)
         pCtxGL->SetPipelineState(m_pOrigPSO);

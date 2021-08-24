@@ -31,11 +31,14 @@
 
 // clang-format off
 
-#define DECLARE_GL_FUNCTION(Func, FuncType, ...)\
-    FuncType Func = nullptr;                    \
-    void Func##Stub(__VA_ARGS__)                \
-    {                                           \
-        UnsupportedGLFunctionStub(#Func);       \
+#define DECLARE_GL_FUNCTION_NO_STUB(Func, FuncType, ...) \
+    FuncType Func = nullptr;
+
+#define DECLARE_GL_FUNCTION(Func, FuncType, ...)             \
+    DECLARE_GL_FUNCTION_NO_STUB(Func, FuncType, __VA_ARGS__) \
+    void Func##Stub(__VA_ARGS__)                             \
+    {                                                        \
+        UnsupportedGLFunctionStub(#Func);                    \
     }
 
 #ifdef LOAD_GL_BIND_IMAGE_TEXTURE
@@ -112,11 +115,7 @@
 #endif
 
 #ifdef LOAD_GL_POLYGON_MODE
-    PFNGLPOLYGONMODE glPolygonMode = nullptr;
-#endif
-
-#ifdef LOAD_GL_ENABLEI
-    DECLARE_GL_FUNCTION( glEnablei, PFNGLENABLEIPROC, GLenum, GLuint)
+    DECLARE_GL_FUNCTION_NO_STUB( glPolygonMode, PFNGLPOLYGONMODE)
 #endif
 
 #ifdef LOAD_GL_BLEND_FUNC_SEPARATEI
@@ -125,6 +124,10 @@
 
 #ifdef LOAD_GL_BLEND_EQUATION_SEPARATEI
     DECLARE_GL_FUNCTION( glBlendEquationSeparatei, PFNGLBLENDEQUATIONSEPARATEIPROC, GLuint buf, GLenum modeRGB, GLenum modeAlpha)
+#endif
+
+#ifdef LOAD_GL_ENABLEI
+    DECLARE_GL_FUNCTION( glEnablei, PFNGLENABLEIPROC, GLenum, GLuint)
 #endif
 
 #ifdef LOAD_GL_DISABLEI
@@ -136,11 +139,30 @@
 #endif
 
 #ifdef LOAD_GL_VIEWPORT_INDEXEDF
-    DECLARE_GL_FUNCTION( glViewportIndexedf, PFNGLVIEWPORTINDEXEDFPROC, GLuint index, GLfloat x, GLfloat y, GLfloat w, GLfloat h)
+    PFNGLVIEWPORTINDEXEDFPROC glViewportIndexedf = nullptr;
+    void glViewportIndexedfStub(GLuint index, GLfloat x, GLfloat y, GLfloat w, GLfloat h)
+    {
+        (void)index;
+        glViewport(static_cast<GLint>(x), static_cast<GLint>(y), static_cast<GLsizei>(w), static_cast<GLsizei>(h));
+    }
 #endif
 
 #ifdef LOAD_GL_SCISSOR_INDEXED
-    DECLARE_GL_FUNCTION( glScissorIndexed, PFNGLSCISSORINDEXEDPROC, GLuint index, GLint left, GLint bottom, GLsizei width, GLsizei height)
+    PFNGLSCISSORINDEXEDPROC glScissorIndexed = nullptr;
+    void glScissorIndexedStub(GLuint index, GLint left, GLint bottom, GLsizei width, GLsizei height)
+    {
+        (void)index;
+        glScissor(static_cast<GLint>(left), static_cast<GLint>(bottom), static_cast<GLsizei>(width), static_cast<GLsizei>(height));
+    }
+#endif
+    
+#ifdef LOAD_GL_DEPTH_RANGE_INDEXED
+    PFNGLDEPTHRANGEINDEXEDPROC glDepthRangeIndexed = nullptr;
+    void glDepthRangeIndexedStub(GLuint index, GLfloat n, GLfloat f)
+    {
+        (void)index;
+        glDepthRangef(n, f);
+    }
 #endif
 
 #ifdef LOAD_GL_FRAMEBUFFER_TEXTURE
@@ -168,7 +190,7 @@
 #endif
 
 #ifdef LOAD_GL_SHADER_STORAGE_BLOCK_BINDING
-    DECLARE_GL_FUNCTION( glShaderStorageBlockBinding, PFNGLSHADERSTORAGEBLOCKBINDINGPROC, GLuint program, GLuint storageBlockIndex, GLuint storageBlockBinding )
+    DECLARE_GL_FUNCTION_NO_STUB( glShaderStorageBlockBinding, PFNGLSHADERSTORAGEBLOCKBINDINGPROC, GLuint program, GLuint storageBlockIndex, GLuint storageBlockBinding )
 #endif
 
 #ifdef LOAD_GL_TEX_STORAGE_3D_MULTISAMPLE
@@ -216,217 +238,262 @@
 #endif
 
 #ifdef LOAD_GL_OBJECT_LABEL
-    PFNGLOBJECTLABELPROC glObjectLabel = nullptr;
+    DECLARE_GL_FUNCTION_NO_STUB( glObjectLabel, PFNGLOBJECTLABELPROC)
 #endif
 
 #ifdef LOAD_GL_POP_DEBUG_GROUP
-    PFNGLPOPDEBUGGROUPPROC glPopDebugGroup = nullptr;
+    DECLARE_GL_FUNCTION_NO_STUB( glPopDebugGroup, PFNGLPOPDEBUGGROUPPROC)
 #endif
 
 #ifdef LOAD_GL_PUSH_DEBUG_GROUP
-    PFNGLPUSHDEBUGGROUPPROC glPushDebugGroup = nullptr;
+    DECLARE_GL_FUNCTION_NO_STUB( glPushDebugGroup, PFNGLPUSHDEBUGGROUPPROC)
 #endif
 
 #ifdef LOAD_GL_DEBUG_MESSAGE_INSERT
-    PFNGLDEBUGMESSAGEINSERTPROC glDebugMessageInsert = nullptr;
+    DECLARE_GL_FUNCTION_NO_STUB( glDebugMessageInsert, PFNGLDEBUGMESSAGEINSERTPROC)
 #endif
 
+#ifdef LOAD_GL_CLIP_CONTROL
+    DECLARE_GL_FUNCTION_NO_STUB( glClipControl, PFNGLCLIPCONTROLPROC)
+#endif
 
-void LoadGLFunctions()
+using Diligent::Version;
+void LoadGLFunctions(Version glesVer)
 {
+    struct FuncNameAndVersion
+    {
+        const char* Name;
+        Version     Ver;
+        /*
+        explicit FuncNameAndVersion(const char* _Name) noexcept :
+            Name{_Name},
+            Ver {3, 0}
+        {}
 
-#define LOAD_GL_FUNCTION(Func, FuncType)\
-Func = (FuncType)eglGetProcAddress( #Func );\
-    if( !Func )Func = Func##Stub;
+        FuncNameAndVersion(const char* _Name,
+                           Version     _Ver) noexcept :
+            Name{_Name},
+            Ver {_Ver}
+        {}*/
+    };
+    const auto LoadFn = [glesVer](auto& Fn, std::initializer_list<FuncNameAndVersion> FnNames, auto* FnStub) //
+    {
+        for (auto& NameAndVer : FnNames)
+        {
+            if (glesVer < NameAndVer.Ver)
+                continue;
+
+            Fn = reinterpret_cast<std::remove_reference_t<decltype(Fn)>>(eglGetProcAddress(NameAndVer.Name));
+            if (Fn != nullptr)
+                break;
+        }
+        if (Fn != nullptr)
+            Fn = FnStub;
+    };
+
+#define LOAD_GL_FUNCTION(Func) \
+    LoadFn(Func, {{#Func, {3,0}}}, &Func##Stub);
+    
+#define LOAD_GL_FUNCTION2(Func, ...) \
+    LoadFn(Func, __VA_ARGS__, &Func##Stub);
+
+#define LOAD_GL_FUNCTION_NO_STUB(Func, ...) \
+    LoadFn(Func, __VA_ARGS__, (decltype(Func))nullptr);
+
 
 #ifdef LOAD_GL_BIND_IMAGE_TEXTURE
-    LOAD_GL_FUNCTION(glBindImageTexture, PFNGLBINDIMAGETEXTUREPROC)
+    LOAD_GL_FUNCTION(glBindImageTexture)
 #endif
 
 #ifdef LOAD_GL_DISPATCH_COMPUTE
-    LOAD_GL_FUNCTION(glDispatchCompute, PFNGLDISPATCHCOMPUTEPROC)
-#endif
-
-#ifdef LOAD_GEN_PROGRAM_PIPELINES
-    LOAD_GL_FUNCTION(glGenProgramPipelines, PFNGLGENPROGRAMPIPELINESPROC)
-#endif
-
-#ifdef LOAD_GL_DELETE_PROGRAM_PIPELINES
-    LOAD_GL_FUNCTION(glDeleteProgramPipelines, PFNGLDELETEPROGRAMPIPELINESPROC)
-#endif
-
-#ifdef LOAD_GL_BIND_PROGRAM_PIPELINE
-    LOAD_GL_FUNCTION(glBindProgramPipeline, PFNGLBINDPROGRAMPIPELINEPROC)
-#endif
-
-#ifdef LOAD_GL_USE_PROGRAM_STAGES
-    LOAD_GL_FUNCTION(glUseProgramStages, PFNGLUSEPROGRAMSTAGESPROC)
-#endif
-
-#ifdef LOAD_GL_PROGRAM_UNIFORM_1I
-    LOAD_GL_FUNCTION(glProgramUniform1i, PFNGLPROGRAMUNIFORM1IPROC)
-#endif
-
-#ifdef LOAD_GL_MEMORY_BARRIER
-    LOAD_GL_FUNCTION(glMemoryBarrier,  PFNGLMEMORYBARRIERPROC)
-#endif
-
-#ifdef LOAD_DRAW_ELEMENTS_INDIRECT
-    LOAD_GL_FUNCTION(glDrawElementsIndirect, PFNGLDRAWELEMENTSINDIRECTPROC)
-#endif
-
-#ifdef LOAD_DRAW_ARRAYS_INDIRECT
-    LOAD_GL_FUNCTION(glDrawArraysIndirect, PFNGLDRAWARRAYSINDIRECTPROC)
-#endif
-
-#ifdef LOAD_GL_TEX_STORAGE_2D_MULTISAMPLE
-    LOAD_GL_FUNCTION(glTexStorage2DMultisample, PFNGLTEXSTORAGE2DMULTISAMPLEPROC)
-#endif
-
-#ifdef LOAD_GL_GET_PROGRAM_INTERFACEIV
-    LOAD_GL_FUNCTION(glGetProgramInterfaceiv, PFNGLGETPROGRAMINTERFACEIVPROC)
-#endif
-
-#ifdef LOAD_GL_GET_PROGRAM_RESOURCE_NAME
-    LOAD_GL_FUNCTION(glGetProgramResourceName, PFNGLGETPROGRAMRESOURCENAMEPROC)
-#endif
-
-#ifdef LOAD_GL_GET_PROGRAM_RESOURCE_INDEX
-    LOAD_GL_FUNCTION(glGetProgramResourceIndex, PFNGLGETPROGRAMRESOURCEINDEXPROC)
-#endif
-
-#ifdef LOAD_GL_GET_PROGRAM_RESOURCEIV
-    LOAD_GL_FUNCTION(glGetProgramResourceiv, PFNGLGETPROGRAMRESOURCEIVPROC)
+    LOAD_GL_FUNCTION(glDispatchCompute)
 #endif
 
 #ifdef LOAD_DISPATCH_COMPUTE_INDIRECT
-    LOAD_GL_FUNCTION(glDispatchComputeIndirect, PFNGLDISPATCHCOMPUTEINDIRECTPROC)
+    LOAD_GL_FUNCTION(glDispatchComputeIndirect)
+#endif
+
+#ifdef LOAD_GEN_PROGRAM_PIPELINES
+    LOAD_GL_FUNCTION2(glGenProgramPipelines, {{"glGenProgramPipelines", {3,1}}, {"glGenProgramPipelinesEXT", {3,0}}} )
+#endif
+
+#ifdef LOAD_GL_DELETE_PROGRAM_PIPELINES
+    LOAD_GL_FUNCTION2(glDeleteProgramPipelines, {{"glDeleteProgramPipelines", {3,1}}, {"glDeleteProgramPipelinesEXT", {3,0}}} )
+#endif
+
+#ifdef LOAD_GL_BIND_PROGRAM_PIPELINE
+    LOAD_GL_FUNCTION2(glBindProgramPipeline, {{"glBindProgramPipeline", {3,1}}, {"glBindProgramPipelineEXT", {3,0}}} )
+#endif
+
+#ifdef LOAD_GL_USE_PROGRAM_STAGES
+    LOAD_GL_FUNCTION2(glUseProgramStages, {{"glUseProgramStages", {3,1}}, {"glUseProgramStagesEXT", {3,0}}} )
+#endif
+
+#ifdef LOAD_GL_PROGRAM_UNIFORM_1I
+    LOAD_GL_FUNCTION2(glProgramUniform1i, {{"glProgramUniform1i", {3,1}}, {"glProgramUniform1iEXT", {3,0}}} )
+#endif
+
+#ifdef LOAD_GL_MEMORY_BARRIER
+    LOAD_GL_FUNCTION(glMemoryBarrier)
+#endif
+
+#ifdef LOAD_DRAW_ELEMENTS_INDIRECT
+    LOAD_GL_FUNCTION(glDrawElementsIndirect)
+#endif
+
+#ifdef LOAD_DRAW_ARRAYS_INDIRECT
+    LOAD_GL_FUNCTION(glDrawArraysIndirect)
+#endif
+
+#ifdef LOAD_GL_TEX_STORAGE_2D_MULTISAMPLE
+    LOAD_GL_FUNCTION(glTexStorage2DMultisample)
+#endif
+
+#ifdef LOAD_GL_GET_PROGRAM_INTERFACEIV
+    LOAD_GL_FUNCTION_NO_STUB(glGetProgramInterfaceiv, {{"glGetProgramInterfaceiv", {3,1}}} )
+#endif
+
+#ifdef LOAD_GL_GET_PROGRAM_RESOURCE_NAME
+    LOAD_GL_FUNCTION(glGetProgramResourceName)
+#endif
+
+#ifdef LOAD_GL_GET_PROGRAM_RESOURCE_INDEX
+    LOAD_GL_FUNCTION(glGetProgramResourceIndex)
+#endif
+
+#ifdef LOAD_GL_GET_PROGRAM_RESOURCEIV
+    LOAD_GL_FUNCTION(glGetProgramResourceiv)
 #endif
 
 #ifdef LOAD_GL_TEX_BUFFER
-    LOAD_GL_FUNCTION(glTexBuffer, PFNGLTEXBUFFERPROC)
+    LOAD_GL_FUNCTION2(glTexBuffer, {{"glTexBuffer", {3,2}}, {"glTexBufferOES", {3,1}}, {"glTexBufferEXT", {3,1}}} )
 #endif
 
 #ifdef LOAD_GL_POLYGON_MODE
-    glPolygonMode = (PFNGLPOLYGONMODE)eglGetProcAddress("glPolygonMode");
-#endif
-
-#ifdef LOAD_GL_ENABLEI
-    LOAD_GL_FUNCTION(glEnablei, PFNGLENABLEIPROC)
+    LOAD_GL_FUNCTION_NO_STUB(glPolygonMode, {{"glPolygonModeNV", {3,1}}} );
 #endif
 
 #ifdef LOAD_GL_BLEND_FUNC_SEPARATEI
-    LOAD_GL_FUNCTION(glBlendFuncSeparatei, PFNGLBLENDFUNCSEPARATEIPROC)
+    LOAD_GL_FUNCTION2(glBlendFuncSeparatei, {{"glBlendFuncSeparatei", {3,2}}, {"glBlendFuncSeparateiOES", {3,0}}, {"glBlendFuncSeparateiEXT", {3,0}}} )
 #endif
 
 #ifdef LOAD_GL_BLEND_EQUATION_SEPARATEI
-    LOAD_GL_FUNCTION(glBlendEquationSeparatei, PFNGLBLENDEQUATIONSEPARATEIPROC)
+    LOAD_GL_FUNCTION2(glBlendEquationSeparatei, {{"glBlendEquationSeparatei", {3,2}}, {"glBlendEquationSeparateiOES", {3,0}}, {"glBlendEquationSeparateiEXT", {3,0}}} )
+#endif
+
+#ifdef LOAD_GL_ENABLEI
+    LOAD_GL_FUNCTION2(glEnablei, {{"glEnablei", {3,2}}, {"glEnableiOES", {3,0}}, {"glEnableiEXT", {3,0}}} )
 #endif
 
 #ifdef LOAD_GL_DISABLEI
-    LOAD_GL_FUNCTION(glDisablei, PFNGLDISABLEIPROC)
+    LOAD_GL_FUNCTION2(glDisablei, {{"glDisablei", {3,2}}, {"glDisableiOES", {3,0}}, {"glDisableiEXT", {3,0}}} )
 #endif
 
 #ifdef LOAD_GL_COLOR_MASKI
-    LOAD_GL_FUNCTION(glColorMaski, PFNGLCOLORMASKIPROC)
+    LOAD_GL_FUNCTION2(glColorMaski, {{"glColorMaski", {3,2}}, {"glColorMaskiOES", {3,0}}, {"glColorMaskiEXT", {3,0}}} )
 #endif
 
 #ifdef LOAD_GL_VIEWPORT_INDEXEDF
-    LOAD_GL_FUNCTION(glViewportIndexedf, PFNGLVIEWPORTINDEXEDFPROC)
+    LOAD_GL_FUNCTION2(glViewportIndexedf, {{"glViewportIndexedfOES", {3,2}}, {"glViewportIndexedfNV", {3,1}}} )
 #endif
 
 #ifdef LOAD_GL_SCISSOR_INDEXED
-    LOAD_GL_FUNCTION(glScissorIndexed, PFNGLSCISSORINDEXEDPROC)
+    LOAD_GL_FUNCTION2(glScissorIndexed, {{"glScissorIndexedOES", {3,2}}, {"glScissorIndexedNV", {3,1}}} )
+#endif
+
+#ifdef LOAD_GL_DEPTH_RANGE_INDEXED
+    LOAD_GL_FUNCTION2(glDepthRangeIndexed, {{"glDepthRangeIndexedfOES", {3,2}}, {"glDepthRangeIndexedfNV", {3,1}}} )
 #endif
 
 #ifdef LOAD_GL_FRAMEBUFFER_TEXTURE
-    LOAD_GL_FUNCTION(glFramebufferTexture, PFNGLFRAMEBUFFERTEXTUREPROC)
+    LOAD_GL_FUNCTION2(glFramebufferTexture, {{"glFramebufferTexture", {3,2}}, {"glFramebufferTextureOES", {3,1}}, {"glFramebufferTextureEXT", {3,1}}} )
 #endif
 
 #ifdef LOAD_GL_FRAMEBUFFER_TEXTURE_1D
-    LOAD_GL_FUNCTION(glFramebufferTexture1D, PFNGLFRAMEBUFFERTEXTURE1DPROC)
+    LOAD_GL_FUNCTION(glFramebufferTexture1D)
 #endif
 
 #ifdef LOAD_GL_FRAMEBUFFER_TEXTURE_3D
-    LOAD_GL_FUNCTION(glFramebufferTexture3D, PFNGLFRAMEBUFFERTEXTURE3DPROC)
+    LOAD_GL_FUNCTION2(glFramebufferTexture3D, {{"glFramebufferTexture3DOES", {3,0}}} )
 #endif
 
 #ifdef LOAD_GL_COPY_IMAGE_SUB_DATA
-    // Do not use proxy if function is not available!
-    LOAD_GL_FUNCTION(glCopyImageSubData, PFNGLCOPYIMAGESUBDATAPROC)
+    LOAD_GL_FUNCTION_NO_STUB(glCopyImageSubData, {{"glCopyImageSubData", {3,2}}, {"glCopyImageSubDataOES", {3,0}}, {"glCopyImageSubDataEXT", {3,0}}} )
 #endif
 
 #ifdef LOAD_GL_PATCH_PARAMTER_I
-    LOAD_GL_FUNCTION(glPatchParameteri, PFNGLPATCHPARAMETERIPROC)
+    LOAD_GL_FUNCTION2(glPatchParameteri, {{"glPatchParameteri", {3,2}}, {"glPatchParameteriOES", {3,1}}, {"glPatchParameteriEXT", {3,1}}} )
 #endif
 
 #ifdef LOAD_GET_TEX_LEVEL_PARAMETER_IV
-    LOAD_GL_FUNCTION(glGetTexLevelParameteriv, PFNGLGETTEXLEVELPARAMETERIVPROC)
+    LOAD_GL_FUNCTION(glGetTexLevelParameteriv)
 #endif
 
 #ifdef LOAD_GL_SHADER_STORAGE_BLOCK_BINDING
-    LOAD_GL_FUNCTION(glShaderStorageBlockBinding, PFNGLSHADERSTORAGEBLOCKBINDINGPROC)
+    //LOAD_GL_FUNCTION_NO_STUB(glShaderStorageBlockBinding, "glShaderStorageBlockBinding")
 #endif
 
 #ifdef LOAD_GL_TEX_STORAGE_3D_MULTISAMPLE
-    LOAD_GL_FUNCTION(glTexStorage3DMultisample, PFNGLTEXSTORAGE3DMULTISAMPLEPROC)
+    LOAD_GL_FUNCTION2(glTexStorage3DMultisample, {{"glTexStorage3DMultisample", {3,2}}, {"glTexStorage3DMultisampleOES", {3,1}}} )
 #endif
 
 #ifdef LOAD_GL_TEXTURE_VIEW
-    LOAD_GL_FUNCTION(glTextureView, PFNGLTEXTUREVIEWPROC)
+    LOAD_GL_FUNCTION2(glTextureView, {{"glTextureViewOES", {3,1}}, {"glTextureViewEXT", {3,1}}} )
 #endif
 
 #ifdef LOAD_GL_DRAW_ELEMENTS_INSTANCED_BASE_VERTEX_BASE_INSTANCE
-    LOAD_GL_FUNCTION(glDrawElementsInstancedBaseVertexBaseInstance, PFNGLDRAWELEMENTSINSTANCEDBASEVERTEXBASEINSTANCEPROC)
+    LOAD_GL_FUNCTION2(glDrawElementsInstancedBaseVertexBaseInstance, {{"glDrawElementsInstancedBaseVertexBaseInstanceEXT", {3,0}}} )
 #endif
 
 #ifdef LOAD_GL_DRAW_ELEMENTS_INSTANCED_BASE_VERTEX
-    LOAD_GL_FUNCTION(glDrawElementsInstancedBaseVertex, PFNGLDRAWELEMENTSINSTANCEDBASEVERTEXPROC)
+    LOAD_GL_FUNCTION2(glDrawElementsInstancedBaseVertex, {{"glDrawElementsInstancedBaseVertexEXT", {3,0}}, {"glDrawElementsInstancedBaseVertexOES", {3,0}}} )
 #endif
 
 #ifdef LOAD_GL_DRAW_ELEMENTS_INSTANCED_BASE_INSTANCE
-    LOAD_GL_FUNCTION(glDrawElementsInstancedBaseInstance, PFNGLDRAWELEMENTSINSTANCEDBASEINSTANCEPROC)
+    LOAD_GL_FUNCTION2(glDrawElementsInstancedBaseInstance, {{"glDrawElementsInstancedBaseInstanceEXT", {3,0}}} )
 #endif
 
 #ifdef LOAD_GL_DRAW_ARRAYS_INSTANCED_BASE_INSTANCE
-    LOAD_GL_FUNCTION(glDrawArraysInstancedBaseInstance, PFNGLDRAWARRAYSINSTANCEDBASEINSTANCEPROC)
+    LOAD_GL_FUNCTION2(glDrawArraysInstancedBaseInstance, {{"glDrawArraysInstancedBaseInstanceEXT", {3,0}}} )
 #endif
 
 #ifdef LOAD_GL_DRAW_ELEMENTS_BASE_VERTEX
-    LOAD_GL_FUNCTION(glDrawElementsBaseVertex, PFNGLDRAWELEMENTSBASEVERTEXPROC)
-#endif
-
-#ifdef LOAD_DEBUG_MESSAGE_CALLBACK
-    LOAD_GL_FUNCTION(glDebugMessageCallback, PFNGLDEBUGMESSAGECALLBACKPROC)
-#endif
-
-#ifdef LOAD_DEBUG_MESSAGE_CONTROL
-    LOAD_GL_FUNCTION(glDebugMessageControl, PFNGLDEBUGMESSAGECONTROLPROC);
+    LOAD_GL_FUNCTION2(glDrawElementsBaseVertex, {{"glDrawElementsBaseVertex", {3,2}}, {"glDrawElementsBaseVertexOES", {3,0}}, {"glDrawElementsBaseVertexEXT", {3,0}}} )
 #endif
 
 #ifdef LOAD_GL_GET_QUERY_OBJECT_UI64V
-    // Do not use stub
-    glGetQueryObjectui64v = (PFNGLGETQUERYOBJECTUI64VPROC)eglGetProcAddress( "glGetQueryObjectui64vEXT" );
+    LOAD_GL_FUNCTION_NO_STUB(glGetQueryObjectui64v, {{"glGetQueryObjectui64vEXT", {3,0}}} );
 #endif
 
 #ifdef LOAD_GL_QUERY_COUNTER
-    // Do not use stub
-    glQueryCounter = (PFNGLQUERYCOUNTERPROC)eglGetProcAddress( "glQueryCounterEXT" );
+    LOAD_GL_FUNCTION_NO_STUB(glQueryCounter, {{"glQueryCounterEXT", {3,0}}} );
 #endif
 
 #ifdef LOAD_GL_OBJECT_LABEL
-    glObjectLabel = (PFNGLOBJECTLABELPROC)eglGetProcAddress( "glObjectLabel" );
+    LOAD_GL_FUNCTION_NO_STUB(glObjectLabel, {{"glObjectLabel", {3,2}}, {"glObjectLabelKHR", {3,0}}} );
 #endif
 
 #ifdef LOAD_GL_POP_DEBUG_GROUP
-    glPopDebugGroup = (PFNGLPOPDEBUGGROUPPROC)eglGetProcAddress( "glPopDebugGroup" );
+    LOAD_GL_FUNCTION_NO_STUB(glPopDebugGroup, {{"glPopDebugGroup", {3,2}}, {"glPopDebugGroupKHR", {3,0}}} );
 #endif
 
 #ifdef LOAD_GL_PUSH_DEBUG_GROUP
-    glPushDebugGroup = (PFNGLPUSHDEBUGGROUPPROC)eglGetProcAddress( "glPushDebugGroup" );
+    LOAD_GL_FUNCTION_NO_STUB(glPushDebugGroup, {{"glPushDebugGroup", {3,2}}, {"glPushDebugGroupKHR", {3,0}}} );
 #endif
 
 #ifdef LOAD_GL_DEBUG_MESSAGE_INSERT
-    glDebugMessageInsert = (PFNGLDEBUGMESSAGEINSERTPROC)eglGetProcAddress( "glDebugMessageInsert" );
+    LOAD_GL_FUNCTION_NO_STUB(glDebugMessageInsert, {{"glDebugMessageInsert", {3,2}}, {"glDebugMessageInsertKHR", {3,0}}} );
+#endif
+
+#ifdef LOAD_DEBUG_MESSAGE_CALLBACK
+    LOAD_GL_FUNCTION_NO_STUB(glDebugMessageCallback, {{"glDebugMessageCallback", {3,2}}, {"glDebugMessageCallbackKHR", {3,0}}} )
+#endif
+
+#ifdef LOAD_DEBUG_MESSAGE_CONTROL
+    LOAD_GL_FUNCTION_NO_STUB(glDebugMessageControl, {{"glDebugMessageControl", {3,2}}, {"glDebugMessageControlKHR", {3,0}}} );
+#endif
+
+#ifdef LOAD_GL_CLIP_CONTROL
+    LOAD_GL_FUNCTION_NO_STUB(glClipControl, {{"glClipControlEXT", {3,0}}} );
 #endif
 }
