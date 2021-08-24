@@ -549,6 +549,10 @@ protected:
         std::vector<PipelineResourceDesc> Resources;
         std::unordered_set<std::string>   Names;
 
+        PRSDescWrapper(const PipelineResourceSignatureDesc& _Desc) :
+            Desc{_Desc}
+        {}
+
         operator const PipelineResourceSignatureDesc&() const { return Desc; }
     };
     // Decouples combined image samplers into texture SRV + sampler pairs.
