@@ -652,7 +652,8 @@ protected:
     RefCntAutoPtr<RenderPassImplType> m_pActiveRenderPass;
 
     /// Strong reference to the variable rate shading view.
-    RefCntAutoPtr<TextureViewImplType> m_pBoundShadingRateTexture;
+    /// Implementation may be TextureViewImplType or IRasterizationRateMapMtl.
+    RefCntAutoPtr<ITextureView> m_pBoundShadingRateMap;
 
     /// Current subpass index.
     Uint32 m_SubpassIndex = 0;
@@ -944,7 +945,7 @@ inline bool DeviceContextBase<ImplementationTraits>::SetRenderTargets(const SetR
         return false;
     }
 
-    m_pBoundShadingRateTexture.Release();
+    m_pBoundShadingRateMap.Release();
 
     bool bBindRenderTargets = false;
     m_FramebufferWidth      = 0;
@@ -1046,61 +1047,64 @@ inline bool DeviceContextBase<ImplementationTraits>::SetRenderTargets(const SetR
 
     VERIFY_EXPR(m_FramebufferWidth > 0 && m_FramebufferHeight > 0 && m_FramebufferSlices > 0 && m_FramebufferSamples > 0);
 
-    RefCntAutoPtr<ITextureView> pShadingRateMap{Attribs.pShadingRateMap, IID_TextureView};
-    if (pShadingRateMap)
+    if (Attribs.pShadingRateMap)
     {
 #ifdef DILIGENT_DEVELOPMENT
         DEV_CHECK_ERR(m_pDevice->GetDeviceInfo().Features.VariableRateShading, "IDeviceContext::SetRenderTargets: VariableRateShading feature must be enabled when used pShadingRateMap");
 
         const auto& SRProps  = m_pDevice->GetAdapterInfo().ShadingRate;
-        const auto& ViewDesc = pShadingRateMap->GetDesc();
-        const auto& TexDesc  = pShadingRateMap->GetTexture()->GetDesc();
-        DEV_CHECK_ERR(TexDesc.BindFlags & BIND_SHADING_RATE, "IDeviceContext::SetRenderTargets: pShadingRateMap must be created with BIND_SHADING_RATE flag");
+        const auto& ViewDesc = Attribs.pShadingRateMap->GetDesc();
         DEV_CHECK_ERR(ViewDesc.ViewType == TEXTURE_VIEW_SHADING_RATE, "IDeviceContext::SetRenderTargets: pShadingRateMap must be created with TEXTURE_VIEW_SHADING_RATE type");
         DEV_CHECK_ERR(SRProps.CapFlags & SHADING_RATE_CAP_FLAG_TEXTURE_BASED, "IDeviceContext::SetRenderTargets: SHADING_RATE_CAP_FLAG_TEXTURE_BASED capability must be supported");
 
-        switch (m_pDevice->GetAdapterInfo().ShadingRate.Format)
+        if (!m_pDevice->GetDeviceInfo().IsMetalDevice())
         {
-            case SHADING_RATE_FORMAT_PALETTE:
-                DEV_CHECK_ERR(ViewDesc.Format == TEX_FORMAT_R8_UINT,
-                              "IDeviceContext::SetRenderTargets: pShadingRateMap format must be R8_UINT. "
-                              "Check supported shading rate format in adapter info.");
-                break;
-            case SHADING_RATE_FORMAT_UNORM8:
-                DEV_CHECK_ERR(ViewDesc.Format == TEX_FORMAT_RG8_UNORM,
-                              "IDeviceContext::SetRenderTargets: pShadingRateMap format must be RG8_UNORM. "
-                              "Check supported shading rate format in adapter info.");
-                break;
-            default:
-                DEV_ERROR("IDeviceContext::SetRenderTargets: unexpected shading rate format");
+            const auto& TexDesc = Attribs.pShadingRateMap->GetTexture()->GetDesc();
+            DEV_CHECK_ERR(TexDesc.BindFlags & BIND_SHADING_RATE, "IDeviceContext::SetRenderTargets: pShadingRateMap must be created with BIND_SHADING_RATE flag");
+
+            switch (SRProps.Format)
+            {
+                case SHADING_RATE_FORMAT_PALETTE:
+                    DEV_CHECK_ERR(ViewDesc.Format == TEX_FORMAT_R8_UINT,
+                                  "IDeviceContext::SetRenderTargets: pShadingRateMap format must be R8_UINT. "
+                                  "Check supported shading rate format in adapter info.");
+                    break;
+                case SHADING_RATE_FORMAT_UNORM8:
+                    DEV_CHECK_ERR(ViewDesc.Format == TEX_FORMAT_RG8_UNORM,
+                                  "IDeviceContext::SetRenderTargets: pShadingRateMap format must be RG8_UNORM. "
+                                  "Check supported shading rate format in adapter info.");
+                    break;
+                default:
+                    DEV_ERROR("IDeviceContext::SetRenderTargets: unexpected shading rate format");
+            }
+
+            const auto Width     = std::max(TexDesc.Width >> ViewDesc.MostDetailedMip, 1u);
+            const auto Height    = std::max(TexDesc.Height >> ViewDesc.MostDetailedMip, 1u);
+            const auto MaxWidth  = m_FramebufferWidth / SRProps.MinTileSize[0];
+            const auto MaxHeight = m_FramebufferHeight / SRProps.MinTileSize[1];
+            const auto MinWidth  = m_FramebufferWidth / SRProps.MaxTileSize[0];
+            const auto MinHeight = m_FramebufferHeight / SRProps.MaxTileSize[1];
+            DEV_CHECK_ERR(Width <= MaxWidth,
+                          "IDeviceContext::SetRenderTargets: shading rate texture width (", Width, ") exceeds maximum allowed width (",
+                          MaxWidth, "). Note: maximum width is defined by (framebuffer width) / ShadingRate::MinTileSize[0].");
+            DEV_CHECK_ERR(Height <= MaxHeight,
+                          "IDeviceContext::SetRenderTargets: shading rate texture height (", Height, ") exceeds maximum allowed height (",
+                          MaxHeight, "). Note: maximum height is defined by (framebuffer height) / ShadingRate::MinTileSize[1].");
+
+            DEV_CHECK_ERR(Width >= MinWidth,
+                          "IDeviceContext::SetRenderTargets: shading rate texture width (", Width, ") must be at least ",
+                          MinWidth, "). Note: minimum width is defined by (framebuffer width) / ShadingRate::MaxTileSize[0].");
+            DEV_CHECK_ERR(Height >= MinHeight,
+                          "IDeviceContext::SetRenderTargets: shading rate texture height (", Height, ") must be at least",
+                          MinHeight, "). Note: minimum height is defined by (framebuffer height) / ShadingRate::MaxTileSize[1].");
         }
-
-        const auto Width     = std::max(TexDesc.Width >> ViewDesc.MostDetailedMip, 1u);
-        const auto Height    = std::max(TexDesc.Height >> ViewDesc.MostDetailedMip, 1u);
-        const auto MaxWidth  = m_FramebufferWidth / SRProps.MinTileSize[0];
-        const auto MaxHeight = m_FramebufferHeight / SRProps.MinTileSize[1];
-        const auto MinWidth  = m_FramebufferWidth / SRProps.MaxTileSize[0];
-        const auto MinHeight = m_FramebufferHeight / SRProps.MaxTileSize[1];
-        DEV_CHECK_ERR(Width <= MaxWidth,
-                      "IDeviceContext::SetRenderTargets: shading rate texture width (", Width, ") exceeds maximum allowed width (",
-                      MaxWidth, "). Note: maximum width is defined by (framebuffer width) / ShadingRate::MinTileSize[0].");
-        DEV_CHECK_ERR(Height <= MaxHeight,
-                      "IDeviceContext::SetRenderTargets: shading rate texture height (", Height, ") exceeds maximum allowed height (",
-                      MaxHeight, "). Note: maximum height is defined by (framebuffer height) / ShadingRate::MinTileSize[1].");
-
-        DEV_CHECK_ERR(Width >= MinWidth,
-                      "IDeviceContext::SetRenderTargets: shading rate texture width (", Width, ") must be at least ",
-                      MinWidth, "). Note: minimum width is defined by (framebuffer width) / ShadingRate::MaxTileSize[0].");
-        DEV_CHECK_ERR(Height >= MinHeight,
-                      "IDeviceContext::SetRenderTargets: shading rate texture height (", Height, ") must be at least",
-                      MinHeight, "). Note: minimum height is defined by (framebuffer height) / ShadingRate::MaxTileSize[1].");
 #endif
     }
 
-    if (m_pBoundShadingRateTexture != pShadingRateMap)
+    if (m_pBoundShadingRateMap != Attribs.pShadingRateMap)
     {
-        m_pBoundShadingRateTexture = pShadingRateMap.RawPtr<TextureViewImplType>();
-        bBindRenderTargets         = true;
+        m_pBoundShadingRateMap = Attribs.pShadingRateMap;
+        bBindRenderTargets     = true;
     }
 
     return bBindRenderTargets;
@@ -1162,8 +1166,7 @@ inline bool DeviceContextBase<ImplementationTraits>::SetSubpassRenderTargets()
         if (SRAttachmentRef.Attachment.AttachmentIndex != ATTACHMENT_UNUSED)
         {
             VERIFY_EXPR(SRAttachmentRef.Attachment.AttachmentIndex < RPDesc.AttachmentCount);
-            pSRM                       = FBDesc.ppAttachments[SRAttachmentRef.Attachment.AttachmentIndex];
-            m_pBoundShadingRateTexture = ValidatedCast<TextureViewImplType>(pSRM);
+            pSRM = FBDesc.ppAttachments[SRAttachmentRef.Attachment.AttachmentIndex];
         }
     }
 
@@ -1352,7 +1355,7 @@ void DeviceContextBase<ImplementationTraits>::ResetRenderTargets()
     m_FramebufferSamples    = 0;
 
     m_pBoundDepthStencil.Release();
-    m_pBoundShadingRateTexture.Release();
+    m_pBoundShadingRateMap.Release();
 
     // Do not reset framebuffer here as there may potentially
     // be a subpass without any render target attachments.
@@ -2284,19 +2287,19 @@ inline void DeviceContextBase<ImplementationTraits>::DvpVerifyRenderTargets() co
         }
     }
 
-    if (!m_pDevice->GetDeviceInfo().IsMetalDevice())
+    // For compatibility with Vulkan, pipeline created to be used with shading rate texture must be used only when shading rate map is bound.
+    if (m_pPipelineState->GetDesc().IsAnyGraphicsPipeline())
     {
         const bool PipelineWithVRSTexture = (m_pPipelineState->GetGraphicsPipelineDesc().ShadingRateFlags & PIPELINE_SHADING_RATE_FLAG_TEXTURE_BASED) != 0;
-
         if (PipelineWithVRSTexture)
         {
-            DEV_CHECK_ERR(m_pBoundShadingRateTexture != nullptr,
+            DEV_CHECK_ERR(m_pBoundShadingRateMap != nullptr,
                           "Draw command uses pipeline state '", m_pPipelineState->GetDesc().Name,
                           "' that was created with ShadingRateFlags = PIPELINE_SHADING_RATE_TEXTURE_BASED, ",
                           "but shading rate texture is not bound; use IDeviceContext::SetRenderTargetsExt() with non-null pShadingRateMap "
                           "to bind the shading rate texture.");
         }
-        else if (m_pBoundShadingRateTexture != nullptr)
+        else if (m_pBoundShadingRateMap != nullptr)
         {
             DEV_CHECK_ERR(PipelineWithVRSTexture,
                           "Draw command uses pipeline state '", m_pPipelineState->GetDesc().Name,

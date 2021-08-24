@@ -39,7 +39,7 @@
 namespace Diligent
 {
 
-void ValidateFramebufferDesc(const FramebufferDesc& Desc) noexcept(false);
+void ValidateFramebufferDesc(const FramebufferDesc& Desc, RENDER_DEVICE_TYPE DevType) noexcept(false);
 
 /// Template class implementing base functionality of the framebuffer object.
 
@@ -68,7 +68,7 @@ public:
         TDeviceObjectBase{pRefCounters, pDevice, Desc, bIsDeviceInternal},
         m_pRenderPass{Desc.pRenderPass}
     {
-        ValidateFramebufferDesc(this->m_Desc);
+        ValidateFramebufferDesc(this->m_Desc, pDevice->GetDeviceInfo().Type);
 
         if (this->m_Desc.Width == 0 || this->m_Desc.Height == 0 || this->m_Desc.NumArraySlices == 0)
         {

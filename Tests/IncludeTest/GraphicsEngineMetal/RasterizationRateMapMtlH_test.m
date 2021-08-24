@@ -32,12 +32,17 @@ void TestRasterizationRateMapMtl_CInterface(IRasterizationRateMapMtl* pRRM)
     const RasterizationRateMapDesc* rrmDesc = IRasterizationRateMapMtl_GetDesc(pRRM);
     (void)rrmDesc;
 
-    id<MTLRasterizationRateMap> mtlRRM = IRasterizationRateMapMtl_GetMtlResource();
-    (void)mtlRRM;
-    IRasterizationRateMapMtl_GetPhysicalSizeForLayer(0, (Uint32*)NULL, (Uint32*)NULL);
-    IRasterizationRateMapMtl_GetPhysicalGranularity((Uint32*)NULL, (Uint32*)NULL);
-    IRasterizationRateMapMtl_MapScreenToPhysicalCoordinates(0, 0.f, 0.f, (float*)NULL, (float*)NULL);
-    IRasterizationRateMapMtl_MapPhysicalToScreenCoordinates(0, 0.f, 0.f, (float*)NULL, (float*)NULL);
-    IRasterizationRateMapMtl_GetParameterBufferSizeAndAlign((Uint32*)NULL, (Uint32*)NULL);
-    IRasterizationRateMapMtl_CopyParameterDataToBuffer((struct IBuffer*)NULL, 0);
+    if (@available(macos 10.15.4, ios 13.0, *))
+    {
+        id<MTLRasterizationRateMap> mtlRRM = IRasterizationRateMapMtl_GetMtlResource(pRRM);
+        (void)mtlRRM;
+    }
+    ITextureView* pView = IRasterizationRateMapMtl_GetView(pRRM);
+    (void)pView;
+    IRasterizationRateMapMtl_GetPhysicalSizeForLayer(pRRM, 0, (Uint32*)NULL, (Uint32*)NULL);
+    IRasterizationRateMapMtl_GetPhysicalGranularity(pRRM, (Uint32*)NULL, (Uint32*)NULL);
+    IRasterizationRateMapMtl_MapScreenToPhysicalCoordinates(pRRM, 0, 0.f, 0.f, (float*)NULL, (float*)NULL);
+    IRasterizationRateMapMtl_MapPhysicalToScreenCoordinates(pRRM, 0, 0.f, 0.f, (float*)NULL, (float*)NULL);
+    IRasterizationRateMapMtl_GetParameterBufferSizeAndAlign(pRRM, (Uint32*)NULL, (Uint32*)NULL);
+    IRasterizationRateMapMtl_CopyParameterDataToBuffer(pRRM, (struct IBuffer*)NULL, 0);
 }

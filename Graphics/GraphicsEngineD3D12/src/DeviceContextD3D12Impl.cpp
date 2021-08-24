@@ -1176,9 +1176,9 @@ void DeviceContextD3D12Impl::CommitRenderTargets(RESOURCE_STATE_TRANSITION_MODE 
     }
 
 #ifdef NTDDI_WIN10_19H1
-    if (m_pBoundShadingRateTexture != nullptr)
+    if (m_pBoundShadingRateMap != nullptr)
     {
-        auto* pTexD3D12 = m_pBoundShadingRateTexture->GetTexture<TextureD3D12Impl>();
+        auto* pTexD3D12 = ValidatedCast<TextureD3D12Impl>(m_pBoundShadingRateMap->GetTexture());
         TransitionOrVerifyTextureState(CmdCtx, *pTexD3D12, StateTransitionMode, RESOURCE_STATE_SHADING_RATE, "Shading rate texture (DeviceContextD3D12Impl::CommitRenderTargets)");
 
         m_State.bShadingRateMapBound = true;
@@ -1428,9 +1428,9 @@ void DeviceContextD3D12Impl::CommitSubpassRenderTargets()
     // Set the viewport to match the framebuffer size
     SetViewports(1, nullptr, 0, 0);
 
-    if (m_pBoundShadingRateTexture != nullptr)
+    if (m_pBoundShadingRateMap != nullptr)
     {
-        auto* pTexD3D12 = m_pBoundShadingRateTexture->GetTexture<TextureD3D12Impl>();
+        auto* pTexD3D12 = ValidatedCast<TextureD3D12Impl>(m_pBoundShadingRateMap->GetTexture());
         CmdCtx.AsGraphicsContext5().SetShadingRateImage(pTexD3D12->GetD3D12Resource());
     }
 }
@@ -1461,7 +1461,7 @@ void DeviceContextD3D12Impl::EndRenderPass()
     auto& CmdCtx = GetCmdContext();
     CmdCtx.AsGraphicsContext4().EndRenderPass();
     TransitionSubpassAttachments(m_SubpassIndex + 1);
-    if (m_pBoundShadingRateTexture)
+    if (m_pBoundShadingRateMap)
         CmdCtx.AsGraphicsContext5().SetShadingRateImage(nullptr);
     TDeviceContextBase::EndRenderPass();
 }

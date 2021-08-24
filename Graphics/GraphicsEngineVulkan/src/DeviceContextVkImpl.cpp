@@ -675,7 +675,7 @@ void DeviceContextVkImpl::DvpLogRenderPass_PSOMismatch()
         ss << "<Not set>";
     ss << "; Sample count: " << SampleCount;
 
-    if (m_pBoundShadingRateTexture)
+    if (m_pBoundShadingRateMap)
         ss << "; VRS";
 
     ss << "\n    PSO: render targets (" << Uint32{GrPipeline.NumRenderTargets} << "): ";
@@ -1593,10 +1593,10 @@ void DeviceContextVkImpl::TransitionRenderTargets(RESOURCE_STATE_TRANSITION_MODE
         }
     }
 
-    if (m_pBoundShadingRateTexture)
+    if (m_pBoundShadingRateMap)
     {
         const auto& ExtFeatures       = m_pDevice->GetLogicalDevice().GetEnabledExtFeatures();
-        auto*       pShadingRateMapVk = m_pBoundShadingRateTexture->GetTexture<TextureVkImpl>();
+        auto*       pShadingRateMapVk = ValidatedCast<TextureVkImpl>(m_pBoundShadingRateMap->GetTexture());
         VERIFY_EXPR((ExtFeatures.ShadingRate.attachmentFragmentShadingRate != VK_FALSE) ^ (ExtFeatures.FragmentDensityMap.fragmentDensityMap != VK_FALSE));
         const auto vkRequiredLayout = ExtFeatures.ShadingRate.attachmentFragmentShadingRate ?
             VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR :
@@ -1669,9 +1669,9 @@ void DeviceContextVkImpl::ChooseRenderPassAndFramebuffer()
         }
     }
 
-    if (m_pBoundShadingRateTexture)
+    if (m_pBoundShadingRateMap)
     {
-        FBKey.ShadingRate       = m_pBoundShadingRateTexture->GetVulkanImageView();
+        FBKey.ShadingRate       = m_pBoundShadingRateMap.RawPtr<TextureViewVkImpl>()->GetVulkanImageView();
         RenderPassKey.EnableVRS = true;
     }
     else

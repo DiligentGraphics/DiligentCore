@@ -884,25 +884,24 @@ struct SetRenderTargetsAttribs
 {
     /// Number of render targets to bind.
     Uint32                         NumRenderTargets     DEFAULT_INITIALIZER(0);
-    
+
     /// Array of pointers to ITextureView that represent the render
     /// targets to bind to the device. The type of each view in the
     /// array must be Diligent::TEXTURE_VIEW_RENDER_TARGET.
     ITextureView**                 ppRenderTargets      DEFAULT_INITIALIZER(nullptr);
-    
+
     /// Pointer to the ITextureView that represents the depth stencil to
     /// bind to the device. The view type must be
     /// Diligent::TEXTURE_VIEW_DEPTH_STENCIL.
     ITextureView*                  pDepthStencil        DEFAULT_INITIALIZER(nullptr);
-    
+
     /// Shading rate texture view. Set null to disable variable rate shading.
-    /// ITextureView for Direct3D12 and Vulkan, IRasterizationRateMapMtl for Metal.
-    IDeviceObject*                 pShadingRateMap      DEFAULT_INITIALIZER(nullptr);
-    
+    ITextureView*                  pShadingRateMap      DEFAULT_INITIALIZER(nullptr);
+
     /// State transition mode of the render targets, depth stencil buffer 
     /// and shading rate map being set (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
     RESOURCE_STATE_TRANSITION_MODE StateTransitionMode  DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
-    
+
 #if DILIGENT_CPP_INTERFACE
     constexpr SetRenderTargetsAttribs() noexcept {}
 
@@ -910,7 +909,7 @@ struct SetRenderTargetsAttribs
                                       ITextureView*                  _ppRenderTargets[],
                                       ITextureView*                  _pDepthStencil       = nullptr,
                                       RESOURCE_STATE_TRANSITION_MODE _StateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE,
-                                      IDeviceObject*                 _pShadingRateMap     = nullptr) noexcept :
+                                      ITextureView*                  _pShadingRateMap     = nullptr) noexcept :
         NumRenderTargets   {_NumRenderTargets   },
         ppRenderTargets    {_ppRenderTargets    },
         pDepthStencil      {_pDepthStencil      },
@@ -2021,13 +2020,13 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
                                           ITextureView*                  ppRenderTargets[],
                                           ITextureView*                  pDepthStencil,
                                           RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) PURE;
-    
+
 
     /// Binds one or more render targets, the depth-stencil buffer and shading rate map to the context.
     /// It also sets the viewport to match the first non-null render target or depth-stencil buffer.
-    
+
     /// \param [in] Attribs - The command attributes, see Diligent::SetRenderTargetsAttribs for details.
-    /// 
+    ///
     /// \remarks     The device context will keep strong references to all bound render target
     ///              and depth-stencil views as well as to shading rate map. Thus these views
     ///              (and consequently referenced textures) cannot be released until they are
@@ -2889,7 +2888,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// Sets the shading base rate and combiners.
 
     /// \param [in] BaseRate          - Base shading rate used for combiner operations.
-    /// \param [in] PrimitiveCombiner - Combiner operation for the per primitive shading rate (the output of the vertex shader).
+    /// \param [in] PrimitiveCombiner - Combiner operation for the per primitive shading rate (the output of the vertex or geometry shader).
     /// \param [in] TextureCombiner   - Combiner operation for texture-based shading rate (fetched from the shading rate texture),
     ///                                 see SetRenderTargetsAttribs::pShadingRateMap and SubpassDesc::pShadingRateAttachment.
     ///
@@ -2915,6 +2914,8 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     ///
     /// \remarks If SHADING_RATE_CAP_FLAG_PER_PRIMITIVE capability is not supported, then PrimitiveCombiner must be SHADING_RATE_COMBINER_PASSTHROUGH.
     ///          if SHADING_RATE_CAP_FLAG_TEXTURE_BASED capability is not supported, then TextureCombiner must be SHADING_RATE_COMBINER_PASSTHROUGH.
+    ///          TextureCombiner must be one of the supported combiners in ShadingRateProperties::Combiners.
+    ///          BaseRate must be SHADING_RATE_1X1 or one of the supported rates in ShadingRateProperties::ShadingRates.
     ///
     /// \remarks Supported contexts: graphics.
     VIRTUAL void METHOD(SetShadingRate)(THIS_

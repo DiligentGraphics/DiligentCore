@@ -44,7 +44,7 @@ void TestRenderDeviceMtl_CInterface(IRenderDeviceMtl* pDevice)
     
     if (@available(macos 10.15.4, ios 13.0, *))
     {
-        IRenderDeviceMtl_CreateRasterizationRateMap(pDevice, (MTLRasterizationRateMapDescriptor*)nil, (IRasterizationRateMapMtl**)NULL);
+        IRenderDeviceMtl_CreateRasterizationRateMap(pDevice, (const RasterizationRateMapCreateInfo*)nil, (IRasterizationRateMapMtl**)NULL);
         IRenderDeviceMtl_CreateRasterizationRateMapFromMtlResource(pDevice, (id<MTLRasterizationRateMap>)nil, (IRasterizationRateMapMtl**)NULL);
     }
 }

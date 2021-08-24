@@ -141,9 +141,9 @@ TEST(VariableShadingRateTest, RasterRateMap)
             ASSERT_NE(pPSOPass1, nullptr);
         }
 
-        RefCntAutoPtr<IDeviceObject> pShadingRateMap;
-        RefCntAutoPtr<IBuffer>       pShadingRateParamBuffer;
-        RefCntAutoPtr<ITexture>      pIntermediateRT;
+        RefCntAutoPtr<ITextureView> pShadingRateMap;
+        RefCntAutoPtr<IBuffer>      pShadingRateParamBuffer;
+        RefCntAutoPtr<ITexture>     pIntermediateRT;
         {
             RasterizationRateMapCreateInfo RasterRateMapCI;
             RasterRateMapCI.Desc.ScreenWidth  = SCDesc.Width;
@@ -171,7 +171,7 @@ TEST(VariableShadingRateTest, RasterRateMap)
             RefCntAutoPtr<IRasterizationRateMapMtl> pRasterizationRateMap;
             pDeviceMtl->CreateRasterizationRateMap(RasterRateMapCI, &pRasterizationRateMap);
             ASSERT_NE(pRasterizationRateMap, nullptr);
-            pShadingRateMap = pRasterizationRateMap;
+            pShadingRateMap = pRasterizationRateMap->GetView();
 
             Uint32 BufferSize, BufferAlign;
             pRasterizationRateMap->GetParameterBufferSizeAndAlign(BufferSize, BufferAlign);

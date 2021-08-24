@@ -29,6 +29,7 @@
 
 #include "../../GraphicsEngine/interface/DeviceObject.h"
 #include "../../GraphicsEngine/interface/Buffer.h"
+#include "../../GraphicsEngine/interface/TextureView.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
@@ -115,7 +116,7 @@ DILIGENT_BEGIN_INTERFACE(IRasterizationRateMapMtl, IDeviceObject)
     VIRTUAL void METHOD(GetPhysicalGranularity)(THIS_
                                                 Uint32 REF XGranularity,
                                                 Uint32 REF YGranularity) CONST PURE;
-    
+
     /// Converts a point in logical viewport coordinates to the corresponding physical coordinates in the layer.
     VIRTUAL void METHOD(MapScreenToPhysicalCoordinates)(THIS_
                                                         Uint32    LayerIndex,
@@ -123,7 +124,7 @@ DILIGENT_BEGIN_INTERFACE(IRasterizationRateMapMtl, IDeviceObject)
                                                         float     ScreenCoordY,
                                                         float REF PhysicalCoordX,
                                                         float REF PhysicalCoordY) CONST PURE;
-    
+
     /// Converts a point in physical coordinates inside a layer to its corresponding logical viewport coordinates.
     VIRTUAL void METHOD(MapPhysicalToScreenCoordinates)(THIS_
                                                         Uint32    LayerIndex,
@@ -136,9 +137,9 @@ DILIGENT_BEGIN_INTERFACE(IRasterizationRateMapMtl, IDeviceObject)
     VIRTUAL void METHOD(GetParameterBufferSizeAndAlign)(THIS_
                                                         Uint32 REF Size,
                                                         Uint32 REF Align) CONST PURE;
-    
+
     /// Copy rasterization rate map parameters to the buffer.
-    
+
     /// \param [in] pDstBuffer - Parameter buffer that will be used in the resolve pass.
     ///                          The buffer must be created with USAGE_UNIFIED.
     /// \param [in] Offset     - Offset in the buffer; must be a multiple of alignment returned by
@@ -146,6 +147,9 @@ DILIGENT_BEGIN_INTERFACE(IRasterizationRateMapMtl, IDeviceObject)
     VIRTUAL void METHOD(CopyParameterDataToBuffer)(THIS_
                                                    IBuffer* pDstBuffer,
                                                    Uint32   Offset) CONST PURE;
+
+    /// Returns texture view that can be used to set the rasterization rate map as framebuffer attachment.
+    VIRTUAL ITextureView* METHOD(GetView)(THIS) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -162,6 +166,7 @@ DILIGENT_END_INTERFACE
 #    define IRasterizationRateMapMtl_MapPhysicalToScreenCoordinates(This, ...)  CALL_IFACE_METHOD(RasterizationRateMapMtl, MapPhysicalToScreenCoordinates, This, __VA_ARGS__)
 #    define IRasterizationRateMapMtl_GetParameterBufferSizeAndAlign(This, ...)  CALL_IFACE_METHOD(RasterizationRateMapMtl, GetParameterBufferSizeAndAlign, This, __VA_ARGS__)
 #    define IRasterizationRateMapMtl_CopyParameterDataToBuffer(This, ...)       CALL_IFACE_METHOD(RasterizationRateMapMtl, CopyParameterDataToBuffer,      This, __VA_ARGS__)
+#    define IRasterizationRateMapMtl_GetView(This)                              CALL_IFACE_METHOD(RasterizationRateMapMtl, GetView,                        This)
 
 #endif
 
