@@ -116,14 +116,14 @@ struct DeviceContextDesc
     Uint32       TextureCopyGranularity[3] DEFAULT_INITIALIZER({});
 
 #if DILIGENT_CPP_INTERFACE
-    DeviceContextDesc() noexcept{}
+    constexpr DeviceContextDesc() noexcept {}
 
     /// Initializes the structure with user-specified values.
-    DeviceContextDesc(const char*        _Name,
-                      COMMAND_QUEUE_TYPE _QueueType,
-                      Bool               _IsDeferred,
-                      Uint32             _ContextId,
-                      Uint32             _QueueId = DeviceContextDesc{}.QueueId) noexcept :
+    constexpr DeviceContextDesc(const char*        _Name,
+                                COMMAND_QUEUE_TYPE _QueueType,
+                                Bool               _IsDeferred,
+                                Uint32             _ContextId,
+                                Uint32             _QueueId = DeviceContextDesc{}.QueueId) noexcept :
         Name      {_Name      },
         QueueType {_QueueType },
         IsDeferred{_IsDeferred},
@@ -286,14 +286,14 @@ struct DrawAttribs
     /// NumInstances                             | 1
     /// StartVertexLocation                      | 0
     /// FirstInstanceLocation                    | 0
-    DrawAttribs()noexcept{}
+    constexpr DrawAttribs() noexcept {}
 
     /// Initializes the structure with user-specified values.
-    DrawAttribs(Uint32     _NumVertices,
-                DRAW_FLAGS _Flags,
-                Uint32     _NumInstances          = 1,
-                Uint32     _StartVertexLocation   = 0,
-                Uint32     _FirstInstanceLocation = 0)noexcept :
+    constexpr DrawAttribs(Uint32     _NumVertices,
+                          DRAW_FLAGS _Flags,
+                          Uint32     _NumInstances          = 1,
+                          Uint32     _StartVertexLocation   = 0,
+                          Uint32     _FirstInstanceLocation = 0) noexcept :
         NumVertices          {_NumVertices          },
         Flags                {_Flags                },
         NumInstances         {_NumInstances         },
@@ -349,16 +349,16 @@ struct DrawIndexedAttribs
     /// FirstIndexLocation                       | 0
     /// BaseVertex                               | 0
     /// FirstInstanceLocation                    | 0
-    DrawIndexedAttribs()noexcept{}
+    constexpr DrawIndexedAttribs() noexcept {}
 
     /// Initializes the structure members with user-specified values.
-    DrawIndexedAttribs(Uint32      _NumIndices,
-                       VALUE_TYPE  _IndexType,
-                       DRAW_FLAGS  _Flags,
-                       Uint32      _NumInstances          = 1,
-                       Uint32      _FirstIndexLocation    = 0,
-                       Uint32      _BaseVertex            = 0,
-                       Uint32      _FirstInstanceLocation = 0)noexcept :
+    constexpr DrawIndexedAttribs(Uint32      _NumIndices,
+                                 VALUE_TYPE  _IndexType,
+                                 DRAW_FLAGS  _Flags,
+                                 Uint32      _NumInstances          = 1,
+                                 Uint32      _FirstIndexLocation    = 0,
+                                 Uint32      _BaseVertex            = 0,
+                                 Uint32      _FirstInstanceLocation = 0) noexcept :
         NumIndices           {_NumIndices           },
         IndexType            {_IndexType            },
         Flags                {_Flags                },
@@ -396,12 +396,12 @@ struct DrawIndirectAttribs
     /// Flags                                    | DRAW_FLAG_NONE
     /// IndirectAttribsBufferStateTransitionMode | RESOURCE_STATE_TRANSITION_MODE_NONE
     /// IndirectDrawArgsOffset                   | 0
-    DrawIndirectAttribs()noexcept{}
+    constexpr DrawIndirectAttribs() noexcept {}
 
     /// Initializes the structure members with user-specified values.
-    DrawIndirectAttribs(DRAW_FLAGS                     _Flags,
-                        RESOURCE_STATE_TRANSITION_MODE _IndirectAttribsBufferStateTransitionMode,
-                        Uint32                         _IndirectDrawArgsOffset = 0)noexcept :
+    constexpr DrawIndirectAttribs(DRAW_FLAGS                     _Flags,
+                                  RESOURCE_STATE_TRANSITION_MODE _IndirectAttribsBufferStateTransitionMode,
+                                  Uint32                         _IndirectDrawArgsOffset = 0) noexcept :
         Flags                                   {_Flags                                   },
         IndirectAttribsBufferStateTransitionMode{_IndirectAttribsBufferStateTransitionMode},
         IndirectDrawArgsOffset                  {_IndirectDrawArgsOffset                  }
@@ -440,13 +440,13 @@ struct DrawIndexedIndirectAttribs
     /// Flags                                    | DRAW_FLAG_NONE
     /// IndirectAttribsBufferStateTransitionMode | RESOURCE_STATE_TRANSITION_MODE_NONE
     /// IndirectDrawArgsOffset                   | 0
-    DrawIndexedIndirectAttribs()noexcept{}
+    constexpr DrawIndexedIndirectAttribs() noexcept {}
 
     /// Initializes the structure members with user-specified values.
-    DrawIndexedIndirectAttribs(VALUE_TYPE                     _IndexType,
-                               DRAW_FLAGS                     _Flags,
-                               RESOURCE_STATE_TRANSITION_MODE _IndirectAttribsBufferStateTransitionMode,
-                               Uint32                         _IndirectDrawArgsOffset = 0)noexcept :
+    constexpr DrawIndexedIndirectAttribs(VALUE_TYPE                     _IndexType,
+                                         DRAW_FLAGS                     _Flags,
+                                         RESOURCE_STATE_TRANSITION_MODE _IndirectAttribsBufferStateTransitionMode,
+                                         Uint32                         _IndirectDrawArgsOffset = 0) noexcept :
         IndexType                               {_IndexType                               },
         Flags                                   {_Flags                                   },
         IndirectAttribsBufferStateTransitionMode{_IndirectAttribsBufferStateTransitionMode},
@@ -470,11 +470,11 @@ struct DrawMeshAttribs
 
 #if DILIGENT_CPP_INTERFACE
     /// Initializes the structure members with default values.
-    DrawMeshAttribs()noexcept{}
+    constexpr DrawMeshAttribs() noexcept {}
 
     /// Initializes the structure with user-specified values.
-    DrawMeshAttribs(Uint32     _ThreadGroupCount,
-                    DRAW_FLAGS _Flags)noexcept :
+    constexpr DrawMeshAttribs(Uint32     _ThreadGroupCount,
+                              DRAW_FLAGS _Flags) noexcept :
         ThreadGroupCount {_ThreadGroupCount},
         Flags            {_Flags}
     {}
@@ -506,12 +506,12 @@ struct DrawMeshIndirectAttribs
     /// Flags                                    | DRAW_FLAG_NONE
     /// IndirectAttribsBufferStateTransitionMode | RESOURCE_STATE_TRANSITION_MODE_NONE
     /// IndirectDrawArgsOffset                   | 0
-    DrawMeshIndirectAttribs()noexcept{}
+    constexpr DrawMeshIndirectAttribs() noexcept {}
 
     /// Initializes the structure members with user-specified values.
-    DrawMeshIndirectAttribs(DRAW_FLAGS                     _Flags,
-                            RESOURCE_STATE_TRANSITION_MODE _IndirectAttribsBufferStateTransitionMode,
-                            Uint32                         _IndirectDrawArgsOffset = 0)noexcept :
+    constexpr DrawMeshIndirectAttribs(DRAW_FLAGS                     _Flags,
+                                      RESOURCE_STATE_TRANSITION_MODE _IndirectAttribsBufferStateTransitionMode,
+                                      Uint32                         _IndirectDrawArgsOffset = 0) noexcept :
         Flags                                   {_Flags                                   },
         IndirectAttribsBufferStateTransitionMode{_IndirectAttribsBufferStateTransitionMode},
         IndirectDrawArgsOffset                  {_IndirectDrawArgsOffset                  }
@@ -545,14 +545,14 @@ struct DrawMeshIndirectCountAttribs
     Uint32 CountBufferOffset        DEFAULT_INITIALIZER(0);
 
 #if DILIGENT_CPP_INTERFACE
-    DrawMeshIndirectCountAttribs()noexcept{}
+    constexpr DrawMeshIndirectCountAttribs() noexcept {}
 
     /// Initializes the structure members with user-specified values.
-    DrawMeshIndirectCountAttribs(DRAW_FLAGS                     _Flags,
-                                 RESOURCE_STATE_TRANSITION_MODE _IndirectAttribsBufferStateTransitionMode,
-                                 Uint32                         _IndirectDrawArgsOffset,
-                                 RESOURCE_STATE_TRANSITION_MODE _CountBufferStateTransitionMode,
-                                 Uint32                         _CountBufferOffset)noexcept :
+    constexpr DrawMeshIndirectCountAttribs(DRAW_FLAGS                     _Flags,
+                                           RESOURCE_STATE_TRANSITION_MODE _IndirectAttribsBufferStateTransitionMode,
+                                           Uint32                         _IndirectDrawArgsOffset,
+                                           RESOURCE_STATE_TRANSITION_MODE _CountBufferStateTransitionMode,
+                                           Uint32                         _CountBufferOffset) noexcept :
         Flags                                   {_Flags                                   },
         IndirectAttribsBufferStateTransitionMode{_IndirectAttribsBufferStateTransitionMode},
         IndirectDrawArgsOffset                  {_IndirectDrawArgsOffset                  },
@@ -610,10 +610,10 @@ struct DispatchComputeAttribs
 
 
 #if DILIGENT_CPP_INTERFACE
-    DispatchComputeAttribs()noexcept{}
+    constexpr DispatchComputeAttribs() noexcept {}
 
     /// Initializes the structure with user-specified values.
-    DispatchComputeAttribs(Uint32 GroupsX, Uint32 GroupsY, Uint32 GroupsZ = 1)noexcept :
+    constexpr DispatchComputeAttribs(Uint32 GroupsX, Uint32 GroupsY, Uint32 GroupsZ = 1) noexcept :
         ThreadGroupCountX {GroupsX},
         ThreadGroupCountY {GroupsY},
         ThreadGroupCountZ {GroupsZ}
@@ -649,10 +649,10 @@ struct DispatchComputeIndirectAttribs
 
 
 #if DILIGENT_CPP_INTERFACE
-    DispatchComputeIndirectAttribs()noexcept{}
+    constexpr DispatchComputeIndirectAttribs() noexcept {}
 
     /// Initializes the structure with user-specified values.
-    explicit
+    explicit constexpr
     DispatchComputeIndirectAttribs(RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
                                    Uint32                         Offset              = 0) :
         IndirectAttribsBufferStateTransitionMode{StateTransitionMode},
@@ -680,12 +680,12 @@ struct DispatchTileAttribs
     DRAW_FLAGS Flags DEFAULT_INITIALIZER(DRAW_FLAG_NONE);
 
 #if DILIGENT_CPP_INTERFACE
-    DispatchTileAttribs()noexcept{}
+    constexpr DispatchTileAttribs() noexcept {}
 
     /// Initializes the structure with user-specified values.
-    DispatchTileAttribs(Uint32     _ThreadsX,
-                        Uint32     _ThreadsY,
-                        DRAW_FLAGS _Flags = DRAW_FLAG_NONE)noexcept :
+    constexpr DispatchTileAttribs(Uint32     _ThreadsX,
+                                  Uint32     _ThreadsY,
+                                  DRAW_FLAGS _Flags = DRAW_FLAG_NONE) noexcept :
         ThreadsPerTileX {_ThreadsX},
         ThreadsPerTileY {_ThreadsY},
         Flags           {_Flags  }
@@ -767,9 +767,9 @@ struct Viewport
 
 #if DILIGENT_CPP_INTERFACE
     /// Initializes the structure.
-    Viewport(Float32 _TopLeftX,     Float32 _TopLeftY,
-             Float32 _Width,        Float32 _Height,
-             Float32 _MinDepth = 0, Float32 _MaxDepth = 1)noexcept :
+    constexpr Viewport(Float32 _TopLeftX,     Float32 _TopLeftY,
+                       Float32 _Width,        Float32 _Height,
+                       Float32 _MinDepth = 0, Float32 _MaxDepth = 1) noexcept :
         TopLeftX {_TopLeftX},
         TopLeftY {_TopLeftY},
         Width    {_Width   },
@@ -778,7 +778,7 @@ struct Viewport
         MaxDepth {_MaxDepth}
     {}
 
-    Viewport()noexcept{}
+    constexpr Viewport() noexcept {}
 #endif
 };
 typedef struct Viewport Viewport;
@@ -800,16 +800,16 @@ struct Rect
 
 #if DILIGENT_CPP_INTERFACE
     /// Initializes the structure
-    Rect(Int32 _left, Int32 _top, Int32 _right, Int32 _bottom)noexcept :
+    constexpr Rect(Int32 _left, Int32 _top, Int32 _right, Int32 _bottom) noexcept :
         left   {_left  },
         top    {_top   },
         right  {_right },
         bottom {_bottom}
     {}
 
-    Rect()noexcept{}
+    constexpr Rect() noexcept {}
 
-    bool IsValid() const
+    constexpr bool IsValid() const
     {
         return right > left && bottom > top;
     }
@@ -861,12 +861,12 @@ struct CopyTextureAttribs
 
 
 #if DILIGENT_CPP_INTERFACE
-    CopyTextureAttribs()noexcept{}
+    constexpr CopyTextureAttribs() noexcept {}
 
-    CopyTextureAttribs(ITexture*                      _pSrcTexture,
-                       RESOURCE_STATE_TRANSITION_MODE _SrcTextureTransitionMode,
-                       ITexture*                      _pDstTexture,
-                       RESOURCE_STATE_TRANSITION_MODE _DstTextureTransitionMode)noexcept :
+    constexpr CopyTextureAttribs(ITexture*                      _pSrcTexture,
+                                 RESOURCE_STATE_TRANSITION_MODE _SrcTextureTransitionMode,
+                                 ITexture*                      _pDstTexture,
+                                 RESOURCE_STATE_TRANSITION_MODE _DstTextureTransitionMode) noexcept :
         pSrcTexture             {_pSrcTexture             },
         SrcTextureTransitionMode{_SrcTextureTransitionMode},
         pDstTexture             {_pDstTexture             },
@@ -904,13 +904,13 @@ struct SetRenderTargetsAttribs
     RESOURCE_STATE_TRANSITION_MODE StateTransitionMode  DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
     
 #if DILIGENT_CPP_INTERFACE
-    SetRenderTargetsAttribs() noexcept {}
+    constexpr SetRenderTargetsAttribs() noexcept {}
 
-    SetRenderTargetsAttribs(Uint32                         _NumRenderTargets,
-                            ITextureView*                  _ppRenderTargets[],
-                            ITextureView*                  _pDepthStencil       = nullptr,
-                            RESOURCE_STATE_TRANSITION_MODE _StateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE,
-                            IDeviceObject*                 _pShadingRateMap     = nullptr) noexcept :
+    constexpr SetRenderTargetsAttribs(Uint32                         _NumRenderTargets,
+                                      ITextureView*                  _ppRenderTargets[],
+                                      ITextureView*                  _pDepthStencil       = nullptr,
+                                      RESOURCE_STATE_TRANSITION_MODE _StateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE,
+                                      IDeviceObject*                 _pShadingRateMap     = nullptr) noexcept :
         NumRenderTargets   {_NumRenderTargets   },
         ppRenderTargets    {_ppRenderTargets    },
         pDepthStencil      {_pDepthStencil      },
@@ -1086,10 +1086,6 @@ struct BLASBuildTriangleData
 
     /// Geometry flags, se Diligent::RAYTRACING_GEOMETRY_FLAGS.
     RAYTRACING_GEOMETRY_FLAGS Flags DEFAULT_INITIALIZER(RAYTRACING_GEOMETRY_FLAG_NONE);
-
-#if DILIGENT_CPP_INTERFACE
-    BLASBuildTriangleData() noexcept {}
-#endif
 };
 typedef struct BLASBuildTriangleData BLASBuildTriangleData;
 
@@ -1123,10 +1119,6 @@ struct BLASBuildBoundingBoxData
 
     /// Geometry flags, see Diligent::RAYTRACING_GEOMETRY_FLAGS.
     RAYTRACING_GEOMETRY_FLAGS Flags DEFAULT_INITIALIZER(RAYTRACING_GEOMETRY_FLAG_NONE);
-
-#if DILIGENT_CPP_INTERFACE
-    BLASBuildBoundingBoxData() noexcept {}
-#endif
 };
 typedef struct BLASBuildBoundingBoxData BLASBuildBoundingBoxData;
 
@@ -1185,10 +1177,6 @@ struct BuildBLASAttribs
     /// pBLAS must be created with RAYTRACING_BUILD_AS_ALLOW_UPDATE flag.
     /// An update will be faster than building an acceleration structure from scratch.
     Bool                            Update                      DEFAULT_INITIALIZER(False);
-
-#if DILIGENT_CPP_INTERFACE
-    BuildBLASAttribs() noexcept {}
-#endif
 };
 typedef struct BuildBLASAttribs BuildBLASAttribs;
 
@@ -1217,7 +1205,7 @@ struct InstanceMatrix
 
 #if DILIGENT_CPP_INTERFACE
     /// Construct identity matrix.
-    InstanceMatrix() noexcept :
+    constexpr InstanceMatrix() noexcept :
         data{{1.0f, 0.0f, 0.0f, 0.0f},
              {0.0f, 1.0f, 0.0f, 0.0f},
              {0.0f, 0.0f, 1.0f, 0.0f}}
@@ -1284,10 +1272,6 @@ struct TLASBuildInstanceData
     /// Must be TLAS_INSTANCE_OFFSET_AUTO if BuildTLASAttribs::BindingMode is not SHADER_BINDING_USER_DEFINED.
     /// Only the lower 24 bits are used.
     Uint32                    ContributionToHitGroupIndex DEFAULT_INITIALIZER(TLAS_INSTANCE_OFFSET_AUTO);
-
-#if DILIGENT_CPP_INTERFACE
-    TLASBuildInstanceData() noexcept {}
-#endif
 };
 typedef struct TLASBuildInstanceData TLASBuildInstanceData;
 
@@ -1368,10 +1352,6 @@ struct BuildTLASAttribs
     /// pTLAS must be created with RAYTRACING_BUILD_AS_ALLOW_UPDATE flag.
     /// An update will be faster than building an acceleration structure from scratch.
     Bool                            Update                        DEFAULT_INITIALIZER(False);
-
-#if DILIGENT_CPP_INTERFACE
-    BuildTLASAttribs() noexcept {}
-#endif
 };
 typedef struct BuildTLASAttribs BuildTLASAttribs;
 
@@ -1399,7 +1379,20 @@ struct CopyBLASAttribs
     RESOURCE_STATE_TRANSITION_MODE DstTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
 
 #if DILIGENT_CPP_INTERFACE
-    CopyBLASAttribs() noexcept {}
+    constexpr CopyBLASAttribs() noexcept {}
+
+    constexpr CopyBLASAttribs(IBottomLevelAS*                _pSrc,
+                              IBottomLevelAS*                _pDst,
+                              COPY_AS_MODE                   _Mode              = CopyBLASAttribs{}.Mode,
+                              RESOURCE_STATE_TRANSITION_MODE _SrcTransitionMode = CopyBLASAttribs{}.SrcTransitionMode,
+                              RESOURCE_STATE_TRANSITION_MODE _DstTransitionMode = CopyBLASAttribs{}.DstTransitionMode) noexcept :
+        pSrc             {_pSrc             },
+        pDst             {_pDst             },
+        Mode             {_Mode             },
+        SrcTransitionMode{_SrcTransitionMode}, 
+        DstTransitionMode{_DstTransitionMode}
+    {
+    }
 #endif
 };
 typedef struct CopyBLASAttribs CopyBLASAttribs;
@@ -1428,7 +1421,20 @@ struct CopyTLASAttribs
     RESOURCE_STATE_TRANSITION_MODE DstTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
 
 #if DILIGENT_CPP_INTERFACE
-    CopyTLASAttribs() noexcept {}
+    constexpr CopyTLASAttribs() noexcept {}
+
+    constexpr CopyTLASAttribs(ITopLevelAS*                   _pSrc,
+                              ITopLevelAS*                   _pDst,
+                              COPY_AS_MODE                   _Mode              = CopyTLASAttribs{}.Mode,
+                              RESOURCE_STATE_TRANSITION_MODE _SrcTransitionMode = CopyTLASAttribs{}.SrcTransitionMode,
+                              RESOURCE_STATE_TRANSITION_MODE _DstTransitionMode = CopyTLASAttribs{}.DstTransitionMode) noexcept :
+        pSrc             {_pSrc             },
+        pDst             {_pDst             },
+        Mode             {_Mode             },
+        SrcTransitionMode{_SrcTransitionMode}, 
+        DstTransitionMode{_DstTransitionMode}
+    {
+    }
 #endif
 };
 typedef struct CopyTLASAttribs CopyTLASAttribs;
@@ -1453,7 +1459,19 @@ struct WriteBLASCompactedSizeAttribs
     RESOURCE_STATE_TRANSITION_MODE BufferTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
 
 #if DILIGENT_CPP_INTERFACE
-    WriteBLASCompactedSizeAttribs() noexcept {}
+    constexpr WriteBLASCompactedSizeAttribs() noexcept {}
+
+    constexpr WriteBLASCompactedSizeAttribs(IBottomLevelAS*                _pBLAS,
+                                            IBuffer*                       _pDestBuffer,
+                                            Uint32                         _DestBufferOffset     = WriteBLASCompactedSizeAttribs{}.DestBufferOffset,
+                                            RESOURCE_STATE_TRANSITION_MODE _BLASTransitionMode   = WriteBLASCompactedSizeAttribs{}.BLASTransitionMode,
+                                            RESOURCE_STATE_TRANSITION_MODE _BufferTransitionMode = WriteBLASCompactedSizeAttribs{}.BufferTransitionMode) noexcept :
+        pBLAS               {_pBLAS               },
+        pDestBuffer         {_pDestBuffer         },
+        DestBufferOffset    {_DestBufferOffset    },
+        BLASTransitionMode  {_BLASTransitionMode  },
+        BufferTransitionMode{_BufferTransitionMode}
+    {}
 #endif
 };
 typedef struct WriteBLASCompactedSizeAttribs WriteBLASCompactedSizeAttribs;
@@ -1478,7 +1496,19 @@ struct WriteTLASCompactedSizeAttribs
     RESOURCE_STATE_TRANSITION_MODE BufferTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
 
 #if DILIGENT_CPP_INTERFACE
-    WriteTLASCompactedSizeAttribs() noexcept {}
+    constexpr WriteTLASCompactedSizeAttribs() noexcept {}
+
+    constexpr WriteTLASCompactedSizeAttribs(ITopLevelAS*                   _pTLAS,
+                                            IBuffer*                       _pDestBuffer,
+                                            Uint32                         _DestBufferOffset     = WriteTLASCompactedSizeAttribs{}.DestBufferOffset,
+                                            RESOURCE_STATE_TRANSITION_MODE _TLASTransitionMode   = WriteTLASCompactedSizeAttribs{}.TLASTransitionMode,
+                                            RESOURCE_STATE_TRANSITION_MODE _BufferTransitionMode = WriteTLASCompactedSizeAttribs{}.BufferTransitionMode) noexcept :
+        pTLAS               {_pTLAS               },
+        pDestBuffer         {_pDestBuffer         },
+        DestBufferOffset    {_DestBufferOffset    },
+        TLASTransitionMode  {_TLASTransitionMode  },
+        BufferTransitionMode{_BufferTransitionMode}
+    {}
 #endif
 };
 typedef struct WriteTLASCompactedSizeAttribs WriteTLASCompactedSizeAttribs;
@@ -1495,7 +1525,17 @@ struct TraceRaysAttribs
     Uint32               DimensionZ  DEFAULT_INITIALIZER(1); ///< The number of rays dispatched in Z direction.
 
 #if DILIGENT_CPP_INTERFACE
-    TraceRaysAttribs() noexcept {}
+    constexpr TraceRaysAttribs() noexcept {}
+
+    constexpr TraceRaysAttribs(const IShaderBindingTable* _pSBT,
+                               Uint32                     _DimensionX,
+                               Uint32                     _DimensionY,
+                               Uint32                     _DimensionZ = TraceRaysAttribs{}.DimensionZ) noexcept :
+        pSBT      {_pSBT      },
+        DimensionX{_DimensionX},
+        DimensionY{_DimensionY},
+        DimensionZ{_DimensionZ}
+    {}
 #endif
 };
 typedef struct TraceRaysAttribs TraceRaysAttribs;
@@ -1514,7 +1554,16 @@ struct TraceRaysIndirectAttribs
     Uint32  ArgsByteOffset  DEFAULT_INITIALIZER(0);
 
 #if DILIGENT_CPP_INTERFACE
-    TraceRaysIndirectAttribs() noexcept {}
+    constexpr TraceRaysIndirectAttribs() noexcept {}
+
+    explicit constexpr TraceRaysIndirectAttribs(
+        const IShaderBindingTable*     _pSBT,
+        RESOURCE_STATE_TRANSITION_MODE _TransitionMode = TraceRaysIndirectAttribs{}.IndirectAttribsBufferStateTransitionMode,
+        Uint32                         _ArgsByteOffset = TraceRaysIndirectAttribs{}.ArgsByteOffset) noexcept :
+        pSBT{_pSBT},
+        IndirectAttribsBufferStateTransitionMode{_TransitionMode},
+        ArgsByteOffset{_ArgsByteOffset}
+    {}
 #endif
 };
 typedef struct TraceRaysIndirectAttribs TraceRaysIndirectAttribs;
@@ -1533,11 +1582,12 @@ struct UpdateIndirectRTBufferAttribs
     RESOURCE_STATE_TRANSITION_MODE TransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
 
 #if DILIGENT_CPP_INTERFACE
-    UpdateIndirectRTBufferAttribs() noexcept {}
+    constexpr UpdateIndirectRTBufferAttribs() noexcept {}
 
-    explicit UpdateIndirectRTBufferAttribs(IBuffer*                       _pAttribsBuffer,
-                                           Uint32                         _AttribsBufferOffset = 0,
-                                           RESOURCE_STATE_TRANSITION_MODE _TransitionMode      = RESOURCE_STATE_TRANSITION_MODE_NONE) noexcept :
+    explicit constexpr UpdateIndirectRTBufferAttribs(
+        IBuffer*                       _pAttribsBuffer,
+        Uint32                         _AttribsBufferOffset = UpdateIndirectRTBufferAttribs{}.AttribsBufferOffset,
+        RESOURCE_STATE_TRANSITION_MODE _TransitionMode      = UpdateIndirectRTBufferAttribs{}.TransitionMode) noexcept :
         pAttribsBuffer     {_pAttribsBuffer     },
         AttribsBufferOffset{_AttribsBufferOffset},
         TransitionMode     {_TransitionMode     }
@@ -1614,17 +1664,17 @@ struct StateTransitionDesc
     STATE_TRANSITION_FLAGS Flags DEFAULT_INITIALIZER(STATE_TRANSITION_FLAG_NONE);
 
 #if DILIGENT_CPP_INTERFACE
-    StateTransitionDesc()noexcept{}
+    constexpr  StateTransitionDesc() noexcept {}
 
-    StateTransitionDesc(ITexture*              _pTexture,
-                        RESOURCE_STATE         _OldState,
-                        RESOURCE_STATE         _NewState,
-                        Uint32                 _FirstMipLevel   = 0,
-                        Uint32                 _MipLevelsCount  = REMAINING_MIP_LEVELS,
-                        Uint32                 _FirstArraySlice = 0,
-                        Uint32                 _ArraySliceCount = REMAINING_ARRAY_SLICES,
-                        STATE_TRANSITION_TYPE  _TransitionType  = STATE_TRANSITION_TYPE_IMMEDIATE,
-                        STATE_TRANSITION_FLAGS _Flags           = STATE_TRANSITION_FLAG_NONE) noexcept :
+    constexpr StateTransitionDesc(ITexture*              _pTexture,
+                                  RESOURCE_STATE         _OldState,
+                                  RESOURCE_STATE         _NewState,
+                                  Uint32                 _FirstMipLevel   = 0,
+                                  Uint32                 _MipLevelsCount  = REMAINING_MIP_LEVELS,
+                                  Uint32                 _FirstArraySlice = 0,
+                                  Uint32                 _ArraySliceCount = REMAINING_ARRAY_SLICES,
+                                  STATE_TRANSITION_TYPE  _TransitionType  = STATE_TRANSITION_TYPE_IMMEDIATE,
+                                  STATE_TRANSITION_FLAGS _Flags           = STATE_TRANSITION_FLAG_NONE) noexcept :
         pResource       {static_cast<IDeviceObject*>(_pTexture)},
         FirstMipLevel   {_FirstMipLevel  },
         MipLevelsCount  {_MipLevelsCount },
@@ -1636,10 +1686,10 @@ struct StateTransitionDesc
         Flags           {_Flags          }
     {}
 
-    StateTransitionDesc(ITexture*              _pTexture,
-                        RESOURCE_STATE         _OldState,
-                        RESOURCE_STATE         _NewState,
-                        STATE_TRANSITION_FLAGS _Flags) noexcept :
+    constexpr StateTransitionDesc(ITexture*              _pTexture,
+                                  RESOURCE_STATE         _OldState,
+                                  RESOURCE_STATE         _NewState,
+                                  STATE_TRANSITION_FLAGS _Flags) noexcept :
         StateTransitionDesc
         {
             _pTexture,
@@ -1654,30 +1704,30 @@ struct StateTransitionDesc
         }
     {}
 
-    StateTransitionDesc(IBuffer*               _pBuffer,
-                        RESOURCE_STATE         _OldState,
-                        RESOURCE_STATE         _NewState,
-                        STATE_TRANSITION_FLAGS _Flags = STATE_TRANSITION_FLAG_NONE) noexcept :
+    constexpr StateTransitionDesc(IBuffer*               _pBuffer,
+                                  RESOURCE_STATE         _OldState,
+                                  RESOURCE_STATE         _NewState,
+                                  STATE_TRANSITION_FLAGS _Flags = STATE_TRANSITION_FLAG_NONE) noexcept :
         pResource {_pBuffer },
         OldState  {_OldState},
         NewState  {_NewState},
         Flags     {_Flags   }
     {}
 
-    StateTransitionDesc(IBottomLevelAS*        _pBLAS,
-                        RESOURCE_STATE         _OldState,
-                        RESOURCE_STATE         _NewState,
-                        STATE_TRANSITION_FLAGS _Flags = STATE_TRANSITION_FLAG_NONE) noexcept :
+    constexpr StateTransitionDesc(IBottomLevelAS*        _pBLAS,
+                                  RESOURCE_STATE         _OldState,
+                                  RESOURCE_STATE         _NewState,
+                                  STATE_TRANSITION_FLAGS _Flags = STATE_TRANSITION_FLAG_NONE) noexcept :
         pResource {_pBLAS   },
         OldState  {_OldState},
         NewState  {_NewState},
         Flags     {_Flags   }
     {}
 
-    StateTransitionDesc(ITopLevelAS*           _pTLAS,
-                        RESOURCE_STATE         _OldState,
-                        RESOURCE_STATE         _NewState,
-                        STATE_TRANSITION_FLAGS _Flags = STATE_TRANSITION_FLAG_NONE) noexcept :
+    constexpr StateTransitionDesc(ITopLevelAS*           _pTLAS,
+                                  RESOURCE_STATE         _OldState,
+                                  RESOURCE_STATE         _NewState,
+                                  STATE_TRANSITION_FLAGS _Flags = STATE_TRANSITION_FLAG_NONE) noexcept :
         pResource {_pTLAS   },
         OldState  {_OldState},
         NewState  {_NewState},

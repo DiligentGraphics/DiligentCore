@@ -166,10 +166,11 @@ struct ShaderMacro
     const Char* Definition DEFAULT_INITIALIZER(nullptr);
 
 #if DILIGENT_CPP_INTERFACE
-    ShaderMacro() noexcept
+    constexpr ShaderMacro() noexcept
     {}
-    ShaderMacro(const Char* _Name,
-                const Char* _Def) noexcept :
+
+    constexpr ShaderMacro(const Char* _Name,
+                          const Char* _Def) noexcept :
         Name{_Name},
         Definition{_Def}
     {}
@@ -349,12 +350,12 @@ DILIGENT_TYPED_ENUM(SHADER_RESOURCE_TYPE, Uint8)
 struct ShaderResourceDesc
 {
 #if DILIGENT_CPP_INTERFACE
-    ShaderResourceDesc() noexcept
+    constexpr ShaderResourceDesc() noexcept
     {}
 
-    ShaderResourceDesc(const char*          _Name,
-                       SHADER_RESOURCE_TYPE _Type,
-                       Uint32               _ArraySize) noexcept :
+    constexpr ShaderResourceDesc(const char*          _Name,
+                                 SHADER_RESOURCE_TYPE _Type,
+                                 Uint32               _ArraySize) noexcept :
         Name{_Name},
         Type{_Type},
         ArraySize{_ArraySize}

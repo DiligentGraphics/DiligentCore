@@ -153,9 +153,9 @@ struct QueryDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     enum QUERY_TYPE Type DEFAULT_INITIALIZER(QUERY_TYPE_UNDEFINED);
 
 #if DILIGENT_CPP_INTERFACE
-    QueryDesc() noexcept {};
+    constexpr QueryDesc() noexcept {};
 
-    explicit QueryDesc(QUERY_TYPE _Type) noexcept :
+    explicit constexpr QueryDesc(QUERY_TYPE _Type) noexcept :
         Type(_Type)
     {}
 #endif

@@ -119,16 +119,16 @@ struct BufferDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     // We have to explicitly define constructors because otherwise the following initialization fails on Apple's clang:
     //      BufferDesc{1024, BIND_UNIFORM_BUFFER, USAGE_DEFAULT}
 
-    BufferDesc()noexcept{}
+    constexpr BufferDesc() noexcept {}
 
-    BufferDesc(const Char*      _Name,
-               Uint32           _uiSizeInBytes,
-               BIND_FLAGS       _BindFlags,
-               USAGE            _Usage                = BufferDesc{}.Usage,
-               CPU_ACCESS_FLAGS _CPUAccessFlags       = BufferDesc{}.CPUAccessFlags,
-               BUFFER_MODE      _Mode                 = BufferDesc{}.Mode,
-               Uint32           _ElementByteStride    = BufferDesc{}.ElementByteStride,
-               Uint64           _ImmediateContextMask = BufferDesc{}.ImmediateContextMask) noexcept :
+    constexpr BufferDesc(const Char*      _Name,
+                         Uint32           _uiSizeInBytes,
+                         BIND_FLAGS       _BindFlags,
+                         USAGE            _Usage                = BufferDesc{}.Usage,
+                         CPU_ACCESS_FLAGS _CPUAccessFlags       = BufferDesc{}.CPUAccessFlags,
+                         BUFFER_MODE      _Mode                 = BufferDesc{}.Mode,
+                         Uint32           _ElementByteStride    = BufferDesc{}.ElementByteStride,
+                         Uint64           _ImmediateContextMask = BufferDesc{}.ImmediateContextMask) noexcept :
         DeviceObjectAttribs  {_Name             },
         uiSizeInBytes        {_uiSizeInBytes    },
         BindFlags            {_BindFlags        },
@@ -148,7 +148,7 @@ struct BufferDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// - False otherwise.
     /// The operator ignores DeviceObjectAttribs::Name field as it does not affect
     /// the buffer description.
-    bool operator == (const BufferDesc& RHS)const
+    constexpr bool operator == (const BufferDesc& RHS)const
     {
                 // Name is primarily used for debug purposes and does not affect the state.
                 // It is ignored in comparison operation.
@@ -185,11 +185,11 @@ struct BufferData
 
 #if DILIGENT_CPP_INTERFACE
 
-    BufferData() noexcept {}
+    constexpr BufferData() noexcept {}
 
-    BufferData(const void*     _pData,
-               Uint32          _DataSize,
-               IDeviceContext* _pContext = nullptr) :
+    constexpr BufferData(const void*     _pData,
+                         Uint32          _DataSize,
+                         IDeviceContext* _pContext = nullptr) :
         pData   {_pData   },
         DataSize{_DataSize},
         pContext{_pContext}

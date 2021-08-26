@@ -279,7 +279,7 @@ struct RenderTargetBlendDesc
     Bool            BlendEnable           DEFAULT_INITIALIZER(False);
 
     /// Enable or disable a logical operation for this render target. Default value: False.
-	Bool			LogicOperationEnable  DEFAULT_INITIALIZER(False);
+    Bool            LogicOperationEnable  DEFAULT_INITIALIZER(False);
 
     /// Specifies the blend factor to apply to the RGB value output from the pixel shader
     /// Default value: Diligent::BLEND_FACTOR_ONE.
@@ -311,7 +311,7 @@ struct RenderTargetBlendDesc
 
     /// Defines logical operation for the render target.
     /// Default value: Diligent::LOGIC_OP_NOOP.
-	LOGIC_OPERATION LogicOp               DEFAULT_INITIALIZER(LOGIC_OP_NOOP);
+    LOGIC_OPERATION LogicOp               DEFAULT_INITIALIZER(LOGIC_OP_NOOP);
 
     /// Render target write mask.
     /// Default value: Diligent::COLOR_MASK_ALL.
@@ -319,11 +319,11 @@ struct RenderTargetBlendDesc
 
 #if DILIGENT_CPP_INTERFACE
 
-    RenderTargetBlendDesc()noexcept{}
+    constexpr RenderTargetBlendDesc() noexcept {}
 
-    explicit
+    explicit constexpr
     RenderTargetBlendDesc(Bool            _BlendEnable,
-                          Bool			  _LogicOperationEnable  = RenderTargetBlendDesc{}.LogicOperationEnable ,
+                          Bool            _LogicOperationEnable  = RenderTargetBlendDesc{}.LogicOperationEnable,
                           BLEND_FACTOR    _SrcBlend              = RenderTargetBlendDesc{}.SrcBlend,
                           BLEND_FACTOR    _DestBlend             = RenderTargetBlendDesc{}.DestBlend,
                           BLEND_OPERATION _BlendOp               = RenderTargetBlendDesc{}.BlendOp,
@@ -340,7 +340,7 @@ struct RenderTargetBlendDesc
         SrcBlendAlpha        {_SrcBlendAlpha        },
         DestBlendAlpha       {_DestBlendAlpha       },
         BlendOpAlpha         {_BlendOpAlpha         },
-		LogicOp			     {_LogicOp              },
+        LogicOp              {_LogicOp              },
         RenderTargetWriteMask{_RenderTargetWriteMask}
     {}
 
@@ -350,17 +350,17 @@ struct RenderTargetBlendDesc
     /// \return
     /// - True if all members of the two structures are equal.
     /// - False otherwise
-    bool operator == (const RenderTargetBlendDesc& rhs)const
+    constexpr bool operator == (const RenderTargetBlendDesc& rhs)const
     {
         return BlendEnable           == rhs.BlendEnable    &&
-			   LogicOperationEnable	 == rhs.LogicOperationEnable &&
+               LogicOperationEnable  == rhs.LogicOperationEnable &&
                SrcBlend              == rhs.SrcBlend       &&
                DestBlend             == rhs.DestBlend      &&
                BlendOp               == rhs.BlendOp        &&
                SrcBlendAlpha         == rhs.SrcBlendAlpha  &&
                DestBlendAlpha        == rhs.DestBlendAlpha &&
                BlendOpAlpha          == rhs.BlendOpAlpha   &&
-			   LogicOp               == rhs.LogicOp		   &&
+               LogicOp               == rhs.LogicOp		   &&
                RenderTargetWriteMask == rhs.RenderTargetWriteMask;
     }
 #endif
@@ -389,11 +389,11 @@ struct BlendStateDesc
     // We have to explicitly define constructors because otherwise Apple's clang fails to compile the following legitimate code:
     //     BlendStateDesc{False, False}
 
-    BlendStateDesc() noexcept {}
+    constexpr BlendStateDesc() noexcept {}
 
-    BlendStateDesc(Bool                         _AlphaToCoverageEnable,
-                   Bool                         _IndependentBlendEnable,
-                   const RenderTargetBlendDesc& RT0 = RenderTargetBlendDesc{}) noexcept :
+    constexpr BlendStateDesc(Bool                         _AlphaToCoverageEnable,
+                             Bool                         _IndependentBlendEnable,
+                             const RenderTargetBlendDesc& RT0 = RenderTargetBlendDesc{}) noexcept :
         AlphaToCoverageEnable   {_AlphaToCoverageEnable },
         IndependentBlendEnable  {_IndependentBlendEnable},
         RenderTargets           {RT0}
@@ -410,7 +410,7 @@ struct BlendStateDesc
     ///   but differ in render target other than 0, the operator will return False
     ///   even though the two blend states created from these structures will be identical.
     /// - False otherwise
-    bool operator==(const BlendStateDesc& RHS) const
+    constexpr bool operator==(const BlendStateDesc& RHS) const
     {
         bool bRTsEqual = true;
         for (size_t i = 0; i < MAX_RENDER_TARGETS; ++i)

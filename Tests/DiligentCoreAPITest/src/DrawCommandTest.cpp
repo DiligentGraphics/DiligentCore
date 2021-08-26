@@ -549,7 +549,6 @@ protected:
 
         PSODesc.Name = "Draw command test";
 
-        InputLayoutDesc LayoutDesc;
         // clang-format off
         LayoutElement Elems[] =
         {

@@ -53,14 +53,14 @@ struct ResourceMappingEntry
 
 
 #if DILIGENT_CPP_INTERFACE
-    ResourceMappingEntry() noexcept {}
+    constexpr ResourceMappingEntry() noexcept {}
 
     /// Initializes the structure members
 
     /// \param [in] _Name       - Object name.
     /// \param [in] _pObject    - Pointer to the object.
     /// \param [in] _ArrayIndex - For array resources, index in the array
-    ResourceMappingEntry (const Char* _Name, IDeviceObject* _pObject, Uint32 _ArrayIndex = 0)noexcept :
+    constexpr ResourceMappingEntry (const Char* _Name, IDeviceObject* _pObject, Uint32 _ArrayIndex = 0)noexcept :
         Name      { _Name     },
         pObject   { _pObject  },
         ArrayIndex{_ArrayIndex}
@@ -80,10 +80,10 @@ struct ResourceMappingDesc
     ResourceMappingEntry* pEntries DEFAULT_INITIALIZER(nullptr);
 
 #if DILIGENT_CPP_INTERFACE
-    ResourceMappingDesc() noexcept
+    constexpr ResourceMappingDesc() noexcept
     {}
 
-    explicit ResourceMappingDesc(ResourceMappingEntry* _pEntries) noexcept :
+    explicit constexpr ResourceMappingDesc(ResourceMappingEntry* _pEntries) noexcept :
         pEntries{_pEntries}
     {}
 #endif

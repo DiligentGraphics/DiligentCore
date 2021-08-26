@@ -125,7 +125,7 @@ struct RenderPassAttachmentDesc
     /// \return
     /// - True if all members of the two structures are equal.
     /// - False otherwise
-    bool operator == (const RenderPassAttachmentDesc& RHS)const
+    constexpr bool operator == (const RenderPassAttachmentDesc& RHS) const
     {
         return  Format          == RHS.Format         &&
                 SampleCount     == RHS.SampleCount    &&
@@ -153,10 +153,10 @@ struct AttachmentReference
     RESOURCE_STATE  State           DEFAULT_INITIALIZER(RESOURCE_STATE_UNKNOWN);
 
 #if DILIGENT_CPP_INTERFACE
-    AttachmentReference()noexcept{}
+    constexpr AttachmentReference() noexcept {}
 
-    AttachmentReference(Uint32          _AttachmentIndex,
-                        RESOURCE_STATE  _State)noexcept :
+    constexpr AttachmentReference(Uint32          _AttachmentIndex,
+                                  RESOURCE_STATE  _State)noexcept :
         AttachmentIndex{_AttachmentIndex},
         State          {_State}
     {}
@@ -167,13 +167,13 @@ struct AttachmentReference
     /// \return
     /// - True if all members of the two structures are equal.
     /// - False otherwise
-    bool operator == (const AttachmentReference& RHS) const
+    constexpr bool operator == (const AttachmentReference& RHS) const
     {
         return  AttachmentIndex == RHS.AttachmentIndex &&
                 State           == RHS.State;
     }
 
-    bool operator != (const AttachmentReference& RHS) const
+    constexpr bool operator != (const AttachmentReference& RHS) const
     {
         return !(*this == RHS);
     }
@@ -193,23 +193,23 @@ struct ShadingRateAttachment
     Uint32              TileSize[2] DEFAULT_INITIALIZER({});
 
 #if DILIGENT_CPP_INTERFACE
-    ShadingRateAttachment() noexcept {}
+    constexpr ShadingRateAttachment() noexcept {}
 
-    ShadingRateAttachment(const AttachmentReference& _Attachment,
-                          Uint32                     TileWidth,
-                          Uint32                     TileHeight) noexcept :
+    constexpr ShadingRateAttachment(const AttachmentReference& _Attachment,
+                                    Uint32                     TileWidth,
+                                    Uint32                     TileHeight) noexcept :
         Attachment{_Attachment},
         TileSize{TileWidth, TileHeight}
     {}
 
-    bool operator == (const ShadingRateAttachment& RHS) const
+    constexpr bool operator == (const ShadingRateAttachment& RHS) const
     {
         return  Attachment  == RHS.Attachment  &&
                 TileSize[0] == RHS.TileSize[0] &&
                 TileSize[1] == RHS.TileSize[1];
     }
 
-    bool operator != (const ShadingRateAttachment& RHS) const
+    constexpr bool operator != (const ShadingRateAttachment& RHS) const
     {
         return !(*this == RHS);
     }
@@ -266,7 +266,7 @@ struct SubpassDesc
     /// \return
     /// - True if all members of the two structures are equal.
     /// - False otherwise
-    bool operator == (const SubpassDesc& RHS)const
+    constexpr bool operator == (const SubpassDesc& RHS) const
     {
         if (InputAttachmentCount        != RHS.InputAttachmentCount ||
             RenderTargetAttachmentCount != RHS.RenderTargetAttachmentCount ||
@@ -366,7 +366,7 @@ struct SubpassDependencyDesc
     /// \return
     /// - True if all members of the two structures are equal.
     /// - False otherwise
-    bool operator == (const SubpassDependencyDesc& RHS) const
+    constexpr bool operator == (const SubpassDependencyDesc& RHS) const
     {
         return  SrcSubpass    == RHS.SrcSubpass    &&
                 DstSubpass    == RHS.DstSubpass    &&
@@ -376,7 +376,7 @@ struct SubpassDependencyDesc
                 DstAccessMask == RHS.DstAccessMask;
     }
 
-    bool operator != (const SubpassDependencyDesc& RHS) const
+    constexpr bool operator != (const SubpassDependencyDesc& RHS) const
     {
         return !(*this == RHS);
     }

@@ -82,10 +82,6 @@ struct BLASTriangleDesc
 
     /// Vulkan only, allows to use transformations in BLASBuildTriangleData.
     Bool                      AllowsTransforms      DEFAULT_INITIALIZER(False);
-
-#if DILIGENT_CPP_INTERFACE
-    BLASTriangleDesc() noexcept {}
-#endif
 };
 typedef struct BLASTriangleDesc BLASTriangleDesc;
 
@@ -104,7 +100,13 @@ struct BLASBoundingBoxDesc
     Uint32                    MaxBoxCount   DEFAULT_INITIALIZER(0);
 
 #if DILIGENT_CPP_INTERFACE
-    BLASBoundingBoxDesc() noexcept {}
+    constexpr BLASBoundingBoxDesc() noexcept {}
+
+    constexpr BLASBoundingBoxDesc(const char* _GeometryName,
+                                  Uint32      _MaxBoxCount) noexcept :
+        GeometryName{_GeometryName},
+        MaxBoxCount {_MaxBoxCount }
+    {}
 #endif
 };
 typedef struct BLASBoundingBoxDesc BLASBoundingBoxDesc;
@@ -173,10 +175,6 @@ struct BottomLevelASDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// \remarks    Only specify these bits that will indicate those immediate contexts where the BLAS
     ///             will actually be used. Do not set unnecessary bits as this will result in extra overhead.
     Uint64                     ImmediateContextMask    DEFAULT_INITIALIZER(1);
-
-#if DILIGENT_CPP_INTERFACE
-    BottomLevelASDesc() noexcept {}
-#endif
 };
 typedef struct BottomLevelASDesc BottomLevelASDesc;
 
@@ -196,7 +194,13 @@ struct ScratchBufferSizes
     Uint32 Update DEFAULT_INITIALIZER(0);
 
 #if DILIGENT_CPP_INTERFACE
-    ScratchBufferSizes() noexcept {}
+    constexpr ScratchBufferSizes() noexcept {}
+
+    constexpr ScratchBufferSizes(Uint32 _Build,
+                                 Uint32 _Update) noexcept :
+        Build {_Build},
+        Update{_Update}
+    {}
 #endif
 };
 typedef struct ScratchBufferSizes ScratchBufferSizes;

@@ -61,11 +61,11 @@ struct ImmutableSamplerDesc
     struct SamplerDesc Desc;
 
 #if DILIGENT_CPP_INTERFACE
-    ImmutableSamplerDesc()noexcept{}
+    constexpr ImmutableSamplerDesc() noexcept {}
 
-    ImmutableSamplerDesc(SHADER_TYPE        _ShaderStages,
-                         const Char*        _SamplerOrTextureName,
-                         const SamplerDesc& _Desc)noexcept :
+    constexpr ImmutableSamplerDesc(SHADER_TYPE        _ShaderStages,
+                                   const Char*        _SamplerOrTextureName,
+                                   const SamplerDesc& _Desc)noexcept :
         ShaderStages        {_ShaderStages        },
         SamplerOrTextureName{_SamplerOrTextureName},
         Desc                {_Desc                }
@@ -142,14 +142,14 @@ struct PipelineResourceDesc
     PIPELINE_RESOURCE_FLAGS        Flags         DEFAULT_INITIALIZER(PIPELINE_RESOURCE_FLAG_NONE);
 
 #if DILIGENT_CPP_INTERFACE
-    PipelineResourceDesc()noexcept{}
+    constexpr PipelineResourceDesc() noexcept {}
 
-    PipelineResourceDesc(SHADER_TYPE                   _ShaderStages,
-                         const char*                   _Name,
-                         Uint32                        _ArraySize,
-                         SHADER_RESOURCE_TYPE          _ResourceType,
-                         SHADER_RESOURCE_VARIABLE_TYPE _VarType = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE,
-                         PIPELINE_RESOURCE_FLAGS       _Flags   = PIPELINE_RESOURCE_FLAG_NONE)noexcept :
+    constexpr PipelineResourceDesc(SHADER_TYPE                   _ShaderStages,
+                                   const char*                   _Name,
+                                   Uint32                        _ArraySize,
+                                   SHADER_RESOURCE_TYPE          _ResourceType,
+                                   SHADER_RESOURCE_VARIABLE_TYPE _VarType = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE,
+                                   PIPELINE_RESOURCE_FLAGS       _Flags   = PIPELINE_RESOURCE_FLAG_NONE)noexcept :
         Name        {_Name        },
         ShaderStages{_ShaderStages},
         ArraySize   {_ArraySize   },

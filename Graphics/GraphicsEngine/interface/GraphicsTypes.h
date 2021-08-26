@@ -1211,10 +1211,10 @@ struct DepthStencilClearValue
     Uint8 Stencil   DEFAULT_INITIALIZER(0);
 
 #if DILIGENT_CPP_INTERFACE
-    DepthStencilClearValue()noexcept{}
+    constexpr DepthStencilClearValue() noexcept {}
 
-    DepthStencilClearValue(Float32 _Depth,
-                           Uint8   _Stencil)noexcept :
+    constexpr DepthStencilClearValue(Float32 _Depth,
+                                     Uint8   _Stencil) noexcept :
         Depth   {_Depth  },
         Stencil {_Stencil}
     {}
@@ -1235,7 +1235,7 @@ struct OptimizedClearValue
     DepthStencilClearValue DepthStencil;
 
 #if DILIGENT_CPP_INTERFACE
-    bool operator == (const OptimizedClearValue& rhs)const
+    constexpr bool operator == (const OptimizedClearValue& rhs) const
     {
         return Format == rhs.Format &&
                Color[0] == rhs.Color[0] &&
@@ -1281,9 +1281,9 @@ struct DeviceObjectAttribs
     //     DeviceObjectAttribs{"Name"}
 
 #if DILIGENT_CPP_INTERFACE
-    DeviceObjectAttribs()noexcept{}
+    constexpr DeviceObjectAttribs() noexcept {}
 
-    explicit DeviceObjectAttribs(const Char* _Name) :
+    explicit constexpr DeviceObjectAttribs(const Char* _Name) :
         Name{_Name}
     {}
 #endif
@@ -1471,7 +1471,7 @@ struct SwapChainDesc
     bool  IsPrimary                     DEFAULT_INITIALIZER(true);
 
 #if DILIGENT_CPP_INTERFACE
-    SwapChainDesc() noexcept
+    constexpr SwapChainDesc() noexcept
     {
 #if PLATFORM_ANDROID || PLATFORM_IOS
         // Use 3 buffers by default on mobile platforms
@@ -1480,14 +1480,14 @@ struct SwapChainDesc
     }
 
     /// Constructor initializes the structure members with default values
-    SwapChainDesc(Uint32         _Width,
-                  Uint32         _Height,
-                  TEXTURE_FORMAT _ColorBufferFormat,
-                  TEXTURE_FORMAT _DepthBufferFormat,
-                  Uint32         _BufferCount         = SwapChainDesc{}.BufferCount,
-                  Float32        _DefaultDepthValue   = SwapChainDesc{}.DefaultDepthValue,
-                  Uint8          _DefaultStencilValue = SwapChainDesc{}.DefaultStencilValue,
-                  bool           _IsPrimary           = SwapChainDesc{}.IsPrimary) :
+    constexpr SwapChainDesc(Uint32         _Width,
+                            Uint32         _Height,
+                            TEXTURE_FORMAT _ColorBufferFormat,
+                            TEXTURE_FORMAT _DepthBufferFormat,
+                            Uint32         _BufferCount         = SwapChainDesc{}.BufferCount,
+                            Float32        _DefaultDepthValue   = SwapChainDesc{}.DefaultDepthValue,
+                            Uint8          _DefaultStencilValue = SwapChainDesc{}.DefaultStencilValue,
+                            bool           _IsPrimary           = SwapChainDesc{}.IsPrimary) :
         Width               {_Width              },
         Height              {_Height             },
         ColorBufferFormat   {_ColorBufferFormat  },
@@ -1747,9 +1747,9 @@ struct DeviceFeatures
     DEVICE_FEATURE_STATE VariableRateShading              DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
 #if DILIGENT_CPP_INTERFACE
-    DeviceFeatures() noexcept {}
+    constexpr DeviceFeatures() noexcept {}
 
-    explicit DeviceFeatures(DEVICE_FEATURE_STATE State) noexcept :
+    explicit constexpr DeviceFeatures(DEVICE_FEATURE_STATE State) noexcept :
         SeparablePrograms                 {State},
         ShaderResourceQueries             {State},
         IndirectRendering                 {State},
@@ -1849,47 +1849,47 @@ struct Version
     Uint32 Minor DEFAULT_INITIALIZER(0);
 
 #if DILIGENT_CPP_INTERFACE
-    Version() noexcept
+    constexpr Version() noexcept
     {}
 
     template <typename T, typename = typename std::enable_if<std::is_integral<T>::value>::type>
-    Version(T _Major, T _Minor) noexcept :
+    constexpr Version(T _Major, T _Minor) noexcept :
         Major{static_cast<decltype(Major)>(_Major)},
         Minor{static_cast<decltype(Minor)>(_Minor)}
     {
     }
 
-    bool operator==(const Version& rhs) const
+    constexpr bool operator==(const Version& rhs) const
     {
         return Major == rhs.Major && Minor == rhs.Minor;
     }
 
-    bool operator>(const Version& rhs) const
+    constexpr bool operator>(const Version& rhs) const
     {
         return Major == rhs.Major ? Minor > rhs.Minor : Major > rhs.Major;
     }
 
-    bool operator>=(const Version& rhs) const
+    constexpr bool operator>=(const Version& rhs) const
     {
         return Major == rhs.Major ? Minor >= rhs.Minor : Major >= rhs.Major;
     }
 
-    bool operator<(const Version& rhs) const
+    constexpr bool operator<(const Version& rhs) const
     {
         return !(*this >= rhs);
     }
 
-    bool operator<=(const Version& rhs) const
+    constexpr bool operator<=(const Version& rhs) const
     {
         return !(*this > rhs);
     }
 
-    static Version Min(const Version& V1, const Version& V2)
+    static constexpr Version Min(const Version& V1, const Version& V2)
     {
         return V1 < V2 ? V1 : V2;
     }
 
-    static Version Max(const Version& V1, const Version& V2)
+    static constexpr Version Max(const Version& V1, const Version& V2)
     {
         return V1 > V2 ? V1 : V2;
     }
@@ -2641,11 +2641,11 @@ struct ImmediateContextCreateInfo
     QUEUE_PRIORITY Priority     DEFAULT_INITIALIZER(QUEUE_PRIORITY_MEDIUM);
 
 #if DILIGENT_CPP_INTERFACE
-    ImmediateContextCreateInfo() noexcept {}
+    constexpr ImmediateContextCreateInfo() noexcept {}
 
-    ImmediateContextCreateInfo(const char*    _Name,
-                               Uint8          _QueueId,
-                               QUEUE_PRIORITY _Priority = ImmediateContextCreateInfo{}.Priority) noexcept :
+    constexpr ImmediateContextCreateInfo(const char*    _Name,
+                                         Uint8          _QueueId,
+                                         QUEUE_PRIORITY _Priority = ImmediateContextCreateInfo{}.Priority) noexcept :
         Name    {_Name},
         QueueId {_QueueId},
         Priority{_Priority}
@@ -3008,19 +3008,19 @@ struct VulkanDescriptorPoolSize
     Uint32 NumAccelStructDescriptors        DEFAULT_INITIALIZER(0);
 
 #if DILIGENT_CPP_INTERFACE
-    VulkanDescriptorPoolSize()noexcept {}
+    constexpr VulkanDescriptorPoolSize() noexcept {}
 
-    VulkanDescriptorPoolSize(Uint32 _MaxDescriptorSets,
-                             Uint32 _NumSeparateSamplerDescriptors,
-                             Uint32 _NumCombinedSamplerDescriptors,
-                             Uint32 _NumSampledImageDescriptors,
-                             Uint32 _NumStorageImageDescriptors,
-                             Uint32 _NumUniformBufferDescriptors,
-                             Uint32 _NumStorageBufferDescriptors,
-                             Uint32 _NumUniformTexelBufferDescriptors,
-                             Uint32 _NumStorageTexelBufferDescriptors,
-                             Uint32 _NumInputAttachmentDescriptors,
-                             Uint32 _NumAccelStructDescriptors)noexcept :
+    constexpr VulkanDescriptorPoolSize(Uint32 _MaxDescriptorSets,
+                                       Uint32 _NumSeparateSamplerDescriptors,
+                                       Uint32 _NumCombinedSamplerDescriptors,
+                                       Uint32 _NumSampledImageDescriptors,
+                                       Uint32 _NumStorageImageDescriptors,
+                                       Uint32 _NumUniformBufferDescriptors,
+                                       Uint32 _NumStorageBufferDescriptors,
+                                       Uint32 _NumUniformTexelBufferDescriptors,
+                                       Uint32 _NumStorageTexelBufferDescriptors,
+                                       Uint32 _NumInputAttachmentDescriptors,
+                                       Uint32 _NumAccelStructDescriptors)noexcept :
         MaxDescriptorSets               {_MaxDescriptorSets               },
         NumSeparateSamplerDescriptors   {_NumSeparateSamplerDescriptors   },
         NumCombinedSamplerDescriptors   {_NumCombinedSamplerDescriptors   },
@@ -3215,9 +3215,9 @@ struct Box
     Uint32 MaxZ DEFAULT_INITIALIZER(1); ///< Maximal Z coordinate. Default value is 1
 
 #if DILIGENT_CPP_INTERFACE
-    Box(Uint32 _MinX, Uint32 _MaxX,
-        Uint32 _MinY, Uint32 _MaxY,
-        Uint32 _MinZ, Uint32 _MaxZ) noexcept:
+    constexpr Box(Uint32 _MinX, Uint32 _MaxX,
+                  Uint32 _MinY, Uint32 _MaxY,
+                  Uint32 _MinZ, Uint32 _MaxZ) noexcept:
         MinX {_MinX},
         MaxX {_MaxX},
         MinY {_MinY},
@@ -3226,12 +3226,12 @@ struct Box
         MaxZ {_MaxZ}
     {}
 
-    Box(Uint32 _MinX, Uint32 _MaxX,
-        Uint32 _MinY, Uint32 _MaxY) noexcept:
+    constexpr Box(Uint32 _MinX, Uint32 _MaxX,
+                  Uint32 _MinY, Uint32 _MaxY) noexcept:
         Box{_MinX, _MaxX, _MinY, _MaxY, 0, 1}
     {}
 
-    Box(Uint32 _MinX, Uint32 _MaxX) noexcept:
+    constexpr Box(Uint32 _MinX, Uint32 _MaxX) noexcept:
         Box{_MinX, _MaxX, 0, 0, 0, 1}
     {}
 
@@ -3318,14 +3318,14 @@ struct TextureFormatAttribs
     }
 
     /// Initializes the structure
-    TextureFormatAttribs(const Char*    _Name,
-                         TEXTURE_FORMAT _Format,
-                         Uint8          _ComponentSize,
-                         Uint8          _NumComponents,
-                         COMPONENT_TYPE _ComponentType,
-                         bool           _IsTypeless,
-                         Uint8          _BlockWidth,
-                         Uint8          _BlockHeight) noexcept :
+    constexpr TextureFormatAttribs(const Char*    _Name,
+                                   TEXTURE_FORMAT _Format,
+                                   Uint8          _ComponentSize,
+                                   Uint8          _NumComponents,
+                                   COMPONENT_TYPE _ComponentType,
+                                   bool           _IsTypeless,
+                                   Uint8          _BlockWidth,
+                                   Uint8          _BlockHeight) noexcept :
         Name         {_Name         },
         Format       {_Format       },
         ComponentSize{_ComponentSize},
@@ -3337,7 +3337,7 @@ struct TextureFormatAttribs
     {
     }
 
-    TextureFormatAttribs()noexcept {}
+    constexpr TextureFormatAttribs() noexcept {}
 #endif
 };
 typedef struct TextureFormatAttribs TextureFormatAttribs;

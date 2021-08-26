@@ -109,18 +109,18 @@ struct LayoutElement
 
 #if DILIGENT_CPP_INTERFACE
 
-    LayoutElement()noexcept{}
+    constexpr LayoutElement() noexcept{}
 
     /// Initializes the structure
-    LayoutElement(Uint32                   _InputIndex,
-                  Uint32                   _BufferSlot,
-                  Uint32                   _NumComponents,
-                  VALUE_TYPE               _ValueType,
-                  Bool                     _IsNormalized         = LayoutElement{}.IsNormalized,
-                  Uint32                   _RelativeOffset       = LayoutElement{}.RelativeOffset,
-                  Uint32                   _Stride               = LayoutElement{}.Stride,
-                  INPUT_ELEMENT_FREQUENCY  _Frequency            = LayoutElement{}.Frequency,
-                  Uint32                   _InstanceDataStepRate = LayoutElement{}.InstanceDataStepRate)noexcept :
+    constexpr LayoutElement(Uint32                   _InputIndex,
+                            Uint32                   _BufferSlot,
+                            Uint32                   _NumComponents,
+                            VALUE_TYPE               _ValueType,
+                            Bool                     _IsNormalized         = LayoutElement{}.IsNormalized,
+                            Uint32                   _RelativeOffset       = LayoutElement{}.RelativeOffset,
+                            Uint32                   _Stride               = LayoutElement{}.Stride,
+                            INPUT_ELEMENT_FREQUENCY  _Frequency            = LayoutElement{}.Frequency,
+                            Uint32                   _InstanceDataStepRate = LayoutElement{}.InstanceDataStepRate)noexcept :
         InputIndex          {_InputIndex          },
         BufferSlot          {_BufferSlot          },
         NumComponents       {_NumComponents       },
@@ -133,16 +133,16 @@ struct LayoutElement
     {}
 
     /// Initializes the structure
-    LayoutElement(const char*               _HLSLSemantic,
-                  Uint32                    _InputIndex,
-                  Uint32                    _BufferSlot,
-                  Uint32                    _NumComponents,
-                  VALUE_TYPE                _ValueType,
-                  Bool                      _IsNormalized         = LayoutElement{}.IsNormalized,
-                  Uint32                    _RelativeOffset       = LayoutElement{}.RelativeOffset,
-                  Uint32                    _Stride               = LayoutElement{}.Stride,
-                  INPUT_ELEMENT_FREQUENCY   _Frequency            = LayoutElement{}.Frequency,
-                  Uint32                    _InstanceDataStepRate = LayoutElement{}.InstanceDataStepRate)noexcept :
+    constexpr LayoutElement(const char*               _HLSLSemantic,
+                            Uint32                    _InputIndex,
+                            Uint32                    _BufferSlot,
+                            Uint32                    _NumComponents,
+                            VALUE_TYPE                _ValueType,
+                            Bool                      _IsNormalized         = LayoutElement{}.IsNormalized,
+                            Uint32                    _RelativeOffset       = LayoutElement{}.RelativeOffset,
+                            Uint32                    _Stride               = LayoutElement{}.Stride,
+                            INPUT_ELEMENT_FREQUENCY   _Frequency            = LayoutElement{}.Frequency,
+                            Uint32                    _InstanceDataStepRate = LayoutElement{}.InstanceDataStepRate)noexcept :
         HLSLSemantic        {_HLSLSemantic        },
         InputIndex          {_InputIndex          },
         BufferSlot          {_BufferSlot          },
@@ -156,13 +156,13 @@ struct LayoutElement
     {}
 
     /// Initializes the structure
-    LayoutElement(Uint32                   _InputIndex,
-                  Uint32                   _BufferSlot,
-                  Uint32                   _NumComponents,
-                  VALUE_TYPE               _ValueType,
-                  Bool                     _IsNormalized,
-                  INPUT_ELEMENT_FREQUENCY  _Frequency,
-                  Uint32                   _InstanceDataStepRate = LayoutElement{}.InstanceDataStepRate)noexcept :
+    constexpr LayoutElement(Uint32                   _InputIndex,
+                            Uint32                   _BufferSlot,
+                            Uint32                   _NumComponents,
+                            VALUE_TYPE               _ValueType,
+                            Bool                     _IsNormalized,
+                            INPUT_ELEMENT_FREQUENCY  _Frequency,
+                            Uint32                   _InstanceDataStepRate = LayoutElement{}.InstanceDataStepRate)noexcept :
         InputIndex          {_InputIndex                   },
         BufferSlot          {_BufferSlot                   },
         NumComponents       {_NumComponents                },
@@ -208,15 +208,15 @@ struct InputLayoutDesc
     Uint32               NumElements     DEFAULT_INITIALIZER(0);
 
 #if DILIGENT_CPP_INTERFACE
-    InputLayoutDesc()noexcept{}
+    constexpr InputLayoutDesc() noexcept {}
 
-    InputLayoutDesc(const LayoutElement* _LayoutElements,
-                    Uint32               _NumElements)noexcept :
+    constexpr InputLayoutDesc(const LayoutElement* _LayoutElements,
+                              Uint32               _NumElements)noexcept :
         LayoutElements{_LayoutElements},
         NumElements   {_NumElements   }
     {}
 
-    bool operator == (const InputLayoutDesc& rhs) const
+    constexpr bool operator == (const InputLayoutDesc& rhs) const
     {
         if (NumElements != rhs.NumElements)
             return false;
@@ -230,7 +230,7 @@ struct InputLayoutDesc
         return true;
     }
 
-    bool operator != (const InputLayoutDesc& rhs) const
+    constexpr bool operator != (const InputLayoutDesc& rhs) const
     {
         return !(*this == rhs);
     }

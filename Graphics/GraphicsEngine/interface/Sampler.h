@@ -111,19 +111,19 @@ struct SamplerDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
 
 #if DILIGENT_CPP_INTERFACE
-    SamplerDesc()noexcept{}
+    constexpr SamplerDesc() noexcept {}
 
-    SamplerDesc(FILTER_TYPE          _MinFilter,
-                FILTER_TYPE          _MagFilter,
-                FILTER_TYPE          _MipFilter,
-                TEXTURE_ADDRESS_MODE _AddressU       = SamplerDesc{}.AddressU,
-                TEXTURE_ADDRESS_MODE _AddressV       = SamplerDesc{}.AddressV,
-                TEXTURE_ADDRESS_MODE _AddressW       = SamplerDesc{}.AddressW,
-                Float32              _MipLODBias     = SamplerDesc{}.MipLODBias,
-                Uint32               _MaxAnisotropy  = SamplerDesc{}.MaxAnisotropy,
-                COMPARISON_FUNCTION  _ComparisonFunc = SamplerDesc{}.ComparisonFunc,
-                float                _MinLOD         = SamplerDesc{}.MinLOD,
-                float                _MaxLOD         = SamplerDesc{}.MaxLOD) :
+    constexpr SamplerDesc(FILTER_TYPE          _MinFilter,
+                          FILTER_TYPE          _MagFilter,
+                          FILTER_TYPE          _MipFilter,
+                          TEXTURE_ADDRESS_MODE _AddressU       = SamplerDesc{}.AddressU,
+                          TEXTURE_ADDRESS_MODE _AddressV       = SamplerDesc{}.AddressV,
+                          TEXTURE_ADDRESS_MODE _AddressW       = SamplerDesc{}.AddressW,
+                          Float32              _MipLODBias     = SamplerDesc{}.MipLODBias,
+                          Uint32               _MaxAnisotropy  = SamplerDesc{}.MaxAnisotropy,
+                          COMPARISON_FUNCTION  _ComparisonFunc = SamplerDesc{}.ComparisonFunc,
+                          float                _MinLOD         = SamplerDesc{}.MinLOD,
+                          float                _MaxLOD         = SamplerDesc{}.MaxLOD) :
         MinFilter      {_MinFilter     },
         MagFilter      {_MagFilter     },
         MipFilter      {_MipFilter     },
@@ -146,7 +146,7 @@ struct SamplerDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// - False otherwise.
     /// The operator ignores DeviceObjectAttribs::Name field as it does not affect
     /// the sampler state.
-    bool operator == (const SamplerDesc& RHS)const
+    constexpr bool operator == (const SamplerDesc& RHS)const
     {
                 // Name is primarily used for debug purposes and does not affect the state.
                 // It is ignored in comparison operation.

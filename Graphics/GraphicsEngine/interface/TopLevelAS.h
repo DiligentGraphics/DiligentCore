@@ -70,7 +70,7 @@ struct TopLevelASDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     Uint64                    ImmediateContextMask    DEFAULT_INITIALIZER(1);
 
 #if DILIGENT_CPP_INTERFACE
-    TopLevelASDesc() noexcept {}
+    constexpr TopLevelASDesc() noexcept {}
 #endif
 };
 typedef struct TopLevelASDesc TopLevelASDesc;
@@ -140,7 +140,7 @@ struct TLASInstanceDesc
     IBottomLevelAS* pBLAS                       DEFAULT_INITIALIZER(nullptr);
 
 #if DILIGENT_CPP_INTERFACE
-    TLASInstanceDesc() noexcept {}
+    constexpr TLASInstanceDesc() noexcept {}
 #endif
 };
 typedef struct TLASInstanceDesc TLASInstanceDesc;

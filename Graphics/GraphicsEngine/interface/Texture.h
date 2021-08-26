@@ -108,22 +108,22 @@ struct TextureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
 
 #if DILIGENT_CPP_INTERFACE
-    TextureDesc()noexcept{}
+    constexpr TextureDesc() noexcept {}
 
-    TextureDesc(const Char*         _Name,
-                RESOURCE_DIMENSION  _Type,
-                Uint32              _Width,
-                Uint32              _Height,
-                Uint32              _ArraySizeOrDepth,
-                TEXTURE_FORMAT      _Format,
-                Uint32              _MipLevels            = TextureDesc{}.MipLevels,
-                Uint32              _SampleCount          = TextureDesc{}.SampleCount,
-                USAGE               _Usage                = TextureDesc{}.Usage,
-                BIND_FLAGS          _BindFlags            = TextureDesc{}.BindFlags,
-                CPU_ACCESS_FLAGS    _CPUAccessFlags       = TextureDesc{}.CPUAccessFlags,
-                MISC_TEXTURE_FLAGS  _MiscFlags            = TextureDesc{}.MiscFlags,
-                OptimizedClearValue _ClearValue           = TextureDesc{}.ClearValue,
-                Uint64              _ImmediateContextMask = TextureDesc{}.ImmediateContextMask) noexcept :
+    constexpr TextureDesc(const Char*         _Name,
+                          RESOURCE_DIMENSION  _Type,
+                          Uint32              _Width,
+                          Uint32              _Height,
+                          Uint32              _ArraySizeOrDepth,
+                          TEXTURE_FORMAT      _Format,
+                          Uint32              _MipLevels            = TextureDesc{}.MipLevels,
+                          Uint32              _SampleCount          = TextureDesc{}.SampleCount,
+                          USAGE               _Usage                = TextureDesc{}.Usage,
+                          BIND_FLAGS          _BindFlags            = TextureDesc{}.BindFlags,
+                          CPU_ACCESS_FLAGS    _CPUAccessFlags       = TextureDesc{}.CPUAccessFlags,
+                          MISC_TEXTURE_FLAGS  _MiscFlags            = TextureDesc{}.MiscFlags,
+                          OptimizedClearValue _ClearValue           = TextureDesc{}.ClearValue,
+                          Uint64              _ImmediateContextMask = TextureDesc{}.ImmediateContextMask) noexcept :
         DeviceObjectAttribs  {_Name            },
         Type                 {_Type            },
         Width                {_Width           },
@@ -148,7 +148,7 @@ struct TextureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// - False otherwise.
     /// The operator ignores DeviceObjectAttribs::Name field as it does not affect
     /// the texture description state.
-    bool operator ==(const TextureDesc& RHS)const
+    constexpr bool operator ==(const TextureDesc& RHS)const
     {
                 // Name is primarily used for debug purposes and does not affect the state.
                 // It is ignored in comparison operation.
@@ -204,10 +204,10 @@ struct TextureSubResData
     /// SrcOffset       | 0
     /// Stride          | 0
     /// DepthStride     | 0
-    TextureSubResData()noexcept{}
+    constexpr TextureSubResData() noexcept {}
 
     /// Initializes the structure members to perform copy from the CPU memory
-    TextureSubResData(const void* _pData, Uint32 _Stride, Uint32 _DepthStride = 0)noexcept :
+    constexpr TextureSubResData(const void* _pData, Uint32 _Stride, Uint32 _DepthStride = 0) noexcept :
         pData       (_pData),
         pSrcBuffer  (nullptr),
         SrcOffset   (0),
@@ -216,7 +216,7 @@ struct TextureSubResData
     {}
 
     /// Initializes the structure members to perform copy from the GPU buffer
-    TextureSubResData(IBuffer* _pBuffer, Uint32 _SrcOffset, Uint32 _Stride, Uint32 _DepthStride = 0)noexcept :
+    constexpr TextureSubResData(IBuffer* _pBuffer, Uint32 _SrcOffset, Uint32 _Stride, Uint32 _DepthStride = 0) noexcept :
         pData       {nullptr     },
         pSrcBuffer  {_pBuffer    },
         SrcOffset   {_SrcOffset  },
@@ -250,11 +250,11 @@ struct TextureData
     struct IDeviceContext* pContext     DEFAULT_INITIALIZER(nullptr);
 
 #if DILIGENT_CPP_INTERFACE
-    TextureData() noexcept {}
+    constexpr TextureData() noexcept {}
 
-    TextureData(TextureSubResData* _pSubResources,
-                Uint32             _NumSubresources,
-                IDeviceContext*    _pContext = nullptr) noexcept :
+    constexpr TextureData(TextureSubResData* _pSubResources,
+                          Uint32             _NumSubresources,
+                          IDeviceContext*    _pContext = nullptr) noexcept :
         pSubResources   {_pSubResources  },
         NumSubresources {_NumSubresources},
         pContext        {_pContext       }
@@ -270,11 +270,11 @@ struct MappedTextureSubresource
     Uint32 DepthStride DEFAULT_INITIALIZER(0);
 
 #if DILIGENT_CPP_INTERFACE
-    MappedTextureSubresource() noexcept {}
+    constexpr MappedTextureSubresource() noexcept {}
 
-    MappedTextureSubresource(PVoid  _pData,
-                             Uint32 _Stride,
-                             Uint32 _DepthStride = 0) noexcept :
+    constexpr MappedTextureSubresource(PVoid  _pData,
+                                       Uint32 _Stride,
+                                       Uint32 _DepthStride = 0) noexcept :
         pData       {_pData      },
         Stride      {_Stride     },
         DepthStride {_DepthStride}

@@ -138,17 +138,17 @@ struct RasterizerStateDesc
 
 #if DILIGENT_CPP_INTERFACE
 
-    RasterizerStateDesc()noexcept{}
+    constexpr RasterizerStateDesc() noexcept {}
 
-    RasterizerStateDesc(FILL_MODE _FillMode,
-                        CULL_MODE _CullMode,
-                        Bool      _FrontCounterClockwise = RasterizerStateDesc{}.FrontCounterClockwise,
-                        Bool      _DepthClipEnable       = RasterizerStateDesc{}.DepthClipEnable,
-                        Bool      _ScissorEnable         = RasterizerStateDesc{}.ScissorEnable,
-                        Bool      _AntialiasedLineEnable = RasterizerStateDesc{}.AntialiasedLineEnable,
-                        Int32     _DepthBias             = RasterizerStateDesc{}.DepthBias,
-                        Float32   _DepthBiasClamp        = RasterizerStateDesc{}.DepthBiasClamp,
-                        Float32   _SlopeScaledDepthBias  = RasterizerStateDesc{}.SlopeScaledDepthBias)noexcept :
+    constexpr RasterizerStateDesc(FILL_MODE _FillMode,
+                                  CULL_MODE _CullMode,
+                                  Bool      _FrontCounterClockwise = RasterizerStateDesc{}.FrontCounterClockwise,
+                                  Bool      _DepthClipEnable       = RasterizerStateDesc{}.DepthClipEnable,
+                                  Bool      _ScissorEnable         = RasterizerStateDesc{}.ScissorEnable,
+                                  Bool      _AntialiasedLineEnable = RasterizerStateDesc{}.AntialiasedLineEnable,
+                                  Int32     _DepthBias             = RasterizerStateDesc{}.DepthBias,
+                                  Float32   _DepthBiasClamp        = RasterizerStateDesc{}.DepthBiasClamp,
+                                  Float32   _SlopeScaledDepthBias  = RasterizerStateDesc{}.SlopeScaledDepthBias)noexcept :
         FillMode              {_FillMode             },
         CullMode              {_CullMode             },
         FrontCounterClockwise {_FrontCounterClockwise},
@@ -167,7 +167,7 @@ struct RasterizerStateDesc
     /// \return
     /// - True if all members of the two structures are equal.
     /// - False otherwise
-    bool operator == (const RasterizerStateDesc& RHS)const
+    constexpr bool operator == (const RasterizerStateDesc& RHS)const
     {
         return  FillMode              == RHS.FillMode              &&
                 CullMode              == RHS.CullMode              &&

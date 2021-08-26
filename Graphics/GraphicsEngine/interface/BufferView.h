@@ -62,11 +62,11 @@ struct BufferFormat
     // We have to explicitly define constructors because otherwise Apple's clang fails to compile the following legitimate code:
     //     BufferFormat{VT_FLOAT32, 4}
 
-    BufferFormat()noexcept{}
+    constexpr BufferFormat() noexcept {}
 
-    BufferFormat(VALUE_TYPE _ValueType,
-                 Uint8      _NumComponents,
-                 Bool       _IsNormalized   = BufferFormat{}.IsNormalized)noexcept :
+    constexpr BufferFormat(VALUE_TYPE _ValueType,
+                           Uint8      _NumComponents,
+                           Bool       _IsNormalized   = BufferFormat{}.IsNormalized) noexcept :
         ValueType     {_ValueType    },
         NumComponents {_NumComponents},
         IsNormalized  {_IsNormalized }
@@ -74,7 +74,7 @@ struct BufferFormat
 
 
     /// Tests if two structures are equivalent
-    bool operator == (const BufferFormat& RHS)const
+    constexpr bool operator == (const BufferFormat& RHS)const
     {
         return ValueType     == RHS.ValueType &&
                NumComponents == RHS.NumComponents &&
@@ -104,14 +104,14 @@ struct BufferViewDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
 
 #if DILIGENT_CPP_INTERFACE
-    BufferViewDesc()noexcept{}
+    constexpr BufferViewDesc() noexcept {}
 
-    explicit
+    explicit constexpr
     BufferViewDesc(const Char*      _Name,
                    BUFFER_VIEW_TYPE _ViewType,
                    BufferFormat     _Format     = BufferViewDesc{}.Format,
                    Uint32           _ByteOffset = BufferViewDesc{}.ByteOffset,
-                   Uint32           _ByteWidth  = BufferViewDesc{}.ByteWidth)noexcept :
+                   Uint32           _ByteWidth  = BufferViewDesc{}.ByteWidth) noexcept :
         DeviceObjectAttribs {_Name      },
         ViewType            {_ViewType  },
         Format              {_Format    },
@@ -127,7 +127,7 @@ struct BufferViewDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// - False otherwise
     /// \remarks
     /// The operator ignores DeviceObjectAttribs::Name field.
-    bool operator==(const BufferViewDesc& RHS) const
+    constexpr bool operator==(const BufferViewDesc& RHS) const
     {
                // Name is primarily used for debug purposes and does not affect the view.
                // It is ignored in comparison operation.

@@ -132,18 +132,18 @@ struct TextureViewDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
 #if DILIGENT_CPP_INTERFACE
 
-    TextureViewDesc() noexcept {}
+    constexpr TextureViewDesc() noexcept {}
 
-    TextureViewDesc(const Char*        _Name,
-                    TEXTURE_VIEW_TYPE  _ViewType,
-                    RESOURCE_DIMENSION _TextureDim,
-                    TEXTURE_FORMAT     _Format                 = TextureViewDesc{}.Format,
-                    Uint32             _MostDetailedMip        = TextureViewDesc{}.MostDetailedMip,
-                    Uint32             _NumMipLevels           = TextureViewDesc{}.NumMipLevels,
-                    Uint32             _FirstArrayOrDepthSlice = TextureViewDesc{}.FirstArraySlice,
-                    Uint32             _NumArrayOrDepthSlices  = TextureViewDesc{}.NumArraySlices,
-                    UAV_ACCESS_FLAG    _AccessFlags            = TextureViewDesc{}.AccessFlags,
-                    TEXTURE_VIEW_FLAGS _Flags                  = TextureViewDesc{}.Flags) noexcept :
+    constexpr TextureViewDesc(const Char*        _Name,
+                              TEXTURE_VIEW_TYPE  _ViewType,
+                              RESOURCE_DIMENSION _TextureDim,
+                              TEXTURE_FORMAT     _Format                 = TextureViewDesc{}.Format,
+                              Uint32             _MostDetailedMip        = TextureViewDesc{}.MostDetailedMip,
+                              Uint32             _NumMipLevels           = TextureViewDesc{}.NumMipLevels,
+                              Uint32             _FirstArrayOrDepthSlice = TextureViewDesc{}.FirstArraySlice,
+                              Uint32             _NumArrayOrDepthSlices  = TextureViewDesc{}.NumArraySlices,
+                              UAV_ACCESS_FLAG    _AccessFlags            = TextureViewDesc{}.AccessFlags,
+                              TEXTURE_VIEW_FLAGS _Flags                  = TextureViewDesc{}.Flags) noexcept :
         DeviceObjectAttribs{_Name                  },
         ViewType           {_ViewType              },
         TextureDim         {_TextureDim            },
@@ -162,7 +162,7 @@ struct TextureViewDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// \return
     /// - True if all members of the two structures are equal.
     /// - False otherwise
-    bool operator==(const TextureViewDesc& RHS) const
+    constexpr bool operator==(const TextureViewDesc& RHS) const
     {
         // Name is primarily used for debug purposes and does not affect the view.
         // It is ignored in comparison operation.

@@ -61,9 +61,9 @@ struct SampleDesc
     Uint8 Quality   DEFAULT_INITIALIZER(0);
 
 #if DILIGENT_CPP_INTERFACE
-    SampleDesc()noexcept{}
+    constexpr SampleDesc() noexcept {}
 
-    SampleDesc(Uint8 _Count, Uint8 _Quality) noexcept :
+    constexpr SampleDesc(Uint8 _Count, Uint8 _Quality) noexcept :
         Count   {_Count  },
         Quality {_Quality}
     {}
@@ -108,12 +108,12 @@ struct ShaderResourceVariableDesc
     SHADER_VARIABLE_FLAGS         Flags        DEFAULT_INITIALIZER(SHADER_VARIABLE_FLAG_NONE);
 
 #if DILIGENT_CPP_INTERFACE
-    ShaderResourceVariableDesc()noexcept{}
+    constexpr ShaderResourceVariableDesc() noexcept {}
 
-    ShaderResourceVariableDesc(SHADER_TYPE                   _ShaderStages,
-                               const Char*                   _Name,
-                               SHADER_RESOURCE_VARIABLE_TYPE _Type,
-                               SHADER_VARIABLE_FLAGS         _Flags = SHADER_VARIABLE_FLAG_NONE) noexcept :
+    constexpr ShaderResourceVariableDesc(SHADER_TYPE                   _ShaderStages,
+                                         const Char*                   _Name,
+                                         SHADER_RESOURCE_VARIABLE_TYPE _Type,
+                                         SHADER_VARIABLE_FLAGS         _Flags = SHADER_VARIABLE_FLAG_NONE) noexcept :
         ShaderStages{_ShaderStages},
         Name        {_Name        },
         Type        {_Type        },
@@ -257,11 +257,11 @@ struct RayTracingGeneralShaderGroup
     IShader*    pShader DEFAULT_INITIALIZER(nullptr);
 
 #if DILIGENT_CPP_INTERFACE
-    RayTracingGeneralShaderGroup() noexcept
+    constexpr RayTracingGeneralShaderGroup() noexcept
     {}
 
-    RayTracingGeneralShaderGroup(const char* _Name,
-                                 IShader*    _pShader) noexcept:
+    constexpr RayTracingGeneralShaderGroup(const char* _Name,
+                                           IShader*    _pShader) noexcept:
         Name   {_Name   },
         pShader{_pShader}
     {}
@@ -284,12 +284,12 @@ struct RayTracingTriangleHitShaderGroup
     IShader*    pAnyHitShader     DEFAULT_INITIALIZER(nullptr); // can be null
 
 #if DILIGENT_CPP_INTERFACE
-    RayTracingTriangleHitShaderGroup() noexcept
+    constexpr RayTracingTriangleHitShaderGroup() noexcept
     {}
 
-    RayTracingTriangleHitShaderGroup(const char* _Name,
-                                     IShader*    _pClosestHitShader,
-                                     IShader*    _pAnyHitShader    = nullptr) noexcept:
+    constexpr RayTracingTriangleHitShaderGroup(const char* _Name,
+                                               IShader*    _pClosestHitShader,
+                                               IShader*    _pAnyHitShader    = nullptr) noexcept:
         Name             {_Name             },
         pClosestHitShader{_pClosestHitShader},
         pAnyHitShader    {_pAnyHitShader    }
@@ -317,13 +317,13 @@ struct RayTracingProceduralHitShaderGroup
     IShader*    pAnyHitShader       DEFAULT_INITIALIZER(nullptr);
 
 #if DILIGENT_CPP_INTERFACE
-    RayTracingProceduralHitShaderGroup() noexcept
+    constexpr RayTracingProceduralHitShaderGroup() noexcept
     {}
 
-    RayTracingProceduralHitShaderGroup(const char* _Name,
-                                       IShader*    _pIntersectionShader,
-                                       IShader*    _pClosestHitShader  = nullptr,
-                                       IShader*    _pAnyHitShader      = nullptr) noexcept:
+    constexpr RayTracingProceduralHitShaderGroup(const char* _Name,
+                                                 IShader*    _pIntersectionShader,
+                                                 IShader*    _pClosestHitShader  = nullptr,
+                                                 IShader*    _pAnyHitShader      = nullptr) noexcept:
         Name               {_Name               },
         pIntersectionShader{_pIntersectionShader},
         pClosestHitShader  {_pClosestHitShader  },

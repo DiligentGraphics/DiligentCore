@@ -118,12 +118,12 @@ struct StencilOpDesc
     // We have to explicitly define constructors because otherwise Apple's clang fails to compile the following legitimate code:
     //     StencilOpDesc{STENCIL_OP_KEEP, STENCIL_OP_KEEP, STENCIL_OP_KEEP, COMPARISON_FUNC_ALWAYS}
 
-    StencilOpDesc()noexcept{}
+    constexpr StencilOpDesc() noexcept {}
 
-    StencilOpDesc(STENCIL_OP          _StencilFailOp,
-                  STENCIL_OP          _StencilDepthFailOp,
-                  STENCIL_OP          _StencilPassOp,
-                  COMPARISON_FUNCTION _StencilFunc)noexcept :
+    constexpr StencilOpDesc(STENCIL_OP          _StencilFailOp,
+                            STENCIL_OP          _StencilDepthFailOp,
+                            STENCIL_OP          _StencilPassOp,
+                            COMPARISON_FUNCTION _StencilFunc) noexcept :
         StencilFailOp      {_StencilFailOp     },
         StencilDepthFailOp {_StencilDepthFailOp},
         StencilPassOp      {_StencilPassOp     },
@@ -136,7 +136,7 @@ struct StencilOpDesc
     /// \return
     /// - True if all members of the two structures are equal.
     /// - False otherwise
-    bool operator== (const StencilOpDesc& rhs) const
+    constexpr bool operator== (const StencilOpDesc& rhs) const
     {
         return StencilFailOp      == rhs.StencilFailOp      &&
                StencilDepthFailOp == rhs.StencilDepthFailOp &&
@@ -191,16 +191,16 @@ struct DepthStencilStateDesc
     // We have to explicitly define constructors because otherwise Apple's clang fails to compile the following legitimate code:
     //     DepthStencilStateDesc{False, False}
 
-    DepthStencilStateDesc()noexcept{}
+    constexpr DepthStencilStateDesc() noexcept {}
 
-    DepthStencilStateDesc(Bool                _DepthEnable,
-                          Bool                _DepthWriteEnable,
-                          COMPARISON_FUNCTION _DepthFunc        = DepthStencilStateDesc{}.DepthFunc,
-                          Bool                _StencilEnable    = DepthStencilStateDesc{}.StencilEnable,
-                          Uint8               _StencilReadMask  = DepthStencilStateDesc{}.StencilReadMask,
-                          Uint8               _StencilWriteMask = DepthStencilStateDesc{}.StencilWriteMask,
-                          StencilOpDesc       _FrontFace        = StencilOpDesc{},
-                          StencilOpDesc       _BackFace         = StencilOpDesc{})noexcept :
+    constexpr DepthStencilStateDesc(Bool                _DepthEnable,
+                                    Bool                _DepthWriteEnable,
+                                    COMPARISON_FUNCTION _DepthFunc        = DepthStencilStateDesc{}.DepthFunc,
+                                    Bool                _StencilEnable    = DepthStencilStateDesc{}.StencilEnable,
+                                    Uint8               _StencilReadMask  = DepthStencilStateDesc{}.StencilReadMask,
+                                    Uint8               _StencilWriteMask = DepthStencilStateDesc{}.StencilWriteMask,
+                                    StencilOpDesc       _FrontFace        = StencilOpDesc{},
+                                    StencilOpDesc       _BackFace         = StencilOpDesc{}) noexcept :
         DepthEnable     {_DepthEnable     },
         DepthWriteEnable{_DepthWriteEnable},
         DepthFunc       {_DepthFunc       },
