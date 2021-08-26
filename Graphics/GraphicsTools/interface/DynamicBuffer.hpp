@@ -62,12 +62,14 @@ public:
 
     /// Resizes the buffer to the new size.
 
-    /// \param[in] pDevice  - Render device that will be used create a new internal buffer.
-    ///                       This parameter may be null (see remarks).
-    /// \param[in] pContext - Device context that will be used to copy existing contents
-    ///                       to the new buffer. This parameter may be null (see remarks).
-    /// \param[in] NewSize  - New buffer size. Can be zero.
-    /// \return               Pointer to the new buffer.
+    /// \param[in] pDevice        - Render device that will be used create a new internal buffer.
+    ///                             This parameter may be null (see remarks).
+    /// \param[in] pContext       - Device context that will be used to copy existing contents
+    ///                             to the new buffer. This parameter may be null (see remarks).
+    /// \param[in] NewSize        - New buffer size. Can be zero.
+    /// \param[in] DiscardContent - Whether to discard previous buffer content.
+    ///
+    /// \return     Pointer to the new buffer.
     ///
     /// \remarks    The method operation depends on which of pDevice and pContext parameters
     ///             are not null:
@@ -86,7 +88,8 @@ public:
     ///             If NewSize is zero, internal buffer will be released.
     IBuffer* Resize(IRenderDevice*  pDevice,
                     IDeviceContext* pContext,
-                    Uint32          NewSize);
+                    Uint32          NewSize,
+                    bool            DiscardContent = false);
 
 
     /// Returns the pointer to the buffer object, initializing it if necessary.
