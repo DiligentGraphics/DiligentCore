@@ -1346,4 +1346,4 @@ extern PFNGLCLIPCONTROLPROC glClipControl;
 #   define GL_KHR_debug 1
 #endif
 
-void LoadGLFunctions(Diligent::Version glesVer);
+void LoadGLFunctions();

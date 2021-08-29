@@ -214,21 +214,8 @@ void GLContext::InitGLES()
 {
     if (gles_initialized_)
         return;
-    //
-    //Initialize OpenGL ES 3 if available
-    //
-    const char* versionStr = (const char*)glGetString(GL_VERSION);
-    LOG_INFO_MESSAGE("GL Version: ", versionStr, '\n');
 
-    Version glesVer{3, 0};
-    if (const auto* dot = strchr(versionStr, '.'))
-    {
-        glesVer.Major = static_cast<Uint8>(dot[-1] - '0');
-        glesVer.Minor = static_cast<Uint8>(dot[+1] - '0');
-    }
-    VERIFY_EXPR(glesVer >= Version{3, 0});
-
-    LoadGLFunctions(glesVer);
+    LoadGLFunctions();
 
     // When GL_FRAMEBUFFER_SRGB is enabled, and if the destination image is in the sRGB colorspace
     // then OpenGL will assume the shader's output is in the linear RGB colorspace. It will therefore

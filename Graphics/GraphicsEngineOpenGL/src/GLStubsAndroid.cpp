@@ -257,13 +257,23 @@
     DECLARE_GL_FUNCTION_NO_STUB( glClipControl, PFNGLCLIPCONTROLPROC)
 #endif
 
-using Diligent::Version;
-void LoadGLFunctions(Version glesVer)
+void LoadGLFunctions()
 {
+    Diligent::Version glesVer{3, 0};
+    int MajorVersion = 0, MinorVersion = 0;
+    glGetIntegerv(GL_MAJOR_VERSION, &MajorVersion);
+    if (glGetError() == GL_NO_ERROR)
+    {
+        glGetIntegerv(GL_MINOR_VERSION, &MinorVersion);
+        if (glGetError() == GL_NO_ERROR)
+            glesVer = {MajorVersion, MinorVersion};
+    }
+    VERIFY_EXPR(glesVer >= Diligent::Version{3, 0});
+
     struct FuncNameAndVersion
     {
-        const char* Name;
-        Version     Ver;
+        const char*       Name;
+        Diligent::Version Ver;
         /*
         explicit FuncNameAndVersion(const char* _Name) noexcept :
             Name{_Name},
