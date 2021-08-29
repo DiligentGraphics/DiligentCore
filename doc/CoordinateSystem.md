@@ -20,8 +20,9 @@ Direct3D11 and Direct3D12.
 
 OpenGL as always is a headache. First of all, at some point somebody decided that symmetry should prevail over common sense, and as a result the default
 NDC space in OpenGL is [-1, +1] x [-1, +1] x [-1, +1]. After a bit of web search you can easily find what disastrous consequences this has for the
-precision of floating point numbers when using inverse depth buffering. Note that there is an OpenGL extension that allows using the normal [0, +1] z range, 
-but it is not widely supported on all mobile devices, so Diligent does not use it.
+precision of floating point numbers when using inverse depth buffering.
+[0, +1] z range may be optionally enabled by setting `ZeroToOneNDZ` of `EngineGLCreateInfo` struct to true. This feature requires an extension
+that is not widely supported on all mobile devices, so an application should query the actual z range after creating the device.
  
 The Z range in OpenGL cannot be fixed under the hood, as it needs to be baked into the projection matrix. Diligent's projection functions take a parameter
 that indicates if the matrix should be constructed for OpenGL. Note that Direct3D/Vulkan projection matrices will also work in OpenGL, but will use

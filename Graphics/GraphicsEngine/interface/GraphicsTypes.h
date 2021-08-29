@@ -2743,9 +2743,9 @@ struct EngineGLCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     /// Native window wrapper
     NativeWindow Window;
 
-    /// Enable 0..1 NDC Z range if required extension is supported; -1..+1 otherwise.
+    /// Enable 0..1 normalized-device Z range, if required extension is supported; -1..+1 otherwise.
     /// Use IRenderDevice::GetDeviceInfo().NDC to get current NDC.
-    bool         ZeroToOneNDC DEFAULT_INITIALIZER(false);
+    bool         ZeroToOneNDZ DEFAULT_INITIALIZER(false);
 
 #if DILIGENT_CPP_INTERFACE
     EngineGLCreateInfo() noexcept : EngineGLCreateInfo{EngineCreateInfo{}}

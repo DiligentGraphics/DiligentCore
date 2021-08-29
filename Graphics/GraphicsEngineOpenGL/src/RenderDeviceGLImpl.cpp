@@ -237,7 +237,7 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
 
     FlagSupportedTexFormats();
 
-    if (EngineCI.ZeroToOneNDC && (CheckExtension("GL_ARB_clip_control") || CheckExtension("GL_EXT_clip_control")))
+    if (EngineCI.ZeroToOneNDZ && (CheckExtension("GL_ARB_clip_control") || CheckExtension("GL_EXT_clip_control")))
     {
         glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
         m_DeviceInfo.NDC = NDCAttribs{0.0f, 1.0f, 0.5f};
