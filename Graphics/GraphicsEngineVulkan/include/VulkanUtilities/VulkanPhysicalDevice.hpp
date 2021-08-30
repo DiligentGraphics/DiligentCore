@@ -63,6 +63,7 @@ public:
         bool                                              SubgroupOps            = false; // Requires Vulkan 1.1
         bool                                              HasPortabilitySubset   = false;
         bool                                              RenderPass2            = false;
+        bool                                              DrawIndirectCount      = false;
     };
 
     struct ExtensionProperties

@@ -287,6 +287,24 @@ public:
                                                    SHADING_RATE_COMBINER PrimitiveCombiner,
                                                    SHADING_RATE_COMBINER TextureCombiner) override final;
 
+    /// Implementation of IDeviceContext::MultiDrawIndirect() in OpenGL backend.
+    virtual void DILIGENT_CALL_TYPE MultiDrawIndirect(const MultiDrawIndirectAttribs& Attribs,
+                                                      IBuffer*                        pAttribsBuffer) override final;
+
+    /// Implementation of IDeviceContext::MultiDrawIndexedIndirect() in OpenGL backend.
+    virtual void DILIGENT_CALL_TYPE MultiDrawIndexedIndirect(const MultiDrawIndexedIndirectAttribs& Attribs,
+                                                             IBuffer*                               pAttribsBuffer) override final;
+
+    /// Implementation of IDeviceContext::MultiDrawIndirectCount() in OpenGL backend.
+    virtual void DILIGENT_CALL_TYPE MultiDrawIndirectCount(const MultiDrawIndirectCountAttribs& Attribs,
+                                                           IBuffer*                             pAttribsBuffer,
+                                                           IBuffer*                             pCountBuffer) override final;
+
+    /// Implementation of IDeviceContext::MultiDrawIndexedIndirectCount() in OpenGL backend.
+    virtual void DILIGENT_CALL_TYPE MultiDrawIndexedIndirectCount(const MultiDrawIndexedIndirectCountAttribs& Attribs,
+                                                                  IBuffer*                                    pAttribsBuffer,
+                                                                  IBuffer*                                    pCountBuffer) override final;
+
     /// Implementation of IDeviceContextGL::UpdateCurrentGLContext().
     virtual bool DILIGENT_CALL_TYPE UpdateCurrentGLContext() override final;
 
@@ -310,6 +328,7 @@ private:
     __forceinline void PrepareForDraw(DRAW_FLAGS Flags, bool IsIndexed, GLenum& GlTopology);
     __forceinline void PrepareForIndexedDraw(VALUE_TYPE IndexType, Uint32 FirstIndexLocation, GLenum& GLIndexType, Uint32& FirstIndexByteOffset);
     __forceinline void PrepareForIndirectDraw(IBuffer* pAttribsBuffer);
+    __forceinline void PrepareForIndirectCountDraw(IBuffer* pAttribsBuffer, IBuffer* pCountBuffer);
     __forceinline void PostDraw();
 
     using TBindings = PipelineResourceSignatureGLImpl::TBindings;

@@ -33,6 +33,10 @@
 #include "EngineD3D11ImplTraits.hpp"
 #include "RenderDeviceD3DBase.hpp"
 
+#ifdef DILIGENT_ENABLE_D3D11_NVAPI
+#    include "nvapi.h"
+#endif
+
 namespace Diligent
 {
 
@@ -48,6 +52,8 @@ public:
                           const EngineD3D11CreateInfo& EngineAttribs,
                           const GraphicsAdapterInfo&   AdapterInfo,
                           ID3D11Device*                pd3d11Device) noexcept(false);
+    ~RenderDeviceD3D11Impl();
+
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of IRenderDevice::CreateBuffer() in Direct3D11 backend.
@@ -147,11 +153,15 @@ public:
     size_t GetCommandQueueCount() const { return 1; }
     Uint64 GetCommandQueueMask() const { return Uint64{1}; }
 
+    bool IsNvApiEnabled() const { return m_UseNvApi; }
+
 private:
     virtual void TestTextureFormat(TEXTURE_FORMAT TexFormat) override final;
 
     /// D3D11 device
     CComPtr<ID3D11Device> m_pd3d11Device;
+
+    bool m_UseNvApi = false;
 };
 
 } // namespace Diligent

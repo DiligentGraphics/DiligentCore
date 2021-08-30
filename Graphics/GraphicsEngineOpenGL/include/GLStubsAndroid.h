@@ -1273,6 +1273,19 @@ extern PFNGLGETQUERYOBJECTUI64VPROC glGetQueryObjectui64v;
 typedef void (GL_APIENTRY* PFNGLQUERYCOUNTERPROC) (GLuint id, GLenum target);
 extern PFNGLQUERYCOUNTERPROC glQueryCounter;
 
+
+#define GL_ARB_multi_draw_indirect 1
+
+// GL_EXT_multi_draw_indirect
+#define LOAD_GL_MULTIDRAW_ARRAYS_INDIRECT
+typedef void (GLAPIENTRY * PFNGLMULTIDRAWARRAYSINDIRECTPROC) (GLenum mode, const void *indirect, GLsizei primcount, GLsizei stride);
+extern PFNGLMULTIDRAWARRAYSINDIRECTPROC glMultiDrawArraysIndirect;
+
+// GL_EXT_multi_draw_indirect
+#define LOAD_GL_MULTIDRAW_ELEMENTS_INDIRECT
+typedef void (GLAPIENTRY * PFNGLMULTIDRAWELEMENTSINDIRECTPROC) (GLenum mode, GLenum type, const void *indirect, GLsizei primcount, GLsizei stride);
+extern PFNGLMULTIDRAWELEMENTSINDIRECTPROC glMultiDrawElementsIndirect;
+
 // GL_EXT_clip_control
 #define LOAD_GL_CLIP_CONTROL
 typedef void (GL_APIENTRYP PFNGLCLIPCONTROLPROC) (GLenum origin, GLenum depth);

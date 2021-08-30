@@ -121,6 +121,82 @@ bool VerifyDrawIndexedIndirectAttribs(const DrawIndexedIndirectAttribs& Attribs,
     return true;
 }
 
+bool VerifyMultiDrawIndirectAttribs(const MultiDrawIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer)
+{
+#define CHECK_MULTI_DRAW_INDIRECT_ATTRIBS(Expr, ...) CHECK_PARAMETER(Expr, "Multi draw indirect attribs are invalid: ", __VA_ARGS__)
+
+    CHECK_MULTI_DRAW_INDIRECT_ATTRIBS(pAttribsBuffer != nullptr, "indirect draw arguments buffer must not null.");
+    CHECK_MULTI_DRAW_INDIRECT_ATTRIBS((pAttribsBuffer->GetDesc().BindFlags & BIND_INDIRECT_DRAW_ARGS) != 0,
+                                      "indirect draw arguments buffer '",
+                                      pAttribsBuffer->GetDesc().Name, "' was not created with BIND_INDIRECT_DRAW_ARGS flag.");
+    CHECK_MULTI_DRAW_INDIRECT_ATTRIBS(Attribs.Stride >= sizeof(Uint32) * 4, "stride must be greater than 16 bytes");
+    CHECK_MULTI_DRAW_INDIRECT_ATTRIBS(Attribs.Stride % 4 == 0, "stride must be a multiple of 4");
+
+#undef CHECK_MULTI_DRAW_INDIRECT_ATTRIBS
+
+    return true;
+}
+
+bool VerifyMultiDrawIndexedIndirectAttribs(const MultiDrawIndexedIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer)
+{
+#define CHECK_MULTI_DRAW_INDEXED_INDIRECT_ATTRIBS(Expr, ...) CHECK_PARAMETER(Expr, "Multi draw indexed indirect attribs are invalid: ", __VA_ARGS__)
+
+    CHECK_MULTI_DRAW_INDEXED_INDIRECT_ATTRIBS(pAttribsBuffer != nullptr, "indirect draw arguments buffer must not null.");
+    CHECK_MULTI_DRAW_INDEXED_INDIRECT_ATTRIBS((pAttribsBuffer->GetDesc().BindFlags & BIND_INDIRECT_DRAW_ARGS) != 0,
+                                              "indirect draw arguments buffer '",
+                                              pAttribsBuffer->GetDesc().Name, "' was not created with BIND_INDIRECT_DRAW_ARGS flag.");
+    CHECK_MULTI_DRAW_INDEXED_INDIRECT_ATTRIBS(Attribs.IndexType == VT_UINT16 || Attribs.IndexType == VT_UINT32,
+                                              "IndexType (", GetValueTypeString(Attribs.IndexType), ") must be VT_UINT16 or VT_UINT32.");
+    CHECK_MULTI_DRAW_INDEXED_INDIRECT_ATTRIBS(Attribs.Stride >= sizeof(Uint32) * 5, "stride must be greater than 20 bytes");
+    CHECK_MULTI_DRAW_INDEXED_INDIRECT_ATTRIBS(Attribs.Stride % 4 == 0, "stride must be a multiple of 4");
+
+#undef CHECK_MULTI_DRAW_INDEXED_INDIRECT_ATTRIBS
+
+    return true;
+}
+
+bool VerifyMultiDrawIndirectCountAttribs(const MultiDrawIndirectCountAttribs& Attribs, const IBuffer* pAttribsBuffer, const IBuffer* pCountBuff)
+{
+#define CHECK_MULTI_DRAW_INDIRECT_COUNT_ATTRIBS(Expr, ...) CHECK_PARAMETER(Expr, "Multi draw indirect count attribs are invalid: ", __VA_ARGS__)
+
+    CHECK_MULTI_DRAW_INDIRECT_COUNT_ATTRIBS(pAttribsBuffer != nullptr, "indirect draw arguments buffer must not null.");
+    CHECK_MULTI_DRAW_INDIRECT_COUNT_ATTRIBS((pAttribsBuffer->GetDesc().BindFlags & BIND_INDIRECT_DRAW_ARGS) != 0,
+                                            "indirect draw arguments buffer '",
+                                            pAttribsBuffer->GetDesc().Name, "' was not created with BIND_INDIRECT_DRAW_ARGS flag.");
+    CHECK_MULTI_DRAW_INDIRECT_COUNT_ATTRIBS(pCountBuff != nullptr, "indirect count draw arguments buffer must not null.");
+    CHECK_MULTI_DRAW_INDIRECT_COUNT_ATTRIBS((pCountBuff->GetDesc().BindFlags & BIND_INDIRECT_DRAW_ARGS) != 0,
+                                            "indirect count draw arguments buffer '",
+                                            pCountBuff->GetDesc().Name, "' was not created with BIND_INDIRECT_DRAW_ARGS flag.");
+    CHECK_MULTI_DRAW_INDIRECT_COUNT_ATTRIBS(Attribs.Stride >= sizeof(Uint32) * 4, "stride must be greater than 16 bytes");
+    CHECK_MULTI_DRAW_INDIRECT_COUNT_ATTRIBS(Attribs.Stride % 4 == 0, "stride must be a multiple of 4");
+
+#undef CHECK_MULTI_DRAW_INDIRECT_COUNT_ATTRIBS
+
+    return true;
+}
+
+bool VerifyMultiDrawIndexedIndirectCountAttribs(const MultiDrawIndexedIndirectCountAttribs& Attribs, const IBuffer* pAttribsBuffer, const IBuffer* pCountBuff)
+{
+#define CHECK_MULTI_DRAW_INDEXED_INDIRECT_COUNT_ATTRIBS(Expr, ...) CHECK_PARAMETER(Expr, "Multi draw indexed indirect count attribs are invalid: ", __VA_ARGS__)
+
+    CHECK_MULTI_DRAW_INDEXED_INDIRECT_COUNT_ATTRIBS(Attribs.IndexType == VT_UINT16 || Attribs.IndexType == VT_UINT32,
+                                                    "IndexType (", GetValueTypeString(Attribs.IndexType), ") must be VT_UINT16 or VT_UINT32.");
+    CHECK_MULTI_DRAW_INDEXED_INDIRECT_COUNT_ATTRIBS(pAttribsBuffer != nullptr, "indirect draw arguments buffer must not null.");
+    CHECK_MULTI_DRAW_INDEXED_INDIRECT_COUNT_ATTRIBS((pAttribsBuffer->GetDesc().BindFlags & BIND_INDIRECT_DRAW_ARGS) != 0,
+                                                    "indirect draw arguments buffer '",
+                                                    pAttribsBuffer->GetDesc().Name, "' was not created with BIND_INDIRECT_DRAW_ARGS flag.");
+    CHECK_MULTI_DRAW_INDEXED_INDIRECT_COUNT_ATTRIBS(pCountBuff != nullptr, "indirect count draw arguments buffer must not null.");
+    CHECK_MULTI_DRAW_INDEXED_INDIRECT_COUNT_ATTRIBS((pCountBuff->GetDesc().BindFlags & BIND_INDIRECT_DRAW_ARGS) != 0,
+                                                    "indirect count draw arguments buffer '",
+                                                    pCountBuff->GetDesc().Name, "' was not created with BIND_INDIRECT_DRAW_ARGS flag.");
+    CHECK_MULTI_DRAW_INDEXED_INDIRECT_COUNT_ATTRIBS(Attribs.Stride >= sizeof(Uint32) * 5, "stride must be greater than 20 bytes");
+    CHECK_MULTI_DRAW_INDEXED_INDIRECT_COUNT_ATTRIBS(Attribs.Stride % 4 == 0, "stride must be a multiple of 4");
+
+#undef CHECK_MULTI_DRAW_INDEXED_INDIRECT_COUNT_ATTRIBS
+
+    return true;
+}
+
 bool VerifyDrawMeshIndirectAttribs(const DrawMeshIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer)
 {
 #define CHECK_DRAW_MESH_INDIRECT_ATTRIBS(Expr, ...) CHECK_PARAMETER(Expr, "Draw mesh indirect attribs are invalid: ", __VA_ARGS__)

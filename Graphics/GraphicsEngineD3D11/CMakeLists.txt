@@ -2,6 +2,7 @@ cmake_minimum_required (VERSION 3.10)
 
 project(Diligent-GraphicsEngineD3D11 CXX)
 
+set(DILIGENT_NVAPI_PATH "" CACHE PATH "Path to NVAPI to enable D3D11 extensions")
 
 set(INCLUDE 
     include/BufferD3D11Impl.hpp
@@ -109,6 +110,17 @@ target_include_directories(Diligent-GraphicsEngineD3D11-static
 PRIVATE
     include
 )
+
+if(EXISTS "${DILIGENT_NVAPI_PATH}/nvapi.h")
+    message(STATUS "Found NVApi with D3D11 extensions")
+    if(${CMAKE_SIZEOF_VOID_P} EQUAL 8)
+        target_link_libraries(Diligent-GraphicsEngineD3D11-static PRIVATE "${DILIGENT_NVAPI_PATH}/amd64/nvapi64.lib")
+    else()
+        target_link_libraries(Diligent-GraphicsEngineD3D11-static PRIVATE "${DILIGENT_NVAPI_PATH}/x86/nvapi.lib")
+    endif()
+    target_include_directories(Diligent-GraphicsEngineD3D11-static PRIVATE ${DILIGENT_NVAPI_PATH})
+    target_compile_definitions(Diligent-GraphicsEngineD3D11-static PRIVATE DILIGENT_ENABLE_D3D11_NVAPI)
+endif()
 
 target_link_libraries(Diligent-GraphicsEngineD3D11-static
 PRIVATE

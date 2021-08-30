@@ -315,6 +315,11 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice      vkDevice,
             m_ExtFeatures.HostQueryReset.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_QUERY_RESET_FEATURES;
         }
 
+        if (IsExtensionSupported(VK_KHR_DRAW_INDIRECT_COUNT_EXTENSION_NAME))
+        {
+            m_ExtFeatures.DrawIndirectCount = true;
+        }
+
         // make sure that last pNext is null
         *NextFeat = nullptr;
         *NextProp = nullptr;

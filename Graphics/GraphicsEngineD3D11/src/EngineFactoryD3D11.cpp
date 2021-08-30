@@ -435,7 +435,7 @@ GraphicsAdapterInfo EngineFactoryD3D11Impl::GetGraphicsAdapterInfo(void*        
         Features.ShaderFloat16 = ShaderFloat16Supported ? DEVICE_FEATURE_STATE_ENABLED : DEVICE_FEATURE_STATE_DISABLED;
     }
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(Features) == 39, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+    static_assert(sizeof(Features) == 40, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 #endif
 
 
@@ -496,6 +496,37 @@ GraphicsAdapterInfo EngineFactoryD3D11Impl::GetGraphicsAdapterInfo(void*        
         static_assert(sizeof(CompProps) == 32, "Did you add a new member to ComputeShaderProperties? Please initialize it here.");
 #endif
     }
+
+    bool NvApiSupported = false;
+#ifdef DILIGENT_ENABLE_D3D11_NVAPI
+    if (AdapterInfo.Vendor == ADAPTER_VENDOR_NVIDIA)
+        NvApiSupported = (NvAPI_Initialize() == NVAPI_OK);
+#endif
+
+    // Draw command properties
+    {
+        auto& DrawCommandProps{AdapterInfo.DrawCommand};
+#if D3D11_REQ_DRAWINDEXED_INDEX_COUNT_2_TO_EXP >= 32
+        DrawCommandProps.MaxIndexValue = ~0u;
+#else
+        DrawCommandProps.MaxIndexValue = 1u << D3D11_REQ_DRAWINDEXED_INDEX_COUNT_2_TO_EXP;
+#endif
+        DrawCommandProps.MaxDrawIndirectCount = 0;
+        DrawCommandProps.CapFlags             = DRAW_COMMAND_CAP_FLAG_NONE;
+        if (NvApiSupported)
+        {
+            DrawCommandProps.CapFlags |= DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_FIRST_INSTANCE;
+            AdapterInfo.Features.NativeMultiDrawIndirect = DEVICE_FEATURE_STATE_OPTIONAL;
+        }
+#if defined(_MSC_VER) && defined(_WIN64)
+        static_assert(sizeof(DrawCommandProps) == 12, "Did you add a new member to DrawCommandProperties? Please initialize it here.");
+#endif
+    }
+
+#ifdef DILIGENT_ENABLE_D3D11_NVAPI
+    if (NvApiSupported)
+        NvAPI_Unload();
+#endif
 
     return AdapterInfo;
 }

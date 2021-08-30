@@ -137,6 +137,33 @@ public:
         vkCmdDrawIndexedIndirect(m_VkCmdBuffer, Buffer, Offset, DrawCount, Stride);
     }
 
+    __forceinline void DrawIndirectCount(VkBuffer Buffer, VkDeviceSize Offset, VkBuffer CountBuffer, VkDeviceSize CountBufferOffset, uint32_t MaxDrawCount, uint32_t Stride)
+    {
+#if DILIGENT_USE_VOLK
+        VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
+        VERIFY(m_State.RenderPass != VK_NULL_HANDLE, "vkCmdDrawIndirectCountKHR() must be called inside render pass (19.3)");
+        VERIFY(m_State.GraphicsPipeline != VK_NULL_HANDLE, "No graphics pipeline bound");
+
+        vkCmdDrawIndirectCountKHR(m_VkCmdBuffer, Buffer, Offset, CountBuffer, CountBufferOffset, MaxDrawCount, Stride);
+#else
+        UNSUPPORTED("DrawIndirectCount is not supported when vulkan library is linked statically");
+#endif
+    }
+
+    __forceinline void DrawIndexedIndirectCount(VkBuffer Buffer, VkDeviceSize Offset, VkBuffer CountBuffer, VkDeviceSize CountBufferOffset, uint32_t MaxDrawCount, uint32_t Stride)
+    {
+#if DILIGENT_USE_VOLK
+        VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
+        VERIFY(m_State.RenderPass != VK_NULL_HANDLE, "vkCmdDrawIndirect() must be called inside render pass (19.3)");
+        VERIFY(m_State.GraphicsPipeline != VK_NULL_HANDLE, "No graphics pipeline bound");
+        VERIFY(m_State.IndexBuffer != VK_NULL_HANDLE, "No index buffer bound");
+
+        vkCmdDrawIndexedIndirectCountKHR(m_VkCmdBuffer, Buffer, Offset, CountBuffer, CountBufferOffset, MaxDrawCount, Stride);
+#else
+        UNSUPPORTED("DrawIndexedIndirectCount is not supported when vulkan library is linked statically");
+#endif
+    }
+
     __forceinline void DrawMesh(uint32_t TaskCount, uint32_t FirstTask)
     {
 #if DILIGENT_USE_VOLK

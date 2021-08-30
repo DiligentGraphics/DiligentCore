@@ -767,6 +767,7 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
         }
 
         Features.ShaderResourceRuntimeArray = DEVICE_FEATURE_STATE_ENABLED;
+        Features.NativeMultiDrawIndirect    = DEVICE_FEATURE_STATE_ENABLED;
 
         {
             D3D12_FEATURE_DATA_D3D12_OPTIONS d3d12Features = {};
@@ -970,8 +971,23 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
 #endif
     }
 
+    // Draw command properties
+    {
+        auto& DrawCommandProps{AdapterInfo.DrawCommand};
+#if D3D12_REQ_DRAWINDEXED_INDEX_COUNT_2_TO_EXP >= 32
+        DrawCommandProps.MaxIndexValue = ~0u;
+#else
+        DrawCommandProps.MaxIndexValue = 1u << D3D12_REQ_DRAWINDEXED_INDEX_COUNT_2_TO_EXP;
+#endif
+        DrawCommandProps.MaxDrawIndirectCount = 0;
+        DrawCommandProps.CapFlags             = DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_FIRST_INSTANCE | DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNT;
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(DeviceFeatures) == 39, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+        static_assert(sizeof(DrawCommandProps) == 12, "Did you add a new member to DrawCommandProperties? Please initialize it here.");
+#endif
+    }
+
+#if defined(_MSC_VER) && defined(_WIN64)
+    static_assert(sizeof(DeviceFeatures) == 40, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 #endif
 
     return AdapterInfo;

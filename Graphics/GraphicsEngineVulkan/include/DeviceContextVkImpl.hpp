@@ -290,6 +290,24 @@ public:
                                                    SHADING_RATE_COMBINER PrimitiveCombiner,
                                                    SHADING_RATE_COMBINER TextureCombiner) override final;
 
+    /// Implementation of IDeviceContext::MultiDrawIndirect() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE MultiDrawIndirect(const MultiDrawIndirectAttribs& Attribs,
+                                                      IBuffer*                        pAttribsBuffer) override final;
+
+    /// Implementation of IDeviceContext::MultiDrawIndexedIndirect() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE MultiDrawIndexedIndirect(const MultiDrawIndexedIndirectAttribs& Attribs,
+                                                             IBuffer*                               pAttribsBuffer) override final;
+
+    /// Implementation of IDeviceContext::MultiDrawIndirectCount() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE MultiDrawIndirectCount(const MultiDrawIndirectCountAttribs& Attribs,
+                                                           IBuffer*                             pAttribsBuffer,
+                                                           IBuffer*                             pCountBuffer) override final;
+
+    /// Implementation of IDeviceContext::MultiDrawIndexedIndirectCount() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE MultiDrawIndexedIndirectCount(const MultiDrawIndexedIndirectCountAttribs& Attribs,
+                                                                  IBuffer*                                    pAttribsBuffer,
+                                                                  IBuffer*                                    pCountBuffer) override final;
+
     // Transitions texture subresources from OldState to NewState, and optionally updates
     // internal texture state.
     // If OldState == RESOURCE_STATE_UNKNOWN, internal texture state is used as old state.

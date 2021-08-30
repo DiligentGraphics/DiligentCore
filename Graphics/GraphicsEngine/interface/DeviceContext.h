@@ -1737,6 +1737,198 @@ struct StateTransitionDesc
 typedef struct StateTransitionDesc StateTransitionDesc;
 
 
+/// This structure is used by IDeviceContext::MultiDrawIndirect().
+struct MultiDrawIndirectAttribs
+{
+    /// The number of commands to draw.
+    /// Must be less than DrawCommandProperties::MaxDrawIndirectCount.
+    Uint32     DrawCount            DEFAULT_INITIALIZER(1);
+
+    /// The byte stride between successive sets of draw parameters.
+    /// Must be a multiple of 4 and greater than or equal to 16 bytes.
+    Uint32     Stride               DEFAULT_INITIALIZER(sizeof(Uint32) * 4);
+
+    /// Additional flags, see Diligent::DRAW_FLAGS.
+    DRAW_FLAGS Flags                DEFAULT_INITIALIZER(DRAW_FLAG_NONE);
+
+    /// State transition mode for indirect draw arguments buffer.
+    RESOURCE_STATE_TRANSITION_MODE IndirectAttribsBufferStateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
+
+    /// Offset from the beginning of the buffer to the location of draw command attributes.
+    Uint32 IndirectDrawArgsOffset        DEFAULT_INITIALIZER(0);
+
+#if DILIGENT_CPP_INTERFACE
+    constexpr MultiDrawIndirectAttribs() noexcept {}
+
+    explicit constexpr MultiDrawIndirectAttribs(
+        Uint32                         _DrawCount,
+        Uint32                         _Stride                                   = MultiDrawIndirectAttribs{}.Stride,
+        DRAW_FLAGS                     _Flags                                    = MultiDrawIndirectAttribs{}.Flags,
+        Uint32                         _IndirectDrawArgsOffset                   = MultiDrawIndirectAttribs{}.IndirectDrawArgsOffset,
+        RESOURCE_STATE_TRANSITION_MODE _IndirectAttribsBufferStateTransitionMode = MultiDrawIndirectAttribs{}.IndirectAttribsBufferStateTransitionMode) noexcept :
+        DrawCount                               {_DrawCount                               },
+        Stride                                  {_Stride                                  },
+        Flags                                   {_Flags                                   },
+        IndirectAttribsBufferStateTransitionMode{_IndirectAttribsBufferStateTransitionMode},
+        IndirectDrawArgsOffset                  {_IndirectDrawArgsOffset                  }
+    {}
+#endif
+};
+typedef struct MultiDrawIndirectAttribs MultiDrawIndirectAttribs;
+
+
+/// This structure is used by IDeviceContext::MultiDrawIndexedIndirect().
+struct MultiDrawIndexedIndirectAttribs
+{
+    /// The type of the elements in the index buffer.
+    /// Allowed values: VT_UINT16 and VT_UINT32.
+    VALUE_TYPE IndexType            DEFAULT_INITIALIZER(VT_UNDEFINED);
+
+    /// The number of commands to draw.
+    /// Must be less than DrawCommandProperties::MaxDrawIndirectCount.
+    Uint32     DrawCount            DEFAULT_INITIALIZER(1);
+
+    /// The byte stride between successive sets of draw parameters.
+    /// Must be a multiple of 4 and greater than or equal to 20 bytes.
+    Uint32     Stride               DEFAULT_INITIALIZER(sizeof(Uint32) * 5);
+
+    /// Additional flags, see Diligent::DRAW_FLAGS.
+    DRAW_FLAGS Flags                DEFAULT_INITIALIZER(DRAW_FLAG_NONE);
+
+    /// State transition mode for indirect draw arguments buffer.
+    RESOURCE_STATE_TRANSITION_MODE IndirectAttribsBufferStateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
+
+    /// Offset from the beginning of the buffer to the location of draw command attributes.
+    Uint32 IndirectDrawArgsOffset        DEFAULT_INITIALIZER(0);
+
+#if DILIGENT_CPP_INTERFACE
+    constexpr MultiDrawIndexedIndirectAttribs() noexcept {}
+
+    explicit constexpr MultiDrawIndexedIndirectAttribs(
+        VALUE_TYPE                     _IndexType,
+        Uint32                         _DrawCount,
+        Uint32                         _Stride                                   = MultiDrawIndexedIndirectAttribs{}.Stride,
+        DRAW_FLAGS                     _Flags                                    = MultiDrawIndexedIndirectAttribs{}.Flags,
+        Uint32                         _IndirectDrawArgsOffset                   = MultiDrawIndexedIndirectAttribs{}.IndirectDrawArgsOffset,
+        RESOURCE_STATE_TRANSITION_MODE _IndirectAttribsBufferStateTransitionMode = MultiDrawIndexedIndirectAttribs{}.IndirectAttribsBufferStateTransitionMode) noexcept :
+        IndexType                               {_IndexType                               },
+        DrawCount                               {_DrawCount                               },
+        Stride                                  {_Stride                                  },
+        Flags                                   {_Flags                                   },
+        IndirectAttribsBufferStateTransitionMode{_IndirectAttribsBufferStateTransitionMode},
+        IndirectDrawArgsOffset                  {_IndirectDrawArgsOffset                  }
+    {}
+#endif
+};
+typedef struct MultiDrawIndexedIndirectAttribs MultiDrawIndexedIndirectAttribs;
+
+
+/// This structure is used by IDeviceContext::MultiDrawIndirectCount().
+struct MultiDrawIndirectCountAttribs
+{
+    /// The maximum number of commands that will be read from the count buffer.
+    /// Must be less than DrawCommandProperties::MaxDrawIndirectCount.
+    Uint32     MaxDrawCount         DEFAULT_INITIALIZER(1);
+
+    /// The byte stride between successive sets of draw parameters.
+    /// Must be a multiple of 4 and greater than or equal to 16 bytes.
+    Uint32     Stride               DEFAULT_INITIALIZER(sizeof(Uint32) * 4);
+
+    /// Additional flags, see Diligent::DRAW_FLAGS.
+    DRAW_FLAGS Flags                DEFAULT_INITIALIZER(DRAW_FLAG_NONE);
+
+    /// State transition mode for indirect draw arguments buffer.
+    RESOURCE_STATE_TRANSITION_MODE IndirectAttribsBufferStateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
+
+    /// State transition mode for the count buffer.
+    RESOURCE_STATE_TRANSITION_MODE CountBufferStateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
+
+    /// Offset from the beginning of the buffer to the location of draw command attributes.
+    Uint32 IndirectDrawArgsOffset   DEFAULT_INITIALIZER(0);
+
+    /// Offset from the beginning of the count buffer to the location of the command counter.
+    Uint32 CountBufferOffset        DEFAULT_INITIALIZER(0);
+
+#if DILIGENT_CPP_INTERFACE
+    constexpr MultiDrawIndirectCountAttribs() noexcept {}
+
+    explicit constexpr MultiDrawIndirectCountAttribs(
+        Uint32                         _MaxDrawCount,
+        Uint32                         _Stride                                   = MultiDrawIndirectCountAttribs{}.Stride,
+        DRAW_FLAGS                     _Flags                                    = MultiDrawIndirectCountAttribs{}.Flags,
+        Uint32                         _IndirectDrawArgsOffset                   = MultiDrawIndirectCountAttribs{}.IndirectDrawArgsOffset,
+        RESOURCE_STATE_TRANSITION_MODE _IndirectAttribsBufferStateTransitionMode = MultiDrawIndirectCountAttribs{}.IndirectAttribsBufferStateTransitionMode,
+        Uint32                         _CountBufferOffset                        = MultiDrawIndirectCountAttribs{}.CountBufferOffset,
+        RESOURCE_STATE_TRANSITION_MODE _CountBufferStateTransitionMode           = MultiDrawIndirectCountAttribs{}.CountBufferStateTransitionMode) noexcept :
+        MaxDrawCount                            {_MaxDrawCount                            },
+        Stride                                  {_Stride                                  },
+        Flags                                   {_Flags                                   },
+        IndirectAttribsBufferStateTransitionMode{_IndirectAttribsBufferStateTransitionMode},
+        CountBufferStateTransitionMode          {_CountBufferStateTransitionMode          },
+        IndirectDrawArgsOffset                  {_IndirectDrawArgsOffset                  },
+        CountBufferOffset                       {_CountBufferOffset                       }
+    {}
+#endif
+};
+typedef struct MultiDrawIndirectCountAttribs MultiDrawIndirectCountAttribs;
+
+
+/// This structure is used by IDeviceContext::MultiDrawIndexedIndirectCount().
+struct MultiDrawIndexedIndirectCountAttribs
+{
+    /// The type of the elements in the index buffer.
+    /// Allowed values: VT_UINT16 and VT_UINT32.
+    VALUE_TYPE IndexType            DEFAULT_INITIALIZER(VT_UNDEFINED);
+
+    /// The maximum number of commands that will be read from the count buffer.
+    /// Must be less than DrawCommandProperties::MaxDrawIndirectCount.
+    Uint32     MaxDrawCount         DEFAULT_INITIALIZER(1);
+
+    /// The byte stride between successive sets of draw parameters.
+    /// Must be a multiple of 4 and greater than or equal to 20 bytes.
+    Uint32     Stride               DEFAULT_INITIALIZER(sizeof(Uint32) * 5);
+
+    /// Additional flags, see Diligent::DRAW_FLAGS.
+    DRAW_FLAGS Flags                DEFAULT_INITIALIZER(DRAW_FLAG_NONE);
+
+    /// State transition mode for indirect draw arguments buffer.
+    RESOURCE_STATE_TRANSITION_MODE IndirectAttribsBufferStateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
+
+    /// State transition mode for the count buffer.
+    RESOURCE_STATE_TRANSITION_MODE CountBufferStateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
+
+    /// Offset from the beginning of the buffer to the location of draw command attributes.
+    Uint32 IndirectDrawArgsOffset   DEFAULT_INITIALIZER(0);
+
+    /// Offset from the beginning of the count buffer to the location of the command counter.
+    Uint32 CountBufferOffset        DEFAULT_INITIALIZER(0);
+
+#if DILIGENT_CPP_INTERFACE
+    constexpr MultiDrawIndexedIndirectCountAttribs() noexcept {}
+    
+    explicit constexpr MultiDrawIndexedIndirectCountAttribs(
+        VALUE_TYPE                     _IndexType,
+        Uint32                         _MaxDrawCount,
+        Uint32                         _Stride                                   = MultiDrawIndexedIndirectCountAttribs{}.Stride,
+        DRAW_FLAGS                     _Flags                                    = MultiDrawIndexedIndirectCountAttribs{}.Flags,
+        Uint32                         _IndirectDrawArgsOffset                   = MultiDrawIndexedIndirectCountAttribs{}.IndirectDrawArgsOffset,
+        RESOURCE_STATE_TRANSITION_MODE _IndirectAttribsBufferStateTransitionMode = MultiDrawIndexedIndirectCountAttribs{}.IndirectAttribsBufferStateTransitionMode,
+        Uint32                         _CountBufferOffset                        = MultiDrawIndexedIndirectCountAttribs{}.CountBufferOffset,
+        RESOURCE_STATE_TRANSITION_MODE _CountBufferStateTransitionMode           = MultiDrawIndexedIndirectCountAttribs{}.CountBufferStateTransitionMode) noexcept :
+        IndexType                               {_IndexType                               },
+        MaxDrawCount                            {_MaxDrawCount                            },
+        Stride                                  {_Stride                                  },
+        Flags                                   {_Flags                                   },
+        IndirectAttribsBufferStateTransitionMode{_IndirectAttribsBufferStateTransitionMode},
+        CountBufferStateTransitionMode          {_CountBufferStateTransitionMode          },
+        IndirectDrawArgsOffset                  {_IndirectDrawArgsOffset                  },
+        CountBufferOffset                       {_CountBufferOffset                       }
+    {}
+#endif
+};
+typedef struct MultiDrawIndexedIndirectCountAttribs MultiDrawIndexedIndirectCountAttribs;
+
+
 #define DILIGENT_INTERFACE_NAME IDeviceContext
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
@@ -2922,6 +3114,72 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
                                         SHADING_RATE          BaseRate,
                                         SHADING_RATE_COMBINER PrimitiveCombiner,
                                         SHADING_RATE_COMBINER TextureCombiner) PURE;
+    
+    /// Executes an indirect multi draw command.
+
+    /// \param [in] Attribs        - Structure describing the command attributes, see Diligent::MultiDrawIndirectAttribs for details.
+    /// \param [in] pAttribsBuffer - Pointer to the buffer, from which indirect draw attributes will be read.
+    ///                              The buffer must contain the following arguments at the specified offset:
+    ///                                  Uint32 NumVertices;
+    ///                                  Uint32 NumInstances;
+    ///                                  Uint32 StartVertexLocation;
+    ///                                  Uint32 FirstInstanceLocation;
+    /// 
+    /// \remarks Supported contexts: graphics.
+    VIRTUAL void METHOD(MultiDrawIndirect)(THIS_
+                                           const MultiDrawIndirectAttribs REF Attribs,
+                                           IBuffer*                           pAttribsBuffer) PURE;
+    
+    /// Executes an indirect indexed multi draw command.
+
+    /// \param [in] Attribs        - Structure describing the command attributes, see Diligent::MultiDrawIndexedIndirectAttribs for details.
+    /// \param [in] pAttribsBuffer - Pointer to the buffer, from which indirect draw attributes will be read.
+    ///                              The buffer must contain the following arguments at the specified offset:
+    ///                                  Uint32 NumIndices;
+    ///                                  Uint32 NumInstances;
+    ///                                  Uint32 FirstIndexLocation;
+    ///                                  Uint32 BaseVertex;
+    ///                                  Uint32 FirstInstanceLocation;
+    /// 
+    /// \remarks Supported contexts: graphics.
+    VIRTUAL void METHOD(MultiDrawIndexedIndirect)(THIS_
+                                                  const MultiDrawIndexedIndirectAttribs REF Attribs,
+                                                  IBuffer*                                  pAttribsBuffer) PURE;
+    
+    /// Executes an indirect multi draw command with indirect command count buffer.
+
+    /// \param [in] Attribs        - Structure describing the command attributes, see Diligent::MultiDrawIndirectAttribs for details.
+    /// \param [in] pAttribsBuffer - Pointer to the buffer, from which indirect draw attributes will be read.
+    ///                              The buffer must contain the following arguments at the specified offset:
+    ///                                  Uint32 NumVertices;
+    ///                                  Uint32 NumInstances;
+    ///                                  Uint32 StartVertexLocation;
+    ///                                  Uint32 FirstInstanceLocation;
+    /// \param [in] pCountBuffer   - Pointer to the buffer, from which Uint32 value with draw count will be read.
+    /// 
+    /// \remarks Supported contexts: graphics.
+    VIRTUAL void METHOD(MultiDrawIndirectCount)(THIS_
+                                                const MultiDrawIndirectCountAttribs REF Attribs,
+                                                IBuffer*                                pAttribsBuffer,
+                                                IBuffer*                                pCountBuffer) PURE;
+    
+    /// Executes an indirect indexed multi draw command with indirect command count buffer.
+
+    /// \param [in] Attribs        - Structure describing the command attributes, see Diligent::MultiDrawIndexedIndirectAttribs for details.
+    /// \param [in] pAttribsBuffer - Pointer to the buffer, from which indirect draw attributes will be read.
+    ///                              The buffer must contain the following arguments at the specified offset:
+    ///                                  Uint32 NumIndices;
+    ///                                  Uint32 NumInstances;
+    ///                                  Uint32 FirstIndexLocation;
+    ///                                  Uint32 BaseVertex;
+    ///                                  Uint32 FirstInstanceLocation;
+    /// \param [in] pCountBuffer   - Pointer to the buffer, from which Uint32 value with draw count will be read.
+    /// 
+    /// \remarks Supported contexts: graphics.
+    VIRTUAL void METHOD(MultiDrawIndexedIndirectCount)(THIS_
+                                                       const MultiDrawIndexedIndirectCountAttribs REF Attribs,
+                                                       IBuffer*                                       pAttribsBuffer,
+                                                       IBuffer*                                       pCountBuffer) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -2931,74 +3189,78 @@ DILIGENT_END_INTERFACE
 
 // clang-format off
 
-#    define IDeviceContext_GetDesc(This)                        CALL_IFACE_METHOD(DeviceContext, GetDesc,                   This)
-#    define IDeviceContext_Begin(This, ...)                     CALL_IFACE_METHOD(DeviceContext, Begin,                     This, __VA_ARGS__)
-#    define IDeviceContext_SetPipelineState(This, ...)          CALL_IFACE_METHOD(DeviceContext, SetPipelineState,          This, __VA_ARGS__)
-#    define IDeviceContext_TransitionShaderResources(This, ...) CALL_IFACE_METHOD(DeviceContext, TransitionShaderResources, This, __VA_ARGS__)
-#    define IDeviceContext_CommitShaderResources(This, ...)     CALL_IFACE_METHOD(DeviceContext, CommitShaderResources,     This, __VA_ARGS__)
-#    define IDeviceContext_SetStencilRef(This, ...)             CALL_IFACE_METHOD(DeviceContext, SetStencilRef,             This, __VA_ARGS__)
-#    define IDeviceContext_SetBlendFactors(This, ...)           CALL_IFACE_METHOD(DeviceContext, SetBlendFactors,           This, __VA_ARGS__)
-#    define IDeviceContext_SetVertexBuffers(This, ...)          CALL_IFACE_METHOD(DeviceContext, SetVertexBuffers,          This, __VA_ARGS__)
-#    define IDeviceContext_InvalidateState(This)                CALL_IFACE_METHOD(DeviceContext, InvalidateState,           This)
-#    define IDeviceContext_SetIndexBuffer(This, ...)            CALL_IFACE_METHOD(DeviceContext, SetIndexBuffer,            This, __VA_ARGS__)
-#    define IDeviceContext_SetViewports(This, ...)              CALL_IFACE_METHOD(DeviceContext, SetViewports,              This, __VA_ARGS__)
-#    define IDeviceContext_SetScissorRects(This, ...)           CALL_IFACE_METHOD(DeviceContext, SetScissorRects,           This, __VA_ARGS__)
-#    define IDeviceContext_SetRenderTargets(This, ...)          CALL_IFACE_METHOD(DeviceContext, SetRenderTargets,          This, __VA_ARGS__)
-#    define IDeviceContext_SetRenderTargetsExt(This, ...)       CALL_IFACE_METHOD(DeviceContext, SetRenderTargetsExt,       This, __VA_ARGS__)
-#    define IDeviceContext_BeginRenderPass(This, ...)           CALL_IFACE_METHOD(DeviceContext, BeginRenderPass,           This, __VA_ARGS__)
-#    define IDeviceContext_NextSubpass(This)                    CALL_IFACE_METHOD(DeviceContext, NextSubpass,               This)
-#    define IDeviceContext_EndRenderPass(This)                  CALL_IFACE_METHOD(DeviceContext, EndRenderPass,             This)
-#    define IDeviceContext_Draw(This, ...)                      CALL_IFACE_METHOD(DeviceContext, Draw,                      This, __VA_ARGS__)
-#    define IDeviceContext_DrawIndexed(This, ...)               CALL_IFACE_METHOD(DeviceContext, DrawIndexed,               This, __VA_ARGS__)
-#    define IDeviceContext_DrawIndirect(This, ...)              CALL_IFACE_METHOD(DeviceContext, DrawIndirect,              This, __VA_ARGS__)
-#    define IDeviceContext_DrawIndexedIndirect(This, ...)       CALL_IFACE_METHOD(DeviceContext, DrawIndexedIndirect,       This, __VA_ARGS__)
-#    define IDeviceContext_DrawMesh(This, ...)                  CALL_IFACE_METHOD(DeviceContext, DrawMesh,                  This, __VA_ARGS__)
-#    define IDeviceContext_DrawMeshIndirect(This, ...)          CALL_IFACE_METHOD(DeviceContext, DrawMeshIndirect,          This, __VA_ARGS__)
-#    define IDeviceContext_DrawMeshIndirectCount(This, ...)     CALL_IFACE_METHOD(DeviceContext, DrawMeshIndirectCount,     This, __VA_ARGS__)
-#    define IDeviceContext_DispatchCompute(This, ...)           CALL_IFACE_METHOD(DeviceContext, DispatchCompute,           This, __VA_ARGS__)
-#    define IDeviceContext_DispatchComputeIndirect(This, ...)   CALL_IFACE_METHOD(DeviceContext, DispatchComputeIndirect,   This, __VA_ARGS__)
-#    define IDeviceContext_DispatchTile(This, ...)              CALL_IFACE_METHOD(DeviceContext, DispatchTile,              This, __VA_ARGS__)
-#    define IDeviceContext_GetTileSize(This, ...)               CALL_IFACE_METHOD(DeviceContext, GetTileSize,               This, __VA_ARGS__)
-#    define IDeviceContext_ClearDepthStencil(This, ...)         CALL_IFACE_METHOD(DeviceContext, ClearDepthStencil,         This, __VA_ARGS__)
-#    define IDeviceContext_ClearRenderTarget(This, ...)         CALL_IFACE_METHOD(DeviceContext, ClearRenderTarget,         This, __VA_ARGS__)
-#    define IDeviceContext_FinishCommandList(This, ...)         CALL_IFACE_METHOD(DeviceContext, FinishCommandList,         This, __VA_ARGS__)
-#    define IDeviceContext_ExecuteCommandLists(This, ...)       CALL_IFACE_METHOD(DeviceContext, ExecuteCommandLists,       This, __VA_ARGS__)
-#    define IDeviceContext_EnqueueSignal(This, ...)             CALL_IFACE_METHOD(DeviceContext, EnqueueSignal,             This, __VA_ARGS__)
-#    define IDeviceContext_DeviceWaitForFence(This, ...)        CALL_IFACE_METHOD(DeviceContext, DeviceWaitForFence,        This, __VA_ARGS__)
-#    define IDeviceContext_WaitForIdle(This)                    CALL_IFACE_METHOD(DeviceContext, WaitForIdle,               This)
-#    define IDeviceContext_BeginQuery(This, ...)                CALL_IFACE_METHOD(DeviceContext, BeginQuery,                This, __VA_ARGS__)
-#    define IDeviceContext_EndQuery(This, ...)                  CALL_IFACE_METHOD(DeviceContext, EndQuery,                  This, __VA_ARGS__)
-#    define IDeviceContext_Flush(This)                          CALL_IFACE_METHOD(DeviceContext, Flush,                     This)
-#    define IDeviceContext_UpdateBuffer(This, ...)              CALL_IFACE_METHOD(DeviceContext, UpdateBuffer,              This, __VA_ARGS__)
-#    define IDeviceContext_CopyBuffer(This, ...)                CALL_IFACE_METHOD(DeviceContext, CopyBuffer,                This, __VA_ARGS__)
-#    define IDeviceContext_MapBuffer(This, ...)                 CALL_IFACE_METHOD(DeviceContext, MapBuffer,                 This, __VA_ARGS__)
-#    define IDeviceContext_UnmapBuffer(This, ...)               CALL_IFACE_METHOD(DeviceContext, UnmapBuffer,               This, __VA_ARGS__)
-#    define IDeviceContext_UpdateTexture(This, ...)             CALL_IFACE_METHOD(DeviceContext, UpdateTexture,             This, __VA_ARGS__)
-#    define IDeviceContext_CopyTexture(This, ...)               CALL_IFACE_METHOD(DeviceContext, CopyTexture,               This, __VA_ARGS__)
-#    define IDeviceContext_MapTextureSubresource(This, ...)     CALL_IFACE_METHOD(DeviceContext, MapTextureSubresource,     This, __VA_ARGS__)
-#    define IDeviceContext_UnmapTextureSubresource(This, ...)   CALL_IFACE_METHOD(DeviceContext, UnmapTextureSubresource,   This, __VA_ARGS__)
-#    define IDeviceContext_GenerateMips(This, ...)              CALL_IFACE_METHOD(DeviceContext, GenerateMips,              This, __VA_ARGS__)
-#    define IDeviceContext_FinishFrame(This)                    CALL_IFACE_METHOD(DeviceContext, FinishFrame,               This)
-#    define IDeviceContext_GetFrameNumber(This)                 CALL_IFACE_METHOD(DeviceContext, GetFrameNumber,            This)
-#    define IDeviceContext_TransitionResourceStates(This, ...)  CALL_IFACE_METHOD(DeviceContext, TransitionResourceStates,  This, __VA_ARGS__)
-#    define IDeviceContext_ResolveTextureSubresource(This, ...) CALL_IFACE_METHOD(DeviceContext, ResolveTextureSubresource, This, __VA_ARGS__)
-#    define IDeviceContext_BuildBLAS(This, ...)                 CALL_IFACE_METHOD(DeviceContext, BuildBLAS,                 This, __VA_ARGS__)
-#    define IDeviceContext_BuildTLAS(This, ...)                 CALL_IFACE_METHOD(DeviceContext, BuildTLAS,                 This, __VA_ARGS__)
-#    define IDeviceContext_CopyBLAS(This, ...)                  CALL_IFACE_METHOD(DeviceContext, CopyBLAS,                  This, __VA_ARGS__)
-#    define IDeviceContext_CopyTLAS(This, ...)                  CALL_IFACE_METHOD(DeviceContext, CopyTLAS,                  This, __VA_ARGS__)
-#    define IDeviceContext_WriteBLASCompactedSize(This, ...)    CALL_IFACE_METHOD(DeviceContext, WriteBLASCompactedSize,    This, __VA_ARGS__)
-#    define IDeviceContext_WriteTLASCompactedSize(This, ...)    CALL_IFACE_METHOD(DeviceContext, WriteTLASCompactedSize,    This, __VA_ARGS__)
-#    define IDeviceContext_TraceRays(This, ...)                 CALL_IFACE_METHOD(DeviceContext, TraceRays,                 This, __VA_ARGS__)
-#    define IDeviceContext_TraceRaysIndirect(This, ...)         CALL_IFACE_METHOD(DeviceContext, TraceRaysIndirect,         This, __VA_ARGS__)
-#    define IDeviceContext_UpdateSBT(This, ...)                 CALL_IFACE_METHOD(DeviceContext, UpdateSBT,                 This, __VA_ARGS__)
-#    define IDeviceContext_SetUserData(This, ...)               CALL_IFACE_METHOD(DeviceContext, SetUserData,               This, __VA_ARGS__)
-#    define IDeviceContext_GetUserData(This)                    CALL_IFACE_METHOD(DeviceContext, GetUserData,               This)
-#    define IDeviceContext_BeginDebugGroup(This, ...)           CALL_IFACE_METHOD(DeviceContext, BeginDebugGroup,           This, __VA_ARGS__)
-#    define IDeviceContext_EndDebugGroup(This)                  CALL_IFACE_METHOD(DeviceContext, EndDebugGroup,             This)
-#    define IDeviceContext_InsertDebugLabel(This, ...)          CALL_IFACE_METHOD(DeviceContext, InsertDebugLabel,          This, __VA_ARGS__)
-#    define IDeviceContext_LockCommandQueue(This)               CALL_IFACE_METHOD(DeviceContext, LockCommandQueue,          This)
-#    define IDeviceContext_UnlockCommandQueue(This)             CALL_IFACE_METHOD(DeviceContext, UnlockCommandQueue,        This)
-#    define IDeviceContext_SetShadingRate(This, ...)            CALL_IFACE_METHOD(DeviceContext, SetShadingRate,            This, __VA_ARGS__)
+#    define IDeviceContext_GetDesc(This)                            CALL_IFACE_METHOD(DeviceContext, GetDesc,                   This)
+#    define IDeviceContext_Begin(This, ...)                         CALL_IFACE_METHOD(DeviceContext, Begin,                     This, __VA_ARGS__)
+#    define IDeviceContext_SetPipelineState(This, ...)              CALL_IFACE_METHOD(DeviceContext, SetPipelineState,          This, __VA_ARGS__)
+#    define IDeviceContext_TransitionShaderResources(This, ...)     CALL_IFACE_METHOD(DeviceContext, TransitionShaderResources, This, __VA_ARGS__)
+#    define IDeviceContext_CommitShaderResources(This, ...)         CALL_IFACE_METHOD(DeviceContext, CommitShaderResources,     This, __VA_ARGS__)
+#    define IDeviceContext_SetStencilRef(This, ...)                 CALL_IFACE_METHOD(DeviceContext, SetStencilRef,             This, __VA_ARGS__)
+#    define IDeviceContext_SetBlendFactors(This, ...)               CALL_IFACE_METHOD(DeviceContext, SetBlendFactors,           This, __VA_ARGS__)
+#    define IDeviceContext_SetVertexBuffers(This, ...)              CALL_IFACE_METHOD(DeviceContext, SetVertexBuffers,          This, __VA_ARGS__)
+#    define IDeviceContext_InvalidateState(This)                    CALL_IFACE_METHOD(DeviceContext, InvalidateState,           This)
+#    define IDeviceContext_SetIndexBuffer(This, ...)                CALL_IFACE_METHOD(DeviceContext, SetIndexBuffer,            This, __VA_ARGS__)
+#    define IDeviceContext_SetViewports(This, ...)                  CALL_IFACE_METHOD(DeviceContext, SetViewports,              This, __VA_ARGS__)
+#    define IDeviceContext_SetScissorRects(This, ...)               CALL_IFACE_METHOD(DeviceContext, SetScissorRects,           This, __VA_ARGS__)
+#    define IDeviceContext_SetRenderTargets(This, ...)              CALL_IFACE_METHOD(DeviceContext, SetRenderTargets,          This, __VA_ARGS__)
+#    define IDeviceContext_SetRenderTargetsExt(This, ...)           CALL_IFACE_METHOD(DeviceContext, SetRenderTargetsExt,       This, __VA_ARGS__)
+#    define IDeviceContext_BeginRenderPass(This, ...)               CALL_IFACE_METHOD(DeviceContext, BeginRenderPass,           This, __VA_ARGS__)
+#    define IDeviceContext_NextSubpass(This)                        CALL_IFACE_METHOD(DeviceContext, NextSubpass,               This)
+#    define IDeviceContext_EndRenderPass(This)                      CALL_IFACE_METHOD(DeviceContext, EndRenderPass,             This)
+#    define IDeviceContext_Draw(This, ...)                          CALL_IFACE_METHOD(DeviceContext, Draw,                      This, __VA_ARGS__)
+#    define IDeviceContext_DrawIndexed(This, ...)                   CALL_IFACE_METHOD(DeviceContext, DrawIndexed,               This, __VA_ARGS__)
+#    define IDeviceContext_DrawIndirect(This, ...)                  CALL_IFACE_METHOD(DeviceContext, DrawIndirect,              This, __VA_ARGS__)
+#    define IDeviceContext_DrawIndexedIndirect(This, ...)           CALL_IFACE_METHOD(DeviceContext, DrawIndexedIndirect,       This, __VA_ARGS__)
+#    define IDeviceContext_DrawMesh(This, ...)                      CALL_IFACE_METHOD(DeviceContext, DrawMesh,                  This, __VA_ARGS__)
+#    define IDeviceContext_DrawMeshIndirect(This, ...)              CALL_IFACE_METHOD(DeviceContext, DrawMeshIndirect,          This, __VA_ARGS__)
+#    define IDeviceContext_DrawMeshIndirectCount(This, ...)         CALL_IFACE_METHOD(DeviceContext, DrawMeshIndirectCount,     This, __VA_ARGS__)
+#    define IDeviceContext_DispatchCompute(This, ...)               CALL_IFACE_METHOD(DeviceContext, DispatchCompute,           This, __VA_ARGS__)
+#    define IDeviceContext_DispatchComputeIndirect(This, ...)       CALL_IFACE_METHOD(DeviceContext, DispatchComputeIndirect,   This, __VA_ARGS__)
+#    define IDeviceContext_DispatchTile(This, ...)                  CALL_IFACE_METHOD(DeviceContext, DispatchTile,              This, __VA_ARGS__)
+#    define IDeviceContext_GetTileSize(This, ...)                   CALL_IFACE_METHOD(DeviceContext, GetTileSize,               This, __VA_ARGS__)
+#    define IDeviceContext_ClearDepthStencil(This, ...)             CALL_IFACE_METHOD(DeviceContext, ClearDepthStencil,         This, __VA_ARGS__)
+#    define IDeviceContext_ClearRenderTarget(This, ...)             CALL_IFACE_METHOD(DeviceContext, ClearRenderTarget,         This, __VA_ARGS__)
+#    define IDeviceContext_FinishCommandList(This, ...)             CALL_IFACE_METHOD(DeviceContext, FinishCommandList,         This, __VA_ARGS__)
+#    define IDeviceContext_ExecuteCommandLists(This, ...)           CALL_IFACE_METHOD(DeviceContext, ExecuteCommandLists,       This, __VA_ARGS__)
+#    define IDeviceContext_EnqueueSignal(This, ...)                 CALL_IFACE_METHOD(DeviceContext, EnqueueSignal,             This, __VA_ARGS__)
+#    define IDeviceContext_DeviceWaitForFence(This, ...)            CALL_IFACE_METHOD(DeviceContext, DeviceWaitForFence,        This, __VA_ARGS__)
+#    define IDeviceContext_WaitForIdle(This)                        CALL_IFACE_METHOD(DeviceContext, WaitForIdle,               This)
+#    define IDeviceContext_BeginQuery(This, ...)                    CALL_IFACE_METHOD(DeviceContext, BeginQuery,                This, __VA_ARGS__)
+#    define IDeviceContext_EndQuery(This, ...)                      CALL_IFACE_METHOD(DeviceContext, EndQuery,                  This, __VA_ARGS__)
+#    define IDeviceContext_Flush(This)                              CALL_IFACE_METHOD(DeviceContext, Flush,                     This)
+#    define IDeviceContext_UpdateBuffer(This, ...)                  CALL_IFACE_METHOD(DeviceContext, UpdateBuffer,              This, __VA_ARGS__)
+#    define IDeviceContext_CopyBuffer(This, ...)                    CALL_IFACE_METHOD(DeviceContext, CopyBuffer,                This, __VA_ARGS__)
+#    define IDeviceContext_MapBuffer(This, ...)                     CALL_IFACE_METHOD(DeviceContext, MapBuffer,                 This, __VA_ARGS__)
+#    define IDeviceContext_UnmapBuffer(This, ...)                   CALL_IFACE_METHOD(DeviceContext, UnmapBuffer,               This, __VA_ARGS__)
+#    define IDeviceContext_UpdateTexture(This, ...)                 CALL_IFACE_METHOD(DeviceContext, UpdateTexture,             This, __VA_ARGS__)
+#    define IDeviceContext_CopyTexture(This, ...)                   CALL_IFACE_METHOD(DeviceContext, CopyTexture,               This, __VA_ARGS__)
+#    define IDeviceContext_MapTextureSubresource(This, ...)         CALL_IFACE_METHOD(DeviceContext, MapTextureSubresource,     This, __VA_ARGS__)
+#    define IDeviceContext_UnmapTextureSubresource(This, ...)       CALL_IFACE_METHOD(DeviceContext, UnmapTextureSubresource,   This, __VA_ARGS__)
+#    define IDeviceContext_GenerateMips(This, ...)                  CALL_IFACE_METHOD(DeviceContext, GenerateMips,              This, __VA_ARGS__)
+#    define IDeviceContext_FinishFrame(This)                        CALL_IFACE_METHOD(DeviceContext, FinishFrame,               This)
+#    define IDeviceContext_GetFrameNumber(This)                     CALL_IFACE_METHOD(DeviceContext, GetFrameNumber,            This)
+#    define IDeviceContext_TransitionResourceStates(This, ...)      CALL_IFACE_METHOD(DeviceContext, TransitionResourceStates,  This, __VA_ARGS__)
+#    define IDeviceContext_ResolveTextureSubresource(This, ...)     CALL_IFACE_METHOD(DeviceContext, ResolveTextureSubresource, This, __VA_ARGS__)
+#    define IDeviceContext_BuildBLAS(This, ...)                     CALL_IFACE_METHOD(DeviceContext, BuildBLAS,                 This, __VA_ARGS__)
+#    define IDeviceContext_BuildTLAS(This, ...)                     CALL_IFACE_METHOD(DeviceContext, BuildTLAS,                     This, __VA_ARGS__)
+#    define IDeviceContext_CopyBLAS(This, ...)                      CALL_IFACE_METHOD(DeviceContext, CopyBLAS,                      This, __VA_ARGS__)
+#    define IDeviceContext_CopyTLAS(This, ...)                      CALL_IFACE_METHOD(DeviceContext, CopyTLAS,                      This, __VA_ARGS__)
+#    define IDeviceContext_WriteBLASCompactedSize(This, ...)        CALL_IFACE_METHOD(DeviceContext, WriteBLASCompactedSize,        This, __VA_ARGS__)
+#    define IDeviceContext_WriteTLASCompactedSize(This, ...)        CALL_IFACE_METHOD(DeviceContext, WriteTLASCompactedSize,        This, __VA_ARGS__)
+#    define IDeviceContext_TraceRays(This, ...)                     CALL_IFACE_METHOD(DeviceContext, TraceRays,                     This, __VA_ARGS__)
+#    define IDeviceContext_TraceRaysIndirect(This, ...)             CALL_IFACE_METHOD(DeviceContext, TraceRaysIndirect,             This, __VA_ARGS__)
+#    define IDeviceContext_UpdateSBT(This, ...)                     CALL_IFACE_METHOD(DeviceContext, UpdateSBT,                     This, __VA_ARGS__)
+#    define IDeviceContext_SetUserData(This, ...)                   CALL_IFACE_METHOD(DeviceContext, SetUserData,                   This, __VA_ARGS__)
+#    define IDeviceContext_GetUserData(This)                        CALL_IFACE_METHOD(DeviceContext, GetUserData,                   This)
+#    define IDeviceContext_BeginDebugGroup(This, ...)               CALL_IFACE_METHOD(DeviceContext, BeginDebugGroup,               This, __VA_ARGS__)
+#    define IDeviceContext_EndDebugGroup(This)                      CALL_IFACE_METHOD(DeviceContext, EndDebugGroup,                 This)
+#    define IDeviceContext_InsertDebugLabel(This, ...)              CALL_IFACE_METHOD(DeviceContext, InsertDebugLabel,              This, __VA_ARGS__)
+#    define IDeviceContext_LockCommandQueue(This)                   CALL_IFACE_METHOD(DeviceContext, LockCommandQueue,              This)
+#    define IDeviceContext_UnlockCommandQueue(This)                 CALL_IFACE_METHOD(DeviceContext, UnlockCommandQueue,            This)
+#    define IDeviceContext_SetShadingRate(This, ...)                CALL_IFACE_METHOD(DeviceContext, SetShadingRate,                This, __VA_ARGS__)
+#    define IDeviceContext_MultiDrawIndirect(This, ...)             CALL_IFACE_METHOD(DeviceContext, MultiDrawIndirect,             This, __VA_ARGS__)
+#    define IDeviceContext_MultiDrawIndexedIndirect(This, ...)      CALL_IFACE_METHOD(DeviceContext, MultiDrawIndexedIndirect,      This, __VA_ARGS__)
+#    define IDeviceContext_MultiDrawIndirectCount(This, ...)        CALL_IFACE_METHOD(DeviceContext, MultiDrawIndirectCount,        This, __VA_ARGS__)
+#    define IDeviceContext_MultiDrawIndexedIndirectCount(This, ...) CALL_IFACE_METHOD(DeviceContext, MultiDrawIndexedIndirectCount, This, __VA_ARGS__)
 
 // clang-format on
 

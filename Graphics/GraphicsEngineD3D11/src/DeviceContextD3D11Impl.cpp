@@ -2175,6 +2175,51 @@ void DeviceContextD3D11Impl::SetShadingRate(SHADING_RATE BaseRate, SHADING_RATE_
     UNSUPPORTED("SetShadingRate is not supported in DirectX 11");
 }
 
+void DeviceContextD3D11Impl::MultiDrawIndirect(const MultiDrawIndirectAttribs& Attribs,
+                                               IBuffer*                        pAttribsBuffer)
+{
+    TDeviceContextBase::DvpVerifyMultiDrawIndirectAttribs(Attribs, pAttribsBuffer);
+
+#ifdef DILIGENT_ENABLE_D3D11_NVAPI
+    PrepareForDraw(Attribs.Flags);
+
+    auto*         pIndirectDrawAttribsD3D11 = ValidatedCast<BufferD3D11Impl>(pAttribsBuffer);
+    ID3D11Buffer* pd3d11ArgsBuff            = pIndirectDrawAttribsD3D11->m_pd3d11Buffer;
+
+    VERIFY(m_pDevice->IsNvApiEnabled(), "NVAPI is not initialized or not supported");
+    NvAPI_D3D11_MultiDrawInstancedIndirect(m_pd3d11DeviceContext, Attribs.DrawCount, pd3d11ArgsBuff, Attribs.IndirectDrawArgsOffset, Attribs.Stride);
+#endif
+}
+
+void DeviceContextD3D11Impl::MultiDrawIndexedIndirect(const MultiDrawIndexedIndirectAttribs& Attribs,
+                                                      IBuffer*                               pAttribsBuffer)
+{
+    TDeviceContextBase::DvpVerifyMultiDrawIndexedIndirectAttribs(Attribs, pAttribsBuffer);
+
+#ifdef DILIGENT_ENABLE_D3D11_NVAPI
+    PrepareForIndexedDraw(Attribs.Flags, Attribs.IndexType);
+
+    auto*         pIndirectDrawAttribsD3D11 = ValidatedCast<BufferD3D11Impl>(pAttribsBuffer);
+    ID3D11Buffer* pd3d11ArgsBuff            = pIndirectDrawAttribsD3D11->m_pd3d11Buffer;
+
+    VERIFY(m_pDevice->IsNvApiEnabled(), "NVAPI is not initialized or not supported");
+    NvAPI_D3D11_MultiDrawIndexedInstancedIndirect(m_pd3d11DeviceContext, Attribs.DrawCount, pd3d11ArgsBuff, Attribs.IndirectDrawArgsOffset, Attribs.Stride);
+#endif
+}
+
+void DeviceContextD3D11Impl::MultiDrawIndirectCount(const MultiDrawIndirectCountAttribs& Attribs,
+                                                    IBuffer*                             pAttribsBuffer,
+                                                    IBuffer*                             pCountBuffer)
+{
+    UNSUPPORTED("MultiDrawIndirectCount is not supported in DirectX 11");
+}
+
+void DeviceContextD3D11Impl::MultiDrawIndexedIndirectCount(const MultiDrawIndexedIndirectCountAttribs& Attribs,
+                                                           IBuffer*                                    pAttribsBuffer,
+                                                           IBuffer*                                    pCountBuffer)
+{
+    UNSUPPORTED("MultiDrawIndexedIndirectCount is not supported in DirectX 11");
+}
 
 void DeviceContextD3D11Impl::BeginDebugGroup(const Char* Name, const float* pColor)
 {

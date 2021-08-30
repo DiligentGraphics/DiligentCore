@@ -257,6 +257,15 @@
     DECLARE_GL_FUNCTION_NO_STUB( glClipControl, PFNGLCLIPCONTROLPROC)
 #endif
 
+#ifdef LOAD_GL_MULTIDRAW_ARRAYS_INDIRECT
+    DECLARE_GL_FUNCTION( glMultiDrawArraysIndirect, PFNGLMULTIDRAWARRAYSINDIRECTPROC, GLenum mode, const void *indirect, GLsizei primcount, GLsizei stride)
+#endif
+
+#ifdef LOAD_GL_MULTIDRAW_ELEMENTS_INDIRECT
+    DECLARE_GL_FUNCTION( glMultiDrawElementsIndirect, PFNGLMULTIDRAWELEMENTSINDIRECTPROC, GLenum mode, GLenum type, const void *indirect, GLsizei primcount, GLsizei stride)
+#endif
+
+
 void LoadGLFunctions()
 {
     Diligent::Version glesVer{3, 0};
@@ -274,17 +283,6 @@ void LoadGLFunctions()
     {
         const char*       Name;
         Diligent::Version Ver;
-        /*
-        explicit FuncNameAndVersion(const char* _Name) noexcept :
-            Name{_Name},
-            Ver {3, 0}
-        {}
-
-        FuncNameAndVersion(const char* _Name,
-                           Version     _Ver) noexcept :
-            Name{_Name},
-            Ver {_Ver}
-        {}*/
     };
     const auto LoadFn = [glesVer](auto& Fn, std::initializer_list<FuncNameAndVersion> FnNames, auto* FnStub) //
     {
@@ -505,5 +503,13 @@ void LoadGLFunctions()
 
 #ifdef LOAD_GL_CLIP_CONTROL
     LOAD_GL_FUNCTION_NO_STUB(glClipControl, {{"glClipControlEXT", {3,0}}} );
+#endif
+
+#ifdef LOAD_GL_MULTIDRAW_ARRAYS_INDIRECT
+    LOAD_GL_FUNCTION_NO_STUB(glMultiDrawArraysIndirect, {{"glMultiDrawArraysIndirectEXT", {3,1}}} );
+#endif
+
+#ifdef LOAD_GL_MULTIDRAW_ELEMENTS_INDIRECT
+    LOAD_GL_FUNCTION_NO_STUB(glMultiDrawElementsIndirect, {{"glMultiDrawElementsIndirectEXT", {3,1}}} );
 #endif
 }

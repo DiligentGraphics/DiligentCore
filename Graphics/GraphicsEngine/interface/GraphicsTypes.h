@@ -1746,6 +1746,12 @@ struct DeviceFeatures
     /// Indicates if device supports variable rate shading.
     DEVICE_FEATURE_STATE VariableRateShading              DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
+    /// Indicates if device supports native multi draw indirect commands.
+    ///
+    /// \remarks  When native multi draw commands are not supported,
+    ///           they may be emulated by the engine, if possible.
+    DEVICE_FEATURE_STATE NativeMultiDrawIndirect          DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
 #if DILIGENT_CPP_INTERFACE
     constexpr DeviceFeatures() noexcept {}
 
@@ -1788,10 +1794,11 @@ struct DeviceFeatures
         NativeFence                       {State},
         TileShaders                       {State},
         TransferQueueTimestampQueries     {State},
-        VariableRateShading               {State}
+        VariableRateShading               {State},
+        NativeMultiDrawIndirect           {State}
     {
 #   if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(*this) == 39, "Did you add a new feature to DeviceFeatures? Please handle its status above.");
+        static_assert(sizeof(*this) == 40, "Did you add a new feature to DeviceFeatures? Please handle its status above.");
 #   endif
     }
 #endif
@@ -2519,6 +2526,36 @@ struct ShadingRateProperties
 typedef struct ShadingRateProperties ShadingRateProperties;
 
 
+/// Defines the draw command capability flags.
+DILIGENT_TYPED_ENUM(DRAW_COMMAND_CAP_FLAGS, Uint16)
+{
+    DRAW_COMMAND_CAP_FLAG_NONE                         = 0,
+
+    /// FirstInstanceLocation of the indirect draw command can be greater than zero.
+    DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_FIRST_INSTANCE = 1u << 0,
+
+    /// Indicates that IDeviceContext::MultiDrawIndirectCount() and IDeviceContext::MultiDrawIndexedIndirectCount()
+    /// are supported.
+    DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNT          = 1u << 1,
+};
+DEFINE_FLAG_ENUM_OPERATORS(DRAW_COMMAND_CAP_FLAGS);
+
+/// Draw command properties
+struct DrawCommandProperties
+{
+    /// Draw command capability flags, see Diligent::DRAW_COMMAND_CAP_FLAGS.
+    DRAW_COMMAND_CAP_FLAGS CapFlags             DEFAULT_INITIALIZER(DRAW_COMMAND_CAP_FLAG_NONE);
+
+    /// Maximum supported index value for index buffer.
+    Uint32                 MaxIndexValue        DEFAULT_INITIALIZER(0);
+
+    /// Maximum supported draw commands counter for IDeviceContext::MultiDrawIndirectCount() and
+    /// IDeviceContext::MultiDrawIndexedIndirectCount().
+    Uint32                 MaxDrawIndirectCount DEFAULT_INITIALIZER(0);
+};
+typedef struct DrawCommandProperties DrawCommandProperties;
+
+
 /// Command queue properties
 struct CommandQueueInfo
 {
@@ -2587,6 +2624,9 @@ struct GraphicsAdapterInfo
 
     /// Compute shader properties, see Diligent::ComputeShaderProperties.
     ComputeShaderProperties ComputeShader;
+
+    /// Draw command properties, see Diligent::DrawCommandProperties.
+    DrawCommandProperties DrawCommand;
 
     /// Supported device features, see Diligent::DeviceFeatures.
 

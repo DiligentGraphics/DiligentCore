@@ -383,6 +383,21 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
 #endif
     }
 
+    // Draw command properties
+    {
+        auto& DrawCommandProps{AdapterInfo.DrawCommand};
+        DrawCommandProps.MaxIndexValue        = vkDeviceProps.limits.maxDrawIndexedIndexValue;
+        DrawCommandProps.MaxDrawIndirectCount = vkDeviceProps.limits.maxDrawIndirectCount;
+        DrawCommandProps.CapFlags             = DRAW_COMMAND_CAP_FLAG_NONE;
+        if (vkFeatures.drawIndirectFirstInstance != VK_FALSE)
+            DrawCommandProps.CapFlags |= DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_FIRST_INSTANCE;
+        if (vkExtFeatures.DrawIndirectCount)
+            DrawCommandProps.CapFlags |= DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNT;
+#if defined(_MSC_VER) && defined(_WIN64)
+        static_assert(sizeof(DrawCommandProps) == 12, "Did you add a new member to DrawCommandProperties? Please initialize it here.");
+#endif
+    }
+
     // Set memory properties
     {
         auto& Mem{AdapterInfo.Memory};
@@ -671,7 +686,6 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
         vkEnabledFeatures.imageCubeArray                          = vkDeviceFeatures.imageCubeArray;
         vkEnabledFeatures.samplerAnisotropy                       = vkDeviceFeatures.samplerAnisotropy;
         vkEnabledFeatures.fullDrawIndexUint32                     = vkDeviceFeatures.fullDrawIndexUint32;
-        vkEnabledFeatures.multiDrawIndirect                       = vkDeviceFeatures.multiDrawIndirect;
         vkEnabledFeatures.drawIndirectFirstInstance               = vkDeviceFeatures.drawIndirectFirstInstance;
         vkEnabledFeatures.shaderStorageImageWriteWithoutFormat    = vkDeviceFeatures.shaderStorageImageWriteWithoutFormat;
         vkEnabledFeatures.shaderUniformBufferArrayDynamicIndexing = vkDeviceFeatures.shaderUniformBufferArrayDynamicIndexing;
@@ -987,6 +1001,16 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
                 }
             }
 
+            if (EnabledFeatures.NativeMultiDrawIndirect != DEVICE_FEATURE_STATE_DISABLED)
+            {
+                vkEnabledFeatures.multiDrawIndirect = vkDeviceFeatures.multiDrawIndirect;
+                if (DeviceExtFeatures.DrawIndirectCount)
+                {
+                    VERIFY_EXPR(PhysicalDevice->IsExtensionSupported(VK_KHR_DRAW_INDIRECT_COUNT_EXTENSION_NAME));
+                    DeviceExtensions.push_back(VK_KHR_DRAW_INDIRECT_COUNT_EXTENSION_NAME);
+                }
+            }
+
             // Append user-defined features
             *NextExt = EngineCI.pDeviceExtensionFeatures;
         }
@@ -997,7 +1021,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
         }
 
 #if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(Diligent::DeviceFeatures) == 39, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+        static_assert(sizeof(Diligent::DeviceFeatures) == 40, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 #endif
 
         for (Uint32 i = 0; i < EngineCI.DeviceExtensionCount; ++i)

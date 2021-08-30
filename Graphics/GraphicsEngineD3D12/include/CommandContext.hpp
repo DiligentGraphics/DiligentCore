@@ -168,13 +168,7 @@ public:
     };
     void SetDescriptorHeaps(ShaderDescriptorHeaps& Heaps);
 
-    void ExecuteIndirect(ID3D12CommandSignature* pCmdSignature, ID3D12Resource* pBuff, Uint64 ArgsOffset)
-    {
-        FlushResourceBarriers();
-        m_pCommandList->ExecuteIndirect(pCmdSignature, 1, pBuff, ArgsOffset, nullptr, 0);
-    }
-
-    void ExecuteIndirect(ID3D12CommandSignature* pCmdSignature, Uint32 MaxCommandCount, ID3D12Resource* pArgsBuff, Uint64 ArgsOffset, ID3D12Resource* pCountBuff, Uint64 CountOffset)
+    void ExecuteIndirect(ID3D12CommandSignature* pCmdSignature, Uint32 MaxCommandCount, ID3D12Resource* pArgsBuff, Uint64 ArgsOffset, ID3D12Resource* pCountBuff = nullptr, Uint64 CountOffset = 0)
     {
         FlushResourceBarriers();
         m_pCommandList->ExecuteIndirect(pCmdSignature, MaxCommandCount, pArgsBuff, ArgsOffset, pCountBuff, CountOffset);

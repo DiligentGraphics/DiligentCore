@@ -299,6 +299,24 @@ public:
                                                    SHADING_RATE_COMBINER PrimitiveCombiner,
                                                    SHADING_RATE_COMBINER TextureCombiner) override final;
 
+    /// Implementation of IDeviceContext::MultiDrawIndirect() in Direct3D12 backend.
+    virtual void DILIGENT_CALL_TYPE MultiDrawIndirect(const MultiDrawIndirectAttribs& Attribs,
+                                                      IBuffer*                        pAttribsBuffer) override final;
+
+    /// Implementation of IDeviceContext::MultiDrawIndexedIndirect() in Direct3D12 backend.
+    virtual void DILIGENT_CALL_TYPE MultiDrawIndexedIndirect(const MultiDrawIndexedIndirectAttribs& Attribs,
+                                                             IBuffer*                               pAttribsBuffer) override final;
+
+    /// Implementation of IDeviceContext::MultiDrawIndirectCount() in Direct3D12 backend.
+    virtual void DILIGENT_CALL_TYPE MultiDrawIndirectCount(const MultiDrawIndirectCountAttribs& Attribs,
+                                                           IBuffer*                             pAttribsBuffer,
+                                                           IBuffer*                             pCountBuffer) override final;
+
+    /// Implementation of IDeviceContext::MultiDrawIndexedIndirectCount() in Direct3D12 backend.
+    virtual void DILIGENT_CALL_TYPE MultiDrawIndexedIndirectCount(const MultiDrawIndexedIndirectCountAttribs& Attribs,
+                                                                  IBuffer*                                    pAttribsBuffer,
+                                                                  IBuffer*                                    pCountBuffer) override final;
+
     void UpdateBufferRegion(class BufferD3D12Impl*         pBuffD3D12,
                             D3D12DynamicAllocation&        Allocation,
                             Uint64                         DstOffset,
@@ -418,6 +436,9 @@ private:
     void DvpValidateCommittedShaderResources(RootTableInfo& RootInfo) const;
 #endif
 
+    ID3D12CommandSignature* GetDrawIndirectSignature(Uint32 Stride);
+    ID3D12CommandSignature* GetDrawIndexedIndirectSignature(Uint32 Stride);
+
     struct TextureUploadSpace
     {
         D3D12DynamicAllocation Allocation;
@@ -466,11 +487,11 @@ private:
     RootTableInfo m_GraphicsResources;
     RootTableInfo m_ComputeResources;
 
-    CComPtr<ID3D12CommandSignature> m_pDrawIndirectSignature;
-    CComPtr<ID3D12CommandSignature> m_pDrawIndexedIndirectSignature;
-    CComPtr<ID3D12CommandSignature> m_pDispatchIndirectSignature;
-    CComPtr<ID3D12CommandSignature> m_pDrawMeshIndirectSignature;
-    CComPtr<ID3D12CommandSignature> m_pTraceRaysIndirectSignature;
+    std::unordered_map<Uint32, CComPtr<ID3D12CommandSignature>> m_pDrawIndirectSignatureMap;
+    std::unordered_map<Uint32, CComPtr<ID3D12CommandSignature>> m_pDrawIndexedIndirectSignatureMap;
+    CComPtr<ID3D12CommandSignature>                             m_pDispatchIndirectSignature;
+    CComPtr<ID3D12CommandSignature>                             m_pDrawMeshIndirectSignature;
+    CComPtr<ID3D12CommandSignature>                             m_pTraceRaysIndirectSignature;
 
     D3D12DynamicHeap m_DynamicHeap;
 

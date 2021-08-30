@@ -886,6 +886,27 @@ void DeviceContextGLImpl::PrepareForIndirectDraw(IBuffer* pAttribsBuffer)
 #endif
 }
 
+void DeviceContextGLImpl::PrepareForIndirectCountDraw(IBuffer* pAttribsBuffer, IBuffer* pCountBuffer)
+{
+    PrepareForIndirectDraw(pAttribsBuffer);
+
+#if GL_ARB_indirect_parameters
+    auto* pCountBufferGL = ValidatedCast<BufferGLImpl>(pCountBuffer);
+    // The indirect rendering functions take their data from the buffer currently bound to the
+    // GL_DRAW_INDIRECT_BUFFER binding. Thus, any of indirect draw functions will fail if no buffer is
+    // bound to that binding.
+    pCountBufferGL->BufferMemoryBarrier(
+        MEMORY_BARRIER_INDIRECT_BUFFER, // Command data sourced from buffer objects by
+                                        // Draw*Indirect and DispatchComputeIndirect commands after the barrier
+                                        // will reflect data written by shaders prior to the barrier.The buffer
+                                        // objects affected by this bit are derived from the DRAW_INDIRECT_BUFFER
+                                        // and DISPATCH_INDIRECT_BUFFER bindings.
+        m_ContextState);
+    constexpr bool ResetVAO = false; // GL_DRAW_INDIRECT_BUFFER does not affect VAO
+    m_ContextState.BindBuffer(GL_PARAMETER_BUFFER, pCountBufferGL->m_GlBuffer, ResetVAO);
+#endif
+}
+
 void DeviceContextGLImpl::DrawIndirect(const DrawIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
 {
     DvpVerifyDrawIndirectArguments(Attribs, pAttribsBuffer);
@@ -1643,6 +1664,127 @@ void DeviceContextGLImpl::UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndir
 void DeviceContextGLImpl::SetShadingRate(SHADING_RATE BaseRate, SHADING_RATE_COMBINER PrimitiveCombiner, SHADING_RATE_COMBINER TextureCombiner)
 {
     UNSUPPORTED("SetShadingRate is not supported in OpenGL");
+}
+
+
+void DeviceContextGLImpl::MultiDrawIndirect(const MultiDrawIndirectAttribs& Attribs,
+                                            IBuffer*                        pAttribsBuffer)
+{
+    TDeviceContextBase::DvpVerifyMultiDrawIndirectAttribs(Attribs, pAttribsBuffer);
+
+#if GL_ARB_multi_draw_indirect
+    GLenum GlTopology;
+    PrepareForDraw(Attribs.Flags, true, GlTopology);
+
+    PrepareForIndirectDraw(pAttribsBuffer);
+
+    glMultiDrawArraysIndirect(GlTopology,
+                              reinterpret_cast<const void*>(static_cast<size_t>(Attribs.IndirectDrawArgsOffset)),
+                              Attribs.DrawCount,
+                              Attribs.Stride);
+    DEV_CHECK_GL_ERROR("glMultiDrawArraysIndirect() failed");
+
+    constexpr bool ResetVAO = false; // GL_DRAW_INDIRECT_BUFFER does not affect VAO
+    m_ContextState.BindBuffer(GL_DRAW_INDIRECT_BUFFER, GLObjectWrappers::GLBufferObj::Null(), ResetVAO);
+
+    PostDraw();
+#else
+    LOG_ERROR_MESSAGE("Multi indirect rendering is not supported");
+#endif
+}
+
+void DeviceContextGLImpl::MultiDrawIndexedIndirect(const MultiDrawIndexedIndirectAttribs& Attribs,
+                                                   IBuffer*                               pAttribsBuffer)
+{
+    TDeviceContextBase::DvpVerifyMultiDrawIndexedIndirectAttribs(Attribs, pAttribsBuffer);
+
+#if GL_ARB_multi_draw_indirect
+    GLenum GlTopology;
+    PrepareForDraw(Attribs.Flags, true, GlTopology);
+
+    GLenum GLIndexType;
+    Uint32 FirstIndexByteOffset;
+    PrepareForIndexedDraw(Attribs.IndexType, 0, GLIndexType, FirstIndexByteOffset);
+
+    PrepareForIndirectDraw(pAttribsBuffer);
+
+    glMultiDrawElementsIndirect(GlTopology,
+                                GLIndexType,
+                                reinterpret_cast<const void*>(static_cast<size_t>(Attribs.IndirectDrawArgsOffset)),
+                                Attribs.DrawCount,
+                                Attribs.Stride);
+    DEV_CHECK_GL_ERROR("glMultiDrawElementsIndirect() failed");
+
+    constexpr bool ResetVAO = false; // GL_DISPATCH_INDIRECT_BUFFER does not affect VAO
+    m_ContextState.BindBuffer(GL_DRAW_INDIRECT_BUFFER, GLObjectWrappers::GLBufferObj::Null(), ResetVAO);
+
+    PostDraw();
+#else
+    LOG_ERROR_MESSAGE("Multi indirect rendering is not supported");
+#endif
+}
+
+void DeviceContextGLImpl::MultiDrawIndirectCount(const MultiDrawIndirectCountAttribs& Attribs,
+                                                 IBuffer*                             pAttribsBuffer,
+                                                 IBuffer*                             pCountBuffer)
+{
+    TDeviceContextBase::DvpVerifyMultiDrawIndirectCountAttribs(Attribs, pAttribsBuffer, pCountBuffer);
+
+#if GL_VERSION_4_6
+    GLenum GlTopology;
+    PrepareForDraw(Attribs.Flags, true, GlTopology);
+
+    PrepareForIndirectCountDraw(pAttribsBuffer, pCountBuffer);
+
+    glMultiDrawArraysIndirectCount(GlTopology,
+                                   reinterpret_cast<const void*>(static_cast<size_t>(Attribs.IndirectDrawArgsOffset)),
+                                   static_cast<GLintptr>(Attribs.CountBufferOffset),
+                                   Attribs.MaxDrawCount,
+                                   Attribs.Stride);
+    DEV_CHECK_GL_ERROR("glMultiDrawArraysIndirectCount() failed");
+
+    constexpr bool ResetVAO = false; // GL_DRAW_INDIRECT_BUFFER does not affect VAO
+    m_ContextState.BindBuffer(GL_DRAW_INDIRECT_BUFFER, GLObjectWrappers::GLBufferObj::Null(), ResetVAO);
+    m_ContextState.BindBuffer(GL_PARAMETER_BUFFER, GLObjectWrappers::GLBufferObj::Null(), ResetVAO);
+
+    PostDraw();
+#else
+    LOG_ERROR_MESSAGE("Multi indirect count rendering is not supported");
+#endif
+}
+
+void DeviceContextGLImpl::MultiDrawIndexedIndirectCount(const MultiDrawIndexedIndirectCountAttribs& Attribs,
+                                                        IBuffer*                                    pAttribsBuffer,
+                                                        IBuffer*                                    pCountBuffer)
+{
+    TDeviceContextBase::DvpVerifyMultiDrawIndexedIndirectCountAttribs(Attribs, pAttribsBuffer, pCountBuffer);
+
+#if GL_VERSION_4_6
+    GLenum GlTopology;
+    PrepareForDraw(Attribs.Flags, true, GlTopology);
+
+    GLenum GLIndexType;
+    Uint32 FirstIndexByteOffset;
+    PrepareForIndexedDraw(Attribs.IndexType, 0, GLIndexType, FirstIndexByteOffset);
+
+    PrepareForIndirectCountDraw(pAttribsBuffer, pCountBuffer);
+
+    glMultiDrawElementsIndirectCount(GlTopology,
+                                     GLIndexType,
+                                     reinterpret_cast<const void*>(static_cast<size_t>(Attribs.IndirectDrawArgsOffset)),
+                                     static_cast<GLintptr>(Attribs.CountBufferOffset),
+                                     Attribs.MaxDrawCount,
+                                     Attribs.Stride);
+    DEV_CHECK_GL_ERROR("glMultiDrawElementsIndirectCount() failed");
+
+    constexpr bool ResetVAO = false; // GL_DISPATCH_INDIRECT_BUFFER does not affect VAO
+    m_ContextState.BindBuffer(GL_DRAW_INDIRECT_BUFFER, GLObjectWrappers::GLBufferObj::Null(), ResetVAO);
+    m_ContextState.BindBuffer(GL_PARAMETER_BUFFER, GLObjectWrappers::GLBufferObj::Null(), ResetVAO);
+
+    PostDraw();
+#else
+    LOG_ERROR_MESSAGE("Multi indirect count rendering is not supported");
+#endif
 }
 
 void DeviceContextGLImpl::BeginDebugGroup(const Char* Name, const float* pColor)

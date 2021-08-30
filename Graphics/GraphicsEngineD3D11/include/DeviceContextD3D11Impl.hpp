@@ -280,9 +280,27 @@ public:
     virtual void DILIGENT_CALL_TYPE UnlockCommandQueue() override final {}
 
     /// Implementation of IDeviceContext::SetShadingRate() in Direct3D11 backend.
-    void DILIGENT_CALL_TYPE SetShadingRate(SHADING_RATE          BaseRate,
-                                           SHADING_RATE_COMBINER PrimitiveCombiner,
-                                           SHADING_RATE_COMBINER TextureCombiner) override final;
+    virtual void DILIGENT_CALL_TYPE SetShadingRate(SHADING_RATE          BaseRate,
+                                                   SHADING_RATE_COMBINER PrimitiveCombiner,
+                                                   SHADING_RATE_COMBINER TextureCombiner) override final;
+
+    /// Implementation of IDeviceContext::MultiDrawIndirect() in Direct3D11 backend.
+    virtual void DILIGENT_CALL_TYPE MultiDrawIndirect(const MultiDrawIndirectAttribs& Attribs,
+                                                      IBuffer*                        pAttribsBuffer) override final;
+
+    /// Implementation of IDeviceContext::MultiDrawIndexedIndirect() in Direct3D11 backend.
+    virtual void DILIGENT_CALL_TYPE MultiDrawIndexedIndirect(const MultiDrawIndexedIndirectAttribs& Attribs,
+                                                             IBuffer*                               pAttribsBuffer) override final;
+
+    /// Implementation of IDeviceContext::MultiDrawIndirectCount() in Direct3D11 backend.
+    virtual void DILIGENT_CALL_TYPE MultiDrawIndirectCount(const MultiDrawIndirectCountAttribs& Attribs,
+                                                           IBuffer*                             pAttribsBuffer,
+                                                           IBuffer*                             pCountBuffer) override final;
+
+    /// Implementation of IDeviceContext::MultiDrawIndexedIndirectCount() in Direct3D11 backend.
+    virtual void DILIGENT_CALL_TYPE MultiDrawIndexedIndirectCount(const MultiDrawIndexedIndirectCountAttribs& Attribs,
+                                                                  IBuffer*                                    pAttribsBuffer,
+                                                                  IBuffer*                                    pCountBuffer) override final;
 
     /// Implementation of IDeviceContextD3D11::GetD3D11DeviceContext().
     virtual ID3D11DeviceContext* DILIGENT_CALL_TYPE GetD3D11DeviceContext() override final { return m_pd3d11DeviceContext; }

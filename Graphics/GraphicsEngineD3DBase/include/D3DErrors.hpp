@@ -79,6 +79,18 @@ private:
 } // namespace Diligent
 
 
+#define CHECK_D3D_RESULT(Expr, Message)                            \
+    do                                                             \
+    {                                                              \
+        HRESULT _hr_ = Expr;                                       \
+        if (FAILED(_hr_))                                          \
+        {                                                          \
+            ComErrorDesc ErrDesc(_hr_);                            \
+            DEV_ERROR(Message, "\nHRESULT Desc: ", ErrDesc.Get()); \
+        }                                                          \
+    } while (false)
+
+
 #define CHECK_D3D_RESULT_THROW(Expr, Message)                                \
     do                                                                       \
     {                                                                        \
