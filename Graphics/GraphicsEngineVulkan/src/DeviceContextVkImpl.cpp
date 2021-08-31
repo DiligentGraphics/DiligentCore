@@ -807,65 +807,65 @@ void DeviceContextVkImpl::DrawIndexed(const DrawIndexedAttribs& Attribs)
     }
 }
 
-void DeviceContextVkImpl::DrawIndirect(const DrawIndirectAttribs& Attribs, IBuffer* pAttribsBuffer, IBuffer* pCountBuffer)
+void DeviceContextVkImpl::DrawIndirect(const DrawIndirectAttribs& Attribs)
 {
-    DvpVerifyDrawIndirectArguments(Attribs, pAttribsBuffer, pCountBuffer);
+    DvpVerifyDrawIndirectArguments(Attribs);
 
     // We must prepare indirect draw attribs buffer first because state transitions must
     // be performed outside of render pass, and PrepareForDraw commits render pass
-    BufferVkImpl* pIndirectDrawAttribsVk = PrepareIndirectAttribsBuffer(pAttribsBuffer, Attribs.IndirectAttribsBufferStateTransitionMode, "Indirect draw (DeviceContextVkImpl::DrawIndirect)");
-    BufferVkImpl* pCountBufferVk         = pCountBuffer != nullptr ?
-        PrepareIndirectAttribsBuffer(pCountBuffer, Attribs.CounterBufferStateTransitionMode, "Count buffer (DeviceContextVkImpl::DrawIndirect)") :
+    BufferVkImpl* pIndirectDrawAttribsVk = PrepareIndirectAttribsBuffer(Attribs.pAttribsBuffer, Attribs.AttribsBufferStateTransitionMode, "Indirect draw (DeviceContextVkImpl::DrawIndirect)");
+    BufferVkImpl* pCountBufferVk         = Attribs.pCounterBuffer != nullptr ?
+        PrepareIndirectAttribsBuffer(Attribs.pCounterBuffer, Attribs.CounterBufferStateTransitionMode, "Count buffer (DeviceContextVkImpl::DrawIndirect)") :
         nullptr;
 
     PrepareForDraw(Attribs.Flags);
 
-    if (pCountBuffer == nullptr)
+    if (Attribs.pCounterBuffer == nullptr)
     {
         m_CommandBuffer.DrawIndirect(pIndirectDrawAttribsVk->GetVkBuffer(),
-                                     pIndirectDrawAttribsVk->GetDynamicOffset(GetContextId(), this) + Attribs.IndirectDrawArgsOffset,
-                                     Attribs.DrawCount, Attribs.DrawCount > 1 ? Attribs.IndirectDrawArgsStride : 0);
+                                     pIndirectDrawAttribsVk->GetDynamicOffset(GetContextId(), this) + Attribs.DrawArgsOffset,
+                                     Attribs.DrawCount, Attribs.DrawCount > 1 ? Attribs.DrawArgsStride : 0);
     }
     else
     {
         m_CommandBuffer.DrawIndirectCount(pIndirectDrawAttribsVk->GetVkBuffer(),
-                                          pIndirectDrawAttribsVk->GetDynamicOffset(GetContextId(), this) + Attribs.IndirectDrawArgsOffset,
+                                          pIndirectDrawAttribsVk->GetDynamicOffset(GetContextId(), this) + Attribs.DrawArgsOffset,
                                           pCountBufferVk->GetVkBuffer(),
                                           pCountBufferVk->GetDynamicOffset(GetContextId(), this) + Attribs.CounterOffset,
                                           Attribs.DrawCount,
-                                          Attribs.IndirectDrawArgsStride);
+                                          Attribs.DrawArgsStride);
     }
 
     ++m_State.NumCommands;
 }
 
-void DeviceContextVkImpl::DrawIndexedIndirect(const DrawIndexedIndirectAttribs& Attribs, IBuffer* pAttribsBuffer, IBuffer* pCountBuffer)
+void DeviceContextVkImpl::DrawIndexedIndirect(const DrawIndexedIndirectAttribs& Attribs)
 {
-    DvpVerifyDrawIndexedIndirectArguments(Attribs, pAttribsBuffer, pCountBuffer);
+    DvpVerifyDrawIndexedIndirectArguments(Attribs);
 
     // We must prepare indirect draw attribs buffer first because state transitions must
     // be performed outside of render pass, and PrepareForDraw commits render pass
-    BufferVkImpl* pIndirectDrawAttribsVk = PrepareIndirectAttribsBuffer(pAttribsBuffer, Attribs.IndirectAttribsBufferStateTransitionMode, "Indirect draw (DeviceContextVkImpl::DrawIndexedIndirect)");
-    BufferVkImpl* pCountBufferVk         = pCountBuffer != nullptr ?
-        PrepareIndirectAttribsBuffer(pCountBuffer, Attribs.CounterBufferStateTransitionMode, "Count buffer (DeviceContextVkImpl::DrawIndexedIndirect)") :
+    BufferVkImpl* pIndirectDrawAttribsVk = PrepareIndirectAttribsBuffer(Attribs.pAttribsBuffer, Attribs.AttribsBufferStateTransitionMode, "Indirect draw (DeviceContextVkImpl::DrawIndexedIndirect)");
+    BufferVkImpl* pCountBufferVk         = Attribs.pCounterBuffer != nullptr ?
+        PrepareIndirectAttribsBuffer(Attribs.pCounterBuffer, Attribs.CounterBufferStateTransitionMode, "Count buffer (DeviceContextVkImpl::DrawIndexedIndirect)") :
         nullptr;
 
     PrepareForIndexedDraw(Attribs.Flags, Attribs.IndexType);
 
-    if (pCountBuffer == nullptr)
+    if (Attribs.pCounterBuffer == nullptr)
     {
         m_CommandBuffer.DrawIndexedIndirect(pIndirectDrawAttribsVk->GetVkBuffer(),
-                                            pIndirectDrawAttribsVk->GetDynamicOffset(GetContextId(), this) + Attribs.IndirectDrawArgsOffset,
-                                            Attribs.DrawCount, Attribs.DrawCount > 1 ? Attribs.IndirectDrawArgsStride : 0);
+                                            pIndirectDrawAttribsVk->GetDynamicOffset(GetContextId(), this) + Attribs.DrawArgsOffset,
+                                            Attribs.DrawCount, Attribs.DrawCount > 1 ? Attribs.DrawArgsStride : 0);
     }
     else
     {
         m_CommandBuffer.DrawIndexedIndirectCount(pIndirectDrawAttribsVk->GetVkBuffer(),
-                                                 pIndirectDrawAttribsVk->GetDynamicOffset(GetContextId(), this) + Attribs.IndirectDrawArgsOffset,
+                                                 pIndirectDrawAttribsVk->GetDynamicOffset(GetContextId(), this) + Attribs.DrawArgsOffset,
                                                  pCountBufferVk->GetVkBuffer(),
                                                  pCountBufferVk->GetDynamicOffset(GetContextId(), this) + Attribs.CounterOffset,
                                                  Attribs.DrawCount,
-                                                 Attribs.IndirectDrawArgsStride);
+                                                 Attribs.DrawArgsStride);
     }
 
     ++m_State.NumCommands;

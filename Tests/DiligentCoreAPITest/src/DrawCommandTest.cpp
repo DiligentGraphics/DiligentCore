@@ -1706,10 +1706,10 @@ TEST_F(DrawCommandTest, DrawInstancedIndirect_FirstInstance_BaseVertex_FirstInde
         };
     auto pIndirectArgsBuff = CreateIndirectDrawArgsBuffer(IndirectDrawData, sizeof(IndirectDrawData));
 
-    DrawIndirectAttribs drawAttrs{DRAW_FLAG_VERIFY_ALL};
-    drawAttrs.IndirectAttribsBufferStateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
-    drawAttrs.IndirectDrawArgsOffset                   = 5 * sizeof(Uint32);
-    pContext->DrawIndirect(drawAttrs, pIndirectArgsBuff);
+    DrawIndirectAttribs drawAttrs{pIndirectArgsBuff, DRAW_FLAG_VERIFY_ALL};
+    drawAttrs.AttribsBufferStateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+    drawAttrs.DrawArgsOffset                   = 5 * sizeof(Uint32);
+    pContext->DrawIndirect(drawAttrs);
 
     Present();
 }
@@ -1763,9 +1763,10 @@ TEST_F(DrawCommandTest, DrawIndexedInstancedIndirect_FirstInstance_BaseVertex_Fi
         };
     auto pIndirectArgsBuff = CreateIndirectDrawArgsBuffer(IndirectDrawData, sizeof(IndirectDrawData));
 
-    DrawIndexedIndirectAttribs drawAttrs{VT_UINT32, DRAW_FLAG_VERIFY_ALL, RESOURCE_STATE_TRANSITION_MODE_TRANSITION};
-    drawAttrs.IndirectDrawArgsOffset = 5 * sizeof(Uint32);
-    pContext->DrawIndexedIndirect(drawAttrs, pIndirectArgsBuff);
+    DrawIndexedIndirectAttribs drawAttrs{VT_UINT32, pIndirectArgsBuff, DRAW_FLAG_VERIFY_ALL};
+    drawAttrs.AttribsBufferStateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+    drawAttrs.DrawArgsOffset                   = 5 * sizeof(Uint32);
+    pContext->DrawIndexedIndirect(drawAttrs);
 
     Present();
 }
@@ -1821,12 +1822,13 @@ TEST_F(DrawCommandTest, MultiDrawIndirect)
     auto pIndirectArgsBuff = CreateIndirectDrawArgsBuffer(IndirectDrawData, sizeof(IndirectDrawData));
 
     DrawIndirectAttribs drawAttrs;
-    drawAttrs.DrawCount                                = 2;
-    drawAttrs.Flags                                    = DRAW_FLAG_VERIFY_ALL;
-    drawAttrs.IndirectAttribsBufferStateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
-    drawAttrs.IndirectDrawArgsOffset                   = 5 * sizeof(Uint32);
-    drawAttrs.IndirectDrawArgsStride                   = 6 * sizeof(Uint32);
-    pContext->DrawIndirect(drawAttrs, pIndirectArgsBuff);
+    drawAttrs.pAttribsBuffer                   = pIndirectArgsBuff;
+    drawAttrs.DrawCount                        = 2;
+    drawAttrs.Flags                            = DRAW_FLAG_VERIFY_ALL;
+    drawAttrs.AttribsBufferStateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+    drawAttrs.DrawArgsOffset                   = 5 * sizeof(Uint32);
+    drawAttrs.DrawArgsStride                   = 6 * sizeof(Uint32);
+    pContext->DrawIndirect(drawAttrs);
 
     Present();
 }
@@ -1887,13 +1889,14 @@ TEST_F(DrawCommandTest, MultiDrawIndexedIndirect)
     auto pIndirectArgsBuff = CreateIndirectDrawArgsBuffer(IndirectDrawData, sizeof(IndirectDrawData));
 
     DrawIndexedIndirectAttribs drawAttrs;
-    drawAttrs.IndexType                                = VT_UINT32;
-    drawAttrs.DrawCount                                = 2;
-    drawAttrs.Flags                                    = DRAW_FLAG_VERIFY_ALL;
-    drawAttrs.IndirectAttribsBufferStateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
-    drawAttrs.IndirectDrawArgsOffset                   = 5 * sizeof(Uint32);
-    drawAttrs.IndirectDrawArgsStride                   = 7 * sizeof(Uint32);
-    pContext->DrawIndexedIndirect(drawAttrs, pIndirectArgsBuff);
+    drawAttrs.pAttribsBuffer                   = pIndirectArgsBuff;
+    drawAttrs.IndexType                        = VT_UINT32;
+    drawAttrs.DrawCount                        = 2;
+    drawAttrs.Flags                            = DRAW_FLAG_VERIFY_ALL;
+    drawAttrs.AttribsBufferStateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+    drawAttrs.DrawArgsOffset                   = 5 * sizeof(Uint32);
+    drawAttrs.DrawArgsStride                   = 7 * sizeof(Uint32);
+    pContext->DrawIndexedIndirect(drawAttrs);
 
     Present();
 }
@@ -1959,14 +1962,16 @@ TEST_F(DrawCommandTest, MultiDrawIndirectCount)
     auto pCountBuff = CreateIndirectDrawArgsBuffer(DrawCount, sizeof(DrawCount));
 
     DrawIndirectAttribs drawAttrs;
-    drawAttrs.DrawCount                                = 2;
-    drawAttrs.Flags                                    = DRAW_FLAG_VERIFY_ALL;
-    drawAttrs.IndirectAttribsBufferStateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
-    drawAttrs.IndirectDrawArgsOffset                   = 5 * sizeof(Uint32);
-    drawAttrs.IndirectDrawArgsStride                   = 6 * sizeof(Uint32);
-    drawAttrs.CounterBufferStateTransitionMode         = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
-    drawAttrs.CounterOffset                            = 2 * sizeof(Uint32);
-    pContext->DrawIndirect(drawAttrs, pIndirectArgsBuff, pCountBuff);
+    drawAttrs.pAttribsBuffer                   = pIndirectArgsBuff;
+    drawAttrs.DrawCount                        = 2;
+    drawAttrs.Flags                            = DRAW_FLAG_VERIFY_ALL;
+    drawAttrs.AttribsBufferStateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+    drawAttrs.DrawArgsOffset                   = 5 * sizeof(Uint32);
+    drawAttrs.DrawArgsStride                   = 6 * sizeof(Uint32);
+    drawAttrs.pCounterBuffer                   = pCountBuff;
+    drawAttrs.CounterBufferStateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+    drawAttrs.CounterOffset                    = 2 * sizeof(Uint32);
+    pContext->DrawIndirect(drawAttrs);
 
     Present();
 }
@@ -2038,15 +2043,17 @@ TEST_F(DrawCommandTest, MultiDrawIndexedIndirectCount)
     auto pCountBuff = CreateIndirectDrawArgsBuffer(DrawCount, sizeof(DrawCount));
 
     DrawIndexedIndirectAttribs drawAttrs;
-    drawAttrs.IndexType                                = VT_UINT32;
-    drawAttrs.DrawCount                                = 2;
-    drawAttrs.Flags                                    = DRAW_FLAG_VERIFY_ALL;
-    drawAttrs.IndirectAttribsBufferStateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
-    drawAttrs.IndirectDrawArgsOffset                   = 5 * sizeof(Uint32);
-    drawAttrs.IndirectDrawArgsStride                   = 7 * sizeof(Uint32);
-    drawAttrs.CounterBufferStateTransitionMode         = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
-    drawAttrs.CounterOffset                            = 2 * sizeof(Uint32);
-    pContext->DrawIndexedIndirect(drawAttrs, pIndirectArgsBuff, pCountBuff);
+    drawAttrs.pAttribsBuffer                   = pIndirectArgsBuff;
+    drawAttrs.IndexType                        = VT_UINT32;
+    drawAttrs.DrawCount                        = 2;
+    drawAttrs.Flags                            = DRAW_FLAG_VERIFY_ALL;
+    drawAttrs.AttribsBufferStateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+    drawAttrs.DrawArgsOffset                   = 5 * sizeof(Uint32);
+    drawAttrs.DrawArgsStride                   = 7 * sizeof(Uint32);
+    drawAttrs.pCounterBuffer                   = pCountBuff;
+    drawAttrs.CounterBufferStateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+    drawAttrs.CounterOffset                    = 2 * sizeof(Uint32);
+    pContext->DrawIndexedIndirect(drawAttrs);
 
     Present();
 }

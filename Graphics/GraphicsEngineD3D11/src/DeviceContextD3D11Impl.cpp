@@ -685,14 +685,14 @@ void DeviceContextD3D11Impl::DrawIndexed(const DrawIndexedAttribs& Attribs)
     }
 }
 
-void DeviceContextD3D11Impl::DrawIndirect(const DrawIndirectAttribs& Attribs, IBuffer* pAttribsBuffer, IBuffer* pCounterBuffer)
+void DeviceContextD3D11Impl::DrawIndirect(const DrawIndirectAttribs& Attribs)
 {
-    DvpVerifyDrawIndirectArguments(Attribs, pAttribsBuffer, pCounterBuffer);
-    DEV_CHECK_ERR(pCounterBuffer == nullptr, "Direct3D11 does not support indirect counter buffer");
+    DvpVerifyDrawIndirectArguments(Attribs);
+    DEV_CHECK_ERR(Attribs.pCounterBuffer == nullptr, "Direct3D11 does not support indirect counter buffer");
 
     PrepareForDraw(Attribs.Flags);
 
-    auto*         pIndirectDrawAttribsD3D11 = ValidatedCast<BufferD3D11Impl>(pAttribsBuffer);
+    auto*         pIndirectDrawAttribsD3D11 = ValidatedCast<BufferD3D11Impl>(Attribs.pAttribsBuffer);
     ID3D11Buffer* pd3d11ArgsBuff            = pIndirectDrawAttribsD3D11->m_pd3d11Buffer;
 
     bool NativeMultiDrawExecuted = false;
@@ -710,23 +710,23 @@ void DeviceContextD3D11Impl::DrawIndirect(const DrawIndirectAttribs& Attribs, IB
     if (!NativeMultiDrawExecuted)
     {
         for (Uint32 draw = 0; draw < Attribs.DrawCount; ++draw)
-            m_pd3d11DeviceContext->DrawInstancedIndirect(pd3d11ArgsBuff, Attribs.IndirectDrawArgsOffset + draw * Attribs.IndirectDrawArgsStride);
+            m_pd3d11DeviceContext->DrawInstancedIndirect(pd3d11ArgsBuff, Attribs.DrawArgsOffset + draw * Attribs.DrawArgsStride);
     }
 }
 
 
-void DeviceContextD3D11Impl::DrawIndexedIndirect(const DrawIndexedIndirectAttribs& Attribs, IBuffer* pAttribsBuffer, IBuffer* pCounterBuffer)
+void DeviceContextD3D11Impl::DrawIndexedIndirect(const DrawIndexedIndirectAttribs& Attribs)
 {
-    DvpVerifyDrawIndexedIndirectArguments(Attribs, pAttribsBuffer, pCounterBuffer);
-    DEV_CHECK_ERR(pCounterBuffer == nullptr, "Direct3D11 does not support indirect counter buffer");
+    DvpVerifyDrawIndexedIndirectArguments(Attribs);
+    DEV_CHECK_ERR(Attribs.pCounterBuffer == nullptr, "Direct3D11 does not support indirect counter buffer");
 
     PrepareForIndexedDraw(Attribs.Flags, Attribs.IndexType);
 
-    auto*         pIndirectDrawAttribsD3D11 = ValidatedCast<BufferD3D11Impl>(pAttribsBuffer);
+    auto*         pIndirectDrawAttribsD3D11 = ValidatedCast<BufferD3D11Impl>(Attribs.pAttribsBuffer);
     ID3D11Buffer* pd3d11ArgsBuff            = pIndirectDrawAttribsD3D11->m_pd3d11Buffer;
     if (Attribs.DrawCount == 1)
     {
-        m_pd3d11DeviceContext->DrawIndexedInstancedIndirect(pd3d11ArgsBuff, Attribs.IndirectDrawArgsOffset);
+        m_pd3d11DeviceContext->DrawIndexedInstancedIndirect(pd3d11ArgsBuff, Attribs.DrawArgsOffset);
     }
 
     bool NativeMultiDrawExecuted = false;
@@ -744,7 +744,7 @@ void DeviceContextD3D11Impl::DrawIndexedIndirect(const DrawIndexedIndirectAttrib
     if (!NativeMultiDrawExecuted)
     {
         for (Uint32 draw = 0; draw < Attribs.DrawCount; ++draw)
-            m_pd3d11DeviceContext->DrawIndexedInstancedIndirect(pd3d11ArgsBuff, Attribs.IndirectDrawArgsOffset + draw * Attribs.IndirectDrawArgsStride);
+            m_pd3d11DeviceContext->DrawIndexedInstancedIndirect(pd3d11ArgsBuff, Attribs.DrawArgsOffset + draw * Attribs.DrawArgsStride);
     }
 }
 

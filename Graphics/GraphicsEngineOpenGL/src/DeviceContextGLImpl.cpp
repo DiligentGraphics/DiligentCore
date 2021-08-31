@@ -905,17 +905,17 @@ void DeviceContextGLImpl::PrepareForIndirectDrawCount(IBuffer* pCountBuffer)
 #endif
 }
 
-void DeviceContextGLImpl::DrawIndirect(const DrawIndirectAttribs& Attribs, IBuffer* pAttribsBuffer, IBuffer* pCounterBuffer)
+void DeviceContextGLImpl::DrawIndirect(const DrawIndirectAttribs& Attribs)
 {
-    DvpVerifyDrawIndirectArguments(Attribs, pAttribsBuffer, pCounterBuffer);
+    DvpVerifyDrawIndirectArguments(Attribs);
 
     GLenum GlTopology;
     PrepareForDraw(Attribs.Flags, true, GlTopology);
 
     // http://www.opengl.org/wiki/Vertex_Rendering
-    PrepareForIndirectDraw(pAttribsBuffer);
+    PrepareForIndirectDraw(Attribs.pAttribsBuffer);
 
-    if (pCounterBuffer == nullptr)
+    if (Attribs.pCounterBuffer == nullptr)
     {
         bool NativeMultiDrawExecuted = false;
         if (Attribs.DrawCount > 1)
@@ -924,9 +924,9 @@ void DeviceContextGLImpl::DrawIndirect(const DrawIndirectAttribs& Attribs, IBuff
             if ((m_pDevice->GetAdapterInfo().DrawCommand.CapFlags & DRAW_COMMAND_CAP_FLAG_NATIVE_MULTI_DRAW_INDIRECT) != 0)
             {
                 glMultiDrawArraysIndirect(GlTopology,
-                                          reinterpret_cast<const void*>(static_cast<size_t>(Attribs.IndirectDrawArgsOffset)),
+                                          reinterpret_cast<const void*>(static_cast<size_t>(Attribs.DrawArgsOffset)),
                                           Attribs.DrawCount,
-                                          Attribs.IndirectDrawArgsStride);
+                                          Attribs.DrawArgsStride);
                 DEV_CHECK_GL_ERROR("glMultiDrawArraysIndirect() failed");
                 NativeMultiDrawExecuted = true;
             }
@@ -938,7 +938,7 @@ void DeviceContextGLImpl::DrawIndirect(const DrawIndirectAttribs& Attribs, IBuff
 #if GL_ARB_draw_indirect
             for (Uint32 draw = 0; draw < Attribs.DrawCount; ++draw)
             {
-                auto Offset = Attribs.IndirectDrawArgsOffset + draw * Attribs.IndirectDrawArgsStride;
+                auto Offset = Attribs.DrawArgsOffset + draw * Attribs.DrawArgsStride;
                 //typedef  struct {
                 //   GLuint  count;
                 //   GLuint  instanceCount;
@@ -956,14 +956,14 @@ void DeviceContextGLImpl::DrawIndirect(const DrawIndirectAttribs& Attribs, IBuff
     }
     else
     {
-        PrepareForIndirectDrawCount(pCounterBuffer);
+        PrepareForIndirectDrawCount(Attribs.pCounterBuffer);
 
 #if GL_VERSION_4_6
         glMultiDrawArraysIndirectCount(GlTopology,
-                                       reinterpret_cast<const void*>(static_cast<size_t>(Attribs.IndirectDrawArgsOffset)),
+                                       reinterpret_cast<const void*>(static_cast<size_t>(Attribs.DrawArgsOffset)),
                                        static_cast<GLintptr>(Attribs.CounterOffset),
                                        Attribs.DrawCount,
-                                       Attribs.IndirectDrawArgsStride);
+                                       Attribs.DrawArgsStride);
         DEV_CHECK_GL_ERROR("glMultiDrawArraysIndirectCount() failed");
 
         constexpr bool ResetVAO = false; // GL_PARAMETER_BUFFER does not affect VAO
@@ -979,9 +979,9 @@ void DeviceContextGLImpl::DrawIndirect(const DrawIndirectAttribs& Attribs, IBuff
     PostDraw();
 }
 
-void DeviceContextGLImpl::DrawIndexedIndirect(const DrawIndexedIndirectAttribs& Attribs, IBuffer* pAttribsBuffer, IBuffer* pCounterBuffer)
+void DeviceContextGLImpl::DrawIndexedIndirect(const DrawIndexedIndirectAttribs& Attribs)
 {
-    DvpVerifyDrawIndexedIndirectArguments(Attribs, pAttribsBuffer, pCounterBuffer);
+    DvpVerifyDrawIndexedIndirectArguments(Attribs);
 
     GLenum GlTopology;
     PrepareForDraw(Attribs.Flags, true, GlTopology);
@@ -990,9 +990,9 @@ void DeviceContextGLImpl::DrawIndexedIndirect(const DrawIndexedIndirectAttribs& 
     PrepareForIndexedDraw(Attribs.IndexType, 0, GLIndexType, FirstIndexByteOffset);
 
     // http://www.opengl.org/wiki/Vertex_Rendering
-    PrepareForIndirectDraw(pAttribsBuffer);
+    PrepareForIndirectDraw(Attribs.pAttribsBuffer);
 
-    if (pCounterBuffer == nullptr)
+    if (Attribs.pCounterBuffer == nullptr)
     {
         bool NativeMultiDrawExecuted = false;
         if (Attribs.DrawCount > 1)
@@ -1003,9 +1003,9 @@ void DeviceContextGLImpl::DrawIndexedIndirect(const DrawIndexedIndirectAttribs& 
             {
                 glMultiDrawElementsIndirect(GlTopology,
                                             GLIndexType,
-                                            reinterpret_cast<const void*>(static_cast<size_t>(Attribs.IndirectDrawArgsOffset)),
+                                            reinterpret_cast<const void*>(static_cast<size_t>(Attribs.DrawArgsOffset)),
                                             Attribs.DrawCount,
-                                            Attribs.IndirectDrawArgsStride);
+                                            Attribs.DrawArgsStride);
                 DEV_CHECK_GL_ERROR("glMultiDrawElementsIndirect() failed");
                 NativeMultiDrawExecuted = true;
             }
@@ -1017,7 +1017,7 @@ void DeviceContextGLImpl::DrawIndexedIndirect(const DrawIndexedIndirectAttribs& 
 #if GL_ARB_draw_indirect
             for (Uint32 draw = 0; draw < Attribs.DrawCount; ++draw)
             {
-                auto Offset = Attribs.IndirectDrawArgsOffset + draw * Attribs.IndirectDrawArgsStride;
+                auto Offset = Attribs.DrawArgsOffset + draw * Attribs.DrawArgsStride;
                 //typedef  struct {
                 //    GLuint  count;
                 //    GLuint  instanceCount;
@@ -1036,15 +1036,15 @@ void DeviceContextGLImpl::DrawIndexedIndirect(const DrawIndexedIndirectAttribs& 
     }
     else
     {
-        PrepareForIndirectDrawCount(pCounterBuffer);
+        PrepareForIndirectDrawCount(Attribs.pCounterBuffer);
 
 #if GL_VERSION_4_6
         glMultiDrawElementsIndirectCount(GlTopology,
                                          GLIndexType,
-                                         reinterpret_cast<const void*>(static_cast<size_t>(Attribs.IndirectDrawArgsOffset)),
+                                         reinterpret_cast<const void*>(static_cast<size_t>(Attribs.DrawArgsOffset)),
                                          static_cast<GLintptr>(Attribs.CounterOffset),
                                          Attribs.DrawCount,
-                                         Attribs.IndirectDrawArgsStride);
+                                         Attribs.DrawArgsStride);
         DEV_CHECK_GL_ERROR("glMultiDrawElementsIndirectCount() failed");
 
         constexpr bool ResetVAO = false; // GL_PARAMETER_BUFFER does not affect VAO

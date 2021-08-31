@@ -59,8 +59,8 @@ void TestDeviceContextCInterface(struct IDeviceContext* pCtx)
 
     IDeviceContext_Draw(pCtx, (struct DrawAttribs*)NULL);
     IDeviceContext_DrawIndexed(pCtx, (struct DrawIndexedAttribs*)NULL);
-    IDeviceContext_DrawIndirect(pCtx, (struct DrawIndirectAttribs*)NULL, (struct IBuffer*)NULL, (struct IBuffer*)NULL);
-    IDeviceContext_DrawIndexedIndirect(pCtx, (struct DrawIndexedIndirectAttribs*)NULL, (struct IBuffer*)NULL, (struct IBuffer*)NULL);
+    IDeviceContext_DrawIndirect(pCtx, (struct DrawIndirectAttribs*)NULL);
+    IDeviceContext_DrawIndexedIndirect(pCtx, (struct DrawIndexedIndirectAttribs*)NULL);
     IDeviceContext_DrawMesh(pCtx, (struct DrawMeshAttribs*)NULL);
     IDeviceContext_DrawMeshIndirect(pCtx, (struct DrawMeshIndirectAttribs*)NULL, (struct IBuffer*)NULL);
     IDeviceContext_DrawMeshIndirectCount(pCtx, (struct DrawMeshIndirectCountAttribs*)NULL, (struct IBuffer*)NULL, (struct IBuffer*)NULL);

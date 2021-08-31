@@ -144,9 +144,9 @@ public:
     /// Implementation of IDeviceContext::DrawIndexed() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE DrawIndexed        (const DrawIndexedAttribs& Attribs) override final;
     /// Implementation of IDeviceContext::DrawIndirect() in Vulkan backend.
-    virtual void DILIGENT_CALL_TYPE DrawIndirect       (const DrawIndirectAttribs& Attribs, IBuffer* pAttribsBuffer, IBuffer* pCounterBuffer) override final;
+    virtual void DILIGENT_CALL_TYPE DrawIndirect       (const DrawIndirectAttribs& Attribs) override final;
     /// Implementation of IDeviceContext::DrawIndexedIndirect() in Vulkan backend.
-    virtual void DILIGENT_CALL_TYPE DrawIndexedIndirect(const DrawIndexedIndirectAttribs& Attribs, IBuffer* pAttribsBuffer, IBuffer* pCounterBuffer) override final;
+    virtual void DILIGENT_CALL_TYPE DrawIndexedIndirect(const DrawIndexedIndirectAttribs& Attribs) override final;
     /// Implementation of IDeviceContext::DrawMesh() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE DrawMesh           (const DrawMeshAttribs& Attribs) override final;
     /// Implementation of IDeviceContext::DrawMeshIndirect() in Vulkan backend.

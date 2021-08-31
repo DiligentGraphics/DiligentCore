@@ -92,8 +92,11 @@ bool VerifyDrawMeshAttribs(Uint32 MaxDrawMeshTasksCount, const DrawMeshAttribs& 
     return true;
 }
 
-bool VerifyDrawIndirectAttribs(const DrawIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer, const IBuffer* pCounterBuffer)
+bool VerifyDrawIndirectAttribs(const DrawIndirectAttribs& Attribs)
 {
+    const auto* pAttribsBuffer = Attribs.pAttribsBuffer;
+    const auto* pCounterBuffer = Attribs.pCounterBuffer;
+
 #define CHECK_DRAW_INDIRECT_ATTRIBS(Expr, ...) CHECK_PARAMETER(Expr, "Draw indirect attribs are invalid: ", __VA_ARGS__)
 
     CHECK_DRAW_INDIRECT_ATTRIBS(pAttribsBuffer != nullptr, "indirect draw arguments buffer must not be null.");
@@ -102,8 +105,8 @@ bool VerifyDrawIndirectAttribs(const DrawIndirectAttribs& Attribs, const IBuffer
 
     if (Attribs.DrawCount > 1)
     {
-        CHECK_DRAW_INDIRECT_ATTRIBS(Attribs.IndirectDrawArgsStride >= sizeof(Uint32) * 4, "stride must be greater than 16 bytes");
-        CHECK_DRAW_INDIRECT_ATTRIBS(Attribs.IndirectDrawArgsStride % 4 == 0, "stride must be a multiple of 4");
+        CHECK_DRAW_INDIRECT_ATTRIBS(Attribs.DrawArgsStride >= sizeof(Uint32) * 4, "stride must be greater than 16 bytes");
+        CHECK_DRAW_INDIRECT_ATTRIBS(Attribs.DrawArgsStride % 4 == 0, "stride must be a multiple of 4");
     }
 
     if (pCounterBuffer != nullptr)
@@ -118,8 +121,11 @@ bool VerifyDrawIndirectAttribs(const DrawIndirectAttribs& Attribs, const IBuffer
     return true;
 }
 
-bool VerifyDrawIndexedIndirectAttribs(const DrawIndexedIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer, const IBuffer* pCounterBuffer)
+bool VerifyDrawIndexedIndirectAttribs(const DrawIndexedIndirectAttribs& Attribs)
 {
+    const auto* pAttribsBuffer = Attribs.pAttribsBuffer;
+    const auto* pCounterBuffer = Attribs.pCounterBuffer;
+
 #define CHECK_DRAW_INDEXED_INDIRECT_ATTRIBS(Expr, ...) CHECK_PARAMETER(Expr, "Draw indexed indirect attribs are invalid: ", __VA_ARGS__)
 
     CHECK_DRAW_INDEXED_INDIRECT_ATTRIBS(pAttribsBuffer != nullptr, "indirect draw arguments buffer must not null.");
@@ -131,8 +137,8 @@ bool VerifyDrawIndexedIndirectAttribs(const DrawIndexedIndirectAttribs& Attribs,
 
     if (Attribs.DrawCount > 1)
     {
-        CHECK_DRAW_INDEXED_INDIRECT_ATTRIBS(Attribs.IndirectDrawArgsStride >= sizeof(Uint32) * 5, "stride must be greater than 20 bytes");
-        CHECK_DRAW_INDEXED_INDIRECT_ATTRIBS(Attribs.IndirectDrawArgsStride % 4 == 0, "stride must be a multiple of 4");
+        CHECK_DRAW_INDEXED_INDIRECT_ATTRIBS(Attribs.DrawArgsStride >= sizeof(Uint32) * 5, "stride must be greater than 20 bytes");
+        CHECK_DRAW_INDEXED_INDIRECT_ATTRIBS(Attribs.DrawArgsStride % 4 == 0, "stride must be a multiple of 4");
     }
 
     if (pCounterBuffer != nullptr)
