@@ -97,7 +97,11 @@ RenderDeviceD3D11Impl::RenderDeviceD3D11Impl(IReferenceCounters*          pRefCo
 
 RenderDeviceD3D11Impl::~RenderDeviceD3D11Impl()
 {
-    m_NVApi.Unload();
+    // There is a problem with NVApi: the dll must be unloaded only after the last
+    // reference to ID3D11Device has been released, otherwise ID3D11Device::Release will crash.
+    // We cannot guarantee this because the engine may be attached to existing
+    // D3D11 device. So we have to keep the DLL loaded.
+    m_NVApi.Invalidate();
 }
 
 void RenderDeviceD3D11Impl::TestTextureFormat(TEXTURE_FORMAT TexFormat)

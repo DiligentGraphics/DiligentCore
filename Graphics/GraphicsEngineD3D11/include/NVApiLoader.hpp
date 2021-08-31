@@ -49,6 +49,8 @@ public:
 #ifdef DILIGENT_ENABLE_D3D11_NVAPI
         if (m_NVApiLoaded)
         {
+            // NB: NVApi must be unloaded only after the last reference to ID3D11Device has
+            //     been released, otherwise ID3D11Device::Release will crash.
             NvAPI_Unload();
             m_NVApiLoaded = false;
         }
@@ -60,6 +62,11 @@ public:
     ~NVApiLoader()
     {
         Unload();
+    }
+
+    void Invalidate()
+    {
+        m_NVApiLoaded = false;
     }
 
     bool IsLoaded() const
