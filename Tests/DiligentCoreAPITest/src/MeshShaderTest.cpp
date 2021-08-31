@@ -310,11 +310,12 @@ TEST(MeshShaderTest, DrawTriangleIndirect)
     pContext->SetPipelineState(pPSO);
 
     DrawMeshIndirectAttribs drawAttrs;
-    drawAttrs.Flags                                    = DRAW_FLAG_VERIFY_ALL;
-    drawAttrs.IndirectDrawArgsOffset                   = offsetof(IndirectAndCountBuffData, IndirectData);
-    drawAttrs.IndirectAttribsBufferStateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+    drawAttrs.pAttribsBuffer                   = pBuffer;
+    drawAttrs.Flags                            = DRAW_FLAG_VERIFY_ALL;
+    drawAttrs.DrawArgsOffset                   = offsetof(IndirectAndCountBuffData, IndirectData);
+    drawAttrs.AttribsBufferStateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
 
-    pContext->DrawMeshIndirect(drawAttrs, pBuffer);
+    pContext->DrawMeshIndirect(drawAttrs);
 
     pSwapChain->Present();
 }
@@ -459,15 +460,17 @@ TEST(MeshShaderTest, DrawTriangleIndirectCount)
 
     pContext->SetPipelineState(pPSO);
 
-    DrawMeshIndirectCountAttribs drawAttrs;
-    drawAttrs.Flags                                    = DRAW_FLAG_VERIFY_ALL;
-    drawAttrs.CountBufferOffset                        = offsetof(IndirectAndCountBuffData, Count);
-    drawAttrs.CountBufferStateTransitionMode           = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
-    drawAttrs.IndirectDrawArgsOffset                   = offsetof(IndirectAndCountBuffData, IndirectData);
-    drawAttrs.IndirectAttribsBufferStateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
-    drawAttrs.MaxCommandCount                          = Data.Count;
+    DrawMeshIndirectAttribs drawAttrs;
+    drawAttrs.pAttribsBuffer                   = pBuffer;
+    drawAttrs.pCounterBuffer                   = pBuffer;
+    drawAttrs.Flags                            = DRAW_FLAG_VERIFY_ALL;
+    drawAttrs.CounterOffset                    = offsetof(IndirectAndCountBuffData, Count);
+    drawAttrs.CounterBufferStateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+    drawAttrs.DrawArgsOffset                   = offsetof(IndirectAndCountBuffData, IndirectData);
+    drawAttrs.AttribsBufferStateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+    drawAttrs.CommandCount                     = Data.Count;
 
-    pContext->DrawMeshIndirectCount(drawAttrs, pBuffer, pBuffer);
+    pContext->DrawMeshIndirect(drawAttrs);
 
     pSwapChain->Present();
 }

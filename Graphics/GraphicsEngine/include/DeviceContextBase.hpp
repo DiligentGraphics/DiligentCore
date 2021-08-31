@@ -63,11 +63,7 @@ bool VerifyDispatchComputeIndirectAttribs(const DispatchComputeIndirectAttribs& 
 // clang-format on
 
 bool VerifyDrawMeshAttribs(Uint32 MaxDrawMeshTasksCount, const DrawMeshAttribs& Attribs);
-bool VerifyDrawMeshIndirectAttribs(const DrawMeshIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer);
-bool VerifyDrawMeshIndirectCountAttribs(const DrawMeshIndirectCountAttribs& Attribs,
-                                        const IBuffer*                      pAttribsBuffer,
-                                        const IBuffer*                      pCountBuff,
-                                        Uint32                              IndirectCmdStride);
+bool VerifyDrawMeshIndirectAttribs(const DrawMeshIndirectAttribs& Attribs, Uint32 IndirectCmdStride);
 
 bool VerifyResolveTextureSubresourceAttribs(const ResolveTextureSubresourceAttribs& ResolveAttribs,
                                             const TextureDesc&                      SrcTexDesc,
@@ -521,8 +517,7 @@ protected:
     void DvpVerifyDrawMeshArguments             (const DrawMeshAttribs&              Attribs) const;
     void DvpVerifyDrawIndirectArguments         (const DrawIndirectAttribs&          Attribs) const;
     void DvpVerifyDrawIndexedIndirectArguments  (const DrawIndexedIndirectAttribs&   Attribs) const;
-    void DvpVerifyDrawMeshIndirectArguments     (const DrawMeshIndirectAttribs&      Attribs, const IBuffer* pAttribsBuffer) const;
-    void DvpVerifyDrawMeshIndirectCountArguments(const DrawMeshIndirectCountAttribs& Attribs, const IBuffer* pAttribsBuffer, const IBuffer* pCountBuff) const;
+    void DvpVerifyDrawMeshIndirectArguments     (const DrawMeshIndirectAttribs&      Attribs) const;
 
     void DvpVerifyDispatchArguments        (const DispatchComputeAttribs& Attribs) const;
     void DvpVerifyDispatchIndirectArguments(const DispatchComputeIndirectAttribs& Attribs) const;
@@ -548,8 +543,7 @@ protected:
     void DvpVerifyDrawMeshArguments             (const DrawMeshAttribs&              Attribs) const {}
     void DvpVerifyDrawIndirectArguments         (const DrawIndirectAttribs&          Attribs) const {}
     void DvpVerifyDrawIndexedIndirectArguments  (const DrawIndexedIndirectAttribs&   Attribs) const {}
-    void DvpVerifyDrawMeshIndirectArguments     (const DrawMeshIndirectAttribs&      Attribs, const IBuffer* pAttribsBuffer) const {}
-    void DvpVerifyDrawMeshIndirectCountArguments(const DrawMeshIndirectCountAttribs& Attribs, const IBuffer* pAttribsBuffer, const IBuffer* pCountBuff) const {}
+    void DvpVerifyDrawMeshIndirectArguments     (const DrawMeshIndirectAttribs&      Attribs) const {}
 
     void DvpVerifyDispatchArguments        (const DispatchComputeAttribs& Attribs) const {}
     void DvpVerifyDispatchIndirectArguments(const DispatchComputeIndirectAttribs& Attribs) const {}
@@ -2186,9 +2180,7 @@ inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDrawIndexedIndirec
 }
 
 template <typename ImplementationTraits>
-inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDrawMeshIndirectArguments(
-    const DrawMeshIndirectAttribs& Attribs,
-    const IBuffer*                 pAttribsBuffer) const
+inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDrawMeshIndirectArguments(const DrawMeshIndirectAttribs& Attribs) const
 {
     if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
         return;
@@ -2203,30 +2195,7 @@ inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDrawMeshIndirectAr
                   "DrawMeshIndirect command arguments are invalid: pipeline state '",
                   m_pPipelineState->GetDesc().Name, "' is not a mesh pipeline.");
 
-    DEV_CHECK_ERR(VerifyDrawMeshIndirectAttribs(Attribs, pAttribsBuffer), "DrawMeshIndirectAttribs are invalid");
-}
-
-template <typename ImplementationTraits>
-inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDrawMeshIndirectCountArguments(
-    const DrawMeshIndirectCountAttribs& Attribs,
-    const IBuffer*                      pAttribsBuffer,
-    const IBuffer*                      pCountBuff) const
-{
-    if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
-        return;
-
-    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_GRAPHICS, "DrawMeshIndirectCount");
-
-    DEV_CHECK_ERR(m_pDevice->GetFeatures().MeshShaders, "DrawMeshIndirectCount: mesh shaders are not supported by this device");
-
-    DEV_CHECK_ERR(m_pPipelineState, "DrawMeshIndirectCount command arguments are invalid: no pipeline state is bound.");
-
-    DEV_CHECK_ERR(m_pPipelineState->GetDesc().PipelineType == PIPELINE_TYPE_MESH,
-                  "DrawMeshIndirectCount command arguments are invalid: pipeline state '",
-                  m_pPipelineState->GetDesc().Name, "' is not a mesh pipeline.");
-
-    DEV_CHECK_ERR(VerifyDrawMeshIndirectCountAttribs(Attribs, pAttribsBuffer, pCountBuff, DrawMeshIndirectCommandStride),
-                  "DrawMeshIndirectCountAttribs are invalid");
+    DEV_CHECK_ERR(VerifyDrawMeshIndirectAttribs(Attribs, DrawMeshIndirectCommandStride), "DrawMeshIndirectAttribs are invalid");
 }
 
 template <typename ImplementationTraits>

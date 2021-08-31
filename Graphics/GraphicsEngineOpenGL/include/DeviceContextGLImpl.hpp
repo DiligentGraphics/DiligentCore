@@ -132,9 +132,7 @@ public:
     /// Implementation of IDeviceContext::DrawMesh() in OpenGL backend.
     virtual void DILIGENT_CALL_TYPE DrawMesh           (const DrawMeshAttribs& Attribs) override final;
     /// Implementation of IDeviceContext::DrawMeshIndirect() in OpenGL backend.
-    virtual void DILIGENT_CALL_TYPE DrawMeshIndirect   (const DrawMeshIndirectAttribs& Attribs, IBuffer* pAttribsBuffer) override final;
-    /// Implementation of IDeviceContext::DrawMeshIndirectCount() in OpenGL backend.
-    virtual void DILIGENT_CALL_TYPE DrawMeshIndirectCount(const DrawMeshIndirectCountAttribs& Attribs, IBuffer* pAttribsBuffer, IBuffer* pCountBuffer) override final;
+    virtual void DILIGENT_CALL_TYPE DrawMeshIndirect   (const DrawMeshIndirectAttribs& Attribs) override final;
 
     /// Implementation of IDeviceContext::DispatchCompute() in OpenGL backend.
     virtual void DILIGENT_CALL_TYPE DispatchCompute        (const DispatchComputeAttribs& Attribs) override final;

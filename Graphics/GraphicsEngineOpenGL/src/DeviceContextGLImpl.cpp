@@ -1065,14 +1065,9 @@ void DeviceContextGLImpl::DrawMesh(const DrawMeshAttribs& Attribs)
     UNSUPPORTED("DrawMesh is not supported in OpenGL");
 }
 
-void DeviceContextGLImpl::DrawMeshIndirect(const DrawMeshIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
+void DeviceContextGLImpl::DrawMeshIndirect(const DrawMeshIndirectAttribs& Attribs)
 {
     UNSUPPORTED("DrawMeshIndirect is not supported in OpenGL");
-}
-
-void DeviceContextGLImpl::DrawMeshIndirectCount(const DrawMeshIndirectCountAttribs& Attribs, IBuffer* pAttribsBuffer, IBuffer* pCountBuffer)
-{
-    UNSUPPORTED("DrawMeshIndirectCount is not supported in OpenGL");
 }
 
 

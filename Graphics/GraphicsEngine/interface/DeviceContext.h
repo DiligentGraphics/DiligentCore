@@ -556,80 +556,67 @@ typedef struct DrawMeshAttribs DrawMeshAttribs;
 /// This structure is used by IDeviceContext::DrawMeshIndirect().
 struct DrawMeshIndirectAttribs
 {
+    /// A pointer to the buffer, from which indirect draw attributes will be read.
+    /// The buffer must contain the following arguments at the specified offset:
+    ///   Direct3D12:
+    ///        Uint32 ThreadGroupCountX;
+    ///        Uint32 ThreadGroupCountY;
+    ///        Uint32 ThreadGroupCountZ;
+    ///   Vulkan:
+    ///        Uint32 TaskCount;
+    ///        Uint32 FirstTask;
+    /// Size of the buffer must be sizeof(Uint32[3]) * Attribs.MaxDrawCommands.
+    IBuffer*   pAttribsBuffer   DEFAULT_INITIALIZER(nullptr);
+
     /// Additional flags, see Diligent::DRAW_FLAGS.
-    DRAW_FLAGS Flags                DEFAULT_INITIALIZER(DRAW_FLAG_NONE);
+    DRAW_FLAGS Flags            DEFAULT_INITIALIZER(DRAW_FLAG_NONE);
+
+    /// When pCounterBuffer is null, the number of commands to run.
+    /// When pCounterBuffer is not null, the maximum number of commands
+    /// that will be read from the count buffer.
+    Uint32 CommandCount         DEFAULT_INITIALIZER(1);
+
+    /// Offset from the beginning of the attribs buffer to the location of the draw command attributes.
+    Uint32 DrawArgsOffset       DEFAULT_INITIALIZER(0);
 
     /// State transition mode for indirect draw arguments buffer.
-    RESOURCE_STATE_TRANSITION_MODE IndirectAttribsBufferStateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
+    RESOURCE_STATE_TRANSITION_MODE AttribsBufferStateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
 
-    /// Offset from the beginning of the buffer to the location of draw command attributes.
-    Uint32 IndirectDrawArgsOffset        DEFAULT_INITIALIZER(0);
+
+    /// A pointer to the optional buffer, from which Uint32 value with the draw count will be read.
+    IBuffer* pCounterBuffer DEFAULT_INITIALIZER(nullptr);
+
+    /// When pCounterBuffer is not null, an offset from the beginning of the buffer to the location of the command counter.
+    Uint32 CounterOffset    DEFAULT_INITIALIZER(0);
+
+    /// When pCounterBuffer is not null, state transition mode for the count buffer.
+    RESOURCE_STATE_TRANSITION_MODE CounterBufferStateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
 
 #if DILIGENT_CPP_INTERFACE
     /// Initializes the structure members with default values
-
-    /// Default values:
-    /// Member                                   | Default value
-    /// -----------------------------------------|--------------------------------------
-    /// Flags                                    | DRAW_FLAG_NONE
-    /// IndirectAttribsBufferStateTransitionMode | RESOURCE_STATE_TRANSITION_MODE_NONE
-    /// IndirectDrawArgsOffset                   | 0
     constexpr DrawMeshIndirectAttribs() noexcept {}
 
     /// Initializes the structure members with user-specified values.
-    constexpr DrawMeshIndirectAttribs(DRAW_FLAGS                     _Flags,
-                                      RESOURCE_STATE_TRANSITION_MODE _IndirectAttribsBufferStateTransitionMode,
-                                      Uint32                         _IndirectDrawArgsOffset = 0) noexcept :
-        Flags                                   {_Flags                                   },
-        IndirectAttribsBufferStateTransitionMode{_IndirectAttribsBufferStateTransitionMode},
-        IndirectDrawArgsOffset                  {_IndirectDrawArgsOffset                  }
+    constexpr DrawMeshIndirectAttribs(IBuffer*                       _pAttribsBuffer,
+                                      DRAW_FLAGS                     _Flags,
+                                      Uint32                         _CommandCount,
+                                      Uint32                         _DrawArgsOffset                   = DrawMeshIndirectAttribs{}.DrawArgsOffset,
+                                      RESOURCE_STATE_TRANSITION_MODE _AttribsBufferStateTransitionMode = DrawMeshIndirectAttribs{}.AttribsBufferStateTransitionMode,
+                                      IBuffer*                       _pCounterBuffer                   = DrawMeshIndirectAttribs{}.pCounterBuffer,
+                                      Uint32                         _CounterOffset                    = DrawMeshIndirectAttribs{}.CounterOffset,
+                                      RESOURCE_STATE_TRANSITION_MODE _CounterBufferStateTransitionMode = DrawMeshIndirectAttribs{}.CounterBufferStateTransitionMode) noexcept :
+        pAttribsBuffer                  {_pAttribsBuffer                  },
+        Flags                           {_Flags                           },
+        CommandCount                    {_CommandCount                    },
+        DrawArgsOffset                  {_DrawArgsOffset                  },
+        AttribsBufferStateTransitionMode{_AttribsBufferStateTransitionMode},
+        pCounterBuffer                  {_pCounterBuffer                  },
+        CounterOffset                   {_CounterOffset                   },
+        CounterBufferStateTransitionMode{_CounterBufferStateTransitionMode}
     {}
 #endif
 };
 typedef struct DrawMeshIndirectAttribs DrawMeshIndirectAttribs;
-
-
-/// Defines the mesh indirect draw count command attributes.
-
-/// This structure is used by IDeviceContext::DrawMeshIndirectCount().
-struct DrawMeshIndirectCountAttribs
-{
-    /// Additional flags, see Diligent::DRAW_FLAGS.
-    DRAW_FLAGS Flags                DEFAULT_INITIALIZER(DRAW_FLAG_NONE);
-
-    /// The maximum number of commands that will be read from the count buffer.
-    Uint32     MaxCommandCount      DEFAULT_INITIALIZER(1);
-
-    /// State transition mode for indirect draw arguments buffer.
-    RESOURCE_STATE_TRANSITION_MODE IndirectAttribsBufferStateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
-
-    /// Offset from the beginning of the buffer to the location of draw command attributes.
-    Uint32 IndirectDrawArgsOffset        DEFAULT_INITIALIZER(0);
-
-    /// State transition mode for the count buffer.
-    RESOURCE_STATE_TRANSITION_MODE CountBufferStateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
-
-    /// Offset from the beginning of the buffer to the location of the command counter.
-    Uint32 CountBufferOffset        DEFAULT_INITIALIZER(0);
-
-#if DILIGENT_CPP_INTERFACE
-    constexpr DrawMeshIndirectCountAttribs() noexcept {}
-
-    /// Initializes the structure members with user-specified values.
-    constexpr DrawMeshIndirectCountAttribs(DRAW_FLAGS                     _Flags,
-                                           RESOURCE_STATE_TRANSITION_MODE _IndirectAttribsBufferStateTransitionMode,
-                                           Uint32                         _IndirectDrawArgsOffset,
-                                           RESOURCE_STATE_TRANSITION_MODE _CountBufferStateTransitionMode,
-                                           Uint32                         _CountBufferOffset) noexcept :
-        Flags                                   {_Flags                                   },
-        IndirectAttribsBufferStateTransitionMode{_IndirectAttribsBufferStateTransitionMode},
-        IndirectDrawArgsOffset                  {_IndirectDrawArgsOffset                  },
-        CountBufferStateTransitionMode          {_CountBufferStateTransitionMode          },
-        CountBufferOffset                       {_CountBufferOffset                       }
-    {}
-#endif
-};
-typedef struct DrawMeshIndirectCountAttribs DrawMeshIndirectCountAttribs;
 
 
 /// Defines which parts of the depth-stencil buffer to clear.
@@ -2260,18 +2247,9 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
                                   const DrawMeshAttribs REF Attribs) PURE;
 
 
-    /// Executes an mesh indirect draw command.
+    /// Executes an indirect mesh draw command.
 
-    /// \param [in] Attribs        - Structure describing the command attributes, see Diligent::DrawMeshIndirectAttribs for details.
-    /// \param [in] pAttribsBuffer - Pointer to the buffer, from which indirect draw attributes will be read.
-    ///                              The buffer must contain the following arguments at the specified offset:
-    ///                                Direct3D12:
-    ///                                     Uint32 ThreadGroupCountX;
-    ///                                     Uint32 ThreadGroupCountY;
-    ///                                     Uint32 ThreadGroupCountZ;
-    ///                                Vulkan:
-    ///                                     Uint32 TaskCount;
-    ///                                     Uint32 FirstTask;
+    /// \param [in] Attribs - Structure describing the command attributes, see Diligent::DrawMeshIndirectAttribs for details.
     ///
     /// \remarks  For compatibility between Direct3D12 and Vulkan and with direct call (DrawMesh) use the first element in the structure,
     ///           for example: Direct3D12 {TaskCount, 1, 1}, Vulkan {TaskCount, 0}.
@@ -2285,40 +2263,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     ///
     /// \remarks Supported contexts: graphics.
     VIRTUAL void METHOD(DrawMeshIndirect)(THIS_
-                                          const DrawMeshIndirectAttribs REF Attribs,
-                                          IBuffer*                          pAttribsBuffer) PURE;
-
-
-    /// Executes an mesh indirect draw command with indirect command count buffer.
-
-    /// \param [in] Attribs        - Structure describing the command attributes, see Diligent::DrawMeshIndirectCountAttribs for details.
-    /// \param [in] pAttribsBuffer - Pointer to the buffer, from which indirect draw attributes will be read.
-    ///                              The buffer must contain the following arguments at the specified offset:
-    ///                                Direct3D12:
-    ///                                     Uint32 ThreadGroupCountX;
-    ///                                     Uint32 ThreadGroupCountY;
-    ///                                     Uint32 ThreadGroupCountZ;
-    ///                                Vulkan:
-    ///                                     Uint32 TaskCount;
-    ///                                     Uint32 FirstTask;
-    ///                              Size of the buffer must be sizeof(Uint32[3]) * Attribs.MaxDrawCommands.
-    /// \param [in] pCountBuffer   - Pointer to the buffer, from which Uint32 value with draw count will be read.
-    ///
-    /// \remarks  For compatibility between Direct3D12 and Vulkan and with direct call (DrawMesh) use the first element in the structure,
-    ///           for example: Direct3D12 {TaskCount, 1, 1}, Vulkan {TaskCount, 0}.
-    ///
-    /// \remarks  If IndirectAttribsBufferStateTransitionMode member is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
-    ///           the method may transition the state of the indirect draw arguments buffer. This is not a thread safe operation,
-    ///           so no other thread is allowed to read or write the state of the buffer.
-    ///
-    ///           If the application intends to use the same resources in other threads simultaneously, it needs to
-    ///           explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
-    ///
-    /// \remarks Supported contexts: graphics.
-    VIRTUAL void METHOD(DrawMeshIndirectCount)(THIS_
-                                               const DrawMeshIndirectCountAttribs REF Attribs,
-                                               IBuffer*                               pAttribsBuffer,
-                                               IBuffer*                               pCountBuffer) PURE;
+                                          const DrawMeshIndirectAttribs REF Attribs) PURE;
 
 
     /// Executes a dispatch compute command.
@@ -3041,7 +2986,6 @@ DILIGENT_END_INTERFACE
 #    define IDeviceContext_DrawIndexedIndirect(This, ...)           CALL_IFACE_METHOD(DeviceContext, DrawIndexedIndirect,       This, __VA_ARGS__)
 #    define IDeviceContext_DrawMesh(This, ...)                      CALL_IFACE_METHOD(DeviceContext, DrawMesh,                  This, __VA_ARGS__)
 #    define IDeviceContext_DrawMeshIndirect(This, ...)              CALL_IFACE_METHOD(DeviceContext, DrawMeshIndirect,          This, __VA_ARGS__)
-#    define IDeviceContext_DrawMeshIndirectCount(This, ...)         CALL_IFACE_METHOD(DeviceContext, DrawMeshIndirectCount,     This, __VA_ARGS__)
 #    define IDeviceContext_DispatchCompute(This, ...)               CALL_IFACE_METHOD(DeviceContext, DispatchCompute,           This, __VA_ARGS__)
 #    define IDeviceContext_DispatchComputeIndirect(This, ...)       CALL_IFACE_METHOD(DeviceContext, DispatchComputeIndirect,   This, __VA_ARGS__)
 #    define IDeviceContext_DispatchTile(This, ...)                  CALL_IFACE_METHOD(DeviceContext, DispatchTile,              This, __VA_ARGS__)

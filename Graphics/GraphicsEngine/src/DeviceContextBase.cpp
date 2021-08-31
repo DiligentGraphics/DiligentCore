@@ -153,41 +153,30 @@ bool VerifyDrawIndexedIndirectAttribs(const DrawIndexedIndirectAttribs& Attribs)
     return true;
 }
 
-bool VerifyDrawMeshIndirectAttribs(const DrawMeshIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer)
+bool VerifyDrawMeshIndirectAttribs(const DrawMeshIndirectAttribs& Attribs, Uint32 IndirectCmdStride)
 {
+    const auto* pAttribsBuffer = Attribs.pAttribsBuffer;
+    const auto* pCounterBuffer = Attribs.pCounterBuffer;
+
 #define CHECK_DRAW_MESH_INDIRECT_ATTRIBS(Expr, ...) CHECK_PARAMETER(Expr, "Draw mesh indirect attribs are invalid: ", __VA_ARGS__)
 
     CHECK_DRAW_MESH_INDIRECT_ATTRIBS(pAttribsBuffer != nullptr, "indirect draw arguments buffer must not be null.");
-    CHECK_DRAW_MESH_INDIRECT_ATTRIBS((pAttribsBuffer->GetDesc().BindFlags & BIND_INDIRECT_DRAW_ARGS) != 0,
-                                     "indirect draw arguments buffer '", pAttribsBuffer->GetDesc().Name,
+    const auto& ArgsBuffDesc = pAttribsBuffer->GetDesc();
+    CHECK_DRAW_MESH_INDIRECT_ATTRIBS((ArgsBuffDesc.BindFlags & BIND_INDIRECT_DRAW_ARGS) != 0,
+                                     "indirect draw arguments buffer '", ArgsBuffDesc.Name,
                                      "' was not created with BIND_INDIRECT_DRAW_ARGS flag.");
+    CHECK_DRAW_MESH_INDIRECT_ATTRIBS(Attribs.DrawArgsOffset + IndirectCmdStride * Attribs.CommandCount <= ArgsBuffDesc.uiSizeInBytes,
+                                     "invalid IndirectDrawArgsOffset or indirect draw arguments buffer '", ArgsBuffDesc.Name, "' is too small.");
 
+    if (pCounterBuffer != nullptr)
+    {
+        const auto& CntBuffDesc = pAttribsBuffer->GetDesc();
+        CHECK_DRAW_MESH_INDIRECT_ATTRIBS((CntBuffDesc.BindFlags & BIND_INDIRECT_DRAW_ARGS) != 0,
+                                         "count buffer '", CntBuffDesc.Name, "' was not created with BIND_INDIRECT_DRAW_ARGS flag.");
+        CHECK_DRAW_MESH_INDIRECT_ATTRIBS(Attribs.CounterOffset + 4 <= CntBuffDesc.uiSizeInBytes,
+                                         "invalid CountBufferOffset or count buffer '", CntBuffDesc.Name, "' is too small.");
+    }
 #undef CHECK_DRAW_MESH_INDIRECT_ATTRIBS
-
-    return true;
-}
-
-bool VerifyDrawMeshIndirectCountAttribs(const DrawMeshIndirectCountAttribs& Attribs, const IBuffer* pAttribsBuffer, const IBuffer* pCountBuff, Uint32 IndirectCmdStride)
-{
-#define CHECK_DRAW_MESH_INDIRECT_COUNT_ATTRIBS(Expr, ...) CHECK_PARAMETER(Expr, "Draw mesh indirect count attribs are invalid: ", __VA_ARGS__)
-
-    CHECK_DRAW_MESH_INDIRECT_COUNT_ATTRIBS(pAttribsBuffer != nullptr, "indirect draw arguments buffer must not be null.");
-
-    const auto& IDesc = pAttribsBuffer->GetDesc();
-    CHECK_DRAW_MESH_INDIRECT_COUNT_ATTRIBS((IDesc.BindFlags & BIND_INDIRECT_DRAW_ARGS) != 0,
-                                           "indirect draw arguments buffer '", IDesc.Name, "' was not created with BIND_INDIRECT_DRAW_ARGS flag.");
-    CHECK_DRAW_MESH_INDIRECT_COUNT_ATTRIBS(Attribs.IndirectDrawArgsOffset + IndirectCmdStride * Attribs.MaxCommandCount <= IDesc.uiSizeInBytes,
-                                           "invalid IndirectDrawArgsOffset or indirect draw arguments buffer '", IDesc.Name, "' is too small.");
-
-    CHECK_DRAW_MESH_INDIRECT_COUNT_ATTRIBS(pCountBuff != nullptr, "count buffer must not be null.");
-
-    const auto& CDesc = pAttribsBuffer->GetDesc();
-    CHECK_DRAW_MESH_INDIRECT_COUNT_ATTRIBS((CDesc.BindFlags & BIND_INDIRECT_DRAW_ARGS) != 0,
-                                           "count buffer '", CDesc.Name, "' was not created with BIND_INDIRECT_DRAW_ARGS flag.");
-    CHECK_DRAW_MESH_INDIRECT_COUNT_ATTRIBS(Attribs.CountBufferOffset + 4 <= CDesc.uiSizeInBytes,
-                                           "invalid CountBufferOffset or count buffer '", CDesc.Name, "' is too small.");
-
-#undef CHECK_DRAW_MESH_INDIRECT_COUNT_ATTRIBS
 
     return true;
 }
