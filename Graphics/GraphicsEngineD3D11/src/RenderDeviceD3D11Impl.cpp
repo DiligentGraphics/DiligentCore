@@ -89,22 +89,15 @@ RenderDeviceD3D11Impl::RenderDeviceD3D11Impl(IReferenceCounters*          pRefCo
     // Initialize device features
     m_DeviceInfo.Features = EnableDeviceFeatures(m_AdapterInfo.Features, EngineCI.Features);
 
-#ifdef DILIGENT_ENABLE_D3D11_NVAPI
-    if (m_DeviceInfo.Features.NativeMultiDrawIndirect && m_AdapterInfo.Vendor == ADAPTER_VENDOR_NVIDIA)
+    if (m_AdapterInfo.Vendor == ADAPTER_VENDOR_NVIDIA)
     {
-        m_UseNvApi = (NvAPI_Initialize() == NVAPI_OK);
+        m_NVApi.Load();
     }
-#endif
 }
 
 RenderDeviceD3D11Impl::~RenderDeviceD3D11Impl()
 {
-#ifdef DILIGENT_ENABLE_D3D11_NVAPI
-    if (m_UseNvApi)
-    {
-        NvAPI_Unload();
-    }
-#endif
+    m_NVApi.Unload();
 }
 
 void RenderDeviceD3D11Impl::TestTextureFormat(TEXTURE_FORMAT TexFormat)

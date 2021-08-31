@@ -32,10 +32,7 @@
 
 #include "EngineD3D11ImplTraits.hpp"
 #include "RenderDeviceD3DBase.hpp"
-
-#ifdef DILIGENT_ENABLE_D3D11_NVAPI
-#    include "nvapi.h"
-#endif
+#include "NVApiLoader.hpp"
 
 namespace Diligent
 {
@@ -153,15 +150,15 @@ public:
     size_t GetCommandQueueCount() const { return 1; }
     Uint64 GetCommandQueueMask() const { return Uint64{1}; }
 
-    bool IsNvApiEnabled() const { return m_UseNvApi; }
+    bool IsNvApiEnabled() const { return m_NVApi.IsLoaded(); }
 
 private:
     virtual void TestTextureFormat(TEXTURE_FORMAT TexFormat) override final;
 
+    NVApiLoader m_NVApi;
+
     /// D3D11 device
     CComPtr<ID3D11Device> m_pd3d11Device;
-
-    bool m_UseNvApi = false;
 };
 
 } // namespace Diligent

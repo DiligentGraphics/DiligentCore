@@ -497,11 +497,9 @@ GraphicsAdapterInfo EngineFactoryD3D11Impl::GetGraphicsAdapterInfo(void*        
 #endif
     }
 
-    bool NvApiSupported = false;
-#ifdef DILIGENT_ENABLE_D3D11_NVAPI
+    NVApiLoader NVApi;
     if (AdapterInfo.Vendor == ADAPTER_VENDOR_NVIDIA)
-        NvApiSupported = (NvAPI_Initialize() == NVAPI_OK);
-#endif
+        NVApi.Load();
 
     // Draw command properties
     {
@@ -511,7 +509,7 @@ GraphicsAdapterInfo EngineFactoryD3D11Impl::GetGraphicsAdapterInfo(void*        
 #else
         DrawCommandProps.MaxIndexValue = 1u << D3D11_REQ_DRAWINDEXED_INDEX_COUNT_2_TO_EXP;
 #endif
-        if (NvApiSupported)
+        if (NVApi)
         {
             DrawCommandProps.CapFlags |= DRAW_COMMAND_CAP_FLAG_NATIVE_MULTI_DRAW_INDIRECT;
         }
@@ -519,11 +517,6 @@ GraphicsAdapterInfo EngineFactoryD3D11Impl::GetGraphicsAdapterInfo(void*        
         static_assert(sizeof(DrawCommandProps) == 12, "Did you add a new member to DrawCommandProperties? Please initialize it here.");
 #endif
     }
-
-#ifdef DILIGENT_ENABLE_D3D11_NVAPI
-    if (NvApiSupported)
-        NvAPI_Unload();
-#endif
 
     return AdapterInfo;
 }
