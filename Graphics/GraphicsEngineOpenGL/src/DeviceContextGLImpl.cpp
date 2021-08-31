@@ -988,6 +988,7 @@ void DeviceContextGLImpl::DrawIndexedIndirect(const DrawIndexedIndirectAttribs& 
     GLenum GLIndexType;
     Uint32 FirstIndexByteOffset;
     PrepareForIndexedDraw(Attribs.IndexType, 0, GLIndexType, FirstIndexByteOffset);
+    DEV_CHECK_ERR(FirstIndexByteOffset == 0, "Index buffer offset is not supported for DrawIndexedIndirect() in OpenGL");
 
     // http://www.opengl.org/wiki/Vertex_Rendering
     PrepareForIndirectDraw(Attribs.pAttribsBuffer);
@@ -997,7 +998,6 @@ void DeviceContextGLImpl::DrawIndexedIndirect(const DrawIndexedIndirectAttribs& 
         bool NativeMultiDrawExecuted = false;
         if (Attribs.DrawCount > 1)
         {
-            NativeMultiDrawExecuted = false;
 #if GL_ARB_multi_draw_indirect
             if ((m_pDevice->GetAdapterInfo().DrawCommand.CapFlags & DRAW_COMMAND_CAP_FLAG_NATIVE_MULTI_DRAW_INDIRECT) != 0)
             {

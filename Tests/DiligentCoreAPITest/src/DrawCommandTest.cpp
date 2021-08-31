@@ -1661,7 +1661,7 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_BaseVertex_FirstIndex
 
 //  Indirect draw calls
 
-TEST_F(DrawCommandTest, DrawInstancedIndirect_FirstInstance_BaseVertex_FirstIndex_VBOffset_IBOffset_InstOffset)
+TEST_F(DrawCommandTest, DrawInstancedIndirect_FirstInstance_BaseVertex_FirstIndex_VBOffset_InstOffset)
 {
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
@@ -1699,7 +1699,7 @@ TEST_F(DrawCommandTest, DrawInstancedIndirect_FirstInstance_BaseVertex_FirstInde
         {
             0, 0, 0, 0, 0, // Offset
 
-            6, // NumVertices
+            3, // NumVertices
             2, // NumInstances
             3, // StartVertexLocation
             4  // FirstInstanceLocation
@@ -1724,6 +1724,8 @@ TEST_F(DrawCommandTest, DrawIndexedInstancedIndirect_FirstInstance_BaseVertex_Fi
     auto* pContext = pEnv->GetDeviceContext();
     SetRenderTargets(sm_pDrawInstancedPSO);
 
+    const bool IsGL = pDevice->GetDeviceInfo().IsGLDevice();
+
     // clang-format off
     const Vertex Triangles[] =
     {
@@ -1732,7 +1734,7 @@ TEST_F(DrawCommandTest, DrawIndexedInstancedIndirect_FirstInstance_BaseVertex_Fi
         {}, {},
         VertInst[1], {}, VertInst[0], {}, {}, VertInst[2]
     };
-    Uint32 Indices[] = {0,0,0, 0,0,0,0, 4, 2, 7};
+    const Uint32 Indices[] = {0,0,0, 0,0,0,0, 4, 2, 7};
     const float4 InstancedData[] =
     {
         {}, {}, {}, {},     // Skip 4 instances with VB offset
@@ -1749,17 +1751,17 @@ TEST_F(DrawCommandTest, DrawIndexedInstancedIndirect_FirstInstance_BaseVertex_Fi
     IBuffer* pVBs[]    = {pVB, pInstVB};
     Uint32   Offsets[] = {4 * sizeof(Vertex), 4 * sizeof(float4)};
     pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
-    pContext->SetIndexBuffer(pIB, 3 * sizeof(Uint32), RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    pContext->SetIndexBuffer(pIB, IsGL ? 0 : 3 * sizeof(Uint32), RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
-    Uint32 IndirectDrawData[] =
+    const Uint32 IndirectDrawData[] =
         {
             0, 0, 0, 0, 0, // Offset
 
-            6, // NumIndices
-            2, // NumInstances
-            4, // FirstIndexLocation
-            3, // BaseVertex
-            5, // FirstInstanceLocation
+            3,             // NumIndices
+            2,             // NumInstances
+            IsGL ? 7u : 4, // FirstIndexLocation
+            3,             // BaseVertex
+            5,             // FirstInstanceLocation
         };
     auto pIndirectArgsBuff = CreateIndirectDrawArgsBuffer(IndirectDrawData, sizeof(IndirectDrawData));
 
@@ -1773,9 +1775,12 @@ TEST_F(DrawCommandTest, DrawIndexedInstancedIndirect_FirstInstance_BaseVertex_Fi
 
 TEST_F(DrawCommandTest, MultiDrawIndirect)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
-    auto* pContext = pEnv->GetDeviceContext();
+    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+    if (!pDevice->GetDeviceInfo().Features.IndirectRendering)
+        GTEST_SKIP() << "Indirect rendering is not supported on this device";
 
+    auto* pContext = pEnv->GetDeviceContext();
     SetRenderTargets(sm_pDrawInstancedPSO);
 
     // clang-format off
@@ -1835,7 +1840,11 @@ TEST_F(DrawCommandTest, MultiDrawIndirect)
 
 TEST_F(DrawCommandTest, MultiDrawIndexedIndirect)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+    if (!pDevice->GetDeviceInfo().Features.IndirectRendering)
+        GTEST_SKIP() << "Indirect rendering is not supported on this device";
+
     auto* pContext = pEnv->GetDeviceContext();
     SetRenderTargets(sm_pDrawInstancedPSO);
 
@@ -1847,7 +1856,7 @@ TEST_F(DrawCommandTest, MultiDrawIndexedIndirect)
         {}, {},
         VertInst[1], {}, VertInst[0], {}, {}, VertInst[2]
     };
-    const Uint32 Indices[] = {0,0,0, 0,0,0,0, 4, 2, 7};
+    const Uint32 Indices[] = {0,0,0,0, 4, 2, 7};
     const float4 InstancedData[] =
     {
         {}, {}, {}, {},     // Skip 4 instances with VB offset
@@ -1864,7 +1873,7 @@ TEST_F(DrawCommandTest, MultiDrawIndexedIndirect)
     IBuffer*     pVBs[]    = {pVB, pInstVB};
     const Uint32 Offsets[] = {4 * sizeof(Vertex), 4 * sizeof(float4)};
     pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
-    pContext->SetIndexBuffer(pIB, 3 * sizeof(Uint32), RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    pContext->SetIndexBuffer(pIB, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
     const Uint32 IndirectDrawData[] =
         {
@@ -1905,6 +1914,8 @@ TEST_F(DrawCommandTest, MultiDrawIndirectCount)
 {
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
+    if (!pDevice->GetDeviceInfo().Features.IndirectRendering)
+        GTEST_SKIP() << "Indirect rendering is not supported on this device";
     if (!(pDevice->GetAdapterInfo().DrawCommand.CapFlags & DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNTER_BUFFER))
         GTEST_SKIP() << "Indirect multi draw with counter buffer is not supported on this device";
 
@@ -1980,6 +1991,8 @@ TEST_F(DrawCommandTest, MultiDrawIndexedIndirectCount)
 {
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
+    if (!pDevice->GetDeviceInfo().Features.IndirectRendering)
+        GTEST_SKIP() << "Indirect rendering is not supported on this device";
     if (!(pDevice->GetAdapterInfo().DrawCommand.CapFlags & DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNTER_BUFFER))
         GTEST_SKIP() << "Indirect multi draw with counter buffer is not supported on this device";
 
@@ -1994,7 +2007,7 @@ TEST_F(DrawCommandTest, MultiDrawIndexedIndirectCount)
         {}, {},
         VertInst[1], {}, VertInst[0], {}, {}, VertInst[2]
     };
-    const Uint32 Indices[] = {0,0,0, 0,0,0,0, 4, 2, 7};
+    const Uint32 Indices[] = {0,0,0,0, 4, 2, 7};
     const float4 InstancedData[] =
     {
         {}, {}, {}, {},     // Skip 4 instances with VB offset
@@ -2011,7 +2024,7 @@ TEST_F(DrawCommandTest, MultiDrawIndexedIndirectCount)
     IBuffer* pVBs[]    = {pVB, pInstVB};
     Uint32   Offsets[] = {4 * sizeof(Vertex), 4 * sizeof(float4)};
     pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
-    pContext->SetIndexBuffer(pIB, 3 * sizeof(Uint32), RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    pContext->SetIndexBuffer(pIB, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
     const Uint32 IndirectDrawData[] =
         {

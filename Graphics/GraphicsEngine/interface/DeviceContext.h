@@ -2229,6 +2229,9 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     ///           If the application intends to use the same resources in other threads simultaneously, it needs to
     ///           explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
     ///
+    /// \remarks  In OpenGL backend, index buffer offset set by SetIndexBuffer() can't be applied in
+    ///           indirect draw command and must be zero.
+    ///
     /// \remarks Supported contexts: graphics.
     VIRTUAL void METHOD(DrawIndexedIndirect)(THIS_
                                              const DrawIndexedIndirectAttribs REF Attribs) PURE;
