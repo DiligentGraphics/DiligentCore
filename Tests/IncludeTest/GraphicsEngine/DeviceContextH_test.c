@@ -101,7 +101,7 @@ void TestDeviceContextCInterface(struct IDeviceContext* pCtx)
     IDeviceContext_WriteBLASCompactedSize(pCtx, (struct WriteBLASCompactedSizeAttribs*)NULL);
     IDeviceContext_WriteTLASCompactedSize(pCtx, (struct WriteTLASCompactedSizeAttribs*)NULL);
     IDeviceContext_TraceRays(pCtx, (struct TraceRaysAttribs*)NULL);
-    IDeviceContext_TraceRaysIndirect(pCtx, (struct TraceRaysIndirectAttribs*)NULL, (struct IBuffer*)NULL);
+    IDeviceContext_TraceRaysIndirect(pCtx, (struct TraceRaysIndirectAttribs*)NULL);
     IDeviceContext_UpdateSBT(pCtx, (struct IShaderBindingTable*)NULL, (const struct UpdateIndirectRTBufferAttribs*)NULL);
 
     struct IObject* pUserData = NULL;

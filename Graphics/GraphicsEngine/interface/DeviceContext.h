@@ -1623,8 +1623,19 @@ struct TraceRaysIndirectAttribs
     /// Shader binding table.
     const IShaderBindingTable* pSBT  DEFAULT_INITIALIZER(nullptr);
 
+    /// A pointer to the buffer containing indirect trace rays attributes.
+    /// The buffer must contain the following arguments at the specified offset:
+    ///    [88 bytes reserved] - for Direct3D12 backend
+    ///    Uint32 DimensionX;
+    ///    Uint32 DimensionY;
+    ///    Uint32 DimensionZ;
+    ///
+    /// \remarks  Use IDeviceContext::UpdateSBT() to initialize the first 88 bytes with the
+    ///           same shader binding table as specified in TraceRaysIndirectAttribs::pSBT.
+    IBuffer*                       pAttribsBuffer                   DEFAULT_INITIALIZER(nullptr);
+
     /// State transition mode for indirect trace rays attributes buffer.
-    RESOURCE_STATE_TRANSITION_MODE IndirectAttribsBufferStateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
+    RESOURCE_STATE_TRANSITION_MODE AttribsBufferStateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
 
     /// The offset from the beginning of the buffer to the trace rays command arguments.
     Uint32  ArgsByteOffset  DEFAULT_INITIALIZER(0);
@@ -1632,13 +1643,15 @@ struct TraceRaysIndirectAttribs
 #if DILIGENT_CPP_INTERFACE
     constexpr TraceRaysIndirectAttribs() noexcept {}
 
-    explicit constexpr TraceRaysIndirectAttribs(
+    constexpr TraceRaysIndirectAttribs(
         const IShaderBindingTable*     _pSBT,
-        RESOURCE_STATE_TRANSITION_MODE _TransitionMode = TraceRaysIndirectAttribs{}.IndirectAttribsBufferStateTransitionMode,
+        IBuffer*                       _pAttribsBuffer,
+        RESOURCE_STATE_TRANSITION_MODE _TransitionMode = TraceRaysIndirectAttribs{}.AttribsBufferStateTransitionMode,
         Uint32                         _ArgsByteOffset = TraceRaysIndirectAttribs{}.ArgsByteOffset) noexcept :
-        pSBT{_pSBT},
-        IndirectAttribsBufferStateTransitionMode{_TransitionMode},
-        ArgsByteOffset{_ArgsByteOffset}
+        pSBT                            {_pSBT},
+        pAttribsBuffer                  {_pAttribsBuffer},
+        AttribsBufferStateTransitionMode{_TransitionMode},
+        ArgsByteOffset                  {_ArgsByteOffset}
     {}
 #endif
 };
@@ -2850,14 +2863,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
 
     /// Executes an indirect trace rays command.
 
-    /// \param [in] pAttribsBuffer - Pointer to the buffer containing indirect trace rays attributes.
-    ///                              The buffer must contain the following arguments at the specified offset:
-    ///                                 [88 bytes reserved] - for Direct3D12 backend
-    ///                                 Uint32 DimensionX;
-    ///                                 Uint32 DimensionY;
-    ///                                 Uint32 DimensionZ;
-    ///                              You must call IDeviceContext::UpdateSBT() to initialize the first 88 bytes with the
-    ///                              same shader binding table as specified in TraceRaysIndirectAttribs::pSBT.
+    /// \param [in] Attribs - Indirect trace rays command attributes, see Diligent::TraceRaysIndirectAttribs.
     ///
     /// \remarks  The method is not thread-safe. An application must externally synchronize the access
     ///           to the shader binding table (SBT) passed as an argument to the function.
@@ -2866,8 +2872,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     ///
     /// \remarks Supported contexts: graphics, compute.
     VIRTUAL void METHOD(TraceRaysIndirect)(THIS_
-                                           const TraceRaysIndirectAttribs REF Attribs,
-                                           IBuffer*                           pAttribsBuffer) PURE;
+                                           const TraceRaysIndirectAttribs REF Attribs) PURE;
 
 
     /// Updates SBT with the pending data that were recorded in IShaderBindingTable::Bind*** calls.

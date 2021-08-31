@@ -2847,14 +2847,14 @@ void DeviceContextD3D12Impl::TraceRays(const TraceRaysAttribs& Attribs)
     ++m_State.NumCommands;
 }
 
-void DeviceContextD3D12Impl::TraceRaysIndirect(const TraceRaysIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
+void DeviceContextD3D12Impl::TraceRaysIndirect(const TraceRaysIndirectAttribs& Attribs)
 {
-    TDeviceContextBase::TraceRaysIndirect(Attribs, pAttribsBuffer, 0);
+    TDeviceContextBase::TraceRaysIndirect(Attribs, 0);
 
     auto&       CmdCtx              = GetCmdContext().AsGraphicsContext4();
-    auto*       pAttribsBufferD3D12 = ValidatedCast<BufferD3D12Impl>(pAttribsBuffer);
+    auto*       pAttribsBufferD3D12 = ValidatedCast<BufferD3D12Impl>(Attribs.pAttribsBuffer);
     const char* OpName              = "Trace rays indirect (DeviceContextD3D12Impl::TraceRaysIndirect)";
-    TransitionOrVerifyBufferState(CmdCtx, *pAttribsBufferD3D12, Attribs.IndirectAttribsBufferStateTransitionMode, RESOURCE_STATE_INDIRECT_ARGUMENT, OpName);
+    TransitionOrVerifyBufferState(CmdCtx, *pAttribsBufferD3D12, Attribs.AttribsBufferStateTransitionMode, RESOURCE_STATE_INDIRECT_ARGUMENT, OpName);
 
     PrepareForDispatchRays(CmdCtx);
 

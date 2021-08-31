@@ -3571,14 +3571,14 @@ void DeviceContextVkImpl::TraceRays(const TraceRaysAttribs& Attribs)
     ++m_State.NumCommands;
 }
 
-void DeviceContextVkImpl::TraceRaysIndirect(const TraceRaysIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
+void DeviceContextVkImpl::TraceRaysIndirect(const TraceRaysIndirectAttribs& Attribs)
 {
-    TDeviceContextBase::TraceRaysIndirect(Attribs, pAttribsBuffer, 0);
+    TDeviceContextBase::TraceRaysIndirect(Attribs, 0);
 
     const auto* pSBTVk       = ValidatedCast<const ShaderBindingTableVkImpl>(Attribs.pSBT);
     const auto& BindingTable = pSBTVk->GetVkBindingTable();
 
-    auto* const pIndirectAttribsVk = PrepareIndirectAttribsBuffer(pAttribsBuffer, Attribs.IndirectAttribsBufferStateTransitionMode, "Trace rays indirect (DeviceContextVkImpl::TraceRaysIndirect)");
+    auto* const pIndirectAttribsVk = PrepareIndirectAttribsBuffer(Attribs.pAttribsBuffer, Attribs.AttribsBufferStateTransitionMode, "Trace rays indirect (DeviceContextVkImpl::TraceRaysIndirect)");
     const auto  IndirectBuffOffset = Attribs.ArgsByteOffset + TraceRaysIndirectCommandSBTSize;
 
     PrepareForRayTracing();

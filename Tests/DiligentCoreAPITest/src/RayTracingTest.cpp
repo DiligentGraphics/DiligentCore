@@ -2066,11 +2066,12 @@ TEST_P(RT7, TraceRaysIndirect)
     pContext->CommitShaderResources(pRayTracingSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
     TraceRaysIndirectAttribs Attribs;
-    Attribs.pSBT                                     = pSBT;
-    Attribs.IndirectAttribsBufferStateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
-    Attribs.ArgsByteOffset                           = offsetof(TraceRaysIndirectArgs, Reserved);
+    Attribs.pAttribsBuffer                   = pAttribsBuf;
+    Attribs.pSBT                             = pSBT;
+    Attribs.AttribsBufferStateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+    Attribs.ArgsByteOffset                   = offsetof(TraceRaysIndirectArgs, Reserved);
 
-    pContext->TraceRaysIndirect(Attribs, pAttribsBuf);
+    pContext->TraceRaysIndirect(Attribs);
 
     pSwapChain->Present();
 }

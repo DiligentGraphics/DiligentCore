@@ -970,8 +970,10 @@ bool VerifyTraceRaysAttribs(const TraceRaysAttribs& Attribs)
     return true;
 }
 
-bool VerifyTraceRaysIndirectAttribs(const IRenderDevice* pDevice, const TraceRaysIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer, Uint32 SBTSize)
+bool VerifyTraceRaysIndirectAttribs(const IRenderDevice* pDevice, const TraceRaysIndirectAttribs& Attribs, Uint32 SBTSize)
 {
+    const IBuffer* pAttribsBuffer = Attribs.pAttribsBuffer;
+
 #define CHECK_TRACE_RAYS_INDIRECT_ATTRIBS(Expr, ...) CHECK_PARAMETER(Expr, "Trace rays indirect attribs are invalid: ", __VA_ARGS__)
     CHECK_TRACE_RAYS_INDIRECT_ATTRIBS(Attribs.pSBT != nullptr, "pSBT must not be null");
 

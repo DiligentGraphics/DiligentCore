@@ -2200,7 +2200,7 @@ void DeviceContextD3D11Impl::TraceRays(const TraceRaysAttribs& Attribs)
     UNSUPPORTED("TraceRays is not supported in DirectX 11");
 }
 
-void DeviceContextD3D11Impl::TraceRaysIndirect(const TraceRaysIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
+void DeviceContextD3D11Impl::TraceRaysIndirect(const TraceRaysIndirectAttribs& Attribs)
 {
     UNSUPPORTED("TraceRaysIndirect is not supported in DirectX 11");
 }

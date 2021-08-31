@@ -92,7 +92,6 @@ bool VerifyWriteTLASCompactedSizeAttribs(const IRenderDevice* pDevice, const Wri
 bool VerifyTraceRaysAttribs(const TraceRaysAttribs& Attribs);
 bool VerifyTraceRaysIndirectAttribs(const IRenderDevice*            pDevice,
                                     const TraceRaysIndirectAttribs& Attribs,
-                                    const IBuffer*                  pAttribsBuffer,
                                     Uint32                          SBTSize);
 
 
@@ -573,7 +572,7 @@ protected:
     void WriteBLASCompactedSize(const WriteBLASCompactedSizeAttribs& Attribs, int) const;
     void WriteTLASCompactedSize(const WriteTLASCompactedSizeAttribs& Attribs, int) const;
     void TraceRays(const TraceRaysAttribs& Attribs, int) const;
-    void TraceRaysIndirect(const TraceRaysIndirectAttribs& Attribs, IBuffer* pAttribsBuffer, int) const;
+    void TraceRaysIndirect(const TraceRaysIndirectAttribs& Attribs, int) const;
     void UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndirectRTBufferAttribs* pUpdateIndirectBufferAttribs, int) const;
 
     void BeginDebugGroup(const Char* Name, const float* pColor, int);
@@ -1911,7 +1910,7 @@ void DeviceContextBase<ImplementationTraits>::TraceRays(const TraceRaysAttribs& 
 }
 
 template <typename ImplementationTraits>
-void DeviceContextBase<ImplementationTraits>::TraceRaysIndirect(const TraceRaysIndirectAttribs& Attribs, IBuffer* pAttribsBuffer, int) const
+void DeviceContextBase<ImplementationTraits>::TraceRaysIndirect(const TraceRaysIndirectAttribs& Attribs, int) const
 {
     DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_COMPUTE, "TraceRaysIndirect");
 
@@ -1928,7 +1927,7 @@ void DeviceContextBase<ImplementationTraits>::TraceRaysIndirect(const TraceRaysI
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr,
                   "IDeviceContext::TraceRaysIndirect must be performed outside of render pass");
 
-    DEV_CHECK_ERR(VerifyTraceRaysIndirectAttribs(m_pDevice, Attribs, pAttribsBuffer, TraceRaysIndirectCommandSize),
+    DEV_CHECK_ERR(VerifyTraceRaysIndirectAttribs(m_pDevice, Attribs, TraceRaysIndirectCommandSize),
                   "TraceRaysIndirectAttribs are invalid");
 
     DEV_CHECK_ERR(PipelineStateImplType::IsSameObject(m_pPipelineState, ValidatedCast<PipelineStateImplType>(Attribs.pSBT->GetDesc().pPSO)),
