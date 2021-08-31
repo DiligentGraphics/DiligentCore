@@ -1663,10 +1663,10 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_BaseVertex_FirstIndex
 
 TEST_F(DrawCommandTest, DrawInstancedIndirect_FirstInstance_BaseVertex_FirstIndex_VBOffset_InstOffset)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
-    auto* pDevice = pEnv->GetDevice();
-    if (!pDevice->GetDeviceInfo().Features.IndirectRendering)
-        GTEST_SKIP() << "Indirect rendering is not supported on this device";
+    auto* const pEnv     = TestingEnvironment::GetInstance();
+    auto* const pDevice  = pEnv->GetDevice();
+    const auto  DrawCaps = pDevice->GetAdapterInfo().DrawCommand.CapFlags;
+    ASSERT_TRUE((DrawCaps & DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT) != 0) << "Indirect rendering must be supported on all desktop platforms";
 
     auto* pContext = pEnv->GetDeviceContext();
 
@@ -1716,10 +1716,10 @@ TEST_F(DrawCommandTest, DrawInstancedIndirect_FirstInstance_BaseVertex_FirstInde
 
 TEST_F(DrawCommandTest, DrawIndexedInstancedIndirect_FirstInstance_BaseVertex_FirstIndex_VBOffset_IBOffset_InstOffset)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
-    auto* pDevice = pEnv->GetDevice();
-    if (!pDevice->GetDeviceInfo().Features.IndirectRendering)
-        GTEST_SKIP() << "Indirect rendering is not supported on this device";
+    auto* const pEnv     = TestingEnvironment::GetInstance();
+    auto* const pDevice  = pEnv->GetDevice();
+    const auto  DrawCaps = pDevice->GetAdapterInfo().DrawCommand.CapFlags;
+    ASSERT_TRUE((DrawCaps & DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT) != 0) << "Indirect rendering must be supported on all desktop platforms";
 
     auto* pContext = pEnv->GetDeviceContext();
     SetRenderTargets(sm_pDrawInstancedPSO);
@@ -1775,10 +1775,10 @@ TEST_F(DrawCommandTest, DrawIndexedInstancedIndirect_FirstInstance_BaseVertex_Fi
 
 TEST_F(DrawCommandTest, MultiDrawIndirect)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
-    auto* pDevice = pEnv->GetDevice();
-    if (!pDevice->GetDeviceInfo().Features.IndirectRendering)
-        GTEST_SKIP() << "Indirect rendering is not supported on this device";
+    auto* const pEnv     = TestingEnvironment::GetInstance();
+    auto* const pDevice  = pEnv->GetDevice();
+    const auto  DrawCaps = pDevice->GetAdapterInfo().DrawCommand.CapFlags;
+    ASSERT_TRUE((DrawCaps & DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT) != 0) << "Indirect rendering must be supported on all desktop platforms";
 
     auto* pContext = pEnv->GetDeviceContext();
     SetRenderTargets(sm_pDrawInstancedPSO);
@@ -1840,10 +1840,10 @@ TEST_F(DrawCommandTest, MultiDrawIndirect)
 
 TEST_F(DrawCommandTest, MultiDrawIndexedIndirect)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
-    auto* pDevice = pEnv->GetDevice();
-    if (!pDevice->GetDeviceInfo().Features.IndirectRendering)
-        GTEST_SKIP() << "Indirect rendering is not supported on this device";
+    auto* const pEnv     = TestingEnvironment::GetInstance();
+    auto* const pDevice  = pEnv->GetDevice();
+    const auto  DrawCaps = pDevice->GetAdapterInfo().DrawCommand.CapFlags;
+    ASSERT_TRUE((DrawCaps & DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT) != 0) << "Indirect rendering must be supported on all desktop platforms";
 
     auto* pContext = pEnv->GetDeviceContext();
     SetRenderTargets(sm_pDrawInstancedPSO);
@@ -1912,11 +1912,11 @@ TEST_F(DrawCommandTest, MultiDrawIndexedIndirect)
 
 TEST_F(DrawCommandTest, MultiDrawIndirectCount)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
-    auto* pDevice = pEnv->GetDevice();
-    if (!pDevice->GetDeviceInfo().Features.IndirectRendering)
-        GTEST_SKIP() << "Indirect rendering is not supported on this device";
-    if (!(pDevice->GetAdapterInfo().DrawCommand.CapFlags & DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNTER_BUFFER))
+    auto* const pEnv     = TestingEnvironment::GetInstance();
+    auto* const pDevice  = pEnv->GetDevice();
+    const auto  DrawCaps = pDevice->GetAdapterInfo().DrawCommand.CapFlags;
+    ASSERT_TRUE((DrawCaps & DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT) != 0) << "Indirect rendering must be supported on all desktop platforms";
+    if ((DrawCaps & DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNTER_BUFFER) == 0)
         GTEST_SKIP() << "Indirect multi draw with counter buffer is not supported on this device";
 
     auto* pContext = pEnv->GetDeviceContext();
@@ -1989,11 +1989,11 @@ TEST_F(DrawCommandTest, MultiDrawIndirectCount)
 
 TEST_F(DrawCommandTest, MultiDrawIndexedIndirectCount)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
-    auto* pDevice = pEnv->GetDevice();
-    if (!pDevice->GetDeviceInfo().Features.IndirectRendering)
-        GTEST_SKIP() << "Indirect rendering is not supported on this device";
-    if (!(pDevice->GetAdapterInfo().DrawCommand.CapFlags & DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNTER_BUFFER))
+    auto* const pEnv     = TestingEnvironment::GetInstance();
+    auto* const pDevice  = pEnv->GetDevice();
+    const auto  DrawCaps = pDevice->GetAdapterInfo().DrawCommand.CapFlags;
+    ASSERT_TRUE((DrawCaps & DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT) != 0) << "Indirect rendering must be supported on all desktop platforms";
+    if ((DrawCaps & DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNTER_BUFFER) == 0)
         GTEST_SKIP() << "Indirect multi draw with counter buffer is not supported on this device";
 
     auto* pContext = pEnv->GetDeviceContext();

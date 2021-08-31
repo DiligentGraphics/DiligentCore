@@ -189,7 +189,6 @@ public:
             auto& Features{AdapterInfo.Features};
             Features.SeparablePrograms             = DEVICE_FEATURE_STATE_ENABLED;
             Features.ShaderResourceQueries         = DEVICE_FEATURE_STATE_ENABLED;
-            Features.IndirectRendering             = DEVICE_FEATURE_STATE_ENABLED;
             Features.WireframeFill                 = DEVICE_FEATURE_STATE_ENABLED;
             Features.MultithreadedResourceCreation = DEVICE_FEATURE_STATE_ENABLED;
             Features.ComputeShaders                = DEVICE_FEATURE_STATE_ENABLED;
@@ -218,6 +217,15 @@ public:
             Mem.LocalMemory        = dxgiAdapterDesc.DedicatedVideoMemory;
             Mem.HostVisibileMemory = dxgiAdapterDesc.SharedSystemMemory;
             Mem.UnifiedMemory      = 0;
+        }
+
+        // Draw command properties
+        {
+            auto& DrawCommand{AdapterInfo.DrawCommand};
+            DrawCommand.MaxDrawIndirectCount = ~0u;
+            DrawCommand.CapFlags =
+                DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT |
+                DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_FIRST_INSTANCE;
         }
 
         // Set queue info

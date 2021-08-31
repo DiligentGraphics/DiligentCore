@@ -73,7 +73,6 @@ DeviceFeatures EnableDeviceFeatures(const DeviceFeatures& SupportedFeatures,
     // clang-format off
     ENABLE_FEATURE(SeparablePrograms,                 "Separable programs are");
     ENABLE_FEATURE(ShaderResourceQueries,             "Shader resource queries are");
-    ENABLE_FEATURE(IndirectRendering,                 "Indirect rendering is");
     ENABLE_FEATURE(WireframeFill,                     "Wireframe fill is");
     ENABLE_FEATURE(MultithreadedResourceCreation,     "Multithreaded resource creation is");
     ENABLE_FEATURE(ComputeShaders,                    "Compute shaders are");
@@ -114,7 +113,7 @@ DeviceFeatures EnableDeviceFeatures(const DeviceFeatures& SupportedFeatures,
 #undef ENABLE_FEATURE
 
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(Diligent::DeviceFeatures) == 39, "Did you add a new feature to DeviceFeatures? Please handle its satus here (if necessary).");
+    static_assert(sizeof(Diligent::DeviceFeatures) == 38, "Did you add a new feature to DeviceFeatures? Please handle its satus here (if necessary).");
 #endif
     return EnabledFeatures;
 }

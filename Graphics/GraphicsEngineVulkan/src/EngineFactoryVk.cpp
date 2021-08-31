@@ -388,7 +388,7 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
         auto& DrawCommandProps{AdapterInfo.DrawCommand};
         DrawCommandProps.MaxIndexValue        = vkDeviceProps.limits.maxDrawIndexedIndexValue;
         DrawCommandProps.MaxDrawIndirectCount = vkDeviceProps.limits.maxDrawIndirectCount;
-        DrawCommandProps.CapFlags             = DRAW_COMMAND_CAP_FLAG_NATIVE_MULTI_DRAW_INDIRECT;
+        DrawCommandProps.CapFlags             = DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT;
         if (vkFeatures.multiDrawIndirect != VK_FALSE || vkExtFeatures.DrawIndirectCount)
             DrawCommandProps.CapFlags |= DRAW_COMMAND_CAP_FLAG_NATIVE_MULTI_DRAW_INDIRECT;
         if (vkFeatures.drawIndirectFirstInstance != VK_FALSE)
@@ -1022,7 +1022,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
         }
 
 #if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(Diligent::DeviceFeatures) == 39, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+        static_assert(sizeof(Diligent::DeviceFeatures) == 38, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 #endif
 
         for (Uint32 i = 0; i < EngineCI.DeviceExtensionCount; ++i)

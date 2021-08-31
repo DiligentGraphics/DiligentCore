@@ -713,7 +713,6 @@ void RenderDeviceGLImpl::InitAdapterInfo()
             Features.SeparablePrograms = DEVICE_FEATURE_STATE_OPTIONAL;
 
             // clang-format off
-            ENABLE_FEATURE(IndirectRendering,             true);
             ENABLE_FEATURE(WireframeFill,                 true);
             ENABLE_FEATURE(MultithreadedResourceCreation, false);
             ENABLE_FEATURE(ComputeShaders,                IsGL43OrAbove || CheckExtension("GL_ARB_compute_shader"));
@@ -776,7 +775,6 @@ void RenderDeviceGLImpl::InitAdapterInfo()
             Features.SeparablePrograms = (IsGLES31OrAbove || strstr(Extensions, "separate_shader_objects")) ? DEVICE_FEATURE_STATE_OPTIONAL : DEVICE_FEATURE_STATE_DISABLED;
 
             // clang-format off
-            ENABLE_FEATURE(IndirectRendering,             IsGLES31OrAbove || strstr(Extensions, "draw_indirect"));
             ENABLE_FEATURE(WireframeFill,                 false);
             ENABLE_FEATURE(MultithreadedResourceCreation, false);
             ENABLE_FEATURE(ComputeShaders,                IsGLES31OrAbove || strstr(Extensions, "compute_shader"));
@@ -922,6 +920,8 @@ void RenderDeviceGLImpl::InitAdapterInfo()
         DrawCommandProps.CapFlags             = DRAW_COMMAND_CAP_FLAG_NONE;
         if (m_DeviceInfo.Type == RENDER_DEVICE_TYPE_GL)
         {
+            DrawCommandProps.CapFlags |= DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT;
+
             // The baseInstance member of the DrawElementsIndirectCommand structure is defined only if the GL version is 4.2 or greater.
             if (GLVersion >= Version{4, 2})
                 DrawCommandProps.CapFlags |= DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_FIRST_INSTANCE;
@@ -935,6 +935,9 @@ void RenderDeviceGLImpl::InitAdapterInfo()
         else if (m_DeviceInfo.Type == RENDER_DEVICE_TYPE_GLES)
         {
             const auto* Extensions = reinterpret_cast<const char*>(glGetString(GL_EXTENSIONS));
+            if (GLVersion >= Version{3, 1} || strstr(Extensions, "draw_indirect"))
+                DrawCommandProps.CapFlags |= DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT;
+
             if (strstr(Extensions, "base_instance"))
                 DrawCommandProps.CapFlags |= DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_FIRST_INSTANCE;
 
@@ -962,7 +965,7 @@ void RenderDeviceGLImpl::InitAdapterInfo()
     }
 
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(DeviceFeatures) == 39, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+    static_assert(sizeof(DeviceFeatures) == 38, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 #endif
 }
 

@@ -1620,9 +1620,6 @@ struct DeviceFeatures
     ///         OpenGL when separable programs are available, and it is always disabled in Metal.
     DEVICE_FEATURE_STATE ShaderResourceQueries         DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
-    /// Indicates if device supports indirect draw commands
-    DEVICE_FEATURE_STATE IndirectRendering             DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
-
     /// Indicates if device supports wireframe fill mode
     DEVICE_FEATURE_STATE WireframeFill                 DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
@@ -1752,7 +1749,6 @@ struct DeviceFeatures
     explicit constexpr DeviceFeatures(DEVICE_FEATURE_STATE State) noexcept :
         SeparablePrograms                 {State},
         ShaderResourceQueries             {State},
-        IndirectRendering                 {State},
         WireframeFill                     {State},
         MultithreadedResourceCreation     {State},
         ComputeShaders                    {State},
@@ -1791,7 +1787,7 @@ struct DeviceFeatures
         VariableRateShading               {State}
     {
 #   if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(*this) == 39, "Did you add a new feature to DeviceFeatures? Please handle its status above.");
+        static_assert(sizeof(*this) == 38, "Did you add a new feature to DeviceFeatures? Please handle its status above.");
 #   endif
     }
 #endif
@@ -2525,18 +2521,21 @@ DILIGENT_TYPED_ENUM(DRAW_COMMAND_CAP_FLAGS, Uint16)
     /// No draw command capabilities.
     DRAW_COMMAND_CAP_FLAG_NONE                         = 0,
 
+    /// Indicates that device supports indirect draw/dispatch commands.
+    DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT                = 1u << 0,
+
     /// Indicates that FirstInstanceLocation of the indirect draw command can be greater than zero.
-    DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_FIRST_INSTANCE = 1u << 0,
+    DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_FIRST_INSTANCE = 1u << 1,
 
     /// Indicates that device natively supports indirect draw commands with DrawCount > 1.
     /// When this flag is not set, the commands will be emulated on the host, which will
     /// produce correct results, but will be slower.
-    DRAW_COMMAND_CAP_FLAG_NATIVE_MULTI_DRAW_INDIRECT   = 1u << 1,
+    DRAW_COMMAND_CAP_FLAG_NATIVE_MULTI_DRAW_INDIRECT   = 1u << 2,
 
     /// Indicates that IDeviceContext::DrawIndirect() and IDeviceContext::DrawIndexedIndirect()
     /// commands may take non-null counter buffer. If this flag is not set, the number
     /// of draw commands must be specified through the command attributes.
-    DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNTER_BUFFER = 1u << 2
+    DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNTER_BUFFER = 1u << 3
 };
 DEFINE_FLAG_ENUM_OPERATORS(DRAW_COMMAND_CAP_FLAGS);
 

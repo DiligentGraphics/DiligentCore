@@ -172,10 +172,12 @@ TEST_F(BufferCreationTest, CreateFormattedBuffer)
     TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     const auto& DevInfo = pDevice->GetDeviceInfo();
-    if (!(DevInfo.Features.ComputeShaders && DevInfo.Features.IndirectRendering))
+    if (!DevInfo.Features.ComputeShaders)
     {
         GTEST_SKIP();
     }
+    const auto DrawCaps = pDevice->GetAdapterInfo().DrawCommand.CapFlags;
+    ASSERT_TRUE((DrawCaps & DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT) != 0) << "Indirect rendering must be supported on all desktop platforms";
 
     BufferDesc BuffDesc;
     BuffDesc.Name              = "Formatted buffer";

@@ -1,5 +1,6 @@
 ## Current progress
 
+* Reworked draw indirect command attributes (moved buffers into the attribs structs), removed DrawMeshIndirectCount (API Version 250008)
 * Enabled indirect multidraw commands (API Version 250007)
 * Enabled variable rate shading (API Version 250006)
 * Added 'TransferQueueTimestampQueries' feature (API Version 250005)

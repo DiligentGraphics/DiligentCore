@@ -1912,7 +1912,6 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
     // The following features are always enabled
     Features.SeparablePrograms             = DEVICE_FEATURE_STATE_ENABLED;
     Features.ShaderResourceQueries         = DEVICE_FEATURE_STATE_ENABLED;
-    Features.IndirectRendering             = DEVICE_FEATURE_STATE_ENABLED;
     Features.MultithreadedResourceCreation = DEVICE_FEATURE_STATE_ENABLED;
     Features.ComputeShaders                = DEVICE_FEATURE_STATE_ENABLED;
     Features.BindlessResources             = DEVICE_FEATURE_STATE_ENABLED;
@@ -2013,7 +2012,7 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
 #endif
 
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(DeviceFeatures) == 39, "Did you add a new feature to DeviceFeatures? Please handle its satus here (if necessary).");
+    static_assert(sizeof(DeviceFeatures) == 38, "Did you add a new feature to DeviceFeatures? Please handle its satus here (if necessary).");
 #endif
 
     return Features;
