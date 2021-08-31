@@ -1706,8 +1706,9 @@ TEST_F(DrawCommandTest, DrawInstancedIndirect_FirstInstance_BaseVertex_FirstInde
         };
     auto pIndirectArgsBuff = CreateIndirectDrawArgsBuffer(IndirectDrawData, sizeof(IndirectDrawData));
 
-    DrawIndirectAttribs drawAttrs{DRAW_FLAG_VERIFY_ALL, RESOURCE_STATE_TRANSITION_MODE_TRANSITION};
-    drawAttrs.IndirectDrawArgsOffset = 5 * sizeof(Uint32);
+    DrawIndirectAttribs drawAttrs{DRAW_FLAG_VERIFY_ALL};
+    drawAttrs.IndirectAttribsBufferStateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+    drawAttrs.IndirectDrawArgsOffset                   = 5 * sizeof(Uint32);
     pContext->DrawIndirect(drawAttrs, pIndirectArgsBuff);
 
     Present();
@@ -1771,12 +1772,9 @@ TEST_F(DrawCommandTest, DrawIndexedInstancedIndirect_FirstInstance_BaseVertex_Fi
 
 TEST_F(DrawCommandTest, MultiDrawIndirect)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
-    auto* pDevice = pEnv->GetDevice();
-    if (!pDevice->GetDeviceInfo().Features.NativeMultiDrawIndirect)
-        GTEST_SKIP() << "Indirect multi draw is not supported on this device";
-
+    auto* pEnv     = TestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
+
     SetRenderTargets(sm_pDrawInstancedPSO);
 
     // clang-format off
@@ -1806,30 +1804,36 @@ TEST_F(DrawCommandTest, MultiDrawIndirect)
         {
             0, 0, 0, 0, 0, // Offset
 
-            6, // NumVertices
-            2, // NumInstances
+            3, // NumVertices
+            1, // NumInstances
             3, // StartVertexLocation
-            4  // FirstInstanceLocation
+            4, // FirstInstanceLocation
+            0, // Test padding
+            0, // Test padding
+
+            3, // NumVertices
+            1, // NumInstances
+            3, // StartVertexLocation
+            5, // FirstInstanceLocation
+            0, // Test padding
+            0  // Test padding
         };
     auto pIndirectArgsBuff = CreateIndirectDrawArgsBuffer(IndirectDrawData, sizeof(IndirectDrawData));
 
-    MultiDrawIndirectAttribs drawAttrs;
-    drawAttrs.DrawCount                                = 1;
+    DrawIndirectAttribs drawAttrs;
+    drawAttrs.DrawCount                                = 2;
     drawAttrs.Flags                                    = DRAW_FLAG_VERIFY_ALL;
     drawAttrs.IndirectAttribsBufferStateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
     drawAttrs.IndirectDrawArgsOffset                   = 5 * sizeof(Uint32);
-    pContext->MultiDrawIndirect(drawAttrs, pIndirectArgsBuff);
+    drawAttrs.IndirectDrawArgsStride                   = 6 * sizeof(Uint32);
+    pContext->DrawIndirect(drawAttrs, pIndirectArgsBuff);
 
     Present();
 }
 
 TEST_F(DrawCommandTest, MultiDrawIndexedIndirect)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
-    auto* pDevice = pEnv->GetDevice();
-    if (!pDevice->GetDeviceInfo().Features.NativeMultiDrawIndirect)
-        GTEST_SKIP() << "Indirect multi draw is not supported on this device";
-
+    auto* pEnv     = TestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
     SetRenderTargets(sm_pDrawInstancedPSO);
 
@@ -1864,21 +1868,32 @@ TEST_F(DrawCommandTest, MultiDrawIndexedIndirect)
         {
             0, 0, 0, 0, 0, // Offset
 
-            6, // NumIndices
-            2, // NumInstances
+            3, // NumIndices
+            1, // NumInstances
             4, // FirstIndexLocation
             3, // BaseVertex
             5, // FirstInstanceLocation
+            0, // Test padding
+            0, // Test padding
+
+            3, // NumIndices
+            1, // NumInstances
+            4, // FirstIndexLocation
+            3, // BaseVertex
+            6, // FirstInstanceLocation
+            0, // Test padding
+            0, // Test padding
         };
     auto pIndirectArgsBuff = CreateIndirectDrawArgsBuffer(IndirectDrawData, sizeof(IndirectDrawData));
 
-    MultiDrawIndexedIndirectAttribs drawAttrs;
+    DrawIndexedIndirectAttribs drawAttrs;
     drawAttrs.IndexType                                = VT_UINT32;
-    drawAttrs.DrawCount                                = 1;
+    drawAttrs.DrawCount                                = 2;
     drawAttrs.Flags                                    = DRAW_FLAG_VERIFY_ALL;
     drawAttrs.IndirectAttribsBufferStateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
     drawAttrs.IndirectDrawArgsOffset                   = 5 * sizeof(Uint32);
-    pContext->MultiDrawIndexedIndirect(drawAttrs, pIndirectArgsBuff);
+    drawAttrs.IndirectDrawArgsStride                   = 7 * sizeof(Uint32);
+    pContext->DrawIndexedIndirect(drawAttrs, pIndirectArgsBuff);
 
     Present();
 }
@@ -1887,10 +1902,8 @@ TEST_F(DrawCommandTest, MultiDrawIndirectCount)
 {
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
-    if (!pDevice->GetDeviceInfo().Features.NativeMultiDrawIndirect)
-        GTEST_SKIP() << "Indirect multi draw is not supported on this device";
-    if (!(pDevice->GetAdapterInfo().DrawCommand.CapFlags & DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNT))
-        GTEST_SKIP() << "Indirect multi draw with count buffer is not supported on this device";
+    if (!(pDevice->GetAdapterInfo().DrawCommand.CapFlags & DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNTER_BUFFER))
+        GTEST_SKIP() << "Indirect multi draw with counter buffer is not supported on this device";
 
     auto* pContext = pEnv->GetDeviceContext();
     SetRenderTargets(sm_pDrawInstancedPSO);
@@ -1922,28 +1935,38 @@ TEST_F(DrawCommandTest, MultiDrawIndirectCount)
         {
             0, 0, 0, 0, 0, // Offset
 
-            6, // NumVertices
-            2, // NumInstances
+            3, // NumVertices
+            1, // NumInstances
             3, // StartVertexLocation
-            4  // FirstInstanceLocation
+            4, // FirstInstanceLocation
+            0,
+            0,
+
+            3, // NumVertices
+            1, // NumInstances
+            3, // StartVertexLocation
+            5, // FirstInstanceLocation
+            0,
+            0 //
         };
     auto pIndirectArgsBuff = CreateIndirectDrawArgsBuffer(IndirectDrawData, sizeof(IndirectDrawData));
 
     const Uint32 DrawCount[] =
         {
             0, 0, // Offset
-            1     //
+            2     //
         };
     auto pCountBuff = CreateIndirectDrawArgsBuffer(DrawCount, sizeof(DrawCount));
 
-    MultiDrawIndirectCountAttribs drawAttrs;
-    drawAttrs.MaxDrawCount                             = 1;
+    DrawIndirectAttribs drawAttrs;
+    drawAttrs.DrawCount                                = 2;
     drawAttrs.Flags                                    = DRAW_FLAG_VERIFY_ALL;
     drawAttrs.IndirectAttribsBufferStateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
     drawAttrs.IndirectDrawArgsOffset                   = 5 * sizeof(Uint32);
-    drawAttrs.CountBufferStateTransitionMode           = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
-    drawAttrs.CountBufferOffset                        = 2 * sizeof(Uint32);
-    pContext->MultiDrawIndirectCount(drawAttrs, pIndirectArgsBuff, pCountBuff);
+    drawAttrs.IndirectDrawArgsStride                   = 6 * sizeof(Uint32);
+    drawAttrs.CounterBufferStateTransitionMode         = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+    drawAttrs.CounterOffset                            = 2 * sizeof(Uint32);
+    pContext->DrawIndirect(drawAttrs, pIndirectArgsBuff, pCountBuff);
 
     Present();
 }
@@ -1952,10 +1975,8 @@ TEST_F(DrawCommandTest, MultiDrawIndexedIndirectCount)
 {
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
-    if (!pDevice->GetDeviceInfo().Features.NativeMultiDrawIndirect)
-        GTEST_SKIP() << "Indirect multi draw is not supported on this device";
-    if (!(pDevice->GetAdapterInfo().DrawCommand.CapFlags & DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNT))
-        GTEST_SKIP() << "Indirect multi draw with count buffer is not supported on this device";
+    if (!(pDevice->GetAdapterInfo().DrawCommand.CapFlags & DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNTER_BUFFER))
+        GTEST_SKIP() << "Indirect multi draw with counter buffer is not supported on this device";
 
     auto* pContext = pEnv->GetDeviceContext();
     SetRenderTargets(sm_pDrawInstancedPSO);
@@ -1991,30 +2012,41 @@ TEST_F(DrawCommandTest, MultiDrawIndexedIndirectCount)
         {
             0, 0, 0, 0, 0, // Offset
 
-            6, // NumIndices
-            2, // NumInstances
+            3, // NumIndices
+            1, // NumInstances
             4, // FirstIndexLocation
             3, // BaseVertex
             5, // FirstInstanceLocation
+            0,
+            0,
+
+            3, // NumIndices
+            1, // NumInstances
+            4, // FirstIndexLocation
+            3, // BaseVertex
+            6, // FirstInstanceLocation
+            0,
+            0 //
         };
     auto pIndirectArgsBuff = CreateIndirectDrawArgsBuffer(IndirectDrawData, sizeof(IndirectDrawData));
 
     const Uint32 DrawCount[] =
         {
             0, 0, // Offset
-            1     //
+            2     //
         };
     auto pCountBuff = CreateIndirectDrawArgsBuffer(DrawCount, sizeof(DrawCount));
 
-    MultiDrawIndexedIndirectCountAttribs drawAttrs;
+    DrawIndexedIndirectAttribs drawAttrs;
     drawAttrs.IndexType                                = VT_UINT32;
-    drawAttrs.MaxDrawCount                             = 1;
+    drawAttrs.DrawCount                                = 2;
     drawAttrs.Flags                                    = DRAW_FLAG_VERIFY_ALL;
     drawAttrs.IndirectAttribsBufferStateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
     drawAttrs.IndirectDrawArgsOffset                   = 5 * sizeof(Uint32);
-    drawAttrs.CountBufferStateTransitionMode           = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
-    drawAttrs.CountBufferOffset                        = 2 * sizeof(Uint32);
-    pContext->MultiDrawIndexedIndirectCount(drawAttrs, pIndirectArgsBuff, pCountBuff);
+    drawAttrs.IndirectDrawArgsStride                   = 7 * sizeof(Uint32);
+    drawAttrs.CounterBufferStateTransitionMode         = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+    drawAttrs.CounterOffset                            = 2 * sizeof(Uint32);
+    pContext->DrawIndexedIndirect(drawAttrs, pIndirectArgsBuff, pCountBuff);
 
     Present();
 }

@@ -126,9 +126,9 @@ public:
     /// Implementation of IDeviceContext::DrawIndexed() in OpenGL backend.
     virtual void DILIGENT_CALL_TYPE DrawIndexed        (const DrawIndexedAttribs& Attribs) override final;
     /// Implementation of IDeviceContext::DrawIndirect() in OpenGL backend.
-    virtual void DILIGENT_CALL_TYPE DrawIndirect       (const DrawIndirectAttribs& Attribs, IBuffer* pAttribsBuffer) override final;
+    virtual void DILIGENT_CALL_TYPE DrawIndirect       (const DrawIndirectAttribs& Attribs, IBuffer* pAttribsBuffer, IBuffer* pCounterBuffer) override final;
     /// Implementation of IDeviceContext::DrawIndexedIndirect() in OpenGL backend.
-    virtual void DILIGENT_CALL_TYPE DrawIndexedIndirect(const DrawIndexedIndirectAttribs& Attribs, IBuffer* pAttribsBuffer) override final;
+    virtual void DILIGENT_CALL_TYPE DrawIndexedIndirect(const DrawIndexedIndirectAttribs& Attribs, IBuffer* pAttribsBuffer, IBuffer* pCounterBuffer) override final;
     /// Implementation of IDeviceContext::DrawMesh() in OpenGL backend.
     virtual void DILIGENT_CALL_TYPE DrawMesh           (const DrawMeshAttribs& Attribs) override final;
     /// Implementation of IDeviceContext::DrawMeshIndirect() in OpenGL backend.
@@ -287,24 +287,6 @@ public:
                                                    SHADING_RATE_COMBINER PrimitiveCombiner,
                                                    SHADING_RATE_COMBINER TextureCombiner) override final;
 
-    /// Implementation of IDeviceContext::MultiDrawIndirect() in OpenGL backend.
-    virtual void DILIGENT_CALL_TYPE MultiDrawIndirect(const MultiDrawIndirectAttribs& Attribs,
-                                                      IBuffer*                        pAttribsBuffer) override final;
-
-    /// Implementation of IDeviceContext::MultiDrawIndexedIndirect() in OpenGL backend.
-    virtual void DILIGENT_CALL_TYPE MultiDrawIndexedIndirect(const MultiDrawIndexedIndirectAttribs& Attribs,
-                                                             IBuffer*                               pAttribsBuffer) override final;
-
-    /// Implementation of IDeviceContext::MultiDrawIndirectCount() in OpenGL backend.
-    virtual void DILIGENT_CALL_TYPE MultiDrawIndirectCount(const MultiDrawIndirectCountAttribs& Attribs,
-                                                           IBuffer*                             pAttribsBuffer,
-                                                           IBuffer*                             pCountBuffer) override final;
-
-    /// Implementation of IDeviceContext::MultiDrawIndexedIndirectCount() in OpenGL backend.
-    virtual void DILIGENT_CALL_TYPE MultiDrawIndexedIndirectCount(const MultiDrawIndexedIndirectCountAttribs& Attribs,
-                                                                  IBuffer*                                    pAttribsBuffer,
-                                                                  IBuffer*                                    pCountBuffer) override final;
-
     /// Implementation of IDeviceContextGL::UpdateCurrentGLContext().
     virtual bool DILIGENT_CALL_TYPE UpdateCurrentGLContext() override final;
 
@@ -328,7 +310,7 @@ private:
     __forceinline void PrepareForDraw(DRAW_FLAGS Flags, bool IsIndexed, GLenum& GlTopology);
     __forceinline void PrepareForIndexedDraw(VALUE_TYPE IndexType, Uint32 FirstIndexLocation, GLenum& GLIndexType, Uint32& FirstIndexByteOffset);
     __forceinline void PrepareForIndirectDraw(IBuffer* pAttribsBuffer);
-    __forceinline void PrepareForIndirectCountDraw(IBuffer* pAttribsBuffer, IBuffer* pCountBuffer);
+    __forceinline void PrepareForIndirectDrawCount(IBuffer* pCountBuffer);
     __forceinline void PostDraw();
 
     using TBindings = PipelineResourceSignatureGLImpl::TBindings;

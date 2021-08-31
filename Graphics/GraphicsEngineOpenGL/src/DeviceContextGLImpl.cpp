@@ -886,10 +886,8 @@ void DeviceContextGLImpl::PrepareForIndirectDraw(IBuffer* pAttribsBuffer)
 #endif
 }
 
-void DeviceContextGLImpl::PrepareForIndirectCountDraw(IBuffer* pAttribsBuffer, IBuffer* pCountBuffer)
+void DeviceContextGLImpl::PrepareForIndirectDrawCount(IBuffer* pCountBuffer)
 {
-    PrepareForIndirectDraw(pAttribsBuffer);
-
 #if GL_ARB_indirect_parameters
     auto* pCountBufferGL = ValidatedCast<BufferGLImpl>(pCountBuffer);
     // The indirect rendering functions take their data from the buffer currently bound to the
@@ -907,41 +905,84 @@ void DeviceContextGLImpl::PrepareForIndirectCountDraw(IBuffer* pAttribsBuffer, I
 #endif
 }
 
-void DeviceContextGLImpl::DrawIndirect(const DrawIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
+void DeviceContextGLImpl::DrawIndirect(const DrawIndirectAttribs& Attribs, IBuffer* pAttribsBuffer, IBuffer* pCounterBuffer)
 {
-    DvpVerifyDrawIndirectArguments(Attribs, pAttribsBuffer);
+    DvpVerifyDrawIndirectArguments(Attribs, pAttribsBuffer, pCounterBuffer);
 
-#if GL_ARB_draw_indirect
     GLenum GlTopology;
     PrepareForDraw(Attribs.Flags, true, GlTopology);
 
     // http://www.opengl.org/wiki/Vertex_Rendering
     PrepareForIndirectDraw(pAttribsBuffer);
 
-    //typedef  struct {
-    //   GLuint  count;
-    //   GLuint  instanceCount;
-    //   GLuint  first;
-    //   GLuint  baseInstance;
-    //} DrawArraysIndirectCommand;
-    glDrawArraysIndirect(GlTopology, reinterpret_cast<const void*>(static_cast<size_t>(Attribs.IndirectDrawArgsOffset)));
-    // Note that on GLES 3.1, baseInstance is present but reserved and must be zero
-    DEV_CHECK_GL_ERROR("glDrawArraysIndirect() failed");
+    if (pCounterBuffer == nullptr)
+    {
+        bool NativeMultiDrawExecuted = false;
+        if (Attribs.DrawCount > 1)
+        {
+#if GL_ARB_multi_draw_indirect
+            if ((m_pDevice->GetAdapterInfo().DrawCommand.CapFlags & DRAW_COMMAND_CAP_FLAG_NATIVE_MULTI_DRAW_INDIRECT) != 0)
+            {
+                glMultiDrawArraysIndirect(GlTopology,
+                                          reinterpret_cast<const void*>(static_cast<size_t>(Attribs.IndirectDrawArgsOffset)),
+                                          Attribs.DrawCount,
+                                          Attribs.IndirectDrawArgsStride);
+                DEV_CHECK_GL_ERROR("glMultiDrawArraysIndirect() failed");
+                NativeMultiDrawExecuted = true;
+            }
+#endif
+        }
+
+        if (!NativeMultiDrawExecuted)
+        {
+#if GL_ARB_draw_indirect
+            for (Uint32 draw = 0; draw < Attribs.DrawCount; ++draw)
+            {
+                auto Offset = Attribs.IndirectDrawArgsOffset + draw * Attribs.IndirectDrawArgsStride;
+                //typedef  struct {
+                //   GLuint  count;
+                //   GLuint  instanceCount;
+                //   GLuint  first;
+                //   GLuint  baseInstance;
+                //} DrawArraysIndirectCommand;
+                glDrawArraysIndirect(GlTopology, reinterpret_cast<const void*>(static_cast<size_t>(Offset)));
+                // Note that on GLES 3.1, baseInstance is present but reserved and must be zero
+                DEV_CHECK_GL_ERROR("glDrawArraysIndirect() failed");
+            }
+#else
+            LOG_ERROR_MESSAGE("Indirect rendering is not supported");
+#endif
+        }
+    }
+    else
+    {
+        PrepareForIndirectDrawCount(pCounterBuffer);
+
+#if GL_VERSION_4_6
+        glMultiDrawArraysIndirectCount(GlTopology,
+                                       reinterpret_cast<const void*>(static_cast<size_t>(Attribs.IndirectDrawArgsOffset)),
+                                       static_cast<GLintptr>(Attribs.CounterOffset),
+                                       Attribs.DrawCount,
+                                       Attribs.IndirectDrawArgsStride);
+        DEV_CHECK_GL_ERROR("glMultiDrawArraysIndirectCount() failed");
+
+        constexpr bool ResetVAO = false; // GL_PARAMETER_BUFFER does not affect VAO
+        m_ContextState.BindBuffer(GL_PARAMETER_BUFFER, GLObjectWrappers::GLBufferObj::Null(), ResetVAO);
+#else
+        LOG_ERROR_MESSAGE("Multi indirect count rendering is not supported");
+#endif
+    }
 
     constexpr bool ResetVAO = false; // GL_DRAW_INDIRECT_BUFFER does not affect VAO
     m_ContextState.BindBuffer(GL_DRAW_INDIRECT_BUFFER, GLObjectWrappers::GLBufferObj::Null(), ResetVAO);
 
     PostDraw();
-#else
-    LOG_ERROR_MESSAGE("Indirect rendering is not supported");
-#endif
 }
 
-void DeviceContextGLImpl::DrawIndexedIndirect(const DrawIndexedIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
+void DeviceContextGLImpl::DrawIndexedIndirect(const DrawIndexedIndirectAttribs& Attribs, IBuffer* pAttribsBuffer, IBuffer* pCounterBuffer)
 {
-    DvpVerifyDrawIndexedIndirectArguments(Attribs, pAttribsBuffer);
+    DvpVerifyDrawIndexedIndirectArguments(Attribs, pAttribsBuffer, pCounterBuffer);
 
-#if GL_ARB_draw_indirect
     GLenum GlTopology;
     PrepareForDraw(Attribs.Flags, true, GlTopology);
     GLenum GLIndexType;
@@ -951,24 +992,72 @@ void DeviceContextGLImpl::DrawIndexedIndirect(const DrawIndexedIndirectAttribs& 
     // http://www.opengl.org/wiki/Vertex_Rendering
     PrepareForIndirectDraw(pAttribsBuffer);
 
-    //typedef  struct {
-    //    GLuint  count;
-    //    GLuint  instanceCount;
-    //    GLuint  firstIndex;
-    //    GLuint  baseVertex;
-    //    GLuint  baseInstance;
-    //} DrawElementsIndirectCommand;
-    glDrawElementsIndirect(GlTopology, GLIndexType, reinterpret_cast<const void*>(static_cast<size_t>(Attribs.IndirectDrawArgsOffset)));
-    // Note that on GLES 3.1, baseInstance is present but reserved and must be zero
-    DEV_CHECK_GL_ERROR("glDrawElementsIndirect() failed");
+    if (pCounterBuffer == nullptr)
+    {
+        bool NativeMultiDrawExecuted = false;
+        if (Attribs.DrawCount > 1)
+        {
+            NativeMultiDrawExecuted = false;
+#if GL_ARB_multi_draw_indirect
+            if ((m_pDevice->GetAdapterInfo().DrawCommand.CapFlags & DRAW_COMMAND_CAP_FLAG_NATIVE_MULTI_DRAW_INDIRECT) != 0)
+            {
+                glMultiDrawElementsIndirect(GlTopology,
+                                            GLIndexType,
+                                            reinterpret_cast<const void*>(static_cast<size_t>(Attribs.IndirectDrawArgsOffset)),
+                                            Attribs.DrawCount,
+                                            Attribs.IndirectDrawArgsStride);
+                DEV_CHECK_GL_ERROR("glMultiDrawElementsIndirect() failed");
+                NativeMultiDrawExecuted = true;
+            }
+#endif
+        }
+
+        if (!NativeMultiDrawExecuted)
+        {
+#if GL_ARB_draw_indirect
+            for (Uint32 draw = 0; draw < Attribs.DrawCount; ++draw)
+            {
+                auto Offset = Attribs.IndirectDrawArgsOffset + draw * Attribs.IndirectDrawArgsStride;
+                //typedef  struct {
+                //    GLuint  count;
+                //    GLuint  instanceCount;
+                //    GLuint  firstIndex;
+                //    GLuint  baseVertex;
+                //    GLuint  baseInstance;
+                //} DrawElementsIndirectCommand;
+                glDrawElementsIndirect(GlTopology, GLIndexType, reinterpret_cast<const void*>(static_cast<size_t>(Offset)));
+                // Note that on GLES 3.1, baseInstance is present but reserved and must be zero
+                DEV_CHECK_GL_ERROR("glDrawElementsIndirect() failed");
+            }
+#else
+            LOG_ERROR_MESSAGE("Indirect rendering is not supported");
+#endif
+        }
+    }
+    else
+    {
+        PrepareForIndirectDrawCount(pCounterBuffer);
+
+#if GL_VERSION_4_6
+        glMultiDrawElementsIndirectCount(GlTopology,
+                                         GLIndexType,
+                                         reinterpret_cast<const void*>(static_cast<size_t>(Attribs.IndirectDrawArgsOffset)),
+                                         static_cast<GLintptr>(Attribs.CounterOffset),
+                                         Attribs.DrawCount,
+                                         Attribs.IndirectDrawArgsStride);
+        DEV_CHECK_GL_ERROR("glMultiDrawElementsIndirectCount() failed");
+
+        constexpr bool ResetVAO = false; // GL_PARAMETER_BUFFER does not affect VAO
+        m_ContextState.BindBuffer(GL_PARAMETER_BUFFER, GLObjectWrappers::GLBufferObj::Null(), ResetVAO);
+#else
+        LOG_ERROR_MESSAGE("Multi indirect count rendering is not supported");
+#endif
+    }
 
     constexpr bool ResetVAO = false; // GL_DISPATCH_INDIRECT_BUFFER does not affect VAO
     m_ContextState.BindBuffer(GL_DRAW_INDIRECT_BUFFER, GLObjectWrappers::GLBufferObj::Null(), ResetVAO);
 
     PostDraw();
-#else
-    LOG_ERROR_MESSAGE("Indirect rendering is not supported");
-#endif
 }
 
 void DeviceContextGLImpl::DrawMesh(const DrawMeshAttribs& Attribs)
@@ -1664,127 +1753,6 @@ void DeviceContextGLImpl::UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndir
 void DeviceContextGLImpl::SetShadingRate(SHADING_RATE BaseRate, SHADING_RATE_COMBINER PrimitiveCombiner, SHADING_RATE_COMBINER TextureCombiner)
 {
     UNSUPPORTED("SetShadingRate is not supported in OpenGL");
-}
-
-
-void DeviceContextGLImpl::MultiDrawIndirect(const MultiDrawIndirectAttribs& Attribs,
-                                            IBuffer*                        pAttribsBuffer)
-{
-    TDeviceContextBase::DvpVerifyMultiDrawIndirectAttribs(Attribs, pAttribsBuffer);
-
-#if GL_ARB_multi_draw_indirect
-    GLenum GlTopology;
-    PrepareForDraw(Attribs.Flags, true, GlTopology);
-
-    PrepareForIndirectDraw(pAttribsBuffer);
-
-    glMultiDrawArraysIndirect(GlTopology,
-                              reinterpret_cast<const void*>(static_cast<size_t>(Attribs.IndirectDrawArgsOffset)),
-                              Attribs.DrawCount,
-                              Attribs.Stride);
-    DEV_CHECK_GL_ERROR("glMultiDrawArraysIndirect() failed");
-
-    constexpr bool ResetVAO = false; // GL_DRAW_INDIRECT_BUFFER does not affect VAO
-    m_ContextState.BindBuffer(GL_DRAW_INDIRECT_BUFFER, GLObjectWrappers::GLBufferObj::Null(), ResetVAO);
-
-    PostDraw();
-#else
-    LOG_ERROR_MESSAGE("Multi indirect rendering is not supported");
-#endif
-}
-
-void DeviceContextGLImpl::MultiDrawIndexedIndirect(const MultiDrawIndexedIndirectAttribs& Attribs,
-                                                   IBuffer*                               pAttribsBuffer)
-{
-    TDeviceContextBase::DvpVerifyMultiDrawIndexedIndirectAttribs(Attribs, pAttribsBuffer);
-
-#if GL_ARB_multi_draw_indirect
-    GLenum GlTopology;
-    PrepareForDraw(Attribs.Flags, true, GlTopology);
-
-    GLenum GLIndexType;
-    Uint32 FirstIndexByteOffset;
-    PrepareForIndexedDraw(Attribs.IndexType, 0, GLIndexType, FirstIndexByteOffset);
-
-    PrepareForIndirectDraw(pAttribsBuffer);
-
-    glMultiDrawElementsIndirect(GlTopology,
-                                GLIndexType,
-                                reinterpret_cast<const void*>(static_cast<size_t>(Attribs.IndirectDrawArgsOffset)),
-                                Attribs.DrawCount,
-                                Attribs.Stride);
-    DEV_CHECK_GL_ERROR("glMultiDrawElementsIndirect() failed");
-
-    constexpr bool ResetVAO = false; // GL_DISPATCH_INDIRECT_BUFFER does not affect VAO
-    m_ContextState.BindBuffer(GL_DRAW_INDIRECT_BUFFER, GLObjectWrappers::GLBufferObj::Null(), ResetVAO);
-
-    PostDraw();
-#else
-    LOG_ERROR_MESSAGE("Multi indirect rendering is not supported");
-#endif
-}
-
-void DeviceContextGLImpl::MultiDrawIndirectCount(const MultiDrawIndirectCountAttribs& Attribs,
-                                                 IBuffer*                             pAttribsBuffer,
-                                                 IBuffer*                             pCountBuffer)
-{
-    TDeviceContextBase::DvpVerifyMultiDrawIndirectCountAttribs(Attribs, pAttribsBuffer, pCountBuffer);
-
-#if GL_VERSION_4_6
-    GLenum GlTopology;
-    PrepareForDraw(Attribs.Flags, true, GlTopology);
-
-    PrepareForIndirectCountDraw(pAttribsBuffer, pCountBuffer);
-
-    glMultiDrawArraysIndirectCount(GlTopology,
-                                   reinterpret_cast<const void*>(static_cast<size_t>(Attribs.IndirectDrawArgsOffset)),
-                                   static_cast<GLintptr>(Attribs.CountBufferOffset),
-                                   Attribs.MaxDrawCount,
-                                   Attribs.Stride);
-    DEV_CHECK_GL_ERROR("glMultiDrawArraysIndirectCount() failed");
-
-    constexpr bool ResetVAO = false; // GL_DRAW_INDIRECT_BUFFER does not affect VAO
-    m_ContextState.BindBuffer(GL_DRAW_INDIRECT_BUFFER, GLObjectWrappers::GLBufferObj::Null(), ResetVAO);
-    m_ContextState.BindBuffer(GL_PARAMETER_BUFFER, GLObjectWrappers::GLBufferObj::Null(), ResetVAO);
-
-    PostDraw();
-#else
-    LOG_ERROR_MESSAGE("Multi indirect count rendering is not supported");
-#endif
-}
-
-void DeviceContextGLImpl::MultiDrawIndexedIndirectCount(const MultiDrawIndexedIndirectCountAttribs& Attribs,
-                                                        IBuffer*                                    pAttribsBuffer,
-                                                        IBuffer*                                    pCountBuffer)
-{
-    TDeviceContextBase::DvpVerifyMultiDrawIndexedIndirectCountAttribs(Attribs, pAttribsBuffer, pCountBuffer);
-
-#if GL_VERSION_4_6
-    GLenum GlTopology;
-    PrepareForDraw(Attribs.Flags, true, GlTopology);
-
-    GLenum GLIndexType;
-    Uint32 FirstIndexByteOffset;
-    PrepareForIndexedDraw(Attribs.IndexType, 0, GLIndexType, FirstIndexByteOffset);
-
-    PrepareForIndirectCountDraw(pAttribsBuffer, pCountBuffer);
-
-    glMultiDrawElementsIndirectCount(GlTopology,
-                                     GLIndexType,
-                                     reinterpret_cast<const void*>(static_cast<size_t>(Attribs.IndirectDrawArgsOffset)),
-                                     static_cast<GLintptr>(Attribs.CountBufferOffset),
-                                     Attribs.MaxDrawCount,
-                                     Attribs.Stride);
-    DEV_CHECK_GL_ERROR("glMultiDrawElementsIndirectCount() failed");
-
-    constexpr bool ResetVAO = false; // GL_DISPATCH_INDIRECT_BUFFER does not affect VAO
-    m_ContextState.BindBuffer(GL_DRAW_INDIRECT_BUFFER, GLObjectWrappers::GLBufferObj::Null(), ResetVAO);
-    m_ContextState.BindBuffer(GL_PARAMETER_BUFFER, GLObjectWrappers::GLBufferObj::Null(), ResetVAO);
-
-    PostDraw();
-#else
-    LOG_ERROR_MESSAGE("Multi indirect count rendering is not supported");
-#endif
 }
 
 void DeviceContextGLImpl::BeginDebugGroup(const Char* Name, const float* pColor)

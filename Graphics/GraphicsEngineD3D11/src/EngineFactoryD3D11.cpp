@@ -435,7 +435,7 @@ GraphicsAdapterInfo EngineFactoryD3D11Impl::GetGraphicsAdapterInfo(void*        
         Features.ShaderFloat16 = ShaderFloat16Supported ? DEVICE_FEATURE_STATE_ENABLED : DEVICE_FEATURE_STATE_DISABLED;
     }
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(Features) == 40, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+    static_assert(sizeof(Features) == 39, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 #endif
 
 
@@ -512,11 +512,10 @@ GraphicsAdapterInfo EngineFactoryD3D11Impl::GetGraphicsAdapterInfo(void*        
         DrawCommandProps.MaxIndexValue = 1u << D3D11_REQ_DRAWINDEXED_INDEX_COUNT_2_TO_EXP;
 #endif
         DrawCommandProps.MaxDrawIndirectCount = 0;
-        DrawCommandProps.CapFlags             = DRAW_COMMAND_CAP_FLAG_NONE;
+        DrawCommandProps.CapFlags             = DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_FIRST_INSTANCE;
         if (NvApiSupported)
         {
-            DrawCommandProps.CapFlags |= DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_FIRST_INSTANCE;
-            AdapterInfo.Features.NativeMultiDrawIndirect = DEVICE_FEATURE_STATE_OPTIONAL;
+            DrawCommandProps.CapFlags |= DRAW_COMMAND_CAP_FLAG_NATIVE_MULTI_DRAW_INDIRECT;
         }
 #if defined(_MSC_VER) && defined(_WIN64)
         static_assert(sizeof(DrawCommandProps) == 12, "Did you add a new member to DrawCommandProperties? Please initialize it here.");

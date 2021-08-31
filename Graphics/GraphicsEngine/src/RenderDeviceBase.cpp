@@ -110,12 +110,11 @@ DeviceFeatures EnableDeviceFeatures(const DeviceFeatures& SupportedFeatures,
     ENABLE_FEATURE(TileShaders,                       "Tile shaders are");
     ENABLE_FEATURE(TransferQueueTimestampQueries,     "Timestamp queries in transfer queues are");
     ENABLE_FEATURE(VariableRateShading,               "Variable shading rate is");
-    ENABLE_FEATURE(NativeMultiDrawIndirect,           "Multi draw indirect is");
     // clang-format on
 #undef ENABLE_FEATURE
 
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(Diligent::DeviceFeatures) == 40, "Did you add a new feature to DeviceFeatures? Please handle its satus here (if necessary).");
+    static_assert(sizeof(Diligent::DeviceFeatures) == 39, "Did you add a new feature to DeviceFeatures? Please handle its satus here (if necessary).");
 #endif
     return EnabledFeatures;
 }

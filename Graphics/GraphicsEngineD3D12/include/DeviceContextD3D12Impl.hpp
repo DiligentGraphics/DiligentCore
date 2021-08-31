@@ -135,9 +135,9 @@ public:
     /// Implementation of IDeviceContext::DrawIndexed() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE DrawIndexed        (const DrawIndexedAttribs& Attribs) override final;
     /// Implementation of IDeviceContext::DrawIndirect() in Direct3D12 backend.
-    virtual void DILIGENT_CALL_TYPE DrawIndirect       (const DrawIndirectAttribs& Attribs, IBuffer* pAttribsBuffer) override final;
+    virtual void DILIGENT_CALL_TYPE DrawIndirect       (const DrawIndirectAttribs& Attribs, IBuffer* pAttribsBuffer, IBuffer* pCounterBuffer) override final;
     /// Implementation of IDeviceContext::DrawIndexedIndirect() in Direct3D12 backend.
-    virtual void DILIGENT_CALL_TYPE DrawIndexedIndirect(const DrawIndexedIndirectAttribs& Attribs, IBuffer* pAttribsBuffer) override final;
+    virtual void DILIGENT_CALL_TYPE DrawIndexedIndirect(const DrawIndexedIndirectAttribs& Attribs, IBuffer* pAttribsBuffer, IBuffer* pCounterBuffer) override final;
     /// Implementation of IDeviceContext::DrawMesh() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE DrawMesh           (const DrawMeshAttribs& Attribs) override final;
     /// Implementation of IDeviceContext::DrawMeshIndirect() in Direct3D12 backend.
@@ -298,24 +298,6 @@ public:
     virtual void DILIGENT_CALL_TYPE SetShadingRate(SHADING_RATE          BaseRate,
                                                    SHADING_RATE_COMBINER PrimitiveCombiner,
                                                    SHADING_RATE_COMBINER TextureCombiner) override final;
-
-    /// Implementation of IDeviceContext::MultiDrawIndirect() in Direct3D12 backend.
-    virtual void DILIGENT_CALL_TYPE MultiDrawIndirect(const MultiDrawIndirectAttribs& Attribs,
-                                                      IBuffer*                        pAttribsBuffer) override final;
-
-    /// Implementation of IDeviceContext::MultiDrawIndexedIndirect() in Direct3D12 backend.
-    virtual void DILIGENT_CALL_TYPE MultiDrawIndexedIndirect(const MultiDrawIndexedIndirectAttribs& Attribs,
-                                                             IBuffer*                               pAttribsBuffer) override final;
-
-    /// Implementation of IDeviceContext::MultiDrawIndirectCount() in Direct3D12 backend.
-    virtual void DILIGENT_CALL_TYPE MultiDrawIndirectCount(const MultiDrawIndirectCountAttribs& Attribs,
-                                                           IBuffer*                             pAttribsBuffer,
-                                                           IBuffer*                             pCountBuffer) override final;
-
-    /// Implementation of IDeviceContext::MultiDrawIndexedIndirectCount() in Direct3D12 backend.
-    virtual void DILIGENT_CALL_TYPE MultiDrawIndexedIndirectCount(const MultiDrawIndexedIndirectCountAttribs& Attribs,
-                                                                  IBuffer*                                    pAttribsBuffer,
-                                                                  IBuffer*                                    pCountBuffer) override final;
 
     void UpdateBufferRegion(class BufferD3D12Impl*         pBuffD3D12,
                             D3D12DynamicAllocation&        Allocation,

@@ -388,11 +388,13 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
         auto& DrawCommandProps{AdapterInfo.DrawCommand};
         DrawCommandProps.MaxIndexValue        = vkDeviceProps.limits.maxDrawIndexedIndexValue;
         DrawCommandProps.MaxDrawIndirectCount = vkDeviceProps.limits.maxDrawIndirectCount;
-        DrawCommandProps.CapFlags             = DRAW_COMMAND_CAP_FLAG_NONE;
+        DrawCommandProps.CapFlags             = DRAW_COMMAND_CAP_FLAG_NATIVE_MULTI_DRAW_INDIRECT;
+        if (vkFeatures.multiDrawIndirect != VK_FALSE || vkExtFeatures.DrawIndirectCount)
+            DrawCommandProps.CapFlags |= DRAW_COMMAND_CAP_FLAG_NATIVE_MULTI_DRAW_INDIRECT;
         if (vkFeatures.drawIndirectFirstInstance != VK_FALSE)
             DrawCommandProps.CapFlags |= DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_FIRST_INSTANCE;
         if (vkExtFeatures.DrawIndirectCount)
-            DrawCommandProps.CapFlags |= DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNT;
+            DrawCommandProps.CapFlags |= DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNTER_BUFFER;
 #if defined(_MSC_VER) && defined(_WIN64)
         static_assert(sizeof(DrawCommandProps) == 12, "Did you add a new member to DrawCommandProperties? Please initialize it here.");
 #endif
@@ -1001,7 +1003,6 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
                 }
             }
 
-            if (EnabledFeatures.NativeMultiDrawIndirect != DEVICE_FEATURE_STATE_DISABLED)
             {
                 vkEnabledFeatures.multiDrawIndirect = vkDeviceFeatures.multiDrawIndirect;
                 if (DeviceExtFeatures.DrawIndirectCount)
@@ -1021,7 +1022,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
         }
 
 #if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(Diligent::DeviceFeatures) == 40, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+        static_assert(sizeof(Diligent::DeviceFeatures) == 39, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 #endif
 
         for (Uint32 i = 0; i < EngineCI.DeviceExtensionCount; ++i)

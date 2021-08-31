@@ -55,13 +55,8 @@ namespace Diligent
 // clang-format off
 bool VerifyDrawAttribs               (const DrawAttribs&                Attribs);
 bool VerifyDrawIndexedAttribs        (const DrawIndexedAttribs&         Attribs);
-bool VerifyDrawIndirectAttribs       (const DrawIndirectAttribs&        Attribs, const IBuffer* pAttribsBuffer);
-bool VerifyDrawIndexedIndirectAttribs(const DrawIndexedIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer);
-
-bool VerifyMultiDrawIndirectAttribs            (const MultiDrawIndirectAttribs&             Attribs, const IBuffer* pAttribsBuffer);
-bool VerifyMultiDrawIndexedIndirectAttribs     (const MultiDrawIndexedIndirectAttribs&      Attribs, const IBuffer* pAttribsBuffer);
-bool VerifyMultiDrawIndirectCountAttribs       (const MultiDrawIndirectCountAttribs&        Attribs, const IBuffer* pAttribsBuffer, const IBuffer* pCountBuff);
-bool VerifyMultiDrawIndexedIndirectCountAttribs(const MultiDrawIndexedIndirectCountAttribs& Attribs, const IBuffer* pAttribsBuffer, const IBuffer* pCountBuff);
+bool VerifyDrawIndirectAttribs       (const DrawIndirectAttribs&        Attribs, const IBuffer* pAttribsBuffer, const IBuffer* pCounterBuffer);
+bool VerifyDrawIndexedIndirectAttribs(const DrawIndexedIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer, const IBuffer* pCounterBuffer);
 
 bool VerifyDispatchComputeAttribs        (const DispatchComputeAttribs&         Attribs);
 bool VerifyDispatchComputeIndirectAttribs(const DispatchComputeIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer);
@@ -525,15 +520,10 @@ protected:
     void DvpVerifyDrawArguments                 (const DrawAttribs&                  Attribs) const;
     void DvpVerifyDrawIndexedArguments          (const DrawIndexedAttribs&           Attribs) const;
     void DvpVerifyDrawMeshArguments             (const DrawMeshAttribs&              Attribs) const;
-    void DvpVerifyDrawIndirectArguments         (const DrawIndirectAttribs&          Attribs, const IBuffer* pAttribsBuffer) const;
-    void DvpVerifyDrawIndexedIndirectArguments  (const DrawIndexedIndirectAttribs&   Attribs, const IBuffer* pAttribsBuffer) const;
+    void DvpVerifyDrawIndirectArguments         (const DrawIndirectAttribs&          Attribs, const IBuffer* pAttribsBuffer, const IBuffer* pCounterBuffer) const;
+    void DvpVerifyDrawIndexedIndirectArguments  (const DrawIndexedIndirectAttribs&   Attribs, const IBuffer* pAttribsBuffer, const IBuffer* pCounterBuffer) const;
     void DvpVerifyDrawMeshIndirectArguments     (const DrawMeshIndirectAttribs&      Attribs, const IBuffer* pAttribsBuffer) const;
     void DvpVerifyDrawMeshIndirectCountArguments(const DrawMeshIndirectCountAttribs& Attribs, const IBuffer* pAttribsBuffer, const IBuffer* pCountBuff) const;
-
-    void DvpVerifyMultiDrawIndirectAttribs            (const MultiDrawIndirectAttribs&             Attribs, const IBuffer* pAttribsBuffer) const;
-    void DvpVerifyMultiDrawIndexedIndirectAttribs     (const MultiDrawIndexedIndirectAttribs&      Attribs, const IBuffer* pAttribsBuffer) const;
-    void DvpVerifyMultiDrawIndirectCountAttribs       (const MultiDrawIndirectCountAttribs&        Attribs, const IBuffer* pAttribsBuffer, const IBuffer* pCountBuff) const;
-    void DvpVerifyMultiDrawIndexedIndirectCountAttribs(const MultiDrawIndexedIndirectCountAttribs& Attribs, const IBuffer* pAttribsBuffer, const IBuffer* pCountBuff) const;
 
     void DvpVerifyDispatchArguments        (const DispatchComputeAttribs& Attribs) const;
     void DvpVerifyDispatchIndirectArguments(const DispatchComputeIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer) const;
@@ -554,18 +544,13 @@ protected:
         std::function<PipelineResourceSignatureImplType*(Uint32)> CustomGetSignature = nullptr) const;
 #else
     // clang-format off
-    void DvpVerifyDrawArguments                 (const DrawAttribs&                  Attribs)const {}
-    void DvpVerifyDrawIndexedArguments          (const DrawIndexedAttribs&           Attribs)const {}
-    void DvpVerifyDrawMeshArguments             (const DrawMeshAttribs&              Attribs)const {}
-    void DvpVerifyDrawIndirectArguments         (const DrawIndirectAttribs&          Attribs, const IBuffer* pAttribsBuffer)const {}
-    void DvpVerifyDrawIndexedIndirectArguments  (const DrawIndexedIndirectAttribs&   Attribs, const IBuffer* pAttribsBuffer)const {}
-    void DvpVerifyDrawMeshIndirectArguments     (const DrawMeshIndirectAttribs&      Attribs, const IBuffer* pAttribsBuffer)const {}
+    void DvpVerifyDrawArguments                 (const DrawAttribs&                  Attribs) const {}
+    void DvpVerifyDrawIndexedArguments          (const DrawIndexedAttribs&           Attribs) const {}
+    void DvpVerifyDrawMeshArguments             (const DrawMeshAttribs&              Attribs) const {}
+    void DvpVerifyDrawIndirectArguments         (const DrawIndirectAttribs&          Attribs, const IBuffer* pAttribsBuffer, const IBuffer* pCounterBuffer) const {}
+    void DvpVerifyDrawIndexedIndirectArguments  (const DrawIndexedIndirectAttribs&   Attribs, const IBuffer* pAttribsBuffer, const IBuffer* pCounterBuffer) const {}
+    void DvpVerifyDrawMeshIndirectArguments     (const DrawMeshIndirectAttribs&      Attribs, const IBuffer* pAttribsBuffer) const {}
     void DvpVerifyDrawMeshIndirectCountArguments(const DrawMeshIndirectCountAttribs& Attribs, const IBuffer* pAttribsBuffer, const IBuffer* pCountBuff) const {}
-
-    void DvpVerifyMultiDrawIndirectAttribs            (const MultiDrawIndirectAttribs&             Attribs, const IBuffer* pAttribsBuffer) const {}
-    void DvpVerifyMultiDrawIndexedIndirectAttribs     (const MultiDrawIndexedIndirectAttribs&      Attribs, const IBuffer* pAttribsBuffer) const {}
-    void DvpVerifyMultiDrawIndirectCountAttribs       (const MultiDrawIndirectCountAttribs&        Attribs, const IBuffer* pAttribsBuffer, const IBuffer* pCountBuff) const {}
-    void DvpVerifyMultiDrawIndexedIndirectCountAttribs(const MultiDrawIndexedIndirectCountAttribs& Attribs, const IBuffer* pAttribsBuffer, const IBuffer* pCountBuff) const {}
 
     void DvpVerifyDispatchArguments        (const DispatchComputeAttribs& Attribs)const {}
     void DvpVerifyDispatchIndirectArguments(const DispatchComputeIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer)const {}
@@ -574,10 +559,10 @@ protected:
 
     void DvpVerifyRenderTargets()const {}
     void DvpVerifyStateTransitionDesc(const StateTransitionDesc& Barrier)const {}
-    void DvpVerifyTextureState(const TextureImplType&   Texture, RESOURCE_STATE RequiredState, const char* OperationName)const {}
-    void DvpVerifyBufferState (const BufferImplType&    Buffer,  RESOURCE_STATE RequiredState, const char* OperationName)const {}
-    void DvpVerifyBLASState   (const BottomLevelASType& BLAS,    RESOURCE_STATE RequiredState, const char* OperationName)const {}
-    void DvpVerifyTLASState   (const TopLevelASType&    TLAS,    RESOURCE_STATE RequiredState, const char* OperationName)const {}
+    void DvpVerifyTextureState(const TextureImplType&   Texture, RESOURCE_STATE RequiredState, const char* OperationName) const {}
+    void DvpVerifyBufferState (const BufferImplType&    Buffer,  RESOURCE_STATE RequiredState, const char* OperationName) const {}
+    void DvpVerifyBLASState   (const BottomLevelASType& BLAS,    RESOURCE_STATE RequiredState, const char* OperationName) const {}
+    void DvpVerifyTLASState   (const TopLevelASType&    TLAS,    RESOURCE_STATE RequiredState, const char* OperationName) const {}
     // clang-format on
 #endif
 
@@ -2154,12 +2139,16 @@ inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDrawMeshArguments(
 template <typename ImplementationTraits>
 inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDrawIndirectArguments(
     const DrawIndirectAttribs& Attribs,
-    const IBuffer*             pAttribsBuffer) const
+    const IBuffer*             pAttribsBuffer,
+    const IBuffer*             pCounterBuffer) const
 {
     if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
         return;
 
     DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_GRAPHICS, "DrawIndirect");
+
+    DEV_CHECK_ERR(pCounterBuffer == nullptr || (m_pDevice->GetAdapterInfo().DrawCommand.CapFlags & DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNTER_BUFFER) != 0,
+                  "DrawIndirect command arguments are invalid: counter buffer requires DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNTER_BUFFER capability");
 
     DEV_CHECK_ERR(m_pPipelineState, "DrawIndirect command arguments are invalid: no pipeline state is bound.");
 
@@ -2171,18 +2160,22 @@ inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDrawIndirectArgume
                   "Resource state transitions are not allowed inside a render pass and may result in an undefined behavior. "
                   "Do not use RESOURCE_STATE_TRANSITION_MODE_TRANSITION or end the render pass first.");
 
-    DEV_CHECK_ERR(VerifyDrawIndirectAttribs(Attribs, pAttribsBuffer), "DrawIndirectAttribs are invalid");
+    DEV_CHECK_ERR(VerifyDrawIndirectAttribs(Attribs, pAttribsBuffer, pCounterBuffer), "DrawIndirectAttribs are invalid");
 }
 
 template <typename ImplementationTraits>
 inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDrawIndexedIndirectArguments(
     const DrawIndexedIndirectAttribs& Attribs,
-    const IBuffer*                    pAttribsBuffer) const
+    const IBuffer*                    pAttribsBuffer,
+    const IBuffer*                    pCounterBuffer) const
 {
     if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
         return;
 
     DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_GRAPHICS, "DrawIndexedIndirect");
+
+    DEV_CHECK_ERR(pCounterBuffer == nullptr || (m_pDevice->GetAdapterInfo().DrawCommand.CapFlags & DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNTER_BUFFER) != 0,
+                  "DrawIndexedIndirect command arguments are invalid: counter buffer requires DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNTER_BUFFER capability");
 
     DEV_CHECK_ERR(m_pPipelineState, "DrawIndexedIndirect command arguments are invalid: no pipeline state is bound.");
 
@@ -2196,111 +2189,7 @@ inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDrawIndexedIndirec
                   "Resource state transitions are not allowed inside a render pass and may result in an undefined behavior. "
                   "Do not use RESOURCE_STATE_TRANSITION_MODE_TRANSITION or end the render pass first.");
 
-    DEV_CHECK_ERR(VerifyDrawIndexedIndirectAttribs(Attribs, pAttribsBuffer), "DrawIndexedIndirectAttribs are invalid");
-}
-
-template <typename ImplementationTraits>
-inline void DeviceContextBase<ImplementationTraits>::DvpVerifyMultiDrawIndirectAttribs(const MultiDrawIndirectAttribs& Attribs,
-                                                                                       const IBuffer*                  pAttribsBuffer) const
-{
-    if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
-        return;
-
-    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_GRAPHICS, "MultiDrawIndirect");
-
-    DEV_CHECK_ERR(m_pDevice->GetFeatures().NativeMultiDrawIndirect, "MultiDrawIndirect: multi draw indirect requires NativeMultiDrawIndirect device feature");
-
-    DEV_CHECK_ERR(m_pPipelineState, "MultiDrawIndirect command arguments are invalid: no pipeline state is bound.");
-
-    DEV_CHECK_ERR(m_pPipelineState->GetDesc().PipelineType == PIPELINE_TYPE_GRAPHICS,
-                  "MultiDrawIndirect command arguments are invalid: pipeline state '",
-                  m_pPipelineState->GetDesc().Name, "' is not a graphics pipeline.");
-
-    DEV_CHECK_ERR(m_pActiveRenderPass == nullptr || Attribs.IndirectAttribsBufferStateTransitionMode != RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
-                  "Resource state transitions are not allowed inside a render pass and may result in an undefined behavior. "
-                  "Do not use RESOURCE_STATE_TRANSITION_MODE_TRANSITION or end the render pass first.");
-
-    DEV_CHECK_ERR(VerifyMultiDrawIndirectAttribs(Attribs, pAttribsBuffer), "MultiDrawIndirectAttribs are invalid");
-}
-
-template <typename ImplementationTraits>
-inline void DeviceContextBase<ImplementationTraits>::DvpVerifyMultiDrawIndexedIndirectAttribs(const MultiDrawIndexedIndirectAttribs& Attribs,
-                                                                                              const IBuffer*                         pAttribsBuffer) const
-{
-    if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
-        return;
-
-    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_GRAPHICS, "MultiDrawIndexedIndirect");
-
-    DEV_CHECK_ERR(m_pDevice->GetFeatures().NativeMultiDrawIndirect, "MultiDrawIndexedIndirect: multi draw indirect requires NativeMultiDrawIndirect device feature");
-
-    DEV_CHECK_ERR(m_pPipelineState, "MultiDrawIndexedIndirect command arguments are invalid: no pipeline state is bound.");
-
-    DEV_CHECK_ERR(m_pPipelineState->GetDesc().PipelineType == PIPELINE_TYPE_GRAPHICS,
-                  "MultiDrawIndexedIndirect command arguments are invalid: pipeline state '",
-                  m_pPipelineState->GetDesc().Name, "' is not a graphics pipeline.");
-
-    DEV_CHECK_ERR(m_pIndexBuffer, "MultiDrawIndexedIndirect command arguments are invalid: no index buffer is bound.");
-
-    DEV_CHECK_ERR(m_pActiveRenderPass == nullptr || Attribs.IndirectAttribsBufferStateTransitionMode != RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
-                  "Resource state transitions are not allowed inside a render pass and may result in an undefined behavior. "
-                  "Do not use RESOURCE_STATE_TRANSITION_MODE_TRANSITION or end the render pass first.");
-
-    DEV_CHECK_ERR(VerifyMultiDrawIndexedIndirectAttribs(Attribs, pAttribsBuffer), "MultiDrawIndexedIndirectAttribs are invalid");
-}
-
-template <typename ImplementationTraits>
-inline void DeviceContextBase<ImplementationTraits>::DvpVerifyMultiDrawIndirectCountAttribs(const MultiDrawIndirectCountAttribs& Attribs,
-                                                                                            const IBuffer*                       pAttribsBuffer,
-                                                                                            const IBuffer*                       pCountBuff) const
-{
-    if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
-        return;
-
-    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_GRAPHICS, "MultiDrawIndirectCount");
-
-    DEV_CHECK_ERR(m_pDevice->GetFeatures().NativeMultiDrawIndirect, "MultiDrawIndirectCount: multi draw indirect requires NativeMultiDrawIndirect device feature");
-    DEV_CHECK_ERR(m_pDevice->GetAdapterInfo().DrawCommand.CapFlags & DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNT, "MultiDrawIndirectCount: multi draw indirect count requires DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNT capability");
-
-    DEV_CHECK_ERR(m_pPipelineState, "MultiDrawIndirectCount command arguments are invalid: no pipeline state is bound.");
-
-    DEV_CHECK_ERR(m_pPipelineState->GetDesc().PipelineType == PIPELINE_TYPE_GRAPHICS,
-                  "MultiDrawIndirectCount command arguments are invalid: pipeline state '",
-                  m_pPipelineState->GetDesc().Name, "' is not a graphics pipeline.");
-
-    DEV_CHECK_ERR(m_pActiveRenderPass == nullptr || Attribs.IndirectAttribsBufferStateTransitionMode != RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
-                  "Resource state transitions are not allowed inside a render pass and may result in an undefined behavior. "
-                  "Do not use RESOURCE_STATE_TRANSITION_MODE_TRANSITION or end the render pass first.");
-
-    DEV_CHECK_ERR(VerifyMultiDrawIndirectCountAttribs(Attribs, pAttribsBuffer, pCountBuff), "MultiDrawIndirectCountAttribs are invalid");
-}
-
-template <typename ImplementationTraits>
-inline void DeviceContextBase<ImplementationTraits>::DvpVerifyMultiDrawIndexedIndirectCountAttribs(const MultiDrawIndexedIndirectCountAttribs& Attribs,
-                                                                                                   const IBuffer*                              pAttribsBuffer,
-                                                                                                   const IBuffer*                              pCountBuff) const
-{
-    if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
-        return;
-
-    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_GRAPHICS, "MultiDrawIndexedIndirectCount");
-
-    DEV_CHECK_ERR(m_pDevice->GetFeatures().NativeMultiDrawIndirect, "MultiDrawIndexedIndirectCount: multi draw indirect requires NativeMultiDrawIndirect device feature");
-    DEV_CHECK_ERR(m_pDevice->GetAdapterInfo().DrawCommand.CapFlags & DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNT, "MultiDrawIndirectCount: multi draw indirect count requires DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNT capability");
-
-    DEV_CHECK_ERR(m_pPipelineState, "MultiDrawIndexedIndirectCount command arguments are invalid: no pipeline state is bound.");
-
-    DEV_CHECK_ERR(m_pPipelineState->GetDesc().PipelineType == PIPELINE_TYPE_GRAPHICS,
-                  "MultiDrawIndexedIndirectCount command arguments are invalid: pipeline state '",
-                  m_pPipelineState->GetDesc().Name, "' is not a graphics pipeline.");
-
-    DEV_CHECK_ERR(m_pIndexBuffer, "MultiDrawIndexedIndirectCount command arguments are invalid: no index buffer is bound.");
-
-    DEV_CHECK_ERR(m_pActiveRenderPass == nullptr || Attribs.IndirectAttribsBufferStateTransitionMode != RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
-                  "Resource state transitions are not allowed inside a render pass and may result in an undefined behavior. "
-                  "Do not use RESOURCE_STATE_TRANSITION_MODE_TRANSITION or end the render pass first.");
-
-    DEV_CHECK_ERR(VerifyMultiDrawIndexedIndirectCountAttribs(Attribs, pAttribsBuffer, pCountBuff), "MultiDrawIndexedIndirectCountAttribs are invalid");
+    DEV_CHECK_ERR(VerifyDrawIndexedIndirectAttribs(Attribs, pAttribsBuffer, pCounterBuffer), "DrawIndexedIndirectAttribs are invalid");
 }
 
 template <typename ImplementationTraits>

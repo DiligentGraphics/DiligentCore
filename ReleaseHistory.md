@@ -1,5 +1,6 @@
 ## Current progress
 
+* Enabled indirect multidraw commands (API Version 250007)
 * Enabled variable rate shading (API Version 250006)
 * Added 'TransferQueueTimestampQueries' feature (API Version 250005)
 * Added 'RESOURCE_STATE_COMMON' state; added `STATE_TRANSITION_FLAGS` enum and replaced

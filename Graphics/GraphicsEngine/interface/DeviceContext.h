@@ -380,31 +380,48 @@ struct DrawIndirectAttribs
     /// Additional flags, see Diligent::DRAW_FLAGS.
     DRAW_FLAGS Flags                DEFAULT_INITIALIZER(DRAW_FLAG_NONE);
 
-    /// State transition mode for indirect draw arguments buffer.
-    RESOURCE_STATE_TRANSITION_MODE IndirectAttribsBufferStateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
+    /// The number of draw commands to execute. When the count buffer is not null, this member
+    /// defines the maximum number of commands that will be executed.
+    /// Must be less than DrawCommandProperties::MaxDrawIndirectCount.
+    Uint32 DrawCount                DEFAULT_INITIALIZER(1);
 
     /// Offset from the beginning of the buffer to the location of draw command attributes.
     Uint32 IndirectDrawArgsOffset   DEFAULT_INITIALIZER(0);
 
+    /// When DrawCount > 1, the byte stride between successive sets of draw parameters.
+    /// Must be a multiple of 4 and greater than or equal to 16 bytes.
+    Uint32 IndirectDrawArgsStride   DEFAULT_INITIALIZER(sizeof(Uint32) * 4);
+
+    /// When counter buffer is not null, offset from the beginning of the count buffer to the
+    /// location of the command counter.
+    Uint32 CounterOffset            DEFAULT_INITIALIZER(0);
+
+    /// State transition mode for indirect draw arguments buffer.
+    RESOURCE_STATE_TRANSITION_MODE  IndirectAttribsBufferStateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
+
+    /// When counter buffer is not null, state transition mode for the count buffer.
+    RESOURCE_STATE_TRANSITION_MODE  CounterBufferStateTransitionMode         DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
+
 
 #if DILIGENT_CPP_INTERFACE
     /// Initializes the structure members with default values
-
-    /// Default values:
-    /// Member                                   | Default value
-    /// -----------------------------------------|--------------------------------------
-    /// Flags                                    | DRAW_FLAG_NONE
-    /// IndirectAttribsBufferStateTransitionMode | RESOURCE_STATE_TRANSITION_MODE_NONE
-    /// IndirectDrawArgsOffset                   | 0
     constexpr DrawIndirectAttribs() noexcept {}
 
     /// Initializes the structure members with user-specified values.
-    constexpr DrawIndirectAttribs(DRAW_FLAGS                     _Flags,
-                                  RESOURCE_STATE_TRANSITION_MODE _IndirectAttribsBufferStateTransitionMode,
-                                  Uint32                         _IndirectDrawArgsOffset = 0) noexcept :
-        Flags                                   {_Flags                                   },
-        IndirectAttribsBufferStateTransitionMode{_IndirectAttribsBufferStateTransitionMode},
-        IndirectDrawArgsOffset                  {_IndirectDrawArgsOffset                  }
+    explicit constexpr DrawIndirectAttribs(DRAW_FLAGS                     _Flags,
+                                           Uint32                         _DrawCount                   = DrawIndirectAttribs{}.DrawCount,
+                                           Uint32                         _IndirectDrawArgsOffset      = DrawIndirectAttribs{}.IndirectDrawArgsOffset,
+                                           Uint32                         _IndirectDrawArgsStride      = DrawIndirectAttribs{}.IndirectDrawArgsStride,
+                                           Uint32                         _CounterOffset               = DrawIndirectAttribs{}.CounterOffset,
+                                           RESOURCE_STATE_TRANSITION_MODE _AttribsBufferTransitionMode = DrawIndirectAttribs{}.IndirectAttribsBufferStateTransitionMode,
+                                           RESOURCE_STATE_TRANSITION_MODE _CounterBufferTransitionMode = DrawIndirectAttribs{}.CounterBufferStateTransitionMode) noexcept :
+        Flags                                   {_Flags                      },
+        DrawCount                               {_DrawCount                  },
+        IndirectDrawArgsOffset                  {_IndirectDrawArgsOffset     },
+        IndirectDrawArgsStride                  {_IndirectDrawArgsStride     },
+        CounterOffset                           {_CounterOffset          },
+        IndirectAttribsBufferStateTransitionMode{_AttribsBufferTransitionMode},
+        CounterBufferStateTransitionMode        {_CounterBufferTransitionMode  }
     {}
 #endif
 };
@@ -423,34 +440,50 @@ struct DrawIndexedIndirectAttribs
     /// Additional flags, see Diligent::DRAW_FLAGS.
     DRAW_FLAGS Flags                DEFAULT_INITIALIZER(DRAW_FLAG_NONE);
 
-    /// State transition mode for indirect draw arguments buffer.
-    RESOURCE_STATE_TRANSITION_MODE IndirectAttribsBufferStateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
+    /// The number of draw commands to execute. When the count buffer is not null, this member
+    /// defines the maximum number of commands that will be executed.
+    /// Must be less than DrawCommandProperties::MaxDrawIndirectCount.
+    Uint32  DrawCount               DEFAULT_INITIALIZER(1);
 
     /// Offset from the beginning of the buffer to the location of draw command attributes.
-    Uint32 IndirectDrawArgsOffset        DEFAULT_INITIALIZER(0);
+    Uint32 IndirectDrawArgsOffset   DEFAULT_INITIALIZER(0);
+
+    /// When DrawCount > 1, the byte stride between successive sets of draw parameters.
+    /// Must be a multiple of 4 and greater than or equal to 20 bytes.
+    Uint32  IndirectDrawArgsStride  DEFAULT_INITIALIZER(sizeof(Uint32) * 5);
+
+    /// When counter buffer is not null, offset from the beginning of the counter buffer to the
+    /// location of the command counter.
+    Uint32 CounterOffset            DEFAULT_INITIALIZER(0);
+
+    /// State transition mode for indirect draw arguments buffer.
+    RESOURCE_STATE_TRANSITION_MODE  IndirectAttribsBufferStateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
+
+    /// When counter buffer is not null, state transition mode for the count buffer.
+    RESOURCE_STATE_TRANSITION_MODE  CounterBufferStateTransitionMode         DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
 
 
 #if DILIGENT_CPP_INTERFACE
     /// Initializes the structure members with default values
-
-    /// Default values:
-    /// Member                                   | Default value
-    /// -----------------------------------------|--------------------------------------
-    /// IndexType                                | VT_UNDEFINED
-    /// Flags                                    | DRAW_FLAG_NONE
-    /// IndirectAttribsBufferStateTransitionMode | RESOURCE_STATE_TRANSITION_MODE_NONE
-    /// IndirectDrawArgsOffset                   | 0
     constexpr DrawIndexedIndirectAttribs() noexcept {}
 
     /// Initializes the structure members with user-specified values.
     constexpr DrawIndexedIndirectAttribs(VALUE_TYPE                     _IndexType,
                                          DRAW_FLAGS                     _Flags,
-                                         RESOURCE_STATE_TRANSITION_MODE _IndirectAttribsBufferStateTransitionMode,
-                                         Uint32                         _IndirectDrawArgsOffset = 0) noexcept :
-        IndexType                               {_IndexType                               },
-        Flags                                   {_Flags                                   },
-        IndirectAttribsBufferStateTransitionMode{_IndirectAttribsBufferStateTransitionMode},
-        IndirectDrawArgsOffset                  {_IndirectDrawArgsOffset                  }
+                                         Uint32                         _DrawCount                   = DrawIndexedIndirectAttribs{}.DrawCount,
+                                         Uint32                         _IndirectDrawArgsOffset      = DrawIndexedIndirectAttribs{}.IndirectDrawArgsOffset,
+                                         Uint32                         _IndirectDrawArgsStride      = DrawIndexedIndirectAttribs{}.IndirectDrawArgsStride,
+                                         Uint32                         _CounterOffset               = DrawIndexedIndirectAttribs{}.CounterOffset,
+                                         RESOURCE_STATE_TRANSITION_MODE _AttribsBufferTransitionMode = DrawIndexedIndirectAttribs{}.IndirectAttribsBufferStateTransitionMode,
+                                         RESOURCE_STATE_TRANSITION_MODE _CounterBufferTransitionMode = DrawIndexedIndirectAttribs{}.CounterBufferStateTransitionMode) noexcept :
+        IndexType                               {_IndexType                  },
+        Flags                                   {_Flags                      },
+        DrawCount                               {_DrawCount                  },
+        IndirectDrawArgsOffset                  {_IndirectDrawArgsOffset     },
+        IndirectDrawArgsStride                  {_IndirectDrawArgsStride     },
+        CounterOffset                           {_CounterOffset              },
+        IndirectAttribsBufferStateTransitionMode{_AttribsBufferTransitionMode},
+        CounterBufferStateTransitionMode        {_CounterBufferTransitionMode}
     {}
 #endif
 };
@@ -1737,198 +1770,6 @@ struct StateTransitionDesc
 typedef struct StateTransitionDesc StateTransitionDesc;
 
 
-/// This structure is used by IDeviceContext::MultiDrawIndirect().
-struct MultiDrawIndirectAttribs
-{
-    /// The number of commands to draw.
-    /// Must be less than DrawCommandProperties::MaxDrawIndirectCount.
-    Uint32     DrawCount            DEFAULT_INITIALIZER(1);
-
-    /// The byte stride between successive sets of draw parameters.
-    /// Must be a multiple of 4 and greater than or equal to 16 bytes.
-    Uint32     Stride               DEFAULT_INITIALIZER(sizeof(Uint32) * 4);
-
-    /// Additional flags, see Diligent::DRAW_FLAGS.
-    DRAW_FLAGS Flags                DEFAULT_INITIALIZER(DRAW_FLAG_NONE);
-
-    /// State transition mode for indirect draw arguments buffer.
-    RESOURCE_STATE_TRANSITION_MODE IndirectAttribsBufferStateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
-
-    /// Offset from the beginning of the buffer to the location of draw command attributes.
-    Uint32 IndirectDrawArgsOffset        DEFAULT_INITIALIZER(0);
-
-#if DILIGENT_CPP_INTERFACE
-    constexpr MultiDrawIndirectAttribs() noexcept {}
-
-    explicit constexpr MultiDrawIndirectAttribs(
-        Uint32                         _DrawCount,
-        Uint32                         _Stride                                   = MultiDrawIndirectAttribs{}.Stride,
-        DRAW_FLAGS                     _Flags                                    = MultiDrawIndirectAttribs{}.Flags,
-        Uint32                         _IndirectDrawArgsOffset                   = MultiDrawIndirectAttribs{}.IndirectDrawArgsOffset,
-        RESOURCE_STATE_TRANSITION_MODE _IndirectAttribsBufferStateTransitionMode = MultiDrawIndirectAttribs{}.IndirectAttribsBufferStateTransitionMode) noexcept :
-        DrawCount                               {_DrawCount                               },
-        Stride                                  {_Stride                                  },
-        Flags                                   {_Flags                                   },
-        IndirectAttribsBufferStateTransitionMode{_IndirectAttribsBufferStateTransitionMode},
-        IndirectDrawArgsOffset                  {_IndirectDrawArgsOffset                  }
-    {}
-#endif
-};
-typedef struct MultiDrawIndirectAttribs MultiDrawIndirectAttribs;
-
-
-/// This structure is used by IDeviceContext::MultiDrawIndexedIndirect().
-struct MultiDrawIndexedIndirectAttribs
-{
-    /// The type of the elements in the index buffer.
-    /// Allowed values: VT_UINT16 and VT_UINT32.
-    VALUE_TYPE IndexType            DEFAULT_INITIALIZER(VT_UNDEFINED);
-
-    /// The number of commands to draw.
-    /// Must be less than DrawCommandProperties::MaxDrawIndirectCount.
-    Uint32     DrawCount            DEFAULT_INITIALIZER(1);
-
-    /// The byte stride between successive sets of draw parameters.
-    /// Must be a multiple of 4 and greater than or equal to 20 bytes.
-    Uint32     Stride               DEFAULT_INITIALIZER(sizeof(Uint32) * 5);
-
-    /// Additional flags, see Diligent::DRAW_FLAGS.
-    DRAW_FLAGS Flags                DEFAULT_INITIALIZER(DRAW_FLAG_NONE);
-
-    /// State transition mode for indirect draw arguments buffer.
-    RESOURCE_STATE_TRANSITION_MODE IndirectAttribsBufferStateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
-
-    /// Offset from the beginning of the buffer to the location of draw command attributes.
-    Uint32 IndirectDrawArgsOffset        DEFAULT_INITIALIZER(0);
-
-#if DILIGENT_CPP_INTERFACE
-    constexpr MultiDrawIndexedIndirectAttribs() noexcept {}
-
-    explicit constexpr MultiDrawIndexedIndirectAttribs(
-        VALUE_TYPE                     _IndexType,
-        Uint32                         _DrawCount,
-        Uint32                         _Stride                                   = MultiDrawIndexedIndirectAttribs{}.Stride,
-        DRAW_FLAGS                     _Flags                                    = MultiDrawIndexedIndirectAttribs{}.Flags,
-        Uint32                         _IndirectDrawArgsOffset                   = MultiDrawIndexedIndirectAttribs{}.IndirectDrawArgsOffset,
-        RESOURCE_STATE_TRANSITION_MODE _IndirectAttribsBufferStateTransitionMode = MultiDrawIndexedIndirectAttribs{}.IndirectAttribsBufferStateTransitionMode) noexcept :
-        IndexType                               {_IndexType                               },
-        DrawCount                               {_DrawCount                               },
-        Stride                                  {_Stride                                  },
-        Flags                                   {_Flags                                   },
-        IndirectAttribsBufferStateTransitionMode{_IndirectAttribsBufferStateTransitionMode},
-        IndirectDrawArgsOffset                  {_IndirectDrawArgsOffset                  }
-    {}
-#endif
-};
-typedef struct MultiDrawIndexedIndirectAttribs MultiDrawIndexedIndirectAttribs;
-
-
-/// This structure is used by IDeviceContext::MultiDrawIndirectCount().
-struct MultiDrawIndirectCountAttribs
-{
-    /// The maximum number of commands that will be read from the count buffer.
-    /// Must be less than DrawCommandProperties::MaxDrawIndirectCount.
-    Uint32     MaxDrawCount         DEFAULT_INITIALIZER(1);
-
-    /// The byte stride between successive sets of draw parameters.
-    /// Must be a multiple of 4 and greater than or equal to 16 bytes.
-    Uint32     Stride               DEFAULT_INITIALIZER(sizeof(Uint32) * 4);
-
-    /// Additional flags, see Diligent::DRAW_FLAGS.
-    DRAW_FLAGS Flags                DEFAULT_INITIALIZER(DRAW_FLAG_NONE);
-
-    /// State transition mode for indirect draw arguments buffer.
-    RESOURCE_STATE_TRANSITION_MODE IndirectAttribsBufferStateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
-
-    /// State transition mode for the count buffer.
-    RESOURCE_STATE_TRANSITION_MODE CountBufferStateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
-
-    /// Offset from the beginning of the buffer to the location of draw command attributes.
-    Uint32 IndirectDrawArgsOffset   DEFAULT_INITIALIZER(0);
-
-    /// Offset from the beginning of the count buffer to the location of the command counter.
-    Uint32 CountBufferOffset        DEFAULT_INITIALIZER(0);
-
-#if DILIGENT_CPP_INTERFACE
-    constexpr MultiDrawIndirectCountAttribs() noexcept {}
-
-    explicit constexpr MultiDrawIndirectCountAttribs(
-        Uint32                         _MaxDrawCount,
-        Uint32                         _Stride                                   = MultiDrawIndirectCountAttribs{}.Stride,
-        DRAW_FLAGS                     _Flags                                    = MultiDrawIndirectCountAttribs{}.Flags,
-        Uint32                         _IndirectDrawArgsOffset                   = MultiDrawIndirectCountAttribs{}.IndirectDrawArgsOffset,
-        RESOURCE_STATE_TRANSITION_MODE _IndirectAttribsBufferStateTransitionMode = MultiDrawIndirectCountAttribs{}.IndirectAttribsBufferStateTransitionMode,
-        Uint32                         _CountBufferOffset                        = MultiDrawIndirectCountAttribs{}.CountBufferOffset,
-        RESOURCE_STATE_TRANSITION_MODE _CountBufferStateTransitionMode           = MultiDrawIndirectCountAttribs{}.CountBufferStateTransitionMode) noexcept :
-        MaxDrawCount                            {_MaxDrawCount                            },
-        Stride                                  {_Stride                                  },
-        Flags                                   {_Flags                                   },
-        IndirectAttribsBufferStateTransitionMode{_IndirectAttribsBufferStateTransitionMode},
-        CountBufferStateTransitionMode          {_CountBufferStateTransitionMode          },
-        IndirectDrawArgsOffset                  {_IndirectDrawArgsOffset                  },
-        CountBufferOffset                       {_CountBufferOffset                       }
-    {}
-#endif
-};
-typedef struct MultiDrawIndirectCountAttribs MultiDrawIndirectCountAttribs;
-
-
-/// This structure is used by IDeviceContext::MultiDrawIndexedIndirectCount().
-struct MultiDrawIndexedIndirectCountAttribs
-{
-    /// The type of the elements in the index buffer.
-    /// Allowed values: VT_UINT16 and VT_UINT32.
-    VALUE_TYPE IndexType            DEFAULT_INITIALIZER(VT_UNDEFINED);
-
-    /// The maximum number of commands that will be read from the count buffer.
-    /// Must be less than DrawCommandProperties::MaxDrawIndirectCount.
-    Uint32     MaxDrawCount         DEFAULT_INITIALIZER(1);
-
-    /// The byte stride between successive sets of draw parameters.
-    /// Must be a multiple of 4 and greater than or equal to 20 bytes.
-    Uint32     Stride               DEFAULT_INITIALIZER(sizeof(Uint32) * 5);
-
-    /// Additional flags, see Diligent::DRAW_FLAGS.
-    DRAW_FLAGS Flags                DEFAULT_INITIALIZER(DRAW_FLAG_NONE);
-
-    /// State transition mode for indirect draw arguments buffer.
-    RESOURCE_STATE_TRANSITION_MODE IndirectAttribsBufferStateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
-
-    /// State transition mode for the count buffer.
-    RESOURCE_STATE_TRANSITION_MODE CountBufferStateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
-
-    /// Offset from the beginning of the buffer to the location of draw command attributes.
-    Uint32 IndirectDrawArgsOffset   DEFAULT_INITIALIZER(0);
-
-    /// Offset from the beginning of the count buffer to the location of the command counter.
-    Uint32 CountBufferOffset        DEFAULT_INITIALIZER(0);
-
-#if DILIGENT_CPP_INTERFACE
-    constexpr MultiDrawIndexedIndirectCountAttribs() noexcept {}
-    
-    explicit constexpr MultiDrawIndexedIndirectCountAttribs(
-        VALUE_TYPE                     _IndexType,
-        Uint32                         _MaxDrawCount,
-        Uint32                         _Stride                                   = MultiDrawIndexedIndirectCountAttribs{}.Stride,
-        DRAW_FLAGS                     _Flags                                    = MultiDrawIndexedIndirectCountAttribs{}.Flags,
-        Uint32                         _IndirectDrawArgsOffset                   = MultiDrawIndexedIndirectCountAttribs{}.IndirectDrawArgsOffset,
-        RESOURCE_STATE_TRANSITION_MODE _IndirectAttribsBufferStateTransitionMode = MultiDrawIndexedIndirectCountAttribs{}.IndirectAttribsBufferStateTransitionMode,
-        Uint32                         _CountBufferOffset                        = MultiDrawIndexedIndirectCountAttribs{}.CountBufferOffset,
-        RESOURCE_STATE_TRANSITION_MODE _CountBufferStateTransitionMode           = MultiDrawIndexedIndirectCountAttribs{}.CountBufferStateTransitionMode) noexcept :
-        IndexType                               {_IndexType                               },
-        MaxDrawCount                            {_MaxDrawCount                            },
-        Stride                                  {_Stride                                  },
-        Flags                                   {_Flags                                   },
-        IndirectAttribsBufferStateTransitionMode{_IndirectAttribsBufferStateTransitionMode},
-        CountBufferStateTransitionMode          {_CountBufferStateTransitionMode          },
-        IndirectDrawArgsOffset                  {_IndirectDrawArgsOffset                  },
-        CountBufferOffset                       {_CountBufferOffset                       }
-    {}
-#endif
-};
-typedef struct MultiDrawIndexedIndirectCountAttribs MultiDrawIndexedIndirectCountAttribs;
-
-
 #define DILIGENT_INTERFACE_NAME IDeviceContext
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
@@ -2292,9 +2133,24 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     ///                                  Uint32 NumInstances;
     ///                                  Uint32 StartVertexLocation;
     ///                                  Uint32 FirstInstanceLocation;
+    /// \param [in] pCounterBuffer - An pointer to the optional buffer, from which Uint32 value with the draw count will be read.
     ///
-    /// \remarks  If IndirectAttribsBufferStateTransitionMode member is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
-    ///           the method may transition the state of the indirect draw arguments buffer. This is not a thread safe operation,
+    ///
+    /// \remarks  Draw command arguments are read from the attributes buffer at the offset given by
+    ///           Attribs.IndirectDrawArgsOffset. If Attribs.DrawCount > 1, the arguments for command N
+    ///           will be read at the offset
+    ///
+    ///             Attribs.IndirectDrawArgsOffset + N * Attribs.IndirectDrawArgsStride.
+    ///
+    ///           If pCountBuffer is not null, the number of commands to execute will be read from the buffer at the offset
+    ///           given by Attribs.CounterOffset. The number of commands will be the lesser of the value read from the buffer
+    ///           and Attribs.DrawCount:
+    ///
+    ///             NumCommads = min(CountBuffer[Attribs.CounterOffset], Attribs.DrawCount)
+    ///
+    ///           If Attribs.IndirectAttribsBufferStateTransitionMode or Attribs.CounterBufferStateTransitionMode is
+    ///           Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION, the method may transition the state of the indirect
+    ///           draw arguments buffer, and the state of the counter buffer . This is not a thread safe operation,
     ///           so no other thread is allowed to read or write the state of the buffer.
     ///
     ///           If Diligent::DRAW_FLAG_VERIFY_STATES flag is set, the method reads the state of vertex/index
@@ -2307,7 +2163,8 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// \remarks Supported contexts: graphics.
     VIRTUAL void METHOD(DrawIndirect)(THIS_
                                       const DrawIndirectAttribs REF Attribs,
-                                      IBuffer*                      pAttribsBuffer) PURE;
+                                      IBuffer*                      pAttribsBuffer,
+                                      IBuffer*                      pCounterBuffer DEFAULT_VALUE(nullptr)) PURE;
 
 
     /// Executes an indexed indirect draw command.
@@ -2320,9 +2177,23 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     ///                                  Uint32 FirstIndexLocation;
     ///                                  Uint32 BaseVertex;
     ///                                  Uint32 FirstInstanceLocation
+    /// \param [in] pCounterBuffer - An pointer to the optional buffer, from which Uint32 value with the draw count will be read.
     ///
-    /// \remarks  If IndirectAttribsBufferStateTransitionMode member is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
-    ///           the method may transition the state of the indirect draw arguments buffer. This is not a thread safe operation,
+    /// \remarks  Draw command arguments are read from the attributes buffer at the offset given by
+    ///           Attribs.IndirectDrawArgsOffset. If Attribs.DrawCount > 1, the arguments for command N
+    ///           will be read at the offset
+    ///
+    ///             Attribs.IndirectDrawArgsOffset + N * Attribs.IndirectDrawArgsStride.
+    ///
+    ///           If pCountBuffer is not null, the number of commands to execute will be read from the buffer at the offset
+    ///           given by Attribs.CounterOffset. The number of commands will be the lesser of the value read from the buffer
+    ///           and Attribs.DrawCount:
+    ///
+    ///             NumCommads = min(CountBuffer[Attribs.CounterOffset], Attribs.DrawCount)
+    ///
+    ///           If Attribs.IndirectAttribsBufferStateTransitionMode or Attribs.CounterBufferStateTransitionMode is
+    ///           Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION, the method may transition the state of the indirect
+    ///           draw arguments buffer, and the state of the counter buffer . This is not a thread safe operation,
     ///           so no other thread is allowed to read or write the state of the buffer.
     ///
     ///           If Diligent::DRAW_FLAG_VERIFY_STATES flag is set, the method reads the state of vertex/index
@@ -2335,7 +2206,8 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// \remarks Supported contexts: graphics.
     VIRTUAL void METHOD(DrawIndexedIndirect)(THIS_
                                              const DrawIndexedIndirectAttribs REF Attribs,
-                                             IBuffer*                             pAttribsBuffer) PURE;
+                                             IBuffer*                             pAttribsBuffer,
+                                             IBuffer*                             pCounterBuffer DEFAULT_VALUE(nullptr)) PURE;
 
 
     /// Executes a mesh draw command.
@@ -3114,72 +2986,6 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
                                         SHADING_RATE          BaseRate,
                                         SHADING_RATE_COMBINER PrimitiveCombiner,
                                         SHADING_RATE_COMBINER TextureCombiner) PURE;
-    
-    /// Executes an indirect multi draw command.
-
-    /// \param [in] Attribs        - Structure describing the command attributes, see Diligent::MultiDrawIndirectAttribs for details.
-    /// \param [in] pAttribsBuffer - Pointer to the buffer, from which indirect draw attributes will be read.
-    ///                              The buffer must contain the following arguments at the specified offset:
-    ///                                  Uint32 NumVertices;
-    ///                                  Uint32 NumInstances;
-    ///                                  Uint32 StartVertexLocation;
-    ///                                  Uint32 FirstInstanceLocation;
-    /// 
-    /// \remarks Supported contexts: graphics.
-    VIRTUAL void METHOD(MultiDrawIndirect)(THIS_
-                                           const MultiDrawIndirectAttribs REF Attribs,
-                                           IBuffer*                           pAttribsBuffer) PURE;
-    
-    /// Executes an indirect indexed multi draw command.
-
-    /// \param [in] Attribs        - Structure describing the command attributes, see Diligent::MultiDrawIndexedIndirectAttribs for details.
-    /// \param [in] pAttribsBuffer - Pointer to the buffer, from which indirect draw attributes will be read.
-    ///                              The buffer must contain the following arguments at the specified offset:
-    ///                                  Uint32 NumIndices;
-    ///                                  Uint32 NumInstances;
-    ///                                  Uint32 FirstIndexLocation;
-    ///                                  Uint32 BaseVertex;
-    ///                                  Uint32 FirstInstanceLocation;
-    /// 
-    /// \remarks Supported contexts: graphics.
-    VIRTUAL void METHOD(MultiDrawIndexedIndirect)(THIS_
-                                                  const MultiDrawIndexedIndirectAttribs REF Attribs,
-                                                  IBuffer*                                  pAttribsBuffer) PURE;
-    
-    /// Executes an indirect multi draw command with indirect command count buffer.
-
-    /// \param [in] Attribs        - Structure describing the command attributes, see Diligent::MultiDrawIndirectAttribs for details.
-    /// \param [in] pAttribsBuffer - Pointer to the buffer, from which indirect draw attributes will be read.
-    ///                              The buffer must contain the following arguments at the specified offset:
-    ///                                  Uint32 NumVertices;
-    ///                                  Uint32 NumInstances;
-    ///                                  Uint32 StartVertexLocation;
-    ///                                  Uint32 FirstInstanceLocation;
-    /// \param [in] pCountBuffer   - Pointer to the buffer, from which Uint32 value with draw count will be read.
-    /// 
-    /// \remarks Supported contexts: graphics.
-    VIRTUAL void METHOD(MultiDrawIndirectCount)(THIS_
-                                                const MultiDrawIndirectCountAttribs REF Attribs,
-                                                IBuffer*                                pAttribsBuffer,
-                                                IBuffer*                                pCountBuffer) PURE;
-    
-    /// Executes an indirect indexed multi draw command with indirect command count buffer.
-
-    /// \param [in] Attribs        - Structure describing the command attributes, see Diligent::MultiDrawIndexedIndirectAttribs for details.
-    /// \param [in] pAttribsBuffer - Pointer to the buffer, from which indirect draw attributes will be read.
-    ///                              The buffer must contain the following arguments at the specified offset:
-    ///                                  Uint32 NumIndices;
-    ///                                  Uint32 NumInstances;
-    ///                                  Uint32 FirstIndexLocation;
-    ///                                  Uint32 BaseVertex;
-    ///                                  Uint32 FirstInstanceLocation;
-    /// \param [in] pCountBuffer   - Pointer to the buffer, from which Uint32 value with draw count will be read.
-    /// 
-    /// \remarks Supported contexts: graphics.
-    VIRTUAL void METHOD(MultiDrawIndexedIndirectCount)(THIS_
-                                                       const MultiDrawIndexedIndirectCountAttribs REF Attribs,
-                                                       IBuffer*                                       pAttribsBuffer,
-                                                       IBuffer*                                       pCountBuffer) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -3257,10 +3063,6 @@ DILIGENT_END_INTERFACE
 #    define IDeviceContext_LockCommandQueue(This)                   CALL_IFACE_METHOD(DeviceContext, LockCommandQueue,              This)
 #    define IDeviceContext_UnlockCommandQueue(This)                 CALL_IFACE_METHOD(DeviceContext, UnlockCommandQueue,            This)
 #    define IDeviceContext_SetShadingRate(This, ...)                CALL_IFACE_METHOD(DeviceContext, SetShadingRate,                This, __VA_ARGS__)
-#    define IDeviceContext_MultiDrawIndirect(This, ...)             CALL_IFACE_METHOD(DeviceContext, MultiDrawIndirect,             This, __VA_ARGS__)
-#    define IDeviceContext_MultiDrawIndexedIndirect(This, ...)      CALL_IFACE_METHOD(DeviceContext, MultiDrawIndexedIndirect,      This, __VA_ARGS__)
-#    define IDeviceContext_MultiDrawIndirectCount(This, ...)        CALL_IFACE_METHOD(DeviceContext, MultiDrawIndirectCount,        This, __VA_ARGS__)
-#    define IDeviceContext_MultiDrawIndexedIndirectCount(This, ...) CALL_IFACE_METHOD(DeviceContext, MultiDrawIndexedIndirectCount, This, __VA_ARGS__)
 
 // clang-format on
 

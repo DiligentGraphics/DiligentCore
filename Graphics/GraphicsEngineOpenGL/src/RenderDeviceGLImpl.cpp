@@ -739,7 +739,6 @@ void RenderDeviceGLImpl::InitAdapterInfo()
             ENABLE_FEATURE(ShaderInt8,                    CheckExtension("GL_EXT_shader_explicit_arithmetic_types_int8"));
             ENABLE_FEATURE(ResourceBuffer8BitAccess,      CheckExtension("GL_EXT_shader_8bit_storage"));
             ENABLE_FEATURE(UniformBuffer8BitAccess,       CheckExtension("GL_EXT_shader_8bit_storage"));
-            ENABLE_FEATURE(NativeMultiDrawIndirect,       IsGL43OrAbove || CheckExtension("GL_ARB_multi_draw_indirect"));
             // clang-format on
 
             TexProps.MaxTexture1DDimension     = MaxTextureSize;
@@ -810,8 +809,6 @@ void RenderDeviceGLImpl::InitAdapterInfo()
             ENABLE_FEATURE(ShaderInt8,                strstr(Extensions, "shader_explicit_arithmetic_types_int8"));
             ENABLE_FEATURE(ResourceBuffer8BitAccess,  strstr(Extensions, "shader_8bit_storage"));
             ENABLE_FEATURE(UniformBuffer8BitAccess,   strstr(Extensions, "shader_8bit_storage"));
-
-            ENABLE_FEATURE(NativeMultiDrawIndirect,   strstr(Extensions, "GL_EXT_multi_draw_indirect"));
             // clang-format on
 
             TexProps.MaxTexture1DDimension     = 0; // Not supported in GLES 3.2
@@ -923,13 +920,28 @@ void RenderDeviceGLImpl::InitAdapterInfo()
         auto& DrawCommandProps{m_AdapterInfo.DrawCommand};
         DrawCommandProps.MaxDrawIndirectCount = ~0u; // no limits
         DrawCommandProps.CapFlags             = DRAW_COMMAND_CAP_FLAG_NONE;
-        // The baseInstance member of the DrawElementsIndirectCommand structure is defined only if the GL version is 4.2 or greater.
-        if ((m_DeviceInfo.Type == RENDER_DEVICE_TYPE_GL && GLVersion >= Version{4, 2}) ||
-            (m_DeviceInfo.Type == RENDER_DEVICE_TYPE_GLES && CheckExtension("GL_EXT_base_instance")))
-            DrawCommandProps.CapFlags |= DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_FIRST_INSTANCE;
-        if ((m_DeviceInfo.Type == RENDER_DEVICE_TYPE_GL && (GLVersion >= Version{4, 6} || CheckExtension("GL_ARB_indirect_parameters"))) ||
-            (m_DeviceInfo.Type == RENDER_DEVICE_TYPE_GLES && CheckExtension("GL_EXT_multi_draw_indirect")))
-            DrawCommandProps.CapFlags |= DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNT;
+        if (m_DeviceInfo.Type == RENDER_DEVICE_TYPE_GL)
+        {
+            // The baseInstance member of the DrawElementsIndirectCommand structure is defined only if the GL version is 4.2 or greater.
+            if (GLVersion >= Version{4, 2})
+                DrawCommandProps.CapFlags |= DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_FIRST_INSTANCE;
+
+            if (GLVersion >= Version{4, 3} || CheckExtension("GL_ARB_multi_draw_indirect"))
+                DrawCommandProps.CapFlags |= DRAW_COMMAND_CAP_FLAG_NATIVE_MULTI_DRAW_INDIRECT;
+
+            if (GLVersion >= Version{4, 6} || CheckExtension("GL_ARB_indirect_parameters"))
+                DrawCommandProps.CapFlags |= DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNTER_BUFFER;
+        }
+        else if (m_DeviceInfo.Type == RENDER_DEVICE_TYPE_GLES)
+        {
+            const auto* Extensions = reinterpret_cast<const char*>(glGetString(GL_EXTENSIONS));
+            if (strstr(Extensions, "base_instance"))
+                DrawCommandProps.CapFlags |= DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_FIRST_INSTANCE;
+
+            if (strstr(Extensions, "multi_draw_indirect"))
+                DrawCommandProps.CapFlags |= DRAW_COMMAND_CAP_FLAG_NATIVE_MULTI_DRAW_INDIRECT | DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNTER_BUFFER;
+        }
+
         DrawCommandProps.MaxIndexValue = 0;
         glGetIntegerv(GL_MAX_ELEMENT_INDEX, reinterpret_cast<GLint*>(&DrawCommandProps.MaxIndexValue));
         CHECK_GL_ERROR("glGetIntegerv(GL_MAX_ELEMENT_INDEX)");
@@ -950,7 +962,7 @@ void RenderDeviceGLImpl::InitAdapterInfo()
     }
 
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(DeviceFeatures) == 40, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+    static_assert(sizeof(DeviceFeatures) == 39, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 #endif
 }
 

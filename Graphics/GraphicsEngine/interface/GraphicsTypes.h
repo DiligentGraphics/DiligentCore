@@ -1746,12 +1746,6 @@ struct DeviceFeatures
     /// Indicates if device supports variable rate shading.
     DEVICE_FEATURE_STATE VariableRateShading              DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
-    /// Indicates if device supports native multi draw indirect commands.
-    ///
-    /// \remarks  When native multi draw commands are not supported,
-    ///           they may be emulated by the engine, if possible.
-    DEVICE_FEATURE_STATE NativeMultiDrawIndirect          DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
-
 #if DILIGENT_CPP_INTERFACE
     constexpr DeviceFeatures() noexcept {}
 
@@ -1794,11 +1788,10 @@ struct DeviceFeatures
         NativeFence                       {State},
         TileShaders                       {State},
         TransferQueueTimestampQueries     {State},
-        VariableRateShading               {State},
-        NativeMultiDrawIndirect           {State}
+        VariableRateShading               {State}
     {
 #   if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(*this) == 40, "Did you add a new feature to DeviceFeatures? Please handle its status above.");
+        static_assert(sizeof(*this) == 39, "Did you add a new feature to DeviceFeatures? Please handle its status above.");
 #   endif
     }
 #endif
@@ -2529,14 +2522,21 @@ typedef struct ShadingRateProperties ShadingRateProperties;
 /// Defines the draw command capability flags.
 DILIGENT_TYPED_ENUM(DRAW_COMMAND_CAP_FLAGS, Uint16)
 {
+    /// No draw command capabilities.
     DRAW_COMMAND_CAP_FLAG_NONE                         = 0,
 
-    /// FirstInstanceLocation of the indirect draw command can be greater than zero.
+    /// Indicates that FirstInstanceLocation of the indirect draw command can be greater than zero.
     DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_FIRST_INSTANCE = 1u << 0,
 
-    /// Indicates that IDeviceContext::MultiDrawIndirectCount() and IDeviceContext::MultiDrawIndexedIndirectCount()
-    /// are supported.
-    DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNT          = 1u << 1,
+    /// Indicates that device natively supports indirect draw commands with DrawCount > 1.
+    /// When this flag is not set, the commands will be emulated on the host, which will
+    /// produce correct results, but will be slower.
+    DRAW_COMMAND_CAP_FLAG_NATIVE_MULTI_DRAW_INDIRECT   = 1u << 1,
+
+    /// Indicates that IDeviceContext::DrawIndirect() and IDeviceContext::DrawIndexedIndirect()
+    /// commands may take non-null counter buffer. If this flag is not set, the number
+    /// of draw commands must be specified through the command attributes.
+    DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNTER_BUFFER = 1u << 2
 };
 DEFINE_FLAG_ENUM_OPERATORS(DRAW_COMMAND_CAP_FLAGS);
 

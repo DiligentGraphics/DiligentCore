@@ -2003,9 +2003,6 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
                   ExtFeatures.ShadingRate.attachmentFragmentShadingRate != VK_FALSE ||
                   ExtFeatures.FragmentDensityMap.fragmentDensityMap != VK_FALSE));
 
-    INIT_FEATURE(NativeMultiDrawIndirect,
-                 (vkFeatures.multiDrawIndirect != VK_FALSE ||
-                  ExtFeatures.DrawIndirectCount));
 #undef INIT_FEATURE
 
     // Not supported in Vulkan on top of Metal.
@@ -2016,7 +2013,7 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
 #endif
 
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(DeviceFeatures) == 40, "Did you add a new feature to DeviceFeatures? Please handle its satus here (if necessary).");
+    static_assert(sizeof(DeviceFeatures) == 39, "Did you add a new feature to DeviceFeatures? Please handle its satus here (if necessary).");
 #endif
 
     return Features;
