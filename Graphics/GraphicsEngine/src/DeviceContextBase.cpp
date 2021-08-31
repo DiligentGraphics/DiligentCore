@@ -205,8 +205,10 @@ bool VerifyDispatchComputeAttribs(const DispatchComputeAttribs& Attribs)
     return true;
 }
 
-bool VerifyDispatchComputeIndirectAttribs(const DispatchComputeIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer)
+bool VerifyDispatchComputeIndirectAttribs(const DispatchComputeIndirectAttribs& Attribs)
 {
+    const auto* pAttribsBuffer = Attribs.pAttribsBuffer;
+
 #define CHECK_DISPATCH_COMPUTE_INDIRECT_ATTRIBS(Expr, ...) CHECK_PARAMETER(Expr, "Dispatch compute indirect attribs are invalid: ", __VA_ARGS__)
 
     CHECK_DISPATCH_COMPUTE_INDIRECT_ATTRIBS(pAttribsBuffer != nullptr, "indirect dispatch arguments buffer must not be null.");

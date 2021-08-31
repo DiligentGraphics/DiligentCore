@@ -696,8 +696,16 @@ typedef struct DispatchComputeAttribs DispatchComputeAttribs;
 /// This structure is used by IDeviceContext::DispatchComputeIndirect().
 struct DispatchComputeIndirectAttribs
 {
+    /// A pointer to the buffer containing indirect dispatch attributes.
+
+    /// The buffer must contain the following arguments at the specified offset:
+    ///    Uint32 ThreadGroupCountX;
+    ///    Uint32 ThreadGroupCountY;
+    ///    Uint32 ThreadGroupCountZ;
+    IBuffer*                       pAttribsBuffer                   DEFAULT_INITIALIZER(nullptr);
+
     /// State transition mode for indirect dispatch attributes buffer.
-    RESOURCE_STATE_TRANSITION_MODE IndirectAttribsBufferStateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
+    RESOURCE_STATE_TRANSITION_MODE AttribsBufferStateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
 
     /// The offset from the beginning of the buffer to the dispatch command arguments.
     Uint32  DispatchArgsByteOffset    DEFAULT_INITIALIZER(0);
@@ -720,11 +728,12 @@ struct DispatchComputeIndirectAttribs
     constexpr DispatchComputeIndirectAttribs() noexcept {}
 
     /// Initializes the structure with user-specified values.
-    explicit constexpr
-    DispatchComputeIndirectAttribs(RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
-                                   Uint32                         Offset              = 0) :
-        IndirectAttribsBufferStateTransitionMode{StateTransitionMode},
-        DispatchArgsByteOffset                  {Offset             }
+    constexpr DispatchComputeIndirectAttribs(IBuffer*                       _pAttribsBuffer,
+                                             RESOURCE_STATE_TRANSITION_MODE _StateTransitionMode,
+                                             Uint32                         _Offset              = 0) :
+        pAttribsBuffer                  {_pAttribsBuffer     },
+        AttribsBufferStateTransitionMode{_StateTransitionMode},
+        DispatchArgsByteOffset          {_Offset             }
     {}
 #endif
 };
@@ -2316,12 +2325,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
 
     /// Executes an indirect dispatch compute command.
 
-    /// \param [in] Attribs        - The command attributes, see Diligent::DispatchComputeIndirectAttribs for details.
-    /// \param [in] pAttribsBuffer - Pointer to the buffer containing indirect dispatch attributes.
-    ///                              The buffer must contain the following arguments at the specified offset:
-    ///                                 Uint32 ThreadGroupCountX;
-    ///                                 Uint32 ThreadGroupCountY;
-    ///                                 Uint32 ThreadGroupCountZ;
+    /// \param [in] Attribs - The command attributes, see Diligent::DispatchComputeIndirectAttribs for details.
     ///
     /// \remarks  If IndirectAttribsBufferStateTransitionMode member is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
     ///           the method may transition the state of indirect dispatch arguments buffer. This is not a thread safe operation,
@@ -2338,8 +2342,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     ///
     /// \remarks Supported contexts: graphics, compute.
     VIRTUAL void METHOD(DispatchComputeIndirect)(THIS_
-                                                 const DispatchComputeIndirectAttribs REF Attribs,
-                                                 IBuffer*                                 pAttribsBuffer) PURE;
+                                                 const DispatchComputeIndirectAttribs REF Attribs) PURE;
 
 
     /// Executes a dispatch tile command.

@@ -854,16 +854,16 @@ void DeviceContextD3D12Impl::DispatchCompute(const DispatchComputeAttribs& Attri
     }
 }
 
-void DeviceContextD3D12Impl::DispatchComputeIndirect(const DispatchComputeIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
+void DeviceContextD3D12Impl::DispatchComputeIndirect(const DispatchComputeIndirectAttribs& Attribs)
 {
-    DvpVerifyDispatchIndirectArguments(Attribs, pAttribsBuffer);
+    DvpVerifyDispatchIndirectArguments(Attribs);
 
     auto& ComputeCtx = GetCmdContext().AsComputeContext();
     PrepareForDispatchCompute(ComputeCtx);
 
     ID3D12Resource* pd3d12ArgsBuff;
     Uint64          BuffDataStartByteOffset;
-    PrepareIndirectAttribsBuffer(ComputeCtx, pAttribsBuffer, Attribs.IndirectAttribsBufferStateTransitionMode, pd3d12ArgsBuff, BuffDataStartByteOffset,
+    PrepareIndirectAttribsBuffer(ComputeCtx, Attribs.pAttribsBuffer, Attribs.AttribsBufferStateTransitionMode, pd3d12ArgsBuff, BuffDataStartByteOffset,
                                  "Indirect dispatch (DeviceContextD3D12Impl::DispatchComputeIndirect)");
 
     ComputeCtx.ExecuteIndirect(m_pDispatchIndirectSignature, 1, pd3d12ArgsBuff, Attribs.DispatchArgsByteOffset + BuffDataStartByteOffset);

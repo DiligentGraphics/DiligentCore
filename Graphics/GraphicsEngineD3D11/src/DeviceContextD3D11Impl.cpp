@@ -793,9 +793,9 @@ void DeviceContextD3D11Impl::DispatchCompute(const DispatchComputeAttribs& Attri
     }
 }
 
-void DeviceContextD3D11Impl::DispatchComputeIndirect(const DispatchComputeIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
+void DeviceContextD3D11Impl::DispatchComputeIndirect(const DispatchComputeIndirectAttribs& Attribs)
 {
-    DvpVerifyDispatchIndirectArguments(Attribs, pAttribsBuffer);
+    DvpVerifyDispatchIndirectArguments(Attribs);
 
     if (Uint32 BindSRBMask = m_BindInfo.GetCommitMask())
     {
@@ -817,7 +817,7 @@ void DeviceContextD3D11Impl::DispatchComputeIndirect(const DispatchComputeIndire
     }
 #endif
 
-    auto* pd3d11Buff = ValidatedCast<BufferD3D11Impl>(pAttribsBuffer)->GetD3D11Buffer();
+    auto* pd3d11Buff = ValidatedCast<BufferD3D11Impl>(Attribs.pAttribsBuffer)->GetD3D11Buffer();
     m_pd3d11DeviceContext->DispatchIndirect(pd3d11Buff, Attribs.DispatchArgsByteOffset);
 }
 

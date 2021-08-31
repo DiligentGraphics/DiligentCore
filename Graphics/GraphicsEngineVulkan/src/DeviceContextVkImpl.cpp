@@ -968,13 +968,13 @@ void DeviceContextVkImpl::DispatchCompute(const DispatchComputeAttribs& Attribs)
     }
 }
 
-void DeviceContextVkImpl::DispatchComputeIndirect(const DispatchComputeIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
+void DeviceContextVkImpl::DispatchComputeIndirect(const DispatchComputeIndirectAttribs& Attribs)
 {
-    DvpVerifyDispatchIndirectArguments(Attribs, pAttribsBuffer);
+    DvpVerifyDispatchIndirectArguments(Attribs);
 
     PrepareForDispatchCompute();
 
-    auto* pBufferVk = ValidatedCast<BufferVkImpl>(pAttribsBuffer);
+    auto* pBufferVk = ValidatedCast<BufferVkImpl>(Attribs.pAttribsBuffer);
 
 #ifdef DILIGENT_DEVELOPMENT
     if (pBufferVk->GetDesc().Usage == USAGE_DYNAMIC)
@@ -982,7 +982,7 @@ void DeviceContextVkImpl::DispatchComputeIndirect(const DispatchComputeIndirectA
 #endif
 
     // Buffer memory barries must be executed outside of render pass
-    TransitionOrVerifyBufferState(*pBufferVk, Attribs.IndirectAttribsBufferStateTransitionMode, RESOURCE_STATE_INDIRECT_ARGUMENT,
+    TransitionOrVerifyBufferState(*pBufferVk, Attribs.AttribsBufferStateTransitionMode, RESOURCE_STATE_INDIRECT_ARGUMENT,
                                   VK_ACCESS_INDIRECT_COMMAND_READ_BIT, "Indirect dispatch (DeviceContextVkImpl::DispatchCompute)");
 
     m_CommandBuffer.DispatchIndirect(pBufferVk->GetVkBuffer(), pBufferVk->GetDynamicOffset(GetContextId(), this) + Attribs.DispatchArgsByteOffset);

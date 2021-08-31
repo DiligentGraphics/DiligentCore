@@ -59,7 +59,7 @@ bool VerifyDrawIndirectAttribs       (const DrawIndirectAttribs&        Attribs)
 bool VerifyDrawIndexedIndirectAttribs(const DrawIndexedIndirectAttribs& Attribs);
 
 bool VerifyDispatchComputeAttribs        (const DispatchComputeAttribs&         Attribs);
-bool VerifyDispatchComputeIndirectAttribs(const DispatchComputeIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer);
+bool VerifyDispatchComputeIndirectAttribs(const DispatchComputeIndirectAttribs& Attribs);
 // clang-format on
 
 bool VerifyDrawMeshAttribs(Uint32 MaxDrawMeshTasksCount, const DrawMeshAttribs& Attribs);
@@ -526,7 +526,7 @@ protected:
     void DvpVerifyDrawMeshIndirectCountArguments(const DrawMeshIndirectCountAttribs& Attribs, const IBuffer* pAttribsBuffer, const IBuffer* pCountBuff) const;
 
     void DvpVerifyDispatchArguments        (const DispatchComputeAttribs& Attribs) const;
-    void DvpVerifyDispatchIndirectArguments(const DispatchComputeIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer) const;
+    void DvpVerifyDispatchIndirectArguments(const DispatchComputeIndirectAttribs& Attribs) const;
 
     void DvpVerifyDispatchTileArguments(const DispatchTileAttribs& Attribs) const;
 
@@ -552,8 +552,8 @@ protected:
     void DvpVerifyDrawMeshIndirectArguments     (const DrawMeshIndirectAttribs&      Attribs, const IBuffer* pAttribsBuffer) const {}
     void DvpVerifyDrawMeshIndirectCountArguments(const DrawMeshIndirectCountAttribs& Attribs, const IBuffer* pAttribsBuffer, const IBuffer* pCountBuff) const {}
 
-    void DvpVerifyDispatchArguments        (const DispatchComputeAttribs& Attribs)const {}
-    void DvpVerifyDispatchIndirectArguments(const DispatchComputeIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer)const {}
+    void DvpVerifyDispatchArguments        (const DispatchComputeAttribs& Attribs) const {}
+    void DvpVerifyDispatchIndirectArguments(const DispatchComputeIndirectAttribs& Attribs) const {}
 
     void DvpVerifyDispatchTileArguments(const DispatchTileAttribs& Attribs) const {}
 
@@ -2340,9 +2340,7 @@ inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDispatchArguments(
 }
 
 template <typename ImplementationTraits>
-inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDispatchIndirectArguments(
-    const DispatchComputeIndirectAttribs& Attribs,
-    const IBuffer*                        pAttribsBuffer) const
+inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDispatchIndirectArguments(const DispatchComputeIndirectAttribs& Attribs) const
 {
     DEV_CHECK_ERR(m_pPipelineState, "DispatchComputeIndirect command arguments are invalid: no pipeline state is bound.");
 
@@ -2352,7 +2350,7 @@ inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDispatchIndirectAr
 
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "DispatchComputeIndirect command must be performed outside of render pass");
 
-    DEV_CHECK_ERR(VerifyDispatchComputeIndirectAttribs(Attribs, pAttribsBuffer), "DispatchComputeIndirectAttribs are invalid");
+    DEV_CHECK_ERR(VerifyDispatchComputeIndirectAttribs(Attribs), "DispatchComputeIndirectAttribs are invalid");
 }
 
 template <typename ImplementationTraits>

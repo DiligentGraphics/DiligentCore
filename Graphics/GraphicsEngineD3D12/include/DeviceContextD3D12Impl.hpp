@@ -149,7 +149,7 @@ public:
     /// Implementation of IDeviceContext::DispatchCompute() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE DispatchCompute        (const DispatchComputeAttribs& Attribs) override final;
     /// Implementation of IDeviceContext::DispatchComputeIndirect() in Direct3D12 backend.
-    virtual void DILIGENT_CALL_TYPE DispatchComputeIndirect(const DispatchComputeIndirectAttribs& Attribs, IBuffer* pAttribsBuffer) override final;
+    virtual void DILIGENT_CALL_TYPE DispatchComputeIndirect(const DispatchComputeIndirectAttribs& Attribs) override final;
     // clang-format on
 
     /// Implementation of IDeviceContext::ClearDepthStencil() in Direct3D12 backend.

@@ -1106,9 +1106,9 @@ void DeviceContextGLImpl::DispatchCompute(const DispatchComputeAttribs& Attribs)
 #endif
 }
 
-void DeviceContextGLImpl::DispatchComputeIndirect(const DispatchComputeIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
+void DeviceContextGLImpl::DispatchComputeIndirect(const DispatchComputeIndirectAttribs& Attribs)
 {
-    DvpVerifyDispatchIndirectArguments(Attribs, pAttribsBuffer);
+    DvpVerifyDispatchIndirectArguments(Attribs);
 
 #if GL_ARB_compute_shader
     // The program might have changed since the last SetPipelineState call if a shader was
@@ -1124,7 +1124,7 @@ void DeviceContextGLImpl::DispatchComputeIndirect(const DispatchComputeIndirectA
     DvpValidateCommittedShaderResources();
 #    endif
 
-    auto* pBufferGL = ValidatedCast<BufferGLImpl>(pAttribsBuffer);
+    auto* pBufferGL = ValidatedCast<BufferGLImpl>(Attribs.pAttribsBuffer);
     pBufferGL->BufferMemoryBarrier(
         MEMORY_BARRIER_INDIRECT_BUFFER, // Command data sourced from buffer objects by
                                         // Draw*Indirect and DispatchComputeIndirect commands after the barrier
