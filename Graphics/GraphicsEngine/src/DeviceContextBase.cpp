@@ -100,8 +100,9 @@ bool VerifyDrawIndirectAttribs(const DrawIndirectAttribs& Attribs)
 #define CHECK_DRAW_INDIRECT_ATTRIBS(Expr, ...) CHECK_PARAMETER(Expr, "Draw indirect attribs are invalid: ", __VA_ARGS__)
 
     CHECK_DRAW_INDIRECT_ATTRIBS(pAttribsBuffer != nullptr, "indirect draw arguments buffer must not be null.");
-    CHECK_DRAW_INDIRECT_ATTRIBS((pAttribsBuffer->GetDesc().BindFlags & BIND_INDIRECT_DRAW_ARGS) != 0,
-                                "indirect draw arguments buffer '", pAttribsBuffer->GetDesc().Name, "' was not created with BIND_INDIRECT_DRAW_ARGS flag.");
+    const auto& AttrBuffDesc = pAttribsBuffer->GetDesc();
+    CHECK_DRAW_INDIRECT_ATTRIBS((AttrBuffDesc.BindFlags & BIND_INDIRECT_DRAW_ARGS) != 0,
+                                "indirect draw arguments buffer '", AttrBuffDesc.Name, "' was not created with BIND_INDIRECT_DRAW_ARGS flag.");
 
     if (Attribs.DrawCount > 1)
     {
@@ -109,11 +110,18 @@ bool VerifyDrawIndirectAttribs(const DrawIndirectAttribs& Attribs)
         CHECK_DRAW_INDIRECT_ATTRIBS(Attribs.DrawArgsStride % 4 == 0, "stride must be a multiple of 4");
     }
 
+    const auto ReqAttrBufSize = Attribs.DrawArgsOffset + (Attribs.DrawCount > 1 ? Attribs.DrawCount * Attribs.DrawArgsStride : Uint32{sizeof(Uint32)} * 4);
+    CHECK_DRAW_INDIRECT_ATTRIBS(ReqAttrBufSize <= AttrBuffDesc.uiSizeInBytes, "invalid DrawArgsOffset (", Attribs.DrawArgsOffset,
+                                ") or indirect draw arguments buffer '", AttrBuffDesc.Name, "' size must be at least ", ReqAttrBufSize, " bytes");
+
     if (pCounterBuffer != nullptr)
     {
-        CHECK_DRAW_INDIRECT_ATTRIBS((pCounterBuffer->GetDesc().BindFlags & BIND_INDIRECT_DRAW_ARGS) != 0,
-                                    "indirect draw counter buffer '",
-                                    pCounterBuffer->GetDesc().Name, "' was not created with BIND_INDIRECT_DRAW_ARGS flag.");
+        const auto& CntBuffDesc = pCounterBuffer->GetDesc();
+        CHECK_DRAW_INDIRECT_ATTRIBS((CntBuffDesc.BindFlags & BIND_INDIRECT_DRAW_ARGS) != 0, "indirect counter buffer '",
+                                    CntBuffDesc.Name, "' was not created with BIND_INDIRECT_DRAW_ARGS flag.");
+        const auto ReqCountBufSize = Attribs.CounterOffset + sizeof(Uint32);
+        CHECK_DRAW_INDIRECT_ATTRIBS(ReqCountBufSize <= CntBuffDesc.uiSizeInBytes, "invalid CounterOffset (", Attribs.CounterOffset,
+                                    ") or counter buffer '", CntBuffDesc.Name, "' size must be at least ", ReqCountBufSize, " bytes");
     }
 
 #undef CHECK_DRAW_INDIRECT_ATTRIBS
@@ -131,9 +139,9 @@ bool VerifyDrawIndexedIndirectAttribs(const DrawIndexedIndirectAttribs& Attribs)
     CHECK_DRAW_INDEXED_INDIRECT_ATTRIBS(pAttribsBuffer != nullptr, "indirect draw arguments buffer must not null.");
     CHECK_DRAW_INDEXED_INDIRECT_ATTRIBS(Attribs.IndexType == VT_UINT16 || Attribs.IndexType == VT_UINT32,
                                         "IndexType (", GetValueTypeString(Attribs.IndexType), ") must be VT_UINT16 or VT_UINT32.");
-    CHECK_DRAW_INDEXED_INDIRECT_ATTRIBS((pAttribsBuffer->GetDesc().BindFlags & BIND_INDIRECT_DRAW_ARGS) != 0,
-                                        "indirect draw arguments buffer '",
-                                        pAttribsBuffer->GetDesc().Name, "' was not created with BIND_INDIRECT_DRAW_ARGS flag.");
+    const auto& AttrBuffDesc = pAttribsBuffer->GetDesc();
+    CHECK_DRAW_INDEXED_INDIRECT_ATTRIBS((AttrBuffDesc.BindFlags & BIND_INDIRECT_DRAW_ARGS) != 0,
+                                        "indirect draw arguments buffer '", AttrBuffDesc.Name, "' was not created with BIND_INDIRECT_DRAW_ARGS flag.");
 
     if (Attribs.DrawCount > 1)
     {
@@ -141,11 +149,18 @@ bool VerifyDrawIndexedIndirectAttribs(const DrawIndexedIndirectAttribs& Attribs)
         CHECK_DRAW_INDEXED_INDIRECT_ATTRIBS(Attribs.DrawArgsStride % 4 == 0, "stride must be a multiple of 4");
     }
 
+    const auto ReqAttrBufSize = Attribs.DrawArgsOffset + (Attribs.DrawCount > 1 ? Attribs.DrawCount * Attribs.DrawArgsStride : Uint32{sizeof(Uint32)} * 5);
+    CHECK_DRAW_INDEXED_INDIRECT_ATTRIBS(ReqAttrBufSize <= AttrBuffDesc.uiSizeInBytes, "invalid DrawArgsOffset (", Attribs.DrawArgsOffset,
+                                        ") or indirect draw arguments buffer '", AttrBuffDesc.Name, "' size must be at least ", ReqAttrBufSize, " bytes");
+
     if (pCounterBuffer != nullptr)
     {
-        CHECK_DRAW_INDEXED_INDIRECT_ATTRIBS((pCounterBuffer->GetDesc().BindFlags & BIND_INDIRECT_DRAW_ARGS) != 0,
-                                            "indirect count draw arguments buffer '",
-                                            pCounterBuffer->GetDesc().Name, "' was not created with BIND_INDIRECT_DRAW_ARGS flag.");
+        const auto& CntBuffDesc = pCounterBuffer->GetDesc();
+        CHECK_DRAW_INDEXED_INDIRECT_ATTRIBS((CntBuffDesc.BindFlags & BIND_INDIRECT_DRAW_ARGS) != 0, "indirect counter buffer '",
+                                            CntBuffDesc.Name, "' was not created with BIND_INDIRECT_DRAW_ARGS flag.");
+        const auto ReqCountBufSize = Attribs.CounterOffset + sizeof(Uint32);
+        CHECK_DRAW_INDEXED_INDIRECT_ATTRIBS(ReqCountBufSize <= CntBuffDesc.uiSizeInBytes, "invalid CounterOffset (", Attribs.CounterOffset,
+                                            ") or counter buffer '", CntBuffDesc.Name, "' size must be at least ", ReqCountBufSize, " bytes");
     }
 
 #undef CHECK_DRAW_INDEXED_INDIRECT_ATTRIBS
@@ -165,16 +180,19 @@ bool VerifyDrawMeshIndirectAttribs(const DrawMeshIndirectAttribs& Attribs, Uint3
     CHECK_DRAW_MESH_INDIRECT_ATTRIBS((ArgsBuffDesc.BindFlags & BIND_INDIRECT_DRAW_ARGS) != 0,
                                      "indirect draw arguments buffer '", ArgsBuffDesc.Name,
                                      "' was not created with BIND_INDIRECT_DRAW_ARGS flag.");
-    CHECK_DRAW_MESH_INDIRECT_ATTRIBS(Attribs.DrawArgsOffset + IndirectCmdStride * Attribs.CommandCount <= ArgsBuffDesc.uiSizeInBytes,
-                                     "invalid IndirectDrawArgsOffset or indirect draw arguments buffer '", ArgsBuffDesc.Name, "' is too small.");
+    const auto ReqAttrBufSize = Attribs.DrawArgsOffset + IndirectCmdStride * Attribs.CommandCount;
+    CHECK_DRAW_MESH_INDIRECT_ATTRIBS(ReqAttrBufSize <= ArgsBuffDesc.uiSizeInBytes, "invalid DrawArgsOffset (", Attribs.DrawArgsOffset,
+                                     ") or indirect draw arguments buffer '", ArgsBuffDesc.Name, "' size must be at least ", ReqAttrBufSize, " bytes");
+
 
     if (pCounterBuffer != nullptr)
     {
-        const auto& CntBuffDesc = pAttribsBuffer->GetDesc();
-        CHECK_DRAW_MESH_INDIRECT_ATTRIBS((CntBuffDesc.BindFlags & BIND_INDIRECT_DRAW_ARGS) != 0,
-                                         "count buffer '", CntBuffDesc.Name, "' was not created with BIND_INDIRECT_DRAW_ARGS flag.");
-        CHECK_DRAW_MESH_INDIRECT_ATTRIBS(Attribs.CounterOffset + 4 <= CntBuffDesc.uiSizeInBytes,
-                                         "invalid CountBufferOffset or count buffer '", CntBuffDesc.Name, "' is too small.");
+        const auto& CntBuffDesc = pCounterBuffer->GetDesc();
+        CHECK_DRAW_MESH_INDIRECT_ATTRIBS((CntBuffDesc.BindFlags & BIND_INDIRECT_DRAW_ARGS) != 0, "indirect counter buffer '",
+                                         CntBuffDesc.Name, "' was not created with BIND_INDIRECT_DRAW_ARGS flag.");
+        const auto ReqCountBufSize = Attribs.CounterOffset + sizeof(Uint32);
+        CHECK_DRAW_MESH_INDIRECT_ATTRIBS(ReqCountBufSize <= CntBuffDesc.uiSizeInBytes, "invalid CounterOffset (", Attribs.CounterOffset,
+                                         ") or counter buffer '", CntBuffDesc.Name, "' size must be at least ", ReqCountBufSize, " bytes");
     }
 #undef CHECK_DRAW_MESH_INDIRECT_ATTRIBS
 
@@ -201,9 +219,13 @@ bool VerifyDispatchComputeIndirectAttribs(const DispatchComputeIndirectAttribs& 
 #define CHECK_DISPATCH_COMPUTE_INDIRECT_ATTRIBS(Expr, ...) CHECK_PARAMETER(Expr, "Dispatch compute indirect attribs are invalid: ", __VA_ARGS__)
 
     CHECK_DISPATCH_COMPUTE_INDIRECT_ATTRIBS(pAttribsBuffer != nullptr, "indirect dispatch arguments buffer must not be null.");
-    CHECK_DISPATCH_COMPUTE_INDIRECT_ATTRIBS((pAttribsBuffer->GetDesc().BindFlags & BIND_INDIRECT_DRAW_ARGS) != 0,
-                                            "indirect dispatch arguments buffer '",
-                                            pAttribsBuffer->GetDesc().Name, "' was not created with BIND_INDIRECT_DRAW_ARGS flag.");
+    const auto& AttrBuffDesc = pAttribsBuffer->GetDesc();
+    CHECK_DISPATCH_COMPUTE_INDIRECT_ATTRIBS((AttrBuffDesc.BindFlags & BIND_INDIRECT_DRAW_ARGS) != 0, "indirect dispatch arguments buffer '",
+                                            AttrBuffDesc.Name, "' was not created with BIND_INDIRECT_DRAW_ARGS flag.");
+    const auto ReqAttrBufSize = sizeof(Uint32) * 3 + Attribs.DispatchArgsByteOffset;
+    CHECK_DISPATCH_COMPUTE_INDIRECT_ATTRIBS(ReqAttrBufSize <= AttrBuffDesc.uiSizeInBytes, "invalid DispatchArgsByteOffset (", Attribs.DispatchArgsByteOffset,
+                                            ") or indirect dispatch arguments buffer '", AttrBuffDesc.Name, "' size must be at least ", ReqAttrBufSize, " bytes");
+
 
 #undef CHECK_DISPATCH_COMPUTE_INDIRECT_ATTRIBS
 
