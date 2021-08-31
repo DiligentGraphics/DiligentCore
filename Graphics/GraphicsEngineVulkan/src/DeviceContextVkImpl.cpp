@@ -820,20 +820,23 @@ void DeviceContextVkImpl::DrawIndirect(const DrawIndirectAttribs& Attribs)
 
     PrepareForDraw(Attribs.Flags);
 
-    if (Attribs.pCounterBuffer == nullptr)
+    if (Attribs.DrawCount > 0)
     {
-        m_CommandBuffer.DrawIndirect(pIndirectDrawAttribsVk->GetVkBuffer(),
-                                     pIndirectDrawAttribsVk->GetDynamicOffset(GetContextId(), this) + Attribs.DrawArgsOffset,
-                                     Attribs.DrawCount, Attribs.DrawCount > 1 ? Attribs.DrawArgsStride : 0);
-    }
-    else
-    {
-        m_CommandBuffer.DrawIndirectCount(pIndirectDrawAttribsVk->GetVkBuffer(),
-                                          pIndirectDrawAttribsVk->GetDynamicOffset(GetContextId(), this) + Attribs.DrawArgsOffset,
-                                          pCountBufferVk->GetVkBuffer(),
-                                          pCountBufferVk->GetDynamicOffset(GetContextId(), this) + Attribs.CounterOffset,
-                                          Attribs.DrawCount,
-                                          Attribs.DrawArgsStride);
+        if (Attribs.pCounterBuffer == nullptr)
+        {
+            m_CommandBuffer.DrawIndirect(pIndirectDrawAttribsVk->GetVkBuffer(),
+                                         pIndirectDrawAttribsVk->GetDynamicOffset(GetContextId(), this) + Attribs.DrawArgsOffset,
+                                         Attribs.DrawCount, Attribs.DrawCount > 1 ? Attribs.DrawArgsStride : 0);
+        }
+        else
+        {
+            m_CommandBuffer.DrawIndirectCount(pIndirectDrawAttribsVk->GetVkBuffer(),
+                                              pIndirectDrawAttribsVk->GetDynamicOffset(GetContextId(), this) + Attribs.DrawArgsOffset,
+                                              pCountBufferVk->GetVkBuffer(),
+                                              pCountBufferVk->GetDynamicOffset(GetContextId(), this) + Attribs.CounterOffset,
+                                              Attribs.DrawCount,
+                                              Attribs.DrawArgsStride);
+        }
     }
 
     ++m_State.NumCommands;
@@ -852,20 +855,23 @@ void DeviceContextVkImpl::DrawIndexedIndirect(const DrawIndexedIndirectAttribs& 
 
     PrepareForIndexedDraw(Attribs.Flags, Attribs.IndexType);
 
-    if (Attribs.pCounterBuffer == nullptr)
+    if (Attribs.DrawCount > 0)
     {
-        m_CommandBuffer.DrawIndexedIndirect(pIndirectDrawAttribsVk->GetVkBuffer(),
-                                            pIndirectDrawAttribsVk->GetDynamicOffset(GetContextId(), this) + Attribs.DrawArgsOffset,
-                                            Attribs.DrawCount, Attribs.DrawCount > 1 ? Attribs.DrawArgsStride : 0);
-    }
-    else
-    {
-        m_CommandBuffer.DrawIndexedIndirectCount(pIndirectDrawAttribsVk->GetVkBuffer(),
-                                                 pIndirectDrawAttribsVk->GetDynamicOffset(GetContextId(), this) + Attribs.DrawArgsOffset,
-                                                 pCountBufferVk->GetVkBuffer(),
-                                                 pCountBufferVk->GetDynamicOffset(GetContextId(), this) + Attribs.CounterOffset,
-                                                 Attribs.DrawCount,
-                                                 Attribs.DrawArgsStride);
+        if (Attribs.pCounterBuffer == nullptr)
+        {
+            m_CommandBuffer.DrawIndexedIndirect(pIndirectDrawAttribsVk->GetVkBuffer(),
+                                                pIndirectDrawAttribsVk->GetDynamicOffset(GetContextId(), this) + Attribs.DrawArgsOffset,
+                                                Attribs.DrawCount, Attribs.DrawCount > 1 ? Attribs.DrawArgsStride : 0);
+        }
+        else
+        {
+            m_CommandBuffer.DrawIndexedIndirectCount(pIndirectDrawAttribsVk->GetVkBuffer(),
+                                                     pIndirectDrawAttribsVk->GetDynamicOffset(GetContextId(), this) + Attribs.DrawArgsOffset,
+                                                     pCountBufferVk->GetVkBuffer(),
+                                                     pCountBufferVk->GetDynamicOffset(GetContextId(), this) + Attribs.CounterOffset,
+                                                     Attribs.DrawCount,
+                                                     Attribs.DrawArgsStride);
+        }
     }
 
     ++m_State.NumCommands;
@@ -897,21 +903,24 @@ void DeviceContextVkImpl::DrawMeshIndirect(const DrawMeshIndirectAttribs& Attrib
 
     PrepareForDraw(Attribs.Flags);
 
-    if (Attribs.pCounterBuffer == nullptr)
+    if (Attribs.CommandCount > 0)
     {
-        m_CommandBuffer.DrawMeshIndirect(pIndirectDrawAttribsVk->GetVkBuffer(),
-                                         pIndirectDrawAttribsVk->GetDynamicOffset(GetContextId(), this) + Attribs.DrawArgsOffset,
-                                         Attribs.CommandCount,
-                                         DrawMeshIndirectCommandStride);
-    }
-    else
-    {
-        m_CommandBuffer.DrawMeshIndirectCount(pIndirectDrawAttribsVk->GetVkBuffer(),
-                                              pIndirectDrawAttribsVk->GetDynamicOffset(GetContextId(), this) + Attribs.DrawArgsOffset,
-                                              pCountBufferVk->GetVkBuffer(),
-                                              pCountBufferVk->GetDynamicOffset(GetContextId(), this) + Attribs.CounterOffset,
-                                              Attribs.CommandCount,
-                                              DrawMeshIndirectCommandStride);
+        if (Attribs.pCounterBuffer == nullptr)
+        {
+            m_CommandBuffer.DrawMeshIndirect(pIndirectDrawAttribsVk->GetVkBuffer(),
+                                             pIndirectDrawAttribsVk->GetDynamicOffset(GetContextId(), this) + Attribs.DrawArgsOffset,
+                                             Attribs.CommandCount,
+                                             DrawMeshIndirectCommandStride);
+        }
+        else
+        {
+            m_CommandBuffer.DrawMeshIndirectCount(pIndirectDrawAttribsVk->GetVkBuffer(),
+                                                  pIndirectDrawAttribsVk->GetDynamicOffset(GetContextId(), this) + Attribs.DrawArgsOffset,
+                                                  pCountBufferVk->GetVkBuffer(),
+                                                  pCountBufferVk->GetDynamicOffset(GetContextId(), this) + Attribs.CounterOffset,
+                                                  Attribs.CommandCount,
+                                                  DrawMeshIndirectCommandStride);
+        }
     }
 
     ++m_State.NumCommands;
