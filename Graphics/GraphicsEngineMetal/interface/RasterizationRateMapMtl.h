@@ -102,8 +102,10 @@ DILIGENT_BEGIN_INTERFACE(IRasterizationRateMapMtl, IDeviceObject)
     virtual const RasterizationRateMapDesc& METHOD(GetDesc)() const override = 0;
 #endif
 
+#if PLATFORM_MACOS || PLATFORM_IOS
     /// Returns a pointer to the Metal rasterization rate map object.
     VIRTUAL id<MTLRasterizationRateMap> METHOD(GetMtlResource)(THIS) CONST API_AVAILABLE(ios(13), macosx(10.15.4)) PURE;
+#endif
 
     /// Returns the physical size of the specified layer.
     VIRTUAL void METHOD(GetPhysicalSizeForLayer)(THIS_

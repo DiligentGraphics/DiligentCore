@@ -81,7 +81,8 @@ DILIGENT_BEGIN_INTERFACE(IRenderDeviceMtl, IRenderDevice)
                                                    const TopLevelASDesc REF     Desc,
                                                    RESOURCE_STATE               InitialState,
                                                    ITopLevelAS**                ppTLAS) API_AVAILABLE(ios(14), macosx(11.0)) API_UNAVAILABLE(tvos) PURE;
-    
+
+#if PLATFORM_MACOS || PLATFORM_IOS
     /// Creates a rasterization rate map from existing Metal resource
     VIRTUAL void METHOD(CreateRasterizationRateMapFromMtlResource)(THIS_
                                                                    id<MTLRasterizationRateMap> mtlRRM,
@@ -91,6 +92,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderDeviceMtl, IRenderDevice)
     VIRTUAL void METHOD(CreateRasterizationRateMap)(THIS_
                                                     const RasterizationRateMapCreateInfo REF CreateInfo,
                                                     IRasterizationRateMapMtl**               ppRRM) PURE;
+#endif
 };
 DILIGENT_END_INTERFACE
 
