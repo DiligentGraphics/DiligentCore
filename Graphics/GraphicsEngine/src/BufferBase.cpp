@@ -78,6 +78,12 @@ void ValidateBufferDesc(const BufferDesc& Desc, const IRenderDevice* pDevice) no
     if ((Desc.BindFlags & BIND_RAY_TRACING) != 0)
         VERIFY_BUFFER(Features.RayTracing, "BIND_RAY_TRACING flag can't be used when RayTracing feature is not enabled.");
 
+    if ((Desc.BindFlags & BIND_INDIRECT_DRAW_ARGS) != 0)
+    {
+        VERIFY_BUFFER((pDevice->GetAdapterInfo().DrawCommand.CapFlags & DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT) != 0,
+                      "BIND_INDIRECT_DRAW_ARGS flag can't be used when DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT capability is not supported");
+    }
+
     switch (Desc.Usage)
     {
         case USAGE_IMMUTABLE:

@@ -2548,8 +2548,8 @@ struct DrawCommandProperties
     /// Maximum supported index value for index buffer.
     Uint32                 MaxIndexValue        DEFAULT_INITIALIZER(0);
 
-    /// Maximum supported draw commands counter for IDeviceContext::MultiDrawIndirectCount() and
-    /// IDeviceContext::MultiDrawIndexedIndirectCount().
+    /// Maximum supported draw commands counter for IDeviceContext::DrawIndirect() and
+    /// IDeviceContext::DrawIndexedIndirect().
     Uint32                 MaxDrawIndirectCount DEFAULT_INITIALIZER(0);
 };
 typedef struct DrawCommandProperties DrawCommandProperties;

@@ -2139,6 +2139,7 @@ inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDrawIndirectArgume
 
     DEV_CHECK_ERR(Attribs.pCounterBuffer == nullptr || (m_pDevice->GetAdapterInfo().DrawCommand.CapFlags & DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNTER_BUFFER) != 0,
                   "DrawIndirect command arguments are invalid: counter buffer requires DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNTER_BUFFER capability");
+    // There is no need to check DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT because an indirect buffer can only be created if this capability is supported.
 
     DEV_CHECK_ERR(m_pPipelineState, "DrawIndirect command arguments are invalid: no pipeline state is bound.");
 
@@ -2163,6 +2164,7 @@ inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDrawIndexedIndirec
 
     DEV_CHECK_ERR(Attribs.pCounterBuffer == nullptr || (m_pDevice->GetAdapterInfo().DrawCommand.CapFlags & DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNTER_BUFFER) != 0,
                   "DrawIndexedIndirect command arguments are invalid: counter buffer requires DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNTER_BUFFER capability");
+    // There is no need to check DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT because an indirect buffer can only be created if this capability is supported.
 
     DEV_CHECK_ERR(m_pPipelineState, "DrawIndexedIndirect command arguments are invalid: no pipeline state is bound.");
 
@@ -2188,6 +2190,10 @@ inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDrawMeshIndirectAr
     DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_GRAPHICS, "DrawMeshIndirect");
 
     DEV_CHECK_ERR(m_pDevice->GetFeatures().MeshShaders, "DrawMeshIndirect: mesh shaders are not supported by this device");
+
+    DEV_CHECK_ERR(Attribs.pCounterBuffer == nullptr || (m_pDevice->GetAdapterInfo().DrawCommand.CapFlags & DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNTER_BUFFER) != 0,
+                  "DrawMeshIndirect command arguments are invalid: counter buffer requires DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNTER_BUFFER capability");
+    // There is no need to check DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT because an indirect buffer can only be created if this capability is supported.
 
     DEV_CHECK_ERR(m_pPipelineState, "DrawMeshIndirect command arguments are invalid: no pipeline state is bound.");
 

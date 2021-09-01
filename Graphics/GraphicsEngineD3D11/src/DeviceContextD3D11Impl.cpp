@@ -701,8 +701,8 @@ void DeviceContextD3D11Impl::DrawIndirect(const DrawIndirectAttribs& Attribs)
 #ifdef DILIGENT_ENABLE_D3D11_NVAPI
         if (m_pDevice->IsNvApiEnabled())
         {
-            NvAPI_D3D11_MultiDrawInstancedIndirect(m_pd3d11DeviceContext, Attribs.DrawCount, pd3d11ArgsBuff, Attribs.DrawArgsOffset, Attribs.DrawArgsStride);
-            NativeMultiDrawExecuted = true;
+            NativeMultiDrawExecuted =
+                NvAPI_D3D11_MultiDrawInstancedIndirect(m_pd3d11DeviceContext, Attribs.DrawCount, pd3d11ArgsBuff, Attribs.DrawArgsOffset, Attribs.DrawArgsStride) == NVAPI_OK;
         }
 #endif
     }
@@ -735,8 +735,8 @@ void DeviceContextD3D11Impl::DrawIndexedIndirect(const DrawIndexedIndirectAttrib
 #ifdef DILIGENT_ENABLE_D3D11_NVAPI
         if (m_pDevice->IsNvApiEnabled())
         {
-            NvAPI_D3D11_MultiDrawIndexedInstancedIndirect(m_pd3d11DeviceContext, Attribs.DrawCount, pd3d11ArgsBuff, Attribs.DrawArgsOffset, Attribs.DrawArgsStride);
-            NativeMultiDrawExecuted = true;
+            NativeMultiDrawExecuted =
+                NvAPI_D3D11_MultiDrawIndexedInstancedIndirect(m_pd3d11DeviceContext, Attribs.DrawCount, pd3d11ArgsBuff, Attribs.DrawArgsOffset, Attribs.DrawArgsStride) == NVAPI_OK;
         }
 #endif
     }
