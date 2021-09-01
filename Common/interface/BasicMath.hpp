@@ -439,6 +439,8 @@ template <class T> struct Vector3
         x{s}, y{s}, z{s} {}
     constexpr Vector3(T _x, T _y, T _z) noexcept :
         x{_x}, y{_y}, z{_z} {}
+    constexpr Vector3(const Vector2<T>& v2, T _z) noexcept :
+        x{v2.x}, y{v2.y}, z{_z} {}
 
     template <typename Y>
     constexpr static Vector3 MakeVector(const Y& vals)
