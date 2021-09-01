@@ -345,7 +345,7 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
                 // Memory is directly accessible by CPU
                 auto* pData = reinterpret_cast<uint8_t*>(m_MemoryAllocation.Page->GetCPUMemory());
                 VERIFY_EXPR(pData != nullptr);
-                memcpy(pData + m_BufferMemoryAlignedOffset, pBuffData->pData, pBuffData->DataSize);
+                memcpy(pData + m_BufferMemoryAlignedOffset, pBuffData->pData, static_cast<size_t>(pBuffData->DataSize));
 
                 if ((MemoryPropFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) == 0)
                 {
@@ -384,7 +384,7 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
                 auto* StagingData = reinterpret_cast<uint8_t*>(StagingMemoryAllocation.Page->GetCPUMemory());
                 if (StagingData == nullptr)
                     LOG_ERROR_AND_THROW("Failed to allocate staging data for buffer '", m_Desc.Name, '\'');
-                memcpy(StagingData + AlignedStagingMemOffset, pBuffData->pData, pBuffData->DataSize);
+                memcpy(StagingData + AlignedStagingMemOffset, pBuffData->pData, static_cast<size_t>(pBuffData->DataSize));
 
                 err = LogicalDevice.BindBufferMemory(StagingBuffer, StagingBufferMemory, AlignedStagingMemOffset);
                 CHECK_VK_ERROR_AND_THROW(err, "Failed to bind staging buffer memory");
@@ -588,7 +588,7 @@ VkDeviceAddress BufferVkImpl::GetVkDeviceAddress() const
     }
 }
 
-void BufferVkImpl::FlushMappedRange(Uint32 StartOffset, Uint32 Size)
+void BufferVkImpl::FlushMappedRange(Uint64 StartOffset, Uint64 Size)
 {
     DvpVerifyFlushMappedRangeArguments(StartOffset, Size);
 
@@ -603,7 +603,7 @@ void BufferVkImpl::FlushMappedRange(Uint32 StartOffset, Uint32 Size)
     LogicalDevice.FlushMappedMemoryRanges(1, &MappedRange);
 }
 
-void BufferVkImpl::InvalidateMappedRange(Uint32 StartOffset, Uint32 Size)
+void BufferVkImpl::InvalidateMappedRange(Uint64 StartOffset, Uint64 Size)
 {
     DvpVerifyInvalidateMappedRangeArguments(StartOffset, Size);
 

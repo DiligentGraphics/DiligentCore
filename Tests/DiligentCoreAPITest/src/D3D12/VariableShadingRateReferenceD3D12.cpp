@@ -206,7 +206,7 @@ void VariableShadingRatePerPrimitiveTestReferenceD3D12(ISwapChain* pSwapChain)
         pEnv->GetDevice()->CreateBuffer(BuffDesc, &BuffData, &pVB);
         ASSERT_NE(pVB, nullptr);
     }
-    auto* pVBD3D12 = static_cast<ID3D12Resource*>(pVB->GetNativeHandle());
+    auto* pVBD3D12 = reinterpret_cast<ID3D12Resource*>(pVB->GetNativeHandle());
 
     auto pCmdList = pEnv->CreateGraphicsCommandList();
     pTestingSwapChainD3D12->TransitionRenderTarget(pCmdList, D3D12_RESOURCE_STATE_RENDER_TARGET);
@@ -306,7 +306,7 @@ void VariableShadingRateTextureBasedTestReferenceD3D12(ISwapChain* pSwapChain)
     auto pVRSView = CreateShadingRateTexture(pEnv->GetDevice(), pSwapChain);
     ASSERT_NE(pVRSView, nullptr);
 
-    auto* pSRTexD3D12 = static_cast<ID3D12Resource*>(pVRSView->GetTexture()->GetNativeHandle());
+    auto* pSRTexD3D12 = reinterpret_cast<ID3D12Resource*>(pVRSView->GetTexture()->GetNativeHandle());
 
     auto pCmdList = pEnv->CreateGraphicsCommandList();
     pTestingSwapChainD3D12->TransitionRenderTarget(pCmdList, D3D12_RESOURCE_STATE_RENDER_TARGET);

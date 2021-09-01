@@ -41,7 +41,7 @@ TopLevelASVkImpl::TopLevelASVkImpl(IReferenceCounters*   pRefCounters,
     const auto& LogicalDevice   = pRenderDeviceVk->GetLogicalDevice();
     const auto& PhysicalDevice  = pRenderDeviceVk->GetPhysicalDevice();
     const auto& RTProps         = pRenderDeviceVk->GetAdapterInfo().RayTracing;
-    Uint32      AccelStructSize = m_Desc.CompactedSize;
+    auto        AccelStructSize = m_Desc.CompactedSize;
 
     if (AccelStructSize == 0)
     {
@@ -69,9 +69,9 @@ TopLevelASVkImpl::TopLevelASVkImpl(IReferenceCounters*   pRefCounters,
         const uint32_t MaxPrimitiveCount = m_Desc.MaxInstanceCount;
         LogicalDevice.GetAccelerationStructureBuildSizes(vkBuildInfo, &MaxPrimitiveCount, vkSizeInfo);
 
-        AccelStructSize      = static_cast<Uint32>(vkSizeInfo.accelerationStructureSize);
-        m_ScratchSize.Build  = static_cast<Uint32>(vkSizeInfo.buildScratchSize);
-        m_ScratchSize.Update = static_cast<Uint32>(vkSizeInfo.updateScratchSize);
+        AccelStructSize      = vkSizeInfo.accelerationStructureSize;
+        m_ScratchSize.Build  = vkSizeInfo.buildScratchSize;
+        m_ScratchSize.Update = vkSizeInfo.updateScratchSize;
     }
 
     VkBufferCreateInfo vkBuffCI{};

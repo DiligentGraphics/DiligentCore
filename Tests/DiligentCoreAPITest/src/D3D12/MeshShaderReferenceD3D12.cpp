@@ -258,7 +258,7 @@ void MeshShaderIndirectDrawReferenceD3D12(ISwapChain* pSwapChain)
     RefCntAutoPtr<IBuffer> pBuffer;
     pEnv->GetDevice()->CreateBuffer(IndirectBufferDesc, &InitData, &pBuffer);
 
-    auto* pIndirectBuffer = static_cast<ID3D12Resource*>(pBuffer->GetNativeHandle());
+    auto* pIndirectBuffer = reinterpret_cast<ID3D12Resource*>(pBuffer->GetNativeHandle());
 
     auto pCmdList = pEnv->CreateGraphicsCommandList();
     pTestingSwapChainD3D12->TransitionRenderTarget(pCmdList, D3D12_RESOURCE_STATE_RENDER_TARGET);

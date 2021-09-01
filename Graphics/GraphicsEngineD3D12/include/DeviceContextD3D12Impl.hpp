@@ -93,7 +93,7 @@ public:
     virtual void DILIGENT_CALL_TYPE SetVertexBuffers(Uint32                         StartSlot,
                                                      Uint32                         NumBuffersSet,
                                                      IBuffer**                      ppBuffers,
-                                                     const Uint32*                  pOffsets,
+                                                     const Uint64*                  pOffsets,
                                                      RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
                                                      SET_VERTEX_BUFFERS_FLAGS       Flags) override final;
 
@@ -102,7 +102,7 @@ public:
 
     /// Implementation of IDeviceContext::SetIndexBuffer() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE SetIndexBuffer(IBuffer*                       pIndexBuffer,
-                                                   Uint32                         ByteOffset,
+                                                   Uint64                         ByteOffset,
                                                    RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) override final;
 
     /// Implementation of IDeviceContext::SetViewports() in Direct3D12 backend.
@@ -164,18 +164,18 @@ public:
 
     /// Implementation of IDeviceContext::UpdateBuffer() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE UpdateBuffer(IBuffer*                       pBuffer,
-                                                 Uint32                         Offset,
-                                                 Uint32                         Size,
+                                                 Uint64                         Offset,
+                                                 Uint64                         Size,
                                                  const void*                    pData,
                                                  RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) override final;
 
     /// Implementation of IDeviceContext::CopyBuffer() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE CopyBuffer(IBuffer*                       pSrcBuffer,
-                                               Uint32                         SrcOffset,
+                                               Uint64                         SrcOffset,
                                                RESOURCE_STATE_TRANSITION_MODE SrcBufferTransitionMode,
                                                IBuffer*                       pDstBuffer,
-                                               Uint32                         DstOffset,
-                                               Uint32                         Size,
+                                               Uint64                         DstOffset,
+                                               Uint64                         Size,
                                                RESOURCE_STATE_TRANSITION_MODE DstBufferTransitionMode) override final;
 
     /// Implementation of IDeviceContext::MapBuffer() in Direct3D12 backend.
@@ -315,27 +315,27 @@ public:
                            RESOURCE_STATE_TRANSITION_MODE DstTextureTransitionMode);
 
     void CopyTextureRegion(IBuffer*                       pSrcBuffer,
-                           Uint32                         SrcOffset,
-                           Uint32                         SrcStride,
-                           Uint32                         SrcDepthStride,
+                           Uint64                         SrcOffset,
+                           Uint64                         SrcStride,
+                           Uint64                         SrcDepthStride,
                            class TextureD3D12Impl&        TextureD3D12,
                            Uint32                         DstSubResIndex,
                            const Box&                     DstBox,
                            RESOURCE_STATE_TRANSITION_MODE BufferTransitionMode,
                            RESOURCE_STATE_TRANSITION_MODE TextureTransitionMode);
     void CopyTextureRegion(ID3D12Resource*                pd3d12Buffer,
-                           Uint32                         SrcOffset,
-                           Uint32                         SrcStride,
-                           Uint32                         SrcDepthStride,
-                           Uint32                         BufferSize,
+                           Uint64                         SrcOffset,
+                           Uint64                         SrcStride,
+                           Uint64                         SrcDepthStride,
+                           Uint64                         BufferSize,
                            class TextureD3D12Impl&        TextureD3D12,
                            Uint32                         DstSubResIndex,
                            const Box&                     DstBox,
                            RESOURCE_STATE_TRANSITION_MODE TextureTransitionMode);
 
     void UpdateTextureRegion(const void*                    pSrcData,
-                             Uint32                         SrcStride,
-                             Uint32                         SrcDepthStride,
+                             Uint64                         SrcStride,
+                             Uint64                         SrcDepthStride,
                              class TextureD3D12Impl&        TextureD3D12,
                              Uint32                         DstSubResIndex,
                              const Box&                     DstBox,
@@ -343,7 +343,7 @@ public:
 
     virtual void DILIGENT_CALL_TYPE GenerateMips(ITextureView* pTexView) override final;
 
-    D3D12DynamicAllocation AllocateDynamicSpace(size_t NumBytes, size_t Alignment);
+    D3D12DynamicAllocation AllocateDynamicSpace(Uint64 NumBytes, Uint32 Alignment);
 
     size_t GetNumCommandsInCtx() const { return m_State.NumCommands; }
 
@@ -423,9 +423,9 @@ private:
     {
         D3D12DynamicAllocation Allocation;
         Uint32                 AlignedOffset = 0;
-        Uint32                 Stride        = 0;
-        Uint32                 DepthStride   = 0;
-        Uint32                 RowSize       = 0;
+        Uint64                 Stride        = 0;
+        Uint64                 DepthStride   = 0;
+        Uint64                 RowSize       = 0;
         Uint32                 RowCount      = 0;
         Box                    Region;
     };

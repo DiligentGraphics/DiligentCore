@@ -1480,7 +1480,7 @@ void DeviceContextVkImpl::Flush(Uint32               NumCommandLists,
 void DeviceContextVkImpl::SetVertexBuffers(Uint32                         StartSlot,
                                            Uint32                         NumBuffersSet,
                                            IBuffer**                      ppBuffers,
-                                           const Uint32*                  pOffsets,
+                                           const Uint64*                  pOffsets,
                                            RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
                                            SET_VERTEX_BUFFERS_FLAGS       Flags)
 {
@@ -1512,7 +1512,7 @@ void DeviceContextVkImpl::InvalidateState()
     m_CommandBuffer.Reset();
 }
 
-void DeviceContextVkImpl::SetIndexBuffer(IBuffer* pIndexBuffer, Uint32 ByteOffset, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
+void DeviceContextVkImpl::SetIndexBuffer(IBuffer* pIndexBuffer, Uint64 ByteOffset, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
     TDeviceContextBase::SetIndexBuffer(pIndexBuffer, ByteOffset, StateTransitionMode);
     if (m_pIndexBuffer)
@@ -1847,8 +1847,8 @@ void DeviceContextVkImpl::UpdateBufferRegion(BufferVkImpl*                  pBuf
 }
 
 void DeviceContextVkImpl::UpdateBuffer(IBuffer*                       pBuffer,
-                                       Uint32                         Offset,
-                                       Uint32                         Size,
+                                       Uint64                         Offset,
+                                       Uint64                         Size,
                                        const void*                    pData,
                                        RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
@@ -1863,18 +1863,18 @@ void DeviceContextVkImpl::UpdateBuffer(IBuffer*                       pBuffer,
     constexpr size_t Alignment = 4;
     // Source buffer offset must be multiple of 4 (18.4)
     auto TmpSpace = m_UploadHeap.Allocate(Size, Alignment);
-    memcpy(TmpSpace.CPUAddress, pData, Size);
+    memcpy(TmpSpace.CPUAddress, pData, static_cast<size_t>(Size));
     UpdateBufferRegion(pBuffVk, Offset, Size, TmpSpace.vkBuffer, TmpSpace.AlignedOffset, StateTransitionMode);
     // The allocation will stay in the upload heap until the end of the frame at which point all upload
     // pages will be discarded
 }
 
 void DeviceContextVkImpl::CopyBuffer(IBuffer*                       pSrcBuffer,
-                                     Uint32                         SrcOffset,
+                                     Uint64                         SrcOffset,
                                      RESOURCE_STATE_TRANSITION_MODE SrcBufferTransitionMode,
                                      IBuffer*                       pDstBuffer,
-                                     Uint32                         DstOffset,
-                                     Uint32                         Size,
+                                     Uint64                         DstOffset,
+                                     Uint64                         Size,
                                      RESOURCE_STATE_TRANSITION_MODE DstBufferTransitionMode)
 {
     TDeviceContextBase::CopyBuffer(pSrcBuffer, SrcOffset, SrcBufferTransitionMode, pDstBuffer, DstOffset, Size, DstBufferTransitionMode);
@@ -2187,8 +2187,8 @@ void DeviceContextVkImpl::CopyTextureRegion(TextureVkImpl*                 pSrcT
 }
 
 void DeviceContextVkImpl::UpdateTextureRegion(const void*                    pSrcData,
-                                              Uint32                         SrcStride,
-                                              Uint32                         SrcDepthStride,
+                                              Uint64                         SrcStride,
+                                              Uint64                         SrcDepthStride,
                                               TextureVkImpl&                 TextureVk,
                                               Uint32                         MipLevel,
                                               Uint32                         Slice,
@@ -2220,7 +2220,7 @@ void DeviceContextVkImpl::UpdateTextureRegion(const void*                    pSr
 #ifdef DILIGENT_DEBUG
     {
         VERIFY(SrcStride >= CopyInfo.RowSize, "Source data stride (", SrcStride, ") is below the image row size (", CopyInfo.RowSize, ")");
-        const Uint32 PlaneSize = SrcStride * CopyInfo.RowCount;
+        const auto PlaneSize = SrcStride * CopyInfo.RowCount;
         VERIFY(UpdateRegionDepth == 1 || SrcDepthStride >= PlaneSize, "Source data depth stride (", SrcDepthStride, ") is below the image plane size (", PlaneSize, ")");
     }
 #endif
@@ -2239,7 +2239,7 @@ void DeviceContextVkImpl::UpdateTextureRegion(const void*                    pSr
                 + DepthSlice * CopyInfo.DepthStride;
             // clang-format on
 
-            memcpy(pDstPtr, pSrcPtr, CopyInfo.RowSize);
+            memcpy(pDstPtr, pSrcPtr, static_cast<size_t>(CopyInfo.RowSize));
         }
     }
     CopyBufferToTexture(Allocation.vkBuffer,
@@ -3060,9 +3060,12 @@ void DeviceContextVkImpl::TransitionOrVerifyTLASState(TopLevelASVkImpl&         
 #endif
 }
 
-VulkanDynamicAllocation DeviceContextVkImpl::AllocateDynamicSpace(Uint32 SizeInBytes, Uint32 Alignment)
+VulkanDynamicAllocation DeviceContextVkImpl::AllocateDynamicSpace(Uint64 SizeInBytes, Uint32 Alignment)
 {
-    auto DynAlloc = m_DynamicHeap.Allocate(SizeInBytes, Alignment);
+    DEV_CHECK_ERR(SizeInBytes < std::numeric_limits<Uint32>::max(),
+                  "Dynamic allocation size must be less than 2^32");
+
+    auto DynAlloc = m_DynamicHeap.Allocate(static_cast<Uint32>(SizeInBytes), Alignment);
 #ifdef DILIGENT_DEVELOPMENT
     DynAlloc.dvpFrameNumber = GetFrameNumber();
 #endif

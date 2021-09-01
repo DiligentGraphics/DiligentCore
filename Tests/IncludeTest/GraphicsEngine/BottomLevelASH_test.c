@@ -29,6 +29,9 @@
 
 void TestBottomLevelAS_CInterface(IBottomLevelAS* pBLAS)
 {
+    const BottomLevelASDesc* pDesc = IBottomLevelAS_GetDesc(pBLAS);
+    (void)pDesc;
+
     Uint32 GeomDescIndex = IBottomLevelAS_GetGeometryDescIndex(pBLAS, "Name");
     (void)GeomDescIndex;
 
@@ -41,7 +44,7 @@ void TestBottomLevelAS_CInterface(IBottomLevelAS* pBLAS)
     ScratchBufferSizes ScratchSizes = IBottomLevelAS_GetScratchBufferSizes(pBLAS);
     (void)ScratchSizes;
 
-    void* NativeHandle = IBottomLevelAS_GetNativeHandle(pBLAS);
+    Uint64 NativeHandle = IBottomLevelAS_GetNativeHandle(pBLAS);
     (void)NativeHandle;
 
     IBottomLevelAS_SetState(pBLAS, RESOURCE_STATE_UNDEFINED);

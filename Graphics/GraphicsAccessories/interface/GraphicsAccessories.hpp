@@ -584,11 +584,11 @@ struct BufferToTextureCopyInfo
 {
     /// Texture region row size, in bytes. For compressed formats,
     /// this is the size of one row of compressed blocks.
-    Uint32 RowSize = 0;
+    Uint64 RowSize = 0;
 
     /// Row stride, in bytes. The stride is computed by
     /// aligning the RowSize, and is thus always >= RowSize.
-    Uint32 RowStride = 0;
+    Uint64 RowStride = 0;
 
     /// Row stride in texels.
     Uint32 RowStrideInTexels = 0;
@@ -598,10 +598,10 @@ struct BufferToTextureCopyInfo
     Uint32 RowCount = 0;
 
     /// Depth stride (RowStride * RowCount)
-    Uint32 DepthStride = 0;
+    Uint64 DepthStride = 0;
 
     /// Total memory size required to store the pixels in the region.
-    Uint32 MemorySize = 0;
+    Uint64 MemorySize = 0;
 
     /// Texture region
     Box Region;

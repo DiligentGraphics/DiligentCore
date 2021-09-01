@@ -253,8 +253,8 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
             for (size_t subres = 0; subres < D3D12SubResData.size(); ++subres)
             {
                 D3D12SubResData[subres].pData      = pInitData->pSubResources[subres].pData;
-                D3D12SubResData[subres].RowPitch   = pInitData->pSubResources[subres].Stride;
-                D3D12SubResData[subres].SlicePitch = pInitData->pSubResources[subres].DepthStride;
+                D3D12SubResData[subres].RowPitch   = static_cast<LONG_PTR>(pInitData->pSubResources[subres].Stride);
+                D3D12SubResData[subres].SlicePitch = static_cast<LONG_PTR>(pInitData->pSubResources[subres].DepthStride);
             }
             auto UploadedSize = UpdateSubresources(InitContext->GetCommandList(), m_pd3d12Resource, UploadBuffer, 0, 0, pInitData->NumSubresources, D3D12SubResData.data());
             VERIFY(UploadedSize == uploadBufferSize, "Incorrect uploaded data size (", UploadedSize, "). ", uploadBufferSize, " is expected");

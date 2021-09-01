@@ -176,7 +176,7 @@ public:
 private:
     bool m_UsePersistentMap = false;
 
-    Uint32 m_BufferSize = 0;
+    Uint64 m_BufferSize = 0;
 
     RefCntAutoPtr<IBuffer> m_pBuffer;
 

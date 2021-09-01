@@ -93,7 +93,7 @@ public:
     void InitializeSets(IMemoryAllocator& MemAllocator, Uint32 NumSets, const Uint32* SetSizes);
     void InitializeResources(Uint32 Set, Uint32 Offset, Uint32 ArraySize, DescriptorType Type, bool HasImmutableSampler);
 
-    // sizeof(Resource) == 24 (x64, msvc, Release)
+    // sizeof(Resource) == 32 (x64, msvc, Release)
     struct Resource
     {
         explicit Resource(DescriptorType _Type, bool _HasImmutableSampler) noexcept :
@@ -117,8 +117,8 @@ public:
 /* 8 */ RefCntAutoPtr<IDeviceObject> pObject;
 
         // For uniform and storage buffers only
-/*16 */ Uint32                       BufferBaseOffset = 0;
-/*20 */ Uint32                       BufferRangeSize  = 0;
+/*16 */ Uint64                       BufferBaseOffset = 0;
+/*24 */ Uint64                       BufferRangeSize  = 0;
 
         VkDescriptorBufferInfo GetUniformBufferDescriptorWriteInfo()                     const;
         VkDescriptorBufferInfo GetStorageBufferDescriptorWriteInfo()                     const;
@@ -132,7 +132,7 @@ public:
         template <DescriptorType DescrType>
         auto GetDescriptorWriteInfo() const;
 
-        void SetUniformBuffer(RefCntAutoPtr<IDeviceObject>&& _pBuffer, Uint32 _RangeOffset, Uint32 _RangeSize);
+        void SetUniformBuffer(RefCntAutoPtr<IDeviceObject>&& _pBuffer, Uint64 _RangeOffset, Uint64 _RangeSize);
         void SetStorageBuffer(RefCntAutoPtr<IDeviceObject>&& _pBufferView);
 
         bool IsNull() const { return pObject == nullptr; }
@@ -207,8 +207,8 @@ public:
 
         RefCntAutoPtr<IDeviceObject> pObject;
 
-        const Uint32 BufferBaseOffset = 0;
-        const Uint32 BufferRangeSize  = 0;
+        const Uint64 BufferBaseOffset = 0;
+        const Uint64 BufferRangeSize  = 0;
 
         SetResourceInfo() noexcept
         {
@@ -217,8 +217,8 @@ public:
         SetResourceInfo(Uint32                         _BindingIndex,
                         Uint32                         _ArrayIndex,
                         RefCntAutoPtr<IDeviceObject>&& _pObject,
-                        Uint32                         _BufferBaseOffset = 0,
-                        Uint32                         _BufferRangeSize  = 0) noexcept :
+                        Uint64                         _BufferBaseOffset = 0,
+                        Uint64                         _BufferRangeSize  = 0) noexcept :
             // clang-format off
             BindingIndex    {_BindingIndex      },
             ArrayIndex      {_ArrayIndex        },

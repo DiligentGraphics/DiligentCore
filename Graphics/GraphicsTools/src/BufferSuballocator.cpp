@@ -126,7 +126,7 @@ public:
                            const BufferSuballocatorCreateInfo& CreateInfo) :
         // clang-format off
         TBase                    {pRefCounters},
-        m_Mgr                    {CreateInfo.Desc.uiSizeInBytes, DefaultRawMemoryAllocator::GetAllocator()},
+        m_Mgr                    {static_cast<size_t>(CreateInfo.Desc.uiSizeInBytes), DefaultRawMemoryAllocator::GetAllocator()},
         m_Buffer                 {pDevice, CreateInfo.Desc},
         m_ExpansionSize          {CreateInfo.ExpansionSize},
         m_SuballocationsAllocator
@@ -145,10 +145,10 @@ public:
 
     virtual IBuffer* GetBuffer(IRenderDevice* pDevice, IDeviceContext* pContext) override final
     {
-        Uint32 Size = 0;
+        size_t Size = 0;
         {
             std::lock_guard<std::mutex> Lock{m_MgrMtx};
-            Size = static_cast<Uint32>(m_Mgr.GetMaxSize());
+            Size = m_Mgr.GetMaxSize();
         }
         if (Size != m_Buffer.GetDesc().uiSizeInBytes)
         {

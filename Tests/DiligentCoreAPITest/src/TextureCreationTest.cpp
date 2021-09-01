@@ -160,8 +160,8 @@ protected:
                 auto& CurrSubResData = Data[SubRes];
                 auto& SubResInfo     = SubResources[SubRes];
 
-                SubResInfo.Stride   = ((MipLevelInfo.RowSize + 3) & (-4)) + 192;
-                auto SubresDataSize = 0;
+                SubResInfo.Stride     = ((MipLevelInfo.RowSize + 3) & (-4)) + 192;
+                Uint64 SubresDataSize = 0;
                 if (TexDesc.Type == RESOURCE_DIM_TEX_3D)
                 {
                     SubResInfo.DepthStride = (MipLevelInfo.StorageHeight + 32) * SubResInfo.Stride;
@@ -170,7 +170,7 @@ protected:
                 else
                     SubresDataSize = SubResInfo.Stride * MipLevelInfo.StorageHeight;
 
-                CurrSubResData.resize(SubresDataSize);
+                CurrSubResData.resize(static_cast<size_t>(SubresDataSize));
                 SubResInfo.pData = CurrSubResData.data();
                 ++SubRes;
             }

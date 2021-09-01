@@ -29,6 +29,9 @@
 
 void TestTopLevelAS_CInterface(ITopLevelAS* pTLAS)
 {
+    const TopLevelASDesc* pDesc = ITopLevelAS_GetDesc(pTLAS);
+    (void)pDesc;
+
     TLASInstanceDesc InstDesc = ITopLevelAS_GetInstanceDesc(pTLAS, "Name");
     (void)InstDesc;
 
@@ -38,7 +41,7 @@ void TestTopLevelAS_CInterface(ITopLevelAS* pTLAS)
     ScratchBufferSizes ScratchSizes = ITopLevelAS_GetScratchBufferSizes(pTLAS);
     (void)ScratchSizes;
 
-    void* Handle = ITopLevelAS_GetNativeHandle(pTLAS);
+    Uint64 Handle = ITopLevelAS_GetNativeHandle(pTLAS);
     (void)Handle;
 
     ITopLevelAS_SetState(pTLAS, RESOURCE_STATE_UNDEFINED);

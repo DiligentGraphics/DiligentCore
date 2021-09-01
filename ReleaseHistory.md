@@ -1,5 +1,6 @@
 ## Current progress
 
+* Updated API to use 64bit offsets for GPU memory (API Version 250009)
 * Reworked draw indirect command attributes (moved buffers into the attribs structs), removed DrawMeshIndirectCount (API Version 250008)
 * Enabled indirect multidraw commands (API Version 250007)
 * Enabled variable rate shading (API Version 250006)

@@ -60,7 +60,7 @@ public:
     virtual ID3D11Resource* DILIGENT_CALL_TYPE GetD3D11Texture() override final { return m_pd3d11Texture; }
 
     /// Implementation of ITexture::GetNativeHandle().
-    virtual void* DILIGENT_CALL_TYPE GetNativeHandle() override final { return GetD3D11Texture(); }
+    virtual Uint64 DILIGENT_CALL_TYPE GetNativeHandle() override final { return VariableSizeCast<Uint64>(GetD3D11Texture()); }
 
     void AddState(RESOURCE_STATE State)
     {

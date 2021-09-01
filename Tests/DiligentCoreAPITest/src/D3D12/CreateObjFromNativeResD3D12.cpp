@@ -67,7 +67,7 @@ void TestCreateObjFromNativeResD3D12::CreateTexture(Diligent::ITexture* pTexture
     RefCntAutoPtr<ITextureD3D12> pTestTextureD3D12(pTextureFromNativeD3D12Handle, IID_TextureD3D12);
     ASSERT_NE(pTestTextureD3D12, nullptr);
     EXPECT_EQ(pTestTextureD3D12->GetD3D12Texture(), pD3D12Texture);
-    EXPECT_EQ(pTestTextureD3D12->GetNativeHandle(), pD3D12Texture);
+    EXPECT_EQ(reinterpret_cast<ID3D12Resource*>(pTestTextureD3D12->GetNativeHandle()), pD3D12Texture);
 }
 
 void TestCreateObjFromNativeResD3D12::CreateBuffer(Diligent::IBuffer* pBuffer)
@@ -99,7 +99,7 @@ void TestCreateObjFromNativeResD3D12::CreateBuffer(Diligent::IBuffer* pBuffer)
         Uint64 TestBuffDataStartByteOffset;
         EXPECT_EQ(pTestBufferD3D12->GetD3D12Buffer(TestBuffDataStartByteOffset, nullptr), pD3D12Buffer);
         EXPECT_EQ(TestBuffDataStartByteOffset, 0);
-        EXPECT_EQ(pTestBufferD3D12->GetNativeHandle(), pD3D12Buffer);
+        EXPECT_EQ(reinterpret_cast<ID3D12Resource*>(pTestBufferD3D12->GetNativeHandle()), pD3D12Buffer);
     }
 }
 

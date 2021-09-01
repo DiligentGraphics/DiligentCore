@@ -41,7 +41,7 @@ int TestBufferCInterface(struct IBuffer* pBuffer)
     BufferDesc     BuffDesc;
     IBufferView *  pView0 = NULL, *pView1 = NULL;
     BufferViewDesc ViewDesc;
-    void*          NativeHandle;
+    Uint64         NativeHandle;
     RESOURCE_STATE State = RESOURCE_STATE_CONSTANT_BUFFER;
 
     int num_errors =
@@ -91,7 +91,7 @@ int TestBufferCInterface(struct IBuffer* pBuffer)
     pView1 = IBuffer_GetDefaultView(pBuffer, BUFFER_VIEW_SHADER_RESOURCE);
 
     NativeHandle = IBuffer_GetNativeHandle(pBuffer);
-    if (NativeHandle == NULL)
+    if (NativeHandle == 0)
         ++num_errors;
 
     State = IBuffer_GetState(pBuffer);

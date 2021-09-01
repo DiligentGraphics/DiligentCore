@@ -43,7 +43,7 @@ int TestTextureCInterface(struct ITexture* pTexture)
     TextureDesc     TexDesc;
     ITextureView *  pView0 = NULL, *pView1 = NULL;
     TextureViewDesc ViewDesc;
-    void*           NativeHandle;
+    Uint64          NativeHandle;
     RESOURCE_STATE  State = RESOURCE_STATE_SHADER_RESOURCE;
 
     int num_errors =
@@ -91,7 +91,7 @@ int TestTextureCInterface(struct ITexture* pTexture)
         ++num_errors;
 
     NativeHandle = ITexture_GetNativeHandle(pTexture);
-    if (NativeHandle == NULL)
+    if (NativeHandle == 0)
         ++num_errors;
 
     State = ITexture_GetState(pTexture);

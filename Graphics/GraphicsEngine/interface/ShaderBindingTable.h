@@ -293,6 +293,8 @@ DILIGENT_END_INTERFACE
 
 // clang-format off
 
+#    define IShaderBindingTable_GetDesc(This) (const struct ShaderBindingTableDesc*)IDeviceObject_GetDesc(This)
+
 #    define IShaderBindingTable_Verify(This, ...)                  CALL_IFACE_METHOD(ShaderBindingTable, Verify,                  This, __VA_ARGS__)
 #    define IShaderBindingTable_Reset(This, ...)                   CALL_IFACE_METHOD(ShaderBindingTable, Reset,                   This, __VA_ARGS__)
 #    define IShaderBindingTable_ResetHitGroups(This)               CALL_IFACE_METHOD(ShaderBindingTable, ResetHitGroups,          This)

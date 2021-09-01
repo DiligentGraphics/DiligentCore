@@ -514,7 +514,7 @@ void DeviceContextD3D12Impl::CommitD3D12IndexBuffer(GraphicsContext& GraphCtx, V
         IBView.Format = DXGI_FORMAT_R16_UINT;
     }
     // Note that for a dynamic buffer, what we use here is the size of the buffer itself, not the upload heap buffer!
-    IBView.SizeInBytes = m_pIndexBuffer->GetDesc().uiSizeInBytes - m_IndexDataStartOffset;
+    IBView.SizeInBytes = static_cast<UINT>(m_pIndexBuffer->GetDesc().uiSizeInBytes - m_IndexDataStartOffset);
 
     // Device context keeps strong reference to bound index buffer.
     // When the buffer is unbound, the reference to the D3D12 resource
@@ -579,7 +579,7 @@ void DeviceContextD3D12Impl::CommitD3D12VertexBuffers(GraphicsContext& GraphCtx)
             VBView.BufferLocation = pBufferD3D12->GetGPUAddress(GetContextId(), this) + CurrStream.Offset;
             VBView.StrideInBytes  = m_pPipelineState->GetBufferStride(Buff);
             // Note that for a dynamic buffer, what we use here is the size of the buffer itself, not the upload heap buffer!
-            VBView.SizeInBytes = pBufferD3D12->GetDesc().uiSizeInBytes - CurrStream.Offset;
+            VBView.SizeInBytes = static_cast<UINT>(pBufferD3D12->GetDesc().uiSizeInBytes - CurrStream.Offset);
         }
         else
         {
@@ -1069,7 +1069,7 @@ void DeviceContextD3D12Impl::FinishFrame()
 void DeviceContextD3D12Impl::SetVertexBuffers(Uint32                         StartSlot,
                                               Uint32                         NumBuffersSet,
                                               IBuffer**                      ppBuffers,
-                                              const Uint32*                  pOffsets,
+                                              const Uint64*                  pOffsets,
                                               RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
                                               SET_VERTEX_BUFFERS_FLAGS       Flags)
 {
@@ -1097,7 +1097,7 @@ void DeviceContextD3D12Impl::InvalidateState()
     m_ComputeResources  = {};
 }
 
-void DeviceContextD3D12Impl::SetIndexBuffer(IBuffer* pIndexBuffer, Uint32 ByteOffset, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
+void DeviceContextD3D12Impl::SetIndexBuffer(IBuffer* pIndexBuffer, Uint64 ByteOffset, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
     TDeviceContextBase::SetIndexBuffer(pIndexBuffer, ByteOffset, StateTransitionMode);
     if (m_pIndexBuffer)
@@ -1560,7 +1560,7 @@ void DeviceContextD3D12Impl::EndRenderPass()
     TDeviceContextBase::EndRenderPass();
 }
 
-D3D12DynamicAllocation DeviceContextD3D12Impl::AllocateDynamicSpace(size_t NumBytes, size_t Alignment)
+D3D12DynamicAllocation DeviceContextD3D12Impl::AllocateDynamicSpace(Uint64 NumBytes, Uint32 Alignment)
 {
     return m_DynamicHeap.Allocate(NumBytes, Alignment, GetFrameNumber());
 }
@@ -1583,8 +1583,8 @@ void DeviceContextD3D12Impl::UpdateBufferRegion(BufferD3D12Impl*               p
 }
 
 void DeviceContextD3D12Impl::UpdateBuffer(IBuffer*                       pBuffer,
-                                          Uint32                         Offset,
-                                          Uint32                         Size,
+                                          Uint64                         Offset,
+                                          Uint64                         Size,
                                           const void*                    pData,
                                           RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
@@ -1596,16 +1596,16 @@ void DeviceContextD3D12Impl::UpdateBuffer(IBuffer*                       pBuffer
     VERIFY(pBuffD3D12->GetDesc().Usage != USAGE_DYNAMIC, "Dynamic buffers must be updated via Map()");
     constexpr size_t DefaultAlginment = 16;
     auto             TmpSpace         = m_DynamicHeap.Allocate(Size, DefaultAlginment, GetFrameNumber());
-    memcpy(TmpSpace.CPUAddress, pData, Size);
+    memcpy(TmpSpace.CPUAddress, pData, static_cast<size_t>(Size));
     UpdateBufferRegion(pBuffD3D12, TmpSpace, Offset, Size, StateTransitionMode);
 }
 
 void DeviceContextD3D12Impl::CopyBuffer(IBuffer*                       pSrcBuffer,
-                                        Uint32                         SrcOffset,
+                                        Uint64                         SrcOffset,
                                         RESOURCE_STATE_TRANSITION_MODE SrcBufferTransitionMode,
                                         IBuffer*                       pDstBuffer,
-                                        Uint32                         DstOffset,
-                                        Uint32                         Size,
+                                        Uint64                         DstOffset,
+                                        Uint64                         Size,
                                         RESOURCE_STATE_TRANSITION_MODE DstBufferTransitionMode)
 {
     TDeviceContextBase::CopyBuffer(pSrcBuffer, SrcOffset, SrcBufferTransitionMode, pDstBuffer, DstOffset, Size, DstBufferTransitionMode);
@@ -1651,7 +1651,7 @@ void DeviceContextD3D12Impl::MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_F
 
         D3D12_RANGE MapRange;
         MapRange.Begin = 0;
-        MapRange.End   = BuffDesc.uiSizeInBytes;
+        MapRange.End   = static_cast<SIZE_T>(BuffDesc.uiSizeInBytes);
         pd3d12Resource->Map(0, &MapRange, &pMappedData);
     }
     else if (MapType == MAP_WRITE)
@@ -1670,7 +1670,7 @@ void DeviceContextD3D12Impl::MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_F
             auto& DynamicData = pBufferD3D12->m_DynamicData[GetContextId()];
             if ((MapFlags & MAP_FLAG_DISCARD) != 0 || DynamicData.CPUAddress == nullptr)
             {
-                size_t Alignment = (BuffDesc.BindFlags & BIND_UNIFORM_BUFFER) ? D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT : 16;
+                Uint32 Alignment = (BuffDesc.BindFlags & BIND_UNIFORM_BUFFER) ? D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT : 16;
                 DynamicData      = AllocateDynamicSpace(BuffDesc.uiSizeInBytes, Alignment);
             }
             else
@@ -1886,10 +1886,10 @@ void DeviceContextD3D12Impl::CopyTextureRegion(TextureD3D12Impl*              pS
 }
 
 void DeviceContextD3D12Impl::CopyTextureRegion(ID3D12Resource*                pd3d12Buffer,
-                                               Uint32                         SrcOffset,
-                                               Uint32                         SrcStride,
-                                               Uint32                         SrcDepthStride,
-                                               Uint32                         BufferSize,
+                                               Uint64                         SrcOffset,
+                                               Uint64                         SrcStride,
+                                               Uint64                         SrcDepthStride,
+                                               Uint64                         BufferSize,
                                                TextureD3D12Impl&              TextureD3D12,
                                                Uint32                         DstSubResIndex,
                                                const Box&                     DstBox,
@@ -1973,9 +1973,9 @@ void DeviceContextD3D12Impl::CopyTextureRegion(ID3D12Resource*                pd
 }
 
 void DeviceContextD3D12Impl::CopyTextureRegion(IBuffer*                       pSrcBuffer,
-                                               Uint32                         SrcOffset,
-                                               Uint32                         SrcStride,
-                                               Uint32                         SrcDepthStride,
+                                               Uint64                         SrcOffset,
+                                               Uint64                         SrcStride,
+                                               Uint64                         SrcDepthStride,
                                                class TextureD3D12Impl&        TextureD3D12,
                                                Uint32                         DstSubResIndex,
                                                const Box&                     DstBox,
@@ -2026,7 +2026,7 @@ DeviceContextD3D12Impl::TextureUploadSpace DeviceContextD3D12Impl::AllocateTextu
     }
     else
     {
-        UploadSpace.RowSize  = UpdateRegionWidth * Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
+        UploadSpace.RowSize  = Uint64{UpdateRegionWidth} * Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
         UploadSpace.RowCount = UpdateRegionHeight;
     }
     // RowPitch must be a multiple of 256 (aka. D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)
@@ -2041,8 +2041,8 @@ DeviceContextD3D12Impl::TextureUploadSpace DeviceContextD3D12Impl::AllocateTextu
 }
 
 void DeviceContextD3D12Impl::UpdateTextureRegion(const void*                    pSrcData,
-                                                 Uint32                         SrcStride,
-                                                 Uint32                         SrcDepthStride,
+                                                 Uint64                         SrcStride,
+                                                 Uint64                         SrcDepthStride,
                                                  TextureD3D12Impl&              TextureD3D12,
                                                  Uint32                         DstSubResIndex,
                                                  const Box&                     DstBox,
@@ -2054,7 +2054,7 @@ void DeviceContextD3D12Impl::UpdateTextureRegion(const void*                    
 #ifdef DILIGENT_DEBUG
     {
         VERIFY(SrcStride >= UploadSpace.RowSize, "Source data stride (", SrcStride, ") is below the image row size (", UploadSpace.RowSize, ")");
-        const Uint32 PlaneSize = SrcStride * UploadSpace.RowCount;
+        const auto PlaneSize = SrcStride * UploadSpace.RowCount;
         VERIFY(UpdateRegionDepth == 1 || SrcDepthStride >= PlaneSize, "Source data depth stride (", SrcDepthStride, ") is below the image plane size (", PlaneSize, ")");
     }
 #endif
@@ -2069,7 +2069,7 @@ void DeviceContextD3D12Impl::UpdateTextureRegion(const void*                    
             auto* pDstPtr =
                 reinterpret_cast<Uint8*>(UploadSpace.Allocation.CPUAddress) + (AlignedOffset - UploadSpace.Allocation.Offset) + row * UploadSpace.Stride + DepthSlice * UploadSpace.DepthStride;
 
-            memcpy(pDstPtr, pSrcPtr, UploadSpace.RowSize);
+            memcpy(pDstPtr, pSrcPtr, static_cast<size_t>(UploadSpace.RowSize));
         }
     }
     CopyTextureRegion(UploadSpace.Allocation.pBuffer,

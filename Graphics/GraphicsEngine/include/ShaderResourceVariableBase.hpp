@@ -128,13 +128,13 @@ struct BindResourceInfo
     IDeviceObject* const pObject;
 
     const Uint32 ArrayIndex;
-    const Uint32 BufferBaseOffset;
-    const Uint32 BufferRangeSize;
+    const Uint64 BufferBaseOffset;
+    const Uint64 BufferRangeSize;
 
     BindResourceInfo(Uint32         _ArrayIndex,
                      IDeviceObject* _pObject,
-                     Uint32         _BufferBaseOffset = 0,
-                     Uint32         _BufferRangeSize  = 0) noexcept :
+                     Uint64         _BufferBaseOffset = 0,
+                     Uint64         _BufferRangeSize  = 0) noexcept :
         // clang-format off
         pObject         {_pObject},
         ArrayIndex      {_ArrayIndex},
@@ -216,8 +216,8 @@ bool VerifyConstantBufferBinding(const PipelineResourceDesc& ResDesc,
                                  const BindResourceInfo&     BindInfo,
                                  const BufferImplType*       pBufferImpl,
                                  const IDeviceObject*        pCachedBuffer,
-                                 Uint32                      CachedBaseOffset,
-                                 Uint32                      CachedRangeSize,
+                                 Uint64                      CachedBaseOffset,
+                                 Uint64                      CachedRangeSize,
                                  const char*                 SignatureName)
 {
     bool BindingOK = VerifyResourceBinding("buffer", ResDesc, BindInfo, pBufferImpl, pCachedBuffer, SignatureName);
@@ -519,9 +519,9 @@ bool VerifyTLASResourceBinding(const PipelineResourceDesc& ResDesc,
 template <typename BufferImplType, typename BufferViewImplType>
 bool VerifyDynamicBufferOffset(const PipelineResourceDesc& ResDesc,
                                const IDeviceObject*        pObject,
-                               Uint32                      BufferBaseOffset,
-                               Uint32                      BufferRangeSize,
-                               Uint32                      BufferDynamicOffset)
+                               Uint64                      BufferBaseOffset,
+                               Uint64                      BufferRangeSize,
+                               Uint64                      BufferDynamicOffset)
 {
     bool BindingOK = true;
 
@@ -671,8 +671,8 @@ struct ShaderVariableBase : public ResourceVariableBaseInterface
     }
 
     virtual void DILIGENT_CALL_TYPE SetBufferRange(IDeviceObject* pObject,
-                                                   Uint32         Offset,
-                                                   Uint32         Size,
+                                                   Uint64         Offset,
+                                                   Uint64         Size,
                                                    Uint32         ArrayIndex) override
     {
         DEV_CHECK_ERR(GetDesc().ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, "SetBufferRange() is only allowed for constant buffers.");

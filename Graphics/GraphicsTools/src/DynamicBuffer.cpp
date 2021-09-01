@@ -70,7 +70,7 @@ void DynamicBuffer::CommitResize(IRenderDevice*  pDevice,
 
 IBuffer* DynamicBuffer::Resize(IRenderDevice*  pDevice,
                                IDeviceContext* pContext,
-                               Uint32          NewSize,
+                               Uint64          NewSize,
                                bool            DiscardContent)
 {
     if (m_Desc.uiSizeInBytes != NewSize)

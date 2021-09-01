@@ -163,7 +163,7 @@ struct BottomLevelASDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
     /// Size from the result of IDeviceContext::WriteBLASCompactedSize() if this acceleration structure
     /// is going to be the target of a compacting copy (IDeviceContext::CopyBLAS() with COPY_AS_MODE_COMPACT).
-    Uint32                     CompactedSize    DEFAULT_INITIALIZER(0);
+    Uint64                     CompactedSize    DEFAULT_INITIALIZER(0);
 
     /// Defines which immediate contexts are allowed to execute commands that use this BLAS.
 
@@ -185,19 +185,19 @@ struct ScratchBufferSizes
     /// Scratch buffer size for acceleration structure building,
     /// see IDeviceContext::BuildBLAS(), IDeviceContext::BuildTLAS().
     /// May be zero if the acceleration structure was created with non-zero CompactedSize.
-    Uint32 Build  DEFAULT_INITIALIZER(0);
+    Uint64 Build  DEFAULT_INITIALIZER(0);
 
     /// Scratch buffer size for acceleration structure updating,
     /// see IDeviceContext::BuildBLAS(), IDeviceContext::BuildTLAS().
     /// May be zero if acceleration structure was created without RAYTRACING_BUILD_AS_ALLOW_UPDATE flag.
     /// May be zero if acceleration structure was created with non-zero CompactedSize.
-    Uint32 Update DEFAULT_INITIALIZER(0);
+    Uint64 Update DEFAULT_INITIALIZER(0);
 
 #if DILIGENT_CPP_INTERFACE
     constexpr ScratchBufferSizes() noexcept {}
 
-    constexpr ScratchBufferSizes(Uint32 _Build,
-                                 Uint32 _Update) noexcept :
+    constexpr ScratchBufferSizes(Uint64 _Build,
+                                 Uint64 _Update) noexcept :
         Build {_Build},
         Update{_Update}
     {}
@@ -262,7 +262,7 @@ DILIGENT_BEGIN_INTERFACE(IBottomLevelAS, IDeviceObject)
 
     /// \return pointer to ID3D12Resource interface, for D3D12 implementation\n
     ///         VkAccelerationStructure handle, for Vulkan implementation
-    VIRTUAL void* METHOD(GetNativeHandle)(THIS) PURE;
+    VIRTUAL Uint64 METHOD(GetNativeHandle)(THIS) PURE;
 
 
     /// Sets the acceleration structure usage state.
@@ -286,6 +286,8 @@ DILIGENT_END_INTERFACE
 #if DILIGENT_C_INTERFACE
 
 // clang-format off
+
+#    define IBottomLevelAS_GetDesc(This) (const struct BottomLevelASDesc*)IDeviceObject_GetDesc(This)
 
 #    define IBottomLevelAS_GetGeometryDescIndex(This, ...)  CALL_IFACE_METHOD(BottomLevelAS, GetGeometryDescIndex,   This, __VA_ARGS__)
 #    define IBottomLevelAS_GetGeometryIndex(This, ...)      CALL_IFACE_METHOD(BottomLevelAS, GetGeometryIndex,       This, __VA_ARGS__)

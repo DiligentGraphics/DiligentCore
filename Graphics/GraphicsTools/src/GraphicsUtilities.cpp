@@ -40,7 +40,7 @@ namespace Diligent
 {
 
 void CreateUniformBuffer(IRenderDevice*   pDevice,
-                         Uint32           Size,
+                         Uint64           Size,
                          const Char*      Name,
                          IBuffer**        ppBuffer,
                          USAGE            Usage,
@@ -65,7 +65,7 @@ void CreateUniformBuffer(IRenderDevice*   pDevice,
 }
 
 template <class TConverter>
-void GenerateCheckerBoardPatternInternal(Uint32 Width, Uint32 Height, TEXTURE_FORMAT Fmt, Uint32 HorzCells, Uint32 VertCells, Uint8* pData, Uint32 StrideInBytes, TConverter Converter)
+void GenerateCheckerBoardPatternInternal(Uint32 Width, Uint32 Height, TEXTURE_FORMAT Fmt, Uint32 HorzCells, Uint32 VertCells, Uint8* pData, Uint64 StrideInBytes, TConverter Converter)
 {
     const auto& FmtAttribs = GetTextureFormatAttribs(Fmt);
     for (Uint32 y = 0; y < Height; ++y)
@@ -84,7 +84,7 @@ void GenerateCheckerBoardPatternInternal(Uint32 Width, Uint32 Height, TEXTURE_FO
     }
 }
 
-void GenerateCheckerBoardPattern(Uint32 Width, Uint32 Height, TEXTURE_FORMAT Fmt, Uint32 HorzCells, Uint32 VertCells, Uint8* pData, Uint32 StrideInBytes)
+void GenerateCheckerBoardPattern(Uint32 Width, Uint32 Height, TEXTURE_FORMAT Fmt, Uint32 HorzCells, Uint32 VertCells, Uint8* pData, Uint64 StrideInBytes)
 {
     const auto& FmtAttribs = GetTextureFormatAttribs(Fmt);
     switch (FmtAttribs.ComponentType)
@@ -207,10 +207,10 @@ struct ComputeCoarseMipHelper
     const Uint32 FineMipHeight;
 
     const void* const pFineMip;
-    const Uint32      FineMipStride;
+    const Uint64      FineMipStride;
 
     void* const  pCoarseMip;
-    const Uint32 CoarseMipStride;
+    const Uint64 CoarseMipStride;
 
     const Uint32 NumChannels;
 
@@ -259,9 +259,9 @@ void ComputeMipLevel(Uint32         FineLevelWidth,
                      Uint32         FineLevelHeight,
                      TEXTURE_FORMAT Fmt,
                      const void*    pFineLevelData,
-                     Uint32         FineDataStrideInBytes,
+                     Uint64         FineDataStrideInBytes,
                      void*          pCoarseLevelData,
-                     Uint32         CoarseDataStrideInBytes)
+                     Uint64         CoarseDataStrideInBytes)
 {
     const auto& FmtAttribs = GetTextureFormatAttribs(Fmt);
 

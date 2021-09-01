@@ -29,6 +29,8 @@
 
 void TestShaderBindingTable_CInterface(IShaderBindingTable* pSBT)
 {
+    const ShaderBindingTableDesc* pDesc = IShaderBindingTable_GetDesc(pSBT);
+    (void)pDesc;
     IShaderBindingTable_Verify(pSBT, VERIFY_SBT_FLAG_ALL);
     IShaderBindingTable_Reset(pSBT, (IPipelineState*)NULL);
     IShaderBindingTable_ResetHitGroups(pSBT);

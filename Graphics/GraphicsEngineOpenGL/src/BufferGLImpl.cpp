@@ -107,12 +107,12 @@ BufferGLImpl::BufferGLImpl(IReferenceCounters*        pRefCounters,
     constexpr bool ResetVAO = true;
     GLState.BindBuffer(m_BindTarget, m_GlBuffer, ResetVAO);
     VERIFY(pBuffData == nullptr || pBuffData->pData == nullptr || pBuffData->DataSize >= BuffDesc.uiSizeInBytes, "Data pointer is null or data size is not consistent with buffer size");
-    GLsizeiptr    DataSize = BuffDesc.uiSizeInBytes;
+    GLsizeiptr    DataSize = static_cast<GLsizeiptr>(BuffDesc.uiSizeInBytes);
     const GLvoid* pData    = nullptr;
     if (pBuffData != nullptr && pBuffData->pData != nullptr && pBuffData->DataSize >= BuffDesc.uiSizeInBytes)
     {
         pData    = pBuffData->pData;
-        DataSize = pBuffData->DataSize;
+        DataSize = static_cast<GLsizeiptr>(pBuffData->DataSize);
     }
     // Create and initialize a buffer object's data store
 
@@ -223,7 +223,7 @@ BufferGLImpl::~BufferGLImpl()
 
 IMPLEMENT_QUERY_INTERFACE(BufferGLImpl, IID_BufferGL, TBufferBase)
 
-void BufferGLImpl::UpdateData(GLContextState& CtxState, Uint32 Offset, Uint32 Size, const void* pData)
+void BufferGLImpl::UpdateData(GLContextState& CtxState, Uint64 Offset, Uint64 Size, const void* pData)
 {
     BufferMemoryBarrier(
         MEMORY_BARRIER_BUFFER_UPDATE, // Reads or writes to buffer objects via any OpenGL API functions that allow
@@ -237,13 +237,13 @@ void BufferGLImpl::UpdateData(GLContextState& CtxState, Uint32 Offset, Uint32 Si
     CtxState.BindBuffer(GL_ARRAY_BUFFER, m_GlBuffer, ResetVAO);
     // All buffer bind targets (GL_ARRAY_BUFFER, GL_ELEMENT_ARRAY_BUFFER etc.) relate to the same
     // kind of objects. As a result they are all equivalent from a transfer point of view.
-    glBufferSubData(GL_ARRAY_BUFFER, Offset, Size, pData);
+    glBufferSubData(GL_ARRAY_BUFFER, static_cast<GLintptr>(Offset), static_cast<GLsizeiptr>(Size), pData);
     CHECK_GL_ERROR("glBufferSubData() failed");
     CtxState.BindBuffer(GL_ARRAY_BUFFER, GLObjectWrappers::GLBufferObj::Null(), ResetVAO);
 }
 
 
-void BufferGLImpl::CopyData(GLContextState& CtxState, BufferGLImpl& SrcBufferGL, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size)
+void BufferGLImpl::CopyData(GLContextState& CtxState, BufferGLImpl& SrcBufferGL, Uint64 SrcOffset, Uint64 DstOffset, Uint64 Size)
 {
     BufferMemoryBarrier(
         MEMORY_BARRIER_BUFFER_UPDATE, // Reads or writes to buffer objects via any OpenGL API functions that allow
@@ -263,7 +263,7 @@ void BufferGLImpl::CopyData(GLContextState& CtxState, BufferGLImpl& SrcBufferGL,
     constexpr bool ResetVAO = false; // No need to reset VAO for READ/WRITE targets
     CtxState.BindBuffer(GL_COPY_WRITE_BUFFER, m_GlBuffer, ResetVAO);
     CtxState.BindBuffer(GL_COPY_READ_BUFFER, SrcBufferGL.m_GlBuffer, ResetVAO);
-    glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, SrcOffset, DstOffset, Size);
+    glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, static_cast<GLintptr>(SrcOffset), static_cast<GLintptr>(DstOffset), static_cast<GLsizeiptr>(Size));
     CHECK_GL_ERROR("glCopyBufferSubData() failed");
     CtxState.BindBuffer(GL_COPY_READ_BUFFER, GLObjectWrappers::GLBufferObj::Null(), ResetVAO);
     CtxState.BindBuffer(GL_COPY_WRITE_BUFFER, GLObjectWrappers::GLBufferObj::Null(), ResetVAO);
@@ -274,7 +274,7 @@ void BufferGLImpl::Map(GLContextState& CtxState, MAP_TYPE MapType, Uint32 MapFla
     MapRange(CtxState, MapType, MapFlags, 0, m_Desc.uiSizeInBytes, pMappedData);
 }
 
-void BufferGLImpl::MapRange(GLContextState& CtxState, MAP_TYPE MapType, Uint32 MapFlags, Uint32 Offset, Uint32 Length, PVoid& pMappedData)
+void BufferGLImpl::MapRange(GLContextState& CtxState, MAP_TYPE MapType, Uint32 MapFlags, Uint64 Offset, Uint64 Length, PVoid& pMappedData)
 {
     BufferMemoryBarrier(
         MEMORY_BARRIER_CLIENT_MAPPED_BUFFER, // Access by the client to persistent mapped regions of buffer
@@ -330,7 +330,7 @@ void BufferGLImpl::MapRange(GLContextState& CtxState, MAP_TYPE MapType, Uint32 M
         default: UNEXPECTED("Unknown map type");
     }
 
-    pMappedData = glMapBufferRange(m_BindTarget, Offset, Length, Access);
+    pMappedData = glMapBufferRange(m_BindTarget, static_cast<GLintptr>(Offset), static_cast<GLsizeiptr>(Length), Access);
     CHECK_GL_ERROR("glMapBufferRange() failed");
     VERIFY(pMappedData, "Map failed");
 }

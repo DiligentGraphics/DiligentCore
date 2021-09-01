@@ -250,8 +250,8 @@ private:
 
     template <typename ObjectType>
     bool UpdateCachedResource(RefCntAutoPtr<ObjectType>&& pObject,
-                              Uint32                      BufferBaseOffset = 0,
-                              Uint32                      BufferRangeSize  = 0) const;
+                              Uint64                      BufferBaseOffset = 0,
+                              Uint64                      BufferRangeSize  = 0) const;
 
 private:
     using ResourceAttribs = PipelineResourceSignatureVkImpl::ResourceAttribs;
@@ -383,8 +383,8 @@ void BindResourceHelper::operator()(const BindResourceInfo& BindInfo) const
 
 template <typename ObjectType>
 bool BindResourceHelper::UpdateCachedResource(RefCntAutoPtr<ObjectType>&& pObject,
-                                              Uint32                      BufferBaseOffset,
-                                              Uint32                      BufferRangeSize) const
+                                              Uint64                      BufferBaseOffset,
+                                              Uint64                      BufferRangeSize) const
 {
     if (pObject)
     {

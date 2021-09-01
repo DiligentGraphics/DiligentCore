@@ -336,7 +336,7 @@ void ValidateUpdateTextureParams(const TextureDesc& TexDesc, Uint32 MipLevel, Ui
         RowCount = UpdateRegionHeight;
     }
     DEV_CHECK_ERR(SubresData.Stride >= RowSize, "Source data stride (", SubresData.Stride, ") is below the image row size (", RowSize, ").");
-    const Uint32 PlaneSize = SubresData.Stride * RowCount;
+    const auto PlaneSize = SubresData.Stride * RowCount;
     DEV_CHECK_ERR(UpdateRegionDepth == 1 || SubresData.DepthStride >= PlaneSize, "Source data depth stride (", SubresData.DepthStride, ") is below the image plane size (", PlaneSize, ").");
 #endif
 }

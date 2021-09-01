@@ -94,7 +94,7 @@ private:
         struct StreamAttribs
         {
             UniqueIdentifier BufferUId;
-            Uint32           Offset;
+            Uint64           Offset;
             // Note that buffer stride is defined by the PSO, so no need to keep it here as
             // it is already handled by the PsoUId
 

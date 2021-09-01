@@ -86,7 +86,7 @@ public:
     virtual void DILIGENT_CALL_TYPE SetVertexBuffers(Uint32                         StartSlot,
                                                      Uint32                         NumBuffersSet,
                                                      IBuffer**                      ppBuffers,
-                                                     const Uint32*                  pOffsets,
+                                                     const Uint64*                  pOffsets,
                                                      RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
                                                      SET_VERTEX_BUFFERS_FLAGS       Flags) override final;
 
@@ -95,7 +95,7 @@ public:
 
     /// Implementation of IDeviceContext::SetIndexBuffer() in Direct3D11 backend.
     virtual void DILIGENT_CALL_TYPE SetIndexBuffer(IBuffer*                       pIndexBuffer,
-                                                   Uint32                         ByteOffset,
+                                                   Uint64                         ByteOffset,
                                                    RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) override final;
 
     /// Implementation of IDeviceContext::SetViewports() in Direct3D11 backend.
@@ -152,18 +152,18 @@ public:
 
     /// Implementation of IDeviceContext::UpdateBuffer() in Direct3D11 backend.
     virtual void DILIGENT_CALL_TYPE UpdateBuffer(IBuffer*                       pBuffer,
-                                                 Uint32                         Offset,
-                                                 Uint32                         Size,
+                                                 Uint64                         Offset,
+                                                 Uint64                         Size,
                                                  const void*                    pData,
                                                  RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) override final;
 
     /// Implementation of IDeviceContext::CopyBuffer() in Direct3D11 backend.
     virtual void DILIGENT_CALL_TYPE CopyBuffer(IBuffer*                       pSrcBuffer,
-                                               Uint32                         SrcOffset,
+                                               Uint64                         SrcOffset,
                                                RESOURCE_STATE_TRANSITION_MODE SrcBufferTransitionMode,
                                                IBuffer*                       pDstBuffer,
-                                               Uint32                         DstOffset,
-                                               Uint32                         Size,
+                                               Uint64                         DstOffset,
+                                               Uint64                         Size,
                                                RESOURCE_STATE_TRANSITION_MODE DstBufferTransitionMode) override final;
 
     /// Implementation of IDeviceContext::MapBuffer() in Direct3D11 backend.

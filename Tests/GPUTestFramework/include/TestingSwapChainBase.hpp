@@ -45,9 +45,9 @@ namespace Testing
 {
 
 void CompareTestImages(const Uint8*                          pReferencePixels,
-                       Uint32                                RefPixelsStride,
+                       Uint64                                RefPixelsStride,
                        const Uint8*                          pPixels,
-                       Uint32                                PixelsStride,
+                       Uint64                                PixelsStride,
                        Uint32                                Width,
                        Uint32                                Height,
                        TEXTURE_FORMAT                        Format,

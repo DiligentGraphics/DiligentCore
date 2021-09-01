@@ -93,11 +93,7 @@ public:
     virtual VkBuffer DILIGENT_CALL_TYPE GetVkBuffer() const override final;
 
     /// Implementation of IBuffer::GetNativeHandle() in Vulkan backend.
-    virtual void* DILIGENT_CALL_TYPE GetNativeHandle() override final
-    {
-        auto vkBuffer = GetVkBuffer();
-        return reinterpret_cast<void*>(vkBuffer);
-    }
+    virtual Uint64 DILIGENT_CALL_TYPE GetNativeHandle() override final { return VariableSizeCast<Uint64>(GetVkBuffer()); }
 
     /// Implementation of IBufferVk::SetAccessFlags().
     virtual void DILIGENT_CALL_TYPE SetAccessFlags(VkAccessFlags AccessFlags) override final;
@@ -109,12 +105,12 @@ public:
     virtual VkDeviceAddress DILIGENT_CALL_TYPE GetVkDeviceAddress() const override final;
 
     /// Implementation of IBuffer::FlushMappedRange().
-    virtual void DILIGENT_CALL_TYPE FlushMappedRange(Uint32 StartOffset,
-                                                     Uint32 Size) override final;
+    virtual void DILIGENT_CALL_TYPE FlushMappedRange(Uint64 StartOffset,
+                                                     Uint64 Size) override final;
 
     /// Implementation of IBuffer::InvalidateMappedRange().
-    virtual void DILIGENT_CALL_TYPE InvalidateMappedRange(Uint32 StartOffset,
-                                                          Uint32 Size) override final;
+    virtual void DILIGENT_CALL_TYPE InvalidateMappedRange(Uint64 StartOffset,
+                                                          Uint64 Size) override final;
 
     bool CheckAccessFlags(VkAccessFlags AccessFlags) const
     {

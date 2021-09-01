@@ -68,11 +68,7 @@ public:
     virtual VkImage DILIGENT_CALL_TYPE GetVkImage() const override final { return m_VulkanImage; }
 
     /// Implementation of ITexture::GetNativeHandle() in Vulkan backend.
-    virtual void* DILIGENT_CALL_TYPE GetNativeHandle() override final
-    {
-        auto vkImage = GetVkImage();
-        return reinterpret_cast<void*>(vkImage);
-    }
+    virtual Uint64 DILIGENT_CALL_TYPE GetNativeHandle() override final { return VariableSizeCast<Uint64>(GetVkImage()); }
 
     /// Implementation of ITextureVk::SetLayout().
     virtual void DILIGENT_CALL_TYPE SetLayout(VkImageLayout Layout) override final;

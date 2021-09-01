@@ -146,7 +146,7 @@ public:
 
     void Initialize(const TResourceCount& Count, IMemoryAllocator& MemAllocator, Uint64 DynamicUBOSlotMask, Uint64 DynamicSSBOSlotMask);
 
-    void SetUniformBuffer(Uint32 CacheOffset, RefCntAutoPtr<BufferGLImpl>&& pBuff, Uint32 BaseOffset, Uint32 RangeSize)
+    void SetUniformBuffer(Uint32 CacheOffset, RefCntAutoPtr<BufferGLImpl>&& pBuff, Uint64 BaseOffset, Uint64 RangeSize)
     {
         DEV_CHECK_ERR(BaseOffset + RangeSize <= (pBuff ? pBuff->GetDesc().uiSizeInBytes : 0), "The range is out of buffer bounds");
         if (pBuff)
@@ -158,8 +158,8 @@ public:
         auto& UB = GetUB(CacheOffset);
 
         UB.pBuffer       = std::move(pBuff);
-        UB.BaseOffset    = BaseOffset;
-        UB.RangeSize     = RangeSize;
+        UB.BaseOffset    = static_cast<Uint32>(BaseOffset);
+        UB.RangeSize     = static_cast<Uint32>(RangeSize);
         UB.DynamicOffset = 0;
 
         Uint64 UBBit = Uint64{1} << Uint64{CacheOffset};

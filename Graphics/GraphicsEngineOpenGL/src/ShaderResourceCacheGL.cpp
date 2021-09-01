@@ -291,7 +291,10 @@ void ShaderResourceCacheGL::BindResources(GLContextState&              GLState,
                                            // will reflect writes prior to the barrier
             GLState);
 
-        GLState.BindStorageBlock(binding, pBufferGL->GetGLHandle(), ViewDesc.ByteOffset + SSBO.DynamicOffset, ViewDesc.ByteWidth);
+        GLState.BindStorageBlock(binding,
+                                 pBufferGL->GetGLHandle(),
+                                 static_cast<GLintptr>(ViewDesc.ByteOffset + SSBO.DynamicOffset),
+                                 static_cast<GLsizeiptr>(ViewDesc.ByteWidth));
 
         if (ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS)
             WritableBuffers.push_back(pBufferGL);
@@ -325,7 +328,10 @@ void ShaderResourceCacheGL::BindDynamicBuffers(GLContextState&              GLSt
         const auto* pBufferGL     = pBufferViewGL->GetBuffer<const BufferGLImpl>();
         const auto& ViewDesc      = pBufferViewGL->GetDesc();
 
-        GLState.BindStorageBlock(BaseSSBOBinding + SSBOIdx, pBufferGL->GetGLHandle(), ViewDesc.ByteOffset + SSBO.DynamicOffset, ViewDesc.ByteWidth);
+        GLState.BindStorageBlock(BaseSSBOBinding + SSBOIdx,
+                                 pBufferGL->GetGLHandle(),
+                                 static_cast<GLintptr>(ViewDesc.ByteOffset + SSBO.DynamicOffset),
+                                 static_cast<GLsizeiptr>(ViewDesc.ByteWidth));
     }
 }
 

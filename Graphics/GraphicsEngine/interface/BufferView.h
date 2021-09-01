@@ -97,10 +97,10 @@ struct BufferViewDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
     /// Offset in bytes from the beginning of the buffer to the start of the
     /// buffer region referenced by the view
-    Uint32 ByteOffset       DEFAULT_INITIALIZER(0);
+    Uint64 ByteOffset       DEFAULT_INITIALIZER(0);
 
     /// Size in bytes of the referenced buffer region
-    Uint32 ByteWidth        DEFAULT_INITIALIZER(0);
+    Uint64 ByteWidth        DEFAULT_INITIALIZER(0);
 
 
 #if DILIGENT_CPP_INTERFACE
@@ -110,8 +110,8 @@ struct BufferViewDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     BufferViewDesc(const Char*      _Name,
                    BUFFER_VIEW_TYPE _ViewType,
                    BufferFormat     _Format     = BufferViewDesc{}.Format,
-                   Uint32           _ByteOffset = BufferViewDesc{}.ByteOffset,
-                   Uint32           _ByteWidth  = BufferViewDesc{}.ByteWidth) noexcept :
+                   Uint64           _ByteOffset = BufferViewDesc{}.ByteOffset,
+                   Uint64           _ByteWidth  = BufferViewDesc{}.ByteWidth) noexcept :
         DeviceObjectAttribs {_Name      },
         ViewType            {_ViewType  },
         Format              {_Format    },

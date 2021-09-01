@@ -73,13 +73,13 @@ public:
     virtual ID3D12Resource* DILIGENT_CALL_TYPE GetD3D12Buffer(Uint64& DataStartByteOffset, IDeviceContext* pContext) override final;
 
     /// Implementation of IBuffer::GetNativeHandle().
-    virtual void* DILIGENT_CALL_TYPE GetNativeHandle() override final
+    virtual Uint64 DILIGENT_CALL_TYPE GetNativeHandle() override final
     {
         VERIFY(GetD3D12Resource() != nullptr, "The buffer is dynamic and has no pointer to D3D12 resource");
         Uint64 DataStartByteOffset = 0;
         auto*  pd3d12Buffer        = GetD3D12Buffer(DataStartByteOffset, 0);
         VERIFY(DataStartByteOffset == 0, "0 offset expected");
-        return pd3d12Buffer;
+        return VariableSizeCast<Uint64>(pd3d12Buffer);
     }
 
     /// Implementation of IBufferD3D12::SetD3D12ResourceState().
@@ -114,7 +114,7 @@ public:
 
     D3D12_CPU_DESCRIPTOR_HANDLE GetCBVHandle() { return m_CBVDescriptorAllocation.GetCpuHandle(); }
 
-    void CreateCBV(D3D12_CPU_DESCRIPTOR_HANDLE CBVDescriptor, Uint32 Offset = 0, Uint32 Size = 0) const;
+    void CreateCBV(D3D12_CPU_DESCRIPTOR_HANDLE CBVDescriptor, Uint64 Offset = 0, Uint64 Size = 0) const;
 
 private:
     virtual void CreateViewInternal(const struct BufferViewDesc& ViewDesc, IBufferView** ppView, bool bIsDefaultView) override;

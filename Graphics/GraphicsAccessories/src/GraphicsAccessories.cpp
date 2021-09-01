@@ -1766,11 +1766,11 @@ BufferToTextureCopyInfo GetBufferToTextureCopyInfo(TEXTURE_FORMAT Format,
     CopyInfo.RowStride = AlignUp(CopyInfo.RowSize, RowStrideAlignment);
     if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
     {
-        CopyInfo.RowStrideInTexels = CopyInfo.RowStride / Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.BlockWidth};
+        CopyInfo.RowStrideInTexels = static_cast<Uint32>(CopyInfo.RowStride / Uint64{FmtAttribs.ComponentSize} * Uint64{FmtAttribs.BlockWidth});
     }
     else
     {
-        CopyInfo.RowStrideInTexels = CopyInfo.RowStride / (Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents});
+        CopyInfo.RowStrideInTexels = static_cast<Uint32>(CopyInfo.RowStride / (Uint64{FmtAttribs.ComponentSize} * Uint64{FmtAttribs.NumComponents}));
     }
     CopyInfo.DepthStride = CopyInfo.RowCount * CopyInfo.RowStride;
     CopyInfo.MemorySize  = UpdateRegionDepth * CopyInfo.DepthStride;

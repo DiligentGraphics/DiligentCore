@@ -229,7 +229,7 @@ void TextureCube_GL::UpdateData(GLContextState&          ContextState,
                                   // An INVALID_VALUE error is generated if imageSize is not consistent with
                                   // the format, dimensions, and contents of the compressed image( too little or
                                   // too much data ),
-                                  ((DstBox.MaxY - DstBox.MinY + 3) / 4) * SubresData.Stride,
+                                  static_cast<GLsizei>(((DstBox.MaxY - DstBox.MinY + 3) / 4) * SubresData.Stride),
                                   // If a non-zero named buffer object is bound to the GL_PIXEL_UNPACK_BUFFER target, 'data' is treated
                                   // as a byte offset into the buffer object's data store.
                                   // https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glCompressedTexSubImage2D.xhtml
@@ -240,7 +240,7 @@ void TextureCube_GL::UpdateData(GLContextState&          ContextState,
         const auto& TexFmtInfo = GetTextureFormatAttribs(m_Desc.Format);
         const auto  PixelSize  = Uint32{TexFmtInfo.NumComponents} * Uint32{TexFmtInfo.ComponentSize};
         VERIFY((SubresData.Stride % PixelSize) == 0, "Data stride is not multiple of pixel size");
-        glPixelStorei(GL_UNPACK_ROW_LENGTH, SubresData.Stride / PixelSize);
+        glPixelStorei(GL_UNPACK_ROW_LENGTH, static_cast<GLint>(SubresData.Stride / PixelSize));
         glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
         glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
 

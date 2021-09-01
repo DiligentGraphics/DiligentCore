@@ -54,11 +54,7 @@ public:
     ~BottomLevelASVkImpl();
 
     /// Implementation of IBottomLevelAS::GetNativeHandle() in Vulkan backend.
-    virtual void* DILIGENT_CALL_TYPE GetNativeHandle() override final
-    {
-        auto Handle = GetVkBLAS();
-        return reinterpret_cast<void*>(Handle);
-    }
+    virtual Uint64 DILIGENT_CALL_TYPE GetNativeHandle() override final { return VariableSizeCast<Uint64>(GetVkBLAS()); }
 
     /// Implementation of IBottomLevelASVk::GetVkBLAS().
     virtual VkAccelerationStructureKHR DILIGENT_CALL_TYPE GetVkBLAS() const override { return m_VulkanBLAS; }

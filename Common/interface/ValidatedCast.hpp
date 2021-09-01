@@ -28,9 +28,10 @@
 #pragma once
 
 #include "../../Platforms/Basic/interface/DebugUtilities.hpp"
+#include "CompilerDefinitions.h"
 
 template <typename DstType, typename SrcType>
-DstType* ValidatedCast(SrcType* Ptr)
+NODISCARD DstType* ValidatedCast(SrcType* Ptr)
 {
 #ifdef DILIGENT_DEBUG
     if (Ptr != nullptr)
@@ -39,4 +40,14 @@ DstType* ValidatedCast(SrcType* Ptr)
     }
 #endif
     return static_cast<DstType*>(Ptr);
+}
+
+
+template <typename DstType, typename SrcType>
+NODISCARD DstType VariableSizeCast(const SrcType& Src)
+{
+    static_assert(sizeof(DstType) >= sizeof(SrcType), "DstType size must be greater than or equal to SrcType size");
+    DstType Dst = static_cast<DstType>(0);
+    memcpy(&Dst, &Src, sizeof(Src));
+    return Dst;
 }

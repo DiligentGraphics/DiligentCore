@@ -56,7 +56,7 @@ struct TopLevelASDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
     /// The size returned by IDeviceContext::WriteTLASCompactedSize(), if this acceleration structure
     /// is going to be the target of a compacting copy command (IDeviceContext::CopyTLAS() with COPY_AS_MODE_COMPACT).
-    Uint32                    CompactedSize    DEFAULT_INITIALIZER(0);
+    Uint64                    CompactedSize    DEFAULT_INITIALIZER(0);
 
     /// Defines which immediate contexts are allowed to execute commands that use this TLAS.
 
@@ -193,7 +193,7 @@ DILIGENT_BEGIN_INTERFACE(ITopLevelAS, IDeviceObject)
 
     /// \return pointer to ID3D12Resource interface, for D3D12 implementation\n
     ///         VkAccelerationStructure handle, for Vulkan implementation
-    VIRTUAL void* METHOD(GetNativeHandle)(THIS) PURE;
+    VIRTUAL Uint64 METHOD(GetNativeHandle)(THIS) PURE;
 
 
     /// Sets the acceleration structure usage state.
@@ -217,6 +217,8 @@ DILIGENT_END_INTERFACE
 #if DILIGENT_C_INTERFACE
 
 // clang-format off
+
+#    define ITopLevelAS_GetDesc(This) (const struct TopLevelASDesc*)IDeviceObject_GetDesc(This)
 
 #    define ITopLevelAS_GetInstanceDesc(This, ...)  CALL_IFACE_METHOD(TopLevelAS, GetInstanceDesc,       This, __VA_ARGS__)
 #    define ITopLevelAS_GetBuildInfo(This)          CALL_IFACE_METHOD(TopLevelAS, GetBuildInfo,          This)

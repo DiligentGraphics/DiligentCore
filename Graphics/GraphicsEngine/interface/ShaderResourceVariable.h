@@ -181,14 +181,15 @@ DILIGENT_BEGIN_INTERFACE(IShaderResourceVariable, IObject)
     ///          specified by the device limits (see Diligent::DeviceLimits).
     VIRTUAL void METHOD(SetBufferRange)(THIS_
                                         IDeviceObject* pObject,
-                                        Uint32         Offset,
-                                        Uint32         Size,
+                                        Uint64         Offset,
+                                        Uint64         Size,
                                         Uint32         ArrayIndex DEFAULT_VALUE(0)) PURE;
 
 
     /// Sets the constant or structured buffer dynamic offset
 
     /// \param [in] Offset     - additional offset, in bytes, that is added to the base offset (see remarks).
+    ///                          Only 32-bit offsets are supported.
     /// \param [in] ArrayIndex - for array variables, index of the array element.
     ///
     /// \remarks This method is only allowed for constant or structured buffer variables that
@@ -243,6 +244,8 @@ DILIGENT_END_INTERFACE
 
 #    define IShaderResourceVariable_Set(This, ...)             CALL_IFACE_METHOD(ShaderResourceVariable, Set,             This, __VA_ARGS__)
 #    define IShaderResourceVariable_SetArray(This, ...)        CALL_IFACE_METHOD(ShaderResourceVariable, SetArray,        This, __VA_ARGS__)
+#    define IShaderResourceVariable_SetBufferRange(This, ...)  CALL_IFACE_METHOD(ShaderResourceVariable, SetBufferRange,  This, __VA_ARGS__)
+#    define IShaderResourceVariable_SetBufferOffset(This, ...) CALL_IFACE_METHOD(ShaderResourceVariable, SetBufferOffset, This, __VA_ARGS__)
 #    define IShaderResourceVariable_GetType(This)              CALL_IFACE_METHOD(ShaderResourceVariable, GetType,         This)
 #    define IShaderResourceVariable_GetResourceDesc(This, ...) CALL_IFACE_METHOD(ShaderResourceVariable, GetResourceDesc, This, __VA_ARGS__)
 #    define IShaderResourceVariable_GetIndex(This)             CALL_IFACE_METHOD(ShaderResourceVariable, GetIndex,        This)

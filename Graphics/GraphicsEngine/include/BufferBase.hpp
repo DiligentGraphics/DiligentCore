@@ -203,14 +203,14 @@ public:
         return this->m_MemoryProperties;
     }
 
-    virtual void DILIGENT_CALL_TYPE FlushMappedRange(Uint32 StartOffset,
-                                                     Uint32 Size) override
+    virtual void DILIGENT_CALL_TYPE FlushMappedRange(Uint64 StartOffset,
+                                                     Uint64 Size) override
     {
         DvpVerifyFlushMappedRangeArguments(StartOffset, Size);
     }
 
-    virtual void DILIGENT_CALL_TYPE InvalidateMappedRange(Uint32 StartOffset,
-                                                          Uint32 Size) override
+    virtual void DILIGENT_CALL_TYPE InvalidateMappedRange(Uint64 StartOffset,
+                                                          Uint64 Size) override
     {
         DvpVerifyInvalidateMappedRangeArguments(StartOffset, Size);
     }
@@ -232,8 +232,8 @@ protected:
     /// Pure virtual function that creates buffer view for the specific engine implementation.
     virtual void CreateViewInternal(const struct BufferViewDesc& ViewDesc, IBufferView** ppView, bool bIsDefaultView) = 0;
 
-    void DvpVerifyFlushMappedRangeArguments(Uint32 StartOffset,
-                                            Uint32 Size) const
+    void DvpVerifyFlushMappedRangeArguments(Uint64 StartOffset,
+                                            Uint64 Size) const
     {
 #ifdef DILIGENT_DEVELOPMENT
         DEV_CHECK_ERR((GetMemoryProperties() & MEMORY_PROPERTY_HOST_COHERENT) == 0, "Coherent memory does not need to be flushed.");
@@ -242,8 +242,8 @@ protected:
 #endif
     }
 
-    void DvpVerifyInvalidateMappedRangeArguments(Uint32 StartOffset,
-                                                 Uint32 Size) const
+    void DvpVerifyInvalidateMappedRangeArguments(Uint64 StartOffset,
+                                                 Uint64 Size) const
     {
 #ifdef DILIGENT_DEVELOPMENT
         DEV_CHECK_ERR((GetMemoryProperties() & MEMORY_PROPERTY_HOST_COHERENT) == 0, "Coherent memory does not need to be invalidated.");

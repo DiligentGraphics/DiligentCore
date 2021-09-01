@@ -102,7 +102,7 @@ struct VertexStreamInfo
     RefCntAutoPtr<BufferImplType> pBuffer;
 
     /// Offset in bytes
-    Uint32 Offset = 0;
+    Uint64 Offset = 0;
 };
 
 /// Base implementation of the device context.
@@ -185,7 +185,7 @@ public:
     inline virtual void DILIGENT_CALL_TYPE SetVertexBuffers(Uint32                         StartSlot,
                                                             Uint32                         NumBuffersSet,
                                                             IBuffer**                      ppBuffers,
-                                                            const Uint32*                  pOffsets,
+                                                            const Uint64*                  pOffsets,
                                                             RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
                                                             SET_VERTEX_BUFFERS_FLAGS       Flags) override = 0;
 
@@ -198,7 +198,7 @@ public:
 
     /// Base implementation of IDeviceContext::SetIndexBuffer(); caches the strong reference to the index buffer
     inline virtual void DILIGENT_CALL_TYPE SetIndexBuffer(IBuffer*                       pIndexBuffer,
-                                                          Uint32                         ByteOffset,
+                                                          Uint64                         ByteOffset,
                                                           RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) override = 0;
 
     /// Caches the viewports
@@ -215,18 +215,18 @@ public:
 
     /// Base implementation of IDeviceContext::UpdateBuffer(); validates input parameters.
     virtual void DILIGENT_CALL_TYPE UpdateBuffer(IBuffer*                       pBuffer,
-                                                 Uint32                         Offset,
-                                                 Uint32                         Size,
+                                                 Uint64                         Offset,
+                                                 Uint64                         Size,
                                                  const void*                    pData,
                                                  RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) override = 0;
 
     /// Base implementation of IDeviceContext::CopyBuffer(); validates input parameters.
     virtual void DILIGENT_CALL_TYPE CopyBuffer(IBuffer*                       pSrcBuffer,
-                                               Uint32                         SrcOffset,
+                                               Uint64                         SrcOffset,
                                                RESOURCE_STATE_TRANSITION_MODE SrcBufferTransitionMode,
                                                IBuffer*                       pDstBuffer,
-                                               Uint32                         DstOffset,
-                                               Uint32                         Size,
+                                               Uint64                         DstOffset,
+                                               Uint64                         Size,
                                                RESOURCE_STATE_TRANSITION_MODE DstBufferTransitionMode) override = 0;
 
     /// Base implementation of IDeviceContext::MapBuffer(); validates input parameters.
@@ -602,7 +602,7 @@ protected:
     RefCntAutoPtr<BufferImplType> m_pIndexBuffer;
 
     /// Offset from the beginning of the index buffer to the start of the index data, in bytes.
-    Uint32 m_IndexDataStartOffset = 0;
+    Uint64 m_IndexDataStartOffset = 0;
 
     /// Current stencil reference value
     Uint32 m_StencilRef = 0;
@@ -699,7 +699,7 @@ inline void DeviceContextBase<ImplementationTraits>::SetVertexBuffers(
     Uint32                         StartSlot,
     Uint32                         NumBuffersSet,
     IBuffer**                      ppBuffers,
-    const Uint32*                  pOffsets,
+    const Uint64*                  pOffsets,
     RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
     SET_VERTEX_BUFFERS_FLAGS       Flags)
 {
@@ -785,7 +785,7 @@ inline void DeviceContextBase<ImplementationTraits>::InvalidateState()
 template <typename ImplementationTraits>
 inline void DeviceContextBase<ImplementationTraits>::SetIndexBuffer(
     IBuffer*                       pIndexBuffer,
-    Uint32                         ByteOffset,
+    Uint64                         ByteOffset,
     RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
     m_pIndexBuffer         = ValidatedCast<BufferImplType>(pIndexBuffer);
@@ -1604,8 +1604,8 @@ inline void DeviceContextBase<ImplementationTraits>::DeviceWaitForFence(IFence* 
 template <typename ImplementationTraits>
 inline void DeviceContextBase<ImplementationTraits>::UpdateBuffer(
     IBuffer*                       pBuffer,
-    Uint32                         Offset,
-    Uint32                         Size,
+    Uint64                         Offset,
+    Uint64                         Size,
     const void*                    pData,
     RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
@@ -1625,11 +1625,11 @@ inline void DeviceContextBase<ImplementationTraits>::UpdateBuffer(
 template <typename ImplementationTraits>
 inline void DeviceContextBase<ImplementationTraits>::CopyBuffer(
     IBuffer*                       pSrcBuffer,
-    Uint32                         SrcOffset,
+    Uint64                         SrcOffset,
     RESOURCE_STATE_TRANSITION_MODE SrcBufferTransitionMode,
     IBuffer*                       pDstBuffer,
-    Uint32                         DstOffset,
-    Uint32                         Size,
+    Uint64                         DstOffset,
+    Uint64                         Size,
     RESOURCE_STATE_TRANSITION_MODE DstBufferTransitionMode)
 {
     DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_TRANSFER, "CopyBuffer");

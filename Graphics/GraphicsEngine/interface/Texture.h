@@ -184,14 +184,14 @@ struct TextureSubResData
 
     /// When updating data from the buffer (pSrcBuffer is not null),
     /// offset from the beginning of the buffer to the data start
-    Uint32 SrcOffset            DEFAULT_INITIALIZER(0);
+    Uint64 SrcOffset            DEFAULT_INITIALIZER(0);
 
     /// For 2D and 3D textures, row stride in bytes
-    Uint32 Stride               DEFAULT_INITIALIZER(0);
+    Uint64 Stride               DEFAULT_INITIALIZER(0);
 
     /// For 3D textures, depth slice stride in bytes
     /// \note On OpenGL, this must be a multiple of Stride
-    Uint32 DepthStride          DEFAULT_INITIALIZER(0);
+    Uint64 DepthStride          DEFAULT_INITIALIZER(0);
 
 
 #if DILIGENT_CPP_INTERFACE
@@ -207,7 +207,7 @@ struct TextureSubResData
     constexpr TextureSubResData() noexcept {}
 
     /// Initializes the structure members to perform copy from the CPU memory
-    constexpr TextureSubResData(const void* _pData, Uint32 _Stride, Uint32 _DepthStride = 0) noexcept :
+    constexpr TextureSubResData(const void* _pData, Uint64 _Stride, Uint64 _DepthStride = 0) noexcept :
         pData       (_pData),
         pSrcBuffer  (nullptr),
         SrcOffset   (0),
@@ -216,7 +216,7 @@ struct TextureSubResData
     {}
 
     /// Initializes the structure members to perform copy from the GPU buffer
-    constexpr TextureSubResData(IBuffer* _pBuffer, Uint32 _SrcOffset, Uint32 _Stride, Uint32 _DepthStride = 0) noexcept :
+    constexpr TextureSubResData(IBuffer* _pBuffer, Uint64 _SrcOffset, Uint64 _Stride, Uint64 _DepthStride = 0) noexcept :
         pData       {nullptr     },
         pSrcBuffer  {_pBuffer    },
         SrcOffset   {_SrcOffset  },
@@ -266,15 +266,15 @@ typedef struct TextureData TextureData;
 struct MappedTextureSubresource
 {
     PVoid  pData       DEFAULT_INITIALIZER(nullptr);
-    Uint32 Stride      DEFAULT_INITIALIZER(0);
-    Uint32 DepthStride DEFAULT_INITIALIZER(0);
+    Uint64 Stride      DEFAULT_INITIALIZER(0);
+    Uint64 DepthStride DEFAULT_INITIALIZER(0);
 
 #if DILIGENT_CPP_INTERFACE
     constexpr MappedTextureSubresource() noexcept {}
 
     constexpr MappedTextureSubresource(PVoid  _pData,
-                                       Uint32 _Stride,
-                                       Uint32 _DepthStride = 0) noexcept :
+                                       Uint64 _Stride,
+                                       Uint64 _DepthStride = 0) noexcept :
         pData       {_pData      },
         Stride      {_Stride     },
         DepthStride {_DepthStride}
@@ -337,7 +337,7 @@ DILIGENT_BEGIN_INTERFACE(ITexture, IDeviceObject)
     /// \return pointer to ID3D11Resource interface, for D3D11 implementation\n
     ///         pointer to ID3D12Resource interface, for D3D12 implementation\n
     ///         GL buffer handle, for GL implementation
-    VIRTUAL void* METHOD(GetNativeHandle)(THIS) PURE;
+    VIRTUAL Uint64 METHOD(GetNativeHandle)(THIS) PURE;
 
     /// Sets the usage state for all texture subresources.
 

@@ -199,7 +199,7 @@ ShaderResourceCacheVk::~ShaderResourceCacheVk()
     }
 }
 
-void ShaderResourceCacheVk::Resource::SetUniformBuffer(RefCntAutoPtr<IDeviceObject>&& _pBuffer, Uint32 _BaseOffset, Uint32 _RangeSize)
+void ShaderResourceCacheVk::Resource::SetUniformBuffer(RefCntAutoPtr<IDeviceObject>&& _pBuffer, Uint64 _BaseOffset, Uint64 _RangeSize)
 {
     VERIFY_EXPR(Type == DescriptorType::UniformBuffer ||
                 Type == DescriptorType::UniformBufferDynamic);

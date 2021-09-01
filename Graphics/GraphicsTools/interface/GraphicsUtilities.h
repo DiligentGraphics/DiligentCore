@@ -37,7 +37,7 @@
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 void DILIGENT_GLOBAL_FUNCTION(CreateUniformBuffer)(IRenderDevice*                  pDevice,
-                                                   Uint32                          Size,
+                                                   Uint64                          Size,
                                                    const Char*                     Name,
                                                    IBuffer**                       ppBuffer,
                                                    USAGE Usage                     DEFAULT_VALUE(USAGE_DYNAMIC),
@@ -51,14 +51,14 @@ void DILIGENT_GLOBAL_FUNCTION(GenerateCheckerBoardPattern)(Uint32         Width,
                                                            Uint32         HorzCells,
                                                            Uint32         VertCells,
                                                            Uint8*         pData,
-                                                           Uint32         StrideInBytes);
+                                                           Uint64         StrideInBytes);
 
 void DILIGENT_GLOBAL_FUNCTION(ComputeMipLevel)(Uint32         FineLevelWidth,
                                                Uint32         FineLevelHeight,
                                                TEXTURE_FORMAT Fmt,
                                                const void*    pFineLevelData,
-                                               Uint32         FineDataStrideInBytes,
+                                               Uint64         FineDataStrideInBytes,
                                                void*          pCoarseLevelData,
-                                               Uint32         CoarseDataStrideInBytes);
+                                               Uint64         CoarseDataStrideInBytes);
 
 DILIGENT_END_NAMESPACE // namespace Diligent

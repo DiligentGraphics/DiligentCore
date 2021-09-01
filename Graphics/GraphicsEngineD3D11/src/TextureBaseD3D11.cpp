@@ -146,8 +146,8 @@ void TextureBaseD3D11::PrepareD3D11InitData(const TextureData*                  
             {
                 auto& CurrSubres                       = pInitData->pSubResources[Subres];
                 D3D11InitData[Subres].pSysMem          = CurrSubres.pData;
-                D3D11InitData[Subres].SysMemPitch      = CurrSubres.Stride;
-                D3D11InitData[Subres].SysMemSlicePitch = CurrSubres.DepthStride;
+                D3D11InitData[Subres].SysMemPitch      = static_cast<UINT>(CurrSubres.Stride);
+                D3D11InitData[Subres].SysMemSlicePitch = static_cast<UINT>(CurrSubres.DepthStride);
             }
         }
         else

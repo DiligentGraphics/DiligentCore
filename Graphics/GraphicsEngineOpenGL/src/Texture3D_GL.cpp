@@ -168,10 +168,10 @@ void Texture3D_GL::UpdateData(GLContextState&          ContextState,
     const auto TexFmtInfo = GetTextureFormatAttribs(m_Desc.Format);
     const auto PixelSize  = Uint32{TexFmtInfo.NumComponents} * Uint32{TexFmtInfo.ComponentSize};
     VERIFY((SubresData.Stride % PixelSize) == 0, "Data stride is not multiple of pixel size");
-    glPixelStorei(GL_UNPACK_ROW_LENGTH, SubresData.Stride / PixelSize);
+    glPixelStorei(GL_UNPACK_ROW_LENGTH, static_cast<GLint>(SubresData.Stride / PixelSize));
 
     VERIFY((SubresData.DepthStride % SubresData.Stride) == 0, "Depth stride is not multiple of stride");
-    glPixelStorei(GL_UNPACK_IMAGE_HEIGHT, SubresData.DepthStride / SubresData.Stride);
+    glPixelStorei(GL_UNPACK_IMAGE_HEIGHT, static_cast<GLint>(SubresData.DepthStride / SubresData.Stride));
 
     glTexSubImage3D(m_BindTarget, MipLevel,
                     DstBox.MinX,

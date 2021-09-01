@@ -88,7 +88,7 @@ public:
     ///             If NewSize is zero, internal buffer will be released.
     IBuffer* Resize(IRenderDevice*  pDevice,
                     IDeviceContext* pContext,
-                    Uint32          NewSize,
+                    Uint64          NewSize,
                     bool            DiscardContent = false);
 
 

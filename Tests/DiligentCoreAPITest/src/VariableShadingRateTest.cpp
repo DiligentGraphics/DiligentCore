@@ -400,7 +400,7 @@ TEST(VariableShadingRateTest, PerPrimitive)
     pContext->SetPipelineState(pPSO);
 
     IBuffer*     VBuffers[] = {pVB};
-    const Uint32 Offsets[]  = {0};
+    const Uint64 Offsets[]  = {0};
     pContext->SetVertexBuffers(0, 1, VBuffers, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
 
     DrawAttribs drawAttrs{_countof(Verts), DRAW_FLAG_VERIFY_ALL};

@@ -102,8 +102,8 @@ int TestRenderDeviceCInterface_CreateBuffer(struct IRenderDevice* pRenderDevice)
     BuffDesc.ImmediateContextMask = 1;
 
     InitData.DataSize = BuffDesc.uiSizeInBytes;
-    void* pData       = malloc(InitData.DataSize);
-    memset(pData, 0, InitData.DataSize);
+    void* pData       = malloc((size_t)InitData.DataSize);
+    memset(pData, 0, (size_t)InitData.DataSize);
     InitData.pData = pData;
     IRenderDevice_CreateBuffer(pRenderDevice, &BuffDesc, &InitData, &pBuffer);
     if (pBuffer != NULL)

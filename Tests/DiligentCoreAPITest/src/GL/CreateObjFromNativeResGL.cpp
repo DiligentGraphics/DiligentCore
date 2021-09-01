@@ -134,7 +134,7 @@ void TestCreateObjFromNativeResGL::CreateTexture(Diligent::ITexture* pTexture)
     ASSERT_NE(pAttachedTextureGL, nullptr);
     EXPECT_EQ(pAttachedTextureGL->GetGLTextureHandle(), GLHandle);
     EXPECT_EQ(pAttachedTextureGL->GetBindTarget(), pTextureGL->GetBindTarget());
-    EXPECT_EQ(reinterpret_cast<size_t>(pAttachedTextureGL->GetNativeHandle()), GLHandle);
+    EXPECT_EQ(static_cast<GLuint>(pAttachedTextureGL->GetNativeHandle()), GLHandle);
 #endif
 }
 
@@ -160,7 +160,7 @@ void TestCreateObjFromNativeResGL::CreateBuffer(Diligent::IBuffer* pBuffer)
     RefCntAutoPtr<IBufferGL> pTestBufferGL(pBufferFromNativeGLHandle, IID_BufferGL);
     ASSERT_NE(pTestBufferGL, nullptr);
     EXPECT_EQ(pTestBufferGL->GetGLBufferHandle(), GLBufferHandle);
-    EXPECT_EQ(reinterpret_cast<size_t>(pTestBufferGL->GetNativeHandle()), GLBufferHandle);
+    EXPECT_EQ(static_cast<GLuint>(pTestBufferGL->GetNativeHandle()), GLBufferHandle);
 #endif
 }
 

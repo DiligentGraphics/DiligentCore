@@ -64,10 +64,10 @@ public:
     /// Queries the specific interface, see IObject::QueryInterface() for details
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override;
 
-    void UpdateData(GLContextState& CtxState, Uint32 Offset, Uint32 Size, const void* pData);
-    void CopyData(GLContextState& CtxState, BufferGLImpl& SrcBufferGL, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size);
+    void UpdateData(GLContextState& CtxState, Uint64 Offset, Uint64 Size, const void* pData);
+    void CopyData(GLContextState& CtxState, BufferGLImpl& SrcBufferGL, Uint64 SrcOffset, Uint64 DstOffset, Uint64 Size);
     void Map(GLContextState& CtxState, MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData);
-    void MapRange(GLContextState& CtxState, MAP_TYPE MapType, Uint32 MapFlags, Uint32 Offset, Uint32 Length, PVoid& pMappedData);
+    void MapRange(GLContextState& CtxState, MAP_TYPE MapType, Uint32 MapFlags, Uint64 Offset, Uint64 Length, PVoid& pMappedData);
     void Unmap(GLContextState& CtxState);
 
     __forceinline void BufferMemoryBarrier(MEMORY_BARRIER RequiredBarriers, GLContextState& GLContextState);
@@ -78,10 +78,7 @@ public:
     virtual GLuint DILIGENT_CALL_TYPE GetGLBufferHandle() override final { return GetGLHandle(); }
 
     /// Implementation of IBuffer::GetNativeHandle() in OpenGL backend.
-    virtual void* DILIGENT_CALL_TYPE GetNativeHandle() override final
-    {
-        return reinterpret_cast<void*>(static_cast<size_t>(GetGLBufferHandle()));
-    }
+    virtual Uint64 DILIGENT_CALL_TYPE GetNativeHandle() override final { return VariableSizeCast<Uint64>(GetGLBufferHandle()); }
 
 private:
     virtual void CreateViewInternal(const struct BufferViewDesc& ViewDesc, IBufferView** ppView, bool bIsDefaultView) override;

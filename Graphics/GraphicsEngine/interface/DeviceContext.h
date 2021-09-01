@@ -386,6 +386,9 @@ struct DrawIndirectAttribs
     ///     Uint32 FirstInstanceLocation;
     IBuffer*   pAttribsBuffer       DEFAULT_VALUE(nullptr);
 
+    /// Offset from the beginning of the buffer to the location of draw command attributes.
+    Uint64 DrawArgsOffset           DEFAULT_INITIALIZER(0);
+
     /// Additional flags, see Diligent::DRAW_FLAGS.
     DRAW_FLAGS Flags                DEFAULT_INITIALIZER(DRAW_FLAG_NONE);
 
@@ -393,9 +396,6 @@ struct DrawIndirectAttribs
     /// defines the maximum number of commands that will be executed.
     /// Must be less than DrawCommandProperties::MaxDrawIndirectCount.
     Uint32 DrawCount                DEFAULT_INITIALIZER(1);
-
-    /// Offset from the beginning of the buffer to the location of draw command attributes.
-    Uint32 DrawArgsOffset           DEFAULT_INITIALIZER(0);
 
     /// When DrawCount > 1, the byte stride between successive sets of draw parameters.
     /// Must be a multiple of 4 and greater than or equal to 16 bytes.
@@ -410,7 +410,7 @@ struct DrawIndirectAttribs
 
     /// When pCounterBuffer is not null, an offset from the beginning of the buffer to the
     /// location of the command counter.
-    Uint32 CounterOffset            DEFAULT_INITIALIZER(0);
+    Uint64 CounterOffset            DEFAULT_INITIALIZER(0);
 
     /// When counter buffer is not null, state transition mode for the count buffer.
     RESOURCE_STATE_TRANSITION_MODE  CounterBufferStateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
@@ -424,16 +424,16 @@ struct DrawIndirectAttribs
     explicit constexpr DrawIndirectAttribs(IBuffer*                       _pAttribsBuffer,
                                            DRAW_FLAGS                     _Flags,
                                            Uint32                         _DrawCount                   = DrawIndirectAttribs{}.DrawCount,
-                                           Uint32                         _DrawArgsOffset              = DrawIndirectAttribs{}.DrawArgsOffset,
+                                           Uint64                         _DrawArgsOffset              = DrawIndirectAttribs{}.DrawArgsOffset,
                                            Uint32                         _DrawArgsStride              = DrawIndirectAttribs{}.DrawArgsStride,
                                            RESOURCE_STATE_TRANSITION_MODE _AttribsBufferTransitionMode = DrawIndirectAttribs{}.AttribsBufferStateTransitionMode,
                                            IBuffer*                       _pCounterBuffer              = DrawIndirectAttribs{}.pCounterBuffer,
-                                           Uint32                         _CounterOffset               = DrawIndirectAttribs{}.CounterOffset,
+                                           Uint64                         _CounterOffset               = DrawIndirectAttribs{}.CounterOffset,
                                            RESOURCE_STATE_TRANSITION_MODE _CounterBufferTransitionMode = DrawIndirectAttribs{}.CounterBufferStateTransitionMode) noexcept :
         pAttribsBuffer                  {_pAttribsBuffer             },
+        DrawArgsOffset                  {_DrawArgsOffset             },
         Flags                           {_Flags                      },
         DrawCount                       {_DrawCount                  },
-        DrawArgsOffset                  {_DrawArgsOffset             },
         DrawArgsStride                  {_DrawArgsStride             },
         AttribsBufferStateTransitionMode{_AttribsBufferTransitionMode},
         pCounterBuffer                  {_pCounterBuffer             },
@@ -464,6 +464,9 @@ struct DrawIndexedIndirectAttribs
     ///     Uint32 FirstInstanceLocation
     IBuffer*  pAttribsBuffer        DEFAULT_INITIALIZER(nullptr);
 
+    /// Offset from the beginning of the buffer to the location of the draw command attributes.
+    Uint64 DrawArgsOffset           DEFAULT_INITIALIZER(0);
+
     /// Additional flags, see Diligent::DRAW_FLAGS.
     DRAW_FLAGS Flags                DEFAULT_INITIALIZER(DRAW_FLAG_NONE);
 
@@ -471,9 +474,6 @@ struct DrawIndexedIndirectAttribs
     /// defines the maximum number of commands that will be executed.
     /// Must be less than DrawCommandProperties::MaxDrawIndirectCount.
     Uint32 DrawCount                DEFAULT_INITIALIZER(1);
-
-    /// Offset from the beginning of the buffer to the location of the draw command attributes.
-    Uint32 DrawArgsOffset           DEFAULT_INITIALIZER(0);
 
     /// When DrawCount > 1, the byte stride between successive sets of draw parameters.
     /// Must be a multiple of 4 and greater than or equal to 20 bytes.
@@ -488,7 +488,7 @@ struct DrawIndexedIndirectAttribs
 
     /// When pCounterBuffer is not null, offset from the beginning of the counter buffer to the
     /// location of the command counter.
-    Uint32 CounterOffset            DEFAULT_INITIALIZER(0);
+    Uint64 CounterOffset            DEFAULT_INITIALIZER(0);
 
     /// When counter buffer is not null, state transition mode for the count buffer.
     RESOURCE_STATE_TRANSITION_MODE CounterBufferStateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
@@ -503,17 +503,17 @@ struct DrawIndexedIndirectAttribs
                                          IBuffer*                       _pAttribsBuffer,
                                          DRAW_FLAGS                     _Flags,
                                          Uint32                         _DrawCount                   = DrawIndexedIndirectAttribs{}.DrawCount,
-                                         Uint32                         _DrawArgsOffset              = DrawIndexedIndirectAttribs{}.DrawArgsOffset,
+                                         Uint64                         _DrawArgsOffset              = DrawIndexedIndirectAttribs{}.DrawArgsOffset,
                                          Uint32                         _DrawArgsStride              = DrawIndexedIndirectAttribs{}.DrawArgsStride,
                                          RESOURCE_STATE_TRANSITION_MODE _AttribsBufferTransitionMode = DrawIndexedIndirectAttribs{}.AttribsBufferStateTransitionMode,
                                          IBuffer*                       _pCounterBuffer              = DrawIndexedIndirectAttribs{}.pCounterBuffer,
-                                         Uint32                         _CounterOffset               = DrawIndexedIndirectAttribs{}.CounterOffset,
+                                         Uint64                         _CounterOffset               = DrawIndexedIndirectAttribs{}.CounterOffset,
                                          RESOURCE_STATE_TRANSITION_MODE _CounterBufferTransitionMode = DrawIndexedIndirectAttribs{}.CounterBufferStateTransitionMode) noexcept :
         IndexType                       {_IndexType                  },
         pAttribsBuffer                  {_pAttribsBuffer             },
+        DrawArgsOffset                  {_DrawArgsOffset             },
         Flags                           {_Flags                      },
         DrawCount                       {_DrawCount                  },
-        DrawArgsOffset                  {_DrawArgsOffset             },
         DrawArgsStride                  {_DrawArgsStride             },
         AttribsBufferStateTransitionMode{_AttribsBufferTransitionMode},
         pCounterBuffer                  {_pCounterBuffer             },
@@ -568,6 +568,9 @@ struct DrawMeshIndirectAttribs
     /// Size of the buffer must be sizeof(Uint32[3]) * Attribs.MaxDrawCommands.
     IBuffer*   pAttribsBuffer   DEFAULT_INITIALIZER(nullptr);
 
+    /// Offset from the beginning of the attribs buffer to the location of the draw command attributes.
+    Uint64 DrawArgsOffset       DEFAULT_INITIALIZER(0);
+
     /// Additional flags, see Diligent::DRAW_FLAGS.
     DRAW_FLAGS Flags            DEFAULT_INITIALIZER(DRAW_FLAG_NONE);
 
@@ -575,9 +578,6 @@ struct DrawMeshIndirectAttribs
     /// When pCounterBuffer is not null, the maximum number of commands
     /// that will be read from the count buffer.
     Uint32 CommandCount         DEFAULT_INITIALIZER(1);
-
-    /// Offset from the beginning of the attribs buffer to the location of the draw command attributes.
-    Uint32 DrawArgsOffset       DEFAULT_INITIALIZER(0);
 
     /// State transition mode for indirect draw arguments buffer.
     RESOURCE_STATE_TRANSITION_MODE AttribsBufferStateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
@@ -587,7 +587,7 @@ struct DrawMeshIndirectAttribs
     IBuffer* pCounterBuffer DEFAULT_INITIALIZER(nullptr);
 
     /// When pCounterBuffer is not null, an offset from the beginning of the buffer to the location of the command counter.
-    Uint32 CounterOffset    DEFAULT_INITIALIZER(0);
+    Uint64 CounterOffset    DEFAULT_INITIALIZER(0);
 
     /// When pCounterBuffer is not null, state transition mode for the count buffer.
     RESOURCE_STATE_TRANSITION_MODE CounterBufferStateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
@@ -600,15 +600,15 @@ struct DrawMeshIndirectAttribs
     constexpr DrawMeshIndirectAttribs(IBuffer*                       _pAttribsBuffer,
                                       DRAW_FLAGS                     _Flags,
                                       Uint32                         _CommandCount,
-                                      Uint32                         _DrawArgsOffset                   = DrawMeshIndirectAttribs{}.DrawArgsOffset,
+                                      Uint64                         _DrawArgsOffset                   = DrawMeshIndirectAttribs{}.DrawArgsOffset,
                                       RESOURCE_STATE_TRANSITION_MODE _AttribsBufferStateTransitionMode = DrawMeshIndirectAttribs{}.AttribsBufferStateTransitionMode,
                                       IBuffer*                       _pCounterBuffer                   = DrawMeshIndirectAttribs{}.pCounterBuffer,
-                                      Uint32                         _CounterOffset                    = DrawMeshIndirectAttribs{}.CounterOffset,
+                                      Uint64                         _CounterOffset                    = DrawMeshIndirectAttribs{}.CounterOffset,
                                       RESOURCE_STATE_TRANSITION_MODE _CounterBufferStateTransitionMode = DrawMeshIndirectAttribs{}.CounterBufferStateTransitionMode) noexcept :
         pAttribsBuffer                  {_pAttribsBuffer                  },
+        DrawArgsOffset                  {_DrawArgsOffset                  },
         Flags                           {_Flags                           },
         CommandCount                    {_CommandCount                    },
-        DrawArgsOffset                  {_DrawArgsOffset                  },
         AttribsBufferStateTransitionMode{_AttribsBufferStateTransitionMode},
         pCounterBuffer                  {_pCounterBuffer                  },
         CounterOffset                   {_CounterOffset                   },
@@ -695,7 +695,7 @@ struct DispatchComputeIndirectAttribs
     RESOURCE_STATE_TRANSITION_MODE AttribsBufferStateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
 
     /// The offset from the beginning of the buffer to the dispatch command arguments.
-    Uint32  DispatchArgsByteOffset    DEFAULT_INITIALIZER(0);
+    Uint64  DispatchArgsByteOffset    DEFAULT_INITIALIZER(0);
 
 
     /// Compute group X size. This member is only used
@@ -717,7 +717,7 @@ struct DispatchComputeIndirectAttribs
     /// Initializes the structure with user-specified values.
     constexpr DispatchComputeIndirectAttribs(IBuffer*                       _pAttribsBuffer,
                                              RESOURCE_STATE_TRANSITION_MODE _StateTransitionMode,
-                                             Uint32                         _Offset              = 0) :
+                                             Uint64                         _Offset              = 0) :
         pAttribsBuffer                  {_pAttribsBuffer     },
         AttribsBufferStateTransitionMode{_StateTransitionMode},
         DispatchArgsByteOffset          {_Offset             }
@@ -1101,7 +1101,7 @@ struct BLASBuildTriangleData
     /// D3D12 and Vulkan: offset must be a multiple of the VertexValueType size.
     /// Metal:            stride must be aligned by RayTracingProperties::VertexBufferAlignmnent
     ///                   and must be a multiple of the VertexStride.
-    Uint32      VertexOffset          DEFAULT_INITIALIZER(0);
+    Uint64      VertexOffset          DEFAULT_INITIALIZER(0);
 
     /// Stride, in bytes, between vertices.
     /// D3D12 and Vulkan: stride must be a multiple of the VertexValueType size.
@@ -1132,7 +1132,7 @@ struct BLASBuildTriangleData
     /// Data offset in bytes in pIndexBuffer.
     /// Offset must be aligned by RayTracingProperties::IndexBufferAlignment
     /// and must be a multiple of the IndexType size.
-    Uint32      IndexOffset           DEFAULT_INITIALIZER(0);
+    Uint64      IndexOffset           DEFAULT_INITIALIZER(0);
 
     /// The type of triangle indices, see Diligent::VALUE_TYPE.
     /// This is an optional value. Must be undefined or same as in BLASTriangleDesc.
@@ -1145,7 +1145,7 @@ struct BLASBuildTriangleData
 
     /// Data offset in bytes in pTransformBuffer.
     /// Offset must be aligned by RayTracingProperties::TransformBufferAlignment.
-    Uint32      TransformBufferOffset DEFAULT_INITIALIZER(0);
+    Uint64      TransformBufferOffset DEFAULT_INITIALIZER(0);
 
     /// Geometry flags, se Diligent::RAYTRACING_GEOMETRY_FLAGS.
     RAYTRACING_GEOMETRY_FLAGS Flags DEFAULT_INITIALIZER(RAYTRACING_GEOMETRY_FLAG_NONE);
@@ -1170,7 +1170,7 @@ struct BLASBuildBoundingBoxData
     /// D3D12 and Vulkan: offset must be aligned by RayTracingProperties::BoxBufferAlignment.
     /// Metal:            offset must be aligned by RayTracingProperties::BoxBufferAlignment
     ///                   and must be a multiple of the BoxStride.
-    Uint32      BoxOffset    DEFAULT_INITIALIZER(0);
+    Uint64      BoxOffset    DEFAULT_INITIALIZER(0);
 
     /// Stride in bytes between each AABB.
     /// Stride must be aligned by RayTracingProperties::BoxBufferAlignment.
@@ -1230,7 +1230,7 @@ struct BuildBLASAttribs
 
     /// Offset from the beginning of the buffer.
     /// Offset must be aligned by RayTracingProperties::ScratchBufferAlignment.
-    Uint32                          ScratchBufferOffset         DEFAULT_INITIALIZER(0);
+    Uint64                          ScratchBufferOffset         DEFAULT_INITIALIZER(0);
 
     /// Scratch buffer state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
     RESOURCE_STATE_TRANSITION_MODE  ScratchBufferTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
@@ -1375,7 +1375,7 @@ struct BuildTLASAttribs
 
     /// Offset from the beginning of the buffer to the location of instance data.
     /// Offset must be aligned by RayTracingProperties::InstanceBufferAlignment.
-    Uint32                          InstanceBufferOffset          DEFAULT_INITIALIZER(0);
+    Uint64                          InstanceBufferOffset          DEFAULT_INITIALIZER(0);
 
     /// Instance buffer state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
     RESOURCE_STATE_TRANSITION_MODE  InstanceBufferTransitionMode  DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
@@ -1405,7 +1405,7 @@ struct BuildTLASAttribs
 
     /// Offset from the beginning of the buffer.
     /// Offset must be aligned by RayTracingProperties::ScratchBufferAlignment.
-    Uint32                          ScratchBufferOffset           DEFAULT_INITIALIZER(0);
+    Uint64                          ScratchBufferOffset           DEFAULT_INITIALIZER(0);
 
     /// Scratch buffer state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
     RESOURCE_STATE_TRANSITION_MODE  ScratchBufferTransitionMode   DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
@@ -1510,10 +1510,11 @@ struct WriteBLASCompactedSizeAttribs
     IBottomLevelAS*                pBLAS                DEFAULT_INITIALIZER(nullptr);
 
     /// The destination buffer into which a 64-bit value representing the acceleration structure compacted size will be written to.
+    /// \remarks  Metal backend writes a 32-bit value.
     IBuffer*                       pDestBuffer          DEFAULT_INITIALIZER(nullptr);
 
     /// Offset from the beginning of the buffer to the location of the AS compacted size.
-    Uint32                         DestBufferOffset     DEFAULT_INITIALIZER(0);
+    Uint64                         DestBufferOffset     DEFAULT_INITIALIZER(0);
 
     /// Bottom-level AS state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
     RESOURCE_STATE_TRANSITION_MODE BLASTransitionMode   DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
@@ -1526,7 +1527,7 @@ struct WriteBLASCompactedSizeAttribs
 
     constexpr WriteBLASCompactedSizeAttribs(IBottomLevelAS*                _pBLAS,
                                             IBuffer*                       _pDestBuffer,
-                                            Uint32                         _DestBufferOffset     = WriteBLASCompactedSizeAttribs{}.DestBufferOffset,
+                                            Uint64                         _DestBufferOffset     = WriteBLASCompactedSizeAttribs{}.DestBufferOffset,
                                             RESOURCE_STATE_TRANSITION_MODE _BLASTransitionMode   = WriteBLASCompactedSizeAttribs{}.BLASTransitionMode,
                                             RESOURCE_STATE_TRANSITION_MODE _BufferTransitionMode = WriteBLASCompactedSizeAttribs{}.BufferTransitionMode) noexcept :
         pBLAS               {_pBLAS               },
@@ -1547,10 +1548,11 @@ struct WriteTLASCompactedSizeAttribs
     ITopLevelAS*                   pTLAS                DEFAULT_INITIALIZER(nullptr);
 
     /// The destination buffer into which a 64-bit value representing the acceleration structure compacted size will be written to.
+    /// \remarks  Metal backend writes a 32-bit value.
     IBuffer*                       pDestBuffer          DEFAULT_INITIALIZER(nullptr);
 
     /// Offset from the beginning of the buffer to the location of the AS compacted size.
-    Uint32                         DestBufferOffset     DEFAULT_INITIALIZER(0);
+    Uint64                         DestBufferOffset     DEFAULT_INITIALIZER(0);
 
     /// Top-level AS state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
     RESOURCE_STATE_TRANSITION_MODE TLASTransitionMode   DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
@@ -1563,7 +1565,7 @@ struct WriteTLASCompactedSizeAttribs
 
     constexpr WriteTLASCompactedSizeAttribs(ITopLevelAS*                   _pTLAS,
                                             IBuffer*                       _pDestBuffer,
-                                            Uint32                         _DestBufferOffset     = WriteTLASCompactedSizeAttribs{}.DestBufferOffset,
+                                            Uint64                         _DestBufferOffset     = WriteTLASCompactedSizeAttribs{}.DestBufferOffset,
                                             RESOURCE_STATE_TRANSITION_MODE _TLASTransitionMode   = WriteTLASCompactedSizeAttribs{}.TLASTransitionMode,
                                             RESOURCE_STATE_TRANSITION_MODE _BufferTransitionMode = WriteTLASCompactedSizeAttribs{}.BufferTransitionMode) noexcept :
         pTLAS               {_pTLAS               },
@@ -1625,7 +1627,7 @@ struct TraceRaysIndirectAttribs
     RESOURCE_STATE_TRANSITION_MODE AttribsBufferStateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
 
     /// The offset from the beginning of the buffer to the trace rays command arguments.
-    Uint32  ArgsByteOffset  DEFAULT_INITIALIZER(0);
+    Uint64  ArgsByteOffset  DEFAULT_INITIALIZER(0);
 
 #if DILIGENT_CPP_INTERFACE
     constexpr TraceRaysIndirectAttribs() noexcept {}
@@ -1634,7 +1636,7 @@ struct TraceRaysIndirectAttribs
         const IShaderBindingTable*     _pSBT,
         IBuffer*                       _pAttribsBuffer,
         RESOURCE_STATE_TRANSITION_MODE _TransitionMode = TraceRaysIndirectAttribs{}.AttribsBufferStateTransitionMode,
-        Uint32                         _ArgsByteOffset = TraceRaysIndirectAttribs{}.ArgsByteOffset) noexcept :
+        Uint64                         _ArgsByteOffset = TraceRaysIndirectAttribs{}.ArgsByteOffset) noexcept :
         pSBT                            {_pSBT},
         pAttribsBuffer                  {_pAttribsBuffer},
         AttribsBufferStateTransitionMode{_TransitionMode},
@@ -1652,7 +1654,7 @@ struct UpdateIndirectRTBufferAttribs
     IBuffer* pAttribsBuffer DEFAULT_INITIALIZER(nullptr);
 
     /// Offset in bytes from the beginning of the buffer where SBT data will be recorded.
-    Uint32 AttribsBufferOffset DEFAULT_INITIALIZER(0);
+    Uint64 AttribsBufferOffset DEFAULT_INITIALIZER(0);
 
     /// State transition mode of the attribs buffer (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
     RESOURCE_STATE_TRANSITION_MODE TransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
@@ -1662,7 +1664,7 @@ struct UpdateIndirectRTBufferAttribs
 
     explicit constexpr UpdateIndirectRTBufferAttribs(
         IBuffer*                       _pAttribsBuffer,
-        Uint32                         _AttribsBufferOffset = UpdateIndirectRTBufferAttribs{}.AttribsBufferOffset,
+        Uint64                         _AttribsBufferOffset = UpdateIndirectRTBufferAttribs{}.AttribsBufferOffset,
         RESOURCE_STATE_TRANSITION_MODE _TransitionMode      = UpdateIndirectRTBufferAttribs{}.TransitionMode) noexcept :
         pAttribsBuffer     {_pAttribsBuffer     },
         AttribsBufferOffset{_AttribsBufferOffset},
@@ -1972,7 +1974,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
                                           Uint32                         StartSlot,
                                           Uint32                         NumBuffersSet,
                                           IBuffer**                      ppBuffers,
-                                          const Uint32*                  pOffsets,
+                                          const Uint64*                  pOffsets,
                                           RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
                                           SET_VERTEX_BUFFERS_FLAGS       Flags) PURE;
 
@@ -2009,7 +2011,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// \remarks Supported contexts: graphics.
     VIRTUAL void METHOD(SetIndexBuffer)(THIS_
                                         IBuffer*                       pIndexBuffer,
-                                        Uint32                         ByteOffset,
+                                        Uint64                         ByteOffset,
                                         RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) PURE;
 
 
@@ -2526,8 +2528,8 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// \remarks Supported contexts: graphics, compute, transfer.
     VIRTUAL void METHOD(UpdateBuffer)(THIS_
                                       IBuffer*                       pBuffer,
-                                      Uint32                         Offset,
-                                      Uint32                         Size,
+                                      Uint64                         Offset,
+                                      Uint64                         Size,
                                       const void*                    pData,
                                       RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) PURE;
 
@@ -2546,11 +2548,11 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// \remarks Supported contexts: graphics, compute, transfer.
     VIRTUAL void METHOD(CopyBuffer)(THIS_
                                     IBuffer*                       pSrcBuffer,
-                                    Uint32                         SrcOffset,
+                                    Uint64                         SrcOffset,
                                     RESOURCE_STATE_TRANSITION_MODE SrcBufferTransitionMode,
                                     IBuffer*                       pDstBuffer,
-                                    Uint32                         DstOffset,
-                                    Uint32                         Size,
+                                    Uint64                         DstOffset,
+                                    Uint64                         Size,
                                     RESOURCE_STATE_TRANSITION_MODE DstBufferTransitionMode) PURE;
 
 

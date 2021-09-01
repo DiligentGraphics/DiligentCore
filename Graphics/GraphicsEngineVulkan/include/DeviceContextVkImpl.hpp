@@ -102,7 +102,7 @@ public:
     virtual void DILIGENT_CALL_TYPE SetVertexBuffers(Uint32                         StartSlot,
                                                      Uint32                         NumBuffersSet,
                                                      IBuffer**                      ppBuffers,
-                                                     const Uint32*                  pOffsets,
+                                                     const Uint64*                  pOffsets,
                                                      RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
                                                      SET_VERTEX_BUFFERS_FLAGS       Flags) override final;
 
@@ -111,7 +111,7 @@ public:
 
     /// Implementation of IDeviceContext::SetIndexBuffer() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE SetIndexBuffer(IBuffer*                       pIndexBuffer,
-                                                   Uint32                         ByteOffset,
+                                                   Uint64                         ByteOffset,
                                                    RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) override final;
 
     /// Implementation of IDeviceContext::SetViewports() in Vulkan backend.
@@ -175,18 +175,18 @@ public:
 
     /// Implementation of IDeviceContext::UpdateBuffer() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE UpdateBuffer(IBuffer*                       pBuffer,
-                                                 Uint32                         Offset,
-                                                 Uint32                         Size,
+                                                 Uint64                         Offset,
+                                                 Uint64                         Size,
                                                  const void*                    pData,
                                                  RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) override final;
 
     /// Implementation of IDeviceContext::CopyBuffer() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE CopyBuffer(IBuffer*                       pSrcBuffer,
-                                               Uint32                         SrcOffset,
+                                               Uint64                         SrcOffset,
                                                RESOURCE_STATE_TRANSITION_MODE SrcBufferTransitionMode,
                                                IBuffer*                       pDstBuffer,
-                                               Uint32                         DstOffset,
-                                               Uint32                         Size,
+                                               Uint64                         DstOffset,
+                                               Uint64                         Size,
                                                RESOURCE_STATE_TRANSITION_MODE DstBufferTransitionMode) override final;
 
     /// Implementation of IDeviceContext::MapBuffer() in Vulkan backend.
@@ -365,8 +365,8 @@ public:
                            const VkImageCopy&             CopyRegion);
 
     void UpdateTextureRegion(const void*                    pSrcData,
-                             Uint32                         SrcStride,
-                             Uint32                         SrcDepthStride,
+                             Uint64                         SrcStride,
+                             Uint64                         SrcDepthStride,
                              TextureVkImpl&                 TextureVk,
                              Uint32                         MipLevel,
                              Uint32                         Slice,
@@ -399,7 +399,7 @@ public:
         return m_DynamicDescrSetAllocator.Allocate(SetLayout, DebugName);
     }
 
-    VulkanDynamicAllocation AllocateDynamicSpace(Uint32 SizeInBytes, Uint32 Alignment);
+    VulkanDynamicAllocation AllocateDynamicSpace(Uint64 SizeInBytes, Uint32 Alignment);
 
     virtual void ResetRenderTargets() override final;
 

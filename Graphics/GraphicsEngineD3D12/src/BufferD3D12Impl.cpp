@@ -194,7 +194,7 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
             hr = UploadBuffer->Map(0, nullptr, &DestAddress);
             if (FAILED(hr))
                 LOG_ERROR_AND_THROW("Failed to map uload buffer");
-            memcpy(DestAddress, pBuffData->pData, pBuffData->DataSize);
+            memcpy(DestAddress, pBuffData->pData, static_cast<size_t>(pBuffData->DataSize));
             UploadBuffer->Unmap(0, nullptr);
 
             auto InitContext = pRenderDeviceD3D12->AllocateCommandContext(CmdQueueInd);
@@ -382,8 +382,8 @@ void BufferD3D12Impl::CreateSRV(struct BufferViewDesc& SRVDesc, D3D12_CPU_DESCRI
 }
 
 void BufferD3D12Impl::CreateCBV(D3D12_CPU_DESCRIPTOR_HANDLE CBVDescriptor,
-                                Uint32                      Offset,
-                                Uint32                      Size) const
+                                Uint64                      Offset,
+                                Uint64                      Size) const
 {
     VERIFY((Offset % D3D12_TEXTURE_DATA_PITCH_ALIGNMENT) == 0, "Offset (", Offset, ") must be ", D3D12_TEXTURE_DATA_PITCH_ALIGNMENT, "-aligned");
     VERIFY(Offset + Size <= m_Desc.uiSizeInBytes, "Range is out of bounds");
@@ -392,7 +392,7 @@ void BufferD3D12Impl::CreateCBV(D3D12_CPU_DESCRIPTOR_HANDLE CBVDescriptor,
 
     D3D12_CONSTANT_BUFFER_VIEW_DESC D3D12_CBVDesc;
     D3D12_CBVDesc.BufferLocation = m_pd3d12Resource->GetGPUVirtualAddress() + Offset;
-    D3D12_CBVDesc.SizeInBytes    = AlignUp(Size, Uint32{D3D12_TEXTURE_DATA_PITCH_ALIGNMENT});
+    D3D12_CBVDesc.SizeInBytes    = static_cast<UINT>(AlignUp(Size, Uint32{D3D12_TEXTURE_DATA_PITCH_ALIGNMENT}));
 
     auto* pd3d12Device = GetDevice()->GetD3D12Device();
     pd3d12Device->CreateConstantBufferView(&D3D12_CBVDesc, CBVDescriptor);

@@ -75,9 +75,14 @@ BufferD3D11Impl::BufferD3D11Impl(IReferenceCounters*        pRefCounters,
         m_Desc.uiSizeInBytes = AlignUp(m_Desc.uiSizeInBytes, Alignment);
     }
 
+    if (m_Desc.uiSizeInBytes > UINT32_MAX)
+    {
+        LOG_ERROR_AND_THROW("Buffer size (", m_Desc.uiSizeInBytes, ") must not be greater than UINT32_MAX in Direct3D11");
+    }
+
     D3D11_BUFFER_DESC D3D11BuffDesc{};
     D3D11BuffDesc.BindFlags = BindFlagsToD3D11BindFlags(m_Desc.BindFlags);
-    D3D11BuffDesc.ByteWidth = m_Desc.uiSizeInBytes;
+    D3D11BuffDesc.ByteWidth = static_cast<UINT>(m_Desc.uiSizeInBytes);
     D3D11BuffDesc.MiscFlags = 0;
     if (m_Desc.BindFlags & BIND_INDIRECT_DRAW_ARGS)
     {
@@ -113,7 +118,7 @@ BufferD3D11Impl::BufferD3D11Impl(IReferenceCounters*        pRefCounters,
 
     D3D11_SUBRESOURCE_DATA InitData;
     InitData.pSysMem          = pBuffData ? pBuffData->pData : nullptr;
-    InitData.SysMemPitch      = pBuffData ? pBuffData->DataSize : 0;
+    InitData.SysMemPitch      = static_cast<UINT>(pBuffData ? pBuffData->DataSize : 0);
     InitData.SysMemSlicePitch = 0;
 
     auto* pDeviceD3D11 = pRenderDeviceD3D11->GetD3D11Device();

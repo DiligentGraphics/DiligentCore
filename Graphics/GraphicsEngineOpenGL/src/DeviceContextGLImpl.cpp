@@ -207,7 +207,7 @@ void DeviceContextGLImpl::SetBlendFactors(const float* pBlendFactors)
 void DeviceContextGLImpl::SetVertexBuffers(Uint32                         StartSlot,
                                            Uint32                         NumBuffersSet,
                                            IBuffer**                      ppBuffers,
-                                           const Uint32*                  pOffsets,
+                                           const Uint64*                  pOffsets,
                                            RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
                                            SET_VERTEX_BUFFERS_FLAGS       Flags)
 {
@@ -226,7 +226,7 @@ void DeviceContextGLImpl::InvalidateState()
     m_IsDefaultFBOBound = false;
 }
 
-void DeviceContextGLImpl::SetIndexBuffer(IBuffer* pIndexBuffer, Uint32 ByteOffset, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
+void DeviceContextGLImpl::SetIndexBuffer(IBuffer* pIndexBuffer, Uint64 ByteOffset, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
     TDeviceContextBase::SetIndexBuffer(pIndexBuffer, ByteOffset, StateTransitionMode);
     m_ContextState.InvalidateVAO();
@@ -781,7 +781,7 @@ void DeviceContextGLImpl::PrepareForIndexedDraw(VALUE_TYPE IndexType, Uint32 Fir
     VERIFY(GLIndexType == GL_UNSIGNED_BYTE || GLIndexType == GL_UNSIGNED_SHORT || GLIndexType == GL_UNSIGNED_INT,
            "Unsupported index type");
     VERIFY(m_pIndexBuffer, "Index Buffer is not bound to the pipeline");
-    FirstIndexByteOffset = static_cast<Uint32>(GetValueSize(IndexType)) * FirstIndexLocation + m_IndexDataStartOffset;
+    FirstIndexByteOffset = static_cast<Uint32>(GetValueSize(IndexType) * FirstIndexLocation + m_IndexDataStartOffset);
 }
 
 void DeviceContextGLImpl::PostDraw()
@@ -1132,7 +1132,7 @@ void DeviceContextGLImpl::DispatchComputeIndirect(const DispatchComputeIndirectA
     m_ContextState.BindBuffer(GL_DISPATCH_INDIRECT_BUFFER, pBufferGL->m_GlBuffer, ResetVAO);
     DEV_CHECK_GL_ERROR("Failed to bind a buffer for dispatch indirect command");
 
-    glDispatchComputeIndirect(Attribs.DispatchArgsByteOffset);
+    glDispatchComputeIndirect(static_cast<GLintptr>(Attribs.DispatchArgsByteOffset));
     DEV_CHECK_GL_ERROR("glDispatchComputeIndirect() failed");
 
     m_ContextState.BindBuffer(GL_DISPATCH_INDIRECT_BUFFER, GLObjectWrappers::GLBufferObj::Null(), ResetVAO);
@@ -1397,8 +1397,8 @@ bool DeviceContextGLImpl::UpdateCurrentGLContext()
 }
 
 void DeviceContextGLImpl::UpdateBuffer(IBuffer*                       pBuffer,
-                                       Uint32                         Offset,
-                                       Uint32                         Size,
+                                       Uint64                         Offset,
+                                       Uint64                         Size,
                                        const void*                    pData,
                                        RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
@@ -1409,11 +1409,11 @@ void DeviceContextGLImpl::UpdateBuffer(IBuffer*                       pBuffer,
 }
 
 void DeviceContextGLImpl::CopyBuffer(IBuffer*                       pSrcBuffer,
-                                     Uint32                         SrcOffset,
+                                     Uint64                         SrcOffset,
                                      RESOURCE_STATE_TRANSITION_MODE SrcBufferTransitionMode,
                                      IBuffer*                       pDstBuffer,
-                                     Uint32                         DstOffset,
-                                     Uint32                         Size,
+                                     Uint64                         DstOffset,
+                                     Uint64                         Size,
                                      RESOURCE_STATE_TRANSITION_MODE DstBufferTransitionMode)
 {
     TDeviceContextBase::CopyBuffer(pSrcBuffer, SrcOffset, SrcBufferTransitionMode, pDstBuffer, DstOffset, Size, DstBufferTransitionMode);

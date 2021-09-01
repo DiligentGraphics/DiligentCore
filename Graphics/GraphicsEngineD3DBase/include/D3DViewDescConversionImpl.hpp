@@ -300,8 +300,8 @@ void BufferViewDesc_to_D3D_SRV_DESC(const BufferDesc& BuffDesc, const BufferView
     {
         DEV_CHECK_ERR((SRVDesc.ByteOffset % ElementByteStride) == 0, "Byte offset (", SRVDesc.ByteOffset, ") is not multiple of element byte stride (", ElementByteStride, ")");
         DEV_CHECK_ERR((SRVDesc.ByteWidth % ElementByteStride) == 0, "Byte width (", SRVDesc.ByteWidth, ")is not multiple of element byte stride (", ElementByteStride, ")");
-        d3dSRVDesc.Buffer.FirstElement = SRVDesc.ByteOffset / ElementByteStride;
-        d3dSRVDesc.Buffer.NumElements  = SRVDesc.ByteWidth / ElementByteStride;
+        d3dSRVDesc.Buffer.FirstElement = static_cast<UINT>(SRVDesc.ByteOffset / ElementByteStride);
+        d3dSRVDesc.Buffer.NumElements  = static_cast<UINT>(SRVDesc.ByteWidth / ElementByteStride);
     }
     d3dSRVDesc.ViewDimension = D3D_SRV_DIMENSION_BUFFER;
 }
@@ -326,8 +326,8 @@ void BufferViewDesc_to_D3D_UAV_DESC(const BufferDesc& BuffDesc, const BufferView
     {
         DEV_CHECK_ERR((UAVDesc.ByteOffset % ElementByteStride) == 0, "Byte offset (", UAVDesc.ByteOffset, ") is not multiple of element byte stride (", ElementByteStride, ")");
         DEV_CHECK_ERR((UAVDesc.ByteWidth % ElementByteStride) == 0, "Byte width (", UAVDesc.ByteWidth, ")is not multiple of element byte stride (", ElementByteStride, ")");
-        d3dUAVDesc.Buffer.FirstElement = UAVDesc.ByteOffset / ElementByteStride;
-        d3dUAVDesc.Buffer.NumElements  = UAVDesc.ByteWidth / ElementByteStride;
+        d3dUAVDesc.Buffer.FirstElement = static_cast<UINT>(UAVDesc.ByteOffset / ElementByteStride);
+        d3dUAVDesc.Buffer.NumElements  = static_cast<UINT>(UAVDesc.ByteWidth / ElementByteStride);
     }
 
     if (BuffDesc.Mode == BUFFER_MODE_RAW && UAVDesc.Format.ValueType == VT_UNDEFINED)

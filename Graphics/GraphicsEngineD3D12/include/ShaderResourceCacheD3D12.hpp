@@ -166,8 +166,8 @@ public:
         Resource(SHADER_RESOURCE_TYPE           _Type,
                  D3D12_CPU_DESCRIPTOR_HANDLE    _CPUDescriptorHandle,
                  RefCntAutoPtr<IDeviceObject>&& _pObject,
-                 Uint32                         _BufferBaseOffset = 0,
-                 Uint32                         _BufferRangeSize  = 0) :
+                 Uint64                         _BufferBaseOffset = 0,
+                 Uint64                         _BufferRangeSize  = 0) :
             // clang-format off
             Type{_Type},
             CPUDescriptorHandle{_CPUDescriptorHandle},
@@ -188,15 +188,15 @@ public:
 
         SHADER_RESOURCE_TYPE Type = SHADER_RESOURCE_TYPE_UNKNOWN;
 
-        Uint32 BufferDynamicOffset = 0;
+        Uint64 BufferDynamicOffset = 0;
 
         // CPU descriptor handle of a cached resource in CPU-only descriptor heap.
         // This handle may be null for CBVs that address the buffer range.
         D3D12_CPU_DESCRIPTOR_HANDLE  CPUDescriptorHandle = {};
         RefCntAutoPtr<IDeviceObject> pObject;
 
-        Uint32 BufferBaseOffset = 0;
-        Uint32 BufferRangeSize  = 0;
+        Uint64 BufferBaseOffset = 0;
+        Uint64 BufferRangeSize  = 0;
 
         bool IsNull() const { return pObject == nullptr; }
 

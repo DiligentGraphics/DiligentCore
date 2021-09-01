@@ -74,7 +74,7 @@ DILIGENT_TYPED_ENUM(BUFFER_MODE, Uint8)
 struct BufferDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
     /// Size of the buffer, in bytes. For a uniform buffer, this must be multiple of 16.
-    Uint32 uiSizeInBytes            DEFAULT_INITIALIZER(0);
+    Uint64 uiSizeInBytes            DEFAULT_INITIALIZER(0);
 
     /// Buffer bind flags, see Diligent::BIND_FLAGS for details
 
@@ -122,7 +122,7 @@ struct BufferDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     constexpr BufferDesc() noexcept {}
 
     constexpr BufferDesc(const Char*      _Name,
-                         Uint32           _uiSizeInBytes,
+                         Uint64           _uiSizeInBytes,
                          BIND_FLAGS       _BindFlags,
                          USAGE            _Usage                = BufferDesc{}.Usage,
                          CPU_ACCESS_FLAGS _CPUAccessFlags       = BufferDesc{}.CPUAccessFlags,
@@ -172,7 +172,7 @@ struct BufferData
     const void* pData DEFAULT_INITIALIZER(nullptr);
 
     /// Data size, in bytes
-    Uint32 DataSize   DEFAULT_INITIALIZER(0);
+    Uint64 DataSize   DEFAULT_INITIALIZER(0);
 
     /// Defines which device context will be used to initialize the buffer.
 
@@ -188,7 +188,7 @@ struct BufferData
     constexpr BufferData() noexcept {}
 
     constexpr BufferData(const void*     _pData,
-                         Uint32          _DataSize,
+                         Uint64          _DataSize,
                          IDeviceContext* _pContext = nullptr) :
         pData   {_pData   },
         DataSize{_DataSize},
@@ -248,7 +248,7 @@ DILIGENT_BEGIN_INTERFACE(IBuffer, IDeviceObject)
     /// \return pointer to ID3D11Resource interface, for D3D11 implementation\n
     ///         pointer to ID3D12Resource interface, for D3D12 implementation\n
     ///         GL buffer handle, for GL implementation
-    VIRTUAL void* METHOD(GetNativeHandle)(THIS) PURE;
+    VIRTUAL Uint64 METHOD(GetNativeHandle)(THIS) PURE;
 
     /// Sets the buffer usage state.
 
@@ -290,8 +290,8 @@ DILIGENT_BEGIN_INTERFACE(IBuffer, IDeviceObject)
     ///         When a mapped buffer is unmapped it is automatically flushed by
     ///         the engine if necessary.
     VIRTUAL void METHOD(FlushMappedRange)(THIS_
-                                          Uint32 StartOffset,
-                                          Uint32 Size) PURE;
+                                          Uint64 StartOffset,
+                                          Uint64 Size) PURE;
 
 
     /// Invalidates the specified range of non-coherent memory modified by the GPU to make
@@ -311,8 +311,8 @@ DILIGENT_BEGIN_INTERFACE(IBuffer, IDeviceObject)
     ///         When a mapped buffer is unmapped it is automatically invalidated by
     ///         the engine if necessary.
     VIRTUAL void METHOD(InvalidateMappedRange)(THIS_
-                                               Uint32 StartOffset,
-                                               Uint32 Size) PURE;
+                                               Uint64 StartOffset,
+                                               Uint64 Size) PURE;
 };
 DILIGENT_END_INTERFACE
 

@@ -763,9 +763,9 @@ TEST_F(DrawCommandTest, Draw)
     };
     // clang-format on
 
-    auto     pVB       = CreateVertexBuffer(Triangles, sizeof(Triangles));
-    IBuffer* pVBs[]    = {pVB};
-    Uint32   Offsets[] = {0};
+    auto         pVB       = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    IBuffer*     pVBs[]    = {pVB};
+    const Uint64 Offsets[] = {0};
     pContext->SetVertexBuffers(0, 1, pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
 
     DrawAttribs drawAttrs{6, DRAW_FLAG_VERIFY_ALL};
@@ -790,9 +790,9 @@ TEST_F(DrawCommandTest, Draw_StartVertex)
     };
     // clang-format on
 
-    auto     pVB       = CreateVertexBuffer(Triangles, sizeof(Triangles));
-    IBuffer* pVBs[]    = {pVB};
-    Uint32   Offsets[] = {0};
+    auto         pVB       = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    IBuffer*     pVBs[]    = {pVB};
+    const Uint64 Offsets[] = {0};
     pContext->SetVertexBuffers(0, 1, pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
 
     DrawAttribs drawAttrs{6, DRAW_FLAG_VERIFY_ALL};
@@ -818,9 +818,9 @@ TEST_F(DrawCommandTest, Draw_VBOffset)
     };
     // clang-format on
 
-    auto     pVB       = CreateVertexBuffer(Triangles, sizeof(Triangles));
-    IBuffer* pVBs[]    = {pVB};
-    Uint32   Offsets[] = {3 * sizeof(Vertex)};
+    auto         pVB       = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    IBuffer*     pVBs[]    = {pVB};
+    const Uint64 Offsets[] = {3 * sizeof(Vertex)};
     pContext->SetVertexBuffers(0, 1, pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
 
     DrawAttribs drawAttrs{6, DRAW_FLAG_VERIFY_ALL};
@@ -846,9 +846,9 @@ TEST_F(DrawCommandTest, Draw_StartVertex_VBOffset)
     };
     // clang-format on
 
-    auto     pVB       = CreateVertexBuffer(Triangles, sizeof(Triangles));
-    IBuffer* pVBs[]    = {pVB};
-    Uint32   Offsets[] = {3 * sizeof(Vertex)};
+    auto         pVB       = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    IBuffer*     pVBs[]    = {pVB};
+    const Uint64 Offsets[] = {3 * sizeof(Vertex)};
     pContext->SetVertexBuffers(0, 1, pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
 
     DrawAttribs drawAttrs{6, DRAW_FLAG_VERIFY_ALL};
@@ -875,9 +875,9 @@ TEST_F(DrawCommandTest, Draw_StartVertex_VBOffset_2xStride)
     };
     // clang-format on
 
-    auto     pVB       = CreateVertexBuffer(Triangles, sizeof(Triangles));
-    IBuffer* pVBs[]    = {pVB};
-    Uint32   Offsets[] = {3 * sizeof(Vertex)};
+    auto         pVB       = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    IBuffer*     pVBs[]    = {pVB};
+    const Uint64 Offsets[] = {3 * sizeof(Vertex)};
     pContext->SetVertexBuffers(0, 1, pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
 
     DrawAttribs drawAttrs{6, DRAW_FLAG_VERIFY_ALL};
@@ -905,14 +905,14 @@ TEST_F(DrawCommandTest, DrawIndexed)
         Vert[0], {}, Vert[1], {}, {}, Vert[2],
         Vert[3], {}, {}, Vert[5], Vert[4]
     };
-    Uint32 Indices[] = {2,4,7, 8,12,11};
+    const Uint32 Indices[] = {2,4,7, 8,12,11};
     // clang-format on
 
     auto pVB = CreateVertexBuffer(Triangles, sizeof(Triangles));
     auto pIB = CreateIndexBuffer(Indices, _countof(Indices));
 
-    IBuffer* pVBs[]    = {pVB};
-    Uint32   Offsets[] = {0};
+    IBuffer*     pVBs[]    = {pVB};
+    const Uint64 Offsets[] = {0};
     pContext->SetVertexBuffers(0, 1, pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
     pContext->SetIndexBuffer(pIB, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
@@ -936,14 +936,14 @@ TEST_F(DrawCommandTest, DrawIndexed_IBOffset)
         Vert[0], {}, Vert[1], {}, {}, Vert[2],
         Vert[3], {}, {}, Vert[5], Vert[4]
     };
-    Uint32 Indices[] = {0,0,0,0, 2,4,7, 8,12,11}; // Skip 4 indices using index buffer offset
+    const Uint32 Indices[] = {0,0,0,0, 2,4,7, 8,12,11}; // Skip 4 indices using index buffer offset
     // clang-format on
 
     auto pVB = CreateVertexBuffer(Triangles, sizeof(Triangles));
     auto pIB = CreateIndexBuffer(Indices, _countof(Indices));
 
-    IBuffer* pVBs[]    = {pVB};
-    Uint32   Offsets[] = {0};
+    IBuffer*     pVBs[]    = {pVB};
+    const Uint64 Offsets[] = {0};
     pContext->SetVertexBuffers(0, 1, pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
     pContext->SetIndexBuffer(pIB, sizeof(Uint32) * 4, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
@@ -968,14 +968,14 @@ TEST_F(DrawCommandTest, DrawIndexed_IBOffset_BaseVertex)
         Vert[0], {}, Vert[1], {}, {}, Vert[2],
         Vert[3], {}, {}, Vert[5], Vert[4]
     };
-    Uint32 Indices[] = {0,0,0,0, 2-bv,4-bv,7-bv, 8-bv,12-bv,11-bv};
+    const Uint32 Indices[] = {0,0,0,0, 2-bv,4-bv,7-bv, 8-bv,12-bv,11-bv};
     // clang-format on
 
     auto pVB = CreateVertexBuffer(Triangles, sizeof(Triangles));
     auto pIB = CreateIndexBuffer(Indices, _countof(Indices));
 
-    IBuffer* pVBs[]    = {pVB};
-    Uint32   Offsets[] = {0};
+    IBuffer*     pVBs[]    = {pVB};
+    const Uint64 Offsets[] = {0};
     pContext->SetVertexBuffers(0, 1, pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
     pContext->SetIndexBuffer(pIB, sizeof(Uint32) * 4, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
@@ -1011,8 +1011,8 @@ TEST_F(DrawCommandTest, DrawInstanced)
     auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
     auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
 
-    IBuffer* pVBs[]    = {pVB, pInstVB};
-    Uint32   Offsets[] = {0, 0};
+    IBuffer*     pVBs[]    = {pVB, pInstVB};
+    const Uint64 Offsets[] = {0, 0};
     pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
 
     DrawAttribs drawAttrs{3, DRAW_FLAG_VERIFY_ALL};
@@ -1046,8 +1046,8 @@ TEST_F(DrawCommandTest, DrawInstanced_VBOffset)
     auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
     auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
 
-    IBuffer* pVBs[]    = {pVB, pInstVB};
-    Uint32   Offsets[] = {2 * sizeof(Vertex), 3 * sizeof(float4)};
+    IBuffer*     pVBs[]    = {pVB, pInstVB};
+    const Uint64 Offsets[] = {2 * sizeof(Vertex), 3 * sizeof(float4)};
     pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
 
     DrawAttribs drawAttrs{3, DRAW_FLAG_VERIFY_ALL};
@@ -1080,8 +1080,8 @@ TEST_F(DrawCommandTest, DrawInstanced_StartVertex)
     auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
     auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
 
-    IBuffer* pVBs[]    = {pVB, pInstVB};
-    Uint32   Offsets[] = {0, 0};
+    IBuffer*     pVBs[]    = {pVB, pInstVB};
+    const Uint64 Offsets[] = {0, 0};
     pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
 
     DrawAttribs drawAttrs{3, DRAW_FLAG_VERIFY_ALL};
@@ -1118,8 +1118,8 @@ TEST_F(DrawCommandTest, DrawInstanced_FirstInstance)
     auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
     auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
 
-    IBuffer* pVBs[]    = {pVB, pInstVB};
-    Uint32   Offsets[] = {0, 0};
+    IBuffer*     pVBs[]    = {pVB, pInstVB};
+    const Uint64 Offsets[] = {0, 0};
     pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
 
     DrawAttribs drawAttrs{3, DRAW_FLAG_VERIFY_ALL};
@@ -1155,8 +1155,8 @@ TEST_F(DrawCommandTest, DrawInstanced_FirstInstance_VBOffset)
     auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
     auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
 
-    IBuffer* pVBs[]    = {pVB, pInstVB};
-    Uint32   Offsets[] = {3 * sizeof(Vertex), 2 * sizeof(float4)};
+    IBuffer*     pVBs[]    = {pVB, pInstVB};
+    const Uint64 Offsets[] = {3 * sizeof(Vertex), 2 * sizeof(float4)};
     pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
 
     DrawAttribs drawAttrs{3, DRAW_FLAG_VERIFY_ALL};
@@ -1194,8 +1194,8 @@ TEST_F(DrawCommandTest, DrawInstanced_FirstInstance_BaseVertex_FirstIndex_VBOffs
     auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
     auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
 
-    IBuffer* pVBs[]    = {pVB, pInstVB};
-    Uint32   Offsets[] = {4 * sizeof(Vertex), 5 * sizeof(float4)};
+    IBuffer*     pVBs[]    = {pVB, pInstVB};
+    const Uint64 Offsets[] = {4 * sizeof(Vertex), 5 * sizeof(float4)};
     pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
 
     DrawAttribs drawAttrs{3, DRAW_FLAG_VERIFY_ALL};
@@ -1222,7 +1222,7 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced)
         {}, {},
         VertInst[1], {}, VertInst[0], {}, {}, VertInst[2]
     };
-    Uint32 Indices[] = {4, 2, 7};
+    const Uint32 Indices[] = {4, 2, 7};
     const float4 InstancedData[] =
     {
         float4{0.5f,  0.5f,  -0.5f, -0.5f},
@@ -1234,8 +1234,8 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced)
     auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
     auto pIB     = CreateIndexBuffer(Indices, _countof(Indices));
 
-    IBuffer* pVBs[]    = {pVB, pInstVB};
-    Uint32   Offsets[] = {0, 0};
+    IBuffer*     pVBs[]    = {pVB, pInstVB};
+    const Uint64 Offsets[] = {0, 0};
     pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
     pContext->SetIndexBuffer(pIB, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
@@ -1260,7 +1260,7 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_IBOffset)
         {}, {},
         VertInst[1], {}, VertInst[0], {}, {}, VertInst[2]
     };
-    Uint32 Indices[] = {0,0,0,0,0, 4, 2, 7};
+    const Uint32 Indices[] = {0,0,0,0,0, 4, 2, 7};
     const float4 InstancedData[] =
     {
         float4{0.5f,  0.5f,  -0.5f, -0.5f},
@@ -1272,8 +1272,8 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_IBOffset)
     auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
     auto pIB     = CreateIndexBuffer(Indices, _countof(Indices));
 
-    IBuffer* pVBs[]    = {pVB, pInstVB};
-    Uint32   Offsets[] = {0, 0};
+    IBuffer*     pVBs[]    = {pVB, pInstVB};
+    const Uint64 Offsets[] = {0, 0};
     pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
     pContext->SetIndexBuffer(pIB, 5 * sizeof(Uint32), RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
@@ -1299,7 +1299,7 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_VBOffset)
         {}, {},
         VertInst[1], {}, VertInst[0], {}, {}, VertInst[2]
     };
-    Uint32 Indices[] = {4, 2, 7};
+    const Uint32 Indices[] = {4, 2, 7};
     const float4 InstancedData[] =
     {
         {}, {}, {}, {}, // Skip 4 instances with VB offset
@@ -1312,8 +1312,8 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_VBOffset)
     auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
     auto pIB     = CreateIndexBuffer(Indices, _countof(Indices));
 
-    IBuffer* pVBs[]    = {pVB, pInstVB};
-    Uint32   Offsets[] = {2 * sizeof(Vertex), 4 * sizeof(float4)};
+    IBuffer*     pVBs[]    = {pVB, pInstVB};
+    const Uint64 Offsets[] = {2 * sizeof(Vertex), 4 * sizeof(float4)};
     pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
     pContext->SetIndexBuffer(pIB, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
@@ -1338,7 +1338,7 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstIndex)
         {}, {},
         VertInst[1], {}, VertInst[0], {}, {}, VertInst[2]
     };
-    Uint32 Indices[] = {0,0,0,0,0, 4, 2, 7};
+    const Uint32 Indices[] = {0,0,0,0,0, 4, 2, 7};
     const float4 InstancedData[] =
     {
         float4{0.5f,  0.5f,  -0.5f, -0.5f},
@@ -1350,8 +1350,8 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstIndex)
     auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
     auto pIB     = CreateIndexBuffer(Indices, _countof(Indices));
 
-    IBuffer* pVBs[]    = {pVB, pInstVB};
-    Uint32   Offsets[] = {0, 0};
+    IBuffer*     pVBs[]    = {pVB, pInstVB};
+    const Uint64 Offsets[] = {0, 0};
     pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
     pContext->SetIndexBuffer(pIB, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
@@ -1380,7 +1380,7 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance)
         {}, {},
         VertInst[1], {}, VertInst[0], {}, {}, VertInst[2]
     };
-    Uint32 Indices[] = {4, 2, 7};
+    const Uint32 Indices[] = {4, 2, 7};
     const float4 InstancedData[] =
     {
         {}, {}, {}, {}, // Skip 4 instances with FirstInstance
@@ -1393,8 +1393,8 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance)
     auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
     auto pIB     = CreateIndexBuffer(Indices, _countof(Indices));
 
-    IBuffer* pVBs[]    = {pVB, pInstVB};
-    Uint32   Offsets[] = {0, 0};
+    IBuffer*     pVBs[]    = {pVB, pInstVB};
+    const Uint64 Offsets[] = {0, 0};
     pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
     pContext->SetIndexBuffer(pIB, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
@@ -1419,7 +1419,7 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_IBOffset)
         {}, {},
         VertInst[1], {}, VertInst[0], {}, {}, VertInst[2]
     };
-    Uint32 Indices[] = {0,0,0,0, 4, 2, 7};
+    const Uint32 Indices[] = {0,0,0,0, 4, 2, 7};
     const float4 InstancedData[] =
     {
         {}, {}, {}, {}, // Skip 4 instances with FirstInstance
@@ -1432,8 +1432,8 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_IBOffset)
     auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
     auto pIB     = CreateIndexBuffer(Indices, _countof(Indices));
 
-    IBuffer* pVBs[]    = {pVB, pInstVB};
-    Uint32   Offsets[] = {0, 0};
+    IBuffer*     pVBs[]    = {pVB, pInstVB};
+    const Uint64 Offsets[] = {0, 0};
     pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
     pContext->SetIndexBuffer(pIB, 4 * sizeof(Uint32), RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
@@ -1459,7 +1459,7 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_VBOffset)
         {}, {},
         VertInst[1], {}, VertInst[0], {}, {}, VertInst[2]
     };
-    Uint32 Indices[] = {4, 2, 7};
+    const Uint32 Indices[] = {4, 2, 7};
     const float4 InstancedData[] =
     {
         {}, {}, {}, {}, {}, // Skip 5 instances with VB offset
@@ -1473,8 +1473,8 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_VBOffset)
     auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
     auto pIB     = CreateIndexBuffer(Indices, _countof(Indices));
 
-    IBuffer* pVBs[]    = {pVB, pInstVB};
-    Uint32   Offsets[] = {4 * sizeof(Vertex), 5 * sizeof(float4)};
+    IBuffer*     pVBs[]    = {pVB, pInstVB};
+    const Uint64 Offsets[] = {4 * sizeof(Vertex), 5 * sizeof(float4)};
     pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
     pContext->SetIndexBuffer(pIB, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
@@ -1500,7 +1500,7 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_IBOffset_FirstIndex)
         {}, {},
         VertInst[1], {}, VertInst[0], {}, {}, VertInst[2]
     };
-    Uint32 Indices[] = {0,0,0,0, 0,0,0, 4, 2, 7};
+    const Uint32 Indices[] = {0,0,0,0, 0,0,0, 4, 2, 7};
     const float4 InstancedData[] =
     {
         {}, {}, {}, {}, // Skip 4 instances with FirstInstance
@@ -1513,8 +1513,8 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_IBOffset_FirstIndex)
     auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
     auto pIB     = CreateIndexBuffer(Indices, _countof(Indices));
 
-    IBuffer* pVBs[]    = {pVB, pInstVB};
-    Uint32   Offsets[] = {0, 0};
+    IBuffer*     pVBs[]    = {pVB, pInstVB};
+    const Uint64 Offsets[] = {0, 0};
     pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
     pContext->SetIndexBuffer(pIB, 4 * sizeof(Uint32), RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
@@ -1545,7 +1545,7 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_BaseVertex)
         {}, {},
         VertInst[1], {}, VertInst[0], {}, {}, VertInst[2]
     };
-    Uint32 Indices[] = {4, 2, 7};
+    const Uint32 Indices[] = {4, 2, 7};
     const float4 InstancedData[] =
     {
         float4{0.5f,  0.5f,  -0.5f, -0.5f},
@@ -1557,8 +1557,8 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_BaseVertex)
     auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
     auto pIB     = CreateIndexBuffer(Indices, _countof(Indices));
 
-    IBuffer* pVBs[]    = {pVB, pInstVB};
-    Uint32   Offsets[] = {0, 0};
+    IBuffer*     pVBs[]    = {pVB, pInstVB};
+    const Uint64 Offsets[] = {0, 0};
     pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
     pContext->SetIndexBuffer(pIB, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
@@ -1585,7 +1585,7 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_BaseVertex_VBOffset)
         {}, {},
         VertInst[1], {}, VertInst[0], {}, {}, VertInst[2]
     };
-    Uint32 Indices[] = {4, 2, 7};
+    const Uint32 Indices[] = {4, 2, 7};
     const float4 InstancedData[] =
     {
         {}, {}, {}, {}, {}, // Skip 5 instances with VB offset
@@ -1599,8 +1599,8 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_BaseVertex_VBOffset)
     auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
     auto pIB     = CreateIndexBuffer(Indices, _countof(Indices));
 
-    IBuffer* pVBs[]    = {pVB, pInstVB};
-    Uint32   Offsets[] = {4 * sizeof(Vertex), 5 * sizeof(float4)};
+    IBuffer*     pVBs[]    = {pVB, pInstVB};
+    const Uint64 Offsets[] = {4 * sizeof(Vertex), 5 * sizeof(float4)};
     pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
     pContext->SetIndexBuffer(pIB, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
@@ -1629,7 +1629,7 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_BaseVertex_FirstIndex
         {}, {},
         VertInst[1], {}, VertInst[0], {}, {}, VertInst[2]
     };
-    Uint32 Indices[] = {0,0,0,0, 0,0,0, 4, 2, 7};
+    const Uint32 Indices[] = {0,0,0,0, 0,0,0, 4, 2, 7};
     const float4 InstancedData[] =
     {
         {}, {}, {}, {}, {}, // Skip 5 instances with VB offset
@@ -1643,8 +1643,8 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_BaseVertex_FirstIndex
     auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
     auto pIB     = CreateIndexBuffer(Indices, _countof(Indices));
 
-    IBuffer* pVBs[]    = {pVB, pInstVB};
-    Uint32   Offsets[] = {4 * sizeof(Vertex), 5 * sizeof(float4)};
+    IBuffer*     pVBs[]    = {pVB, pInstVB};
+    const Uint64 Offsets[] = {4 * sizeof(Vertex), 5 * sizeof(float4)};
     pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
     pContext->SetIndexBuffer(pIB, 4 * sizeof(Uint32), RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
@@ -1691,8 +1691,8 @@ TEST_F(DrawCommandTest, DrawInstancedIndirect_FirstInstance_BaseVertex_FirstInde
     auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
     auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
 
-    IBuffer* pVBs[]    = {pVB, pInstVB};
-    Uint32   Offsets[] = {4 * sizeof(Vertex), 5 * sizeof(float4)};
+    IBuffer*     pVBs[]    = {pVB, pInstVB};
+    const Uint64 Offsets[] = {4 * sizeof(Vertex), 5 * sizeof(float4)};
     pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
 
     Uint32 IndirectDrawData[] =
@@ -1748,8 +1748,8 @@ TEST_F(DrawCommandTest, DrawIndexedInstancedIndirect_FirstInstance_BaseVertex_Fi
     auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
     auto pIB     = CreateIndexBuffer(Indices, _countof(Indices));
 
-    IBuffer* pVBs[]    = {pVB, pInstVB};
-    Uint32   Offsets[] = {4 * sizeof(Vertex), 4 * sizeof(float4)};
+    IBuffer*     pVBs[]    = {pVB, pInstVB};
+    const Uint64 Offsets[] = {4 * sizeof(Vertex), 4 * sizeof(float4)};
     pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
     pContext->SetIndexBuffer(pIB, IsGL ? 0 : 3 * sizeof(Uint32), RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
@@ -1803,7 +1803,7 @@ TEST_F(DrawCommandTest, MultiDrawIndirect)
     auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
 
     IBuffer*     pVBs[]    = {pVB, pInstVB};
-    const Uint32 Offsets[] = {4 * sizeof(Vertex), 5 * sizeof(float4)};
+    const Uint64 Offsets[] = {4 * sizeof(Vertex), 5 * sizeof(float4)};
     pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
 
     const Uint32 IndirectDrawData[] =
@@ -1871,7 +1871,7 @@ TEST_F(DrawCommandTest, MultiDrawIndexedIndirect)
     auto pIB     = CreateIndexBuffer(Indices, _countof(Indices));
 
     IBuffer*     pVBs[]    = {pVB, pInstVB};
-    const Uint32 Offsets[] = {4 * sizeof(Vertex), 4 * sizeof(float4)};
+    const Uint64 Offsets[] = {4 * sizeof(Vertex), 4 * sizeof(float4)};
     pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
     pContext->SetIndexBuffer(pIB, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
@@ -1942,7 +1942,7 @@ TEST_F(DrawCommandTest, MultiDrawIndirectCount)
     auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
 
     IBuffer*     pVBs[]    = {pVB, pInstVB};
-    const Uint32 Offsets[] = {4 * sizeof(Vertex), 5 * sizeof(float4)};
+    const Uint64 Offsets[] = {4 * sizeof(Vertex), 5 * sizeof(float4)};
     pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
 
     const Uint32 IndirectDrawData[] =
@@ -2021,8 +2021,8 @@ TEST_F(DrawCommandTest, MultiDrawIndexedIndirectCount)
     auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
     auto pIB     = CreateIndexBuffer(Indices, _countof(Indices));
 
-    IBuffer* pVBs[]    = {pVB, pInstVB};
-    Uint32   Offsets[] = {4 * sizeof(Vertex), 4 * sizeof(float4)};
+    IBuffer*     pVBs[]    = {pVB, pInstVB};
+    const Uint64 Offsets[] = {4 * sizeof(Vertex), 4 * sizeof(float4)};
     pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
     pContext->SetIndexBuffer(pIB, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
@@ -2157,8 +2157,8 @@ TEST_F(DrawCommandTest, Draw_InstanceDataStepRate)
     auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
     auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
 
-    IBuffer* pVBs[]    = {pVB, pInstVB};
-    Uint32   Offsets[] = {0, 0};
+    IBuffer*     pVBs[]    = {pVB, pInstVB};
+    const Uint64 Offsets[] = {0, 0};
     pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
 
     DrawAttribs drawAttrs{3, DRAW_FLAG_VERIFY_ALL};
@@ -2183,9 +2183,9 @@ TEST_F(DrawCommandTest, DeferredContexts)
     const float ClearColor[] = {sm_Rnd(), sm_Rnd(), sm_Rnd(), sm_Rnd()};
     RenderDrawCommandReference(pSwapChain, ClearColor);
 
-    Uint32 Indices[] = {0, 1, 2, 3, 4, 5};
-    auto   pVB       = CreateVertexBuffer(Vert, sizeof(Vert));
-    auto   pIB       = CreateIndexBuffer(Indices, _countof(Indices));
+    const Uint32 Indices[] = {0, 1, 2, 3, 4, 5};
+    auto         pVB       = CreateVertexBuffer(Vert, sizeof(Vert));
+    auto         pIB       = CreateIndexBuffer(Indices, _countof(Indices));
 
     StateTransitionDesc Barriers[] = //
         {
@@ -2216,8 +2216,8 @@ TEST_F(DrawCommandTest, DeferredContexts)
                 pCtx->Begin(0);
                 pCtx->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
 
-                IBuffer* pVBs[]    = {pVB};
-                Uint32   Offsets[] = {0};
+                IBuffer*     pVBs[]    = {pVB};
+                const Uint64 Offsets[] = {0};
                 pCtx->SetVertexBuffers(0, 1, pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_VERIFY, SET_VERTEX_BUFFERS_FLAG_RESET);
                 pCtx->SetIndexBuffer(pIB, 0, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
 
@@ -2455,8 +2455,8 @@ TEST_F(DrawCommandTest, DynamicVertexBufferUpdate)
         ASSERT_NE(pVB, nullptr);
     }
 
-    IBuffer* pVBs[]    = {pVB};
-    Uint32   Offsets[] = {0};
+    IBuffer*     pVBs[]    = {pVB};
+    const Uint64 Offsets[] = {0};
     pContext->SetVertexBuffers(0, 1, pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
 
     {
@@ -2510,8 +2510,8 @@ TEST_F(DrawCommandTest, DynamicIndexBufferUpdate)
     }
 
 
-    IBuffer* pVBs[]    = {pVB};
-    Uint32   Offsets[] = {0};
+    IBuffer*     pVBs[]    = {pVB};
+    const Uint64 Offsets[] = {0};
     pContext->SetVertexBuffers(0, 1, pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
     pContext->SetIndexBuffer(pIB, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
@@ -2943,11 +2943,11 @@ void DrawCommandTest::DrawWithUniOrStructBufferOffsets(IShader*                 
     {
         {
             MapHelper<float4> PosBufferData{pContext, pPosDataBuffer, MAP_WRITE, MAP_FLAG_DISCARD};
-            memcpy(PosBufferData, PosData.data(), PosBuffDesc.uiSizeInBytes);
+            memcpy(PosBufferData, PosData.data(), static_cast<size_t>(PosBuffDesc.uiSizeInBytes));
         }
         {
             MapHelper<float4> ColBufferData{pContext, pColDataBuffer, MAP_WRITE, MAP_FLAG_DISCARD};
-            memcpy(ColBufferData, ColData.data(), ColBuffDesc.uiSizeInBytes);
+            memcpy(ColBufferData, ColData.data(), static_cast<size_t>(ColBuffDesc.uiSizeInBytes));
         }
     }
     else

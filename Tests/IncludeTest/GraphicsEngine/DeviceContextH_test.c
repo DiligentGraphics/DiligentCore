@@ -44,9 +44,9 @@ void TestDeviceContextCInterface(struct IDeviceContext* pCtx)
     IDeviceContext_CommitShaderResources(pCtx, (struct IShaderResourceBinding*)NULL, RESOURCE_STATE_TRANSITION_MODE_NONE);
     IDeviceContext_SetStencilRef(pCtx, 1u);
     IDeviceContext_SetBlendFactors(pCtx, (const float*)NULL);
-    IDeviceContext_SetVertexBuffers(pCtx, 0u, 1u, (struct IBuffer**)NULL, (const Uint32*)NULL, RESOURCE_STATE_TRANSITION_MODE_NONE, SET_VERTEX_BUFFERS_FLAG_RESET);
+    IDeviceContext_SetVertexBuffers(pCtx, 0u, 1u, (struct IBuffer**)NULL, (const Uint64*)NULL, RESOURCE_STATE_TRANSITION_MODE_NONE, SET_VERTEX_BUFFERS_FLAG_RESET);
     IDeviceContext_InvalidateState(pCtx);
-    IDeviceContext_SetIndexBuffer(pCtx, (struct IBuffer*)NULL, 0u, RESOURCE_STATE_TRANSITION_MODE_NONE);
+    IDeviceContext_SetIndexBuffer(pCtx, (struct IBuffer*)NULL, (Uint64)0, RESOURCE_STATE_TRANSITION_MODE_NONE);
     IDeviceContext_SetViewports(pCtx, 1u, (const struct Viewport*)NULL, 512u, 512u);
     IDeviceContext_SetScissorRects(pCtx, 1u, (const struct Rect*)NULL, 512u, 512u);
     IDeviceContext_SetRenderTargets(pCtx, 1u, (struct ITextureView**)NULL, (struct ITextureView*)NULL, RESOURCE_STATE_TRANSITION_MODE_NONE);
@@ -82,8 +82,8 @@ void TestDeviceContextCInterface(struct IDeviceContext* pCtx)
     IDeviceContext_BeginQuery(pCtx, (struct IQuery*)NULL);
     IDeviceContext_EndQuery(pCtx, (struct IQuery*)NULL);
 
-    IDeviceContext_UpdateBuffer(pCtx, (struct IBuffer*)NULL, 1u, 1u, NULL, RESOURCE_STATE_TRANSITION_MODE_NONE);
-    IDeviceContext_CopyBuffer(pCtx, (struct IBuffer*)NULL, 0u, RESOURCE_STATE_TRANSITION_MODE_NONE, (struct IBuffer*)NULL, 0u, 128u, RESOURCE_STATE_TRANSITION_MODE_NONE);
+    IDeviceContext_UpdateBuffer(pCtx, (struct IBuffer*)NULL, (Uint64)1, (Uint64)1, NULL, RESOURCE_STATE_TRANSITION_MODE_NONE);
+    IDeviceContext_CopyBuffer(pCtx, (struct IBuffer*)NULL, (Uint64)0, RESOURCE_STATE_TRANSITION_MODE_NONE, (struct IBuffer*)NULL, (Uint64)0, (Uint64)128, RESOURCE_STATE_TRANSITION_MODE_NONE);
     IDeviceContext_MapBuffer(pCtx, (struct IBuffer*)NULL, MAP_WRITE, MAP_FLAG_DISCARD, (void**)NULL);
     IDeviceContext_UnmapBuffer(pCtx, (struct IBuffer*)NULL, MAP_WRITE);
     IDeviceContext_UpdateTexture(pCtx, (struct ITexture*)NULL, 0u, 0u, (const struct Box*)NULL, (const struct TextureSubResData*)NULL, RESOURCE_STATE_TRANSITION_MODE_NONE, RESOURCE_STATE_TRANSITION_MODE_NONE);
