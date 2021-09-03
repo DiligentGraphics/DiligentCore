@@ -1,7 +1,7 @@
 #ifndef _INCLUDE_TEST_FXH_
 #define _INCLUDE_TEST_FXH_
 
-#define PI (3.1415928f)
+#define PI (3.1415927f)
 
 struct SomeStruct
 {
