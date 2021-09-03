@@ -763,10 +763,9 @@ TEST_F(DrawCommandTest, Draw)
     };
     // clang-format on
 
-    auto         pVB       = CreateVertexBuffer(Triangles, sizeof(Triangles));
-    IBuffer*     pVBs[]    = {pVB};
-    const Uint64 Offsets[] = {0};
-    pContext->SetVertexBuffers(0, 1, pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+    auto     pVB    = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    IBuffer* pVBs[] = {pVB};
+    pContext->SetVertexBuffers(0, 1, pVBs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
 
     DrawAttribs drawAttrs{6, DRAW_FLAG_VERIFY_ALL};
     pContext->Draw(drawAttrs);
@@ -1011,9 +1010,8 @@ TEST_F(DrawCommandTest, DrawInstanced)
     auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
     auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
 
-    IBuffer*     pVBs[]    = {pVB, pInstVB};
-    const Uint64 Offsets[] = {0, 0};
-    pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+    IBuffer* pVBs[] = {pVB, pInstVB};
+    pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
 
     DrawAttribs drawAttrs{3, DRAW_FLAG_VERIFY_ALL};
     drawAttrs.NumInstances = 2; // Draw two instances of the same triangle

@@ -253,9 +253,8 @@ TEST(ShaderResourceLayout, ResourceArray)
 
     pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
-    IBuffer*     pBuffs[]  = {pVertexBuff};
-    const Uint64 Offsets[] = {0};
-    pContext->SetVertexBuffers(0, 1, pBuffs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+    IBuffer* pBuffs[] = {pVertexBuff};
+    pContext->SetVertexBuffers(0, 1, pBuffs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
 
     // Draw a quad
     DrawAttribs DrawAttrs(4, DRAW_FLAG_VERIFY_ALL);
