@@ -94,7 +94,8 @@ DeviceContextD3D12Impl::DeviceContextD3D12Impl(IReferenceCounters*          pRef
             GetContextObjectName("SAMPLER     dynamic descriptor allocator", Desc.IsDeferred, Desc.ContextId)
         }
     },
-    m_CmdListAllocator{GetRawAllocator(), sizeof(CommandListD3D12Impl), 64}
+    m_CmdListAllocator{GetRawAllocator(), sizeof(CommandListD3D12Impl), 64},
+    m_NullRTV{pDeviceD3D12Impl->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1)}
 // clang-format on
 {
     auto* pd3d12Device = pDeviceD3D12Impl->GetD3D12Device();
@@ -143,6 +144,15 @@ DeviceContextD3D12Impl::DeviceContextD3D12Impl(IReferenceCounters*          pRef
         CHECK_D3D_RESULT_THROW(hr, "Failed to create trace rays indirect command signature");
         static_assert(TraceRaysIndirectCommandSBTSize == offsetof(D3D12_DISPATCH_RAYS_DESC, Width), "Invalid SBT offsets size");
         static_assert(TraceRaysIndirectCommandSize == sizeof(D3D12_DISPATCH_RAYS_DESC), "Invalid trace ray indirect command size");
+    }
+
+    {
+        D3D12_RENDER_TARGET_VIEW_DESC NullRTVDesc{DXGI_FORMAT_R8G8B8A8_UNORM, D3D12_RTV_DIMENSION_TEXTURE2D};
+        // A null pResource is used to initialize a null descriptor, which guarantees D3D11-like null binding behavior
+        // (reading 0s, writes are discarded), but must have a valid pDesc in order to determine the descriptor type.
+        // https://docs.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device-createrendertargetview
+        pd3d12Device->CreateRenderTargetView(nullptr, &NullRTVDesc, m_NullRTV.GetCpuHandle());
+        VERIFY(!m_NullRTV.IsNull(), "Failed to create null RTV");
     }
 }
 
@@ -1228,6 +1238,12 @@ void DeviceContextD3D12Impl::CommitRenderTargets(RESOURCE_STATE_TRANSITION_MODE 
             TransitionOrVerifyTextureState(CmdCtx, *pTexture, StateTransitionMode, RESOURCE_STATE_RENDER_TARGET, "Setting render targets (DeviceContextD3D12Impl::CommitRenderTargets)");
             RTVHandles[i] = pRTV->GetCPUDescriptorHandle();
             VERIFY_EXPR(RTVHandles[i].ptr != 0);
+        }
+        else
+        {
+            // Binding NULL descriptor handle is invalid. We need to use a non-NULL handle
+            // that defines null RTV.
+            RTVHandles[i] = m_NullRTV.GetCpuHandle();
         }
     }
 

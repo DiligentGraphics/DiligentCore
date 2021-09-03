@@ -511,6 +511,9 @@ private:
     std::vector<D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS> m_AttachmentResolveInfo;
 
     QueryManagerD3D12* m_QueryMgr = nullptr;
+
+    // Null render targets require a null RTV. NULL descriptor causes an error.
+    DescriptorHeapAllocation m_NullRTV;
 };
 
 } // namespace Diligent
