@@ -70,26 +70,12 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
         LOG_ERROR_AND_THROW("Unified resources are not supported in Direct3D12");
     }
 
-    if (m_Desc.Usage == USAGE_IMMUTABLE)
-        VERIFY(pBuffData != nullptr && pBuffData->pData != nullptr, "Initial data must not be null for immutable buffers");
-    if (m_Desc.Usage == USAGE_DYNAMIC)
-        VERIFY(pBuffData == nullptr || pBuffData->pData == nullptr, "Initial data must be null for dynamic buffers");
-
     Uint32 BufferAlignment = 1;
     if (m_Desc.BindFlags & BIND_UNIFORM_BUFFER)
         BufferAlignment = D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT;
 
-    if (m_Desc.Usage == USAGE_STAGING)
-    {
-        VERIFY(m_Desc.CPUAccessFlags == CPU_ACCESS_WRITE || m_Desc.CPUAccessFlags == CPU_ACCESS_READ,
-               "Exactly one of the CPU_ACCESS_WRITE or CPU_ACCESS_READ flags must be specified for a staging buffer");
-
-        if (m_Desc.CPUAccessFlags == CPU_ACCESS_WRITE)
-        {
-            VERIFY(pBuffData == nullptr || pBuffData->pData == nullptr, "CPU-writable staging buffers must be updated via map");
-            BufferAlignment = std::max(BufferAlignment, Uint32{D3D12_TEXTURE_DATA_PITCH_ALIGNMENT});
-        }
-    }
+    if (m_Desc.Usage == USAGE_STAGING && m_Desc.CPUAccessFlags == CPU_ACCESS_WRITE)
+        BufferAlignment = std::max(BufferAlignment, Uint32{D3D12_TEXTURE_DATA_PITCH_ALIGNMENT});
 
     m_Desc.uiSizeInBytes = AlignUp(m_Desc.uiSizeInBytes, BufferAlignment);
 
@@ -146,8 +132,11 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
         HeapProps.CreationNodeMask     = 1;
         HeapProps.VisibleNodeMask      = 1;
 
-        const bool bInitializeBuffer = (pBuffData != nullptr && pBuffData->pData != nullptr && pBuffData->DataSize > 0);
-        if (bInitializeBuffer)
+        const auto InitialDataSize = (pBuffData != nullptr && pBuffData->pData != nullptr) ?
+            std::min(pBuffData->DataSize, D3D12BuffDesc.Width) :
+            0;
+
+        if (InitialDataSize > 0)
             SetState(RESOURCE_STATE_COPY_DEST);
 
         if (!IsInKnownState())
@@ -157,7 +146,7 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
             ValidatedCast<DeviceContextD3D12Impl>(pBuffData->pContext)->GetCommandQueueId() :
             SoftwareQueueIndex{PlatformMisc::GetLSB(m_Desc.ImmediateContextMask)};
 
-        const auto StateMask = bInitializeBuffer ?
+        const auto StateMask = InitialDataSize > 0 ?
             GetSupportedD3D12ResourceStatesForCommandList(pRenderDeviceD3D12->GetCommandQueueType(CmdQueueInd)) :
             static_cast<D3D12_RESOURCE_STATES>(~0u);
 
@@ -172,7 +161,7 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
         if (*m_Desc.Name != 0)
             m_pd3d12Resource->SetName(WidenString(m_Desc.Name).c_str());
 
-        if (bInitializeBuffer)
+        if (InitialDataSize > 0)
         {
             D3D12_HEAP_PROPERTIES UploadHeapProps{};
             UploadHeapProps.Type                 = D3D12_HEAP_TYPE_UPLOAD;
@@ -194,7 +183,7 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
             hr = UploadBuffer->Map(0, nullptr, &DestAddress);
             if (FAILED(hr))
                 LOG_ERROR_AND_THROW("Failed to map uload buffer");
-            memcpy(DestAddress, pBuffData->pData, static_cast<size_t>(pBuffData->DataSize));
+            memcpy(DestAddress, pBuffData->pData, static_cast<size_t>(InitialDataSize));
             UploadBuffer->Unmap(0, nullptr);
 
             auto InitContext = pRenderDeviceD3D12->AllocateCommandContext(CmdQueueInd);

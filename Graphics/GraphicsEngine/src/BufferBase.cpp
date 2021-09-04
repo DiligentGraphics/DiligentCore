@@ -142,23 +142,24 @@ void ValidateBufferDesc(const BufferDesc& Desc, const IRenderDevice* pDevice) no
 
 void ValidateBufferInitData(const BufferDesc& Desc, const BufferData* pBuffData) noexcept(false)
 {
-    if (Desc.Usage == USAGE_IMMUTABLE && (pBuffData == nullptr || pBuffData->pData == nullptr))
+    const bool HasInitialData = (pBuffData != nullptr && pBuffData->pData != nullptr);
+
+    if (Desc.Usage == USAGE_IMMUTABLE && !HasInitialData)
         LOG_BUFFER_ERROR_AND_THROW("initial data must not be null as immutable buffers must be initialized at creation time.");
 
-    if (Desc.Usage == USAGE_DYNAMIC && pBuffData != nullptr && pBuffData->pData != nullptr)
+    if (Desc.Usage == USAGE_DYNAMIC && HasInitialData)
         LOG_BUFFER_ERROR_AND_THROW("initial data must be null for dynamic buffers.");
 
     if (Desc.Usage == USAGE_STAGING)
     {
         if (Desc.CPUAccessFlags == CPU_ACCESS_WRITE)
         {
-            VERIFY_BUFFER(pBuffData == nullptr || pBuffData->pData == nullptr,
-                          "CPU-writable staging buffers must be updated via map.");
+            VERIFY_BUFFER(!HasInitialData, "CPU-writable staging buffers must be updated via map.");
         }
     }
     else if (Desc.Usage == USAGE_UNIFIED)
     {
-        if (pBuffData != nullptr && pBuffData->pData != nullptr && (Desc.CPUAccessFlags & CPU_ACCESS_WRITE) == 0)
+        if (HasInitialData && (Desc.CPUAccessFlags & CPU_ACCESS_WRITE) == 0)
         {
             LOG_BUFFER_ERROR_AND_THROW("CPU_ACCESS_WRITE flag is required to initialize a unified buffer.");
         }
@@ -175,6 +176,12 @@ void ValidateBufferInitData(const BufferDesc& Desc, const BufferData* pBuffData)
                                        "' as ImmediateContextMask (", std::hex, Desc.ImmediateContextMask, ") does not contain ",
                                        std::hex, (Uint64{1} << CtxDesc.ContextId), " bit.");
         }
+    }
+
+    if (HasInitialData)
+    {
+        VERIFY_BUFFER(pBuffData->DataSize >= Desc.uiSizeInBytes,
+                      "Buffer initial DataSize (", pBuffData->DataSize, ") must be larger than the buffer size (", Desc.uiSizeInBytes, ")");
     }
 }
 

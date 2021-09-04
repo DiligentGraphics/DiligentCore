@@ -97,23 +97,14 @@ BufferGLImpl::BufferGLImpl(IReferenceCounters*        pRefCounters,
         LOG_ERROR_AND_THROW("Unified resources are not supported in OpenGL/GLES");
     }
 
-    if (m_Desc.Usage == USAGE_IMMUTABLE)
-        VERIFY(pBuffData != nullptr && pBuffData->pData != nullptr, "Initial data must not be null for immutable buffers");
-
     // TODO: find out if it affects performance if the buffer is originally bound to one target
     // and then bound to another (such as first to GL_ARRAY_BUFFER and then to GL_UNIFORM_BUFFER)
 
     // We must unbind VAO because otherwise we will break the bindings
     constexpr bool ResetVAO = true;
     GLState.BindBuffer(m_BindTarget, m_GlBuffer, ResetVAO);
-    VERIFY(pBuffData == nullptr || pBuffData->pData == nullptr || pBuffData->DataSize >= BuffDesc.uiSizeInBytes, "Data pointer is null or data size is not consistent with buffer size");
-    GLsizeiptr    DataSize = static_cast<GLsizeiptr>(BuffDesc.uiSizeInBytes);
-    const GLvoid* pData    = nullptr;
-    if (pBuffData != nullptr && pBuffData->pData != nullptr && pBuffData->DataSize >= BuffDesc.uiSizeInBytes)
-    {
-        pData    = pBuffData->pData;
-        DataSize = static_cast<GLsizeiptr>(pBuffData->DataSize);
-    }
+    const GLvoid* pData = pBuffData != nullptr ? pBuffData->pData : nullptr;
+
     // Create and initialize a buffer object's data store
 
     // Target must be one of GL_ARRAY_BUFFER, GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER,
@@ -153,7 +144,7 @@ BufferGLImpl::BufferGLImpl(IReferenceCounters*        pRefCounters,
 
     // All buffer bind targets (GL_ARRAY_BUFFER, GL_ELEMENT_ARRAY_BUFFER etc.) relate to the same
     // kind of objects. As a result they are all equivalent from a transfer point of view.
-    glBufferData(m_BindTarget, DataSize, pData, m_GLUsageHint);
+    glBufferData(m_BindTarget, static_cast<GLsizeiptr>(BuffDesc.uiSizeInBytes), pData, m_GLUsageHint);
     CHECK_GL_ERROR_AND_THROW("glBufferData() failed");
     GLState.BindBuffer(m_BindTarget, GLObjectWrappers::GLBufferObj::Null(), ResetVAO);
 

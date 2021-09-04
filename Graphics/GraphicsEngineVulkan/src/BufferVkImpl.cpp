@@ -59,20 +59,6 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
 {
     ValidateBufferInitData(m_Desc, pBuffData);
 
-    if (m_Desc.Usage == USAGE_IMMUTABLE)
-        VERIFY(pBuffData != nullptr && pBuffData->pData != nullptr, "Initial data must not be null for immutable buffers");
-    if (m_Desc.Usage == USAGE_DYNAMIC)
-        VERIFY(pBuffData == nullptr || pBuffData->pData == nullptr, "Initial data must be null for dynamic buffers");
-
-    if (m_Desc.Usage == USAGE_STAGING)
-    {
-        VERIFY(m_Desc.CPUAccessFlags == CPU_ACCESS_WRITE || m_Desc.CPUAccessFlags == CPU_ACCESS_READ,
-               "Exactly one of the CPU_ACCESS_WRITE or CPU_ACCESS_READ flags must be specified for a staging buffer");
-
-        if (m_Desc.CPUAccessFlags == CPU_ACCESS_WRITE)
-            VERIFY(pBuffData == nullptr || pBuffData->pData == nullptr, "CPU-writable staging buffers must be updated via map");
-    }
-
     const auto& LogicalDevice  = pRenderDeviceVk->GetLogicalDevice();
     const auto& PhysicalDevice = pRenderDeviceVk->GetPhysicalDevice();
     const auto& DeviceLimits   = PhysicalDevice.GetProperties().limits;
@@ -333,9 +319,12 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
         }
 #endif
 
-        const bool     bInitializeBuffer = (pBuffData != nullptr && pBuffData->pData != nullptr && pBuffData->DataSize > 0);
-        RESOURCE_STATE InitialState      = RESOURCE_STATE_UNDEFINED;
-        if (bInitializeBuffer)
+        const auto InitialDataSize = (pBuffData != nullptr && pBuffData->pData != nullptr) ?
+            std::min(pBuffData->DataSize, VkBuffCI.size) :
+            0;
+
+        RESOURCE_STATE InitialState = RESOURCE_STATE_UNDEFINED;
+        if (InitialDataSize > 0)
         {
             const auto& MemoryProps = PhysicalDevice.GetMemoryProperties();
             VERIFY_EXPR(MemoryTypeIndex < MemoryProps.memoryTypeCount);
@@ -345,7 +334,7 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
                 // Memory is directly accessible by CPU
                 auto* pData = reinterpret_cast<uint8_t*>(m_MemoryAllocation.Page->GetCPUMemory());
                 VERIFY_EXPR(pData != nullptr);
-                memcpy(pData + m_BufferMemoryAlignedOffset, pBuffData->pData, static_cast<size_t>(pBuffData->DataSize));
+                memcpy(pData + m_BufferMemoryAlignedOffset, pBuffData->pData, static_cast<size_t>(InitialDataSize));
 
                 if ((MemoryPropFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) == 0)
                 {
@@ -384,7 +373,7 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
                 auto* StagingData = reinterpret_cast<uint8_t*>(StagingMemoryAllocation.Page->GetCPUMemory());
                 if (StagingData == nullptr)
                     LOG_ERROR_AND_THROW("Failed to allocate staging data for buffer '", m_Desc.Name, '\'');
-                memcpy(StagingData + AlignedStagingMemOffset, pBuffData->pData, static_cast<size_t>(pBuffData->DataSize));
+                memcpy(StagingData + AlignedStagingMemOffset, pBuffData->pData, static_cast<size_t>(InitialDataSize));
 
                 err = LogicalDevice.BindBufferMemory(StagingBuffer, StagingBufferMemory, AlignedStagingMemOffset);
                 CHECK_VK_ERROR_AND_THROW(err, "Failed to bind staging buffer memory");

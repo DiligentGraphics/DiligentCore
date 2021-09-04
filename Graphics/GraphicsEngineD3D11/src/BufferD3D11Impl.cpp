@@ -64,9 +64,6 @@ BufferD3D11Impl::BufferD3D11Impl(IReferenceCounters*        pRefCounters,
         LOG_ERROR_AND_THROW("Unified resources are not supported in Direct3D11");
     }
 
-    if (m_Desc.Usage == USAGE_IMMUTABLE)
-        VERIFY(pBuffData != nullptr && pBuffData->pData != nullptr, "Initial data must not be null for immutable buffers");
-
     if (m_Desc.BindFlags & BIND_UNIFORM_BUFFER)
     {
         // Note that Direct3D11 does not allow partial updates of constant buffers with UpdateSubresource().
@@ -118,7 +115,7 @@ BufferD3D11Impl::BufferD3D11Impl(IReferenceCounters*        pRefCounters,
 
     D3D11_SUBRESOURCE_DATA InitData;
     InitData.pSysMem          = pBuffData ? pBuffData->pData : nullptr;
-    InitData.SysMemPitch      = static_cast<UINT>(pBuffData ? pBuffData->DataSize : 0);
+    InitData.SysMemPitch      = 0;
     InitData.SysMemSlicePitch = 0;
 
     auto* pDeviceD3D11 = pRenderDeviceD3D11->GetD3D11Device();
