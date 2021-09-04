@@ -68,7 +68,7 @@ public:
     void DvpVerifyDynamicAllocation(const DeviceContextVkImpl* pCtx) const;
 #endif
 
-    Uint32 GetDynamicOffset(DeviceContextIndex CtxId, const DeviceContextVkImpl* pCtx) const
+    size_t GetDynamicOffset(DeviceContextIndex CtxId, const DeviceContextVkImpl* pCtx) const
     {
         if (m_VulkanBuffer != VK_NULL_HANDLE)
         {
@@ -85,7 +85,7 @@ public:
             }
 #endif
             auto& DynAlloc = m_DynamicData[CtxId];
-            return static_cast<Uint32>(DynAlloc.AlignedOffset);
+            return DynAlloc.AlignedOffset;
         }
     }
 

@@ -183,7 +183,7 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
             hr = UploadBuffer->Map(0, nullptr, &DestAddress);
             if (FAILED(hr))
                 LOG_ERROR_AND_THROW("Failed to map uload buffer");
-            memcpy(DestAddress, pBuffData->pData, static_cast<size_t>(InitialDataSize));
+            memcpy(DestAddress, pBuffData->pData, StaticCast<size_t>(InitialDataSize));
             UploadBuffer->Unmap(0, nullptr);
 
             auto InitContext = pRenderDeviceD3D12->AllocateCommandContext(CmdQueueInd);
@@ -238,7 +238,7 @@ static BufferDesc BufferDescFromD3D12Resource(BufferDesc BuffDesc, ID3D12Resourc
     DEV_CHECK_ERR(D3D12BuffDesc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER, "D3D12 resource is not a buffer");
 
     DEV_CHECK_ERR(BuffDesc.uiSizeInBytes == 0 || BuffDesc.uiSizeInBytes == D3D12BuffDesc.Width, "Buffer size specified by the BufferDesc (", BuffDesc.uiSizeInBytes, ") does not match d3d12 resource size (", D3D12BuffDesc.Width, ")");
-    BuffDesc.uiSizeInBytes = static_cast<Uint32>(D3D12BuffDesc.Width);
+    BuffDesc.uiSizeInBytes = StaticCast<Uint32>(D3D12BuffDesc.Width);
 
     if (D3D12BuffDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)
     {
@@ -381,7 +381,7 @@ void BufferD3D12Impl::CreateCBV(D3D12_CPU_DESCRIPTOR_HANDLE CBVDescriptor,
 
     D3D12_CONSTANT_BUFFER_VIEW_DESC D3D12_CBVDesc;
     D3D12_CBVDesc.BufferLocation = m_pd3d12Resource->GetGPUVirtualAddress() + Offset;
-    D3D12_CBVDesc.SizeInBytes    = static_cast<UINT>(AlignUp(Size, Uint32{D3D12_TEXTURE_DATA_PITCH_ALIGNMENT}));
+    D3D12_CBVDesc.SizeInBytes    = StaticCast<UINT>(AlignUp(Size, Uint32{D3D12_TEXTURE_DATA_PITCH_ALIGNMENT}));
 
     auto* pd3d12Device = GetDevice()->GetD3D12Device();
     pd3d12Device->CreateConstantBufferView(&D3D12_CBVDesc, CBVDescriptor);

@@ -393,7 +393,7 @@ void TextureVkImpl::InitializeTextureContent(const TextureData&          InitDat
                     memcpy(StagingData + CopyRegion.bufferOffset + ((y + z * MipInfo.StorageHeight) / FmtAttribs.BlockHeight) * MipInfo.RowSize,
                            // SubResData.Stride must be the stride of one row of compressed blocks
                            reinterpret_cast<const uint8_t*>(SubResData.pData) + (y / FmtAttribs.BlockHeight) * SubResData.Stride + z * SubResData.DepthStride,
-                           MipInfo.RowSize);
+                           StaticCast<size_t>(MipInfo.RowSize));
                 }
             }
 

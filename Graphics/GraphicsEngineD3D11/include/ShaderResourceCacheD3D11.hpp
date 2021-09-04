@@ -116,11 +116,11 @@ public:
 
             pBuff = std::move(_pBuff);
 
-            BaseOffset = static_cast<Uint32>(_BaseOffset);
-            RangeSize  = static_cast<Uint32>(_RangeSize);
+            BaseOffset = StaticCast<Uint32>(_BaseOffset);
+            RangeSize  = StaticCast<Uint32>(_RangeSize);
 
             if (RangeSize == 0 && pBuff)
-                RangeSize = static_cast<Uint32>(pBuff->GetDesc().uiSizeInBytes - BaseOffset);
+                RangeSize = StaticCast<Uint32>(pBuff->GetDesc().uiSizeInBytes - BaseOffset);
 
             DynamicOffset = 0;
         }
@@ -643,9 +643,9 @@ inline ShaderResourceCacheD3D11::MinMaxSlot ShaderResourceCacheD3D11::BindCBs(
         const Uint32 Slot     = BaseBinding + res;
         auto* const  pd3d11CB = ResArrays.second[res];
         // Offsets in Direct3D11 are measure in float4 constants.
-        const auto FirstCBConstant = static_cast<UINT>((ResArrays.first[res].BaseOffset + ResArrays.first[res].DynamicOffset) / 16u);
+        const auto FirstCBConstant = StaticCast<UINT>((ResArrays.first[res].BaseOffset + ResArrays.first[res].DynamicOffset) / 16u);
         // The number of constants must be a multiple of 16 constants. It is OK if it is past the end of the buffer.
-        const auto NumCBConstants = static_cast<UINT>(AlignUp(ResArrays.first[res].RangeSize / 16u, 16u));
+        const auto NumCBConstants = StaticCast<UINT>(AlignUp(ResArrays.first[res].RangeSize / 16u, 16u));
         // clang-format off
         if (CommittedD3D11Resources[Slot] != pd3d11CB        ||
             FirstConstants[Slot]          != FirstCBConstant ||
@@ -690,9 +690,9 @@ inline void ShaderResourceCacheD3D11::BindDynamicCBs(Uint32                     
         VERIFY_EXPR(CB.AllowsDynamicOffset() && (m_DynamicCBSlotsMask[ShaderInd] & CBBit) != 0);
         auto* const pd3d11CB = ResArrays.second[Binding];
         // Offsets in Direct3D11 are measure in float4 constants.
-        const auto FirstCBConstant = static_cast<UINT>((CB.BaseOffset + CB.DynamicOffset) / 16u);
+        const auto FirstCBConstant = StaticCast<UINT>((CB.BaseOffset + CB.DynamicOffset) / 16u);
         // The number of constants must be a multiple of 16 constants. It is OK if it is past the end of the buffer.
-        const auto NumCBConstants = static_cast<UINT>(AlignUp(CB.RangeSize / 16u, 16u));
+        const auto NumCBConstants = StaticCast<UINT>(AlignUp(CB.RangeSize / 16u, 16u));
         // clang-format off
         if (CommittedD3D11Resources[Slot] != pd3d11CB        ||
             FirstConstants[Slot]          != FirstCBConstant ||

@@ -31,6 +31,7 @@
 #include "DebugUtilities.hpp"
 #include "Align.hpp"
 #include "BasicMath.hpp"
+#include "Cast.hpp"
 
 namespace Diligent
 {
@@ -1386,7 +1387,7 @@ MipLevelProperties GetMipLevelProperties(const TextureDesc& TexDesc, Uint32 MipL
         // For block-compression formats, all parameters are still specified in texels rather than compressed texel blocks (18.4.1)
         MipProps.StorageWidth   = AlignUp(MipProps.LogicalWidth, Uint32{FmtAttribs.BlockWidth});
         MipProps.StorageHeight  = AlignUp(MipProps.LogicalHeight, Uint32{FmtAttribs.BlockHeight});
-        MipProps.RowSize        = MipProps.StorageWidth / Uint32{FmtAttribs.BlockWidth} * Uint32{FmtAttribs.ComponentSize}; // ComponentSize is the block size
+        MipProps.RowSize        = Uint64{MipProps.StorageWidth} / Uint32{FmtAttribs.BlockWidth} * Uint32{FmtAttribs.ComponentSize}; // ComponentSize is the block size
         MipProps.DepthSliceSize = MipProps.StorageHeight / Uint32{FmtAttribs.BlockHeight} * MipProps.RowSize;
         MipProps.MipSize        = MipProps.DepthSliceSize * MipProps.Depth;
     }
@@ -1394,7 +1395,7 @@ MipLevelProperties GetMipLevelProperties(const TextureDesc& TexDesc, Uint32 MipL
     {
         MipProps.StorageWidth   = MipProps.LogicalWidth;
         MipProps.StorageHeight  = MipProps.LogicalHeight;
-        MipProps.RowSize        = MipProps.StorageWidth * Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
+        MipProps.RowSize        = Uint64{MipProps.StorageWidth} * Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
         MipProps.DepthSliceSize = MipProps.RowSize * MipProps.StorageHeight;
         MipProps.MipSize        = MipProps.DepthSliceSize * MipProps.Depth;
     }
@@ -1667,7 +1668,7 @@ PIPELINE_TYPE PipelineTypeFromShaderStages(SHADER_TYPE ShaderStages)
     return PIPELINE_TYPE_INVALID;
 }
 
-Uint32 GetStagingTextureLocationOffset(const TextureDesc& TexDesc,
+Uint64 GetStagingTextureLocationOffset(const TextureDesc& TexDesc,
                                        Uint32             ArraySlice,
                                        Uint32             MipLevel,
                                        Uint32             Alignment,
@@ -1678,10 +1679,10 @@ Uint32 GetStagingTextureLocationOffset(const TextureDesc& TexDesc,
     VERIFY_EXPR(TexDesc.MipLevels > 0 && TexDesc.ArraySize > 0 && TexDesc.Width > 0 && TexDesc.Height > 0 && TexDesc.Format != TEX_FORMAT_UNKNOWN);
     VERIFY_EXPR(ArraySlice < TexDesc.ArraySize && MipLevel < TexDesc.MipLevels || ArraySlice == TexDesc.ArraySize && MipLevel == 0);
 
-    Uint32 Offset = 0;
+    Uint64 Offset = 0;
     if (ArraySlice > 0)
     {
-        Uint32 ArraySliceSize = 0;
+        Uint64 ArraySliceSize = 0;
         for (Uint32 mip = 0; mip < TexDesc.MipLevels; ++mip)
         {
             auto MipInfo = GetMipLevelProperties(TexDesc, mip);
@@ -1753,12 +1754,12 @@ BufferToTextureCopyInfo GetBufferToTextureCopyInfo(TEXTURE_FORMAT Format,
         const auto BlockAlignedRegionWidth  = AlignUp(UpdateRegionWidth, Uint32{FmtAttribs.BlockWidth});
         const auto BlockAlignedRegionHeight = AlignUp(UpdateRegionHeight, Uint32{FmtAttribs.BlockHeight});
 
-        CopyInfo.RowSize  = BlockAlignedRegionWidth / Uint32{FmtAttribs.BlockWidth} * Uint32{FmtAttribs.ComponentSize};
+        CopyInfo.RowSize  = Uint64{BlockAlignedRegionWidth} / Uint32{FmtAttribs.BlockWidth} * Uint32{FmtAttribs.ComponentSize};
         CopyInfo.RowCount = BlockAlignedRegionHeight / FmtAttribs.BlockHeight;
     }
     else
     {
-        CopyInfo.RowSize  = UpdateRegionWidth * Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
+        CopyInfo.RowSize  = Uint64{UpdateRegionWidth} * Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
         CopyInfo.RowCount = UpdateRegionHeight;
     }
 
@@ -1766,11 +1767,11 @@ BufferToTextureCopyInfo GetBufferToTextureCopyInfo(TEXTURE_FORMAT Format,
     CopyInfo.RowStride = AlignUp(CopyInfo.RowSize, RowStrideAlignment);
     if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
     {
-        CopyInfo.RowStrideInTexels = static_cast<Uint32>(CopyInfo.RowStride / Uint64{FmtAttribs.ComponentSize} * Uint64{FmtAttribs.BlockWidth});
+        CopyInfo.RowStrideInTexels = StaticCast<Uint32>(CopyInfo.RowStride / Uint64{FmtAttribs.ComponentSize} * Uint64{FmtAttribs.BlockWidth});
     }
     else
     {
-        CopyInfo.RowStrideInTexels = static_cast<Uint32>(CopyInfo.RowStride / (Uint64{FmtAttribs.ComponentSize} * Uint64{FmtAttribs.NumComponents}));
+        CopyInfo.RowStrideInTexels = StaticCast<Uint32>(CopyInfo.RowStride / (Uint64{FmtAttribs.ComponentSize} * Uint64{FmtAttribs.NumComponents}));
     }
     CopyInfo.DepthStride = CopyInfo.RowCount * CopyInfo.RowStride;
     CopyInfo.MemorySize  = UpdateRegionDepth * CopyInfo.DepthStride;
@@ -1782,10 +1783,10 @@ BufferToTextureCopyInfo GetBufferToTextureCopyInfo(TEXTURE_FORMAT Format,
 void CopyTextureSubresource(const TextureSubResData& SrcSubres,
                             Uint32                   NumRows,
                             Uint32                   NumDepthSlices,
-                            Uint32                   RowSize,
+                            Uint64                   RowSize,
                             void*                    pDstData,
-                            Uint32                   DstRowStride,
-                            Uint32                   DstDepthStride)
+                            Uint64                   DstRowStride,
+                            Uint64                   DstDepthStride)
 {
     VERIFY_EXPR(SrcSubres.pSrcBuffer == nullptr && SrcSubres.pData != nullptr);
     VERIFY_EXPR(pDstData != nullptr);
@@ -1800,7 +1801,7 @@ void CopyTextureSubresource(const TextureSubResData& SrcSubres,
         {
             memcpy(pDstSlice + DstRowStride * y,
                    pSrcSlice + SrcSubres.Stride * y,
-                   RowSize);
+                   StaticCast<size_t>(RowSize));
         }
     }
 }

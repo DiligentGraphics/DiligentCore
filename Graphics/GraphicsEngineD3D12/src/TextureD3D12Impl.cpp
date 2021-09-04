@@ -380,7 +380,7 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
                     );
                 }
             }
-            D3D12_RANGE FlushRange{0, static_cast<SIZE_T>(stagingBufferSize)};
+            D3D12_RANGE FlushRange{0, StaticCast<SIZE_T>(stagingBufferSize)};
             m_pd3d12Resource->Unmap(0, &FlushRange);
         }
     }
@@ -407,7 +407,7 @@ static TextureDesc InitTexDescFromD3D12Resource(ID3D12Resource* pTexture, const 
         (void)RefFormat;
     }
 
-    TexDesc.Width     = static_cast<Uint32>(ResourceDesc.Width);
+    TexDesc.Width     = StaticCast<Uint32>(ResourceDesc.Width);
     TexDesc.Height    = Uint32{ResourceDesc.Height};
     TexDesc.ArraySize = Uint32{ResourceDesc.DepthOrArraySize};
     TexDesc.MipLevels = Uint32{ResourceDesc.MipLevels};

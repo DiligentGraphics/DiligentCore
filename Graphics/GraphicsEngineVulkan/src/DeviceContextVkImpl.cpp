@@ -1863,7 +1863,7 @@ void DeviceContextVkImpl::UpdateBuffer(IBuffer*                       pBuffer,
     constexpr size_t Alignment = 4;
     // Source buffer offset must be multiple of 4 (18.4)
     auto TmpSpace = m_UploadHeap.Allocate(Size, Alignment);
-    memcpy(TmpSpace.CPUAddress, pData, static_cast<size_t>(Size));
+    memcpy(TmpSpace.CPUAddress, pData, StaticCast<size_t>(Size));
     UpdateBufferRegion(pBuffVk, Offset, Size, TmpSpace.vkBuffer, TmpSpace.AlignedOffset, StateTransitionMode);
     // The allocation will stay in the upload heap until the end of the frame at which point all upload
     // pages will be discarded
@@ -2239,11 +2239,11 @@ void DeviceContextVkImpl::UpdateTextureRegion(const void*                    pSr
                 + DepthSlice * CopyInfo.DepthStride;
             // clang-format on
 
-            memcpy(pDstPtr, pSrcPtr, static_cast<size_t>(CopyInfo.RowSize));
+            memcpy(pDstPtr, pSrcPtr, StaticCast<size_t>(CopyInfo.RowSize));
         }
     }
     CopyBufferToTexture(Allocation.vkBuffer,
-                        static_cast<Uint32>(Allocation.AlignedOffset),
+                        Allocation.AlignedOffset,
                         CopyInfo.RowStrideInTexels,
                         TextureVk,
                         CopyInfo.Region,
@@ -2258,7 +2258,7 @@ void DeviceContextVkImpl::GenerateMips(ITextureView* pTexView)
     GenerateMipsVkHelper::GenerateMips(*ValidatedCast<TextureViewVkImpl>(pTexView), *this);
 }
 
-static VkBufferImageCopy GetBufferImageCopyInfo(Uint32             BufferOffset,
+static VkBufferImageCopy GetBufferImageCopyInfo(Uint64             BufferOffset,
                                                 Uint32             BufferRowStrideInTexels,
                                                 const TextureDesc& TexDesc,
                                                 const Box&         Region,
@@ -2319,7 +2319,7 @@ static VkBufferImageCopy GetBufferImageCopyInfo(Uint32             BufferOffset,
 }
 
 void DeviceContextVkImpl::CopyBufferToTexture(VkBuffer                       vkSrcBuffer,
-                                              Uint32                         SrcBufferOffset,
+                                              Uint64                         SrcBufferOffset,
                                               Uint32                         SrcBufferRowStrideInTexels,
                                               TextureVkImpl&                 DstTextureVk,
                                               const Box&                     DstRegion,
@@ -2348,7 +2348,7 @@ void DeviceContextVkImpl::CopyTextureToBuffer(TextureVkImpl&                 Src
                                               Uint32                         SrcArraySlice,
                                               RESOURCE_STATE_TRANSITION_MODE SrcTextureTransitionMode,
                                               VkBuffer                       vkDstBuffer,
-                                              Uint32                         DstBufferOffset,
+                                              Uint64                         DstBufferOffset,
                                               Uint32                         DstBufferRowStrideInTexels)
 {
     EnsureVkCmdBuffer();
@@ -2488,7 +2488,7 @@ void DeviceContextVkImpl::UnmapTextureSubresource(ITexture* pTexture,
         {
             auto& MappedTex = UploadSpaceIt->second;
             CopyBufferToTexture(MappedTex.Allocation.pDynamicMemMgr->GetVkBuffer(),
-                                static_cast<Uint32>(MappedTex.Allocation.AlignedOffset),
+                                MappedTex.Allocation.AlignedOffset,
                                 MappedTex.CopyInfo.RowStrideInTexels,
                                 TextureVk,
                                 MappedTex.CopyInfo.Region,

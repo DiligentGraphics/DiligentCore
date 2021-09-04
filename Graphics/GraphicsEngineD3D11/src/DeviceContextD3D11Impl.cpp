@@ -519,7 +519,7 @@ void DeviceContextD3D11Impl::CommitD3D11IndexBuffer(VALUE_TYPE IndexType)
 
         m_CommittedD3D11IndexBuffer          = m_pIndexBuffer->m_pd3d11Buffer;
         m_CommittedIBFormat                  = IndexType;
-        m_CommittedD3D11IndexDataStartOffset = static_cast<UINT>(m_IndexDataStartOffset);
+        m_CommittedD3D11IndexDataStartOffset = StaticCast<UINT>(m_IndexDataStartOffset);
         m_pd3d11DeviceContext->IASetIndexBuffer(m_pIndexBuffer->m_pd3d11Buffer, D3D11IndexFmt, m_CommittedD3D11IndexDataStartOffset);
     }
 
@@ -540,7 +540,7 @@ void DeviceContextD3D11Impl::CommitD3D11VertexBuffers(PipelineStateD3D11Impl* pP
         auto*         pBuffD3D11Impl = CurrStream.pBuffer.RawPtr();
         ID3D11Buffer* pd3d11Buffer   = pBuffD3D11Impl ? pBuffD3D11Impl->m_pd3d11Buffer : nullptr;
         const auto    Stride         = pPipelineStateD3D11->GetBufferStride(Slot);
-        const auto    Offset         = static_cast<UINT>(CurrStream.Offset);
+        const auto    Offset         = StaticCast<UINT>(CurrStream.Offset);
 
         // It is safe to perform raw pointer check because device context keeps
         // all buffers alive.
@@ -705,7 +705,7 @@ void DeviceContextD3D11Impl::DrawIndirect(const DrawIndirectAttribs& Attribs)
                 NvAPI_D3D11_MultiDrawInstancedIndirect(m_pd3d11DeviceContext,
                                                        Attribs.DrawCount,
                                                        pd3d11ArgsBuff,
-                                                       static_cast<UINT>(Attribs.DrawArgsOffset),
+                                                       StaticCast<UINT>(Attribs.DrawArgsOffset),
                                                        Attribs.DrawArgsStride) == NVAPI_OK;
         }
 #endif
@@ -714,7 +714,7 @@ void DeviceContextD3D11Impl::DrawIndirect(const DrawIndirectAttribs& Attribs)
     if (!NativeMultiDrawExecuted)
     {
         for (Uint32 draw = 0; draw < Attribs.DrawCount; ++draw)
-            m_pd3d11DeviceContext->DrawInstancedIndirect(pd3d11ArgsBuff, static_cast<UINT>(Attribs.DrawArgsOffset + draw * Attribs.DrawArgsStride));
+            m_pd3d11DeviceContext->DrawInstancedIndirect(pd3d11ArgsBuff, StaticCast<UINT>(Attribs.DrawArgsOffset + draw * Attribs.DrawArgsStride));
     }
 }
 
@@ -739,7 +739,7 @@ void DeviceContextD3D11Impl::DrawIndexedIndirect(const DrawIndexedIndirectAttrib
                 NvAPI_D3D11_MultiDrawIndexedInstancedIndirect(m_pd3d11DeviceContext,
                                                               Attribs.DrawCount,
                                                               pd3d11ArgsBuff,
-                                                              static_cast<UINT>(Attribs.DrawArgsOffset),
+                                                              StaticCast<UINT>(Attribs.DrawArgsOffset),
                                                               Attribs.DrawArgsStride) == NVAPI_OK;
         }
 #endif
@@ -748,7 +748,7 @@ void DeviceContextD3D11Impl::DrawIndexedIndirect(const DrawIndexedIndirectAttrib
     if (!NativeMultiDrawExecuted)
     {
         for (Uint32 draw = 0; draw < Attribs.DrawCount; ++draw)
-            m_pd3d11DeviceContext->DrawIndexedInstancedIndirect(pd3d11ArgsBuff, static_cast<UINT>(Attribs.DrawArgsOffset + draw * Attribs.DrawArgsStride));
+            m_pd3d11DeviceContext->DrawIndexedInstancedIndirect(pd3d11ArgsBuff, StaticCast<UINT>(Attribs.DrawArgsOffset + draw * Attribs.DrawArgsStride));
     }
 }
 
@@ -817,7 +817,7 @@ void DeviceContextD3D11Impl::DispatchComputeIndirect(const DispatchComputeIndire
 #endif
 
     auto* pd3d11Buff = ValidatedCast<BufferD3D11Impl>(Attribs.pAttribsBuffer)->GetD3D11Buffer();
-    m_pd3d11DeviceContext->DispatchIndirect(pd3d11Buff, static_cast<UINT>(Attribs.DispatchArgsByteOffset));
+    m_pd3d11DeviceContext->DispatchIndirect(pd3d11Buff, StaticCast<UINT>(Attribs.DispatchArgsByteOffset));
 }
 
 
@@ -877,8 +877,8 @@ void DeviceContextD3D11Impl::UpdateBuffer(IBuffer*                       pBuffer
     auto* pBufferD3D11Impl = ValidatedCast<BufferD3D11Impl>(pBuffer);
 
     D3D11_BOX DstBox;
-    DstBox.left   = static_cast<UINT>(Offset);
-    DstBox.right  = static_cast<UINT>(Offset + Size);
+    DstBox.left   = StaticCast<UINT>(Offset);
+    DstBox.right  = StaticCast<UINT>(Offset + Size);
     DstBox.top    = 0;
     DstBox.bottom = 1;
     DstBox.front  = 0;
@@ -901,13 +901,13 @@ void DeviceContextD3D11Impl::CopyBuffer(IBuffer*                       pSrcBuffe
     auto* pDstBufferD3D11Impl = ValidatedCast<BufferD3D11Impl>(pDstBuffer);
 
     D3D11_BOX SrcBox;
-    SrcBox.left   = static_cast<UINT>(SrcOffset);
-    SrcBox.right  = static_cast<UINT>(SrcOffset + Size);
+    SrcBox.left   = StaticCast<UINT>(SrcOffset);
+    SrcBox.right  = StaticCast<UINT>(SrcOffset + Size);
     SrcBox.top    = 0;
     SrcBox.bottom = 1;
     SrcBox.front  = 0;
     SrcBox.back   = 1;
-    m_pd3d11DeviceContext->CopySubresourceRegion(pDstBufferD3D11Impl->m_pd3d11Buffer, 0, static_cast<UINT>(DstOffset), 0, 0, pSrcBufferD3D11Impl->m_pd3d11Buffer, 0, &SrcBox);
+    m_pd3d11DeviceContext->CopySubresourceRegion(pDstBufferD3D11Impl->m_pd3d11Buffer, 0, StaticCast<UINT>(DstOffset), 0, 0, pSrcBufferD3D11Impl->m_pd3d11Buffer, 0, &SrcBox);
 }
 
 
@@ -979,7 +979,7 @@ void DeviceContextD3D11Impl::UpdateTexture(ITexture*                      pTextu
         D3D11Box.bottom = (D3D11Box.bottom + FmtAttribs.BlockHeight - 1) & ~(FmtAttribs.BlockHeight - 1);
     }
     auto SubresIndex = D3D11CalcSubresource(MipLevel, Slice, Desc.MipLevels);
-    m_pd3d11DeviceContext->UpdateSubresource(pTexD3D11->GetD3D11Texture(), SubresIndex, &D3D11Box, SubresData.pData, static_cast<UINT>(SubresData.Stride), static_cast<UINT>(SubresData.DepthStride));
+    m_pd3d11DeviceContext->UpdateSubresource(pTexD3D11->GetD3D11Texture(), SubresIndex, &D3D11Box, SubresData.pData, StaticCast<UINT>(SubresData.Stride), StaticCast<UINT>(SubresData.DepthStride));
 }
 
 void DeviceContextD3D11Impl::CopyTexture(const CopyTextureAttribs& CopyAttribs)

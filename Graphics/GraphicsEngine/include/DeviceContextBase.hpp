@@ -41,7 +41,7 @@
 #include "Sampler.h"
 #include "ObjectBase.hpp"
 #include "DebugUtilities.hpp"
-#include "ValidatedCast.hpp"
+#include "Cast.hpp"
 #include "GraphicsAccessories.hpp"
 #include "TextureBase.hpp"
 #include "IndexWrapper.hpp"

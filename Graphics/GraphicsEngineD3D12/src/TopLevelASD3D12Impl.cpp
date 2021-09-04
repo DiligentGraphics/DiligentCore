@@ -69,8 +69,8 @@ TopLevelASD3D12Impl::TopLevelASD3D12Impl(IReferenceCounters*    pRefCounters,
 
         ResultDataMaxSizeInBytes = d3d12TopLevelPrebuildInfo.ResultDataMaxSizeInBytes;
 
-        m_ScratchSize.Build  = static_cast<Uint32>(d3d12TopLevelPrebuildInfo.ScratchDataSizeInBytes);
-        m_ScratchSize.Update = static_cast<Uint32>(d3d12TopLevelPrebuildInfo.UpdateScratchDataSizeInBytes);
+        m_ScratchSize.Build  = d3d12TopLevelPrebuildInfo.ScratchDataSizeInBytes;
+        m_ScratchSize.Update = d3d12TopLevelPrebuildInfo.UpdateScratchDataSizeInBytes;
     }
 
     D3D12_HEAP_PROPERTIES HeapProps{};

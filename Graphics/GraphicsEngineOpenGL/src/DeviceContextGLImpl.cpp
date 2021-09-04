@@ -775,13 +775,13 @@ void DeviceContextGLImpl::PrepareForDraw(DRAW_FLAGS Flags, bool IsIndexed, GLenu
     }
 }
 
-void DeviceContextGLImpl::PrepareForIndexedDraw(VALUE_TYPE IndexType, Uint32 FirstIndexLocation, GLenum& GLIndexType, Uint32& FirstIndexByteOffset)
+void DeviceContextGLImpl::PrepareForIndexedDraw(VALUE_TYPE IndexType, Uint32 FirstIndexLocation, GLenum& GLIndexType, size_t& FirstIndexByteOffset)
 {
     GLIndexType = TypeToGLType(IndexType);
     VERIFY(GLIndexType == GL_UNSIGNED_BYTE || GLIndexType == GL_UNSIGNED_SHORT || GLIndexType == GL_UNSIGNED_INT,
            "Unsupported index type");
     VERIFY(m_pIndexBuffer, "Index Buffer is not bound to the pipeline");
-    FirstIndexByteOffset = static_cast<Uint32>(GetValueSize(IndexType) * FirstIndexLocation + m_IndexDataStartOffset);
+    FirstIndexByteOffset = StaticCast<size_t>(GetValueSize(IndexType) * FirstIndexLocation + m_IndexDataStartOffset);
 }
 
 void DeviceContextGLImpl::PostDraw()
@@ -827,7 +827,7 @@ void DeviceContextGLImpl::DrawIndexed(const DrawIndexedAttribs& Attribs)
     GLenum GlTopology;
     PrepareForDraw(Attribs.Flags, true, GlTopology);
     GLenum GLIndexType;
-    Uint32 FirstIndexByteOffset;
+    size_t FirstIndexByteOffset;
     PrepareForIndexedDraw(Attribs.IndexType, Attribs.FirstIndexLocation, GLIndexType, FirstIndexByteOffset);
 
     // NOTE: Base Vertex and Base Instance versions are not supported even in OpenGL ES 3.1
@@ -924,7 +924,7 @@ void DeviceContextGLImpl::DrawIndirect(const DrawIndirectAttribs& Attribs)
             if ((m_pDevice->GetAdapterInfo().DrawCommand.CapFlags & DRAW_COMMAND_CAP_FLAG_NATIVE_MULTI_DRAW_INDIRECT) != 0)
             {
                 glMultiDrawArraysIndirect(GlTopology,
-                                          reinterpret_cast<const void*>(static_cast<size_t>(Attribs.DrawArgsOffset)),
+                                          reinterpret_cast<const void*>(StaticCast<size_t>(Attribs.DrawArgsOffset)),
                                           Attribs.DrawCount,
                                           Attribs.DrawArgsStride);
                 DEV_CHECK_GL_ERROR("glMultiDrawArraysIndirect() failed");
@@ -945,7 +945,7 @@ void DeviceContextGLImpl::DrawIndirect(const DrawIndirectAttribs& Attribs)
                 //   GLuint  first;
                 //   GLuint  baseInstance;
                 //} DrawArraysIndirectCommand;
-                glDrawArraysIndirect(GlTopology, reinterpret_cast<const void*>(static_cast<size_t>(Offset)));
+                glDrawArraysIndirect(GlTopology, reinterpret_cast<const void*>(StaticCast<size_t>(Offset)));
                 // Note that on GLES 3.1, baseInstance is present but reserved and must be zero
                 DEV_CHECK_GL_ERROR("glDrawArraysIndirect() failed");
             }
@@ -960,8 +960,8 @@ void DeviceContextGLImpl::DrawIndirect(const DrawIndirectAttribs& Attribs)
 
 #if GL_VERSION_4_6
         glMultiDrawArraysIndirectCount(GlTopology,
-                                       reinterpret_cast<const void*>(static_cast<size_t>(Attribs.DrawArgsOffset)),
-                                       static_cast<GLintptr>(Attribs.CounterOffset),
+                                       reinterpret_cast<const void*>(StaticCast<size_t>(Attribs.DrawArgsOffset)),
+                                       StaticCast<GLintptr>(Attribs.CounterOffset),
                                        Attribs.DrawCount,
                                        Attribs.DrawArgsStride);
         DEV_CHECK_GL_ERROR("glMultiDrawArraysIndirectCount() failed");
@@ -986,7 +986,7 @@ void DeviceContextGLImpl::DrawIndexedIndirect(const DrawIndexedIndirectAttribs& 
     GLenum GlTopology;
     PrepareForDraw(Attribs.Flags, true, GlTopology);
     GLenum GLIndexType;
-    Uint32 FirstIndexByteOffset;
+    size_t FirstIndexByteOffset;
     PrepareForIndexedDraw(Attribs.IndexType, 0, GLIndexType, FirstIndexByteOffset);
     DEV_CHECK_ERR(FirstIndexByteOffset == 0, "Index buffer offset is not supported for DrawIndexedIndirect() in OpenGL");
 
@@ -1003,7 +1003,7 @@ void DeviceContextGLImpl::DrawIndexedIndirect(const DrawIndexedIndirectAttribs& 
             {
                 glMultiDrawElementsIndirect(GlTopology,
                                             GLIndexType,
-                                            reinterpret_cast<const void*>(static_cast<size_t>(Attribs.DrawArgsOffset)),
+                                            reinterpret_cast<const void*>(StaticCast<size_t>(Attribs.DrawArgsOffset)),
                                             Attribs.DrawCount,
                                             Attribs.DrawArgsStride);
                 DEV_CHECK_GL_ERROR("glMultiDrawElementsIndirect() failed");
@@ -1025,7 +1025,7 @@ void DeviceContextGLImpl::DrawIndexedIndirect(const DrawIndexedIndirectAttribs& 
                 //    GLuint  baseVertex;
                 //    GLuint  baseInstance;
                 //} DrawElementsIndirectCommand;
-                glDrawElementsIndirect(GlTopology, GLIndexType, reinterpret_cast<const void*>(static_cast<size_t>(Offset)));
+                glDrawElementsIndirect(GlTopology, GLIndexType, reinterpret_cast<const void*>(StaticCast<size_t>(Offset)));
                 // Note that on GLES 3.1, baseInstance is present but reserved and must be zero
                 DEV_CHECK_GL_ERROR("glDrawElementsIndirect() failed");
             }
@@ -1041,8 +1041,8 @@ void DeviceContextGLImpl::DrawIndexedIndirect(const DrawIndexedIndirectAttribs& 
 #if GL_VERSION_4_6
         glMultiDrawElementsIndirectCount(GlTopology,
                                          GLIndexType,
-                                         reinterpret_cast<const void*>(static_cast<size_t>(Attribs.DrawArgsOffset)),
-                                         static_cast<GLintptr>(Attribs.CounterOffset),
+                                         reinterpret_cast<const void*>(StaticCast<size_t>(Attribs.DrawArgsOffset)),
+                                         StaticCast<GLintptr>(Attribs.CounterOffset),
                                          Attribs.DrawCount,
                                          Attribs.DrawArgsStride);
         DEV_CHECK_GL_ERROR("glMultiDrawElementsIndirectCount() failed");
@@ -1132,7 +1132,7 @@ void DeviceContextGLImpl::DispatchComputeIndirect(const DispatchComputeIndirectA
     m_ContextState.BindBuffer(GL_DISPATCH_INDIRECT_BUFFER, pBufferGL->m_GlBuffer, ResetVAO);
     DEV_CHECK_GL_ERROR("Failed to bind a buffer for dispatch indirect command");
 
-    glDispatchComputeIndirect(static_cast<GLintptr>(Attribs.DispatchArgsByteOffset));
+    glDispatchComputeIndirect(StaticCast<GLintptr>(Attribs.DispatchArgsByteOffset));
     DEV_CHECK_GL_ERROR("glDispatchComputeIndirect() failed");
 
     m_ContextState.BindBuffer(GL_DISPATCH_INDIRECT_BUFFER, GLObjectWrappers::GLBufferObj::Null(), ResetVAO);
@@ -1547,7 +1547,7 @@ void DeviceContextGLImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
 
         const auto& TransferAttribs = GetNativePixelTransferAttribs(SrcTexDesc.Format);
         glReadPixels(pSrcBox->MinX, pSrcBox->MinY, pSrcBox->MaxX - pSrcBox->MinX, pSrcBox->MaxY - pSrcBox->MinY,
-                     TransferAttribs.PixelFormat, TransferAttribs.DataType, reinterpret_cast<void*>(static_cast<size_t>(DstOffset)));
+                     TransferAttribs.PixelFormat, TransferAttribs.DataType, reinterpret_cast<void*>(StaticCast<size_t>(DstOffset)));
         DEV_CHECK_GL_ERROR("Failed to read pixel from framebuffer to pixel pack buffer");
 
         m_ContextState.BindBuffer(GL_PIXEL_PACK_BUFFER, GLObjectWrappers::GLBufferObj::Null(), true);

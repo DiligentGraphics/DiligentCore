@@ -158,8 +158,8 @@ public:
         auto& UB = GetUB(CacheOffset);
 
         UB.pBuffer       = std::move(pBuff);
-        UB.BaseOffset    = static_cast<Uint32>(BaseOffset);
-        UB.RangeSize     = static_cast<Uint32>(RangeSize);
+        UB.BaseOffset    = StaticCast<Uint32>(BaseOffset);
+        UB.RangeSize     = StaticCast<Uint32>(RangeSize);
         UB.DynamicOffset = 0;
 
         Uint64 UBBit = Uint64{1} << Uint64{CacheOffset};

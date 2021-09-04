@@ -424,9 +424,9 @@ struct MipLevelProperties
     Uint32 StorageWidth   = 0;
     Uint32 StorageHeight  = 0;
     Uint32 Depth          = 1;
-    Uint32 RowSize        = 0;
-    Uint32 DepthSliceSize = 0;
-    Uint32 MipSize        = 0;
+    Uint64 RowSize        = 0;
+    Uint64 DepthSliceSize = 0;
+    Uint64 MipSize        = 0;
 };
 
 MipLevelProperties GetMipLevelProperties(const TextureDesc& TexDesc, Uint32 MipLevel);
@@ -558,7 +558,7 @@ PIPELINE_TYPE PipelineTypeFromShaderStages(SHADER_TYPE ShaderStages);
 ///     Buffer start            Subres 1 offset,               Subres N offset,
 ///                          aligned by 'Alignment'         aligned by 'Alignment'
 ///
-Uint32 GetStagingTextureLocationOffset(const TextureDesc& TexDesc,
+Uint64 GetStagingTextureLocationOffset(const TextureDesc& TexDesc,
                                        Uint32             ArraySlice,
                                        Uint32             MipLevel,
                                        Uint32             Alignment,
@@ -570,7 +570,7 @@ Uint32 GetStagingTextureLocationOffset(const TextureDesc& TexDesc,
 /// to the given subresource.
 /// Texels within subresources are assumed to be tightly packed. There is no padding
 /// except between whole subresources.
-inline Uint32 GetStagingTextureSubresourceOffset(const TextureDesc& TexDesc,
+inline Uint64 GetStagingTextureSubresourceOffset(const TextureDesc& TexDesc,
                                                  Uint32             ArraySlice,
                                                  Uint32             MipLevel,
                                                  Uint32             Alignment)
@@ -623,10 +623,10 @@ BufferToTextureCopyInfo GetBufferToTextureCopyInfo(TEXTURE_FORMAT Format,
 void CopyTextureSubresource(const TextureSubResData& SrcSubres,
                             Uint32                   NumRows,
                             Uint32                   NumDepthSlices,
-                            Uint32                   RowSize,
+                            Uint64                   RowSize,
                             void*                    pDstData,
-                            Uint32                   DstRowStride,
-                            Uint32                   DstDepthStride);
+                            Uint64                   DstRowStride,
+                            Uint64                   DstDepthStride);
 
 
 inline String GetShaderResourcePrintName(const char* Name, Uint32 ArraySize, Uint32 ArrayIndex)

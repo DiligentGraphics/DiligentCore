@@ -306,7 +306,7 @@ protected:
 
 private:
     __forceinline void PrepareForDraw(DRAW_FLAGS Flags, bool IsIndexed, GLenum& GlTopology);
-    __forceinline void PrepareForIndexedDraw(VALUE_TYPE IndexType, Uint32 FirstIndexLocation, GLenum& GLIndexType, Uint32& FirstIndexByteOffset);
+    __forceinline void PrepareForIndexedDraw(VALUE_TYPE IndexType, Uint32 FirstIndexLocation, GLenum& GLIndexType, size_t& FirstIndexByteOffset);
     __forceinline void PrepareForIndirectDraw(IBuffer* pAttribsBuffer);
     __forceinline void PrepareForIndirectDrawCount(IBuffer* pCountBuffer);
     __forceinline void PostDraw();

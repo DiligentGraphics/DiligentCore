@@ -35,7 +35,7 @@
 #include "../../Platforms/interface/Atomics.hpp"
 #include "../../Platforms/Basic/interface/DebugUtilities.hpp"
 #include "LockHelper.hpp"
-#include "ValidatedCast.hpp"
+#include "Cast.hpp"
 
 namespace Diligent
 {

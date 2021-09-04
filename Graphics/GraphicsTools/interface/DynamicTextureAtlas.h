@@ -89,7 +89,7 @@ struct ITextureAtlasSuballocation : public IObject
 struct DynamicTextureAtlasUsageStats
 {
     /// The total size of the atlas, in bytes.
-    Uint32 Size = 0;
+    Uint64 Size = 0;
 
     /// The total number of allocations in the atlas.
     Uint32 AllocationCount = 0;

@@ -79,7 +79,7 @@ BufferD3D11Impl::BufferD3D11Impl(IReferenceCounters*        pRefCounters,
 
     D3D11_BUFFER_DESC D3D11BuffDesc{};
     D3D11BuffDesc.BindFlags = BindFlagsToD3D11BindFlags(m_Desc.BindFlags);
-    D3D11BuffDesc.ByteWidth = static_cast<UINT>(m_Desc.uiSizeInBytes);
+    D3D11BuffDesc.ByteWidth = StaticCast<UINT>(m_Desc.uiSizeInBytes);
     D3D11BuffDesc.MiscFlags = 0;
     if (m_Desc.BindFlags & BIND_INDIRECT_DRAW_ARGS)
     {

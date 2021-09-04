@@ -29,7 +29,7 @@
 
 #include "../../Primitives/interface/Object.h"
 #include "../../Platforms/interface/Atomics.hpp"
-#include "ValidatedCast.hpp"
+#include "Cast.hpp"
 #include "RefCountedObjectImpl.hpp"
 
 namespace Diligent

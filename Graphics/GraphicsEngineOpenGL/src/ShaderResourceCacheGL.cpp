@@ -293,8 +293,8 @@ void ShaderResourceCacheGL::BindResources(GLContextState&              GLState,
 
         GLState.BindStorageBlock(binding,
                                  pBufferGL->GetGLHandle(),
-                                 static_cast<GLintptr>(ViewDesc.ByteOffset + SSBO.DynamicOffset),
-                                 static_cast<GLsizeiptr>(ViewDesc.ByteWidth));
+                                 StaticCast<GLintptr>(ViewDesc.ByteOffset + SSBO.DynamicOffset),
+                                 StaticCast<GLsizeiptr>(ViewDesc.ByteWidth));
 
         if (ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS)
             WritableBuffers.push_back(pBufferGL);
@@ -330,8 +330,8 @@ void ShaderResourceCacheGL::BindDynamicBuffers(GLContextState&              GLSt
 
         GLState.BindStorageBlock(BaseSSBOBinding + SSBOIdx,
                                  pBufferGL->GetGLHandle(),
-                                 static_cast<GLintptr>(ViewDesc.ByteOffset + SSBO.DynamicOffset),
-                                 static_cast<GLsizeiptr>(ViewDesc.ByteWidth));
+                                 StaticCast<GLintptr>(ViewDesc.ByteOffset + SSBO.DynamicOffset),
+                                 StaticCast<GLsizeiptr>(ViewDesc.ByteWidth));
     }
 }
 

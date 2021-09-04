@@ -74,7 +74,7 @@ public:
         RefCntAutoPtr<IDataBlob> pFileData(MakeNewRCObj<DataBlobImpl>{}(0));
         pSourceStream->ReadBlob(pFileData);
         *ppData = pFileData->GetDataPtr();
-        *pBytes = static_cast<UINT>(pFileData->GetSize());
+        *pBytes = StaticCast<UINT>(pFileData->GetSize());
 
         m_DataBlobs.insert(std::make_pair(*ppData, pFileData));
 

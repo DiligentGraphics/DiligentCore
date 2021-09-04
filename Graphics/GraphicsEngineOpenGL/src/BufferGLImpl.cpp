@@ -144,7 +144,7 @@ BufferGLImpl::BufferGLImpl(IReferenceCounters*        pRefCounters,
 
     // All buffer bind targets (GL_ARRAY_BUFFER, GL_ELEMENT_ARRAY_BUFFER etc.) relate to the same
     // kind of objects. As a result they are all equivalent from a transfer point of view.
-    glBufferData(m_BindTarget, static_cast<GLsizeiptr>(BuffDesc.uiSizeInBytes), pData, m_GLUsageHint);
+    glBufferData(m_BindTarget, StaticCast<GLsizeiptr>(BuffDesc.uiSizeInBytes), pData, m_GLUsageHint);
     CHECK_GL_ERROR_AND_THROW("glBufferData() failed");
     GLState.BindBuffer(m_BindTarget, GLObjectWrappers::GLBufferObj::Null(), ResetVAO);
 
@@ -228,7 +228,7 @@ void BufferGLImpl::UpdateData(GLContextState& CtxState, Uint64 Offset, Uint64 Si
     CtxState.BindBuffer(GL_ARRAY_BUFFER, m_GlBuffer, ResetVAO);
     // All buffer bind targets (GL_ARRAY_BUFFER, GL_ELEMENT_ARRAY_BUFFER etc.) relate to the same
     // kind of objects. As a result they are all equivalent from a transfer point of view.
-    glBufferSubData(GL_ARRAY_BUFFER, static_cast<GLintptr>(Offset), static_cast<GLsizeiptr>(Size), pData);
+    glBufferSubData(GL_ARRAY_BUFFER, StaticCast<GLintptr>(Offset), StaticCast<GLsizeiptr>(Size), pData);
     CHECK_GL_ERROR("glBufferSubData() failed");
     CtxState.BindBuffer(GL_ARRAY_BUFFER, GLObjectWrappers::GLBufferObj::Null(), ResetVAO);
 }
@@ -254,7 +254,7 @@ void BufferGLImpl::CopyData(GLContextState& CtxState, BufferGLImpl& SrcBufferGL,
     constexpr bool ResetVAO = false; // No need to reset VAO for READ/WRITE targets
     CtxState.BindBuffer(GL_COPY_WRITE_BUFFER, m_GlBuffer, ResetVAO);
     CtxState.BindBuffer(GL_COPY_READ_BUFFER, SrcBufferGL.m_GlBuffer, ResetVAO);
-    glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, static_cast<GLintptr>(SrcOffset), static_cast<GLintptr>(DstOffset), static_cast<GLsizeiptr>(Size));
+    glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, StaticCast<GLintptr>(SrcOffset), StaticCast<GLintptr>(DstOffset), StaticCast<GLsizeiptr>(Size));
     CHECK_GL_ERROR("glCopyBufferSubData() failed");
     CtxState.BindBuffer(GL_COPY_READ_BUFFER, GLObjectWrappers::GLBufferObj::Null(), ResetVAO);
     CtxState.BindBuffer(GL_COPY_WRITE_BUFFER, GLObjectWrappers::GLBufferObj::Null(), ResetVAO);
@@ -321,7 +321,7 @@ void BufferGLImpl::MapRange(GLContextState& CtxState, MAP_TYPE MapType, Uint32 M
         default: UNEXPECTED("Unknown map type");
     }
 
-    pMappedData = glMapBufferRange(m_BindTarget, static_cast<GLintptr>(Offset), static_cast<GLsizeiptr>(Length), Access);
+    pMappedData = glMapBufferRange(m_BindTarget, StaticCast<GLintptr>(Offset), StaticCast<GLsizeiptr>(Length), Access);
     CHECK_GL_ERROR("glMapBufferRange() failed");
     VERIFY(pMappedData, "Map failed");
 }

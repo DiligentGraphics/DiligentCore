@@ -455,7 +455,7 @@ private:
     inline void DisposeCurrentCmdBuffer(SoftwareQueueIndex CmdQueue, Uint64 FenceValue);
 
     void CopyBufferToTexture(VkBuffer                       vkSrcBuffer,
-                             Uint32                         SrcBufferOffset,
+                             Uint64                         SrcBufferOffset,
                              Uint32                         SrcBufferRowStrideInTexels,
                              TextureVkImpl&                 DstTextureVk,
                              const Box&                     DstRegion,
@@ -469,7 +469,7 @@ private:
                              Uint32                         SrcArraySlice,
                              RESOURCE_STATE_TRANSITION_MODE SrcTextureTransitionMode,
                              VkBuffer                       vkDstBuffer,
-                             Uint32                         DstBufferOffset,
+                             Uint64                         DstBufferOffset,
                              Uint32                         DstBufferRowStrideInTexels);
 
     __forceinline void          PrepareForDraw(DRAW_FLAGS Flags);

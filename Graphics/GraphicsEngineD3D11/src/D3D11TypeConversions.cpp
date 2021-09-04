@@ -132,8 +132,8 @@ void BufferViewDesc_to_D3D11_SRV_DESC(const BufferDesc&                BuffDesc,
         UINT ElementByteStride = 4;
         DEV_CHECK_ERR((SRVDesc.ByteOffset % 16) == 0, "Byte offset (", SRVDesc.ByteOffset, ") is not multiple of 16");
         DEV_CHECK_ERR((SRVDesc.ByteWidth % ElementByteStride) == 0, "Byte width (", SRVDesc.ByteWidth, ") is not multiple of 4");
-        D3D11SRVDesc.BufferEx.FirstElement = static_cast<UINT>(SRVDesc.ByteOffset / ElementByteStride);
-        D3D11SRVDesc.BufferEx.NumElements  = static_cast<UINT>(SRVDesc.ByteWidth / ElementByteStride);
+        D3D11SRVDesc.BufferEx.FirstElement = StaticCast<UINT>(SRVDesc.ByteOffset / ElementByteStride);
+        D3D11SRVDesc.BufferEx.NumElements  = StaticCast<UINT>(SRVDesc.ByteWidth / ElementByteStride);
         D3D11SRVDesc.BufferEx.Flags        = D3D11_BUFFEREX_SRV_FLAG_RAW;
         D3D11SRVDesc.Format                = DXGI_FORMAT_R32_TYPELESS;
         D3D11SRVDesc.ViewDimension         = D3D_SRV_DIMENSION_BUFFEREX;

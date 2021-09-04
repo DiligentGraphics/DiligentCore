@@ -62,7 +62,7 @@ constexpr D3D12_RESOURCE_STATES D3D12_RESOURCE_STATE_SHADING_RATE_SOURCE = stati
 #include "RefCntAutoPtr.hpp"
 #include "DebugUtilities.hpp"
 #include "D3DErrors.hpp"
-#include "ValidatedCast.hpp"
+#include "Cast.hpp"
 #include "STDAllocator.hpp"
 
 #include <atlbase.h>

@@ -121,7 +121,7 @@
 #include "RefCntAutoPtr.hpp"
 #include "DebugUtilities.hpp"
 #include "GLObjectWrapper.hpp"
-#include "ValidatedCast.hpp"
+#include "Cast.hpp"
 #include "RenderDevice.h"
 #include "BaseInterfacesGL.h"
 

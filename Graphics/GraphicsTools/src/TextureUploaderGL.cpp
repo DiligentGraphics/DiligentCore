@@ -35,6 +35,7 @@
 #include "ThreadSignal.hpp"
 #include "GraphicsAccessories.hpp"
 #include "Align.hpp"
+#include "Cast.hpp"
 
 namespace Diligent
 {
@@ -66,7 +67,7 @@ public:
             {
                 auto MipProps = GetMipLevelProperties(TexDesc, Mip);
                 // Stride must be 32-bit aligned in OpenGL
-                auto RowStride               = AlignUp(MipProps.RowSize, Uint32{4});
+                auto RowStride               = AlignUp(StaticCast<Uint32>(MipProps.RowSize), Uint32{4});
                 m_SubresourceStrides[SubRes] = RowStride;
 
                 auto MipSize                     = MipProps.StorageHeight * RowStride;

@@ -276,7 +276,7 @@ const GLObjectWrappers::GLVertexArrayObj& VAOCache::GetVAO(const VAOAttribs& Att
 
             constexpr bool ResetVAO = false;
             GLState.BindBuffer(GL_ARRAY_BUFFER, pBuffer->m_GlBuffer, ResetVAO);
-            GLvoid* DataStartOffset = reinterpret_cast<GLvoid*>(static_cast<size_t>(CurrStream.Offset) + static_cast<size_t>(LayoutElem.RelativeOffset));
+            GLvoid* DataStartOffset = reinterpret_cast<GLvoid*>(StaticCast<size_t>(CurrStream.Offset) + static_cast<size_t>(LayoutElem.RelativeOffset));
 
             const auto GlType = TypeToGLType(LayoutElem.ValueType);
             if (!LayoutElem.IsNormalized &&

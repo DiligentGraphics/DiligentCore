@@ -32,7 +32,7 @@ set(INTERFACE
     interface/ThreadSignal.hpp
     interface/Timer.hpp
     interface/UniqueIdentifier.hpp
-    interface/ValidatedCast.hpp
+    interface/Cast.hpp
     interface/CompilerDefinitions.h
 )
 

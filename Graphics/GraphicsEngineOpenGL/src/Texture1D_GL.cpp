@@ -167,7 +167,7 @@ void Texture1D_GL::UpdateData(GLContextState&          ContextState,
                     // If a non-zero named buffer object is bound to the GL_PIXEL_UNPACK_BUFFER target, 'data' is treated
                     // as a byte offset into the buffer object's data store.
                     // https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/glTexSubImage1D.xml
-                    SubresData.pSrcBuffer != nullptr ? reinterpret_cast<void*>(static_cast<size_t>(SubresData.SrcOffset)) : SubresData.pData);
+                    SubresData.pSrcBuffer != nullptr ? reinterpret_cast<void*>(StaticCast<size_t>(SubresData.SrcOffset)) : SubresData.pData);
     CHECK_GL_ERROR("Failed to update subimage data");
 
     if (UnpackBuffer != 0)

@@ -514,7 +514,7 @@ void DeviceContextD3D12Impl::CommitD3D12IndexBuffer(GraphicsContext& GraphCtx, V
         IBView.Format = DXGI_FORMAT_R16_UINT;
     }
     // Note that for a dynamic buffer, what we use here is the size of the buffer itself, not the upload heap buffer!
-    IBView.SizeInBytes = static_cast<UINT>(m_pIndexBuffer->GetDesc().uiSizeInBytes - m_IndexDataStartOffset);
+    IBView.SizeInBytes = StaticCast<UINT>(m_pIndexBuffer->GetDesc().uiSizeInBytes - m_IndexDataStartOffset);
 
     // Device context keeps strong reference to bound index buffer.
     // When the buffer is unbound, the reference to the D3D12 resource
@@ -579,7 +579,7 @@ void DeviceContextD3D12Impl::CommitD3D12VertexBuffers(GraphicsContext& GraphCtx)
             VBView.BufferLocation = pBufferD3D12->GetGPUAddress(GetContextId(), this) + CurrStream.Offset;
             VBView.StrideInBytes  = m_pPipelineState->GetBufferStride(Buff);
             // Note that for a dynamic buffer, what we use here is the size of the buffer itself, not the upload heap buffer!
-            VBView.SizeInBytes = static_cast<UINT>(pBufferD3D12->GetDesc().uiSizeInBytes - CurrStream.Offset);
+            VBView.SizeInBytes = StaticCast<UINT>(pBufferD3D12->GetDesc().uiSizeInBytes - CurrStream.Offset);
         }
         else
         {
@@ -1572,7 +1572,6 @@ void DeviceContextD3D12Impl::UpdateBufferRegion(BufferD3D12Impl*               p
                                                 RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
     auto& CmdCtx = GetCmdContext();
-    VERIFY_EXPR(static_cast<size_t>(NumBytes) == NumBytes);
     TransitionOrVerifyBufferState(CmdCtx, *pBuffD3D12, StateTransitionMode, RESOURCE_STATE_COPY_DEST, "Updating buffer (DeviceContextD3D12Impl::UpdateBufferRegion)");
     Uint64 DstBuffDataStartByteOffset;
     auto*  pd3d12Buff = pBuffD3D12->GetD3D12Buffer(DstBuffDataStartByteOffset, this);
@@ -1596,7 +1595,7 @@ void DeviceContextD3D12Impl::UpdateBuffer(IBuffer*                       pBuffer
     VERIFY(pBuffD3D12->GetDesc().Usage != USAGE_DYNAMIC, "Dynamic buffers must be updated via Map()");
     constexpr size_t DefaultAlginment = 16;
     auto             TmpSpace         = m_DynamicHeap.Allocate(Size, DefaultAlginment, GetFrameNumber());
-    memcpy(TmpSpace.CPUAddress, pData, static_cast<size_t>(Size));
+    memcpy(TmpSpace.CPUAddress, pData, StaticCast<size_t>(Size));
     UpdateBufferRegion(pBuffD3D12, TmpSpace, Offset, Size, StateTransitionMode);
 }
 
@@ -1651,7 +1650,7 @@ void DeviceContextD3D12Impl::MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_F
 
         D3D12_RANGE MapRange;
         MapRange.Begin = 0;
-        MapRange.End   = static_cast<SIZE_T>(BuffDesc.uiSizeInBytes);
+        MapRange.End   = StaticCast<SIZE_T>(BuffDesc.uiSizeInBytes);
         pd3d12Resource->Map(0, &MapRange, &pMappedData);
     }
     else if (MapType == MAP_WRITE)
@@ -1926,26 +1925,26 @@ void DeviceContextD3D12Impl::CopyTextureRegion(ID3D12Resource*                pd
     D3D12_TEXTURE_COPY_LOCATION DstLocation;
     DstLocation.Type             = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
     DstLocation.pResource        = TextureD3D12.GetD3D12Resource();
-    DstLocation.SubresourceIndex = static_cast<UINT>(DstSubResIndex);
+    DstLocation.SubresourceIndex = StaticCast<UINT>(DstSubResIndex);
 
     D3D12_TEXTURE_COPY_LOCATION SrcLocation;
     SrcLocation.Type                              = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
     SrcLocation.pResource                         = pd3d12Buffer;
     D3D12_PLACED_SUBRESOURCE_FOOTPRINT& Footprint = SrcLocation.PlacedFootprint;
     Footprint.Offset                              = SrcOffset;
-    Footprint.Footprint.Width                     = static_cast<UINT>(DstBox.MaxX - DstBox.MinX);
-    Footprint.Footprint.Height                    = static_cast<UINT>(DstBox.MaxY - DstBox.MinY);
-    Footprint.Footprint.Depth                     = static_cast<UINT>(DstBox.MaxZ - DstBox.MinZ); // Depth cannot be 0
+    Footprint.Footprint.Width                     = StaticCast<UINT>(DstBox.MaxX - DstBox.MinX);
+    Footprint.Footprint.Height                    = StaticCast<UINT>(DstBox.MaxY - DstBox.MinY);
+    Footprint.Footprint.Depth                     = StaticCast<UINT>(DstBox.MaxZ - DstBox.MinZ); // Depth cannot be 0
     Footprint.Footprint.Format                    = TexFormatToDXGI_Format(TexDesc.Format);
 
-    Footprint.Footprint.RowPitch = static_cast<UINT>(SrcStride);
+    Footprint.Footprint.RowPitch = StaticCast<UINT>(SrcStride);
 
 #ifdef DILIGENT_DEBUG
     {
         const auto&  FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
         const Uint32 RowCount   = std::max((Footprint.Footprint.Height / FmtAttribs.BlockHeight), 1u);
         VERIFY(BufferSize >= Footprint.Footprint.RowPitch * RowCount * Footprint.Footprint.Depth, "Buffer is not large enough");
-        VERIFY(Footprint.Footprint.Depth == 1 || static_cast<UINT>(SrcDepthStride) == Footprint.Footprint.RowPitch * RowCount, "Depth stride must be equal to the size of 2D plane");
+        VERIFY(Footprint.Footprint.Depth == 1 || StaticCast<UINT>(SrcDepthStride) == Footprint.Footprint.RowPitch * RowCount, "Depth stride must be equal to the size of 2D plane");
     }
 #endif
 
@@ -1958,9 +1957,9 @@ void DeviceContextD3D12Impl::CopyTextureRegion(ID3D12Resource*                pd
     D3D12SrcBox.back   = Footprint.Footprint.Depth;
     CmdCtx.FlushResourceBarriers();
     CmdCtx.GetCommandList()->CopyTextureRegion(&DstLocation,
-                                               static_cast<UINT>(DstBox.MinX),
-                                               static_cast<UINT>(DstBox.MinY),
-                                               static_cast<UINT>(DstBox.MinZ),
+                                               StaticCast<UINT>(DstBox.MinX),
+                                               StaticCast<UINT>(DstBox.MinY),
+                                               StaticCast<UINT>(DstBox.MinZ),
                                                &SrcLocation, &D3D12SrcBox);
 
     ++m_State.NumCommands;
@@ -2002,7 +2001,7 @@ void DeviceContextD3D12Impl::CopyTextureRegion(IBuffer*                       pS
     GetCmdContext().FlushResourceBarriers();
     Uint64 DataStartByteOffset = 0;
     auto*  pd3d12Buffer        = pBufferD3D12->GetD3D12Buffer(DataStartByteOffset, this);
-    CopyTextureRegion(pd3d12Buffer, static_cast<Uint32>(DataStartByteOffset) + SrcOffset, SrcStride, SrcDepthStride,
+    CopyTextureRegion(pd3d12Buffer, StaticCast<Uint32>(DataStartByteOffset) + SrcOffset, SrcStride, SrcDepthStride,
                       pBufferD3D12->GetDesc().uiSizeInBytes, TextureD3D12, DstSubResIndex, DstBox, TextureTransitionMode);
 }
 
@@ -2069,14 +2068,14 @@ void DeviceContextD3D12Impl::UpdateTextureRegion(const void*                    
             auto* pDstPtr =
                 reinterpret_cast<Uint8*>(UploadSpace.Allocation.CPUAddress) + (AlignedOffset - UploadSpace.Allocation.Offset) + row * UploadSpace.Stride + DepthSlice * UploadSpace.DepthStride;
 
-            memcpy(pDstPtr, pSrcPtr, static_cast<size_t>(UploadSpace.RowSize));
+            memcpy(pDstPtr, pSrcPtr, StaticCast<size_t>(UploadSpace.RowSize));
         }
     }
     CopyTextureRegion(UploadSpace.Allocation.pBuffer,
-                      static_cast<Uint32>(AlignedOffset),
+                      StaticCast<Uint32>(AlignedOffset),
                       UploadSpace.Stride,
                       UploadSpace.DepthStride,
-                      static_cast<Uint32>(UploadSpace.Allocation.Size - (AlignedOffset - UploadSpace.Allocation.Offset)),
+                      StaticCast<Uint32>(UploadSpace.Allocation.Size - (AlignedOffset - UploadSpace.Allocation.Offset)),
                       TextureD3D12,
                       DstSubResIndex,
                       DstBox,
@@ -2146,9 +2145,9 @@ void DeviceContextD3D12Impl::MapTextureSubresource(ITexture*                 pTe
 
             DEV_CHECK_ERR((TexDesc.CPUAccessFlags & CPU_ACCESS_READ), "Texture '", TexDesc.Name, "' was not created with CPU_ACCESS_READ flag and can't be mapped for reading");
             // Resources on D3D12_HEAP_TYPE_READBACK heaps do not support persistent map.
-            InvalidateRange.Begin     = static_cast<SIZE_T>(Footprint.Offset);
+            InvalidateRange.Begin     = StaticCast<SIZE_T>(Footprint.Offset);
             const auto& NextFootprint = TextureD3D12.GetStagingFootprint(Subres + 1);
-            InvalidateRange.End       = static_cast<SIZE_T>(NextFootprint.Offset);
+            InvalidateRange.End       = StaticCast<SIZE_T>(NextFootprint.Offset);
         }
         else if (MapType == MAP_WRITE)
         {
@@ -2164,9 +2163,9 @@ void DeviceContextD3D12Impl::MapTextureSubresource(ITexture*                 pTe
         void* pMappedDataPtr = nullptr;
         TextureD3D12.GetD3D12Resource()->Map(0, &InvalidateRange, &pMappedDataPtr);
         MappedData.pData       = reinterpret_cast<Uint8*>(pMappedDataPtr) + Footprint.Offset;
-        MappedData.Stride      = static_cast<Uint32>(Footprint.Footprint.RowPitch);
+        MappedData.Stride      = StaticCast<Uint32>(Footprint.Footprint.RowPitch);
         const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
-        MappedData.DepthStride = static_cast<Uint32>(Footprint.Footprint.Height / FmtAttribs.BlockHeight * Footprint.Footprint.RowPitch);
+        MappedData.DepthStride = StaticCast<Uint32>(Footprint.Footprint.Height / FmtAttribs.BlockHeight * Footprint.Footprint.RowPitch);
     }
     else
     {
@@ -2191,7 +2190,7 @@ void DeviceContextD3D12Impl::UnmapTextureSubresource(ITexture* pTexture, Uint32 
                               UploadSpace.AlignedOffset,
                               UploadSpace.Stride,
                               UploadSpace.DepthStride,
-                              static_cast<Uint32>(UploadSpace.Allocation.Size - (UploadSpace.AlignedOffset - UploadSpace.Allocation.Offset)),
+                              StaticCast<Uint32>(UploadSpace.Allocation.Size - (UploadSpace.AlignedOffset - UploadSpace.Allocation.Offset)),
                               TextureD3D12,
                               Subres,
                               UploadSpace.Region,
@@ -2214,8 +2213,8 @@ void DeviceContextD3D12Impl::UnmapTextureSubresource(ITexture* pTexture, Uint32 
         {
             const auto& Footprint     = TextureD3D12.GetStagingFootprint(Subres);
             const auto& NextFootprint = TextureD3D12.GetStagingFootprint(Subres + 1);
-            FlushRange.Begin          = static_cast<SIZE_T>(Footprint.Offset);
-            FlushRange.End            = static_cast<SIZE_T>(NextFootprint.Offset);
+            FlushRange.Begin          = StaticCast<SIZE_T>(Footprint.Offset);
+            FlushRange.End            = StaticCast<SIZE_T>(NextFootprint.Offset);
         }
 
         // Map and Unmap can be called by multiple threads safely. Nested Map calls are supported

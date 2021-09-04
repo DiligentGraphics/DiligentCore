@@ -43,5 +43,5 @@
 #include "PlatformDefinitions.h"
 #include "RefCntAutoPtr.hpp"
 #include "DebugUtilities.hpp"
-#include "ValidatedCast.hpp"
+#include "Cast.hpp"
 #include "RenderDevice.h"

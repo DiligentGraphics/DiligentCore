@@ -126,7 +126,7 @@ public:
                            const BufferSuballocatorCreateInfo& CreateInfo) :
         // clang-format off
         TBase                    {pRefCounters},
-        m_Mgr                    {static_cast<size_t>(CreateInfo.Desc.uiSizeInBytes), DefaultRawMemoryAllocator::GetAllocator()},
+        m_Mgr                    {StaticCast<size_t>(CreateInfo.Desc.uiSizeInBytes), DefaultRawMemoryAllocator::GetAllocator()},
         m_Buffer                 {pDevice, CreateInfo.Desc},
         m_ExpansionSize          {CreateInfo.ExpansionSize},
         m_SuballocationsAllocator

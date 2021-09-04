@@ -347,7 +347,7 @@ __forceinline Uint32 ShaderResourceCacheVk::GetDynamicBufferOffsets(DeviceContex
                 // The effective offset used for dynamic uniform and storage buffer bindings is the sum of the relative
                 // offset taken from pDynamicOffsets, and the base address of the buffer plus base offset in the descriptor set.
                 // The range of the dynamic uniform and storage buffer bindings is the buffer range as specified in the descriptor set.
-                Offsets[OffsetInd++] = Res.BufferDynamicOffset + Offset;
+                Offsets[OffsetInd++] = StaticCast<Uint32>(Res.BufferDynamicOffset + Offset);
                 ++res;
             }
             else
@@ -369,7 +369,7 @@ __forceinline Uint32 ShaderResourceCacheVk::GetDynamicBufferOffsets(DeviceContex
                 // The effective offset used for dynamic uniform and storage buffer bindings is the sum of the relative
                 // offset taken from pDynamicOffsets, and the base address of the buffer plus base offset in the descriptor set.
                 // The range of the dynamic uniform and storage buffer bindings is the buffer range as specified in the descriptor set.
-                Offsets[OffsetInd++] = Res.BufferDynamicOffset + Offset;
+                Offsets[OffsetInd++] = StaticCast<Uint32>(Res.BufferDynamicOffset + Offset);
                 ++res;
             }
             else
