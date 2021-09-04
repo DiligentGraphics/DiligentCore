@@ -309,6 +309,8 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     /// \param [in] TexFormat - Texture format for which to provide the information
     /// \return Const reference to the TextureFormatInfo structure containing the
     ///         texture format description.
+    /// 
+    /// \remarks This method must be externally synchronized.
     VIRTUAL const TextureFormatInfo REF METHOD(GetTextureFormatInfo)(THIS_
                                                                      TEXTURE_FORMAT TexFormat) PURE;
 
@@ -322,6 +324,8 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     /// \remark The first time this method is called for a particular format, it may be
     ///         considerably slower than GetTextureFormatInfo(). If you do not require
     ///         extended information, call GetTextureFormatInfo() instead.
+    /// 
+    /// \remarks This method must be externally synchronized.
     VIRTUAL const TextureFormatInfoExt REF METHOD(GetTextureFormatInfoExt)(THIS_
                                                                            TEXTURE_FORMAT TexFormat) PURE;
 

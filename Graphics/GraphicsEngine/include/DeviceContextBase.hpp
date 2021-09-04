@@ -1986,6 +1986,8 @@ template <typename ImplementationTraits>
 void DeviceContextBase<ImplementationTraits>::SetShadingRate(SHADING_RATE BaseRate, SHADING_RATE_COMBINER PrimitiveCombiner, SHADING_RATE_COMBINER TextureCombiner, int) const
 {
 #ifdef DILIGENT_DEVELOPMENT
+    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_GRAPHICS, "SetShadingRate");
+
     DEV_CHECK_ERR(IsPowerOfTwo(PrimitiveCombiner), "Only one primitive combiner must be specified");
     DEV_CHECK_ERR(IsPowerOfTwo(TextureCombiner), "Only one texture combiner must be specified");
     DEV_CHECK_ERR(m_pDevice->GetDeviceInfo().Features.VariableRateShading, "IDeviceContext::SetShadingRate: VariableRateShading feature must be enabled");

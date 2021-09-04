@@ -3443,7 +3443,7 @@ struct TextureFormatInfoExt DILIGENT_DERIVE(TextureFormatInfo)
     Uint32     SampleCounts DEFAULT_INITIALIZER(0);
 
     /// Indicates if the format can be filtered in the shader.
-    Bool       Filterable   DEFAULT_INITIALIZER(false);
+    Bool       Filterable   DEFAULT_INITIALIZER(False);
 };
 typedef struct TextureFormatInfoExt TextureFormatInfoExt;
 
@@ -3533,7 +3533,7 @@ DILIGENT_TYPED_ENUM(PIPELINE_STAGE_FLAGS, Uint32)
     /// Mesh shader stage.
     PIPELINE_STAGE_FLAG_MESH_SHADER                  = 0x00100000,
 
-    ///
+    /// The stage of the pipeline where the fragment density map is read to generate the fragment areas.
     PIPELINE_STAGE_FLAG_FRAGMENT_DENSITY_PROCESS     = 0x00800000,
 
     /// Default pipeline stage that is determined by the resource state.

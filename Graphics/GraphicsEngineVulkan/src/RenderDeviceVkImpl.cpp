@@ -469,7 +469,7 @@ void RenderDeviceVkImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
 
             if (vkSrvFmtProps.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)
             {
-                TexFormatInfo.Filterable = true;
+                TexFormatInfo.Filterable = (vkSrvFmtProps.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT) != 0;
                 TexFormatInfo.BindFlags |= BIND_SHADER_RESOURCE;
 
                 VkImageFormatProperties ImgFmtProps = {};

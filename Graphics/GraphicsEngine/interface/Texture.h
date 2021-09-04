@@ -65,6 +65,7 @@ struct TextureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     };
 
     /// Texture format, see Diligent::TEXTURE_FORMAT.
+    /// Use IRenderDevice::GetTextureFormatInfo() to check if format is supported.
     TEXTURE_FORMAT Format       DEFAULT_INITIALIZER(TEX_FORMAT_UNKNOWN);
 
     /// Number of Mip levels in the texture. Multisampled textures can only have 1 Mip level.
