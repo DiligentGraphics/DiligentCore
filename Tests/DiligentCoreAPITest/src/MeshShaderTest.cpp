@@ -95,6 +95,7 @@ TEST(MeshShaderTest, DrawTriangle)
                 break;
 #endif
 
+            case RENDER_DEVICE_TYPE_UNDEFINED: // to avoid empty switch
             default:
                 LOG_ERROR_AND_THROW("Unsupported device type");
         }
@@ -511,6 +512,7 @@ TEST(MeshShaderTest, DrawTrisWithAmplificationShader)
                 break;
 #endif
 
+            case RENDER_DEVICE_TYPE_UNDEFINED: // to avoid empty switch
             default:
                 LOG_ERROR_AND_THROW("Unsupported device type");
         }

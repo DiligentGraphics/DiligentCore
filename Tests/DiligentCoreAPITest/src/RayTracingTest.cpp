@@ -652,6 +652,7 @@ TEST_P(RT1, TriangleClosestHitShader)
                 break;
 #endif
 
+            case RENDER_DEVICE_TYPE_UNDEFINED: // to avoid empty switch
             default:
                 LOG_ERROR_AND_THROW("Unsupported device type");
         }
@@ -834,6 +835,7 @@ TEST_P(RT2, TriangleAnyHitShader)
                 break;
 #endif
 
+            case RENDER_DEVICE_TYPE_UNDEFINED: // to avoid empty switch
             default:
                 LOG_ERROR_AND_THROW("Unsupported device type");
         }
@@ -1026,6 +1028,7 @@ TEST_P(RT3, ProceduralIntersection)
                 break;
 #endif
 
+            case RENDER_DEVICE_TYPE_UNDEFINED: // to avoid empty switch
             default:
                 LOG_ERROR_AND_THROW("Unsupported device type");
         }
@@ -1218,6 +1221,7 @@ TEST_P(RT4, MultiGeometry)
                 break;
 #endif
 
+            case RENDER_DEVICE_TYPE_UNDEFINED: // to avoid empty switch
             default:
                 LOG_ERROR_AND_THROW("Unsupported device type");
         }
@@ -1597,6 +1601,7 @@ TEST_P(RT5, InlineRayTracing_RayTracingPSO)
                 break;
 #endif
 
+            case RENDER_DEVICE_TYPE_UNDEFINED: // to avoid empty switch
             default:
                 LOG_ERROR_AND_THROW("Unsupported device type");
         }
@@ -1753,6 +1758,7 @@ TEST_P(RT6, InlineRayTracing_GraphicsPSO)
                 break;
 #endif
 
+            case RENDER_DEVICE_TYPE_UNDEFINED: // to avoid empty switch
             default:
                 LOG_ERROR_AND_THROW("Unsupported device type");
         }
@@ -1905,6 +1911,7 @@ TEST_P(RT7, TraceRaysIndirect)
                 break;
 #endif
 
+            case RENDER_DEVICE_TYPE_UNDEFINED: // to avoid empty switch
             default:
                 LOG_ERROR_AND_THROW("Unsupported device type");
         }
@@ -2128,6 +2135,7 @@ TEST_P(RT8, InlineRayTracing_ComputePSO)
                 InlineRayTracingInComputePplnReferenceMtl(pSwapChain);
                 break;
 #endif
+            case RENDER_DEVICE_TYPE_UNDEFINED: // to avoid empty switch
             default:
                 LOG_ERROR_AND_THROW("Unsupported device type");
         }

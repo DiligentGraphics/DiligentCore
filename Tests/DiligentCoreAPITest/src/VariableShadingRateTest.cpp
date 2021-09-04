@@ -194,6 +194,7 @@ TEST(VariableShadingRateTest, PerDraw)
                 break;
 #endif
 
+            case RENDER_DEVICE_TYPE_UNDEFINED: // to avoid empty switch
             default:
                 LOG_ERROR_AND_THROW("Unsupported device type");
         }
@@ -311,6 +312,7 @@ TEST(VariableShadingRateTest, PerPrimitive)
                 break;
 #endif
 
+            case RENDER_DEVICE_TYPE_UNDEFINED: // to avoid empty switch
             default:
                 LOG_ERROR_AND_THROW("Unsupported device type");
         }
@@ -456,6 +458,7 @@ TEST(VariableShadingRateTest, TextureBased)
                 break;
 #endif
 
+            case RENDER_DEVICE_TYPE_UNDEFINED: // to avoid empty switch
             default:
                 LOG_ERROR_AND_THROW("Unsupported device type");
         }
@@ -588,6 +591,7 @@ TEST(VariableShadingRateTest, TextureBasedWithTextureArray)
                 break;
 #endif
 
+            case RENDER_DEVICE_TYPE_UNDEFINED: // to avoid empty switch
             default:
                 LOG_ERROR_AND_THROW("Unsupported device type");
         }
@@ -767,6 +771,7 @@ TEST(VariableShadingRateTest, TextureBasedWithRenderPass)
                 break;
 #endif
 
+            case RENDER_DEVICE_TYPE_UNDEFINED: // to avoid empty switch
             default:
                 LOG_ERROR_AND_THROW("Unsupported device type");
         }
