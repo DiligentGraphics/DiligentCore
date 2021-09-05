@@ -77,7 +77,7 @@ void RenderDrawCommandReferenceD3D11(ISwapChain* pSwapChain, const float* pClear
 {
     auto* pEnvD3D11              = TestingEnvironmentD3D11::GetInstance();
     auto* pd3d11Context          = pEnvD3D11->GetD3D11Context();
-    auto* pTestingSwapChainD3D11 = ValidatedCast<TestingSwapChainD3D11>(pSwapChain);
+    auto* pTestingSwapChainD3D11 = ClassPtrCast<TestingSwapChainD3D11>(pSwapChain);
 
     pd3d11Context->ClearState();
 
@@ -93,7 +93,7 @@ void RenderPassMSResolveReferenceD3D11(ISwapChain* pSwapChain, const float* pCle
     auto* pEnvD3D11              = TestingEnvironmentD3D11::GetInstance();
     auto* pd3d11Context          = pEnvD3D11->GetD3D11Context();
     auto* pd3d11Device           = pEnvD3D11->GetD3D11Device();
-    auto* pTestingSwapChainD3D11 = ValidatedCast<TestingSwapChainD3D11>(pSwapChain);
+    auto* pTestingSwapChainD3D11 = ClassPtrCast<TestingSwapChainD3D11>(pSwapChain);
 
     const auto& SCDesc = pTestingSwapChainD3D11->GetDesc();
 
@@ -141,7 +141,7 @@ void RenderPassInputAttachmentReferenceD3D11(ISwapChain* pSwapChain, const float
     auto* pEnvD3D11              = TestingEnvironmentD3D11::GetInstance();
     auto* pd3d11Context          = pEnvD3D11->GetD3D11Context();
     auto* pd3d11Device           = pEnvD3D11->GetD3D11Device();
-    auto* pTestingSwapChainD3D11 = ValidatedCast<TestingSwapChainD3D11>(pSwapChain);
+    auto* pTestingSwapChainD3D11 = ClassPtrCast<TestingSwapChainD3D11>(pSwapChain);
 
     const auto& SCDesc = pTestingSwapChainD3D11->GetDesc();
 

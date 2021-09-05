@@ -112,7 +112,7 @@ public:
                                                      const D3D_SHADER_MACRO* pDefines        = nullptr,
                                                      LPCSTR                  profile         = "cs_5_0");
 
-    static TestingEnvironmentD3D11* GetInstance() { return ValidatedCast<TestingEnvironmentD3D11>(TestingEnvironment::GetInstance()); }
+    static TestingEnvironmentD3D11* GetInstance() { return ClassPtrCast<TestingEnvironmentD3D11>(TestingEnvironment::GetInstance()); }
 
     virtual void Reset() override final;
 

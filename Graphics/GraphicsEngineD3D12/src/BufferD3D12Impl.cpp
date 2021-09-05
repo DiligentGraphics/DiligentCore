@@ -143,7 +143,7 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
             SetState(RESOURCE_STATE_UNDEFINED);
 
         const auto CmdQueueInd = pBuffData && pBuffData->pContext ?
-            ValidatedCast<DeviceContextD3D12Impl>(pBuffData->pContext)->GetCommandQueueId() :
+            ClassPtrCast<DeviceContextD3D12Impl>(pBuffData->pContext)->GetCommandQueueId() :
             SoftwareQueueIndex{PlatformMisc::GetLSB(m_Desc.ImmediateContextMask)};
 
         const auto StateMask = InitialDataSize > 0 ?
@@ -399,7 +399,7 @@ ID3D12Resource* BufferD3D12Impl::GetD3D12Buffer(Uint64& DataStartByteOffset, IDe
     else
     {
         VERIFY(m_Desc.Usage == USAGE_DYNAMIC, "Dynamic buffer is expected");
-        auto* pCtxD3D12 = ValidatedCast<DeviceContextD3D12Impl>(pContext);
+        auto* pCtxD3D12 = ClassPtrCast<DeviceContextD3D12Impl>(pContext);
 #ifdef DILIGENT_DEVELOPMENT
         DvpVerifyDynamicAllocation(pCtxD3D12);
 #endif

@@ -41,7 +41,7 @@ void TessellationReferenceD3D11(ISwapChain* pSwapChain)
     auto* pEnvD3D11              = TestingEnvironmentD3D11::GetInstance();
     auto* pd3d11Context          = pEnvD3D11->GetD3D11Context();
     auto* pd3d11Device           = pEnvD3D11->GetD3D11Device();
-    auto* pTestingSwapChainD3D11 = ValidatedCast<TestingSwapChainD3D11>(pSwapChain);
+    auto* pTestingSwapChainD3D11 = ClassPtrCast<TestingSwapChainD3D11>(pSwapChain);
 
     pd3d11Context->ClearState();
 

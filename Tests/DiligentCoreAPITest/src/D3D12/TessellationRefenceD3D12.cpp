@@ -44,7 +44,7 @@ void TessellationReferenceD3D12(ISwapChain* pSwapChain)
 {
     auto* pEnv                   = TestingEnvironmentD3D12::GetInstance();
     auto* pd3d12Device           = pEnv->GetD3D12Device();
-    auto* pTestingSwapChainD3D12 = ValidatedCast<TestingSwapChainD3D12>(pSwapChain);
+    auto* pTestingSwapChainD3D12 = ClassPtrCast<TestingSwapChainD3D12>(pSwapChain);
 
     const auto& SCDesc = pSwapChain->GetDesc();
 

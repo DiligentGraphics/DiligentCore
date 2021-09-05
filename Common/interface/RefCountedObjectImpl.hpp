@@ -499,7 +499,7 @@ public:
     RefCountedObject(IReferenceCounters* pRefCounters, BaseCtorArgTypes&&... BaseCtorArgs) noexcept :
         // clang-format off
         Base          {std::forward<BaseCtorArgTypes>(BaseCtorArgs)...},
-        m_pRefCounters{ValidatedCast<RefCountersImpl>(pRefCounters)   }
+        m_pRefCounters{ClassPtrCast<RefCountersImpl>(pRefCounters)   }
     // clang-format on
     {
         // If object is allocated on stack, ref counters will be null

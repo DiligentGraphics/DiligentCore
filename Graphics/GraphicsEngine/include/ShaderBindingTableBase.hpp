@@ -87,7 +87,7 @@ public:
 
         ValidateShaderBindingTableDesc(this->m_Desc, RTProps.ShaderGroupHandleSize, RTProps.MaxShaderRecordStride);
 
-        this->m_pPSO               = ValidatedCast<PipelineStateImplType>(this->m_Desc.pPSO);
+        this->m_pPSO               = ClassPtrCast<PipelineStateImplType>(this->m_Desc.pPSO);
         this->m_ShaderRecordSize   = this->m_pPSO->GetRayTracingPipelineDesc().ShaderRecordSize;
         this->m_ShaderRecordStride = this->m_ShaderRecordSize + RTProps.ShaderGroupHandleSize;
     }
@@ -123,7 +123,7 @@ public:
             return;
         }
 
-        this->m_pPSO               = ValidatedCast<PipelineStateImplType>(this->m_Desc.pPSO);
+        this->m_pPSO               = ClassPtrCast<PipelineStateImplType>(this->m_Desc.pPSO);
         this->m_ShaderRecordSize   = this->m_pPSO->GetRayTracingPipelineDesc().ShaderRecordSize;
         this->m_ShaderRecordStride = this->m_ShaderRecordSize + RayTracingProps.ShaderGroupHandleSize;
     }
@@ -205,7 +205,7 @@ public:
         VERIFY_EXPR((pData == nullptr) || (DataSize == this->m_ShaderRecordSize));
         VERIFY_EXPR(pTLAS != nullptr);
 
-        auto* const pTLASImpl = ValidatedCast<TopLevelASImplType>(pTLAS);
+        auto* const pTLASImpl = ClassPtrCast<TopLevelASImplType>(pTLAS);
         const auto  Info      = pTLASImpl->GetBuildInfo();
         const auto  Desc      = pTLASImpl->GetInstanceDesc(pInstanceName);
 
@@ -247,7 +247,7 @@ public:
         VERIFY_EXPR((pData == nullptr) || (DataSize == this->m_ShaderRecordSize));
         VERIFY_EXPR(pTLAS != nullptr);
 
-        auto* const pTLASImpl = ValidatedCast<TopLevelASImplType>(pTLAS);
+        auto* const pTLASImpl = ClassPtrCast<TopLevelASImplType>(pTLAS);
         const auto  Info      = pTLASImpl->GetBuildInfo();
         const auto  Desc      = pTLASImpl->GetInstanceDesc(pInstanceName);
 
@@ -303,7 +303,7 @@ public:
         VERIFY_EXPR((pData == nullptr) || (DataSize == this->m_ShaderRecordSize));
         VERIFY_EXPR(pTLAS != nullptr);
 
-        auto*      pTLASImpl = ValidatedCast<TopLevelASImplType>(pTLAS);
+        auto*      pTLASImpl = ClassPtrCast<TopLevelASImplType>(pTLAS);
         const auto Info      = pTLASImpl->GetBuildInfo();
         VERIFY_EXPR(Info.BindingMode == HIT_GROUP_BINDING_MODE_PER_GEOMETRY ||
                     Info.BindingMode == HIT_GROUP_BINDING_MODE_PER_INSTANCE ||

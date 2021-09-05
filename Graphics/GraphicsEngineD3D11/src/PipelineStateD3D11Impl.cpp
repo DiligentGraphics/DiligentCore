@@ -326,7 +326,7 @@ bool PipelineStateD3D11Impl::IsCompatibleWith(const IPipelineState* pPSO) const
     if (!TPipelineStateBase::IsCompatibleWith(pPSO))
         return false;
 
-    const auto& rhs = *ValidatedCast<const PipelineStateD3D11Impl>(pPSO);
+    const auto& rhs = *ClassPtrCast<const PipelineStateD3D11Impl>(pPSO);
     if (m_ActiveShaderStages != rhs.m_ActiveShaderStages)
         return false;
 

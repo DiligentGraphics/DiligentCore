@@ -1236,8 +1236,8 @@ void EngineFactoryVkImpl::CreateSwapChainVk(IRenderDevice*       pDevice,
 
     try
     {
-        auto* pDeviceVk        = ValidatedCast<RenderDeviceVkImpl>(pDevice);
-        auto* pDeviceContextVk = ValidatedCast<DeviceContextVkImpl>(pImmediateContext);
+        auto* pDeviceVk        = ClassPtrCast<RenderDeviceVkImpl>(pDevice);
+        auto* pDeviceContextVk = ClassPtrCast<DeviceContextVkImpl>(pImmediateContext);
         auto& RawMemAllocator  = GetRawAllocator();
 
         auto* pSwapChainVk = NEW_RC_OBJ(RawMemAllocator, "SwapChainVkImpl instance", SwapChainVkImpl)(SCDesc, pDeviceVk, pDeviceContextVk, Window);

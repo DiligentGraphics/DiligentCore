@@ -360,7 +360,7 @@ void TextureUploaderGL::ScheduleGPUCopy(IDeviceContext* pContext,
                                         Uint32          MipLevel,
                                         IUploadBuffer*  pUploadBuffer)
 {
-    auto* pUploadBufferGL = ValidatedCast<UploadBufferGL>(pUploadBuffer);
+    auto* pUploadBufferGL = ClassPtrCast<UploadBufferGL>(pUploadBuffer);
     if (pContext != nullptr)
     {
         // Render thread
@@ -383,7 +383,7 @@ void TextureUploaderGL::ScheduleGPUCopy(IDeviceContext* pContext,
 
 void TextureUploaderGL::RecycleBuffer(IUploadBuffer* pUploadBuffer)
 {
-    auto* pUploadBufferGL = ValidatedCast<UploadBufferGL>(pUploadBuffer);
+    auto* pUploadBufferGL = ClassPtrCast<UploadBufferGL>(pUploadBuffer);
     VERIFY(pUploadBufferGL->DbgIsCopyScheduled(), "Upload buffer must be recycled only after copy operation has been scheduled on the GPU");
     pUploadBufferGL->Reset();
 

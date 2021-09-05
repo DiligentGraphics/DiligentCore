@@ -38,7 +38,7 @@ void ClearRenderTargetReferenceD3D11(ISwapChain* pSwapChain, const float ClearCo
 {
     auto* pEnvD3D11              = TestingEnvironmentD3D11::GetInstance();
     auto* pd3d11Context          = pEnvD3D11->GetD3D11Context();
-    auto* pTestingSwapChainD3D11 = ValidatedCast<TestingSwapChainD3D11>(pSwapChain);
+    auto* pTestingSwapChainD3D11 = ClassPtrCast<TestingSwapChainD3D11>(pSwapChain);
 
     pd3d11Context->ClearRenderTargetView(pTestingSwapChainD3D11->GetD3D11RTV(), ClearColor);
 

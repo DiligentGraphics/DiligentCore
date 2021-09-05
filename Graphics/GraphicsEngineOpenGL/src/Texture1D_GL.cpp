@@ -143,7 +143,7 @@ void Texture1D_GL::UpdateData(GLContextState&          ContextState,
     GLuint UnpackBuffer = 0;
     if (SubresData.pSrcBuffer != nullptr)
     {
-        auto* pBufferGL = ValidatedCast<BufferGLImpl>(SubresData.pSrcBuffer);
+        auto* pBufferGL = ClassPtrCast<BufferGLImpl>(SubresData.pSrcBuffer);
         UnpackBuffer    = pBufferGL->GetGLHandle();
     }
 

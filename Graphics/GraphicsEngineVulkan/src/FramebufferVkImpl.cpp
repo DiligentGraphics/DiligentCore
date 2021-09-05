@@ -51,7 +51,7 @@ FramebufferVkImpl::FramebufferVkImpl(IReferenceCounters*    pRefCounters,
     FramebufferCI.pNext = nullptr;
     FramebufferCI.flags = 0;
 
-    auto* pRenderPassVkImpl  = ValidatedCast<RenderPassVkImpl>(m_Desc.pRenderPass);
+    auto* pRenderPassVkImpl  = ClassPtrCast<RenderPassVkImpl>(m_Desc.pRenderPass);
     FramebufferCI.renderPass = pRenderPassVkImpl->GetVkRenderPass();
 
     FramebufferCI.attachmentCount = m_Desc.AttachmentCount;
@@ -61,7 +61,7 @@ FramebufferVkImpl::FramebufferVkImpl(IReferenceCounters*    pRefCounters,
     {
         if (auto* pView = m_Desc.ppAttachments[i])
         {
-            vkImgViews[i] = ValidatedCast<TextureViewVkImpl>(pView)->GetVulkanImageView();
+            vkImgViews[i] = ClassPtrCast<TextureViewVkImpl>(pView)->GetVulkanImageView();
         }
     }
     FramebufferCI.pAttachments = vkImgViews.data();

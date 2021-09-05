@@ -693,7 +693,7 @@ void SwapChainVkImpl::Present(Uint32 SyncInterval)
     auto* pDeviceVk       = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
 
     auto* pBackBuffer = GetCurrentBackBufferRTV()->GetTexture();
-    pImmediateCtxVk->UnbindTextureFromFramebuffer(ValidatedCast<TextureVkImpl>(pBackBuffer), false);
+    pImmediateCtxVk->UnbindTextureFromFramebuffer(ClassPtrCast<TextureVkImpl>(pBackBuffer), false);
 
     if (!m_IsMinimized)
     {
@@ -794,7 +794,7 @@ void SwapChainVkImpl::ReleaseSwapChainResources(DeviceContextVkImpl* pImmediateC
         bool RenderTargetsReset = false;
         for (Uint32 i = 0; i < m_pBackBufferRTV.size() && !RenderTargetsReset; ++i)
         {
-            auto* pCurrentBackBuffer = ValidatedCast<TextureVkImpl>(m_pBackBufferRTV[i]->GetTexture());
+            auto* pCurrentBackBuffer = ClassPtrCast<TextureVkImpl>(m_pBackBufferRTV[i]->GetTexture());
             RenderTargetsReset       = pImmediateCtxVk->UnbindTextureFromFramebuffer(pCurrentBackBuffer, false);
         }
         if (RenderTargetsReset)

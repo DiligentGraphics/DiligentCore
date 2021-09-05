@@ -255,7 +255,7 @@ void TextureVkImpl::InitializeTextureContent(const TextureData&          InitDat
     const auto& LogicalDevice = GetDevice()->GetLogicalDevice();
 
     const auto CmdQueueInd = InitData.pContext ?
-        ValidatedCast<DeviceContextVkImpl>(InitData.pContext)->GetCommandQueueId() :
+        ClassPtrCast<DeviceContextVkImpl>(InitData.pContext)->GetCommandQueueId() :
         SoftwareQueueIndex{PlatformMisc::GetLSB(m_Desc.ImmediateContextMask)};
 
     // Vulkan validation layers do not like uninitialized memory, so if no initial data

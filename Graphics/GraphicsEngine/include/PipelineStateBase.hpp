@@ -446,7 +446,7 @@ public:
             return true;
 
         const auto& lhs = *static_cast<const PipelineStateImplType*>(this);
-        const auto& rhs = *ValidatedCast<const PipelineStateImplType>(pPSO);
+        const auto& rhs = *ClassPtrCast<const PipelineStateImplType>(pPSO);
 
         const auto SignCount = lhs.GetResourceSignatureCount();
         if (SignCount != rhs.GetResourceSignatureCount())
@@ -546,7 +546,7 @@ protected:
         auto AddShaderStage = [&](IShader* pShader) {
             if (pShader != nullptr)
             {
-                ShaderStages.emplace_back(ValidatedCast<ShaderImplType>(pShader));
+                ShaderStages.emplace_back(ClassPtrCast<ShaderImplType>(pShader));
                 const auto ShaderType = pShader->GetDesc().ShaderType;
                 VERIFY((m_ActiveShaderStages & ShaderType) == 0,
                        "Shader stage ", GetShaderTypeLiteralName(ShaderType), " has already been initialized in PSO '", this->m_Desc.Name, "'.");
@@ -599,7 +599,7 @@ protected:
         VERIFY_EXPR(CreateInfo.pCS != nullptr);
         VERIFY_EXPR(CreateInfo.pCS->GetDesc().ShaderType == SHADER_TYPE_COMPUTE);
 
-        ShaderStages.emplace_back(ValidatedCast<ShaderImplType>(CreateInfo.pCS));
+        ShaderStages.emplace_back(ClassPtrCast<ShaderImplType>(CreateInfo.pCS));
         m_ActiveShaderStages = SHADER_TYPE_COMPUTE;
 
         VERIFY_EXPR(!ShaderStages.empty());
@@ -620,7 +620,7 @@ protected:
                 const auto StageInd   = GetShaderTypePipelineIndex(ShaderType, PIPELINE_TYPE_RAY_TRACING);
                 auto&      Stage      = ShaderStages[StageInd];
                 m_ActiveShaderStages |= ShaderType;
-                Stage.Append(ValidatedCast<ShaderImplType>(pShader));
+                Stage.Append(ClassPtrCast<ShaderImplType>(pShader));
             }
         };
 
@@ -673,7 +673,7 @@ protected:
         VERIFY_EXPR(CreateInfo.pTS != nullptr);
         VERIFY_EXPR(CreateInfo.pTS->GetDesc().ShaderType == SHADER_TYPE_TILE);
 
-        ShaderStages.emplace_back(ValidatedCast<ShaderImplType>(CreateInfo.pTS));
+        ShaderStages.emplace_back(ClassPtrCast<ShaderImplType>(CreateInfo.pTS));
         m_ActiveShaderStages = SHADER_TYPE_TILE;
 
         VERIFY_EXPR(!ShaderStages.empty());
@@ -1042,7 +1042,7 @@ private:
             Uint32 MaxSignatureBindingIndex = 0;
             for (Uint32 i = 0; i < CreateInfo.ResourceSignaturesCount; ++i)
             {
-                const auto* pSignature = ValidatedCast<PipelineResourceSignatureImplType>(CreateInfo.ppResourceSignatures[i]);
+                const auto* pSignature = ClassPtrCast<PipelineResourceSignatureImplType>(CreateInfo.ppResourceSignatures[i]);
                 VERIFY(pSignature != nullptr, "Pipeline resource signature at index ", i, " is null. This error should've been caught by ValidatePipelineResourceSignatures.");
 
                 Uint32 Index = pSignature->GetDesc().BindingIndex;
@@ -1068,7 +1068,7 @@ private:
             VERIFY_EXPR(CreateInfo.ResourceSignaturesCount != 0 && CreateInfo.ppResourceSignatures != nullptr);
             for (Uint32 i = 0; i < CreateInfo.ResourceSignaturesCount; ++i)
             {
-                auto* pSignature = ValidatedCast<PipelineResourceSignatureImplType>(CreateInfo.ppResourceSignatures[i]);
+                auto* pSignature = ClassPtrCast<PipelineResourceSignatureImplType>(CreateInfo.ppResourceSignatures[i]);
                 VERIFY_EXPR(pSignature != nullptr);
 
                 const Uint32 Index = pSignature->GetDesc().BindingIndex;

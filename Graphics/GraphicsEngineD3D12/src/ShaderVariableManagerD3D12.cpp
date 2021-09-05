@@ -319,7 +319,7 @@ void BindResourceHelper::CacheCB(const BindResourceInfo& BindInfo) const
 {
     VERIFY(BindInfo.pObject != nullptr, "Setting buffer to null is handled by BindResourceHelper::operator()");
 
-    // We cannot use ValidatedCast<> here as the resource can be of wrong type
+    // We cannot use ClassPtrCast<> here as the resource can be of wrong type
     RefCntAutoPtr<BufferD3D12Impl> pBuffD3D12{BindInfo.pObject, IID_BufferD3D12};
 #ifdef DILIGENT_DEVELOPMENT
     VerifyConstantBufferBinding(m_ResDesc, BindInfo, pBuffD3D12.RawPtr(), m_DstRes.pObject.RawPtr(),
@@ -487,7 +487,7 @@ void BindResourceHelper::CacheResourceView(const BindResourceInfo& BindInfo,
 {
     VERIFY(BindInfo.pObject != nullptr, "Setting resource view to null is handled by BindResourceHelper::operator()");
 
-    // We cannot use ValidatedCast<> here as the resource can be of wrong type
+    // We cannot use ClassPtrCast<> here as the resource can be of wrong type
     RefCntAutoPtr<TResourceViewType> pViewD3D12{BindInfo.pObject, ResourceViewTraits<TResourceViewType>::IID};
 #ifdef DILIGENT_DEVELOPMENT
     VerifyResourceViewBinding(m_ResDesc, BindInfo, pViewD3D12.RawPtr(),

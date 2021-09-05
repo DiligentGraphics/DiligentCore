@@ -271,7 +271,7 @@ void ShaderVariableManagerD3D11::ConstBuffBindInfo::BindResource(const BindResou
 
     auto& ResourceCache = m_ParentManager.m_ResourceCache;
 
-    // We cannot use ValidatedCast<> here as the resource can be of wrong type
+    // We cannot use ClassPtrCast<> here as the resource can be of wrong type
     RefCntAutoPtr<BufferD3D11Impl> pBuffD3D11Impl{BindInfo.pObject, IID_BufferD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {
@@ -308,7 +308,7 @@ void ShaderVariableManagerD3D11::TexSRVBindInfo::BindResource(const BindResource
 
     auto& ResourceCache = m_ParentManager.m_ResourceCache;
 
-    // We cannot use ValidatedCast<> here as the resource can be of wrong type
+    // We cannot use ClassPtrCast<> here as the resource can be of wrong type
     RefCntAutoPtr<TextureViewD3D11Impl> pViewD3D11{BindInfo.pObject, IID_TextureViewD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {
@@ -366,7 +366,7 @@ void ShaderVariableManagerD3D11::SamplerBindInfo::BindResource(const BindResourc
 
     auto& ResourceCache = m_ParentManager.m_ResourceCache;
 
-    // We cannot use ValidatedCast<> here as the resource can be of wrong type
+    // We cannot use ClassPtrCast<> here as the resource can be of wrong type
     RefCntAutoPtr<SamplerD3D11Impl> pSamplerD3D11{BindInfo.pObject, IID_SamplerD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {
@@ -388,7 +388,7 @@ void ShaderVariableManagerD3D11::BuffSRVBindInfo::BindResource(const BindResourc
 
     auto& ResourceCache = m_ParentManager.m_ResourceCache;
 
-    // We cannot use ValidatedCast<> here as the resource can be of wrong type
+    // We cannot use ClassPtrCast<> here as the resource can be of wrong type
     RefCntAutoPtr<BufferViewD3D11Impl> pViewD3D11{BindInfo.pObject, IID_BufferViewD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {
@@ -413,7 +413,7 @@ void ShaderVariableManagerD3D11::TexUAVBindInfo::BindResource(const BindResource
 
     auto& ResourceCache = m_ParentManager.m_ResourceCache;
 
-    // We cannot use ValidatedCast<> here as the resource can be of wrong type
+    // We cannot use ClassPtrCast<> here as the resource can be of wrong type
     RefCntAutoPtr<TextureViewD3D11Impl> pViewD3D11{BindInfo.pObject, IID_TextureViewD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {
@@ -437,7 +437,7 @@ void ShaderVariableManagerD3D11::BuffUAVBindInfo::BindResource(const BindResourc
 
     auto& ResourceCache = m_ParentManager.m_ResourceCache;
 
-    // We cannot use ValidatedCast<> here as the resource can be of wrong type
+    // We cannot use ClassPtrCast<> here as the resource can be of wrong type
     RefCntAutoPtr<BufferViewD3D11Impl> pViewD3D11{BindInfo.pObject, IID_BufferViewD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {

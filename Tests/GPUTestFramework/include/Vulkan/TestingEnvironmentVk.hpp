@@ -49,7 +49,7 @@ public:
                          const SwapChainDesc& SCDesc);
     ~TestingEnvironmentVk();
 
-    static TestingEnvironmentVk* GetInstance() { return ValidatedCast<TestingEnvironmentVk>(TestingEnvironment::GetInstance()); }
+    static TestingEnvironmentVk* GetInstance() { return ClassPtrCast<TestingEnvironmentVk>(TestingEnvironment::GetInstance()); }
 
     void CreateImage2D(uint32_t          Width,
                        uint32_t          Height,

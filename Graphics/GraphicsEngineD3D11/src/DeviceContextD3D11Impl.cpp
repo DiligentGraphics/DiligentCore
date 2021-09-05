@@ -76,7 +76,7 @@ void DeviceContextD3D11Impl::Begin(Uint32 ImmediateContextId)
 
 void DeviceContextD3D11Impl::SetPipelineState(IPipelineState* pPipelineState)
 {
-    auto* pPipelineStateD3D11 = ValidatedCast<PipelineStateD3D11Impl>(pPipelineState);
+    auto* pPipelineStateD3D11 = ClassPtrCast<PipelineStateD3D11Impl>(pPipelineState);
     if (PipelineStateD3D11Impl::IsSameObject(m_pPipelineState, pPipelineStateD3D11))
         return;
 
@@ -206,7 +206,7 @@ void DeviceContextD3D11Impl::TransitionShaderResources(IPipelineState* pPipeline
         return;
     }
 
-    auto* pShaderResBindingD3D11 = ValidatedCast<ShaderResourceBindingD3D11Impl>(pShaderResourceBinding);
+    auto* pShaderResBindingD3D11 = ClassPtrCast<ShaderResourceBindingD3D11Impl>(pShaderResourceBinding);
     auto& ResourceCache          = pShaderResBindingD3D11->GetResourceCache();
 
     ResourceCache.TransitionResourceStates<ShaderResourceCacheD3D11::StateTransitionMode::Transition>(*this);
@@ -216,7 +216,7 @@ void DeviceContextD3D11Impl::CommitShaderResources(IShaderResourceBinding* pShad
 {
     DeviceContextBase::CommitShaderResources(pShaderResourceBinding, StateTransitionMode, 0 /*Dummy*/);
 
-    auto* const pShaderResBindingD3D11 = ValidatedCast<ShaderResourceBindingD3D11Impl>(pShaderResourceBinding);
+    auto* const pShaderResBindingD3D11 = ClassPtrCast<ShaderResourceBindingD3D11Impl>(pShaderResourceBinding);
     const auto  SRBIndex               = pShaderResBindingD3D11->GetBindingIndex();
     auto&       ResourceCache          = pShaderResBindingD3D11->GetResourceCache();
 
@@ -692,7 +692,7 @@ void DeviceContextD3D11Impl::DrawIndirect(const DrawIndirectAttribs& Attribs)
 
     PrepareForDraw(Attribs.Flags);
 
-    auto*         pIndirectDrawAttribsD3D11 = ValidatedCast<BufferD3D11Impl>(Attribs.pAttribsBuffer);
+    auto*         pIndirectDrawAttribsD3D11 = ClassPtrCast<BufferD3D11Impl>(Attribs.pAttribsBuffer);
     ID3D11Buffer* pd3d11ArgsBuff            = pIndirectDrawAttribsD3D11->m_pd3d11Buffer;
 
     bool NativeMultiDrawExecuted = false;
@@ -726,7 +726,7 @@ void DeviceContextD3D11Impl::DrawIndexedIndirect(const DrawIndexedIndirectAttrib
 
     PrepareForIndexedDraw(Attribs.Flags, Attribs.IndexType);
 
-    auto*         pIndirectDrawAttribsD3D11 = ValidatedCast<BufferD3D11Impl>(Attribs.pAttribsBuffer);
+    auto*         pIndirectDrawAttribsD3D11 = ClassPtrCast<BufferD3D11Impl>(Attribs.pAttribsBuffer);
     ID3D11Buffer* pd3d11ArgsBuff            = pIndirectDrawAttribsD3D11->m_pd3d11Buffer;
 
     bool NativeMultiDrawExecuted = false;
@@ -816,7 +816,7 @@ void DeviceContextD3D11Impl::DispatchComputeIndirect(const DispatchComputeIndire
     }
 #endif
 
-    auto* pd3d11Buff = ValidatedCast<BufferD3D11Impl>(Attribs.pAttribsBuffer)->GetD3D11Buffer();
+    auto* pd3d11Buff = ClassPtrCast<BufferD3D11Impl>(Attribs.pAttribsBuffer)->GetD3D11Buffer();
     m_pd3d11DeviceContext->DispatchIndirect(pd3d11Buff, StaticCast<UINT>(Attribs.DispatchArgsByteOffset));
 }
 
@@ -831,7 +831,7 @@ void DeviceContextD3D11Impl::ClearDepthStencil(ITextureView*                  pV
 
     VERIFY_EXPR(pView != nullptr);
 
-    auto* pViewD3D11 = ValidatedCast<TextureViewD3D11Impl>(pView);
+    auto* pViewD3D11 = ClassPtrCast<TextureViewD3D11Impl>(pView);
     auto* pd3d11DSV  = static_cast<ID3D11DepthStencilView*>(pViewD3D11->GetD3D11View());
 
     UINT32 d3d11ClearFlags = 0;
@@ -848,7 +848,7 @@ void DeviceContextD3D11Impl::ClearRenderTarget(ITextureView* pView, const float*
 
     VERIFY_EXPR(pView != nullptr);
 
-    auto* pViewD3D11 = ValidatedCast<TextureViewD3D11Impl>(pView);
+    auto* pViewD3D11 = ClassPtrCast<TextureViewD3D11Impl>(pView);
     auto* pd3d11RTV  = static_cast<ID3D11RenderTargetView*>(pViewD3D11->GetD3D11View());
 
     static const float Zero[4] = {0.f, 0.f, 0.f, 0.f};
@@ -874,7 +874,7 @@ void DeviceContextD3D11Impl::UpdateBuffer(IBuffer*                       pBuffer
 {
     TDeviceContextBase::UpdateBuffer(pBuffer, Offset, Size, pData, StateTransitionMode);
 
-    auto* pBufferD3D11Impl = ValidatedCast<BufferD3D11Impl>(pBuffer);
+    auto* pBufferD3D11Impl = ClassPtrCast<BufferD3D11Impl>(pBuffer);
 
     D3D11_BOX DstBox;
     DstBox.left   = StaticCast<UINT>(Offset);
@@ -897,8 +897,8 @@ void DeviceContextD3D11Impl::CopyBuffer(IBuffer*                       pSrcBuffe
 {
     TDeviceContextBase::CopyBuffer(pSrcBuffer, SrcOffset, SrcBufferTransitionMode, pDstBuffer, DstOffset, Size, DstBufferTransitionMode);
 
-    auto* pSrcBufferD3D11Impl = ValidatedCast<BufferD3D11Impl>(pSrcBuffer);
-    auto* pDstBufferD3D11Impl = ValidatedCast<BufferD3D11Impl>(pDstBuffer);
+    auto* pSrcBufferD3D11Impl = ClassPtrCast<BufferD3D11Impl>(pSrcBuffer);
+    auto* pDstBufferD3D11Impl = ClassPtrCast<BufferD3D11Impl>(pDstBuffer);
 
     D3D11_BOX SrcBox;
     SrcBox.left   = StaticCast<UINT>(SrcOffset);
@@ -915,7 +915,7 @@ void DeviceContextD3D11Impl::MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_F
 {
     TDeviceContextBase::MapBuffer(pBuffer, MapType, MapFlags, pMappedData);
 
-    auto*     pBufferD3D11  = ValidatedCast<BufferD3D11Impl>(pBuffer);
+    auto*     pBufferD3D11  = ClassPtrCast<BufferD3D11Impl>(pBuffer);
     D3D11_MAP d3d11MapType  = static_cast<D3D11_MAP>(0);
     UINT      d3d11MapFlags = 0;
     MapParamsToD3D11MapParams(MapType, MapFlags, d3d11MapType, d3d11MapFlags);
@@ -933,7 +933,7 @@ void DeviceContextD3D11Impl::MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_F
 void DeviceContextD3D11Impl::UnmapBuffer(IBuffer* pBuffer, MAP_TYPE MapType)
 {
     TDeviceContextBase::UnmapBuffer(pBuffer, MapType);
-    auto* pBufferD3D11 = ValidatedCast<BufferD3D11Impl>(pBuffer);
+    auto* pBufferD3D11 = ClassPtrCast<BufferD3D11Impl>(pBuffer);
     m_pd3d11DeviceContext->Unmap(pBufferD3D11->m_pd3d11Buffer, 0);
 }
 
@@ -947,7 +947,7 @@ void DeviceContextD3D11Impl::UpdateTexture(ITexture*                      pTextu
 {
     TDeviceContextBase::UpdateTexture(pTexture, MipLevel, Slice, DstBox, SubresData, SrcBufferTransitionMode, DstTextureTransitionMode);
 
-    auto*       pTexD3D11 = ValidatedCast<TextureBaseD3D11>(pTexture);
+    auto*       pTexD3D11 = ClassPtrCast<TextureBaseD3D11>(pTexture);
     const auto& Desc      = pTexD3D11->GetDesc();
 
     // Direct3D11 backend uses UpdateData() to initialize textures, so we can't check the usage in ValidateUpdateTextureParams()
@@ -986,8 +986,8 @@ void DeviceContextD3D11Impl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
 {
     TDeviceContextBase::CopyTexture(CopyAttribs);
 
-    auto* pSrcTexD3D11 = ValidatedCast<TextureBaseD3D11>(CopyAttribs.pSrcTexture);
-    auto* pDstTexD3D11 = ValidatedCast<TextureBaseD3D11>(CopyAttribs.pDstTexture);
+    auto* pSrcTexD3D11 = ClassPtrCast<TextureBaseD3D11>(CopyAttribs.pSrcTexture);
+    auto* pDstTexD3D11 = ClassPtrCast<TextureBaseD3D11>(CopyAttribs.pDstTexture);
 
     D3D11_BOX D3D11SrcBox, *pD3D11SrcBox = nullptr;
     if (const auto* pSrcBox = CopyAttribs.pSrcBox)
@@ -1017,7 +1017,7 @@ void DeviceContextD3D11Impl::MapTextureSubresource(ITexture*                 pTe
 {
     TDeviceContextBase::MapTextureSubresource(pTexture, MipLevel, ArraySlice, MapType, MapFlags, pMapRegion, MappedData);
 
-    auto*       pTexD3D11     = ValidatedCast<TextureBaseD3D11>(pTexture);
+    auto*       pTexD3D11     = ClassPtrCast<TextureBaseD3D11>(pTexture);
     const auto& TexDesc       = pTexD3D11->GetDesc();
     D3D11_MAP   d3d11MapType  = static_cast<D3D11_MAP>(0);
     UINT        d3d11MapFlags = 0;
@@ -1043,7 +1043,7 @@ void DeviceContextD3D11Impl::UnmapTextureSubresource(ITexture* pTexture, Uint32 
 {
     TDeviceContextBase::UnmapTextureSubresource(pTexture, MipLevel, ArraySlice);
 
-    auto*       pTexD3D11   = ValidatedCast<TextureBaseD3D11>(pTexture);
+    auto*       pTexD3D11   = ClassPtrCast<TextureBaseD3D11>(pTexture);
     const auto& TexDesc     = pTexD3D11->GetDesc();
     auto        Subresource = D3D11CalcSubresource(MipLevel, ArraySlice, TexDesc.MipLevels);
     m_pd3d11DeviceContext->Unmap(pTexD3D11->GetD3D11Texture(), Subresource);
@@ -1052,7 +1052,7 @@ void DeviceContextD3D11Impl::UnmapTextureSubresource(ITexture* pTexture, Uint32 
 void DeviceContextD3D11Impl::GenerateMips(ITextureView* pTextureView)
 {
     TDeviceContextBase::GenerateMips(pTextureView);
-    auto& TexViewD3D11 = *ValidatedCast<TextureViewD3D11Impl>(pTextureView);
+    auto& TexViewD3D11 = *ClassPtrCast<TextureViewD3D11Impl>(pTextureView);
     auto* pd3d11SRV    = static_cast<ID3D11ShaderResourceView*>(TexViewD3D11.GetD3D11View());
     m_pd3d11DeviceContext->GenerateMips(pd3d11SRV);
 }
@@ -1527,7 +1527,7 @@ void DeviceContextD3D11Impl::BeginSubpass()
         {
             if (auto* pTexView = FBDesc.ppAttachments[AttachmentRef.AttachmentIndex])
             {
-                auto* pTexD3D11 = ValidatedCast<TextureBaseD3D11>(pTexView->GetTexture());
+                auto* pTexD3D11 = ClassPtrCast<TextureBaseD3D11>(pTexView->GetTexture());
                 UnbindResourceView(m_CommittedRes.d3d11SRVs, m_CommittedRes.d3d11SRVResources, m_CommittedRes.NumSRVs, pTexD3D11->GetD3D11Texture(), SetSRVMethods);
             }
         }
@@ -1560,7 +1560,7 @@ void DeviceContextD3D11Impl::BeginSubpass()
             {
                 if (auto* pTexView = FBDesc.ppAttachments[RTAttachmentIdx])
                 {
-                    auto* const pViewD3D11 = ValidatedCast<TextureViewD3D11Impl>(pTexView);
+                    auto* const pViewD3D11 = ClassPtrCast<TextureViewD3D11Impl>(pTexView);
                     auto* const pd3d11RTV  = static_cast<ID3D11RenderTargetView*>(pViewD3D11->GetD3D11View());
                     const auto& ClearValue = m_AttachmentClearValues[RTAttachmentIdx];
                     m_pd3d11DeviceContext->ClearRenderTargetView(pd3d11RTV, ClearValue.Color);
@@ -1579,7 +1579,7 @@ void DeviceContextD3D11Impl::BeginSubpass()
             {
                 if (auto* pTexView = FBDesc.ppAttachments[DSAttachmentIdx])
                 {
-                    auto* const pViewD3D11 = ValidatedCast<TextureViewD3D11Impl>(pTexView);
+                    auto* const pViewD3D11 = ClassPtrCast<TextureViewD3D11Impl>(pTexView);
                     auto* const pd3d11DSV  = static_cast<ID3D11DepthStencilView*>(pViewD3D11->GetD3D11View());
                     const auto& ClearValue = m_AttachmentClearValues[DSAttachmentIdx];
                     m_pd3d11DeviceContext->ClearDepthStencilView(pd3d11DSV, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, ClearValue.DepthStencil.Depth, ClearValue.DepthStencil.Stencil);
@@ -1608,8 +1608,8 @@ void DeviceContextD3D11Impl::EndSubpass()
                 VERIFY_EXPR(RTAttachmentRef.AttachmentIndex != ATTACHMENT_UNUSED);
                 auto* pSrcView     = FBDesc.ppAttachments[RTAttachmentRef.AttachmentIndex];
                 auto* pDstView     = FBDesc.ppAttachments[RslvAttachmentRef.AttachmentIndex];
-                auto* pSrcTexD3D11 = ValidatedCast<TextureBaseD3D11>(pSrcView->GetTexture());
-                auto* pDstTexD3D11 = ValidatedCast<TextureBaseD3D11>(pDstView->GetTexture());
+                auto* pSrcTexD3D11 = ClassPtrCast<TextureBaseD3D11>(pSrcView->GetTexture());
+                auto* pDstTexD3D11 = ClassPtrCast<TextureBaseD3D11>(pDstView->GetTexture());
 
                 const auto& SrcViewDesc = pSrcView->GetDesc();
                 const auto& DstViewDesc = pDstView->GetDesc();
@@ -1797,7 +1797,7 @@ void DeviceContextD3D11Impl::ExecuteCommandLists(Uint32               NumCommand
 
     for (Uint32 i = 0; i < NumCommandLists; ++i)
     {
-        auto* pCmdListD3D11 = ValidatedCast<CommandListD3D11Impl>(ppCommandLists[i]);
+        auto* pCmdListD3D11 = ClassPtrCast<CommandListD3D11Impl>(ppCommandLists[i]);
         auto* pd3d11CmdList = pCmdListD3D11->GetD3D11CommandList();
         m_pd3d11DeviceContext->ExecuteCommandList(pd3d11CmdList,
                                                   FALSE // A Boolean flag that determines whether the target context state is
@@ -1852,7 +1852,7 @@ void DeviceContextD3D11Impl::EnqueueSignal(IFence* pFence, Uint64 Value)
     auto*                pd3d11Device = m_pDevice->GetD3D11Device();
     CComPtr<ID3D11Query> pd3d11Query  = CreateD3D11QueryEvent(pd3d11Device);
     m_pd3d11DeviceContext->End(pd3d11Query);
-    auto* pFenceD3D11Impl = ValidatedCast<FenceD3D11Impl>(pFence);
+    auto* pFenceD3D11Impl = ClassPtrCast<FenceD3D11Impl>(pFence);
     pFenceD3D11Impl->AddPendingQuery(m_pd3d11DeviceContext, std::move(pd3d11Query), Value);
 }
 
@@ -1889,7 +1889,7 @@ void DeviceContextD3D11Impl::BeginQuery(IQuery* pQuery)
 {
     TDeviceContextBase::BeginQuery(pQuery, 0);
 
-    auto* const pQueryD3D11Impl = ValidatedCast<QueryD3D11Impl>(pQuery);
+    auto* const pQueryD3D11Impl = ClassPtrCast<QueryD3D11Impl>(pQuery);
     if (pQueryD3D11Impl->GetDesc().Type == QUERY_TYPE_DURATION)
     {
         pQueryD3D11Impl->SetDisjointQuery(BeginDisjointQuery());
@@ -1905,7 +1905,7 @@ void DeviceContextD3D11Impl::EndQuery(IQuery* pQuery)
 {
     TDeviceContextBase::EndQuery(pQuery, 0);
 
-    auto* const pQueryD3D11Impl = ValidatedCast<QueryD3D11Impl>(pQuery);
+    auto* const pQueryD3D11Impl = ClassPtrCast<QueryD3D11Impl>(pQuery);
 
     const auto QueryType = pQueryD3D11Impl->GetDesc().Type;
     DEV_CHECK_ERR(QueryType != QUERY_TYPE_DURATION || m_ActiveDisjointQuery,
@@ -2137,8 +2137,8 @@ void DeviceContextD3D11Impl::ResolveTextureSubresource(ITexture*                
 {
     TDeviceContextBase::ResolveTextureSubresource(pSrcTexture, pDstTexture, ResolveAttribs);
 
-    auto* const pSrcTexD3D11 = ValidatedCast<TextureBaseD3D11>(pSrcTexture);
-    auto* const pDstTexD3D11 = ValidatedCast<TextureBaseD3D11>(pDstTexture);
+    auto* const pSrcTexD3D11 = ClassPtrCast<TextureBaseD3D11>(pSrcTexture);
+    auto* const pDstTexD3D11 = ClassPtrCast<TextureBaseD3D11>(pDstTexture);
     const auto& SrcTexDesc   = pSrcTexD3D11->GetDesc();
     const auto& DstTexDesc   = pDstTexD3D11->GetDesc();
 

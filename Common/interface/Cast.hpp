@@ -31,7 +31,7 @@
 #include "CompilerDefinitions.h"
 
 template <typename DstType, typename SrcType>
-NODISCARD DstType* ValidatedCast(SrcType* Ptr)
+NODISCARD DstType* ClassPtrCast(SrcType* Ptr)
 {
 #ifdef DILIGENT_DEBUG
     if (Ptr != nullptr)

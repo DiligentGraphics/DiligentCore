@@ -42,7 +42,7 @@ void VariableShadingRatePerDrawTestReferenceVk(ISwapChain* pSwapChain)
 {
     auto* pEnv                = TestingEnvironmentVk::GetInstance();
     auto  vkDevice            = pEnv->GetVkDevice();
-    auto* pTestingSwapChainVk = ValidatedCast<TestingSwapChainVk>(pSwapChain);
+    auto* pTestingSwapChainVk = ClassPtrCast<TestingSwapChainVk>(pSwapChain);
 
     const auto& SCDesc  = pSwapChain->GetDesc();
     const auto& SRProps = pEnv->GetDevice()->GetAdapterInfo().ShadingRate;
@@ -188,7 +188,7 @@ void VariableShadingRatePerPrimitiveTestReferenceVk(ISwapChain* pSwapChain)
 {
     auto* pEnv                = TestingEnvironmentVk::GetInstance();
     auto  vkDevice            = pEnv->GetVkDevice();
-    auto* pTestingSwapChainVk = ValidatedCast<TestingSwapChainVk>(pSwapChain);
+    auto* pTestingSwapChainVk = ClassPtrCast<TestingSwapChainVk>(pSwapChain);
 
     const auto& SCDesc  = pSwapChain->GetDesc();
     const auto& SRProps = pEnv->GetDevice()->GetAdapterInfo().ShadingRate;
@@ -361,7 +361,7 @@ void VariableShadingRateTextureBasedTestReferenceVk(ISwapChain* pSwapChain)
 {
     auto* pEnv                = TestingEnvironmentVk::GetInstance();
     auto  vkDevice            = pEnv->GetVkDevice();
-    auto* pTestingSwapChainVk = ValidatedCast<TestingSwapChainVk>(pSwapChain);
+    auto* pTestingSwapChainVk = ClassPtrCast<TestingSwapChainVk>(pSwapChain);
 
     const auto& SCDesc  = pSwapChain->GetDesc();
     const auto& SRProps = pEnv->GetDevice()->GetAdapterInfo().ShadingRate;

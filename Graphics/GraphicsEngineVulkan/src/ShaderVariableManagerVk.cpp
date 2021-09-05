@@ -421,7 +421,7 @@ void BindResourceHelper::CacheUniformBuffer(const BindResourceInfo& BindInfo) co
             m_DstRes.Type == DescriptorType::UniformBufferDynamic),
            "Uniform buffer resource is expected");
 
-    // We cannot use ValidatedCast<> here as the resource can have wrong type
+    // We cannot use ClassPtrCast<> here as the resource can have wrong type
     RefCntAutoPtr<BufferVkImpl> pBufferVk{BindInfo.pObject, IID_BufferVk};
 #ifdef DILIGENT_DEVELOPMENT
     VerifyConstantBufferBinding(m_ResDesc, BindInfo, pBufferVk.RawPtr(), m_DstRes.pObject.RawPtr(),

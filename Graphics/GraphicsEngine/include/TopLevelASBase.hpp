@@ -125,7 +125,7 @@ public:
                 const char*  NameCopy = this->m_StringPool.CopyString(Inst.InstanceName);
                 InstanceDesc Desc     = {};
 
-                Desc.pBLAS                       = ValidatedCast<BottomLevelASImplType>(Inst.pBLAS);
+                Desc.pBLAS                       = ClassPtrCast<BottomLevelASImplType>(Inst.pBLAS);
                 Desc.ContributionToHitGroupIndex = Inst.ContributionToHitGroupIndex;
                 Desc.InstanceIndex               = i;
                 CalculateHitGroupIndex(Desc, InstanceOffset, HitGroupStride, BindingMode);
@@ -190,7 +190,7 @@ public:
             const auto PrevIndex = Desc.ContributionToHitGroupIndex;
             const auto pPrevBLAS = Desc.pBLAS;
 
-            Desc.pBLAS                       = ValidatedCast<BottomLevelASImplType>(Inst.pBLAS);
+            Desc.pBLAS                       = ClassPtrCast<BottomLevelASImplType>(Inst.pBLAS);
             Desc.ContributionToHitGroupIndex = Inst.ContributionToHitGroupIndex;
             //Desc.InstanceIndex             = i; // keep Desc.InstanceIndex unmodified
             CalculateHitGroupIndex(Desc, InstanceOffset, HitGroupStride, BindingMode);

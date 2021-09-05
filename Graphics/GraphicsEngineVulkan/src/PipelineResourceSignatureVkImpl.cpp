@@ -845,7 +845,7 @@ bool PipelineResourceSignatureVkImpl::DvpValidateCommittedResource(const DeviceC
                 // is bound. It will be null if the type is incorrect.
                 if (auto* pBufferViewVk = Res.pObject.RawPtr<BufferViewVkImpl>())
                 {
-                    const auto* pBufferVk = ValidatedCast<BufferVkImpl>(pBufferViewVk->GetBuffer());
+                    const auto* pBufferVk = ClassPtrCast<BufferVkImpl>(pBufferViewVk->GetBuffer());
                     const auto& ViewDesc  = pBufferViewVk->GetDesc();
                     const auto& BuffDesc  = pBufferVk->GetDesc();
 

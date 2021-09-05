@@ -193,7 +193,7 @@ public:
 
     void SetSampler(Uint32 CacheOffset, ISampler* pSampler)
     {
-        GetTexture(CacheOffset).pSampler = ValidatedCast<SamplerGLImpl>(pSampler);
+        GetTexture(CacheOffset).pSampler = ClassPtrCast<SamplerGLImpl>(pSampler);
         UpdateRevision();
     }
 

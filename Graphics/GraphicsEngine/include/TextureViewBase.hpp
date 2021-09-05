@@ -112,7 +112,7 @@ public:
     template <typename TextureType>
     TextureType* GetTexture() const
     {
-        return ValidatedCast<TextureType>(m_pTexture);
+        return ClassPtrCast<TextureType>(m_pTexture);
     }
 
     template <typename SamplerType>

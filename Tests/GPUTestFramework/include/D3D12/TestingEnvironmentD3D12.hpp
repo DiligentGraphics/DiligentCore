@@ -61,7 +61,7 @@ public:
                             const SwapChainDesc& SCDesc);
     ~TestingEnvironmentD3D12();
 
-    static TestingEnvironmentD3D12* GetInstance() { return ValidatedCast<TestingEnvironmentD3D12>(TestingEnvironment::GetInstance()); }
+    static TestingEnvironmentD3D12* GetInstance() { return ClassPtrCast<TestingEnvironmentD3D12>(TestingEnvironment::GetInstance()); }
 
     ID3D12Device* GetD3D12Device()
     {

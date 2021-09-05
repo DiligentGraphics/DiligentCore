@@ -191,7 +191,7 @@ public:
         }
     }
 
-    ITextureView*   GetView(size_t i) { return ValidatedCast<ITextureView>(ppViewObjects[i]); };
+    ITextureView*   GetView(size_t i) { return ClassPtrCast<ITextureView>(ppViewObjects[i]); };
     IDeviceObject** GetViewObjects(size_t i) { return &ppViewObjects[i]; };
 
     const float4& GetColor(size_t i)

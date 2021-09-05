@@ -273,7 +273,7 @@ inline void DeviceContextVkImpl::DisposeCurrentCmdBuffer(SoftwareQueueIndex CmdQ
 
 void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
 {
-    auto* pPipelineStateVk = ValidatedCast<PipelineStateVkImpl>(pPipelineState);
+    auto* pPipelineStateVk = ClassPtrCast<PipelineStateVkImpl>(pPipelineState);
     if (PipelineStateVkImpl::IsSameObject(m_pPipelineState, pPipelineStateVk))
         return;
 
@@ -493,7 +493,7 @@ void DeviceContextVkImpl::TransitionShaderResources(IPipelineState*, IShaderReso
     DEV_CHECK_ERR(!m_pActiveRenderPass, "State transitions are not allowed inside a render pass.");
     DEV_CHECK_ERR(pShaderResourceBinding != nullptr, "pShaderResourceBinding must not be null");
 
-    auto* pResBindingVkImpl = ValidatedCast<ShaderResourceBindingVkImpl>(pShaderResourceBinding);
+    auto* pResBindingVkImpl = ClassPtrCast<ShaderResourceBindingVkImpl>(pShaderResourceBinding);
     auto& ResourceCache     = pResBindingVkImpl->GetResourceCache();
 
     ResourceCache.TransitionResources<false>(this);
@@ -503,7 +503,7 @@ void DeviceContextVkImpl::CommitShaderResources(IShaderResourceBinding* pShaderR
 {
     TDeviceContextBase::CommitShaderResources(pShaderResourceBinding, StateTransitionMode, 0 /*Dummy*/);
 
-    auto* pResBindingVkImpl = ValidatedCast<ShaderResourceBindingVkImpl>(pShaderResourceBinding);
+    auto* pResBindingVkImpl = ClassPtrCast<ShaderResourceBindingVkImpl>(pShaderResourceBinding);
     auto& ResourceCache     = pResBindingVkImpl->GetResourceCache();
     if (ResourceCache.GetNumDescriptorSets() == 0)
     {
@@ -753,7 +753,7 @@ BufferVkImpl* DeviceContextVkImpl::PrepareIndirectAttribsBuffer(IBuffer*        
                                                                 const char*                    OpName)
 {
     DEV_CHECK_ERR(pAttribsBuffer, "Indirect draw attribs buffer must not be null");
-    auto* pIndirectDrawAttribsVk = ValidatedCast<BufferVkImpl>(pAttribsBuffer);
+    auto* pIndirectDrawAttribsVk = ClassPtrCast<BufferVkImpl>(pAttribsBuffer);
 
 #ifdef DILIGENT_DEVELOPMENT
     if (pIndirectDrawAttribsVk->GetDesc().Usage == USAGE_DYNAMIC)
@@ -981,7 +981,7 @@ void DeviceContextVkImpl::DispatchComputeIndirect(const DispatchComputeIndirectA
 
     PrepareForDispatchCompute();
 
-    auto* pBufferVk = ValidatedCast<BufferVkImpl>(Attribs.pAttribsBuffer);
+    auto* pBufferVk = ClassPtrCast<BufferVkImpl>(Attribs.pAttribsBuffer);
 
 #ifdef DILIGENT_DEVELOPMENT
     if (pBufferVk->GetDesc().Usage == USAGE_DYNAMIC)
@@ -1021,7 +1021,7 @@ void DeviceContextVkImpl::ClearDepthStencil(ITextureView*                  pView
 {
     TDeviceContextBase::ClearDepthStencil(pView);
 
-    auto* pVkDSV = ValidatedCast<ITextureViewVk>(pView);
+    auto* pVkDSV = ClassPtrCast<ITextureViewVk>(pView);
 
     EnsureVkCmdBuffer();
 
@@ -1070,7 +1070,7 @@ void DeviceContextVkImpl::ClearDepthStencil(ITextureView*                  pView
             m_CommandBuffer.EndRenderPass();
 
         auto* pTexture   = pVkDSV->GetTexture();
-        auto* pTextureVk = ValidatedCast<TextureVkImpl>(pTexture);
+        auto* pTextureVk = ClassPtrCast<TextureVkImpl>(pTexture);
 
         // Image layout must be VK_IMAGE_LAYOUT_GENERAL or VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL (17.1)
         TransitionOrVerifyTextureState(*pTextureVk, StateTransitionMode, RESOURCE_STATE_COPY_DEST, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
@@ -1122,7 +1122,7 @@ void DeviceContextVkImpl::ClearRenderTarget(ITextureView* pView, const float* RG
 {
     TDeviceContextBase::ClearRenderTarget(pView);
 
-    auto* pVkRTV = ValidatedCast<ITextureViewVk>(pView);
+    auto* pVkRTV = ClassPtrCast<ITextureViewVk>(pView);
 
     static constexpr float Zero[4] = {0.f, 0.f, 0.f, 0.f};
     if (RGBA == nullptr)
@@ -1190,7 +1190,7 @@ void DeviceContextVkImpl::ClearRenderTarget(ITextureView* pView, const float* RG
             m_CommandBuffer.EndRenderPass();
 
         auto* pTexture   = pVkRTV->GetTexture();
-        auto* pTextureVk = ValidatedCast<TextureVkImpl>(pTexture);
+        auto* pTextureVk = ClassPtrCast<TextureVkImpl>(pTexture);
 
         // Image layout must be VK_IMAGE_LAYOUT_GENERAL or VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL (17.1)
         TransitionOrVerifyTextureState(*pTextureVk, StateTransitionMode, RESOURCE_STATE_COPY_DEST, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
@@ -1336,7 +1336,7 @@ void DeviceContextVkImpl::Flush(Uint32               NumCommandLists,
     // Add command buffers from deferred contexts
     for (Uint32 i = 0; i < NumCommandLists; ++i)
     {
-        auto* pCmdListVk = ValidatedCast<CommandListVkImpl>(ppCommandLists[i]);
+        auto* pCmdListVk = ClassPtrCast<CommandListVkImpl>(ppCommandLists[i]);
         DEV_CHECK_ERR(pCmdListVk != nullptr, "Command list must not be null");
         DEV_CHECK_ERR(pCmdListVk->GetQueueId() == GetDesc().QueueId, "Command list recorded for QueueId ", pCmdListVk->GetQueueId(), ", but executed on QueueId ", GetDesc().QueueId, ".");
         DeferredCtxs.emplace_back();
@@ -1639,7 +1639,7 @@ void DeviceContextVkImpl::TransitionRenderTargets(RESOURCE_STATE_TRANSITION_MODE
     if (m_pBoundShadingRateMap)
     {
         const auto& ExtFeatures       = m_pDevice->GetLogicalDevice().GetEnabledExtFeatures();
-        auto*       pShadingRateMapVk = ValidatedCast<TextureVkImpl>(m_pBoundShadingRateMap->GetTexture());
+        auto*       pShadingRateMapVk = ClassPtrCast<TextureVkImpl>(m_pBoundShadingRateMap->GetTexture());
         VERIFY_EXPR((ExtFeatures.ShadingRate.attachmentFragmentShadingRate != VK_FALSE) ^ (ExtFeatures.FragmentDensityMap.fragmentDensityMap != VK_FALSE));
         const auto vkRequiredLayout = ExtFeatures.ShadingRate.attachmentFragmentShadingRate ?
             VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR :
@@ -1856,7 +1856,7 @@ void DeviceContextVkImpl::UpdateBuffer(IBuffer*                       pBuffer,
 
     // We must use cmd context from the device context provided, otherwise there will
     // be resource barrier issues in the cmd list in the device context
-    auto* pBuffVk = ValidatedCast<BufferVkImpl>(pBuffer);
+    auto* pBuffVk = ClassPtrCast<BufferVkImpl>(pBuffer);
 
     DEV_CHECK_ERR(pBuffVk->GetDesc().Usage != USAGE_DYNAMIC, "Dynamic buffers must be updated via Map()");
 
@@ -1879,8 +1879,8 @@ void DeviceContextVkImpl::CopyBuffer(IBuffer*                       pSrcBuffer,
 {
     TDeviceContextBase::CopyBuffer(pSrcBuffer, SrcOffset, SrcBufferTransitionMode, pDstBuffer, DstOffset, Size, DstBufferTransitionMode);
 
-    auto* pSrcBuffVk = ValidatedCast<BufferVkImpl>(pSrcBuffer);
-    auto* pDstBuffVk = ValidatedCast<BufferVkImpl>(pDstBuffer);
+    auto* pSrcBuffVk = ClassPtrCast<BufferVkImpl>(pSrcBuffer);
+    auto* pDstBuffVk = ClassPtrCast<BufferVkImpl>(pDstBuffer);
 
     DEV_CHECK_ERR(pDstBuffVk->GetDesc().Usage != USAGE_DYNAMIC, "Dynamic buffers cannot be copy destinations");
 
@@ -1901,7 +1901,7 @@ void DeviceContextVkImpl::CopyBuffer(IBuffer*                       pSrcBuffer,
 void DeviceContextVkImpl::MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_FLAGS MapFlags, PVoid& pMappedData)
 {
     TDeviceContextBase::MapBuffer(pBuffer, MapType, MapFlags, pMappedData);
-    auto* const pBufferVk = ValidatedCast<BufferVkImpl>(pBuffer);
+    auto* const pBufferVk = ClassPtrCast<BufferVkImpl>(pBuffer);
     const auto& BuffDesc  = pBufferVk->GetDesc();
 
     if (MapType == MAP_READ)
@@ -1978,7 +1978,7 @@ void DeviceContextVkImpl::MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_FLAG
 void DeviceContextVkImpl::UnmapBuffer(IBuffer* pBuffer, MAP_TYPE MapType)
 {
     TDeviceContextBase::UnmapBuffer(pBuffer, MapType);
-    auto* const pBufferVk = ValidatedCast<BufferVkImpl>(pBuffer);
+    auto* const pBufferVk = ClassPtrCast<BufferVkImpl>(pBuffer);
     const auto& BuffDesc  = pBufferVk->GetDesc();
 
     if (MapType == MAP_READ)
@@ -2022,7 +2022,7 @@ void DeviceContextVkImpl::UpdateTexture(ITexture*                      pTexture,
 {
     TDeviceContextBase::UpdateTexture(pTexture, MipLevel, Slice, DstBox, SubresData, SrcBufferStateTransitionMode, TextureStateTransitionMode);
 
-    auto* pTexVk = ValidatedCast<TextureVkImpl>(pTexture);
+    auto* pTexVk = ClassPtrCast<TextureVkImpl>(pTexture);
     // OpenGL backend uses UpdateData() to initialize textures, so we can't check the usage in ValidateUpdateTextureParams()
     DEV_CHECK_ERR(pTexVk->GetDesc().Usage == USAGE_DEFAULT, "Only USAGE_DEFAULT textures should be updated with UpdateData()");
 
@@ -2041,8 +2041,8 @@ void DeviceContextVkImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
 {
     TDeviceContextBase::CopyTexture(CopyAttribs);
 
-    auto* pSrcTexVk = ValidatedCast<TextureVkImpl>(CopyAttribs.pSrcTexture);
-    auto* pDstTexVk = ValidatedCast<TextureVkImpl>(CopyAttribs.pDstTexture);
+    auto* pSrcTexVk = ClassPtrCast<TextureVkImpl>(CopyAttribs.pSrcTexture);
+    auto* pDstTexVk = ClassPtrCast<TextureVkImpl>(CopyAttribs.pDstTexture);
 
     // We must unbind the textures from framebuffer because
     // we will transition their states. If we later try to commit
@@ -2255,7 +2255,7 @@ void DeviceContextVkImpl::UpdateTextureRegion(const void*                    pSr
 void DeviceContextVkImpl::GenerateMips(ITextureView* pTexView)
 {
     TDeviceContextBase::GenerateMips(pTexView);
-    GenerateMipsVkHelper::GenerateMips(*ValidatedCast<TextureViewVkImpl>(pTexView), *this);
+    GenerateMipsVkHelper::GenerateMips(*ClassPtrCast<TextureViewVkImpl>(pTexView), *this);
 }
 
 static VkBufferImageCopy GetBufferImageCopyInfo(Uint64             BufferOffset,
@@ -2377,7 +2377,7 @@ void DeviceContextVkImpl::MapTextureSubresource(ITexture*                 pTextu
 {
     TDeviceContextBase::MapTextureSubresource(pTexture, MipLevel, ArraySlice, MapType, MapFlags, pMapRegion, MappedData);
 
-    TextureVkImpl& TextureVk  = *ValidatedCast<TextureVkImpl>(pTexture);
+    TextureVkImpl& TextureVk  = *ClassPtrCast<TextureVkImpl>(pTexture);
     const auto&    TexDesc    = TextureVk.GetDesc();
     const auto&    FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
 
@@ -2478,7 +2478,7 @@ void DeviceContextVkImpl::UnmapTextureSubresource(ITexture* pTexture,
 {
     TDeviceContextBase::UnmapTextureSubresource(pTexture, MipLevel, ArraySlice);
 
-    TextureVkImpl& TextureVk = *ValidatedCast<TextureVkImpl>(pTexture);
+    TextureVkImpl& TextureVk = *ClassPtrCast<TextureVkImpl>(pTexture);
     const auto&    TexDesc   = TextureVk.GetDesc();
 
     if (TexDesc.Usage == USAGE_DYNAMIC)
@@ -2565,13 +2565,13 @@ void DeviceContextVkImpl::ExecuteCommandLists(Uint32               NumCommandLis
 void DeviceContextVkImpl::EnqueueSignal(IFence* pFence, Uint64 Value)
 {
     TDeviceContextBase::EnqueueSignal(pFence, Value, 0);
-    m_SignalFences.emplace_back(std::make_pair(Value, ValidatedCast<FenceVkImpl>(pFence)));
+    m_SignalFences.emplace_back(std::make_pair(Value, ClassPtrCast<FenceVkImpl>(pFence)));
 }
 
 void DeviceContextVkImpl::DeviceWaitForFence(IFence* pFence, Uint64 Value)
 {
     TDeviceContextBase::DeviceWaitForFence(pFence, Value, 0);
-    m_WaitFences.emplace_back(std::make_pair(Value, ValidatedCast<FenceVkImpl>(pFence)));
+    m_WaitFences.emplace_back(std::make_pair(Value, ClassPtrCast<FenceVkImpl>(pFence)));
 }
 
 void DeviceContextVkImpl::WaitForIdle()
@@ -2588,7 +2588,7 @@ void DeviceContextVkImpl::BeginQuery(IQuery* pQuery)
     VERIFY(m_pQueryMgr != nullptr || IsDeferred(), "Query manager should never be null for immediate contexts. This might be a bug.");
     DEV_CHECK_ERR(m_pQueryMgr != nullptr, "Query manager is null, which indicates that this deferred context is not in a recording state");
 
-    auto*      pQueryVkImpl = ValidatedCast<QueryVkImpl>(pQuery);
+    auto*      pQueryVkImpl = ClassPtrCast<QueryVkImpl>(pQuery);
     const auto QueryType    = pQueryVkImpl->GetDesc().Type;
     auto       vkQueryPool  = m_pQueryMgr->GetQueryPool(QueryType);
     auto       Idx          = pQueryVkImpl->GetQueryPoolIndex(0);
@@ -2636,7 +2636,7 @@ void DeviceContextVkImpl::EndQuery(IQuery* pQuery)
     VERIFY(m_pQueryMgr != nullptr || IsDeferred(), "Query manager should never be null for immediate contexts. This might be a bug.");
     DEV_CHECK_ERR(m_pQueryMgr != nullptr, "Query manager is null, which indicates that this deferred context is not in a recording state");
 
-    auto*      pQueryVkImpl = ValidatedCast<QueryVkImpl>(pQuery);
+    auto*      pQueryVkImpl = ClassPtrCast<QueryVkImpl>(pQuery);
     const auto QueryType    = pQueryVkImpl->GetDesc().Type;
     auto       vkQueryPool  = m_pQueryMgr->GetQueryPool(QueryType);
     auto       Idx          = pQueryVkImpl->GetQueryPoolIndex(QueryType == QUERY_TYPE_DURATION ? 1 : 0);
@@ -2681,7 +2681,7 @@ void DeviceContextVkImpl::TransitionImageLayout(ITexture* pTexture, VkImageLayou
 {
     VERIFY_EXPR(pTexture != nullptr);
     VERIFY(m_pActiveRenderPass == nullptr, "State transitions are not allowed inside a render pass");
-    auto pTextureVk = ValidatedCast<TextureVkImpl>(pTexture);
+    auto pTextureVk = ClassPtrCast<TextureVkImpl>(pTexture);
     if (!pTextureVk->IsInKnownState())
     {
         LOG_ERROR_MESSAGE("Failed to transition layout for texture '", pTextureVk->GetDesc().Name, "' because the texture state is unknown");
@@ -2831,7 +2831,7 @@ void DeviceContextVkImpl::TransitionImageLayout(TextureVkImpl& TextureVk, VkImag
 void DeviceContextVkImpl::BufferMemoryBarrier(IBuffer* pBuffer, VkAccessFlags NewAccessFlags)
 {
     VERIFY_EXPR(pBuffer != nullptr);
-    auto pBuffVk = ValidatedCast<BufferVkImpl>(pBuffer);
+    auto pBuffVk = ClassPtrCast<BufferVkImpl>(pBuffer);
     if (!pBuffVk->IsInKnownState())
     {
         LOG_ERROR_MESSAGE("Failed to execute buffer memory barrier for buffer '", pBuffVk->GetDesc().Name, "' because the buffer state is unknown");
@@ -3130,8 +3130,8 @@ void DeviceContextVkImpl::ResolveTextureSubresource(ITexture*                   
 {
     TDeviceContextBase::ResolveTextureSubresource(pSrcTexture, pDstTexture, ResolveAttribs);
 
-    auto*       pSrcTexVk  = ValidatedCast<TextureVkImpl>(pSrcTexture);
-    auto*       pDstTexVk  = ValidatedCast<TextureVkImpl>(pDstTexture);
+    auto*       pSrcTexVk  = ClassPtrCast<TextureVkImpl>(pSrcTexture);
+    auto*       pDstTexVk  = ClassPtrCast<TextureVkImpl>(pDstTexture);
     const auto& SrcTexDesc = pSrcTexVk->GetDesc();
     const auto& DstTexDesc = pDstTexVk->GetDesc();
 
@@ -3183,8 +3183,8 @@ void DeviceContextVkImpl::BuildBLAS(const BuildBLASAttribs& Attribs)
 {
     TDeviceContextBase::BuildBLAS(Attribs, 0);
 
-    auto* pBLASVk    = ValidatedCast<BottomLevelASVkImpl>(Attribs.pBLAS);
-    auto* pScratchVk = ValidatedCast<BufferVkImpl>(Attribs.pScratchBuffer);
+    auto* pBLASVk    = ClassPtrCast<BottomLevelASVkImpl>(Attribs.pBLAS);
+    auto* pScratchVk = ClassPtrCast<BufferVkImpl>(Attribs.pScratchBuffer);
     auto& BLASDesc   = pBLASVk->GetDesc();
 
     EnsureVkCmdBuffer();
@@ -3227,7 +3227,7 @@ void DeviceContextVkImpl::BuildBLAS(const BuildBLASAttribs& Attribs)
             vkTris.sType       = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
             vkTris.pNext       = nullptr;
 
-            auto* const pVB = ValidatedCast<BufferVkImpl>(SrcTris.pVertexBuffer);
+            auto* const pVB = ClassPtrCast<BufferVkImpl>(SrcTris.pVertexBuffer);
 
             // vertex format in SrcTris may be undefined, so use vertex format from description
             vkTris.vertexFormat             = TypeToVkFormat(TriDesc.VertexValueType, TriDesc.VertexComponentCount, TriDesc.VertexValueType < VT_FLOAT16);
@@ -3242,7 +3242,7 @@ void DeviceContextVkImpl::BuildBLAS(const BuildBLASAttribs& Attribs)
 
             if (SrcTris.pIndexBuffer)
             {
-                auto* const pIB = ValidatedCast<BufferVkImpl>(SrcTris.pIndexBuffer);
+                auto* const pIB = ClassPtrCast<BufferVkImpl>(SrcTris.pIndexBuffer);
 
                 // index type in SrcTris may be undefined, so use index type from description
                 vkTris.indexType               = TypeToVkIndexType(TriDesc.IndexType);
@@ -3261,7 +3261,7 @@ void DeviceContextVkImpl::BuildBLAS(const BuildBLASAttribs& Attribs)
 
             if (SrcTris.pTransformBuffer)
             {
-                auto* const pTB                    = ValidatedCast<BufferVkImpl>(SrcTris.pTransformBuffer);
+                auto* const pTB                    = ClassPtrCast<BufferVkImpl>(SrcTris.pTransformBuffer);
                 vkTris.transformData.deviceAddress = pTB->GetVkDeviceAddress() + SrcTris.TransformBufferOffset;
 
                 // If geometry.triangles.transformData.deviceAddress is not 0, it must be aligned to 16 bytes
@@ -3307,7 +3307,7 @@ void DeviceContextVkImpl::BuildBLAS(const BuildBLASAttribs& Attribs)
             vkGeo.flags        = GeometryFlagsToVkGeometryFlags(SrcBoxes.Flags);
             vkGeo.geometryType = VK_GEOMETRY_TYPE_AABBS_KHR;
 
-            auto* const pBB            = ValidatedCast<BufferVkImpl>(SrcBoxes.pBoxBuffer);
+            auto* const pBB            = ClassPtrCast<BufferVkImpl>(SrcBoxes.pBoxBuffer);
             vkAABBs.sType              = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR;
             vkAABBs.pNext              = nullptr;
             vkAABBs.stride             = SrcBoxes.BoxStride;
@@ -3356,9 +3356,9 @@ void DeviceContextVkImpl::BuildTLAS(const BuildTLASAttribs& Attribs)
 
     static_assert(TLAS_INSTANCE_DATA_SIZE == sizeof(VkAccelerationStructureInstanceKHR), "Value in TLAS_INSTANCE_DATA_SIZE doesn't match the actual instance description size");
 
-    auto* pTLASVk      = ValidatedCast<TopLevelASVkImpl>(Attribs.pTLAS);
-    auto* pScratchVk   = ValidatedCast<BufferVkImpl>(Attribs.pScratchBuffer);
-    auto* pInstancesVk = ValidatedCast<BufferVkImpl>(Attribs.pInstanceBuffer);
+    auto* pTLASVk      = ClassPtrCast<TopLevelASVkImpl>(Attribs.pTLAS);
+    auto* pScratchVk   = ClassPtrCast<BufferVkImpl>(Attribs.pScratchBuffer);
+    auto* pInstancesVk = ClassPtrCast<BufferVkImpl>(Attribs.pInstanceBuffer);
     auto& TLASDesc     = pTLASVk->GetDesc();
 
     EnsureVkCmdBuffer();
@@ -3395,7 +3395,7 @@ void DeviceContextVkImpl::BuildTLAS(const BuildTLASAttribs& Attribs)
             }
 
             auto& vkASInst = static_cast<VkAccelerationStructureInstanceKHR*>(TmpSpace.CPUAddress)[InstDesc.InstanceIndex];
-            auto* pBLASVk  = ValidatedCast<BottomLevelASVkImpl>(Inst.pBLAS);
+            auto* pBLASVk  = ClassPtrCast<BottomLevelASVkImpl>(Inst.pBLAS);
 
             static_assert(sizeof(vkASInst.transform) == sizeof(Inst.Transform), "size mismatch");
             std::memcpy(&vkASInst.transform, Inst.Transform.data, sizeof(vkASInst.transform));
@@ -3456,8 +3456,8 @@ void DeviceContextVkImpl::CopyBLAS(const CopyBLASAttribs& Attribs)
 {
     TDeviceContextBase::CopyBLAS(Attribs, 0);
 
-    auto* pSrcVk = ValidatedCast<BottomLevelASVkImpl>(Attribs.pSrc);
-    auto* pDstVk = ValidatedCast<BottomLevelASVkImpl>(Attribs.pDst);
+    auto* pSrcVk = ClassPtrCast<BottomLevelASVkImpl>(Attribs.pSrc);
+    auto* pDstVk = ClassPtrCast<BottomLevelASVkImpl>(Attribs.pDst);
 
     // Dst BLAS description has specified CompactedSize, but doesn't have specified pTriangles and pBoxes.
     // We should copy geometries because it required for SBT to map geometry name to hit group.
@@ -3489,8 +3489,8 @@ void DeviceContextVkImpl::CopyTLAS(const CopyTLASAttribs& Attribs)
 {
     TDeviceContextBase::CopyTLAS(Attribs, 0);
 
-    auto* pSrcVk = ValidatedCast<TopLevelASVkImpl>(Attribs.pSrc);
-    auto* pDstVk = ValidatedCast<TopLevelASVkImpl>(Attribs.pDst);
+    auto* pSrcVk = ClassPtrCast<TopLevelASVkImpl>(Attribs.pSrc);
+    auto* pDstVk = ClassPtrCast<TopLevelASVkImpl>(Attribs.pDst);
 
     // Instances specified in BuildTLAS command.
     // We should copy instances because it required for SBT to map instance name to hit group.
@@ -3518,8 +3518,8 @@ void DeviceContextVkImpl::WriteBLASCompactedSize(const WriteBLASCompactedSizeAtt
     TDeviceContextBase::WriteBLASCompactedSize(Attribs, 0);
 
     const Uint32 QueryIndex  = 0;
-    auto*        pBLASVk     = ValidatedCast<BottomLevelASVkImpl>(Attribs.pBLAS);
-    auto*        pDestBuffVk = ValidatedCast<BufferVkImpl>(Attribs.pDestBuffer);
+    auto*        pBLASVk     = ClassPtrCast<BottomLevelASVkImpl>(Attribs.pBLAS);
+    auto*        pDestBuffVk = ClassPtrCast<BufferVkImpl>(Attribs.pDestBuffer);
 
     EnsureVkCmdBuffer();
 
@@ -3538,8 +3538,8 @@ void DeviceContextVkImpl::WriteTLASCompactedSize(const WriteTLASCompactedSizeAtt
     TDeviceContextBase::WriteTLASCompactedSize(Attribs, 0);
 
     const Uint32 QueryIndex  = 0;
-    auto*        pTLASVk     = ValidatedCast<TopLevelASVkImpl>(Attribs.pTLAS);
-    auto*        pDestBuffVk = ValidatedCast<BufferVkImpl>(Attribs.pDestBuffer);
+    auto*        pTLASVk     = ClassPtrCast<TopLevelASVkImpl>(Attribs.pTLAS);
+    auto*        pDestBuffVk = ClassPtrCast<BufferVkImpl>(Attribs.pDestBuffer);
 
     EnsureVkCmdBuffer();
 
@@ -3572,7 +3572,7 @@ void DeviceContextVkImpl::TraceRays(const TraceRaysAttribs& Attribs)
 {
     TDeviceContextBase::TraceRays(Attribs, 0);
 
-    const auto* pSBTVk       = ValidatedCast<const ShaderBindingTableVkImpl>(Attribs.pSBT);
+    const auto* pSBTVk       = ClassPtrCast<const ShaderBindingTableVkImpl>(Attribs.pSBT);
     const auto& BindingTable = pSBTVk->GetVkBindingTable();
 
     PrepareForRayTracing();
@@ -3585,7 +3585,7 @@ void DeviceContextVkImpl::TraceRaysIndirect(const TraceRaysIndirectAttribs& Attr
 {
     TDeviceContextBase::TraceRaysIndirect(Attribs, 0);
 
-    const auto* pSBTVk       = ValidatedCast<const ShaderBindingTableVkImpl>(Attribs.pSBT);
+    const auto* pSBTVk       = ClassPtrCast<const ShaderBindingTableVkImpl>(Attribs.pSBT);
     const auto& BindingTable = pSBTVk->GetVkBindingTable();
 
     auto* const pIndirectAttribsVk = PrepareIndirectAttribsBuffer(Attribs.pAttribsBuffer, Attribs.AttribsBufferStateTransitionMode, "Trace rays indirect (DeviceContextVkImpl::TraceRaysIndirect)");
@@ -3601,7 +3601,7 @@ void DeviceContextVkImpl::UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndir
 {
     TDeviceContextBase::UpdateSBT(pSBT, pUpdateIndirectBufferAttribs, 0);
 
-    auto*         pSBTVk       = ValidatedCast<ShaderBindingTableVkImpl>(pSBT);
+    auto*         pSBTVk       = ClassPtrCast<ShaderBindingTableVkImpl>(pSBT);
     BufferVkImpl* pSBTBufferVk = nullptr;
 
     ShaderBindingTableVkImpl::BindingTable RayGenShaderRecord  = {};

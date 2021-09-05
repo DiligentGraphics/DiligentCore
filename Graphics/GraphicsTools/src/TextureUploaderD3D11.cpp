@@ -414,7 +414,7 @@ void TextureUploaderD3D11::ScheduleGPUCopy(IDeviceContext* pContext,
                                            Uint32          MipLevel,
                                            IUploadBuffer*  pUploadBuffer)
 {
-    auto*                        pUploadBufferD3D11 = ValidatedCast<UploadBufferD3D11>(pUploadBuffer);
+    auto*                        pUploadBufferD3D11 = ClassPtrCast<UploadBufferD3D11>(pUploadBuffer);
     RefCntAutoPtr<ITextureD3D11> pDstTexD3D11(pDstTexture, IID_TextureD3D11);
     auto*                        pd3d11NativeDstTex = pDstTexD3D11->GetD3D11Texture();
     const auto&                  DstTexDesc         = pDstTexture->GetDesc();
@@ -441,7 +441,7 @@ void TextureUploaderD3D11::ScheduleGPUCopy(IDeviceContext* pContext,
 
 void TextureUploaderD3D11::RecycleBuffer(IUploadBuffer* pUploadBuffer)
 {
-    auto* pUploadBufferD3D11 = ValidatedCast<UploadBufferD3D11>(pUploadBuffer);
+    auto* pUploadBufferD3D11 = ClassPtrCast<UploadBufferD3D11>(pUploadBuffer);
     VERIFY(pUploadBufferD3D11->DbgIsCopyScheduled(), "Upload buffer must be recycled only after copy operation has been scheduled on the GPU");
     pUploadBufferD3D11->Reset();
 

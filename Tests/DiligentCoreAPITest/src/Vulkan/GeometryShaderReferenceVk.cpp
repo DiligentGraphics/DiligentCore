@@ -50,7 +50,7 @@ void GeometryShaderReferenceVk(ISwapChain* pSwapChain)
     VkResult res = VK_SUCCESS;
     (void)res;
 
-    auto* pTestingSwapChainVk = ValidatedCast<TestingSwapChainVk>(pSwapChain);
+    auto* pTestingSwapChainVk = ClassPtrCast<TestingSwapChainVk>(pSwapChain);
 
     auto vkVSModule = pEnv->CreateShaderModule(SHADER_TYPE_VERTEX, GLSL::GSTest_VS);
     ASSERT_TRUE(vkVSModule != VK_NULL_HANDLE);

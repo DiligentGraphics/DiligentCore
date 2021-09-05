@@ -379,7 +379,7 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
                 CHECK_VK_ERROR_AND_THROW(err, "Failed to bind staging buffer memory");
 
                 const auto CmdQueueInd = pBuffData->pContext ?
-                    ValidatedCast<DeviceContextVkImpl>(pBuffData->pContext)->GetCommandQueueId() :
+                    ClassPtrCast<DeviceContextVkImpl>(pBuffData->pContext)->GetCommandQueueId() :
                     SoftwareQueueIndex{PlatformMisc::GetLSB(m_Desc.ImmediateContextMask)};
 
                 VulkanUtilities::CommandPoolWrapper CmdPool;

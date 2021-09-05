@@ -54,7 +54,7 @@ public:
                          const SwapChainDesc& SCDesc);
     ~TestingEnvironmentGL();
 
-    static TestingEnvironmentGL* GetInstance() { return ValidatedCast<TestingEnvironmentGL>(TestingEnvironment::GetInstance()); }
+    static TestingEnvironmentGL* GetInstance() { return ClassPtrCast<TestingEnvironmentGL>(TestingEnvironment::GetInstance()); }
 
     GLuint CompileGLShader(const std::string& Source, GLenum ShaderType);
     GLuint LinkProgram(GLuint Shaders[], GLuint NumShaders);

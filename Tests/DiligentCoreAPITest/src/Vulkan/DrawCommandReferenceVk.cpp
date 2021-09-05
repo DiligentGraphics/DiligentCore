@@ -307,7 +307,7 @@ void RenderDrawCommandReferenceVk(ISwapChain* pSwapChain, const float* pClearCol
 {
     auto* pEnv = TestingEnvironmentVk::GetInstance();
 
-    auto* pTestingSwapChainVk = ValidatedCast<TestingSwapChainVk>(pSwapChain);
+    auto* pTestingSwapChainVk = ClassPtrCast<TestingSwapChainVk>(pSwapChain);
 
     ReferenceTriangleRenderer TriRenderer{pSwapChain, pTestingSwapChainVk->GetRenderPass()};
 
@@ -326,7 +326,7 @@ void RenderPassMSResolveReferenceVk(ISwapChain* pSwapChain, const float* pClearC
     auto* pDevice  = pEnv->GetDevice();
     auto  vkDevice = pEnv->GetVkDevice();
 
-    auto*       pTestingSwapChainVk = ValidatedCast<TestingSwapChainVk>(pSwapChain);
+    auto*       pTestingSwapChainVk = ClassPtrCast<TestingSwapChainVk>(pSwapChain);
     const auto& SCDesc              = pTestingSwapChainVk->GetDesc();
 
     VkRenderPassCreateInfo RenderPassCI = {};
@@ -476,7 +476,7 @@ void RenderPassInputAttachmentReferenceVk(ISwapChain* pSwapChain, const float* p
     auto* pDevice  = pEnv->GetDevice();
     auto  vkDevice = pEnv->GetVkDevice();
 
-    auto*       pTestingSwapChainVk = ValidatedCast<TestingSwapChainVk>(pSwapChain);
+    auto*       pTestingSwapChainVk = ClassPtrCast<TestingSwapChainVk>(pSwapChain);
     const auto& SCDesc              = pTestingSwapChainVk->GetDesc();
 
     VkRenderPassCreateInfo RenderPassCI = {};

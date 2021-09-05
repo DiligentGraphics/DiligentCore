@@ -41,7 +41,7 @@ namespace Testing
 void ClearRenderTargetReferenceVk(ISwapChain* pSwapChain, const float ClearColor[])
 {
     auto* pEnv                = TestingEnvironmentVk::GetInstance();
-    auto* pTestingSwapChainVk = ValidatedCast<TestingSwapChainVk>(pSwapChain);
+    auto* pTestingSwapChainVk = ClassPtrCast<TestingSwapChainVk>(pSwapChain);
 
     VkCommandBuffer vkCmdBuffer = pEnv->AllocateCommandBuffer();
 

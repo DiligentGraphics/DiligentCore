@@ -100,13 +100,13 @@ FramebufferGLImpl::FramebufferGLImpl(IReferenceCounters*    pRefCounters,
             const auto& RTAttachmentRef = SubpassDesc.pRenderTargetAttachments[rt];
             if (RTAttachmentRef.AttachmentIndex != ATTACHMENT_UNUSED)
             {
-                ppRTVs[rt] = ValidatedCast<TextureViewGLImpl>(m_Desc.ppAttachments[RTAttachmentRef.AttachmentIndex]);
+                ppRTVs[rt] = ClassPtrCast<TextureViewGLImpl>(m_Desc.ppAttachments[RTAttachmentRef.AttachmentIndex]);
             }
         }
 
         if (SubpassDesc.pDepthStencilAttachment != nullptr && SubpassDesc.pDepthStencilAttachment->AttachmentIndex != ATTACHMENT_UNUSED)
         {
-            pDSV = ValidatedCast<TextureViewGLImpl>(m_Desc.ppAttachments[SubpassDesc.pDepthStencilAttachment->AttachmentIndex]);
+            pDSV = ClassPtrCast<TextureViewGLImpl>(m_Desc.ppAttachments[SubpassDesc.pDepthStencilAttachment->AttachmentIndex]);
         }
         auto RenderTargetFBO = UseDefaultFBO(SubpassDesc.RenderTargetAttachmentCount, ppRTVs, pDSV) ?
             GLObjectWrappers::GLFrameBufferObj{false} :
@@ -121,7 +121,7 @@ FramebufferGLImpl::FramebufferGLImpl(IReferenceCounters*    pRefCounters,
                 const auto& RslvAttachmentRef = SubpassDesc.pResolveAttachments[rt];
                 if (RslvAttachmentRef.AttachmentIndex != ATTACHMENT_UNUSED)
                 {
-                    ppRsvlViews[rt] = ValidatedCast<TextureViewGLImpl>(m_Desc.ppAttachments[RslvAttachmentRef.AttachmentIndex]);
+                    ppRsvlViews[rt] = ClassPtrCast<TextureViewGLImpl>(m_Desc.ppAttachments[RslvAttachmentRef.AttachmentIndex]);
                 }
             }
             ResolveFBO = UseDefaultFBO(SubpassDesc.RenderTargetAttachmentCount, ppRsvlViews, nullptr) ?

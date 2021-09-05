@@ -389,8 +389,8 @@ void EngineFactoryD3D11Impl::CreateSwapChainD3D11(IRenderDevice*            pDev
 
     try
     {
-        auto* pDeviceD3D11        = ValidatedCast<RenderDeviceD3D11Impl>(pDevice);
-        auto* pDeviceContextD3D11 = ValidatedCast<DeviceContextD3D11Impl>(pImmediateContext);
+        auto* pDeviceD3D11        = ClassPtrCast<RenderDeviceD3D11Impl>(pDevice);
+        auto* pDeviceContextD3D11 = ClassPtrCast<DeviceContextD3D11Impl>(pImmediateContext);
         auto& RawMemAllocator     = GetRawAllocator();
 
         auto* pSwapChainD3D11 = NEW_RC_OBJ(RawMemAllocator, "SwapChainD3D11Impl instance", SwapChainD3D11Impl)(SCDesc, FSDesc, pDeviceD3D11, pDeviceContextD3D11, Window);

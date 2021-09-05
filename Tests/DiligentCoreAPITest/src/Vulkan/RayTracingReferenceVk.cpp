@@ -225,7 +225,7 @@ template <typename PSOCtorType>
 void InitializeRTContext(RTContext& Ctx, ISwapChain* pSwapChain, PSOCtorType&& PSOCtor)
 {
     auto*    pEnv                = TestingEnvironmentVk::GetInstance();
-    auto*    pTestingSwapChainVk = ValidatedCast<TestingSwapChainVk>(pSwapChain);
+    auto*    pTestingSwapChainVk = ClassPtrCast<TestingSwapChainVk>(pSwapChain);
     VkResult res                 = VK_SUCCESS;
 
     Ctx.vkDevice           = pEnv->GetVkDevice();
@@ -740,7 +740,7 @@ void RayTracingTriangleClosestHitReferenceVk(ISwapChain* pSwapChain)
     };
 
     auto* pEnv                = TestingEnvironmentVk::GetInstance();
-    auto* pTestingSwapChainVk = ValidatedCast<TestingSwapChainVk>(pSwapChain);
+    auto* pTestingSwapChainVk = ClassPtrCast<TestingSwapChainVk>(pSwapChain);
 
     const auto& SCDesc = pSwapChain->GetDesc();
 
@@ -900,7 +900,7 @@ void RayTracingTriangleAnyHitReferenceVk(ISwapChain* pSwapChain)
     };
 
     auto* pEnv                = TestingEnvironmentVk::GetInstance();
-    auto* pTestingSwapChainVk = ValidatedCast<TestingSwapChainVk>(pSwapChain);
+    auto* pTestingSwapChainVk = ClassPtrCast<TestingSwapChainVk>(pSwapChain);
 
     const auto& SCDesc = pSwapChain->GetDesc();
 
@@ -1060,7 +1060,7 @@ void RayTracingProceduralIntersectionReferenceVk(ISwapChain* pSwapChain)
     };
 
     auto* pEnv                = TestingEnvironmentVk::GetInstance();
-    auto* pTestingSwapChainVk = ValidatedCast<TestingSwapChainVk>(pSwapChain);
+    auto* pTestingSwapChainVk = ClassPtrCast<TestingSwapChainVk>(pSwapChain);
 
     const auto& SCDesc = pSwapChain->GetDesc();
 
@@ -1223,7 +1223,7 @@ void RayTracingMultiGeometryReferenceVk(ISwapChain* pSwapChain)
     };
 
     auto* pEnv                = TestingEnvironmentVk::GetInstance();
-    auto* pTestingSwapChainVk = ValidatedCast<TestingSwapChainVk>(pSwapChain);
+    auto* pTestingSwapChainVk = ClassPtrCast<TestingSwapChainVk>(pSwapChain);
 
     const auto& SCDesc = pSwapChain->GetDesc();
 

@@ -39,7 +39,7 @@ namespace Testing
 void ClearRenderTargetReferenceD3D12(ISwapChain* pSwapChain, const float ClearColor[])
 {
     auto* pEnv                   = TestingEnvironmentD3D12::GetInstance();
-    auto* pTestingSwapChainD3D12 = ValidatedCast<TestingSwapChainD3D12>(pSwapChain);
+    auto* pTestingSwapChainD3D12 = ClassPtrCast<TestingSwapChainD3D12>(pSwapChain);
 
     auto pCmdList = pEnv->CreateGraphicsCommandList();
     pTestingSwapChainD3D12->TransitionRenderTarget(pCmdList, D3D12_RESOURCE_STATE_RENDER_TARGET);

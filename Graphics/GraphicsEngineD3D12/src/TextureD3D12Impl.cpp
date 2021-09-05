@@ -151,7 +151,7 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
     const bool          bInitializeTexture = (pInitData != nullptr && pInitData->pSubResources != nullptr && pInitData->NumSubresources > 0);
 
     const auto CmdQueueInd = pInitData != nullptr && pInitData->pContext != nullptr ?
-        ValidatedCast<DeviceContextD3D12Impl>(pInitData->pContext)->GetCommandQueueId() :
+        ClassPtrCast<DeviceContextD3D12Impl>(pInitData->pContext)->GetCommandQueueId() :
         SoftwareQueueIndex{PlatformMisc::GetLSB(m_Desc.ImmediateContextMask)};
 
     const auto d3d12StateMask = bInitializeTexture ?

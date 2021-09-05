@@ -88,13 +88,13 @@ public:
     template <typename BufferType>
     BufferType* GetBuffer()
     {
-        return ValidatedCast<BufferType>(m_pBuffer);
+        return ClassPtrCast<BufferType>(m_pBuffer);
     }
 
     template <typename BufferType>
     BufferType* GetBuffer() const
     {
-        return ValidatedCast<BufferType>(m_pBuffer);
+        return ClassPtrCast<BufferType>(m_pBuffer);
     }
 
 protected:

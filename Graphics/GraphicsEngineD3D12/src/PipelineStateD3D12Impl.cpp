@@ -150,7 +150,7 @@ void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo& CreateI
 
             auto&       LibDesc      = *TempPool.Construct<D3D12_DXIL_LIBRARY_DESC>();
             auto&       ExportDesc   = *TempPool.Construct<D3D12_EXPORT_DESC>();
-            const auto* pShaderD3D12 = ValidatedCast<ShaderD3D12Impl>(pShader);
+            const auto* pShaderD3D12 = ClassPtrCast<ShaderD3D12Impl>(pShader);
             const auto& pBlob        = Stage.ByteCodes[ShaderIndex];
             ++ShaderIndex;
 
@@ -950,7 +950,7 @@ bool PipelineStateD3D12Impl::IsCompatibleWith(const IPipelineState* pPSO) const
     if (pPSO == this)
         return true;
 
-    bool IsCompatible = (m_RootSig == ValidatedCast<const PipelineStateD3D12Impl>(pPSO)->m_RootSig);
+    bool IsCompatible = (m_RootSig == ClassPtrCast<const PipelineStateD3D12Impl>(pPSO)->m_RootSig);
     VERIFY_EXPR(IsCompatible == TPipelineStateBase::IsCompatibleWith(pPSO));
     return IsCompatible;
 }

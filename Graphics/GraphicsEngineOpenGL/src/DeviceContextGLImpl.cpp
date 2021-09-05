@@ -89,7 +89,7 @@ void DeviceContextGLImpl::SetPipelineState(IPipelineState* pPipelineState)
 {
     VERIFY_EXPR(pPipelineState != nullptr);
 
-    auto* pPipelineStateGLImpl = ValidatedCast<PipelineStateGLImpl>(pPipelineState);
+    auto* pPipelineStateGLImpl = ClassPtrCast<PipelineStateGLImpl>(pPipelineState);
     if (PipelineStateGLImpl::IsSameObject(m_pPipelineState, pPipelineStateGLImpl))
         return;
 
@@ -177,7 +177,7 @@ void DeviceContextGLImpl::CommitShaderResources(IShaderResourceBinding* pShaderR
 {
     DeviceContextBase::CommitShaderResources(pShaderResourceBinding, StateTransitionMode, 0);
 
-    auto* const pShaderResBindingGL = ValidatedCast<ShaderResourceBindingGLImpl>(pShaderResourceBinding);
+    auto* const pShaderResBindingGL = ClassPtrCast<ShaderResourceBindingGLImpl>(pShaderResourceBinding);
     const auto  SRBIndex            = pShaderResBindingGL->GetBindingIndex();
 
     m_BindInfo.Set(SRBIndex, pShaderResBindingGL);
@@ -458,7 +458,7 @@ void DeviceContextGLImpl::BeginSubpass()
         const auto& RTAttachmentRef = SubpassDesc.pRenderTargetAttachments[rt];
         if (RTAttachmentRef.AttachmentIndex != ATTACHMENT_UNUSED)
         {
-            auto* const pRTV = ValidatedCast<TextureViewGLImpl>(FBDesc.ppAttachments[RTAttachmentRef.AttachmentIndex]);
+            auto* const pRTV = ClassPtrCast<TextureViewGLImpl>(FBDesc.ppAttachments[RTAttachmentRef.AttachmentIndex]);
             if (pRTV == nullptr)
                 continue;
 
@@ -484,7 +484,7 @@ void DeviceContextGLImpl::BeginSubpass()
         const auto DepthAttachmentIndex = SubpassDesc.pDepthStencilAttachment->AttachmentIndex;
         if (DepthAttachmentIndex != ATTACHMENT_UNUSED)
         {
-            auto* const pDSV = ValidatedCast<TextureViewGLImpl>(FBDesc.ppAttachments[DepthAttachmentIndex]);
+            auto* const pDSV = ClassPtrCast<TextureViewGLImpl>(FBDesc.ppAttachments[DepthAttachmentIndex]);
             if (pDSV != nullptr)
             {
                 auto* pDepthTexGL = pDSV->GetTexture<TextureBaseGL>();
@@ -870,7 +870,7 @@ void DeviceContextGLImpl::DrawIndexed(const DrawIndexedAttribs& Attribs)
 void DeviceContextGLImpl::PrepareForIndirectDraw(IBuffer* pAttribsBuffer)
 {
 #if GL_ARB_draw_indirect
-    auto* pIndirectDrawAttribsGL = ValidatedCast<BufferGLImpl>(pAttribsBuffer);
+    auto* pIndirectDrawAttribsGL = ClassPtrCast<BufferGLImpl>(pAttribsBuffer);
     // The indirect rendering functions take their data from the buffer currently bound to the
     // GL_DRAW_INDIRECT_BUFFER binding. Thus, any of indirect draw functions will fail if no buffer is
     // bound to that binding.
@@ -889,7 +889,7 @@ void DeviceContextGLImpl::PrepareForIndirectDraw(IBuffer* pAttribsBuffer)
 void DeviceContextGLImpl::PrepareForIndirectDrawCount(IBuffer* pCountBuffer)
 {
 #if GL_ARB_indirect_parameters
-    auto* pCountBufferGL = ValidatedCast<BufferGLImpl>(pCountBuffer);
+    auto* pCountBufferGL = ClassPtrCast<BufferGLImpl>(pCountBuffer);
     // The indirect rendering functions take their data from the buffer currently bound to the
     // GL_DRAW_INDIRECT_BUFFER binding. Thus, any of indirect draw functions will fail if no buffer is
     // bound to that binding.
@@ -1119,7 +1119,7 @@ void DeviceContextGLImpl::DispatchComputeIndirect(const DispatchComputeIndirectA
     DvpValidateCommittedShaderResources();
 #    endif
 
-    auto* pBufferGL = ValidatedCast<BufferGLImpl>(Attribs.pAttribsBuffer);
+    auto* pBufferGL = ClassPtrCast<BufferGLImpl>(Attribs.pAttribsBuffer);
     pBufferGL->BufferMemoryBarrier(
         MEMORY_BARRIER_INDIRECT_BUFFER, // Command data sourced from buffer objects by
                                         // Draw*Indirect and DispatchComputeIndirect commands after the barrier
@@ -1264,7 +1264,7 @@ void DeviceContextGLImpl::EnqueueSignal(IFence* pFence, Uint64 Value)
         0                              // Flags, must be 0
         )};
     DEV_CHECK_GL_ERROR("Failed to create gl fence");
-    auto* pFenceGLImpl = ValidatedCast<FenceGLImpl>(pFence);
+    auto* pFenceGLImpl = ClassPtrCast<FenceGLImpl>(pFence);
     pFenceGLImpl->AddPendingFence(std::move(GLFence), Value);
 }
 
@@ -1272,7 +1272,7 @@ void DeviceContextGLImpl::DeviceWaitForFence(IFence* pFence, Uint64 Value)
 {
     TDeviceContextBase::DeviceWaitForFence(pFence, Value, 0);
 
-    auto* pFenceGLImpl = ValidatedCast<FenceGLImpl>(pFence);
+    auto* pFenceGLImpl = ClassPtrCast<FenceGLImpl>(pFence);
     pFenceGLImpl->DeviceWait(Value);
     pFenceGLImpl->DvpDeviceWait(Value);
 }
@@ -1288,7 +1288,7 @@ void DeviceContextGLImpl::BeginQuery(IQuery* pQuery)
 {
     TDeviceContextBase::BeginQuery(pQuery, 0);
 
-    auto* pQueryGLImpl = ValidatedCast<QueryGLImpl>(pQuery);
+    auto* pQueryGLImpl = ClassPtrCast<QueryGLImpl>(pQuery);
     auto  QueryType    = pQueryGLImpl->GetDesc().Type;
     auto  glQuery      = pQueryGLImpl->GetGlQueryHandle();
 
@@ -1335,7 +1335,7 @@ void DeviceContextGLImpl::EndQuery(IQuery* pQuery)
 {
     TDeviceContextBase::EndQuery(pQuery, 0);
 
-    auto* pQueryGLImpl = ValidatedCast<QueryGLImpl>(pQuery);
+    auto* pQueryGLImpl = ClassPtrCast<QueryGLImpl>(pQuery);
     auto  QueryType    = pQueryGLImpl->GetDesc().Type;
     switch (QueryType)
     {
@@ -1404,7 +1404,7 @@ void DeviceContextGLImpl::UpdateBuffer(IBuffer*                       pBuffer,
 {
     TDeviceContextBase::UpdateBuffer(pBuffer, Offset, Size, pData, StateTransitionMode);
 
-    auto* pBufferGL = ValidatedCast<BufferGLImpl>(pBuffer);
+    auto* pBufferGL = ClassPtrCast<BufferGLImpl>(pBuffer);
     pBufferGL->UpdateData(m_ContextState, Offset, Size, pData);
 }
 
@@ -1418,22 +1418,22 @@ void DeviceContextGLImpl::CopyBuffer(IBuffer*                       pSrcBuffer,
 {
     TDeviceContextBase::CopyBuffer(pSrcBuffer, SrcOffset, SrcBufferTransitionMode, pDstBuffer, DstOffset, Size, DstBufferTransitionMode);
 
-    auto* pSrcBufferGL = ValidatedCast<BufferGLImpl>(pSrcBuffer);
-    auto* pDstBufferGL = ValidatedCast<BufferGLImpl>(pDstBuffer);
+    auto* pSrcBufferGL = ClassPtrCast<BufferGLImpl>(pSrcBuffer);
+    auto* pDstBufferGL = ClassPtrCast<BufferGLImpl>(pDstBuffer);
     pDstBufferGL->CopyData(m_ContextState, *pSrcBufferGL, SrcOffset, DstOffset, Size);
 }
 
 void DeviceContextGLImpl::MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_FLAGS MapFlags, PVoid& pMappedData)
 {
     TDeviceContextBase::MapBuffer(pBuffer, MapType, MapFlags, pMappedData);
-    auto* pBufferGL = ValidatedCast<BufferGLImpl>(pBuffer);
+    auto* pBufferGL = ClassPtrCast<BufferGLImpl>(pBuffer);
     pBufferGL->Map(m_ContextState, MapType, MapFlags, pMappedData);
 }
 
 void DeviceContextGLImpl::UnmapBuffer(IBuffer* pBuffer, MAP_TYPE MapType)
 {
     TDeviceContextBase::UnmapBuffer(pBuffer, MapType);
-    auto* pBufferGL = ValidatedCast<BufferGLImpl>(pBuffer);
+    auto* pBufferGL = ClassPtrCast<BufferGLImpl>(pBuffer);
     pBufferGL->Unmap(m_ContextState);
 }
 
@@ -1446,15 +1446,15 @@ void DeviceContextGLImpl::UpdateTexture(ITexture*                      pTexture,
                                         RESOURCE_STATE_TRANSITION_MODE TextureStateTransitionMode)
 {
     TDeviceContextBase::UpdateTexture(pTexture, MipLevel, Slice, DstBox, SubresData, SrcBufferStateTransitionMode, TextureStateTransitionMode);
-    auto* pTexGL = ValidatedCast<TextureBaseGL>(pTexture);
+    auto* pTexGL = ClassPtrCast<TextureBaseGL>(pTexture);
     pTexGL->UpdateData(m_ContextState, MipLevel, Slice, DstBox, SubresData);
 }
 
 void DeviceContextGLImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
 {
     TDeviceContextBase::CopyTexture(CopyAttribs);
-    auto* pSrcTexGL = ValidatedCast<TextureBaseGL>(CopyAttribs.pSrcTexture);
-    auto* pDstTexGL = ValidatedCast<TextureBaseGL>(CopyAttribs.pDstTexture);
+    auto* pSrcTexGL = ClassPtrCast<TextureBaseGL>(CopyAttribs.pSrcTexture);
+    auto* pDstTexGL = ClassPtrCast<TextureBaseGL>(CopyAttribs.pDstTexture);
 
     const auto& SrcTexDesc = pSrcTexGL->GetDesc();
     const auto& DstTexDesc = pDstTexGL->GetDesc();
@@ -1534,7 +1534,7 @@ void DeviceContextGLImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
             DEV_CHECK_GL_ERROR("Failed to bind FBO as read framebuffer");
         }
 
-        auto* pDstBuffer = ValidatedCast<BufferGLImpl>(pDstTexGL->GetPBO());
+        auto* pDstBuffer = ClassPtrCast<BufferGLImpl>(pDstTexGL->GetPBO());
         VERIFY(pDstBuffer != nullptr, "Internal staging buffer must not be null");
         // GetStagingTextureLocationOffset assumes pixels are tightly packed in every subresource - no padding
         // except between subresources.
@@ -1572,13 +1572,13 @@ void DeviceContextGLImpl::MapTextureSubresource(ITexture*                 pTextu
                                                 MappedTextureSubresource& MappedData)
 {
     TDeviceContextBase::MapTextureSubresource(pTexture, MipLevel, ArraySlice, MapType, MapFlags, pMapRegion, MappedData);
-    auto*       pTexGL  = ValidatedCast<TextureBaseGL>(pTexture);
+    auto*       pTexGL  = ClassPtrCast<TextureBaseGL>(pTexture);
     const auto& TexDesc = pTexGL->GetDesc();
     if (TexDesc.Usage == USAGE_STAGING)
     {
         auto PBOOffset       = GetStagingTextureSubresourceOffset(TexDesc, ArraySlice, MipLevel, TextureBaseGL::PBOOffsetAlignment);
         auto MipLevelAttribs = GetMipLevelProperties(TexDesc, MipLevel);
-        auto pPBO            = ValidatedCast<BufferGLImpl>(pTexGL->GetPBO());
+        auto pPBO            = ClassPtrCast<BufferGLImpl>(pTexGL->GetPBO());
         pPBO->MapRange(m_ContextState, MapType, MapFlags, PBOOffset, MipLevelAttribs.MipSize, MappedData.pData);
 
         MappedData.Stride      = MipLevelAttribs.RowSize;
@@ -1595,11 +1595,11 @@ void DeviceContextGLImpl::MapTextureSubresource(ITexture*                 pTextu
 void DeviceContextGLImpl::UnmapTextureSubresource(ITexture* pTexture, Uint32 MipLevel, Uint32 ArraySlice)
 {
     TDeviceContextBase::UnmapTextureSubresource(pTexture, MipLevel, ArraySlice);
-    auto*       pTexGL  = ValidatedCast<TextureBaseGL>(pTexture);
+    auto*       pTexGL  = ClassPtrCast<TextureBaseGL>(pTexture);
     const auto& TexDesc = pTexGL->GetDesc();
     if (TexDesc.Usage == USAGE_STAGING)
     {
-        auto pPBO = ValidatedCast<BufferGLImpl>(pTexGL->GetPBO());
+        auto pPBO = ClassPtrCast<BufferGLImpl>(pTexGL->GetPBO());
         pPBO->Unmap(m_ContextState);
     }
     else
@@ -1611,7 +1611,7 @@ void DeviceContextGLImpl::UnmapTextureSubresource(ITexture* pTexture, Uint32 Mip
 void DeviceContextGLImpl::GenerateMips(ITextureView* pTexView)
 {
     TDeviceContextBase::GenerateMips(pTexView);
-    auto* pTexViewGL = ValidatedCast<TextureViewGLImpl>(pTexView);
+    auto* pTexViewGL = ClassPtrCast<TextureViewGLImpl>(pTexView);
     auto  BindTarget = pTexViewGL->GetBindTarget();
     m_ContextState.BindTexture(-1, BindTarget, pTexViewGL->GetHandle());
     glGenerateMipmap(BindTarget);
@@ -1629,8 +1629,8 @@ void DeviceContextGLImpl::ResolveTextureSubresource(ITexture*                   
                                                     const ResolveTextureSubresourceAttribs& ResolveAttribs)
 {
     TDeviceContextBase::ResolveTextureSubresource(pSrcTexture, pDstTexture, ResolveAttribs);
-    auto*       pSrcTexGl  = ValidatedCast<TextureBaseGL>(pSrcTexture);
-    auto*       pDstTexGl  = ValidatedCast<TextureBaseGL>(pDstTexture);
+    auto*       pSrcTexGl  = ClassPtrCast<TextureBaseGL>(pSrcTexture);
+    auto*       pDstTexGl  = ClassPtrCast<TextureBaseGL>(pDstTexture);
     const auto& SrcTexDesc = pSrcTexGl->GetDesc();
     //const auto& DstTexDesc = pDstTexGl->GetDesc();
 

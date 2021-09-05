@@ -535,12 +535,12 @@ bool VerifyDynamicBufferOffset(const PipelineResourceDesc& ResDesc,
     switch (ResDesc.ResourceType)
     {
         case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:
-            pBuffer = ValidatedCast<const BufferImplType>(pObject);
+            pBuffer = ClassPtrCast<const BufferImplType>(pObject);
             break;
 
         case SHADER_RESOURCE_TYPE_BUFFER_SRV:
         case SHADER_RESOURCE_TYPE_BUFFER_UAV:
-            if (const auto* pBuffView = ValidatedCast<const BufferViewImplType>(pObject))
+            if (const auto* pBuffView = ClassPtrCast<const BufferViewImplType>(pObject))
             {
                 pBuffer = pObject != nullptr ? pBuffView->template GetBuffer<const BufferImplType>() : nullptr;
 

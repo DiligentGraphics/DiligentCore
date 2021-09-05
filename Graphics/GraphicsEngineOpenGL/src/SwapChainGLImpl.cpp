@@ -112,7 +112,7 @@ void SwapChainGLImpl::Present(Uint32 SyncInterval)
     if (auto pDeviceContext = m_wpDeviceContext.Lock())
     {
         auto* pDeviceCtxGl = pDeviceContext.RawPtr<DeviceContextGLImpl>();
-        auto* pBackBuffer  = ValidatedCast<TextureBaseGL>(m_pRenderTargetView->GetTexture());
+        auto* pBackBuffer  = ClassPtrCast<TextureBaseGL>(m_pRenderTargetView->GetTexture());
         pDeviceCtxGl->UnbindTextureFromFramebuffer(pBackBuffer, false);
     }
 }

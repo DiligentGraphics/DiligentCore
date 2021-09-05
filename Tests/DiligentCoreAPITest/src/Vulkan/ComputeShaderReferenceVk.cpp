@@ -48,7 +48,7 @@ void ComputeShaderReferenceVk(ISwapChain* pSwapChain)
     VkResult res = VK_SUCCESS;
     (void)res;
 
-    auto* pTestingSwapChainVk = ValidatedCast<TestingSwapChainVk>(pSwapChain);
+    auto* pTestingSwapChainVk = ClassPtrCast<TestingSwapChainVk>(pSwapChain);
 
     const auto& SCDesc = pSwapChain->GetDesc();
 

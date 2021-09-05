@@ -112,7 +112,7 @@ void RenderDrawCommandReferenceGL(ISwapChain* pSwapChain, const float* pClearCol
 {
     auto* pEnv                = TestingEnvironmentGL::GetInstance();
     auto* pContext            = pEnv->GetDeviceContext();
-    auto* pTestingSwapChainGL = ValidatedCast<TestingSwapChainGL>(pSwapChain);
+    auto* pTestingSwapChainGL = ClassPtrCast<TestingSwapChainGL>(pSwapChain);
 
     const auto& SCDesc = pTestingSwapChainGL->GetDesc();
 
@@ -130,7 +130,7 @@ void RenderPassMSResolveReferenceGL(ISwapChain* pSwapChain, const float* pClearC
 {
     auto* pEnv                = TestingEnvironmentGL::GetInstance();
     auto* pContext            = pEnv->GetDeviceContext();
-    auto* pTestingSwapChainGL = ValidatedCast<TestingSwapChainGL>(pSwapChain);
+    auto* pTestingSwapChainGL = ClassPtrCast<TestingSwapChainGL>(pSwapChain);
 
     const auto& SCDesc = pTestingSwapChainGL->GetDesc();
 
@@ -187,7 +187,7 @@ void RenderPassInputAttachmentReferenceGL(ISwapChain* pSwapChain, const float* p
 {
     auto* pEnv                = TestingEnvironmentGL::GetInstance();
     auto* pContext            = pEnv->GetDeviceContext();
-    auto* pTestingSwapChainGL = ValidatedCast<TestingSwapChainGL>(pSwapChain);
+    auto* pTestingSwapChainGL = ClassPtrCast<TestingSwapChainGL>(pSwapChain);
 
     const auto& SCDesc = pTestingSwapChainGL->GetDesc();
 

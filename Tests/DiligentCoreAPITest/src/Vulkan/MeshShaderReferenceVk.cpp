@@ -50,7 +50,7 @@ void MeshShaderDrawReferenceVk(ISwapChain* pSwapChain)
     VkResult res = VK_SUCCESS;
     (void)res;
 
-    auto* pTestingSwapChainVk = ValidatedCast<TestingSwapChainVk>(pSwapChain);
+    auto* pTestingSwapChainVk = ClassPtrCast<TestingSwapChainVk>(pSwapChain);
 
     auto vkMSModule = pEnv->CreateShaderModule(SHADER_TYPE_MESH, GLSL::MeshShaderTest_MS);
     ASSERT_TRUE(vkMSModule != VK_NULL_HANDLE);
@@ -210,7 +210,7 @@ void MeshShaderIndirectDrawReferenceVk(ISwapChain* pSwapChain)
     VkResult res = VK_SUCCESS;
     (void)res;
 
-    auto* pTestingSwapChainVk = ValidatedCast<TestingSwapChainVk>(pSwapChain);
+    auto* pTestingSwapChainVk = ClassPtrCast<TestingSwapChainVk>(pSwapChain);
 
     auto vkMSModule = pEnv->CreateShaderModule(SHADER_TYPE_MESH, GLSL::MeshShaderTest_MS);
     ASSERT_TRUE(vkMSModule != VK_NULL_HANDLE);
@@ -390,7 +390,7 @@ void AmplificationShaderDrawReferenceVk(ISwapChain* pSwapChain)
     VkResult res = VK_SUCCESS;
     (void)res;
 
-    auto* pTestingSwapChainVk = ValidatedCast<TestingSwapChainVk>(pSwapChain);
+    auto* pTestingSwapChainVk = ClassPtrCast<TestingSwapChainVk>(pSwapChain);
 
     auto vkTSModule = pEnv->CreateShaderModule(SHADER_TYPE_AMPLIFICATION, GLSL::AmplificationShaderTest_TS);
     ASSERT_TRUE(vkTSModule != VK_NULL_HANDLE);

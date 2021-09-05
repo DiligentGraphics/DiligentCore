@@ -208,9 +208,9 @@ public:
     const T* RawPtr() const noexcept { return m_pObject; }
 
     template <typename DstType>
-    DstType* RawPtr() noexcept { return ValidatedCast<DstType>(m_pObject); }
+    DstType* RawPtr() noexcept { return ClassPtrCast<DstType>(m_pObject); }
     template <typename DstType>
-    DstType* RawPtr() const noexcept { return ValidatedCast<DstType>(m_pObject); }
+    DstType* RawPtr() const noexcept { return ClassPtrCast<DstType>(m_pObject); }
 
     operator T*() noexcept { return RawPtr(); }
     operator const T*() const noexcept { return RawPtr(); }
@@ -315,7 +315,7 @@ public:
     {
         if (m_pObject)
         {
-            m_pRefCounters = ValidatedCast<RefCountersImpl>(m_pObject->GetReferenceCounters());
+            m_pRefCounters = ClassPtrCast<RefCountersImpl>(m_pObject->GetReferenceCounters());
             m_pRefCounters->AddWeakRef();
         }
     }
@@ -342,7 +342,7 @@ public:
     }
 
     explicit RefCntWeakPtr(RefCntAutoPtr<T>& AutoPtr) noexcept :
-        m_pRefCounters{AutoPtr ? ValidatedCast<RefCountersImpl>(AutoPtr->GetReferenceCounters()) : nullptr},
+        m_pRefCounters{AutoPtr ? ClassPtrCast<RefCountersImpl>(AutoPtr->GetReferenceCounters()) : nullptr},
         m_pObject{static_cast<T*>(AutoPtr)}
     {
         if (m_pRefCounters)
@@ -384,7 +384,7 @@ public:
     {
         Release();
         m_pObject      = static_cast<T*>(AutoPtr);
-        m_pRefCounters = m_pObject ? ValidatedCast<RefCountersImpl>(m_pObject->GetReferenceCounters()) : nullptr;
+        m_pRefCounters = m_pObject ? ClassPtrCast<RefCountersImpl>(m_pObject->GetReferenceCounters()) : nullptr;
         if (m_pRefCounters)
             m_pRefCounters->AddWeakRef();
         return *this;

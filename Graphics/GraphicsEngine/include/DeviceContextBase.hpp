@@ -731,7 +731,7 @@ inline void DeviceContextBase<ImplementationTraits>::SetVertexBuffers(
     for (Uint32 Buff = 0; Buff < NumBuffersSet; ++Buff)
     {
         auto& CurrStream   = m_VertexStreams[StartSlot + Buff];
-        CurrStream.pBuffer = ppBuffers ? ValidatedCast<BufferImplType>(ppBuffers[Buff]) : nullptr;
+        CurrStream.pBuffer = ppBuffers ? ClassPtrCast<BufferImplType>(ppBuffers[Buff]) : nullptr;
         CurrStream.Offset  = pOffsets ? pOffsets[Buff] : 0;
 #ifdef DILIGENT_DEVELOPMENT
         if (CurrStream.pBuffer)
@@ -788,7 +788,7 @@ inline void DeviceContextBase<ImplementationTraits>::SetIndexBuffer(
     Uint64                         ByteOffset,
     RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
-    m_pIndexBuffer         = ValidatedCast<BufferImplType>(pIndexBuffer);
+    m_pIndexBuffer         = ClassPtrCast<BufferImplType>(pIndexBuffer);
     m_IndexDataStartOffset = ByteOffset;
 
 #ifdef DILIGENT_DEVELOPMENT
@@ -1005,7 +1005,7 @@ inline bool DeviceContextBase<ImplementationTraits>::SetRenderTargets(const SetR
         // can safely compare pointers.
         if (m_pBoundRenderTargets[rt] != pRTView)
         {
-            m_pBoundRenderTargets[rt] = ValidatedCast<TextureViewImplType>(pRTView);
+            m_pBoundRenderTargets[rt] = ClassPtrCast<TextureViewImplType>(pRTView);
             bBindRenderTargets        = true;
         }
     }
@@ -1044,7 +1044,7 @@ inline bool DeviceContextBase<ImplementationTraits>::SetRenderTargets(const SetR
 
     if (m_pBoundDepthStencil != Attribs.pDepthStencil)
     {
-        m_pBoundDepthStencil = ValidatedCast<TextureViewImplType>(Attribs.pDepthStencil);
+        m_pBoundDepthStencil = ClassPtrCast<TextureViewImplType>(Attribs.pDepthStencil);
         bBindRenderTargets   = true;
     }
 
@@ -1376,8 +1376,8 @@ inline void DeviceContextBase<ImplementationTraits>::BeginRenderPass(const Begin
     // Reset current render targets (in Vulkan backend, this may end current render pass).
     ResetRenderTargets();
 
-    auto* pNewRenderPass  = ValidatedCast<RenderPassImplType>(Attribs.pRenderPass);
-    auto* pNewFramebuffer = ValidatedCast<FramebufferImplType>(Attribs.pFramebuffer);
+    auto* pNewRenderPass  = ClassPtrCast<RenderPassImplType>(Attribs.pRenderPass);
+    auto* pNewFramebuffer = ClassPtrCast<FramebufferImplType>(Attribs.pFramebuffer);
     if (Attribs.StateTransitionMode != RESOURCE_STATE_TRANSITION_MODE_NONE)
     {
         const auto& RPDesc = pNewRenderPass->GetDesc();
@@ -1391,7 +1391,7 @@ inline void DeviceContextBase<ImplementationTraits>::BeginRenderPass(const Begin
             if (pView == nullptr)
                 return;
 
-            auto* pTex          = ValidatedCast<TextureImplType>(pView->GetTexture());
+            auto* pTex          = ClassPtrCast<TextureImplType>(pView->GetTexture());
             auto  RequiredState = RPDesc.pAttachments[i].InitialState;
             if (Attribs.StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
             {
@@ -1446,7 +1446,7 @@ inline void DeviceContextBase<ImplementationTraits>::UpdateAttachmentStates(Uint
     {
         if (auto* pView = FBDesc.ppAttachments[i])
         {
-            auto* pTex = ValidatedCast<TextureImplType>(pView->GetTexture());
+            auto* pTex = ClassPtrCast<TextureImplType>(pView->GetTexture());
             if (pTex->IsInKnownState())
             {
                 auto CurrState = SubpassIndex < RPDesc.SubpassCount ?
@@ -1571,7 +1571,7 @@ inline void DeviceContextBase<ImplementationTraits>::BeginQuery(IQuery* pQuery, 
     const auto QueueType = QueryType == QUERY_TYPE_DURATION ? COMMAND_QUEUE_TYPE_TRANSFER : COMMAND_QUEUE_TYPE_GRAPHICS;
     DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(QueueType, "BeginQuery for query type ", GetQueryTypeString(QueryType));
 
-    ValidatedCast<QueryImplType>(pQuery)->OnBeginQuery(static_cast<DeviceContextImplType*>(this));
+    ClassPtrCast<QueryImplType>(pQuery)->OnBeginQuery(static_cast<DeviceContextImplType*>(this));
 }
 
 template <typename ImplementationTraits>
@@ -1583,7 +1583,7 @@ inline void DeviceContextBase<ImplementationTraits>::EndQuery(IQuery* pQuery, in
     const auto QueueType = QueryType == QUERY_TYPE_DURATION || QueryType == QUERY_TYPE_TIMESTAMP ? COMMAND_QUEUE_TYPE_TRANSFER : COMMAND_QUEUE_TYPE_GRAPHICS;
     DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(QueueType, "EndQuery for query type ", GetQueryTypeString(QueryType));
 
-    ValidatedCast<QueryImplType>(pQuery)->OnEndQuery(static_cast<DeviceContextImplType*>(this));
+    ClassPtrCast<QueryImplType>(pQuery)->OnEndQuery(static_cast<DeviceContextImplType*>(this));
 }
 
 template <typename ImplementationTraits>
@@ -1614,7 +1614,7 @@ inline void DeviceContextBase<ImplementationTraits>::UpdateBuffer(
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "UpdateBuffer command must be used outside of render pass.");
 #ifdef DILIGENT_DEVELOPMENT
     {
-        const auto& BuffDesc = ValidatedCast<BufferImplType>(pBuffer)->GetDesc();
+        const auto& BuffDesc = ClassPtrCast<BufferImplType>(pBuffer)->GetDesc();
         DEV_CHECK_ERR(BuffDesc.Usage == USAGE_DEFAULT, "Unable to update buffer '", BuffDesc.Name, "': only USAGE_DEFAULT buffers can be updated with UpdateData()");
         DEV_CHECK_ERR(Offset < BuffDesc.uiSizeInBytes, "Unable to update buffer '", BuffDesc.Name, "': offset (", Offset, ") exceeds the buffer size (", BuffDesc.uiSizeInBytes, ")");
         DEV_CHECK_ERR(Size + Offset <= BuffDesc.uiSizeInBytes, "Unable to update buffer '", BuffDesc.Name, "': Update region [", Offset, ",", Size + Offset, ") is out of buffer bounds [0,", BuffDesc.uiSizeInBytes, ")");
@@ -1638,8 +1638,8 @@ inline void DeviceContextBase<ImplementationTraits>::CopyBuffer(
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "CopyBuffer command must be used outside of render pass.");
 #ifdef DILIGENT_DEVELOPMENT
     {
-        const auto& SrcBufferDesc = ValidatedCast<BufferImplType>(pSrcBuffer)->GetDesc();
-        const auto& DstBufferDesc = ValidatedCast<BufferImplType>(pDstBuffer)->GetDesc();
+        const auto& SrcBufferDesc = ClassPtrCast<BufferImplType>(pSrcBuffer)->GetDesc();
+        const auto& DstBufferDesc = ClassPtrCast<BufferImplType>(pDstBuffer)->GetDesc();
         DEV_CHECK_ERR(DstOffset + Size <= DstBufferDesc.uiSizeInBytes, "Failed to copy buffer '", SrcBufferDesc.Name, "' to '", DstBufferDesc.Name, "': Destination range [", DstOffset, ",", DstOffset + Size, ") is out of buffer bounds [0,", DstBufferDesc.uiSizeInBytes, ")");
         DEV_CHECK_ERR(SrcOffset + Size <= SrcBufferDesc.uiSizeInBytes, "Failed to copy buffer '", SrcBufferDesc.Name, "' to '", DstBufferDesc.Name, "': Source range [", SrcOffset, ",", SrcOffset + Size, ") is out of buffer bounds [0,", SrcBufferDesc.uiSizeInBytes, ")");
     }
@@ -1843,7 +1843,7 @@ void DeviceContextBase<ImplementationTraits>::CopyTLAS(const CopyTLASAttribs& At
     DEV_CHECK_ERR(m_pDevice->GetFeatures().RayTracing, "IDeviceContext::CopyTLAS: ray tracing is not supported by this device");
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "IDeviceContext::CopyTLAS command must be performed outside of render pass");
     DEV_CHECK_ERR(VerifyCopyTLASAttribs(Attribs), "CopyTLASAttribs are invalid");
-    DEV_CHECK_ERR(ValidatedCast<TopLevelASType>(Attribs.pSrc)->ValidateContent(), "IDeviceContext::CopyTLAS: pSrc acceleration structure is not valid");
+    DEV_CHECK_ERR(ClassPtrCast<TopLevelASType>(Attribs.pSrc)->ValidateContent(), "IDeviceContext::CopyTLAS: pSrc acceleration structure is not valid");
 }
 
 template <typename ImplementationTraits>
@@ -1883,11 +1883,11 @@ void DeviceContextBase<ImplementationTraits>::TraceRays(const TraceRaysAttribs& 
 
     DEV_CHECK_ERR(VerifyTraceRaysAttribs(Attribs), "TraceRaysAttribs are invalid");
 
-    DEV_CHECK_ERR(PipelineStateImplType::IsSameObject(m_pPipelineState, ValidatedCast<PipelineStateImplType>(Attribs.pSBT->GetDesc().pPSO)),
+    DEV_CHECK_ERR(PipelineStateImplType::IsSameObject(m_pPipelineState, ClassPtrCast<PipelineStateImplType>(Attribs.pSBT->GetDesc().pPSO)),
                   "IDeviceContext::TraceRays command arguments are invalid: currently bound pipeline '", m_pPipelineState->GetDesc().Name,
                   "' doesn't match the pipeline '", Attribs.pSBT->GetDesc().pPSO->GetDesc().Name, "' that was used in ShaderBindingTable");
 
-    const auto* pSBTImpl = ValidatedCast<const ShaderBindingTableImplType>(Attribs.pSBT);
+    const auto* pSBTImpl = ClassPtrCast<const ShaderBindingTableImplType>(Attribs.pSBT);
     DEV_CHECK_ERR(!pSBTImpl->HasPendingData(), "IDeviceContext::TraceRaysIndirect command arguments are invalid: SBT '",
                   pSBTImpl->GetDesc().Name, "' has uncommitted changes, call UpdateSBT() first");
 
@@ -1924,11 +1924,11 @@ void DeviceContextBase<ImplementationTraits>::TraceRaysIndirect(const TraceRaysI
     DEV_CHECK_ERR(VerifyTraceRaysIndirectAttribs(m_pDevice, Attribs, TraceRaysIndirectCommandSize),
                   "TraceRaysIndirectAttribs are invalid");
 
-    DEV_CHECK_ERR(PipelineStateImplType::IsSameObject(m_pPipelineState, ValidatedCast<PipelineStateImplType>(Attribs.pSBT->GetDesc().pPSO)),
+    DEV_CHECK_ERR(PipelineStateImplType::IsSameObject(m_pPipelineState, ClassPtrCast<PipelineStateImplType>(Attribs.pSBT->GetDesc().pPSO)),
                   "IDeviceContext::TraceRaysIndirect command arguments are invalid: currently bound pipeline '", m_pPipelineState->GetDesc().Name,
                   "' doesn't match the pipeline '", Attribs.pSBT->GetDesc().pPSO->GetDesc().Name, "' that was used in ShaderBindingTable");
 
-    const auto* pSBTImpl = ValidatedCast<const ShaderBindingTableImplType>(Attribs.pSBT);
+    const auto* pSBTImpl = ClassPtrCast<const ShaderBindingTableImplType>(Attribs.pSBT);
     DEV_CHECK_ERR(!pSBTImpl->HasPendingData(),
                   "IDeviceContext::TraceRaysIndirect command arguments are invalid: SBT '",
                   pSBTImpl->GetDesc().Name, "' has uncommitted changes, call UpdateSBT() first");

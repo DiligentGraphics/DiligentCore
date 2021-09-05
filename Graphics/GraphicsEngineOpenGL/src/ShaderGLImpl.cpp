@@ -241,7 +241,7 @@ GLObjectWrappers::GLProgramObj ShaderGLImpl::LinkProgram(ShaderGLImpl* const* pp
 
     for (Uint32 i = 0; i < NumShaders; ++i)
     {
-        auto* pCurrShader = ValidatedCast<const ShaderGLImpl>(ppShaders[i]);
+        auto* pCurrShader = ClassPtrCast<const ShaderGLImpl>(ppShaders[i]);
         glDetachShader(GLProg, pCurrShader->m_GLShaderObj);
         CHECK_GL_ERROR("glDetachShader() failed");
     }

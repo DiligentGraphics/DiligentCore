@@ -122,7 +122,7 @@ void RenderDrawCommandReferenceD3D12(ISwapChain* pSwapChain, const float* pClear
 {
     auto* pEnv                   = TestingEnvironmentD3D12::GetInstance();
     auto* pd3d12Device           = pEnv->GetD3D12Device();
-    auto* pTestingSwapChainD3D12 = ValidatedCast<TestingSwapChainD3D12>(pSwapChain);
+    auto* pTestingSwapChainD3D12 = ClassPtrCast<TestingSwapChainD3D12>(pSwapChain);
 
     const auto& SCDesc = pSwapChain->GetDesc();
 
@@ -150,7 +150,7 @@ void RenderPassMSResolveReferenceD3D12(ISwapChain* pSwapChain, const float* pCle
 {
     auto* pEnv                   = TestingEnvironmentD3D12::GetInstance();
     auto* pd3d12Device           = pEnv->GetD3D12Device();
-    auto* pTestingSwapChainD3D12 = ValidatedCast<TestingSwapChainD3D12>(pSwapChain);
+    auto* pTestingSwapChainD3D12 = ClassPtrCast<TestingSwapChainD3D12>(pSwapChain);
 
     const auto& SCDesc = pSwapChain->GetDesc();
 
@@ -260,7 +260,7 @@ void RenderPassInputAttachmentReferenceD3D12(ISwapChain* pSwapChain, const float
 {
     auto* pEnv                   = TestingEnvironmentD3D12::GetInstance();
     auto* pd3d12Device           = pEnv->GetD3D12Device();
-    auto* pTestingSwapChainD3D12 = ValidatedCast<TestingSwapChainD3D12>(pSwapChain);
+    auto* pTestingSwapChainD3D12 = ClassPtrCast<TestingSwapChainD3D12>(pSwapChain);
 
     const auto& SCDesc = pSwapChain->GetDesc();
 

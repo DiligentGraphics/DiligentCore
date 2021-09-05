@@ -425,7 +425,7 @@ void TextureUploaderD3D12_Vk::ScheduleGPUCopy(IDeviceContext* pContext,
                                               Uint32          MipLevel,
                                               IUploadBuffer*  pUploadBuffer)
 {
-    auto* pUploadTexture = ValidatedCast<UploadTexture>(pUploadBuffer);
+    auto* pUploadTexture = ClassPtrCast<UploadTexture>(pUploadBuffer);
     if (pContext != nullptr)
     {
         // Render thread
@@ -455,7 +455,7 @@ void TextureUploaderD3D12_Vk::ScheduleGPUCopy(IDeviceContext* pContext,
 
 void TextureUploaderD3D12_Vk::RecycleBuffer(IUploadBuffer* pUploadBuffer)
 {
-    auto* pUploadTexture = ValidatedCast<UploadTexture>(pUploadBuffer);
+    auto* pUploadTexture = ClassPtrCast<UploadTexture>(pUploadBuffer);
     VERIFY(pUploadTexture->DbgIsCopyScheduled(), "Upload buffer must be recycled only after copy operation has been scheduled on the GPU");
 
     m_pInternalData->RecycleUploadTexture(pUploadTexture);

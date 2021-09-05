@@ -99,7 +99,7 @@ void FBOCache::OnReleaseTexture(ITexture* pTexture)
 {
     ThreadingTools::LockHelper CacheLock(m_CacheLockFlag);
 
-    auto* pTexGL = ValidatedCast<TextureBaseGL>(pTexture);
+    auto* pTexGL = ClassPtrCast<TextureBaseGL>(pTexture);
     // Find all FBOs that this texture used in
     auto EqualRange = m_TexIdToKey.equal_range(pTexGL->GetUniqueID());
     for (auto It = EqualRange.first; It != EqualRange.second; ++It)

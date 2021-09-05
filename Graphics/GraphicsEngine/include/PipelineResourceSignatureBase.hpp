@@ -269,7 +269,7 @@ public:
     {
         DEV_CHECK_ERR(pSRB != nullptr, "SRB must not be null");
 
-        auto* const pSRBImpl = ValidatedCast<ShaderResourceBindingImplType>(pSRB);
+        auto* const pSRBImpl = ClassPtrCast<ShaderResourceBindingImplType>(pSRB);
         if (pSRBImpl->StaticResourcesInitialized())
         {
             LOG_WARNING_MESSAGE("Static resources have already been initialized in this shader resource binding object.");
@@ -300,7 +300,7 @@ public:
             return true;
 
         const auto& This  = *static_cast<const PipelineResourceSignatureImplType*>(this);
-        const auto& Other = *ValidatedCast<const PipelineResourceSignatureImplType>(pPRS);
+        const auto& Other = *ClassPtrCast<const PipelineResourceSignatureImplType>(pPRS);
 
         if (This.GetHash() != Other.GetHash())
             return false;

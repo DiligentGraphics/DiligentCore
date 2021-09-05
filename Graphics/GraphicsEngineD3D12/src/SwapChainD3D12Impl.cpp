@@ -139,7 +139,7 @@ void SwapChainD3D12Impl::Present(Uint32 SyncInterval)
     auto* pImmediateCtxD3D12 = pDeviceContext.RawPtr<DeviceContextD3D12Impl>();
 
     auto& CmdCtx      = pImmediateCtxD3D12->GetCmdContext();
-    auto* pBackBuffer = ValidatedCast<TextureD3D12Impl>(GetCurrentBackBufferRTV()->GetTexture());
+    auto* pBackBuffer = ClassPtrCast<TextureD3D12Impl>(GetCurrentBackBufferRTV()->GetTexture());
 
     // A successful Present call for DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL SwapChains unbinds
     // backbuffer 0 from all GPU writeable bind points.
@@ -160,7 +160,7 @@ void SwapChainD3D12Impl::Present(Uint32 SyncInterval)
     if (m_SwapChainDesc.IsPrimary)
     {
         pImmediateCtxD3D12->FinishFrame();
-        auto* pDeviceD3D12 = ValidatedCast<RenderDeviceD3D12Impl>(pImmediateCtxD3D12->GetDevice());
+        auto* pDeviceD3D12 = ClassPtrCast<RenderDeviceD3D12Impl>(pImmediateCtxD3D12->GetDevice());
         pDeviceD3D12->ReleaseStaleResources();
     }
 
@@ -188,7 +188,7 @@ void SwapChainD3D12Impl::UpdateSwapChain(bool CreateNew)
             bool  RenderTargetsReset = false;
             for (Uint32 i = 0; i < m_pBackBufferRTV.size() && !RenderTargetsReset; ++i)
             {
-                auto* pCurrentBackBuffer = ValidatedCast<TextureD3D12Impl>(m_pBackBufferRTV[i]->GetTexture());
+                auto* pCurrentBackBuffer = ClassPtrCast<TextureD3D12Impl>(m_pBackBufferRTV[i]->GetTexture());
                 RenderTargetsReset       = pImmediateCtxD3D12->UnbindTextureFromFramebuffer(pCurrentBackBuffer, false);
             }
 

@@ -38,7 +38,7 @@ void ClearRenderTargetReferenceGL(ISwapChain* pSwapChain, const float ClearColor
 {
     auto* pEnv                = TestingEnvironmentGL::GetInstance();
     auto* pContext            = pEnv->GetDeviceContext();
-    auto* pTestingSwapChainGL = ValidatedCast<TestingSwapChainGL>(pSwapChain);
+    auto* pTestingSwapChainGL = ClassPtrCast<TestingSwapChainGL>(pSwapChain);
 
     const auto& SCDesc = pTestingSwapChainGL->GetDesc();
 

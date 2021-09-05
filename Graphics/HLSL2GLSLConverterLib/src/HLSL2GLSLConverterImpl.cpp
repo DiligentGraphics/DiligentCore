@@ -4863,7 +4863,7 @@ String HLSL2GLSLConverterImpl::Convert(ConversionAttribs& Attribs) const
         ConversionStream* pStream = nullptr;
         if (*Attribs.ppConversionStream != nullptr)
         {
-            pStream = ValidatedCast<ConversionStream>(*Attribs.ppConversionStream);
+            pStream = ClassPtrCast<ConversionStream>(*Attribs.ppConversionStream);
 
             const auto& FileNameFromStream = pStream->GetInputFileName();
             if (FileNameFromStream != Attribs.InputFileName)
@@ -4877,7 +4877,7 @@ String HLSL2GLSLConverterImpl::Convert(ConversionAttribs& Attribs) const
         if (*Attribs.ppConversionStream == nullptr)
         {
             CreateStream(Attribs.InputFileName, Attribs.pSourceStreamFactory, Attribs.HLSLSource, Attribs.NumSymbols, Attribs.ppConversionStream);
-            pStream = ValidatedCast<ConversionStream>(*Attribs.ppConversionStream);
+            pStream = ClassPtrCast<ConversionStream>(*Attribs.ppConversionStream);
         }
 
         return pStream->Convert(Attribs.EntryPoint, Attribs.ShaderType, Attribs.IncludeDefinitions, Attribs.SamplerSuffix, Attribs.UseInOutLocationQualifiers);

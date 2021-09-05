@@ -163,7 +163,7 @@ template <typename PSOCtorType, typename RootSigCtorType>
 void InitializeRTContext(RTContext& Ctx, ISwapChain* pSwapChain, Uint32 ShaderRecordSize, PSOCtorType&& PSOCtor, RootSigCtorType&& RootSigCtor)
 {
     auto* pEnv                   = TestingEnvironmentD3D12::GetInstance();
-    auto* pTestingSwapChainD3D12 = ValidatedCast<TestingSwapChainD3D12>(pSwapChain);
+    auto* pTestingSwapChainD3D12 = ClassPtrCast<TestingSwapChainD3D12>(pSwapChain);
 
     auto hr = pEnv->GetD3D12Device()->QueryInterface(IID_PPV_ARGS(&Ctx.pDevice));
     ASSERT_HRESULT_SUCCEEDED(hr) << "Failed to get ID3D12Device2";
@@ -562,7 +562,7 @@ void UAVBarrier(const RTContext& Ctx, ID3D12Resource* pResource)
 void RayTracingTriangleClosestHitReferenceD3D12(ISwapChain* pSwapChain)
 {
     auto* pEnv                   = TestingEnvironmentD3D12::GetInstance();
-    auto* pTestingSwapChainD3D12 = ValidatedCast<TestingSwapChainD3D12>(pSwapChain);
+    auto* pTestingSwapChainD3D12 = ClassPtrCast<TestingSwapChainD3D12>(pSwapChain);
 
     const auto& SCDesc = pSwapChain->GetDesc();
 
@@ -696,7 +696,7 @@ void RayTracingTriangleClosestHitReferenceD3D12(ISwapChain* pSwapChain)
 void RayTracingTriangleAnyHitReferenceD3D12(ISwapChain* pSwapChain)
 {
     auto* pEnv                   = TestingEnvironmentD3D12::GetInstance();
-    auto* pTestingSwapChainD3D12 = ValidatedCast<TestingSwapChainD3D12>(pSwapChain);
+    auto* pTestingSwapChainD3D12 = ClassPtrCast<TestingSwapChainD3D12>(pSwapChain);
 
     const auto& SCDesc = pSwapChain->GetDesc();
 
@@ -832,7 +832,7 @@ void RayTracingTriangleAnyHitReferenceD3D12(ISwapChain* pSwapChain)
 void RayTracingProceduralIntersectionReferenceD3D12(ISwapChain* pSwapChain)
 {
     auto* pEnv                   = TestingEnvironmentD3D12::GetInstance();
-    auto* pTestingSwapChainD3D12 = ValidatedCast<TestingSwapChainD3D12>(pSwapChain);
+    auto* pTestingSwapChainD3D12 = ClassPtrCast<TestingSwapChainD3D12>(pSwapChain);
 
     const auto& SCDesc = pSwapChain->GetDesc();
 
@@ -967,7 +967,7 @@ void RayTracingMultiGeometryReferenceD3D12(ISwapChain* pSwapChain)
     static constexpr Uint32 HitGroupCount = InstanceCount * GeometryCount;
 
     auto* pEnv                   = TestingEnvironmentD3D12::GetInstance();
-    auto* pTestingSwapChainD3D12 = ValidatedCast<TestingSwapChainD3D12>(pSwapChain);
+    auto* pTestingSwapChainD3D12 = ClassPtrCast<TestingSwapChainD3D12>(pSwapChain);
 
     const auto& SCDesc = pSwapChain->GetDesc();
 

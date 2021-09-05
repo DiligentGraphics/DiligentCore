@@ -195,7 +195,7 @@ void ShaderVariableManagerGL::UniformBuffBindInfo::BindResource(const BindResour
 
     auto& ResourceCache = m_ParentManager.m_ResourceCache;
 
-    // We cannot use ValidatedCast<> here as the resource can be of wrong type
+    // We cannot use ClassPtrCast<> here as the resource can be of wrong type
     RefCntAutoPtr<BufferGLImpl> pBuffGLImpl{BindInfo.pObject, IID_BufferGL};
 #ifdef DILIGENT_DEVELOPMENT
     {
@@ -235,7 +235,7 @@ void ShaderVariableManagerGL::TextureBindInfo::BindResource(const BindResourceIn
     if (Desc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV ||
         Desc.ResourceType == SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT)
     {
-        // We cannot use ValidatedCast<> here as the resource can be of wrong type
+        // We cannot use ClassPtrCast<> here as the resource can be of wrong type
         RefCntAutoPtr<TextureViewGLImpl> pViewGL{BindInfo.pObject, IID_TextureViewGL};
 
         const auto ImmutableSamplerAssigned = (m_ParentManager.m_pSignature->GetImmutableSamplerIdx(Attr) != InvalidImmutableSamplerIndex);
@@ -262,7 +262,7 @@ void ShaderVariableManagerGL::TextureBindInfo::BindResource(const BindResourceIn
     }
     else if (Desc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_SRV)
     {
-        // We cannot use ValidatedCast<> here as the resource can be of wrong type
+        // We cannot use ClassPtrCast<> here as the resource can be of wrong type
         RefCntAutoPtr<BufferViewGLImpl> pViewGL{BindInfo.pObject, IID_BufferViewGL};
 #ifdef DILIGENT_DEVELOPMENT
         {
@@ -298,7 +298,7 @@ void ShaderVariableManagerGL::ImageBindInfo::BindResource(const BindResourceInfo
 
     if (Desc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_UAV)
     {
-        // We cannot use ValidatedCast<> here as the resource can be of wrong type
+        // We cannot use ClassPtrCast<> here as the resource can be of wrong type
         RefCntAutoPtr<TextureViewGLImpl> pViewGL{BindInfo.pObject, IID_TextureViewGL};
 #ifdef DILIGENT_DEVELOPMENT
         {
@@ -315,7 +315,7 @@ void ShaderVariableManagerGL::ImageBindInfo::BindResource(const BindResourceInfo
     }
     else if (Desc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_UAV)
     {
-        // We cannot use ValidatedCast<> here as the resource can be of wrong type
+        // We cannot use ClassPtrCast<> here as the resource can be of wrong type
         RefCntAutoPtr<BufferViewGLImpl> pViewGL{BindInfo.pObject, IID_BufferViewGL};
 #ifdef DILIGENT_DEVELOPMENT
         {
@@ -352,7 +352,7 @@ void ShaderVariableManagerGL::StorageBufferBindInfo::BindResource(const BindReso
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_SRV ||
                 Desc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_UAV);
 
-    // We cannot use ValidatedCast<> here as the resource can be of wrong type
+    // We cannot use ClassPtrCast<> here as the resource can be of wrong type
     RefCntAutoPtr<BufferViewGLImpl> pViewGL{BindInfo.pObject, IID_BufferViewGL};
 #ifdef DILIGENT_DEVELOPMENT
     {
