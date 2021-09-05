@@ -41,19 +41,32 @@ RenderPassVkImpl::RenderPassVkImpl(IReferenceCounters*   pRefCounters,
                                    bool                  IsDeviceInternal) :
     TRenderPassBase{pRefCounters, pDevice, Desc, IsDeviceInternal}
 {
-    bool UseRenderPass2 = false;
-    for (Uint32 i = 0; i < m_Desc.SubpassCount && !UseRenderPass2; ++i)
-    {
-        const auto& Subpass{m_Desc.pSubpasses[i]};
-        UseRenderPass2 = (Subpass.pShadingRateAttachment != nullptr);
-    }
-    DEV_CHECK_ERR(!UseRenderPass2 || pDevice->GetLogicalDevice().GetEnabledExtFeatures().RenderPass2 != VK_FALSE,
-                  "This render pass requires RenderPass2 Vulkan feature that is not enabled");
+    const auto& ExtFeats = pDevice->GetLogicalDevice().GetEnabledExtFeatures();
 
-    if (UseRenderPass2)
-        CreateRenderPass<true>();
-    else
-        CreateRenderPass<false>();
+    size_t RenderPassVersion = 1;
+    if (ExtFeats.ShadingRate.attachmentFragmentShadingRate)
+    {
+        for (Uint32 i = 0; i < m_Desc.SubpassCount && RenderPassVersion < 2; ++i)
+        {
+            const auto& Subpass{m_Desc.pSubpasses[i]};
+            if (Subpass.pShadingRateAttachment != nullptr)
+                RenderPassVersion = 2;
+        }
+        DEV_CHECK_ERR(RenderPassVersion < 2 || ExtFeats.RenderPass2 != VK_FALSE,
+                      "This render pass requires RenderPass2 Vulkan feature that is not enabled");
+    }
+    else if (ExtFeats.FragmentDensityMap.fragmentDensityMap)
+    {
+        // Fragment density map is defined through RenderPassCI.pNext
+    }
+
+
+    switch (RenderPassVersion)
+    {
+        case 1: CreateRenderPass<1>(); break;
+        case 2: CreateRenderPass<2>(); break;
+        default: UNSUPPORTED("Unsupported render pass version");
+    }
 }
 
 inline void InitAttachmentDescription(VkAttachmentDescription&) {}
@@ -94,14 +107,14 @@ inline void InitSubpassDependency(VkSubpassDependency2& Dependency)
     Dependency.viewOffset = 0;
 }
 
-template <bool UseRenderPass2>
+template <size_t RPVersion>
 void RenderPassVkImpl::CreateRenderPass() noexcept(false)
 {
-    using RenderPassCIType          = std::conditional_t<UseRenderPass2, VkRenderPassCreateInfo2, VkRenderPassCreateInfo>;
-    using SubpassDescriptionType    = std::conditional_t<UseRenderPass2, VkSubpassDescription2, VkSubpassDescription>;
-    using AttachmentDescriptionType = std::conditional_t<UseRenderPass2, VkAttachmentDescription2, VkAttachmentDescription>;
-    using AttachmentReferenceType   = std::conditional_t<UseRenderPass2, VkAttachmentReference2, VkAttachmentReference>;
-    using SubpassDependencyType     = std::conditional_t<UseRenderPass2, VkSubpassDependency2, VkSubpassDependency>;
+    using RenderPassCIType          = std::conditional_t<RPVersion == 2, VkRenderPassCreateInfo2, VkRenderPassCreateInfo>;
+    using SubpassDescriptionType    = std::conditional_t<RPVersion == 2, VkSubpassDescription2, VkSubpassDescription>;
+    using AttachmentDescriptionType = std::conditional_t<RPVersion == 2, VkAttachmentDescription2, VkAttachmentDescription>;
+    using AttachmentReferenceType   = std::conditional_t<RPVersion == 2, VkAttachmentReference2, VkAttachmentReference>;
+    using SubpassDependencyType     = std::conditional_t<RPVersion == 2, VkSubpassDependency2, VkSubpassDependency>;
 
     const auto& LogicalDevice         = m_pDevice->GetLogicalDevice();
     const auto& ExtFeats              = LogicalDevice.GetEnabledExtFeatures();
@@ -109,7 +122,7 @@ void RenderPassVkImpl::CreateRenderPass() noexcept(false)
     const bool  FragDensityMapEnabled = ExtFeats.FragmentDensityMap.fragmentDensityMap != VK_FALSE;
 
     RenderPassCIType RenderPassCI{};
-    RenderPassCI.sType = UseRenderPass2 ? VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO_2 : VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    RenderPassCI.sType = RPVersion == 2 ? VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO_2 : VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     RenderPassCI.pNext = nullptr;
     RenderPassCI.flags = 0;
 
