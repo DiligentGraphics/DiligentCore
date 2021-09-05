@@ -51,7 +51,7 @@ TEST(StreamingBufferTest, MapUnmap)
     CI.BuffDesc.BindFlags      = BIND_VERTEX_BUFFER;
     CI.BuffDesc.Usage          = USAGE_DYNAMIC;
     CI.BuffDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
-    CI.BuffDesc.uiSizeInBytes  = 1024;
+    CI.BuffDesc.Size           = 1024;
 
     StreamingBuffer StreamBuff{CI};
     ASSERT_TRUE(StreamBuff.GetBuffer() != nullptr);

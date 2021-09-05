@@ -39,7 +39,7 @@ DynamicBuffer::DynamicBuffer(IRenderDevice* pDevice, const BufferDesc& Desc) :
     m_Name{Desc.Name != nullptr ? Desc.Name : "Dynamic buffer"}
 {
     m_Desc.Name = m_Name.c_str();
-    if (m_Desc.uiSizeInBytes > 0 && pDevice != nullptr)
+    if (m_Desc.Size > 0 && pDevice != nullptr)
     {
         pDevice->CreateBuffer(Desc, nullptr, &m_pBuffer);
         VERIFY_EXPR(m_pBuffer);
@@ -49,19 +49,19 @@ DynamicBuffer::DynamicBuffer(IRenderDevice* pDevice, const BufferDesc& Desc) :
 void DynamicBuffer::CommitResize(IRenderDevice*  pDevice,
                                  IDeviceContext* pContext)
 {
-    if (!m_pBuffer && m_Desc.uiSizeInBytes > 0 && pDevice != nullptr)
+    if (!m_pBuffer && m_Desc.Size > 0 && pDevice != nullptr)
     {
         pDevice->CreateBuffer(m_Desc, nullptr, &m_pBuffer);
         VERIFY_EXPR(m_pBuffer);
         ++m_Version;
 
         LOG_INFO_MESSAGE("Dynamic buffer: expanding dynamic buffer '", m_Desc.Name,
-                         "' to ", FormatMemorySize(m_Desc.uiSizeInBytes, 1), ". Version: ", GetVersion());
+                         "' to ", FormatMemorySize(m_Desc.Size, 1), ". Version: ", GetVersion());
     }
 
     if (m_pStaleBuffer && m_pBuffer && pContext != nullptr)
     {
-        auto CopySize = std::min(m_Desc.uiSizeInBytes, m_pStaleBuffer->GetDesc().uiSizeInBytes);
+        auto CopySize = std::min(m_Desc.Size, m_pStaleBuffer->GetDesc().Size);
         pContext->CopyBuffer(m_pStaleBuffer, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
                              m_pBuffer, 0, CopySize, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
         m_pStaleBuffer.Release();
@@ -73,7 +73,7 @@ IBuffer* DynamicBuffer::Resize(IRenderDevice*  pDevice,
                                Uint64          NewSize,
                                bool            DiscardContent)
 {
-    if (m_Desc.uiSizeInBytes != NewSize)
+    if (m_Desc.Size != NewSize)
     {
         if (!m_pStaleBuffer)
             m_pStaleBuffer = std::move(m_pBuffer);
@@ -86,9 +86,9 @@ IBuffer* DynamicBuffer::Resize(IRenderDevice*  pDevice,
                           "context to either Resize() or GetBuffer()");
         }
 
-        m_Desc.uiSizeInBytes = NewSize;
+        m_Desc.Size = NewSize;
 
-        if (m_Desc.uiSizeInBytes == 0)
+        if (m_Desc.Size == 0)
         {
             m_pStaleBuffer.Release();
             m_pBuffer.Release();
@@ -106,7 +106,7 @@ IBuffer* DynamicBuffer::Resize(IRenderDevice*  pDevice,
 IBuffer* DynamicBuffer::GetBuffer(IRenderDevice*  pDevice,
                                   IDeviceContext* pContext)
 {
-    DEV_CHECK_ERR(m_pBuffer || m_Desc.uiSizeInBytes == 0 || pDevice != nullptr,
+    DEV_CHECK_ERR(m_pBuffer || m_Desc.Size == 0 || pDevice != nullptr,
                   "A new buffer must be created, but pDevice is null. Use PendingUpdate() to check if the buffer must be updated.");
     DEV_CHECK_ERR(!m_pStaleBuffer || pContext != nullptr,
                   "An existing contents of the buffer must be copied to the new buffer, but pContext is null. "

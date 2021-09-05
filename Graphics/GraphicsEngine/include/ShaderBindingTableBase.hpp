@@ -462,16 +462,16 @@ protected:
         const Uint32 BufSize               = AlignToLarger(CallableShadersOffset + m_CallableShadersRecord.size());
 
         // Recreate buffer
-        if (m_pBuffer == nullptr || m_pBuffer->GetDesc().uiSizeInBytes < BufSize)
+        if (m_pBuffer == nullptr || m_pBuffer->GetDesc().Size < BufSize)
         {
             m_pBuffer = nullptr;
 
             String     BuffName = String{this->m_Desc.Name} + " - internal buffer";
             BufferDesc BuffDesc;
-            BuffDesc.Name          = BuffName.c_str();
-            BuffDesc.Usage         = USAGE_DEFAULT;
-            BuffDesc.BindFlags     = BIND_RAY_TRACING;
-            BuffDesc.uiSizeInBytes = BufSize;
+            BuffDesc.Name      = BuffName.c_str();
+            BuffDesc.Usage     = USAGE_DEFAULT;
+            BuffDesc.BindFlags = BIND_RAY_TRACING;
+            BuffDesc.Size      = BufSize;
 
             this->m_pDevice->CreateBuffer(BuffDesc, nullptr, m_pBuffer.template DblPtr<IBuffer>());
             VERIFY_EXPR(m_pBuffer != nullptr);

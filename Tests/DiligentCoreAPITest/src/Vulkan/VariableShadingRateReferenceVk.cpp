@@ -319,10 +319,10 @@ void VariableShadingRatePerPrimitiveTestReferenceVk(ISwapChain* pSwapChain)
     {
         BufferData BuffData{Verts, sizeof(Verts)};
         BufferDesc BuffDesc;
-        BuffDesc.Name          = "Vertex buffer";
-        BuffDesc.uiSizeInBytes = BuffData.DataSize;
-        BuffDesc.BindFlags     = BIND_VERTEX_BUFFER;
-        BuffDesc.Usage         = USAGE_IMMUTABLE;
+        BuffDesc.Name      = "Vertex buffer";
+        BuffDesc.Size      = BuffData.DataSize;
+        BuffDesc.BindFlags = BIND_VERTEX_BUFFER;
+        BuffDesc.Usage     = USAGE_IMMUTABLE;
 
         pEnv->GetDevice()->CreateBuffer(BuffDesc, &BuffData, &pVB);
         ASSERT_NE(pVB, nullptr);

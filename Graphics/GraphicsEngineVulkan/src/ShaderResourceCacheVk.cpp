@@ -154,7 +154,7 @@ static bool IsDynamicBuffer(const ShaderResourceCacheVk::Resource& Res)
     if (!IsDynamic)
     {
         // Buffers that are not bound as a whole to a dynamic descriptor are also counted as dynamic
-        IsDynamic = (IsDynamicDescriptorType(Res.Type) && Res.BufferRangeSize != 0 && Res.BufferRangeSize < BuffDesc.uiSizeInBytes);
+        IsDynamic = (IsDynamicDescriptorType(Res.Type) && Res.BufferRangeSize != 0 && Res.BufferRangeSize < BuffDesc.Size);
     }
 
     DEV_CHECK_ERR(!IsDynamic || IsDynamicDescriptorType(Res.Type),
@@ -219,11 +219,11 @@ void ShaderResourceCacheVk::Resource::SetUniformBuffer(RefCntAutoPtr<IDeviceObje
     }
 #endif
 
-    VERIFY(_BaseOffset + _RangeSize <= (pBuffVk != nullptr ? pBuffVk->GetDesc().uiSizeInBytes : 0), "Specified range is out of buffer bounds");
+    VERIFY(_BaseOffset + _RangeSize <= (pBuffVk != nullptr ? pBuffVk->GetDesc().Size : 0), "Specified range is out of buffer bounds");
     BufferBaseOffset = _BaseOffset;
     BufferRangeSize  = _RangeSize;
     if (BufferRangeSize == 0)
-        BufferRangeSize = pBuffVk != nullptr ? (pBuffVk->GetDesc().uiSizeInBytes - BufferBaseOffset) : 0;
+        BufferRangeSize = pBuffVk != nullptr ? (pBuffVk->GetDesc().Size - BufferBaseOffset) : 0;
 
     // Reset dynamic offset
     BufferDynamicOffset = 0;
@@ -258,7 +258,7 @@ void ShaderResourceCacheVk::Resource::SetStorageBuffer(RefCntAutoPtr<IDeviceObje
         VERIFY(Type == DescriptorType::StorageBufferDynamic || Type == DescriptorType::StorageBufferDynamic_ReadOnly || BuffDesc.Usage != USAGE_DYNAMIC,
                "Dynamic buffer must be used with StorageBufferDynamic or StorageBufferDynamic_ReadOnly descriptor");
 
-        VERIFY(BufferBaseOffset + BufferRangeSize <= BuffDesc.uiSizeInBytes,
+        VERIFY(BufferBaseOffset + BufferRangeSize <= BuffDesc.Size,
                "Specified view range is out of buffer bounds");
 
         // VK_DESCRIPTOR_TYPE_STORAGE_BUFFER or VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC descriptor type
@@ -425,7 +425,7 @@ void ShaderResourceCacheVk::SetDynamicBufferOffset(Uint32 DescrSetIndex,
     const auto* pBufferVk = DstRes.Type == DescriptorType::UniformBufferDynamic ?
         DstRes.pObject.RawPtr<const BufferVkImpl>() :
         DstRes.pObject.RawPtr<const BufferViewVkImpl>()->GetBuffer<const BufferVkImpl>();
-    DEV_CHECK_ERR(DstRes.BufferBaseOffset + DstRes.BufferRangeSize + DynamicBufferOffset <= pBufferVk->GetDesc().uiSizeInBytes,
+    DEV_CHECK_ERR(DstRes.BufferBaseOffset + DstRes.BufferRangeSize + DynamicBufferOffset <= pBufferVk->GetDesc().Size,
                   "Specified offset is out of buffer bounds");
 
     DstRes.BufferDynamicOffset = DynamicBufferOffset;
@@ -686,7 +686,7 @@ VkDescriptorBufferInfo ShaderResourceCacheVk::Resource::GetUniformBufferDescript
     DescrBuffInfo.buffer = pBuffVk->GetVkBuffer();
     // If descriptorType is VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER or VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, the offset member
     // of each element of pBufferInfo must be a multiple of VkPhysicalDeviceLimits::minUniformBufferOffsetAlignment (13.2.4)
-    VERIFY_EXPR(BufferBaseOffset + BufferRangeSize <= pBuffVk->GetDesc().uiSizeInBytes);
+    VERIFY_EXPR(BufferBaseOffset + BufferRangeSize <= pBuffVk->GetDesc().Size);
     DescrBuffInfo.offset = BufferBaseOffset;
     DescrBuffInfo.range  = BufferRangeSize;
     return DescrBuffInfo;

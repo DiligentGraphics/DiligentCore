@@ -359,7 +359,7 @@ TEST_F(MultipleContextTest, GraphicsAndComputeQueue)
 
         BufferDesc BuffDesc;
         BuffDesc.Name                 = "Constants";
-        BuffDesc.uiSizeInBytes        = sizeof(ConstData1);
+        BuffDesc.Size                 = sizeof(ConstData1);
         BuffDesc.BindFlags            = BIND_UNIFORM_BUFFER;
         BuffDesc.ImmediateContextMask = QueueMask;
 
@@ -601,7 +601,7 @@ TEST_F(MultipleContextTest, GraphicsAndTransferQueue)
 
         BufferDesc BuffDesc;
         BuffDesc.Name                 = "Constants";
-        BuffDesc.uiSizeInBytes        = sizeof(ConstData);
+        BuffDesc.Size                 = sizeof(ConstData);
         BuffDesc.BindFlags            = BIND_UNIFORM_BUFFER;
         BuffDesc.ImmediateContextMask = QueueMask;
 

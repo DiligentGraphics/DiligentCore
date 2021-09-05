@@ -140,13 +140,13 @@ void MultithreadedResourceCreationTest::WorkerThreadFunc(MultithreadedResourceCr
         for (Uint32 i = 0; i < NumBuffersToCreate; ++i)
         {
             BufferDesc BuffDesc;
-            BuffDesc.Name          = "MT creation test uniform buffer";
-            BuffDesc.Usage         = USAGE_DEFAULT;
-            BuffDesc.BindFlags     = BIND_UNIFORM_BUFFER;
-            BuffDesc.uiSizeInBytes = static_cast<Uint32>(RawBufferData.size());
+            BuffDesc.Name      = "MT creation test uniform buffer";
+            BuffDesc.Usage     = USAGE_DEFAULT;
+            BuffDesc.BindFlags = BIND_UNIFORM_BUFFER;
+            BuffDesc.Size      = static_cast<Uint32>(RawBufferData.size());
 
             BufferData BuffData;
-            BuffData.DataSize = BuffDesc.uiSizeInBytes;
+            BuffData.DataSize = BuffDesc.Size;
             BuffData.pData    = RawBufferData.data();
 
             RefCntAutoPtr<IBuffer> pBuffer1;

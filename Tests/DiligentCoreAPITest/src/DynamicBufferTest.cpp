@@ -45,9 +45,9 @@ TEST(DynamicBufferTest, Create)
 
     {
         BufferDesc BuffDesc;
-        BuffDesc.Name          = "Dynamic buffer create test 0";
-        BuffDesc.BindFlags     = BIND_VERTEX_BUFFER;
-        BuffDesc.uiSizeInBytes = 0;
+        BuffDesc.Name      = "Dynamic buffer create test 0";
+        BuffDesc.BindFlags = BIND_VERTEX_BUFFER;
+        BuffDesc.Size      = 0;
         DynamicBuffer DynBuff{pDevice, BuffDesc};
         EXPECT_EQ(DynBuff.GetDesc(), BuffDesc);
         EXPECT_STREQ(DynBuff.GetDesc().Name, BuffDesc.Name);
@@ -60,9 +60,9 @@ TEST(DynamicBufferTest, Create)
 
     {
         BufferDesc BuffDesc;
-        BuffDesc.Name          = "Dynamic buffer create test 1";
-        BuffDesc.BindFlags     = BIND_VERTEX_BUFFER;
-        BuffDesc.uiSizeInBytes = 256;
+        BuffDesc.Name      = "Dynamic buffer create test 1";
+        BuffDesc.BindFlags = BIND_VERTEX_BUFFER;
+        BuffDesc.Size      = 256;
         DynamicBuffer DynBuff{pDevice, BuffDesc};
         EXPECT_EQ(DynBuff.GetDesc(), BuffDesc);
         EXPECT_FALSE(DynBuff.PendingUpdate());
@@ -74,9 +74,9 @@ TEST(DynamicBufferTest, Create)
 
     {
         BufferDesc BuffDesc;
-        BuffDesc.Name          = "Dynamic buffer create test 2";
-        BuffDesc.BindFlags     = BIND_VERTEX_BUFFER;
-        BuffDesc.uiSizeInBytes = 256;
+        BuffDesc.Name      = "Dynamic buffer create test 2";
+        BuffDesc.BindFlags = BIND_VERTEX_BUFFER;
+        BuffDesc.Size      = 256;
         DynamicBuffer DynBuff{nullptr, BuffDesc};
         EXPECT_EQ(DynBuff.GetDesc(), BuffDesc);
         EXPECT_TRUE(DynBuff.PendingUpdate());
@@ -98,14 +98,14 @@ TEST(DynamicBufferTest, Resize)
 
     {
         BufferDesc BuffDesc;
-        BuffDesc.Name          = "Dynamic buffer resize test 0";
-        BuffDesc.BindFlags     = BIND_VERTEX_BUFFER;
-        BuffDesc.uiSizeInBytes = 256;
+        BuffDesc.Name      = "Dynamic buffer resize test 0";
+        BuffDesc.BindFlags = BIND_VERTEX_BUFFER;
+        BuffDesc.Size      = 256;
         DynamicBuffer DynBuff{nullptr, BuffDesc};
         EXPECT_TRUE(DynBuff.PendingUpdate());
 
-        BuffDesc.uiSizeInBytes = 512;
-        DynBuff.Resize(nullptr, nullptr, BuffDesc.uiSizeInBytes);
+        BuffDesc.Size = 512;
+        DynBuff.Resize(nullptr, nullptr, BuffDesc.Size);
         EXPECT_TRUE(DynBuff.PendingUpdate());
 
         auto* pBuffer = DynBuff.GetBuffer(pDevice, nullptr);
@@ -117,19 +117,19 @@ TEST(DynamicBufferTest, Resize)
 
     {
         BufferDesc BuffDesc;
-        BuffDesc.Name          = "Dynamic buffer resize test 1";
-        BuffDesc.BindFlags     = BIND_VERTEX_BUFFER;
-        BuffDesc.uiSizeInBytes = 256;
+        BuffDesc.Name      = "Dynamic buffer resize test 1";
+        BuffDesc.BindFlags = BIND_VERTEX_BUFFER;
+        BuffDesc.Size      = 256;
         DynamicBuffer DynBuff{pDevice, BuffDesc};
         EXPECT_FALSE(DynBuff.PendingUpdate());
 
-        BuffDesc.uiSizeInBytes = 1024;
+        BuffDesc.Size = 1024;
         DynBuff.Resize(nullptr, nullptr, 1024);
         EXPECT_EQ(DynBuff.GetDesc(), BuffDesc);
         EXPECT_TRUE(DynBuff.PendingUpdate());
 
-        BuffDesc.uiSizeInBytes = 512;
-        DynBuff.Resize(pDevice, nullptr, BuffDesc.uiSizeInBytes);
+        BuffDesc.Size = 512;
+        DynBuff.Resize(pDevice, nullptr, BuffDesc.Size);
         EXPECT_EQ(DynBuff.GetDesc(), BuffDesc);
         EXPECT_TRUE(DynBuff.PendingUpdate());
 
@@ -141,14 +141,14 @@ TEST(DynamicBufferTest, Resize)
 
     {
         BufferDesc BuffDesc;
-        BuffDesc.Name          = "Dynamic buffer resize test 2";
-        BuffDesc.BindFlags     = BIND_VERTEX_BUFFER;
-        BuffDesc.uiSizeInBytes = 256;
+        BuffDesc.Name      = "Dynamic buffer resize test 2";
+        BuffDesc.BindFlags = BIND_VERTEX_BUFFER;
+        BuffDesc.Size      = 256;
         DynamicBuffer DynBuff{pDevice, BuffDesc};
         EXPECT_NE(DynBuff.GetBuffer(nullptr, nullptr), nullptr);
 
-        BuffDesc.uiSizeInBytes = 512;
-        DynBuff.Resize(pDevice, pContext, BuffDesc.uiSizeInBytes);
+        BuffDesc.Size = 512;
+        DynBuff.Resize(pDevice, pContext, BuffDesc.Size);
         EXPECT_FALSE(DynBuff.PendingUpdate());
         EXPECT_EQ(DynBuff.GetVersion(), Uint32{1});
 
@@ -157,8 +157,8 @@ TEST(DynamicBufferTest, Resize)
         ASSERT_NE(pBuffer, nullptr);
         EXPECT_EQ(pBuffer->GetDesc(), BuffDesc);
 
-        BuffDesc.uiSizeInBytes = 128;
-        DynBuff.Resize(pDevice, pContext, BuffDesc.uiSizeInBytes);
+        BuffDesc.Size = 128;
+        DynBuff.Resize(pDevice, pContext, BuffDesc.Size);
         EXPECT_FALSE(DynBuff.PendingUpdate());
         EXPECT_EQ(DynBuff.GetVersion(), Uint32{2});
 
@@ -169,18 +169,18 @@ TEST(DynamicBufferTest, Resize)
 
     {
         BufferDesc BuffDesc;
-        BuffDesc.Name          = "Dynamic buffer resize test 3";
-        BuffDesc.BindFlags     = BIND_VERTEX_BUFFER;
-        BuffDesc.uiSizeInBytes = 256;
+        BuffDesc.Name      = "Dynamic buffer resize test 3";
+        BuffDesc.BindFlags = BIND_VERTEX_BUFFER;
+        BuffDesc.Size      = 256;
         DynamicBuffer DynBuff{pDevice, BuffDesc};
         EXPECT_FALSE(DynBuff.PendingUpdate());
 
-        BuffDesc.uiSizeInBytes = 1024;
+        BuffDesc.Size = 1024;
         DynBuff.Resize(pDevice, nullptr, 1024);
         EXPECT_TRUE(DynBuff.PendingUpdate());
         EXPECT_EQ(DynBuff.GetVersion(), Uint32{1});
 
-        DynBuff.Resize(nullptr, pContext, BuffDesc.uiSizeInBytes);
+        DynBuff.Resize(nullptr, pContext, BuffDesc.Size);
         EXPECT_FALSE(DynBuff.PendingUpdate());
         EXPECT_EQ(DynBuff.GetVersion(), Uint32{1});
 
@@ -192,16 +192,16 @@ TEST(DynamicBufferTest, Resize)
 
     {
         BufferDesc BuffDesc;
-        BuffDesc.Name          = "Dynamic buffer resize test 4";
-        BuffDesc.BindFlags     = BIND_VERTEX_BUFFER;
-        BuffDesc.uiSizeInBytes = 256;
+        BuffDesc.Name      = "Dynamic buffer resize test 4";
+        BuffDesc.BindFlags = BIND_VERTEX_BUFFER;
+        BuffDesc.Size      = 256;
         DynamicBuffer DynBuff{pDevice, BuffDesc};
         EXPECT_NE(DynBuff.GetBuffer(nullptr, nullptr), nullptr);
 
         DynBuff.Resize(nullptr, nullptr, 1024);
 
-        BuffDesc.uiSizeInBytes = 0;
-        DynBuff.Resize(nullptr, nullptr, BuffDesc.uiSizeInBytes);
+        BuffDesc.Size = 0;
+        DynBuff.Resize(nullptr, nullptr, BuffDesc.Size);
         EXPECT_FALSE(DynBuff.PendingUpdate());
         EXPECT_EQ(DynBuff.GetDesc(), BuffDesc);
 

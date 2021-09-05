@@ -823,13 +823,13 @@ bool PipelineResourceSignatureVkImpl::DvpValidateCommittedResource(const DeviceC
                 {
                     pBufferVk->DvpVerifyDynamicAllocation(pDeviceCtx);
 
-                    if ((pBufferVk->GetDesc().uiSizeInBytes < SPIRVAttribs.BufferStaticSize) &&
+                    if ((pBufferVk->GetDesc().Size < SPIRVAttribs.BufferStaticSize) &&
                         (GetDevice()->GetValidationFlags() & VALIDATION_FLAG_CHECK_SHADER_BUFFER_SIZE) != 0)
                     {
                         // It is OK if robustBufferAccess feature is enabled, otherwise access outside of buffer range may lead to crash or undefined behavior.
                         LOG_WARNING_MESSAGE("The size of uniform buffer '",
                                             pBufferVk->GetDesc().Name, "' bound to shader variable '",
-                                            GetShaderResourcePrintName(SPIRVAttribs, ArrIndex), "' is ", pBufferVk->GetDesc().uiSizeInBytes,
+                                            GetShaderResourcePrintName(SPIRVAttribs, ArrIndex), "' is ", pBufferVk->GetDesc().Size,
                                             " bytes, but the shader expects at least ", SPIRVAttribs.BufferStaticSize,
                                             " bytes.");
                     }

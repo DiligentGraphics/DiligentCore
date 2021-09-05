@@ -114,7 +114,7 @@ public:
     /// When update is not pending, GetBuffer() may be called with null device and context.
     bool PendingUpdate() const
     {
-        return (m_Desc.uiSizeInBytes > 0) && (!m_pBuffer || m_pStaleBuffer);
+        return (m_Desc.Size > 0) && (!m_pBuffer || m_pStaleBuffer);
     }
 
 

@@ -145,12 +145,12 @@ TEST(ShaderResourceLayout, ResourceArray)
     RefCntAutoPtr<IBuffer> pVertexBuff;
     {
         BufferDesc BuffDesc;
-        BuffDesc.uiSizeInBytes = sizeof(Vertices);
-        BuffDesc.BindFlags     = BIND_VERTEX_BUFFER;
-        BuffDesc.Usage         = USAGE_IMMUTABLE;
+        BuffDesc.Size      = sizeof(Vertices);
+        BuffDesc.BindFlags = BIND_VERTEX_BUFFER;
+        BuffDesc.Usage     = USAGE_IMMUTABLE;
         BufferData BuffData;
         BuffData.pData    = Vertices;
-        BuffData.DataSize = BuffDesc.uiSizeInBytes;
+        BuffData.DataSize = BuffDesc.Size;
         pDevice->CreateBuffer(BuffDesc, &BuffData, &pVertexBuff);
         ASSERT_NE(pVertexBuff, nullptr);
     }

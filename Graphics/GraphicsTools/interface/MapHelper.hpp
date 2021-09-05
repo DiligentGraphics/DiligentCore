@@ -122,7 +122,7 @@ public:
 #ifdef DILIGENT_DEBUG
         {
             auto& BuffDesc = pBuffer->GetDesc();
-            VERIFY(sizeof(DataType) <= BuffDesc.uiSizeInBytes, "Data type size exceeds buffer size");
+            VERIFY(sizeof(DataType) <= BuffDesc.Size, "Data type size exceeds buffer size");
         }
 #endif
         pContext->MapBuffer(pBuffer, MapType, MapFlags, (PVoid&)m_pMappedData);

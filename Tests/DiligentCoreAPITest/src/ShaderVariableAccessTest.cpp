@@ -166,8 +166,8 @@ TEST(ShaderResourceLayout, VariableAccess)
     auto* pDSV = pDepthTex->GetDefaultView(TEXTURE_VIEW_DEPTH_STENCIL);
 
     BufferDesc BuffDesc;
-    BuffDesc.uiSizeInBytes = 1024;
-    BuffDesc.BindFlags     = BIND_UNIFORM_BUFFER;
+    BuffDesc.Size      = 1024;
+    BuffDesc.BindFlags = BIND_UNIFORM_BUFFER;
     RefCntAutoPtr<IBuffer> pUniformBuffs[2];
     IDeviceObject*         pUBs[2];
     for (size_t i = 0; i < _countof(pUniformBuffs); ++i)
@@ -194,7 +194,7 @@ TEST(ShaderResourceLayout, VariableAccess)
     {
         BufferDesc TxlBuffDesc;
         TxlBuffDesc.Name              = "Uniform texel buffer test";
-        TxlBuffDesc.uiSizeInBytes     = 256;
+        TxlBuffDesc.Size              = 256;
         TxlBuffDesc.BindFlags         = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
         TxlBuffDesc.Usage             = USAGE_DEFAULT;
         TxlBuffDesc.ElementByteStride = 16;

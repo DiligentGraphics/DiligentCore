@@ -266,7 +266,7 @@ void TextureUploaderGL::InternalData::Execute(IRenderDevice*          pDevice,
                 BuffDesc.Name           = "Staging buffer for UploadBufferGL";
                 BuffDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
                 BuffDesc.Usage          = USAGE_STAGING;
-                BuffDesc.uiSizeInBytes  = pBuffer->GetTotalSize();
+                BuffDesc.Size           = pBuffer->GetTotalSize();
                 RefCntAutoPtr<IBuffer> pStagingBuffer;
                 pDevice->CreateBuffer(BuffDesc, nullptr, &pBuffer->m_pStagingBuffer);
             }

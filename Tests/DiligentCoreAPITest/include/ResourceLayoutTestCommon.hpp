@@ -79,11 +79,11 @@ public:
             BuffDesc.Usage             = Usage;
             BuffDesc.BindFlags         = BindFlags;
             BuffDesc.Mode              = BufferMode;
-            BuffDesc.uiSizeInBytes     = static_cast<Uint32>(InitData.size() * sizeof(InitData[0]));
+            BuffDesc.Size              = static_cast<Uint64>(InitData.size() * sizeof(InitData[0]));
             BuffDesc.ElementByteStride = BufferMode != BUFFER_MODE_UNDEFINED ? 16 : 0;
 
             auto&      pBuffer = Buffers[i];
-            BufferData BuffData{InitData.data(), BuffDesc.uiSizeInBytes};
+            BufferData BuffData{InitData.data(), BuffDesc.Size};
             pDevice->CreateBuffer(BuffDesc, &BuffData, &pBuffer);
             if (!pBuffer)
             {

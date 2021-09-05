@@ -346,9 +346,9 @@ void BindResourceHelper::CacheCB(const BindResourceInfo& BindInfo) const
             VERIFY(CPUDescriptorHandle.ptr != 0, "CPU descriptor handle must not be null for resources allocated in descriptor tables");
 
         const auto& BuffDesc  = pBuffD3D12->GetDesc();
-        const auto  RangeSize = BindInfo.BufferRangeSize == 0 ? BuffDesc.uiSizeInBytes - BindInfo.BufferBaseOffset : BindInfo.BufferRangeSize;
+        const auto  RangeSize = BindInfo.BufferRangeSize == 0 ? BuffDesc.Size - BindInfo.BufferBaseOffset : BindInfo.BufferRangeSize;
 
-        if (RangeSize != BuffDesc.uiSizeInBytes)
+        if (RangeSize != BuffDesc.Size)
         {
             // Default descriptor handle addresses the entire buffer, so we can't use it.
             // We will create a special CBV instead.
@@ -359,7 +359,7 @@ void BindResourceHelper::CacheCB(const BindResourceInfo& BindInfo) const
         if (m_DstTableCPUDescriptorHandle.ptr != 0)
         {
             DEV_CHECK_ERR(m_ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC || m_DstRes.pObject == nullptr, "Static and mutable resource descriptors should only be copied once");
-            if (RangeSize == BuffDesc.uiSizeInBytes)
+            if (RangeSize == BuffDesc.Size)
             {
                 GetD3D12Device()->CopyDescriptorsSimple(1, m_DstTableCPUDescriptorHandle, CPUDescriptorHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
             }

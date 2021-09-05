@@ -68,7 +68,7 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
     VkBuffCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     VkBuffCI.pNext = nullptr;
     VkBuffCI.flags = 0; // VK_BUFFER_CREATE_SPARSE_BINDING_BIT, VK_BUFFER_CREATE_SPARSE_RESIDENCY_BIT, VK_BUFFER_CREATE_SPARSE_ALIASED_BIT
-    VkBuffCI.size  = m_Desc.uiSizeInBytes;
+    VkBuffCI.size  = m_Desc.Size;
     VkBuffCI.usage =
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT | // The buffer can be used as the source of a transfer command
         VK_BUFFER_USAGE_TRANSFER_DST_BIT;  // The buffer can be used as the destination of a transfer command

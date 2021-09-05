@@ -111,7 +111,7 @@ public:
             // whole buffer (which will not be the case if we extend the buffer size).
             // We align the range when we bind the buffer, and it is legal if it extends past the end of the buffer.
             constexpr Uint32 CBOffsetAlignment = 256;
-            DEV_CHECK_ERR(_BaseOffset + _RangeSize <= (_pBuff ? _pBuff->GetDesc().uiSizeInBytes : 0), "The range is out of buffer bounds");
+            DEV_CHECK_ERR(_BaseOffset + _RangeSize <= (_pBuff ? _pBuff->GetDesc().Size : 0), "The range is out of buffer bounds");
             DEV_CHECK_ERR((_BaseOffset % CBOffsetAlignment) == 0, "Buffer offset must be a multiple of ", CBOffsetAlignment);
 
             pBuff = std::move(_pBuff);
@@ -120,7 +120,7 @@ public:
             RangeSize  = StaticCast<Uint32>(_RangeSize);
 
             if (RangeSize == 0 && pBuff)
-                RangeSize = StaticCast<Uint32>(pBuff->GetDesc().uiSizeInBytes - BaseOffset);
+                RangeSize = StaticCast<Uint32>(pBuff->GetDesc().Size - BaseOffset);
 
             DynamicOffset = 0;
         }
@@ -135,7 +135,7 @@ public:
         // whether the buffer is USAGE_DYNAMIC or not).
         bool AllowsDynamicOffset() const
         {
-            return pBuff && RangeSize != 0 && RangeSize < pBuff->GetDesc().uiSizeInBytes;
+            return pBuff && RangeSize != 0 && RangeSize < pBuff->GetDesc().Size;
         }
 
         // Returns ID3D11Buffer

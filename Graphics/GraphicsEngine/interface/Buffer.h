@@ -73,8 +73,8 @@ DILIGENT_TYPED_ENUM(BUFFER_MODE, Uint8)
 /// Buffer description
 struct BufferDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
-    /// Size of the buffer, in bytes. For a uniform buffer, this must be multiple of 16.
-    Uint64 uiSizeInBytes            DEFAULT_INITIALIZER(0);
+    /// Size of the buffer, in bytes. For a uniform buffer, this must be a multiple of 16.
+    Uint64 Size                    DEFAULT_INITIALIZER(0);
 
     /// Buffer bind flags, see Diligent::BIND_FLAGS for details
 
@@ -122,7 +122,7 @@ struct BufferDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     constexpr BufferDesc() noexcept {}
 
     constexpr BufferDesc(const Char*      _Name,
-                         Uint64           _uiSizeInBytes,
+                         Uint64           _Size,
                          BIND_FLAGS       _BindFlags,
                          USAGE            _Usage                = BufferDesc{}.Usage,
                          CPU_ACCESS_FLAGS _CPUAccessFlags       = BufferDesc{}.CPUAccessFlags,
@@ -130,7 +130,7 @@ struct BufferDesc DILIGENT_DERIVE(DeviceObjectAttribs)
                          Uint32           _ElementByteStride    = BufferDesc{}.ElementByteStride,
                          Uint64           _ImmediateContextMask = BufferDesc{}.ImmediateContextMask) noexcept :
         DeviceObjectAttribs  {_Name             },
-        uiSizeInBytes        {_uiSizeInBytes    },
+        Size                 {_Size             },
         BindFlags            {_BindFlags        },
         Usage                {_Usage            },
         CPUAccessFlags       {_CPUAccessFlags   },
@@ -153,7 +153,7 @@ struct BufferDesc DILIGENT_DERIVE(DeviceObjectAttribs)
                 // Name is primarily used for debug purposes and does not affect the state.
                 // It is ignored in comparison operation.
         return  // strcmp(Name, RHS.Name) == 0          &&
-                uiSizeInBytes        == RHS.uiSizeInBytes     &&
+                Size                 == RHS.Size              &&
                 BindFlags            == RHS.BindFlags         &&
                 Usage                == RHS.Usage             &&
                 CPUAccessFlags       == RHS.CPUAccessFlags    &&

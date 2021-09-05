@@ -768,7 +768,7 @@ bool PipelineResourceSignatureD3D12Impl::DvpValidateCommittedResource(const Devi
                         if (BuffDesc.Usage == USAGE_DYNAMIC)
                             pBuffD3D12->DvpVerifyDynamicAllocation(pCtx);
 
-                        if (BuffDesc.Usage == USAGE_DYNAMIC || CachedRes.BufferRangeSize != 0 && CachedRes.BufferRangeSize < BuffDesc.uiSizeInBytes)
+                        if (BuffDesc.Usage == USAGE_DYNAMIC || CachedRes.BufferRangeSize != 0 && CachedRes.BufferRangeSize < BuffDesc.Size)
                             VERIFY_EXPR((ResourceCache.GetDynamicRootBuffersMask() & (Uint64{1} << RootIndex)) != 0);
                         else
                             VERIFY_EXPR((ResourceCache.GetNonDynamicRootBuffersMask() & (Uint64{1} << RootIndex)) != 0);
@@ -793,7 +793,7 @@ bool PipelineResourceSignatureD3D12Impl::DvpValidateCommittedResource(const Devi
                         if (BuffDesc.Usage == USAGE_DYNAMIC)
                             pBuffD3D12->DvpVerifyDynamicAllocation(pCtx);
 
-                        if (BuffDesc.Usage == USAGE_DYNAMIC || CachedRes.BufferRangeSize != 0 && CachedRes.BufferRangeSize < BuffDesc.uiSizeInBytes)
+                        if (BuffDesc.Usage == USAGE_DYNAMIC || CachedRes.BufferRangeSize != 0 && CachedRes.BufferRangeSize < BuffDesc.Size)
                             VERIFY_EXPR((ResourceCache.GetDynamicRootBuffersMask() & (Uint64{1} << RootIndex)) != 0);
                         else
                             VERIFY_EXPR((ResourceCache.GetNonDynamicRootBuffersMask() & (Uint64{1} << RootIndex)) != 0);

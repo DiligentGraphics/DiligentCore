@@ -254,10 +254,10 @@ bool VerifyConstantBufferBinding(const PipelineResourceDesc& ResDesc,
         }
 
         bool RangeIsOutOfBounds = false;
-        if (BindInfo.BufferBaseOffset + BindInfo.BufferRangeSize > BuffDesc.uiSizeInBytes)
+        if (BindInfo.BufferBaseOffset + BindInfo.BufferRangeSize > BuffDesc.Size)
         {
             RESOURCE_VALIDAION_FAILURE("Buffer range [", BindInfo.BufferBaseOffset, ", ", BindInfo.BufferBaseOffset + BindInfo.BufferRangeSize,
-                                       ") specified for buffer '", BuffDesc.Name, "' of size ", BuffDesc.uiSizeInBytes, " is out of the buffer bounds.");
+                                       ") specified for buffer '", BuffDesc.Name, "' of size ", BuffDesc.Size, " is out of the buffer bounds.");
             BindingOK          = false;
             RangeIsOutOfBounds = true;
         }
@@ -274,10 +274,10 @@ bool VerifyConstantBufferBinding(const PipelineResourceDesc& ResDesc,
         if (!RangeIsOutOfBounds && ResDesc.VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC && pCachedBuffer != nullptr)
         {
             if (CachedRangeSize == 0)
-                CachedRangeSize = BuffDesc.uiSizeInBytes - CachedBaseOffset;
+                CachedRangeSize = BuffDesc.Size - CachedBaseOffset;
             auto NewBufferRangeSize = BindInfo.BufferRangeSize;
             if (NewBufferRangeSize == 0)
-                NewBufferRangeSize = BuffDesc.uiSizeInBytes - BindInfo.BufferBaseOffset;
+                NewBufferRangeSize = BuffDesc.Size - BindInfo.BufferBaseOffset;
 
             if (CachedBaseOffset != BindInfo.BufferBaseOffset ||
                 CachedRangeSize != NewBufferRangeSize)
@@ -559,12 +559,12 @@ bool VerifyDynamicBufferOffset(const PipelineResourceDesc& ResDesc,
     if (pBuffer != nullptr)
     {
         const auto& BuffDesc = pBuffer->GetDesc();
-        if (BufferBaseOffset + BufferRangeSize + BufferDynamicOffset > BuffDesc.uiSizeInBytes)
+        if (BufferBaseOffset + BufferRangeSize + BufferDynamicOffset > BuffDesc.Size)
         {
             RESOURCE_VALIDAION_FAILURE("Dynamic offset ", BufferDynamicOffset, " specified for variable '", ResDesc.Name,
                                        "' defines buffer range [", BufferBaseOffset + BufferDynamicOffset, ", ",
                                        BufferBaseOffset + BufferRangeSize + BufferDynamicOffset,
-                                       ") that is past the bounds of buffer '", BuffDesc.Name, "' of size ", BuffDesc.uiSizeInBytes, ".");
+                                       ") that is past the bounds of buffer '", BuffDesc.Name, "' of size ", BuffDesc.Size, ".");
             BindingOK = false;
         }
 

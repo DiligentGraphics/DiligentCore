@@ -82,7 +82,7 @@ BufferViewGLImpl::BufferViewGLImpl(IReferenceCounters*   pRefCounters,
             GLFormat = GL_R32UI;
         }
 
-        if (ViewDesc.ByteOffset == 0 && ViewDesc.ByteWidth == BuffDesc.uiSizeInBytes)
+        if (ViewDesc.ByteOffset == 0 && ViewDesc.ByteWidth == BuffDesc.Size)
             glTexBuffer(GL_TEXTURE_BUFFER, GLFormat, pBuffer->GetGLHandle());
         else
         {

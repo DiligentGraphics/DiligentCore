@@ -96,12 +96,12 @@ int TestRenderDeviceCInterface_CreateBuffer(struct IRenderDevice* pRenderDevice)
 
     BuffDesc._DeviceObjectAttribs.Name = "Vertex buffer";
 
-    BuffDesc.uiSizeInBytes        = 256;
+    BuffDesc.Size                 = 256;
     BuffDesc.BindFlags            = BIND_VERTEX_BUFFER;
     BuffDesc.Usage                = USAGE_DEFAULT;
     BuffDesc.ImmediateContextMask = 1;
 
-    InitData.DataSize = BuffDesc.uiSizeInBytes;
+    InitData.DataSize = BuffDesc.Size;
     void* pData       = malloc((size_t)InitData.DataSize);
     memset(pData, 0, (size_t)InitData.DataSize);
     InitData.pData = pData;

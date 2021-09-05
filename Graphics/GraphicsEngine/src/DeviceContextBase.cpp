@@ -111,7 +111,7 @@ bool VerifyDrawIndirectAttribs(const DrawIndirectAttribs& Attribs)
     }
 
     const auto ReqAttrBufSize = Attribs.DrawArgsOffset + (Attribs.DrawCount > 1 ? Attribs.DrawCount * Attribs.DrawArgsStride : Uint32{sizeof(Uint32)} * 4);
-    CHECK_DRAW_INDIRECT_ATTRIBS(ReqAttrBufSize <= AttrBuffDesc.uiSizeInBytes, "invalid DrawArgsOffset (", Attribs.DrawArgsOffset,
+    CHECK_DRAW_INDIRECT_ATTRIBS(ReqAttrBufSize <= AttrBuffDesc.Size, "invalid DrawArgsOffset (", Attribs.DrawArgsOffset,
                                 ") or indirect draw arguments buffer '", AttrBuffDesc.Name, "' size must be at least ", ReqAttrBufSize, " bytes");
 
     if (pCounterBuffer != nullptr)
@@ -120,7 +120,7 @@ bool VerifyDrawIndirectAttribs(const DrawIndirectAttribs& Attribs)
         CHECK_DRAW_INDIRECT_ATTRIBS((CntBuffDesc.BindFlags & BIND_INDIRECT_DRAW_ARGS) != 0, "indirect counter buffer '",
                                     CntBuffDesc.Name, "' was not created with BIND_INDIRECT_DRAW_ARGS flag.");
         const auto ReqCountBufSize = Attribs.CounterOffset + sizeof(Uint32);
-        CHECK_DRAW_INDIRECT_ATTRIBS(ReqCountBufSize <= CntBuffDesc.uiSizeInBytes, "invalid CounterOffset (", Attribs.CounterOffset,
+        CHECK_DRAW_INDIRECT_ATTRIBS(ReqCountBufSize <= CntBuffDesc.Size, "invalid CounterOffset (", Attribs.CounterOffset,
                                     ") or counter buffer '", CntBuffDesc.Name, "' size must be at least ", ReqCountBufSize, " bytes");
     }
 
@@ -150,7 +150,7 @@ bool VerifyDrawIndexedIndirectAttribs(const DrawIndexedIndirectAttribs& Attribs)
     }
 
     const auto ReqAttrBufSize = Attribs.DrawArgsOffset + (Attribs.DrawCount > 1 ? Attribs.DrawCount * Attribs.DrawArgsStride : Uint32{sizeof(Uint32)} * 5);
-    CHECK_DRAW_INDEXED_INDIRECT_ATTRIBS(ReqAttrBufSize <= AttrBuffDesc.uiSizeInBytes, "invalid DrawArgsOffset (", Attribs.DrawArgsOffset,
+    CHECK_DRAW_INDEXED_INDIRECT_ATTRIBS(ReqAttrBufSize <= AttrBuffDesc.Size, "invalid DrawArgsOffset (", Attribs.DrawArgsOffset,
                                         ") or indirect draw arguments buffer '", AttrBuffDesc.Name, "' size must be at least ", ReqAttrBufSize, " bytes");
 
     if (pCounterBuffer != nullptr)
@@ -159,7 +159,7 @@ bool VerifyDrawIndexedIndirectAttribs(const DrawIndexedIndirectAttribs& Attribs)
         CHECK_DRAW_INDEXED_INDIRECT_ATTRIBS((CntBuffDesc.BindFlags & BIND_INDIRECT_DRAW_ARGS) != 0, "indirect counter buffer '",
                                             CntBuffDesc.Name, "' was not created with BIND_INDIRECT_DRAW_ARGS flag.");
         const auto ReqCountBufSize = Attribs.CounterOffset + sizeof(Uint32);
-        CHECK_DRAW_INDEXED_INDIRECT_ATTRIBS(ReqCountBufSize <= CntBuffDesc.uiSizeInBytes, "invalid CounterOffset (", Attribs.CounterOffset,
+        CHECK_DRAW_INDEXED_INDIRECT_ATTRIBS(ReqCountBufSize <= CntBuffDesc.Size, "invalid CounterOffset (", Attribs.CounterOffset,
                                             ") or counter buffer '", CntBuffDesc.Name, "' size must be at least ", ReqCountBufSize, " bytes");
     }
 
@@ -181,7 +181,7 @@ bool VerifyDrawMeshIndirectAttribs(const DrawMeshIndirectAttribs& Attribs, Uint3
                                      "indirect draw arguments buffer '", ArgsBuffDesc.Name,
                                      "' was not created with BIND_INDIRECT_DRAW_ARGS flag.");
     const auto ReqAttrBufSize = Attribs.DrawArgsOffset + IndirectCmdStride * Attribs.CommandCount;
-    CHECK_DRAW_MESH_INDIRECT_ATTRIBS(ReqAttrBufSize <= ArgsBuffDesc.uiSizeInBytes, "invalid DrawArgsOffset (", Attribs.DrawArgsOffset,
+    CHECK_DRAW_MESH_INDIRECT_ATTRIBS(ReqAttrBufSize <= ArgsBuffDesc.Size, "invalid DrawArgsOffset (", Attribs.DrawArgsOffset,
                                      ") or indirect draw arguments buffer '", ArgsBuffDesc.Name, "' size must be at least ", ReqAttrBufSize, " bytes");
 
 
@@ -191,7 +191,7 @@ bool VerifyDrawMeshIndirectAttribs(const DrawMeshIndirectAttribs& Attribs, Uint3
         CHECK_DRAW_MESH_INDIRECT_ATTRIBS((CntBuffDesc.BindFlags & BIND_INDIRECT_DRAW_ARGS) != 0, "indirect counter buffer '",
                                          CntBuffDesc.Name, "' was not created with BIND_INDIRECT_DRAW_ARGS flag.");
         const auto ReqCountBufSize = Attribs.CounterOffset + sizeof(Uint32);
-        CHECK_DRAW_MESH_INDIRECT_ATTRIBS(ReqCountBufSize <= CntBuffDesc.uiSizeInBytes, "invalid CounterOffset (", Attribs.CounterOffset,
+        CHECK_DRAW_MESH_INDIRECT_ATTRIBS(ReqCountBufSize <= CntBuffDesc.Size, "invalid CounterOffset (", Attribs.CounterOffset,
                                          ") or counter buffer '", CntBuffDesc.Name, "' size must be at least ", ReqCountBufSize, " bytes");
     }
 #undef CHECK_DRAW_MESH_INDIRECT_ATTRIBS
@@ -223,7 +223,7 @@ bool VerifyDispatchComputeIndirectAttribs(const DispatchComputeIndirectAttribs& 
     CHECK_DISPATCH_COMPUTE_INDIRECT_ATTRIBS((AttrBuffDesc.BindFlags & BIND_INDIRECT_DRAW_ARGS) != 0, "indirect dispatch arguments buffer '",
                                             AttrBuffDesc.Name, "' was not created with BIND_INDIRECT_DRAW_ARGS flag.");
     const auto ReqAttrBufSize = sizeof(Uint32) * 3 + Attribs.DispatchArgsByteOffset;
-    CHECK_DISPATCH_COMPUTE_INDIRECT_ATTRIBS(ReqAttrBufSize <= AttrBuffDesc.uiSizeInBytes, "invalid DispatchArgsByteOffset (", Attribs.DispatchArgsByteOffset,
+    CHECK_DISPATCH_COMPUTE_INDIRECT_ATTRIBS(ReqAttrBufSize <= AttrBuffDesc.Size, "invalid DispatchArgsByteOffset (", Attribs.DispatchArgsByteOffset,
                                             ") or indirect dispatch arguments buffer '", AttrBuffDesc.Name, "' size must be at least ", ReqAttrBufSize, " bytes");
 
 
@@ -553,7 +553,7 @@ bool VerifyBuildBLASAttribs(const BuildBLASAttribs& Attribs, const IRenderDevice
         CHECK_BUILD_BLAS_ATTRIBS(tri.VertexOffset % VertOffsetAlign == 0,
                                  "pTriangleData[", i, "].VertexOffset (", tri.VertexOffset, ") must be aligned by ", VertOffsetAlign, ".");
 
-        CHECK_BUILD_BLAS_ATTRIBS(tri.VertexOffset + VertexDataSize <= VertBufDesc.uiSizeInBytes,
+        CHECK_BUILD_BLAS_ATTRIBS(tri.VertexOffset + VertexDataSize <= VertBufDesc.Size,
                                  "pTriangleData[", i, "].pVertexBuffer is too small for the specified VertexStride (", tri.VertexStride, ") and VertexCount (",
                                  tri.VertexCount, "): at least ", tri.VertexOffset + VertexDataSize, " bytes are required.");
 
@@ -575,7 +575,7 @@ bool VerifyBuildBLASAttribs(const BuildBLASAttribs& Attribs, const IRenderDevice
             CHECK_BUILD_BLAS_ATTRIBS((InstBufDesc.BindFlags & BIND_RAY_TRACING) == BIND_RAY_TRACING,
                                      "pTriangleData[", i, "].pIndexBuffer was not created with BIND_RAY_TRACING flag.");
 
-            CHECK_BUILD_BLAS_ATTRIBS(tri.IndexOffset + IndexDataSize <= InstBufDesc.uiSizeInBytes,
+            CHECK_BUILD_BLAS_ATTRIBS(tri.IndexOffset + IndexDataSize <= InstBufDesc.Size,
                                      "pTriangleData[", i, "].pIndexBuffer is too small for specified IndexType and IndexCount: at least ",
                                      tri.IndexOffset + IndexDataSize, " bytes are required.");
 
@@ -604,7 +604,7 @@ bool VerifyBuildBLASAttribs(const BuildBLASAttribs& Attribs, const IRenderDevice
 
             CHECK_BUILD_BLAS_ATTRIBS(TriDesc.AllowsTransforms, "pTriangleData[", i, "] uses transform buffer, but AllowsTransforms is false.");
 
-            CHECK_BUILD_BLAS_ATTRIBS(tri.TransformBufferOffset + sizeof(InstanceMatrix) <= TrfrmBufDesc.uiSizeInBytes,
+            CHECK_BUILD_BLAS_ATTRIBS(tri.TransformBufferOffset + sizeof(InstanceMatrix) <= TrfrmBufDesc.Size,
                                      "pTriangleData[", i, "].pTransformBuffer is too small: at least ", tri.TransformBufferOffset + sizeof(InstanceMatrix), " bytes are required.");
 
             CHECK_BUILD_BLAS_ATTRIBS(tri.TransformBufferOffset % RTProps.TransformBufferAlignment == 0,
@@ -649,7 +649,7 @@ bool VerifyBuildBLASAttribs(const BuildBLASAttribs& Attribs, const IRenderDevice
 
         const auto& BoxBufDesc = box.pBoxBuffer->GetDesc();
 
-        CHECK_BUILD_BLAS_ATTRIBS(box.BoxOffset + BoxBufferSize <= BoxBufDesc.uiSizeInBytes,
+        CHECK_BUILD_BLAS_ATTRIBS(box.BoxOffset + BoxBufferSize <= BoxBufDesc.Size,
                                  "pBoxData[", i, "].pBoxBuffer is too small for the specified BoxStride (", box.BoxStride,
                                  ") and BoxCount (", box.BoxCount, "): at least", box.BoxOffset + BoxBufferSize, " bytes are required.");
 
@@ -659,8 +659,8 @@ bool VerifyBuildBLASAttribs(const BuildBLASAttribs& Attribs, const IRenderDevice
 
     const auto& ScratchDesc = Attribs.pScratchBuffer->GetDesc();
 
-    CHECK_BUILD_BLAS_ATTRIBS(Attribs.ScratchBufferOffset <= ScratchDesc.uiSizeInBytes,
-                             "ScratchBufferOffset (", Attribs.ScratchBufferOffset, ") is greater than the buffer size (", ScratchDesc.uiSizeInBytes, ").");
+    CHECK_BUILD_BLAS_ATTRIBS(Attribs.ScratchBufferOffset <= ScratchDesc.Size,
+                             "ScratchBufferOffset (", Attribs.ScratchBufferOffset, ") is greater than the buffer size (", ScratchDesc.Size, ").");
 
     CHECK_BUILD_BLAS_ATTRIBS(Attribs.ScratchBufferOffset % RTProps.ScratchBufferAlignment == 0,
                              "ScratchBufferOffset (", Attribs.ScratchBufferOffset, ") must be aligned by ", RTProps.ScratchBufferAlignment,
@@ -668,12 +668,12 @@ bool VerifyBuildBLASAttribs(const BuildBLASAttribs& Attribs, const IRenderDevice
 
     if (Attribs.Update)
     {
-        CHECK_BUILD_BLAS_ATTRIBS(ScratchDesc.uiSizeInBytes - Attribs.ScratchBufferOffset >= Attribs.pBLAS->GetScratchBufferSizes().Update,
+        CHECK_BUILD_BLAS_ATTRIBS(ScratchDesc.Size - Attribs.ScratchBufferOffset >= Attribs.pBLAS->GetScratchBufferSizes().Update,
                                  "pScratchBuffer size is too small, use pBLAS->GetScratchBufferSizes().Update to get the required size for the scratch buffer.");
     }
     else
     {
-        CHECK_BUILD_BLAS_ATTRIBS(ScratchDesc.uiSizeInBytes - Attribs.ScratchBufferOffset >= Attribs.pBLAS->GetScratchBufferSizes().Build,
+        CHECK_BUILD_BLAS_ATTRIBS(ScratchDesc.Size - Attribs.ScratchBufferOffset >= Attribs.pBLAS->GetScratchBufferSizes().Build,
                                  "pScratchBuffer size is too small, use pBLAS->GetScratchBufferSizes().Build to get the required size for the scratch buffer.");
     }
 
@@ -751,11 +751,11 @@ bool VerifyBuildTLASAttribs(const BuildTLASAttribs& Attribs, const RayTracingPro
     CHECK_BUILD_TLAS_ATTRIBS(AutoOffsetCounter == 0 || AutoOffsetCounter == Attribs.InstanceCount,
                              "all pInstances[i].ContributionToHitGroupIndex must be TLAS_INSTANCE_OFFSET_AUTO, or none of them should.");
 
-    CHECK_BUILD_TLAS_ATTRIBS(Attribs.InstanceBufferOffset <= InstDesc.uiSizeInBytes,
-                             "InstanceBufferOffset (", Attribs.InstanceBufferOffset, ") is greater than the buffer size (", InstDesc.uiSizeInBytes, ").");
+    CHECK_BUILD_TLAS_ATTRIBS(Attribs.InstanceBufferOffset <= InstDesc.Size,
+                             "InstanceBufferOffset (", Attribs.InstanceBufferOffset, ") is greater than the buffer size (", InstDesc.Size, ").");
 
-    CHECK_BUILD_TLAS_ATTRIBS(InstDesc.uiSizeInBytes - Attribs.InstanceBufferOffset >= InstDataSize,
-                             "pInstanceBuffer size (", InstDesc.uiSizeInBytes, ") is too small: at least ",
+    CHECK_BUILD_TLAS_ATTRIBS(InstDesc.Size - Attribs.InstanceBufferOffset >= InstDataSize,
+                             "pInstanceBuffer size (", InstDesc.Size, ") is too small: at least ",
                              InstDataSize + Attribs.InstanceBufferOffset, " bytes are required.");
 
     CHECK_BUILD_TLAS_ATTRIBS(Attribs.InstanceBufferOffset % RTProps.InstanceBufferAlignment == 0,
@@ -767,8 +767,8 @@ bool VerifyBuildTLASAttribs(const BuildTLASAttribs& Attribs, const RayTracingPro
 
     const auto& ScratchDesc = Attribs.pScratchBuffer->GetDesc();
 
-    CHECK_BUILD_TLAS_ATTRIBS(Attribs.ScratchBufferOffset <= ScratchDesc.uiSizeInBytes,
-                             "ScratchBufferOffset (", Attribs.ScratchBufferOffset, ") is greater than the buffer size (", ScratchDesc.uiSizeInBytes, ").");
+    CHECK_BUILD_TLAS_ATTRIBS(Attribs.ScratchBufferOffset <= ScratchDesc.Size,
+                             "ScratchBufferOffset (", Attribs.ScratchBufferOffset, ") is greater than the buffer size (", ScratchDesc.Size, ").");
 
     CHECK_BUILD_TLAS_ATTRIBS(Attribs.ScratchBufferOffset % RTProps.ScratchBufferAlignment == 0,
                              "ScratchBufferOffset (", Attribs.ScratchBufferOffset, ") must be aligned by ", RTProps.ScratchBufferAlignment,
@@ -776,12 +776,12 @@ bool VerifyBuildTLASAttribs(const BuildTLASAttribs& Attribs, const RayTracingPro
 
     if (Attribs.Update)
     {
-        CHECK_BUILD_TLAS_ATTRIBS(ScratchDesc.uiSizeInBytes - Attribs.ScratchBufferOffset >= Attribs.pTLAS->GetScratchBufferSizes().Update,
+        CHECK_BUILD_TLAS_ATTRIBS(ScratchDesc.Size - Attribs.ScratchBufferOffset >= Attribs.pTLAS->GetScratchBufferSizes().Update,
                                  "pScratchBuffer size is too small, use pTLAS->GetScratchBufferSizes().Update to get the required size for scratch buffer.");
     }
     else
     {
-        CHECK_BUILD_TLAS_ATTRIBS(ScratchDesc.uiSizeInBytes - Attribs.ScratchBufferOffset >= Attribs.pTLAS->GetScratchBufferSizes().Build,
+        CHECK_BUILD_TLAS_ATTRIBS(ScratchDesc.Size - Attribs.ScratchBufferOffset >= Attribs.pTLAS->GetScratchBufferSizes().Build,
                                  "pScratchBuffer size is too small, use pTLAS->GetScratchBufferSizes().Build to get the required size for scratch buffer.");
     }
 
@@ -925,7 +925,7 @@ bool VerifyWriteBLASCompactedSizeAttribs(const IRenderDevice* pDevice, const Wri
     CHECK_WRITE_BLAS_SIZE_ATTRIBS(Attribs.pDestBuffer != nullptr, "pDestBuffer must not be null.");
 
     const BufferDesc& DstDesc = Attribs.pDestBuffer->GetDesc();
-    CHECK_WRITE_BLAS_SIZE_ATTRIBS(Attribs.DestBufferOffset + sizeof(Uint64) <= DstDesc.uiSizeInBytes, "pDestBuffer is too small.");
+    CHECK_WRITE_BLAS_SIZE_ATTRIBS(Attribs.DestBufferOffset + sizeof(Uint64) <= DstDesc.Size, "pDestBuffer is too small.");
 
     if (pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_D3D12)
     {
@@ -949,7 +949,7 @@ bool VerifyWriteTLASCompactedSizeAttribs(const IRenderDevice* pDevice, const Wri
     CHECK_WRITE_TLAS_SIZE_ATTRIBS(Attribs.pDestBuffer != nullptr, "pDestBuffer must not be null.");
 
     const BufferDesc& DstDesc = Attribs.pDestBuffer->GetDesc();
-    CHECK_WRITE_TLAS_SIZE_ATTRIBS(Attribs.DestBufferOffset + sizeof(Uint64) <= DstDesc.uiSizeInBytes, "pDestBuffer is too small.");
+    CHECK_WRITE_TLAS_SIZE_ATTRIBS(Attribs.DestBufferOffset + sizeof(Uint64) <= DstDesc.Size, "pDestBuffer is too small.");
 
     if (pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_D3D12)
     {
@@ -1000,7 +1000,7 @@ bool VerifyTraceRaysIndirectAttribs(const IRenderDevice* pDevice, const TraceRay
                                       "indirect trace rays arguments buffer '", Desc.Name, "' was not created with BIND_INDIRECT_DRAW_ARGS flag.");
     CHECK_TRACE_RAYS_INDIRECT_ATTRIBS((Desc.BindFlags & BIND_RAY_TRACING) != 0,
                                       "indirect trace rays arguments buffer '", Desc.Name, "' was not created with BIND_RAY_TRACING flag.");
-    CHECK_TRACE_RAYS_INDIRECT_ATTRIBS(Attribs.ArgsByteOffset + SBTSize <= Desc.uiSizeInBytes,
+    CHECK_TRACE_RAYS_INDIRECT_ATTRIBS(Attribs.ArgsByteOffset + SBTSize <= Desc.Size,
                                       "indirect trace rays arguments buffer '", Desc.Name, "' is too small");
 
 #undef CHECK_TRACE_RAYS_INDIRECT_ATTRIBS

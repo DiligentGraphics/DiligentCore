@@ -635,9 +635,9 @@ protected:
     RefCntAutoPtr<IBuffer> CreateVertexBuffer(const void* VertexData, Uint32 DataSize)
     {
         BufferDesc BuffDesc;
-        BuffDesc.Name          = "Test vertex buffer";
-        BuffDesc.BindFlags     = BIND_VERTEX_BUFFER;
-        BuffDesc.uiSizeInBytes = DataSize;
+        BuffDesc.Name      = "Test vertex buffer";
+        BuffDesc.BindFlags = BIND_VERTEX_BUFFER;
+        BuffDesc.Size      = DataSize;
 
         BufferData InitialData;
         InitialData.pData    = VertexData;
@@ -654,13 +654,13 @@ protected:
     RefCntAutoPtr<IBuffer> CreateIndexBuffer(const Uint32* Indices, Uint32 NumIndices)
     {
         BufferDesc BuffDesc;
-        BuffDesc.Name          = "Test index buffer";
-        BuffDesc.BindFlags     = BIND_INDEX_BUFFER;
-        BuffDesc.uiSizeInBytes = sizeof(Uint32) * NumIndices;
+        BuffDesc.Name      = "Test index buffer";
+        BuffDesc.BindFlags = BIND_INDEX_BUFFER;
+        BuffDesc.Size      = sizeof(Uint32) * NumIndices;
 
         BufferData InitialData;
         InitialData.pData    = Indices;
-        InitialData.DataSize = BuffDesc.uiSizeInBytes;
+        InitialData.DataSize = BuffDesc.Size;
 
         auto* pDevice = TestingEnvironment::GetInstance()->GetDevice();
 
@@ -673,13 +673,13 @@ protected:
     RefCntAutoPtr<IBuffer> CreateIndirectDrawArgsBuffer(const Uint32* Data, Uint32 DataSize)
     {
         BufferDesc BuffDesc;
-        BuffDesc.Name          = "Test index buffer";
-        BuffDesc.BindFlags     = BIND_INDIRECT_DRAW_ARGS;
-        BuffDesc.uiSizeInBytes = DataSize;
+        BuffDesc.Name      = "Test index buffer";
+        BuffDesc.BindFlags = BIND_INDIRECT_DRAW_ARGS;
+        BuffDesc.Size      = DataSize;
 
         BufferData InitialData;
         InitialData.pData    = Data;
-        InitialData.DataSize = BuffDesc.uiSizeInBytes;
+        InitialData.DataSize = BuffDesc.Size;
 
         auto* pDevice = TestingEnvironment::GetInstance()->GetDevice();
 
@@ -2389,7 +2389,7 @@ TEST_F(DrawCommandTest, DynamicUniformBufferUpdates)
         BuffDesc.BindFlags      = BIND_UNIFORM_BUFFER;
         BuffDesc.Usage          = USAGE_DYNAMIC;
         BuffDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
-        BuffDesc.uiSizeInBytes  = sizeof(float) * 16;
+        BuffDesc.Size           = sizeof(float) * 16;
 
         pDevice->CreateBuffer(BuffDesc, nullptr, &pDynamicCB0);
         ASSERT_NE(pDynamicCB0, nullptr);
@@ -2447,7 +2447,7 @@ TEST_F(DrawCommandTest, DynamicVertexBufferUpdate)
         BuffDesc.BindFlags      = BIND_VERTEX_BUFFER;
         BuffDesc.Usage          = USAGE_DYNAMIC;
         BuffDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
-        BuffDesc.uiSizeInBytes  = sizeof(Vertex) * 3;
+        BuffDesc.Size           = sizeof(Vertex) * 3;
 
         pDevice->CreateBuffer(BuffDesc, nullptr, &pVB);
         ASSERT_NE(pVB, nullptr);
@@ -2501,7 +2501,7 @@ TEST_F(DrawCommandTest, DynamicIndexBufferUpdate)
         BuffDesc.BindFlags      = BIND_INDEX_BUFFER;
         BuffDesc.Usage          = USAGE_DYNAMIC;
         BuffDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
-        BuffDesc.uiSizeInBytes  = sizeof(Uint32) * 3;
+        BuffDesc.Size           = sizeof(Uint32) * 3;
 
         pDevice->CreateBuffer(BuffDesc, nullptr, &pIB);
         ASSERT_NE(pIB, nullptr);
@@ -2746,14 +2746,14 @@ void DrawCommandTest::TestStructuredOrFormattedBuffers(BUFFER_MODE BuffMode,
         BuffDesc.CPUAccessFlags    = UseDynamicBuffers ? CPU_ACCESS_WRITE : CPU_ACCESS_NONE;
         BuffDesc.Mode              = BuffMode;
         BuffDesc.ElementByteStride = 16;
-        BuffDesc.uiSizeInBytes     = sizeof(float4) * 4;
+        BuffDesc.Size              = sizeof(float4) * 4;
 
         RefCntAutoPtr<IBuffer> pPositionsBuffer;
         pDevice->CreateBuffer(BuffDesc, nullptr, &pPositionsBuffer);
         ASSERT_NE(pPositionsBuffer, nullptr);
 
-        BuffDesc.Name          = "Structured buffer draw test - colors";
-        BuffDesc.uiSizeInBytes = sizeof(float4) * 8;
+        BuffDesc.Name = "Structured buffer draw test - colors";
+        BuffDesc.Size = sizeof(float4) * 8;
         RefCntAutoPtr<IBuffer> pColorsBuffer;
         pDevice->CreateBuffer(BuffDesc, nullptr, &pColorsBuffer);
         ASSERT_NE(pColorsBuffer, nullptr);
@@ -2924,15 +2924,15 @@ void DrawCommandTest::DrawWithUniOrStructBufferOffsets(IShader*                 
     PosBuffDesc.Mode              = BuffMode;
     PosBuffDesc.ElementByteStride = BuffMode == BUFFER_MODE_STRUCTURED ? sizeof(float4) : 0;
     PosBuffDesc.CPUAccessFlags    = BufferUsage == USAGE_DYNAMIC ? CPU_ACCESS_WRITE : CPU_ACCESS_NONE;
-    PosBuffDesc.uiSizeInBytes     = static_cast<Uint32>(PosData.size() * sizeof(float4));
+    PosBuffDesc.Size              = static_cast<Uint32>(PosData.size() * sizeof(float4));
 
     RefCntAutoPtr<IBuffer> pPosDataBuffer;
     pDevice->CreateBuffer(PosBuffDesc, nullptr, &pPosDataBuffer);
     ASSERT_TRUE(pPosDataBuffer);
 
-    auto ColBuffDesc          = PosBuffDesc;
-    ColBuffDesc.Name          = "Buffer offset test color data";
-    ColBuffDesc.uiSizeInBytes = static_cast<Uint32>(ColData.size() * sizeof(float4));
+    auto ColBuffDesc = PosBuffDesc;
+    ColBuffDesc.Name = "Buffer offset test color data";
+    ColBuffDesc.Size = static_cast<Uint32>(ColData.size() * sizeof(float4));
     RefCntAutoPtr<IBuffer> pColDataBuffer;
     pDevice->CreateBuffer(ColBuffDesc, nullptr, &pColDataBuffer);
     ASSERT_TRUE(pColDataBuffer);
@@ -2941,17 +2941,17 @@ void DrawCommandTest::DrawWithUniOrStructBufferOffsets(IShader*                 
     {
         {
             MapHelper<float4> PosBufferData{pContext, pPosDataBuffer, MAP_WRITE, MAP_FLAG_DISCARD};
-            memcpy(PosBufferData, PosData.data(), static_cast<size_t>(PosBuffDesc.uiSizeInBytes));
+            memcpy(PosBufferData, PosData.data(), StaticCast<size_t>(PosBuffDesc.Size));
         }
         {
             MapHelper<float4> ColBufferData{pContext, pColDataBuffer, MAP_WRITE, MAP_FLAG_DISCARD};
-            memcpy(ColBufferData, ColData.data(), static_cast<size_t>(ColBuffDesc.uiSizeInBytes));
+            memcpy(ColBufferData, ColData.data(), StaticCast<size_t>(ColBuffDesc.Size));
         }
     }
     else
     {
-        pContext->UpdateBuffer(pPosDataBuffer, 0, PosBuffDesc.uiSizeInBytes, PosData.data(), RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-        pContext->UpdateBuffer(pColDataBuffer, 0, ColBuffDesc.uiSizeInBytes, ColData.data(), RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        pContext->UpdateBuffer(pPosDataBuffer, 0, PosBuffDesc.Size, PosData.data(), RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        pContext->UpdateBuffer(pColDataBuffer, 0, ColBuffDesc.Size, ColData.data(), RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
     }
 
     enum BufferType

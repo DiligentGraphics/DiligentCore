@@ -1017,20 +1017,20 @@ String GetBufferDescString(const BufferDesc& Desc)
     String Str;
     Str += "Size: ";
     bool bIsLarge = false;
-    if (Desc.uiSizeInBytes > (1 << 20))
+    if (Desc.Size > (1 << 20))
     {
-        Str += ToString(Desc.uiSizeInBytes / (1 << 20));
+        Str += ToString(Desc.Size / (1 << 20));
         Str += " Mb (";
         bIsLarge = true;
     }
-    else if (Desc.uiSizeInBytes > (1 << 10))
+    else if (Desc.Size > (1 << 10))
     {
-        Str += ToString(Desc.uiSizeInBytes / (1 << 10));
+        Str += ToString(Desc.Size / (1 << 10));
         Str += " Kb (";
         bIsLarge = true;
     }
 
-    Str += ToString(Desc.uiSizeInBytes);
+    Str += ToString(Desc.Size);
     Str += " bytes";
     if (bIsLarge)
         Str += ')';

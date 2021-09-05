@@ -57,7 +57,7 @@ public:
 
     explicit StreamingBuffer(const StreamingBufferCreateInfo& CI) :
         m_UsePersistentMap{CI.AllowPersistentMapping && (CI.pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_VULKAN || CI.pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_D3D12)},
-        m_BufferSize{CI.BuffDesc.uiSizeInBytes},
+        m_BufferSize{CI.BuffDesc.Size},
         m_OnBufferResizeCallback{CI.OnBufferResizeCallback},
         m_MapInfo(CI.NumContexts)
     {
@@ -101,8 +101,8 @@ public:
                 while (m_BufferSize < Size)
                     m_BufferSize *= 2;
 
-                auto BuffDesc          = m_pBuffer->GetDesc();
-                BuffDesc.uiSizeInBytes = m_BufferSize;
+                auto BuffDesc = m_pBuffer->GetDesc();
+                BuffDesc.Size = m_BufferSize;
                 // BuffDesc.Name becomes invalid after old buffer is released
                 std::string Name = BuffDesc.Name;
                 BuffDesc.Name    = Name.c_str();

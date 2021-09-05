@@ -108,10 +108,10 @@ DeviceContextVkImpl::DeviceContextVkImpl(IReferenceCounters*       pRefCounters,
     }
 
     BufferDesc DummyVBDesc;
-    DummyVBDesc.Name          = "Dummy vertex buffer";
-    DummyVBDesc.BindFlags     = BIND_VERTEX_BUFFER;
-    DummyVBDesc.Usage         = USAGE_DEFAULT;
-    DummyVBDesc.uiSizeInBytes = 32;
+    DummyVBDesc.Name      = "Dummy vertex buffer";
+    DummyVBDesc.BindFlags = BIND_VERTEX_BUFFER;
+    DummyVBDesc.Usage     = USAGE_DEFAULT;
+    DummyVBDesc.Size      = 32;
     RefCntAutoPtr<IBuffer> pDummyVB;
     m_pDevice->CreateBuffer(DummyVBDesc, nullptr, &pDummyVB);
     m_DummyVB = pDummyVB.RawPtr<BufferVkImpl>();
@@ -1831,7 +1831,7 @@ void DeviceContextVkImpl::UpdateBufferRegion(BufferVkImpl*                  pBuf
                                              Uint64                         SrcOffset,
                                              RESOURCE_STATE_TRANSITION_MODE TransitionMode)
 {
-    DEV_CHECK_ERR(DstOffset + NumBytes <= pBuffVk->GetDesc().uiSizeInBytes,
+    DEV_CHECK_ERR(DstOffset + NumBytes <= pBuffVk->GetDesc().Size,
                   "Update region is out of buffer bounds which will result in an undefined behavior");
 
     EnsureVkCmdBuffer();
@@ -1932,7 +1932,7 @@ void DeviceContextVkImpl::MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_FLAG
             auto& DynAllocation = pBufferVk->m_DynamicData[GetContextId()];
             if ((MapFlags & MAP_FLAG_DISCARD) != 0 || DynAllocation.pDynamicMemMgr == nullptr)
             {
-                DynAllocation = AllocateDynamicSpace(BuffDesc.uiSizeInBytes, pBufferVk->m_DynamicOffsetAlignment);
+                DynAllocation = AllocateDynamicSpace(BuffDesc.Size, pBufferVk->m_DynamicOffsetAlignment);
             }
             else
             {
@@ -1987,7 +1987,7 @@ void DeviceContextVkImpl::UnmapBuffer(IBuffer* pBuffer, MAP_TYPE MapType)
         {
             if ((pBufferVk->GetMemoryProperties() & MEMORY_PROPERTY_HOST_COHERENT) == 0)
             {
-                pBufferVk->InvalidateMappedRange(0, BuffDesc.uiSizeInBytes);
+                pBufferVk->InvalidateMappedRange(0, BuffDesc.Size);
             }
         }
     }
@@ -1997,7 +1997,7 @@ void DeviceContextVkImpl::UnmapBuffer(IBuffer* pBuffer, MAP_TYPE MapType)
         {
             if ((pBufferVk->GetMemoryProperties() & MEMORY_PROPERTY_HOST_COHERENT) == 0)
             {
-                pBufferVk->FlushMappedRange(0, BuffDesc.uiSizeInBytes);
+                pBufferVk->FlushMappedRange(0, BuffDesc.Size);
             }
         }
         else if (BuffDesc.Usage == USAGE_DYNAMIC)
@@ -2006,7 +2006,7 @@ void DeviceContextVkImpl::UnmapBuffer(IBuffer* pBuffer, MAP_TYPE MapType)
             {
                 auto& DynAlloc  = pBufferVk->m_DynamicData[GetContextId()];
                 auto  vkSrcBuff = DynAlloc.pDynamicMemMgr->GetVkBuffer();
-                UpdateBufferRegion(pBufferVk, 0, BuffDesc.uiSizeInBytes, vkSrcBuff, DynAlloc.AlignedOffset, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+                UpdateBufferRegion(pBufferVk, 0, BuffDesc.Size, vkSrcBuff, DynAlloc.AlignedOffset, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
             }
         }
     }

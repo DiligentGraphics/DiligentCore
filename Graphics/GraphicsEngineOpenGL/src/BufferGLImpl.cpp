@@ -144,7 +144,7 @@ BufferGLImpl::BufferGLImpl(IReferenceCounters*        pRefCounters,
 
     // All buffer bind targets (GL_ARRAY_BUFFER, GL_ELEMENT_ARRAY_BUFFER etc.) relate to the same
     // kind of objects. As a result they are all equivalent from a transfer point of view.
-    glBufferData(m_BindTarget, StaticCast<GLsizeiptr>(BuffDesc.uiSizeInBytes), pData, m_GLUsageHint);
+    glBufferData(m_BindTarget, StaticCast<GLsizeiptr>(BuffDesc.Size), pData, m_GLUsageHint);
     CHECK_GL_ERROR_AND_THROW("glBufferData() failed");
     GLState.BindBuffer(m_BindTarget, GLObjectWrappers::GLBufferObj::Null(), ResetVAO);
 
@@ -172,9 +172,9 @@ static BufferDesc GetBufferDescFromGLHandle(GLContextState& GLState, BufferDesc 
     CHECK_GL_ERROR("glGetBufferParameteriv() failed");
     VERIFY_EXPR(BufferSize > 0);
 
-    VERIFY(BuffDesc.uiSizeInBytes == 0 || BuffDesc.uiSizeInBytes == static_cast<Uint32>(BufferSize), "Buffer size specified by the BufferDesc (", BuffDesc.uiSizeInBytes, ") does not match the size recovered from gl buffer object (", BufferSize, ")");
+    VERIFY(BuffDesc.Size == 0 || BuffDesc.Size == static_cast<Uint32>(BufferSize), "Buffer size specified by the BufferDesc (", BuffDesc.Size, ") does not match the size recovered from gl buffer object (", BufferSize, ")");
     if (BufferSize > 0)
-        BuffDesc.uiSizeInBytes = static_cast<Uint32>(BufferSize);
+        BuffDesc.Size = static_cast<Uint32>(BufferSize);
 
     glBindBuffer(BindTarget, 0);
     CHECK_GL_ERROR("Failed to unbind GL buffer");
@@ -262,7 +262,7 @@ void BufferGLImpl::CopyData(GLContextState& CtxState, BufferGLImpl& SrcBufferGL,
 
 void BufferGLImpl::Map(GLContextState& CtxState, MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData)
 {
-    MapRange(CtxState, MapType, MapFlags, 0, m_Desc.uiSizeInBytes, pMappedData);
+    MapRange(CtxState, MapType, MapFlags, 0, m_Desc.Size, pMappedData);
 }
 
 void BufferGLImpl::MapRange(GLContextState& CtxState, MAP_TYPE MapType, Uint32 MapFlags, Uint64 Offset, Uint64 Length, PVoid& pMappedData)

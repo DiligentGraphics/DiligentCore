@@ -76,7 +76,7 @@ public:
         // buffer is USAGE_DYNAMIC or not.
         bool IsDynamic() const
         {
-            return pBuffer && RangeSize < pBuffer->GetDesc().uiSizeInBytes;
+            return pBuffer && RangeSize < pBuffer->GetDesc().Size;
         }
     };
 
@@ -134,7 +134,7 @@ public:
             if (pBufferView)
             {
                 const auto* pBuff = pBufferView->GetBuffer<const BufferGLImpl>();
-                return pBufferView->GetDesc().ByteWidth < pBuff->GetDesc().uiSizeInBytes;
+                return pBufferView->GetDesc().ByteWidth < pBuff->GetDesc().Size;
             }
 
             return false;
@@ -148,11 +148,11 @@ public:
 
     void SetUniformBuffer(Uint32 CacheOffset, RefCntAutoPtr<BufferGLImpl>&& pBuff, Uint64 BaseOffset, Uint64 RangeSize)
     {
-        DEV_CHECK_ERR(BaseOffset + RangeSize <= (pBuff ? pBuff->GetDesc().uiSizeInBytes : 0), "The range is out of buffer bounds");
+        DEV_CHECK_ERR(BaseOffset + RangeSize <= (pBuff ? pBuff->GetDesc().Size : 0), "The range is out of buffer bounds");
         if (pBuff)
         {
             if (RangeSize == 0)
-                RangeSize = pBuff->GetDesc().uiSizeInBytes - BaseOffset;
+                RangeSize = pBuff->GetDesc().Size - BaseOffset;
         }
 
         auto& UB = GetUB(CacheOffset);

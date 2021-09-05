@@ -883,7 +883,7 @@ void DeviceContextD3D11Impl::UpdateBuffer(IBuffer*                       pBuffer
     DstBox.bottom = 1;
     DstBox.front  = 0;
     DstBox.back   = 1;
-    auto* pDstBox = (Offset == 0 && Size == pBufferD3D11Impl->GetDesc().uiSizeInBytes) ? nullptr : &DstBox;
+    auto* pDstBox = (Offset == 0 && Size == pBufferD3D11Impl->GetDesc().Size) ? nullptr : &DstBox;
     m_pd3d11DeviceContext->UpdateSubresource(pBufferD3D11Impl->m_pd3d11Buffer, 0, pDstBox, pData, 0, 0);
 }
 

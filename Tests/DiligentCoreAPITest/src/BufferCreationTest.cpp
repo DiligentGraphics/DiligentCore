@@ -128,12 +128,12 @@ TEST_F(BufferCreationTest, CreateVertexBuffer)
     TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     BufferDesc BuffDesc;
-    BuffDesc.Name          = "Vertex buffer";
-    BuffDesc.uiSizeInBytes = 256;
-    BuffDesc.BindFlags     = BIND_VERTEX_BUFFER;
+    BuffDesc.Name      = "Vertex buffer";
+    BuffDesc.Size      = 256;
+    BuffDesc.BindFlags = BIND_VERTEX_BUFFER;
 
     BufferData InitData;
-    InitData.DataSize = BuffDesc.uiSizeInBytes;
+    InitData.DataSize = BuffDesc.Size;
     std::vector<Uint8> DummyData(static_cast<size_t>(InitData.DataSize));
     InitData.pData = DummyData.data();
     RefCntAutoPtr<IBuffer> pBuffer;
@@ -151,9 +151,9 @@ TEST_F(BufferCreationTest, CreateIndexBuffer)
     TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     BufferDesc BuffDesc;
-    BuffDesc.Name          = "Index";
-    BuffDesc.uiSizeInBytes = 256;
-    BuffDesc.BindFlags     = BIND_VERTEX_BUFFER;
+    BuffDesc.Name      = "Index";
+    BuffDesc.Size      = 256;
+    BuffDesc.BindFlags = BIND_VERTEX_BUFFER;
 
     BufferData NullData;
 
@@ -181,7 +181,7 @@ TEST_F(BufferCreationTest, CreateFormattedBuffer)
 
     BufferDesc BuffDesc;
     BuffDesc.Name              = "Formatted buffer";
-    BuffDesc.uiSizeInBytes     = 256;
+    BuffDesc.Size              = 256;
     BuffDesc.BindFlags         = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
     BuffDesc.Mode              = BUFFER_MODE_FORMATTED;
     BuffDesc.ElementByteStride = 16;
@@ -227,7 +227,7 @@ TEST_F(BufferCreationTest, CreateStructuredBuffer)
 
     BufferDesc BuffDesc;
     BuffDesc.Name              = "Structured buffer";
-    BuffDesc.uiSizeInBytes     = 256;
+    BuffDesc.Size              = 256;
     BuffDesc.BindFlags         = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
     BuffDesc.Mode              = BUFFER_MODE_STRUCTURED;
     BuffDesc.ElementByteStride = 16;
@@ -246,9 +246,9 @@ TEST_F(BufferCreationTest, CreateUniformBuffer)
     TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     BufferDesc BuffDesc;
-    BuffDesc.Name          = "Uniform buffer";
-    BuffDesc.uiSizeInBytes = 256;
-    BuffDesc.BindFlags     = BIND_UNIFORM_BUFFER;
+    BuffDesc.Name      = "Uniform buffer";
+    BuffDesc.Size      = 256;
+    BuffDesc.BindFlags = BIND_UNIFORM_BUFFER;
     RefCntAutoPtr<IBuffer> pBuffer;
     pDevice->CreateBuffer(BuffDesc, nullptr, &pBuffer);
     ASSERT_NE(pBuffer, nullptr) << GetObjectDescString(BuffDesc);
@@ -265,7 +265,7 @@ TEST_F(BufferCreationTest, CreateRawBuffer)
 
     BufferDesc BuffDesc;
     BuffDesc.Name              = "Raw buffer";
-    BuffDesc.uiSizeInBytes     = 256;
+    BuffDesc.Size              = 256;
     BuffDesc.BindFlags         = BIND_VERTEX_BUFFER | BIND_INDEX_BUFFER | BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
     BuffDesc.Mode              = BUFFER_MODE_RAW;
     BuffDesc.ElementByteStride = 16;
@@ -301,7 +301,7 @@ TEST_F(BufferCreationTest, CreateStagingBuffer)
     BufferDesc BuffDesc;
     BuffDesc.Name           = "Staging buffer";
     BuffDesc.Usage          = USAGE_STAGING;
-    BuffDesc.uiSizeInBytes  = 256;
+    BuffDesc.Size           = 256;
     BuffDesc.BindFlags      = BIND_NONE;
     BuffDesc.CPUAccessFlags = CPU_ACCESS_READ;
 
@@ -341,7 +341,7 @@ TEST_F(BufferCreationTest, CreateDynamicBuffer)
     BufferDesc BuffDesc;
     BuffDesc.Name           = "Dynamic vertex buffer";
     BuffDesc.Usage          = USAGE_DYNAMIC;
-    BuffDesc.uiSizeInBytes  = 256;
+    BuffDesc.Size           = 256;
     BuffDesc.BindFlags      = BIND_VERTEX_BUFFER;
     BuffDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
 
@@ -389,14 +389,14 @@ TEST_F(BufferCreationTest, CreateUnifiedBuffer)
     BufferDesc BuffDesc;
     BuffDesc.Name           = "Unified vertex buffer";
     BuffDesc.Usage          = USAGE_UNIFIED;
-    BuffDesc.uiSizeInBytes  = 256;
+    BuffDesc.Size           = 256;
     BuffDesc.BindFlags      = BIND_VERTEX_BUFFER;
     BuffDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
 
     if (MemoryInfo.UnifiedMemoryCPUAccess & CPU_ACCESS_WRITE)
     {
         BufferData InitData;
-        InitData.DataSize = BuffDesc.uiSizeInBytes;
+        InitData.DataSize = BuffDesc.Size;
         std::vector<Uint8> DummyData(static_cast<size_t>(InitData.DataSize));
         InitData.pData = DummyData.data();
         RefCntAutoPtr<IBuffer> pBuffer;

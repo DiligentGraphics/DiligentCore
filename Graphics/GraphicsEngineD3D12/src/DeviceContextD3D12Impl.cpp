@@ -514,7 +514,7 @@ void DeviceContextD3D12Impl::CommitD3D12IndexBuffer(GraphicsContext& GraphCtx, V
         IBView.Format = DXGI_FORMAT_R16_UINT;
     }
     // Note that for a dynamic buffer, what we use here is the size of the buffer itself, not the upload heap buffer!
-    IBView.SizeInBytes = StaticCast<UINT>(m_pIndexBuffer->GetDesc().uiSizeInBytes - m_IndexDataStartOffset);
+    IBView.SizeInBytes = StaticCast<UINT>(m_pIndexBuffer->GetDesc().Size - m_IndexDataStartOffset);
 
     // Device context keeps strong reference to bound index buffer.
     // When the buffer is unbound, the reference to the D3D12 resource
@@ -579,7 +579,7 @@ void DeviceContextD3D12Impl::CommitD3D12VertexBuffers(GraphicsContext& GraphCtx)
             VBView.BufferLocation = pBufferD3D12->GetGPUAddress(GetContextId(), this) + CurrStream.Offset;
             VBView.StrideInBytes  = m_pPipelineState->GetBufferStride(Buff);
             // Note that for a dynamic buffer, what we use here is the size of the buffer itself, not the upload heap buffer!
-            VBView.SizeInBytes = StaticCast<UINT>(pBufferD3D12->GetDesc().uiSizeInBytes - CurrStream.Offset);
+            VBView.SizeInBytes = StaticCast<UINT>(pBufferD3D12->GetDesc().Size - CurrStream.Offset);
         }
         else
         {
@@ -1650,7 +1650,7 @@ void DeviceContextD3D12Impl::MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_F
 
         D3D12_RANGE MapRange;
         MapRange.Begin = 0;
-        MapRange.End   = StaticCast<SIZE_T>(BuffDesc.uiSizeInBytes);
+        MapRange.End   = StaticCast<SIZE_T>(BuffDesc.Size);
         pd3d12Resource->Map(0, &MapRange, &pMappedData);
     }
     else if (MapType == MAP_WRITE)
@@ -1670,7 +1670,7 @@ void DeviceContextD3D12Impl::MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_F
             if ((MapFlags & MAP_FLAG_DISCARD) != 0 || DynamicData.CPUAddress == nullptr)
             {
                 Uint32 Alignment = (BuffDesc.BindFlags & BIND_UNIFORM_BUFFER) ? D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT : 16;
-                DynamicData      = AllocateDynamicSpace(BuffDesc.uiSizeInBytes, Alignment);
+                DynamicData      = AllocateDynamicSpace(BuffDesc.Size, Alignment);
             }
             else
             {
@@ -1730,7 +1730,7 @@ void DeviceContextD3D12Impl::UnmapBuffer(IBuffer* pBuffer, MAP_TYPE MapType)
             // Copy data into the resource
             if (pd3d12Resource)
             {
-                UpdateBufferRegion(pBufferD3D12, pBufferD3D12->m_DynamicData[GetContextId()], 0, BuffDesc.uiSizeInBytes, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+                UpdateBufferRegion(pBufferD3D12, pBufferD3D12->m_DynamicData[GetContextId()], 0, BuffDesc.Size, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
             }
         }
     }
@@ -2002,7 +2002,7 @@ void DeviceContextD3D12Impl::CopyTextureRegion(IBuffer*                       pS
     Uint64 DataStartByteOffset = 0;
     auto*  pd3d12Buffer        = pBufferD3D12->GetD3D12Buffer(DataStartByteOffset, this);
     CopyTextureRegion(pd3d12Buffer, StaticCast<Uint32>(DataStartByteOffset) + SrcOffset, SrcStride, SrcDepthStride,
-                      pBufferD3D12->GetDesc().uiSizeInBytes, TextureD3D12, DstSubResIndex, DstBox, TextureTransitionMode);
+                      pBufferD3D12->GetDesc().Size, TextureD3D12, DstSubResIndex, DstBox, TextureTransitionMode);
 }
 
 DeviceContextD3D12Impl::TextureUploadSpace DeviceContextD3D12Impl::AllocateTextureUploadSpace(TEXTURE_FORMAT TexFmt,

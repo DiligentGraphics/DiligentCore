@@ -298,10 +298,10 @@ TEST(MeshShaderTest, DrawTriangleIndirect)
     }
 
     BufferDesc IndirectBufferDesc;
-    IndirectBufferDesc.Name          = "Indirect buffer";
-    IndirectBufferDesc.Usage         = USAGE_IMMUTABLE;
-    IndirectBufferDesc.uiSizeInBytes = sizeof(Data);
-    IndirectBufferDesc.BindFlags     = BIND_INDIRECT_DRAW_ARGS;
+    IndirectBufferDesc.Name      = "Indirect buffer";
+    IndirectBufferDesc.Usage     = USAGE_IMMUTABLE;
+    IndirectBufferDesc.Size      = sizeof(Data);
+    IndirectBufferDesc.BindFlags = BIND_INDIRECT_DRAW_ARGS;
 
     BufferData InitData{&Data, sizeof(Data)};
 
@@ -449,10 +449,10 @@ TEST(MeshShaderTest, DrawTriangleIndirectCount)
     Data.Count = 1;
 
     BufferDesc IndirectBufferDesc;
-    IndirectBufferDesc.Name          = "Indirect & Count buffer";
-    IndirectBufferDesc.Usage         = USAGE_IMMUTABLE;
-    IndirectBufferDesc.uiSizeInBytes = sizeof(Data);
-    IndirectBufferDesc.BindFlags     = BIND_INDIRECT_DRAW_ARGS;
+    IndirectBufferDesc.Name      = "Indirect & Count buffer";
+    IndirectBufferDesc.Usage     = USAGE_IMMUTABLE;
+    IndirectBufferDesc.Size      = sizeof(Data);
+    IndirectBufferDesc.BindFlags = BIND_INDIRECT_DRAW_ARGS;
 
     BufferData InitData{&Data, sizeof(Data)};
 

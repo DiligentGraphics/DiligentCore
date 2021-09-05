@@ -57,7 +57,7 @@ void VerifyBufferData(IBuffer* pBuffer)
     BuffDesc.Name           = "Test staging buffer";
     BuffDesc.Usage          = USAGE_STAGING;
     BuffDesc.CPUAccessFlags = CPU_ACCESS_READ;
-    BuffDesc.uiSizeInBytes  = sizeof(TestBufferData);
+    BuffDesc.Size           = sizeof(TestBufferData);
     BuffDesc.BindFlags      = BIND_NONE;
 
     RefCntAutoPtr<IBuffer> pStagingBuffer;
@@ -66,7 +66,7 @@ void VerifyBufferData(IBuffer* pBuffer)
                                        << BuffDesc;
 
     pContext->CopyBuffer(pBuffer, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
-                         pStagingBuffer, 0, BuffDesc.uiSizeInBytes, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+                         pStagingBuffer, 0, BuffDesc.Size, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
     pContext->WaitForIdle();
 
     void* pBufferData = nullptr;
@@ -87,14 +87,14 @@ TEST(BufferAccessTest, Initialization)
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     BufferDesc BuffDesc;
-    BuffDesc.Name          = "Test immutable buffer";
-    BuffDesc.Usage         = USAGE_IMMUTABLE;
-    BuffDesc.uiSizeInBytes = sizeof(TestBufferData);
-    BuffDesc.BindFlags     = BIND_UNIFORM_BUFFER;
+    BuffDesc.Name      = "Test immutable buffer";
+    BuffDesc.Usage     = USAGE_IMMUTABLE;
+    BuffDesc.Size      = sizeof(TestBufferData);
+    BuffDesc.BindFlags = BIND_UNIFORM_BUFFER;
 
     BufferData InitData;
     InitData.pData    = TestBufferData;
-    InitData.DataSize = BuffDesc.uiSizeInBytes;
+    InitData.DataSize = BuffDesc.Size;
     RefCntAutoPtr<IBuffer> pBuffer;
     pDevice->CreateBuffer(BuffDesc, &InitData, &pBuffer);
     ASSERT_NE(pBuffer, nullptr) << "Buffer desc:\n"
@@ -112,16 +112,16 @@ TEST(BufferAccessTest, UpdateBufferData)
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     BufferDesc BuffDesc;
-    BuffDesc.Name          = "Test default buffer";
-    BuffDesc.Usage         = USAGE_DEFAULT;
-    BuffDesc.uiSizeInBytes = sizeof(TestBufferData);
-    BuffDesc.BindFlags     = BIND_UNIFORM_BUFFER;
+    BuffDesc.Name      = "Test default buffer";
+    BuffDesc.Usage     = USAGE_DEFAULT;
+    BuffDesc.Size      = sizeof(TestBufferData);
+    BuffDesc.BindFlags = BIND_UNIFORM_BUFFER;
 
     RefCntAutoPtr<IBuffer> pBuffer;
     pDevice->CreateBuffer(BuffDesc, nullptr, &pBuffer);
     ASSERT_NE(pBuffer, nullptr) << "Buffer desc:\n"
                                 << BuffDesc;
-    pContext->UpdateBuffer(pBuffer, 0, BuffDesc.uiSizeInBytes, TestBufferData, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    pContext->UpdateBuffer(pBuffer, 0, BuffDesc.Size, TestBufferData, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
     VerifyBufferData(pBuffer);
 }
@@ -137,7 +137,7 @@ TEST(BufferAccessTest, MapWriteDiscard)
     BufferDesc BuffDesc;
     BuffDesc.Name           = "Test dynamic buffer";
     BuffDesc.Usage          = USAGE_DYNAMIC;
-    BuffDesc.uiSizeInBytes  = sizeof(TestBufferData);
+    BuffDesc.Size           = sizeof(TestBufferData);
     BuffDesc.BindFlags      = BIND_UNIFORM_BUFFER;
     BuffDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
 
@@ -163,10 +163,10 @@ TEST(BufferAccessTest, CopyFromStaging)
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     BufferDesc BuffDesc;
-    BuffDesc.Name          = "Test default buffer";
-    BuffDesc.Usage         = USAGE_DEFAULT;
-    BuffDesc.uiSizeInBytes = sizeof(TestBufferData);
-    BuffDesc.BindFlags     = BIND_UNIFORM_BUFFER;
+    BuffDesc.Name      = "Test default buffer";
+    BuffDesc.Usage     = USAGE_DEFAULT;
+    BuffDesc.Size      = sizeof(TestBufferData);
+    BuffDesc.BindFlags = BIND_UNIFORM_BUFFER;
 
     RefCntAutoPtr<IBuffer> pBuffer;
     pDevice->CreateBuffer(BuffDesc, nullptr, &pBuffer);
@@ -189,7 +189,7 @@ TEST(BufferAccessTest, CopyFromStaging)
     pContext->UnmapBuffer(pStagingBuffer, MAP_WRITE);
 
     pContext->CopyBuffer(pStagingBuffer, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
-                         pBuffer, 0, BuffDesc.uiSizeInBytes, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+                         pBuffer, 0, BuffDesc.Size, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
     VerifyBufferData(pBuffer);
 }

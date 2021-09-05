@@ -133,10 +133,10 @@ void CreateBLAS(IRenderDevice* pDevice, IDeviceContext* pContext, BLASBuildTrian
     RefCntAutoPtr<IBuffer> ScratchBuffer;
 
     BufferDesc BuffDesc;
-    BuffDesc.Name          = "BLAS Scratch Buffer";
-    BuffDesc.Usage         = USAGE_DEFAULT;
-    BuffDesc.BindFlags     = BIND_RAY_TRACING;
-    BuffDesc.uiSizeInBytes = std::max(pBLAS->GetScratchBufferSizes().Build, pBLAS->GetScratchBufferSizes().Update);
+    BuffDesc.Name      = "BLAS Scratch Buffer";
+    BuffDesc.Usage     = USAGE_DEFAULT;
+    BuffDesc.BindFlags = BIND_RAY_TRACING;
+    BuffDesc.Size      = std::max(pBLAS->GetScratchBufferSizes().Build, pBLAS->GetScratchBufferSizes().Update);
 
     pDevice->CreateBuffer(BuffDesc, nullptr, &ScratchBuffer);
     ASSERT_NE(ScratchBuffer, nullptr);
@@ -191,10 +191,10 @@ void CreateBLAS(IRenderDevice* pDevice, IDeviceContext* pContext, BLASBuildBound
     RefCntAutoPtr<IBuffer> ScratchBuffer;
 
     BufferDesc BuffDesc;
-    BuffDesc.Name          = "BLAS Scratch Buffer";
-    BuffDesc.Usage         = USAGE_DEFAULT;
-    BuffDesc.BindFlags     = BIND_RAY_TRACING;
-    BuffDesc.uiSizeInBytes = std::max(pBLAS->GetScratchBufferSizes().Build, pBLAS->GetScratchBufferSizes().Update);
+    BuffDesc.Name      = "BLAS Scratch Buffer";
+    BuffDesc.Usage     = USAGE_DEFAULT;
+    BuffDesc.BindFlags = BIND_RAY_TRACING;
+    BuffDesc.Size      = std::max(pBLAS->GetScratchBufferSizes().Build, pBLAS->GetScratchBufferSizes().Update);
 
     pDevice->CreateBuffer(BuffDesc, nullptr, &ScratchBuffer);
     ASSERT_NE(ScratchBuffer, nullptr);
@@ -235,10 +235,10 @@ void CreateTLAS(IRenderDevice* pDevice, IDeviceContext* pContext, TLASBuildInsta
     RefCntAutoPtr<IBuffer> ScratchBuffer;
 
     BufferDesc BuffDesc;
-    BuffDesc.Name          = "TLAS Scratch Buffer";
-    BuffDesc.Usage         = USAGE_DEFAULT;
-    BuffDesc.BindFlags     = BIND_RAY_TRACING;
-    BuffDesc.uiSizeInBytes = std::max(pTLAS->GetScratchBufferSizes().Build, pTLAS->GetScratchBufferSizes().Update);
+    BuffDesc.Name      = "TLAS Scratch Buffer";
+    BuffDesc.Usage     = USAGE_DEFAULT;
+    BuffDesc.BindFlags = BIND_RAY_TRACING;
+    BuffDesc.Size      = std::max(pTLAS->GetScratchBufferSizes().Build, pTLAS->GetScratchBufferSizes().Update);
 
     pDevice->CreateBuffer(BuffDesc, nullptr, &ScratchBuffer);
     ASSERT_NE(ScratchBuffer, nullptr);
@@ -246,10 +246,10 @@ void CreateTLAS(IRenderDevice* pDevice, IDeviceContext* pContext, TLASBuildInsta
     // create instance buffer
     RefCntAutoPtr<IBuffer> InstanceBuffer;
 
-    BuffDesc.Name          = "TLAS Instance Buffer";
-    BuffDesc.Usage         = USAGE_DEFAULT;
-    BuffDesc.BindFlags     = BIND_RAY_TRACING;
-    BuffDesc.uiSizeInBytes = TLAS_INSTANCE_DATA_SIZE * InstanceCount;
+    BuffDesc.Name      = "TLAS Instance Buffer";
+    BuffDesc.Usage     = USAGE_DEFAULT;
+    BuffDesc.BindFlags = BIND_RAY_TRACING;
+    BuffDesc.Size      = TLAS_INSTANCE_DATA_SIZE * InstanceCount;
 
     pDevice->CreateBuffer(BuffDesc, nullptr, &InstanceBuffer);
     ASSERT_NE(InstanceBuffer, nullptr);
@@ -352,11 +352,11 @@ void ASCompaction(IRenderDevice*             pDevice,
     RefCntAutoPtr<IBuffer> pReadbackBuffer;
 
     BufferDesc BuffDesc;
-    BuffDesc.Name          = "AS compacted size Buffer";
-    BuffDesc.Usage         = USAGE_DEFAULT;
-    BuffDesc.BindFlags     = BIND_UNORDERED_ACCESS;
-    BuffDesc.Mode          = BUFFER_MODE_RAW;
-    BuffDesc.uiSizeInBytes = sizeof(Uint64);
+    BuffDesc.Name      = "AS compacted size Buffer";
+    BuffDesc.Usage     = USAGE_DEFAULT;
+    BuffDesc.BindFlags = BIND_UNORDERED_ACCESS;
+    BuffDesc.Mode      = BUFFER_MODE_RAW;
+    BuffDesc.Size      = sizeof(Uint64);
 
     pDevice->CreateBuffer(BuffDesc, nullptr, &pCompactedSizeBuffer);
     ASSERT_NE(pCompactedSizeBuffer, nullptr);
@@ -727,9 +727,9 @@ TEST_P(RT1, TriangleClosestHitShader)
     RefCntAutoPtr<IBuffer> pVertexBuffer;
     {
         BufferDesc BuffDesc;
-        BuffDesc.Name          = "Triangle vertices";
-        BuffDesc.BindFlags     = BIND_RAY_TRACING;
-        BuffDesc.uiSizeInBytes = BuffOffsets.VBOffset + sizeof(Vertices);
+        BuffDesc.Name      = "Triangle vertices";
+        BuffDesc.BindFlags = BIND_RAY_TRACING;
+        BuffDesc.Size      = BuffOffsets.VBOffset + sizeof(Vertices);
         pDevice->CreateBuffer(BuffDesc, nullptr, &pVertexBuffer);
         ASSERT_NE(pVertexBuffer, nullptr);
 
@@ -920,9 +920,9 @@ TEST_P(RT2, TriangleAnyHitShader)
     RefCntAutoPtr<IBuffer> pVertexBuffer;
     {
         BufferDesc BuffDesc;
-        BuffDesc.Name          = "Triangle vertices";
-        BuffDesc.BindFlags     = BIND_RAY_TRACING;
-        BuffDesc.uiSizeInBytes = BuffOffsets.VBOffset + sizeof(Vertices);
+        BuffDesc.Name      = "Triangle vertices";
+        BuffDesc.BindFlags = BIND_RAY_TRACING;
+        BuffDesc.Size      = BuffOffsets.VBOffset + sizeof(Vertices);
         pDevice->CreateBuffer(BuffDesc, nullptr, &pVertexBuffer);
         ASSERT_NE(pVertexBuffer, nullptr);
 
@@ -1112,10 +1112,10 @@ TEST_P(RT3, ProceduralIntersection)
     RefCntAutoPtr<IBuffer> pBoxBuffer;
     {
         BufferDesc BuffDesc;
-        BuffDesc.Name          = "Boxes";
-        BuffDesc.Usage         = USAGE_IMMUTABLE;
-        BuffDesc.BindFlags     = BIND_RAY_TRACING;
-        BuffDesc.uiSizeInBytes = sizeof(Boxes);
+        BuffDesc.Name      = "Boxes";
+        BuffDesc.Usage     = USAGE_IMMUTABLE;
+        BuffDesc.BindFlags = BIND_RAY_TRACING;
+        BuffDesc.Size      = sizeof(Boxes);
 
         BufferData BufData;
         BufData.pData    = Boxes;
@@ -1314,16 +1314,16 @@ TEST_P(RT4, MultiGeometry)
     RefCntAutoPtr<IBuffer>     pPrimitiveBuffer;
     {
         BufferDesc BuffDesc;
-        BuffDesc.Name          = "Indices";
-        BuffDesc.BindFlags     = BIND_RAY_TRACING;
-        BuffDesc.uiSizeInBytes = BuffOffsets.IBOffset + sizeof(Indices);
+        BuffDesc.Name      = "Indices";
+        BuffDesc.BindFlags = BIND_RAY_TRACING;
+        BuffDesc.Size      = BuffOffsets.IBOffset + sizeof(Indices);
         pDevice->CreateBuffer(BuffDesc, nullptr, &pIndexBuffer);
         ASSERT_NE(pIndexBuffer, nullptr);
 
         BuffDesc.Name              = "Vertices";
         BuffDesc.Mode              = BUFFER_MODE_STRUCTURED;
         BuffDesc.BindFlags         = BIND_RAY_TRACING | BIND_SHADER_RESOURCE;
-        BuffDesc.uiSizeInBytes     = BuffOffsets.VBOffset + sizeof(Vertices);
+        BuffDesc.Size              = BuffOffsets.VBOffset + sizeof(Vertices);
         BuffDesc.ElementByteStride = sizeof(Vertices[0]);
         pDevice->CreateBuffer(BuffDesc, nullptr, &pVertexBuffer);
         ASSERT_NE(pVertexBuffer, nullptr);
@@ -1337,14 +1337,14 @@ TEST_P(RT4, MultiGeometry)
 
         BuffDesc.Name              = "PerInstanceData";
         BuffDesc.BindFlags         = BIND_SHADER_RESOURCE;
-        BuffDesc.uiSizeInBytes     = sizeof(PrimitiveOffsets);
+        BuffDesc.Size              = sizeof(PrimitiveOffsets);
         BuffDesc.ElementByteStride = sizeof(PrimitiveOffsets[0]);
         BufferData BufData         = {PrimitiveOffsets, sizeof(PrimitiveOffsets)};
         pDevice->CreateBuffer(BuffDesc, &BufData, &pPerInstanceBuffer);
         ASSERT_NE(pPerInstanceBuffer, nullptr);
 
         BuffDesc.Name              = "PrimitiveData";
-        BuffDesc.uiSizeInBytes     = sizeof(Primitives);
+        BuffDesc.Size              = sizeof(Primitives);
         BuffDesc.ElementByteStride = sizeof(Primitives[0]);
         BufData                    = {Primitives, sizeof(Primitives)};
         pDevice->CreateBuffer(BuffDesc, &BufData, &pPrimitiveBuffer);
@@ -1652,9 +1652,9 @@ TEST_P(RT5, InlineRayTracing_RayTracingPSO)
     RefCntAutoPtr<IBuffer> pVertexBuffer;
     {
         BufferDesc BuffDesc;
-        BuffDesc.Name          = "Triangle vertices";
-        BuffDesc.BindFlags     = BIND_RAY_TRACING;
-        BuffDesc.uiSizeInBytes = BuffOffsets.VBOffset + sizeof(Vertices);
+        BuffDesc.Name      = "Triangle vertices";
+        BuffDesc.BindFlags = BIND_RAY_TRACING;
+        BuffDesc.Size      = BuffOffsets.VBOffset + sizeof(Vertices);
         pDevice->CreateBuffer(BuffDesc, nullptr, &pVertexBuffer);
         ASSERT_NE(pVertexBuffer, nullptr);
 
@@ -1821,9 +1821,9 @@ TEST_P(RT6, InlineRayTracing_GraphicsPSO)
     RefCntAutoPtr<IBuffer> pVertexBuffer;
     {
         BufferDesc BuffDesc;
-        BuffDesc.Name          = "Triangle vertices";
-        BuffDesc.BindFlags     = BIND_RAY_TRACING;
-        BuffDesc.uiSizeInBytes = BuffOffsets.VBOffset + sizeof(Vertices);
+        BuffDesc.Name      = "Triangle vertices";
+        BuffDesc.BindFlags = BIND_RAY_TRACING;
+        BuffDesc.Size      = BuffOffsets.VBOffset + sizeof(Vertices);
         pDevice->CreateBuffer(BuffDesc, nullptr, &pVertexBuffer);
         ASSERT_NE(pVertexBuffer, nullptr);
 
@@ -1986,9 +1986,9 @@ TEST_P(RT7, TraceRaysIndirect)
     RefCntAutoPtr<IBuffer> pVertexBuffer;
     {
         BufferDesc BuffDesc;
-        BuffDesc.Name          = "Triangle vertices";
-        BuffDesc.BindFlags     = BIND_RAY_TRACING;
-        BuffDesc.uiSizeInBytes = BuffOffsets.VBOffset + sizeof(Vertices);
+        BuffDesc.Name      = "Triangle vertices";
+        BuffDesc.BindFlags = BIND_RAY_TRACING;
+        BuffDesc.Size      = BuffOffsets.VBOffset + sizeof(Vertices);
         pDevice->CreateBuffer(BuffDesc, nullptr, &pVertexBuffer);
         ASSERT_NE(pVertexBuffer, nullptr);
 
@@ -2056,10 +2056,10 @@ TEST_P(RT7, TraceRaysIndirect)
     IndirectArgs.DimensionZ = 1;
 
     BufferDesc BuffDesc;
-    BuffDesc.Name          = "Indirect args buffer";
-    BuffDesc.Usage         = USAGE_DEFAULT;
-    BuffDesc.uiSizeInBytes = sizeof(IndirectArgs);
-    BuffDesc.BindFlags     = BIND_INDIRECT_DRAW_ARGS | BIND_RAY_TRACING;
+    BuffDesc.Name      = "Indirect args buffer";
+    BuffDesc.Usage     = USAGE_DEFAULT;
+    BuffDesc.Size      = sizeof(IndirectArgs);
+    BuffDesc.BindFlags = BIND_INDIRECT_DRAW_ARGS | BIND_RAY_TRACING;
 
     BufferData BuffData{&IndirectArgs, sizeof(IndirectArgs)};
 
@@ -2191,14 +2191,14 @@ TEST_P(RT8, InlineRayTracing_ComputePSO)
     RefCntAutoPtr<IBuffer> pIndexBuffer;
     {
         BufferDesc BuffDesc;
-        BuffDesc.Name          = "Triangle indices";
-        BuffDesc.BindFlags     = BIND_RAY_TRACING;
-        BuffDesc.uiSizeInBytes = BuffOffsets.IBOffset + sizeof(Indices);
+        BuffDesc.Name      = "Triangle indices";
+        BuffDesc.BindFlags = BIND_RAY_TRACING;
+        BuffDesc.Size      = BuffOffsets.IBOffset + sizeof(Indices);
         pDevice->CreateBuffer(BuffDesc, nullptr, &pIndexBuffer);
         ASSERT_NE(pIndexBuffer, nullptr);
 
-        BuffDesc.Name          = "Triangle vertices";
-        BuffDesc.uiSizeInBytes = BuffOffsets.VBOffset + sizeof(Vertices);
+        BuffDesc.Name = "Triangle vertices";
+        BuffDesc.Size = BuffOffsets.VBOffset + sizeof(Vertices);
         pDevice->CreateBuffer(BuffDesc, nullptr, &pVertexBuffer);
         ASSERT_NE(pVertexBuffer, nullptr);
 
@@ -2298,16 +2298,16 @@ static void RayTracingPRSTest(const int Mode)
     RefCntAutoPtr<IBuffer> pConstuffer3;
     {
         BufferDesc BuffDesc;
-        BuffDesc.Name          = "Triangle vertices";
-        BuffDesc.BindFlags     = BIND_RAY_TRACING;
-        BuffDesc.uiSizeInBytes = sizeof(Vertices);
+        BuffDesc.Name      = "Triangle vertices";
+        BuffDesc.BindFlags = BIND_RAY_TRACING;
+        BuffDesc.Size      = sizeof(Vertices);
         BufferData BuffData{Vertices, sizeof(Vertices)};
         pDevice->CreateBuffer(BuffDesc, &BuffData, &pVertexBuffer);
         ASSERT_NE(pVertexBuffer, nullptr);
 
         BuffDesc.Name           = "Constants";
         BuffDesc.BindFlags      = BIND_UNIFORM_BUFFER;
-        BuffDesc.uiSizeInBytes  = sizeof(float) * 4;
+        BuffDesc.Size           = sizeof(float) * 4;
         BuffDesc.Usage          = USAGE_DYNAMIC;
         BuffDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
         pDevice->CreateBuffer(BuffDesc, nullptr, &pConstuffer1);
@@ -2367,10 +2367,10 @@ static void RayTracingPRSTest(const int Mode)
         ASSERT_NE(pBLAS, nullptr);
 
         BufferDesc BuffDesc;
-        BuffDesc.Name          = "BLAS Scratch Buffer";
-        BuffDesc.Usage         = USAGE_DEFAULT;
-        BuffDesc.BindFlags     = BIND_RAY_TRACING;
-        BuffDesc.uiSizeInBytes = pBLAS->GetScratchBufferSizes().Build;
+        BuffDesc.Name      = "BLAS Scratch Buffer";
+        BuffDesc.Usage     = USAGE_DEFAULT;
+        BuffDesc.BindFlags = BIND_RAY_TRACING;
+        BuffDesc.Size      = pBLAS->GetScratchBufferSizes().Build;
         RefCntAutoPtr<IBuffer> pScratchBuffer;
         pDevice->CreateBuffer(BuffDesc, nullptr, &pScratchBuffer);
         ASSERT_NE(pScratchBuffer, nullptr);
@@ -2401,18 +2401,18 @@ static void RayTracingPRSTest(const int Mode)
         Instance.Flags        = RAYTRACING_INSTANCE_NONE;
 
         BufferDesc BuffDesc;
-        BuffDesc.Name          = "TLAS Scratch Buffer";
-        BuffDesc.Usage         = USAGE_DEFAULT;
-        BuffDesc.BindFlags     = BIND_RAY_TRACING;
-        BuffDesc.uiSizeInBytes = pTLAS->GetScratchBufferSizes().Build;
+        BuffDesc.Name      = "TLAS Scratch Buffer";
+        BuffDesc.Usage     = USAGE_DEFAULT;
+        BuffDesc.BindFlags = BIND_RAY_TRACING;
+        BuffDesc.Size      = pTLAS->GetScratchBufferSizes().Build;
         RefCntAutoPtr<IBuffer> pScratchBuffer;
         pDevice->CreateBuffer(BuffDesc, nullptr, &pScratchBuffer);
         ASSERT_NE(pScratchBuffer, nullptr);
 
-        BuffDesc.Name          = "TLAS Instance Buffer";
-        BuffDesc.Usage         = USAGE_DEFAULT;
-        BuffDesc.BindFlags     = BIND_RAY_TRACING;
-        BuffDesc.uiSizeInBytes = TLAS_INSTANCE_DATA_SIZE;
+        BuffDesc.Name      = "TLAS Instance Buffer";
+        BuffDesc.Usage     = USAGE_DEFAULT;
+        BuffDesc.BindFlags = BIND_RAY_TRACING;
+        BuffDesc.Size      = TLAS_INSTANCE_DATA_SIZE;
         RefCntAutoPtr<IBuffer> pInstanceBuffer;
         pDevice->CreateBuffer(BuffDesc, nullptr, &pInstanceBuffer);
         ASSERT_NE(pInstanceBuffer, nullptr);

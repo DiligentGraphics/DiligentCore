@@ -126,7 +126,7 @@ public:
                            const BufferSuballocatorCreateInfo& CreateInfo) :
         // clang-format off
         TBase                    {pRefCounters},
-        m_Mgr                    {StaticCast<size_t>(CreateInfo.Desc.uiSizeInBytes), DefaultRawMemoryAllocator::GetAllocator()},
+        m_Mgr                    {StaticCast<size_t>(CreateInfo.Desc.Size), DefaultRawMemoryAllocator::GetAllocator()},
         m_Buffer                 {pDevice, CreateInfo.Desc},
         m_ExpansionSize          {CreateInfo.ExpansionSize},
         m_SuballocationsAllocator
@@ -150,7 +150,7 @@ public:
             std::lock_guard<std::mutex> Lock{m_MgrMtx};
             Size = m_Mgr.GetMaxSize();
         }
-        if (Size != m_Buffer.GetDesc().uiSizeInBytes)
+        if (Size != m_Buffer.GetDesc().Size)
         {
             m_Buffer.Resize(pDevice, pContext, Size);
         }

@@ -69,17 +69,17 @@ BufferD3D11Impl::BufferD3D11Impl(IReferenceCounters*        pRefCounters,
         // Note that Direct3D11 does not allow partial updates of constant buffers with UpdateSubresource().
         // Only the entire buffer may be updated.
         static constexpr Uint32 Alignment{16};
-        m_Desc.uiSizeInBytes = AlignUp(m_Desc.uiSizeInBytes, Alignment);
+        m_Desc.Size = AlignUp(m_Desc.Size, Alignment);
     }
 
-    if (m_Desc.uiSizeInBytes > UINT32_MAX)
+    if (m_Desc.Size > UINT32_MAX)
     {
-        LOG_ERROR_AND_THROW("Buffer size (", m_Desc.uiSizeInBytes, ") must not be greater than UINT32_MAX in Direct3D11");
+        LOG_ERROR_AND_THROW("Buffer size (", m_Desc.Size, ") must not be greater than UINT32_MAX in Direct3D11");
     }
 
     D3D11_BUFFER_DESC D3D11BuffDesc{};
     D3D11BuffDesc.BindFlags = BindFlagsToD3D11BindFlags(m_Desc.BindFlags);
-    D3D11BuffDesc.ByteWidth = StaticCast<UINT>(m_Desc.uiSizeInBytes);
+    D3D11BuffDesc.ByteWidth = StaticCast<UINT>(m_Desc.Size);
     D3D11BuffDesc.MiscFlags = 0;
     if (m_Desc.BindFlags & BIND_INDIRECT_DRAW_ARGS)
     {
@@ -139,10 +139,10 @@ static BufferDesc BuffDescFromD3D11Buffer(ID3D11Buffer* pd3d11Buffer, BufferDesc
     D3D11_BUFFER_DESC D3D11BuffDesc;
     pd3d11Buffer->GetDesc(&D3D11BuffDesc);
 
-    VERIFY(BuffDesc.uiSizeInBytes == 0 || BuffDesc.uiSizeInBytes == D3D11BuffDesc.ByteWidth,
-           "The buffer size specified by the BufferDesc (", BuffDesc.uiSizeInBytes,
+    VERIFY(BuffDesc.Size == 0 || BuffDesc.Size == D3D11BuffDesc.ByteWidth,
+           "The buffer size specified by the BufferDesc (", BuffDesc.Size,
            ") does not match the d3d11 buffer size (", D3D11BuffDesc.ByteWidth, ")");
-    BuffDesc.uiSizeInBytes = Uint32{D3D11BuffDesc.ByteWidth};
+    BuffDesc.Size = Uint32{D3D11BuffDesc.ByteWidth};
 
     auto BindFlags = D3D11BindFlagsToBindFlags(D3D11BuffDesc.BindFlags);
     if (D3D11BuffDesc.MiscFlags & D3D11_RESOURCE_MISC_DRAWINDIRECT_ARGS)

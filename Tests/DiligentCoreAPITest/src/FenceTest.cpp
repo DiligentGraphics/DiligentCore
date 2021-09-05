@@ -138,7 +138,7 @@ TEST_F(FenceTest, GPUWaitForCPU)
 
     BufferDesc BuffDesc;
     BuffDesc.Name           = "Constants 1";
-    BuffDesc.uiSizeInBytes  = sizeof(float4);
+    BuffDesc.Size           = sizeof(float4);
     BuffDesc.BindFlags      = BIND_UNIFORM_BUFFER;
     BuffDesc.Usage          = USAGE_DYNAMIC;
     BuffDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
@@ -261,10 +261,10 @@ TEST_F(FenceTest, ContextWaitForAnotherContext)
     auto pBackBufferUAV = pTestingSwapChain->GetCurrentBackBufferUAV();
 
     BufferDesc BuffDesc;
-    BuffDesc.Name          = "Constants 1";
-    BuffDesc.uiSizeInBytes = sizeof(float4);
-    BuffDesc.BindFlags     = BIND_UNIFORM_BUFFER;
-    BuffDesc.Usage         = USAGE_DEFAULT;
+    BuffDesc.Name      = "Constants 1";
+    BuffDesc.Size      = sizeof(float4);
+    BuffDesc.BindFlags = BIND_UNIFORM_BUFFER;
+    BuffDesc.Usage     = USAGE_DEFAULT;
 
     RefCntAutoPtr<IBuffer> pConstants1;
     pDevice->CreateBuffer(BuffDesc, nullptr, &pConstants1);

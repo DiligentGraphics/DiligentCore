@@ -77,7 +77,7 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
     if (m_Desc.Usage == USAGE_STAGING && m_Desc.CPUAccessFlags == CPU_ACCESS_WRITE)
         BufferAlignment = std::max(BufferAlignment, Uint32{D3D12_TEXTURE_DATA_PITCH_ALIGNMENT});
 
-    m_Desc.uiSizeInBytes = AlignUp(m_Desc.uiSizeInBytes, BufferAlignment);
+    m_Desc.Size = AlignUp(m_Desc.Size, BufferAlignment);
 
 
     if ((m_Desc.Usage == USAGE_DYNAMIC) &&
@@ -99,7 +99,7 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
         D3D12_RESOURCE_DESC D3D12BuffDesc{};
         D3D12BuffDesc.Dimension          = D3D12_RESOURCE_DIMENSION_BUFFER;
         D3D12BuffDesc.Alignment          = 0;
-        D3D12BuffDesc.Width              = m_Desc.uiSizeInBytes;
+        D3D12BuffDesc.Width              = m_Desc.Size;
         D3D12BuffDesc.Height             = 1;
         D3D12BuffDesc.DepthOrArraySize   = 1;
         D3D12BuffDesc.MipLevels          = 1;
@@ -237,8 +237,8 @@ static BufferDesc BufferDescFromD3D12Resource(BufferDesc BuffDesc, ID3D12Resourc
     auto D3D12BuffDesc = pd3d12Buffer->GetDesc();
     DEV_CHECK_ERR(D3D12BuffDesc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER, "D3D12 resource is not a buffer");
 
-    DEV_CHECK_ERR(BuffDesc.uiSizeInBytes == 0 || BuffDesc.uiSizeInBytes == D3D12BuffDesc.Width, "Buffer size specified by the BufferDesc (", BuffDesc.uiSizeInBytes, ") does not match d3d12 resource size (", D3D12BuffDesc.Width, ")");
-    BuffDesc.uiSizeInBytes = StaticCast<Uint32>(D3D12BuffDesc.Width);
+    DEV_CHECK_ERR(BuffDesc.Size == 0 || BuffDesc.Size == D3D12BuffDesc.Width, "Buffer size specified by the BufferDesc (", BuffDesc.Size, ") does not match d3d12 resource size (", D3D12BuffDesc.Width, ")");
+    BuffDesc.Size = StaticCast<Uint32>(D3D12BuffDesc.Width);
 
     if (D3D12BuffDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)
     {
@@ -375,9 +375,9 @@ void BufferD3D12Impl::CreateCBV(D3D12_CPU_DESCRIPTOR_HANDLE CBVDescriptor,
                                 Uint64                      Size) const
 {
     VERIFY((Offset % D3D12_TEXTURE_DATA_PITCH_ALIGNMENT) == 0, "Offset (", Offset, ") must be ", D3D12_TEXTURE_DATA_PITCH_ALIGNMENT, "-aligned");
-    VERIFY(Offset + Size <= m_Desc.uiSizeInBytes, "Range is out of bounds");
+    VERIFY(Offset + Size <= m_Desc.Size, "Range is out of bounds");
     if (Size == 0)
-        Size = m_Desc.uiSizeInBytes - Offset;
+        Size = m_Desc.Size - Offset;
 
     D3D12_CONSTANT_BUFFER_VIEW_DESC D3D12_CBVDesc;
     D3D12_CBVDesc.BufferLocation = m_pd3d12Resource->GetGPUVirtualAddress() + Offset;

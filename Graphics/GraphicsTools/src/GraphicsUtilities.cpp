@@ -50,7 +50,7 @@ void CreateUniformBuffer(IRenderDevice*   pDevice,
 {
     BufferDesc CBDesc;
     CBDesc.Name           = Name;
-    CBDesc.uiSizeInBytes  = Size;
+    CBDesc.Size           = Size;
     CBDesc.Usage          = Usage;
     CBDesc.BindFlags      = BindFlags;
     CBDesc.CPUAccessFlags = CPUAccessFlags;

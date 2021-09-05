@@ -180,8 +180,8 @@ void ValidateBufferInitData(const BufferDesc& Desc, const BufferData* pBuffData)
 
     if (HasInitialData)
     {
-        VERIFY_BUFFER(pBuffData->DataSize >= Desc.uiSizeInBytes,
-                      "Buffer initial DataSize (", pBuffData->DataSize, ") must be larger than the buffer size (", Desc.uiSizeInBytes, ")");
+        VERIFY_BUFFER(pBuffData->DataSize >= Desc.Size,
+                      "Buffer initial DataSize (", pBuffData->DataSize, ") must be larger than the buffer size (", Desc.Size, ")");
     }
 }
 
@@ -194,12 +194,12 @@ void ValidateAndCorrectBufferViewDesc(const BufferDesc& BuffDesc,
 {
     if (ViewDesc.ByteWidth == 0)
     {
-        DEV_CHECK_ERR(BuffDesc.uiSizeInBytes > ViewDesc.ByteOffset, "Byte offset (", ViewDesc.ByteOffset, ") exceeds buffer size (", BuffDesc.uiSizeInBytes, ")");
-        ViewDesc.ByteWidth = BuffDesc.uiSizeInBytes - ViewDesc.ByteOffset;
+        DEV_CHECK_ERR(BuffDesc.Size > ViewDesc.ByteOffset, "Byte offset (", ViewDesc.ByteOffset, ") exceeds buffer size (", BuffDesc.Size, ")");
+        ViewDesc.ByteWidth = BuffDesc.Size - ViewDesc.ByteOffset;
     }
 
-    if (ViewDesc.ByteOffset + ViewDesc.ByteWidth > BuffDesc.uiSizeInBytes)
-        LOG_ERROR_AND_THROW("Buffer view range [", ViewDesc.ByteOffset, ", ", ViewDesc.ByteOffset + ViewDesc.ByteWidth, ") is out of the buffer boundaries [0, ", BuffDesc.uiSizeInBytes, ").");
+    if (ViewDesc.ByteOffset + ViewDesc.ByteWidth > BuffDesc.Size)
+        LOG_ERROR_AND_THROW("Buffer view range [", ViewDesc.ByteOffset, ", ", ViewDesc.ByteOffset + ViewDesc.ByteWidth, ") is out of the buffer boundaries [0, ", BuffDesc.Size, ").");
 
     if ((BuffDesc.BindFlags & BIND_UNORDERED_ACCESS) ||
         (BuffDesc.BindFlags & BIND_SHADER_RESOURCE))

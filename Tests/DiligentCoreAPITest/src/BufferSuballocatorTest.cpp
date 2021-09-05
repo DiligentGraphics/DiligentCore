@@ -51,9 +51,9 @@ TEST(BufferSuballocatorTest, Create)
     TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     BufferSuballocatorCreateInfo CI;
-    CI.Desc.Name          = "Buffer Suballocator Test";
-    CI.Desc.BindFlags     = BIND_VERTEX_BUFFER;
-    CI.Desc.uiSizeInBytes = 1024;
+    CI.Desc.Name      = "Buffer Suballocator Test";
+    CI.Desc.BindFlags = BIND_VERTEX_BUFFER;
+    CI.Desc.Size      = 1024;
 
     RefCntAutoPtr<IBufferSuballocator> pAllocator;
     CreateBufferSuballocator(pDevice, CI, &pAllocator);
@@ -77,9 +77,9 @@ TEST(BufferSuballocatorTest, Allocate)
     TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     BufferSuballocatorCreateInfo CI;
-    CI.Desc.Name          = "Buffer Suballocator Test";
-    CI.Desc.BindFlags     = BIND_VERTEX_BUFFER;
-    CI.Desc.uiSizeInBytes = 1024;
+    CI.Desc.Name      = "Buffer Suballocator Test";
+    CI.Desc.BindFlags = BIND_VERTEX_BUFFER;
+    CI.Desc.Size      = 1024;
 
     RefCntAutoPtr<IBufferSuballocator> pAllocator;
     CreateBufferSuballocator(pDevice, CI, &pAllocator);

@@ -329,7 +329,7 @@ const ShaderResourceCacheD3D12::Resource& ShaderResourceCacheD3D12::SetResource(
 
             const auto IsDynamic =
                 (BuffDesc.Usage == USAGE_DYNAMIC) ||
-                (SrcRes.BufferRangeSize != 0 && SrcRes.BufferRangeSize < BuffDesc.uiSizeInBytes);
+                (SrcRes.BufferRangeSize != 0 && SrcRes.BufferRangeSize < BuffDesc.Size);
 
             (IsDynamic ? m_DynamicRootBuffersMask : m_NonDynamicRootBuffersMask) |= BufferBit;
         }
@@ -408,7 +408,7 @@ const ShaderResourceCacheD3D12::Resource& ShaderResourceCacheD3D12::CopyResource
         {
             VERIFY(DstRes.Type == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, "Null CPU descriptor is only allowed for constant buffers");
             const auto* pBuffer = DstRes.pObject.RawPtr<const BufferD3D12Impl>();
-            VERIFY(DstRes.BufferRangeSize < pBuffer->GetDesc().uiSizeInBytes, "Null CPU descriptor is only allowed for partial views of constant buffers");
+            VERIFY(DstRes.BufferRangeSize < pBuffer->GetDesc().Size, "Null CPU descriptor is only allowed for partial views of constant buffers");
             pBuffer->CreateCBV(DstDescrHandle, DstRes.BufferBaseOffset, DstRes.BufferRangeSize);
         }
     }
@@ -456,7 +456,7 @@ void ShaderResourceCacheD3D12::DbgValidateDynamicBuffersMask() const
 
                 const auto IsDynamicBuffer =
                     (BuffDesc.Usage == USAGE_DYNAMIC) ||
-                    (Res.BufferRangeSize != 0 && Res.BufferRangeSize < BuffDesc.uiSizeInBytes);
+                    (Res.BufferRangeSize != 0 && Res.BufferRangeSize < BuffDesc.Size);
 
                 VERIFY(((m_DynamicRootBuffersMask & DynamicBufferBit) != 0) == IsDynamicBuffer,
                        "Incorrect bit set in the dynamic buffer mask");

@@ -246,14 +246,14 @@ void MeshShaderIndirectDrawReferenceD3D12(ISwapChain* pSwapChain)
     Uint32 IndirectBufferData[3] = {1, 1, 1};
 
     BufferDesc IndirectBufferDesc;
-    IndirectBufferDesc.Name          = "Indirect buffer";
-    IndirectBufferDesc.Usage         = USAGE_IMMUTABLE;
-    IndirectBufferDesc.uiSizeInBytes = sizeof(IndirectBufferData);
-    IndirectBufferDesc.BindFlags     = BIND_INDIRECT_DRAW_ARGS;
+    IndirectBufferDesc.Name      = "Indirect buffer";
+    IndirectBufferDesc.Usage     = USAGE_IMMUTABLE;
+    IndirectBufferDesc.Size      = sizeof(IndirectBufferData);
+    IndirectBufferDesc.BindFlags = BIND_INDIRECT_DRAW_ARGS;
 
     BufferData InitData;
     InitData.pData    = &IndirectBufferData;
-    InitData.DataSize = IndirectBufferDesc.uiSizeInBytes;
+    InitData.DataSize = IndirectBufferDesc.Size;
 
     RefCntAutoPtr<IBuffer> pBuffer;
     pEnv->GetDevice()->CreateBuffer(IndirectBufferDesc, &InitData, &pBuffer);

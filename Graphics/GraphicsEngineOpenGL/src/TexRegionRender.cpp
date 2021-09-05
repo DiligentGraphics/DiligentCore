@@ -99,7 +99,7 @@ TexRegionRender::TexRegionRender(class RenderDeviceGLImpl* pDeviceGL)
 
     BufferDesc CBDesc;
     CBDesc.Name           = "TexRegionRender: FS constants CB";
-    CBDesc.uiSizeInBytes  = sizeof(Int32) * 4;
+    CBDesc.Size           = sizeof(Int32) * 4;
     CBDesc.Usage          = USAGE_DYNAMIC;
     CBDesc.BindFlags      = BIND_UNIFORM_BUFFER;
     CBDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
