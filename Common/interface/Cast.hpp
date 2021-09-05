@@ -44,7 +44,7 @@ NODISCARD DstType* ValidatedCast(SrcType* Ptr)
 
 
 template <typename DstType, typename SrcType>
-NODISCARD DstType VariableSizeCast(const SrcType& Src)
+NODISCARD DstType BitCast(const SrcType& Src)
 {
     static_assert(sizeof(DstType) >= sizeof(SrcType), "DstType size must be greater than or equal to SrcType size");
     DstType Dst = static_cast<DstType>(0);

@@ -93,7 +93,7 @@ public:
     virtual VkBuffer DILIGENT_CALL_TYPE GetVkBuffer() const override final;
 
     /// Implementation of IBuffer::GetNativeHandle() in Vulkan backend.
-    virtual Uint64 DILIGENT_CALL_TYPE GetNativeHandle() override final { return VariableSizeCast<Uint64>(GetVkBuffer()); }
+    virtual Uint64 DILIGENT_CALL_TYPE GetNativeHandle() override final { return BitCast<Uint64>(GetVkBuffer()); }
 
     /// Implementation of IBufferVk::SetAccessFlags().
     virtual void DILIGENT_CALL_TYPE SetAccessFlags(VkAccessFlags AccessFlags) override final;

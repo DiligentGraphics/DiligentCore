@@ -79,7 +79,7 @@ public:
         Uint64 DataStartByteOffset = 0;
         auto*  pd3d12Buffer        = GetD3D12Buffer(DataStartByteOffset, 0);
         VERIFY(DataStartByteOffset == 0, "0 offset expected");
-        return VariableSizeCast<Uint64>(pd3d12Buffer);
+        return BitCast<Uint64>(pd3d12Buffer);
     }
 
     /// Implementation of IBufferD3D12::SetD3D12ResourceState().

@@ -56,7 +56,7 @@ public:
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_TopLevelASVk, TTopLevelASBase)
 
     /// Implementation of ITopLevelAS::GetNativeHandle() in Vulkan backend.
-    virtual Uint64 DILIGENT_CALL_TYPE GetNativeHandle() override final { return VariableSizeCast<Uint64>(GetVkTLAS()); }
+    virtual Uint64 DILIGENT_CALL_TYPE GetNativeHandle() override final { return BitCast<Uint64>(GetVkTLAS()); }
 
     /// Implementation of ITopLevelASVk::GetVkTLAS().
     virtual VkAccelerationStructureKHR DILIGENT_CALL_TYPE GetVkTLAS() const override { return m_VulkanTLAS; }

@@ -70,7 +70,7 @@ void TestCreateObjFromNativeResVK::CreateTexture(Diligent::ITexture* pTexture)
     RefCntAutoPtr<ITextureVk> pAttachedTextureVk(pAttachedTexture, IID_TextureVk);
     ASSERT_NE(pAttachedTextureVk, nullptr);
     EXPECT_EQ(pAttachedTextureVk->GetVkImage(), VkHandle);
-    EXPECT_EQ(VariableSizeCast<VkImage>(pAttachedTextureVk->GetNativeHandle()), VkHandle);
+    EXPECT_EQ(BitCast<VkImage>(pAttachedTextureVk->GetNativeHandle()), VkHandle);
 #endif
 }
 
@@ -97,7 +97,7 @@ void TestCreateObjFromNativeResVK::CreateBuffer(Diligent::IBuffer* pBuffer)
     RefCntAutoPtr<IBufferVk> pTestBufferVk(pBufferFromNativeVkHandle, IID_BufferVk);
     ASSERT_NE(pTestBufferVk, nullptr);
     EXPECT_EQ(pTestBufferVk->GetVkBuffer(), VkBufferHandle);
-    EXPECT_EQ(VariableSizeCast<VkBuffer>(pTestBufferVk->GetNativeHandle()), VkBufferHandle);
+    EXPECT_EQ(BitCast<VkBuffer>(pTestBufferVk->GetNativeHandle()), VkBufferHandle);
 #endif
 }
 

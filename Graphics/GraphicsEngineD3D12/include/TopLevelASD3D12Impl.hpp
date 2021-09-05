@@ -61,7 +61,7 @@ public:
     virtual ID3D12Resource* DILIGENT_CALL_TYPE GetD3D12TLAS() override final { return GetD3D12Resource(); }
 
     /// Implementation of ITopLevelASD3D12::GetNativeHandle() in Direct3D12 backend.
-    virtual Uint64 DILIGENT_CALL_TYPE GetNativeHandle() override final { return VariableSizeCast<Uint64>(GetD3D12TLAS()); }
+    virtual Uint64 DILIGENT_CALL_TYPE GetNativeHandle() override final { return BitCast<Uint64>(GetD3D12TLAS()); }
 
     D3D12_GPU_VIRTUAL_ADDRESS GetGPUAddress()
     {

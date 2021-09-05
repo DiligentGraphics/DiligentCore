@@ -99,7 +99,7 @@ public:
     virtual GLuint DILIGENT_CALL_TYPE GetGLTextureHandle() override final { return GetGLHandle(); }
 
     /// Implementation of ITexture::GetNativeHandle() in OpenGL backend.
-    virtual Uint64 DILIGENT_CALL_TYPE GetNativeHandle() override final { return VariableSizeCast<Uint64>(GetGLTextureHandle()); }
+    virtual Uint64 DILIGENT_CALL_TYPE GetNativeHandle() override final { return BitCast<Uint64>(GetGLTextureHandle()); }
 
     virtual void UpdateData(class GLContextState&    CtxState,
                             Uint32                   MipLevel,

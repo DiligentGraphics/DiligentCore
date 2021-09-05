@@ -67,7 +67,7 @@ public:
     virtual ID3D12Resource* DILIGENT_CALL_TYPE GetD3D12Texture() override final { return GetD3D12Resource(); }
 
     /// Implementation of ITexture::GetNativeHandle() in Direct3D12 backend.
-    virtual Uint64 DILIGENT_CALL_TYPE GetNativeHandle() override final { return VariableSizeCast<Uint64>(GetD3D12Texture()); }
+    virtual Uint64 DILIGENT_CALL_TYPE GetNativeHandle() override final { return BitCast<Uint64>(GetD3D12Texture()); }
 
     /// Implementation of ITextureD3D12::SetD3D12ResourceState().
     virtual void DILIGENT_CALL_TYPE SetD3D12ResourceState(D3D12_RESOURCE_STATES state) override final;

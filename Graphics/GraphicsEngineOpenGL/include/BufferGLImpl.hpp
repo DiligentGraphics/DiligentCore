@@ -78,7 +78,7 @@ public:
     virtual GLuint DILIGENT_CALL_TYPE GetGLBufferHandle() override final { return GetGLHandle(); }
 
     /// Implementation of IBuffer::GetNativeHandle() in OpenGL backend.
-    virtual Uint64 DILIGENT_CALL_TYPE GetNativeHandle() override final { return VariableSizeCast<Uint64>(GetGLBufferHandle()); }
+    virtual Uint64 DILIGENT_CALL_TYPE GetNativeHandle() override final { return BitCast<Uint64>(GetGLBufferHandle()); }
 
 private:
     virtual void CreateViewInternal(const struct BufferViewDesc& ViewDesc, IBufferView** ppView, bool bIsDefaultView) override;
