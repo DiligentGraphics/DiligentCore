@@ -178,7 +178,7 @@ TEST(VariableShadingRateTest, RasterRateMap)
 
             BufferDesc BuffDesc;
             BuffDesc.Name           = "RRM parameters buffer";
-            BuffDesc.uiSizeInBytes  = BufferSize;
+            BuffDesc.Size           = BufferSize;
             BuffDesc.Usage          = USAGE_UNIFIED;       // buffer is used for host access and will be accessed in shader
             BuffDesc.BindFlags      = BIND_UNIFORM_BUFFER; // only uniform buffer is compatible with unified memory
             BuffDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
@@ -261,10 +261,10 @@ TEST(VariableShadingRateTest, RasterRateMap)
 
         BufferData BuffData{Verts, sizeof(Verts)};
         BufferDesc BuffDesc;
-        BuffDesc.Name          = "Vertex buffer";
-        BuffDesc.uiSizeInBytes = BuffData.DataSize;
-        BuffDesc.BindFlags     = BIND_VERTEX_BUFFER;
-        BuffDesc.Usage         = USAGE_IMMUTABLE;
+        BuffDesc.Name      = "Vertex buffer";
+        BuffDesc.Size      = BuffData.DataSize;
+        BuffDesc.BindFlags = BIND_VERTEX_BUFFER;
+        BuffDesc.Usage     = USAGE_IMMUTABLE;
 
         RefCntAutoPtr<IBuffer> pVB;
         pDevice->CreateBuffer(BuffDesc, &BuffData, &pVB);

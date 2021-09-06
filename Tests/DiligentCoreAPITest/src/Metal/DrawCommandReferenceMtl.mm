@@ -119,11 +119,11 @@ void RenderDrawCommandReferenceMtl(ISwapChain* pSwapChain, const float* pClearCo
     auto* const pEnv            = TestingEnvironmentMtl::GetInstance();
     auto* const mtlCommandQueue = pEnv->GetMtlCommandQueue();
 
-    auto* pTestingSwapChainMtl = ValidatedCast<TestingSwapChainMtl>(pSwapChain);
+    auto* pTestingSwapChainMtl = ClassPtrCast<TestingSwapChainMtl>(pSwapChain);
     const auto& SCDesc = pTestingSwapChainMtl->GetDesc();
 
     auto* pRTV = pTestingSwapChainMtl->GetCurrentBackBufferRTV();
-    auto* mtlBackBuffer = ValidatedCast<ITextureViewMtl>(pRTV)->GetMtlTexture();
+    auto* mtlBackBuffer = ClassPtrCast<ITextureViewMtl>(pRTV)->GetMtlTexture();
 
     constexpr float Zero[4] = {};
     if (pClearColor == nullptr)
@@ -162,11 +162,11 @@ void RenderPassMSResolveReferenceMtl(ISwapChain* pSwapChain, const float* pClear
     auto* const mtlCommandQueue = pEnv->GetMtlCommandQueue();
     auto* const mtlDevice       = pEnv->GetMtlDevice();
 
-    auto* pTestingSwapChainMtl = ValidatedCast<TestingSwapChainMtl>(pSwapChain);
+    auto* pTestingSwapChainMtl = ClassPtrCast<TestingSwapChainMtl>(pSwapChain);
     const auto& SCDesc = pTestingSwapChainMtl->GetDesc();
 
     auto* pRTV = pTestingSwapChainMtl->GetCurrentBackBufferRTV();
-    auto* mtlBackBuffer = ValidatedCast<ITextureViewMtl>(pRTV)->GetMtlTexture();
+    auto* mtlBackBuffer = ClassPtrCast<ITextureViewMtl>(pRTV)->GetMtlTexture();
 
     constexpr Uint32 SampleCount = 4;
 
@@ -220,11 +220,11 @@ void RenderPassInputAttachmentReferenceMtl(ISwapChain* pSwapChain, const float* 
     auto* const mtlCommandQueue = pEnv->GetMtlCommandQueue();
     auto* const mtlDevice       = pEnv->GetMtlDevice();
 
-    auto* pTestingSwapChainMtl = ValidatedCast<TestingSwapChainMtl>(pSwapChain);
+    auto* pTestingSwapChainMtl = ClassPtrCast<TestingSwapChainMtl>(pSwapChain);
     const auto& SCDesc = pTestingSwapChainMtl->GetDesc();
 
     auto* pRTV = pTestingSwapChainMtl->GetCurrentBackBufferRTV();
-    auto* mtlBackBuffer = ValidatedCast<ITextureViewMtl>(pRTV)->GetMtlTexture();
+    auto* mtlBackBuffer = ClassPtrCast<ITextureViewMtl>(pRTV)->GetMtlTexture();
 
     MTLTextureDescriptor* inptAttTextureDescriptor = [[MTLTextureDescriptor alloc] init];
     inptAttTextureDescriptor.textureType = MTLTextureType2D;

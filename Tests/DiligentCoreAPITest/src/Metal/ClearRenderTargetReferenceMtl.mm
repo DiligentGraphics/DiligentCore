@@ -41,10 +41,10 @@ void ClearRenderTargetReferenceMtl(ISwapChain* pSwapChain, const float ClearColo
     auto* const pEnv            = TestingEnvironmentMtl::GetInstance();
     auto const mtlCommandQueue = pEnv->GetMtlCommandQueue();
 
-    auto* pTestingSwapChainMtl = ValidatedCast<TestingSwapChainMtl>(pSwapChain);
+    auto* pTestingSwapChainMtl = ClassPtrCast<TestingSwapChainMtl>(pSwapChain);
 
     auto* pRTV       = pTestingSwapChainMtl->GetCurrentBackBufferRTV();
-    auto* mtlTexture = ValidatedCast<ITextureViewMtl>(pRTV)->GetMtlTexture();
+    auto* mtlTexture = ClassPtrCast<ITextureViewMtl>(pRTV)->GetMtlTexture();
 
     @autoreleasepool
     {

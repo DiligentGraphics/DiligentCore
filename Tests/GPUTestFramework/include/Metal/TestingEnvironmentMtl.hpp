@@ -45,7 +45,7 @@ public:
                           const SwapChainDesc& SCDesc);
     ~TestingEnvironmentMtl();
 
-    static TestingEnvironmentMtl* GetInstance() { return ValidatedCast<TestingEnvironmentMtl>(TestingEnvironment::GetInstance()); }
+    static TestingEnvironmentMtl* GetInstance() { return ClassPtrCast<TestingEnvironmentMtl>(TestingEnvironment::GetInstance()); }
 
     virtual void Reset() override final;
 

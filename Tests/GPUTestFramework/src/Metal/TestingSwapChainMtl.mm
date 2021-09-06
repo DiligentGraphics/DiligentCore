@@ -70,7 +70,7 @@ void TestingSwapChainMtl::TakeSnapshot(ITexture* pCopyFrom)
     id<MTLTexture> mtlTexture = nil;
     if (pCopyFrom != nullptr)
     {
-        auto* pSrcTexMtl = ValidatedCast<ITextureMtl>(pCopyFrom);
+        auto* pSrcTexMtl = ClassPtrCast<ITextureMtl>(pCopyFrom);
         mtlTexture = (id<MTLTexture>)pSrcTexMtl->GetMtlResource();
 
         VERIFY_EXPR(m_SwapChainDesc.Width == pSrcTexMtl->GetDesc().Width);
@@ -79,7 +79,7 @@ void TestingSwapChainMtl::TakeSnapshot(ITexture* pCopyFrom)
     }
     else
     {
-        auto* pRTV = ValidatedCast<ITextureViewMtl>(GetCurrentBackBufferRTV());
+        auto* pRTV = ClassPtrCast<ITextureViewMtl>(GetCurrentBackBufferRTV());
         mtlTexture = pRTV->GetMtlTexture();
     }
     m_ReferenceDataPitch = m_SwapChainDesc.Height * 4;

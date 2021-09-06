@@ -44,8 +44,8 @@ TestingEnvironmentMtl::TestingEnvironmentMtl(const CreateInfo&    CI,
     TestingEnvironment{CI, SCDesc}
 {
     m_MtlDevice = m_pDevice.Cast<IRenderDeviceMtl>(IID_RenderDeviceMtl)->GetMtlDevice();
-    auto* Ctx   = ValidatedCast<IDeviceContextMtl>(GetDeviceContext());
-    auto* Queue = ValidatedCast<ICommandQueueMtl>(Ctx->LockCommandQueue());
+    auto* Ctx   = ClassPtrCast<IDeviceContextMtl>(GetDeviceContext());
+    auto* Queue = ClassPtrCast<ICommandQueueMtl>(Ctx->LockCommandQueue());
     m_MtlQueue  = Queue->GetMtlCommandQueue();
     Ctx->UnlockCommandQueue();
 

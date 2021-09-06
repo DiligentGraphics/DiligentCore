@@ -50,11 +50,11 @@ void RasterizationRateMapReferenceMtl(ISwapChain* pSwapChain)
     {
         if (@available(macos 10.15.4, ios 13.0, *))
         {
-            auto* pTestingSwapChainMtl = ValidatedCast<TestingSwapChainMtl>(pSwapChain);
+            auto* pTestingSwapChainMtl = ClassPtrCast<TestingSwapChainMtl>(pSwapChain);
             const auto& SCDesc = pTestingSwapChainMtl->GetDesc();
 
             auto* pRTV = pTestingSwapChainMtl->GetCurrentBackBufferRTV();
-            auto* mtlBackBuffer = ValidatedCast<ITextureViewMtl>(pRTV)->GetMtlTexture();
+            auto* mtlBackBuffer = ClassPtrCast<ITextureViewMtl>(pRTV)->GetMtlTexture();
 
             id<MTLRenderPipelineState> mtlPass1PSO;
             {

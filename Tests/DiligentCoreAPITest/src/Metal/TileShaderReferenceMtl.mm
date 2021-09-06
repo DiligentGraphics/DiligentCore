@@ -65,10 +65,10 @@ void TileShaderDrawReferenceMtl(ISwapChain* pSwapChain)
             ASSERT_TRUE(tlsFunc != nil);
             [tlsFunc autorelease];
 
-            auto* pTestingSwapChainMtl = ValidatedCast<TestingSwapChainMtl>(pSwapChain);
+            auto* pTestingSwapChainMtl = ClassPtrCast<TestingSwapChainMtl>(pSwapChain);
             const auto& SCDesc = pTestingSwapChainMtl->GetDesc();
             auto* pRTV = pTestingSwapChainMtl->GetCurrentBackBufferRTV();
-            auto* mtlBackBuffer = ValidatedCast<ITextureViewMtl>(pRTV)->GetMtlTexture();
+            auto* mtlBackBuffer = ClassPtrCast<ITextureViewMtl>(pRTV)->GetMtlTexture();
 
             auto* renderPipeDesc = [[[MTLRenderPipelineDescriptor alloc] init] autorelease];
             renderPipeDesc.vertexFunction = vsFunc;

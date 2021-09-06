@@ -64,9 +64,9 @@ void InlineRayTracingInComputePplnReferenceMtl(ISwapChain* pSwapChain)
             ASSERT_TRUE(computePipeline != nil);
             [computePipeline autorelease];
 
-            auto* pTestingSwapChainMtl = ValidatedCast<TestingSwapChainMtl>(pSwapChain);
+            auto* pTestingSwapChainMtl = ClassPtrCast<TestingSwapChainMtl>(pSwapChain);
             auto* pUAV = pTestingSwapChainMtl->GetCurrentBackBufferUAV();
-            auto* mtlTexture = ValidatedCast<ITextureViewMtl>(pUAV)->GetMtlTexture();
+            auto* mtlTexture = ClassPtrCast<ITextureViewMtl>(pUAV)->GetMtlTexture();
             const auto& SCDesc = pTestingSwapChainMtl->GetDesc();
 
             const auto& Vertices = TestingConstants::TriangleClosestHit::Vertices;
@@ -194,9 +194,9 @@ void RayTracingPRSReferenceMtl(ISwapChain* pSwapChain)
             ASSERT_TRUE(computePipeline != nil);
             [computePipeline autorelease];
 
-            auto* pTestingSwapChainMtl = ValidatedCast<TestingSwapChainMtl>(pSwapChain);
+            auto* pTestingSwapChainMtl = ClassPtrCast<TestingSwapChainMtl>(pSwapChain);
             auto* pUAV = pTestingSwapChainMtl->GetCurrentBackBufferUAV();
-            auto* mtlTexture = ValidatedCast<ITextureViewMtl>(pUAV)->GetMtlTexture();
+            auto* mtlTexture = ClassPtrCast<ITextureViewMtl>(pUAV)->GetMtlTexture();
             const auto& SCDesc = pTestingSwapChainMtl->GetDesc();
 
             const auto& Vertices = TestingConstants::TriangleClosestHit::Vertices;
