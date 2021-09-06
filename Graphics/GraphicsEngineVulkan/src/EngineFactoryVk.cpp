@@ -991,18 +991,6 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
 
                     *NextExt = &EnabledExtFeats.FragmentDensityMap;
                     NextExt  = &EnabledExtFeats.FragmentDensityMap.pNext;
-
-                    // FragmentDensityMap2 is not used
-                    /*if (DeviceExtFeatures.FragmentDensityMap2.fragmentDensityMapDeferred != VK_FALSE)
-                    {
-                        VERIFY_EXPR(PhysicalDevice->IsExtensionSupported(VK_EXT_FRAGMENT_DENSITY_MAP_2_EXTENSION_NAME));
-                        DeviceExtensions.push_back(VK_EXT_FRAGMENT_DENSITY_MAP_2_EXTENSION_NAME);
-
-                        EnabledExtFeats.FragmentDensityMap2 = DeviceExtFeatures.FragmentDensityMap2;
-
-                        *NextExt = &EnabledExtFeats.FragmentDensityMap2;
-                        NextExt  = &EnabledExtFeats.FragmentDensityMap2.pNext;
-                    }*/
                 }
                 else
                 {

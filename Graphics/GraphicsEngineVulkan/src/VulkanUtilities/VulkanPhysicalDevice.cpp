@@ -294,19 +294,6 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice      vkDevice,
             m_ExtProperties.FragmentDensityMap.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_PROPERTIES_EXT;
         }
 
-        if (IsExtensionSupported(VK_EXT_FRAGMENT_DENSITY_MAP_2_EXTENSION_NAME))
-        {
-            *NextFeat = &m_ExtFeatures.FragmentDensityMap2;
-            NextFeat  = &m_ExtFeatures.FragmentDensityMap2.pNext;
-
-            m_ExtFeatures.FragmentDensityMap2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_2_FEATURES_EXT;
-
-            *NextProp = &m_ExtProperties.FragmentDensityMap2;
-            NextProp  = &m_ExtProperties.FragmentDensityMap2.pNext;
-
-            m_ExtProperties.FragmentDensityMap2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_2_PROPERTIES_EXT;
-        }
-
         if (IsExtensionSupported(VK_EXT_HOST_QUERY_RESET_EXTENSION_NAME))
         {
             *NextFeat = &m_ExtFeatures.HostQueryReset;
@@ -352,10 +339,8 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice      vkDevice,
             // Disable feature if image format is not supported
             if (!(FmtProps.optimalTilingFeatures & VK_FORMAT_FEATURE_FRAGMENT_DENSITY_MAP_BIT_EXT))
             {
-                m_ExtFeatures.FragmentDensityMap    = {};
-                m_ExtFeatures.FragmentDensityMap2   = {};
-                m_ExtProperties.FragmentDensityMap  = {};
-                m_ExtProperties.FragmentDensityMap2 = {};
+                m_ExtFeatures.FragmentDensityMap   = {};
+                m_ExtProperties.FragmentDensityMap = {};
             }
         }
     }

@@ -56,7 +56,6 @@ public:
         VkPhysicalDeviceHostQueryResetFeatures            HostQueryReset         = {};
         VkPhysicalDeviceFragmentShadingRateFeaturesKHR    ShadingRate            = {};
         VkPhysicalDeviceFragmentDensityMapFeaturesEXT     FragmentDensityMap     = {}; // Only for desktop devices
-        VkPhysicalDeviceFragmentDensityMap2FeaturesEXT    FragmentDensityMap2    = {}; // Only for mobile devices
         VkPhysicalDeviceMultiviewFeaturesKHR              Multiview              = {}; // Required for RenderPass2
 
         bool Spirv14              = false; // Ray tracing requires Vulkan 1.2 or SPIRV 1.4 extension
@@ -79,7 +78,6 @@ public:
         VkPhysicalDeviceTimelineSemaphorePropertiesKHR      TimelineSemaphore      = {};
         VkPhysicalDeviceFragmentShadingRatePropertiesKHR    ShadingRate            = {};
         VkPhysicalDeviceFragmentDensityMapPropertiesEXT     FragmentDensityMap     = {};
-        VkPhysicalDeviceFragmentDensityMap2PropertiesEXT    FragmentDensityMap2    = {};
         VkPhysicalDeviceMultiviewPropertiesKHR              Multiview              = {};
     };
 
