@@ -731,6 +731,12 @@ VulkanUtilities::ImageViewWrapper TextureVkImpl::CreateImageView(TextureViewDesc
 
     const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
 
+    if (ViewDesc.ViewType == TEXTURE_VIEW_SHADING_RATE)
+    {
+        if (LogicalDevice.GetEnabledExtFeatures().FragmentDensityMap.fragmentDensityMapDynamic != VK_FALSE)
+            ImageViewCI.flags |= VK_IMAGE_VIEW_CREATE_FRAGMENT_DENSITY_MAP_DYNAMIC_BIT_EXT;
+    }
+
     std::string ViewName = "Image view for \'";
     ViewName += m_Desc.Name;
     ViewName += '\'';

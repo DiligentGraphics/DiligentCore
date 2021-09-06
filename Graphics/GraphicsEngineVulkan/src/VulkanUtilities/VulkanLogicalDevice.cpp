@@ -87,7 +87,7 @@ VulkanLogicalDevice::VulkanLogicalDevice(const VulkanPhysicalDevice&  PhysicalDe
         ComputeStages |= VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR | VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR;
     if (m_EnabledExtFeatures.ShadingRate.attachmentFragmentShadingRate != VK_FALSE)
         GraphicsStages |= VK_PIPELINE_STAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR;
-    if (m_EnabledExtFeatures.FragmentDensityMap.fragmentDensityMap != VK_FALSE)
+    if (m_EnabledExtFeatures.FragmentDensityMap.fragmentDensityMapDynamic != VK_FALSE)
         GraphicsStages |= VK_PIPELINE_STAGE_FRAGMENT_DENSITY_PROCESS_BIT_EXT;
 
     const auto QueueCount = PhysicalDevice.GetQueueProperties().size();

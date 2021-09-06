@@ -303,7 +303,7 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
             // clang-format off
             SetShadingRateCap(vkExtFeatures.ShadingRate.pipelineFragmentShadingRate,                          SHADING_RATE_CAP_FLAG_PER_DRAW);
             SetShadingRateCap(vkExtFeatures.ShadingRate.primitiveFragmentShadingRate,                         SHADING_RATE_CAP_FLAG_PER_PRIMITIVE);
-            SetShadingRateCap(vkExtFeatures.ShadingRate.attachmentFragmentShadingRate,                        SHADING_RATE_CAP_FLAG_TEXTURE_BASED);
+            SetShadingRateCap(vkExtFeatures.ShadingRate.attachmentFragmentShadingRate,                        SHADING_RATE_CAP_FLAG_TEXTURE_BASED | SHADING_RATE_CAP_FLAG_TEXTURE_DEVICE_ACCESS);
             SetShadingRateCap(vkDeviceExtProps.ShadingRate.fragmentShadingRateWithSampleMask,                 SHADING_RATE_CAP_FLAG_SAMPLE_MASK);
             SetShadingRateCap(vkDeviceExtProps.ShadingRate.fragmentShadingRateWithShaderSampleMask,           SHADING_RATE_CAP_FLAG_SHADER_SAMPLE_MASK);
             SetShadingRateCap(vkDeviceExtProps.ShadingRate.fragmentShadingRateWithShaderDepthStencilWrites,   SHADING_RATE_CAP_FLAG_SHADER_DEPTH_STENCIL_WRITE);
@@ -363,11 +363,16 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
             }
         }
         // VK_EXT_fragment_density_map
-        else if (vkExtFeatures.FragmentDensityMap.fragmentDensityMap != VK_FALSE)
+        // fragmentDensityMapNonSubsampledImages - specifies whether the implementation supports regular non-subsampled image attachments
+        else if (vkExtFeatures.FragmentDensityMap.fragmentDensityMap != VK_FALSE &&
+                 vkExtFeatures.FragmentDensityMap.fragmentDensityMapNonSubsampledImages != VK_FALSE)
         {
             ShadingRateProps.Format    = SHADING_RATE_FORMAT_UNORM8;
             ShadingRateProps.Combiners = SHADING_RATE_COMBINER_PASSTHROUGH | SHADING_RATE_COMBINER_OVERRIDE;
             ShadingRateProps.CapFlags  = SHADING_RATE_CAP_FLAG_TEXTURE_BASED | SHADING_RATE_CAP_FLAG_SAME_TEXTURE_FOR_WHOLE_RENDERPASS;
+
+            if (vkExtFeatures.FragmentDensityMap.fragmentDensityMapDynamic != VK_FALSE)
+                ShadingRateProps.CapFlags |= SHADING_RATE_CAP_FLAG_TEXTURE_DEVICE_ACCESS;
 
             ShadingRateProps.MinTileSize[0] = vkDeviceExtProps.FragmentDensityMap.minFragmentDensityTexelSize.width;
             ShadingRateProps.MinTileSize[1] = vkDeviceExtProps.FragmentDensityMap.minFragmentDensityTexelSize.height;
@@ -976,7 +981,8 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
                     *NextExt = &EnabledExtFeats.ShadingRate;
                     NextExt  = &EnabledExtFeats.ShadingRate.pNext;
                 }
-                else if (DeviceExtFeatures.FragmentDensityMap.fragmentDensityMap != VK_FALSE)
+                else if (DeviceExtFeatures.FragmentDensityMap.fragmentDensityMap != VK_FALSE &&
+                         DeviceExtFeatures.FragmentDensityMap.fragmentDensityMapNonSubsampledImages != VK_FALSE)
                 {
                     VERIFY_EXPR(PhysicalDevice->IsExtensionSupported(VK_EXT_FRAGMENT_DENSITY_MAP_EXTENSION_NAME));
                     DeviceExtensions.push_back(VK_EXT_FRAGMENT_DENSITY_MAP_EXTENSION_NAME);
@@ -986,7 +992,8 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
                     *NextExt = &EnabledExtFeats.FragmentDensityMap;
                     NextExt  = &EnabledExtFeats.FragmentDensityMap.pNext;
 
-                    if (DeviceExtFeatures.FragmentDensityMap2.fragmentDensityMapDeferred != VK_FALSE)
+                    // FragmentDensityMap2 is not used
+                    /*if (DeviceExtFeatures.FragmentDensityMap2.fragmentDensityMapDeferred != VK_FALSE)
                     {
                         VERIFY_EXPR(PhysicalDevice->IsExtensionSupported(VK_EXT_FRAGMENT_DENSITY_MAP_2_EXTENSION_NAME));
                         DeviceExtensions.push_back(VK_EXT_FRAGMENT_DENSITY_MAP_2_EXTENSION_NAME);
@@ -995,7 +1002,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
 
                         *NextExt = &EnabledExtFeats.FragmentDensityMap2;
                         NextExt  = &EnabledExtFeats.FragmentDensityMap2.pNext;
-                    }
+                    }*/
                 }
                 else
                 {

@@ -884,6 +884,7 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
                     ShadingRateProps.CapFlags |=
                         SHADING_RATE_CAP_FLAG_PER_PRIMITIVE |
                         SHADING_RATE_CAP_FLAG_TEXTURE_BASED |
+                        SHADING_RATE_CAP_FLAG_TEXTURE_DEVICE_ACCESS |
                         SHADING_RATE_CAP_FLAG_SAMPLE_MASK |
                         SHADING_RATE_CAP_FLAG_SHADER_SAMPLE_MASK |
                         SHADING_RATE_CAP_FLAG_SHADING_RATE_SHADER_INPUT;
