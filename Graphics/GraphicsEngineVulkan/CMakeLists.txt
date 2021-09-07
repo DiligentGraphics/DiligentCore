@@ -176,7 +176,7 @@ endif()
 if(PLATFORM_WIN32)
     # find Vulkan SDK
     find_package(Vulkan)
-    if(Vulkan_FOUND)
+    if(Vulkan_FOUND AND DEFINED ${Vulkan_LIBRARY})
         get_filename_component(VulkanSDKPath ${Vulkan_LIBRARY} DIRECTORY)
         set(VulkanSDKPath "${VulkanSDKPath}/..")
         if(NOT EXISTS "${VulkanSDKPath}")
