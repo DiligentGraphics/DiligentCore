@@ -216,7 +216,7 @@ struct InputLayoutDesc
         NumElements   {_NumElements   }
     {}
 
-    constexpr bool operator == (const InputLayoutDesc& rhs) const
+    bool operator == (const InputLayoutDesc& rhs) const
     {
         if (NumElements != rhs.NumElements)
             return false;
@@ -230,7 +230,7 @@ struct InputLayoutDesc
         return true;
     }
 
-    constexpr bool operator != (const InputLayoutDesc& rhs) const
+    bool operator != (const InputLayoutDesc& rhs) const
     {
         return !(*this == rhs);
     }
