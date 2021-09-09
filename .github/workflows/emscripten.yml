@@ -44,3 +44,89 @@ jobs:
       working-directory: ${{runner.workspace}}/build
       shell: bash
       run: cmake --build .
+
+  build-linux:
+    strategy:
+      matrix:
+        config: [Debug, Release]
+
+    runs-on: ubuntu-latest
+    name: Emscripten -> Linux, ${{ matrix.config }}
+
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      - name: Format validation
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/BuildTools/FormatValidation
+          ./validate_format_linux.sh
+
+      - name: Download Ninja
+        uses: actions/checkout@master
+
+      - name: Configure Ninja
+        uses: seanmiddleditch/gha-setup-ninja@master
+
+      - name: Download and Configure Emscripten SDK
+        uses: mymindstorm/setup-emsdk@v9
+
+      - name: Configure CMake
+        if: success()
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/BuildTools/Scripts/github_actions
+          chmod +x configure_cmake.sh
+          ./configure_cmake.sh "emscripten" "${{runner.workspace}}" ${{ matrix.config }} ${{ matrix.toolset }}
+
+      - name: Build
+        if: success()
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        run: cmake --build .  
+
+  build-macos:
+    strategy:
+      matrix:
+        config: [Debug, Release]
+
+    runs-on: macos-latest
+    name: MacOS, ${{ matrix.config }}
+
+    steps:
+    - name: Clone repository
+      uses: actions/checkout@v2
+      with:
+        submodules: recursive
+
+    - name: Format validation
+      shell: bash
+      run: |
+        cd $GITHUB_WORKSPACE/BuildTools/FormatValidation
+        ./validate_format_mac.sh
+
+    - name: Download Ninja
+      uses: actions/checkout@master
+
+    - name: Configure Ninja
+      uses: seanmiddleditch/gha-setup-ninja@master
+
+    - name: Download and Configure Emscripten SDK
+      uses: mymindstorm/setup-emsdk@v9
+
+    - name: Configure CMake
+      if: success()
+      shell: bash
+      run: |
+        cd $GITHUB_WORKSPACE/BuildTools/Scripts/github_actions
+        chmod +x configure_cmake.sh
+        ./configure_cmake.sh "emscripten" "${{runner.workspace}}" ${{ matrix.config }} ${{ matrix.toolset }}
+
+    - name: Build
+      if: success()
+      working-directory: ${{runner.workspace}}/build
+      shell: bash
+      run: cmake --build .  
