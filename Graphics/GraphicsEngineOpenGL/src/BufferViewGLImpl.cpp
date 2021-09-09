@@ -71,8 +71,8 @@ BufferViewGLImpl::BufferViewGLImpl(IReferenceCounters*   pRefCounters,
         m_GLTexBuffer.Create();
         CtxState.BindTexture(-1, GL_TEXTURE_BUFFER, m_GLTexBuffer);
 
-        const auto& BuffFmt  = ViewDesc.Format;
-        GLenum      GLFormat = 0;
+        const auto&         BuffFmt  = ViewDesc.Format;
+        MAYBE_UNUSED GLenum GLFormat = 0;
         if (BuffDesc.Mode == BUFFER_MODE_FORMATTED || BuffFmt.ValueType != VT_UNDEFINED)
         {
             GLFormat = TypeToGLTexFormat(BuffFmt.ValueType, BuffFmt.NumComponents, BuffFmt.IsNormalized);

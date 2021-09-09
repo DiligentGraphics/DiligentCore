@@ -391,6 +391,16 @@ template <class T> struct Vector3
         return !(*this == right);
     }
 
+    Vector3& operator=(const Vector2<T>& v2)
+    {
+        x = v2.x;
+        y = v2.y;
+        z = 1;
+        return *this;
+    }
+
+    Vector3& operator=(const Vector3&) = default;
+
     constexpr Vector3 operator<(const Vector3& right) const
     {
         return Vector3{x < right.x ? static_cast<T>(1) : static_cast<T>(0),
@@ -432,6 +442,8 @@ template <class T> struct Vector3
     {
         return Data()[index];
     }
+
+    constexpr Vector3(const Vector3&) = default;
 
     constexpr Vector3() noexcept :
         x{0}, y{0}, z{0} {}
@@ -610,6 +622,7 @@ template <class T> struct Vector4
     }
     Vector4& operator=(const Vector4&) = default;
 
+
     constexpr Vector4 operator<(const Vector4& right) const
     {
         return Vector4{x < right.x ? static_cast<T>(1) : static_cast<T>(0),
@@ -655,6 +668,8 @@ template <class T> struct Vector4
     {
         return Data()[index];
     }
+
+    constexpr Vector4(const Vector4&) = default;
 
     constexpr Vector4() noexcept :
         x{0}, y{0}, z{0}, w{0} {}

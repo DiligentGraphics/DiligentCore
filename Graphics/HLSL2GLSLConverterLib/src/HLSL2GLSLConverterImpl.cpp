@@ -3969,23 +3969,22 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessHullShaderArguments(TokenL
     // [...]
     // HSOutput main(InputPatch<VSOutput, 1> inputPatch, uint uCPID : SV_OutputControlPointID)
     // ^
-    enum class Domain
-    {
+    MAYBE_UNUSED enum class Domain {
         undefined,
         tri,
         quad,
         isoline
     } domain = Domain::undefined;
-    enum class Partitioning
-    {
+
+    MAYBE_UNUSED enum class Partitioning {
         undefined,
         integer,
         fractional_even,
         fractional_odd,
         pow2
     } partitioning = Partitioning::undefined;
-    enum class OutputTopology
-    {
+
+    MAYBE_UNUSED enum class OutputTopology {
         undefined,
         point,
         line,

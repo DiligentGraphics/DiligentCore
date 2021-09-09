@@ -31,6 +31,7 @@
 
 #include "DeviceContext.h"
 #include "GraphicsAccessories.hpp"
+#include "CompilerDefinitions.h"
 
 namespace Diligent
 {
@@ -100,7 +101,7 @@ void ValidateTextureDesc(const TextureDesc& Desc, const IRenderDevice* pDevice) 
             LOG_TEXTURE_ERROR_AND_THROW("Texture cube/cube array must have at least 6 slices (", Desc.ArraySize, " provided).");
     }
 
-    Uint32 MaxDim = 0;
+    MAYBE_UNUSED Uint32 MaxDim = 0;
     if (Desc.Type == RESOURCE_DIM_TEX_1D || Desc.Type == RESOURCE_DIM_TEX_1D_ARRAY)
         MaxDim = Desc.Width;
     else if (Desc.Type == RESOURCE_DIM_TEX_2D || Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY || Desc.Type == RESOURCE_DIM_TEX_CUBE || Desc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)

@@ -1095,7 +1095,7 @@ void RenderDeviceGLImpl::FlagSupportedTexFormats()
     // clang-format on
 
 #ifdef DILIGENT_DEBUG
-    const bool bGL43OrAbove = DeviceInfo.Type == RENDER_DEVICE_TYPE_GL && DeviceInfo.APIVersion >= Version{4, 3};
+    MAYBE_UNUSED const bool bGL43OrAbove = DeviceInfo.Type == RENDER_DEVICE_TYPE_GL && DeviceInfo.APIVersion >= Version{4, 3};
 
     constexpr int      TestTextureDim = 8;
     constexpr int      MaxTexelSize   = 16;

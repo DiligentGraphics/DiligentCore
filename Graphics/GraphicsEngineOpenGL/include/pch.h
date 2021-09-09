@@ -109,6 +109,11 @@
 #    include <OpenGLES/ES3/glext.h>
 #    include "GLStubsIOS.h"
 
+#elif PLATFORM_EMSCRIPTEN
+
+#    include <GLES3/gl32.h>
+#    include "GLStubsEmscripten.h"
+
 #else
 #    error Unsupported platform
 #endif

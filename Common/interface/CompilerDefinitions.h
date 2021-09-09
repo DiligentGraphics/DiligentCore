@@ -33,6 +33,12 @@
 #    else
 #        define NODISCARD
 #    endif
+
+#    if _MSC_VER >= 1917
+#        define MAYBE_UNUSED [[maybe_unused]]
+#    else
+#        define MAYBE_UNUSED
+#    endif
 #endif // _MSC_VER
 
 #ifdef __clang__
@@ -41,6 +47,12 @@
 #    else
 #        define NODISCARD
 #    endif
+
+#    if __has_feature(cxx_attributes)
+#        define MAYBE_UNUSED [[maybe_unused]]
+#    else
+#        define MAYBE_UNUSED
+#    endif
 #endif // __clang__
 
 #ifdef __GNUC__
@@ -48,5 +60,11 @@
 #        define NODISCARD [[nodiscard]]
 #    else
 #        define NODISCARD
+#    endif
+
+#    if __has_cpp_attribute(maybe_unused)
+#        define MAYBE_UNUSED [[maybe_unused]]
+#    else
+#        define MAYBE_UNUSED
 #    endif
 #endif // __GNUC__

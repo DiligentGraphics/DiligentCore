@@ -88,11 +88,11 @@ static GLenum GetTextureInternalFormat(GLContextState& GLState, GLenum BindTarge
 {
     GLState.BindTexture(-1, BindTarget, GLTex);
 
-    GLenum QueryBindTarget = BindTarget;
+    GLint               GlFormat        = 0;
+    MAYBE_UNUSED GLenum QueryBindTarget = BindTarget;
     if (BindTarget == GL_TEXTURE_CUBE_MAP || BindTarget == GL_TEXTURE_CUBE_MAP_ARRAY)
         QueryBindTarget = GL_TEXTURE_CUBE_MAP_POSITIVE_X;
 
-    GLint GlFormat = 0;
 #if GL_TEXTURE_INTERNAL_FORMAT
     glGetTexLevelParameteriv(QueryBindTarget, 0, GL_TEXTURE_INTERNAL_FORMAT, &GlFormat);
     if (glGetError() == GL_NO_ERROR && GlFormat != 0)
@@ -133,10 +133,9 @@ static TextureDesc GetTextureDescFromGLHandle(GLContextState& GLState, TextureDe
     GLObjectWrappers::GLTextureObj TmpGLTexWrapper(true, GLObjectWrappers::GLTextureCreateReleaseHelper(GLHandle));
     GLState.BindTexture(-1, BindTarget, TmpGLTexWrapper);
 
-    GLenum QueryBindTarget = BindTarget;
+    MAYBE_UNUSED GLenum QueryBindTarget = BindTarget;
     if (BindTarget == GL_TEXTURE_CUBE_MAP)
         QueryBindTarget = GL_TEXTURE_CUBE_MAP_POSITIVE_X;
-
 
 #if GL_TEXTURE_WIDTH
     GLint TexWidth = 0;
