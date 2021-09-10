@@ -43,6 +43,9 @@ public:
 
     void                Suspend();
     NativeGLContextType GetCurrentNativeGLContext();
+
+private:
+    NativeGLContextType m_GLContext = {};
 };
 
 } // namespace Diligent

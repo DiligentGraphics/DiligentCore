@@ -232,8 +232,8 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         )
     endif()
     if(PLATFORM_EMSCRIPTEN)
-        set_property(TARGET Diligent-GraphicsEngineOpenGL-shared APPEND_STRING PROPERTY
-            LINK_FLAGS "-s FULL_ES3=1 -s OFFSCREEN_FRAMEBUFFER=1"
+        set_property(TARGET Diligent-GraphicsEngineOpenGL-static APPEND_STRING PROPERTY
+            LINK_FLAGS "-s FULL_ES3=1 -s"
         )
     endif()
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU")

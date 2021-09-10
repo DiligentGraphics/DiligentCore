@@ -85,6 +85,7 @@ bool StandardFile::Write(const void* Data, size_t Size)
 
 size_t StandardFile::GetSize()
 {
+    VERIFY(m_pFile, "File is not opened");
     auto OrigPos = ftell(m_pFile);
     fseek(m_pFile, 0, SEEK_END);
     auto FileSize = ftell(m_pFile);

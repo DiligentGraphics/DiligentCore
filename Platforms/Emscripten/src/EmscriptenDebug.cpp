@@ -29,7 +29,7 @@
 
 using namespace Diligent;
 
-void EmscriptenDebug ::AssertionFailed(const Char* Message, const char* Function, const char* File, int Line)
+void EmscriptenDebug::AssertionFailed(const Char* Message, const char* Function, const char* File, int Line)
 {
     auto AssertionFailedMessage = FormatAssertionFailedMessage(Message, Function, File, Line);
     OutputDebugMessage(DEBUG_MESSAGE_SEVERITY_ERROR, AssertionFailedMessage.c_str(), nullptr, nullptr, 0);
@@ -42,11 +42,12 @@ void EmscriptenDebug::OutputDebugMessage(DEBUG_MESSAGE_SEVERITY Severity, const 
 {
     auto msg = FormatDebugMessage(Severity, Message, Function, File, Line);
     std::cerr << msg;
+    std::cout << msg;
 }
 
 void DebugAssertionFailed(const Diligent::Char* Message, const char* Function, const char* File, int Line)
 {
-    EmscriptenDebug ::AssertionFailed(Message, Function, File, Line);
+    EmscriptenDebug::AssertionFailed(Message, Function, File, Line);
 }
 
 namespace Diligent

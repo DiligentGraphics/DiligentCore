@@ -40,5 +40,5 @@ if [ "$1" = "linux" ]; then
 fi
 
 if [ "$1" = "emscripten" ]; then
-  emcmake cmake $GITHUB_WORKSPACE -G "Ninja" "-DCMAKE_EXE_LINKER_FLAGS=-s USE_GLFW=3 -s FULL_ES3=1 -s ERROR_ON_UNDEFINED_SYMBOLS=0 -s SINGLE_FILE"
+  emcmake cmake $GITHUB_WORKSPACE -G "Ninja" -DCMAKE_BUILD_TYPE=$3
 fi
