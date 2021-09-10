@@ -33,6 +33,8 @@
 #include <vector>
 #include "../../Primitives/interface/BasicTypes.h"
 #include "../../Primitives/interface/DataBlob.h"
+#include "../../Primitives/interface/MemoryAllocator.h"
+#include "RefCntAutoPtr.hpp"
 #include "ObjectBase.hpp"
 
 namespace Diligent
@@ -60,8 +62,23 @@ public:
     /// Returns const pointer to the internal data buffer
     virtual const void* DILIGENT_CALL_TYPE GetConstDataPtr() const override;
 
+    static RefCntAutoPtr<DataBlobImpl> Create(size_t InitialSize = 0, const void* pData = nullptr);
+
 private:
     std::vector<Uint8> m_DataBuff;
+};
+
+class DataBlobAllocatorAdapter : public IMemoryAllocator
+{
+public:
+    virtual void* Allocate(size_t Size, const Char* dbgDescription, const char* dbgFileName, const Int32 dbgLineNumber) override final;
+
+    virtual void Free(void* Ptr) override final;
+
+    RefCntAutoPtr<DataBlobImpl> Release() { return std::move(m_pDataBlob); };
+
+private:
+    RefCntAutoPtr<DataBlobImpl> m_pDataBlob;
 };
 
 } // namespace Diligent

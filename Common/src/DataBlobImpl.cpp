@@ -33,6 +33,11 @@
 namespace Diligent
 {
 
+RefCntAutoPtr<DataBlobImpl> DataBlobImpl::Create(size_t InitialSize, const void* pData)
+{
+    return RefCntAutoPtr<DataBlobImpl>{MakeNewRCObj<DataBlobImpl>()(InitialSize, pData)};
+}
+
 DataBlobImpl::DataBlobImpl(IReferenceCounters* pRefCounters, size_t InitialSize, const void* pData) :
     TBase{pRefCounters},
     m_DataBuff(InitialSize)
@@ -68,5 +73,20 @@ const void* DataBlobImpl::GetConstDataPtr() const
 }
 
 IMPLEMENT_QUERY_INTERFACE(DataBlobImpl, IID_DataBlob, TBase)
+
+
+void* DataBlobAllocatorAdapter::Allocate(size_t Size, const Char* dbgDescription, const char* dbgFileName, const Int32 dbgLineNumber)
+{
+    VERIFY(!m_pDataBlob, "The data blob has already been created. The allocator does not support more than one blob.");
+    m_pDataBlob = DataBlobImpl::Create(Size);
+    return m_pDataBlob->GetDataPtr();
+}
+
+void DataBlobAllocatorAdapter::Free(void* Ptr)
+{
+    VERIFY(m_pDataBlob, "Memory has not been allocated");
+    VERIFY(m_pDataBlob->GetDataPtr() == Ptr, "Incorrect memory pointer");
+    m_pDataBlob.Release();
+}
 
 } // namespace Diligent
