@@ -35,6 +35,7 @@ The module's cmake script defines a number of variables that are required to gen
     - [MacOS](#initialization_macos)
     - [Android](#initialization_android)
     - [iOS](#initialization_ios)
+    - [Emscripten](#initialization_emscripten)
     - [Destroying the Engine](#initialization_destroying)
   - [Creating Resources](#creating_resources)
   - [Creating Shaders](#creating_shaders)
@@ -252,6 +253,19 @@ performed by the application, and the engine attaches to the context initialized
 [EAGLView.mm](https://github.com/DiligentGraphics/DiligentTools/blob/master/NativeApp/Apple/Source/Classes/iOS/EAGLView.mm)
 for details.
 
+<a name="initialization_emscripten"></a>
+### Emscripten
+
+On Emscripten, you can create OpenGLES device. The following code snippet shows an example:
+```cpp
+//You need to pass the id of the canvas to NativeWindow
+auto* pFactoryOpenGL = GetEngineFactoryOpenGL();
+EngineGLCreateInfo EngineCI = {};
+EngineCI.Window = NativeWindow{"#canvas"};
+pFactoryOpenGL->CreateDeviceAndSwapChainGL(EngineCI, &m_pDevice, &m_pContext, SCDesc, &m_pSwapChain);
+```
+If you are using SDL or GLFW with a created context, you can fill the structure `Diligent::EngineGLCreateInfo` like this
+`EngineCI.Window = NativeWindow{nullptr}`
 
 <a name="initialization_destroying"></a>
 ### Destroying the Engine
