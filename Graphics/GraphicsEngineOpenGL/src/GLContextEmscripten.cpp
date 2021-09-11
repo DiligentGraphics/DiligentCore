@@ -35,7 +35,6 @@ namespace Diligent
 
 GLContext::GLContext(const EngineGLCreateInfo& InitAttribs, RENDER_DEVICE_TYPE& DevType, Version& APIVersion, const struct SwapChainDesc* /*pSCDesc*/)
 {
-
     if (InitAttribs.Window.pCanvasId != nullptr)
     {
         EmscriptenWebGLContextAttributes ContextAttributes = {};
@@ -76,7 +75,7 @@ GLContext::GLContext(const EngineGLCreateInfo& InitAttribs, RENDER_DEVICE_TYPE& 
     // Or better yet, use the GL3 way to get the version number
     glGetIntegerv(GL_MAJOR_VERSION, &MajorVersion);
     glGetIntegerv(GL_MINOR_VERSION, &MinorVersion);
-    LOG_INFO_MESSAGE(InitAttribs.Window.pCanvasId != 0 ? "Initialized OpenGLES " : "Attached to OpenGLES ", MajorVersion, '.', MinorVersion, " context (", GLVersionString, ", ", GLRenderer, ')');
+    LOG_INFO_MESSAGE(InitAttribs.Window.pCanvasId != nullptr ? "Initialized OpenGLES " : "Attached to OpenGLES ", MajorVersion, '.', MinorVersion, " context (", GLVersionString, ", ", GLRenderer, ')');
 
     // Under the standard filtering rules for cubemaps, filtering does not work across faces of the cubemap.
     // This results in a seam across the faces of a cubemap. This was a hardware limitation in the past, but
@@ -106,8 +105,9 @@ GLContext::~GLContext()
         auto EmResult = emscripten_webgl_destroy_context(m_GLContext);
         if (EmResult != EMSCRIPTEN_RESULT_SUCCESS)
         {
-            LOG_INFO_MESSAGE("OpenGL context isn't destroyed");
+            LOG_INFO_MESSAGE("GL context isn't destroyed");
         }
+        m_IsCreated = false;
     }
 }
 
@@ -121,12 +121,12 @@ GLContext::NativeGLContextType GLContext::GetCurrentNativeGLContext()
 
 void GLContext::Suspend()
 {
-    LOG_INFO_MESSAGE("Suspending gl context\n");
+    LOG_INFO_MESSAGE("Suspending GL context\n");
 }
 
 bool GLContext::Invalidate()
 {
-    LOG_INFO_MESSAGE("Invalidating gl context\n");
+    LOG_INFO_MESSAGE("Invalidating GL context\n");
     return true;
 }
 

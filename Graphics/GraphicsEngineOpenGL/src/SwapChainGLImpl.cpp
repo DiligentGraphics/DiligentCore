@@ -79,10 +79,17 @@ SwapChainGLImpl::SwapChainGLImpl(IReferenceCounters*       pRefCounters,
     auto& GLContext        = pRenderDeviceGL->m_GLContext;
     m_SwapChainDesc.Width  = GLContext.GetScreenWidth();
     m_SwapChainDesc.Height = GLContext.GetScreenHeight();
-#elif PLATFORM_MACOS || PLATFORM_EMSCRIPTEN
+#elif PLATFORM_MACOS
     //Set dummy width and height until resize is called by the app
     m_SwapChainDesc.Width  = 1024;
     m_SwapChainDesc.Height = 768;
+#elif PLATFORM_EMSCRIPTEN
+    //TODO: Understand why resize doesn't work
+    double CanvasWidth  = 0;
+    double CanvasHeight = 0;
+    emscripten_get_element_css_size(InitAttribs.Window.pCanvasId, &CanvasWidth, &CanvasHeight);
+    m_SwapChainDesc.Width  = static_cast<uint32_t>(CanvasWidth);
+    m_SwapChainDesc.Height = static_cast<uint32_t>(CanvasHeight);
 #else
 #    error Unsupported platform
 #endif
