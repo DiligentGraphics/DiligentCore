@@ -36,25 +36,37 @@ namespace Diligent
 
 GLContext::GLContext(const EngineGLCreateInfo& InitAttribs, RENDER_DEVICE_TYPE& DevType, Version& APIVersion, const struct SwapChainDesc* /*pSCDesc*/)
 {
-    EmscriptenWebGLContextAttributes ContextAttributes = {};
-    emscripten_webgl_init_context_attributes(&ContextAttributes);
 
-    // clang-format off
-    ContextAttributes.depth = true;
-    ContextAttributes.majorVersion = 3;
-    ContextAttributes.minorVersion = 0;
-    // clang-format on
-
-    m_GLContext = emscripten_webgl_create_context(InitAttribs.Window.pCanvasId, &ContextAttributes);
-    if (m_GLContext == 0)
+    if (InitAttribs.Window.pCanvasId != nullptr)
     {
-        LOG_ERROR_AND_THROW("OpenGL context isn't created");
+        EmscriptenWebGLContextAttributes ContextAttributes = {};
+        emscripten_webgl_init_context_attributes(&ContextAttributes);
+
+        // TODO: Intitialization params
+        ContextAttributes.depth        = true;
+        ContextAttributes.majorVersion = 3;
+        ContextAttributes.minorVersion = 0;
+
+        m_GLContext = emscripten_webgl_create_context(InitAttribs.Window.pCanvasId, &ContextAttributes);
+        if (m_GLContext == 0)
+        {
+            LOG_ERROR_AND_THROW("GL context isn't created");
+        }
+
+        auto EmResult = emscripten_webgl_make_context_current(m_GLContext);
+        if (EmResult != EMSCRIPTEN_RESULT_SUCCESS)
+        {
+            LOG_ERROR_AND_THROW("Couldn't set the current GL context");
+        }
+        m_IsCreated = true;
     }
-
-    auto EmResult = emscripten_webgl_make_context_current(m_GLContext);
-    if (EmResult != EMSCRIPTEN_RESULT_SUCCESS)
+    else
     {
-        LOG_ERROR_AND_THROW("Couldn't set the current OpenGL context");
+        m_GLContext = emscripten_webgl_get_current_context();
+        if (m_GLContext == 0)
+        {
+            LOG_ERROR_AND_THROW("No current GL context found!");
+        }
     }
 
     // Checking GL version
@@ -65,7 +77,7 @@ GLContext::GLContext(const EngineGLCreateInfo& InitAttribs, RENDER_DEVICE_TYPE& 
     // Or better yet, use the GL3 way to get the version number
     glGetIntegerv(GL_MAJOR_VERSION, &MajorVersion);
     glGetIntegerv(GL_MINOR_VERSION, &MinorVersion);
-    LOG_INFO_MESSAGE("Initialized OpenGLES ", MajorVersion, '.', MinorVersion, " context (", GLVersionString, ", ", GLRenderer, ')');
+    LOG_INFO_MESSAGE(InitAttribs.Window.pCanvasId != 0 ? "Initialized OpenGLES " : "Attached to OpenGLES ", MajorVersion, '.', MinorVersion, " context (", GLVersionString, ", ", GLRenderer, ')');
 
     // Under the standard filtering rules for cubemaps, filtering does not work across faces of the cubemap.
     // This results in a seam across the faces of a cubemap. This was a hardware limitation in the past, but
@@ -90,10 +102,13 @@ GLContext::GLContext(const EngineGLCreateInfo& InitAttribs, RENDER_DEVICE_TYPE& 
 
 GLContext::~GLContext()
 {
-    auto EmResult = emscripten_webgl_destroy_context(m_GLContext);
-    if (EmResult != EMSCRIPTEN_RESULT_SUCCESS)
+    if (m_IsCreated)
     {
-        LOG_INFO_MESSAGE("OpenGL context isn't destroyed");
+        auto EmResult = emscripten_webgl_destroy_context(m_GLContext);
+        if (EmResult != EMSCRIPTEN_RESULT_SUCCESS)
+        {
+            LOG_INFO_MESSAGE("OpenGL context isn't destroyed");
+        }
     }
 }
 

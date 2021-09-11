@@ -43,13 +43,13 @@ public:
               const struct SwapChainDesc*      pSCDesc);
     ~GLContext();
 
-    bool Invalidate();
-
+    bool                Invalidate();
     void                Suspend();
     NativeGLContextType GetCurrentNativeGLContext();
 
 private:
     NativeGLContextType m_GLContext = {};
+    bool                m_IsCreated = false;
 };
 
 } // namespace Diligent
