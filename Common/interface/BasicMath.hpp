@@ -92,7 +92,6 @@ template <class T> struct Vector2
         };
     };
 
-
     constexpr Vector2 operator-(const Vector2<T>& right) const
     {
         return Vector2{x - right.x, y - right.y};
@@ -621,7 +620,6 @@ template <class T> struct Vector4
         return *this;
     }
     Vector4& operator=(const Vector4&) = default;
-
 
     constexpr Vector4 operator<(const Vector4& right) const
     {
@@ -2092,7 +2090,6 @@ inline Quaternion slerp(Quaternion v0, Quaternion v1, float t, bool DoNotNormali
     return v;
 }
 
-
 template <typename T>
 constexpr T lerp(const T& Left, const T& Right, float w)
 {
@@ -2305,7 +2302,6 @@ inline std::ostream& operator<<(std::ostream& os, const int2& vec)
     return os << "int2(" << vec.x << ", " << vec.y << ')';
 }
 
-
 inline std::ostream& operator<<(std::ostream& os, const uint4& vec)
 {
     return os << "uint4(" << vec.x << ", " << vec.y << ", " << vec.z << ", " << vec.w << ')';
@@ -2351,7 +2347,6 @@ constexpr Diligent::Vector4<T> max(const Diligent::Vector4<T>& Left, const Dilig
         std::max(Left.z, Right.z),
         std::max(Left.w, Right.w));
 }
-
 
 template <typename T>
 constexpr Diligent::Vector2<T> min(const Diligent::Vector2<T>& Left, const Diligent::Vector2<T>& Right)

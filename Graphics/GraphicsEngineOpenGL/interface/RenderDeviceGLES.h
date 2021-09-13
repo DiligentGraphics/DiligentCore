@@ -64,11 +64,8 @@ DILIGENT_BEGIN_INTERFACE(IRenderDeviceGLES, IRenderDeviceGL)
 #if PLATFORM_ANDROID
     VIRTUAL EGLint METHOD(Resume)(THIS_
                                   ANativeWindow* window) PURE;
-#elif PLATFORM_EMSCRIPTEN
-// Not supported for EMSCRIPTEN
-#else
-#    error Unsupported platform
 #endif
+
 };
 DILIGENT_END_INTERFACE
 

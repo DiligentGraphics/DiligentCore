@@ -231,11 +231,6 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
             COMPILE_FLAGS " -Wno-unused-variable"
         )
     endif()
-    if(PLATFORM_EMSCRIPTEN)
-        set_property(TARGET Diligent-GraphicsEngineOpenGL-static APPEND_STRING PROPERTY
-            LINK_FLAGS "-s FULL_ES3=1 -s"
-        )
-    endif()
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     set_target_properties(Diligent-GraphicsEngineOpenGL-shared PROPERTIES
         # Disallow missing direct and indirect dependencies to enssure that .so is self-contained

@@ -26,76 +26,8 @@
 
 #pragma once
 
-#include "../../Basic/interface/BasicPlatformMisc.hpp"
+#include "../../Linux/interface/LinuxPlatformMisc.hpp"
 #include "../../../Platforms/Basic/interface/DebugUtilities.hpp"
 
-struct EmscriptenMisc : public BasicPlatformMisc
-{
-    static Diligent::Uint32 GetMSB(Diligent::Uint32 Val)
-    {
-        if (Val == 0) return 32;
-
-        // Returns the number of leading 0-bits in x, starting at the
-        // most significant bit position. If x is 0, the result is undefined.
-        Diligent::Uint32 LeadingZeros = __builtin_clz(Val);
-        Diligent::Uint32 MSB          = 31 - LeadingZeros;
-        VERIFY_EXPR(MSB == BasicPlatformMisc::GetMSB(Val));
-
-        return MSB;
-    }
-
-    static Diligent::Uint32 GetLSB(Diligent::Uint32 Val)
-    {
-        if (Val == 0) return 32;
-
-        // Returns the number of trailing 0-bits in x, starting at the
-        // least significant bit position. If x is 0, the result is undefined.
-        Diligent::Uint32 TrailingZeros = __builtin_ctz(Val);
-        Diligent::Uint32 LSB           = TrailingZeros;
-        VERIFY_EXPR(LSB == BasicPlatformMisc::GetLSB(Val));
-
-        return LSB;
-    }
-
-    static Diligent::Uint32 GetMSB(Diligent::Uint64 Val)
-    {
-        if (Val == 0) return 64;
-
-        // Returns the number of leading 0-bits in x, starting at the
-        // most significant bit position. If x is 0, the result is undefined.
-        Diligent::Uint32 LeadingZeros = __builtin_clzll(Val);
-        Diligent::Uint32 MSB          = 63 - LeadingZeros;
-        VERIFY_EXPR(MSB == BasicPlatformMisc::GetMSB(Val));
-
-        return MSB;
-    }
-
-    static Diligent::Uint32 GetLSB(Diligent::Uint64 Val)
-    {
-        if (Val == 0) return 64;
-
-        // Returns the number of trailing 0-bits in x, starting at the
-        // least significant bit position. If x is 0, the result is undefined.
-        Diligent::Uint32 TrailingZeros = __builtin_ctzll(Val);
-        Diligent::Uint32 LSB           = TrailingZeros;
-        VERIFY_EXPR(LSB == BasicPlatformMisc::GetLSB(Val));
-
-        return LSB;
-    }
-
-    static Diligent::Uint32 CountOneBits(Diligent::Uint32 Val)
-    {
-        // Returns the number of 1-bits in x.
-        Diligent::Uint32 bits = __builtin_popcount(Val);
-        VERIFY_EXPR(bits == BasicPlatformMisc::CountOneBits(Val));
-        return bits;
-    }
-
-    static Diligent::Uint32 CountOneBits(Diligent::Uint64 Val)
-    {
-        // Returns the number of 1-bits in x.
-        Diligent::Uint32 bits = __builtin_popcountll(Val);
-        VERIFY_EXPR(bits == BasicPlatformMisc::CountOneBits(Val));
-        return bits;
-    }
-};
+struct EmscriptenMisc : public LinuxMisc
+{};

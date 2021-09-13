@@ -33,7 +33,7 @@ StandardFile::StandardFile(const FileOpenAttribs& OpenAttribs, Diligent::Char Sl
     BasicFile{OpenAttribs, SlashSymbol},
     m_pFile{nullptr}
 {
-#if PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS || PLATFORM_TVOS
+#if PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS || PLATFORM_TVOS || PLATFORM_EMSCRIPTEN
     auto OpenModeStr = GetOpenModeStr();
     m_pFile          = fopen(m_OpenAttribs.strFilePath, OpenModeStr.c_str());
     if (m_pFile == nullptr)

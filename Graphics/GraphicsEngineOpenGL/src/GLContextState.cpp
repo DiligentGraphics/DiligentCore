@@ -44,29 +44,30 @@ namespace Diligent
 
 GLContextState::GLContextState(RenderDeviceGLImpl* pDeviceGL)
 {
-    const auto& AdapterInfo            = pDeviceGL->GetAdapterInfo();
-    m_Caps.bFillModeSelectionSupported = AdapterInfo.Features.WireframeFill;
+    const auto& AdapterInfo             = pDeviceGL->GetAdapterInfo();
+    m_Caps.IsFillModeSelectionSupported = AdapterInfo.Features.WireframeFill;
+    m_Caps.IsProgramPipelineSupported   = AdapterInfo.Features.SeparablePrograms;
 
     {
-        m_Caps.m_iMaxCombinedTexUnits = 0;
-        glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &m_Caps.m_iMaxCombinedTexUnits);
+        m_Caps.MaxCombinedTexUnits = 0;
+        glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &m_Caps.MaxCombinedTexUnits);
         CHECK_GL_ERROR("Failed to get max combined tex image units count");
-        VERIFY_EXPR(m_Caps.m_iMaxCombinedTexUnits > 0);
+        VERIFY_EXPR(m_Caps.MaxCombinedTexUnits > 0);
 
-        m_Caps.m_iMaxDrawBuffers = 0;
-        glGetIntegerv(GL_MAX_DRAW_BUFFERS, &m_Caps.m_iMaxDrawBuffers);
+        m_Caps.MaxDrawBuffers = 0;
+        glGetIntegerv(GL_MAX_DRAW_BUFFERS, &m_Caps.MaxDrawBuffers);
         CHECK_GL_ERROR("Failed to get max draw buffers count");
-        VERIFY_EXPR(m_Caps.m_iMaxDrawBuffers > 0);
+        VERIFY_EXPR(m_Caps.MaxDrawBuffers > 0);
 
-        glGetIntegerv(GL_MAX_UNIFORM_BUFFER_BINDINGS, &m_Caps.m_iMaxUniformBufferBindings);
+        glGetIntegerv(GL_MAX_UNIFORM_BUFFER_BINDINGS, &m_Caps.MaxUniformBufferBindings);
         CHECK_GL_ERROR("Failed to get uniform buffers count");
-        VERIFY_EXPR(m_Caps.m_iMaxUniformBufferBindings > 0);
+        VERIFY_EXPR(m_Caps.MaxUniformBufferBindings > 0);
     }
 
-    m_BoundTextures.reserve(m_Caps.m_iMaxCombinedTexUnits);
+    m_BoundTextures.reserve(m_Caps.MaxCombinedTexUnits);
     m_BoundSamplers.reserve(32);
     m_BoundImages.reserve(32);
-    m_BoundUniformBuffers.reserve(m_Caps.m_iMaxUniformBufferBindings);
+    m_BoundUniformBuffers.reserve(m_Caps.MaxUniformBufferBindings);
     m_BoundStorageBlocks.reserve(16);
 
     Invalidate();
@@ -88,9 +89,9 @@ void GLContextState::Invalidate()
     // Unity messes up at least VAO left in the context,
     // so unbid what we bound
     glUseProgram(0);
-#ifndef PLATFORM_EMSCRIPTEN
-    glBindProgramPipeline(0);
-#endif
+    if (m_Caps.IsProgramPipelineSupported)
+        glBindProgramPipeline(0);
+
     glBindVertexArray(0);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
     glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
@@ -150,16 +151,19 @@ void GLContextState::SetProgram(const GLProgramObj& GLProgram)
 
 void GLContextState::SetPipeline(const GLPipelineObj& GLPipeline)
 {
-#ifndef PLATFORM_EMSCRIPTEN
     GLuint GLPipelineHandle = 0;
     if (UpdateBoundObject(m_GLPipelineId, GLPipeline, GLPipelineHandle))
     {
-        glBindProgramPipeline(GLPipelineHandle);
-        DEV_CHECK_GL_ERROR("Failed to bind program pipeline");
+        if (m_Caps.IsProgramPipelineSupported)
+        {
+            glBindProgramPipeline(GLPipelineHandle);
+            DEV_CHECK_GL_ERROR("Failed to bind program pipeline");
+        }
+        else
+        {
+            UNSUPPORTED("SetPipeline is not supported");
+        }
     }
-#else
-    UNSUPPORTED("SetPipeline is not supported in Emscripten");
-#endif
 }
 
 void GLContextState::BindVAO(const GLVertexArrayObj& VAO)
@@ -204,9 +208,9 @@ void GLContextState::SetActiveTexture(Int32 Index)
 {
     if (Index < 0)
     {
-        Index += m_Caps.m_iMaxCombinedTexUnits;
+        Index += m_Caps.MaxCombinedTexUnits;
     }
-    VERIFY(0 <= Index && Index < m_Caps.m_iMaxCombinedTexUnits, "Texture unit is out of range");
+    VERIFY(0 <= Index && Index < m_Caps.MaxCombinedTexUnits, "Texture unit is out of range");
 
     if (m_iActiveTexture != Index)
     {
@@ -220,9 +224,9 @@ void GLContextState::BindTexture(Int32 Index, GLenum BindTarget, const GLObjectW
 {
     if (Index < 0)
     {
-        Index += m_Caps.m_iMaxCombinedTexUnits;
+        Index += m_Caps.MaxCombinedTexUnits;
     }
-    VERIFY(0 <= Index && Index < m_Caps.m_iMaxCombinedTexUnits, "Texture unit is out of range");
+    VERIFY(0 <= Index && Index < m_Caps.MaxCombinedTexUnits, "Texture unit is out of range");
 
     // Always update active texture unit
     SetActiveTexture(Index);
@@ -339,7 +343,7 @@ void GLContextState::GetBoundImage(Uint32     Index,
 
 void GLContextState::BindUniformBuffer(Int32 Index, const GLObjectWrappers::GLBufferObj& Buff, GLintptr Offset, GLsizeiptr Size)
 {
-    VERIFY(0 <= Index && Index < m_Caps.m_iMaxUniformBufferBindings, "Uniform buffer index is out of range");
+    VERIFY(0 <= Index && Index < m_Caps.MaxUniformBufferBindings, "Uniform buffer index is out of range");
 
     BoundBufferInfo NewUBOInfo{Buff.GetUniqueID(), Offset, Size};
     if (Index >= static_cast<Int32>(m_BoundUniformBuffers.size()))
@@ -561,7 +565,7 @@ void GLContextState::SetStencilOp(GLenum Face, STENCIL_OP StencilFailOp, STENCIL
 
 void GLContextState::SetFillMode(FILL_MODE FillMode)
 {
-    if (m_Caps.bFillModeSelectionSupported)
+    if (m_Caps.IsFillModeSelectionSupported)
     {
         if (m_RSState.FillMode != FillMode)
         {
@@ -719,13 +723,13 @@ void GLContextState::SetBlendState(const BlendStateDesc& BSDsc, Uint32 SampleMas
             if (RT.BlendEnable)
                 bEnableBlend = true;
 
-            if (i < m_Caps.m_iMaxDrawBuffers)
+            if (i < m_Caps.MaxDrawBuffers)
             {
                 SetColorWriteMask(i, RT.RenderTargetWriteMask, True);
             }
             else
             {
-                VERIFY(RT.RenderTargetWriteMask == RenderTargetBlendDesc().RenderTargetWriteMask, "Render target write mask is specified for buffer ", i, " but this device only supports ", m_Caps.m_iMaxDrawBuffers, " draw buffers");
+                VERIFY(RT.RenderTargetWriteMask == RenderTargetBlendDesc().RenderTargetWriteMask, "Render target write mask is specified for buffer ", i, " but this device only supports ", m_Caps.MaxDrawBuffers, " draw buffers");
             }
         }
     }
@@ -759,10 +763,10 @@ void GLContextState::SetBlendState(const BlendStateDesc& BSDsc, Uint32 SampleMas
             {
                 const auto& RT = BSDsc.RenderTargets[i];
 
-                if (i >= m_Caps.m_iMaxDrawBuffers)
+                if (i >= m_Caps.MaxDrawBuffers)
                 {
                     if (RT.BlendEnable)
-                        LOG_ERROR_MESSAGE("Blend is enabled for render target ", i, " but this device only supports ", m_Caps.m_iMaxDrawBuffers, " draw buffers");
+                        LOG_ERROR_MESSAGE("Blend is enabled for render target ", i, " but this device only supports ", m_Caps.MaxDrawBuffers, " draw buffers");
                     continue;
                 }
 

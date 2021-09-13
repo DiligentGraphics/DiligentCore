@@ -143,7 +143,6 @@
 #    define GL_TESS_EVALUATION_SHADER 0x8E87
 #endif
 
-
 // Define unsupported texture filtering modes
 #ifndef GL_CLAMP_TO_BORDER
 #    define GL_CLAMP_TO_BORDER 0
@@ -154,7 +153,6 @@
 #endif
 
 // Define unsupported bind points
-
 #ifndef GL_TEXTURE_BINDING_1D
 #    define GL_TEXTURE_BINDING_1D 0x8068
 #endif
@@ -285,7 +283,6 @@
 #ifndef GL_ONE_MINUS_SRC1_ALPHA
 #    define GL_ONE_MINUS_SRC1_ALPHA 0x88FB
 #endif
-
 
 // Define unsupported sampler attributes
 #ifndef GL_TEXTURE_LOD_BIAS
@@ -552,7 +549,6 @@
 #ifndef GL_UNSIGNED_INT_IMAGE_2D_MULTISAMPLE_ARRAY
 #    define GL_UNSIGNED_INT_IMAGE_2D_MULTISAMPLE_ARRAY 0x906C
 #endif
-
 
 // Compute shader stubs
 #ifndef GL_CLIENT_MAPPED_BUFFER_BARRIER_BIT
