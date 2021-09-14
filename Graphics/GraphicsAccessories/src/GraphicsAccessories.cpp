@@ -1742,10 +1742,10 @@ BufferToTextureCopyInfo GetBufferToTextureCopyInfo(TEXTURE_FORMAT Format,
     BufferToTextureCopyInfo CopyInfo;
 
     const auto& FmtAttribs = GetTextureFormatAttribs(Format);
-    VERIFY_EXPR(Region.MaxX > Region.MinX && Region.MaxY > Region.MinY && Region.MaxZ > Region.MinZ);
-    const auto UpdateRegionWidth  = Region.MaxX - Region.MinX;
-    const auto UpdateRegionHeight = Region.MaxY - Region.MinY;
-    const auto UpdateRegionDepth  = Region.MaxZ - Region.MinZ;
+    VERIFY_EXPR(Region.IsValid());
+    const auto UpdateRegionWidth  = Region.Width();
+    const auto UpdateRegionHeight = Region.Height();
+    const auto UpdateRegionDepth  = Region.Depth();
     if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
     {
         // Align update region size by the block size

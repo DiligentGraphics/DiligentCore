@@ -177,9 +177,9 @@ void Texture3D_GL::UpdateData(GLContextState&          ContextState,
                     DstBox.MinX,
                     DstBox.MinY,
                     DstBox.MinZ,
-                    DstBox.MaxX - DstBox.MinX,
-                    DstBox.MaxY - DstBox.MinY,
-                    DstBox.MaxZ - DstBox.MinZ,
+                    DstBox.Width(),
+                    DstBox.Height(),
+                    DstBox.Depth(),
                     TransferAttribs.PixelFormat, TransferAttribs.DataType,
                     // If a non-zero named buffer object is bound to the GL_PIXEL_UNPACK_BUFFER target, 'data' is treated
                     // as a byte offset into the buffer object's data store.

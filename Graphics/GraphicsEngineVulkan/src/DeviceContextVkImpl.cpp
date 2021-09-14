@@ -2071,9 +2071,9 @@ void DeviceContextVkImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
         CopyRegion.srcOffset.x   = pSrcBox->MinX;
         CopyRegion.srcOffset.y   = pSrcBox->MinY;
         CopyRegion.srcOffset.z   = pSrcBox->MinZ;
-        CopyRegion.extent.width  = pSrcBox->MaxX - pSrcBox->MinX;
-        CopyRegion.extent.height = std::max(pSrcBox->MaxY - pSrcBox->MinY, 1u);
-        CopyRegion.extent.depth  = std::max(pSrcBox->MaxZ - pSrcBox->MinZ, 1u);
+        CopyRegion.extent.width  = pSrcBox->Width();
+        CopyRegion.extent.height = std::max(pSrcBox->Height(), 1u);
+        CopyRegion.extent.depth  = std::max(pSrcBox->Depth(), 1u);
 
         const auto& DstFmtAttribs = GetTextureFormatAttribs(DstTexDesc.Format);
 
@@ -2125,9 +2125,9 @@ void DeviceContextVkImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
         DstBox.MinX = CopyAttribs.DstX;
         DstBox.MinY = CopyAttribs.DstY;
         DstBox.MinZ = CopyAttribs.DstZ;
-        DstBox.MaxX = DstBox.MinX + pSrcBox->MaxX - pSrcBox->MinX;
-        DstBox.MaxY = DstBox.MinY + pSrcBox->MaxY - pSrcBox->MinY;
-        DstBox.MaxZ = DstBox.MinZ + pSrcBox->MaxZ - pSrcBox->MinZ;
+        DstBox.MaxX = DstBox.MinX + pSrcBox->Width();
+        DstBox.MaxY = DstBox.MinY + pSrcBox->Height();
+        DstBox.MaxZ = DstBox.MinZ + pSrcBox->Depth();
 
         CopyBufferToTexture(
             pSrcTexVk->GetVkStagingBuffer(),
@@ -2200,7 +2200,7 @@ void DeviceContextVkImpl::UpdateTextureRegion(const void*                    pSr
 
     const auto& DeviceLimits      = m_pDevice->GetPhysicalDevice().GetProperties().limits;
     const auto  CopyInfo          = GetBufferToTextureCopyInfo(TexDesc.Format, DstBox, static_cast<Uint32>(DeviceLimits.optimalBufferCopyRowPitchAlignment));
-    const auto  UpdateRegionDepth = CopyInfo.Region.MaxZ - CopyInfo.Region.MinZ;
+    const auto  UpdateRegionDepth = CopyInfo.Region.Depth();
 
     // For UpdateTextureRegion(), use UploadHeap, not dynamic heap
     // Source buffer offset must be multiple of 4 (18.4)
@@ -2305,14 +2305,14 @@ static VkBufferImageCopy GetBufferImageCopyInfo(Uint64             BufferOffset,
             static_cast<int32_t>(Region.MinY),
             static_cast<int32_t>(Region.MinZ) //
         };
-    VERIFY(Region.MaxX > Region.MinX && Region.MaxY - Region.MinY && Region.MaxZ > Region.MinZ,
+    VERIFY(Region.IsValid(),
            "[", Region.MinX, " .. ", Region.MaxX, ") x [", Region.MinY, " .. ", Region.MaxY, ") x [", Region.MinZ, " .. ", Region.MaxZ, ") is not a valid region");
     CopyRegion.imageExtent =
         VkExtent3D //
         {
-            static_cast<uint32_t>(Region.MaxX - Region.MinX),
-            static_cast<uint32_t>(Region.MaxY - Region.MinY),
-            static_cast<uint32_t>(Region.MaxZ - Region.MinZ) //
+            static_cast<uint32_t>(Region.Width()),
+            static_cast<uint32_t>(Region.Height()),
+            static_cast<uint32_t>(Region.Depth()) //
         };
 
     return CopyRegion;

@@ -1932,9 +1932,9 @@ void DeviceContextD3D12Impl::CopyTextureRegion(ID3D12Resource*                pd
     SrcLocation.pResource                         = pd3d12Buffer;
     D3D12_PLACED_SUBRESOURCE_FOOTPRINT& Footprint = SrcLocation.PlacedFootprint;
     Footprint.Offset                              = SrcOffset;
-    Footprint.Footprint.Width                     = StaticCast<UINT>(DstBox.MaxX - DstBox.MinX);
-    Footprint.Footprint.Height                    = StaticCast<UINT>(DstBox.MaxY - DstBox.MinY);
-    Footprint.Footprint.Depth                     = StaticCast<UINT>(DstBox.MaxZ - DstBox.MinZ); // Depth cannot be 0
+    Footprint.Footprint.Width                     = StaticCast<UINT>(DstBox.Width());
+    Footprint.Footprint.Height                    = StaticCast<UINT>(DstBox.Height());
+    Footprint.Footprint.Depth                     = StaticCast<UINT>(DstBox.Depth()); // Depth cannot be 0
     Footprint.Footprint.Format                    = TexFormatToDXGI_Format(TexDesc.Format);
 
     Footprint.Footprint.RowPitch = StaticCast<UINT>(SrcStride);
@@ -2009,10 +2009,10 @@ DeviceContextD3D12Impl::TextureUploadSpace DeviceContextD3D12Impl::AllocateTextu
                                                                                               const Box&     Region)
 {
     TextureUploadSpace UploadSpace;
-    VERIFY_EXPR(Region.MaxX > Region.MinX && Region.MaxY > Region.MinY && Region.MaxZ > Region.MinZ);
-    auto UpdateRegionWidth  = Region.MaxX - Region.MinX;
-    auto UpdateRegionHeight = Region.MaxY - Region.MinY;
-    auto UpdateRegionDepth  = Region.MaxZ - Region.MinZ;
+    VERIFY_EXPR(Region.IsValid());
+    auto UpdateRegionWidth  = Region.Width();
+    auto UpdateRegionHeight = Region.Height();
+    auto UpdateRegionDepth  = Region.Depth();
 
     const auto& FmtAttribs = GetTextureFormatAttribs(TexFmt);
     if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
@@ -2049,7 +2049,7 @@ void DeviceContextD3D12Impl::UpdateTextureRegion(const void*                    
 {
     const auto& TexDesc           = TextureD3D12.GetDesc();
     auto        UploadSpace       = AllocateTextureUploadSpace(TexDesc.Format, DstBox);
-    auto        UpdateRegionDepth = DstBox.MaxZ - DstBox.MinZ;
+    auto        UpdateRegionDepth = DstBox.Depth();
 #ifdef DILIGENT_DEBUG
     {
         VERIFY(SrcStride >= UploadSpace.RowSize, "Source data stride (", SrcStride, ") is below the image row size (", UploadSpace.RowSize, ")");

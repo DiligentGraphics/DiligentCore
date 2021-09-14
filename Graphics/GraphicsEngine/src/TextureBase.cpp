@@ -25,7 +25,7 @@
  *  of the possibility of such damages.
  */
 
-#include "Texture.h"
+#include "TextureBase.hpp"
 
 #include <algorithm>
 
@@ -313,9 +313,9 @@ void ValidateUpdateTextureParams(const TextureDesc& TexDesc, Uint32 MipLevel, Ui
     VERIFY_TEX_PARAMS((SubresData.Stride & 0x03) == 0, "Texture data stride (", SubresData.Stride, ") must be at least 32-bit aligned.");
     VERIFY_TEX_PARAMS((SubresData.DepthStride & 0x03) == 0, "Texture data depth stride (", SubresData.DepthStride, ") must be at least 32-bit aligned.");
 
-    auto        UpdateRegionWidth  = DstBox.MaxX - DstBox.MinX;
-    auto        UpdateRegionHeight = DstBox.MaxY - DstBox.MinY;
-    auto        UpdateRegionDepth  = DstBox.MaxZ - DstBox.MinZ;
+    auto        UpdateRegionWidth  = DstBox.Width();
+    auto        UpdateRegionHeight = DstBox.Height();
+    auto        UpdateRegionDepth  = DstBox.Depth();
     const auto& FmtAttribs         = GetTextureFormatAttribs(TexDesc.Format);
     Uint32      RowSize            = 0;
     Uint32      RowCount           = 0;
@@ -362,9 +362,9 @@ void ValidateCopyTextureParams(const CopyTextureAttribs& CopyAttribs)
     DstBox.MinX = CopyAttribs.DstX;
     DstBox.MinY = CopyAttribs.DstY;
     DstBox.MinZ = CopyAttribs.DstZ;
-    DstBox.MaxX = DstBox.MinX + (pSrcBox->MaxX - pSrcBox->MinX);
-    DstBox.MaxY = DstBox.MinY + (pSrcBox->MaxY - pSrcBox->MinY);
-    DstBox.MaxZ = DstBox.MinZ + (pSrcBox->MaxZ - pSrcBox->MinZ);
+    DstBox.MaxX = DstBox.MinX + pSrcBox->Width();
+    DstBox.MaxY = DstBox.MinY + pSrcBox->Height();
+    DstBox.MaxZ = DstBox.MinZ + pSrcBox->Depth();
     ValidateTextureRegion(DstTexDesc, CopyAttribs.DstMipLevel, CopyAttribs.DstSlice, DstBox);
 }
 

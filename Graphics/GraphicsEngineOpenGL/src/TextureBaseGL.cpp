@@ -570,9 +570,9 @@ void TextureBaseGL::CopyData(DeviceContextGLImpl* pDeviceCtxGL,
             DstX,
             DstY + DstSliceY,
             DstZ + DstSliceZ, // Slice must be zero for 3D texture
-            pSrcBox->MaxX - pSrcBox->MinX,
-            pSrcBox->MaxY - pSrcBox->MinY,
-            pSrcBox->MaxZ - pSrcBox->MinZ);
+            pSrcBox->Width(),
+            pSrcBox->Height(),
+            pSrcBox->Depth());
         CHECK_GL_ERROR("glCopyImageSubData() failed");
     }
     else
@@ -609,7 +609,7 @@ void TextureBaseGL::CopyData(DeviceContextGLImpl* pDeviceCtxGL,
                                      // keep strong reference to the texture
         );
 
-        for (Uint32 DepthSlice = 0; DepthSlice < pSrcBox->MaxZ - pSrcBox->MinZ; ++DepthSlice)
+        for (Uint32 DepthSlice = 0; DepthSlice < pSrcBox->Depth(); ++DepthSlice)
         {
             // Create temporary RTV for the target subresource
             TextureViewDesc RTVDesc;

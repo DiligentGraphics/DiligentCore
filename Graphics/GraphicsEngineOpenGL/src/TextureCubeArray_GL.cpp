@@ -185,7 +185,7 @@ void TextureCubeArray_GL::UpdateData(GLContextState&          ContextState,
 #ifdef DILIGENT_DEBUG
         {
             const auto& FmtAttribs      = GetTextureFormatAttribs(m_Desc.Format);
-            auto        BlockBytesInRow = ((DstBox.MaxX - DstBox.MinX + 3) / 4) * Uint32{FmtAttribs.ComponentSize};
+            auto        BlockBytesInRow = ((DstBox.Width() + 3) / 4) * Uint32{FmtAttribs.ComponentSize};
             VERIFY(SubresData.Stride == BlockBytesInRow,
                    "Compressed data stride (", SubresData.Stride, " must match the size of a row of compressed blocks (", BlockBytesInRow, ")");
         }
@@ -195,8 +195,8 @@ void TextureCubeArray_GL::UpdateData(GLContextState&          ContextState,
 
         //glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
         //glPixelStorei(GL_UNPACK_COMPRESSED_BLOCK_WIDTH, 0);
-        auto UpdateRegionWidth  = DstBox.MaxX - DstBox.MinX;
-        auto UpdateRegionHeight = DstBox.MaxY - DstBox.MinY;
+        auto UpdateRegionWidth  = DstBox.Width();
+        auto UpdateRegionHeight = DstBox.Height();
         UpdateRegionWidth       = std::min(UpdateRegionWidth, MipWidth - DstBox.MinX);
         UpdateRegionHeight      = std::min(UpdateRegionHeight, MipHeight - DstBox.MinY);
         glCompressedTexSubImage3D(m_BindTarget, MipLevel,
@@ -214,7 +214,7 @@ void TextureCubeArray_GL::UpdateData(GLContextState&          ContextState,
                                   // An INVALID_VALUE error is generated if imageSize is not consistent with
                                   // the format, dimensions, and contents of the compressed image( too little or
                                   // too much data ),
-                                  StaticCast<GLsizei>(((DstBox.MaxY - DstBox.MinY + 3) / 4) * SubresData.Stride),
+                                  StaticCast<GLsizei>(((DstBox.Height() + 3) / 4) * SubresData.Stride),
                                   // If a non-zero named buffer object is bound to the GL_PIXEL_UNPACK_BUFFER target, 'data' is treated
                                   // as a byte offset into the buffer object's data store.
                                   // https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glCompressedTexSubImage3D.xhtml
@@ -241,8 +241,8 @@ void TextureCubeArray_GL::UpdateData(GLContextState&          ContextState,
                         DstBox.MinX,
                         DstBox.MinY,
                         Slice,
-                        DstBox.MaxX - DstBox.MinX,
-                        DstBox.MaxY - DstBox.MinY,
+                        DstBox.Width(),
+                        DstBox.Height(),
                         1,
                         TransferAttribs.PixelFormat, TransferAttribs.DataType,
                         // If a non-zero named buffer object is bound to the GL_PIXEL_UNPACK_BUFFER target, 'data' is treated

@@ -3270,6 +3270,12 @@ struct Box
     {}
 
     Box() noexcept {}
+
+    Uint32 Width() const { return MaxX - MinX; }
+    Uint32 Height() const { return MaxY - MinY; }
+    Uint32 Depth() const { return MaxZ - MinZ; }
+
+    bool IsValid() const { return MaxX > MinX && MaxY > MinY && MaxZ > MinZ; }
 #endif
 };
 typedef struct Box Box;

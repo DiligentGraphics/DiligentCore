@@ -162,7 +162,7 @@ void Texture1D_GL::UpdateData(GLContextState&          ContextState,
 
     glTexSubImage1D(m_BindTarget, MipLevel,
                     DstBox.MinX,
-                    DstBox.MaxX - DstBox.MinX,
+                    DstBox.Width(),
                     TransferAttribs.PixelFormat, TransferAttribs.DataType,
                     // If a non-zero named buffer object is bound to the GL_PIXEL_UNPACK_BUFFER target, 'data' is treated
                     // as a byte offset into the buffer object's data store.

@@ -166,7 +166,7 @@ void Texture1DArray_GL::UpdateData(GLContextState&          ContextState,
     glTexSubImage2D(m_BindTarget, MipLevel,
                     DstBox.MinX,
                     Slice,
-                    DstBox.MaxX - DstBox.MinX,
+                    DstBox.Width(),
                     1,
                     TransferAttribs.PixelFormat, TransferAttribs.DataType,
                     // If a non-zero named buffer object is bound to the GL_PIXEL_UNPACK_BUFFER target, 'data' is treated

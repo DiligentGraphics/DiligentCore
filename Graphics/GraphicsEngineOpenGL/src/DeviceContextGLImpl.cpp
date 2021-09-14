@@ -1483,9 +1483,9 @@ void DeviceContextGLImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
         DstBox.MinX = CopyAttribs.DstX;
         DstBox.MinY = CopyAttribs.DstY;
         DstBox.MinZ = CopyAttribs.DstZ;
-        DstBox.MaxX = DstBox.MinX + pSrcBox->MaxX - pSrcBox->MinX;
-        DstBox.MaxY = DstBox.MinY + pSrcBox->MaxY - pSrcBox->MinY;
-        DstBox.MaxZ = DstBox.MinZ + pSrcBox->MaxZ - pSrcBox->MinZ;
+        DstBox.MaxX = DstBox.MinX + pSrcBox->Width();
+        DstBox.MaxY = DstBox.MinY + pSrcBox->Height();
+        DstBox.MaxZ = DstBox.MinZ + pSrcBox->Depth();
         pDstTexGL->UpdateData(m_ContextState, CopyAttribs.DstMipLevel, CopyAttribs.DstSlice, DstBox, SubresData);
     }
     else if (SrcTexDesc.Usage != USAGE_STAGING && DstTexDesc.Usage == USAGE_STAGING)
@@ -1546,7 +1546,7 @@ void DeviceContextGLImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
         m_ContextState.BindBuffer(GL_PIXEL_PACK_BUFFER, pDstBuffer->GetGLHandle(), true);
 
         const auto& TransferAttribs = GetNativePixelTransferAttribs(SrcTexDesc.Format);
-        glReadPixels(pSrcBox->MinX, pSrcBox->MinY, pSrcBox->MaxX - pSrcBox->MinX, pSrcBox->MaxY - pSrcBox->MinY,
+        glReadPixels(pSrcBox->MinX, pSrcBox->MinY, pSrcBox->Width(), pSrcBox->Height(),
                      TransferAttribs.PixelFormat, TransferAttribs.DataType, reinterpret_cast<void*>(StaticCast<size_t>(DstOffset)));
         DEV_CHECK_GL_ERROR("Failed to read pixel from framebuffer to pixel pack buffer");
 
