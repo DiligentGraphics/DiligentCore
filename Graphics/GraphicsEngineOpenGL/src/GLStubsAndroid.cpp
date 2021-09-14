@@ -277,7 +277,7 @@ void LoadGLFunctions()
         if (glGetError() == GL_NO_ERROR)
             glesVer = {MajorVersion, MinorVersion};
     }
-    VERIFY_EXPR(glesVer >= Diligent::Version{3, 0});
+    VERIFY_EXPR(glesVer >= Diligent::Version(3, 0));
 
     struct FuncNameAndVersion
     {

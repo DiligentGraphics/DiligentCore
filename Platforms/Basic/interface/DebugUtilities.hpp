@@ -54,7 +54,7 @@
 #    define UNEXPECTED  ASSERTION_FAILED
 #    define UNSUPPORTED ASSERTION_FAILED
 
-#    define VERIFY_EXPR(...) VERIFY((__VA_ARGS__), "Debug expression failed:\n", #    __VA_ARGS__)
+#    define VERIFY_EXPR(Expr) VERIFY((Expr), "Debug expression failed:\n", #    Expr)
 
 
 template <typename DstType, typename SrcType>
