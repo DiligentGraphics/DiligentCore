@@ -68,7 +68,8 @@ public:
         TDeviceObjectBase{pRefCounters, pDevice, Desc, bIsDeviceInternal},
         m_pRenderPass{Desc.pRenderPass}
     {
-        ValidateFramebufferDesc(this->m_Desc, pDevice->GetDeviceInfo().Type);
+        const auto& DeviceInfo = pDevice->GetDeviceInfo();
+        ValidateFramebufferDesc(this->m_Desc, DeviceInfo.Type);
 
         if (this->m_Desc.Width == 0 || this->m_Desc.Height == 0 || this->m_Desc.NumArraySlices == 0)
         {
@@ -79,9 +80,14 @@ public:
                     continue;
 
                 const auto& ViewDesc = pAttachment->GetDesc();
-                const auto& TexDesc  = pAttachment->GetTexture()->GetDesc();
+                if (DeviceInfo.IsMetalDevice() && ViewDesc.ViewType == TEXTURE_VIEW_SHADING_RATE)
+                {
+                    VERIFY_EXPR(pAttachment->GetTexture() == nullptr);
+                    continue;
+                }
 
-                auto MipLevelProps = GetMipLevelProperties(TexDesc, ViewDesc.MostDetailedMip);
+                const auto& TexDesc       = pAttachment->GetTexture()->GetDesc();
+                const auto  MipLevelProps = GetMipLevelProperties(TexDesc, ViewDesc.MostDetailedMip);
                 if (this->m_Desc.Width == 0)
                     this->m_Desc.Width = MipLevelProps.LogicalWidth;
                 if (this->m_Desc.Height == 0)

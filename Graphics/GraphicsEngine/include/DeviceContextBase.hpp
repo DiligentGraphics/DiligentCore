@@ -1385,11 +1385,15 @@ inline void DeviceContextBase<ImplementationTraits>::BeginRenderPass(const Begin
         DEV_CHECK_ERR(RPDesc.AttachmentCount <= FBDesc.AttachmentCount,
                       "The number of attachments (", FBDesc.AttachmentCount,
                       ") in currently bound framebuffer is smaller than the number of attachments in the render pass (", RPDesc.AttachmentCount, ")");
+        const bool IsMetal = m_pDevice->GetDeviceInfo().IsMetalDevice();
         for (Uint32 i = 0; i < FBDesc.AttachmentCount; ++i)
         {
             auto* pView = FBDesc.ppAttachments[i];
             if (pView == nullptr)
                 return;
+
+            if (IsMetal && pView->GetDesc().ViewType == TEXTURE_VIEW_SHADING_RATE)
+                continue;
 
             auto* pTex          = ClassPtrCast<TextureImplType>(pView->GetTexture());
             auto  RequiredState = RPDesc.pAttachments[i].InitialState;
@@ -1442,10 +1446,14 @@ inline void DeviceContextBase<ImplementationTraits>::UpdateAttachmentStates(Uint
     VERIFY(FBDesc.AttachmentCount == RPDesc.AttachmentCount,
            "Framebuffer attachment count (", FBDesc.AttachmentCount, ") is not consistent with the render pass attachment count (", RPDesc.AttachmentCount, ")");
     VERIFY_EXPR(SubpassIndex <= RPDesc.SubpassCount);
+    const bool IsMetal = m_pDevice->GetDeviceInfo().IsMetalDevice();
     for (Uint32 i = 0; i < RPDesc.AttachmentCount; ++i)
     {
         if (auto* pView = FBDesc.ppAttachments[i])
         {
+            if (IsMetal && pView->GetDesc().ViewType == TEXTURE_VIEW_SHADING_RATE)
+                continue;
+
             auto* pTex = ClassPtrCast<TextureImplType>(pView->GetTexture());
             if (pTex->IsInKnownState())
             {

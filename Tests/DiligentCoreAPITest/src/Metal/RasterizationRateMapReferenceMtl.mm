@@ -187,7 +187,8 @@ void RasterizationRateMapReferenceMtl(ISwapChain* pSwapChain)
             {
                 MTLRenderPassDescriptor* renderPassDesc = [MTLRenderPassDescriptor renderPassDescriptor]; // Autoreleased
                 renderPassDesc.colorAttachments[0].texture     = mtlBackBuffer;
-                renderPassDesc.colorAttachments[0].loadAction  = MTLLoadActionDontCare;
+                renderPassDesc.colorAttachments[0].loadAction  = MTLLoadActionClear;
+                renderPassDesc.colorAttachments[0].clearColor  = MTLClearColorMake(0.0, 0.0, 0.0, 1.0);
                 renderPassDesc.colorAttachments[0].storeAction = MTLStoreActionStore;
 
                 id<MTLRenderCommandEncoder> renderEncoder = [mtlCommandBuffer renderCommandEncoderWithDescriptor:renderPassDesc]; // Autoreleased

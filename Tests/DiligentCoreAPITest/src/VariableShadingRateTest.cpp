@@ -827,7 +827,7 @@ TEST(VariableShadingRateTest, TextureBasedWithRenderPass)
         };
 
         FramebufferDesc FBDesc;
-        FBDesc.Name            = "Test framebuffer";
+        FBDesc.Name            = "Framebuffer with shading rate";
         FBDesc.pRenderPass     = pRenderPass;
         FBDesc.AttachmentCount = _countof(pTexViews);
         FBDesc.ppAttachments   = pTexViews;

@@ -93,7 +93,8 @@ void ValidateRenderPassDesc(const RenderPassDesc& Desc, IRenderDevice* pDevice) 
                 Attachment.InitialState != RESOURCE_STATE_RESOLVE_SOURCE &&
                 Attachment.InitialState != RESOURCE_STATE_COPY_DEST &&
                 Attachment.InitialState != RESOURCE_STATE_COPY_SOURCE &&
-                Attachment.InitialState != RESOURCE_STATE_INPUT_ATTACHMENT)
+                Attachment.InitialState != RESOURCE_STATE_INPUT_ATTACHMENT &&
+                Attachment.InitialState != RESOURCE_STATE_UNDEFINED)
             {
                 LOG_RENDER_PASS_ERROR_AND_THROW("the initial state of depth-stencil attachment ", i, " (", GetResourceStateString(Attachment.InitialState), ") is invalid.");
             }
@@ -122,7 +123,8 @@ void ValidateRenderPassDesc(const RenderPassDesc& Desc, IRenderDevice* pDevice) 
                 Attachment.InitialState != RESOURCE_STATE_COPY_DEST &&
                 Attachment.InitialState != RESOURCE_STATE_INPUT_ATTACHMENT &&
                 Attachment.InitialState != RESOURCE_STATE_PRESENT &&
-                Attachment.InitialState != RESOURCE_STATE_SHADING_RATE)
+                Attachment.InitialState != RESOURCE_STATE_SHADING_RATE &&
+                Attachment.InitialState != RESOURCE_STATE_UNDEFINED)
             {
                 LOG_RENDER_PASS_ERROR_AND_THROW("the initial state of color attachment ", i, " (", GetResourceStateString(Attachment.InitialState), ") is invalid.");
             }
