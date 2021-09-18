@@ -40,5 +40,5 @@ if [ "$1" = "linux" ]; then
 fi
 
 if [ "$1" = "emscripten" ]; then
-  emcmake cmake $GITHUB_WORKSPACE -G "Ninja" -DCMAKE_BUILD_TYPE=$3
+  emcmake cmake $GITHUB_WORKSPACE -G "Ninja" -DCMAKE_BUILD_TYPE=$3 -DDILIGENT_BUILD_TESTS=ON -DDILIGENT_NO_FORMAT_VALIDATION=ON -DCMAKE_INSTALL_PREFIX=install ..
 fi

@@ -559,6 +559,11 @@
 #    define GL_FRAMEBUFFER_BARRIER_BIT 0x00000400
 #endif
 
+// Query
+#ifndef GL_QUERY_BUFFER
+#    define GL_QUERY_BUFFER 0x9192
+#endif
+
 // ---------------------  Framebuffer SRGB -----------------------
 #ifndef GL_FRAMEBUFFER_SRGB
 #    define GL_FRAMEBUFFER_SRGB 0x8DB9
@@ -608,7 +613,12 @@ static void (*glPolygonMode)(GLenum face, GLenum mode) = nullptr;
 #define glFramebufferTexture(...)     UnsupportedGLFunctionStub("glFramebufferTexture", __VA_ARGS__)
 #define glFramebufferTexture1D(...)   UnsupportedGLFunctionStub("glFramebufferTexture1D", __VA_ARGS__)
 static void (*glGetQueryObjectui64v)(GLuint id, GLenum pname, GLuint64* params) = nullptr;
-#define glGenProgramPipelines(...)    UnsupportedGLFunctionStub("glGenProgramPipelines", __VA_ARGS__)
-#define glBindProgramPipeline(...)    UnsupportedGLFunctionStub("glBindProgramPipeline", __VA_ARGS__)
-#define glDeleteProgramPipelines(...) UnsupportedGLFunctionStub("glDeleteProgramPipelines", __VA_ARGS__)
-#define glUseProgramStages(...)       UnsupportedGLFunctionStub("glUseProgramStages", __VA_ARGS__)
+#define glGenProgramPipelines(...)     UnsupportedGLFunctionStub("glGenProgramPipelines", __VA_ARGS__)
+#define glBindProgramPipeline(...)     UnsupportedGLFunctionStub("glBindProgramPipeline", __VA_ARGS__)
+#define glDeleteProgramPipelines(...)  UnsupportedGLFunctionStub("glDeleteProgramPipelines", __VA_ARGS__)
+#define glUseProgramStages(...)        UnsupportedGLFunctionStub("glUseProgramStages", __VA_ARGS__)
+#define glUseProgramStages(...)        UnsupportedGLFunctionStub("glUseProgramStages", __VA_ARGS__)
+#define glBindImageTexture(...)        UnsupportedGLFunctionStub("glBindImageTexture", __VA_ARGS__)
+#define glDispatchCompute(...)         UnsupportedGLFunctionStub("glDispatchCompute", __VA_ARGS__)
+#define glPatchParameteri(...)         UnsupportedGLFunctionStub("glPatchParameteri", __VA_ARGS__)
+#define glTexStorage2DMultisample(...) UnsupportedGLFunctionStub("glTexStorage2DMultisample", __VA_ARGS__)

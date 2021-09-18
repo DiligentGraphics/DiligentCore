@@ -104,6 +104,9 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     PROPERTIES
         COMPILE_FLAGS -Wno-tautological-pointer-compare
     )
+    if (PLATFORM_EMSCRIPTEN)
+        set_source_files_properties(${C_INTERFACE_SOURCE} PROPERTIES COMPILE_FLAGS "-Wno-unknown-warning-option -Wno-unused-but-set-variable")
+    endif()
 endif()
 
 target_include_directories(DiligentCoreAPITest

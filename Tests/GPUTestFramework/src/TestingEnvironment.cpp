@@ -199,7 +199,7 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
         }
     };
 
-    auto AddContext = [&ContextCI, &Adapters](COMMAND_QUEUE_TYPE Type, const char* Name, Uint32 AdapterId) //
+    MAYBE_UNUSED auto AddContext = [&ContextCI, &Adapters](COMMAND_QUEUE_TYPE Type, const char* Name, Uint32 AdapterId) //
     {
         if (AdapterId >= Adapters.size())
             AdapterId = 0;

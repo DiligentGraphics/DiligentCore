@@ -79,6 +79,10 @@
 
 #    include <OpenGLES/ES3/gl.h>
 
+#elif PLATFORM_EMSCRIPTEN
+
+#    include <GLES3/gl3.h>
+
 #else
 #    error Unsupported platform
 #endif

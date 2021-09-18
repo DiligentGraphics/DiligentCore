@@ -18,6 +18,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     )
 endif()
 
+
 add_executable(DiligentCoreTest ${SOURCE} ${INCLUDE})
 set_common_target_properties(DiligentCoreTest)
 

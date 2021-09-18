@@ -42,10 +42,13 @@ TestingEnvironmentGL::TestingEnvironmentGL(const CreateInfo&    CI,
                                            const SwapChainDesc& SCDesc) :
     TestingEnvironment{CI, SCDesc}
 {
+
+#ifndef PLATFORM_EMSCRIPTEN
     // Initialize GLEW
     auto err = glewInit();
     if (GLEW_OK != err)
         LOG_ERROR_AND_THROW("Failed to initialize GLEW");
+#endif
 
     if (m_pSwapChain == nullptr)
     {

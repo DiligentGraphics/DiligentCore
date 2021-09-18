@@ -27,6 +27,7 @@
 
 #include "RingBuffer.hpp"
 #include "DefaultRawMemoryAllocator.hpp"
+#include "CompilerDefinitions.h"
 
 #include "gtest/gtest.h"
 
@@ -276,7 +277,7 @@ TEST(GraphicsAccessories_RingBuffer, AllocDealloc)
     {
         RingBuffer RB(1024, Allocator);
 
-        auto offset = RB.Allocate(512, 1);
+        MAYBE_UNUSED auto offset = RB.Allocate(512, 1);
         RB.FinishCurrentFrame(0);
         RB.FinishCurrentFrame(1);
         RB.ReleaseCompletedFrames(1);

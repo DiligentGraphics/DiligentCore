@@ -1276,6 +1276,8 @@ struct InstanceMatrix
 
     InstanceMatrix(const InstanceMatrix&) noexcept = default;
 
+    InstanceMatrix& operator=(const InstanceMatrix&)  noexcept = default;
+
     /// Sets the translation part.
     InstanceMatrix& SetTranslation(float x, float y, float z) noexcept
     {

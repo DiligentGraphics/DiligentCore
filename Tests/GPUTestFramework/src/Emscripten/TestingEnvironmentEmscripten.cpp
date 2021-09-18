@@ -1,6 +1,5 @@
 /*
  *  Copyright 2019-2021 Diligent Graphics LLC
- *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -25,25 +24,10 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
-
-#include <string>
-
-#ifndef GLEW_STATIC
-#    define GLEW_STATIC // Must be defined to use static version of glew
-#endif
-#ifndef GLEW_NO_GLU
-#    define GLEW_NO_GLU
-#endif
-
-#ifdef PLATFORM_EMSCRIPTEN
-#    include <GLES3/gl32.h>
-#    include "../../Graphics/GraphicsEngineOpenGL/include/GLStubsEmscripten.h"
-#else
-#    include "GL/glew.h"
-#endif
-
 #include "TestingEnvironment.hpp"
+
+#include <emscripten.h>
+#include <emscripten/html5.h>
 
 namespace Diligent
 {
@@ -51,26 +35,13 @@ namespace Diligent
 namespace Testing
 {
 
-class TestingEnvironmentGL final : public TestingEnvironment
+EmscriptenNativeWindow TestingEnvironment::CreateNativeWindow()
 {
-public:
-    using CreateInfo = TestingEnvironment::CreateInfo;
-    TestingEnvironmentGL(const CreateInfo&    CI,
-                         const SwapChainDesc& SCDesc);
-    ~TestingEnvironmentGL();
-
-    static TestingEnvironmentGL* GetInstance() { return ClassPtrCast<TestingEnvironmentGL>(TestingEnvironment::GetInstance()); }
-
-    GLuint CompileGLShader(const std::string& Source, GLenum ShaderType);
-    GLuint LinkProgram(GLuint Shaders[], GLuint NumShaders);
-
-    GLuint GetDummyVAO() { return m_DummyVAO; }
-
-    virtual void Reset() override final;
-
-private:
-    GLuint m_DummyVAO = 0;
-};
+    int32_t WindowWidth  = 512;
+    int32_t WindowHeight = 512;
+    emscripten_set_canvas_element_size("#canvas", WindowWidth, WindowHeight);
+    return EmscriptenNativeWindow{"#canvas"};
+}
 
 } // namespace Testing
 
