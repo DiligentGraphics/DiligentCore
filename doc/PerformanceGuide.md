@@ -43,8 +43,23 @@ Try to optimize dynamic buffers usage, but don't strive to avoid them as they ar
 to upload frequently changing data to the GPU.
 
 
+# Profilers
+
+* [RenderDoc](https://renderdoc.org/) - Direct3D11/Direct3D12/OpenGL/Vulkan debugging tool
+* [NVidia NSight](https://developer.nvidia.com/nsight-graphics) - Vulkan & Direct3D12 profiling and debugging tool for NVidia GPUs
+* [AMD GPU Profiler](https://gpuopen.com/rgp/) - Vulkan & Direct3D12 profiling and debugging tool for AMD GPUs
+* [Microsoft PIX](https://devblogs.microsoft.com/pix/download/) - Direct3D11/Direct3D12 profiler and debugger
+* [XCode](https://developer.apple.com/xcode/) - GPU profiler & debugger for Metal API (including Vulkan on top of Metal)
+* [ARM Mobile Studio](https://www.arm.com/products/development-tools/graphics/arm-mobile-Studio) - profiler for Mali GPUs
+* [Snapdragon Profiler](https://developer.qualcomm.com/software/snapdragon-profiler) - profiler for Adreno GPUs
+
 # References
 
 * [DirectX12 Do's And Don'ts](https://developer.nvidia.com/dx12-dos-and-donts) by NVidia
 * [Vulkan Do's And Don'ts](https://developer.nvidia.com/blog/vulkan-dos-donts/) by NVidia
+* [RDNA2 performance guide](https://gpuopen.com/performance/) by AMD
 * [Arm Mali GPU Best Practices Developer Guide Version](https://developer.arm.com/documentation/101897/0201/Preface) by ARM
+* [Arm Mali GPU Training Series](https://www.youtube.com/watch?v=tnR4mExVClY&list=PLKjl7IFAwc4QUTejaX2vpIwXstbgf8Ik7) video by ARM
+* [Adreno GPU](https://developer.qualcomm.com/sites/default/files/docs/adreno-gpu/developer-guide//gpu/gpu.html) by Qualcomm
+* [PowerVR](http://cdn.imgtec.com/sdk-documentation/PowerVR_Performance_Recommendations.pdf) by Imagination Technologies
+* [Metal Best Practices Guide](https://developer.apple.com/library/archive/documentation/3DDrawing/Conceptual/MTLBestPracticesGuide/index.html) by Apple
