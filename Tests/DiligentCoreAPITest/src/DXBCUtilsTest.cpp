@@ -212,9 +212,9 @@ float4 PSMain(in float4 f4Position : SV_Position) : SV_Target
         ResMap["g_OutColorBuffer_2"] = {UAV++, Space, 1, SHADER_RESOURCE_TYPE_TEXTURE_UAV};
     }
 
-    std::string ShaderModleStr{"ps_"};
-    ShaderModleStr += std::to_string(ShaderModel.Major) + '_' + std::to_string(ShaderModel.Minor);
-    TestDXBCRemapping(Source.c_str(), "PSMain", ShaderModleStr.c_str(), ResMap);
+    std::string ShaderModelStr{"ps_"};
+    ShaderModelStr += std::to_string(ShaderModel.Major) + '_' + std::to_string(ShaderModel.Minor);
+    TestDXBCRemapping(Source.c_str(), "PSMain", ShaderModelStr.c_str(), ResMap);
 }
 
 

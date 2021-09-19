@@ -186,7 +186,7 @@ inline bool IsNum(char c)
     return c >= '0' && c <= '9';
 }
 
-/// Returns the number of chararcters at the beginning of the string that form a
+/// Returns the number of characters at the beginning of the string that form a
 /// floating point number.
 inline size_t CountFloatNumberChars(const char* str)
 {

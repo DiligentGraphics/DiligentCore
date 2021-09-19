@@ -45,7 +45,7 @@ DXGI_FORMAT TypeToDXGI_Format(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIs
                 case 1: return DXGI_FORMAT_R16_FLOAT;
                 case 2: return DXGI_FORMAT_R16G16_FLOAT;
                 case 4: return DXGI_FORMAT_R16G16B16A16_FLOAT;
-                default: UNEXPECTED("Unusupported number of components"); return DXGI_FORMAT_UNKNOWN;
+                default: UNEXPECTED("Unsupported number of components"); return DXGI_FORMAT_UNKNOWN;
             }
         }
 
@@ -58,7 +58,7 @@ DXGI_FORMAT TypeToDXGI_Format(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIs
                 case 2: return DXGI_FORMAT_R32G32_FLOAT;
                 case 3: return DXGI_FORMAT_R32G32B32_FLOAT;
                 case 4: return DXGI_FORMAT_R32G32B32A32_FLOAT;
-                default: UNEXPECTED("Unusupported number of components"); return DXGI_FORMAT_UNKNOWN;
+                default: UNEXPECTED("Unsupported number of components"); return DXGI_FORMAT_UNKNOWN;
             }
         }
 
@@ -71,7 +71,7 @@ DXGI_FORMAT TypeToDXGI_Format(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIs
                 case 2: return DXGI_FORMAT_R32G32_SINT;
                 case 3: return DXGI_FORMAT_R32G32B32_SINT;
                 case 4: return DXGI_FORMAT_R32G32B32A32_SINT;
-                default: UNEXPECTED("Unusupported number of components"); return DXGI_FORMAT_UNKNOWN;
+                default: UNEXPECTED("Unsupported number of components"); return DXGI_FORMAT_UNKNOWN;
             }
         }
 
@@ -84,7 +84,7 @@ DXGI_FORMAT TypeToDXGI_Format(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIs
                 case 2: return DXGI_FORMAT_R32G32_UINT;
                 case 3: return DXGI_FORMAT_R32G32B32_UINT;
                 case 4: return DXGI_FORMAT_R32G32B32A32_UINT;
-                default: UNEXPECTED("Unusupported number of components"); return DXGI_FORMAT_UNKNOWN;
+                default: UNEXPECTED("Unsupported number of components"); return DXGI_FORMAT_UNKNOWN;
             }
         }
 
@@ -97,7 +97,7 @@ DXGI_FORMAT TypeToDXGI_Format(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIs
                     case 1: return DXGI_FORMAT_R16_SNORM;
                     case 2: return DXGI_FORMAT_R16G16_SNORM;
                     case 4: return DXGI_FORMAT_R16G16B16A16_SNORM;
-                    default: UNEXPECTED("Unusupported number of components"); return DXGI_FORMAT_UNKNOWN;
+                    default: UNEXPECTED("Unsupported number of components"); return DXGI_FORMAT_UNKNOWN;
                 }
             }
             else
@@ -107,7 +107,7 @@ DXGI_FORMAT TypeToDXGI_Format(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIs
                     case 1: return DXGI_FORMAT_R16_SINT;
                     case 2: return DXGI_FORMAT_R16G16_SINT;
                     case 4: return DXGI_FORMAT_R16G16B16A16_SINT;
-                    default: UNEXPECTED("Unusupported number of components"); return DXGI_FORMAT_UNKNOWN;
+                    default: UNEXPECTED("Unsupported number of components"); return DXGI_FORMAT_UNKNOWN;
                 }
             }
         }
@@ -121,7 +121,7 @@ DXGI_FORMAT TypeToDXGI_Format(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIs
                     case 1: return DXGI_FORMAT_R16_UNORM;
                     case 2: return DXGI_FORMAT_R16G16_UNORM;
                     case 4: return DXGI_FORMAT_R16G16B16A16_UNORM;
-                    default: UNEXPECTED("Unusupported number of components"); return DXGI_FORMAT_UNKNOWN;
+                    default: UNEXPECTED("Unsupported number of components"); return DXGI_FORMAT_UNKNOWN;
                 }
             }
             else
@@ -131,7 +131,7 @@ DXGI_FORMAT TypeToDXGI_Format(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIs
                     case 1: return DXGI_FORMAT_R16_UINT;
                     case 2: return DXGI_FORMAT_R16G16_UINT;
                     case 4: return DXGI_FORMAT_R16G16B16A16_UINT;
-                    default: UNEXPECTED("Unusupported number of components"); return DXGI_FORMAT_UNKNOWN;
+                    default: UNEXPECTED("Unsupported number of components"); return DXGI_FORMAT_UNKNOWN;
                 }
             }
         }
@@ -145,7 +145,7 @@ DXGI_FORMAT TypeToDXGI_Format(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIs
                     case 1: return DXGI_FORMAT_R8_SNORM;
                     case 2: return DXGI_FORMAT_R8G8_SNORM;
                     case 4: return DXGI_FORMAT_R8G8B8A8_SNORM;
-                    default: UNEXPECTED("Unusupported number of components"); return DXGI_FORMAT_UNKNOWN;
+                    default: UNEXPECTED("Unsupported number of components"); return DXGI_FORMAT_UNKNOWN;
                 }
             }
             else
@@ -155,7 +155,7 @@ DXGI_FORMAT TypeToDXGI_Format(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIs
                     case 1: return DXGI_FORMAT_R8_SINT;
                     case 2: return DXGI_FORMAT_R8G8_SINT;
                     case 4: return DXGI_FORMAT_R8G8B8A8_SINT;
-                    default: UNEXPECTED("Unusupported number of components"); return DXGI_FORMAT_UNKNOWN;
+                    default: UNEXPECTED("Unsupported number of components"); return DXGI_FORMAT_UNKNOWN;
                 }
             }
         }
@@ -169,7 +169,7 @@ DXGI_FORMAT TypeToDXGI_Format(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIs
                     case 1: return DXGI_FORMAT_R8_UNORM;
                     case 2: return DXGI_FORMAT_R8G8_UNORM;
                     case 4: return DXGI_FORMAT_R8G8B8A8_UNORM;
-                    default: UNEXPECTED("Unusupported number of components"); return DXGI_FORMAT_UNKNOWN;
+                    default: UNEXPECTED("Unsupported number of components"); return DXGI_FORMAT_UNKNOWN;
                 }
             }
             else
@@ -179,12 +179,12 @@ DXGI_FORMAT TypeToDXGI_Format(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIs
                     case 1: return DXGI_FORMAT_R8_UINT;
                     case 2: return DXGI_FORMAT_R8G8_UINT;
                     case 4: return DXGI_FORMAT_R8G8B8A8_UINT;
-                    default: UNEXPECTED("Unusupported number of components"); return DXGI_FORMAT_UNKNOWN;
+                    default: UNEXPECTED("Unsupported number of components"); return DXGI_FORMAT_UNKNOWN;
                 }
             }
         }
 
-        default: UNEXPECTED("Unusupported format"); return DXGI_FORMAT_UNKNOWN;
+        default: UNEXPECTED("Unsupported format"); return DXGI_FORMAT_UNKNOWN;
     }
 }
 

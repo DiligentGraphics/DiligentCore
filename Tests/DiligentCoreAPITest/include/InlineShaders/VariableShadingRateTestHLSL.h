@@ -67,7 +67,7 @@ struct PSInput
 
 float4 main(in PSInput PSIn) : SV_Target
 {
-    // Rate was overrided by per-draw rate from SetShadingRate()
+    // Rate was overridden by per-draw rate from SetShadingRate()
     return ShadingRateToColor(PSIn.Rate);
 }
 )hlsl";
@@ -134,7 +134,7 @@ struct PSInput
 
 float4 main(in PSInput PSIn) : SV_Target
 {
-    // Rate was overrided by shading rate texture
+    // Rate was overridden by shading rate texture
     return ShadingRateToColor(PSIn.Rate);
 }
 )hlsl";
@@ -195,7 +195,7 @@ struct PSInput
 
 float4 main(in PSInput PSIn) : SV_Target
 {
-    // Rate was overrided by shading rate texture
+    // Rate was overridden by shading rate texture
     return ShadingRateToColor(PSIn.Rate);
 }
 )hlsl";

@@ -196,7 +196,7 @@ public:
     {
         auto& DescrSet = GetDescriptorSet(SetIndex);
         VERIFY(DescrSet.GetSize() > 0, "Descriptor set is empty");
-        VERIFY(!DescrSet.m_DescriptorSetAllocation, "Descriptor set alloction has already been initialized");
+        VERIFY(!DescrSet.m_DescriptorSetAllocation, "Descriptor set allocation has already been initialized");
         DescrSet.m_DescriptorSetAllocation = std::move(Allocation);
     }
 

@@ -417,7 +417,7 @@ void GLContextState::EnsureMemoryBarrier(MEMORY_BARRIER RequiredBarriers, AsyncW
     {
         // If resource is specified, only set up memory barriers
         // that are required by the resource
-        ResourcePendingBarriers = pRes->GetPendingMemortBarriers();
+        ResourcePendingBarriers = pRes->GetPendingMemoryBarriers();
         RequiredBarriers &= ResourcePendingBarriers;
     }
 

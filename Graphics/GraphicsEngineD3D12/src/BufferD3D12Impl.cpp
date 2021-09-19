@@ -176,13 +176,13 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
                                                        &D3D12BuffDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, __uuidof(UploadBuffer),
                                                        reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&UploadBuffer)));
             if (FAILED(hr))
-                LOG_ERROR_AND_THROW("Failed to create uload buffer");
+                LOG_ERROR_AND_THROW("Failed to create upload buffer");
 
             void* DestAddress = nullptr;
 
             hr = UploadBuffer->Map(0, nullptr, &DestAddress);
             if (FAILED(hr))
-                LOG_ERROR_AND_THROW("Failed to map uload buffer");
+                LOG_ERROR_AND_THROW("Failed to map upload buffer");
             memcpy(DestAddress, pBuffData->pData, StaticCast<size_t>(InitialDataSize));
             UploadBuffer->Unmap(0, nullptr);
 

@@ -110,7 +110,7 @@ struct VertexStreamInfo
 /// \tparam EngineImplTraits     - Engine implementation traits that define specific implementation details
 ///                                 (texture implementation type, buffer implementation type, etc.)
 /// \remarks Device context keeps strong references to all objects currently bound to
-///          the pipeline: buffers, tetxures, states, SRBs, etc.
+///          the pipeline: buffers, textures, states, SRBs, etc.
 ///          The context also keeps strong references to the device and
 ///          the swap chain.
 template <typename EngineImplTraits>
@@ -460,7 +460,7 @@ protected:
     /// Checks if the texture is currently bound as depth-stencil buffer.
     bool CheckIfBoundAsDepthStencil(TextureImplType* pTexture);
 
-    /// Updates the states of render pass attachments to match states within the gievn subpass
+    /// Updates the states of render pass attachments to match states within the given subpass
     void UpdateAttachmentStates(Uint32 SubpassIndex);
 
     void ClearDepthStencil(ITextureView* pView);

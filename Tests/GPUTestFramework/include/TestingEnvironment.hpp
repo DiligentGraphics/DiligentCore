@@ -150,7 +150,7 @@ protected:
                                 const char*            File,
                                 int                    Line);
 
-    Uint32 FindAdapater(const std::vector<GraphicsAdapterInfo>& Adapters,
+    Uint32 FindAdapter(const std::vector<GraphicsAdapterInfo>& Adapters,
                         ADAPTER_TYPE                            AdapterType,
                         Uint32                                  AdapterId);
 

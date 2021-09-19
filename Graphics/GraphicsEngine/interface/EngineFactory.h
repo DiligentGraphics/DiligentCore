@@ -64,7 +64,7 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactory, IObject)
 
     /// Creates default shader source input stream factory
 
-    /// \param [in]  SearchDirectories           - Semicolon-seprated list of search directories.
+    /// \param [in]  SearchDirectories           - Semicolon-separated list of search directories.
     /// \param [out] ppShaderSourceStreamFactory - Memory address where the pointer to the shader source stream factory will be written.
     VIRTUAL void METHOD(CreateDefaultShaderSourceStreamFactory)(
                         THIS_
@@ -81,7 +81,7 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactory, IObject)
     ///                               pointed to by Adapters. In the latter case, this value
     ///                               is overwritten with the actual number of elements written to
     ///                               Adapters.
-    /// \param [out]    Adapters - Pointer to the array conataining adapter information. If
+    /// \param [out]    Adapters - Pointer to the array containing adapter information. If
     ///                            null is provided, the number of available adapters is
     ///                            written to NumAdapters.
     ///

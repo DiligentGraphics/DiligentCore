@@ -152,7 +152,7 @@ void TextureBaseD3D11::PrepareD3D11InitData(const TextureData*                  
         }
         else
         {
-            UNEXPECTED("Incorrect number of subrsources");
+            UNEXPECTED("Incorrect number of subresources");
         }
     }
 }

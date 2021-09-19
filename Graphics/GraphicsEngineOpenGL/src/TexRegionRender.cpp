@@ -147,9 +147,9 @@ TexRegionRender::TexRegionRender(class RenderDeviceGLImpl* pDeviceGL)
 
             auto Source         = SourceSS.str();
             ShaderAttrs.Source  = Source.c_str();
-            auto& FragmetShader = m_pFragmentShaders[Dim * 3 + Fmt];
-            pDeviceGL->CreateShader(ShaderAttrs, &FragmetShader, IsInternalDeviceObject);
-            PSOCreateInfo.pPS = FragmetShader;
+            auto& FragmentShader = m_pFragmentShaders[Dim * 3 + Fmt];
+            pDeviceGL->CreateShader(ShaderAttrs, &FragmentShader, IsInternalDeviceObject);
+            PSOCreateInfo.pPS = FragmentShader;
 
             auto& ResourceLayout = PSOCreateInfo.PSODesc.ResourceLayout;
 

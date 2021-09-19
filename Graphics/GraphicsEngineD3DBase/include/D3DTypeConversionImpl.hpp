@@ -449,7 +449,7 @@ D3D_FILTER FilterTypeToD3DFilter(FILTER_TYPE MinFilter, FILTER_TYPE MagFilter, F
 
         case FILTER_TYPE_ANISOTROPIC:
             VERIFY(MagFilter == FILTER_TYPE_ANISOTROPIC && MipFilter == FILTER_TYPE_ANISOTROPIC,
-                   "For anistropic filtering, all filters must be anisotropic");
+                   "For anisotropic filtering, all filters must be anisotropic");
             return D3D_FILTER_ANISOTROPIC;
             break;
 
@@ -492,7 +492,7 @@ D3D_FILTER FilterTypeToD3DFilter(FILTER_TYPE MinFilter, FILTER_TYPE MagFilter, F
 
         case FILTER_TYPE_COMPARISON_ANISOTROPIC:
             VERIFY(MagFilter == FILTER_TYPE_COMPARISON_ANISOTROPIC && MipFilter == FILTER_TYPE_COMPARISON_ANISOTROPIC,
-                   "For comparison anistropic filtering, all filters must be anisotropic");
+                   "For comparison anisotropic filtering, all filters must be anisotropic");
             return D3D_FILTER_COMPARISON_ANISOTROPIC;
             break;
 
@@ -535,7 +535,7 @@ D3D_FILTER FilterTypeToD3DFilter(FILTER_TYPE MinFilter, FILTER_TYPE MagFilter, F
 
         case FILTER_TYPE_MINIMUM_ANISOTROPIC:
             VERIFY(MagFilter == FILTER_TYPE_MINIMUM_ANISOTROPIC && MipFilter == FILTER_TYPE_MINIMUM_ANISOTROPIC,
-                   "For minimum anistropic filtering, all filters must be anisotropic");
+                   "For minimum anisotropic filtering, all filters must be anisotropic");
             return D3D_FILTER_MINIMUM_ANISOTROPIC;
             break;
 
@@ -578,7 +578,7 @@ D3D_FILTER FilterTypeToD3DFilter(FILTER_TYPE MinFilter, FILTER_TYPE MagFilter, F
 
         case FILTER_TYPE_MAXIMUM_ANISOTROPIC:
             VERIFY(MagFilter == FILTER_TYPE_MAXIMUM_ANISOTROPIC && MipFilter == FILTER_TYPE_MAXIMUM_ANISOTROPIC,
-                   "For maximum anistropic filtering, all filters must be anisotropic");
+                   "For maximum anisotropic filtering, all filters must be anisotropic");
             return D3D_FILTER_MAXIMUM_ANISOTROPIC;
             break;
     }

@@ -220,7 +220,7 @@ public:
         return true;
     }
 
-    void CopyInstancceData(const TopLevelASBase& Src) noexcept
+    void CopyInstanceData(const TopLevelASBase& Src) noexcept
     {
         ClearInstanceData();
 

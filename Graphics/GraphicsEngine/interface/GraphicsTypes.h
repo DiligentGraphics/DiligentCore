@@ -2063,7 +2063,7 @@ struct RayTracingProperties
     Uint32 MaxGeometriesPerBLAS     DEFAULT_INITIALIZER(0);
 
     /// The minimum alignment for vertex buffer offset in BLASBuildTriangleData::VertexOffset.
-    Uint32 VertexBufferAlignmnent   DEFAULT_INITIALIZER(0);
+    Uint32 VertexBufferAlignment   DEFAULT_INITIALIZER(0);
 
     /// The minimum alignment for index buffer offset in BLASBuildTriangleData::IndexOffset.
     Uint32 IndexBufferAlignment     DEFAULT_INITIALIZER(0);

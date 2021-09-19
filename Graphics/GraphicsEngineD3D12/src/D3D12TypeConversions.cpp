@@ -551,7 +551,7 @@ D3D12_QUERY_HEAP_TYPE QueryTypeToD3D12QueryHeapType(QUERY_TYPE QueryType, Hardwa
             return D3D12_QUERY_HEAP_TYPE_OCCLUSION;
 
         case QUERY_TYPE_PIPELINE_STATISTICS:
-            VERIFY(QueueId == D3D12HWQueueIndex_Graphics, "Pipeline statistcis queries are only supported in graphics queue");
+            VERIFY(QueueId == D3D12HWQueueIndex_Graphics, "Pipeline statistics queries are only supported in graphics queue");
             return D3D12_QUERY_HEAP_TYPE_PIPELINE_STATISTICS;
 
         case QUERY_TYPE_DURATION:

@@ -311,7 +311,7 @@ bool VerifyBeginRenderPassAttribs(const BeginRenderPassAttribs& Attribs)
     return true;
 }
 
-bool VarifyResourceState(RESOURCE_STATE States, COMMAND_QUEUE_TYPE QueueType, const char* Name)
+bool VerifyResourceState(RESOURCE_STATE States, COMMAND_QUEUE_TYPE QueueType, const char* Name)
 {
     QueueType &= COMMAND_QUEUE_TYPE_PRIMARY_MASK;
 
@@ -474,8 +474,8 @@ bool VerifyStateTransitionDesc(const IRenderDevice*       pDevice,
     CHECK_STATE_TRANSITION_DESC(Barrier.NewState != RESOURCE_STATE_UNKNOWN && Barrier.NewState != RESOURCE_STATE_UNDEFINED,
                                 "NewState must not be UNKNOWN or UNDEFINED");
 
-    VarifyResourceState(Barrier.OldState, CtxDesc.QueueType, "OldState");
-    VarifyResourceState(Barrier.NewState, CtxDesc.QueueType, "NewState");
+    VerifyResourceState(Barrier.OldState, CtxDesc.QueueType, "OldState");
+    VerifyResourceState(Barrier.NewState, CtxDesc.QueueType, "NewState");
 
 #undef CHECK_STATE_TRANSITION_DESC
 
@@ -525,7 +525,7 @@ bool VerifyBuildBLASAttribs(const BuildBLASAttribs& Attribs, const IRenderDevice
         const Uint32 VertexValueSize = GetValueSize(TriDesc.VertexValueType);
         const Uint32 VertexSize      = VertexValueSize * tri.VertexComponentCount;
         const Uint32 VertexDataSize  = tri.VertexStride * tri.VertexCount;
-        const Uint32 VertStrideAlign = DeviceType == RENDER_DEVICE_TYPE_METAL ? RTProps.VertexBufferAlignmnent : VertexValueSize;
+        const Uint32 VertStrideAlign = DeviceType == RENDER_DEVICE_TYPE_METAL ? RTProps.VertexBufferAlignment : VertexValueSize;
         const Uint32 VertOffsetAlign = DeviceType == RENDER_DEVICE_TYPE_METAL ? tri.VertexStride : VertexValueSize;
 
         CHECK_BUILD_BLAS_ATTRIBS(tri.VertexValueType == VT_UNDEFINED || tri.VertexValueType == TriDesc.VertexValueType,
@@ -856,7 +856,7 @@ bool VerifyCopyBLASAttribs(const IRenderDevice* pDevice, const CopyBLASAttribs& 
                 const BLASBoundingBoxDesc& DstBox = DstDesc.pBoxes[Index];
 
                 CHECK_COPY_BLAS_ATTRIBS(SrcBox.MaxBoxCount == DstBox.MaxBoxCount,
-                                        "MaxBoxCountt value (", SrcBox.MaxBoxCount, ") in source box description at index ", i,
+                                        "MaxBoxCount value (", SrcBox.MaxBoxCount, ") in source box description at index ", i,
                                         " does not match MaxBoxCount value (", DstBox.MaxBoxCount, ") in destination description.");
             }
         }

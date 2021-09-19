@@ -266,7 +266,7 @@ void TextureCubeArray_GL::AttachToFramebuffer(const TextureViewDesc& ViewDesc, G
     // So the parameters that represent the Z component are layer-faces.
     if (ViewDesc.NumArraySlices == m_Desc.ArraySize)
     {
-        // glFramebufferTexture() attaches the given mipmap levelas a layered image with the number of layers that the given texture has.
+        // glFramebufferTexture() attaches the given mipmap level as a layered image with the number of layers that the given texture has.
         glFramebufferTexture(GL_DRAW_FRAMEBUFFER, AttachmentPoint, m_GlTexture, ViewDesc.MostDetailedMip);
         CHECK_GL_ERROR("Failed to attach texture cubemap array to draw framebuffer");
         glFramebufferTexture(GL_READ_FRAMEBUFFER, AttachmentPoint, m_GlTexture, ViewDesc.MostDetailedMip);

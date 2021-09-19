@@ -82,7 +82,7 @@ private:
         // pDevice->CreateBuffer(&pBuffer); // Returns same pointer
 
         // VAO encapsulates both input layout and all bound buffers.
-        // PSO uniqly defines the layout (attrib pointers, divisors, etc.),
+        // PSO uniquely defines the layout (attrib pointers, divisors, etc.),
         // so we do not need to add individual layout elements to the key.
         // The key needs to contain all bound buffers.
         const UniqueIdentifier PsoUId;

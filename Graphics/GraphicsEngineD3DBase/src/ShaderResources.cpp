@@ -37,7 +37,7 @@ namespace Diligent
 
 SHADER_RESOURCE_TYPE D3DShaderResourceAttribs::GetShaderResourceType() const
 {
-    switch (InputType) // Not using GetInutType() to avoid warnings for D3D_SIT_RTACCELERATIONSTRUCTURE in old SDKs
+    switch (InputType) // Not using GetInputType() to avoid warnings for D3D_SIT_RTACCELERATIONSTRUCTURE in old SDKs
     {
         case D3D_SIT_CBUFFER:
             return SHADER_RESOURCE_TYPE_CONSTANT_BUFFER;

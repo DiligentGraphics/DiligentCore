@@ -165,7 +165,7 @@ VulkanMemoryAllocation VulkanMemoryManager::Allocate(VkDeviceSize Size, VkDevice
     // On integrated GPUs, there is no difference between host-visible and GPU-only
     // memory, so MemoryTypeIndex is the same. As GPU-only pages do not have CPU address,
     // we need to use HostVisible flag to differentiate the two.
-    // It is likely a good idea to always keep staging pages separate to reduce fragmenation
+    // It is likely a good idea to always keep staging pages separate to reduce fragmentation
     // even though on integrated GPUs same pages can be used for both GPU-only and staging
     // allocations. Staging allocations are short-living and will be released when upload is
     // complete, while GPU-only allocations are expected to be long-living.
@@ -238,15 +238,15 @@ void VulkanMemoryManager::ShrinkMemory()
     }
 }
 
-void VulkanMemoryManager::OnFreeAllocation(VkDeviceSize Size, bool IsHostVisble)
+void VulkanMemoryManager::OnFreeAllocation(VkDeviceSize Size, bool IsHostVisible)
 {
-    m_CurrUsedSize[IsHostVisble ? 1 : 0].fetch_add(-static_cast<int64_t>(Size));
+    m_CurrUsedSize[IsHostVisible ? 1 : 0].fetch_add(-static_cast<int64_t>(Size));
 }
 
 VulkanMemoryManager::~VulkanMemoryManager()
 {
     auto PeakDeviceLocalPages  = m_PeakAllocatedSize[0] / m_DeviceLocalPageSize;
-    auto PeakHostVisisblePages = m_PeakAllocatedSize[1] / m_HostVisiblePageSize;
+    auto PeakHostVisiblePages = m_PeakAllocatedSize[1] / m_HostVisiblePageSize;
     LOG_INFO_MESSAGE("VulkanMemoryManager '", m_MgrName, "' stats:\n"
                                                          "                       Peak used/allocated device-local memory size: ",
                      Diligent::FormatMemorySize(m_PeakUsedSize[0], 2, m_PeakAllocatedSize[0]), " / ",
@@ -255,7 +255,7 @@ VulkanMemoryManager::~VulkanMemoryManager()
                      "\n                       Peak used/allocated host-visible memory size: ",
                      Diligent::FormatMemorySize(m_PeakUsedSize[1], 2, m_PeakAllocatedSize[1]), " / ",
                      Diligent::FormatMemorySize(m_PeakAllocatedSize[1], 2, m_PeakAllocatedSize[1]),
-                     " (", PeakHostVisisblePages, (PeakHostVisisblePages == 1 ? " page)" : " pages)"));
+                     " (", PeakHostVisiblePages, (PeakHostVisiblePages == 1 ? " page)" : " pages)"));
 
     for (auto it = m_Pages.begin(); it != m_Pages.end(); ++it)
         VERIFY(it->second.IsEmpty(), "The page contains outstanding allocations");

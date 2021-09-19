@@ -176,7 +176,7 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
         std::unique_ptr<ShaderResourcesGL> pResources{new ShaderResourcesGL{}};
         pResources->LoadUniforms(m_Desc.ShaderType,
                                  m_SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL ?
-                                     PIPELINE_RESOURCE_FLAG_NONE :            // Reflect samplers as separate for consistency with othe backends
+                                     PIPELINE_RESOURCE_FLAG_NONE :            // Reflect samplers as separate for consistency with other backends
                                      PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER, // Reflect samplers as combined
                                  Program, GLState);
         m_pShaderResources.reset(pResources.release());

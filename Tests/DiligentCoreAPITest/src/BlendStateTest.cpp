@@ -294,16 +294,16 @@ TEST_P(BlendFactorTest, CreatePSO)
         }
     }
 
-    for (Uint32 NumRenderTarges = 1; NumRenderTarges < MaxTestRenderTargets; ++NumRenderTarges)
+    for (Uint32 NumRenderTargets = 1; NumRenderTargets < MaxTestRenderTargets; ++NumRenderTargets)
     {
-        GraphicsPipelineStateCreateInfo PSOCreateInfo = GetPSOCreateInfo(NumRenderTarges);
+        GraphicsPipelineStateCreateInfo PSOCreateInfo = GetPSOCreateInfo(NumRenderTargets);
 
         PSOCreateInfo.PSODesc.Name = "SrcBlendFactorTest";
 
         BlendStateDesc& BSDesc = PSOCreateInfo.GraphicsPipeline.BlendDesc;
 
         BSDesc.IndependentBlendEnable = True;
-        for (Uint32 i = 0; i < NumRenderTarges; ++i)
+        for (Uint32 i = 0; i < NumRenderTargets; ++i)
         {
             auto& RT = BSDesc.RenderTargets[i];
 
@@ -315,8 +315,8 @@ TEST_P(BlendFactorTest, CreatePSO)
         }
 
         auto pPSO = CreateTestPSO(PSOCreateInfo, true);
-        ASSERT_TRUE(pPSO) << "Number of render targets: " << NumRenderTarges;
-        for (Uint32 i = 0; i < NumRenderTarges; ++i)
+        ASSERT_TRUE(pPSO) << "Number of render targets: " << NumRenderTargets;
+        for (Uint32 i = 0; i < NumRenderTargets; ++i)
         {
             auto& RT = pPSO->GetGraphicsPipelineDesc().BlendDesc.RenderTargets[i];
 
@@ -332,16 +332,16 @@ TEST_P(BlendFactorTest, CreatePSO)
         }
     }
 
-    for (Uint32 NumRenderTarges = 1; NumRenderTarges < MaxTestRenderTargets; ++NumRenderTarges)
+    for (Uint32 NumRenderTargets = 1; NumRenderTargets < MaxTestRenderTargets; ++NumRenderTargets)
     {
-        GraphicsPipelineStateCreateInfo PSOCreateInfo = GetPSOCreateInfo(NumRenderTarges);
+        GraphicsPipelineStateCreateInfo PSOCreateInfo = GetPSOCreateInfo(NumRenderTargets);
 
         PSOCreateInfo.PSODesc.Name = "DstBlendFactorTest";
 
         BlendStateDesc& BSDesc = PSOCreateInfo.GraphicsPipeline.BlendDesc;
 
         BSDesc.IndependentBlendEnable = True;
-        for (Uint32 i = 0; i < NumRenderTarges; ++i)
+        for (Uint32 i = 0; i < NumRenderTargets; ++i)
         {
             auto& RT = BSDesc.RenderTargets[i];
 
@@ -353,8 +353,8 @@ TEST_P(BlendFactorTest, CreatePSO)
         }
 
         auto pPSO = CreateTestPSO(PSOCreateInfo, true);
-        ASSERT_TRUE(pPSO) << "Number of render targets: " << NumRenderTarges;
-        for (Uint32 i = 0; i < NumRenderTarges; ++i)
+        ASSERT_TRUE(pPSO) << "Number of render targets: " << NumRenderTargets;
+        for (Uint32 i = 0; i < NumRenderTargets; ++i)
         {
             auto& RT = pPSO->GetGraphicsPipelineDesc().BlendDesc.RenderTargets[i];
 
@@ -437,16 +437,16 @@ TEST_P(BlendOperationTest, CreatePSO)
     const auto&  DeviceInfo           = pDevice->GetDeviceInfo();
     const Uint32 MaxTestRenderTargets = (DeviceInfo.Type == RENDER_DEVICE_TYPE_GLES) ? 4 : 8;
 
-    for (Uint32 NumRenderTarges = 1; NumRenderTarges < MaxTestRenderTargets; ++NumRenderTarges)
+    for (Uint32 NumRenderTargets = 1; NumRenderTargets < MaxTestRenderTargets; ++NumRenderTargets)
     {
-        GraphicsPipelineStateCreateInfo PSOCreateInfo = GetPSOCreateInfo(NumRenderTarges);
+        GraphicsPipelineStateCreateInfo PSOCreateInfo = GetPSOCreateInfo(NumRenderTargets);
 
         PSOCreateInfo.PSODesc.Name = "BlendOperationTest";
 
         BlendStateDesc& BSDesc = PSOCreateInfo.GraphicsPipeline.BlendDesc;
 
         BSDesc.IndependentBlendEnable = True;
-        for (Uint32 i = 0; i < NumRenderTarges; ++i)
+        for (Uint32 i = 0; i < NumRenderTargets; ++i)
         {
             auto& RT          = BSDesc.RenderTargets[i];
             RT.BlendEnable    = True;
@@ -461,8 +461,8 @@ TEST_P(BlendOperationTest, CreatePSO)
         }
 
         auto pPSO = CreateTestPSO(PSOCreateInfo, true);
-        ASSERT_TRUE(pPSO) << "Number of render targets: " << NumRenderTarges;
-        for (Uint32 i = 0; i < NumRenderTarges; ++i)
+        ASSERT_TRUE(pPSO) << "Number of render targets: " << NumRenderTargets;
+        for (Uint32 i = 0; i < NumRenderTargets; ++i)
         {
             auto& RT = pPSO->GetGraphicsPipelineDesc().BlendDesc.RenderTargets[i];
 

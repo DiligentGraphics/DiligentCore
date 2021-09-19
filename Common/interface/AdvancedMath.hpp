@@ -589,8 +589,8 @@ inline bool IntersectRayBox2D(const float2& RayOrigin,
 }
 
 
-/// Intersects a ray with the trianlge using Moller-Trumbore algorithm and returns
-/// the distance along the ray to the intesrsection point.
+/// Intersects a ray with the triangle using Moller-Trumbore algorithm and returns
+/// the distance along the ray to the intersection point.
 /// If the intersection point is behind the ray origin, the distance will be negative.
 /// If there is no intersection, returns +FLT_MAX.
 inline float IntersectRayTriangle(const float3& V0,
@@ -641,7 +641,7 @@ inline float IntersectRayTriangle(const float3& V0,
 /// \param f2Start    - Line start point.
 /// \param f2End      - Line end point.
 /// \param i2GridSize - Grid dimensions.
-/// \param Callback   - Callback function that will be caled with the argument of type int2
+/// \param Callback   - Callback function that will be called with the argument of type int2
 ///                     for every cell visited. The function should return true to continue
 ///                     tracing and false to stop it.
 ///
@@ -851,7 +851,7 @@ bool IsPointInsideTriangle(const Vector2<T>& V0,
 /// \param [in] V0         - First triangle vertex.
 /// \param [in] V1         - Second triangle vertex.
 /// \param [in] V2         - Third triangle vertex.
-/// \param [in] Callback   - Callback function that will be caled with the argument of type int2
+/// \param [in] Callback   - Callback function that will be called with the argument of type int2
 ///                          for every sample covered.
 template <typename T,
           class TCallback>

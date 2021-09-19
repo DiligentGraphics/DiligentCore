@@ -607,7 +607,7 @@ struct BufferOffsets
 BufferOffsets GetBufferOffsets(IRenderDevice* pDevice, Uint32 TestId, Uint32 VertexSize)
 {
     const auto& RTProps = pDevice->GetAdapterInfo().RayTracing;
-    return BufferOffsets{AlignUp((TestId / 3) * VertexSize, RTProps.VertexBufferAlignmnent),
+    return BufferOffsets{AlignUp((TestId / 3) * VertexSize, RTProps.VertexBufferAlignment),
                          AlignUp((TestId / 2) * Uint32{sizeof(Uint32)}, RTProps.IndexBufferAlignment)};
 }
 

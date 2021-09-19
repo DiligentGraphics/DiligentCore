@@ -1593,8 +1593,8 @@ void DeviceContextD3D12Impl::UpdateBuffer(IBuffer*                       pBuffer
     // be resource barrier issues in the cmd list in the device context
     auto* pBuffD3D12 = ClassPtrCast<BufferD3D12Impl>(pBuffer);
     VERIFY(pBuffD3D12->GetDesc().Usage != USAGE_DYNAMIC, "Dynamic buffers must be updated via Map()");
-    constexpr size_t DefaultAlginment = 16;
-    auto             TmpSpace         = m_DynamicHeap.Allocate(Size, DefaultAlginment, GetFrameNumber());
+    constexpr size_t DefaultAlignment = 16;
+    auto             TmpSpace         = m_DynamicHeap.Allocate(Size, DefaultAlignment, GetFrameNumber());
     memcpy(TmpSpace.CPUAddress, pData, StaticCast<size_t>(Size));
     UpdateBufferRegion(pBuffD3D12, TmpSpace, Offset, Size, StateTransitionMode);
 }
@@ -2786,7 +2786,7 @@ void DeviceContextD3D12Impl::CopyTLAS(const CopyTLASAttribs& Attribs)
 
     // Instances specified in BuildTLAS command.
     // We should copy instances because it required for SBT to map instance name to hit group.
-    pDstD3D12->CopyInstancceData(*pSrcD3D12);
+    pDstD3D12->CopyInstanceData(*pSrcD3D12);
 
     const char* OpName = "Copy BottomLevelAS (DeviceContextD3D12Impl::CopyTLAS)";
     TransitionOrVerifyTLASState(CmdCtx, *pSrcD3D12, Attribs.SrcTransitionMode, RESOURCE_STATE_BUILD_AS_READ, OpName);

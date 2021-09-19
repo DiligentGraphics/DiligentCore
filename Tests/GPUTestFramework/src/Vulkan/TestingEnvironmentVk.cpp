@@ -66,9 +66,9 @@ TestingEnvironmentVk::TestingEnvironmentVk(const CreateInfo&    CI,
     volkLoadInstance(pRenderDeviceVk->GetVkInstance());
 
     RefCntAutoPtr<IDeviceContextVk> pContextVk{GetDeviceContext(), IID_DeviceContextVk};
-    RefCntAutoPtr<ICommandQueueVk>  pQeueVk{pContextVk->LockCommandQueue(), IID_CommandQueueVk};
+    RefCntAutoPtr<ICommandQueueVk>  pQueueVk{pContextVk->LockCommandQueue(), IID_CommandQueueVk};
 
-    const auto QueueFamilyIndex = pQeueVk->GetQueueFamilyIndex();
+    const auto QueueFamilyIndex = pQueueVk->GetQueueFamilyIndex();
     pContextVk->UnlockCommandQueue();
 
     vkGetPhysicalDeviceMemoryProperties(m_vkPhysicalDevice, &m_MemoryProperties);
@@ -752,7 +752,7 @@ void TestingEnvironmentVk::TransitionImageLayout(VkCommandBuffer                
 
 bool TestingEnvironmentVk::SupportsRayTracing() const
 {
-    // DXC requires Vulkan 1.2 othervise tests will fail.
+    // DXC requires Vulkan 1.2 otherwise tests will fail.
     RefCntAutoPtr<IRenderDeviceVk> pRenderDeviceVk{m_pDevice.RawPtr<IRenderDevice>(), IID_RenderDeviceVk};
     return pRenderDeviceVk->GetDeviceInfo().Features.RayTracing &&
         (pRenderDeviceVk->GetAdapterInfo().RayTracing.CapFlags & RAY_TRACING_CAP_FLAG_STANDALONE_SHADERS) != 0 &&

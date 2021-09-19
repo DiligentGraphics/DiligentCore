@@ -66,9 +66,9 @@ ShaderResourcesGL::ShaderResourcesGL(ShaderResourcesGL&& Program) noexcept :
 
 inline void RemoveArrayBrackets(char* Str)
 {
-    auto* OpenBacketPtr = strchr(Str, '[');
-    if (OpenBacketPtr != nullptr)
-        *OpenBacketPtr = 0;
+    auto* OpenBracketPtr = strchr(Str, '[');
+    if (OpenBracketPtr != nullptr)
+        *OpenBracketPtr = 0;
 }
 
 void ShaderResourcesGL::AllocateResources(std::vector<UniformBufferInfo>& UniformBlocks,
@@ -464,12 +464,12 @@ void ShaderResourcesGL::LoadUniforms(SHADER_TYPE                           Shade
         bool IsNewBlock = true;
 
         GLint ArraySize     = 1;
-        auto* OpenBacketPtr = strchr(Name.data(), '[');
-        if (OpenBacketPtr != nullptr)
+        auto* OpenBracketPtr = strchr(Name.data(), '[');
+        if (OpenBracketPtr != nullptr)
         {
-            auto Ind       = atoi(OpenBacketPtr + 1);
+            auto Ind       = atoi(OpenBracketPtr + 1);
             ArraySize      = std::max(ArraySize, Ind + 1);
-            *OpenBacketPtr = 0;
+            *OpenBracketPtr = 0;
             if (!UniformBlocks.empty())
             {
                 // Look at previous uniform block to check if it is the same array
@@ -516,12 +516,12 @@ void ShaderResourcesGL::LoadUniforms(SHADER_TYPE                           Shade
 
         bool  IsNewBlock    = true;
         Int32 ArraySize     = 1;
-        auto* OpenBacketPtr = strchr(Name.data(), '[');
-        if (OpenBacketPtr != nullptr)
+        auto* OpenBracketPtr = strchr(Name.data(), '[');
+        if (OpenBracketPtr != nullptr)
         {
-            auto Ind       = atoi(OpenBacketPtr + 1);
+            auto Ind       = atoi(OpenBracketPtr + 1);
             ArraySize      = std::max(ArraySize, Ind + 1);
-            *OpenBacketPtr = 0;
+            *OpenBracketPtr = 0;
             if (!StorageBlocks.empty())
             {
                 // Look at previous storage block to check if it is the same array

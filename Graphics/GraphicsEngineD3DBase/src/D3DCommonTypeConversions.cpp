@@ -74,7 +74,7 @@ void VerifyD3DResourceMerge(const PipelineStateDesc&        PSODesc,
         LOG_RESOURCE_MERGE_ERROR_AND_THROW("array size");
 
     if (ExistingRes.IsMultisample() != NewResAttribs.IsMultisample())
-        LOG_RESOURCE_MERGE_ERROR_AND_THROW("mutlisample state");
+        LOG_RESOURCE_MERGE_ERROR_AND_THROW("multisample state");
 #undef LOG_RESOURCE_MERGE_ERROR_AND_THROW
 }
 

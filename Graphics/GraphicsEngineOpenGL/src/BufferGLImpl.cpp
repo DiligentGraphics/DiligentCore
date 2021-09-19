@@ -53,7 +53,7 @@ static GLenum GetBufferBindTarget(const BufferDesc& Desc)
 #    pragma warning(push)
 #    pragma warning(disable : 4127) // conditional expression is constant
 #endif
-        VERIFY(GL_DRAW_INDIRECT_BUFFER != 0, "Inidrect draw is not supported");
+        VERIFY(GL_DRAW_INDIRECT_BUFFER != 0, "Indirect draw is not supported");
 #ifdef _MSC_VER
 #    pragma warning(pop)
 #endif

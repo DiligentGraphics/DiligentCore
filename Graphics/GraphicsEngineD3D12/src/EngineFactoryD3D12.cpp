@@ -310,7 +310,7 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
         {
             DXGI_ADAPTER_DESC1 desc;
             hardwareAdapter->GetDesc1(&desc);
-            LOG_INFO_MESSAGE("D3D12-capabale adapter found: ", NarrowString(desc.Description), " (", desc.DedicatedVideoMemory >> 20, " MB)");
+            LOG_INFO_MESSAGE("D3D12-capable adapter found: ", NarrowString(desc.Description), " (", desc.DedicatedVideoMemory >> 20, " MB)");
         }
 
         const Version FeatureLevelList[] = {{12, 1}, {12, 0}, {11, 1}, {11, 0}};
@@ -832,7 +832,7 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
                     RayTracingProps.MaxInstancesPerTLAS      = D3D12_RAYTRACING_MAX_INSTANCES_PER_TOP_LEVEL_ACCELERATION_STRUCTURE;
                     RayTracingProps.MaxPrimitivesPerBLAS     = D3D12_RAYTRACING_MAX_PRIMITIVES_PER_BOTTOM_LEVEL_ACCELERATION_STRUCTURE;
                     RayTracingProps.MaxGeometriesPerBLAS     = D3D12_RAYTRACING_MAX_GEOMETRIES_PER_BOTTOM_LEVEL_ACCELERATION_STRUCTURE;
-                    RayTracingProps.VertexBufferAlignmnent   = 1;
+                    RayTracingProps.VertexBufferAlignment   = 1;
                     RayTracingProps.IndexBufferAlignment     = 1;
                     RayTracingProps.TransformBufferAlignment = D3D12_RAYTRACING_TRANSFORM3X4_BYTE_ALIGNMENT;
                     RayTracingProps.BoxBufferAlignment       = D3D12_RAYTRACING_AABB_BYTE_ALIGNMENT;

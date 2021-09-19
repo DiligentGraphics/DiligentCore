@@ -2243,7 +2243,7 @@ constexpr inline Uint32 BitInterleave16(Uint16 _x, Uint16 _y)
     return x | (y << 1u);
 }
 
-/// Returns the least-signficant bit and clears it in the input argument
+/// Returns the least-significant bit and clears it in the input argument
 template <typename T>
 typename std::enable_if<std::is_integral<T>::value, T>::type ExtractLSB(T& bits)
 {
@@ -2256,7 +2256,7 @@ typename std::enable_if<std::is_integral<T>::value, T>::type ExtractLSB(T& bits)
     return bit;
 }
 
-/// Returns the enum value representing the least-signficant bit and clears it in the input argument
+/// Returns the enum value representing the least-significant bit and clears it in the input argument
 template <typename T>
 typename std::enable_if<std::is_enum<T>::value, T>::type ExtractLSB(T& bits)
 {

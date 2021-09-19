@@ -255,7 +255,7 @@ protected:
     const VkDeviceSize m_DeviceLocalReserveSize;
     const VkDeviceSize m_HostVisibleReserveSize;
 
-    void OnFreeAllocation(VkDeviceSize Size, bool IsHostVisble);
+    void OnFreeAllocation(VkDeviceSize Size, bool IsHostVisible);
 
     // 0 == Device local, 1 == Host-visible
     std::array<std::atomic<int64_t>, 2> m_CurrUsedSize      = {};
