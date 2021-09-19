@@ -733,8 +733,9 @@ bool PipelineResourceSignatureD3D12Impl::DvpValidateCommittedResource(const Devi
                 {
                     const auto  SamRootIndex            = SamplerAttribs.RootIndex(CacheType);
                     const auto  SamOffsetFromTableStart = SamplerAttribs.OffsetFromTableStart(CacheType);
-                    const auto& SamRootTable            = ResourceCache.GetRootTable(RootIndex);
+                    const auto& SamRootTable            = ResourceCache.GetRootTable(SamRootIndex);
                     const auto& CachedSam               = SamRootTable.GetResource(SamOffsetFromTableStart + ArrIndex);
+                    VERIFY_EXPR(CachedSam.Type == SHADER_RESOURCE_TYPE_SAMPLER);
                     if (CachedSam.IsNull())
                     {
                         LOG_ERROR_MESSAGE("No sampler is bound to sampler variable '", GetShaderResourcePrintName(SamplerResDesc, ArrIndex),
