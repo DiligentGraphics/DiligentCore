@@ -86,7 +86,7 @@ TEST(TessellationTest, DrawQuad)
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    auto* pSwapChain = pEnv->GetSwapChain();
+    auto* pSwapChain  = pEnv->GetSwapChain();
     auto* pContext    = pEnv->GetDeviceContext();
 
     RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);

@@ -71,7 +71,7 @@ TEST(MeshShaderTest, DrawTriangle)
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    auto* pSwapChain = pEnv->GetSwapChain();
+    auto* pSwapChain  = pEnv->GetSwapChain();
     auto* pContext    = pEnv->GetDeviceContext();
 
     RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
@@ -183,7 +183,7 @@ TEST(MeshShaderTest, DrawTriangleIndirect)
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    auto* pSwapChain = pEnv->GetSwapChain();
+    auto* pSwapChain  = pEnv->GetSwapChain();
     auto* pContext    = pEnv->GetDeviceContext();
 
     RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
@@ -333,7 +333,7 @@ TEST(MeshShaderTest, DrawTriangleIndirectCount)
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    auto* pSwapChain = pEnv->GetSwapChain();
+    auto* pSwapChain  = pEnv->GetSwapChain();
     auto* pContext    = pEnv->GetDeviceContext();
 
     RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
@@ -488,7 +488,7 @@ TEST(MeshShaderTest, DrawTrisWithAmplificationShader)
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    auto* pSwapChain = pEnv->GetSwapChain();
+    auto* pSwapChain  = pEnv->GetSwapChain();
     auto* pContext    = pEnv->GetDeviceContext();
 
     RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);

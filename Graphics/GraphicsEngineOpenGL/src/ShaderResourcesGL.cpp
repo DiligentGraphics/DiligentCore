@@ -467,8 +467,8 @@ void ShaderResourcesGL::LoadUniforms(SHADER_TYPE                           Shade
         auto* OpenBracketPtr = strchr(Name.data(), '[');
         if (OpenBracketPtr != nullptr)
         {
-            auto Ind       = atoi(OpenBracketPtr + 1);
-            ArraySize      = std::max(ArraySize, Ind + 1);
+            auto Ind        = atoi(OpenBracketPtr + 1);
+            ArraySize       = std::max(ArraySize, Ind + 1);
             *OpenBracketPtr = 0;
             if (!UniformBlocks.empty())
             {
@@ -514,13 +514,13 @@ void ShaderResourcesGL::LoadUniforms(SHADER_TYPE                           Shade
         auto SBIndex = glGetProgramResourceIndex(GLProgram, GL_SHADER_STORAGE_BLOCK, Name.data());
         CHECK_GL_ERROR_AND_THROW("Unable to get shader storage block index\n");
 
-        bool  IsNewBlock    = true;
-        Int32 ArraySize     = 1;
+        bool  IsNewBlock     = true;
+        Int32 ArraySize      = 1;
         auto* OpenBracketPtr = strchr(Name.data(), '[');
         if (OpenBracketPtr != nullptr)
         {
-            auto Ind       = atoi(OpenBracketPtr + 1);
-            ArraySize      = std::max(ArraySize, Ind + 1);
+            auto Ind        = atoi(OpenBracketPtr + 1);
+            ArraySize       = std::max(ArraySize, Ind + 1);
             *OpenBracketPtr = 0;
             if (!StorageBlocks.empty())
             {

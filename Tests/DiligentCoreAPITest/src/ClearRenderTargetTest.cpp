@@ -118,9 +118,9 @@ void ClearRenderTargetReference(IRenderDevice* pDevice,
 
 TEST(ClearRenderTargetTest, AsRenderTarget)
 {
-    auto* pEnv       = TestingEnvironment::GetInstance();
-    auto* pDevice    = pEnv->GetDevice();
-    auto* pSwapChain = pEnv->GetSwapChain();
+    auto* pEnv        = TestingEnvironment::GetInstance();
+    auto* pDevice     = pEnv->GetDevice();
+    auto* pSwapChain  = pEnv->GetSwapChain();
     auto* pContext    = pEnv->GetDeviceContext();
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
@@ -161,7 +161,7 @@ TEST(ClearRenderTargetTest, AsAttachment)
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    auto* pSwapChain = pEnv->GetSwapChain();
+    auto* pSwapChain  = pEnv->GetSwapChain();
     auto* pContext    = pEnv->GetDeviceContext();
 
     constexpr float ClearColor[] = {0.75f, 0.1875f, 0.375f, 1.0f};
@@ -233,9 +233,9 @@ TEST(ClearRenderTargetTest, AsAttachment)
 
 TEST(ClearRenderTargetTest, LoadOpClear)
 {
-    auto* pEnv       = TestingEnvironment::GetInstance();
-    auto* pDevice    = pEnv->GetDevice();
-    auto* pSwapChain = pEnv->GetSwapChain();
+    auto* pEnv        = TestingEnvironment::GetInstance();
+    auto* pDevice     = pEnv->GetDevice();
+    auto* pSwapChain  = pEnv->GetSwapChain();
     auto* pContext    = pEnv->GetDeviceContext();
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;

@@ -832,7 +832,7 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
                     RayTracingProps.MaxInstancesPerTLAS      = D3D12_RAYTRACING_MAX_INSTANCES_PER_TOP_LEVEL_ACCELERATION_STRUCTURE;
                     RayTracingProps.MaxPrimitivesPerBLAS     = D3D12_RAYTRACING_MAX_PRIMITIVES_PER_BOTTOM_LEVEL_ACCELERATION_STRUCTURE;
                     RayTracingProps.MaxGeometriesPerBLAS     = D3D12_RAYTRACING_MAX_GEOMETRIES_PER_BOTTOM_LEVEL_ACCELERATION_STRUCTURE;
-                    RayTracingProps.VertexBufferAlignment   = 1;
+                    RayTracingProps.VertexBufferAlignment    = 1;
                     RayTracingProps.IndexBufferAlignment     = 1;
                     RayTracingProps.TransformBufferAlignment = D3D12_RAYTRACING_TRANSFORM3X4_BYTE_ALIGNMENT;
                     RayTracingProps.BoxBufferAlignment       = D3D12_RAYTRACING_AABB_BYTE_ALIGNMENT;
