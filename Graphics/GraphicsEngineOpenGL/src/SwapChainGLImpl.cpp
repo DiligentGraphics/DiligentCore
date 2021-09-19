@@ -84,7 +84,6 @@ SwapChainGLImpl::SwapChainGLImpl(IReferenceCounters*       pRefCounters,
     m_SwapChainDesc.Width  = 1024;
     m_SwapChainDesc.Height = 768;
 #elif PLATFORM_EMSCRIPTEN
-    //TODO: Understand why resize doesn't work
     double CanvasWidth  = 0;
     double CanvasHeight = 0;
     emscripten_get_element_css_size(InitAttribs.Window.pCanvasId, &CanvasWidth, &CanvasHeight);
