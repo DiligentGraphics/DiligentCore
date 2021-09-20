@@ -95,12 +95,12 @@ if(VULKAN_SUPPORTED)
 endif()
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    # Disable warings like this one:
+    # Disable warnings like this one:
     #   comparison of function 'glPolygonMode' not equal to a null pointer is always true [-Wtautological-pointer-compare]
     set_source_files_properties(
         src/GL/DrawCommandReferenceGL.cpp
-        src/GL/GeometryShaderRefenceGL.cpp
-        src/GL/TessellationRefenceGL.cpp
+        src/GL/GeometryShaderReferenceGL.cpp
+        src/GL/TessellationReferenceGL.cpp
     PROPERTIES
         COMPILE_FLAGS -Wno-tautological-pointer-compare
     )
