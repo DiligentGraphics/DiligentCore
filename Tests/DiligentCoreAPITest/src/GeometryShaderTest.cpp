@@ -87,13 +87,13 @@ TEST(GeometryShaderTest, DrawTriangles)
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto* pSwapChain = pEnv->GetSwapChain();
-    auto* pContext   = pEnv->GetDeviceContext();
+    auto* pCntxt     = pEnv->GetDeviceContext();
 
     RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
     if (pTestingSwapChain)
     {
-        pContext->Flush();
-        pContext->InvalidateState();
+        pCntxt->Flush();
+        pCntxt->InvalidateState();
 
         switch (DeviceInfo.Type)
         {
