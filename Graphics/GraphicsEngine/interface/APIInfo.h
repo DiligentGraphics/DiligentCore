@@ -36,7 +36,7 @@
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
-/// Diligent API Info. This tructure can be used to verify API compatibility.
+/// Diligent API Info. This structure can be used to verify API compatibility.
 struct APIInfo
 {
     size_t StructSize                            DEFAULT_INITIALIZER(0);

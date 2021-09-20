@@ -83,7 +83,7 @@ public:
         //    and suspend the execution of the thread.
         //  * When the condition variable is notified, a timeout expires, or a spurious wakeup occurs,
         //    the thread is awakened, and the mutex is atomically reacquired:
-        //    - The thread should then check the condition and resume waiting if the wake up was spurious.
+        //    - The thread should then check the condition and resume waiting if the wake-up was spurious.
         std::unique_lock<std::mutex> Lock(m_Mutex);
         // It is safe to check m_SignaledValue since we are holding
         // the mutex

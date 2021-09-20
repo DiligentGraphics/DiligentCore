@@ -92,7 +92,7 @@ std::string GetSamplerFilterTestName(const testing::TestParamInfo<std::tuple<FIL
 }
 
 
-INSTANTIATE_TEST_SUITE_P(RegularFitlers,
+INSTANTIATE_TEST_SUITE_P(RegularFilters,
                          FilterTypeTest,
                          testing::Combine(
                              testing::Values(FILTER_TYPE_POINT, FILTER_TYPE_LINEAR),

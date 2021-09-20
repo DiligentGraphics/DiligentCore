@@ -139,9 +139,9 @@ void TestingEnvironment::PushExpectedErrorSubstring(const char* Str, bool ClearS
     m_ExpectedErrorSubstrings.push_back(Str);
 }
 
-Uint32 TestingEnvironment::FindAdapater(const std::vector<GraphicsAdapterInfo>& Adapters,
-                                        ADAPTER_TYPE                            AdapterType,
-                                        Uint32                                  AdapterId)
+Uint32 TestingEnvironment::FindAdapter(const std::vector<GraphicsAdapterInfo>& Adapters,
+                                       ADAPTER_TYPE                            AdapterType,
+                                       Uint32                                  AdapterId)
 {
     if (AdapterId != DEFAULT_ADAPTER_ID && AdapterId >= Adapters.size())
     {
@@ -284,7 +284,7 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
                 PrintAdapterInfo(i, AdapterInfo, DisplayModes);
             }
 
-            CreateInfo.AdapterId           = FindAdapater(Adapters, CI.AdapterType, CI.AdapterId);
+            CreateInfo.AdapterId           = FindAdapter(Adapters, CI.AdapterType, CI.AdapterId);
             NumDeferredCtx                 = CI.NumDeferredContexts;
             CreateInfo.NumDeferredContexts = NumDeferredCtx;
             ppContexts.resize(std::max(size_t{1}, ContextCI.size()) + NumDeferredCtx);
@@ -338,7 +338,7 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
                 PrintAdapterInfo(i, AdapterInfo, DisplayModes);
             }
 
-            CreateInfo.AdapterId = FindAdapater(Adapters, CI.AdapterType, CI.AdapterId);
+            CreateInfo.AdapterId = FindAdapter(Adapters, CI.AdapterType, CI.AdapterId);
             AddContext(COMMAND_QUEUE_TYPE_GRAPHICS, "Graphics", CI.AdapterId);
             AddContext(COMMAND_QUEUE_TYPE_COMPUTE, "Compute", CI.AdapterId);
             AddContext(COMMAND_QUEUE_TYPE_TRANSFER, "Transfer", CI.AdapterId);
@@ -555,7 +555,7 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
     AdapterInfoStr += ". Local memory: ";
     AdapterInfoStr += std::to_string(AdapterInfo.Memory.LocalMemory >> 20);
     AdapterInfoStr += " MB. Host-visible memory: ";
-    AdapterInfoStr += std::to_string(AdapterInfo.Memory.HostVisibileMemory >> 20);
+    AdapterInfoStr += std::to_string(AdapterInfo.Memory.HostVisibleMemory >> 20);
     AdapterInfoStr += " MB. Unified memory: ";
     AdapterInfoStr += std::to_string(AdapterInfo.Memory.UnifiedMemory >> 20);
     AdapterInfoStr += " MB.";
@@ -719,7 +719,7 @@ void TestingEnvironment::SetDefaultCompiler(SHADER_COMPILER compiler)
             break;
 
         default:
-            LOG_WARNING_MESSAGE("Unepxected device type");
+            LOG_WARNING_MESSAGE("Unexpected device type");
             m_ShaderCompiler = SHADER_COMPILER_DEFAULT;
     }
 

@@ -107,8 +107,8 @@ void TestingEnvironmentD3D12::ExecuteCommandList(ID3D12CommandList* pCmdList, bo
 
     auto* pd3d12Queue = pQueueD3D12->GetD3D12CommandQueue();
 
-    ID3D12CommandList* pCmdLits[] = {pCmdList};
-    pd3d12Queue->ExecuteCommandLists(_countof(pCmdLits), pCmdLits);
+    ID3D12CommandList* pCmdLists[] = {pCmdList};
+    pd3d12Queue->ExecuteCommandLists(_countof(pCmdLists), pCmdLists);
     if (WaitForIdle)
         IdleCommandQueue(pd3d12Queue);
 

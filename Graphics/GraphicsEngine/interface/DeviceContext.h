@@ -189,7 +189,7 @@ DILIGENT_TYPED_ENUM(DRAW_FLAGS, Uint8)
     ///          stay intact to avoid extra work.\n
     ///          Note that after a new PSO is bound or an SRB is committed, the engine will always set all
     ///          required buffer addresses/offsets regardless of the flag. The flag will only take effect
-    ///          on the second and susbequent draw calls that use the same PSO and SRB.\n
+    ///          on the second and subsequent draw calls that use the same PSO and SRB.\n
     ///          The flag has no effect in D3D11 and OpenGL backends.
     ///
     ///          Implementation details
@@ -1099,13 +1099,13 @@ struct BLASBuildTriangleData
 
     /// Data offset, in bytes, in pVertexBuffer.
     /// D3D12 and Vulkan: offset must be a multiple of the VertexValueType size.
-    /// Metal:            stride must be aligned by RayTracingProperties::VertexBufferAlignmnent
+    /// Metal:            stride must be aligned by RayTracingProperties::VertexBufferAlignment
     ///                   and must be a multiple of the VertexStride.
     Uint64      VertexOffset          DEFAULT_INITIALIZER(0);
 
     /// Stride, in bytes, between vertices.
     /// D3D12 and Vulkan: stride must be a multiple of the VertexValueType size.
-    /// Metal:            stride must be aligned by RayTracingProperties::VertexBufferAlignmnent.
+    /// Metal:            stride must be aligned by RayTracingProperties::VertexBufferAlignment.
     Uint32      VertexStride          DEFAULT_INITIALIZER(0);
 
     /// The number of triangle vertices.
@@ -1206,7 +1206,7 @@ struct BuildBLASAttribs
     ///     - To disable geometry, make all triangles inactive, see BLASBuildTriangleData::pVertexBuffer description.
     BLASBuildTriangleData const*    pTriangleData               DEFAULT_INITIALIZER(nullptr);
 
-    /// The number of triangle grometries.
+    /// The number of triangle geometries.
     /// Must be less than or equal to BottomLevelASDesc::TriangleCount.
     /// If Update is true then the count must be the same as the one used to build BLAS.
     Uint32                          TriangleDataCount           DEFAULT_INITIALIZER(0);
@@ -1862,7 +1862,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// \param [in] pPipelineState         - Pipeline state object that was used to create the shader resource binding.
     /// \param [in] pShaderResourceBinding - Shader resource binding whose resources will be transitioned.
     ///
-    /// \remarks This method explicitly transitiones all resources except ones in unknown state to the states required
+    /// \remarks This method explicitly transitions all resources except ones in unknown state to the states required
     ///          by Draw or Dispatch command.
     ///          If this method was called, there is no need to use Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION
     ///          when calling IDeviceContext::CommitShaderResources()
@@ -2083,7 +2083,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     ///              Any render targets not defined by this call are set to nullptr.\n\n
     ///
     /// \remarks When StateTransitionMode is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION, the method will
-    ///          transition all render targets in known states to Diligent::RESOURCE_STATE_REDER_TARGET,
+    ///          transition all render targets in known states to Diligent::RESOURCE_STATE_RENDER_TARGET,
     ///          and the depth-stencil buffer to Diligent::RESOURCE_STATE_DEPTH_WRITE state.
     ///          Resource state transitioning is not thread safe, so no other thread is allowed to read or write
     ///          the states of resources used by the command.
@@ -2184,7 +2184,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     ///           given by Attribs.CounterOffset. The number of commands will be the lesser of the value read from the buffer
     ///           and Attribs.DrawCount:
     ///
-    ///             NumCommads = min(CountBuffer[Attribs.CounterOffset], Attribs.DrawCount)
+    ///             NumCommands = min(CountBuffer[Attribs.CounterOffset], Attribs.DrawCount)
     ///
     ///           If Attribs.IndirectAttribsBufferStateTransitionMode or Attribs.CounterBufferStateTransitionMode is
     ///           Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION, the method may transition the state of the indirect
@@ -2217,7 +2217,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     ///           given by Attribs.CounterOffset. The number of commands will be the lesser of the value read from the buffer
     ///           and Attribs.DrawCount:
     ///
-    ///             NumCommads = min(CountBuffer[Attribs.CounterOffset], Attribs.DrawCount)
+    ///             NumCommands = min(CountBuffer[Attribs.CounterOffset], Attribs.DrawCount)
     ///
     ///           If Attribs.IndirectAttribsBufferStateTransitionMode or Attribs.CounterBufferStateTransitionMode is
     ///           Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION, the method may transition the state of the indirect
@@ -2340,7 +2340,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     ///
     /// \remarks When StateTransitionMode is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION, the method will
     ///          transition the state of the texture to the state required by clear operation.
-    ///          In Direct3D12, this satate is always Diligent::RESOURCE_STATE_DEPTH_WRITE, however in Vulkan
+    ///          In Direct3D12, this state is always Diligent::RESOURCE_STATE_DEPTH_WRITE, however in Vulkan
     ///          the state depends on whether the depth buffer is bound to the pipeline.
     ///
     ///          Resource state transitioning is not thread safe, so no other thread is allowed to read or write
@@ -2413,7 +2413,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// \param [in] Value  - The value to set the fence to. This value must be greater than the
     ///                      previously signaled value on the same fence.
     ///
-    /// \note The method does not flush the context (an application can do this explcitly if needed)
+    /// \note The method does not flush the context (an application can do this explicitly if needed)
     ///       and the fence will be signaled only when the command context is flushed next time.
     ///       If an application needs to wait for the fence in a loop, it must flush the context
     ///       after signalling the fence.

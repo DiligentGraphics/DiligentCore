@@ -14,9 +14,9 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *
- *  In no event and under no legal theory, whether in tort (including neVkigence),
+ *  In no event and under no legal theory, whether in tort (including negligence),
  *  contract, or otherwise, unless required by applicable law (such as deliberate
- *  and grossly neVkigent acts) or agreed to in writing, shall any Contributor be
+ *  and grossly negligent acts) or agreed to in writing, shall any Contributor be
  *  liable for any damages, including any direct, indirect, special, incidental,
  *  or consequential damages of any character arising as a result of this License or
  *  out of the use or inability to use the software (including but not limited to damages
@@ -36,14 +36,14 @@ namespace Diligent
 {
 
 QueryVkImpl::QueryVkImpl(IReferenceCounters* pRefCounters,
-                         RenderDeviceVkImpl* pRendeDeviceVkImpl,
+                         RenderDeviceVkImpl* pRenderDeviceVkImpl,
                          const QueryDesc&    Desc,
                          bool                IsDeviceInternal) :
     // clang-format off
     TQueryBase
     {
         pRefCounters,
-        pRendeDeviceVkImpl,
+        pRenderDeviceVkImpl,
         Desc,
         IsDeviceInternal
     }
@@ -143,10 +143,10 @@ bool QueryVkImpl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
     bool       DataAvailable       = false;
     if (CompletedFenceValue >= m_QueryEndFenceValue)
     {
-        const auto  QueueFamiliyIndex = m_pDevice->GetQueueFamilyIndex(CmdQueueId);
-        const auto& LogicalDevice     = m_pDevice->GetLogicalDevice();
-        const auto  StageMask         = LogicalDevice.GetSupportedStagesMask(QueueFamiliyIndex);
-        auto        vkQueryPool       = m_pQueryMgr->GetQueryPool(m_Desc.Type);
+        const auto  QueueFamilyIndex = m_pDevice->GetQueueFamilyIndex(CmdQueueId);
+        const auto& LogicalDevice    = m_pDevice->GetLogicalDevice();
+        const auto  StageMask        = LogicalDevice.GetSupportedStagesMask(QueueFamilyIndex);
+        auto        vkQueryPool      = m_pQueryMgr->GetQueryPool(m_Desc.Type);
 
         static_assert(QUERY_TYPE_NUM_TYPES == 6, "Not all QUERY_TYPE enum values are handled below");
         switch (m_Desc.Type)

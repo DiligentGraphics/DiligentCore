@@ -79,7 +79,7 @@ public:
     AsyncWritableResource() noexcept {}
 
     void           SetPendingMemoryBarriers(MEMORY_BARRIER Barriers) { m_PendingMemoryBarriers |= Barriers; }
-    MEMORY_BARRIER GetPendingMemortBarriers() { return m_PendingMemoryBarriers; }
+    MEMORY_BARRIER GetPendingMemoryBarriers() { return m_PendingMemoryBarriers; }
 
 private:
     friend class GLContextState;

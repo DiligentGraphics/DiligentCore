@@ -98,7 +98,7 @@ public:
     ///                              (shader register and space).
     /// \param [in]  pSrcBytecode  - Source byte code.
     /// \param [out] ppDstByteCode - Memory location where the pointer to the byte code
-    ///                              with the remapped bindigs will be written.
+    ///                              with the remapped bindings will be written.
     ///
     /// \return     true if the remapping was successful, and false otherwise.
     virtual bool RemapResourceBindings(const TResourceBindingMap& ResourceMap,

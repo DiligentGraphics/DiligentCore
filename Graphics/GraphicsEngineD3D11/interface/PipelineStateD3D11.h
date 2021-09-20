@@ -28,7 +28,7 @@
 #pragma once
 
 /// \file
-/// Definition of the Diligent::IPipeplineStateD3D11 interface
+/// Definition of the Diligent::IPipelineStateD3D11 interface
 
 #include "../../GraphicsEngine/interface/PipelineState.h"
 

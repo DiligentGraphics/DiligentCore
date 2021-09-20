@@ -423,7 +423,7 @@ void DeviceContextD3D11Impl::BindShaderResources(Uint32 BindSRBMask)
         // https://docs.microsoft.com/en-us/windows/desktop/api/d3d11/nf-d3d11-id3d11devicecontext-omsetrendertargetsandunorderedaccessviews#remarks
         const auto StartUAVSlot = m_NumBoundRenderTargets;
 
-        const Uint8 NumUAVSlots = m_pPipelineState->GetNumPixleUAVs();
+        const Uint8 NumUAVSlots = m_pPipelineState->GetNumPixelUAVs();
         VERIFY(NumUAVSlots > StartUAVSlot, "Number of UAVs must be greater than the render target count");
         auto* d3d11UAVs   = m_CommittedRes.d3d11UAVs[PSInd];
         auto* d3d11UAVRes = m_CommittedRes.d3d11UAVResources[PSInd];
@@ -1254,7 +1254,7 @@ bool UnbindPixelShaderUAV<ID3D11UnorderedAccessView, TSetUnorderedAccessViewsTyp
 {
     if (SetD3D11UAVMethod == reinterpret_cast<TSetUnorderedAccessViewsType>(&ID3D11DeviceContext::OMSetRenderTargetsAndUnorderedAccessViews))
     {
-        // Pixel shader UAVs are bound in a special way simulatneously with the render targets
+        // Pixel shader UAVs are bound in a special way simultaneously with the render targets
         auto UAVStartSlot = NumCommittedRenderTargets;
         // UAVs cannot be set independently; they all need to be set at the same time.
         // https://docs.microsoft.com/en-us/windows/desktop/api/d3d11/nf-d3d11-id3d11devicecontext-omsetrendertargetsandunorderedaccessviews#remarks

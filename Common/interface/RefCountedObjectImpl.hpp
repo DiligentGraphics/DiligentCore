@@ -303,7 +303,7 @@ private:
         //  IT IS CRUCIALLY IMPORTANT TO ASSURE THAT ONLY ONE THREAD WILL EVER
         //  EXECUTE THIS CODE
 
-        // The sloution is to atomically increment strong ref counter in GetObject().
+        // The solution is to atomically increment strong ref counter in GetObject().
         // There are two possible scenarios depending on who first increments the counter:
 
 
@@ -362,7 +362,7 @@ private:
         ThreadingTools::LockHelper Lock(m_LockFlag);
 
         // GetObject() first acquires the lock, and only then increments and
-        // decrements the ref counter. If it reads 1 after incremeting the counter,
+        // decrements the ref counter. If it reads 1 after incrementing the counter,
         // it does not return the reference to the object and decrements the counter.
         // If we acquired the lock, GetObject() will not start until we are done
         VERIFY_EXPR(m_lNumStrongReferences == 0 && m_ObjectState == ObjectState::Alive);
@@ -401,7 +401,7 @@ private:
             // Note that this is the only place where m_ObjectState is
             // modified after the ref counters object has been created
             m_ObjectState = ObjectState::Destroyed;
-            // The object is now detached from the reference counters and it is if
+            // The object is now detached from the reference counters, and it is if
             // it was destroyed since no one can obtain access to it.
 
 
@@ -416,7 +416,7 @@ private:
             //    acquire the lock, destroy        |
             //    the obj, release the lock        |
             //    m_lNumWeakReferences == 1        |
-            //                                     |   1. Aacquire the lock,
+            //                                     |   1. Acquire the lock,
             //                                     |      decrement m_lNumWeakReferences,
             //                                     |      m_lNumWeakReferences == 0,
             //                                     |      m_ObjectState == ObjectState::Destroyed

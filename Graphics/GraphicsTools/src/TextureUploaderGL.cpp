@@ -155,13 +155,13 @@ struct TextureUploaderGL::InternalData
         m_PendingOperations.swap(m_InWorkOperations);
     }
 
-    void EnqueCopy(UploadBufferGL* pUploadBuffer, ITexture* pDstTexture, Uint32 dstSlice, Uint32 dstMip)
+    void EnqueueCopy(UploadBufferGL* pUploadBuffer, ITexture* pDstTexture, Uint32 dstSlice, Uint32 dstMip)
     {
         std::lock_guard<std::mutex> QueueLock(m_PendingOperationsMtx);
         m_PendingOperations.emplace_back(PendingBufferOperation::Operation::Copy, pUploadBuffer, pDstTexture, dstSlice, dstMip);
     }
 
-    void EnqueMap(UploadBufferGL* pUploadBuffer)
+    void EnqueueMap(UploadBufferGL* pUploadBuffer)
     {
         std::lock_guard<std::mutex> QueueLock(m_PendingOperationsMtx);
         m_PendingOperations.emplace_back(PendingBufferOperation::Operation::Map, pUploadBuffer);
@@ -348,7 +348,7 @@ void TextureUploaderGL::AllocateUploadBuffer(IDeviceContext*         pContext,
     else
     {
         // Worker thread
-        m_pInternalData->EnqueMap(pUploadBuffer);
+        m_pInternalData->EnqueueMap(pUploadBuffer);
         pUploadBuffer->WaitForMap();
     }
     *ppBuffer = pUploadBuffer.Detach();
@@ -377,7 +377,7 @@ void TextureUploaderGL::ScheduleGPUCopy(IDeviceContext* pContext,
     else
     {
         // Worker thread
-        m_pInternalData->EnqueCopy(pUploadBufferGL, pDstTexture, ArraySlice, MipLevel);
+        m_pInternalData->EnqueueCopy(pUploadBufferGL, pDstTexture, ArraySlice, MipLevel);
     }
 }
 

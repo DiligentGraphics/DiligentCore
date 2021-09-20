@@ -431,7 +431,7 @@ GLenum TypeToGLTexFormat(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNorma
                 case 1: return GL_R16F;
                 case 2: return GL_RG16F;
                 case 4: return GL_RGBA16F;
-                default: UNEXPECTED("Unusupported number of components"); return 0;
+                default: UNEXPECTED("Unsupported number of components"); return 0;
             }
         }
 
@@ -444,7 +444,7 @@ GLenum TypeToGLTexFormat(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNorma
                 case 2: return GL_RG32F;
                 case 3: return GL_RGB32F;
                 case 4: return GL_RGBA32F;
-                default: UNEXPECTED("Unusupported number of components"); return 0;
+                default: UNEXPECTED("Unsupported number of components"); return 0;
             }
         }
 
@@ -457,7 +457,7 @@ GLenum TypeToGLTexFormat(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNorma
                 case 2: return GL_RG32I;
                 case 3: return GL_RGB32I;
                 case 4: return GL_RGBA32I;
-                default: UNEXPECTED("Unusupported number of components"); return 0;
+                default: UNEXPECTED("Unsupported number of components"); return 0;
             }
         }
 
@@ -470,7 +470,7 @@ GLenum TypeToGLTexFormat(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNorma
                 case 2: return GL_RG32UI;
                 case 3: return GL_RGB32UI;
                 case 4: return GL_RGBA32UI;
-                default: UNEXPECTED("Unusupported number of components"); return 0;
+                default: UNEXPECTED("Unsupported number of components"); return 0;
             }
         }
 
@@ -483,7 +483,7 @@ GLenum TypeToGLTexFormat(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNorma
                     case 1: return GL_R16_SNORM;
                     case 2: return GL_RG16_SNORM;
                     case 4: return GL_RGBA16_SNORM;
-                    default: UNEXPECTED("Unusupported number of components"); return 0;
+                    default: UNEXPECTED("Unsupported number of components"); return 0;
                 }
             }
             else
@@ -493,7 +493,7 @@ GLenum TypeToGLTexFormat(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNorma
                     case 1: return GL_R16I;
                     case 2: return GL_RG16I;
                     case 4: return GL_RGBA16I;
-                    default: UNEXPECTED("Unusupported number of components"); return 0;
+                    default: UNEXPECTED("Unsupported number of components"); return 0;
                 }
             }
         }
@@ -507,7 +507,7 @@ GLenum TypeToGLTexFormat(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNorma
                     case 1: return GL_R16;
                     case 2: return GL_RG16;
                     case 4: return GL_RGBA16;
-                    default: UNEXPECTED("Unusupported number of components"); return 0;
+                    default: UNEXPECTED("Unsupported number of components"); return 0;
                 }
             }
             else
@@ -517,7 +517,7 @@ GLenum TypeToGLTexFormat(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNorma
                     case 1: return GL_R16UI;
                     case 2: return GL_RG16UI;
                     case 4: return GL_RGBA16UI;
-                    default: UNEXPECTED("Unusupported number of components"); return 0;
+                    default: UNEXPECTED("Unsupported number of components"); return 0;
                 }
             }
         }
@@ -531,7 +531,7 @@ GLenum TypeToGLTexFormat(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNorma
                     case 1: return GL_R8_SNORM;
                     case 2: return GL_RG8_SNORM;
                     case 4: return GL_RGBA8_SNORM;
-                    default: UNEXPECTED("Unusupported number of components"); return 0;
+                    default: UNEXPECTED("Unsupported number of components"); return 0;
                 }
             }
             else
@@ -541,7 +541,7 @@ GLenum TypeToGLTexFormat(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNorma
                     case 1: return GL_R8I;
                     case 2: return GL_RG8I;
                     case 4: return GL_RGBA8I;
-                    default: UNEXPECTED("Unusupported number of components"); return 0;
+                    default: UNEXPECTED("Unsupported number of components"); return 0;
                 }
             }
         }
@@ -555,7 +555,7 @@ GLenum TypeToGLTexFormat(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNorma
                     case 1: return GL_R8;
                     case 2: return GL_RG8;
                     case 4: return GL_RGBA8;
-                    default: UNEXPECTED("Unusupported number of components"); return 0;
+                    default: UNEXPECTED("Unsupported number of components"); return 0;
                 }
             }
             else
@@ -565,12 +565,12 @@ GLenum TypeToGLTexFormat(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNorma
                     case 1: return GL_R8UI;
                     case 2: return GL_RG8UI;
                     case 4: return GL_RGBA8UI;
-                    default: UNEXPECTED("Unusupported number of components"); return 0;
+                    default: UNEXPECTED("Unsupported number of components"); return 0;
                 }
             }
         }
 
-        default: UNEXPECTED("Unusupported format"); return 0;
+        default: UNEXPECTED("Unsupported format"); return 0;
     }
 }
 

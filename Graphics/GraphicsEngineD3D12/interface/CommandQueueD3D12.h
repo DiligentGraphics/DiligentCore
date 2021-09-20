@@ -61,7 +61,7 @@ DILIGENT_BEGIN_INTERFACE(ICommandQueueD3D12, ICommandQueue)
                                   Uint32                    NumCommandLists,
                                   ID3D12CommandList* const* ppCommandLists) PURE;
 
-    /// Returns D3D12 command queue. May return null if queue is anavailable
+    /// Returns D3D12 command queue. May return null if queue is unavailable
     VIRTUAL ID3D12CommandQueue* METHOD(GetD3D12CommandQueue)(THIS) PURE;
 
     /// Signals the given fence

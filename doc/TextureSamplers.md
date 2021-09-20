@@ -22,7 +22,7 @@ uniform sampler2D g_Texture;
 vec4 Color = texture(g_Texture, UV);
 ```
 
-Vulkan supports both ways: there are combined samplers as well as separate ones.
+Vulkan supports both ways: there are both combined and separate samplers.
 
 There are two ways texture samplers can be handled in Diligent Engine, which are described in detail below.
 

@@ -90,10 +90,10 @@ public:
 
     bool IsLoaded() override final
     {
-        return GetCreateInstaceProc() != nullptr;
+        return GetCreateInstanceProc() != nullptr;
     }
 
-    DxcCreateInstanceProc GetCreateInstaceProc()
+    DxcCreateInstanceProc GetCreateInstanceProc()
     {
         return Load();
     }
@@ -291,7 +291,7 @@ std::unique_ptr<IDXCompiler> CreateDXCompiler(DXCompilerTarget Target, Uint32 AP
 
 bool DXCompilerImpl::Compile(const CompileAttribs& Attribs)
 {
-    auto CreateInstance = GetCreateInstaceProc();
+    auto CreateInstance = GetCreateInstanceProc();
 
     if (CreateInstance == nullptr)
     {
@@ -632,7 +632,7 @@ void DXCompilerImpl::GetD3D12ShaderReflection(IDxcBlob*                pShaderBy
 #if D3D12_SUPPORTED
     try
     {
-        auto CreateInstance = GetCreateInstaceProc();
+        auto CreateInstance = GetCreateInstanceProc();
         if (CreateInstance == nullptr)
             return;
 
@@ -819,7 +819,7 @@ bool DXCompilerImpl::RemapResourceBindings(const TResourceBindingMap& ResourceMa
                                            IDxcBlob**                 ppDstByteCode)
 {
 #if D3D12_SUPPORTED
-    auto CreateInstance = GetCreateInstaceProc();
+    auto CreateInstance = GetCreateInstanceProc();
     if (CreateInstance == nullptr)
     {
         LOG_ERROR("Failed to load DXCompiler");

@@ -153,13 +153,13 @@ struct TextureUploaderD3D11::InternalData
         m_PendingOperations.swap(m_InWorkOperations);
     }
 
-    void EnqueCopy(UploadBufferD3D11* pUploadBuffer, ID3D11Resource* pd3d11DstTex, Uint32 Mip, Uint32 Slice, Uint32 MipLevels)
+    void EnqueueCopy(UploadBufferD3D11* pUploadBuffer, ID3D11Resource* pd3d11DstTex, Uint32 Mip, Uint32 Slice, Uint32 MipLevels)
     {
         std::lock_guard<std::mutex> QueueLock(m_PendingOperationsMtx);
         m_PendingOperations.emplace_back(PendingBufferOperation::Operation::Copy, pUploadBuffer, pd3d11DstTex, Mip, Slice, MipLevels);
     }
 
-    void EnqueMap(UploadBufferD3D11* pUploadBuffer, PendingBufferOperation::Operation Op)
+    void EnqueueMap(UploadBufferD3D11* pUploadBuffer, PendingBufferOperation::Operation Op)
     {
         std::lock_guard<std::mutex> QueueLock(m_PendingOperationsMtx);
         m_PendingOperations.emplace_back(Op, pUploadBuffer);
@@ -288,7 +288,7 @@ void TextureUploaderD3D11::InternalData::Execute(ID3D11DeviceContext*    pd3d11N
             else
             {
                 VERIFY_EXPR(!ExecuteImmediately);
-                EnqueMap(pBuffer, OperationInfo.operation);
+                EnqueueMap(pBuffer, OperationInfo.operation);
             }
         }
         break;
@@ -400,7 +400,7 @@ void TextureUploaderD3D11::AllocateUploadBuffer(IDeviceContext*         pContext
         else
         {
             // Worker thread
-            m_pInternalData->EnqueMap(pUploadBuffer, InternalData::PendingBufferOperation::Map);
+            m_pInternalData->EnqueueMap(pUploadBuffer, InternalData::PendingBufferOperation::Map);
             pUploadBuffer->WaitForMap();
         }
     }
@@ -435,7 +435,7 @@ void TextureUploaderD3D11::ScheduleGPUCopy(IDeviceContext* pContext,
     else
     {
         // Worker thread
-        m_pInternalData->EnqueCopy(pUploadBufferD3D11, pd3d11NativeDstTex, MipLevel, ArraySlice, DstTexDesc.MipLevels);
+        m_pInternalData->EnqueueCopy(pUploadBufferD3D11, pd3d11NativeDstTex, MipLevel, ArraySlice, DstTexDesc.MipLevels);
     }
 }
 

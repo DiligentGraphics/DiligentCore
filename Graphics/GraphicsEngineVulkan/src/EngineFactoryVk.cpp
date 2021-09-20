@@ -207,7 +207,7 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
         RayTracingProps.MaxInstancesPerTLAS      = static_cast<Uint32>(vkASLimits.maxInstanceCount);
         RayTracingProps.MaxPrimitivesPerBLAS     = static_cast<Uint32>(vkASLimits.maxPrimitiveCount);
         RayTracingProps.MaxGeometriesPerBLAS     = static_cast<Uint32>(vkASLimits.maxGeometryCount);
-        RayTracingProps.VertexBufferAlignmnent   = 1;
+        RayTracingProps.VertexBufferAlignment    = 1;
         RayTracingProps.IndexBufferAlignment     = 1;
         RayTracingProps.TransformBufferAlignment = 16; // from specs
         RayTracingProps.BoxBufferAlignment       = 8;  // from specs
@@ -408,9 +408,9 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
     // Set memory properties
     {
         auto& Mem{AdapterInfo.Memory};
-        Mem.LocalMemory        = 0;
-        Mem.HostVisibileMemory = 0;
-        Mem.UnifiedMemory      = 0;
+        Mem.LocalMemory       = 0;
+        Mem.HostVisibleMemory = 0;
+        Mem.UnifiedMemory     = 0;
 
         std::bitset<VK_MAX_MEMORY_HEAPS> DeviceLocalHeap;
         std::bitset<VK_MAX_MEMORY_HEAPS> HostVisibleHeap;
@@ -460,7 +460,7 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
             else if (DeviceLocalHeap[heap])
                 Mem.LocalMemory += static_cast<Uint64>(HeapInfo.size);
             else if (HostVisibleHeap[heap])
-                Mem.HostVisibileMemory += static_cast<Uint64>(HeapInfo.size);
+                Mem.HostVisibleMemory += static_cast<Uint64>(HeapInfo.size);
         }
     }
 

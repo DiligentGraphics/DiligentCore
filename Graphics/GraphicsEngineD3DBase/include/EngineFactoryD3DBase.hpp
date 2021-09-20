@@ -176,7 +176,7 @@ public:
         {
             WideCharToMultiByte(CP_ACP, 0, dxgiAdapterDesc.Description, -1, AdapterInfo.Description, _countof(AdapterInfo.Description), NULL, FALSE);
 
-            // Can not detect descrete or integrated GPUs, so set descrete.
+            // Can not detect discrete or integrated GPUs, so set discrete.
             AdapterInfo.Type       = (dxgiAdapterDesc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) ? ADAPTER_TYPE_SOFTWARE : ADAPTER_TYPE_DISCRETE;
             AdapterInfo.Vendor     = VendorIdToAdapterVendor(dxgiAdapterDesc.VendorId);
             AdapterInfo.VendorId   = dxgiAdapterDesc.VendorId;
@@ -213,10 +213,10 @@ public:
 
         // Set memory properties
         {
-            auto& Mem              = AdapterInfo.Memory;
-            Mem.LocalMemory        = dxgiAdapterDesc.DedicatedVideoMemory;
-            Mem.HostVisibileMemory = dxgiAdapterDesc.SharedSystemMemory;
-            Mem.UnifiedMemory      = 0;
+            auto& Mem             = AdapterInfo.Memory;
+            Mem.LocalMemory       = dxgiAdapterDesc.DedicatedVideoMemory;
+            Mem.HostVisibleMemory = dxgiAdapterDesc.SharedSystemMemory;
+            Mem.UnifiedMemory     = 0;
         }
 
         // Draw command properties

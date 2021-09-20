@@ -350,7 +350,7 @@ VkPhysicalDevice VulkanInstance::SelectPhysicalDevice(uint32_t AdapterId) const
         SelectedPhysicalDevice = m_PhysicalDevices[AdapterId];
     }
 
-    // Select a device that exposes a queue family that suppors both compute and graphics operations.
+    // Select a device that exposes a queue family that supports both compute and graphics operations.
     // Prefer discrete GPU.
     if (SelectedPhysicalDevice == VK_NULL_HANDLE)
     {

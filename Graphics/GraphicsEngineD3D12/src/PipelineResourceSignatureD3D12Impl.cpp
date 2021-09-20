@@ -236,7 +236,7 @@ void PipelineResourceSignatureD3D12Impl::AllocateRootParameters()
         {
             if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
             {
-                // Use artifial root signature:
+                // Use artificial root signature:
                 // SRVs at root index D3D12_DESCRIPTOR_RANGE_TYPE_SRV (0)
                 // UAVs at root index D3D12_DESCRIPTOR_RANGE_TYPE_UAV (1)
                 // CBVs at root index D3D12_DESCRIPTOR_RANGE_TYPE_CBV (2)
@@ -504,7 +504,7 @@ void PipelineResourceSignatureD3D12Impl::CommitRootTables(const CommitCacheResou
     auto* const pd3d12Device = GetDevice()->GetD3D12Device();
 
     // Having an array of actual DescriptorHeapAllocation objects introduces unnecessary overhead when
-    // there are no dynamic variables as constructors and desctructors are always called. To avoid this
+    // there are no dynamic variables as constructors and destructors are always called. To avoid this
     // overhead we will construct DescriptorHeapAllocation in-place only when they are really needed.
     std::array<DescriptorHeapAllocation*, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER + 1> pDynamicDescriptorAllocations{};
 

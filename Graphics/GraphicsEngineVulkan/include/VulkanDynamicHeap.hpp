@@ -37,7 +37,7 @@
 namespace Diligent
 {
 
-// Vulkand dynamic heap implementation consists of a number of dynamic heaps, one per context.
+// Vulkan dynamic heap implementation consists of a number of dynamic heaps, one per context.
 // Every dynamic heap suballocates chunk of memory from the global memory manager. Within
 // every chunk, memory is allocated in a simple lock-free linear fashion. All used allocations are discarded
 // when FinishFrame() is called

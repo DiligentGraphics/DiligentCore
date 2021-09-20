@@ -135,7 +135,7 @@ void ValidateBufferDesc(const BufferDesc& Desc, const IRenderDevice* pDevice) no
             LOG_BUFFER_ERROR_AND_THROW("USAGE_DYNAMIC buffers that use UAV flag or FORMATTED mode require internal backing resource. "
                                        "This resource is implicitly transitioned by the device context and thus can't be safely used in "
                                        "multiple contexts. Create DYNAMIC buffer without UAV flag and use UNDEFINED mode and copy the contents to USAGE_DEFAULT buffer "
-                                       "with required flags, which can be sharead between contexts.");
+                                       "with required flags, which can be shared between contexts.");
         }
     }
 }

@@ -111,7 +111,7 @@ void RasterizationRateMapReferenceMtl(ISwapChain* pSwapChain)
             }
 
             id<MTLRasterizationRateMap> mtlRRM;
-            id<MTLTexture>              mtlIntermadiateRT;
+            id<MTLTexture>              mtlIntermediateRT;
             id<MTLBuffer>               mtlParamBuffer;
             {
                 const Uint32 TileSize = 4;
@@ -135,8 +135,8 @@ void RasterizationRateMapReferenceMtl(ISwapChain* pSwapChain)
                                                                                   mipmapped: NO];
                 mTLTexDesc.storageMode = MTLStorageModePrivate;
                 mTLTexDesc.usage       = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
-                mtlIntermadiateRT = [mtlDevice newTextureWithDescriptor: mTLTexDesc];
-                ASSERT_TRUE(mtlIntermadiateRT != nil);
+                mtlIntermediateRT = [mtlDevice newTextureWithDescriptor: mTLTexDesc];
+                ASSERT_TRUE(mtlIntermediateRT != nil);
 
                 mtlParamBuffer = [mtlDevice newBufferWithLength: [mtlRRM parameterBufferSizeAndAlign].size
                                                         options: MTLResourceStorageModeShared];
@@ -162,7 +162,7 @@ void RasterizationRateMapReferenceMtl(ISwapChain* pSwapChain)
             // Pass 1
             {
                 MTLRenderPassDescriptor* renderPassDesc = [MTLRenderPassDescriptor renderPassDescriptor]; // Autoreleased
-                renderPassDesc.colorAttachments[0].texture     = mtlIntermadiateRT;
+                renderPassDesc.colorAttachments[0].texture     = mtlIntermediateRT;
                 renderPassDesc.colorAttachments[0].loadAction  = MTLLoadActionClear;
                 renderPassDesc.colorAttachments[0].clearColor  = MTLClearColorMake(1.0, 0.0, 0.0, 1.0);
                 renderPassDesc.colorAttachments[0].storeAction = MTLStoreActionStore;
@@ -171,7 +171,7 @@ void RasterizationRateMapReferenceMtl(ISwapChain* pSwapChain)
                 id<MTLRenderCommandEncoder> renderEncoder = [mtlCommandBuffer renderCommandEncoderWithDescriptor:renderPassDesc]; // Autoreleased
                 ASSERT_TRUE(renderEncoder != nil);
 
-                [renderEncoder setViewport:MTLViewport{0, 0, (double)mtlIntermadiateRT.width, (double)mtlIntermadiateRT.height, 0, 1}];
+                [renderEncoder setViewport:MTLViewport{0, 0, (double)mtlIntermediateRT.width, (double)mtlIntermediateRT.height, 0, 1}];
 
                 [renderEncoder setRenderPipelineState:mtlPass1PSO];
                 [renderEncoder setVertexBuffer: mtlVertBuffer
@@ -201,7 +201,7 @@ void RasterizationRateMapReferenceMtl(ISwapChain* pSwapChain)
                 [renderEncoder setFragmentBuffer: mtlParamBuffer
                                           offset: 0
                                          atIndex: 0];
-                [renderEncoder setFragmentTexture: mtlIntermadiateRT
+                [renderEncoder setFragmentTexture: mtlIntermediateRT
                                           atIndex: 0];
 
                 [renderEncoder drawPrimitives: MTLPrimitiveTypeTriangle

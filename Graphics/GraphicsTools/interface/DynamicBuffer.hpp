@@ -42,7 +42,7 @@ namespace Diligent
 class DynamicBuffer
 {
 public:
-    /// Initialies the dynamic buffer.
+    /// Initializes the dynamic buffer.
 
     /// \param[in] pDevice - Render device that will be used to create the buffer.
     ///                      This parameter may be null (see remarks).

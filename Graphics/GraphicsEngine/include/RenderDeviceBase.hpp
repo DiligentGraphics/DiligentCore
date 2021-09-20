@@ -233,7 +233,7 @@ public:
     /// \param pRefCounters    - Reference counters object that controls the lifetime of this render device
     /// \param RawMemAllocator - Allocator that will be used to allocate memory for all device objects (including render device itself)
     /// \param pEngineFactory  - Engine factory that was used to create this device
-    /// \param EngineCI        - Engigne create info struct, see Diligent::EngineCreateInfo.
+    /// \param EngineCI        - Engine create info struct, see Diligent::EngineCreateInfo.
     /// \param AdapterInfo     - Graphics adapter info, see Diligent::AdapterInfo.
     ///
     /// \remarks Render device uses fixed block allocators (see FixedBlockMemoryAllocator) to allocate memory for

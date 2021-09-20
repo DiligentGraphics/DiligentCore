@@ -44,7 +44,7 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 /// [D3D12_BLEND]: https://msdn.microsoft.com/en-us/library/windows/desktop/dn770338(v=vs.85).aspx
 /// [glBlendFuncSeparate]: https://www.opengl.org/wiki/GLAPI/glBlendFuncSeparate
 /// This enumeration defines blend factors for alpha-blending.
-/// It generatlly mirrors [D3D11_BLEND][] and [D3D12_BLEND][] enumerations and is used by RenderTargetBlendDesc structure
+/// It generally mirrors [D3D11_BLEND][] and [D3D12_BLEND][] enumerations and is used by RenderTargetBlendDesc structure
 /// to define source and destination blend factors for color and alpha channels.
 /// \sa [D3D11_BLEND on MSDN][D3D11_BLEND], [D3D12_BLEND on MSDN][D3D12_BLEND], [glBlendFuncSeparate on OpenGL.org][glBlendFuncSeparate]
 DILIGENT_TYPED_ENUM(BLEND_FACTOR, Int8)

@@ -72,13 +72,13 @@ TEST(MeshShaderTest, DrawTriangle)
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto* pSwapChain = pEnv->GetSwapChain();
-    auto* pConext    = pEnv->GetDeviceContext();
+    auto* pContext   = pEnv->GetDeviceContext();
 
     RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
     if (pTestingSwapChain)
     {
-        pConext->Flush();
-        pConext->InvalidateState();
+        pContext->Flush();
+        pContext->InvalidateState();
 
         auto deviceType = pDevice->GetDeviceInfo().Type;
         switch (deviceType)
@@ -184,13 +184,13 @@ TEST(MeshShaderTest, DrawTriangleIndirect)
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto* pSwapChain = pEnv->GetSwapChain();
-    auto* pConext    = pEnv->GetDeviceContext();
+    auto* pContext   = pEnv->GetDeviceContext();
 
     RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
     if (pTestingSwapChain)
     {
-        pConext->Flush();
-        pConext->InvalidateState();
+        pContext->Flush();
+        pContext->InvalidateState();
 
         auto deviceType = pDevice->GetDeviceInfo().Type;
         switch (deviceType)
@@ -334,13 +334,13 @@ TEST(MeshShaderTest, DrawTriangleIndirectCount)
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto* pSwapChain = pEnv->GetSwapChain();
-    auto* pConext    = pEnv->GetDeviceContext();
+    auto* pContext   = pEnv->GetDeviceContext();
 
     RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
     if (pTestingSwapChain)
     {
-        pConext->Flush();
-        pConext->InvalidateState();
+        pContext->Flush();
+        pContext->InvalidateState();
 
         auto deviceType = pDevice->GetDeviceInfo().Type;
         switch (deviceType)
@@ -489,13 +489,13 @@ TEST(MeshShaderTest, DrawTrisWithAmplificationShader)
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto* pSwapChain = pEnv->GetSwapChain();
-    auto* pConext    = pEnv->GetDeviceContext();
+    auto* pContext   = pEnv->GetDeviceContext();
 
     RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
     if (pTestingSwapChain)
     {
-        pConext->Flush();
-        pConext->InvalidateState();
+        pContext->Flush();
+        pContext->InvalidateState();
 
         auto deviceType = pDevice->GetDeviceInfo().Type;
         switch (deviceType)

@@ -274,7 +274,7 @@ PUBLIC
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     set_target_properties(Diligent-GraphicsEngineVk-shared PROPERTIES
-        # Disallow missing direct and indirect dependencies to enssure that .so is self-contained
+        # Disallow missing direct and indirect dependencies to ensure that .so is self-contained
         LINK_FLAGS "-Wl,--no-undefined -Wl,--no-allow-shlib-undefined"
     )
     if(PLATFORM_WIN32)

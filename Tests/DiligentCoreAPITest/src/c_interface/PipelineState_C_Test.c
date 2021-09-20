@@ -41,7 +41,7 @@ int TestPipelineStateCInterface(struct IPipelineState* pPSO)
     PipelineStateDesc PSODesc;
 
     Uint32 StaticVarCount = 0;
-    bool   IsComptible    = false;
+    bool   IsCompatible   = false;
 
     IShaderResourceVariable* pVar = NULL;
     IShaderResourceBinding*  pSRB = NULL;
@@ -95,8 +95,8 @@ int TestPipelineStateCInterface(struct IPipelineState* pPSO)
     else
         ++num_errors;
 
-    IsComptible = IPipelineState_IsCompatibleWith(pPSO, pPSO);
-    if (!IsComptible)
+    IsCompatible = IPipelineState_IsCompatibleWith(pPSO, pPSO);
+    if (!IsCompatible)
         ++num_errors;
 
     return num_errors;

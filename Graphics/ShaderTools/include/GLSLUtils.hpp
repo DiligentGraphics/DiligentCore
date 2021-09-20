@@ -42,7 +42,7 @@ enum class TargetGLSLCompiler
 
 String BuildGLSLSourceString(const ShaderCreateInfo&    ShaderCI,
                              const RenderDeviceInfo&    DeviceInfo,
-                             const GraphicsAdapterInfo& AdaterInfo,
+                             const GraphicsAdapterInfo& AdapterInfo,
                              TargetGLSLCompiler         TargetCompiler,
                              const char*                ExtraDefinitions = nullptr);
 

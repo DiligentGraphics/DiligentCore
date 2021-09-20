@@ -169,7 +169,7 @@ if(PLATFORM_IOS OR PLATFORM_TVOS)
         endif()
 
         if(EXISTS ${MOLTENVK_LIBRARY})
-            message("Using MotlenVK library ${MOLTENVK_LIBRARY}")
+            message("Using MoltenVK library ${MOLTENVK_LIBRARY}")
             set(VULKAN_SUPPORTED TRUE CACHE INTERNAL "Vulkan is enabled through MoltenVK on ${CMAKE_SYSTEM_NAME} platform")
             set(MOLTENVK_LIBRARY ${MOLTENVK_LIBRARY} CACHE FILEPATH "MoltenVK library")
         else()

@@ -158,7 +158,7 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
 
     // Note that Vulkan itself does not invert Y coordinate when transforming
     // normalized device Y to window space. However, we use negative viewport
-    // height which achieves the same effect as in D3D, thererfore we need to
+    // height which achieves the same effect as in D3D, therefore we need to
     // invert y (see comments in DeviceContextVkImpl::CommitViewports() for details)
     m_DeviceInfo.NDC = NDCAttribs{0.0f, 1.0f, -0.5f};
 
@@ -234,7 +234,7 @@ void RenderDeviceVkImpl::AllocateTransientCmdPool(SoftwareQueueIndex            
     auto QueueFamilyIndex = HardwareQueueIndex{GetCommandQueue(CommandQueueId).GetQueueFamilyIndex()};
     auto CmdPoolMgrIter   = m_TransientCmdPoolMgrs.find(QueueFamilyIndex);
     VERIFY(CmdPoolMgrIter != m_TransientCmdPoolMgrs.end(),
-           "Con not find transiend command pool manager for queue family index (", Uint32{QueueFamilyIndex}, ")");
+           "Con not find transient command pool manager for queue family index (", Uint32{QueueFamilyIndex}, ")");
 
     CmdPool = CmdPoolMgrIter->second.AllocateCommandPool(DebugPoolName);
 
@@ -361,7 +361,7 @@ void RenderDeviceVkImpl::ExecuteAndDisposeTransientCmdBuff(SoftwareQueueIndex   
     auto QueueFamilyIndex = HardwareQueueIndex{GetCommandQueue(CommandQueueId).GetQueueFamilyIndex()};
     auto CmdPoolMgrIter   = m_TransientCmdPoolMgrs.find(QueueFamilyIndex);
     VERIFY(CmdPoolMgrIter != m_TransientCmdPoolMgrs.end(),
-           "Unable to find transiend command pool manager for queue family index ", Uint32{QueueFamilyIndex}, ".");
+           "Unable to find transient command pool manager for queue family index ", Uint32{QueueFamilyIndex}, ".");
 
     // Discard command pool directly to the release queue since we know exactly which queue it was submitted to
     // as well as the associated FenceValue
@@ -428,9 +428,9 @@ void RenderDeviceVkImpl::FlushStaleResources(SoftwareQueueIndex CmdQueueIndex)
 {
     // Submit empty command buffer to the queue. This will effectively signal the fence and
     // discard all resources
-    VkSubmitInfo DummySumbitInfo{};
-    DummySumbitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    TRenderDeviceBase::SubmitCommandBuffer(CmdQueueIndex, true, DummySumbitInfo);
+    VkSubmitInfo DummySubmitInfo{};
+    DummySubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    TRenderDeviceBase::SubmitCommandBuffer(CmdQueueIndex, true, DummySubmitInfo);
 }
 
 void RenderDeviceVkImpl::ReleaseStaleResources(bool ForceRelease)

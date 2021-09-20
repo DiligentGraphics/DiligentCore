@@ -180,7 +180,7 @@ public:
 
     DescriptorHeapAllocation AllocateDynamicGPUVisibleDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count = 1)
     {
-        VERIFY(m_DynamicGPUDescriptorAllocators != nullptr, "Dynamic GPU descriptor llocators have not been initialized. Did you forget to call SetDynamicGPUDescriptorAllocators() after resetting the context?");
+        VERIFY(m_DynamicGPUDescriptorAllocators != nullptr, "Dynamic GPU descriptor allocators have not been initialized. Did you forget to call SetDynamicGPUDescriptorAllocators() after resetting the context?");
         VERIFY(Type >= D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV && Type <= D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, "Invalid heap type");
         return m_DynamicGPUDescriptorAllocators[Type].Allocate(Count);
     }

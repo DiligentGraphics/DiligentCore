@@ -271,14 +271,14 @@ public:
     template <typename... CtorArgTypes>
     ObjectType* NewObject(const Char* dbgDescription, const char* dbgFileName, const Int32 dbgLineNumber, CtorArgTypes&&... CtorArgs)
     {
-        void* pRawMem = m_FixedBlockAlloctor.Allocate(sizeof(ObjectType), dbgDescription, dbgFileName, dbgLineNumber);
+        void* pRawMem = m_FixedBlockAllocator.Allocate(sizeof(ObjectType), dbgDescription, dbgFileName, dbgLineNumber);
         try
         {
             return new (pRawMem) ObjectType(std::forward<CtorArgTypes>(CtorArgs)...);
         }
         catch (...)
         {
-            m_FixedBlockAlloctor.Free(pRawMem);
+            m_FixedBlockAllocator.Free(pRawMem);
             return nullptr;
         }
     }
@@ -288,7 +288,7 @@ public:
         if (pObj != nullptr)
         {
             pObj->~ObjectType();
-            m_FixedBlockAlloctor.Free(pObj);
+            m_FixedBlockAllocator.Free(pObj);
         }
     }
 
@@ -297,12 +297,12 @@ private:
     static IMemoryAllocator* m_pRawAllocator;
 
     ObjectPool() :
-        m_FixedBlockAlloctor(m_pRawAllocator ? *m_pRawAllocator : GetRawAllocator(), sizeof(ObjectType), m_NumAllocationsInPage)
+        m_FixedBlockAllocator(m_pRawAllocator ? *m_pRawAllocator : GetRawAllocator(), sizeof(ObjectType), m_NumAllocationsInPage)
     {}
 #ifdef DILIGENT_DEBUG
     static bool m_bPoolInitialized;
 #endif
-    FixedBlockMemoryAllocator m_FixedBlockAlloctor;
+    FixedBlockMemoryAllocator m_FixedBlockAllocator;
 };
 template <typename ObjectType>
 Uint32 ObjectPool<ObjectType>::m_NumAllocationsInPage = 64;

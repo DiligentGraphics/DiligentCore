@@ -185,19 +185,19 @@ TEST(ShaderResourceLayout, ResourceArray)
         TexDesc.Name      = "Test Texture";
 
         std::vector<Uint8>             Data(TexDesc.Width * TexDesc.Height * 4, 128);
-        std::vector<TextureSubResData> SubResouces(TexDesc.MipLevels);
+        std::vector<TextureSubResData> SubResources(TexDesc.MipLevels);
         for (Uint32 i = 0; i < TexDesc.MipLevels; ++i)
         {
-            auto& SubResData  = SubResouces[i];
+            auto& SubResData  = SubResources[i];
             SubResData.pData  = Data.data();
             SubResData.Stride = TexDesc.Width * 4;
         }
 
         //float ColorOffset[4] = {(float)t * 0.13f, (float)t * 0.21f, (float)t * 0.29f, 0};
-        //TestTexturing::GenerateTextureData(pDevice, Data, SubResouces, TexDesc, ColorOffset);
+        //TestTexturing::GenerateTextureData(pDevice, Data, SubResources, TexDesc, ColorOffset);
         TextureData TexData;
-        TexData.pSubResources   = SubResouces.data();
-        TexData.NumSubresources = (Uint32)SubResouces.size();
+        TexData.pSubResources   = SubResources.data();
+        TexData.NumSubresources = (Uint32)SubResources.size();
 
         pDevice->CreateTexture(TexDesc, &TexData, &pTextures[t]);
         ASSERT_NE(pTextures[t], nullptr);

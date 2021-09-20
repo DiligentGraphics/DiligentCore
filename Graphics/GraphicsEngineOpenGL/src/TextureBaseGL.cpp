@@ -702,7 +702,7 @@ void TextureBaseGL::SetDefaultGLParameters()
         // otherwise it will be incomplete
 
         // The default value of GL_TEXTURE_MIN_FILTER is GL_NEAREST_MIPMAP_LINEAR
-        // Reset it to GL_NEAREST to avoid incompletness issues with integer textures
+        // Reset it to GL_NEAREST to avoid incompleteness issues with integer textures
         glTexParameteri(m_BindTarget, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         CHECK_GL_ERROR("Failed to set GL_TEXTURE_MIN_FILTER texture parameter");
 

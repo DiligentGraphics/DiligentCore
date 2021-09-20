@@ -435,7 +435,7 @@ bool VulkanPhysicalDevice::CheckPresentSupport(HardwareQueueIndex queueFamilyInd
 // This function is used to find a device memory type that supports all the property flags we request
 // Params:
 // * memoryTypeBitsRequirement  -  a bitmask that contains one bit set for every supported memory type for
-//                                 the resource. Bit i is set if and only if the memory type i in the
+//                                 the resource. Bit i is set if the memory type i in the
 //                                 VkPhysicalDeviceMemoryProperties structure for the physical device is
 //                                 supported for the resource.
 // * requiredProperties   -  required memory properties (device local, host visible, etc.)

@@ -108,7 +108,7 @@ public:
 
         // Try to construct the new element in place
         auto Elems = m_DescToObjHashMap.emplace(std::make_pair(ObjectDesc, Diligent::RefCntWeakPtr<IDeviceObject>(pObject)));
-        // It is theorertically possible that the same object can be found
+        // It is theoretically possible that the same object can be found
         // in the registry. This might happen if two threads try to create
         // the same object at the same time. They both will not find the
         // object and then will create and try to add it.
@@ -177,7 +177,7 @@ public:
             // want to detect 100% expired pointers. IsValid() does provide that information
             // because once a weak pointer becomes invalid, it will be invalid
             // until it is destroyed. It is not a problem if we miss an expired weak
-            // pointer as it will definitiely be removed next time.
+            // pointer as it will definitely be removed next time.
             if (!It->second.IsValid())
             {
                 m_DescToObjHashMap.erase(It);
@@ -201,7 +201,7 @@ private:
     /// Lock flag to protect the m_DescToObjHashMap
     ThreadingTools::LockFlag m_LockFlag;
 
-    /// Nmber of outstanding deleted objects that have not been purged
+    /// Number of outstanding deleted objects that have not been purged
     Atomics::AtomicLong m_NumDeletedObjects;
 
     /// Hash map that stores weak pointers to the referenced objects

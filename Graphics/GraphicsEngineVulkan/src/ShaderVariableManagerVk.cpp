@@ -472,7 +472,7 @@ void BindResourceHelper::CacheTexelBuffer(const BindResourceInfo& BindInfo) cons
     RefCntAutoPtr<BufferViewVkImpl> pBufferViewVk{BindInfo.pObject, IID_BufferViewVk};
 #ifdef DILIGENT_DEVELOPMENT
     {
-        // HLSL buffer SRVs are mapped to storge buffers in GLSL
+        // HLSL buffer SRVs are mapped to storage buffers in GLSL
         const auto RequiredViewType = DvpDescriptorTypeToBufferView(m_DstRes.Type);
         VerifyResourceViewBinding(m_ResDesc, BindInfo, pBufferViewVk.RawPtr(),
                                   {RequiredViewType},
@@ -548,12 +548,12 @@ void BindResourceHelper::CacheImage(const BindResourceInfo& BindInfo) const
                                   "' must be one or the same as the array size (", m_ResDesc.ArraySize,
                                   ") of separate image variable '", m_ResDesc.Name, "' it is assigned to");
 
-                    BindResourceHelper BindSeparateSamler{
+                    BindResourceHelper BindSeparateSampler{
                         m_Signature,
                         m_ResourceCache,
                         m_Attribs.SamplerInd,
                         SamplerResDesc.ArraySize == 1 ? 0 : m_ArrayIndex};
-                    BindSeparateSamler(BindResourceInfo{BindSeparateSamler.m_ArrayIndex, pSampler});
+                    BindSeparateSampler(BindResourceInfo{BindSeparateSampler.m_ArrayIndex, pSampler});
                 }
                 else
                 {

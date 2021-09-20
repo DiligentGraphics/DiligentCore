@@ -56,8 +56,8 @@ namespace Diligent
 class ShaderMacroHelper
 {
 public:
-    template <typename DefintionType>
-    void AddShaderMacro(const Char* Name, DefintionType Definition)
+    template <typename DefinitionType>
+    void AddShaderMacro(const Char* Name, DefinitionType Definition)
     {
 #if DILIGENT_DEBUG
         for (size_t i = 0; i < m_Macros.size() && m_Macros[i].Definition != nullptr; ++i)
@@ -149,8 +149,8 @@ public:
         }
     }
 
-    template <typename DefintionType>
-    void UpdateMacro(const Char* Name, DefintionType Definition)
+    template <typename DefinitionType>
+    void UpdateMacro(const Char* Name, DefinitionType Definition)
     {
         RemoveMacro(Name);
         AddShaderMacro(Name, Definition);
@@ -183,7 +183,7 @@ inline void ShaderMacroHelper::AddShaderMacro(const Char* Name, float Definition
     std::ostringstream ss;
 
     // Make sure that when floating point represents integer, it is still
-    // written as float: 1024.0, but not 1024. This is essnetial to
+    // written as float: 1024.0, but not 1024. This is essential to
     // avoid type conversion issues in GLES.
     if (Definition == static_cast<float>(static_cast<int>(Definition)))
         ss << std::fixed << std::setprecision(1);

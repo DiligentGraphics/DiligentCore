@@ -540,7 +540,7 @@ void VerifyResourceMerge(const PipelineStateDesc&          PSODesc,
         LOG_RESOURCE_MERGE_ERROR_AND_THROW("array size");
 
     if (ExistingRes.IsMS != NewResAttribs.IsMS)
-        LOG_RESOURCE_MERGE_ERROR_AND_THROW("mutlisample state");
+        LOG_RESOURCE_MERGE_ERROR_AND_THROW("multisample state");
 #undef LOG_RESOURCE_MERGE_ERROR_AND_THROW
 }
 
