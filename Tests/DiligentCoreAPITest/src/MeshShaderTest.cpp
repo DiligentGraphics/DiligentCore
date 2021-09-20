@@ -103,13 +103,11 @@ TEST(MeshShaderTest, DrawTriangle)
         pTestingSwapChain->TakeSnapshot();
     }
 
-    auto* pCntxt = pEnv->GetDeviceContext();
-
     ITextureView* pRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
-    pCntxt->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    pContext->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
     float ClearColor[] = {0.f, 0.f, 0.f, 0.f};
-    pCntxt->ClearRenderTarget(pRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    pContext->ClearRenderTarget(pRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
     GraphicsPipelineStateCreateInfo PSOCreateInfo;
 
@@ -184,13 +182,13 @@ TEST(MeshShaderTest, DrawTriangleIndirect)
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto* pSwapChain = pEnv->GetSwapChain();
-    auto* pCntxt     = pEnv->GetDeviceContext();
+    auto* pContext   = pEnv->GetDeviceContext();
 
     RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
     if (pTestingSwapChain)
     {
-        pCntxt->Flush();
-        pCntxt->InvalidateState();
+        pContext->Flush();
+        pContext->InvalidateState();
 
         auto deviceType = pDevice->GetDeviceInfo().Type;
         switch (deviceType)
@@ -217,8 +215,6 @@ TEST(MeshShaderTest, DrawTriangleIndirect)
 
         pTestingSwapChain->TakeSnapshot();
     }
-
-    auto* pContext = pEnv->GetDeviceContext();
 
     ITextureView* pRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
     pContext->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
@@ -334,13 +330,13 @@ TEST(MeshShaderTest, DrawTriangleIndirectCount)
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto* pSwapChain = pEnv->GetSwapChain();
-    auto* pCntxt     = pEnv->GetDeviceContext();
+    auto* pContext   = pEnv->GetDeviceContext();
 
     RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
     if (pTestingSwapChain)
     {
-        pCntxt->Flush();
-        pCntxt->InvalidateState();
+        pContext->Flush();
+        pContext->InvalidateState();
 
         auto deviceType = pDevice->GetDeviceInfo().Type;
         switch (deviceType)
@@ -367,8 +363,6 @@ TEST(MeshShaderTest, DrawTriangleIndirectCount)
 
         pTestingSwapChain->TakeSnapshot();
     }
-
-    auto* pContext = pEnv->GetDeviceContext();
 
     ITextureView* pRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
     pContext->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
@@ -489,13 +483,13 @@ TEST(MeshShaderTest, DrawTrisWithAmplificationShader)
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto* pSwapChain = pEnv->GetSwapChain();
-    auto* pCntxt     = pEnv->GetDeviceContext();
+    auto* pContext   = pEnv->GetDeviceContext();
 
     RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
     if (pTestingSwapChain)
     {
-        pCntxt->Flush();
-        pCntxt->InvalidateState();
+        pContext->Flush();
+        pContext->InvalidateState();
 
         auto deviceType = pDevice->GetDeviceInfo().Type;
         switch (deviceType)
@@ -519,8 +513,6 @@ TEST(MeshShaderTest, DrawTrisWithAmplificationShader)
 
         pTestingSwapChain->TakeSnapshot();
     }
-
-    auto* pContext = pEnv->GetDeviceContext();
 
     ITextureView* pRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
     pContext->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
