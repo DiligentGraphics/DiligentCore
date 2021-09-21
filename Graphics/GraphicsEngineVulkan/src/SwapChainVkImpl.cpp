@@ -156,7 +156,7 @@ void SwapChainVkImpl::CreateSurface()
         {
             LOG_ERROR_AND_THROW("Selected physical device does not support present capability.\n"
                                 "There could be few ways to mitigate this problem. One is to try to find another queue that supports present, but does not support graphics and compute capabilities."
-                                "Another way is to find another physical device that exposes queue family that supports present and graphics capability. Neither apporach is currently implemented in Diligent Engine.");
+                                "Another way is to find another physical device that exposes queue family that supports present and graphics capability. Neither approach is currently implemented in Diligent Engine.");
         }
     }
     else

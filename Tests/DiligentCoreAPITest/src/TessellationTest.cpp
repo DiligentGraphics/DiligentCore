@@ -87,13 +87,13 @@ TEST(TessellationTest, DrawQuad)
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto* pSwapChain = pEnv->GetSwapChain();
-    auto* pConext    = pEnv->GetDeviceContext();
+    auto* pContext   = pEnv->GetDeviceContext();
 
     RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
     if (pTestingSwapChain)
     {
-        pConext->Flush();
-        pConext->InvalidateState();
+        pContext->Flush();
+        pContext->InvalidateState();
 
         switch (DeviceInfo.Type)
         {
@@ -130,8 +130,6 @@ TEST(TessellationTest, DrawQuad)
 
         pTestingSwapChain->TakeSnapshot();
     }
-
-    auto* pContext = pEnv->GetDeviceContext();
 
     ITextureView* pRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
     pContext->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);

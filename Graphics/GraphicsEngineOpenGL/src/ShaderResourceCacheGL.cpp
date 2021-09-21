@@ -219,7 +219,7 @@ void ShaderResourceCacheGL::BindResources(GLContextState&              GLState,
             }
 
 #    ifdef DILIGENT_DEBUG
-            // Check that the texure being bound has immutable storage
+            // Check that the texture being bound has immutable storage
             {
                 GLState.BindTexture(-1, pTexViewGL->GetBindTarget(), pTexViewGL->GetHandle());
                 GLint IsImmutable = 0;
@@ -230,7 +230,7 @@ void ShaderResourceCacheGL::BindResources(GLContextState&              GLState,
             }
 #    endif
             auto GlTexFormat = TexFormatToGLInternalTexFormat(ViewDesc.Format);
-            // Note that if a format qulifier is specified in the shader, the format
+            // Note that if a format qualifier is specified in the shader, the format
             // must match it
 
             GLboolean Layered = ViewDesc.NumArraySlices > 1 && ViewDesc.FirstArraySlice == 0;

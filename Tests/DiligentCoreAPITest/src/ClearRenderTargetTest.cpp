@@ -121,7 +121,7 @@ TEST(ClearRenderTargetTest, AsRenderTarget)
     auto* pEnv       = TestingEnvironment::GetInstance();
     auto* pDevice    = pEnv->GetDevice();
     auto* pSwapChain = pEnv->GetSwapChain();
-    auto* pConext    = pEnv->GetDeviceContext();
+    auto* pContext   = pEnv->GetDeviceContext();
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
@@ -131,13 +131,11 @@ TEST(ClearRenderTargetTest, AsRenderTarget)
 
     if (pTestingSwapChain)
     {
-        pConext->Flush();
-        pConext->InvalidateState();
+        pContext->Flush();
+        pContext->InvalidateState();
         ClearRenderTargetReference(pDevice, pSwapChain, ClearColor);
         pTestingSwapChain->TakeSnapshot();
     }
-
-    auto* pContext = pEnv->GetDeviceContext();
 
     ITextureView* pRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
     pContext->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
@@ -162,15 +160,15 @@ TEST(ClearRenderTargetTest, AsAttachment)
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto* pSwapChain = pEnv->GetSwapChain();
-    auto* pConext    = pEnv->GetDeviceContext();
+    auto* pContext   = pEnv->GetDeviceContext();
 
     constexpr float ClearColor[] = {0.75f, 0.1875f, 0.375f, 1.0f};
 
     RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
     if (pTestingSwapChain)
     {
-        pConext->Flush();
-        pConext->InvalidateState();
+        pContext->Flush();
+        pContext->InvalidateState();
         ClearRenderTargetReference(pDevice, pSwapChain, ClearColor);
         pTestingSwapChain->TakeSnapshot();
     }
@@ -213,8 +211,6 @@ TEST(ClearRenderTargetTest, AsAttachment)
     pDevice->CreateFramebuffer(FBDesc, &pFramebuffer);
     ASSERT_TRUE(pFramebuffer);
 
-    auto* pContext = pEnv->GetDeviceContext();
-
     BeginRenderPassAttribs BeginRPInfo;
     BeginRPInfo.pRenderPass         = pRenderPass;
     BeginRPInfo.pFramebuffer        = pFramebuffer;
@@ -236,7 +232,7 @@ TEST(ClearRenderTargetTest, LoadOpClear)
     auto* pEnv       = TestingEnvironment::GetInstance();
     auto* pDevice    = pEnv->GetDevice();
     auto* pSwapChain = pEnv->GetSwapChain();
-    auto* pConext    = pEnv->GetDeviceContext();
+    auto* pContext   = pEnv->GetDeviceContext();
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
@@ -245,8 +241,8 @@ TEST(ClearRenderTargetTest, LoadOpClear)
     RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
     if (pTestingSwapChain)
     {
-        pConext->Flush();
-        pConext->InvalidateState();
+        pContext->Flush();
+        pContext->InvalidateState();
         ClearRenderTargetReference(pDevice, pSwapChain, ClearColor);
         pTestingSwapChain->TakeSnapshot();
     }
@@ -288,8 +284,6 @@ TEST(ClearRenderTargetTest, LoadOpClear)
     RefCntAutoPtr<IFramebuffer> pFramebuffer;
     pDevice->CreateFramebuffer(FBDesc, &pFramebuffer);
     ASSERT_TRUE(pFramebuffer);
-
-    auto* pContext = pEnv->GetDeviceContext();
 
     BeginRenderPassAttribs BeginRPInfo;
     BeginRPInfo.pRenderPass         = pRenderPass;

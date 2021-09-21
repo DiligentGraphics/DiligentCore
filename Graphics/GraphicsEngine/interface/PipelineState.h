@@ -746,7 +746,7 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
     /// Checks if this pipeline state object is compatible with another PSO
 
     /// If two pipeline state objects are compatible, they can use shader resource binding
-    /// objects interchangebly, i.e. SRBs created by one PSO can be committed
+    /// objects interchangeably, i.e. SRBs created by one PSO can be committed
     /// when another PSO is bound.
     /// \param [in] pPSO - Pointer to the pipeline state object to check compatibility with.
     /// \return     true if this PSO is compatible with pPSO. false otherwise.
@@ -764,8 +764,8 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
     ///             In Vulkan backend, switching PSOs that are partially compatible may increase performance
     ///             as shader resource bindings (that map to descriptor sets) from compatible signatures may be preserved.
     ///             In Direct3D12 backend, only switching between fully compatible PSOs preserves shader resource bindings,
-    ///             while switching partially compatible PSOs still requires re-binding all resource bindigns from all signatures.
-    ///             In other backends the behavior is emualted. Usually, the bindigs from the first N compatible resource signatures
+    ///             while switching partially compatible PSOs still requires re-binding all resource bindings from all signatures.
+    ///             In other backends the behavior is emulated. Usually, the bindings from the first N compatible resource signatures
     ///             may be preserved.
     VIRTUAL bool METHOD(IsCompatibleWith)(THIS_
                                           const struct IPipelineState* pPSO) CONST PURE;

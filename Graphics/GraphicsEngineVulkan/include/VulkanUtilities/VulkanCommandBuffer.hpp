@@ -577,7 +577,7 @@ public:
         }
 
         // A query must either begin and end inside the same subpass of a render pass instance, or must both
-        // begin and end outside of a render pass instance (i.e. contain entire render pass instances) (17.2).
+        // begin and end outside a render pass instance (i.e. contain entire render pass instances) (17.2).
 
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
         vkCmdBeginQuery(m_VkCmdBuffer, queryPool, query, flags);

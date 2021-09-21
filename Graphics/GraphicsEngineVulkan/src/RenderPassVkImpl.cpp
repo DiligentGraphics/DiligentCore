@@ -77,11 +77,11 @@ inline void InitAttachmentDescription(VkAttachmentDescription2& Attachment)
 }
 
 inline void InitAttachmentReference(VkAttachmentReference&, VkImageAspectFlags) {}
-inline void InitAttachmentReference(VkAttachmentReference2& AttachmnetRef, VkImageAspectFlags AspectMask)
+inline void InitAttachmentReference(VkAttachmentReference2& AttachmentRef, VkImageAspectFlags AspectMask)
 {
-    AttachmnetRef.sType      = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2;
-    AttachmnetRef.pNext      = nullptr;
-    AttachmnetRef.aspectMask = AspectMask;
+    AttachmentRef.sType      = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2;
+    AttachmentRef.pNext      = nullptr;
+    AttachmentRef.aspectMask = AspectMask;
 }
 
 inline void InitSubpassDescription(VkSubpassDescription&) {}
@@ -187,12 +187,12 @@ void RenderPassVkImpl::CreateRenderPass() noexcept(false)
             auto* pCurrVkAttachmentReference = &vkAttachmentReferences[CurrAttachmentReferenceInd];
             for (Uint32 attachment = 0; attachment < NumAttachments; ++attachment, ++CurrAttachmentReferenceInd)
             {
-                const auto& SrcAttachmnetRef = pSrcAttachments[attachment];
-                auto&       DstAttachmnetRef = vkAttachmentReferences[CurrAttachmentReferenceInd];
+                const auto& SrcAttachmentRef = pSrcAttachments[attachment];
+                auto&       DstAttachmentRef = vkAttachmentReferences[CurrAttachmentReferenceInd];
 
-                InitAttachmentReference(DstAttachmnetRef, AspectMask);
-                DstAttachmnetRef.attachment = SrcAttachmnetRef.AttachmentIndex;
-                DstAttachmnetRef.layout     = ResourceStateToVkImageLayout(SrcAttachmnetRef.State, /*IsInsideRenderPass = */ true, FragDensityMapEnabled);
+                InitAttachmentReference(DstAttachmentRef, AspectMask);
+                DstAttachmentRef.attachment = SrcAttachmentRef.AttachmentIndex;
+                DstAttachmentRef.layout     = ResourceStateToVkImageLayout(SrcAttachmentRef.State, /*IsInsideRenderPass = */ true, FragDensityMapEnabled);
             }
             return pCurrVkAttachmentReference;
         };

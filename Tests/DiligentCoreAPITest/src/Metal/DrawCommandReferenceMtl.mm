@@ -248,7 +248,7 @@ void RenderPassInputAttachmentReferenceMtl(ISwapChain* pSwapChain, const float* 
         // Command buffer is autoreleased
         id <MTLCommandBuffer> mtlCommandBuffer = [mtlCommandQueue commandBuffer];
 
-        // Render pass descritor is autoreleased
+        // Render pass descriptor is autoreleased
         MTLRenderPassDescriptor* subpass0Desc =
             [MTLRenderPassDescriptor renderPassDescriptor];
         subpass0Desc.colorAttachments[0].texture     = mtlInputAttachment;

@@ -317,7 +317,7 @@ void PipelineResourceSignatureGLImpl::ApplyBindings(GLObjectWrappers::GLProgramO
                     if (BindingIndex != static_cast<Uint32>(params[0]))
                     {
                         LOG_WARNING_MESSAGE("glShaderStorageBlockBinding is not available on this device and "
-                                            "the engine is unable to automatically assign shader storage block bindindg for '",
+                                            "the engine is unable to automatically assign shader storage block binding for '",
                                             ResDesc.Name, "' variable. Expected binding: ", BindingIndex, ", actual binding: ", params[0],
                                             ". Make sure that this binding is explicitly assigned in shader source code."
                                             " Note that if the source code is converted from HLSL and if storage blocks are only used"

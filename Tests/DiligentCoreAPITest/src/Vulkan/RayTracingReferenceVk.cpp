@@ -1078,7 +1078,7 @@ void RayTracingProceduralIntersectionReferenceVk(ISwapChain* pSwapChain)
                             rtGroups.SetProceduralHitGroup(HIT_GROUP, INTERSECTION_SHADER, HIT_SHADER);
                         });
 
-    // Create acceleration structurea
+    // Create acceleration structures
     {
         const auto& Boxes = TestingConstants::ProceduralIntersection::Boxes;
 
@@ -1249,7 +1249,7 @@ void RayTracingMultiGeometryReferenceVk(ISwapChain* pSwapChain)
     const auto& PrimitiveOffsets = TestingConstants::MultiGeometry::PrimitiveOffsets;
     const auto& Primitives       = TestingConstants::MultiGeometry::Primitives;
 
-    // Create acceleration structurea
+    // Create acceleration structures
     {
         const auto& Vertices = TestingConstants::MultiGeometry::Vertices;
         const auto& Indices  = TestingConstants::MultiGeometry::Indices;

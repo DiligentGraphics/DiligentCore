@@ -42,7 +42,7 @@ namespace Diligent
 
 String BuildGLSLSourceString(const ShaderCreateInfo&    ShaderCI,
                              const RenderDeviceInfo&    DeviceInfo,
-                             const GraphicsAdapterInfo& AdaterInfo,
+                             const GraphicsAdapterInfo& AdapterInfo,
                              TargetGLSLCompiler         TargetCompiler,
                              const char*                ExtraDefinitions)
 {
@@ -108,7 +108,7 @@ String BuildGLSLSourceString(const ShaderCreateInfo&    ShaderCI,
     if (DeviceInfo.Features.SeparablePrograms && !IsES31OrAbove)
         GLSLSource.append("#extension GL_EXT_separate_shader_objects : enable\n");
 
-    if (AdaterInfo.Texture.CubemapArraysSupported && !IsES32OrAbove)
+    if (AdapterInfo.Texture.CubemapArraysSupported && !IsES32OrAbove)
         GLSLSource.append("#extension GL_EXT_texture_cube_map_array : enable\n");
 
     if (ShaderType == SHADER_TYPE_GEOMETRY && !IsES32OrAbove)
@@ -166,7 +166,7 @@ String BuildGLSLSourceString(const ShaderCreateInfo&    ShaderCI,
         ); // clang-format on
     }
 
-    if (AdaterInfo.Texture.CubemapArraysSupported)
+    if (AdapterInfo.Texture.CubemapArraysSupported)
     {
         GLSLSource.append(
             "precision highp samplerCubeArray;\n"
@@ -176,7 +176,7 @@ String BuildGLSLSourceString(const ShaderCreateInfo&    ShaderCI,
         ); // clang-format on
     }
 
-    if (AdaterInfo.Texture.Texture2DMSSupported)
+    if (AdapterInfo.Texture.Texture2DMSSupported)
     {
         GLSLSource.append(
             "precision highp sampler2DMS;\n"

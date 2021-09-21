@@ -84,7 +84,7 @@ DeviceFeatures EnableDeviceFeatures(const DeviceFeatures& SupportedFeatures,
     ENABLE_FEATURE(OcclusionQueries,                  "Occlusion queries are");
     ENABLE_FEATURE(BinaryOcclusionQueries,            "Binary occlusion queries are");
     ENABLE_FEATURE(TimestampQueries,                  "Timestamp queries are");
-    ENABLE_FEATURE(PipelineStatisticsQueries,         "Pipeline atatistics queries are");
+    ENABLE_FEATURE(PipelineStatisticsQueries,         "Pipeline statistics queries are");
     ENABLE_FEATURE(DurationQueries,                   "Duration queries are");
     ENABLE_FEATURE(DepthBiasClamp,                    "Depth bias clamp is");
     ENABLE_FEATURE(DepthClamp,                        "Depth clamp is");

@@ -409,7 +409,7 @@ void GLContextState::EnsureMemoryBarrier(MEMORY_BARRIER RequiredBarriers, AsyncW
     // In the last draw call, barrier for resource A has already been executed when resource B was
     // bound to the pipeline. Since Resource A has not been bound since then, its flag has not been
     // cleared.
-    // This situation does not seem to be a problem though since a barier cannot be executed
+    // This situation does not seem to be a problem though since a barrier cannot be executed
     // twice in any situation
 
     MEMORY_BARRIER ResourcePendingBarriers = MEMORY_BARRIER_NONE;
@@ -417,7 +417,7 @@ void GLContextState::EnsureMemoryBarrier(MEMORY_BARRIER RequiredBarriers, AsyncW
     {
         // If resource is specified, only set up memory barriers
         // that are required by the resource
-        ResourcePendingBarriers = pRes->GetPendingMemortBarriers();
+        ResourcePendingBarriers = pRes->GetPendingMemoryBarriers();
         RequiredBarriers &= ResourcePendingBarriers;
     }
 
@@ -450,12 +450,12 @@ void GLContextState::EnableDepthTest(bool bEnable)
         if (bEnable)
         {
             glEnable(GL_DEPTH_TEST);
-            DEV_CHECK_GL_ERROR("Failed to enable detph test");
+            DEV_CHECK_GL_ERROR("Failed to enable depth test");
         }
         else
         {
             glDisable(GL_DEPTH_TEST);
-            DEV_CHECK_GL_ERROR("Failed to disable detph test");
+            DEV_CHECK_GL_ERROR("Failed to disable depth test");
         }
         m_DSState.m_DepthEnableState = bEnable;
     }
@@ -467,7 +467,7 @@ void GLContextState::EnableDepthWrites(bool bEnable)
     {
         // If mask is non-zero, the depth buffer is enabled for writing; otherwise, it is disabled.
         glDepthMask(bEnable ? 1 : 0);
-        DEV_CHECK_GL_ERROR("Failed to enale/disable depth writes");
+        DEV_CHECK_GL_ERROR("Failed to enable/disable depth writes");
         m_DSState.m_DepthWritesEnableState = bEnable;
     }
 }

@@ -299,7 +299,7 @@ void ValidateFramebufferDesc(const FramebufferDesc& Desc, RENDER_DEVICE_TYPE Dev
                 if (pAttachment == nullptr)
                 {
                     LOG_FRAMEBUFFER_ERROR_AND_THROW("attachment at index ", AttchRef.AttachmentIndex,
-                                                    " is used as detph-stencil attachment by subpass ",
+                                                    " is used as depth-stencil attachment by subpass ",
                                                     i, " of render pass '", RPDesc.Name,
                                                     "', and must not be null.");
                 }
@@ -308,7 +308,7 @@ void ValidateFramebufferDesc(const FramebufferDesc& Desc, RENDER_DEVICE_TYPE Dev
                 if (ViewDesc.ViewType != TEXTURE_VIEW_DEPTH_STENCIL)
                 {
                     LOG_FRAMEBUFFER_ERROR_AND_THROW("attachment at index ", AttchRef.AttachmentIndex,
-                                                    " is used as detph-stencil attachment by subpass ",
+                                                    " is used as depth-stencil attachment by subpass ",
                                                     i, " of render pass '", RPDesc.Name,
                                                     "', but is not a TEXTURE_VIEW_DEPTH_STENCIL.");
                 }
@@ -322,7 +322,7 @@ void ValidateFramebufferDesc(const FramebufferDesc& Desc, RENDER_DEVICE_TYPE Dev
                 if ((TexDesc.BindFlags & BIND_DEPTH_STENCIL) == 0)
                 {
                     LOG_FRAMEBUFFER_ERROR_AND_THROW("the attachment '", TexDesc.Name, "' at index ", AttchRef.AttachmentIndex,
-                                                    " is used as detph-stencil attachment by subpass ",
+                                                    " is used as depth-stencil attachment by subpass ",
                                                     i, " of render pass '", RPDesc.Name,
                                                     "', but was not created with BIND_DEPTH_STENCIL bind flag.");
                 }

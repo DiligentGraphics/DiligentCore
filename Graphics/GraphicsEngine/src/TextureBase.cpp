@@ -161,7 +161,7 @@ void ValidateTextureDesc(const TextureDesc& Desc, const IRenderDevice* pDevice) 
             LOG_TEXTURE_ERROR_AND_THROW("Staging textures must specify CPU access flags.");
 
         if ((Desc.CPUAccessFlags & (CPU_ACCESS_READ | CPU_ACCESS_WRITE)) == (CPU_ACCESS_READ | CPU_ACCESS_WRITE))
-            LOG_TEXTURE_ERROR_AND_THROW("Staging textures must use exactly one of ACESS_READ or ACCESS_WRITE flags.");
+            LOG_TEXTURE_ERROR_AND_THROW("Staging textures must use exactly one of ACCESS_READ or ACCESS_WRITE flags.");
     }
     else if (Desc.Usage == USAGE_UNIFIED)
     {
@@ -172,7 +172,7 @@ void ValidateTextureDesc(const TextureDesc& Desc, const IRenderDevice* pDevice) 
         PlatformMisc::CountOneBits(Desc.ImmediateContextMask) > 1)
     {
         // Dynamic textures always use backing resource that requires implicit state transitions
-        // in map/unamp operations, which is not safe in multiple contexts.
+        // in map/unmap operations, which is not safe in multiple contexts.
         LOG_TEXTURE_ERROR_AND_THROW("USAGE_DYNAMIC textures may only be used in one immediate device context.");
     }
 

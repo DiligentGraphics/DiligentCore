@@ -101,7 +101,7 @@ protected:
         auto*       pSwapChain = pEnv->GetSwapChain();
         const auto& SCDesc     = pSwapChain->GetDesc();
 
-        sm_DispathSize = uint2{(SCDesc.Width + 3) / 4, (SCDesc.Height + 3) / 4}; // must be same as numthreads(...)
+        sm_dispatchSize = uint2{(SCDesc.Width + 3) / 4, (SCDesc.Height + 3) / 4}; // must be same as numthreads(...)
     }
 
     static void TearDownTestSuite()
@@ -115,11 +115,11 @@ protected:
 
     static RefCntAutoPtr<IPipelineState>         sm_pCompPSO;
     static RefCntAutoPtr<IShaderResourceBinding> sm_pCompSRB;
-    static uint2                                 sm_DispathSize;
+    static uint2                                 sm_dispatchSize;
 };
 RefCntAutoPtr<IPipelineState>         FenceTest::sm_pCompPSO;
 RefCntAutoPtr<IShaderResourceBinding> FenceTest::sm_pCompSRB;
-uint2                                 FenceTest::sm_DispathSize;
+uint2                                 FenceTest::sm_dispatchSize;
 
 
 TEST_F(FenceTest, GPUWaitForCPU)
@@ -163,7 +163,7 @@ TEST_F(FenceTest, GPUWaitForCPU)
 
         pContext->SetPipelineState(sm_pCompPSO);
         pContext->CommitShaderResources(sm_pCompSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-        pContext->DispatchCompute(DispatchComputeAttribs{sm_DispathSize.x, sm_DispathSize.y, 1});
+        pContext->DispatchCompute(DispatchComputeAttribs{sm_dispatchSize.x, sm_dispatchSize.y, 1});
 
         // Transition to CopySrc state to use in TakeSnapshot()
         StateTransitionDesc Barrier{pBackBufferUAV->GetTexture(), RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE};
@@ -196,7 +196,7 @@ TEST_F(FenceTest, GPUWaitForCPU)
 
     pContext->SetPipelineState(sm_pCompPSO);
     pContext->CommitShaderResources(sm_pCompSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-    pContext->DispatchCompute(DispatchComputeAttribs{sm_DispathSize.x, sm_DispathSize.y, 1});
+    pContext->DispatchCompute(DispatchComputeAttribs{sm_dispatchSize.x, sm_dispatchSize.y, 1});
 
     pContext->DeviceWaitForFence(pFence, 100);
     pContext->Flush();
@@ -279,7 +279,7 @@ TEST_F(FenceTest, ContextWaitForAnotherContext)
 
         pGraphicsCtx->SetPipelineState(sm_pCompPSO);
         pGraphicsCtx->CommitShaderResources(sm_pCompSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-        pGraphicsCtx->DispatchCompute(DispatchComputeAttribs{sm_DispathSize.x, sm_DispathSize.y, 1});
+        pGraphicsCtx->DispatchCompute(DispatchComputeAttribs{sm_dispatchSize.x, sm_dispatchSize.y, 1});
 
         // Transition to CopySrc state to use in TakeSnapshot()
         StateTransitionDesc Barrier{pBackBufferUAV->GetTexture(), RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE};
@@ -310,7 +310,7 @@ TEST_F(FenceTest, ContextWaitForAnotherContext)
 
         pGraphicsCtx->SetPipelineState(sm_pCompPSO);
         pGraphicsCtx->CommitShaderResources(sm_pCompSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-        pGraphicsCtx->DispatchCompute(DispatchComputeAttribs{sm_DispathSize.x, sm_DispathSize.y, 1});
+        pGraphicsCtx->DispatchCompute(DispatchComputeAttribs{sm_dispatchSize.x, sm_dispatchSize.y, 1});
 
         pGraphicsCtx->DeviceWaitForFence(pFence, 100);
         pGraphicsCtx->Flush();

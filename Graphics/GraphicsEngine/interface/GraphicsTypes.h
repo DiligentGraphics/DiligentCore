@@ -592,7 +592,7 @@ DILIGENT_TYPED_ENUM(TEXTURE_FORMAT, Uint16)
     /// D3D counterpart: DXGI_FORMAT_R16_TYPELESS. OpenGL does not have direct counterpart, GL_R16F is used.
     TEX_FORMAT_R16_TYPELESS,
 
-    /// Single-component 16-bit half-precisoin floating-point format. \n
+    /// Single-component 16-bit half-precision floating-point format. \n
     /// D3D counterpart: DXGI_FORMAT_R16_FLOAT. OpenGL counterpart: GL_R16F.
     TEX_FORMAT_R16_FLOAT,
 
@@ -959,7 +959,7 @@ DILIGENT_TYPED_ENUM(TEXTURE_ADDRESS_MODE, Uint8)
 
 /// [D3D11_COMPARISON_FUNC]: https://docs.microsoft.com/en-us/windows/win32/api/d3d11/ne-d3d11-d3d11_comparison_func
 /// [D3D12_COMPARISON_FUNC]: https://docs.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_comparison_func
-/// This enumeartion defines a comparison function. It generally mirrors [D3D11_COMPARISON_FUNC]/[D3D12_COMPARISON_FUNC] enum and is used by
+/// This enumeration defines a comparison function. It generally mirrors [D3D11_COMPARISON_FUNC]/[D3D12_COMPARISON_FUNC] enum and is used by
 /// - SamplerDesc to define a comparison function if one of the comparison mode filters is used
 /// - StencilOpDesc to define a stencil function
 /// - DepthStencilStateDesc to define a depth function
@@ -1971,7 +1971,7 @@ struct SamplerProperties
     /// Indicates if device supports border texture addressing mode
     Bool BorderSamplingModeSupported   DEFAULT_INITIALIZER(False);
 
-    /// Indicates if device supports anisotrpoic filtering
+    /// Indicates if device supports anisotropic filtering
     Bool AnisotropicFilteringSupported DEFAULT_INITIALIZER(False);
 
     /// Indicates if device supports MIP load bias
@@ -2063,7 +2063,7 @@ struct RayTracingProperties
     Uint32 MaxGeometriesPerBLAS     DEFAULT_INITIALIZER(0);
 
     /// The minimum alignment for vertex buffer offset in BLASBuildTriangleData::VertexOffset.
-    Uint32 VertexBufferAlignmnent   DEFAULT_INITIALIZER(0);
+    Uint32 VertexBufferAlignment   DEFAULT_INITIALIZER(0);
 
     /// The minimum alignment for index buffer offset in BLASBuildTriangleData::IndexOffset.
     Uint32 IndexBufferAlignment     DEFAULT_INITIALIZER(0);
@@ -2101,7 +2101,7 @@ struct ComputeShaderProperties
     /// Amount of shared memory available to threads in one group.
     Uint32 SharedMemorySize         DEFAULT_INITIALIZER(0);
 
-    /// The total mamximum number of threads in one group.
+    /// The total maximum number of threads in one group.
     Uint32 MaxThreadGroupInvocations  DEFAULT_INITIALIZER(0);
 
     /// The maximum number of threads in group X dimension.
@@ -2196,7 +2196,7 @@ struct RenderDeviceInfo
 typedef struct RenderDeviceInfo RenderDeviceInfo;
 
 
-/// Commomn validation options.
+/// Common validation options.
 DILIGENT_TYPED_ENUM(VALIDATION_FLAGS, Uint32)
 {
     /// Extra validation is disabled.
@@ -2283,7 +2283,7 @@ struct AdapterMemoryInfo
 
     /// \note Host-visible memory is where USAGE_DYNAMIC and USAGE_STAGING resources
     ///       are typically allocated.
-    Uint64  HostVisibileMemory  DEFAULT_INITIALIZER(0);
+    Uint64  HostVisibleMemory  DEFAULT_INITIALIZER(0);
 
 
     /// The amount of unified memory that can be directly accessed by both CPU and GPU, in bytes.
@@ -2809,7 +2809,7 @@ DILIGENT_TYPED_ENUM(D3D11_VALIDATION_FLAGS, Uint32)
     /// Direct3D11-specific validation is disabled.
     D3D11_VALIDATION_FLAG_NONE                                = 0x00,
 
-    /// Verify that all committed cotext resources are relevant,
+    /// Verify that all committed context resources are relevant,
     /// i.e. they are consistent with the committed resource cache.
     /// This is very expensive and should only be used for engine debugging.
     /// This option is enabled in validation level 2 (see Diligent::VALIDATION_LEVEL).
@@ -2911,7 +2911,7 @@ struct EngineD3D12CreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     /// are allocated in one continuous chunk.
     /// GPUDescriptorHeapSize defines the total number of all descriptors
     /// that can be allocated across all SRB objects.
-    /// Note that due to heap fragmentation, releaseing two chunks of sizes
+    /// Note that due to heap fragmentation, releasing two chunks of sizes
     /// N and M does not necessarily make the chunk of size N+M available.
     Uint32 GPUDescriptorHeapSize[2]
 #if DILIGENT_CPP_INTERFACE

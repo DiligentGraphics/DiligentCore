@@ -91,7 +91,7 @@ public:
         Helper.m_MapFlags    = static_cast<Uint32>(-1);
     }
 
-    /// Move-assignement operator: takes over resource ownership from Helper
+    /// Move-assignment operator: takes over resource ownership from Helper
     MapHelper& operator=(MapHelper&& Helper)
     {
         m_pBuffer     = std::move(Helper.m_pBuffer);
@@ -135,7 +135,7 @@ public:
         }
     }
 
-    /// Unamps the resource and resets the object state to default.
+    /// Unmaps the resource and resets the object state to default.
     void Unmap()
     {
         if (m_pBuffer)
@@ -161,7 +161,7 @@ public:
     /// Operator const ->
     const DataType* operator->() const { return m_pMappedData; }
 
-    /// Unamps the resource
+    /// Unmaps the resource
     ~MapHelper()
     {
         Unmap();

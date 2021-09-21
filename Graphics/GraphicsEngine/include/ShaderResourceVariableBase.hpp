@@ -149,9 +149,9 @@ struct BindResourceInfo
 };
 
 #ifdef DILIGENT_DEBUG
-#    define RESOURCE_VALIDAION_FAILURE UNEXPECTED
+#    define RESOURCE_VALIDATION_FAILURE UNEXPECTED
 #else
-#    define RESOURCE_VALIDAION_FAILURE LOG_ERROR_MESSAGE
+#    define RESOURCE_VALIDATION_FAILURE LOG_ERROR_MESSAGE
 #endif
 
 template <typename ResourceImplType>
@@ -171,7 +171,7 @@ bool VerifyResourceBinding(const char*                 ExpectedResourceTypeName,
             ss << " defined by signature '" << SignatureName << '\'';
         }
         ss << ". Invalid resource type: " << ExpectedResourceTypeName << " is expected.";
-        RESOURCE_VALIDAION_FAILURE(ss.str());
+        RESOURCE_VALIDATION_FAILURE(ss.str());
 
         return false;
     }
@@ -203,7 +203,7 @@ bool VerifyResourceBinding(const char*                 ExpectedResourceTypeName,
         else if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE)
             ss << " Use another shader resource binding instance or label the variable as dynamic.";
 
-        RESOURCE_VALIDAION_FAILURE(ss.str());
+        RESOURCE_VALIDATION_FAILURE(ss.str());
 
         return false;
     }
@@ -234,7 +234,7 @@ bool VerifyConstantBufferBinding(const PipelineResourceDesc& ResDesc,
                 ss << " defined by signature '" << SignatureName << '\'';
             }
             ss << ". The buffer was not created with BIND_UNIFORM_BUFFER flag.";
-            RESOURCE_VALIDAION_FAILURE(ss.str());
+            RESOURCE_VALIDATION_FAILURE(ss.str());
 
             BindingOK = false;
         }
@@ -248,7 +248,7 @@ bool VerifyConstantBufferBinding(const PipelineResourceDesc& ResDesc,
                 ss << " defined by signature '" << SignatureName << '\'';
             }
             ss << ". The variable was initialized with PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS flag.";
-            RESOURCE_VALIDAION_FAILURE(ss.str());
+            RESOURCE_VALIDATION_FAILURE(ss.str());
 
             BindingOK = false;
         }
@@ -256,8 +256,8 @@ bool VerifyConstantBufferBinding(const PipelineResourceDesc& ResDesc,
         bool RangeIsOutOfBounds = false;
         if (BindInfo.BufferBaseOffset + BindInfo.BufferRangeSize > BuffDesc.Size)
         {
-            RESOURCE_VALIDAION_FAILURE("Buffer range [", BindInfo.BufferBaseOffset, ", ", BindInfo.BufferBaseOffset + BindInfo.BufferRangeSize,
-                                       ") specified for buffer '", BuffDesc.Name, "' of size ", BuffDesc.Size, " is out of the buffer bounds.");
+            RESOURCE_VALIDATION_FAILURE("Buffer range [", BindInfo.BufferBaseOffset, ", ", BindInfo.BufferBaseOffset + BindInfo.BufferRangeSize,
+                                        ") specified for buffer '", BuffDesc.Name, "' of size ", BuffDesc.Size, " is out of the buffer bounds.");
             BindingOK          = false;
             RangeIsOutOfBounds = true;
         }
@@ -266,8 +266,8 @@ bool VerifyConstantBufferBinding(const PipelineResourceDesc& ResDesc,
         VERIFY_EXPR(OffsetAlignment != 0);
         if ((BindInfo.BufferBaseOffset % OffsetAlignment) != 0)
         {
-            RESOURCE_VALIDAION_FAILURE("Buffer base offset (", BindInfo.BufferBaseOffset, ") is not a multiple of required constant buffer offset alignment (",
-                                       OffsetAlignment, ").");
+            RESOURCE_VALIDATION_FAILURE("Buffer base offset (", BindInfo.BufferBaseOffset, ") is not a multiple of required constant buffer offset alignment (",
+                                        OffsetAlignment, ").");
             BindingOK = false;
         }
 
@@ -292,14 +292,14 @@ bool VerifyConstantBufferBinding(const PipelineResourceDesc& ResDesc,
                    << ") does not match current range [" << CachedBaseOffset << ", " << CachedBaseOffset + CachedRangeSize
                    << "). This is treated as binding a new resource even if the buffer itself stays the same. "
                       "Use another SRB or label the variable as dynamic, or use SetBufferOffset() method if you only need to change the offset.";
-                RESOURCE_VALIDAION_FAILURE(ss.str());
+                RESOURCE_VALIDATION_FAILURE(ss.str());
             }
         }
     }
     else
     {
         if (BindInfo.BufferBaseOffset != 0 || BindInfo.BufferRangeSize != 0)
-            RESOURCE_VALIDAION_FAILURE("Non-empty buffer range is specified for a null buffer.");
+            RESOURCE_VALIDATION_FAILURE("Non-empty buffer range is specified for a null buffer.");
     }
 
     return BindingOK;
@@ -359,9 +359,9 @@ bool ValidateResourceViewDimension(const char*                ResName,
         const auto ResourceDim = GetResourceViewDimension(pViewImpl);
         if (ResourceDim != ExpectedResourceDim)
         {
-            RESOURCE_VALIDAION_FAILURE("The dimension of resource view '", pViewImpl->GetDesc().Name,
-                                       "' bound to variable '", GetShaderResourcePrintName(ResName, ArraySize, ArrayInd), "' is ", GetResourceDimString(ResourceDim),
-                                       ", but resource dimension expected by the shader is ", GetResourceDimString(ExpectedResourceDim), ".");
+            RESOURCE_VALIDATION_FAILURE("The dimension of resource view '", pViewImpl->GetDesc().Name,
+                                        "' bound to variable '", GetShaderResourcePrintName(ResName, ArraySize, ArrayInd), "' is ", GetResourceDimString(ResourceDim),
+                                        ", but resource dimension expected by the shader is ", GetResourceDimString(ExpectedResourceDim), ".");
             BindingsOK = false;
         }
 
@@ -370,14 +370,14 @@ bool ValidateResourceViewDimension(const char*                ResName,
             auto SampleCount = GetResourceSampleCount(pViewImpl);
             if (IsMultisample && SampleCount == 1)
             {
-                RESOURCE_VALIDAION_FAILURE("Texture view '", pViewImpl->GetDesc().Name, "' bound to variable '",
-                                           GetShaderResourcePrintName(ResName, ArraySize, ArrayInd), "' is invalid: multisample texture is expected.");
+                RESOURCE_VALIDATION_FAILURE("Texture view '", pViewImpl->GetDesc().Name, "' bound to variable '",
+                                            GetShaderResourcePrintName(ResName, ArraySize, ArrayInd), "' is invalid: multisample texture is expected.");
                 BindingsOK = false;
             }
             else if (!IsMultisample && SampleCount > 1)
             {
-                RESOURCE_VALIDAION_FAILURE("Texture view '", pViewImpl->GetDesc().Name, "' bound to variable '",
-                                           GetShaderResourcePrintName(ResName, ArraySize, ArrayInd), "' is invalid: single-sample texture is expected.");
+                RESOURCE_VALIDATION_FAILURE("Texture view '", pViewImpl->GetDesc().Name, "' bound to variable '",
+                                            GetShaderResourcePrintName(ResName, ArraySize, ArrayInd), "' is invalid: single-sample texture is expected.");
                 BindingsOK = false;
             }
         }
@@ -433,7 +433,7 @@ bool VerifyResourceViewBinding(const PipelineResourceDesc&             ResDesc,
                 IsFirstViewType = false;
             }
             ss << " is expected, " << GetViewTypeLiteralName(ViewType) << " is provided.";
-            RESOURCE_VALIDAION_FAILURE(ss.str());
+            RESOURCE_VALIDATION_FAILURE(ss.str());
 
             BindingOK = false;
         }
@@ -446,8 +446,8 @@ bool VerifyResourceViewBinding(const PipelineResourceDesc&             ResDesc,
 
     if (BindInfo.BufferBaseOffset != 0 || BindInfo.BufferRangeSize != 0)
     {
-        RESOURCE_VALIDAION_FAILURE("Buffer range may only be directly specified for constant buffers. "
-                                   "To specify a range for a structured buffer, create a buffer view.");
+        RESOURCE_VALIDATION_FAILURE("Buffer range may only be directly specified for constant buffers. "
+                                    "To specify a range for a structured buffer, create a buffer view.");
     }
 
     return BindingOK;
@@ -466,8 +466,8 @@ bool ValidateBufferMode(const PipelineResourceDesc& ResDesc,
         {
             if (BuffDesc.Mode != BUFFER_MODE_FORMATTED)
             {
-                RESOURCE_VALIDAION_FAILURE("Error binding buffer view '", pBufferView->GetDesc().Name, "' of buffer '", BuffDesc.Name, "' to shader variable '",
-                                           GetShaderResourcePrintName(ResDesc, ArrayIndex), "': formatted buffer view is expected.");
+                RESOURCE_VALIDATION_FAILURE("Error binding buffer view '", pBufferView->GetDesc().Name, "' of buffer '", BuffDesc.Name, "' to shader variable '",
+                                            GetShaderResourcePrintName(ResDesc, ArrayIndex), "': formatted buffer view is expected.");
 
                 BindingOK = false;
             }
@@ -476,8 +476,8 @@ bool ValidateBufferMode(const PipelineResourceDesc& ResDesc,
         {
             if (BuffDesc.Mode != BUFFER_MODE_STRUCTURED && BuffDesc.Mode != BUFFER_MODE_RAW)
             {
-                RESOURCE_VALIDAION_FAILURE("Error binding buffer view '", pBufferView->GetDesc().Name, "' of buffer '", BuffDesc.Name, "' to shader variable '",
-                                           GetShaderResourcePrintName(ResDesc, ArrayIndex), "': structured or raw buffer view is expected.");
+                RESOURCE_VALIDATION_FAILURE("Error binding buffer view '", pBufferView->GetDesc().Name, "' of buffer '", BuffDesc.Name, "' to shader variable '",
+                                            GetShaderResourcePrintName(ResDesc, ArrayIndex), "': structured or raw buffer view is expected.");
 
                 BindingOK = false;
             }
@@ -497,7 +497,7 @@ bool VerifySamplerBinding(const PipelineResourceDesc& ResDesc,
 {
     if (BindInfo.BufferBaseOffset != 0 || BindInfo.BufferRangeSize != 0)
     {
-        RESOURCE_VALIDAION_FAILURE("Buffer range can't be specified for samplers.");
+        RESOURCE_VALIDATION_FAILURE("Buffer range can't be specified for samplers.");
     }
     return VerifyResourceBinding("sampler", ResDesc, BindInfo, pSamplerImpl, pCachedSampler, SignatureName);
 }
@@ -511,7 +511,7 @@ bool VerifyTLASResourceBinding(const PipelineResourceDesc& ResDesc,
 {
     if (BindInfo.BufferBaseOffset != 0 || BindInfo.BufferRangeSize != 0)
     {
-        RESOURCE_VALIDAION_FAILURE("Buffer range can't be specified for TLAS.");
+        RESOURCE_VALIDATION_FAILURE("Buffer range can't be specified for TLAS.");
     }
     return VerifyResourceBinding("TLAS", ResDesc, BindInfo, pTLASImpl, pCachedAS, SignatureName);
 }
@@ -527,7 +527,7 @@ bool VerifyDynamicBufferOffset(const PipelineResourceDesc& ResDesc,
 
     if ((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) != 0)
     {
-        RESOURCE_VALIDAION_FAILURE("Error setting dynamic buffer offset for variable '", ResDesc.Name, "': the variable was created with PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS flag.");
+        RESOURCE_VALIDATION_FAILURE("Error setting dynamic buffer offset for variable '", ResDesc.Name, "': the variable was created with PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS flag.");
         BindingOK = false;
     }
 
@@ -553,7 +553,7 @@ bool VerifyDynamicBufferOffset(const PipelineResourceDesc& ResDesc,
             break;
 
         default:
-            RESOURCE_VALIDAION_FAILURE("Error setting dynamic buffer offset for variable '", ResDesc.Name, "': the offset may only be set for constant and structured buffers.");
+            RESOURCE_VALIDATION_FAILURE("Error setting dynamic buffer offset for variable '", ResDesc.Name, "': the offset may only be set for constant and structured buffers.");
     }
 
     if (pBuffer != nullptr)
@@ -561,10 +561,10 @@ bool VerifyDynamicBufferOffset(const PipelineResourceDesc& ResDesc,
         const auto& BuffDesc = pBuffer->GetDesc();
         if (BufferBaseOffset + BufferRangeSize + BufferDynamicOffset > BuffDesc.Size)
         {
-            RESOURCE_VALIDAION_FAILURE("Dynamic offset ", BufferDynamicOffset, " specified for variable '", ResDesc.Name,
-                                       "' defines buffer range [", BufferBaseOffset + BufferDynamicOffset, ", ",
-                                       BufferBaseOffset + BufferRangeSize + BufferDynamicOffset,
-                                       ") that is past the bounds of buffer '", BuffDesc.Name, "' of size ", BuffDesc.Size, ".");
+            RESOURCE_VALIDATION_FAILURE("Dynamic offset ", BufferDynamicOffset, " specified for variable '", ResDesc.Name,
+                                        "' defines buffer range [", BufferBaseOffset + BufferDynamicOffset, ", ",
+                                        BufferBaseOffset + BufferRangeSize + BufferDynamicOffset,
+                                        ") that is past the bounds of buffer '", BuffDesc.Name, "' of size ", BuffDesc.Size, ".");
             BindingOK = false;
         }
 
@@ -577,8 +577,8 @@ bool VerifyDynamicBufferOffset(const PipelineResourceDesc& ResDesc,
 
         if ((BufferDynamicOffset % OffsetAlignment) != 0)
         {
-            RESOURCE_VALIDAION_FAILURE("Dynamic offset (", BufferDynamicOffset, ") specified for variable '", ResDesc.Name,
-                                       "' is not a multiple of required offset alignment (", OffsetAlignment, ").");
+            RESOURCE_VALIDATION_FAILURE("Dynamic offset (", BufferDynamicOffset, ") specified for variable '", ResDesc.Name,
+                                        "' is not a multiple of required offset alignment (", OffsetAlignment, ").");
             BindingOK = false;
         }
     }
@@ -587,7 +587,7 @@ bool VerifyDynamicBufferOffset(const PipelineResourceDesc& ResDesc,
 }
 
 
-#undef RESOURCE_VALIDAION_FAILURE
+#undef RESOURCE_VALIDATION_FAILURE
 
 template <typename ShaderVectorType>
 std::string GetShaderGroupName(const ShaderVectorType& Shaders)

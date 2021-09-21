@@ -76,7 +76,7 @@ public:
     /// \param [in] AssetManager            - Pointer to the asset manager (AAssetManager).
     ///
     /// \remarks The file system can be initialized to use either native activity or asset manager, or both.
-    ///          When NativeActivity is not null, the file system will try to use it first when openining files.
+    ///          When NativeActivity is not null, the file system will try to use it first when opening files.
     ///          It will then resort to using the asset manager. When NativeActivity is not null, but AssetManager
     ///          parameter is null, the file system will use the asset manager from the activity.
     ///          If NativeActivity is null, the file system will only use the asset manager.

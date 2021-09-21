@@ -138,7 +138,7 @@ static const SamplerDesc Sam_LinearWrap
     TEXTURE_ADDRESS_WRAP
 };
 
-static const SamplerDesc Sam_ComparsionLinearClamp
+static const SamplerDesc Sam_ComparisonLinearClamp
 {
     FILTER_TYPE_COMPARISON_LINEAR,
     FILTER_TYPE_COMPARISON_LINEAR,

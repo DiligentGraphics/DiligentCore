@@ -197,7 +197,7 @@ endif()
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     # WARNING: set_source_files_properties() does not append
     #          properties, but overwrites them!
-    # Disable warings like this one:
+    # Disable warnings like this one:
     #   comparison of function 'glPolygonMode' not equal to a null pointer is always true [-Wtautological-pointer-compare]
     set_property(SOURCE
         src/RenderDeviceGLImpl.cpp
@@ -208,7 +208,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     )
 
     if (PLATFORM_IOS)
-        # Disable warings like this one:
+        # Disable warnings like this one:
         #   unused variable 'BottomLeftY' [-Wunused-variable]
         set_property(SOURCE
             src/DeviceContextGLImpl.cpp
@@ -221,7 +221,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     endif()
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     set_target_properties(Diligent-GraphicsEngineOpenGL-shared PROPERTIES
-        # Disallow missing direct and indirect dependencies to enssure that .so is self-contained
+        # Disallow missing direct and indirect dependencies to ensure that .so is self-contained
         LINK_FLAGS "-Wl,--no-undefined -Wl,--no-allow-shlib-undefined"
     )
     if(PLATFORM_WIN32)

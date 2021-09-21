@@ -46,7 +46,7 @@ public:
     using TQueryBase = QueryBase<EngineVkImplTraits>;
 
     QueryVkImpl(IReferenceCounters* pRefCounters,
-                RenderDeviceVkImpl* pRendeDeviceVkImpl,
+                RenderDeviceVkImpl* pRenderDeviceVkImpl,
                 const QueryDesc&    Desc,
                 bool                IsDeviceInternal = false);
     ~QueryVkImpl();

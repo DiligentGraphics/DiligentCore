@@ -76,7 +76,7 @@ public:
 #ifdef DILIGENT_DEVELOPMENT
         auto EnqueuedValue = m_EnqueuedFenceValue.load();
         DEV_CHECK_ERR(NewValue >= EnqueuedValue,
-                      "Fence '", this->m_Desc.Name, "' is being signaled or equeued for signal with value ", NewValue,
+                      "Fence '", this->m_Desc.Name, "' is being signaled or enqueued for signal with value ", NewValue,
                       ", but the previous value (", EnqueuedValue,
                       ") is greater than the new value. Signal operation will have no effect.");
 

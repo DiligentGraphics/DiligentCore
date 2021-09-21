@@ -58,7 +58,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceObject, IObject)
     /// Returns unique identifier assigned to an object
 
     /// \remarks Unique identifiers can be used to reliably check if two objects are identical.
-    ///          Note that the engine resuses memory reclaimed after an object has been released.
+    ///          Note that the engine reuses memory reclaimed after an object has been released.
     ///          For example, if a texture object is released and then another texture is created,
     ///          the engine may return the same pointer, so pointer-to-pointer comparisons are not
     ///          reliable. Unique identifiers, on the other hand, are guaranteed to be, well, unique.

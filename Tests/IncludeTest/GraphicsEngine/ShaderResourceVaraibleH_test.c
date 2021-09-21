@@ -27,7 +27,7 @@
 
 #include "DiligentCore/Graphics/GraphicsEngine/interface/ShaderResourceVariable.h"
 
-void TestShaderResourceVaraible_CInterface(IShaderResourceVariable* pVar)
+void TestShaderResourceVariable_CInterface(IShaderResourceVariable* pVar)
 {
     IShaderResourceVariable_Set(pVar, (struct IDeviceObject*)NULL);
     IShaderResourceVariable_SetArray(pVar, (struct IDeviceObject* const*)NULL, (Uint32)1, (Uint32)2);

@@ -236,7 +236,7 @@ private:
 
     // The array below contains the index of a CBV/SRV/UAV root table in m_RootTables
     // (NOT the Root Index!), for every root parameter group (static/mutable, dynamic)
-    // and every shader visbility, or -1, if the table is not yet assigned to the combination.
+    // and every shader visibility, or -1, if the table is not yet assigned to the combination.
     // Note: max(D3D12_SHADER_VISIBILITY) == D3D12_SHADER_VISIBILITY_MESH == 7
     std::array<std::array<int, 8>, ROOT_PARAMETER_GROUP_COUNT> m_SrvCbvUavRootTablesMap = {};
 

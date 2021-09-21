@@ -59,7 +59,7 @@ DILIGENT_BEGIN_INTERFACE(ISwapChain, IObject)
     VIRTUAL void METHOD(Present)(THIS_
                                  Uint32 SyncInterval DEFAULT_VALUE(1)) PURE;
 
-    /// Returns the swap chain desctription
+    /// Returns the swap chain description
     VIRTUAL const SwapChainDesc REF METHOD(GetDesc)(THIS) CONST PURE;
 
     /// Changes the swap chain size

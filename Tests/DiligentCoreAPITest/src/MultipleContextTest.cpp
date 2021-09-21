@@ -255,7 +255,7 @@ protected:
         ASSERT_NE(sm_pCompProceduralSRB, nullptr);
 
         const auto& SCDesc = pSwapChain->GetDesc();
-        sm_DispathSize     = uint2{(SCDesc.Width + 3) / 4, (SCDesc.Height + 3) / 4}; // must be same as numthreads(...)
+        sm_DispatchSize    = uint2{(SCDesc.Width + 3) / 4, (SCDesc.Height + 3) / 4}; // must be same as numthreads(...)
     }
 
     static void TearDownTestSuite()
@@ -302,7 +302,7 @@ protected:
     static RefCntAutoPtr<IShaderResourceBinding> sm_pDrawProceduralSRB;
     static RefCntAutoPtr<IShaderResourceBinding> sm_pCompProceduralSRB;
 
-    static uint2 sm_DispathSize;
+    static uint2 sm_DispatchSize;
 };
 
 RefCntAutoPtr<IPipelineState> MultipleContextTest::sm_pBlendTexPSO;
@@ -313,7 +313,7 @@ RefCntAutoPtr<IShaderResourceBinding> MultipleContextTest::sm_pBlendTexSRB;
 RefCntAutoPtr<IShaderResourceBinding> MultipleContextTest::sm_pDrawProceduralSRB;
 RefCntAutoPtr<IShaderResourceBinding> MultipleContextTest::sm_pCompProceduralSRB;
 
-uint2 MultipleContextTest::sm_DispathSize;
+uint2 MultipleContextTest::sm_DispatchSize;
 
 
 TEST_F(MultipleContextTest, GraphicsAndComputeQueue)
@@ -403,7 +403,7 @@ TEST_F(MultipleContextTest, GraphicsAndComputeQueue)
 
             pGraphicsCtx->SetPipelineState(sm_pCompProceduralPSO);
             pGraphicsCtx->CommitShaderResources(sm_pCompProceduralSRB, DefaultTransitionMode);
-            pGraphicsCtx->DispatchCompute(DispatchComputeAttribs{sm_DispathSize.x, sm_DispathSize.y, 1});
+            pGraphicsCtx->DispatchCompute(DispatchComputeAttribs{sm_DispatchSize.x, sm_DispatchSize.y, 1});
         }
 
         // blend pass
@@ -493,7 +493,7 @@ TEST_F(MultipleContextTest, GraphicsAndComputeQueue)
 
         pComputeCtx->SetPipelineState(sm_pCompProceduralPSO);
         pComputeCtx->CommitShaderResources(sm_pCompProceduralSRB, DefaultTransitionMode);
-        pComputeCtx->DispatchCompute(DispatchComputeAttribs{sm_DispathSize.x, sm_DispathSize.y, 1});
+        pComputeCtx->DispatchCompute(DispatchComputeAttribs{sm_DispatchSize.x, sm_DispatchSize.y, 1});
 
         pComputeCtx->EnqueueSignal(pComputeFence, ComputeFenceValue);
         pComputeCtx->Flush();

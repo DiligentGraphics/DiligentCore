@@ -173,12 +173,12 @@ void TextureUploaderTest(bool IsRenderThread)
         }
         else
         {
-            std::thread WokerThread{PopulateBuffer, nullptr};
+            std::thread WorkerThread{PopulateBuffer, nullptr};
             while (!BufferPopulated)
             {
                 pTexUploader->RenderThreadUpdate(pContext);
             }
-            WokerThread.join();
+            WorkerThread.join();
         }
 
 

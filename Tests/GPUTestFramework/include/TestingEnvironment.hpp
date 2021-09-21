@@ -150,9 +150,9 @@ protected:
                                 const char*            File,
                                 int                    Line);
 
-    Uint32 FindAdapater(const std::vector<GraphicsAdapterInfo>& Adapters,
-                        ADAPTER_TYPE                            AdapterType,
-                        Uint32                                  AdapterId);
+    Uint32 FindAdapter(const std::vector<GraphicsAdapterInfo>& Adapters,
+                       ADAPTER_TYPE                            AdapterType,
+                       Uint32                                  AdapterId);
 
     const RENDER_DEVICE_TYPE m_DeviceType;
 

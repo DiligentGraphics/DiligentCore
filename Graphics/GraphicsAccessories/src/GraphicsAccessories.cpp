@@ -790,13 +790,13 @@ const Char* GetUsageString(USAGE Usage)
     if (!bUsageStringsInit)
     {
         // clang-format off
-#define INIT_USGAGE_STR(Usage)UsageStrings[Usage] = #Usage
-        INIT_USGAGE_STR(USAGE_IMMUTABLE);
-        INIT_USGAGE_STR(USAGE_DEFAULT);
-        INIT_USGAGE_STR(USAGE_DYNAMIC);
-        INIT_USGAGE_STR(USAGE_STAGING);
-        INIT_USGAGE_STR(USAGE_UNIFIED);
-#undef  INIT_USGAGE_STR
+#define INIT_USAGE_STR(Usage)UsageStrings[Usage] = #Usage
+        INIT_USAGE_STR(USAGE_IMMUTABLE);
+        INIT_USAGE_STR(USAGE_DEFAULT);
+        INIT_USAGE_STR(USAGE_DYNAMIC);
+        INIT_USAGE_STR(USAGE_STAGING);
+        INIT_USAGE_STR(USAGE_UNIFIED);
+#undef  INIT_USAGE_STR
         // clang-format on
         bUsageStringsInit = true;
     }
@@ -1125,7 +1125,7 @@ const char* GetQueryTypeString(QUERY_TYPE QueryType)
         case QUERY_TYPE_DURATION:            return "QUERY_TYPE_DURATION";
         // clang-format on
         default:
-            UNEXPECTED("Unepxected query type");
+            UNEXPECTED("Unexpected query type");
             return "Unknown";
     }
 }

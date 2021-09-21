@@ -298,11 +298,11 @@ void EngineFactoryD3D11Impl::AttachToD3D11Device(void*                        pd
         VerifyEngineCreateInfo(EngineCI, AdapterInfo);
 
         SetRawAllocator(EngineCI.pRawMemAllocator);
-        auto& RawAlloctor = GetRawAllocator();
+        auto& RawAllocator = GetRawAllocator();
 
         RenderDeviceD3D11Impl* pRenderDeviceD3D11{
-            NEW_RC_OBJ(RawAlloctor, "RenderDeviceD3D11Impl instance", RenderDeviceD3D11Impl)(
-                RawAlloctor, this, EngineCI, AdapterInfo, pd3d11Device) //
+            NEW_RC_OBJ(RawAllocator, "RenderDeviceD3D11Impl instance", RenderDeviceD3D11Impl)(
+                RawAllocator, this, EngineCI, AdapterInfo, pd3d11Device) //
         };
         pRenderDeviceD3D11->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice));
 
@@ -311,8 +311,8 @@ void EngineFactoryD3D11Impl::AttachToD3D11Device(void*                        pd
             LOG_ERROR_AND_THROW("Failed to get ID3D11DeviceContext1 interface from device context");
 
         RefCntAutoPtr<DeviceContextD3D11Impl> pDeviceContextD3D11{
-            NEW_RC_OBJ(RawAlloctor, "DeviceContextD3D11Impl instance", DeviceContextD3D11Impl)(
-                RawAlloctor, pRenderDeviceD3D11, pd3d11ImmediateCtx1, EngineCI,
+            NEW_RC_OBJ(RawAllocator, "DeviceContextD3D11Impl instance", DeviceContextD3D11Impl)(
+                RawAllocator, pRenderDeviceD3D11, pd3d11ImmediateCtx1, EngineCI,
                 DeviceContextDesc{
                     EngineCI.pImmediateContextInfo ? EngineCI.pImmediateContextInfo[0].Name : nullptr,
                     COMMAND_QUEUE_TYPE_GRAPHICS,
@@ -338,8 +338,8 @@ void EngineFactoryD3D11Impl::AttachToD3D11Device(void*                        pd
                 LOG_ERROR_AND_THROW("Failed to get ID3D11DeviceContext1 interface from device context");
 
             RefCntAutoPtr<DeviceContextD3D11Impl> pDeferredCtxD3D11{
-                NEW_RC_OBJ(RawAlloctor, "DeviceContextD3D11Impl instance", DeviceContextD3D11Impl)(
-                    RawAlloctor, pRenderDeviceD3D11, pd3d11DeferredCtx1, EngineCI,
+                NEW_RC_OBJ(RawAllocator, "DeviceContextD3D11Impl instance", DeviceContextD3D11Impl)(
+                    RawAllocator, pRenderDeviceD3D11, pd3d11DeferredCtx1, EngineCI,
                     DeviceContextDesc{
                         nullptr,
                         COMMAND_QUEUE_TYPE_UNKNOWN,

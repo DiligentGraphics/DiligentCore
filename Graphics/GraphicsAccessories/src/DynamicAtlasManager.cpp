@@ -380,7 +380,7 @@ void DynamicAtlasManager::DbgVerifyRegion(const Region& R) const
     VERIFY(R.x < m_Width, "Region x (", R.x, ") exceeds atlas width (", m_Width, ").");
     VERIFY(R.y < m_Height, "Region y (", R.y, ") exceeds atlas height (", m_Height, ").");
     VERIFY(R.x + R.width <= m_Width, "Region right boundary (", R.x + R.width, ") exceeds atlas width (", m_Width, ").");
-    VERIFY(R.y + R.height <= m_Height, "Region top boundart (", R.y + R.height, ") exceeds atlas height (", m_Height, ").");
+    VERIFY(R.y + R.height <= m_Height, "Region top boundary (", R.y + R.height, ") exceeds atlas height (", m_Height, ").");
 }
 
 void DynamicAtlasManager::DbgRecursiveVerifyConsistency(const Node& N, Uint32& Area) const

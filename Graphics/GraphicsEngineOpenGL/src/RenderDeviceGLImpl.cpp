@@ -1214,7 +1214,7 @@ void RenderDeviceGLImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
     TexFormatInfo.BindFlags  = BIND_SHADER_RESOURCE;
     TexFormatInfo.Dimensions = RESOURCE_DIMENSION_SUPPORT_NONE;
 
-    // Disable debug messages - errors are exepcted
+    // Disable debug messages - errors are expected
     m_ShowDebugGLOutput = 0;
 
     const auto& TexProps = GetAdapterInfo().Texture;

@@ -131,7 +131,7 @@ public:
         }
 
         // Returns true if the bound constant buffer allows setting dynamic offset,
-        // i.e. the buffer is not bound as a whole (irrespecitve of the variable type or
+        // i.e. the buffer is not bound as a whole (irrespective of the variable type or
         // whether the buffer is USAGE_DYNAMIC or not).
         bool AllowsDynamicOffset() const
         {

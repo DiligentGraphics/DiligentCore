@@ -994,7 +994,7 @@ template <class T> struct Matrix3x3
             };
     }
 
-    // D3D-style left-handed matrix that rotates a point around the x axis. Angle (in radians)
+    // D3D-style left-handed matrix that rotates a point around the x-axis. Angle (in radians)
     // is measured clockwise when looking along the rotation axis toward the origin:
     // (x' y' z') = (x y z) * RotationX
     static Matrix3x3 RotationX(T angleInRadians)
@@ -1010,7 +1010,7 @@ template <class T> struct Matrix3x3
             };
     }
 
-    // D3D-style left-handed matrix that rotates a point around the y axis. Angle (in radians)
+    // D3D-style left-handed matrix that rotates a point around the y-axis. Angle (in radians)
     // is measured clockwise when looking along the rotation axis toward the origin:
     // (x' y' z' 1) = (x y z 1) * RotationY
     static Matrix3x3 RotationY(T angleInRadians)
@@ -1319,7 +1319,7 @@ template <class T> struct Matrix4x4
     }
 
 
-    // D3D-style left-handed matrix that rotates a point around the x axis. Angle (in radians)
+    // D3D-style left-handed matrix that rotates a point around the x-axis. Angle (in radians)
     // is measured clockwise when looking along the rotation axis toward the origin:
     // (x' y' z' 1) = (x y z 1) * RotationX
     static Matrix4x4 RotationX(T angleInRadians)
@@ -1336,7 +1336,7 @@ template <class T> struct Matrix4x4
             };
     }
 
-    // D3D-style left-handed matrix that rotates a point around the y axis. Angle (in radians)
+    // D3D-style left-handed matrix that rotates a point around the y-axis. Angle (in radians)
     // is measured clockwise when looking along the rotation axis toward the origin:
     // (x' y' z' 1) = (x y z 1) * RotationY
     static Matrix4x4 RotationY(T angleInRadians)
@@ -2243,7 +2243,7 @@ constexpr inline Uint32 BitInterleave16(Uint16 _x, Uint16 _y)
     return x | (y << 1u);
 }
 
-/// Returns the least-signficant bit and clears it in the input argument
+/// Returns the least-significant bit and clears it in the input argument
 template <typename T>
 typename std::enable_if<std::is_integral<T>::value, T>::type ExtractLSB(T& bits)
 {
@@ -2256,7 +2256,7 @@ typename std::enable_if<std::is_integral<T>::value, T>::type ExtractLSB(T& bits)
     return bit;
 }
 
-/// Returns the enum value representing the least-signficant bit and clears it in the input argument
+/// Returns the enum value representing the least-significant bit and clears it in the input argument
 template <typename T>
 typename std::enable_if<std::is_enum<T>::value, T>::type ExtractLSB(T& bits)
 {

@@ -261,7 +261,7 @@ void DeviceContextVkImpl::DisposeVkCmdBuffer(SoftwareQueueIndex CmdQueue, VkComm
 
 inline void DeviceContextVkImpl::DisposeCurrentCmdBuffer(SoftwareQueueIndex CmdQueue, Uint64 FenceValue)
 {
-    VERIFY(m_CommandBuffer.GetState().RenderPass == VK_NULL_HANDLE, "Disposing command buffer with unifinished render pass");
+    VERIFY(m_CommandBuffer.GetState().RenderPass == VK_NULL_HANDLE, "Disposing command buffer with unfinished render pass");
     auto vkCmdBuff = m_CommandBuffer.GetVkCmdBuffer();
     if (vkCmdBuff != VK_NULL_HANDLE)
     {
@@ -540,9 +540,9 @@ void DeviceContextVkImpl::CommitShaderResources(IShaderResourceBinding* pShaderR
     if (pSignature->HasDescriptorSet(PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_STATIC_MUTABLE))
     {
         VERIFY_EXPR(DSIndex == pSignature->GetDescriptorSetIndex<PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_STATIC_MUTABLE>());
-        const auto& CahedDescrSet = const_cast<const ShaderResourceCacheVk&>(ResourceCache).GetDescriptorSet(DSIndex);
-        VERIFY_EXPR(CahedDescrSet.GetVkDescriptorSet() != VK_NULL_HANDLE);
-        SetInfo.vkSets[DSIndex] = CahedDescrSet.GetVkDescriptorSet();
+        const auto& CachedDescrSet = const_cast<const ShaderResourceCacheVk&>(ResourceCache).GetDescriptorSet(DSIndex);
+        VERIFY_EXPR(CachedDescrSet.GetVkDescriptorSet() != VK_NULL_HANDLE);
+        SetInfo.vkSets[DSIndex] = CachedDescrSet.GetVkDescriptorSet();
         ++DSIndex;
     }
 
@@ -760,7 +760,7 @@ BufferVkImpl* DeviceContextVkImpl::PrepareIndirectAttribsBuffer(IBuffer*        
         pIndirectDrawAttribsVk->DvpVerifyDynamicAllocation(this);
 #endif
 
-    // Buffer memory barries must be executed outside of render pass
+    // Buffer memory barriers must be executed outside of render pass
     TransitionOrVerifyBufferState(*pIndirectDrawAttribsVk, TransitionMode, RESOURCE_STATE_INDIRECT_ARGUMENT,
                                   VK_ACCESS_INDIRECT_COMMAND_READ_BIT, OpName);
     return pIndirectDrawAttribsVk;
@@ -988,7 +988,7 @@ void DeviceContextVkImpl::DispatchComputeIndirect(const DispatchComputeIndirectA
         pBufferVk->DvpVerifyDynamicAllocation(this);
 #endif
 
-    // Buffer memory barries must be executed outside of render pass
+    // Buffer memory barriers must be executed outside of render pass
     TransitionOrVerifyBufferState(*pBufferVk, Attribs.AttribsBufferStateTransitionMode, RESOURCE_STATE_INDIRECT_ARGUMENT,
                                   VK_ACCESS_INDIRECT_COMMAND_READ_BIT, "Indirect dispatch (DeviceContextVkImpl::DispatchCompute)");
 
@@ -1508,7 +1508,7 @@ void DeviceContextVkImpl::InvalidateState()
     m_vkRenderPass  = VK_NULL_HANDLE;
     m_vkFramebuffer = VK_NULL_HANDLE;
 
-    VERIFY(m_CommandBuffer.GetState().RenderPass == VK_NULL_HANDLE, "Invalidating context with unifinished render pass");
+    VERIFY(m_CommandBuffer.GetState().RenderPass == VK_NULL_HANDLE, "Invalidating context with unfinished render pass");
     m_CommandBuffer.Reset();
 }
 
@@ -2665,7 +2665,7 @@ void DeviceContextVkImpl::EndQuery(IQuery* pQuery)
         else
         {
             if (!m_CommandBuffer.GetState().RenderPass)
-                LOG_ERROR_MESSAGE("The query was started inside render pass, but is being ended oustside of render pass. "
+                LOG_ERROR_MESSAGE("The query was started inside render pass, but is being ended outside of render pass. "
                                   "Vulkan requires that a query must either begin and end inside the same "
                                   "subpass of a render pass instance, or must both begin and end outside of a render pass "
                                   "instance (i.e. contain entire render pass instances). (17.2)");
@@ -3494,7 +3494,7 @@ void DeviceContextVkImpl::CopyTLAS(const CopyTLASAttribs& Attribs)
 
     // Instances specified in BuildTLAS command.
     // We should copy instances because it required for SBT to map instance name to hit group.
-    pDstVk->CopyInstancceData(*pSrcVk);
+    pDstVk->CopyInstanceData(*pSrcVk);
 
     VkCopyAccelerationStructureInfoKHR Info = {};
 

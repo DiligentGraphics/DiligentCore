@@ -139,7 +139,7 @@ VulkanUploadAllocation VulkanUploadHeap::Allocate(VkDeviceSize SizeInBytes, VkDe
 void VulkanUploadHeap::ReleaseAllocatedPages(Uint64 CmdQueueMask)
 {
     // The pages will go into the stale resources queue first, however they will move into the release
-    // queue rightaway when RenderDeviceVkImpl::FlushStaleResources() is called by the DeviceContextVkImpl::FinishFrame()
+    // queue immediately when RenderDeviceVkImpl::FlushStaleResources() is called by the DeviceContextVkImpl::FinishFrame()
     for (auto& Page : m_Pages)
     {
         m_RenderDevice.SafeReleaseDeviceObject(std::move(Page.MemAllocation), CmdQueueMask);

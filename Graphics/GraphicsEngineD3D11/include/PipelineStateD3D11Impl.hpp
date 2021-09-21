@@ -96,7 +96,7 @@ public:
         return m_BaseBindings[Index];
     }
 
-    Uint8 GetNumPixleUAVs() const
+    Uint8 GetNumPixelUAVs() const
     {
         return m_NumPixelUAVs;
     }

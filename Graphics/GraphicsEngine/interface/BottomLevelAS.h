@@ -125,7 +125,7 @@ DILIGENT_TYPED_ENUM(RAYTRACING_BUILD_AS_FLAGS, Uint8)
     /// Indicates that the specified acceleration structure can act as the source for
     /// a copy acceleration structure command IDeviceContext::CopyBLAS() or IDeviceContext::CopyTLAS()
     /// with COPY_AS_MODE_COMPACT mode to produce a compacted acceleration structure.
-    /// With this flag acculeration structure may allocate more memory and take more time on build.
+    /// With this flag acceleration structure may allocate more memory and take more time on build.
     RAYTRACING_BUILD_AS_ALLOW_COMPACTION  = 0x02,
 
     /// Indicates that the given acceleration structure build should prioritize trace performance over build time.

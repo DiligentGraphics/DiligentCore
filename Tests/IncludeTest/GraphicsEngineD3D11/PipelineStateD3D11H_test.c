@@ -33,7 +33,7 @@ void TestPipelineStateD3D11CInterface(struct IPipelineStateD3D11* pPSO)
     ID3D11BlendState*        pBlendState        = IPipelineStateD3D11_GetD3D11BlendState(pPSO);
     ID3D11RasterizerState*   pRasterizerState   = IPipelineStateD3D11_GetD3D11RasterizerState(pPSO);
     ID3D11DepthStencilState* pDepthStencilState = IPipelineStateD3D11_GetD3D11DepthStencilState(pPSO);
-    ID3D11InputLayout*       pInputLayot        = IPipelineStateD3D11_GetD3D11InputLayout(pPSO);
+    ID3D11InputLayout*       pInputLayout       = IPipelineStateD3D11_GetD3D11InputLayout(pPSO);
     ID3D11VertexShader*      pVS                = IPipelineStateD3D11_GetD3D11VertexShader(pPSO);
     ID3D11PixelShader*       pPS                = IPipelineStateD3D11_GetD3D11PixelShader(pPSO);
     ID3D11GeometryShader*    pGS                = IPipelineStateD3D11_GetD3D11GeometryShader(pPSO);
@@ -43,7 +43,7 @@ void TestPipelineStateD3D11CInterface(struct IPipelineStateD3D11* pPSO)
     (void)pBlendState;
     (void)pRasterizerState;
     (void)pDepthStencilState;
-    (void)pInputLayot;
+    (void)pInputLayout;
     (void)pVS;
     (void)pPS;
     (void)pGS;

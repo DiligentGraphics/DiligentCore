@@ -731,7 +731,7 @@ VkDescriptorImageInfo ShaderResourceCacheVk::Resource::GetImageDescriptorWriteIn
     VkDescriptorImageInfo DescrImgInfo;
     DescrImgInfo.sampler = VK_NULL_HANDLE;
     VERIFY(Type == DescriptorType::CombinedImageSampler || !HasImmutableSampler,
-           "Immutable sampler can't be assigned to separarate image or storage image");
+           "Immutable sampler can't be assigned to separate image or storage image");
     if (Type == DescriptorType::CombinedImageSampler && !HasImmutableSampler)
     {
         // Immutable samplers are permanently bound into the set layout; later binding a sampler
