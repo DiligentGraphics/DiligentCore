@@ -83,6 +83,12 @@ SwapChainGLImpl::SwapChainGLImpl(IReferenceCounters*       pRefCounters,
     //Set dummy width and height until resize is called by the app
     m_SwapChainDesc.Width  = 1024;
     m_SwapChainDesc.Height = 768;
+#elif PLATFORM_EMSCRIPTEN
+    double CanvasWidth  = 0;
+    double CanvasHeight = 0;
+    emscripten_get_element_css_size(InitAttribs.Window.pCanvasId, &CanvasWidth, &CanvasHeight);
+    m_SwapChainDesc.Width  = static_cast<uint32_t>(CanvasWidth);
+    m_SwapChainDesc.Height = static_cast<uint32_t>(CanvasHeight);
 #else
 #    error Unsupported platform
 #endif
@@ -104,6 +110,8 @@ void SwapChainGLImpl::Present(Uint32 SyncInterval)
     GLContext.SwapBuffers(static_cast<int>(SyncInterval));
 #elif PLATFORM_MACOS
     LOG_ERROR("Swap buffers operation must be performed by the app on MacOS");
+#elif PLATFORM_EMSCRIPTEN
+    LOG_ERROR("Swap buffers operation must be performed by the app on Emscripten");
 #else
 #    error Unsupported platform
 #endif

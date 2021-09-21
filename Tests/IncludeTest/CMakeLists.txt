@@ -55,6 +55,16 @@ if(MSVC)
     target_compile_options(DiligentCore-IncludeTest PRIVATE "/WX")
 endif()
 
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    if (PLATFORM_EMSCRIPTEN)
+        set_source_files_properties(
+            Primitives/ReferenceCountersH_test.c
+            PROPERTIES 
+            COMPILE_FLAGS "-Wno-unknown-warning-option -Wno-unused-but-set-variable"
+        )
+    endif()
+endif()
+
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCE})
 
 set_target_properties(DiligentCore-IncludeTest PROPERTIES

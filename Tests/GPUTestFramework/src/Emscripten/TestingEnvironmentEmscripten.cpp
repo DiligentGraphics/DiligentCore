@@ -1,6 +1,5 @@
 /*
  *  Copyright 2019-2021 Diligent Graphics LLC
- *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -25,32 +24,25 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
+#include "TestingEnvironment.hpp"
 
-#include "PlatformDefinitions.h"
+#include <emscripten.h>
+#include <emscripten/html5.h>
 
-#if PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS
-#    include "../Win32/interface/Win32PlatformMisc.hpp"
-using PlatformMisc = WindowsMisc;
+namespace Diligent
+{
 
-#elif PLATFORM_ANDROID
-#    include "../Android/interface/AndroidPlatformMisc.hpp"
-using PlatformMisc = AndroidMisc;
+namespace Testing
+{
 
-#elif PLATFORM_LINUX
-#    include "../Linux/interface/LinuxPlatformMisc.hpp"
-using PlatformMisc = LinuxMisc;
+EmscriptenNativeWindow TestingEnvironment::CreateNativeWindow()
+{
+    int32_t WindowWidth  = 512;
+    int32_t WindowHeight = 512;
+    emscripten_set_canvas_element_size("#canvas", WindowWidth, WindowHeight);
+    return EmscriptenNativeWindow{"#canvas"};
+}
 
-#elif PLATFORM_MACOS || PLATFORM_IOS || PLATFORM_TVOS
-#    include "../Apple/interface/ApplePlatformMisc.hpp"
-using PlatformMisc = AppleMisc;
+} // namespace Testing
 
-#elif PLATFORM_EMSCRIPTEN
-#    include "../Emscripten/interface/EmscriptenPlatformMisc.hpp"
-using PlatformMisc = EmscriptenMisc;
-
-#else
-
-#    error Unknown platform. Please define one of the following macros as 1:  PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS, PLATFORM_TVOS, PLATFORM_EMSCRIPTEN.
-
-#endif
+} // namespace Diligent

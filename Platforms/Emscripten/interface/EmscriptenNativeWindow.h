@@ -1,6 +1,5 @@
 /*
  *  Copyright 2019-2021 Diligent Graphics LLC
- *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -27,30 +26,22 @@
 
 #pragma once
 
-#include "PlatformDefinitions.h"
+#include "../../../Primitives/interface/CommonDefinitions.h"
+#include "../../../Primitives/interface/BasicTypes.h"
 
-#if PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS
-#    include "../Win32/interface/Win32PlatformMisc.hpp"
-using PlatformMisc = WindowsMisc;
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
-#elif PLATFORM_ANDROID
-#    include "../Android/interface/AndroidPlatformMisc.hpp"
-using PlatformMisc = AndroidMisc;
+struct EmscriptenNativeWindow
+{
+    const char* pCanvasId DEFAULT_INITIALIZER(nullptr);
+#if DILIGENT_CPP_INTERFACE
+    EmscriptenNativeWindow() noexcept
+    {}
 
-#elif PLATFORM_LINUX
-#    include "../Linux/interface/LinuxPlatformMisc.hpp"
-using PlatformMisc = LinuxMisc;
-
-#elif PLATFORM_MACOS || PLATFORM_IOS || PLATFORM_TVOS
-#    include "../Apple/interface/ApplePlatformMisc.hpp"
-using PlatformMisc = AppleMisc;
-
-#elif PLATFORM_EMSCRIPTEN
-#    include "../Emscripten/interface/EmscriptenPlatformMisc.hpp"
-using PlatformMisc = EmscriptenMisc;
-
-#else
-
-#    error Unknown platform. Please define one of the following macros as 1:  PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS, PLATFORM_TVOS, PLATFORM_EMSCRIPTEN.
-
+    explicit EmscriptenNativeWindow(const char* _pCanvasId) noexcept :
+        pCanvasId(_pCanvasId)
+    {}
 #endif
+};
+
+DILIGENT_END_NAMESPACE // namespace Diligent

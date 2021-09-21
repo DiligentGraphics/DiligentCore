@@ -92,6 +92,10 @@ template <class T> struct Vector2
         };
     };
 
+    constexpr Vector2(const Vector2&) = default;
+    constexpr Vector2(Vector2&&)      = default;
+    constexpr Vector2& operator=(const Vector2&) = default;
+    constexpr Vector2& operator=(Vector2&&) = default;
 
     constexpr Vector2 operator-(const Vector2<T>& right) const
     {
@@ -282,6 +286,10 @@ template <class T> struct Vector3
         };
     };
 
+    constexpr Vector3(const Vector3&) = default;
+    constexpr Vector3(Vector3&&)      = default;
+    constexpr Vector3& operator=(const Vector3&) = default;
+    constexpr Vector3& operator=(Vector3&&) = default;
 
     constexpr Vector3 operator-(const Vector3& right) const
     {
@@ -442,6 +450,7 @@ template <class T> struct Vector3
     constexpr Vector3(const Vector2<T>& v2, T _z) noexcept :
         x{v2.x}, y{v2.y}, z{_z} {}
 
+
     template <typename Y>
     constexpr static Vector3 MakeVector(const Y& vals)
     {
@@ -490,6 +499,11 @@ template <class T> struct Vector4
             T a;
         };
     };
+
+    constexpr Vector4(const Vector4&) = default;
+    constexpr Vector4(Vector4&&)      = default;
+    constexpr Vector4& operator=(const Vector4&) = default;
+    constexpr Vector4& operator=(Vector4&&) = default;
 
     constexpr Vector4 operator-(const Vector4& right) const
     {
@@ -608,7 +622,6 @@ template <class T> struct Vector4
         w = 1;
         return *this;
     }
-    Vector4& operator=(const Vector4&) = default;
 
     constexpr Vector4 operator<(const Vector4& right) const
     {

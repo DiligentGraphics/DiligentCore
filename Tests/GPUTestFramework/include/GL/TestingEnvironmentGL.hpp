@@ -36,7 +36,12 @@
 #    define GLEW_NO_GLU
 #endif
 
-#include "GL/glew.h"
+#ifdef PLATFORM_EMSCRIPTEN
+#    include <GLES3/gl32.h>
+#    include "../../Graphics/GraphicsEngineOpenGL/include/GLStubsEmscripten.h"
+#else
+#    include "GL/glew.h"
+#endif
 
 #include "TestingEnvironment.hpp"
 

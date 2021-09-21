@@ -14,6 +14,9 @@ elseif(PLATFORM_MACOS)
 elseif(PLATFORM_LINUX)
     file(GLOB SOURCE_LINUX LIST_DIRECTORIES false src/Linux/*)
     list(APPEND SOURCE ${SOURCE_LINUX})
+elseif(PLATFORM_EMSCRIPTEN)
+    file(GLOB SOURCE_EMSCRIPTEN LIST_DIRECTORIES false src/Emscripten/*)
+    list(APPEND SOURCE ${SOURCE_EMSCRIPTEN})
 endif()
 
 if(D3D11_SUPPORTED)
@@ -84,6 +87,8 @@ if(GL_SUPPORTED OR GLES_SUPPORTED)
     elseif(PLATFORM_MACOS)
         find_package(OpenGL REQUIRED)
         target_link_libraries(Diligent-GPUTestFramework PUBLIC glew-static ${OPENGL_LIBRARY})
+    elseif(PLATFORM_EMSCRIPTEN)
+
     else()
         message(FATAL_ERROR "Unsupported platform")
     endif()
@@ -107,11 +112,18 @@ endif()
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     # Disable the following warning:
     #   comparison of function 'glPolygonMode' not equal to a null pointer is always true [-Wtautological-pointer-compare]
-    set_source_files_properties(
+    set_property(SOURCE
         src/GL/TestingEnvironmentGL.cpp
-    PROPERTIES
+    APPEND_STRING PROPERTY
         COMPILE_FLAGS -Wno-tautological-pointer-compare
     )
+    if (PLATFORM_EMSCRIPTEN)
+        set_property(SOURCE
+            src/TestingEnvironment.cpp
+        APPEND_STRING PROPERTY
+            COMPILE_FLAGS "-Wno-unused-variable"
+        )
+    endif()
 endif()
 
 target_include_directories(Diligent-GPUTestFramework

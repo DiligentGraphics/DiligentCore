@@ -53,13 +53,17 @@
 #    include "FileSystem.hpp"
 #endif
 
+#if PLATFORM_EMSCRIPTEN
+#    include "RenderDeviceGLESImpl.hpp"
+#endif
+
 namespace Diligent
 {
 
 #if PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS || PLATFORM_LINUX || PLATFORM_MACOS
 using TRenderDeviceGLImpl = RenderDeviceGLImpl;
 using TSwapChain          = SwapChainGLImpl;
-#elif PLATFORM_ANDROID
+#elif PLATFORM_ANDROID || PLATFORM_EMSCRIPTEN
 using TRenderDeviceGLImpl = RenderDeviceGLESImpl;
 using TSwapChain          = SwapChainGLImpl;
 #elif PLATFORM_IOS

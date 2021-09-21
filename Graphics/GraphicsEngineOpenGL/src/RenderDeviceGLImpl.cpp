@@ -1123,6 +1123,8 @@ void RenderDeviceGLImpl::FlagSupportedTexFormats()
             CHECK_GL_ERROR("glGetInternalformativ() failed");
             VERIFY(FmtInfo->Supported == (params == GL_TRUE), "This internal format should be supported");
         }
+#    else
+        (void)bGL43OrAbove; // To suppress warning
 #    endif
 
         // Check that the format is indeed supported

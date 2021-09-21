@@ -1,6 +1,5 @@
 /*
  *  Copyright 2019-2021 Diligent Graphics LLC
- *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -27,30 +26,29 @@
 
 #pragma once
 
-#include "PlatformDefinitions.h"
+#include <emscripten/html5_webgl.h>
 
-#if PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS
-#    include "../Win32/interface/Win32PlatformMisc.hpp"
-using PlatformMisc = WindowsMisc;
+namespace Diligent
+{
 
-#elif PLATFORM_ANDROID
-#    include "../Android/interface/AndroidPlatformMisc.hpp"
-using PlatformMisc = AndroidMisc;
+class GLContext
+{
+public:
+    using NativeGLContextType = EMSCRIPTEN_WEBGL_CONTEXT_HANDLE;
 
-#elif PLATFORM_LINUX
-#    include "../Linux/interface/LinuxPlatformMisc.hpp"
-using PlatformMisc = LinuxMisc;
+    GLContext(const struct EngineGLCreateInfo& InitAttribs,
+              RENDER_DEVICE_TYPE&              DevType,
+              struct Version&                  APIVersion,
+              const struct SwapChainDesc*      pSCDesc);
+    ~GLContext();
 
-#elif PLATFORM_MACOS || PLATFORM_IOS || PLATFORM_TVOS
-#    include "../Apple/interface/ApplePlatformMisc.hpp"
-using PlatformMisc = AppleMisc;
+    bool                Invalidate();
+    void                Suspend();
+    NativeGLContextType GetCurrentNativeGLContext();
 
-#elif PLATFORM_EMSCRIPTEN
-#    include "../Emscripten/interface/EmscriptenPlatformMisc.hpp"
-using PlatformMisc = EmscriptenMisc;
+private:
+    NativeGLContextType m_GLContext = {};
+    bool                m_IsCreated = false;
+};
 
-#else
-
-#    error Unknown platform. Please define one of the following macros as 1:  PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS, PLATFORM_TVOS, PLATFORM_EMSCRIPTEN.
-
-#endif
+} // namespace Diligent

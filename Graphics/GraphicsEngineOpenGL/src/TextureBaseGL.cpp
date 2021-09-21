@@ -88,11 +88,11 @@ static GLenum GetTextureInternalFormat(GLContextState& GLState, GLenum BindTarge
 {
     GLState.BindTexture(-1, BindTarget, GLTex);
 
+    GLint  GlFormat        = 0;
     GLenum QueryBindTarget = BindTarget;
     if (BindTarget == GL_TEXTURE_CUBE_MAP || BindTarget == GL_TEXTURE_CUBE_MAP_ARRAY)
         QueryBindTarget = GL_TEXTURE_CUBE_MAP_POSITIVE_X;
 
-    GLint GlFormat = 0;
 #if GL_TEXTURE_INTERNAL_FORMAT
     glGetTexLevelParameteriv(QueryBindTarget, 0, GL_TEXTURE_INTERNAL_FORMAT, &GlFormat);
     if (glGetError() == GL_NO_ERROR && GlFormat != 0)
@@ -111,6 +111,8 @@ static GLenum GetTextureInternalFormat(GLContextState& GLState, GLenum BindTarge
         }
     }
 #else
+    (void)QueryBindTarget;
+
     if (TexFmtFromDesc != TEX_FORMAT_UNKNOWN)
     {
         GlFormat = TexFormatToGLInternalTexFormat(TexFmtFromDesc);
@@ -137,7 +139,6 @@ static TextureDesc GetTextureDescFromGLHandle(GLContextState& GLState, TextureDe
     if (BindTarget == GL_TEXTURE_CUBE_MAP)
         QueryBindTarget = GL_TEXTURE_CUBE_MAP_POSITIVE_X;
 
-
 #if GL_TEXTURE_WIDTH
     GLint TexWidth = 0;
     glGetTexLevelParameteriv(QueryBindTarget, 0, GL_TEXTURE_WIDTH, &TexWidth);
@@ -159,6 +160,8 @@ static TextureDesc GetTextureDescFromGLHandle(GLContextState& GLState, TextureDe
         }
     }
 #else
+    (void)QueryBindTarget;
+
     if (TexDesc.Width == 0)
     {
         LOG_WARNING_MESSAGE("Texture width query is not supported while the Width member of TextureDesc struct of texture '",

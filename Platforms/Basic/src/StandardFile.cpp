@@ -33,7 +33,7 @@ StandardFile::StandardFile(const FileOpenAttribs& OpenAttribs, Diligent::Char Sl
     BasicFile{OpenAttribs, SlashSymbol},
     m_pFile{nullptr}
 {
-#if PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS || PLATFORM_TVOS
+#if PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS || PLATFORM_TVOS || PLATFORM_EMSCRIPTEN
     auto OpenModeStr = GetOpenModeStr();
     m_pFile          = fopen(m_OpenAttribs.strFilePath, OpenModeStr.c_str());
     if (m_pFile == nullptr)
@@ -85,6 +85,7 @@ bool StandardFile::Write(const void* Data, size_t Size)
 
 size_t StandardFile::GetSize()
 {
+    VERIFY(m_pFile, "File is not opened");
     auto OrigPos = ftell(m_pFile);
     fseek(m_pFile, 0, SEEK_END);
     auto FileSize = ftell(m_pFile);

@@ -110,10 +110,11 @@ public:
 
     struct ContextCaps
     {
-        bool  bFillModeSelectionSupported = true;
-        GLint m_iMaxCombinedTexUnits      = 0;
-        GLint m_iMaxDrawBuffers           = 0;
-        GLint m_iMaxUniformBufferBindings = 0;
+        bool  IsFillModeSelectionSupported = true;
+        bool  IsProgramPipelineSupported   = true;
+        GLint MaxCombinedTexUnits          = 0;
+        GLint MaxDrawBuffers               = 0;
+        GLint MaxUniformBufferBindings     = 0;
     };
     const ContextCaps& GetContextCaps() { return m_Caps; }
 

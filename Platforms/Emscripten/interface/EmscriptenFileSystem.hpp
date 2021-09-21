@@ -1,6 +1,5 @@
 /*
  *  Copyright 2019-2021 Diligent Graphics LLC
- *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -27,30 +26,27 @@
 
 #pragma once
 
-#include "PlatformDefinitions.h"
+#include <memory>
+#include <vector>
 
-#if PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS
-#    include "../Win32/interface/Win32PlatformMisc.hpp"
-using PlatformMisc = WindowsMisc;
+#include "../../Basic/interface/BasicFileSystem.hpp"
+#include "../../Basic/interface/StandardFile.hpp"
 
-#elif PLATFORM_ANDROID
-#    include "../Android/interface/AndroidPlatformMisc.hpp"
-using PlatformMisc = AndroidMisc;
+using EmscriptenFile = StandardFile;
 
-#elif PLATFORM_LINUX
-#    include "../Linux/interface/LinuxPlatformMisc.hpp"
-using PlatformMisc = LinuxMisc;
+struct EmscriptenFileSystem : public BasicFileSystem
+{
+public:
+    static EmscriptenFile* OpenFile(const FileOpenAttribs& OpenAttribs);
 
-#elif PLATFORM_MACOS || PLATFORM_IOS || PLATFORM_TVOS
-#    include "../Apple/interface/ApplePlatformMisc.hpp"
-using PlatformMisc = AppleMisc;
+    static inline Diligent::Char GetSlashSymbol() { return '/'; }
 
-#elif PLATFORM_EMSCRIPTEN
-#    include "../Emscripten/interface/EmscriptenPlatformMisc.hpp"
-using PlatformMisc = EmscriptenMisc;
+    static bool FileExists(const Diligent::Char* strFilePath);
+    static bool PathExists(const Diligent::Char* strPath);
 
-#else
+    static bool CreateDirectory(const Diligent::Char* strPath);
+    static void ClearDirectory(const Diligent::Char* strPath);
+    static void DeleteFile(const Diligent::Char* strPath);
 
-#    error Unknown platform. Please define one of the following macros as 1:  PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS, PLATFORM_TVOS, PLATFORM_EMSCRIPTEN.
-
-#endif
+    static std::vector<std::unique_ptr<FindFileData>> Search(const Diligent::Char* SearchPattern);
+};

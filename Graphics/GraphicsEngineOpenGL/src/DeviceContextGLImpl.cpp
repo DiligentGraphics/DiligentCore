@@ -367,8 +367,8 @@ void DeviceContextGLImpl::CommitRenderTargets()
         NumRenderTargets = std::min(NumRenderTargets, MAX_RENDER_TARGETS);
 
         const auto& CtxCaps = m_ContextState.GetContextCaps();
-        VERIFY(NumRenderTargets < static_cast<Uint32>(CtxCaps.m_iMaxDrawBuffers), "This device only supports ", CtxCaps.m_iMaxDrawBuffers, " draw buffers, but ", NumRenderTargets, " are being set");
-        NumRenderTargets = std::min(NumRenderTargets, static_cast<Uint32>(CtxCaps.m_iMaxDrawBuffers));
+        VERIFY(NumRenderTargets < static_cast<Uint32>(CtxCaps.MaxDrawBuffers), "This device only supports ", CtxCaps.MaxDrawBuffers, " draw buffers, but ", NumRenderTargets, " are being set");
+        NumRenderTargets = std::min(NumRenderTargets, static_cast<Uint32>(CtxCaps.MaxDrawBuffers));
 
         TextureViewGLImpl* pBoundRTVs[MAX_RENDER_TARGETS] = {};
         for (Uint32 rt = 0; rt < NumRenderTargets; ++rt)

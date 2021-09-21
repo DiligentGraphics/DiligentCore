@@ -49,6 +49,10 @@ using PlatformDebug = LinuxDebug;
 #    include "../Apple/interface/AppleDebug.hpp"
 using PlatformDebug = AppleDebug;
 
+#elif PLATFORM_EMSCRIPTEN
+#    include "../Emscripten/interface/EmscriptenDebug.hpp"
+using PlatformDebug = EmscriptenDebug;
+
 #else
-#    error Unknown platform. Please define one of the following macros as 1:  PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS, PLATFORM_TVOS.
+#    error Unknown platform. Please define one of the following macros as 1:  PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS, PLATFORM_TVOS, PLATFORM_EMSCRIPTEN.
 #endif

@@ -290,6 +290,7 @@ TEST(GraphicsAccessories_RingBuffer, AllocDealloc)
         offset = RB.Allocate(512, 1);
         RB.FinishCurrentFrame(5);
         RB.ReleaseCompletedFrames(5);
+        (void)offset;
     }
 }
 

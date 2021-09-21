@@ -31,8 +31,13 @@
 /// Definition of the Diligent::IRenderDeviceGLES interface
 
 #include "RenderDeviceGL.h"
-#include <android/native_window.h>
-#include <EGL/egl.h>
+#if PLATFORM_ANDROID
+#    include <android/native_window.h>
+#    include <EGL/egl.h>
+#elif PLATFORM_EMSCRIPTEN
+#else
+#    error Unsupported platform
+#endif
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
@@ -56,8 +61,11 @@ DILIGENT_BEGIN_INTERFACE(IRenderDeviceGLES, IRenderDeviceGL)
 
     VIRTUAL void METHOD(Suspend)(THIS) PURE;
 
+#if PLATFORM_ANDROID
     VIRTUAL EGLint METHOD(Resume)(THIS_
                                   ANativeWindow* window) PURE;
+#endif
+
 };
 DILIGENT_END_INTERFACE
 

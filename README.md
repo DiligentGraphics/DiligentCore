@@ -7,13 +7,14 @@ The module's cmake script defines a number of variables that are required to gen
 
 | Platform             | Build Status  |
 | ---------------------| ------------- |
-|<img src="media/windows-logo.png" width=24 valign="middle"> Win32               | [![Build Status](https://github.com/DiligentGraphics/DiligentCore/workflows/Windows/badge.svg?branch=master)](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/windows.yml?query=branch%3Amaster) |
-|<img src="media/uwindows-logo.png" width=24 valign="middle"> Universal Windows  | [![Build Status](https://github.com/DiligentGraphics/DiligentCore/workflows/UWP/badge.svg?branch=master)](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/uwp.yml?query=branch%3Amaster)         |
-|<img src="media/linux-logo.png" width=24 valign="middle"> Linux                 | [![Build Status](https://github.com/DiligentGraphics/DiligentCore/workflows/Linux/badge.svg?branch=master)](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/linux.yml?query=branch%3Amaster)     |
-|<img src="media/android-logo.png" width=24 valign="middle"> Android             | [![Build Status](https://github.com/DiligentGraphics/DiligentCore/workflows/Android/badge.svg?branch=master)](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/android.yml?query=branch%3Amaster) |
-|<img src="media/macos-logo.png" width=24 valign="middle"> MacOS                 | [![Build Status](https://github.com/DiligentGraphics/DiligentCore/workflows/MacOS/badge.svg?branch=master)](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/macos.yml?query=branch%3Amaster)     |
-|<img src="media/apple-logo.png" width=24 valign="middle"> iOS                   | [![Build Status](https://github.com/DiligentGraphics/DiligentCore/workflows/iOS/badge.svg?branch=master)](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/ios.yml?query=branch%3Amaster)         |
-|<img src="media/tvos-logo.png" width=24 valign="middle"> tvOS                   | [![Build Status](https://github.com/DiligentGraphics/DiligentCore/workflows/tvOS/badge.svg?branch=master)](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/tvos.yml?query=branch%3Amaster)       |
+|<img src="media/windows-logo.png" width=24 valign="middle"> Win32               | [![Build Status](https://github.com/DiligentGraphics/DiligentCore/workflows/Windows/badge.svg?branch=master)](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/windows.yml?query=branch%3Amaster)       |
+|<img src="media/uwindows-logo.png" width=24 valign="middle"> Universal Windows  | [![Build Status](https://github.com/DiligentGraphics/DiligentCore/workflows/UWP/badge.svg?branch=master)](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/uwp.yml?query=branch%3Amaster)               |
+|<img src="media/linux-logo.png" width=24 valign="middle"> Linux                 | [![Build Status](https://github.com/DiligentGraphics/DiligentCore/workflows/Linux/badge.svg?branch=master)](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/linux.yml?query=branch%3Amaster)           |
+|<img src="media/android-logo.png" width=24 valign="middle"> Android             | [![Build Status](https://github.com/DiligentGraphics/DiligentCore/workflows/Android/badge.svg?branch=master)](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/android.yml?query=branch%3Amaster)       |
+|<img src="media/macos-logo.png" width=24 valign="middle"> MacOS                 | [![Build Status](https://github.com/DiligentGraphics/DiligentCore/workflows/MacOS/badge.svg?branch=master)](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/macos.yml?query=branch%3Amaster)           |
+|<img src="media/apple-logo.png" width=24 valign="middle"> iOS                   | [![Build Status](https://github.com/DiligentGraphics/DiligentCore/workflows/iOS/badge.svg?branch=master)](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/ios.yml?query=branch%3Amaster)               |
+|<img src="media/tvos-logo.png" width=24 valign="middle"> tvOS                   | [![Build Status](https://github.com/DiligentGraphics/DiligentCore/workflows/tvOS/badge.svg?branch=master)](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/tvos.yml?query=branch%3Amaster)             |
+|<img src="media/emscripten-logo.png" width=24 valign="middle"> Emscripten       | [![Build Status](https://github.com/DiligentGraphics/DiligentCore/workflows/Emscripten/badge.svg?branch=master)](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/emscripten.yml?query=branch%3Amaster) | 
 
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](License.txt)
@@ -34,6 +35,7 @@ The module's cmake script defines a number of variables that are required to gen
     - [MacOS](#initialization_macos)
     - [Android](#initialization_android)
     - [iOS](#initialization_ios)
+    - [Emscripten](#initialization_emscripten)
     - [Destroying the Engine](#initialization_destroying)
   - [Creating Resources](#creating_resources)
   - [Creating Shaders](#creating_shaders)
@@ -251,6 +253,19 @@ performed by the application, and the engine attaches to the context initialized
 [EAGLView.mm](https://github.com/DiligentGraphics/DiligentTools/blob/master/NativeApp/Apple/Source/Classes/iOS/EAGLView.mm)
 for details.
 
+<a name="initialization_emscripten"></a>
+### Emscripten
+
+On Emscripten, you can create OpenGLES device. The following code snippet shows an example:
+```cpp
+//You need to pass the id of the canvas to NativeWindow
+auto* pFactoryOpenGL = GetEngineFactoryOpenGL();
+EngineGLCreateInfo EngineCI = {};
+EngineCI.Window = NativeWindow{"#canvas"};
+pFactoryOpenGL->CreateDeviceAndSwapChainGL(EngineCI, &m_pDevice, &m_pContext, SCDesc, &m_pSwapChain);
+```
+If you are using SDL or GLFW with existing context, you can provide null as the native window handle:
+`EngineCI.Window = NativeWindow{nullptr}`
 
 <a name="initialization_destroying"></a>
 ### Destroying the Engine
