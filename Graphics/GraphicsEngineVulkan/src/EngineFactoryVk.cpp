@@ -374,6 +374,9 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
             if (vkExtFeatures.FragmentDensityMap.fragmentDensityMapDynamic != VK_FALSE)
                 ShadingRateProps.CapFlags |= SHADING_RATE_CAP_FLAG_TEXTURE_DEVICE_ACCESS;
 
+            if (vkDeviceExtProps.FragmentDensityMap.fragmentDensityInvocations != VK_FALSE)
+                ShadingRateProps.CapFlags |= SHADING_RATE_CAP_FLAG_ADDITIONAL_INVOCATIONS;
+
             ShadingRateProps.MinTileSize[0] = vkDeviceExtProps.FragmentDensityMap.minFragmentDensityTexelSize.width;
             ShadingRateProps.MinTileSize[1] = vkDeviceExtProps.FragmentDensityMap.minFragmentDensityTexelSize.height;
             ShadingRateProps.MaxTileSize[0] = vkDeviceExtProps.FragmentDensityMap.maxFragmentDensityTexelSize.width;

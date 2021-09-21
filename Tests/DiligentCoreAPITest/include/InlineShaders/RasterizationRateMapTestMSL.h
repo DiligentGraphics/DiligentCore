@@ -107,8 +107,7 @@ float4 PSmain(         VSOut                        in          [[stage_in]],
 
     rasterization_rate_map_decoder Decoder(g_RRMData);
 
-    float2 uv = in.UV * float2(g_Texture.get_width(), g_Texture.get_height());
-
+    float2 uv        = in.Pos.xy;
     float2 ScreenPos = Decoder.map_screen_to_physical_coordinates(uv);
     float4 RTCol     = float4(g_Texture.sample(readSampler, ScreenPos));
 

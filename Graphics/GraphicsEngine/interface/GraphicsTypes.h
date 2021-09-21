@@ -2487,6 +2487,10 @@ DILIGENT_TYPED_ENUM(SHADING_RATE_CAP_FLAGS, Uint16)
     /// If the flag is not set, the texture content is accessed
     /// on the CPU side when render pass begins.
     SHADING_RATE_CAP_FLAG_TEXTURE_DEVICE_ACCESS     = 1u << 10,
+
+    /// Indicates that driver may generate additional fragment shader invocations
+    /// in order to make transitions between fragment areas with different shading rates more smooth.
+    SHADING_RATE_CAP_FLAG_ADDITIONAL_INVOCATIONS    = 1u << 11,
 };
 DEFINE_FLAG_ENUM_OPERATORS(SHADING_RATE_CAP_FLAGS);
 

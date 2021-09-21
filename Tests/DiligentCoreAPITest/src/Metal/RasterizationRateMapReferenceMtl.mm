@@ -167,11 +167,13 @@ void RasterizationRateMapReferenceMtl(ISwapChain* pSwapChain)
                 renderPassDesc.colorAttachments[0].clearColor  = MTLClearColorMake(1.0, 0.0, 0.0, 1.0);
                 renderPassDesc.colorAttachments[0].storeAction = MTLStoreActionStore;
                 renderPassDesc.rasterizationRateMap            = mtlRRM;
+                renderPassDesc.renderTargetWidth               = mtlBackBuffer.width;
+                renderPassDesc.renderTargetHeight              = mtlBackBuffer.height;
 
                 id<MTLRenderCommandEncoder> renderEncoder = [mtlCommandBuffer renderCommandEncoderWithDescriptor:renderPassDesc]; // Autoreleased
                 ASSERT_TRUE(renderEncoder != nil);
 
-                [renderEncoder setViewport:MTLViewport{0, 0, (double)mtlIntermediateRT.width, (double)mtlIntermediateRT.height, 0, 1}];
+                [renderEncoder setViewport:MTLViewport{0, 0, (double)mtlBackBuffer.width, (double)mtlBackBuffer.height, 0, 1}];
 
                 [renderEncoder setRenderPipelineState:mtlPass1PSO];
                 [renderEncoder setVertexBuffer: mtlVertBuffer
@@ -193,8 +195,6 @@ void RasterizationRateMapReferenceMtl(ISwapChain* pSwapChain)
 
                 id<MTLRenderCommandEncoder> renderEncoder = [mtlCommandBuffer renderCommandEncoderWithDescriptor:renderPassDesc]; // Autoreleased
                 ASSERT_TRUE(renderEncoder != nil);
-
-                [renderEncoder setViewport:MTLViewport{0, 0, (double)mtlBackBuffer.width, (double)mtlBackBuffer.height, 0, 1}];
 
                 [renderEncoder setRenderPipelineState:mtlPass2PSO];
 
