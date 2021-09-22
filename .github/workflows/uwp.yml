@@ -18,12 +18,6 @@ jobs:
       with:
         submodules: recursive
 
-    - name: Format validation
-      shell: cmd
-      run: |
-        cd BuildTools\FormatValidation
-        validate_format_win.bat
-
     - name: Configure CMake
       if: success()
       shell: bash

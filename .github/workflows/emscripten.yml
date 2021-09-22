@@ -17,12 +17,6 @@ jobs:
       with:
         submodules: recursive
 
-    - name: Format validation
-      shell: cmd
-      run: |
-        cd BuildTools\FormatValidation
-        validate_format_win.bat
-
     - name: Download Ninja
       uses: actions/checkout@master
 
@@ -59,12 +53,6 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Format validation
-        shell: bash
-        run: |
-          cd $GITHUB_WORKSPACE/BuildTools/FormatValidation
-          ./validate_format_linux.sh
-
       - name: Download Ninja
         uses: actions/checkout@master
 
@@ -91,7 +79,7 @@ jobs:
   build-macos:
     strategy:
       matrix:
-        config: [Debug, Release]
+        config: [Debug]
 
     runs-on: macos-latest
     name: Emscripten -> MacOS, ${{ matrix.config }}
@@ -101,12 +89,6 @@ jobs:
       uses: actions/checkout@v2
       with:
         submodules: recursive
-
-    - name: Format validation
-      shell: bash
-      run: |
-        cd $GITHUB_WORKSPACE/BuildTools/FormatValidation
-        ./validate_format_mac.sh
 
     - name: Download Ninja
       uses: actions/checkout@master

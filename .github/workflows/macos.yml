@@ -17,12 +17,6 @@ jobs:
       with:
         submodules: recursive
 
-    - name: Format validation
-      shell: bash
-      run: |
-        cd $GITHUB_WORKSPACE/BuildTools/FormatValidation
-        ./validate_format_mac.sh
-
     - name: Download Vulkan SDK
       if: success()
       shell: bash

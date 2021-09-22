@@ -17,12 +17,6 @@ jobs:
       with:
         submodules: recursive
 
-    - name: Format validation
-      shell: bash
-      run: |
-        cd $GITHUB_WORKSPACE/BuildTools/FormatValidation
-        ./validate_format_linux.sh
-
     - name: Configure dependencies
       if: success()
       run: |
@@ -74,12 +68,6 @@ jobs:
       uses: actions/checkout@v2
       with:
         submodules: recursive
-
-    - name: Format validation
-      shell: bash
-      run: |
-        cd $GITHUB_WORKSPACE/BuildTools/FormatValidation
-        ./validate_format_linux.sh
 
     - name: Configure dependencies
       if: success()
