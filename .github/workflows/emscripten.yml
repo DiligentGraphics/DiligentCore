@@ -94,7 +94,7 @@ jobs:
         config: [Debug, Release]
 
     runs-on: macos-latest
-    name: MacOS, ${{ matrix.config }}
+    name: Emscripten -> MacOS, ${{ matrix.config }}
 
     steps:
     - name: Clone repository
