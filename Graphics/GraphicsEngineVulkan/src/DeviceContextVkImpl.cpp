@@ -44,6 +44,7 @@
 #include "GraphicsAccessories.hpp"
 #include "GenerateMipsVkHelper.hpp"
 #include "QueryManagerVk.hpp"
+#include "CommandQueueVkImpl.hpp"
 
 namespace Diligent
 {
@@ -3703,6 +3704,279 @@ void DeviceContextVkImpl::SetShadingRate(SHADING_RATE BaseRate, SHADING_RATE_COM
     }
     else
         UNEXPECTED("VariableRateShading device feature is not enabled");
+}
+
+void DeviceContextVkImpl::BindSparseMemory(const BindSparseMemoryAttribs& Attribs)
+{
+    TDeviceContextBase::BindSparseMemory(Attribs, 0);
+
+    if (Attribs.NumBufferBinds == 0 && Attribs.NumTextureBinds == 0)
+        return;
+
+    Flush();
+
+    // Calculated required size of the arrays
+    Uint32 NumImageBind         = 0;
+    Uint32 NumImageOpaqueBind   = 0;
+    Uint32 MemoryBindCount      = 0;
+    Uint32 ImageMemoryBindCount = 0;
+
+    for (Uint32 i = 0; i < Attribs.NumBufferBinds; ++i)
+        MemoryBindCount += Attribs.pBufferBinds[i].NumRanges;
+
+    for (Uint32 i = 0; i < Attribs.NumTextureBinds; ++i)
+    {
+        const auto& Bind           = Attribs.pTextureBinds[i];
+        auto*       pTexVk         = ClassPtrCast<TextureVkImpl>(Bind.pTexture);
+        const auto& TexSparseProps = pTexVk->GetSparseProperties();
+        bool        ImageBindAdded = false;
+
+        for (Uint32 j = 0, Count = Bind.NumRanges; j < Count; ++j)
+        {
+            if (Bind.pRanges[j].MipLevel >= TexSparseProps.FirstMipInTail)
+            {
+                ++MemoryBindCount;
+                ++NumImageOpaqueBind;
+            }
+            else
+            {
+                if (!ImageBindAdded)
+                {
+                    ++NumImageBind;
+                    ImageBindAdded = true;
+                }
+                ++ImageMemoryBindCount;
+            }
+        }
+    }
+
+    std::vector<VkSparseBufferMemoryBindInfo>      BufferBind{Attribs.NumBufferBinds};
+    std::vector<VkSparseImageOpaqueMemoryBindInfo> ImageOpaqueBind{NumImageOpaqueBind};
+    std::vector<VkSparseImageMemoryBindInfo>       ImageBind{NumImageBind};
+    std::vector<VkSparseMemoryBind>                MemoryBind{MemoryBindCount};
+    std::vector<VkSparseImageMemoryBind>           ImageMemoryBind{ImageMemoryBindCount};
+
+    MemoryBindCount      = 0;
+    ImageMemoryBindCount = 0;
+    NumImageBind         = 0;
+    NumImageOpaqueBind   = 0;
+
+    for (Uint32 i = 0; i < Attribs.NumBufferBinds; ++i)
+    {
+        const auto& Src     = Attribs.pBufferBinds[i];
+        auto&       Dst     = BufferBind[i];
+        auto*       pBuffVk = ClassPtrCast<BufferVkImpl>(Src.pBuffer);
+#ifdef DILIGENT_DEVELOPMENT
+        const auto& BuffSparseProps = pBuffVk->GetSparseProperties();
+#endif
+
+        Dst.buffer    = pBuffVk->GetVkBuffer();
+        Dst.bindCount = Src.NumRanges;
+        Dst.pBinds    = &MemoryBind[MemoryBindCount];
+
+        for (Uint32 r = 0; r < Src.NumRanges; ++r)
+        {
+            const auto& SrcRange   = Src.pRanges[r];
+            auto&       DstRange   = MemoryBind[MemoryBindCount + r];
+            auto*       pMemVk     = ClassPtrCast<IDeviceMemoryVk>(SrcRange.pMemory);
+            const auto  MemRangeVk = pMemVk ? pMemVk->GetRange(SrcRange.MemoryOffset, SrcRange.MemorySize) : DeviceMemoryRangeVk{};
+
+            DEV_CHECK_ERR(MemRangeVk.Offset % BuffSparseProps.BlockSize == 0,
+                          "MemoryOffset must be multiple of the BufferSparseProperties::BlockSize");
+
+            DstRange.memory         = MemRangeVk.Handle;
+            DstRange.memoryOffset   = MemRangeVk.Offset;
+            DstRange.size           = MemRangeVk.Size;
+            DstRange.resourceOffset = SrcRange.BufferOffset;
+            DstRange.flags          = 0;
+        }
+        MemoryBindCount += Src.NumRanges;
+    }
+
+    for (Uint32 i = 0; i < Attribs.NumTextureBinds; ++i)
+    {
+        const auto& Src            = Attribs.pTextureBinds[i];
+        auto*       pTexVk         = ClassPtrCast<TextureVkImpl>(Src.pTexture);
+        const auto& TexDesc        = pTexVk->GetDesc();
+        const auto& TexSparseProps = pTexVk->GetSparseProperties();
+
+        const auto         OldImageMemoryBindCount = ImageMemoryBindCount;
+        const auto&        FmtAttribs              = GetTextureFormatAttribs(TexDesc.Format);
+        VkImageAspectFlags aspectMask              = 0;
+
+        if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH)
+            aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+        else if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
+            aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+        else
+            aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+        for (Uint32 r = 0; r < Src.NumRanges; ++r)
+        {
+            const auto& SrcRange   = Src.pRanges[r];
+            auto*       pMemVk     = ClassPtrCast<IDeviceMemoryVk>(SrcRange.pMemory);
+            const auto  MemRangeVk = pMemVk ? pMemVk->GetRange(SrcRange.MemoryOffset, SrcRange.MemorySize) : DeviceMemoryRangeVk{};
+
+            DEV_CHECK_ERR(MemRangeVk.Offset % TexSparseProps.BlockSize == 0,
+                          "MemoryOffset must be multiple of the TextureSparseProperties::BlockSize");
+
+            if (SrcRange.MipLevel < TexSparseProps.FirstMipInTail)
+            {
+                auto& DstRange = ImageMemoryBind[ImageMemoryBindCount++];
+
+                const auto TexWidth  = std::max(1u, TexDesc.Width >> SrcRange.MipLevel);
+                const auto TexHeight = std::max(1u, TexDesc.Height >> SrcRange.MipLevel);
+                const auto TexDepth  = std::max(1u, TexDesc.GetDepth() >> SrcRange.MipLevel);
+
+                DstRange.subresource.arrayLayer = SrcRange.ArraySlice;
+                DstRange.subresource.aspectMask = aspectMask;
+                DstRange.subresource.mipLevel   = SrcRange.MipLevel;
+                DstRange.offset.x               = static_cast<int32_t>(SrcRange.Region.MinX);
+                DstRange.offset.y               = static_cast<int32_t>(SrcRange.Region.MinY);
+                DstRange.offset.z               = static_cast<int32_t>(SrcRange.Region.MinZ);
+                DstRange.extent.width           = static_cast<int32_t>(std::min(SrcRange.Region.Width(), TexWidth - SrcRange.Region.MinX));
+                DstRange.extent.height          = static_cast<int32_t>(std::min(SrcRange.Region.Height(), TexHeight - SrcRange.Region.MinY));
+                DstRange.extent.depth           = static_cast<int32_t>(std::min(SrcRange.Region.Depth(), TexDepth - SrcRange.Region.MinZ));
+                DstRange.memory                 = MemRangeVk.Handle;
+                DstRange.memoryOffset           = MemRangeVk.Offset;
+                DstRange.flags                  = 0;
+            }
+            else
+            {
+                // Bind mip tail memory
+                auto& Dst     = ImageOpaqueBind[NumImageOpaqueBind++];
+                Dst.image     = pTexVk->GetVkImage();
+                Dst.bindCount = 1;
+                Dst.pBinds    = &MemoryBind[MemoryBindCount];
+
+                auto& DstRange = MemoryBind[MemoryBindCount];
+                ++MemoryBindCount;
+
+                DstRange.memory         = MemRangeVk.Handle;
+                DstRange.memoryOffset   = MemRangeVk.Offset;
+                DstRange.size           = MemRangeVk.Size;
+                DstRange.resourceOffset = TexSparseProps.MipTailOffset + TexSparseProps.MipTailStride * SrcRange.ArraySlice + SrcRange.OffsetInMipTail;
+                DstRange.flags          = 0;
+            }
+        }
+
+        if (OldImageMemoryBindCount != ImageMemoryBindCount)
+        {
+            auto& Dst     = ImageBind[NumImageBind++];
+            Dst.image     = pTexVk->GetVkImage();
+            Dst.bindCount = ImageMemoryBindCount - OldImageMemoryBindCount;
+            Dst.pBinds    = &ImageMemoryBind[OldImageMemoryBindCount];
+        }
+    }
+
+    VERIFY_EXPR(MemoryBindCount == MemoryBind.size());
+    VERIFY_EXPR(ImageMemoryBindCount == ImageMemoryBind.size());
+    VERIFY_EXPR(NumImageBind == ImageBind.size());
+    VERIFY_EXPR(NumImageOpaqueBind == ImageOpaqueBind.size());
+
+    VkBindSparseInfo BindSparse{};
+    BindSparse.sType                = VK_STRUCTURE_TYPE_BIND_SPARSE_INFO;
+    BindSparse.bufferBindCount      = static_cast<uint32_t>(BufferBind.size());
+    BindSparse.pBufferBinds         = BufferBind.size() ? BufferBind.data() : nullptr;
+    BindSparse.imageOpaqueBindCount = static_cast<uint32_t>(ImageOpaqueBind.size());
+    BindSparse.pImageOpaqueBinds    = ImageOpaqueBind.size() ? ImageOpaqueBind.data() : nullptr;
+    BindSparse.imageBindCount       = static_cast<uint32_t>(ImageBind.size());
+    BindSparse.pImageBinds          = ImageBind.size() ? ImageBind.data() : nullptr;
+
+    VERIFY_EXPR(m_VkSignalSemaphores.empty() && m_SignalSemaphoreValues.empty());
+    VERIFY_EXPR(m_VkWaitSemaphores.empty() && m_WaitSemaphoreValues.empty());
+
+    bool UsedTimelineSemaphore = false;
+    for (Uint32 i = 0; i < Attribs.NumSignalFences; ++i)
+    {
+        auto* pFenceVk    = ClassPtrCast<FenceVkImpl>(Attribs.ppSignalFences[i]);
+        auto  SignalValue = Attribs.pSignalFenceValues[i];
+        if (!pFenceVk->IsTimelineSemaphore())
+            continue;
+        UsedTimelineSemaphore = true;
+        pFenceVk->DvpSignal(SignalValue);
+        m_VkSignalSemaphores.push_back(pFenceVk->GetVkSemaphore());
+        m_SignalSemaphoreValues.push_back(SignalValue);
+    }
+
+    for (Uint32 i = 0; i < Attribs.NumWaitFences; ++i)
+    {
+        auto* pFenceVk  = ClassPtrCast<FenceVkImpl>(Attribs.ppWaitFences[i]);
+        auto  WaitValue = Attribs.pWaitFenceValues[i];
+        pFenceVk->DvpDeviceWait(WaitValue);
+
+        if (pFenceVk->IsTimelineSemaphore())
+        {
+            UsedTimelineSemaphore = true;
+            VkSemaphore WaitSem   = pFenceVk->GetVkSemaphore();
+#ifdef DILIGENT_DEVELOPMENT
+            for (size_t j = 0; j < m_VkWaitSemaphores.size(); ++j)
+            {
+                if (m_VkWaitSemaphores[j] == WaitSem)
+                {
+                    LOG_ERROR_MESSAGE("Fence '", pFenceVk->GetDesc().Name, "' with value (", WaitValue,
+                                      ") is already added to wait operation with value (", m_WaitSemaphoreValues[j], ")");
+                }
+            }
+#endif
+            m_VkWaitSemaphores.push_back(WaitSem);
+            m_WaitSemaphoreValues.push_back(WaitValue);
+        }
+        else
+        {
+            auto WaitSem = pFenceVk->ExtractSignalSemaphore(GetCommandQueueId(), WaitValue);
+            if (WaitSem)
+            {
+                // Here we have unique binary semaphore that must be released/recycled using release queue
+                m_VkWaitSemaphores.push_back(WaitSem);
+                m_WaitDstStageMasks.push_back(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+                m_WaitRecycledSemaphores.push_back(std::move(WaitSem));
+                m_WaitSemaphoreValues.push_back(0); // Ignored for binary semaphore
+            }
+        }
+    }
+    BindSparse.waitSemaphoreCount   = static_cast<uint32_t>(m_VkWaitSemaphores.size());
+    BindSparse.pWaitSemaphores      = BindSparse.waitSemaphoreCount != 0 ? m_VkWaitSemaphores.data() : nullptr;
+    BindSparse.signalSemaphoreCount = static_cast<uint32_t>(m_VkSignalSemaphores.size());
+    BindSparse.pSignalSemaphores    = BindSparse.signalSemaphoreCount != 0 ? m_VkSignalSemaphores.data() : nullptr;
+
+    VkTimelineSemaphoreSubmitInfo TimelineSemaphoreSubmitInfo{};
+    if (UsedTimelineSemaphore)
+    {
+        BindSparse.pNext = &TimelineSemaphoreSubmitInfo;
+
+        TimelineSemaphoreSubmitInfo.sType                     = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO;
+        TimelineSemaphoreSubmitInfo.pNext                     = nullptr;
+        TimelineSemaphoreSubmitInfo.waitSemaphoreValueCount   = BindSparse.waitSemaphoreCount;
+        TimelineSemaphoreSubmitInfo.pWaitSemaphoreValues      = BindSparse.waitSemaphoreCount ? m_WaitSemaphoreValues.data() : nullptr;
+        TimelineSemaphoreSubmitInfo.signalSemaphoreValueCount = BindSparse.signalSemaphoreCount;
+        TimelineSemaphoreSubmitInfo.pSignalSemaphoreValues    = BindSparse.signalSemaphoreCount ? m_SignalSemaphoreValues.data() : nullptr;
+    }
+
+    SyncPointVkPtr pSyncPoint;
+    {
+        auto* pQueueVk = ClassPtrCast<CommandQueueVkImpl>(LockCommandQueue());
+
+        pQueueVk->BindSparse(BindSparse);
+        pSyncPoint = pQueueVk->GetLastSyncPoint();
+
+        UnlockCommandQueue();
+    }
+
+    if (!UsedTimelineSemaphore)
+    {
+        for (Uint32 i = 0; i < Attribs.NumSignalFences; ++i)
+        {
+            auto* pFenceVk = ClassPtrCast<FenceVkImpl>(Attribs.ppSignalFences[i]);
+            if (!pFenceVk->IsTimelineSemaphore())
+                pFenceVk->AddPendingSyncPoint(GetCommandQueueId(), Attribs.pSignalFenceValues[i], pSyncPoint);
+        }
+    }
+
+    m_VkSignalSemaphores.clear();
+    m_SignalSemaphoreValues.clear();
+    m_VkWaitSemaphores.clear();
+    m_WaitSemaphoreValues.clear();
 }
 
 } // namespace Diligent

@@ -85,18 +85,18 @@ D3D12_RESOURCE_DESC TextureD3D12Impl::GetD3D12TextureDesc() const
     D3D12_RESOURCE_DESC Desc = {};
 
     Desc.Alignment = 0;
-    if (m_Desc.Type == RESOURCE_DIM_TEX_1D_ARRAY || m_Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY || m_Desc.Type == RESOURCE_DIM_TEX_CUBE || m_Desc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
-        Desc.DepthOrArraySize = (UINT16)m_Desc.ArraySize;
-    else if (m_Desc.Type == RESOURCE_DIM_TEX_3D)
-        Desc.DepthOrArraySize = (UINT16)m_Desc.Depth;
+    if (m_Desc.IsArray())
+        Desc.DepthOrArraySize = StaticCast<UINT16>(m_Desc.ArraySize);
+    else if (m_Desc.Is3D())
+        Desc.DepthOrArraySize = StaticCast<UINT16>(m_Desc.Depth);
     else
         Desc.DepthOrArraySize = 1;
 
-    if (m_Desc.Type == RESOURCE_DIM_TEX_1D || m_Desc.Type == RESOURCE_DIM_TEX_1D_ARRAY)
+    if (m_Desc.Is1D())
         Desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE1D;
-    else if (m_Desc.Type == RESOURCE_DIM_TEX_2D || m_Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY || m_Desc.Type == RESOURCE_DIM_TEX_CUBE || m_Desc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
+    else if (m_Desc.Is2D())
         Desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-    else if (m_Desc.Type == RESOURCE_DIM_TEX_3D)
+    else if (m_Desc.Is3D())
         Desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE3D;
     else
     {
@@ -121,7 +121,7 @@ D3D12_RESOURCE_DESC TextureD3D12Impl::GetD3D12TextureDesc() const
 
     Desc.Height             = UINT{m_Desc.Height};
     Desc.Layout             = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-    Desc.MipLevels          = static_cast<UINT16>(m_Desc.MipLevels);
+    Desc.MipLevels          = StaticCast<UINT16>(m_Desc.MipLevels);
     Desc.SampleDesc.Count   = m_Desc.SampleCount;
     Desc.SampleDesc.Quality = 0;
     Desc.Width              = UINT64{m_Desc.Width};
@@ -158,36 +158,65 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
         GetSupportedD3D12ResourceStatesForCommandList(pRenderDeviceD3D12->GetCommandQueueType(CmdQueueInd)) :
         static_cast<D3D12_RESOURCE_STATES>(~0u);
 
+    D3D12_CLEAR_VALUE  ClearValue  = {};
+    D3D12_CLEAR_VALUE* pClearValue = nullptr;
+    if (d3d12TexDesc.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL))
+    {
+        if (m_Desc.ClearValue.Format != TEX_FORMAT_UNKNOWN)
+            ClearValue.Format = TexFormatToDXGI_Format(m_Desc.ClearValue.Format);
+        else
+        {
+            auto Format       = TexFormatToDXGI_Format(m_Desc.Format, m_Desc.BindFlags);
+            ClearValue.Format = GetClearFormat(Format, d3d12TexDesc.Flags);
+        }
+
+        if (d3d12TexDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET)
+        {
+            for (int i = 0; i < 4; ++i)
+                ClearValue.Color[i] = m_Desc.ClearValue.Color[i];
+        }
+        else if (d3d12TexDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)
+        {
+            ClearValue.DepthStencil.Depth   = m_Desc.ClearValue.DepthStencil.Depth;
+            ClearValue.DepthStencil.Stencil = m_Desc.ClearValue.DepthStencil.Stencil;
+        }
+        pClearValue = &ClearValue;
+    }
+
     auto* pd3d12Device = pRenderDeviceD3D12->GetD3D12Device();
-    if (m_Desc.Usage == USAGE_IMMUTABLE || m_Desc.Usage == USAGE_DEFAULT || m_Desc.Usage == USAGE_DYNAMIC)
+    if (m_Desc.Usage == USAGE_SPARSE)
+    {
+        d3d12TexDesc.Layout = D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE;
+
+#ifdef DILIGENT_ENABLE_D3D_NVAPI
+        if (IsUsedNVApi())
+        {
+            auto err = NvAPI_D3D12_CreateReservedResource(pd3d12Device, &d3d12TexDesc, D3D12_RESOURCE_STATE_COMMON, pClearValue, __uuidof(m_pd3d12Resource),
+                                                          reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&m_pd3d12Resource)),
+                                                          true, m_pDevice->GetDummyNVApiHeap());
+            if (err != NVAPI_OK)
+                LOG_ERROR_AND_THROW("Failed to create D3D12 texture using NVApi");
+        }
+        else
+#endif
+        {
+            auto hr = pd3d12Device->CreateReservedResource(&d3d12TexDesc, D3D12_RESOURCE_STATE_COMMON, pClearValue, __uuidof(m_pd3d12Resource),
+                                                           reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&m_pd3d12Resource)));
+            if (FAILED(hr))
+                LOG_ERROR_AND_THROW("Failed to create D3D12 texture");
+        }
+
+        if (*m_Desc.Name != 0)
+            m_pd3d12Resource->SetName(WidenString(m_Desc.Name).c_str());
+
+        SetState(RESOURCE_STATE_UNDEFINED);
+
+        InitSparseProperties();
+    }
+    else if (m_Desc.Usage == USAGE_IMMUTABLE || m_Desc.Usage == USAGE_DEFAULT || m_Desc.Usage == USAGE_DYNAMIC)
     {
         VERIFY(m_Desc.Usage != USAGE_DYNAMIC || PlatformMisc::CountOneBits(m_Desc.ImmediateContextMask) <= 1,
                "ImmediateContextMask must contain single set bit, this error should've been handled in ValidateTextureDesc()");
-
-        D3D12_CLEAR_VALUE  ClearValue  = {};
-        D3D12_CLEAR_VALUE* pClearValue = nullptr;
-        if (d3d12TexDesc.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL))
-        {
-            if (m_Desc.ClearValue.Format != TEX_FORMAT_UNKNOWN)
-                ClearValue.Format = TexFormatToDXGI_Format(m_Desc.ClearValue.Format);
-            else
-            {
-                auto Format       = TexFormatToDXGI_Format(m_Desc.Format, m_Desc.BindFlags);
-                ClearValue.Format = GetClearFormat(Format, d3d12TexDesc.Flags);
-            }
-
-            if (d3d12TexDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET)
-            {
-                for (int i = 0; i < 4; ++i)
-                    ClearValue.Color[i] = m_Desc.ClearValue.Color[i];
-            }
-            else if (d3d12TexDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)
-            {
-                ClearValue.DepthStencil.Depth   = m_Desc.ClearValue.DepthStencil.Depth;
-                ClearValue.DepthStencil.Stencil = m_Desc.ClearValue.DepthStencil.Stencil;
-            }
-            pClearValue = &ClearValue;
-        }
 
         D3D12_HEAP_PROPERTIES HeapProps{};
         HeapProps.Type                 = D3D12_HEAP_TYPE_DEFAULT;
@@ -439,6 +468,12 @@ static TextureDesc InitTexDescFromD3D12Resource(ID3D12Resource* pTexture, const 
         }
     }
 
+    if (ResourceDesc.Layout == D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE)
+    {
+        TexDesc.Usage = USAGE_SPARSE;
+        TexDesc.MiscFlags |= MISC_TEXTURE_FLAG_SPARSE_ALIASING;
+    }
+
     return TexDesc;
 }
 
@@ -452,6 +487,9 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
 {
     m_pd3d12Resource = pTexture;
     SetState(InitialState);
+
+    if (m_Desc.Usage == USAGE_SPARSE)
+        InitSparseProperties();
 }
 
 void TextureD3D12Impl::CreateViewInternal(const struct TextureViewDesc& ViewDesc, ITextureView** ppView, bool bIsDefaultView)
@@ -470,6 +508,12 @@ void TextureD3D12Impl::CreateViewInternal(const struct TextureViewDesc& ViewDesc
 
         auto UpdatedViewDesc = ViewDesc;
         ValidatedAndCorrectTextureViewDesc(m_Desc, UpdatedViewDesc);
+
+        if (m_Desc.IsArray() && (ViewDesc.TextureDim == RESOURCE_DIM_TEX_1D || ViewDesc.TextureDim == RESOURCE_DIM_TEX_2D))
+        {
+            if (ViewDesc.FirstArraySlice != 0)
+                LOG_ERROR_AND_THROW("FirstArraySlice must be 0, offset is not supported for non-array view in Direct3D12");
+        }
 
         DescriptorHeapAllocation ViewDescriptor;
         switch (ViewDesc.ViewType)
@@ -629,6 +673,50 @@ void TextureD3D12Impl::SetD3D12ResourceState(D3D12_RESOURCE_STATES state)
 D3D12_RESOURCE_STATES TextureD3D12Impl::GetD3D12ResourceState() const
 {
     return ResourceStateFlagsToD3D12ResourceStates(GetState());
+}
+
+void TextureD3D12Impl::InitSparseProperties()
+{
+    VERIFY_EXPR(m_Desc.Usage == USAGE_SPARSE);
+    VERIFY_EXPR(m_pSparseProps == nullptr);
+
+    m_pSparseProps = ALLOCATE(m_pDevice->GetTexSparsePropsAllocator(), "TextureSparseProperties", TextureSparseProperties, 1);
+
+    if (IsUsedNVApi())
+    {
+        *m_pSparseProps = GetTextureSparsePropertiesForStandardBlocks(m_Desc);
+    }
+    else
+    {
+        auto* pd3d12Device = m_pDevice->GetD3D12Device();
+
+        UINT                  NumTilesForEntireResource = 0;
+        D3D12_PACKED_MIP_INFO PackedMipDesc;
+        D3D12_TILE_SHAPE      StandardTileShapeForNonPackedMips;
+        UINT                  NumSubresourceTilings = 0;
+        pd3d12Device->GetResourceTiling(GetD3D12Resource(),
+                                        &NumTilesForEntireResource,
+                                        &PackedMipDesc,
+                                        &StandardTileShapeForNonPackedMips,
+                                        &NumSubresourceTilings,
+                                        0,
+                                        nullptr);
+
+        auto& Props          = *m_pSparseProps;
+        Props.MemorySize     = NumTilesForEntireResource * D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
+        Props.BlockSize      = D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
+        Props.MipTailOffset  = PackedMipDesc.StartTileIndexInOverallResource * D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
+        Props.MipTailSize    = PackedMipDesc.NumTilesForPackedMips * D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
+        Props.FirstMipInTail = PackedMipDesc.NumStandardMips;
+        Props.TileSize[0]    = StandardTileShapeForNonPackedMips.WidthInTexels;
+        Props.TileSize[1]    = StandardTileShapeForNonPackedMips.HeightInTexels;
+        Props.TileSize[2]    = StandardTileShapeForNonPackedMips.DepthInTexels;
+        Props.Flags          = SPARSE_TEXTURE_FLAG_NONE;
+
+        // The number of overall tiles, packed or not, for a given array slice is simply the total number of tiles for the resource divided by the resource's array size
+        Props.MipTailStride = m_Desc.IsArray() ? (NumTilesForEntireResource / m_Desc.ArraySize) * D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES : 0;
+        VERIFY_EXPR(NumTilesForEntireResource % m_Desc.GetArraySize() == 0);
+    }
 }
 
 } // namespace Diligent

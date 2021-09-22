@@ -43,6 +43,30 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 static const INTERFACE_ID IID_Texture =
     {0xa64b0e60, 0x1b5e, 0x4cfd,{0xb8, 0x80, 0x66, 0x3a, 0x1a, 0xdc, 0xbe, 0x98}};
 
+/// Miscellaneous texture flags
+
+/// The enumeration is used by TextureDesc to describe misc texture flags
+DILIGENT_TYPED_ENUM(MISC_TEXTURE_FLAGS, Uint8)
+{
+    MISC_TEXTURE_FLAG_NONE          = 0,
+
+    /// Allow automatic mipmap generation with ITextureView::GenerateMips()
+
+    /// \note A texture must be created with BIND_RENDER_TARGET bind flag
+    MISC_TEXTURE_FLAG_GENERATE_MIPS = 1u << 0,
+
+    /// The texture will be used as a transient framebuffer attachment.
+
+    /// \note Memoryless textures must only be used within a render passes in a framebuffer,
+    ///       load operation must be CLEAR or DISCARD, store operation must be DISCARD.
+    MISC_TEXTURE_FLAG_MEMORYLESS    = 1u << 1,
+
+    /// For sparse texture allow to bind same memory range in different texture regions
+    /// or in different sparse textures.
+    MISC_TEXTURE_FLAG_SPARSE_ALIASING = 1u << 2,
+};
+DEFINE_FLAG_ENUM_OPERATORS(MISC_TEXTURE_FLAGS)
+
 /// Texture description
 struct TextureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
@@ -76,15 +100,12 @@ struct TextureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// Only 2D textures or 2D texture arrays can be multisampled.
     Uint32          SampleCount DEFAULT_INITIALIZER(1);
 
+    /// Bind flags, see Diligent::BIND_FLAGS for details. \n
+    /// Use IRenderDevice::GetTextureFormatInfoExt() to check if bind flags is supported.
+    BIND_FLAGS      BindFlags   DEFAULT_INITIALIZER(BIND_NONE);
+
     /// Texture usage. See Diligent::USAGE for details.
     USAGE           Usage       DEFAULT_INITIALIZER(USAGE_DEFAULT);
-
-    /// Bind flags, see Diligent::BIND_FLAGS for details. \n
-    /// The following bind flags are allowed:
-    /// Diligent::BIND_SHADER_RESOURCE, Diligent::BIND_RENDER_TARGET, Diligent::BIND_DEPTH_STENCIL,
-    /// Diligent::and BIND_UNORDERED_ACCESS. \n
-    /// Multisampled textures cannot have Diligent::BIND_UNORDERED_ACCESS flag set
-    BIND_FLAGS      BindFlags   DEFAULT_INITIALIZER(BIND_NONE);
 
     /// CPU access flags or 0 if no CPU access is allowed,
     /// see Diligent::CPU_ACCESS_FLAGS for details.
@@ -133,13 +154,15 @@ struct TextureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
         Format               {_Format          },
         MipLevels            {_MipLevels       },
         SampleCount          {_SampleCount     },
-        Usage                {_Usage           },
         BindFlags            {_BindFlags       },
+        Usage                {_Usage           },
         CPUAccessFlags       {_CPUAccessFlags  },
         MiscFlags            {_MiscFlags       },
         ClearValue           {_ClearValue      },
         ImmediateContextMask {_ImmediateContextMask}
     {}
+
+    constexpr Uint32 ArraySizeOrDepth() const { return ArraySize; }
 
     /// Tests if two structures are equivalent
 
@@ -157,7 +180,7 @@ struct TextureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
                 Type                 == RHS.Type           &&
                 Width                == RHS.Width          &&
                 Height               == RHS.Height         &&
-                ArraySize            == RHS.ArraySize      &&
+                ArraySizeOrDepth()   == RHS.ArraySizeOrDepth() &&
                 Format               == RHS.Format         &&
                 MipLevels            == RHS.MipLevels      &&
                 SampleCount          == RHS.SampleCount    &&
@@ -167,6 +190,49 @@ struct TextureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
                 MiscFlags            == RHS.MiscFlags      &&
                 ClearValue           == RHS.ClearValue     &&
                 ImmediateContextMask == RHS.ImmediateContextMask;
+    }
+
+    constexpr bool IsArray() const
+    {
+        return Type == RESOURCE_DIM_TEX_1D_ARRAY ||
+               Type == RESOURCE_DIM_TEX_2D_ARRAY ||
+               Type == RESOURCE_DIM_TEX_CUBE     ||
+               Type == RESOURCE_DIM_TEX_CUBE_ARRAY;
+    }
+
+    constexpr bool Is1D() const
+    {
+        return Type == RESOURCE_DIM_TEX_1D      ||
+               Type == RESOURCE_DIM_TEX_1D_ARRAY;
+    }
+
+    constexpr bool Is2D() const
+    {
+        return Type == RESOURCE_DIM_TEX_2D       ||
+               Type == RESOURCE_DIM_TEX_2D_ARRAY ||
+               Type == RESOURCE_DIM_TEX_CUBE     ||
+               Type == RESOURCE_DIM_TEX_CUBE_ARRAY;
+    }
+
+    constexpr bool Is3D() const
+    {
+        return Type == RESOURCE_DIM_TEX_3D;
+    }
+
+    constexpr bool IsCube() const
+    {
+        return Type == RESOURCE_DIM_TEX_CUBE     ||
+               Type == RESOURCE_DIM_TEX_CUBE_ARRAY;
+    }
+
+    constexpr Uint32 GetArraySize() const
+    {
+        return Type != RESOURCE_DIM_TEX_3D ? ArraySize : 1u;
+    }
+
+    constexpr Uint32 GetDepth() const
+    {
+        return Type == RESOURCE_DIM_TEX_3D ? Depth : 1u;
     }
 #endif
 };
@@ -284,6 +350,63 @@ struct MappedTextureSubresource
 };
 typedef struct MappedTextureSubresource MappedTextureSubresource;
 
+/// Describes sparse texture packing mode
+DILIGENT_TYPED_ENUM(SPARSE_TEXTURE_FLAGS, Uint8)
+{
+    SPARSE_TEXTURE_FLAG_NONE                   = 0,
+
+    // AZ TODO: if MipTailStride == 0 then used single mip tail, so this flag is not needed, remove ?
+    /// Specifies that the texture uses a single mip tail region for all array layers
+    SPARSE_TEXTURE_FLAG_SINGLE_MIPTAIL         = 1u << 0,
+        
+    // AZ TODO: not needed because of FirstMipInTail, remove ?
+    /// Specifies that the first mip level whose dimensions are not integer
+    /// multiples of the corresponding dimensions of the sparse texture block begins the mip tail region.
+    SPARSE_TEXTURE_FLAG_ALIGNED_MIP_SIZE       = 1u << 1,
+
+    // AZ TODO: not needed because of TileSize, remove ?
+    /// Specifies that the texture uses non-standard sparse texture block dimensions,
+    /// and the TileSize values do not match the standard sparse texture block dimensions.
+    SPARSE_TEXTURE_FLAG_NONSTANDARD_BLOCK_SIZE = 1u << 2,
+
+    SPARSE_TEXTURE_FLAG_LAST                   = SPARSE_TEXTURE_FLAG_NONSTANDARD_BLOCK_SIZE
+};
+DEFINE_FLAG_ENUM_OPERATORS(SPARSE_TEXTURE_FLAGS);
+
+/// Describes the sparse texture properties
+struct TextureSparseProperties
+{
+    /// Texture address space size.
+    Uint64  MemorySize      DEFAULT_INITIALIZER(0);
+
+    /// Specifies where to bind mip tail memory.
+    /// Reserved for internal use.
+    Uint64  MipTailOffset   DEFAULT_INITIALIZER(0);
+
+    /// Specifies how to calculate mip tail offset for 2D array texture.
+    /// Reserved for internal use.
+    Uint64  MipTailStride   DEFAULT_INITIALIZER(0);
+
+    /// Specifies the mip tail size in bytes.
+    /// \note Single mip tail for 2D array may exeed the 32bit limit.
+    Uint64  MipTailSize     DEFAULT_INITIALIZER(0);
+
+    /// This mip level with a subsequent mips packed into a single memory block.
+    Uint32  FirstMipInTail  DEFAULT_INITIALIZER(0);
+
+    /// Specifies a tile dimension for a single sparse block, see SparseMemoryProperties::SparseBlockSize.
+    Uint32  TileSize[3]     DEFAULT_INITIALIZER({});
+    
+    /// Size of the sparse block.
+    /// Offset in the buffer, memory offset and memory size which is used in sparse binding command must be multiple of block size.
+    /// It is equal to SparseMemoryProperties::StandardBlockSize if Flags doesn't contains SPARSE_TEXTURE_FLAG_NONSTANDARD_BLOCK_SIZE.
+    Uint32  BlockSize DEFAULT_INITIALIZER(0);
+
+    /// Flags which describes additional packing modes.
+    SPARSE_TEXTURE_FLAGS Flags DEFAULT_INITIALIZER(SPARSE_TEXTURE_FLAG_NONE);
+};
+typedef struct TextureSparseProperties TextureSparseProperties;
+
 #define DILIGENT_INTERFACE_NAME ITexture
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
@@ -352,6 +475,9 @@ DILIGENT_BEGIN_INTERFACE(ITexture, IDeviceObject)
 
     /// Returns the internal texture state
     VIRTUAL RESOURCE_STATE METHOD(GetState)(THIS) CONST PURE;
+    
+    /// Returns the texture sparse memory properties
+    VIRTUAL const TextureSparseProperties REF METHOD(GetSparseProperties)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -363,11 +489,12 @@ DILIGENT_END_INTERFACE
 
 #    define ITexture_GetDesc(This) (const struct TextureDesc*)IDeviceObject_GetDesc(This)
 
-#    define ITexture_CreateView(This, ...)     CALL_IFACE_METHOD(Texture, CreateView,      This, __VA_ARGS__)
-#    define ITexture_GetDefaultView(This, ...) CALL_IFACE_METHOD(Texture, GetDefaultView,  This, __VA_ARGS__)
-#    define ITexture_GetNativeHandle(This)     CALL_IFACE_METHOD(Texture, GetNativeHandle, This)
-#    define ITexture_SetState(This, ...)       CALL_IFACE_METHOD(Texture, SetState,        This, __VA_ARGS__)
-#    define ITexture_GetState(This)            CALL_IFACE_METHOD(Texture, GetState,        This)
+#    define ITexture_CreateView(This, ...)     CALL_IFACE_METHOD(Texture, CreateView,          This, __VA_ARGS__)
+#    define ITexture_GetDefaultView(This, ...) CALL_IFACE_METHOD(Texture, GetDefaultView,      This, __VA_ARGS__)
+#    define ITexture_GetNativeHandle(This)     CALL_IFACE_METHOD(Texture, GetNativeHandle,     This)
+#    define ITexture_SetState(This, ...)       CALL_IFACE_METHOD(Texture, SetState,            This, __VA_ARGS__)
+#    define ITexture_GetState(This)            CALL_IFACE_METHOD(Texture, GetState,            This)
+#    define ITexture_GetSparseProperties(This) CALL_IFACE_METHOD(Texture, GetSparseProperties, This)
 
 // clang-format on
 

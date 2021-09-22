@@ -290,4 +290,52 @@ VkResult CommandQueueVkImpl::Present(const VkPresentInfoKHR& PresentInfo)
     return vkQueuePresentKHR(m_VkQueue, &PresentInfo);
 }
 
+Uint64 CommandQueueVkImpl::BindSparse(const VkBindSparseInfo& InBindInfo)
+{
+    std::lock_guard<std::mutex> Lock{m_QueueMutex};
+
+    // Increment the value before submitting the buffer to be overly safe
+    const uint64_t FenceValue = m_NextFenceValue.fetch_add(1);
+
+    auto NewSyncPoint = CreateSyncPoint(FenceValue);
+
+    m_TempSignalSemaphores.clear();
+    NewSyncPoint->GetSemaphores(m_TempSignalSemaphores);
+
+#ifdef DILIGENT_DEBUG
+    const VkBaseInStructure* pStruct = static_cast<const VkBaseInStructure*>(InBindInfo.pNext);
+    for (; pStruct != nullptr;)
+    {
+        if (pStruct->sType == VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO)
+        {
+            VERIFY(m_TempSignalSemaphores.empty(), "Can not append semaphores when timeline semaphores are used");
+            break;
+        }
+        pStruct = pStruct->pNext;
+    }
+#endif
+
+    for (uint32_t s = 0; s < InBindInfo.signalSemaphoreCount; ++s)
+        m_TempSignalSemaphores.push_back(InBindInfo.pSignalSemaphores[s]);
+
+    VkBindSparseInfo BindInfo     = InBindInfo;
+    BindInfo.signalSemaphoreCount = static_cast<Uint32>(m_TempSignalSemaphores.size());
+    BindInfo.pSignalSemaphores    = m_TempSignalSemaphores.data();
+
+    auto err = vkQueueBindSparse(m_VkQueue, 1, &BindInfo, NewSyncPoint->GetFence());
+    DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to submit sparse bind commands to the command queue");
+    (void)err;
+
+    VERIFY(m_pFence != nullptr, "Command queue fence has not been initialized");
+    m_pFence->AddPendingSyncPoint(m_CommandQueueId, FenceValue, NewSyncPoint);
+
+    // Update the last sync point
+    {
+        ThreadingTools::LockHelper Lock2(m_LastSyncPointGuard);
+        m_LastSyncPoint = std::move(NewSyncPoint);
+    }
+
+    return FenceValue;
+}
+
 } // namespace Diligent

@@ -76,11 +76,18 @@ public:
             m_State = RESOURCE_STATE_UNDEFINED;
     }
 
+    bool IsUsedNVApi() const
+    {
+        return m_Desc.Usage == USAGE_SPARSE && m_Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY && m_pDevice->IsNvApiEnabled();
+    }
+
 protected:
     void CreateViewInternal(const struct TextureViewDesc& ViewDesc, ITextureView** ppView, bool bIsDefaultView) override final;
     void PrepareD3D11InitData(const TextureData*                                                               pInitData,
                               Uint32                                                                           NumSubresources,
                               std::vector<D3D11_SUBRESOURCE_DATA, STDAllocatorRawMem<D3D11_SUBRESOURCE_DATA>>& D3D11InitData);
+
+    void InitSparseProperties();
 
     // clang-format off
     virtual void CreateSRV(const TextureViewDesc& SRVDesc, ID3D11ShaderResourceView**  ppD3D11SRV) = 0;

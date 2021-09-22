@@ -54,12 +54,19 @@ TextureBaseD3D11::TextureBaseD3D11(IReferenceCounters*        pRefCounters,
     if (m_Desc.Usage == USAGE_IMMUTABLE && (pInitData == nullptr || pInitData->pSubResources == nullptr))
         LOG_ERROR_AND_THROW("Immutable textures must be initialized with data at creation time: pInitData can't be null");
 
+    if (m_Desc.Usage == USAGE_SPARSE)
+    {
+        constexpr auto AllowedBindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS | BIND_RENDER_TARGET | BIND_DEPTH_STENCIL;
+        if ((m_Desc.BindFlags & ~AllowedBindFlags) != 0)
+            LOG_ERROR_AND_THROW("Texture '", m_Desc.Name, "': the following bind flags are not allowed for a sparse texture: ", GetBindFlagsString(m_Desc.BindFlags & ~AllowedBindFlags, ", "), '.');
+    }
+
     SetState(RESOURCE_STATE_UNDEFINED);
 }
 
 IMPLEMENT_QUERY_INTERFACE(TextureBaseD3D11, IID_TextureD3D11, TTextureBase)
 
-void TextureBaseD3D11::CreateViewInternal(const struct TextureViewDesc& ViewDesc, ITextureView** ppView, bool bIsDefaultView)
+void TextureBaseD3D11::CreateViewInternal(const TextureViewDesc& ViewDesc, ITextureView** ppView, bool bIsDefaultView)
 {
     VERIFY(ppView != nullptr, "View pointer address is null");
     if (!ppView) return;
@@ -71,6 +78,12 @@ void TextureBaseD3D11::CreateViewInternal(const struct TextureViewDesc& ViewDesc
     {
         auto UpdatedViewDesc = ViewDesc;
         ValidatedAndCorrectTextureViewDesc(m_Desc, UpdatedViewDesc);
+
+        if (m_Desc.IsArray() && (ViewDesc.TextureDim == RESOURCE_DIM_TEX_1D || ViewDesc.TextureDim == RESOURCE_DIM_TEX_2D))
+        {
+            if (ViewDesc.FirstArraySlice != 0)
+                LOG_ERROR_AND_THROW("FirstArraySlice must be 0, offset is not supported for non-array view in Direct3D11");
+        }
 
         RefCntAutoPtr<ID3D11View> pD3D11View;
         switch (ViewDesc.ViewType)
@@ -159,6 +172,50 @@ void TextureBaseD3D11::PrepareD3D11InitData(const TextureData*                  
 
 TextureBaseD3D11::~TextureBaseD3D11()
 {
+}
+
+void TextureBaseD3D11::InitSparseProperties()
+{
+    VERIFY_EXPR(m_Desc.Usage == USAGE_SPARSE);
+    VERIFY_EXPR(m_pSparseProps == nullptr);
+
+    m_pSparseProps = ALLOCATE(m_pDevice->GetTexSparsePropsAllocator(), "TextureSparseProperties", TextureSparseProperties, 1);
+
+    if (IsUsedNVApi())
+    {
+        *m_pSparseProps = GetTextureSparsePropertiesForStandardBlocks(m_Desc);
+    }
+    else
+    {
+        auto* pd3d11Device2 = m_pDevice->GetD3D11Device2();
+
+        UINT                  NumTilesForEntireResource = 0;
+        D3D11_PACKED_MIP_DESC PackedMipDesc;
+        D3D11_TILE_SHAPE      StandardTileShapeForNonPackedMips;
+        UINT                  NumSubresourceTilings = 0;
+        pd3d11Device2->GetResourceTiling(m_pd3d11Texture,
+                                         &NumTilesForEntireResource,
+                                         &PackedMipDesc,
+                                         &StandardTileShapeForNonPackedMips,
+                                         &NumSubresourceTilings,
+                                         0,
+                                         nullptr); // AZ TODO: required to detect how mip tail packed for 2D array
+
+        auto& Props          = *m_pSparseProps;
+        Props.MemorySize     = NumTilesForEntireResource * D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
+        Props.BlockSize      = D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
+        Props.MipTailOffset  = PackedMipDesc.StartTileIndexInOverallResource * D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
+        Props.MipTailSize    = PackedMipDesc.NumTilesForPackedMips * D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
+        Props.FirstMipInTail = PackedMipDesc.NumStandardMips;
+        Props.TileSize[0]    = StandardTileShapeForNonPackedMips.WidthInTexels;
+        Props.TileSize[1]    = StandardTileShapeForNonPackedMips.HeightInTexels;
+        Props.TileSize[2]    = StandardTileShapeForNonPackedMips.DepthInTexels;
+        Props.Flags          = SPARSE_TEXTURE_FLAG_NONE;
+
+        // The number of overall tiles, packed or not, for a given array slice is simply the total number of tiles for the resource divided by the resource's array size
+        Props.MipTailStride = m_Desc.IsArray() ? (NumTilesForEntireResource / m_Desc.ArraySize) * D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES : 0;
+        VERIFY_EXPR(NumTilesForEntireResource % m_Desc.GetArraySize() == 0);
+    }
 }
 
 } // namespace Diligent

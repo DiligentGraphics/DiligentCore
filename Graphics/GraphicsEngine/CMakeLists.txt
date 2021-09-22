@@ -9,6 +9,7 @@ set(INCLUDE
     include/DefaultShaderSourceStreamFactory.h
     include/Defines.h
     include/DeviceContextBase.hpp
+    include/DeviceMemoryBase.hpp
     include/DeviceObjectBase.hpp
     include/EngineFactoryBase.hpp
     include/EngineMemory.h
@@ -46,6 +47,7 @@ set(INTERFACE
     interface/CommandQueue.h
     interface/DepthStencilState.h
     interface/DeviceContext.h
+    interface/DeviceMemory.h
     interface/DeviceObject.h
     interface/EngineFactory.h
     interface/Fence.h
@@ -81,6 +83,7 @@ set(SOURCE
     src/BufferBase.cpp
     src/DefaultShaderSourceStreamFactory.cpp
     src/DeviceContextBase.cpp
+    src/DeviceMemoryBase.cpp
     src/EngineMemory.cpp
     src/EngineFactoryBase.cpp
     src/FramebufferBase.cpp

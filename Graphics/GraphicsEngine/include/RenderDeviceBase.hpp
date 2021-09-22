@@ -229,6 +229,7 @@ public:
     using TopLevelASImplType                = typename EngineImplTraits::TopLevelASImplType;
     using ShaderBindingTableImplType        = typename EngineImplTraits::ShaderBindingTableImplType;
     using PipelineResourceSignatureImplType = typename EngineImplTraits::PipelineResourceSignatureImplType;
+    using DeviceMemoryImplType              = typename EngineImplTraits::DeviceMemoryImplType;
 
     /// \param pRefCounters    - Reference counters object that controls the lifetime of this render device
     /// \param RawMemAllocator - Allocator that will be used to allocate memory for all device objects (including render device itself)
@@ -244,33 +245,35 @@ public:
                      const EngineCreateInfo&    EngineCI,
                      const GraphicsAdapterInfo& AdapterInfo) :
         // clang-format off
-        TObjectBase             {pRefCounters},
-        m_pEngineFactory        {pEngineFactory},
-        m_ValidationFlags       {EngineCI.ValidationFlags},
-        m_AdapterInfo           {AdapterInfo},
-        m_SamplersRegistry      {RawMemAllocator, "sampler"},
-        m_TextureFormatsInfo    (TEX_FORMAT_NUM_FORMATS, TextureFormatInfoExt(), STD_ALLOCATOR_RAW_MEM(TextureFormatInfoExt, RawMemAllocator, "Allocator for vector<TextureFormatInfoExt>")),
-        m_TexFmtInfoInitFlags   (TEX_FORMAT_NUM_FORMATS, false, STD_ALLOCATOR_RAW_MEM(bool, RawMemAllocator, "Allocator for vector<bool>")),
-        m_wpImmediateContexts   (std::max(1u, EngineCI.NumImmediateContexts), RefCntWeakPtr<DeviceContextImplType>(), STD_ALLOCATOR_RAW_MEM(RefCntWeakPtr<DeviceContextImplType>, RawMemAllocator, "Allocator for vector<RefCntWeakPtr<DeviceContextImplType>>")),
-        m_wpDeferredContexts    (EngineCI.NumDeferredContexts, RefCntWeakPtr<DeviceContextImplType>(), STD_ALLOCATOR_RAW_MEM(RefCntWeakPtr<DeviceContextImplType>, RawMemAllocator, "Allocator for vector<RefCntWeakPtr<DeviceContextImplType>>")),
-        m_RawMemAllocator       {RawMemAllocator},
-        m_TexObjAllocator       {RawMemAllocator, sizeof(TextureImplType),                    64},
-        m_TexViewObjAllocator   {RawMemAllocator, sizeof(TextureViewImplType),                64},
-        m_BufObjAllocator       {RawMemAllocator, sizeof(BufferImplType),                    128},
-        m_BuffViewObjAllocator  {RawMemAllocator, sizeof(BufferViewImplType),                128},
-        m_ShaderObjAllocator    {RawMemAllocator, sizeof(ShaderImplType),                     32},
-        m_SamplerObjAllocator   {RawMemAllocator, sizeof(SamplerImplType),                    32},
-        m_PSOAllocator          {RawMemAllocator, sizeof(PipelineStateImplType),             128},
-        m_SRBAllocator          {RawMemAllocator, sizeof(ShaderResourceBindingImplType),    1024},
-        m_ResMappingAllocator   {RawMemAllocator, sizeof(ResourceMappingImpl),                16},
-        m_FenceAllocator        {RawMemAllocator, sizeof(FenceImplType),                      16},
-        m_QueryAllocator        {RawMemAllocator, sizeof(QueryImplType),                      16},
-        m_RenderPassAllocator   {RawMemAllocator, sizeof(RenderPassImplType),                 16},
-        m_FramebufferAllocator  {RawMemAllocator, sizeof(FramebufferImplType),                16},
-        m_BLASAllocator         {RawMemAllocator, sizeof(BottomLevelASImplType),              16},
-        m_TLASAllocator         {RawMemAllocator, sizeof(TopLevelASImplType),                 16},
-        m_SBTAllocator          {RawMemAllocator, sizeof(ShaderBindingTableImplType),         16},
-        m_PipeResSignAllocator  {RawMemAllocator, sizeof(PipelineResourceSignatureImplType), 128}
+        TObjectBase              {pRefCounters},
+        m_pEngineFactory         {pEngineFactory},
+        m_ValidationFlags        {EngineCI.ValidationFlags},
+        m_AdapterInfo            {AdapterInfo},
+        m_SamplersRegistry       {RawMemAllocator, "sampler"},
+        m_TextureFormatsInfo     (TEX_FORMAT_NUM_FORMATS, TextureFormatInfoExt(), STD_ALLOCATOR_RAW_MEM(TextureFormatInfoExt, RawMemAllocator, "Allocator for vector<TextureFormatInfoExt>")),
+        m_TexFmtInfoInitFlags    (TEX_FORMAT_NUM_FORMATS, false, STD_ALLOCATOR_RAW_MEM(bool, RawMemAllocator, "Allocator for vector<bool>")),
+        m_wpImmediateContexts    (std::max(1u, EngineCI.NumImmediateContexts), RefCntWeakPtr<DeviceContextImplType>(), STD_ALLOCATOR_RAW_MEM(RefCntWeakPtr<DeviceContextImplType>, RawMemAllocator, "Allocator for vector<RefCntWeakPtr<DeviceContextImplType>>")),
+        m_wpDeferredContexts     (EngineCI.NumDeferredContexts, RefCntWeakPtr<DeviceContextImplType>(), STD_ALLOCATOR_RAW_MEM(RefCntWeakPtr<DeviceContextImplType>, RawMemAllocator, "Allocator for vector<RefCntWeakPtr<DeviceContextImplType>>")),
+        m_RawMemAllocator        {RawMemAllocator},
+        m_TexObjAllocator        {RawMemAllocator, sizeof(TextureImplType),                    64},
+        m_TexViewObjAllocator    {RawMemAllocator, sizeof(TextureViewImplType),                64},
+        m_BufObjAllocator        {RawMemAllocator, sizeof(BufferImplType),                    128},
+        m_BuffViewObjAllocator   {RawMemAllocator, sizeof(BufferViewImplType),                128},
+        m_ShaderObjAllocator     {RawMemAllocator, sizeof(ShaderImplType),                     32},
+        m_SamplerObjAllocator    {RawMemAllocator, sizeof(SamplerImplType),                    32},
+        m_PSOAllocator           {RawMemAllocator, sizeof(PipelineStateImplType),             128},
+        m_SRBAllocator           {RawMemAllocator, sizeof(ShaderResourceBindingImplType),    1024},
+        m_ResMappingAllocator    {RawMemAllocator, sizeof(ResourceMappingImpl),                16},
+        m_FenceAllocator         {RawMemAllocator, sizeof(FenceImplType),                      16},
+        m_QueryAllocator         {RawMemAllocator, sizeof(QueryImplType),                      16},
+        m_RenderPassAllocator    {RawMemAllocator, sizeof(RenderPassImplType),                 16},
+        m_FramebufferAllocator   {RawMemAllocator, sizeof(FramebufferImplType),                16},
+        m_BLASAllocator          {RawMemAllocator, sizeof(BottomLevelASImplType),              16},
+        m_TLASAllocator          {RawMemAllocator, sizeof(TopLevelASImplType),                 16},
+        m_SBTAllocator           {RawMemAllocator, sizeof(ShaderBindingTableImplType),         16},
+        m_PipeResSignAllocator   {RawMemAllocator, sizeof(PipelineResourceSignatureImplType), 128},
+        m_MemObjAllocator        {RawMemAllocator, sizeof(DeviceMemoryImplType),               16},
+        m_TexSparsePropsAllocator{RawMemAllocator, sizeof(TextureSparseProperties),            64}
     // clang-format on
     {
         // Initialize texture format info
@@ -437,6 +440,7 @@ public:
     FixedBlockMemoryAllocator& GetTexViewObjAllocator() { return m_TexViewObjAllocator; }
     FixedBlockMemoryAllocator& GetBuffViewObjAllocator() { return m_BuffViewObjAllocator; }
     FixedBlockMemoryAllocator& GetSRBAllocator() { return m_SRBAllocator; }
+    FixedBlockMemoryAllocator& GetTexSparsePropsAllocator() { return m_TexSparsePropsAllocator; }
 
     VALIDATION_FLAGS GetValidationFlags() const { return m_ValidationFlags; }
 
@@ -444,6 +448,39 @@ public:
     const DeviceFeatures& GetFeatures() const
     {
         return m_DeviceInfo.Features;
+    }
+
+    // AZ TODO: remove
+    virtual TextureFormatDimensions DILIGENT_CALL_TYPE GetTextureFormatDimensions(const TextureDesc& TexDesc) const override
+    {
+        const auto& TexProps = m_AdapterInfo.Texture;
+
+        TextureFormatDimensions Result;
+        if (TexDesc.Is1D())
+        {
+            Result.MaxWidth     = TexProps.MaxTexture1DDimension;
+            Result.MaxHeight    = 1;
+            Result.MaxDepth     = 1;
+            Result.MaxArraySize = TexDesc.IsArray() ? TexProps.MaxTexture1DArraySlices : 1;
+        }
+        else if (TexDesc.Is2D())
+        {
+            Result.MaxWidth     = TexProps.MaxTexture2DDimension;
+            Result.MaxHeight    = TexProps.MaxTexture2DDimension;
+            Result.MaxDepth     = 1;
+            Result.MaxArraySize = TexDesc.IsArray() ? TexProps.MaxTexture2DArraySlices : 1;
+        }
+        else
+        {
+            Result.MaxWidth     = TexProps.MaxTexture3DDimension;
+            Result.MaxHeight    = TexProps.MaxTexture3DDimension;
+            Result.MaxDepth     = TexProps.MaxTexture3DDimension;
+            Result.MaxArraySize = 1;
+        }
+        Result.MaxMipLevels  = ComputeMipLevelsCount(Result.MaxWidth, Result.MaxHeight, Result.MaxDepth);
+        Result.SampleBits    = 1 | 2 | 4 | 8;
+        Result.MaxMemorySize = Uint64{1} << 63;
+        return Result;
     }
 
 protected:
@@ -652,6 +689,17 @@ protected:
                            });
     }
 
+    template <typename... ExtraArgsType>
+    void CreateDeviceMemoryImpl(IDeviceMemory** ppMemory, const DeviceMemoryCreateInfo& MemCI, const ExtraArgsType&... ExtraArgs)
+    {
+        CreateDeviceObject("DeviceMemory", MemCI.Desc, ppMemory,
+                           [&]() //
+                           {
+                               auto* pDevMemImpl(NEW_RC_OBJ(m_MemObjAllocator, "DeviceMemory instance", DeviceMemoryImplType)(static_cast<RenderDeviceImplType*>(this), MemCI, ExtraArgs...));
+                               pDevMemImpl->QueryInterface(IID_DeviceMemory, reinterpret_cast<IObject**>(ppMemory));
+                           });
+    }
+
 protected:
     RefCntAutoPtr<IEngineFactory> m_pEngineFactory;
 
@@ -673,24 +721,26 @@ protected:
     /// Weak references to deferred contexts.
     std::vector<RefCntWeakPtr<DeviceContextImplType>, STDAllocatorRawMem<RefCntWeakPtr<DeviceContextImplType>>> m_wpDeferredContexts;
 
-    IMemoryAllocator&         m_RawMemAllocator;      ///< Raw memory allocator
-    FixedBlockMemoryAllocator m_TexObjAllocator;      ///< Allocator for texture objects
-    FixedBlockMemoryAllocator m_TexViewObjAllocator;  ///< Allocator for texture view objects
-    FixedBlockMemoryAllocator m_BufObjAllocator;      ///< Allocator for buffer objects
-    FixedBlockMemoryAllocator m_BuffViewObjAllocator; ///< Allocator for buffer view objects
-    FixedBlockMemoryAllocator m_ShaderObjAllocator;   ///< Allocator for shader objects
-    FixedBlockMemoryAllocator m_SamplerObjAllocator;  ///< Allocator for sampler objects
-    FixedBlockMemoryAllocator m_PSOAllocator;         ///< Allocator for pipeline state objects
-    FixedBlockMemoryAllocator m_SRBAllocator;         ///< Allocator for shader resource binding objects
-    FixedBlockMemoryAllocator m_ResMappingAllocator;  ///< Allocator for resource mapping objects
-    FixedBlockMemoryAllocator m_FenceAllocator;       ///< Allocator for fence objects
-    FixedBlockMemoryAllocator m_QueryAllocator;       ///< Allocator for query objects
-    FixedBlockMemoryAllocator m_RenderPassAllocator;  ///< Allocator for render pass objects
-    FixedBlockMemoryAllocator m_FramebufferAllocator; ///< Allocator for framebuffer objects
-    FixedBlockMemoryAllocator m_BLASAllocator;        ///< Allocator for bottom-level acceleration structure objects
-    FixedBlockMemoryAllocator m_TLASAllocator;        ///< Allocator for top-level acceleration structure objects
-    FixedBlockMemoryAllocator m_SBTAllocator;         ///< Allocator for shader binding table objects
-    FixedBlockMemoryAllocator m_PipeResSignAllocator; ///< Allocator for pipeline resource signature objects
+    IMemoryAllocator&         m_RawMemAllocator;         ///< Raw memory allocator
+    FixedBlockMemoryAllocator m_TexObjAllocator;         ///< Allocator for texture objects
+    FixedBlockMemoryAllocator m_TexViewObjAllocator;     ///< Allocator for texture view objects
+    FixedBlockMemoryAllocator m_BufObjAllocator;         ///< Allocator for buffer objects
+    FixedBlockMemoryAllocator m_BuffViewObjAllocator;    ///< Allocator for buffer view objects
+    FixedBlockMemoryAllocator m_ShaderObjAllocator;      ///< Allocator for shader objects
+    FixedBlockMemoryAllocator m_SamplerObjAllocator;     ///< Allocator for sampler objects
+    FixedBlockMemoryAllocator m_PSOAllocator;            ///< Allocator for pipeline state objects
+    FixedBlockMemoryAllocator m_SRBAllocator;            ///< Allocator for shader resource binding objects
+    FixedBlockMemoryAllocator m_ResMappingAllocator;     ///< Allocator for resource mapping objects
+    FixedBlockMemoryAllocator m_FenceAllocator;          ///< Allocator for fence objects
+    FixedBlockMemoryAllocator m_QueryAllocator;          ///< Allocator for query objects
+    FixedBlockMemoryAllocator m_RenderPassAllocator;     ///< Allocator for render pass objects
+    FixedBlockMemoryAllocator m_FramebufferAllocator;    ///< Allocator for framebuffer objects
+    FixedBlockMemoryAllocator m_BLASAllocator;           ///< Allocator for bottom-level acceleration structure objects
+    FixedBlockMemoryAllocator m_TLASAllocator;           ///< Allocator for top-level acceleration structure objects
+    FixedBlockMemoryAllocator m_SBTAllocator;            ///< Allocator for shader binding table objects
+    FixedBlockMemoryAllocator m_PipeResSignAllocator;    ///< Allocator for pipeline resource signature objects
+    FixedBlockMemoryAllocator m_MemObjAllocator;         ///< Allocator for device memory objects
+    FixedBlockMemoryAllocator m_TexSparsePropsAllocator; ///< Allocator for TextureSparseProperties objects
 };
 
 } // namespace Diligent

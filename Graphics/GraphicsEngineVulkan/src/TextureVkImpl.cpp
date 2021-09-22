@@ -64,12 +64,12 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
     const auto& LogicalDevice = pRenderDeviceVk->GetLogicalDevice();
     const auto& ExtFeatures   = LogicalDevice.GetEnabledExtFeatures();
 
-    const bool ImageView2DSupported =
-        (m_Desc.Type == RESOURCE_DIM_TEX_3D && LogicalDevice.GetEnabledExtFeatures().HasPortabilitySubset) ?
-        LogicalDevice.GetEnabledExtFeatures().PortabilitySubset.imageView2DOn3DImage == VK_TRUE :
+    const bool ImageView2DSupported = // AZ TODO: use props
+        (m_Desc.Is3D() && ExtFeatures.HasPortabilitySubset) ?
+        ExtFeatures.PortabilitySubset.imageView2DOn3DImage == VK_TRUE :
         true;
 
-    if (m_Desc.Usage == USAGE_IMMUTABLE || m_Desc.Usage == USAGE_DEFAULT || m_Desc.Usage == USAGE_DYNAMIC)
+    if (m_Desc.Usage == USAGE_IMMUTABLE || m_Desc.Usage == USAGE_DEFAULT || m_Desc.Usage == USAGE_DYNAMIC || m_Desc.Usage == USAGE_SPARSE)
     {
         VERIFY(m_Desc.Usage != USAGE_DYNAMIC || PlatformMisc::CountOneBits(m_Desc.ImmediateContextMask) <= 1,
                "ImmediateContextMask must contain single set bit, this error should've been handled in ValidateTextureDesc()");
@@ -85,11 +85,11 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
             ImageCI.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT; // Specifies that the image can be used to create a
                                                                  // VkImageView with a different format from the image.
 
-        if (m_Desc.Type == RESOURCE_DIM_TEX_1D || m_Desc.Type == RESOURCE_DIM_TEX_1D_ARRAY)
+        if (m_Desc.Is1D())
             ImageCI.imageType = VK_IMAGE_TYPE_1D;
-        else if (m_Desc.Type == RESOURCE_DIM_TEX_2D || m_Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY || m_Desc.Type == RESOURCE_DIM_TEX_CUBE || m_Desc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
+        else if (m_Desc.Is2D())
             ImageCI.imageType = VK_IMAGE_TYPE_2D;
-        else if (m_Desc.Type == RESOURCE_DIM_TEX_3D)
+        else if (m_Desc.Is3D())
         {
             ImageCI.imageType = VK_IMAGE_TYPE_3D;
             if (ImageView2DSupported)
@@ -118,59 +118,18 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
         ImageCI.format = TexFormatToVkFormat(InternalTexFmt);
 
         ImageCI.extent.width  = m_Desc.Width;
-        ImageCI.extent.height = (m_Desc.Type == RESOURCE_DIM_TEX_1D || m_Desc.Type == RESOURCE_DIM_TEX_1D_ARRAY) ? 1 : m_Desc.Height;
-        ImageCI.extent.depth  = (m_Desc.Type == RESOURCE_DIM_TEX_3D) ? m_Desc.Depth : 1;
-
-        ImageCI.mipLevels = m_Desc.MipLevels;
-        if (m_Desc.Type == RESOURCE_DIM_TEX_1D_ARRAY ||
-            m_Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY ||
-            m_Desc.Type == RESOURCE_DIM_TEX_CUBE ||
-            m_Desc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
-            ImageCI.arrayLayers = m_Desc.ArraySize;
-        else
-            ImageCI.arrayLayers = 1;
+        ImageCI.extent.height = m_Desc.Is1D() ? 1 : m_Desc.Height;
+        ImageCI.extent.depth  = m_Desc.GetDepth();
+        ImageCI.mipLevels     = m_Desc.MipLevels;
+        ImageCI.arrayLayers   = m_Desc.GetArraySize();
 
         ImageCI.samples = static_cast<VkSampleCountFlagBits>(m_Desc.SampleCount);
         ImageCI.tiling  = VK_IMAGE_TILING_OPTIMAL;
 
-        ImageCI.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-        if (m_Desc.BindFlags & BIND_RENDER_TARGET)
-        {
-            // VK_IMAGE_USAGE_TRANSFER_DST_BIT is required for vkCmdClearColorImage()
-            ImageCI.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-            DEV_CHECK_ERR(ImageView2DSupported, "imageView2DOn3DImage in VkPhysicalDevicePortabilitySubsetFeaturesKHR is not enabled, can not create render target with 2D image view");
-        }
-        if (m_Desc.BindFlags & BIND_DEPTH_STENCIL)
-        {
-            // VK_IMAGE_USAGE_TRANSFER_DST_BIT is required for vkCmdClearDepthStencilImage()
-            ImageCI.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+        ImageCI.usage = BindFlagsToVkImageUsage(m_Desc.BindFlags, IsMemoryless, ExtFeatures.FragmentDensityMap.fragmentDensityMap != VK_FALSE);
+
+        if (m_Desc.BindFlags & (BIND_DEPTH_STENCIL | BIND_RENDER_TARGET))
             DEV_CHECK_ERR(ImageView2DSupported, "imageView2DOn3DImage in VkPhysicalDevicePortabilitySubsetFeaturesKHR is not enabled, can not create depth-stencil target with 2D image view");
-        }
-        if (m_Desc.BindFlags & BIND_UNORDERED_ACCESS)
-        {
-            ImageCI.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
-        }
-        if (m_Desc.BindFlags & BIND_SHADER_RESOURCE)
-        {
-            ImageCI.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
-        }
-        if (m_Desc.BindFlags & BIND_INPUT_ATTACHMENT)
-        {
-            ImageCI.usage |= VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
-        }
-        if (m_Desc.BindFlags & BIND_SHADING_RATE)
-        {
-            if (ExtFeatures.ShadingRate.attachmentFragmentShadingRate != VK_FALSE)
-            {
-                ImageCI.usage |= VK_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR;
-            }
-            else if (ExtFeatures.FragmentDensityMap.fragmentDensityMap != VK_FALSE)
-            {
-                ImageCI.usage |= VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT;
-            }
-            else
-                UNEXPECTED("BIND_SHADING_RATE requires ShadingRate or FragmentDensityMap Vulkan features");
-        }
 
         if (m_Desc.MiscFlags & MISC_TEXTURE_FLAG_GENERATE_MIPS)
         {
@@ -212,29 +171,39 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
         // and the transition away from this layout is not guaranteed to preserve that data.
         ImageCI.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-        if (IsMemoryless)
+        if (m_Desc.Usage == USAGE_SPARSE)
         {
-            ImageCI.usage &= (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT);
-            ImageCI.usage |= VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
-        }
+            ImageCI.flags =
+                VK_IMAGE_CREATE_SPARSE_BINDING_BIT |
+                VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT |
+                (m_Desc.MiscFlags & MISC_TEXTURE_FLAG_SPARSE_ALIASING ? VK_IMAGE_CREATE_SPARSE_ALIASED_BIT : 0);
 
-        m_VulkanImage = LogicalDevice.CreateImage(ImageCI, m_Desc.Name);
+            m_VulkanImage = LogicalDevice.CreateImage(ImageCI, m_Desc.Name);
 
-        VkMemoryRequirements MemReqs = LogicalDevice.GetImageMemoryRequirements(m_VulkanImage);
-
-        const auto ImageMemoryFlags = IsMemoryless ? VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT : VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-        VERIFY(IsPowerOfTwo(MemReqs.alignment), "Alignment is not power of 2!");
-        m_MemoryAllocation = pRenderDeviceVk->AllocateMemory(MemReqs, ImageMemoryFlags);
-        auto AlignedOffset = AlignUp(m_MemoryAllocation.UnalignedOffset, MemReqs.alignment);
-        VERIFY_EXPR(m_MemoryAllocation.Size >= MemReqs.size + (AlignedOffset - m_MemoryAllocation.UnalignedOffset));
-        auto Memory = m_MemoryAllocation.Page->GetVkMemory();
-        auto err    = LogicalDevice.BindImageMemory(m_VulkanImage, Memory, AlignedOffset);
-        CHECK_VK_ERROR_AND_THROW(err, "Failed to bind image memory");
-
-        if (pInitData != nullptr && pInitData->pSubResources != nullptr && pInitData->NumSubresources > 0)
-            InitializeTextureContent(*pInitData, FmtAttribs, ImageCI);
-        else
             SetState(RESOURCE_STATE_UNDEFINED);
+
+            InitSparseProperties();
+        }
+        else
+        {
+            m_VulkanImage = LogicalDevice.CreateImage(ImageCI, m_Desc.Name);
+
+            VkMemoryRequirements MemReqs = LogicalDevice.GetImageMemoryRequirements(m_VulkanImage);
+
+            const auto ImageMemoryFlags = IsMemoryless ? VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT : VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+            VERIFY(IsPowerOfTwo(MemReqs.alignment), "Alignment is not power of 2!");
+            m_MemoryAllocation = pRenderDeviceVk->AllocateMemory(MemReqs, ImageMemoryFlags);
+            auto AlignedOffset = AlignUp(m_MemoryAllocation.UnalignedOffset, MemReqs.alignment);
+            VERIFY_EXPR(m_MemoryAllocation.Size >= MemReqs.size + (AlignedOffset - m_MemoryAllocation.UnalignedOffset));
+            auto Memory = m_MemoryAllocation.Page->GetVkMemory();
+            auto err    = LogicalDevice.BindImageMemory(m_VulkanImage, Memory, AlignedOffset);
+            CHECK_VK_ERROR_AND_THROW(err, "Failed to bind image memory");
+
+            if (pInitData != nullptr && pInitData->pSubResources != nullptr && pInitData->NumSubresources > 0)
+                InitializeTextureContent(*pInitData, FmtAttribs, ImageCI);
+            else
+                SetState(RESOURCE_STATE_UNDEFINED);
+        }
     }
     else if (m_Desc.Usage == USAGE_STAGING)
     {
@@ -432,7 +401,7 @@ void TextureVkImpl::CreateStagingTexture(const TextureData* pInitData, const Tex
     VkStagingBuffCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     VkStagingBuffCI.pNext = nullptr;
     VkStagingBuffCI.flags = 0;
-    VkStagingBuffCI.size  = GetStagingTextureSubresourceOffset(m_Desc, m_Desc.ArraySize, 0, StagingBufferOffsetAlignment);
+    VkStagingBuffCI.size  = GetStagingTextureSubresourceOffset(m_Desc, m_Desc.GetArraySize(), 0, StagingBufferOffsetAlignment);
 
     // clang-format off
         DEV_CHECK_ERR((m_Desc.CPUAccessFlags & (CPU_ACCESS_READ | CPU_ACCESS_WRITE)) == CPU_ACCESS_READ ||
@@ -493,7 +462,7 @@ void TextureVkImpl::CreateStagingTexture(const TextureData* pInitData, const Tex
         uint8_t* const pStagingData = GetStagingDataCPUAddress();
 
         Uint32 subres = 0;
-        for (Uint32 layer = 0; layer < m_Desc.ArraySize; ++layer)
+        for (Uint32 layer = 0; layer < m_Desc.GetArraySize(); ++layer)
         {
             for (Uint32 mip = 0; mip < m_Desc.MipLevels; ++mip)
             {
@@ -526,6 +495,9 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
     m_VulkanImage{VkImageHandle}
 {
     SetState(InitialState);
+
+    if (m_Desc.Usage == USAGE_SPARSE)
+        InitSparseProperties();
 }
 
 void TextureVkImpl::CreateViewInternal(const TextureViewDesc& ViewDesc, ITextureView** ppView, bool bIsDefaultView)
@@ -620,7 +592,7 @@ VulkanUtilities::ImageViewWrapper TextureVkImpl::CreateImageView(TextureViewDesc
             else
             {
                 ImageViewCI.viewType = VK_IMAGE_VIEW_TYPE_3D;
-                Uint32 MipDepth      = std::max(Uint32{m_Desc.Depth} >> Uint32{ViewDesc.MostDetailedMip}, 1U);
+                Uint32 MipDepth      = std::max(m_Desc.Depth >> ViewDesc.MostDetailedMip, 1U);
                 if (ViewDesc.FirstDepthSlice != 0 || ViewDesc.NumDepthSlices != MipDepth)
                 {
                     LOG_ERROR("3D texture view '", (ViewDesc.Name ? ViewDesc.Name : ""), "' (most detailed mip: ", Uint32{ViewDesc.MostDetailedMip},
@@ -670,10 +642,7 @@ VulkanUtilities::ImageViewWrapper TextureVkImpl::CreateImageView(TextureViewDesc
 
     ImageViewCI.subresourceRange.baseMipLevel = ViewDesc.MostDetailedMip;
     ImageViewCI.subresourceRange.levelCount   = ViewDesc.NumMipLevels;
-    if (ViewDesc.TextureDim == RESOURCE_DIM_TEX_1D_ARRAY ||
-        ViewDesc.TextureDim == RESOURCE_DIM_TEX_2D_ARRAY ||
-        ViewDesc.TextureDim == RESOURCE_DIM_TEX_CUBE ||
-        ViewDesc.TextureDim == RESOURCE_DIM_TEX_CUBE_ARRAY)
+    if (m_Desc.IsArray())
     {
         ImageViewCI.subresourceRange.baseArrayLayer = ViewDesc.FirstArraySlice;
         ImageViewCI.subresourceRange.layerCount     = ViewDesc.NumArraySlices;
@@ -775,6 +744,73 @@ void TextureVkImpl::InvalidateStagingRange(VkDeviceSize Offset, VkDeviceSize Siz
     auto err = LogicalDevice.InvalidateMappedMemoryRanges(1, &InvalidateRange);
     DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to invalidated mapped texture memory range");
     (void)err;
+}
+
+void TextureVkImpl::InitSparseProperties()
+{
+    VERIFY_EXPR(m_Desc.Usage == USAGE_SPARSE);
+    VERIFY_EXPR(m_pSparseProps == nullptr);
+
+    m_pSparseProps = ALLOCATE(m_pDevice->GetTexSparsePropsAllocator(), "TextureSparseProperties", TextureSparseProperties, 1);
+
+    const auto&              LogicalDevice = m_pDevice->GetLogicalDevice();
+    const auto               MemReq        = LogicalDevice.GetImageMemoryRequirements(GetVkImage());
+    TextureSparseProperties& Props         = *m_pSparseProps;
+
+    // If the image was not created with VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT then pSparseMemoryRequirementCount will be set to zero.
+    uint32_t SparseReqCount = 0;
+    vkGetImageSparseMemoryRequirements(LogicalDevice.GetVkDevice(), GetVkImage(), &SparseReqCount, nullptr);
+    VERIFY(SparseReqCount > 0, "Sparse memory requirements for image must not be zero");
+
+    SparseReqCount = std::min(SparseReqCount, 2u);
+
+    // Texture with depth-stencil format may be implemented with a two memory blocks per tile.
+    VkSparseImageMemoryRequirements SparseReq[2] = {};
+    vkGetImageSparseMemoryRequirements(LogicalDevice.GetVkDevice(), GetVkImage(), &SparseReqCount, SparseReq);
+
+    Props.MipTailOffset  = SparseReq[0].imageMipTailOffset;
+    Props.MipTailSize    = SparseReq[0].imageMipTailSize;
+    Props.MipTailStride  = SparseReq[0].imageMipTailStride;
+    Props.FirstMipInTail = SparseReq[0].imageMipTailFirstLod;
+    Props.TileSize[0]    = SparseReq[0].formatProperties.imageGranularity.width;
+    Props.TileSize[1]    = SparseReq[0].formatProperties.imageGranularity.height;
+    Props.TileSize[2]    = SparseReq[0].formatProperties.imageGranularity.depth;
+    Props.Flags          = VkSparseImageFormatFlagsToSparseTextureFlags(SparseReq[0].formatProperties.flags);
+
+    // AZ TODO: depth stencil
+
+    if (m_Desc.Is3D() || m_Desc.ArraySize == 1)
+    {
+        VERIFY_EXPR(Props.MipTailOffset < MemReq.size);
+        VERIFY_EXPR(Props.MipTailOffset + Props.MipTailSize <= MemReq.size);
+        Props.MipTailStride = 0;
+    }
+    else
+    {
+        if (Props.Flags & SPARSE_TEXTURE_FLAG_SINGLE_MIPTAIL)
+            Props.MipTailStride = 0;
+        else
+            VERIFY_EXPR(Props.MipTailStride > 0);
+
+        VERIFY_EXPR(Props.MipTailStride * m_Desc.GetArraySize() == MemReq.size);
+        VERIFY_EXPR(Props.MipTailStride % MemReq.alignment == 0);
+        VERIFY_EXPR(Props.MipTailOffset < Props.MipTailStride);
+        VERIFY_EXPR(Props.MipTailOffset + Props.MipTailSize <= Props.MipTailStride);
+    }
+
+    Props.MemorySize = MemReq.size;
+    Props.BlockSize  = StaticCast<Uint32>(MemReq.alignment);
+
+#ifdef DILIGENT_DEBUG
+    const auto&  FmtAttribs    = GetTextureFormatAttribs(m_Desc.Format);
+    const Uint32 BytesPerBlock = FmtAttribs.GetElementSize();
+    const auto   BytesPerTile =
+        (Props.TileSize[0] / FmtAttribs.BlockWidth) *
+        (Props.TileSize[1] / FmtAttribs.BlockHeight) *
+        Props.TileSize[2] * m_Desc.SampleCount * BytesPerBlock;
+
+    VERIFY(BytesPerTile == Props.BlockSize, "Expected that memory alignment equals to block size");
+#endif
 }
 
 } // namespace Diligent

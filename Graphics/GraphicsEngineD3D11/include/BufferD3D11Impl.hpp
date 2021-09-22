@@ -67,6 +67,9 @@ public:
     /// Implementation of IBuffer::GetNativeHandle().
     virtual Uint64 DILIGENT_CALL_TYPE GetNativeHandle() override final { return BitCast<Uint64>(GetD3D11Buffer()); }
 
+    /// Implementation of IBuffer::GetSparseProperties().
+    virtual BufferSparseProperties DILIGENT_CALL_TYPE GetSparseProperties() const override final;
+
     void AddState(RESOURCE_STATE State)
     {
         m_State &= ~(RESOURCE_STATE_COMMON | RESOURCE_STATE_UNDEFINED);

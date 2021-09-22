@@ -26,3 +26,23 @@
  */
 
 #include "DiligentCore/Graphics/GraphicsEngine/interface/Buffer.h"
+
+void TestBuffer_CInterface(IBuffer* pBuffer)
+{
+    const BufferDesc* pDesc = IBuffer_GetDesc(pBuffer);
+    (void)pDesc;
+    IBuffer_CreateView(pBuffer, (const BufferViewDesc*)NULL, (IBufferView**)NULL);
+    IBufferView* pView = IBuffer_GetDefaultView(pBuffer, BUFFER_VIEW_UNDEFINED);
+    (void)pView;
+    Uint64 Handle = IBuffer_GetNativeHandle(pBuffer);
+    (void)Handle;
+    IBuffer_SetState(pBuffer, RESOURCE_STATE_UNKNOWN);
+    RESOURCE_STATE State = IBuffer_GetState(pBuffer);
+    (void)State;
+    MEMORY_PROPERTIES MemProps = IBuffer_GetMemoryProperties(pBuffer);
+    (void)MemProps;
+    IBuffer_FlushMappedRange(pBuffer, (Uint64)0, (Uint64)128);
+    IBuffer_InvalidateMappedRange(pBuffer, (Uint64)0, (Uint64)128);
+    BufferSparseProperties SparseProps = IBuffer_GetSparseProperties(pBuffer);
+    (void)SparseProps;
+}

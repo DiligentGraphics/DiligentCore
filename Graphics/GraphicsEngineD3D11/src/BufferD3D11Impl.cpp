@@ -72,10 +72,7 @@ BufferD3D11Impl::BufferD3D11Impl(IReferenceCounters*        pRefCounters,
         m_Desc.Size = AlignUp(m_Desc.Size, Alignment);
     }
 
-    if (m_Desc.Size > UINT32_MAX)
-    {
-        LOG_ERROR_AND_THROW("Buffer size (", m_Desc.Size, ") must not be greater than UINT32_MAX in Direct3D11");
-    }
+    VERIFY_EXPR(m_Desc.Size <= std::numeric_limits<Uint32>::max()); // duplicates check in ValidateBufferDesc()
 
     D3D11_BUFFER_DESC D3D11BuffDesc{};
     D3D11BuffDesc.BindFlags = BindFlagsToD3D11BindFlags(m_Desc.BindFlags);
@@ -84,6 +81,10 @@ BufferD3D11Impl::BufferD3D11Impl(IReferenceCounters*        pRefCounters,
     if (m_Desc.BindFlags & BIND_INDIRECT_DRAW_ARGS)
     {
         D3D11BuffDesc.MiscFlags |= D3D11_RESOURCE_MISC_DRAWINDIRECT_ARGS;
+    }
+    if (m_Desc.Usage == USAGE_SPARSE)
+    {
+        D3D11BuffDesc.MiscFlags |= D3D11_RESOURCE_MISC_TILED;
     }
     D3D11BuffDesc.Usage = UsageToD3D11Usage(m_Desc.Usage);
 
@@ -153,6 +154,14 @@ static BufferDesc BuffDescFromD3D11Buffer(ID3D11Buffer* pd3d11Buffer, BufferDesc
     BuffDesc.BindFlags = BindFlags;
 
     auto Usage = D3D11UsageToUsage(D3D11BuffDesc.Usage);
+    if (D3D11BuffDesc.MiscFlags & D3D11_RESOURCE_MISC_TILED)
+    {
+        VERIFY_EXPR(Usage == USAGE_DEFAULT);
+        Usage = USAGE_SPARSE;
+
+        // In Direct3D11 sparse resources is always resident and aliased
+        BuffDesc.MiscFlags |= MISC_BUFFER_FLAG_SPARSE_ALIASING;
+    }
     VERIFY(BuffDesc.Usage == 0 || BuffDesc.Usage == Usage,
            "Usage specified by the BufferDesc (", GetUsageString(BuffDesc.Usage),
            ") does not match the buffer usage recovered from d3d11 buffer desc (", GetUsageString(Usage), ")");
@@ -291,6 +300,32 @@ void BufferD3D11Impl::CreateSRV(struct BufferViewDesc& SRVDesc, ID3D11ShaderReso
     auto* pd3d11Device = GetDevice()->GetD3D11Device();
     CHECK_D3D_RESULT_THROW(pd3d11Device->CreateShaderResourceView(m_pd3d11Buffer, &D3D11_SRVDesc, ppD3D11SRV),
                            "Failed to create D3D11 shader resource view");
+}
+
+BufferSparseProperties BufferD3D11Impl::GetSparseProperties() const
+{
+    DEV_CHECK_ERR(m_Desc.Usage == USAGE_SPARSE,
+                  "IBuffer::GetSparseProperties() must be used for sparse buffer");
+
+    auto* pd3d11Device2 = m_pDevice->GetD3D11Device2();
+
+    UINT             NumTilesForEntireResource = 0;
+    D3D11_TILE_SHAPE StandardTileShapeForNonPackedMips;
+    pd3d11Device2->GetResourceTiling(m_pd3d11Buffer,
+                                     &NumTilesForEntireResource,
+                                     nullptr,
+                                     &StandardTileShapeForNonPackedMips,
+                                     nullptr,
+                                     0,
+                                     nullptr);
+
+    VERIFY(StandardTileShapeForNonPackedMips.WidthInTexels == D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES,
+           "Expected to be a standard block size");
+
+    BufferSparseProperties Props;
+    Props.MemorySize = NumTilesForEntireResource * StandardTileShapeForNonPackedMips.WidthInTexels;
+    Props.BlockSize  = StandardTileShapeForNonPackedMips.WidthInTexels;
+    return Props;
 }
 
 } // namespace Diligent

@@ -40,6 +40,7 @@
 #include "STDAllocator.hpp"
 #include "FormatString.hpp"
 #include "PlatformMisc.hpp"
+#include "BasicMath.hpp"
 
 namespace Diligent
 {
@@ -65,6 +66,24 @@ void ValidateMapTextureParams(const TextureDesc& TexDesc,
                               MAP_TYPE           MapType,
                               Uint32             MapFlags,
                               const Box*         pMapRegion);
+
+inline uint3 GetNumTilesInMipLevel(const TextureDesc& Desc, const TextureSparseProperties& Props, Uint32 MipLevel)
+{
+    // Texture size may be not multiple of tile size
+    return uint3{
+        (std::max(1u, Desc.Width >> MipLevel) + Props.TileSize[0] - 1) / Props.TileSize[0],
+        (std::max(1u, Desc.Height >> MipLevel) + Props.TileSize[1] - 1) / Props.TileSize[1],
+        (std::max(1u, Desc.GetDepth() >> MipLevel) + Props.TileSize[2] - 1) / Props.TileSize[2],
+    };
+}
+
+inline uint3 GetNumTilesInBox(const Box& Region, const TextureSparseProperties& Props)
+{
+    return uint3{
+        (Region.Width() + Props.TileSize[0] - 1) / Props.TileSize[0],
+        (Region.Height() + Props.TileSize[1] - 1) / Props.TileSize[1],
+        (Region.Depth() + Props.TileSize[2] - 1) / Props.TileSize[2]};
+}
 
 /// Base implementation of the ITexture interface
 
@@ -111,19 +130,15 @@ public:
         if (this->m_Desc.MipLevels == 0)
         {
             // Compute the number of levels in the full mipmap chain
-            if (this->m_Desc.Type == RESOURCE_DIM_TEX_1D ||
-                this->m_Desc.Type == RESOURCE_DIM_TEX_1D_ARRAY)
+            if (this->m_Desc.Is1D())
             {
                 this->m_Desc.MipLevels = ComputeMipLevelsCount(this->m_Desc.Width);
             }
-            else if (this->m_Desc.Type == RESOURCE_DIM_TEX_2D ||
-                     this->m_Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY ||
-                     this->m_Desc.Type == RESOURCE_DIM_TEX_CUBE ||
-                     this->m_Desc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
+            else if (this->m_Desc.Is2D())
             {
                 this->m_Desc.MipLevels = ComputeMipLevelsCount(this->m_Desc.Width, this->m_Desc.Height);
             }
-            else if (this->m_Desc.Type == RESOURCE_DIM_TEX_3D)
+            else if (this->m_Desc.Is3D())
             {
                 this->m_Desc.MipLevels = ComputeMipLevelsCount(this->m_Desc.Width, this->m_Desc.Height, this->m_Desc.Depth);
             }
@@ -169,6 +184,10 @@ public:
 
     ~TextureBase()
     {
+        if (m_pSparseProps != nullptr)
+        {
+            this->m_pDevice->GetTexSparsePropsAllocator().Free(m_pSparseProps);
+        }
         DestroyDefaultViews();
     }
 
@@ -325,6 +344,15 @@ public:
         return ppDefaultViews[ViewIdx];
     }
 
+    /// Implementation of ITexture::GetSparseProperties().
+    virtual const TextureSparseProperties& DILIGENT_CALL_TYPE GetSparseProperties() const override final
+    {
+        DEV_CHECK_ERR(this->m_Desc.Usage == USAGE_SPARSE,
+                      "ITexture::GetSparseProperties() must be used for sparse texture");
+        VERIFY_EXPR(m_pSparseProps != nullptr);
+        return *m_pSparseProps;
+    }
+
 private:
     void DestroyDefaultViews()
     {
@@ -390,6 +418,8 @@ protected:
     std::array<Uint8, TEXTURE_VIEW_NUM_VIEWS> m_ViewIndices{};
 
     RESOURCE_STATE m_State = RESOURCE_STATE_UNKNOWN;
+
+    TextureSparseProperties* m_pSparseProps = nullptr;
 };
 
 } // namespace Diligent

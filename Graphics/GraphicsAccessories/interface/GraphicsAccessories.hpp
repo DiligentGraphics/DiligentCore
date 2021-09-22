@@ -652,4 +652,7 @@ TEXTURE_FORMAT TexFormatToSRGB(TEXTURE_FORMAT Fmt);
 
 String GetPipelineShadingRateFlagsString(PIPELINE_SHADING_RATE_FLAGS Flags);
 
+/// Returns sparse texture properties for standard blocks
+TextureSparseProperties GetTextureSparsePropertiesForStandardBlocks(const TextureDesc& TexDesc);
+
 } // namespace Diligent

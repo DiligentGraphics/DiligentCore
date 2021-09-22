@@ -79,7 +79,6 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
 
     m_Desc.Size = AlignUp(m_Desc.Size, BufferAlignment);
 
-
     if ((m_Desc.Usage == USAGE_DYNAMIC) &&
         (m_Desc.BindFlags & BIND_UNORDERED_ACCESS) == 0 &&
         (m_Desc.Mode == BUFFER_MODE_UNDEFINED || m_Desc.Mode == BUFFER_MODE_STRUCTURED))
@@ -117,113 +116,129 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
 
         auto* pd3d12Device = pRenderDeviceD3D12->GetD3D12Device();
 
-        D3D12_HEAP_PROPERTIES HeapProps{};
-        if (m_Desc.Usage == USAGE_STAGING)
-            HeapProps.Type = m_Desc.CPUAccessFlags == CPU_ACCESS_READ ? D3D12_HEAP_TYPE_READBACK : D3D12_HEAP_TYPE_UPLOAD;
-        else
-            HeapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
+        if (m_Desc.Usage == USAGE_SPARSE)
+        {
+            auto hr = pd3d12Device->CreateReservedResource(&D3D12BuffDesc, D3D12_RESOURCE_STATE_COMMON, nullptr,
+                                                           __uuidof(m_pd3d12Resource),
+                                                           reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&m_pd3d12Resource)));
+            if (FAILED(hr))
+                LOG_ERROR_AND_THROW("Failed to create D3D12 buffer");
 
-        if (HeapProps.Type == D3D12_HEAP_TYPE_READBACK)
-            SetState(RESOURCE_STATE_COPY_DEST);
-        else if (HeapProps.Type == D3D12_HEAP_TYPE_UPLOAD)
-            SetState(RESOURCE_STATE_GENERIC_READ);
-        HeapProps.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-        HeapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-        HeapProps.CreationNodeMask     = 1;
-        HeapProps.VisibleNodeMask      = 1;
+            if (*m_Desc.Name != 0)
+                m_pd3d12Resource->SetName(WidenString(m_Desc.Name).c_str());
 
-        const auto InitialDataSize = (pBuffData != nullptr && pBuffData->pData != nullptr) ?
-            std::min(pBuffData->DataSize, D3D12BuffDesc.Width) :
-            0;
-
-        if (InitialDataSize > 0)
-            SetState(RESOURCE_STATE_COPY_DEST);
-
-        if (!IsInKnownState())
             SetState(RESOURCE_STATE_UNDEFINED);
-
-        const auto CmdQueueInd = pBuffData && pBuffData->pContext ?
-            ClassPtrCast<DeviceContextD3D12Impl>(pBuffData->pContext)->GetCommandQueueId() :
-            SoftwareQueueIndex{PlatformMisc::GetLSB(m_Desc.ImmediateContextMask)};
-
-        const auto StateMask = InitialDataSize > 0 ?
-            GetSupportedD3D12ResourceStatesForCommandList(pRenderDeviceD3D12->GetCommandQueueType(CmdQueueInd)) :
-            static_cast<D3D12_RESOURCE_STATES>(~0u);
-
-        auto D3D12State = ResourceStateFlagsToD3D12ResourceStates(GetState()) & StateMask;
-        auto hr         = pd3d12Device->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE,
-                                                        &D3D12BuffDesc, D3D12State, nullptr,
-                                                        __uuidof(m_pd3d12Resource),
-                                                        reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&m_pd3d12Resource)));
-        if (FAILED(hr))
-            LOG_ERROR_AND_THROW("Failed to create D3D12 buffer");
-
-        if (*m_Desc.Name != 0)
-            m_pd3d12Resource->SetName(WidenString(m_Desc.Name).c_str());
-
-        if (InitialDataSize > 0)
-        {
-            D3D12_HEAP_PROPERTIES UploadHeapProps{};
-            UploadHeapProps.Type                 = D3D12_HEAP_TYPE_UPLOAD;
-            UploadHeapProps.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-            UploadHeapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-            UploadHeapProps.CreationNodeMask     = 1;
-            UploadHeapProps.VisibleNodeMask      = 1;
-
-            D3D12BuffDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-            CComPtr<ID3D12Resource> UploadBuffer;
-            hr = pd3d12Device->CreateCommittedResource(&UploadHeapProps, D3D12_HEAP_FLAG_NONE,
-                                                       &D3D12BuffDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, __uuidof(UploadBuffer),
-                                                       reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&UploadBuffer)));
-            if (FAILED(hr))
-                LOG_ERROR_AND_THROW("Failed to create upload buffer");
-
-            void* DestAddress = nullptr;
-
-            hr = UploadBuffer->Map(0, nullptr, &DestAddress);
-            if (FAILED(hr))
-                LOG_ERROR_AND_THROW("Failed to map upload buffer");
-            memcpy(DestAddress, pBuffData->pData, StaticCast<size_t>(InitialDataSize));
-            UploadBuffer->Unmap(0, nullptr);
-
-            auto InitContext = pRenderDeviceD3D12->AllocateCommandContext(CmdQueueInd);
-            // copy data to the intermediate upload heap and then schedule a copy from the upload heap to the default buffer
-            VERIFY_EXPR(CheckState(RESOURCE_STATE_COPY_DEST));
-            // We MUST NOT call TransitionResource() from here, because
-            // it will call AddRef() and potentially Release(), while
-            // the object is not constructed yet
-            InitContext->CopyResource(m_pd3d12Resource, UploadBuffer);
-
-            // Command list fence should only be signaled when submitting cmd list
-            // from the immediate context, otherwise the basic requirement will be violated
-            // as in the scenario below
-            // See http://diligentgraphics.com/diligent-engine/architecture/d3d12/managing-resource-lifetimes/
-            //
-            //  Signaled Fence  |        Immediate Context               |            InitContext            |
-            //                  |                                        |                                   |
-            //    N             |  Draw(ResourceX)                       |                                   |
-            //                  |  Release(ResourceX)                    |                                   |
-            //                  |   - (ResourceX, N) -> Release Queue    |                                   |
-            //                  |                                        | CopyResource()                    |
-            //   N+1            |                                        | CloseAndExecuteCommandContext()   |
-            //                  |                                        |                                   |
-            //   N+2            |  CloseAndExecuteCommandContext()       |                                   |
-            //                  |   - Cmd list is submitted with number  |                                   |
-            //                  |     N+1, but resource it references    |                                   |
-            //                  |     was added to the delete queue      |                                   |
-            //                  |     with value N                       |                                   |
-            pRenderDeviceD3D12->CloseAndExecuteTransientCommandContext(CmdQueueInd, std::move(InitContext));
-
-            // Add reference to the object to the release queue to keep it alive
-            // until copy operation is complete. This must be done after
-            // submitting command list for execution!
-            pRenderDeviceD3D12->SafeReleaseDeviceObject(std::move(UploadBuffer), Uint64{1} << CmdQueueInd);
         }
-
-        if (m_Desc.BindFlags & BIND_UNIFORM_BUFFER)
+        else
         {
-            m_CBVDescriptorAllocation = pRenderDeviceD3D12->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-            CreateCBV(m_CBVDescriptorAllocation.GetCpuHandle());
+            D3D12_HEAP_PROPERTIES HeapProps{};
+            if (m_Desc.Usage == USAGE_STAGING)
+                HeapProps.Type = m_Desc.CPUAccessFlags == CPU_ACCESS_READ ? D3D12_HEAP_TYPE_READBACK : D3D12_HEAP_TYPE_UPLOAD;
+            else
+                HeapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
+
+            if (HeapProps.Type == D3D12_HEAP_TYPE_READBACK)
+                SetState(RESOURCE_STATE_COPY_DEST);
+            else if (HeapProps.Type == D3D12_HEAP_TYPE_UPLOAD)
+                SetState(RESOURCE_STATE_GENERIC_READ);
+            HeapProps.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+            HeapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+            HeapProps.CreationNodeMask     = 1;
+            HeapProps.VisibleNodeMask      = 1;
+
+            const auto InitialDataSize = (pBuffData != nullptr && pBuffData->pData != nullptr) ?
+                std::min(pBuffData->DataSize, D3D12BuffDesc.Width) :
+                0;
+
+            if (InitialDataSize > 0)
+                SetState(RESOURCE_STATE_COPY_DEST);
+
+            if (!IsInKnownState())
+                SetState(RESOURCE_STATE_UNDEFINED);
+
+            const auto CmdQueueInd = pBuffData && pBuffData->pContext ?
+                ClassPtrCast<DeviceContextD3D12Impl>(pBuffData->pContext)->GetCommandQueueId() :
+                SoftwareQueueIndex{PlatformMisc::GetLSB(m_Desc.ImmediateContextMask)};
+
+            const auto StateMask = InitialDataSize > 0 ?
+                GetSupportedD3D12ResourceStatesForCommandList(pRenderDeviceD3D12->GetCommandQueueType(CmdQueueInd)) :
+                static_cast<D3D12_RESOURCE_STATES>(~0u);
+
+            auto D3D12State = ResourceStateFlagsToD3D12ResourceStates(GetState()) & StateMask;
+            auto hr         = pd3d12Device->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE,
+                                                            &D3D12BuffDesc, D3D12State, nullptr,
+                                                            __uuidof(m_pd3d12Resource),
+                                                            reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&m_pd3d12Resource)));
+            if (FAILED(hr))
+                LOG_ERROR_AND_THROW("Failed to create D3D12 buffer");
+
+            if (*m_Desc.Name != 0)
+                m_pd3d12Resource->SetName(WidenString(m_Desc.Name).c_str());
+
+            if (InitialDataSize > 0)
+            {
+                D3D12_HEAP_PROPERTIES UploadHeapProps{};
+                UploadHeapProps.Type                 = D3D12_HEAP_TYPE_UPLOAD;
+                UploadHeapProps.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+                UploadHeapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+                UploadHeapProps.CreationNodeMask     = 1;
+                UploadHeapProps.VisibleNodeMask      = 1;
+
+                D3D12BuffDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+                CComPtr<ID3D12Resource> UploadBuffer;
+                hr = pd3d12Device->CreateCommittedResource(&UploadHeapProps, D3D12_HEAP_FLAG_NONE,
+                                                           &D3D12BuffDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, __uuidof(UploadBuffer),
+                                                           reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&UploadBuffer)));
+                if (FAILED(hr))
+                    LOG_ERROR_AND_THROW("Failed to create uload buffer");
+
+                void* DestAddress = nullptr;
+
+                hr = UploadBuffer->Map(0, nullptr, &DestAddress);
+                if (FAILED(hr))
+                    LOG_ERROR_AND_THROW("Failed to map uload buffer");
+                memcpy(DestAddress, pBuffData->pData, StaticCast<size_t>(InitialDataSize));
+                UploadBuffer->Unmap(0, nullptr);
+
+                auto InitContext = pRenderDeviceD3D12->AllocateCommandContext(CmdQueueInd);
+                // copy data to the intermediate upload heap and then schedule a copy from the upload heap to the default buffer
+                VERIFY_EXPR(CheckState(RESOURCE_STATE_COPY_DEST));
+                // We MUST NOT call TransitionResource() from here, because
+                // it will call AddRef() and potentially Release(), while
+                // the object is not constructed yet
+                InitContext->CopyResource(m_pd3d12Resource, UploadBuffer);
+
+                // Command list fence should only be signaled when submitting cmd list
+                // from the immediate context, otherwise the basic requirement will be violated
+                // as in the scenario below
+                // See http://diligentgraphics.com/diligent-engine/architecture/d3d12/managing-resource-lifetimes/
+                //
+                //  Signaled Fence  |        Immediate Context               |            InitContext            |
+                //                  |                                        |                                   |
+                //    N             |  Draw(ResourceX)                       |                                   |
+                //                  |  Release(ResourceX)                    |                                   |
+                //                  |   - (ResourceX, N) -> Release Queue    |                                   |
+                //                  |                                        | CopyResource()                    |
+                //   N+1            |                                        | CloseAndExecuteCommandContext()   |
+                //                  |                                        |                                   |
+                //   N+2            |  CloseAndExecuteCommandContext()       |                                   |
+                //                  |   - Cmd list is submitted with number  |                                   |
+                //                  |     N+1, but resource it references    |                                   |
+                //                  |     was added to the delete queue      |                                   |
+                //                  |     with value N                       |                                   |
+                pRenderDeviceD3D12->CloseAndExecuteTransientCommandContext(CmdQueueInd, std::move(InitContext));
+
+                // Add reference to the object to the release queue to keep it alive
+                // until copy operation is complete. This must be done after
+                // submitting command list for execution!
+                pRenderDeviceD3D12->SafeReleaseDeviceObject(std::move(UploadBuffer), Uint64{1} << CmdQueueInd);
+            }
+
+            if (m_Desc.BindFlags & BIND_UNIFORM_BUFFER)
+            {
+                m_CBVDescriptorAllocation = pRenderDeviceD3D12->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+                CreateCBV(m_CBVDescriptorAllocation.GetCpuHandle());
+            }
         }
     }
 
@@ -250,6 +265,8 @@ static BufferDesc BufferDescFromD3D12Resource(BufferDesc BuffDesc, ID3D12Resourc
         DEV_CHECK_ERR(!(BuffDesc.BindFlags & BIND_SHADER_RESOURCE), "BIND_SHADER_RESOURCE flag is specified by the BufferDesc, while d3d12 resource was created with D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE flag");
         BuffDesc.BindFlags &= ~BIND_SHADER_RESOURCE;
     }
+    else
+        BuffDesc.BindFlags |= BIND_SHADER_RESOURCE;
 
     if ((BuffDesc.BindFlags & BIND_UNORDERED_ACCESS) || (BuffDesc.BindFlags & BIND_SHADER_RESOURCE))
     {
@@ -265,6 +282,8 @@ static BufferDesc BufferDescFromD3D12Resource(BufferDesc BuffDesc, ID3D12Resourc
             UNEXPECTED("Buffer mode must be structured or formatted");
         }
     }
+
+    // Warning: can not detect sparse buffer
 
     return BuffDesc;
 }
@@ -428,6 +447,32 @@ void BufferD3D12Impl::SetD3D12ResourceState(D3D12_RESOURCE_STATES state)
 D3D12_RESOURCE_STATES BufferD3D12Impl::GetD3D12ResourceState() const
 {
     return ResourceStateFlagsToD3D12ResourceStates(GetState());
+}
+
+BufferSparseProperties BufferD3D12Impl::GetSparseProperties() const
+{
+    DEV_CHECK_ERR(m_Desc.Usage == USAGE_SPARSE,
+                  "IBuffer::GetSparseProperties() must be used for sparse buffer");
+
+    auto* pd3d12Device = m_pDevice->GetD3D12Device();
+
+    UINT             NumTilesForEntireResource = 0;
+    D3D12_TILE_SHAPE StandardTileShapeForNonPackedMips;
+    pd3d12Device->GetResourceTiling(GetD3D12Resource(),
+                                    &NumTilesForEntireResource,
+                                    nullptr,
+                                    &StandardTileShapeForNonPackedMips,
+                                    nullptr,
+                                    0,
+                                    nullptr);
+
+    VERIFY(StandardTileShapeForNonPackedMips.WidthInTexels == D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES,
+           "Expected to be a standard block size");
+
+    BufferSparseProperties Props;
+    Props.MemorySize = NumTilesForEntireResource * StandardTileShapeForNonPackedMips.WidthInTexels;
+    Props.BlockSize  = StandardTileShapeForNonPackedMips.WidthInTexels;
+    return Props;
 }
 
 } // namespace Diligent

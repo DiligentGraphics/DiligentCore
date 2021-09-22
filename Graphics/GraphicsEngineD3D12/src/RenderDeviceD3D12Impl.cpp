@@ -47,6 +47,7 @@
 #include "TopLevelASD3D12Impl.hpp"
 #include "ShaderBindingTableD3D12Impl.hpp"
 #include "PipelineResourceSignatureD3D12Impl.hpp"
+#include "DeviceMemoryD3D12Impl.hpp"
 
 #include "EngineMemory.h"
 #include "D3D12TypeConversions.hpp"
@@ -191,6 +192,29 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
             const auto d3d12CmdListType = ppCmdQueues[q]->GetD3D12CommandQueueDesc().Type;
             const auto HWQueueId        = D3D12CommandListTypeToQueueId(d3d12CmdListType);
             m_QueryMgrs.emplace_back(std::make_unique<QueryManagerD3D12>(this, EngineCI.QueryPoolSizes, SoftwareQueueIndex{q}, HWQueueId));
+        }
+
+        if (m_AdapterInfo.Vendor == ADAPTER_VENDOR_NVIDIA)
+        {
+            m_NVApi.Load();
+
+#ifdef DILIGENT_ENABLE_D3D_NVAPI
+            if (IsNvApiEnabled())
+            {
+                D3D12_HEAP_DESC d3d12HeapDesc{};
+                d3d12HeapDesc.SizeInBytes                     = D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
+                d3d12HeapDesc.Properties.Type                 = D3D12_HEAP_TYPE_DEFAULT;
+                d3d12HeapDesc.Properties.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+                d3d12HeapDesc.Properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+                d3d12HeapDesc.Properties.CreationNodeMask     = 0; // equivalent to 1
+                d3d12HeapDesc.Properties.VisibleNodeMask      = 0; // equivalent to 1
+                d3d12HeapDesc.Alignment                       = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+                d3d12HeapDesc.Flags                           = D3D12_HEAP_FLAG_NONE;
+
+                if (NvAPI_D3D12_CreateHeap(m_pd3d12Device, &d3d12HeapDesc, IID_PPV_ARGS(&m_pNVApiHeap)) != NVAPI_OK)
+                    LOG_ERROR_MESSAGE("Failed to create default sparse heap using NVApi");
+            }
+#endif
         }
     }
     catch (...)
@@ -460,6 +484,9 @@ void RenderDeviceD3D12Impl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
         if (SUCCEEDED(hr) && QualityLevels.NumQualityLevels > 0)
             TexFormatInfo.SampleCounts |= SampleCount;
     }
+
+    //TexFormatInfo.SparseMemoryCompatible = (FormatSupport.Support2 & D3D12_FORMAT_SUPPORT2_TILED) == D3D12_FORMAT_SUPPORT2_TILED;
+    // AZ TODO: SparseMemoryMSAACompatible
 }
 
 void RenderDeviceD3D12Impl::CreateGraphicsPipelineState(const GraphicsPipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState)
@@ -605,6 +632,16 @@ void RenderDeviceD3D12Impl::CreateRootSignature(const RefCntAutoPtr<PipelineReso
     RootSignatureD3D12* pRootSigD3D12{NEW_RC_OBJ(m_RootSignatureAllocator, "RootSignatureD3D12 instance", RootSignatureD3D12)(this, ppSignatures, SignatureCount, Hash)};
     pRootSigD3D12->AddRef();
     *ppRootSig = pRootSigD3D12;
+}
+
+void RenderDeviceD3D12Impl::CreateDeviceMemory(const DeviceMemoryCreateInfo& CreateInfo, IDeviceMemory** ppMemory)
+{
+    CreateDeviceMemoryImpl(ppMemory, CreateInfo);
+}
+
+TextureFormatSparseInfo RenderDeviceD3D12Impl::GetTextureFormatSparseInfo(TEXTURE_FORMAT TexFormat, RESOURCE_DIMENSION Dimension) const
+{
+    return {};
 }
 
 } // namespace Diligent

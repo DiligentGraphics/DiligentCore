@@ -307,6 +307,14 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice      vkDevice,
             m_ExtFeatures.DrawIndirectCount = true;
         }
 
+        if (IsExtensionSupported(VK_KHR_MAINTENANCE3_EXTENSION_NAME))
+        {
+            *NextProp = &m_ExtProperties.Maintenance3;
+            NextProp  = &m_ExtProperties.Maintenance3.pNext;
+
+            m_ExtProperties.Maintenance3.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_3_PROPERTIES;
+        }
+
         // make sure that last pNext is null
         *NextFeat = nullptr;
         *NextProp = nullptr;

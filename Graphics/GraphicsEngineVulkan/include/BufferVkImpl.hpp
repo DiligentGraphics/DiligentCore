@@ -112,6 +112,9 @@ public:
     virtual void DILIGENT_CALL_TYPE InvalidateMappedRange(Uint64 StartOffset,
                                                           Uint64 Size) override final;
 
+    /// Implementation of IBuffer::GetSparseProperties().
+    virtual BufferSparseProperties DILIGENT_CALL_TYPE GetSparseProperties() const override final;
+
     bool CheckAccessFlags(VkAccessFlags AccessFlags) const
     {
         return (GetAccessFlags() & AccessFlags) == AccessFlags;

@@ -102,10 +102,8 @@ DILIGENT_BEGIN_INTERFACE(IRasterizationRateMapMtl, IDeviceObject)
     virtual const RasterizationRateMapDesc& METHOD(GetDesc)() const override = 0;
 #endif
 
-#if PLATFORM_MACOS || PLATFORM_IOS
     /// Returns a pointer to the Metal rasterization rate map object.
     VIRTUAL id<MTLRasterizationRateMap> METHOD(GetMtlResource)(THIS) CONST API_AVAILABLE(ios(13), macosx(10.15.4)) PURE;
-#endif
 
     /// Returns the physical size of the specified layer.
     VIRTUAL void METHOD(GetPhysicalSizeForLayer)(THIS_
@@ -137,7 +135,7 @@ DILIGENT_BEGIN_INTERFACE(IRasterizationRateMapMtl, IDeviceObject)
 
     /// Returns the size and alignment of the parameter buffer that will be used in the resolve pass.
     VIRTUAL void METHOD(GetParameterBufferSizeAndAlign)(THIS_
-                                                        Uint32 REF Size,
+                                                        Uint64 REF Size,
                                                         Uint32 REF Align) CONST PURE;
 
     /// Copy rasterization rate map parameters to the buffer.
@@ -148,7 +146,7 @@ DILIGENT_BEGIN_INTERFACE(IRasterizationRateMapMtl, IDeviceObject)
     ///                          GetParameterBufferSizeAndAlign().
     VIRTUAL void METHOD(CopyParameterDataToBuffer)(THIS_
                                                    IBuffer* pDstBuffer,
-                                                   Uint32   Offset) CONST PURE;
+                                                   Uint64   Offset) CONST PURE;
 
     /// Returns texture view that can be used to set the rasterization rate map as framebuffer attachment.
     VIRTUAL ITextureView* METHOD(GetView)(THIS) PURE;

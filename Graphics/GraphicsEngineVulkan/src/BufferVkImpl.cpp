@@ -189,7 +189,18 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
         // Read-only storage buffers (aka structured buffers) don't need a backing buffer.
         ((VkBuffCI.usage & VK_BUFFER_USAGE_STORAGE_BUFFER_BIT) != 0 && (m_Desc.BindFlags & BIND_UNORDERED_ACCESS) != 0);
 
-    if (m_Desc.Usage == USAGE_DYNAMIC && !RequiresBackingBuffer)
+    if (m_Desc.Usage == USAGE_SPARSE)
+    {
+        VkBuffCI.flags =
+            VK_BUFFER_CREATE_SPARSE_BINDING_BIT |
+            VK_BUFFER_CREATE_SPARSE_RESIDENCY_BIT |
+            (m_Desc.MiscFlags & MISC_BUFFER_FLAG_SPARSE_ALIASING ? VK_BUFFER_CREATE_SPARSE_ALIASED_BIT : 0);
+
+        m_VulkanBuffer = LogicalDevice.CreateBuffer(VkBuffCI, m_Desc.Name);
+
+        SetState(RESOURCE_STATE_UNDEFINED);
+    }
+    else if (m_Desc.Usage == USAGE_DYNAMIC && !RequiresBackingBuffer)
     {
         VERIFY(VkBuffCI.sharingMode == VK_SHARING_MODE_EXCLUSIVE,
                "Sharing mode is not supported for dynamic buffers, must be handled by ValidateBufferDesc()");
@@ -623,5 +634,18 @@ void BufferVkImpl::DvpVerifyDynamicAllocation(const DeviceContextVkImpl* pCtx) c
     }
 }
 #endif
+
+BufferSparseProperties BufferVkImpl::GetSparseProperties() const
+{
+    DEV_CHECK_ERR(m_Desc.Usage == USAGE_SPARSE,
+                  "IBuffer::GetSparseProperties() must be used for sparse buffer");
+
+    auto MemReq = m_pDevice->GetLogicalDevice().GetBufferMemoryRequirements(GetVkBuffer());
+
+    BufferSparseProperties Props{};
+    Props.MemorySize = MemReq.size;
+    Props.BlockSize  = StaticCast<Uint32>(MemReq.alignment);
+    return Props;
+}
 
 } // namespace Diligent

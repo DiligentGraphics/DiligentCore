@@ -377,4 +377,10 @@ void BufferGLImpl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, IBuffe
     }
 }
 
+BufferSparseProperties BufferGLImpl::GetSparseProperties() const
+{
+    DEV_ERROR("IBuffer::GetSparseProperties() is not supported in OpenGL");
+    return {};
+}
+
 } // namespace Diligent

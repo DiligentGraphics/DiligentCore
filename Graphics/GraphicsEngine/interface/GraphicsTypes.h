@@ -209,6 +209,10 @@ DILIGENT_TYPED_ENUM(USAGE, Uint8)
     ///          (see Diligent::AdapterMemoryInfo::UnifiedMemoryCPUAccess).
     USAGE_UNIFIED,
 
+    /// A resource that can be bound and unbound to the memory.
+    /// Sparse resources don't have the restriction on total memory size.
+    USAGE_SPARSE,
+
     /// Helper value indicating the total number of elements in the enum
     USAGE_NUM_USAGES
 };
@@ -1004,26 +1008,6 @@ DILIGENT_TYPED_ENUM(COMPARISON_FUNCTION, Uint8)
     COMPARISON_FUNC_NUM_FUNCTIONS
 };
 
-/// Miscellaneous texture flags
-
-/// The enumeration is used by TextureDesc to describe misc texture flags
-DILIGENT_TYPED_ENUM(MISC_TEXTURE_FLAGS, Uint8)
-{
-    MISC_TEXTURE_FLAG_NONE          = 0x00,
-
-    /// Allow automatic mipmap generation with ITextureView::GenerateMips()
-
-    /// \note A texture must be created with BIND_RENDER_TARGET bind flag
-    MISC_TEXTURE_FLAG_GENERATE_MIPS = 0x01,
-
-    /// The texture will be used as a transient framebuffer attachment.
-
-    /// \note Memoryless textures must only be used within a render passes in a framebuffer,
-    ///       load operation must be CLEAR or DISCARD, store operation must be DISCARD.
-    MISC_TEXTURE_FLAG_MEMORYLESS    = 0x02,
-};
-DEFINE_FLAG_ENUM_OPERATORS(MISC_TEXTURE_FLAGS)
-
 /// Input primitive topology.
 
 /// This enumeration is used by GraphicsPipelineDesc structure to define input primitive topology.
@@ -1742,6 +1726,9 @@ struct DeviceFeatures
 
     /// Indicates if device supports variable rate shading.
     DEVICE_FEATURE_STATE VariableRateShading              DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+    
+    /// Indicates if device supports sparse memory (tiled resources) for buffer or texture.
+    DEVICE_FEATURE_STATE SparseMemory                     DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
 #if DILIGENT_CPP_INTERFACE
     constexpr DeviceFeatures() noexcept {}
@@ -1784,10 +1771,11 @@ struct DeviceFeatures
         NativeFence                       {State},
         TileShaders                       {State},
         TransferQueueTimestampQueries     {State},
-        VariableRateShading               {State}
+        VariableRateShading               {State},
+        SparseMemory                      {State}
     {
 #   if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(*this) == 38, "Did you add a new feature to DeviceFeatures? Please handle its status above.");
+        static_assert(sizeof(*this) == 39, "Did you add a new feature to DeviceFeatures? Please handle its status above.");
 #   endif
     }
 #endif
@@ -1961,6 +1949,9 @@ struct TextureProperties
 
     /// Indicates if device supports cubemap arrays
     Bool CubemapArraysSupported    DEFAULT_INITIALIZER(False);
+
+    /// Indicates if device supports 2D views from 3D texture.
+    Bool TextureView2DOn3DSupported DEFAULT_INITIALIZER(False);
 };
 typedef struct TextureProperties TextureProperties;
 
@@ -2292,6 +2283,10 @@ struct AdapterMemoryInfo
     ///       resources with other usages may be allocated as well if there is no corresponding
     ///       memory type.
     Uint64  UnifiedMemory       DEFAULT_INITIALIZER(0);
+        
+    /// Maximum size of a solid memory block.
+    /// This is maximum allowed size of a single IBuffer, ITexture, IDeviceMemory, IBottomLevelAS or ITopLevelAS.
+    Uint64  MaxMemoryAllocation DEFAULT_INITIALIZER(0);
 
     /// Supported access types for the unified memory.
     CPU_ACCESS_FLAGS UnifiedMemoryCPUAccess DEFAULT_INITIALIZER(CPU_ACCESS_NONE);
@@ -2483,9 +2478,8 @@ DILIGENT_TYPED_ENUM(SHADING_RATE_CAP_FLAGS, Uint16)
     /// HLSL: in SV_ShadingRate, GLSL: gl_ShadingRate.
     SHADING_RATE_CAP_FLAG_SHADING_RATE_SHADER_INPUT = 1u << 9,
 
-    /// Indicates that VRS texture is accessed on the GPU side.
-    /// If the flag is not set, the texture content is accessed
-    /// on the CPU side when render pass begins.
+    /// Indicates that VRS texture will be accessed on the GPU side.
+    /// Otherwise texture content will be accessed on the CPU side when render pass will begin.
     SHADING_RATE_CAP_FLAG_TEXTURE_DEVICE_ACCESS     = 1u << 10,
 
     /// Indicates that driver may generate additional fragment shader invocations
@@ -2564,6 +2558,127 @@ struct DrawCommandProperties
 typedef struct DrawCommandProperties DrawCommandProperties;
 
 
+
+/// Sparse memory capability flags
+DILIGENT_TYPED_ENUM(SPARSE_MEMORY_CAP_FLAGS, Uint32)
+{
+    SPARSE_MEMORY_CAP_FLAG_NONE                         = 0,
+    
+    /// Specifies whether texture operations that return resource residency information are supported in shader code.
+    SPARSE_MEMORY_CAP_FLAG_SHADER_RESOURCE_RESIDENCY    = 1u << 0,
+        
+    /// Specifies whether the device can access partially resident buffers.
+    SPARSE_MEMORY_CAP_FLAG_BUFFER             = 1u << 1,
+   
+    /// Specifies whether the device can access partially resident 2D textures with 1 sample per pixel.
+    SPARSE_MEMORY_CAP_FLAG_TEXTURE_2D         = 1u << 2,
+
+    /// Specifies whether the device can access partially resident 3D textures.
+    SPARSE_MEMORY_CAP_FLAG_TEXTURE_3D         = 1u << 3,
+    
+    /// Specifies whether the device can access partially resident 2D textures with 2 samples per pixel.
+    SPARSE_MEMORY_CAP_FLAG_TEXTURE_2_SAMPLES  = 1u << 4,
+
+    /// Specifies whether the device can access partially resident 2D textures with 4 samples per pixel.
+    SPARSE_MEMORY_CAP_FLAG_TEXTURE_4_SAMPLES  = 1u << 5,
+
+    /// Specifies whether the device can access partially resident 2D textures with 8 samples per pixel.
+    SPARSE_MEMORY_CAP_FLAG_TEXTURE_8_SAMPLES  = 1u << 6,
+
+    /// Specifies whether the device can access partially resident 2D textures with 16 samples per pixel.
+    SPARSE_MEMORY_CAP_FLAG_TEXTURE_16_SAMPLES = 1u << 7,
+    
+    /// Specifies whether the device can correctly access data aliased into multiple locations,
+    /// reading physical memory from multiple aliased locations will return the same value.
+    SPARSE_MEMORY_CAP_FLAG_ALIASED            = 1u << 8,
+
+    /// Specifies whether the device will access all single-sample 2D sparse texture using the standard sparse texture block shapes.
+    /// If not present, call IRenderDevice::GetTextureFormatSparseInfo() to get supported sparse block dimensions.
+    ///
+    ///  | Texel size  |   Block shape   |
+    ///  |-------------|-----------------|
+    ///  |     8-Bit   |  256 x 256 x 1  |
+    ///  |    16-Bit   |  256 x 128 x 1  |
+    ///  |    32-Bit   |  128 x 128 x 1  |
+    ///  |    64-Bit   |  128 x  64 x 1  |
+    ///  |   128-Bit   |   64 x  64 x 1  |
+    SPARSE_MEMORY_CAP_FLAG_STANDARD_2D_BLOCK_SHAPE   = 1u << 9,
+        
+    /// Specifies whether the device will access all multi-sample 2D sparse resources using the standard sparse texture block shapes.
+    /// If not present, call IRenderDevice::GetTextureFormatSparseInfo() to get supported sparse block dimensions.
+    ///
+    ///  | Texel size  |  Block shape 2x  |  Block shape 4x  |  Block shape 8x  |  Block shape 16x  |
+    ///  |-------------|------------------|------------------|------------------|-------------------|
+    ///  |     8-Bit   |   128 x 256 x 1  |   128 x 128 x 1  |   64 x 128 x 1   |    64 x 64 x 1    |
+    ///  |    16-Bit   |   128 x 128 x 1  |   128 x  64 x 1  |   64 x  64 x 1   |    64 x 32 x 1    |
+    ///  |    32-Bit   |    64 x 128 x 1  |    64 x  64 x 1  |   32 x  64 x 1   |    32 x 32 x 1    |
+    ///  |    64-Bit   |    64 x  64 x 1  |    64 x  32 x 1  |   32 x  32 x 1   |    32 x 16 x 1    |
+    ///  |   128-Bit   |    32 x  64 x 1  |    32 x  32 x 1  |   16 x  32 x 1   |    16 x 16 x 1    |
+    SPARSE_MEMORY_CAP_FLAG_STANDARD_2DMS_BLOCK_SHAPE = 1u << 10,
+        
+    /// Specifies whether the device will access all 3D sparse resources using the standard sparse texture block shapes.
+    /// If not present, call IRenderDevice::GetTextureFormatSparseInfo() to get supported sparse block dimensions.
+    ///
+    ///  | Texel size  |   Block shape   |
+    ///  |-------------|-----------------|
+    ///  |     8-Bit   |   64 x 32 x 32  |
+    ///  |    16-Bit   |   32 x 32 x 32  |
+    ///  |    32-Bit   |   32 x 32 x 16  |
+    ///  |    64-Bit   |   32 x 16 x 16  |
+    ///  |   128-Bit   |   16 x 16 x 16  |
+    SPARSE_MEMORY_CAP_FLAG_STANDARD_3D_BLOCK_SHAPE   = 1u << 11,
+        
+    /// Specifies if textures with mip level dimensions that are not integer multiples of the corresponding
+    /// dimensions of the sparse image block may be placed in the mip tail.
+    /// If this capability is not reported, only mip levels with dimensions smaller than the TextureSparseProperties::TilesSize will be placed in the mip tail. 
+    SPARSE_MEMORY_CAP_FLAG_ALIGNED_MIP_SIZE          = 1u << 12,
+   
+    /// Specifies whether the device can consistently access non-resident (without bound memory) regions of a resource.
+    /// If not present, reads of unbound regions of the resource will return undefined values.
+    /// Both reads and writes are still considered safe and will not affect other resources or populated regions of the resource.
+    /// If present, all reads of unbound regions of the resource will behave as if the region was bound to memory populated with all zeros; writes will be discarded.
+    /// Non-existent components of the format replaced by 1. For example, RG8_UNORM format will be (0, 0, 1, 1).
+    SPARSE_MEMORY_CAP_FLAG_NON_RESIDENT_STRICT       = 1u << 13,
+
+    /// Direct3D11 & 12 does not support sparse texture array with mip levels which dimension is less than tile size.
+    SPARSE_MEMORY_CAP_FLAG_TEXTURE_2D_ARRAY_MIP_TAIL = 1U << 14,
+        
+    /// Indicates that sparse buffer uses standard block, see SparseMemoryProperties::StandardBlockSize.
+    /// If this capability is not reported, call IBuffer::GetSparseProperties() and check BufferSparseProperties::BlockSize.
+    SPARSE_MEMORY_CAP_FLAG_BUFFER_STANDARD_BLOCK     = 1U << 15, // AZ TODO: specified only in DX backend and can be removed
+
+    //SPARSE_MEMORY_CAP_FLAG_TEXTURE_INT64_ATOMICS               = 1u << 18, // AZ TODO
+};
+DEFINE_FLAG_ENUM_OPERATORS(SPARSE_MEMORY_CAP_FLAGS)
+
+/// Sparse memory properties
+struct SparseMemoryProperties
+{
+    /// The total amount of address space available, in bytes, for sparse memory resources.
+    Uint64 AddressSpaceSize DEFAULT_INITIALIZER(0);
+    
+    /// The total amount of address space available, in bytes, for a single resource.
+    Uint64 ResourceSpaceSize DEFAULT_INITIALIZER(0);
+    
+    /// Sparse memory capability flags, see Diligent::SPARSE_MEMORY_CAP_FLAGS.
+    SPARSE_MEMORY_CAP_FLAGS CapFlags DEFAULT_INITIALIZER(SPARSE_MEMORY_CAP_FLAG_NONE);
+    
+    /// Size of standard sparse memory block in bytes.
+    /// In Direct3D11, Direct3D12 and Vulkan this is 64Kb.
+    /// In Metal it is implementation defined.
+    /// See SPARSE_MEMORY_CAP_FLAG_STANDARD_2D_BLOCK_SHAPE, SPARSE_MEMORY_CAP_FLAG_STANDARD_2DMS_BLOCK_SHAPE,
+    /// SPARSE_MEMORY_CAP_FLAG_STANDARD_3D_BLOCK_SHAPE, SPARSE_MEMORY_CAP_FLAG_BUFFER_STANDARD_BLOCK.
+    /// See (AZ TODO: texture format info)
+    Uint32 StandardBlockSize DEFAULT_INITIALIZER(0);
+    
+    /// Allowed bind flags for sparse buffer.
+    BIND_FLAGS BufferBindFlags  DEFAULT_INITIALIZER(BIND_NONE);
+
+    Uint32 _Padding;
+};
+typedef struct SparseMemoryProperties SparseMemoryProperties;
+
+
 /// Command queue properties
 struct CommandQueueInfo
 {
@@ -2635,6 +2750,9 @@ struct GraphicsAdapterInfo
 
     /// Draw command properties, see Diligent::DrawCommandProperties.
     DrawCommandProperties DrawCommand;
+    
+    /// Sparse memory properties, see Diligent::SparseMemoryProperties.
+    SparseMemoryProperties SparseMemory;
 
     /// Supported device features, see Diligent::DeviceFeatures.
 
@@ -3275,11 +3393,18 @@ struct Box
 
     Box() noexcept {}
 
-    Uint32 Width() const { return MaxX - MinX; }
-    Uint32 Height() const { return MaxY - MinY; }
-    Uint32 Depth() const { return MaxZ - MinZ; }
+    constexpr Uint32 Width()   const { return MaxX - MinX; }
+    constexpr Uint32 Height()  const { return MaxY - MinY; }
+    constexpr Uint32 Depth()   const { return MaxZ - MinZ; }
 
-    bool IsValid() const { return MaxX > MinX && MaxY > MinY && MaxZ > MinZ; }
+    constexpr bool   IsValid() const { return MaxX > MinX && MaxY > MinY && MaxZ > MinZ; }
+
+    constexpr bool operator==(const Box &Rhs) const
+    {
+        return MinX == Rhs.MinX && MaxX == Rhs.MaxX &&
+               MinY == Rhs.MinY && MaxY == Rhs.MaxY &&
+               MinZ == Rhs.MinZ && MaxZ == Rhs.MaxZ;
+    }
 #endif
 };
 typedef struct Box Box;
@@ -3462,6 +3587,54 @@ struct TextureFormatInfoExt DILIGENT_DERIVE(TextureFormatInfo)
 };
 typedef struct TextureFormatInfoExt TextureFormatInfoExt;
 
+
+/// AZ TODO
+struct TextureFormatDimensions
+{
+    Uint32  MaxWidth       DEFAULT_INITIALIZER(0);
+    Uint32  MaxHeight      DEFAULT_INITIALIZER(0);
+    Uint32  MaxDepth       DEFAULT_INITIALIZER(0);
+
+    Uint32  MaxMipLevels   DEFAULT_INITIALIZER(0);
+    Uint32  MaxArraySize   DEFAULT_INITIALIZER(0);
+    Uint32  SampleBits     DEFAULT_INITIALIZER(0);
+    
+    Uint64  MaxMemorySize  DEFAULT_INITIALIZER(0);
+};
+typedef struct TextureFormatDimensions TextureFormatDimensions;
+
+
+/// AZ TODO
+DILIGENT_TYPED_ENUM(SPARSE_TEXTURE_FORMAT_FLAGS, Uint32)
+{
+    SPARSE_TEXTURE_FORMAT_FLAG_NONE                   = 0,
+    SPARSE_TEXTURE_FORMAT_FLAG_SINGLE_MIPTAIL         = 1u << 0,
+    SPARSE_TEXTURE_FORMAT_FLAG_ALIGNED_MIP_SIZE       = 1u << 1,
+    SPARSE_TEXTURE_FORMAT_FLAG_NONSTANDARD_BLOCK_SIZE = 1u << 2,
+};
+
+/// This structure is returned by IRenderDevice::GetTextureFormatSparseInfo()
+struct TextureFormatSparseInfo
+{
+    /// Allowed bind flags for this format.
+    BIND_FLAGS BindFlags    DEFAULT_INITIALIZER(BIND_NONE);
+    
+    /// AZ TODO
+    Uint32     Samples DEFAULT_INITIALIZER(0);
+
+    /// AZ TODO
+    Uint32     SparseBlockSize[3] DEFAULT_INITIALIZER({});
+    
+    /// AZ TODO
+    SPARSE_TEXTURE_FORMAT_FLAGS Flags DEFAULT_INITIALIZER(SPARSE_TEXTURE_FORMAT_FLAG_NONE);
+
+    /// AZ TODO
+    //Bool       SparseMemoryCompatible DEFAULT_INITIALIZER(False);
+    
+    /// AZ TODO
+    //Bool       SparseMemoryMSAACompatible DEFAULT_INITIALIZER(False);
+};
+typedef struct TextureFormatSparseInfo TextureFormatSparseInfo;
 
 /// Pipeline stage flags.
 

@@ -45,6 +45,7 @@
 #include "Framebuffer.h"
 #include "CommandList.h"
 #include "PipelineResourceSignature.h"
+#include "DeviceMemoryD3D11.h"
 #include "DeviceContextD3D11.h"
 
 namespace Diligent
@@ -69,6 +70,7 @@ class BottomLevelASD3D11Impl;
 class TopLevelASD3D11Impl;
 class ShaderBindingTableD3D11Impl;
 class PipelineResourceSignatureD3D11Impl;
+class DeviceMemoryD3D11Impl;
 
 class FixedBlockMemoryAllocator;
 
@@ -95,6 +97,7 @@ struct EngineD3D11ImplTraits
     using FramebufferInterface               = IFramebuffer;
     using CommandListInterface               = ICommandList;
     using PipelineResourceSignatureInterface = IPipelineResourceSignature;
+    using DeviceMemoryInterface              = IDeviceMemoryD3D11;
 
     using RenderDeviceImplType              = RenderDeviceD3D11Impl;
     using DeviceContextImplType             = DeviceContextD3D11Impl;
@@ -115,6 +118,7 @@ struct EngineD3D11ImplTraits
     using TopLevelASImplType                = TopLevelASD3D11Impl;
     using ShaderBindingTableImplType        = ShaderBindingTableD3D11Impl;
     using PipelineResourceSignatureImplType = PipelineResourceSignatureD3D11Impl;
+    using DeviceMemoryImplType              = DeviceMemoryD3D11Impl;
 
     using BuffViewObjAllocatorType = FixedBlockMemoryAllocator;
     using TexViewObjAllocatorType  = FixedBlockMemoryAllocator;

@@ -40,7 +40,7 @@ FenceD3D11Impl::FenceD3D11Impl(IReferenceCounters*    pRefCounters,
     TFenceBase{pRefCounters, pDevice, Desc}
 {
     if (m_Desc.Type != FENCE_TYPE_CPU_WAIT_ONLY)
-        LOG_ERROR_AND_THROW("Description of Fence '", m_Desc.Name, "' is invalid: ", GetFenceTypeString(m_Desc.Type), " is not supported in Direct3D11.");
+        LOG_INFO_MESSAGE_ONCE("Description of Fence '", m_Desc.Name, "' is invalid: ", GetFenceTypeString(m_Desc.Type), " is not supported in Direct3D11.");
 }
 
 FenceD3D11Impl::~FenceD3D11Impl()

@@ -56,6 +56,7 @@
 #include "BottomLevelAS.h"
 #include "TopLevelAS.h"
 #include "ShaderBindingTable.h"
+#include "DeviceMemory.h"
 #include "CommandQueue.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
@@ -1678,6 +1679,153 @@ struct UpdateIndirectRTBufferAttribs
 typedef struct UpdateIndirectRTBufferAttribs UpdateIndirectRTBufferAttribs;
 
 
+/// This structure is used by SparseBufferMemoryBind.
+struct SparseBufferMemoryBindRange
+{
+    /// Offset in buffer address space where memory will be bound/unbound.
+    /// Must be multiple of the BufferSparseProperties::BlockSize.
+    Uint64           BufferOffset  DEFAULT_INITIALIZER(0);
+    
+    /// Memory range offset in the pMemory.
+    /// Must be multiple of the BufferSparseProperties::BlockSize.
+    Uint32           MemoryOffset  DEFAULT_INITIALIZER(0);
+    
+    /// Size of the memory which will be bound/unbound.
+    /// Must be multiple of the BufferSparseProperties::BlockSize.
+    Uint32           MemorySize    DEFAULT_INITIALIZER(0);
+    
+    /// Pointer to the memory object.
+    /// If non-null then memory will be bound to Region, otherwise memory will be unbound.
+    /// Direct3D11: resource must use a single memory object, when resource bound to a new memory object all previous bindings will be unbound.
+    /// Vulkan: memory object must be compatible with resource, use IDeviceMemory::IsCompatible() to ensure that.
+    /// Vulkan & Direct3D12: resource may have bound memory from different memory objects.
+    IDeviceMemory*   pMemory       DEFAULT_INITIALIZER(nullptr);
+    
+#if DILIGENT_CPP_INTERFACE
+    constexpr SparseBufferMemoryBindRange() noexcept {}
+
+    constexpr SparseBufferMemoryBindRange(Uint64         _BufferOffset,
+                                          Uint32         _MemoryOffset,
+                                          Uint32         _MemorySize,
+                                          IDeviceMemory* _pMemory) noexcept :
+        BufferOffset{_BufferOffset},
+        MemoryOffset{_MemoryOffset},
+        MemorySize  {_MemorySize  },
+        pMemory     {_pMemory     }
+    {}
+#endif
+};
+typedef struct SparseBufferMemoryBindRange SparseBufferMemoryBindRange;
+
+/// This structure is used by BindSparseMemoryAttribs.
+struct SparseBufferMemoryBind
+{
+    /// Buffer for which sparse binding command will be executed.
+    IBuffer*                           pBuffer    DEFAULT_INITIALIZER(nullptr);
+
+    /// Array of memory bind commands.
+    const SparseBufferMemoryBindRange* pRanges    DEFAULT_INITIALIZER(nullptr);
+
+    /// Number of elements in the pRanges.
+    Uint32                             NumRanges  DEFAULT_INITIALIZER(0);
+};
+typedef struct SparseBufferMemoryBind SparseBufferMemoryBind;
+
+/// This structure is used by SparseTextureMemoryBind.
+struct SparseTextureMemoryBindRange
+{
+    /// If equals to TextureSparseProperties::FirstMipInTail then all subsequent mip levels are also affected.
+    Uint32           MipLevel      DEFAULT_INITIALIZER(0);
+
+    /// Texture array slice index.
+    Uint32           ArraySlice    DEFAULT_INITIALIZER(0);
+
+    /// Region in pixels where to bind/unbind memory.
+    /// Must be multiple of TextureSparseProperties::TileSize.
+    /// If MipLevel is equals to TextureSparseProperties::FirstMipInTail then this field ignored and OffsetInMipTail must be used.
+    Box              Region        DEFAULT_INITIALIZER({});
+    
+    /// Used to bind/unbind memory to the mip tail.
+    /// If MipLevel is less than TextureSparseProperties::FirstMipInTail then this field ignored and Region must be used.
+    Uint64           OffsetInMipTail DEFAULT_INITIALIZER(0);
+
+    /// Size of the memory which will be bound/unbound to Region.
+    /// Memory size must equal to the number of tiles in Region multiplied by the sparse block size.
+    /// Must be multiple of the SparseMemoryProperties::SparseBlockSize.
+    /// Ignored in Metal.
+    /// 
+    /// \note This is 32bit value because on most devices size of single memory block is limited to 2^32.
+    Uint32           MemorySize    DEFAULT_INITIALIZER(0);
+    
+    /// Memory range offset in the pMemory.
+    /// Must be multiple of the TextureSparseProperties::BlockSize.
+    /// Ignored in Metal.
+    Uint32           MemoryOffset  DEFAULT_INITIALIZER(0); // AZ TODO: 64bit? In dx11 it is always 32bit, in dx12 & vk can be 64 only because of multiple pages
+    
+    /// Pointer to the memory object.
+    /// If non-null then memory will be bound to Region, otherwise memory will be unbound.
+    /// Direct3D11: resource must use a single memory object, when resource bound to a new memory object all previous bindings will be unbound.
+    /// Metal: must be the same memory object which is used to create sparse texture, see IRenderDeviceMtl::CreateSparseTexture().
+    /// Vulkan: memory object must be compatible with resource, use IDeviceMemory::IsCompatible() to ensure that.
+    /// Vulkan & Direct3D12: resource may have bound memory from different memory objects.
+    IDeviceMemory*   pMemory       DEFAULT_INITIALIZER(nullptr);
+};
+typedef struct SparseTextureMemoryBindRange SparseTextureMemoryBindRange;
+
+/// This structure is used by BindSparseMemoryAttribs.
+struct SparseTextureMemoryBind
+{
+    /// Texture for which sparse binding command will be executed.
+    ITexture*                           pTexture   DEFAULT_INITIALIZER(nullptr);
+    
+    /// Array of memory bind commands.
+    const SparseTextureMemoryBindRange* pRanges    DEFAULT_INITIALIZER(nullptr);
+
+    /// Number of elements in the pRanges.
+    Uint32                              NumRanges  DEFAULT_INITIALIZER(0);
+};
+typedef struct SparseTextureMemoryBind SparseTextureMemoryBind;
+
+/// This structure is used by IDeviceContext::BindSparseMemory().
+struct BindSparseMemoryAttribs
+{
+    /// Array of sparse buffer bind commands.
+    /// All commands must bind/unbind unique range in the buffer.
+    /// Not supported in Metal.
+    const SparseBufferMemoryBind*  pBufferBinds   DEFAULT_INITIALIZER(nullptr);
+
+    /// Number of elements in the pBufferBinds.
+    Uint32                         NumBufferBinds DEFAULT_INITIALIZER(0);
+
+    /// Array of sparse texture bind commands.
+    /// All commands must bind/unbind unique region in the texture.
+    const SparseTextureMemoryBind* pTextureBinds   DEFAULT_INITIALIZER(nullptr);
+
+    /// Number of elements in the pTextureBinds.
+    Uint32                         NumTextureBinds DEFAULT_INITIALIZER(0);
+    
+    /// Array of fences to wait.
+    /// Context will wait untill all fences a reached values specified in pWaitFenceValues.
+    IFence**      ppWaitFences       DEFAULT_INITIALIZER(nullptr);
+
+    /// Array of the values that the context is waiting for the fences to reach.
+    const Uint64* pWaitFenceValues   DEFAULT_INITIALIZER(nullptr);
+
+    /// Number of elements in the ppWaitFences and pWaitFenceValues.
+    Uint32        NumWaitFences      DEFAULT_INITIALIZER(0);
+
+    /// Array of the fences to signal.
+    IFence**      ppSignalFences     DEFAULT_INITIALIZER(nullptr);
+
+    /// Array of the values to set the fences to.
+    const Uint64* pSignalFenceValues DEFAULT_INITIALIZER(nullptr);
+    
+    /// Number of elements in the ppSignalFences and pSignalFenceValues.
+    Uint32        NumSignalFences    DEFAULT_INITIALIZER(0);
+};
+typedef struct BindSparseMemoryAttribs BindSparseMemoryAttribs;
+
+
 static const Uint32 REMAINING_MIP_LEVELS   = ~0u;
 static const Uint32 REMAINING_ARRAY_SLICES = ~0u;
 
@@ -2962,6 +3110,17 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
                                         SHADING_RATE          BaseRate,
                                         SHADING_RATE_COMBINER PrimitiveCombiner,
                                         SHADING_RATE_COMBINER TextureCombiner) PURE;
+
+
+    /// Bind or unbind memory objects to sparse buffer and sparse textures.
+    
+    /// \param [in] Attribs - command attributes, see Diligent::BindSparseMemoryAttribs.
+    /// 
+    /// \remarks This command will implicitly call Flush().
+    /// 
+    /// \remarks Requires COMMAND_QUEUE_TYPE_SPARSE_BINDING flag in queue.
+    VIRTUAL void METHOD(BindSparseMemory)(THIS_
+                                          const BindSparseMemoryAttribs REF Attribs) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -3038,6 +3197,7 @@ DILIGENT_END_INTERFACE
 #    define IDeviceContext_LockCommandQueue(This)                   CALL_IFACE_METHOD(DeviceContext, LockCommandQueue,          This)
 #    define IDeviceContext_UnlockCommandQueue(This)                 CALL_IFACE_METHOD(DeviceContext, UnlockCommandQueue,        This)
 #    define IDeviceContext_SetShadingRate(This, ...)                CALL_IFACE_METHOD(DeviceContext, SetShadingRate,            This, __VA_ARGS__)
+#    define IDeviceContext_BindSparseMemory(This, ...)              CALL_IFACE_METHOD(DeviceContext, BindSparseMemory,          This, __VA_ARGS__)
 
 // clang-format on
 

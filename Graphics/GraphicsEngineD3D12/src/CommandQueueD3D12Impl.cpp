@@ -26,7 +26,9 @@
  */
 
 #include "pch.h"
+#include <dxgi1_4.h>
 #include "CommandQueueD3D12Impl.hpp"
+#include "NVApiLoader.hpp"
 
 namespace Diligent
 {
@@ -124,6 +126,54 @@ void CommandQueueD3D12Impl::WaitFence(ID3D12Fence* pFence, Uint64 Value)
 
     std::lock_guard<std::mutex> Lock{m_QueueMtx};
     m_pd3d12CmdQueue->Wait(pFence, Value);
+}
+
+void CommandQueueD3D12Impl::UpdateTileMappings(ResourceTileMappingsD3D12* pMappings, Uint32 Count)
+{
+    DEV_CHECK_ERR(pMappings != nullptr, "");
+
+    std::lock_guard<std::mutex> Lock{m_QueueMtx};
+
+    for (Uint32 i = 0; i < Count; ++i)
+    {
+        const auto& Mapping = pMappings[i];
+        if (Mapping.UseNVApi)
+        {
+#ifdef DILIGENT_ENABLE_D3D_NVAPI
+            if (NvAPI_D3D12_UpdateTileMappings(
+                    m_pd3d12CmdQueue,
+                    Mapping.pResource,
+                    Mapping.NumResourceRegions,
+                    Mapping.pResourceRegionStartCoordinates,
+                    Mapping.pResourceRegionSizes,
+                    Mapping.pHeap,
+                    Mapping.NumRanges,
+                    Mapping.pRangeFlags,
+                    Mapping.pHeapRangeStartOffsets,
+                    Mapping.pRangeTileCounts,
+                    Mapping.Flags) != NVAPI_OK)
+            {
+                LOG_ERROR_MESSAGE("NvAPI_D3D12_UpdateTileMappings() failed");
+            }
+#else
+            LOG_ERROR_MESSAGE("NvAPI is not enabled");
+#endif
+        }
+        else
+        {
+            m_pd3d12CmdQueue->UpdateTileMappings(
+                Mapping.pResource,
+                Mapping.NumResourceRegions,
+                Mapping.pResourceRegionStartCoordinates,
+                Mapping.pResourceRegionSizes,
+                Mapping.pHeap,
+                Mapping.NumRanges,
+                Mapping.pRangeFlags,
+                Mapping.pHeapRangeStartOffsets,
+                Mapping.pRangeTileCounts,
+                Mapping.Flags);
+        }
+    }
 }
 
 } // namespace Diligent

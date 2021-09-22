@@ -407,20 +407,20 @@ bool VerifyStateTransitionDesc(const IRenderDevice*       pDevice,
                                     " specified by the barrier is out of range. Texture '",
                                     TexDesc.Name, "' has only ", TexDesc.MipLevels, " mip level(s).");
 
-        CHECK_STATE_TRANSITION_DESC(Barrier.FirstArraySlice < TexDesc.ArraySize, "first array slice (", Barrier.FirstArraySlice,
+        CHECK_STATE_TRANSITION_DESC(Barrier.FirstArraySlice < TexDesc.GetArraySize(), "first array slice (", Barrier.FirstArraySlice,
                                     ") specified by the barrier is out of range. Array size of texture '",
-                                    TexDesc.Name, "' is ", TexDesc.ArraySize);
-        CHECK_STATE_TRANSITION_DESC(Barrier.ArraySliceCount == REMAINING_ARRAY_SLICES || Barrier.FirstArraySlice + Barrier.ArraySliceCount <= TexDesc.ArraySize,
+                                    TexDesc.Name, "' is ", TexDesc.GetArraySize());
+        CHECK_STATE_TRANSITION_DESC(Barrier.ArraySliceCount == REMAINING_ARRAY_SLICES || Barrier.FirstArraySlice + Barrier.ArraySliceCount <= TexDesc.GetArraySize(),
                                     "array slice range ", Barrier.FirstArraySlice, "..", Barrier.FirstArraySlice + Barrier.ArraySliceCount - 1,
                                     " specified by the barrier is out of range. Array size of texture '",
-                                    TexDesc.Name, "' is ", TexDesc.ArraySize);
+                                    TexDesc.Name, "' is ", TexDesc.GetArraySize());
 
         auto DeviceType = pDevice->GetDeviceInfo().Type;
         if (DeviceType != RENDER_DEVICE_TYPE_D3D12 && DeviceType != RENDER_DEVICE_TYPE_VULKAN)
         {
             CHECK_STATE_TRANSITION_DESC(Barrier.FirstMipLevel == 0 && (Barrier.MipLevelsCount == REMAINING_MIP_LEVELS || Barrier.MipLevelsCount == TexDesc.MipLevels),
                                         "failed to transition texture '", TexDesc.Name, "': only whole resources can be transitioned on this device.");
-            CHECK_STATE_TRANSITION_DESC(Barrier.FirstArraySlice == 0 && (Barrier.ArraySliceCount == REMAINING_ARRAY_SLICES || Barrier.ArraySliceCount == TexDesc.ArraySize),
+            CHECK_STATE_TRANSITION_DESC(Barrier.FirstArraySlice == 0 && (Barrier.ArraySliceCount == REMAINING_ARRAY_SLICES || Barrier.ArraySliceCount == TexDesc.GetArraySize()),
                                         "failed to transition texture '", TexDesc.Name, "': only whole resources can be transitioned on this device.");
         }
     }
@@ -1004,6 +1004,232 @@ bool VerifyTraceRaysIndirectAttribs(const IRenderDevice* pDevice, const TraceRay
                                       "indirect trace rays arguments buffer '", Desc.Name, "' is too small");
 
 #undef CHECK_TRACE_RAYS_INDIRECT_ATTRIBS
+
+    return true;
+}
+
+bool VerifyBindSparseMemoryAttribs(const IRenderDevice* pDevice, const BindSparseMemoryAttribs& Attribs)
+{
+#define CHECK_BIND_SPARSE_ATTRIBS(Expr, ...) CHECK_PARAMETER(Expr, "Bind sparse memory attribs are invalid: ", __VA_ARGS__)
+
+    const auto& SparseMem = pDevice->GetAdapterInfo().SparseMemory;
+
+    if (Attribs.NumBufferBinds != 0)
+    {
+        CHECK_BIND_SPARSE_ATTRIBS(Attribs.pBufferBinds != nullptr, "if NumBufferBinds is not zero then pBufferBinds must not be null");
+        CHECK_BIND_SPARSE_ATTRIBS(SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_BUFFER, "NumBufferBinds must be zero if SPARSE_MEMORY_CAP_FLAG_BUFFER capability is not supported");
+    }
+    if (Attribs.NumTextureBinds != 0)
+    {
+        CHECK_BIND_SPARSE_ATTRIBS(Attribs.pTextureBinds != nullptr, "if NumTextureBinds is not zero then pTextureBinds must not be null");
+        CHECK_BIND_SPARSE_ATTRIBS(SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_TEXTURE_2D, "NumTextureBinds and NumTextureOpaqueBinds must be zero if SPARSE_MEMORY_CAP_FLAG_TEXTURE_2D capability is not supported");
+    }
+#ifdef DILIGENT_DEVELOPMENT
+    const bool IsMetal = pDevice->GetDeviceInfo().IsMetalDevice();
+
+    for (Uint32 i = 0; i < Attribs.NumBufferBinds; ++i)
+    {
+        const auto& Bind = Attribs.pBufferBinds[i];
+        CHECK_BIND_SPARSE_ATTRIBS(Bind.pBuffer != nullptr, "pBufferBinds[", i, "].pBuffer must not be null");
+
+        const auto& Desc = Bind.pBuffer->GetDesc();
+        CHECK_BIND_SPARSE_ATTRIBS(Desc.Usage == USAGE_SPARSE, "pBufferBinds[", i, "].pBuffer must be created with USAGE_SPARSE");
+
+        const auto& BuffSparseProps = Bind.pBuffer->GetSparseProperties();
+
+        CHECK_BIND_SPARSE_ATTRIBS(Bind.NumRanges != 0, "pBufferBinds[", i, "].NumRanges must not be zero");
+        CHECK_BIND_SPARSE_ATTRIBS(Bind.pRanges != nullptr, "pBufferBinds[", i, "].pRanges must not be null");
+
+        for (Uint32 r = 0; r < Bind.NumRanges; ++r)
+        {
+            const auto& Range = Bind.pRanges[r];
+            CHECK_BIND_SPARSE_ATTRIBS(Range.BufferOffset + Range.MemorySize <= Desc.Size,
+                                      "pBufferBinds[", i, "].pRanges[", r, "] with BufferOffset(", Range.BufferOffset, ") and MemorySize(",
+                                      Range.MemorySize, ") must not be greater than buffer size (", Desc.Size, ")");
+            CHECK_BIND_SPARSE_ATTRIBS(Range.BufferOffset % BuffSparseProps.BlockSize == 0,
+                                      "pBufferBinds[", i, "].pRanges[", r, "].BufferOffset(", Range.BufferOffset,
+                                      ") must be multiple of buffer block size (", BuffSparseProps.BlockSize, ")");
+
+            CHECK_BIND_SPARSE_ATTRIBS(Range.MemorySize != 0,
+                                      "pBufferBinds[", i, "].pRanges[", r, "].MemorySize must not be zero");
+            CHECK_BIND_SPARSE_ATTRIBS(Range.MemorySize % BuffSparseProps.BlockSize == 0,
+                                      "pBufferBinds[", i, "].pRanges[", r, "].MemorySize must be multiple of buffer block size (", BuffSparseProps.BlockSize, ")");
+
+            if (Range.pMemory != nullptr)
+            {
+                CHECK_BIND_SPARSE_ATTRIBS(Range.pMemory->IsCompatible(Bind.pBuffer),
+                                          "pBufferBinds[", i, "].pRanges[", r, "].pMemory must be compatible with pBuffer");
+
+                const auto Capacity = Range.pMemory->GetCapacity();
+                CHECK_BIND_SPARSE_ATTRIBS(Range.MemoryOffset + Range.MemorySize <= Capacity,
+                                          "pBufferBinds[", i, "].pRanges[", r, "] with MemoryOffset(", Range.MemoryOffset, ") and MemorySize(",
+                                          Range.MemorySize, ") must not be greater than device memory size (", Capacity, ")");
+                // Can not check here because final memory offset depends on device memory object implementation
+                //CHECK_BIND_SPARSE_ATTRIBS(Range.MemoryOffset % BuffSparseProps.BlockSize == 0)
+
+                const auto PageSize = Range.pMemory->GetDesc().PageSize;
+                CHECK_BIND_SPARSE_ATTRIBS(Range.MemoryOffset % PageSize + Range.MemorySize <= PageSize,
+                                          "pBufferBinds[", i, "].pRanges[", r, "] with MemoryOffset(", Range.MemoryOffset, ") and MemorySize(", Range.MemorySize,
+                                          "): memory range must be inside a single page, in Direct3D12 and Vulkan this will be an error");
+            }
+            else
+            {
+                CHECK_BIND_SPARSE_ATTRIBS(Range.MemoryOffset == 0,
+                                          "pBufferBinds[", i, "].pRanges[", r, "]: if pMemory is null then MemoryOffset must be zero");
+            }
+        }
+    }
+
+    for (Uint32 i = 0; i < Attribs.NumTextureBinds; ++i)
+    {
+        const auto& Bind = Attribs.pTextureBinds[i];
+        CHECK_BIND_SPARSE_ATTRIBS(Bind.pTexture != nullptr, "pTextureBinds[", i, "].pTexture must not be null");
+
+        const auto& Desc = Bind.pTexture->GetDesc();
+        CHECK_BIND_SPARSE_ATTRIBS(Desc.Usage == USAGE_SPARSE, "pTextureBinds[", i, "].pTexture must be created with USAGE_SPARSE");
+
+        const auto& TexSparseProps = Bind.pTexture->GetSparseProperties();
+
+        CHECK_BIND_SPARSE_ATTRIBS(Bind.NumRanges != 0, "pTextureBinds[", i, "].NumRanges must not be zero");
+        CHECK_BIND_SPARSE_ATTRIBS(Bind.pRanges != nullptr, "pTextureBinds[", i, "].pRanges must not be null");
+
+        for (Uint32 r = 0; r < Bind.NumRanges; ++r)
+        {
+            const auto& Range     = Bind.pRanges[r];
+            const auto& Region    = Range.Region;
+            const auto  TexWidth  = std::max(1u, Desc.Width >> Range.MipLevel);
+            const auto  TexHeight = std::max(1u, Desc.Height >> Range.MipLevel);
+            const auto  TexDepth  = std::max(1u, Desc.GetDepth() >> Range.MipLevel);
+
+            CHECK_BIND_SPARSE_ATTRIBS(Range.MipLevel < Desc.MipLevels,
+                                      "pTextureBinds[", i, "].pRanges[", r, "].MipLevel(", Range.MipLevel, ") must be less than (", Desc.MipLevels, ")");
+            CHECK_BIND_SPARSE_ATTRIBS(Range.MipLevel <= TexSparseProps.FirstMipInTail,
+                                      "pTextureBinds[", i, "].pRanges[", r, "].MipLevel(", Range.MipLevel, ") must not be greater than first mip in tail (", TexSparseProps.FirstMipInTail, ")");
+
+            if (Range.MipLevel < TexSparseProps.FirstMipInTail)
+            {
+                CHECK_BIND_SPARSE_ATTRIBS(Range.OffsetInMipTail == 0,
+                                          "pTextureBinds[", i, "].pRanges[", r, "].OffsetInMipTail must be zero");
+                CHECK_BIND_SPARSE_ATTRIBS(Region.IsValid(),
+                                          "pTextureBinds[", i, "].pRanges[", r, "].Region must be valid");
+                CHECK_BIND_SPARSE_ATTRIBS(Region.MaxX <= TexWidth || Region.MaxX == AlignUp(TexWidth, TexSparseProps.TileSize[0]),
+                                          "pTextureBinds[", i, "].pRanges[", r, "].Region.MaxX(", Region.MaxX, ") must not be greater than (", TexWidth, ")");
+                CHECK_BIND_SPARSE_ATTRIBS(Region.MaxY <= TexHeight || Region.MaxY == AlignUp(TexHeight, TexSparseProps.TileSize[1]),
+                                          "pTextureBinds[", i, "].pRanges[", r, "].Region.MaxY(", Region.MaxY, ") must not be greater than (", TexHeight, ")");
+                CHECK_BIND_SPARSE_ATTRIBS(Region.MaxZ <= TexDepth || Region.MaxZ == AlignUp(TexDepth, TexSparseProps.TileSize[2]),
+                                          "pTextureBinds[", i, "].pRanges[", r, "].Region.MaxZ(", Region.MaxZ, ") must not be greater than (", TexDepth, ")");
+
+                CHECK_BIND_SPARSE_ATTRIBS(Region.MinX % TexSparseProps.TileSize[0] == 0,
+                                          "pTextureBinds[", i, "].pRanges[", r, "].Region MinX(", Region.MinX, ") must be multiple of tile size (", TexSparseProps.TileSize[0], ")");
+                CHECK_BIND_SPARSE_ATTRIBS(Region.MinY % TexSparseProps.TileSize[1] == 0,
+                                          "pTextureBinds[", i, "].pRanges[", r, "].Region MinY(", Region.MinY, ") must be multiple of tile size (", TexSparseProps.TileSize[1], ")");
+                CHECK_BIND_SPARSE_ATTRIBS(Region.MinZ % TexSparseProps.TileSize[2] == 0,
+                                          "pTextureBinds[", i, "].pRanges[", r, "].Region MinZ(", Region.MinZ, ") must be multiple of tile size (", TexSparseProps.TileSize[2], ")");
+                CHECK_BIND_SPARSE_ATTRIBS(Region.Width() % TexSparseProps.TileSize[0] == 0 || Region.MaxX == TexWidth,
+                                          "pTextureBinds[", i, "].pRanges[", r, "].Region (MaxX - MinX) must be multiple of tile size (", TexSparseProps.TileSize[0], ")");
+                CHECK_BIND_SPARSE_ATTRIBS(Region.Height() % TexSparseProps.TileSize[1] == 0 || Region.MaxY == TexHeight,
+                                          "pTextureBinds[", i, "].pRanges[", r, "].Region (MaxY - MinY) must be multiple of tile size (", TexSparseProps.TileSize[1], ")");
+                CHECK_BIND_SPARSE_ATTRIBS(Region.Depth() % TexSparseProps.TileSize[2] == 0 || Region.MaxZ == TexDepth,
+                                          "pTextureBinds[", i, "].pRanges[", r, "].Region (MaxZ - MinZ) must be multiple of tile size (", TexSparseProps.TileSize[2], ")");
+            }
+            else
+            {
+                CHECK_BIND_SPARSE_ATTRIBS(Region == Box{},
+                                          "pTextureBinds[", i, "].pRanges[", r, "].Region must be default");
+                CHECK_BIND_SPARSE_ATTRIBS(Range.OffsetInMipTail + Range.MemorySize <= TexSparseProps.MipTailSize,
+                                          "pTextureBinds[", i, "].pRanges[", r, "] with OffsetInMipTail(", Range.OffsetInMipTail,
+                                          ") and MemorySize(", Range.MemorySize, ") must not be greater than mip tail size (", TexSparseProps.MipTailSize, ")");
+                CHECK_BIND_SPARSE_ATTRIBS(Range.OffsetInMipTail % TexSparseProps.BlockSize == 0,
+                                          "pTextureBinds[", i, "].pRanges[", r, "].OffsetInMipTail (", Range.OffsetInMipTail,
+                                          ") must be multiple of texture block size (", TexSparseProps.BlockSize, ")");
+
+                if (TexSparseProps.Flags & SPARSE_TEXTURE_FLAG_SINGLE_MIPTAIL)
+                {
+                    CHECK_BIND_SPARSE_ATTRIBS(Range.ArraySlice == 0,
+                                              "pTextureBinds[", i, "].pRanges[", r, "].ArraySlice (", Range.ArraySlice, ") must be 0 for single mip tail");
+                }
+
+                if (IsMetal)
+                {
+                    CHECK_BIND_SPARSE_ATTRIBS(Range.OffsetInMipTail == 0 && Range.MemorySize == TexSparseProps.MipTailSize,
+                                              "pTextureBinds[", i, "].pRanges[", r, "]: in Metal mip tail must be bound with a single memory range: ",
+                                              "OffsetInMipTail(", Range.OffsetInMipTail, ") must be zero and MemorySize(", Range.MemorySize,
+                                              ") must equal to mip tail size (", TexSparseProps.MipTailSize, ")");
+                }
+            }
+
+            CHECK_BIND_SPARSE_ATTRIBS(Range.ArraySlice < Desc.GetArraySize(),
+                                      "pTextureBinds[", i, "].pRanges[", r, "].ArraySlice(", Range.ArraySlice, ") must be less than (", Desc.GetArraySize(), ")");
+
+            // In Metal MemorySize is not defined and not used
+            if (!IsMetal)
+            {
+                CHECK_BIND_SPARSE_ATTRIBS(Range.MemorySize != 0,
+                                          "pTextureBinds[", i, "].pRanges[", r, "].MemorySize must not be zero");
+                CHECK_BIND_SPARSE_ATTRIBS(Range.MemorySize % TexSparseProps.BlockSize == 0,
+                                          "pTextureBinds[", i, "].pRanges[", r, "].MemorySize (", Range.MemorySize,
+                                          ") must be multiple of texture block size (", TexSparseProps.BlockSize, ")");
+
+                if (Range.MipLevel < TexSparseProps.FirstMipInTail)
+                {
+                    const uint3 TilesInBox = GetNumTilesInBox(Region, TexSparseProps);
+                    const auto  NumBlocks  = TilesInBox.x * TilesInBox.y * TilesInBox.z;
+                    CHECK_BIND_SPARSE_ATTRIBS(NumBlocks * TexSparseProps.BlockSize == Range.MemorySize,
+                                              "pTextureBinds[", i, "].pRanges[", r, "].MemorySize(", Range.MemorySize, ") does not match to sparse memory blocks count (",
+                                              NumBlocks, ") in specified region");
+                }
+
+                if (Range.pMemory != nullptr)
+                {
+                    CHECK_BIND_SPARSE_ATTRIBS(Range.pMemory->IsCompatible(Bind.pTexture),
+                                              "pTextureBinds[", i, "].pRanges[", r, "].pMemory must be compatible with pTexture");
+
+                    const auto Capacity = Range.pMemory->GetCapacity();
+                    CHECK_BIND_SPARSE_ATTRIBS(Range.MemoryOffset + Range.MemorySize <= Capacity,
+                                              "pTextureBinds[", i, "].pRanges[", r, "] with MemoryOffset(", Range.MemoryOffset, ") and MemorySize(",
+                                              Range.MemorySize, ") must not be greater than device memory size (", Capacity, ")");
+                    // Can not check here because final memory offset depends on device memory object implementation
+                    //CHECK_BIND_SPARSE_ATTRIBS(Range.MemoryOffset % BuffSparseProps.BlockSize == 0)
+
+                    const auto PageSize = Range.pMemory->GetDesc().PageSize;
+                    CHECK_BIND_SPARSE_ATTRIBS(Range.MemoryOffset % PageSize + Range.MemorySize <= PageSize,
+                                              "pTextureBinds[", i, "].pRanges[", r, "] with MemoryOffset(", Range.MemoryOffset, ") and MemorySize(", Range.MemorySize,
+                                              "): memory range must be inside a single page, in Direct3D12 and Vulkan this will be an error");
+                }
+            }
+
+            if (Range.pMemory == nullptr)
+            {
+                CHECK_BIND_SPARSE_ATTRIBS(Range.MemoryOffset == 0,
+                                          "pTextureBinds[", i, "].pRanges[", r, "]: if pMemory is null then MemoryOffset must be zero");
+            }
+        }
+    }
+
+    if (Attribs.NumWaitFences != 0)
+    {
+        CHECK_BIND_SPARSE_ATTRIBS(Attribs.ppWaitFences != nullptr, "ppWaitFences must not be null if NumWaitFences is not zero");
+        CHECK_BIND_SPARSE_ATTRIBS(Attribs.pWaitFenceValues != nullptr, "pWaitFenceValues must not be null if NumWaitFences is not zero");
+
+        for (Uint32 i = 0; i < Attribs.NumWaitFences; ++i)
+        {
+            CHECK_BIND_SPARSE_ATTRIBS(Attribs.ppWaitFences[i] != nullptr, "ppWaitFences[", i, "] must not be zero");
+            CHECK_BIND_SPARSE_ATTRIBS(Attribs.ppWaitFences[i]->GetDesc().Type == FENCE_TYPE_GENERAL, "ppWaitFences[", i, "] must be GENERAL type");
+        }
+    }
+
+    if (Attribs.NumSignalFences != 0)
+    {
+        CHECK_BIND_SPARSE_ATTRIBS(Attribs.ppSignalFences != nullptr, "ppSignalFences must not be null if NumSignalFences is not zero");
+        CHECK_BIND_SPARSE_ATTRIBS(Attribs.pSignalFenceValues != nullptr, "pSignalFenceValues must not be null if NumSignalFences is not zero");
+
+        for (Uint32 i = 0; i < Attribs.NumSignalFences; ++i)
+        {
+            CHECK_BIND_SPARSE_ATTRIBS(Attribs.ppSignalFences[i] != nullptr, "ppSignalFences[", i, "] must not be zero");
+            CHECK_BIND_SPARSE_ATTRIBS(Attribs.ppSignalFences[i]->GetDesc().Type == FENCE_TYPE_GENERAL, "ppSignalFences[", i, "] must be GENERAL type");
+        }
+    }
+#endif // DILIGENT_DEVELOPMENT
 
     return true;
 }

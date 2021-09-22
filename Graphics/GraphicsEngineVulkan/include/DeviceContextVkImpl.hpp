@@ -288,6 +288,9 @@ public:
                                                    SHADING_RATE_COMBINER PrimitiveCombiner,
                                                    SHADING_RATE_COMBINER TextureCombiner) override final;
 
+    /// Implementation of IDeviceContext::BindSparseMemory() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE BindSparseMemory(const BindSparseMemoryAttribs& Attribs) override final;
+
     // Transitions texture subresources from OldState to NewState, and optionally updates
     // internal texture state.
     // If OldState == RESOURCE_STATE_UNKNOWN, internal texture state is used as old state.

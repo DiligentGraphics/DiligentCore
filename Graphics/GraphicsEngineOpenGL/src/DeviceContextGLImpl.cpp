@@ -1750,6 +1750,11 @@ void DeviceContextGLImpl::SetShadingRate(SHADING_RATE BaseRate, SHADING_RATE_COM
     UNSUPPORTED("SetShadingRate is not supported in OpenGL");
 }
 
+void DeviceContextGLImpl::BindSparseMemory(const BindSparseMemoryAttribs& Attribs)
+{
+    UNSUPPORTED("BindSparseMemory is not supported in OpenGL");
+}
+
 void DeviceContextGLImpl::BeginDebugGroup(const Char* Name, const float* pColor)
 {
     TDeviceContextBase::BeginDebugGroup(Name, pColor, 0);

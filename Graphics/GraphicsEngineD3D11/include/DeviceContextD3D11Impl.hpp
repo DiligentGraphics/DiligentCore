@@ -282,6 +282,9 @@ public:
                                                    SHADING_RATE_COMBINER PrimitiveCombiner,
                                                    SHADING_RATE_COMBINER TextureCombiner) override final;
 
+    /// Implementation of IDeviceContext::BindSparseMemory() in Direct3D11 backend.
+    virtual void DILIGENT_CALL_TYPE BindSparseMemory(const BindSparseMemoryAttribs& Attribs) override final;
+
     /// Implementation of IDeviceContextD3D11::GetD3D11DeviceContext().
     virtual ID3D11DeviceContext* DILIGENT_CALL_TYPE GetD3D11DeviceContext() override final { return m_pd3d11DeviceContext; }
 
@@ -300,6 +303,8 @@ public:
 
     void TransitionResource(TextureBaseD3D11& Texture, RESOURCE_STATE NewState, RESOURCE_STATE OldState = RESOURCE_STATE_UNKNOWN, bool UpdateResourceState = true);
     void TransitionResource(BufferD3D11Impl& Buffer, RESOURCE_STATE NewState, RESOURCE_STATE OldState = RESOURCE_STATE_UNKNOWN, bool UpdateResourceState = true);
+
+    bool ResizeTilePool(ID3D11Buffer* pBuffer, UINT NewSize);
 
 private:
     /// Commits d3d11 index buffer to d3d11 device context.

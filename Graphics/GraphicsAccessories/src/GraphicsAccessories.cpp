@@ -783,7 +783,7 @@ const Char* GetMapTypeString(MAP_TYPE MapType)
 /// Returns the string containing the usage
 const Char* GetUsageString(USAGE Usage)
 {
-    static_assert(USAGE_NUM_USAGES == 5, "Please update the function to handle the new usage type");
+    static_assert(USAGE_NUM_USAGES == 6, "Please update the function to handle the new usage type");
 
     static const Char* UsageStrings[USAGE_NUM_USAGES];
     static bool        bUsageStringsInit = false;
@@ -796,6 +796,7 @@ const Char* GetUsageString(USAGE Usage)
         INIT_USAGE_STR(USAGE_DYNAMIC);
         INIT_USAGE_STR(USAGE_STAGING);
         INIT_USAGE_STR(USAGE_UNIFIED);
+        INIT_USAGE_STR(USAGE_SPARSE);
 #undef  INIT_USAGE_STR
         // clang-format on
         bUsageStringsInit = true;
@@ -935,19 +936,20 @@ String GetTextureDescString(const TextureDesc& Desc)
     Str += GetResourceDimString(Desc.Type);
     Str += "; size: ";
     Str += ToString(Desc.Width);
-    if (Desc.Type == RESOURCE_DIM_TEX_2D || Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY || Desc.Type == RESOURCE_DIM_TEX_3D || Desc.Type == RESOURCE_DIM_TEX_CUBE || Desc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
+
+    if (Desc.Is2D() || Desc.Is3D())
     {
         Str += "x";
         Str += ToString(Desc.Height);
     }
 
-    if (Desc.Type == RESOURCE_DIM_TEX_3D)
+    if (Desc.Is3D())
     {
         Str += "x";
         Str += ToString(Desc.Depth);
     }
 
-    if (Desc.Type == RESOURCE_DIM_TEX_1D_ARRAY || Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY || Desc.Type == RESOURCE_DIM_TEX_CUBE || Desc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
+    if (Desc.IsArray())
     {
         Str += "; Num Slices: ";
         Str += ToString(Desc.ArraySize);
@@ -1385,7 +1387,7 @@ MipLevelProperties GetMipLevelProperties(const TextureDesc& TexDesc, Uint32 MipL
 
     MipProps.LogicalWidth  = std::max(TexDesc.Width >> MipLevel, 1u);
     MipProps.LogicalHeight = std::max(TexDesc.Height >> MipLevel, 1u);
-    MipProps.Depth         = (TexDesc.Type == RESOURCE_DIM_TEX_3D) ? std::max(TexDesc.Depth >> MipLevel, 1u) : 1u;
+    MipProps.Depth         = std::max(TexDesc.GetDepth() >> MipLevel, 1u);
     if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
     {
         VERIFY_EXPR(FmtAttribs.BlockWidth > 1 && FmtAttribs.BlockHeight > 1);
@@ -1683,8 +1685,8 @@ Uint64 GetStagingTextureLocationOffset(const TextureDesc& TexDesc,
                                        Uint32             LocationY,
                                        Uint32             LocationZ)
 {
-    VERIFY_EXPR(TexDesc.MipLevels > 0 && TexDesc.ArraySize > 0 && TexDesc.Width > 0 && TexDesc.Height > 0 && TexDesc.Format != TEX_FORMAT_UNKNOWN);
-    VERIFY_EXPR(ArraySlice < TexDesc.ArraySize && MipLevel < TexDesc.MipLevels || ArraySlice == TexDesc.ArraySize && MipLevel == 0);
+    VERIFY_EXPR(TexDesc.MipLevels > 0 && TexDesc.GetArraySize() > 0 && TexDesc.Width > 0 && TexDesc.Height > 0 && TexDesc.Format != TEX_FORMAT_UNKNOWN);
+    VERIFY_EXPR(ArraySlice < TexDesc.GetArraySize() && MipLevel < TexDesc.MipLevels || ArraySlice == TexDesc.GetArraySize() && MipLevel == 0);
 
     Uint64 Offset = 0;
     if (ArraySlice > 0)
@@ -1697,10 +1699,7 @@ Uint64 GetStagingTextureLocationOffset(const TextureDesc& TexDesc,
         }
 
         Offset = ArraySliceSize;
-        if (TexDesc.Type == RESOURCE_DIM_TEX_1D_ARRAY ||
-            TexDesc.Type == RESOURCE_DIM_TEX_2D_ARRAY ||
-            TexDesc.Type == RESOURCE_DIM_TEX_CUBE ||
-            TexDesc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
+        if (TexDesc.IsArray())
             Offset *= ArraySlice;
     }
 
@@ -1710,7 +1709,7 @@ Uint64 GetStagingTextureLocationOffset(const TextureDesc& TexDesc,
         Offset += AlignUp(MipInfo.MipSize, Alignment);
     }
 
-    if (ArraySlice == TexDesc.ArraySize)
+    if (ArraySlice == TexDesc.GetArraySize())
     {
         VERIFY(LocationX == 0 && LocationY == 0 && LocationZ == 0,
                "Staging buffer size is requested: location must be (0,0,0).");
@@ -1910,6 +1909,112 @@ String GetPipelineShadingRateFlagsString(PIPELINE_SHADING_RATE_FLAGS Flags)
         }
     }
     return Result;
+}
+
+TextureSparseProperties GetTextureSparsePropertiesForStandardBlocks(const TextureDesc& TexDesc)
+{
+    constexpr Uint32 SparseBlockSize = 64 << 10;
+    const auto&      FmtAttribs      = GetTextureFormatAttribs(TexDesc.Format);
+    const Uint32     BytesPerBlock   = FmtAttribs.GetElementSize();
+    VERIFY_EXPR(IsPowerOfTwo(BytesPerBlock));
+    VERIFY_EXPR(BytesPerBlock >= 1 && BytesPerBlock <= 16);
+    VERIFY_EXPR(TexDesc.Is2D() || TexDesc.Is3D());
+
+    TextureSparseProperties Props{};
+
+    if (TexDesc.Is3D())
+    {
+        //  | Texel size  |   Block shape   |
+        //  |-------------|-----------------|
+        //  |     8-Bit   |   64 x 32 x 32  |
+        //  |    16-Bit   |   32 x 32 x 32  |
+        //  |    32-Bit   |   32 x 32 x 16  |
+        //  |    64-Bit   |   32 x 16 x 16  |
+        //  |   128-Bit   |   16 x 16 x 16  |
+        Props.TileSize[0] = BytesPerBlock >= 16 ? 16 : (BytesPerBlock > 1 ? 32 : 64);
+        Props.TileSize[1] = BytesPerBlock >= 8 ? 16 : 32;
+        Props.TileSize[2] = BytesPerBlock >= 4 ? 16 : 32;
+    }
+    else if (TexDesc.SampleCount > 1)
+    {
+        //  | Texel size  |  Block shape 2x  |  Block shape 4x  |  Block shape 8x  |  Block shape 16x  |
+        //  |-------------|------------------|------------------|------------------|-------------------|
+        //  |     8-Bit   |   128 x 256 x 1  |   128 x 128 x 1  |   64 x 128 x 1   |    64 x 64 x 1    |
+        //  |    16-Bit   |   128 x 128 x 1  |   128 x  64 x 1  |   64 x  64 x 1   |    64 x 32 x 1    |
+        //  |    32-Bit   |    64 x 128 x 1  |    64 x  64 x 1  |   32 x  64 x 1   |    32 x 32 x 1    |
+        //  |    64-Bit   |    64 x  64 x 1  |    64 x  32 x 1  |   32 x  32 x 1   |    32 x 16 x 1    |
+        //  |   128-Bit   |    32 x  64 x 1  |    32 x  32 x 1  |   16 x  32 x 1   |    16 x 16 x 1    |
+        VERIFY_EXPR(IsPowerOfTwo(TexDesc.SampleCount));
+        Props.TileSize[0] = 128;
+        Props.TileSize[1] = 256;
+        Props.TileSize[2] = 1;
+        for (Uint32 i = 0, BPB = BytesPerBlock * TexDesc.SampleCount / 2; (1u << i) < BPB; ++i)
+        {
+            Props.TileSize[1 - (i & 1)] /= 2;
+        }
+    }
+    else
+    {
+        //  | Texel size  |   Block shape   |
+        //  |-------------|-----------------|
+        //  |     8-Bit   |  256 x 256 x 1  |
+        //  |    16-Bit   |  256 x 128 x 1  |
+        //  |    32-Bit   |  128 x 128 x 1  |
+        //  |    64-Bit   |  128 x  64 x 1  |
+        //  |   128-Bit   |   64 x  64 x 1  |
+        Props.TileSize[0] = 256;
+        Props.TileSize[1] = 256;
+        Props.TileSize[2] = 1;
+        for (Uint32 i = 0; (1u << i) < BytesPerBlock; ++i)
+        {
+            Props.TileSize[1 - (i & 1)] /= 2;
+        }
+    }
+
+    const auto BytesPerTile =
+        (Props.TileSize[0] / FmtAttribs.BlockWidth) *
+        (Props.TileSize[1] / FmtAttribs.BlockHeight) *
+        Props.TileSize[2] * TexDesc.SampleCount * BytesPerBlock;
+    VERIFY_EXPR(BytesPerTile == SparseBlockSize);
+
+    const auto TexDepth  = TexDesc.Type == RESOURCE_DIM_TEX_3D ? TexDesc.Depth : 1u;
+    const auto ArraySize = TexDesc.Type == RESOURCE_DIM_TEX_3D ? 1u : TexDesc.ArraySize;
+
+    Uint64 SliceSize = 0;
+    bool   IsMipTail = false;
+    for (Uint32 Mip = 0; Mip < TexDesc.MipLevels; ++Mip)
+    {
+        const auto Width  = std::max(1u, TexDesc.Width >> Mip);
+        const auto Height = std::max(1u, TexDesc.Height >> Mip);
+        const auto Depth  = std::max(1u, TexDepth >> Mip);
+
+        if (!IsMipTail && Width < Props.TileSize[0] && Height < Props.TileSize[1] && (Depth == 1 || Depth < Props.TileSize[2]))
+        {
+            Props.FirstMipInTail = Mip;
+            Props.MipTailOffset  = SliceSize;
+            IsMipTail            = true;
+        }
+
+        if (IsMipTail)
+        {
+            Props.MipTailSize += Width * Height * Depth * BytesPerBlock;
+        }
+        else
+        {
+            const auto XTiles = (Width + Props.TileSize[0] - 1) / Props.TileSize[0];
+            const auto YTiles = (Height + Props.TileSize[1] - 1) / Props.TileSize[1];
+            const auto ZTiles = (Depth + Props.TileSize[2] - 1) / Props.TileSize[2];
+            SliceSize += (XTiles * YTiles * ZTiles) * SparseBlockSize;
+        }
+    }
+
+    Props.MipTailSize   = AlignUp(Props.MipTailSize, SparseBlockSize);
+    Props.MipTailStride = SliceSize + Props.MipTailSize;
+    Props.MemorySize    = Props.MipTailStride * ArraySize;
+    Props.BlockSize     = SparseBlockSize;
+    Props.Flags         = SPARSE_TEXTURE_FLAG_NONE;
+
+    return Props;
 }
 
 } // namespace Diligent

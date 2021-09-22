@@ -48,6 +48,7 @@
 #include "TopLevelASVk.h"
 #include "ShaderBindingTableVk.h"
 #include "PipelineResourceSignature.h"
+#include "DeviceMemoryVk.h"
 #include "CommandQueueVk.h"
 #include "DeviceContextVk.h"
 
@@ -73,6 +74,7 @@ class BottomLevelASVkImpl;
 class TopLevelASVkImpl;
 class ShaderBindingTableVkImpl;
 class PipelineResourceSignatureVkImpl;
+class DeviceMemoryVkImpl;
 
 class FixedBlockMemoryAllocator;
 
@@ -103,6 +105,7 @@ struct EngineVkImplTraits
     using ShaderBindingTableInterface        = IShaderBindingTableVk;
     using PipelineResourceSignatureInterface = IPipelineResourceSignature;
     using CommandQueueInterface              = ICommandQueueVk;
+    using DeviceMemoryInterface              = IDeviceMemoryVk;
 
     using RenderDeviceImplType              = RenderDeviceVkImpl;
     using DeviceContextImplType             = DeviceContextVkImpl;
@@ -123,6 +126,7 @@ struct EngineVkImplTraits
     using TopLevelASImplType                = TopLevelASVkImpl;
     using ShaderBindingTableImplType        = ShaderBindingTableVkImpl;
     using PipelineResourceSignatureImplType = PipelineResourceSignatureVkImpl;
+    using DeviceMemoryImplType              = DeviceMemoryVkImpl;
 
     using BuffViewObjAllocatorType = FixedBlockMemoryAllocator;
     using TexViewObjAllocatorType  = FixedBlockMemoryAllocator;

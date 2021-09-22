@@ -71,7 +71,7 @@ inline GLenum TypeToGLType(VALUE_TYPE Value)
 
 inline GLenum UsageToGLUsage(const BufferDesc& Desc)
 {
-    static_assert(USAGE_NUM_USAGES == 5, "Please update this function to handle the new usage type");
+    static_assert(USAGE_NUM_USAGES == 6, "Please update this function to handle the new usage type");
 
     // http://www.informit.com/articles/article.aspx?p=2033340&seqNum=2
     // https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/glBufferData.xml
@@ -91,8 +91,8 @@ inline GLenum UsageToGLUsage(const BufferDesc& Desc)
                 return GL_STATIC_READ;
             else
                 return GL_STATIC_COPY;
-
-        default: UNEXPECTED( "Unknown usage" ); return 0;
+        case USAGE_SPARSE: UNEXPECTED( "USAGE_SPARSE is not supported" ); return 0;
+        default:           UNEXPECTED( "Unknown usage" ); return 0;
             // clang-format on
     }
 }

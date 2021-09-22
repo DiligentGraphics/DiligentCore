@@ -44,6 +44,7 @@
 #include "QueryD3D11Impl.hpp"
 #include "RenderPassD3D11Impl.hpp"
 #include "FramebufferD3D11Impl.hpp"
+#include "DeviceMemoryD3D11Impl.hpp"
 
 #include "D3D11TypeConversions.hpp"
 #include "EngineMemory.h"
@@ -85,6 +86,27 @@ RenderDeviceD3D11Impl::RenderDeviceD3D11Impl(IReferenceCounters*          pRefCo
         case D3D_FEATURE_LEVEL_10_0: m_DeviceInfo.APIVersion = {10, 0}; break;
         default: UNEXPECTED("Unexpected D3D feature level");
     }
+
+#ifdef DILIGENT_DEVELOPMENT
+#    define CHECK_D3D11_DEVICE_VERSION(Version)               \
+        if (CComQIPtr<ID3D11Device##Version>{m_pd3d11Device}) \
+            m_MaxD3D11DeviceVersion = Version;
+
+#    if D3D11_VERSION >= 1
+    CHECK_D3D11_DEVICE_VERSION(1)
+#    endif
+#    if D3D11_VERSION >= 2
+    CHECK_D3D11_DEVICE_VERSION(2)
+#    endif
+#    if D3D11_VERSION >= 3
+    CHECK_D3D11_DEVICE_VERSION(3)
+#    endif
+#    if D3D11_VERSION >= 4
+    CHECK_D3D11_DEVICE_VERSION(4)
+#    endif
+
+#    undef CHECK_D3D11_DEVICE_VERSION
+#endif
 
     // Initialize device features
     m_DeviceInfo.Features = EnableDeviceFeatures(m_AdapterInfo.Features, EngineCI.Features);
@@ -150,6 +172,15 @@ void RenderDeviceD3D11Impl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
         if (SUCCEEDED(hr) && QualityLevels > 0)
             TexFormatInfo.SampleCounts |= SampleCount;
     }
+    /*
+    D3D11_FEATURE_DATA_FORMAT_SUPPORT2 FormatSupport2;
+    FormatSupport2.InFormat          = DXGIFormat;
+    FormatSupport2.OutFormatSupport2 = 0;
+    if (SUCCEEDED(m_pd3d11Device->CheckFeatureSupport(D3D11_FEATURE_FORMAT_SUPPORT2, &FormatSupport2, sizeof(FormatSupport2))))
+    {
+        TexFormatInfo.SparseMemoryCompatible = (FormatSupport2.OutFormatSupport2 & D3D11_FORMAT_SUPPORT2_TILED) == D3D11_FORMAT_SUPPORT2_TILED;
+    }
+    // AZ TODO: SparseMemoryMSAACompatible*/
 }
 
 IMPLEMENT_QUERY_INTERFACE(RenderDeviceD3D11Impl, IID_RenderDeviceD3D11, TRenderDeviceBase)
@@ -317,6 +348,11 @@ void RenderDeviceD3D11Impl::CreatePipelineResourceSignature(const PipelineResour
     CreatePipelineResourceSignature(Desc, ppSignature, SHADER_TYPE_UNKNOWN, false);
 }
 
+void RenderDeviceD3D11Impl::CreateDeviceMemory(const DeviceMemoryCreateInfo& CreateInfo, IDeviceMemory** ppMemory)
+{
+    CreateDeviceMemoryImpl(ppMemory, CreateInfo);
+}
+
 void RenderDeviceD3D11Impl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
                                                             IPipelineResourceSignature**         ppSignature,
                                                             SHADER_TYPE                          ShaderStages,
@@ -333,6 +369,15 @@ void RenderDeviceD3D11Impl::IdleGPU()
     {
         pImmediateCtx->WaitForIdle();
     }
+}
+
+TextureFormatSparseInfo RenderDeviceD3D11Impl::GetTextureFormatSparseInfo(TEXTURE_FORMAT     TexFormat,
+                                                                          RESOURCE_DIMENSION Dimension) const
+{
+    TextureFormatSparseInfo Info;
+    Info.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS | BIND_RENDER_TARGET | BIND_DEPTH_STENCIL;
+    // AZ TODO
+    return Info;
 }
 
 } // namespace Diligent

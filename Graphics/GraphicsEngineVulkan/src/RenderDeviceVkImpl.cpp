@@ -44,6 +44,7 @@
 #include "TopLevelASVkImpl.hpp"
 #include "ShaderBindingTableVkImpl.hpp"
 #include "PipelineResourceSignatureVkImpl.hpp"
+#include "DeviceMemoryVkImpl.hpp"
 #include "CommandQueueVkImpl.hpp"
 
 #include "VulkanTypeConversions.hpp"
@@ -695,6 +696,11 @@ void RenderDeviceVkImpl::CreatePipelineResourceSignature(const PipelineResourceS
     CreatePipelineResourceSignatureImpl(ppSignature, Desc, ShaderStages, IsDeviceInternal);
 }
 
+void RenderDeviceVkImpl::CreateDeviceMemory(const DeviceMemoryCreateInfo& CreateInfo, IDeviceMemory** ppMemory)
+{
+    CreateDeviceMemoryImpl(ppMemory, CreateInfo);
+}
+
 std::vector<uint32_t> RenderDeviceVkImpl::ConvertCmdQueueIdsToQueueFamilies(Uint64 CommandQueueMask) const
 {
     std::bitset<MAX_COMMAND_QUEUES> QueueFamilyBits{};
@@ -720,6 +726,82 @@ HardwareQueueIndex RenderDeviceVkImpl::GetQueueFamilyIndex(SoftwareQueueIndex Cm
 {
     const auto& CmdQueue = GetCommandQueue(SoftwareQueueIndex{CmdQueueInd});
     return HardwareQueueIndex{CmdQueue.GetQueueFamilyIndex()};
+}
+
+TextureFormatSparseInfo RenderDeviceVkImpl::GetTextureFormatSparseInfo(TEXTURE_FORMAT TexFormat, RESOURCE_DIMENSION Dimension) const
+{
+    // AZ TODO
+    return {};
+}
+
+TextureFormatDimensions RenderDeviceVkImpl::GetTextureFormatDimensions(const TextureDesc& TexDesc) const
+{
+    if (!(TexDesc.Usage == USAGE_IMMUTABLE || TexDesc.Usage == USAGE_DEFAULT || TexDesc.Usage == USAGE_SPARSE))
+    {
+        LOG_ERROR_MESSAGE("Supported usage are: IMMUTABLE, DEFAULT, SPARSE");
+        return {};
+    }
+
+    auto        vkPhysicalDevice = m_PhysicalDevice->GetVkDeviceHandle();
+    const auto& ExtFeatures      = m_LogicalVkDevice->GetEnabledExtFeatures();
+    const auto& FmtAttribs       = GetTextureFormatAttribs(TexDesc.Format);
+
+    const bool ImageView2DSupported =
+        (TexDesc.Type == RESOURCE_DIM_TEX_3D && ExtFeatures.HasPortabilitySubset) ?
+        ExtFeatures.PortabilitySubset.imageView2DOn3DImage == VK_TRUE :
+        true;
+
+    VkImageType        ImgType = VK_IMAGE_TYPE_2D;
+    VkImageCreateFlags Flags   = 0;
+
+    if (TexDesc.Is1D())
+        ImgType = VK_IMAGE_TYPE_1D;
+    else if (TexDesc.Is2D())
+        ImgType = VK_IMAGE_TYPE_2D;
+    else if (TexDesc.Type == RESOURCE_DIM_TEX_3D)
+    {
+        ImgType = VK_IMAGE_TYPE_3D;
+        if (ImageView2DSupported)
+            Flags |= VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT;
+    }
+
+    auto Usage = BindFlagsToVkImageUsage(TexDesc.BindFlags,
+                                         (TexDesc.MiscFlags & MISC_TEXTURE_FLAG_MEMORYLESS) != 0,
+                                         ExtFeatures.FragmentDensityMap.fragmentDensityMap != VK_FALSE);
+
+    if (TexDesc.Type == RESOURCE_DIM_TEX_CUBE || TexDesc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
+        Flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+    if (FmtAttribs.IsTypeless)
+        Flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT; // Specifies that the image can be used to create a
+                                                     // VkImageView with a different format from the image.
+    if (TexDesc.Usage == USAGE_SPARSE)
+    {
+        Flags |= VK_IMAGE_CREATE_SPARSE_BINDING_BIT | VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT;
+        Flags |= (TexDesc.MiscFlags & MISC_TEXTURE_FLAG_SPARSE_ALIASING) != 0 ? VK_IMAGE_CREATE_SPARSE_ALIASED_BIT : 0;
+    }
+
+    VkImageFormatProperties Props{};
+
+    auto err =
+        vkGetPhysicalDeviceImageFormatProperties(vkPhysicalDevice,
+                                                 TexFormatToVkFormat(TexDesc.Format),
+                                                 ImgType,
+                                                 VK_IMAGE_TILING_OPTIMAL,
+                                                 Usage,
+                                                 Flags,
+                                                 &Props);
+    if (err != VK_SUCCESS)
+        return {};
+
+    TextureFormatDimensions Result;
+    Result.MaxWidth      = Props.maxExtent.width;
+    Result.MaxHeight     = Props.maxExtent.height;
+    Result.MaxDepth      = Props.maxExtent.depth;
+    Result.MaxArraySize  = Props.maxArrayLayers;
+    Result.MaxMipLevels  = Props.maxMipLevels;
+    Result.SampleBits    = static_cast<Uint32>(Props.sampleCounts);
+    Result.MaxMemorySize = Props.maxResourceSize;
+    return Result;
 }
 
 } // namespace Diligent

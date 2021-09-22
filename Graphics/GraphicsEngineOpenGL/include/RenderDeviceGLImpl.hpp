@@ -166,6 +166,17 @@ public:
     /// Implementation of IRenderDevice::IdleGPU() in OpenGL backend.
     virtual void DILIGENT_CALL_TYPE IdleGPU() override final;
 
+    /// Implementation of IRenderDevice::CreateDeviceMemory() in OpenGL backend.
+    virtual void DILIGENT_CALL_TYPE CreateDeviceMemory(const DeviceMemoryCreateInfo& CreateInfo,
+                                                       IDeviceMemory**               ppMemory) override final;
+
+    /// Implementation of IRenderDevice::GetTextureFormatSparseInfo() in OpenGL backend.
+    virtual TextureFormatSparseInfo DILIGENT_CALL_TYPE GetTextureFormatSparseInfo(TEXTURE_FORMAT     TexFormat,
+                                                                                  RESOURCE_DIMENSION Dimension) const override final
+    {
+        return {};
+    }
+
     FBOCache& GetFBOCache(GLContext::NativeGLContextType Context);
     void      OnReleaseTexture(ITexture* pTexture);
 

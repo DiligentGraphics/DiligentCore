@@ -51,6 +51,9 @@ DILIGENT_BEGIN_INTERFACE(ITextureMtl, ITexture)
     /// For a staging texture, this will be a pointer to a MTLStorageModeShared buffer (MTLBuffer).
     /// For all other texture types, this will be a pointer to Metal texture object (MTLTexture).
     VIRTUAL id<MTLResource> METHOD(GetMtlResource)(THIS) CONST PURE;
+
+    /// AZ TODO
+    VIRTUAL id<MTLHeap> METHOD(GetMtlHeap)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -60,7 +63,8 @@ DILIGENT_END_INTERFACE
 
 // clang-format off
 
-#    define ITextureMtl_GetMtlResource(This) CALL_IFACE_METHOD(TextureMtl, GetMtlResource,This)
+#    define ITextureMtl_GetMtlResource(This) CALL_IFACE_METHOD(TextureMtl, GetMtlResource, This)
+#    define ITextureMtl_GetMtlHeap(This)     CALL_IFACE_METHOD(TextureMtl, GetMtlHeap,     This)
 
 // clang-format ons
 #endif

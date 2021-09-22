@@ -16,6 +16,7 @@ set(INCLUDE
     include/d3dx12_win.h
     include/DescriptorHeap.hpp
     include/DeviceContextD3D12Impl.hpp
+    include/DeviceMemoryD3D12Impl.hpp
     include/EngineD3D12ImplTraits.hpp
     include/D3D12DynamicHeap.hpp
     include/FenceD3D12Impl.hpp
@@ -50,6 +51,7 @@ set(INTERFACE
     interface/BufferViewD3D12.h
     interface/CommandQueueD3D12.h
     interface/DeviceContextD3D12.h
+    interface/DeviceMemoryD3D12.h
     interface/EngineFactoryD3D12.h
     interface/FenceD3D12.h
     interface/PipelineStateD3D12.h
@@ -77,6 +79,7 @@ set(SRC
     src/D3D12Utils.cpp
     src/DescriptorHeap.cpp
     src/DeviceContextD3D12Impl.cpp
+    src/DeviceMemoryD3D12Impl.cpp
     src/D3D12DynamicHeap.cpp
     src/EngineFactoryD3D12.cpp
     src/FenceD3D12Impl.cpp

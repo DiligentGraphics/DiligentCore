@@ -44,6 +44,7 @@
 #include "GenerateMips.hpp"
 #include "DXCompiler.hpp"
 #include "RootSignature.hpp"
+#include "NVApiLoader.hpp"
 
 
 // The macros below are only defined in Win SDK 19041+ and are missing in 17763
@@ -154,6 +155,14 @@ public:
                                          SHADER_TYPE                          ShaderStages,
                                          bool                                 IsDeviceInternal);
 
+    /// Implementation of IRenderDevice::CreateDeviceMemory() in Direct3D12 backend.
+    virtual void DILIGENT_CALL_TYPE CreateDeviceMemory(const DeviceMemoryCreateInfo& CreateInfo,
+                                                       IDeviceMemory**               ppMemory) override final;
+
+    /// Implementation of IRenderDevice::GetTextureFormatSparseInfo() in Direct3D12 backend.
+    virtual TextureFormatSparseInfo DILIGENT_CALL_TYPE GetTextureFormatSparseInfo(TEXTURE_FORMAT     TexFormat,
+                                                                                  RESOURCE_DIMENSION Dimension) const override final;
+
     /// Implementation of IRenderDeviceD3D12::GetD3D12Device().
     virtual ID3D12Device* DILIGENT_CALL_TYPE GetD3D12Device() override final { return m_pd3d12Device; }
 
@@ -255,6 +264,16 @@ public:
         return *m_QueryMgrs[CmdQueueInd];
     }
 
+    bool IsNvApiEnabled() const
+    {
+        return m_NVApi.IsLoaded();
+    }
+
+    ID3D12Heap* GetDummyNVApiHeap() const
+    {
+        return m_pNVApiHeap;
+    }
+
 private:
     virtual void TestTextureFormat(TEXTURE_FORMAT TexFormat) override final;
     void         FreeCommandContext(PooledCommandContext&& Ctx);
@@ -290,6 +309,9 @@ private:
 
     // Each command queue needs its own query manager to avoid race conditions.
     std::vector<std::unique_ptr<QueryManagerD3D12>> m_QueryMgrs;
+
+    NVApiLoader         m_NVApi;
+    CComPtr<ID3D12Heap> m_pNVApiHeap;
 
 #ifdef DILIGENT_DEVELOPMENT
     Uint32 m_MaxD3D12DeviceVersion = 0;

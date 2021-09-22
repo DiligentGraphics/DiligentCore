@@ -75,7 +75,7 @@ TextureBaseGL::TextureBaseGL(IReferenceCounters*        pRefCounters,
         StagingBuffName += '\'';
         StagingBufferDesc.Name = StagingBuffName.c_str();
 
-        StagingBufferDesc.Size           = GetStagingTextureSubresourceOffset(m_Desc, m_Desc.ArraySize, 0, PBOOffsetAlignment);
+        StagingBufferDesc.Size           = GetStagingTextureSubresourceOffset(m_Desc, m_Desc.GetArraySize(), 0, PBOOffsetAlignment);
         StagingBufferDesc.Usage          = USAGE_STAGING;
         StagingBufferDesc.CPUAccessFlags = TexDesc.CPUAccessFlags;
 
@@ -379,12 +379,12 @@ void TextureBaseGL::CreateViewInternal(const struct TextureViewDesc& OrigViewDes
         {
             // clang-format off
             bool bIsFullTextureView =
-                ViewDesc.TextureDim      == m_Desc.Type &&
-                ViewDesc.Format          == GetDefaultTextureViewFormat(m_Desc.Format, ViewDesc.ViewType, m_Desc.BindFlags) &&
-                ViewDesc.MostDetailedMip == 0 &&
-                ViewDesc.NumMipLevels    == m_Desc.MipLevels &&
-                ViewDesc.FirstArraySlice == 0 &&
-                ViewDesc.NumArraySlices  == m_Desc.ArraySize;
+                ViewDesc.TextureDim               == m_Desc.Type &&
+                ViewDesc.Format                   == GetDefaultTextureViewFormat(m_Desc.Format, ViewDesc.ViewType, m_Desc.BindFlags) &&
+                ViewDesc.MostDetailedMip          == 0 &&
+                ViewDesc.NumMipLevels             == m_Desc.MipLevels &&
+                ViewDesc.FirstArrayOrDepthSlice() == 0 &&
+                ViewDesc.NumArrayOrDepthSlices()  == m_Desc.ArraySizeOrDepth();
             // clang-format on
 
             pViewOGL = NEW_RC_OBJ(TexViewAllocator, "TextureViewGLImpl instance", TextureViewGLImpl, bIsDefaultView ? this : nullptr)(
@@ -445,6 +445,10 @@ void TextureBaseGL::CreateViewInternal(const struct TextureViewDesc& OrigViewDes
                     default: UNEXPECTED("Unsupported texture view type");
                 }
 
+                // In OpenGL ES this function allowed as extension and may be not supported
+                if (glTextureView == nullptr)
+                    LOG_ERROR_AND_THROW("glTextureView is not supported");
+
                 glTextureView(pViewOGL->GetHandle(), GLViewTarget, m_GlTexture, GLViewFormat, ViewDesc.MostDetailedMip, ViewDesc.NumMipLevels, ViewDesc.FirstArraySlice, NumLayers);
                 CHECK_GL_ERROR_AND_THROW("Failed to create texture view");
                 pViewOGL->SetBindTarget(GLViewTarget);
@@ -453,8 +457,8 @@ void TextureBaseGL::CreateViewInternal(const struct TextureViewDesc& OrigViewDes
         else if (ViewDesc.ViewType == TEXTURE_VIEW_UNORDERED_ACCESS)
         {
             // clang-format off
-            VERIFY(ViewDesc.NumArraySlices == 1 ||
-                   m_Desc.Type == RESOURCE_DIM_TEX_3D && ViewDesc.NumDepthSlices == std::max(m_Desc.Depth >> ViewDesc.MostDetailedMip, 1U) ||
+            VERIFY(ViewDesc.NumArrayOrDepthSlices() == 1 ||
+                   (m_Desc.Type == RESOURCE_DIM_TEX_3D && ViewDesc.NumDepthSlices == std::max(m_Desc.Depth >> ViewDesc.MostDetailedMip, 1U)) ||
                    ViewDesc.NumArraySlices == m_Desc.ArraySize,
                    "Only single array/depth slice or the whole texture can be bound as UAV in OpenGL.");
             // clang-format on

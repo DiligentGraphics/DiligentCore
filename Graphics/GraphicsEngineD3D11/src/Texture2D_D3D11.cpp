@@ -49,17 +49,21 @@ Texture2D_D3D11::Texture2D_D3D11(IReferenceCounters*        pRefCounters,
     }
 // clang-format on
 {
-    auto D3D11TexFormat      = TexFormatToDXGI_Format(m_Desc.Format, m_Desc.BindFlags);
-    auto D3D11BindFlags      = BindFlagsToD3D11BindFlags(m_Desc.BindFlags);
-    auto D3D11CPUAccessFlags = CPUAccessFlagsToD3D11CPUAccessFlags(m_Desc.CPUAccessFlags);
-    auto D3D11Usage          = UsageToD3D11Usage(m_Desc.Usage);
-    auto MiscFlags           = MiscTextureFlagsToD3D11Flags(m_Desc.MiscFlags);
+    const auto D3D11TexFormat      = TexFormatToDXGI_Format(m_Desc.Format, m_Desc.BindFlags);
+    auto       D3D11BindFlags      = BindFlagsToD3D11BindFlags(m_Desc.BindFlags);
+    const auto D3D11CPUAccessFlags = CPUAccessFlagsToD3D11CPUAccessFlags(m_Desc.CPUAccessFlags);
+    const auto D3D11Usage          = UsageToD3D11Usage(m_Desc.Usage);
+    auto       MiscFlags           = MiscTextureFlagsToD3D11Flags(m_Desc.MiscFlags);
 
     if (MiscFlags & D3D11_RESOURCE_MISC_GENERATE_MIPS)
         D3D11BindFlags |= D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
 
     if (m_Desc.Type == RESOURCE_DIM_TEX_CUBE || m_Desc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
         MiscFlags |= D3D11_RESOURCE_MISC_TEXTURECUBE;
+
+    if (m_Desc.Usage == USAGE_SPARSE)
+        MiscFlags |= D3D11_RESOURCE_MISC_TILED;
+
     DXGI_SAMPLE_DESC D3D11SampleDesc = {m_Desc.SampleCount, 0};
 
     // clang-format off
@@ -84,15 +88,29 @@ Texture2D_D3D11::Texture2D_D3D11(IReferenceCounters*        pRefCounters,
     auto* pd3d11Device = pRenderDeviceD3D11->GetD3D11Device();
 
     CComPtr<ID3D11Texture2D> ptex2D;
-    HRESULT                  hr = pd3d11Device->CreateTexture2D(&Tex2DDesc, D3D11InitData.size() ? D3D11InitData.data() : nullptr, &ptex2D);
-    CHECK_D3D_RESULT_THROW(hr, "Failed to create the Direct3D11 Texture2D");
-    m_pd3d11Texture = std::move(ptex2D);
+#ifdef DILIGENT_ENABLE_D3D_NVAPI
+    if (IsUsedNVApi())
+    {
+        if (NvAPI_D3D11_CreateTiledTexture2DArray(pd3d11Device, &Tex2DDesc, nullptr, &ptex2D) != NVAPI_OK)
+            LOG_ERROR_AND_THROW("Failed to create the Direct3D11 Texture2D using NVApi");
+        m_pd3d11Texture = std::move(ptex2D);
+    }
+    else
+#endif
+    {
+        auto hr = pd3d11Device->CreateTexture2D(&Tex2DDesc, D3D11InitData.size() ? D3D11InitData.data() : nullptr, &ptex2D);
+        CHECK_D3D_RESULT_THROW(hr, "Failed to create the Direct3D11 Texture2D");
+        m_pd3d11Texture = std::move(ptex2D);
+    }
 
     if (*m_Desc.Name != 0)
     {
-        hr = m_pd3d11Texture->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen(m_Desc.Name)), m_Desc.Name);
+        auto hr = m_pd3d11Texture->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen(m_Desc.Name)), m_Desc.Name);
         DEV_CHECK_ERR(SUCCEEDED(hr), "Failed to set texture name");
     }
+
+    if (m_Desc.Usage == USAGE_SPARSE)
+        InitSparseProperties();
 }
 
 namespace
@@ -130,6 +148,15 @@ public:
         TexDesc.CPUAccessFlags = D3D11CPUAccessFlagsToCPUAccessFlags(D3D11TexDesc.CPUAccessFlags);
         TexDesc.MiscFlags      = D3D11MiscFlagsToMiscTextureFlags(D3D11TexDesc.MiscFlags);
 
+        if (D3D11TexDesc.MiscFlags & D3D11_RESOURCE_MISC_TILED)
+        {
+            VERIFY_EXPR(TexDesc.Usage == USAGE_DEFAULT);
+            TexDesc.Usage = USAGE_SPARSE;
+
+            // In Direct3D11 sparse resources is always resident and aliased
+            TexDesc.MiscFlags |= MISC_TEXTURE_FLAG_SPARSE_ALIASING;
+        }
+
         return TexDesc;
     }
 
@@ -157,6 +184,9 @@ Texture2D_D3D11::Texture2D_D3D11(IReferenceCounters*        pRefCounters,
 {
     m_pd3d11Texture = pd3d11Texture;
     SetState(InitialState);
+
+    if (m_Desc.Usage == USAGE_SPARSE)
+        InitSparseProperties();
 }
 
 Texture2D_D3D11::~Texture2D_D3D11()

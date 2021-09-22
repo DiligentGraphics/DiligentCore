@@ -116,4 +116,8 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
                                           const VulkanUtilities::VulkanPhysicalDevice::ExtensionProperties& ExtProps,
                                           DEVICE_FEATURE_STATE                                              OptionalState = DEVICE_FEATURE_STATE_ENABLED);
 
+SPARSE_TEXTURE_FLAGS VkSparseImageFormatFlagsToSparseTextureFlags(VkSparseImageFormatFlags Flags);
+
+VkImageUsageFlags BindFlagsToVkImageUsage(BIND_FLAGS Flags, bool IsMemoryless, bool FragDensityMapInsteadOfShadingRate);
+
 } // namespace Diligent

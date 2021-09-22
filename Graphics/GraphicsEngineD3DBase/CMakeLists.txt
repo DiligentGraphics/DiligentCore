@@ -2,6 +2,8 @@ cmake_minimum_required (VERSION 3.10)
 
 project(Diligent-GraphicsEngineD3DBase CXX)
 
+set(DILIGENT_NVAPI_PATH "" CACHE PATH "Path to NVAPI to enable D3D11/D3D12 extensions")
+
 set(INCLUDE
     include/D3DCommonTypeConversions.hpp
     include/D3DErrors.hpp
@@ -16,6 +18,7 @@ set(INCLUDE
     include/ShaderResources.hpp
     include/ShaderVariableD3D.hpp
     include/SwapChainD3DBase.hpp
+    include/NVApiLoader.hpp
 )
 
 set(INTERFACE
@@ -115,4 +118,16 @@ if(MSVC)
         # executable path instead
         set(VS_D3D_COMPILER_PATH "\"$(VC_ExecutablePath_x64_${ARCH_SUFFIX})\\D3Dcompiler_47.dll\"" CACHE INTERNAL "D3Dcompiler_47.dll path")
     endif()
+endif()
+
+
+if(EXISTS "${DILIGENT_NVAPI_PATH}/nvapi.h")
+    message(STATUS "Found NVApi with D3D11 extensions")
+    if(${CMAKE_SIZEOF_VOID_P} EQUAL 8)
+        target_link_libraries(Diligent-GraphicsEngineD3DBase PUBLIC "${DILIGENT_NVAPI_PATH}/amd64/nvapi64.lib") # AZ TODO: make private ?
+    else()
+        target_link_libraries(Diligent-GraphicsEngineD3DBase PUBLIC "${DILIGENT_NVAPI_PATH}/x86/nvapi.lib")
+    endif()
+    target_include_directories(Diligent-GraphicsEngineD3DBase PUBLIC ${DILIGENT_NVAPI_PATH})
+    target_compile_definitions(Diligent-GraphicsEngineD3DBase PUBLIC DILIGENT_ENABLE_D3D_NVAPI)
 endif()

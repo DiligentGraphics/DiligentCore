@@ -10,6 +10,7 @@ set(INCLUDE
     include/CommandQueueVkImpl.hpp
     include/DescriptorPoolManager.hpp
     include/DeviceContextVkImpl.hpp
+    include/DeviceMemoryVkImpl.hpp
     include/EngineVkImplTraits.hpp
     include/FenceVkImpl.hpp
     include/FramebufferVkImpl.hpp
@@ -62,6 +63,7 @@ set(INTERFACE
     interface/BufferViewVk.h
     interface/CommandQueueVk.h
     interface/DeviceContextVk.h
+    interface/DeviceMemoryVk.h
     interface/EngineFactoryVk.h
     interface/FenceVk.h
     interface/FramebufferVk.h
@@ -88,6 +90,7 @@ set(SRC
     src/CommandQueueVkImpl.cpp
     src/DescriptorPoolManager.cpp
     src/DeviceContextVkImpl.cpp
+    src/DeviceMemoryVkImpl.cpp
     src/EngineFactoryVk.cpp
     src/FenceVkImpl.cpp
     src/FramebufferVkImpl.cpp

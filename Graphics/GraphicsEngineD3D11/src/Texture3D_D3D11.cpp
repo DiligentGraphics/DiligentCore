@@ -53,7 +53,10 @@ Texture3D_D3D11::Texture3D_D3D11(IReferenceCounters*        pRefCounters,
     const auto D3D11BindFlags      = BindFlagsToD3D11BindFlags(m_Desc.BindFlags);
     const auto D3D11CPUAccessFlags = CPUAccessFlagsToD3D11CPUAccessFlags(m_Desc.CPUAccessFlags);
     const auto D3D11Usage          = UsageToD3D11Usage(m_Desc.Usage);
-    const auto MiscFlags           = MiscTextureFlagsToD3D11Flags(m_Desc.MiscFlags);
+    auto       MiscFlags           = MiscTextureFlagsToD3D11Flags(m_Desc.MiscFlags);
+
+    if (m_Desc.Usage == USAGE_SPARSE)
+        MiscFlags |= D3D11_RESOURCE_MISC_TILED;
 
     // clang-format off
     D3D11_TEXTURE3D_DESC Tex3DDesc =
@@ -85,6 +88,9 @@ Texture3D_D3D11::Texture3D_D3D11(IReferenceCounters*        pRefCounters,
         hr = m_pd3d11Texture->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen(m_Desc.Name)), m_Desc.Name);
         DEV_CHECK_ERR(SUCCEEDED(hr), "Failed to set texture name");
     }
+
+    if (m_Desc.Usage == USAGE_SPARSE)
+        InitSparseProperties();
 }
 
 namespace
@@ -122,6 +128,15 @@ public:
         TexDesc.CPUAccessFlags = D3D11CPUAccessFlagsToCPUAccessFlags(D3D11TexDesc.CPUAccessFlags);
         TexDesc.MiscFlags      = D3D11MiscFlagsToMiscTextureFlags(D3D11TexDesc.MiscFlags);
 
+        if (D3D11TexDesc.MiscFlags & D3D11_RESOURCE_MISC_TILED)
+        {
+            VERIFY_EXPR(TexDesc.Usage == USAGE_DEFAULT);
+            TexDesc.Usage = USAGE_SPARSE;
+
+            // In Direct3D11 sparse resources is always resident and aliased
+            TexDesc.MiscFlags |= MISC_TEXTURE_FLAG_SPARSE_ALIASING;
+        }
+
         return TexDesc;
     }
 
@@ -149,6 +164,9 @@ Texture3D_D3D11::Texture3D_D3D11(IReferenceCounters*        pRefCounters,
 {
     m_pd3d11Texture = pd3d11Texture;
     SetState(InitialState);
+
+    if (m_Desc.Usage == USAGE_SPARSE)
+        InitSparseProperties();
 }
 
 void Texture3D_D3D11::CreateSRV(const TextureViewDesc& SRVDesc, ID3D11ShaderResourceView** ppD3D11SRV)

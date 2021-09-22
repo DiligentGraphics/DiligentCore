@@ -51,6 +51,7 @@
 #include "TopLevelAS.h"
 #include "ShaderBindingTable.h"
 #include "PipelineResourceSignature.h"
+#include "DeviceMemory.h"
 
 #include "DepthStencilState.h"
 #include "RasterizerState.h"
@@ -297,6 +298,18 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
                                                          IPipelineResourceSignature**            ppSignature) PURE;
 
 
+    /// Creates a device memory object.
+    
+    /// \param [in]  CreateInfo - Device memory create info, see Diligent::DeviceMemoryCreateInfo for details.
+    /// \param [out] ppMemory   - Address of the memory location where the pointer to the
+    ///                           device memory interface will be stored.
+    ///                           The function calls AddRef(), so that the new object will have
+    ///                           one reference.
+    VIRTUAL void METHOD(CreateDeviceMemory)(THIS_
+                                            const DeviceMemoryCreateInfo REF CreateInfo,
+                                            IDeviceMemory**                  ppMemory) PURE;
+
+
     /// Returns the device information, see Diligent::RenderDeviceInfo for details.
     VIRTUAL const RenderDeviceInfo REF METHOD(GetDeviceInfo)(THIS) CONST PURE;
 
@@ -328,6 +341,16 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     /// \remarks This method must be externally synchronized.
     VIRTUAL const TextureFormatInfoExt REF METHOD(GetTextureFormatInfoExt)(THIS_
                                                                            TEXTURE_FORMAT TexFormat) PURE;
+    
+    /// AZ TODO
+    /// Used fields: Type, Format, SampleCount, BindFlags, Usage, SparseFlags
+    VIRTUAL TextureFormatDimensions METHOD(GetTextureFormatDimensions)(THIS_
+                                                                       const TextureDesc REF TexDesc) CONST PURE;
+
+    /// AZ TODO
+    VIRTUAL TextureFormatSparseInfo METHOD(GetTextureFormatSparseInfo)(THIS_
+                                                                       TEXTURE_FORMAT     TexFormat,
+                                                                       RESOURCE_DIMENSION Dimension) CONST PURE;
 
     /// Purges device release queues and releases all stale resources.
     /// This method is automatically called by ISwapChain::Present() of the primary swap chain.
@@ -377,10 +400,13 @@ DILIGENT_END_INTERFACE
 #    define IRenderDevice_CreateTLAS(This, ...)                      CALL_IFACE_METHOD(RenderDevice, CreateTLAS,                      This, __VA_ARGS__)
 #    define IRenderDevice_CreateSBT(This, ...)                       CALL_IFACE_METHOD(RenderDevice, CreateSBT,                       This, __VA_ARGS__)
 #    define IRenderDevice_CreatePipelineResourceSignature(This, ...) CALL_IFACE_METHOD(RenderDevice, CreatePipelineResourceSignature, This, __VA_ARGS__)
+#    define IRenderDevice_CreateDeviceMemory(This, ...)              CALL_IFACE_METHOD(RenderDevice, CreateDeviceMemory,              This, __VA_ARGS__)
 #    define IRenderDevice_GetAdapterInfo(This)                       CALL_IFACE_METHOD(RenderDevice, GetAdapterInfo,                  This)
 #    define IRenderDevice_GetDeviceInfo(This)                        CALL_IFACE_METHOD(RenderDevice, GetDeviceInfo,                   This)
 #    define IRenderDevice_GetTextureFormatInfo(This, ...)            CALL_IFACE_METHOD(RenderDevice, GetTextureFormatInfo,            This, __VA_ARGS__)
 #    define IRenderDevice_GetTextureFormatInfoExt(This, ...)         CALL_IFACE_METHOD(RenderDevice, GetTextureFormatInfoExt,         This, __VA_ARGS__)
+#    define IRenderDevice_GetTextureFormatDimensions(This, ...)      CALL_IFACE_METHOD(RenderDevice, GetTextureFormatDimensions,      This, __VA_ARGS__)
+#    define IRenderDevice_GetTextureFormatSparseInfo(This, ...)      CALL_IFACE_METHOD(RenderDevice, GetTextureFormatSparseInfo,      This, __VA_ARGS__)
 #    define IRenderDevice_ReleaseStaleResources(This, ...)           CALL_IFACE_METHOD(RenderDevice, ReleaseStaleResources,           This, __VA_ARGS__)
 #    define IRenderDevice_IdleGPU(This)                              CALL_IFACE_METHOD(RenderDevice, IdleGPU,                         This)
 #    define IRenderDevice_GetEngineFactory(This)                     CALL_IFACE_METHOD(RenderDevice, GetEngineFactory,                This)

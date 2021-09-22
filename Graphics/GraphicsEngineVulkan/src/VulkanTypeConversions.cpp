@@ -1936,6 +1936,7 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
     INIT_FEATURE(VertexPipelineUAVWritesAndAtomics, vkFeatures.vertexPipelineStoresAndAtomics);
     INIT_FEATURE(PixelUAVWritesAndAtomics,          vkFeatures.fragmentStoresAndAtomics);
     INIT_FEATURE(TextureUAVExtendedFormats,         vkFeatures.shaderStorageImageExtendedFormats);
+    INIT_FEATURE(SparseMemory,                      vkFeatures.sparseBinding && (vkFeatures.sparseResidencyBuffer || vkFeatures.sparseResidencyImage2D)); // requires support for resident resources
     // clang-format on
 
     const auto& MeshShaderFeats = ExtFeatures.MeshShader;
@@ -2012,10 +2013,71 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
 #endif
 
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(DeviceFeatures) == 38, "Did you add a new feature to DeviceFeatures? Please handle its satus here (if necessary).");
+    static_assert(sizeof(DeviceFeatures) == 39, "Did you add a new feature to DeviceFeatures? Please handle its satus here (if necessary).");
 #endif
 
     return Features;
+}
+
+SPARSE_TEXTURE_FLAGS VkSparseImageFormatFlagsToSparseTextureFlags(VkSparseImageFormatFlags Flags)
+{
+    SPARSE_TEXTURE_FLAGS Result = SPARSE_TEXTURE_FLAG_NONE;
+    while (Flags != 0)
+    {
+        auto FlagBit = static_cast<VkSparseImageFormatFlagBits>(ExtractLSB(Flags));
+        static_assert(SPARSE_TEXTURE_FLAG_LAST == (1u << 2), "This function must be updated to handle new sparse texture flag");
+        switch (FlagBit)
+        {
+            // clang-format off
+            case VK_SPARSE_IMAGE_FORMAT_SINGLE_MIPTAIL_BIT:         Result |= SPARSE_TEXTURE_FLAG_SINGLE_MIPTAIL;         break;
+            case VK_SPARSE_IMAGE_FORMAT_ALIGNED_MIP_SIZE_BIT:       Result |= SPARSE_TEXTURE_FLAG_ALIGNED_MIP_SIZE;       break;
+            case VK_SPARSE_IMAGE_FORMAT_NONSTANDARD_BLOCK_SIZE_BIT: Result |= SPARSE_TEXTURE_FLAG_NONSTANDARD_BLOCK_SIZE; break;
+            // clang-format on
+            default:
+                UNEXPECTED("Unexpected sparse image format flag");
+        }
+    }
+    return Result;
+}
+
+VkImageUsageFlags BindFlagsToVkImageUsage(BIND_FLAGS Flags, bool IsMemoryless, bool FragDensityMapInsteadOfShadingRate)
+{
+    VkImageUsageFlags Result = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    while (Flags != BIND_NONE)
+    {
+        auto FlagBit = ExtractLSB(Flags);
+        static_assert(BIND_FLAGS_LAST == (1u << 11), "This function must be updated to handle new bind flag");
+        switch (FlagBit)
+        {
+            case BIND_RENDER_TARGET:
+                Result |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+                break;
+            case BIND_DEPTH_STENCIL:
+                // VK_IMAGE_USAGE_TRANSFER_DST_BIT is required for vkCmdClearDepthStencilImage()
+                Result |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+                break;
+            case BIND_UNORDERED_ACCESS:
+                Result |= VK_IMAGE_USAGE_STORAGE_BIT;
+                break;
+            case BIND_SHADER_RESOURCE:
+                Result |= VK_IMAGE_USAGE_SAMPLED_BIT;
+                break;
+            case BIND_INPUT_ATTACHMENT:
+                Result |= VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
+                break;
+            case BIND_SHADING_RATE:
+                Result |= (FragDensityMapInsteadOfShadingRate ? VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT : VK_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR);
+                break;
+            default:
+                UNEXPECTED("Unexpected bind flag");
+        }
+    }
+    if (IsMemoryless)
+    {
+        Result &= (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT);
+        Result |= VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
+    }
+    return Result;
 }
 
 } // namespace Diligent

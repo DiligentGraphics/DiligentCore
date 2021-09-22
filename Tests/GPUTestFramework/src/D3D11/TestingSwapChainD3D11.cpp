@@ -30,6 +30,7 @@
 
 #include "RenderDeviceD3D11.h"
 #include "DeviceContextD3D11.h"
+#include "TextureD3D11.h"
 
 namespace Diligent
 {
@@ -100,11 +101,20 @@ TestingSwapChainD3D11::TestingSwapChainD3D11(IReferenceCounters*  pRefCounters,
     }
 }
 
-void TestingSwapChainD3D11::TakeSnapshot(ITexture* pBlitFrom)
+void TestingSwapChainD3D11::TakeSnapshot(ITexture* pCopyFrom)
 {
-    VERIFY(pBlitFrom == nullptr, "Not implemented");
+    ID3D11Texture2D* pSrcRT = m_pd3d11RenderTarget;
+    if (pCopyFrom != nullptr)
+    {
+        RefCntAutoPtr<ITextureD3D11> pSrcTexD3D11{pCopyFrom, IID_TextureD3D11};
+        VERIFY_EXPR(pSrcTexD3D11->GetState() == RESOURCE_STATE_COPY_SOURCE);
+        VERIFY_EXPR(GetDesc().Width == pSrcTexD3D11->GetDesc().Width);
+        VERIFY_EXPR(GetDesc().Height == pSrcTexD3D11->GetDesc().Height);
+        VERIFY_EXPR(GetDesc().ColorBufferFormat == pSrcTexD3D11->GetDesc().Format);
+        pSrcRT = static_cast<ID3D11Texture2D*>(pSrcTexD3D11->GetD3D11Texture());
+    }
 
-    m_pd3d11Context->CopyResource(m_pd3d11StagingTex, m_pd3d11RenderTarget);
+    m_pd3d11Context->CopyResource(m_pd3d11StagingTex, pSrcRT);
     D3D11_MAPPED_SUBRESOURCE MappedData;
 
     auto hr = m_pd3d11Context->Map(m_pd3d11StagingTex, 0, D3D11_MAP_READ, 0, &MappedData);

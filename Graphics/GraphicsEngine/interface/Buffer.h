@@ -70,6 +70,16 @@ DILIGENT_TYPED_ENUM(BUFFER_MODE, Uint8)
     BUFFER_MODE_NUM_MODES
 };
 
+DILIGENT_TYPED_ENUM(MISC_BUFFER_FLAGS, Uint8)
+{
+    MISC_BUFFER_FLAG_NONE          = 0,
+
+    /// For sparse buffer allow to bind same memory range in different buffer ranges
+    /// or in different sparse buffers.
+    MISC_BUFFER_FLAG_SPARSE_ALIASING = 1u << 0,
+};
+DEFINE_FLAG_ENUM_OPERATORS(MISC_BUFFER_FLAGS)
+
 /// Buffer description
 struct BufferDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
@@ -81,7 +91,8 @@ struct BufferDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// The following bind flags are allowed:
     /// Diligent::BIND_VERTEX_BUFFER, Diligent::BIND_INDEX_BUFFER, Diligent::BIND_UNIFORM_BUFFER,
     /// Diligent::BIND_SHADER_RESOURCE, Diligent::BIND_STREAM_OUTPUT, Diligent::BIND_UNORDERED_ACCESS,
-    /// Diligent::BIND_INDIRECT_DRAW_ARGS, Diligent::BIND_RAY_TRACING
+    /// Diligent::BIND_INDIRECT_DRAW_ARGS, Diligent::BIND_RAY_TRACING.
+    /// Use SparseMemoryProperties::BufferBindFlags to get valid bind flags for sparse buffer.
     BIND_FLAGS BindFlags            DEFAULT_INITIALIZER(BIND_NONE);
 
     /// Buffer usage, see Diligent::USAGE for details
@@ -93,6 +104,9 @@ struct BufferDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
     /// Buffer mode, see Diligent::BUFFER_MODE
     BUFFER_MODE Mode                DEFAULT_INITIALIZER(BUFFER_MODE_UNDEFINED);
+    
+    /// Miscellaneous flags, see Diligent::MISC_BUFFER_FLAGS for details.
+    MISC_BUFFER_FLAGS MiscFlags     DEFAULT_INITIALIZER(MISC_BUFFER_FLAG_NONE);
 
     /// Buffer element stride, in bytes.
 
@@ -197,6 +211,22 @@ struct BufferData
 #endif
 };
 typedef struct BufferData BufferData;
+
+/// Describes the sparse buffer properties
+struct BufferSparseProperties
+{
+    /// Texture address space size.
+    Uint64  MemorySize  DEFAULT_INITIALIZER(0);
+
+    /// Size of the sparse block.
+    /// Offset in the buffer, memory offset and memory size which is used in sparse binding command
+    /// must be multiple of block size.
+    /// In Direct3D11 and Direct3D12 this is always 64Kb.
+    /// In Vulkan this is not documented, but usually it is 64Kb.
+    Uint32  BlockSize  DEFAULT_INITIALIZER(0);
+};
+typedef struct BufferSparseProperties BufferSparseProperties;
+
 
 #define DILIGENT_INTERFACE_NAME IBuffer
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
@@ -313,6 +343,9 @@ DILIGENT_BEGIN_INTERFACE(IBuffer, IDeviceObject)
     VIRTUAL void METHOD(InvalidateMappedRange)(THIS_
                                                Uint64 StartOffset,
                                                Uint64 Size) PURE;
+
+    /// Returns the buffer sparse memory properties
+    VIRTUAL BufferSparseProperties METHOD(GetSparseProperties)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -332,6 +365,7 @@ DILIGENT_END_INTERFACE
 #    define IBuffer_GetMemoryProperties(This)        CALL_IFACE_METHOD(Buffer, GetMemoryProperties,   This)
 #    define IBuffer_FlushMappedRange(This, ...)      CALL_IFACE_METHOD(Buffer, FlushMappedRange,      This, __VA_ARGS__)
 #    define IBuffer_InvalidateMappedRange(This, ...) CALL_IFACE_METHOD(Buffer, InvalidateMappedRange, This, __VA_ARGS__)
+#    define IBuffer_GetSparseProperties(This)        CALL_IFACE_METHOD(Buffer, GetSparseProperties,   This)
 
 // clang-format on
 

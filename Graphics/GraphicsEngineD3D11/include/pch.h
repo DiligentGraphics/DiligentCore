@@ -50,7 +50,7 @@
 
 #if PLATFORM_WIN32
 #    ifndef D3D11_VERSION
-#        define D3D11_VERSION 1
+#        define D3D11_VERSION 2 // AZ TODO
 #    endif
 #elif PLATFORM_UNIVERSAL_WINDOWS
 #    ifndef D3D11_VERSION

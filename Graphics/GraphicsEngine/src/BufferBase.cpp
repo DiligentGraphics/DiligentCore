@@ -122,6 +122,20 @@ void ValidateBufferDesc(const BufferDesc& Desc, const IRenderDevice* pDevice) no
             }
             break;
 
+        case USAGE_SPARSE:
+        {
+            const auto& SparseMem = pDevice->GetAdapterInfo().SparseMemory;
+            VERIFY_BUFFER(Features.SparseMemory, "sparse buffer requires SparseMemory feature");
+            VERIFY_BUFFER(Desc.CPUAccessFlags == CPU_ACCESS_NONE, "sparse buffers can't have any CPU access flags set.");
+            VERIFY_BUFFER(Desc.Size <= SparseMem.ResourceSpaceSize, "sparse buffer size (", Desc.Size, ") must not be greater than (", SparseMem.ResourceSpaceSize, ")");
+            VERIFY_BUFFER(SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_BUFFER, "sparse buffer requires SPARSE_MEMORY_CAP_FLAG_BUFFER capability");
+            if ((Desc.MiscFlags & MISC_BUFFER_FLAG_SPARSE_ALIASING) != 0)
+                VERIFY_BUFFER(SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_ALIASED, "SPARSE_RESOURCE_FLAG_ALIASED flag requires SPARSE_MEMORY_CAP_FLAG_ALIASED capability");
+            VERIFY_BUFFER((Desc.BindFlags & ~SparseMem.BufferBindFlags) == 0,
+                          "the following bind flags are not allowed for a sparse buffer: ", GetBindFlagsString(Desc.BindFlags & ~SparseMem.BufferBindFlags, ", "), '.');
+            break;
+        }
+
         default:
             UNEXPECTED("Unknown usage");
     }
@@ -138,6 +152,14 @@ void ValidateBufferDesc(const BufferDesc& Desc, const IRenderDevice* pDevice) no
                                        "with required flags, which can be shared between contexts.");
         }
     }
+
+    if (Desc.Usage != USAGE_SPARSE)
+    {
+        VERIFY_BUFFER(MemoryInfo.MaxMemoryAllocation == 0 || Desc.Size <= MemoryInfo.MaxMemoryAllocation,
+                      "non-sparse buffer size (", Desc.Size, ") must not be greater than maximum allocation size (", MemoryInfo.MaxMemoryAllocation, ")");
+        VERIFY_BUFFER((Desc.MiscFlags & MISC_BUFFER_FLAG_SPARSE_ALIASING) == 0,
+                      "MiscFlags must not have MISC_BUFFER_FLAG_SPARSE_ALIASING if usege is not USAGE_SPARSE");
+    }
 }
 
 void ValidateBufferInitData(const BufferDesc& Desc, const BufferData* pBuffData) noexcept(false)
@@ -149,6 +171,9 @@ void ValidateBufferInitData(const BufferDesc& Desc, const BufferData* pBuffData)
 
     if (Desc.Usage == USAGE_DYNAMIC && HasInitialData)
         LOG_BUFFER_ERROR_AND_THROW("initial data must be null for dynamic buffers.");
+
+    if (Desc.Usage == USAGE_SPARSE && HasInitialData)
+        LOG_BUFFER_ERROR_AND_THROW("initial data must be null for sparse buffers.");
 
     if (Desc.Usage == USAGE_STAGING)
     {

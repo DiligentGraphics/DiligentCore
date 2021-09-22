@@ -2,8 +2,6 @@ cmake_minimum_required (VERSION 3.10)
 
 project(Diligent-GraphicsEngineD3D11 CXX)
 
-set(DILIGENT_NVAPI_PATH "" CACHE PATH "Path to NVAPI to enable D3D11 extensions")
-
 set(INCLUDE 
     include/BufferD3D11Impl.hpp
     include/BufferViewD3D11Impl.hpp
@@ -11,9 +9,9 @@ set(INCLUDE
     include/D3D11TypeConversions.hpp
     include/D3D11TypeDefinitions.h
     include/DeviceContextD3D11Impl.hpp
+    include/DeviceMemoryD3D11Impl.hpp
     include/DisjointQueryPool.hpp
     include/EngineD3D11ImplTraits.hpp
-    include/NVApiLoader.hpp
     include/pch.h
     include/FenceD3D11Impl.hpp
     include/FramebufferD3D11Impl.hpp
@@ -42,6 +40,7 @@ set(INTERFACE
     interface/BufferD3D11.h
     interface/BufferViewD3D11.h
     interface/DeviceContextD3D11.h
+    interface/DeviceMemoryD3D11.h
     interface/EngineFactoryD3D11.h
     interface/FenceD3D11.h
     interface/PipelineStateD3D11.h
@@ -62,6 +61,7 @@ set(SRC
     src/CommandListD3D11Impl.cpp
     src/D3D11TypeConversions.cpp
     src/DeviceContextD3D11Impl.cpp
+    src/DeviceMemoryD3D11Impl.cpp
     src/EngineFactoryD3D11.cpp
     src/FenceD3D11Impl.cpp
     src/FramebufferD3D11Impl.cpp
@@ -111,17 +111,6 @@ target_include_directories(Diligent-GraphicsEngineD3D11-static
 PRIVATE
     include
 )
-
-if(EXISTS "${DILIGENT_NVAPI_PATH}/nvapi.h")
-    message(STATUS "Found NVApi with D3D11 extensions")
-    if(${CMAKE_SIZEOF_VOID_P} EQUAL 8)
-        target_link_libraries(Diligent-GraphicsEngineD3D11-static PRIVATE "${DILIGENT_NVAPI_PATH}/amd64/nvapi64.lib")
-    else()
-        target_link_libraries(Diligent-GraphicsEngineD3D11-static PRIVATE "${DILIGENT_NVAPI_PATH}/x86/nvapi.lib")
-    endif()
-    target_include_directories(Diligent-GraphicsEngineD3D11-static PRIVATE ${DILIGENT_NVAPI_PATH})
-    target_compile_definitions(Diligent-GraphicsEngineD3D11-static PRIVATE DILIGENT_ENABLE_D3D11_NVAPI)
-endif()
 
 target_link_libraries(Diligent-GraphicsEngineD3D11-static
 PRIVATE

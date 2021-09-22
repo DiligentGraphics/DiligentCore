@@ -34,6 +34,7 @@
 #include "TextureBase.hpp"
 #include "TextureViewD3D12Impl.hpp"
 #include "D3D12ResourceBase.hpp"
+#include "RenderDeviceD3D12Impl.hpp"
 
 namespace Diligent
 {
@@ -80,8 +81,13 @@ public:
     const D3D12_PLACED_SUBRESOURCE_FOOTPRINT& GetStagingFootprint(Uint32 Subresource)
     {
         VERIFY_EXPR(m_StagingFootprints != nullptr);
-        VERIFY_EXPR(Subresource <= (Uint32{m_Desc.MipLevels} * (m_Desc.Type == RESOURCE_DIM_TEX_3D ? 1 : Uint32{m_Desc.ArraySize})));
+        VERIFY_EXPR(Subresource <= (m_Desc.MipLevels * m_Desc.GetArraySize()));
         return m_StagingFootprints[Subresource];
+    }
+
+    bool IsUsedNVApi() const
+    {
+        return m_Desc.Usage == USAGE_SPARSE && m_Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY && m_pDevice->GetDummyNVApiHeap() != nullptr;
     }
 
 protected:
@@ -92,6 +98,8 @@ protected:
     void CreateRTV(const TextureViewDesc& RTVDesc, D3D12_CPU_DESCRIPTOR_HANDLE RTVHandle);
     void CreateDSV(const TextureViewDesc& DSVDesc, D3D12_CPU_DESCRIPTOR_HANDLE DSVHandle);
     void CreateUAV(const TextureViewDesc& UAVDesc, D3D12_CPU_DESCRIPTOR_HANDLE UAVHandle);
+
+    void InitSparseProperties();
 
     D3D12_PLACED_SUBRESOURCE_FOOTPRINT* m_StagingFootprints = nullptr;
 };

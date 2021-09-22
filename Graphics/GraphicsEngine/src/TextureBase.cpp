@@ -31,14 +31,23 @@
 
 #include "DeviceContext.h"
 #include "GraphicsAccessories.hpp"
+#include "Align.hpp"
 
 namespace Diligent
 {
 
+#define LOG_TEXTURE_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Texture '", (Desc.Name ? Desc.Name : ""), "': ", ##__VA_ARGS__)
+#define VERIFY_TEXTURE(Expr, ...)                     \
+    do                                                \
+    {                                                 \
+        if (!(Expr))                                  \
+        {                                             \
+            LOG_TEXTURE_ERROR_AND_THROW(__VA_ARGS__); \
+        }                                             \
+    } while (false)
+
 void ValidateTextureDesc(const TextureDesc& Desc, const IRenderDevice* pDevice) noexcept(false)
 {
-#define LOG_TEXTURE_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Texture '", (Desc.Name ? Desc.Name : ""), "': ", ##__VA_ARGS__)
-
     const auto& FmtAttribs  = GetTextureFormatAttribs(Desc.Format);
     const auto& AdapterInfo = pDevice->GetAdapterInfo();
     const auto& DeviceInfo  = pDevice->GetDeviceInfo();
@@ -104,11 +113,11 @@ void ValidateTextureDesc(const TextureDesc& Desc, const IRenderDevice* pDevice) 
 #ifdef DILIGENT_DEVELOPMENT
     {
         Uint32 MaxDim = 0;
-        if (Desc.Type == RESOURCE_DIM_TEX_1D || Desc.Type == RESOURCE_DIM_TEX_1D_ARRAY)
+        if (Desc.Is1D())
             MaxDim = Desc.Width;
-        else if (Desc.Type == RESOURCE_DIM_TEX_2D || Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY || Desc.Type == RESOURCE_DIM_TEX_CUBE || Desc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
+        else if (Desc.Is2D())
             MaxDim = std::max(Desc.Width, Desc.Height);
-        else if (Desc.Type == RESOURCE_DIM_TEX_3D)
+        else if (Desc.Is3D())
             MaxDim = std::max(std::max(Desc.Width, Desc.Height), Desc.Depth);
         DEV_CHECK_ERR(MaxDim >= (1U << (Desc.MipLevels - 1)), "Texture '", Desc.Name ? Desc.Name : "", "': Incorrect number of Mip levels (", Desc.MipLevels, ").");
     }
@@ -238,6 +247,58 @@ void ValidateTextureDesc(const TextureDesc& Desc, const IRenderDevice* pDevice) 
                 LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture is not supported.");
         }
     }
+
+    if (Desc.Usage == USAGE_SPARSE)
+    {
+        VERIFY_TEXTURE(pDevice->GetDeviceInfo().Features.SparseMemory, "sparse texture requires SparseMemory feature");
+
+        const auto& SparseMem = pDevice->GetAdapterInfo().SparseMemory;
+
+        if ((Desc.MiscFlags & MISC_TEXTURE_FLAG_SPARSE_ALIASING) != 0)
+            VERIFY_TEXTURE(SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_ALIASED, "SPARSE_RESOURCE_FLAG_ALIASED flag requires SPARSE_MEMORY_CAP_FLAG_ALIASED capability");
+
+        static_assert(RESOURCE_DIM_NUM_DIMENSIONS == 9, "Please update the switch below to handle the new resource dimension type");
+        switch (Desc.Type)
+        {
+            case RESOURCE_DIM_TEX_2D:
+                VERIFY_TEXTURE(SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_TEXTURE_2D,
+                               "2D texture requires SPARSE_MEMORY_CAP_FLAG_TEXTURE_2D capability");
+                break;
+
+            case RESOURCE_DIM_TEX_2D_ARRAY:
+            case RESOURCE_DIM_TEX_CUBE:
+            case RESOURCE_DIM_TEX_CUBE_ARRAY:
+                VERIFY_TEXTURE(SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_TEXTURE_2D,
+                               "2D array or Cube sparse textures requires SPARSE_MEMORY_CAP_FLAG_TEXTURE_2D capability");
+
+                if ((SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_TEXTURE_2D_ARRAY_MIP_TAIL) == 0)
+                {
+                    const auto  Props = GetTextureSparsePropertiesForStandardBlocks(Desc);
+                    const uint2 MipSize{std::max(1u, Desc.Width >> Desc.MipLevels),
+                                        std::max(1u, Desc.Height >> Desc.MipLevels)};
+                    VERIFY_TEXTURE(MipSize.x >= Props.TileSize[0] && MipSize.y >= Props.TileSize[1],
+                                   "2D array or Cube sparse texture with MipLevels (", Desc.MipLevels,
+                                   ") where last mip with dimension (", MipSize.x, ", ", MipSize.y, ") is less than tile size (",
+                                   Props.TileSize[0], "x", Props.TileSize[1], ") requires SPARSE_MEMORY_CAP_FLAG_TEXTURE_2D_ARRAY_MIP_TAIL capability");
+                }
+                break;
+
+            case RESOURCE_DIM_TEX_3D:
+                VERIFY_TEXTURE(SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_TEXTURE_3D,
+                               "3D sparse texture requires SPARSE_MEMORY_CAP_FLAG_TEXTURE_3D capability");
+                break;
+
+            case RESOURCE_DIM_TEX_1D:
+            case RESOURCE_DIM_TEX_1D_ARRAY:
+            default:
+                LOG_TEXTURE_ERROR_AND_THROW("unsupported or unknown texture type used with USAGE_SPARSE");
+        }
+    }
+    else
+    {
+        VERIFY_TEXTURE((Desc.MiscFlags & MISC_TEXTURE_FLAG_SPARSE_ALIASING) == 0,
+                       "MiscFlags must not have MISC_TEXTURE_FLAG_SPARSE_ALIASING if usege is not USAGE_SPARSE");
+    }
 }
 
 
@@ -258,10 +319,7 @@ void ValidateTextureRegion(const TextureDesc& TexDesc, Uint32 MipLevel, Uint32 S
     VERIFY_TEX_PARAMS(Box.MinY < Box.MaxY, "Invalid Y range: ", Box.MinY, "..", Box.MaxY);
     VERIFY_TEX_PARAMS(Box.MinZ < Box.MaxZ, "Invalid Z range: ", Box.MinZ, "..", Box.MaxZ);
 
-    if (TexDesc.Type == RESOURCE_DIM_TEX_1D_ARRAY ||
-        TexDesc.Type == RESOURCE_DIM_TEX_2D_ARRAY ||
-        TexDesc.Type == RESOURCE_DIM_TEX_CUBE ||
-        TexDesc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
+    if (TexDesc.IsArray())
     {
         VERIFY_TEX_PARAMS(Slice < TexDesc.ArraySize, "Array slice (", Slice, ") is out of range [0,", TexDesc.ArraySize - 1, "].");
     }
@@ -386,10 +444,7 @@ void ValidateMapTextureParams(const TextureDesc& TexDesc,
                               const Box*         pMapRegion)
 {
     VERIFY_TEX_PARAMS(MipLevel < TexDesc.MipLevels, "Mip level (", MipLevel, ") is out of allowed range [0, ", TexDesc.MipLevels - 1, "].");
-    if (TexDesc.Type == RESOURCE_DIM_TEX_1D_ARRAY ||
-        TexDesc.Type == RESOURCE_DIM_TEX_2D_ARRAY ||
-        TexDesc.Type == RESOURCE_DIM_TEX_CUBE ||
-        TexDesc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
+    if (TexDesc.IsArray())
     {
         VERIFY_TEX_PARAMS(ArraySlice < TexDesc.ArraySize, "Array slice (", ArraySlice, ") is out of range [0,", TexDesc.ArraySize - 1, "].");
     }
@@ -419,6 +474,21 @@ void ValidatedAndCorrectTextureViewDesc(const TextureDesc& TexDesc, TextureViewD
 
     if (ViewDesc.Format == TEX_FORMAT_UNKNOWN)
         ViewDesc.Format = GetDefaultTextureViewFormat(TexDesc.Format, ViewDesc.ViewType, TexDesc.BindFlags);
+
+    if (TexDesc.IsArray())
+    {
+        if (ViewDesc.FirstArraySlice >= TexDesc.ArraySize)
+            TEX_VIEW_VALIDATION_ERROR("First array slice (", ViewDesc.FirstArraySlice, ") is out of range. The texture has only (", TexDesc.ArraySize, ") slices.");
+
+        if (ViewDesc.NumArraySlices != REMAINING_ARRAY_SLICES && ViewDesc.FirstArraySlice + ViewDesc.NumArraySlices > TexDesc.ArraySize)
+            TEX_VIEW_VALIDATION_ERROR("First array slice (", ViewDesc.FirstArraySlice, ") and number of array slices (", ViewDesc.NumArraySlices,
+                                      ") is out of range. The texture has only (", TexDesc.ArraySize, ") slices.");
+    }
+    else if (!TexDesc.Is3D())
+    {
+        if (ViewDesc.FirstArraySlice != 0)
+            TEX_VIEW_VALIDATION_ERROR("For non-array texture FirstArraySlice must be 0");
+    }
 
     if (ViewDesc.TextureDim == RESOURCE_DIM_UNDEFINED)
     {
@@ -531,52 +601,42 @@ void ValidatedAndCorrectTextureViewDesc(const TextureDesc& TexDesc, TextureViewD
             break;
     }
 
-    if (ViewDesc.TextureDim == RESOURCE_DIM_TEX_CUBE)
+    switch (ViewDesc.TextureDim)
     {
-        if (ViewDesc.ViewType != TEXTURE_VIEW_SHADER_RESOURCE)
-            TEX_VIEW_VALIDATION_ERROR("Unexpected view type: SRV is expected.");
-        if (ViewDesc.NumArraySlices != 6 && ViewDesc.NumArraySlices != 0 && ViewDesc.NumArraySlices != REMAINING_ARRAY_SLICES)
-            TEX_VIEW_VALIDATION_ERROR("Texture cube SRV is expected to have 6 array slices, while ", ViewDesc.NumArraySlices, " is provided.");
-        if (ViewDesc.FirstArraySlice != 0)
-            TEX_VIEW_VALIDATION_ERROR("First slice (", ViewDesc.FirstArraySlice, ") must be 0 for non-array texture cube SRV.");
-    }
-    if (ViewDesc.TextureDim == RESOURCE_DIM_TEX_CUBE_ARRAY)
-    {
-        if (ViewDesc.ViewType != TEXTURE_VIEW_SHADER_RESOURCE)
-            TEX_VIEW_VALIDATION_ERROR("Unexpected view type: SRV is expected.");
-        if (ViewDesc.NumArraySlices != REMAINING_ARRAY_SLICES && (ViewDesc.NumArraySlices % 6) != 0)
-            TEX_VIEW_VALIDATION_ERROR("Number of slices in texture cube array SRV is expected to be multiple of 6. ", ViewDesc.NumArraySlices, " slices is provided.");
-    }
+        case RESOURCE_DIM_TEX_CUBE:
+            if (ViewDesc.ViewType != TEXTURE_VIEW_SHADER_RESOURCE)
+                TEX_VIEW_VALIDATION_ERROR("Unexpected view type: SRV is expected.");
+            if (ViewDesc.NumArraySlices != 6 && ViewDesc.NumArraySlices != 0 && ViewDesc.NumArraySlices != REMAINING_ARRAY_SLICES)
+                TEX_VIEW_VALIDATION_ERROR("Texture cube SRV is expected to have 6 array slices, while ", ViewDesc.NumArraySlices, " is provided.");
+            break;
 
-    if (ViewDesc.TextureDim == RESOURCE_DIM_TEX_1D ||
-        ViewDesc.TextureDim == RESOURCE_DIM_TEX_2D)
-    {
-        if (ViewDesc.FirstArraySlice != 0)
-            TEX_VIEW_VALIDATION_ERROR("First slice (", ViewDesc.FirstArraySlice, ") must be 0 for non-array texture 1D/2D views.");
+        case RESOURCE_DIM_TEX_CUBE_ARRAY:
+            if (ViewDesc.ViewType != TEXTURE_VIEW_SHADER_RESOURCE)
+                TEX_VIEW_VALIDATION_ERROR("Unexpected view type: SRV is expected.");
+            if (ViewDesc.NumArraySlices != REMAINING_ARRAY_SLICES && (ViewDesc.NumArraySlices % 6) != 0)
+                TEX_VIEW_VALIDATION_ERROR("Number of slices in texture cube array SRV is expected to be multiple of 6. ", ViewDesc.NumArraySlices, " slices is provided.");
+            break;
 
-        if (ViewDesc.NumArraySlices != REMAINING_ARRAY_SLICES && ViewDesc.NumArraySlices > 1)
-            TEX_VIEW_VALIDATION_ERROR("Number of slices in the view (", ViewDesc.NumArraySlices, ") must be 1 (or 0) for non-array texture 1D/2D views.");
-    }
-    else if (ViewDesc.TextureDim == RESOURCE_DIM_TEX_1D_ARRAY ||
-             ViewDesc.TextureDim == RESOURCE_DIM_TEX_2D_ARRAY ||
-             ViewDesc.TextureDim == RESOURCE_DIM_TEX_CUBE ||
-             ViewDesc.TextureDim == RESOURCE_DIM_TEX_CUBE_ARRAY)
-    {
-        if (ViewDesc.FirstArraySlice >= TexDesc.ArraySize)
-            TEX_VIEW_VALIDATION_ERROR("First array slice (", ViewDesc.FirstArraySlice, ") exceeds the number of slices in the texture array (", TexDesc.ArraySize, ").");
+        case RESOURCE_DIM_TEX_1D:
+        case RESOURCE_DIM_TEX_2D:
+            if (ViewDesc.NumArraySlices != REMAINING_ARRAY_SLICES && ViewDesc.NumArraySlices > 1)
+                TEX_VIEW_VALIDATION_ERROR("Number of slices in the view (", ViewDesc.NumArraySlices, ") must be 1 (or 0) for non-array texture 1D/2D views.");
+            break;
 
-        if (ViewDesc.NumArraySlices != REMAINING_ARRAY_SLICES && ViewDesc.FirstArraySlice + ViewDesc.NumArraySlices > TexDesc.ArraySize)
-            TEX_VIEW_VALIDATION_ERROR("First slice (", ViewDesc.FirstArraySlice, ") and number of slices in the view (", ViewDesc.NumArraySlices, ") specify more slices than target texture has (", TexDesc.ArraySize, ").");
-    }
-    else if (ViewDesc.TextureDim == RESOURCE_DIM_TEX_3D)
-    {
-        auto MipDepth = TexDesc.Depth >> ViewDesc.MostDetailedMip;
-        if (ViewDesc.FirstDepthSlice + ViewDesc.NumDepthSlices > MipDepth)
-            TEX_VIEW_VALIDATION_ERROR("First slice (", ViewDesc.FirstDepthSlice, ") and number of slices in the view (", ViewDesc.NumDepthSlices, ") specify more slices than target 3D texture mip level has (", MipDepth, ").");
-    }
-    else
-    {
-        UNEXPECTED("Unexpected texture dimension");
+        case RESOURCE_DIM_TEX_1D_ARRAY:
+        case RESOURCE_DIM_TEX_2D_ARRAY:
+            break;
+
+        case RESOURCE_DIM_TEX_3D:
+        {
+            auto MipDepth = std::max(TexDesc.Depth >> ViewDesc.MostDetailedMip, 1u);
+            if (ViewDesc.FirstDepthSlice + ViewDesc.NumDepthSlices > MipDepth)
+                TEX_VIEW_VALIDATION_ERROR("First slice (", ViewDesc.FirstDepthSlice, ") and number of slices in the view (", ViewDesc.NumDepthSlices, ") specify more slices than target 3D texture mip level has (", MipDepth, ").");
+            break;
+        }
+
+        default:
+            UNEXPECTED("Unexpected texture dimension");
     }
 
     if (GetTextureFormatAttribs(ViewDesc.Format).IsTypeless)
@@ -605,14 +665,11 @@ void ValidatedAndCorrectTextureViewDesc(const TextureDesc& TexDesc, TextureViewD
 
     if (ViewDesc.NumArraySlices == 0 || ViewDesc.NumArraySlices == REMAINING_ARRAY_SLICES)
     {
-        if (ViewDesc.TextureDim == RESOURCE_DIM_TEX_1D_ARRAY ||
-            ViewDesc.TextureDim == RESOURCE_DIM_TEX_2D_ARRAY ||
-            ViewDesc.TextureDim == RESOURCE_DIM_TEX_CUBE ||
-            ViewDesc.TextureDim == RESOURCE_DIM_TEX_CUBE_ARRAY)
+        if (TexDesc.IsArray())
             ViewDesc.NumArraySlices = TexDesc.ArraySize - ViewDesc.FirstArraySlice;
         else if (ViewDesc.TextureDim == RESOURCE_DIM_TEX_3D)
         {
-            auto MipDepth           = TexDesc.Depth >> ViewDesc.MostDetailedMip;
+            auto MipDepth           = std::max(TexDesc.Depth >> ViewDesc.MostDetailedMip, 1u);
             ViewDesc.NumDepthSlices = MipDepth - ViewDesc.FirstDepthSlice;
         }
         else

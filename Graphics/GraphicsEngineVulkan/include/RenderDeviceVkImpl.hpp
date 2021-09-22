@@ -145,6 +145,10 @@ public:
                                          SHADER_TYPE                          ShaderStages,
                                          bool                                 IsDeviceInternal);
 
+    /// Implementation of IRenderDevice::CreateDeviceMemory() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE CreateDeviceMemory(const DeviceMemoryCreateInfo& CreateInfo,
+                                                       IDeviceMemory**               ppMemory) override final;
+
     /// Implementation of IRenderDeviceVk::GetVkDevice().
     virtual VkDevice DILIGENT_CALL_TYPE GetVkDevice() override final { return m_LogicalVkDevice->GetVkDevice(); }
 
@@ -201,6 +205,13 @@ public:
 
     /// Implementation of IRenderDevice::ReleaseStaleResources() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE ReleaseStaleResources(bool ForceRelease = false) override final;
+
+    /// Implementation of IRenderDevice::GetTextureFormatSparseInfo() in Vulkan backend.
+    virtual TextureFormatSparseInfo DILIGENT_CALL_TYPE GetTextureFormatSparseInfo(TEXTURE_FORMAT     TexFormat,
+                                                                                  RESOURCE_DIMENSION Dimension) const override final;
+
+    /// Implementation of IRenderDevice::GetTextureFormatDimensions() in Vulkan backend.
+    virtual TextureFormatDimensions DILIGENT_CALL_TYPE GetTextureFormatDimensions(const TextureDesc& TexDesc) const override final;
 
     DescriptorSetAllocation AllocateDescriptorSet(Uint64 CommandQueueMask, VkDescriptorSetLayout SetLayout, const char* DebugName = "")
     {

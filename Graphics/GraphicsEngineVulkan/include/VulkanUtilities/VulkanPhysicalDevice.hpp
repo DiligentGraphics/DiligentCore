@@ -79,6 +79,7 @@ public:
         VkPhysicalDeviceFragmentShadingRatePropertiesKHR    ShadingRate            = {};
         VkPhysicalDeviceFragmentDensityMapPropertiesEXT     FragmentDensityMap     = {};
         VkPhysicalDeviceMultiviewPropertiesKHR              Multiview              = {};
+        VkPhysicalDeviceMaintenance3Properties              Maintenance3           = {};
     };
 
 public:

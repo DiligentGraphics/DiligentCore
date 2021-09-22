@@ -115,6 +115,10 @@ public:
     virtual void DILIGENT_CALL_TYPE CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
                                                                     IPipelineResourceSignature**         ppSignature) override final;
 
+    /// Implementation of IRenderDevice::CreateDeviceMemory() in Direct3D11 backend.
+    virtual void DILIGENT_CALL_TYPE CreateDeviceMemory(const DeviceMemoryCreateInfo& CreateInfo,
+                                                       IDeviceMemory**               ppMemory) override final;
+
     void CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
                                          IPipelineResourceSignature**         ppSignature,
                                          SHADER_TYPE                          ShaderStages,
@@ -147,10 +151,40 @@ public:
     /// Implementation of IRenderDevice::IdleGPU() in Direct3D11 backend.
     virtual void DILIGENT_CALL_TYPE IdleGPU() override final;
 
+    /// Implementation of IRenderDevice::GetTextureFormatSparseInfo() in Direct3D11 backend.
+    virtual TextureFormatSparseInfo DILIGENT_CALL_TYPE GetTextureFormatSparseInfo(TEXTURE_FORMAT     TexFormat,
+                                                                                  RESOURCE_DIMENSION Dimension) const override final;
+
     size_t GetCommandQueueCount() const { return 1; }
     Uint64 GetCommandQueueMask() const { return Uint64{1}; }
 
-    bool IsNvApiEnabled() const { return m_NVApi.IsLoaded(); }
+
+#define GET_D3D11_DEVICE(Version)                                                  \
+    ID3D11Device##Version* GetD3D11Device##Version()                               \
+    {                                                                              \
+        DEV_CHECK_ERR(m_MaxD3D11DeviceVersion >= Version, "ID3D11Device", Version, \
+                      " is not supported. Maximum supported version: ",            \
+                      m_MaxD3D11DeviceVersion);                                    \
+        return static_cast<ID3D11Device##Version*>(m_pd3d11Device.p);              \
+    }
+#if D3D11_VERSION >= 1
+    GET_D3D11_DEVICE(1)
+#endif
+#if D3D11_VERSION >= 2
+    GET_D3D11_DEVICE(2)
+#endif
+#if D3D11_VERSION >= 3
+    GET_D3D11_DEVICE(3)
+#endif
+#if D3D11_VERSION >= 4
+    GET_D3D11_DEVICE(4)
+#endif
+#undef GET_D3D11_DEVICE
+
+    bool IsNvApiEnabled() const
+    {
+        return m_NVApi.IsLoaded();
+    }
 
 private:
     virtual void TestTextureFormat(TEXTURE_FORMAT TexFormat) override final;
@@ -159,6 +193,10 @@ private:
 
     /// D3D11 device
     CComPtr<ID3D11Device> m_pd3d11Device;
+
+#ifdef DILIGENT_DEVELOPMENT
+    Uint32 m_MaxD3D11DeviceVersion = 0;
+#endif
 };
 
 } // namespace Diligent

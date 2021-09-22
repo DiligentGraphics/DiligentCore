@@ -127,6 +127,9 @@ public:
     /// Implementation of ICommandQueueVk::Present().
     virtual VkResult DILIGENT_CALL_TYPE Present(const VkPresentInfoKHR& PresentInfo) override final;
 
+    /// Implementation of ICommandQueueVk::BindSparse().
+    virtual Uint64 DILIGENT_CALL_TYPE BindSparse(const VkBindSparseInfo& InBindInfo) override final;
+
     /// Implementation of ICommandQueueVk::GetVkQueue().
     virtual VkQueue DILIGENT_CALL_TYPE GetVkQueue() override final { return m_VkQueue; }
 

@@ -28,10 +28,10 @@
 /// Definition of the Diligent::IRenderDeviceMtl interface
 
 #include "../../GraphicsEngine/interface/RenderDevice.h"
-#include "RasterizationRateMapMtl.h"
 
 #if PLATFORM_TVOS
 @protocol MTLAccelerationStructure; // Not available in tvOS
+@protocol MTLRasterizationRateMap;  // Not available in tvOS
 #endif
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
@@ -52,6 +52,7 @@ static const INTERFACE_ID IID_RenderDeviceMtl =
 /// Exposes Metal-specific functionality of a render device.
 DILIGENT_BEGIN_INTERFACE(IRenderDeviceMtl, IRenderDevice)
 {
+#ifdef __OBJC__
     /// Returns the pointer to Metal device (MTLDevice).
     VIRTUAL id<MTLDevice> METHOD(GetMtlDevice)(THIS) CONST PURE;
 
@@ -82,17 +83,22 @@ DILIGENT_BEGIN_INTERFACE(IRenderDeviceMtl, IRenderDevice)
                                                    RESOURCE_STATE               InitialState,
                                                    ITopLevelAS**                ppTLAS) API_AVAILABLE(ios(14), macosx(11.0)) API_UNAVAILABLE(tvos) PURE;
 
-#if PLATFORM_MACOS || PLATFORM_IOS
     /// Creates a rasterization rate map from existing Metal resource
     VIRTUAL void METHOD(CreateRasterizationRateMapFromMtlResource)(THIS_
-                                                                   id<MTLRasterizationRateMap> mtlRRM,
-                                                                   IRasterizationRateMapMtl**  ppRRM) API_AVAILABLE(ios(13), macosx(10.15.4)) PURE;
+                                                                   id<MTLRasterizationRateMap>       mtlRRM,
+                                                                   struct IRasterizationRateMapMtl** ppRRM) API_AVAILABLE(ios(13), macosx(10.15.4)) API_UNAVAILABLE(tvos) PURE;
+#endif
 
     /// Creates a rasterization rate map
     VIRTUAL void METHOD(CreateRasterizationRateMap)(THIS_
-                                                    const RasterizationRateMapCreateInfo REF CreateInfo,
-                                                    IRasterizationRateMapMtl**               ppRRM) PURE;
-#endif
+                                                    const struct RasterizationRateMapCreateInfo REF CreateInfo,
+                                                    struct IRasterizationRateMapMtl**               ppRRM) PURE;
+
+    /// AZ TODO
+    VIRTUAL void METHOD(CreateSparseTexture)(THIS_
+                                             const TextureDesc REF TexDesc,
+                                             IDeviceMemory*        pMemory,
+                                             ITexture**            ppTexture) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -110,6 +116,7 @@ DILIGENT_END_INTERFACE
 #    define IRenderDeviceMtl_CreateTLASFromMtlResource(This, ...)                 CALL_IFACE_METHOD(RenderDeviceMtl, CreateTLASFromMtlResource,                 This, __VA_ARGS__)
 #    define IRenderDeviceMtl_CreateRasterizationRateMap(This, ...)                CALL_IFACE_METHOD(RenderDeviceMtl, CreateRasterizationRateMap,                This, __VA_ARGS__)
 #    define IRenderDeviceMtl_CreateRasterizationRateMapFromMtlResource(This, ...) CALL_IFACE_METHOD(RenderDeviceMtl, CreateRasterizationRateMapFromMtlResource, This, __VA_ARGS__)
+#    define IRenderDeviceMtl_CreateSparseTexture(This, ...)                       CALL_IFACE_METHOD(RenderDeviceMtl, CreateSparseTexture,                       This, __VA_ARGS__)
 
 // clang-format on
 

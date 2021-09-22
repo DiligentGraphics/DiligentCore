@@ -166,18 +166,19 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
     // Texture properties
     {
         auto& TexProps{AdapterInfo.Texture};
-        TexProps.MaxTexture1DDimension     = vkDeviceLimits.maxImageDimension1D;
-        TexProps.MaxTexture1DArraySlices   = vkDeviceLimits.maxImageArrayLayers;
-        TexProps.MaxTexture2DDimension     = vkDeviceLimits.maxImageDimension2D;
-        TexProps.MaxTexture2DArraySlices   = vkDeviceLimits.maxImageArrayLayers;
-        TexProps.MaxTexture3DDimension     = vkDeviceLimits.maxImageDimension3D;
-        TexProps.MaxTextureCubeDimension   = vkDeviceLimits.maxImageDimensionCube;
-        TexProps.Texture2DMSSupported      = True;
-        TexProps.Texture2DMSArraySupported = True;
-        TexProps.TextureViewSupported      = True;
-        TexProps.CubemapArraysSupported    = vkFeatures.imageCubeArray;
+        TexProps.MaxTexture1DDimension      = vkDeviceLimits.maxImageDimension1D;
+        TexProps.MaxTexture1DArraySlices    = vkDeviceLimits.maxImageArrayLayers;
+        TexProps.MaxTexture2DDimension      = vkDeviceLimits.maxImageDimension2D;
+        TexProps.MaxTexture2DArraySlices    = vkDeviceLimits.maxImageArrayLayers;
+        TexProps.MaxTexture3DDimension      = vkDeviceLimits.maxImageDimension3D;
+        TexProps.MaxTextureCubeDimension    = vkDeviceLimits.maxImageDimensionCube;
+        TexProps.Texture2DMSSupported       = True;
+        TexProps.Texture2DMSArraySupported  = True;
+        TexProps.TextureViewSupported       = True;
+        TexProps.CubemapArraysSupported     = vkFeatures.imageCubeArray;
+        TexProps.TextureView2DOn3DSupported = vkExtFeatures.HasPortabilitySubset ? vkExtFeatures.PortabilitySubset.imageView2DOn3DImage == VK_TRUE : True;
 #if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(TexProps) == 28, "Did you add a new member to TextureProperites? Please initialize it here.");
+        static_assert(sizeof(TexProps) == 32, "Did you add a new member to TextureProperites? Please initialize it here.");
 #endif
     }
 
@@ -408,12 +409,57 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
 #endif
     }
 
+    // Sparse memory properties
+    if (AdapterInfo.Features.SparseMemory)
+    {
+        const auto& SparseProps     = vkDeviceProps.sparseProperties;
+        auto&       SparseMem       = AdapterInfo.SparseMemory;
+        SparseMem.AddressSpaceSize  = vkDeviceLimits.sparseAddressSpaceSize;
+        SparseMem.ResourceSpaceSize = vkDeviceLimits.sparseAddressSpaceSize; // no way to query
+        SparseMem.StandardBlockSize = 64u << 10;                             // docs: "All currently defined standard sparse image block shapes are 64 KB in size."
+
+        SparseMem.BufferBindFlags =
+            BIND_VERTEX_BUFFER |
+            BIND_INDEX_BUFFER |
+            BIND_UNIFORM_BUFFER |
+            BIND_SHADER_RESOURCE |
+            BIND_UNORDERED_ACCESS |
+            BIND_INDIRECT_DRAW_ARGS |
+            BIND_RAY_TRACING;
+
+        auto SetSparseMemoryCap = [&SparseMem](VkBool32 Feature, SPARSE_MEMORY_CAP_FLAGS Flag) {
+            if (Feature != VK_FALSE)
+                SparseMem.CapFlags |= Flag;
+        };
+        // clang-format off
+        SetSparseMemoryCap(SparseProps.residencyStandard2DBlockShape,            SPARSE_MEMORY_CAP_FLAG_STANDARD_2D_BLOCK_SHAPE  );
+        SetSparseMemoryCap(SparseProps.residencyStandard2DMultisampleBlockShape, SPARSE_MEMORY_CAP_FLAG_STANDARD_2DMS_BLOCK_SHAPE);
+        SetSparseMemoryCap(SparseProps.residencyStandard3DBlockShape,            SPARSE_MEMORY_CAP_FLAG_STANDARD_3D_BLOCK_SHAPE  );
+        SetSparseMemoryCap(SparseProps.residencyAlignedMipSize,                  SPARSE_MEMORY_CAP_FLAG_ALIGNED_MIP_SIZE         );
+        SetSparseMemoryCap(SparseProps.residencyNonResidentStrict,               SPARSE_MEMORY_CAP_FLAG_NON_RESIDENT_STRICT      );
+        SetSparseMemoryCap(vkFeatures.shaderResourceResidency,                   SPARSE_MEMORY_CAP_FLAG_SHADER_RESOURCE_RESIDENCY);
+        SetSparseMemoryCap(vkFeatures.sparseResidencyBuffer,                     SPARSE_MEMORY_CAP_FLAG_BUFFER                   );
+        SetSparseMemoryCap(vkFeatures.sparseResidencyImage2D,                    SPARSE_MEMORY_CAP_FLAG_TEXTURE_2D | SPARSE_MEMORY_CAP_FLAG_TEXTURE_2D_ARRAY_MIP_TAIL);
+        SetSparseMemoryCap(vkFeatures.sparseResidencyImage3D,                    SPARSE_MEMORY_CAP_FLAG_TEXTURE_3D               );
+        SetSparseMemoryCap(vkFeatures.sparseResidency2Samples,                   SPARSE_MEMORY_CAP_FLAG_TEXTURE_2_SAMPLES        );
+        SetSparseMemoryCap(vkFeatures.sparseResidency4Samples,                   SPARSE_MEMORY_CAP_FLAG_TEXTURE_4_SAMPLES        );
+        SetSparseMemoryCap(vkFeatures.sparseResidency8Samples,                   SPARSE_MEMORY_CAP_FLAG_TEXTURE_8_SAMPLES        );
+        SetSparseMemoryCap(vkFeatures.sparseResidency16Samples,                  SPARSE_MEMORY_CAP_FLAG_TEXTURE_16_SAMPLES       );
+        SetSparseMemoryCap(vkFeatures.sparseResidencyAliased,                    SPARSE_MEMORY_CAP_FLAG_ALIASED                  );
+        // clang-format on
+
+#if defined(_MSC_VER) && defined(_WIN64)
+        static_assert(sizeof(SparseMem) == 32, "Did you add a new member to SparseMemoryProperties? Please initialize it here.");
+#endif
+    }
+
     // Set memory properties
     {
         auto& Mem{AdapterInfo.Memory};
-        Mem.LocalMemory       = 0;
-        Mem.HostVisibleMemory = 0;
-        Mem.UnifiedMemory     = 0;
+        Mem.LocalMemory         = 0;
+        Mem.HostVisibleMemory   = 0;
+        Mem.UnifiedMemory       = 0;
+        Mem.MaxMemoryAllocation = vkDeviceExtProps.Maintenance3.maxMemoryAllocationSize;
 
         std::bitset<VK_MAX_MEMORY_HEAPS> DeviceLocalHeap;
         std::bitset<VK_MAX_MEMORY_HEAPS> HostVisibleHeap;
@@ -465,6 +511,10 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
             else if (HostVisibleHeap[heap])
                 Mem.HostVisibleMemory += static_cast<Uint64>(HeapInfo.size);
         }
+
+#if defined(_MSC_VER) && defined(_WIN64)
+        static_assert(sizeof(Mem) == 40, "Did you add a new member to AdapterMemoryInfo? Please initialize it here.");
+#endif
     }
 
     // Set queue info
@@ -702,6 +752,20 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
         vkEnabledFeatures.shaderSampledImageArrayDynamicIndexing  = vkDeviceFeatures.shaderSampledImageArrayDynamicIndexing;
         vkEnabledFeatures.shaderStorageBufferArrayDynamicIndexing = vkDeviceFeatures.shaderStorageBufferArrayDynamicIndexing;
         vkEnabledFeatures.shaderStorageImageArrayDynamicIndexing  = vkDeviceFeatures.shaderStorageImageArrayDynamicIndexing;
+
+        if (EnabledFeatures.SparseMemory)
+        {
+            vkEnabledFeatures.sparseBinding            = VK_TRUE;
+            vkEnabledFeatures.sparseResidency16Samples = vkDeviceFeatures.sparseResidency16Samples;
+            vkEnabledFeatures.sparseResidency2Samples  = vkDeviceFeatures.sparseResidency2Samples;
+            vkEnabledFeatures.sparseResidency4Samples  = vkDeviceFeatures.sparseResidency4Samples;
+            vkEnabledFeatures.sparseResidency8Samples  = vkDeviceFeatures.sparseResidency8Samples;
+            vkEnabledFeatures.sparseResidencyAliased   = vkDeviceFeatures.sparseResidencyAliased;
+            vkEnabledFeatures.sparseResidencyBuffer    = vkDeviceFeatures.sparseResidencyBuffer;
+            vkEnabledFeatures.sparseResidencyImage2D   = vkDeviceFeatures.sparseResidencyImage2D;
+            vkEnabledFeatures.sparseResidencyImage3D   = vkDeviceFeatures.sparseResidencyImage3D;
+            vkEnabledFeatures.shaderResourceResidency  = vkDeviceFeatures.shaderResourceResidency;
+        }
 
         using ExtensionFeatures                    = VulkanUtilities::VulkanPhysicalDevice::ExtensionFeatures;
         const ExtensionFeatures& DeviceExtFeatures = PhysicalDevice->GetExtFeatures();
@@ -1020,7 +1084,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
         }
 
 #if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(Diligent::DeviceFeatures) == 38, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+        static_assert(sizeof(Diligent::DeviceFeatures) == 39, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 #endif
 
         for (Uint32 i = 0; i < EngineCI.DeviceExtensionCount; ++i)

@@ -156,6 +156,9 @@ struct TextureViewDesc DILIGENT_DERIVE(DeviceObjectAttribs)
         Flags              {_Flags                 }
     {}
 
+    constexpr Uint32 FirstArrayOrDepthSlice() const { return FirstArraySlice; }
+    constexpr Uint32 NumArrayOrDepthSlices()  const { return NumArraySlices; }
+
     /// Tests if two structures are equivalent
 
     /// \param [in] RHS - reference to the structure to perform comparison with
@@ -172,10 +175,8 @@ struct TextureViewDesc DILIGENT_DERIVE(DeviceObjectAttribs)
             Format == RHS.Format &&
             MostDetailedMip == RHS.MostDetailedMip &&
             NumMipLevels == RHS.NumMipLevels &&
-            FirstArraySlice == RHS.FirstArraySlice &&
-            FirstDepthSlice == RHS.FirstDepthSlice &&
-            NumArraySlices == RHS.NumArraySlices &&
-            NumDepthSlices == RHS.NumDepthSlices &&
+            FirstArrayOrDepthSlice() == RHS.FirstArrayOrDepthSlice() &&
+            NumArrayOrDepthSlices() == RHS.NumArrayOrDepthSlices() &&
             AccessFlags == RHS.AccessFlags;
     }
 #else

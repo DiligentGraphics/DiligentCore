@@ -65,6 +65,12 @@ DILIGENT_BEGIN_INTERFACE(ICommandQueueVk, ICommandQueue)
     /// Presents the current swap chain image on the screen
     VIRTUAL VkResult METHOD(Present)(THIS_
                                      const VkPresentInfoKHR REF PresentInfo) PURE;
+    
+    /// Submits a sparse bind commands to the internal Vulkan command queue
+
+    /// \return Fence value associated with the submitted sparse bind command
+    VIRTUAL Uint64 METHOD(BindSparse)(THIS_
+                                      const VkBindSparseInfo REF BindInfo) PURE;
 
     /// Returns Vulkan command queue handle. May return VK_NULL_HANDLE if queue is unavailable
     ///
@@ -102,6 +108,7 @@ DILIGENT_END_INTERFACE
 #    define ICommandQueueVk_GetQueueFamilyIndex(This)         CALL_IFACE_METHOD(CommandQueueVk, GetQueueFamilyIndex,    This)
 #    define ICommandQueueVk_EnqueueSignalFence(This, ...)     CALL_IFACE_METHOD(CommandQueueVk, EnqueueSignalFence,     This, __VA_ARGS__)
 #    define ICommandQueueVk_EnqueueSignal(This, ...)          CALL_IFACE_METHOD(CommandQueueVk, EnqueueSignal,          This, __VA_ARGS__)
+#    define ICommandQueueVk_BindSparse(This, ...)             CALL_IFACE_METHOD(CommandQueueVk, BindSparse,             This, __VA_ARGS__)
 
 // clang-format on
 
