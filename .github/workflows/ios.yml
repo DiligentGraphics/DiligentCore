@@ -9,7 +9,7 @@ jobs:
         config: [Debug, Release]
 
     runs-on: macos-latest
-    name: iOS, ${{ matrix.config }}
+    name: MacOS -> iOS, ${{ matrix.config }}
 
     steps:
     - name: Clone repository

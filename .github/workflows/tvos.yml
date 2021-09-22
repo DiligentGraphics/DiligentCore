@@ -9,7 +9,7 @@ jobs:
         config: [Release]
 
     runs-on: macos-latest
-    name: tvOS, ${{ matrix.config }}
+    name: MacOS -> tvOS, ${{ matrix.config }}
 
     steps:
     - name: Clone repository

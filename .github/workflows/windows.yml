@@ -10,7 +10,7 @@ jobs:
         config: [Debug, Release]
 
     runs-on: windows-latest
-    name: Windows 10, ${{ matrix.config }} ${{ matrix.toolset }}
+    name: Win10 -> ${{ matrix.toolset }}, ${{ matrix.config }}
 
     steps:
     - name: Clone repository
@@ -76,7 +76,7 @@ jobs:
         config: [RelWithDebInfo]
 
     runs-on: windows-latest
-    name: Windows 10, ${{ matrix.config }}-DEV ${{ matrix.toolset }}
+    name: Win10 -> ${{ matrix.toolset }}, ${{ matrix.config }}, DEVELOPMENT
 
     steps:
     - name: Clone repository
@@ -121,7 +121,7 @@ jobs:
         config: [Release]
 
     runs-on: windows-latest
-    name: Windows 8.1, ${{ matrix.config }} ${{ matrix.toolset }}
+    name: Win10 -> Win8.1-${{ matrix.toolset }}, ${{ matrix.config }}
 
     steps:
     - name: Clone repository

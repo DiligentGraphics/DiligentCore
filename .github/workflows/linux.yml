@@ -9,7 +9,7 @@ jobs:
         config: [Debug, Release]
 
     runs-on: ubuntu-latest
-    name: Linux x64, GCC 9, ${{ matrix.config }}
+    name: Linux -> x64, GCC 9, ${{ matrix.config }}
 
     steps:
     - name: Clone repository
@@ -61,7 +61,7 @@ jobs:
         config: [Debug, Release]
 
     runs-on: ubuntu-latest
-    name: Linux x64, Clang 10, ${{ matrix.config }}
+    name: Linux -> x64, Clang 10, ${{ matrix.config }}
 
     steps:
     - name: Clone repository
@@ -113,7 +113,7 @@ jobs:
         config: [Debug]
 
     runs-on: ubuntu-latest
-    name: Linux x64, Clang 10 NO_GLSLANG, ${{ matrix.config }}
+    name: Linux -> x64, Clang 10, NO_GLSLANG, ${{ matrix.config }}
 
     steps:
     - name: Clone repository
@@ -150,7 +150,7 @@ jobs:
         config: [Release]
 
     runs-on: ubuntu-latest
-    name: Linux x64, Clang 10 NO_GLSLANG NO_HLSL, ${{ matrix.config }}
+    name: Linux -> x64, Clang 10, NO_GLSLANG NO_HLSL, ${{ matrix.config }}
 
     steps:
     - name: Clone repository

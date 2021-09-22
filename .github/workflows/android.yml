@@ -5,7 +5,7 @@ on: [push, pull_request]
 jobs:
   build-armeabi-v7a:
     runs-on: ubuntu-latest
-    name: Android ARM32
+    name: Linux -> Android-ARM32
 
     steps:
     - name: Clone repository
@@ -28,7 +28,7 @@ jobs:
 
   build-arm64-v8a:
     runs-on: ubuntu-latest
-    name: Android ARM64
+    name: Linux -> Android-ARM64
 
     steps:
     - name: Clone repository

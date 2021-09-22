@@ -9,7 +9,7 @@ jobs:
         config: [Debug, Release]
 
     runs-on: windows-latest
-    name: Emscripten -> Windows 10, ${{ matrix.config }}
+    name: Win10 -> Emscripten, ${{ matrix.config }}
 
     steps:
     - name: Clone repository
@@ -45,7 +45,7 @@ jobs:
         config: [Debug, Release]
 
     runs-on: ubuntu-latest
-    name: Emscripten -> Linux, ${{ matrix.config }}
+    name: Linux -> Emscripten, ${{ matrix.config }}
 
     steps:
       - name: Clone repository
@@ -82,7 +82,7 @@ jobs:
         config: [Debug]
 
     runs-on: macos-latest
-    name: Emscripten -> MacOS, ${{ matrix.config }}
+    name: MacOS -> Emscripten, ${{ matrix.config }}
 
     steps:
     - name: Clone repository

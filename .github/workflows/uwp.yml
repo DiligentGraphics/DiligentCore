@@ -10,7 +10,7 @@ jobs:
         config: [Debug, Release]
 
     runs-on: windows-latest
-    name: UWP, ${{ matrix.config }} ${{ matrix.toolset }}
+    name: Win10 -> UWP-${{ matrix.toolset }}, ${{ matrix.config }} 
 
     steps:
     - name: Clone repository
