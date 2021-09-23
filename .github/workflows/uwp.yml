@@ -23,7 +23,7 @@ jobs:
       shell: bash
       run: |
         cd $GITHUB_WORKSPACE/BuildTools/Scripts/github_actions
-        ./configure_cmake.sh "uwp" "${{runner.workspace}}" ${{ matrix.config }} ${{ matrix.toolset }}
+        ./configure_cmake.sh "uwp" "${{runner.workspace}}" ${{ matrix.toolset }} ${{ matrix.config }} "-DDILIGENT_LOAD_PIX_EVENT_RUNTIME=ON"
 
     - name: Build
       if: success()
