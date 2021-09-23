@@ -412,7 +412,7 @@ TEST(VariableShadingRateTest, RasterRateMapWithRenderPass)
 
             SubpassDesc           Subpass;
             AttachmentReference   RTAttachmentRef = {0, RESOURCE_STATE_RENDER_TARGET};
-            ShadingRateAttachment SRAttachment    = {{1, RESOURCE_STATE_SHADING_RATE}, TileSize, TileSize};
+            ShadingRateAttachment SRAttachment    = {{1, RESOURCE_STATE_SHADING_RATE}, 0, 0}; // tile size is ignored in Metal
 
             Subpass.RenderTargetAttachmentCount = 1;
             Subpass.pRenderTargetAttachments    = &RTAttachmentRef;

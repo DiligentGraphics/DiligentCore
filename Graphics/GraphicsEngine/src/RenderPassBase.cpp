@@ -318,10 +318,38 @@ void ValidateRenderPassDesc(const RenderPassDesc& Desc, IRenderDevice* pDevice) 
                     LOG_RENDER_PASS_ERROR_AND_THROW("the attachment index (", AttchRef.AttachmentIndex, ") of shading rate attachment reference of subpass ", subpass,
                                                     " must be less than the number of attachments (", Desc.AttachmentCount, ").");
                 }
-            }
 
-            if (!Features.VariableRateShading)
-                LOG_RENDER_PASS_ERROR_AND_THROW("subpass ", subpass, " uses a shading rate attachment, but VariableRateShading device feature is not enabled");
+                if (!Features.VariableRateShading)
+                    LOG_RENDER_PASS_ERROR_AND_THROW("subpass ", subpass, " uses a shading rate attachment, but VariableRateShading device feature is not enabled");
+
+                const auto& TileSize = Subpass.pShadingRateAttachment->TileSize;
+                if (TileSize[0] != 0 || TileSize[1] != 0)
+                {
+                    if (TileSize[0] < SRProps.MinTileSize[0] || TileSize[0] > SRProps.MaxTileSize[0])
+                    {
+                        LOG_RENDER_PASS_ERROR_AND_THROW("subpass ", subpass, " uses shading rate attachment with tile width ", TileSize[0],
+                                                        " that is not in the allowed range [", SRProps.MinTileSize[0], ", ", SRProps.MaxTileSize[0],
+                                                        "]. Check MinTileSize/MaxTileSize members of ShadingRateProperties.");
+                    }
+                    if (TileSize[1] < SRProps.MinTileSize[1] || TileSize[1] > SRProps.MaxTileSize[1])
+                    {
+                        LOG_RENDER_PASS_ERROR_AND_THROW("subpass ", subpass, " uses shading rate attachment with tile height ", TileSize[1],
+                                                        " that is not in the allowed range [", SRProps.MinTileSize[1], ", ", SRProps.MaxTileSize[1],
+                                                        "]. Check MinTileSize/MaxTileSize members of ShadingRateProperties.");
+                    }
+                    if (TileSize[0] != TileSize[1])
+                    {
+                        // The tile size is only used for Vulkan shading rate and current hardware only supports aspect ratio of 1.
+                        // TODO: use VkPhysicalDeviceFragmentShadingRatePropertiesKHR::maxFragmentShadingRateAttachmentTexelSizeAspectRatio
+                        LOG_RENDER_PASS_ERROR_AND_THROW("subpass ", subpass, " uses shading rate attachment with tile width ", TileSize[0], " that is not equal to the tile height ", TileSize[1], ".");
+                    }
+                    if (!IsPowerOfTwo(TileSize[0]) || !IsPowerOfTwo(TileSize[1]))
+                    {
+                        LOG_RENDER_PASS_ERROR_AND_THROW("subpass ", subpass, " uses shading rate attachment with tile sizes ", TileSize[0], 'x', TileSize[1],
+                                                        " that are not a powers of two.");
+                    }
+                }
+            }
         }
     }
 

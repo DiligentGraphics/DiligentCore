@@ -189,7 +189,8 @@ struct ShadingRateAttachment
     AttachmentReference Attachment  DEFAULT_INITIALIZER({});
 
     /// Each texel in the attachment contains shading rate for the whole tile.
-    /// The size must be between ShadingRateProperties::MinTileSize and ShadingRateProperties::MaxTileSize.
+    /// The size must be a power-of-two value between ShadingRateProperties::MinTileSize and ShadingRateProperties::MaxTileSize.
+    /// Keep zero to use the default tile size.
     Uint32              TileSize[2] DEFAULT_INITIALIZER({});
 
 #if DILIGENT_CPP_INTERFACE

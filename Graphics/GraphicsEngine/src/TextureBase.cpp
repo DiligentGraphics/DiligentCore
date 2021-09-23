@@ -39,8 +39,9 @@ void ValidateTextureDesc(const TextureDesc& Desc, const IRenderDevice* pDevice) 
 {
 #define LOG_TEXTURE_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Texture '", (Desc.Name ? Desc.Name : ""), "': ", ##__VA_ARGS__)
 
-    const auto& FmtAttribs = GetTextureFormatAttribs(Desc.Format);
-    const auto& MemInfo    = pDevice->GetAdapterInfo().Memory;
+    const auto& FmtAttribs  = GetTextureFormatAttribs(Desc.Format);
+    const auto& AdapterInfo = pDevice->GetAdapterInfo();
+    const auto& DeviceInfo  = pDevice->GetDeviceInfo();
 
     if (Desc.Type == RESOURCE_DIM_UNDEFINED)
     {
@@ -137,6 +138,8 @@ void ValidateTextureDesc(const TextureDesc& Desc, const IRenderDevice* pDevice) 
 
     if (Desc.MiscFlags & MISC_TEXTURE_FLAG_MEMORYLESS)
     {
+        const auto& MemInfo = AdapterInfo.Memory;
+
         if (MemInfo.MemorylessTextureBindFlags == BIND_NONE)
             LOG_TEXTURE_ERROR_AND_THROW("Memoryless textures are not supported by device");
 
@@ -182,10 +185,13 @@ void ValidateTextureDesc(const TextureDesc& Desc, const IRenderDevice* pDevice) 
 
     if (Desc.BindFlags & BIND_SHADING_RATE)
     {
-        const auto& SRProps = pDevice->GetAdapterInfo().ShadingRate;
+        const auto& SRProps = AdapterInfo.ShadingRate;
 
-        if (!pDevice->GetDeviceInfo().Features.VariableRateShading)
+        if (!DeviceInfo.Features.VariableRateShading)
             LOG_TEXTURE_ERROR_AND_THROW("BIND_FLAG_SHADING_RATE requires VariableRateShading feature.");
+
+        if (DeviceInfo.IsMetalDevice())
+            LOG_TEXTURE_ERROR_AND_THROW("BIND_FLAG_SHADING_RATE is not supported in Metal, use IRasterizationRateMapMtl instead.");
 
         if ((SRProps.CapFlags & SHADING_RATE_CAP_FLAG_TEXTURE_BASED) == 0)
             LOG_TEXTURE_ERROR_AND_THROW("BIND_FLAG_SHADING_RATE requires SHADING_RATE_CAP_FLAG_TEXTURE_BASED capability.");
@@ -199,7 +205,7 @@ void ValidateTextureDesc(const TextureDesc& Desc, const IRenderDevice* pDevice) 
         if (Desc.Usage != USAGE_DEFAULT && Desc.Usage != USAGE_IMMUTABLE)
             LOG_TEXTURE_ERROR_AND_THROW("Shading rate textures only allow USAGE_DEFAULT or USAGE_IMMUTABLE.");
 
-        if (pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_D3D12)
+        if (DeviceInfo.Type == RENDER_DEVICE_TYPE_D3D12)
         {
             if (Desc.BindFlags & (BIND_RENDER_TARGET | BIND_DEPTH_STENCIL))
                 LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture is not compatible with BIND_RENDER_TARGET and BIND_DEPTH_STENCIL in Direct3D12.");
