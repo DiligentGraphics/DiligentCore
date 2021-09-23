@@ -43,6 +43,19 @@ Try to optimize dynamic buffers usage, but don't strive to avoid them as they ar
 to upload frequently changing data to the GPU.
 
 
+# Render pass
+
+Use `IRenderPass` for better performance on mobile GPUs, including ARM-based laptops and desktops.
+
+Vulkan backend natively supports render pass subpasses. The subpasses allow rendering multiple passes in on-chip memory
+without the need to load and store data to the global memory. This is faster, saves memory bandwidth and reduces power consumption.
+
+Metal backend and Vulkan on top of Metal don't natively support subpasses. To leverage the on-chip memory, use
+[Imageblocks](https://developer.apple.com/documentation/metal/gpu_features/understanding_gpu_family_4/about_imageblocks?language=objc),
+[Tile shader](https://developer.apple.com/documentation/metal/gpu_features/understanding_gpu_family_4/about_tile_shading?language=objc), and
+[Raster order groups](https://developer.apple.com/documentation/metal/gpu_features/understanding_gpu_family_4/about_raster_order_groups?language=objc).
+
+
 # Profilers
 
 * [RenderDoc](https://renderdoc.org/) - Direct3D11/Direct3D12/OpenGL/Vulkan debugging tool
@@ -52,6 +65,8 @@ to upload frequently changing data to the GPU.
 * [XCode](https://developer.apple.com/xcode/) - GPU profiler & debugger for Metal API (including Vulkan on top of Metal)
 * [ARM Mobile Studio](https://www.arm.com/products/development-tools/graphics/arm-mobile-Studio) - profiler for Mali GPUs
 * [Snapdragon Profiler](https://developer.qualcomm.com/software/snapdragon-profiler) - profiler for Adreno GPUs
+* [Android GPU Inspector](https://gpuinspector.dev/) - debugger & profiler by Google
+
 
 # References
 
@@ -63,3 +78,4 @@ to upload frequently changing data to the GPU.
 * [Adreno GPU](https://developer.qualcomm.com/sites/default/files/docs/adreno-gpu/developer-guide//gpu/gpu.html) by Qualcomm
 * [PowerVR](http://cdn.imgtec.com/sdk-documentation/PowerVR_Performance_Recommendations.pdf) by Imagination Technologies
 * [Metal Best Practices Guide](https://developer.apple.com/library/archive/documentation/3DDrawing/Conceptual/MTLBestPracticesGuide/index.html) by Apple
+* [Apple Tech Talks - Graphics & Games](https://developer.apple.com/videos/graphics-games)
