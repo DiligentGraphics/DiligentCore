@@ -6,7 +6,7 @@ jobs:
   run-win10:
 
     runs-on: windows-latest
-    name: Win 10 -> Pre-checks
+    name: Win10 -> Pre-checks
 
     steps:
     - name: Clone repository
