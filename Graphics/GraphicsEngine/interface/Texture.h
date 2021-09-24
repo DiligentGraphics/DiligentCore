@@ -43,26 +43,28 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 static const INTERFACE_ID IID_Texture =
     {0xa64b0e60, 0x1b5e, 0x4cfd,{0xb8, 0x80, 0x66, 0x3a, 0x1a, 0xdc, 0xbe, 0x98}};
 
+
 /// Miscellaneous texture flags
 
 /// The enumeration is used by TextureDesc to describe misc texture flags
 DILIGENT_TYPED_ENUM(MISC_TEXTURE_FLAGS, Uint8)
 {
-    MISC_TEXTURE_FLAG_NONE          = 0,
+    MISC_TEXTURE_FLAG_NONE             = 0u,
 
-    /// Allow automatic mipmap generation with ITextureView::GenerateMips()
+    /// Allow automatic mipmap generation with IDeviceContext::GenerateMips()
 
-    /// \note A texture must be created with BIND_RENDER_TARGET bind flag
-    MISC_TEXTURE_FLAG_GENERATE_MIPS = 1u << 0,
+    /// \note A texture must be created with BIND_RENDER_TARGET bind flag.
+    MISC_TEXTURE_FLAG_GENERATE_MIPS    = 1u << 0,
 
     /// The texture will be used as a transient framebuffer attachment.
 
-    /// \note Memoryless textures must only be used within a render passes in a framebuffer,
-    ///       load operation must be CLEAR or DISCARD, store operation must be DISCARD.
-    MISC_TEXTURE_FLAG_MEMORYLESS    = 1u << 1,
+    /// \note Memoryless textures may only be used within a render pass in a framebuffer;
+    ///       the corresponding subpass load operation must be CLEAR or DISCARD, and the
+    ///       subpass store operation must be DISCARD.
+    MISC_TEXTURE_FLAG_MEMORYLESS      = 1u << 1,
 
-    /// For sparse texture allow to bind same memory range in different texture regions
-    /// or in different sparse textures.
+    /// For sparse textures, allow binding the same memory range in different texture
+    /// regions or in different sparse textures.
     MISC_TEXTURE_FLAG_SPARSE_ALIASING = 1u << 2,
 };
 DEFINE_FLAG_ENUM_OPERATORS(MISC_TEXTURE_FLAGS)
@@ -101,7 +103,7 @@ struct TextureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     Uint32          SampleCount DEFAULT_INITIALIZER(1);
 
     /// Bind flags, see Diligent::BIND_FLAGS for details. \n
-    /// Use IRenderDevice::GetTextureFormatInfoExt() to check if bind flags is supported.
+    /// Use IRenderDevice::GetTextureFormatInfoExt() to check which bind flags are supported.
     BIND_FLAGS      BindFlags   DEFAULT_INITIALIZER(BIND_NONE);
 
     /// Texture usage. See Diligent::USAGE for details.
@@ -350,15 +352,15 @@ struct MappedTextureSubresource
 };
 typedef struct MappedTextureSubresource MappedTextureSubresource;
 
-/// Describes sparse texture packing mode
+/// Describes the sparse texture packing mode
 DILIGENT_TYPED_ENUM(SPARSE_TEXTURE_FLAGS, Uint8)
 {
     SPARSE_TEXTURE_FLAG_NONE                   = 0,
 
-    // AZ TODO: if MipTailStride == 0 then used single mip tail, so this flag is not needed, remove ?
+    // AZ TODO: if MipTailStride == 0, single mip tail is used, so this flag is not needed, remove ?
     /// Specifies that the texture uses a single mip tail region for all array layers
     SPARSE_TEXTURE_FLAG_SINGLE_MIPTAIL         = 1u << 0,
-        
+
     // AZ TODO: not needed because of FirstMipInTail, remove ?
     /// Specifies that the first mip level whose dimensions are not integer
     /// multiples of the corresponding dimensions of the sparse texture block begins the mip tail region.
@@ -379,30 +381,34 @@ struct TextureSparseProperties
     /// Texture address space size.
     Uint64  MemorySize      DEFAULT_INITIALIZER(0);
 
-    /// Specifies where to bind mip tail memory.
+    /// Specifies where to bind the mip tail memory.
     /// Reserved for internal use.
     Uint64  MipTailOffset   DEFAULT_INITIALIZER(0);
 
-    /// Specifies how to calculate mip tail offset for 2D array texture.
+    /// Specifies how to calculate the mip tail offset for 2D array texture.
     /// Reserved for internal use.
     Uint64  MipTailStride   DEFAULT_INITIALIZER(0);
 
     /// Specifies the mip tail size in bytes.
-    /// \note Single mip tail for 2D array may exeed the 32bit limit.
+    /// \note Single mip tail for a 2D array may exceed the 32-bit limit.
     Uint64  MipTailSize     DEFAULT_INITIALIZER(0);
 
-    /// This mip level with a subsequent mips packed into a single memory block.
+    /// The first mip level in the mip tail that is packed into a single memory block.
     Uint32  FirstMipInTail  DEFAULT_INITIALIZER(0);
 
-    /// Specifies a tile dimension for a single sparse block, see SparseMemoryProperties::SparseBlockSize.
+    /// Specifies the tile dimension for a single sparse block, see SparseMemoryProperties::SparseBlockSize.
     Uint32  TileSize[3]     DEFAULT_INITIALIZER({});
-    
+
     /// Size of the sparse block.
-    /// Offset in the buffer, memory offset and memory size which is used in sparse binding command must be multiple of block size.
-    /// It is equal to SparseMemoryProperties::StandardBlockSize if Flags doesn't contains SPARSE_TEXTURE_FLAG_NONSTANDARD_BLOCK_SIZE.
+
+    /// \remarks The offset in the buffer, memory offset and memory size that are used in sparse binding command 
+    ///          must be multiples of the block size.
+    ///
+    ///          The sparse block size is equal to SparseMemoryProperties::StandardBlockSize if Flags don't contain
+    ///          SPARSE_TEXTURE_FLAG_NONSTANDARD_BLOCK_SIZE.
     Uint32  BlockSize DEFAULT_INITIALIZER(0);
 
-    /// Flags which describes additional packing modes.
+    /// Flags that describe additional packing modes.
     SPARSE_TEXTURE_FLAGS Flags DEFAULT_INITIALIZER(SPARSE_TEXTURE_FLAG_NONE);
 };
 typedef struct TextureSparseProperties TextureSparseProperties;
@@ -475,7 +481,7 @@ DILIGENT_BEGIN_INTERFACE(ITexture, IDeviceObject)
 
     /// Returns the internal texture state
     VIRTUAL RESOURCE_STATE METHOD(GetState)(THIS) CONST PURE;
-    
+
     /// Returns the texture sparse memory properties
     VIRTUAL const TextureSparseProperties REF METHOD(GetSparseProperties)(THIS) CONST PURE;
 };

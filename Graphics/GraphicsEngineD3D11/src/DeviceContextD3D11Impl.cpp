@@ -2222,15 +2222,7 @@ void DeviceContextD3D11Impl::BindSparseMemory(const BindSparseMemoryAttribs& Att
     if (Attribs.NumBufferBinds == 0 && Attribs.NumTextureBinds == 0)
         return;
 
-    Flush();
-
-#ifdef DILIGENT_DEVELOPMENT
-    {
-        CComPtr<ID3D11DeviceContext2> pCtx2;
-        DEV_CHECK_ERR(SUCCEEDED(m_pd3d11DeviceContext->QueryInterface(&pCtx2)), "Failed to get ID3D11DeviceContext2");
-    }
-#endif
-
+    DEV_CHECK_ERR(CComQIPtr<ID3D11DeviceContext2>{m_pd3d11DeviceContext}, "Failed to query ID3D11DeviceContext2");
     auto* pd3d11DeviceContext2 = static_cast<ID3D11DeviceContext2*>(m_pd3d11DeviceContext.p);
 
     std::vector<D3D11_TILED_RESOURCE_COORDINATE> Coordinates;
@@ -2248,8 +2240,8 @@ void DeviceContextD3D11Impl::BindSparseMemory(const BindSparseMemoryAttribs& Att
 #ifdef DILIGENT_ENABLE_D3D_NVAPI
             if (UseNVApi)
             {
-                // docs:
-                // "If any of API from this set is used, using all of them is highly recommended."
+                // From NVAPI docs:
+                //   "If any of API from this set is used, using all of them is highly recommended."
                 NvAPI_D3D11_UpdateTileMappings(pd3d11DeviceContext2,
                                                pResource,
                                                static_cast<UINT>(Coordinates.size()),
@@ -2292,7 +2284,7 @@ void DeviceContextD3D11Impl::BindSparseMemory(const BindSparseMemoryAttribs& Att
         {
             if (pMemD3D11 != nullptr && pTilePool != pMemD3D11->GetD3D11TilePool())
             {
-                LOG_ERROR_MESSAGE("IDeviceContext::BindSparseMemory(): can not bind multiple memory objects to a single resource, this is Direct3D11 limitation");
+                LOG_ERROR_MESSAGE("IDeviceContext::BindSparseMemory(): binding multiple memory objects to a single resource is not allowed in Direct3D11.");
 
                 // all previous mapping will be unmapped
                 Coordinates.clear();
@@ -2318,8 +2310,8 @@ void DeviceContextD3D11Impl::BindSparseMemory(const BindSparseMemoryAttribs& Att
             const auto& SrcRange  = Src.pRanges[r];
             auto*       pMemD3D11 = ClassPtrCast<DeviceMemoryD3D11Impl>(SrcRange.pMemory);
 
-            DEV_CHECK_ERR(SrcRange.MemoryOffset % D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES == 0,
-                          "MemoryOffset must be multiple of sparse block size");
+            DEV_CHECK_ERR((SrcRange.MemoryOffset % D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES) == 0,
+                          "MemoryOffset must be a multiple of sparse block size");
 
             Coordinates.emplace_back();
             auto& Coord = Coordinates.back();
@@ -2331,11 +2323,11 @@ void DeviceContextD3D11Impl::BindSparseMemory(const BindSparseMemoryAttribs& Att
             Size.Height   = 0;
             Size.Depth    = 0;
             Size.bUseBox  = FALSE;
-            Size.NumTiles = SrcRange.MemorySize / D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
+            Size.NumTiles = StaticCast<UINT>(SrcRange.MemorySize / D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES);
 
             RangeFlags.emplace_back(pMemD3D11 ? 0 : D3D11_TILE_RANGE_NULL);
-            StartOffsets.emplace_back(SrcRange.MemoryOffset / D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES);
-            RangeTileCounts.emplace_back(SrcRange.MemorySize / D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES);
+            StartOffsets.emplace_back(StaticCast<UINT>(SrcRange.MemoryOffset / D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES));
+            RangeTileCounts.emplace_back(StaticCast<UINT>(SrcRange.MemorySize / D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES));
 
             UpdateTilePool(pMemD3D11);
         }
@@ -2350,7 +2342,7 @@ void DeviceContextD3D11Impl::BindSparseMemory(const BindSparseMemoryAttribs& Att
         const auto& TexSparseProps = pTexD3D11->GetSparseProperties();
         const auto& TexDesc        = pTexD3D11->GetDesc();
 
-        UseNVApi = pTexD3D11->IsUsedNVApi();
+        UseNVApi = pTexD3D11->IsUsingNVApi();
 
         for (Uint32 r = 0; r < Src.NumRanges; ++r)
         {
@@ -2389,31 +2381,23 @@ void DeviceContextD3D11Impl::BindSparseMemory(const BindSparseMemoryAttribs& Att
                 Size.Height   = 0;
                 Size.Depth    = 0;
                 Size.bUseBox  = FALSE;
-                Size.NumTiles = SrcRange.MemorySize / D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
+                Size.NumTiles = StaticCast<UINT>(SrcRange.MemorySize / D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES);
             }
 
             RangeFlags.emplace_back(pMemD3D11 ? 0 : D3D11_TILE_RANGE_NULL);
-            StartOffsets.emplace_back(SrcRange.MemoryOffset / D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES);
-            RangeTileCounts.emplace_back(SrcRange.MemorySize / D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES);
+            StartOffsets.emplace_back(StaticCast<UINT>(SrcRange.MemoryOffset / D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES));
+            RangeTileCounts.emplace_back(StaticCast<UINT>(SrcRange.MemorySize / D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES));
 
             UpdateTilePool(pMemD3D11);
         }
 
         UpdateTileMappingsAndClear(pTexD3D11->GetD3D11Texture());
     }
-
-    Flush();
 }
 
 bool DeviceContextD3D11Impl::ResizeTilePool(ID3D11Buffer* pBuffer, UINT NewSize)
 {
-#ifdef DILIGENT_DEVELOPMENT
-    {
-        CComPtr<ID3D11DeviceContext2> pCtx2;
-        DEV_CHECK_ERR(SUCCEEDED(m_pd3d11DeviceContext->QueryInterface(&pCtx2)), "Failed to get ID3D11DeviceContext2");
-    }
-#endif
-
+    DEV_CHECK_ERR(CComQIPtr<ID3D11DeviceContext2>{m_pd3d11DeviceContext}, "Failed to query ID3D11DeviceContext2");
     auto* pd3d11DeviceContext2 = static_cast<ID3D11DeviceContext2*>(m_pd3d11DeviceContext.p);
 
     return SUCCEEDED(pd3d11DeviceContext2->ResizeTilePool(pBuffer, NewSize));

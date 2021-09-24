@@ -33,7 +33,7 @@
 #include "BufferD3D12.h"
 #include "CommandQueueD3D12.h"
 
-#ifdef DILIGENT_TEST_ENABLE_D3D_NVAPI
+#ifdef DILIGENT_ENABLE_D3D_NVAPI
 #    include <dxgi1_4.h>
 #    include "nvapi.h"
 #endif
@@ -88,7 +88,7 @@ CComPtr<ID3D12Resource> CreateSparseTexture(const int4& Dim, Uint32 MipLevels, I
     Desc.Flags            = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
     CComPtr<ID3D12Resource> pResource;
-#ifdef DILIGENT_TEST_ENABLE_D3D_NVAPI
+#ifdef DILIGENT_ENABLE_D3D_NVAPI
     if (Dim.w > 1 && pHeap)
     {
         if (NvAPI_D3D12_CreateReservedResource(pd3d12Device, &Desc, D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS(&pResource), true, pHeap) == NVAPI_OK)
@@ -115,7 +115,7 @@ CComPtr<ID3D12Heap> CreateHeap(Uint64 NumTiles, bool Is2DArray = false)
     Desc.Flags                           = D3D12_HEAP_FLAG_NONE;
 
     CComPtr<ID3D12Heap> pHeap;
-#ifdef DILIGENT_TEST_ENABLE_D3D_NVAPI
+#ifdef DILIGENT_ENABLE_D3D_NVAPI
     if (Is2DArray)
     {
         if (NvAPI_D3D12_CreateHeap(pd3d12Device, &Desc, IID_PPV_ARGS(&pHeap)) == NVAPI_OK)
@@ -208,7 +208,7 @@ void UpdateTileMappings(
     D3D12_TILE_MAPPING_FLAGS               Flags,
     bool                                   Is2DArray)
 {
-#ifdef DILIGENT_TEST_ENABLE_D3D_NVAPI
+#ifdef DILIGENT_ENABLE_D3D_NVAPI
     if (Is2DArray)
     {
         NvAPI_D3D12_UpdateTileMappings(

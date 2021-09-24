@@ -89,7 +89,7 @@ Texture2D_D3D11::Texture2D_D3D11(IReferenceCounters*        pRefCounters,
 
     CComPtr<ID3D11Texture2D> ptex2D;
 #ifdef DILIGENT_ENABLE_D3D_NVAPI
-    if (IsUsedNVApi())
+    if (IsUsingNVApi())
     {
         if (NvAPI_D3D11_CreateTiledTexture2DArray(pd3d11Device, &Tex2DDesc, nullptr, &ptex2D) != NVAPI_OK)
             LOG_ERROR_AND_THROW("Failed to create the Direct3D11 Texture2D using NVApi");
@@ -153,7 +153,7 @@ public:
             VERIFY_EXPR(TexDesc.Usage == USAGE_DEFAULT);
             TexDesc.Usage = USAGE_SPARSE;
 
-            // In Direct3D11 sparse resources is always resident and aliased
+            // In Direct3D11 sparse resources are always aliased
             TexDesc.MiscFlags |= MISC_TEXTURE_FLAG_SPARSE_ALIASING;
         }
 

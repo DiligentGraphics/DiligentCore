@@ -3040,13 +3040,13 @@ void DeviceContextD3D12Impl::BindSparseMemory(const BindSparseMemoryAttribs& Att
             Size.Height   = 0;
             Size.Depth    = 0;
             Size.UseBox   = FALSE;
-            Size.NumTiles = SrcRange.MemorySize / D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
+            Size.NumTiles = StaticCast<UINT>(SrcRange.MemorySize / D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES);
 
             // If pRangeFlags[i] is D3D12_TILE_RANGE_FLAG_NONE, that range defines sequential tiles in the heap,
             // with the number of tiles being pRangeTileCounts[i] and the starting location pHeapRangeStartOffsets[i]
             Dst.RangeFlags.emplace_back(SrcRange.pMemory ? D3D12_TILE_RANGE_FLAG_NONE : D3D12_TILE_RANGE_FLAG_NULL);
             Dst.HeapRangeStartOffsets.emplace_back(StaticCast<UINT>(MemRange.Offset / D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES));
-            Dst.RangeTileCounts.emplace_back(SrcRange.MemorySize / D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES);
+            Dst.RangeTileCounts.emplace_back(StaticCast<UINT>(SrcRange.MemorySize / D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES));
         }
     }
 
@@ -3056,7 +3056,7 @@ void DeviceContextD3D12Impl::BindSparseMemory(const BindSparseMemoryAttribs& Att
         auto*       pTexD3D12      = ClassPtrCast<TextureD3D12Impl>(Src.pTexture);
         const auto& TexSparseProps = pTexD3D12->GetSparseProperties();
         const auto& TexDesc        = pTexD3D12->GetDesc();
-        const bool  UseNVApi       = pTexD3D12->IsUsedNVApi();
+        const bool  UseNVApi       = pTexD3D12->IsUsingNVApi();
 
         for (Uint32 r = 0; r < Src.NumRanges; ++r)
         {
@@ -3099,12 +3099,12 @@ void DeviceContextD3D12Impl::BindSparseMemory(const BindSparseMemoryAttribs& Att
                 Size.Height   = 0;
                 Size.Depth    = 0;
                 Size.UseBox   = FALSE;
-                Size.NumTiles = SrcRange.MemorySize / D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
+                Size.NumTiles = StaticCast<UINT>(SrcRange.MemorySize / D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES);
             }
 
             Dst.RangeFlags.emplace_back(SrcRange.pMemory ? D3D12_TILE_RANGE_FLAG_NONE : D3D12_TILE_RANGE_FLAG_NULL);
             Dst.HeapRangeStartOffsets.emplace_back(StaticCast<UINT>(MemRange.Offset / D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES));
-            Dst.RangeTileCounts.emplace_back(SrcRange.MemorySize / D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES);
+            Dst.RangeTileCounts.emplace_back(StaticCast<UINT>(SrcRange.MemorySize / D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES));
         }
     }
 

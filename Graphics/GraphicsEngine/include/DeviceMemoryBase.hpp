@@ -40,6 +40,7 @@ namespace Diligent
 /// Validates device memory description and throws an exception in case of an error.
 void ValidateDeviceMemoryDesc(const DeviceMemoryDesc& Desc, const IRenderDevice* pDevice) noexcept(false);
 
+
 /// Template class implementing base functionality of the device memory object
 
 /// \tparam EngineImplTraits - Engine implementation type traits.
@@ -55,9 +56,9 @@ public:
 
     using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, DeviceMemoryDesc>;
 
-    /// \param pRefCounters  - Reference counters object that controls the lifetime of this device memory object.
-    /// \param pDevice       - Pointer to the device.
-    /// \param MemCI         - Device memory create info.
+    /// \param pRefCounters - Reference counters object that controls the lifetime of this device memory object.
+    /// \param pDevice      - Pointer to the device.
+    /// \param MemCI        - Device memory create info.
     DeviceMemoryBase(IReferenceCounters*           pRefCounters,
                      RenderDeviceImplType*         pDevice,
                      const DeviceMemoryCreateInfo& MemCI) :
@@ -79,8 +80,8 @@ public:
 
     void DvpVerifyResize(Uint64 NewSize) const
     {
-        DEV_CHECK_ERR(NewSize % this->m_Desc.PageSize == 0,
-                      "NewSize (", NewSize, ") must be multiple of page size (", this->m_Desc.PageSize, ")");
+        DEV_CHECK_ERR((NewSize % this->m_Desc.PageSize) == 0,
+                      "NewSize (", NewSize, ") must be  a multiple of the page size (", this->m_Desc.PageSize, ")");
     }
 };
 

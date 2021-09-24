@@ -70,11 +70,12 @@ DILIGENT_TYPED_ENUM(BUFFER_MODE, Uint8)
     BUFFER_MODE_NUM_MODES
 };
 
+/// Miscellaneous buffer flags.
 DILIGENT_TYPED_ENUM(MISC_BUFFER_FLAGS, Uint8)
 {
     MISC_BUFFER_FLAG_NONE          = 0,
 
-    /// For sparse buffer allow to bind same memory range in different buffer ranges
+    /// For a sparse buffer, allow binding the same memory region in different buffer ranges
     /// or in different sparse buffers.
     MISC_BUFFER_FLAG_SPARSE_ALIASING = 1u << 0,
 };
@@ -92,7 +93,7 @@ struct BufferDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// Diligent::BIND_VERTEX_BUFFER, Diligent::BIND_INDEX_BUFFER, Diligent::BIND_UNIFORM_BUFFER,
     /// Diligent::BIND_SHADER_RESOURCE, Diligent::BIND_STREAM_OUTPUT, Diligent::BIND_UNORDERED_ACCESS,
     /// Diligent::BIND_INDIRECT_DRAW_ARGS, Diligent::BIND_RAY_TRACING.
-    /// Use SparseMemoryProperties::BufferBindFlags to get valid bind flags for sparse buffer.
+    /// Use SparseMemoryProperties::BufferBindFlags to get allowed bind flags for a sparse buffer.
     BIND_FLAGS BindFlags            DEFAULT_INITIALIZER(BIND_NONE);
 
     /// Buffer usage, see Diligent::USAGE for details
@@ -104,7 +105,7 @@ struct BufferDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
     /// Buffer mode, see Diligent::BUFFER_MODE
     BUFFER_MODE Mode                DEFAULT_INITIALIZER(BUFFER_MODE_UNDEFINED);
-    
+
     /// Miscellaneous flags, see Diligent::MISC_BUFFER_FLAGS for details.
     MISC_BUFFER_FLAGS MiscFlags     DEFAULT_INITIALIZER(MISC_BUFFER_FLAG_NONE);
 
@@ -219,10 +220,11 @@ struct BufferSparseProperties
     Uint64  MemorySize  DEFAULT_INITIALIZER(0);
 
     /// Size of the sparse block.
-    /// Offset in the buffer, memory offset and memory size which is used in sparse binding command
-    /// must be multiple of block size.
-    /// In Direct3D11 and Direct3D12 this is always 64Kb.
-    /// In Vulkan this is not documented, but usually it is 64Kb.
+    ///
+    /// \note Offset in the buffer, memory offset and memory size that are used in sparse binding command,
+    ///       must be a multiple of the block size.
+    ///       In Direct3D11 and Direct3D12, the block size is always 64Kb.
+    ///       In Vulkan the block size is not documented, but is usually 64Kb.
     Uint32  BlockSize  DEFAULT_INITIALIZER(0);
 };
 typedef struct BufferSparseProperties BufferSparseProperties;

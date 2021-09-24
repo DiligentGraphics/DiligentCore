@@ -114,6 +114,12 @@ PRIVATE
     include
 )
 
+if(EXISTS "${DILIGENT_NVAPI_PATH}/nvapi.h")
+    target_include_directories(DiligentCoreAPITest PRIVATE ${DILIGENT_NVAPI_PATH})
+    target_link_libraries(DiligentCoreAPITest PRIVATE ${DILIGENT_NVAPI_LIB_PATH})
+    target_compile_definitions(DiligentCoreAPITest PUBLIC DILIGENT_ENABLE_D3D_NVAPI)
+endif()
+
 
 set_target_properties(DiligentCoreAPITest
 PROPERTIES

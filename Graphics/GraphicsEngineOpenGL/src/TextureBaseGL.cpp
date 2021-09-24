@@ -445,7 +445,7 @@ void TextureBaseGL::CreateViewInternal(const struct TextureViewDesc& OrigViewDes
                     default: UNEXPECTED("Unsupported texture view type");
                 }
 
-                // In OpenGL ES this function allowed as extension and may be not supported
+                // In OpenGL ES this function is allowed as an extension and may not be supported
                 if (glTextureView == nullptr)
                     LOG_ERROR_AND_THROW("glTextureView is not supported");
 

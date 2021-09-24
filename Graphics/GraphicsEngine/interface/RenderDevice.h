@@ -299,7 +299,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
 
 
     /// Creates a device memory object.
-    
+
     /// \param [in]  CreateInfo - Device memory create info, see Diligent::DeviceMemoryCreateInfo for details.
     /// \param [out] ppMemory   - Address of the memory location where the pointer to the
     ///                           device memory interface will be stored.
@@ -322,7 +322,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     /// \param [in] TexFormat - Texture format for which to provide the information
     /// \return Const reference to the TextureFormatInfo structure containing the
     ///         texture format description.
-    /// 
+    ///
     /// \remarks This method must be externally synchronized.
     VIRTUAL const TextureFormatInfo REF METHOD(GetTextureFormatInfo)(THIS_
                                                                      TEXTURE_FORMAT TexFormat) PURE;
@@ -337,17 +337,17 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     /// \remark The first time this method is called for a particular format, it may be
     ///         considerably slower than GetTextureFormatInfo(). If you do not require
     ///         extended information, call GetTextureFormatInfo() instead.
-    /// 
+    ///
     /// \remarks This method must be externally synchronized.
     VIRTUAL const TextureFormatInfoExt REF METHOD(GetTextureFormatInfoExt)(THIS_
                                                                            TEXTURE_FORMAT TexFormat) PURE;
-    
-    /// AZ TODO
-    /// Used fields: Type, Format, SampleCount, BindFlags, Usage, SparseFlags
+
+    /// Returns the texture format dimensions for the given texture description.
     VIRTUAL TextureFormatDimensions METHOD(GetTextureFormatDimensions)(THIS_
                                                                        const TextureDesc REF TexDesc) CONST PURE;
 
-    /// AZ TODO
+
+    /// Returns the sparse texture format info for the given texture format and resource dimension.
     VIRTUAL TextureFormatSparseInfo METHOD(GetTextureFormatSparseInfo)(THIS_
                                                                        TEXTURE_FORMAT     TexFormat,
                                                                        RESOURCE_DIMENSION Dimension) CONST PURE;

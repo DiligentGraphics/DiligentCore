@@ -122,12 +122,13 @@ endif()
 
 
 if(EXISTS "${DILIGENT_NVAPI_PATH}/nvapi.h")
-    message(STATUS "Found NVApi with D3D11 extensions")
+    message(STATUS "Using NVApi from ${DILIGENT_NVAPI_PATH}")
     if(${CMAKE_SIZEOF_VOID_P} EQUAL 8)
-        target_link_libraries(Diligent-GraphicsEngineD3DBase PUBLIC "${DILIGENT_NVAPI_PATH}/amd64/nvapi64.lib") # AZ TODO: make private ?
+        set(DILIGENT_NVAPI_LIB_PATH "${DILIGENT_NVAPI_PATH}/amd64/nvapi64.lib" CACHE INTERNAL "NVAPI lib path")
     else()
-        target_link_libraries(Diligent-GraphicsEngineD3DBase PUBLIC "${DILIGENT_NVAPI_PATH}/x86/nvapi.lib")
+        set(DILIGENT_NVAPI_LIB_PATH "${DILIGENT_NVAPI_PATH}/x86/nvapi.lib" CACHE INTERNAL "NVAPI lib path")
     endif()
     target_include_directories(Diligent-GraphicsEngineD3DBase PUBLIC ${DILIGENT_NVAPI_PATH})
+    target_link_libraries(Diligent-GraphicsEngineD3DBase PRIVATE ${DILIGENT_NVAPI_LIB_PATH})
     target_compile_definitions(Diligent-GraphicsEngineD3DBase PUBLIC DILIGENT_ENABLE_D3D_NVAPI)
 endif()

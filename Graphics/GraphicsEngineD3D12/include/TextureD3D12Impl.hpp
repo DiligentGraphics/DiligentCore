@@ -85,7 +85,7 @@ public:
         return m_StagingFootprints[Subresource];
     }
 
-    bool IsUsedNVApi() const
+    bool IsUsingNVApi() const
     {
         return m_Desc.Usage == USAGE_SPARSE && m_Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY && m_pDevice->GetDummyNVApiHeap() != nullptr;
     }

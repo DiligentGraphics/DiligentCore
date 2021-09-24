@@ -133,7 +133,7 @@ public:
             VERIFY_EXPR(TexDesc.Usage == USAGE_DEFAULT);
             TexDesc.Usage = USAGE_SPARSE;
 
-            // In Direct3D11 sparse resources is always resident and aliased
+            // In Direct3D11, sparse resources are always aliased
             TexDesc.MiscFlags |= MISC_TEXTURE_FLAG_SPARSE_ALIASING;
         }
 

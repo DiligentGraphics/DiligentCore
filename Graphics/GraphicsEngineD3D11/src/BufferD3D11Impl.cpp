@@ -159,7 +159,7 @@ static BufferDesc BuffDescFromD3D11Buffer(ID3D11Buffer* pd3d11Buffer, BufferDesc
         VERIFY_EXPR(Usage == USAGE_DEFAULT);
         Usage = USAGE_SPARSE;
 
-        // In Direct3D11 sparse resources is always resident and aliased
+        // In Direct3D11, sparse resources are always aliased
         BuffDesc.MiscFlags |= MISC_BUFFER_FLAG_SPARSE_ALIASING;
     }
     VERIFY(BuffDesc.Usage == 0 || BuffDesc.Usage == Usage,
@@ -305,12 +305,12 @@ void BufferD3D11Impl::CreateSRV(struct BufferViewDesc& SRVDesc, ID3D11ShaderReso
 BufferSparseProperties BufferD3D11Impl::GetSparseProperties() const
 {
     DEV_CHECK_ERR(m_Desc.Usage == USAGE_SPARSE,
-                  "IBuffer::GetSparseProperties() must be used for sparse buffer");
+                  "IBuffer::GetSparseProperties() should only be used for sparse buffer");
 
     auto* pd3d11Device2 = m_pDevice->GetD3D11Device2();
 
     UINT             NumTilesForEntireResource = 0;
-    D3D11_TILE_SHAPE StandardTileShapeForNonPackedMips;
+    D3D11_TILE_SHAPE StandardTileShapeForNonPackedMips{};
     pd3d11Device2->GetResourceTiling(m_pd3d11Buffer,
                                      &NumTilesForEntireResource,
                                      nullptr,

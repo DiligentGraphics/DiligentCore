@@ -146,6 +146,9 @@ Texture1D_D3D11::Texture1D_D3D11(IReferenceCounters*        pRefCounters,
 {
     m_pd3d11Texture = pd3d11Texture;
     SetState(InitialState);
+
+    if (m_Desc.Usage == USAGE_SPARSE)
+        InitSparseProperties();
 }
 
 Texture1D_D3D11::~Texture1D_D3D11()

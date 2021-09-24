@@ -58,7 +58,7 @@ TextureBaseD3D11::TextureBaseD3D11(IReferenceCounters*        pRefCounters,
     {
         constexpr auto AllowedBindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS | BIND_RENDER_TARGET | BIND_DEPTH_STENCIL;
         if ((m_Desc.BindFlags & ~AllowedBindFlags) != 0)
-            LOG_ERROR_AND_THROW("Texture '", m_Desc.Name, "': the following bind flags are not allowed for a sparse texture: ", GetBindFlagsString(m_Desc.BindFlags & ~AllowedBindFlags, ", "), '.');
+            LOG_ERROR_AND_THROW("Texture '", m_Desc.Name, "': the following bind flags are not allowed for a sparse texture in Direct3D11: ", GetBindFlagsString(m_Desc.BindFlags & ~AllowedBindFlags, ", "), '.');
     }
 
     SetState(RESOURCE_STATE_UNDEFINED);
@@ -82,7 +82,7 @@ void TextureBaseD3D11::CreateViewInternal(const TextureViewDesc& ViewDesc, IText
         if (m_Desc.IsArray() && (ViewDesc.TextureDim == RESOURCE_DIM_TEX_1D || ViewDesc.TextureDim == RESOURCE_DIM_TEX_2D))
         {
             if (ViewDesc.FirstArraySlice != 0)
-                LOG_ERROR_AND_THROW("FirstArraySlice must be 0, offset is not supported for non-array view in Direct3D11");
+                LOG_ERROR_AND_THROW("FirstArraySlice must be 0; slice offset is not supported for non-array views in Direct3D11");
         }
 
         RefCntAutoPtr<ID3D11View> pD3D11View;
@@ -181,7 +181,7 @@ void TextureBaseD3D11::InitSparseProperties()
 
     m_pSparseProps = ALLOCATE(m_pDevice->GetTexSparsePropsAllocator(), "TextureSparseProperties", TextureSparseProperties, 1);
 
-    if (IsUsedNVApi())
+    if (IsUsingNVApi())
     {
         *m_pSparseProps = GetTextureSparsePropertiesForStandardBlocks(m_Desc);
     }
@@ -202,10 +202,10 @@ void TextureBaseD3D11::InitSparseProperties()
                                          nullptr); // AZ TODO: required to detect how mip tail packed for 2D array
 
         auto& Props          = *m_pSparseProps;
-        Props.MemorySize     = NumTilesForEntireResource * D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
+        Props.MemorySize     = Uint64{NumTilesForEntireResource} * D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
         Props.BlockSize      = D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
-        Props.MipTailOffset  = PackedMipDesc.StartTileIndexInOverallResource * D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
-        Props.MipTailSize    = PackedMipDesc.NumTilesForPackedMips * D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
+        Props.MipTailOffset  = Uint64{PackedMipDesc.StartTileIndexInOverallResource} * D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
+        Props.MipTailSize    = Uint64{PackedMipDesc.NumTilesForPackedMips} * D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
         Props.FirstMipInTail = PackedMipDesc.NumStandardMips;
         Props.TileSize[0]    = StandardTileShapeForNonPackedMips.WidthInTexels;
         Props.TileSize[1]    = StandardTileShapeForNonPackedMips.HeightInTexels;

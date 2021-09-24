@@ -52,14 +52,14 @@ DILIGENT_TYPED_ENUM(DEVICE_MEMORY_TYPE, Uint8)
 
 /// Device memory description
 struct DeviceMemoryDesc DILIGENT_DERIVE(DeviceObjectAttribs)
-    
+
     /// Memory type, see Diligent::DEVICE_MEMORY_TYPE.
     DEVICE_MEMORY_TYPE  Type                  DEFAULT_INITIALIZER(DEVICE_MEMORY_TYPE_NONE);
 
     /// Size of the memory page.
-    /// Depends on implementation memory may be allocated to a single block or as array of pages.
+    /// Depending on the implementation, the memory may be allocated as a single chunk or as an array of pages.
     Uint32              PageSize              DEFAULT_INITIALIZER(0);
-    
+
     /// Defines which immediate contexts are allowed to execute commands that use this device memory.
 
     /// When ImmediateContextMask contains a bit at position n, the device memory may be
@@ -88,19 +88,21 @@ typedef struct DeviceMemoryDesc DeviceMemoryDesc;
 /// Device memory creation attributes
 struct DeviceMemoryCreateInfo
 {
-    /// Device memory description
+    /// Device memory description, see Diligent::DeviceMemoryDesc.
     DeviceMemoryDesc  Desc;
-    
+
     /// Initial size of the memory object.
-    /// Some implementation does not support IDeviceMemory::Resize() and memory can be allocated only during creation.
+    ///
+    /// Some implementations do not support IDeviceMemory::Resize() and memory can only be allocated during the initialization.
     Uint64            InitialSize           DEFAULT_INITIALIZER(0);
-    
-    /// Array of the resources for which memory must be compatible.
-    /// For sparse memory only buffer and texture resources which was created with USAGE_SPARSE are supported.
-    /// Vulkan backend requires at least one resource to be specified.
+
+    /// An array of NumResources resources that this memory must be compatible with.
+    /// For sparse memory, only USAGE_SPARSE buffer and texture resources are allowed.
+    /// 
+    /// \note Vulkan backend requires at least one resource to be provided.
     IDeviceObject**   ppCompatibleResources DEFAULT_INITIALIZER(nullptr);
-    
-    /// Number of elements in the ppCompatibleResources.
+
+    /// The number of elements in the ppCompatibleResources array.
     Uint32            NumResources          DEFAULT_INITIALIZER(0);
 };
 typedef struct DeviceMemoryCreateInfo DeviceMemoryCreateInfo;
@@ -118,7 +120,7 @@ typedef struct DeviceMemoryCreateInfo DeviceMemoryCreateInfo;
 
 /// Device memory interface
 
-/// Defines the methods to manipulate a device memory object
+/// Defines the methods to manipulate a device memory object.
 DILIGENT_BEGIN_INTERFACE(IDeviceMemory, IDeviceObject)
 {
 #if DILIGENT_CPP_INTERFACE
@@ -127,22 +129,24 @@ DILIGENT_BEGIN_INTERFACE(IDeviceMemory, IDeviceObject)
 #endif
 
     /// Resizes the internal memory object.
-    
-    /// \param [in] NewSize - New size of the memory object, must be multiple of DeviceMemoryDesc::PageSize.
-    /// 
-    /// \remarks  Depends on implementation function can resize existing memory object or
+
+    /// \param [in] NewSize - The new size of the memory object, must be a multiple of DeviceMemoryDesc::PageSize.
+    ///
+    /// \remarks  Depending on the implementation, the function may resize the existing memory object or
     ///           create/destroy pages with separate memory objects.
-    /// 
-    /// \remarks  Must be externally synchronized with IDeviceMemory::GetCapacity() and IDeviceContext::BindSparseMemory().
+    ///
+    /// \remarks  This method must be externally synchronized with IDeviceMemory::GetCapacity()
+    ///           and IDeviceContext::BindSparseMemory().
     VIRTUAL Bool METHOD(Resize)(THIS_
                                 Uint64 NewSize) PURE;
 
-    /// Returns current size of the memory object.
-    
-    /// \remarks  Must be externally synchronized with IDeviceMemory::Resize() and IDeviceContext::BindSparseMemory().
+    /// Returns the current size of the memory object.
+
+    /// \remarks  This method must be externally synchronized with IDeviceMemory::Resize()
+    ///           and IDeviceContext::BindSparseMemory().
     VIRTUAL Uint64 METHOD(GetCapacity)(THIS) PURE;
 
-    /// Checks if resource is compatible with memory object.
+    /// Checks if the given resource is compatible with this memory object.
     VIRTUAL Bool METHOD(IsCompatible)(THIS_
                                       IDeviceObject* pResource) CONST PURE;
 

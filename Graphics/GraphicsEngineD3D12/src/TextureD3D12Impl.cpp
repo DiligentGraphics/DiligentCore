@@ -189,7 +189,7 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
         d3d12TexDesc.Layout = D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE;
 
 #ifdef DILIGENT_ENABLE_D3D_NVAPI
-        if (IsUsedNVApi())
+        if (IsUsingNVApi())
         {
             auto err = NvAPI_D3D12_CreateReservedResource(pd3d12Device, &d3d12TexDesc, D3D12_RESOURCE_STATE_COMMON, pClearValue, __uuidof(m_pd3d12Resource),
                                                           reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&m_pd3d12Resource)),
@@ -682,7 +682,7 @@ void TextureD3D12Impl::InitSparseProperties()
 
     m_pSparseProps = ALLOCATE(m_pDevice->GetTexSparsePropsAllocator(), "TextureSparseProperties", TextureSparseProperties, 1);
 
-    if (IsUsedNVApi())
+    if (IsUsingNVApi())
     {
         *m_pSparseProps = GetTextureSparsePropertiesForStandardBlocks(m_Desc);
     }

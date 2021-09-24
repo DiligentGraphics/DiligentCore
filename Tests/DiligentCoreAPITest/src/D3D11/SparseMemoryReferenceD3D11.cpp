@@ -32,7 +32,7 @@
 #include "TextureD3D11.h"
 #include "BufferD3D11.h"
 
-#ifdef DILIGENT_TEST_ENABLE_D3D_NVAPI
+#ifdef DILIGENT_ENABLE_D3D_NVAPI
 #    include "nvapi.h"
 #endif
 
@@ -106,7 +106,7 @@ CComPtr<ID3D11Resource> CreateSparseTexture(const int4& Dim, UINT BindFlags, Uin
         Desc.MiscFlags        = D3D11_RESOURCE_MISC_TILED;
 
         CComPtr<ID3D11Texture2D> ptex2D;
-#ifdef DILIGENT_TEST_ENABLE_D3D_NVAPI
+#ifdef DILIGENT_ENABLE_D3D_NVAPI
         if (Dim.w > 1)
         {
             if (NvAPI_D3D11_CreateTiledTexture2DArray(pd3d11Device, &Desc, nullptr, &ptex2D) == NVAPI_OK)
@@ -206,7 +206,7 @@ void UpdateTileMappings(ID3D11Resource*                        pTiledResource,
     auto* pd3d11Context2 = static_cast<ID3D11DeviceContext2*>(TestingEnvironmentD3D11::GetInstance()->GetD3D11Context());
     bool  Updated        = false;
 
-#ifdef DILIGENT_TEST_ENABLE_D3D_NVAPI
+#ifdef DILIGENT_ENABLE_D3D_NVAPI
     if (Is2DArray)
     {
         Updated = NvAPI_D3D11_UpdateTileMappings(

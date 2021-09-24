@@ -1301,7 +1301,7 @@ TEST_P(SparseMemoryTest, SparseTexture)
     {
         std::vector<SparseTextureMemoryBindRange> BindRanges;
 
-        Uint32 MemOffset = 0;
+        Uint64 MemOffset = 0;
         for (Uint32 Slice = 0; Slice < TexDesc.ArraySize; ++Slice)
         {
             for (Uint32 Mip = 0; Mip < TexSparseProps.FirstMipInTail; ++Mip)
@@ -1334,7 +1334,7 @@ TEST_P(SparseMemoryTest, SparseTexture)
             if (Slice == 0 || (TexSparseProps.Flags & SPARSE_TEXTURE_FLAG_SINGLE_MIPTAIL) == 0)
             {
                 const bool IsMetal = pDevice->GetDeviceInfo().IsMetalDevice();
-                for (Uint32 OffsetInMipTail = 0; OffsetInMipTail < TexSparseProps.MipTailSize;)
+                for (Uint64 OffsetInMipTail = 0; OffsetInMipTail < TexSparseProps.MipTailSize;)
                 {
                     BindRanges.emplace_back();
                     auto& Range           = BindRanges.back();
@@ -1342,7 +1342,7 @@ TEST_P(SparseMemoryTest, SparseTexture)
                     Range.ArraySlice      = Slice;
                     Range.OffsetInMipTail = OffsetInMipTail;
                     Range.MemoryOffset    = MemOffset;
-                    Range.MemorySize      = IsMetal ? StaticCast<Uint32>(TexSparseProps.MipTailSize) : BlockSize;
+                    Range.MemorySize      = IsMetal ? TexSparseProps.MipTailSize : BlockSize;
                     Range.pMemory         = pMemory;
                     MemOffset += Range.MemorySize;
                     OffsetInMipTail += Range.MemorySize;
@@ -1494,7 +1494,7 @@ TEST_P(SparseMemoryTest, SparseResidencyTexture)
     {
         std::vector<SparseTextureMemoryBindRange> BindRanges;
 
-        Uint32 MemOffset = 0;
+        Uint64 MemOffset = 0;
         for (Uint32 Slice = 0; Slice < TexDesc.ArraySize; ++Slice)
         {
             for (Uint32 Mip = 0, Idx = 0; Mip < TexSparseProps.FirstMipInTail; ++Mip)
@@ -1531,7 +1531,7 @@ TEST_P(SparseMemoryTest, SparseResidencyTexture)
             if (Slice == 0 || (TexSparseProps.Flags & SPARSE_TEXTURE_FLAG_SINGLE_MIPTAIL) == 0)
             {
                 const bool IsMetal = pDevice->GetDeviceInfo().IsMetalDevice();
-                for (Uint32 OffsetInMipTail = 0; OffsetInMipTail < TexSparseProps.MipTailSize;)
+                for (Uint64 OffsetInMipTail = 0; OffsetInMipTail < TexSparseProps.MipTailSize;)
                 {
                     BindRanges.emplace_back();
                     auto& Range           = BindRanges.back();
@@ -1539,7 +1539,7 @@ TEST_P(SparseMemoryTest, SparseResidencyTexture)
                     Range.ArraySlice      = Slice;
                     Range.OffsetInMipTail = OffsetInMipTail;
                     Range.MemoryOffset    = MemOffset;
-                    Range.MemorySize      = IsMetal ? StaticCast<Uint32>(TexSparseProps.MipTailSize) : BlockSize;
+                    Range.MemorySize      = IsMetal ? TexSparseProps.MipTailSize : BlockSize;
                     Range.pMemory         = pMemory;
                     MemOffset += Range.MemorySize;
                     OffsetInMipTail += Range.MemorySize;
@@ -1700,12 +1700,12 @@ TEST_P(SparseMemoryTest, SparseResidencyAliasedTexture)
         std::vector<SparseTextureMemoryBindRange> BindRanges;
 
         // Mip tail - must not alias with other tiles
-        Uint32       InitialOffset = 0;
+        Uint64       InitialOffset = 0;
         const Uint32 MipTailSlices = (TexSparseProps.Flags & SPARSE_TEXTURE_FLAG_SINGLE_MIPTAIL) != 0 ? 1 : TexDesc.ArraySize;
         const bool   IsMetal       = pDevice->GetDeviceInfo().IsMetalDevice();
         for (Uint32 Slice = 0; Slice < MipTailSlices; ++Slice)
         {
-            for (Uint32 OffsetInMipTail = 0; OffsetInMipTail < TexSparseProps.MipTailSize;)
+            for (Uint64 OffsetInMipTail = 0; OffsetInMipTail < TexSparseProps.MipTailSize;)
             {
                 BindRanges.emplace_back();
                 auto& Range           = BindRanges.back();
@@ -1713,7 +1713,7 @@ TEST_P(SparseMemoryTest, SparseResidencyAliasedTexture)
                 Range.ArraySlice      = Slice;
                 Range.OffsetInMipTail = OffsetInMipTail;
                 Range.MemoryOffset    = InitialOffset;
-                Range.MemorySize      = IsMetal ? StaticCast<Uint32>(TexSparseProps.MipTailSize) : BlockSize;
+                Range.MemorySize      = IsMetal ? TexSparseProps.MipTailSize : BlockSize;
                 Range.pMemory         = pMemory;
                 InitialOffset += Range.MemorySize;
                 OffsetInMipTail += Range.MemorySize;
@@ -1723,7 +1723,7 @@ TEST_P(SparseMemoryTest, SparseResidencyAliasedTexture)
         // tiles may alias
         for (Uint32 Slice = 0; Slice < TexDesc.ArraySize; ++Slice)
         {
-            Uint32 MemOffset = InitialOffset;
+            Uint64 MemOffset = InitialOffset;
             for (Uint32 Mip = 0, Idx = 0; Mip < TexSparseProps.FirstMipInTail; ++Mip)
             {
                 const Uint32 Width  = std::max(1u, TexDesc.Width >> Mip);
@@ -1894,7 +1894,7 @@ TEST_F(SparseMemoryTest, SparseTexture3D)
     {
         std::vector<SparseTextureMemoryBindRange> BindRanges;
 
-        Uint32 MemOffset = 0;
+        Uint64 MemOffset = 0;
         for (Uint32 Mip = 0; Mip < TexSparseProps.FirstMipInTail; ++Mip)
         {
             const auto Width  = std::max(1u, TexDesc.Width >> Mip);
@@ -1927,7 +1927,7 @@ TEST_F(SparseMemoryTest, SparseTexture3D)
 
         // Mip tail
         const bool IsMetal = pDevice->GetDeviceInfo().IsMetalDevice();
-        for (Uint32 OffsetInMipTail = 0; OffsetInMipTail < TexSparseProps.MipTailSize;)
+        for (Uint64 OffsetInMipTail = 0; OffsetInMipTail < TexSparseProps.MipTailSize;)
         {
             BindRanges.emplace_back();
             auto& Range           = BindRanges.back();
@@ -1935,7 +1935,7 @@ TEST_F(SparseMemoryTest, SparseTexture3D)
             Range.ArraySlice      = 0;
             Range.OffsetInMipTail = OffsetInMipTail;
             Range.MemoryOffset    = MemOffset;
-            Range.MemorySize      = IsMetal ? StaticCast<Uint32>(TexSparseProps.MipTailSize) : BlockSize;
+            Range.MemorySize      = IsMetal ? TexSparseProps.MipTailSize : BlockSize;
             Range.pMemory         = pMemory;
             MemOffset += Range.MemorySize;
             OffsetInMipTail += Range.MemorySize;

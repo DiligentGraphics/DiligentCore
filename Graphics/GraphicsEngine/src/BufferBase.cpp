@@ -127,8 +127,8 @@ void ValidateBufferDesc(const BufferDesc& Desc, const IRenderDevice* pDevice) no
             const auto& SparseMem = pDevice->GetAdapterInfo().SparseMemory;
             VERIFY_BUFFER(Features.SparseMemory, "sparse buffer requires SparseMemory feature");
             VERIFY_BUFFER(Desc.CPUAccessFlags == CPU_ACCESS_NONE, "sparse buffers can't have any CPU access flags set.");
-            VERIFY_BUFFER(Desc.Size <= SparseMem.ResourceSpaceSize, "sparse buffer size (", Desc.Size, ") must not be greater than (", SparseMem.ResourceSpaceSize, ")");
-            VERIFY_BUFFER(SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_BUFFER, "sparse buffer requires SPARSE_MEMORY_CAP_FLAG_BUFFER capability");
+            VERIFY_BUFFER(Desc.Size <= SparseMem.ResourceSpaceSize, "sparse buffer size (", Desc.Size, ") must not exceed the ResourceSpaceSize (", SparseMem.ResourceSpaceSize, ")");
+            VERIFY_BUFFER((SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_BUFFER) != 0, "sparse buffer requires SPARSE_MEMORY_CAP_FLAG_BUFFER capability");
             if ((Desc.MiscFlags & MISC_BUFFER_FLAG_SPARSE_ALIASING) != 0)
                 VERIFY_BUFFER(SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_ALIASED, "SPARSE_RESOURCE_FLAG_ALIASED flag requires SPARSE_MEMORY_CAP_FLAG_ALIASED capability");
             VERIFY_BUFFER((Desc.BindFlags & ~SparseMem.BufferBindFlags) == 0,
@@ -156,9 +156,9 @@ void ValidateBufferDesc(const BufferDesc& Desc, const IRenderDevice* pDevice) no
     if (Desc.Usage != USAGE_SPARSE)
     {
         VERIFY_BUFFER(MemoryInfo.MaxMemoryAllocation == 0 || Desc.Size <= MemoryInfo.MaxMemoryAllocation,
-                      "non-sparse buffer size (", Desc.Size, ") must not be greater than maximum allocation size (", MemoryInfo.MaxMemoryAllocation, ")");
+                      "non-sparse buffer size (", Desc.Size, ") must not exceed the maximum allocation size (", MemoryInfo.MaxMemoryAllocation, ")");
         VERIFY_BUFFER((Desc.MiscFlags & MISC_BUFFER_FLAG_SPARSE_ALIASING) == 0,
-                      "MiscFlags must not have MISC_BUFFER_FLAG_SPARSE_ALIASING if usege is not USAGE_SPARSE");
+                      "MiscFlags must not have MISC_BUFFER_FLAG_SPARSE_ALIASING if usage is not USAGE_SPARSE");
     }
 }
 

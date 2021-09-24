@@ -1915,9 +1915,9 @@ TextureSparseProperties GetTextureSparsePropertiesForStandardBlocks(const Textur
 {
     constexpr Uint32 SparseBlockSize = 64 << 10;
     const auto&      FmtAttribs      = GetTextureFormatAttribs(TexDesc.Format);
-    const Uint32     BytesPerBlock   = FmtAttribs.GetElementSize();
-    VERIFY_EXPR(IsPowerOfTwo(BytesPerBlock));
-    VERIFY_EXPR(BytesPerBlock >= 1 && BytesPerBlock <= 16);
+    const Uint32     TexelSize       = FmtAttribs.GetElementSize();
+    VERIFY_EXPR(IsPowerOfTwo(TexelSize));
+    VERIFY_EXPR(TexelSize >= 1 && TexelSize <= 16);
     VERIFY_EXPR(TexDesc.Is2D() || TexDesc.Is3D());
 
     TextureSparseProperties Props{};
@@ -1931,9 +1931,9 @@ TextureSparseProperties GetTextureSparsePropertiesForStandardBlocks(const Textur
         //  |    32-Bit   |   32 x 32 x 16  |
         //  |    64-Bit   |   32 x 16 x 16  |
         //  |   128-Bit   |   16 x 16 x 16  |
-        Props.TileSize[0] = BytesPerBlock >= 16 ? 16 : (BytesPerBlock > 1 ? 32 : 64);
-        Props.TileSize[1] = BytesPerBlock >= 8 ? 16 : 32;
-        Props.TileSize[2] = BytesPerBlock >= 4 ? 16 : 32;
+        Props.TileSize[0] = TexelSize >= 16 ? 16 : (TexelSize > 1 ? 32 : 64);
+        Props.TileSize[1] = TexelSize >= 8 ? 16 : 32;
+        Props.TileSize[2] = TexelSize >= 4 ? 16 : 32;
     }
     else if (TexDesc.SampleCount > 1)
     {
@@ -1948,7 +1948,7 @@ TextureSparseProperties GetTextureSparsePropertiesForStandardBlocks(const Textur
         Props.TileSize[0] = 128;
         Props.TileSize[1] = 256;
         Props.TileSize[2] = 1;
-        for (Uint32 i = 0, BPB = BytesPerBlock * TexDesc.SampleCount / 2; (1u << i) < BPB; ++i)
+        for (Uint32 i = 0, BPB = TexelSize * TexDesc.SampleCount / 2; (1u << i) < BPB; ++i)
         {
             Props.TileSize[1 - (i & 1)] /= 2;
         }
@@ -1965,7 +1965,7 @@ TextureSparseProperties GetTextureSparsePropertiesForStandardBlocks(const Textur
         Props.TileSize[0] = 256;
         Props.TileSize[1] = 256;
         Props.TileSize[2] = 1;
-        for (Uint32 i = 0; (1u << i) < BytesPerBlock; ++i)
+        for (Uint32 i = 0; (1u << i) < TexelSize; ++i)
         {
             Props.TileSize[1 - (i & 1)] /= 2;
         }
@@ -1974,19 +1974,17 @@ TextureSparseProperties GetTextureSparsePropertiesForStandardBlocks(const Textur
     const auto BytesPerTile =
         (Props.TileSize[0] / FmtAttribs.BlockWidth) *
         (Props.TileSize[1] / FmtAttribs.BlockHeight) *
-        Props.TileSize[2] * TexDesc.SampleCount * BytesPerBlock;
+        Props.TileSize[2] * TexDesc.SampleCount * TexelSize;
     VERIFY_EXPR(BytesPerTile == SparseBlockSize);
-
-    const auto TexDepth  = TexDesc.Type == RESOURCE_DIM_TEX_3D ? TexDesc.Depth : 1u;
-    const auto ArraySize = TexDesc.Type == RESOURCE_DIM_TEX_3D ? 1u : TexDesc.ArraySize;
 
     Uint64 SliceSize = 0;
     bool   IsMipTail = false;
     for (Uint32 Mip = 0; Mip < TexDesc.MipLevels; ++Mip)
     {
-        const auto Width  = std::max(1u, TexDesc.Width >> Mip);
-        const auto Height = std::max(1u, TexDesc.Height >> Mip);
-        const auto Depth  = std::max(1u, TexDepth >> Mip);
+        const auto MipProps = GetMipLevelProperties(TexDesc, Mip);
+        const auto Width    = MipProps.StorageWidth;
+        const auto Height   = MipProps.StorageHeight;
+        const auto Depth    = MipProps.Depth;
 
         if (!IsMipTail && Width < Props.TileSize[0] && Height < Props.TileSize[1] && (Depth == 1 || Depth < Props.TileSize[2]))
         {
@@ -1997,20 +1995,20 @@ TextureSparseProperties GetTextureSparsePropertiesForStandardBlocks(const Textur
 
         if (IsMipTail)
         {
-            Props.MipTailSize += Width * Height * Depth * BytesPerBlock;
+            Props.MipTailSize += Uint64{Width} * Uint64{Height} * Uint64{Depth} * Uint64{TexelSize};
         }
         else
         {
-            const auto XTiles = (Width + Props.TileSize[0] - 1) / Props.TileSize[0];
-            const auto YTiles = (Height + Props.TileSize[1] - 1) / Props.TileSize[1];
-            const auto ZTiles = (Depth + Props.TileSize[2] - 1) / Props.TileSize[2];
+            const Uint64 XTiles = (Width + Props.TileSize[0] - 1) / Props.TileSize[0];
+            const Uint64 YTiles = (Height + Props.TileSize[1] - 1) / Props.TileSize[1];
+            const Uint64 ZTiles = (Depth + Props.TileSize[2] - 1) / Props.TileSize[2];
             SliceSize += (XTiles * YTiles * ZTiles) * SparseBlockSize;
         }
     }
 
     Props.MipTailSize   = AlignUp(Props.MipTailSize, SparseBlockSize);
     Props.MipTailStride = SliceSize + Props.MipTailSize;
-    Props.MemorySize    = Props.MipTailStride * ArraySize;
+    Props.MemorySize    = Props.MipTailStride * TexDesc.GetArraySize();
     Props.BlockSize     = SparseBlockSize;
     Props.Flags         = SPARSE_TEXTURE_FLAG_NONE;
 
