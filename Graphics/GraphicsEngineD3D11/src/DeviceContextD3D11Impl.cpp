@@ -42,6 +42,7 @@
 #include "FenceD3D11Impl.hpp"
 #include "QueryD3D11Impl.hpp"
 #include "DeviceMemoryD3D11Impl.hpp"
+#include "D3D11TileMappingHelper.hpp"
 
 namespace Diligent
 {
@@ -2225,91 +2226,34 @@ void DeviceContextD3D11Impl::BindSparseMemory(const BindSparseMemoryAttribs& Att
     DEV_CHECK_ERR(CComQIPtr<ID3D11DeviceContext2>{m_pd3d11DeviceContext}, "Failed to query ID3D11DeviceContext2");
     auto* pd3d11DeviceContext2 = static_cast<ID3D11DeviceContext2*>(m_pd3d11DeviceContext.p);
 
-    std::vector<D3D11_TILED_RESOURCE_COORDINATE> Coordinates;
-    std::vector<D3D11_TILE_REGION_SIZE>          RegionSizes;
-    std::vector<UINT>                            RangeFlags; // D3D11_TILE_RANGE_FLAG
-    std::vector<UINT>                            StartOffsets;
-    std::vector<UINT>                            RangeTileCounts;
-    ID3D11Buffer*                                pTilePool = nullptr;
-    bool                                         UseNVApi  = false;
+    D3D11TileMappingHelper TileMapping;
+    ID3D11Buffer*          pTilePool = nullptr;
 
     auto UpdateTileMappingsAndClear = [&](ID3D11Resource* pResource) //
     {
-        if (pTilePool != nullptr && !Coordinates.empty())
+        if (pTilePool != nullptr && !TileMapping.Coordinates.empty())
         {
-#ifdef DILIGENT_ENABLE_D3D_NVAPI
-            if (UseNVApi)
-            {
-                // From NVAPI docs:
-                //   "If any of API from this set is used, using all of them is highly recommended."
-                NvAPI_D3D11_UpdateTileMappings(pd3d11DeviceContext2,
-                                               pResource,
-                                               static_cast<UINT>(Coordinates.size()),
-                                               Coordinates.data(),
-                                               RegionSizes.data(),
-                                               pTilePool,
-                                               static_cast<UINT>(RangeFlags.size()),
-                                               RangeFlags.data(),
-                                               StartOffsets.data(),
-                                               RangeTileCounts.data(),
-                                               D3D11_TILE_MAPPING_NO_OVERWRITE);
-            }
-            else
-#endif
-            {
-                pd3d11DeviceContext2->UpdateTileMappings(pResource,
-                                                         static_cast<UINT>(Coordinates.size()),
-                                                         Coordinates.data(),
-                                                         RegionSizes.data(),
-                                                         pTilePool,
-                                                         static_cast<UINT>(RangeFlags.size()),
-                                                         RangeFlags.data(),
-                                                         StartOffsets.data(),
-                                                         RangeTileCounts.data(),
-                                                         D3D11_TILE_MAPPING_NO_OVERWRITE);
-            }
+            TileMapping.Commit(pd3d11DeviceContext2, pResource, pTilePool);
         }
-        Coordinates.clear();
-        RegionSizes.clear();
-        RangeFlags.clear();
-        StartOffsets.clear();
-        RangeTileCounts.clear();
+        TileMapping.Reset();
         pTilePool = nullptr;
-        UseNVApi  = false;
     };
 
-    auto AddBindRange = [&](const D3D11_TILED_RESOURCE_COORDINATE& d3d11Coords,
-                            const D3D11_TILE_REGION_SIZE&          d3d11RegionSize,
-                            const auto&                            BindRange) //
+    auto UpdateTilePool = [&](const auto& BindRange) //
     {
         auto* pMemD3D11 = ClassPtrCast<DeviceMemoryD3D11Impl>(BindRange.pMemory);
 
         if (pTilePool != nullptr && pMemD3D11 != nullptr && pTilePool != pMemD3D11->GetD3D11TilePool())
         {
             LOG_ERROR_MESSAGE("IDeviceContext::BindSparseMemory(): binding multiple memory objects to a single resource is not allowed in Direct3D11.");
-
             // all previous mapping will be unmapped
-            Coordinates.clear();
-            RegionSizes.clear();
-            RangeFlags.clear();
-            StartOffsets.clear();
-            RangeTileCounts.clear();
+            TileMapping.Reset();
         }
 
         if (pMemD3D11 != nullptr)
         {
             pTilePool = pMemD3D11->GetD3D11TilePool();
         }
-
-        const auto Flags     = pMemD3D11 ? 0 : D3D11_TILE_RANGE_NULL;
-        const auto Offset    = StaticCast<UINT>(BindRange.MemoryOffset / D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES);
-        const auto TileCount = StaticCast<UINT>(BindRange.MemorySize / D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES);
-
-        Coordinates.emplace_back(d3d11Coords);
-        RegionSizes.emplace_back(d3d11RegionSize);
-        RangeFlags.emplace_back(Flags);
-        StartOffsets.emplace_back(Offset);
-        RangeTileCounts.emplace_back(TileCount);
     };
 
     for (Uint32 i = 0; i < Attribs.NumBufferBinds; ++i)
@@ -2320,24 +2264,11 @@ void DeviceContextD3D11Impl::BindSparseMemory(const BindSparseMemoryAttribs& Att
         for (Uint32 r = 0; r < BuffBind.NumRanges; ++r)
         {
             const auto& BindRange = BuffBind.pRanges[r];
-
             DEV_CHECK_ERR((BindRange.MemoryOffset % D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES) == 0,
                           "MemoryOffset must be a multiple of sparse block size");
 
-            D3D11_TILED_RESOURCE_COORDINATE d3d11Coord{};
-            d3d11Coord.X           = StaticCast<UINT>(BindRange.BufferOffset / D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES);
-            d3d11Coord.Y           = 0;
-            d3d11Coord.Z           = 0;
-            d3d11Coord.Subresource = 0;
-
-            D3D11_TILE_REGION_SIZE d3d11RegionSize{};
-            d3d11RegionSize.NumTiles = StaticCast<UINT>(BindRange.MemorySize / D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES);
-            d3d11RegionSize.bUseBox  = FALSE;
-            d3d11RegionSize.Width    = 0;
-            d3d11RegionSize.Height   = 0;
-            d3d11RegionSize.Depth    = 0;
-
-            AddBindRange(d3d11Coord, d3d11RegionSize, BindRange);
+            UpdateTilePool(BindRange);
+            TileMapping.AddBufferBindRange(BindRange);
         }
 
         UpdateTileMappingsAndClear(pBuffD3D11->GetD3D11Buffer());
@@ -2349,46 +2280,13 @@ void DeviceContextD3D11Impl::BindSparseMemory(const BindSparseMemoryAttribs& Att
         auto*       pTexD3D11      = ClassPtrCast<TextureBaseD3D11>(TexBind.pTexture);
         const auto& TexSparseProps = pTexD3D11->GetSparseProperties();
         const auto& TexDesc        = pTexD3D11->GetDesc();
-
-        UseNVApi = pTexD3D11->IsUsingNVApi();
+        const auto  UseNVApi       = pTexD3D11->IsUsingNVApi();
 
         for (Uint32 r = 0; r < TexBind.NumRanges; ++r)
         {
             const auto& BindRange = TexBind.pRanges[r];
-
-            D3D11_TILED_RESOURCE_COORDINATE d3d11Coord{};
-            d3d11Coord.Subresource = D3D11CalcSubresource(BindRange.MipLevel, BindRange.ArraySlice, TexDesc.MipLevels);
-
-            D3D11_TILE_REGION_SIZE d3d11RegionSize{};
-            d3d11RegionSize.bUseBox = BindRange.MipLevel < TexSparseProps.FirstMipInTail ? TRUE : FALSE;
-
-            if (d3d11RegionSize.bUseBox)
-            {
-                d3d11Coord.X = BindRange.Region.MinX / TexSparseProps.TileSize[0];
-                d3d11Coord.Y = BindRange.Region.MinY / TexSparseProps.TileSize[1];
-                d3d11Coord.Z = BindRange.Region.MinZ / TexSparseProps.TileSize[2];
-
-                const auto NumTiles      = GetNumTilesInBox(BindRange.Region, TexSparseProps);
-                d3d11RegionSize.NumTiles = NumTiles.x * NumTiles.y * NumTiles.z;
-                d3d11RegionSize.Width    = NumTiles.x;
-                d3d11RegionSize.Height   = StaticCast<UINT16>(NumTiles.y);
-                d3d11RegionSize.Depth    = StaticCast<UINT16>(NumTiles.z);
-            }
-            else
-            {
-                // The X coordinate is used to indicate a tile within the packed mip region, rather than a logical region of a single subresource.
-                // The Y and Z coordinates must be zero.
-                d3d11Coord.X = StaticCast<UINT>(BindRange.OffsetInMipTail / D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES);
-                d3d11Coord.Y = 0;
-                d3d11Coord.Z = 0;
-
-                d3d11RegionSize.NumTiles = StaticCast<UINT>(BindRange.MemorySize / D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES);
-                d3d11RegionSize.Width    = 0;
-                d3d11RegionSize.Height   = 0;
-                d3d11RegionSize.Depth    = 0;
-            }
-
-            AddBindRange(d3d11Coord, d3d11RegionSize, BindRange);
+            UpdateTilePool(BindRange);
+            TileMapping.AddTextureBindRange(BindRange, TexSparseProps, TexDesc, UseNVApi);
         }
 
         UpdateTileMappingsAndClear(pTexD3D11->GetD3D11Texture());

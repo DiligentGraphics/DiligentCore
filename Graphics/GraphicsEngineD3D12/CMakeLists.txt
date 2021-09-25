@@ -9,6 +9,7 @@ set(INCLUDE
     include/CommandListD3D12Impl.hpp
     include/CommandListManager.hpp
     include/CommandQueueD3D12Impl.hpp
+    include/D3D12TileMappingHelper.hpp
     include/D3D12ResourceBase.hpp
     include/D3D12TypeConversions.hpp
     include/D3D12TypeDefinitions.h

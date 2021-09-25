@@ -7,6 +7,7 @@ set(DILIGENT_NVAPI_PATH "" CACHE PATH "Path to NVAPI to enable D3D11/D3D12 exten
 set(INCLUDE
     include/D3DCommonTypeConversions.hpp
     include/D3DErrors.hpp
+    include/D3DTileMappingHelper.hpp
     include/D3DShaderResourceLoader.hpp
     include/D3DTypeConversionImpl.hpp
     include/D3DViewDescConversionImpl.hpp

@@ -6,6 +6,7 @@ set(INCLUDE
     include/BufferD3D11Impl.hpp
     include/BufferViewD3D11Impl.hpp
     include/CommandListD3D11Impl.hpp
+    include/D3D11TileMappingHelper.hpp
     include/D3D11TypeConversions.hpp
     include/D3D11TypeDefinitions.h
     include/DeviceContextD3D11Impl.hpp
