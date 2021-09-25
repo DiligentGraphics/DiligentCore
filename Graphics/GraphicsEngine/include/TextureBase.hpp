@@ -188,10 +188,6 @@ public:
 
     ~TextureBase()
     {
-        if (m_pSparseProps != nullptr)
-        {
-            this->m_pDevice->GetTexSparsePropsAllocator().Free(m_pSparseProps);
-        }
         DestroyDefaultViews();
     }
 
@@ -423,7 +419,7 @@ protected:
 
     RESOURCE_STATE m_State = RESOURCE_STATE_UNKNOWN;
 
-    TextureSparseProperties* m_pSparseProps = nullptr;
+    std::unique_ptr<TextureSparseProperties> m_pSparseProps;
 };
 
 } // namespace Diligent

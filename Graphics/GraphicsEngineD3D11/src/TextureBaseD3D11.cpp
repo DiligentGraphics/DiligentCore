@@ -179,7 +179,7 @@ void TextureBaseD3D11::InitSparseProperties()
     VERIFY_EXPR(m_Desc.Usage == USAGE_SPARSE);
     VERIFY_EXPR(m_pSparseProps == nullptr);
 
-    m_pSparseProps = ALLOCATE(m_pDevice->GetTexSparsePropsAllocator(), "TextureSparseProperties", TextureSparseProperties, 1);
+    m_pSparseProps = std::make_unique<TextureSparseProperties>();
 
     if (IsUsingNVApi())
     {

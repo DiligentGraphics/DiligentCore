@@ -751,11 +751,11 @@ void TextureVkImpl::InitSparseProperties()
     VERIFY_EXPR(m_Desc.Usage == USAGE_SPARSE);
     VERIFY_EXPR(m_pSparseProps == nullptr);
 
-    m_pSparseProps = ALLOCATE(m_pDevice->GetTexSparsePropsAllocator(), "TextureSparseProperties", TextureSparseProperties, 1);
+    m_pSparseProps = std::make_unique<TextureSparseProperties>();
 
-    const auto&              LogicalDevice = m_pDevice->GetLogicalDevice();
-    const auto               MemReq        = LogicalDevice.GetImageMemoryRequirements(GetVkImage());
-    TextureSparseProperties& Props         = *m_pSparseProps;
+    const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
+    const auto  MemReq        = LogicalDevice.GetImageMemoryRequirements(GetVkImage());
+    auto&       Props         = *m_pSparseProps;
 
     // If the image was not created with VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT then pSparseMemoryRequirementCount will be set to zero.
     uint32_t SparseReqCount = 0;

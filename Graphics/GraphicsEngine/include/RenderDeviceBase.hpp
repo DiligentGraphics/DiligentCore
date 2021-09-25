@@ -272,8 +272,7 @@ public:
         m_TLASAllocator          {RawMemAllocator, sizeof(TopLevelASImplType),                 16},
         m_SBTAllocator           {RawMemAllocator, sizeof(ShaderBindingTableImplType),         16},
         m_PipeResSignAllocator   {RawMemAllocator, sizeof(PipelineResourceSignatureImplType), 128},
-        m_MemObjAllocator        {RawMemAllocator, sizeof(DeviceMemoryImplType),               16},
-        m_TexSparsePropsAllocator{RawMemAllocator, sizeof(TextureSparseProperties),            64}
+        m_MemObjAllocator        {RawMemAllocator, sizeof(DeviceMemoryImplType),               16}
     // clang-format on
     {
         // Initialize texture format info
@@ -440,7 +439,6 @@ public:
     FixedBlockMemoryAllocator& GetTexViewObjAllocator() { return m_TexViewObjAllocator; }
     FixedBlockMemoryAllocator& GetBuffViewObjAllocator() { return m_BuffViewObjAllocator; }
     FixedBlockMemoryAllocator& GetSRBAllocator() { return m_SRBAllocator; }
-    FixedBlockMemoryAllocator& GetTexSparsePropsAllocator() { return m_TexSparsePropsAllocator; }
 
     VALIDATION_FLAGS GetValidationFlags() const { return m_ValidationFlags; }
 
@@ -721,26 +719,25 @@ protected:
     /// Weak references to deferred contexts.
     std::vector<RefCntWeakPtr<DeviceContextImplType>, STDAllocatorRawMem<RefCntWeakPtr<DeviceContextImplType>>> m_wpDeferredContexts;
 
-    IMemoryAllocator&         m_RawMemAllocator;         ///< Raw memory allocator
-    FixedBlockMemoryAllocator m_TexObjAllocator;         ///< Allocator for texture objects
-    FixedBlockMemoryAllocator m_TexViewObjAllocator;     ///< Allocator for texture view objects
-    FixedBlockMemoryAllocator m_BufObjAllocator;         ///< Allocator for buffer objects
-    FixedBlockMemoryAllocator m_BuffViewObjAllocator;    ///< Allocator for buffer view objects
-    FixedBlockMemoryAllocator m_ShaderObjAllocator;      ///< Allocator for shader objects
-    FixedBlockMemoryAllocator m_SamplerObjAllocator;     ///< Allocator for sampler objects
-    FixedBlockMemoryAllocator m_PSOAllocator;            ///< Allocator for pipeline state objects
-    FixedBlockMemoryAllocator m_SRBAllocator;            ///< Allocator for shader resource binding objects
-    FixedBlockMemoryAllocator m_ResMappingAllocator;     ///< Allocator for resource mapping objects
-    FixedBlockMemoryAllocator m_FenceAllocator;          ///< Allocator for fence objects
-    FixedBlockMemoryAllocator m_QueryAllocator;          ///< Allocator for query objects
-    FixedBlockMemoryAllocator m_RenderPassAllocator;     ///< Allocator for render pass objects
-    FixedBlockMemoryAllocator m_FramebufferAllocator;    ///< Allocator for framebuffer objects
-    FixedBlockMemoryAllocator m_BLASAllocator;           ///< Allocator for bottom-level acceleration structure objects
-    FixedBlockMemoryAllocator m_TLASAllocator;           ///< Allocator for top-level acceleration structure objects
-    FixedBlockMemoryAllocator m_SBTAllocator;            ///< Allocator for shader binding table objects
-    FixedBlockMemoryAllocator m_PipeResSignAllocator;    ///< Allocator for pipeline resource signature objects
-    FixedBlockMemoryAllocator m_MemObjAllocator;         ///< Allocator for device memory objects
-    FixedBlockMemoryAllocator m_TexSparsePropsAllocator; ///< Allocator for TextureSparseProperties objects
+    IMemoryAllocator&         m_RawMemAllocator;      ///< Raw memory allocator
+    FixedBlockMemoryAllocator m_TexObjAllocator;      ///< Allocator for texture objects
+    FixedBlockMemoryAllocator m_TexViewObjAllocator;  ///< Allocator for texture view objects
+    FixedBlockMemoryAllocator m_BufObjAllocator;      ///< Allocator for buffer objects
+    FixedBlockMemoryAllocator m_BuffViewObjAllocator; ///< Allocator for buffer view objects
+    FixedBlockMemoryAllocator m_ShaderObjAllocator;   ///< Allocator for shader objects
+    FixedBlockMemoryAllocator m_SamplerObjAllocator;  ///< Allocator for sampler objects
+    FixedBlockMemoryAllocator m_PSOAllocator;         ///< Allocator for pipeline state objects
+    FixedBlockMemoryAllocator m_SRBAllocator;         ///< Allocator for shader resource binding objects
+    FixedBlockMemoryAllocator m_ResMappingAllocator;  ///< Allocator for resource mapping objects
+    FixedBlockMemoryAllocator m_FenceAllocator;       ///< Allocator for fence objects
+    FixedBlockMemoryAllocator m_QueryAllocator;       ///< Allocator for query objects
+    FixedBlockMemoryAllocator m_RenderPassAllocator;  ///< Allocator for render pass objects
+    FixedBlockMemoryAllocator m_FramebufferAllocator; ///< Allocator for framebuffer objects
+    FixedBlockMemoryAllocator m_BLASAllocator;        ///< Allocator for bottom-level acceleration structure objects
+    FixedBlockMemoryAllocator m_TLASAllocator;        ///< Allocator for top-level acceleration structure objects
+    FixedBlockMemoryAllocator m_SBTAllocator;         ///< Allocator for shader binding table objects
+    FixedBlockMemoryAllocator m_PipeResSignAllocator; ///< Allocator for pipeline resource signature objects
+    FixedBlockMemoryAllocator m_MemObjAllocator;      ///< Allocator for device memory objects
 };
 
 } // namespace Diligent
