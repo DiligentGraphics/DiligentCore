@@ -42,16 +42,21 @@ namespace Diligent
 
 void ValidateDeviceMemoryDesc(const DeviceMemoryDesc& Desc, const IRenderDevice* pDevice) noexcept(false)
 {
-    VERIFY_DEVMEMORY(Desc.Type == DEVICE_MEMORY_TYPE_SPARSE, "type must be DEVICE_MEMORY_TYPE_SPARSE");
+    if (Desc.Type == DEVICE_MEMORY_TYPE_SPARSE)
+    {
+        const auto& SparseMem = pDevice->GetAdapterInfo().SparseMemory;
 
-    const auto& SparseMem = pDevice->GetAdapterInfo().SparseMemory;
+        VERIFY_DEVMEMORY(Desc.PageSize != 0, "page size must not be zero");
 
-    VERIFY_DEVMEMORY(Desc.PageSize != 0, "page size must not be zero");
-
-    // In a very rare case when the resource has a custom memory alignment that is not a multiple of StandardBlockSize,
-    // this might be a false positive.
-    VERIFY_DEVMEMORY((Desc.PageSize % SparseMem.StandardBlockSize) == 0,
-                     "page size (", Desc.PageSize, ") is not a multiple of sparse block size (", SparseMem.StandardBlockSize, ")");
+        // In a very rare case when the resource has a custom memory alignment that is not a multiple of StandardBlockSize,
+        // this might be a false positive.
+        VERIFY_DEVMEMORY((Desc.PageSize % SparseMem.StandardBlockSize) == 0,
+                         "page size (", Desc.PageSize, ") is not a multiple of sparse block size (", SparseMem.StandardBlockSize, ")");
+    }
+    else
+    {
+        LOG_DEVMEMORY_ERROR_AND_THROW("Unexpected device memory type");
+    }
 }
 
 } // namespace Diligent

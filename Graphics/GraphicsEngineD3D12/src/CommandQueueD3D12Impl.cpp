@@ -130,7 +130,7 @@ void CommandQueueD3D12Impl::WaitFence(ID3D12Fence* pFence, Uint64 Value)
 
 void CommandQueueD3D12Impl::UpdateTileMappings(ResourceTileMappingsD3D12* pMappings, Uint32 Count)
 {
-    DEV_CHECK_ERR(pMappings != nullptr, "");
+    DEV_CHECK_ERR(pMappings != nullptr, "Tile mappings must not be null");
 
     std::lock_guard<std::mutex> Lock{m_QueueMtx};
 

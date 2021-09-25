@@ -44,21 +44,21 @@ static const INTERFACE_ID IID_DeviceMemory =
 /// This enumeration is used by DeviceMemoryDesc structure.
 DILIGENT_TYPED_ENUM(DEVICE_MEMORY_TYPE, Uint8)
 {
-    DEVICE_MEMORY_TYPE_NONE   = 0,
+    DEVICE_MEMORY_TYPE_UNDEFINED = 0,
 
     /// Indicates that memory will be used for sparse resources.
-    DEVICE_MEMORY_TYPE_SPARSE = 1,
+    DEVICE_MEMORY_TYPE_SPARSE    = 1,
 };
 
 /// Device memory description
 struct DeviceMemoryDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
     /// Memory type, see Diligent::DEVICE_MEMORY_TYPE.
-    DEVICE_MEMORY_TYPE  Type                  DEFAULT_INITIALIZER(DEVICE_MEMORY_TYPE_NONE);
+    DEVICE_MEMORY_TYPE  Type                  DEFAULT_INITIALIZER(DEVICE_MEMORY_TYPE_UNDEFINED);
 
     /// Size of the memory page.
     /// Depending on the implementation, the memory may be allocated as a single chunk or as an array of pages.
-    Uint32              PageSize              DEFAULT_INITIALIZER(0);
+    Uint64              PageSize              DEFAULT_INITIALIZER(0);
 
     /// Defines which immediate contexts are allowed to execute commands that use this device memory.
 

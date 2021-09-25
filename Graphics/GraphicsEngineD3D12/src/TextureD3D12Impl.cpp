@@ -691,8 +691,8 @@ void TextureD3D12Impl::InitSparseProperties()
         auto* pd3d12Device = m_pDevice->GetD3D12Device();
 
         UINT                  NumTilesForEntireResource = 0;
-        D3D12_PACKED_MIP_INFO PackedMipDesc;
-        D3D12_TILE_SHAPE      StandardTileShapeForNonPackedMips;
+        D3D12_PACKED_MIP_INFO PackedMipDesc{};
+        D3D12_TILE_SHAPE      StandardTileShapeForNonPackedMips{};
         UINT                  NumSubresourceTilings = 0;
         pd3d12Device->GetResourceTiling(GetD3D12Resource(),
                                         &NumTilesForEntireResource,
@@ -703,10 +703,10 @@ void TextureD3D12Impl::InitSparseProperties()
                                         nullptr);
 
         auto& Props          = *m_pSparseProps;
-        Props.MemorySize     = NumTilesForEntireResource * D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
+        Props.MemorySize     = Uint64{NumTilesForEntireResource} * D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
         Props.BlockSize      = D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
-        Props.MipTailOffset  = PackedMipDesc.StartTileIndexInOverallResource * D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
-        Props.MipTailSize    = PackedMipDesc.NumTilesForPackedMips * D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
+        Props.MipTailOffset  = Uint64{PackedMipDesc.StartTileIndexInOverallResource} * D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
+        Props.MipTailSize    = Uint64{PackedMipDesc.NumTilesForPackedMips} * D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
         Props.FirstMipInTail = PackedMipDesc.NumStandardMips;
         Props.TileSize[0]    = StandardTileShapeForNonPackedMips.WidthInTexels;
         Props.TileSize[1]    = StandardTileShapeForNonPackedMips.HeightInTexels;

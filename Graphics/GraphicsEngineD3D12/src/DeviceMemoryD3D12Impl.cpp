@@ -48,58 +48,63 @@ DeviceMemoryD3D12Impl::DeviceMemoryD3D12Impl(IReferenceCounters*           pRefC
 
 DeviceMemoryD3D12Impl::~DeviceMemoryD3D12Impl()
 {
-    // AZ TODO: use release queue
+    m_pDevice->SafeReleaseDeviceObject(std::move(m_Pages), m_Desc.ImmediateContextMask);
 }
 
 IMPLEMENT_QUERY_INTERFACE(DeviceMemoryD3D12Impl, IID_DeviceMemoryD3D12, TDeviceMemoryBase)
 
+inline CComPtr<ID3D12Heap> CreateD3D12Heap(RenderDeviceD3D12Impl* pDevice, const D3D12_HEAP_DESC& d3d12HeapDesc)
+{
+    auto* const pd3d12Device = pDevice->GetD3D12Device();
+
+    CComPtr<ID3D12Heap> pd3d12Heap;
+#ifdef DILIGENT_ENABLE_D3D_NVAPI
+    const auto UseNVApi = pDevice->GetDummyNVApiHeap() != nullptr;
+    if (UseNVApi)
+    {
+        if (NvAPI_D3D12_CreateHeap(pd3d12Device, &d3d12HeapDesc, IID_PPV_ARGS(&pd3d12Heap)) != NVAPI_OK)
+        {
+            LOG_ERROR_MESSAGE("Failed to create D3D12 heap using NVApi");
+            return false;
+        }
+    }
+    else
+#endif
+    {
+        if (FAILED(pd3d12Device->CreateHeap(&d3d12HeapDesc, IID_PPV_ARGS(&pd3d12Heap))))
+        {
+            LOG_ERROR_MESSAGE("Failed to create D3D12 heap");
+            return false;
+        }
+    }
+
+    return pd3d12Heap;
+}
+
 Bool DeviceMemoryD3D12Impl::Resize(Uint64 NewSize)
 {
-    auto*      pd3d12Device = m_pDevice->GetD3D12Device();
-    const auto NewPageCount = StaticCast<size_t>(NewSize / m_Desc.PageSize);
-    const auto OldPageCount = m_Pages.size();
-    const bool UseNVApi     = m_pDevice->GetDummyNVApiHeap() != nullptr;
-
     D3D12_HEAP_DESC d3d12HeapDesc{};
     d3d12HeapDesc.SizeInBytes                     = m_Desc.PageSize;
     d3d12HeapDesc.Properties.Type                 = D3D12_HEAP_TYPE_CUSTOM;
     d3d12HeapDesc.Properties.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_NOT_AVAILABLE;
     d3d12HeapDesc.Properties.MemoryPoolPreference = m_pDevice->GetAdapterInfo().Type == ADAPTER_TYPE_DISCRETE ? D3D12_MEMORY_POOL_L1 : D3D12_MEMORY_POOL_L0;
-    d3d12HeapDesc.Properties.CreationNodeMask     = 0;                                          // equivalent to 1
-    d3d12HeapDesc.Properties.VisibleNodeMask      = 0;                                          // equivalent to 1
-    d3d12HeapDesc.Alignment                       = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT; // AZ TODO: D3D12_DEFAULT_MSAA_RESOURCE_PLACEMENT_ALIGNMENT
-    d3d12HeapDesc.Flags                           = D3D12_HEAP_FLAG_NONE;                       // AZ TODO: D3D12_HEAP_FLAG_ALLOW_SHADER_ATOMICS, D3D12_HEAP_FLAG_CREATE_NOT_ZEROED
+    d3d12HeapDesc.Properties.CreationNodeMask     = 0;                                                                  // equivalent to 1
+    d3d12HeapDesc.Properties.VisibleNodeMask      = 0;                                                                  // equivalent to 1
+    d3d12HeapDesc.Alignment                       = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;                         // AZ TODO: D3D12_DEFAULT_MSAA_RESOURCE_PLACEMENT_ALIGNMENT
+    d3d12HeapDesc.Flags                           = D3D12_HEAP_FLAG_DENY_RT_DS_TEXTURES | D3D12_HEAP_FLAG_DENY_BUFFERS; // AZ TODO: D3D12_HEAP_FLAG_ALLOW_SHADER_ATOMICS, D3D12_HEAP_FLAG_CREATE_NOT_ZEROED
 
+    const auto NewPageCount = StaticCast<size_t>(NewSize / m_Desc.PageSize);
     m_Pages.reserve(NewPageCount);
 
-    for (size_t i = OldPageCount; i < NewPageCount; ++i)
+    while (m_Pages.size() < NewPageCount)
     {
-        CComPtr<ID3D12Heap> pd3d12Heap;
-#ifdef DILIGENT_ENABLE_D3D_NVAPI
-        if (UseNVApi)
-        {
-            if (NvAPI_D3D12_CreateHeap(pd3d12Device, &d3d12HeapDesc, IID_PPV_ARGS(&pd3d12Heap)) != NVAPI_OK)
-            {
-                LOG_ERROR_MESSAGE("Failed to create D3D12 heap using NVApi");
-                return false;
-            }
-        }
-        else
-#endif
-        {
-            if (FAILED(pd3d12Device->CreateHeap(&d3d12HeapDesc, IID_PPV_ARGS(&pd3d12Heap))))
-            {
-                LOG_ERROR_MESSAGE("Failed to create D3D12 heap");
-                return false;
-            }
-        }
-        m_Pages.emplace_back(std::move(pd3d12Heap));
+        m_Pages.emplace_back(CreateD3D12Heap(m_pDevice, d3d12HeapDesc));
     }
 
-    if (NewPageCount < OldPageCount)
+    while (m_Pages.size() > NewPageCount)
     {
-        // AZ TODO: use release queue
-        m_Pages.resize(NewPageCount);
+        m_pDevice->SafeReleaseDeviceObject(std::move(m_Pages.back()), m_Desc.ImmediateContextMask);
+        m_Pages.pop_back();
     }
 
     return true;
@@ -117,27 +122,27 @@ Bool DeviceMemoryD3D12Impl::IsCompatible(IDeviceObject* pResource) const
 
 DeviceMemoryRangeD3D12 DeviceMemoryD3D12Impl::GetRange(Uint64 Offset, Uint64 Size)
 {
-    const auto             PageIdx = static_cast<size_t>(Offset / m_Desc.PageSize);
-    DeviceMemoryRangeD3D12 Result{};
+    const auto PageIdx = static_cast<size_t>(Offset / m_Desc.PageSize);
 
+    DeviceMemoryRangeD3D12 Range{};
     if (PageIdx >= m_Pages.size())
     {
-        LOG_ERROR_MESSAGE("DeviceMemoryD3D12Impl::GetRange(): Offset is greater than allocated space");
-        return Result;
+        LOG_ERROR_MESSAGE("DeviceMemoryD3D12Impl::GetRange(): Offset is out of bounds of allocated space");
+        return Range;
     }
 
     const auto OffsetInPage = Offset % m_Desc.PageSize;
     if (OffsetInPage + Size > m_Desc.PageSize)
     {
-        LOG_ERROR_MESSAGE("DeviceMemoryD3D12Impl::GetRange(): Offset and Size must be inside single page");
-        return Result;
+        LOG_ERROR_MESSAGE("DeviceMemoryD3D12Impl::GetRange(): Offset and Size must be inside a single page");
+        return Range;
     }
 
-    Result.Offset  = OffsetInPage;
-    Result.pHandle = m_Pages[PageIdx];
-    Result.Size    = std::min(m_Desc.PageSize - OffsetInPage, Size);
+    Range.Offset  = OffsetInPage;
+    Range.pHandle = m_Pages[PageIdx];
+    Range.Size    = std::min(m_Desc.PageSize - OffsetInPage, Size);
 
-    return Result;
+    return Range;
 }
 
 } // namespace Diligent
