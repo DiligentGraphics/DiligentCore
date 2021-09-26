@@ -30,6 +30,8 @@
 
 #include "RenderDeviceD3D12Impl.hpp"
 #include "DeviceContextD3D12Impl.hpp"
+#include "TextureD3D12Impl.hpp"
+#include "BufferD3D12Impl.hpp"
 
 #include "D3D12TypeConversions.hpp"
 #include "GraphicsAccessories.hpp"
@@ -37,11 +39,71 @@
 namespace Diligent
 {
 
+namespace
+{
+
+D3D12_HEAP_FLAGS GetD3D12HeapFlags(IDeviceObject** ppResources, Uint32 NumResources, bool& AllowMSAA)
+{
+    AllowMSAA = false;
+
+    if (NumResources == 0)
+        return D3D12_HEAP_FLAG_NONE;
+
+    // NB: D3D12_RESOURCE_HEAP_TIER_1 hardware requires exactly one of the
+    //     flags below left unset when creating a heap.
+    D3D12_HEAP_FLAGS HeapFlags =
+        D3D12_HEAP_FLAG_DENY_BUFFERS |
+        D3D12_HEAP_FLAG_DENY_RT_DS_TEXTURES |
+        D3D12_HEAP_FLAG_DENY_NON_RT_DS_TEXTURES;
+
+    static_assert(BIND_FLAGS_LAST == 1u << 11u, "Did you add a new bind flag? You may need to update the logic below.");
+    for (Uint32 res = 0; res < NumResources; ++res)
+    {
+        auto* pResource = ppResources[res];
+        if (pResource == nullptr)
+            continue;
+
+        if (RefCntAutoPtr<ITextureD3D12> pTexture{pResource, IID_TextureD3D12})
+        {
+            const auto& TexDesc = pTexture.RawPtr<TextureD3D12Impl>()->GetDesc();
+            if (TexDesc.SampleCount > 1)
+                AllowMSAA = true;
+
+            if (TexDesc.BindFlags & (BIND_RENDER_TARGET | BIND_DEPTH_STENCIL))
+                HeapFlags &= ~D3D12_HEAP_FLAG_DENY_RT_DS_TEXTURES;
+
+            if (TexDesc.BindFlags & (BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS | BIND_INPUT_ATTACHMENT))
+                HeapFlags &= ~D3D12_HEAP_FLAG_DENY_NON_RT_DS_TEXTURES;
+
+            if (TexDesc.BindFlags & BIND_UNORDERED_ACCESS)
+                HeapFlags |= D3D12_HEAP_FLAG_ALLOW_SHADER_ATOMICS;
+        }
+        else if (RefCntAutoPtr<IBufferD3D12> pBuffer{pResource, IID_BufferD3D12})
+        {
+            const auto& BuffDesc = pBuffer.RawPtr<BufferD3D12Impl>()->GetDesc();
+
+            HeapFlags &= ~D3D12_HEAP_FLAG_DENY_BUFFERS;
+            if (BuffDesc.BindFlags & BIND_UNORDERED_ACCESS)
+                HeapFlags |= D3D12_HEAP_FLAG_ALLOW_SHADER_ATOMICS;
+        }
+        else
+        {
+            UNEXPECTED("unsupported resource type");
+        }
+    }
+
+    return HeapFlags;
+}
+
+} // namespace
+
 DeviceMemoryD3D12Impl::DeviceMemoryD3D12Impl(IReferenceCounters*           pRefCounters,
                                              RenderDeviceD3D12Impl*        pDeviceD3D11,
                                              const DeviceMemoryCreateInfo& MemCI) :
     TDeviceMemoryBase{pRefCounters, pDeviceD3D11, MemCI}
 {
+    m_d3d12HeapFlags = GetD3D12HeapFlags(MemCI.ppCompatibleResources, MemCI.NumResources, m_AllowMSAA);
+
     if (!Resize(MemCI.InitialSize))
         LOG_ERROR_AND_THROW("Failed to allocate device memory");
 }
@@ -87,11 +149,11 @@ Bool DeviceMemoryD3D12Impl::Resize(Uint64 NewSize)
     d3d12HeapDesc.SizeInBytes                     = m_Desc.PageSize;
     d3d12HeapDesc.Properties.Type                 = D3D12_HEAP_TYPE_CUSTOM;
     d3d12HeapDesc.Properties.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_NOT_AVAILABLE;
-    d3d12HeapDesc.Properties.MemoryPoolPreference = m_pDevice->GetAdapterInfo().Type == ADAPTER_TYPE_DISCRETE ? D3D12_MEMORY_POOL_L1 : D3D12_MEMORY_POOL_L0;
-    d3d12HeapDesc.Properties.CreationNodeMask     = 0;                                                                  // equivalent to 1
-    d3d12HeapDesc.Properties.VisibleNodeMask      = 0;                                                                  // equivalent to 1
-    d3d12HeapDesc.Alignment                       = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;                         // AZ TODO: D3D12_DEFAULT_MSAA_RESOURCE_PLACEMENT_ALIGNMENT
-    d3d12HeapDesc.Flags                           = D3D12_HEAP_FLAG_DENY_RT_DS_TEXTURES | D3D12_HEAP_FLAG_DENY_BUFFERS; // AZ TODO: D3D12_HEAP_FLAG_ALLOW_SHADER_ATOMICS, D3D12_HEAP_FLAG_CREATE_NOT_ZEROED
+    d3d12HeapDesc.Properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+    d3d12HeapDesc.Properties.CreationNodeMask     = 1;
+    d3d12HeapDesc.Properties.VisibleNodeMask      = 1;
+    d3d12HeapDesc.Alignment                       = m_AllowMSAA ? D3D12_DEFAULT_MSAA_RESOURCE_PLACEMENT_ALIGNMENT : D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+    d3d12HeapDesc.Flags                           = m_d3d12HeapFlags; // AZ TODO: D3D12_HEAP_FLAG_CREATE_NOT_ZEROED
 
     const auto NewPageCount = StaticCast<size_t>(NewSize / m_Desc.PageSize);
     m_Pages.reserve(NewPageCount);
@@ -117,7 +179,9 @@ Uint64 DeviceMemoryD3D12Impl::GetCapacity()
 
 Bool DeviceMemoryD3D12Impl::IsCompatible(IDeviceObject* pResource) const
 {
-    return true;
+    bool AllowMSAA              = false;
+    auto d3d12RequiredHeapFlags = GetD3D12HeapFlags(&pResource, 1, AllowMSAA);
+    return ((m_d3d12HeapFlags & d3d12RequiredHeapFlags) == d3d12RequiredHeapFlags) && (!AllowMSAA || m_AllowMSAA);
 }
 
 DeviceMemoryRangeD3D12 DeviceMemoryD3D12Impl::GetRange(Uint64 Offset, Uint64 Size) const

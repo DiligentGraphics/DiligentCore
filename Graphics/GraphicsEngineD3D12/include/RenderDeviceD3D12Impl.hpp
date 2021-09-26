@@ -310,7 +310,8 @@ private:
     // Each command queue needs its own query manager to avoid race conditions.
     std::vector<std::unique_ptr<QueryManagerD3D12>> m_QueryMgrs;
 
-    NVApiLoader         m_NVApi;
+    NVApiLoader m_NVApi;
+    // Dummy heap required by NvAPI_D3D12_CreateReservedResource.
     CComPtr<ID3D12Heap> m_pNVApiHeap;
 
 #ifdef DILIGENT_DEVELOPMENT

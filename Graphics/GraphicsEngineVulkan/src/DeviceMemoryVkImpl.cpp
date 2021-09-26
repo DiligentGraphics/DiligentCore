@@ -28,6 +28,8 @@
 #include "DeviceMemoryVkImpl.hpp"
 #include "RenderDeviceVkImpl.hpp"
 #include "DeviceContextVkImpl.hpp"
+#include "TextureVkImpl.hpp"
+#include "BufferVkImpl.hpp"
 #include "VulkanTypeConversions.hpp"
 #include "GraphicsAccessories.hpp"
 #include "VulkanUtilities/VulkanDebug.hpp"
@@ -154,13 +156,15 @@ Bool DeviceMemoryVkImpl::IsCompatible(IDeviceObject* pResource) const
     const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
 
     uint32_t memoryTypeBits = 0;
-    if (RefCntAutoPtr<TextureVkImpl> pTexture{pResource, IID_TextureVk})
+    if (RefCntAutoPtr<ITextureVk> pTexture{pResource, IID_TextureVk})
     {
-        memoryTypeBits = LogicalDevice.GetImageMemoryRequirements(pTexture->GetVkImage()).memoryTypeBits;
+        const auto* pTexVk = pTexture.RawPtr<const TextureVkImpl>();
+        memoryTypeBits     = LogicalDevice.GetImageMemoryRequirements(pTexVk->GetVkImage()).memoryTypeBits;
     }
-    else if (RefCntAutoPtr<BufferVkImpl> pBuffer{pResource, IID_BufferVk})
+    else if (RefCntAutoPtr<IBufferVk> pBuffer{pResource, IID_BufferVk})
     {
-        memoryTypeBits = LogicalDevice.GetBufferMemoryRequirements(pBuffer->GetVkBuffer()).memoryTypeBits;
+        const auto* pBuffVk = pBuffer.RawPtr<const BufferVkImpl>();
+        memoryTypeBits      = LogicalDevice.GetBufferMemoryRequirements(pBuffVk->GetVkBuffer()).memoryTypeBits;
     }
     else
     {

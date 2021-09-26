@@ -62,6 +62,9 @@ public:
     virtual DeviceMemoryRangeD3D12 DILIGENT_CALL_TYPE GetRange(Uint64 Offset, Uint64 Size) const override final;
 
 private:
+    D3D12_HEAP_FLAGS m_d3d12HeapFlags = D3D12_HEAP_FLAG_NONE;
+    bool             m_AllowMSAA      = false;
+
     std::vector<CComPtr<ID3D12Heap>> m_Pages;
 };
 

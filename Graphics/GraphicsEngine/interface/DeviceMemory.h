@@ -100,6 +100,10 @@ struct DeviceMemoryCreateInfo
     /// For sparse memory, only USAGE_SPARSE buffer and texture resources are allowed.
     /// 
     /// \note Vulkan backend requires at least one resource to be provided.
+    ///
+    ///       In Direct3D12, the list of resources is optional on D3D12_RESOURCE_HEAP_TIER_2-hardware
+    ///       and above, but is required on D3D12_RESOURCE_HEAP_TIER_1-hardware. It is recommended to
+    ///       always provide the list.
     IDeviceObject**   ppCompatibleResources DEFAULT_INITIALIZER(nullptr);
 
     /// The number of elements in the ppCompatibleResources array.
