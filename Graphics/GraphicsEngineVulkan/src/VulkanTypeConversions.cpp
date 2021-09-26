@@ -2050,6 +2050,7 @@ VkImageUsageFlags BindFlagsToVkImageUsage(BIND_FLAGS Flags, bool IsMemoryless, b
         switch (FlagBit)
         {
             case BIND_RENDER_TARGET:
+                // VK_IMAGE_USAGE_TRANSFER_DST_BIT is required for vkCmdClearColorImage
                 Result |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
                 break;
             case BIND_DEPTH_STENCIL:

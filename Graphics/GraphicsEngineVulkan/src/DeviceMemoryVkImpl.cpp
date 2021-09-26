@@ -105,7 +105,7 @@ DeviceMemoryVkImpl::DeviceMemoryVkImpl(IReferenceCounters*           pRefCounter
 
 DeviceMemoryVkImpl::~DeviceMemoryVkImpl()
 {
-    // AZ TODO: use release queue
+    m_pDevice->SafeReleaseDeviceObject(std::move(m_Pages), m_Desc.ImmediateContextMask);
 }
 
 IMPLEMENT_QUERY_INTERFACE(DeviceMemoryVkImpl, IID_DeviceMemoryVk, TDeviceMemoryBase)
@@ -114,7 +114,6 @@ Bool DeviceMemoryVkImpl::Resize(Uint64 NewSize)
 {
     const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
     const auto  NewPageCount  = StaticCast<size_t>(NewSize / m_Desc.PageSize);
-    const auto  OldPageCount  = m_Pages.size();
 
     VkMemoryAllocateInfo MemAlloc{};
     MemAlloc.pNext           = nullptr;
@@ -124,7 +123,7 @@ Bool DeviceMemoryVkImpl::Resize(Uint64 NewSize)
 
     m_Pages.reserve(NewPageCount);
 
-    for (size_t i = OldPageCount; i < NewPageCount; ++i)
+    while (m_Pages.size() < NewPageCount)
     {
         try
         {
@@ -136,10 +135,10 @@ Bool DeviceMemoryVkImpl::Resize(Uint64 NewSize)
         }
     }
 
-    if (NewPageCount < OldPageCount)
+    while (m_Pages.size() > NewPageCount)
     {
-        // AZ TODO: use release queue
-        m_Pages.resize(NewPageCount);
+        m_pDevice->SafeReleaseDeviceObject(std::move(m_Pages.back()), m_Desc.ImmediateContextMask);
+        m_Pages.pop_back();
     }
 
     return true;
@@ -154,44 +153,45 @@ Bool DeviceMemoryVkImpl::IsCompatible(IDeviceObject* pResource) const
 {
     const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
 
+    uint32_t memoryTypeBits = 0;
     if (RefCntAutoPtr<TextureVkImpl> pTexture{pResource, IID_TextureVk})
     {
-        return (LogicalDevice.GetImageMemoryRequirements(pTexture->GetVkImage()).memoryTypeBits & (1u << m_MemoryTypeIndex)) != 0;
+        memoryTypeBits = LogicalDevice.GetImageMemoryRequirements(pTexture->GetVkImage()).memoryTypeBits;
     }
     else if (RefCntAutoPtr<BufferVkImpl> pBuffer{pResource, IID_BufferVk})
     {
-        return (LogicalDevice.GetBufferMemoryRequirements(pBuffer->GetVkBuffer()).memoryTypeBits & (1u << m_MemoryTypeIndex)) != 0;
+        memoryTypeBits = LogicalDevice.GetBufferMemoryRequirements(pBuffer->GetVkBuffer()).memoryTypeBits;
     }
     else
     {
         UNEXPECTED("unsupported resource type");
-        return false;
     }
+    return (memoryTypeBits & (1u << m_MemoryTypeIndex)) != 0;
 }
 
 DeviceMemoryRangeVk DeviceMemoryVkImpl::GetRange(Uint64 Offset, Uint64 Size) const
 {
-    const auto          PageIdx = static_cast<size_t>(Offset / m_Desc.PageSize);
-    DeviceMemoryRangeVk Result{};
+    const auto PageIdx = static_cast<size_t>(Offset / m_Desc.PageSize);
 
+    DeviceMemoryRangeVk Range{};
     if (PageIdx >= m_Pages.size())
     {
-        LOG_ERROR_MESSAGE("DeviceMemoryVkImpl::GetRange(): Offset is greater than allocated space");
-        return Result;
+        LOG_ERROR_MESSAGE("DeviceMemoryVkImpl::GetRange(): Offset is out of allocated space bounds");
+        return Range;
     }
 
     const auto OffsetInPage = Offset % m_Desc.PageSize;
     if (OffsetInPage + Size > m_Desc.PageSize)
     {
-        LOG_ERROR_MESSAGE("DeviceMemoryVkImpl::GetRange(): Offset and Size must be inside single page");
-        return Result;
+        LOG_ERROR_MESSAGE("DeviceMemoryVkImpl::GetRange(): Offset and Size must be inside a single page");
+        return Range;
     }
 
-    Result.Offset = OffsetInPage;
-    Result.Handle = m_Pages[PageIdx];
-    Result.Size   = std::min(m_Desc.PageSize - OffsetInPage, Size);
+    Range.Offset = OffsetInPage;
+    Range.Handle = m_Pages[PageIdx];
+    Range.Size   = std::min(m_Desc.PageSize - OffsetInPage, Size);
 
-    return Result;
+    return Range;
 }
 
 } // namespace Diligent

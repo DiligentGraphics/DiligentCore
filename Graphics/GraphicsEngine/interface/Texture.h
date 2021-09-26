@@ -229,12 +229,22 @@ struct TextureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
     constexpr Uint32 GetArraySize() const
     {
-        return Type != RESOURCE_DIM_TEX_3D ? ArraySize : 1u;
+        return IsArray() ? ArraySize : 1u;
+    }
+
+    constexpr Uint32 GetWidth() const
+    {
+        return Width;
+    }
+
+    constexpr Uint32 GetHeight() const
+    {
+        return Is1D() ? 1u : Height;
     }
 
     constexpr Uint32 GetDepth() const
     {
-        return Type == RESOURCE_DIM_TEX_3D ? Depth : 1u;
+        return Is3D() ? Depth : 1u;
     }
 #endif
 };

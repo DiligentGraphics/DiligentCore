@@ -3010,7 +3010,7 @@ void DeviceContextD3D12Impl::BindSparseMemory(const BindSparseMemoryAttribs& Att
         for (Uint32 r = 0; r < BuffBind.NumRanges; ++r)
         {
             const auto& BindRange = BuffBind.pRanges[r];
-            auto*       pMemD3D12 = ClassPtrCast<DeviceMemoryD3D12Impl>(BindRange.pMemory);
+            const auto* pMemD3D12 = ClassPtrCast<const DeviceMemoryD3D12Impl>(BindRange.pMemory);
             const auto  MemRange  = pMemD3D12 ? pMemD3D12->GetRange(BindRange.MemoryOffset, BindRange.MemorySize) : DeviceMemoryRangeD3D12{};
 
             DEV_CHECK_ERR((MemRange.Offset % D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES) == 0,
@@ -3032,7 +3032,7 @@ void DeviceContextD3D12Impl::BindSparseMemory(const BindSparseMemoryAttribs& Att
         for (Uint32 r = 0; r < TexBind.NumRanges; ++r)
         {
             const auto& BindRange = TexBind.pRanges[r];
-            auto*       pMemD3D12 = ClassPtrCast<DeviceMemoryD3D12Impl>(BindRange.pMemory);
+            const auto* pMemD3D12 = ClassPtrCast<const DeviceMemoryD3D12Impl>(BindRange.pMemory);
             const auto  MemRange  = pMemD3D12 ? pMemD3D12->GetRange(BindRange.MemoryOffset, BindRange.MemorySize) : DeviceMemoryRangeD3D12{};
 
             auto& DstMapping = TileMappingMap[TileMappingKey{pTexD3D12->GetD3D12Resource(), MemRange.pHandle}];

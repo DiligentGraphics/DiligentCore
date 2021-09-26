@@ -65,7 +65,7 @@ DILIGENT_BEGIN_INTERFACE(ICommandQueueVk, ICommandQueue)
     /// Presents the current swap chain image on the screen
     VIRTUAL VkResult METHOD(Present)(THIS_
                                      const VkPresentInfoKHR REF PresentInfo) PURE;
-    
+
     /// Submits a sparse bind commands to the internal Vulkan command queue
 
     /// \return Fence value associated with the submitted sparse bind command

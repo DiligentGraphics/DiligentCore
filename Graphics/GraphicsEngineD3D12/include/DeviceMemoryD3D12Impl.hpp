@@ -59,7 +59,7 @@ public:
     virtual Bool DILIGENT_CALL_TYPE IsCompatible(IDeviceObject* pResource) const override final;
 
     /// Implementation of IDeviceMemoryD3D12::GetRange().
-    virtual DeviceMemoryRangeD3D12 DILIGENT_CALL_TYPE GetRange(Uint64 Offset, Uint64 Size) override final;
+    virtual DeviceMemoryRangeD3D12 DILIGENT_CALL_TYPE GetRange(Uint64 Offset, Uint64 Size) const override final;
 
 private:
     std::vector<CComPtr<ID3D12Heap>> m_Pages;

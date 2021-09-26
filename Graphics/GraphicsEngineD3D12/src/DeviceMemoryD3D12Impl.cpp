@@ -120,7 +120,7 @@ Bool DeviceMemoryD3D12Impl::IsCompatible(IDeviceObject* pResource) const
     return true;
 }
 
-DeviceMemoryRangeD3D12 DeviceMemoryD3D12Impl::GetRange(Uint64 Offset, Uint64 Size)
+DeviceMemoryRangeD3D12 DeviceMemoryD3D12Impl::GetRange(Uint64 Offset, Uint64 Size) const
 {
     const auto PageIdx = static_cast<size_t>(Offset / m_Desc.PageSize);
 

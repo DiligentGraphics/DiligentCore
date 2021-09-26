@@ -2024,7 +2024,6 @@ void DeviceContextBase<ImplementationTraits>::BindSparseMemory(const BindSparseM
 
     DEV_CHECK_ERR(!IsDeferred(), "BindSparseMemory() should only be called for immediate contexts.");
     DEV_CHECK_ERR(m_pDevice->GetDeviceInfo().Features.SparseMemory, "IDeviceContext::BindSparseMemory: SparseMemory feature must be enabled");
-    DEV_CHECK_ERR(!IsDeferred(), "BindSparseMemory() should only be called for immediate contexts.");
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "Can not bind sparse memory inside an active render pass.");
     DEV_CHECK_ERR(VerifyBindSparseMemoryAttribs(m_pDevice, Attribs), "BindSparseMemoryAttribs are invalid");
 }

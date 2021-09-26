@@ -195,7 +195,7 @@ Uint64 CommandQueueVkImpl::Submit(const VkSubmitInfo& InSubmitInfo)
 
     // Update the last sync point
     {
-        ThreadingTools::LockHelper Lock2(m_LastSyncPointGuard);
+        ThreadingTools::LockHelper Lock2{m_LastSyncPointGuard};
         m_LastSyncPoint = std::move(NewSyncPoint);
     }
 
@@ -331,7 +331,7 @@ Uint64 CommandQueueVkImpl::BindSparse(const VkBindSparseInfo& InBindInfo)
 
     // Update the last sync point
     {
-        ThreadingTools::LockHelper Lock2(m_LastSyncPointGuard);
+        ThreadingTools::LockHelper Lock2{m_LastSyncPointGuard};
         m_LastSyncPoint = std::move(NewSyncPoint);
     }
 

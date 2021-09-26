@@ -60,7 +60,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceMemoryD3D12, IDeviceMemory)
     /// AZ TODO
     VIRTUAL DeviceMemoryRangeD3D12 METHOD(GetRange)(THIS_
                                                     Uint64 Offset,
-                                                    Uint64 Size) PURE;
+                                                    Uint64 Size) CONST PURE;
 };
 DILIGENT_END_INTERFACE
 

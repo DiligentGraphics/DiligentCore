@@ -117,8 +117,8 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
 
         ImageCI.format = TexFormatToVkFormat(InternalTexFmt);
 
-        ImageCI.extent.width  = m_Desc.Width;
-        ImageCI.extent.height = m_Desc.Is1D() ? 1 : m_Desc.Height;
+        ImageCI.extent.width  = m_Desc.GetWidth();
+        ImageCI.extent.height = m_Desc.GetHeight();
         ImageCI.extent.depth  = m_Desc.GetDepth();
         ImageCI.mipLevels     = m_Desc.MipLevels;
         ImageCI.arrayLayers   = m_Desc.GetArraySize();
@@ -127,6 +127,8 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
         ImageCI.tiling  = VK_IMAGE_TILING_OPTIMAL;
 
         ImageCI.usage = BindFlagsToVkImageUsage(m_Desc.BindFlags, IsMemoryless, ExtFeatures.FragmentDensityMap.fragmentDensityMap != VK_FALSE);
+        // TRANSFER_SRC_BIT and TRANSFER_DST_BIT are required by CopyTexture
+        ImageCI.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
         if (m_Desc.BindFlags & (BIND_DEPTH_STENCIL | BIND_RENDER_TARGET))
             DEV_CHECK_ERR(ImageView2DSupported, "imageView2DOn3DImage in VkPhysicalDevicePortabilitySubsetFeaturesKHR is not enabled, can not create depth-stencil target with 2D image view");
@@ -755,19 +757,19 @@ void TextureVkImpl::InitSparseProperties()
 
     const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
     const auto  MemReq        = LogicalDevice.GetImageMemoryRequirements(GetVkImage());
-    auto&       Props         = *m_pSparseProps;
 
-    // If the image was not created with VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT then pSparseMemoryRequirementCount will be set to zero.
+    // If the image was not created with VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT, then pSparseMemoryRequirementCount will be set to zero.
     uint32_t SparseReqCount = 0;
     vkGetImageSparseMemoryRequirements(LogicalDevice.GetVkDevice(), GetVkImage(), &SparseReqCount, nullptr);
     VERIFY(SparseReqCount > 0, "Sparse memory requirements for image must not be zero");
 
     SparseReqCount = std::min(SparseReqCount, 2u);
 
-    // Texture with depth-stencil format may be implemented with a two memory blocks per tile.
+    // Texture with depth-stencil format may be implemented with two memory blocks per tile.
     VkSparseImageMemoryRequirements SparseReq[2] = {};
     vkGetImageSparseMemoryRequirements(LogicalDevice.GetVkDevice(), GetVkImage(), &SparseReqCount, SparseReq);
 
+    auto& Props{*m_pSparseProps};
     Props.MipTailOffset  = SparseReq[0].imageMipTailOffset;
     Props.MipTailSize    = SparseReq[0].imageMipTailSize;
     Props.MipTailStride  = SparseReq[0].imageMipTailStride;
@@ -779,7 +781,7 @@ void TextureVkImpl::InitSparseProperties()
 
     // AZ TODO: depth stencil
 
-    if (m_Desc.Is3D() || m_Desc.ArraySize == 1)
+    if (m_Desc.GetArraySize() == 1)
     {
         VERIFY_EXPR(Props.MipTailOffset < MemReq.size);
         VERIFY_EXPR(Props.MipTailOffset + Props.MipTailSize <= MemReq.size);

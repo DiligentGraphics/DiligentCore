@@ -738,7 +738,7 @@ TextureFormatDimensions RenderDeviceVkImpl::GetTextureFormatDimensions(const Tex
 {
     if (!(TexDesc.Usage == USAGE_IMMUTABLE || TexDesc.Usage == USAGE_DEFAULT || TexDesc.Usage == USAGE_SPARSE))
     {
-        LOG_ERROR_MESSAGE("Supported usage are: IMMUTABLE, DEFAULT, SPARSE");
+        LOG_ERROR_MESSAGE("Supported usages are: IMMUTABLE, DEFAULT, SPARSE");
         return {};
     }
 
@@ -758,7 +758,7 @@ TextureFormatDimensions RenderDeviceVkImpl::GetTextureFormatDimensions(const Tex
         ImgType = VK_IMAGE_TYPE_1D;
     else if (TexDesc.Is2D())
         ImgType = VK_IMAGE_TYPE_2D;
-    else if (TexDesc.Type == RESOURCE_DIM_TEX_3D)
+    else if (TexDesc.Is3D())
     {
         ImgType = VK_IMAGE_TYPE_3D;
         if (ImageView2DSupported)
