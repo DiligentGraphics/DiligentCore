@@ -113,7 +113,7 @@ if(VULKAN_SUPPORTED OR METAL_SUPPORTED)
      )
 endif()
 
-if(${DILIGENT_BUILD_TESTS})
+if(${DILIGENT_BUILD_GOOGLE_TEST})
     set(INSTALL_GTEST OFF CACHE BOOL "Do not install googletest")
     set(BUILD_GMOCK OFF CACHE BOOL "Do not build gmock")
     set(gtest_force_shared_crt ON CACHE BOOL "Use shared (DLL) run-time lib even when Google Test is built as static lib.")
