@@ -8,6 +8,6 @@ if(TARGET gtest)
     endif()
 endif()
 
-if (DILIGENT_BUILD_INCLUDE_TESTS)
+if (DILIGENT_BUILD_CORE_INCLUDE_TEST)
     add_subdirectory(IncludeTest)
 endif()
