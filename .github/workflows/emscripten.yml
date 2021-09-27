@@ -17,14 +17,15 @@ jobs:
       with:
         submodules: recursive
 
-    - name: Download Ninja
-      uses: actions/checkout@master
-
     - name: Configure Ninja
       uses: seanmiddleditch/gha-setup-ninja@master
 
     - name: Download and Configure Emscripten SDK
-      uses: mymindstorm/setup-emsdk@v9
+      if: success()
+      shell: bash
+      run: |
+        cd $GITHUB_WORKSPACE/BuildTools/Scripts/github_actions
+        ./emscripten_sdk.sh "${{runner.workspace}}" 
 
     - name: Configure CMake
       if: success()
@@ -53,14 +54,16 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Download Ninja
-        uses: actions/checkout@master
-
       - name: Configure Ninja
         uses: seanmiddleditch/gha-setup-ninja@master
 
       - name: Download and Configure Emscripten SDK
-        uses: mymindstorm/setup-emsdk@v9
+        if: success()
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/BuildTools/Scripts/github_actions
+          chmod +x emscripten_sdk.sh
+          ./emscripten_sdk.sh "${{runner.workspace}}" 
 
       - name: Configure CMake
         if: success()
@@ -90,14 +93,16 @@ jobs:
       with:
         submodules: recursive
 
-    - name: Download Ninja
-      uses: actions/checkout@master
-
     - name: Configure Ninja
       uses: seanmiddleditch/gha-setup-ninja@master
 
     - name: Download and Configure Emscripten SDK
-      uses: mymindstorm/setup-emsdk@v9
+      if: success()
+      shell: bash
+      run: | 
+        cd $GITHUB_WORKSPACE/BuildTools/Scripts/github_actions
+        chmod +x emscripten_sdk.sh
+        ./emscripten_sdk.sh "${{runner.workspace}}" 
 
     - name: Configure CMake
       if: success()

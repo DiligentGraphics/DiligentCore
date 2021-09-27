@@ -89,6 +89,7 @@ BufferViewGLImpl::BufferViewGLImpl(IReferenceCounters*   pRefCounters,
 #if GL_ARB_texture_buffer_range
             glTexBufferRange(GL_TEXTURE_BUFFER, GLFormat, pBuffer->GetGLHandle(), StaticCast<GLintptr>(ViewDesc.ByteOffset), StaticCast<GLsizeiptr>(ViewDesc.ByteWidth));
 #else
+            (void)GLFormat;
             LOG_ERROR_AND_THROW("Unable to create view '", ViewDesc.Name, "' for buffer '", BuffDesc.Name,
                                 "' because GL_ARB_texture_buffer_range extension is not available. "
                                 "Only full-buffer views can be created on this device.");
