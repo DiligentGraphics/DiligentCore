@@ -80,9 +80,10 @@ public:
                     continue;
 
                 const auto& ViewDesc = pAttachment->GetDesc();
-                if (DeviceInfo.IsMetalDevice() && ViewDesc.ViewType == TEXTURE_VIEW_SHADING_RATE)
+                if (ViewDesc.ViewType == TEXTURE_VIEW_SHADING_RATE)
                 {
-                    VERIFY_EXPR(pAttachment->GetTexture() == nullptr);
+                    // Dimensions of the shading rate texture are less than the dimensions of other attachments
+                    // and can't be used to compute the frame buffer size.
                     continue;
                 }
 

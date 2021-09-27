@@ -1083,17 +1083,8 @@ inline bool DeviceContextBase<ImplementationTraits>::SetRenderTargets(const SetR
 
             const auto Width     = std::max(TexDesc.Width >> ViewDesc.MostDetailedMip, 1u);
             const auto Height    = std::max(TexDesc.Height >> ViewDesc.MostDetailedMip, 1u);
-            const auto MaxWidth  = m_FramebufferWidth / SRProps.MinTileSize[0];
-            const auto MaxHeight = m_FramebufferHeight / SRProps.MinTileSize[1];
-            const auto MinWidth  = m_FramebufferWidth / SRProps.MaxTileSize[0];
-            const auto MinHeight = m_FramebufferHeight / SRProps.MaxTileSize[1];
-            DEV_CHECK_ERR(Width <= MaxWidth,
-                          "IDeviceContext::SetRenderTargets: shading rate texture width (", Width, ") exceeds maximum allowed width (",
-                          MaxWidth, "). Note: maximum width is defined by (framebuffer width) / ShadingRate::MinTileSize[0].");
-            DEV_CHECK_ERR(Height <= MaxHeight,
-                          "IDeviceContext::SetRenderTargets: shading rate texture height (", Height, ") exceeds maximum allowed height (",
-                          MaxHeight, "). Note: maximum height is defined by (framebuffer height) / ShadingRate::MinTileSize[1].");
-
+            const auto MinWidth  = (m_FramebufferWidth + SRProps.MaxTileSize[0] - 1) / SRProps.MaxTileSize[0];
+            const auto MinHeight = (m_FramebufferHeight + SRProps.MaxTileSize[1] - 1) / SRProps.MaxTileSize[1];
             DEV_CHECK_ERR(Width >= MinWidth,
                           "IDeviceContext::SetRenderTargets: shading rate texture width (", Width, ") must be at least ",
                           MinWidth, "). Note: minimum width is defined by (framebuffer width) / ShadingRate::MaxTileSize[0].");
