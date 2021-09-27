@@ -4054,6 +4054,9 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessHullShaderArguments(TokenL
     ProcessHullShaderConstantFunction(ConstantFunc, bConstFuncTakesInputPatch);
 
     stringstream GlobalsSS;
+    (void)domain;
+    (void)partitioning;
+    (void)topology;
     // In glsl, domain, partitioning, and topology are properties of tessellation evaluation
     // shader rather than tessellation control shader
 
