@@ -28,9 +28,13 @@
 #include <unordered_map>
 #include <deque>
 #include <mutex>
-#include <atlbase.h>
 #include <vector>
+
+#ifndef NOMINMAX
+#    define NOMINMAX
+#endif
 #include <d3d11.h>
+#include <atlbase.h>
 
 #include "TextureUploaderD3D11.hpp"
 #include "RenderDeviceD3D11.h"

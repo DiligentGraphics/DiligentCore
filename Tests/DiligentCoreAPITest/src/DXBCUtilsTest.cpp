@@ -28,6 +28,9 @@
 #include <string>
 #include <unordered_set>
 
+#ifndef NOMINMAX
+#    define NOMINMAX
+#endif
 #include <atlcomcli.h>
 #include <d3dcompiler.h>
 

@@ -57,6 +57,10 @@
 #ifdef _MSC_VER
 #    pragma warning(push)
 #    pragma warning(disable : 4201) // nonstandard extension used: nameless struct/union
+
+#    if defined(min) || defined(max)
+#        error One of Windows headers leaks min/max macros, which will result in odd errors. Define NOMINMAX before including any Windows headers to fix this.
+#    endif
 #endif
 
 namespace Diligent

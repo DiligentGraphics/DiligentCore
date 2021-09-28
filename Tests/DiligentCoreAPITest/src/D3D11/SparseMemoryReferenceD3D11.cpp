@@ -24,7 +24,11 @@
  *  of the possibility of such damages.
  */
 
+#ifndef NOMINMAX
+#    define NOMINMAX
+#endif
 #include <d3d11_2.h>
+
 #include "D3D11/TestingEnvironmentD3D11.hpp"
 #include "D3D11/TestingSwapChainD3D11.hpp"
 

@@ -30,7 +30,11 @@
 /// \file
 /// Common D3D type conversion utilities
 
+#ifndef NOMINMAX
+#    define NOMINMAX
+#endif
 #include <dxgi.h>
+
 #include "GraphicsTypes.h"
 
 namespace Diligent

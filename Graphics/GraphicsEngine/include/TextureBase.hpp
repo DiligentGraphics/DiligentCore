@@ -40,7 +40,6 @@
 #include "STDAllocator.hpp"
 #include "FormatString.hpp"
 #include "PlatformMisc.hpp"
-#include "BasicMath.hpp"
 
 namespace Diligent
 {
@@ -66,28 +65,6 @@ void ValidateMapTextureParams(const TextureDesc& TexDesc,
                               MAP_TYPE           MapType,
                               Uint32             MapFlags,
                               const Box*         pMapRegion);
-
-inline uint3 GetNumTilesInMipLevel(const TextureDesc& Desc, const TextureSparseProperties& Props, Uint32 MipLevel)
-{
-    // Texture dimensions may not be multiples of the tile size
-    const auto MipProps = GetMipLevelProperties(Desc, MipLevel);
-    return uint3 //
-        {
-            (MipProps.StorageWidth + Props.TileSize[0] - 1) / Props.TileSize[0],
-            (MipProps.StorageHeight + Props.TileSize[1] - 1) / Props.TileSize[1],
-            (MipProps.Depth + Props.TileSize[2] - 1) / Props.TileSize[2] //
-        };
-}
-
-inline uint3 GetNumTilesInBox(const Box& Region, const TextureSparseProperties& Props)
-{
-    return uint3 //
-        {
-            (Region.Width() + Props.TileSize[0] - 1) / Props.TileSize[0],
-            (Region.Height() + Props.TileSize[1] - 1) / Props.TileSize[1],
-            (Region.Depth() + Props.TileSize[2] - 1) / Props.TileSize[2] //
-        };
-}
 
 /// Base implementation of the ITexture interface
 
