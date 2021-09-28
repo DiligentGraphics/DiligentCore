@@ -148,7 +148,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceMemory, IDeviceObject)
 
     /// \remarks  This method must be externally synchronized with IDeviceMemory::Resize()
     ///           and IDeviceContext::BindSparseMemory().
-    VIRTUAL Uint64 METHOD(GetCapacity)(THIS) PURE;
+    VIRTUAL Uint64 METHOD(GetCapacity)(THIS) CONST PURE;
 
     /// Checks if the given resource is compatible with this memory object.
     VIRTUAL Bool METHOD(IsCompatible)(THIS_

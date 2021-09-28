@@ -51,7 +51,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceMemoryD3D11, IDeviceMemory)
 
     /// The method does *NOT* increment the reference counter of the returned object,
     /// so Release() must not be called.
-    VIRTUAL ID3D11Buffer* METHOD(GetD3D11TilePool)(THIS) PURE;
+    VIRTUAL ID3D11Buffer* METHOD(GetD3D11TilePool)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE
 

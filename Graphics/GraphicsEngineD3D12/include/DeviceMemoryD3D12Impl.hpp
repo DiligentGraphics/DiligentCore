@@ -53,7 +53,7 @@ public:
     virtual Bool DILIGENT_CALL_TYPE Resize(Uint64 NewSize) override final;
 
     /// Implementation of IDeviceMemory::GetCapacity().
-    virtual Uint64 DILIGENT_CALL_TYPE GetCapacity() override final;
+    virtual Uint64 DILIGENT_CALL_TYPE GetCapacity() const override final;
 
     /// Implementation of IDeviceMemory::IsCompatible().
     virtual Bool DILIGENT_CALL_TYPE IsCompatible(IDeviceObject* pResource) const override final;

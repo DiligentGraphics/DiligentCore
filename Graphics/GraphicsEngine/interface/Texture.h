@@ -404,7 +404,7 @@ struct TextureSparseProperties
     Uint64  MipTailSize     DEFAULT_INITIALIZER(0);
 
     /// The first mip level in the mip tail that is packed into a single memory block.
-    Uint32  FirstMipInTail  DEFAULT_INITIALIZER(0);
+    Uint32  FirstMipInTail  DEFAULT_INITIALIZER(~0u);
 
     /// Specifies the tile dimension for a single sparse block, see SparseMemoryProperties::SparseBlockSize.
     Uint32  TileSize[3]     DEFAULT_INITIALIZER({});

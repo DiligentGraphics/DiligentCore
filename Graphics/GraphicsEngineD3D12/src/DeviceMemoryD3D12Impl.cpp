@@ -172,7 +172,7 @@ Bool DeviceMemoryD3D12Impl::Resize(Uint64 NewSize)
     return true;
 }
 
-Uint64 DeviceMemoryD3D12Impl::GetCapacity()
+Uint64 DeviceMemoryD3D12Impl::GetCapacity() const
 {
     return m_Desc.PageSize * m_Pages.size();
 }

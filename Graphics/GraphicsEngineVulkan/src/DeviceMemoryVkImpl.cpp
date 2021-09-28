@@ -146,7 +146,7 @@ Bool DeviceMemoryVkImpl::Resize(Uint64 NewSize)
     return true;
 }
 
-Uint64 DeviceMemoryVkImpl::GetCapacity()
+Uint64 DeviceMemoryVkImpl::GetCapacity() const
 {
     return m_Desc.PageSize * m_Pages.size();
 }

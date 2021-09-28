@@ -55,13 +55,13 @@ public:
     virtual Bool DILIGENT_CALL_TYPE Resize(Uint64 NewSize) override final;
 
     /// Implementation of IDeviceMemory::GetCapacity().
-    virtual Uint64 DILIGENT_CALL_TYPE GetCapacity() override final;
+    virtual Uint64 DILIGENT_CALL_TYPE GetCapacity() const override final;
 
     /// Implementation of IDeviceMemory::IsCompatible().
     virtual Bool DILIGENT_CALL_TYPE IsCompatible(IDeviceObject* pResource) const override final;
 
     /// Implementation of IDeviceMemoryD3D11::GetD3D11TilePool().
-    virtual ID3D11Buffer* DILIGENT_CALL_TYPE GetD3D11TilePool() override final
+    virtual ID3D11Buffer* DILIGENT_CALL_TYPE GetD3D11TilePool() const override final
     {
         return m_pd3d11Buffer;
     }
