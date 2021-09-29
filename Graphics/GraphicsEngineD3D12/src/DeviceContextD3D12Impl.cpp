@@ -1752,7 +1752,8 @@ void DeviceContextD3D12Impl::UpdateTexture(ITexture*                      pTextu
     auto*       pTexD3D12 = ClassPtrCast<TextureD3D12Impl>(pTexture);
     const auto& Desc      = pTexD3D12->GetDesc();
     // OpenGL backend uses UpdateData() to initialize textures, so we can't check the usage in ValidateUpdateTextureParams()
-    DEV_CHECK_ERR(Desc.Usage == USAGE_DEFAULT, "Only USAGE_DEFAULT textures should be updated with UpdateData()");
+    DEV_CHECK_ERR(Desc.Usage == USAGE_DEFAULT || Desc.Usage == USAGE_SPARSE,
+                  "Only USAGE_DEFAULT or USAGE_SPARSE textures should be updated with UpdateData()");
 
     Box         BlockAlignedBox;
     const auto& FmtAttribs = GetTextureFormatAttribs(Desc.Format);
@@ -2102,7 +2103,7 @@ void DeviceContextD3D12Impl::MapTextureSubresource(ITexture*                 pTe
     {
         if (MapType != MAP_WRITE)
         {
-            LOG_ERROR("USAGE_DEFAULT textures can only be mapped for writing");
+            LOG_ERROR("USAGE_DYNAMIC textures can only be mapped for writing");
             MappedData = MappedTextureSubresource{};
             return;
         }

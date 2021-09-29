@@ -953,7 +953,8 @@ void DeviceContextD3D11Impl::UpdateTexture(ITexture*                      pTextu
     const auto& Desc      = pTexD3D11->GetDesc();
 
     // Direct3D11 backend uses UpdateData() to initialize textures, so we can't check the usage in ValidateUpdateTextureParams()
-    DEV_CHECK_ERR(Desc.Usage == USAGE_DEFAULT, "Only USAGE_DEFAULT textures should be updated with UpdateData()");
+    DEV_CHECK_ERR(Desc.Usage == USAGE_DEFAULT || Desc.Usage == USAGE_SPARSE,
+                  "Only USAGE_DEFAULT or USAGE_SPARSE textures should be updated with UpdateData()");
 
     if (SubresData.pSrcBuffer != nullptr)
     {

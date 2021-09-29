@@ -2026,7 +2026,8 @@ void DeviceContextVkImpl::UpdateTexture(ITexture*                      pTexture,
 
     auto* pTexVk = ClassPtrCast<TextureVkImpl>(pTexture);
     // OpenGL backend uses UpdateData() to initialize textures, so we can't check the usage in ValidateUpdateTextureParams()
-    DEV_CHECK_ERR(pTexVk->GetDesc().Usage == USAGE_DEFAULT, "Only USAGE_DEFAULT textures should be updated with UpdateData()");
+    DEV_CHECK_ERR(pTexVk->GetDesc().Usage == USAGE_DEFAULT || pTexVk->GetDesc().Usage == USAGE_SPARSE,
+                  "Only USAGE_DEFAULT or USAGE_SPARSE textures should be updated with UpdateData()");
 
     if (SubresData.pSrcBuffer != nullptr)
     {

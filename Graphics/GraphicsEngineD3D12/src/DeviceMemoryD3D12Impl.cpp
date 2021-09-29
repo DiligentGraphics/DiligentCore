@@ -147,8 +147,8 @@ Bool DeviceMemoryD3D12Impl::Resize(Uint64 NewSize)
 {
     D3D12_HEAP_DESC d3d12HeapDesc{};
     d3d12HeapDesc.SizeInBytes                     = m_Desc.PageSize;
-    d3d12HeapDesc.Properties.Type                 = D3D12_HEAP_TYPE_CUSTOM;
-    d3d12HeapDesc.Properties.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_NOT_AVAILABLE;
+    d3d12HeapDesc.Properties.Type                 = D3D12_HEAP_TYPE_DEFAULT;
+    d3d12HeapDesc.Properties.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
     d3d12HeapDesc.Properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
     d3d12HeapDesc.Properties.CreationNodeMask     = 1;
     d3d12HeapDesc.Properties.VisibleNodeMask      = 1;
@@ -160,7 +160,10 @@ Bool DeviceMemoryD3D12Impl::Resize(Uint64 NewSize)
 
     while (m_Pages.size() < NewPageCount)
     {
-        m_Pages.emplace_back(CreateD3D12Heap(m_pDevice, d3d12HeapDesc));
+        if (auto pHeap = CreateD3D12Heap(m_pDevice, d3d12HeapDesc))
+            m_Pages.emplace_back(std::move(pHeap));
+        else
+            break;
     }
 
     while (m_Pages.size() > NewPageCount)
