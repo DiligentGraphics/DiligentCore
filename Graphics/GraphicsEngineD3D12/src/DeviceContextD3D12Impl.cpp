@@ -3036,6 +3036,8 @@ void DeviceContextD3D12Impl::BindSparseMemory(const BindSparseMemoryAttribs& Att
             const auto* pMemD3D12 = ClassPtrCast<const DeviceMemoryD3D12Impl>(BindRange.pMemory);
             const auto  MemRange  = pMemD3D12 ? pMemD3D12->GetRange(BindRange.MemoryOffset, BindRange.MemorySize) : DeviceMemoryRangeD3D12{};
 
+            VERIFY_EXPR(pMemD3D12 == nullptr || pMemD3D12->IsUsingNVApi() == UseNVApi);
+
             auto& DstMapping = TileMappingMap[TileMappingKey{pTexD3D12->GetD3D12Resource(), MemRange.pHandle}];
             DstMapping.AddTextureBindRange(BindRange, TexSparseProps, TexDesc, UseNVApi, MemRange.Offset, MemRange.Size);
         }

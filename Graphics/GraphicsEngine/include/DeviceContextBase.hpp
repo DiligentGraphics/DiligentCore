@@ -1384,7 +1384,7 @@ inline void DeviceContextBase<ImplementationTraits>::BeginRenderPass(const Begin
         {
             auto* pView = FBDesc.ppAttachments[i];
             if (pView == nullptr)
-                return;
+                continue;
 
             if (IsMetal && pView->GetDesc().ViewType == TEXTURE_VIEW_SHADING_RATE)
                 continue;

@@ -199,7 +199,7 @@ void TextureBaseD3D11::InitSparseProperties()
                                          &StandardTileShapeForNonPackedMips,
                                          &NumSubresourceTilings,
                                          0,
-                                         nullptr); // AZ TODO: required to detect how mip tail packed for 2D array
+                                         nullptr);
 
         auto& Props          = *m_pSparseProps;
         Props.MemorySize     = Uint64{NumTilesForEntireResource} * D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES;

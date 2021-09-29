@@ -3590,9 +3590,10 @@ struct TextureFormatInfoExt DILIGENT_DERIVE(TextureFormatInfo)
 typedef struct TextureFormatInfoExt TextureFormatInfoExt;
 
 
-/// AZ TODO
+/// This structure is returned by IRenderDevice::GetTextureFormatDimensions()
 struct TextureFormatDimensions
 {
+    /// AZ TODO
     Uint32  MaxWidth       DEFAULT_INITIALIZER(0);
     Uint32  MaxHeight      DEFAULT_INITIALIZER(0);
     Uint32  MaxDepth       DEFAULT_INITIALIZER(0);
@@ -3606,14 +3607,26 @@ struct TextureFormatDimensions
 typedef struct TextureFormatDimensions TextureFormatDimensions;
 
 
-/// AZ TODO
-DILIGENT_TYPED_ENUM(SPARSE_TEXTURE_FORMAT_FLAGS, Uint32)
+/// Describes the sparse texture packing mode
+DILIGENT_TYPED_ENUM(SPARSE_TEXTURE_FLAGS, Uint8)
 {
-    SPARSE_TEXTURE_FORMAT_FLAG_NONE                   = 0,
-    SPARSE_TEXTURE_FORMAT_FLAG_SINGLE_MIPTAIL         = 1u << 0,
-    SPARSE_TEXTURE_FORMAT_FLAG_ALIGNED_MIP_SIZE       = 1u << 1,
-    SPARSE_TEXTURE_FORMAT_FLAG_NONSTANDARD_BLOCK_SIZE = 1u << 2,
+    SPARSE_TEXTURE_FLAG_NONE                   = 0,
+
+    /// Specifies that the texture uses a single mip tail region for all array layers
+    SPARSE_TEXTURE_FLAG_SINGLE_MIPTAIL         = 1u << 0,
+
+    /// Specifies that the first mip level whose dimensions are not integer
+    /// multiples of the corresponding dimensions of the sparse texture block begins the mip tail region.
+    SPARSE_TEXTURE_FLAG_ALIGNED_MIP_SIZE       = 1u << 1,
+
+    /// Specifies that the texture uses non-standard sparse texture block dimensions,
+    /// and the TileSize values do not match the standard sparse texture block dimensions.
+    SPARSE_TEXTURE_FLAG_NONSTANDARD_BLOCK_SIZE = 1u << 2,
+
+    SPARSE_TEXTURE_FLAG_LAST                   = SPARSE_TEXTURE_FLAG_NONSTANDARD_BLOCK_SIZE
 };
+DEFINE_FLAG_ENUM_OPERATORS(SPARSE_TEXTURE_FLAGS);
+
 
 /// This structure is returned by IRenderDevice::GetTextureFormatSparseInfo()
 struct TextureFormatSparseInfo
@@ -3628,7 +3641,7 @@ struct TextureFormatSparseInfo
     Uint32     SparseBlockSize[3] DEFAULT_INITIALIZER({});
 
     /// AZ TODO
-    SPARSE_TEXTURE_FORMAT_FLAGS Flags DEFAULT_INITIALIZER(SPARSE_TEXTURE_FORMAT_FLAG_NONE);
+    SPARSE_TEXTURE_FLAGS Flags DEFAULT_INITIALIZER(SPARSE_TEXTURE_FLAG_NONE);
 
     /// AZ TODO
     //Bool       SparseMemoryCompatible DEFAULT_INITIALIZER(False);

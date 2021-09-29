@@ -42,9 +42,10 @@ namespace Diligent
 namespace
 {
 
-D3D12_HEAP_FLAGS GetD3D12HeapFlags(IDeviceObject** ppResources, Uint32 NumResources, bool& AllowMSAA)
+D3D12_HEAP_FLAGS GetD3D12HeapFlags(IDeviceObject** ppResources, Uint32 NumResources, bool& AllowMSAA, bool& UseNVApi) noexcept(false)
 {
     AllowMSAA = false;
+    UseNVApi  = false;
 
     if (NumResources == 0)
         return D3D12_HEAP_FLAG_NONE;
@@ -56,6 +57,9 @@ D3D12_HEAP_FLAGS GetD3D12HeapFlags(IDeviceObject** ppResources, Uint32 NumResour
         D3D12_HEAP_FLAG_DENY_RT_DS_TEXTURES |
         D3D12_HEAP_FLAG_DENY_NON_RT_DS_TEXTURES;
 
+    Uint32 UsingNVApiCount    = 0;
+    Uint32 NotUsingNVApiCount = 0;
+
     static_assert(BIND_FLAGS_LAST == 1u << 11u, "Did you add a new bind flag? You may need to update the logic below.");
     for (Uint32 res = 0; res < NumResources; ++res)
     {
@@ -65,9 +69,19 @@ D3D12_HEAP_FLAGS GetD3D12HeapFlags(IDeviceObject** ppResources, Uint32 NumResour
 
         if (RefCntAutoPtr<ITextureD3D12> pTexture{pResource, IID_TextureD3D12})
         {
-            const auto& TexDesc = pTexture.RawPtr<TextureD3D12Impl>()->GetDesc();
+            auto*       pTexD3D12Impl = pTexture.RawPtr<TextureD3D12Impl>();
+            const auto& TexDesc       = pTexD3D12Impl->GetDesc();
+
+            if (TexDesc.Usage != USAGE_SPARSE)
+                LOG_ERROR_AND_THROW("Resource must be created with USAGE_SPARSE");
+
             if (TexDesc.SampleCount > 1)
                 AllowMSAA = true;
+
+            if (pTexD3D12Impl->IsUsingNVApi())
+                ++UsingNVApiCount;
+            else
+                ++NotUsingNVApiCount;
 
             if (TexDesc.BindFlags & (BIND_RENDER_TARGET | BIND_DEPTH_STENCIL))
                 HeapFlags &= ~D3D12_HEAP_FLAG_DENY_RT_DS_TEXTURES;
@@ -82,6 +96,9 @@ D3D12_HEAP_FLAGS GetD3D12HeapFlags(IDeviceObject** ppResources, Uint32 NumResour
         {
             const auto& BuffDesc = pBuffer.RawPtr<BufferD3D12Impl>()->GetDesc();
 
+            if (BuffDesc.Usage != USAGE_SPARSE)
+                LOG_ERROR_AND_THROW("Resource must be created with USAGE_SPARSE");
+
             HeapFlags &= ~D3D12_HEAP_FLAG_DENY_BUFFERS;
             if (BuffDesc.BindFlags & BIND_UNORDERED_ACCESS)
                 HeapFlags |= D3D12_HEAP_FLAG_ALLOW_SHADER_ATOMICS;
@@ -92,7 +109,40 @@ D3D12_HEAP_FLAGS GetD3D12HeapFlags(IDeviceObject** ppResources, Uint32 NumResour
         }
     }
 
+    if (UsingNVApiCount > 0)
+        UseNVApi = true;
+
+    if (UseNVApi && NotUsingNVApiCount > 0)
+        LOG_ERROR_AND_THROW("Resources that use NVApi are incompatible with the resources that don't");
+
     return HeapFlags;
+}
+
+inline CComPtr<ID3D12Heap> CreateD3D12Heap(RenderDeviceD3D12Impl* pDevice, const D3D12_HEAP_DESC& d3d12HeapDesc, bool UseNVApi)
+{
+    auto* const pd3d12Device = pDevice->GetD3D12Device();
+
+    CComPtr<ID3D12Heap> pd3d12Heap;
+#ifdef DILIGENT_ENABLE_D3D_NVAPI
+    if (UseNVApi)
+    {
+        if (NvAPI_D3D12_CreateHeap(pd3d12Device, &d3d12HeapDesc, IID_PPV_ARGS(&pd3d12Heap)) != NVAPI_OK)
+        {
+            LOG_ERROR_MESSAGE("Failed to create D3D12 heap using NVApi");
+            return {};
+        }
+    }
+    else
+#endif
+    {
+        if (FAILED(pd3d12Device->CreateHeap(&d3d12HeapDesc, IID_PPV_ARGS(&pd3d12Heap))))
+        {
+            LOG_ERROR_MESSAGE("Failed to create D3D12 heap");
+            return {};
+        }
+    }
+
+    return pd3d12Heap;
 }
 
 } // namespace
@@ -102,7 +152,7 @@ DeviceMemoryD3D12Impl::DeviceMemoryD3D12Impl(IReferenceCounters*           pRefC
                                              const DeviceMemoryCreateInfo& MemCI) :
     TDeviceMemoryBase{pRefCounters, pDeviceD3D11, MemCI}
 {
-    m_d3d12HeapFlags = GetD3D12HeapFlags(MemCI.ppCompatibleResources, MemCI.NumResources, m_AllowMSAA);
+    m_d3d12HeapFlags = GetD3D12HeapFlags(MemCI.ppCompatibleResources, MemCI.NumResources, m_AllowMSAA, m_UseNVApi);
 
     if (!Resize(MemCI.InitialSize))
         LOG_ERROR_AND_THROW("Failed to allocate device memory");
@@ -115,36 +165,11 @@ DeviceMemoryD3D12Impl::~DeviceMemoryD3D12Impl()
 
 IMPLEMENT_QUERY_INTERFACE(DeviceMemoryD3D12Impl, IID_DeviceMemoryD3D12, TDeviceMemoryBase)
 
-inline CComPtr<ID3D12Heap> CreateD3D12Heap(RenderDeviceD3D12Impl* pDevice, const D3D12_HEAP_DESC& d3d12HeapDesc)
-{
-    auto* const pd3d12Device = pDevice->GetD3D12Device();
-
-    CComPtr<ID3D12Heap> pd3d12Heap;
-#ifdef DILIGENT_ENABLE_D3D_NVAPI
-    const auto UseNVApi = pDevice->GetDummyNVApiHeap() != nullptr;
-    if (UseNVApi)
-    {
-        if (NvAPI_D3D12_CreateHeap(pd3d12Device, &d3d12HeapDesc, IID_PPV_ARGS(&pd3d12Heap)) != NVAPI_OK)
-        {
-            LOG_ERROR_MESSAGE("Failed to create D3D12 heap using NVApi");
-            return false;
-        }
-    }
-    else
-#endif
-    {
-        if (FAILED(pd3d12Device->CreateHeap(&d3d12HeapDesc, IID_PPV_ARGS(&pd3d12Heap))))
-        {
-            LOG_ERROR_MESSAGE("Failed to create D3D12 heap");
-            return false;
-        }
-    }
-
-    return pd3d12Heap;
-}
 
 Bool DeviceMemoryD3D12Impl::Resize(Uint64 NewSize)
 {
+    DvpVerifyResize(NewSize);
+
     D3D12_HEAP_DESC d3d12HeapDesc{};
     d3d12HeapDesc.SizeInBytes                     = m_Desc.PageSize;
     d3d12HeapDesc.Properties.Type                 = D3D12_HEAP_TYPE_DEFAULT;
@@ -160,10 +185,10 @@ Bool DeviceMemoryD3D12Impl::Resize(Uint64 NewSize)
 
     while (m_Pages.size() < NewPageCount)
     {
-        if (auto pHeap = CreateD3D12Heap(m_pDevice, d3d12HeapDesc))
+        if (auto pHeap = CreateD3D12Heap(m_pDevice, d3d12HeapDesc, m_UseNVApi))
             m_Pages.emplace_back(std::move(pHeap));
         else
-            break;
+            return false;
     }
 
     while (m_Pages.size() > NewPageCount)
@@ -182,9 +207,17 @@ Uint64 DeviceMemoryD3D12Impl::GetCapacity() const
 
 Bool DeviceMemoryD3D12Impl::IsCompatible(IDeviceObject* pResource) const
 {
-    bool AllowMSAA              = false;
-    auto d3d12RequiredHeapFlags = GetD3D12HeapFlags(&pResource, 1, AllowMSAA);
-    return ((m_d3d12HeapFlags & d3d12RequiredHeapFlags) == d3d12RequiredHeapFlags) && (!AllowMSAA || m_AllowMSAA);
+    try
+    {
+        bool AllowMSAA              = false;
+        bool UseNVApi               = false;
+        auto d3d12RequiredHeapFlags = GetD3D12HeapFlags(&pResource, 1, AllowMSAA, UseNVApi);
+        return ((m_d3d12HeapFlags & d3d12RequiredHeapFlags) == d3d12RequiredHeapFlags) && (!AllowMSAA || m_AllowMSAA) && (UseNVApi == m_UseNVApi);
+    }
+    catch (...)
+    {
+        return false;
+    }
 }
 
 DeviceMemoryRangeD3D12 DeviceMemoryD3D12Impl::GetRange(Uint64 Offset, Uint64 Size) const

@@ -1861,7 +1861,7 @@ void DeviceContextD3D11Impl::EnqueueSignal(IFence* pFence, Uint64 Value)
 
 void DeviceContextD3D11Impl::DeviceWaitForFence(IFence* pFence, Uint64 Value)
 {
-    LOG_INFO_MESSAGE_ONCE("DeviceWaitForFence() is not supported in Direct3D11");
+    DEV_ERROR("DeviceWaitForFence() is not supported in Direct3D11");
 }
 
 void DeviceContextD3D11Impl::WaitForIdle()

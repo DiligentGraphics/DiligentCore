@@ -24,7 +24,7 @@
  *  of the possibility of such damages.
  */
 
-#include "SparseMemoryTest.hpp"
+#include "TestingEnvironment.hpp"
 #include "TestingSwapChainBase.hpp"
 
 #include "gtest/gtest.h"
@@ -32,59 +32,13 @@
 #include "ShaderMacroHelper.hpp"
 #include "MapHelper.hpp"
 #include "Align.hpp"
+#include "BasicMath.hpp"
 
 #if PLATFORM_MACOS
 #    include "../../../../Graphics/GraphicsEngineMetal/interface/RenderDeviceMtl.h"
 #endif
 
 #include "InlineShaders/SparseMemoryTestHLSL.h"
-
-namespace Diligent
-{
-
-namespace Testing
-{
-
-#if D3D11_SUPPORTED
-void SparseMemorySparseBufferTestD3D11(const SparseMemoryTestBufferHelper& Helper);
-void SparseMemorySparseResidentBufferTestD3D11(const SparseMemoryTestBufferHelper& Helper);
-void SparseMemorySparseResidentAliasedBufferTestD3D11(const SparseMemoryTestBufferHelper& Helper);
-void SparseMemorySparseTextureTestD3D11(const SparseMemoryTestTextureHelper& Helper);
-void SparseMemorySparseResidencyTextureTestD3D11(const SparseMemoryTestTextureHelper& Helper);
-void SparseMemorySparseResidencyAliasedTextureTestD3D11(const SparseMemoryTestTextureHelper& Helper);
-void SparseMemorySparseTexture3DTestD3D11(const SparseMemoryTestTextureHelper& Helper);
-#endif
-
-#if D3D12_SUPPORTED
-void SparseMemorySparseBufferTestD3D12(const SparseMemoryTestBufferHelper& Helper);
-void SparseMemorySparseResidentBufferTestD3D12(const SparseMemoryTestBufferHelper& Helper);
-void SparseMemorySparseResidentAliasedBufferTestD3D12(const SparseMemoryTestBufferHelper& Helper);
-void SparseMemorySparseTextureTestD3D12(const SparseMemoryTestTextureHelper& Helper);
-void SparseMemorySparseResidencyTextureTestD3D12(const SparseMemoryTestTextureHelper& Helper);
-void SparseMemorySparseResidencyAliasedTextureTestD3D12(const SparseMemoryTestTextureHelper& Helper);
-void SparseMemorySparseTexture3DTestD3D12(const SparseMemoryTestTextureHelper& Helper);
-#endif
-
-#if VULKAN_SUPPORTED
-void SparseMemorySparseBufferTestVk(const SparseMemoryTestBufferHelper& Helper);
-void SparseMemorySparseResidentBufferTestVk(const SparseMemoryTestBufferHelper& Helper);
-void SparseMemorySparseResidentAliasedBufferTestVk(const SparseMemoryTestBufferHelper& Helper);
-void SparseMemorySparseTextureTestVk(const SparseMemoryTestTextureHelper& Helper);
-void SparseMemorySparseResidencyTextureTestVk(const SparseMemoryTestTextureHelper& Helper);
-void SparseMemorySparseResidencyAliasedTextureTestVk(const SparseMemoryTestTextureHelper& Helper);
-void SparseMemorySparseTexture3DTestVk(const SparseMemoryTestTextureHelper& Helper);
-#endif
-
-#if METAL_SUPPORTED
-void SparseMemorySparseTextureTestMtl(const SparseMemoryTestTextureHelper& Helper);
-void SparseMemorySparseResidencyTextureTestMtl(const SparseMemoryTestTextureHelper& Helper);
-void SparseMemorySparseResidencyAliasedTextureTestMtl(const SparseMemoryTestTextureHelper& Helper);
-void SparseMemorySparseTexture3DTestMtl(const SparseMemoryTestTextureHelper& Helper);
-#endif
-
-} // namespace Testing
-
-} // namespace Diligent
 
 using namespace Diligent;
 using namespace Diligent::Testing;
@@ -165,49 +119,71 @@ protected:
             ASSERT_NE(sm_pFillBufferSRB, nullptr);
         }
 
-        // Fill texture PSO
+        // Fullscreen quad to fill 2D texture
         {
             BufferDesc BuffDesc;
-            BuffDesc.Name           = "Fill texture parameters";
-            BuffDesc.Size           = sizeof(Uint32) * 8;
+            BuffDesc.Name           = "Fill texture 2D parameters";
+            BuffDesc.Size           = sizeof(float4);
             BuffDesc.BindFlags      = BIND_UNIFORM_BUFFER;
             BuffDesc.Usage          = USAGE_DYNAMIC;
             BuffDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
 
-            pDevice->CreateBuffer(BuffDesc, nullptr, &sm_pFillTextureParams);
-            ASSERT_NE(sm_pFillTextureParams, nullptr);
+            pDevice->CreateBuffer(BuffDesc, nullptr, &sm_pFillTexture2DParams);
+            ASSERT_NE(sm_pFillTexture2DParams, nullptr);
+
+            GraphicsPipelineStateCreateInfo PSOCreateInfo;
+
+            auto& PSODesc          = PSOCreateInfo.PSODesc;
+            auto& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
+
+            PSODesc.Name = "Fill texture 2D";
+
+            PSODesc.ResourceLayout.DefaultVariableType = SHADER_RESOURCE_VARIABLE_TYPE_STATIC;
+
+            GraphicsPipeline.NumRenderTargets                     = 1;
+            GraphicsPipeline.RTVFormats[0]                        = sm_TexFormat;
+            GraphicsPipeline.PrimitiveTopology                    = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+            GraphicsPipeline.RasterizerDesc.CullMode              = CULL_MODE_BACK;
+            GraphicsPipeline.RasterizerDesc.FillMode              = FILL_MODE_SOLID;
+            GraphicsPipeline.RasterizerDesc.FrontCounterClockwise = False;
+            GraphicsPipeline.RasterizerDesc.ScissorEnable         = True;
+            GraphicsPipeline.DepthStencilDesc.DepthEnable         = False;
 
             ShaderCreateInfo ShaderCI;
-            ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
-            ShaderCI.UseCombinedTextureSamplers = true;
-            ShaderCI.Desc.ShaderType            = SHADER_TYPE_COMPUTE;
-            ShaderCI.EntryPoint                 = "main";
-            ShaderCI.Desc.Name                  = "Fill texture CS";
-            ShaderCI.Source                     = HLSL::FillTexture_CS.c_str();
-            RefCntAutoPtr<IShader> pCS;
-            pDevice->CreateShader(ShaderCI, &pCS);
-            ASSERT_NE(pCS, nullptr);
+            ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
 
-            ComputePipelineStateCreateInfo PSOCreateInfo;
-            PSOCreateInfo.PSODesc.Name         = "Fill texture PSO";
-            PSOCreateInfo.PSODesc.PipelineType = PIPELINE_TYPE_COMPUTE;
-            PSOCreateInfo.pCS                  = pCS;
+            RefCntAutoPtr<IShader> pVS;
+            {
+                ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
+                ShaderCI.EntryPoint      = "main";
+                ShaderCI.Desc.Name       = "Fill texture 2D PS";
+                ShaderCI.Source          = HLSL::SparseMemoryTest_VS.c_str();
 
-            const ShaderResourceVariableDesc Variables[] =
-                {
-                    {SHADER_TYPE_COMPUTE, "CB", SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
-                    {SHADER_TYPE_COMPUTE, "g_DstTexture", SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC} //
-                };
-            PSOCreateInfo.PSODesc.ResourceLayout.Variables    = Variables;
-            PSOCreateInfo.PSODesc.ResourceLayout.NumVariables = _countof(Variables);
+                pDevice->CreateShader(ShaderCI, &pVS);
+                ASSERT_NE(pVS, nullptr);
+            }
 
-            pDevice->CreateComputePipelineState(PSOCreateInfo, &sm_pFillTexturePSO);
-            ASSERT_NE(sm_pFillTexturePSO, nullptr);
+            RefCntAutoPtr<IShader> pPS;
+            {
+                ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
+                ShaderCI.EntryPoint      = "main";
+                ShaderCI.Desc.Name       = "Fill texture 2D PS";
+                ShaderCI.Source          = HLSL::FillTexture2D_PS.c_str();
 
-            sm_pFillTexturePSO->GetStaticVariableByName(SHADER_TYPE_COMPUTE, "CB")->Set(sm_pFillTextureParams);
+                pDevice->CreateShader(ShaderCI, &pPS);
+                ASSERT_NE(pPS, nullptr);
+            }
 
-            sm_pFillTexturePSO->CreateShaderResourceBinding(&sm_pFillTextureSRB, true);
-            ASSERT_NE(sm_pFillTextureSRB, nullptr);
+            PSOCreateInfo.pVS = pVS;
+            PSOCreateInfo.pPS = pPS;
+
+            pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &sm_pFillTexture2DPSO);
+            ASSERT_NE(sm_pFillTexture2DPSO, nullptr);
+
+            sm_pFillTexture2DPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, "CB")->Set(sm_pFillTexture2DParams);
+
+            sm_pFillTexture2DPSO->CreateShaderResourceBinding(&sm_pFillTexture2DSRB, true);
+            ASSERT_NE(sm_pFillTexture2DSRB, nullptr);
         }
 
         // Fill texture 3D PSO
@@ -264,13 +240,15 @@ protected:
         sm_pFillBufferSRB.Release();
         sm_pFillBufferParams.Release();
 
-        sm_pFillTexturePSO.Release();
-        sm_pFillTextureSRB.Release();
-        sm_pFillTextureParams.Release();
+        sm_pFillTexture2DPSO.Release();
+        sm_pFillTexture2DSRB.Release();
+        sm_pFillTexture2DParams.Release();
 
         sm_pFillTexture3DPSO.Release();
         sm_pFillTexture3DSRB.Release();
         sm_pFillTexture3DParams.Release();
+
+        sm_pTempSRB.Release();
     }
 
     static RefCntAutoPtr<IBuffer> CreateSparseBuffer(Uint64 Size, BIND_FLAGS BindFlags, bool Aliasing = false, const Uint32 Stride = 4u)
@@ -279,10 +257,27 @@ protected:
 
         BufferDesc Desc;
         Desc.Name              = "Sparse buffer";
-        Desc.Size              = AlignDown(Size, Stride);
+        Desc.Size              = AlignUp(Size, Stride);
         Desc.BindFlags         = BindFlags | BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS; // UAV for fill buffer, SRV to read in PS
         Desc.Usage             = USAGE_SPARSE;
         Desc.MiscFlags         = (Aliasing ? MISC_BUFFER_FLAG_SPARSE_ALIASING : MISC_BUFFER_FLAG_NONE);
+        Desc.Mode              = BUFFER_MODE_STRUCTURED;
+        Desc.ElementByteStride = Stride;
+
+        RefCntAutoPtr<IBuffer> pBuffer;
+        pDevice->CreateBuffer(Desc, nullptr, &pBuffer);
+        return pBuffer;
+    }
+
+    static RefCntAutoPtr<IBuffer> CreateBuffer(Uint64 Size, BIND_FLAGS BindFlags, const Uint32 Stride = 4u)
+    {
+        auto* pDevice = TestingEnvironment::GetInstance()->GetDevice();
+
+        BufferDesc Desc;
+        Desc.Name              = "Reference buffer";
+        Desc.Size              = AlignUp(Size, Stride);
+        Desc.BindFlags         = BindFlags | BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS; // UAV for fill buffer, SRV to read in PS
+        Desc.Usage             = USAGE_DEFAULT;
         Desc.Mode              = BUFFER_MODE_STRUCTURED;
         Desc.ElementByteStride = Stride;
 
@@ -324,28 +319,31 @@ protected:
     };
     static TextureAndMemory CreateSparseTextureAndMemory(const uint4& Dim, BIND_FLAGS BindFlags, Uint32 NumMemoryPages, bool Aliasing = false)
     {
-        auto* pDevice = TestingEnvironment::GetInstance()->GetDevice();
+        auto*      pDevice   = TestingEnvironment::GetInstance()->GetDevice();
+        const auto BlockSize = pDevice->GetAdapterInfo().SparseMemory.StandardBlockSize;
 
         TextureDesc Desc;
+        Desc.BindFlags = BindFlags | BIND_SHADER_RESOURCE; // SRV to read in PS
         if (Dim.z > 1)
         {
             VERIFY_EXPR(Dim.w <= 1);
             Desc.Type  = RESOURCE_DIM_TEX_3D;
             Desc.Depth = static_cast<Uint32>(Dim.z);
+            Desc.BindFlags |= BIND_UNORDERED_ACCESS; // UAV to fill texture
         }
         else
         {
             VERIFY_EXPR(Dim.z <= 1);
             Desc.Type      = Dim.w > 1 ? RESOURCE_DIM_TEX_2D_ARRAY : RESOURCE_DIM_TEX_2D;
             Desc.ArraySize = static_cast<Uint32>(Dim.w);
+            Desc.BindFlags |= BIND_RENDER_TARGET; // RTV to fill texture
         }
 
         Desc.Width       = static_cast<Uint32>(Dim.x);
         Desc.Height      = static_cast<Uint32>(Dim.y);
-        Desc.Format      = TEX_FORMAT_RGBA8_UNORM;
+        Desc.Format      = sm_TexFormat;
         Desc.MipLevels   = 0; // full mip chain
         Desc.SampleCount = 1;
-        Desc.BindFlags   = BindFlags | BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS; // UAV for fill texture, SRV to read in PS
         Desc.Usage       = USAGE_SPARSE;
         Desc.MiscFlags   = (Aliasing ? MISC_TEXTURE_FLAG_SPARSE_ALIASING : MISC_TEXTURE_FLAG_NONE);
 
@@ -353,7 +351,7 @@ protected:
         if (pDevice->GetDeviceInfo().IsMetalDevice())
         {
 #if PLATFORM_MACOS
-            Result.pMemory = CreateMemory(pDevice->GetAdapterInfo().SparseMemory.StandardBlockSize, NumMemoryPages, nullptr);
+            Result.pMemory = CreateMemory(AlignUp(64u << 10, BlockSize), NumMemoryPages, nullptr);
             if (Result.pMemory == nullptr)
                 return {};
 
@@ -367,14 +365,50 @@ protected:
             if (Result.pTexture == nullptr)
                 return {};
 
-            Result.pMemory = CreateMemory(pDevice->GetAdapterInfo().SparseMemory.StandardBlockSize, NumMemoryPages, Result.pTexture);
+            Result.pMemory = CreateMemory(BlockSize, NumMemoryPages, Result.pTexture);
         }
         return Result;
+    }
+
+    static RefCntAutoPtr<ITexture> CreateTexture(const uint4& Dim, BIND_FLAGS BindFlags)
+    {
+        auto* pDevice = TestingEnvironment::GetInstance()->GetDevice();
+
+        TextureDesc Desc;
+        Desc.BindFlags = BindFlags | BIND_SHADER_RESOURCE; // SRV to read in PS
+        if (Dim.z > 1)
+        {
+            VERIFY_EXPR(Dim.w <= 1);
+            Desc.Type  = RESOURCE_DIM_TEX_3D;
+            Desc.Depth = static_cast<Uint32>(Dim.z);
+            Desc.BindFlags |= BIND_UNORDERED_ACCESS; // UAV to fill texture
+        }
+        else
+        {
+            VERIFY_EXPR(Dim.z <= 1);
+            Desc.Type      = Dim.w > 1 ? RESOURCE_DIM_TEX_2D_ARRAY : RESOURCE_DIM_TEX_2D;
+            Desc.ArraySize = static_cast<Uint32>(Dim.w);
+            Desc.BindFlags |= BIND_RENDER_TARGET; // RTV to fill texture
+        }
+
+        Desc.Width       = static_cast<Uint32>(Dim.x);
+        Desc.Height      = static_cast<Uint32>(Dim.y);
+        Desc.Format      = sm_TexFormat;
+        Desc.MipLevels   = 0; // full mip chain
+        Desc.SampleCount = 1;
+        Desc.Usage       = USAGE_DEFAULT;
+
+        RefCntAutoPtr<ITexture> pTexture;
+        pDevice->CreateTexture(Desc, nullptr, &pTexture);
+        return pTexture;
     }
 
     static RefCntAutoPtr<IFence> CreateFence()
     {
         auto* pDevice = TestingEnvironment::GetInstance()->GetDevice();
+
+        if (pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_D3D11)
+            return {};
 
         FenceDesc Desc;
         Desc.Name = "Fence";
@@ -432,7 +466,7 @@ protected:
         VERIFY_EXPR(pTexture->GetDesc().Is2D());
 
         TextureViewDesc Desc;
-        Desc.ViewType        = TEXTURE_VIEW_UNORDERED_ACCESS;
+        Desc.ViewType        = TEXTURE_VIEW_RENDER_TARGET;
         Desc.TextureDim      = RESOURCE_DIM_TEX_2D_ARRAY;
         Desc.MostDetailedMip = MipLevel;
         Desc.NumMipLevels    = 1;
@@ -443,34 +477,59 @@ protected:
         pTexture->CreateView(Desc, &pView);
         VERIFY_EXPR(pView != nullptr);
 
-        sm_pFillTextureSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_DstTexture")->Set(pView);
+        ITextureView* pRTV = pView;
 
-        struct CB
+        pContext->SetRenderTargets(1, &pRTV, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+        pContext->SetScissorRects(1, &Region, 0, 0);
+
+        pContext->SetPipelineState(sm_pFillTexture2DPSO);
+        pContext->CommitShaderResources(sm_pFillTexture2DSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
         {
-            uint2  Offset;
-            uint2  Size;
-            float4 Color;
-        };
-        {
-            MapHelper<CB> CBConstants(pContext, sm_pFillTextureParams, MAP_WRITE, MAP_FLAG_DISCARD);
-            CBConstants->Offset = {static_cast<Uint32>(Region.left), static_cast<Uint32>(Region.top)};
-            CBConstants->Size   = {static_cast<Uint32>(Region.right - Region.left), static_cast<Uint32>(Region.bottom - Region.top)};
-            CBConstants->Color  = Color;
+            MapHelper<float4> CBConstants(pContext, sm_pFillTexture2DParams, MAP_WRITE, MAP_FLAG_DISCARD);
+            *CBConstants = Color;
         }
 
-        pContext->SetPipelineState(sm_pFillTexturePSO);
-        pContext->CommitShaderResources(sm_pFillTextureSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        DrawAttribs DrawAttrs{3, DRAW_FLAG_VERIFY_ALL};
+        pContext->Draw(DrawAttrs);
 
-        DispatchComputeAttribs CompAttrs;
-        CompAttrs.ThreadGroupCountX = (Region.right - Region.left + 7) / 8;
-        CompAttrs.ThreadGroupCountY = (Region.bottom - Region.top + 7) / 8;
-        CompAttrs.ThreadGroupCountZ = 1;
-        pContext->DispatchCompute(CompAttrs);
+        pContext->SetRenderTargets(0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_NONE);
+    }
 
-        // D3D11 will generate warning:
-        // "UnorderedAccessView[0] is a Tiled Resource that contains at least 1 tile mapping(s) that point to the same Tile Pool location(s) as other mappings
-        //  in the same or other bound UnorderedAccessViews. Ordering of accesses to these shared tiles is undefined if performed by different threads."
-        // This is false positive, we update only one of aliased tiles.
+    static void ClearTexture(IDeviceContext* pContext, ITexture* pTexture)
+    {
+        // sparse render target must be cleared
+
+        VERIFY_EXPR(pTexture->GetDesc().Is2D());
+
+        const auto& TexDesc = pTexture->GetDesc();
+        for (Uint32 Slice = 0; Slice < TexDesc.ArraySize; ++Slice)
+        {
+            for (Uint32 Mip = 0; Mip < TexDesc.MipLevels; ++Mip)
+            {
+                TextureViewDesc Desc;
+                Desc.ViewType        = TEXTURE_VIEW_RENDER_TARGET;
+                Desc.TextureDim      = RESOURCE_DIM_TEX_2D_ARRAY;
+                Desc.MostDetailedMip = Mip;
+                Desc.NumMipLevels    = 1;
+                Desc.FirstArraySlice = Slice;
+                Desc.NumArraySlices  = 1;
+
+                RefCntAutoPtr<ITextureView> pView;
+                pTexture->CreateView(Desc, &pView);
+                VERIFY_EXPR(pView != nullptr);
+
+                ITextureView* pRTV = pView;
+
+                pContext->SetRenderTargets(1, &pRTV, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+                const float ClearColor[4] = {};
+                pContext->ClearRenderTarget(pRTV, ClearColor, RESOURCE_STATE_TRANSITION_MODE_NONE);
+
+                pContext->SetRenderTargets(0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_NONE);
+            }
+        }
     }
 
     static void FillTexture3DMip(IDeviceContext* pContext, ITexture* pTexture, Uint32 MipLevel, const float4& Color)
@@ -486,7 +545,7 @@ protected:
 
     static void FillTexture3D(IDeviceContext* pContext, ITexture* pTexture, const Box& Region, Uint32 MipLevel, const float4& Color)
     {
-        VERIFY_EXPR(pTexture->GetDesc().Type == RESOURCE_DIM_TEX_3D);
+        VERIFY_EXPR(pTexture->GetDesc().Is3D());
 
         TextureViewDesc Desc;
         Desc.ViewType        = TEXTURE_VIEW_UNORDERED_ACCESS;
@@ -556,6 +615,8 @@ protected:
         pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Buffer")->Set(pView);
 
         DrawFSQuad(pContext, pPSO, pSRB);
+
+        sm_pTempSRB = std::move(pSRB);
     }
 
     static void DrawFSQuadWithTexture(IDeviceContext* pContext, IPipelineState* pPSO, ITexture* pTexture)
@@ -571,6 +632,8 @@ protected:
         pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Texture")->Set(pView);
 
         DrawFSQuad(pContext, pPSO, pSRB);
+
+        sm_pTempSRB = std::move(pSRB);
     }
 
     static void CreateGraphicsPSO(const char* Name, const String& PSSource, bool Is2DArray, RefCntAutoPtr<IPipelineState>& pPSO)
@@ -659,19 +722,28 @@ protected:
         return F4Color_To_RGBA8Unorm(RandomColor());
     }
 
+    static float4 GetNullBoundTileColor()
+    {
+        return float4{1.0, 0.0, 1.0, 1.0};
+    }
+
     static RefCntAutoPtr<IDeviceContext> sm_pSparseBindingCtx;
 
     static RefCntAutoPtr<IPipelineState>         sm_pFillBufferPSO;
     static RefCntAutoPtr<IShaderResourceBinding> sm_pFillBufferSRB;
     static RefCntAutoPtr<IBuffer>                sm_pFillBufferParams;
 
-    static RefCntAutoPtr<IPipelineState>         sm_pFillTexturePSO;
-    static RefCntAutoPtr<IShaderResourceBinding> sm_pFillTextureSRB;
-    static RefCntAutoPtr<IBuffer>                sm_pFillTextureParams;
+    static RefCntAutoPtr<IPipelineState>         sm_pFillTexture2DPSO;
+    static RefCntAutoPtr<IShaderResourceBinding> sm_pFillTexture2DSRB;
+    static RefCntAutoPtr<IBuffer>                sm_pFillTexture2DParams;
 
     static RefCntAutoPtr<IPipelineState>         sm_pFillTexture3DPSO;
     static RefCntAutoPtr<IShaderResourceBinding> sm_pFillTexture3DSRB;
     static RefCntAutoPtr<IBuffer>                sm_pFillTexture3DParams;
+
+    static RefCntAutoPtr<IShaderResourceBinding> sm_pTempSRB;
+
+    static const TEXTURE_FORMAT sm_TexFormat = TEX_FORMAT_RGBA8_UNORM;
 
     static float sm_RndColorIndex;
 };
@@ -679,13 +751,14 @@ RefCntAutoPtr<IDeviceContext>         SparseMemoryTest::sm_pSparseBindingCtx;
 RefCntAutoPtr<IPipelineState>         SparseMemoryTest::sm_pFillBufferPSO;
 RefCntAutoPtr<IShaderResourceBinding> SparseMemoryTest::sm_pFillBufferSRB;
 RefCntAutoPtr<IBuffer>                SparseMemoryTest::sm_pFillBufferParams;
-RefCntAutoPtr<IPipelineState>         SparseMemoryTest::sm_pFillTexturePSO;
-RefCntAutoPtr<IShaderResourceBinding> SparseMemoryTest::sm_pFillTextureSRB;
-RefCntAutoPtr<IBuffer>                SparseMemoryTest::sm_pFillTextureParams;
+RefCntAutoPtr<IPipelineState>         SparseMemoryTest::sm_pFillTexture2DPSO;
+RefCntAutoPtr<IShaderResourceBinding> SparseMemoryTest::sm_pFillTexture2DSRB;
+RefCntAutoPtr<IBuffer>                SparseMemoryTest::sm_pFillTexture2DParams;
 RefCntAutoPtr<IPipelineState>         SparseMemoryTest::sm_pFillTexture3DPSO;
 RefCntAutoPtr<IShaderResourceBinding> SparseMemoryTest::sm_pFillTexture3DSRB;
 RefCntAutoPtr<IBuffer>                SparseMemoryTest::sm_pFillTexture3DParams;
 float                                 SparseMemoryTest::sm_RndColorIndex;
+RefCntAutoPtr<IShaderResourceBinding> SparseMemoryTest::sm_pTempSRB;
 
 
 enum TestMode
@@ -743,6 +816,7 @@ void CheckTextureSparseProperties(ITexture* pTexture)
     const auto& SparseMem  = TestingEnvironment::GetInstance()->GetDevice()->GetAdapterInfo().SparseMemory;
 
     ASSERT_GT(Props.MemorySize, 0u);
+    ASSERT_GT(Props.BlockSize, 0u);
     ASSERT_TRUE(Props.MemorySize % Props.BlockSize == 0);
 
     if (IsStdBlock)
@@ -759,7 +833,7 @@ void CheckTextureSparseProperties(ITexture* pTexture)
     {
         ASSERT_GE(Props.MemorySize, Props.MipTailOffset + Props.MipTailSize);
     }
-    else
+    else if (Props.MipTailStride != 0) // zero in Metal
     {
         ASSERT_EQ(Props.MipTailStride * Desc.ArraySize, Props.MemorySize);
         ASSERT_GE(Props.MipTailStride, Props.MipTailOffset + Props.MipTailSize);
@@ -793,21 +867,6 @@ void CheckTextureSparseProperties(ITexture* pTexture)
             ASSERT_EQ(Props.TileSize[2], 1u);
         }
     }
-}
-
-void TransitSwapchainToCopySrcAndFlush()
-{
-    auto* pEnv       = TestingEnvironment::GetInstance();
-    auto* pSwapChain = pEnv->GetSwapChain();
-    auto* pContext   = pEnv->GetDeviceContext();
-
-    // Transition to CopySrc state to use in TakeSnapshot()
-    StateTransitionDesc Barrier{pSwapChain->GetCurrentBackBufferRTV()->GetTexture(), RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE};
-    pContext->TransitionResourceStates(1, &Barrier);
-
-    pContext->Flush();
-    pContext->InvalidateState(); // because TakeSnapshot() will clear state in D3D11
-    pContext->WaitForIdle();     // for Vulkan & D3D12
 }
 
 
@@ -847,43 +906,26 @@ TEST_F(SparseMemoryTest, SparseBuffer)
         FillBuffer(pContext, pBuffer, BlockSize * 3, BlockSize, RandomColorU());
     };
 
-    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
-    if (pTestingSwapChain)
+    // Draw reference
     {
+        RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+
+        auto pBuffer = CreateBuffer(BuffSize, BIND_NONE);
+        ASSERT_NE(pBuffer, nullptr);
+
+        Fill(pBuffer);
+        DrawFSQuadWithBuffer(pContext, pPSO, pBuffer);
+
+        auto pRT = pSwapChain->GetCurrentBackBufferRTV()->GetTexture();
+
+        // Transition to CopySrc state to use in TakeSnapshot()
+        StateTransitionDesc Barrier{pRT, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE};
+        pContext->TransitionResourceStates(1, &Barrier);
+
         pContext->Flush();
-        pContext->InvalidateState();
+        pContext->InvalidateState(); // because TakeSnapshot() will clear state in D3D11
 
-        SparseMemoryTestBufferHelper Helper;
-        Helper.BufferSize  = BuffSize;
-        Helper.FillAndDraw = [&](IBuffer* pBuffer) {
-            Fill(pBuffer);
-            DrawFSQuadWithBuffer(pContext, pPSO, pBuffer);
-            TransitSwapchainToCopySrcAndFlush();
-        };
-
-        auto DeviceType = pDevice->GetDeviceInfo().Type;
-        switch (DeviceType)
-        {
-#if D3D11_SUPPORTED
-            case RENDER_DEVICE_TYPE_D3D11:
-                SparseMemorySparseBufferTestD3D11(Helper);
-                break;
-#endif
-#if D3D12_SUPPORTED
-            case RENDER_DEVICE_TYPE_D3D12:
-                SparseMemorySparseBufferTestD3D12(Helper);
-                break;
-#endif
-#if VULKAN_SUPPORTED
-            case RENDER_DEVICE_TYPE_VULKAN:
-                SparseMemorySparseBufferTestVk(Helper);
-                break;
-#endif
-            default:
-                LOG_ERROR_AND_THROW("Unsupported device type");
-        }
-
-        pTestingSwapChain->TakeSnapshot(pSwapChain->GetCurrentBackBufferRTV()->GetTexture());
+        pTestingSwapChain->TakeSnapshot(pRT);
     }
 
     auto pBuffer = CreateSparseBuffer(BuffSize, BIND_NONE);
@@ -895,7 +937,6 @@ TEST_F(SparseMemoryTest, SparseBuffer)
     ASSERT_NE(pMemory, nullptr);
 
     auto pFence = CreateFence();
-    ASSERT_NE(pFence, nullptr);
 
     // bind sparse
     {
@@ -911,19 +952,25 @@ TEST_F(SparseMemoryTest, SparseBuffer)
         SparseBuffBind.NumRanges = _countof(BindRanges);
         SparseBuffBind.pRanges   = BindRanges;
 
+        BindSparseMemoryAttribs BindSparseAttrs;
+        BindSparseAttrs.NumBufferBinds = 1;
+        BindSparseAttrs.pBufferBinds   = &SparseBuffBind;
+
         IFence*      SignalFence = pFence;
         const Uint64 SignalValue = 1;
 
-        BindSparseMemoryAttribs BindSparseAttrs;
-        BindSparseAttrs.NumBufferBinds     = 1;
-        BindSparseAttrs.pBufferBinds       = &SparseBuffBind;
-        BindSparseAttrs.ppSignalFences     = &SignalFence;
-        BindSparseAttrs.pSignalFenceValues = &SignalValue;
-        BindSparseAttrs.NumSignalFences    = 1;
+        if (SignalFence)
+        {
+            BindSparseAttrs.ppSignalFences     = &SignalFence;
+            BindSparseAttrs.pSignalFenceValues = &SignalValue;
+            BindSparseAttrs.NumSignalFences    = 1;
+        }
 
         sm_pSparseBindingCtx->BindSparseMemory(BindSparseAttrs);
 
-        pContext->DeviceWaitForFence(SignalFence, SignalValue);
+        if (SignalFence)
+            pContext->DeviceWaitForFence(SignalFence, SignalValue);
+
         Fill(pBuffer);
     }
 
@@ -970,45 +1017,36 @@ TEST_F(SparseMemoryTest, SparseResidentBuffer)
         FillBuffer(pContext, pBuffer, BlockSize * 2, BlockSize, RandomColorU());
         FillBuffer(pContext, pBuffer, BlockSize * 3, BlockSize, RandomColorU());
         FillBuffer(pContext, pBuffer, BlockSize * 6, BlockSize, RandomColorU());
+
+        if (pBuffer->GetDesc().Usage != USAGE_SPARSE)
+        {
+            FillBuffer(pContext, pBuffer, BlockSize * 1, BlockSize, 0);
+            FillBuffer(pContext, pBuffer, BlockSize * 4, BlockSize, 0);
+            FillBuffer(pContext, pBuffer, BlockSize * 5, BlockSize, 0);
+            FillBuffer(pContext, pBuffer, BlockSize * 7, BlockSize, 0);
+        }
     };
 
-    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
-    if (pTestingSwapChain)
+    // Draw reference
     {
+        RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+
+        auto pBuffer = CreateBuffer(BuffSize, BIND_NONE);
+        ASSERT_NE(pBuffer, nullptr);
+
+        Fill(pBuffer);
+        DrawFSQuadWithBuffer(pContext, pPSO, pBuffer);
+
+        auto pRT = pSwapChain->GetCurrentBackBufferRTV()->GetTexture();
+
+        // Transition to CopySrc state to use in TakeSnapshot()
+        StateTransitionDesc Barrier{pRT, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE};
+        pContext->TransitionResourceStates(1, &Barrier);
+
         pContext->Flush();
-        pContext->InvalidateState();
+        pContext->InvalidateState(); // because TakeSnapshot() will clear state in D3D11
 
-        SparseMemoryTestBufferHelper Helper;
-        Helper.BufferSize  = BuffSize;
-        Helper.FillAndDraw = [&](IBuffer* pBuffer) {
-            Fill(pBuffer);
-            DrawFSQuadWithBuffer(pContext, pPSO, pBuffer);
-            TransitSwapchainToCopySrcAndFlush();
-        };
-
-        auto DeviceType = pDevice->GetDeviceInfo().Type;
-        switch (DeviceType)
-        {
-#if D3D11_SUPPORTED
-            case RENDER_DEVICE_TYPE_D3D11:
-                SparseMemorySparseResidentBufferTestD3D11(Helper);
-                break;
-#endif
-#if D3D12_SUPPORTED
-            case RENDER_DEVICE_TYPE_D3D12:
-                SparseMemorySparseResidentBufferTestD3D12(Helper);
-                break;
-#endif
-#if VULKAN_SUPPORTED
-            case RENDER_DEVICE_TYPE_VULKAN:
-                SparseMemorySparseResidentBufferTestVk(Helper);
-                break;
-#endif
-            default:
-                LOG_ERROR_AND_THROW("Unsupported device type");
-        }
-
-        pTestingSwapChain->TakeSnapshot(pSwapChain->GetCurrentBackBufferRTV()->GetTexture());
+        pTestingSwapChain->TakeSnapshot(pRT);
     }
 
     auto pBuffer = CreateSparseBuffer(BuffSize, BIND_NONE);
@@ -1020,7 +1058,6 @@ TEST_F(SparseMemoryTest, SparseResidentBuffer)
     ASSERT_NE(pMemory, nullptr);
 
     auto pFence = CreateFence();
-    ASSERT_NE(pFence, nullptr);
 
     // bind sparse
     {
@@ -1039,19 +1076,24 @@ TEST_F(SparseMemoryTest, SparseResidentBuffer)
         SparseBuffBind.NumRanges = _countof(BindRanges);
         SparseBuffBind.pRanges   = BindRanges;
 
+        BindSparseMemoryAttribs BindSparseAttrs;
+        BindSparseAttrs.NumBufferBinds = 1;
+        BindSparseAttrs.pBufferBinds   = &SparseBuffBind;
+
         IFence*      SignalFence = pFence;
         const Uint64 SignalValue = 1;
 
-        BindSparseMemoryAttribs BindSparseAttrs;
-        BindSparseAttrs.NumBufferBinds     = 1;
-        BindSparseAttrs.pBufferBinds       = &SparseBuffBind;
-        BindSparseAttrs.ppSignalFences     = &SignalFence;
-        BindSparseAttrs.pSignalFenceValues = &SignalValue;
-        BindSparseAttrs.NumSignalFences    = 1;
-
+        if (SignalFence)
+        {
+            BindSparseAttrs.ppSignalFences     = &SignalFence;
+            BindSparseAttrs.pSignalFenceValues = &SignalValue;
+            BindSparseAttrs.NumSignalFences    = 1;
+        }
         sm_pSparseBindingCtx->BindSparseMemory(BindSparseAttrs);
 
-        pContext->DeviceWaitForFence(SignalFence, SignalValue);
+        if (SignalFence)
+            pContext->DeviceWaitForFence(SignalFence, SignalValue);
+
         Fill(pBuffer);
     }
 
@@ -1095,49 +1137,41 @@ TEST_F(SparseMemoryTest, SparseResidentAliasedBuffer)
     const auto Fill = [&](IBuffer* pBuffer) //
     {
         RestartColorRandomizer();
-        FillBuffer(pContext, pBuffer, BlockSize * 2, BlockSize, RandomColorU());
+        const auto col = RandomColorU();
+        FillBuffer(pContext, pBuffer, BlockSize * 2, BlockSize, col);
         FillBuffer(pContext, pBuffer, BlockSize * 1, BlockSize, RandomColorU());
         FillBuffer(pContext, pBuffer, BlockSize * 3, BlockSize, RandomColorU());
         FillBuffer(pContext, pBuffer, BlockSize * 5, BlockSize, RandomColorU());
+
+        if (pBuffer->GetDesc().Usage != USAGE_SPARSE)
+        {
+            FillBuffer(pContext, pBuffer, BlockSize * 0, BlockSize, col);
+            FillBuffer(pContext, pBuffer, BlockSize * 4, BlockSize, 0);
+            FillBuffer(pContext, pBuffer, BlockSize * 6, BlockSize, 0);
+            FillBuffer(pContext, pBuffer, BlockSize * 7, BlockSize, 0);
+        }
     };
 
-    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
-    if (pTestingSwapChain)
+    // Draw reference
     {
+        RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+
+        auto pBuffer = CreateBuffer(BuffSize, BIND_NONE);
+        ASSERT_NE(pBuffer, nullptr);
+
+        Fill(pBuffer);
+        DrawFSQuadWithBuffer(pContext, pPSO, pBuffer);
+
+        auto pRT = pSwapChain->GetCurrentBackBufferRTV()->GetTexture();
+
+        // Transition to CopySrc state to use in TakeSnapshot()
+        StateTransitionDesc Barrier{pRT, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE};
+        pContext->TransitionResourceStates(1, &Barrier);
+
         pContext->Flush();
-        pContext->InvalidateState();
+        pContext->InvalidateState(); // because TakeSnapshot() will clear state in D3D11
 
-        SparseMemoryTestBufferHelper Helper;
-        Helper.BufferSize  = BuffSize;
-        Helper.FillAndDraw = [&](IBuffer* pBuffer) {
-            Fill(pBuffer);
-            DrawFSQuadWithBuffer(pContext, pPSO, pBuffer);
-            TransitSwapchainToCopySrcAndFlush();
-        };
-
-        auto DeviceType = pDevice->GetDeviceInfo().Type;
-        switch (DeviceType)
-        {
-#if D3D11_SUPPORTED
-            case RENDER_DEVICE_TYPE_D3D11:
-                SparseMemorySparseResidentAliasedBufferTestD3D11(Helper);
-                break;
-#endif
-#if D3D12_SUPPORTED
-            case RENDER_DEVICE_TYPE_D3D12:
-                SparseMemorySparseResidentAliasedBufferTestD3D12(Helper);
-                break;
-#endif
-#if VULKAN_SUPPORTED
-            case RENDER_DEVICE_TYPE_VULKAN:
-                SparseMemorySparseResidentAliasedBufferTestVk(Helper);
-                break;
-#endif
-            default:
-                LOG_ERROR_AND_THROW("Unsupported device type");
-        }
-
-        pTestingSwapChain->TakeSnapshot(pSwapChain->GetCurrentBackBufferRTV()->GetTexture());
+        pTestingSwapChain->TakeSnapshot(pRT);
     }
 
     auto pBuffer = CreateSparseBuffer(BuffSize, BIND_NONE);
@@ -1149,7 +1183,6 @@ TEST_F(SparseMemoryTest, SparseResidentAliasedBuffer)
     ASSERT_NE(pMemory, nullptr);
 
     auto pFence = CreateFence();
-    ASSERT_NE(pFence, nullptr);
 
     // bind sparse
     {
@@ -1166,19 +1199,24 @@ TEST_F(SparseMemoryTest, SparseResidentAliasedBuffer)
         SparseBuffBind.NumRanges = _countof(BindRanges);
         SparseBuffBind.pRanges   = BindRanges;
 
+        BindSparseMemoryAttribs BindSparseAttrs;
+        BindSparseAttrs.NumBufferBinds = 1;
+        BindSparseAttrs.pBufferBinds   = &SparseBuffBind;
+
         IFence*      SignalFence = pFence;
         const Uint64 SignalValue = 1;
 
-        BindSparseMemoryAttribs BindSparseAttrs;
-        BindSparseAttrs.NumBufferBinds     = 1;
-        BindSparseAttrs.pBufferBinds       = &SparseBuffBind;
-        BindSparseAttrs.ppSignalFences     = &SignalFence;
-        BindSparseAttrs.pSignalFenceValues = &SignalValue;
-        BindSparseAttrs.NumSignalFences    = 1;
-
+        if (SignalFence)
+        {
+            BindSparseAttrs.ppSignalFences     = &SignalFence;
+            BindSparseAttrs.pSignalFenceValues = &SignalValue;
+            BindSparseAttrs.NumSignalFences    = 1;
+        }
         sm_pSparseBindingCtx->BindSparseMemory(BindSparseAttrs);
 
-        pContext->DeviceWaitForFence(SignalFence, SignalValue);
+        if (SignalFence)
+            pContext->DeviceWaitForFence(SignalFence, SignalValue);
+
         Fill(pBuffer);
     }
 
@@ -1225,10 +1263,10 @@ TEST_P(SparseMemoryTest, SparseTexture)
         for (Uint32 Slice = 0; Slice < TexDesc.ArraySize; ++Slice)
         {
             // clang-format off
-            FillTexture(pContext, pTexture, Rect{  0,   0,       128,            128     }, 0, Slice, RandomColor());
-            FillTexture(pContext, pTexture, Rect{128,   0, TexSize.x,            128     }, 0, Slice, RandomColor());
-            FillTexture(pContext, pTexture, Rect{  0, 128,       128,      TexSize.y     }, 0, Slice, RandomColor());
-            FillTexture(pContext, pTexture, Rect{128, 128, TexSize.x,      TexSize.y     }, 0, Slice, RandomColor());
+            FillTexture(pContext, pTexture, Rect{  0,   0,       128,       128}, 0, Slice, RandomColor());
+            FillTexture(pContext, pTexture, Rect{128,   0, TexSize.x,       128}, 0, Slice, RandomColor());
+            FillTexture(pContext, pTexture, Rect{  0, 128,       128, TexSize.y}, 0, Slice, RandomColor());
+            FillTexture(pContext, pTexture, Rect{128, 128, TexSize.x, TexSize.y}, 0, Slice, RandomColor());
             // clang-format on
 
             for (Uint32 Mip = 1; Mip < TexDesc.MipLevels; ++Mip)
@@ -1236,48 +1274,26 @@ TEST_P(SparseMemoryTest, SparseTexture)
         }
     };
 
-    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
-    if (pTestingSwapChain)
+    // Draw reference
     {
+        RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+
+        auto pRefTexture = CreateTexture(TexSize.Recast<Uint32>(), BIND_NONE);
+        ASSERT_NE(pRefTexture, nullptr);
+
+        Fill(pRefTexture);
+        DrawFSQuadWithTexture(pContext, pPSO, pRefTexture);
+
+        auto pRT = pSwapChain->GetCurrentBackBufferRTV()->GetTexture();
+
+        // Transition to CopySrc state to use in TakeSnapshot()
+        StateTransitionDesc Barrier{pRT, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE};
+        pContext->TransitionResourceStates(1, &Barrier);
+
         pContext->Flush();
-        pContext->InvalidateState();
+        pContext->InvalidateState(); // because TakeSnapshot() will clear state in D3D11
 
-        SparseMemoryTestTextureHelper Helper;
-        Helper.TextureSize = TexSize;
-        Helper.FillAndDraw = [&](ITexture* pTexture) {
-            Fill(pTexture);
-            DrawFSQuadWithTexture(pContext, pPSO, pTexture);
-            TransitSwapchainToCopySrcAndFlush();
-        };
-
-        auto DeviceType = pDevice->GetDeviceInfo().Type;
-        switch (DeviceType)
-        {
-#if D3D11_SUPPORTED
-            case RENDER_DEVICE_TYPE_D3D11:
-                SparseMemorySparseTextureTestD3D11(Helper);
-                break;
-#endif
-#if D3D12_SUPPORTED
-            case RENDER_DEVICE_TYPE_D3D12:
-                SparseMemorySparseTextureTestD3D12(Helper);
-                break;
-#endif
-#if VULKAN_SUPPORTED
-            case RENDER_DEVICE_TYPE_VULKAN:
-                SparseMemorySparseTextureTestVk(Helper);
-                break;
-#endif
-#if METAL_SUPPORTED
-            case RENDER_DEVICE_TYPE_METAL:
-                SparseMemorySparseTextureTestMtl(Helper);
-                break;
-#endif
-            default:
-                LOG_ERROR_AND_THROW("Unsupported device type");
-        }
-
-        pTestingSwapChain->TakeSnapshot(pSwapChain->GetCurrentBackBufferRTV()->GetTexture());
+        pTestingSwapChain->TakeSnapshot(pRT);
     }
 
     const auto BlockSize = SparseMem.StandardBlockSize;
@@ -1295,7 +1311,6 @@ TEST_P(SparseMemoryTest, SparseTexture)
     ASSERT_LE(TexSparseProps.MemorySize, pMemory->GetCapacity());
 
     auto pFence = CreateFence();
-    ASSERT_NE(pFence, nullptr);
 
     // bind sparse
     {
@@ -1356,19 +1371,25 @@ TEST_P(SparseMemoryTest, SparseTexture)
         SparseTexBind.NumRanges = static_cast<Uint32>(BindRanges.size());
         SparseTexBind.pRanges   = BindRanges.data();
 
+        BindSparseMemoryAttribs BindSparseAttrs;
+        BindSparseAttrs.NumTextureBinds = 1;
+        BindSparseAttrs.pTextureBinds   = &SparseTexBind;
+
         IFence*      SignalFence = pFence;
         const Uint64 SignalValue = 1;
 
-        BindSparseMemoryAttribs BindSparseAttrs;
-        BindSparseAttrs.NumTextureBinds    = 1;
-        BindSparseAttrs.pTextureBinds      = &SparseTexBind;
-        BindSparseAttrs.ppSignalFences     = &SignalFence;
-        BindSparseAttrs.pSignalFenceValues = &SignalValue;
-        BindSparseAttrs.NumSignalFences    = 1;
-
+        if (SignalFence)
+        {
+            BindSparseAttrs.ppSignalFences     = &SignalFence;
+            BindSparseAttrs.pSignalFenceValues = &SignalValue;
+            BindSparseAttrs.NumSignalFences    = 1;
+        }
         sm_pSparseBindingCtx->BindSparseMemory(BindSparseAttrs);
 
-        pContext->DeviceWaitForFence(SignalFence, SignalValue);
+        if (SignalFence)
+            pContext->DeviceWaitForFence(SignalFence, SignalValue);
+
+        ClearTexture(pContext, pTexture);
         Fill(pTexture);
     }
 
@@ -1418,59 +1439,45 @@ TEST_P(SparseMemoryTest, SparseResidencyTexture)
         for (Uint32 Slice = 0; Slice < TexDesc.ArraySize; ++Slice)
         {
             // clang-format off
-            FillTexture(pContext, pTexture, Rect{  0,   0,       128,            128     }, 0, Slice, RandomColor());
-            FillTexture(pContext, pTexture, Rect{128,   0, TexSize.x,            128     }, 0, Slice, RandomColor());
-            FillTexture(pContext, pTexture, Rect{  0, 128,       128,      TexSize.y     }, 0, Slice, RandomColor());
-            FillTexture(pContext, pTexture, Rect{128, 128, TexSize.x,      TexSize.y     }, 0, Slice, RandomColor());
+            FillTexture(pContext, pTexture, Rect{  0,   0,       128,       128}, 0, Slice, RandomColor());
+            FillTexture(pContext, pTexture, Rect{128,   0, TexSize.x,       128}, 0, Slice, RandomColor()); // -|-- null bound
+            FillTexture(pContext, pTexture, Rect{  0, 128,       128, TexSize.y}, 0, Slice, RandomColor()); // -|
+            FillTexture(pContext, pTexture, Rect{128, 128, TexSize.x, TexSize.y}, 0, Slice, RandomColor());
             // clang-format on
 
             for (Uint32 Mip = 1; Mip < TexDesc.MipLevels; ++Mip)
                 FillTextureMip(pContext, pTexture, Mip, Slice, RandomColor());
+
+            if (TexDesc.Usage != USAGE_SPARSE)
+            {
+                // clang-format off
+                FillTexture(pContext, pTexture, Rect{128,   0, TexSize.x,       128}, 0, Slice, GetNullBoundTileColor());
+                FillTexture(pContext, pTexture, Rect{  0, 128,       128, TexSize.y}, 0, Slice, GetNullBoundTileColor());
+                // clang-format on
+            }
         }
     };
 
-    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
-    if (pTestingSwapChain)
+    // Draw reference
     {
+        RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+
+        auto pRefTexture = CreateTexture(TexSize.Recast<Uint32>(), BIND_NONE);
+        ASSERT_NE(pRefTexture, nullptr);
+
+        Fill(pRefTexture);
+        DrawFSQuadWithTexture(pContext, pPSO, pRefTexture);
+
+        auto pRT = pSwapChain->GetCurrentBackBufferRTV()->GetTexture();
+
+        // Transition to CopySrc state to use in TakeSnapshot()
+        StateTransitionDesc Barrier{pRT, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE};
+        pContext->TransitionResourceStates(1, &Barrier);
+
         pContext->Flush();
-        pContext->InvalidateState();
+        pContext->InvalidateState(); // because TakeSnapshot() will clear state in D3D11
 
-        SparseMemoryTestTextureHelper Helper;
-        Helper.TextureSize = TexSize;
-        Helper.FillAndDraw = [&](ITexture* pTexture) {
-            Fill(pTexture);
-            DrawFSQuadWithTexture(pContext, pPSO, pTexture);
-            TransitSwapchainToCopySrcAndFlush();
-        };
-
-        auto DeviceType = pDevice->GetDeviceInfo().Type;
-        switch (DeviceType)
-        {
-#if D3D11_SUPPORTED
-            case RENDER_DEVICE_TYPE_D3D11:
-                SparseMemorySparseResidencyTextureTestD3D11(Helper);
-                break;
-#endif
-#if D3D12_SUPPORTED
-            case RENDER_DEVICE_TYPE_D3D12:
-                SparseMemorySparseResidencyTextureTestD3D12(Helper);
-                break;
-#endif
-#if VULKAN_SUPPORTED
-            case RENDER_DEVICE_TYPE_VULKAN:
-                SparseMemorySparseResidencyTextureTestVk(Helper);
-                break;
-#endif
-#if METAL_SUPPORTED
-            case RENDER_DEVICE_TYPE_METAL:
-                SparseMemorySparseResidencyTextureTestMtl(Helper);
-                break;
-#endif
-            default:
-                LOG_ERROR_AND_THROW("Unsupported device type");
-        }
-
-        pTestingSwapChain->TakeSnapshot(pSwapChain->GetCurrentBackBufferRTV()->GetTexture());
+        pTestingSwapChain->TakeSnapshot(pRT);
     }
 
     const auto BlockSize = SparseMem.StandardBlockSize;
@@ -1488,7 +1495,6 @@ TEST_P(SparseMemoryTest, SparseResidencyTexture)
     ASSERT_LE(TexSparseProps.MemorySize, pMemory->GetCapacity());
 
     auto pFence = CreateFence();
-    ASSERT_NE(pFence, nullptr);
 
     // bind sparse
     {
@@ -1517,7 +1523,7 @@ TEST_P(SparseMemoryTest, SparseResidencyTexture)
                         Range.ArraySlice  = Slice;
                         Range.MemorySize  = BlockSize;
 
-                        if ((++Idx & 2) == 0)
+                        if ((++Idx & 2) == 0 || Mip > 0)
                         {
                             Range.MemoryOffset = MemOffset;
                             Range.pMemory      = pMemory;
@@ -1553,19 +1559,25 @@ TEST_P(SparseMemoryTest, SparseResidencyTexture)
         SparseTexBind.NumRanges = static_cast<Uint32>(BindRanges.size());
         SparseTexBind.pRanges   = BindRanges.data();
 
+        BindSparseMemoryAttribs BindSparseAttrs;
+        BindSparseAttrs.NumTextureBinds = 1;
+        BindSparseAttrs.pTextureBinds   = &SparseTexBind;
+
         IFence*      SignalFence = pFence;
         const Uint64 SignalValue = 1;
 
-        BindSparseMemoryAttribs BindSparseAttrs;
-        BindSparseAttrs.NumTextureBinds    = 1;
-        BindSparseAttrs.pTextureBinds      = &SparseTexBind;
-        BindSparseAttrs.ppSignalFences     = &SignalFence;
-        BindSparseAttrs.pSignalFenceValues = &SignalValue;
-        BindSparseAttrs.NumSignalFences    = 1;
-
+        if (SignalFence)
+        {
+            BindSparseAttrs.ppSignalFences     = &SignalFence;
+            BindSparseAttrs.pSignalFenceValues = &SignalValue;
+            BindSparseAttrs.NumSignalFences    = 1;
+        }
         sm_pSparseBindingCtx->BindSparseMemory(BindSparseAttrs);
 
-        pContext->DeviceWaitForFence(SignalFence, SignalValue);
+        if (SignalFence)
+            pContext->DeviceWaitForFence(SignalFence, SignalValue);
+
+        ClearTexture(pContext, pTexture);
         Fill(pTexture);
     }
 
@@ -1615,67 +1627,49 @@ TEST_P(SparseMemoryTest, SparseResidencyAliasedTexture)
         const auto& TexDesc = pTexture->GetDesc();
         for (Uint32 Slice = 0; Slice < TexDesc.ArraySize; ++Slice)
         {
+            const auto Col0 = RandomColor();
+            const auto Col1 = RandomColor();
+
             // clang-format off
-            FillTexture(pContext, pTexture, Rect{  0,   0,       128,            128     }, 0, Slice, RandomColor());
-            FillTexture(pContext, pTexture, Rect{128,   0, TexSize.x,            128     }, 0, Slice, RandomColor());
-            FillTexture(pContext, pTexture, Rect{  0, 128,       128,      TexSize.y     }, 0, Slice, RandomColor());
-          //FillTexture(pContext, pTexture, Rect{128, 128, TexSize.x,      TexSize.y     }, 0, Slice, RandomColor()); // -|-- aliased with 1 & 2
-          //FillTexture(pContext, pTexture, Rect{  0,   0, TexSize.x >> 1, TexSize.y >> 1}, 1, Slice, RandomColor()); // -|
+            FillTexture(pContext, pTexture, Rect{  0,   0,       128,       128}, 0, Slice, Col0);
+            FillTexture(pContext, pTexture, Rect{128,   0, TexSize.x,       128}, 0, Slice, Col1);
+          //FillTexture(pContext, pTexture, Rect{  0, 128,       128, TexSize.y}, 0, Slice, Col0); // -|
+          //FillTexture(pContext, pTexture, Rect{128, 128, TexSize.x, TexSize.y}, 0, Slice, Col1); // -|-- aliased with 1
             // clang-format on
 
-            //if (FirstMipInTail == 1)
-            //    FillTexture(pContext, pTexture, Rect{0, 0, TexSize.x >> 1, TexSize.y >> 1}, 1, Slice, RandomColor());
+            if (TexDesc.Usage != USAGE_SPARSE)
+            {
+                // clang-format off
+                FillTexture(pContext, pTexture, Rect{  0, 128,       128, TexSize.y}, 0, Slice, Col0); // -|
+                FillTexture(pContext, pTexture, Rect{128, 128, TexSize.x, TexSize.y}, 0, Slice, Col1); // -|-- aliased with 1
+                // clang-format on
+            }
 
-            // AZ TODO: DX11 soft does not support mip tail and aliased tiles may have undefined values
-
-            // Fill mip tail
-            for (Uint32 Mip = 2; Mip < TexDesc.MipLevels; ++Mip)
+            for (Uint32 Mip = 1; Mip < TexDesc.MipLevels; ++Mip)
                 FillTextureMip(pContext, pTexture, Mip, Slice, RandomColor());
         }
     };
 
-    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
-    if (pTestingSwapChain)
+    // Draw reference
     {
+        RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+
+        auto pRefTexture = CreateTexture(TexSize.Recast<Uint32>(), BIND_NONE);
+        ASSERT_NE(pRefTexture, nullptr);
+
+        Fill(pRefTexture);
+        DrawFSQuadWithTexture(pContext, pPSO, pRefTexture);
+
+        auto pRT = pSwapChain->GetCurrentBackBufferRTV()->GetTexture();
+
+        // Transition to CopySrc state to use in TakeSnapshot()
+        StateTransitionDesc Barrier{pRT, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE};
+        pContext->TransitionResourceStates(1, &Barrier);
+
         pContext->Flush();
-        pContext->InvalidateState();
+        pContext->InvalidateState(); // because TakeSnapshot() will clear state in D3D11
 
-        SparseMemoryTestTextureHelper Helper;
-        Helper.TextureSize = TexSize;
-        Helper.FillAndDraw = [&](ITexture* pTexture) {
-            Fill(pTexture);
-            DrawFSQuadWithTexture(pContext, pPSO, pTexture);
-            TransitSwapchainToCopySrcAndFlush();
-        };
-
-        auto DeviceType = pDevice->GetDeviceInfo().Type;
-        switch (DeviceType)
-        {
-#if D3D11_SUPPORTED
-            case RENDER_DEVICE_TYPE_D3D11:
-                SparseMemorySparseResidencyAliasedTextureTestD3D11(Helper);
-                break;
-#endif
-#if D3D12_SUPPORTED
-            case RENDER_DEVICE_TYPE_D3D12:
-                SparseMemorySparseResidencyAliasedTextureTestD3D12(Helper);
-                break;
-#endif
-#if VULKAN_SUPPORTED
-            case RENDER_DEVICE_TYPE_VULKAN:
-                SparseMemorySparseResidencyAliasedTextureTestVk(Helper);
-                break;
-#endif
-#if METAL_SUPPORTED
-            case RENDER_DEVICE_TYPE_METAL:
-                SparseMemorySparseResidencyAliasedTextureTestMtl(Helper);
-                break;
-#endif
-            default:
-                LOG_ERROR_AND_THROW("Unsupported device type");
-        }
-
-        pTestingSwapChain->TakeSnapshot(pSwapChain->GetCurrentBackBufferRTV()->GetTexture());
+        pTestingSwapChain->TakeSnapshot(pRT);
     }
 
     const auto BlockSize = SparseMem.StandardBlockSize;
@@ -1693,7 +1687,6 @@ TEST_P(SparseMemoryTest, SparseResidencyAliasedTexture)
     ASSERT_LE(TexSparseProps.MemorySize, pMemory->GetCapacity());
 
     auto pFence = CreateFence();
-    ASSERT_NE(pFence, nullptr);
 
     // bind sparse
     {
@@ -1732,7 +1725,7 @@ TEST_P(SparseMemoryTest, SparseResidencyAliasedTexture)
                 {
                     for (Uint32 x = 0; x < Width; x += TexSparseProps.TileSize[0])
                     {
-                        if (++Idx > 3)
+                        if (++Idx > 2 && Mip == 0)
                         {
                             Idx       = 0;
                             MemOffset = InitialOffset;
@@ -1757,7 +1750,7 @@ TEST_P(SparseMemoryTest, SparseResidencyAliasedTexture)
                     }
                 }
             }
-            InitialOffset += AlignUp(3 * BlockSize, TexSparseProps.BlockSize);
+            InitialOffset = MemOffset;
         }
 
         SparseTextureMemoryBind SparseTexBind;
@@ -1765,19 +1758,25 @@ TEST_P(SparseMemoryTest, SparseResidencyAliasedTexture)
         SparseTexBind.NumRanges = static_cast<Uint32>(BindRanges.size());
         SparseTexBind.pRanges   = BindRanges.data();
 
+        BindSparseMemoryAttribs BindSparseAttrs;
+        BindSparseAttrs.NumTextureBinds = 1;
+        BindSparseAttrs.pTextureBinds   = &SparseTexBind;
+
         IFence*      SignalFence = pFence;
         const Uint64 SignalValue = 1;
 
-        BindSparseMemoryAttribs BindSparseAttrs;
-        BindSparseAttrs.NumTextureBinds    = 1;
-        BindSparseAttrs.pTextureBinds      = &SparseTexBind;
-        BindSparseAttrs.ppSignalFences     = &SignalFence;
-        BindSparseAttrs.pSignalFenceValues = &SignalValue;
-        BindSparseAttrs.NumSignalFences    = 1;
-
+        if (SignalFence)
+        {
+            BindSparseAttrs.ppSignalFences     = &SignalFence;
+            BindSparseAttrs.pSignalFenceValues = &SignalValue;
+            BindSparseAttrs.NumSignalFences    = 1;
+        }
         sm_pSparseBindingCtx->BindSparseMemory(BindSparseAttrs);
 
-        pContext->DeviceWaitForFence(SignalFence, SignalValue);
+        if (SignalFence)
+            pContext->DeviceWaitForFence(SignalFence, SignalValue);
+
+        ClearTexture(pContext, pTexture);
         Fill(pTexture);
     }
 
@@ -1803,6 +1802,8 @@ TEST_F(SparseMemoryTest, SparseTexture3D)
     {
         GTEST_SKIP() << "Sparse texture 3D is not supported by this device";
     }
+    if (pDevice->GetDeviceInfo().IsMetalDevice())
+        GTEST_SKIP() << "UAV sparse texture is not supported in Metal";
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
@@ -1829,48 +1830,26 @@ TEST_F(SparseMemoryTest, SparseTexture3D)
             FillTexture3DMip(pContext, pTexture, Mip, RandomColor());
     };
 
-    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
-    if (pTestingSwapChain)
+    // Draw reference
     {
+        RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+
+        auto pRefTexture = CreateTexture(TexSize, BIND_NONE);
+        ASSERT_NE(pRefTexture, nullptr);
+
+        Fill(pRefTexture);
+        DrawFSQuadWithTexture(pContext, pPSO, pRefTexture);
+
+        auto pRT = pSwapChain->GetCurrentBackBufferRTV()->GetTexture();
+
+        // Transition to CopySrc state to use in TakeSnapshot()
+        StateTransitionDesc Barrier{pRT, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE};
+        pContext->TransitionResourceStates(1, &Barrier);
+
         pContext->Flush();
-        pContext->InvalidateState();
+        pContext->InvalidateState(); // because TakeSnapshot() will clear state in D3D11
 
-        SparseMemoryTestTextureHelper Helper;
-        Helper.TextureSize = TexSize.Recast<int>();
-        Helper.FillAndDraw = [&](ITexture* pTexture) {
-            Fill(pTexture);
-            DrawFSQuadWithTexture(pContext, pPSO, pTexture);
-            TransitSwapchainToCopySrcAndFlush();
-        };
-
-        auto DeviceType = pDevice->GetDeviceInfo().Type;
-        switch (DeviceType)
-        {
-#if D3D11_SUPPORTED
-            case RENDER_DEVICE_TYPE_D3D11:
-                SparseMemorySparseTexture3DTestD3D11(Helper);
-                break;
-#endif
-#if D3D12_SUPPORTED
-            case RENDER_DEVICE_TYPE_D3D12:
-                SparseMemorySparseTexture3DTestD3D12(Helper);
-                break;
-#endif
-#if VULKAN_SUPPORTED
-            case RENDER_DEVICE_TYPE_VULKAN:
-                SparseMemorySparseTexture3DTestVk(Helper);
-                break;
-#endif
-#if METAL_SUPPORTED
-            case RENDER_DEVICE_TYPE_METAL:
-                SparseMemorySparseTexture3DTestMtl(Helper);
-                break;
-#endif
-            default:
-                LOG_ERROR_AND_THROW("Unsupported device type");
-        }
-
-        pTestingSwapChain->TakeSnapshot(pSwapChain->GetCurrentBackBufferRTV()->GetTexture());
+        pTestingSwapChain->TakeSnapshot(pRT);
     }
 
     const auto BlockSize = SparseMem.StandardBlockSize;
@@ -1888,7 +1867,6 @@ TEST_F(SparseMemoryTest, SparseTexture3D)
     ASSERT_LE(TexSparseProps.MemorySize, pMemory->GetCapacity());
 
     auto pFence = CreateFence();
-    ASSERT_NE(pFence, nullptr);
 
     // bind sparse
     {
@@ -1948,19 +1926,24 @@ TEST_F(SparseMemoryTest, SparseTexture3D)
         SparseTexBind.NumRanges = static_cast<Uint32>(BindRanges.size());
         SparseTexBind.pRanges   = BindRanges.data();
 
+        BindSparseMemoryAttribs BindSparseAttrs;
+        BindSparseAttrs.NumTextureBinds = 1;
+        BindSparseAttrs.pTextureBinds   = &SparseTexBind;
+
         IFence*      SignalFence = pFence;
         const Uint64 SignalValue = 1;
 
-        BindSparseMemoryAttribs BindSparseAttrs;
-        BindSparseAttrs.NumTextureBinds    = 1;
-        BindSparseAttrs.pTextureBinds      = &SparseTexBind;
-        BindSparseAttrs.ppSignalFences     = &SignalFence;
-        BindSparseAttrs.pSignalFenceValues = &SignalValue;
-        BindSparseAttrs.NumSignalFences    = 1;
-
+        if (SignalFence)
+        {
+            BindSparseAttrs.ppSignalFences     = &SignalFence;
+            BindSparseAttrs.pSignalFenceValues = &SignalValue;
+            BindSparseAttrs.NumSignalFences    = 1;
+        }
         sm_pSparseBindingCtx->BindSparseMemory(BindSparseAttrs);
 
-        pContext->DeviceWaitForFence(SignalFence, SignalValue);
+        if (SignalFence)
+            pContext->DeviceWaitForFence(SignalFence, SignalValue);
+
         Fill(pTexture);
     }
 
@@ -2138,5 +2121,6 @@ TEST_F(SparseMemoryTest, LargeTexture3D)
 // AZ TODO:
 //  - depth stencil
 //  - multisampled
+//  - feedback sampler (dx12, metal?, vk?)
 
 } // namespace

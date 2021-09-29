@@ -52,7 +52,6 @@ static const INTERFACE_ID IID_RenderDeviceMtl =
 /// Exposes Metal-specific functionality of a render device.
 DILIGENT_BEGIN_INTERFACE(IRenderDeviceMtl, IRenderDevice)
 {
-#ifdef __OBJC__
     /// Returns the pointer to Metal device (MTLDevice).
     VIRTUAL id<MTLDevice> METHOD(GetMtlDevice)(THIS) CONST PURE;
 
@@ -87,14 +86,13 @@ DILIGENT_BEGIN_INTERFACE(IRenderDeviceMtl, IRenderDevice)
     VIRTUAL void METHOD(CreateRasterizationRateMapFromMtlResource)(THIS_
                                                                    id<MTLRasterizationRateMap>       mtlRRM,
                                                                    struct IRasterizationRateMapMtl** ppRRM) API_AVAILABLE(ios(13), macosx(10.15.4)) API_UNAVAILABLE(tvos) PURE;
-#endif
 
     /// Creates a rasterization rate map
     VIRTUAL void METHOD(CreateRasterizationRateMap)(THIS_
                                                     const struct RasterizationRateMapCreateInfo REF CreateInfo,
                                                     struct IRasterizationRateMapMtl**               ppRRM) PURE;
 
-    /// AZ TODO
+    /// Creates a sparse texture
     VIRTUAL void METHOD(CreateSparseTexture)(THIS_
                                              const TextureDesc REF TexDesc,
                                              IDeviceMemory*        pMemory,

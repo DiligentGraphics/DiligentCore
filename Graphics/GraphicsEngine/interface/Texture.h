@@ -362,29 +362,6 @@ struct MappedTextureSubresource
 };
 typedef struct MappedTextureSubresource MappedTextureSubresource;
 
-/// Describes the sparse texture packing mode
-DILIGENT_TYPED_ENUM(SPARSE_TEXTURE_FLAGS, Uint8)
-{
-    SPARSE_TEXTURE_FLAG_NONE                   = 0,
-
-    // AZ TODO: if MipTailStride == 0, single mip tail is used, so this flag is not needed, remove ?
-    /// Specifies that the texture uses a single mip tail region for all array layers
-    SPARSE_TEXTURE_FLAG_SINGLE_MIPTAIL         = 1u << 0,
-
-    // AZ TODO: not needed because of FirstMipInTail, remove ?
-    /// Specifies that the first mip level whose dimensions are not integer
-    /// multiples of the corresponding dimensions of the sparse texture block begins the mip tail region.
-    SPARSE_TEXTURE_FLAG_ALIGNED_MIP_SIZE       = 1u << 1,
-
-    // AZ TODO: not needed because of TileSize, remove ?
-    /// Specifies that the texture uses non-standard sparse texture block dimensions,
-    /// and the TileSize values do not match the standard sparse texture block dimensions.
-    SPARSE_TEXTURE_FLAG_NONSTANDARD_BLOCK_SIZE = 1u << 2,
-
-    SPARSE_TEXTURE_FLAG_LAST                   = SPARSE_TEXTURE_FLAG_NONSTANDARD_BLOCK_SIZE
-};
-DEFINE_FLAG_ENUM_OPERATORS(SPARSE_TEXTURE_FLAGS);
-
 /// Describes the sparse texture properties
 struct TextureSparseProperties
 {

@@ -33,7 +33,7 @@ namespace HLSL
 {
 
 const std::string FillBuffer_CS{R"hlsl(
-RWStructuredBuffer<uint> g_DstBuffer : register(u0);
+RWStructuredBuffer<uint> g_DstBuffer;
 
 cbuffer CB
 {
@@ -54,29 +54,26 @@ void main(uint DTid : SV_DispatchThreadID)
 )hlsl"};
 
 
-const std::string FillTexture_CS{R"hlsl(
-RWTexture2DArray<float4> g_DstTexture : register(u0);
+const std::string FillTexture2D_PS{R"hlsl(
+struct PSInput 
+{ 
+    float4 Pos : SV_POSITION;
+};
 
 cbuffer CB
 {
-    uint2  Offset;
-    uint2  Size;
     float4 Color;
 };
 
-[numthreads(8, 8, 1)]
-void main(uint2 DTid : SV_DispatchThreadID)
+float4 main(in PSInput PSIn) : SV_Target
 {
-    if (all(DTid < Size))
-    {
-        g_DstTexture[uint3(Offset + DTid, 0)] = Color;
-    }
+    return Color;
 }
 )hlsl"};
 
 
 const std::string FillTexture3D_CS{R"hlsl(
-RWTexture3D<float4> g_DstTexture : register(u0);
+RWTexture3D<float4> g_DstTexture;
 
 cbuffer CB
 {
@@ -213,6 +210,8 @@ float4 main(in PSInput PSIn) : SV_Target
         Coord.w   += 1;
         MipHeight >>= 1;
     }
+
+    // Bug in D3D11 WARP
 
     uint Status;
 #if TEXTURE_2D_ARRAY

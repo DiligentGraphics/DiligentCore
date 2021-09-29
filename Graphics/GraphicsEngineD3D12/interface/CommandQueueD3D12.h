@@ -47,19 +47,44 @@ static const INTERFACE_ID IID_CommandQueueD3D12 =
 
 // clang-format off
 
-/// AZ TODO
+/// This structure is used by ICommandQueueD3D12::UpdateTileMappings().
 struct ResourceTileMappingsD3D12
 {
+    /// A pointer to the reserved resource.
     ID3D12Resource*                        pResource                       DEFAULT_INITIALIZER(nullptr);
+
+    /// The number of reserved resource regions.
     UINT                                   NumResourceRegions              DEFAULT_INITIALIZER(0);
+
+    /// An array of structures that describe the starting coordinates of the reserved resource regions.
+    /// The NumResourceRegions parameter specifies the number of elements in the array.
     const D3D12_TILED_RESOURCE_COORDINATE* pResourceRegionStartCoordinates DEFAULT_INITIALIZER(nullptr);
+
+    /// An array of structures that describe the sizes of the reserved resource regions. 
+    /// The NumResourceRegions parameter specifies the number of elements in the array.
     const D3D12_TILE_REGION_SIZE*          pResourceRegionSizes            DEFAULT_INITIALIZER(nullptr);
+
+    /// A pointer to the resource heap.
     ID3D12Heap*                            pHeap                           DEFAULT_INITIALIZER(nullptr);
+
+    /// The number of tile ranges.
     UINT                                   NumRanges                       DEFAULT_INITIALIZER(0);
+
+    /// A pointer to an array of D3D12_TILE_RANGE_FLAGS values that describes each tile range.
+    /// The NumRanges parameter specifies the number of values in the array.
     const D3D12_TILE_RANGE_FLAGS*          pRangeFlags                     DEFAULT_INITIALIZER(nullptr);
+
+    /// An array of offsets into the resource heap. These are 0-based tile offsets, counting in tiles (not bytes).
     const UINT*                            pHeapRangeStartOffsets          DEFAULT_INITIALIZER(nullptr);
+
+    /// An array of tiles. An array of values that specify the number of tiles in each tile range.
+    /// The NumRanges parameter specifies the number of values in the array.
     const UINT*                            pRangeTileCounts                DEFAULT_INITIALIZER(nullptr);
+
+    /// A combination of D3D12_TILE_MAPPING_FLAGS values that are combined by using a bitwise OR operation.
     D3D12_TILE_MAPPING_FLAGS               Flags                           DEFAULT_INITIALIZER(D3D12_TILE_MAPPING_FLAG_NONE);
+
+    /// Set to True if the resource has been created using NVApi.
     Bool                                   UseNVApi                        DEFAULT_INITIALIZER(False);
 };
 typedef struct ResourceTileMappingsD3D12 ResourceTileMappingsD3D12;

@@ -48,7 +48,6 @@ DeviceMemoryVkImpl::DeviceMemoryVkImpl(IReferenceCounters*           pRefCounter
     const auto& PhysicalDevice = m_pDevice->GetPhysicalDevice();
     const auto& LogicalDevice  = m_pDevice->GetLogicalDevice();
 
-    // AZ TODO: we can create temporary buffer and texture to detect memory type
     if (MemCI.NumResources == 0)
         DEVMEM_CHECK_CREATE_INFO("Vulkan requires at least one resource to choose memory type");
 
@@ -60,19 +59,21 @@ DeviceMemoryVkImpl::DeviceMemoryVkImpl(IReferenceCounters*           pRefCounter
     {
         auto* pResource = MemCI.ppCompatibleResources[i];
 
-        if (RefCntAutoPtr<TextureVkImpl> pTexture{pResource, IID_TextureVk})
+        if (RefCntAutoPtr<ITextureVk> pTexture{pResource, IID_TextureVk})
         {
-            if (pTexture->GetDesc().Usage != USAGE_SPARSE)
+            const auto* pTexVk = pTexture.RawPtr<const TextureVkImpl>();
+            if (pTexVk->GetDesc().Usage != USAGE_SPARSE)
                 DEVMEM_CHECK_CREATE_INFO("ppCompatibleResources[", i, "] must be created with USAGE_SPARSE");
 
-            MemoryTypeBits &= LogicalDevice.GetImageMemoryRequirements(pTexture->GetVkImage()).memoryTypeBits;
+            MemoryTypeBits &= LogicalDevice.GetImageMemoryRequirements(pTexVk->GetVkImage()).memoryTypeBits;
         }
-        else if (RefCntAutoPtr<BufferVkImpl> pBuffer{pResource, IID_BufferVk})
+        else if (RefCntAutoPtr<IBufferVk> pBuffer{pResource, IID_BufferVk})
         {
-            if (pBuffer->GetDesc().Usage != USAGE_SPARSE)
+            const auto* pBuffVk = pBuffer.RawPtr<const BufferVkImpl>();
+            if (pBuffVk->GetDesc().Usage != USAGE_SPARSE)
                 DEVMEM_CHECK_CREATE_INFO("ppCompatibleResources[", i, "] must be created with USAGE_SPARSE");
 
-            MemoryTypeBits &= LogicalDevice.GetBufferMemoryRequirements(pBuffer->GetVkBuffer()).memoryTypeBits;
+            MemoryTypeBits &= LogicalDevice.GetBufferMemoryRequirements(pBuffVk->GetVkBuffer()).memoryTypeBits;
         }
         else
         {
@@ -114,6 +115,8 @@ IMPLEMENT_QUERY_INTERFACE(DeviceMemoryVkImpl, IID_DeviceMemoryVk, TDeviceMemoryB
 
 Bool DeviceMemoryVkImpl::Resize(Uint64 NewSize)
 {
+    DvpVerifyResize(NewSize);
+
     const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
     const auto  NewPageCount  = StaticCast<size_t>(NewSize / m_Desc.PageSize);
 
