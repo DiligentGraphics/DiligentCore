@@ -44,7 +44,6 @@
 #include "GenerateMips.hpp"
 #include "DXCompiler.hpp"
 #include "RootSignature.hpp"
-#include "NVApiLoader.hpp"
 
 
 // The macros below are only defined in Win SDK 19041+ and are missing in 17763
@@ -264,11 +263,6 @@ public:
         return *m_QueryMgrs[CmdQueueInd];
     }
 
-    bool IsNvApiEnabled() const
-    {
-        return m_NVApi.IsLoaded();
-    }
-
     ID3D12Heap* GetDummyNVApiHeap() const
     {
         return m_pNVApiHeap;
@@ -310,7 +304,6 @@ private:
     // Each command queue needs its own query manager to avoid race conditions.
     std::vector<std::unique_ptr<QueryManagerD3D12>> m_QueryMgrs;
 
-    NVApiLoader m_NVApi;
     // Dummy heap required by NvAPI_D3D12_CreateReservedResource.
     CComPtr<ID3D12Heap> m_pNVApiHeap;
 

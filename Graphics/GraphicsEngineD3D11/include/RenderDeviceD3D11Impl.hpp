@@ -32,7 +32,6 @@
 
 #include "EngineD3D11ImplTraits.hpp"
 #include "RenderDeviceD3DBase.hpp"
-#include "NVApiLoader.hpp"
 
 namespace Diligent
 {
@@ -181,15 +180,8 @@ public:
 #endif
 #undef GET_D3D11_DEVICE
 
-    bool IsNvApiEnabled() const
-    {
-        return m_NVApi.IsLoaded();
-    }
-
 private:
     virtual void TestTextureFormat(TEXTURE_FORMAT TexFormat) override final;
-
-    NVApiLoader m_NVApi;
 
     /// D3D11 device
     CComPtr<ID3D11Device> m_pd3d11Device;

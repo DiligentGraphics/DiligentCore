@@ -227,12 +227,8 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
             m_QueryMgrs.emplace_back(std::make_unique<QueryManagerD3D12>(this, EngineCI.QueryPoolSizes, SoftwareQueueIndex{q}, HWQueueId));
         }
 
-        if (m_AdapterInfo.Vendor == ADAPTER_VENDOR_NVIDIA)
-        {
-            m_NVApi.Load();
-            if (IsNvApiEnabled())
-                m_pNVApiHeap = CreateDummyNVApiHeap(m_pd3d12Device);
-        }
+        if (IsNvApiEnabled())
+            m_pNVApiHeap = CreateDummyNVApiHeap(m_pd3d12Device);
     }
     catch (...)
     {

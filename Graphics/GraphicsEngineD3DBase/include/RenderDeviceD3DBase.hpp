@@ -30,9 +30,13 @@
 /// \file
 /// Implementation of the Diligent::RenderDeviceBase template class and related structures
 
+#ifndef NOMINMAX
+#    define NOMINMAX
+#endif
 #include <dxgi.h>
 
 #include "RenderDeviceBase.hpp"
+#include "NVApiLoader.hpp"
 
 namespace Diligent
 {
@@ -158,7 +162,29 @@ public:
         // clang-format on
 
         m_DeviceInfo.NDC = NDCAttribs{0.0f, 1.0f, -0.5f};
+
+        if (m_AdapterInfo.Vendor == ADAPTER_VENDOR_NVIDIA)
+        {
+            m_NVApi.Load();
+        }
     }
+
+    ~RenderDeviceD3DBase()
+    {
+        // There is a problem with NVApi: the dll must be unloaded only after the last
+        // reference to Direct3D Device has been released, otherwise Release() will crash.
+        // We cannot guarantee this because the engine may be attached to existing
+        // D3D11/D3D12 device. So we have to keep the DLL loaded.
+        m_NVApi.Invalidate();
+    }
+
+    bool IsNvApiEnabled() const
+    {
+        return m_NVApi.IsLoaded();
+    }
+
+protected:
+    NVApiLoader m_NVApi;
 };
 
 } // namespace Diligent
