@@ -211,8 +211,6 @@ float4 main(in PSInput PSIn) : SV_Target
         MipHeight >>= 1;
     }
 
-    // Bug in D3D11 WARP
-
     uint Status;
 #if TEXTURE_2D_ARRAY
     float4 Color = g_Texture.Load(Coord, /*offset*/int2(0,0), Status);

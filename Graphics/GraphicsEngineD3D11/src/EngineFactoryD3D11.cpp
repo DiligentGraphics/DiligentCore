@@ -565,6 +565,12 @@ GraphicsAdapterInfo EngineFactoryD3D11Impl::GetGraphicsAdapterInfo(void*        
                     SparseMem.CapFlags |= SPARSE_MEMORY_CAP_FLAG_TEXTURE_2D_ARRAY_MIP_TAIL;
                 }
 
+                // Some features are not correctly working in software renderer.
+                if (AdapterInfo.Type == ADAPTER_TYPE_SOFTWARE)
+                {
+                    SparseMem.CapFlags &= ~SPARSE_MEMORY_CAP_FLAG_SHADER_RESOURCE_RESIDENCY;
+                }
+
                 for (Uint32 q = 0; q < AdapterInfo.NumQueues; ++q)
                     AdapterInfo.Queues[q].QueueType |= COMMAND_QUEUE_TYPE_SPARSE_BINDING;
 
