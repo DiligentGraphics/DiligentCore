@@ -2592,41 +2592,41 @@ DILIGENT_TYPED_ENUM(SPARSE_MEMORY_CAP_FLAGS, Uint32)
     /// and reading physical memory from multiple aliased locations will return the same value.
     SPARSE_MEMORY_CAP_FLAG_ALIASED            = 1u << 8,
 
-    /// Specifies whether the device accesses single-sample 2D sparse textures using the standard sparse texture block shapes.
+    /// Specifies whether the device accesses single-sample 2D sparse textures using the standard sparse texture tile shapes.
     /// If not present, call IRenderDevice::GetTextureFormatSparseInfo() to get the supported sparse block dimensions.
     ///
-    ///  | Texel size  |   Block shape   |
+    ///  | Texel size  |    Tile shape   |
     ///  |-------------|-----------------|
     ///  |     8-Bit   |  256 x 256 x 1  |
     ///  |    16-Bit   |  256 x 128 x 1  |
     ///  |    32-Bit   |  128 x 128 x 1  |
     ///  |    64-Bit   |  128 x  64 x 1  |
     ///  |   128-Bit   |   64 x  64 x 1  |
-    SPARSE_MEMORY_CAP_FLAG_STANDARD_2D_BLOCK_SHAPE   = 1u << 9,
+    SPARSE_MEMORY_CAP_FLAG_STANDARD_2D_TILE_SHAPE   = 1u << 9,
 
-    /// Specifies whether the device accesses multi-sample 2D sparse textures using the standard sparse texture block shapes.
+    /// Specifies whether the device accesses multi-sample 2D sparse textures using the standard sparse texture tile shapes.
     /// If not present, call IRenderDevice::GetTextureFormatSparseInfo() to get the supported sparse block dimensions.
     ///
-    ///  | Texel size  |  Block shape 2x  |  Block shape 4x  |  Block shape 8x  |  Block shape 16x  |
+    ///  | Texel size  |   Tile shape 2x  |   Tile shape 4x  |   Tile shape 8x  |   Tile shape 16x  |
     ///  |-------------|------------------|------------------|------------------|-------------------|
     ///  |     8-Bit   |   128 x 256 x 1  |   128 x 128 x 1  |   64 x 128 x 1   |    64 x 64 x 1    |
     ///  |    16-Bit   |   128 x 128 x 1  |   128 x  64 x 1  |   64 x  64 x 1   |    64 x 32 x 1    |
     ///  |    32-Bit   |    64 x 128 x 1  |    64 x  64 x 1  |   32 x  64 x 1   |    32 x 32 x 1    |
     ///  |    64-Bit   |    64 x  64 x 1  |    64 x  32 x 1  |   32 x  32 x 1   |    32 x 16 x 1    |
     ///  |   128-Bit   |    32 x  64 x 1  |    32 x  32 x 1  |   16 x  32 x 1   |    16 x 16 x 1    |
-    SPARSE_MEMORY_CAP_FLAG_STANDARD_2DMS_BLOCK_SHAPE = 1u << 10,
+    SPARSE_MEMORY_CAP_FLAG_STANDARD_2DMS_TILE_SHAPE = 1u << 10,
 
-    /// Specifies whether the device accesses 3D sparse resources using the standard sparse texture block shapes.
+    /// Specifies whether the device accesses 3D sparse resources using the standard sparse texture tile shapes.
     /// If not present, call IRenderDevice::GetTextureFormatSparseInfo() to get the supported sparse block dimensions.
     ///
-    ///  | Texel size  |   Block shape   |
+    ///  | Texel size  |    Tile shape   |
     ///  |-------------|-----------------|
     ///  |     8-Bit   |   64 x 32 x 32  |
     ///  |    16-Bit   |   32 x 32 x 32  |
     ///  |    32-Bit   |   32 x 32 x 16  |
     ///  |    64-Bit   |   32 x 16 x 16  |
     ///  |   128-Bit   |   16 x 16 x 16  |
-    SPARSE_MEMORY_CAP_FLAG_STANDARD_3D_BLOCK_SHAPE   = 1u << 11,
+    SPARSE_MEMORY_CAP_FLAG_STANDARD_3D_TILE_SHAPE   = 1u << 11,
 
     /// Specifies if textures with mip level dimensions that are not integer multiples of the corresponding
     /// dimensions of the sparse image block may be placed in the mip tail.
@@ -2667,9 +2667,9 @@ struct SparseMemoryProperties
 
     /// \note   In Direct3D11, Direct3D12 and Vulkan this is 64Kb.
     ///         In Metal it is implementation-defined.
-    /// 
-    /// See SPARSE_MEMORY_CAP_FLAG_STANDARD_2D_BLOCK_SHAPE, SPARSE_MEMORY_CAP_FLAG_STANDARD_2DMS_BLOCK_SHAPE,
-    /// SPARSE_MEMORY_CAP_FLAG_STANDARD_3D_BLOCK_SHAPE, SPARSE_MEMORY_CAP_FLAG_BUFFER_STANDARD_BLOCK.
+    ///
+    /// See SPARSE_MEMORY_CAP_FLAG_STANDARD_2D_TILE_SHAPE, SPARSE_MEMORY_CAP_FLAG_STANDARD_2DMS_TILE_SHAPE,
+    /// SPARSE_MEMORY_CAP_FLAG_STANDARD_3D_TILE_SHAPE, SPARSE_MEMORY_CAP_FLAG_BUFFER_STANDARD_BLOCK.
     /// See (AZ TODO: texture format info)
     Uint32 StandardBlockSize DEFAULT_INITIALIZER(0);
 
@@ -3638,7 +3638,7 @@ struct TextureFormatSparseInfo
     Uint32     Samples DEFAULT_INITIALIZER(0);
 
     /// AZ TODO
-    Uint32     SparseBlockSize[3] DEFAULT_INITIALIZER({});
+    Uint32     TileSize[3] DEFAULT_INITIALIZER({});
 
     /// AZ TODO
     SPARSE_TEXTURE_FLAGS Flags DEFAULT_INITIALIZER(SPARSE_TEXTURE_FLAG_NONE);

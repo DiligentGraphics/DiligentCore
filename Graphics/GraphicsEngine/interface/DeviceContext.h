@@ -1757,7 +1757,7 @@ struct SparseTextureMemoryBindRange
 
     /// Size of the memory which will be bound/unbound to Region.
     /// Memory size must be equal to the number of tiles in Region multiplied by the sparse block size.
-    /// It must be a multiple of the SparseMemoryProperties::SparseBlockSize.
+    /// It must be a multiple of the TextureSparseProperties::BlockSize.
     /// Ignored in Metal.
     Uint64           MemorySize    DEFAULT_INITIALIZER(0);
 

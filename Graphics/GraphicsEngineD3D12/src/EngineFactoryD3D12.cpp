@@ -803,13 +803,13 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
                         SPARSE_MEMORY_CAP_FLAG_BUFFER |
                         SPARSE_MEMORY_CAP_FLAG_BUFFER_STANDARD_BLOCK |
                         SPARSE_MEMORY_CAP_FLAG_TEXTURE_2D |
-                        SPARSE_MEMORY_CAP_FLAG_STANDARD_2D_BLOCK_SHAPE |
+                        SPARSE_MEMORY_CAP_FLAG_STANDARD_2D_TILE_SHAPE |
                         SPARSE_MEMORY_CAP_FLAG_ALIASED;
 
                     // No 2, 8 or 16 sample multisample antialiasing (MSAA) support. Only 4x is required, except no 128 bpp formats.
                     SparseMem.CapFlags |=
                         SPARSE_MEMORY_CAP_FLAG_TEXTURE_4_SAMPLES |
-                        SPARSE_MEMORY_CAP_FLAG_STANDARD_2DMS_BLOCK_SHAPE;
+                        SPARSE_MEMORY_CAP_FLAG_STANDARD_2DMS_TILE_SHAPE;
 
                     if (d3d12Features.TiledResourcesTier >= D3D12_TILED_RESOURCES_TIER_2)
                     {
@@ -821,7 +821,7 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
                     {
                         SparseMem.CapFlags |=
                             SPARSE_MEMORY_CAP_FLAG_TEXTURE_3D |
-                            SPARSE_MEMORY_CAP_FLAG_STANDARD_3D_BLOCK_SHAPE;
+                            SPARSE_MEMORY_CAP_FLAG_STANDARD_3D_TILE_SHAPE;
                     }
                     if (NVApi)
                     {

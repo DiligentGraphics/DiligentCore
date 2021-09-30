@@ -432,9 +432,9 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
                 SparseMem.CapFlags |= Flag;
         };
         // clang-format off
-        SetSparseMemoryCap(SparseProps.residencyStandard2DBlockShape,            SPARSE_MEMORY_CAP_FLAG_STANDARD_2D_BLOCK_SHAPE  );
-        SetSparseMemoryCap(SparseProps.residencyStandard2DMultisampleBlockShape, SPARSE_MEMORY_CAP_FLAG_STANDARD_2DMS_BLOCK_SHAPE);
-        SetSparseMemoryCap(SparseProps.residencyStandard3DBlockShape,            SPARSE_MEMORY_CAP_FLAG_STANDARD_3D_BLOCK_SHAPE  );
+        SetSparseMemoryCap(SparseProps.residencyStandard2DBlockShape,            SPARSE_MEMORY_CAP_FLAG_STANDARD_2D_TILE_SHAPE   );
+        SetSparseMemoryCap(SparseProps.residencyStandard2DMultisampleBlockShape, SPARSE_MEMORY_CAP_FLAG_STANDARD_2DMS_TILE_SHAPE );
+        SetSparseMemoryCap(SparseProps.residencyStandard3DBlockShape,            SPARSE_MEMORY_CAP_FLAG_STANDARD_3D_TILE_SHAPE   );
         SetSparseMemoryCap(SparseProps.residencyAlignedMipSize,                  SPARSE_MEMORY_CAP_FLAG_ALIGNED_MIP_SIZE         );
         SetSparseMemoryCap(SparseProps.residencyNonResidentStrict,               SPARSE_MEMORY_CAP_FLAG_NON_RESIDENT_STRICT      );
         SetSparseMemoryCap(vkFeatures.shaderResourceResidency,                   SPARSE_MEMORY_CAP_FLAG_SHADER_RESOURCE_RESIDENCY);

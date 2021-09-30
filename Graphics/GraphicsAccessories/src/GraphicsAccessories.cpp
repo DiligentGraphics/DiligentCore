@@ -1926,7 +1926,7 @@ TextureSparseProperties GetTextureSparsePropertiesForStandardBlocks(const Textur
     {
         VERIFY(FmtAttribs.ComponentType != COMPONENT_TYPE_COMPRESSED, "Compressed sparse 3D textures are currently not supported");
 
-        //  | Texel size  |   Block shape   |
+        //  | Texel size  |    Tile shape   |
         //  |-------------|-----------------|
         //  |     8-Bit   |   64 x 32 x 32  |
         //  |    16-Bit   |   32 x 32 x 32  |
@@ -1941,7 +1941,7 @@ TextureSparseProperties GetTextureSparsePropertiesForStandardBlocks(const Textur
     {
         VERIFY_EXPR(FmtAttribs.ComponentType != COMPONENT_TYPE_COMPRESSED);
 
-        //  | Texel size  |  Block shape 2x  |  Block shape 4x  |  Block shape 8x  |  Block shape 16x  |
+        //  | Texel size  |   Tile shape 2x  |   Tile shape 4x  |   Tile shape 8x  |   Tile shape 16x  |
         //  |-------------|------------------|------------------|------------------|-------------------|
         //  |     8-Bit   |   128 x 256 x 1  |   128 x 128 x 1  |   64 x 128 x 1   |    64 x 64 x 1    |
         //  |    16-Bit   |   128 x 128 x 1  |   128 x  64 x 1  |   64 x  64 x 1   |    64 x 32 x 1    |
@@ -1964,7 +1964,7 @@ TextureSparseProperties GetTextureSparsePropertiesForStandardBlocks(const Textur
         Props.TileSize[2] = 1;
         if (FmtAttribs.ComponentType != COMPONENT_TYPE_COMPRESSED)
         {
-            //  | Texel size  |   Block shape   |
+            //  | Texel size  |    Tile shape   |
             //  |-------------|-----------------|
             //  |     8-Bit   |  256 x 256 x 1  |
             //  |    16-Bit   |  256 x 128 x 1  |

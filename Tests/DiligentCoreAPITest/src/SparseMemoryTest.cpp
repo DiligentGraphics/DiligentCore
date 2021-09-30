@@ -847,7 +847,7 @@ void CheckTextureSparseProperties(ITexture* pTexture)
 
         if (IsStdBlock)
         {
-            ASSERT_TRUE((SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_STANDARD_3D_BLOCK_SHAPE) != 0);
+            ASSERT_TRUE((SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_STANDARD_3D_TILE_SHAPE) != 0);
             ASSERT_EQ(Props.TileSize[0], 32u);
             ASSERT_EQ(Props.TileSize[1], 32u);
             ASSERT_EQ(Props.TileSize[2], 16u);
@@ -861,7 +861,7 @@ void CheckTextureSparseProperties(ITexture* pTexture)
 
         if (IsStdBlock)
         {
-            ASSERT_TRUE((SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_STANDARD_2D_BLOCK_SHAPE) != 0);
+            ASSERT_TRUE((SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_STANDARD_2D_TILE_SHAPE) != 0);
             ASSERT_EQ(Props.TileSize[0], 128u);
             ASSERT_EQ(Props.TileSize[1], 128u);
             ASSERT_EQ(Props.TileSize[2], 1u);
