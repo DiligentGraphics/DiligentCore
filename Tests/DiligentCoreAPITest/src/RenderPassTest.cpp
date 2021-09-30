@@ -182,6 +182,7 @@ protected:
 
     static void TestMSResolve(bool UseMemoryless);
     static void TestInputAttachment(bool UseSignature, bool UseMemoryless);
+    static void TestInputAttachmentGeneralLayout(bool UseSignature);
 
     static void Present()
     {
@@ -258,12 +259,12 @@ TEST_F(RenderPassTest, CreateRenderPassAndFramebuffer)
     SubpassDesc Subpasses[2];
 
     // clang-format off
-    AttachmentReference RTAttachmentRefs0[] =
+    constexpr AttachmentReference RTAttachmentRefs0[] =
     {
         {0, RESOURCE_STATE_RENDER_TARGET},
         {1, RESOURCE_STATE_RENDER_TARGET}
     };
-    AttachmentReference RslvAttachmentRefs0[] =
+    constexpr AttachmentReference RslvAttachmentRefs0[] =
     {
         {ATTACHMENT_UNUSED, RESOURCE_STATE_RESOLVE_DEST},
         {2, RESOURCE_STATE_RESOLVE_DEST}
@@ -276,16 +277,16 @@ TEST_F(RenderPassTest, CreateRenderPassAndFramebuffer)
     Subpasses[0].pDepthStencilAttachment     = &DSAttachmentRef0;
 
     // clang-format off
-    AttachmentReference RTAttachmentRefs1[] =
+    constexpr AttachmentReference RTAttachmentRefs1[] =
     {
         {4, RESOURCE_STATE_RENDER_TARGET}
     };
-    AttachmentReference InptAttachmentRefs1[] =
+    constexpr AttachmentReference InptAttachmentRefs1[] =
     {
         {2, RESOURCE_STATE_INPUT_ATTACHMENT},
         {5, RESOURCE_STATE_INPUT_ATTACHMENT}
     };
-    Uint32 PrsvAttachmentRefs1[] =
+    constexpr Uint32 PrsvAttachmentRefs1[] =
     {
         0
     };
@@ -484,7 +485,7 @@ TEST_F(RenderPassTest, CreateRenderPassAndFramebuffer)
         DeviceType != RENDER_DEVICE_TYPE_METAL)
     {
         // ClearRenderTarget is not allowed inside a render pass in Direct3D12 and Metal
-        float ClearColor[] = {0, 0, 0, 0};
+        constexpr float ClearColor[] = {0, 0, 0, 0};
         pContext->ClearRenderTarget(pTexViews[4], ClearColor, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
     }
 
@@ -513,7 +514,7 @@ TEST_F(RenderPassTest, Draw)
     SubpassDesc Subpasses[1];
 
     // clang-format off
-    AttachmentReference RTAttachmentRefs0[] =
+    constexpr AttachmentReference RTAttachmentRefs0[] =
     {
         {0, RESOURCE_STATE_RENDER_TARGET}
     };
@@ -648,11 +649,11 @@ void RenderPassTest::TestMSResolve(bool UseMemoryless)
     SubpassDesc Subpasses[1];
 
     // clang-format off
-    AttachmentReference RTAttachmentRefs0[] =
+    constexpr AttachmentReference RTAttachmentRefs0[] =
     {
         {0, RESOURCE_STATE_RENDER_TARGET}
     };
-    AttachmentReference RslvAttachmentRefs0[] =
+    constexpr AttachmentReference RslvAttachmentRefs0[] =
     {
         {1, RESOURCE_STATE_RESOLVE_DEST}
     };
@@ -809,15 +810,15 @@ void RenderPassTest::TestInputAttachment(bool UseSignature, bool UseMemoryless)
     SubpassDesc Subpasses[2];
 
     // clang-format off
-    AttachmentReference RTAttachmentRefs0[] =
+    constexpr AttachmentReference RTAttachmentRefs0[] =
     {
         {0, RESOURCE_STATE_RENDER_TARGET}
     };
-    AttachmentReference RTAttachmentRefs1[] =
+    constexpr AttachmentReference RTAttachmentRefs1[] =
     {
         {1, RESOURCE_STATE_RENDER_TARGET}
     };
-    AttachmentReference InputAttachmentRefs1[] =
+    constexpr AttachmentReference InputAttachmentRefs1[] =
     {
         {0, RESOURCE_STATE_INPUT_ATTACHMENT}
     };
@@ -1019,5 +1020,275 @@ TEST_F(RenderPassTest, MemorylessInputAttachment)
     TestInputAttachment(false, true);
 }
 
+
+void RenderPassTest::TestInputAttachmentGeneralLayout(bool UseSignature)
+{
+    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+
+    if (!pDevice->GetDeviceInfo().IsVulkanDevice())
+    {
+        GTEST_SKIP() << "Input attachment with general layout is not supported by device";
+    }
+
+    auto* pSwapChain = pEnv->GetSwapChain();
+    auto* pContext   = pEnv->GetDeviceContext();
+
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+
+    constexpr float ClearColor[] = {0.5f, 0.125f, 0.25f, 0.25f};
+
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+    if (pTestingSwapChain)
+    {
+        pContext->Flush();
+        pContext->InvalidateState();
+
+        auto deviceType = pDevice->GetDeviceInfo().Type;
+        switch (deviceType)
+        {
+#if VULKAN_SUPPORTED
+            case RENDER_DEVICE_TYPE_VULKAN:
+                RenderPassInputAttachmentReferenceVk(pSwapChain, ClearColor);
+                break;
+#endif
+
+            case RENDER_DEVICE_TYPE_UNDEFINED: // to avoid compilation error
+            default:
+                LOG_ERROR_AND_THROW("Unsupported device type");
+        }
+
+        pTestingSwapChain->TakeSnapshot();
+    }
+
+    const auto& SCDesc = pSwapChain->GetDesc();
+
+    RenderPassAttachmentDesc Attachments[1];
+    Attachments[0].Format       = SCDesc.ColorBufferFormat;
+    Attachments[0].SampleCount  = 1;
+    Attachments[0].InitialState = RESOURCE_STATE_RENDER_TARGET;
+    Attachments[0].FinalState   = RESOURCE_STATE_COMMON;
+    Attachments[0].LoadOp       = ATTACHMENT_LOAD_OP_CLEAR;
+    Attachments[0].StoreOp      = ATTACHMENT_STORE_OP_STORE;
+
+    RefCntAutoPtr<ITexture> pTex;
+    {
+        TextureDesc TexDesc;
+        TexDesc.Name      = "Input attachment test texture";
+        TexDesc.Type      = RESOURCE_DIM_TEX_2D;
+        TexDesc.Format    = SCDesc.ColorBufferFormat;
+        TexDesc.Width     = SCDesc.Width;
+        TexDesc.Height    = SCDesc.Height;
+        TexDesc.BindFlags = BIND_RENDER_TARGET | BIND_INPUT_ATTACHMENT;
+        TexDesc.MipLevels = 1;
+        TexDesc.Usage     = USAGE_DEFAULT;
+        TexDesc.MiscFlags = MISC_TEXTURE_FLAG_NONE;
+
+        pDevice->CreateTexture(TexDesc, nullptr, &pTex);
+        ASSERT_NE(pTex, nullptr);
+    }
+
+    SubpassDesc Subpasses[2];
+
+    // clang-format off
+    constexpr AttachmentReference RTAttachmentRefs0[] =
+    {
+        {0, RESOURCE_STATE_RENDER_TARGET}
+    };
+    constexpr AttachmentReference RTAttachmentRefs1[] =
+    {
+        {0, RESOURCE_STATE_COMMON}
+    };
+    constexpr AttachmentReference InputAttachmentRefs1[] =
+    {
+        {0, RESOURCE_STATE_COMMON}
+    };
+    // clang-format on
+    Subpasses[0].RenderTargetAttachmentCount = _countof(RTAttachmentRefs0);
+    Subpasses[0].pRenderTargetAttachments    = RTAttachmentRefs0;
+
+    Subpasses[1].RenderTargetAttachmentCount = _countof(RTAttachmentRefs1);
+    Subpasses[1].pRenderTargetAttachments    = RTAttachmentRefs1;
+    Subpasses[1].InputAttachmentCount        = _countof(InputAttachmentRefs1);
+    Subpasses[1].pInputAttachments           = InputAttachmentRefs1;
+
+    SubpassDependencyDesc Dependencies[1];
+    Dependencies[0].SrcSubpass    = 0;
+    Dependencies[0].DstSubpass    = 1;
+    Dependencies[0].SrcStageMask  = PIPELINE_STAGE_FLAG_RENDER_TARGET;
+    Dependencies[0].DstStageMask  = PIPELINE_STAGE_FLAG_PIXEL_SHADER | PIPELINE_STAGE_FLAG_RENDER_TARGET;
+    Dependencies[0].SrcAccessMask = ACCESS_FLAG_RENDER_TARGET_WRITE;
+    Dependencies[0].DstAccessMask = ACCESS_FLAG_SHADER_READ | ACCESS_FLAG_RENDER_TARGET_WRITE;
+
+    RenderPassDesc RPDesc;
+    RPDesc.Name            = "Render pass general input attachment test";
+    RPDesc.AttachmentCount = _countof(Attachments);
+    RPDesc.pAttachments    = Attachments;
+    RPDesc.SubpassCount    = _countof(Subpasses);
+    RPDesc.pSubpasses      = Subpasses;
+    RPDesc.DependencyCount = _countof(Dependencies);
+    RPDesc.pDependencies   = Dependencies;
+
+    RefCntAutoPtr<IRenderPass> pRenderPass;
+    pDevice->CreateRenderPass(RPDesc, &pRenderPass);
+    ASSERT_NE(pRenderPass, nullptr);
+
+    RefCntAutoPtr<IPipelineState> pPSO;
+    CreateDrawTrisPSO(pRenderPass, 1, pPSO);
+    ASSERT_TRUE(pPSO != nullptr);
+
+    RefCntAutoPtr<IPipelineState>         pInputAttachmentPSO;
+    RefCntAutoPtr<IShaderResourceBinding> pInputAttachmentSRB;
+    {
+        GraphicsPipelineStateCreateInfo PSOCreateInfo;
+        PipelineStateDesc&              PSODesc          = PSOCreateInfo.PSODesc;
+        GraphicsPipelineDesc&           GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
+
+        PSODesc.Name = "Render pass test - input attachment";
+
+        PSODesc.PipelineType                          = PIPELINE_TYPE_GRAPHICS;
+        GraphicsPipeline.pRenderPass                  = pRenderPass;
+        GraphicsPipeline.SubpassIndex                 = 1;
+        GraphicsPipeline.SmplDesc.Count               = 1;
+        GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
+        GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+
+        ShaderCreateInfo ShaderCI;
+        ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM;
+        ShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+
+        ShaderCI.UseCombinedTextureSamplers = true;
+
+        RefCntAutoPtr<IShader> pVS;
+        {
+            ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
+            ShaderCI.EntryPoint      = "main";
+            ShaderCI.Desc.Name       = "Input attachment test VS";
+            ShaderCI.Source          = GLSL::DrawTest_ProceduralTriangleVS.c_str();
+            pDevice->CreateShader(ShaderCI, &pVS);
+            ASSERT_NE(pVS, nullptr);
+        }
+
+        RefCntAutoPtr<IShader> pPS;
+        {
+            ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
+            ShaderCI.EntryPoint      = "main";
+            ShaderCI.Desc.Name       = "Input attachment test PS";
+            ShaderCI.Source          = GLSL::InputAttachmentTest_FS.c_str();
+            pDevice->CreateShader(ShaderCI, &pPS);
+            ASSERT_NE(pPS, nullptr);
+        }
+
+        PSOCreateInfo.pVS = pVS;
+        PSOCreateInfo.pPS = pPS;
+
+        constexpr ShaderResourceVariableDesc Variables[] =
+            {
+                {SHADER_TYPE_PIXEL, "g_SubpassInput", SHADER_RESOURCE_VARIABLE_TYPE_STATIC, SHADER_VARIABLE_FLAG_GENERAL_INPUT_ATTACHMENT} //
+            };
+
+        RefCntAutoPtr<IPipelineResourceSignature> pSignature;
+        IPipelineResourceSignature*               ppSignatures[1]{};
+        if (UseSignature)
+        {
+            constexpr PipelineResourceDesc Resources[] = //
+                {
+                    {SHADER_TYPE_PIXEL, "g_SubpassInput", 1, SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT, SHADER_RESOURCE_VARIABLE_TYPE_STATIC, PIPELINE_RESOURCE_FLAG_GENERAL_INPUT_ATTACHMENT} //
+                };
+            PipelineResourceSignatureDesc PRSDesc;
+            PRSDesc.Name                       = "Render pass test - signature";
+            PRSDesc.UseCombinedTextureSamplers = true;
+            PRSDesc.Resources                  = Resources;
+            PRSDesc.NumResources               = _countof(Resources);
+
+            pDevice->CreatePipelineResourceSignature(PRSDesc, &pSignature);
+            ASSERT_NE(pSignature, nullptr);
+            ppSignatures[0]                       = pSignature;
+            PSOCreateInfo.ppResourceSignatures    = ppSignatures;
+            PSOCreateInfo.ResourceSignaturesCount = 1;
+        }
+        else
+        {
+            PSODesc.ResourceLayout.Variables    = Variables;
+            PSODesc.ResourceLayout.NumVariables = _countof(Variables);
+        }
+
+        pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pInputAttachmentPSO);
+        ASSERT_NE(pInputAttachmentPSO, nullptr);
+        if (pSignature)
+        {
+            pSignature->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_SubpassInput")->Set(pTex->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE));
+            pSignature->CreateShaderResourceBinding(&pInputAttachmentSRB, true);
+        }
+        else
+        {
+            pInputAttachmentPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_SubpassInput")->Set(pTex->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE));
+            pInputAttachmentPSO->CreateShaderResourceBinding(&pInputAttachmentSRB, true);
+        }
+        ASSERT_NE(pInputAttachmentSRB, nullptr);
+    }
+
+    ITextureView* pRTAttachments[] = {pTex->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET)};
+
+    FramebufferDesc FBDesc;
+    FBDesc.Name            = "Render pass input attachment test framebuffer";
+    FBDesc.pRenderPass     = pRenderPass;
+    FBDesc.AttachmentCount = _countof(Attachments);
+    FBDesc.ppAttachments   = pRTAttachments;
+    RefCntAutoPtr<IFramebuffer> pFramebuffer;
+    pDevice->CreateFramebuffer(FBDesc, &pFramebuffer);
+    ASSERT_TRUE(pFramebuffer);
+
+    pContext->SetPipelineState(pPSO);
+
+    BeginRenderPassAttribs RPBeginInfo;
+    RPBeginInfo.pRenderPass  = pRenderPass;
+    RPBeginInfo.pFramebuffer = pFramebuffer;
+
+    OptimizedClearValue ClearValues[1];
+    ClearValues[0].Color[0] = ClearColor[0];
+    ClearValues[0].Color[1] = ClearColor[1];
+    ClearValues[0].Color[2] = ClearColor[2];
+    ClearValues[0].Color[3] = ClearColor[3];
+
+    RPBeginInfo.pClearValues        = ClearValues;
+    RPBeginInfo.ClearValueCount     = _countof(ClearValues);
+    RPBeginInfo.StateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+    pContext->BeginRenderPass(RPBeginInfo);
+
+    DrawAttribs DrawAttrs{6, DRAW_FLAG_VERIFY_ALL};
+    pContext->Draw(DrawAttrs);
+
+    pContext->NextSubpass();
+
+    pContext->SetPipelineState(pInputAttachmentPSO);
+    pContext->CommitShaderResources(pInputAttachmentSRB, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+
+    pContext->Draw(DrawAttrs);
+
+    pContext->EndRenderPass();
+
+    CopyTextureAttribs CopyAttrs;
+    CopyAttrs.pSrcTexture = pTex;
+    CopyAttrs.pDstTexture = pSwapChain->GetCurrentBackBufferRTV()->GetTexture();
+
+    CopyAttrs.SrcTextureTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+    CopyAttrs.DstTextureTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+
+    pContext->CopyTexture(CopyAttrs);
+
+    Present();
+}
+
+TEST_F(RenderPassTest, InputAttachmentGeneralLayout)
+{
+    TestInputAttachmentGeneralLayout(false);
+}
+
+TEST_F(RenderPassTest, InputAttachmentGeneralLayoutWithSignature)
+{
+    TestInputAttachmentGeneralLayout(true);
+}
 
 } // namespace

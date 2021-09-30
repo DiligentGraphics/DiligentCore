@@ -127,6 +127,11 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
             }
         }
 
+        if ((Res.Flags & PIPELINE_RESOURCE_FLAG_GENERAL_INPUT_ATTACHMENT) != 0 && !DeviceInfo.IsVulkanDevice())
+        {
+            LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].Flags contain GENERAL_INPUT_ATTACHMENT which is only valid in Vulkan");
+        }
+
         Resources.emplace(Res.Name, Res);
 
         // NB: when creating immutable sampler array, we have to define the sampler as both resource and

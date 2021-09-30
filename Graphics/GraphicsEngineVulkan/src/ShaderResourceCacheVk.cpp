@@ -303,6 +303,7 @@ const ShaderResourceCacheVk::Resource& ShaderResourceCacheVk::SetResource(
         --m_NumDynamicBuffers;
     }
 
+    static_assert(static_cast<Uint32>(DescriptorType::Count) == 16, "Please update the switch below to handle the new descriptor type");
     switch (DstRes.Type)
     {
         case DescriptorType::UniformBuffer:
@@ -355,7 +356,7 @@ const ShaderResourceCacheVk::Resource& ShaderResourceCacheVk::SetResource(
             VkWriteDescriptorSetAccelerationStructureKHR vkDescrAccelStructInfo;
         };
 
-        static_assert(static_cast<Uint32>(DescriptorType::Count) == 15, "Please update the switch below to handle the new descriptor type");
+        static_assert(static_cast<Uint32>(DescriptorType::Count) == 16, "Please update the switch below to handle the new descriptor type");
         switch (DstRes.Type)
         {
             case DescriptorType::Sampler:
@@ -392,6 +393,7 @@ const ShaderResourceCacheVk::Resource& ShaderResourceCacheVk::SetResource(
                 break;
 
             case DescriptorType::InputAttachment:
+            case DescriptorType::InputAttachment_General:
                 vkDescrImageInfo         = DstRes.GetInputAttachmentDescriptorWriteInfo();
                 WriteDescrSet.pImageInfo = &vkDescrImageInfo;
                 break;
@@ -434,7 +436,7 @@ void ShaderResourceCacheVk::SetDynamicBufferOffset(Uint32 DescrSetIndex,
 
 static RESOURCE_STATE DescriptorTypeToResourceState(DescriptorType Type)
 {
-    static_assert(static_cast<Uint32>(DescriptorType::Count) == 15, "Please update the switch below to handle the new descriptor type");
+    static_assert(static_cast<Uint32>(DescriptorType::Count) == 16, "Please update the switch below to handle the new descriptor type");
     switch (Type)
     {
         // clang-format off
@@ -452,6 +454,7 @@ static RESOURCE_STATE DescriptorTypeToResourceState(DescriptorType Type)
         case DescriptorType::StorageBufferDynamic:          return RESOURCE_STATE_UNORDERED_ACCESS;
         case DescriptorType::StorageBufferDynamic_ReadOnly: return RESOURCE_STATE_SHADER_RESOURCE;
         case DescriptorType::InputAttachment:               return RESOURCE_STATE_SHADER_RESOURCE;
+        case DescriptorType::InputAttachment_General:       return RESOURCE_STATE_SHADER_RESOURCE;
         case DescriptorType::AccelerationStructure:         return RESOURCE_STATE_SHADER_RESOURCE;
         // clang-format on
         default:
@@ -467,6 +470,8 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl* pCtxVkImpl)
     for (Uint32 res = 0; res < m_TotalResources; ++res)
     {
         auto& Res = pResources[res];
+
+        static_assert(static_cast<Uint32>(DescriptorType::Count) == 16, "Please update the switch below to handle the new descriptor type");
         switch (Res.Type)
         {
             case DescriptorType::UniformBuffer:
@@ -619,6 +624,7 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl* pCtxVkImpl)
             break;
 
             case DescriptorType::InputAttachment:
+            case DescriptorType::InputAttachment_General:
             {
                 // Nothing to do with input attachments - they are transitioned by the render pass.
                 // There is nothing we can validate here - a texture may be in different state at
@@ -803,7 +809,9 @@ VkDescriptorImageInfo ShaderResourceCacheVk::Resource::GetSamplerDescriptorWrite
 
 VkDescriptorImageInfo ShaderResourceCacheVk::Resource::GetInputAttachmentDescriptorWriteInfo() const
 {
-    VERIFY(Type == DescriptorType::InputAttachment, "Input attachment resource is expected");
+    VERIFY((Type == DescriptorType::InputAttachment ||
+            Type == DescriptorType::InputAttachment_General),
+           "Input attachment resource is expected");
     DEV_CHECK_ERR(pObject != nullptr, "Unable to get input attachment write info: cached object is null");
 
     const auto* pTexViewVk = pObject.RawPtr<const TextureViewVkImpl>();
@@ -812,7 +820,7 @@ VkDescriptorImageInfo ShaderResourceCacheVk::Resource::GetInputAttachmentDescrip
     VkDescriptorImageInfo DescrImgInfo;
     DescrImgInfo.sampler     = VK_NULL_HANDLE;
     DescrImgInfo.imageView   = pTexViewVk->GetVulkanImageView();
-    DescrImgInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    DescrImgInfo.imageLayout = Type == DescriptorType::InputAttachment_General ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
     return DescrImgInfo;
 }

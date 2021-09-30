@@ -55,6 +55,7 @@ enum class DescriptorType : Uint8
     StorageBufferDynamic,
     StorageBufferDynamic_ReadOnly,
     InputAttachment,
+    InputAttachment_General,
     AccelerationStructure,
     Count,
     Unknown = 0xFF,
@@ -164,7 +165,7 @@ public:
 
 inline VkDescriptorType DescriptorTypeToVkDescriptorType(DescriptorType Type)
 {
-    static_assert(static_cast<Uint32>(DescriptorType::Count) == 15, "Please update the switch below to handle the new descriptor type");
+    static_assert(static_cast<Uint32>(DescriptorType::Count) == 16, "Please update the switch below to handle the new descriptor type");
     switch (Type)
     {
         // clang-format off
@@ -182,6 +183,7 @@ inline VkDescriptorType DescriptorTypeToVkDescriptorType(DescriptorType Type)
         case DescriptorType::StorageBufferDynamic:          return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
         case DescriptorType::StorageBufferDynamic_ReadOnly: return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
         case DescriptorType::InputAttachment:               return VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
+        case DescriptorType::InputAttachment_General:       return VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
         case DescriptorType::AccelerationStructure:         return VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
         // clang-format on
         default:

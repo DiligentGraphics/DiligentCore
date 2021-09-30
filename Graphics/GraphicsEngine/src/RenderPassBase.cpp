@@ -39,6 +39,7 @@ void ValidateRenderPassDesc(const RenderPassDesc& Desc, IRenderDevice* pDevice) 
 
     const auto& Features = pDevice->GetDeviceInfo().Features;
     const auto& SRProps  = pDevice->GetAdapterInfo().ShadingRate;
+    const bool  IsVulkan = pDevice->GetDeviceInfo().IsVulkanDevice();
 
     if (Desc.AttachmentCount != 0 && Desc.pAttachments == nullptr)
     {
@@ -94,7 +95,8 @@ void ValidateRenderPassDesc(const RenderPassDesc& Desc, IRenderDevice* pDevice) 
                 Attachment.InitialState != RESOURCE_STATE_COPY_DEST &&
                 Attachment.InitialState != RESOURCE_STATE_COPY_SOURCE &&
                 Attachment.InitialState != RESOURCE_STATE_INPUT_ATTACHMENT &&
-                Attachment.InitialState != RESOURCE_STATE_UNDEFINED)
+                Attachment.InitialState != RESOURCE_STATE_UNDEFINED &&
+                !(IsVulkan && Attachment.InitialState == RESOURCE_STATE_COMMON))
             {
                 LOG_RENDER_PASS_ERROR_AND_THROW("the initial state of depth-stencil attachment ", i, " (", GetResourceStateString(Attachment.InitialState), ") is invalid.");
             }
@@ -107,7 +109,8 @@ void ValidateRenderPassDesc(const RenderPassDesc& Desc, IRenderDevice* pDevice) 
                 Attachment.FinalState != RESOURCE_STATE_RESOLVE_SOURCE &&
                 Attachment.FinalState != RESOURCE_STATE_COPY_DEST &&
                 Attachment.FinalState != RESOURCE_STATE_COPY_SOURCE &&
-                Attachment.FinalState != RESOURCE_STATE_INPUT_ATTACHMENT)
+                Attachment.FinalState != RESOURCE_STATE_INPUT_ATTACHMENT &&
+                !(IsVulkan && Attachment.FinalState == RESOURCE_STATE_COMMON))
             {
                 LOG_RENDER_PASS_ERROR_AND_THROW("the final state of depth-stencil attachment ", i, " (", GetResourceStateString(Attachment.FinalState), ") is invalid.");
             }
@@ -124,7 +127,8 @@ void ValidateRenderPassDesc(const RenderPassDesc& Desc, IRenderDevice* pDevice) 
                 Attachment.InitialState != RESOURCE_STATE_INPUT_ATTACHMENT &&
                 Attachment.InitialState != RESOURCE_STATE_PRESENT &&
                 Attachment.InitialState != RESOURCE_STATE_SHADING_RATE &&
-                Attachment.InitialState != RESOURCE_STATE_UNDEFINED)
+                Attachment.InitialState != RESOURCE_STATE_UNDEFINED &&
+                !(IsVulkan && Attachment.InitialState == RESOURCE_STATE_COMMON))
             {
                 LOG_RENDER_PASS_ERROR_AND_THROW("the initial state of color attachment ", i, " (", GetResourceStateString(Attachment.InitialState), ") is invalid.");
             }
@@ -138,7 +142,8 @@ void ValidateRenderPassDesc(const RenderPassDesc& Desc, IRenderDevice* pDevice) 
                 Attachment.FinalState != RESOURCE_STATE_COPY_DEST &&
                 Attachment.FinalState != RESOURCE_STATE_INPUT_ATTACHMENT &&
                 Attachment.FinalState != RESOURCE_STATE_PRESENT &&
-                Attachment.FinalState != RESOURCE_STATE_SHADING_RATE)
+                Attachment.FinalState != RESOURCE_STATE_SHADING_RATE &&
+                !(IsVulkan && Attachment.FinalState == RESOURCE_STATE_COMMON))
             {
                 LOG_RENDER_PASS_ERROR_AND_THROW("the final state of color attachment ", i, " (", GetResourceStateString(Attachment.FinalState), ") is invalid.");
             }

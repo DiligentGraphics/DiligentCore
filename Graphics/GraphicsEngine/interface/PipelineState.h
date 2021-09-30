@@ -76,7 +76,7 @@ typedef struct SampleDesc SampleDesc;
 DILIGENT_TYPED_ENUM(SHADER_VARIABLE_FLAGS, Uint8)
 {
     /// Shader variable has no special properties.
-    SHADER_VARIABLE_FLAG_NONE               = 0x00,
+    SHADER_VARIABLE_FLAG_NONE               = 0,
 
     /// Indicates that dynamic buffers will never be bound to the resource
     /// variable. Applies to SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,
@@ -84,9 +84,16 @@ DILIGENT_TYPED_ENUM(SHADER_VARIABLE_FLAGS, Uint8)
     ///
     /// \remarks    This flag directly translates to the PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS
     ///             flag in the internal pipeline resource signature.
-    SHADER_VARIABLE_FLAG_NO_DYNAMIC_BUFFERS = 0x01,
+    SHADER_VARIABLE_FLAG_NO_DYNAMIC_BUFFERS = 1u << 0,
 
-    SHADER_VARIABLE_FLAG_LAST               = SHADER_VARIABLE_FLAG_NO_DYNAMIC_BUFFERS
+    /// Indicates that the resource is an input attachment in general layout, which allows simultaneously
+    /// reading from the resource through the input attachment and writing to it via color or depth-stencil
+    /// attachment.
+    ///
+    /// \note This flag is only valid in Vulkan.
+    SHADER_VARIABLE_FLAG_GENERAL_INPUT_ATTACHMENT = 1u << 1,
+
+    SHADER_VARIABLE_FLAG_LAST               = SHADER_VARIABLE_FLAG_GENERAL_INPUT_ATTACHMENT
 };
 DEFINE_FLAG_ENUM_OPERATORS(SHADER_VARIABLE_FLAGS);
 

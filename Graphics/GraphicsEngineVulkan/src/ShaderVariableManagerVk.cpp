@@ -188,7 +188,7 @@ namespace
 #ifdef DILIGENT_DEVELOPMENT
 inline BUFFER_VIEW_TYPE DvpDescriptorTypeToBufferView(DescriptorType Type)
 {
-    static_assert(static_cast<Uint32>(DescriptorType::Count) == 15, "Please update the switch below to handle the new descriptor type");
+    static_assert(static_cast<Uint32>(DescriptorType::Count) == 16, "Please update the switch below to handle the new descriptor type");
     switch (Type)
     {
         case DescriptorType::UniformTexelBuffer:
@@ -210,7 +210,7 @@ inline BUFFER_VIEW_TYPE DvpDescriptorTypeToBufferView(DescriptorType Type)
 
 inline TEXTURE_VIEW_TYPE DvpDescriptorTypeToTextureView(DescriptorType Type)
 {
-    static_assert(static_cast<Uint32>(DescriptorType::Count) == 15, "Please update the switch below to handle the new descriptor type");
+    static_assert(static_cast<Uint32>(DescriptorType::Count) == 16, "Please update the switch below to handle the new descriptor type");
     switch (Type)
     {
         case DescriptorType::StorageImage:
@@ -219,6 +219,7 @@ inline TEXTURE_VIEW_TYPE DvpDescriptorTypeToTextureView(DescriptorType Type)
         case DescriptorType::CombinedImageSampler:
         case DescriptorType::SeparateImage:
         case DescriptorType::InputAttachment:
+        case DescriptorType::InputAttachment_General:
             return TEXTURE_VIEW_SHADER_RESOURCE;
 
         default:
@@ -320,7 +321,7 @@ void BindResourceHelper::operator()(const BindResourceInfo& BindInfo) const
 
     if (BindInfo.pObject != nullptr)
     {
-        static_assert(static_cast<Uint32>(DescriptorType::Count) == 15, "Please update the switch below to handle the new descriptor type");
+        static_assert(static_cast<Uint32>(DescriptorType::Count) == 16, "Please update the switch below to handle the new descriptor type");
         switch (m_DstRes.Type)
         {
             case DescriptorType::UniformBuffer:
@@ -361,6 +362,7 @@ void BindResourceHelper::operator()(const BindResourceInfo& BindInfo) const
                 break;
 
             case DescriptorType::InputAttachment:
+            case DescriptorType::InputAttachment_General:
                 CacheInputAttachment(BindInfo);
                 break;
 
@@ -583,7 +585,9 @@ void BindResourceHelper::CacheSeparateSampler(const BindResourceInfo& BindInfo) 
 void BindResourceHelper::CacheInputAttachment(const BindResourceInfo& BindInfo) const
 {
     VERIFY(BindInfo.pObject != nullptr, "Setting input attachment to null is handled by BindResourceHelper::operator()");
-    VERIFY(m_DstRes.Type == DescriptorType::InputAttachment, "Input attachment resource is expected");
+    VERIFY((m_DstRes.Type == DescriptorType::InputAttachment ||
+            m_DstRes.Type == DescriptorType::InputAttachment_General),
+           "Input attachment resource is expected");
     RefCntAutoPtr<TextureViewVkImpl> pTexViewVk{BindInfo.pObject, IID_TextureViewVk};
 #ifdef DILIGENT_DEVELOPMENT
     VerifyResourceViewBinding(m_ResDesc, BindInfo, pTexViewVk.RawPtr(),

@@ -51,6 +51,7 @@ DescriptorType GetDescriptorType(const PipelineResourceDesc& Res)
     const bool WithDynamicOffset = (Res.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0;
     const bool CombinedSampler   = (Res.Flags & PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER) != 0;
     const bool UseTexelBuffer    = (Res.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) != 0;
+    const bool GeneralInputAtt   = (Res.Flags & PIPELINE_RESOURCE_FLAG_GENERAL_INPUT_ATTACHMENT) != 0;
 
     static_assert(SHADER_RESOURCE_TYPE_LAST == SHADER_RESOURCE_TYPE_ACCEL_STRUCT, "Please update the switch below to handle the new shader resource type");
     switch (Res.ResourceType)
@@ -76,7 +77,7 @@ DescriptorType GetDescriptorType(const PipelineResourceDesc& Res)
             return DescriptorType::Sampler;
 
         case SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT:
-            return DescriptorType::InputAttachment;
+            return GeneralInputAtt ? DescriptorType::InputAttachment_General : DescriptorType::InputAttachment;
 
         case SHADER_RESOURCE_TYPE_ACCEL_STRUCT:
             return DescriptorType::AccelerationStructure;
@@ -662,7 +663,7 @@ void PipelineResourceSignatureVkImpl::CommitDynamicResources(const ShaderResourc
         };
 
         // For every resource type, try to batch as many descriptor updates as we can
-        static_assert(static_cast<Uint32>(DescriptorType::Count) == 15, "Please update the switch below to handle the new descriptor type");
+        static_assert(static_cast<Uint32>(DescriptorType::Count) == 16, "Please update the switch below to handle the new descriptor type");
         switch (DescrType)
         {
             case DescriptorType::UniformBuffer:
@@ -690,6 +691,7 @@ void PipelineResourceSignatureVkImpl::CommitDynamicResources(const ShaderResourc
             case DescriptorType::SeparateImage:
             case DescriptorType::StorageImage:
             case DescriptorType::InputAttachment:
+            case DescriptorType::InputAttachment_General:
                 WriteDescrSetIt->pImageInfo = &(*DescrImgIt);
                 WriteArrayElements(std::integral_constant<DescriptorType, DescriptorType::SeparateImage>{}, DescrImgIt, DescrImgInfoArr);
                 break;

@@ -1203,7 +1203,7 @@ String GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAGS Flags, bool GetFul
 
         auto Flag = ExtractLSB(Flags);
 
-        static_assert(PIPELINE_RESOURCE_FLAG_LAST == 0x08, "Please update the switch below to handle the new pipeline resource flag.");
+        static_assert(PIPELINE_RESOURCE_FLAG_LAST == (1u << 4), "Please update the switch below to handle the new pipeline resource flag.");
         switch (Flag)
         {
             case PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS:
@@ -1220,6 +1220,10 @@ String GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAGS Flags, bool GetFul
 
             case PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY:
                 Str.append(GetFullName ? "PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY" : "RUNTIME_ARRAY");
+                break;
+
+            case PIPELINE_RESOURCE_FLAG_GENERAL_INPUT_ATTACHMENT:
+                Str.append(GetFullName ? "PIPELINE_RESOURCE_FLAG_GENERAL_INPUT_ATTACHMENT" : "GENERAL_INPUT_ATTACHMENT");
                 break;
 
             default:
@@ -1253,7 +1257,7 @@ PIPELINE_RESOURCE_FLAGS GetValidPipelineResourceFlags(SHADER_RESOURCE_TYPE Resou
             return PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY;
 
         case SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT:
-            return PIPELINE_RESOURCE_FLAG_NONE;
+            return PIPELINE_RESOURCE_FLAG_GENERAL_INPUT_ATTACHMENT;
 
         case SHADER_RESOURCE_TYPE_ACCEL_STRUCT:
             return PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY;
@@ -1266,7 +1270,7 @@ PIPELINE_RESOURCE_FLAGS GetValidPipelineResourceFlags(SHADER_RESOURCE_TYPE Resou
 
 PIPELINE_RESOURCE_FLAGS ShaderVariableFlagsToPipelineResourceFlags(SHADER_VARIABLE_FLAGS Flags)
 {
-    static_assert(SHADER_VARIABLE_FLAG_LAST == 1, "Please update the switch below to handle the new shader variable flags");
+    static_assert(SHADER_VARIABLE_FLAG_LAST == 0x02, "Please update the switch below to handle the new shader variable flags");
     switch (Flags)
     {
         case SHADER_VARIABLE_FLAG_NONE:
@@ -1274,6 +1278,9 @@ PIPELINE_RESOURCE_FLAGS ShaderVariableFlagsToPipelineResourceFlags(SHADER_VARIAB
 
         case SHADER_VARIABLE_FLAG_NO_DYNAMIC_BUFFERS:
             return PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS;
+
+        case SHADER_VARIABLE_FLAG_GENERAL_INPUT_ATTACHMENT:
+            return PIPELINE_RESOURCE_FLAG_GENERAL_INPUT_ATTACHMENT;
 
         default:
             UNEXPECTED("Unexpected shader variable flag");

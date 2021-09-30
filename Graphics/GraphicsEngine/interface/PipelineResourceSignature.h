@@ -79,7 +79,7 @@ typedef struct ImmutableSamplerDesc ImmutableSamplerDesc;
 DILIGENT_TYPED_ENUM(PIPELINE_RESOURCE_FLAGS, Uint8)
 {
     /// Resource has no special properties
-    PIPELINE_RESOURCE_FLAG_NONE            = 0x00,
+    PIPELINE_RESOURCE_FLAG_NONE            = 0,
 
     /// Indicates that dynamic buffers will never be bound to the resource
     /// variable. Applies to SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,
@@ -92,11 +92,11 @@ DILIGENT_TYPED_ENUM(PIPELINE_RESOURCE_FLAGS, Uint8)
     ///             will still work even if the flag is not used. It is an error to bind a
     ///             dynamic buffer to resource that uses
     ///             PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS flag.
-    PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS = 0x01,
+    PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS = 1u << 0,
 
     /// Indicates that a texture SRV will be combined with a sampler.
     /// Applies to SHADER_RESOURCE_TYPE_TEXTURE_SRV resources.
-    PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER   = 0x02,
+    PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER   = 1u << 1,
 
     /// Indicates that this variable will be used to bind formatted buffers.
     /// Applies to SHADER_RESOURCE_TYPE_BUFFER_UAV and SHADER_RESOURCE_TYPE_BUFFER_SRV
@@ -106,12 +106,19 @@ DILIGENT_TYPED_ENUM(PIPELINE_RESOURCE_FLAGS, Uint8)
     ///             as opposed to structured buffers. If an application will be using
     ///             formatted buffers with buffer UAVs and SRVs, it must specify the
     ///             PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER flag.
-    PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER   = 0x04,
+    PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER   = 1u << 2,
 
     /// Indicates that resource is a run-time sized shader array (e.g. an array without a specific size).
-    PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY      = 0x08,
+    PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY      = 1u << 3,
 
-    PIPELINE_RESOURCE_FLAG_LAST               = PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY
+    /// Indicates that the resource is an input attachment in general layout, which allows simultaneously
+    /// reading from the resource through the input attachment and writing to it via color or depth-stencil
+    /// attachment.
+    ///
+    /// \note This flag is only valid in Vulkan.
+    PIPELINE_RESOURCE_FLAG_GENERAL_INPUT_ATTACHMENT = 1u << 4,
+
+    PIPELINE_RESOURCE_FLAG_LAST               = PIPELINE_RESOURCE_FLAG_GENERAL_INPUT_ATTACHMENT
 };
 DEFINE_FLAG_ENUM_OPERATORS(PIPELINE_RESOURCE_FLAGS);
 

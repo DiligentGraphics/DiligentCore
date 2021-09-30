@@ -310,6 +310,8 @@ __forceinline auto ShaderResourceCacheVk::Resource::GetDescriptorWriteInfo<Descr
 template <>
 __forceinline auto ShaderResourceCacheVk::Resource::GetDescriptorWriteInfo<DescriptorType::InputAttachment>() const { return GetInputAttachmentDescriptorWriteInfo(); }
 template <>
+__forceinline auto ShaderResourceCacheVk::Resource::GetDescriptorWriteInfo<DescriptorType::InputAttachment_General>() const { return GetInputAttachmentDescriptorWriteInfo(); }
+template <>
 __forceinline auto ShaderResourceCacheVk::Resource::GetDescriptorWriteInfo<DescriptorType::AccelerationStructure>() const { return GetAccelerationStructureWriteInfo(); }
 
 
