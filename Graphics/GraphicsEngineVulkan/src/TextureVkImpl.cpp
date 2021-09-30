@@ -38,6 +38,106 @@
 namespace Diligent
 {
 
+VkImageCreateInfo TextureDescToVkImageCreateInfo(const TextureDesc& Desc, const RenderDeviceVkImpl* pRenderDeviceVk)
+{
+    const auto  IsMemoryless         = (Desc.MiscFlags & MISC_TEXTURE_FLAG_MEMORYLESS) != 0;
+    const auto& FmtAttribs           = GetTextureFormatAttribs(Desc.Format);
+    const bool  ImageView2DSupported = !Desc.Is3D() || pRenderDeviceVk->GetAdapterInfo().Texture.TextureView2DOn3DSupported;
+    const auto& ExtFeatures          = pRenderDeviceVk->GetLogicalDevice().GetEnabledExtFeatures();
+
+    VkImageCreateInfo ImageCI = {};
+
+    ImageCI.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    ImageCI.pNext = nullptr;
+    ImageCI.flags = 0;
+    if (Desc.Type == RESOURCE_DIM_TEX_CUBE || Desc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
+        ImageCI.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+    if (FmtAttribs.IsTypeless)
+        ImageCI.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT; // Specifies that the image can be used to create a
+                                                             // VkImageView with a different format from the image.
+
+    if (Desc.Is1D())
+        ImageCI.imageType = VK_IMAGE_TYPE_1D;
+    else if (Desc.Is2D())
+        ImageCI.imageType = VK_IMAGE_TYPE_2D;
+    else if (Desc.Is3D())
+    {
+        ImageCI.imageType = VK_IMAGE_TYPE_3D;
+        if (ImageView2DSupported)
+            ImageCI.flags |= VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT;
+    }
+    else
+    {
+        LOG_ERROR_AND_THROW("Unknown texture type");
+    }
+
+    TEXTURE_FORMAT InternalTexFmt = Desc.Format;
+    if (FmtAttribs.IsTypeless)
+    {
+        TEXTURE_VIEW_TYPE PrimaryViewType;
+        if (Desc.BindFlags & BIND_DEPTH_STENCIL)
+            PrimaryViewType = TEXTURE_VIEW_DEPTH_STENCIL;
+        else if (Desc.BindFlags & BIND_UNORDERED_ACCESS)
+            PrimaryViewType = TEXTURE_VIEW_UNORDERED_ACCESS;
+        else if (Desc.BindFlags & BIND_RENDER_TARGET)
+            PrimaryViewType = TEXTURE_VIEW_RENDER_TARGET;
+        else
+            PrimaryViewType = TEXTURE_VIEW_SHADER_RESOURCE;
+        InternalTexFmt = GetDefaultTextureViewFormat(Desc, PrimaryViewType);
+    }
+
+    ImageCI.format = TexFormatToVkFormat(InternalTexFmt);
+
+    ImageCI.extent.width  = Desc.GetWidth();
+    ImageCI.extent.height = Desc.GetHeight();
+    ImageCI.extent.depth  = Desc.GetDepth();
+    ImageCI.mipLevels     = Desc.MipLevels;
+    ImageCI.arrayLayers   = Desc.GetArraySize();
+
+    ImageCI.samples = static_cast<VkSampleCountFlagBits>(Desc.SampleCount);
+    ImageCI.tiling  = VK_IMAGE_TILING_OPTIMAL;
+
+    ImageCI.usage = BindFlagsToVkImageUsage(Desc.BindFlags, IsMemoryless, ExtFeatures.FragmentDensityMap.fragmentDensityMap != VK_FALSE);
+    // TRANSFER_SRC_BIT and TRANSFER_DST_BIT are required by CopyTexture
+    ImageCI.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+
+    if (Desc.BindFlags & (BIND_DEPTH_STENCIL | BIND_RENDER_TARGET))
+        DEV_CHECK_ERR(ImageView2DSupported, "imageView2DOn3DImage in VkPhysicalDevicePortabilitySubsetFeaturesKHR is not enabled, can not create depth-stencil target with 2D image view");
+
+    if (Desc.MiscFlags & MISC_TEXTURE_FLAG_GENERATE_MIPS)
+    {
+        VERIFY_EXPR(!IsMemoryless);
+#ifdef DILIGENT_DEVELOPMENT
+        {
+            const auto& PhysicalDevice = pRenderDeviceVk->GetPhysicalDevice();
+            const auto  FmtProperties  = PhysicalDevice.GetPhysicalDeviceFormatProperties(ImageCI.format);
+            DEV_CHECK_ERR((FmtProperties.optimalTilingFeatures & (VK_FORMAT_FEATURE_BLIT_SRC_BIT | VK_FORMAT_FEATURE_BLIT_DST_BIT)) == (VK_FORMAT_FEATURE_BLIT_SRC_BIT | VK_FORMAT_FEATURE_BLIT_DST_BIT),
+                          "Automatic mipmap generation is not supported for ", GetTextureFormatAttribs(InternalTexFmt).Name,
+                          " as the format does not support blitting.");
+
+            DEV_CHECK_ERR((FmtProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT) != 0,
+                          "Automatic mipmap generation is not supported for ", GetTextureFormatAttribs(InternalTexFmt).Name,
+                          " as the format does not support linear filtering.");
+        }
+#endif
+    }
+
+    ImageCI.sharingMode           = VK_SHARING_MODE_EXCLUSIVE;
+    ImageCI.queueFamilyIndexCount = 0;
+    ImageCI.pQueueFamilyIndices   = nullptr;
+
+    if (Desc.Usage == USAGE_SPARSE)
+    {
+        ImageCI.flags =
+            VK_IMAGE_CREATE_SPARSE_BINDING_BIT |
+            VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT |
+            (Desc.MiscFlags & MISC_TEXTURE_FLAG_SPARSE_ALIASING ? VK_IMAGE_CREATE_SPARSE_ALIASED_BIT : 0);
+    }
+
+    return ImageCI;
+}
+
+
 TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
                              FixedBlockMemoryAllocator& TexViewObjAllocator,
                              RenderDeviceVkImpl*        pRenderDeviceVk,
@@ -62,98 +162,13 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
 
     const auto& FmtAttribs    = GetTextureFormatAttribs(m_Desc.Format);
     const auto& LogicalDevice = pRenderDeviceVk->GetLogicalDevice();
-    const auto& ExtFeatures   = LogicalDevice.GetEnabledExtFeatures();
-
-    const bool ImageView2DSupported = // AZ TODO: use props
-        (m_Desc.Is3D() && ExtFeatures.HasPortabilitySubset) ?
-        ExtFeatures.PortabilitySubset.imageView2DOn3DImage == VK_TRUE :
-        true;
 
     if (m_Desc.Usage == USAGE_IMMUTABLE || m_Desc.Usage == USAGE_DEFAULT || m_Desc.Usage == USAGE_DYNAMIC || m_Desc.Usage == USAGE_SPARSE)
     {
         VERIFY(m_Desc.Usage != USAGE_DYNAMIC || PlatformMisc::CountOneBits(m_Desc.ImmediateContextMask) <= 1,
                "ImmediateContextMask must contain single set bit, this error should've been handled in ValidateTextureDesc()");
 
-        VkImageCreateInfo ImageCI = {};
-
-        ImageCI.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-        ImageCI.pNext = nullptr;
-        ImageCI.flags = 0;
-        if (m_Desc.Type == RESOURCE_DIM_TEX_CUBE || m_Desc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
-            ImageCI.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
-        if (FmtAttribs.IsTypeless)
-            ImageCI.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT; // Specifies that the image can be used to create a
-                                                                 // VkImageView with a different format from the image.
-
-        if (m_Desc.Is1D())
-            ImageCI.imageType = VK_IMAGE_TYPE_1D;
-        else if (m_Desc.Is2D())
-            ImageCI.imageType = VK_IMAGE_TYPE_2D;
-        else if (m_Desc.Is3D())
-        {
-            ImageCI.imageType = VK_IMAGE_TYPE_3D;
-            if (ImageView2DSupported)
-                ImageCI.flags |= VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT;
-        }
-        else
-        {
-            LOG_ERROR_AND_THROW("Unknown texture type");
-        }
-
-        TEXTURE_FORMAT InternalTexFmt = m_Desc.Format;
-        if (FmtAttribs.IsTypeless)
-        {
-            TEXTURE_VIEW_TYPE PrimaryViewType;
-            if (m_Desc.BindFlags & BIND_DEPTH_STENCIL)
-                PrimaryViewType = TEXTURE_VIEW_DEPTH_STENCIL;
-            else if (m_Desc.BindFlags & BIND_UNORDERED_ACCESS)
-                PrimaryViewType = TEXTURE_VIEW_UNORDERED_ACCESS;
-            else if (m_Desc.BindFlags & BIND_RENDER_TARGET)
-                PrimaryViewType = TEXTURE_VIEW_RENDER_TARGET;
-            else
-                PrimaryViewType = TEXTURE_VIEW_SHADER_RESOURCE;
-            InternalTexFmt = GetDefaultTextureViewFormat(m_Desc, PrimaryViewType);
-        }
-
-        ImageCI.format = TexFormatToVkFormat(InternalTexFmt);
-
-        ImageCI.extent.width  = m_Desc.GetWidth();
-        ImageCI.extent.height = m_Desc.GetHeight();
-        ImageCI.extent.depth  = m_Desc.GetDepth();
-        ImageCI.mipLevels     = m_Desc.MipLevels;
-        ImageCI.arrayLayers   = m_Desc.GetArraySize();
-
-        ImageCI.samples = static_cast<VkSampleCountFlagBits>(m_Desc.SampleCount);
-        ImageCI.tiling  = VK_IMAGE_TILING_OPTIMAL;
-
-        ImageCI.usage = BindFlagsToVkImageUsage(m_Desc.BindFlags, IsMemoryless, ExtFeatures.FragmentDensityMap.fragmentDensityMap != VK_FALSE);
-        // TRANSFER_SRC_BIT and TRANSFER_DST_BIT are required by CopyTexture
-        ImageCI.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-
-        if (m_Desc.BindFlags & (BIND_DEPTH_STENCIL | BIND_RENDER_TARGET))
-            DEV_CHECK_ERR(ImageView2DSupported, "imageView2DOn3DImage in VkPhysicalDevicePortabilitySubsetFeaturesKHR is not enabled, can not create depth-stencil target with 2D image view");
-
-        if (m_Desc.MiscFlags & MISC_TEXTURE_FLAG_GENERATE_MIPS)
-        {
-            VERIFY_EXPR(!IsMemoryless);
-#ifdef DILIGENT_DEVELOPMENT
-            {
-                const auto& PhysicalDevice = pRenderDeviceVk->GetPhysicalDevice();
-                const auto  FmtProperties  = PhysicalDevice.GetPhysicalDeviceFormatProperties(ImageCI.format);
-                DEV_CHECK_ERR((FmtProperties.optimalTilingFeatures & (VK_FORMAT_FEATURE_BLIT_SRC_BIT | VK_FORMAT_FEATURE_BLIT_DST_BIT)) == (VK_FORMAT_FEATURE_BLIT_SRC_BIT | VK_FORMAT_FEATURE_BLIT_DST_BIT),
-                              "Automatic mipmap generation is not supported for ", GetTextureFormatAttribs(InternalTexFmt).Name,
-                              " as the format does not support blitting.");
-
-                DEV_CHECK_ERR((FmtProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT) != 0,
-                              "Automatic mipmap generation is not supported for ", GetTextureFormatAttribs(InternalTexFmt).Name,
-                              " as the format does not support linear filtering.");
-            }
-#endif
-        }
-
-        ImageCI.sharingMode           = VK_SHARING_MODE_EXCLUSIVE;
-        ImageCI.queueFamilyIndexCount = 0;
-        ImageCI.pQueueFamilyIndices   = nullptr;
+        VkImageCreateInfo ImageCI = TextureDescToVkImageCreateInfo(m_Desc, pRenderDeviceVk);
 
         const auto QueueFamilyIndices = PlatformMisc::CountOneBits(m_Desc.ImmediateContextMask) > 1 ?
             GetDevice()->ConvertCmdQueueIdsToQueueFamilies(m_Desc.ImmediateContextMask) :
@@ -175,11 +190,6 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
 
         if (m_Desc.Usage == USAGE_SPARSE)
         {
-            ImageCI.flags =
-                VK_IMAGE_CREATE_SPARSE_BINDING_BIT |
-                VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT |
-                (m_Desc.MiscFlags & MISC_TEXTURE_FLAG_SPARSE_ALIASING ? VK_IMAGE_CREATE_SPARSE_ALIASED_BIT : 0);
-
             m_VulkanImage = LogicalDevice.CreateImage(ImageCI, m_Desc.Name);
 
             SetState(RESOURCE_STATE_UNDEFINED);

@@ -52,7 +52,7 @@ DILIGENT_BEGIN_INTERFACE(ITextureMtl, ITexture)
     /// For all other texture types, this will be a pointer to Metal texture object (MTLTexture).
     VIRTUAL id<MTLResource> METHOD(GetMtlResource)(THIS) CONST PURE;
 
-    /// AZ TODO
+    /// Returns a pointer to the Metal heap where the texture is allocated.
     VIRTUAL id<MTLHeap> METHOD(GetMtlHeap)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE

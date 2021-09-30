@@ -222,7 +222,7 @@ public:
     std::shared_ptr<const VulkanUtilities::VulkanInstance> GetVulkanInstance() const { return m_VulkanInstance; }
 
     const VulkanUtilities::VulkanPhysicalDevice& GetPhysicalDevice() const { return *m_PhysicalDevice; }
-    const VulkanUtilities::VulkanLogicalDevice&  GetLogicalDevice() { return *m_LogicalVkDevice; }
+    const VulkanUtilities::VulkanLogicalDevice&  GetLogicalDevice() const { return *m_LogicalVkDevice; }
 
     FramebufferCache& GetFramebufferCache() { return m_FramebufferCache; }
     RenderPassCache&  GetImplicitRenderPassCache() { return m_ImplicitRenderPassCache; }

@@ -118,4 +118,6 @@ protected:
     VkDeviceSize                            m_StagingDataAlignedOffset;
 };
 
+VkImageCreateInfo TextureDescToVkImageCreateInfo(const TextureDesc& Desc, const RenderDeviceVkImpl* pDevice);
+
 } // namespace Diligent

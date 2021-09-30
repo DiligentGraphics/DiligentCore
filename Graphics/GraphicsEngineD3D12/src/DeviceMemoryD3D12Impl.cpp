@@ -42,7 +42,11 @@ namespace Diligent
 namespace
 {
 
-D3D12_HEAP_FLAGS GetD3D12HeapFlags(IDeviceObject** ppResources, Uint32 NumResources, bool& AllowMSAA, bool& UseNVApi) noexcept(false)
+D3D12_HEAP_FLAGS GetD3D12HeapFlags(ID3D12Device*   pd3d12Device,
+                                   IDeviceObject** ppResources,
+                                   Uint32          NumResources,
+                                   bool&           AllowMSAA,
+                                   bool&           UseNVApi) noexcept(false)
 {
     AllowMSAA = false;
     UseNVApi  = false;
@@ -56,6 +60,17 @@ D3D12_HEAP_FLAGS GetD3D12HeapFlags(IDeviceObject** ppResources, Uint32 NumResour
         D3D12_HEAP_FLAG_DENY_BUFFERS |
         D3D12_HEAP_FLAG_DENY_RT_DS_TEXTURES |
         D3D12_HEAP_FLAG_DENY_NON_RT_DS_TEXTURES;
+
+    D3D12_FEATURE_DATA_D3D12_OPTIONS d3d12Features{};
+    if (SUCCEEDED(pd3d12Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &d3d12Features, sizeof(d3d12Features))))
+    {
+        if (d3d12Features.ResourceHeapTier >= D3D12_RESOURCE_HEAP_TIER_2)
+        {
+            // D3D12_RESOURCE_HEAP_TIER_2 hardware allows any combination of resources
+            // to be placed in the heap
+            HeapFlags = D3D12_HEAP_FLAG_NONE;
+        }
+    }
 
     Uint32 UsingNVApiCount    = 0;
     Uint32 NotUsingNVApiCount = 0;
@@ -152,7 +167,7 @@ DeviceMemoryD3D12Impl::DeviceMemoryD3D12Impl(IReferenceCounters*           pRefC
                                              const DeviceMemoryCreateInfo& MemCI) :
     TDeviceMemoryBase{pRefCounters, pDeviceD3D11, MemCI}
 {
-    m_d3d12HeapFlags = GetD3D12HeapFlags(MemCI.ppCompatibleResources, MemCI.NumResources, m_AllowMSAA, m_UseNVApi);
+    m_d3d12HeapFlags = GetD3D12HeapFlags(m_pDevice->GetD3D12Device(), MemCI.ppCompatibleResources, MemCI.NumResources, m_AllowMSAA, m_UseNVApi);
 
     if (!Resize(MemCI.InitialSize))
         LOG_ERROR_AND_THROW("Failed to allocate device memory");
@@ -178,7 +193,7 @@ Bool DeviceMemoryD3D12Impl::Resize(Uint64 NewSize)
     d3d12HeapDesc.Properties.CreationNodeMask     = 1;
     d3d12HeapDesc.Properties.VisibleNodeMask      = 1;
     d3d12HeapDesc.Alignment                       = m_AllowMSAA ? D3D12_DEFAULT_MSAA_RESOURCE_PLACEMENT_ALIGNMENT : D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
-    d3d12HeapDesc.Flags                           = m_d3d12HeapFlags; // AZ TODO: D3D12_HEAP_FLAG_CREATE_NOT_ZEROED
+    d3d12HeapDesc.Flags                           = m_d3d12HeapFlags;
 
     const auto NewPageCount = StaticCast<size_t>(NewSize / m_Desc.PageSize);
     m_Pages.reserve(NewPageCount);
@@ -211,7 +226,7 @@ Bool DeviceMemoryD3D12Impl::IsCompatible(IDeviceObject* pResource) const
     {
         bool AllowMSAA              = false;
         bool UseNVApi               = false;
-        auto d3d12RequiredHeapFlags = GetD3D12HeapFlags(&pResource, 1, AllowMSAA, UseNVApi);
+        auto d3d12RequiredHeapFlags = GetD3D12HeapFlags(m_pDevice->GetD3D12Device(), &pResource, 1, AllowMSAA, UseNVApi);
         return ((m_d3d12HeapFlags & d3d12RequiredHeapFlags) == d3d12RequiredHeapFlags) && (!AllowMSAA || m_AllowMSAA) && (UseNVApi == m_UseNVApi);
     }
     catch (...)

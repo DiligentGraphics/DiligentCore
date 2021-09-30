@@ -3018,7 +3018,7 @@ void DeviceContextD3D12Impl::BindSparseMemory(const BindSparseMemoryAttribs& Att
                           "MemoryOffset must be a multiple of sparse block size");
 
             auto& DstMapping = TileMappingMap[TileMappingKey{pBuffD3D12, MemRange.pHandle}];
-            DstMapping.AddBufferBindRange(BindRange, MemRange.Offset, MemRange.Size);
+            DstMapping.AddBufferBindRange(BindRange, MemRange.Offset);
         }
     }
 
@@ -3039,7 +3039,7 @@ void DeviceContextD3D12Impl::BindSparseMemory(const BindSparseMemoryAttribs& Att
             VERIFY_EXPR(pMemD3D12 == nullptr || pMemD3D12->IsUsingNVApi() == UseNVApi);
 
             auto& DstMapping = TileMappingMap[TileMappingKey{pTexD3D12->GetD3D12Resource(), MemRange.pHandle}];
-            DstMapping.AddTextureBindRange(BindRange, TexSparseProps, TexDesc, UseNVApi, MemRange.Offset, MemRange.Size);
+            DstMapping.AddTextureBindRange(BindRange, TexSparseProps, TexDesc, UseNVApi, MemRange.Offset);
         }
     }
 

@@ -827,6 +827,19 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
                     {
                         SparseMem.CapFlags |= SPARSE_MEMORY_CAP_FLAG_TEXTURE_2D_ARRAY_MIP_TAIL;
                     }
+                    if (d3d12Features.ResourceHeapTier >= D3D12_RESOURCE_HEAP_TIER_2)
+                    {
+                        SparseMem.CapFlags |= SPARSE_MEMORY_CAP_FLAG_SHARING_BETWEEN_BUFFER_AND_TEXTURE;
+                    }
+
+                    // Some features are not correctly working in software renderer.
+                    if (AdapterInfo.Type == ADAPTER_TYPE_SOFTWARE)
+                    {
+                        // Reading from null-mapped tile doesn't return zero
+                        SparseMem.CapFlags &= ~SPARSE_MEMORY_CAP_FLAG_NON_RESIDENT_STRICT;
+                        // CheckAccessFullyMapped() in shader doesn't work.
+                        SparseMem.CapFlags &= ~SPARSE_MEMORY_CAP_FLAG_SHADER_RESOURCE_RESIDENCY;
+                    }
 
                     SparseMem.BufferBindFlags =
                         BIND_VERTEX_BUFFER |

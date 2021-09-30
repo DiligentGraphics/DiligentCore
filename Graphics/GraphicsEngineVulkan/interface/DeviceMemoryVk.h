@@ -47,10 +47,17 @@ static const INTERFACE_ID IID_DeviceMemoryVk =
 
 // clang-format off
 
+/// This structure is returned by IDeviceMemoryVk::GetRange()
 struct DeviceMemoryRangeVk
 {
+    /// Vulkan memory object.
     VkDeviceMemory Handle  DEFAULT_INITIALIZER(VK_NULL_HANDLE);
+
+    /// Offset to the start of the memory range, in bytes.
     VkDeviceSize   Offset  DEFAULT_INITIALIZER(0);
+
+    /// Memory range size in bytes.
+    /// It will be equal to the Size argument of the function, or zero if function failed.
     VkDeviceSize   Size    DEFAULT_INITIALIZER(0);
 };
 typedef struct DeviceMemoryRangeVk DeviceMemoryRangeVk;
@@ -58,6 +65,8 @@ typedef struct DeviceMemoryRangeVk DeviceMemoryRangeVk;
 /// Exposes Vulkan-specific functionality of a device memory object.
 DILIGENT_BEGIN_INTERFACE(IDeviceMemoryVk, IDeviceMemory)
 {
+    /// Returns a DeviceMemoryRangeVk object with the information
+    /// about the Vulkan device memory assotiated with the specified memory range.
     VIRTUAL DeviceMemoryRangeVk METHOD(GetRange)(THIS_
                                                  Uint64 Offset,
                                                  Uint64 Size) CONST PURE;

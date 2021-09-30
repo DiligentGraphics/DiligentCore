@@ -51,8 +51,7 @@ struct D3DTileMappingHelper
     bool UseNVApi = false;
 
     void AddBufferBindRange(const SparseBufferMemoryBindRange& BindRange,
-                            Uint64                             MemOffsetInBytes,
-                            Uint64                             MemSizeInBytes)
+                            Uint64                             MemOffsetInBytes)
     {
         D3D_TILED_RESOURCE_COORDINATE_TYPE d3dCoord{};
         d3dCoord.X           = StaticCast<UINT>(BindRange.BufferOffset / D3D_TILED_RESOURCE_TILE_SIZE_IN_BYTES);
@@ -66,20 +65,19 @@ struct D3DTileMappingHelper
         d3dRegionSize.Height   = 0;
         d3dRegionSize.Depth    = 0;
 
-        AddBindRange(d3dCoord, d3dRegionSize, BindRange.pMemory, MemOffsetInBytes, MemSizeInBytes);
+        AddBindRange(d3dCoord, d3dRegionSize, BindRange.pMemory, MemOffsetInBytes, BindRange.MemorySize);
     }
 
     void AddBufferBindRange(const SparseBufferMemoryBindRange& BindRange)
     {
-        AddBufferBindRange(BindRange, BindRange.MemoryOffset, BindRange.MemorySize);
+        AddBufferBindRange(BindRange, BindRange.MemoryOffset);
     }
 
     void AddTextureBindRange(const SparseTextureMemoryBindRange& BindRange,
                              const TextureSparseProperties&      TexSparseProps,
                              const TextureDesc&                  TexDesc,
                              bool                                _UseNVApi,
-                             Uint64                              MemOffsetInBytes,
-                             Uint64                              MemSizeInBytes)
+                             Uint64                              MemOffsetInBytes)
     {
         VERIFY(Coordinates.empty() || UseNVApi == _UseNVApi, "Inconsistent use of NV API among different bind ranges");
         UseNVApi = _UseNVApi;
@@ -118,7 +116,7 @@ struct D3DTileMappingHelper
             d3dRegionSize.Depth    = 0;
         }
 
-        AddBindRange(d3dCoord, d3dRegionSize, BindRange.pMemory, MemOffsetInBytes, MemSizeInBytes);
+        AddBindRange(d3dCoord, d3dRegionSize, BindRange.pMemory, MemOffsetInBytes, BindRange.MemorySize);
     }
 
     void AddTextureBindRange(const SparseTextureMemoryBindRange& BindRange,
@@ -126,7 +124,7 @@ struct D3DTileMappingHelper
                              const TextureDesc&                  TexDesc,
                              bool                                _UseNVApi)
     {
-        AddTextureBindRange(BindRange, TexSparseProps, TexDesc, _UseNVApi, BindRange.MemoryOffset, BindRange.MemorySize);
+        AddTextureBindRange(BindRange, TexSparseProps, TexDesc, _UseNVApi, BindRange.MemoryOffset);
     }
 
     void Reset()
@@ -150,6 +148,8 @@ private:
 
         const auto StartTile      = StaticCast<UINT>(MemOffsetInBytes / D3D_TILED_RESOURCE_TILE_SIZE_IN_BYTES);
         const auto RangeTileCount = StaticCast<UINT>(MemSizeInBytes / D3D_TILED_RESOURCE_TILE_SIZE_IN_BYTES);
+
+        VERIFY(MemSizeInBytes == 0 || RangeTileCount > 0, "Tile count must not be zero");
 
         RangeFlags.emplace_back(d3dRangeFlags);
         RangeStartOffsets.emplace_back(StartTile);

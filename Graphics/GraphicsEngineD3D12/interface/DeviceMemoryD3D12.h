@@ -46,10 +46,17 @@ static const INTERFACE_ID IID_DeviceMemoryD3D12 =
 
 // clang-format off
 
+/// This structure is returned by IDeviceMemoryD3D12::GetRange()
 struct DeviceMemoryRangeD3D12
 {
+    /// Pointer to the ID3D12Heap interface.
     ID3D12Heap* pHandle  DEFAULT_INITIALIZER(nullptr);
+
+    /// Offset from the beginning of the heap to the start of the range, in bytes.
     Uint64      Offset   DEFAULT_INITIALIZER(0);
+
+    /// Memory range size in bytes.
+    /// Will be equal to the Size argument of the function, or zero if the function failed.
     Uint64      Size     DEFAULT_INITIALIZER(0);
 };
 typedef struct DeviceMemoryRangeD3D12 DeviceMemoryRangeD3D12;
@@ -57,7 +64,8 @@ typedef struct DeviceMemoryRangeD3D12 DeviceMemoryRangeD3D12;
 /// Exposes Direct3D12-specific functionality of a device memory object.
 DILIGENT_BEGIN_INTERFACE(IDeviceMemoryD3D12, IDeviceMemory)
 {
-    /// AZ TODO
+    /// Returns a DeviceMemoryRangeD3D12 object with the information
+    /// about ID3D12Heap assotiated with the specified memory range.
     VIRTUAL DeviceMemoryRangeD3D12 METHOD(GetRange)(THIS_
                                                     Uint64 Offset,
                                                     Uint64 Size) CONST PURE;

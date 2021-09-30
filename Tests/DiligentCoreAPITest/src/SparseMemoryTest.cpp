@@ -636,7 +636,18 @@ protected:
         sm_pTempSRB = std::move(pSRB);
     }
 
-    static void CreateGraphicsPSO(const char* Name, const String& PSSource, bool Is2DArray, RefCntAutoPtr<IPipelineState>& pPSO)
+    static void CreateGraphicsPSOForBuffer(const char* Name, const String& PSSource, Uint32 BufferElementCount, RefCntAutoPtr<IPipelineState>& pPSO)
+    {
+        const auto Stride = 4u;
+        CreateGraphicsPSO(Name, PSSource, false, BufferElementCount / Stride, pPSO);
+    }
+
+    static void CreateGraphicsPSOForTexture(const char* Name, const String& PSSource, bool Is2DArray, RefCntAutoPtr<IPipelineState>& pPSO)
+    {
+        CreateGraphicsPSO(Name, PSSource, Is2DArray, 0, pPSO);
+    }
+
+    static void CreateGraphicsPSO(const char* Name, const String& PSSource, bool Is2DArray, Uint32 BufferElementCount, RefCntAutoPtr<IPipelineState>& pPSO)
     {
         auto*       pEnv       = TestingEnvironment::GetInstance();
         auto*       pDevice    = pEnv->GetDevice();
@@ -671,6 +682,7 @@ protected:
         Macros.AddShaderMacro("SCREEN_WIDTH", SCDesc.Width);
         Macros.AddShaderMacro("SCREEN_HEIGHT", SCDesc.Height);
         Macros.AddShaderMacro("TEXTURE_2D_ARRAY", Is2DArray);
+        Macros.AddShaderMacro("BUFFER_ELEMENT_COUNT", BufferElementCount); // GetDimensions() can not be used for root view in D3D12
         ShaderCI.Macros = Macros;
 
         RefCntAutoPtr<IShader> pVS;
@@ -890,12 +902,12 @@ TEST_F(SparseMemoryTest, SparseBuffer)
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
 
-    RefCntAutoPtr<IPipelineState> pPSO;
-    CreateGraphicsPSO("Sparse buffer test", HLSL::SparseBuffer_PS, false, pPSO);
-    ASSERT_NE(pPSO, nullptr);
-
     const auto BlockSize = 64u << 10;
     const auto BuffSize  = BlockSize * 4;
+
+    RefCntAutoPtr<IPipelineState> pPSO;
+    CreateGraphicsPSOForBuffer("Sparse buffer test", HLSL::SparseBuffer_PS, BuffSize, pPSO);
+    ASSERT_NE(pPSO, nullptr);
 
     const auto Fill = [&](IBuffer* pBuffer) //
     {
@@ -994,21 +1006,18 @@ TEST_F(SparseMemoryTest, SparseResidentBuffer)
     {
         GTEST_SKIP() << "Sparse buffer is not supported by this device";
     }
-    // Without this capability read access will return undefined values for unbound ranges and tast may fail
-    //if ((SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_NON_RESIDENT_STRICT) == 0)
-    //    GTEST_SKIP() << "SPARSE_MEMORY_CAP_FLAG_NON_RESIDENT_STRICT is not supported by this device";
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
 
-    RefCntAutoPtr<IPipelineState> pPSO;
-    CreateGraphicsPSO("Sparse residency buffer test", HLSL::SparseBuffer_PS, false, pPSO);
-    ASSERT_NE(pPSO, nullptr);
-
     const auto BlockSize = 64u << 10;
     const auto BuffSize  = BlockSize * 8;
+
+    RefCntAutoPtr<IPipelineState> pPSO;
+    CreateGraphicsPSOForBuffer("Sparse residency buffer test", HLSL::SparseBuffer_PS, BuffSize, pPSO);
+    ASSERT_NE(pPSO, nullptr);
 
     const auto Fill = [&](IBuffer* pBuffer) //
     {
@@ -1127,12 +1136,12 @@ TEST_F(SparseMemoryTest, SparseResidentAliasedBuffer)
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
 
-    RefCntAutoPtr<IPipelineState> pPSO;
-    CreateGraphicsPSO("Sparse residency aliased buffer test", HLSL::SparseBuffer_PS, false, pPSO);
-    ASSERT_NE(pPSO, nullptr);
-
     const auto BlockSize = 64u << 10;
     const auto BuffSize  = BlockSize * 8;
+
+    RefCntAutoPtr<IPipelineState> pPSO;
+    CreateGraphicsPSOForBuffer("Sparse residency aliased buffer test", HLSL::SparseBuffer_PS, BuffSize, pPSO);
+    ASSERT_NE(pPSO, nullptr);
 
     const auto Fill = [&](IBuffer* pBuffer) //
     {
@@ -1253,7 +1262,7 @@ TEST_P(SparseMemoryTest, SparseTexture)
 
     const auto                    TexSize = TestIdToTextureDim(TestId);
     RefCntAutoPtr<IPipelineState> pPSO;
-    CreateGraphicsPSO("Sparse texture test", HLSL::SparseTexture_PS, TexSize.w > 1, pPSO);
+    CreateGraphicsPSOForTexture("Sparse texture test", HLSL::SparseTexture_PS, TexSize.w > 1, pPSO);
     ASSERT_NE(pPSO, nullptr);
 
     const auto Fill = [&](ITexture* pTexture) //
@@ -1430,7 +1439,7 @@ TEST_P(SparseMemoryTest, SparseResidencyTexture)
 
     const auto                    TexSize = TestIdToTextureDim(TestId);
     RefCntAutoPtr<IPipelineState> pPSO;
-    CreateGraphicsPSO("Sparse resident texture test", HLSL::SparseTextureResidency_PS, TexSize.w > 1, pPSO);
+    CreateGraphicsPSOForTexture("Sparse resident texture test", HLSL::SparseTextureResidency_PS, TexSize.w > 1, pPSO);
     ASSERT_NE(pPSO, nullptr);
 
     const auto Fill = [&](ITexture* pTexture) {
@@ -1618,7 +1627,7 @@ TEST_P(SparseMemoryTest, SparseResidencyAliasedTexture)
 
     const auto                    TexSize = TestIdToTextureDim(TestId);
     RefCntAutoPtr<IPipelineState> pPSO;
-    CreateGraphicsPSO("Sparse resident aliased texture test", HLSL::SparseTexture_PS, TexSize.w > 1, pPSO);
+    CreateGraphicsPSOForTexture("Sparse resident aliased texture test", HLSL::SparseTexture_PS, TexSize.w > 1, pPSO);
     ASSERT_NE(pPSO, nullptr);
 
     const auto Fill = [&](ITexture* pTexture) //
@@ -1811,7 +1820,7 @@ TEST_F(SparseMemoryTest, SparseTexture3D)
     auto* pContext   = pEnv->GetDeviceContext();
 
     RefCntAutoPtr<IPipelineState> pPSO;
-    CreateGraphicsPSO("Sparse texture 3d test", HLSL::SparseTexture3D_PS, false, pPSO);
+    CreateGraphicsPSOForTexture("Sparse texture 3d test", HLSL::SparseTexture3D_PS, false, pPSO);
     ASSERT_NE(pPSO, nullptr);
 
     const auto TexSize = uint4{64, 64, 15, 1};

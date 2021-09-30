@@ -92,13 +92,22 @@ CComPtr<ID3D12Heap> CreateDummyNVApiHeap(ID3D12Device* pd3d12Device)
     d3d12HeapDesc.Properties.CreationNodeMask     = 1;
     d3d12HeapDesc.Properties.VisibleNodeMask      = 1;
     d3d12HeapDesc.Alignment                       = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+
+    bool HasResourceHeapTier2 = false;
+
+    D3D12_FEATURE_DATA_D3D12_OPTIONS d3d12Features = {};
+    if (SUCCEEDED(pd3d12Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &d3d12Features, sizeof(d3d12Features))))
+    {
+        HasResourceHeapTier2 = d3d12Features.ResourceHeapTier >= D3D12_RESOURCE_HEAP_TIER_2;
+    }
+
     // From NVAPI docs:
     //      pHeap is necessary when bTexture2DArrayMipPack is true.
     //      pHeap can be any heap and this API doens't change anything to it.
     //
     // On D3D12_RESOURCE_HEAP_TIER_1 hardware, we need to specify the heap usage. Use NON_RT_DS_TEXTURES as the
     // most logical for sparse 2D arrays (the documentation says that pHeap can be any heap anyway).
-    d3d12HeapDesc.Flags = D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES;
+    d3d12HeapDesc.Flags = HasResourceHeapTier2 ? D3D12_HEAP_FLAG_ALLOW_SHADER_ATOMICS : D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES;
 
     if (NvAPI_D3D12_CreateHeap(pd3d12Device, &d3d12HeapDesc, IID_PPV_ARGS(&pNVApiHeap)) != NVAPI_OK)
         LOG_ERROR_MESSAGE("Failed to create default sparse heap using NVApi");

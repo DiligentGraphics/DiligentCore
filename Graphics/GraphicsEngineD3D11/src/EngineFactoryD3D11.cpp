@@ -548,6 +548,11 @@ GraphicsAdapterInfo EngineFactoryD3D11Impl::GetGraphicsAdapterInfo(void*        
                     SPARSE_MEMORY_CAP_FLAG_STANDARD_2DMS_TILE_SHAPE;
                 SparseMem.BufferBindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 
+                if (d3d11TiledResources.TiledResourcesTier == D3D11_TILED_RESOURCES_TIER_1)
+                {
+                    // If you access tiles (read or write) that are NULL-mapped, you get undefined behavior, which includes device removal
+                    SparseMem.CapFlags |= SPARSE_MEMORY_CAP_FLAG_UNSAFE_NON_RESIDENT;
+                }
                 if (d3d11TiledResources.TiledResourcesTier >= D3D11_TILED_RESOURCES_TIER_2)
                 {
                     SparseMem.CapFlags |=
@@ -568,6 +573,9 @@ GraphicsAdapterInfo EngineFactoryD3D11Impl::GetGraphicsAdapterInfo(void*        
                 // Some features are not correctly working in software renderer.
                 if (AdapterInfo.Type == ADAPTER_TYPE_SOFTWARE)
                 {
+                    // Reading from null-mapped tile doesn't return zero
+                    SparseMem.CapFlags &= ~SPARSE_MEMORY_CAP_FLAG_NON_RESIDENT_STRICT;
+                    // CheckAccessFullyMapped() in shader doesn't work.
                     SparseMem.CapFlags &= ~SPARSE_MEMORY_CAP_FLAG_SHADER_RESOURCE_RESIDENCY;
                 }
 

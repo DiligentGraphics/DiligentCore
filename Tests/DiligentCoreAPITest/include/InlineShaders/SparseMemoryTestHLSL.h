@@ -119,11 +119,12 @@ StructuredBuffer<uint> g_Buffer;
 
 float4 main(in PSInput PSIn) : SV_Target
 {
-    uint Count, Stride;
-    g_Buffer.GetDimensions(Count, Stride);
-
     uint Idx         = uint(PSIn.Pos.x) + uint(PSIn.Pos.y) * SCREEN_WIDTH;
-    uint PackedColor = Idx < Count ? g_Buffer[Idx] : 0;
+    uint PackedColor = 0;
+
+    [branch]
+    if (Idx < BUFFER_ELEMENT_COUNT)
+        PackedColor = g_Buffer[Idx];
 
     float4 Color;
     Color.r = (PackedColor & 0xFF) / 255.0;

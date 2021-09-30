@@ -2641,13 +2641,17 @@ DILIGENT_TYPED_ENUM(SPARSE_MEMORY_CAP_FLAGS, Uint32)
     SPARSE_MEMORY_CAP_FLAG_NON_RESIDENT_STRICT       = 1u << 13,
 
     /// Specifies whether the device supports sparse texture arrays with mip levels whose dimensions are less than the tile size.
-    SPARSE_MEMORY_CAP_FLAG_TEXTURE_2D_ARRAY_MIP_TAIL = 1U << 14,
+    SPARSE_MEMORY_CAP_FLAG_TEXTURE_2D_ARRAY_MIP_TAIL = 1u << 14,
 
     /// Indicates that sparse buffers use the standard block, see SparseMemoryProperties::StandardBlockSize.
     /// If this capability is not reported, call IBuffer::GetSparseProperties() and check BufferSparseProperties::BlockSize.
-    SPARSE_MEMORY_CAP_FLAG_BUFFER_STANDARD_BLOCK     = 1U << 15,
+    SPARSE_MEMORY_CAP_FLAG_BUFFER_STANDARD_BLOCK     = 1u << 15,
 
-    //SPARSE_MEMORY_CAP_FLAG_TEXTURE_INT64_ATOMICS               = 1u << 18, // AZ TODO
+    // Read or write from unbound memory may cause device removal.
+    SPARSE_MEMORY_CAP_FLAG_UNSAFE_NON_RESIDENT       = 1u << 16,
+
+    // Sharing blocks between buffer and texture may cause device removal.
+    SPARSE_MEMORY_CAP_FLAG_SHARING_BETWEEN_BUFFER_AND_TEXTURE = 1u << 17,
 };
 DEFINE_FLAG_ENUM_OPERATORS(SPARSE_MEMORY_CAP_FLAGS)
 
@@ -2668,9 +2672,11 @@ struct SparseMemoryProperties
     /// \note   In Direct3D11, Direct3D12 and Vulkan this is 64Kb.
     ///         In Metal it is implementation-defined.
     ///
+    /// \note   Query standard block support using IRenderDevice::GetTextureFormatSparseInfo() and
+    ///         check TextureFormatSparseInfo::Flags for SPARSE_TEXTURE_FLAG_NONSTANDARD_BLOCK_SIZE flag.
+    ///
     /// See SPARSE_MEMORY_CAP_FLAG_STANDARD_2D_TILE_SHAPE, SPARSE_MEMORY_CAP_FLAG_STANDARD_2DMS_TILE_SHAPE,
     /// SPARSE_MEMORY_CAP_FLAG_STANDARD_3D_TILE_SHAPE, SPARSE_MEMORY_CAP_FLAG_BUFFER_STANDARD_BLOCK.
-    /// See (AZ TODO: texture format info)
     Uint32 StandardBlockSize DEFAULT_INITIALIZER(0);
 
     /// Allowed bind flags for sparse buffer.
