@@ -383,12 +383,12 @@ struct TextureSparseProperties
     /// The first mip level in the mip tail that is packed into a single memory block.
     Uint32  FirstMipInTail  DEFAULT_INITIALIZER(~0u);
 
-    /// Specifies the tile dimension for a single sparse block, see SparseMemoryProperties::SparseBlockSize.
+    /// Specifies the tile dimension for a single sparse block.
     Uint32  TileSize[3]     DEFAULT_INITIALIZER({});
 
     /// Size of the sparse block.
 
-    /// \remarks The offset in the buffer, memory offset and memory size that are used in sparse binding command 
+    /// \remarks The offset in the packed mip tail, memory offset and memory size that are used in sparse binding command 
     ///          must be multiples of the block size.
     ///
     ///          The sparse block size is equal to SparseMemoryProperties::StandardBlockSize if Flags don't contain

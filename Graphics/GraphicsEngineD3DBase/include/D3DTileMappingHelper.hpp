@@ -67,7 +67,7 @@ struct D3DTileMappingHelper
 
         VERIFY(d3dRegionSize.NumTiles > 0, "NumTiles must not be zero");
 
-        AddBindRange(d3dCoord, d3dRegionSize, BindRange.pMemory, MemOffsetInBytes, d3dRegionSize.NumTiles);
+        AddBindRange(d3dCoord, d3dRegionSize, BindRange.pMemory, MemOffsetInBytes);
     }
 
     void AddBufferBindRange(const SparseBufferMemoryBindRange& BindRange)
@@ -124,7 +124,7 @@ struct D3DTileMappingHelper
 
         VERIFY(d3dRegionSize.NumTiles > 0, "NumTiles must not be zero");
 
-        AddBindRange(d3dCoord, d3dRegionSize, BindRange.pMemory, MemOffsetInBytes, d3dRegionSize.NumTiles);
+        AddBindRange(d3dCoord, d3dRegionSize, BindRange.pMemory, MemOffsetInBytes);
     }
 
     void AddTextureBindRange(const SparseTextureMemoryBindRange& BindRange,
@@ -144,16 +144,16 @@ private:
     void AddBindRange(const D3D_TILED_RESOURCE_COORDINATE_TYPE& d3dCoords,
                       const D3D_TILE_REGION_SIZE_TYPE&          d3dRegionSize,
                       const IDeviceMemory*                      pMemory,
-                      Uint64                                    MemOffsetInBytes,
-                      Uint32                                    RangeTileCount)
+                      Uint64                                    MemOffsetInBytes)
     {
         Coordinates.emplace_back(d3dCoords);
         RegionSizes.emplace_back(d3dRegionSize);
 
         // If pRangeFlags[i] is D3D12_TILE_RANGE_FLAG_NONE, that range defines sequential tiles in the heap,
         // with the number of tiles being pRangeTileCounts[i] and the starting location pHeapRangeStartOffsets[i]
-        const auto d3dRangeFlags = pMemory != nullptr ? D3D_TILE_RANGE_FLAG_NONE : D3D_TILE_RANGE_FLAG_NULL;
-        const auto StartTile     = StaticCast<UINT>(MemOffsetInBytes / D3D_TILED_RESOURCE_TILE_SIZE_IN_BYTES);
+        const auto d3dRangeFlags  = pMemory != nullptr ? D3D_TILE_RANGE_FLAG_NONE : D3D_TILE_RANGE_FLAG_NULL;
+        const auto StartTile      = StaticCast<UINT>(MemOffsetInBytes / D3D_TILED_RESOURCE_TILE_SIZE_IN_BYTES);
+        const auto RangeTileCount = d3dRegionSize.NumTiles;
 
         VERIFY(RangeTileCount > 0, "Tile count must not be zero");
 

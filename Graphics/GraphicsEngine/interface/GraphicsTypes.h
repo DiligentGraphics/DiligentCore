@@ -2630,7 +2630,7 @@ DILIGENT_TYPED_ENUM(SPARSE_MEMORY_CAP_FLAGS, Uint32)
     SPARSE_MEMORY_CAP_FLAG_STANDARD_3D_TILE_SHAPE   = 1u << 11,
 
     /// Specifies if textures with mip level dimensions that are not integer multiples of the corresponding
-    /// dimensions of the sparse image block may be placed in the mip tail.
+    /// dimensions of the sparse texture block may be placed in the mip tail.
     /// If this capability is not reported, only mip levels with dimensions smaller than the TextureSparseProperties::TilesSize will be placed in the mip tail. 
     SPARSE_MEMORY_CAP_FLAG_ALIGNED_MIP_SIZE          = 1u << 12,
 
@@ -3631,7 +3631,7 @@ DILIGENT_TYPED_ENUM(SPARSE_TEXTURE_FLAGS, Uint8)
     /// multiples of the corresponding dimensions of the sparse texture block begins the mip tail region.
     SPARSE_TEXTURE_FLAG_ALIGNED_MIP_SIZE       = 1u << 1,
 
-    /// Specifies that the texture uses non-standard sparse texture block dimensions,
+    /// Specifies that the texture uses non-standard sparse texture tile dimensions,
     /// and the TileSize values do not match the standard sparse texture block dimensions.
     SPARSE_TEXTURE_FLAG_NONSTANDARD_BLOCK_SIZE = 1u << 2,
 

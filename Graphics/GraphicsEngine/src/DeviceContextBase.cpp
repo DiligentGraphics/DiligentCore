@@ -1163,26 +1163,25 @@ bool VerifyBindSparseMemoryAttribs(const IRenderDevice* pDevice, const BindSpars
 
                 if (IsMetal)
                 {
-                    CHECK_BIND_SPARSE_ATTRIBS(Range.OffsetInMipTail == 0 && Range.MemorySize == TexSparseProps.MipTailSize,
+                    CHECK_BIND_SPARSE_ATTRIBS(Range.OffsetInMipTail == 0 && (Range.MemorySize == 0 || Range.MemorySize == TexSparseProps.MipTailSize),
                                               "pTextureBinds[", i, "].pRanges[", r, "]: in Metal, mip tail must be bound in a single memory range: ",
                                               "OffsetInMipTail (", Range.OffsetInMipTail, ") must be zero and MemorySize (", Range.MemorySize,
-                                              ") must be equal to the mip tail size (", TexSparseProps.MipTailSize, ")");
+                                              ") must be equal to the mip tail size (", TexSparseProps.MipTailSize, ") or zero");
                 }
             }
 
             CHECK_BIND_SPARSE_ATTRIBS(Range.ArraySlice < Desc.GetArraySize(),
                                       "pTextureBinds[", i, "].pRanges[", r, "].ArraySlice (", Range.ArraySlice, ") must be less than the array size (", Desc.GetArraySize(), ")");
 
-            // In Metal, MemorySize is not defined and not used
-            if (Range.pMemory != nullptr && !IsMetal)
-            {
-                CHECK_BIND_SPARSE_ATTRIBS(Range.MemorySize != 0,
-                                          "pTextureBinds[", i, "].pRanges[", r, "].MemorySize must not be zero");
-                CHECK_BIND_SPARSE_ATTRIBS(Range.MemorySize % TexSparseProps.BlockSize == 0,
-                                          "pTextureBinds[", i, "].pRanges[", r, "].MemorySize (", Range.MemorySize,
-                                          ") must be a multiple of the texture block size (", TexSparseProps.BlockSize, ")");
+            // MemorySize can be zero
+            CHECK_BIND_SPARSE_ATTRIBS(Range.MemorySize % TexSparseProps.BlockSize == 0,
+                                      "pTextureBinds[", i, "].pRanges[", r, "].MemorySize (", Range.MemorySize,
+                                      ") must be a multiple of the texture block size (", TexSparseProps.BlockSize, ")");
 
-                if (Range.MipLevel < TexSparseProps.FirstMipInTail)
+            // In Metal, MemorySize is not defined and not used
+            if (!IsMetal)
+            {
+                if (Range.MemorySize != 0 && Range.MipLevel < TexSparseProps.FirstMipInTail)
                 {
                     const uint3 TilesInBox = GetNumTilesInBox(Region, TexSparseProps);
                     const auto  NumBlocks  = TilesInBox.x * TilesInBox.y * TilesInBox.z;
@@ -1191,20 +1190,31 @@ bool VerifyBindSparseMemoryAttribs(const IRenderDevice* pDevice, const BindSpars
                                               NumBlocks, ") in the specified region");
                 }
 
-                CHECK_BIND_SPARSE_ATTRIBS(Range.pMemory->IsCompatible(Bind.pTexture),
-                                          "pTextureBinds[", i, "].pRanges[", r, "].pMemory must be compatible with pTexture");
+                // packed mip tail
+                if (Range.MipLevel == TexSparseProps.FirstMipInTail)
+                {
+                    // MemorySize is used to specify how much block must be bound/unbound
+                    CHECK_BIND_SPARSE_ATTRIBS(Range.MemorySize != 0,
+                                              "pTextureBinds[", i, "].pRanges[", r, "].MemorySize must not be zero");
+                }
 
-                const auto Capacity = Range.pMemory->GetCapacity();
-                CHECK_BIND_SPARSE_ATTRIBS(Range.MemoryOffset + Range.MemorySize <= Capacity,
-                                          "pTextureBinds[", i, "].pRanges[", r, "] specifies MemoryOffset (", Range.MemoryOffset, ") and MemorySize (",
-                                          Range.MemorySize, ") that exceed the memory capacity (", Capacity, ")");
-                // Can not check here because the final memory offset depends on the device memory object implementation
-                //CHECK_BIND_SPARSE_ATTRIBS(Range.MemoryOffset % BuffSparseProps.BlockSize == 0)
+                if (Range.pMemory != nullptr)
+                {
+                    CHECK_BIND_SPARSE_ATTRIBS(Range.pMemory->IsCompatible(Bind.pTexture),
+                                              "pTextureBinds[", i, "].pRanges[", r, "].pMemory must be compatible with pTexture");
 
-                const auto PageSize = Range.pMemory->GetDesc().PageSize;
-                CHECK_BIND_SPARSE_ATTRIBS((Range.MemoryOffset % PageSize) + Range.MemorySize <= PageSize,
-                                          "pTextureBinds[", i, "].pRanges[", r, "] specifies MemoryOffset (", Range.MemoryOffset, ") and MemorySize (", Range.MemorySize,
-                                          ") that don't fit into a single page. In Direct3D12 and Vulkan this will be an error");
+                    const auto Capacity = Range.pMemory->GetCapacity();
+                    CHECK_BIND_SPARSE_ATTRIBS(Range.MemoryOffset + Range.MemorySize <= Capacity,
+                                              "pTextureBinds[", i, "].pRanges[", r, "] specifies MemoryOffset (", Range.MemoryOffset, ") and MemorySize (",
+                                              Range.MemorySize, ") that exceed the memory capacity (", Capacity, ")");
+                    // Can not check here because the final memory offset depends on the device memory object implementation
+                    //CHECK_BIND_SPARSE_ATTRIBS(Range.MemoryOffset % BuffSparseProps.BlockSize == 0)
+
+                    const auto PageSize = Range.pMemory->GetDesc().PageSize;
+                    CHECK_BIND_SPARSE_ATTRIBS((Range.MemoryOffset % PageSize) + Range.MemorySize <= PageSize,
+                                              "pTextureBinds[", i, "].pRanges[", r, "] specifies MemoryOffset (", Range.MemoryOffset, ") and MemorySize (", Range.MemorySize,
+                                              ") that don't fit into a single page. In Direct3D12 and Vulkan this will be an error");
+                }
             }
 
             if (Range.pMemory == nullptr)
