@@ -58,6 +58,7 @@ TEST_P(DynamicTextureArrayCreateTest, Run)
 
     auto& Desc{DynTexArrCI.Desc};
     Desc.Type      = RESOURCE_DIM_TEX_2D_ARRAY;
+    Desc.BindFlags = BIND_SHADER_RESOURCE;
     Desc.Width     = 1024;
     Desc.Height    = 1024;
     Desc.MipLevels = 0;
@@ -143,6 +144,7 @@ TEST_P(DynamicTextureArrayResizeTest, Run)
     auto& Desc{DynTexArrCI.Desc};
     Desc.Name      = "Dynamic texture array resize test";
     Desc.Type      = RESOURCE_DIM_TEX_2D_ARRAY;
+    Desc.BindFlags = BIND_SHADER_RESOURCE;
     Desc.Width     = 1024;
     Desc.Height    = 1024;
     Desc.MipLevels = 11;
@@ -156,6 +158,7 @@ TEST_P(DynamicTextureArrayResizeTest, Run)
     {
         auto StagingTexDesc           = Desc;
         StagingTexDesc.Name           = "Dynamice texture array staging texture";
+        StagingTexDesc.BindFlags      = BIND_NONE;
         StagingTexDesc.Usage          = USAGE_STAGING;
         StagingTexDesc.CPUAccessFlags = CPU_ACCESS_READ;
         StagingTexDesc.ArraySize      = NumTestSlices;

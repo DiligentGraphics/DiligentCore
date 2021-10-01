@@ -35,7 +35,8 @@
 #include "BasicMath.hpp"
 
 #if PLATFORM_MACOS
-#    include "../../../../Graphics/GraphicsEngineMetal/interface/RenderDeviceMtl.h"
+// AZ: TODO
+//#    include "../../../../Graphics/GraphicsEngineMetal/interface/RenderDeviceMtl.h"
 #endif
 
 #include "InlineShaders/SparseMemoryTestHLSL.h"
@@ -351,12 +352,13 @@ protected:
         if (pDevice->GetDeviceInfo().IsMetalDevice())
         {
 #if PLATFORM_MACOS
-            Result.pMemory = CreateMemory(AlignUp(64u << 10, BlockSize), NumMemoryPages, nullptr);
-            if (Result.pMemory == nullptr)
-                return {};
+            // AZ: TODO
+            //Result.pMemory = CreateMemory(AlignUp(64u << 10, BlockSize), NumMemoryPages, nullptr);
+            //if (Result.pMemory == nullptr)
+            //    return {};
 
-            RefCntAutoPtr<IRenderDeviceMtl> pDeviceMtl{pDevice, IID_RenderDeviceMtl};
-            pDeviceMtl->CreateSparseTexture(Desc, Result.pMemory, &Result.pTexture);
+            //RefCntAutoPtr<IRenderDeviceMtl> pDeviceMtl{pDevice, IID_RenderDeviceMtl};
+            //pDeviceMtl->CreateSparseTexture(Desc, Result.pMemory, &Result.pTexture);
 #endif
         }
         else

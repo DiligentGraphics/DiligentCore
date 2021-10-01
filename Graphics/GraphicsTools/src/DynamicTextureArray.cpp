@@ -243,7 +243,6 @@ void DynamicTextureArray::ResizeSparseTexture(IDeviceContext* pContext)
                 {
                     // Unbind tile
                     range_it->pMemory = nullptr;
-                    CurrMemOffset -= range_it->MemorySize;
                 }
             }
             TexBinds.push_back(NormalMipMemBind);
@@ -259,12 +258,12 @@ void DynamicTextureArray::ResizeSparseTexture(IDeviceContext* pContext)
 
             range_it->ArraySlice = Slice;
             range_it->MipLevel   = TexSparseProps.FirstMipInTail;
+            range_it->MemorySize = TexSparseProps.MipTailSize;
 
             if (Slice >= m_Desc.ArraySize)
             {
                 range_it->pMemory      = m_pMemory;
                 range_it->MemoryOffset = CurrMemOffset;
-                range_it->MemorySize   = TexSparseProps.MipTailSize;
 
                 CurrMemOffset += range_it->MemorySize;
             }
@@ -272,7 +271,6 @@ void DynamicTextureArray::ResizeSparseTexture(IDeviceContext* pContext)
             {
                 // Unbind tile
                 range_it->pMemory = nullptr;
-                CurrMemOffset -= range_it->MemorySize;
             }
             ++range_it;
 

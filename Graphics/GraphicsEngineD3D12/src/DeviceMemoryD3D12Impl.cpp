@@ -56,10 +56,12 @@ D3D12_HEAP_FLAGS GetD3D12HeapFlags(ID3D12Device*   pd3d12Device,
 
     // NB: D3D12_RESOURCE_HEAP_TIER_1 hardware requires exactly one of the
     //     flags below left unset when creating a heap.
-    D3D12_HEAP_FLAGS HeapFlags =
+    constexpr auto D3D12_HEAP_FLAG_DENY_ALL =
         D3D12_HEAP_FLAG_DENY_BUFFERS |
         D3D12_HEAP_FLAG_DENY_RT_DS_TEXTURES |
         D3D12_HEAP_FLAG_DENY_NON_RT_DS_TEXTURES;
+
+    auto HeapFlags = D3D12_HEAP_FLAG_DENY_ALL;
 
     D3D12_FEATURE_DATA_D3D12_OPTIONS d3d12Features{};
     if (SUCCEEDED(pd3d12Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &d3d12Features, sizeof(d3d12Features))))
@@ -121,6 +123,17 @@ D3D12_HEAP_FLAGS GetD3D12HeapFlags(ID3D12Device*   pd3d12Device,
         else
         {
             UNEXPECTED("unsupported resource type");
+        }
+    }
+
+    if (d3d12Features.ResourceHeapTier == D3D12_RESOURCE_HEAP_TIER_1)
+    {
+        const auto NumDenyFlags = PlatformMisc::CountOneBits(static_cast<Uint32>(HeapFlags & D3D12_HEAP_FLAG_DENY_ALL));
+        if (NumDenyFlags != 2)
+        {
+            LOG_ERROR_AND_THROW("On D3D12_RESOURCE_HEAP_TIER_1 hadrware, only single resource usage for the heap is allowed: "
+                                "buffers, RT_DS_TEXTURES (BIND_RENDER_TARGET, BIND_DEPTH_STENCIL), or NON_RT_DS_TEXTURES "
+                                "(BIND_SHADER_RESOURCE, BIND_UNORDERED_ACCESS, BIND_INPUT_ATTACHMENT)");
         }
     }
 
