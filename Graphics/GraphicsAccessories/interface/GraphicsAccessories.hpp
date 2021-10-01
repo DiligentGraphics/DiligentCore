@@ -420,14 +420,43 @@ bool VerifyResourceStates(RESOURCE_STATE State, bool IsTexture);
 /// Describes the mip level properties
 struct MipLevelProperties
 {
-    Uint32 LogicalWidth   = 0;
-    Uint32 LogicalHeight  = 0;
-    Uint32 StorageWidth   = 0;
-    Uint32 StorageHeight  = 0;
-    Uint32 Depth          = 1;
-    Uint64 RowSize        = 0;
+    /// Logical mip width.
+    Uint32 LogicalWidth = 0;
+
+    /// Logical mip height.
+    Uint32 LogicalHeight = 0;
+
+    /// Storage mip width.
+
+    /// \note   For compressed formats, storage width is rounded
+    ///         up to the block size. For example, for a texture
+    ///         mip with logical width 10 and BC1 format (with 4x4
+    ///         pixel block size), the storage width will be 12.
+    Uint32 StorageWidth = 0;
+
+    /// Storage mip height.
+
+    /// \note   For compressed formats, storage height is rounded
+    ///         up to the block size. For example, for a texture
+    ///         mip with logical height 10 and BC1 format (with 4x4
+    ///         pixel block size), the storage height will be 12.
+    Uint32 StorageHeight = 0;
+
+    /// Mip level depth. Note that logical and storage depths
+    /// are always the same.
+    Uint32 Depth = 1;
+
+    /// Row size in bytes.
+
+    /// \note   For compressed formats, row size defines
+    ///         the size of one row of compressed blocks.
+    Uint64 RowSize = 0;
+
+    /// Depth slice size in bytes.
     Uint64 DepthSliceSize = 0;
-    Uint64 MipSize        = 0;
+
+    /// Total mip level data size in bytes.
+    Uint64 MipSize = 0;
 };
 
 MipLevelProperties GetMipLevelProperties(const TextureDesc& TexDesc, Uint32 MipLevel);

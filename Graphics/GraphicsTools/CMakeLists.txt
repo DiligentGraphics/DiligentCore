@@ -6,6 +6,7 @@ set(INTERFACE
     interface/BufferSuballocator.h
     interface/CommonlyUsedStates.h
     interface/DynamicBuffer.hpp
+    interface/DynamicTextureArray.hpp
     interface/DynamicTextureAtlas.h
     interface/DurationQueryHelper.hpp
     interface/GraphicsUtilities.h
@@ -22,6 +23,7 @@ set(SOURCE
     src/BufferSuballocator.cpp
     src/DurationQueryHelper.cpp
     src/DynamicBuffer.cpp
+    src/DynamicTextureArray.cpp
     src/DynamicTextureAtlas.cpp
     src/GraphicsUtilities.cpp
     src/ScopedQueryHelper.cpp

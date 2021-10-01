@@ -1174,7 +1174,7 @@ bool VerifyBindSparseMemoryAttribs(const IRenderDevice* pDevice, const BindSpars
                                       "pTextureBinds[", i, "].pRanges[", r, "].ArraySlice (", Range.ArraySlice, ") must be less than the array size (", Desc.GetArraySize(), ")");
 
             // In Metal, MemorySize is not defined and not used
-            if (!IsMetal)
+            if (Range.pMemory != nullptr && !IsMetal)
             {
                 CHECK_BIND_SPARSE_ATTRIBS(Range.MemorySize != 0,
                                           "pTextureBinds[", i, "].pRanges[", r, "].MemorySize must not be zero");
@@ -1191,23 +1191,20 @@ bool VerifyBindSparseMemoryAttribs(const IRenderDevice* pDevice, const BindSpars
                                               NumBlocks, ") in the specified region");
                 }
 
-                if (Range.pMemory != nullptr)
-                {
-                    CHECK_BIND_SPARSE_ATTRIBS(Range.pMemory->IsCompatible(Bind.pTexture),
-                                              "pTextureBinds[", i, "].pRanges[", r, "].pMemory must be compatible with pTexture");
+                CHECK_BIND_SPARSE_ATTRIBS(Range.pMemory->IsCompatible(Bind.pTexture),
+                                          "pTextureBinds[", i, "].pRanges[", r, "].pMemory must be compatible with pTexture");
 
-                    const auto Capacity = Range.pMemory->GetCapacity();
-                    CHECK_BIND_SPARSE_ATTRIBS(Range.MemoryOffset + Range.MemorySize <= Capacity,
-                                              "pTextureBinds[", i, "].pRanges[", r, "] specifies MemoryOffset (", Range.MemoryOffset, ") and MemorySize (",
-                                              Range.MemorySize, ") that exceed the memory capacity (", Capacity, ")");
-                    // Can not check here because the final memory offset depends on the device memory object implementation
-                    //CHECK_BIND_SPARSE_ATTRIBS(Range.MemoryOffset % BuffSparseProps.BlockSize == 0)
+                const auto Capacity = Range.pMemory->GetCapacity();
+                CHECK_BIND_SPARSE_ATTRIBS(Range.MemoryOffset + Range.MemorySize <= Capacity,
+                                          "pTextureBinds[", i, "].pRanges[", r, "] specifies MemoryOffset (", Range.MemoryOffset, ") and MemorySize (",
+                                          Range.MemorySize, ") that exceed the memory capacity (", Capacity, ")");
+                // Can not check here because the final memory offset depends on the device memory object implementation
+                //CHECK_BIND_SPARSE_ATTRIBS(Range.MemoryOffset % BuffSparseProps.BlockSize == 0)
 
-                    const auto PageSize = Range.pMemory->GetDesc().PageSize;
-                    CHECK_BIND_SPARSE_ATTRIBS((Range.MemoryOffset % PageSize) + Range.MemorySize <= PageSize,
-                                              "pTextureBinds[", i, "].pRanges[", r, "] specifies MemoryOffset (", Range.MemoryOffset, ") and MemorySize (", Range.MemorySize,
-                                              ") that don't fit into a single page. In Direct3D12 and Vulkan this will be an error");
-                }
+                const auto PageSize = Range.pMemory->GetDesc().PageSize;
+                CHECK_BIND_SPARSE_ATTRIBS((Range.MemoryOffset % PageSize) + Range.MemorySize <= PageSize,
+                                          "pTextureBinds[", i, "].pRanges[", r, "] specifies MemoryOffset (", Range.MemoryOffset, ") and MemorySize (", Range.MemorySize,
+                                          ") that don't fit into a single page. In Direct3D12 and Vulkan this will be an error");
             }
 
             if (Range.pMemory == nullptr)

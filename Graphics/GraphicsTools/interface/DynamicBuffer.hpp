@@ -109,7 +109,7 @@ public:
                        IDeviceContext* pContext);
 
 
-    /// Returns true if the buffer buffer must be updated before use (e.g. it has been resized,
+    /// Returns true if the buffer must be updated before use (e.g. it has been resized,
     /// but internal buffer has not been initialized or updated).
     /// When update is not pending, GetBuffer() may be called with null device and context.
     bool PendingUpdate() const
@@ -119,7 +119,7 @@ public:
 
 
     /// Returns the buffer description.
-    const BufferDesc& GetDesc()
+    const BufferDesc& GetDesc() const
     {
         return m_Desc;
     }

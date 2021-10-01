@@ -35,6 +35,7 @@
 #include <set>
 
 #include "DynamicAtlasManager.hpp"
+#include "DynamicTextureArray.hpp"
 #include "ObjectBase.hpp"
 #include "RefCntAutoPtr.hpp"
 #include "FixedBlockMemoryAllocator.hpp"
@@ -375,10 +376,17 @@ public:
     DynamicTextureAtlasImpl(IReferenceCounters*                  pRefCounters,
                             IRenderDevice*                       pDevice,
                             const DynamicTextureAtlasCreateInfo& CreateInfo) :
+        TBase{pRefCounters},
+        m_Name{CreateInfo.Desc.Name != nullptr ? CreateInfo.Desc.Name : "Dynamic texture atlas"},
+        m_Desc //
+        {
+            [this](TextureDesc TexDesc) //
+            {
+                TexDesc.Name = m_Name.c_str();
+                return TexDesc;
+            }(CreateInfo.Desc) //
+        },
         // clang-format off
-        TBase             {pRefCounters},
-        m_Desc            {CreateInfo.Desc},
-        m_Name            {CreateInfo.Desc.Name != nullptr ? CreateInfo.Desc.Name : "Dynamic texture atlas"},
         m_MinAlignment    {CreateInfo.MinAlignment},
         m_ExtraSliceCount {CreateInfo.ExtraSliceCount},
         m_MaxSliceCount   {CreateInfo.Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY ? std::min(CreateInfo.MaxSliceCount, Uint32{2048}) : 1},
@@ -415,18 +423,24 @@ public:
                 LOG_ERROR_AND_THROW("Texture height (", m_Desc.Height, ") is not a multiple of minimum alignment (", m_MinAlignment, ")");
         }
 
-        m_Desc.Name = m_Name.c_str();
         for (Uint32 i = 0; i < m_MaxSliceCount; ++i)
             m_AvailableSlices.insert(i);
 
         m_TexArraySize.store(m_Desc.ArraySize);
-        if (pDevice == nullptr)
-            m_Desc.ArraySize = 0;
-        if (m_Desc.ArraySize > 0)
+        if (m_Desc.Type == RESOURCE_DIM_TEX_2D)
         {
-            pDevice->CreateTexture(m_Desc, nullptr, &m_pTexture);
-            if (!m_pTexture)
-                LOG_ERROR_AND_THROW("Failed to create texture atlas texture");
+            if (pDevice != nullptr)
+            {
+                pDevice->CreateTexture(m_Desc, nullptr, &m_pTexture);
+                VERIFY_EXPR(m_pTexture);
+            }
+        }
+        else
+        {
+            DynamicTextureArrayCreateInfo DynTexArrCI;
+            DynTexArrCI.Desc                  = m_Desc;
+            DynTexArrCI.NumSlicesInMemoryPage = m_ExtraSliceCount != 0 ? m_ExtraSliceCount : m_Desc.ArraySize;
+            m_DynamicTexArray                 = std::make_unique<DynamicTextureArray>(pDevice, DynTexArrCI);
         }
 
         m_Version.store(0);
@@ -444,50 +458,27 @@ public:
 
     virtual ITexture* GetTexture(IRenderDevice* pDevice, IDeviceContext* pContext) override final
     {
-        Uint32 ArraySize = m_TexArraySize.load();
-        if (m_Desc.ArraySize < ArraySize)
+        if (m_DynamicTexArray)
         {
-            DEV_CHECK_ERR(pDevice != nullptr && pContext != nullptr,
-                          "Texture atlas must be resized, but pDevice or pContext is null");
-
-            m_Desc.ArraySize = ArraySize;
-            RefCntAutoPtr<ITexture> pNewTexture;
-            pDevice->CreateTexture(m_Desc, nullptr, &pNewTexture);
-            VERIFY_EXPR(pNewTexture);
-            m_Version.fetch_add(1);
-
-            LOG_INFO_MESSAGE("Dynamic texture atlas: expanding texture array '", m_Desc.Name,
-                             "' (", m_Desc.Width, " x ", m_Desc.Height, " ", m_Desc.MipLevels, "-mip ",
-                             GetTextureFormatAttribs(m_Desc.Format).Name, ") to ",
-                             m_Desc.ArraySize, " slices. Version: ", GetVersion());
-
-            if (m_pTexture)
+            Uint32 ArraySize = m_TexArraySize.load();
+            if (m_DynamicTexArray->GetDesc().ArraySize != ArraySize)
             {
-                const auto& StaleTexDesc = m_pTexture->GetDesc();
-
-                CopyTextureAttribs CopyAttribs;
-                CopyAttribs.pSrcTexture              = m_pTexture;
-                CopyAttribs.pDstTexture              = pNewTexture;
-                CopyAttribs.SrcTextureTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
-                CopyAttribs.DstTextureTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
-
-                for (Uint32 slice = 0; slice < StaleTexDesc.ArraySize; ++slice)
-                {
-                    for (Uint32 mip = 0; mip < StaleTexDesc.MipLevels; ++mip)
-                    {
-                        CopyAttribs.SrcSlice    = slice;
-                        CopyAttribs.DstSlice    = slice;
-                        CopyAttribs.SrcMipLevel = mip;
-                        CopyAttribs.DstMipLevel = mip;
-                        pContext->CopyTexture(CopyAttribs);
-                    }
-                }
+                m_DynamicTexArray->Resize(pDevice, pContext, ArraySize);
             }
 
-            m_pTexture = std::move(pNewTexture);
+            return m_DynamicTexArray->GetTexture(pDevice, pContext);
         }
+        else
+        {
+            VERIFY_EXPR(m_Desc.Type == RESOURCE_DIM_TEX_2D);
+            if (!m_pTexture)
+            {
+                DEV_CHECK_ERR(pDevice != nullptr, "Texture must be created, but pDevice is null");
+                pDevice->CreateTexture(m_Desc, nullptr, &m_pTexture);
+            }
 
-        return m_pTexture;
+            return m_pTexture;
+        }
     }
 
     virtual void Allocate(Uint32                       Width,
@@ -609,7 +600,7 @@ public:
 
     virtual const TextureDesc& GetAtlasDesc() const override final
     {
-        return m_Desc;
+        return m_DynamicTexArray ? m_DynamicTexArray->GetDesc() : m_Desc;
     }
 
     virtual Uint32 GetVersion() const override final
@@ -619,10 +610,17 @@ public:
 
     void GetUsageStats(DynamicTextureAtlasUsageStats& Stats) const override final
     {
-        Stats.Size = 0;
-        for (Uint32 mip = 0; mip < m_Desc.MipLevels; ++mip)
-            Stats.Size += GetMipLevelProperties(m_Desc, mip).MipSize;
-        Stats.Size *= m_Desc.ArraySize;
+        if (m_DynamicTexArray)
+        {
+            Stats.Size = m_DynamicTexArray->GetMemoryUsage();
+        }
+        else
+        {
+            VERIFY_EXPR(m_Desc.Type == RESOURCE_DIM_TEX_2D);
+            Stats.Size = 0;
+            for (Uint32 mip = 0; mip < m_Desc.MipLevels; ++mip)
+                Stats.Size += GetMipLevelProperties(m_Desc, mip).MipSize;
+        }
 
         Stats.AllocationCount = m_AllocationCount.load();
 
@@ -674,17 +672,18 @@ private:
     }
 
 private:
-    TextureDesc       m_Desc;
     const std::string m_Name;
+    const TextureDesc m_Desc;
 
     const Uint32 m_MinAlignment;
     const Uint32 m_ExtraSliceCount;
     const Uint32 m_MaxSliceCount;
     const bool   m_Silent;
 
-    std::atomic<Uint32> m_TexArraySize{0};
+    std::unique_ptr<DynamicTextureArray> m_DynamicTexArray;
+    RefCntAutoPtr<ITexture>              m_pTexture;
 
-    RefCntAutoPtr<ITexture> m_pTexture;
+    std::atomic<Uint32> m_TexArraySize{0};
 
     FixedBlockMemoryAllocator m_SuballocationsAllocator;
 
