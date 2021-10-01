@@ -3785,10 +3785,12 @@ void DeviceContextVkImpl::BindSparseMemory(const BindSparseMemoryAttribs& Attrib
 
             auto& vkMemBind{vkMemoryBinds[MemoryBindCount++]};
             vkMemBind.resourceOffset = SrcRange.BufferOffset;
-            vkMemBind.size           = MemRangeVk.Size;
+            vkMemBind.size           = SrcRange.MemorySize; // MemRangeVk.Size may be zero
             vkMemBind.memory         = MemRangeVk.Handle;
             vkMemBind.memoryOffset   = MemRangeVk.Offset;
             vkMemBind.flags          = 0;
+
+            VERIFY(vkMemBind.size > 0, "Buffer memory size must not be zero");
         }
     }
 
@@ -3850,10 +3852,12 @@ void DeviceContextVkImpl::BindSparseMemory(const BindSparseMemoryAttribs& Attrib
 
                 auto& vkMemBind{vkMemoryBinds[MemoryBindCount++]};
                 vkMemBind.resourceOffset = TexSparseProps.MipTailOffset + TexSparseProps.MipTailStride * SrcRange.ArraySlice + SrcRange.OffsetInMipTail;
-                vkMemBind.size           = MemRangeVk.Size;
+                vkMemBind.size           = SrcRange.MemorySize; // MemRangeVk.Size may be zero
                 vkMemBind.memory         = MemRangeVk.Handle;
                 vkMemBind.memoryOffset   = MemRangeVk.Offset;
                 vkMemBind.flags          = 0;
+
+                VERIFY(vkMemBind.size > 0, "Texture mip tail memory size must not be zero");
             }
         }
 

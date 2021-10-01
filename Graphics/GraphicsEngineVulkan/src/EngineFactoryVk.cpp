@@ -412,6 +412,9 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
     // Sparse memory properties
     if (AdapterInfo.Features.SparseMemory)
     {
+        // Same check as in VkFeaturesToDeviceFeatures()
+        VERIFY_EXPR(vkFeatures.sparseBinding && (vkFeatures.sparseResidencyBuffer || vkFeatures.sparseResidencyImage2D));
+
         const auto& SparseProps     = vkDeviceProps.sparseProperties;
         auto&       SparseMem       = AdapterInfo.SparseMemory;
         SparseMem.AddressSpaceSize  = vkDeviceLimits.sparseAddressSpaceSize;
@@ -426,6 +429,10 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
             BIND_UNORDERED_ACCESS |
             BIND_INDIRECT_DRAW_ARGS |
             BIND_RAY_TRACING;
+
+        SparseMem.CapFlags |=
+            SPARSE_MEMORY_CAP_FLAG_NON_RESIDENT_SAFE |
+            SPARSE_MEMORY_CAP_FLAG_SHARING_BETWEEN_BUFFER_AND_TEXTURE;
 
         auto SetSparseMemoryCap = [&SparseMem](VkBool32 Feature, SPARSE_MEMORY_CAP_FLAGS Flag) {
             if (Feature != VK_FALSE)

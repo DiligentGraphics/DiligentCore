@@ -804,7 +804,8 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
                         SPARSE_MEMORY_CAP_FLAG_BUFFER_STANDARD_BLOCK |
                         SPARSE_MEMORY_CAP_FLAG_TEXTURE_2D |
                         SPARSE_MEMORY_CAP_FLAG_STANDARD_2D_TILE_SHAPE |
-                        SPARSE_MEMORY_CAP_FLAG_ALIASED;
+                        SPARSE_MEMORY_CAP_FLAG_ALIASED |
+                        SPARSE_MEMORY_CAP_FLAG_NON_RESIDENT_SAFE;
 
                     // No 2, 8 or 16 sample multisample antialiasing (MSAA) support. Only 4x is required, except no 128 bpp formats.
                     SparseMem.CapFlags |=
@@ -839,6 +840,8 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
                         SparseMem.CapFlags &= ~SPARSE_MEMORY_CAP_FLAG_NON_RESIDENT_STRICT;
                         // CheckAccessFullyMapped() in shader doesn't work.
                         SparseMem.CapFlags &= ~SPARSE_MEMORY_CAP_FLAG_SHADER_RESOURCE_RESIDENCY;
+                        // Mip tails are not supported at all.
+                        SparseMem.CapFlags &= ~SPARSE_MEMORY_CAP_FLAG_ALIGNED_MIP_SIZE;
                     }
 
                     SparseMem.BufferBindFlags =

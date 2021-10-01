@@ -114,6 +114,8 @@ struct D3DTileMappingHelper
             d3dRegionSize.Width    = 0;
             d3dRegionSize.Height   = 0;
             d3dRegionSize.Depth    = 0;
+
+            VERIFY(d3dRegionSize.NumTiles > 0, "NumTiles must not be zero");
         }
 
         AddBindRange(d3dCoord, d3dRegionSize, BindRange.pMemory, MemOffsetInBytes, BindRange.MemorySize);
@@ -149,7 +151,7 @@ private:
         const auto StartTile      = StaticCast<UINT>(MemOffsetInBytes / D3D_TILED_RESOURCE_TILE_SIZE_IN_BYTES);
         const auto RangeTileCount = StaticCast<UINT>(MemSizeInBytes / D3D_TILED_RESOURCE_TILE_SIZE_IN_BYTES);
 
-        VERIFY(MemSizeInBytes == 0 || RangeTileCount > 0, "Tile count must not be zero");
+        VERIFY(RangeTileCount > 0, "Tile count must not be zero");
 
         RangeFlags.emplace_back(d3dRangeFlags);
         RangeStartOffsets.emplace_back(StartTile);

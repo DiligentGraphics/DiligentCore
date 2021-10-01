@@ -34,9 +34,19 @@
 #include "Align.hpp"
 #include "BasicMath.hpp"
 
-#if PLATFORM_MACOS
-// AZ: TODO
-//#    include "../../../../Graphics/GraphicsEngineMetal/interface/RenderDeviceMtl.h"
+#if METAL_SUPPORTED
+namespace Diligent
+{
+namespace Testing
+{
+
+extern void CreateSparseTextureMtl(IRenderDevice*     pDevice,
+                                   const TextureDesc& TexDesc,
+                                   IDeviceMemory*     pMemory,
+                                   ITexture**         ppTexture);
+
+} // namespace Testing
+} // namespace Diligent
 #endif
 
 #include "InlineShaders/SparseMemoryTestHLSL.h"
@@ -349,19 +359,13 @@ protected:
         Desc.MiscFlags   = (Aliasing ? MISC_TEXTURE_FLAG_SPARSE_ALIASING : MISC_TEXTURE_FLAG_NONE);
 
         TextureAndMemory Result;
+#if METAL_SUPPORTED
         if (pDevice->GetDeviceInfo().IsMetalDevice())
         {
-#if PLATFORM_MACOS
-            // AZ: TODO
-            //Result.pMemory = CreateMemory(AlignUp(64u << 10, BlockSize), NumMemoryPages, nullptr);
-            //if (Result.pMemory == nullptr)
-            //    return {};
-
-            //RefCntAutoPtr<IRenderDeviceMtl> pDeviceMtl{pDevice, IID_RenderDeviceMtl};
-            //pDeviceMtl->CreateSparseTexture(Desc, Result.pMemory, &Result.pTexture);
-#endif
+            CreateSparseTextureMtl(pDevice, Desc, Result.pMemory, &Result.pTexture);
         }
         else
+#endif
         {
             pDevice->CreateTexture(Desc, nullptr, &Result.pTexture);
             if (Result.pTexture == nullptr)
@@ -1075,7 +1079,7 @@ TEST_F(SparseMemoryTest, SparseResidentBuffer)
         const SparseBufferMemoryBindRange BindRanges[] = {
             // clang-format off
             {BlockSize * 0, MemBlockSize * 0, BlockSize, pMemory},
-            //{BlockSize * 1,                0, BlockSize, nullptr}, // same as keep range unbounded // AZ TODO: hungs on NVidia
+            {BlockSize * 1,                0, BlockSize, nullptr}, // same as keep range unbounded
             {BlockSize * 2, MemBlockSize * 2, BlockSize, pMemory},
             {BlockSize * 3, MemBlockSize * 3, BlockSize, pMemory},
             {BlockSize * 6, MemBlockSize * 6, BlockSize, pMemory}
@@ -1532,10 +1536,10 @@ TEST_P(SparseMemoryTest, SparseResidencyTexture)
                         Range.Region.MaxZ = 1;
                         Range.MipLevel    = Mip;
                         Range.ArraySlice  = Slice;
-                        Range.MemorySize  = BlockSize;
 
                         if ((++Idx & 2) == 0 || Mip > 0)
                         {
+                            Range.MemorySize   = BlockSize;
                             Range.MemoryOffset = MemOffset;
                             Range.pMemory      = pMemory;
                             MemOffset += Range.MemorySize;

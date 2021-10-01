@@ -548,16 +548,12 @@ GraphicsAdapterInfo EngineFactoryD3D11Impl::GetGraphicsAdapterInfo(void*        
                     SPARSE_MEMORY_CAP_FLAG_STANDARD_2DMS_TILE_SHAPE;
                 SparseMem.BufferBindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 
-                if (d3d11TiledResources.TiledResourcesTier == D3D11_TILED_RESOURCES_TIER_1)
-                {
-                    // If you access tiles (read or write) that are NULL-mapped, you get undefined behavior, which includes device removal
-                    SparseMem.CapFlags |= SPARSE_MEMORY_CAP_FLAG_UNSAFE_NON_RESIDENT;
-                }
                 if (d3d11TiledResources.TiledResourcesTier >= D3D11_TILED_RESOURCES_TIER_2)
                 {
                     SparseMem.CapFlags |=
                         SPARSE_MEMORY_CAP_FLAG_SHADER_RESOURCE_RESIDENCY |
-                        SPARSE_MEMORY_CAP_FLAG_NON_RESIDENT_STRICT;
+                        SPARSE_MEMORY_CAP_FLAG_NON_RESIDENT_STRICT |
+                        SPARSE_MEMORY_CAP_FLAG_NON_RESIDENT_SAFE;
                 }
                 if (d3d11TiledResources.TiledResourcesTier >= D3D11_TILED_RESOURCES_TIER_3)
                 {
@@ -577,6 +573,8 @@ GraphicsAdapterInfo EngineFactoryD3D11Impl::GetGraphicsAdapterInfo(void*        
                     SparseMem.CapFlags &= ~SPARSE_MEMORY_CAP_FLAG_NON_RESIDENT_STRICT;
                     // CheckAccessFullyMapped() in shader doesn't work.
                     SparseMem.CapFlags &= ~SPARSE_MEMORY_CAP_FLAG_SHADER_RESOURCE_RESIDENCY;
+                    // Mip tails are not supported at all.
+                    SparseMem.CapFlags &= ~SPARSE_MEMORY_CAP_FLAG_ALIGNED_MIP_SIZE;
                 }
 
                 for (Uint32 q = 0; q < AdapterInfo.NumQueues; ++q)

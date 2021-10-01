@@ -2221,7 +2221,8 @@ DILIGENT_TYPED_ENUM(COMMAND_QUEUE_TYPE, Uint8)
     /// Mask to extract primary command queue type.
     COMMAND_QUEUE_TYPE_PRIMARY_MASK   = COMMAND_QUEUE_TYPE_TRANSFER | COMMAND_QUEUE_TYPE_COMPUTE | COMMAND_QUEUE_TYPE_GRAPHICS,
 
-    /// Reserved for future use.
+    /// Command queue that supports sparse binding commands,
+    /// see IDeviceContext::BindSparseMemory().
     COMMAND_QUEUE_TYPE_SPARSE_BINDING = 0x10,
 
     COMMAND_QUEUE_TYPE_MAX_BIT        = COMMAND_QUEUE_TYPE_GRAPHICS
@@ -2647,10 +2648,15 @@ DILIGENT_TYPED_ENUM(SPARSE_MEMORY_CAP_FLAGS, Uint32)
     /// If this capability is not reported, call IBuffer::GetSparseProperties() and check BufferSparseProperties::BlockSize.
     SPARSE_MEMORY_CAP_FLAG_BUFFER_STANDARD_BLOCK     = 1u << 15,
 
-    // Read or write from unbound memory may cause device removal.
-    SPARSE_MEMORY_CAP_FLAG_UNSAFE_NON_RESIDENT       = 1u << 16,
+    /// Read or write from unbound memory must not cause device removal.
+    /// Note that if SPARSE_MEMORY_CAP_FLAG_NON_RESIDENT_STRICT capability is not present,
+    /// the result is still undefined even when this capability is enabled.
+    SPARSE_MEMORY_CAP_FLAG_NON_RESIDENT_SAFE       = 1u << 16,
 
-    // Sharing blocks between buffer and texture may cause device removal.
+    /// Indicates that single device memory object can be used to bind memory for buffers and textures.
+    /// If this capability is not present, separate device memory object must be created for buffers and
+    /// textures.
+    /// \note  Sharing the same memory block between buffers and textures is never allowed.
     SPARSE_MEMORY_CAP_FLAG_SHARING_BETWEEN_BUFFER_AND_TEXTURE = 1u << 17,
 };
 DEFINE_FLAG_ENUM_OPERATORS(SPARSE_MEMORY_CAP_FLAGS)
