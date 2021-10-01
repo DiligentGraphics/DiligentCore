@@ -475,6 +475,7 @@ public:
             {
                 DEV_CHECK_ERR(pDevice != nullptr, "Texture must be created, but pDevice is null");
                 pDevice->CreateTexture(m_Desc, nullptr, &m_pTexture);
+                DEV_CHECK_ERR(m_pTexture, "Failed to create atlas texture");
             }
 
             return m_pTexture;
@@ -613,6 +614,8 @@ public:
         if (m_DynamicTexArray)
         {
             Stats.Size = m_DynamicTexArray->GetMemoryUsage();
+            const auto& Desc{m_DynamicTexArray->GetDesc()};
+            Stats.TotalArea = Uint64{Desc.Width} * Uint64{Desc.Height} * Uint64{Desc.ArraySize};
         }
         else
         {
@@ -620,13 +623,12 @@ public:
             Stats.Size = 0;
             for (Uint32 mip = 0; mip < m_Desc.MipLevels; ++mip)
                 Stats.Size += GetMipLevelProperties(m_Desc, mip).MipSize;
+            Stats.TotalArea = Uint64{m_Desc.Width} * Uint64{m_Desc.Height};
         }
 
         Stats.AllocationCount = m_AllocationCount.load();
-
-        Stats.TotalArea     = Uint64{m_Desc.Width} * Uint64{m_Desc.Height} * Uint64{m_Desc.ArraySize};
-        Stats.AllocatedArea = m_AllocatedArea.load();
-        Stats.UsedArea      = m_UsedArea.load();
+        Stats.AllocatedArea   = m_AllocatedArea.load();
+        Stats.UsedArea        = m_UsedArea.load();
     }
 
 private:

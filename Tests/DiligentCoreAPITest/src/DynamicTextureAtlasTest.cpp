@@ -42,6 +42,41 @@ namespace
 
 TEST(DynamicTextureAtlas, Create)
 {
+    auto* const pEnv    = TestingEnvironment::GetInstance();
+    auto* const pDevice = pEnv->GetDevice();
+
+    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+
+    DynamicTextureAtlasCreateInfo CI;
+    CI.MinAlignment   = 16;
+    CI.Desc.Format    = TEX_FORMAT_RGBA8_UNORM;
+    CI.Desc.Name      = "Dynamic Texture Atlas Test";
+    CI.Desc.Type      = RESOURCE_DIM_TEX_2D;
+    CI.Desc.BindFlags = BIND_SHADER_RESOURCE;
+    CI.Desc.Width     = 512;
+    CI.Desc.Height    = 512;
+
+    RefCntAutoPtr<IDynamicTextureAtlas> pAtlas;
+    CreateDynamicTextureAtlas(nullptr, CI, &pAtlas);
+
+    auto* pTexture = pAtlas->GetTexture(pDevice, nullptr);
+    EXPECT_NE(pTexture, nullptr);
+
+    RefCntAutoPtr<ITextureAtlasSuballocation> pSuballoc;
+    pAtlas->Allocate(128, 128, &pSuballoc);
+    EXPECT_TRUE(pSuballoc);
+
+    DynamicTextureAtlasUsageStats Stats;
+    pAtlas->GetUsageStats(Stats);
+    EXPECT_EQ(Stats.AllocationCount, 1u);
+    EXPECT_EQ(Stats.TotalArea, CI.Desc.Width * CI.Desc.Height);
+    EXPECT_EQ(Stats.AllocatedArea, 128u * 128u);
+    EXPECT_EQ(Stats.UsedArea, 128u * 128u);
+    EXPECT_GE(Stats.Size, 0u);
+}
+
+TEST(DynamicTextureAtlas, CreateArray)
+{
     auto* const pEnv     = TestingEnvironment::GetInstance();
     auto* const pDevice  = pEnv->GetDevice();
     auto* const pContext = pEnv->GetDeviceContext();
@@ -72,6 +107,14 @@ TEST(DynamicTextureAtlas, Create)
 
         pTexture = pAtlas->GetTexture(pDevice, pContext);
         EXPECT_NE(pTexture, nullptr);
+
+        DynamicTextureAtlasUsageStats Stats;
+        pAtlas->GetUsageStats(Stats);
+        EXPECT_EQ(Stats.AllocationCount, 1u);
+        EXPECT_EQ(Stats.TotalArea, CI.Desc.Width * CI.Desc.Height * 2u);
+        EXPECT_EQ(Stats.AllocatedArea, 128u * 128u);
+        EXPECT_EQ(Stats.UsedArea, 128u * 128u);
+        EXPECT_GE(Stats.Size, 0u);
     }
 
     CI.Desc.ArraySize = 2;
