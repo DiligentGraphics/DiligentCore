@@ -65,7 +65,9 @@ struct D3DTileMappingHelper
         d3dRegionSize.Height   = 0;
         d3dRegionSize.Depth    = 0;
 
-        AddBindRange(d3dCoord, d3dRegionSize, BindRange.pMemory, MemOffsetInBytes, BindRange.MemorySize);
+        VERIFY(d3dRegionSize.NumTiles > 0, "NumTiles must not be zero");
+
+        AddBindRange(d3dCoord, d3dRegionSize, BindRange.pMemory, MemOffsetInBytes, d3dRegionSize.NumTiles);
     }
 
     void AddBufferBindRange(const SparseBufferMemoryBindRange& BindRange)
@@ -101,6 +103,10 @@ struct D3DTileMappingHelper
             d3dRegionSize.Width    = NumTiles.x;
             d3dRegionSize.Height   = StaticCast<UINT16>(NumTiles.y);
             d3dRegionSize.Depth    = StaticCast<UINT16>(NumTiles.z);
+
+            VERIFY((BindRange.MemorySize == 0 ||
+                    d3dRegionSize.NumTiles == StaticCast<UINT>(BindRange.MemorySize / D3D_TILED_RESOURCE_TILE_SIZE_IN_BYTES)),
+                   "MemorySize must be zero or equal to NumTiles * BlockSize");
         }
         else
         {
@@ -114,11 +120,11 @@ struct D3DTileMappingHelper
             d3dRegionSize.Width    = 0;
             d3dRegionSize.Height   = 0;
             d3dRegionSize.Depth    = 0;
-
-            VERIFY(d3dRegionSize.NumTiles > 0, "NumTiles must not be zero");
         }
 
-        AddBindRange(d3dCoord, d3dRegionSize, BindRange.pMemory, MemOffsetInBytes, BindRange.MemorySize);
+        VERIFY(d3dRegionSize.NumTiles > 0, "NumTiles must not be zero");
+
+        AddBindRange(d3dCoord, d3dRegionSize, BindRange.pMemory, MemOffsetInBytes, d3dRegionSize.NumTiles);
     }
 
     void AddTextureBindRange(const SparseTextureMemoryBindRange& BindRange,
@@ -139,7 +145,7 @@ private:
                       const D3D_TILE_REGION_SIZE_TYPE&          d3dRegionSize,
                       const IDeviceMemory*                      pMemory,
                       Uint64                                    MemOffsetInBytes,
-                      Uint64                                    MemSizeInBytes)
+                      Uint32                                    RangeTileCount)
     {
         Coordinates.emplace_back(d3dCoords);
         RegionSizes.emplace_back(d3dRegionSize);
@@ -147,9 +153,7 @@ private:
         // If pRangeFlags[i] is D3D12_TILE_RANGE_FLAG_NONE, that range defines sequential tiles in the heap,
         // with the number of tiles being pRangeTileCounts[i] and the starting location pHeapRangeStartOffsets[i]
         const auto d3dRangeFlags = pMemory != nullptr ? D3D_TILE_RANGE_FLAG_NONE : D3D_TILE_RANGE_FLAG_NULL;
-
-        const auto StartTile      = StaticCast<UINT>(MemOffsetInBytes / D3D_TILED_RESOURCE_TILE_SIZE_IN_BYTES);
-        const auto RangeTileCount = StaticCast<UINT>(MemSizeInBytes / D3D_TILED_RESOURCE_TILE_SIZE_IN_BYTES);
+        const auto StartTile     = StaticCast<UINT>(MemOffsetInBytes / D3D_TILED_RESOURCE_TILE_SIZE_IN_BYTES);
 
         VERIFY(RangeTileCount > 0, "Tile count must not be zero");
 
