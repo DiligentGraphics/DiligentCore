@@ -830,7 +830,7 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
                     }
                     if (d3d12Features.ResourceHeapTier >= D3D12_RESOURCE_HEAP_TIER_2)
                     {
-                        SparseMem.CapFlags |= SPARSE_MEMORY_CAP_FLAG_SHARING_BETWEEN_BUFFER_AND_TEXTURE;
+                        SparseMem.CapFlags |= SPARSE_MEMORY_CAP_FLAG_MIXED_RESOURCE_TYPE_SUPPORT;
                     }
 
                     // Some features are not correctly working in software renderer.

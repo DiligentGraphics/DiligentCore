@@ -1256,6 +1256,10 @@ TEST_P(SparseMemoryTest, SparseTexture)
     {
         GTEST_SKIP() << "Sparse texture 2D is not supported by this device";
     }
+    if ((SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_MIXED_RESOURCE_TYPE_SUPPORT) == 0)
+    {
+        GTEST_SKIP() << "This device does not support texture RTVs and SRVs in one memory object";
+    }
     if (TestMode_IsTexArray(TestId) && (SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_TEXTURE_2D_ARRAY_MIP_TAIL) == 0)
     {
         GTEST_SKIP() << "Sparse texture 2D array with mipmap tail is not supported by this device";
@@ -1428,6 +1432,10 @@ TEST_P(SparseMemoryTest, SparseResidencyTexture)
     if ((SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_TEXTURE_2D) == 0)
     {
         GTEST_SKIP() << "Sparse texture 2D is not supported by this device";
+    }
+    if ((SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_MIXED_RESOURCE_TYPE_SUPPORT) == 0)
+    {
+        GTEST_SKIP() << "This device does not support texture RTVs and SRVs in one memory object";
     }
     if ((SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_SHADER_RESOURCE_RESIDENCY) == 0)
     {
@@ -1616,6 +1624,10 @@ TEST_P(SparseMemoryTest, SparseResidencyAliasedTexture)
     if ((SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_TEXTURE_2D) == 0)
     {
         GTEST_SKIP() << "Sparse texture 2D is not supported by this device";
+    }
+    if ((SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_MIXED_RESOURCE_TYPE_SUPPORT) == 0)
+    {
+        GTEST_SKIP() << "This device does not support texture RTVs and SRVs in one memory object";
     }
     if ((SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_ALIASED) == 0)
     {

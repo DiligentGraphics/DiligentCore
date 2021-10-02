@@ -51,9 +51,6 @@ D3D12_HEAP_FLAGS GetD3D12HeapFlags(ID3D12Device*   pd3d12Device,
     AllowMSAA = false;
     UseNVApi  = false;
 
-    if (NumResources == 0)
-        return D3D12_HEAP_FLAG_NONE;
-
     // NB: D3D12_RESOURCE_HEAP_TIER_1 hardware requires exactly one of the
     //     flags below left unset when creating a heap.
     constexpr auto D3D12_HEAP_FLAG_DENY_ALL =
@@ -66,13 +63,24 @@ D3D12_HEAP_FLAGS GetD3D12HeapFlags(ID3D12Device*   pd3d12Device,
     D3D12_FEATURE_DATA_D3D12_OPTIONS d3d12Features{};
     if (SUCCEEDED(pd3d12Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &d3d12Features, sizeof(d3d12Features))))
     {
-        if (d3d12Features.ResourceHeapTier >= D3D12_RESOURCE_HEAP_TIER_2)
+        if (d3d12Features.ResourceHeapTier == D3D12_RESOURCE_HEAP_TIER_1)
+        {
+            if (NumResources == 0)
+            {
+                LOG_ERROR_AND_THROW("D3D12_RESOURCE_HEAP_TIER_1 hardware requires that at least one comptaible resource is provided. "
+                                    "See SPARSE_MEMORY_CAP_FLAG_MIXED_RESOURCE_TYPE_SUPPORT capability.");
+            }
+        }
+        else if (d3d12Features.ResourceHeapTier >= D3D12_RESOURCE_HEAP_TIER_2)
         {
             // D3D12_RESOURCE_HEAP_TIER_2 hardware allows any combination of resources
             // to be placed in the heap
             HeapFlags = D3D12_HEAP_FLAG_NONE;
         }
     }
+
+    if (NumResources == 0)
+        return HeapFlags;
 
     Uint32 UsingNVApiCount    = 0;
     Uint32 NotUsingNVApiCount = 0;

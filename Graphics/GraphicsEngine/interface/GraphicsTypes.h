@@ -2651,13 +2651,23 @@ DILIGENT_TYPED_ENUM(SPARSE_MEMORY_CAP_FLAGS, Uint32)
     /// Read or write from unbound memory must not cause device removal.
     /// Note that if SPARSE_MEMORY_CAP_FLAG_NON_RESIDENT_STRICT capability is not present,
     /// the result is still undefined even when this capability is enabled.
-    SPARSE_MEMORY_CAP_FLAG_NON_RESIDENT_SAFE       = 1u << 16,
+    SPARSE_MEMORY_CAP_FLAG_NON_RESIDENT_SAFE         = 1u << 16,
 
-    /// Indicates that single device memory object can be used to bind memory for buffers and textures.
-    /// If this capability is not present, separate device memory object must be created for buffers and
-    /// textures.
-    /// \note  Sharing the same memory block between buffers and textures is never allowed.
-    SPARSE_MEMORY_CAP_FLAG_SHARING_BETWEEN_BUFFER_AND_TEXTURE = 1u << 17,
+    /// Indicates that single device memory object can be used to bind memory for different resource types.
+
+    /// \remarks  This capability is always enabled in Vulkan when sparse memory is available.
+    ///
+    ///           In Direct3D12, this capability is enabled on D3D12_RESOURCE_HEAP_TIER_2 hardware
+    ///           and above. If this capability is not set, the device is D3D12_RESOURCE_HEAP_TIER_1 hardware,
+    ///           which requires that one memory object is only used to allocate resources from one of the
+    ///           following categories:
+    ///           - Buffers
+    ///           - Non-render target & non-depth stencil textures
+    ///           - Render target or depth stencil textures
+    ///           The engine automatically selects the required category based on the list of compatible resources.
+    ///
+    ///           Note that sharing the same memory block between buffers and textures is never allowed.
+    SPARSE_MEMORY_CAP_FLAG_MIXED_RESOURCE_TYPE_SUPPORT = 1u << 17,
 };
 DEFINE_FLAG_ENUM_OPERATORS(SPARSE_MEMORY_CAP_FLAGS)
 
