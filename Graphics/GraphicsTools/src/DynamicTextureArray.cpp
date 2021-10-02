@@ -127,7 +127,7 @@ void DynamicTextureArray::CreateSparseTexture(IRenderDevice* pDevice)
     Uint64 NumBlocksInSlice = 0;
     for (Uint32 Mip = 0; Mip < NumNormalMips; ++Mip)
     {
-        const auto NumTilesInMip = GetNumSparseTilesInMipLevel(m_Desc, TexSparseProps, Mip);
+        const auto NumTilesInMip = GetNumSparseTilesInMipLevel(m_Desc, TexSparseProps.TileSize, Mip);
         NumBlocksInSlice += Uint64{NumTilesInMip.x} * Uint64{NumTilesInMip.y} * Uint64{NumTilesInMip.z};
     }
 
@@ -232,7 +232,7 @@ void DynamicTextureArray::ResizeSparseTexture(IDeviceContext* pContext)
 
                 if (Slice >= m_Desc.ArraySize)
                 {
-                    const auto NumTilesInMip = GetNumSparseTilesInBox(range_it->Region, TexSparseProps);
+                    const auto NumTilesInMip = GetNumSparseTilesInBox(range_it->Region, TexSparseProps.TileSize);
                     range_it->pMemory        = m_pMemory;
                     range_it->MemoryOffset   = CurrMemOffset;
                     range_it->MemorySize     = Uint64{NumTilesInMip.x} * NumTilesInMip.y * NumTilesInMip.z * TexSparseProps.BlockSize;

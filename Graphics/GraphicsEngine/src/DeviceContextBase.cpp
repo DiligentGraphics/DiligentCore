@@ -1183,7 +1183,7 @@ bool VerifyBindSparseResourceMemoryAttribs(const IRenderDevice* pDevice, const B
             {
                 if (Range.MemorySize != 0 && Range.MipLevel < TexSparseProps.FirstMipInTail)
                 {
-                    const uint3 TilesInBox = GetNumSparseTilesInBox(Region, TexSparseProps);
+                    const uint3 TilesInBox = GetNumSparseTilesInBox(Region, TexSparseProps.TileSize);
                     const auto  NumBlocks  = TilesInBox.x * TilesInBox.y * TilesInBox.z;
                     CHECK_BIND_SPARSE_ATTRIBS(NumBlocks * TexSparseProps.BlockSize == Range.MemorySize,
                                               "pTextureBinds[", i, "].pRanges[", r, "].MemorySize (", Range.MemorySize, ") does not match the sparse memory blocks count (",

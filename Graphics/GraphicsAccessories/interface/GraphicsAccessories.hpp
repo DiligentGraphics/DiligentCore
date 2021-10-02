@@ -686,24 +686,24 @@ String GetPipelineShadingRateFlagsString(PIPELINE_SHADING_RATE_FLAGS Flags);
 SparseTextureProperties GetStandardSparseTextureProperties(const TextureDesc& TexDesc);
 
 /// Returns the number of sparse memory tiles in the given box region
-inline uint3 GetNumSparseTilesInBox(const Box& Region, const SparseTextureProperties& Props)
+inline uint3 GetNumSparseTilesInBox(const Box& Region, const Uint32 TileSize[3])
 {
     return uint3 // clang-format off
         {
-            (Region.Width()  + Props.TileSize[0] - 1) / Props.TileSize[0],
-            (Region.Height() + Props.TileSize[1] - 1) / Props.TileSize[1],
-            (Region.Depth()  + Props.TileSize[2] - 1) / Props.TileSize[2]
+            (Region.Width()  + TileSize[0] - 1) / TileSize[0],
+            (Region.Height() + TileSize[1] - 1) / TileSize[1],
+            (Region.Depth()  + TileSize[2] - 1) / TileSize[2]
         }; // clang-format on
 }
 
 /// Returns the number of sparse memory tiles in the given texture mip level
-inline uint3 GetNumSparseTilesInMipLevel(const TextureDesc&             Desc,
-                                         const SparseTextureProperties& Props,
-                                         Uint32                         MipLevel)
+inline uint3 GetNumSparseTilesInMipLevel(const TextureDesc& Desc,
+                                         const Uint32       TileSize[3],
+                                         Uint32             MipLevel)
 {
     // Texture dimensions may not be multiples of the tile size
     const auto MipProps = GetMipLevelProperties(Desc, MipLevel);
-    return GetNumSparseTilesInBox(Box{0, MipProps.StorageWidth, 0, MipProps.StorageHeight, 0, MipProps.Depth}, Props);
+    return GetNumSparseTilesInBox(Box{0, MipProps.StorageWidth, 0, MipProps.StorageHeight, 0, MipProps.Depth}, TileSize);
 }
 
 } // namespace Diligent

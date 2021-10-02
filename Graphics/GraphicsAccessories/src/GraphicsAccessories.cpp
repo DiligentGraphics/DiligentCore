@@ -1919,6 +1919,8 @@ SparseTextureProperties GetStandardSparseTextureProperties(const TextureDesc& Te
     VERIFY_EXPR(IsPowerOfTwo(TexelSize));
     VERIFY_EXPR(TexelSize >= 1 && TexelSize <= 16);
     VERIFY_EXPR(TexDesc.Is2D() || TexDesc.Is3D());
+    VERIFY(TexDesc.MipLevels > 0, "Number of mipmap calculation is not supported");
+    VERIFY(TexDesc.SampleCount == 1 || TexDesc.MipLevels == 1, "Multisampled textures must have 1 mip level");
 
     SparseTextureProperties Props;
 
@@ -1933,9 +1935,15 @@ SparseTextureProperties GetStandardSparseTextureProperties(const TextureDesc& Te
         //  |    32-Bit   |   32 x 32 x 16  |
         //  |    64-Bit   |   32 x 16 x 16  |
         //  |   128-Bit   |   16 x 16 x 16  |
-        Props.TileSize[0] = TexelSize >= 16 ? 16 : (TexelSize > 1 ? 32 : 64);
-        Props.TileSize[1] = TexelSize >= 8 ? 16 : 32;
-        Props.TileSize[2] = TexelSize >= 4 ? 16 : 32;
+        Props.TileSize[0] = 64;
+        Props.TileSize[1] = 32;
+        Props.TileSize[2] = 32;
+
+        constexpr size_t Remap[] = {0, 2, 1};
+        for (Uint32 i = 0; (1u << i) < TexelSize; ++i)
+        {
+            Props.TileSize[Remap[i % 3]] /= 2;
+        }
     }
     else if (TexDesc.SampleCount > 1)
     {
@@ -1949,12 +1957,14 @@ SparseTextureProperties GetStandardSparseTextureProperties(const TextureDesc& Te
         //  |    64-Bit   |    64 x  64 x 1  |    64 x  32 x 1  |   32 x  32 x 1   |    32 x 16 x 1    |
         //  |   128-Bit   |    32 x  64 x 1  |    32 x  32 x 1  |   16 x  32 x 1   |    16 x 16 x 1    |
         VERIFY_EXPR(IsPowerOfTwo(TexDesc.SampleCount));
-        Props.TileSize[0] = 128;
-        Props.TileSize[1] = 256;
+        Props.TileSize[0] = 128 >> ((TexDesc.SampleCount & (8 | 16)) ? 1 : 0);
+        Props.TileSize[1] = 256 >> (((TexDesc.SampleCount & (4 | 8)) ? 1 : 0) + ((TexDesc.SampleCount & 16) ? 1 : 0));
         Props.TileSize[2] = 1;
-        for (Uint32 i = 0, BPB = TexelSize * TexDesc.SampleCount / 2; (1u << i) < BPB; ++i)
+
+        constexpr size_t Remap[] = {1, 0};
+        for (Uint32 i = 0; (1u << i) < TexelSize; ++i)
         {
-            Props.TileSize[1 - (i & 1)] /= 2;
+            Props.TileSize[Remap[i & 1]] /= 2;
         }
     }
     else
@@ -1971,9 +1981,10 @@ SparseTextureProperties GetStandardSparseTextureProperties(const TextureDesc& Te
             //  |    32-Bit   |  128 x 128 x 1  |
             //  |    64-Bit   |  128 x  64 x 1  |
             //  |   128-Bit   |   64 x  64 x 1  |
+            constexpr size_t Remap[] = {1, 0};
             for (Uint32 i = 0; (1u << i) < TexelSize; ++i)
             {
-                Props.TileSize[1 - (i & 1)] /= 2;
+                Props.TileSize[Remap[i & 1]] /= 2;
             }
         }
         else
@@ -1999,13 +2010,17 @@ SparseTextureProperties GetStandardSparseTextureProperties(const TextureDesc& Te
         const auto MipWidth  = MipProps.StorageWidth;
         const auto MipHeight = MipProps.StorageHeight;
         const auto MipDepth  = MipProps.Depth;
-        const auto IsTail =
-            MipWidth < Props.TileSize[0] &&
-            MipHeight < Props.TileSize[1] &&
-            (!TexDesc.Is3D() || MipDepth < Props.TileSize[2]);
 
-        if (IsTail)
+        // When the size of a texture mipmap level is at least one standard tile shape for its
+        // format, the mipmap level is guaranteed to be nonpacked.
+        const auto IsUnpacked =
+            MipWidth >= Props.TileSize[0] &&
+            MipHeight >= Props.TileSize[1] &&
+            MipDepth >= Props.TileSize[2];
+
+        if (!IsUnpacked)
         {
+            // Mip tail
             if (Props.FirstMipInTail == ~0u)
             {
                 Props.FirstMipInTail = Mip;
@@ -2015,16 +2030,22 @@ SparseTextureProperties GetStandardSparseTextureProperties(const TextureDesc& Te
         }
         else
         {
-            const auto NumTilesInMip = GetNumSparseTilesInBox(Box{0, MipWidth, 0, MipHeight, 0, MipDepth}, Props);
+            const auto NumTilesInMip = GetNumSparseTilesInBox(Box{0, MipWidth, 0, MipHeight, 0, MipDepth}, Props.TileSize);
             SliceSize += Uint64{NumTilesInMip.x} * NumTilesInMip.y * NumTilesInMip.z * SparseBlockSize;
         }
     }
 
+    Props.FirstMipInTail   = std::min(Props.FirstMipInTail, TexDesc.MipLevels);
     Props.MipTailSize      = AlignUp(Props.MipTailSize, SparseBlockSize);
-    Props.MipTailStride    = SliceSize + Props.MipTailSize;
-    Props.AddressSpaceSize = Props.MipTailStride * TexDesc.GetArraySize();
+    SliceSize              = SliceSize + Props.MipTailSize;
+    Props.MipTailStride    = TexDesc.IsArray() ? SliceSize : 0;
+    Props.AddressSpaceSize = SliceSize * TexDesc.GetArraySize();
     Props.BlockSize        = SparseBlockSize;
     Props.Flags            = SPARSE_TEXTURE_FLAG_NONE;
+
+    VERIFY_EXPR(Props.MipTailSize % SparseBlockSize == 0);
+    VERIFY_EXPR(Props.MipTailStride % SparseBlockSize == 0);
+    VERIFY_EXPR(Props.AddressSpaceSize % SparseBlockSize == 0);
 
     return Props;
 }
