@@ -974,6 +974,37 @@ bool CheckBox2DBox2DOverlap(const Vector2<T>& Box0Min,
 }
 
 
+/// Checks if two 1D-line sections overlap.
+
+/// \tparam [in] AllowTouch - Whether to consider two sections overlapping if
+///                           they only touch at their end points.
+/// \tparam [in] T          - Component type.
+///
+/// \param [in]  Min0 - Min end point of the first section
+/// \param [in]  Max0 - Max end point of the first section
+/// \param [in]  Min1 - Min end point of the second section
+/// \param [in]  Max1 - Max end point of the second section
+///
+/// \return     true if the sections overlap, and false otherwise.
+template <bool AllowTouch, typename T>
+bool CheckLineSectionOverlap(T Min0, T Max0, T Min1, T Max1)
+{
+    VERIFY_EXPR(Min0 <= Max0 && Min1 <= Max1);
+    //     [------]         [------]
+    //   Min0    Max0    Min1     Max1
+    //
+    //     [------]         [------]
+    //   Min1    Max1    Min0     Max0
+    if (AllowTouch)
+    {
+        return !(Min0 > Max1 || Min1 > Max0);
+    }
+    else
+    {
+        return !(Min0 >= Max1 || Min1 >= Max0);
+    }
+}
+
 } // namespace Diligent
 
 namespace std

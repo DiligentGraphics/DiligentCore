@@ -2302,4 +2302,35 @@ TEST(Common_AdvancedMath, CheckBox2DBox2DOverlap)
     // clang-format on
 }
 
+TEST(Common_AdvancedMath, CheckLineSectionOverlap)
+{
+    EXPECT_FALSE(CheckLineSectionOverlap<true>(0, 10, 12, 22));
+    EXPECT_FALSE(CheckLineSectionOverlap<false>(0, 10, 12, 22));
+    EXPECT_FALSE(CheckLineSectionOverlap<true>(0, 10, -10, -2));
+    EXPECT_FALSE(CheckLineSectionOverlap<false>(0, 10, -10, -2));
+
+    EXPECT_TRUE(CheckLineSectionOverlap<true>(0, 10, 1, 2));
+    EXPECT_TRUE(CheckLineSectionOverlap<true>(1, 2, 0, 10));
+    EXPECT_TRUE(CheckLineSectionOverlap<true>(0, 10, 8, 10));
+    EXPECT_TRUE(CheckLineSectionOverlap<true>(8, 10, 0, 10));
+    EXPECT_TRUE(CheckLineSectionOverlap<true>(0, 10, 0, 2));
+    EXPECT_TRUE(CheckLineSectionOverlap<true>(0, 2, 0, 10));
+    EXPECT_TRUE(CheckLineSectionOverlap<true>(0, 10, 5, 15));
+    EXPECT_TRUE(CheckLineSectionOverlap<true>(5, 15, 0, 10));
+
+    EXPECT_TRUE(CheckLineSectionOverlap<false>(0, 10, 1, 2));
+    EXPECT_TRUE(CheckLineSectionOverlap<false>(1, 2, 0, 10));
+    EXPECT_TRUE(CheckLineSectionOverlap<false>(0, 10, 8, 10));
+    EXPECT_TRUE(CheckLineSectionOverlap<false>(8, 10, 0, 10));
+    EXPECT_TRUE(CheckLineSectionOverlap<false>(0, 10, 0, 2));
+    EXPECT_TRUE(CheckLineSectionOverlap<false>(0, 2, 0, 10));
+    EXPECT_TRUE(CheckLineSectionOverlap<false>(0, 10, 5, 15));
+    EXPECT_TRUE(CheckLineSectionOverlap<false>(5, 15, 0, 10));
+
+    EXPECT_TRUE(CheckLineSectionOverlap<true>(0, 10, 10, 20));
+    EXPECT_TRUE(CheckLineSectionOverlap<true>(10, 20, 0, 10));
+    EXPECT_FALSE(CheckLineSectionOverlap<false>(0, 10, 10, 20));
+    EXPECT_FALSE(CheckLineSectionOverlap<false>(10, 20, 0, 10));
+}
+
 } // namespace
