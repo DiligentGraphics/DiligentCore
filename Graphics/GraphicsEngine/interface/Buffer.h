@@ -217,7 +217,7 @@ typedef struct BufferData BufferData;
 struct SparseBufferProperties
 {
     /// The size of the buffer's virtual address space.
-    Uint64  MemorySize  DEFAULT_INITIALIZER(0);
+    Uint64  AddressSpaceSize  DEFAULT_INITIALIZER(0);
 
     /// The size of the sparse memory block.
     ///

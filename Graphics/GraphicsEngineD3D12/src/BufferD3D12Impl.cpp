@@ -452,7 +452,7 @@ D3D12_RESOURCE_STATES BufferD3D12Impl::GetD3D12ResourceState() const
 SparseBufferProperties BufferD3D12Impl::GetSparseProperties() const
 {
     DEV_CHECK_ERR(m_Desc.Usage == USAGE_SPARSE,
-                  "IBuffer::GetSparseProperties() must be used for sparse buffer");
+                  "IBuffer::GetSparseProperties() must only be used for sparse buffer");
 
     auto* pd3d12Device = m_pDevice->GetD3D12Device();
 
@@ -470,8 +470,8 @@ SparseBufferProperties BufferD3D12Impl::GetSparseProperties() const
            "Expected to be a standard block size");
 
     SparseBufferProperties Props;
-    Props.MemorySize = Uint64{NumTilesForEntireResource} * StandardTileShapeForNonPackedMips.WidthInTexels;
-    Props.BlockSize  = StandardTileShapeForNonPackedMips.WidthInTexels;
+    Props.AddressSpaceSize = Uint64{NumTilesForEntireResource} * StandardTileShapeForNonPackedMips.WidthInTexels;
+    Props.BlockSize        = StandardTileShapeForNonPackedMips.WidthInTexels;
     return Props;
 }
 

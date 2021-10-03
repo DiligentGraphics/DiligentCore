@@ -58,7 +58,7 @@ TextureBaseD3D11::TextureBaseD3D11(IReferenceCounters*        pRefCounters,
     {
         constexpr auto AllowedBindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS | BIND_RENDER_TARGET | BIND_DEPTH_STENCIL;
         if ((m_Desc.BindFlags & ~AllowedBindFlags) != 0)
-            LOG_ERROR_AND_THROW("Texture '", m_Desc.Name, "': the following bind flags are not allowed for a sparse texture in Direct3D11: ", GetBindFlagsString(m_Desc.BindFlags & ~AllowedBindFlags, ", "), '.');
+            LOG_ERROR_AND_THROW("Texture '", m_Desc.Name, "': the following bind flags are not allowed for sparse textures in Direct3D11: ", GetBindFlagsString(m_Desc.BindFlags & ~AllowedBindFlags, ", "), '.');
     }
 
     SetState(RESOURCE_STATE_UNDEFINED);
@@ -190,8 +190,8 @@ void TextureBaseD3D11::InitSparseProperties()
         auto* pd3d11Device2 = m_pDevice->GetD3D11Device2();
 
         UINT                  NumTilesForEntireResource = 0;
-        D3D11_PACKED_MIP_DESC PackedMipDesc;
-        D3D11_TILE_SHAPE      StandardTileShapeForNonPackedMips;
+        D3D11_PACKED_MIP_DESC PackedMipDesc{};
+        D3D11_TILE_SHAPE      StandardTileShapeForNonPackedMips{};
         UINT                  NumSubresourceTilings = 0;
         pd3d11Device2->GetResourceTiling(m_pd3d11Texture,
                                          &NumTilesForEntireResource,
@@ -201,16 +201,16 @@ void TextureBaseD3D11::InitSparseProperties()
                                          0,
                                          nullptr);
 
-        auto& Props          = *m_pSparseProps;
-        Props.MemorySize     = Uint64{NumTilesForEntireResource} * D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
-        Props.BlockSize      = D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
-        Props.MipTailOffset  = Uint64{PackedMipDesc.StartTileIndexInOverallResource} * D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
-        Props.MipTailSize    = Uint64{PackedMipDesc.NumTilesForPackedMips} * D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
-        Props.FirstMipInTail = PackedMipDesc.NumStandardMips;
-        Props.TileSize[0]    = StandardTileShapeForNonPackedMips.WidthInTexels;
-        Props.TileSize[1]    = StandardTileShapeForNonPackedMips.HeightInTexels;
-        Props.TileSize[2]    = StandardTileShapeForNonPackedMips.DepthInTexels;
-        Props.Flags          = SPARSE_TEXTURE_FLAG_NONE;
+        auto& Props{*m_pSparseProps};
+        Props.AddressSpaceSize = Uint64{NumTilesForEntireResource} * D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
+        Props.BlockSize        = D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
+        Props.MipTailOffset    = Uint64{PackedMipDesc.StartTileIndexInOverallResource} * D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
+        Props.MipTailSize      = Uint64{PackedMipDesc.NumTilesForPackedMips} * D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
+        Props.FirstMipInTail   = PackedMipDesc.NumStandardMips;
+        Props.TileSize[0]      = StandardTileShapeForNonPackedMips.WidthInTexels;
+        Props.TileSize[1]      = StandardTileShapeForNonPackedMips.HeightInTexels;
+        Props.TileSize[2]      = StandardTileShapeForNonPackedMips.DepthInTexels;
+        Props.Flags            = SPARSE_TEXTURE_FLAG_NONE;
 
         // The number of overall tiles, packed or not, for a given array slice is simply the total number of tiles for the resource divided by the resource's array size
         Props.MipTailStride = m_Desc.IsArray() ? (NumTilesForEntireResource / m_Desc.ArraySize) * D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES : 0;

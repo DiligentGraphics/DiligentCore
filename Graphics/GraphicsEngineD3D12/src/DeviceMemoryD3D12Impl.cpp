@@ -94,7 +94,7 @@ D3D12_HEAP_FLAGS GetD3D12HeapFlags(ID3D12Device*   pd3d12Device,
 
         if (RefCntAutoPtr<ITextureD3D12> pTexture{pResource, IID_TextureD3D12})
         {
-            auto*       pTexD3D12Impl = pTexture.RawPtr<TextureD3D12Impl>();
+            const auto* pTexD3D12Impl = pTexture.RawPtr<const TextureD3D12Impl>();
             const auto& TexDesc       = pTexD3D12Impl->GetDesc();
 
             if (TexDesc.Usage != USAGE_SPARSE)
@@ -119,7 +119,7 @@ D3D12_HEAP_FLAGS GetD3D12HeapFlags(ID3D12Device*   pd3d12Device,
         }
         else if (RefCntAutoPtr<IBufferD3D12> pBuffer{pResource, IID_BufferD3D12})
         {
-            const auto& BuffDesc = pBuffer.RawPtr<BufferD3D12Impl>()->GetDesc();
+            const auto& BuffDesc = pBuffer.RawPtr<const BufferD3D12Impl>()->GetDesc();
 
             if (BuffDesc.Usage != USAGE_SPARSE)
                 LOG_ERROR_AND_THROW("Resource must be created with USAGE_SPARSE");
@@ -141,7 +141,8 @@ D3D12_HEAP_FLAGS GetD3D12HeapFlags(ID3D12Device*   pd3d12Device,
         {
             LOG_ERROR_AND_THROW("On D3D12_RESOURCE_HEAP_TIER_1 hadrware, only single resource usage for the heap is allowed: "
                                 "buffers, RT_DS_TEXTURES (BIND_RENDER_TARGET, BIND_DEPTH_STENCIL), or NON_RT_DS_TEXTURES "
-                                "(BIND_SHADER_RESOURCE, BIND_UNORDERED_ACCESS, BIND_INPUT_ATTACHMENT)");
+                                "(BIND_SHADER_RESOURCE, BIND_UNORDERED_ACCESS, BIND_INPUT_ATTACHMENT). "
+                                "See SPARSE_RESOURCE_CAP_FLAG_MIXED_RESOURCE_TYPE_SUPPORT capability.");
         }
     }
 
@@ -263,14 +264,14 @@ DeviceMemoryRangeD3D12 DeviceMemoryD3D12Impl::GetRange(Uint64 Offset, Uint64 Siz
     DeviceMemoryRangeD3D12 Range{};
     if (PageIdx >= m_Pages.size())
     {
-        LOG_ERROR_MESSAGE("DeviceMemoryD3D12Impl::GetRange(): Offset is out of bounds of allocated space");
+        DEV_ERROR("DeviceMemoryD3D12Impl::GetRange(): Offset is out of bounds of allocated space");
         return Range;
     }
 
     const auto OffsetInPage = Offset % m_Desc.PageSize;
     if (OffsetInPage + Size > m_Desc.PageSize)
     {
-        LOG_ERROR_MESSAGE("DeviceMemoryD3D12Impl::GetRange(): Offset and Size must be inside a single page");
+        DEV_ERROR("DeviceMemoryD3D12Impl::GetRange(): Offset and Size must be inside a single page");
         return Range;
     }
 

@@ -323,8 +323,8 @@ SparseBufferProperties BufferD3D11Impl::GetSparseProperties() const
            "Expected to be a standard block size");
 
     SparseBufferProperties Props;
-    Props.MemorySize = NumTilesForEntireResource * StandardTileShapeForNonPackedMips.WidthInTexels;
-    Props.BlockSize  = StandardTileShapeForNonPackedMips.WidthInTexels;
+    Props.AddressSpaceSize = Uint64{NumTilesForEntireResource} * StandardTileShapeForNonPackedMips.WidthInTexels;
+    Props.BlockSize        = StandardTileShapeForNonPackedMips.WidthInTexels;
     return Props;
 }
 

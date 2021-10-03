@@ -2020,11 +2020,11 @@ SparseTextureProperties GetStandardSparseTextureProperties(const TextureDesc& Te
         }
     }
 
-    Props.MipTailSize   = AlignUp(Props.MipTailSize, SparseBlockSize);
-    Props.MipTailStride = SliceSize + Props.MipTailSize;
-    Props.MemorySize    = Props.MipTailStride * TexDesc.GetArraySize();
-    Props.BlockSize     = SparseBlockSize;
-    Props.Flags         = SPARSE_TEXTURE_FLAG_NONE;
+    Props.MipTailSize      = AlignUp(Props.MipTailSize, SparseBlockSize);
+    Props.MipTailStride    = SliceSize + Props.MipTailSize;
+    Props.AddressSpaceSize = Props.MipTailStride * TexDesc.GetArraySize();
+    Props.BlockSize        = SparseBlockSize;
+    Props.Flags            = SPARSE_TEXTURE_FLAG_NONE;
 
     return Props;
 }

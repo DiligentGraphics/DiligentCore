@@ -49,7 +49,7 @@ extern void CreateSparseTextureMtl(IRenderDevice*     pDevice,
 } // namespace Diligent
 #endif
 
-#include "InlineShaders/SparseMemoryTestHLSL.h"
+#include "InlineShaders/SparseResourcesTestHLSL.h"
 
 using namespace Diligent;
 using namespace Diligent::Testing;
@@ -168,7 +168,7 @@ protected:
                 ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
                 ShaderCI.EntryPoint      = "main";
                 ShaderCI.Desc.Name       = "Fill texture 2D PS";
-                ShaderCI.Source          = HLSL::SparseMemoryTest_VS.c_str();
+                ShaderCI.Source          = HLSL::SparseResTest_VS.c_str();
 
                 pDevice->CreateShader(ShaderCI, &pVS);
                 ASSERT_NE(pVS, nullptr);
@@ -696,7 +696,7 @@ protected:
             ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
             ShaderCI.EntryPoint      = "main";
             ShaderCI.Desc.Name       = "Sparse resource test - VS";
-            ShaderCI.Source          = HLSL::SparseMemoryTest_VS.c_str();
+            ShaderCI.Source          = HLSL::SparseResTest_VS.c_str();
 
             pDevice->CreateShader(ShaderCI, &pVS);
             if (pVS == nullptr)
@@ -833,15 +833,15 @@ void CheckSparseTextureProperties(ITexture* pTexture)
     const bool  IsStdBlock = (Props.Flags & SPARSE_TEXTURE_FLAG_NONSTANDARD_BLOCK_SIZE) == 0;
     const auto& SparseRes  = TestingEnvironment::GetInstance()->GetDevice()->GetAdapterInfo().SparseResources;
 
-    ASSERT_GT(Props.MemorySize, 0u);
+    ASSERT_GT(Props.AddressSpaceSize, 0u);
     ASSERT_GT(Props.BlockSize, 0u);
-    ASSERT_TRUE(Props.MemorySize % Props.BlockSize == 0);
+    ASSERT_TRUE(Props.AddressSpaceSize % Props.BlockSize == 0);
 
     if (IsStdBlock)
         ASSERT_EQ(Props.BlockSize, SparseRes.StandardBlockSize);
 
     ASSERT_LE(Props.FirstMipInTail, Desc.MipLevels);
-    ASSERT_LT(Props.MipTailOffset, Props.MemorySize);
+    ASSERT_LT(Props.MipTailOffset, Props.AddressSpaceSize);
     ASSERT_TRUE(Props.MipTailOffset % Props.BlockSize == 0);
 
     // Props.MipTailSize can be zero
@@ -849,11 +849,11 @@ void CheckSparseTextureProperties(ITexture* pTexture)
 
     if (Desc.Type == RESOURCE_DIM_TEX_3D || Desc.ArraySize == 1)
     {
-        ASSERT_GE(Props.MemorySize, Props.MipTailOffset + Props.MipTailSize);
+        ASSERT_GE(Props.AddressSpaceSize, Props.MipTailOffset + Props.MipTailSize);
     }
     else if (Props.MipTailStride != 0) // zero in Metal
     {
-        ASSERT_EQ(Props.MipTailStride * Desc.ArraySize, Props.MemorySize);
+        ASSERT_EQ(Props.MipTailStride * Desc.ArraySize, Props.AddressSpaceSize);
         ASSERT_GE(Props.MipTailStride, Props.MipTailOffset + Props.MipTailSize);
     }
 
@@ -1327,7 +1327,7 @@ TEST_P(SparseResourceTest, SparseTexture)
     const auto& TexDesc        = pTexture->GetDesc();
     const auto& TexSparseProps = pTexture->GetSparseProperties();
     CheckSparseTextureProperties(pTexture);
-    ASSERT_LE(TexSparseProps.MemorySize, pMemory->GetCapacity());
+    ASSERT_LE(TexSparseProps.AddressSpaceSize, pMemory->GetCapacity());
 
     auto pFence = CreateFence();
 
@@ -1515,7 +1515,7 @@ TEST_P(SparseResourceTest, SparseResidencyTexture)
     const auto& TexDesc        = pTexture->GetDesc();
     const auto& TexSparseProps = pTexture->GetSparseProperties();
     CheckSparseTextureProperties(pTexture);
-    ASSERT_LE(TexSparseProps.MemorySize, pMemory->GetCapacity());
+    ASSERT_LE(TexSparseProps.AddressSpaceSize, pMemory->GetCapacity());
 
     auto pFence = CreateFence();
 
@@ -1711,7 +1711,7 @@ TEST_P(SparseResourceTest, SparseResidencyAliasedTexture)
     const auto& TexDesc        = pTexture->GetDesc();
     const auto& TexSparseProps = pTexture->GetSparseProperties();
     CheckSparseTextureProperties(pTexture);
-    ASSERT_LE(TexSparseProps.MemorySize, pMemory->GetCapacity());
+    ASSERT_LE(TexSparseProps.AddressSpaceSize, pMemory->GetCapacity());
 
     auto pFence = CreateFence();
 
@@ -1891,7 +1891,7 @@ TEST_F(SparseResourceTest, SparseTexture3D)
     const auto& TexDesc        = pTexture->GetDesc();
     const auto& TexSparseProps = pTexture->GetSparseProperties();
     CheckSparseTextureProperties(pTexture);
-    ASSERT_LE(TexSparseProps.MemorySize, pMemory->GetCapacity());
+    ASSERT_LE(TexSparseProps.AddressSpaceSize, pMemory->GetCapacity());
 
     auto pFence = CreateFence();
 

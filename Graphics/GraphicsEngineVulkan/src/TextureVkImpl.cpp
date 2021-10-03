@@ -42,7 +42,7 @@ VkImageCreateInfo TextureDescToVkImageCreateInfo(const TextureDesc& Desc, const 
 {
     const auto  IsMemoryless         = (Desc.MiscFlags & MISC_TEXTURE_FLAG_MEMORYLESS) != 0;
     const auto& FmtAttribs           = GetTextureFormatAttribs(Desc.Format);
-    const bool  ImageView2DSupported = !Desc.Is3D() || pRenderDeviceVk->GetAdapterInfo().Texture.TextureView2DOn3DSupported;
+    const auto  ImageView2DSupported = !Desc.Is3D() || pRenderDeviceVk->GetAdapterInfo().Texture.TextureView2DOn3DSupported;
     const auto& ExtFeatures          = pRenderDeviceVk->GetLogicalDevice().GetEnabledExtFeatures();
 
     VkImageCreateInfo ImageCI = {};
@@ -810,8 +810,8 @@ void TextureVkImpl::InitSparseProperties()
         VERIFY_EXPR(Props.MipTailOffset + Props.MipTailSize <= Props.MipTailStride);
     }
 
-    Props.MemorySize = MemReq.size;
-    Props.BlockSize  = StaticCast<Uint32>(MemReq.alignment);
+    Props.AddressSpaceSize = MemReq.size;
+    Props.BlockSize        = StaticCast<Uint32>(MemReq.alignment);
 
 #ifdef DILIGENT_DEBUG
     const auto&  FmtAttribs    = GetTextureFormatAttribs(m_Desc.Format);

@@ -255,7 +255,7 @@ void ValidateTextureDesc(const TextureDesc& Desc, const IRenderDevice* pDevice) 
         const auto& SparseRes = AdapterInfo.SparseResources;
 
         if ((Desc.MiscFlags & MISC_TEXTURE_FLAG_SPARSE_ALIASING) != 0)
-            VERIFY_TEXTURE((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_ALIASED) != 0, "SPARSE_RESOURCE_FLAG_ALIASED flag requires SPARSE_RESOURCE_CAP_FLAG_ALIASED capability");
+            VERIFY_TEXTURE((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_ALIASED) != 0, "MISC_TEXTURE_FLAG_SPARSE_ALIASING flag requires SPARSE_RESOURCE_CAP_FLAG_ALIASED capability");
 
         static_assert(RESOURCE_DIM_NUM_DIMENSIONS == 9, "Please update the switch below to handle the new resource dimension type");
         switch (Desc.Type)
@@ -290,8 +290,11 @@ void ValidateTextureDesc(const TextureDesc& Desc, const IRenderDevice* pDevice) 
 
             case RESOURCE_DIM_TEX_1D:
             case RESOURCE_DIM_TEX_1D_ARRAY:
+                LOG_TEXTURE_ERROR_AND_THROW("Sparse 1D textures are not supported");
+                break;
+
             default:
-                LOG_TEXTURE_ERROR_AND_THROW("unsupported or unknown texture type is used with USAGE_SPARSE");
+                LOG_TEXTURE_ERROR_AND_THROW("unknown texture type");
         }
     }
     else

@@ -52,7 +52,7 @@ DILIGENT_BEGIN_INTERFACE(ITextureD3D11, ITexture)
 
     /// The method does *NOT* increment the reference counter of the returned object,
     /// so Release() must not be called.
-    VIRTUAL ID3D11Resource* METHOD(GetD3D11Texture)(THIS) PURE;
+    VIRTUAL ID3D11Resource* METHOD(GetD3D11Texture)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE
 

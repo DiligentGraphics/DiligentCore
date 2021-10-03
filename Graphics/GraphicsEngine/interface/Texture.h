@@ -366,26 +366,26 @@ typedef struct MappedTextureSubresource MappedTextureSubresource;
 struct SparseTextureProperties
 {
     /// The size of the texture's virtual address space.
-    Uint64  MemorySize      DEFAULT_INITIALIZER(0);
+    Uint64 AddressSpaceSize DEFAULT_INITIALIZER(0);
 
     /// Specifies where to bind the mip tail memory.
     /// Reserved for internal use.
-    Uint64  MipTailOffset   DEFAULT_INITIALIZER(0);
+    Uint64 MipTailOffset    DEFAULT_INITIALIZER(0);
 
     /// Specifies how to calculate the mip tail offset for 2D array texture.
     /// Reserved for internal use.
-    Uint64  MipTailStride   DEFAULT_INITIALIZER(0);
+    Uint64 MipTailStride    DEFAULT_INITIALIZER(0);
 
     /// Specifies the mip tail size in bytes.
     /// \note Single mip tail for a 2D array may exceed the 32-bit limit.
-    Uint64  MipTailSize     DEFAULT_INITIALIZER(0);
+    Uint64 MipTailSize      DEFAULT_INITIALIZER(0);
 
     /// The first mip level in the mip tail that is packed as a whole into one
     /// or multiple memory blocks.
-    Uint32  FirstMipInTail  DEFAULT_INITIALIZER(~0u);
+    Uint32 FirstMipInTail   DEFAULT_INITIALIZER(~0u);
 
     /// Specifies the dimension of a tile packed into a single memory block.
-    Uint32  TileSize[3]     DEFAULT_INITIALIZER({});
+    Uint32 TileSize[3]      DEFAULT_INITIALIZER({});
 
     /// Size of the sparse memory block, in bytes.
 
@@ -394,7 +394,7 @@ struct SparseTextureProperties
     ///
     ///          If the SPARSE_TEXTURE_FLAG_NONSTANDARD_BLOCK_SIZE flag is not set in the Flags member,
     ///          the block size is equal to SparseResourceProperties::StandardBlockSize.
-    Uint32  BlockSize DEFAULT_INITIALIZER(0);
+    Uint32 BlockSize DEFAULT_INITIALIZER(0);
 
     /// Flags that describe additional packing modes.
     SPARSE_TEXTURE_FLAGS Flags DEFAULT_INITIALIZER(SPARSE_TEXTURE_FLAG_NONE);

@@ -3785,7 +3785,7 @@ void DeviceContextVkImpl::BindSparseResourceMemory(const BindSparseResourceMemor
 
             auto& vkMemBind{vkMemoryBinds[MemoryBindCount++]};
             vkMemBind.resourceOffset = SrcRange.BufferOffset;
-            vkMemBind.size           = SrcRange.MemorySize; // MemRangeVk.Size may be zero
+            vkMemBind.size           = SrcRange.MemorySize; // MemRangeVk.Size may be zero when range is unbound
             vkMemBind.memory         = MemRangeVk.Handle;
             vkMemBind.memoryOffset   = MemRangeVk.Offset;
             vkMemBind.flags          = 0;
@@ -3852,7 +3852,7 @@ void DeviceContextVkImpl::BindSparseResourceMemory(const BindSparseResourceMemor
 
                 auto& vkMemBind{vkMemoryBinds[MemoryBindCount++]};
                 vkMemBind.resourceOffset = TexSparseProps.MipTailOffset + TexSparseProps.MipTailStride * SrcRange.ArraySlice + SrcRange.OffsetInMipTail;
-                vkMemBind.size           = SrcRange.MemorySize; // MemRangeVk.Size may be zero
+                vkMemBind.size           = SrcRange.MemorySize; // MemRangeVk.Size may be zero if tail is unbound
                 vkMemBind.memory         = MemRangeVk.Handle;
                 vkMemBind.memoryOffset   = MemRangeVk.Offset;
                 vkMemBind.flags          = 0;

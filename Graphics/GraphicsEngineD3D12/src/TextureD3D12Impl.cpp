@@ -702,16 +702,16 @@ void TextureD3D12Impl::InitSparseProperties()
                                         0,
                                         nullptr);
 
-        auto& Props          = *m_pSparseProps;
-        Props.MemorySize     = Uint64{NumTilesForEntireResource} * D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
-        Props.BlockSize      = D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
-        Props.MipTailOffset  = Uint64{PackedMipDesc.StartTileIndexInOverallResource} * D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
-        Props.MipTailSize    = Uint64{PackedMipDesc.NumTilesForPackedMips} * D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
-        Props.FirstMipInTail = PackedMipDesc.NumStandardMips;
-        Props.TileSize[0]    = StandardTileShapeForNonPackedMips.WidthInTexels;
-        Props.TileSize[1]    = StandardTileShapeForNonPackedMips.HeightInTexels;
-        Props.TileSize[2]    = StandardTileShapeForNonPackedMips.DepthInTexels;
-        Props.Flags          = SPARSE_TEXTURE_FLAG_NONE;
+        auto& Props{*m_pSparseProps};
+        Props.AddressSpaceSize = Uint64{NumTilesForEntireResource} * D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
+        Props.BlockSize        = D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
+        Props.MipTailOffset    = Uint64{PackedMipDesc.StartTileIndexInOverallResource} * D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
+        Props.MipTailSize      = Uint64{PackedMipDesc.NumTilesForPackedMips} * D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
+        Props.FirstMipInTail   = PackedMipDesc.NumStandardMips;
+        Props.TileSize[0]      = StandardTileShapeForNonPackedMips.WidthInTexels;
+        Props.TileSize[1]      = StandardTileShapeForNonPackedMips.HeightInTexels;
+        Props.TileSize[2]      = StandardTileShapeForNonPackedMips.DepthInTexels;
+        Props.Flags            = SPARSE_TEXTURE_FLAG_NONE;
 
         // The number of overall tiles, packed or not, for a given array slice is simply the total number of tiles for the resource divided by the resource's array size
         Props.MipTailStride = m_Desc.IsArray() ? (NumTilesForEntireResource / m_Desc.ArraySize) * D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES : 0;

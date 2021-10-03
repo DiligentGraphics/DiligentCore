@@ -52,7 +52,7 @@ DILIGENT_BEGIN_INTERFACE(IBufferD3D11, IBuffer)
 
     /// The method does *NOT* increment the reference counter of the returned object,
     /// so Release() must not be called.
-    VIRTUAL ID3D11Buffer* METHOD(GetD3D11Buffer)(THIS) PURE;
+    VIRTUAL ID3D11Buffer* METHOD(GetD3D11Buffer)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE
 

@@ -130,9 +130,9 @@ void ValidateBufferDesc(const BufferDesc& Desc, const IRenderDevice* pDevice) no
             VERIFY_BUFFER(Desc.Size <= SparseRes.ResourceSpaceSize, "sparse buffer size (", Desc.Size, ") must not exceed the ResourceSpaceSize (", SparseRes.ResourceSpaceSize, ")");
             VERIFY_BUFFER((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_BUFFER) != 0, "sparse buffer requires SPARSE_RESOURCE_CAP_FLAG_BUFFER capability");
             if ((Desc.MiscFlags & MISC_BUFFER_FLAG_SPARSE_ALIASING) != 0)
-                VERIFY_BUFFER(SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_ALIASED, "SPARSE_RESOURCE_FLAG_ALIASED flag requires SPARSE_RESOURCE_CAP_FLAG_ALIASED capability");
+                VERIFY_BUFFER(SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_ALIASED, "MISC_BUFFER_FLAG_SPARSE_ALIASING flag requires SPARSE_RESOURCE_CAP_FLAG_ALIASED capability");
             VERIFY_BUFFER((Desc.BindFlags & ~SparseRes.BufferBindFlags) == 0,
-                          "the following bind flags are not allowed for a sparse buffer: ", GetBindFlagsString(Desc.BindFlags & ~SparseRes.BufferBindFlags, ", "), '.');
+                          "the following bind flags are not allowed for sparse buffers: ", GetBindFlagsString(Desc.BindFlags & ~SparseRes.BufferBindFlags, ", "), '.');
             break;
         }
 

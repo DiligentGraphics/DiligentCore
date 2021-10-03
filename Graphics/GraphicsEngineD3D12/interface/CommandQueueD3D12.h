@@ -115,7 +115,7 @@ DILIGENT_BEGIN_INTERFACE(ICommandQueueD3D12, ICommandQueue)
     VIRTUAL void METHOD(WaitFence)(THIS_
                                    ID3D12Fence* pFence,
                                    Uint64       Value) PURE;
-    
+
     /// Updates mappings of tile locations in reserved resources to memory locations in a resource heap.
     VIRTUAL void METHOD(UpdateTileMappings)(THIS_
                                             ResourceTileMappingsD3D12* pMappings,

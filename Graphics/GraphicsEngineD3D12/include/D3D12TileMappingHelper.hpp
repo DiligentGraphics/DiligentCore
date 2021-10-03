@@ -47,24 +47,22 @@ struct D3D12TileMappingHelper : D3DTileMappingHelper<D3D12_TILED_RESOURCE_COORDI
         RegionSize.UseBox = UseBox;
     }
 
-    void Commit(ICommandQueueD3D12* pCmdQueue, ID3D12Resource* pResource, ID3D12Heap* pHeap) const
+    ResourceTileMappingsD3D12 GetMappings(ID3D12Resource* pResource, ID3D12Heap* pHeap) const
     {
-        VERIFY_EXPR(pCmdQueue != nullptr);
+        ResourceTileMappingsD3D12 Mapping{};
+        Mapping.pResource                       = pResource;
+        Mapping.NumResourceRegions              = static_cast<UINT>(Coordinates.size());
+        Mapping.pResourceRegionStartCoordinates = Coordinates.data();
+        Mapping.pResourceRegionSizes            = RegionSizes.data();
+        Mapping.pHeap                           = pHeap;
+        Mapping.NumRanges                       = static_cast<UINT>(RangeFlags.size());
+        Mapping.pRangeFlags                     = RangeFlags.data();
+        Mapping.pHeapRangeStartOffsets          = RangeStartOffsets.data();
+        Mapping.pRangeTileCounts                = RangeTileCounts.data();
+        Mapping.Flags                           = D3D12_TILE_MAPPING_FLAG_NONE;
+        Mapping.UseNVApi                        = UseNVApi;
 
-        ResourceTileMappingsD3D12 Dst{};
-        Dst.pResource                       = pResource;
-        Dst.NumResourceRegions              = static_cast<UINT>(Coordinates.size());
-        Dst.pResourceRegionStartCoordinates = Coordinates.data();
-        Dst.pResourceRegionSizes            = RegionSizes.data();
-        Dst.pHeap                           = pHeap;
-        Dst.NumRanges                       = static_cast<UINT>(RangeFlags.size());
-        Dst.pRangeFlags                     = RangeFlags.data();
-        Dst.pHeapRangeStartOffsets          = RangeStartOffsets.data();
-        Dst.pRangeTileCounts                = RangeTileCounts.data();
-        Dst.Flags                           = D3D12_TILE_MAPPING_FLAG_NONE;
-        Dst.UseNVApi                        = UseNVApi;
-
-        pCmdQueue->UpdateTileMappings(&Dst, 1);
+        return Mapping;
     }
 };
 

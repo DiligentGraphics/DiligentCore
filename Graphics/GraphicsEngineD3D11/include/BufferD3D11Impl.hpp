@@ -62,7 +62,7 @@ public:
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of IBufferD3D11::GetD3D11Buffer().
-    virtual ID3D11Buffer* DILIGENT_CALL_TYPE GetD3D11Buffer() override final { return m_pd3d11Buffer; }
+    virtual ID3D11Buffer* DILIGENT_CALL_TYPE GetD3D11Buffer() const override final { return m_pd3d11Buffer; }
 
     /// Implementation of IBuffer::GetNativeHandle().
     virtual Uint64 DILIGENT_CALL_TYPE GetNativeHandle() override final { return BitCast<Uint64>(GetD3D11Buffer()); }

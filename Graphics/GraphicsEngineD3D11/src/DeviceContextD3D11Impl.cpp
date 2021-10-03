@@ -2242,7 +2242,7 @@ void DeviceContextD3D11Impl::BindSparseResourceMemory(const BindSparseResourceMe
 
     auto UpdateTilePool = [&](const auto& BindRange) //
     {
-        auto* pMemD3D11 = ClassPtrCast<DeviceMemoryD3D11Impl>(BindRange.pMemory);
+        const auto* pMemD3D11 = ClassPtrCast<const DeviceMemoryD3D11Impl>(BindRange.pMemory);
 
         if (pTilePool != nullptr && pMemD3D11 != nullptr && pTilePool != pMemD3D11->GetD3D11TilePool())
         {
@@ -2260,7 +2260,7 @@ void DeviceContextD3D11Impl::BindSparseResourceMemory(const BindSparseResourceMe
     for (Uint32 i = 0; i < Attribs.NumBufferBinds; ++i)
     {
         const auto& BuffBind   = Attribs.pBufferBinds[i];
-        auto*       pBuffD3D11 = ClassPtrCast<BufferD3D11Impl>(BuffBind.pBuffer);
+        const auto* pBuffD3D11 = ClassPtrCast<const BufferD3D11Impl>(BuffBind.pBuffer);
 
         for (Uint32 r = 0; r < BuffBind.NumRanges; ++r)
         {
@@ -2278,7 +2278,7 @@ void DeviceContextD3D11Impl::BindSparseResourceMemory(const BindSparseResourceMe
     for (Uint32 i = 0; i < Attribs.NumTextureBinds; ++i)
     {
         const auto& TexBind        = Attribs.pTextureBinds[i];
-        auto*       pTexD3D11      = ClassPtrCast<TextureBaseD3D11>(TexBind.pTexture);
+        const auto* pTexD3D11      = ClassPtrCast<const TextureBaseD3D11>(TexBind.pTexture);
         const auto& TexSparseProps = pTexD3D11->GetSparseProperties();
         const auto& TexDesc        = pTexD3D11->GetDesc();
         const auto  UseNVApi       = pTexD3D11->IsUsingNVApi();

@@ -57,7 +57,7 @@ public:
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of ITextureD3D11::GetD3D11Texture().
-    virtual ID3D11Resource* DILIGENT_CALL_TYPE GetD3D11Texture() override final { return m_pd3d11Texture; }
+    virtual ID3D11Resource* DILIGENT_CALL_TYPE GetD3D11Texture() const override final { return m_pd3d11Texture; }
 
     /// Implementation of ITexture::GetNativeHandle().
     virtual Uint64 DILIGENT_CALL_TYPE GetNativeHandle() override final { return BitCast<Uint64>(GetD3D11Texture()); }

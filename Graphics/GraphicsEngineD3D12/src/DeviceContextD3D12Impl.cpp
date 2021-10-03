@@ -3001,12 +3001,12 @@ void DeviceContextD3D12Impl::BindSparseResourceMemory(const BindSparseResourceMe
 
     Flush();
 
-    std::unordered_map<TileMappingKey, D3D12TileMappingHelper, TileMappingKey::Hasher> TileMappingMap; // AZ TODO: optimize
+    std::unordered_map<TileMappingKey, D3D12TileMappingHelper, TileMappingKey::Hasher> TileMappingMap;
 
     for (Uint32 i = 0; i < Attribs.NumBufferBinds; ++i)
     {
         const auto& BuffBind   = Attribs.pBufferBinds[i];
-        auto*       pBuffD3D12 = ClassPtrCast<BufferD3D12Impl>(BuffBind.pBuffer)->GetD3D12Resource();
+        auto*       pd3d12Buff = ClassPtrCast<const BufferD3D12Impl>(BuffBind.pBuffer)->GetD3D12Resource();
 
         for (Uint32 r = 0; r < BuffBind.NumRanges; ++r)
         {
@@ -3017,7 +3017,7 @@ void DeviceContextD3D12Impl::BindSparseResourceMemory(const BindSparseResourceMe
             DEV_CHECK_ERR((MemRange.Offset % D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES) == 0,
                           "MemoryOffset must be a multiple of sparse block size");
 
-            auto& DstMapping = TileMappingMap[TileMappingKey{pBuffD3D12, MemRange.pHandle}];
+            auto& DstMapping = TileMappingMap[TileMappingKey{pd3d12Buff, MemRange.pHandle}];
             DstMapping.AddBufferBindRange(BindRange, MemRange.Offset);
         }
     }
@@ -3025,7 +3025,7 @@ void DeviceContextD3D12Impl::BindSparseResourceMemory(const BindSparseResourceMe
     for (Uint32 i = 0; i < Attribs.NumTextureBinds; ++i)
     {
         const auto& TexBind        = Attribs.pTextureBinds[i];
-        auto*       pTexD3D12      = ClassPtrCast<TextureD3D12Impl>(TexBind.pTexture);
+        const auto* pTexD3D12      = ClassPtrCast<const TextureD3D12Impl>(TexBind.pTexture);
         const auto& TexSparseProps = pTexD3D12->GetSparseProperties();
         const auto& TexDesc        = pTexD3D12->GetDesc();
         const auto  UseNVApi       = pTexD3D12->IsUsingNVApi();
@@ -3054,10 +3054,13 @@ void DeviceContextD3D12Impl::BindSparseResourceMemory(const BindSparseResourceMe
         pFenceD3D12->DvpDeviceWait(Value);
     }
 
+    std::vector<ResourceTileMappingsD3D12> TileMappings;
+    TileMappings.reserve(TileMappingMap.size());
     for (const auto& it : TileMappingMap)
     {
-        it.second.Commit(pQueueD3D12, it.first.pResource, it.first.pHeap);
+        TileMappings.emplace_back(it.second.GetMappings(it.first.pResource, it.first.pHeap));
     }
+    pQueueD3D12->UpdateTileMappings(TileMappings.data(), static_cast<Uint32>(TileMappings.size()));
 
     for (Uint32 i = 0; i < Attribs.NumSignalFences; ++i)
     {

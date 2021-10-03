@@ -183,14 +183,14 @@ DeviceMemoryRangeVk DeviceMemoryVkImpl::GetRange(Uint64 Offset, Uint64 Size) con
     DeviceMemoryRangeVk Range{};
     if (PageIdx >= m_Pages.size())
     {
-        LOG_ERROR_MESSAGE("DeviceMemoryVkImpl::GetRange(): Offset is out of allocated space bounds");
+        DEV_ERROR("DeviceMemoryVkImpl::GetRange(): Offset is out of allocated space bounds");
         return Range;
     }
 
     const auto OffsetInPage = Offset % m_Desc.PageSize;
     if (OffsetInPage + Size > m_Desc.PageSize)
     {
-        LOG_ERROR_MESSAGE("DeviceMemoryVkImpl::GetRange(): Offset and Size must be inside a single page");
+        DEV_ERROR("DeviceMemoryVkImpl::GetRange(): Offset and Size must be inside a single page");
         return Range;
     }
 

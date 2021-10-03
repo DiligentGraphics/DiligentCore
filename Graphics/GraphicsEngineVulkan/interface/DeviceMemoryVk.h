@@ -57,7 +57,8 @@ struct DeviceMemoryRangeVk
     VkDeviceSize   Offset  DEFAULT_INITIALIZER(0);
 
     /// Memory range size in bytes.
-    /// It will be equal to the Size argument of the function, or zero if function failed.
+    /// When IDeviceMemoryVk::GetRange() succeeds, the size is equal to the Size argument
+    /// that was given to the function, and zero otherwise.
     VkDeviceSize   Size    DEFAULT_INITIALIZER(0);
 };
 typedef struct DeviceMemoryRangeVk DeviceMemoryRangeVk;
@@ -65,8 +66,8 @@ typedef struct DeviceMemoryRangeVk DeviceMemoryRangeVk;
 /// Exposes Vulkan-specific functionality of a device memory object.
 DILIGENT_BEGIN_INTERFACE(IDeviceMemoryVk, IDeviceMemory)
 {
-    /// Returns a DeviceMemoryRangeVk object with the information
-    /// about the Vulkan device memory assotiated with the specified memory range.
+    /// Returns a DeviceMemoryRangeVk object with the information about
+    /// the Vulkan device memory associated with the specified memory range.
     VIRTUAL DeviceMemoryRangeVk METHOD(GetRange)(THIS_
                                                  Uint64 Offset,
                                                  Uint64 Size) CONST PURE;

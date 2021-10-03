@@ -643,8 +643,8 @@ SparseBufferProperties BufferVkImpl::GetSparseProperties() const
     auto MemReq = m_pDevice->GetLogicalDevice().GetBufferMemoryRequirements(GetVkBuffer());
 
     SparseBufferProperties Props{};
-    Props.MemorySize = MemReq.size;
-    Props.BlockSize  = StaticCast<Uint32>(MemReq.alignment);
+    Props.AddressSpaceSize = MemReq.size;
+    Props.BlockSize        = StaticCast<Uint32>(MemReq.alignment);
     return Props;
 }
 

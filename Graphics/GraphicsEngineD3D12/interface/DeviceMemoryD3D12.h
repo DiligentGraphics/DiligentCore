@@ -56,7 +56,8 @@ struct DeviceMemoryRangeD3D12
     Uint64      Offset   DEFAULT_INITIALIZER(0);
 
     /// Memory range size in bytes.
-    /// Will be equal to the Size argument of the function, or zero if the function failed.
+    /// When IDeviceMemoryD3D12::GetRange() succeeds, the size is equal to the Size argument
+    /// that was given to the function, and zero otherwise.
     Uint64      Size     DEFAULT_INITIALIZER(0);
 };
 typedef struct DeviceMemoryRangeD3D12 DeviceMemoryRangeD3D12;
@@ -65,7 +66,7 @@ typedef struct DeviceMemoryRangeD3D12 DeviceMemoryRangeD3D12;
 DILIGENT_BEGIN_INTERFACE(IDeviceMemoryD3D12, IDeviceMemory)
 {
     /// Returns a DeviceMemoryRangeD3D12 object with the information
-    /// about ID3D12Heap assotiated with the specified memory range.
+    /// about ID3D12Heap associated with the specified memory range.
     VIRTUAL DeviceMemoryRangeD3D12 METHOD(GetRange)(THIS_
                                                     Uint64 Offset,
                                                     Uint64 Size) CONST PURE;

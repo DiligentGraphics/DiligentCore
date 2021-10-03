@@ -93,7 +93,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 )hlsl"};
 
 
-const std::string SparseMemoryTest_VS{R"hlsl(
+const std::string SparseResTest_VS{R"hlsl(
 struct PSInput 
 { 
     float4 Pos : SV_POSITION;
