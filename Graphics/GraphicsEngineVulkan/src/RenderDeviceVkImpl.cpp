@@ -738,38 +738,4 @@ TextureFormatSparseInfo RenderDeviceVkImpl::GetTextureFormatSparseInfo(TEXTURE_F
     return {};
 }
 
-TextureFormatDimensions RenderDeviceVkImpl::GetTextureFormatDimensions(const TextureDesc& TexDesc) const
-{
-    if (!(TexDesc.Usage == USAGE_IMMUTABLE || TexDesc.Usage == USAGE_DEFAULT || TexDesc.Usage == USAGE_SPARSE))
-    {
-        LOG_ERROR_MESSAGE("Supported usages are: IMMUTABLE, DEFAULT, SPARSE");
-        return {};
-    }
-
-    auto                    vkPhysicalDevice = m_PhysicalDevice->GetVkDeviceHandle();
-    VkImageCreateInfo       ImageCI          = TextureDescToVkImageCreateInfo(TexDesc, this);
-    VkImageFormatProperties Props{};
-
-    auto err =
-        vkGetPhysicalDeviceImageFormatProperties(vkPhysicalDevice,
-                                                 ImageCI.format,
-                                                 ImageCI.imageType,
-                                                 ImageCI.tiling,
-                                                 ImageCI.usage,
-                                                 ImageCI.flags,
-                                                 &Props);
-    if (err != VK_SUCCESS)
-        return {};
-
-    TextureFormatDimensions Result;
-    Result.MaxWidth      = Props.maxExtent.width;
-    Result.MaxHeight     = Props.maxExtent.height;
-    Result.MaxDepth      = Props.maxExtent.depth;
-    Result.MaxArraySize  = Props.maxArrayLayers;
-    Result.MaxMipLevels  = Props.maxMipLevels;
-    Result.SampleBits    = static_cast<Uint32>(Props.sampleCounts);
-    Result.MaxMemorySize = Props.maxResourceSize;
-    return Result;
-}
-
 } // namespace Diligent

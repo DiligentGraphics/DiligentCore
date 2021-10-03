@@ -3621,23 +3621,6 @@ struct TextureFormatInfoExt DILIGENT_DERIVE(TextureFormatInfo)
 typedef struct TextureFormatInfoExt TextureFormatInfoExt;
 
 
-/// This structure is returned by IRenderDevice::GetTextureFormatDimensions()
-struct TextureFormatDimensions
-{
-    /// AZ TODO
-    Uint32  MaxWidth       DEFAULT_INITIALIZER(0);
-    Uint32  MaxHeight      DEFAULT_INITIALIZER(0);
-    Uint32  MaxDepth       DEFAULT_INITIALIZER(0);
-
-    Uint32  MaxMipLevels   DEFAULT_INITIALIZER(0);
-    Uint32  MaxArraySize   DEFAULT_INITIALIZER(0);
-    Uint32  SampleBits     DEFAULT_INITIALIZER(0);
-
-    Uint64  MaxMemorySize  DEFAULT_INITIALIZER(0);
-};
-typedef struct TextureFormatDimensions TextureFormatDimensions;
-
-
 /// Describes the sparse texture packing mode
 DILIGENT_TYPED_ENUM(SPARSE_TEXTURE_FLAGS, Uint8)
 {

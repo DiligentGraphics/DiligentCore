@@ -448,39 +448,6 @@ public:
         return m_DeviceInfo.Features;
     }
 
-    // AZ TODO: remove
-    virtual TextureFormatDimensions DILIGENT_CALL_TYPE GetTextureFormatDimensions(const TextureDesc& TexDesc) const override
-    {
-        const auto& TexProps = m_AdapterInfo.Texture;
-
-        TextureFormatDimensions Result;
-        if (TexDesc.Is1D())
-        {
-            Result.MaxWidth     = TexProps.MaxTexture1DDimension;
-            Result.MaxHeight    = 1;
-            Result.MaxDepth     = 1;
-            Result.MaxArraySize = TexDesc.IsArray() ? TexProps.MaxTexture1DArraySlices : 1;
-        }
-        else if (TexDesc.Is2D())
-        {
-            Result.MaxWidth     = TexProps.MaxTexture2DDimension;
-            Result.MaxHeight    = TexProps.MaxTexture2DDimension;
-            Result.MaxDepth     = 1;
-            Result.MaxArraySize = TexDesc.IsArray() ? TexProps.MaxTexture2DArraySlices : 1;
-        }
-        else
-        {
-            Result.MaxWidth     = TexProps.MaxTexture3DDimension;
-            Result.MaxHeight    = TexProps.MaxTexture3DDimension;
-            Result.MaxDepth     = TexProps.MaxTexture3DDimension;
-            Result.MaxArraySize = 1;
-        }
-        Result.MaxMipLevels  = ComputeMipLevelsCount(Result.MaxWidth, Result.MaxHeight, Result.MaxDepth);
-        Result.SampleBits    = 1 | 2 | 4 | 8;
-        Result.MaxMemorySize = Uint64{1} << 63;
-        return Result;
-    }
-
 protected:
     virtual void TestTextureFormat(TEXTURE_FORMAT TexFormat) = 0;
 

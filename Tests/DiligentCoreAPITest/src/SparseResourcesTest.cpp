@@ -350,14 +350,12 @@ protected:
             VERIFY_EXPR(Dim.w <= 1);
             Desc.Type  = RESOURCE_DIM_TEX_3D;
             Desc.Depth = static_cast<Uint32>(Dim.z);
-            Desc.BindFlags |= BIND_UNORDERED_ACCESS; // UAV to fill texture
         }
         else
         {
             VERIFY_EXPR(Dim.z <= 1);
             Desc.Type      = Dim.w > 1 ? RESOURCE_DIM_TEX_2D_ARRAY : RESOURCE_DIM_TEX_2D;
             Desc.ArraySize = static_cast<Uint32>(Dim.w);
-            Desc.BindFlags |= BIND_RENDER_TARGET; // RTV to fill texture
         }
 
         Desc.Width       = static_cast<Uint32>(Dim.x);
@@ -401,14 +399,12 @@ protected:
             VERIFY_EXPR(Dim.w <= 1);
             Desc.Type  = RESOURCE_DIM_TEX_3D;
             Desc.Depth = static_cast<Uint32>(Dim.z);
-            Desc.BindFlags |= BIND_UNORDERED_ACCESS; // UAV to fill texture
         }
         else
         {
             VERIFY_EXPR(Dim.z <= 1);
             Desc.Type      = Dim.w > 1 ? RESOURCE_DIM_TEX_2D_ARRAY : RESOURCE_DIM_TEX_2D;
             Desc.ArraySize = static_cast<Uint32>(Dim.w);
-            Desc.BindFlags |= BIND_RENDER_TARGET; // RTV to fill texture
         }
 
         Desc.Width       = static_cast<Uint32>(Dim.x);
@@ -853,56 +849,56 @@ void CheckSparseTextureProperties(ITexture* pTexture)
     const bool  IsStdBlock = (Props.Flags & SPARSE_TEXTURE_FLAG_NONSTANDARD_BLOCK_SIZE) == 0;
     const auto& SparseRes  = TestingEnvironment::GetInstance()->GetDevice()->GetAdapterInfo().SparseResources;
 
-    ASSERT_GT(Props.AddressSpaceSize, 0u);
-    ASSERT_GT(Props.BlockSize, 0u);
-    ASSERT_TRUE(Props.AddressSpaceSize % Props.BlockSize == 0);
+    EXPECT_GT(Props.AddressSpaceSize, 0u);
+    EXPECT_GT(Props.BlockSize, 0u);
+    EXPECT_TRUE(Props.AddressSpaceSize % Props.BlockSize == 0);
 
     if (IsStdBlock)
-        ASSERT_EQ(Props.BlockSize, SparseRes.StandardBlockSize);
+        EXPECT_EQ(Props.BlockSize, SparseRes.StandardBlockSize);
 
-    ASSERT_LE(Props.FirstMipInTail, Desc.MipLevels);
-    ASSERT_LT(Props.MipTailOffset, Props.AddressSpaceSize);
-    ASSERT_TRUE(Props.MipTailOffset % Props.BlockSize == 0);
+    EXPECT_LE(Props.FirstMipInTail, Desc.MipLevels);
+    EXPECT_LT(Props.MipTailOffset, Props.AddressSpaceSize);
+    EXPECT_TRUE(Props.MipTailOffset % Props.BlockSize == 0);
 
     // Props.MipTailSize can be zero
-    ASSERT_TRUE(Props.MipTailSize % Props.BlockSize == 0);
+    EXPECT_TRUE(Props.MipTailSize % Props.BlockSize == 0);
 
     if (Desc.Type == RESOURCE_DIM_TEX_3D || Desc.ArraySize == 1)
     {
-        ASSERT_GE(Props.AddressSpaceSize, Props.MipTailOffset + Props.MipTailSize);
+        EXPECT_GE(Props.AddressSpaceSize, Props.MipTailOffset + Props.MipTailSize);
     }
     else if (Props.MipTailStride != 0) // zero in Metal
     {
-        ASSERT_EQ(Props.MipTailStride * Desc.ArraySize, Props.AddressSpaceSize);
-        ASSERT_GE(Props.MipTailStride, Props.MipTailOffset + Props.MipTailSize);
+        EXPECT_EQ(Props.MipTailStride * Desc.ArraySize, Props.AddressSpaceSize);
+        EXPECT_GE(Props.MipTailStride, Props.MipTailOffset + Props.MipTailSize);
     }
 
     if (Desc.Type == RESOURCE_DIM_TEX_3D)
     {
-        ASSERT_GT(Props.TileSize[0], 1u);
-        ASSERT_GT(Props.TileSize[1], 1u);
-        ASSERT_GT(Props.TileSize[2], 1u);
+        EXPECT_GT(Props.TileSize[0], 1u);
+        EXPECT_GT(Props.TileSize[1], 1u);
+        EXPECT_GE(Props.TileSize[2], 1u); // can be 1 on Metal
 
         if (IsStdBlock)
         {
-            ASSERT_TRUE((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_STANDARD_3D_TILE_SHAPE) != 0);
-            ASSERT_EQ(Props.TileSize[0], 32u);
-            ASSERT_EQ(Props.TileSize[1], 32u);
-            ASSERT_EQ(Props.TileSize[2], 16u);
+            EXPECT_TRUE((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_STANDARD_3D_TILE_SHAPE) != 0);
+            EXPECT_EQ(Props.TileSize[0], 32u);
+            EXPECT_EQ(Props.TileSize[1], 32u);
+            EXPECT_EQ(Props.TileSize[2], 16u);
         }
     }
     else
     {
-        ASSERT_GT(Props.TileSize[0], 1u);
-        ASSERT_GT(Props.TileSize[1], 1u);
-        ASSERT_EQ(Props.TileSize[2], 1u);
+        EXPECT_GT(Props.TileSize[0], 1u);
+        EXPECT_GT(Props.TileSize[1], 1u);
+        EXPECT_EQ(Props.TileSize[2], 1u);
 
         if (IsStdBlock)
         {
-            ASSERT_TRUE((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_STANDARD_2D_TILE_SHAPE) != 0);
-            ASSERT_EQ(Props.TileSize[0], 128u);
-            ASSERT_EQ(Props.TileSize[1], 128u);
-            ASSERT_EQ(Props.TileSize[2], 1u);
+            EXPECT_TRUE((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_STANDARD_2D_TILE_SHAPE) != 0);
+            EXPECT_EQ(Props.TileSize[0], 128u);
+            EXPECT_EQ(Props.TileSize[1], 128u);
+            EXPECT_EQ(Props.TileSize[2], 1u);
         }
     }
 }
@@ -1357,7 +1353,7 @@ TEST_P(SparseResourceTest, SparseTexture)
     {
         RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
 
-        auto pRefTexture = CreateTexture(TexSize.Recast<Uint32>(), BIND_NONE);
+        auto pRefTexture = CreateTexture(TexSize.Recast<Uint32>(), BIND_RENDER_TARGET);
         ASSERT_NE(pRefTexture, nullptr);
 
         Fill(pRefTexture);
@@ -1377,7 +1373,7 @@ TEST_P(SparseResourceTest, SparseTexture)
 
     const auto BlockSize = SparseRes.StandardBlockSize;
 
-    auto TexAndMem = CreateSparseTextureAndMemory(TexSize.Recast<Uint32>(), BIND_NONE, 14 * TexSize.w);
+    auto TexAndMem = CreateSparseTextureAndMemory(TexSize.Recast<Uint32>(), BIND_RENDER_TARGET, 14 * TexSize.w);
     auto pTexture  = TexAndMem.pTexture;
     ASSERT_NE(pTexture, nullptr);
     ASSERT_NE(pTexture->GetNativeHandle(), 0);
@@ -1550,7 +1546,7 @@ TEST_P(SparseResourceTest, SparseResidencyTexture)
     {
         RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
 
-        auto pRefTexture = CreateTexture(TexSize.Recast<Uint32>(), BIND_NONE);
+        auto pRefTexture = CreateTexture(TexSize.Recast<Uint32>(), BIND_RENDER_TARGET);
         ASSERT_NE(pRefTexture, nullptr);
 
         Fill(pRefTexture);
@@ -1570,7 +1566,7 @@ TEST_P(SparseResourceTest, SparseResidencyTexture)
 
     const auto BlockSize = SparseRes.StandardBlockSize;
 
-    auto TexAndMem = CreateSparseTextureAndMemory(TexSize.Recast<Uint32>(), BIND_NONE, 12 * TexSize.w);
+    auto TexAndMem = CreateSparseTextureAndMemory(TexSize.Recast<Uint32>(), BIND_RENDER_TARGET, 12 * TexSize.w);
     auto pTexture  = TexAndMem.pTexture;
     ASSERT_NE(pTexture, nullptr);
     ASSERT_NE(pTexture->GetNativeHandle(), 0);
@@ -1762,7 +1758,7 @@ TEST_P(SparseResourceTest, SparseResidencyAliasedTexture)
     {
         RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
 
-        auto pRefTexture = CreateTexture(TexSize.Recast<Uint32>(), BIND_NONE);
+        auto pRefTexture = CreateTexture(TexSize.Recast<Uint32>(), BIND_RENDER_TARGET);
         ASSERT_NE(pRefTexture, nullptr);
 
         Fill(pRefTexture);
@@ -1782,7 +1778,7 @@ TEST_P(SparseResourceTest, SparseResidencyAliasedTexture)
 
     const auto BlockSize = SparseRes.StandardBlockSize;
 
-    auto TexAndMem = CreateSparseTextureAndMemory(TexSize.Recast<Uint32>(), BIND_NONE, 12 * TexSize.w, /*Aliasing*/ true);
+    auto TexAndMem = CreateSparseTextureAndMemory(TexSize.Recast<Uint32>(), BIND_RENDER_TARGET, 12 * TexSize.w, /*Aliasing*/ true);
     auto pTexture  = TexAndMem.pTexture;
     ASSERT_NE(pTexture, nullptr);
     ASSERT_NE(pTexture->GetNativeHandle(), 0);
@@ -1942,7 +1938,7 @@ TEST_F(SparseResourceTest, SparseTexture3D)
     {
         RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
 
-        auto pRefTexture = CreateTexture(TexSize, BIND_NONE);
+        auto pRefTexture = CreateTexture(TexSize, BIND_UNORDERED_ACCESS);
         ASSERT_NE(pRefTexture, nullptr);
 
         Fill(pRefTexture);
@@ -1962,7 +1958,7 @@ TEST_F(SparseResourceTest, SparseTexture3D)
 
     const auto BlockSize = SparseRes.StandardBlockSize;
 
-    auto TexAndMem = CreateSparseTextureAndMemory(TexSize, BIND_NONE, 16);
+    auto TexAndMem = CreateSparseTextureAndMemory(TexSize, BIND_UNORDERED_ACCESS, 16);
     auto pTexture  = TexAndMem.pTexture;
     ASSERT_NE(pTexture, nullptr);
     ASSERT_NE(pTexture->GetNativeHandle(), 0);
@@ -2060,13 +2056,13 @@ TEST_F(SparseResourceTest, SparseTexture3D)
     pSwapChain->Present();
 }
 
-#if 0
+constexpr auto MaxResourceSpaceSize = Uint64{1} << 40;
+
 TEST_F(SparseResourceTest, LargeBuffer)
 {
     auto*       pEnv      = TestingEnvironment::GetInstance();
     auto*       pDevice   = pEnv->GetDevice();
-    const auto& SparseRes = pDevice->GetAdapterInfo().SparseResource;
-    const auto  DevType   = pDevice->GetDeviceInfo().Type;
+    const auto& SparseRes = pDevice->GetAdapterInfo().SparseResources;
 
     if ((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_BUFFER) == 0)
     {
@@ -2074,20 +2070,20 @@ TEST_F(SparseResourceTest, LargeBuffer)
     }
 
     // Limits which is queried from API is not valid, x/4 works on all tested devices.
-    Uint64 BuffSize = std::max(SparseRes.ResourceSpaceSize >> 2, Uint64{1} << 31);
-    Uint32 Stride   = static_cast<Uint32>(std::min(BuffSize, Uint64{1} << 17));
+    Uint64 BuffSize = AlignUp(std::min(MaxResourceSpaceSize, SparseRes.ResourceSpaceSize) >> 2, 4u);
+    if (pDevice->GetDeviceInfo().IsD3DDevice())
+        BuffSize = std::min(BuffSize, Uint64{1} << 31);
 
-    if (DevType == RENDER_DEVICE_TYPE_D3D11)
-    {
-        Stride   = 2048;
-        BuffSize = std::min(BuffSize, Uint64{UINT32_MAX} * Stride);
-    }
-    else if (DevType == RENDER_DEVICE_TYPE_D3D12)
-    {
-        BuffSize = std::min(BuffSize, Uint64{2097152} * Stride); // max supported in D3D12 number of elements
-    }
+    BufferDesc Desc;
+    Desc.Name      = "Sparse buffer";
+    Desc.Size      = BuffSize;
+    Desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+    Desc.Usage     = USAGE_SPARSE;
+    Desc.Mode      = BUFFER_MODE_RAW;
 
-    auto pBuffer = CreateSparseBuffer(BuffSize, BIND_NONE, /*Aliasing*/ false, Stride);
+    RefCntAutoPtr<IBuffer> pBuffer;
+    pDevice->CreateBuffer(Desc, nullptr, &pBuffer);
+
     ASSERT_NE(pBuffer, nullptr);
     ASSERT_NE(pBuffer->GetNativeHandle(), 0);
 
@@ -2099,31 +2095,22 @@ TEST_F(SparseResourceTest, LargeTexture2D)
 {
     auto*       pEnv      = TestingEnvironment::GetInstance();
     auto*       pDevice   = pEnv->GetDevice();
-    const auto& SparseRes = pDevice->GetAdapterInfo().SparseResource;
+    const auto& SparseRes = pDevice->GetAdapterInfo().SparseResources;
+    const auto& TexProps  = pDevice->GetAdapterInfo().Texture;
 
     if ((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_TEXTURE_2D) == 0)
     {
         GTEST_SKIP() << "Sparse texture 2D is not supported by this device";
     }
 
-    TextureFormatDimensions FmtDims;
-    {
-        TextureDesc TexDesc;
-        TexDesc.Type      = RESOURCE_DIM_TEX_2D;
-        TexDesc.Format    = TEX_FORMAT_RGBA8_UNORM;
-        TexDesc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-        TexDesc.Usage     = USAGE_SPARSE;
+    uint4      TexSize{TexProps.MaxTexture2DDimension, TexProps.MaxTexture2DDimension, 1u, 1u};
+    const auto BPP           = 4u;
+    const auto MaxMemorySize = std::min(MaxResourceSpaceSize, SparseRes.ResourceSpaceSize) >> 1;
 
-        FmtDims = pDevice->GetTextureFormatDimensions(TexDesc);
-    }
+    if ((Uint64{TexSize.x} * Uint64{TexSize.y} * BPP * 3) / 2 > MaxMemorySize)
+        TexSize.y = std::max(1u, static_cast<Uint32>(MaxMemorySize / (Uint64{TexSize.x} * BPP * 3)) * 2);
 
-    uint4      TexSize{FmtDims.MaxWidth, FmtDims.MaxHeight, 1u, 1u};
-    const auto BPP = 4u;
-
-    if ((Uint64{TexSize.x} * Uint64{TexSize.y} * BPP * 3) / 2 > FmtDims.MaxMemorySize)
-        TexSize.y = std::max(1u, static_cast<Uint32>(FmtDims.MaxMemorySize / (Uint64{TexSize.x} * BPP * 3)) * 2);
-
-    auto TexAndMem = CreateSparseTextureAndMemory(TexSize, BIND_NONE, 8);
+    auto TexAndMem = CreateSparseTextureAndMemory(TexSize, BIND_RENDER_TARGET, 8);
     auto pTexture  = TexAndMem.pTexture;
     ASSERT_NE(pTexture, nullptr);
     ASSERT_NE(pTexture->GetNativeHandle(), 0);
@@ -2132,9 +2119,9 @@ TEST_F(SparseResourceTest, LargeTexture2D)
 
     const auto& TexSparseProps = pTexture->GetSparseProperties();
     CheckSparseTextureProperties(pTexture);
-    ASSERT_LE(TexSparseProps.MemorySize, FmtDims.MaxMemorySize);
+    ASSERT_LE(TexSparseProps.AddressSpaceSize, SparseRes.ResourceSpaceSize);
 
-    LOG_INFO_MESSAGE("Created sparse 2D texture with dimension ", TexSize.x, "x", TexSize.y, " and size ", TexSparseProps.MemorySize >> 20, " Mb");
+    LOG_INFO_MESSAGE("Created sparse 2D texture with dimension ", TexSize.x, "x", TexSize.y, ", size ", TexSparseProps.AddressSpaceSize >> 20, " Mb");
 }
 
 
@@ -2142,32 +2129,22 @@ TEST_F(SparseResourceTest, LargeTexture2DArray)
 {
     auto*       pEnv      = TestingEnvironment::GetInstance();
     auto*       pDevice   = pEnv->GetDevice();
-    const auto& SparseRes = pDevice->GetAdapterInfo().SparseResource;
+    const auto& SparseRes = pDevice->GetAdapterInfo().SparseResources;
+    const auto& TexProps  = pDevice->GetAdapterInfo().Texture;
 
     if ((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_TEXTURE_2D_ARRAY_MIP_TAIL) == 0)
     {
         GTEST_SKIP() << "Sparse texture 2D array with mip tail is not supported by this device";
     }
 
-    TextureFormatDimensions FmtDims;
-    {
-        TextureDesc TexDesc;
-        TexDesc.Type      = RESOURCE_DIM_TEX_2D_ARRAY;
-        TexDesc.Format    = TEX_FORMAT_RGBA8_UNORM;
-        TexDesc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-        TexDesc.Usage     = USAGE_SPARSE;
-
-        FmtDims = pDevice->GetTextureFormatDimensions(TexDesc);
-    }
-
-    uint4      TexSize{FmtDims.MaxWidth, FmtDims.MaxHeight, 1u, FmtDims.MaxArraySize};
+    uint4      TexSize{TexProps.MaxTexture2DDimension, TexProps.MaxTexture2DDimension, 1u, TexProps.MaxTexture2DArraySlices};
     const auto BPP           = 4u;
-    const auto MaxMemorySize = std::min(FmtDims.MaxMemorySize, SparseRes.ResourceSpaceSize >> 1);
+    const auto MaxMemorySize = std::min(MaxResourceSpaceSize, SparseRes.ResourceSpaceSize) >> 1;
 
     if ((Uint64{TexSize.x} * Uint64{TexSize.y} * TexSize.w * BPP * 3) / 2 > MaxMemorySize)
         TexSize.y = std::max(1u, static_cast<Uint32>(MaxMemorySize / (Uint64{TexSize.x} * TexSize.w * BPP * 3)) * 2);
 
-    auto TexAndMem = CreateSparseTextureAndMemory(TexSize, BIND_NONE, 8);
+    auto TexAndMem = CreateSparseTextureAndMemory(TexSize, BIND_RENDER_TARGET, 8);
     auto pTexture  = TexAndMem.pTexture;
     ASSERT_NE(pTexture, nullptr);
     ASSERT_NE(pTexture->GetNativeHandle(), 0);
@@ -2176,9 +2153,9 @@ TEST_F(SparseResourceTest, LargeTexture2DArray)
 
     const auto& TexSparseProps = pTexture->GetSparseProperties();
     CheckSparseTextureProperties(pTexture);
-    ASSERT_LE(TexSparseProps.MemorySize, FmtDims.MaxMemorySize);
+    ASSERT_LE(TexSparseProps.AddressSpaceSize, SparseRes.ResourceSpaceSize);
 
-    LOG_INFO_MESSAGE("Created sparse 2D texture array with dimension ", TexSize.x, "x", TexSize.y, ", ", TexSize.w, "layers and size ", TexSparseProps.MemorySize >> 20, " Mb");
+    LOG_INFO_MESSAGE("Created sparse 2D texture array with dimension ", TexSize.x, "x", TexSize.y, ", layers ", TexSize.w, ", size ", TexSparseProps.AddressSpaceSize >> 20, " Mb");
 }
 
 
@@ -2186,32 +2163,24 @@ TEST_F(SparseResourceTest, LargeTexture3D)
 {
     auto*       pEnv      = TestingEnvironment::GetInstance();
     auto*       pDevice   = pEnv->GetDevice();
-    const auto& SparseRes = pDevice->GetAdapterInfo().SparseResource;
+    const auto& SparseRes = pDevice->GetAdapterInfo().SparseResources;
+    const auto& TexProps  = pDevice->GetAdapterInfo().Texture;
 
     if ((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_TEXTURE_3D) == 0)
     {
         GTEST_SKIP() << "Sparse texture 3D is not supported by this device";
     }
 
-    TextureFormatDimensions FmtDims;
-    {
-        TextureDesc TexDesc;
-        TexDesc.Type      = RESOURCE_DIM_TEX_3D;
-        TexDesc.Format    = TEX_FORMAT_RGBA8_UNORM;
-        TexDesc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-        TexDesc.Usage     = USAGE_SPARSE;
-
-        FmtDims = pDevice->GetTextureFormatDimensions(TexDesc);
-    }
-
-    uint4      TexSize{FmtDims.MaxWidth, FmtDims.MaxHeight, FmtDims.MaxDepth, 1u};
+    uint4      TexSize{TexProps.MaxTexture3DDimension, TexProps.MaxTexture3DDimension, TexProps.MaxTexture3DDimension, 1u};
     const auto BPP           = 4u;
-    const auto MaxMemorySize = std::min(FmtDims.MaxMemorySize, SparseRes.ResourceSpaceSize >> 4);
+    const auto MaxMemorySize = std::min(MaxResourceSpaceSize, SparseRes.ResourceSpaceSize) >> 4;
 
     if ((Uint64{TexSize.x} * Uint64{TexSize.y} * Uint64{TexSize.z} * BPP * 3) / 2 > MaxMemorySize)
         TexSize.z = std::max(1u, static_cast<Uint32>(MaxMemorySize / (Uint64{TexSize.x} * Uint64{TexSize.y} * BPP * 3)) * 2);
 
-    auto TexAndMem = CreateSparseTextureAndMemory(TexSize, BIND_NONE, 8);
+    const auto Bind = pDevice->GetDeviceInfo().IsMetalDevice() ? BIND_RENDER_TARGET : BIND_UNORDERED_ACCESS;
+
+    auto TexAndMem = CreateSparseTextureAndMemory(TexSize, Bind, 8);
     auto pTexture  = TexAndMem.pTexture;
     ASSERT_NE(pTexture, nullptr);
     ASSERT_NE(pTexture->GetNativeHandle(), 0);
@@ -2220,15 +2189,9 @@ TEST_F(SparseResourceTest, LargeTexture3D)
 
     const auto& TexSparseProps = pTexture->GetSparseProperties();
     CheckSparseTextureProperties(pTexture);
-    ASSERT_LE(TexSparseProps.MemorySize, FmtDims.MaxMemorySize);
+    ASSERT_LE(TexSparseProps.AddressSpaceSize, SparseRes.ResourceSpaceSize);
 
-    LOG_INFO_MESSAGE("Created sparse 3D texture with dimension ", TexSize.x, "x", TexSize.y, "x", TexSize.z, " and size ", TexSparseProps.MemorySize >> 20, " Mb");
+    LOG_INFO_MESSAGE("Created sparse 3D texture with dimension ", TexSize.x, "x", TexSize.y, "x", TexSize.z, ", size ", TexSparseProps.AddressSpaceSize >> 20, " Mb");
 }
-#endif
-
-// AZ TODO:
-//  - depth stencil
-//  - multisampled
-//  - feedback sampler (dx12, metal?, vk?)
 
 } // namespace

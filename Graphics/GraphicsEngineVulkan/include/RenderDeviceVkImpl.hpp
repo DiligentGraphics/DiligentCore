@@ -211,9 +211,6 @@ public:
     virtual TextureFormatSparseInfo DILIGENT_CALL_TYPE GetTextureFormatSparseInfo(TEXTURE_FORMAT     TexFormat,
                                                                                   RESOURCE_DIMENSION Dimension) const override final;
 
-    /// Implementation of IRenderDevice::GetTextureFormatDimensions() in Vulkan backend.
-    virtual TextureFormatDimensions DILIGENT_CALL_TYPE GetTextureFormatDimensions(const TextureDesc& TexDesc) const override final;
-
     DescriptorSetAllocation AllocateDescriptorSet(Uint64 CommandQueueMask, VkDescriptorSetLayout SetLayout, const char* DebugName = "")
     {
         return m_DescriptorSetAllocator.Allocate(CommandQueueMask, SetLayout, DebugName);

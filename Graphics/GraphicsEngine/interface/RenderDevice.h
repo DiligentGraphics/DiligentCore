@@ -342,10 +342,6 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     VIRTUAL const TextureFormatInfoExt REF METHOD(GetTextureFormatInfoExt)(THIS_
                                                                            TEXTURE_FORMAT TexFormat) PURE;
 
-    /// Returns the texture format dimensions for the given texture description.
-    VIRTUAL TextureFormatDimensions METHOD(GetTextureFormatDimensions)(THIS_
-                                                                       const TextureDesc REF TexDesc) CONST PURE;
-
 
     /// Returns the sparse texture format info for the given texture format and resource dimension.
     VIRTUAL TextureFormatSparseInfo METHOD(GetTextureFormatSparseInfo)(THIS_
@@ -405,7 +401,6 @@ DILIGENT_END_INTERFACE
 #    define IRenderDevice_GetDeviceInfo(This)                        CALL_IFACE_METHOD(RenderDevice, GetDeviceInfo,                   This)
 #    define IRenderDevice_GetTextureFormatInfo(This, ...)            CALL_IFACE_METHOD(RenderDevice, GetTextureFormatInfo,            This, __VA_ARGS__)
 #    define IRenderDevice_GetTextureFormatInfoExt(This, ...)         CALL_IFACE_METHOD(RenderDevice, GetTextureFormatInfoExt,         This, __VA_ARGS__)
-#    define IRenderDevice_GetTextureFormatDimensions(This, ...)      CALL_IFACE_METHOD(RenderDevice, GetTextureFormatDimensions,      This, __VA_ARGS__)
 #    define IRenderDevice_GetTextureFormatSparseInfo(This, ...)      CALL_IFACE_METHOD(RenderDevice, GetTextureFormatSparseInfo,      This, __VA_ARGS__)
 #    define IRenderDevice_ReleaseStaleResources(This, ...)           CALL_IFACE_METHOD(RenderDevice, ReleaseStaleResources,           This, __VA_ARGS__)
 #    define IRenderDevice_IdleGPU(This)                              CALL_IFACE_METHOD(RenderDevice, IdleGPU,                         This)
