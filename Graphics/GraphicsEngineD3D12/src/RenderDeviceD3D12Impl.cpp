@@ -497,14 +497,14 @@ void RenderDeviceD3D12Impl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
     if ((FormatSupport.Support1 & D3D12_FORMAT_SUPPORT1_TEXTURECUBE) != 0)
         TexFormatInfo.Dimensions |= RESOURCE_DIMENSION_SUPPORT_TEX_CUBE | RESOURCE_DIMENSION_SUPPORT_TEX_CUBE_ARRAY;
 
-    TexFormatInfo.SampleCounts = 0x0;
+    TexFormatInfo.SampleCounts = SAMPLE_COUNT_NONE;
     for (Uint32 SampleCount = 1; SampleCount <= D3D12_MAX_MULTISAMPLE_SAMPLE_COUNT; SampleCount *= 2)
     {
         D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS QualityLevels = {DXGIFormat, SampleCount};
 
         hr = m_pd3d12Device->CheckFeatureSupport(D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS, &QualityLevels, sizeof(QualityLevels));
         if (SUCCEEDED(hr) && QualityLevels.NumQualityLevels > 0)
-            TexFormatInfo.SampleCounts |= SampleCount;
+            TexFormatInfo.SampleCounts |= static_cast<SAMPLE_COUNT>(SampleCount);
     }
 }
 

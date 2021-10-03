@@ -125,6 +125,8 @@ void ValidateTextureDesc(const TextureDesc& Desc, const IRenderDevice* pDevice) 
 
     if (Desc.SampleCount > 1)
     {
+        VERIFY_TEXTURE(IsPowerOfTwo(Desc.SampleCount), "SampleCount must be a power-of-two value");
+
         if (!(Desc.Type == RESOURCE_DIM_TEX_2D || Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY))
             LOG_TEXTURE_ERROR_AND_THROW("Only Texture 2D/Texture 2D Array can be multisampled");
 

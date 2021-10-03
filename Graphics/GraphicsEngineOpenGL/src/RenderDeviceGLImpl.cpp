@@ -1401,7 +1401,7 @@ void RenderDeviceGLImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
 #endif
     }
 
-    TexFormatInfo.SampleCounts = 0x01;
+    TexFormatInfo.SampleCounts = SAMPLE_COUNT_1;
     if (TexFormatInfo.ComponentType != COMPONENT_TYPE_COMPRESSED && TexProps.Texture2DMSSupported)
     {
 #if GL_ARB_texture_storage_multisample
@@ -1417,7 +1417,7 @@ void RenderDeviceGLImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
                 } //
             );
             if (SampleCountSupported)
-                TexFormatInfo.SampleCounts |= SampleCount;
+                TexFormatInfo.SampleCounts |= static_cast<SAMPLE_COUNT>(SampleCount);
         }
 #endif
     }

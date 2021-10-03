@@ -2413,6 +2413,21 @@ DILIGENT_TYPED_ENUM(SHADING_RATE, Uint8)
     SHADING_RATE_MAX = SHADING_RATE_4X4
 };
 
+/// Defines the sample count
+DILIGENT_TYPED_ENUM(SAMPLE_COUNT, Uint8)
+{
+    SAMPLE_COUNT_NONE = 0,
+    SAMPLE_COUNT_1    = 1,
+    SAMPLE_COUNT_2    = 2,
+    SAMPLE_COUNT_4    = 4,
+    SAMPLE_COUNT_8    = 8,
+    SAMPLE_COUNT_16   = 16,
+    SAMPLE_COUNT_32   = 32,
+    SAMPLE_COUNT_64   = 64,
+    SAMPLE_COUNT_ALL  = (SAMPLE_COUNT_64 << 1) - 1,
+};
+DEFINE_FLAG_ENUM_OPERATORS(SAMPLE_COUNT);
+
 /// Combination of a shading rate and supported multi-sampling mode.
 struct ShadingRateMode
 {
@@ -2420,11 +2435,8 @@ struct ShadingRateMode
     SHADING_RATE Rate        DEFAULT_INITIALIZER(SHADING_RATE_1X1);
 
     /// A combination of supported sample counts.
-    /// \note Since the number of samples is a power-of-two value, this field is bitmask
-    ///       of supported values.
-    ///       Example: 1 | 2 | 4
-    Uint8        SampleBits  DEFAULT_INITIALIZER(0);
-    
+    SAMPLE_COUNT SampleBits  DEFAULT_INITIALIZER(SAMPLE_COUNT_NONE);
+
 #if DILIGENT_CPP_INTERFACE
     bool HasSampleCount(Uint32 SampleCount) const
     {
@@ -3613,7 +3625,7 @@ struct TextureFormatInfoExt DILIGENT_DERIVE(TextureFormatInfo)
 
     /// A bitmask specifying all the supported sample counts for this texture format.
     /// If the format supports n samples, then (SampleCounts & n) != 0
-    Uint32     SampleCounts DEFAULT_INITIALIZER(0);
+    SAMPLE_COUNT SampleCounts DEFAULT_INITIALIZER(SAMPLE_COUNT_NONE);
 
     /// Indicates if the format can be filtered in the shader.
     Bool       Filterable   DEFAULT_INITIALIZER(False);

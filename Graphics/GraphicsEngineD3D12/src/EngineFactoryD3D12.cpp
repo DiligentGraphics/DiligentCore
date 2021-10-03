@@ -939,15 +939,15 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
             {
                 // https://microsoft.github.io/DirectX-Specs/d3d/VariableRateShading.html#feature-tiering
                 auto& ShadingRateProps{AdapterInfo.ShadingRate};
-                auto  AddShadingRate = [&ShadingRateProps](SHADING_RATE Rate, Uint8 SampleBits) {
+                auto  AddShadingRate = [&ShadingRateProps](SHADING_RATE Rate, SAMPLE_COUNT SampleBits) {
                     VERIFY_EXPR(ShadingRateProps.NumShadingRates < DILIGENT_MAX_SHADING_RATES);
                     ShadingRateProps.ShadingRates[ShadingRateProps.NumShadingRates++] = {Rate, SampleBits};
                 };
                 if (d3d12Features6.AdditionalShadingRatesSupported != FALSE)
                 {
-                    AddShadingRate(SHADING_RATE_4X4, 1);
-                    AddShadingRate(SHADING_RATE_4X2, 1 | 2);
-                    AddShadingRate(SHADING_RATE_2X4, 1 | 2);
+                    AddShadingRate(SHADING_RATE_4X4, SAMPLE_COUNT_1);
+                    AddShadingRate(SHADING_RATE_4X2, SAMPLE_COUNT_1 | SAMPLE_COUNT_2);
+                    AddShadingRate(SHADING_RATE_2X4, SAMPLE_COUNT_1 | SAMPLE_COUNT_2);
                 }
                 if (d3d12Features6.VariableShadingRateTier >= D3D12_VARIABLE_SHADING_RATE_TIER_1)
                 {
@@ -958,10 +958,10 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
                     ShadingRateProps.CapFlags |= SHADING_RATE_CAP_FLAG_PER_DRAW;
 
                     // 1x1, 1x2, 2x1, 2x2 are always supported
-                    AddShadingRate(SHADING_RATE_2X2, 1 | 2 | 4);
-                    AddShadingRate(SHADING_RATE_2X1, 1 | 2 | 4);
-                    AddShadingRate(SHADING_RATE_1X2, 1 | 2 | 4);
-                    AddShadingRate(SHADING_RATE_1X1, 0xFF);
+                    AddShadingRate(SHADING_RATE_2X2, SAMPLE_COUNT_1 | SAMPLE_COUNT_2 | SAMPLE_COUNT_4);
+                    AddShadingRate(SHADING_RATE_2X1, SAMPLE_COUNT_1 | SAMPLE_COUNT_2 | SAMPLE_COUNT_4);
+                    AddShadingRate(SHADING_RATE_1X2, SAMPLE_COUNT_1 | SAMPLE_COUNT_2 | SAMPLE_COUNT_4);
+                    AddShadingRate(SHADING_RATE_1X1, SAMPLE_COUNT_ALL);
                 }
                 if (d3d12Features6.VariableShadingRateTier >= D3D12_VARIABLE_SHADING_RATE_TIER_2)
                 {

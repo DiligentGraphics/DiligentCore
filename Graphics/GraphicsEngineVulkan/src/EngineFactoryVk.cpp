@@ -348,6 +348,8 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
 #else
             UNSUPPORTED("vkGetPhysicalDeviceFragmentShadingRatesKHR is only available through Volk");
 #endif
+            constexpr VkSampleCountFlags VK_SAMPLE_COUNT_ALL = (VK_SAMPLE_COUNT_64_BIT << 1) - 1;
+
             ShadingRateProps.NumShadingRates = static_cast<Uint32>(std::min(ShadingRates.size(), size_t{MAX_SHADING_RATES}));
             for (Uint32 i = 0; i < ShadingRateProps.NumShadingRates; ++i)
             {
@@ -359,7 +361,7 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
                 VERIFY_EXPR((Src.fragmentSize.width == 1 && Src.fragmentSize.height == 1) ||
                             (Uint32{Src.sampleCounts} <= ((static_cast<Uint32>(vkDeviceExtProps.ShadingRate.maxFragmentShadingRateRasterizationSamples) << 1) - 1)));
 
-                Dst.SampleBits = static_cast<Uint8>(Src.sampleCounts);
+                Dst.SampleBits = VkSampleCountFlagsToSampleCount(Src.sampleCounts & VK_SAMPLE_COUNT_ALL);
                 Dst.Rate       = VkFragmentSizeToShadingRate(Src.fragmentSize);
             }
         }
@@ -385,7 +387,7 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
 
             ShadingRateProps.NumShadingRates            = 1;
             ShadingRateProps.ShadingRates[0].Rate       = SHADING_RATE_1X1;
-            ShadingRateProps.ShadingRates[0].SampleBits = 0xFF;
+            ShadingRateProps.ShadingRates[0].SampleBits = SAMPLE_COUNT_ALL;
         }
 #if defined(_MSC_VER) && defined(_WIN64)
         static_assert(sizeof(ShadingRateProps) == 44, "Did you add a new member to ShadingRateProperties? Please initialize it here.");

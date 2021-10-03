@@ -511,7 +511,7 @@ void RenderDeviceVkImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
                 if (CheckFormatProperties(vkRtvFormat, VK_IMAGE_TYPE_2D, VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT, ImgFmtProps))
                 {
                     TexFormatInfo.BindFlags |= BIND_RENDER_TARGET;
-                    TexFormatInfo.SampleCounts = ImgFmtProps.sampleCounts;
+                    TexFormatInfo.SampleCounts = VkSampleCountFlagsToSampleCount(ImgFmtProps.sampleCounts);
                 }
             }
         }
@@ -532,7 +532,7 @@ void RenderDeviceVkImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
                     // MoltenVK reports VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT for
                     // VK_FORMAT_D24_UNORM_S8_UINT even though the format is not supported.
                     TexFormatInfo.BindFlags |= BIND_DEPTH_STENCIL;
-                    TexFormatInfo.SampleCounts = ImgFmtProps.sampleCounts;
+                    TexFormatInfo.SampleCounts = VkSampleCountFlagsToSampleCount(ImgFmtProps.sampleCounts);
                 }
             }
         }

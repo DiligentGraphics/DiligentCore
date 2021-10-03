@@ -618,7 +618,7 @@ TEST_P(TextureCreationTest, CreateTexture)
     {
         if (TexProps.Texture2DMSSupported)
         {
-            if ((FmtInfo.SampleCounts & 0x04) != 0 && (TestInfo.BindFlags & (BIND_RENDER_TARGET | BIND_DEPTH_STENCIL)) != 0)
+            if ((FmtInfo.SampleCounts & SAMPLE_COUNT_4) != 0 && (TestInfo.BindFlags & (BIND_RENDER_TARGET | BIND_DEPTH_STENCIL)) != 0)
             {
                 CreateTestTexture(RESOURCE_DIM_TEX_2D, TestInfo.Fmt, TestInfo.BindFlags, 4, TestInfo.TestDataUpload);
                 CreateTestTexture(RESOURCE_DIM_TEX_2D, TestInfo.Fmt, TestInfo.BindFlags, 4, TestInfo.TestDataUpload);
@@ -631,7 +631,7 @@ TEST_P(TextureCreationTest, CreateTexture)
 
         if (TexProps.Texture2DMSArraySupported)
         {
-            if ((FmtInfo.SampleCounts & 0x04) != 0 && (TestInfo.BindFlags & (BIND_RENDER_TARGET | BIND_DEPTH_STENCIL)) != 0)
+            if ((FmtInfo.SampleCounts & SAMPLE_COUNT_4) != 0 && (TestInfo.BindFlags & (BIND_RENDER_TARGET | BIND_DEPTH_STENCIL)) != 0)
             {
                 CreateTestTexture(RESOURCE_DIM_TEX_2D_ARRAY, TestInfo.Fmt, TestInfo.BindFlags, 4, TestInfo.TestDataUpload);
                 CreateTestTexture(RESOURCE_DIM_TEX_2D_ARRAY, TestInfo.Fmt, TestInfo.BindFlags, 4, TestInfo.TestDataUpload);
