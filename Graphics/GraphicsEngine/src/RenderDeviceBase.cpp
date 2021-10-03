@@ -25,6 +25,7 @@
  */
 
 #include "RenderDeviceBase.hpp"
+#include "Align.hpp"
 
 namespace Diligent
 {
@@ -117,6 +118,54 @@ DeviceFeatures EnableDeviceFeatures(const DeviceFeatures& SupportedFeatures,
     static_assert(sizeof(Diligent::DeviceFeatures) == 39, "Did you add a new feature to DeviceFeatures? Please handle its satus here (if necessary).");
 #endif
     return EnabledFeatures;
+}
+
+COMPONENT_TYPE CheckSparseTextureFormatSupport(TEXTURE_FORMAT                  TexFormat,
+                                               RESOURCE_DIMENSION              Dimension,
+                                               Uint32                          SampleCount,
+                                               const SparseResourceProperties& SparseRes) noexcept
+{
+    switch (Dimension)
+    {
+        case RESOURCE_DIM_TEX_2D:
+        case RESOURCE_DIM_TEX_2D_ARRAY:
+        {
+            if ((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_TEXTURE_2D) == 0)
+                return COMPONENT_TYPE_UNDEFINED;
+
+            static_assert(SPARSE_RESOURCE_CAP_FLAG_TEXTURE_4_SAMPLES == SPARSE_RESOURCE_CAP_FLAG_TEXTURE_2_SAMPLES * 2, "Unexpected enum values");
+            static_assert(SPARSE_RESOURCE_CAP_FLAG_TEXTURE_8_SAMPLES == SPARSE_RESOURCE_CAP_FLAG_TEXTURE_2_SAMPLES * 4, "Unexpected enum values");
+            static_assert(SPARSE_RESOURCE_CAP_FLAG_TEXTURE_16_SAMPLES == SPARSE_RESOURCE_CAP_FLAG_TEXTURE_2_SAMPLES * 8, "Unexpected enum values");
+            VERIFY_EXPR(IsPowerOfTwo(SampleCount));
+            if (SampleCount >= 2 && (SparseRes.CapFlags & (SPARSE_RESOURCE_CAP_FLAG_TEXTURE_2_SAMPLES * (SampleCount >> 1))) == 0)
+                return COMPONENT_TYPE_UNDEFINED;
+
+            break;
+        }
+        case RESOURCE_DIM_TEX_CUBE:
+        case RESOURCE_DIM_TEX_CUBE_ARRAY:
+            if ((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_TEXTURE_2D) == 0)
+                return COMPONENT_TYPE_UNDEFINED;
+            break;
+
+        case RESOURCE_DIM_TEX_3D:
+            DEV_CHECK_ERR(SampleCount == 1, "Multisampled texture 3D is not supported");
+            if ((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_TEXTURE_3D) == 0)
+                return COMPONENT_TYPE_UNDEFINED;
+            break;
+
+        case RESOURCE_DIM_BUFFER:
+        case RESOURCE_DIM_TEX_1D:
+        case RESOURCE_DIM_TEX_1D_ARRAY:
+            DEV_ERROR("Invalid sparse texture resource dimension");
+            return COMPONENT_TYPE_UNDEFINED;
+
+        default:
+            DEV_ERROR("Unexpected resource dimension");
+            return COMPONENT_TYPE_UNDEFINED;
+    }
+
+    return GetTextureFormatAttribs(TexFormat).ComponentType;
 }
 
 } // namespace Diligent

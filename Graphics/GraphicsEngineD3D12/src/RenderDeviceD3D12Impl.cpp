@@ -506,9 +506,6 @@ void RenderDeviceD3D12Impl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
         if (SUCCEEDED(hr) && QualityLevels.NumQualityLevels > 0)
             TexFormatInfo.SampleCounts |= SampleCount;
     }
-
-    //TexFormatInfo.SparseMemoryCompatible = (FormatSupport.Support2 & D3D12_FORMAT_SUPPORT2_TILED) == D3D12_FORMAT_SUPPORT2_TILED;
-    // AZ TODO: SparseMemoryMSAACompatible
 }
 
 void RenderDeviceD3D12Impl::CreateGraphicsPipelineState(const GraphicsPipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState)
@@ -661,9 +658,20 @@ void RenderDeviceD3D12Impl::CreateDeviceMemory(const DeviceMemoryCreateInfo& Cre
     CreateDeviceMemoryImpl(ppMemory, CreateInfo);
 }
 
-TextureFormatSparseInfo RenderDeviceD3D12Impl::GetTextureFormatSparseInfo(TEXTURE_FORMAT TexFormat, RESOURCE_DIMENSION Dimension) const
+SparseTextureFormatInfo RenderDeviceD3D12Impl::GetSparseTextureFormatInfo(TEXTURE_FORMAT     TexFormat,
+                                                                          RESOURCE_DIMENSION Dimension,
+                                                                          Uint32             SampleCount) const
 {
-    return {};
+    D3D12_FEATURE_DATA_FORMAT_SUPPORT FormatSupport{
+        TexFormatToDXGI_Format(TexFormat) // .Format
+    };
+    if (FAILED(m_pd3d12Device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &FormatSupport, sizeof(FormatSupport))) ||
+        (FormatSupport.Support2 & D3D12_FORMAT_SUPPORT2_TILED) != D3D12_FORMAT_SUPPORT2_TILED)
+    {
+        return {};
+    }
+
+    return TRenderDeviceBase::GetSparseTextureFormatInfo(TexFormat, Dimension, SampleCount);
 }
 
 } // namespace Diligent

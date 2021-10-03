@@ -3882,6 +3882,8 @@ void DeviceContextVkImpl::BindSparseResourceMemory(const BindSparseResourceMemor
                 vkMemBind.flags          = 0;
 
                 VERIFY(vkMemBind.size > 0, "Texture mip tail memory size must not be zero");
+                VERIFY(!(TexDesc.IsArray() && (TexSparseProps.Flags & SPARSE_TEXTURE_FLAG_SINGLE_MIPTAIL) == 0) || TexSparseProps.MipTailStride != 0,
+                       "For texture arrays, if SPARSE_TEXTURE_FLAG_SINGLE_MIPTAIL flag is not present, MipTailStride must not be zero");
             }
         }
 

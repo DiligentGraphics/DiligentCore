@@ -170,12 +170,10 @@ public:
     virtual void DILIGENT_CALL_TYPE CreateDeviceMemory(const DeviceMemoryCreateInfo& CreateInfo,
                                                        IDeviceMemory**               ppMemory) override final;
 
-    /// Implementation of IRenderDevice::GetTextureFormatSparseInfo() in OpenGL backend.
-    virtual TextureFormatSparseInfo DILIGENT_CALL_TYPE GetTextureFormatSparseInfo(TEXTURE_FORMAT     TexFormat,
-                                                                                  RESOURCE_DIMENSION Dimension) const override final
-    {
-        return {};
-    }
+    /// Implementation of IRenderDevice::GetSparseTextureFormatInfo() in OpenGL backend.
+    virtual SparseTextureFormatInfo DILIGENT_CALL_TYPE GetSparseTextureFormatInfo(TEXTURE_FORMAT     TexFormat,
+                                                                                  RESOURCE_DIMENSION Dimension,
+                                                                                  Uint32             SampleCount) const override final;
 
     FBOCache& GetFBOCache(GLContext::NativeGLContextType Context);
     void      OnReleaseTexture(ITexture* pTexture);

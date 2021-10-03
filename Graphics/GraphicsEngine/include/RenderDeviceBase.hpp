@@ -195,7 +195,11 @@ namespace Diligent
 DeviceFeatures EnableDeviceFeatures(const DeviceFeatures& SupportedFeatures,
                                     const DeviceFeatures& RequestedFeatures) noexcept(false);
 
-
+/// Checks sparse texture format support and returns the component type
+COMPONENT_TYPE CheckSparseTextureFormatSupport(TEXTURE_FORMAT                  TexFormat,
+                                               RESOURCE_DIMENSION              Dimension,
+                                               Uint32                          SampleCount,
+                                               const SparseResourceProperties& SparseRes) noexcept;
 /// Base implementation of a render device
 
 /// \tparam EngineImplTraits - Engine implementation type traits.

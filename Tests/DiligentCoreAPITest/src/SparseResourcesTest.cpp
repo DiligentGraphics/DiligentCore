@@ -2194,4 +2194,105 @@ TEST_F(SparseResourceTest, LargeTexture3D)
     LOG_INFO_MESSAGE("Created sparse 3D texture with dimension ", TexSize.x, "x", TexSize.y, "x", TexSize.z, ", size ", TexSparseProps.AddressSpaceSize >> 20, " Mb");
 }
 
+
+TEST_F(SparseResourceTest, GetSparseTextureFormatInfo)
+{
+    auto*       pEnv      = TestingEnvironment::GetInstance();
+    auto*       pDevice   = pEnv->GetDevice();
+    const auto& SparseRes = pDevice->GetAdapterInfo().SparseResources;
+
+    if ((SparseRes.CapFlags & (SPARSE_RESOURCE_CAP_FLAG_TEXTURE_2D | SPARSE_RESOURCE_CAP_FLAG_TEXTURE_3D)) == 0)
+    {
+        GTEST_SKIP() << "Sparse texture 2D or 3D are not supported by this device";
+    }
+
+    const bool IsDirect3D = pDevice->GetDeviceInfo().IsD3DDevice();
+    const bool IsMetal    = pDevice->GetDeviceInfo().IsMetalDevice();
+
+    const auto CheckInfo = [&](TEXTURE_FORMAT TexFormat, RESOURCE_DIMENSION Dimension, Uint32 SampleCount, const char* FmtName, BIND_FLAGS PossibleBindFlags) //
+    {
+        SparseTextureFormatInfo Info = pDevice->GetSparseTextureFormatInfo(TexFormat, Dimension, SampleCount);
+
+        if (Info.BindFlags == BIND_NONE)
+            return; // not supported
+
+        LOG_INFO_MESSAGE("Supported sparse texture ", GetResourceDimString(Dimension), " with format ", FmtName, ", sample count ", SampleCount,
+                         ", tile size ", Info.TileSize[0], "x", Info.TileSize[1], "x", Info.TileSize[2],
+                         ", bind flags ", GetBindFlagsString(Info.BindFlags));
+
+        EXPECT_TRUE(IsPowerOfTwo(Info.TileSize[0]));
+        EXPECT_TRUE(IsPowerOfTwo(Info.TileSize[1]));
+        EXPECT_TRUE(IsPowerOfTwo(Info.TileSize[2]));
+        EXPECT_GT(Info.TileSize[0], 1u);
+        EXPECT_GT(Info.TileSize[1], 1u);
+
+        if (Dimension == RESOURCE_DIM_TEX_3D)
+            EXPECT_GE(Info.TileSize[2], 1u);
+        else
+            EXPECT_EQ(Info.TileSize[2], 1u);
+
+        EXPECT_TRUE((Info.BindFlags & BIND_SHADER_RESOURCE) != 0);
+
+        if (PossibleBindFlags != BIND_NONE)
+            EXPECT_TRUE((Info.BindFlags & PossibleBindFlags) != 0);
+
+        if (IsMetal)
+            EXPECT_EQ(Info.Flags, SPARSE_TEXTURE_FLAG_NONSTANDARD_BLOCK_SIZE);
+        if (IsDirect3D)
+            EXPECT_TRUE((Info.Flags & SPARSE_TEXTURE_FLAG_SINGLE_MIPTAIL) == 0); // single mip tail is not supported in D3D11/12
+
+        if (SampleCount > 1)
+            EXPECT_TRUE((Info.BindFlags & (BIND_RENDER_TARGET | BIND_DEPTH_STENCIL)) != 0);
+
+        if ((Info.Flags & SPARSE_TEXTURE_FLAG_NONSTANDARD_BLOCK_SIZE) == 0)
+        {
+            TextureDesc TexDesc;
+            TexDesc.Type        = Dimension;
+            TexDesc.Width       = 1024;
+            TexDesc.Height      = 1024;
+            TexDesc.Format      = TexFormat;
+            TexDesc.MipLevels   = 1;
+            TexDesc.SampleCount = SampleCount;
+
+            if (TexDesc.IsArray())
+                TexDesc.ArraySize = 64;
+            if (TexDesc.Is3D())
+                TexDesc.Depth = 64;
+
+            auto Props = GetStandardSparseTextureProperties(TexDesc);
+            EXPECT_EQ(Info.TileSize[0], Props.TileSize[0]);
+            EXPECT_EQ(Info.TileSize[1], Props.TileSize[1]);
+            EXPECT_EQ(Info.TileSize[2], Props.TileSize[2]);
+        }
+    };
+
+    // clang-format off
+    CheckInfo(TEX_FORMAT_RGBA8_UNORM,          RESOURCE_DIM_TEX_2D, 1, "RGBA8_UNORM",  BIND_RENDER_TARGET);
+    CheckInfo(TEX_FORMAT_RGBA32_FLOAT,         RESOURCE_DIM_TEX_2D, 1, "RGBA32_FLOAT", BIND_RENDER_TARGET);
+    CheckInfo(TEX_FORMAT_BC1_UNORM,            RESOURCE_DIM_TEX_2D, 1, "BC1_UNORM",    BIND_NONE);
+    CheckInfo(TEX_FORMAT_BC2_UNORM,            RESOURCE_DIM_TEX_2D, 1, "BC2_UNORM",    BIND_NONE);
+    CheckInfo(TEX_FORMAT_BC5_UNORM,            RESOURCE_DIM_TEX_2D, 1, "BC5_UNORM",    BIND_NONE);
+    CheckInfo(TEX_FORMAT_D24_UNORM_S8_UINT,    RESOURCE_DIM_TEX_2D, 1, "D24_S8",       BIND_DEPTH_STENCIL);
+    CheckInfo(TEX_FORMAT_D32_FLOAT_S8X24_UINT, RESOURCE_DIM_TEX_2D, 1, "D32_FLOAT_S8", BIND_DEPTH_STENCIL);
+    CheckInfo(TEX_FORMAT_D32_FLOAT,            RESOURCE_DIM_TEX_2D, 1, "D32_FLOAT",    BIND_DEPTH_STENCIL);
+
+    CheckInfo(TEX_FORMAT_RGBA8_UNORM,  RESOURCE_DIM_TEX_2D_ARRAY,   1, "RGBA8_UNORM",  BIND_RENDER_TARGET);
+    CheckInfo(TEX_FORMAT_RGBA8_UNORM,  RESOURCE_DIM_TEX_2D_ARRAY,   4, "RGBA8_UNORM",  BIND_RENDER_TARGET);
+    CheckInfo(TEX_FORMAT_BC1_UNORM,    RESOURCE_DIM_TEX_2D_ARRAY,   1, "BC1_UNORM",    BIND_NONE);
+    CheckInfo(TEX_FORMAT_BC2_UNORM,    RESOURCE_DIM_TEX_2D_ARRAY,   1, "BC2_UNORM",    BIND_NONE);
+    CheckInfo(TEX_FORMAT_BC5_UNORM,    RESOURCE_DIM_TEX_2D_ARRAY,   1, "BC5_UNORM",    BIND_NONE);
+
+    CheckInfo(TEX_FORMAT_RGBA8_UNORM,  RESOURCE_DIM_TEX_CUBE,       1, "RGBA8_UNORM",  BIND_RENDER_TARGET);
+    CheckInfo(TEX_FORMAT_RGBA8_UNORM,  RESOURCE_DIM_TEX_CUBE_ARRAY, 1, "RGBA8_UNORM",  BIND_RENDER_TARGET);
+
+    CheckInfo(TEX_FORMAT_RGBA8_UNORM,  RESOURCE_DIM_TEX_2D,         2, "RGBA8_UNORM",  BIND_RENDER_TARGET);
+    CheckInfo(TEX_FORMAT_RGBA8_UNORM,  RESOURCE_DIM_TEX_2D,         4, "RGBA8_UNORM",  BIND_RENDER_TARGET); // Direct3D supports only 4x
+    CheckInfo(TEX_FORMAT_RGBA8_UNORM,  RESOURCE_DIM_TEX_2D,         8, "RGBA8_UNORM",  BIND_RENDER_TARGET);
+    CheckInfo(TEX_FORMAT_RGBA8_UNORM,  RESOURCE_DIM_TEX_2D,        16, "RGBA8_UNORM",  BIND_RENDER_TARGET);
+
+    CheckInfo(TEX_FORMAT_RGBA8_UNORM,  RESOURCE_DIM_TEX_3D,         1, "RGBA8_UNORM",  BIND_RENDER_TARGET);
+    CheckInfo(TEX_FORMAT_RGBA32_FLOAT, RESOURCE_DIM_TEX_3D,         1, "RGBA32_FLOAT", BIND_RENDER_TARGET);
+    // clang-format on
+}
+
 } // namespace

@@ -2604,7 +2604,7 @@ DILIGENT_TYPED_ENUM(SPARSE_RESOURCE_CAP_FLAGS, Uint32)
     ///  |    64-Bit   |  128 x  64 x 1  |
     ///  |   128-Bit   |   64 x  64 x 1  |
     ///
-    /// If not present, call IRenderDevice::GetTextureFormatSparseInfo() to get the supported sparse tile dimensions.
+    /// If not present, call IRenderDevice::GetSparseTextureFormatInfo() to get the supported sparse tile dimensions.
     SPARSE_RESOURCE_CAP_FLAG_STANDARD_2D_TILE_SHAPE = 1u << 9,
 
     /// Specifies whether the device accesses multi-sample 2D sparse textures using the standard sparse texture tile shapes.
@@ -2617,7 +2617,7 @@ DILIGENT_TYPED_ENUM(SPARSE_RESOURCE_CAP_FLAGS, Uint32)
     ///  |    64-Bit   |    64 x  64 x 1  |    64 x  32 x 1  |   32 x  32 x 1   |    32 x 16 x 1    |
     ///  |   128-Bit   |    32 x  64 x 1  |    32 x  32 x 1  |   16 x  32 x 1   |    16 x 16 x 1    |
     ///
-    /// If not present, call IRenderDevice::GetTextureFormatSparseInfo() to get the supported sparse tile dimensions.
+    /// If not present, call IRenderDevice::GetSparseTextureFormatInfo() to get the supported sparse tile dimensions.
     SPARSE_RESOURCE_CAP_FLAG_STANDARD_2DMS_TILE_SHAPE = 1u << 10,
 
     /// Specifies whether the device accesses 3D sparse textures using the standard sparse texture tile shapes.
@@ -2630,7 +2630,7 @@ DILIGENT_TYPED_ENUM(SPARSE_RESOURCE_CAP_FLAGS, Uint32)
     ///  |    64-Bit   |   32 x 16 x 16  |
     ///  |   128-Bit   |   16 x 16 x 16  |
     ///
-    /// If not present, call IRenderDevice::GetTextureFormatSparseInfo() to get the supported sparse tile dimensions.
+    /// If not present, call IRenderDevice::GetSparseTextureFormatInfo() to get the supported sparse tile dimensions.
     SPARSE_RESOURCE_CAP_FLAG_STANDARD_3D_TILE_SHAPE   = 1u << 11,
 
     /// Specifies if textures with mip level dimensions that are not integer multiples of the corresponding
@@ -2697,8 +2697,8 @@ struct SparseResourceProperties
     /// \note   In Direct3D11, Direct3D12 and Vulkan this is 64Kb.
     ///         In Metal it is implementation-defined.
     ///
-    /// \note   Query standard block support using IRenderDevice::GetTextureFormatSparseInfo() and
-    ///         check TextureFormatSparseInfo::Flags for SPARSE_TEXTURE_FLAG_NONSTANDARD_BLOCK_SIZE flag.
+    /// \note   Query standard block support using IRenderDevice::GetSparseTextureFormatInfo() and
+    ///         check SparseTextureFormatInfo::Flags for SPARSE_TEXTURE_FLAG_NONSTANDARD_BLOCK_SIZE flag.
     ///
     /// \sa SPARSE_RESOURCE_CAP_FLAG_STANDARD_2D_TILE_SHAPE, SPARSE_RESOURCE_CAP_FLAG_STANDARD_2DMS_TILE_SHAPE,
     ///     SPARSE_RESOURCE_CAP_FLAG_STANDARD_3D_TILE_SHAPE, SPARSE_RESOURCE_CAP_FLAG_BUFFER_STANDARD_BLOCK.
@@ -3642,28 +3642,19 @@ DILIGENT_TYPED_ENUM(SPARSE_TEXTURE_FLAGS, Uint8)
 DEFINE_FLAG_ENUM_OPERATORS(SPARSE_TEXTURE_FLAGS);
 
 
-/// This structure is returned by IRenderDevice::GetTextureFormatSparseInfo()
-struct TextureFormatSparseInfo
+/// This structure is returned by IRenderDevice::GetSparseTextureFormatInfo()
+struct SparseTextureFormatInfo
 {
     /// Allowed bind flags for this format.
     BIND_FLAGS BindFlags    DEFAULT_INITIALIZER(BIND_NONE);
-
-    /// AZ TODO
-    Uint32     Samples DEFAULT_INITIALIZER(0);
 
     /// AZ TODO
     Uint32     TileSize[3] DEFAULT_INITIALIZER({});
 
     /// AZ TODO
     SPARSE_TEXTURE_FLAGS Flags DEFAULT_INITIALIZER(SPARSE_TEXTURE_FLAG_NONE);
-
-    /// AZ TODO
-    //Bool       SparseMemoryCompatible DEFAULT_INITIALIZER(False);
-
-    /// AZ TODO
-    //Bool       SparseMemoryMSAACompatible DEFAULT_INITIALIZER(False);
 };
-typedef struct TextureFormatSparseInfo TextureFormatSparseInfo;
+typedef struct SparseTextureFormatInfo SparseTextureFormatInfo;
 
 /// Pipeline stage flags.
 

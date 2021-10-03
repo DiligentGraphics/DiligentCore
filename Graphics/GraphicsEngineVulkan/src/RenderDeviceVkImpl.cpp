@@ -732,10 +732,56 @@ HardwareQueueIndex RenderDeviceVkImpl::GetQueueFamilyIndex(SoftwareQueueIndex Cm
     return HardwareQueueIndex{CmdQueue.GetQueueFamilyIndex()};
 }
 
-TextureFormatSparseInfo RenderDeviceVkImpl::GetTextureFormatSparseInfo(TEXTURE_FORMAT TexFormat, RESOURCE_DIMENSION Dimension) const
+SparseTextureFormatInfo RenderDeviceVkImpl::GetSparseTextureFormatInfo(TEXTURE_FORMAT     TexFormat,
+                                                                       RESOURCE_DIMENSION Dimension,
+                                                                       Uint32             SampleCount) const
 {
-    // AZ TODO
-    return {};
+    const auto ComponentType = CheckSparseTextureFormatSupport(TexFormat, Dimension, SampleCount, m_AdapterInfo.SparseResources);
+    if (ComponentType == COMPONENT_TYPE_UNDEFINED)
+        return {};
+
+    const auto vkDevice       = m_PhysicalDevice->GetVkDeviceHandle();
+    const auto vkType         = Dimension == RESOURCE_DIM_TEX_3D ? VK_IMAGE_TYPE_3D : VK_IMAGE_TYPE_2D;
+    const auto vkFormat       = TexFormatToVkFormat(TexFormat);
+    const auto vkDefaultUsage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    const auto vkSampleCount  = static_cast<VkSampleCountFlagBits>(SampleCount);
+
+    VkSparseImageFormatProperties FmtProps[2]   = {};
+    Uint32                        FmtPropsCount = 0;
+
+    vkGetPhysicalDeviceSparseImageFormatProperties(vkDevice, vkFormat, vkType, vkSampleCount, vkDefaultUsage, VK_IMAGE_TILING_OPTIMAL, &FmtPropsCount, nullptr);
+    if (FmtPropsCount == 0)
+        return {};
+
+    FmtPropsCount = std::min(FmtPropsCount, 2u);
+    vkGetPhysicalDeviceSparseImageFormatProperties(vkDevice, vkFormat, vkType, vkSampleCount, vkDefaultUsage, VK_IMAGE_TILING_OPTIMAL, &FmtPropsCount, FmtProps);
+
+    SparseTextureFormatInfo Info;
+    Info.BindFlags   = BIND_NONE;
+    Info.TileSize[0] = FmtProps[0].imageGranularity.width;
+    Info.TileSize[1] = FmtProps[0].imageGranularity.height;
+    Info.TileSize[2] = FmtProps[0].imageGranularity.depth;
+    Info.Flags       = VkSparseImageFormatFlagsToSparseTextureFlags(FmtProps[0].flags);
+
+    const auto CheckUsage = [&](VkImageUsageFlags vkUsage) {
+        Uint32 Count = 0;
+        vkGetPhysicalDeviceSparseImageFormatProperties(vkDevice, vkFormat, vkType, vkSampleCount, vkDefaultUsage | vkUsage, VK_IMAGE_TILING_OPTIMAL, &Count, nullptr);
+        return (Count != 0);
+    };
+
+    if ((ComponentType == COMPONENT_TYPE_DEPTH || ComponentType == COMPONENT_TYPE_DEPTH_STENCIL) && CheckUsage(VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT))
+        Info.BindFlags |= BIND_DEPTH_STENCIL;
+    else if (ComponentType != COMPONENT_TYPE_COMPRESSED && CheckUsage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT))
+        Info.BindFlags |= BIND_RENDER_TARGET;
+
+    if ((Info.BindFlags & (BIND_DEPTH_STENCIL | BIND_RENDER_TARGET)) != 0 && CheckUsage(VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT))
+        Info.BindFlags |= BIND_INPUT_ATTACHMENT;
+    if (CheckUsage(VK_IMAGE_USAGE_SAMPLED_BIT))
+        Info.BindFlags |= BIND_SHADER_RESOURCE;
+    if (CheckUsage(VK_IMAGE_USAGE_STORAGE_BIT))
+        Info.BindFlags |= BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+
+    return Info;
 }
 
 } // namespace Diligent

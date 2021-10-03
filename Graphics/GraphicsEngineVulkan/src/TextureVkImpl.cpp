@@ -38,7 +38,7 @@
 namespace Diligent
 {
 
-VkImageCreateInfo TextureDescToVkImageCreateInfo(const TextureDesc& Desc, const RenderDeviceVkImpl* pRenderDeviceVk)
+VkImageCreateInfo TextureDescToVkImageCreateInfo(const TextureDesc& Desc, const RenderDeviceVkImpl* pRenderDeviceVk) noexcept
 {
     const auto  IsMemoryless         = (Desc.MiscFlags & MISC_TEXTURE_FLAG_MEMORYLESS) != 0;
     const auto& FmtAttribs           = GetTextureFormatAttribs(Desc.Format);
@@ -128,7 +128,8 @@ VkImageCreateInfo TextureDescToVkImageCreateInfo(const TextureDesc& Desc, const 
 
     if (Desc.Usage == USAGE_SPARSE)
     {
-        ImageCI.flags =
+        ImageCI.flags &= ~VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT; // not compatible
+        ImageCI.flags |=
             VK_IMAGE_CREATE_SPARSE_BINDING_BIT |
             VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT |
             (Desc.MiscFlags & MISC_TEXTURE_FLAG_SPARSE_ALIASING ? VK_IMAGE_CREATE_SPARSE_ALIASED_BIT : 0);
@@ -159,6 +160,9 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
     const auto IsMemoryless = (m_Desc.MiscFlags & MISC_TEXTURE_FLAG_MEMORYLESS) != 0;
     if (IsMemoryless && pInitData != nullptr && pInitData->pSubResources != nullptr)
         LOG_ERROR_AND_THROW("Memoryless textures can't be initialized");
+
+    if (m_Desc.Usage == USAGE_SPARSE && m_Desc.Is3D() && (m_Desc.BindFlags & (BIND_RENDER_TARGET | BIND_DEPTH_STENCIL)) != 0)
+        LOG_ERROR_AND_THROW("Sparse 3D texture with BIND_RENDER_TARGET or BIND_DEPTH_STENCIL is not supported in Vulkan");
 
     const auto& FmtAttribs    = GetTextureFormatAttribs(m_Desc.Format);
     const auto& LogicalDevice = pRenderDeviceVk->GetLogicalDevice();
@@ -597,6 +601,9 @@ VulkanUtilities::ImageViewWrapper TextureVkImpl::CreateImageView(TextureViewDesc
         case RESOURCE_DIM_TEX_3D:
             if (ViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET || ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL)
             {
+                VERIFY_EXPR(m_pDevice->GetAdapterInfo().Texture.TextureView2DOn3DSupported);
+                VERIFY(m_Desc.Usage != USAGE_SPARSE, "Can not create 2D texture view on a 3D sparse texture");
+
                 ViewDesc.TextureDim  = RESOURCE_DIM_TEX_2D_ARRAY;
                 ImageViewCI.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
             }

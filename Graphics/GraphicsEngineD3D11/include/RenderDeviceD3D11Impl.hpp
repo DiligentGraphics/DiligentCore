@@ -150,9 +150,10 @@ public:
     /// Implementation of IRenderDevice::IdleGPU() in Direct3D11 backend.
     virtual void DILIGENT_CALL_TYPE IdleGPU() override final;
 
-    /// Implementation of IRenderDevice::GetTextureFormatSparseInfo() in Direct3D11 backend.
-    virtual TextureFormatSparseInfo DILIGENT_CALL_TYPE GetTextureFormatSparseInfo(TEXTURE_FORMAT     TexFormat,
-                                                                                  RESOURCE_DIMENSION Dimension) const override final;
+    /// Implementation of IRenderDevice::GetSparseTextureFormatInfo() in Direct3D11 backend.
+    virtual SparseTextureFormatInfo DILIGENT_CALL_TYPE GetSparseTextureFormatInfo(TEXTURE_FORMAT     TexFormat,
+                                                                                  RESOURCE_DIMENSION Dimension,
+                                                                                  Uint32             SampleCount) const override final;
 
     size_t GetCommandQueueCount() const { return 1; }
     Uint64 GetCommandQueueMask() const { return Uint64{1}; }

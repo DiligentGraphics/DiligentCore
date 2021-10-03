@@ -343,10 +343,11 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
                                                                            TEXTURE_FORMAT TexFormat) PURE;
 
 
-    /// Returns the sparse texture format info for the given texture format and resource dimension.
-    VIRTUAL TextureFormatSparseInfo METHOD(GetTextureFormatSparseInfo)(THIS_
+    /// Returns the sparse texture format info for the given texture format, resource dimension and sample count.
+    VIRTUAL SparseTextureFormatInfo METHOD(GetSparseTextureFormatInfo)(THIS_
                                                                        TEXTURE_FORMAT     TexFormat,
-                                                                       RESOURCE_DIMENSION Dimension) CONST PURE;
+                                                                       RESOURCE_DIMENSION Dimension,
+                                                                       Uint32             SampleCount) CONST PURE;
 
     /// Purges device release queues and releases all stale resources.
     /// This method is automatically called by ISwapChain::Present() of the primary swap chain.
@@ -401,7 +402,7 @@ DILIGENT_END_INTERFACE
 #    define IRenderDevice_GetDeviceInfo(This)                        CALL_IFACE_METHOD(RenderDevice, GetDeviceInfo,                   This)
 #    define IRenderDevice_GetTextureFormatInfo(This, ...)            CALL_IFACE_METHOD(RenderDevice, GetTextureFormatInfo,            This, __VA_ARGS__)
 #    define IRenderDevice_GetTextureFormatInfoExt(This, ...)         CALL_IFACE_METHOD(RenderDevice, GetTextureFormatInfoExt,         This, __VA_ARGS__)
-#    define IRenderDevice_GetTextureFormatSparseInfo(This, ...)      CALL_IFACE_METHOD(RenderDevice, GetTextureFormatSparseInfo,      This, __VA_ARGS__)
+#    define IRenderDevice_GetSparseTextureFormatInfo(This, ...)      CALL_IFACE_METHOD(RenderDevice, GetSparseTextureFormatInfo,      This, __VA_ARGS__)
 #    define IRenderDevice_ReleaseStaleResources(This, ...)           CALL_IFACE_METHOD(RenderDevice, ReleaseStaleResources,           This, __VA_ARGS__)
 #    define IRenderDevice_IdleGPU(This)                              CALL_IFACE_METHOD(RenderDevice, IdleGPU,                         This)
 #    define IRenderDevice_GetEngineFactory(This)                     CALL_IFACE_METHOD(RenderDevice, GetEngineFactory,                This)

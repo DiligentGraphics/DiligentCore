@@ -162,15 +162,6 @@ void RenderDeviceD3D11Impl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
         if (SUCCEEDED(hr) && QualityLevels > 0)
             TexFormatInfo.SampleCounts |= SampleCount;
     }
-    /*
-    D3D11_FEATURE_DATA_FORMAT_SUPPORT2 FormatSupport2;
-    FormatSupport2.InFormat          = DXGIFormat;
-    FormatSupport2.OutFormatSupport2 = 0;
-    if (SUCCEEDED(m_pd3d11Device->CheckFeatureSupport(D3D11_FEATURE_FORMAT_SUPPORT2, &FormatSupport2, sizeof(FormatSupport2))))
-    {
-        TexFormatInfo.SparseMemoryCompatible = (FormatSupport2.OutFormatSupport2 & D3D11_FORMAT_SUPPORT2_TILED) == D3D11_FORMAT_SUPPORT2_TILED;
-    }
-    // AZ TODO: SparseMemoryMSAACompatible*/
 }
 
 IMPLEMENT_QUERY_INTERFACE(RenderDeviceD3D11Impl, IID_RenderDeviceD3D11, TRenderDeviceBase)
@@ -361,13 +352,20 @@ void RenderDeviceD3D11Impl::IdleGPU()
     }
 }
 
-TextureFormatSparseInfo RenderDeviceD3D11Impl::GetTextureFormatSparseInfo(TEXTURE_FORMAT     TexFormat,
-                                                                          RESOURCE_DIMENSION Dimension) const
+SparseTextureFormatInfo RenderDeviceD3D11Impl::GetSparseTextureFormatInfo(TEXTURE_FORMAT     TexFormat,
+                                                                          RESOURCE_DIMENSION Dimension,
+                                                                          Uint32             SampleCount) const
 {
-    TextureFormatSparseInfo Info;
-    Info.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS | BIND_RENDER_TARGET | BIND_DEPTH_STENCIL;
-    // AZ TODO
-    return Info;
+    D3D11_FEATURE_DATA_FORMAT_SUPPORT2 FormatSupport2{
+        TexFormatToDXGI_Format(TexFormat) // .InFormat
+    };
+    if (FAILED(m_pd3d11Device->CheckFeatureSupport(D3D11_FEATURE_FORMAT_SUPPORT2, &FormatSupport2, sizeof(FormatSupport2))) ||
+        (FormatSupport2.OutFormatSupport2 & D3D11_FORMAT_SUPPORT2_TILED) != D3D11_FORMAT_SUPPORT2_TILED)
+    {
+        return {};
+    }
+
+    return TRenderDeviceBase::GetSparseTextureFormatInfo(TexFormat, Dimension, SampleCount);
 }
 
 } // namespace Diligent

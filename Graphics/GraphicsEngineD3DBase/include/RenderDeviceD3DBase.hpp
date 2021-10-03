@@ -37,6 +37,7 @@
 
 #include "RenderDeviceBase.hpp"
 #include "NVApiLoader.hpp"
+#include "GraphicsAccessories.hpp"
 
 namespace Diligent
 {
@@ -181,6 +182,38 @@ public:
     bool IsNvApiEnabled() const
     {
         return m_NVApi.IsLoaded();
+    }
+
+protected:
+    virtual SparseTextureFormatInfo DILIGENT_CALL_TYPE GetSparseTextureFormatInfo(TEXTURE_FORMAT     TexFormat,
+                                                                                  RESOURCE_DIMENSION Dimension,
+                                                                                  Uint32             SampleCount) const override
+    {
+        const auto ComponentType = CheckSparseTextureFormatSupport(TexFormat, Dimension, SampleCount, this->m_AdapterInfo.SparseResources);
+        if (ComponentType == COMPONENT_TYPE_UNDEFINED)
+            return {};
+
+        TextureDesc TexDesc;
+        TexDesc.Type        = Dimension;
+        TexDesc.Format      = TexFormat;
+        TexDesc.MipLevels   = 1;
+        TexDesc.SampleCount = SampleCount;
+
+        const auto SparseProps = GetStandardSparseTextureProperties(TexDesc);
+
+        SparseTextureFormatInfo Info;
+        Info.BindFlags   = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+        Info.TileSize[0] = SparseProps.TileSize[0];
+        Info.TileSize[1] = SparseProps.TileSize[1];
+        Info.TileSize[2] = SparseProps.TileSize[2];
+        Info.Flags       = SparseProps.Flags;
+
+        if (ComponentType == COMPONENT_TYPE_DEPTH || ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
+            Info.BindFlags |= BIND_DEPTH_STENCIL;
+        else if (ComponentType != COMPONENT_TYPE_COMPRESSED)
+            Info.BindFlags |= BIND_RENDER_TARGET;
+
+        return Info;
     }
 
 protected:

@@ -552,6 +552,14 @@ void RenderDeviceGLImpl::CreateDeviceMemory(const DeviceMemoryCreateInfo& Create
     *ppMemory = nullptr;
 }
 
+SparseTextureFormatInfo RenderDeviceGLImpl::GetSparseTextureFormatInfo(TEXTURE_FORMAT     TexFormat,
+                                                                       RESOURCE_DIMENSION Dimension,
+                                                                       Uint32             SampleCount) const
+{
+    UNSUPPORTED("GetSparseTextureFormatInfo is not supported in OpenGL");
+    return {};
+}
+
 bool RenderDeviceGLImpl::CheckExtension(const Char* ExtensionString) const
 {
     return m_ExtensionStrings.find(ExtensionString) != m_ExtensionStrings.end();
