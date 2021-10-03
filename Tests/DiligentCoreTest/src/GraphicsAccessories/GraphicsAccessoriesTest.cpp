@@ -952,6 +952,21 @@ TEST(GraphicsAccessories_GraphicsAccessories, GetStandardSparseTextureProperties
     EXPECT_EQ(Props.BlockSize, BlockSize);
     EXPECT_EQ(Props.Flags, SPARSE_TEXTURE_FLAG_NONE);
 
+    Desc.Format      = TEX_FORMAT_R8_UNORM; // 8 bits
+    Desc.SampleCount = 2;
+
+    Props = GetStandardSparseTextureProperties(Desc);
+    EXPECT_EQ(Props.AddressSpaceSize, 32 * BlockSize);
+    EXPECT_EQ(Props.MipTailOffset, 0u);
+    EXPECT_EQ(Props.MipTailStride, 0u);
+    EXPECT_EQ(Props.MipTailSize, 0u);
+    EXPECT_EQ(Props.FirstMipInTail, 1u);
+    EXPECT_EQ(Props.TileSize[0], 128u);
+    EXPECT_EQ(Props.TileSize[1], 256u);
+    EXPECT_EQ(Props.TileSize[2], 1u);
+    EXPECT_EQ(Props.BlockSize, BlockSize);
+    EXPECT_EQ(Props.Flags, SPARSE_TEXTURE_FLAG_NONE);
+
     Desc.Format      = TEX_FORMAT_RGBA8_UNORM; // 32 bits
     Desc.SampleCount = 8;
 
@@ -963,6 +978,21 @@ TEST(GraphicsAccessories_GraphicsAccessories, GetStandardSparseTextureProperties
     EXPECT_EQ(Props.FirstMipInTail, 1u);
     EXPECT_EQ(Props.TileSize[0], 32u);
     EXPECT_EQ(Props.TileSize[1], 64u);
+    EXPECT_EQ(Props.TileSize[2], 1u);
+    EXPECT_EQ(Props.BlockSize, BlockSize);
+    EXPECT_EQ(Props.Flags, SPARSE_TEXTURE_FLAG_NONE);
+
+    Desc.Format      = TEX_FORMAT_RGBA32_FLOAT; // 128 bits
+    Desc.SampleCount = 16;
+
+    Props = GetStandardSparseTextureProperties(Desc);
+    EXPECT_EQ(Props.AddressSpaceSize, 4096 * BlockSize);
+    EXPECT_EQ(Props.MipTailOffset, 0u);
+    EXPECT_EQ(Props.MipTailStride, 0u);
+    EXPECT_EQ(Props.MipTailSize, 0u);
+    EXPECT_EQ(Props.FirstMipInTail, 1u);
+    EXPECT_EQ(Props.TileSize[0], 16u);
+    EXPECT_EQ(Props.TileSize[1], 16u);
     EXPECT_EQ(Props.TileSize[2], 1u);
     EXPECT_EQ(Props.BlockSize, BlockSize);
     EXPECT_EQ(Props.Flags, SPARSE_TEXTURE_FLAG_NONE);

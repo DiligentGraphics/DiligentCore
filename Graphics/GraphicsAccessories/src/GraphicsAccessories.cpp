@@ -1957,8 +1957,8 @@ SparseTextureProperties GetStandardSparseTextureProperties(const TextureDesc& Te
         //  |    64-Bit   |    64 x  64 x 1  |    64 x  32 x 1  |   32 x  32 x 1   |    32 x 16 x 1    |
         //  |   128-Bit   |    32 x  64 x 1  |    32 x  32 x 1  |   16 x  32 x 1   |    16 x 16 x 1    |
         VERIFY_EXPR(IsPowerOfTwo(TexDesc.SampleCount));
-        Props.TileSize[0] = 128 >> ((TexDesc.SampleCount & (8 | 16)) ? 1 : 0);
-        Props.TileSize[1] = 256 >> (((TexDesc.SampleCount & (4 | 8)) ? 1 : 0) + ((TexDesc.SampleCount & 16) ? 1 : 0));
+        Props.TileSize[0] = 128 >> (TexDesc.SampleCount >= 8 ? 1 : 0);
+        Props.TileSize[1] = 256 >> (TexDesc.SampleCount >= 4 ? (TexDesc.SampleCount >= 16 ? 2 : 1) : 0);
         Props.TileSize[2] = 1;
 
         constexpr size_t Remap[] = {1, 0};
