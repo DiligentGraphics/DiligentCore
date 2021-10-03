@@ -1523,10 +1523,6 @@ VkAttachmentLoadOp AttachmentLoadOpToVkAttachmentLoadOp(ATTACHMENT_LOAD_OP LoadO
 {
     return static_cast<VkAttachmentLoadOp>(LoadOp);
 }
-ATTACHMENT_LOAD_OP VkAttachmentLoadOpToAttachmentLoadOp(VkAttachmentLoadOp VkLoadOp)
-{
-    return static_cast<ATTACHMENT_LOAD_OP>(VkLoadOp);
-}
 
 
 ASSERT_SAME(ATTACHMENT_STORE_OP_STORE, VK_ATTACHMENT_STORE_OP_STORE);
@@ -1534,10 +1530,6 @@ ASSERT_SAME(ATTACHMENT_STORE_OP_DISCARD, VK_ATTACHMENT_STORE_OP_DONT_CARE);
 VkAttachmentStoreOp AttachmentStoreOpToVkAttachmentStoreOp(ATTACHMENT_STORE_OP StoreOp)
 {
     return static_cast<VkAttachmentStoreOp>(StoreOp);
-}
-ATTACHMENT_STORE_OP VkAttachmentStoreOpToAttachmentStoreOp(VkAttachmentStoreOp VkStoreOp)
-{
-    return static_cast<ATTACHMENT_STORE_OP>(VkStoreOp);
 }
 
 

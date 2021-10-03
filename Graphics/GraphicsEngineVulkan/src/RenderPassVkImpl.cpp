@@ -276,10 +276,10 @@ void RenderPassVkImpl::CreateRenderPass() noexcept(false)
         InitSubpassDependency(vkDependency);
         vkDependency.srcSubpass    = DependencyDesc.SrcSubpass;
         vkDependency.dstSubpass    = DependencyDesc.DstSubpass;
-        vkDependency.srcStageMask  = DependencyDesc.SrcStageMask;
-        vkDependency.dstStageMask  = DependencyDesc.DstStageMask;
-        vkDependency.srcAccessMask = DependencyDesc.SrcAccessMask;
-        vkDependency.dstAccessMask = DependencyDesc.DstAccessMask;
+        vkDependency.srcStageMask  = PipelineStageFlagsToVkPipelineStageFlags(DependencyDesc.SrcStageMask);
+        vkDependency.dstStageMask  = PipelineStageFlagsToVkPipelineStageFlags(DependencyDesc.DstStageMask);
+        vkDependency.srcAccessMask = AccessFlagsToVkAccessFlags(DependencyDesc.SrcAccessMask);
+        vkDependency.dstAccessMask = AccessFlagsToVkAccessFlags(DependencyDesc.DstAccessMask);
 
         // VK_DEPENDENCY_BY_REGION_BIT specifies that dependencies will be framebuffer-local.
         // Framebuffer-local dependencies are more optimal for most architectures; particularly
