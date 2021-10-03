@@ -27,6 +27,7 @@
 #include <sstream>
 
 #include "VulkanUtilities/VulkanCommandBuffer.hpp"
+#include "AdvancedMath.hpp"
 
 namespace VulkanUtilities
 {
@@ -174,25 +175,31 @@ void VulkanCommandBuffer::TransitionImageLayout(VkImage                        I
         return;
     }
 
-    // AZ TODO: barrier must not intersects
+    // Check overlapping subresources
     for (size_t i = 0; i < m_ImageBarriers.size(); ++i)
     {
-        const auto& Lhs = m_ImageBarriers[i];
-        if (Lhs.image != Image)
+        const auto& ImgBarrier = m_ImageBarriers[i];
+        if (ImgBarrier.image != Image)
             continue;
 
-        const auto& LhsSubRes = Lhs.subresourceRange;
+        const auto& OtherRange = ImgBarrier.subresourceRange;
 
-        const bool SlicesIntersects =
-            (LhsSubRes.baseArrayLayer + LhsSubRes.layerCount > SubresRange.baseArrayLayer &&
-             LhsSubRes.baseArrayLayer < SubresRange.baseArrayLayer + SubresRange.layerCount);
-        const bool MipmapIntersects =
-            (LhsSubRes.baseMipLevel + LhsSubRes.levelCount > SubresRange.baseMipLevel &&
-             LhsSubRes.baseMipLevel < SubresRange.baseMipLevel + SubresRange.levelCount);
+        const auto StartLayer0 = SubresRange.baseArrayLayer;
+        const auto EndLayer0   = SubresRange.layerCount != VK_REMAINING_ARRAY_LAYERS ? (SubresRange.baseArrayLayer + SubresRange.layerCount) : ~0u;
+        const auto StartLayer1 = OtherRange.baseArrayLayer;
+        const auto EndLayer1   = OtherRange.layerCount != VK_REMAINING_ARRAY_LAYERS ? (OtherRange.baseArrayLayer + OtherRange.layerCount) : ~0u;
 
-        //VERIFY(!(SlicesIntersects && MipmapIntersects), "Image barriers must not intersects");
+        const auto StartMip0 = SubresRange.baseMipLevel;
+        const auto EndMip0   = SubresRange.levelCount != VK_REMAINING_MIP_LEVELS ? (SubresRange.baseMipLevel + SubresRange.levelCount) : ~0u;
+        const auto StartMip1 = OtherRange.baseMipLevel;
+        const auto EndMip1   = OtherRange.levelCount != VK_REMAINING_MIP_LEVELS ? (OtherRange.baseMipLevel + OtherRange.levelCount) : ~0u;
 
-        if (SlicesIntersects && MipmapIntersects)
+        const auto SlicesOverlap = Diligent::CheckLineSectionOverlap<true>(StartLayer0, EndLayer0, StartLayer1, EndLayer1);
+        const auto MipsOverlap   = Diligent::CheckLineSectionOverlap<true>(StartMip0, EndMip0, StartMip1, EndMip1);
+
+        // If the range overlaps with any of the existing barriers, we need to
+        // flush them.
+        if (SlicesOverlap && MipsOverlap)
         {
             FlushBarriers();
             break;
