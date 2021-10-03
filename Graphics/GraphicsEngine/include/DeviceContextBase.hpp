@@ -90,7 +90,7 @@ bool VerifyTraceRaysIndirectAttribs(const IRenderDevice*            pDevice,
                                     const TraceRaysIndirectAttribs& Attribs,
                                     Uint32                          SBTSize);
 
-bool VerifyBindSparseMemoryAttribs(const IRenderDevice* pDevice, const BindSparseMemoryAttribs& Attribs);
+bool VerifyBindSparseResourceMemoryAttribs(const IRenderDevice* pDevice, const BindSparseResourceMemoryAttribs& Attribs);
 
 
 /// Describes input vertex stream
@@ -576,7 +576,7 @@ protected:
 
     void SetShadingRate(SHADING_RATE BaseRate, SHADING_RATE_COMBINER PrimitiveCombiner, SHADING_RATE_COMBINER TextureCombiner, int) const;
 
-    void BindSparseMemory(const BindSparseMemoryAttribs& Attribs, int) const;
+    void BindSparseResourceMemory(const BindSparseResourceMemoryAttribs& Attribs, int) const;
 
 protected:
     static constexpr Uint32 DrawMeshIndirectCommandStride = sizeof(Uint32) * 3; // D3D12: 12 bytes (x, y, z dimension)
@@ -2018,14 +2018,14 @@ void DeviceContextBase<ImplementationTraits>::SetShadingRate(SHADING_RATE BaseRa
 }
 
 template <typename ImplementationTraits>
-void DeviceContextBase<ImplementationTraits>::BindSparseMemory(const BindSparseMemoryAttribs& Attribs, int) const
+void DeviceContextBase<ImplementationTraits>::BindSparseResourceMemory(const BindSparseResourceMemoryAttribs& Attribs, int) const
 {
-    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_SPARSE_BINDING, "BindSparseMemory");
+    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_SPARSE_BINDING, "BindSparseResourceMemory");
 
-    DEV_CHECK_ERR(!IsDeferred(), "BindSparseMemory() should only be called for immediate contexts.");
-    DEV_CHECK_ERR(m_pDevice->GetDeviceInfo().Features.SparseMemory, "IDeviceContext::BindSparseMemory: SparseMemory feature must be enabled");
+    DEV_CHECK_ERR(!IsDeferred(), "BindSparseResourceMemory() should only be called for immediate contexts.");
+    DEV_CHECK_ERR(m_pDevice->GetDeviceInfo().Features.SparseResources, "IDeviceContext::BindSparseResourceMemory: SparseResources feature must be enabled");
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "Can not bind sparse memory inside an active render pass.");
-    DEV_CHECK_ERR(VerifyBindSparseMemoryAttribs(m_pDevice, Attribs), "BindSparseMemoryAttribs are invalid");
+    DEV_CHECK_ERR(VerifyBindSparseResourceMemoryAttribs(m_pDevice, Attribs), "BindSparseResourceMemoryAttribs are invalid");
 }
 
 template <typename ImplementationTraits>

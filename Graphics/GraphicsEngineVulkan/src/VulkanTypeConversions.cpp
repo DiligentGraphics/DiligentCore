@@ -1936,7 +1936,7 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
     INIT_FEATURE(VertexPipelineUAVWritesAndAtomics, vkFeatures.vertexPipelineStoresAndAtomics);
     INIT_FEATURE(PixelUAVWritesAndAtomics,          vkFeatures.fragmentStoresAndAtomics);
     INIT_FEATURE(TextureUAVExtendedFormats,         vkFeatures.shaderStorageImageExtendedFormats);
-    INIT_FEATURE(SparseMemory,                      vkFeatures.sparseBinding && (vkFeatures.sparseResidencyBuffer || vkFeatures.sparseResidencyImage2D)); // requires support for resident resources
+    INIT_FEATURE(SparseResources,                   vkFeatures.sparseBinding && (vkFeatures.sparseResidencyBuffer || vkFeatures.sparseResidencyImage2D)); // requires support for resident resources
     // clang-format on
 
     const auto& MeshShaderFeats = ExtFeatures.MeshShader;

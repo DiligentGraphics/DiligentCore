@@ -39,6 +39,6 @@ void TestTexture_CInterface(ITexture* pTexture)
     ITexture_SetState(pTexture, RESOURCE_STATE_UNKNOWN);
     RESOURCE_STATE State = ITexture_GetState(pTexture);
     (void)State;
-    const TextureSparseProperties* pSparseProps = ITexture_GetSparseProperties(pTexture);
+    const SparseTextureProperties* pSparseProps = ITexture_GetSparseProperties(pTexture);
     (void)pSparseProps;
 }

@@ -76,7 +76,7 @@ struct D3DTileMappingHelper
     }
 
     void AddTextureBindRange(const SparseTextureMemoryBindRange& BindRange,
-                             const TextureSparseProperties&      TexSparseProps,
+                             const SparseTextureProperties&      TexSparseProps,
                              const TextureDesc&                  TexDesc,
                              bool                                _UseNVApi,
                              Uint64                              MemOffsetInBytes)
@@ -98,7 +98,7 @@ struct D3DTileMappingHelper
             d3dCoord.Y = BindRange.Region.MinY / TexSparseProps.TileSize[1];
             d3dCoord.Z = BindRange.Region.MinZ / TexSparseProps.TileSize[2];
 
-            const auto NumTiles    = GetNumTilesInBox(BindRange.Region, TexSparseProps);
+            const auto NumTiles    = GetNumSparseTilesInBox(BindRange.Region, TexSparseProps);
             d3dRegionSize.NumTiles = NumTiles.x * NumTiles.y * NumTiles.z;
             d3dRegionSize.Width    = NumTiles.x;
             d3dRegionSize.Height   = StaticCast<UINT16>(NumTiles.y);
@@ -128,7 +128,7 @@ struct D3DTileMappingHelper
     }
 
     void AddTextureBindRange(const SparseTextureMemoryBindRange& BindRange,
-                             const TextureSparseProperties&      TexSparseProps,
+                             const SparseTextureProperties&      TexSparseProps,
                              const TextureDesc&                  TexDesc,
                              bool                                _UseNVApi)
     {

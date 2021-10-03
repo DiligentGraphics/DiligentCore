@@ -68,7 +68,7 @@ D3D12_HEAP_FLAGS GetD3D12HeapFlags(ID3D12Device*   pd3d12Device,
             if (NumResources == 0)
             {
                 LOG_ERROR_AND_THROW("D3D12_RESOURCE_HEAP_TIER_1 hardware requires that at least one comptaible resource is provided. "
-                                    "See SPARSE_MEMORY_CAP_FLAG_MIXED_RESOURCE_TYPE_SUPPORT capability.");
+                                    "See SPARSE_RESOURCE_CAP_FLAG_MIXED_RESOURCE_TYPE_SUPPORT capability.");
             }
         }
         else if (d3d12Features.ResourceHeapTier >= D3D12_RESOURCE_HEAP_TIER_2)

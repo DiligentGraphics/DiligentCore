@@ -250,42 +250,42 @@ void ValidateTextureDesc(const TextureDesc& Desc, const IRenderDevice* pDevice) 
 
     if (Desc.Usage == USAGE_SPARSE)
     {
-        VERIFY_TEXTURE(DeviceInfo.Features.SparseMemory, "sparse texture requires SparseMemory feature");
+        VERIFY_TEXTURE(DeviceInfo.Features.SparseResources, "sparse texture requires SparseResources feature");
 
-        const auto& SparseMem = AdapterInfo.SparseMemory;
+        const auto& SparseRes = AdapterInfo.SparseResources;
 
         if ((Desc.MiscFlags & MISC_TEXTURE_FLAG_SPARSE_ALIASING) != 0)
-            VERIFY_TEXTURE((SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_ALIASED) != 0, "SPARSE_RESOURCE_FLAG_ALIASED flag requires SPARSE_MEMORY_CAP_FLAG_ALIASED capability");
+            VERIFY_TEXTURE((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_ALIASED) != 0, "SPARSE_RESOURCE_FLAG_ALIASED flag requires SPARSE_RESOURCE_CAP_FLAG_ALIASED capability");
 
         static_assert(RESOURCE_DIM_NUM_DIMENSIONS == 9, "Please update the switch below to handle the new resource dimension type");
         switch (Desc.Type)
         {
             case RESOURCE_DIM_TEX_2D:
-                VERIFY_TEXTURE((SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_TEXTURE_2D) != 0,
-                               "2D texture requires SPARSE_MEMORY_CAP_FLAG_TEXTURE_2D capability");
+                VERIFY_TEXTURE((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_TEXTURE_2D) != 0,
+                               "2D texture requires SPARSE_RESOURCE_CAP_FLAG_TEXTURE_2D capability");
                 break;
 
             case RESOURCE_DIM_TEX_2D_ARRAY:
             case RESOURCE_DIM_TEX_CUBE:
             case RESOURCE_DIM_TEX_CUBE_ARRAY:
-                VERIFY_TEXTURE((SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_TEXTURE_2D) != 0,
-                               "2D array or Cube sparse textures requires SPARSE_MEMORY_CAP_FLAG_TEXTURE_2D capability");
+                VERIFY_TEXTURE((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_TEXTURE_2D) != 0,
+                               "2D array or Cube sparse textures requires SPARSE_RESOURCE_CAP_FLAG_TEXTURE_2D capability");
 
-                if ((SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_TEXTURE_2D_ARRAY_MIP_TAIL) == 0)
+                if ((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_TEXTURE_2D_ARRAY_MIP_TAIL) == 0)
                 {
-                    const auto  Props = GetTextureSparsePropertiesForStandardBlocks(Desc);
+                    const auto  Props = GetStandardSparseTextureProperties(Desc);
                     const uint2 MipSize{std::max(1u, Desc.Width >> Desc.MipLevels),
                                         std::max(1u, Desc.Height >> Desc.MipLevels)};
                     VERIFY_TEXTURE(MipSize.x >= Props.TileSize[0] && MipSize.y >= Props.TileSize[1],
                                    "2D array or Cube sparse texture with mip level count ", Desc.MipLevels,
                                    ", where the last mip with dimension (", MipSize.x, "x", MipSize.y, ") is less than the tile size (",
-                                   Props.TileSize[0], "x", Props.TileSize[1], ") requires SPARSE_MEMORY_CAP_FLAG_TEXTURE_2D_ARRAY_MIP_TAIL capability");
+                                   Props.TileSize[0], "x", Props.TileSize[1], ") requires SPARSE_RESOURCE_CAP_FLAG_TEXTURE_2D_ARRAY_MIP_TAIL capability");
                 }
                 break;
 
             case RESOURCE_DIM_TEX_3D:
-                VERIFY_TEXTURE((SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_TEXTURE_3D) != 0,
-                               "3D sparse texture requires SPARSE_MEMORY_CAP_FLAG_TEXTURE_3D capability");
+                VERIFY_TEXTURE((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_TEXTURE_3D) != 0,
+                               "3D sparse texture requires SPARSE_RESOURCE_CAP_FLAG_TEXTURE_3D capability");
                 break;
 
             case RESOURCE_DIM_TEX_1D:

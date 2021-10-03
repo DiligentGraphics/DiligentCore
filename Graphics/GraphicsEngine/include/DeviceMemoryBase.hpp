@@ -48,7 +48,7 @@ template <typename EngineImplTraits>
 class DeviceMemoryBase : public DeviceObjectBase<typename EngineImplTraits::DeviceMemoryInterface, typename EngineImplTraits::RenderDeviceImplType, DeviceMemoryDesc>
 {
 public:
-    // Base interface that this class inherits (IBufferD3D12, IBufferVk, etc.).
+    // Base interface that this class inherits (IDeviceMemoryD3D12, IDeviceMemoryVk, etc.).
     using BaseInterface = typename EngineImplTraits::DeviceMemoryInterface;
 
     // Render device implementation type (RenderDeviceD3D12Impl, RenderDeviceVkImpl, etc.).

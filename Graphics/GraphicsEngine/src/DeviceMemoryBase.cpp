@@ -44,14 +44,14 @@ void ValidateDeviceMemoryDesc(const DeviceMemoryDesc& Desc, const IRenderDevice*
 {
     if (Desc.Type == DEVICE_MEMORY_TYPE_SPARSE)
     {
-        const auto& SparseMem = pDevice->GetAdapterInfo().SparseMemory;
+        const auto& SparseRes = pDevice->GetAdapterInfo().SparseResources;
 
         VERIFY_DEVMEMORY(Desc.PageSize != 0, "page size must not be zero");
 
         // In a very rare case when the resource has a custom memory alignment that is not a multiple of StandardBlockSize,
         // this might be a false positive.
-        VERIFY_DEVMEMORY((Desc.PageSize % SparseMem.StandardBlockSize) == 0,
-                         "page size (", Desc.PageSize, ") is not a multiple of sparse block size (", SparseMem.StandardBlockSize, ")");
+        VERIFY_DEVMEMORY((Desc.PageSize % SparseRes.StandardBlockSize) == 0,
+                         "page size (", Desc.PageSize, ") is not a multiple of sparse block size (", SparseRes.StandardBlockSize, ")");
     }
     else
     {

@@ -782,69 +782,69 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
                     if (AdapterInfo.Vendor == ADAPTER_VENDOR_NVIDIA)
                         NVApi.Load();
 
-                    Features.SparseMemory = DEVICE_FEATURE_STATE_ENABLED;
+                    Features.SparseResources = DEVICE_FEATURE_STATE_ENABLED;
 
-                    auto& SparseMem{AdapterInfo.SparseMemory};
-                    SparseMem.StandardBlockSize = D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
+                    auto& SparseRes{AdapterInfo.SparseResources};
+                    SparseRes.StandardBlockSize = D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
 
                     D3D12_FEATURE_DATA_GPU_VIRTUAL_ADDRESS_SUPPORT d3d12Address = {};
                     if (SUCCEEDED(d3d12Device->CheckFeatureSupport(D3D12_FEATURE_GPU_VIRTUAL_ADDRESS_SUPPORT, &d3d12Address, sizeof(d3d12Address))))
                     {
-                        SparseMem.AddressSpaceSize  = Uint64{1} << d3d12Address.MaxGPUVirtualAddressBitsPerProcess;
-                        SparseMem.ResourceSpaceSize = Uint64{1} << d3d12Address.MaxGPUVirtualAddressBitsPerResource;
+                        SparseRes.AddressSpaceSize  = Uint64{1} << d3d12Address.MaxGPUVirtualAddressBitsPerProcess;
+                        SparseRes.ResourceSpaceSize = Uint64{1} << d3d12Address.MaxGPUVirtualAddressBitsPerResource;
                     }
                     else
                     {
-                        SparseMem.AddressSpaceSize  = Uint64{1} << d3d12Features.MaxGPUVirtualAddressBitsPerResource;
-                        SparseMem.ResourceSpaceSize = Uint64{1} << d3d12Features.MaxGPUVirtualAddressBitsPerResource;
+                        SparseRes.AddressSpaceSize  = Uint64{1} << d3d12Features.MaxGPUVirtualAddressBitsPerResource;
+                        SparseRes.ResourceSpaceSize = Uint64{1} << d3d12Features.MaxGPUVirtualAddressBitsPerResource;
                     }
 
-                    SparseMem.CapFlags =
-                        SPARSE_MEMORY_CAP_FLAG_BUFFER |
-                        SPARSE_MEMORY_CAP_FLAG_BUFFER_STANDARD_BLOCK |
-                        SPARSE_MEMORY_CAP_FLAG_TEXTURE_2D |
-                        SPARSE_MEMORY_CAP_FLAG_STANDARD_2D_TILE_SHAPE |
-                        SPARSE_MEMORY_CAP_FLAG_ALIASED |
-                        SPARSE_MEMORY_CAP_FLAG_NON_RESIDENT_SAFE;
+                    SparseRes.CapFlags =
+                        SPARSE_RESOURCE_CAP_FLAG_BUFFER |
+                        SPARSE_RESOURCE_CAP_FLAG_BUFFER_STANDARD_BLOCK |
+                        SPARSE_RESOURCE_CAP_FLAG_TEXTURE_2D |
+                        SPARSE_RESOURCE_CAP_FLAG_STANDARD_2D_TILE_SHAPE |
+                        SPARSE_RESOURCE_CAP_FLAG_ALIASED |
+                        SPARSE_RESOURCE_CAP_FLAG_NON_RESIDENT_SAFE;
 
                     // No 2, 8 or 16 sample multisample antialiasing (MSAA) support. Only 4x is required, except no 128 bpp formats.
-                    SparseMem.CapFlags |=
-                        SPARSE_MEMORY_CAP_FLAG_TEXTURE_4_SAMPLES |
-                        SPARSE_MEMORY_CAP_FLAG_STANDARD_2DMS_TILE_SHAPE;
+                    SparseRes.CapFlags |=
+                        SPARSE_RESOURCE_CAP_FLAG_TEXTURE_4_SAMPLES |
+                        SPARSE_RESOURCE_CAP_FLAG_STANDARD_2DMS_TILE_SHAPE;
 
                     if (d3d12Features.TiledResourcesTier >= D3D12_TILED_RESOURCES_TIER_2)
                     {
-                        SparseMem.CapFlags |=
-                            SPARSE_MEMORY_CAP_FLAG_SHADER_RESOURCE_RESIDENCY |
-                            SPARSE_MEMORY_CAP_FLAG_NON_RESIDENT_STRICT;
+                        SparseRes.CapFlags |=
+                            SPARSE_RESOURCE_CAP_FLAG_SHADER_RESOURCE_RESIDENCY |
+                            SPARSE_RESOURCE_CAP_FLAG_NON_RESIDENT_STRICT;
                     }
                     if (d3d12Features.TiledResourcesTier >= D3D12_TILED_RESOURCES_TIER_3)
                     {
-                        SparseMem.CapFlags |=
-                            SPARSE_MEMORY_CAP_FLAG_TEXTURE_3D |
-                            SPARSE_MEMORY_CAP_FLAG_STANDARD_3D_TILE_SHAPE;
+                        SparseRes.CapFlags |=
+                            SPARSE_RESOURCE_CAP_FLAG_TEXTURE_3D |
+                            SPARSE_RESOURCE_CAP_FLAG_STANDARD_3D_TILE_SHAPE;
                     }
                     if (NVApi)
                     {
-                        SparseMem.CapFlags |= SPARSE_MEMORY_CAP_FLAG_TEXTURE_2D_ARRAY_MIP_TAIL;
+                        SparseRes.CapFlags |= SPARSE_RESOURCE_CAP_FLAG_TEXTURE_2D_ARRAY_MIP_TAIL;
                     }
                     if (d3d12Features.ResourceHeapTier >= D3D12_RESOURCE_HEAP_TIER_2)
                     {
-                        SparseMem.CapFlags |= SPARSE_MEMORY_CAP_FLAG_MIXED_RESOURCE_TYPE_SUPPORT;
+                        SparseRes.CapFlags |= SPARSE_RESOURCE_CAP_FLAG_MIXED_RESOURCE_TYPE_SUPPORT;
                     }
 
                     // Some features are not correctly working in software renderer.
                     if (AdapterInfo.Type == ADAPTER_TYPE_SOFTWARE)
                     {
                         // Reading from null-mapped tile doesn't return zero
-                        SparseMem.CapFlags &= ~SPARSE_MEMORY_CAP_FLAG_NON_RESIDENT_STRICT;
+                        SparseRes.CapFlags &= ~SPARSE_RESOURCE_CAP_FLAG_NON_RESIDENT_STRICT;
                         // CheckAccessFullyMapped() in shader doesn't work.
-                        SparseMem.CapFlags &= ~SPARSE_MEMORY_CAP_FLAG_SHADER_RESOURCE_RESIDENCY;
+                        SparseRes.CapFlags &= ~SPARSE_RESOURCE_CAP_FLAG_SHADER_RESOURCE_RESIDENCY;
                         // Mip tails are not supported at all.
-                        SparseMem.CapFlags &= ~SPARSE_MEMORY_CAP_FLAG_ALIGNED_MIP_SIZE;
+                        SparseRes.CapFlags &= ~SPARSE_RESOURCE_CAP_FLAG_ALIGNED_MIP_SIZE;
                     }
 
-                    SparseMem.BufferBindFlags =
+                    SparseRes.BufferBindFlags =
                         BIND_VERTEX_BUFFER |
                         BIND_INDEX_BUFFER |
                         BIND_UNIFORM_BUFFER |
@@ -857,7 +857,7 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
                         AdapterInfo.Queues[q].QueueType |= COMMAND_QUEUE_TYPE_SPARSE_BINDING;
 
 #if defined(_MSC_VER) && defined(_WIN64)
-                    static_assert(sizeof(SparseMem) == 32, "Did you add a new member to SparseMemoryProperties? Please initialize it here.");
+                    static_assert(sizeof(SparseRes) == 32, "Did you add a new member to SparseResourceProperties? Please initialize it here.");
 #endif
                 }
             }

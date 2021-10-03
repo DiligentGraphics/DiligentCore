@@ -763,7 +763,7 @@ void TextureVkImpl::InitSparseProperties()
     VERIFY_EXPR(m_Desc.Usage == USAGE_SPARSE);
     VERIFY_EXPR(m_pSparseProps == nullptr);
 
-    m_pSparseProps = std::make_unique<TextureSparseProperties>();
+    m_pSparseProps = std::make_unique<SparseTextureProperties>();
 
     const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
     const auto  MemReq        = LogicalDevice.GetImageMemoryRequirements(GetVkImage());

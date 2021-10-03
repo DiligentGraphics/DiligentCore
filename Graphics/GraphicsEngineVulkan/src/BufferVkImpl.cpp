@@ -635,14 +635,14 @@ void BufferVkImpl::DvpVerifyDynamicAllocation(const DeviceContextVkImpl* pCtx) c
 }
 #endif
 
-BufferSparseProperties BufferVkImpl::GetSparseProperties() const
+SparseBufferProperties BufferVkImpl::GetSparseProperties() const
 {
     DEV_CHECK_ERR(m_Desc.Usage == USAGE_SPARSE,
                   "IBuffer::GetSparseProperties() must be used for sparse buffer");
 
     auto MemReq = m_pDevice->GetLogicalDevice().GetBufferMemoryRequirements(GetVkBuffer());
 
-    BufferSparseProperties Props{};
+    SparseBufferProperties Props{};
     Props.MemorySize = MemReq.size;
     Props.BlockSize  = StaticCast<Uint32>(MemReq.alignment);
     return Props;

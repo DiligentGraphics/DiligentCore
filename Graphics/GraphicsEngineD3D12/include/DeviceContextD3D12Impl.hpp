@@ -297,8 +297,8 @@ public:
                                                    SHADING_RATE_COMBINER PrimitiveCombiner,
                                                    SHADING_RATE_COMBINER TextureCombiner) override final;
 
-    /// Implementation of IDeviceContext::BindSparseMemory() in Direct3D12 backend.
-    virtual void DILIGENT_CALL_TYPE BindSparseMemory(const BindSparseMemoryAttribs& Attribs) override final;
+    /// Implementation of IDeviceContext::BindSparseResourceMemory() in Direct3D12 backend.
+    virtual void DILIGENT_CALL_TYPE BindSparseResourceMemory(const BindSparseResourceMemoryAttribs& Attribs) override final;
 
     void UpdateBufferRegion(class BufferD3D12Impl*         pBuffD3D12,
                             D3D12DynamicAllocation&        Allocation,

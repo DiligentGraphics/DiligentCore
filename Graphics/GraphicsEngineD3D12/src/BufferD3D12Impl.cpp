@@ -449,7 +449,7 @@ D3D12_RESOURCE_STATES BufferD3D12Impl::GetD3D12ResourceState() const
     return ResourceStateFlagsToD3D12ResourceStates(GetState());
 }
 
-BufferSparseProperties BufferD3D12Impl::GetSparseProperties() const
+SparseBufferProperties BufferD3D12Impl::GetSparseProperties() const
 {
     DEV_CHECK_ERR(m_Desc.Usage == USAGE_SPARSE,
                   "IBuffer::GetSparseProperties() must be used for sparse buffer");
@@ -469,7 +469,7 @@ BufferSparseProperties BufferD3D12Impl::GetSparseProperties() const
     VERIFY(StandardTileShapeForNonPackedMips.WidthInTexels == D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES,
            "Expected to be a standard block size");
 
-    BufferSparseProperties Props;
+    SparseBufferProperties Props;
     Props.MemorySize = Uint64{NumTilesForEntireResource} * StandardTileShapeForNonPackedMips.WidthInTexels;
     Props.BlockSize  = StandardTileShapeForNonPackedMips.WidthInTexels;
     return Props;

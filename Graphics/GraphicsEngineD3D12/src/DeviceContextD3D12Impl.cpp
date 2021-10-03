@@ -2992,9 +2992,9 @@ struct TileMappingKey
 
 } // namespace
 
-void DeviceContextD3D12Impl::BindSparseMemory(const BindSparseMemoryAttribs& Attribs)
+void DeviceContextD3D12Impl::BindSparseResourceMemory(const BindSparseResourceMemoryAttribs& Attribs)
 {
-    TDeviceContextBase::BindSparseMemory(Attribs, 0);
+    TDeviceContextBase::BindSparseResourceMemory(Attribs, 0);
 
     if (Attribs.NumBufferBinds == 0 && Attribs.NumTextureBinds == 0)
         return;

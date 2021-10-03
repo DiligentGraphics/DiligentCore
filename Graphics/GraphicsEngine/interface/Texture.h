@@ -65,7 +65,7 @@ DILIGENT_TYPED_ENUM(MISC_TEXTURE_FLAGS, Uint8)
 
     /// For sparse textures, allow binding the same memory range in different texture
     /// regions or in different sparse textures.
-    MISC_TEXTURE_FLAG_SPARSE_ALIASING = 1u << 2,
+    MISC_TEXTURE_FLAG_SPARSE_ALIASING = 1u << 2
 };
 DEFINE_FLAG_ENUM_OPERATORS(MISC_TEXTURE_FLAGS)
 
@@ -363,9 +363,9 @@ struct MappedTextureSubresource
 typedef struct MappedTextureSubresource MappedTextureSubresource;
 
 /// Describes the sparse texture properties
-struct TextureSparseProperties
+struct SparseTextureProperties
 {
-    /// Texture address space size.
+    /// The size of the texture's virtual address space.
     Uint64  MemorySize      DEFAULT_INITIALIZER(0);
 
     /// Specifies where to bind the mip tail memory.
@@ -380,25 +380,26 @@ struct TextureSparseProperties
     /// \note Single mip tail for a 2D array may exceed the 32-bit limit.
     Uint64  MipTailSize     DEFAULT_INITIALIZER(0);
 
-    /// The first mip level in the mip tail that is packed into a single memory block.
+    /// The first mip level in the mip tail that is packed as a whole into one
+    /// or multiple memory blocks.
     Uint32  FirstMipInTail  DEFAULT_INITIALIZER(~0u);
 
-    /// Specifies the tile dimension for a single sparse block.
+    /// Specifies the dimension of a tile packed into a single memory block.
     Uint32  TileSize[3]     DEFAULT_INITIALIZER({});
 
-    /// Size of the sparse block.
+    /// Size of the sparse memory block, in bytes.
 
-    /// \remarks The offset in the packed mip tail, memory offset and memory size that are used in sparse binding command 
-    ///          must be multiples of the block size.
+    /// \remarks The offset in the packed mip tail, memory offset and memory size that are used in sparse
+    ///          memory binding command must be multiples of the block size.
     ///
-    ///          The sparse block size is equal to SparseMemoryProperties::StandardBlockSize if Flags don't contain
-    ///          SPARSE_TEXTURE_FLAG_NONSTANDARD_BLOCK_SIZE.
+    ///          If the SPARSE_TEXTURE_FLAG_NONSTANDARD_BLOCK_SIZE flag is not set in the Flags member,
+    ///          the block size is equal to SparseResourceProperties::StandardBlockSize.
     Uint32  BlockSize DEFAULT_INITIALIZER(0);
 
     /// Flags that describe additional packing modes.
     SPARSE_TEXTURE_FLAGS Flags DEFAULT_INITIALIZER(SPARSE_TEXTURE_FLAG_NONE);
 };
-typedef struct TextureSparseProperties TextureSparseProperties;
+typedef struct SparseTextureProperties SparseTextureProperties;
 
 #define DILIGENT_INTERFACE_NAME ITexture
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
@@ -469,8 +470,8 @@ DILIGENT_BEGIN_INTERFACE(ITexture, IDeviceObject)
     /// Returns the internal texture state
     VIRTUAL RESOURCE_STATE METHOD(GetState)(THIS) CONST PURE;
 
-    /// Returns the texture sparse memory properties
-    VIRTUAL const TextureSparseProperties REF METHOD(GetSparseProperties)(THIS) CONST PURE;
+    /// Returns the sparse texture properties, see Diligent::SparseTextureProperties.
+    VIRTUAL const SparseTextureProperties REF METHOD(GetSparseProperties)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE
 

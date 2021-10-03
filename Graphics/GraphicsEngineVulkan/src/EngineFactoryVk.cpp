@@ -410,18 +410,18 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
     }
 
     // Sparse memory properties
-    if (AdapterInfo.Features.SparseMemory)
+    if (AdapterInfo.Features.SparseResources)
     {
         // Same check as in VkFeaturesToDeviceFeatures()
         VERIFY_EXPR(vkFeatures.sparseBinding && (vkFeatures.sparseResidencyBuffer || vkFeatures.sparseResidencyImage2D));
 
         const auto& SparseProps     = vkDeviceProps.sparseProperties;
-        auto&       SparseMem       = AdapterInfo.SparseMemory;
-        SparseMem.AddressSpaceSize  = vkDeviceLimits.sparseAddressSpaceSize;
-        SparseMem.ResourceSpaceSize = vkDeviceLimits.sparseAddressSpaceSize; // no way to query
-        SparseMem.StandardBlockSize = 64u << 10;                             // docs: "All currently defined standard sparse image block shapes are 64 KB in size."
+        auto&       SparseRes       = AdapterInfo.SparseResources;
+        SparseRes.AddressSpaceSize  = vkDeviceLimits.sparseAddressSpaceSize;
+        SparseRes.ResourceSpaceSize = vkDeviceLimits.sparseAddressSpaceSize; // no way to query
+        SparseRes.StandardBlockSize = 64u << 10;                             // docs: "All currently defined standard sparse image block shapes are 64 KB in size."
 
-        SparseMem.BufferBindFlags =
+        SparseRes.BufferBindFlags =
             BIND_VERTEX_BUFFER |
             BIND_INDEX_BUFFER |
             BIND_UNIFORM_BUFFER |
@@ -430,33 +430,33 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
             BIND_INDIRECT_DRAW_ARGS |
             BIND_RAY_TRACING;
 
-        SparseMem.CapFlags |=
-            SPARSE_MEMORY_CAP_FLAG_NON_RESIDENT_SAFE |
-            SPARSE_MEMORY_CAP_FLAG_MIXED_RESOURCE_TYPE_SUPPORT;
+        SparseRes.CapFlags |=
+            SPARSE_RESOURCE_CAP_FLAG_NON_RESIDENT_SAFE |
+            SPARSE_RESOURCE_CAP_FLAG_MIXED_RESOURCE_TYPE_SUPPORT;
 
-        auto SetSparseMemoryCap = [&SparseMem](VkBool32 Feature, SPARSE_MEMORY_CAP_FLAGS Flag) {
+        auto SetSparseResCap = [&SparseRes](VkBool32 Feature, SPARSE_RESOURCE_CAP_FLAGS Flag) {
             if (Feature != VK_FALSE)
-                SparseMem.CapFlags |= Flag;
+                SparseRes.CapFlags |= Flag;
         };
         // clang-format off
-        SetSparseMemoryCap(SparseProps.residencyStandard2DBlockShape,            SPARSE_MEMORY_CAP_FLAG_STANDARD_2D_TILE_SHAPE   );
-        SetSparseMemoryCap(SparseProps.residencyStandard2DMultisampleBlockShape, SPARSE_MEMORY_CAP_FLAG_STANDARD_2DMS_TILE_SHAPE );
-        SetSparseMemoryCap(SparseProps.residencyStandard3DBlockShape,            SPARSE_MEMORY_CAP_FLAG_STANDARD_3D_TILE_SHAPE   );
-        SetSparseMemoryCap(SparseProps.residencyAlignedMipSize,                  SPARSE_MEMORY_CAP_FLAG_ALIGNED_MIP_SIZE         );
-        SetSparseMemoryCap(SparseProps.residencyNonResidentStrict,               SPARSE_MEMORY_CAP_FLAG_NON_RESIDENT_STRICT      );
-        SetSparseMemoryCap(vkFeatures.shaderResourceResidency,                   SPARSE_MEMORY_CAP_FLAG_SHADER_RESOURCE_RESIDENCY);
-        SetSparseMemoryCap(vkFeatures.sparseResidencyBuffer,                     SPARSE_MEMORY_CAP_FLAG_BUFFER                   );
-        SetSparseMemoryCap(vkFeatures.sparseResidencyImage2D,                    SPARSE_MEMORY_CAP_FLAG_TEXTURE_2D | SPARSE_MEMORY_CAP_FLAG_TEXTURE_2D_ARRAY_MIP_TAIL);
-        SetSparseMemoryCap(vkFeatures.sparseResidencyImage3D,                    SPARSE_MEMORY_CAP_FLAG_TEXTURE_3D               );
-        SetSparseMemoryCap(vkFeatures.sparseResidency2Samples,                   SPARSE_MEMORY_CAP_FLAG_TEXTURE_2_SAMPLES        );
-        SetSparseMemoryCap(vkFeatures.sparseResidency4Samples,                   SPARSE_MEMORY_CAP_FLAG_TEXTURE_4_SAMPLES        );
-        SetSparseMemoryCap(vkFeatures.sparseResidency8Samples,                   SPARSE_MEMORY_CAP_FLAG_TEXTURE_8_SAMPLES        );
-        SetSparseMemoryCap(vkFeatures.sparseResidency16Samples,                  SPARSE_MEMORY_CAP_FLAG_TEXTURE_16_SAMPLES       );
-        SetSparseMemoryCap(vkFeatures.sparseResidencyAliased,                    SPARSE_MEMORY_CAP_FLAG_ALIASED                  );
+        SetSparseResCap(SparseProps.residencyStandard2DBlockShape,            SPARSE_RESOURCE_CAP_FLAG_STANDARD_2D_TILE_SHAPE   );
+        SetSparseResCap(SparseProps.residencyStandard2DMultisampleBlockShape, SPARSE_RESOURCE_CAP_FLAG_STANDARD_2DMS_TILE_SHAPE );
+        SetSparseResCap(SparseProps.residencyStandard3DBlockShape,            SPARSE_RESOURCE_CAP_FLAG_STANDARD_3D_TILE_SHAPE   );
+        SetSparseResCap(SparseProps.residencyAlignedMipSize,                  SPARSE_RESOURCE_CAP_FLAG_ALIGNED_MIP_SIZE         );
+        SetSparseResCap(SparseProps.residencyNonResidentStrict,               SPARSE_RESOURCE_CAP_FLAG_NON_RESIDENT_STRICT      );
+        SetSparseResCap(vkFeatures.shaderResourceResidency,                   SPARSE_RESOURCE_CAP_FLAG_SHADER_RESOURCE_RESIDENCY);
+        SetSparseResCap(vkFeatures.sparseResidencyBuffer,                     SPARSE_RESOURCE_CAP_FLAG_BUFFER                   );
+        SetSparseResCap(vkFeatures.sparseResidencyImage2D,                    SPARSE_RESOURCE_CAP_FLAG_TEXTURE_2D | SPARSE_RESOURCE_CAP_FLAG_TEXTURE_2D_ARRAY_MIP_TAIL);
+        SetSparseResCap(vkFeatures.sparseResidencyImage3D,                    SPARSE_RESOURCE_CAP_FLAG_TEXTURE_3D               );
+        SetSparseResCap(vkFeatures.sparseResidency2Samples,                   SPARSE_RESOURCE_CAP_FLAG_TEXTURE_2_SAMPLES        );
+        SetSparseResCap(vkFeatures.sparseResidency4Samples,                   SPARSE_RESOURCE_CAP_FLAG_TEXTURE_4_SAMPLES        );
+        SetSparseResCap(vkFeatures.sparseResidency8Samples,                   SPARSE_RESOURCE_CAP_FLAG_TEXTURE_8_SAMPLES        );
+        SetSparseResCap(vkFeatures.sparseResidency16Samples,                  SPARSE_RESOURCE_CAP_FLAG_TEXTURE_16_SAMPLES       );
+        SetSparseResCap(vkFeatures.sparseResidencyAliased,                    SPARSE_RESOURCE_CAP_FLAG_ALIASED                  );
         // clang-format on
 
 #if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(SparseMem) == 32, "Did you add a new member to SparseMemoryProperties? Please initialize it here.");
+        static_assert(sizeof(SparseRes) == 32, "Did you add a new member to SparseResourceProperties? Please initialize it here.");
 #endif
     }
 
@@ -760,7 +760,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
         vkEnabledFeatures.shaderStorageBufferArrayDynamicIndexing = vkDeviceFeatures.shaderStorageBufferArrayDynamicIndexing;
         vkEnabledFeatures.shaderStorageImageArrayDynamicIndexing  = vkDeviceFeatures.shaderStorageImageArrayDynamicIndexing;
 
-        if (EnabledFeatures.SparseMemory)
+        if (EnabledFeatures.SparseResources)
         {
             vkEnabledFeatures.sparseBinding            = VK_TRUE;
             vkEnabledFeatures.sparseResidency16Samples = vkDeviceFeatures.sparseResidency16Samples;

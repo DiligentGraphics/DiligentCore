@@ -57,7 +57,7 @@ using namespace Diligent::Testing;
 namespace
 {
 
-class SparseMemoryTest : public testing::TestWithParam<int>
+class SparseResourceTest : public testing::TestWithParam<int>
 {
 protected:
     static void SetUpTestSuite()
@@ -65,7 +65,7 @@ protected:
         auto* pEnv    = TestingEnvironment::GetInstance();
         auto* pDevice = pEnv->GetDevice();
 
-        if (!pDevice->GetDeviceInfo().Features.SparseMemory)
+        if (!pDevice->GetDeviceInfo().Features.SparseResources)
             return;
 
         // Find context.
@@ -331,7 +331,7 @@ protected:
     static TextureAndMemory CreateSparseTextureAndMemory(const uint4& Dim, BIND_FLAGS BindFlags, Uint32 NumMemoryPages, bool Aliasing = false)
     {
         auto*      pDevice   = TestingEnvironment::GetInstance()->GetDevice();
-        const auto BlockSize = pDevice->GetAdapterInfo().SparseMemory.StandardBlockSize;
+        const auto BlockSize = pDevice->GetAdapterInfo().SparseResources.StandardBlockSize;
 
         TextureDesc Desc;
         Desc.BindFlags = BindFlags | BIND_SHADER_RESOURCE; // SRV to read in PS
@@ -765,18 +765,18 @@ protected:
 
     static float sm_RndColorIndex;
 };
-RefCntAutoPtr<IDeviceContext>         SparseMemoryTest::sm_pSparseBindingCtx;
-RefCntAutoPtr<IPipelineState>         SparseMemoryTest::sm_pFillBufferPSO;
-RefCntAutoPtr<IShaderResourceBinding> SparseMemoryTest::sm_pFillBufferSRB;
-RefCntAutoPtr<IBuffer>                SparseMemoryTest::sm_pFillBufferParams;
-RefCntAutoPtr<IPipelineState>         SparseMemoryTest::sm_pFillTexture2DPSO;
-RefCntAutoPtr<IShaderResourceBinding> SparseMemoryTest::sm_pFillTexture2DSRB;
-RefCntAutoPtr<IBuffer>                SparseMemoryTest::sm_pFillTexture2DParams;
-RefCntAutoPtr<IPipelineState>         SparseMemoryTest::sm_pFillTexture3DPSO;
-RefCntAutoPtr<IShaderResourceBinding> SparseMemoryTest::sm_pFillTexture3DSRB;
-RefCntAutoPtr<IBuffer>                SparseMemoryTest::sm_pFillTexture3DParams;
-float                                 SparseMemoryTest::sm_RndColorIndex;
-RefCntAutoPtr<IShaderResourceBinding> SparseMemoryTest::sm_pTempSRB;
+RefCntAutoPtr<IDeviceContext>         SparseResourceTest::sm_pSparseBindingCtx;
+RefCntAutoPtr<IPipelineState>         SparseResourceTest::sm_pFillBufferPSO;
+RefCntAutoPtr<IShaderResourceBinding> SparseResourceTest::sm_pFillBufferSRB;
+RefCntAutoPtr<IBuffer>                SparseResourceTest::sm_pFillBufferParams;
+RefCntAutoPtr<IPipelineState>         SparseResourceTest::sm_pFillTexture2DPSO;
+RefCntAutoPtr<IShaderResourceBinding> SparseResourceTest::sm_pFillTexture2DSRB;
+RefCntAutoPtr<IBuffer>                SparseResourceTest::sm_pFillTexture2DParams;
+RefCntAutoPtr<IPipelineState>         SparseResourceTest::sm_pFillTexture3DPSO;
+RefCntAutoPtr<IShaderResourceBinding> SparseResourceTest::sm_pFillTexture3DSRB;
+RefCntAutoPtr<IBuffer>                SparseResourceTest::sm_pFillTexture3DParams;
+float                                 SparseResourceTest::sm_RndColorIndex;
+RefCntAutoPtr<IShaderResourceBinding> SparseResourceTest::sm_pTempSRB;
 
 
 enum TestMode
@@ -826,19 +826,19 @@ int4 TestIdToTextureDim(Uint32 TestId)
     }
 }
 
-void CheckTextureSparseProperties(ITexture* pTexture)
+void CheckSparseTextureProperties(ITexture* pTexture)
 {
     const auto& Desc       = pTexture->GetDesc();
     const auto& Props      = pTexture->GetSparseProperties();
     const bool  IsStdBlock = (Props.Flags & SPARSE_TEXTURE_FLAG_NONSTANDARD_BLOCK_SIZE) == 0;
-    const auto& SparseMem  = TestingEnvironment::GetInstance()->GetDevice()->GetAdapterInfo().SparseMemory;
+    const auto& SparseRes  = TestingEnvironment::GetInstance()->GetDevice()->GetAdapterInfo().SparseResources;
 
     ASSERT_GT(Props.MemorySize, 0u);
     ASSERT_GT(Props.BlockSize, 0u);
     ASSERT_TRUE(Props.MemorySize % Props.BlockSize == 0);
 
     if (IsStdBlock)
-        ASSERT_EQ(Props.BlockSize, SparseMem.StandardBlockSize);
+        ASSERT_EQ(Props.BlockSize, SparseRes.StandardBlockSize);
 
     ASSERT_LE(Props.FirstMipInTail, Desc.MipLevels);
     ASSERT_LT(Props.MipTailOffset, Props.MemorySize);
@@ -865,7 +865,7 @@ void CheckTextureSparseProperties(ITexture* pTexture)
 
         if (IsStdBlock)
         {
-            ASSERT_TRUE((SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_STANDARD_3D_TILE_SHAPE) != 0);
+            ASSERT_TRUE((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_STANDARD_3D_TILE_SHAPE) != 0);
             ASSERT_EQ(Props.TileSize[0], 32u);
             ASSERT_EQ(Props.TileSize[1], 32u);
             ASSERT_EQ(Props.TileSize[2], 16u);
@@ -879,7 +879,7 @@ void CheckTextureSparseProperties(ITexture* pTexture)
 
         if (IsStdBlock)
         {
-            ASSERT_TRUE((SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_STANDARD_2D_TILE_SHAPE) != 0);
+            ASSERT_TRUE((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_STANDARD_2D_TILE_SHAPE) != 0);
             ASSERT_EQ(Props.TileSize[0], 128u);
             ASSERT_EQ(Props.TileSize[1], 128u);
             ASSERT_EQ(Props.TileSize[2], 1u);
@@ -888,17 +888,17 @@ void CheckTextureSparseProperties(ITexture* pTexture)
 }
 
 
-TEST_F(SparseMemoryTest, SparseBuffer)
+TEST_F(SparseResourceTest, SparseBuffer)
 {
     auto*       pEnv      = TestingEnvironment::GetInstance();
     auto*       pDevice   = pEnv->GetDevice();
-    const auto& SparseMem = pDevice->GetAdapterInfo().SparseMemory;
+    const auto& SparseRes = pDevice->GetAdapterInfo().SparseResources;
 
     if (!sm_pSparseBindingCtx)
     {
         GTEST_SKIP() << "Sparse binding queue is not supported by this device";
     }
-    if ((SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_BUFFER) == 0)
+    if ((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_BUFFER) == 0)
     {
         GTEST_SKIP() << "Sparse buffer is not supported by this device";
     }
@@ -965,12 +965,12 @@ TEST_F(SparseMemoryTest, SparseBuffer)
             {BlockSize * 3, MemBlockSize * 6, BlockSize, pMemory} //
         };
 
-        SparseBufferMemoryBind SparseBuffBind;
+        SparseBufferMemoryBindInfo SparseBuffBind;
         SparseBuffBind.pBuffer   = pBuffer;
         SparseBuffBind.NumRanges = _countof(BindRanges);
         SparseBuffBind.pRanges   = BindRanges;
 
-        BindSparseMemoryAttribs BindSparseAttrs;
+        BindSparseResourceMemoryAttribs BindSparseAttrs;
         BindSparseAttrs.NumBufferBinds = 1;
         BindSparseAttrs.pBufferBinds   = &SparseBuffBind;
 
@@ -984,7 +984,7 @@ TEST_F(SparseMemoryTest, SparseBuffer)
             BindSparseAttrs.NumSignalFences    = 1;
         }
 
-        sm_pSparseBindingCtx->BindSparseMemory(BindSparseAttrs);
+        sm_pSparseBindingCtx->BindSparseResourceMemory(BindSparseAttrs);
 
         if (SignalFence)
             pContext->DeviceWaitForFence(SignalFence, SignalValue);
@@ -998,17 +998,17 @@ TEST_F(SparseMemoryTest, SparseBuffer)
 }
 
 
-TEST_F(SparseMemoryTest, SparseResidentBuffer)
+TEST_F(SparseResourceTest, SparseResidentBuffer)
 {
     auto*       pEnv      = TestingEnvironment::GetInstance();
     auto*       pDevice   = pEnv->GetDevice();
-    const auto& SparseMem = pDevice->GetAdapterInfo().SparseMemory;
+    const auto& SparseRes = pDevice->GetAdapterInfo().SparseResources;
 
     if (!sm_pSparseBindingCtx)
     {
         GTEST_SKIP() << "Sparse binding queue is not supported by this device";
     }
-    if ((SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_BUFFER) == 0)
+    if ((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_BUFFER) == 0)
     {
         GTEST_SKIP() << "Sparse buffer is not supported by this device";
     }
@@ -1086,12 +1086,12 @@ TEST_F(SparseMemoryTest, SparseResidentBuffer)
             // clang-format on
         };
 
-        SparseBufferMemoryBind SparseBuffBind;
+        SparseBufferMemoryBindInfo SparseBuffBind;
         SparseBuffBind.pBuffer   = pBuffer;
         SparseBuffBind.NumRanges = _countof(BindRanges);
         SparseBuffBind.pRanges   = BindRanges;
 
-        BindSparseMemoryAttribs BindSparseAttrs;
+        BindSparseResourceMemoryAttribs BindSparseAttrs;
         BindSparseAttrs.NumBufferBinds = 1;
         BindSparseAttrs.pBufferBinds   = &SparseBuffBind;
 
@@ -1104,7 +1104,7 @@ TEST_F(SparseMemoryTest, SparseResidentBuffer)
             BindSparseAttrs.pSignalFenceValues = &SignalValue;
             BindSparseAttrs.NumSignalFences    = 1;
         }
-        sm_pSparseBindingCtx->BindSparseMemory(BindSparseAttrs);
+        sm_pSparseBindingCtx->BindSparseResourceMemory(BindSparseAttrs);
 
         if (SignalFence)
             pContext->DeviceWaitForFence(SignalFence, SignalValue);
@@ -1118,21 +1118,21 @@ TEST_F(SparseMemoryTest, SparseResidentBuffer)
 }
 
 
-TEST_F(SparseMemoryTest, SparseResidentAliasedBuffer)
+TEST_F(SparseResourceTest, SparseResidentAliasedBuffer)
 {
     auto*       pEnv      = TestingEnvironment::GetInstance();
     auto*       pDevice   = pEnv->GetDevice();
-    const auto& SparseMem = pDevice->GetAdapterInfo().SparseMemory;
+    const auto& SparseRes = pDevice->GetAdapterInfo().SparseResources;
 
     if (!sm_pSparseBindingCtx)
     {
         GTEST_SKIP() << "Sparse binding queue is not supported by this device";
     }
-    if ((SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_BUFFER) == 0)
+    if ((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_BUFFER) == 0)
     {
         GTEST_SKIP() << "Sparse buffer is not supported by this device";
     }
-    if ((SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_ALIASED) == 0)
+    if ((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_ALIASED) == 0)
     {
         GTEST_SKIP() << "Sparse aliased resources is not supported by this device";
     }
@@ -1209,12 +1209,12 @@ TEST_F(SparseMemoryTest, SparseResidentAliasedBuffer)
             {BlockSize * 5, MemBlockSize * 6, BlockSize, pMemory} //
         };
 
-        SparseBufferMemoryBind SparseBuffBind;
+        SparseBufferMemoryBindInfo SparseBuffBind;
         SparseBuffBind.pBuffer   = pBuffer;
         SparseBuffBind.NumRanges = _countof(BindRanges);
         SparseBuffBind.pRanges   = BindRanges;
 
-        BindSparseMemoryAttribs BindSparseAttrs;
+        BindSparseResourceMemoryAttribs BindSparseAttrs;
         BindSparseAttrs.NumBufferBinds = 1;
         BindSparseAttrs.pBufferBinds   = &SparseBuffBind;
 
@@ -1227,7 +1227,7 @@ TEST_F(SparseMemoryTest, SparseResidentAliasedBuffer)
             BindSparseAttrs.pSignalFenceValues = &SignalValue;
             BindSparseAttrs.NumSignalFences    = 1;
         }
-        sm_pSparseBindingCtx->BindSparseMemory(BindSparseAttrs);
+        sm_pSparseBindingCtx->BindSparseResourceMemory(BindSparseAttrs);
 
         if (SignalFence)
             pContext->DeviceWaitForFence(SignalFence, SignalValue);
@@ -1241,26 +1241,26 @@ TEST_F(SparseMemoryTest, SparseResidentAliasedBuffer)
 }
 
 
-TEST_P(SparseMemoryTest, SparseTexture)
+TEST_P(SparseResourceTest, SparseTexture)
 {
     Uint32      TestId    = GetParam();
     auto*       pEnv      = TestingEnvironment::GetInstance();
     auto*       pDevice   = pEnv->GetDevice();
-    const auto& SparseMem = pDevice->GetAdapterInfo().SparseMemory;
+    const auto& SparseRes = pDevice->GetAdapterInfo().SparseResources;
 
     if (!sm_pSparseBindingCtx)
     {
         GTEST_SKIP() << "Sparse binding queue is not supported by this device";
     }
-    if ((SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_TEXTURE_2D) == 0)
+    if ((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_TEXTURE_2D) == 0)
     {
         GTEST_SKIP() << "Sparse texture 2D is not supported by this device";
     }
-    if ((SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_MIXED_RESOURCE_TYPE_SUPPORT) == 0)
+    if ((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_MIXED_RESOURCE_TYPE_SUPPORT) == 0)
     {
         GTEST_SKIP() << "This device does not support texture RTVs and SRVs in one memory object";
     }
-    if (TestMode_IsTexArray(TestId) && (SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_TEXTURE_2D_ARRAY_MIP_TAIL) == 0)
+    if (TestMode_IsTexArray(TestId) && (SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_TEXTURE_2D_ARRAY_MIP_TAIL) == 0)
     {
         GTEST_SKIP() << "Sparse texture 2D array with mipmap tail is not supported by this device";
     }
@@ -1315,7 +1315,7 @@ TEST_P(SparseMemoryTest, SparseTexture)
         pTestingSwapChain->TakeSnapshot(pRT);
     }
 
-    const auto BlockSize = SparseMem.StandardBlockSize;
+    const auto BlockSize = SparseRes.StandardBlockSize;
 
     auto TexAndMem = CreateSparseTextureAndMemory(TexSize.Recast<Uint32>(), BIND_NONE, 14 * TexSize.w);
     auto pTexture  = TexAndMem.pTexture;
@@ -1326,7 +1326,7 @@ TEST_P(SparseMemoryTest, SparseTexture)
 
     const auto& TexDesc        = pTexture->GetDesc();
     const auto& TexSparseProps = pTexture->GetSparseProperties();
-    CheckTextureSparseProperties(pTexture);
+    CheckSparseTextureProperties(pTexture);
     ASSERT_LE(TexSparseProps.MemorySize, pMemory->GetCapacity());
 
     auto pFence = CreateFence();
@@ -1385,12 +1385,12 @@ TEST_P(SparseMemoryTest, SparseTexture)
         }
         VERIFY_EXPR(MemOffset <= pMemory->GetCapacity());
 
-        SparseTextureMemoryBind SparseTexBind;
+        SparseTextureMemoryBindInfo SparseTexBind;
         SparseTexBind.pTexture  = pTexture;
         SparseTexBind.NumRanges = static_cast<Uint32>(BindRanges.size());
         SparseTexBind.pRanges   = BindRanges.data();
 
-        BindSparseMemoryAttribs BindSparseAttrs;
+        BindSparseResourceMemoryAttribs BindSparseAttrs;
         BindSparseAttrs.NumTextureBinds = 1;
         BindSparseAttrs.pTextureBinds   = &SparseTexBind;
 
@@ -1403,7 +1403,7 @@ TEST_P(SparseMemoryTest, SparseTexture)
             BindSparseAttrs.pSignalFenceValues = &SignalValue;
             BindSparseAttrs.NumSignalFences    = 1;
         }
-        sm_pSparseBindingCtx->BindSparseMemory(BindSparseAttrs);
+        sm_pSparseBindingCtx->BindSparseResourceMemory(BindSparseAttrs);
 
         if (SignalFence)
             pContext->DeviceWaitForFence(SignalFence, SignalValue);
@@ -1418,30 +1418,30 @@ TEST_P(SparseMemoryTest, SparseTexture)
 }
 
 
-TEST_P(SparseMemoryTest, SparseResidencyTexture)
+TEST_P(SparseResourceTest, SparseResidencyTexture)
 {
     Uint32      TestId    = GetParam();
     auto*       pEnv      = TestingEnvironment::GetInstance();
     auto*       pDevice   = pEnv->GetDevice();
-    const auto& SparseMem = pDevice->GetAdapterInfo().SparseMemory;
+    const auto& SparseRes = pDevice->GetAdapterInfo().SparseResources;
 
     if (!sm_pSparseBindingCtx)
     {
         GTEST_SKIP() << "Sparse binding queue is not supported by this device";
     }
-    if ((SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_TEXTURE_2D) == 0)
+    if ((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_TEXTURE_2D) == 0)
     {
         GTEST_SKIP() << "Sparse texture 2D is not supported by this device";
     }
-    if ((SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_MIXED_RESOURCE_TYPE_SUPPORT) == 0)
+    if ((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_MIXED_RESOURCE_TYPE_SUPPORT) == 0)
     {
         GTEST_SKIP() << "This device does not support texture RTVs and SRVs in one memory object";
     }
-    if ((SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_SHADER_RESOURCE_RESIDENCY) == 0)
+    if ((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_SHADER_RESOURCE_RESIDENCY) == 0)
     {
         GTEST_SKIP() << "Shader resource residency is not supported by this device";
     }
-    if (TestMode_IsTexArray(TestId) && (SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_TEXTURE_2D_ARRAY_MIP_TAIL) == 0)
+    if (TestMode_IsTexArray(TestId) && (SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_TEXTURE_2D_ARRAY_MIP_TAIL) == 0)
     {
         GTEST_SKIP() << "Sparse texture 2D array with mipmap tail is not supported by this device";
     }
@@ -1503,7 +1503,7 @@ TEST_P(SparseMemoryTest, SparseResidencyTexture)
         pTestingSwapChain->TakeSnapshot(pRT);
     }
 
-    const auto BlockSize = SparseMem.StandardBlockSize;
+    const auto BlockSize = SparseRes.StandardBlockSize;
 
     auto TexAndMem = CreateSparseTextureAndMemory(TexSize.Recast<Uint32>(), BIND_NONE, 12 * TexSize.w);
     auto pTexture  = TexAndMem.pTexture;
@@ -1514,7 +1514,7 @@ TEST_P(SparseMemoryTest, SparseResidencyTexture)
 
     const auto& TexDesc        = pTexture->GetDesc();
     const auto& TexSparseProps = pTexture->GetSparseProperties();
-    CheckTextureSparseProperties(pTexture);
+    CheckSparseTextureProperties(pTexture);
     ASSERT_LE(TexSparseProps.MemorySize, pMemory->GetCapacity());
 
     auto pFence = CreateFence();
@@ -1577,12 +1577,12 @@ TEST_P(SparseMemoryTest, SparseResidencyTexture)
         }
         VERIFY_EXPR(MemOffset <= pMemory->GetCapacity());
 
-        SparseTextureMemoryBind SparseTexBind;
+        SparseTextureMemoryBindInfo SparseTexBind;
         SparseTexBind.pTexture  = pTexture;
         SparseTexBind.NumRanges = static_cast<Uint32>(BindRanges.size());
         SparseTexBind.pRanges   = BindRanges.data();
 
-        BindSparseMemoryAttribs BindSparseAttrs;
+        BindSparseResourceMemoryAttribs BindSparseAttrs;
         BindSparseAttrs.NumTextureBinds = 1;
         BindSparseAttrs.pTextureBinds   = &SparseTexBind;
 
@@ -1595,7 +1595,7 @@ TEST_P(SparseMemoryTest, SparseResidencyTexture)
             BindSparseAttrs.pSignalFenceValues = &SignalValue;
             BindSparseAttrs.NumSignalFences    = 1;
         }
-        sm_pSparseBindingCtx->BindSparseMemory(BindSparseAttrs);
+        sm_pSparseBindingCtx->BindSparseResourceMemory(BindSparseAttrs);
 
         if (SignalFence)
             pContext->DeviceWaitForFence(SignalFence, SignalValue);
@@ -1610,30 +1610,30 @@ TEST_P(SparseMemoryTest, SparseResidencyTexture)
 }
 
 
-TEST_P(SparseMemoryTest, SparseResidencyAliasedTexture)
+TEST_P(SparseResourceTest, SparseResidencyAliasedTexture)
 {
     Uint32      TestId    = GetParam();
     auto*       pEnv      = TestingEnvironment::GetInstance();
     auto*       pDevice   = pEnv->GetDevice();
-    const auto& SparseMem = pDevice->GetAdapterInfo().SparseMemory;
+    const auto& SparseRes = pDevice->GetAdapterInfo().SparseResources;
 
     if (!sm_pSparseBindingCtx)
     {
         GTEST_SKIP() << "Sparse binding queue is not supported by this device";
     }
-    if ((SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_TEXTURE_2D) == 0)
+    if ((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_TEXTURE_2D) == 0)
     {
         GTEST_SKIP() << "Sparse texture 2D is not supported by this device";
     }
-    if ((SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_MIXED_RESOURCE_TYPE_SUPPORT) == 0)
+    if ((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_MIXED_RESOURCE_TYPE_SUPPORT) == 0)
     {
         GTEST_SKIP() << "This device does not support texture RTVs and SRVs in one memory object";
     }
-    if ((SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_ALIASED) == 0)
+    if ((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_ALIASED) == 0)
     {
         GTEST_SKIP() << "Sparse aliased resources is not supported by this device";
     }
-    if (TestMode_IsTexArray(TestId) && (SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_TEXTURE_2D_ARRAY_MIP_TAIL) == 0)
+    if (TestMode_IsTexArray(TestId) && (SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_TEXTURE_2D_ARRAY_MIP_TAIL) == 0)
     {
         GTEST_SKIP() << "Sparse texture 2D array with mipmap tail is not supported by this device";
     }
@@ -1699,7 +1699,7 @@ TEST_P(SparseMemoryTest, SparseResidencyAliasedTexture)
         pTestingSwapChain->TakeSnapshot(pRT);
     }
 
-    const auto BlockSize = SparseMem.StandardBlockSize;
+    const auto BlockSize = SparseRes.StandardBlockSize;
 
     auto TexAndMem = CreateSparseTextureAndMemory(TexSize.Recast<Uint32>(), BIND_NONE, 12 * TexSize.w, /*Aliasing*/ true);
     auto pTexture  = TexAndMem.pTexture;
@@ -1710,7 +1710,7 @@ TEST_P(SparseMemoryTest, SparseResidencyAliasedTexture)
 
     const auto& TexDesc        = pTexture->GetDesc();
     const auto& TexSparseProps = pTexture->GetSparseProperties();
-    CheckTextureSparseProperties(pTexture);
+    CheckSparseTextureProperties(pTexture);
     ASSERT_LE(TexSparseProps.MemorySize, pMemory->GetCapacity());
 
     auto pFence = CreateFence();
@@ -1780,12 +1780,12 @@ TEST_P(SparseMemoryTest, SparseResidencyAliasedTexture)
             InitialOffset = MemOffset;
         }
 
-        SparseTextureMemoryBind SparseTexBind;
+        SparseTextureMemoryBindInfo SparseTexBind;
         SparseTexBind.pTexture  = pTexture;
         SparseTexBind.NumRanges = static_cast<Uint32>(BindRanges.size());
         SparseTexBind.pRanges   = BindRanges.data();
 
-        BindSparseMemoryAttribs BindSparseAttrs;
+        BindSparseResourceMemoryAttribs BindSparseAttrs;
         BindSparseAttrs.NumTextureBinds = 1;
         BindSparseAttrs.pTextureBinds   = &SparseTexBind;
 
@@ -1798,7 +1798,7 @@ TEST_P(SparseMemoryTest, SparseResidencyAliasedTexture)
             BindSparseAttrs.pSignalFenceValues = &SignalValue;
             BindSparseAttrs.NumSignalFences    = 1;
         }
-        sm_pSparseBindingCtx->BindSparseMemory(BindSparseAttrs);
+        sm_pSparseBindingCtx->BindSparseResourceMemory(BindSparseAttrs);
 
         if (SignalFence)
             pContext->DeviceWaitForFence(SignalFence, SignalValue);
@@ -1812,20 +1812,20 @@ TEST_P(SparseMemoryTest, SparseResidencyAliasedTexture)
     pSwapChain->Present();
 }
 
-INSTANTIATE_TEST_SUITE_P(Sparse, SparseMemoryTest, TestParamRange, TestIdToString);
+INSTANTIATE_TEST_SUITE_P(Sparse, SparseResourceTest, TestParamRange, TestIdToString);
 
 
-TEST_F(SparseMemoryTest, SparseTexture3D)
+TEST_F(SparseResourceTest, SparseTexture3D)
 {
     auto*       pEnv      = TestingEnvironment::GetInstance();
     auto*       pDevice   = pEnv->GetDevice();
-    const auto& SparseMem = pDevice->GetAdapterInfo().SparseMemory;
+    const auto& SparseRes = pDevice->GetAdapterInfo().SparseResources;
 
     if (!sm_pSparseBindingCtx)
     {
         GTEST_SKIP() << "Sparse binding queue is not supported by this device";
     }
-    if ((SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_TEXTURE_3D) == 0)
+    if ((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_TEXTURE_3D) == 0)
     {
         GTEST_SKIP() << "Sparse texture 3D is not supported by this device";
     }
@@ -1879,7 +1879,7 @@ TEST_F(SparseMemoryTest, SparseTexture3D)
         pTestingSwapChain->TakeSnapshot(pRT);
     }
 
-    const auto BlockSize = SparseMem.StandardBlockSize;
+    const auto BlockSize = SparseRes.StandardBlockSize;
 
     auto TexAndMem = CreateSparseTextureAndMemory(TexSize, BIND_NONE, 16);
     auto pTexture  = TexAndMem.pTexture;
@@ -1890,7 +1890,7 @@ TEST_F(SparseMemoryTest, SparseTexture3D)
 
     const auto& TexDesc        = pTexture->GetDesc();
     const auto& TexSparseProps = pTexture->GetSparseProperties();
-    CheckTextureSparseProperties(pTexture);
+    CheckSparseTextureProperties(pTexture);
     ASSERT_LE(TexSparseProps.MemorySize, pMemory->GetCapacity());
 
     auto pFence = CreateFence();
@@ -1948,12 +1948,12 @@ TEST_F(SparseMemoryTest, SparseTexture3D)
 
         VERIFY_EXPR(MemOffset <= pMemory->GetCapacity());
 
-        SparseTextureMemoryBind SparseTexBind;
+        SparseTextureMemoryBindInfo SparseTexBind;
         SparseTexBind.pTexture  = pTexture;
         SparseTexBind.NumRanges = static_cast<Uint32>(BindRanges.size());
         SparseTexBind.pRanges   = BindRanges.data();
 
-        BindSparseMemoryAttribs BindSparseAttrs;
+        BindSparseResourceMemoryAttribs BindSparseAttrs;
         BindSparseAttrs.NumTextureBinds = 1;
         BindSparseAttrs.pTextureBinds   = &SparseTexBind;
 
@@ -1966,7 +1966,7 @@ TEST_F(SparseMemoryTest, SparseTexture3D)
             BindSparseAttrs.pSignalFenceValues = &SignalValue;
             BindSparseAttrs.NumSignalFences    = 1;
         }
-        sm_pSparseBindingCtx->BindSparseMemory(BindSparseAttrs);
+        sm_pSparseBindingCtx->BindSparseResourceMemory(BindSparseAttrs);
 
         if (SignalFence)
             pContext->DeviceWaitForFence(SignalFence, SignalValue);
@@ -1980,20 +1980,20 @@ TEST_F(SparseMemoryTest, SparseTexture3D)
 }
 
 #if 0
-TEST_F(SparseMemoryTest, LargeBuffer)
+TEST_F(SparseResourceTest, LargeBuffer)
 {
     auto*       pEnv      = TestingEnvironment::GetInstance();
     auto*       pDevice   = pEnv->GetDevice();
-    const auto& SparseMem = pDevice->GetAdapterInfo().SparseMemory;
+    const auto& SparseRes = pDevice->GetAdapterInfo().SparseResource;
     const auto  DevType   = pDevice->GetDeviceInfo().Type;
 
-    if ((SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_BUFFER) == 0)
+    if ((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_BUFFER) == 0)
     {
         GTEST_SKIP() << "Sparse buffer is not supported by this device";
     }
 
     // Limits which is queried from API is not valid, x/4 works on all tested devices.
-    Uint64 BuffSize = std::max(SparseMem.ResourceSpaceSize >> 2, Uint64{1} << 31);
+    Uint64 BuffSize = std::max(SparseRes.ResourceSpaceSize >> 2, Uint64{1} << 31);
     Uint32 Stride   = static_cast<Uint32>(std::min(BuffSize, Uint64{1} << 17));
 
     if (DevType == RENDER_DEVICE_TYPE_D3D11)
@@ -2014,13 +2014,13 @@ TEST_F(SparseMemoryTest, LargeBuffer)
 }
 
 
-TEST_F(SparseMemoryTest, LargeTexture2D)
+TEST_F(SparseResourceTest, LargeTexture2D)
 {
     auto*       pEnv      = TestingEnvironment::GetInstance();
     auto*       pDevice   = pEnv->GetDevice();
-    const auto& SparseMem = pDevice->GetAdapterInfo().SparseMemory;
+    const auto& SparseRes = pDevice->GetAdapterInfo().SparseResource;
 
-    if ((SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_TEXTURE_2D) == 0)
+    if ((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_TEXTURE_2D) == 0)
     {
         GTEST_SKIP() << "Sparse texture 2D is not supported by this device";
     }
@@ -2050,20 +2050,20 @@ TEST_F(SparseMemoryTest, LargeTexture2D)
     ASSERT_NE(pMemory, nullptr);
 
     const auto& TexSparseProps = pTexture->GetSparseProperties();
-    CheckTextureSparseProperties(pTexture);
+    CheckSparseTextureProperties(pTexture);
     ASSERT_LE(TexSparseProps.MemorySize, FmtDims.MaxMemorySize);
 
     LOG_INFO_MESSAGE("Created sparse 2D texture with dimension ", TexSize.x, "x", TexSize.y, " and size ", TexSparseProps.MemorySize >> 20, " Mb");
 }
 
 
-TEST_F(SparseMemoryTest, LargeTexture2DArray)
+TEST_F(SparseResourceTest, LargeTexture2DArray)
 {
     auto*       pEnv      = TestingEnvironment::GetInstance();
     auto*       pDevice   = pEnv->GetDevice();
-    const auto& SparseMem = pDevice->GetAdapterInfo().SparseMemory;
+    const auto& SparseRes = pDevice->GetAdapterInfo().SparseResource;
 
-    if ((SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_TEXTURE_2D_ARRAY_MIP_TAIL) == 0)
+    if ((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_TEXTURE_2D_ARRAY_MIP_TAIL) == 0)
     {
         GTEST_SKIP() << "Sparse texture 2D array with mip tail is not supported by this device";
     }
@@ -2081,7 +2081,7 @@ TEST_F(SparseMemoryTest, LargeTexture2DArray)
 
     uint4      TexSize{FmtDims.MaxWidth, FmtDims.MaxHeight, 1u, FmtDims.MaxArraySize};
     const auto BPP           = 4u;
-    const auto MaxMemorySize = std::min(FmtDims.MaxMemorySize, SparseMem.ResourceSpaceSize >> 1);
+    const auto MaxMemorySize = std::min(FmtDims.MaxMemorySize, SparseRes.ResourceSpaceSize >> 1);
 
     if ((Uint64{TexSize.x} * Uint64{TexSize.y} * TexSize.w * BPP * 3) / 2 > MaxMemorySize)
         TexSize.y = std::max(1u, static_cast<Uint32>(MaxMemorySize / (Uint64{TexSize.x} * TexSize.w * BPP * 3)) * 2);
@@ -2094,20 +2094,20 @@ TEST_F(SparseMemoryTest, LargeTexture2DArray)
     ASSERT_NE(pMemory, nullptr);
 
     const auto& TexSparseProps = pTexture->GetSparseProperties();
-    CheckTextureSparseProperties(pTexture);
+    CheckSparseTextureProperties(pTexture);
     ASSERT_LE(TexSparseProps.MemorySize, FmtDims.MaxMemorySize);
 
     LOG_INFO_MESSAGE("Created sparse 2D texture array with dimension ", TexSize.x, "x", TexSize.y, ", ", TexSize.w, "layers and size ", TexSparseProps.MemorySize >> 20, " Mb");
 }
 
 
-TEST_F(SparseMemoryTest, LargeTexture3D)
+TEST_F(SparseResourceTest, LargeTexture3D)
 {
     auto*       pEnv      = TestingEnvironment::GetInstance();
     auto*       pDevice   = pEnv->GetDevice();
-    const auto& SparseMem = pDevice->GetAdapterInfo().SparseMemory;
+    const auto& SparseRes = pDevice->GetAdapterInfo().SparseResource;
 
-    if ((SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_TEXTURE_3D) == 0)
+    if ((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_TEXTURE_3D) == 0)
     {
         GTEST_SKIP() << "Sparse texture 3D is not supported by this device";
     }
@@ -2125,7 +2125,7 @@ TEST_F(SparseMemoryTest, LargeTexture3D)
 
     uint4      TexSize{FmtDims.MaxWidth, FmtDims.MaxHeight, FmtDims.MaxDepth, 1u};
     const auto BPP           = 4u;
-    const auto MaxMemorySize = std::min(FmtDims.MaxMemorySize, SparseMem.ResourceSpaceSize >> 4);
+    const auto MaxMemorySize = std::min(FmtDims.MaxMemorySize, SparseRes.ResourceSpaceSize >> 4);
 
     if ((Uint64{TexSize.x} * Uint64{TexSize.y} * Uint64{TexSize.z} * BPP * 3) / 2 > MaxMemorySize)
         TexSize.z = std::max(1u, static_cast<Uint32>(MaxMemorySize / (Uint64{TexSize.x} * Uint64{TexSize.y} * BPP * 3)) * 2);
@@ -2138,7 +2138,7 @@ TEST_F(SparseMemoryTest, LargeTexture3D)
     ASSERT_NE(pMemory, nullptr);
 
     const auto& TexSparseProps = pTexture->GetSparseProperties();
-    CheckTextureSparseProperties(pTexture);
+    CheckSparseTextureProperties(pTexture);
     ASSERT_LE(TexSparseProps.MemorySize, FmtDims.MaxMemorySize);
 
     LOG_INFO_MESSAGE("Created sparse 3D texture with dimension ", TexSize.x, "x", TexSize.y, "x", TexSize.z, " and size ", TexSparseProps.MemorySize >> 20, " Mb");

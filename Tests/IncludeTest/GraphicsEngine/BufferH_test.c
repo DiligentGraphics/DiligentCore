@@ -43,6 +43,6 @@ void TestBuffer_CInterface(IBuffer* pBuffer)
     (void)MemProps;
     IBuffer_FlushMappedRange(pBuffer, (Uint64)0, (Uint64)128);
     IBuffer_InvalidateMappedRange(pBuffer, (Uint64)0, (Uint64)128);
-    BufferSparseProperties SparseProps = IBuffer_GetSparseProperties(pBuffer);
+    SparseBufferProperties SparseProps = IBuffer_GetSparseProperties(pBuffer);
     (void)SparseProps;
 }

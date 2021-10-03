@@ -1385,8 +1385,8 @@ MipLevelProperties GetMipLevelProperties(const TextureDesc& TexDesc, Uint32 MipL
     MipLevelProperties MipProps;
     const auto&        FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
 
-    MipProps.LogicalWidth  = std::max(TexDesc.Width >> MipLevel, 1u);
-    MipProps.LogicalHeight = std::max(TexDesc.Height >> MipLevel, 1u);
+    MipProps.LogicalWidth  = std::max(TexDesc.GetWidth() >> MipLevel, 1u);
+    MipProps.LogicalHeight = std::max(TexDesc.GetHeight() >> MipLevel, 1u);
     MipProps.Depth         = std::max(TexDesc.GetDepth() >> MipLevel, 1u);
     if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
     {
@@ -1911,7 +1911,7 @@ String GetPipelineShadingRateFlagsString(PIPELINE_SHADING_RATE_FLAGS Flags)
     return Result;
 }
 
-TextureSparseProperties GetTextureSparsePropertiesForStandardBlocks(const TextureDesc& TexDesc)
+SparseTextureProperties GetStandardSparseTextureProperties(const TextureDesc& TexDesc)
 {
     constexpr Uint32 SparseBlockSize = 64 << 10;
     const auto&      FmtAttribs      = GetTextureFormatAttribs(TexDesc.Format);
@@ -1920,11 +1920,11 @@ TextureSparseProperties GetTextureSparsePropertiesForStandardBlocks(const Textur
     VERIFY_EXPR(TexelSize >= 1 && TexelSize <= 16);
     VERIFY_EXPR(TexDesc.Is2D() || TexDesc.Is3D());
 
-    TextureSparseProperties Props{};
+    SparseTextureProperties Props;
 
     if (TexDesc.Is3D())
     {
-        VERIFY(FmtAttribs.ComponentType != COMPONENT_TYPE_COMPRESSED, "Compressed sparse 3D textures are currently not supported");
+        DEV_CHECK_ERR(FmtAttribs.ComponentType != COMPONENT_TYPE_COMPRESSED, "Compressed sparse 3D textures are currently not supported");
 
         //  | Texel size  |    Tile shape   |
         //  |-------------|-----------------|
@@ -1999,10 +1999,13 @@ TextureSparseProperties GetTextureSparsePropertiesForStandardBlocks(const Textur
         const auto MipWidth  = MipProps.StorageWidth;
         const auto MipHeight = MipProps.StorageHeight;
         const auto MipDepth  = MipProps.Depth;
+        const auto IsTail =
+            MipWidth < Props.TileSize[0] &&
+            MipHeight < Props.TileSize[1] &&
+            (!TexDesc.Is3D() || MipDepth < Props.TileSize[2]);
 
-        if (MipWidth < Props.TileSize[0] && MipHeight < Props.TileSize[1] && (!TexDesc.Is3D() || MipDepth < Props.TileSize[2]))
+        if (IsTail)
         {
-            // Mip tail
             if (Props.FirstMipInTail == ~0u)
             {
                 Props.FirstMipInTail = Mip;
@@ -2012,7 +2015,7 @@ TextureSparseProperties GetTextureSparsePropertiesForStandardBlocks(const Textur
         }
         else
         {
-            const auto NumTilesInMip = GetNumTilesInBox(Box{0, MipWidth, 0, MipHeight, 0, MipDepth}, Props);
+            const auto NumTilesInMip = GetNumSparseTilesInBox(Box{0, MipWidth, 0, MipHeight, 0, MipDepth}, Props);
             SliceSize += Uint64{NumTilesInMip.x} * NumTilesInMip.y * NumTilesInMip.z * SparseBlockSize;
         }
     }

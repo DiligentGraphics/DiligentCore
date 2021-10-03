@@ -1008,21 +1008,21 @@ bool VerifyTraceRaysIndirectAttribs(const IRenderDevice* pDevice, const TraceRay
     return true;
 }
 
-bool VerifyBindSparseMemoryAttribs(const IRenderDevice* pDevice, const BindSparseMemoryAttribs& Attribs)
+bool VerifyBindSparseResourceMemoryAttribs(const IRenderDevice* pDevice, const BindSparseResourceMemoryAttribs& Attribs)
 {
 #define CHECK_BIND_SPARSE_ATTRIBS(Expr, ...) CHECK_PARAMETER(Expr, "Bind sparse memory attribs are invalid: ", __VA_ARGS__)
 
-    const auto& SparseMem = pDevice->GetAdapterInfo().SparseMemory;
+    const auto& SparseRes = pDevice->GetAdapterInfo().SparseResources;
 
     if (Attribs.NumBufferBinds != 0)
     {
         CHECK_BIND_SPARSE_ATTRIBS(Attribs.pBufferBinds != nullptr, "NumBufferBinds is ", Attribs.NumBufferBinds, ", but pBufferBinds is null");
-        CHECK_BIND_SPARSE_ATTRIBS((SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_BUFFER) != 0, "NumBufferBinds must be zero if SPARSE_MEMORY_CAP_FLAG_BUFFER capability is not supported");
+        CHECK_BIND_SPARSE_ATTRIBS((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_BUFFER) != 0, "NumBufferBinds must be zero if SPARSE_RESOURCE_CAP_FLAG_BUFFER capability is not supported");
     }
     if (Attribs.NumTextureBinds != 0)
     {
         CHECK_BIND_SPARSE_ATTRIBS(Attribs.pTextureBinds != nullptr, "NumTextureBinds is ", Attribs.NumTextureBinds, ", but pTextureBinds is null");
-        CHECK_BIND_SPARSE_ATTRIBS((SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_TEXTURE_2D) != 0, "NumTextureBinds must be zero if SPARSE_MEMORY_CAP_FLAG_TEXTURE_2D capability is not supported");
+        CHECK_BIND_SPARSE_ATTRIBS((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_TEXTURE_2D) != 0, "NumTextureBinds must be zero if SPARSE_RESOURCE_CAP_FLAG_TEXTURE_2D capability is not supported");
     }
 #ifdef DILIGENT_DEVELOPMENT
     const auto IsMetal = pDevice->GetDeviceInfo().IsMetalDevice();
@@ -1183,7 +1183,7 @@ bool VerifyBindSparseMemoryAttribs(const IRenderDevice* pDevice, const BindSpars
             {
                 if (Range.MemorySize != 0 && Range.MipLevel < TexSparseProps.FirstMipInTail)
                 {
-                    const uint3 TilesInBox = GetNumTilesInBox(Region, TexSparseProps);
+                    const uint3 TilesInBox = GetNumSparseTilesInBox(Region, TexSparseProps);
                     const auto  NumBlocks  = TilesInBox.x * TilesInBox.y * TilesInBox.z;
                     CHECK_BIND_SPARSE_ATTRIBS(NumBlocks * TexSparseProps.BlockSize == Range.MemorySize,
                                               "pTextureBinds[", i, "].pRanges[", r, "].MemorySize (", Range.MemorySize, ") does not match the sparse memory blocks count (",

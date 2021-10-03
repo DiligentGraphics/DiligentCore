@@ -113,7 +113,7 @@ public:
                                                           Uint64 Size) override final;
 
     /// Implementation of IBuffer::GetSparseProperties().
-    virtual BufferSparseProperties DILIGENT_CALL_TYPE GetSparseProperties() const override final;
+    virtual SparseBufferProperties DILIGENT_CALL_TYPE GetSparseProperties() const override final;
 
     bool CheckAccessFlags(VkAccessFlags AccessFlags) const
     {

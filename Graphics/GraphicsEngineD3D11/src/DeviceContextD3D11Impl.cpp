@@ -2217,9 +2217,9 @@ void DeviceContextD3D11Impl::SetShadingRate(SHADING_RATE BaseRate, SHADING_RATE_
     UNSUPPORTED("SetShadingRate is not supported in DirectX 11");
 }
 
-void DeviceContextD3D11Impl::BindSparseMemory(const BindSparseMemoryAttribs& Attribs)
+void DeviceContextD3D11Impl::BindSparseResourceMemory(const BindSparseResourceMemoryAttribs& Attribs)
 {
-    TDeviceContextBase::BindSparseMemory(Attribs, 0);
+    TDeviceContextBase::BindSparseResourceMemory(Attribs, 0);
 
     if (Attribs.NumBufferBinds == 0 && Attribs.NumTextureBinds == 0)
         return;
@@ -2246,7 +2246,7 @@ void DeviceContextD3D11Impl::BindSparseMemory(const BindSparseMemoryAttribs& Att
 
         if (pTilePool != nullptr && pMemD3D11 != nullptr && pTilePool != pMemD3D11->GetD3D11TilePool())
         {
-            LOG_ERROR_MESSAGE("IDeviceContext::BindSparseMemory(): binding multiple memory objects to a single resource is not allowed in Direct3D11.");
+            LOG_ERROR_MESSAGE("IDeviceContext::BindSparseResourceMemory(): binding multiple memory objects to a single resource is not allowed in Direct3D11.");
             // all previous mapping will be unmapped
             TileMapping.Reset();
         }

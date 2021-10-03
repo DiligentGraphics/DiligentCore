@@ -124,15 +124,15 @@ void ValidateBufferDesc(const BufferDesc& Desc, const IRenderDevice* pDevice) no
 
         case USAGE_SPARSE:
         {
-            const auto& SparseMem = pDevice->GetAdapterInfo().SparseMemory;
-            VERIFY_BUFFER(Features.SparseMemory, "sparse buffer requires SparseMemory feature");
+            const auto& SparseRes = pDevice->GetAdapterInfo().SparseResources;
+            VERIFY_BUFFER(Features.SparseResources, "sparse buffer requires SparseResources feature");
             VERIFY_BUFFER(Desc.CPUAccessFlags == CPU_ACCESS_NONE, "sparse buffers can't have any CPU access flags set.");
-            VERIFY_BUFFER(Desc.Size <= SparseMem.ResourceSpaceSize, "sparse buffer size (", Desc.Size, ") must not exceed the ResourceSpaceSize (", SparseMem.ResourceSpaceSize, ")");
-            VERIFY_BUFFER((SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_BUFFER) != 0, "sparse buffer requires SPARSE_MEMORY_CAP_FLAG_BUFFER capability");
+            VERIFY_BUFFER(Desc.Size <= SparseRes.ResourceSpaceSize, "sparse buffer size (", Desc.Size, ") must not exceed the ResourceSpaceSize (", SparseRes.ResourceSpaceSize, ")");
+            VERIFY_BUFFER((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_BUFFER) != 0, "sparse buffer requires SPARSE_RESOURCE_CAP_FLAG_BUFFER capability");
             if ((Desc.MiscFlags & MISC_BUFFER_FLAG_SPARSE_ALIASING) != 0)
-                VERIFY_BUFFER(SparseMem.CapFlags & SPARSE_MEMORY_CAP_FLAG_ALIASED, "SPARSE_RESOURCE_FLAG_ALIASED flag requires SPARSE_MEMORY_CAP_FLAG_ALIASED capability");
-            VERIFY_BUFFER((Desc.BindFlags & ~SparseMem.BufferBindFlags) == 0,
-                          "the following bind flags are not allowed for a sparse buffer: ", GetBindFlagsString(Desc.BindFlags & ~SparseMem.BufferBindFlags, ", "), '.');
+                VERIFY_BUFFER(SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_ALIASED, "SPARSE_RESOURCE_FLAG_ALIASED flag requires SPARSE_RESOURCE_CAP_FLAG_ALIASED capability");
+            VERIFY_BUFFER((Desc.BindFlags & ~SparseRes.BufferBindFlags) == 0,
+                          "the following bind flags are not allowed for a sparse buffer: ", GetBindFlagsString(Desc.BindFlags & ~SparseRes.BufferBindFlags, ", "), '.');
             break;
         }
 

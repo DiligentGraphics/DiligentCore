@@ -81,7 +81,7 @@ public:
     virtual Uint64 DILIGENT_CALL_TYPE GetNativeHandle() override final { return BitCast<Uint64>(GetGLBufferHandle()); }
 
     /// Implementation of IBuffer::GetSparseProperties().
-    virtual BufferSparseProperties DILIGENT_CALL_TYPE GetSparseProperties() const override final;
+    virtual SparseBufferProperties DILIGENT_CALL_TYPE GetSparseProperties() const override final;
 
 private:
     virtual void CreateViewInternal(const struct BufferViewDesc& ViewDesc, IBufferView** ppView, bool bIsDefaultView) override;

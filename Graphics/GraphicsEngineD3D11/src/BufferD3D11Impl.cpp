@@ -302,7 +302,7 @@ void BufferD3D11Impl::CreateSRV(struct BufferViewDesc& SRVDesc, ID3D11ShaderReso
                            "Failed to create D3D11 shader resource view");
 }
 
-BufferSparseProperties BufferD3D11Impl::GetSparseProperties() const
+SparseBufferProperties BufferD3D11Impl::GetSparseProperties() const
 {
     DEV_CHECK_ERR(m_Desc.Usage == USAGE_SPARSE,
                   "IBuffer::GetSparseProperties() should only be used for sparse buffer");
@@ -322,7 +322,7 @@ BufferSparseProperties BufferD3D11Impl::GetSparseProperties() const
     VERIFY(StandardTileShapeForNonPackedMips.WidthInTexels == D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES,
            "Expected to be a standard block size");
 
-    BufferSparseProperties Props;
+    SparseBufferProperties Props;
     Props.MemorySize = NumTilesForEntireResource * StandardTileShapeForNonPackedMips.WidthInTexels;
     Props.BlockSize  = StandardTileShapeForNonPackedMips.WidthInTexels;
     return Props;

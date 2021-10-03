@@ -89,7 +89,7 @@ public:
     virtual D3D12_RESOURCE_STATES DILIGENT_CALL_TYPE GetD3D12ResourceState() const override final;
 
     /// Implementation of IBuffer::GetSparseProperties().
-    virtual BufferSparseProperties DILIGENT_CALL_TYPE GetSparseProperties() const override final;
+    virtual SparseBufferProperties DILIGENT_CALL_TYPE GetSparseProperties() const override final;
 
     __forceinline D3D12_GPU_VIRTUAL_ADDRESS GetGPUAddress(DeviceContextIndex ContextId, const DeviceContextD3D12Impl* pCtx) const
     {

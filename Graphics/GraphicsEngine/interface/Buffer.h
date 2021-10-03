@@ -93,7 +93,7 @@ struct BufferDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// Diligent::BIND_VERTEX_BUFFER, Diligent::BIND_INDEX_BUFFER, Diligent::BIND_UNIFORM_BUFFER,
     /// Diligent::BIND_SHADER_RESOURCE, Diligent::BIND_STREAM_OUTPUT, Diligent::BIND_UNORDERED_ACCESS,
     /// Diligent::BIND_INDIRECT_DRAW_ARGS, Diligent::BIND_RAY_TRACING.
-    /// Use SparseMemoryProperties::BufferBindFlags to get allowed bind flags for a sparse buffer.
+    /// Use SparseResourceProperties::BufferBindFlags to get allowed bind flags for a sparse buffer.
     BIND_FLAGS BindFlags            DEFAULT_INITIALIZER(BIND_NONE);
 
     /// Buffer usage, see Diligent::USAGE for details
@@ -214,20 +214,20 @@ struct BufferData
 typedef struct BufferData BufferData;
 
 /// Describes the sparse buffer properties
-struct BufferSparseProperties
+struct SparseBufferProperties
 {
-    /// Texture address space size.
+    /// The size of the buffer's virtual address space.
     Uint64  MemorySize  DEFAULT_INITIALIZER(0);
 
-    /// Size of the sparse block.
+    /// The size of the sparse memory block.
     ///
-    /// \note Offset in the buffer, memory offset and memory size that are used in sparse binding command,
-    ///       must be a multiple of the block size.
+    /// \note Offset in the buffer, memory offset and memory size that are used in sparse resource
+    ///       binding command, must be multiples of the block size.
     ///       In Direct3D11 and Direct3D12, the block size is always 64Kb.
-    ///       In Vulkan the block size is not documented, but is usually 64Kb.
+    ///       In Vulkan, the block size is not documented, but is usually also 64Kb.
     Uint32  BlockSize  DEFAULT_INITIALIZER(0);
 };
-typedef struct BufferSparseProperties BufferSparseProperties;
+typedef struct SparseBufferProperties SparseBufferProperties;
 
 
 #define DILIGENT_INTERFACE_NAME IBuffer
@@ -346,8 +346,8 @@ DILIGENT_BEGIN_INTERFACE(IBuffer, IDeviceObject)
                                                Uint64 StartOffset,
                                                Uint64 Size) PURE;
 
-    /// Returns the buffer sparse memory properties
-    VIRTUAL BufferSparseProperties METHOD(GetSparseProperties)(THIS) CONST PURE;
+    /// Returns the sparse buffer memory properties
+    VIRTUAL SparseBufferProperties METHOD(GetSparseProperties)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE
 

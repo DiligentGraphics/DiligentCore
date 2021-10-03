@@ -682,31 +682,28 @@ TEXTURE_FORMAT TexFormatToSRGB(TEXTURE_FORMAT Fmt);
 
 String GetPipelineShadingRateFlagsString(PIPELINE_SHADING_RATE_FLAGS Flags);
 
-/// Returns the sparse texture properties for standard blocks
-TextureSparseProperties GetTextureSparsePropertiesForStandardBlocks(const TextureDesc& TexDesc);
+/// Returns the sparse texture properties assuming the standard tile shapes
+SparseTextureProperties GetStandardSparseTextureProperties(const TextureDesc& TexDesc);
+
+/// Returns the number of sparse memory tiles in the given box region
+inline uint3 GetNumSparseTilesInBox(const Box& Region, const SparseTextureProperties& Props)
+{
+    return uint3 // clang-format off
+        {
+            (Region.Width()  + Props.TileSize[0] - 1) / Props.TileSize[0],
+            (Region.Height() + Props.TileSize[1] - 1) / Props.TileSize[1],
+            (Region.Depth()  + Props.TileSize[2] - 1) / Props.TileSize[2]
+        }; // clang-format on
+}
 
 /// Returns the number of sparse memory tiles in the given texture mip level
-inline uint3 GetNumTilesInMipLevel(const TextureDesc& Desc, const TextureSparseProperties& Props, Uint32 MipLevel)
+inline uint3 GetNumSparseTilesInMipLevel(const TextureDesc&             Desc,
+                                         const SparseTextureProperties& Props,
+                                         Uint32                         MipLevel)
 {
     // Texture dimensions may not be multiples of the tile size
     const auto MipProps = GetMipLevelProperties(Desc, MipLevel);
-    return uint3 //
-        {
-            (MipProps.StorageWidth + Props.TileSize[0] - 1) / Props.TileSize[0],
-            (MipProps.StorageHeight + Props.TileSize[1] - 1) / Props.TileSize[1],
-            (MipProps.Depth + Props.TileSize[2] - 1) / Props.TileSize[2] //
-        };
-}
-
-/// Returns the number of sparse memory tiles in the given box region
-inline uint3 GetNumTilesInBox(const Box& Region, const TextureSparseProperties& Props)
-{
-    return uint3 //
-        {
-            (Region.Width() + Props.TileSize[0] - 1) / Props.TileSize[0],
-            (Region.Height() + Props.TileSize[1] - 1) / Props.TileSize[1],
-            (Region.Depth() + Props.TileSize[2] - 1) / Props.TileSize[2] //
-        };
+    return GetNumSparseTilesInBox(Box{0, MipProps.StorageWidth, 0, MipProps.StorageHeight, 0, MipProps.Depth}, Props);
 }
 
 } // namespace Diligent

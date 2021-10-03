@@ -69,11 +69,11 @@ TEST_P(DynamicTextureArrayCreateTest, Run)
     if (Desc.Usage == USAGE_SPARSE)
     {
         const auto& DeviceInfo = pDevice->GetDeviceInfo();
-        if (!DeviceInfo.Features.SparseMemory)
-            GTEST_SKIP() << "Sparse memory is not enabled on this device";
+        if (!DeviceInfo.Features.SparseResources)
+            GTEST_SKIP() << "Sparse resources are not enabled on this device";
 
         const auto& AdapterInfo = pDevice->GetAdapterInfo();
-        if ((AdapterInfo.SparseMemory.CapFlags & SPARSE_MEMORY_CAP_FLAG_TEXTURE_2D_ARRAY_MIP_TAIL) == 0)
+        if ((AdapterInfo.SparseResources.CapFlags & SPARSE_RESOURCE_CAP_FLAG_TEXTURE_2D_ARRAY_MIP_TAIL) == 0)
             GTEST_SKIP() << "This device does not support sparse texture 2D arrays with mip tails";
     }
 
@@ -242,11 +242,11 @@ TEST_P(DynamicTextureArrayResizeTest, Run)
     if (Desc.Usage == USAGE_SPARSE)
     {
         const auto& DeviceInfo = pDevice->GetDeviceInfo();
-        if (!DeviceInfo.Features.SparseMemory)
-            GTEST_SKIP() << "Sparse memory is not enabled on this device";
+        if (!DeviceInfo.Features.SparseResources)
+            GTEST_SKIP() << "Sparse resources are not enabled on this device";
 
         const auto& AdapterInfo = pDevice->GetAdapterInfo();
-        if ((AdapterInfo.SparseMemory.CapFlags & SPARSE_MEMORY_CAP_FLAG_TEXTURE_2D_ARRAY_MIP_TAIL) == 0)
+        if ((AdapterInfo.SparseResources.CapFlags & SPARSE_RESOURCE_CAP_FLAG_TEXTURE_2D_ARRAY_MIP_TAIL) == 0)
             GTEST_SKIP() << "This device does not support sparse texture 2D arrays with mip tails";
     }
 

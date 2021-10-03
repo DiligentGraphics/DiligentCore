@@ -322,7 +322,7 @@ public:
     }
 
     /// Implementation of ITexture::GetSparseProperties().
-    virtual const TextureSparseProperties& DILIGENT_CALL_TYPE GetSparseProperties() const override final
+    virtual const SparseTextureProperties& DILIGENT_CALL_TYPE GetSparseProperties() const override final
     {
         DEV_CHECK_ERR(this->m_Desc.Usage == USAGE_SPARSE,
                       "ITexture::GetSparseProperties() must be used for sparse texture");
@@ -396,7 +396,7 @@ protected:
 
     RESOURCE_STATE m_State = RESOURCE_STATE_UNKNOWN;
 
-    std::unique_ptr<TextureSparseProperties> m_pSparseProps;
+    std::unique_ptr<SparseTextureProperties> m_pSparseProps;
 };
 
 } // namespace Diligent

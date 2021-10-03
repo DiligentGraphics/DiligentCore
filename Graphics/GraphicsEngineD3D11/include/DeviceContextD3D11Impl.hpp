@@ -282,8 +282,8 @@ public:
                                                    SHADING_RATE_COMBINER PrimitiveCombiner,
                                                    SHADING_RATE_COMBINER TextureCombiner) override final;
 
-    /// Implementation of IDeviceContext::BindSparseMemory() in Direct3D11 backend.
-    virtual void DILIGENT_CALL_TYPE BindSparseMemory(const BindSparseMemoryAttribs& Attribs) override final;
+    /// Implementation of IDeviceContext::BindSparseResourceMemory() in Direct3D11 backend.
+    virtual void DILIGENT_CALL_TYPE BindSparseResourceMemory(const BindSparseResourceMemoryAttribs& Attribs) override final;
 
     /// Implementation of IDeviceContextD3D11::GetD3D11DeviceContext().
     virtual ID3D11DeviceContext* DILIGENT_CALL_TYPE GetD3D11DeviceContext() override final { return m_pd3d11DeviceContext; }

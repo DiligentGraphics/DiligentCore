@@ -85,7 +85,7 @@ struct DeviceMemoryDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 };
 typedef struct DeviceMemoryDesc DeviceMemoryDesc;
 
-/// Device memory creation attributes
+/// Device memory create information
 struct DeviceMemoryCreateInfo
 {
     /// Device memory description, see Diligent::DeviceMemoryDesc.
@@ -102,8 +102,9 @@ struct DeviceMemoryCreateInfo
     /// \note Vulkan backend requires at least one resource to be provided.
     ///
     ///       In Direct3D12, the list of resources is optional on D3D12_RESOURCE_HEAP_TIER_2-hardware
-    ///       and above, but is required on D3D12_RESOURCE_HEAP_TIER_1-hardware. It is recommended to
-    ///       always provide the list.
+    ///       and above, but is required on D3D12_RESOURCE_HEAP_TIER_1-hardware
+    ///       (see SPARSE_RESOURCE_CAP_FLAG_MIXED_RESOURCE_TYPE_SUPPORT).
+    ///       It is recommended to always provide the list.
     IDeviceObject**   ppCompatibleResources DEFAULT_INITIALIZER(nullptr);
 
     /// The number of elements in the ppCompatibleResources array.
@@ -128,26 +129,26 @@ typedef struct DeviceMemoryCreateInfo DeviceMemoryCreateInfo;
 DILIGENT_BEGIN_INTERFACE(IDeviceMemory, IDeviceObject)
 {
 #if DILIGENT_CPP_INTERFACE
-    /// Returns the device memory description used to create the object
+    /// Returns the device memory description
     virtual const DeviceMemoryDesc& METHOD(GetDesc)() const override = 0;
 #endif
 
     /// Resizes the internal memory object.
 
-    /// \param [in] NewSize - The new size of the memory object, must be a multiple of DeviceMemoryDesc::PageSize.
+    /// \param [in] NewSize - The new size of the memory object; must be a multiple of DeviceMemoryDesc::PageSize.
     ///
     /// \remarks  Depending on the implementation, the function may resize the existing memory object or
     ///           create/destroy pages with separate memory objects.
     ///
     /// \remarks  This method must be externally synchronized with IDeviceMemory::GetCapacity()
-    ///           and IDeviceContext::BindSparseMemory().
+    ///           and IDeviceContext::BindSparseResourceMemory().
     VIRTUAL Bool METHOD(Resize)(THIS_
                                 Uint64 NewSize) PURE;
 
     /// Returns the current size of the memory object.
 
     /// \remarks  This method must be externally synchronized with IDeviceMemory::Resize()
-    ///           and IDeviceContext::BindSparseMemory().
+    ///           and IDeviceContext::BindSparseResourceMemory().
     VIRTUAL Uint64 METHOD(GetCapacity)(THIS) CONST PURE;
 
     /// Checks if the given resource is compatible with this memory object.

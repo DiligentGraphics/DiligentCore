@@ -109,7 +109,7 @@ DeviceFeatures EnableDeviceFeatures(const DeviceFeatures& SupportedFeatures,
     ENABLE_FEATURE(TileShaders,                       "Tile shaders are");
     ENABLE_FEATURE(TransferQueueTimestampQueries,     "Timestamp queries in transfer queues are");
     ENABLE_FEATURE(VariableRateShading,               "Variable shading rate is");
-    ENABLE_FEATURE(SparseMemory,                      "Sparse memory is");
+    ENABLE_FEATURE(SparseResources,                   "Sparse resources are");
     // clang-format on
 #undef ENABLE_FEATURE
 

@@ -3708,9 +3708,9 @@ void DeviceContextVkImpl::SetShadingRate(SHADING_RATE BaseRate, SHADING_RATE_COM
         UNEXPECTED("VariableRateShading device feature is not enabled");
 }
 
-void DeviceContextVkImpl::BindSparseMemory(const BindSparseMemoryAttribs& Attribs)
+void DeviceContextVkImpl::BindSparseResourceMemory(const BindSparseResourceMemoryAttribs& Attribs)
 {
-    TDeviceContextBase::BindSparseMemory(Attribs, 0);
+    TDeviceContextBase::BindSparseResourceMemory(Attribs, 0);
 
     if (Attribs.NumBufferBinds == 0 && Attribs.NumTextureBinds == 0)
         return;
@@ -3781,7 +3781,7 @@ void DeviceContextVkImpl::BindSparseMemory(const BindSparseMemoryAttribs& Attrib
             const auto  MemRangeVk = pMemVk ? pMemVk->GetRange(SrcRange.MemoryOffset, SrcRange.MemorySize) : DeviceMemoryRangeVk{};
 
             DEV_CHECK_ERR(MemRangeVk.Offset % BuffSparseProps.BlockSize == 0,
-                          "MemoryOffset must be multiple of the BufferSparseProperties::BlockSize");
+                          "MemoryOffset must be multiple of the SparseBufferProperties::BlockSize");
 
             auto& vkMemBind{vkMemoryBinds[MemoryBindCount++]};
             vkMemBind.resourceOffset = SrcRange.BufferOffset;
@@ -3818,7 +3818,7 @@ void DeviceContextVkImpl::BindSparseMemory(const BindSparseMemoryAttribs& Attrib
             const auto  MemRangeVk = pMemVk ? pMemVk->GetRange(SrcRange.MemoryOffset, SrcRange.MemorySize) : DeviceMemoryRangeVk{};
 
             DEV_CHECK_ERR((MemRangeVk.Offset % TexSparseProps.BlockSize) == 0,
-                          "MemoryOffset must be a multiple of the TextureSparseProperties::BlockSize");
+                          "MemoryOffset must be a multiple of the SparseTextureProperties::BlockSize");
 
             if (SrcRange.MipLevel < TexSparseProps.FirstMipInTail)
             {
