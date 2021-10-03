@@ -155,7 +155,7 @@
         glScissor(static_cast<GLint>(left), static_cast<GLint>(bottom), static_cast<GLsizei>(width), static_cast<GLsizei>(height));
     }
 #endif
-    
+
 #ifdef LOAD_GL_DEPTH_RANGE_INDEXED
     PFNGLDEPTHRANGEINDEXEDPROC glDepthRangeIndexed = nullptr;
     void glDepthRangeIndexedStub(GLuint index, GLfloat n, GLfloat f)
@@ -198,7 +198,7 @@
 #endif
 
 #ifdef LOAD_GL_TEXTURE_VIEW
-    DECLARE_GL_FUNCTION( glTextureView, PFNGLTEXTUREVIEWPROC, GLuint texture, GLenum target, GLuint origtexture, GLenum internalformat, GLuint minlevel, GLuint numlevels, GLuint minlayer, GLuint numlayers)
+    DECLARE_GL_FUNCTION_NO_STUB( glTextureView, PFNGLTEXTUREVIEWPROC, GLuint texture, GLenum target, GLuint origtexture, GLenum internalformat, GLuint minlevel, GLuint numlevels, GLuint minlayer, GLuint numlayers)
 #endif
 
 #ifdef LOAD_GL_DRAW_ELEMENTS_INSTANCED_BASE_VERTEX_BASE_INSTANCE
@@ -301,7 +301,7 @@ void LoadGLFunctions()
 
 #define LOAD_GL_FUNCTION(Func) \
     LoadFn(Func, {{#Func, {3,0}}}, &Func##Stub);
-    
+
 #define LOAD_GL_FUNCTION2(Func, ...) \
     LoadFn(Func, __VA_ARGS__, &Func##Stub);
 
@@ -446,7 +446,7 @@ void LoadGLFunctions()
 #endif
 
 #ifdef LOAD_GL_TEXTURE_VIEW
-    LOAD_GL_FUNCTION2(glTextureView, {{"glTextureViewOES", {3,1}}, {"glTextureViewEXT", {3,1}}} )
+    LOAD_GL_FUNCTION_NO_STUB(glTextureView, {{"glTextureViewOES", {3,1}}, {"glTextureViewEXT", {3,1}}} )
 #endif
 
 #ifdef LOAD_GL_DRAW_ELEMENTS_INSTANCED_BASE_VERTEX_BASE_INSTANCE
