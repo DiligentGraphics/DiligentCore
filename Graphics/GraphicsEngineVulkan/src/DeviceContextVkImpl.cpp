@@ -3083,35 +3083,73 @@ void DeviceContextVkImpl::TransitionResourceStates(Uint32 BarrierCount, const St
             VERIFY((Barrier.Flags & STATE_TRANSITION_FLAG_UPDATE_STATE) == 0, "Resource state can't be updated in begin-split barrier");
             continue;
         }
-        VERIFY(Barrier.TransitionType == STATE_TRANSITION_TYPE_IMMEDIATE || Barrier.TransitionType == STATE_TRANSITION_TYPE_END, "Unexpected barrier type");
-
-        if (RefCntAutoPtr<TextureVkImpl> pTexture{Barrier.pResource, IID_TextureVk})
+        if (Barrier.Flags & STATE_TRANSITION_FLAG_ALIASING)
         {
-            VkImageSubresourceRange SubResRange;
-            SubResRange.aspectMask     = 0;
-            SubResRange.baseMipLevel   = Barrier.FirstMipLevel;
-            SubResRange.levelCount     = (Barrier.MipLevelsCount == REMAINING_MIP_LEVELS) ? VK_REMAINING_MIP_LEVELS : Barrier.MipLevelsCount;
-            SubResRange.baseArrayLayer = Barrier.FirstArraySlice;
-            SubResRange.layerCount     = (Barrier.ArraySliceCount == REMAINING_ARRAY_SLICES) ? VK_REMAINING_ARRAY_LAYERS : Barrier.ArraySliceCount;
-            TransitionTextureState(*pTexture, Barrier.OldState, Barrier.NewState, Barrier.Flags, &SubResRange);
-        }
-        else if (RefCntAutoPtr<BufferVkImpl> pBuffer{Barrier.pResource, IID_BufferVk})
-        {
-            TransitionBufferState(*pBuffer, Barrier.OldState, Barrier.NewState, (Barrier.Flags & STATE_TRANSITION_FLAG_UPDATE_STATE) != 0);
-        }
-        else if (RefCntAutoPtr<BottomLevelASVkImpl> pBottomLevelAS{Barrier.pResource, IID_BottomLevelAS})
-        {
-            TransitionBLASState(*pBottomLevelAS, Barrier.OldState, Barrier.NewState, (Barrier.Flags & STATE_TRANSITION_FLAG_UPDATE_STATE) != 0);
-        }
-        else if (RefCntAutoPtr<TopLevelASVkImpl> pTopLevelAS{Barrier.pResource, IID_TopLevelAS})
-        {
-            TransitionTLASState(*pTopLevelAS, Barrier.OldState, Barrier.NewState, (Barrier.Flags & STATE_TRANSITION_FLAG_UPDATE_STATE) != 0);
+            AliasingBarrier(Barrier.pResourceBefore, Barrier.pResource);
         }
         else
         {
-            UNEXPECTED("unsupported resource type");
+            VERIFY(Barrier.TransitionType == STATE_TRANSITION_TYPE_IMMEDIATE || Barrier.TransitionType == STATE_TRANSITION_TYPE_END, "Unexpected barrier type");
+
+            if (RefCntAutoPtr<TextureVkImpl> pTexture{Barrier.pResource, IID_TextureVk})
+            {
+                VkImageSubresourceRange SubResRange;
+                SubResRange.aspectMask     = 0;
+                SubResRange.baseMipLevel   = Barrier.FirstMipLevel;
+                SubResRange.levelCount     = (Barrier.MipLevelsCount == REMAINING_MIP_LEVELS) ? VK_REMAINING_MIP_LEVELS : Barrier.MipLevelsCount;
+                SubResRange.baseArrayLayer = Barrier.FirstArraySlice;
+                SubResRange.layerCount     = (Barrier.ArraySliceCount == REMAINING_ARRAY_SLICES) ? VK_REMAINING_ARRAY_LAYERS : Barrier.ArraySliceCount;
+                TransitionTextureState(*pTexture, Barrier.OldState, Barrier.NewState, Barrier.Flags, &SubResRange);
+            }
+            else if (RefCntAutoPtr<BufferVkImpl> pBuffer{Barrier.pResource, IID_BufferVk})
+            {
+                TransitionBufferState(*pBuffer, Barrier.OldState, Barrier.NewState, (Barrier.Flags & STATE_TRANSITION_FLAG_UPDATE_STATE) != 0);
+            }
+            else if (RefCntAutoPtr<BottomLevelASVkImpl> pBottomLevelAS{Barrier.pResource, IID_BottomLevelAS})
+            {
+                TransitionBLASState(*pBottomLevelAS, Barrier.OldState, Barrier.NewState, (Barrier.Flags & STATE_TRANSITION_FLAG_UPDATE_STATE) != 0);
+            }
+            else if (RefCntAutoPtr<TopLevelASVkImpl> pTopLevelAS{Barrier.pResource, IID_TopLevelAS})
+            {
+                TransitionTLASState(*pTopLevelAS, Barrier.OldState, Barrier.NewState, (Barrier.Flags & STATE_TRANSITION_FLAG_UPDATE_STATE) != 0);
+            }
+            else
+            {
+                UNEXPECTED("unsupported resource type");
+            }
         }
     }
+}
+
+void DeviceContextVkImpl::AliasingBarrier(IDeviceObject* pResourceBefore, IDeviceObject* pResourceAfter)
+{
+    auto GetResourceBindFlags = [](IDeviceObject* pResource) //
+    {
+        if (RefCntAutoPtr<ITextureVk> pTexture{pResource, IID_TextureVk})
+        {
+            return pTexture.RawPtr<TextureVkImpl>()->GetDesc().BindFlags;
+        }
+        else if (RefCntAutoPtr<IBufferVk> pBuffer{pResource, IID_BufferVk})
+        {
+            return pBuffer.RawPtr<BufferVkImpl>()->GetDesc().BindFlags;
+        }
+        else
+        {
+            constexpr auto BindAll = static_cast<BIND_FLAGS>((Uint32{BIND_FLAGS_LAST} << 1) - 1);
+            return BindAll;
+        }
+    };
+
+    VkPipelineStageFlags vkSrcStages     = 0;
+    VkAccessFlags        vkSrcAccessMask = 0;
+    GetAllowedStagesAndAccessMask(GetResourceBindFlags(pResourceBefore), vkSrcStages, vkSrcAccessMask);
+
+    VkPipelineStageFlags vkDstStages     = 0;
+    VkAccessFlags        vkDstAccessMask = 0;
+    GetAllowedStagesAndAccessMask(GetResourceBindFlags(pResourceAfter), vkDstStages, vkDstAccessMask);
+
+    EnsureVkCmdBuffer();
+    m_CommandBuffer.MemoryBarrier(vkSrcAccessMask, vkDstAccessMask, vkSrcStages, vkDstStages);
 }
 
 void DeviceContextVkImpl::ResolveTextureSubresource(ITexture*                               pSrcTexture,

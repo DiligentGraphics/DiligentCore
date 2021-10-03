@@ -116,4 +116,6 @@ SPARSE_TEXTURE_FLAGS VkSparseImageFormatFlagsToSparseTextureFlags(VkSparseImageF
 
 VkImageUsageFlags BindFlagsToVkImageUsage(BIND_FLAGS Flags, bool IsMemoryless, bool FragDensityMapInsteadOfShadingRate);
 
+void GetAllowedStagesAndAccessMask(BIND_FLAGS Flags, VkPipelineStageFlags& StageMask, VkAccessFlags& AccessMask);
+
 } // namespace Diligent

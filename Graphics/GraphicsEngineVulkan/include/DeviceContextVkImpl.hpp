@@ -435,6 +435,8 @@ private:
                                                    RESOURCE_STATE                 RequiredState,
                                                    const char*                    OperationName);
 
+    void AliasingBarrier(IDeviceObject* pResourceBefore, IDeviceObject* pResourceAfter);
+
     __forceinline void EnsureVkCmdBuffer()
     {
         VERIFY_EXPR(m_CmdPool != nullptr);

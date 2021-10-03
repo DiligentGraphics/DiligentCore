@@ -374,15 +374,81 @@ bool VerifyResourceState(RESOURCE_STATE States, COMMAND_QUEUE_TYPE QueueType, co
     return Result;
 }
 
+#define CHECK_STATE_TRANSITION_DESC(Expr, ...) CHECK_PARAMETER(Expr, "State transition parameters are invalid: ", __VA_ARGS__)
+static bool VerifyAliasingBarrierDesc(const StateTransitionDesc& Barrier)
+{
+    VERIFY_EXPR(Barrier.Flags & STATE_TRANSITION_FLAG_ALIASING);
+
+    auto VerifySparseAliasedResource = [](IDeviceObject* pResource) //
+    {
+        if (pResource == nullptr)
+            return RESOURCE_DIM_UNDEFINED;
+
+        if (RefCntAutoPtr<ITexture> pTexture{pResource, IID_Texture})
+        {
+            const auto& TexDesc = pTexture->GetDesc();
+            DEV_CHECK_ERR(TexDesc.Usage == USAGE_SPARSE,
+                          "Texture '", TexDesc.Name, "' used in an aliasing barrier is not a sparse resource");
+            DEV_CHECK_ERR((TexDesc.MiscFlags & MISC_TEXTURE_FLAG_SPARSE_ALIASING) != 0,
+                          "Texture '", TexDesc.Name, "' used in an aliasing barrier was not created with MISC_TEXTURE_FLAG_SPARSE_ALIASING flag");
+
+            return TexDesc.Type;
+        }
+        else if (RefCntAutoPtr<IBuffer> pBuffer{pResource, IID_Buffer})
+        {
+            const auto& BuffDesc = pBuffer->GetDesc();
+
+            DEV_CHECK_ERR(BuffDesc.Usage == USAGE_SPARSE,
+                          "Buffer '", BuffDesc.Name, "' used in an aliasing barrier is not a sparse resource");
+            DEV_CHECK_ERR((BuffDesc.MiscFlags & MISC_BUFFER_FLAG_SPARSE_ALIASING) != 0,
+                          "Buffer '", BuffDesc.Name, "' used in an aliasing barrier was not created with MISC_BUFFER_FLAG_SPARSE_ALIASING flag");
+
+            return RESOURCE_DIM_BUFFER;
+        }
+        else
+        {
+            DEV_ERROR("Only textures and buffers are allowed in aliasing barriers");
+            return RESOURCE_DIM_UNDEFINED;
+        }
+    };
+
+    auto BeforeDim = VerifySparseAliasedResource(Barrier.pResourceBefore);
+    auto AfterDim  = VerifySparseAliasedResource(Barrier.pResource);
+    if (BeforeDim != RESOURCE_DIM_UNDEFINED && AfterDim != RESOURCE_DIM_UNDEFINED)
+    {
+        CHECK_STATE_TRANSITION_DESC((BeforeDim == RESOURCE_DIM_BUFFER) == (AfterDim == RESOURCE_DIM_BUFFER),
+                                    "Both before- and after-resources must either be buffers or textures. "
+                                    "Sparse aliasing between textures and buffers is not allowed.");
+    }
+
+    CHECK_STATE_TRANSITION_DESC(Barrier.OldState == RESOURCE_STATE_UNKNOWN && Barrier.NewState == RESOURCE_STATE_UNKNOWN,
+                                "Aliasing barrier does not support state transitions. OldState and NewState must both be RESOURCE_STATE_UNKNOWN");
+
+    CHECK_STATE_TRANSITION_DESC((Barrier.FirstMipLevel == 0 && Barrier.MipLevelsCount == REMAINING_MIP_LEVELS &&
+                                 Barrier.FirstArraySlice == 0 && Barrier.ArraySliceCount == REMAINING_ARRAY_SLICES),
+                                "Aliasing barrier is applied to all subresources. FirstMipLevel, MipLevelsCount, FirstArraySlice and ArraySliceCount must be default");
+
+    return true;
+}
+
 bool VerifyStateTransitionDesc(const IRenderDevice*       pDevice,
                                const StateTransitionDesc& Barrier,
                                DeviceContextIndex         ExecutionCtxId,
                                const DeviceContextDesc&   CtxDesc)
 {
-#define CHECK_STATE_TRANSITION_DESC(Expr, ...) CHECK_PARAMETER(Expr, "State transition parameters are invalid: ", __VA_ARGS__)
+    if (Barrier.Flags & STATE_TRANSITION_FLAG_ALIASING)
+    {
+        CHECK_STATE_TRANSITION_DESC((Barrier.Flags & ~STATE_TRANSITION_FLAG_ALIASING) == 0,
+                                    "STATE_TRANSITION_FLAG_ALIASING flag is not compatible with other flags");
+        return VerifyAliasingBarrierDesc(Barrier);
+    }
+
+    CHECK_STATE_TRANSITION_DESC(Barrier.pResourceBefore == nullptr, "pResourceBefore is only used for aliasing barrier and must be null otherwise");
+    CHECK_STATE_TRANSITION_DESC(Barrier.NewState != RESOURCE_STATE_UNKNOWN && Barrier.NewState != RESOURCE_STATE_UNDEFINED,
+                                "NewState must not be UNKNOWN or UNDEFINED");
+
 
     CHECK_STATE_TRANSITION_DESC(Barrier.pResource != nullptr, "pResource must not be null.");
-    CHECK_STATE_TRANSITION_DESC(Barrier.NewState != RESOURCE_STATE_UNKNOWN, "NewState state can't be UNKNOWN.");
 
     RESOURCE_STATE OldState             = RESOURCE_STATE_UNKNOWN;
     Uint64         ImmediateContextMask = 0;
@@ -461,26 +527,32 @@ bool VerifyStateTransitionDesc(const IRenderDevice*       pDevice,
     CHECK_STATE_TRANSITION_DESC((ImmediateContextMask & (Uint64{1} << Uint64{ExecutionCtxId})) != 0,
                                 "resource was created with ImmediateContextMask 0x", std::hex, ImmediateContextMask, " and can not be used in device context '", CtxDesc.Name, "'.");
 
-    if (OldState == RESOURCE_STATE_UNORDERED_ACCESS && Barrier.NewState == RESOURCE_STATE_UNORDERED_ACCESS)
+    switch (Barrier.TransitionType)
     {
-        CHECK_STATE_TRANSITION_DESC(Barrier.TransitionType == STATE_TRANSITION_TYPE_IMMEDIATE, "for UAV barriers, transition type must be STATE_TRANSITION_TYPE_IMMEDIATE.");
-    }
+        case STATE_TRANSITION_TYPE_IMMEDIATE:
+            CHECK_STATE_TRANSITION_DESC(!(OldState == RESOURCE_STATE_UNORDERED_ACCESS && Barrier.NewState == RESOURCE_STATE_UNORDERED_ACCESS),
+                                        "for UAV barriers, transition type must be STATE_TRANSITION_TYPE_IMMEDIATE.");
+            break;
 
-    if (Barrier.TransitionType == STATE_TRANSITION_TYPE_BEGIN)
-    {
-        CHECK_STATE_TRANSITION_DESC((Barrier.Flags & STATE_TRANSITION_FLAG_UPDATE_STATE) == 0, "resource state can't be updated in begin-split barrier.");
-    }
+        case STATE_TRANSITION_TYPE_BEGIN:
+            CHECK_STATE_TRANSITION_DESC((Barrier.Flags & STATE_TRANSITION_FLAG_UPDATE_STATE) == 0, "resource state can't be updated in begin-split barrier.");
+            break;
 
-    CHECK_STATE_TRANSITION_DESC(Barrier.NewState != RESOURCE_STATE_UNKNOWN && Barrier.NewState != RESOURCE_STATE_UNDEFINED,
-                                "NewState must not be UNKNOWN or UNDEFINED");
+        case STATE_TRANSITION_TYPE_END:
+            break;
+
+        default:
+            UNEXPECTED("Unexpected transition type");
+    }
 
     VerifyResourceState(Barrier.OldState, CtxDesc.QueueType, "OldState");
     VerifyResourceState(Barrier.NewState, CtxDesc.QueueType, "NewState");
 
-#undef CHECK_STATE_TRANSITION_DESC
 
     return true;
 }
+
+#undef CHECK_STATE_TRANSITION_DESC
 
 
 bool VerifyBuildBLASAttribs(const BuildBLASAttribs& Attribs, const IRenderDevice* pDevice)

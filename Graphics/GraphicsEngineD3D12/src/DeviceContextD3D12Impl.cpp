@@ -2352,6 +2352,33 @@ void DeviceContextD3D12Impl::EndQuery(IQuery* pQuery)
     QueryMgr.EndQuery(Ctx, QueryType, Idx);
 }
 
+static void AliasingBarrier(CommandContext& CmdCtx, IDeviceObject* pResourceBefore, IDeviceObject* pResourceAfter)
+{
+    auto GetD3D12Resource = [](IDeviceObject* pResource) -> ID3D12Resource* //
+    {
+        if (RefCntAutoPtr<ITextureD3D12> pTexture{pResource, IID_TextureD3D12})
+        {
+            return pTexture.RawPtr<TextureD3D12Impl>()->GetD3D12Texture();
+        }
+        else if (RefCntAutoPtr<IBufferD3D12> pBuffer{pResource, IID_BufferD3D12})
+        {
+            return pBuffer.RawPtr<BufferD3D12Impl>()->GetD3D12Resource();
+        }
+        else
+        {
+            return nullptr;
+        }
+    };
+
+    D3D12_RESOURCE_BARRIER Barrier{};
+    Barrier.Type                     = D3D12_RESOURCE_BARRIER_TYPE_ALIASING;
+    Barrier.Flags                    = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+    Barrier.Aliasing.pResourceBefore = GetD3D12Resource(pResourceBefore);
+    Barrier.Aliasing.pResourceAfter  = GetD3D12Resource(pResourceAfter);
+
+    CmdCtx.ResourceBarrier(Barrier);
+}
+
 void DeviceContextD3D12Impl::TransitionResourceStates(Uint32 BarrierCount, const StateTransitionDesc* pResourceBarriers)
 {
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "State transitions are not allowed inside a render pass");
@@ -2363,16 +2390,23 @@ void DeviceContextD3D12Impl::TransitionResourceStates(Uint32 BarrierCount, const
         DvpVerifyStateTransitionDesc(pResourceBarriers[i]);
 #endif
         const auto& Barrier = pResourceBarriers[i];
-        if (RefCntAutoPtr<TextureD3D12Impl> pTextureD3D12Impl{Barrier.pResource, IID_TextureD3D12})
-            CmdCtx.TransitionResource(*pTextureD3D12Impl, Barrier);
-        else if (RefCntAutoPtr<BufferD3D12Impl> pBufferD3D12Impl{Barrier.pResource, IID_BufferD3D12})
-            CmdCtx.TransitionResource(*pBufferD3D12Impl, Barrier);
-        else if (RefCntAutoPtr<BottomLevelASD3D12Impl> pBLASD3D12Impl{Barrier.pResource, IID_BottomLevelASD3D12})
-            CmdCtx.TransitionResource(*pBLASD3D12Impl, Barrier);
-        else if (RefCntAutoPtr<TopLevelASD3D12Impl> pTLASD3D12Impl{Barrier.pResource, IID_TopLevelASD3D12})
-            CmdCtx.TransitionResource(*pTLASD3D12Impl, Barrier);
+        if (Barrier.Flags & STATE_TRANSITION_FLAG_ALIASING)
+        {
+            AliasingBarrier(CmdCtx, Barrier.pResourceBefore, Barrier.pResource);
+        }
         else
-            UNEXPECTED("Unknown resource type");
+        {
+            if (RefCntAutoPtr<TextureD3D12Impl> pTextureD3D12Impl{Barrier.pResource, IID_TextureD3D12})
+                CmdCtx.TransitionResource(*pTextureD3D12Impl, Barrier);
+            else if (RefCntAutoPtr<BufferD3D12Impl> pBufferD3D12Impl{Barrier.pResource, IID_BufferD3D12})
+                CmdCtx.TransitionResource(*pBufferD3D12Impl, Barrier);
+            else if (RefCntAutoPtr<BottomLevelASD3D12Impl> pBLASD3D12Impl{Barrier.pResource, IID_BottomLevelASD3D12})
+                CmdCtx.TransitionResource(*pBLASD3D12Impl, Barrier);
+            else if (RefCntAutoPtr<TopLevelASD3D12Impl> pTLASD3D12Impl{Barrier.pResource, IID_TopLevelASD3D12})
+                CmdCtx.TransitionResource(*pTLASD3D12Impl, Barrier);
+            else
+                UNEXPECTED("Unknown resource type");
+        }
     }
 }
 

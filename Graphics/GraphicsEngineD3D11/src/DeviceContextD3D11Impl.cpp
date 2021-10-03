@@ -2004,6 +2004,34 @@ void DeviceContextD3D11Impl::InvalidateState()
     m_BindInfo.Invalidate();
 }
 
+
+static void AliasingBarrier(ID3D11DeviceContext* pd3d11Ctx, IDeviceObject* pResourceBefore, IDeviceObject* pResourceAfter)
+{
+    DEV_CHECK_ERR(CComQIPtr<ID3D11DeviceContext2>{pd3d11Ctx}, "Failed to query ID3D11DeviceContext2");
+    auto* pd3d11DeviceContext2 = static_cast<ID3D11DeviceContext2*>(pd3d11Ctx);
+
+    auto GetD3D11Resource = [](IDeviceObject* pResource) -> ID3D11Resource* //
+    {
+        if (RefCntAutoPtr<ITextureD3D11> pTexture{pResource, IID_TextureD3D11})
+        {
+            return pTexture->GetD3D11Texture();
+        }
+        else if (RefCntAutoPtr<IBufferD3D11> pBuffer{pResource, IID_BufferD3D11})
+        {
+            return pBuffer->GetD3D11Buffer();
+        }
+        else
+        {
+            return nullptr;
+        }
+    };
+
+    auto* pd3d11ResourceBefore = GetD3D11Resource(pResourceBefore);
+    auto* pd3d11ResourceAfter  = GetD3D11Resource(pResourceAfter);
+
+    pd3d11DeviceContext2->TiledResourceBarrier(pd3d11ResourceBefore, pd3d11ResourceAfter);
+}
+
 void DeviceContextD3D11Impl::TransitionResourceStates(Uint32 BarrierCount, const StateTransitionDesc* pResourceBarriers)
 {
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "State transitions are not allowed inside a render pass");
@@ -2014,7 +2042,6 @@ void DeviceContextD3D11Impl::TransitionResourceStates(Uint32 BarrierCount, const
 #ifdef DILIGENT_DEVELOPMENT
         DvpVerifyStateTransitionDesc(Barrier);
 #endif
-        DEV_CHECK_ERR(Barrier.NewState != RESOURCE_STATE_UNKNOWN, "New resource state can't be unknown");
 
         if (Barrier.TransitionType == STATE_TRANSITION_TYPE_BEGIN)
         {
@@ -2024,17 +2051,25 @@ void DeviceContextD3D11Impl::TransitionResourceStates(Uint32 BarrierCount, const
         }
         VERIFY(Barrier.TransitionType == STATE_TRANSITION_TYPE_IMMEDIATE || Barrier.TransitionType == STATE_TRANSITION_TYPE_END, "Unexpected barrier type");
 
-        if (RefCntAutoPtr<TextureBaseD3D11> pTexture{Barrier.pResource, IID_TextureD3D11})
+        if (Barrier.Flags & STATE_TRANSITION_FLAG_ALIASING)
         {
-            TransitionResource(*pTexture, Barrier.NewState, Barrier.OldState);
-        }
-        else if (RefCntAutoPtr<BufferD3D11Impl> pBuffer{Barrier.pResource, IID_BufferD3D11})
-        {
-            TransitionResource(*pBuffer, Barrier.NewState, Barrier.OldState);
+            AliasingBarrier(m_pd3d11DeviceContext, Barrier.pResourceBefore, Barrier.pResource);
         }
         else
         {
-            UNEXPECTED("The type of resource '", Barrier.pResource->GetDesc().Name, "' is not support in D3D11");
+            DEV_CHECK_ERR(Barrier.NewState != RESOURCE_STATE_UNKNOWN, "New resource state can't be unknown");
+            if (RefCntAutoPtr<TextureBaseD3D11> pTexture{Barrier.pResource, IID_TextureD3D11})
+            {
+                TransitionResource(*pTexture, Barrier.NewState, Barrier.OldState);
+            }
+            else if (RefCntAutoPtr<BufferD3D11Impl> pBuffer{Barrier.pResource, IID_BufferD3D11})
+            {
+                TransitionResource(*pBuffer, Barrier.NewState, Barrier.OldState);
+            }
+            else
+            {
+                UNEXPECTED("The type of resource '", Barrier.pResource->GetDesc().Name, "' is not support in D3D11");
+            }
         }
     }
 }

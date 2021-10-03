@@ -85,6 +85,8 @@ protected:
         if (!sm_pSparseBindingCtx)
             return;
 
+        auto* pContext = pEnv->GetDeviceContext();
+
         // Fill buffer PSO
         {
             BufferDesc BuffDesc;
@@ -96,6 +98,14 @@ protected:
 
             pDevice->CreateBuffer(BuffDesc, nullptr, &sm_pFillBufferParams);
             ASSERT_NE(sm_pFillBufferParams, nullptr);
+
+            StateTransitionDesc Barrier;
+            Barrier.pResource = sm_pFillBufferParams;
+            Barrier.OldState  = RESOURCE_STATE_UNKNOWN;
+            Barrier.NewState  = RESOURCE_STATE_CONSTANT_BUFFER;
+            Barrier.Flags     = STATE_TRANSITION_FLAG_UPDATE_STATE;
+
+            pContext->TransitionResourceStates(1, &Barrier);
 
             ShaderCreateInfo ShaderCI;
             ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
@@ -362,6 +372,10 @@ protected:
 #if METAL_SUPPORTED
         if (pDevice->GetDeviceInfo().IsMetalDevice())
         {
+            Result.pMemory = CreateMemory(AlignUp(64u << 10, BlockSize), NumMemoryPages, nullptr);
+            if (Result.pMemory == nullptr)
+                return {};
+
             CreateSparseTextureMtl(pDevice, Desc, Result.pMemory, &Result.pTexture);
         }
         else
@@ -450,7 +464,7 @@ protected:
         }
 
         pContext->SetPipelineState(sm_pFillBufferPSO);
-        pContext->CommitShaderResources(sm_pFillBufferSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        pContext->CommitShaderResources(sm_pFillBufferSRB, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
 
         DispatchComputeAttribs CompAttrs;
         CompAttrs.ThreadGroupCountX = (Size / Stride + 63) / 64;
@@ -923,6 +937,16 @@ TEST_F(SparseResourceTest, SparseBuffer)
 
     const auto Fill = [&](IBuffer* pBuffer) //
     {
+        // To avoid UAV barriers between FillBuffer()
+        {
+            StateTransitionDesc Barrier;
+            Barrier.pResource = pBuffer;
+            Barrier.OldState  = RESOURCE_STATE_UNKNOWN;
+            Barrier.NewState  = RESOURCE_STATE_UNORDERED_ACCESS;
+            Barrier.Flags     = STATE_TRANSITION_FLAG_UPDATE_STATE;
+
+            pContext->TransitionResourceStates(1, &Barrier);
+        }
         RestartColorRandomizer();
         FillBuffer(pContext, pBuffer, BlockSize * 0, BlockSize, RandomColorU());
         FillBuffer(pContext, pBuffer, BlockSize * 1, BlockSize, RandomColorU());
@@ -1033,6 +1057,16 @@ TEST_F(SparseResourceTest, SparseResidentBuffer)
 
     const auto Fill = [&](IBuffer* pBuffer) //
     {
+        // To avoid UAV barriers between FillBuffer()
+        {
+            StateTransitionDesc Barrier;
+            Barrier.pResource = pBuffer;
+            Barrier.OldState  = RESOURCE_STATE_UNKNOWN;
+            Barrier.NewState  = RESOURCE_STATE_UNORDERED_ACCESS;
+            Barrier.Flags     = STATE_TRANSITION_FLAG_UPDATE_STATE;
+
+            pContext->TransitionResourceStates(1, &Barrier);
+        }
         RestartColorRandomizer();
         FillBuffer(pContext, pBuffer, BlockSize * 0, BlockSize, RandomColorU());
         FillBuffer(pContext, pBuffer, BlockSize * 2, BlockSize, RandomColorU());
@@ -1157,19 +1191,39 @@ TEST_F(SparseResourceTest, SparseResidentAliasedBuffer)
 
     const auto Fill = [&](IBuffer* pBuffer) //
     {
+        // To avoid UAV barriers between FillBuffer()
+        {
+            StateTransitionDesc Barrier;
+            Barrier.pResource = pBuffer;
+            Barrier.OldState  = RESOURCE_STATE_UNKNOWN;
+            Barrier.NewState  = RESOURCE_STATE_UNORDERED_ACCESS;
+            Barrier.Flags     = STATE_TRANSITION_FLAG_UPDATE_STATE;
+
+            pContext->TransitionResourceStates(1, &Barrier);
+        }
         RestartColorRandomizer();
-        const auto col = RandomColorU();
-        FillBuffer(pContext, pBuffer, BlockSize * 2, BlockSize, col);
+        const auto Col0 = RandomColorU();
+        const auto Col1 = RandomColorU();
+        FillBuffer(pContext, pBuffer, BlockSize * 2, BlockSize, Col0); // aliased
         FillBuffer(pContext, pBuffer, BlockSize * 1, BlockSize, RandomColorU());
         FillBuffer(pContext, pBuffer, BlockSize * 3, BlockSize, RandomColorU());
         FillBuffer(pContext, pBuffer, BlockSize * 5, BlockSize, RandomColorU());
 
         if (pBuffer->GetDesc().Usage != USAGE_SPARSE)
         {
-            FillBuffer(pContext, pBuffer, BlockSize * 0, BlockSize, col);
+            FillBuffer(pContext, pBuffer, BlockSize * 0, BlockSize, Col1);
+            FillBuffer(pContext, pBuffer, BlockSize * 2, BlockSize, Col1);
             FillBuffer(pContext, pBuffer, BlockSize * 4, BlockSize, 0);
             FillBuffer(pContext, pBuffer, BlockSize * 6, BlockSize, 0);
             FillBuffer(pContext, pBuffer, BlockSize * 7, BlockSize, 0);
+        }
+        else
+        {
+            // aliased buffer ranges
+            StateTransitionDesc Barrier{pBuffer, pBuffer};
+            pContext->TransitionResourceStates(1, &Barrier);
+
+            FillBuffer(pContext, pBuffer, BlockSize * 0, BlockSize, Col1); // aliased
         }
     };
 
@@ -1208,9 +1262,9 @@ TEST_F(SparseResourceTest, SparseResidentAliasedBuffer)
     // bind sparse
     {
         const SparseBufferMemoryBindRange BindRanges[] = {
-            {BlockSize * 0, MemBlockSize * 0, BlockSize, pMemory},
-            {BlockSize * 1, MemBlockSize * 2, BlockSize, pMemory},
-            {BlockSize * 2, MemBlockSize * 0, BlockSize, pMemory}, // reuse 1st memory block
+            {BlockSize * 0, MemBlockSize * 0, BlockSize, pMemory}, // --|
+            {BlockSize * 1, MemBlockSize * 2, BlockSize, pMemory}, //   |-- 2 aliased blocks
+            {BlockSize * 2, MemBlockSize * 0, BlockSize, pMemory}, // --|
             {BlockSize * 3, MemBlockSize * 1, BlockSize, pMemory},
             {BlockSize * 5, MemBlockSize * 6, BlockSize, pMemory} //
         };
@@ -1673,17 +1727,29 @@ TEST_P(SparseResourceTest, SparseResidencyAliasedTexture)
             const auto Col1 = RandomColor();
 
             // clang-format off
-            FillTexture(pContext, pTexture, Rect{  0,   0,       128,       128}, 0, Slice, Col0);
-            FillTexture(pContext, pTexture, Rect{128,   0, TexSize.x,       128}, 0, Slice, Col1);
-          //FillTexture(pContext, pTexture, Rect{  0, 128,       128, TexSize.y}, 0, Slice, Col0); // -|
-          //FillTexture(pContext, pTexture, Rect{128, 128, TexSize.x, TexSize.y}, 0, Slice, Col1); // -|-- aliased with 1
+          //FillTexture(pContext, pTexture, Rect{  0,   0,       128,       128}, 0, Slice, Col0);          // --|-- aliased
+          //FillTexture(pContext, pTexture, Rect{128,   0, TexSize.x,       128}, 0, Slice, Col1);          // --|
+            FillTexture(pContext, pTexture, Rect{  0, 128,       128, TexSize.y}, 0, Slice, RandomColor()); // -|
+            FillTexture(pContext, pTexture, Rect{128, 128, TexSize.x, TexSize.y}, 0, Slice, RandomColor()); // -|-- will be overwritten
             // clang-format on
 
             if (TexDesc.Usage != USAGE_SPARSE)
             {
                 // clang-format off
-                FillTexture(pContext, pTexture, Rect{  0, 128,       128, TexSize.y}, 0, Slice, Col0); // -|
-                FillTexture(pContext, pTexture, Rect{128, 128, TexSize.x, TexSize.y}, 0, Slice, Col1); // -|-- aliased with 1
+                FillTexture(pContext, pTexture, Rect{  0,   0,       128,       128}, 0, Slice, Col0);
+                FillTexture(pContext, pTexture, Rect{128,   0, TexSize.x,       128}, 0, Slice, Col1);
+                FillTexture(pContext, pTexture, Rect{  0, 128,       128, TexSize.y}, 0, Slice, Col0);
+                FillTexture(pContext, pTexture, Rect{128, 128, TexSize.x, TexSize.y}, 0, Slice, Col1);
+                // clang-format on
+            }
+            else
+            {
+                StateTransitionDesc Barrier{pTexture, pTexture};
+                pContext->TransitionResourceStates(1, &Barrier);
+
+                // clang-format off
+                FillTexture(pContext, pTexture, Rect{  0, 0,       128, 128}, 0, Slice, Col0);
+                FillTexture(pContext, pTexture, Rect{128, 0, TexSize.x, 128}, 0, Slice, Col1);
                 // clang-format on
             }
 

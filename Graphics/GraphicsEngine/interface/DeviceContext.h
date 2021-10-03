@@ -1869,6 +1869,10 @@ DILIGENT_TYPED_ENUM(STATE_TRANSITION_FLAGS, Uint8)
     /// This may avoid potentially expensive operations such as render target decompression
     /// or a pipeline stall when transitioning to COMMON or UAV state.
     STATE_TRANSITION_FLAG_DISCARD_CONTENT = 1u << 1,
+
+    /// Indicates state transition between aliased resources that share the same memory.
+    /// Currently it is only supported for sparse resources that were created with aliasing flag.
+    STATE_TRANSITION_FLAG_ALIASING        = 1u << 2
 };
 DEFINE_FLAG_ENUM_OPERATORS(STATE_TRANSITION_FLAGS);
 
@@ -1876,9 +1880,22 @@ DEFINE_FLAG_ENUM_OPERATORS(STATE_TRANSITION_FLAGS);
 /// Resource state transition barrier description
 struct StateTransitionDesc
 {
+    /// Previous resource for aliasing transiton.
+    ///
+    /// This member is only used for aliasing transition (STATE_TRANSITION_FLAG_ALIASING flag is set),
+    /// and ignored otherwise, and must point to a texture or a buffer object.
+    ///
+    /// \note pResourceBefore may be null, which indicates that any sparse or
+    ///       normal resource could cause aliasing.
+    IDeviceObject* pResourceBefore DEFAULT_INITIALIZER(nullptr);
+
     /// Resource to transition.
     /// Can be ITexture, IBuffer, IBottomLevelAS, ITopLevelAS.
-    struct IDeviceObject* pResource DEFAULT_INITIALIZER(nullptr);
+    ///
+    /// \note For aliasing transition (STATE_TRANSITION_FLAG_ALIASING flag is set),
+    ///       pResource may be null, which indicates that any sparse or
+    ///       normal resource could cause aliasing.
+    IDeviceObject* pResource       DEFAULT_INITIALIZER(nullptr);	
 
     /// When transitioning a texture, first mip level of the subresource range to transition.
     Uint32 FirstMipLevel     DEFAULT_INITIALIZER(0);
@@ -1982,6 +1999,14 @@ struct StateTransitionDesc
         OldState  {_OldState},
         NewState  {_NewState},
         Flags     {_Flags   }
+    {}
+
+    /// Aliasing barrier
+    constexpr StateTransitionDesc(IDeviceObject* _pResourceBefore,
+                                  IDeviceObject* _pResourceAfter) noexcept :
+        pResourceBefore{_pResourceBefore},
+        pResource      {_pResourceAfter},
+        Flags          {STATE_TRANSITION_FLAG_ALIASING}
     {}
 #endif
 };

@@ -2073,4 +2073,68 @@ VkImageUsageFlags BindFlagsToVkImageUsage(BIND_FLAGS Flags, bool IsMemoryless, b
     return Result;
 }
 
+void GetAllowedStagesAndAccessMask(BIND_FLAGS Flags, VkPipelineStageFlags& StageMask, VkAccessFlags& AccessMask)
+{
+    StageMask  = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    AccessMask = VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_TRANSFER_WRITE_BIT;
+    while (Flags != BIND_NONE)
+    {
+        auto FlagBit = ExtractLSB(Flags);
+        static_assert(BIND_FLAGS_LAST == (1u << 11), "This function must be updated to handle new bind flag");
+        switch (FlagBit)
+        {
+            case BIND_VERTEX_BUFFER:
+                StageMask |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+                AccessMask |= VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
+                break;
+            case BIND_INDEX_BUFFER:
+                StageMask |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+                AccessMask |= VK_ACCESS_INDEX_READ_BIT;
+                break;
+            case BIND_UNIFORM_BUFFER:
+                StageMask |= VulkanUtilities::VK_PIPELINE_STAGE_ALL_SHADERS;
+                AccessMask |= VK_ACCESS_UNIFORM_READ_BIT;
+                break;
+            case BIND_SHADER_RESOURCE:
+                StageMask |= VulkanUtilities::VK_PIPELINE_STAGE_ALL_SHADERS;
+                AccessMask |= VK_ACCESS_SHADER_READ_BIT;
+                break;
+            case BIND_RENDER_TARGET:
+                StageMask |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+                AccessMask |= VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+                break;
+            case BIND_DEPTH_STENCIL:
+                StageMask |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+                AccessMask |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+                break;
+            case BIND_UNORDERED_ACCESS:
+                StageMask |= VulkanUtilities::VK_PIPELINE_STAGE_ALL_SHADERS;
+                AccessMask |= VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+                break;
+            case BIND_INDIRECT_DRAW_ARGS:
+                StageMask |= VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT;
+                AccessMask |= VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
+                break;
+            case BIND_INPUT_ATTACHMENT:
+                StageMask |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+                AccessMask |= VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
+                break;
+            case BIND_RAY_TRACING:
+                StageMask |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
+                AccessMask |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
+                break;
+            case BIND_SHADING_RATE:
+                StageMask |= VK_PIPELINE_STAGE_FRAGMENT_DENSITY_PROCESS_BIT_EXT | VK_PIPELINE_STAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR;
+                AccessMask |= VK_ACCESS_FRAGMENT_DENSITY_MAP_READ_BIT_EXT | VK_ACCESS_FRAGMENT_SHADING_RATE_ATTACHMENT_READ_BIT_KHR;
+                break;
+
+            case BIND_NONE:
+            case BIND_STREAM_OUTPUT:
+            default:
+                UNEXPECTED("Unexpected bind flag");
+                break;
+        }
+    }
+}
+
 } // namespace Diligent
