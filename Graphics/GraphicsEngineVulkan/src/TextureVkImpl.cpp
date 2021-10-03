@@ -242,9 +242,9 @@ void TextureVkImpl::InitializeTextureContent(const TextureData&          InitDat
     // Vulkan validation layers do not like uninitialized memory, so if no initial data
     // is provided, we will clear the memory
 
-    VulkanUtilities::CommandPoolWrapper CmdPool;
-    VkCommandBuffer                     vkCmdBuff;
-    GetDevice()->AllocateTransientCmdPool(CmdQueueInd, CmdPool, vkCmdBuff, "Transient command pool to copy staging data to a device buffer");
+    VulkanUtilities::CommandPoolWrapper  CmdPool;
+    VulkanUtilities::VulkanCommandBuffer CmdBuffer;
+    GetDevice()->AllocateTransientCmdPool(CmdQueueInd, CmdPool, CmdBuffer, "Transient command pool to copy staging data to a device buffer");
 
     VkImageAspectFlags aspectMask = 0;
     if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH)
@@ -261,13 +261,12 @@ void TextureVkImpl::InitializeTextureContent(const TextureData&          InitDat
 
     // For either clear or copy command, dst layout must be VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
     VkImageSubresourceRange SubresRange;
-    SubresRange.aspectMask         = aspectMask;
-    SubresRange.baseArrayLayer     = 0;
-    SubresRange.layerCount         = VK_REMAINING_ARRAY_LAYERS;
-    SubresRange.baseMipLevel       = 0;
-    SubresRange.levelCount         = VK_REMAINING_MIP_LEVELS;
-    const auto SupportedStagesMask = ~0u;
-    VulkanUtilities::VulkanCommandBuffer::TransitionImageLayout(vkCmdBuff, m_VulkanImage, ImageCI.initialLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, SubresRange, SupportedStagesMask);
+    SubresRange.aspectMask     = aspectMask;
+    SubresRange.baseArrayLayer = 0;
+    SubresRange.layerCount     = VK_REMAINING_ARRAY_LAYERS;
+    SubresRange.baseMipLevel   = 0;
+    SubresRange.levelCount     = VK_REMAINING_MIP_LEVELS;
+    CmdBuffer.TransitionImageLayout(m_VulkanImage, ImageCI.initialLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, SubresRange, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
     SetState(RESOURCE_STATE_COPY_DEST);
     const auto CurrentLayout = GetLayout();
     VERIFY_EXPR(CurrentLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
@@ -386,15 +385,15 @@ void TextureVkImpl::InitializeTextureContent(const TextureData&          InitDat
     auto err = LogicalDevice.BindBufferMemory(StagingBuffer, StagingBufferMemory, AlignedStagingMemOffset);
     CHECK_VK_ERROR_AND_THROW(err, "Failed to bind staging buffer memory");
 
-    VulkanUtilities::VulkanCommandBuffer::BufferMemoryBarrier(vkCmdBuff, StagingBuffer, 0, VK_ACCESS_TRANSFER_READ_BIT, SupportedStagesMask);
+    CmdBuffer.MemoryBarrier(VK_ACCESS_HOST_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
 
     // Copy commands MUST be recorded outside of a render pass instance. This is OK here
     // as copy will be the only command in the cmd buffer
-    vkCmdCopyBufferToImage(vkCmdBuff, StagingBuffer, m_VulkanImage,
-                           CurrentLayout, // dstImageLayout must be VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL or VK_IMAGE_LAYOUT_GENERAL (18.4)
-                           static_cast<uint32_t>(Regions.size()), Regions.data());
+    CmdBuffer.CopyBufferToImage(StagingBuffer, m_VulkanImage,
+                                CurrentLayout, // dstImageLayout must be VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL or VK_IMAGE_LAYOUT_GENERAL (18.4)
+                                static_cast<uint32_t>(Regions.size()), Regions.data());
 
-    GetDevice()->ExecuteAndDisposeTransientCmdBuff(CmdQueueInd, vkCmdBuff, std::move(CmdPool));
+    GetDevice()->ExecuteAndDisposeTransientCmdBuff(CmdQueueInd, CmdBuffer.GetVkCmdBuffer(), std::move(CmdPool));
 
     // After command buffer is submitted, safe-release resources. This strategy
     // is little overconservative as the resources will be released after the first

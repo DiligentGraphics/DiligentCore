@@ -27,6 +27,7 @@
 
 #pragma once
 
+#include <vector>
 #include "VulkanHeaders.h"
 #include "DebugUtilities.hpp"
 
@@ -36,8 +37,7 @@ namespace VulkanUtilities
 class VulkanCommandBuffer
 {
 public:
-    VulkanCommandBuffer() noexcept
-    {}
+    VulkanCommandBuffer() noexcept;
 
     // clang-format off
     VulkanCommandBuffer             (const VulkanCommandBuffer&)  = delete;
@@ -54,6 +54,7 @@ public:
         VERIFY(m_State.RenderPass == VK_NULL_HANDLE, "vkCmdClearColorImage() must be called outside of render pass (17.1)");
         VERIFY(Subresource.aspectMask == VK_IMAGE_ASPECT_COLOR_BIT, "The aspectMask of all image subresource ranges must only include VK_IMAGE_ASPECT_COLOR_BIT (17.1)");
 
+        FlushBarriers();
         vkCmdClearColorImage(
             m_VkCmdBuffer,
             Image,
@@ -75,6 +76,7 @@ public:
                "The aspectMask of all image subresource ranges must only include VK_IMAGE_ASPECT_DEPTH_BIT or VK_IMAGE_ASPECT_STENCIL_BIT(17.1)");
         // clang-format on
 
+        FlushBarriers();
         vkCmdClearDepthStencilImage(
             m_VkCmdBuffer,
             Image,
@@ -209,6 +211,7 @@ public:
         VERIFY(m_State.RenderPass == VK_NULL_HANDLE, "vkCmdDispatch() must be called outside of render pass (27)");
         VERIFY(m_State.ComputePipeline != VK_NULL_HANDLE, "No compute pipeline bound");
 
+        FlushBarriers();
         vkCmdDispatch(m_VkCmdBuffer, GroupCountX, GroupCountY, GroupCountZ);
     }
 
@@ -218,6 +221,7 @@ public:
         VERIFY(m_State.RenderPass == VK_NULL_HANDLE, "vkCmdDispatchIndirect() must be called outside of render pass (27)");
         VERIFY(m_State.ComputePipeline != VK_NULL_HANDLE, "No compute pipeline bound");
 
+        FlushBarriers();
         vkCmdDispatchIndirect(m_VkCmdBuffer, Buffer, Offset);
     }
 
@@ -233,6 +237,8 @@ public:
 
         if (m_State.RenderPass != RenderPass || m_State.Framebuffer != Framebuffer)
         {
+            FlushBarriers();
+
             VkRenderPassBeginInfo BeginInfo;
             BeginInfo.sType       = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
             BeginInfo.pNext       = nullptr;
@@ -288,13 +294,17 @@ public:
     __forceinline void EndCommandBuffer()
     {
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
+        VERIFY(m_State.RenderPass == VK_NULL_HANDLE, "Render pass has not been ended");
+        FlushBarriers();
         vkEndCommandBuffer(m_VkCmdBuffer);
     }
 
     __forceinline void Reset()
     {
         m_VkCmdBuffer = VK_NULL_HANDLE;
-        m_State       = StateCache{};
+        m_State       = {};
+        m_Barrier     = {};
+        m_ImageBarriers.clear();
     }
 
     __forceinline void BindComputePipeline(VkPipeline ComputePipeline)
@@ -376,80 +386,17 @@ public:
         vkCmdBindVertexBuffers(m_VkCmdBuffer, firstBinding, bindingCount, pBuffers, pOffsets);
     }
 
-    static void TransitionImageLayout(VkCommandBuffer                CmdBuffer,
-                                      VkImage                        Image,
-                                      VkImageLayout                  OldLayout,
-                                      VkImageLayout                  NewLayout,
-                                      const VkImageSubresourceRange& SubresRange,
-                                      VkPipelineStageFlags           SupportedStagesMask,
-                                      VkPipelineStageFlags           SrcStages  = 0,
-                                      VkPipelineStageFlags           DestStages = 0);
+    void TransitionImageLayout(VkImage                        Image,
+                               VkImageLayout                  OldLayout,
+                               VkImageLayout                  NewLayout,
+                               const VkImageSubresourceRange& SubresRange,
+                               VkPipelineStageFlags           SrcStages,
+                               VkPipelineStageFlags           DestStages);
 
-    __forceinline void TransitionImageLayout(VkImage                        Image,
-                                             VkImageLayout                  OldLayout,
-                                             VkImageLayout                  NewLayout,
-                                             const VkImageSubresourceRange& SubresRange,
-                                             VkPipelineStageFlags           SrcStages  = 0,
-                                             VkPipelineStageFlags           DestStages = 0)
-    {
-        VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-        if (m_State.RenderPass != VK_NULL_HANDLE)
-        {
-            // Image layout transitions within a render pass execute
-            // dependencies between attachments
-            EndRenderPass();
-        }
-        TransitionImageLayout(m_VkCmdBuffer, Image, OldLayout, NewLayout, SubresRange, m_SupportedStagesMask, SrcStages, DestStages);
-    }
-
-
-    static void BufferMemoryBarrier(VkCommandBuffer      CmdBuffer,
-                                    VkBuffer             Buffer,
-                                    VkAccessFlags        srcAccessMask,
-                                    VkAccessFlags        dstAccessMask,
-                                    VkPipelineStageFlags SupportedStagesMask,
-                                    VkPipelineStageFlags SrcStages  = 0,
-                                    VkPipelineStageFlags DestStages = 0);
-
-    __forceinline void BufferMemoryBarrier(VkBuffer             Buffer,
-                                           VkAccessFlags        srcAccessMask,
-                                           VkAccessFlags        dstAccessMask,
-                                           VkPipelineStageFlags SrcStages  = 0,
-                                           VkPipelineStageFlags DestStages = 0)
-    {
-        VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-        if (m_State.RenderPass != VK_NULL_HANDLE)
-        {
-            // Image layout transitions within a render pass execute
-            // dependencies between attachments
-            EndRenderPass();
-        }
-        BufferMemoryBarrier(m_VkCmdBuffer, Buffer, srcAccessMask, dstAccessMask, m_SupportedStagesMask, SrcStages, DestStages);
-    }
-
-
-    // for Acceleration structures
-    static void ASMemoryBarrier(VkCommandBuffer      CmdBuffer,
-                                VkAccessFlags        srcAccessMask,
-                                VkAccessFlags        dstAccessMask,
-                                VkPipelineStageFlags SupportedStagesMask,
-                                VkPipelineStageFlags SrcStages  = 0,
-                                VkPipelineStageFlags DestStages = 0);
-
-    __forceinline void ASMemoryBarrier(VkAccessFlags        srcAccessMask,
-                                       VkAccessFlags        dstAccessMask,
-                                       VkPipelineStageFlags SrcStages  = 0,
-                                       VkPipelineStageFlags DestStages = 0)
-    {
-        VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-        if (m_State.RenderPass != VK_NULL_HANDLE)
-        {
-            // Image layout transitions within a render pass execute
-            // dependencies between attachments
-            EndRenderPass();
-        }
-        ASMemoryBarrier(m_VkCmdBuffer, srcAccessMask, dstAccessMask, m_SupportedStagesMask, SrcStages, DestStages);
-    }
+    void MemoryBarrier(VkAccessFlags        srcAccessMask,
+                       VkAccessFlags        dstAccessMask,
+                       VkPipelineStageFlags SrcStages,
+                       VkPipelineStageFlags DestStages);
 
     __forceinline void BindDescriptorSets(VkPipelineBindPoint    pipelineBindPoint,
                                           VkPipelineLayout       layout,
@@ -474,6 +421,7 @@ public:
             // Copy buffer operation must be performed outside of render pass.
             EndRenderPass();
         }
+        FlushBarriers();
         vkCmdCopyBuffer(m_VkCmdBuffer, srcBuffer, dstBuffer, regionCount, pRegions);
     }
 
@@ -490,7 +438,7 @@ public:
             // Copy operations must be performed outside of render pass.
             EndRenderPass();
         }
-
+        FlushBarriers();
         vkCmdCopyImage(m_VkCmdBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount, pRegions);
     }
 
@@ -506,7 +454,7 @@ public:
             // Copy operations must be performed outside of render pass.
             EndRenderPass();
         }
-
+        FlushBarriers();
         vkCmdCopyBufferToImage(m_VkCmdBuffer, srcBuffer, dstImage, dstImageLayout, regionCount, pRegions);
     }
 
@@ -522,7 +470,7 @@ public:
             // Copy operations must be performed outside of render pass.
             EndRenderPass();
         }
-
+        FlushBarriers();
         vkCmdCopyImageToBuffer(m_VkCmdBuffer, srcImage, srcImageLayout, dstBuffer, regionCount, pRegions);
     }
 
@@ -540,7 +488,7 @@ public:
             // Blit must be performed outside of render pass.
             EndRenderPass();
         }
-
+        FlushBarriers();
         vkCmdBlitImage(m_VkCmdBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount, pRegions, filter);
     }
 
@@ -557,6 +505,7 @@ public:
             // Resolve must be performed outside of render pass.
             EndRenderPass();
         }
+        FlushBarriers();
         vkCmdResolveImage(m_VkCmdBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount, pRegions);
     }
 
@@ -623,6 +572,7 @@ public:
             // Query pool reset must be performed outside of render pass (17.2).
             EndRenderPass();
         }
+        FlushBarriers();
         vkCmdResetQueryPool(m_VkCmdBuffer, queryPool, firstQuery, queryCount);
     }
 
@@ -640,6 +590,7 @@ public:
             // Copy query results must be performed outside of render pass (17.2).
             EndRenderPass();
         }
+        FlushBarriers();
         vkCmdCopyQueryPoolResults(m_VkCmdBuffer, queryPool, firstQuery, queryCount,
                                   dstBuffer, dstOffset, stride, flags);
     }
@@ -655,6 +606,7 @@ public:
             // Build AS operations must be performed outside of render pass.
             EndRenderPass();
         }
+        FlushBarriers();
         vkCmdBuildAccelerationStructuresKHR(m_VkCmdBuffer, infoCount, pInfos, ppBuildRangeInfos);
 #else
         UNSUPPORTED("Ray tracing is not supported when vulkan library is linked statically");
@@ -670,6 +622,7 @@ public:
             // Copy AS operations must be performed outside of render pass.
             EndRenderPass();
         }
+        FlushBarriers();
         vkCmdCopyAccelerationStructureKHR(m_VkCmdBuffer, &Info);
 #else
         UNSUPPORTED("Ray tracing is not supported when vulkan library is linked statically");
@@ -685,6 +638,7 @@ public:
             // Write AS properties operations must be performed outside of render pass.
             EndRenderPass();
         }
+        FlushBarriers();
         vkCmdWriteAccelerationStructuresPropertiesKHR(m_VkCmdBuffer, 1, &accelerationStructure, queryType, queryPool, firstQuery);
 #else
         UNSUPPORTED("Ray tracing is not supported when vulkan library is linked statically");
@@ -702,7 +656,11 @@ public:
 #if DILIGENT_USE_VOLK
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
         VERIFY(m_State.RayTracingPipeline != VK_NULL_HANDLE, "No ray tracing pipeline bound");
-
+        if (m_State.RenderPass != VK_NULL_HANDLE)
+        {
+            EndRenderPass();
+        }
+        FlushBarriers();
         vkCmdTraceRaysKHR(m_VkCmdBuffer, &RaygenShaderBindingTable, &MissShaderBindingTable, &HitShaderBindingTable, &CallableShaderBindingTable, width, height, depth);
 #else
         UNSUPPORTED("Ray tracing is not supported when vulkan library is linked statically");
@@ -718,7 +676,11 @@ public:
 #if DILIGENT_USE_VOLK
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
         VERIFY(m_State.RayTracingPipeline != VK_NULL_HANDLE, "No ray tracing pipeline bound");
-
+        if (m_State.RenderPass != VK_NULL_HANDLE)
+        {
+            EndRenderPass();
+        }
+        FlushBarriers();
         vkCmdTraceRaysIndirectKHR(m_VkCmdBuffer, &RaygenShaderBindingTable, &MissShaderBindingTable, &HitShaderBindingTable, &CallableShaderBindingTable, indirectDeviceAddress);
 #else
         UNSUPPORTED("Ray tracing is not supported when vulkan library is linked statically");
@@ -778,14 +740,16 @@ public:
 
     void FlushBarriers();
 
-    __forceinline void SetVkCmdBuffer(VkCommandBuffer VkCmdBuffer, VkPipelineStageFlags StageMask)
+    __forceinline void SetVkCmdBuffer(VkCommandBuffer VkCmdBuffer, VkPipelineStageFlags StageMask, VkAccessFlags AccessMask)
     {
-        m_VkCmdBuffer         = VkCmdBuffer;
-        m_SupportedStagesMask = StageMask;
+        m_VkCmdBuffer                 = VkCmdBuffer;
+        m_Barrier.SupportedStagesMask = StageMask;
+        m_Barrier.SupportedAccessMask = AccessMask;
     }
     VkCommandBuffer GetVkCmdBuffer() const { return m_VkCmdBuffer; }
 
-    VkPipelineStageFlags GetSupportedStagesMask() const { return m_SupportedStagesMask; }
+    VkPipelineStageFlags GetSupportedStagesMask() const { return m_Barrier.SupportedStagesMask; }
+    VkAccessFlags        GetSupportedAccessMask() const { return m_Barrier.SupportedAccessMask; }
 
     struct StateCache
     {
@@ -806,9 +770,25 @@ public:
     const StateCache& GetState() const { return m_State; }
 
 private:
-    StateCache           m_State;
-    VkCommandBuffer      m_VkCmdBuffer         = VK_NULL_HANDLE;
-    VkPipelineStageFlags m_SupportedStagesMask = ~0u;
+    struct PipelineBarrier
+    {
+        VkPipelineStageFlags MemorySrcStages = 0;
+        VkPipelineStageFlags MemoryDstStages = 0;
+        VkAccessFlags        MemorySrcAccess = 0;
+        VkAccessFlags        MemoryDstAccess = 0;
+
+        VkPipelineStageFlags ImageSrcStages = 0;
+        VkPipelineStageFlags ImageDstStages = 0;
+
+        VkPipelineStageFlags SupportedStagesMask = ~0u;
+        VkAccessFlags        SupportedAccessMask = ~0u;
+    };
+
+    VkCommandBuffer m_VkCmdBuffer = VK_NULL_HANDLE;
+    StateCache      m_State;
+    PipelineBarrier m_Barrier;
+
+    std::vector<VkImageMemoryBarrier> m_ImageBarriers;
 };
 
 } // namespace VulkanUtilities

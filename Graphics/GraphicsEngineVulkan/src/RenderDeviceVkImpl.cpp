@@ -227,10 +227,10 @@ RenderDeviceVkImpl::~RenderDeviceVkImpl()
 }
 
 
-void RenderDeviceVkImpl::AllocateTransientCmdPool(SoftwareQueueIndex                   CommandQueueId,
-                                                  VulkanUtilities::CommandPoolWrapper& CmdPool,
-                                                  VkCommandBuffer&                     vkCmdBuff,
-                                                  const Char*                          DebugPoolName)
+void RenderDeviceVkImpl::AllocateTransientCmdPool(SoftwareQueueIndex                    CommandQueueId,
+                                                  VulkanUtilities::CommandPoolWrapper&  CmdPool,
+                                                  VulkanUtilities::VulkanCommandBuffer& CmdBuffer,
+                                                  const Char*                           DebugPoolName)
 {
     auto QueueFamilyIndex = HardwareQueueIndex{GetCommandQueue(CommandQueueId).GetQueueFamilyIndex()};
     auto CmdPoolMgrIter   = m_TransientCmdPoolMgrs.find(QueueFamilyIndex);
@@ -247,7 +247,7 @@ void RenderDeviceVkImpl::AllocateTransientCmdPool(SoftwareQueueIndex            
     BuffAllocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     BuffAllocInfo.commandBufferCount = 1;
 
-    vkCmdBuff = m_LogicalVkDevice->AllocateVkCommandBuffer(BuffAllocInfo);
+    auto vkCmdBuff = m_LogicalVkDevice->AllocateVkCommandBuffer(BuffAllocInfo);
     DEV_CHECK_ERR(vkCmdBuff != VK_NULL_HANDLE, "Failed to allocate Vulkan command buffer");
 
 
@@ -262,6 +262,10 @@ void RenderDeviceVkImpl::AllocateTransientCmdPool(SoftwareQueueIndex            
     auto err = vkBeginCommandBuffer(vkCmdBuff, &CmdBuffBeginInfo);
     DEV_CHECK_ERR(err == VK_SUCCESS, "vkBeginCommandBuffer() failed");
     (void)err;
+
+    CmdBuffer.SetVkCmdBuffer(vkCmdBuff,
+                             m_LogicalVkDevice->GetSupportedStagesMask(QueueFamilyIndex),
+                             m_LogicalVkDevice->GetSupportedAccessMask(QueueFamilyIndex));
 }
 
 

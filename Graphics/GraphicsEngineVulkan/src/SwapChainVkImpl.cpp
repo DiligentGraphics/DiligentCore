@@ -668,7 +668,7 @@ VkResult SwapChainVkImpl::AcquireNextImage(DeviceContextVkImpl* pDeviceCtxVk)
             ITextureView* pRTV = GetCurrentBackBufferRTV();
             ITextureView* pDSV = GetDepthBufferDSV();
             pDeviceCtxVk->SetRenderTargets(1, &pRTV, pDSV, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-            pDeviceCtxVk->ClearRenderTarget(GetCurrentBackBufferRTV(), nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+            pDeviceCtxVk->ClearRenderTarget(GetCurrentBackBufferRTV(), nullptr, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
             m_SwapChainImagesInitialized[m_BackBufferIndex] = true;
         }
         pDeviceCtxVk->SetRenderTargets(0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_NONE);

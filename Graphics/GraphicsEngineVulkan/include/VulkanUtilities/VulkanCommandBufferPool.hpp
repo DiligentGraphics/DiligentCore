@@ -59,6 +59,7 @@ public:
     void RecycleCommandBuffer(VkCommandBuffer&& CmdBuffer);
 
     VkPipelineStageFlags GetSupportedStagesMask() const { return m_SupportedStagesMask; }
+    VkAccessFlags        GetSupportedAccessMask() const { return m_SupportedAccessMask; }
 
 private:
     // Shared point to logical device must be defined before the command pool
@@ -69,6 +70,7 @@ private:
     std::mutex                  m_Mutex;
     std::deque<VkCommandBuffer> m_CmdBuffers;
     const VkPipelineStageFlags  m_SupportedStagesMask;
+    const VkAccessFlags         m_SupportedAccessMask;
 
 #ifdef DILIGENT_DEVELOPMENT
     std::atomic<int32_t> m_BuffCounter{0};

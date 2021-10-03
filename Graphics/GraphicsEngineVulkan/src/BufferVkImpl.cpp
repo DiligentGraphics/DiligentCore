@@ -393,16 +393,15 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
                     ClassPtrCast<DeviceContextVkImpl>(pBuffData->pContext)->GetCommandQueueId() :
                     SoftwareQueueIndex{PlatformMisc::GetLSB(m_Desc.ImmediateContextMask)};
 
-                VulkanUtilities::CommandPoolWrapper CmdPool;
-                VkCommandBuffer                     vkCmdBuff;
-                pRenderDeviceVk->AllocateTransientCmdPool(CmdQueueInd, CmdPool, vkCmdBuff, "Transient command pool to copy staging data to a device buffer");
+                VulkanUtilities::CommandPoolWrapper  CmdPool;
+                VulkanUtilities::VulkanCommandBuffer CmdBuffer;
+                pRenderDeviceVk->AllocateTransientCmdPool(CmdQueueInd, CmdPool, CmdBuffer, "Transient command pool to copy staging data to a device buffer");
 
-                const auto SupportedStagesMask = ~0u;
-                VulkanUtilities::VulkanCommandBuffer::BufferMemoryBarrier(vkCmdBuff, StagingBuffer, 0, VK_ACCESS_TRANSFER_READ_BIT, SupportedStagesMask);
+                CmdBuffer.MemoryBarrier(VK_ACCESS_HOST_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
                 InitialState              = RESOURCE_STATE_COPY_DEST;
                 VkAccessFlags AccessFlags = ResourceStateFlagsToVkAccessFlags(InitialState);
                 VERIFY_EXPR(AccessFlags == VK_ACCESS_TRANSFER_WRITE_BIT);
-                VulkanUtilities::VulkanCommandBuffer::BufferMemoryBarrier(vkCmdBuff, m_VulkanBuffer, 0, AccessFlags, SupportedStagesMask);
+                CmdBuffer.MemoryBarrier(0, AccessFlags, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
 
                 // Copy commands MUST be recorded outside of a render pass instance. This is OK here
                 // as copy will be the only command in the cmd buffer
@@ -410,9 +409,9 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
                 BuffCopy.srcOffset = 0;
                 BuffCopy.dstOffset = 0;
                 BuffCopy.size      = VkBuffCI.size;
-                vkCmdCopyBuffer(vkCmdBuff, StagingBuffer, m_VulkanBuffer, 1, &BuffCopy);
+                CmdBuffer.CopyBuffer(StagingBuffer, m_VulkanBuffer, 1, &BuffCopy);
 
-                pRenderDeviceVk->ExecuteAndDisposeTransientCmdBuff(CmdQueueInd, vkCmdBuff, std::move(CmdPool));
+                pRenderDeviceVk->ExecuteAndDisposeTransientCmdBuff(CmdQueueInd, CmdBuffer.GetVkCmdBuffer(), std::move(CmdPool));
 
 
                 // After command buffer is submitted, safe-release staging resources. This strategy

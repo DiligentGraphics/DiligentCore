@@ -34,136 +34,6 @@ namespace VulkanUtilities
 namespace
 {
 
-static VkPipelineStageFlags PipelineStageFromAccessFlags(VkAccessFlags AccessFlags)
-{
-    // 6.1.3
-    VkPipelineStageFlags Stages = 0;
-
-    while (AccessFlags != 0)
-    {
-        VkAccessFlagBits AccessFlag = static_cast<VkAccessFlagBits>(AccessFlags & (~(AccessFlags - 1)));
-        VERIFY_EXPR(AccessFlag != 0 && (AccessFlag & (AccessFlag - 1)) == 0);
-        AccessFlags &= ~AccessFlag;
-
-        // An application MUST NOT specify an access flag in a synchronization command if it does not include a
-        // pipeline stage in the corresponding stage mask that is able to perform accesses of that type.
-        // A table that lists, for each access flag, which pipeline stages can perform that type of access is given in 6.1.3.
-        switch (AccessFlag)
-        {
-            // Read access to an indirect command structure read as part of an indirect drawing or dispatch command
-            case VK_ACCESS_INDIRECT_COMMAND_READ_BIT:
-                Stages |= VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT;
-                break;
-
-            // Read access to an index buffer as part of an indexed drawing command, bound by vkCmdBindIndexBuffer
-            case VK_ACCESS_INDEX_READ_BIT:
-                Stages |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
-                break;
-
-            // Read access to a vertex buffer as part of a drawing command, bound by vkCmdBindVertexBuffers
-            case VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT:
-                Stages |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
-                break;
-
-            // Read access to a uniform buffer
-            case VK_ACCESS_UNIFORM_READ_BIT:
-                Stages |= VK_PIPELINE_STAGE_ALL_SHADERS;
-                break;
-
-            // Read access to an input attachment within a render pass during fragment shading
-            case VK_ACCESS_INPUT_ATTACHMENT_READ_BIT:
-                Stages |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-                break;
-
-            // Read access to a storage buffer, uniform texel buffer, storage texel buffer, sampled image, or storage image
-            case VK_ACCESS_SHADER_READ_BIT:
-                Stages |= VK_PIPELINE_STAGE_ALL_SHADERS;
-                break;
-
-            // Write access to a storage buffer, storage texel buffer, or storage image
-            case VK_ACCESS_SHADER_WRITE_BIT:
-                Stages |= VK_PIPELINE_STAGE_ALL_SHADERS;
-                break;
-
-            // Read access to a color attachment, such as via blending, logic operations, or via certain subpass load operations
-            case VK_ACCESS_COLOR_ATTACHMENT_READ_BIT:
-                Stages |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-                break;
-
-            // Write access to a color or resolve attachment during a render pass or via certain subpass load and store operations
-            case VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT:
-                Stages |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-                break;
-
-            // Read access to a depth/stencil attachment, via depth or stencil operations or via certain subpass load operations
-            case VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT:
-                Stages |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-                break;
-
-            // Write access to a depth/stencil attachment, via depth or stencil operations or via certain subpass load and store operations
-            case VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT:
-                Stages |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-                break;
-
-            // Read access to an image or buffer in a copy operation
-            case VK_ACCESS_TRANSFER_READ_BIT:
-                Stages |= VK_PIPELINE_STAGE_TRANSFER_BIT;
-                break;
-
-            // Write access to an image or buffer in a clear or copy operation
-            case VK_ACCESS_TRANSFER_WRITE_BIT:
-                Stages |= VK_PIPELINE_STAGE_TRANSFER_BIT;
-                break;
-
-            // Read access by a host operation. Accesses of this type are not performed through a resource, but directly on memory
-            case VK_ACCESS_HOST_READ_BIT:
-                Stages |= VK_PIPELINE_STAGE_HOST_BIT;
-                break;
-
-            // Write access by a host operation. Accesses of this type are not performed through a resource, but directly on memory
-            case VK_ACCESS_HOST_WRITE_BIT:
-                Stages |= VK_PIPELINE_STAGE_HOST_BIT;
-                break;
-
-            // Read access via non-specific entities. When included in a destination access mask, makes all available writes
-            // visible to all future read accesses on entities known to the Vulkan device
-            case VK_ACCESS_MEMORY_READ_BIT:
-                break;
-
-            // Write access via non-specific entities. hen included in a source access mask, all writes that are performed
-            // by entities known to the Vulkan device are made available. When included in a destination access mask, makes
-            // all available writes visible to all future write accesses on entities known to the Vulkan device.
-            case VK_ACCESS_MEMORY_WRITE_BIT:
-                break;
-
-            // Read access to acceleration structure or vertex/index/instance buffer in a build AS or trace rays operations.
-            case VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR:
-                Stages |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
-                break;
-
-            // Write access to acceleration structure or scratch buffer in a build AS operations.
-            case VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR:
-                Stages |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR;
-                break;
-
-            // Read access to a fragment shading rate attachment during rasterization.
-            case VK_ACCESS_FRAGMENT_SHADING_RATE_ATTACHMENT_READ_BIT_KHR:
-                Stages |= VK_PIPELINE_STAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR;
-                break;
-
-            // Read access to a fragment density map attachment during dynamic fragment density map operations.
-            case VK_ACCESS_FRAGMENT_DENSITY_MAP_READ_BIT_EXT:
-                Stages |= VK_PIPELINE_STAGE_FRAGMENT_DENSITY_PROCESS_BIT_EXT;
-                break;
-
-            default:
-                UNEXPECTED("Unknown memory access flag");
-        }
-    }
-    return Stages;
-}
-
-
 static VkAccessFlags AccessMaskFromImageLayout(VkImageLayout Layout,
                                                bool          IsDstMask // false - source mask
                                                                        // true  - destination mask
@@ -272,208 +142,145 @@ static VkAccessFlags AccessMaskFromImageLayout(VkImageLayout Layout,
 } // namespace
 
 
-void VulkanCommandBuffer::TransitionImageLayout(VkCommandBuffer                CmdBuffer,
-                                                VkImage                        Image,
+VulkanCommandBuffer::VulkanCommandBuffer() noexcept
+{
+    m_ImageBarriers.reserve(32);
+}
+
+void VulkanCommandBuffer::TransitionImageLayout(VkImage                        Image,
                                                 VkImageLayout                  OldLayout,
                                                 VkImageLayout                  NewLayout,
                                                 const VkImageSubresourceRange& SubresRange,
-                                                VkPipelineStageFlags           SupportedStagesMask,
                                                 VkPipelineStageFlags           SrcStages,
-                                                VkPipelineStageFlags           DestStages)
+                                                VkPipelineStageFlags           DstStages)
 {
-    VERIFY_EXPR(CmdBuffer != VK_NULL_HANDLE);
-
-    VkImageMemoryBarrier ImgBarrier = {};
-    ImgBarrier.sType                = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    ImgBarrier.pNext                = nullptr;
-    ImgBarrier.srcAccessMask        = 0;
-    ImgBarrier.dstAccessMask        = 0;
-    ImgBarrier.oldLayout            = OldLayout;
-    ImgBarrier.newLayout            = NewLayout;
-    ImgBarrier.srcQueueFamilyIndex  = VK_QUEUE_FAMILY_IGNORED; // source queue family for a queue family ownership transfer.
-    ImgBarrier.dstQueueFamilyIndex  = VK_QUEUE_FAMILY_IGNORED; // destination queue family for a queue family ownership transfer.
-    ImgBarrier.image                = Image;
-    ImgBarrier.subresourceRange     = SubresRange;
-    ImgBarrier.srcAccessMask        = AccessMaskFromImageLayout(OldLayout, false);
-    ImgBarrier.dstAccessMask        = AccessMaskFromImageLayout(NewLayout, true);
-
-    if (SrcStages == 0)
+    if (m_State.RenderPass != VK_NULL_HANDLE)
     {
-        if (OldLayout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
+        // Image layout transitions within a render pass execute
+        // dependencies between attachments
+        EndRenderPass();
+    }
+
+    VERIFY_EXPR((SrcStages & m_Barrier.SupportedStagesMask) != 0);
+    VERIFY_EXPR((DstStages & m_Barrier.SupportedStagesMask) != 0);
+
+    if (OldLayout == NewLayout)
+    {
+        m_Barrier.MemorySrcStages |= SrcStages;
+        m_Barrier.MemoryDstStages |= DstStages;
+
+        m_Barrier.MemorySrcAccess |= AccessMaskFromImageLayout(OldLayout, false);
+        m_Barrier.MemoryDstAccess |= AccessMaskFromImageLayout(NewLayout, true);
+        return;
+    }
+
+    // AZ TODO: barrier must not intersects
+    for (size_t i = 0; i < m_ImageBarriers.size(); ++i)
+    {
+        const auto& Lhs = m_ImageBarriers[i];
+        if (Lhs.image != Image)
+            continue;
+
+        const auto& LhsSubRes = Lhs.subresourceRange;
+
+        const bool SlicesIntersects =
+            (LhsSubRes.baseArrayLayer + LhsSubRes.layerCount > SubresRange.baseArrayLayer &&
+             LhsSubRes.baseArrayLayer < SubresRange.baseArrayLayer + SubresRange.layerCount);
+        const bool MipmapIntersects =
+            (LhsSubRes.baseMipLevel + LhsSubRes.levelCount > SubresRange.baseMipLevel &&
+             LhsSubRes.baseMipLevel < SubresRange.baseMipLevel + SubresRange.levelCount);
+
+        //VERIFY(!(SlicesIntersects && MipmapIntersects), "Image barriers must not intersects");
+
+        if (SlicesIntersects && MipmapIntersects)
         {
-            SrcStages = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-        }
-        else if (ImgBarrier.srcAccessMask != 0)
-        {
-            SrcStages = PipelineStageFromAccessFlags(ImgBarrier.srcAccessMask);
-        }
-        else
-        {
-            // An execution dependency with only VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT in the source stage
-            // mask will effectively not wait for any prior commands to complete. (6.1.2)
-            SrcStages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            FlushBarriers();
+            break;
         }
     }
 
-    if (DestStages == 0)
-    {
-        if (NewLayout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
-        {
-            DestStages = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-        }
-        else if (ImgBarrier.dstAccessMask != 0)
-        {
-            DestStages = PipelineStageFromAccessFlags(ImgBarrier.dstAccessMask);
-        }
-        else
-        {
-            // An execution dependency with only VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT in the destination
-            // stage mask will only prevent that stage from executing in subsequently submitted commands.
-            // As this stage does not perform any actual execution, this is not observable - in effect,
-            // it does not delay processing of subsequent commands. (6.1.2)
-            DestStages = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-        }
-    }
+    m_Barrier.ImageSrcStages |= SrcStages;
+    m_Barrier.ImageDstStages |= DstStages;
 
-    if ((SupportedStagesMask & VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT) == 0)
-    {
-        ImgBarrier.srcAccessMask &= ~VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
-        ImgBarrier.dstAccessMask &= ~VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
-    }
-
-    SrcStages &= SupportedStagesMask;
-    DestStages &= SupportedStagesMask;
-    VERIFY(SrcStages != 0 && DestStages != 0, "Stage mask must not be 0");
-
-    // Including a particular pipeline stage in the first synchronization scope of a command implicitly
-    // includes logically earlier pipeline stages in the synchronization scope. Similarly, the second
-    // synchronization scope includes logically later pipeline stages.
-    // However, note that access scopes are not affected in this way - only the precise stages specified
-    // are considered part of each access scope.  (6.1.2)
-
-    vkCmdPipelineBarrier(CmdBuffer,
-                         SrcStages,  // must not be 0
-                         DestStages, // must not be 0
-                         0,          // a bitmask specifying how execution and memory dependencies are formed
-                         0,          // memoryBarrierCount
-                         nullptr,    // pMemoryBarriers
-                         0,          // bufferMemoryBarrierCount
-                         nullptr,    // pBufferMemoryBarriers
-                         1,
-                         &ImgBarrier);
-    // Each element of pMemoryBarriers, pBufferMemoryBarriers and pImageMemoryBarriers must not
-    // have any access flag included in its srcAccessMask member if that bit is not supported by
-    // any of the pipeline stages in srcStageMask.
-    // Each element of pMemoryBarriers, pBufferMemoryBarriers and pImageMemoryBarriers must not
-    // have any access flag included in its dstAccessMask member if that bit is not supported by any
-    // of the pipeline stages in dstStageMask (6.6)
+    VkImageMemoryBarrier ImgBarrier{};
+    ImgBarrier.sType               = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    ImgBarrier.pNext               = nullptr;
+    ImgBarrier.oldLayout           = OldLayout;
+    ImgBarrier.newLayout           = NewLayout;
+    ImgBarrier.image               = Image;
+    ImgBarrier.subresourceRange    = SubresRange;
+    ImgBarrier.srcAccessMask       = AccessMaskFromImageLayout(OldLayout, false) & m_Barrier.SupportedAccessMask;
+    ImgBarrier.dstAccessMask       = AccessMaskFromImageLayout(NewLayout, true) & m_Barrier.SupportedAccessMask;
+    ImgBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED; // source queue family for a queue family ownership transfer.
+    ImgBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED; // destination queue family for a queue family ownership transfer.
+    m_ImageBarriers.emplace_back(ImgBarrier);
 }
 
-
-void VulkanCommandBuffer::BufferMemoryBarrier(VkCommandBuffer      CmdBuffer,
-                                              VkBuffer             Buffer,
-                                              VkAccessFlags        srcAccessMask,
-                                              VkAccessFlags        dstAccessMask,
-                                              VkPipelineStageFlags SupportedStagesMask,
-                                              VkPipelineStageFlags SrcStages,
-                                              VkPipelineStageFlags DestStages)
+void VulkanCommandBuffer::MemoryBarrier(VkAccessFlags        srcAccessMask,
+                                        VkAccessFlags        dstAccessMask,
+                                        VkPipelineStageFlags SrcStages,
+                                        VkPipelineStageFlags DstStages)
 {
-    VkBufferMemoryBarrier BuffBarrier = {};
-    BuffBarrier.sType                 = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-    BuffBarrier.pNext                 = nullptr;
-    BuffBarrier.srcAccessMask         = srcAccessMask;
-    BuffBarrier.dstAccessMask         = dstAccessMask;
-    BuffBarrier.srcQueueFamilyIndex   = VK_QUEUE_FAMILY_IGNORED;
-    BuffBarrier.dstQueueFamilyIndex   = VK_QUEUE_FAMILY_IGNORED;
-    BuffBarrier.buffer                = Buffer;
-    BuffBarrier.offset                = 0;
-    BuffBarrier.size                  = VK_WHOLE_SIZE;
-    if (SrcStages == 0)
+    if (m_State.RenderPass != VK_NULL_HANDLE)
     {
-        if (BuffBarrier.srcAccessMask != 0)
-            SrcStages = PipelineStageFromAccessFlags(BuffBarrier.srcAccessMask);
-        else
-        {
-            // An execution dependency with only VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT in the source stage
-            // mask will effectively not wait for any prior commands to complete. (6.1.2)
-            SrcStages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-        }
+        EndRenderPass();
     }
 
-    if (DestStages == 0)
-    {
-        VERIFY(BuffBarrier.dstAccessMask != 0, "Dst access mask must not be zero");
-        DestStages = PipelineStageFromAccessFlags(BuffBarrier.dstAccessMask);
-    }
+    VERIFY_EXPR((SrcStages & m_Barrier.SupportedStagesMask) != 0);
+    VERIFY_EXPR((DstStages & m_Barrier.SupportedStagesMask) != 0);
 
-    SrcStages &= SupportedStagesMask;
-    DestStages &= SupportedStagesMask;
-    VERIFY(SrcStages != 0 && DestStages != 0, "Stage mask must not be 0");
+    m_Barrier.MemorySrcStages |= SrcStages;
+    m_Barrier.MemoryDstStages |= DstStages;
 
-    vkCmdPipelineBarrier(CmdBuffer,
-                         SrcStages,    // must not be 0
-                         DestStages,   // must not be 0
-                         0,            // a bitmask specifying how execution and memory dependencies are formed
-                         0,            // memoryBarrierCount
-                         nullptr,      // pMemoryBarriers
-                         1,            // bufferMemoryBarrierCount
-                         &BuffBarrier, // pBufferMemoryBarriers
-                         0,
-                         nullptr);
-}
-
-void VulkanCommandBuffer::ASMemoryBarrier(VkCommandBuffer      CmdBuffer,
-                                          VkAccessFlags        srcAccessMask,
-                                          VkAccessFlags        dstAccessMask,
-                                          VkPipelineStageFlags SupportedStagesMask,
-                                          VkPipelineStageFlags SrcStages,
-                                          VkPipelineStageFlags DestStages)
-{
-    VkMemoryBarrier Barrier = {};
-    Barrier.sType           = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
-    Barrier.pNext           = nullptr;
-    Barrier.srcAccessMask   = srcAccessMask;
-    Barrier.dstAccessMask   = dstAccessMask;
-
-    if (SrcStages == 0)
-    {
-        if (Barrier.srcAccessMask != 0)
-            SrcStages = PipelineStageFromAccessFlags(Barrier.srcAccessMask);
-        else
-        {
-            // An execution dependency with only VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT in the source stage
-            // mask will effectively not wait for any prior commands to complete. (6.1.2)
-            SrcStages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-        }
-    }
-
-    if (DestStages == 0)
-    {
-        VERIFY(Barrier.dstAccessMask != 0, "Dst access mask must not be zero");
-        DestStages = PipelineStageFromAccessFlags(Barrier.dstAccessMask);
-    }
-
-    // Other stages are not valid for acceleration structures
-    constexpr VkPipelineStageFlags RayTracingStagesMask = VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR | VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-
-    SrcStages &= (SupportedStagesMask & RayTracingStagesMask);
-    DestStages &= (SupportedStagesMask & RayTracingStagesMask);
-    VERIFY(SrcStages != 0 && DestStages != 0, "Stage mask must not be 0");
-
-    vkCmdPipelineBarrier(CmdBuffer,
-                         SrcStages,  // must not be 0
-                         DestStages, // must not be 0
-                         0,          // a bitmask specifying how execution and memory dependencies are formed
-                         1,          // memoryBarrierCount
-                         &Barrier,   // pMemoryBarriers
-                         0,
-                         nullptr,
-                         0,
-                         nullptr);
+    m_Barrier.MemorySrcAccess |= srcAccessMask;
+    m_Barrier.MemoryDstAccess |= dstAccessMask;
 }
 
 void VulkanCommandBuffer::FlushBarriers()
 {
+    if (m_Barrier.MemorySrcStages == 0 && m_Barrier.MemoryDstStages == 0 && m_ImageBarriers.empty())
+        return;
+
+    if (m_State.RenderPass != VK_NULL_HANDLE)
+    {
+        EndRenderPass();
+    }
+
+    VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
+
+    VkMemoryBarrier vkMemBarrier{};
+    vkMemBarrier.sType         = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+    vkMemBarrier.pNext         = nullptr;
+    vkMemBarrier.srcAccessMask = m_Barrier.MemorySrcAccess & m_Barrier.SupportedAccessMask;
+    vkMemBarrier.dstAccessMask = m_Barrier.MemoryDstAccess & m_Barrier.SupportedAccessMask;
+
+    const bool HasMemoryBarrier =
+        m_Barrier.MemorySrcStages != 0 && m_Barrier.MemoryDstStages != 0 &&
+        m_Barrier.MemorySrcAccess != 0 && m_Barrier.MemoryDstAccess != 0;
+
+    const VkPipelineStageFlags SrcStages = (m_Barrier.ImageSrcStages | m_Barrier.MemorySrcStages) & m_Barrier.SupportedStagesMask;
+    const VkPipelineStageFlags DstStages = (m_Barrier.ImageDstStages | m_Barrier.MemoryDstStages) & m_Barrier.SupportedStagesMask;
+    VERIFY_EXPR(SrcStages != 0 && DstStages != 0);
+
+    vkCmdPipelineBarrier(m_VkCmdBuffer,
+                         SrcStages,
+                         DstStages,
+                         0,
+                         HasMemoryBarrier ? 1 : 0,
+                         HasMemoryBarrier ? &vkMemBarrier : nullptr,
+                         0,
+                         nullptr,
+                         static_cast<uint32_t>(m_ImageBarriers.size()),
+                         m_ImageBarriers.empty() ? nullptr : m_ImageBarriers.data());
+
+    m_ImageBarriers.clear();
+    m_Barrier.ImageSrcStages  = 0;
+    m_Barrier.ImageDstStages  = 0;
+    m_Barrier.MemorySrcStages = 0;
+    m_Barrier.MemoryDstStages = 0;
+    m_Barrier.MemorySrcAccess = 0;
+    m_Barrier.MemoryDstAccess = 0;
+    // Do not clear SupportedStagesMask and SupportedAccessMask
 }
 
 } // namespace VulkanUtilities

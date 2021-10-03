@@ -42,6 +42,7 @@
 
 #ifdef _WINBASE_
 #    undef CreateSemaphore
+#    undef MemoryBarrier
 #endif
 
 #if defined(VK_USE_PLATFORM_XLIB_KHR) || defined(_X11_XLIB_H_)

@@ -232,6 +232,7 @@ public:
     VkResult GetRayTracingShaderGroupHandles(VkPipeline pipeline, uint32_t firstGroup, uint32_t groupCount, size_t dataSize, void* pData) const;
 
     VkPipelineStageFlags GetSupportedStagesMask(HardwareQueueIndex QueueFamilyIndex) const { return m_SupportedStagesMask[QueueFamilyIndex]; }
+    VkAccessFlags        GetSupportedAccessMask(HardwareQueueIndex QueueFamilyIndex) const { return m_SupportedAccessMask[QueueFamilyIndex]; }
 
     const VkPhysicalDeviceFeatures& GetEnabledFeatures() const { return m_EnabledFeatures; }
     const ExtensionFeatures&        GetEnabledExtFeatures() const { return m_EnabledExtFeatures; }
@@ -256,6 +257,7 @@ private:
     const VkPhysicalDeviceFeatures     m_EnabledFeatures;
     ExtensionFeatures                  m_EnabledExtFeatures = {};
     std::vector<VkPipelineStageFlags>  m_SupportedStagesMask;
+    std::vector<VkAccessFlags>         m_SupportedAccessMask;
 };
 
 } // namespace VulkanUtilities

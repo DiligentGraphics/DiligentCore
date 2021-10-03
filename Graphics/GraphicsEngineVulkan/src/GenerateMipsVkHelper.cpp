@@ -52,6 +52,7 @@ void GenerateMips(TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx)
 
     const auto  OriginalState  = pTexVk->GetState();
     const auto  OriginalLayout = pTexVk->GetLayout();
+    const auto  OldStages      = ResourceStateFlagsToVkPipelineStageFlags(OriginalState);
     const auto& TexDesc        = pTexVk->GetDesc();
     const auto& ViewDesc       = TexView.GetDesc();
 
@@ -92,10 +93,12 @@ void GenerateMips(TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx)
 
     SubresRange.baseMipLevel = ViewDesc.MostDetailedMip;
     SubresRange.levelCount   = 1;
-    if (OriginalState != RESOURCE_STATE_COPY_SOURCE)
-        Ctx.TransitionTextureState(*pTexVk, OriginalState, RESOURCE_STATE_COPY_SOURCE, STATE_TRANSITION_FLAG_NONE, &SubresRange);
 
-    auto& CmdBuffer = Ctx.GetCommandBuffer();
+    auto&      CmdBuffer = Ctx.GetCommandBuffer();
+    const auto vkImage   = pTexVk->GetVkImage();
+    if (OriginalState != RESOURCE_STATE_COPY_SOURCE)
+        CmdBuffer.TransitionImageLayout(vkImage, OriginalLayout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, SubresRange, OldStages, VK_PIPELINE_STAGE_TRANSFER_BIT);
+
     for (uint32_t mip = ViewDesc.MostDetailedMip + 1; mip < ViewDesc.MostDetailedMip + ViewDesc.NumMipLevels; ++mip)
     {
         BlitRegion.srcSubresource.mipLevel = mip - 1;
@@ -123,11 +126,13 @@ void GenerateMips(TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx)
 
         SubresRange.baseMipLevel = mip;
         if (OriginalLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-            Ctx.TransitionImageLayout(*pTexVk, OriginalLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, SubresRange);
+        {
+            CmdBuffer.TransitionImageLayout(vkImage, OriginalLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                            SubresRange, OldStages, VK_PIPELINE_STAGE_TRANSFER_BIT);
+        }
 
         // For sRGB source formats, nonlinear RGB values are converted to linear representation prior to filtering.
         // In case of sRGB destination format, linear RGB values are converted to nonlinear representation before writing the pixel to the image.
-        const auto vkImage = pTexVk->GetVkImage();
         CmdBuffer.BlitImage(vkImage,
                             VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, //  must be VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL or VK_IMAGE_LAYOUT_GENERAL
                             vkImage,
@@ -135,7 +140,8 @@ void GenerateMips(TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx)
                             1,
                             &BlitRegion,
                             VK_FILTER_LINEAR);
-        Ctx.TransitionImageLayout(*pTexVk, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, SubresRange);
+        CmdBuffer.TransitionImageLayout(vkImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                                        SubresRange, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
     }
 
     const auto AffectedMipLevelLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
@@ -157,7 +163,9 @@ void GenerateMips(TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx)
             SubresRange.baseMipLevel = ViewDesc.MostDetailedMip;
             SubresRange.levelCount   = ViewDesc.NumMipLevels;
             // Transition all affected subresources back to original layout
-            Ctx.TransitionImageLayout(*pTexVk, AffectedMipLevelLayout, OriginalLayout, SubresRange);
+            CmdBuffer.FlushBarriers();
+            CmdBuffer.TransitionImageLayout(vkImage, AffectedMipLevelLayout, OriginalLayout,
+                                            SubresRange, VK_PIPELINE_STAGE_TRANSFER_BIT, OldStages);
             VERIFY_EXPR(pTexVk->GetLayout() == OriginalLayout);
         }
     }

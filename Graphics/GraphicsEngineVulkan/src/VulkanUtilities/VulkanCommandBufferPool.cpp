@@ -39,7 +39,8 @@ VulkanCommandBufferPool::VulkanCommandBufferPool(std::shared_ptr<const VulkanLog
                                                  HardwareQueueIndex                         queueFamilyIndex,
                                                  VkCommandPoolCreateFlags                   flags) :
     m_LogicalDevice{std::move(LogicalDevice)},
-    m_SupportedStagesMask{m_LogicalDevice->GetSupportedStagesMask(queueFamilyIndex)}
+    m_SupportedStagesMask{m_LogicalDevice->GetSupportedStagesMask(queueFamilyIndex)},
+    m_SupportedAccessMask{m_LogicalDevice->GetSupportedAccessMask(queueFamilyIndex)}
 {
     VkCommandPoolCreateInfo CmdPoolCI{};
     CmdPoolCI.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;

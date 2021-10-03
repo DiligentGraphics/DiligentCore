@@ -300,11 +300,6 @@ public:
                                 STATE_TRANSITION_FLAGS   Flags,
                                 VkImageSubresourceRange* pSubresRange = nullptr);
 
-    void TransitionImageLayout(TextureVkImpl&                 TextureVk,
-                               VkImageLayout                  OldLayout,
-                               VkImageLayout                  NewLayout,
-                               const VkImageSubresourceRange& SubresRange);
-
     /// Implementation of IDeviceContextVk::TransitionImageLayout().
     virtual void DILIGENT_CALL_TYPE TransitionImageLayout(ITexture* pTexture, VkImageLayout NewLayout) override final;
 
@@ -450,7 +445,7 @@ private:
         if (m_CommandBuffer.GetVkCmdBuffer() == VK_NULL_HANDLE)
         {
             auto vkCmdBuff = m_CmdPool->GetCommandBuffer();
-            m_CommandBuffer.SetVkCmdBuffer(vkCmdBuff, m_CmdPool->GetSupportedStagesMask());
+            m_CommandBuffer.SetVkCmdBuffer(vkCmdBuff, m_CmdPool->GetSupportedStagesMask(), m_CmdPool->GetSupportedAccessMask());
         }
     }
 

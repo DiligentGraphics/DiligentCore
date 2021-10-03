@@ -1172,14 +1172,14 @@ VkBorderColor BorderColorToVkBorderColor(const Float32 BorderColor[])
 }
 
 
-static VkPipelineStageFlags ResourceStateFlagToVkPipelineStage(RESOURCE_STATE StateFlag, bool FragDensityMapInsteadOfShadingRate)
+static VkPipelineStageFlags ResourceStateFlagToVkPipelineStage(RESOURCE_STATE StateFlag)
 {
     static_assert(RESOURCE_STATE_MAX_BIT == (1u << 21), "This function must be updated to handle new resource state flag");
     VERIFY((StateFlag & (StateFlag - 1)) == 0, "Only single bit must be set");
     switch (StateFlag)
     {
         // clang-format off
-        case RESOURCE_STATE_UNDEFINED:         return 0;
+        case RESOURCE_STATE_UNDEFINED:         return VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
         case RESOURCE_STATE_VERTEX_BUFFER:     return VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
         case RESOURCE_STATE_CONSTANT_BUFFER:   return VulkanUtilities::VK_PIPELINE_STAGE_ALL_SHADERS;
         case RESOURCE_STATE_INDEX_BUFFER:      return VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
@@ -1200,7 +1200,7 @@ static VkPipelineStageFlags ResourceStateFlagToVkPipelineStage(RESOURCE_STATE St
         case RESOURCE_STATE_BUILD_AS_WRITE:    return VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR;
         case RESOURCE_STATE_RAY_TRACING:       return VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
         case RESOURCE_STATE_COMMON:            return VK_PIPELINE_STAGE_ALL_COMMANDS_BIT; // resource may be used in multiple states
-        case RESOURCE_STATE_SHADING_RATE:      return FragDensityMapInsteadOfShadingRate ? VK_PIPELINE_STAGE_FRAGMENT_DENSITY_PROCESS_BIT_EXT : VK_PIPELINE_STAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR;
+        case RESOURCE_STATE_SHADING_RATE:      return VK_PIPELINE_STAGE_FRAGMENT_DENSITY_PROCESS_BIT_EXT | VK_PIPELINE_STAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR;
             // clang-format on
 
         default:
@@ -1209,7 +1209,7 @@ static VkPipelineStageFlags ResourceStateFlagToVkPipelineStage(RESOURCE_STATE St
     }
 }
 
-VkPipelineStageFlags ResourceStateFlagsToVkPipelineStageFlags(RESOURCE_STATE StateFlags, bool FragDensityMapInsteadOfShadingRate)
+VkPipelineStageFlags ResourceStateFlagsToVkPipelineStageFlags(RESOURCE_STATE StateFlags)
 {
     VERIFY(Uint32{StateFlags} < (RESOURCE_STATE_MAX_BIT << 1), "Resource state flags are out of range");
 
@@ -1217,13 +1217,13 @@ VkPipelineStageFlags ResourceStateFlagsToVkPipelineStageFlags(RESOURCE_STATE Sta
     while (StateFlags != RESOURCE_STATE_UNKNOWN)
     {
         auto StateBit = ExtractLSB(StateFlags);
-        vkPipelineStages |= ResourceStateFlagToVkPipelineStage(StateBit, FragDensityMapInsteadOfShadingRate);
+        vkPipelineStages |= ResourceStateFlagToVkPipelineStage(StateBit);
     }
     return vkPipelineStages;
 }
 
 
-static VkAccessFlags ResourceStateFlagToVkAccessFlags(RESOURCE_STATE StateFlag, bool FragDensityMapInsteadOfShadingRate)
+static VkAccessFlags ResourceStateFlagToVkAccessFlags(RESOURCE_STATE StateFlag)
 {
     // Currently not used:
     //VK_ACCESS_HOST_READ_BIT
@@ -1264,7 +1264,7 @@ static VkAccessFlags ResourceStateFlagToVkAccessFlags(RESOURCE_STATE StateFlag, 
         case RESOURCE_STATE_BUILD_AS_WRITE:    return VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR; // for scratch buffer
         case RESOURCE_STATE_RAY_TRACING:       return VK_ACCESS_SHADER_READ_BIT; // for SBT
         case RESOURCE_STATE_COMMON:            return 0; // COMMON state must be used for queue to queue transition (linke in D3D12), queue to queue synchronization via semaphore creates a memory dependency
-        case RESOURCE_STATE_SHADING_RATE:      return FragDensityMapInsteadOfShadingRate ? VK_ACCESS_FRAGMENT_DENSITY_MAP_READ_BIT_EXT : VK_ACCESS_FRAGMENT_SHADING_RATE_ATTACHMENT_READ_BIT_KHR;
+        case RESOURCE_STATE_SHADING_RATE:      return VK_ACCESS_FRAGMENT_DENSITY_MAP_READ_BIT_EXT | VK_ACCESS_FRAGMENT_SHADING_RATE_ATTACHMENT_READ_BIT_KHR;
             // clang-format on
 
         default:
@@ -1273,7 +1273,7 @@ static VkAccessFlags ResourceStateFlagToVkAccessFlags(RESOURCE_STATE StateFlag, 
     }
 }
 
-VkPipelineStageFlags ResourceStateFlagsToVkAccessFlags(RESOURCE_STATE StateFlags, bool FragDensityMapInsteadOfShadingRate)
+VkPipelineStageFlags ResourceStateFlagsToVkAccessFlags(RESOURCE_STATE StateFlags)
 {
     VERIFY(Uint32{StateFlags} < (RESOURCE_STATE_MAX_BIT << 1), "Resource state flags are out of range");
 
@@ -1281,7 +1281,7 @@ VkPipelineStageFlags ResourceStateFlagsToVkAccessFlags(RESOURCE_STATE StateFlags
     while (StateFlags != RESOURCE_STATE_UNKNOWN)
     {
         auto StateBit = ExtractLSB(StateFlags);
-        AccessFlags |= ResourceStateFlagToVkAccessFlags(StateBit, FragDensityMapInsteadOfShadingRate);
+        AccessFlags |= ResourceStateFlagToVkAccessFlags(StateBit);
     }
     return AccessFlags;
 }

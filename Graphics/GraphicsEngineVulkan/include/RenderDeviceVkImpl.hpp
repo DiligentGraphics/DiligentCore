@@ -41,6 +41,7 @@
 #include "VulkanUtilities/VulkanInstance.hpp"
 #include "VulkanUtilities/VulkanPhysicalDevice.hpp"
 #include "VulkanUtilities/VulkanCommandBufferPool.hpp"
+#include "VulkanUtilities/VulkanCommandBuffer.hpp"
 #include "VulkanUtilities/VulkanLogicalDevice.hpp"
 #include "VulkanUtilities/VulkanObjectWrappers.hpp"
 #include "VulkanUtilities/VulkanMemoryManager.hpp"
@@ -197,10 +198,10 @@ public:
     // The method returns fence value associated with the submitted command buffer
     Uint64 ExecuteCommandBuffer(SoftwareQueueIndex CommandQueueId, const VkSubmitInfo& SubmitInfo, std::vector<std::pair<Uint64, RefCntAutoPtr<FenceVkImpl>>>* pSignalFences);
 
-    void AllocateTransientCmdPool(SoftwareQueueIndex                   CommandQueueId,
-                                  VulkanUtilities::CommandPoolWrapper& CmdPool,
-                                  VkCommandBuffer&                     vkCmdBuff,
-                                  const Char*                          DebugPoolName = nullptr);
+    void AllocateTransientCmdPool(SoftwareQueueIndex                    CommandQueueId,
+                                  VulkanUtilities::CommandPoolWrapper&  CmdPool,
+                                  VulkanUtilities::VulkanCommandBuffer& CmdBuffer,
+                                  const Char*                           DebugPoolName = nullptr);
     void ExecuteAndDisposeTransientCmdBuff(SoftwareQueueIndex CommandQueueId, VkCommandBuffer vkCmdBuff, VulkanUtilities::CommandPoolWrapper&& CmdPool);
 
     /// Implementation of IRenderDevice::ReleaseStaleResources() in Vulkan backend.

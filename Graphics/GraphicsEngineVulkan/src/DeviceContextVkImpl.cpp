@@ -2782,8 +2782,8 @@ void DeviceContextVkImpl::TransitionTextureState(TextureVkImpl&           Textur
     const auto  FragDensityMap = ExtFeatures.FragmentDensityMap.fragmentDensityMap != VK_FALSE;
     const auto  OldLayout      = (Flags & STATE_TRANSITION_FLAG_DISCARD_CONTENT) != 0 ? VK_IMAGE_LAYOUT_UNDEFINED : ResourceStateToVkImageLayout(OldState, /*IsInsideRenderPass = */ false, FragDensityMap);
     const auto  NewLayout      = ResourceStateToVkImageLayout(NewState, /*IsInsideRenderPass = */ false, FragDensityMap);
-    const auto  OldStages      = ResourceStateFlagsToVkPipelineStageFlags(OldState, FragDensityMap);
-    const auto  NewStages      = ResourceStateFlagsToVkPipelineStageFlags(NewState, FragDensityMap);
+    const auto  OldStages      = ResourceStateFlagsToVkPipelineStageFlags(OldState);
+    const auto  NewStages      = ResourceStateFlagsToVkPipelineStageFlags(NewState);
 
     if (((OldState & NewState) != NewState) || OldLayout != NewLayout || AfterWrite)
     {
@@ -2817,18 +2817,6 @@ void DeviceContextVkImpl::TransitionOrVerifyTextureState(TextureVkImpl&         
         DvpVerifyTextureState(Texture, RequiredState, OperationName);
     }
 #endif
-}
-
-void DeviceContextVkImpl::TransitionImageLayout(TextureVkImpl& TextureVk, VkImageLayout OldLayout, VkImageLayout NewLayout, const VkImageSubresourceRange& SubresRange)
-{
-    // Note that the method may be used to transition texture subresources when global texture state is not altered,
-    // so the debug check below can't be used
-    // VERIFY(!TextureVk.IsInKnownState() || TextureVk.GetLayout() != NewLayout, "The texture is already transitioned to correct layout");
-
-    VERIFY(OldLayout != NewLayout, "Old and new layouts are the same");
-    EnsureVkCmdBuffer();
-    auto vkImg = TextureVk.GetVkImage();
-    m_CommandBuffer.TransitionImageLayout(vkImg, OldLayout, NewLayout, SubresRange);
 }
 
 void DeviceContextVkImpl::BufferMemoryBarrier(IBuffer* pBuffer, VkAccessFlags NewAccessFlags)
@@ -2888,12 +2876,11 @@ void DeviceContextVkImpl::TransitionBufferState(BufferVkImpl& BufferVk, RESOURCE
         VERIFY_EXPR(BufferVk.GetDynamicOffset(GetContextId(), this) == 0);
 
         EnsureVkCmdBuffer();
-        auto vkBuff         = BufferVk.GetVkBuffer();
         auto OldAccessFlags = ResourceStateFlagsToVkAccessFlags(OldState);
         auto NewAccessFlags = ResourceStateFlagsToVkAccessFlags(NewState);
         auto OldStages      = ResourceStateFlagsToVkPipelineStageFlags(OldState);
         auto NewStages      = ResourceStateFlagsToVkPipelineStageFlags(NewState);
-        m_CommandBuffer.BufferMemoryBarrier(vkBuff, OldAccessFlags, NewAccessFlags, OldStages, NewStages);
+        m_CommandBuffer.MemoryBarrier(OldAccessFlags, NewAccessFlags, OldStages, NewStages);
         if (UpdateBufferState)
         {
             BufferVk.SetState(NewState);
@@ -2962,7 +2949,7 @@ void DeviceContextVkImpl::TransitionBLASState(BottomLevelASVkImpl& BLAS,
         auto NewAccessFlags = AccelStructStateFlagsToVkAccessFlags(NewState);
         auto OldStages      = ResourceStateFlagsToVkPipelineStageFlags(OldState);
         auto NewStages      = ResourceStateFlagsToVkPipelineStageFlags(NewState);
-        m_CommandBuffer.ASMemoryBarrier(OldAccessFlags, NewAccessFlags, OldStages, NewStages);
+        m_CommandBuffer.MemoryBarrier(OldAccessFlags, NewAccessFlags, OldStages, NewStages);
         if (UpdateInternalState)
         {
             BLAS.SetState(NewState);
@@ -3008,7 +2995,7 @@ void DeviceContextVkImpl::TransitionTLASState(TopLevelASVkImpl& TLAS,
         auto NewAccessFlags = AccelStructStateFlagsToVkAccessFlags(NewState);
         auto OldStages      = ResourceStateFlagsToVkPipelineStageFlags(OldState);
         auto NewStages      = ResourceStateFlagsToVkPipelineStageFlags(NewState);
-        m_CommandBuffer.ASMemoryBarrier(OldAccessFlags, NewAccessFlags, OldStages, NewStages);
+        m_CommandBuffer.MemoryBarrier(OldAccessFlags, NewAccessFlags, OldStages, NewStages);
         if (UpdateInternalState)
         {
             TLAS.SetState(NewState);
