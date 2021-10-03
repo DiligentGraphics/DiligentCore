@@ -117,7 +117,7 @@ struct PSInput
 
 StructuredBuffer<uint> g_Buffer;
 
-float4 main(in PSInput PSIn) : SV_Target
+float4 PSmain(in PSInput PSIn) : SV_Target
 {
     uint Idx         = uint(PSIn.Pos.x) + uint(PSIn.Pos.y) * SCREEN_WIDTH;
     uint PackedColor = 0;
@@ -149,7 +149,7 @@ struct PSInput
     Texture2D<float4> g_Texture;
 #endif
 
-float4 main(in PSInput PSIn) : SV_Target
+float4 PSmain(in PSInput PSIn) : SV_Target
 {
     int4 Coord     = int4(PSIn.Pos.x, PSIn.Pos.y, 0, 0); // u, v, Layer, LOD
     int  MipHeight = SCREEN_HEIGHT / 2;
@@ -191,7 +191,7 @@ struct PSInput
     Texture2D<float4> g_Texture;
 #endif
 
-float4 main(in PSInput PSIn) : SV_Target
+float4 PSmain(in PSInput PSIn) : SV_Target
 {
     int4 Coord     = int4(PSIn.Pos.x, PSIn.Pos.y, 0, 0); // u, v, Layer, LOD
     int  MipHeight = SCREEN_HEIGHT / 2;
@@ -235,7 +235,7 @@ struct PSInput
 
 Texture3D<float4> g_Texture;
 
-float4 main(in PSInput PSIn) : SV_Target
+float4 PSmain(in PSInput PSIn) : SV_Target
 {
     int4 Coord     = int4(PSIn.Pos.x, PSIn.Pos.y, 0, 0); // u, v, w, LOD
     int  MipHeight = SCREEN_HEIGHT / 8;
@@ -258,5 +258,62 @@ float4 main(in PSInput PSIn) : SV_Target
 )hlsl"};
 
 } // namespace HLSL
+
+
+namespace MSL
+{
+
+const std::string SparseTextureResidency_PS{R"msl(
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct VSOut
+{
+    float4 Pos [[position]];
+};
+
+fragment float4 PSmain(VSOut PSIn [[stage_in]],
+                       #if TEXTURE_2D_ARRAY
+                           texture2d_array<float> g_Texture [[texture(0)]]
+                       #else
+                           texture2d<float>       g_Texture [[texture(0)]]
+                       #endif
+                      )
+{
+    int4 Coord     = int4(PSIn.Pos.x, PSIn.Pos.y, 0, 0); // u, v, Layer, LOD
+    int  MipHeight = SCREEN_HEIGHT / 2;
+
+#if TEXTURE_2D_ARRAY
+    int  TexWidth = SCREEN_WIDTH / 2;
+    if (PSIn.Pos.x > TexWidth)
+    {
+        Coord.x %= TexWidth;
+        Coord.z = PSIn.Pos.x / TexWidth;
+    }
+#endif
+
+    while (Coord.y > MipHeight && MipHeight > 1)
+    {
+        Coord.y   -= MipHeight;
+        Coord.w   += 1;
+        MipHeight >>= 1;
+    }
+
+#if TEXTURE_2D_ARRAY
+    sparse_color<float4> Color = g_Texture.sparse_read(uint2(Coord.xy), Coord.z, Coord.w);
+#else
+    sparse_color<float4> Color = g_Texture.sparse_read(uint2(Coord.xy), Coord.w);
+#endif
+
+    if (!Color.resident())
+        return float4(1.0, 0.0, 1.0, 1.0);
+
+    return Color.value();
+}
+)msl"};
+
+} // namespace MSL
 
 } // namespace

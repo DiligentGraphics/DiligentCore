@@ -2566,6 +2566,7 @@ DILIGENT_TYPED_ENUM(SPARSE_RESOURCE_CAP_FLAGS, Uint32)
     SPARSE_RESOURCE_CAP_FLAG_NONE = 0,
 
     /// Specifies whether texture operations that return resource residency information are supported in shader code.
+    /// \note In Metal backend, MSL shader should be used.
     SPARSE_RESOURCE_CAP_FLAG_SHADER_RESOURCE_RESIDENCY = 1u << 0,
 
     /// Specifies whether the device supports sparse buffers.

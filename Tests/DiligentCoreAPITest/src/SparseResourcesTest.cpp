@@ -49,7 +49,7 @@ extern void CreateSparseTextureMtl(IRenderDevice*     pDevice,
 } // namespace Diligent
 #endif
 
-#include "InlineShaders/SparseResourcesTestHLSL.h"
+#include "InlineShaders/SparseResourcesTest.h"
 
 using namespace Diligent;
 using namespace Diligent::Testing;
@@ -645,15 +645,20 @@ protected:
     static void CreateGraphicsPSOForBuffer(const char* Name, const String& PSSource, Uint32 BufferElementCount, RefCntAutoPtr<IPipelineState>& pPSO)
     {
         const auto Stride = 4u;
-        CreateGraphicsPSO(Name, PSSource, false, BufferElementCount / Stride, pPSO);
+        CreateGraphicsPSO(Name, PSSource, /*Is2DArray*/ false, /*IsMSL*/ false, BufferElementCount / Stride, pPSO);
     }
 
     static void CreateGraphicsPSOForTexture(const char* Name, const String& PSSource, bool Is2DArray, RefCntAutoPtr<IPipelineState>& pPSO)
     {
-        CreateGraphicsPSO(Name, PSSource, Is2DArray, 0, pPSO);
+        CreateGraphicsPSO(Name, PSSource, Is2DArray, /*IsMSL*/ false, 0, pPSO);
     }
 
-    static void CreateGraphicsPSO(const char* Name, const String& PSSource, bool Is2DArray, Uint32 BufferElementCount, RefCntAutoPtr<IPipelineState>& pPSO)
+    static void CreateGraphicsPSOForTextureWithMSL(const char* Name, const String& PSSource, bool Is2DArray, RefCntAutoPtr<IPipelineState>& pPSO)
+    {
+        CreateGraphicsPSO(Name, PSSource, Is2DArray, /*IsMSL*/ true, 0, pPSO);
+    }
+
+    static void CreateGraphicsPSO(const char* Name, const String& PSSource, bool Is2DArray, bool IsMSL, Uint32 BufferElementCount, RefCntAutoPtr<IPipelineState>& pPSO)
     {
         auto*       pEnv       = TestingEnvironment::GetInstance();
         auto*       pDevice    = pEnv->GetDevice();
@@ -678,7 +683,6 @@ protected:
         GraphicsPipeline.DepthStencilDesc.DepthEnable         = False;
 
         ShaderCreateInfo ShaderCI;
-        ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
         ShaderCI.UseCombinedTextureSamplers = true;
 
         if (pDevice->GetDeviceInfo().IsVulkanDevice())
@@ -693,6 +697,7 @@ protected:
 
         RefCntAutoPtr<IShader> pVS;
         {
+            ShaderCI.SourceLanguage  = SHADER_SOURCE_LANGUAGE_HLSL;
             ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
             ShaderCI.EntryPoint      = "main";
             ShaderCI.Desc.Name       = "Sparse resource test - VS";
@@ -705,8 +710,9 @@ protected:
 
         RefCntAutoPtr<IShader> pPS;
         {
+            ShaderCI.SourceLanguage  = IsMSL ? SHADER_SOURCE_LANGUAGE_MSL : SHADER_SOURCE_LANGUAGE_HLSL;
             ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
-            ShaderCI.EntryPoint      = "main";
+            ShaderCI.EntryPoint      = "PSmain";
             ShaderCI.Desc.Name       = "Sparse resource test - PS";
             ShaderCI.Source          = PSSource.c_str();
 
@@ -1189,7 +1195,7 @@ TEST_F(SparseResourceTest, SparseResidentAliasedBuffer)
         pTestingSwapChain->TakeSnapshot(pRT);
     }
 
-    auto pBuffer = CreateSparseBuffer(BuffSize, BIND_NONE);
+    auto pBuffer = CreateSparseBuffer(BuffSize, BIND_NONE, /*Aliasing*/ true);
     ASSERT_NE(pBuffer, nullptr);
     ASSERT_NE(pBuffer->GetNativeHandle(), 0);
 
@@ -1451,12 +1457,17 @@ TEST_P(SparseResourceTest, SparseResidencyTexture)
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
 
+    const bool                    IsMetal = pDevice->GetDeviceInfo().IsMetalDevice();
     const auto                    TexSize = TestIdToTextureDim(TestId);
     RefCntAutoPtr<IPipelineState> pPSO;
-    CreateGraphicsPSOForTexture("Sparse resident texture test", HLSL::SparseTextureResidency_PS, TexSize.w > 1, pPSO);
+    if (IsMetal)
+        CreateGraphicsPSOForTextureWithMSL("Sparse resident texture test", MSL::SparseTextureResidency_PS, TexSize.w > 1, pPSO);
+    else
+        CreateGraphicsPSOForTexture("Sparse resident texture test", HLSL::SparseTextureResidency_PS, TexSize.w > 1, pPSO);
     ASSERT_NE(pPSO, nullptr);
 
-    const auto Fill = [&](ITexture* pTexture) {
+    const auto Fill = [&](ITexture* pTexture) //
+    {
         RestartColorRandomizer();
         const auto& TexDesc = pTexture->GetDesc();
         for (Uint32 Slice = 0; Slice < TexDesc.ArraySize; ++Slice)
@@ -1517,6 +1528,11 @@ TEST_P(SparseResourceTest, SparseResidencyTexture)
     CheckSparseTextureProperties(pTexture);
     ASSERT_LE(TexSparseProps.AddressSpaceSize, pMemory->GetCapacity());
 
+    // in Direct3D & Vulkan tile size is always 128x128, but in Metal tile size is implementation defined
+    const uint2 TileSize = {128, 128};
+    ASSERT_TRUE(TileSize.x % TexSparseProps.TileSize[0] == 0);
+    ASSERT_TRUE(TileSize.y % TexSparseProps.TileSize[1] == 0);
+
     auto pFence = CreateFence();
 
     // bind sparse
@@ -1530,16 +1546,16 @@ TEST_P(SparseResourceTest, SparseResidencyTexture)
             {
                 const Uint32 Width  = std::max(1u, TexDesc.Width >> Mip);
                 const Uint32 Height = std::max(1u, TexDesc.Height >> Mip);
-                for (Uint32 TileY = 0; TileY < Height; TileY += TexSparseProps.TileSize[1])
+                for (Uint32 TileY = 0; TileY < Height; TileY += TileSize.y)
                 {
-                    for (Uint32 TileX = 0; TileX < Width; TileX += TexSparseProps.TileSize[0])
+                    for (Uint32 TileX = 0; TileX < Width; TileX += TileSize.x)
                     {
                         BindRanges.emplace_back();
                         auto& Range       = BindRanges.back();
                         Range.Region.MinX = TileX;
-                        Range.Region.MaxX = TileX + TexSparseProps.TileSize[0];
+                        Range.Region.MaxX = std::min(Width, TileX + TileSize.x);
                         Range.Region.MinY = TileY;
-                        Range.Region.MaxY = TileY + TexSparseProps.TileSize[1];
+                        Range.Region.MaxY = std::min(Height, TileY + TileSize.y);
                         Range.Region.MinZ = 0;
                         Range.Region.MaxZ = 1;
                         Range.MipLevel    = Mip;
@@ -1559,7 +1575,6 @@ TEST_P(SparseResourceTest, SparseResidencyTexture)
             // Mip tail
             if (Slice == 0 || (TexSparseProps.Flags & SPARSE_TEXTURE_FLAG_SINGLE_MIPTAIL) == 0)
             {
-                const bool IsMetal = pDevice->GetDeviceInfo().IsMetalDevice();
                 for (Uint64 OffsetInMipTail = 0; OffsetInMipTail < TexSparseProps.MipTailSize;)
                 {
                     BindRanges.emplace_back();
@@ -1830,7 +1845,7 @@ TEST_F(SparseResourceTest, SparseTexture3D)
         GTEST_SKIP() << "Sparse texture 3D is not supported by this device";
     }
     if (pDevice->GetDeviceInfo().IsMetalDevice())
-        GTEST_SKIP() << "UAV sparse texture is not supported in Metal";
+        GTEST_SKIP() << "UAV sparse texture is not supported in Metal"; // AZ TODO: query texture bind flags
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 

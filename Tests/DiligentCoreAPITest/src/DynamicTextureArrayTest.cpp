@@ -49,6 +49,9 @@ TEST_P(DynamicTextureArrayCreateTest, Run)
     auto* pDevice  = pEnv->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();
 
+    if (pDevice->GetDeviceInfo().IsMetalDevice())
+        GTEST_SKIP() << "This test is currently disabled on Metal";
+
     const auto& TestInfo = GetParam();
 
     TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
@@ -148,6 +151,9 @@ TEST_P(DynamicTextureArrayResizeTest, Run)
         if ((AdapterInfo.SparseResources.CapFlags & SPARSE_RESOURCE_CAP_FLAG_TEXTURE_2D_ARRAY_MIP_TAIL) == 0)
             GTEST_SKIP() << "This device does not support sparse texture 2D arrays with mip tails";
     }
+
+    if (DeviceInfo.IsMetalDevice())
+        GTEST_SKIP() << "This test is currently disabled on Metal";
 
     TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 

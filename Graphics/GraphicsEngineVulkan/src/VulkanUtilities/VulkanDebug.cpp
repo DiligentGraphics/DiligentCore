@@ -49,6 +49,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL DebugMessengerCallback(VkDebugUtilsMessageSeverit
         }
     }
 
+    // "The SPIR-V Capability (ImageGatherExtended) was declared, but none of the requirements were met to use it."
     if (callbackData->pMessageIdName == std::string{"VUID-VkShaderModuleCreateInfo-pCode-01091"})
         return VK_FALSE;
 

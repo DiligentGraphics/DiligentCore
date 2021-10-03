@@ -93,6 +93,10 @@ DILIGENT_BEGIN_INTERFACE(IRenderDeviceMtl, IRenderDevice)
                                                     struct IRasterizationRateMapMtl**               ppRRM) PURE;
 
     /// Creates a sparse texture
+    ///
+    /// \note  Before you release a sparse texture, unmap all of its sparse tiles.
+    ///        Otherwise, the sparse heap continues to mark those tiles as mapped.
+    ///        However, all mapped tile memory is freed when you release the heap.
     VIRTUAL void METHOD(CreateSparseTexture)(THIS_
                                              const TextureDesc REF TexDesc,
                                              IDeviceMemory*        pMemory,

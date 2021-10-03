@@ -647,9 +647,12 @@ TEST_P(TextureCreationTest, CreateTexture)
     if (FmtInfo.Dimensions & RESOURCE_DIMENSION_SUPPORT_TEX_3D)
     {
         auto TexInfo2 = TestInfo;
+
+        // 2D texture view from 3D texture will be used for render target but may not be supported
+        if (!TexProps.TextureView2DOn3DSupported)
+            TexInfo2.BindFlags &= ~(BIND_RENDER_TARGET | BIND_DEPTH_STENCIL);
+
 #ifdef PLATFORM_MACOS
-        // in MoltenVk 2D image view from 3D texture may be unsupported.
-        TexInfo2.BindFlags &= ~(BIND_RENDER_TARGET | BIND_DEPTH_STENCIL);
         if (TexInfo2.Fmt == TEX_FORMAT_D32_FLOAT || TexInfo2.Fmt == TEX_FORMAT_D16_UNORM)
             return;
 #endif

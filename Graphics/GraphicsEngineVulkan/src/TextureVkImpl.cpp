@@ -793,7 +793,7 @@ void TextureVkImpl::InitSparseProperties()
 
     if (m_Desc.GetArraySize() == 1)
     {
-        VERIFY_EXPR(Props.MipTailOffset < MemReq.size);
+        VERIFY_EXPR(Props.MipTailOffset < MemReq.size || (Props.MipTailOffset == MemReq.size && Props.MipTailSize == 0));
         VERIFY_EXPR(Props.MipTailOffset + Props.MipTailSize <= MemReq.size);
         Props.MipTailStride = 0;
     }

@@ -1024,6 +1024,9 @@ bool VerifyBindSparseResourceMemoryAttribs(const IRenderDevice* pDevice, const B
         CHECK_BIND_SPARSE_ATTRIBS(Attribs.pTextureBinds != nullptr, "NumTextureBinds is ", Attribs.NumTextureBinds, ", but pTextureBinds is null");
         CHECK_BIND_SPARSE_ATTRIBS((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_TEXTURE_2D) != 0, "NumTextureBinds must be zero if SPARSE_RESOURCE_CAP_FLAG_TEXTURE_2D capability is not supported");
     }
+
+    CHECK_BIND_SPARSE_ATTRIBS(Attribs.NumBufferBinds > 0 || Attribs.NumTextureBinds > 0, "One of NumBufferBinds and NumTextureBinds must not be zero");
+
 #ifdef DILIGENT_DEVELOPMENT
     const auto IsMetal = pDevice->GetDeviceInfo().IsMetalDevice();
 
@@ -1224,6 +1227,7 @@ bool VerifyBindSparseResourceMemoryAttribs(const IRenderDevice* pDevice, const B
             }
         }
     }
+#endif // DILIGENT_DEVELOPMENT
 
     if (Attribs.NumWaitFences != 0)
     {
@@ -1254,7 +1258,8 @@ bool VerifyBindSparseResourceMemoryAttribs(const IRenderDevice* pDevice, const B
             }
         }
     }
-#endif // DILIGENT_DEVELOPMENT
+
+#undef CHECK_BIND_SPARSE_ATTRIBS
 
     return true;
 }

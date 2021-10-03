@@ -533,14 +533,15 @@ GraphicsAdapterInfo EngineFactoryD3D11Impl::GetGraphicsAdapterInfo(void*        
                 auto& SparseRes{AdapterInfo.SparseResources};
                 // https://docs.microsoft.com/en-us/windows/win32/direct3d11/address-space-available-for-tiled-resources
                 SparseRes.AddressSpaceSize  = Uint64{1} << (sizeof(void*) > 4 ? 40 : 32);
-                SparseRes.ResourceSpaceSize = Uint64{1} << 32; // buffer size limits to number of bits in UINT
+                SparseRes.ResourceSpaceSize = std::numeric_limits<UINT>::max(); // buffer size limits to number of bits in UINT
                 SparseRes.StandardBlockSize = D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
                 SparseRes.CapFlags =
                     SPARSE_RESOURCE_CAP_FLAG_BUFFER |
                     SPARSE_RESOURCE_CAP_FLAG_BUFFER_STANDARD_BLOCK |
                     SPARSE_RESOURCE_CAP_FLAG_TEXTURE_2D |
                     SPARSE_RESOURCE_CAP_FLAG_STANDARD_2D_TILE_SHAPE |
-                    SPARSE_RESOURCE_CAP_FLAG_ALIASED;
+                    SPARSE_RESOURCE_CAP_FLAG_ALIASED |
+                    SPARSE_RESOURCE_CAP_FLAG_MIXED_RESOURCE_TYPE_SUPPORT;
 
                 // No 2, 8 or 16 sample multisample antialiasing (MSAA) support. Only 4x is required, except no 128 bpp formats.
                 SparseRes.CapFlags |=

@@ -2996,8 +2996,7 @@ void DeviceContextD3D12Impl::BindSparseResourceMemory(const BindSparseResourceMe
 {
     TDeviceContextBase::BindSparseResourceMemory(Attribs, 0);
 
-    if (Attribs.NumBufferBinds == 0 && Attribs.NumTextureBinds == 0)
-        return;
+    VERIFY_EXPR(Attribs.NumBufferBinds != 0 || Attribs.NumTextureBinds != 0);
 
     Flush();
 

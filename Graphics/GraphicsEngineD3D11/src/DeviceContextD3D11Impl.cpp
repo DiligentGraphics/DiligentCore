@@ -2221,8 +2221,7 @@ void DeviceContextD3D11Impl::BindSparseResourceMemory(const BindSparseResourceMe
 {
     TDeviceContextBase::BindSparseResourceMemory(Attribs, 0);
 
-    if (Attribs.NumBufferBinds == 0 && Attribs.NumTextureBinds == 0)
-        return;
+    VERIFY_EXPR(Attribs.NumBufferBinds != 0 || Attribs.NumTextureBinds != 0);
 
     DEV_CHECK_ERR(CComQIPtr<ID3D11DeviceContext2>{m_pd3d11DeviceContext}, "Failed to query ID3D11DeviceContext2");
     auto* pd3d11DeviceContext2 = static_cast<ID3D11DeviceContext2*>(m_pd3d11DeviceContext.p);

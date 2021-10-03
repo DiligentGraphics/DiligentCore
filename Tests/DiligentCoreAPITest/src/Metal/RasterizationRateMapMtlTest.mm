@@ -91,7 +91,8 @@ void CreateRasterizationRateMap(RefCntAutoPtr<ITextureView>& pShadingRateMap,
     ASSERT_NE(pRasterizationRateMap, nullptr);
     pShadingRateMap = pRasterizationRateMap->GetView();
 
-    Uint32 BufferSize, BufferAlign;
+    Uint64 BufferSize;
+    Uint32 BufferAlign;
     pRasterizationRateMap->GetParameterBufferSizeAndAlign(BufferSize, BufferAlign);
 
     BufferDesc BuffDesc;

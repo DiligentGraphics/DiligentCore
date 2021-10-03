@@ -1754,6 +1754,7 @@ struct SparseTextureMemoryBindRange
     /// Must be a multiple of SparseTextureProperties::TileSize.
     /// If MipLevel is equal to SparseTextureProperties::FirstMipInTail, this field is ignored
     /// and OffsetInMipTail is used instead.
+    /// If Region contains multiple tiles, they are bound in the row-major order.
     Box              Region        DEFAULT_INITIALIZER({});
 
     /// When mip tail consists of multiple memory blocks, this member
@@ -3136,6 +3137,17 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
 
     /// \param [in] Attribs - command attributes, see Diligent::BindSparseResourceMemoryAttribs.
     ///
+    /// \remarks Metal backend:
+    ///            Since resource uses a single preallocated memory storage,
+    ///            memory offset is ignored and the driver acquires any free memory block from
+    ///            the storage.
+    ///            If there is no free memory in the storage, the region remains unbound.
+    ///            Access to the device memory object on the GPU side
+    ///            must be explicitly synchronized using fences.
+    ///
+    /// \note    Direct3D12, Vulkan and Metal backends require explicitly synchronizing
+    ///          access to the resource using fences or by IDeviceContext::WaitForIdle().
+    ///
     /// \remarks This command implicitly calls Flush().
     ///
     /// \remarks This command may only be executed by immediate context whose
@@ -3218,7 +3230,7 @@ DILIGENT_END_INTERFACE
 #    define IDeviceContext_LockCommandQueue(This)                   CALL_IFACE_METHOD(DeviceContext, LockCommandQueue,          This)
 #    define IDeviceContext_UnlockCommandQueue(This)                 CALL_IFACE_METHOD(DeviceContext, UnlockCommandQueue,        This)
 #    define IDeviceContext_SetShadingRate(This, ...)                CALL_IFACE_METHOD(DeviceContext, SetShadingRate,            This, __VA_ARGS__)
-#    define IDeviceContext_BindSparseResourceMemory(This, ...)           CALL_IFACE_METHOD(DeviceContext, BindSparseResourceMemory,       This, __VA_ARGS__)
+#    define IDeviceContext_BindSparseResourceMemory(This, ...)      CALL_IFACE_METHOD(DeviceContext, BindSparseResourceMemory,  This, __VA_ARGS__)
 
 // clang-format on
 
