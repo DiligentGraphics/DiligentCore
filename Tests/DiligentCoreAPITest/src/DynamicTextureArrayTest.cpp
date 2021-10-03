@@ -134,7 +134,20 @@ TEST_P(DynamicTextureArrayResizeTest, Run)
     auto* pDevice  = pEnv->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();
 
-    const auto& TestInfo = GetParam();
+    const auto& DeviceInfo = pDevice->GetDeviceInfo();
+    const auto& TestInfo   = GetParam();
+    const auto  Usage      = std::get<0>(TestInfo);
+    const auto  Format     = std::get<1>(TestInfo);
+
+    if (Usage == USAGE_SPARSE)
+    {
+        if (!DeviceInfo.Features.SparseResources)
+            GTEST_SKIP() << "Sparse resources are not enabled on this device";
+
+        const auto& AdapterInfo = pDevice->GetAdapterInfo();
+        if ((AdapterInfo.SparseResources.CapFlags & SPARSE_RESOURCE_CAP_FLAG_TEXTURE_2D_ARRAY_MIP_TAIL) == 0)
+            GTEST_SKIP() << "This device does not support sparse texture 2D arrays with mip tails";
+    }
 
     TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
@@ -148,8 +161,8 @@ TEST_P(DynamicTextureArrayResizeTest, Run)
     Desc.Width     = 1024;
     Desc.Height    = 1024;
     Desc.MipLevels = 11;
-    Desc.Usage     = std::get<0>(TestInfo);
-    Desc.Format    = std::get<1>(TestInfo);
+    Desc.Usage     = Usage;
+    Desc.Format    = Format;
     Desc.ArraySize = 0;
 
     constexpr Uint32 NumTestSlices = 6;
@@ -194,8 +207,15 @@ TEST_P(DynamicTextureArrayResizeTest, Run)
         }
     };
 
-    auto VerifySlices = [&RefData, &Desc, &pStagingTex](IDeviceContext* pCtx, ITexture* pSrcTex, Uint32 FirstSlice, Uint32 NumSlices) //
+    auto VerifySlices = [&RefData, &Desc, &pStagingTex, IsGL = DeviceInfo.IsGLDevice()](IDeviceContext* pCtx, ITexture* pSrcTex, Uint32 FirstSlice, Uint32 NumSlices) //
     {
+        const auto FmtAttribs = GetTextureFormatAttribs(Desc.Format);
+        if (IsGL && FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
+        {
+            // Copying to compressed staging textures is not supported in GL
+            return;
+        }
+
         for (Uint32 slice = FirstSlice; slice < FirstSlice + NumSlices; ++slice)
         {
             for (Uint32 mip = 0; mip < Desc.MipLevels; ++mip)
@@ -210,8 +230,6 @@ TEST_P(DynamicTextureArrayResizeTest, Run)
         }
 
         pCtx->WaitForIdle();
-
-        const auto FmtAttribs = GetTextureFormatAttribs(Desc.Format);
 
         for (Uint32 slice = FirstSlice; slice < FirstSlice + NumSlices; ++slice)
         {
@@ -238,17 +256,6 @@ TEST_P(DynamicTextureArrayResizeTest, Run)
             }
         }
     };
-
-    if (Desc.Usage == USAGE_SPARSE)
-    {
-        const auto& DeviceInfo = pDevice->GetDeviceInfo();
-        if (!DeviceInfo.Features.SparseResources)
-            GTEST_SKIP() << "Sparse resources are not enabled on this device";
-
-        const auto& AdapterInfo = pDevice->GetAdapterInfo();
-        if ((AdapterInfo.SparseResources.CapFlags & SPARSE_RESOURCE_CAP_FLAG_TEXTURE_2D_ARRAY_MIP_TAIL) == 0)
-            GTEST_SKIP() << "This device does not support sparse texture 2D arrays with mip tails";
-    }
 
     auto pDynTexArray = std::make_unique<DynamicTextureArray>(pDevice, DynTexArrCI);
     ASSERT_NE(pDynTexArray, nullptr);

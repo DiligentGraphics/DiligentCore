@@ -1500,6 +1500,8 @@ void DeviceContextGLImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
         else
         {
             const auto& FmtAttribs = GetTextureFormatAttribs(SrcTexDesc.Format);
+            DEV_CHECK_ERR(FmtAttribs.ComponentType != COMPONENT_TYPE_COMPRESSED,
+                          "Reading pixels from compressed-format textures to pixel pack buffer is not supported");
 
             TextureViewDesc SrcTexViewDesc;
             SrcTexViewDesc.Format = SrcTexDesc.Format;
