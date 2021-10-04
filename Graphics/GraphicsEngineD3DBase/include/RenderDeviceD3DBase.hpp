@@ -209,9 +209,9 @@ protected:
         Info.Flags       = SparseProps.Flags;
 
         if (ComponentType == COMPONENT_TYPE_DEPTH || ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
-            Info.BindFlags |= BIND_DEPTH_STENCIL;
+            Info.BindFlags |= BIND_DEPTH_STENCIL | BIND_INPUT_ATTACHMENT;
         else if (ComponentType != COMPONENT_TYPE_COMPRESSED)
-            Info.BindFlags |= BIND_RENDER_TARGET;
+            Info.BindFlags |= BIND_RENDER_TARGET | BIND_INPUT_ATTACHMENT;
 
         return Info;
     }

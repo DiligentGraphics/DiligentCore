@@ -764,7 +764,7 @@ void TextureVkImpl::InvalidateStagingRange(VkDeviceSize Offset, VkDeviceSize Siz
     (void)err;
 }
 
-void TextureVkImpl::InitSparseProperties()
+void TextureVkImpl::InitSparseProperties() noexcept(false)
 {
     VERIFY_EXPR(m_Desc.Usage == USAGE_SPARSE);
     VERIFY_EXPR(m_pSparseProps == nullptr);
@@ -777,9 +777,8 @@ void TextureVkImpl::InitSparseProperties()
     // If the image was not created with VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT, then pSparseMemoryRequirementCount will be set to zero.
     uint32_t SparseReqCount = 0;
     vkGetImageSparseMemoryRequirements(LogicalDevice.GetVkDevice(), GetVkImage(), &SparseReqCount, nullptr);
-    VERIFY(SparseReqCount > 0, "Sparse memory requirements for image must not be zero");
-
-    SparseReqCount = std::min(SparseReqCount, 2u);
+    if (SparseReqCount != 1)
+        LOG_ERROR_AND_THROW("Sparse memory requirements for texture must be 1");
 
     // Texture with depth-stencil format may be implemented with two memory blocks per tile.
     VkSparseImageMemoryRequirements SparseReq[2] = {};
@@ -794,8 +793,6 @@ void TextureVkImpl::InitSparseProperties()
     Props.TileSize[1]    = SparseReq[0].formatProperties.imageGranularity.height;
     Props.TileSize[2]    = SparseReq[0].formatProperties.imageGranularity.depth;
     Props.Flags          = VkSparseImageFormatFlagsToSparseTextureFlags(SparseReq[0].formatProperties.flags);
-
-    // AZ TODO: depth stencil
 
     if (m_Desc.GetArraySize() == 1)
     {

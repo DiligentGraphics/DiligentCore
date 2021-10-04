@@ -746,14 +746,14 @@ SparseTextureFormatInfo RenderDeviceVkImpl::GetSparseTextureFormatInfo(TEXTURE_F
     const auto vkDefaultUsage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     const auto vkSampleCount  = static_cast<VkSampleCountFlagBits>(SampleCount);
 
+    // Texture with depth-stencil format may be implemented with two memory blocks per tile.
     VkSparseImageFormatProperties FmtProps[2]   = {};
     Uint32                        FmtPropsCount = 0;
 
     vkGetPhysicalDeviceSparseImageFormatProperties(vkDevice, vkFormat, vkType, vkSampleCount, vkDefaultUsage, VK_IMAGE_TILING_OPTIMAL, &FmtPropsCount, nullptr);
-    if (FmtPropsCount == 0)
-        return {};
+    if (FmtPropsCount != 1)
+        return {}; // Only single block per region is supported
 
-    FmtPropsCount = std::min(FmtPropsCount, 2u);
     vkGetPhysicalDeviceSparseImageFormatProperties(vkDevice, vkFormat, vkType, vkSampleCount, vkDefaultUsage, VK_IMAGE_TILING_OPTIMAL, &FmtPropsCount, FmtProps);
 
     SparseTextureFormatInfo Info;

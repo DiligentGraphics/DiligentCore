@@ -110,7 +110,7 @@ protected:
 
     VulkanUtilities::ImageViewWrapper CreateImageView(TextureViewDesc& ViewDesc);
 
-    void InitSparseProperties();
+    void InitSparseProperties() noexcept(false);
 
     VulkanUtilities::ImageWrapper           m_VulkanImage;
     VulkanUtilities::BufferWrapper          m_StagingBuffer;
