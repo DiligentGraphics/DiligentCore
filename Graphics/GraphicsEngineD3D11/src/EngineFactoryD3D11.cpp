@@ -556,12 +556,16 @@ GraphicsAdapterInfo EngineFactoryD3D11Impl::GetGraphicsAdapterInfo(void*        
                         SPARSE_RESOURCE_CAP_FLAG_NON_RESIDENT_STRICT |
                         SPARSE_RESOURCE_CAP_FLAG_NON_RESIDENT_SAFE;
                 }
+
+#    ifdef NTDDI_WIN10 // D3D11_TILED_RESOURCES_TIER_3 is not defined in Win8.1
                 if (d3d11TiledResources.TiledResourcesTier >= D3D11_TILED_RESOURCES_TIER_3)
                 {
                     SparseRes.CapFlags |=
                         SPARSE_RESOURCE_CAP_FLAG_TEXTURE_3D |
                         SPARSE_RESOURCE_CAP_FLAG_STANDARD_3D_TILE_SHAPE;
                 }
+#    endif
+
                 if (NVApi)
                 {
                     SparseRes.CapFlags |= SPARSE_RESOURCE_CAP_FLAG_TEXTURE_2D_ARRAY_MIP_TAIL;
