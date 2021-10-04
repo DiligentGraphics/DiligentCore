@@ -1067,7 +1067,7 @@ void RenderPassTest::TestInputAttachmentGeneralLayout(bool UseSignature)
     Attachments[0].Format       = SCDesc.ColorBufferFormat;
     Attachments[0].SampleCount  = 1;
     Attachments[0].InitialState = RESOURCE_STATE_RENDER_TARGET;
-    Attachments[0].FinalState   = RESOURCE_STATE_COMMON;
+    Attachments[0].FinalState   = RESOURCE_STATE_RENDER_TARGET;
     Attachments[0].LoadOp       = ATTACHMENT_LOAD_OP_CLEAR;
     Attachments[0].StoreOp      = ATTACHMENT_STORE_OP_STORE;
 
@@ -1097,11 +1097,11 @@ void RenderPassTest::TestInputAttachmentGeneralLayout(bool UseSignature)
     };
     constexpr AttachmentReference RTAttachmentRefs1[] =
     {
-        {0, RESOURCE_STATE_COMMON}
+        {0, RESOURCE_STATE_RENDER_TARGET} // auto replaced with general layout
     };
     constexpr AttachmentReference InputAttachmentRefs1[] =
     {
-        {0, RESOURCE_STATE_COMMON}
+        {0, RESOURCE_STATE_INPUT_ATTACHMENT} // auto replaced with general layout
     };
     // clang-format on
     Subpasses[0].RenderTargetAttachmentCount = _countof(RTAttachmentRefs0);

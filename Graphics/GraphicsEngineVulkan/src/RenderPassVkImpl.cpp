@@ -31,6 +31,7 @@
 #include "RenderPassVkImpl.hpp"
 #include "RenderDeviceVkImpl.hpp"
 #include "VulkanTypeConversions.hpp"
+#include "PlatformMisc.hpp"
 
 namespace Diligent
 {
@@ -171,16 +172,36 @@ void RenderPassVkImpl::CreateRenderPass() noexcept(false)
     Uint32 CurrAttachmentReferenceInd = 0;
     Uint32 CurrPreserveAttachmentInd  = 0;
 
-    std::vector<SubpassDescriptionType> vkSubpasses{m_Desc.SubpassCount};
+    // State flags for every attachment in each subpass.
+    // This array is used to detect attachments that are used as render target or depth-stencil,
+    // but also as input attachment in the same subpass. Such attachments need to use GENERAL layout.
+    std::vector<RESOURCE_STATE> AttachmentStates(m_Desc.AttachmentCount);
+
+    std::vector<SubpassDescriptionType> vkSubpasses(m_Desc.SubpassCount);
     for (Uint32 i = 0, SRInd = 0; i < m_Desc.SubpassCount; ++i)
     {
         const auto& SubpassDesc = m_Desc.pSubpasses[i];
         auto&       vkSubpass   = vkSubpasses[i];
 
         InitSubpassDescription(vkSubpass);
-        vkSubpass.flags                = 0;
-        vkSubpass.pipelineBindPoint    = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        vkSubpass.inputAttachmentCount = SubpassDesc.InputAttachmentCount;
+        vkSubpass.flags             = 0;
+        vkSubpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+
+        std::fill(AttachmentStates.begin(), AttachmentStates.end(), RESOURCE_STATE_UNKNOWN);
+        auto UpdateAttachmentsStates = [&AttachmentStates](Uint32 NumAttachments, const AttachmentReference* pSrcAttachments) //
+        {
+            if (pSrcAttachments == nullptr)
+                return;
+            for (Uint32 attachment = 0; attachment < NumAttachments; ++attachment)
+            {
+                const auto& SrcAttachmentRef = pSrcAttachments[attachment];
+                if (SrcAttachmentRef.AttachmentIndex != ATTACHMENT_UNUSED)
+                    AttachmentStates[SrcAttachmentRef.AttachmentIndex] |= SrcAttachmentRef.State;
+            }
+        };
+        UpdateAttachmentsStates(SubpassDesc.InputAttachmentCount, SubpassDesc.pInputAttachments);
+        UpdateAttachmentsStates(SubpassDesc.RenderTargetAttachmentCount, SubpassDesc.pRenderTargetAttachments);
+        UpdateAttachmentsStates(1, SubpassDesc.pDepthStencilAttachment);
 
         auto ConvertAttachmentReferences = [&](Uint32 NumAttachments, const AttachmentReference* pSrcAttachments, VkImageAspectFlags AspectMask) //
         {
@@ -192,11 +213,28 @@ void RenderPassVkImpl::CreateRenderPass() noexcept(false)
 
                 InitAttachmentReference(DstAttachmentRef, AspectMask);
                 DstAttachmentRef.attachment = SrcAttachmentRef.AttachmentIndex;
-                DstAttachmentRef.layout     = ResourceStateToVkImageLayout(SrcAttachmentRef.State, /*IsInsideRenderPass = */ true, FragDensityMapEnabled);
+
+                auto State = SrcAttachmentRef.AttachmentIndex != ATTACHMENT_UNUSED ?
+                    AttachmentStates[SrcAttachmentRef.AttachmentIndex] :
+                    SrcAttachmentRef.State;
+                if (PlatformMisc::CountOneBits(State) >= 2)
+                {
+                    // The same attachment is used in different ways in this subpass (e.g. color and input attachments).
+                    // It must use COMMON layout.
+                    State = RESOURCE_STATE_COMMON;
+                }
+                else
+                {
+                    VERIFY_EXPR(State == RESOURCE_STATE_UNKNOWN || State == SrcAttachmentRef.State);
+                    State = SrcAttachmentRef.State;
+                }
+
+                DstAttachmentRef.layout = ResourceStateToVkImageLayout(State, /*IsInsideRenderPass = */ true, FragDensityMapEnabled);
             }
             return pCurrVkAttachmentReference;
         };
 
+        vkSubpass.inputAttachmentCount = SubpassDesc.InputAttachmentCount;
         if (SubpassDesc.InputAttachmentCount != 0)
         {
             vkSubpass.pInputAttachments = ConvertAttachmentReferences(SubpassDesc.InputAttachmentCount, SubpassDesc.pInputAttachments, VK_IMAGE_ASPECT_COLOR_BIT);

@@ -185,6 +185,13 @@ void ValidateRenderPassDesc(const RenderPassDesc& Desc, IRenderDevice* pDevice) 
                 LOG_RENDER_PASS_ERROR_AND_THROW("the attachment index (", AttchRef.AttachmentIndex, ") of input attachment reference ", input_attachment,
                                                 " of subpass ", subpass, " must be less than the number of attachments (", Desc.AttachmentCount, ").");
             }
+
+            if (!(AttchRef.State == RESOURCE_STATE_INPUT_ATTACHMENT || (IsVulkan && AttchRef.State == RESOURCE_STATE_COMMON)))
+            {
+                LOG_RENDER_PASS_ERROR_AND_THROW("attachment with index ", AttchRef.AttachmentIndex, " referenced as input attachment in subpass ", subpass,
+                                                " must be in ", (IsVulkan ? "INPUT_ATTACHMENT or COMMON" : "INPUT_ATTACHMENT"), " state, but specified state is ",
+                                                GetResourceStateString(AttchRef.State));
+            }
         }
 
         for (Uint32 rt_attachment = 0; rt_attachment < Subpass.RenderTargetAttachmentCount; ++rt_attachment)
@@ -201,6 +208,13 @@ void ValidateRenderPassDesc(const RenderPassDesc& Desc, IRenderDevice* pDevice) 
             {
                 LOG_RENDER_PASS_ERROR_AND_THROW("the attachment index (", AttchRef.AttachmentIndex, ") of render target attachment reference ", rt_attachment,
                                                 " of subpass ", subpass, " must be less than the number of attachments (", Desc.AttachmentCount, ").");
+            }
+
+            if (!(AttchRef.State == RESOURCE_STATE_RENDER_TARGET || (IsVulkan && AttchRef.State == RESOURCE_STATE_COMMON)))
+            {
+                LOG_RENDER_PASS_ERROR_AND_THROW("attachment with index ", AttchRef.AttachmentIndex, " referenced as render target attachment in subpass ", subpass,
+                                                " must be in ", (IsVulkan ? "RENDER_TARGET or COMMON" : "RENDER_TARGET"), " state, but specified state is ",
+                                                GetResourceStateString(AttchRef.State));
             }
         }
 
@@ -237,6 +251,13 @@ void ValidateRenderPassDesc(const RenderPassDesc& Desc, IRenderDevice* pDevice) 
                 {
                     LOG_RENDER_PASS_ERROR_AND_THROW("the attachment index (", AttchRef.AttachmentIndex, ") of depth-stencil attachment reference of subpass ", subpass,
                                                     " must be less than the number of attachments (", Desc.AttachmentCount, ").");
+                }
+
+                if (!(AttchRef.State == RESOURCE_STATE_DEPTH_READ || AttchRef.State == RESOURCE_STATE_DEPTH_WRITE || (IsVulkan && AttchRef.State == RESOURCE_STATE_COMMON)))
+                {
+                    LOG_RENDER_PASS_ERROR_AND_THROW("attachment with index ", AttchRef.AttachmentIndex, " referenced as depth stencil attachment in subpass ", subpass,
+                                                    " must be in ", (IsVulkan ? "DEPTH_READ, DEPTH_WRITE or COMMON" : "DEPTH_READ or DEPTH_WRITE"),
+                                                    " state, but specified state is ", GetResourceStateString(AttchRef.State));
                 }
             }
         }
@@ -326,6 +347,12 @@ void ValidateRenderPassDesc(const RenderPassDesc& Desc, IRenderDevice* pDevice) 
 
                 if (!Features.VariableRateShading)
                     LOG_RENDER_PASS_ERROR_AND_THROW("subpass ", subpass, " uses a shading rate attachment, but VariableRateShading device feature is not enabled");
+
+                if (AttchRef.State != RESOURCE_STATE_SHADING_RATE)
+                {
+                    LOG_RENDER_PASS_ERROR_AND_THROW("attachment with index ", AttchRef.AttachmentIndex, " referenced as shading rate attachment in subpass ", subpass,
+                                                    " must be in SHADING_RATE state, but specified state is ", GetResourceStateString(AttchRef.State));
+                }
 
                 const auto& TileSize = Subpass.pShadingRateAttachment->TileSize;
                 if (TileSize[0] != 0 || TileSize[1] != 0)
