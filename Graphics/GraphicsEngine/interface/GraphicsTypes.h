@@ -2673,7 +2673,7 @@ DILIGENT_TYPED_ENUM(SPARSE_RESOURCE_CAP_FLAGS, Uint32)
 
     /// Indicates that single device memory object can be used to bind memory for different resource types.
 
-    /// \remarks  This capability is always enabled in Vulkan when sparse memory is available.
+    /// \remarks  This capability is always enabled in Vulkan when sparse resources feature is enabled.
     ///
     ///           In Direct3D12, this capability is enabled on D3D12_RESOURCE_HEAP_TIER_2 hardware
     ///           and above. If this capability is not reported, the device is D3D12_RESOURCE_HEAP_TIER_1 hardware,
@@ -3660,10 +3660,17 @@ struct SparseTextureFormatInfo
     /// Allowed bind flags for this format.
     BIND_FLAGS BindFlags    DEFAULT_INITIALIZER(BIND_NONE);
 
-    /// AZ TODO
+    /// The dimensions of the sparse texture tile.
+
+    /// \remarks
+    ///     When SPARSE_TEXTURE_FLAG_NONSTANDARD_BLOCK_SIZE flag is not set, the tile
+    ///     dimensions match the standard tile dimensions, see
+    ///     SPARSE_RESOURCE_CAP_FLAG_STANDARD_2D_TILE_SHAPE,
+    ///     SPARSE_RESOURCE_CAP_FLAG_STANDARD_2DMS_TILE_SHAPE,
+    ///     SPARSE_RESOURCE_CAP_FLAG_STANDARD_3D_TILE_SHAPE.
     Uint32     TileSize[3] DEFAULT_INITIALIZER({});
 
-    /// AZ TODO
+    /// Sparse texture flags, see Diligent::SPARSE_TEXTURE_FLAGS.
     SPARSE_TEXTURE_FLAGS Flags DEFAULT_INITIALIZER(SPARSE_TEXTURE_FLAG_NONE);
 };
 typedef struct SparseTextureFormatInfo SparseTextureFormatInfo;
