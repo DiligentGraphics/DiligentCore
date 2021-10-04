@@ -344,7 +344,7 @@ protected:
         const auto BlockSize = pDevice->GetAdapterInfo().SparseResources.StandardBlockSize;
 
         TextureDesc Desc;
-        Desc.BindFlags = BindFlags | BIND_SHADER_RESOURCE; // SRV to read in PS
+        Desc.BindFlags = BindFlags;
         if (Dim.z > 1)
         {
             VERIFY_EXPR(Dim.w <= 1);
@@ -1373,7 +1373,7 @@ TEST_P(SparseResourceTest, SparseTexture)
 
     const auto BlockSize = SparseRes.StandardBlockSize;
 
-    auto TexAndMem = CreateSparseTextureAndMemory(TexSize.Recast<Uint32>(), BIND_RENDER_TARGET, 14 * TexSize.w);
+    auto TexAndMem = CreateSparseTextureAndMemory(TexSize.Recast<Uint32>(), BIND_RENDER_TARGET | BIND_SHADER_RESOURCE, 14 * TexSize.w);
     auto pTexture  = TexAndMem.pTexture;
     ASSERT_NE(pTexture, nullptr);
     ASSERT_NE(pTexture->GetNativeHandle(), 0);
@@ -1566,7 +1566,7 @@ TEST_P(SparseResourceTest, SparseResidencyTexture)
 
     const auto BlockSize = SparseRes.StandardBlockSize;
 
-    auto TexAndMem = CreateSparseTextureAndMemory(TexSize.Recast<Uint32>(), BIND_RENDER_TARGET, 12 * TexSize.w);
+    auto TexAndMem = CreateSparseTextureAndMemory(TexSize.Recast<Uint32>(), BIND_RENDER_TARGET | BIND_SHADER_RESOURCE, 12 * TexSize.w);
     auto pTexture  = TexAndMem.pTexture;
     ASSERT_NE(pTexture, nullptr);
     ASSERT_NE(pTexture->GetNativeHandle(), 0);
@@ -1778,7 +1778,7 @@ TEST_P(SparseResourceTest, SparseResidencyAliasedTexture)
 
     const auto BlockSize = SparseRes.StandardBlockSize;
 
-    auto TexAndMem = CreateSparseTextureAndMemory(TexSize.Recast<Uint32>(), BIND_RENDER_TARGET, 12 * TexSize.w, /*Aliasing*/ true);
+    auto TexAndMem = CreateSparseTextureAndMemory(TexSize.Recast<Uint32>(), BIND_RENDER_TARGET | BIND_SHADER_RESOURCE, 12 * TexSize.w, /*Aliasing*/ true);
     auto pTexture  = TexAndMem.pTexture;
     ASSERT_NE(pTexture, nullptr);
     ASSERT_NE(pTexture->GetNativeHandle(), 0);
@@ -1958,7 +1958,7 @@ TEST_F(SparseResourceTest, SparseTexture3D)
 
     const auto BlockSize = SparseRes.StandardBlockSize;
 
-    auto TexAndMem = CreateSparseTextureAndMemory(TexSize, BIND_UNORDERED_ACCESS, 16);
+    auto TexAndMem = CreateSparseTextureAndMemory(TexSize, BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE, 16);
     auto pTexture  = TexAndMem.pTexture;
     ASSERT_NE(pTexture, nullptr);
     ASSERT_NE(pTexture->GetNativeHandle(), 0);
@@ -2110,7 +2110,7 @@ TEST_F(SparseResourceTest, LargeTexture2D)
     if ((Uint64{TexSize.x} * Uint64{TexSize.y} * BPP * 3) / 2 > MaxMemorySize)
         TexSize.y = std::max(1u, static_cast<Uint32>(MaxMemorySize / (Uint64{TexSize.x} * BPP * 3)) * 2);
 
-    auto TexAndMem = CreateSparseTextureAndMemory(TexSize, BIND_RENDER_TARGET, 8);
+    auto TexAndMem = CreateSparseTextureAndMemory(TexSize, BIND_SHADER_RESOURCE, 8);
     auto pTexture  = TexAndMem.pTexture;
     ASSERT_NE(pTexture, nullptr);
     ASSERT_NE(pTexture->GetNativeHandle(), 0);
@@ -2144,7 +2144,7 @@ TEST_F(SparseResourceTest, LargeTexture2DArray)
     if ((Uint64{TexSize.x} * Uint64{TexSize.y} * TexSize.w * BPP * 3) / 2 > MaxMemorySize)
         TexSize.y = std::max(1u, static_cast<Uint32>(MaxMemorySize / (Uint64{TexSize.x} * TexSize.w * BPP * 3)) * 2);
 
-    auto TexAndMem = CreateSparseTextureAndMemory(TexSize, BIND_RENDER_TARGET, 8);
+    auto TexAndMem = CreateSparseTextureAndMemory(TexSize, BIND_SHADER_RESOURCE, 8);
     auto pTexture  = TexAndMem.pTexture;
     ASSERT_NE(pTexture, nullptr);
     ASSERT_NE(pTexture->GetNativeHandle(), 0);
