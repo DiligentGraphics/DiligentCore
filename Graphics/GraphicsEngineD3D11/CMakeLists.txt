@@ -21,6 +21,7 @@ set(INCLUDE
     include/PipelineResourceSignatureD3D11Impl.hpp
     include/QueryD3D11Impl.hpp
     include/RenderDeviceD3D11Impl.hpp
+    include/ResourceD3D11Base.hpp
     include/RenderPassD3D11Impl.hpp
     include/SamplerD3D11Impl.hpp
     include/ShaderD3D11Impl.hpp

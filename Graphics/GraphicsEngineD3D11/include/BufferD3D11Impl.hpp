@@ -34,12 +34,15 @@
 
 #include "EngineD3D11ImplTraits.hpp"
 #include "BufferBase.hpp"
+#include "ResourceD3D11Base.hpp"
 
 namespace Diligent
 {
 
+struct IDeviceMemory;
+
 /// Buffer object implementation in Direct3D11 backend.
-class BufferD3D11Impl final : public BufferBase<EngineD3D11ImplTraits>
+class BufferD3D11Impl final : public BufferBase<EngineD3D11ImplTraits>, public ResourceD3D11Base
 {
 public:
     using TBufferBase = BufferBase<EngineD3D11ImplTraits>;

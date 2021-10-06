@@ -34,6 +34,7 @@
 #include "TextureBase.hpp"
 #include "TextureViewD3D11Impl.hpp"
 #include "RenderDeviceD3D11Impl.hpp"
+#include "ResourceD3D11Base.hpp"
 
 namespace Diligent
 {
@@ -41,7 +42,7 @@ namespace Diligent
 class FixedBlockMemoryAllocator;
 
 /// Base implementation of a texture object in Direct3D11 backend.
-class TextureBaseD3D11 : public TextureBase<EngineD3D11ImplTraits>
+class TextureBaseD3D11 : public TextureBase<EngineD3D11ImplTraits>, public ResourceD3D11Base
 {
 public:
     using TTextureBase = TextureBase<EngineD3D11ImplTraits>;

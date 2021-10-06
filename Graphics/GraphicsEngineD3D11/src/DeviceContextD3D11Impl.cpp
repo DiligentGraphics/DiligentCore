@@ -2262,38 +2262,10 @@ void DeviceContextD3D11Impl::BindSparseResourceMemory(const BindSparseResourceMe
     auto* pd3d11DeviceContext2 = static_cast<ID3D11DeviceContext2*>(m_pd3d11DeviceContext.p);
 
     D3D11TileMappingHelper TileMapping;
-    ID3D11Buffer*          pTilePool = nullptr;
-
-    auto UpdateTileMappingsAndClear = [&](ID3D11Resource* pResource) //
-    {
-        if (!TileMapping.Coordinates.empty())
-        {
-            TileMapping.Commit(pd3d11DeviceContext2, pResource, pTilePool);
-        }
-        TileMapping.Reset();
-        pTilePool = nullptr;
-    };
-
-    auto UpdateTilePool = [&](const auto& BindRange) //
-    {
-        const auto pMemD3D11 = RefCntAutoPtr<IDeviceMemoryD3D11>{BindRange.pMemory, IID_DeviceMemoryD3D11};
-        if (pTilePool != nullptr && pMemD3D11 != nullptr && pTilePool != pMemD3D11->GetD3D11TilePool())
-        {
-            LOG_ERROR_MESSAGE("IDeviceContext::BindSparseResourceMemory(): binding multiple memory objects to a single resource is not allowed in Direct3D11.");
-            // all previous mapping will be unmapped
-            TileMapping.Reset();
-        }
-
-        if (pMemD3D11 != nullptr)
-        {
-            pTilePool = pMemD3D11->GetD3D11TilePool();
-        }
-    };
-
     for (Uint32 i = 0; i < Attribs.NumBufferBinds; ++i)
     {
         const auto& BuffBind   = Attribs.pBufferBinds[i];
-        const auto* pBuffD3D11 = ClassPtrCast<const BufferD3D11Impl>(BuffBind.pBuffer);
+        auto*       pBuffD3D11 = ClassPtrCast<BufferD3D11Impl>(BuffBind.pBuffer);
 
         for (Uint32 r = 0; r < BuffBind.NumRanges; ++r)
         {
@@ -2301,17 +2273,16 @@ void DeviceContextD3D11Impl::BindSparseResourceMemory(const BindSparseResourceMe
             DEV_CHECK_ERR((BindRange.MemoryOffset % D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES) == 0,
                           "MemoryOffset must be a multiple of sparse block size");
 
-            UpdateTilePool(BindRange);
             TileMapping.AddBufferBindRange(BindRange);
         }
 
-        UpdateTileMappingsAndClear(pBuffD3D11->GetD3D11Buffer());
+        TileMapping.Commit(pd3d11DeviceContext2, pBuffD3D11);
     }
 
     for (Uint32 i = 0; i < Attribs.NumTextureBinds; ++i)
     {
         const auto& TexBind        = Attribs.pTextureBinds[i];
-        const auto* pTexD3D11      = ClassPtrCast<const TextureBaseD3D11>(TexBind.pTexture);
+        auto*       pTexD3D11      = ClassPtrCast<TextureBaseD3D11>(TexBind.pTexture);
         const auto& TexSparseProps = pTexD3D11->GetSparseProperties();
         const auto& TexDesc        = pTexD3D11->GetDesc();
         const auto  UseNVApi       = pTexD3D11->IsUsingNVApi();
@@ -2319,11 +2290,10 @@ void DeviceContextD3D11Impl::BindSparseResourceMemory(const BindSparseResourceMe
         for (Uint32 r = 0; r < TexBind.NumRanges; ++r)
         {
             const auto& BindRange = TexBind.pRanges[r];
-            UpdateTilePool(BindRange);
             TileMapping.AddTextureBindRange(BindRange, TexSparseProps, TexDesc, UseNVApi);
         }
 
-        UpdateTileMappingsAndClear(pTexD3D11->GetD3D11Texture());
+        TileMapping.Commit(pd3d11DeviceContext2, pTexD3D11);
     }
 }
 
