@@ -3800,10 +3800,12 @@ void DeviceContextVkImpl::BindSparseResourceMemory(const BindSparseResourceMemor
 
         for (Uint32 r = 0; r < BuffBind.NumRanges; ++r)
         {
-            const auto& SrcRange   = BuffBind.pRanges[r];
-            const auto* pMemVk     = ClassPtrCast<const DeviceMemoryVkImpl>(SrcRange.pMemory);
-            const auto  MemRangeVk = pMemVk ? pMemVk->GetRange(SrcRange.MemoryOffset, SrcRange.MemorySize) : DeviceMemoryRangeVk{};
+            const auto& SrcRange = BuffBind.pRanges[r];
+            const auto  pMemVk   = RefCntAutoPtr<IDeviceMemoryVk>{SrcRange.pMemory, IID_DeviceMemoryVk};
+            DEV_CHECK_ERR((SrcRange.pMemory != nullptr) == (pMemVk != nullptr),
+                          "Failed to query IDeviceMemoryVk interface from non-null memory object");
 
+            const auto MemRangeVk = pMemVk ? pMemVk->GetRange(SrcRange.MemoryOffset, SrcRange.MemorySize) : DeviceMemoryRangeVk{};
             DEV_CHECK_ERR(MemRangeVk.Offset % BuffSparseProps.BlockSize == 0,
                           "MemoryOffset must be multiple of the SparseBufferProperties::BlockSize");
 
@@ -3837,10 +3839,12 @@ void DeviceContextVkImpl::BindSparseResourceMemory(const BindSparseResourceMemor
         Uint32 NumImageBindsInRange = 0;
         for (Uint32 r = 0; r < TexBind.NumRanges; ++r)
         {
-            const auto& SrcRange   = TexBind.pRanges[r];
-            const auto* pMemVk     = ClassPtrCast<const DeviceMemoryVkImpl>(SrcRange.pMemory);
-            const auto  MemRangeVk = pMemVk ? pMemVk->GetRange(SrcRange.MemoryOffset, SrcRange.MemorySize) : DeviceMemoryRangeVk{};
+            const auto& SrcRange = TexBind.pRanges[r];
+            const auto  pMemVk   = RefCntAutoPtr<IDeviceMemoryVk>{SrcRange.pMemory, IID_DeviceMemoryVk};
+            DEV_CHECK_ERR((SrcRange.pMemory != nullptr) == (pMemVk != nullptr),
+                          "Failed to query IDeviceMemoryVk interface from non-null memory object");
 
+            const auto MemRangeVk = pMemVk ? pMemVk->GetRange(SrcRange.MemoryOffset, SrcRange.MemorySize) : DeviceMemoryRangeVk{};
             DEV_CHECK_ERR((MemRangeVk.Offset % TexSparseProps.BlockSize) == 0,
                           "MemoryOffset must be a multiple of the SparseTextureProperties::BlockSize");
 

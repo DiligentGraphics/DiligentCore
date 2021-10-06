@@ -3044,9 +3044,11 @@ void DeviceContextD3D12Impl::BindSparseResourceMemory(const BindSparseResourceMe
         for (Uint32 r = 0; r < BuffBind.NumRanges; ++r)
         {
             const auto& BindRange = BuffBind.pRanges[r];
-            const auto* pMemD3D12 = ClassPtrCast<const DeviceMemoryD3D12Impl>(BindRange.pMemory);
-            const auto  MemRange  = pMemD3D12 ? pMemD3D12->GetRange(BindRange.MemoryOffset, BindRange.MemorySize) : DeviceMemoryRangeD3D12{};
+            const auto  pMemD3D12 = RefCntAutoPtr<IDeviceMemoryD3D12>{BindRange.pMemory, IID_DeviceMemoryD3D12};
+            DEV_CHECK_ERR((BindRange.pMemory != nullptr) == (pMemD3D12 != nullptr),
+                          "Failed to query IDeviceMemoryD3D12 interface from non-null memory object");
 
+            const auto MemRange = pMemD3D12 ? pMemD3D12->GetRange(BindRange.MemoryOffset, BindRange.MemorySize) : DeviceMemoryRangeD3D12{};
             DEV_CHECK_ERR((MemRange.Offset % D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES) == 0,
                           "MemoryOffset must be a multiple of sparse block size");
 
@@ -3066,9 +3068,13 @@ void DeviceContextD3D12Impl::BindSparseResourceMemory(const BindSparseResourceMe
         for (Uint32 r = 0; r < TexBind.NumRanges; ++r)
         {
             const auto& BindRange = TexBind.pRanges[r];
-            const auto* pMemD3D12 = ClassPtrCast<const DeviceMemoryD3D12Impl>(BindRange.pMemory);
-            const auto  MemRange  = pMemD3D12 ? pMemD3D12->GetRange(BindRange.MemoryOffset, BindRange.MemorySize) : DeviceMemoryRangeD3D12{};
+            const auto  pMemD3D12 = RefCntAutoPtr<IDeviceMemoryD3D12>{BindRange.pMemory, IID_DeviceMemoryD3D12};
+            DEV_CHECK_ERR((BindRange.pMemory != nullptr) == (pMemD3D12 != nullptr),
+                          "Failed to query IDeviceMemoryD3D12 interface from non-null memory object");
 
+            const auto MemRange = pMemD3D12 ? pMemD3D12->GetRange(BindRange.MemoryOffset, BindRange.MemorySize) : DeviceMemoryRangeD3D12{};
+            DEV_CHECK_ERR((MemRange.Offset % D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES) == 0,
+                          "MemoryOffset must be a multiple of sparse block size");
             VERIFY_EXPR(pMemD3D12 == nullptr || pMemD3D12->IsUsingNVApi() == UseNVApi);
 
             auto& DstMapping = TileMappingMap[TileMappingKey{pTexD3D12->GetD3D12Resource(), MemRange.pHandle}];

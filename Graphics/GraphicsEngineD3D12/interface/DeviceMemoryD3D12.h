@@ -70,6 +70,9 @@ DILIGENT_BEGIN_INTERFACE(IDeviceMemoryD3D12, IDeviceMemory)
     VIRTUAL DeviceMemoryRangeD3D12 METHOD(GetRange)(THIS_
                                                     Uint64 Offset,
                                                     Uint64 Size) CONST PURE;
+
+    /// Returns true if the heap was created using NVApi.
+    VIRTUAL Bool METHOD(IsUsingNVApi)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -77,7 +80,8 @@ DILIGENT_END_INTERFACE
 
 #if DILIGENT_C_INTERFACE
 
-#    define IDeviceMemoryD3D12_GetRange(This, ...) CALL_IFACE_METHOD(DeviceMemoryD3D12, GetRange, This, __VA_ARGS__)
+#    define IDeviceMemoryD3D12_GetRange(This, ...)  CALL_IFACE_METHOD(DeviceMemoryD3D12, GetRange,     This, __VA_ARGS__)
+#    define IDeviceMemoryD3D12_IsUsingNVApi(This)   CALL_IFACE_METHOD(DeviceMemoryD3D12, IsUsingNVApi, This)
 
 #endif
 

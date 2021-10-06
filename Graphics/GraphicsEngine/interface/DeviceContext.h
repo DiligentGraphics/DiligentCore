@@ -1703,6 +1703,9 @@ struct SparseBufferMemoryBindRange
     ///                 all previous bindings are invalidated.
     ///     Vulkan & Direct3D12: different resource regions may be bound to different memory objects.
     ///     Vulkan: memory object must be compatible with the resource, use IDeviceMemory::IsCompatible() to ensure that.
+    ///
+    /// \note  Memory object can be created by the engine using IRenderDevice::CreateDeviceMemory() or can be implemented by the user.
+    ///        Memory object must implement interface methods for each backend (IDeviceMemoryD3D11, IDeviceMemoryD3D12, IDeviceMemoryVk).
     IDeviceMemory*   pMemory       DEFAULT_INITIALIZER(nullptr);
 
 #if DILIGENT_CPP_INTERFACE
@@ -1781,10 +1784,13 @@ struct SparseTextureMemoryBindRange
     /// \remarks
     ///     Direct3D11: the entire texture must use a single memory object; when a resource is bound to a new memory
     ///                 object, all previous bindings are invalidated.
-    ///     Vulkan & Direct3D12: different resource regions may be bound to different memory objects.    
+    ///     Vulkan & Direct3D12: different resource regions may be bound to different memory objects.
     ///     Metal: must be the same memory object that was used to create the sparse texture,
     ///            see IRenderDeviceMtl::CreateSparseTexture().
     ///     Vulkan: memory object must be compatible with the resource, use IDeviceMemory::IsCompatible() to ensure that.
+    ///
+    /// \note  Memory object can be created by the engine using IRenderDevice::CreateDeviceMemory() or can be implemented by the user.
+    ///        Memory object must implement interface methods for each backend (IDeviceMemoryD3D11, IDeviceMemoryD3D12, IDeviceMemoryVk).
     IDeviceMemory*   pMemory       DEFAULT_INITIALIZER(nullptr);
 };
 typedef struct SparseTextureMemoryBindRange SparseTextureMemoryBindRange;

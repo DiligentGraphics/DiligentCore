@@ -61,7 +61,8 @@ public:
     /// Implementation of IDeviceMemoryD3D12::GetRange().
     virtual DeviceMemoryRangeD3D12 DILIGENT_CALL_TYPE GetRange(Uint64 Offset, Uint64 Size) const override final;
 
-    bool IsUsingNVApi() const { return m_UseNVApi; }
+    /// Implementation of IDeviceMemoryD3D12::IsUsingNVApi().
+    virtual Bool DILIGENT_CALL_TYPE IsUsingNVApi() const override final { return m_UseNVApi; }
 
 private:
     D3D12_HEAP_FLAGS m_d3d12HeapFlags = D3D12_HEAP_FLAG_NONE;
