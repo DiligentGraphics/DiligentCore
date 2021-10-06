@@ -155,6 +155,18 @@ void DynamicTextureArray::CreateSparseTexture(IRenderDevice* pDevice)
         pDevice->CreateDeviceMemory(MemCI, &m_pMemory);
         DEV_CHECK_ERR(m_pMemory, "Failed to create device memory");
     }
+
+    // Create fences
+    if (pDevice->GetDeviceInfo().Features.NativeFence)
+    {
+        FenceDesc Desc;
+        Desc.Type = FENCE_TYPE_GENERAL;
+
+        Desc.Name = "Dynamic texture array before resize fence";
+        pDevice->CreateFence(Desc, &m_pBeforeResizeFence);
+        Desc.Name = "Dynamic texture array after resize fence";
+        pDevice->CreateFence(Desc, &m_pAfterResizeFence);
+    }
 }
 
 void DynamicTextureArray::CreateResources(IRenderDevice* pDevice)
@@ -283,6 +295,32 @@ void DynamicTextureArray::ResizeSparseTexture(IDeviceContext* pContext)
     BindSparseResourceMemoryAttribs BindMemAttribs;
     BindMemAttribs.NumTextureBinds = StaticCast<Uint32>(TexBinds.size());
     BindMemAttribs.pTextureBinds   = TexBinds.data();
+
+    Uint64  WaitFenceValue = 0;
+    IFence* pWaitFence     = nullptr;
+    if (m_pBeforeResizeFence)
+    {
+        WaitFenceValue = m_NextBeforeResizeFenceValue++;
+        pWaitFence     = m_pBeforeResizeFence;
+
+        pWaitFence->Signal(WaitFenceValue);
+        BindMemAttribs.NumWaitFences    = 1;
+        BindMemAttribs.pWaitFenceValues = &WaitFenceValue;
+        BindMemAttribs.ppWaitFences     = &pWaitFence;
+    }
+
+    Uint64  SignalFenceValue = 0;
+    IFence* pSignalFence     = nullptr;
+    if (m_pAfterResizeFence)
+    {
+        SignalFenceValue = m_NextAfterResizeFenceValue++;
+        pSignalFence     = m_pAfterResizeFence;
+
+        BindMemAttribs.NumSignalFences    = 1;
+        BindMemAttribs.pSignalFenceValues = &SignalFenceValue;
+        BindMemAttribs.ppSignalFences     = &pSignalFence;
+    }
+
     pContext->BindSparseResourceMemory(BindMemAttribs);
 
     if (RequiredMemSize < m_pMemory->GetCapacity())
@@ -396,6 +434,14 @@ ITexture* DynamicTextureArray::GetTexture(IRenderDevice*  pDevice,
                                           IDeviceContext* pContext)
 {
     CommitResize(pDevice, pContext, false /*AllowNull*/);
+
+    if (m_LastAfterResizeFenceValue + 1 < m_NextAfterResizeFenceValue)
+    {
+        VERIFY_EXPR(m_pAfterResizeFence);
+        m_LastAfterResizeFenceValue = m_NextAfterResizeFenceValue - 1;
+        pContext->DeviceWaitForFence(m_pAfterResizeFence, m_LastAfterResizeFenceValue);
+    }
+
     return m_pTexture;
 }
 

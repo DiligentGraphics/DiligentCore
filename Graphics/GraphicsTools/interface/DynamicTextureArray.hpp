@@ -34,6 +34,7 @@
 #include "../../GraphicsEngine/interface/RenderDevice.h"
 #include "../../GraphicsEngine/interface/DeviceContext.h"
 #include "../../GraphicsEngine/interface/Texture.h"
+#include "../../GraphicsEngine/interface/Fence.h"
 #include "../../GraphicsEngine/interface/DeviceMemory.h"
 #include "../../../Common/interface/RefCntAutoPtr.hpp"
 
@@ -182,6 +183,13 @@ private:
     RefCntAutoPtr<IDeviceMemory> m_pMemory;
 
     Uint64 m_MemoryPageSize = 0;
+
+    Uint64 m_NextBeforeResizeFenceValue = 1;
+    Uint64 m_NextAfterResizeFenceValue  = 1;
+    Uint64 m_LastAfterResizeFenceValue  = 0;
+
+    RefCntAutoPtr<IFence> m_pBeforeResizeFence;
+    RefCntAutoPtr<IFence> m_pAfterResizeFence;
 };
 
 } // namespace Diligent
