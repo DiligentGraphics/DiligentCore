@@ -1617,7 +1617,7 @@ inline void DeviceContextBase<ImplementationTraits>::UpdateBuffer(
 #ifdef DILIGENT_DEVELOPMENT
     {
         const auto& BuffDesc = ClassPtrCast<BufferImplType>(pBuffer)->GetDesc();
-        DEV_CHECK_ERR(BuffDesc.Usage == USAGE_DEFAULT, "Unable to update buffer '", BuffDesc.Name, "': only USAGE_DEFAULT buffers can be updated with UpdateData()");
+        DEV_CHECK_ERR(BuffDesc.Usage == USAGE_DEFAULT || BuffDesc.Usage == USAGE_SPARSE, "Unable to update buffer '", BuffDesc.Name, "': only USAGE_DEFAULT or USAGE_SPARSE buffers can be updated with UpdateData()");
         DEV_CHECK_ERR(Offset < BuffDesc.Size, "Unable to update buffer '", BuffDesc.Name, "': offset (", Offset, ") exceeds the buffer size (", BuffDesc.Size, ")");
         DEV_CHECK_ERR(Size + Offset <= BuffDesc.Size, "Unable to update buffer '", BuffDesc.Name, "': Update region [", Offset, ",", Size + Offset, ") is out of buffer bounds [0,", BuffDesc.Size, ")");
     }

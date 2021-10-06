@@ -2266,7 +2266,7 @@ void DeviceContextD3D11Impl::BindSparseResourceMemory(const BindSparseResourceMe
 
     auto UpdateTileMappingsAndClear = [&](ID3D11Resource* pResource) //
     {
-        if (pTilePool != nullptr && !TileMapping.Coordinates.empty())
+        if (!TileMapping.Coordinates.empty())
         {
             TileMapping.Commit(pd3d11DeviceContext2, pResource, pTilePool);
         }
@@ -2276,8 +2276,7 @@ void DeviceContextD3D11Impl::BindSparseResourceMemory(const BindSparseResourceMe
 
     auto UpdateTilePool = [&](const auto& BindRange) //
     {
-        const auto* pMemD3D11 = ClassPtrCast<const DeviceMemoryD3D11Impl>(BindRange.pMemory);
-
+        const auto pMemD3D11 = RefCntAutoPtr<IDeviceMemoryD3D11>{BindRange.pMemory, IID_DeviceMemoryD3D11};
         if (pTilePool != nullptr && pMemD3D11 != nullptr && pTilePool != pMemD3D11->GetD3D11TilePool())
         {
             LOG_ERROR_MESSAGE("IDeviceContext::BindSparseResourceMemory(): binding multiple memory objects to a single resource is not allowed in Direct3D11.");
