@@ -442,8 +442,6 @@ public:
             DynTexArrCI.NumSlicesInMemoryPage = m_ExtraSliceCount != 0 ? m_ExtraSliceCount : m_Desc.ArraySize;
             m_DynamicTexArray                 = std::make_unique<DynamicTextureArray>(pDevice, DynTexArrCI);
         }
-
-        m_Version.store(0);
     }
 
     ~DynamicTextureAtlasImpl()
@@ -606,7 +604,12 @@ public:
 
     virtual Uint32 GetVersion() const override final
     {
-        return m_Version.load();
+        if (m_DynamicTexArray)
+            return m_DynamicTexArray->GetVersion();
+        else if (m_pTexture)
+            return 1;
+        else
+            return 0;
     }
 
     void GetUsageStats(DynamicTextureAtlasUsageStats& Stats) const override final
@@ -689,8 +692,7 @@ private:
 
     FixedBlockMemoryAllocator m_SuballocationsAllocator;
 
-    std::atomic<Uint32> m_Version{0};
-    std::atomic<Int32>  m_AllocationCount{0};
+    std::atomic<Int32> m_AllocationCount{0};
 
     std::atomic<Int64> m_AllocatedArea{0};
     std::atomic<Int64> m_UsedArea{0};
