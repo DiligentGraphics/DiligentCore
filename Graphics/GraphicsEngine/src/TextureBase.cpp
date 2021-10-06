@@ -194,21 +194,41 @@ void ValidateTextureDesc(const TextureDesc& Desc, const IRenderDevice* pDevice) 
         LOG_TEXTURE_ERROR_AND_THROW("USAGE_DYNAMIC textures may only be used in one immediate device context.");
     }
 
+    const auto& SRProps = pDevice->GetAdapterInfo().ShadingRate;
+    if (Desc.MiscFlags & MISC_TEXTURE_FLAG_SUBSAMPLED)
+    {
+        if (!pDevice->GetDeviceInfo().Features.VariableRateShading)
+            LOG_TEXTURE_ERROR_AND_THROW("MISC_TEXTURE_FLAG_SUBSAMPLED requires VariableRateShading feature.");
+
+        if (pDevice->GetDeviceInfo().IsMetalDevice())
+            LOG_TEXTURE_ERROR_AND_THROW("MISC_TEXTURE_FLAG_SUBSAMPLED is not supported in Metal, use IRasterizationRateMapMtl to implement VRS in Metal");
+
+        if ((SRProps.CapFlags & SHADING_RATE_CAP_FLAG_SUBSAMPLED_RENDER_TARGET) == 0)
+            LOG_TEXTURE_ERROR_AND_THROW("MISC_TEXTURE_FLAG_SUBSAMPLED requires SHADING_RATE_CAP_FLAG_SUBSAMPLED_RENDER_TARGET capability.");
+
+        if ((Desc.BindFlags & (BIND_RENDER_TARGET | BIND_DEPTH_STENCIL)) == 0)
+            LOG_TEXTURE_ERROR_AND_THROW("Subsampled texture must use one of BIND_RENDER_TARGET or BIND_DEPTH_STENCIL bind flags");
+
+        if (Desc.BindFlags & BIND_SHADING_RATE)
+            LOG_TEXTURE_ERROR_AND_THROW("MISC_TEXTURE_FLAG_SUBSAMPLED is not compatible with BIND_SHADING_RATE");
+    }
+
     if (Desc.BindFlags & BIND_SHADING_RATE)
     {
-        const auto& SRProps = AdapterInfo.ShadingRate;
+        if (!pDevice->GetDeviceInfo().Features.VariableRateShading)
+            LOG_TEXTURE_ERROR_AND_THROW("BIND_SHADING_RATE requires VariableRateShading feature.");
 
-        if (!DeviceInfo.Features.VariableRateShading)
-            LOG_TEXTURE_ERROR_AND_THROW("BIND_FLAG_SHADING_RATE requires VariableRateShading feature.");
+        if (pDevice->GetDeviceInfo().IsMetalDevice())
+            LOG_TEXTURE_ERROR_AND_THROW("BIND_SHADING_RATE is not supported in Metal, use IRasterizationRateMapMtl instead.");
 
         if (DeviceInfo.IsMetalDevice())
             LOG_TEXTURE_ERROR_AND_THROW("BIND_FLAG_SHADING_RATE is not supported in Metal, use IRasterizationRateMapMtl instead.");
 
         if ((SRProps.CapFlags & SHADING_RATE_CAP_FLAG_TEXTURE_BASED) == 0)
-            LOG_TEXTURE_ERROR_AND_THROW("BIND_FLAG_SHADING_RATE requires SHADING_RATE_CAP_FLAG_TEXTURE_BASED capability.");
+            LOG_TEXTURE_ERROR_AND_THROW("BIND_SHADING_RATE requires SHADING_RATE_CAP_FLAG_TEXTURE_BASED capability.");
 
         if (Desc.SampleCount != 1)
-            LOG_TEXTURE_ERROR_AND_THROW("BIND_FLAG_SHADING_RATE is not allowed for multisample texture.");
+            LOG_TEXTURE_ERROR_AND_THROW("BIND_SHADING_RATE is not allowed for multisample texture.");
 
         if (Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY && Desc.ArraySize > 1 && (SRProps.CapFlags & SHADING_RATE_CAP_FLAG_TEXTURE_ARRAY) == 0)
             LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture arrays require SHADING_RATE_CAP_FLAG_TEXTURE_ARRAY capability");
@@ -216,17 +236,12 @@ void ValidateTextureDesc(const TextureDesc& Desc, const IRenderDevice* pDevice) 
         if (Desc.Usage != USAGE_DEFAULT && Desc.Usage != USAGE_IMMUTABLE)
             LOG_TEXTURE_ERROR_AND_THROW("Shading rate textures only allow USAGE_DEFAULT or USAGE_IMMUTABLE.");
 
-        if (DeviceInfo.Type == RENDER_DEVICE_TYPE_D3D12)
-        {
-            if (Desc.BindFlags & (BIND_RENDER_TARGET | BIND_DEPTH_STENCIL))
-                LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture is not compatible with BIND_RENDER_TARGET and BIND_DEPTH_STENCIL in Direct3D12.");
+        // For Direct3D12 and Vulkan with VK_EXT_fragment_density_map
+        if (Desc.MipLevels != 1)
+            LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture must have 1 mip level.");
 
-            if (Desc.MipLevels != 1)
-                LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture must have 1 mip level in Direct3D12.");
-
-            if (Desc.Format != TEX_FORMAT_R8_UINT)
-                LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture format must be R8_UINT.");
-        }
+        if ((Desc.BindFlags & ~SRProps.BindFlags) != 0)
+            LOG_TEXTURE_ERROR_AND_THROW("the following bind flags are not allowed for a shading rate texture: ", GetBindFlagsString(Desc.BindFlags & ~SRProps.BindFlags, ", "), '.');
 
         // TODO: Vulkan allows to create 2D texture array and then use single slice for view even if SHADING_RATE_CAP_FLAG_TEXTURE_ARRAY capability is not supported
         if (Desc.Type != RESOURCE_DIM_TEX_2D && !(Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY && (SRProps.CapFlags & SHADING_RATE_CAP_FLAG_TEXTURE_ARRAY) != 0))
@@ -235,13 +250,13 @@ void ValidateTextureDesc(const TextureDesc& Desc, const IRenderDevice* pDevice) 
         switch (SRProps.Format)
         {
             case SHADING_RATE_FORMAT_PALETTE:
-                if (Desc.Format != TEX_FORMAT_R8_UINT && Desc.Format != TEX_FORMAT_R8_TYPELESS)
-                    LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture format must be R8_UINT or TEX_FORMAT_R8_TYPELESS.");
+                if (Desc.Format != TEX_FORMAT_R8_UINT)
+                    LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture format must be R8_UINT.");
                 break;
 
             case SHADING_RATE_FORMAT_UNORM8:
-                if (Desc.Format != TEX_FORMAT_RG8_UNORM && Desc.Format != TEX_FORMAT_RG8_TYPELESS)
-                    LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture format must be RG8_UNORM or TEX_FORMAT_RG8_TYPELESS.");
+                if (Desc.Format != TEX_FORMAT_RG8_UNORM)
+                    LOG_TEXTURE_ERROR_AND_THROW("Shading rate texture format must be RG8_UNORM.");
                 break;
 
             case SHADING_RATE_FORMAT_COL_ROW_FP32:
@@ -656,6 +671,12 @@ void ValidatedAndCorrectTextureViewDesc(const TextureDesc& TexDesc, TextureViewD
 
         if (ViewDesc.ViewType != TEXTURE_VIEW_SHADER_RESOURCE)
             TEX_VIEW_VALIDATION_ERROR("TEXTURE_VIEW_FLAG_ALLOW_MIP_MAP_GENERATION flag can only be used with TEXTURE_VIEW_SHADER_RESOURCE view type.");
+    }
+
+    if (ViewDesc.ViewType == TEXTURE_VIEW_SHADING_RATE)
+    {
+        if ((TexDesc.BindFlags & BIND_SHADING_RATE) == 0)
+            TEX_VIEW_VALIDATION_ERROR("To create TEXTURE_VIEW_SHADING_RATE, the texture must be created with BIND_SHADING_RATE flag");
     }
 
 #undef TEX_VIEW_VALIDATION_ERROR

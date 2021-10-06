@@ -1,5 +1,6 @@
 ## Current progress
 
+* Added subsampled render targets for VRS (API Version 250011)
 * Added sparse resources (API Version 250010)
 * Updated API to use 64bit offsets for GPU memory (API Version 250009)
 * Reworked draw indirect command attributes (moved buffers into the attribs structs), removed DrawMeshIndirectCount (API Version 250008)

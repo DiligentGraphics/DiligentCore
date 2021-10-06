@@ -65,7 +65,14 @@ DILIGENT_TYPED_ENUM(MISC_TEXTURE_FLAGS, Uint8)
 
     /// For sparse textures, allow binding the same memory range in different texture
     /// regions or in different sparse textures.
-    MISC_TEXTURE_FLAG_SPARSE_ALIASING = 1u << 2
+    MISC_TEXTURE_FLAG_SPARSE_ALIASING = 1u << 2,
+
+    /// The texture will be used as an intermediate render target for rendering with
+    /// texture-based variable rate shading.
+    /// Requires SHADING_RATE_CAP_FLAG_SUBSAMPLED_RENDER_TARGET capability.
+    /// 
+    /// \note  Copy operations are not supported for subsampled textures.
+    MISC_TEXTURE_FLAG_SUBSAMPLED      = 1u << 3
 };
 DEFINE_FLAG_ENUM_OPERATORS(MISC_TEXTURE_FLAGS)
 

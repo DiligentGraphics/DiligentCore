@@ -121,6 +121,11 @@ VkImageCreateInfo TextureDescToVkImageCreateInfo(const TextureDesc& Desc, const 
         }
 #endif
     }
+    if (Desc.MiscFlags & MISC_TEXTURE_FLAG_SUBSAMPLED)
+    {
+        ImageCI.usage &= ~(VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_STORAGE_BIT);
+        ImageCI.flags |= VK_IMAGE_CREATE_SUBSAMPLED_BIT_EXT;
+    }
 
     ImageCI.sharingMode           = VK_SHARING_MODE_EXCLUSIVE;
     ImageCI.queueFamilyIndexCount = 0;
@@ -720,8 +725,26 @@ VulkanUtilities::ImageViewWrapper TextureVkImpl::CreateImageView(TextureViewDesc
 
     if (ViewDesc.ViewType == TEXTURE_VIEW_SHADING_RATE)
     {
-        if (LogicalDevice.GetEnabledExtFeatures().FragmentDensityMap.fragmentDensityMapDynamic != VK_FALSE)
-            ImageViewCI.flags |= VK_IMAGE_VIEW_CREATE_FRAGMENT_DENSITY_MAP_DYNAMIC_BIT_EXT;
+        if (LogicalDevice.GetEnabledExtFeatures().FragmentDensityMap.fragmentDensityMap != VK_FALSE)
+        {
+            const auto ShadingRateTexAccess = m_pDevice->GetAdapterInfo().ShadingRate.ShadingRateTextureAccess;
+            switch (ShadingRateTexAccess)
+            {
+                case SHADING_RATE_TEXTURE_ACCESS_ON_GPU:
+                    ImageViewCI.flags |= VK_IMAGE_VIEW_CREATE_FRAGMENT_DENSITY_MAP_DYNAMIC_BIT_EXT;
+                    break;
+
+                case SHADING_RATE_TEXTURE_ACCESS_ON_SUBMIT:
+                    ImageViewCI.flags |= VK_IMAGE_VIEW_CREATE_FRAGMENT_DENSITY_MAP_DEFERRED_BIT_EXT;
+                    break;
+
+                case SHADING_RATE_TEXTURE_ACCESS_ON_SET_RTV:
+                    break;
+
+                default:
+                    UNEXPECTED("Unexpected shading rate access type");
+            }
+        }
     }
 
     std::string ViewName = "Image view for \'";

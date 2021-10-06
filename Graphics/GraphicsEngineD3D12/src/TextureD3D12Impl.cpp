@@ -492,7 +492,7 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
         InitSparseProperties();
 }
 
-void TextureD3D12Impl::CreateViewInternal(const struct TextureViewDesc& ViewDesc, ITextureView** ppView, bool bIsDefaultView)
+void TextureD3D12Impl::CreateViewInternal(const TextureViewDesc& ViewDesc, ITextureView** ppView, bool bIsDefaultView)
 {
     VERIFY(ppView != nullptr, "View pointer address is null");
     if (!ppView) return;

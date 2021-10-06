@@ -66,12 +66,12 @@ DEFINE_FLAG_ENUM_OPERATORS(UAV_ACCESS_FLAG)
 DILIGENT_TYPED_ENUM(TEXTURE_VIEW_FLAGS, Uint8)
 {
     /// No flags
-    TEXTURE_VIEW_FLAG_NONE                      = 0x00,
+    TEXTURE_VIEW_FLAG_NONE                     = 0,
 
     /// Allow automatic mipmap generation for this view.
     /// This flag is only allowed for TEXTURE_VIEW_SHADER_RESOURCE view type.
     /// The texture must be created with MISC_TEXTURE_FLAG_GENERATE_MIPS flag.
-    TEXTURE_VIEW_FLAG_ALLOW_MIP_MAP_GENERATION = 0x01,
+    TEXTURE_VIEW_FLAG_ALLOW_MIP_MAP_GENERATION = 1u << 0
 };
 DEFINE_FLAG_ENUM_OPERATORS(TEXTURE_VIEW_FLAGS)
 

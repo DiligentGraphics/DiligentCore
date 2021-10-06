@@ -2450,56 +2450,86 @@ typedef struct ShadingRateMode ShadingRateMode;
 DILIGENT_TYPED_ENUM(SHADING_RATE_CAP_FLAGS, Uint16)
 {
     /// No shading rate capabilities.
-    SHADING_RATE_CAP_FLAG_NONE                = 0,
+    SHADING_RATE_CAP_FLAG_NONE                                  = 0,
 
     /// Shading rate can be specified for the whole draw call using IDeviceContext::SetShadingRate().
-    SHADING_RATE_CAP_FLAG_PER_DRAW            = 1u << 0,
+    SHADING_RATE_CAP_FLAG_PER_DRAW                              = 1u << 0,
 
     /// Shading rate can be specified in the vertex shader for each primitive and combined with the base rate.
     /// Use IDeviceContext::SetShadingRate() to set base rate and per-primitive combiner.
-    SHADING_RATE_CAP_FLAG_PER_PRIMITIVE       = 1u << 1,
+    SHADING_RATE_CAP_FLAG_PER_PRIMITIVE                         = 1u << 1,
 
     /// Shading rate is specified by a texture, each texel defines a shading rate for the tile.
     /// Supported tile size is specified in ShadingRateProperties::MinTileSize/MaxTileSize.
     /// Use IDeviceContext::SetShadingRate() to set the base rate and texture combiner.
     /// Use IDeviceContext::SetRenderTargetsExt() to set the shading rate texture.
-    SHADING_RATE_CAP_FLAG_TEXTURE_BASED       = 1u << 2,
+    SHADING_RATE_CAP_FLAG_TEXTURE_BASED                         = 1u << 2,
 
     /// Allows to set zero bits in GraphicsPipelineDesc::SampleMask
     /// with the enabled variable rate shading.
-    SHADING_RATE_CAP_FLAG_SAMPLE_MASK         = 1u << 3,
+    SHADING_RATE_CAP_FLAG_SAMPLE_MASK                           = 1u << 3,
 
     /// Allows to get or set SampleMask in the shader with enabled variable rate shading.
     /// HLSL: SV_Coverage, GLSL: gl_SampleMaskIn, gl_SampleMask.
-    SHADING_RATE_CAP_FLAG_SHADER_SAMPLE_MASK  = 1u << 4,
+    SHADING_RATE_CAP_FLAG_SHADER_SAMPLE_MASK                    = 1u << 4,
 
     /// Allows to write depth and stencil from the pixel shader.
-    SHADING_RATE_CAP_FLAG_SHADER_DEPTH_STENCIL_WRITE = 1u << 5,
+    SHADING_RATE_CAP_FLAG_SHADER_DEPTH_STENCIL_WRITE            = 1u << 5,
 
     /// Allows to use per primitive shading rate when multiple viewports are used.
     SHADING_RATE_CAP_FLAG_PER_PRIMITIVE_WITH_MULTIPLE_VIEWPORTS = 1u << 6,
 
     /// Shading rate attachment for render pass must be the same for all subpasses.
     /// See SubpassDesc::pShadingRateAttachment.
-    SHADING_RATE_CAP_FLAG_SAME_TEXTURE_FOR_WHOLE_RENDERPASS = 1u << 7,
+    SHADING_RATE_CAP_FLAG_SAME_TEXTURE_FOR_WHOLE_RENDERPASS     = 1u << 7,
 
     /// Allows to use texture 2D array for shading rate.
-    SHADING_RATE_CAP_FLAG_TEXTURE_ARRAY            = 1u << 8,
+    SHADING_RATE_CAP_FLAG_TEXTURE_ARRAY                         = 1u << 8,
 
     /// Allows to read current shading rate in the pixel shader.
     /// HLSL: in SV_ShadingRate, GLSL: gl_ShadingRate.
-    SHADING_RATE_CAP_FLAG_SHADING_RATE_SHADER_INPUT = 1u << 9,
-
-    /// Indicates that VRS texture is accessed on the GPU side.
-    /// If the flag is not set, the texture content is accessed
-    /// on the CPU side when render pass begins.
-    SHADING_RATE_CAP_FLAG_TEXTURE_DEVICE_ACCESS     = 1u << 10,
+    SHADING_RATE_CAP_FLAG_SHADING_RATE_SHADER_INPUT             = 1u << 9,
 
     /// Indicates that driver may generate additional fragment shader invocations
     /// in order to make transitions between fragment areas with different shading rates more smooth.
-    SHADING_RATE_CAP_FLAG_ADDITIONAL_INVOCATIONS    = 1u << 11,
+    SHADING_RATE_CAP_FLAG_ADDITIONAL_INVOCATIONS                = 1u << 10,
+
+    /// Indicates that there are no additional requirements for render targets
+    /// that are used in texture-based VRS rendering.
+    SHADING_RATE_CAP_FLAG_NON_SUBSAMPLED_RENDER_TARGET          = 1u << 11,
+
+    /// Indicates that render targets that are used in texture-based VRS rendering
+    /// must be created with MISC_TEXTURE_FLAG_SUBSAMPLED flag.
+    /// Intermediate targets must be scaled to the final resolution in a separate pass.
+    /// Intermediate targets can only be sampled with an immutable sampler created with SAMPLER_FLAG_SUBSAMPLED flag.
+    /// If supported, rendering to the subsampled render targets may be more optimal.
+    /// 
+    /// \note  Both NON_SUBSAMPLED and SUBSAMPLED modes may be supported by a device.
+    SHADING_RATE_CAP_FLAG_SUBSAMPLED_RENDER_TARGET              = 1u << 12
 };
 DEFINE_FLAG_ENUM_OPERATORS(SHADING_RATE_CAP_FLAGS);
+
+/// Defines how the shading rate texture is accessed
+DILIGENT_TYPED_ENUM(SHADING_RATE_TEXTURE_ACCESS, Uint8)
+{
+    /// Shading rate texture access type is unknown
+    SHADING_RATE_TEXTURE_ACCESS_UNKNOWN = 0,
+
+    /// Shading rate texture is accessed by the GPU when command buffer is executed.
+    SHADING_RATE_TEXTURE_ACCESS_ON_GPU,
+
+    /// Shading rate texture is accessed by the CPU when command buffer is submitted
+    /// for execution. An application is not allowed to modify the texture until the command
+    /// buffer is executed by the GPU. Feneces or other synchronization methods must be used
+    /// to control the access to the texture.
+    SHADING_RATE_TEXTURE_ACCESS_ON_SUBMIT,
+
+    /// Shading rate texture is accessed by the CPU when SetRenderTargetsEx or BeginRenderPass
+    /// command is executed. An application is not allowed to modify the texture until the
+    /// command buffer is executed by GPU. Feneces or other synchronization methods must be used
+    /// to control the access to the texture.
+    SHADING_RATE_TEXTURE_ACCESS_ON_SET_RTV
+};
 
 /// Shading rate properties
 struct ShadingRateProperties
@@ -2509,7 +2539,7 @@ struct ShadingRateProperties
     ShadingRateMode        ShadingRates [DILIGENT_MAX_SHADING_RATES]  DEFAULT_INITIALIZER({});
 
     /// The number of valid elements in ShadingRates array.
-    Uint32                 NumShadingRates DEFAULT_INITIALIZER(0);
+    Uint8                  NumShadingRates DEFAULT_INITIALIZER(0);
 
     /// Shading rate capability flags, see Diligent::SHADING_RATE_CAP_FLAGS.
     SHADING_RATE_CAP_FLAGS CapFlags       DEFAULT_INITIALIZER(SHADING_RATE_CAP_FLAG_NONE);
@@ -2520,6 +2550,12 @@ struct ShadingRateProperties
     /// Indicates which shading rate texture format is used by this device (see Diligent::SHADING_RATE_FORMAT).
     SHADING_RATE_FORMAT    Format         DEFAULT_INITIALIZER(SHADING_RATE_FORMAT_UNKNOWN);
 
+    /// Shading rate texture access type (see Diligent::SHADING_RATE_TEXTURE_ACCESS).
+    SHADING_RATE_TEXTURE_ACCESS ShadingRateTextureAccess DEFAULT_INITIALIZER(SHADING_RATE_TEXTURE_ACCESS_UNKNOWN);
+
+    /// Indicates which bind flags are allowed for shading rate texture.
+    BIND_FLAGS             BindFlags      DEFAULT_INITIALIZER(BIND_NONE);
+
     /// Minimal supported tile size.
     /// Shading rate texture size must be less than or equal to (framebuffer_size / MinTileSize).
     Uint32                 MinTileSize[2] DEFAULT_INITIALIZER({});
@@ -2527,6 +2563,9 @@ struct ShadingRateProperties
     /// Maximum supported tile size.
     /// Shading rate texture size must be greater than or equal to (framebuffer_size / MaxTileSize).
     Uint32                 MaxTileSize[2] DEFAULT_INITIALIZER({});
+
+    /// Maximum size of the texture array created with MISC_TEXTURE_FLAG_SUBSAMPLED flag.
+    Uint32                 MaxSabsampledArraySlices DEFAULT_INITIALIZER(0);
 };
 typedef struct ShadingRateProperties ShadingRateProperties;
 

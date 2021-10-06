@@ -62,6 +62,7 @@ struct hash<Diligent::SamplerDesc>
             static_cast<int>(SamDesc.AddressU),
             static_cast<int>(SamDesc.AddressV),
             static_cast<int>(SamDesc.AddressW),
+            static_cast<int>(SamDesc.Flags),
             SamDesc.MipLODBias,
             SamDesc.MaxAnisotropy,
             static_cast<int>(SamDesc.ComparisonFunc),

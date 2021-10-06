@@ -31,7 +31,7 @@
 namespace Diligent
 {
 
-void ValidateFramebufferDesc(const FramebufferDesc& Desc, RENDER_DEVICE_TYPE DevType) noexcept(false)
+void ValidateFramebufferDesc(const FramebufferDesc& Desc, IRenderDevice* pDevice) noexcept(false)
 {
 #define LOG_FRAMEBUFFER_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of framebuffer '", (Desc.Name ? Desc.Name : ""), "' is invalid: ", ##__VA_ARGS__)
 
@@ -69,6 +69,8 @@ void ValidateFramebufferDesc(const FramebufferDesc& Desc, RENDER_DEVICE_TYPE Dev
                                         ") in the render pass '", RPDesc.Name, "'.");
     }
 
+    const bool IsMetal = pDevice->GetDeviceInfo().IsMetalDevice();
+
     for (Uint32 i = 0; i < RPDesc.AttachmentCount; ++i)
     {
         if (Desc.ppAttachments[i] == nullptr)
@@ -78,7 +80,7 @@ void ValidateFramebufferDesc(const FramebufferDesc& Desc, RENDER_DEVICE_TYPE Dev
         const auto& ViewDesc = Desc.ppAttachments[i]->GetDesc();
 
         // Metal backend has different implementation for ITextureView with shading rate view.
-        if (DevType == RENDER_DEVICE_TYPE_METAL && ViewDesc.ViewType == TEXTURE_VIEW_SHADING_RATE)
+        if (IsMetal && ViewDesc.ViewType == TEXTURE_VIEW_SHADING_RATE)
         {
             VERIFY_EXPR(Desc.ppAttachments[i]->GetTexture() == nullptr);
             continue;
@@ -328,7 +330,12 @@ void ValidateFramebufferDesc(const FramebufferDesc& Desc, RENDER_DEVICE_TYPE Dev
                 }
             }
         }
+    }
 
+    bool IsVRSEnabled = false;
+    for (Uint32 i = 0; i < RPDesc.SubpassCount; ++i)
+    {
+        const auto& Subpass = RPDesc.pSubpasses[i];
         if (Subpass.pShadingRateAttachment != nullptr)
         {
             const auto& AttchRef = *Subpass.pShadingRateAttachment;
@@ -356,7 +363,7 @@ void ValidateFramebufferDesc(const FramebufferDesc& Desc, RENDER_DEVICE_TYPE Dev
                                                     "', but is not a TEXTURE_VIEW_SHADING_RATE.");
                 }
 
-                if (DevType == RENDER_DEVICE_TYPE_METAL)
+                if (IsMetal)
                 {
                     VERIFY_EXPR(pAttachment->GetTexture() == nullptr);
                 }
@@ -371,6 +378,32 @@ void ValidateFramebufferDesc(const FramebufferDesc& Desc, RENDER_DEVICE_TYPE Dev
                                                         "', but was not created with BIND_SHADING_RATE bind flag.");
                     }
                 }
+
+                IsVRSEnabled = true;
+            }
+        }
+    }
+
+    const auto& SRProps = pDevice->GetAdapterInfo().ShadingRate;
+    if (!IsMetal && IsVRSEnabled && (SRProps.CapFlags & SHADING_RATE_CAP_FLAG_NON_SUBSAMPLED_RENDER_TARGET) == 0)
+    {
+        VERIFY((SRProps.CapFlags & SHADING_RATE_CAP_FLAG_SUBSAMPLED_RENDER_TARGET) != 0,
+               "One of NON_SUBSAMPLED_RENDER_TARGET or SUBSAMPLED_RENDER_TARGET caps must be presented if texture-based VRS is supported");
+
+        for (Uint32 i = 0; i < RPDesc.AttachmentCount; ++i)
+        {
+            if (Desc.ppAttachments[i] == nullptr)
+                continue;
+
+            if (Desc.ppAttachments[i]->GetDesc().ViewType == TEXTURE_VIEW_SHADING_RATE)
+                continue;
+
+            const auto& TexDesc = Desc.ppAttachments[i]->GetTexture()->GetDesc();
+            if ((TexDesc.MiscFlags & MISC_TEXTURE_FLAG_SUBSAMPLED) == 0)
+            {
+                LOG_FRAMEBUFFER_ERROR_AND_THROW("attachment ", i, " must be created with MISC_TEXTURE_FLAG_SUBSAMPLED flag. ",
+                                                "If capability SHADING_RATE_CAP_FLAG_NON_SUBSAMPLED_RENDER_TARGET is not supported, all ",
+                                                "attachments except shading rate texture must have been created with a MISC_TEXTURE_FLAG_SUBSAMPLED flag.");
             }
         }
     }

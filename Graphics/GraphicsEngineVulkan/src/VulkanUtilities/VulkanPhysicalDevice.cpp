@@ -347,8 +347,10 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice      vkDevice,
             // Disable feature if image format is not supported
             if (!(FmtProps.optimalTilingFeatures & VK_FORMAT_FEATURE_FRAGMENT_DENSITY_MAP_BIT_EXT))
             {
-                m_ExtFeatures.FragmentDensityMap   = {};
-                m_ExtProperties.FragmentDensityMap = {};
+                m_ExtFeatures.FragmentDensityMap    = {};
+                m_ExtProperties.FragmentDensityMap  = {};
+                m_ExtFeatures.FragmentDensityMap2   = {};
+                m_ExtProperties.FragmentDensityMap2 = {};
             }
         }
     }

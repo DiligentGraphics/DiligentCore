@@ -968,7 +968,7 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
                     ShadingRateProps.CapFlags |=
                         SHADING_RATE_CAP_FLAG_PER_PRIMITIVE |
                         SHADING_RATE_CAP_FLAG_TEXTURE_BASED |
-                        SHADING_RATE_CAP_FLAG_TEXTURE_DEVICE_ACCESS |
+                        SHADING_RATE_CAP_FLAG_NON_SUBSAMPLED_RENDER_TARGET |
                         SHADING_RATE_CAP_FLAG_SAMPLE_MASK |
                         SHADING_RATE_CAP_FLAG_SHADER_SAMPLE_MASK |
                         SHADING_RATE_CAP_FLAG_SHADING_RATE_SHADER_INPUT;
@@ -981,6 +981,8 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
                         SHADING_RATE_COMBINER_MIN |
                         SHADING_RATE_COMBINER_MAX |
                         SHADING_RATE_COMBINER_SUM;
+                    ShadingRateProps.BindFlags                = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS | BIND_SHADING_RATE;
+                    ShadingRateProps.ShadingRateTextureAccess = SHADING_RATE_TEXTURE_ACCESS_ON_GPU;
                 }
                 if (d3d12Features6.PerPrimitiveShadingRateSupportedWithViewportIndexing != FALSE)
                 {
@@ -992,7 +994,7 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
                 // TODO: add support for D3D12_FEATURE_DATA_D3D12_OPTIONS10
 
 #    if defined(_MSC_VER) && defined(_WIN64)
-                static_assert(sizeof(ShadingRateProps) == 44, "Did you add a new member to ShadingRateProperties? Please initialize it here.");
+                static_assert(sizeof(ShadingRateProps) == 52, "Did you add a new member to ShadingRateProperties? Please initialize it here.");
 #    endif
             }
 #endif // NTDDI_WIN10_19H1

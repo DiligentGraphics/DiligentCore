@@ -42,6 +42,23 @@ static const INTERFACE_ID IID_Sampler =
 
 // clang-format off
 
+/// Sampler flags
+DILIGENT_TYPED_ENUM(SAMPLER_FLAGS, Uint8)
+{
+    SAMPLER_FLAG_NONE        = 0,
+
+    /// Specifies that the sampler will read from a subsampled texture created with MISC_TEXTURE_FLAG_SUBSAMPLED flag.
+    /// Requires SHADING_RATE_CAP_FLAG_SUBSAMPLED_RENDER_TARGET capability.
+    SAMPLER_FLAG_SUBSAMPLED  = 1u << 0,
+
+    /// Specifies that the GPU is allowed to use fast approximation when reconstructing full-resolution value from
+    /// the subsampled texture accessed by the sampler.
+    /// Requires SHADING_RATE_CAP_FLAG_SUBSAMPLED_RENDER_TARGET capability.
+    SAMPLER_FLAG_SUBSAMPLED_COARSE_RECONSTRUCTION = 1u << 1,
+};
+DEFINE_FLAG_ENUM_OPERATORS(SAMPLER_FLAGS)
+
+
 /// Sampler description
 
 /// This structure describes the sampler state which is used in a call to
@@ -83,6 +100,9 @@ struct SamplerDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// Default value: Diligent::TEXTURE_ADDRESS_CLAMP.
     TEXTURE_ADDRESS_MODE AddressW   DEFAULT_INITIALIZER(TEXTURE_ADDRESS_CLAMP);
 
+    /// Sampler flags, see Diligent::SAMPLER_FLAGS for details.
+    SAMPLER_FLAGS        Flags      DEFAULT_INITIALIZER(SAMPLER_FLAG_NONE);
+
     /// Offset from the calculated mipmap level. For example, if a sampler calculates that a texture
     /// should be sampled at mipmap level 1.2 and MipLODBias is 2.3, then the texture will be sampled at
     /// mipmap level 3.5. Default value: 0.
@@ -123,13 +143,15 @@ struct SamplerDesc DILIGENT_DERIVE(DeviceObjectAttribs)
                           Uint32               _MaxAnisotropy  = SamplerDesc{}.MaxAnisotropy,
                           COMPARISON_FUNCTION  _ComparisonFunc = SamplerDesc{}.ComparisonFunc,
                           float                _MinLOD         = SamplerDesc{}.MinLOD,
-                          float                _MaxLOD         = SamplerDesc{}.MaxLOD) :
+                          float                _MaxLOD         = SamplerDesc{}.MaxLOD,
+                          SAMPLER_FLAGS        _Flags          = SamplerDesc{}.Flags) :
         MinFilter      {_MinFilter     },
         MagFilter      {_MagFilter     },
         MipFilter      {_MipFilter     },
         AddressU       {_AddressU      },
         AddressV       {_AddressV      },
         AddressW       {_AddressW      },
+        Flags          {_Flags         },
         MipLODBias     {_MipLODBias    },
         MaxAnisotropy  {_MaxAnisotropy },
         ComparisonFunc {_ComparisonFunc},
@@ -157,6 +179,7 @@ struct SamplerDesc DILIGENT_DERIVE(DeviceObjectAttribs)
                 AddressU        == RHS.AddressU       &&
                 AddressV        == RHS.AddressV       &&
                 AddressW        == RHS.AddressW       &&
+                Flags           == RHS.Flags          &&
                 MipLODBias      == RHS.MipLODBias     &&
                 MaxAnisotropy   == RHS.MaxAnisotropy  &&
                 ComparisonFunc  == RHS.ComparisonFunc &&

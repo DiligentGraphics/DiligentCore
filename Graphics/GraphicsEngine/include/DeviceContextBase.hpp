@@ -1104,6 +1104,34 @@ inline bool DeviceContextBase<ImplementationTraits>::SetRenderTargets(const SetR
         bBindRenderTargets     = true;
     }
 
+#ifdef DILIGENT_DEVELOPMENT
+    const auto& SRProps = m_pDevice->GetAdapterInfo().ShadingRate;
+    if (m_pBoundShadingRateMap &&
+        (SRProps.CapFlags & SHADING_RATE_CAP_FLAG_NON_SUBSAMPLED_RENDER_TARGET) == 0 &&
+        !m_pDevice->GetDeviceInfo().IsMetalDevice())
+    {
+        VERIFY((SRProps.CapFlags & SHADING_RATE_CAP_FLAG_SUBSAMPLED_RENDER_TARGET) != 0,
+               "One of NON_SUBSAMPLED_RENDER_TARGET or SUBSAMPLED_RENDER_TARGET caps must be presented if texture-based VRS is supported");
+
+        for (Uint32 i = 0; i < m_NumBoundRenderTargets; ++i)
+        {
+            if (auto& pRTV = m_pBoundRenderTargets[i])
+            {
+                DEV_CHECK_ERR((pRTV->GetTexture()->GetDesc().MiscFlags & MISC_TEXTURE_FLAG_SUBSAMPLED) != 0,
+                              "Render target used with shading rate map must be created with MISC_TEXTURE_FLAG_SUBSAMPLED flag when "
+                              "SHADING_RATE_CAP_FLAG_NON_SUBSAMPLED_RENDER_TARGET capability is not present.");
+            }
+        }
+
+        if (m_pBoundDepthStencil)
+        {
+            DEV_CHECK_ERR((m_pBoundDepthStencil->GetTexture()->GetDesc().MiscFlags & MISC_TEXTURE_FLAG_SUBSAMPLED) != 0,
+                          "Depth-stencil target used with shading rate map must be created with MISC_TEXTURE_FLAG_SUBSAMPLED flag when "
+                          "SHADING_RATE_CAP_FLAG_NON_SUBSAMPLED_RENDER_TARGET capability is not present.");
+        }
+    }
+#endif
+
     return bBindRenderTargets;
 }
 

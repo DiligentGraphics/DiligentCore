@@ -25,14 +25,14 @@
  *  of the possibility of such damages.
  */
 
-#include "Buffer.h"
+#include "BufferBase.hpp"
 #include "DeviceContext.h"
 #include "GraphicsAccessories.hpp"
 
 namespace Diligent
 {
 
-#define LOG_BUFFER_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of buffer '", (Desc.Name ? Desc.Name : ""), "' is invalid: ", ##__VA_ARGS__)
+#define LOG_BUFFER_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of buffer '", (Desc.Name != nullptr ? Desc.Name : ""), "' is invalid: ", ##__VA_ARGS__)
 #define VERIFY_BUFFER(Expr, ...)                     \
     do                                               \
     {                                                \

@@ -92,6 +92,7 @@ set(SOURCE
     src/RenderDeviceBase.cpp
     src/ResourceMappingBase.cpp
     src/ShaderBindingTableBase.cpp
+    src/SamplerBase.cpp
     src/RenderPassBase.cpp
     src/TextureBase.cpp
     src/TopLevelASBase.cpp

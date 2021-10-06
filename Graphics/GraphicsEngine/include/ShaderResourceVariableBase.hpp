@@ -499,6 +499,10 @@ bool VerifySamplerBinding(const PipelineResourceDesc& ResDesc,
     {
         RESOURCE_VALIDATION_FAILURE("Buffer range can't be specified for samplers.");
     }
+    if (pSamplerImpl != nullptr && (pSamplerImpl->GetDesc().Flags & SAMPLER_FLAG_SUBSAMPLED) != 0)
+    {
+        RESOURCE_VALIDATION_FAILURE("Subsampled sampler must be added as an immutable sampler to the PSO or resource signature");
+    }
     return VerifyResourceBinding("sampler", ResDesc, BindInfo, pSamplerImpl, pCachedSampler, SignatureName);
 }
 

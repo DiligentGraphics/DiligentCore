@@ -77,6 +77,13 @@ SamplerVkImpl::SamplerVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImp
     SamplerCI.borderColor             = BorderColorToVkBorderColor(m_Desc.BorderColor);
     SamplerCI.unnormalizedCoordinates = VK_FALSE;
 
+    if (m_Desc.Flags & SAMPLER_FLAG_SUBSAMPLED)
+    {
+        SamplerCI.flags |= VK_SAMPLER_CREATE_SUBSAMPLED_BIT_EXT;
+    }
+    if (m_Desc.Flags & SAMPLER_FLAG_SUBSAMPLED_COARSE_RECONSTRUCTION)
+        SamplerCI.flags |= VK_SAMPLER_CREATE_SUBSAMPLED_COARSE_RECONSTRUCTION_BIT_EXT;
+
     m_VkSampler = LogicalDevice.CreateSampler(SamplerCI);
 }
 

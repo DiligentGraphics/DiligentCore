@@ -37,6 +37,9 @@
 namespace Diligent
 {
 
+/// Validates sampler description and throws an exception in case of an error.
+void ValidateSamplerDesc(const SamplerDesc& Desc, const IRenderDevice* pDevice) noexcept(false);
+
 /// Template class implementing base functionality of the sampler object.
 
 /// \tparam EngineImplTraits - Engine implementation type traits.
@@ -59,7 +62,9 @@ public:
     ///							   must not keep a strong reference to the device.
     SamplerBase(IReferenceCounters* pRefCounters, RenderDeviceImplType* pDevice, const SamplerDesc& SamDesc, bool bIsDeviceInternal = false) :
         TDeviceObjectBase{pRefCounters, pDevice, SamDesc, bIsDeviceInternal}
-    {}
+    {
+        ValidateSamplerDesc(this->m_Desc, pDevice);
+    }
 
     ~SamplerBase()
     {
