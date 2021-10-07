@@ -189,21 +189,10 @@ TEST_P(DynamicBufferResizeTest, Run)
         ASSERT_NE(pStagingBuff, nullptr);
     }
 
-    RefCntAutoPtr<IBuffer> pResidentBuff;
-    {
-        auto BuffDesc = GetSparseBuffDesc("Tmp resident buffer for dynamic buffer test", USAGE_DEFAULT, MaxSize);
-        pDevice->CreateBuffer(BuffDesc, nullptr, &pResidentBuff);
-        ASSERT_NE(pResidentBuff, nullptr);
-    }
-
     auto UpdateBuffer = [&](IBuffer* pBuffer, Uint64 Offset, Uint64 Size) //
     {
         VERIFY_EXPR(Offset + Size <= RefData.size());
-        // There appears to be a bug on NVidia: updating sparse buffer does not work properly
-        // As a workaround, we update temporary non-sparse buffer and then copy the data to the sparse buffer
-        // pContext->UpdateBuffer(pBuffer, Offset, Size, &RefData[static_cast<size_t>(Offset)], RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-        pContext->UpdateBuffer(pResidentBuff, Offset, Size, &RefData[static_cast<size_t>(Offset)], RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-        pContext->CopyBuffer(pResidentBuff, Offset, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, pBuffer, Offset, Size, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        pContext->UpdateBuffer(pBuffer, Offset, Size, &RefData[static_cast<size_t>(Offset)], RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
     };
 
     auto VerifyBuffer = [&](IBuffer* pBuffer, Uint64 Offset, Uint64 Size) //
