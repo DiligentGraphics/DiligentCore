@@ -2354,11 +2354,15 @@ void DeviceContextD3D12Impl::EndQuery(IQuery* pQuery)
 
 static void AliasingBarrier(CommandContext& CmdCtx, IDeviceObject* pResourceBefore, IDeviceObject* pResourceAfter)
 {
-    auto GetD3D12Resource = [](IDeviceObject* pResource) -> ID3D12Resource* //
+    bool UseNVApi         = false;
+    auto GetD3D12Resource = [&UseNVApi](IDeviceObject* pResource) -> ID3D12Resource* //
     {
         if (RefCntAutoPtr<ITextureD3D12> pTexture{pResource, IID_TextureD3D12})
         {
-            return pTexture.RawPtr<TextureD3D12Impl>()->GetD3D12Texture();
+            const auto* pTexD3D12 = pTexture.RawPtr<const TextureD3D12Impl>();
+            if (pTexD3D12->IsUsingNVApi())
+                UseNVApi = true;
+            return pTexD3D12->GetD3D12Texture();
         }
         else if (RefCntAutoPtr<IBufferD3D12> pBuffer{pResource, IID_BufferD3D12})
         {
@@ -2376,7 +2380,17 @@ static void AliasingBarrier(CommandContext& CmdCtx, IDeviceObject* pResourceBefo
     Barrier.Aliasing.pResourceBefore = GetD3D12Resource(pResourceBefore);
     Barrier.Aliasing.pResourceAfter  = GetD3D12Resource(pResourceAfter);
 
-    CmdCtx.ResourceBarrier(Barrier);
+#ifdef DILIGENT_ENABLE_D3D_NVAPI
+    if (UseNVApi)
+    {
+        NvAPI_D3D12_ResourceAliasingBarrier(CmdCtx.GetCommandList(), 1, &Barrier);
+    }
+    else
+#endif
+    {
+        VERIFY_EXPR(!UseNVApi);
+        CmdCtx.ResourceBarrier(Barrier);
+    }
 }
 
 void DeviceContextD3D12Impl::TransitionResourceStates(Uint32 BarrierCount, const StateTransitionDesc* pResourceBarriers)

@@ -2009,16 +2009,20 @@ static void AliasingBarrier(ID3D11DeviceContext* pd3d11Ctx, IDeviceObject* pReso
 {
     DEV_CHECK_ERR(CComQIPtr<ID3D11DeviceContext2>{pd3d11Ctx}, "Failed to query ID3D11DeviceContext2");
     auto* pd3d11DeviceContext2 = static_cast<ID3D11DeviceContext2*>(pd3d11Ctx);
+    bool  UseNVApi             = false;
 
-    auto GetD3D11Resource = [](IDeviceObject* pResource) -> ID3D11Resource* //
+    auto GetD3D11Resource = [&UseNVApi](IDeviceObject* pResource) -> ID3D11Resource* //
     {
         if (RefCntAutoPtr<ITextureD3D11> pTexture{pResource, IID_TextureD3D11})
         {
+            const auto* pTexD3D11 = pTexture.RawPtr<const TextureBaseD3D11>();
+            if (pTexD3D11->IsUsingNVApi())
+                UseNVApi = true;
             return pTexture->GetD3D11Texture();
         }
         else if (RefCntAutoPtr<IBufferD3D11> pBuffer{pResource, IID_BufferD3D11})
         {
-            return pBuffer->GetD3D11Buffer();
+            return pBuffer.RawPtr<BufferD3D11Impl>()->GetD3D11Buffer();
         }
         else
         {
@@ -2029,7 +2033,17 @@ static void AliasingBarrier(ID3D11DeviceContext* pd3d11Ctx, IDeviceObject* pReso
     auto* pd3d11ResourceBefore = GetD3D11Resource(pResourceBefore);
     auto* pd3d11ResourceAfter  = GetD3D11Resource(pResourceAfter);
 
-    pd3d11DeviceContext2->TiledResourceBarrier(pd3d11ResourceBefore, pd3d11ResourceAfter);
+#ifdef DILIGENT_ENABLE_D3D_NVAPI
+    if (UseNVApi)
+    {
+        NvAPI_D3D11_TiledResourceBarrier(pd3d11DeviceContext2, pd3d11ResourceBefore, pd3d11ResourceAfter);
+    }
+    else
+#endif
+    {
+        VERIFY_EXPR(!UseNVApi);
+        pd3d11DeviceContext2->TiledResourceBarrier(pd3d11ResourceBefore, pd3d11ResourceAfter);
+    }
 }
 
 void DeviceContextD3D11Impl::TransitionResourceStates(Uint32 BarrierCount, const StateTransitionDesc* pResourceBarriers)

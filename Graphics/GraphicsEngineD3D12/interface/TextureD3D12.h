@@ -54,7 +54,7 @@ DILIGENT_BEGIN_INTERFACE(ITextureD3D12, ITexture)
 
     /// The method does *NOT* increment the reference counter of the returned object,
     /// so Release() must not be called.
-    VIRTUAL ID3D12Resource* METHOD(GetD3D12Texture)(THIS) PURE;
+    VIRTUAL ID3D12Resource* METHOD(GetD3D12Texture)(THIS) CONST PURE;
 
     /// Sets the texture usage state
 

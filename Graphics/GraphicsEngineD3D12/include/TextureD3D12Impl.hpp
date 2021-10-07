@@ -65,7 +65,7 @@ public:
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_TextureD3D12, TTextureBase)
 
     /// Implementation of ITextureD3D12::GetD3D12Texture().
-    virtual ID3D12Resource* DILIGENT_CALL_TYPE GetD3D12Texture() override final { return GetD3D12Resource(); }
+    virtual ID3D12Resource* DILIGENT_CALL_TYPE GetD3D12Texture() const override final { return GetD3D12Resource(); }
 
     /// Implementation of ITexture::GetNativeHandle() in Direct3D12 backend.
     virtual Uint64 DILIGENT_CALL_TYPE GetNativeHandle() override final { return BitCast<Uint64>(GetD3D12Texture()); }
