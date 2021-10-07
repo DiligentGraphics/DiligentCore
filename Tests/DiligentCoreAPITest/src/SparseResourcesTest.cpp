@@ -2210,6 +2210,7 @@ TEST_F(SparseResourceTest, GetSparseTextureFormatInfo)
 
     const bool IsDirect3D = pDevice->GetDeviceInfo().IsD3DDevice();
     const bool IsMetal    = pDevice->GetDeviceInfo().IsMetalDevice();
+    const bool IsVulkan   = pDevice->GetDeviceInfo().IsVulkanDevice();
 
     const auto CheckInfo = [&](TEXTURE_FORMAT TexFormat, RESOURCE_DIMENSION Dimension, Uint32 SampleCount, const char* FmtName, BIND_FLAGS PossibleBindFlags) //
     {
@@ -2292,8 +2293,8 @@ TEST_F(SparseResourceTest, GetSparseTextureFormatInfo)
     CheckInfo(TEX_FORMAT_RGBA8_UNORM,  RESOURCE_DIM_TEX_2D,         8, "RGBA8_UNORM",  BIND_RENDER_TARGET);
     CheckInfo(TEX_FORMAT_RGBA8_UNORM,  RESOURCE_DIM_TEX_2D,        16, "RGBA8_UNORM",  BIND_RENDER_TARGET);
 
-    CheckInfo(TEX_FORMAT_RGBA8_UNORM,  RESOURCE_DIM_TEX_3D,         1, "RGBA8_UNORM",  BIND_RENDER_TARGET);
-    CheckInfo(TEX_FORMAT_RGBA32_FLOAT, RESOURCE_DIM_TEX_3D,         1, "RGBA32_FLOAT", BIND_RENDER_TARGET);
+    CheckInfo(TEX_FORMAT_RGBA8_UNORM,  RESOURCE_DIM_TEX_3D,         1, "RGBA8_UNORM",  IsVulkan ? BIND_NONE : BIND_RENDER_TARGET);
+    CheckInfo(TEX_FORMAT_RGBA32_FLOAT, RESOURCE_DIM_TEX_3D,         1, "RGBA32_FLOAT", IsVulkan ? BIND_NONE : BIND_RENDER_TARGET);
     // clang-format on
 }
 

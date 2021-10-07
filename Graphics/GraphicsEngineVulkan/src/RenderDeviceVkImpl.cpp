@@ -771,7 +771,7 @@ SparseTextureFormatInfo RenderDeviceVkImpl::GetSparseTextureFormatInfo(TEXTURE_F
 
     if ((ComponentType == COMPONENT_TYPE_DEPTH || ComponentType == COMPONENT_TYPE_DEPTH_STENCIL) && CheckUsage(VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT))
         Info.BindFlags |= BIND_DEPTH_STENCIL;
-    else if (ComponentType != COMPONENT_TYPE_COMPRESSED && CheckUsage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT))
+    else if (ComponentType != COMPONENT_TYPE_COMPRESSED && Dimension != RESOURCE_DIM_TEX_3D && CheckUsage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT))
         Info.BindFlags |= BIND_RENDER_TARGET;
 
     if ((Info.BindFlags & (BIND_DEPTH_STENCIL | BIND_RENDER_TARGET)) != 0 && CheckUsage(VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT))
