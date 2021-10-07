@@ -71,6 +71,9 @@ TEST(Common_Align, AlignUp)
     EXPECT_EQ(AlignUp(Uint8{16}, Uint8{16}), Uint8{16});
     EXPECT_EQ(AlignUp(Uint8{17}, Uint8{16}), Uint8{32});
 
+    EXPECT_EQ(AlignUp(Uint8{17}, Uint32{1024}), Uint32{1024});
+    EXPECT_EQ(AlignUp(Uint16{400}, Uint8{128}), Uint16{512});
+
     for (Uint32 i = 0; i < 1024; ++i)
     {
         constexpr Uint32 Alignment = 16;
@@ -91,6 +94,9 @@ TEST(Common_Align, AlignDown)
     EXPECT_EQ(AlignDown(Uint8{15}, Uint8{16}), Uint8{0});
     EXPECT_EQ(AlignDown(Uint8{16}, Uint8{16}), Uint8{16});
     EXPECT_EQ(AlignDown(Uint8{17}, Uint8{16}), Uint8{16});
+
+    EXPECT_EQ(AlignDown(Uint16{519}, Uint8{128}), Uint16{512});
+    EXPECT_EQ(AlignDown(Uint8{127}, Uint32{1024}), Uint32{0});
 
     for (Uint32 i = 0; i < 1024; ++i)
     {
@@ -139,6 +145,53 @@ TEST(Common_Align, AlignDownPtr)
 
         EXPECT_EQ(AlignDown((void*)(0x1000 + i), (size_t)Alignment), (void*)(0x1000 + Aligned));
     }
+}
+
+TEST(Common_Align, AlignDownNonPw2)
+{
+    EXPECT_EQ(AlignDownNonPw2(Uint8{0}, Uint8{17}), Uint8{0});
+    EXPECT_EQ(AlignDownNonPw2(Uint16{1}, Uint8{15}), Uint16{0});
+    EXPECT_EQ(AlignDownNonPw2(Uint32{14}, Uint8{15}), Uint32{0});
+    EXPECT_EQ(AlignDownNonPw2(Int8{15}, Int16{15}), Int16{15});
+    EXPECT_EQ(AlignDownNonPw2(Int32{16}, Int16{15}), Int32{15});
+
+    EXPECT_EQ(AlignDownNonPw2(Int8{127}, Int16{531}), Int16{0});
+    EXPECT_EQ(AlignDownNonPw2(Int32{1023}, Int8{119}), Int32{952});
+
+    for (Uint32 i = 0; i < 1024; ++i)
+    {
+        constexpr Uint32 Alignment = 17;
+
+        auto Aligned = (i / Alignment) * Alignment;
+
+        EXPECT_EQ(AlignDownNonPw2(i, Alignment), Aligned);
+    }
+
+    EXPECT_EQ(AlignDownNonPw2((Uint64{1} << 63) + 1023, Uint64{1024}), (Uint64{1} << 63));
+}
+
+TEST(Common_Align, AlignUpNonPw2)
+{
+    EXPECT_EQ(AlignUpNonPw2(Uint8{0}, Uint8{17}), Uint8{0});
+    EXPECT_EQ(AlignUpNonPw2(Uint16{1}, Uint8{15}), Uint16{15});
+    EXPECT_EQ(AlignUpNonPw2(Uint32{14}, Uint16{15}), Uint32{15});
+    EXPECT_EQ(AlignUpNonPw2(Int8{15}, Int32{15}), Int32{15});
+    EXPECT_EQ(AlignUpNonPw2(Int16{16}, Int8{15}), Int16{30});
+
+    EXPECT_EQ(AlignUpNonPw2(Int8{15}, Int32{1125}), Int32{1125});
+    EXPECT_EQ(AlignUpNonPw2(Int32{325}, Int8{113}), Int32{339});
+
+    for (Uint32 i = 0; i < 1024; ++i)
+    {
+        constexpr Uint32 Alignment = 15;
+
+        auto Aligned = (i / Alignment) * Alignment;
+        if (Aligned < i) Aligned += Alignment;
+
+        EXPECT_EQ(AlignUpNonPw2(i, Alignment), Aligned);
+    }
+
+    EXPECT_EQ(AlignUpNonPw2((Uint64{1} << 63) + 1, Uint64{1024}), (Uint64{1} << 63) + 1024);
 }
 
 } // namespace

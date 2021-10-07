@@ -154,6 +154,10 @@ struct BufferSuballocatorCreateInfo
     /// of IBufferSuballocation implementation class. This member defines
     /// the number of objects in one page.
     Uint32 SuballocationObjAllocationGranularity = 64;
+
+
+    /// If Desc.Usage == USAGE_SPARSE, the irtual buffer size; ignored otherwise.
+    Uint64 VirtualSize = 0;
 };
 
 /// Creates a new buffer suballocator.

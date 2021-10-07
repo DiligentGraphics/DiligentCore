@@ -133,7 +133,8 @@ public:
             DynamicBufferCreateInfo
             {
                 CreateInfo.Desc,
-                CreateInfo.ExpansionSize != 0 ? CreateInfo.ExpansionSize : static_cast<Uint32>(CreateInfo.Desc.Size) // MemoryPageSize
+                CreateInfo.ExpansionSize != 0 ? CreateInfo.ExpansionSize : static_cast<Uint32>(CreateInfo.Desc.Size), // MemoryPageSize
+                CreateInfo.VirtualSize
             }
         },
         m_ExpansionSize{CreateInfo.ExpansionSize},
