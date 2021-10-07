@@ -162,6 +162,22 @@ public:
         if (Size != m_Buffer.GetDesc().Size)
         {
             m_Buffer.Resize(pDevice, pContext, Size);
+
+            // Actual buffer size may be larger due to alignment requirements
+            // (for sparse buffers, the size is aligned by the memory page size)
+            const auto BufferSize = m_Buffer.GetDesc().Size;
+            VERIFY_EXPR(BufferSize >= Size);
+            if (BufferSize > Size)
+            {
+                std::lock_guard<std::mutex> Lock{m_MgrMtx};
+                // Since we released the mutex, the size may have changed in other thread
+                Size = m_Mgr.GetMaxSize();
+                if (BufferSize > Size)
+                {
+                    m_Mgr.Extend(StaticCast<size_t>(BufferSize - Size));
+                }
+                VERIFY_EXPR(BufferSize == m_Mgr.GetMaxSize());
+            }
         }
 
         return m_Buffer.GetBuffer(pDevice, pContext);
@@ -230,9 +246,9 @@ public:
     virtual void GetUsageStats(BufferSuballocatorUsageStats& UsageStats) override final
     {
         std::lock_guard<std::mutex> Lock{m_MgrMtx};
-        UsageStats.Size             = static_cast<Uint32>(m_Mgr.GetMaxSize());
-        UsageStats.UsedSize         = static_cast<Uint32>(m_Mgr.GetUsedSize());
-        UsageStats.MaxFreeChunkSize = static_cast<Uint32>(m_Mgr.GetMaxFreeBlockSize());
+        UsageStats.Size             = m_Mgr.GetMaxSize();
+        UsageStats.UsedSize         = m_Mgr.GetUsedSize();
+        UsageStats.MaxFreeChunkSize = m_Mgr.GetMaxFreeBlockSize();
         UsageStats.AllocationCount  = m_AllocationCount.load();
     }
 

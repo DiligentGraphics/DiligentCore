@@ -82,13 +82,13 @@ struct IBufferSuballocation : public IObject
 struct BufferSuballocatorUsageStats
 {
     /// The size of the internal buffer, in bytes.
-    Uint32 Size = 0;
+    Uint64 Size = 0;
 
     /// The total used size, in bytes.
-    Uint32 UsedSize = 0;
+    Uint64 UsedSize = 0;
 
     /// The maximum size of the continuous free chunk in the buffer, in bytes.
-    Uint32 MaxFreeChunkSize = 0;
+    Uint64 MaxFreeChunkSize = 0;
 
     /// The current number of allocations.
     Uint32 AllocationCount = 0;
