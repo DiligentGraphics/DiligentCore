@@ -30,13 +30,41 @@
 /// \file
 /// Declaration of a DynamicBuffer class
 
+#include <atomic>
+
 #include "../../GraphicsEngine/interface/RenderDevice.h"
 #include "../../GraphicsEngine/interface/DeviceContext.h"
 #include "../../GraphicsEngine/interface/Buffer.h"
+#include "../../GraphicsEngine/interface/DeviceMemory.h"
+#include "../../GraphicsEngine/interface/Fence.h"
 #include "../../../Common/interface/RefCntAutoPtr.hpp"
 
 namespace Diligent
 {
+
+/// Dynamic buffer create information.
+struct DynamicBufferCreateInfo
+{
+    /// Buffer description.
+    BufferDesc Desc;
+
+    /// The size of the memory page for the sparse buffer.
+
+    /// \remarks
+    ///     This value is only relevant when Desc.Usage == USAGE_SPARSE and
+    ///     defines the memory page size of the device memory object that is
+    ///     backing the buffer.
+    ///
+    ///     Memory page size should be a multiple of SparseResources.StandardBlockSize.
+    ///     If it is not, the engine automatically aligns the value up to the closest
+    ///     multiple of the block size.
+    Uint32 MemoryPageSize = 64 << 10;
+
+    /// When Desc.Usage == USAGE_SPARSE, the virual size of the sparse buffer;
+    /// ignored otherwise.
+    Uint64 VirualSize = Uint64{1} << Uint64{30};
+};
+
 
 /// Dynamically resizable buffer
 class DynamicBuffer
@@ -44,13 +72,13 @@ class DynamicBuffer
 public:
     /// Initializes the dynamic buffer.
 
-    /// \param[in] pDevice - Render device that will be used to create the buffer.
-    ///                      This parameter may be null (see remarks).
-    /// \param[in] Desc    - Buffer description.
+    /// \param[in] pDevice    - Render device that will be used to create the buffer.
+    ///                         This parameter may be null (see remarks).
+    /// \param[in] CreateInfo - Create information, see Diligent::DynamicBufferCreateInfo.
     ///
     /// \remarks            If pDevice is null, internal buffer creation will be postponed
     ///                     until GetBuffer() or Resize() is called.
-    DynamicBuffer(IRenderDevice* pDevice, const BufferDesc& Desc);
+    DynamicBuffer(IRenderDevice* pDevice, const DynamicBufferCreateInfo& CreateInfo);
 
     // clang-format off
     DynamicBuffer           (const DynamicBuffer&)  = delete;
@@ -62,10 +90,11 @@ public:
 
     /// Resizes the buffer to the new size.
 
-    /// \param[in] pDevice        - Render device that will be used create a new internal buffer.
+    /// \param[in] pDevice        - Render device that will be used create the new internal buffer.
     ///                             This parameter may be null (see remarks).
     /// \param[in] pContext       - Device context that will be used to copy existing contents
-    ///                             to the new buffer. This parameter may be null (see remarks).
+    ///                             to the new buffer (for non-sparse buffer), or commit new memory
+    ///                             pages (for sparse buffer). This parameter may be null (see remarks).
     /// \param[in] NewSize        - New buffer size. Can be zero.
     /// \param[in] DiscardContent - Whether to discard previous buffer content.
     ///
@@ -73,12 +102,13 @@ public:
     ///
     /// \remarks    The method operation depends on which of pDevice and pContext parameters
     ///             are not null:
-    ///             - Both pDevice and pContext are not null: internal buffer is created
-    ///               and existing contents is copied. GetBuffer() may be called with
+    ///             - Both pDevice and pContext are not null: the new internal buffer is created
+    ///               and existing contents is copied (for non-sparse buffer), or memory pages
+    ///               are committed (for sparse buffer). GetBuffer() may be called with
     ///               both pDevice and pContext being null.
     ///             - pDevice is not null, pContext is null: internal buffer is created,
-    ///               but existing contents is not copied. An application must provide non-null
-    ///               device context when calling GetBuffer().
+    ///               but existing contents is not copied or memory is not committed. An
+    ///               application must provide non-null device context when calling GetBuffer().
     ///             - Both pDevice and pContext are null: internal buffer is not created.
     ///               An application must provide non-null device and device context when calling
     ///               GetBuffer().
@@ -97,7 +127,8 @@ public:
     /// \param[in] pDevice  - Render device that will be used to create the new buffer,
     ///                       if necessary (see remarks).
     /// \param[in] pContext - Device context that will be used to copy existing
-    ///                       buffer contents, if necessary (see remarks).
+    ///                       buffer contents or commit memory pages, if necessary
+    ///                       (see remarks).
     /// \return               The pointer to the buffer object.
     ///
     /// \remarks    If the buffer has been resized, but internal buffer object has not been
@@ -114,7 +145,7 @@ public:
     /// When update is not pending, GetBuffer() may be called with null device and context.
     bool PendingUpdate() const
     {
-        return (m_Desc.Size > 0) && (!m_pBuffer || m_pStaleBuffer);
+        return m_PendingSize != m_Desc.Size;
     }
 
 
@@ -125,23 +156,43 @@ public:
     }
 
 
-    /// Returns dynamic buffer version.
+    /// Returns the dynamic buffer version.
     /// The version is incremented every time a new internal buffer is created.
     Uint32 GetVersion() const
     {
-        return m_Version;
+        return m_Version.load();
     }
 
 private:
+    void InitBuffer(IRenderDevice* pDevice);
+    void CreateSparseBuffer(IRenderDevice* pDevice);
+
     void CommitResize(IRenderDevice*  pDevice,
-                      IDeviceContext* pContext);
+                      IDeviceContext* pContext,
+                      bool            AllowNull);
+    void ResizeSparseBuffer(IDeviceContext* pContext);
+    void ResizeDefaultBuffer(IDeviceContext* pContext);
 
-    BufferDesc        m_Desc;
     const std::string m_Name;
-    Uint32            m_Version = 0;
+    BufferDesc        m_Desc;
 
-    RefCntAutoPtr<IBuffer> m_pBuffer;
-    RefCntAutoPtr<IBuffer> m_pStaleBuffer;
+    std::atomic<Uint32> m_Version{0};
+
+    RefCntAutoPtr<IBuffer>       m_pBuffer;
+    RefCntAutoPtr<IBuffer>       m_pStaleBuffer;
+    RefCntAutoPtr<IDeviceMemory> m_pMemory;
+
+    Uint64 m_PendingSize = 0;
+    Uint64 m_VirualSize  = 0;
+
+    Uint32 m_MemoryPageSize = 0;
+
+    Uint64 m_NextBeforeResizeFenceValue = 1;
+    Uint64 m_NextAfterResizeFenceValue  = 1;
+    Uint64 m_LastAfterResizeFenceValue  = 0;
+
+    RefCntAutoPtr<IFence> m_pBeforeResizeFence;
+    RefCntAutoPtr<IFence> m_pAfterResizeFence;
 };
 
 } // namespace Diligent

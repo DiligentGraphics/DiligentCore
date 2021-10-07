@@ -39,7 +39,7 @@ namespace Diligent
 namespace
 {
 
-bool VerifySparseTextureCompatibility(IRenderDevice* pDevice, const TextureDesc& TexDesc)
+bool VerifySparseTextureCompatibility(IRenderDevice* pDevice)
 {
     VERIFY_EXPR(pDevice != nullptr);
 
@@ -99,7 +99,7 @@ void DynamicTextureArray::CreateSparseTexture(IRenderDevice* pDevice)
     VERIFY_EXPR(pDevice != nullptr);
     VERIFY_EXPR(m_Desc.Usage == USAGE_SPARSE);
 
-    if (!VerifySparseTextureCompatibility(pDevice, m_Desc))
+    if (!VerifySparseTextureCompatibility(pDevice))
     {
         LOG_WARNING_MESSAGE("This device does not support capabilities required for sparse texture 2D arrays. USAGE_DEFAULT texture will be used instead.");
         m_Desc.Usage = USAGE_DEFAULT;
@@ -157,14 +157,15 @@ void DynamicTextureArray::CreateSparseTexture(IRenderDevice* pDevice)
     }
 
     // Create fences
-    if (pDevice->GetDeviceInfo().Features.NativeFence)
+    // Note: D3D11 does not support general fences
+    if (pDevice->GetDeviceInfo().Type != RENDER_DEVICE_TYPE_D3D11)
     {
         FenceDesc Desc;
         Desc.Type = FENCE_TYPE_GENERAL;
 
-        Desc.Name = "Dynamic texture array before resize fence";
+        Desc.Name = "Dynamic texture array before-resize fence";
         pDevice->CreateFence(Desc, &m_pBeforeResizeFence);
-        Desc.Name = "Dynamic texture array after resize fence";
+        Desc.Name = "Dynamic texture array after-resize fence";
         pDevice->CreateFence(Desc, &m_pAfterResizeFence);
     }
 }
@@ -207,7 +208,7 @@ void DynamicTextureArray::ResizeSparseTexture(IDeviceContext* pContext)
 
     const auto RequiredMemSize = (m_PendingSize / m_NumSlicesInPage) * m_MemoryPageSize;
     if (RequiredMemSize > m_pMemory->GetCapacity())
-        m_pMemory->Resize(RequiredMemSize);
+        m_pMemory->Resize(RequiredMemSize); // Allocate additional memory
 
     const auto NumSlicesToBind = m_PendingSize > m_Desc.ArraySize ?
         m_PendingSize - m_Desc.ArraySize :
@@ -324,7 +325,7 @@ void DynamicTextureArray::ResizeSparseTexture(IDeviceContext* pContext)
     pContext->BindSparseResourceMemory(BindMemAttribs);
 
     if (RequiredMemSize < m_pMemory->GetCapacity())
-        m_pMemory->Resize(RequiredMemSize);
+        m_pMemory->Resize(RequiredMemSize); // Release unused memory
 }
 
 void DynamicTextureArray::ResizeDefaultTexture(IDeviceContext* pContext)
@@ -365,7 +366,7 @@ void DynamicTextureArray::CommitResize(IRenderDevice*  pDevice,
         if (pDevice != nullptr)
             CreateResources(pDevice);
         else
-            DEV_CHECK_ERR(AllowNull, "Sparse texture must be initialized, but pDevice is null");
+            DEV_CHECK_ERR(AllowNull, "Dynamic texture array must be initialized, but pDevice is null");
     }
 
     if (m_pTexture && m_Desc.ArraySize != m_PendingSize)
@@ -437,6 +438,7 @@ ITexture* DynamicTextureArray::GetTexture(IRenderDevice*  pDevice,
 
     if (m_LastAfterResizeFenceValue + 1 < m_NextAfterResizeFenceValue)
     {
+        DEV_CHECK_ERR(pContext != nullptr, "Device context is null, but waiting for the fence is required");
         VERIFY_EXPR(m_pAfterResizeFence);
         m_LastAfterResizeFenceValue = m_NextAfterResizeFenceValue - 1;
         pContext->DeviceWaitForFence(m_pAfterResizeFence, m_LastAfterResizeFenceValue);

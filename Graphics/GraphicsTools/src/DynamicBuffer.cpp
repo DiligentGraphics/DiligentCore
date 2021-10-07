@@ -28,43 +28,252 @@
 #include "DynamicBuffer.hpp"
 
 #include <algorithm>
+#include <vector>
 
 #include "DebugUtilities.hpp"
+#include "Align.hpp"
 
 namespace Diligent
 {
 
-DynamicBuffer::DynamicBuffer(IRenderDevice* pDevice, const BufferDesc& Desc) :
-    m_Desc{Desc},
-    m_Name{Desc.Name != nullptr ? Desc.Name : "Dynamic buffer"}
+namespace
 {
-    m_Desc.Name = m_Name.c_str();
-    if (m_Desc.Size > 0 && pDevice != nullptr)
+
+bool VerifySparseBufferCompatibility(IRenderDevice* pDevice)
+{
+    VERIFY_EXPR(pDevice != nullptr);
+
+    const auto& DeviceInfo = pDevice->GetDeviceInfo().Features;
+    if (!DeviceInfo.SparseResources)
     {
-        pDevice->CreateBuffer(Desc, nullptr, &m_pBuffer);
-        VERIFY_EXPR(m_pBuffer);
+        LOG_WARNING_MESSAGE("SparseResources device feature is not enabled.");
+        return false;
+    }
+
+    const auto& SparseRes = pDevice->GetAdapterInfo().SparseResources;
+    if ((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_BUFFER) == 0)
+    {
+        LOG_WARNING_MESSAGE("This device does not support sparse buffers.");
+        return false;
+    }
+
+    return true;
+}
+
+} // namespace
+
+DynamicBuffer::DynamicBuffer(IRenderDevice*                 pDevice,
+                             const DynamicBufferCreateInfo& CI) :
+    m_Name{CI.Desc.Name != nullptr ? CI.Desc.Name : "Dynamic buffer"},
+    m_Desc{CI.Desc},
+    m_VirualSize{CI.VirualSize},
+    m_MemoryPageSize{CI.MemoryPageSize}
+{
+    m_Desc.Name   = m_Name.c_str();
+    m_PendingSize = m_Desc.Size;
+    m_Desc.Size   = 0; // Current buffer size
+    if (pDevice != nullptr && (m_PendingSize > 0 || m_Desc.Usage == USAGE_SPARSE))
+    {
+        InitBuffer(pDevice);
     }
 }
 
-void DynamicBuffer::CommitResize(IRenderDevice*  pDevice,
-                                 IDeviceContext* pContext)
+void DynamicBuffer::CreateSparseBuffer(IRenderDevice* pDevice)
 {
-    if (!m_pBuffer && m_Desc.Size > 0 && pDevice != nullptr)
-    {
-        pDevice->CreateBuffer(m_Desc, nullptr, &m_pBuffer);
-        VERIFY_EXPR(m_pBuffer);
-        ++m_Version;
+    VERIFY_EXPR(pDevice != nullptr);
+    VERIFY_EXPR(!m_pBuffer && !m_pMemory);
+    VERIFY_EXPR(m_Desc.Usage == USAGE_SPARSE);
 
-        LOG_INFO_MESSAGE("Dynamic buffer: expanding dynamic buffer '", m_Desc.Name,
-                         "' to ", FormatMemorySize(m_Desc.Size, 1), ". Version: ", GetVersion());
+    if (!VerifySparseBufferCompatibility(pDevice))
+    {
+        LOG_WARNING_MESSAGE("This device does not support capabilities required for sparse buffers. USAGE_DEFAULT buffer will be used instead.");
+        m_Desc.Usage = USAGE_DEFAULT;
+        return;
     }
 
-    if (m_pStaleBuffer && m_pBuffer && pContext != nullptr)
+    const auto& SparseResources    = pDevice->GetAdapterInfo().SparseResources;
+    const auto  SparseMemBlockSize = SparseResources.StandardBlockSize;
+
+    m_MemoryPageSize = std::max(AlignUp(m_MemoryPageSize, SparseMemBlockSize), SparseMemBlockSize);
+    m_VirualSize     = std::min(m_VirualSize, AlignDown(SparseResources.ResourceSpaceSize, m_MemoryPageSize));
+
     {
-        auto CopySize = std::min(m_Desc.Size, m_pStaleBuffer->GetDesc().Size);
-        pContext->CopyBuffer(m_pStaleBuffer, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
-                             m_pBuffer, 0, CopySize, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-        m_pStaleBuffer.Release();
+        auto Desc = m_Desc;
+        Desc.Size = m_VirualSize;
+        pDevice->CreateBuffer(Desc, nullptr, &m_pBuffer);
+        DEV_CHECK_ERR(m_pBuffer, "Failed to create sparse buffer");
+        if (!m_pBuffer)
+            return;
+
+        m_Desc.Size = 0; // No memory is committed
+    }
+
+    // Create backing memory
+    {
+        DeviceMemoryCreateInfo MemCI;
+        MemCI.Desc.Name     = "Sparse dynamic buffer memory pool";
+        MemCI.Desc.Type     = DEVICE_MEMORY_TYPE_SPARSE;
+        MemCI.Desc.PageSize = m_MemoryPageSize;
+
+        MemCI.InitialSize = m_MemoryPageSize;
+
+        IDeviceObject* pCompatibleRes[]{m_pBuffer};
+        MemCI.ppCompatibleResources = pCompatibleRes;
+        MemCI.NumResources          = _countof(pCompatibleRes);
+
+        pDevice->CreateDeviceMemory(MemCI, &m_pMemory);
+        DEV_CHECK_ERR(m_pMemory, "Failed to create device memory");
+    }
+
+    // Note: D3D11 does not support general fences
+    if (pDevice->GetDeviceInfo().Type != RENDER_DEVICE_TYPE_D3D11)
+    {
+        FenceDesc Desc;
+        Desc.Type = FENCE_TYPE_GENERAL;
+
+        Desc.Name = "Dynamic buffer before-resize fence";
+        pDevice->CreateFence(Desc, &m_pBeforeResizeFence);
+        Desc.Name = "Dynamic buffer after-resize fence";
+        pDevice->CreateFence(Desc, &m_pAfterResizeFence);
+    }
+}
+
+void DynamicBuffer::InitBuffer(IRenderDevice* pDevice)
+{
+    VERIFY_EXPR(pDevice != nullptr);
+    VERIFY_EXPR(!m_pBuffer && !m_pMemory);
+
+    if (m_Desc.Usage == USAGE_SPARSE)
+    {
+        CreateSparseBuffer(pDevice);
+    }
+
+    // NB: m_Desc.Usage may be changed by CreateSparseBuffer()
+    if (m_Desc.Usage == USAGE_DEFAULT && m_PendingSize > 0)
+    {
+        auto Desc = m_Desc;
+        Desc.Size = m_PendingSize;
+        pDevice->CreateBuffer(Desc, nullptr, &m_pBuffer);
+        if (m_Desc.Size == 0)
+        {
+            // The array was previously empty - nothing to copy
+            m_Desc.Size = m_PendingSize;
+        }
+    }
+    DEV_CHECK_ERR(m_pBuffer, "Failed to create buffer for a dynamic buffer");
+
+    m_Version.fetch_add(1);
+}
+
+void DynamicBuffer::ResizeSparseBuffer(IDeviceContext* pContext)
+{
+    VERIFY_EXPR(m_pBuffer && m_pMemory);
+    VERIFY_EXPR(m_PendingSize % m_MemoryPageSize == 0);
+    if (m_pMemory->GetCapacity() < m_PendingSize)
+        m_pMemory->Resize(m_PendingSize); // Allocate additional memory
+
+    SparseBufferMemoryBindInfo BufferBindInfo;
+    BufferBindInfo.pBuffer = m_pBuffer;
+
+    auto StartOffset = m_Desc.Size;
+    auto EndOffset   = m_PendingSize;
+    if (StartOffset > EndOffset)
+        std::swap(StartOffset, EndOffset);
+    VERIFY_EXPR((EndOffset - StartOffset) % m_MemoryPageSize == 0);
+    const auto NumPages = StaticCast<Uint32>((EndOffset - StartOffset) / m_MemoryPageSize);
+
+    std::vector<SparseBufferMemoryBindRange> Ranges;
+    Ranges.reserve(NumPages);
+    for (Uint32 i = 0; i < NumPages; ++i)
+    {
+        SparseBufferMemoryBindRange Range;
+        Range.BufferOffset = StartOffset + i * m_MemoryPageSize;
+        Range.MemorySize   = m_MemoryPageSize;
+        Range.pMemory      = m_PendingSize > m_Desc.Size ? m_pMemory.RawPtr() : nullptr;
+        Range.MemoryOffset = Range.pMemory != nullptr ? Range.BufferOffset : 0;
+        Ranges.emplace_back(Range);
+    }
+
+    BufferBindInfo.pRanges   = Ranges.data();
+    BufferBindInfo.NumRanges = static_cast<Uint32>(Ranges.size());
+
+    BindSparseResourceMemoryAttribs BindMemAttribs;
+    BindMemAttribs.NumBufferBinds = 1;
+    BindMemAttribs.pBufferBinds   = &BufferBindInfo;
+
+    Uint64  WaitFenceValue = 0;
+    IFence* pWaitFence     = nullptr;
+    if (m_pBeforeResizeFence)
+    {
+        WaitFenceValue = m_NextBeforeResizeFenceValue++;
+        pWaitFence     = m_pBeforeResizeFence;
+
+        pWaitFence->Signal(WaitFenceValue);
+        BindMemAttribs.NumWaitFences    = 1;
+        BindMemAttribs.pWaitFenceValues = &WaitFenceValue;
+        BindMemAttribs.ppWaitFences     = &pWaitFence;
+    }
+
+    Uint64  SignalFenceValue = 0;
+    IFence* pSignalFence     = nullptr;
+    if (m_pAfterResizeFence)
+    {
+        SignalFenceValue = m_NextAfterResizeFenceValue++;
+        pSignalFence     = m_pAfterResizeFence;
+
+        BindMemAttribs.NumSignalFences    = 1;
+        BindMemAttribs.pSignalFenceValues = &SignalFenceValue;
+        BindMemAttribs.ppSignalFences     = &pSignalFence;
+    }
+
+    pContext->BindSparseResourceMemory(BindMemAttribs);
+
+    if (m_pMemory->GetCapacity() > m_PendingSize)
+        m_pMemory->Resize(m_PendingSize); // Release unused memory
+}
+
+void DynamicBuffer::ResizeDefaultBuffer(IDeviceContext* pContext)
+{
+    if (!m_pStaleBuffer)
+        return;
+
+    VERIFY_EXPR(m_pBuffer);
+    auto CopySize = std::min(m_pBuffer->GetDesc().Size, m_pStaleBuffer->GetDesc().Size);
+    pContext->CopyBuffer(m_pStaleBuffer, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
+                         m_pBuffer, 0, CopySize, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    m_pStaleBuffer.Release();
+}
+
+void DynamicBuffer::CommitResize(IRenderDevice*  pDevice,
+                                 IDeviceContext* pContext,
+                                 bool            AllowNull)
+{
+    if (!m_pBuffer && m_PendingSize > 0)
+    {
+        if (pDevice != nullptr)
+            InitBuffer(pDevice);
+        else
+            DEV_CHECK_ERR(AllowNull, "Dynamic buffer must be initialized, but pDevice is null");
+    }
+
+    if (m_pBuffer && m_Desc.Size != m_PendingSize)
+    {
+        if (pContext != nullptr)
+        {
+            if (m_Desc.Usage == USAGE_SPARSE)
+                ResizeSparseBuffer(pContext);
+            else
+                ResizeDefaultBuffer(pContext);
+
+            m_Desc.Size = m_PendingSize;
+
+            LOG_INFO_MESSAGE("Dynamic buffer: expanding dynamic buffer '", m_Desc.Name,
+                             "' to ", FormatMemorySize(m_Desc.Size, 1), ". Version: ", GetVersion());
+        }
+        else
+        {
+            DEV_CHECK_ERR(AllowNull, "Dynamic buffer must be resized, but pContext is null. Use PendingUpdate() to check if the buffer must be updated.");
+        }
     }
 }
 
@@ -73,32 +282,39 @@ IBuffer* DynamicBuffer::Resize(IRenderDevice*  pDevice,
                                Uint64          NewSize,
                                bool            DiscardContent)
 {
+    if (m_Desc.Usage == USAGE_SPARSE)
+        NewSize = AlignUp(NewSize, m_MemoryPageSize);
+
     if (m_Desc.Size != NewSize)
     {
-        if (!m_pStaleBuffer)
-            m_pStaleBuffer = std::move(m_pBuffer);
-        else
+        m_PendingSize = NewSize;
+
+        if (m_Desc.Usage != USAGE_SPARSE)
         {
-            DEV_CHECK_ERR(!m_pBuffer || NewSize == 0,
-                          "There is a non-null stale buffer. This likely indicates that "
-                          "Resize() has been called multiple times with different sizes, "
-                          "but copy has not been committed by providing non-null device "
-                          "context to either Resize() or GetBuffer()");
+            if (!m_pStaleBuffer)
+                m_pStaleBuffer = std::move(m_pBuffer);
+            else
+            {
+                DEV_CHECK_ERR(!m_pBuffer || NewSize == 0,
+                              "There is a non-null stale buffer. This likely indicates that "
+                              "Resize() has been called multiple times with different sizes, "
+                              "but copy has not been committed by providing non-null device "
+                              "context to either Resize() or GetBuffer()");
+            }
+
+            if (m_PendingSize == 0)
+            {
+                m_pStaleBuffer.Release();
+                m_pBuffer.Release();
+                m_Desc.Size = 0;
+            }
+
+            if (DiscardContent)
+                m_pStaleBuffer.Release();
         }
-
-        m_Desc.Size = NewSize;
-
-        if (m_Desc.Size == 0)
-        {
-            m_pStaleBuffer.Release();
-            m_pBuffer.Release();
-        }
-
-        if (DiscardContent)
-            m_pStaleBuffer.Release();
     }
 
-    CommitResize(pDevice, pContext);
+    CommitResize(pDevice, pContext, true /*AllowNull*/);
 
     return m_pBuffer;
 }
@@ -106,12 +322,15 @@ IBuffer* DynamicBuffer::Resize(IRenderDevice*  pDevice,
 IBuffer* DynamicBuffer::GetBuffer(IRenderDevice*  pDevice,
                                   IDeviceContext* pContext)
 {
-    DEV_CHECK_ERR(m_pBuffer || m_Desc.Size == 0 || pDevice != nullptr,
-                  "A new buffer must be created, but pDevice is null. Use PendingUpdate() to check if the buffer must be updated.");
-    DEV_CHECK_ERR(!m_pStaleBuffer || pContext != nullptr,
-                  "An existing contents of the buffer must be copied to the new buffer, but pContext is null. "
-                  "Use PendingUpdate() to check if the buffer must be updated.");
-    CommitResize(pDevice, pContext);
+    CommitResize(pDevice, pContext, false /*AllowNull*/);
+
+    if (m_LastAfterResizeFenceValue + 1 < m_NextAfterResizeFenceValue)
+    {
+        DEV_CHECK_ERR(pContext != nullptr, "Device context is null, but waiting for the fence is required");
+        VERIFY_EXPR(m_pAfterResizeFence);
+        m_LastAfterResizeFenceValue = m_NextAfterResizeFenceValue - 1;
+        pContext->DeviceWaitForFence(m_pAfterResizeFence, m_LastAfterResizeFenceValue);
+    }
 
     return m_pBuffer;
 }

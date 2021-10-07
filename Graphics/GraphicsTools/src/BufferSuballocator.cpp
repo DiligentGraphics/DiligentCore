@@ -125,10 +125,18 @@ public:
                            IRenderDevice*                      pDevice,
                            const BufferSuballocatorCreateInfo& CreateInfo) :
         // clang-format off
-        TBase                    {pRefCounters},
-        m_Mgr                    {StaticCast<size_t>(CreateInfo.Desc.Size), DefaultRawMemoryAllocator::GetAllocator()},
-        m_Buffer                 {pDevice, CreateInfo.Desc},
-        m_ExpansionSize          {CreateInfo.ExpansionSize},
+        TBase{pRefCounters},
+        m_Mgr{StaticCast<size_t>(CreateInfo.Desc.Size), DefaultRawMemoryAllocator::GetAllocator()},
+        m_Buffer
+        {
+            pDevice,
+            DynamicBufferCreateInfo
+            {
+                CreateInfo.Desc,
+                CreateInfo.ExpansionSize != 0 ? CreateInfo.ExpansionSize : static_cast<Uint32>(CreateInfo.Desc.Size) // MemoryPageSize
+            }
+        },
+        m_ExpansionSize{CreateInfo.ExpansionSize},
         m_SuballocationsAllocator
         {
             DefaultRawMemoryAllocator::GetAllocator(),
