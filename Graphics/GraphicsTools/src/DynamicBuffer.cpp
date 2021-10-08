@@ -208,10 +208,11 @@ void DynamicBuffer::ResizeSparseBuffer(IDeviceContext* pContext)
         WaitFenceValue = m_NextBeforeResizeFenceValue++;
         pWaitFence     = m_pBeforeResizeFence;
 
-        pWaitFence->Signal(WaitFenceValue);
         BindMemAttribs.NumWaitFences    = 1;
         BindMemAttribs.pWaitFenceValues = &WaitFenceValue;
         BindMemAttribs.ppWaitFences     = &pWaitFence;
+
+        pContext->EnqueueSignal(m_pBeforeResizeFence, WaitFenceValue);
     }
 
     Uint64  SignalFenceValue = 0;

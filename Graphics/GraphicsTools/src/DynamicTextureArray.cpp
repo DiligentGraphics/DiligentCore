@@ -39,7 +39,7 @@ namespace Diligent
 namespace
 {
 
-bool VerifySparseTextureCompatibility(IRenderDevice* pDevice)
+bool VerifySparseTextureCompatibility(IRenderDevice* pDevice, const TextureDesc& Desc)
 {
     VERIFY_EXPR(pDevice != nullptr);
 
@@ -54,6 +54,13 @@ bool VerifySparseTextureCompatibility(IRenderDevice* pDevice)
     if ((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_TEXTURE_2D_ARRAY_MIP_TAIL) == 0)
     {
         LOG_WARNING_MESSAGE("This device does not support sparse texture 2D arrays with mip tails.");
+        return false;
+    }
+
+    const auto& SparseInfo = pDevice->GetSparseTextureFormatInfo(Desc.Format, Desc.Type, Desc.SampleCount);
+    if ((SparseInfo.BindFlags & Desc.BindFlags) != Desc.BindFlags)
+    {
+        LOG_WARNING_MESSAGE("The following bind flags requested for the sparse dynamic texture array are not supported by device: ", GetBindFlagsString(Desc.BindFlags & ~SparseInfo.BindFlags, ", "));
         return false;
     }
 
@@ -99,7 +106,7 @@ void DynamicTextureArray::CreateSparseTexture(IRenderDevice* pDevice)
     VERIFY_EXPR(pDevice != nullptr);
     VERIFY_EXPR(m_Desc.Usage == USAGE_SPARSE);
 
-    if (!VerifySparseTextureCompatibility(pDevice))
+    if (!VerifySparseTextureCompatibility(pDevice, m_Desc))
     {
         LOG_WARNING_MESSAGE("This device does not support capabilities required for sparse texture 2D arrays. USAGE_DEFAULT texture will be used instead.");
         m_Desc.Usage = USAGE_DEFAULT;
@@ -109,9 +116,17 @@ void DynamicTextureArray::CreateSparseTexture(IRenderDevice* pDevice)
     const auto& AdapterInfo = pDevice->GetAdapterInfo();
 
     {
+        // Some implementations may return UINT64_MAX, so limit the maximum memory size per resource.
+        // Some implementations will fail to create texture even if size is less than ResourceSpaceSize.
+        const auto MaxMemorySize = std::min(Uint64{1} << 40, AdapterInfo.SparseResources.ResourceSpaceSize) >> 1;
+        const auto MipProps      = GetMipLevelProperties(m_Desc, 0);
+
         auto TmpDesc = m_Desc;
         // Reserve the maximum available number of slices
         TmpDesc.ArraySize = AdapterInfo.Texture.MaxTexture2DArraySlices;
+        // Account for the maximum virtual space size
+        TmpDesc.ArraySize = std::min(TmpDesc.ArraySize, StaticCast<Uint32>(MaxMemorySize / (MipProps.MipSize * 4 / 3)));
+
         pDevice->CreateTexture(TmpDesc, nullptr, &m_pTexture);
         DEV_CHECK_ERR(m_pTexture, "Failed to create sparse texture");
         if (!m_pTexture)
@@ -122,7 +137,15 @@ void DynamicTextureArray::CreateSparseTexture(IRenderDevice* pDevice)
     }
 
     const auto& TexSparseProps = m_pTexture->GetSparseProperties();
-    const auto  NumNormalMips  = std::min(m_Desc.MipLevels, TexSparseProps.FirstMipInTail);
+    if ((TexSparseProps.Flags & SPARSE_TEXTURE_FLAG_SINGLE_MIPTAIL) != 0)
+    {
+        LOG_WARNING_MESSAGE("This device requires single mip tail for the sparse texture 2D array, which is not suitable for the dynamic array.");
+        m_pTexture.Release();
+        m_Desc.Usage = USAGE_DEFAULT;
+        return;
+    }
+
+    const auto NumNormalMips = std::min(m_Desc.MipLevels, TexSparseProps.FirstMipInTail);
     // Compute the total number of blocks in one slice
     Uint64 NumBlocksInSlice = 0;
     for (Uint32 Mip = 0; Mip < NumNormalMips; ++Mip)
@@ -304,10 +327,11 @@ void DynamicTextureArray::ResizeSparseTexture(IDeviceContext* pContext)
         WaitFenceValue = m_NextBeforeResizeFenceValue++;
         pWaitFence     = m_pBeforeResizeFence;
 
-        pWaitFence->Signal(WaitFenceValue);
         BindMemAttribs.NumWaitFences    = 1;
         BindMemAttribs.pWaitFenceValues = &WaitFenceValue;
         BindMemAttribs.ppWaitFences     = &pWaitFence;
+
+        pContext->EnqueueSignal(m_pBeforeResizeFence, WaitFenceValue);
     }
 
     Uint64  SignalFenceValue = 0;
