@@ -938,7 +938,7 @@ void RenderDeviceGLImpl::InitAdapterInfo()
         DrawCommandProps.CapFlags             = DRAW_COMMAND_CAP_FLAG_NONE;
         if (m_DeviceInfo.Type == RENDER_DEVICE_TYPE_GL)
         {
-            DrawCommandProps.CapFlags |= DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT;
+            DrawCommandProps.CapFlags |= DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT | DRAW_COMMAND_CAP_FLAG_BASE_VERTEX;
 
             // The baseInstance member of the DrawElementsIndirectCommand structure is defined only if the GL version is 4.2 or greater.
             if (GLVersion >= Version{4, 2})
@@ -955,6 +955,9 @@ void RenderDeviceGLImpl::InitAdapterInfo()
             const auto* Extensions = reinterpret_cast<const char*>(glGetString(GL_EXTENSIONS));
             if (GLVersion >= Version{3, 1} || strstr(Extensions, "draw_indirect"))
                 DrawCommandProps.CapFlags |= DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT;
+
+            if (GLVersion >= Version{3, 2} || strstr(Extensions, "draw_elements_base_vertex"))
+                DrawCommandProps.CapFlags |= DRAW_COMMAND_CAP_FLAG_BASE_VERTEX;
 
             if (strstr(Extensions, "base_instance"))
                 DrawCommandProps.CapFlags |= DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_FIRST_INSTANCE;
