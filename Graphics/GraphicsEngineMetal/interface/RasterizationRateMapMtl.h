@@ -31,6 +31,10 @@
 #include "../../GraphicsEngine/interface/Buffer.h"
 #include "../../GraphicsEngine/interface/TextureView.h"
 
+#if PLATFORM_TVOS
+@protocol MTLRasterizationRateMap; // Not available in tvOS
+#endif
+
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {89148E0E-1300-4FF2-BEA4-F1127ED24CF9}
@@ -49,13 +53,13 @@ static const INTERFACE_ID IID_RasterizationRateMapMtl =
 
 /// Rasterization rate map description
 struct RasterizationRateMapDesc DILIGENT_DERIVE(DeviceObjectAttribs)
-    
+
     /// Width of the final render target
     Uint32 ScreenWidth  DEFAULT_INITIALIZER(0);
 
     /// Height of the final render target
     Uint32 ScreenHeight DEFAULT_INITIALIZER(0);
-    
+
     /// The number of layers (aka array size)
     Uint32 LayerCount   DEFAULT_INITIALIZER(0);
 };
@@ -87,7 +91,7 @@ struct RasterizationRateMapCreateInfo
 {
     /// Rasterization rate map description
     RasterizationRateMapDesc          Desc;
-    
+
     /// Array of rasterization rate map layer descriptions
     const RasterizationRateLayerDesc* pLayers    DEFAULT_INITIALIZER(nullptr);
 };

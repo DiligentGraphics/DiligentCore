@@ -28,10 +28,10 @@
 /// Definition of the Diligent::IRenderDeviceMtl interface
 
 #include "../../GraphicsEngine/interface/RenderDevice.h"
+#include "RasterizationRateMapMtl.h"
 
 #if PLATFORM_TVOS
 @protocol MTLAccelerationStructure; // Not available in tvOS
-@protocol MTLRasterizationRateMap;  // Not available in tvOS
 #endif
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
@@ -84,13 +84,13 @@ DILIGENT_BEGIN_INTERFACE(IRenderDeviceMtl, IRenderDevice)
 
     /// Creates a rasterization rate map from existing Metal resource
     VIRTUAL void METHOD(CreateRasterizationRateMapFromMtlResource)(THIS_
-                                                                   id<MTLRasterizationRateMap>       mtlRRM,
-                                                                   struct IRasterizationRateMapMtl** ppRRM) API_AVAILABLE(ios(13), macosx(10.15.4)) API_UNAVAILABLE(tvos) PURE;
+                                                                   id<MTLRasterizationRateMap> mtlRRM,
+                                                                   IRasterizationRateMapMtl**  ppRRM) API_AVAILABLE(ios(13), macosx(10.15.4)) API_UNAVAILABLE(tvos) PURE;
 
     /// Creates a rasterization rate map
     VIRTUAL void METHOD(CreateRasterizationRateMap)(THIS_
-                                                    const struct RasterizationRateMapCreateInfo REF CreateInfo,
-                                                    struct IRasterizationRateMapMtl**               ppRRM) PURE;
+                                                    const RasterizationRateMapCreateInfo REF CreateInfo,
+                                                    IRasterizationRateMapMtl**               ppRRM) PURE;
 
     /// Creates a sparse texture
     ///

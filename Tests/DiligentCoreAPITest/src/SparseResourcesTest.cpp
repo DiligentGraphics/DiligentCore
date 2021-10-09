@@ -1906,7 +1906,7 @@ TEST_F(SparseResourceTest, SparseTexture3D)
     {
         GTEST_SKIP() << "Sparse texture 3D is not supported by this device";
     }
-    if ((pDevice->GetSparseTextureFormatInfo(TEX_FORMAT_RGBA8_UNORM, RESOURCE_DIM_TEX_3D, 1).BindFlags & BIND_UNORDERED_ACCESS) != 0)
+    if ((pDevice->GetSparseTextureFormatInfo(TEX_FORMAT_RGBA8_UNORM, RESOURCE_DIM_TEX_3D, 1).BindFlags & BIND_UNORDERED_ACCESS) == 0)
     {
         GTEST_SKIP() << "Sparse texture UAV is not supported by this device";
     }
