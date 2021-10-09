@@ -505,6 +505,7 @@ GraphicsAdapterInfo EngineFactoryD3D11Impl::GetGraphicsAdapterInfo(void*        
     // Draw command properties
     {
         auto& DrawCommandProps{AdapterInfo.DrawCommand};
+        DrawCommandProps.CapFlags |= DRAW_COMMAND_CAP_FLAG_DRAW_INDEX_VERTEX_OFFSET;
 #if D3D11_REQ_DRAWINDEXED_INDEX_COUNT_2_TO_EXP >= 32
         DrawCommandProps.MaxIndexValue = ~0u;
 #else

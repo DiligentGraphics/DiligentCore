@@ -1065,6 +1065,7 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
         DrawCommandProps.MaxIndexValue = 1u << D3D12_REQ_DRAWINDEXED_INDEX_COUNT_2_TO_EXP;
 #endif
         DrawCommandProps.CapFlags |=
+            DRAW_COMMAND_CAP_FLAG_DRAW_INDEX_VERTEX_OFFSET |
             DRAW_COMMAND_CAP_FLAG_NATIVE_MULTI_DRAW_INDIRECT |
             DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNTER_BUFFER;
 #if defined(_MSC_VER) && defined(_WIN64)

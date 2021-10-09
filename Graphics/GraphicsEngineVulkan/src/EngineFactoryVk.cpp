@@ -399,7 +399,7 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
         auto& DrawCommandProps{AdapterInfo.DrawCommand};
         DrawCommandProps.MaxIndexValue        = vkDeviceProps.limits.maxDrawIndexedIndexValue;
         DrawCommandProps.MaxDrawIndirectCount = vkDeviceProps.limits.maxDrawIndirectCount;
-        DrawCommandProps.CapFlags             = DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT;
+        DrawCommandProps.CapFlags             = DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT | DRAW_COMMAND_CAP_FLAG_DRAW_INDEX_VERTEX_OFFSET;
         if (vkFeatures.multiDrawIndirect != VK_FALSE || vkExtFeatures.DrawIndirectCount)
             DrawCommandProps.CapFlags |= DRAW_COMMAND_CAP_FLAG_NATIVE_MULTI_DRAW_INDIRECT;
         if (vkFeatures.drawIndirectFirstInstance != VK_FALSE)
