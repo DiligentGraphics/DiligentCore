@@ -949,6 +949,9 @@ void RenderDeviceGLImpl::InitAdapterInfo()
 
             if (GLVersion >= Version{4, 6} || CheckExtension("GL_ARB_indirect_parameters"))
                 DrawCommandProps.CapFlags |= DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNTER_BUFFER;
+
+            // Always 2^32-1 on desktop
+            DrawCommandProps.MaxIndexValue = ~Uint32{0};
         }
         else if (m_DeviceInfo.Type == RENDER_DEVICE_TYPE_GLES)
         {
@@ -964,11 +967,17 @@ void RenderDeviceGLImpl::InitAdapterInfo()
 
             if (strstr(Extensions, "multi_draw_indirect"))
                 DrawCommandProps.CapFlags |= DRAW_COMMAND_CAP_FLAG_NATIVE_MULTI_DRAW_INDIRECT | DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNTER_BUFFER;
+
+            DrawCommandProps.MaxIndexValue = 0;
+            glGetIntegerv(GL_MAX_ELEMENT_INDEX, reinterpret_cast<GLint*>(&DrawCommandProps.MaxIndexValue));
+            if (glGetError() != GL_NO_ERROR)
+            {
+                // Note that on desktop, GL_MAX_ELEMENT_INDEX was added only in 4.3 and always returns 2^32-1
+                LOG_ERROR_MESSAGE("glGetIntegerv(GL_MAX_ELEMENT_INDEX) failed");
+                DrawCommandProps.MaxIndexValue = (1u << 24) - 1; // Guaranteed by the spec
+            }
         }
 
-        DrawCommandProps.MaxIndexValue = 0;
-        glGetIntegerv(GL_MAX_ELEMENT_INDEX, reinterpret_cast<GLint*>(&DrawCommandProps.MaxIndexValue));
-        CHECK_GL_ERROR("glGetIntegerv(GL_MAX_ELEMENT_INDEX)");
 #if defined(_MSC_VER) && defined(_WIN64)
         static_assert(sizeof(DrawCommandProps) == 12, "Did you add a new member to DrawCommandProperties? Please initialize it here.");
 #endif
