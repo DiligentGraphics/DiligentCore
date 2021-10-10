@@ -676,11 +676,11 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
         auto vkDevice       = Instance->SelectPhysicalDevice(EngineCI.AdapterId);
         auto PhysicalDevice = VulkanUtilities::VulkanPhysicalDevice::Create(vkDevice, *Instance);
 
-        std::vector<const char*> DeviceExtensions =
-            {
-                VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-                VK_KHR_MAINTENANCE1_EXTENSION_NAME // To allow negative viewport height
-            };
+        std::vector<const char*> DeviceExtensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+        if (PhysicalDevice->IsExtensionSupported(VK_KHR_MAINTENANCE1_EXTENSION_NAME))
+            DeviceExtensions.push_back(VK_KHR_MAINTENANCE1_EXTENSION_NAME); // To allow negative viewport height
+        else
+            LOG_WARNING_MESSAGE(VK_KHR_MAINTENANCE1_EXTENSION_NAME, " is not supported.");
 
         // Enable device features if they are supported and throw an error if not supported, but required by user.
         const auto AdapterInfo = GetPhysicalDeviceGraphicsAdapterInfo(*PhysicalDevice);
