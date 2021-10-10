@@ -295,7 +295,7 @@ void LoadGLFunctions()
             if (Fn != nullptr)
                 break;
         }
-        if (Fn != nullptr)
+        if (Fn == nullptr)
             Fn = FnStub;
     };
 
