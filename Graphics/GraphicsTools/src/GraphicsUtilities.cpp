@@ -341,7 +341,7 @@ void ComputeMipLevel(Uint32         FineLevelWidth,
 extern "C"
 {
     void Diligent_CreateUniformBuffer(Diligent::IRenderDevice*   pDevice,
-                                      Diligent::Uint32           Size,
+                                      Diligent::Uint64           Size,
                                       const Diligent::Char*      Name,
                                       Diligent::IBuffer**        ppBuffer,
                                       Diligent::USAGE            Usage,
@@ -358,7 +358,7 @@ extern "C"
                                               Diligent::Uint32         HorzCells,
                                               Diligent::Uint32         VertCells,
                                               Diligent::Uint8*         pData,
-                                              Diligent::Uint32         StrideInBytes)
+                                              Diligent::Uint64         StrideInBytes)
     {
         Diligent::GenerateCheckerBoardPattern(Width, Height, Fmt, HorzCells, VertCells, pData, StrideInBytes);
     }
@@ -367,9 +367,9 @@ extern "C"
                                   Diligent::Uint32         FineLevelHeight,
                                   Diligent::TEXTURE_FORMAT Fmt,
                                   const void*              pFineLevelData,
-                                  Diligent::Uint32         FineDataStrideInBytes,
+                                  Diligent::Uint64         FineDataStrideInBytes,
                                   void*                    pCoarseLevelData,
-                                  Diligent::Uint32         CoarseDataStrideInBytes)
+                                  Diligent::Uint64         CoarseDataStrideInBytes)
     {
         ComputeMipLevel(FineLevelWidth, FineLevelHeight, Fmt, pFineLevelData,
                         FineDataStrideInBytes, pCoarseLevelData, CoarseDataStrideInBytes);
