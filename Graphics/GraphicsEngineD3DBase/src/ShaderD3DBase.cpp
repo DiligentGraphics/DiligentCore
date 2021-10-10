@@ -139,7 +139,6 @@ ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI, const ShaderVersi
     if (ShaderCI.Source || ShaderCI.FilePath)
     {
         DEV_CHECK_ERR(ShaderCI.ByteCode == nullptr, "'ByteCode' must be null when shader is created from the source code or a file");
-        DEV_CHECK_ERR(ShaderCI.ByteCodeSize == 0, "'ByteCodeSize' must be 0 when shader is created from the source code or a file");
         DEV_CHECK_ERR(ShaderCI.EntryPoint != nullptr, "Entry point must not be null");
 
         bool UseDXC = false;

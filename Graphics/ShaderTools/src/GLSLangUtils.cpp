@@ -359,7 +359,7 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& ShaderCI,
     Shader.setEnvTargetHlslFunctionality1();
 
     RefCntAutoPtr<IDataBlob> pFileData;
-    size_t                   SourceCodeLen = 0;
+    size_t                   SourceCodeLen = ShaderCI.SourceLength;
 
     const char* SourceCode = ReadShaderSourceFile(ShaderCI.Source, ShaderCI.pShaderSourceStreamFactory, ShaderCI.FilePath, pFileData, SourceCodeLen);
 

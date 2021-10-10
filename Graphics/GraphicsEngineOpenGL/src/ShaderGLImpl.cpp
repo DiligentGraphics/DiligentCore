@@ -60,7 +60,6 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
 // clang-format on
 {
     DEV_CHECK_ERR(ShaderCI.ByteCode == nullptr, "'ByteCode' must be null when shader is created from the source code or a file");
-    DEV_CHECK_ERR(ShaderCI.ByteCodeSize == 0, "'ByteCodeSize' must be 0 when shader is created from the source code or a file");
     DEV_CHECK_ERR(ShaderCI.ShaderCompiler == SHADER_COMPILER_DEFAULT, "only default compiler is supported in OpenGL");
 
     const auto& DeviceInfo  = pDeviceGL->GetDeviceInfo();
@@ -93,9 +92,9 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
         }
 
         // Read the source file directly and use it as is
-        size_t SourceLen = 0;
+        size_t SourceLen = ShaderCI.SourceLength;
         ShaderStrings[0] = ReadShaderSourceFile(ShaderCI.Source, ShaderCI.pShaderSourceStreamFactory, ShaderCI.FilePath, pSourceFileData, SourceLen);
-        Lengths[0]       = static_cast<GLint>(SourceLen);
+        Lengths[0]       = StaticCast<GLint>(SourceLen);
     }
     else
     {

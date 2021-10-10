@@ -109,11 +109,11 @@ const char* ReadShaderSourceFile(const char*                      SourceCode,
                                  RefCntAutoPtr<IDataBlob>&        pFileData,
                                  size_t&                          SourceCodeLen) noexcept(false)
 {
-    SourceCodeLen = 0;
     if (SourceCode != nullptr)
     {
         VERIFY(FilePath == nullptr, "FilePath must be null when SourceCode is not null");
-        SourceCodeLen = strlen(SourceCode);
+        if (SourceCodeLen == 0)
+            SourceCodeLen = strlen(SourceCode);
     }
     else
     {
@@ -147,9 +147,11 @@ const char* ReadShaderSourceFile(const char*                      SourceCode,
 
 void AppendShaderSourceCode(std::string& Source, const ShaderCreateInfo& ShaderCI) noexcept(false)
 {
+    VERIFY_EXPR(ShaderCI.ByteCode == nullptr);
+
     RefCntAutoPtr<IDataBlob> pFileData;
 
-    size_t SourceCodeLen = 0;
+    size_t SourceCodeLen = ShaderCI.SourceLength;
 
     const auto* SourceCode =
         ReadShaderSourceFile(ShaderCI.Source, ShaderCI.pShaderSourceStreamFactory,

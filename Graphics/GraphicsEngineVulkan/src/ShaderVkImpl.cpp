@@ -60,7 +60,6 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
     if (ShaderCI.Source != nullptr || ShaderCI.FilePath != nullptr)
     {
         DEV_CHECK_ERR(ShaderCI.ByteCode == nullptr, "'ByteCode' must be null when shader is created from source code or a file");
-        DEV_CHECK_ERR(ShaderCI.ByteCodeSize == 0, "'ByteCodeSize' must be 0 when shader is created from source code or a file");
 
         static constexpr char VulkanDefine[] =
             "#ifndef VULKAN\n"
@@ -110,7 +109,7 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
                     RefCntAutoPtr<IDataBlob> pSourceFileData;
 
                     const char*        ShaderSource = nullptr;
-                    size_t             SourceLength = 0;
+                    size_t             SourceLength = ShaderCI.SourceLength;
                     const ShaderMacro* Macros       = nullptr;
                     if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM)
                     {

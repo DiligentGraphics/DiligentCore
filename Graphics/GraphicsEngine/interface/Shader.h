@@ -240,10 +240,22 @@ struct ShaderCreateInfo
     ///        HLSL shaders need to be compiled against 4.0 profile or higher.
     const void* ByteCode DEFAULT_INITIALIZER(nullptr);
 
-    /// Size of the compiled shader bytecode
+    union
+    {
+        /// Length of the source code, when Source is not null.
 
-    /// Byte code size (in bytes) must be provided if ByteCode is not null
-    size_t ByteCodeSize DEFAULT_INITIALIZER(0);
+        /// When Source is not null and is not a null-terminated string, this member
+        /// should be used to specify the length of the source code.
+        /// If SourceLength is zero, the source code string is assumed to be
+        /// null-terminated.
+        size_t SourceLength DEFAULT_INITIALIZER(0);
+
+
+        /// Size of the compiled shader byte code, when ByteCode is not null.
+
+        /// Byte code size (in bytes) must not be zero if ByteCode is not null.
+        size_t ByteCodeSize;
+    };
 
     /// Shader entry point
 

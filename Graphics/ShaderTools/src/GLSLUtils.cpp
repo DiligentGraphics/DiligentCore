@@ -272,7 +272,7 @@ String BuildGLSLSourceString(const ShaderCreateInfo&    ShaderCI,
     AppendShaderMacros(GLSLSource, ShaderCI.Macros);
 
     RefCntAutoPtr<IDataBlob> pFileData;
-    size_t                   SourceLen = 0;
+    size_t                   SourceLen = ShaderCI.SourceLength;
 
     const auto* ShaderSource = ReadShaderSourceFile(ShaderCI.Source, ShaderCI.pShaderSourceStreamFactory, ShaderCI.FilePath, pFileData, SourceLen);
 
