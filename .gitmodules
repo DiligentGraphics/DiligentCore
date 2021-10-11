@@ -3,7 +3,7 @@
 	url = https://github.com/DiligentGraphics/glslang
 [submodule "ThirdParty/SPIRV-Cross"]
 	path = ThirdParty/SPIRV-Cross
-	url = https://github.com/DiligentGraphics/SPIRV-Cross
+	url = https://github.com/KhronosGroup/SPIRV-Cross.git
 [submodule "ThirdParty/SPIRV-Tools"]
 	path = ThirdParty/SPIRV-Tools
 	url = https://github.com/DiligentGraphics/SPIRV-Tools
