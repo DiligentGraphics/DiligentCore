@@ -972,8 +972,8 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
                         SHADING_RATE_CAP_FLAG_SAMPLE_MASK |
                         SHADING_RATE_CAP_FLAG_SHADER_SAMPLE_MASK |
                         SHADING_RATE_CAP_FLAG_SHADING_RATE_SHADER_INPUT;
-                    ShadingRateProps.MinTileSize[0] = 1;
-                    ShadingRateProps.MinTileSize[1] = 1;
+                    ShadingRateProps.MinTileSize[0] = d3d12Features6.ShadingRateImageTileSize;
+                    ShadingRateProps.MinTileSize[1] = d3d12Features6.ShadingRateImageTileSize;
                     ShadingRateProps.MaxTileSize[0] = d3d12Features6.ShadingRateImageTileSize;
                     ShadingRateProps.MaxTileSize[1] = d3d12Features6.ShadingRateImageTileSize;
                     ShadingRateProps.Combiners |=
