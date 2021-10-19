@@ -507,7 +507,7 @@ bool VerifyStateTransitionDesc(const IRenderDevice*       pDevice,
         CHECK_STATE_TRANSITION_DESC(OldState != RESOURCE_STATE_UNKNOWN, "the state of BLAS '", BLASDesc.Name, "' is unknown to the engine and is not explicitly specified in the barrier.");
         CHECK_STATE_TRANSITION_DESC(Barrier.NewState == RESOURCE_STATE_BUILD_AS_READ || Barrier.NewState == RESOURCE_STATE_BUILD_AS_WRITE,
                                     "invalid new state specified for BLAS '", BLASDesc.Name, "'.");
-        CHECK_STATE_TRANSITION_DESC(Barrier.TransitionType != STATE_TRANSITION_TYPE_IMMEDIATE, "split barriers are not supported for BLAS.");
+        CHECK_STATE_TRANSITION_DESC(Barrier.TransitionType == STATE_TRANSITION_TYPE_IMMEDIATE, "split barriers are not supported for BLAS.");
     }
     else if (RefCntAutoPtr<ITopLevelAS> pTopLevelAS{Barrier.pResource, IID_TopLevelAS})
     {
@@ -517,7 +517,7 @@ bool VerifyStateTransitionDesc(const IRenderDevice*       pDevice,
         CHECK_STATE_TRANSITION_DESC(OldState != RESOURCE_STATE_UNKNOWN, "the state of TLAS '", TLASDesc.Name, "' is unknown to the engine and is not explicitly specified in the barrier.");
         CHECK_STATE_TRANSITION_DESC(Barrier.NewState == RESOURCE_STATE_BUILD_AS_READ || Barrier.NewState == RESOURCE_STATE_BUILD_AS_WRITE || Barrier.NewState == RESOURCE_STATE_RAY_TRACING,
                                     "invalid new state specified for TLAS '", TLASDesc.Name, "'.");
-        CHECK_STATE_TRANSITION_DESC(Barrier.TransitionType != STATE_TRANSITION_TYPE_IMMEDIATE, "split barriers are not supported for TLAS.");
+        CHECK_STATE_TRANSITION_DESC(Barrier.TransitionType == STATE_TRANSITION_TYPE_IMMEDIATE, "split barriers are not supported for TLAS.");
     }
     else
     {
