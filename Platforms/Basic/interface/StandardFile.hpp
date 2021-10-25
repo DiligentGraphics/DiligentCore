@@ -48,7 +48,7 @@ public:
 
     size_t GetPos();
 
-    void SetPos(size_t Offset, FilePosOrigin Origin);
+    size_t SetPos(size_t Offset, FilePosOrigin Origin);
 
 protected:
     FILE* m_pFile = nullptr;

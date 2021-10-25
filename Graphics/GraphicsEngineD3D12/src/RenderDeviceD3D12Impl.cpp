@@ -46,8 +46,8 @@
 #include "BottomLevelASD3D12Impl.hpp"
 #include "TopLevelASD3D12Impl.hpp"
 #include "ShaderBindingTableD3D12Impl.hpp"
-#include "PipelineResourceSignatureD3D12Impl.hpp"
 #include "DeviceMemoryD3D12Impl.hpp"
+#include "PSOCacheD3D12Impl.hpp"
 
 #include "EngineMemory.h"
 #include "D3D12TypeConversions.hpp"
@@ -634,6 +634,13 @@ void RenderDeviceD3D12Impl::CreatePipelineResourceSignature(const PipelineResour
     CreatePipelineResourceSignatureImpl(ppSignature, Desc, ShaderStages, IsDeviceInternal);
 }
 
+void RenderDeviceD3D12Impl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc&                      Desc,
+                                                            const PipelineResourceSignatureD3D12Impl::SerializedData& SerializedData,
+                                                            IPipelineResourceSignature**                              ppSignature)
+{
+    CreatePipelineResourceSignatureImpl(ppSignature, Desc, SerializedData);
+}
+
 DescriptorHeapAllocation RenderDeviceD3D12Impl::AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count /*= 1*/)
 {
     VERIFY(Type >= D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV && Type < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES, "Invalid heap type");
@@ -656,6 +663,12 @@ void RenderDeviceD3D12Impl::CreateRootSignature(const RefCntAutoPtr<PipelineReso
 void RenderDeviceD3D12Impl::CreateDeviceMemory(const DeviceMemoryCreateInfo& CreateInfo, IDeviceMemory** ppMemory)
 {
     CreateDeviceMemoryImpl(ppMemory, CreateInfo);
+}
+
+void RenderDeviceD3D12Impl::CreatePSOCache(const PSOCacheCreateInfo& CreateInfo,
+                                           IPSOCache**               ppPSOCache)
+{
+    CreatePSOCacheImpl(ppPSOCache, CreateInfo);
 }
 
 SparseTextureFormatInfo RenderDeviceD3D12Impl::GetSparseTextureFormatInfo(TEXTURE_FORMAT     TexFormat,

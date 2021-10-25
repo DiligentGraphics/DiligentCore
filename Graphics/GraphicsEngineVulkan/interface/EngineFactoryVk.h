@@ -28,7 +28,7 @@
 #pragma once
 
 /// \file
-/// Declaration of functions that initialize Direct3D12-based engine implementation
+/// Declaration of functions that initialize Vulkan-based engine implementation
 
 #include "../../GraphicsEngine/interface/EngineFactory.h"
 #include "../../GraphicsEngine/interface/RenderDevice.h"

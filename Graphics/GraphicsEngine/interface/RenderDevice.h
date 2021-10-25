@@ -309,6 +309,12 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
                                             const DeviceMemoryCreateInfo REF CreateInfo,
                                             IDeviceMemory**                  ppMemory) PURE;
 
+    
+    // AZ TODO
+    VIRTUAL void METHOD(CreatePSOCache)(THIS_
+                                        const PSOCacheCreateInfo REF CreateInfo,
+                                        IPSOCache**                  ppPSOCache) PURE;
+
 
     /// Returns the device information, see Diligent::RenderDeviceInfo for details.
     VIRTUAL const RenderDeviceInfo REF METHOD(GetDeviceInfo)(THIS) CONST PURE;

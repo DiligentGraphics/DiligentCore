@@ -37,6 +37,7 @@
 #include "ShaderVkImpl.hpp"
 #include "RenderPassVkImpl.hpp"
 #include "ShaderResourceBindingVkImpl.hpp"
+#include "PSOCacheVkImpl.hpp"
 
 #include "VulkanTypeConversions.hpp"
 #include "EngineMemory.h"
@@ -141,7 +142,8 @@ void CreateComputePipeline(RenderDeviceVkImpl*                           pDevice
                            std::vector<VkPipelineShaderStageCreateInfo>& Stages,
                            const PipelineLayoutVk&                       Layout,
                            const PipelineStateDesc&                      PSODesc,
-                           VulkanUtilities::PipelineWrapper&             Pipeline)
+                           VulkanUtilities::PipelineWrapper&             Pipeline,
+                           VkPipelineCache                               PSOCache)
 {
     const auto& LogicalDevice = pDeviceVk->GetLogicalDevice();
 
@@ -157,7 +159,7 @@ void CreateComputePipeline(RenderDeviceVkImpl*                           pDevice
     PipelineCI.stage  = Stages[0];
     PipelineCI.layout = Layout.GetVkPipelineLayout();
 
-    Pipeline = LogicalDevice.CreateComputePipeline(PipelineCI, VK_NULL_HANDLE, PSODesc.Name);
+    Pipeline = LogicalDevice.CreateComputePipeline(PipelineCI, PSOCache, PSODesc.Name);
 }
 
 
@@ -167,7 +169,8 @@ void CreateGraphicsPipeline(RenderDeviceVkImpl*                           pDevic
                             const PipelineStateDesc&                      PSODesc,
                             const GraphicsPipelineDesc&                   GraphicsPipeline,
                             VulkanUtilities::PipelineWrapper&             Pipeline,
-                            RefCntAutoPtr<IRenderPass>&                   pRenderPass)
+                            RefCntAutoPtr<IRenderPass>&                   pRenderPass,
+                            VkPipelineCache                               PSOCache)
 {
     const auto& LogicalDevice  = pDeviceVk->GetLogicalDevice();
     const auto& PhysicalDevice = pDeviceVk->GetPhysicalDevice();
@@ -354,7 +357,7 @@ void CreateGraphicsPipeline(RenderDeviceVkImpl*                           pDevic
     PipelineCI.basePipelineHandle = VK_NULL_HANDLE; // a pipeline to derive from
     PipelineCI.basePipelineIndex  = -1;             // an index into the pCreateInfos parameter to use as a pipeline to derive from
 
-    Pipeline = LogicalDevice.CreateGraphicsPipeline(PipelineCI, VK_NULL_HANDLE, PSODesc.Name);
+    Pipeline = LogicalDevice.CreateGraphicsPipeline(PipelineCI, PSOCache, PSODesc.Name);
 }
 
 
@@ -364,7 +367,8 @@ void CreateRayTracingPipeline(RenderDeviceVkImpl*                               
                               const PipelineLayoutVk&                                  Layout,
                               const PipelineStateDesc&                                 PSODesc,
                               const RayTracingPipelineDesc&                            RayTracingPipeline,
-                              VulkanUtilities::PipelineWrapper&                        Pipeline)
+                              VulkanUtilities::PipelineWrapper&                        Pipeline,
+                              VkPipelineCache                                          PSOCache)
 {
     const auto& LogicalDevice = pDeviceVk->GetLogicalDevice();
 
@@ -387,7 +391,7 @@ void CreateRayTracingPipeline(RenderDeviceVkImpl*                               
     PipelineCI.basePipelineHandle           = VK_NULL_HANDLE; // a pipeline to derive from
     PipelineCI.basePipelineIndex            = -1;             // an index into the pCreateInfos parameter to use as a pipeline to derive from
 
-    Pipeline = LogicalDevice.CreateRayTracingPipeline(PipelineCI, VK_NULL_HANDLE, PSODesc.Name);
+    Pipeline = LogicalDevice.CreateRayTracingPipeline(PipelineCI, PSOCache, PSODesc.Name);
 }
 
 
@@ -783,7 +787,8 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters* pRefCounters, Rende
 
         InitInternalObjects(CreateInfo, vkShaderStages, ShaderModules);
 
-        CreateGraphicsPipeline(pDeviceVk, vkShaderStages, m_PipelineLayout, m_Desc, GetGraphicsPipelineDesc(), m_Pipeline, GetRenderPassPtr());
+        CreateGraphicsPipeline(pDeviceVk, vkShaderStages, m_PipelineLayout, m_Desc, GetGraphicsPipelineDesc(), m_Pipeline, GetRenderPassPtr(),
+                               CreateInfo.pPSOCache ? ClassPtrCast<PSOCacheVkImpl>(CreateInfo.pPSOCache)->GetVkPipelineCache() : nullptr);
     }
     catch (...)
     {
@@ -802,7 +807,8 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters* pRefCounters, Rende
 
         InitInternalObjects(CreateInfo, vkShaderStages, ShaderModules);
 
-        CreateComputePipeline(pDeviceVk, vkShaderStages, m_PipelineLayout, m_Desc, m_Pipeline);
+        CreateComputePipeline(pDeviceVk, vkShaderStages, m_PipelineLayout, m_Desc, m_Pipeline,
+                              CreateInfo.pPSOCache ? ClassPtrCast<PSOCacheVkImpl>(CreateInfo.pPSOCache)->GetVkPipelineCache() : nullptr);
     }
     catch (...)
     {
@@ -825,7 +831,8 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters* pRefCounters, Rende
 
         const auto vkShaderGroups = BuildRTShaderGroupDescription(CreateInfo, m_pRayTracingPipelineData->NameToGroupIndex, ShaderStages);
 
-        CreateRayTracingPipeline(pDeviceVk, vkShaderStages, vkShaderGroups, m_PipelineLayout, m_Desc, GetRayTracingPipelineDesc(), m_Pipeline);
+        CreateRayTracingPipeline(pDeviceVk, vkShaderStages, vkShaderGroups, m_PipelineLayout, m_Desc, GetRayTracingPipelineDesc(), m_Pipeline,
+                                 CreateInfo.pPSOCache ? ClassPtrCast<PSOCacheVkImpl>(CreateInfo.pPSOCache)->GetVkPipelineCache() : nullptr);
 
         VERIFY(m_pRayTracingPipelineData->NameToGroupIndex.size() == vkShaderGroups.size(),
                "The size of NameToGroupIndex map does not match the actual number of groups in the pipeline. This is a bug.");

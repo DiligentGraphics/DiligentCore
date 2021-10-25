@@ -40,6 +40,7 @@
 #include "VulkanUtilities/VulkanPhysicalDevice.hpp"
 #include "EngineFactoryBase.hpp"
 #include "VulkanTypeConversions.hpp"
+#include "SerializationAPIVkImpl.hpp"
 
 #if PLATFORM_ANDROID
 #    include "FileSystem.hpp"
@@ -110,6 +111,11 @@ public:
         m_EnableDeviceSimulation = true;
     }
 
+    virtual ISerializationAPI* DILIGENT_CALL_TYPE GetSerializationAPI() override final
+    {
+        return &m_SerializationAPI;
+    }
+
 #if PLATFORM_ANDROID
     virtual void InitAndroidFileSystem(struct ANativeActivity* NativeActivity,
                                        const char*             NativeActivityClassName,
@@ -123,6 +129,8 @@ private:
     RefCntWeakPtr<IRenderDevice> m_wpDevice;
 
     bool m_EnableDeviceSimulation = false;
+
+    SerializationAPIVkImpl m_SerializationAPI{nullptr}; // AZ TODO
 };
 
 
@@ -1361,7 +1369,7 @@ void EngineFactoryVkImpl::CreateSwapChainVk(IRenderDevice*       pDevice,
                                             const NativeWindow&  Window,
                                             ISwapChain**         ppSwapChain)
 {
-    VERIFY(ppSwapChain, "Null pointer provided");
+    DEV_CHECK_ERR(ppSwapChain, "Null pointer provided");
     if (!ppSwapChain)
         return;
 

@@ -39,6 +39,7 @@
 #include "Sampler.h"
 #include "ShaderResourceVariable.h"
 #include "ShaderResourceBinding.h"
+#include "DeviceObjectArchive.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
@@ -216,6 +217,23 @@ struct PipelineResourceSignatureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 typedef struct PipelineResourceSignatureDesc PipelineResourceSignatureDesc;
 
 
+// AZ TODO
+/// Resource signature unpack parameters
+struct ResourceSignatureUnpackInfo
+{
+    struct IRenderDevice* pDevice DEFAULT_INITIALIZER(nullptr);
+
+    IDeviceObjectArchive* pArchive DEFAULT_INITIALIZER(nullptr);
+
+    /// Signature name to unpack. If there is only
+    /// one signature in the archive, the name may be null.
+    const char* Name DEFAULT_INITIALIZER(nullptr);
+};
+typedef struct ResourceSignatureUnpackInfo ResourceSignatureUnpackInfo;
+
+// clang-format on
+
+
 // {DCE499A5-F812-4C93-B108-D684A0B56118}
 static const INTERFACE_ID IID_PipelineResourceSignature =
     {0xdce499a5, 0xf812, 0x4c93, {0xb1, 0x8, 0xd6, 0x84, 0xa0, 0xb5, 0x61, 0x18}};
@@ -224,7 +242,7 @@ static const INTERFACE_ID IID_PipelineResourceSignature =
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
 #define IPipelineResourceSignatureInclusiveMethods \
-    IDeviceObjectInclusiveMethods;     \
+    IDeviceObjectInclusiveMethods;                 \
     IPipelineResourceSignatureMethods PipelineResourceSignature
 
 // clang-format off

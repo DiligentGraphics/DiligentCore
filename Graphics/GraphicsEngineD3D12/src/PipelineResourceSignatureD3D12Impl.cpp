@@ -811,4 +811,41 @@ bool PipelineResourceSignatureD3D12Impl::DvpValidateCommittedResource(const Devi
 }
 #endif
 
+
+PipelineResourceSignatureD3D12Impl::PipelineResourceSignatureD3D12Impl(IReferenceCounters*                  pRefCounters,
+                                                                       RenderDeviceD3D12Impl*               pDevice,
+                                                                       const PipelineResourceSignatureDesc& Desc,
+                                                                       const SerializedData&                Serialized) :
+    TPipelineResourceSignatureBase{pRefCounters, pDevice, Desc, Serialized.Base, false}
+{
+    try
+    {
+        ValidatePipelineResourceSignatureDescD3D12(Desc);
+
+        Initialize(
+            GetRawAllocator(), DecoupleCombinedSamplers(Desc), m_ImmutableSamplers,
+            [this]() //
+            {
+                AllocateRootParameters();
+            },
+            [this]() //
+            {
+                return ShaderResourceCacheD3D12::GetMemoryRequirements(m_RootParams).TotalSize;
+            });
+    }
+    catch (...)
+    {
+        Destruct();
+        throw;
+    }
+}
+
+void PipelineResourceSignatureD3D12Impl::Serialize(SerializedData& Serialized) const
+{
+    TPipelineResourceSignatureBase::Serialize(Serialized.Base);
+
+    Serialized.pResourceAttribs = m_pResourceAttribs;
+    Serialized.NumResources     = GetDesc().NumResources;
+}
+
 } // namespace Diligent

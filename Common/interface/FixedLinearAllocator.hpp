@@ -140,7 +140,7 @@ public:
 
     void AddSpaceForString(const Char* str) noexcept
     {
-        if (str != nullptr)
+        if (str != nullptr && *str != '\0')
             AddSpace<Char>(strlen(str) + 1);
     }
 
@@ -252,6 +252,9 @@ public:
     {
         if (Str == nullptr)
             return nullptr;
+
+        if (*Str == '\0')
+            return "";
 
         auto* Ptr = reinterpret_cast<Char*>(Allocate(strlen(Str) + 1, 1));
         Char* Dst = Ptr;

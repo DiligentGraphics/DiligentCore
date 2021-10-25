@@ -37,6 +37,7 @@
 #include "SwapChain.h"
 #include "GraphicsTypesOutputInserters.hpp"
 #include "NativeWindow.h"
+#include "ArchiveBuilderFactory.h"
 
 #include "gtest/gtest.h"
 
@@ -106,6 +107,8 @@ public:
                 m_pTheEnvironment->ReleaseResources();
         }
     };
+
+    IArchiveBuilderFactory* GetArchiveFactory() { return m_ArchiveBuilderFactory; }
 
     IRenderDevice*  GetDevice() { return m_pDevice; }
     IDeviceContext* GetDeviceContext(size_t ctx = 0)
@@ -182,6 +185,8 @@ protected:
     // Shader resource array indexing always references array element 0 when shaders are compiled.
     // A workaround is to use SM5.0 and default shader compiler.
     bool m_NeedWARPResourceArrayIndexingBugWorkaround = false;
+
+    RefCntAutoPtr<IArchiveBuilderFactory> m_ArchiveBuilderFactory;
 };
 
 } // namespace Testing

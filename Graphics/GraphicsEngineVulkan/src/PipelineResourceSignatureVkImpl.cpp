@@ -167,6 +167,8 @@ PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCount
 
 void PipelineResourceSignatureVkImpl::CreateSetLayouts()
 {
+    auto* const pDevice = GetDevice();
+
     // Initialize static resource cache first
     if (auto NumStaticResStages = GetNumStaticResStages())
     {
@@ -282,8 +284,8 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts()
                 auto&       ImmutableSampler     = m_ImmutableSamplers[SrcImmutableSamplerInd];
                 const auto& ImmutableSamplerDesc = m_Desc.ImmutableSamplers[SrcImmutableSamplerInd].Desc;
                 // The same immutable sampler may be used by different resources in different shader stages.
-                if (!ImmutableSampler.Ptr)
-                    GetDevice()->CreateSampler(ImmutableSamplerDesc, &ImmutableSampler.Ptr);
+                if (!ImmutableSampler.Ptr && pDevice)
+                    pDevice->CreateSampler(ImmutableSamplerDesc, &ImmutableSampler.Ptr);
 
                 pVkImmutableSamplers = TempAllocator.ConstructArray<VkSampler>(ResDesc.ArraySize, ImmutableSampler.Ptr.RawPtr<SamplerVkImpl>()->GetVkSampler());
             }
@@ -377,7 +379,8 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts()
                       "There are no descriptor sets in this signature, which indicates there are no other "
                       "resources besides immutable samplers. This is not currently allowed.");
 
-        GetDevice()->CreateSampler(SamplerDesc.Desc, &ImmutableSampler.Ptr);
+        if (pDevice)
+            pDevice->CreateSampler(SamplerDesc.Desc, &ImmutableSampler.Ptr);
 
         auto& BindingIndex            = BindingIndices[SetId * 3 + CACHE_GROUP_OTHER];
         ImmutableSampler.DescrSet     = DSMapping[SetId];
@@ -390,7 +393,7 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts()
         vkSetLayoutBinding.descriptorCount    = 1;
         vkSetLayoutBinding.stageFlags         = ShaderTypesToVkShaderStageFlags(SamplerDesc.ShaderStages);
         vkSetLayoutBinding.descriptorType     = VK_DESCRIPTOR_TYPE_SAMPLER;
-        vkSetLayoutBinding.pImmutableSamplers = TempAllocator.Construct<VkSampler>(ImmutableSampler.Ptr.RawPtr<SamplerVkImpl>()->GetVkSampler());
+        vkSetLayoutBinding.pImmutableSamplers = ImmutableSampler.Ptr ? TempAllocator.Construct<VkSampler>(ImmutableSampler.Ptr.RawPtr<SamplerVkImpl>()->GetVkSampler()) : VK_NULL_HANDLE;
     }
 
     Uint32 NumSets = 0;
@@ -422,20 +425,22 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts()
     SetLayoutCI.pNext = nullptr;
     SetLayoutCI.flags = 0;
 
-    const auto& LogicalDevice = GetDevice()->GetLogicalDevice();
-
-    for (size_t i = 0; i < vkSetLayoutBindings.size(); ++i)
+    if (pDevice)
     {
-        auto& vkSetLayoutBinding = vkSetLayoutBindings[i];
-        if (vkSetLayoutBinding.empty())
-            continue;
+        const auto& LogicalDevice = pDevice->GetLogicalDevice();
 
-        SetLayoutCI.bindingCount = static_cast<Uint32>(vkSetLayoutBinding.size());
-        SetLayoutCI.pBindings    = vkSetLayoutBinding.data();
-        m_VkDescrSetLayouts[i]   = LogicalDevice.CreateDescriptorSetLayout(SetLayoutCI);
+        for (size_t i = 0; i < vkSetLayoutBindings.size(); ++i)
+        {
+            auto& vkSetLayoutBinding = vkSetLayoutBindings[i];
+            if (vkSetLayoutBinding.empty())
+                continue;
+
+            SetLayoutCI.bindingCount = static_cast<Uint32>(vkSetLayoutBinding.size());
+            SetLayoutCI.pBindings    = vkSetLayoutBinding.data();
+            m_VkDescrSetLayouts[i]   = LogicalDevice.CreateDescriptorSetLayout(SetLayoutCI);
+        }
+        VERIFY_EXPR(NumSets == GetNumDescriptorSets());
     }
-
-    VERIFY_EXPR(NumSets == GetNumDescriptorSets());
 }
 
 PipelineResourceSignatureVkImpl::~PipelineResourceSignatureVkImpl()
@@ -901,5 +906,45 @@ bool PipelineResourceSignatureVkImpl::DvpValidateCommittedResource(const DeviceC
     return BindingsOK;
 }
 #endif
+
+PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCounters*                  pRefCounters,
+                                                                 RenderDeviceVkImpl*                  pDevice,
+                                                                 const PipelineResourceSignatureDesc& Desc,
+                                                                 const SerializedData&                Serialized) :
+    TPipelineResourceSignatureBase{pRefCounters, pDevice, Desc, Serialized.Base, false}
+//m_DynamicUniformBufferCount{Serialized.DynamicUniformBufferCount}
+//m_DynamicStorageBufferCount{Serialized.DynamicStorageBufferCount}
+{
+    try
+    {
+        InitializeSerialized(
+            GetRawAllocator(), Desc, Serialized, m_ImmutableSamplers,
+            [this, &Serialized]() //
+            {
+                CreateSetLayouts(); // Az TODO: optimize
+                VERIFY_EXPR(m_DynamicUniformBufferCount == Serialized.DynamicUniformBufferCount);
+                VERIFY_EXPR(m_DynamicStorageBufferCount == Serialized.DynamicStorageBufferCount);
+            },
+            [this]() //
+            {
+                return ShaderResourceCacheVk::GetRequiredMemorySize(GetNumDescriptorSets(), m_DescriptorSetSizes.data());
+            });
+    }
+    catch (...)
+    {
+        Destruct();
+        throw;
+    }
+}
+
+void PipelineResourceSignatureVkImpl::Serialize(SerializedData& Serialized) const
+{
+    TPipelineResourceSignatureBase::Serialize(Serialized.Base);
+
+    Serialized.pResourceAttribs          = m_pResourceAttribs;
+    Serialized.NumResources              = GetDesc().NumResources;
+    Serialized.DynamicStorageBufferCount = m_DynamicStorageBufferCount;
+    Serialized.DynamicUniformBufferCount = m_DynamicUniformBufferCount;
+}
 
 } // namespace Diligent

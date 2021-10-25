@@ -3,45 +3,53 @@ cmake_minimum_required (VERSION 3.6)
 project(Diligent-GraphicsEngine CXX)
 
 set(INCLUDE 
+    include/ArchiveFileSourceImpl.hpp
+    include/ArchiveMemSourceImpl.hpp
     include/BufferBase.hpp
     include/BufferViewBase.hpp
+    include/BottomLevelASBase.hpp
     include/CommandListBase.hpp
     include/DefaultShaderSourceStreamFactory.h
     include/Defines.h
     include/DeviceContextBase.hpp
     include/DeviceMemoryBase.hpp
     include/DeviceObjectBase.hpp
+    include/DeviceObjectArchiveBase.hpp
     include/EngineFactoryBase.hpp
     include/EngineMemory.h
     include/FenceBase.hpp
     include/FramebufferBase.hpp
     include/IndexWrapper.hpp
     include/PipelineStateBase.hpp
+    include/PipelineResourceSignatureBase.hpp
+    include/PSOCacheBase.hpp
     include/PrivateConstants.h
     include/QueryBase.hpp
     include/RenderDeviceBase.hpp
     include/RenderPassBase.hpp
     include/ResourceMappingImpl.hpp
     include/SamplerBase.hpp
+    include/SerializationAPIBase.hpp
     include/ShaderBase.hpp
     include/ShaderResourceBindingBase.hpp
     include/ShaderResourceCacheCommon.hpp
     include/ShaderResourceVariableBase.hpp
+    include/ShaderBindingTableBase.hpp
     include/StateObjectsRegistry.hpp
     include/SwapChainBase.hpp
     include/TextureBase.hpp
     include/TextureViewBase.hpp
-    include/BottomLevelASBase.hpp
     include/TopLevelASBase.hpp
-    include/ShaderBindingTableBase.hpp
-    include/PipelineResourceSignatureBase.hpp
+    include/Serializer.hpp
 )
 
 set(INTERFACE 
     interface/APIInfo.h
+    interface/ArchiveSource.h
     interface/BlendState.h
     interface/Buffer.h
     interface/BufferView.h
+    interface/BottomLevelAS.h
     interface/CommandList.h
     interface/Constants.h
     interface/CommandQueue.h
@@ -49,6 +57,7 @@ set(INTERFACE
     interface/DeviceContext.h
     interface/DeviceMemory.h
     interface/DeviceObject.h
+    interface/DeviceObjectArchive.h
     interface/EngineFactory.h
     interface/Fence.h
     interface/Framebuffer.h
@@ -56,21 +65,22 @@ set(INTERFACE
     interface/InputLayout.h
     interface/PipelineState.h
     interface/PipelineResourceSignature.h
+    interface/PSOCache.h
     interface/Query.h
     interface/RasterizerState.h
     interface/RenderDevice.h
     interface/RenderPass.h
     interface/ResourceMapping.h
     interface/Sampler.h
+    interface/SerializationAPI.h
     interface/Shader.h
     interface/ShaderResourceBinding.h
     interface/ShaderResourceVariable.h
+    interface/ShaderBindingTable.h
     interface/SwapChain.h
     interface/Texture.h
     interface/TextureView.h
-    interface/BottomLevelAS.h
     interface/TopLevelAS.h
-    interface/ShaderBindingTable.h
 )
 
 if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
@@ -79,21 +89,26 @@ endif()
 
 set(SOURCE
     src/APIInfo.cpp
+    src/ArchiveFileSourceImpl.cpp
+    src/ArchiveMemSourceImpl.cpp
     src/BottomLevelASBase.cpp
     src/BufferBase.cpp
     src/DefaultShaderSourceStreamFactory.cpp
     src/DeviceContextBase.cpp
     src/DeviceMemoryBase.cpp
+    src/DeviceObjectArchiveBase.cpp
     src/EngineMemory.cpp
     src/EngineFactoryBase.cpp
     src/FramebufferBase.cpp
     src/PipelineResourceSignatureBase.cpp
     src/PipelineStateBase.cpp
+    src/PSOCacheBase.cpp
     src/RenderDeviceBase.cpp
     src/ResourceMappingBase.cpp
+    src/RenderPassBase.cpp
     src/ShaderBindingTableBase.cpp
     src/SamplerBase.cpp
-    src/RenderPassBase.cpp
+    src/SerializationAPIBase.cpp
     src/TextureBase.cpp
     src/TopLevelASBase.cpp
 )

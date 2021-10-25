@@ -43,8 +43,8 @@
 #include "BottomLevelASVkImpl.hpp"
 #include "TopLevelASVkImpl.hpp"
 #include "ShaderBindingTableVkImpl.hpp"
-#include "PipelineResourceSignatureVkImpl.hpp"
 #include "DeviceMemoryVkImpl.hpp"
+#include "PSOCacheVkImpl.hpp"
 #include "CommandQueueVkImpl.hpp"
 
 #include "VulkanTypeConversions.hpp"
@@ -700,9 +700,21 @@ void RenderDeviceVkImpl::CreatePipelineResourceSignature(const PipelineResourceS
     CreatePipelineResourceSignatureImpl(ppSignature, Desc, ShaderStages, IsDeviceInternal);
 }
 
+void RenderDeviceVkImpl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc&                   Desc,
+                                                         const PipelineResourceSignatureVkImpl::SerializedData& SerializedData,
+                                                         IPipelineResourceSignature**                           ppSignature)
+{
+    CreatePipelineResourceSignatureImpl(ppSignature, Desc, SerializedData);
+}
+
 void RenderDeviceVkImpl::CreateDeviceMemory(const DeviceMemoryCreateInfo& CreateInfo, IDeviceMemory** ppMemory)
 {
     CreateDeviceMemoryImpl(ppMemory, CreateInfo);
+}
+
+void RenderDeviceVkImpl::CreatePSOCache(const PSOCacheCreateInfo& CreateInfo, IPSOCache** ppPSOCache)
+{
+    CreatePSOCacheImpl(ppPSOCache, CreateInfo);
 }
 
 std::vector<uint32_t> RenderDeviceVkImpl::ConvertCmdQueueIdsToQueueFamilies(Uint64 CommandQueueMask) const

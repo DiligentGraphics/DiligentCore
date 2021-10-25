@@ -40,8 +40,15 @@ namespace Diligent
 void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& Desc,
                                            const IRenderDevice*                 pDevice) noexcept(false)
 {
-    const auto& DeviceInfo = pDevice->GetDeviceInfo();
-    const auto& Features   = DeviceInfo.Features;
+    DeviceFeatures     Features{DEVICE_FEATURE_STATE_ENABLED};
+    RENDER_DEVICE_TYPE DevType = RENDER_DEVICE_TYPE_UNDEFINED;
+
+    if (pDevice)
+    {
+        const auto& DeviceInfo = pDevice->GetDeviceInfo();
+        Features               = DeviceInfo.Features;
+        DevType                = DeviceInfo.Type;
+    }
 
     if (Desc.BindingIndex >= MAX_RESOURCE_SIGNATURES)
         LOG_PRS_ERROR_AND_THROW("Desc.BindingIndex (", Uint32{Desc.BindingIndex}, ") exceeds the maximum allowed value (", MAX_RESOURCE_SIGNATURES - 1, ").");
@@ -117,7 +124,7 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
                                     ": ", GetPipelineResourceFlagsString(AllowedResourceFlags, false, ", "), ".");
         }
 
-        if (DeviceInfo.IsD3DDevice() || DeviceInfo.IsMetalDevice())
+        if (DevType == RENDER_DEVICE_TYPE_D3D11 || DevType == RENDER_DEVICE_TYPE_D3D12 || DevType == RENDER_DEVICE_TYPE_METAL)
         {
             if ((Res.Flags & PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER) != 0 && !Desc.UseCombinedTextureSamplers)
             {
@@ -127,7 +134,7 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
             }
         }
 
-        if ((Res.Flags & PIPELINE_RESOURCE_FLAG_GENERAL_INPUT_ATTACHMENT) != 0 && !DeviceInfo.IsVulkanDevice())
+        if ((Res.Flags & PIPELINE_RESOURCE_FLAG_GENERAL_INPUT_ATTACHMENT) != 0 && DevType != RENDER_DEVICE_TYPE_VULKAN)
         {
             LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].Flags contain GENERAL_INPUT_ATTACHMENT which is only valid in Vulkan");
         }

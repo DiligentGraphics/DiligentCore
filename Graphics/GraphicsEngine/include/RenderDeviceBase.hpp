@@ -235,6 +235,7 @@ public:
     using ShaderBindingTableImplType        = typename EngineImplTraits::ShaderBindingTableImplType;
     using PipelineResourceSignatureImplType = typename EngineImplTraits::PipelineResourceSignatureImplType;
     using DeviceMemoryImplType              = typename EngineImplTraits::DeviceMemoryImplType;
+    using PSOCacheImplType                  = typename EngineImplTraits::PSOCacheImplType;
 
     /// \param pRefCounters    - Reference counters object that controls the lifetime of this render device
     /// \param RawMemAllocator - Allocator that will be used to allocate memory for all device objects (including render device itself)
@@ -277,7 +278,8 @@ public:
         m_TLASAllocator          {RawMemAllocator, sizeof(TopLevelASImplType),                 16},
         m_SBTAllocator           {RawMemAllocator, sizeof(ShaderBindingTableImplType),         16},
         m_PipeResSignAllocator   {RawMemAllocator, sizeof(PipelineResourceSignatureImplType), 128},
-        m_MemObjAllocator        {RawMemAllocator, sizeof(DeviceMemoryImplType),               16}
+        m_MemObjAllocator        {RawMemAllocator, sizeof(DeviceMemoryImplType),               16},
+        m_PSOCacheAllocator      {RawMemAllocator, sizeof(PSOCacheImplType),                   16}
     // clang-format on
     {
         // Initialize texture format info
@@ -670,6 +672,16 @@ protected:
                            });
     }
 
+    void CreatePSOCacheImpl(IPSOCache** ppCache, const PSOCacheCreateInfo& PSOCI)
+    {
+        CreateDeviceObject("PSOCache", PSOCI.Desc, ppCache,
+                           [&]() //
+                           {
+                               auto* pPSOCacheImpl(NEW_RC_OBJ(m_PSOCacheAllocator, "PSOCache instance", PSOCacheImplType)(static_cast<RenderDeviceImplType*>(this), PSOCI));
+                               pPSOCacheImpl->QueryInterface(IID_PSOCache, reinterpret_cast<IObject**>(ppCache));
+                           });
+    }
+
 protected:
     RefCntAutoPtr<IEngineFactory> m_pEngineFactory;
 
@@ -710,6 +722,7 @@ protected:
     FixedBlockMemoryAllocator m_SBTAllocator;         ///< Allocator for shader binding table objects
     FixedBlockMemoryAllocator m_PipeResSignAllocator; ///< Allocator for pipeline resource signature objects
     FixedBlockMemoryAllocator m_MemObjAllocator;      ///< Allocator for device memory objects
+    FixedBlockMemoryAllocator m_PSOCacheAllocator;    ///< Allocator for pipeline state cache objects
 };
 
 } // namespace Diligent

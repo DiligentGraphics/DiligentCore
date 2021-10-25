@@ -30,7 +30,7 @@
 // clang-format off
 
 /// \file
-/// Definition of the Diligent::IRenderDevice interface and related data structures
+/// Definition of the Diligent::IPipelineState interface and related data structures
 
 #include "../../../Primitives/interface/Object.h"
 #include "../../../Platforms/interface/PlatformDefinitions.h"
@@ -45,6 +45,7 @@
 #include "Sampler.h"
 #include "RenderPass.h"
 #include "PipelineResourceSignature.h"
+#include "PSOCache.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
@@ -208,7 +209,6 @@ struct GraphicsPipelineDesc
 
     /// Input layout, ignored in a mesh pipeline.
     InputLayoutDesc InputLayout;
-    //D3D12_INDEX_BUFFER_STRIP_CUT_VALUE IBStripCutValue;
 
     /// Primitive topology type, ignored in a mesh pipeline.
     PRIMITIVE_TOPOLOGY PrimitiveTopology DEFAULT_INITIALIZER(PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
@@ -247,9 +247,6 @@ struct GraphicsPipelineDesc
 
     /// Node mask.
     Uint32 NodeMask DEFAULT_INITIALIZER(0);
-
-    //D3D12_CACHED_PIPELINE_STATE CachedPSO;
-    //D3D12_PIPELINE_STATE_FLAGS Flags;
 };
 typedef struct GraphicsPipelineDesc GraphicsPipelineDesc;
 
@@ -471,6 +468,9 @@ struct PipelineStateCreateInfo
     // another struct is derived from PipelineStateCreateInfo, though, the compiler may place
     // another member in this space. To fix this, we add padding.
     Uint32 _Padding;
+    
+    /// PSODesc.Name must be unique to add PSO into cache (D3D12 requirements)
+    IPSOCache* pPSOCache DEFAULT_INITIALIZER(nullptr);
 };
 typedef struct PipelineStateCreateInfo PipelineStateCreateInfo;
 
@@ -603,6 +603,79 @@ struct TilePipelineStateCreateInfo DILIGENT_DERIVE(PipelineStateCreateInfo)
 #endif
 };
 typedef struct TilePipelineStateCreateInfo TilePipelineStateCreateInfo;
+
+
+// AZ TODO
+DILIGENT_TYPED_ENUM(PSO_ARCHIVE_FLAGS, Uint32)
+{
+    PSO_ARCHIVE_FLAG_NONE = 0u,
+
+    /// By default, shader reflection information will be preserved
+    /// during the PSO serialization. When this flag is specified,
+    /// it will be stripped from the bytecode. This will reduce
+    /// the binary size, but also make run-time checks not possible.
+    /// Applications should generally use this flag for Release builds.
+    /// TODO: this flag may need to be defined when archive is created
+    /// to avoid situations where the same byte code is archived with
+    /// and without reflection from different PSOs.
+    PSO_ARCHIVE_FLAG_STRIP_REFLECTION = 1u << 0,
+};
+
+// AZ TODO
+DILIGENT_TYPED_ENUM(PSO_UNPACK_FLAGS, Uint32)
+{
+    PSO_UNPACK_FLAG_NONE = 0u,
+
+    /// Do not perform validation when unpacking the pipeline state.
+    /// (TODO: maybe this flag is not needed as validation will not be performed
+    ///        if there is no reflection information anyway).
+
+    /// \remarks Parameter validation will only be performed if the PSO
+    ///          was serialized without stripping the reflection. If
+    ///          reflection was stripped, validation will never be performed
+    ///          and this flag will have no effect.
+    PSO_UNPACK_FLAG_NO_VALIDATION = 1u << 0,
+};
+
+// AZ TODO
+DILIGENT_TYPED_ENUM(PSO_UNPACK_OVERRIDE_FLAGS, Uint32)
+{
+    PSO_UNPACK_OVERRIDE_FLAG_NONE = 0,
+    PSO_UNPACK_OVERRIDE_FLAG_NAME = 1u << 0,
+    PSO_UNPACK_OVERRIDE_FLAG_RASTERIZER = 1u << 1,
+    PSO_UNPACK_OVERRIDE_FLAG_BLEND_STATE = 1u << 1,
+    // AZ TODO: flags
+};
+
+// AZ TODO
+/// Pipeline state unpack parameters
+struct PipelineStateUnpackInfo
+{
+    struct IRenderDevice* pDevice DEFAULT_INITIALIZER(nullptr);
+
+    IDeviceObjectArchive* pArchive DEFAULT_INITIALIZER(nullptr);
+
+    /// PSO name to unpack. If there is only
+    /// one PSO in the archive, the name may be null.
+    const char* Name DEFAULT_INITIALIZER(nullptr);
+
+    PIPELINE_TYPE PipelineType DEFAULT_INITIALIZER(PIPELINE_TYPE_INVALID);
+    
+    union
+    {
+         const GraphicsPipelineDesc* pGraphicsPipelineDesc DEFAULT_INITIALIZER(nullptr);
+         //const ComputePipelineDesc* pComputePipelineDesc;
+         const RayTracingPipelineDesc* pRayTracingPipelineDesc;
+    };
+
+   PSO_UNPACK_OVERRIDE_FLAGS OverrideFlags DEFAULT_INITIALIZER(PSO_UNPACK_OVERRIDE_FLAG_NONE);
+
+    // Optional PSO cache
+    IPSOCache* pCache DEFAULT_INITIALIZER(nullptr);
+};
+typedef struct PipelineStateUnpackInfo PipelineStateUnpackInfo;
+
+// clang-format on
 
 
 // {06084AE5-6A71-4FE8-84B9-395DD489A28C}

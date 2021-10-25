@@ -3,12 +3,14 @@ cmake_minimum_required (VERSION 3.11)
 project(Diligent-GraphicsEngineD3D12 CXX)
 
 set(INCLUDE
+    include/BottomLevelASD3D12Impl.hpp
     include/BufferD3D12Impl.hpp
     include/BufferViewD3D12Impl.hpp
     include/CommandContext.hpp
     include/CommandListD3D12Impl.hpp
     include/CommandListManager.hpp
     include/CommandQueueD3D12Impl.hpp
+    include/D3D12DynamicHeap.hpp
     include/D3D12TileMappingHelper.hpp
     include/D3D12ResourceBase.hpp
     include/D3D12TypeConversions.hpp
@@ -18,13 +20,16 @@ set(INCLUDE
     include/DescriptorHeap.hpp
     include/DeviceContextD3D12Impl.hpp
     include/DeviceMemoryD3D12Impl.hpp
+    include/DeviceObjectArchiveD3D12Impl.hpp
     include/EngineD3D12ImplTraits.hpp
-    include/D3D12DynamicHeap.hpp
     include/FenceD3D12Impl.hpp
     include/FramebufferD3D12Impl.hpp
     include/GenerateMips.hpp
     include/pch.h
+    include/PipelineResourceAttribsD3D12.hpp
+    include/PipelineResourceSignatureD3D12Impl.hpp
     include/PipelineStateD3D12Impl.hpp
+    include/PSOCacheD3D12Impl.hpp
     include/QueryD3D12Impl.hpp
     include/QueryManagerD3D12.hpp
     include/RenderDeviceD3D12Impl.hpp
@@ -32,6 +37,8 @@ set(INCLUDE
     include/RootParamsManager.hpp
     include/RootSignature.hpp
     include/SamplerD3D12Impl.hpp
+    include/SerializationAPID3D12Impl.hpp
+    include/ShaderBindingTableD3D12Impl.hpp
     include/ShaderD3D12Impl.hpp
     include/ShaderResourceBindingD3D12Impl.hpp
     include/ShaderResourceCacheD3D12.hpp
@@ -40,14 +47,11 @@ set(INCLUDE
     include/SwapChainD3D12Impl.hpp
     include/TextureD3D12Impl.hpp
     include/TextureViewD3D12Impl.hpp
-    include/BottomLevelASD3D12Impl.hpp
     include/TopLevelASD3D12Impl.hpp
-    include/ShaderBindingTableD3D12Impl.hpp
-    include/PipelineResourceSignatureD3D12Impl.hpp
-    include/PipelineResourceAttribsD3D12.hpp
 )
 
 set(INTERFACE
+    interface/BottomLevelASD3D12.h
     interface/BufferD3D12.h
     interface/BufferViewD3D12.h
     interface/CommandQueueD3D12.h
@@ -56,37 +60,40 @@ set(INTERFACE
     interface/EngineFactoryD3D12.h
     interface/FenceD3D12.h
     interface/PipelineStateD3D12.h
+    interface/PSOCacheD3D12.h
     interface/QueryD3D12.h
     interface/RenderDeviceD3D12.h
     interface/SamplerD3D12.h
+    interface/ShaderBindingTableD3D12.h
     interface/ShaderD3D12.h
     interface/ShaderResourceBindingD3D12.h
     interface/SwapChainD3D12.h
     interface/TextureD3D12.h
     interface/TextureViewD3D12.h
-    interface/BottomLevelASD3D12.h
     interface/TopLevelASD3D12.h
-    interface/ShaderBindingTableD3D12.h
 )
 
-
 set(SRC
+    src/BottomLevelASD3D12Impl.cpp
     src/BufferD3D12Impl.cpp
     src/BufferViewD3D12Impl.cpp
     src/CommandContext.cpp
     src/CommandListManager.cpp
     src/CommandQueueD3D12Impl.cpp
+    src/D3D12DynamicHeap.cpp
     src/D3D12TypeConversions.cpp
     src/D3D12Utils.cpp
     src/DescriptorHeap.cpp
     src/DeviceContextD3D12Impl.cpp
     src/DeviceMemoryD3D12Impl.cpp
-    src/D3D12DynamicHeap.cpp
+    src/DeviceObjectArchiveD3D12Impl.cpp
     src/EngineFactoryD3D12.cpp
     src/FenceD3D12Impl.cpp
     src/FramebufferD3D12Impl.cpp
     src/GenerateMips.cpp
+    src/PipelineResourceSignatureD3D12Impl.cpp
     src/PipelineStateD3D12Impl.cpp
+    src/PSOCacheD3D12Impl.cpp
     src/QueryD3D12Impl.cpp
     src/QueryManagerD3D12.cpp
     src/RenderDeviceD3D12Impl.cpp
@@ -94,6 +101,8 @@ set(SRC
     src/RootParamsManager.cpp
     src/RootSignature.cpp
     src/SamplerD3D12Impl.cpp
+    src/SerializationAPID3D12Impl.cpp
+    src/ShaderBindingTableD3D12Impl.cpp
     src/ShaderD3D12Impl.cpp
     src/ShaderResourceBindingD3D12Impl.cpp
     src/ShaderResourceCacheD3D12.cpp
@@ -102,10 +111,7 @@ set(SRC
     src/SwapChainD3D12Impl.cpp
     src/TextureD3D12Impl.cpp
     src/TextureViewD3D12Impl.cpp
-    src/BottomLevelASD3D12Impl.cpp
     src/TopLevelASD3D12Impl.cpp
-    src/ShaderBindingTableD3D12Impl.cpp
-    src/PipelineResourceSignatureD3D12Impl.cpp
 )
 
 if(PLATFORM_WIN32)
