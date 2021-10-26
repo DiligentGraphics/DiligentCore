@@ -53,6 +53,10 @@ public:
     /// Implementation of ISerializationAPI::UnpackResourceSignature() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo,
                                                             IPipelineResourceSignature**       ppSignature) override final;
+
+    /// Implementation of ISerializationAPI::UnpackRenderPass() in Direct3D12 backend.
+    virtual void DILIGENT_CALL_TYPE UnpackRenderPass(const RenderPassUnpackInfo& DeArchiveInfo,
+                                                     IRenderPass**               ppRP) override final;
 };
 
 } // namespace Diligent

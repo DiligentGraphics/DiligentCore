@@ -70,13 +70,13 @@ void SerializationAPIVkImpl::UnpackPipelineState(const PipelineStateUnpackInfo& 
     {
         case PIPELINE_TYPE_GRAPHICS:
         case PIPELINE_TYPE_MESH:
-            pArchiveVk->UnpackGraphicsPSO(DeArchiveInfo, pDeviceVk, ppPSO);
+            pArchiveVk->UnpackGraphicsPSO(DeArchiveInfo, pDeviceVk, *ppPSO);
             break;
         case PIPELINE_TYPE_COMPUTE:
-            pArchiveVk->UnpackComputePSO(DeArchiveInfo, pDeviceVk, ppPSO);
+            pArchiveVk->UnpackComputePSO(DeArchiveInfo, pDeviceVk, *ppPSO);
             break;
         case PIPELINE_TYPE_RAY_TRACING:
-            pArchiveVk->UnpackRayTracingPSO(DeArchiveInfo, pDeviceVk, ppPSO);
+            pArchiveVk->UnpackRayTracingPSO(DeArchiveInfo, pDeviceVk, *ppPSO);
             break;
         case PIPELINE_TYPE_TILE:
         case PIPELINE_TYPE_INVALID:
@@ -95,7 +95,19 @@ void SerializationAPIVkImpl::UnpackResourceSignature(const ResourceSignatureUnpa
     auto* pDeviceVk  = ClassPtrCast<RenderDeviceVkImpl>(DeArchiveInfo.pDevice);
 
     *ppSignature = nullptr;
-    pArchiveVk->UnpackResourceSignature(DeArchiveInfo, pDeviceVk, ppSignature);
+    pArchiveVk->UnpackResourceSignature(DeArchiveInfo, pDeviceVk, *ppSignature);
+}
+
+void SerializationAPIVkImpl::UnpackRenderPass(const RenderPassUnpackInfo& DeArchiveInfo, IRenderPass** ppRP)
+{
+    if (!VerifyUnpackRenderPass(DeArchiveInfo, ppRP))
+        return;
+
+    auto* pArchiveVk = ClassPtrCast<DeviceObjectArchiveVkImpl>(DeArchiveInfo.pArchive);
+    auto* pDeviceVk  = ClassPtrCast<RenderDeviceVkImpl>(DeArchiveInfo.pDevice);
+
+    *ppRP = nullptr;
+    pArchiveVk->UnpackRenderPass(DeArchiveInfo, pDeviceVk, *ppRP);
 }
 
 } // namespace Diligent

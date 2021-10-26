@@ -43,12 +43,12 @@ public:
     DeviceObjectArchiveD3D12Impl(IReferenceCounters* pRefCounters, IArchiveSource* pSource);
     ~DeviceObjectArchiveD3D12Impl();
 
-    void UnpackGraphicsPSO(const PipelineStateUnpackInfo& DeArchiveInfo, RenderDeviceD3D12Impl* pDevice, IPipelineState** ppPSO);
-    void UnpackComputePSO(const PipelineStateUnpackInfo& DeArchiveInfo, RenderDeviceD3D12Impl* pDevice, IPipelineState** ppPSO);
-    void UnpackRayTracingPSO(const PipelineStateUnpackInfo& DeArchiveInfo, RenderDeviceD3D12Impl* pDevice, IPipelineState** ppPSO);
-    void UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, RenderDeviceD3D12Impl* pDevice, IPipelineResourceSignature** ppSignature);
+    void UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, IRenderDevice* pDevice, IPipelineResourceSignature*& pSignature) override
+    {
+        DeviceObjectArchiveBase::UnpackResourceSignature<SerializerD3D12Impl, PipelineResourceSignatureD3D12Impl::SerializedData>(
+            DeArchiveInfo, ClassPtrCast<RenderDeviceD3D12Impl>(pDevice), pSignature);
+    }
 
-public:
     template <SerializerMode Mode>
     struct SerializerD3D12Impl
     {

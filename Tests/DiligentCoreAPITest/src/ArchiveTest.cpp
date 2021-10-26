@@ -60,7 +60,7 @@ static Uint32 GetDeviceBits()
     return DeviceBits;
 }
 
-TEST(ArchiveTest, ArchivePRS)
+TEST(ArchiveTest, ResourceSignature)
 {
     auto* pEnv            = TestingEnvironment::GetInstance();
     auto* pDevice         = pEnv->GetDevice();
@@ -70,7 +70,7 @@ TEST(ArchiveTest, ArchivePRS)
     if (!pSerialization || !pArchiveFactory)
         return;
 
-    constexpr char PRSName[] = "Archive test";
+    constexpr char PRSName[] = "PRS archive test";
 
     TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
@@ -96,7 +96,7 @@ TEST(ArchiveTest, ArchivePRS)
         PRSDesc.Resources    = Resources;
         PRSDesc.NumResources = _countof(Resources);
 
-        ImmutableSamplerDesc ImmutableSamplers[] = //
+        const ImmutableSamplerDesc ImmutableSamplers[] = //
             {
                 {SHADER_TYPE_ALL_GRAPHICS, "g_Sampler", SamplerDesc{}} //
             };
@@ -123,9 +123,10 @@ TEST(ArchiveTest, ArchivePRS)
     }
 
     ResourceSignatureUnpackInfo UnpackInfo;
-    UnpackInfo.Name     = PRSName;
-    UnpackInfo.pArchive = pArchive;
-    UnpackInfo.pDevice  = pDevice;
+    UnpackInfo.Name                     = PRSName;
+    UnpackInfo.pArchive                 = pArchive;
+    UnpackInfo.pDevice                  = pDevice;
+    UnpackInfo.SRBAllocationGranularity = 10;
 
     RefCntAutoPtr<IPipelineResourceSignature> pUnpackedPRS;
     pSerialization->UnpackResourceSignature(UnpackInfo, &pUnpackedPRS);

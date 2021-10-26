@@ -43,12 +43,12 @@ public:
     DeviceObjectArchiveVkImpl(IReferenceCounters* pRefCounters, IArchiveSource* pSource);
     ~DeviceObjectArchiveVkImpl();
 
-    void UnpackGraphicsPSO(const PipelineStateUnpackInfo& DeArchiveInfo, RenderDeviceVkImpl* pDevice, IPipelineState** ppPSO);
-    void UnpackComputePSO(const PipelineStateUnpackInfo& DeArchiveInfo, RenderDeviceVkImpl* pDevice, IPipelineState** ppPSO);
-    void UnpackRayTracingPSO(const PipelineStateUnpackInfo& DeArchiveInfo, RenderDeviceVkImpl* pDevice, IPipelineState** ppPSO);
-    void UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, RenderDeviceVkImpl* pDevice, IPipelineResourceSignature** ppSignature);
+    void UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, IRenderDevice* pDevice, IPipelineResourceSignature*& pSignature) override
+    {
+        DeviceObjectArchiveBase::UnpackResourceSignature<SerializerVkImpl, PipelineResourceSignatureVkImpl::SerializedData>(
+            DeArchiveInfo, ClassPtrCast<RenderDeviceVkImpl>(pDevice), pSignature);
+    }
 
-public:
     template <SerializerMode Mode>
     struct SerializerVkImpl
     {

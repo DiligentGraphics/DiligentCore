@@ -66,9 +66,17 @@ public:
     virtual Bool DILIGENT_CALL_TYPE ArchiveRayTracingPipelineState(const RayTracingPipelineStateCreateInfo& PSOCreateInfo,
                                                                    const PipelineStateArchiveInfo&          ArchiveInfo) override final;
 
+    /// Implementation of IArchiveBuilder::ArchiveTilePipelineState().
+    virtual Bool DILIGENT_CALL_TYPE ArchiveTilePipelineState(const TilePipelineStateCreateInfo& PSOCreateInfo,
+                                                             const PipelineStateArchiveInfo&    ArchiveInfo) override final;
+
     /// Implementation of IArchiveBuilder::ArchivePipelineResourceSignature().
     virtual Bool DILIGENT_CALL_TYPE ArchivePipelineResourceSignature(const PipelineResourceSignatureDesc& SignatureDesc,
                                                                      const ResourceSignatureArchiveInfo&  ArchiveInfo) override final;
+
+    /// Implementation of IArchiveBuilder::ArchiveRenderPass().
+    virtual Bool DILIGENT_CALL_TYPE ArchiveRenderPass(const RenderPassDesc&        Desc,
+                                                      const RenderPassArchiveInfo& ArchiveInfo) override final;
 
 private:
     using DeviceType               = DeviceObjectArchiveBase::DeviceType;
@@ -78,6 +86,8 @@ private:
     using NamedResourceArrayHeader = DeviceObjectArchiveBase::NamedResourceArrayHeader;
     using PRSDataHeader            = DeviceObjectArchiveBase::PRSDataHeader;
     using PSODataHeader            = DeviceObjectArchiveBase::PSODataHeader;
+    using RPDataHeader             = DeviceObjectArchiveBase::RPDataHeader;
+    using TPRSNames                = DeviceObjectArchiveBase::TPRSNames;
 
     struct TSerializedMem
     {
@@ -117,10 +127,50 @@ private:
         TSerializedMem&       GetSharedData() { return m_PerDeviceData[0]; }
         TSerializedMem const& GetSharedData() const { return m_PerDeviceData[0]; }
         TSerializedMem&       GetDeviceData(DeviceType DevType) { return m_PerDeviceData[Uint32{DevType} + 1]; }
+        TSerializedMem const& GetDeviceData(DeviceType DevType) const { return m_PerDeviceData[Uint32{DevType} + 1]; }
+        TSerializedMem&       GetData(Uint32 Ind) { return m_PerDeviceData[Ind]; }
+        TSerializedMem const& GetData(Uint32 Ind) const { return m_PerDeviceData[Ind]; }
+    };
+    std::unordered_map<String, PRSData> m_PRSMap;
+
+    struct RPData
+    {
+        TSerializedMem SharedData;
+
+        TSerializedMem const& GetSharedData() const { return SharedData; }
+    };
+    std::unordered_map<String, RPData> m_RPMap;
+
+    struct GraphicsPSOData
+    {
+        TSerializedMem                   DescMem;
+        GraphicsPipelineStateCreateInfo* pCreateInfo = nullptr;
+
+    private:
+        std::array<TSerializedMem, DeviceDataCount> m_PerDeviceData;
+
+    public:
+        TSerializedMem&       GetSharedData() { return m_PerDeviceData[0]; }
+        TSerializedMem const& GetSharedData() const { return m_PerDeviceData[0]; }
+        TSerializedMem&       GetDeviceData(DeviceType DevType) { return m_PerDeviceData[Uint32{DevType} + 1]; }
         TSerializedMem&       GetData(Uint32 Ind) { return m_PerDeviceData[Ind]; }
     };
+    std::unordered_map<String, PRSData> m_GraphicsPSOMap;
 
-    std::unordered_map<String, PRSData> m_PRSMap;
+private:
+    struct PendingData
+    {
+        std::array<std::vector<Uint8>, Uint32{ChunkType::Count}>   ChunkData;                             // NamedResourceArrayHeader
+        std::array<std::vector<Uint8>, DeviceDataCount>            ArchiveData;                           // ***DataHeader, device specific data
+        std::array<Uint32*, Uint32{ChunkType::Count}>              DataOffsetArrayPerChunk          = {}; // pointer to NamedResourceArrayHeader::DataOffset - offsets to ***DataHeader
+        std::array<Uint32, Uint32{ChunkType::Count}>               ResourceCountPerChunk            = {};
+        std::array<std::vector<Uint32*>, Uint32{ChunkType::Count}> DeviceSpecificDataOffsetPerChunk = {};
+    };
+
+    void ReserveSpace(std::array<size_t, DeviceDataCount>& ArchiveDataSize) const;
+    void WriteResourceSignatureData(PendingData& Dst) const;
+    void WriteRenderPassData(PendingData& Dst) const;
+    void WriteGraphicsPSOData(PendingData& Dst) const;
 };
 
 } // namespace Diligent

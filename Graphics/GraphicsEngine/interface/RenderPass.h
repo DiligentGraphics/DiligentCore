@@ -33,6 +33,7 @@
 /// Definition of the Diligent::IRenderPass interface and related data structures
 
 #include "DeviceObject.h"
+#include "DeviceObjectArchive.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
@@ -407,6 +408,18 @@ struct RenderPassDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     const SubpassDependencyDesc*     pDependencies      DEFAULT_INITIALIZER(nullptr);
 };
 typedef struct RenderPassDesc RenderPassDesc;
+
+/// AZ TODO
+struct RenderPassUnpackInfo
+{
+    struct IRenderDevice* pDevice  DEFAULT_INITIALIZER(nullptr);
+
+    IDeviceObjectArchive* pArchive DEFAULT_INITIALIZER(nullptr);
+    
+    /// Render pass name to unpack.
+    const char* Name DEFAULT_INITIALIZER(nullptr);
+};
+typedef struct RenderPassUnpackInfo RenderPassUnpackInfo;
 
 
 #if DILIGENT_CPP_INTERFACE

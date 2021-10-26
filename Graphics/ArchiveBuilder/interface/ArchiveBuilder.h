@@ -52,6 +52,14 @@ static const INTERFACE_ID IID_ArchiveBuilder =
 struct PipelineStateArchiveInfo
 {
     PSO_ARCHIVE_FLAGS Flags DEFAULT_INITIALIZER(PSO_ARCHIVE_FLAG_NONE);
+    
+    // RENDER_DEVICE_TYPE
+    Uint32 DeviceBits DEFAULT_INITIALIZER(0);
+
+    // Count in PipelineStateCreateInfo
+    const Char** pResourceSignatureNames    DEFAULT_INITIALIZER(nullptr);
+
+    const Char* RenderPassName DEFAULT_INITIALIZER(nullptr);
 };
 typedef struct PipelineStateArchiveInfo PipelineStateArchiveInfo;
 
@@ -63,7 +71,15 @@ struct ResourceSignatureArchiveInfo
 };
 typedef struct ResourceSignatureArchiveInfo ResourceSignatureArchiveInfo;
 
+// AZ TODO
+struct RenderPassArchiveInfo
+{
+    int tmp;
+};
+typedef struct RenderPassArchiveInfo RenderPassArchiveInfo;
 
+
+// AZ TODO
 DILIGENT_BEGIN_INTERFACE(IArchiveBuilder, IObject)
 {
     // AZ TODO
@@ -74,7 +90,6 @@ DILIGENT_BEGIN_INTERFACE(IArchiveBuilder, IObject)
     VIRTUAL Bool METHOD(SerializeToStream)(THIS_
                                            IFileStream* pStream) PURE;
 
-
     // AZ TODO
     /// Pipeline archival requires the same information as PSO creation
 
@@ -84,20 +99,33 @@ DILIGENT_BEGIN_INTERFACE(IArchiveBuilder, IObject)
     VIRTUAL Bool METHOD(ArchiveGraphicsPipelineState)(THIS_
                                                       const GraphicsPipelineStateCreateInfo REF PSOCreateInfo,
                                                       const PipelineStateArchiveInfo REF        ArchiveInfo) PURE;
-
+    
+    // AZ TODO
     VIRTUAL Bool METHOD(ArchiveComputePipelineState)(THIS_
                                                      const ComputePipelineStateCreateInfo REF PSOCreateInfo,
                                                      const PipelineStateArchiveInfo REF       ArchiveInfo) PURE;
-
+    
+    // AZ TODO
     VIRTUAL Bool METHOD(ArchiveRayTracingPipelineState)(THIS_
                                                         const RayTracingPipelineStateCreateInfo REF PSOCreateInfo,
                                                         const PipelineStateArchiveInfo REF          ArchiveInfo) PURE;
+    
+    // AZ TODO
+    VIRTUAL Bool METHOD(ArchiveTilePipelineState)(THIS_
+                                                  const TilePipelineStateCreateInfo REF PSOCreateInfo,
+                                                  const PipelineStateArchiveInfo REF    ArchiveInfo) PURE;
+    
 
     /// Multiple PSOs and signatures may be packed into the same archive as long as they use
     /// distinct names
     VIRTUAL Bool METHOD(ArchivePipelineResourceSignature)(THIS_
                                                           const PipelineResourceSignatureDesc REF SignatureDesc,
                                                           const ResourceSignatureArchiveInfo REF  ArchiveInfo) PURE;
+    
+    // AZ TODO
+    VIRTUAL Bool METHOD(ArchiveRenderPass)(THIS_
+                                           const RenderPassDesc REF        Desc,
+                                           const RenderPassArchiveInfo REF ArchiveInfo) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -105,16 +133,14 @@ DILIGENT_END_INTERFACE
 
 #if DILIGENT_C_INTERFACE
 
-// clang-format off
-
 #    define IArchiveBuilder_SerializeToBlob(This, ...)                  CALL_IFACE_METHOD(ArchiveBuilder, SerializeToBlob,                  This, __VA_ARGS__)
 #    define IArchiveBuilder_SerializeToStream(This, ...)                CALL_IFACE_METHOD(ArchiveBuilder, SerializeToStream,                This, __VA_ARGS__)
 #    define IArchiveBuilder_ArchiveGraphicsPipelineState(This, ...)     CALL_IFACE_METHOD(ArchiveBuilder, ArchiveGraphicsPipelineState,     This, __VA_ARGS__)
 #    define IArchiveBuilder_ArchiveComputePipelineState(This, ...)      CALL_IFACE_METHOD(ArchiveBuilder, ArchiveComputePipelineState,      This, __VA_ARGS__)
 #    define IArchiveBuilder_ArchiveRayTracingPipelineState(This, ...)   CALL_IFACE_METHOD(ArchiveBuilder, ArchiveRayTracingPipelineState,   This, __VA_ARGS__)
+#    define IArchiveBuilder_ArchiveTilePipelineState(This, ...)         CALL_IFACE_METHOD(ArchiveBuilder, ArchiveTilePipelineState,         This, __VA_ARGS__)
 #    define IArchiveBuilder_ArchivePipelineResourceSignature(This, ...) CALL_IFACE_METHOD(ArchiveBuilder, ArchivePipelineResourceSignature, This, __VA_ARGS__)
-
-// clang-format on
+#    define IArchiveBuilder_ArchiveRenderPass(This, ...)                CALL_IFACE_METHOD(ArchiveBuilder, ArchiveRenderPass,                This, __VA_ARGS__)
 
 #endif
 

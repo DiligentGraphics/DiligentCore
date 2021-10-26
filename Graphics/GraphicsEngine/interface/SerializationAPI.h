@@ -76,10 +76,16 @@ DILIGENT_BEGIN_INTERFACE(ISerializationAPI, IObject)
     VIRTUAL void METHOD(UnpackPipelineState)(THIS_
                                              const PipelineStateUnpackInfo REF DeArchiveInfo,
                                              IPipelineState**                  ppPSO) PURE;
-
+    
+    // AZ TODO
     VIRTUAL void METHOD(UnpackResourceSignature)(THIS_
                                                  const ResourceSignatureUnpackInfo REF DeArchiveInfo,
                                                  IPipelineResourceSignature**          ppSignature) PURE;
+    
+    // AZ TODO
+    VIRTUAL void METHOD(UnpackRenderPass)(THIS_
+                                          const RenderPassUnpackInfo REF DeArchiveInfo,
+                                          IRenderPass**                  ppRP) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -92,6 +98,7 @@ DILIGENT_END_INTERFACE
 #    define ISerializationAPI_CreateArchiveSourceFromBlob(This, ...)  CALL_IFACE_METHOD(SerializationAPI, CreateArchiveSourceFromBlob, This, __VA_ARGS__)
 #    define ISerializationAPI_UnpackPipelineState(This, ...)          CALL_IFACE_METHOD(SerializationAPI, UnpackPipelineState,         This, __VA_ARGS__)
 #    define ISerializationAPI_UnpackResourceSignature(This, ...)      CALL_IFACE_METHOD(SerializationAPI, UnpackResourceSignature,     This, __VA_ARGS__)
+#    define ISerializationAPI_UnpackRenderPass(This, ...)             CALL_IFACE_METHOD(SerializationAPI, UnpackRenderPass,            This, __VA_ARGS__)
 
 #endif
 

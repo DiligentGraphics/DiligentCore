@@ -105,4 +105,20 @@ bool SerializationAPIBase::VerifyUnpackResourceSignature(const ResourceSignature
     return true;
 }
 
+bool SerializationAPIBase::VerifyUnpackRenderPass(const RenderPassUnpackInfo& DeArchiveInfo, IRenderPass** ppRP)
+{
+    DEV_CHECK_ERR(ppRP != nullptr, "ppRP must not be null");
+    DEV_CHECK_ERR(DeArchiveInfo.pArchive != nullptr, "pArchive must not be null");
+    DEV_CHECK_ERR(DeArchiveInfo.Name != nullptr, "Name must not be null");
+    DEV_CHECK_ERR(DeArchiveInfo.pDevice != nullptr, "pDevice must not be null");
+
+    if (!ppRP ||
+        !DeArchiveInfo.pArchive ||
+        !DeArchiveInfo.Name ||
+        !DeArchiveInfo.pDevice)
+        return false;
+
+    return true;
+}
+
 } // namespace Diligent

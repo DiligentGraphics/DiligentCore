@@ -31,10 +31,8 @@
 namespace Diligent
 {
 
-static constexpr auto DevType = DeviceObjectArchiveBase::DeviceType::Vulkan;
-
 DeviceObjectArchiveVkImpl::DeviceObjectArchiveVkImpl(IReferenceCounters* pRefCounters, IArchiveSource* pSource) :
-    DeviceObjectArchiveBase{pRefCounters, pSource}
+    DeviceObjectArchiveBase{pRefCounters, pSource, DeviceType::Vulkan}
 {
 }
 
@@ -42,96 +40,6 @@ DeviceObjectArchiveVkImpl::~DeviceObjectArchiveVkImpl()
 {
 }
 
-void DeviceObjectArchiveVkImpl::UnpackGraphicsPSO(const PipelineStateUnpackInfo& DeArchiveInfo, RenderDeviceVkImpl* pRenderDeviceVk, IPipelineState** ppPSO)
-{
-    VERIFY_EXPR(pRenderDeviceVk != nullptr);
-    VERIFY_EXPR(ppPSO != nullptr);
-
-    PSOData<GraphicsPipelineStateCreateInfo> PSO{GetRawAllocator()};
-    if (!ReadGraphicsPSOData(DeArchiveInfo.Name, PSO))
-        return;
-
-    LoadDeviceSpecificData(
-        DevType,
-        *PSO.pHeader,
-        PSO.Allocator,
-        "Graphics pipeline",
-        [&](Serializer<SerializerMode::Read>& Ser) //
-        {
-            // AZ TODO
-
-            pRenderDeviceVk->CreateGraphicsPipelineState(PSO.CreateInfo, ppPSO);
-        });
-}
-
-void DeviceObjectArchiveVkImpl::UnpackComputePSO(const PipelineStateUnpackInfo& DeArchiveInfo, RenderDeviceVkImpl* pRenderDeviceVk, IPipelineState** ppPSO)
-{
-    VERIFY_EXPR(pRenderDeviceVk != nullptr);
-    VERIFY_EXPR(ppPSO != nullptr);
-
-    PSOData<ComputePipelineStateCreateInfo> PSO{GetRawAllocator()};
-    if (!ReadComputePSOData(DeArchiveInfo.Name, PSO))
-        return;
-
-    LoadDeviceSpecificData(
-        DevType,
-        *PSO.pHeader,
-        PSO.Allocator,
-        "Compute pipeline",
-        [&](Serializer<SerializerMode::Read>& Ser) //
-        {
-            // AZ TODO
-
-            pRenderDeviceVk->CreateComputePipelineState(PSO.CreateInfo, ppPSO);
-        });
-}
-
-void DeviceObjectArchiveVkImpl::UnpackRayTracingPSO(const PipelineStateUnpackInfo& DeArchiveInfo, RenderDeviceVkImpl* pRenderDeviceVk, IPipelineState** ppPSO)
-{
-    VERIFY_EXPR(pRenderDeviceVk != nullptr);
-    VERIFY_EXPR(ppPSO != nullptr);
-
-    PSOData<RayTracingPipelineStateCreateInfo> PSO{GetRawAllocator()};
-    if (!ReadRayTracingPSOData(DeArchiveInfo.Name, PSO))
-        return;
-
-    LoadDeviceSpecificData(
-        DevType,
-        *PSO.pHeader,
-        PSO.Allocator,
-        "Ray tracing pipeline",
-        [&](Serializer<SerializerMode::Read>& Ser) //
-        {
-            // AZ TODO
-
-            pRenderDeviceVk->CreateRayTracingPipelineState(PSO.CreateInfo, ppPSO);
-        });
-}
-
-void DeviceObjectArchiveVkImpl::UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, RenderDeviceVkImpl* pRenderDeviceVk, IPipelineResourceSignature** ppSignature)
-{
-    VERIFY_EXPR(pRenderDeviceVk != nullptr);
-    VERIFY_EXPR(ppSignature != nullptr);
-
-    PRSData PRS{GetRawAllocator()};
-    if (!ReadPRSData(DeArchiveInfo.Name, PRS))
-        return;
-
-    LoadDeviceSpecificData(
-        DevType,
-        *PRS.pHeader,
-        PRS.Allocator,
-        "Resource signature",
-        [&](Serializer<SerializerMode::Read>& Ser) //
-        {
-            PipelineResourceSignatureVkImpl::SerializedData SerializedData;
-            SerializedData.Base = PRS.Serialized;
-            SerializerVkImpl<SerializerMode::Read>::SerializePRS(Ser, SerializedData, &PRS.Allocator);
-            VERIFY_EXPR(Ser.IsEnd());
-
-            pRenderDeviceVk->CreatePipelineResourceSignature(PRS.Desc, SerializedData, ppSignature);
-        });
-}
 
 template <SerializerMode Mode>
 void DeviceObjectArchiveVkImpl::SerializerVkImpl<Mode>::SerializePRS(

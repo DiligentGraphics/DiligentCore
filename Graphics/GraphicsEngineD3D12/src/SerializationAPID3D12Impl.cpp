@@ -70,13 +70,13 @@ void SerializationAPID3D12Impl::UnpackPipelineState(const PipelineStateUnpackInf
     {
         case PIPELINE_TYPE_GRAPHICS:
         case PIPELINE_TYPE_MESH:
-            pArchiveD3D12->UnpackGraphicsPSO(DeArchiveInfo, pDeviceD3D12, ppPSO);
+            pArchiveD3D12->UnpackGraphicsPSO(DeArchiveInfo, pDeviceD3D12, *ppPSO);
             break;
         case PIPELINE_TYPE_COMPUTE:
-            pArchiveD3D12->UnpackComputePSO(DeArchiveInfo, pDeviceD3D12, ppPSO);
+            pArchiveD3D12->UnpackComputePSO(DeArchiveInfo, pDeviceD3D12, *ppPSO);
             break;
         case PIPELINE_TYPE_RAY_TRACING:
-            pArchiveD3D12->UnpackRayTracingPSO(DeArchiveInfo, pDeviceD3D12, ppPSO);
+            pArchiveD3D12->UnpackRayTracingPSO(DeArchiveInfo, pDeviceD3D12, *ppPSO);
             break;
         case PIPELINE_TYPE_TILE:
         case PIPELINE_TYPE_INVALID:
@@ -95,7 +95,19 @@ void SerializationAPID3D12Impl::UnpackResourceSignature(const ResourceSignatureU
     auto* pDeviceD3D12  = ClassPtrCast<RenderDeviceD3D12Impl>(DeArchiveInfo.pDevice);
 
     *ppSignature = nullptr;
-    pArchiveD3D12->UnpackResourceSignature(DeArchiveInfo, pDeviceD3D12, ppSignature);
+    pArchiveD3D12->UnpackResourceSignature(DeArchiveInfo, pDeviceD3D12, *ppSignature);
+}
+
+void SerializationAPID3D12Impl::UnpackRenderPass(const RenderPassUnpackInfo& DeArchiveInfo, IRenderPass** ppRP)
+{
+    if (!VerifyUnpackRenderPass(DeArchiveInfo, ppRP))
+        return;
+
+    auto* pArchiveD3D12 = ClassPtrCast<DeviceObjectArchiveD3D12Impl>(DeArchiveInfo.pArchive);
+    auto* pDeviceD3D12  = ClassPtrCast<RenderDeviceD3D12Impl>(DeArchiveInfo.pDevice);
+
+    *ppRP = nullptr;
+    pArchiveD3D12->UnpackRenderPass(DeArchiveInfo, pDeviceD3D12, *ppRP);
 }
 
 } // namespace Diligent

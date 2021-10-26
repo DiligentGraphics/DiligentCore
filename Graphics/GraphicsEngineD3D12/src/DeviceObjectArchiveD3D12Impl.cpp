@@ -31,106 +31,13 @@
 namespace Diligent
 {
 
-static constexpr auto DevType = DeviceObjectArchiveBase::DeviceType::Direct3D12;
-
 DeviceObjectArchiveD3D12Impl::DeviceObjectArchiveD3D12Impl(IReferenceCounters* pRefCounters, IArchiveSource* pSource) :
-    DeviceObjectArchiveBase{pRefCounters, pSource}
+    DeviceObjectArchiveBase{pRefCounters, pSource, DeviceType::Direct3D12}
 {
 }
 
 DeviceObjectArchiveD3D12Impl::~DeviceObjectArchiveD3D12Impl()
 {
-}
-
-void DeviceObjectArchiveD3D12Impl::UnpackGraphicsPSO(const PipelineStateUnpackInfo& DeArchiveInfo, RenderDeviceD3D12Impl* pRenderDeviceD3D12, IPipelineState** ppPSO)
-{
-    VERIFY_EXPR(pRenderDeviceD3D12 != nullptr);
-    VERIFY_EXPR(ppPSO != nullptr);
-
-    PSOData<GraphicsPipelineStateCreateInfo> PSO{GetRawAllocator()};
-    if (!ReadGraphicsPSOData(DeArchiveInfo.Name, PSO))
-        return;
-
-    LoadDeviceSpecificData(
-        DevType,
-        *PSO.pHeader,
-        PSO.Allocator,
-        "Graphics pipeline",
-        [&](Serializer<SerializerMode::Read>& Ser) //
-        {
-            // AZ TODO
-
-            pRenderDeviceD3D12->CreateGraphicsPipelineState(PSO.CreateInfo, ppPSO);
-        });
-}
-
-void DeviceObjectArchiveD3D12Impl::UnpackComputePSO(const PipelineStateUnpackInfo& DeArchiveInfo, RenderDeviceD3D12Impl* pRenderDeviceD3D12, IPipelineState** ppPSO)
-{
-    VERIFY_EXPR(pRenderDeviceD3D12 != nullptr);
-    VERIFY_EXPR(ppPSO != nullptr);
-
-    PSOData<ComputePipelineStateCreateInfo> PSO{GetRawAllocator()};
-    if (!ReadComputePSOData(DeArchiveInfo.Name, PSO))
-        return;
-
-    LoadDeviceSpecificData(
-        DevType,
-        *PSO.pHeader,
-        PSO.Allocator,
-        "Compute pipeline",
-        [&](Serializer<SerializerMode::Read>& Ser) //
-        {
-            // AZ TODO
-
-            pRenderDeviceD3D12->CreateComputePipelineState(PSO.CreateInfo, ppPSO);
-        });
-}
-
-void DeviceObjectArchiveD3D12Impl::UnpackRayTracingPSO(const PipelineStateUnpackInfo& DeArchiveInfo, RenderDeviceD3D12Impl* pRenderDeviceD3D12, IPipelineState** ppPSO)
-{
-    VERIFY_EXPR(pRenderDeviceD3D12 != nullptr);
-    VERIFY_EXPR(ppPSO != nullptr);
-
-    PSOData<RayTracingPipelineStateCreateInfo> PSO{GetRawAllocator()};
-    if (!ReadRayTracingPSOData(DeArchiveInfo.Name, PSO))
-        return;
-
-    LoadDeviceSpecificData(
-        DevType,
-        *PSO.pHeader,
-        PSO.Allocator,
-        "Ray tracing pipeline",
-        [&](Serializer<SerializerMode::Read>& Ser) //
-        {
-            // AZ TODO
-
-            pRenderDeviceD3D12->CreateRayTracingPipelineState(PSO.CreateInfo, ppPSO);
-        });
-}
-
-void DeviceObjectArchiveD3D12Impl::UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, RenderDeviceD3D12Impl* pRenderDeviceD3D12, IPipelineResourceSignature** ppSignature)
-{
-    VERIFY_EXPR(pRenderDeviceD3D12 != nullptr);
-    VERIFY_EXPR(ppSignature != nullptr);
-
-    PRSData PRS{GetRawAllocator()};
-    if (!ReadPRSData(DeArchiveInfo.Name, PRS))
-        return;
-
-    LoadDeviceSpecificData(
-        DevType,
-        *PRS.pHeader,
-        PRS.Allocator,
-        "Resource signature",
-        [&](Serializer<SerializerMode::Read>& Ser) //
-        {
-            PipelineResourceSignatureD3D12Impl::SerializedData SerializedData;
-            SerializedData.Base = PRS.Serialized;
-            SerializerD3D12Impl<SerializerMode::Read>::SerializePRS(Ser, SerializedData, &PRS.Allocator);
-            VERIFY_EXPR(Ser.IsEnd());
-
-            pRenderDeviceD3D12->CreatePipelineResourceSignature(PRS.Desc, SerializedData, ppSignature);
-        });
 }
 
 template <SerializerMode Mode>

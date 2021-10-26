@@ -669,6 +669,24 @@ struct PipelineStateUnpackInfo
     };
 
    PSO_UNPACK_OVERRIDE_FLAGS OverrideFlags DEFAULT_INITIALIZER(PSO_UNPACK_OVERRIDE_FLAG_NONE);
+   
+    /// Shader resource binding allocation granularity
+
+    /// This member defines allocation granularity for internal resources required by the shader resource
+    /// binding object instances.
+    /// Has no effect if the PSO is created with explicit pipeline resource signature(s).
+    Uint32 SRBAllocationGranularity DEFAULT_INITIALIZER(1);
+
+    /// Defines which immediate contexts are allowed to execute commands that use this pipeline state.
+
+    /// When ImmediateContextMask contains a bit at position n, the pipeline state may be
+    /// used in the immediate context with index n directly (see DeviceContextDesc::ContextId).
+    /// It may also be used in a command list recorded by a deferred context that will be executed
+    /// through that immediate context.
+    ///
+    /// \remarks    Only specify these bits that will indicate those immediate contexts where the PSO
+    ///             will actually be used. Do not set unnecessary bits as this will result in extra overhead.
+    Uint64 ImmediateContextMask     DEFAULT_INITIALIZER(1);
 
     // Optional PSO cache
     IPSOCache* pCache DEFAULT_INITIALIZER(nullptr);
