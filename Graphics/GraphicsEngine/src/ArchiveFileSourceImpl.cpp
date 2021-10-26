@@ -28,43 +28,32 @@
 
 namespace Diligent
 {
-namespace
-{
-static size_t GetFileSize(FileWrapper& File)
-{
-    return File ? File->GetSize() : 0;
-}
-} // namespace
 
 ArchiveFileSourceImpl::ArchiveFileSourceImpl(IReferenceCounters* pRefCounters, const Char* Path) :
     TObjectBase{pRefCounters},
     m_File{Path, EFileAccessMode::Read},
-    m_Size(GetFileSize(m_File))
+    m_Size{m_File ? m_File->GetSize() : 0}
 {
     if (!m_File)
         LOG_ERROR_AND_THROW("Failed to open file '", Path, "'");
-
-    m_Pos = m_File->GetPos();
 }
 
 Bool ArchiveFileSourceImpl::Read(Uint64 Pos, void* pData, const Uint64 RequiredSize)
 {
     DEV_CHECK_ERR(pData != nullptr && RequiredSize != 0, "pData must not be null");
+    std::unique_lock<std::mutex> Lock{m_Quard};
 
-    m_Pos = m_File->SetPos(Pos, FilePosOrigin::Start);
-    VERIFY_EXPR(m_Pos == m_File->GetPos());
+    auto CurrPos = m_File->SetPos(Pos, FilePosOrigin::Start);
+    VERIFY_EXPR(CurrPos == m_File->GetPos());
 
-    if (m_Pos != Pos)
+    if (CurrPos != Pos)
         return false;
 
-    Uint64 Size = std::min(m_Pos + RequiredSize, Uint64{m_Size}) - m_Pos;
-    if (m_File->Read(pData, Size))
-    {
-        m_Pos += static_cast<size_t>(Size);
-        VERIFY_EXPR(m_Pos == m_File->GetPos());
-        return Size == RequiredSize;
-    }
-    return false;
+    Uint64 Size = std::min(Pos + RequiredSize, Uint64{m_Size}) - Pos;
+    if (Size != RequiredSize)
+        return false;
+
+    return m_File->Read(pData, Size);
 }
 
 } // namespace Diligent

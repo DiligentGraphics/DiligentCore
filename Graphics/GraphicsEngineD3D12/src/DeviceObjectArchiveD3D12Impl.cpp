@@ -31,10 +31,10 @@
 namespace Diligent
 {
 
-static constexpr auto DevType = RENDER_DEVICE_TYPE_D3D12;
+static constexpr auto DevType = DeviceObjectArchiveBase::DeviceType::Direct3D12;
 
-DeviceObjectArchiveD3D12Impl::DeviceObjectArchiveD3D12Impl(IReferenceCounters* pRefCounters) :
-    DeviceObjectArchiveBase{pRefCounters}
+DeviceObjectArchiveD3D12Impl::DeviceObjectArchiveD3D12Impl(IReferenceCounters* pRefCounters, IArchiveSource* pSource) :
+    DeviceObjectArchiveBase{pRefCounters, pSource}
 {
 }
 
@@ -47,37 +47,21 @@ void DeviceObjectArchiveD3D12Impl::UnpackGraphicsPSO(const PipelineStateUnpackIn
     VERIFY_EXPR(pRenderDeviceD3D12 != nullptr);
     VERIFY_EXPR(ppPSO != nullptr);
 
-    std::shared_lock<std::shared_mutex> ReadLock{m_Guard};
-
     PSOData<GraphicsPipelineStateCreateInfo> PSO{GetRawAllocator()};
     if (!ReadGraphicsPSOData(DeArchiveInfo.Name, PSO))
         return;
 
-    const auto& Header = *PSO.pHeader;
-    if (Header.DeviceSpecificDataSize[DevType] == 0)
-    {
-        LOG_ERROR_MESSAGE("Direct3D12 specific data is not specified for resource signature");
-        return;
-    }
-    if (Header.DeviceSpecificDataOffset[DevType] + Header.DeviceSpecificDataSize[DevType] > m_pSource->GetSize())
-    {
-        LOG_ERROR_MESSAGE("Invalid offset in archive");
-        return;
-    }
+    LoadDeviceSpecificData(
+        DevType,
+        *PSO.pHeader,
+        PSO.Allocator,
+        "Graphics pipeline",
+        [&](Serializer<SerializerMode::Read>& Ser) //
+        {
+            // AZ TODO
 
-    const auto DataSize = Header.DeviceSpecificDataSize[DevType];
-    auto*      pData    = static_cast<Uint8*>(PSO.Allocator.Allocate(DataSize, DataPtrAlign));
-    if (!m_pSource->Read(Header.DeviceSpecificDataOffset[DevType], pData, DataSize))
-    {
-        LOG_ERROR_MESSAGE("Failed to read resource signature data");
-        return;
-    }
-
-    const void* Ptr = pData;
-
-    VERIFY_EXPR(Ptr <= pData + DataSize);
-
-    pRenderDeviceD3D12->CreateGraphicsPipelineState(PSO.CreateInfo, ppPSO);
+            pRenderDeviceD3D12->CreateGraphicsPipelineState(PSO.CreateInfo, ppPSO);
+        });
 }
 
 void DeviceObjectArchiveD3D12Impl::UnpackComputePSO(const PipelineStateUnpackInfo& DeArchiveInfo, RenderDeviceD3D12Impl* pRenderDeviceD3D12, IPipelineState** ppPSO)
@@ -85,15 +69,21 @@ void DeviceObjectArchiveD3D12Impl::UnpackComputePSO(const PipelineStateUnpackInf
     VERIFY_EXPR(pRenderDeviceD3D12 != nullptr);
     VERIFY_EXPR(ppPSO != nullptr);
 
-    std::shared_lock<std::shared_mutex> ReadLock{m_Guard};
-
     PSOData<ComputePipelineStateCreateInfo> PSO{GetRawAllocator()};
     if (!ReadComputePSOData(DeArchiveInfo.Name, PSO))
         return;
 
-    // AZ TODO
+    LoadDeviceSpecificData(
+        DevType,
+        *PSO.pHeader,
+        PSO.Allocator,
+        "Compute pipeline",
+        [&](Serializer<SerializerMode::Read>& Ser) //
+        {
+            // AZ TODO
 
-    pRenderDeviceD3D12->CreateComputePipelineState(PSO.CreateInfo, ppPSO);
+            pRenderDeviceD3D12->CreateComputePipelineState(PSO.CreateInfo, ppPSO);
+        });
 }
 
 void DeviceObjectArchiveD3D12Impl::UnpackRayTracingPSO(const PipelineStateUnpackInfo& DeArchiveInfo, RenderDeviceD3D12Impl* pRenderDeviceD3D12, IPipelineState** ppPSO)
@@ -101,15 +91,21 @@ void DeviceObjectArchiveD3D12Impl::UnpackRayTracingPSO(const PipelineStateUnpack
     VERIFY_EXPR(pRenderDeviceD3D12 != nullptr);
     VERIFY_EXPR(ppPSO != nullptr);
 
-    std::shared_lock<std::shared_mutex> ReadLock{m_Guard};
-
     PSOData<RayTracingPipelineStateCreateInfo> PSO{GetRawAllocator()};
     if (!ReadRayTracingPSOData(DeArchiveInfo.Name, PSO))
         return;
 
-    // AZ TODO
+    LoadDeviceSpecificData(
+        DevType,
+        *PSO.pHeader,
+        PSO.Allocator,
+        "Ray tracing pipeline",
+        [&](Serializer<SerializerMode::Read>& Ser) //
+        {
+            // AZ TODO
 
-    pRenderDeviceD3D12->CreateRayTracingPipelineState(PSO.CreateInfo, ppPSO);
+            pRenderDeviceD3D12->CreateRayTracingPipelineState(PSO.CreateInfo, ppPSO);
+        });
 }
 
 void DeviceObjectArchiveD3D12Impl::UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, RenderDeviceD3D12Impl* pRenderDeviceD3D12, IPipelineResourceSignature** ppSignature)
@@ -117,40 +113,24 @@ void DeviceObjectArchiveD3D12Impl::UnpackResourceSignature(const ResourceSignatu
     VERIFY_EXPR(pRenderDeviceD3D12 != nullptr);
     VERIFY_EXPR(ppSignature != nullptr);
 
-    std::shared_lock<std::shared_mutex> ReadLock{m_Guard};
-
     PRSData PRS{GetRawAllocator()};
     if (!ReadPRSData(DeArchiveInfo.Name, PRS))
         return;
 
-    const auto& Header = *PRS.pHeader;
-    if (Header.DeviceSpecificDataSize[DevType] == 0)
-    {
-        LOG_ERROR_MESSAGE("Direct3D12 specific data is not specified for resource signature");
-        return;
-    }
-    if (Header.DeviceSpecificDataOffset[DevType] + Header.DeviceSpecificDataSize[DevType] > m_pSource->GetSize())
-    {
-        LOG_ERROR_MESSAGE("Invalid offset in archive");
-        return;
-    }
+    LoadDeviceSpecificData(
+        DevType,
+        *PRS.pHeader,
+        PRS.Allocator,
+        "Resource signature",
+        [&](Serializer<SerializerMode::Read>& Ser) //
+        {
+            PipelineResourceSignatureD3D12Impl::SerializedData SerializedData;
+            SerializedData.Base = PRS.Serialized;
+            SerializerD3D12Impl<SerializerMode::Read>::SerializePRS(Ser, SerializedData, &PRS.Allocator);
+            VERIFY_EXPR(Ser.IsEnd());
 
-    const auto DataSize = Header.DeviceSpecificDataSize[DevType];
-    auto*      pData    = PRS.Allocator.Allocate(DataSize, DataPtrAlign);
-    if (!m_pSource->Read(Header.DeviceSpecificDataOffset[DevType], pData, DataSize))
-    {
-        LOG_ERROR_MESSAGE("Failed to read resource signature data");
-        return;
-    }
-
-    Serializer<SerializerMode::Read> Ser{pData, DataSize};
-
-    PipelineResourceSignatureD3D12Impl::SerializedData SerializedData;
-    SerializedData.Base = PRS.Serialized;
-    SerializerD3D12Impl<SerializerMode::Read>::SerializePRS(Ser, SerializedData, &PRS.Allocator);
-    VERIFY_EXPR(Ser.IsEnd());
-
-    pRenderDeviceD3D12->CreatePipelineResourceSignature(PRS.Desc, SerializedData, ppSignature);
+            pRenderDeviceD3D12->CreatePipelineResourceSignature(PRS.Desc, SerializedData, ppSignature);
+        });
 }
 
 template <SerializerMode Mode>

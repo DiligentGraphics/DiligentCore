@@ -270,7 +270,7 @@ void InitNamedResourceArrayHeader(std::vector<Uint8>&                         Ch
         const auto& Name = NameAndData.first;
 
         NameLengthArray[i] = static_cast<Uint32>(Name.size());
-        DataSizeArray[i]   = StaticCast<Uint32>(NameAndData.second.PerDeviceData[RENDER_DEVICE_TYPE_UNDEFINED].Size);
+        DataSizeArray[i]   = StaticCast<Uint32>(NameAndData.second.GetSharedData().Size);
         DataOffsetArray[i] = 0; // will be initialized later
         std::memcpy(NameDataPtr, Name.c_str(), Name.size());
         NameDataPtr += Name.size();
@@ -341,29 +341,29 @@ Bool ArchiveBuilderImpl::SerializeToStream(IFileStream* pStream)
     if (pStream == nullptr)
         return false;
 
-    std::vector<Uint8>                                               HeaderData;                            // ArchiveHeader, ChunkHeader[]
-    std::array<std::vector<Uint8>, Uint32{ChunkType::Count}>         ChunkData;                             // NamedResourceArrayHeader
-    std::array<std::vector<Uint8>, Uint32{RENDER_DEVICE_TYPE_COUNT}> ArchiveData;                           // ***DataHeader, device specific data
-    std::array<Uint32*, Uint32{ChunkType::Count}>                    DataOffsetArrayPerChunk          = {}; // pointer to NamedResourceArrayHeader::DataOffset - offsets to ***DataHeader
-    std::array<Uint32, Uint32{ChunkType::Count}>                     ResourceCountPerChunk            = {};
-    std::array<std::vector<Uint32*>, Uint32{ChunkType::Count}>       DeviceSpecificDataOffsetPerChunk = {};
+    std::vector<Uint8>                                         HeaderData;                            // ArchiveHeader, ChunkHeader[]
+    std::array<std::vector<Uint8>, Uint32{ChunkType::Count}>   ChunkData;                             // NamedResourceArrayHeader
+    std::array<std::vector<Uint8>, DeviceDataCount>            ArchiveData;                           // ***DataHeader, device specific data
+    std::array<Uint32*, Uint32{ChunkType::Count}>              DataOffsetArrayPerChunk          = {}; // pointer to NamedResourceArrayHeader::DataOffset - offsets to ***DataHeader
+    std::array<Uint32, Uint32{ChunkType::Count}>               ResourceCountPerChunk            = {};
+    std::array<std::vector<Uint32*>, Uint32{ChunkType::Count}> DeviceSpecificDataOffsetPerChunk = {};
 
     // Reserve space
     {
-        std::array<size_t, Uint32{RENDER_DEVICE_TYPE_COUNT}> ArchiveDataSize = {};
+        std::array<size_t, DeviceDataCount> ArchiveDataSize = {};
 
         // Reserve space for pipeline resource signatures
         for (auto& PRS : m_PRSMap)
         {
-            for (Uint32 dev = 0; dev < RENDER_DEVICE_TYPE_COUNT; ++dev)
+            for (Uint32 dev = 0; dev < DeviceDataCount; ++dev)
             {
                 auto&       Dst = ArchiveDataSize[dev];
-                const auto& Src = PRS.second.PerDeviceData[dev];
+                const auto& Src = PRS.second.GetData(dev);
                 Dst += (dev == 0 ? sizeof(PRSDataHeader) : 0) + Src.Size;
             }
         }
 
-        for (Uint32 dev = 0; dev < RENDER_DEVICE_TYPE_COUNT; ++dev)
+        for (Uint32 dev = 0; dev < DeviceDataCount; ++dev)
         {
             ArchiveData[dev].reserve(ArchiveDataSize[dev]);
         }
@@ -388,8 +388,8 @@ Bool ArchiveBuilderImpl::SerializeToStream(IFileStream* pStream)
 
             // Write shared data
             {
-                const auto& Src     = PRS.second.PerDeviceData[RENDER_DEVICE_TYPE_UNDEFINED];
-                auto&       Dst     = ArchiveData[RENDER_DEVICE_TYPE_UNDEFINED];
+                const auto& Src     = PRS.second.GetSharedData();
+                auto&       Dst     = ArchiveData[0];
                 auto        Offset  = Dst.size();
                 const auto  NewSize = Offset + sizeof(PRSDataHeader) + Src.Size;
                 VERIFY_EXPR(NewSize <= Dst.capacity());
@@ -398,7 +398,7 @@ Bool ArchiveBuilderImpl::SerializeToStream(IFileStream* pStream)
                 pHeader       = reinterpret_cast<PRSDataHeader*>(&Dst[Offset]);
                 pHeader->Type = ChunkType::ResourceSignature;
                 // DeviceSpecificDataSize & DeviceSpecificDataOffset will be initialized later
-                std::memset(pHeader->DeviceSpecificDataOffset, 0xFF, sizeof(pHeader->DeviceSpecificDataOffset));
+                std::memset(pHeader->DeviceSpecificDataOffset.data(), 0xFF, sizeof(pHeader->DeviceSpecificDataOffset));
 
                 Offset += sizeof(*pHeader);
 
@@ -406,24 +406,25 @@ Bool ArchiveBuilderImpl::SerializeToStream(IFileStream* pStream)
                 std::memcpy(&Dst[Offset], Src.Ptr, Src.Size);
             }
 
-            for (Uint32 dev = 1; dev < RENDER_DEVICE_TYPE_COUNT; ++dev)
+            for (Uint32 i = 1; i < DeviceDataCount; ++i)
             {
-                const auto& Src = PRS.second.PerDeviceData[dev];
+                const auto  dev = static_cast<DeviceType>(i - 1);
+                const auto& Src = PRS.second.GetDeviceData(dev);
                 if (!Src)
                     continue;
 
-                auto&      Dst     = ArchiveData[dev];
+                auto&      Dst     = ArchiveData[i];
                 const auto OldSize = Dst.size();
                 const auto NewSize = OldSize + Src.Size;
                 VERIFY_EXPR(NewSize <= Dst.capacity());
                 Dst.resize(NewSize);
 
-                pHeader->DeviceSpecificDataSize[dev]   = StaticCast<Uint32>(Src.Size);
-                pHeader->DeviceSpecificDataOffset[dev] = StaticCast<Uint32>(OldSize);
+                pHeader->SetDeviceSpecificDataSize(dev, StaticCast<Uint32>(Src.Size));
+                pHeader->SetDeviceSpecificDataOffset(dev, StaticCast<Uint32>(OldSize));
                 std::memcpy(&Dst[OldSize], Src.Ptr, Src.Size);
             }
             DataSizeArray[j] += sizeof(PRSDataHeader);
-            DeviceSpecificDataOffset[j] = pHeader->DeviceSpecificDataOffset;
+            DeviceSpecificDataOffset[j] = pHeader->DeviceSpecificDataOffset.data();
             ++j;
         }
     }
@@ -461,7 +462,7 @@ Bool ArchiveBuilderImpl::SerializeToStream(IFileStream* pStream)
             ++CurrChunkPtr;
         }
 
-        for (Uint32 dev = 0; dev < RENDER_DEVICE_TYPE_COUNT; ++dev)
+        for (Uint32 k = 0; k < DeviceDataCount; ++k)
         {
             for (Uint32 i = 0; i < NumChunks; ++i)
             {
@@ -472,7 +473,7 @@ Bool ArchiveBuilderImpl::SerializeToStream(IFileStream* pStream)
                 for (Uint32 j = 0; j < Count; ++j)
                 {
                     Uint32* Offset = nullptr;
-                    if (dev == 0)
+                    if (k == 0)
                     {
                         // Update offsets to the ***DataHeader
                         Offset = &DataOffsetArrayPerChunk[ChunkInd][j];
@@ -480,12 +481,13 @@ Bool ArchiveBuilderImpl::SerializeToStream(IFileStream* pStream)
                     else
                     {
                         // Update offsets to the device specific data
-                        Offset = &DeviceSpecificDataOffsetPerChunk[ChunkInd][j][dev];
+                        auto dev = k - 1;
+                        Offset   = &DeviceSpecificDataOffsetPerChunk[ChunkInd][j][dev];
                     }
                     *Offset = *Offset == ~0u ? 0u : StaticCast<Uint32>(*Offset + OffsetInFile);
                 }
             }
-            OffsetInFile += ArchiveData[dev].size();
+            OffsetInFile += ArchiveData[k].size();
         }
     }
 
@@ -567,7 +569,7 @@ Bool ArchiveBuilderImpl::ArchivePipelineResourceSignature(const PipelineResource
         }
         else
         {
-            CopyPipelineResourceSignatureDesc(Desc, Serialized, Data.pDesc, Data.pSerialized, DescData, Data.PerDeviceData[RENDER_DEVICE_TYPE_UNDEFINED]);
+            CopyPipelineResourceSignatureDesc(Desc, Serialized, Data.pDesc, Data.pSerialized, DescData, Data.GetSharedData());
             return true;
         }
     };
@@ -596,7 +598,7 @@ Bool ArchiveBuilderImpl::ArchivePipelineResourceSignature(const PipelineResource
                 if (!AddPRSDesc(Temp.GetDesc(), SerializedData.Base))
                     return false;
 
-                CopyPRSSerializedDataD3D12(SerializedData, Data.PerDeviceData[Type]);
+                CopyPRSSerializedDataD3D12(SerializedData, Data.GetDeviceData(DeviceType::Direct3D12));
                 break;
             }
 #endif
@@ -619,7 +621,7 @@ Bool ArchiveBuilderImpl::ArchivePipelineResourceSignature(const PipelineResource
                 if (!AddPRSDesc(Temp.GetDesc(), SerializedData.Base))
                     return false;
 
-                CopyPRSSerializedDataVk(SerializedData, Data.PerDeviceData[Type]);
+                CopyPRSSerializedDataVk(SerializedData, Data.GetDeviceData(DeviceType::Vulkan));
                 break;
             }
 #endif

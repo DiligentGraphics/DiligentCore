@@ -40,7 +40,7 @@ namespace Diligent
 class DeviceObjectArchiveD3D12Impl final : public DeviceObjectArchiveBase
 {
 public:
-    explicit DeviceObjectArchiveD3D12Impl(IReferenceCounters* pRefCounters);
+    DeviceObjectArchiveD3D12Impl(IReferenceCounters* pRefCounters, IArchiveSource* pSource);
     ~DeviceObjectArchiveD3D12Impl();
 
     void UnpackGraphicsPSO(const PipelineStateUnpackInfo& DeArchiveInfo, RenderDeviceD3D12Impl* pDevice, IPipelineState** ppPSO);
@@ -48,7 +48,6 @@ public:
     void UnpackRayTracingPSO(const PipelineStateUnpackInfo& DeArchiveInfo, RenderDeviceD3D12Impl* pDevice, IPipelineState** ppPSO);
     void UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, RenderDeviceD3D12Impl* pDevice, IPipelineResourceSignature** ppSignature);
 
-private:
 public:
     template <SerializerMode Mode>
     struct SerializerD3D12Impl

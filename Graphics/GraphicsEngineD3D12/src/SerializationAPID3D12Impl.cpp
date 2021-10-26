@@ -37,7 +37,8 @@ SerializationAPID3D12Impl::SerializationAPID3D12Impl(IReferenceCounters* pRefCou
 {
 }
 
-void SerializationAPID3D12Impl::CreateDeviceObjectArchive(IDeviceObjectArchive** ppArchive)
+void SerializationAPID3D12Impl::CreateDeviceObjectArchive(IArchiveSource*        pSource,
+                                                          IDeviceObjectArchive** ppArchive)
 {
     DEV_CHECK_ERR(ppArchive != nullptr, "ppArchive must not be null");
     if (!ppArchive)
@@ -47,7 +48,7 @@ void SerializationAPID3D12Impl::CreateDeviceObjectArchive(IDeviceObjectArchive**
     try
     {
         auto& RawMemAllocator = GetRawAllocator();
-        auto* pArchiveImpl(NEW_RC_OBJ(RawMemAllocator, "Device object archive instance", DeviceObjectArchiveD3D12Impl)());
+        auto* pArchiveImpl(NEW_RC_OBJ(RawMemAllocator, "Device object archive instance", DeviceObjectArchiveD3D12Impl)(pSource));
         pArchiveImpl->QueryInterface(IID_DeviceObjectArchive, reinterpret_cast<IObject**>(ppArchive));
     }
     catch (...)

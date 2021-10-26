@@ -47,14 +47,11 @@ ArchiveMemSourceImpl::~ArchiveMemSourceImpl()
 Bool ArchiveMemSourceImpl::Read(Uint64 Pos, void* pData, const Uint64 RequiredSize)
 {
     DEV_CHECK_ERR(pData != nullptr && RequiredSize != 0, "pData must not be null");
-
-    m_Pos = static_cast<size_t>(std::min(Pos, Uint64{m_Size}));
-    if (m_Pos != Pos)
+    if (Pos >= m_Size)
         return false;
 
-    Uint64 Size = std::min(m_Pos + RequiredSize, Uint64{m_Size}) - m_Pos;
-    std::memcpy(pData, m_pData + m_Pos, static_cast<size_t>(Size));
-    m_Pos += static_cast<size_t>(Size);
+    Uint64 Size = std::min(Pos + RequiredSize, Uint64{m_Size}) - Pos;
+    std::memcpy(pData, m_pData + Pos, static_cast<size_t>(Size));
     return Size == RequiredSize;
 }
 

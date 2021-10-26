@@ -59,6 +59,7 @@ DILIGENT_BEGIN_INTERFACE(ISerializationAPI, IObject)
 {
     // AZ TODO
     VIRTUAL void METHOD(CreateDeviceObjectArchive)(THIS_
+                                                   IArchiveSource*        pSource,
                                                    IDeviceObjectArchive** ppArchive) PURE;
     
     // AZ TODO
@@ -68,7 +69,7 @@ DILIGENT_BEGIN_INTERFACE(ISerializationAPI, IObject)
     
     // AZ TODO
     VIRTUAL void METHOD(CreateArchiveSourceFromBlob)(THIS_
-                                                     IDataBlob* pBlob,
+                                                     IDataBlob*       pBlob,
                                                      IArchiveSource** ppSource) PURE;
 
     /// Resource signatures used by the PSO will be unpacked from the same archive.
@@ -86,15 +87,11 @@ DILIGENT_END_INTERFACE
 
 #if DILIGENT_C_INTERFACE
 
-// clang-format off
-
 #    define ISerializationAPI_CreateDeviceObjectArchive(This, ...)    CALL_IFACE_METHOD(SerializationAPI, CreateDeviceObjectArchive,   This, __VA_ARGS__)
 #    define ISerializationAPI_CreateArchiveSourceFromFile(This, ...)  CALL_IFACE_METHOD(SerializationAPI, CreateArchiveSourceFromFile, This, __VA_ARGS__)
 #    define ISerializationAPI_CreateArchiveSourceFromBlob(This, ...)  CALL_IFACE_METHOD(SerializationAPI, CreateArchiveSourceFromBlob, This, __VA_ARGS__)
 #    define ISerializationAPI_UnpackPipelineState(This, ...)          CALL_IFACE_METHOD(SerializationAPI, UnpackPipelineState,         This, __VA_ARGS__)
 #    define ISerializationAPI_UnpackResourceSignature(This, ...)      CALL_IFACE_METHOD(SerializationAPI, UnpackResourceSignature,     This, __VA_ARGS__)
-
-// clang-format on
 
 #endif
 

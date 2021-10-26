@@ -29,6 +29,7 @@
 /// \file
 /// Implementation of the Diligent::ArchiveFileSourceImpl class
 
+#include <mutex>
 #include "ArchiveSource.h"
 #include "ObjectBase.hpp"
 #include "FileWrapper.hpp"
@@ -50,12 +51,10 @@ public:
 
     virtual Uint64 DILIGENT_CALL_TYPE GetSize() override final { return m_Size; }
 
-    virtual Uint64 DILIGENT_CALL_TYPE GetPos() override final { return m_Pos; }
-
 private:
+    std::mutex   m_Quard;
     FileWrapper  m_File;
     const size_t m_Size;
-    size_t       m_Pos;
 };
 
 } // namespace Diligent

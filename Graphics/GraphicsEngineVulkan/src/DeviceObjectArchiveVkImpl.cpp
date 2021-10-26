@@ -31,10 +31,10 @@
 namespace Diligent
 {
 
-static constexpr auto DevType = RENDER_DEVICE_TYPE_VULKAN;
+static constexpr auto DevType = DeviceObjectArchiveBase::DeviceType::Vulkan;
 
-DeviceObjectArchiveVkImpl::DeviceObjectArchiveVkImpl(IReferenceCounters* pRefCounters) :
-    DeviceObjectArchiveBase{pRefCounters}
+DeviceObjectArchiveVkImpl::DeviceObjectArchiveVkImpl(IReferenceCounters* pRefCounters, IArchiveSource* pSource) :
+    DeviceObjectArchiveBase{pRefCounters, pSource}
 {
 }
 
@@ -47,39 +47,21 @@ void DeviceObjectArchiveVkImpl::UnpackGraphicsPSO(const PipelineStateUnpackInfo&
     VERIFY_EXPR(pRenderDeviceVk != nullptr);
     VERIFY_EXPR(ppPSO != nullptr);
 
-    std::shared_lock<std::shared_mutex> ReadLock{m_Guard};
-
     PSOData<GraphicsPipelineStateCreateInfo> PSO{GetRawAllocator()};
     if (!ReadGraphicsPSOData(DeArchiveInfo.Name, PSO))
         return;
 
-    const auto& Header = *PSO.pHeader;
-    if (Header.DeviceSpecificDataSize[DevType] == 0)
-    {
-        LOG_ERROR_MESSAGE("Vulkan specific data is not specified for resource signature");
-        return;
-    }
-    if (Header.DeviceSpecificDataOffset[DevType] + Header.DeviceSpecificDataSize[DevType] > m_pSource->GetSize())
-    {
-        LOG_ERROR_MESSAGE("Invalid offset in archive");
-        return;
-    }
+    LoadDeviceSpecificData(
+        DevType,
+        *PSO.pHeader,
+        PSO.Allocator,
+        "Graphics pipeline",
+        [&](Serializer<SerializerMode::Read>& Ser) //
+        {
+            // AZ TODO
 
-    const auto DataSize = Header.DeviceSpecificDataSize[DevType];
-    auto*      pData    = static_cast<Uint8*>(PSO.Allocator.Allocate(DataSize, DataPtrAlign));
-    if (!m_pSource->Read(Header.DeviceSpecificDataOffset[DevType], pData, DataSize))
-    {
-        LOG_ERROR_MESSAGE("Failed to read resource signature data");
-        return;
-    }
-
-    const void* Ptr = pData;
-
-    VERIFY_EXPR(Ptr <= pData + DataSize);
-
-    // AZ TODO: spirv parsing is slow and should be avoided
-
-    pRenderDeviceVk->CreateGraphicsPipelineState(PSO.CreateInfo, ppPSO);
+            pRenderDeviceVk->CreateGraphicsPipelineState(PSO.CreateInfo, ppPSO);
+        });
 }
 
 void DeviceObjectArchiveVkImpl::UnpackComputePSO(const PipelineStateUnpackInfo& DeArchiveInfo, RenderDeviceVkImpl* pRenderDeviceVk, IPipelineState** ppPSO)
@@ -87,15 +69,21 @@ void DeviceObjectArchiveVkImpl::UnpackComputePSO(const PipelineStateUnpackInfo& 
     VERIFY_EXPR(pRenderDeviceVk != nullptr);
     VERIFY_EXPR(ppPSO != nullptr);
 
-    std::shared_lock<std::shared_mutex> ReadLock{m_Guard};
-
     PSOData<ComputePipelineStateCreateInfo> PSO{GetRawAllocator()};
     if (!ReadComputePSOData(DeArchiveInfo.Name, PSO))
         return;
 
-    // AZ TODO
+    LoadDeviceSpecificData(
+        DevType,
+        *PSO.pHeader,
+        PSO.Allocator,
+        "Compute pipeline",
+        [&](Serializer<SerializerMode::Read>& Ser) //
+        {
+            // AZ TODO
 
-    pRenderDeviceVk->CreateComputePipelineState(PSO.CreateInfo, ppPSO);
+            pRenderDeviceVk->CreateComputePipelineState(PSO.CreateInfo, ppPSO);
+        });
 }
 
 void DeviceObjectArchiveVkImpl::UnpackRayTracingPSO(const PipelineStateUnpackInfo& DeArchiveInfo, RenderDeviceVkImpl* pRenderDeviceVk, IPipelineState** ppPSO)
@@ -103,15 +91,21 @@ void DeviceObjectArchiveVkImpl::UnpackRayTracingPSO(const PipelineStateUnpackInf
     VERIFY_EXPR(pRenderDeviceVk != nullptr);
     VERIFY_EXPR(ppPSO != nullptr);
 
-    std::shared_lock<std::shared_mutex> ReadLock{m_Guard};
-
     PSOData<RayTracingPipelineStateCreateInfo> PSO{GetRawAllocator()};
     if (!ReadRayTracingPSOData(DeArchiveInfo.Name, PSO))
         return;
 
-    // AZ TODO
+    LoadDeviceSpecificData(
+        DevType,
+        *PSO.pHeader,
+        PSO.Allocator,
+        "Ray tracing pipeline",
+        [&](Serializer<SerializerMode::Read>& Ser) //
+        {
+            // AZ TODO
 
-    pRenderDeviceVk->CreateRayTracingPipelineState(PSO.CreateInfo, ppPSO);
+            pRenderDeviceVk->CreateRayTracingPipelineState(PSO.CreateInfo, ppPSO);
+        });
 }
 
 void DeviceObjectArchiveVkImpl::UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, RenderDeviceVkImpl* pRenderDeviceVk, IPipelineResourceSignature** ppSignature)
@@ -119,40 +113,24 @@ void DeviceObjectArchiveVkImpl::UnpackResourceSignature(const ResourceSignatureU
     VERIFY_EXPR(pRenderDeviceVk != nullptr);
     VERIFY_EXPR(ppSignature != nullptr);
 
-    std::shared_lock<std::shared_mutex> ReadLock{m_Guard};
-
     PRSData PRS{GetRawAllocator()};
     if (!ReadPRSData(DeArchiveInfo.Name, PRS))
         return;
 
-    const auto& Header = *PRS.pHeader;
-    if (Header.DeviceSpecificDataSize[DevType] == 0)
-    {
-        LOG_ERROR_MESSAGE("Vulkan specific data is not specified for resource signature");
-        return;
-    }
-    if (Header.DeviceSpecificDataOffset[DevType] + Header.DeviceSpecificDataSize[DevType] > m_pSource->GetSize())
-    {
-        LOG_ERROR_MESSAGE("Invalid offset in archive");
-        return;
-    }
+    LoadDeviceSpecificData(
+        DevType,
+        *PRS.pHeader,
+        PRS.Allocator,
+        "Resource signature",
+        [&](Serializer<SerializerMode::Read>& Ser) //
+        {
+            PipelineResourceSignatureVkImpl::SerializedData SerializedData;
+            SerializedData.Base = PRS.Serialized;
+            SerializerVkImpl<SerializerMode::Read>::SerializePRS(Ser, SerializedData, &PRS.Allocator);
+            VERIFY_EXPR(Ser.IsEnd());
 
-    const auto DataSize = Header.DeviceSpecificDataSize[DevType];
-    auto*      pData    = PRS.Allocator.Allocate(DataSize, DataPtrAlign);
-    if (!m_pSource->Read(Header.DeviceSpecificDataOffset[DevType], pData, DataSize))
-    {
-        LOG_ERROR_MESSAGE("Failed to read resource signature data");
-        return;
-    }
-
-    Serializer<SerializerMode::Read> Ser{pData, DataSize};
-
-    PipelineResourceSignatureVkImpl::SerializedData SerializedData;
-    SerializedData.Base = PRS.Serialized;
-    SerializerVkImpl<SerializerMode::Read>::SerializePRS(Ser, SerializedData, &PRS.Allocator);
-    VERIFY_EXPR(Ser.IsEnd());
-
-    pRenderDeviceVk->CreatePipelineResourceSignature(PRS.Desc, SerializedData, ppSignature);
+            pRenderDeviceVk->CreatePipelineResourceSignature(PRS.Desc, SerializedData, ppSignature);
+        });
 }
 
 template <SerializerMode Mode>

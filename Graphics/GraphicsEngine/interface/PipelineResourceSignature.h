@@ -221,13 +221,19 @@ typedef struct PipelineResourceSignatureDesc PipelineResourceSignatureDesc;
 /// Resource signature unpack parameters
 struct ResourceSignatureUnpackInfo
 {
-    struct IRenderDevice* pDevice DEFAULT_INITIALIZER(nullptr);
+    struct IRenderDevice* pDevice  DEFAULT_INITIALIZER(nullptr);
 
     IDeviceObjectArchive* pArchive DEFAULT_INITIALIZER(nullptr);
 
     /// Signature name to unpack. If there is only
     /// one signature in the archive, the name may be null.
     const char* Name DEFAULT_INITIALIZER(nullptr);
+    
+    /// Shader resource binding allocation granularity
+
+    /// This member defines the allocation granularity for internal resources required by
+    /// the shader resource binding object instances.
+    Uint32 SRBAllocationGranularity DEFAULT_INITIALIZER(1);
 };
 typedef struct ResourceSignatureUnpackInfo ResourceSignatureUnpackInfo;
 

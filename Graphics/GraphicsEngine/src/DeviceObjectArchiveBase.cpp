@@ -31,35 +31,27 @@
 namespace Diligent
 {
 
-Bool DeviceObjectArchiveBase::Deserialize(IArchiveSource* pSource)
+DeviceObjectArchiveBase::DeviceObjectArchiveBase(IReferenceCounters* pRefCounters, IArchiveSource* pSource) :
+    TObjectBase{pRefCounters},
+    m_pSource{pSource}
 {
-    Clear();
-
-    DEV_CHECK_ERR(pSource != nullptr, "pSource must not be null");
-    if (pSource == nullptr)
-        return false;
-
-    std::unique_lock<std::shared_mutex> WriteLock{m_Guard};
-
-    m_pSource = pSource;
+    if (m_pSource == nullptr)
+        LOG_ERROR_AND_THROW("pSource must not be null");
 
     // Read header
     ArchiveHeader Header{};
     {
         if (!m_pSource->Read(0, &Header, sizeof(Header)))
         {
-            LOG_ERROR_MESSAGE("Failed to read archive header");
-            return false;
+            LOG_ERROR_AND_THROW("Failed to read archive header");
         }
         if (Header.MagicNumber != HeaderMagicNumber)
         {
-            LOG_ERROR_MESSAGE("Archive header magic number is incorrect");
-            return false;
+            LOG_ERROR_AND_THROW("Archive header magic number is incorrect");
         }
         if (Header.Version != HeaderVersion)
         {
-            LOG_ERROR_MESSAGE("Archive header version (", Header.Version, ") is not supported, expected (", HeaderVersion, ")");
-            return false;
+            LOG_ERROR_AND_THROW("Archive header version (", Header.Version, ") is not supported, expected (", HeaderVersion, ")");
         }
     }
 
@@ -67,8 +59,7 @@ Bool DeviceObjectArchiveBase::Deserialize(IArchiveSource* pSource)
     std::vector<ChunkHeader> Chunks{Header.NumChunks};
     if (!m_pSource->Read(sizeof(Header), Chunks.data(), sizeof(Chunks[0]) * Chunks.size()))
     {
-        LOG_ERROR_MESSAGE("Failed to read chunk headers");
-        return false;
+        LOG_ERROR_AND_THROW("Failed to read chunk headers");
     }
 
     std::bitset<Uint32{ChunkType::Count}> ProcessedBits{};
@@ -76,42 +67,26 @@ Bool DeviceObjectArchiveBase::Deserialize(IArchiveSource* pSource)
     {
         if (ProcessedBits[Uint32{Chunk.Type}])
         {
-            LOG_ERROR_MESSAGE("Multiple chunks with the same types are not allowed");
-            return false;
+            LOG_ERROR_AND_THROW("Multiple chunks with the same types are not allowed");
         }
         ProcessedBits[Uint32{Chunk.Type}] = true;
 
         switch (Chunk.Type)
         {
             // clang-format off
-            case ChunkType::ArchiveDebugInfo:         ReadArchiveDebugInfo(Chunk);                   break;
-            case ChunkType::ResourceSignature:        ReadNamedResources(Chunk, m_PRSMap);           break;
-            case ChunkType::GraphicsPipelineStates:   ReadNamedResources(Chunk, m_GraphicsPSOMap);   break;
-            case ChunkType::ComputePipelineStates:    ReadNamedResources(Chunk, m_ComputePSOMap);    break;
-            case ChunkType::RayTracingPipelineStates: ReadNamedResources(Chunk, m_RayTracingPSOMap); break;
+            case ChunkType::ArchiveDebugInfo:         ReadArchiveDebugInfo(Chunk);                                            break;
+            case ChunkType::ResourceSignature:        ReadNamedResources(Chunk, m_PRSMap,           m_PRSMapGuard);           break;
+            case ChunkType::GraphicsPipelineStates:   ReadNamedResources(Chunk, m_GraphicsPSOMap,   m_GraphicsPSOMapGuard);   break;
+            case ChunkType::ComputePipelineStates:    ReadNamedResources(Chunk, m_ComputePSOMap,    m_ComputePSOMapGuard);    break;
+            case ChunkType::RayTracingPipelineStates: ReadNamedResources(Chunk, m_RayTracingPSOMap, m_RayTracingPSOMapGuard); break;
             // clang-format on
             default:
-                LOG_ERROR_MESSAGE("Unknown chunk type (", static_cast<Uint32>(Chunk.Type), ")");
-                return false;
+                LOG_ERROR_AND_THROW("Unknown chunk type (", static_cast<Uint32>(Chunk.Type), ")");
         }
     }
-
-    return true;
 }
 
-void DeviceObjectArchiveBase::Clear()
-{
-    std::unique_lock<std::shared_mutex> WriteLock{m_Guard};
-
-    m_DebugInfo = {};
-    m_pSource   = {};
-    m_PRSMap.clear();
-    m_GraphicsPSOMap.clear();
-    m_ComputePSOMap.clear();
-    m_RayTracingPSOMap.clear();
-}
-
-void DeviceObjectArchiveBase::ReadArchiveDebugInfo(const ChunkHeader& Chunk)
+void DeviceObjectArchiveBase::ReadArchiveDebugInfo(const ChunkHeader& Chunk) noexcept(false)
 {
     VERIFY_EXPR(Chunk.Type == ChunkType::ArchiveDebugInfo);
 
@@ -120,8 +95,7 @@ void DeviceObjectArchiveBase::ReadArchiveDebugInfo(const ChunkHeader& Chunk)
 
     if (!m_pSource->Read(Chunk.Offset, Data.data(), Data.size()))
     {
-        LOG_ERROR_MESSAGE("Failed to read archive debug info");
-        return;
+        LOG_ERROR_AND_THROW("Failed to read archive debug info");
     }
 
     Serializer<SerializerMode::Read> Ser{Data.data(), Data.size()};
@@ -133,7 +107,7 @@ void DeviceObjectArchiveBase::ReadArchiveDebugInfo(const ChunkHeader& Chunk)
     m_DebugInfo.GitHash = String{GitHash};
 }
 
-void DeviceObjectArchiveBase::ReadNamedResources(const ChunkHeader& Chunk, TNameOffsetMap& NameAndOffset)
+void DeviceObjectArchiveBase::ReadNamedResources(const ChunkHeader& Chunk, TNameOffsetMap& NameAndOffset, std::shared_mutex& Quard) noexcept(false)
 {
     VERIFY_EXPR(Chunk.Type == ChunkType::ResourceSignature ||
                 Chunk.Type == ChunkType::GraphicsPipelineStates ||
@@ -145,8 +119,7 @@ void DeviceObjectArchiveBase::ReadNamedResources(const ChunkHeader& Chunk, TName
 
     if (!m_pSource->Read(Chunk.Offset, Data.data(), Data.size()))
     {
-        LOG_ERROR_MESSAGE("Failed to read resource list from archive");
-        return;
+        LOG_ERROR_AND_THROW("Failed to read resource list from archive");
     }
 
     const auto& Header         = *reinterpret_cast<const NamedResourceArrayHeader*>(Data.data());
@@ -166,116 +139,145 @@ void DeviceObjectArchiveBase::ReadNamedResources(const ChunkHeader& Chunk, TName
 
     const char* NameDataPtr = reinterpret_cast<char*>(&Data[OffsetInHeader]);
 
+    std::unique_lock<std::shared_mutex> Lock{Quard};
+
     // Read names
     Uint32 Offset = 0;
     for (Uint32 i = 0; i < Header.Count; ++i)
     {
         if (Offset + NameLengthArray[i] > Data.size())
         {
-            LOG_ERROR_MESSAGE("Failed to read archive data");
-            return;
+            LOG_ERROR_AND_THROW("Failed to read archive data");
         }
-
         if (DataOffsetArray[i] + DataSizeArray[i] >= m_pSource->GetSize())
         {
-            LOG_ERROR_MESSAGE("Failed to read archive data");
-            return;
+            LOG_ERROR_AND_THROW("Failed to read archive data");
         }
 
-        bool Inserted = m_PRSMap.emplace(String{NameDataPtr + Offset, NameLengthArray[i]}, FileOffsetAndSize{DataOffsetArray[i], DataSizeArray[i]}).second;
+        bool Inserted = NameAndOffset.emplace(String{NameDataPtr + Offset, NameLengthArray[i]}, FileOffsetAndSize{DataOffsetArray[i], DataSizeArray[i]}).second;
         DEV_CHECK_ERR(Inserted, "Each name in the resource names array must be unique");
         Offset += NameLengthArray[i];
     }
 }
 
-bool DeviceObjectArchiveBase::ReadPRSData(const String& Name, PRSData& PRS)
+template <typename FnType>
+bool DeviceObjectArchiveBase::LoadResourceData(const TNameOffsetMap&   NameAndOffset,
+                                               std::shared_mutex&      Quard,
+                                               const String&           ResourceName,
+                                               DynamicLinearAllocator& Allocator,
+                                               const char*             ResTypeName,
+                                               const FnType&           Fn)
 {
-    //std::shared_lock ReadLock{m_Guard};
-
-    auto Iter = m_PRSMap.find(Name);
-    if (Iter == m_PRSMap.end())
+    FileOffsetAndSize OffsetAndSize;
+    const char*       ResName = nullptr;
     {
-        LOG_ERROR_MESSAGE("Resource signature '", Name, "' is not present in archive");
-        return false;
+        std::shared_lock<std::shared_mutex> ReadLock{Quard};
+
+        auto Iter = NameAndOffset.find(ResourceName);
+        if (Iter == NameAndOffset.end())
+        {
+            LOG_ERROR_MESSAGE(ResTypeName, " with name '", ResourceName, "' is not present in archive");
+            return false;
+        }
+        OffsetAndSize = Iter->second;
+        ResName       = Iter->first.c_str();
     }
 
-    const auto DataSize = Iter->second.Size;
-    void*      pData    = PRS.Allocator.Allocate(DataSize, DataPtrAlign);
-    if (!m_pSource->Read(Iter->second.Offset, pData, DataSize))
+    const auto DataSize = OffsetAndSize.Size;
+    void*      pData    = Allocator.Allocate(DataSize, DataPtrAlign);
+    if (!m_pSource->Read(OffsetAndSize.Offset, pData, DataSize))
     {
-        LOG_ERROR_MESSAGE("Failed to read PRS '", Name, "' data from archive");
+        LOG_ERROR_MESSAGE("Failed to read ", ResTypeName, " with name '", ResourceName, "' data from archive");
         return false;
     }
 
     Serializer<SerializerMode::Read> Ser{pData, DataSize};
+    return Fn(ResName, Ser);
+}
 
-    PRS.pHeader = Ser.Cast<PRSDataHeader>();
-    if (PRS.pHeader->Type != ChunkType::ResourceSignature)
-    {
-        LOG_ERROR_MESSAGE("Invalid PRS header in archive");
-        return false;
-    }
+bool DeviceObjectArchiveBase::ReadPRSData(const String& Name, PRSData& PRS)
+{
+    return LoadResourceData(
+        m_PRSMap, m_PRSMapGuard, Name, PRS.Allocator,
+        "Resource signature",
+        [&PRS](const char* Name, Serializer<SerializerMode::Read>& Ser) -> bool //
+        {
+            PRS.Desc.Name = Name;
+            PRS.pHeader   = Ser.Cast<PRSDataHeader>();
+            if (PRS.pHeader->Type != ChunkType::ResourceSignature)
+            {
+                LOG_ERROR_MESSAGE("Invalid PRS header in archive");
+                return false;
+            }
 
-    PRS.Desc.Name = Iter->first.c_str();
-    SerializerImpl<SerializerMode::Read>::SerializePRS(Ser, PRS.Desc, PRS.Serialized, &PRS.Allocator);
-
-    VERIFY_EXPR(Ser.IsEnd());
-    return true;
+            SerializerImpl<SerializerMode::Read>::SerializePRS(Ser, PRS.Desc, PRS.Serialized, &PRS.Allocator);
+            VERIFY_EXPR(Ser.IsEnd());
+            return true;
+        });
 }
 
 bool DeviceObjectArchiveBase::ReadGraphicsPSOData(const String& Name, PSOData<GraphicsPipelineStateCreateInfo>& PSO)
 {
-    //std::shared_lock ReadLock{m_Guard};
+    return LoadResourceData(
+        m_GraphicsPSOMap, m_GraphicsPSOMapGuard, Name, PSO.Allocator,
+        "Graphics pipeline",
+        [&PSO](const char* Name, Serializer<SerializerMode::Read>& Ser) -> bool //
+        {
+            PSO.CreateInfo.PSODesc.Name = Name;
+            PSO.pHeader                 = Ser.Cast<PSODataHeader>();
+            if (PSO.pHeader->Type != ChunkType::GraphicsPipelineStates)
+            {
+                LOG_ERROR_MESSAGE("Invalid graphics pipeline header in archive");
+                return false;
+            }
 
-    auto Iter = m_GraphicsPSOMap.find(Name);
-    if (Iter == m_GraphicsPSOMap.end())
-    {
-        LOG_ERROR_MESSAGE("Graphics pipeline '", Name, "' is not present in archive");
-        return false;
-    }
-
-    const auto DataSize = Iter->second.Size;
-    void*      pData    = PSO.Allocator.Allocate(DataSize, DataPtrAlign);
-    if (!m_pSource->Read(Iter->second.Offset, pData, DataSize))
-    {
-        LOG_ERROR_MESSAGE("Failed to read graphics pipeline '", Name, "' data from archive");
-        return false;
-    }
-
-    Serializer<SerializerMode::Read> Ser{pData, DataSize};
-
-    PSO.pHeader = Ser.Cast<PSODataHeader>();
-    if (PSO.pHeader->Type != ChunkType::GraphicsPipelineStates)
-    {
-        LOG_ERROR_MESSAGE("Invalid graphics pipeline header in archive");
-        return false;
-    }
-
-    PSO.CreateInfo.PSODesc.Name = Iter->first.c_str();
-    SerializerImpl<SerializerMode::Read>::SerializeGraphicsPSO(Ser, PSO.CreateInfo, &PSO.Allocator);
-
-    VERIFY_EXPR(Ser.IsEnd());
-    return true;
+            SerializerImpl<SerializerMode::Read>::SerializeGraphicsPSO(Ser, PSO.CreateInfo, &PSO.Allocator);
+            VERIFY_EXPR(Ser.IsEnd());
+            return true;
+        });
 }
 
 bool DeviceObjectArchiveBase::ReadComputePSOData(const String& Name, PSOData<ComputePipelineStateCreateInfo>& PSO)
 {
-    //std::shared_lock ReadLock{m_Guard};
+    return LoadResourceData(
+        m_ComputePSOMap, m_ComputePSOMapGuard, Name, PSO.Allocator,
+        "Compute pipeline",
+        [&PSO](const char* Name, Serializer<SerializerMode::Read>& Ser) -> bool //
+        {
+            PSO.CreateInfo.PSODesc.Name = Name;
+            PSO.pHeader                 = Ser.Cast<PSODataHeader>();
+            if (PSO.pHeader->Type != ChunkType::ComputePipelineStates)
+            {
+                LOG_ERROR_MESSAGE("Invalid compute pipeline header in archive");
+                return false;
+            }
 
-    // AZ TODO
-
-    return true;
+            SerializerImpl<SerializerMode::Read>::SerializeComputePSO(Ser, PSO.CreateInfo, &PSO.Allocator);
+            VERIFY_EXPR(Ser.IsEnd());
+            return true;
+        });
 }
 
 bool DeviceObjectArchiveBase::ReadRayTracingPSOData(const String& Name, PSOData<RayTracingPipelineStateCreateInfo>& PSO)
 {
-    //std::shared_lock ReadLock{m_Guard};
+    return LoadResourceData(
+        m_RayTracingPSOMap, m_RayTracingPSOMapGuard, Name, PSO.Allocator,
+        "Ray tracing pipeline",
+        [&PSO](const char* Name, Serializer<SerializerMode::Read>& Ser) -> bool //
+        {
+            PSO.CreateInfo.PSODesc.Name = Name;
+            PSO.pHeader                 = Ser.Cast<PSODataHeader>();
+            if (PSO.pHeader->Type != ChunkType::RayTracingPipelineStates)
+            {
+                LOG_ERROR_MESSAGE("Invalid ray tracing pipeline header in archive");
+                return false;
+            }
 
-    // AZ TODO: not needed yet
-
-    return true;
+            SerializerImpl<SerializerMode::Read>::SerializeRayTracingPSO(Ser, PSO.CreateInfo, &PSO.Allocator);
+            VERIFY_EXPR(Ser.IsEnd());
+            return true;
+        });
 }
-
 
 template <SerializerMode Mode>
 void DeviceObjectArchiveBase::SerializerImpl<Mode>::SerializePRS(

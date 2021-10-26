@@ -43,7 +43,8 @@ public:
     explicit SerializationAPID3D12Impl(IReferenceCounters* pRefCounters);
 
     /// Implementation of ISerializationAPI::CreateDeviceObjectArchive() in Direct3D12 backend.
-    virtual void DILIGENT_CALL_TYPE CreateDeviceObjectArchive(IDeviceObjectArchive** ppArchive) override final;
+    virtual void DILIGENT_CALL_TYPE CreateDeviceObjectArchive(IArchiveSource*        pSource,
+                                                              IDeviceObjectArchive** ppArchive) override final;
 
     /// Implementation of ISerializationAPI::UnpackPipelineState() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE UnpackPipelineState(const PipelineStateUnpackInfo& DeArchiveInfo,

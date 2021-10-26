@@ -37,7 +37,8 @@ SerializationAPIVkImpl::SerializationAPIVkImpl(IReferenceCounters* pRefCounters)
 {
 }
 
-void SerializationAPIVkImpl::CreateDeviceObjectArchive(IDeviceObjectArchive** ppArchive)
+void SerializationAPIVkImpl::CreateDeviceObjectArchive(IArchiveSource*        pSource,
+                                                       IDeviceObjectArchive** ppArchive)
 {
     DEV_CHECK_ERR(ppArchive != nullptr, "ppArchive must not be null");
     if (!ppArchive)
@@ -47,7 +48,7 @@ void SerializationAPIVkImpl::CreateDeviceObjectArchive(IDeviceObjectArchive** pp
     try
     {
         auto& RawMemAllocator = GetRawAllocator();
-        auto* pArchiveImpl(NEW_RC_OBJ(RawMemAllocator, "Device object archive instance", DeviceObjectArchiveVkImpl)());
+        auto* pArchiveImpl(NEW_RC_OBJ(RawMemAllocator, "Device object archive instance", DeviceObjectArchiveVkImpl)(pSource));
         pArchiveImpl->QueryInterface(IID_DeviceObjectArchive, reinterpret_cast<IObject**>(ppArchive));
     }
     catch (...)

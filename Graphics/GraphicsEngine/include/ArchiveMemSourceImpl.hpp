@@ -52,12 +52,9 @@ public:
 
     virtual Uint64 DILIGENT_CALL_TYPE GetSize() override final { return m_Size; }
 
-    virtual Uint64 DILIGENT_CALL_TYPE GetPos() override final { return m_Pos; }
-
 private:
     const Uint8* const       m_pData;
     const size_t             m_Size = 0;
-    size_t                   m_Pos  = 0;
     RefCntAutoPtr<IDataBlob> m_pBlob;
 };
 

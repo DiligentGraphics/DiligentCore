@@ -55,6 +55,7 @@ static const INTERFACE_ID IID_ArchiveSource =
 DILIGENT_BEGIN_INTERFACE(IArchiveSource, IObject)
 {
     // AZ TODO
+    // Thread-safe
     VIRTUAL Bool METHOD(Read)(THIS_
                               Uint64 Pos,
                               void*  pData,
@@ -62,9 +63,6 @@ DILIGENT_BEGIN_INTERFACE(IArchiveSource, IObject)
     
     // AZ TODO
     VIRTUAL Uint64 METHOD(GetSize)(THIS) PURE;
-    
-    // AZ TODO
-    VIRTUAL Uint64 METHOD(GetPos)(THIS) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -76,7 +74,6 @@ DILIGENT_END_INTERFACE
 
 #    define IArchiveSource_Read(This, ...)  CALL_IFACE_METHOD(ArchiveSource, Read,    This, __VA_ARGS__)
 #    define IArchiveSource_GetSize(This)    CALL_IFACE_METHOD(ArchiveSource, GetSize, This)
-#    define IArchiveSource_GetPos(This)     CALL_IFACE_METHOD(ArchiveSource, GetPos,  This)
 
 // clang-format on
 

@@ -59,11 +59,7 @@ DILIGENT_END_INTERFACE
 
 #if DILIGENT_C_INTERFACE
 
-// clang-format off
-
 #    define IArchiveBuilderFactory_CreateArchiveBuilder(This, ...)  CALL_IFACE_METHOD(ArchiveBuilderFactory, CreateArchiveBuilder, This, __VA_ARGS__)
-
-// clang-format on
 
 #endif
 

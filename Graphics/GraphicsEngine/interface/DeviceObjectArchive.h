@@ -49,20 +49,17 @@ static const INTERFACE_ID IID_DeviceObjectArchive =
 #define DILIGENT_INTERFACE_NAME IDeviceObjectArchive
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
-#define IDeviceObjectArchiveInclusiveMethods \
-    IDeviceObjectInclusiveMethods;           \
-    IDeviceObjectArchiveMethods DeviceObjectArchive
-
 // clang-format off
 
+#define IDeviceObjectArchiveInclusiveMethods \
+    IDeviceObjectInclusiveMethods \
+    /*IDeviceObjectArchiveMethods DeviceObjectArchive*/
+
+#if DILIGENT_CPP_INTERFACE
 
 /// Device object archive interface
 DILIGENT_BEGIN_INTERFACE(IDeviceObjectArchive, IObject)
 {
-    // AZ TODO
-    VIRTUAL Bool METHOD(Deserialize)(THIS_
-                                     IArchiveSource* pSource) PURE;
-    
     // AZ TODO
     //VIRTUAL Bool METHOD(PrefetchPipelineStates)(THIS_
     //                                            const Char* const* pNames,
@@ -70,18 +67,23 @@ DILIGENT_BEGIN_INTERFACE(IDeviceObjectArchive, IObject)
 };
 DILIGENT_END_INTERFACE
 
+#endif // DILIGENT_CPP_INTERFACE
+
+
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
 
-// clang-format off
+typedef struct IDeviceObjectArchiveVtbl
+{
+    IDeviceObjectArchiveInclusiveMethods;
+} IDeviceObjectArchiveVtbl;
 
-#    define IDeviceObjectArchive_Deserialize(This, ...)        CALL_IFACE_METHOD(DeviceObjectArchive, Deserialize,       This, __VA_ARGS__)
-#    define IDeviceObjectArchive_SerializeToBlob(This, ...)    CALL_IFACE_METHOD(DeviceObjectArchive, SerializeToBlob,   This, __VA_ARGS__)
-#    define IDeviceObjectArchive_SerializeToStream(This, ...)  CALL_IFACE_METHOD(DeviceObjectArchive, SerializeToStream, This, __VA_ARGS__)
-
-// clang-format on
+typedef struct IDeviceObjectArchive
+{
+    struct IDeviceObjectArchiveVtbl* pVtbl;
+} IDeviceObjectArchive;
 
 #endif
 
-DILIGENT_END_NAMESPACE
+DILIGENT_END_NAMESPACE // namespace Diligent

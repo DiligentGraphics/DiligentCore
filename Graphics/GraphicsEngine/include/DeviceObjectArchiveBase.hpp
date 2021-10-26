@@ -39,7 +39,9 @@
 //
 // | ***DataHeader | --> offset --> | device specific data |
 
+#include <array>
 #include <shared_mutex>
+
 #include "DeviceObjectArchive.h"
 #include "PipelineResourceSignatureBase.hpp"
 #include "PipelineState.h"
@@ -63,15 +65,21 @@ public:
     using TObjectBase = ObjectBase<BaseInterface>;
 
     /// \param pRefCounters - Reference counters object that controls the lifetime of this device object archive.
-    explicit DeviceObjectArchiveBase(IReferenceCounters* pRefCounters) :
-        TObjectBase{pRefCounters}
-    {
-    }
+    /// \param pSource      - AZ TODO
+    DeviceObjectArchiveBase(IReferenceCounters* pRefCounters,
+                            IArchiveSource*     pSource);
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_DeviceObjectArchive, TObjectBase)
 
-    /// Implementation of IDeviceObjectArchive::Deserialize().
-    virtual Bool DILIGENT_CALL_TYPE Deserialize(IArchiveSource* pSource) override final;
+    enum class DeviceType : Uint32
+    {
+        OpenGL, // same as GLES
+        Direct3D11,
+        Direct3D12,
+        Vulkan,
+        Metal,
+        Count
+    };
 
 protected:
     static constexpr Uint32 HeaderMagicNumber = 0xDE00000A;
@@ -118,20 +126,30 @@ protected:
         //char   NameData      []
     };
 
-    struct PRSDataHeader
+    struct BaseDataHeader
     {
-        ChunkType Type;
-        Uint32    DeviceSpecificDataSize[RENDER_DEVICE_TYPE_COUNT];
-        Uint32    DeviceSpecificDataOffset[RENDER_DEVICE_TYPE_COUNT];
+        using Uint32Array = std::array<Uint32, Uint32{DeviceType::Count}>;
+
+        ChunkType   Type;
+        Uint32Array DeviceSpecificDataSize;
+        Uint32Array DeviceSpecificDataOffset;
+
+        Uint32 GetDeviceSpecificDataSize(DeviceType DevType) const { return DeviceSpecificDataSize[Uint32{DevType}]; }
+        Uint32 GetDeviceSpecificDataOffset(DeviceType DevType) const { return DeviceSpecificDataOffset[Uint32{DevType}]; }
+        Uint32 GetDeviceSpecificDataEndOffset(DeviceType DevType) const { return DeviceSpecificDataOffset[Uint32{DevType}] + DeviceSpecificDataSize[Uint32{DevType}]; }
+
+        void SetDeviceSpecificDataSize(DeviceType DevType, Uint32 Size) { DeviceSpecificDataSize[Uint32{DevType}] = Size; }
+        void SetDeviceSpecificDataOffset(DeviceType DevType, Uint32 Offset) { DeviceSpecificDataOffset[Uint32{DevType}] = Offset; }
+    };
+
+    struct PRSDataHeader : BaseDataHeader
+    {
         //PipelineResourceSignatureDesc
         //PipelineResourceSignatureSerializedData
     };
 
-    struct PSODataHeader
+    struct PSODataHeader : BaseDataHeader
     {
-        ChunkType Type;
-        Uint32    DeviceSpecificDataSize[RENDER_DEVICE_TYPE_COUNT];
-        Uint32    DeviceSpecificDataOffset[RENDER_DEVICE_TYPE_COUNT];
         //GraphicsPipelineStateCreateInfo | ComputePipelineStateCreateInfo | RayTracingPipelineStateCreateInfo
     };
 
@@ -149,21 +167,22 @@ private:
     TNameOffsetMap m_ComputePSOMap;
     TNameOffsetMap m_RayTracingPSOMap;
 
+    std::shared_mutex m_PRSMapGuard;
+    std::shared_mutex m_GraphicsPSOMapGuard;
+    std::shared_mutex m_ComputePSOMapGuard;
+    std::shared_mutex m_RayTracingPSOMapGuard;
+
     struct
     {
         String GitHash;
     } m_DebugInfo;
 
+    RefCntAutoPtr<IArchiveSource> m_pSource; // archive source is thread-safe
+
+    void ReadArchiveDebugInfo(const ChunkHeader& Chunk) noexcept(false);
+    void ReadNamedResources(const ChunkHeader& Chunk, TNameOffsetMap& NameAndOffset, std::shared_mutex& Quard) noexcept(false);
+
 protected:
-    RefCntAutoPtr<IArchiveSource> m_pSource;
-    std::shared_mutex             m_Guard;
-
-
-protected:
-    void Clear();
-    void ReadArchiveDebugInfo(const ChunkHeader& Chunk);
-    void ReadNamedResources(const ChunkHeader& Chunk, TNameOffsetMap& NameAndOffset);
-
     struct PRSData
     {
         DynamicLinearAllocator                  Allocator;
@@ -193,6 +212,43 @@ protected:
     bool ReadComputePSOData(const String& Name, PSOData<ComputePipelineStateCreateInfo>& PSO);
     bool ReadRayTracingPSOData(const String& Name, PSOData<RayTracingPipelineStateCreateInfo>& PSO);
 
+    template <typename FnType>
+    bool LoadResourceData(const TNameOffsetMap&   NameAndOffset,
+                          std::shared_mutex&      Quard,
+                          const String&           ResourceName,
+                          DynamicLinearAllocator& Allocator,
+                          const char*             ResTypeName,
+                          const FnType&           Fn);
+
+    template <typename HeaderType, typename FnType>
+    void LoadDeviceSpecificData(DeviceType              DevType,
+                                const HeaderType&       Header,
+                                DynamicLinearAllocator& Allocator,
+                                const char*             ResTypeName,
+                                const FnType&           Fn)
+    {
+        if (Header.GetDeviceSpecificDataSize(DevType) == 0)
+        {
+            LOG_ERROR_MESSAGE("Device specific data is not specified for ", ResTypeName);
+            return;
+        }
+        if (Header.GetDeviceSpecificDataEndOffset(DevType) > m_pSource->GetSize())
+        {
+            LOG_ERROR_MESSAGE("Invalid offset in archive");
+            return;
+        }
+
+        const auto DataSize = Header.GetDeviceSpecificDataSize(DevType);
+        auto*      pData    = Allocator.Allocate(DataSize, DataPtrAlign);
+        if (!m_pSource->Read(Header.GetDeviceSpecificDataOffset(DevType), pData, DataSize))
+        {
+            LOG_ERROR_MESSAGE("Failed to read resource signature data");
+            return;
+        }
+
+        Serializer<SerializerMode::Read> Ser{pData, DataSize};
+        return Fn(Ser);
+    }
 
 public:
     template <SerializerMode Mode>

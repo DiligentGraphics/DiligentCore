@@ -71,6 +71,7 @@ public:
                                                                      const ResourceSignatureArchiveInfo&  ArchiveInfo) override final;
 
 private:
+    using DeviceType               = DeviceObjectArchiveBase::DeviceType;
     using ArchiveHeader            = DeviceObjectArchiveBase::ArchiveHeader;
     using ChunkType                = DeviceObjectArchiveBase::ChunkType;
     using ChunkHeader              = DeviceObjectArchiveBase::ChunkHeader;
@@ -101,12 +102,22 @@ private:
         explicit operator bool() const { return Ptr != nullptr; }
     };
 
+    static constexpr Uint32 DeviceDataCount = Uint32{DeviceType::Count} + 1;
+
     struct PRSData
     {
-        TSerializedMem                                       DescMem;
-        PipelineResourceSignatureDesc*                       pDesc       = nullptr;
-        PipelineResourceSignatureSerializedData*             pSerialized = nullptr;
-        std::array<TSerializedMem, RENDER_DEVICE_TYPE_COUNT> PerDeviceData;
+        TSerializedMem                           DescMem;
+        PipelineResourceSignatureDesc*           pDesc       = nullptr;
+        PipelineResourceSignatureSerializedData* pSerialized = nullptr;
+
+    private:
+        std::array<TSerializedMem, DeviceDataCount> m_PerDeviceData;
+
+    public:
+        TSerializedMem&       GetSharedData() { return m_PerDeviceData[0]; }
+        TSerializedMem const& GetSharedData() const { return m_PerDeviceData[0]; }
+        TSerializedMem&       GetDeviceData(DeviceType DevType) { return m_PerDeviceData[Uint32{DevType} + 1]; }
+        TSerializedMem&       GetData(Uint32 Ind) { return m_PerDeviceData[Ind]; }
     };
 
     std::unordered_map<String, PRSData> m_PRSMap;

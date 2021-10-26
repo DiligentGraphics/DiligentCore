@@ -105,7 +105,6 @@ TEST(ArchiveTest, ArchivePRS)
 
         ResourceSignatureArchiveInfo ArchiveInfo;
         ArchiveInfo.DeviceBits = GetDeviceBits();
-
         ASSERT_TRUE(pBuilder->ArchivePipelineResourceSignature(PRSDesc, ArchiveInfo));
 
         pDevice->CreatePipelineResourceSignature(PRSDesc, &pRefPRS);
@@ -119,10 +118,8 @@ TEST(ArchiveTest, ArchivePRS)
         pSerialization->CreateArchiveSourceFromBlob(pBlob, &pSource);
         ASSERT_NE(pSource, nullptr);
 
-        pSerialization->CreateDeviceObjectArchive(&pArchive);
+        pSerialization->CreateDeviceObjectArchive(pSource, &pArchive);
         ASSERT_NE(pArchive, nullptr);
-
-        ASSERT_TRUE(pArchive->Deserialize(pSource));
     }
 
     ResourceSignatureUnpackInfo UnpackInfo;

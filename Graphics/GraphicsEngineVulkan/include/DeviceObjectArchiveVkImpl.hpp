@@ -40,7 +40,7 @@ namespace Diligent
 class DeviceObjectArchiveVkImpl final : public DeviceObjectArchiveBase
 {
 public:
-    explicit DeviceObjectArchiveVkImpl(IReferenceCounters* pRefCounters);
+    DeviceObjectArchiveVkImpl(IReferenceCounters* pRefCounters, IArchiveSource* pSource);
     ~DeviceObjectArchiveVkImpl();
 
     void UnpackGraphicsPSO(const PipelineStateUnpackInfo& DeArchiveInfo, RenderDeviceVkImpl* pDevice, IPipelineState** ppPSO);
@@ -48,7 +48,6 @@ public:
     void UnpackRayTracingPSO(const PipelineStateUnpackInfo& DeArchiveInfo, RenderDeviceVkImpl* pDevice, IPipelineState** ppPSO);
     void UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, RenderDeviceVkImpl* pDevice, IPipelineResourceSignature** ppSignature);
 
-private:
 public:
     template <SerializerMode Mode>
     struct SerializerVkImpl
