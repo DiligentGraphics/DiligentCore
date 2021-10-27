@@ -11,6 +11,7 @@ set(INTERFACE
     interface/DurationQueryHelper.hpp
     interface/GraphicsUtilities.h
     interface/MapHelper.hpp
+    interface/GPUCompletionAwaitQueue.hpp
     interface/ScopedQueryHelper.hpp
     interface/ScreenCapture.hpp
     interface/ShaderMacroHelper.hpp
