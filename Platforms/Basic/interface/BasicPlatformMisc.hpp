@@ -66,4 +66,29 @@ struct BasicPlatformMisc
         }
         return bits;
     }
+
+    template <typename Type>
+    static typename std::enable_if<sizeof(Type) == 2, Type>::type SwapBytes(Type Val)
+    {
+        SwapBytes16(reinterpret_cast<Diligent::Uint16&>(Val));
+        return Val;
+    }
+
+    template <typename Type>
+    static typename std::enable_if<sizeof(Type) == 4, Type>::type SwapBytes(Type Val)
+    {
+        SwapBytes32(reinterpret_cast<Diligent::Uint32&>(Val));
+        return Val;
+    }
+
+private:
+    static void SwapBytes16(Diligent::Uint16& Val)
+    {
+        Val = (Val << 8u) | (Val >> 8u);
+    }
+
+    static void SwapBytes32(Diligent::Uint32& Val)
+    {
+        Val = (Val << 24u) | ((Val & 0xFF00u) << 8u) | ((Val & 0xFF0000u) >> 8u) | (Val >> 24u);
+    }
 };

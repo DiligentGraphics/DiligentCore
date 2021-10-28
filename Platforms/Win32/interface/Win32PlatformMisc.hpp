@@ -138,4 +138,27 @@ struct WindowsMisc : public BasicPlatformMisc
         VERIFY_EXPR(Bits == BasicPlatformMisc::CountOneBits(Val));
         return static_cast<Diligent::Uint32>(Bits);
     }
+
+    template <typename Type>
+    static typename std::enable_if<sizeof(Type) == 2, Type>::type SwapBytes(Type Val)
+    {
+        auto SwappedBytes = _byteswap_ushort(reinterpret_cast<unsigned short&>(Val));
+        return reinterpret_cast<const Type&>(SwappedBytes);
+    }
+
+    template <typename Type>
+    static typename std::enable_if<sizeof(Type) == 4, Type>::type SwapBytes(Type Val)
+    {
+        auto SwappedBytes = _byteswap_ulong(reinterpret_cast<unsigned long&>(Val));
+        return reinterpret_cast<const Type&>(SwappedBytes);
+    }
+
+#if _WIN64
+    template <typename Type>
+    static typename std::enable_if<sizeof(Type) == 8, Type>::type SwapBytes(Type Val)
+    {
+        auto SwappedBytes = _byteswap_uint64(reinterpret_cast<unsigned __int64&>(Val));
+        return reinterpret_cast<const Type&>(SwappedBytes);
+    }
+#endif
 };

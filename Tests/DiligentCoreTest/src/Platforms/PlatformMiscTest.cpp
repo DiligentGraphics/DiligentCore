@@ -79,4 +79,16 @@ TEST(Platforms_PlatformMisc, CountOneBits)
     EXPECT_EQ(PlatformMisc::CountOneBits((Uint64{1} << 63) - 1), Uint64{63});
 }
 
+TEST(Platforms_PlatformMisc, SwapBytes)
+{
+    EXPECT_EQ(PlatformMisc::SwapBytes(Uint32{0x01020304}), Uint32{0x04030201});
+    EXPECT_EQ(PlatformMisc::SwapBytes(Int32{0x01020304}), Int32{0x04030201});
+    EXPECT_EQ(PlatformMisc::SwapBytes(Uint16{0x0102}), Uint16{0x0201});
+    EXPECT_EQ(PlatformMisc::SwapBytes(Int16{0x0102}), Int16{0x0201});
+
+    constexpr float f     = 1234.5678f;
+    const auto      fswap = PlatformMisc::SwapBytes(f);
+    EXPECT_EQ(PlatformMisc::SwapBytes(fswap), f);
+}
+
 } // namespace
