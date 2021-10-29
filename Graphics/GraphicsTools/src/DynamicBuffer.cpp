@@ -169,6 +169,9 @@ void DynamicBuffer::ResizeSparseBuffer(IDeviceContext* pContext)
 {
     VERIFY_EXPR(m_pBuffer && m_pMemory);
     VERIFY_EXPR(m_PendingSize % m_MemoryPageSize == 0);
+    DEV_CHECK_ERR(m_PendingSize <= m_pBuffer->GetDesc().Size,
+                  "New size (", m_PendingSize, ") exceeds the buffer virtual size (", m_pBuffer->GetDesc().Size, ").");
+
     if (m_pMemory->GetCapacity() < m_PendingSize)
         m_pMemory->Resize(m_PendingSize); // Allocate additional memory
 

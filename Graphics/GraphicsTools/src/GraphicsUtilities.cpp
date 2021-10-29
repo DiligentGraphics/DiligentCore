@@ -253,6 +253,29 @@ struct ComputeCoarseMipHelper
             }
         }
     }
+
+    void RemapAlpha(Uint32 Channel, float AlphaCutoff) const
+    {
+        const auto CoarseMipWidth  = std::max(FineMipWidth / Uint32{2}, Uint32{1});
+        const auto CoarseMipHeight = std::max(FineMipHeight / Uint32{2}, Uint32{1});
+        for (Uint32 row = 0; row < CoarseMipHeight; ++row)
+        {
+            for (Uint32 col = 0; col < CoarseMipWidth; ++col)
+            {
+                auto& Alpha = (reinterpret_cast<Uint8*>(pCoarseMip) + row * CoarseMipStride)[col * NumChannels + Channel];
+
+                // Remap alpha channel using the following formula to improve mip maps:
+                //
+                //      A_new = max(A_old; 1/3 * A_old + 2/3 * CutoffThreshold)
+                //
+                // https://asawicki.info/articles/alpha_test.php5
+
+                auto AlphaNew = std::min((static_cast<float>(Alpha) + 2.f * (AlphaCutoff * 255.f)) / 3.f, 255.f);
+
+                Alpha = std::max(Alpha, static_cast<Uint8>(AlphaNew));
+            }
+        }
+    }
 };
 
 void ComputeMipLevel(Uint32         FineLevelWidth,
@@ -261,9 +284,14 @@ void ComputeMipLevel(Uint32         FineLevelWidth,
                      const void*    pFineLevelData,
                      Uint64         FineDataStrideInBytes,
                      void*          pCoarseLevelData,
-                     Uint64         CoarseDataStrideInBytes)
+                     Uint64         CoarseDataStrideInBytes,
+                     float          AlphaCutoff)
 {
     const auto& FmtAttribs = GetTextureFormatAttribs(Fmt);
+
+    VERIFY_EXPR(AlphaCutoff >= 0 && AlphaCutoff <= 1);
+    VERIFY(AlphaCutoff == 0 || FmtAttribs.NumComponents == 4 && FmtAttribs.ComponentSize == 1,
+           "Alpha remapping is only supported for 4-channel 8-bit textures");
 
     ComputeCoarseMipHelper ComputeMipHelper //
         {
@@ -289,6 +317,10 @@ void ComputeMipLevel(Uint32         FineLevelWidth,
             {
                 case 1:
                     ComputeMipHelper.Run<Uint8>(LinearAverage<Uint8>);
+                    if (AlphaCutoff > 0)
+                    {
+                        ComputeMipHelper.RemapAlpha(FmtAttribs.NumComponents - 1, AlphaCutoff);
+                    }
                     break;
 
                 case 2:
@@ -369,9 +401,11 @@ extern "C"
                                   const void*              pFineLevelData,
                                   Diligent::Uint64         FineDataStrideInBytes,
                                   void*                    pCoarseLevelData,
-                                  Diligent::Uint64         CoarseDataStrideInBytes)
+                                  Diligent::Uint64         CoarseDataStrideInBytes,
+                                  float                    AlphaCutoff)
     {
         ComputeMipLevel(FineLevelWidth, FineLevelHeight, Fmt, pFineLevelData,
-                        FineDataStrideInBytes, pCoarseLevelData, CoarseDataStrideInBytes);
+                        FineDataStrideInBytes, pCoarseLevelData, CoarseDataStrideInBytes,
+                        AlphaCutoff);
     }
 }

@@ -33,8 +33,8 @@ Similar to `USAGE_DYNAMIC` buffers, if an applications knows that none of the dy
 between the draw calls, it may use `DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT` flag.
 
 An application should try to use as few dynamic buffers as possible. On some implementations, the number of dynamic
-buffers may be limited by as few as 8 buffers. If an application knows that no dynamic buffers will be bound to
-a shader resource variable, it should use the `SHADER_VARIABLE_FLAG_NO_DYNAMIC_BUFFERS` flag when defining
+buffers that can be used by a PSO may be limited by as few as 8 buffers. If an application knows that no dynamic buffers
+will be bound to a shader resource variable, it should use the `SHADER_VARIABLE_FLAG_NO_DYNAMIC_BUFFERS` flag when defining
 the variables through the PSO layout or `PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS` when defining the variable
 through pipeline resource signature. It is an error to bind `USAGE_DYNAMIC` buffer to a variable that was
 created with `NO_DYNAMIC_BUFFERS` flag. Likewise, it is an error to set dynamic offset for such variable.

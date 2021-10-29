@@ -53,12 +53,15 @@ void DILIGENT_GLOBAL_FUNCTION(GenerateCheckerBoardPattern)(Uint32         Width,
                                                            Uint8*         pData,
                                                            Uint64         StrideInBytes);
 
-void DILIGENT_GLOBAL_FUNCTION(ComputeMipLevel)(Uint32         FineLevelWidth,
-                                               Uint32         FineLevelHeight,
-                                               TEXTURE_FORMAT Fmt,
-                                               const void*    pFineLevelData,
-                                               Uint64         FineDataStrideInBytes,
-                                               void*          pCoarseLevelData,
-                                               Uint64         CoarseDataStrideInBytes);
+// When AlphaCutoff is not 0, alpha channel is remaped as follows:
+//     A_new = max(A_old; 1/3 * A_old + 2/3 * AlphaCutoff)
+void DILIGENT_GLOBAL_FUNCTION(ComputeMipLevel)(Uint32            FineLevelWidth,
+                                               Uint32            FineLevelHeight,
+                                               TEXTURE_FORMAT    Fmt,
+                                               const void*       pFineLevelData,
+                                               Uint64            FineDataStrideInBytes,
+                                               void*             pCoarseLevelData,
+                                               Uint64            CoarseDataStrideInBytes,
+                                               float AlphaCutoff DEFAULT_VALUE(0));
 
 DILIGENT_END_NAMESPACE // namespace Diligent
