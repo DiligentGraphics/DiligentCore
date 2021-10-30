@@ -3184,7 +3184,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// \remarks This command may only be executed by immediate context whose
     ///          internal queue supports COMMAND_QUEUE_TYPE_SPARSE_BINDING.
     VIRTUAL void METHOD(BindSparseResourceMemory)(THIS_
-                                             const BindSparseResourceMemoryAttribs REF Attribs) PURE;
+                                                  const BindSparseResourceMemoryAttribs REF Attribs) PURE;
 };
 DILIGENT_END_INTERFACE
 

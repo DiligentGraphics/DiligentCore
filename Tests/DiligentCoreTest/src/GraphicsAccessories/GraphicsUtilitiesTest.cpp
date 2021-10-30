@@ -39,7 +39,7 @@ using namespace Diligent;
 namespace
 {
 
-TEST(GraphicsTools_CalculateMipLevel, UINT8)
+TEST(GraphicsTools_CalculateMipLevel, R8_BOX_AVE)
 {
     const Uint8 FineData[] = //
         {
@@ -62,7 +62,7 @@ TEST(GraphicsTools_CalculateMipLevel, UINT8)
             for (Uint32 height = 4; height <= 5; ++height)
             {
                 Uint8 CoarseData[4] = {};
-                ComputeMipLevel(width, height, fmt, FineData, 5, CoarseData, 2);
+                ComputeMipLevel({fmt, width, height, FineData, 5, CoarseData, 2, MIP_FILTER_TYPE_BOX_AVERAGE});
                 EXPECT_EQ(CoarseData[0], RefCoarseData[0]);
                 EXPECT_EQ(CoarseData[1], RefCoarseData[1]);
                 EXPECT_EQ(CoarseData[2], RefCoarseData[2]);
@@ -73,7 +73,7 @@ TEST(GraphicsTools_CalculateMipLevel, UINT8)
         for (Uint32 width = 4; width <= 5; ++width)
         {
             Uint8 CoarseData[2] = {};
-            ComputeMipLevel(width, 1, fmt, FineData, 0, CoarseData, 0);
+            ComputeMipLevel({fmt, width, 1, FineData, 0, CoarseData, 0, MIP_FILTER_TYPE_BOX_AVERAGE});
             EXPECT_EQ(CoarseData[0], Uint8{1});
             EXPECT_EQ(CoarseData[1], Uint8{254});
         }
@@ -81,14 +81,14 @@ TEST(GraphicsTools_CalculateMipLevel, UINT8)
         for (Uint32 height = 4; height <= 5; ++height)
         {
             Uint8 CoarseData[2] = {};
-            ComputeMipLevel(1, height, fmt, FineData, 5, CoarseData, 1);
+            ComputeMipLevel({fmt, 1, height, FineData, 5, CoarseData, 1, MIP_FILTER_TYPE_BOX_AVERAGE});
             EXPECT_EQ(CoarseData[0], Uint8{2});
             EXPECT_EQ(CoarseData[1], Uint8{4});
         }
     }
 }
 
-TEST(GraphicsTools_CalculateMipLevel, INT8)
+TEST(GraphicsTools_CalculateMipLevel, S8_BOX_AVE)
 {
     // clang-format off
     const Int8 FineData[] =
@@ -105,7 +105,7 @@ TEST(GraphicsTools_CalculateMipLevel, INT8)
                2, 125,
             -126,  62
         };
-    // clang-format off
+    // clang-format on
 
     for (auto fmt : {TEX_FORMAT_R8_SNORM, TEX_FORMAT_R8_SINT})
     {
@@ -114,7 +114,7 @@ TEST(GraphicsTools_CalculateMipLevel, INT8)
             for (Uint32 height = 4; height <= 5; ++height)
             {
                 Int8 CoarseData[4] = {};
-                ComputeMipLevel(width, height, fmt, FineData, 5, CoarseData, 2);
+                ComputeMipLevel({fmt, width, height, FineData, 5, CoarseData, 2, MIP_FILTER_TYPE_BOX_AVERAGE});
                 EXPECT_EQ(CoarseData[0], RefCoarseData[0]);
                 EXPECT_EQ(CoarseData[1], RefCoarseData[1]);
                 EXPECT_EQ(CoarseData[2], RefCoarseData[2]);
@@ -125,7 +125,7 @@ TEST(GraphicsTools_CalculateMipLevel, INT8)
         for (Uint32 width = 4; width <= 5; ++width)
         {
             Int8 CoarseData[2] = {};
-            ComputeMipLevel(width, 1, fmt, FineData, 0, CoarseData, 0);
+            ComputeMipLevel({fmt, width, 1, FineData, 0, CoarseData, 0, MIP_FILTER_TYPE_BOX_AVERAGE});
             EXPECT_EQ(CoarseData[0], Int8{1});
             EXPECT_EQ(CoarseData[1], Int8{126});
         }
@@ -133,7 +133,7 @@ TEST(GraphicsTools_CalculateMipLevel, INT8)
         for (Uint32 height = 4; height <= 5; ++height)
         {
             Int8 CoarseData[2] = {};
-            ComputeMipLevel(1, height, fmt, FineData, 5, CoarseData, 1);
+            ComputeMipLevel({fmt, 1, height, FineData, 5, CoarseData, 1, MIP_FILTER_TYPE_BOX_AVERAGE});
             EXPECT_EQ(CoarseData[0], Int8{2});
             EXPECT_EQ(CoarseData[1], Int8{-127});
         }
@@ -141,7 +141,44 @@ TEST(GraphicsTools_CalculateMipLevel, INT8)
 }
 
 
-TEST(GraphicsTools_CalculateMipLevel, UINT16)
+TEST(GraphicsTools_CalculateMipLevel, UINT8_MOST_FREQ)
+{
+    // clang-format off
+    const Uint8 FineData[] =
+        {
+            1, 1,   2, 2,   3, 4,   5, 4,   5, 5,   0,
+            1, 1,   2, 3,   3, 3,   4, 4,   6, 5,   1,
+
+            7, 8,   7, 9,   1, 8,   9, 0,   1, 1,   2,
+            6, 6,   7, 8,   8, 9,   2, 9,   3, 5,   3,
+
+            7, 2,   1, 3,   3, 3,   5, 6,   7, 8,   4,
+            9, 2,   3, 1,   4, 4,   5, 6,   9, 1,   5,
+
+            0, 1,   2, 3,   4, 5,   6, 7,   8, 9
+        };
+    const Uint8 RefCoarseData[] = //
+        {
+            1,      2,     3,       4,      5,
+            6,      7,     8,       9,      1,
+            2,      3,     4,       5,      8
+        };
+    // clang-format on
+
+    constexpr auto Fmt = TEX_FORMAT_R8_UINT;
+    for (Uint32 width = 10; width <= 11; ++width)
+    {
+        for (Uint32 height = 6; height <= 7; ++height)
+        {
+            Uint8 CoarseData[_countof(RefCoarseData)] = {};
+            ComputeMipLevel({Fmt, width, height, FineData, 11, CoarseData, 5});
+            EXPECT_EQ(memcmp(CoarseData, RefCoarseData, sizeof(RefCoarseData)), 0);
+        }
+    }
+}
+
+
+TEST(GraphicsTools_CalculateMipLevel, R16_BOX_AVE)
 {
     // clang-format off
     const Uint16 FineData[] =
@@ -158,7 +195,7 @@ TEST(GraphicsTools_CalculateMipLevel, UINT16)
                 2,  65533,
             32767,     62
         };
-    // clang-format off
+    // clang-format on
 
     for (auto fmt : {TEX_FORMAT_R16_UNORM, TEX_FORMAT_R16_UINT})
     {
@@ -167,7 +204,7 @@ TEST(GraphicsTools_CalculateMipLevel, UINT16)
             for (Uint32 height = 4; height <= 5; ++height)
             {
                 Uint16 CoarseData[4] = {};
-                ComputeMipLevel(width, height, fmt, FineData, 10, CoarseData, 4);
+                ComputeMipLevel({fmt, width, height, FineData, 10, CoarseData, 4, MIP_FILTER_TYPE_BOX_AVERAGE});
                 EXPECT_EQ(CoarseData[0], RefCoarseData[0]);
                 EXPECT_EQ(CoarseData[1], RefCoarseData[1]);
                 EXPECT_EQ(CoarseData[2], RefCoarseData[2]);
@@ -178,7 +215,7 @@ TEST(GraphicsTools_CalculateMipLevel, UINT16)
         for (Uint32 width = 4; width <= 5; ++width)
         {
             Uint16 CoarseData[2] = {};
-            ComputeMipLevel(width, 1, fmt, FineData, 0, CoarseData, 0);
+            ComputeMipLevel({fmt, width, 1, FineData, 0, CoarseData, 0, MIP_FILTER_TYPE_BOX_AVERAGE});
             EXPECT_EQ(CoarseData[0], Uint16{1});
             EXPECT_EQ(CoarseData[1], Uint16{65532});
         }
@@ -186,14 +223,14 @@ TEST(GraphicsTools_CalculateMipLevel, UINT16)
         for (Uint32 height = 4; height <= 5; ++height)
         {
             Uint16 CoarseData[2] = {};
-            ComputeMipLevel(1, height, fmt, FineData, 10, CoarseData, 2);
+            ComputeMipLevel({fmt, 1, height, FineData, 10, CoarseData, 2, MIP_FILTER_TYPE_BOX_AVERAGE});
             EXPECT_EQ(CoarseData[0], Uint16{2});
             EXPECT_EQ(CoarseData[1], Uint16{32766});
         }
     }
 }
 
-TEST(GraphicsTools_CalculateMipLevel, SINT16)
+TEST(GraphicsTools_CalculateMipLevel, S16_BOX_AVE)
 {
     // clang-format off
     const Int16 FineData[] =
@@ -210,7 +247,7 @@ TEST(GraphicsTools_CalculateMipLevel, SINT16)
                 2,  32764,
            -32765,     62
         };
-    // clang-format off
+    // clang-format on
 
     for (auto fmt : {TEX_FORMAT_R16_SNORM, TEX_FORMAT_R16_SINT})
     {
@@ -219,7 +256,7 @@ TEST(GraphicsTools_CalculateMipLevel, SINT16)
             for (Uint32 height = 4; height <= 5; ++height)
             {
                 Int16 CoarseData[4] = {};
-                ComputeMipLevel(width, height, fmt, FineData, 10, CoarseData, 4);
+                ComputeMipLevel({fmt, width, height, FineData, 10, CoarseData, 4, MIP_FILTER_TYPE_BOX_AVERAGE});
                 EXPECT_EQ(CoarseData[0], RefCoarseData[0]);
                 EXPECT_EQ(CoarseData[1], RefCoarseData[1]);
                 EXPECT_EQ(CoarseData[2], RefCoarseData[2]);
@@ -230,7 +267,7 @@ TEST(GraphicsTools_CalculateMipLevel, SINT16)
         for (Uint32 width = 4; width <= 5; ++width)
         {
             Int16 CoarseData[2] = {};
-            ComputeMipLevel(width, 1, fmt, FineData, 0, CoarseData, 0);
+            ComputeMipLevel({fmt, width, 1, FineData, 0, CoarseData, 0, MIP_FILTER_TYPE_BOX_AVERAGE});
             EXPECT_EQ(CoarseData[0], Int16{1});
             EXPECT_EQ(CoarseData[1], Int16{32766});
         }
@@ -238,14 +275,51 @@ TEST(GraphicsTools_CalculateMipLevel, SINT16)
         for (Uint32 height = 4; height <= 5; ++height)
         {
             Int16 CoarseData[2] = {};
-            ComputeMipLevel(1, height, fmt, FineData, 10, CoarseData, 2);
+            ComputeMipLevel({fmt, 1, height, FineData, 10, CoarseData, 2, MIP_FILTER_TYPE_BOX_AVERAGE});
             EXPECT_EQ(CoarseData[0], Int16{2});
             EXPECT_EQ(CoarseData[1], Int16{-32766});
         }
     }
 }
 
-TEST(GraphicsTools_CalculateMipLevel, UINT32)
+
+TEST(GraphicsTools_CalculateMipLevel, SINT16_MOST_FREQ)
+{
+    // clang-format off
+    const Int16 FineData[] =
+        {
+            -201, -201,   -202, -202,   -203, -204,   -205, -204,   -205, -205,   0,
+            -201, -201,   -202, -203,   -203, -203,   -204, -204,   -206, -205,   1,
+
+            -207, -208,   -207, -209,   -201, -208,   -209, -200,   -201, -201,   2,
+            -206, -206,   -207, -208,   -208, -209,   -202, -209,   -203, -205,   3,
+
+            -207, -202,   -201, -203,   -203, -203,   -205, -206,   -207, -208,   4,
+            -209, -202,   -203, -201,   -204, -204,   -205, -206,   -209, -201,   5,
+
+            0, 1,   2, 3,   4, 5,   6, 7,   8, 9
+        };
+    const Int16 RefCoarseData[] = //
+        {
+            -201,      -202,     -203,       -204,      -205,
+            -206,      -207,     -208,       -209,      -201,
+            -202,      -203,     -204,       -205,      -208
+        };
+    // clang-format on
+
+    constexpr auto Fmt = TEX_FORMAT_R16_SINT;
+    for (Uint32 width = 10; width <= 11; ++width)
+    {
+        for (Uint32 height = 6; height <= 7; ++height)
+        {
+            Int16 CoarseData[_countof(RefCoarseData)] = {};
+            ComputeMipLevel({Fmt, width, height, FineData, 22, CoarseData, 10});
+            EXPECT_EQ(memcmp(CoarseData, RefCoarseData, sizeof(RefCoarseData)), 0);
+        }
+    }
+}
+
+TEST(GraphicsTools_CalculateMipLevel, UINT32_BOX_AVE)
 {
     // clang-format off
     const Uint32 FineData[] =
@@ -262,7 +336,7 @@ TEST(GraphicsTools_CalculateMipLevel, UINT32)
                  2,  100002,
             200002,      62
         };
-    // clang-format off
+    // clang-format on
 
     const auto fmt = TEX_FORMAT_R32_UINT;
     for (Uint32 width = 4; width <= 5; ++width)
@@ -270,7 +344,7 @@ TEST(GraphicsTools_CalculateMipLevel, UINT32)
         for (Uint32 height = 4; height <= 5; ++height)
         {
             Uint32 CoarseData[4] = {};
-            ComputeMipLevel(width, height, fmt, FineData, 20, CoarseData, 8);
+            ComputeMipLevel({fmt, width, height, FineData, 20, CoarseData, 8, MIP_FILTER_TYPE_BOX_AVERAGE});
             EXPECT_EQ(CoarseData[0], RefCoarseData[0]);
             EXPECT_EQ(CoarseData[1], RefCoarseData[1]);
             EXPECT_EQ(CoarseData[2], RefCoarseData[2]);
@@ -281,7 +355,7 @@ TEST(GraphicsTools_CalculateMipLevel, UINT32)
     for (Uint32 width = 4; width <= 5; ++width)
     {
         Uint32 CoarseData[2] = {};
-        ComputeMipLevel(width, 1, fmt, FineData, 0, CoarseData, 0);
+        ComputeMipLevel({fmt, width, 1, FineData, 0, CoarseData, 0, MIP_FILTER_TYPE_BOX_AVERAGE});
         EXPECT_EQ(CoarseData[0], Uint32{1});
         EXPECT_EQ(CoarseData[1], Uint32{100000});
     }
@@ -289,13 +363,13 @@ TEST(GraphicsTools_CalculateMipLevel, UINT32)
     for (Uint32 height = 4; height <= 5; ++height)
     {
         Uint32 CoarseData[2] = {};
-        ComputeMipLevel(1, height, fmt, FineData, 20, CoarseData, 4);
+        ComputeMipLevel({fmt, 1, height, FineData, 20, CoarseData, 4, MIP_FILTER_TYPE_BOX_AVERAGE});
         EXPECT_EQ(CoarseData[0], Uint32{2});
         EXPECT_EQ(CoarseData[1], Uint32{200002});
     }
 }
 
-TEST(GraphicsTools_CalculateMipLevel, INT32)
+TEST(GraphicsTools_CalculateMipLevel, INT32_BOX_AVE)
 {
     // clang-format off
     const Int32 FineData[] =
@@ -312,7 +386,7 @@ TEST(GraphicsTools_CalculateMipLevel, INT32)
                   2,  100002,
             -200002,      62
         };
-    // clang-format off
+    // clang-format on
 
     const auto fmt = TEX_FORMAT_R32_SINT;
     for (Uint32 width = 4; width <= 5; ++width)
@@ -320,7 +394,7 @@ TEST(GraphicsTools_CalculateMipLevel, INT32)
         for (Uint32 height = 4; height <= 5; ++height)
         {
             Int32 CoarseData[4] = {};
-            ComputeMipLevel(width, height, fmt, FineData, 20, CoarseData, 8);
+            ComputeMipLevel({fmt, width, height, FineData, 20, CoarseData, 8, MIP_FILTER_TYPE_BOX_AVERAGE});
             EXPECT_EQ(CoarseData[0], RefCoarseData[0]);
             EXPECT_EQ(CoarseData[1], RefCoarseData[1]);
             EXPECT_EQ(CoarseData[2], RefCoarseData[2]);
@@ -331,7 +405,7 @@ TEST(GraphicsTools_CalculateMipLevel, INT32)
     for (Uint32 width = 4; width <= 5; ++width)
     {
         Int32 CoarseData[2] = {};
-        ComputeMipLevel(width, 1, fmt, FineData, 0, CoarseData, 0);
+        ComputeMipLevel({fmt, width, 1, FineData, 0, CoarseData, 0, MIP_FILTER_TYPE_BOX_AVERAGE});
         EXPECT_EQ(CoarseData[0], Int32{1});
         EXPECT_EQ(CoarseData[1], Int32{100000});
     }
@@ -339,7 +413,7 @@ TEST(GraphicsTools_CalculateMipLevel, INT32)
     for (Uint32 height = 4; height <= 5; ++height)
     {
         Int32 CoarseData[2] = {};
-        ComputeMipLevel(1, height, fmt, FineData, 20, CoarseData, 4);
+        ComputeMipLevel({fmt, 1, height, FineData, 20, CoarseData, 4, MIP_FILTER_TYPE_BOX_AVERAGE});
         EXPECT_EQ(CoarseData[0], Int32{2});
         EXPECT_EQ(CoarseData[1], Int32{-200002});
     }
@@ -370,7 +444,7 @@ TEST(GraphicsTools_CalculateMipLevel, FLOAT32)
         for (Uint32 height = 4; height <= 5; ++height)
         {
             Float32 CoarseData[4] = {};
-            ComputeMipLevel(width, height, fmt, FineData, 20, CoarseData, 8);
+            ComputeMipLevel({fmt, width, height, FineData, 20, CoarseData, 8, MIP_FILTER_TYPE_BOX_AVERAGE});
             EXPECT_EQ(CoarseData[0], RefCoarseData[0]);
             EXPECT_EQ(CoarseData[1], RefCoarseData[1]);
             EXPECT_EQ(CoarseData[2], RefCoarseData[2]);
@@ -381,7 +455,7 @@ TEST(GraphicsTools_CalculateMipLevel, FLOAT32)
     for (Uint32 width = 4; width <= 5; ++width)
     {
         Float32 CoarseData[2] = {};
-        ComputeMipLevel(width, 1, fmt, FineData, 0, CoarseData, 0);
+        ComputeMipLevel({fmt, width, 1, FineData, 0, CoarseData, 0, MIP_FILTER_TYPE_BOX_AVERAGE});
         EXPECT_EQ(CoarseData[0], 0.5f);
         EXPECT_EQ(CoarseData[1], 128.875f);
     }
@@ -389,13 +463,13 @@ TEST(GraphicsTools_CalculateMipLevel, FLOAT32)
     for (Uint32 height = 4; height <= 5; ++height)
     {
         Float32 CoarseData[2] = {};
-        ComputeMipLevel(1, height, fmt, FineData, 20, CoarseData, 4);
+        ComputeMipLevel({fmt, 1, height, FineData, 20, CoarseData, 4, MIP_FILTER_TYPE_BOX_AVERAGE});
         EXPECT_EQ(CoarseData[0], 2.f);
         EXPECT_EQ(CoarseData[1], -1.875f);
     }
 }
 
-TEST(GraphicsTools_CalculateMipLevel, RGBA)
+TEST(GraphicsTools_CalculateMipLevel, RGBA_BOX_AVE)
 {
     for (Uint32 NumChannels = 1; NumChannels <= 4; NumChannels *= 2)
     {
@@ -452,7 +526,7 @@ TEST(GraphicsTools_CalculateMipLevel, RGBA)
         for (auto fmt : Formats)
         {
             std::vector<Uint8> CoarseData(RefCoarseData.size());
-            ComputeMipLevel(FineWidth, FineHeight, fmt, FineData.data(), FineWidth * NumChannels, CoarseData.data(), CoarseWidth * NumChannels);
+            ComputeMipLevel({fmt, FineWidth, FineHeight, FineData.data(), FineWidth * NumChannels, CoarseData.data(), CoarseWidth * NumChannels, MIP_FILTER_TYPE_BOX_AVERAGE});
             EXPECT_TRUE(CoarseData == RefCoarseData);
         }
     }
@@ -460,7 +534,7 @@ TEST(GraphicsTools_CalculateMipLevel, RGBA)
 
 
 
-TEST(GraphicsTools_CalculateMipLevel, sRGB)
+TEST(GraphicsTools_CalculateMipLevel, sRGB_BOX_AVE)
 {
     const Uint32 FineWidth   = 225;
     const Uint32 FineHeight  = 137;
@@ -497,7 +571,7 @@ TEST(GraphicsTools_CalculateMipLevel, sRGB)
     }
 
     std::vector<Uint8> CoarseData(RefCoarseData.size());
-    ComputeMipLevel(FineWidth, FineHeight, TEX_FORMAT_RGBA8_UNORM_SRGB, FineData.data(), FineWidth * NumChannels, CoarseData.data(), CoarseWidth * NumChannels);
+    ComputeMipLevel({TEX_FORMAT_RGBA8_UNORM_SRGB, FineWidth, FineHeight, FineData.data(), FineWidth * NumChannels, CoarseData.data(), CoarseWidth * NumChannels});
     EXPECT_TRUE(CoarseData == RefCoarseData);
 }
 
