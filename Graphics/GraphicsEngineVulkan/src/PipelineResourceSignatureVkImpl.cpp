@@ -690,10 +690,14 @@ void PipelineResourceSignatureVkImpl::CommitDynamicResources(const ShaderResourc
             case DescriptorType::CombinedImageSampler:
             case DescriptorType::SeparateImage:
             case DescriptorType::StorageImage:
+                WriteDescrSetIt->pImageInfo = &(*DescrImgIt);
+                WriteArrayElements(std::integral_constant<DescriptorType, DescriptorType::SeparateImage>{}, DescrImgIt, DescrImgInfoArr);
+                break;
+
             case DescriptorType::InputAttachment:
             case DescriptorType::InputAttachment_General:
                 WriteDescrSetIt->pImageInfo = &(*DescrImgIt);
-                WriteArrayElements(std::integral_constant<DescriptorType, DescriptorType::SeparateImage>{}, DescrImgIt, DescrImgInfoArr);
+                WriteArrayElements(std::integral_constant<DescriptorType, DescriptorType::InputAttachment>{}, DescrImgIt, DescrImgInfoArr);
                 break;
 
             case DescriptorType::Sampler:
