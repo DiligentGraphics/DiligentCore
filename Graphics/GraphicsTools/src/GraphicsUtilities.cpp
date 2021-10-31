@@ -367,6 +367,10 @@ void ComputeMipLevel(const ComputeMipLevelAttribs& Attribs)
             {
                 case 1:
                     ComputeMipLevelInternal<Uint8>(Attribs, FmtAttribs);
+                    if (Attribs.AlphaCutoff > 0)
+                    {
+                        RemapAlpha(Attribs, FmtAttribs.NumComponents, FmtAttribs.NumComponents - 1);
+                    }
                     break;
 
                 case 2:
