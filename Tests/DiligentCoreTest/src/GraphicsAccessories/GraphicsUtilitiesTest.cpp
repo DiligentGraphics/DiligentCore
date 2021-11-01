@@ -161,7 +161,7 @@ TEST(GraphicsTools_CalculateMipLevel, UINT8_MOST_FREQ)
         {
             1,      2,     3,       4,      5,
             6,      7,     8,       9,      1,
-            2,      3,     4,       5,      8
+            2,      1,     4,       5,      9
         };
     // clang-format on
 
@@ -303,7 +303,7 @@ TEST(GraphicsTools_CalculateMipLevel, SINT16_MOST_FREQ)
         {
             -201,      -202,     -203,       -204,      -205,
             -206,      -207,     -208,       -209,      -201,
-            -202,      -203,     -204,       -205,      -208
+            -202,      -201,     -204,       -205,      -209
         };
     // clang-format on
 

@@ -34,8 +34,6 @@
 #include "GraphicsAccessories.hpp"
 #include "ColorConversion.h"
 
-#include "FastRand.hpp"
-
 #define PI_F 3.1415926f
 
 namespace Diligent
@@ -136,7 +134,7 @@ void GenerateCheckerBoardPattern(Uint32 Width, Uint32 Height, TEXTURE_FORMAT Fmt
 
 
 template <typename ChannelType>
-ChannelType SRGBAverage(ChannelType c0, ChannelType c1, ChannelType c2, ChannelType c3)
+ChannelType SRGBAverage(ChannelType c0, ChannelType c1, ChannelType c2, ChannelType c3, Uint32 /*col*/, Uint32 /*row*/)
 {
     static_assert(std::numeric_limits<ChannelType>::is_integer && !std::numeric_limits<ChannelType>::is_signed, "Unsigned integers are expected");
 
@@ -159,98 +157,130 @@ ChannelType SRGBAverage(ChannelType c0, ChannelType c1, ChannelType c2, ChannelT
 }
 
 template <typename ChannelType>
-ChannelType LinearAverage(ChannelType c0, ChannelType c1, ChannelType c2, ChannelType c3);
+ChannelType LinearAverage(ChannelType c0, ChannelType c1, ChannelType c2, ChannelType c3, Uint32 /*col*/, Uint32 /*row*/);
 
 template <>
-Uint8 LinearAverage<Uint8>(Uint8 c0, Uint8 c1, Uint8 c2, Uint8 c3)
+Uint8 LinearAverage<Uint8>(Uint8 c0, Uint8 c1, Uint8 c2, Uint8 c3, Uint32 /*col*/, Uint32 /*row*/)
 {
     return static_cast<Uint8>((Uint32{c0} + Uint32{c1} + Uint32{c2} + Uint32{c3}) >> 2);
 }
 
 template <>
-Uint16 LinearAverage<Uint16>(Uint16 c0, Uint16 c1, Uint16 c2, Uint16 c3)
+Uint16 LinearAverage<Uint16>(Uint16 c0, Uint16 c1, Uint16 c2, Uint16 c3, Uint32 /*col*/, Uint32 /*row*/)
 {
     return static_cast<Uint16>((Uint32{c0} + Uint32{c1} + Uint32{c2} + Uint32{c3}) >> 2);
 }
 
 template <>
-Uint32 LinearAverage<Uint32>(Uint32 c0, Uint32 c1, Uint32 c2, Uint32 c3)
+Uint32 LinearAverage<Uint32>(Uint32 c0, Uint32 c1, Uint32 c2, Uint32 c3, Uint32 /*col*/, Uint32 /*row*/)
 {
     return (c0 + c1 + c2 + c3) >> 2;
 }
 
 template <>
-Int8 LinearAverage<Int8>(Int8 c0, Int8 c1, Int8 c2, Int8 c3)
+Int8 LinearAverage<Int8>(Int8 c0, Int8 c1, Int8 c2, Int8 c3, Uint32 /*col*/, Uint32 /*row*/)
 {
     return static_cast<Int8>((Int32{c0} + Int32{c1} + Int32{c2} + Int32{c3}) / 4);
 }
 
 template <>
-Int16 LinearAverage<Int16>(Int16 c0, Int16 c1, Int16 c2, Int16 c3)
+Int16 LinearAverage<Int16>(Int16 c0, Int16 c1, Int16 c2, Int16 c3, Uint32 /*col*/, Uint32 /*row*/)
 {
     return static_cast<Int16>((Int32{c0} + Int32{c1} + Int32{c2} + Int32{c3}) / 4);
 }
 
 template <>
-Int32 LinearAverage<Int32>(Int32 c0, Int32 c1, Int32 c2, Int32 c3)
+Int32 LinearAverage<Int32>(Int32 c0, Int32 c1, Int32 c2, Int32 c3, Uint32 /*col*/, Uint32 /*row*/)
 {
     return (c0 + c1 + c2 + c3) / 4;
 }
 
 template <>
-float LinearAverage<float>(float c0, float c1, float c2, float c3)
+float LinearAverage<float>(float c0, float c1, float c2, float c3, Uint32 /*col*/, Uint32 /*row*/)
 {
     return (c0 + c1 + c2 + c3) * 0.25f;
 }
 
 
 template <typename ChannelType>
-struct MostFrequentSelector
+ChannelType MostFrequentSelector(ChannelType c0, ChannelType c1, ChannelType c2, ChannelType c3, Uint32 col, Uint32 row)
 {
-    ChannelType operator()(ChannelType c0, ChannelType c1, ChannelType c2, ChannelType c3)
+    //  c2      c3
+    //   *      *
+    //
+    //   *      *
+    //  c0      c1
+    const auto _01 = c0 == c1;
+    const auto _02 = c0 == c2;
+    const auto _03 = c0 == c3;
+    const auto _12 = c1 == c2;
+    const auto _13 = c1 == c3;
+    const auto _23 = c2 == c3;
+    if (_01)
     {
-        // When element frequencies are the same, use random
-        // selection to avoid image shifting
-        auto rnd = Rand();
-
-        const auto _01 = c0 == c1;
-        const auto _02 = c0 == c2;
-        const auto _03 = c0 == c3;
-        const auto _12 = c1 == c2;
-        const auto _13 = c1 == c3;
-        const auto _23 = c2 == c3;
-        if (_01)
-        {
-            return (!_23 || (rnd & 0x01) != 0) ? c0 : c2;
-        }
-        if (_02)
-        {
-            return (!_13 || (rnd & 0x01) != 0) ? c0 : c1;
-        }
-        if (_03)
-        {
-            return (!_12 || (rnd & 0x01) != 0) ? c0 : c1;
-        }
-        if (_12 || _13)
-            return c1;
-        if (_23)
-            return c2;
-
-        switch (rnd)
-        {
-            case 0: return c0;
-            case 1: return c1;
-            case 2: return c2;
-            case 3: return c3;
-            default:
-                UNEXPECTED("Unexpected index");
-                return c0;
-        }
+        //      2     3
+        //      *-----*
+        //                Use row to pseudo-randomly make selection
+        //      *-----*
+        //      0     1
+        return (!_23 || (row & 0x01) != 0) ? c0 : c2;
+    }
+    if (_02)
+    {
+        //      2     3
+        //      *     *
+        //      |     |   Use col to pseudo-randomly make selection
+        //      *     *
+        //      0     1
+        return (!_13 || (col & 0x01) != 0) ? c0 : c1;
+    }
+    if (_03)
+    {
+        //      2     3
+        //      *.   .*
+        //        '.'
+        //       .' '.
+        //      *     *
+        //      0     1
+        return (!_12 || ((col + row) & 0x01) != 0) ? c0 : c1;
+    }
+    if (_12 || _13)
+    {
+        //      2     3         2     3
+        //      *.    *         *     *
+        //        '.                  |
+        //          '.                |
+        //      *     *         *     *
+        //      0     1         0     1
+        return c1;
+    }
+    if (_23)
+    {
+        //      2     3
+        //      *-----*
+        //
+        //      *     *
+        //      0     1
+        return c2;
     }
 
-private:
-    FastRandInt Rand{0, 0, 3};
-};
+    // Select pseudo-random element
+    //      2     3
+    //      *     *
+    //
+    //      *     *
+    //      0     1
+    switch ((col + row) % 4)
+    {
+        case 0: return c0;
+        case 1: return c1;
+        case 2: return c2;
+        case 3: return c3;
+        default:
+            UNEXPECTED("Unexpected index");
+            return c0;
+    }
+}
 
 template <typename ChannelType,
           typename FilterType>
@@ -282,13 +312,13 @@ void FilterMipLevel(const ComputeMipLevelAttribs& Attribs,
             for (Uint32 c = 0; c < NumChannels; ++c)
             {
                 const auto Chnl00 = pSrcRow0[src_col0 * NumChannels + c];
-                const auto Chnl01 = pSrcRow0[src_col1 * NumChannels + c];
-                const auto Chnl10 = pSrcRow1[src_col0 * NumChannels + c];
+                const auto Chnl10 = pSrcRow0[src_col1 * NumChannels + c];
+                const auto Chnl01 = pSrcRow1[src_col0 * NumChannels + c];
                 const auto Chnl11 = pSrcRow1[src_col1 * NumChannels + c];
 
                 auto& DstCol = reinterpret_cast<ChannelType*>(reinterpret_cast<Uint8*>(Attribs.pCoarseMipData) + row * Attribs.CoarseMipStride)[col * NumChannels + c];
 
-                DstCol = Filter(Chnl00, Chnl01, Chnl10, Chnl11);
+                DstCol = Filter(Chnl00, Chnl10, Chnl01, Chnl11, col, row);
             }
         }
     }
@@ -331,10 +361,10 @@ void ComputeMipLevelInternal(const ComputeMipLevelAttribs& Attribs,
             MIP_FILTER_TYPE_BOX_AVERAGE;
     }
 
-    if (FilterType == MIP_FILTER_TYPE_BOX_AVERAGE)
-        FilterMipLevel<ChannelType>(Attribs, FmtAttribs.NumComponents, LinearAverage<ChannelType>);
-    else
-        FilterMipLevel<ChannelType>(Attribs, FmtAttribs.NumComponents, MostFrequentSelector<ChannelType>{});
+    FilterMipLevel<ChannelType>(Attribs, FmtAttribs.NumComponents,
+                                FilterType == MIP_FILTER_TYPE_BOX_AVERAGE ?
+                                    LinearAverage<ChannelType> :
+                                    MostFrequentSelector<ChannelType>);
 }
 
 void ComputeMipLevel(const ComputeMipLevelAttribs& Attribs)
@@ -355,10 +385,10 @@ void ComputeMipLevel(const ComputeMipLevelAttribs& Attribs)
     {
         case COMPONENT_TYPE_UNORM_SRGB:
             VERIFY(FmtAttribs.ComponentSize == 1, "Only 8-bit sRGB formats are expected");
-            if (Attribs.FilterType == MIP_FILTER_TYPE_MOST_FREQUENT)
-                FilterMipLevel<Uint8>(Attribs, FmtAttribs.NumComponents, MostFrequentSelector<Uint8>{});
-            else
-                FilterMipLevel<Uint8>(Attribs, FmtAttribs.NumComponents, SRGBAverage<Uint8>);
+            FilterMipLevel<Uint8>(Attribs, FmtAttribs.NumComponents,
+                                  Attribs.FilterType == MIP_FILTER_TYPE_MOST_FREQUENT ?
+                                      MostFrequentSelector<Uint8> :
+                                      SRGBAverage<Uint8>);
             break;
 
         case COMPONENT_TYPE_UNORM:
