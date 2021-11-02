@@ -1217,6 +1217,7 @@ void DXCompilerImpl::PatchResourceDeclaration(const TResourceBindingMap& Resourc
     static const String TexBufferPart         = "Buffer<";
     static const String RWFmtBufferPart       = "RWBuffer<";
     static const String DxAlignmentLegacyPart = "dx.alignment.legacy.";
+    static const String HostlayoutPart        = "hostlayout.";
     static const String StructPart            = "struct.";
     static const String ClassPart             = "class.";
 
@@ -1391,6 +1392,12 @@ void DXCompilerImpl::PatchResourceDeclaration(const TResourceBindingMap& Resourc
             pos += DxAlignmentLegacyPart.length();
             NameParts |= ALIGNMENT_LEGACY_PART;
         }
+        else if (std::strncmp(&DXIL[pos], HostlayoutPart.c_str(), HostlayoutPart.length()) == 0)
+        {
+            pos += HostlayoutPart.length();
+            NameParts |= ALIGNMENT_LEGACY_PART;
+        }
+
         if (std::strncmp(&DXIL[pos], StructPart.c_str(), StructPart.length()) == 0)
         {
             pos += StructPart.length();
