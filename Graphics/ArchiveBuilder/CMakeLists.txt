@@ -4,6 +4,11 @@ project(Diligent-ArchiveBuilder CXX)
 
 set(INCLUDE
     include/ArchiveBuilderImpl.hpp
+    include/DummyRenderDevice.hpp
+    include/SerializableShaderImpl.hpp
+    include/SerializableRenderPassImpl.hpp
+    include/SerializableResourceSignatureImpl.hpp
+    include/SerializedMemory.hpp
 )
 
 set(INTERFACE
@@ -14,7 +19,14 @@ set(INTERFACE
 
 set(SOURCE
     src/ArchiveBuilderImpl.cpp
+    src/ArchiveBuilderImpl_PRS.cpp
+    src/ArchiveBuilderImpl_PSO.cpp
     src/ArchiveBuilderFactory.cpp
+    src/DummyRenderDevice.cpp
+    src/SerializableShaderImpl.cpp
+    src/SerializableResourceSignatureImpl.cpp
+    src/SerializableRenderPassImpl.cpp
+    src/SerializedMemory.cpp
 )
 
 add_library(Diligent-ArchiveBuilder-interface INTERFACE)
@@ -62,6 +74,7 @@ if(VULKAN_SUPPORTED)
         ../GraphicsEngineVulkan/include
         ../../ThirdParty/Vulkan-Headers/include
     )
+    target_compile_definitions(Diligent-ArchiveBuilder PRIVATE DILIGENT_NO_GLSLANG=$<BOOL:${DILIGENT_NO_GLSLANG}>)
 endif()
 
 if(GL_SUPPORTED OR GLES_SUPPORTED)

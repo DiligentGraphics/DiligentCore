@@ -417,4 +417,83 @@ size_t CalculatePipelineResourceSignatureDescHash(const PipelineResourceSignatur
     return Hash;
 }
 
+void ReserveSpaceForPipelineResourceSignatureDesc(FixedLinearAllocator& Allocator, const PipelineResourceSignatureDesc& Desc)
+{
+    Allocator.AddSpace<PipelineResourceDesc>(Desc.NumResources);
+    Allocator.AddSpace<ImmutableSamplerDesc>(Desc.NumImmutableSamplers);
+
+    for (Uint32 i = 0; i < Desc.NumResources; ++i)
+    {
+        const auto& Res = Desc.Resources[i];
+
+        VERIFY(Res.Name != nullptr, "Name can't be null. This error should've been caught by ValidatePipelineResourceSignatureDesc().");
+        VERIFY(Res.Name[0] != '\0', "Name can't be empty. This error should've been caught by ValidatePipelineResourceSignatureDesc().");
+        VERIFY(Res.ShaderStages != SHADER_TYPE_UNKNOWN, "ShaderStages can't be SHADER_TYPE_UNKNOWN. This error should've been caught by ValidatePipelineResourceSignatureDesc().");
+        VERIFY(Res.ArraySize != 0, "ArraySize can't be 0. This error should've been caught by ValidatePipelineResourceSignatureDesc().");
+
+        Allocator.AddSpaceForString(Res.Name);
+    }
+
+    for (Uint32 i = 0; i < Desc.NumImmutableSamplers; ++i)
+    {
+        const auto* SamOrTexName = Desc.ImmutableSamplers[i].SamplerOrTextureName;
+        VERIFY(SamOrTexName != nullptr, "SamplerOrTextureName can't be null. This error should've been caught by ValidatePipelineResourceSignatureDesc().");
+        VERIFY(SamOrTexName[0] != '\0', "SamplerOrTextureName can't be empty. This error should've been caught by ValidatePipelineResourceSignatureDesc().");
+        Allocator.AddSpaceForString(SamOrTexName);
+        Allocator.AddSpaceForString(Desc.ImmutableSamplers[i].Desc.Name);
+    }
+
+    if (Desc.UseCombinedTextureSamplers)
+        Allocator.AddSpaceForString(Desc.CombinedSamplerSuffix);
+}
+
+void CopyPipelineResourceSignatureDesc(FixedLinearAllocator&                                            Allocator,
+                                       const PipelineResourceSignatureDesc&                             SrcDesc,
+                                       PipelineResourceSignatureDesc&                                   DstDesc,
+                                       std::array<Uint16, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES + 1>& ResourceOffsets)
+{
+    PipelineResourceDesc* pResources = Allocator.ConstructArray<PipelineResourceDesc>(SrcDesc.NumResources);
+    ImmutableSamplerDesc* pSamplers  = Allocator.ConstructArray<ImmutableSamplerDesc>(SrcDesc.NumImmutableSamplers);
+
+    for (Uint32 i = 0; i < SrcDesc.NumResources; ++i)
+    {
+        const auto& SrcRes = SrcDesc.Resources[i];
+        auto&       DstRes = pResources[i];
+
+        DstRes = SrcRes;
+        VERIFY_EXPR(SrcRes.Name != nullptr && SrcRes.Name[0] != '\0');
+        DstRes.Name = Allocator.CopyString(SrcRes.Name);
+
+        ++ResourceOffsets[DstRes.VarType + 1];
+    }
+
+    // Sort resources by variable type (all static -> all mutable -> all dynamic)
+    std::sort(pResources, pResources + SrcDesc.NumResources,
+              [](const PipelineResourceDesc& lhs, const PipelineResourceDesc& rhs) {
+                  return lhs.VarType < rhs.VarType;
+              });
+
+    for (size_t i = 1; i < ResourceOffsets.size(); ++i)
+        ResourceOffsets[i] += ResourceOffsets[i - 1];
+
+    for (Uint32 i = 0; i < SrcDesc.NumImmutableSamplers; ++i)
+    {
+        const auto& SrcSam = SrcDesc.ImmutableSamplers[i];
+        auto&       DstSam = pSamplers[i];
+
+        DstSam = SrcSam;
+        VERIFY_EXPR(SrcSam.SamplerOrTextureName != nullptr && SrcSam.SamplerOrTextureName[0] != '\0');
+        DstSam.SamplerOrTextureName = Allocator.CopyString(SrcSam.SamplerOrTextureName);
+        DstSam.Desc.Name            = Allocator.CopyString(SrcSam.Desc.Name);
+        if (!DstSam.Desc.Name)
+            DstSam.Desc.Name = "";
+    }
+
+    DstDesc.Resources         = pResources;
+    DstDesc.ImmutableSamplers = pSamplers;
+
+    if (SrcDesc.UseCombinedTextureSamplers)
+        DstDesc.CombinedSamplerSuffix = Allocator.CopyString(SrcDesc.CombinedSamplerSuffix);
+}
+
 } // namespace Diligent

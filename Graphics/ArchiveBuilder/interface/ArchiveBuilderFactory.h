@@ -31,6 +31,7 @@
 
 #include "../../../Primitives/interface/Object.h"
 #include "ArchiveBuilder.h"
+#include "Shader.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
@@ -52,6 +53,23 @@ DILIGENT_BEGIN_INTERFACE(IArchiveBuilderFactory, IObject)
     // AZ TODO
     VIRTUAL void METHOD(CreateArchiveBuilder)(THIS_
                                               IArchiveBuilder** ppBuilder) PURE;
+    
+    // AZ TODO
+    VIRTUAL void METHOD(CreateShader)(THIS_
+                                      const ShaderCreateInfo REF ShaderCI,
+                                      Uint32                     DeviceBits,
+                                      IShader**                  ppShader) PURE;
+    
+    // AZ TODO
+    VIRTUAL void METHOD(CreateRenderPass)(THIS_
+                                          const RenderPassDesc REF Desc,
+                                          IRenderPass**            ppRenderPass) PURE;
+    
+    // AZ TODO
+    VIRTUAL void METHOD(CreatePipelineResourceSignature)(THIS_
+                                                         const PipelineResourceSignatureDesc REF Desc,
+                                                         Uint32                                  DeviceBits,
+                                                         IPipelineResourceSignature**            ppSignature) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -59,7 +77,10 @@ DILIGENT_END_INTERFACE
 
 #if DILIGENT_C_INTERFACE
 
-#    define IArchiveBuilderFactory_CreateArchiveBuilder(This, ...)  CALL_IFACE_METHOD(ArchiveBuilderFactory, CreateArchiveBuilder, This, __VA_ARGS__)
+#    define IArchiveBuilderFactory_CreateArchiveBuilder(This, ...)             CALL_IFACE_METHOD(ArchiveBuilderFactory, CreateArchiveBuilder,            This, __VA_ARGS__)
+#    define IArchiveBuilderFactory_CreateShader(This, ...)                     CALL_IFACE_METHOD(ArchiveBuilderFactory, CreateShader,                    This, __VA_ARGS__)
+#    define IArchiveBuilderFactory_CreateRenderPass(This, ...)                 CALL_IFACE_METHOD(ArchiveBuilderFactory, CreateRenderPass,                This, __VA_ARGS__)
+#    define IArchiveBuilderFactory_CreatePipelineResourceSignature(This, ...)  CALL_IFACE_METHOD(ArchiveBuilderFactory, CreatePipelineResourceSignature, This, __VA_ARGS__)
 
 #endif
 

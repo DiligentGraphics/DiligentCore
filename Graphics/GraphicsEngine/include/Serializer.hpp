@@ -140,6 +140,16 @@ public:
         return m_Ptr - static_cast<const Uint8*>(Ptr);
     }
 
+    size_t GetRemainSize() const
+    {
+        return m_End - m_Ptr;
+    }
+
+    TPointer GetCurrentPtr() const
+    {
+        return m_Ptr;
+    }
+
     bool IsEnd() const
     {
         return m_Ptr == m_End;

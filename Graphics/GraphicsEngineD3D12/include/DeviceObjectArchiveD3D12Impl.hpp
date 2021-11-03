@@ -31,7 +31,6 @@
 
 #include "EngineD3D12ImplTraits.hpp"
 #include "DeviceObjectArchiveBase.hpp"
-#include "PipelineResourceSignatureD3D12Impl.hpp"
 
 namespace Diligent
 {
@@ -43,11 +42,7 @@ public:
     DeviceObjectArchiveD3D12Impl(IReferenceCounters* pRefCounters, IArchiveSource* pSource);
     ~DeviceObjectArchiveD3D12Impl();
 
-    void UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, IRenderDevice* pDevice, IPipelineResourceSignature*& pSignature) override
-    {
-        DeviceObjectArchiveBase::UnpackResourceSignature<SerializerD3D12Impl, PipelineResourceSignatureD3D12Impl::SerializedData>(
-            DeArchiveInfo, ClassPtrCast<RenderDeviceD3D12Impl>(pDevice), pSignature);
-    }
+    void UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature*& pSignature) override;
 
     template <SerializerMode Mode>
     struct SerializerD3D12Impl

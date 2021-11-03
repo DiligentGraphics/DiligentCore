@@ -47,7 +47,7 @@ public:
     PipelineLayoutVk();
     ~PipelineLayoutVk();
 
-    void Create(RenderDeviceVkImpl* pDeviceVk, RefCntAutoPtr<PipelineResourceSignatureVkImpl> ppSignatures[], Uint32 SignatureCount);
+    void Create(RenderDeviceVkImpl* pDeviceVk, RefCntAutoPtr<PipelineResourceSignatureVkImpl> ppSignatures[], Uint32 SignatureCount) noexcept(false);
     void Release(RenderDeviceVkImpl* pDeviceVkImpl, Uint64 CommandQueueMask);
 
     VkPipelineLayout GetVkPipelineLayout() const { return m_VkPipelineLayout; }
@@ -55,7 +55,7 @@ public:
     // Returns the index of the first descriptor set used by the resource signature at the given bind index
     Uint32 GetFirstDescrSetIndex(Uint32 Index) const
     {
-        VERIFY_EXPR(Index <= m_DbgMaxBindIndex);
+        //VERIFY_EXPR(Index <= m_DbgMaxBindIndex); // AZ TODO
         return m_FirstDescrSetIndex[Index];
     }
 

@@ -27,6 +27,7 @@
 #include "pch.h"
 #include "RenderDeviceVkImpl.hpp"
 #include "DeviceObjectArchiveVkImpl.hpp"
+#include "PipelineResourceSignatureVkImpl.hpp"
 
 namespace Diligent
 {
@@ -40,6 +41,21 @@ DeviceObjectArchiveVkImpl::~DeviceObjectArchiveVkImpl()
 {
 }
 
+void DeviceObjectArchiveVkImpl::UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature*& pSignature)
+{
+    DeviceObjectArchiveBase::UnpackResourceSignatureImpl(
+        DeArchiveInfo, pSignature,
+        [&DeArchiveInfo](PRSData& PRS, Serializer<SerializerMode::Read>& Ser, IPipelineResourceSignature*& pSignature) //
+        {
+            PipelineResourceSignatureVkImpl::SerializedData SerializedData;
+            SerializedData.Base = PRS.Serialized;
+            SerializerVkImpl<SerializerMode::Read>::SerializePRS(Ser, SerializedData, &PRS.Allocator);
+            VERIFY_EXPR(Ser.IsEnd());
+
+            auto* pRenderDeviceVk = ClassPtrCast<RenderDeviceVkImpl>(DeArchiveInfo.pDevice);
+            pRenderDeviceVk->CreatePipelineResourceSignature(PRS.Desc, SerializedData, &pSignature);
+        });
+}
 
 template <SerializerMode Mode>
 void DeviceObjectArchiveVkImpl::SerializerVkImpl<Mode>::SerializePRS(

@@ -123,7 +123,7 @@ public:
 
     VkDescriptorSetLayout GetVkDescriptorSetLayout(DESCRIPTOR_SET_ID SetId) const { return m_VkDescrSetLayouts[SetId]; }
 
-    bool HasDescriptorSet(DESCRIPTOR_SET_ID SetId) const { return m_VkDescrSetLayouts[SetId] != VK_NULL_HANDLE; }
+    bool HasDescriptorSet(DESCRIPTOR_SET_ID SetId) const { return m_VkDescrSetLayouts[SetId] != VK_NULL_HANDLE; } // AZ TODO: use m_DescriptorSetSizes
 
     void InitSRBResourceCache(ShaderResourceCacheVk& ResourceCache);
 

@@ -63,20 +63,19 @@ void SerializationAPIVkImpl::UnpackPipelineState(const PipelineStateUnpackInfo& 
         return;
 
     auto* pArchiveVk = ClassPtrCast<DeviceObjectArchiveVkImpl>(DeArchiveInfo.pArchive);
-    auto* pDeviceVk  = ClassPtrCast<RenderDeviceVkImpl>(DeArchiveInfo.pDevice);
 
     *ppPSO = nullptr;
     switch (DeArchiveInfo.PipelineType)
     {
         case PIPELINE_TYPE_GRAPHICS:
         case PIPELINE_TYPE_MESH:
-            pArchiveVk->UnpackGraphicsPSO(DeArchiveInfo, pDeviceVk, *ppPSO);
+            pArchiveVk->UnpackGraphicsPSO(DeArchiveInfo, *ppPSO);
             break;
         case PIPELINE_TYPE_COMPUTE:
-            pArchiveVk->UnpackComputePSO(DeArchiveInfo, pDeviceVk, *ppPSO);
+            pArchiveVk->UnpackComputePSO(DeArchiveInfo, *ppPSO);
             break;
         case PIPELINE_TYPE_RAY_TRACING:
-            pArchiveVk->UnpackRayTracingPSO(DeArchiveInfo, pDeviceVk, *ppPSO);
+            pArchiveVk->UnpackRayTracingPSO(DeArchiveInfo, *ppPSO);
             break;
         case PIPELINE_TYPE_TILE:
         case PIPELINE_TYPE_INVALID:
@@ -92,10 +91,9 @@ void SerializationAPIVkImpl::UnpackResourceSignature(const ResourceSignatureUnpa
         return;
 
     auto* pArchiveVk = ClassPtrCast<DeviceObjectArchiveVkImpl>(DeArchiveInfo.pArchive);
-    auto* pDeviceVk  = ClassPtrCast<RenderDeviceVkImpl>(DeArchiveInfo.pDevice);
 
     *ppSignature = nullptr;
-    pArchiveVk->UnpackResourceSignature(DeArchiveInfo, pDeviceVk, *ppSignature);
+    pArchiveVk->UnpackResourceSignature(DeArchiveInfo, *ppSignature);
 }
 
 void SerializationAPIVkImpl::UnpackRenderPass(const RenderPassUnpackInfo& DeArchiveInfo, IRenderPass** ppRP)
@@ -104,10 +102,9 @@ void SerializationAPIVkImpl::UnpackRenderPass(const RenderPassUnpackInfo& DeArch
         return;
 
     auto* pArchiveVk = ClassPtrCast<DeviceObjectArchiveVkImpl>(DeArchiveInfo.pArchive);
-    auto* pDeviceVk  = ClassPtrCast<RenderDeviceVkImpl>(DeArchiveInfo.pDevice);
 
     *ppRP = nullptr;
-    pArchiveVk->UnpackRenderPass(DeArchiveInfo, pDeviceVk, *ppRP);
+    pArchiveVk->UnpackRenderPass(DeArchiveInfo, *ppRP);
 }
 
 } // namespace Diligent

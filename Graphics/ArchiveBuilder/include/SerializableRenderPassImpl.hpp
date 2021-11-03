@@ -26,36 +26,29 @@
 
 #pragma once
 
-/// \file
-/// Declaration of Diligent::DeviceObjectArchiveVkImpl class
-
-#include "EngineVkImplTraits.hpp"
-#include "DeviceObjectArchiveBase.hpp"
+#include "RenderPass.h"
+#include "RenderPassBase.hpp"
+#include "DummyRenderDevice.hpp"
+#include "SerializedMemory.hpp"
 
 namespace Diligent
 {
 
-/// Device object archive object implementation in Vulkan backend.
-class DeviceObjectArchiveVkImpl final : public DeviceObjectArchiveBase
+class SerializableRenderPassImpl final : public RenderPassBase<SerializationEngineImplTraits>
 {
 public:
-    DeviceObjectArchiveVkImpl(IReferenceCounters* pRefCounters, IArchiveSource* pSource);
-    ~DeviceObjectArchiveVkImpl();
+    using TBase = RenderPassBase<SerializationEngineImplTraits>;
 
-    void UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature*& pSignature) override;
+    SerializableRenderPassImpl(IReferenceCounters*   pRefCounters,
+                               DummyRenderDevice*    pDevice,
+                               const RenderPassDesc& Desc);
 
-    template <SerializerMode Mode>
-    struct SerializerVkImpl
-    {
-        template <typename T>
-        using TQual = typename Serializer<Mode>::template TQual<T>;
+    ~SerializableRenderPassImpl() override;
 
-        static void SerializePRS(Serializer<Mode>&                                       Ser,
-                                 TQual<PipelineResourceSignatureVkImpl::SerializedData>& Serialized,
-                                 DynamicLinearAllocator*                                 Allocator);
-    };
+    const SerializedMemory& GetSharedSerializedMemory() const { return m_SharedData; }
+
+private:
+    SerializedMemory m_SharedData;
 };
-
-DECL_TRIVIALLY_SERIALIZABLE(PipelineResourceAttribsVk);
 
 } // namespace Diligent

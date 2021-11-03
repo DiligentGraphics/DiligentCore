@@ -27,6 +27,7 @@
 #include "pch.h"
 #include "RenderDeviceD3D12Impl.hpp"
 #include "DeviceObjectArchiveD3D12Impl.hpp"
+#include "PipelineResourceSignatureD3D12Impl.hpp"
 
 namespace Diligent
 {
@@ -38,6 +39,22 @@ DeviceObjectArchiveD3D12Impl::DeviceObjectArchiveD3D12Impl(IReferenceCounters* p
 
 DeviceObjectArchiveD3D12Impl::~DeviceObjectArchiveD3D12Impl()
 {
+}
+
+void DeviceObjectArchiveD3D12Impl::UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature*& pSignature)
+{
+    DeviceObjectArchiveBase::UnpackResourceSignatureImpl(
+        DeArchiveInfo, pSignature,
+        [&DeArchiveInfo](PRSData& PRS, Serializer<SerializerMode::Read>& Ser, IPipelineResourceSignature*& pSignature) //
+        {
+            PipelineResourceSignatureD3D12Impl::SerializedData SerializedData;
+            SerializedData.Base = PRS.Serialized;
+            SerializerD3D12Impl<SerializerMode::Read>::SerializePRS(Ser, SerializedData, &PRS.Allocator);
+            VERIFY_EXPR(Ser.IsEnd());
+
+            auto* pRenderDeviceD3D12 = ClassPtrCast<RenderDeviceD3D12Impl>(DeArchiveInfo.pDevice);
+            pRenderDeviceD3D12->CreatePipelineResourceSignature(PRS.Desc, SerializedData, &pSignature);
+        });
 }
 
 template <SerializerMode Mode>

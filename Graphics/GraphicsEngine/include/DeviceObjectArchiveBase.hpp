@@ -89,14 +89,38 @@ protected:
 
     friend class ArchiveBuilderImpl;
 
+    // Archive header contains offsets for blocks.
+    // Any block can be added or removed without patching all offsets in archive,
+    // you need to patch only base offsets.
+    enum class BlockOffsetType : Uint32
+    {
+        // Device specific data
+        OpenGL,
+        Direct3D11,
+        Direct3D12,
+        Vulkan,
+        Metal,
+
+        //Direct3D12_PSOCache,
+        //Vulkan_PSOCache,
+        //Metal_PSOCache,
+
+        //Direct3D12_Debug,
+        //Vulkan_Debug,
+
+        Count
+    };
+    using TBlockBaseOffsets = std::array<Uint32, Uint32{BlockOffsetType::Count}>;
+
     struct ArchiveHeader
     {
-        Uint32 MagicNumber;
-        Uint32 Version;
-        Uint32 NumChunks;
-        //ChunkHeader Chunks      [NumChunks]
+        Uint32            MagicNumber;
+        Uint32            Version;
+        TBlockBaseOffsets BlockBaseOffsets;
+        Uint32            NumChunks;
+        //ChunkHeader     Chunks  [NumChunks]
     };
-    static_assert(sizeof(ArchiveHeader) == 12, "Archive header size must be 12 bytes");
+    static_assert(sizeof(ArchiveHeader) == 32, "Archive header size must be 32 bytes");
 
     enum class ChunkType : Uint32
     {
@@ -106,9 +130,8 @@ protected:
         ComputePipelineStates,
         RayTracingPipelineStates,
         RenderPass,
+        Shaders,
         //PipelineCache,
-        //ShaderSources,
-        //ShaderBinary,
         Count
     };
 
@@ -132,16 +155,20 @@ protected:
     {
         using Uint32Array = std::array<Uint32, Uint32{DeviceType::Count}>;
 
+        static constexpr Uint32 InvalidOffset = ~0u;
+
         ChunkType   Type;
-        Uint32Array DeviceSpecificDataSize;
-        Uint32Array DeviceSpecificDataOffset;
+        Uint32Array m_DeviceSpecificDataSize;
+        Uint32Array m_DeviceSpecificDataOffset;
 
-        Uint32 GetDeviceSpecificDataSize(DeviceType DevType) const { return DeviceSpecificDataSize[Uint32{DevType}]; }
-        Uint32 GetDeviceSpecificDataOffset(DeviceType DevType) const { return DeviceSpecificDataOffset[Uint32{DevType}]; }
-        Uint32 GetDeviceSpecificDataEndOffset(DeviceType DevType) const { return DeviceSpecificDataOffset[Uint32{DevType}] + DeviceSpecificDataSize[Uint32{DevType}]; }
+        Uint32 GetSize(DeviceType DevType) const { return m_DeviceSpecificDataSize[Uint32{DevType}]; }
+        Uint32 GetOffset(DeviceType DevType) const { return m_DeviceSpecificDataOffset[Uint32{DevType}]; }
+        Uint32 GetEndOffset(DeviceType DevType) const { return m_DeviceSpecificDataOffset[Uint32{DevType}] + m_DeviceSpecificDataSize[Uint32{DevType}]; }
 
-        void SetDeviceSpecificDataSize(DeviceType DevType, Uint32 Size) { DeviceSpecificDataSize[Uint32{DevType}] = Size; }
-        void SetDeviceSpecificDataOffset(DeviceType DevType, Uint32 Offset) { DeviceSpecificDataOffset[Uint32{DevType}] = Offset; }
+        void InitOffsets() { m_DeviceSpecificDataOffset.fill(InvalidOffset); }
+
+        void SetSize(DeviceType DevType, Uint32 Size) { m_DeviceSpecificDataSize[Uint32{DevType}] = Size; }
+        void SetOffset(DeviceType DevType, Uint32 Offset) { m_DeviceSpecificDataOffset[Uint32{DevType}] = Offset; }
     };
 
     struct PRSDataHeader : BaseDataHeader
@@ -155,18 +182,21 @@ protected:
         //GraphicsPipelineStateCreateInfo | ComputePipelineStateCreateInfo | RayTracingPipelineStateCreateInfo
     };
 
+    struct ShadersDataHeader : BaseDataHeader
+    {};
+
     struct RPDataHeader
     {
         ChunkType Type;
     };
 
-private:
     struct FileOffsetAndSize
     {
         Uint32 Offset;
         Uint32 Size;
     };
 
+private:
     template <typename T>
     struct FileOffsetAndResCache : FileOffsetAndSize
     {
@@ -180,21 +210,24 @@ private:
     template <typename T>
     using TNameOffsetMap = std::unordered_map<String, FileOffsetAndResCache<T>>;
     //using TNameOffsetMap = std::unordered_map<HashMapStringKey, FileOffsetAndSize, HashMapStringKey::Hasher>; // AZ TODO
-    using TPRSOffsetAndCacheMap = TNameOffsetMap<IPipelineResourceSignature>;
-    using TPSOOffsetAndCacheMap = TNameOffsetMap<IPipelineState>;
-    using TRPOffsetAndCacheMap  = TNameOffsetMap<IRenderPass>;
+    using TPRSOffsetAndCacheMap  = TNameOffsetMap<IPipelineResourceSignature>;
+    using TPSOOffsetAndCacheMap  = TNameOffsetMap<IPipelineState>;
+    using TRPOffsetAndCacheMap   = TNameOffsetMap<IRenderPass>;
+    using TResourceOffsetAndSize = std::vector<FileOffsetAndSize>;
 
-    TPRSOffsetAndCacheMap m_PRSMap;
-    TPSOOffsetAndCacheMap m_GraphicsPSOMap;
-    TPSOOffsetAndCacheMap m_ComputePSOMap;
-    TPSOOffsetAndCacheMap m_RayTracingPSOMap;
-    TRPOffsetAndCacheMap  m_RenderPassMap;
+    TPRSOffsetAndCacheMap  m_PRSMap;
+    TPSOOffsetAndCacheMap  m_GraphicsPSOMap;
+    TPSOOffsetAndCacheMap  m_ComputePSOMap;
+    TPSOOffsetAndCacheMap  m_RayTracingPSOMap;
+    TRPOffsetAndCacheMap   m_RenderPassMap;
+    TResourceOffsetAndSize m_Shaders;
 
     std::shared_mutex m_PRSMapGuard;
     std::shared_mutex m_GraphicsPSOMapGuard;
     std::shared_mutex m_ComputePSOMapGuard;
     std::shared_mutex m_RayTracingPSOMapGuard;
     std::shared_mutex m_RenderPassMapGuard;
+    std::shared_mutex m_ShadersGuard;
 
     struct
     {
@@ -203,9 +236,11 @@ private:
 
     RefCntAutoPtr<IArchiveSource> m_pSource; // archive source is thread-safe
     const DeviceType              m_DevType;
+    TBlockBaseOffsets             m_BaseOffsets = {};
 
     template <typename ResType>
     void ReadNamedResources(const ChunkHeader& Chunk, TNameOffsetMap<ResType>& NameAndOffset, std::shared_mutex& Guard) noexcept(false);
+    void ReadIndexedResources(const ChunkHeader& Chunk, TResourceOffsetAndSize& Resources, std::shared_mutex& Guard) noexcept(false);
     void ReadArchiveDebugInfo(const ChunkHeader& Chunk) noexcept(false);
 
     template <typename ResType>
@@ -213,7 +248,7 @@ private:
     template <typename ResType>
     void CacheResource(const String& Name, TNameOffsetMap<ResType>& Cache, std::shared_mutex& Guard, ResType* pResource);
 
-private:
+protected:
     using TPRSNames = std::array<const char*, MAX_RESOURCE_SIGNATURES>;
 
     struct PRSData
@@ -227,9 +262,6 @@ private:
             Allocator{Allocator, BlockSize}
         {}
     };
-    bool ReadPRSData(const String& Name, PRSData& PRS);
-    bool GetCachedPRS(const String& Name, IPipelineResourceSignature*& pSignature);
-    void CachePRSResource(const String& Name, IPipelineResourceSignature* pSignature);
 
     template <typename CreateInfoType>
     struct PSOData
@@ -244,6 +276,12 @@ private:
             Allocator{Allocator, BlockSize}
         {}
     };
+
+private:
+    bool ReadPRSData(const String& Name, PRSData& PRS);
+    bool GetCachedPRS(const String& Name, IPipelineResourceSignature*& pSignature);
+    void CachePRSResource(const String& Name, IPipelineResourceSignature* pSignature);
+
     bool ReadGraphicsPSOData(const String& Name, PSOData<GraphicsPipelineStateCreateInfo>& PSO);
     bool ReadComputePSOData(const String& Name, PSOData<ComputePipelineStateCreateInfo>& PSO);
     bool ReadRayTracingPSOData(const String& Name, PSOData<RayTracingPipelineStateCreateInfo>& PSO);
@@ -254,6 +292,10 @@ private:
     void CacheComputePSOResource(const String& Name, IPipelineState* pPSO);
     bool GetCachedRayTracingPSO(const String& Name, IPipelineState*& pPSO);
     void CacheRayTracingPSOResource(const String& Name, IPipelineState* pPSO);
+
+    bool LoadShaders(Serializer<SerializerMode::Read>&    Ser,
+                     IRenderDevice*                       pDevice,
+                     std::vector<RefCntAutoPtr<IShader>>& Shaders);
 
     struct RPData
     {
@@ -281,35 +323,13 @@ private:
     void LoadDeviceSpecificData(const HeaderType&       Header,
                                 DynamicLinearAllocator& Allocator,
                                 const char*             ResTypeName,
-                                const FnType&           Fn)
-    {
-        if (Header.GetDeviceSpecificDataSize(m_DevType) == 0)
-        {
-            LOG_ERROR_MESSAGE("Device specific data is not specified for ", ResTypeName);
-            return;
-        }
-        if (Header.GetDeviceSpecificDataEndOffset(m_DevType) > m_pSource->GetSize())
-        {
-            LOG_ERROR_MESSAGE("Invalid offset in archive");
-            return;
-        }
-
-        const auto DataSize = Header.GetDeviceSpecificDataSize(m_DevType);
-        auto*      pData    = Allocator.Allocate(DataSize, DataPtrAlign);
-        if (!m_pSource->Read(Header.GetDeviceSpecificDataOffset(m_DevType), pData, DataSize))
-        {
-            LOG_ERROR_MESSAGE("Failed to read resource signature data");
-            return;
-        }
-
-        Serializer<SerializerMode::Read> Ser{pData, DataSize};
-        return Fn(Ser);
-    }
+                                BlockOffsetType         BlockType,
+                                const FnType&           Fn);
 
     static constexpr Uint32 DefaultSRBAllocationGranularity = 1;
 
-    template <typename CreateInfoType, typename RenderDeviceImplType>
-    bool CreateResourceSignatures(PSOData<CreateInfoType>& PSO, RenderDeviceImplType* pDevice);
+    template <typename CreateInfoType>
+    bool CreateResourceSignatures(PSOData<CreateInfoType>& PSO, IRenderDevice* pDevice);
 
     template <typename CreateInfoType>
     struct ReleaseTempResourceRefs
@@ -322,26 +342,21 @@ private:
         ~ReleaseTempResourceRefs();
     };
 
-    template <typename RenderDeviceImplType>
-    bool CreateRenderPass(PSOData<GraphicsPipelineStateCreateInfo>& PSO, RenderDeviceImplType* pDevice);
+    bool CreateRenderPass(PSOData<GraphicsPipelineStateCreateInfo>& PSO, IRenderDevice* pDevice);
 
 protected:
-    template <template <SerializerMode> class TSerializerImpl,
-              typename TSerializedData,
-              typename RenderDeviceImplType>
-    void UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, RenderDeviceImplType* pDevice, IPipelineResourceSignature*& pSignature);
+    using CreateSignatureType = std::function<void(PRSData& PRS, Serializer<SerializerMode::Read>& Ser, IPipelineResourceSignature*& pSignature)>;
+    void UnpackResourceSignatureImpl(const ResourceSignatureUnpackInfo& DeArchiveInfo,
+                                     IPipelineResourceSignature*&       pSignature,
+                                     const CreateSignatureType&         CreateSignature);
+
+    virtual void UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature*& pSignature) = 0;
 
 public:
-    template <typename RenderDeviceImplType>
-    void UnpackGraphicsPSO(const PipelineStateUnpackInfo& DeArchiveInfo, RenderDeviceImplType* pDevice, IPipelineState*& pPSO);
-    template <typename RenderDeviceImplType>
-    void UnpackComputePSO(const PipelineStateUnpackInfo& DeArchiveInfo, RenderDeviceImplType* pDevice, IPipelineState*& pPSO);
-    template <typename RenderDeviceImplType>
-    void UnpackRayTracingPSO(const PipelineStateUnpackInfo& DeArchiveInfo, RenderDeviceImplType* pDevice, IPipelineState*& pPSO);
-    template <typename RenderDeviceImplType>
-    void UnpackRenderPass(const RenderPassUnpackInfo& DeArchiveInfo, RenderDeviceImplType* pDevice, IRenderPass*& pRP);
-
-    virtual void UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, IRenderDevice* pDevice, IPipelineResourceSignature*& pSignature) = 0;
+    void UnpackGraphicsPSO(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState*& pPSO);
+    void UnpackComputePSO(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState*& pPSO);
+    void UnpackRayTracingPSO(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState*& pPSO);
+    void UnpackRenderPass(const RenderPassUnpackInfo& DeArchiveInfo, IRenderPass*& pRP);
 
     template <SerializerMode Mode>
     struct ArraySerializerHelper
@@ -367,10 +382,16 @@ public:
         {
             VERIFY_EXPR(Allocator != nullptr);
             VERIFY_EXPR(DstArray == nullptr);
-            auto* pArray = Allocator->Allocate<T>(Count);
+            auto* pArray = Allocator->ConstructArray<T>(Count);
             DstArray     = pArray;
             return pArray;
         }
+    };
+
+    struct ShaderIndexArray
+    {
+        const Uint32* pIndices = nullptr;
+        Uint32        Count    = 0;
     };
 
     template <SerializerMode Mode>
@@ -411,6 +432,10 @@ public:
         static void SerializeRenderPass(Serializer<Mode>&       Ser,
                                         TQual<RenderPassDesc>&  RPDesc,
                                         DynamicLinearAllocator* Allocator);
+
+        static void SerializeShaders(Serializer<Mode>&        Ser,
+                                     TQual<ShaderIndexArray>& Shaders,
+                                     DynamicLinearAllocator*  Allocator);
     };
 };
 
@@ -418,246 +443,5 @@ DECL_TRIVIALLY_SERIALIZABLE(BlendStateDesc);
 DECL_TRIVIALLY_SERIALIZABLE(RasterizerStateDesc);
 DECL_TRIVIALLY_SERIALIZABLE(DepthStencilStateDesc);
 DECL_TRIVIALLY_SERIALIZABLE(SampleDesc);
-
-
-template <>
-inline DeviceObjectArchiveBase::ReleaseTempResourceRefs<GraphicsPipelineStateCreateInfo>::~ReleaseTempResourceRefs()
-{
-    if (PSO.CreateInfo.ppResourceSignatures != nullptr)
-    {
-        for (Uint32 i = 0; i < PSO.CreateInfo.ResourceSignaturesCount; ++i)
-        {
-            if (PSO.CreateInfo.ppResourceSignatures[i] != nullptr)
-                PSO.CreateInfo.ppResourceSignatures[i]->Release();
-        }
-    }
-
-    if (PSO.CreateInfo.GraphicsPipeline.pRenderPass != nullptr)
-    {
-        PSO.CreateInfo.GraphicsPipeline.pRenderPass->Release();
-    }
-
-    // AZ TODO: release shaders
-}
-
-template <>
-inline DeviceObjectArchiveBase::ReleaseTempResourceRefs<ComputePipelineStateCreateInfo>::~ReleaseTempResourceRefs()
-{
-    if (PSO.CreateInfo.ppResourceSignatures != nullptr)
-    {
-        for (Uint32 i = 0; i < PSO.CreateInfo.ResourceSignaturesCount; ++i)
-        {
-            if (PSO.CreateInfo.ppResourceSignatures[i] != nullptr)
-                PSO.CreateInfo.ppResourceSignatures[i]->Release();
-        }
-    }
-
-    // AZ TODO: release shaders
-}
-
-template <>
-inline DeviceObjectArchiveBase::ReleaseTempResourceRefs<RayTracingPipelineStateCreateInfo>::~ReleaseTempResourceRefs()
-{
-    if (PSO.CreateInfo.ppResourceSignatures != nullptr)
-    {
-        for (Uint32 i = 0; i < PSO.CreateInfo.ResourceSignaturesCount; ++i)
-        {
-            if (PSO.CreateInfo.ppResourceSignatures[i] != nullptr)
-                PSO.CreateInfo.ppResourceSignatures[i]->Release();
-        }
-    }
-
-    // AZ TODO: release shaders
-}
-
-template <typename CreateInfoType, typename RenderDeviceImplType>
-bool DeviceObjectArchiveBase::CreateResourceSignatures(PSOData<CreateInfoType>& PSO, RenderDeviceImplType* pRenderDevice)
-{
-    if (PSO.CreateInfo.ResourceSignaturesCount == 0)
-        return true;
-
-    auto* ppResourceSignatures = PSO.Allocator.Allocate<IPipelineResourceSignature*>(PSO.CreateInfo.ResourceSignaturesCount);
-
-    ResourceSignatureUnpackInfo UnpackInfo;
-    UnpackInfo.SRBAllocationGranularity = DefaultSRBAllocationGranularity;
-
-    PSO.CreateInfo.ppResourceSignatures = ppResourceSignatures;
-    for (Uint32 i = 0; i < PSO.CreateInfo.ResourceSignaturesCount; ++i)
-    {
-        UnpackInfo.Name = PSO.PRSNames[i];
-        UnpackResourceSignature(UnpackInfo, pRenderDevice, ppResourceSignatures[i]); // Reference released in ~ReleaseTempResourceRefs()
-        if (ppResourceSignatures[i] == nullptr)
-            return false;
-    }
-    return true;
-}
-
-template <template <SerializerMode> class TSerializerImpl,
-          typename TSerializedData,
-          typename RenderDeviceImplType>
-void DeviceObjectArchiveBase::UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, RenderDeviceImplType* pRenderDevice, IPipelineResourceSignature*& pSignature)
-{
-    VERIFY_EXPR(pRenderDevice != nullptr);
-
-    if (GetCachedPRS(DeArchiveInfo.Name, pSignature))
-        return;
-
-    PRSData PRS{GetRawAllocator()};
-    if (!ReadPRSData(DeArchiveInfo.Name, PRS))
-        return;
-
-    PRS.Desc.SRBAllocationGranularity = DeArchiveInfo.SRBAllocationGranularity;
-
-    LoadDeviceSpecificData(
-        *PRS.pHeader,
-        PRS.Allocator,
-        "Resource signature",
-        [&](Serializer<SerializerMode::Read>& Ser) //
-        {
-            TSerializedData SerializedData;
-            SerializedData.Base = PRS.Serialized;
-            TSerializerImpl<SerializerMode::Read>::SerializePRS(Ser, SerializedData, &PRS.Allocator);
-            VERIFY_EXPR(Ser.IsEnd());
-
-            pRenderDevice->CreatePipelineResourceSignature(PRS.Desc, SerializedData, &pSignature);
-            CachePRSResource(DeArchiveInfo.Name, pSignature);
-        });
-}
-
-template <typename RenderDeviceImplType>
-bool DeviceObjectArchiveBase::CreateRenderPass(PSOData<GraphicsPipelineStateCreateInfo>& PSO, RenderDeviceImplType* pRenderDevice)
-{
-    if (PSO.RenderPassName == nullptr)
-        return true;
-
-    RenderPassUnpackInfo UnpackInfo;
-    UnpackInfo.Name = PSO.RenderPassName;
-
-    IRenderPass* pRP = nullptr;
-    UnpackRenderPass(UnpackInfo, pRenderDevice, pRP); // Reference released in ~ReleaseTempResourceRefs()
-    if (pRP == nullptr)
-        return false;
-
-    PSO.CreateInfo.GraphicsPipeline.pRenderPass = pRP;
-    return true;
-}
-
-template <typename RenderDeviceImplType>
-void DeviceObjectArchiveBase::UnpackGraphicsPSO(const PipelineStateUnpackInfo& DeArchiveInfo, RenderDeviceImplType* pRenderDevice, IPipelineState*& pPSO)
-{
-    VERIFY_EXPR(pRenderDevice != nullptr);
-
-    if (GetCachedGraphicsPSO(DeArchiveInfo.Name, pPSO))
-        return;
-
-    PSOData<GraphicsPipelineStateCreateInfo> PSO{GetRawAllocator()};
-    if (!ReadGraphicsPSOData(DeArchiveInfo.Name, PSO))
-        return;
-
-    ReleaseTempResourceRefs<GraphicsPipelineStateCreateInfo> ReleaseRefs{PSO};
-
-    if (!CreateRenderPass(PSO, pRenderDevice))
-        return;
-
-    if (!CreateResourceSignatures(PSO, pRenderDevice))
-        return;
-
-    PSO.CreateInfo.PSODesc.SRBAllocationGranularity = DeArchiveInfo.SRBAllocationGranularity;
-    PSO.CreateInfo.PSODesc.ImmediateContextMask     = DeArchiveInfo.ImmediateContextMask;
-
-    LoadDeviceSpecificData(
-        *PSO.pHeader,
-        PSO.Allocator,
-        "Graphics pipeline",
-        [&](Serializer<SerializerMode::Read>& Ser) //
-        {
-            // AZ TODO
-
-            pRenderDevice->CreateGraphicsPipelineState(PSO.CreateInfo, &pPSO);
-            CacheGraphicsPSOResource(DeArchiveInfo.Name, pPSO);
-        });
-}
-
-template <typename RenderDeviceImplType>
-void DeviceObjectArchiveBase::UnpackComputePSO(const PipelineStateUnpackInfo& DeArchiveInfo, RenderDeviceImplType* pRenderDevice, IPipelineState*& pPSO)
-{
-    VERIFY_EXPR(pRenderDevice != nullptr);
-
-    if (GetCachedComputePSO(DeArchiveInfo.Name, pPSO))
-        return;
-
-    PSOData<ComputePipelineStateCreateInfo> PSO{GetRawAllocator()};
-    if (!ReadComputePSOData(DeArchiveInfo.Name, PSO))
-        return;
-
-    ReleaseTempResourceRefs<ComputePipelineStateCreateInfo> ReleaseRefs{PSO};
-
-    if (!CreateResourceSignatures(PSO, pRenderDevice))
-        return;
-
-    PSO.CreateInfo.PSODesc.SRBAllocationGranularity = DeArchiveInfo.SRBAllocationGranularity;
-    PSO.CreateInfo.PSODesc.ImmediateContextMask     = DeArchiveInfo.ImmediateContextMask;
-
-    LoadDeviceSpecificData(
-        *PSO.pHeader,
-        PSO.Allocator,
-        "Compute pipeline",
-        [&](Serializer<SerializerMode::Read>& Ser) //
-        {
-            // AZ TODO
-
-            pRenderDevice->CreateComputePipelineState(PSO.CreateInfo, &pPSO);
-            CacheComputePSOResource(DeArchiveInfo.Name, pPSO);
-        });
-}
-
-template <typename RenderDeviceImplType>
-void DeviceObjectArchiveBase::UnpackRayTracingPSO(const PipelineStateUnpackInfo& DeArchiveInfo, RenderDeviceImplType* pRenderDevice, IPipelineState*& pPSO)
-{
-    VERIFY_EXPR(pRenderDevice != nullptr);
-
-    if (GetCachedRayTracingPSO(DeArchiveInfo.Name, pPSO))
-        return;
-
-    PSOData<RayTracingPipelineStateCreateInfo> PSO{GetRawAllocator()};
-    if (!ReadRayTracingPSOData(DeArchiveInfo.Name, PSO))
-        return;
-
-    ReleaseTempResourceRefs<RayTracingPipelineStateCreateInfo> ReleaseRefs{PSO};
-
-    if (!CreateResourceSignatures(PSO, pRenderDevice))
-        return;
-
-    PSO.CreateInfo.PSODesc.SRBAllocationGranularity = DeArchiveInfo.SRBAllocationGranularity;
-    PSO.CreateInfo.PSODesc.ImmediateContextMask     = DeArchiveInfo.ImmediateContextMask;
-
-    LoadDeviceSpecificData(
-        *PSO.pHeader,
-        PSO.Allocator,
-        "Ray tracing pipeline",
-        [&](Serializer<SerializerMode::Read>& Ser) //
-        {
-            // AZ TODO
-
-            pRenderDevice->CreateRayTracingPipelineState(PSO.CreateInfo, &pPSO);
-            CacheRayTracingPSOResource(DeArchiveInfo.Name, pPSO);
-        });
-}
-
-template <typename RenderDeviceImplType>
-void DeviceObjectArchiveBase::UnpackRenderPass(const RenderPassUnpackInfo& DeArchiveInfo, RenderDeviceImplType* pRenderDevice, IRenderPass*& pRP)
-{
-    VERIFY_EXPR(pRenderDevice != nullptr);
-
-    if (GetCachedRP(DeArchiveInfo.Name, pRP))
-        return;
-
-    RPData RP{GetRawAllocator()};
-    if (!ReadRPData(DeArchiveInfo.Name, RP))
-        return;
-
-    pRenderDevice->CreateRenderPass(RP.Desc, &pRP);
-    CacheRPResource(DeArchiveInfo.Name, pRP);
-}
 
 } // namespace Diligent

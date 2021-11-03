@@ -58,11 +58,6 @@ static const INTERFACE_ID IID_SerializationAPI =
 DILIGENT_BEGIN_INTERFACE(ISerializationAPI, IObject)
 {
     // AZ TODO
-    VIRTUAL void METHOD(CreateDeviceObjectArchive)(THIS_
-                                                   IArchiveSource*        pSource,
-                                                   IDeviceObjectArchive** ppArchive) PURE;
-    
-    // AZ TODO
     VIRTUAL void METHOD(CreateArchiveSourceFromFile)(THIS_
                                                      const Char*      Path,
                                                      IArchiveSource** ppSource) PURE;
@@ -72,6 +67,11 @@ DILIGENT_BEGIN_INTERFACE(ISerializationAPI, IObject)
                                                      IDataBlob*       pBlob,
                                                      IArchiveSource** ppSource) PURE;
 
+    // AZ TODO
+    VIRTUAL void METHOD(CreateDeviceObjectArchive)(THIS_
+                                                   IArchiveSource*        pSource,
+                                                   IDeviceObjectArchive** ppArchive) PURE;
+    
     /// Resource signatures used by the PSO will be unpacked from the same archive.
     VIRTUAL void METHOD(UnpackPipelineState)(THIS_
                                              const PipelineStateUnpackInfo REF DeArchiveInfo,

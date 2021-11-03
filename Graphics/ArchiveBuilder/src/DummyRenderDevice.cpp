@@ -24,38 +24,64 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
-
-/// \file
-/// Declaration of Diligent::DeviceObjectArchiveVkImpl class
-
-#include "EngineVkImplTraits.hpp"
-#include "DeviceObjectArchiveBase.hpp"
+#include "DummyRenderDevice.hpp"
+#include "GLSLangUtils.hpp"
 
 namespace Diligent
 {
-
-/// Device object archive object implementation in Vulkan backend.
-class DeviceObjectArchiveVkImpl final : public DeviceObjectArchiveBase
+namespace
 {
-public:
-    DeviceObjectArchiveVkImpl(IReferenceCounters* pRefCounters, IArchiveSource* pSource);
-    ~DeviceObjectArchiveVkImpl();
+static constexpr Uint32 GetDeviceBits()
+{
+    Uint32 DeviceBits = 0;
+#if D3D11_SUPPORTED
+    DeviceBits |= 1 << RENDER_DEVICE_TYPE_D3D11;
+#endif
+#if D3D12_SUPPORTED
+    DeviceBits |= 1 << RENDER_DEVICE_TYPE_D3D12;
+#endif
+#if GL_SUPPORTED
+    DeviceBits |= 1 << RENDER_DEVICE_TYPE_GL;
+#endif
+#if GLES_SUPPORTED
+    DeviceBits |= 1 << RENDER_DEVICE_TYPE_GLES;
+#endif
+#if VULKAN_SUPPORTED
+    DeviceBits |= 1 << RENDER_DEVICE_TYPE_VULKAN;
+#endif
+#if METAL_SUPPORTED
+    DeviceBits |= 1 << RENDER_DEVICE_TYPE_METAL;
+#endif
+    return DeviceBits;
+}
 
-    void UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature*& pSignature) override;
+static constexpr Uint32 ValidDeviceBits = GetDeviceBits();
+} // namespace
 
-    template <SerializerMode Mode>
-    struct SerializerVkImpl
-    {
-        template <typename T>
-        using TQual = typename Serializer<Mode>::template TQual<T>;
 
-        static void SerializePRS(Serializer<Mode>&                                       Ser,
-                                 TQual<PipelineResourceSignatureVkImpl::SerializedData>& Serialized,
-                                 DynamicLinearAllocator*                                 Allocator);
-    };
-};
+DummyRenderDevice::DummyRenderDevice() :
+    TBase{nullptr},
+    m_pDxCompiler{CreateDXCompiler(DXCompilerTarget::Direct3D12, 0, nullptr)},
+    m_pVkDxCompiler{CreateDXCompiler(DXCompilerTarget::Vulkan, GetVkVersion(), nullptr)}
+{
+    m_DeviceInfo.Features  = DeviceFeatures{DEVICE_FEATURE_STATE_ENABLED};
+    m_AdapterInfo.Features = DeviceFeatures{DEVICE_FEATURE_STATE_ENABLED};
 
-DECL_TRIVIALLY_SERIALIZABLE(PipelineResourceAttribsVk);
+#if !DILIGENT_NO_GLSLANG
+    GLSLangUtils::InitializeGlslang();
+#endif
+}
+
+DummyRenderDevice::~DummyRenderDevice()
+{
+#if !DILIGENT_NO_GLSLANG
+    GLSLangUtils::FinalizeGlslang();
+#endif
+}
+
+Uint32 DummyRenderDevice::GetValidDeviceBits()
+{
+    return ValidDeviceBits;
+}
 
 } // namespace Diligent

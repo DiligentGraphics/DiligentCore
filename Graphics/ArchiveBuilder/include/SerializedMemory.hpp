@@ -26,36 +26,32 @@
 
 #pragma once
 
-/// \file
-/// Declaration of Diligent::DeviceObjectArchiveVkImpl class
-
-#include "EngineVkImplTraits.hpp"
-#include "DeviceObjectArchiveBase.hpp"
-
 namespace Diligent
 {
 
-/// Device object archive object implementation in Vulkan backend.
-class DeviceObjectArchiveVkImpl final : public DeviceObjectArchiveBase
+struct SerializedMemory
 {
-public:
-    DeviceObjectArchiveVkImpl(IReferenceCounters* pRefCounters, IArchiveSource* pSource);
-    ~DeviceObjectArchiveVkImpl();
+    void*  Ptr  = nullptr;
+    size_t Size = 0;
 
-    void UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature*& pSignature) override;
+    SerializedMemory() {}
 
-    template <SerializerMode Mode>
-    struct SerializerVkImpl
+    SerializedMemory(void* _Ptr, size_t _Size) :
+        Ptr{_Ptr}, Size{_Size}
+    {}
+
+    SerializedMemory(SerializedMemory&& Other) :
+        Ptr{Other.Ptr}, Size{Other.Size}
     {
-        template <typename T>
-        using TQual = typename Serializer<Mode>::template TQual<T>;
+        Other.Ptr  = nullptr;
+        Other.Size = 0;
+    }
 
-        static void SerializePRS(Serializer<Mode>&                                       Ser,
-                                 TQual<PipelineResourceSignatureVkImpl::SerializedData>& Serialized,
-                                 DynamicLinearAllocator*                                 Allocator);
-    };
+    ~SerializedMemory();
+
+    SerializedMemory& operator=(SerializedMemory&& Rhs);
+
+    explicit operator bool() const { return Ptr != nullptr; }
 };
-
-DECL_TRIVIALLY_SERIALIZABLE(PipelineResourceAttribsVk);
 
 } // namespace Diligent

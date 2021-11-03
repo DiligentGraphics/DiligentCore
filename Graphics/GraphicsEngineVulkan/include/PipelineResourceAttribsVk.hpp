@@ -58,7 +58,7 @@ enum class DescriptorType : Uint8
     InputAttachment_General,
     AccelerationStructure,
     Count,
-    Unknown = 0xFF,
+    Unknown = 0xF,
 };
 
 
@@ -124,6 +124,12 @@ public:
         VERIFY(DescrSet            == _DescrSet,     "Descriptor set (", _DescrSet, ") exceeds maximum representable value");
         // clang-format on
     }
+
+    // Only for serialization
+    PipelineResourceAttribsVk() noexcept :
+        PipelineResourceAttribsVk{0, 0, 0, DescriptorType::Unknown, 0, false, 0, 0}
+    {}
+
 
     Uint32 CacheOffset(ResourceCacheContentType CacheType) const
     {

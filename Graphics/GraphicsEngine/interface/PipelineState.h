@@ -435,6 +435,9 @@ DILIGENT_TYPED_ENUM(PSO_CREATE_FLAGS, Uint32)
     /// that is not found in any of the designated shader stages.
     /// Use this flag to silence these warnings.
     PSO_CREATE_FLAG_IGNORE_MISSING_IMMUTABLE_SAMPLERS = 0x02,
+
+    /// AZ TODO
+    PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES       = 0x04,
 };
 DEFINE_FLAG_ENUM_OPERATORS(PSO_CREATE_FLAGS);
 

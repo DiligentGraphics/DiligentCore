@@ -36,6 +36,7 @@
 
 namespace Diligent
 {
+class IDXCompiler;
 
 /// Shader object object implementation in Vulkan backend.
 class ShaderVkImpl final : public ShaderBase<EngineVkImplTraits>
@@ -43,7 +44,31 @@ class ShaderVkImpl final : public ShaderBase<EngineVkImplTraits>
 public:
     using TShaderBase = ShaderBase<EngineVkImplTraits>;
 
-    ShaderVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl* pRenderDeviceVk, const ShaderCreateInfo& CreationAttribs);
+    struct CreateInfo
+    {
+        IDXCompiler*               pDXCompiler;
+        const RenderDeviceInfo&    DeviceInfo;
+        const GraphicsAdapterInfo& AdapterInfo;
+        Uint32                     VkVersion;
+        bool                       HasSpirv14;
+
+        CreateInfo(IDXCompiler*               _pDXCompiler,
+                   const RenderDeviceInfo&    _DeviceInfo,
+                   const GraphicsAdapterInfo& _AdapterInfo,
+                   Uint32                     _VkVersion,
+                   bool                       _HasSpirv14) :
+            pDXCompiler{_pDXCompiler},
+            DeviceInfo{_DeviceInfo},
+            AdapterInfo{_AdapterInfo},
+            VkVersion{_VkVersion},
+            HasSpirv14{_HasSpirv14}
+        {}
+    };
+    ShaderVkImpl(IReferenceCounters*     pRefCounters,
+                 RenderDeviceVkImpl*     pRenderDeviceVk,
+                 const ShaderCreateInfo& ShaderCI,
+                 const CreateInfo&       VkShaderCI,
+                 bool                    IsDeviceInternal = false);
     ~ShaderVkImpl();
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ShaderVk, TShaderBase)

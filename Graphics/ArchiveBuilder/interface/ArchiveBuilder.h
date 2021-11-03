@@ -55,11 +55,6 @@ struct PipelineStateArchiveInfo
     
     // RENDER_DEVICE_TYPE
     Uint32 DeviceBits DEFAULT_INITIALIZER(0);
-
-    // Count in PipelineStateCreateInfo
-    const Char** pResourceSignatureNames    DEFAULT_INITIALIZER(nullptr);
-
-    const Char* RenderPassName DEFAULT_INITIALIZER(nullptr);
 };
 typedef struct PipelineStateArchiveInfo PipelineStateArchiveInfo;
 
@@ -70,13 +65,6 @@ struct ResourceSignatureArchiveInfo
     Uint32 DeviceBits DEFAULT_INITIALIZER(0);
 };
 typedef struct ResourceSignatureArchiveInfo ResourceSignatureArchiveInfo;
-
-// AZ TODO
-struct RenderPassArchiveInfo
-{
-    int tmp;
-};
-typedef struct RenderPassArchiveInfo RenderPassArchiveInfo;
 
 
 // AZ TODO
@@ -121,11 +109,6 @@ DILIGENT_BEGIN_INTERFACE(IArchiveBuilder, IObject)
     VIRTUAL Bool METHOD(ArchivePipelineResourceSignature)(THIS_
                                                           const PipelineResourceSignatureDesc REF SignatureDesc,
                                                           const ResourceSignatureArchiveInfo REF  ArchiveInfo) PURE;
-    
-    // AZ TODO
-    VIRTUAL Bool METHOD(ArchiveRenderPass)(THIS_
-                                           const RenderPassDesc REF        Desc,
-                                           const RenderPassArchiveInfo REF ArchiveInfo) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -140,7 +123,6 @@ DILIGENT_END_INTERFACE
 #    define IArchiveBuilder_ArchiveRayTracingPipelineState(This, ...)   CALL_IFACE_METHOD(ArchiveBuilder, ArchiveRayTracingPipelineState,   This, __VA_ARGS__)
 #    define IArchiveBuilder_ArchiveTilePipelineState(This, ...)         CALL_IFACE_METHOD(ArchiveBuilder, ArchiveTilePipelineState,         This, __VA_ARGS__)
 #    define IArchiveBuilder_ArchivePipelineResourceSignature(This, ...) CALL_IFACE_METHOD(ArchiveBuilder, ArchivePipelineResourceSignature, This, __VA_ARGS__)
-#    define IArchiveBuilder_ArchiveRenderPass(This, ...)                CALL_IFACE_METHOD(ArchiveBuilder, ArchiveRenderPass,                This, __VA_ARGS__)
 
 #endif
 

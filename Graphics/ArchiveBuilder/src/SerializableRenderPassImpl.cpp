@@ -24,38 +24,35 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
-
-/// \file
-/// Declaration of Diligent::DeviceObjectArchiveVkImpl class
-
-#include "EngineVkImplTraits.hpp"
+#include "SerializableRenderPassImpl.hpp"
 #include "DeviceObjectArchiveBase.hpp"
 
 namespace Diligent
 {
 
-/// Device object archive object implementation in Vulkan backend.
-class DeviceObjectArchiveVkImpl final : public DeviceObjectArchiveBase
+template <SerializerMode Mode>
+using SerializerImpl = DeviceObjectArchiveBase::SerializerImpl<Mode>;
+
+SerializableRenderPassImpl::SerializableRenderPassImpl(IReferenceCounters*   pRefCounters,
+                                                       DummyRenderDevice*    pDevice,
+                                                       const RenderPassDesc& Desc) :
+    TBase{pRefCounters, pDevice, Desc, true}
 {
-public:
-    DeviceObjectArchiveVkImpl(IReferenceCounters* pRefCounters, IArchiveSource* pSource);
-    ~DeviceObjectArchiveVkImpl();
+    Serializer<SerializerMode::Measure> MeasureSer;
+    SerializerImpl<SerializerMode::Measure>::SerializeRenderPass(MeasureSer, m_Desc, nullptr);
 
-    void UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature*& pSignature) override;
+    const size_t SerSize = MeasureSer.GetSize(nullptr);
+    void*        SerPtr  = ALLOCATE_RAW(GetRawAllocator(), "", SerSize);
 
-    template <SerializerMode Mode>
-    struct SerializerVkImpl
-    {
-        template <typename T>
-        using TQual = typename Serializer<Mode>::template TQual<T>;
+    Serializer<SerializerMode::Write> Ser{SerPtr, SerSize};
+    SerializerImpl<SerializerMode::Write>::SerializeRenderPass(Ser, m_Desc, nullptr);
+    VERIFY_EXPR(Ser.IsEnd());
 
-        static void SerializePRS(Serializer<Mode>&                                       Ser,
-                                 TQual<PipelineResourceSignatureVkImpl::SerializedData>& Serialized,
-                                 DynamicLinearAllocator*                                 Allocator);
-    };
-};
+    m_SharedData = SerializedMemory{SerPtr, SerSize};
+}
 
-DECL_TRIVIALLY_SERIALIZABLE(PipelineResourceAttribsVk);
+SerializableRenderPassImpl::~SerializableRenderPassImpl()
+{}
+
 
 } // namespace Diligent

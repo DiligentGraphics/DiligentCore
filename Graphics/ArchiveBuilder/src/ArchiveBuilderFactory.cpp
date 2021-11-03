@@ -31,6 +31,10 @@
 #undef GetObject
 
 #include "ArchiveBuilderImpl.hpp"
+#include "DummyRenderDevice.hpp"
+#include "SerializableShaderImpl.hpp"
+#include "SerializableRenderPassImpl.hpp"
+#include "SerializableResourceSignatureImpl.hpp"
 #include "EngineMemory.h"
 
 namespace Diligent
@@ -89,12 +93,72 @@ public:
         try
         {
             auto& RawMemAllocator = GetRawAllocator();
-            auto* pBuilderImpl(NEW_RC_OBJ(RawMemAllocator, "Archive builder instance", ArchiveBuilderImpl)());
+            auto* pBuilderImpl(NEW_RC_OBJ(RawMemAllocator, "Archive builder instance", ArchiveBuilderImpl)(&m_RenderDevice, this));
             pBuilderImpl->QueryInterface(IID_ArchiveBuilder, reinterpret_cast<IObject**>(ppBuilder));
         }
         catch (...)
         {
             LOG_ERROR_MESSAGE("Failed to create the archive builder");
+        }
+    }
+
+    virtual void DILIGENT_CALL_TYPE CreateShader(const ShaderCreateInfo& ShaderCI, Uint32 DeviceBits, IShader** ppShader) override final
+    {
+        DEV_CHECK_ERR(ppShader != nullptr, "ppShader must not be null");
+        if (!ppShader)
+            return;
+
+        *ppShader = nullptr;
+        try
+        {
+            auto& RawMemAllocator = GetRawAllocator();
+            auto* pShaderImpl(NEW_RC_OBJ(RawMemAllocator, "Shader instance", SerializableShaderImpl)(&m_RenderDevice, ShaderCI, DeviceBits));
+            pShaderImpl->QueryInterface(IID_Shader, reinterpret_cast<IObject**>(ppShader));
+        }
+        catch (...)
+        {
+            LOG_ERROR_MESSAGE("Failed to create the shader");
+        }
+    }
+
+    virtual void DILIGENT_CALL_TYPE CreateRenderPass(const RenderPassDesc& Desc,
+                                                     IRenderPass**         ppRenderPass) override final
+    {
+        DEV_CHECK_ERR(ppRenderPass != nullptr, "ppRenderPass must not be null");
+        if (!ppRenderPass)
+            return;
+
+        *ppRenderPass = nullptr;
+        try
+        {
+            auto& RawMemAllocator = GetRawAllocator();
+            auto* pRenderPassImpl(NEW_RC_OBJ(RawMemAllocator, "Render pass instance", SerializableRenderPassImpl)(&m_RenderDevice, Desc));
+            pRenderPassImpl->QueryInterface(IID_RenderPass, reinterpret_cast<IObject**>(ppRenderPass));
+        }
+        catch (...)
+        {
+            LOG_ERROR_MESSAGE("Failed to create the render pass");
+        }
+    }
+
+    virtual void DILIGENT_CALL_TYPE CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
+                                                                    Uint32                               DeviceBits,
+                                                                    IPipelineResourceSignature**         ppSignature) override final
+    {
+        DEV_CHECK_ERR(ppSignature != nullptr, "ppSignature must not be null");
+        if (!ppSignature)
+            return;
+
+        *ppSignature = nullptr;
+        try
+        {
+            auto& RawMemAllocator = GetRawAllocator();
+            auto* pSignatureImpl(NEW_RC_OBJ(RawMemAllocator, "Pipeline resource signature instance", SerializableResourceSignatureImpl)(&m_RenderDevice, Desc, DeviceBits));
+            pSignatureImpl->QueryInterface(IID_PipelineResourceSignature, reinterpret_cast<IObject**>(ppSignature));
+        }
+        catch (...)
+        {
+            LOG_ERROR_MESSAGE("Failed to create the resource signature");
         }
     }
 
@@ -153,6 +217,7 @@ private:
     };
 
     DummyReferenceCounters m_RefCounters;
+    DummyRenderDevice      m_RenderDevice;
 };
 
 } // namespace

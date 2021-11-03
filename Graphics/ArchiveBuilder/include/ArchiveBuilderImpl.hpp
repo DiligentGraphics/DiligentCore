@@ -28,12 +28,46 @@
 
 #include <unordered_map>
 #include <array>
+#include <bitset>
+
 #include "ArchiveBuilder.h"
+#include "ArchiveBuilderFactory.h"
+#include "RenderDevice.h"
 
 #include "PipelineResourceSignatureBase.hpp"
 #include "DeviceObjectArchiveBase.hpp"
 #include "RefCntAutoPtr.hpp"
 #include "ObjectBase.hpp"
+
+#include "HashUtils.hpp"
+#include "BasicMath.hpp"
+#include "PlatformMisc.hpp"
+#include "DataBlobImpl.hpp"
+#include "MemoryFileStream.hpp"
+#include "PipelineStateBase.hpp"
+
+#include "DummyRenderDevice.hpp"
+#include "SerializedMemory.hpp"
+#include "SerializableShaderImpl.hpp"
+#include "SerializableRenderPassImpl.hpp"
+#include "SerializableResourceSignatureImpl.hpp"
+
+#if D3D12_SUPPORTED
+#    include "../../GraphicsEngineD3D12/include/pch.h"
+#    include "RenderDeviceD3D12Impl.hpp"
+#    include "PipelineResourceSignatureD3D12Impl.hpp"
+#    include "PipelineStateD3D12Impl.hpp"
+#    include "ShaderD3D12Impl.hpp"
+#    include "DeviceObjectArchiveD3D12Impl.hpp"
+#endif
+#if VULKAN_SUPPORTED
+#    include "VulkanUtilities/VulkanHeaders.h"
+#    include "RenderDeviceVkImpl.hpp"
+#    include "PipelineResourceSignatureVkImpl.hpp"
+#    include "PipelineStateVkImpl.hpp"
+#    include "ShaderVkImpl.hpp"
+#    include "DeviceObjectArchiveVkImpl.hpp"
+#endif
 
 namespace Diligent
 {
@@ -43,7 +77,7 @@ class ArchiveBuilderImpl final : public ObjectBase<IArchiveBuilder>
 public:
     using TBase = ObjectBase<IArchiveBuilder>;
 
-    explicit ArchiveBuilderImpl(IReferenceCounters* pRefCounters);
+    ArchiveBuilderImpl(IReferenceCounters* pRefCounters, DummyRenderDevice* pDevice, IArchiveBuilderFactory* pFactory);
     ~ArchiveBuilderImpl();
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ArchiveBuilder, TBase)
@@ -74,103 +108,113 @@ public:
     virtual Bool DILIGENT_CALL_TYPE ArchivePipelineResourceSignature(const PipelineResourceSignatureDesc& SignatureDesc,
                                                                      const ResourceSignatureArchiveInfo&  ArchiveInfo) override final;
 
-    /// Implementation of IArchiveBuilder::ArchiveRenderPass().
-    virtual Bool DILIGENT_CALL_TYPE ArchiveRenderPass(const RenderPassDesc&        Desc,
-                                                      const RenderPassArchiveInfo& ArchiveInfo) override final;
-
 private:
     using DeviceType               = DeviceObjectArchiveBase::DeviceType;
     using ArchiveHeader            = DeviceObjectArchiveBase::ArchiveHeader;
     using ChunkType                = DeviceObjectArchiveBase::ChunkType;
     using ChunkHeader              = DeviceObjectArchiveBase::ChunkHeader;
     using NamedResourceArrayHeader = DeviceObjectArchiveBase::NamedResourceArrayHeader;
+    using FileOffsetAndSize        = DeviceObjectArchiveBase::FileOffsetAndSize;
     using PRSDataHeader            = DeviceObjectArchiveBase::PRSDataHeader;
     using PSODataHeader            = DeviceObjectArchiveBase::PSODataHeader;
     using RPDataHeader             = DeviceObjectArchiveBase::RPDataHeader;
+    using ShadersDataHeader        = DeviceObjectArchiveBase::ShadersDataHeader;
     using TPRSNames                = DeviceObjectArchiveBase::TPRSNames;
+    using ShaderIndexArray         = DeviceObjectArchiveBase::ShaderIndexArray;
 
-    struct TSerializedMem
-    {
-        void*  Ptr  = nullptr;
-        size_t Size = 0;
-
-        TSerializedMem() {}
-        TSerializedMem(void* _Ptr, size_t _Size) :
-            Ptr{_Ptr}, Size{_Size} {}
-
-        TSerializedMem(TSerializedMem&& Other) :
-            Ptr{Other.Ptr}, Size{Other.Size}
-        {
-            Other.Ptr  = nullptr;
-            Other.Size = 0;
-        }
-
-        ~TSerializedMem();
-
-        TSerializedMem& operator=(TSerializedMem&& Rhs);
-
-        explicit operator bool() const { return Ptr != nullptr; }
-    };
-
-    static constexpr Uint32 DeviceDataCount = Uint32{DeviceType::Count} + 1;
+    static constexpr auto   InvalidOffset   = DeviceObjectArchiveBase::BaseDataHeader::InvalidOffset;
+    static constexpr Uint32 DeviceDataCount = Uint32{DeviceType::Count};
+    using TPerDeviceData                    = std::array<SerializedMemory, DeviceDataCount>;
 
     struct PRSData
     {
-        TSerializedMem                           DescMem;
-        PipelineResourceSignatureDesc*           pDesc       = nullptr;
-        PipelineResourceSignatureSerializedData* pSerialized = nullptr;
+        RefCntAutoPtr<SerializableResourceSignatureImpl> pPRS;
 
-    private:
-        std::array<TSerializedMem, DeviceDataCount> m_PerDeviceData;
-
-    public:
-        TSerializedMem&       GetSharedData() { return m_PerDeviceData[0]; }
-        TSerializedMem const& GetSharedData() const { return m_PerDeviceData[0]; }
-        TSerializedMem&       GetDeviceData(DeviceType DevType) { return m_PerDeviceData[Uint32{DevType} + 1]; }
-        TSerializedMem const& GetDeviceData(DeviceType DevType) const { return m_PerDeviceData[Uint32{DevType} + 1]; }
-        TSerializedMem&       GetData(Uint32 Ind) { return m_PerDeviceData[Ind]; }
-        TSerializedMem const& GetData(Uint32 Ind) const { return m_PerDeviceData[Ind]; }
+        const SerializedMemory& GetSharedData() const;
+        const SerializedMemory& GetDeviceData(Uint32 Idx) const;
     };
+    //std::unordered_map<HashMapStringKey, PRSData, HashMapStringKey::Hasher> m_PRSMap;
     std::unordered_map<String, PRSData> m_PRSMap;
 
     struct RPData
     {
-        TSerializedMem SharedData;
+        RefCntAutoPtr<SerializableRenderPassImpl> pRP;
 
-        TSerializedMem const& GetSharedData() const { return SharedData; }
+        const SerializedMemory& GetSharedData() const;
     };
     std::unordered_map<String, RPData> m_RPMap;
 
+    struct ShaderKey
+    {
+        SerializedMemory Data;
+
+        bool operator==(const ShaderKey& Rhs) const;
+    };
+    struct ShaderKeyHash
+    {
+        size_t operator()(const ShaderKey& Key) const;
+    };
+    struct PerDeviceShaders
+    {
+        std::unordered_map<ShaderKey, /*Index*/ size_t, ShaderKeyHash> Map;
+    };
+    std::array<PerDeviceShaders, Uint32{DeviceType::Count}> m_Shaders;
+
     struct GraphicsPSOData
     {
-        TSerializedMem                   DescMem;
+        SerializedMemory                 DescMem;
         GraphicsPipelineStateCreateInfo* pCreateInfo = nullptr;
+        SerializedMemory                 SharedData;
+        TPerDeviceData                   PerDeviceData;
 
-    private:
-        std::array<TSerializedMem, DeviceDataCount> m_PerDeviceData;
-
-    public:
-        TSerializedMem&       GetSharedData() { return m_PerDeviceData[0]; }
-        TSerializedMem const& GetSharedData() const { return m_PerDeviceData[0]; }
-        TSerializedMem&       GetDeviceData(DeviceType DevType) { return m_PerDeviceData[Uint32{DevType} + 1]; }
-        TSerializedMem&       GetData(Uint32 Ind) { return m_PerDeviceData[Ind]; }
+        const SerializedMemory& GetSharedData() const { return SharedData; }
     };
-    std::unordered_map<String, PRSData> m_GraphicsPSOMap;
+    std::unordered_map<String, GraphicsPSOData> m_GraphicsPSOMap;
+
+    DummyRenderDevice*      m_pRenderDevice   = nullptr;
+    IArchiveBuilderFactory* m_pArchiveFactory = nullptr;
 
 private:
     struct PendingData
     {
-        std::array<std::vector<Uint8>, Uint32{ChunkType::Count}>   ChunkData;                             // NamedResourceArrayHeader
-        std::array<std::vector<Uint8>, DeviceDataCount>            ArchiveData;                           // ***DataHeader, device specific data
-        std::array<Uint32*, Uint32{ChunkType::Count}>              DataOffsetArrayPerChunk          = {}; // pointer to NamedResourceArrayHeader::DataOffset - offsets to ***DataHeader
-        std::array<Uint32, Uint32{ChunkType::Count}>               ResourceCountPerChunk            = {};
-        std::array<std::vector<Uint32*>, Uint32{ChunkType::Count}> DeviceSpecificDataOffsetPerChunk = {};
+        // AZ TODO: use SerializedMemory instead of vector
+        std::vector<Uint8>                                       HeaderData;                   // ArchiveHeader, ChunkHeader[]
+        std::array<std::vector<Uint8>, Uint32{ChunkType::Count}> ChunkData;                    // NamedResourceArrayHeader
+        std::array<Uint32*, Uint32{ChunkType::Count}>            DataOffsetArrayPerChunk = {}; // pointer to NamedResourceArrayHeader::DataOffset - offsets to ***DataHeader
+        std::array<Uint32, Uint32{ChunkType::Count}>             ResourceCountPerChunk   = {}; //
+        std::vector<Uint8>                                       SharedData;                   // ***DataHeader
+        std::array<std::vector<Uint8>, DeviceDataCount>          PerDeviceData;                // device specific data
+        size_t                                                   OffsetInFile = 0;
     };
 
-    void ReserveSpace(std::array<size_t, DeviceDataCount>& ArchiveDataSize) const;
-    void WriteResourceSignatureData(PendingData& Dst) const;
-    void WriteRenderPassData(PendingData& Dst) const;
-    void WriteGraphicsPSOData(PendingData& Dst) const;
+    void ReserveSpace(size_t& SharedDataSize, std::array<size_t, DeviceDataCount>& PerDeviceDataSize) const;
+    void WriteResourceSignatureData(PendingData& Pending) const;
+    void WriteShaderData(PendingData& Pending) const;
+    void WriteRenderPassData(PendingData& Pending) const;
+    void WriteGraphicsPSOData(PendingData& Pending) const;
+    void UpdateOffsetsInArchive(PendingData& Pending) const;
+    void WritePendingDataToStream(const PendingData& Pending, IFileStream* pStream) const;
+
+    using TShaderIndices = std::vector<Uint32>; // shader data indices in device specific block
+
+    template <typename CreateInfoType>
+    bool PatchShadersVk(const CreateInfoType&           CreateInfo,
+                        const PipelineStateArchiveInfo& ArchiveInfo,
+                        TShaderIndices&                 ShaderIndices);
+    void SerializeShadersForPSO(const TShaderIndices& ShaderIndices,
+                                SerializedMemory&     DeviceData) const;
+
+    template <typename DataType>
+    static void InitNamedResourceArrayHeader(std::vector<Uint8>&                         ChunkData,
+                                             const std::unordered_map<String, DataType>& Map,
+                                             Uint32*&                                    DataSizeArray,
+                                             Uint32*&                                    DataOffsetArray);
+
+    bool AddPipelineResourceSignature(IPipelineResourceSignature* pPRS);
+    bool AddRenderPass(IRenderPass* pRP);
 };
+
+template <SerializerMode Mode>
+using SerializerImpl = DeviceObjectArchiveBase::SerializerImpl<Mode>;
 
 } // namespace Diligent

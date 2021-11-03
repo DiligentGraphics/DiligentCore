@@ -82,10 +82,19 @@ bool PipelineResourceSignaturesCompatible(const PipelineResourceSignatureDesc& D
 /// Calculates hash of the pipeline resource signature description.
 size_t CalculatePipelineResourceSignatureDescHash(const PipelineResourceSignatureDesc& Desc) noexcept;
 
+void ReserveSpaceForPipelineResourceSignatureDesc(FixedLinearAllocator& Allocator, const PipelineResourceSignatureDesc& Desc);
+void CopyPipelineResourceSignatureDesc(FixedLinearAllocator&                                            Allocator,
+                                       const PipelineResourceSignatureDesc&                             SrcDesc,
+                                       PipelineResourceSignatureDesc&                                   DstDesc,
+                                       std::array<Uint16, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES + 1>& ResourceOffsets);
+
 
 // AZ TODO
 struct PipelineResourceSignatureSerializedData
 {
+    // AZ TODO:
+    //void* pAttribs;
+    //Uint32 AttribsSize;
     SHADER_TYPE                               ShaderStages          = SHADER_TYPE_UNKNOWN;
     SHADER_TYPE                               StaticResShaderStages = SHADER_TYPE_UNKNOWN;
     PIPELINE_TYPE                             PipelineType          = PIPELINE_TYPE_INVALID;
@@ -138,7 +147,7 @@ public:
         m_ShaderStages{ShaderStages},
         m_SRBMemAllocator{GetRawAllocator()}
     {
-        // Don't read from m_Desc until it was allocated and copied in CopyDescription()
+        // Don't read from m_Desc until it was allocated and copied in CopyPipelineResourceSignatureDesc()
         this->m_Desc.Resources             = nullptr;
         this->m_Desc.ImmutableSamplers     = nullptr;
         this->m_Desc.CombinedSamplerSuffix = nullptr;
@@ -186,7 +195,7 @@ public:
         m_StaticResStageIndex{Serialized.StaticResStageIndex},
         m_SRBMemAllocator{GetRawAllocator()}
     {
-        // Don't read from m_Desc until it was allocated and copied in CopyDescription()
+        // Don't read from m_Desc until it was allocated and copied in CopyPipelineResourceSignatureDesc()
         this->m_Desc.Resources             = nullptr;
         this->m_Desc.ImmutableSamplers     = nullptr;
         this->m_Desc.CombinedSamplerSuffix = nullptr;
@@ -506,7 +515,7 @@ private:
     {
         FixedLinearAllocator Allocator{RawAllocator};
 
-        ReserveSpaceForDescription(Allocator, Desc);
+        ReserveSpaceForPipelineResourceSignatureDesc(Allocator, Desc);
 
         Allocator.AddSpace<PipelineResourceAttribsType>(Desc.NumResources);
 
@@ -523,7 +532,17 @@ private:
         // The memory is now owned by PipelineResourceSignatureBase and will be freed by Destruct().
         m_pRawMemory = decltype(m_pRawMemory){Allocator.ReleaseOwnership(), STDDeleterRawMem<void>{RawAllocator}};
 
-        CopyDescription(Allocator, Desc);
+        CopyPipelineResourceSignatureDesc(Allocator, Desc, this->m_Desc, m_ResourceOffsets);
+
+#ifdef DILIGENT_DEBUG
+        VERIFY_EXPR(m_ResourceOffsets[SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES] == this->m_Desc.NumResources);
+        for (Uint32 VarType = 0; VarType < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; ++VarType)
+        {
+            auto IdxRange = GetResourceIndexRange(static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(VarType));
+            for (Uint32 idx = IdxRange.first; idx < IdxRange.second; ++idx)
+                VERIFY(this->m_Desc.Resources[idx].VarType == VarType, "Unexpected resource var type");
+        }
+#endif
 
         // Objects will be constructed by the specific implementation
         static_assert(std::is_trivially_destructible<PipelineResourceAttribsType>::value,
@@ -671,93 +690,6 @@ protected:
         Serialized.StaticResShaderStages = m_StaticResShaderStages;
         Serialized.PipelineType          = m_PipelineType;
         Serialized.StaticResStageIndex   = m_StaticResStageIndex;
-    }
-
-private:
-    static void ReserveSpaceForDescription(FixedLinearAllocator& Allocator, const PipelineResourceSignatureDesc& Desc)
-    {
-        Allocator.AddSpace<PipelineResourceDesc>(Desc.NumResources);
-        Allocator.AddSpace<ImmutableSamplerDesc>(Desc.NumImmutableSamplers);
-
-        for (Uint32 i = 0; i < Desc.NumResources; ++i)
-        {
-            const auto& Res = Desc.Resources[i];
-
-            VERIFY(Res.Name != nullptr, "Name can't be null. This error should've been caught by ValidatePipelineResourceSignatureDesc().");
-            VERIFY(Res.Name[0] != '\0', "Name can't be empty. This error should've been caught by ValidatePipelineResourceSignatureDesc().");
-            VERIFY(Res.ShaderStages != SHADER_TYPE_UNKNOWN, "ShaderStages can't be SHADER_TYPE_UNKNOWN. This error should've been caught by ValidatePipelineResourceSignatureDesc().");
-            VERIFY(Res.ArraySize != 0, "ArraySize can't be 0. This error should've been caught by ValidatePipelineResourceSignatureDesc().");
-
-            Allocator.AddSpaceForString(Res.Name);
-        }
-
-        for (Uint32 i = 0; i < Desc.NumImmutableSamplers; ++i)
-        {
-            const auto* SamOrTexName = Desc.ImmutableSamplers[i].SamplerOrTextureName;
-            VERIFY(SamOrTexName != nullptr, "SamplerOrTextureName can't be null. This error should've been caught by ValidatePipelineResourceSignatureDesc().");
-            VERIFY(SamOrTexName[0] != '\0', "SamplerOrTextureName can't be empty. This error should've been caught by ValidatePipelineResourceSignatureDesc().");
-            Allocator.AddSpaceForString(SamOrTexName);
-            Allocator.AddSpaceForString(Desc.ImmutableSamplers[i].Desc.Name);
-        }
-
-        if (Desc.UseCombinedTextureSamplers)
-            Allocator.AddSpaceForString(Desc.CombinedSamplerSuffix);
-    }
-
-    void CopyDescription(FixedLinearAllocator& Allocator, const PipelineResourceSignatureDesc& Desc) noexcept(false)
-    {
-        PipelineResourceDesc* pResources = Allocator.ConstructArray<PipelineResourceDesc>(Desc.NumResources);
-        ImmutableSamplerDesc* pSamplers  = Allocator.ConstructArray<ImmutableSamplerDesc>(Desc.NumImmutableSamplers);
-
-        for (Uint32 i = 0; i < Desc.NumResources; ++i)
-        {
-            const auto& SrcRes = Desc.Resources[i];
-            auto&       DstRes = pResources[i];
-
-            DstRes = SrcRes;
-            VERIFY_EXPR(SrcRes.Name != nullptr && SrcRes.Name[0] != '\0');
-            DstRes.Name = Allocator.CopyString(SrcRes.Name);
-
-            ++m_ResourceOffsets[DstRes.VarType + 1];
-        }
-
-        // Sort resources by variable type (all static -> all mutable -> all dynamic)
-        std::sort(pResources, pResources + Desc.NumResources,
-                  [](const PipelineResourceDesc& lhs, const PipelineResourceDesc& rhs) {
-                      return lhs.VarType < rhs.VarType;
-                  });
-
-        for (size_t i = 1; i < m_ResourceOffsets.size(); ++i)
-            m_ResourceOffsets[i] += m_ResourceOffsets[i - 1];
-
-#ifdef DILIGENT_DEBUG
-        VERIFY_EXPR(m_ResourceOffsets[SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES] == Desc.NumResources);
-        for (Uint32 VarType = 0; VarType < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; ++VarType)
-        {
-            auto IdxRange = GetResourceIndexRange(static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(VarType));
-            for (Uint32 idx = IdxRange.first; idx < IdxRange.second; ++idx)
-                VERIFY(pResources[idx].VarType == VarType, "Unexpected resource var type");
-        }
-#endif
-
-        for (Uint32 i = 0; i < Desc.NumImmutableSamplers; ++i)
-        {
-            const auto& SrcSam = Desc.ImmutableSamplers[i];
-            auto&       DstSam = pSamplers[i];
-
-            DstSam = SrcSam;
-            VERIFY_EXPR(SrcSam.SamplerOrTextureName != nullptr && SrcSam.SamplerOrTextureName[0] != '\0');
-            DstSam.SamplerOrTextureName = Allocator.CopyString(SrcSam.SamplerOrTextureName);
-            DstSam.Desc.Name            = Allocator.CopyString(SrcSam.Desc.Name);
-            if (!DstSam.Desc.Name)
-                DstSam.Desc.Name = "";
-        }
-
-        this->m_Desc.Resources         = pResources;
-        this->m_Desc.ImmutableSamplers = pSamplers;
-
-        if (Desc.UseCombinedTextureSamplers)
-            this->m_Desc.CombinedSamplerSuffix = Allocator.CopyString(Desc.CombinedSamplerSuffix);
     }
 
 protected:
