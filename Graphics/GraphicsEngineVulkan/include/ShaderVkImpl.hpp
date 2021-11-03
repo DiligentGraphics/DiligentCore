@@ -56,7 +56,7 @@ public:
                    const RenderDeviceInfo&    _DeviceInfo,
                    const GraphicsAdapterInfo& _AdapterInfo,
                    Uint32                     _VkVersion,
-                   bool                       _HasSpirv14) :
+                   bool                       _HasSpirv14) noexcept :
             pDXCompiler{_pDXCompiler},
             DeviceInfo{_DeviceInfo},
             AdapterInfo{_AdapterInfo},

@@ -44,9 +44,28 @@ class ShaderD3D12Impl final : public ShaderBase<EngineD3D12ImplTraits>, public S
 public:
     using TShaderBase = ShaderBase<EngineD3D12ImplTraits>;
 
+    struct CreateInfo
+    {
+        IDXCompiler*               pDXCompiler;
+        const RenderDeviceInfo&    DeviceInfo;
+        const GraphicsAdapterInfo& AdapterInfo;
+        ShaderVersion              MaxShaderVersion;
+
+        CreateInfo(IDXCompiler*               _pDXCompiler,
+                   const RenderDeviceInfo&    _DeviceInfo,
+                   const GraphicsAdapterInfo& _AdapterInfo,
+                   ShaderVersion              _MaxShaderVersion) noexcept :
+            pDXCompiler{_pDXCompiler},
+            DeviceInfo{_DeviceInfo},
+            AdapterInfo{_AdapterInfo},
+            MaxShaderVersion{_MaxShaderVersion}
+        {}
+    };
     ShaderD3D12Impl(IReferenceCounters*     pRefCounters,
                     RenderDeviceD3D12Impl*  pRenderDeviceD3D12,
-                    const ShaderCreateInfo& ShaderCI);
+                    const ShaderCreateInfo& ShaderCI,
+                    const CreateInfo&       D3D12ShaderCI,
+                    bool                    IsDeviceInternal = false);
     ~ShaderD3D12Impl();
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;

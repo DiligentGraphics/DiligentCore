@@ -350,7 +350,7 @@ TEST(ArchiveTest, GraphicsPipeline)
         Attachments[0].SampleCount  = static_cast<Uint8>(RTVDesc.SampleCount);
         Attachments[0].InitialState = RESOURCE_STATE_RENDER_TARGET;
         Attachments[0].FinalState   = RESOURCE_STATE_RENDER_TARGET;
-        Attachments[0].LoadOp       = ATTACHMENT_LOAD_OP_DISCARD;
+        Attachments[0].LoadOp       = ATTACHMENT_LOAD_OP_CLEAR;
         Attachments[0].StoreOp      = ATTACHMENT_STORE_OP_STORE;
 
         SubpassDesc Subpasses[1] = {};
@@ -623,8 +623,7 @@ TEST(ArchiveTest, GraphicsPipeline)
         ASSERT_TRUE(pUnpackedPSO_2->GetGraphicsPipelineDesc().pRenderPass == pUnpackedRenderPass);
     }
 
-    auto*       pContext     = pEnv->GetDeviceContext();
-    const float ClearColor[] = {0.25f, 0.5f, 0.75f, 1.0f};
+    auto* pContext = pEnv->GetDeviceContext();
 
     struct Vertex
     {
@@ -653,6 +652,7 @@ TEST(ArchiveTest, GraphicsPipeline)
         BufferDesc BuffDesc;
         BuffDesc.Name      = "Vertex buffer";
         BuffDesc.BindFlags = BIND_VERTEX_BUFFER;
+        BuffDesc.Usage     = USAGE_IMMUTABLE;
         BuffDesc.Size      = sizeof(Triangles);
 
         BufferData InitialData{Triangles, sizeof(Triangles)};
@@ -686,12 +686,19 @@ TEST(ArchiveTest, GraphicsPipeline)
 
     RefCntAutoPtr<IBuffer> pConstants;
     {
+        HLSL::Constants Const;
+        Const.UVScale     = float4{0.9f, 0.8f, 0.0f, 0.0f};
+        Const.ColorScale  = float4{0.15f};
+        Const.NormalScale = float4{0.2f};
+        Const.DepthScale  = float4{0.1f};
+
         BufferDesc BuffDesc;
         BuffDesc.Name      = "Constant buffer";
         BuffDesc.BindFlags = BIND_UNIFORM_BUFFER;
-        BuffDesc.Size      = sizeof(Triangles);
+        BuffDesc.Usage     = USAGE_IMMUTABLE;
+        BuffDesc.Size      = sizeof(Const);
 
-        BufferData InitialData{Triangles, sizeof(Triangles)};
+        BufferData InitialData{&Const, sizeof(Const)};
         pDevice->CreateBuffer(BuffDesc, &InitialData, &pConstants);
         ASSERT_NE(pConstants, nullptr);
 
@@ -724,6 +731,9 @@ TEST(ArchiveTest, GraphicsPipeline)
         ASSERT_NE(pFramebuffer, nullptr);
     }
 
+    OptimizedClearValue ClearColor;
+    ClearColor.SetColor(TEX_FORMAT_RGBA8_UNORM, 0.25f, 0.5f, 0.75f, 1.0f);
+
     // Draw reference
     RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_TestingSwapChain};
     if (pTestingSwapChain)
@@ -731,6 +741,8 @@ TEST(ArchiveTest, GraphicsPipeline)
         BeginRenderPassAttribs BeginRPInfo;
         BeginRPInfo.pRenderPass         = pRenderPass1;
         BeginRPInfo.pFramebuffer        = pFramebuffer;
+        BeginRPInfo.ClearValueCount     = 1;
+        BeginRPInfo.pClearValues        = &ClearColor;
         BeginRPInfo.StateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
         pContext->BeginRenderPass(BeginRPInfo);
 
@@ -757,6 +769,8 @@ TEST(ArchiveTest, GraphicsPipeline)
         BeginRenderPassAttribs BeginRPInfo;
         BeginRPInfo.pRenderPass         = pUnpackedRenderPass;
         BeginRPInfo.pFramebuffer        = pFramebuffer;
+        BeginRPInfo.ClearValueCount     = 1;
+        BeginRPInfo.pClearValues        = &ClearColor;
         BeginRPInfo.StateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
         pContext->BeginRenderPass(BeginRPInfo);
 

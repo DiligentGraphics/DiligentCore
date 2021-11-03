@@ -55,7 +55,7 @@ public:
     // Returns the index of the first descriptor set used by the resource signature at the given bind index
     Uint32 GetFirstDescrSetIndex(Uint32 Index) const
     {
-        //VERIFY_EXPR(Index <= m_DbgMaxBindIndex); // AZ TODO
+        VERIFY_EXPR(Index <= m_DbgMaxBindIndex);
         return m_FirstDescrSetIndex[Index];
     }
 

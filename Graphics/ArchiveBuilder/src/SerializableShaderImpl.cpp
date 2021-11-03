@@ -28,6 +28,11 @@
 #include "FixedLinearAllocator.hpp"
 #include "EngineMemory.h"
 
+#if D3D12_SUPPORTED
+#    include "../../GraphicsEngineD3D12/include/pch.h"
+#    include "RenderDeviceD3D12Impl.hpp"
+#    include "ShaderD3D12Impl.hpp"
+#endif
 #if VULKAN_SUPPORTED
 #    include "VulkanUtilities/VulkanHeaders.h"
 #    include "RenderDeviceVkImpl.hpp"
@@ -36,6 +41,23 @@
 
 namespace Diligent
 {
+
+#if D3D12_SUPPORTED
+struct SerializableShaderImpl::CompiledShaderD3D12
+{
+    ShaderD3D12Impl ShaderD3D12;
+
+    CompiledShaderD3D12(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI, const ShaderD3D12Impl::CreateInfo& D3D12ShaderCI) :
+        ShaderD3D12{pRefCounters, nullptr, ShaderCI, D3D12ShaderCI, true}
+    {}
+};
+
+const ShaderD3D12Impl* SerializableShaderImpl::GetShaderD3D12() const
+{
+    return m_pShaderD3D12 ? &m_pShaderD3D12->ShaderD3D12 : nullptr;
+}
+#endif // D3D12_SUPPORTED
+
 
 #if VULKAN_SUPPORTED
 struct SerializableShaderImpl::CompiledShaderVk
@@ -46,7 +68,13 @@ struct SerializableShaderImpl::CompiledShaderVk
         ShaderVk{pRefCounters, nullptr, ShaderCI, VkShaderCI, true}
     {}
 };
-#endif
+
+const ShaderVkImpl* SerializableShaderImpl::GetShaderVk() const
+{
+    return m_pShaderVk ? &m_pShaderVk->ShaderVk : nullptr;
+}
+#endif // VULKAN_SUPPORTED
+
 
 SerializableShaderImpl::SerializableShaderImpl(IReferenceCounters*     pRefCounters,
                                                DummyRenderDevice*      pDevice,
@@ -78,7 +106,13 @@ SerializableShaderImpl::SerializableShaderImpl(IReferenceCounters*     pRefCount
 #if D3D12_SUPPORTED
             case RENDER_DEVICE_TYPE_D3D12:
             {
-                // AZ TODO
+                const ShaderD3D12Impl::CreateInfo D3D12ShaderCI{
+                    pDevice->GetDxCompilerForDirect3D12(),
+                    pDevice->GetDeviceInfo(),
+                    pDevice->GetAdapterInfo(),
+                    pDevice->GetD3D12ShaderVersion() //
+                };
+                m_pShaderD3D12.reset(new CompiledShaderD3D12{pRefCounters, ShaderCI, D3D12ShaderCI});
                 break;
             }
 #endif
@@ -200,12 +234,5 @@ void SerializableShaderImpl::CopyShaderCreateInfo(const ShaderCreateInfo& Shader
 
 SerializableShaderImpl::~SerializableShaderImpl()
 {}
-
-#if VULKAN_SUPPORTED
-const ShaderVkImpl* SerializableShaderImpl::GetShaderVk() const
-{
-    return m_pShaderVk ? &m_pShaderVk->ShaderVk : nullptr;
-}
-#endif
 
 } // namespace Diligent

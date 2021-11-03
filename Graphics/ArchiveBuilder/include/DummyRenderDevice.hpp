@@ -169,11 +169,27 @@ public:
     /// Implementation of IRenderDevice::GetEngineFactory().
     virtual IEngineFactory* DILIGENT_CALL_TYPE GetEngineFactory() const override final { return nullptr; }
 
-    IDXCompiler* GetDxCompilerForVulkan() const { return m_pVkDxCompiler.get(); }
-    IDXCompiler* GetDxCompilerForDirect3D12() const { return m_pDxCompiler.get(); }
+#if D3D12_SUPPORTED
+    IDXCompiler* GetDxCompilerForDirect3D12() const
+    {
+        return m_pDxCompiler.get();
+    }
+
+    ShaderVersion GetD3D12ShaderVersion() const
+    {
+        return ShaderVersion{6, 5};
+    }
+#endif
+
+#if VULKAN_SUPPORTED
+    IDXCompiler* GetDxCompilerForVulkan() const
+    {
+        return m_pVkDxCompiler.get();
+    }
 
     Uint32 GetVkVersion() const { return /*VK_API_VERSION_1_0*/ (1u << 22) | (0u << 12); } // AZ TODO
     bool   HasSpirv14() const { return false; }                                            // AZ TODO
+#endif
 
     static Uint32 GetValidDeviceBits();
 

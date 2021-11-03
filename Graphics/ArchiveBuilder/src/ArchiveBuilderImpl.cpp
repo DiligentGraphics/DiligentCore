@@ -409,7 +409,8 @@ void ArchiveBuilderImpl::WriteShaderData(PendingData& Pending) const
             const auto NewSize = Offset + Size;
             VERIFY_EXPR(NewSize <= Dst.capacity());
             Dst.resize(NewSize);
-            pOffsetAndSize = reinterpret_cast<FileOffsetAndSize*>(&Dst[Offset]); // AZ TODO: check align
+            pOffsetAndSize = reinterpret_cast<FileOffsetAndSize*>(&Dst[Offset]);
+            VERIFY_EXPR(reinterpret_cast<size_t>(pOffsetAndSize) % alignof(FileOffsetAndSize) == 0);
 
             DataOffsetArray[dev] = StaticCast<Uint32>(Offset);
             DataSizeArray[dev]   = StaticCast<Uint32>(Size);

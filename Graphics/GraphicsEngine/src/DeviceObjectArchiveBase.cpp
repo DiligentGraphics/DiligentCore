@@ -991,6 +991,25 @@ void DeviceObjectArchiveBase::SerializerImpl<Mode>::SerializeComputePSO(
 }
 
 template <SerializerMode Mode>
+void DeviceObjectArchiveBase::SerializerImpl<Mode>::SerializeTilePSO(
+    Serializer<Mode>&                   Ser,
+    TQual<TilePipelineStateCreateInfo>& CreateInfo,
+    TQual<TPRSNames>&                   PRSNames,
+    DynamicLinearAllocator*             Allocator)
+{
+    SerializePSO(Ser, CreateInfo, PRSNames, Allocator);
+
+    // AZ TODO: read TilePipelineStateCreateInfo
+
+    // skip NodeMask
+    // skip shaders - they are device specific
+
+#if defined(_MSC_VER) && defined(_WIN64)
+    static_assert(sizeof(TilePipelineStateCreateInfo) == 128, "Did you add a new member to TilePipelineStateCreateInfo? Please add serialization here.");
+#endif
+}
+
+template <SerializerMode Mode>
 void DeviceObjectArchiveBase::SerializerImpl<Mode>::SerializeRayTracingPSO(
     Serializer<Mode>&                         Ser,
     TQual<RayTracingPipelineStateCreateInfo>& CreateInfo,

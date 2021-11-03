@@ -197,8 +197,8 @@ struct SerializableResourceSignatureImpl::TPRS
     ImplType         PRS;
     SerializedMemory Mem;
 
-    explicit TPRS(const PipelineResourceSignatureDesc& SignatureDesc) :
-        PRS{nullptr, nullptr, SignatureDesc, SHADER_TYPE_UNKNOWN, true}
+    TPRS(IReferenceCounters* pRefCounters, const PipelineResourceSignatureDesc& SignatureDesc) :
+        PRS{pRefCounters, nullptr, SignatureDesc, SHADER_TYPE_UNKNOWN, true}
     {}
 };
 
@@ -246,7 +246,7 @@ SerializableResourceSignatureImpl::SerializableResourceSignatureImpl(IReferenceC
 #if D3D12_SUPPORTED
             case RENDER_DEVICE_TYPE_D3D12:
             {
-                m_pPRSD3D12.reset(new TPRS<PipelineResourceSignatureD3D12Impl>{Desc});
+                m_pPRSD3D12.reset(new TPRS<PipelineResourceSignatureD3D12Impl>{pRefCounters, Desc});
                 auto* pPRSD3D12 = &m_pPRSD3D12->PRS;
 
                 PipelineResourceSignatureD3D12Impl::SerializedData SerializedData;
@@ -267,7 +267,7 @@ SerializableResourceSignatureImpl::SerializableResourceSignatureImpl(IReferenceC
 #if VULKAN_SUPPORTED
             case RENDER_DEVICE_TYPE_VULKAN:
             {
-                m_pPRSVk.reset(new TPRS<PipelineResourceSignatureVkImpl>{Desc});
+                m_pPRSVk.reset(new TPRS<PipelineResourceSignatureVkImpl>{pRefCounters, Desc});
                 auto* pPRSVk = &m_pPRSVk->PRS;
 
                 PipelineResourceSignatureVkImpl::SerializedData SerializedData;
@@ -298,7 +298,7 @@ SerializableResourceSignatureImpl::~SerializableResourceSignatureImpl()
 }
 
 #if D3D12_SUPPORTED
-const PipelineResourceSignatureD3D12Impl* SerializableResourceSignatureImpl::GetSignatureD3D12() const
+PipelineResourceSignatureD3D12Impl* SerializableResourceSignatureImpl::GetSignatureD3D12() const
 {
     return &m_pPRSD3D12->PRS;
 }
@@ -310,7 +310,7 @@ const SerializedMemory& SerializableResourceSignatureImpl::GetSerializedMemoryD3
 #endif
 
 #if VULKAN_SUPPORTED
-const PipelineResourceSignatureVkImpl* SerializableResourceSignatureImpl::GetSignatureVk() const
+PipelineResourceSignatureVkImpl* SerializableResourceSignatureImpl::GetSignatureVk() const
 {
     return &m_pPRSVk->PRS;
 }

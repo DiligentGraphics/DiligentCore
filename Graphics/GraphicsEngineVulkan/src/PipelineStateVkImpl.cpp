@@ -763,13 +763,13 @@ void PipelineStateVkImpl::InitPipelineLayout(bool RemapResources, TShaderStages&
 
     if (RemapResources)
     {
-        TBindIndexToDescSetIndex BindIndexToDescSetIndex = {};
-        for (Uint32 i = 0; i < BindIndexToDescSetIndex.size(); ++i)
-            BindIndexToDescSetIndex[i] = m_PipelineLayout.GetFirstDescrSetIndex(i);
-
-        std::array<const PipelineResourceSignatureVkImpl*, MAX_RESOURCE_SIGNATURES> Signatures = {};
+        TBindIndexToDescSetIndex                                                    BindIndexToDescSetIndex = {};
+        std::array<const PipelineResourceSignatureVkImpl*, MAX_RESOURCE_SIGNATURES> Signatures              = {};
         for (Uint32 i = 0; i < m_SignatureCount; ++i)
-            Signatures[i] = m_Signatures[i].RawPtr();
+        {
+            Signatures[i]              = m_Signatures[i].RawPtr();
+            BindIndexToDescSetIndex[i] = m_PipelineLayout.GetFirstDescrSetIndex(i);
+        }
 
         RemapShaderResources(ShaderStages,
                              Signatures.data(),

@@ -86,12 +86,12 @@ public:
     const SerializedMemory& GetSharedSerializedMemory() const { return m_SharedData; }
 
 #if D3D12_SUPPORTED
-    const PipelineResourceSignatureD3D12Impl* GetSignatureD3D12() const;
-    const SerializedMemory&                   GetSerializedMemoryD3D12() const;
+    PipelineResourceSignatureD3D12Impl* GetSignatureD3D12() const;
+    const SerializedMemory&             GetSerializedMemoryD3D12() const;
 #endif
 #if VULKAN_SUPPORTED
-    const PipelineResourceSignatureVkImpl* GetSignatureVk() const;
-    const SerializedMemory&                GetSerializedMemoryVk() const;
+    PipelineResourceSignatureVkImpl* GetSignatureVk() const;
+    const SerializedMemory&          GetSerializedMemoryVk() const;
 #endif
 
 private:

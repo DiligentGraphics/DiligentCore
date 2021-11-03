@@ -424,6 +424,11 @@ public:
                                         TQual<TPRSNames>&                      PRSNames,
                                         DynamicLinearAllocator*                Allocator);
 
+        static void SerializeTilePSO(Serializer<Mode>&                   Ser,
+                                     TQual<TilePipelineStateCreateInfo>& CreateInfo,
+                                     TQual<TPRSNames>&                   PRSNames,
+                                     DynamicLinearAllocator*             Allocator);
+
         static void SerializeRayTracingPSO(Serializer<Mode>&                         Ser,
                                            TQual<RayTracingPipelineStateCreateInfo>& CreateInfo,
                                            TQual<TPRSNames>&                         PRSNames,

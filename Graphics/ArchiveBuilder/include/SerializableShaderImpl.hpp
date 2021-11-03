@@ -34,6 +34,9 @@
 namespace Diligent
 {
 
+#if D3D12_SUPPORTED
+class ShaderD3D12Impl;
+#endif
 #if VULKAN_SUPPORTED
 class ShaderVkImpl;
 #endif
@@ -63,6 +66,9 @@ public:
 
     virtual IObject* DILIGENT_CALL_TYPE GetUserData() const override final { return nullptr; }
 
+#if D3D12_SUPPORTED
+    const ShaderD3D12Impl* GetShaderD3D12() const;
+#endif
 #if VULKAN_SUPPORTED
     const ShaderVkImpl* GetShaderVk() const;
 #endif
@@ -73,6 +79,10 @@ private:
     ShaderCreateInfo                              m_CreateInfo;
     std::unique_ptr<void, STDDeleterRawMem<void>> m_pRawMemory;
 
+#if D3D12_SUPPORTED
+    struct CompiledShaderD3D12;
+    std::unique_ptr<CompiledShaderD3D12> m_pShaderD3D12;
+#endif
 #if VULKAN_SUPPORTED
     struct CompiledShaderVk;
     std::unique_ptr<CompiledShaderVk> m_pShaderVk;

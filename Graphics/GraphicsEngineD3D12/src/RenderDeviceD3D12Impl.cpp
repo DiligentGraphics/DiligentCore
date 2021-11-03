@@ -536,7 +536,13 @@ void RenderDeviceD3D12Impl::CreateBuffer(const BufferDesc& BuffDesc, const Buffe
 
 void RenderDeviceD3D12Impl::CreateShader(const ShaderCreateInfo& ShaderCI, IShader** ppShader)
 {
-    CreateShaderImpl(ppShader, ShaderCI);
+    const ShaderD3D12Impl::CreateInfo D3D12ShaderCI{
+        GetDxCompiler(),
+        GetDeviceInfo(),
+        GetAdapterInfo(),
+        GetMaxShaderVersion() //
+    };
+    CreateShaderImpl(ppShader, ShaderCI, D3D12ShaderCI);
 }
 
 void RenderDeviceD3D12Impl::CreateTextureFromD3DResource(ID3D12Resource* pd3d12Texture, RESOURCE_STATE InitialState, ITexture** ppTexture)

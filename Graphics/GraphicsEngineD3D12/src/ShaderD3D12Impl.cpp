@@ -37,14 +37,14 @@
 namespace Diligent
 {
 
-static ShaderVersion GetD3D12ShaderModel(RenderDeviceD3D12Impl* pDevice, const ShaderVersion& HLSLVersion, SHADER_COMPILER ShaderCompiler)
+static ShaderVersion GetD3D12ShaderModel(const ShaderVersion& HLSLVersion, SHADER_COMPILER ShaderCompiler, IDXCompiler* pDXCompiler, const ShaderVersion DeviceSM)
 {
     ShaderVersion CompilerSM;
     if (ShaderCompiler == SHADER_COMPILER_DXC)
     {
-        if (pDevice->GetDxCompiler() && pDevice->GetDxCompiler()->IsLoaded())
+        if (pDXCompiler && pDXCompiler->IsLoaded())
         {
-            CompilerSM = pDevice->GetDxCompiler()->GetMaxShaderModel();
+            CompilerSM = pDXCompiler->GetMaxShaderModel();
         }
         else
         {
@@ -60,7 +60,6 @@ static ShaderVersion GetD3D12ShaderModel(RenderDeviceD3D12Impl* pDevice, const S
         CompilerSM = ShaderVersion{5, 1};
     }
 
-    const auto DeviceSM       = pDevice->GetMaxShaderVersion();
     const auto MaxSupportedSM = ShaderVersion::Min(DeviceSM, CompilerSM);
     if (HLSLVersion == ShaderVersion{0, 0})
     {
@@ -82,15 +81,18 @@ static ShaderVersion GetD3D12ShaderModel(RenderDeviceD3D12Impl* pDevice, const S
 
 ShaderD3D12Impl::ShaderD3D12Impl(IReferenceCounters*     pRefCounters,
                                  RenderDeviceD3D12Impl*  pRenderDeviceD3D12,
-                                 const ShaderCreateInfo& ShaderCI) :
+                                 const ShaderCreateInfo& ShaderCI,
+                                 const CreateInfo&       D3D12ShaderCI,
+                                 bool                    IsDeviceInternal) :
     // clang-format off
     TShaderBase
     {
         pRefCounters,
         pRenderDeviceD3D12,
-        ShaderCI.Desc
+        ShaderCI.Desc,
+        IsDeviceInternal
     },
-    ShaderD3DBase{ShaderCI, GetD3D12ShaderModel(pRenderDeviceD3D12, ShaderCI.HLSLVersion, ShaderCI.ShaderCompiler), pRenderDeviceD3D12->GetDxCompiler()},
+    ShaderD3DBase{ShaderCI, GetD3D12ShaderModel(ShaderCI.HLSLVersion, ShaderCI.ShaderCompiler, D3D12ShaderCI.pDXCompiler, D3D12ShaderCI.MaxShaderVersion), D3D12ShaderCI.pDXCompiler},
     m_EntryPoint{ShaderCI.EntryPoint}
 // clang-format on
 {
@@ -102,7 +104,7 @@ ShaderD3D12Impl::ShaderD3D12Impl(IReferenceCounters*     pRefCounters,
             m_pShaderByteCode,
             m_Desc,
             ShaderCI.UseCombinedTextureSamplers ? ShaderCI.CombinedSamplerSuffix : nullptr,
-            pRenderDeviceD3D12->GetDxCompiler() //
+            D3D12ShaderCI.pDXCompiler //
         };
     m_pShaderResources.reset(pResources, STDDeleterRawMem<ShaderResourcesD3D12>(Allocator));
 }

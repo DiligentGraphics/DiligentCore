@@ -160,16 +160,25 @@ private:
     };
     std::array<PerDeviceShaders, Uint32{DeviceType::Count}> m_Shaders;
 
-    struct GraphicsPSOData
+    template <typename CreateInfoType>
+    struct TPSOData
     {
-        SerializedMemory                 DescMem;
-        GraphicsPipelineStateCreateInfo* pCreateInfo = nullptr;
-        SerializedMemory                 SharedData;
-        TPerDeviceData                   PerDeviceData;
+        SerializedMemory DescMem;
+        CreateInfoType*  pCreateInfo = nullptr;
+        SerializedMemory SharedData;
+        TPerDeviceData   PerDeviceData;
 
         const SerializedMemory& GetSharedData() const { return SharedData; }
     };
-    std::unordered_map<String, GraphicsPSOData> m_GraphicsPSOMap;
+    using GraphicsPSOData   = TPSOData<GraphicsPipelineStateCreateInfo>;
+    using ComputePSOData    = TPSOData<ComputePipelineStateCreateInfo>;
+    using TilePSOData       = TPSOData<TilePipelineStateCreateInfo>;
+    using RayTracingPSOData = TPSOData<RayTracingPipelineStateCreateInfo>;
+
+    std::unordered_map<String, GraphicsPSOData>   m_GraphicsPSOMap;
+    std::unordered_map<String, ComputePSOData>    m_ComputePSOMap;
+    std::unordered_map<String, TilePSOData>       m_TilePSOMap;
+    std::unordered_map<String, RayTracingPSOData> m_RayTracingPSOMap;
 
     DummyRenderDevice*      m_pRenderDevice   = nullptr;
     IArchiveBuilderFactory* m_pArchiveFactory = nullptr;
@@ -198,11 +207,16 @@ private:
     using TShaderIndices = std::vector<Uint32>; // shader data indices in device specific block
 
     template <typename CreateInfoType>
-    bool PatchShadersVk(const CreateInfoType&           CreateInfo,
-                        const PipelineStateArchiveInfo& ArchiveInfo,
-                        TShaderIndices&                 ShaderIndices);
-    void SerializeShadersForPSO(const TShaderIndices& ShaderIndices,
-                                SerializedMemory&     DeviceData) const;
+    bool SerializePSO(std::unordered_map<String, TPSOData<CreateInfoType>>& PSOMap,
+                      const CreateInfoType&                                 PSOCreateInfo,
+                      const PipelineStateArchiveInfo&                       ArchiveInfo) noexcept;
+
+    template <typename CreateInfoType>
+    bool PatchShadersVk(const CreateInfoType& CreateInfo, TShaderIndices& ShaderIndices);
+    template <typename CreateInfoType>
+    bool PatchShadersD3D12(const CreateInfoType& CreateInfo, TShaderIndices& ShaderIndices);
+
+    void SerializeShadersForPSO(const TShaderIndices& ShaderIndices, SerializedMemory& DeviceData) const;
 
     template <typename DataType>
     static void InitNamedResourceArrayHeader(std::vector<Uint8>&                         ChunkData,

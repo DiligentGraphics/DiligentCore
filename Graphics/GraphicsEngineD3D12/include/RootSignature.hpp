@@ -131,7 +131,7 @@ private:
     };
     std::unique_ptr<ResourceSignatureInfo[]> m_ResourceSignatures;
 
-    RootSignatureCacheD3D12& m_Cache;
+    RootSignatureCacheD3D12* m_pCache = nullptr;
 };
 
 
