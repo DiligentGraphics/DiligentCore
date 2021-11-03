@@ -127,6 +127,7 @@ public:
         // clang-format off
         TBase{pRefCounters},
         m_Mgr{StaticCast<size_t>(CreateInfo.Desc.Size), DefaultRawMemoryAllocator::GetAllocator()},
+        m_MgrSize{m_Mgr.GetMaxSize()},
         m_Buffer
         {
             pDevice,
@@ -137,6 +138,7 @@ public:
                 CreateInfo.VirtualSize
             }
         },
+        m_BufferSize{m_Buffer.GetDesc().Size},
         m_ExpansionSize{CreateInfo.ExpansionSize},
         m_SuballocationsAllocator
         {
@@ -154,32 +156,16 @@ public:
 
     virtual IBuffer* GetBuffer(IRenderDevice* pDevice, IDeviceContext* pContext) override final
     {
-        size_t Size = 0;
+        // NB: mutex must not be locked here to avoid stalling render thread
+        const auto MgrSize = m_MgrSize.load();
+        VERIFY_EXPR(m_BufferSize.load() == m_Buffer.GetDesc().Size);
+        if (MgrSize > m_Buffer.GetDesc().Size)
         {
-            std::lock_guard<std::mutex> Lock{m_MgrMtx};
-            Size = m_Mgr.GetMaxSize();
+            m_Buffer.Resize(pDevice, pContext, MgrSize);
+            // We must use atomic because this value is read in another thread,
+            // while m_Buffer internally does not use mutex or other synchronization.
+            m_BufferSize.store(m_Buffer.GetDesc().Size);
         }
-        if (Size != m_Buffer.GetDesc().Size)
-        {
-            m_Buffer.Resize(pDevice, pContext, Size);
-
-            // Actual buffer size may be larger due to alignment requirements
-            // (for sparse buffers, the size is aligned by the memory page size)
-            const auto BufferSize = m_Buffer.GetDesc().Size;
-            VERIFY_EXPR(BufferSize >= Size);
-            if (BufferSize > Size)
-            {
-                std::lock_guard<std::mutex> Lock{m_MgrMtx};
-                // Since we released the mutex, the size may have changed in other thread
-                Size = m_Mgr.GetMaxSize();
-                if (BufferSize > Size)
-                {
-                    m_Mgr.Extend(StaticCast<size_t>(BufferSize - Size));
-                }
-                VERIFY_EXPR(BufferSize == m_Mgr.GetMaxSize());
-            }
-        }
-
         return m_Buffer.GetBuffer(pDevice, pContext);
     }
 
@@ -202,6 +188,20 @@ public:
         VariableSizeAllocationsManager::Allocation Subregion;
         {
             std::lock_guard<std::mutex> Lock{m_MgrMtx};
+
+            {
+                // After the resize, the actual buffer size may be larger due to alignment
+                // requirements (for sparse buffers, the size is aligned by the memory page size).
+                const auto BufferSize = m_BufferSize.load();
+                const auto MgrSize    = m_Mgr.GetMaxSize();
+                if (BufferSize > MgrSize)
+                {
+                    m_Mgr.Extend(StaticCast<size_t>(BufferSize - MgrSize));
+                    VERIFY_EXPR(m_Mgr.GetMaxSize() == BufferSize);
+                    m_MgrSize.store(m_Mgr.GetMaxSize());
+                }
+            }
+
             Subregion = m_Mgr.Allocate(Size, Alignment);
 
             while (!Subregion.IsValid())
@@ -211,8 +211,12 @@ public:
                     m_Mgr.GetMaxSize();
 
                 m_Mgr.Extend(ExtraSize);
+                m_MgrSize.store(m_Mgr.GetMaxSize());
+
                 Subregion = m_Mgr.Allocate(Size, Alignment);
             }
+
+            UpdateUsageStats();
         }
 
         // clang-format off
@@ -236,6 +240,7 @@ public:
         std::lock_guard<std::mutex> Lock{m_MgrMtx};
         m_Mgr.Free(std::move(Subregion));
         m_AllocationCount.fetch_add(-1);
+        UpdateUsageStats();
     }
 
     virtual Uint32 GetVersion() const override final
@@ -245,22 +250,34 @@ public:
 
     virtual void GetUsageStats(BufferSuballocatorUsageStats& UsageStats) override final
     {
-        std::lock_guard<std::mutex> Lock{m_MgrMtx};
-        UsageStats.Size             = m_Mgr.GetMaxSize();
-        UsageStats.UsedSize         = m_Mgr.GetUsedSize();
-        UsageStats.MaxFreeChunkSize = m_Mgr.GetMaxFreeBlockSize();
+        // NB: mutex must not be locked here to avoid stalling render thread
+        UsageStats.Size             = m_BufferSize.load();
+        UsageStats.UsedSize         = m_UsedSize.load();
+        UsageStats.MaxFreeChunkSize = m_MaxFreeBlockSize.load();
         UsageStats.AllocationCount  = m_AllocationCount.load();
+    }
+
+private:
+    void UpdateUsageStats()
+    {
+        m_UsedSize.store(m_Mgr.GetUsedSize());
+        m_MaxFreeBlockSize.store(m_Mgr.GetMaxFreeBlockSize());
     }
 
 private:
     std::mutex                     m_MgrMtx;
     VariableSizeAllocationsManager m_Mgr;
 
-    DynamicBuffer m_Buffer;
+    std::atomic<VariableSizeAllocationsManager::OffsetType> m_MgrSize{0};
+
+    DynamicBuffer       m_Buffer;
+    std::atomic<Uint64> m_BufferSize{0};
 
     const Uint32 m_ExpansionSize;
 
-    std::atomic<Int32> m_AllocationCount{0};
+    std::atomic<Int32>  m_AllocationCount{0};
+    std::atomic<Uint64> m_UsedSize{0};
+    std::atomic<Uint64> m_MaxFreeBlockSize{0};
 
     FixedBlockMemoryAllocator m_SuballocationsAllocator;
 };
