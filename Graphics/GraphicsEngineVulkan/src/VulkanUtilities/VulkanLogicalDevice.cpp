@@ -441,6 +441,12 @@ VkDescriptorSet VulkanLogicalDevice::AllocateVkDescriptorSet(const VkDescriptorS
     return DescrSet;
 }
 
+PipelineCacheWrapper VulkanLogicalDevice::CreatePipelineCache(const VkPipelineCacheCreateInfo& CI, const char* DebugName) const
+{
+    VERIFY_EXPR(CI.sType == VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO);
+    return CreateVulkanObject<VkPipelineCache, VulkanHandleTypeId::PipelineCache>(vkCreatePipelineCache, CI, DebugName, "pipeline cache");
+}
+
 void VulkanLogicalDevice::ReleaseVulkanObject(CommandPoolWrapper&& CmdPool) const
 {
     vkDestroyCommandPool(m_VkDevice, CmdPool.m_VkObject, m_VkAllocator);
@@ -551,6 +557,12 @@ void VulkanLogicalDevice::ReleaseVulkanObject(AccelStructWrapper&& AccelStruct) 
 #else
     UNSUPPORTED("vkDestroyAccelerationStructureKHR is only available through Volk");
 #endif
+}
+
+void VulkanLogicalDevice::ReleaseVulkanObject(PipelineCacheWrapper&& PipeCache) const
+{
+    vkDestroyPipelineCache(m_VkDevice, PipeCache.m_VkObject, m_VkAllocator);
+    PipeCache.m_VkObject = VK_NULL_HANDLE;
 }
 
 void VulkanLogicalDevice::FreeDescriptorSet(VkDescriptorPool Pool, VkDescriptorSet Set) const

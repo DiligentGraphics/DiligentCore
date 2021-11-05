@@ -45,8 +45,7 @@ RootSignatureD3D12::RootSignatureD3D12(IReferenceCounters*                      
                                        size_t                                                  Hash) :
     ObjectBase<IObject>{pRefCounters},
     m_SignatureCount{SignatureCount},
-    m_Hash{Hash},
-    m_Cache{pDeviceD3D12Impl->GetRootSignatureCache()}
+    m_Hash{Hash}
 {
     if (m_SignatureCount > 0)
     {
@@ -224,25 +223,31 @@ RootSignatureD3D12::RootSignatureD3D12(IReferenceCounters*                      
         VERIFY_EXPR(d3d12StaticSamplers.size() == TotalImmutableSamplers);
     }
 
-    CComPtr<ID3DBlob> signature;
-    CComPtr<ID3DBlob> error;
-
-    HRESULT hr = D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error);
-    if (error)
+    if (pDeviceD3D12Impl)
     {
-        LOG_ERROR_MESSAGE("Error: ", (const char*)error->GetBufferPointer());
+        CComPtr<ID3DBlob> signature;
+        CComPtr<ID3DBlob> error;
+
+        HRESULT hr = D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error);
+        if (error)
+        {
+            LOG_ERROR_MESSAGE("Error: ", (const char*)error->GetBufferPointer());
+        }
+        CHECK_D3D_RESULT_THROW(hr, "Failed to serialize root signature");
+
+        m_pCache = &pDeviceD3D12Impl->GetRootSignatureCache();
+
+        auto* pd3d12Device = pDeviceD3D12Impl->GetD3D12Device();
+
+        hr = pd3d12Device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), __uuidof(m_pd3d12RootSignature), reinterpret_cast<void**>(static_cast<ID3D12RootSignature**>(&m_pd3d12RootSignature)));
+        CHECK_D3D_RESULT_THROW(hr, "Failed to create root signature");
     }
-    CHECK_D3D_RESULT_THROW(hr, "Failed to serialize root signature");
-
-    auto* pd3d12Device = pDeviceD3D12Impl->GetD3D12Device();
-
-    hr = pd3d12Device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), __uuidof(m_pd3d12RootSignature), reinterpret_cast<void**>(static_cast<ID3D12RootSignature**>(&m_pd3d12RootSignature)));
-    CHECK_D3D_RESULT_THROW(hr, "Failed to create root signature");
 }
 
 RootSignatureD3D12::~RootSignatureD3D12()
 {
-    m_Cache.OnDestroyRootSig(this);
+    if (m_pCache)
+        m_pCache->OnDestroyRootSig(this);
 }
 
 LocalRootSignatureD3D12::LocalRootSignatureD3D12(const char* pCBName, Uint32 ShaderRecordSize) :
