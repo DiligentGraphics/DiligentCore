@@ -494,8 +494,10 @@ TEST_F(PipelineResourceSignatureTest, SingleVarType)
 
         ImmutableSamplerDesc ImmutableSamplers[] = //
             {
-                {SHADER_TYPE_ALL_GRAPHICS, "g_Sampler", SamplerDesc{}} //
+                {SHADER_TYPE_ALL_GRAPHICS, "g_Sampler", SamplerDesc{FILTER_TYPE_POINT, FILTER_TYPE_POINT, FILTER_TYPE_POINT}} //
             };
+        ImmutableSamplers[0].Desc.Name = "Default sampler";
+
         PRSDesc.ImmutableSamplers    = ImmutableSamplers;
         PRSDesc.NumImmutableSamplers = _countof(ImmutableSamplers);
 

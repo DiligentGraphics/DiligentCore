@@ -47,7 +47,7 @@ public:
     PipelineLayoutVk();
     ~PipelineLayoutVk();
 
-    void Create(RenderDeviceVkImpl* pDeviceVk, RefCntAutoPtr<PipelineResourceSignatureVkImpl> ppSignatures[], Uint32 SignatureCount);
+    void Create(RenderDeviceVkImpl* pDeviceVk, RefCntAutoPtr<PipelineResourceSignatureVkImpl> ppSignatures[], Uint32 SignatureCount) noexcept(false);
     void Release(RenderDeviceVkImpl* pDeviceVkImpl, Uint64 CommandQueueMask);
 
     VkPipelineLayout GetVkPipelineLayout() const { return m_VkPipelineLayout; }
