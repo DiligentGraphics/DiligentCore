@@ -41,8 +41,8 @@ public:
         m_pFile{nullptr}
     {}
 
-    FileWrapper(const Char*     Path,
-                EFileAccessMode Access = EFileAccessMode::Read) :
+    explicit FileWrapper(const Char*     Path,
+                         EFileAccessMode Access = EFileAccessMode::Read) :
         m_pFile{nullptr}
     {
         FileOpenAttribs OpenAttribs(Path, Access);
@@ -64,7 +64,7 @@ public:
     CFile* Detach()
     {
         CFile* pFile = m_pFile;
-        m_pFile      = NULL;
+        m_pFile      = nullptr;
         return pFile;
     }
 
@@ -84,6 +84,8 @@ public:
 
     operator CFile*() { return m_pFile; }
     CFile* operator->() { return m_pFile; }
+
+    explicit operator bool() const { return m_pFile != nullptr; }
 
 private:
     FileWrapper(const FileWrapper&);

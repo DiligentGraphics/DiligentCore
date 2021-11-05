@@ -41,12 +41,13 @@ namespace Diligent
 {
 
 /// Base interface for a data blob
-class DataBlobImpl : public Diligent::ObjectBase<IDataBlob>
+class DataBlobImpl final : public Diligent::ObjectBase<IDataBlob>
 {
 public:
     typedef ObjectBase<IDataBlob> TBase;
 
-    DataBlobImpl(IReferenceCounters* pRefCounters, size_t InitialSize = 0, const void* pData = nullptr);
+    explicit DataBlobImpl(IReferenceCounters* pRefCounters, size_t InitialSize = 0, const void* pData = nullptr);
+    ~DataBlobImpl() override;
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override;
 
@@ -68,7 +69,7 @@ private:
     std::vector<Uint8> m_DataBuff;
 };
 
-class DataBlobAllocatorAdapter : public IMemoryAllocator
+class DataBlobAllocatorAdapter final : public IMemoryAllocator
 {
 public:
     virtual void* Allocate(size_t Size, const Char* dbgDescription, const char* dbgFileName, const Int32 dbgLineNumber) override final;
