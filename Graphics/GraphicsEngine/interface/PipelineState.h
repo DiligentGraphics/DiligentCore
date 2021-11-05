@@ -30,7 +30,7 @@
 // clang-format off
 
 /// \file
-/// Definition of the Diligent::IRenderDevice interface and related data structures
+/// Definition of the Diligent::IPipelineState interface and related data structures
 
 #include "../../../Primitives/interface/Object.h"
 #include "../../../Platforms/interface/PlatformDefinitions.h"
@@ -208,7 +208,6 @@ struct GraphicsPipelineDesc
 
     /// Input layout, ignored in a mesh pipeline.
     InputLayoutDesc InputLayout;
-    //D3D12_INDEX_BUFFER_STRIP_CUT_VALUE IBStripCutValue;
 
     /// Primitive topology type, ignored in a mesh pipeline.
     PRIMITIVE_TOPOLOGY PrimitiveTopology DEFAULT_INITIALIZER(PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
@@ -247,9 +246,6 @@ struct GraphicsPipelineDesc
 
     /// Node mask.
     Uint32 NodeMask DEFAULT_INITIALIZER(0);
-
-    //D3D12_CACHED_PIPELINE_STATE CachedPSO;
-    //D3D12_PIPELINE_STATE_FLAGS Flags;
 };
 typedef struct GraphicsPipelineDesc GraphicsPipelineDesc;
 

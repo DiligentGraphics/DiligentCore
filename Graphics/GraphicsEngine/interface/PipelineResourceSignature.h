@@ -215,6 +215,8 @@ struct PipelineResourceSignatureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 };
 typedef struct PipelineResourceSignatureDesc PipelineResourceSignatureDesc;
 
+// clang-format on
+
 
 // {DCE499A5-F812-4C93-B108-D684A0B56118}
 static const INTERFACE_ID IID_PipelineResourceSignature =
@@ -224,7 +226,7 @@ static const INTERFACE_ID IID_PipelineResourceSignature =
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
 #define IPipelineResourceSignatureInclusiveMethods \
-    IDeviceObjectInclusiveMethods;     \
+    IDeviceObjectInclusiveMethods;                 \
     IPipelineResourceSignatureMethods PipelineResourceSignature
 
 // clang-format off
