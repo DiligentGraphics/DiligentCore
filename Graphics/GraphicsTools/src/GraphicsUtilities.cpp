@@ -389,6 +389,10 @@ void ComputeMipLevel(const ComputeMipLevelAttribs& Attribs)
                                   Attribs.FilterType == MIP_FILTER_TYPE_MOST_FREQUENT ?
                                       MostFrequentSelector<Uint8> :
                                       SRGBAverage<Uint8>);
+            if (Attribs.AlphaCutoff > 0)
+            {
+                RemapAlpha(Attribs, FmtAttribs.NumComponents, FmtAttribs.NumComponents - 1);
+            }
             break;
 
         case COMPONENT_TYPE_UNORM:
