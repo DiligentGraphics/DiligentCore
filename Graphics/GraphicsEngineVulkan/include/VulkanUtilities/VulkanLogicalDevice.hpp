@@ -58,7 +58,8 @@ enum class VulkanHandleTypeId : uint32_t
     Queue,
     Event,
     QueryPool,
-    AccelerationStructureKHR
+    AccelerationStructureKHR,
+    PipelineCache
 };
 
 template <typename VulkanObjectType, VulkanHandleTypeId>
@@ -83,6 +84,7 @@ using DescriptorSetLayoutWrapper = DEFINE_VULKAN_OBJECT_WRAPPER(DescriptorSetLay
 using SemaphoreWrapper           = DEFINE_VULKAN_OBJECT_WRAPPER(Semaphore);
 using QueryPoolWrapper           = DEFINE_VULKAN_OBJECT_WRAPPER(QueryPool);
 using AccelStructWrapper         = DEFINE_VULKAN_OBJECT_WRAPPER(AccelerationStructureKHR);
+using PipelineCacheWrapper       = DEFINE_VULKAN_OBJECT_WRAPPER(PipelineCache);
 #undef DEFINE_VULKAN_OBJECT_WRAPPER
 
 class VulkanLogicalDevice : public std::enable_shared_from_this<VulkanLogicalDevice>
@@ -153,6 +155,8 @@ public:
     VkCommandBuffer     AllocateVkCommandBuffer(const VkCommandBufferAllocateInfo& AllocInfo, const char* DebugName = "") const;
     VkDescriptorSet     AllocateVkDescriptorSet(const VkDescriptorSetAllocateInfo& AllocInfo, const char* DebugName = "") const;
 
+    PipelineCacheWrapper CreatePipelineCache(const VkPipelineCacheCreateInfo &CI, const char* DebugName = "") const;
+
     void ReleaseVulkanObject(CommandPoolWrapper&&  CmdPool) const;
     void ReleaseVulkanObject(BufferWrapper&&       Buffer) const;
     void ReleaseVulkanObject(BufferViewWrapper&&   BufferView) const;
@@ -171,6 +175,7 @@ public:
     void ReleaseVulkanObject(SemaphoreWrapper&&     Semaphore) const;
     void ReleaseVulkanObject(QueryPoolWrapper&&     QueryPool) const;
     void ReleaseVulkanObject(AccelStructWrapper&&   AccelStruct) const;
+    void ReleaseVulkanObject(PipelineCacheWrapper&& PSOCache) const;
 
     void FreeDescriptorSet(VkDescriptorPool Pool, VkDescriptorSet Set) const;
     void FreeCommandBuffer(VkCommandPool Pool, VkCommandBuffer CmdBuffer) const;

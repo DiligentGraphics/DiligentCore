@@ -366,6 +366,11 @@ void SetAccelStructName(VkDevice device, VkAccelerationStructureKHR accelStruct,
     SetObjectName(device, (uint64_t)accelStruct, VK_OBJECT_TYPE_ACCELERATION_STRUCTURE_KHR, name);
 }
 
+void SetPipelineCacheName(VkDevice device, VkPipelineCache pipeCache, const char* name)
+{
+    SetObjectName(device, (uint64_t)pipeCache, VK_OBJECT_TYPE_PIPELINE_CACHE, name);
+}
+
 
 template <>
 void SetVulkanObjectName<VkCommandPool, VulkanHandleTypeId::CommandPool>(VkDevice device, VkCommandPool cmdPool, const char* name)
@@ -497,6 +502,12 @@ template <>
 void SetVulkanObjectName<VkAccelerationStructureKHR, VulkanHandleTypeId::AccelerationStructureKHR>(VkDevice device, VkAccelerationStructureKHR accelStruct, const char* name)
 {
     SetAccelStructName(device, accelStruct, name);
+}
+
+template <>
+void SetVulkanObjectName<VkPipelineCache, VulkanHandleTypeId::PipelineCache>(VkDevice device, VkPipelineCache pipeCache, const char* name)
+{
+    SetPipelineCacheName(device, pipeCache, name);
 }
 
 
