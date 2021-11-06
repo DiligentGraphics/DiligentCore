@@ -19,6 +19,7 @@ set(INCLUDE
     include/IndexWrapper.hpp
     include/PipelineStateBase.hpp
     include/PipelineResourceSignatureBase.hpp
+    include/PipelineStateCacheBase.hpp
     include/PrivateConstants.h
     include/QueryBase.hpp
     include/RenderDeviceBase.hpp
@@ -35,8 +36,6 @@ set(INCLUDE
     include/TextureBase.hpp
     include/TextureViewBase.hpp
     include/TopLevelASBase.hpp
-    include/ShaderBindingTableBase.hpp
-    include/PipelineResourceSignatureBase.hpp
 )
 
 set(INTERFACE 
@@ -59,6 +58,7 @@ set(INTERFACE
     interface/InputLayout.h
     interface/PipelineState.h
     interface/PipelineResourceSignature.h
+    interface/PipelineStateCache.h
     interface/Query.h
     interface/RasterizerState.h
     interface/RenderDevice.h
@@ -91,6 +91,7 @@ set(SOURCE
     src/FramebufferBase.cpp
     src/PipelineResourceSignatureBase.cpp
     src/PipelineStateBase.cpp
+    src/PipelineStateCacheBase.cpp
     src/RenderDeviceBase.cpp
     src/ResourceMappingBase.cpp
     src/RenderPassBase.cpp

@@ -150,6 +150,10 @@ public:
     virtual void DILIGENT_CALL_TYPE CreateDeviceMemory(const DeviceMemoryCreateInfo& CreateInfo,
                                                        IDeviceMemory**               ppMemory) override final;
 
+    /// Implementation of IRenderDevice::CreatePipelineStateCache() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE CreatePipelineStateCache(const PipelineStateCacheCreateInfo& CreateInfo,
+                                                             IPipelineStateCache**               ppPipelineStateCache) override final;
+
     /// Implementation of IRenderDeviceVk::GetVkDevice().
     virtual VkDevice DILIGENT_CALL_TYPE GetVkDevice() override final { return m_LogicalVkDevice->GetVkDevice(); }
 

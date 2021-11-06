@@ -37,6 +37,7 @@
 #include "ShaderVkImpl.hpp"
 #include "RenderPassVkImpl.hpp"
 #include "ShaderResourceBindingVkImpl.hpp"
+#include "PipelineStateCacheVkImpl.hpp"
 
 #include "VulkanTypeConversions.hpp"
 #include "EngineMemory.h"
@@ -54,7 +55,7 @@ namespace Diligent
 namespace
 {
 
-bool StripReflection(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice, std::vector<uint32_t>& SPIRV)
+bool StripReflection(std::vector<uint32_t>& SPIRV)
 {
 #if DILIGENT_NO_HLSL
     return true;
@@ -117,7 +118,7 @@ void InitPipelineShaderStages(const VulkanUtilities::VulkanLogicalDevice&       
             // We have to strip reflection instructions to fix the following validation error:
             //     SPIR-V module not valid: DecorateStringGOOGLE requires one of the following extensions: SPV_GOOGLE_decorate_string
             // Optimizer also performs validation and may catch problems with the byte code.
-            if (!StripReflection(LogicalDevice, SPIRV))
+            if (!StripReflection(SPIRV))
                 LOG_ERROR("Failed to strip reflection information from shader '", pShader->GetDesc().Name, "'. This may indicate a problem with the byte code.");
 
             ShaderModuleCI.codeSize = SPIRV.size() * sizeof(uint32_t);
@@ -141,7 +142,8 @@ void CreateComputePipeline(RenderDeviceVkImpl*                           pDevice
                            std::vector<VkPipelineShaderStageCreateInfo>& Stages,
                            const PipelineLayoutVk&                       Layout,
                            const PipelineStateDesc&                      PSODesc,
-                           VulkanUtilities::PipelineWrapper&             Pipeline)
+                           VulkanUtilities::PipelineWrapper&             Pipeline,
+                           VkPipelineCache                               vkPSOCache)
 {
     const auto& LogicalDevice = pDeviceVk->GetLogicalDevice();
 
@@ -157,7 +159,7 @@ void CreateComputePipeline(RenderDeviceVkImpl*                           pDevice
     PipelineCI.stage  = Stages[0];
     PipelineCI.layout = Layout.GetVkPipelineLayout();
 
-    Pipeline = LogicalDevice.CreateComputePipeline(PipelineCI, VK_NULL_HANDLE, PSODesc.Name);
+    Pipeline = LogicalDevice.CreateComputePipeline(PipelineCI, vkPSOCache, PSODesc.Name);
 }
 
 
@@ -167,7 +169,8 @@ void CreateGraphicsPipeline(RenderDeviceVkImpl*                           pDevic
                             const PipelineStateDesc&                      PSODesc,
                             const GraphicsPipelineDesc&                   GraphicsPipeline,
                             VulkanUtilities::PipelineWrapper&             Pipeline,
-                            RefCntAutoPtr<IRenderPass>&                   pRenderPass)
+                            RefCntAutoPtr<IRenderPass>&                   pRenderPass,
+                            VkPipelineCache                               vkPSOCache)
 {
     const auto& LogicalDevice  = pDeviceVk->GetLogicalDevice();
     const auto& PhysicalDevice = pDeviceVk->GetPhysicalDevice();
@@ -354,7 +357,7 @@ void CreateGraphicsPipeline(RenderDeviceVkImpl*                           pDevic
     PipelineCI.basePipelineHandle = VK_NULL_HANDLE; // a pipeline to derive from
     PipelineCI.basePipelineIndex  = -1;             // an index into the pCreateInfos parameter to use as a pipeline to derive from
 
-    Pipeline = LogicalDevice.CreateGraphicsPipeline(PipelineCI, VK_NULL_HANDLE, PSODesc.Name);
+    Pipeline = LogicalDevice.CreateGraphicsPipeline(PipelineCI, vkPSOCache, PSODesc.Name);
 }
 
 
@@ -364,7 +367,8 @@ void CreateRayTracingPipeline(RenderDeviceVkImpl*                               
                               const PipelineLayoutVk&                                  Layout,
                               const PipelineStateDesc&                                 PSODesc,
                               const RayTracingPipelineDesc&                            RayTracingPipeline,
-                              VulkanUtilities::PipelineWrapper&                        Pipeline)
+                              VulkanUtilities::PipelineWrapper&                        Pipeline,
+                              VkPipelineCache                                          vkPSOCache)
 {
     const auto& LogicalDevice = pDeviceVk->GetLogicalDevice();
 
@@ -387,7 +391,7 @@ void CreateRayTracingPipeline(RenderDeviceVkImpl*                               
     PipelineCI.basePipelineHandle           = VK_NULL_HANDLE; // a pipeline to derive from
     PipelineCI.basePipelineIndex            = -1;             // an index into the pCreateInfos parameter to use as a pipeline to derive from
 
-    Pipeline = LogicalDevice.CreateRayTracingPipeline(PipelineCI, VK_NULL_HANDLE, PSODesc.Name);
+    Pipeline = LogicalDevice.CreateRayTracingPipeline(PipelineCI, vkPSOCache, PSODesc.Name);
 }
 
 
@@ -581,7 +585,7 @@ size_t PipelineStateVkImpl::ShaderStageInfo::Count() const
     return Shaders.size();
 }
 
-RefCntAutoPtr<PipelineResourceSignatureVkImpl> PipelineStateVkImpl::CreateDefaultSignature(const TShaderStages& ShaderStages)
+RefCntAutoPtr<PipelineResourceSignatureVkImpl> PipelineStateVkImpl::CreateDefaultSignature(const TShaderStages& ShaderStages) noexcept(false)
 {
     std::unordered_map<ShaderResourceHashKey, const SPIRVShaderResourceAttribs&, ShaderResourceHashKey::Hasher> UniqueResources;
 
@@ -750,7 +754,7 @@ template <typename PSOCreateInfoType>
 PipelineStateVkImpl::TShaderStages PipelineStateVkImpl::InitInternalObjects(
     const PSOCreateInfoType&                           CreateInfo,
     std::vector<VkPipelineShaderStageCreateInfo>&      vkShaderStages,
-    std::vector<VulkanUtilities::ShaderModuleWrapper>& ShaderModules)
+    std::vector<VulkanUtilities::ShaderModuleWrapper>& ShaderModules) noexcept(false)
 {
     TShaderStages ShaderStages;
     ExtractShaders<ShaderVkImpl>(CreateInfo, ShaderStages);
@@ -783,7 +787,8 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters* pRefCounters, Rende
 
         InitInternalObjects(CreateInfo, vkShaderStages, ShaderModules);
 
-        CreateGraphicsPipeline(pDeviceVk, vkShaderStages, m_PipelineLayout, m_Desc, GetGraphicsPipelineDesc(), m_Pipeline, GetRenderPassPtr());
+        const auto vkSPOCache = CreateInfo.pPSOCache != nullptr ? ClassPtrCast<PipelineStateCacheVkImpl>(CreateInfo.pPSOCache)->GetVkPipelineCache() : VK_NULL_HANDLE;
+        CreateGraphicsPipeline(pDeviceVk, vkShaderStages, m_PipelineLayout, m_Desc, GetGraphicsPipelineDesc(), m_Pipeline, GetRenderPassPtr(), vkSPOCache);
     }
     catch (...)
     {
@@ -802,7 +807,8 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters* pRefCounters, Rende
 
         InitInternalObjects(CreateInfo, vkShaderStages, ShaderModules);
 
-        CreateComputePipeline(pDeviceVk, vkShaderStages, m_PipelineLayout, m_Desc, m_Pipeline);
+        const auto vkSPOCache = CreateInfo.pPSOCache != nullptr ? ClassPtrCast<PipelineStateCacheVkImpl>(CreateInfo.pPSOCache)->GetVkPipelineCache() : VK_NULL_HANDLE;
+        CreateComputePipeline(pDeviceVk, vkShaderStages, m_PipelineLayout, m_Desc, m_Pipeline, vkSPOCache);
     }
     catch (...)
     {
@@ -821,11 +827,11 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters* pRefCounters, Rende
         std::vector<VkPipelineShaderStageCreateInfo>      vkShaderStages;
         std::vector<VulkanUtilities::ShaderModuleWrapper> ShaderModules;
 
-        const auto ShaderStages = InitInternalObjects(CreateInfo, vkShaderStages, ShaderModules);
-
+        const auto ShaderStages   = InitInternalObjects(CreateInfo, vkShaderStages, ShaderModules);
         const auto vkShaderGroups = BuildRTShaderGroupDescription(CreateInfo, m_pRayTracingPipelineData->NameToGroupIndex, ShaderStages);
+        const auto vkSPOCache     = CreateInfo.pPSOCache != nullptr ? ClassPtrCast<PipelineStateCacheVkImpl>(CreateInfo.pPSOCache)->GetVkPipelineCache() : VK_NULL_HANDLE;
 
-        CreateRayTracingPipeline(pDeviceVk, vkShaderStages, vkShaderGroups, m_PipelineLayout, m_Desc, GetRayTracingPipelineDesc(), m_Pipeline);
+        CreateRayTracingPipeline(pDeviceVk, vkShaderStages, vkShaderGroups, m_PipelineLayout, m_Desc, GetRayTracingPipelineDesc(), m_Pipeline, vkSPOCache);
 
         VERIFY(m_pRayTracingPipelineData->NameToGroupIndex.size() == vkShaderGroups.size(),
                "The size of NameToGroupIndex map does not match the actual number of groups in the pipeline. This is a bug.");

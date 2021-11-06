@@ -69,6 +69,8 @@ class TopLevelASGLImpl;
 class ShaderBindingTableGLImpl;
 class PipelineResourceSignatureGLImpl;
 class DeviceMemoryGLImpl;
+class PipelineStateCacheGlImpl
+{};
 
 class FixedBlockMemoryAllocator;
 
@@ -114,6 +116,7 @@ struct EngineGLImplTraits
     using ShaderBindingTableImplType        = ShaderBindingTableGLImpl;
     using PipelineResourceSignatureImplType = PipelineResourceSignatureGLImpl;
     using DeviceMemoryImplType              = DeviceMemoryGLImpl;
+    using PipelineStateCacheImplType        = PipelineStateCacheGlImpl;
 
     using BuffViewObjAllocatorType = FixedBlockMemoryAllocator;
     using TexViewObjAllocatorType  = FixedBlockMemoryAllocator;

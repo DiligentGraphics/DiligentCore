@@ -46,8 +46,8 @@
 #include "BottomLevelASD3D12Impl.hpp"
 #include "TopLevelASD3D12Impl.hpp"
 #include "ShaderBindingTableD3D12Impl.hpp"
-#include "PipelineResourceSignatureD3D12Impl.hpp"
 #include "DeviceMemoryD3D12Impl.hpp"
+#include "PipelineStateCacheD3D12Impl.hpp"
 
 #include "EngineMemory.h"
 #include "D3D12TypeConversions.hpp"
@@ -656,6 +656,12 @@ void RenderDeviceD3D12Impl::CreateRootSignature(const RefCntAutoPtr<PipelineReso
 void RenderDeviceD3D12Impl::CreateDeviceMemory(const DeviceMemoryCreateInfo& CreateInfo, IDeviceMemory** ppMemory)
 {
     CreateDeviceMemoryImpl(ppMemory, CreateInfo);
+}
+
+void RenderDeviceD3D12Impl::CreatePipelineStateCache(const PipelineStateCacheCreateInfo& CreateInfo,
+                                                     IPipelineStateCache**               ppPipelineStateCache)
+{
+    CreatePipelineStateCacheImpl(ppPipelineStateCache, CreateInfo);
 }
 
 SparseTextureFormatInfo RenderDeviceD3D12Impl::GetSparseTextureFormatInfo(TEXTURE_FORMAT     TexFormat,

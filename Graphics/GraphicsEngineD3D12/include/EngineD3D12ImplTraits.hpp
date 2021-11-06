@@ -49,6 +49,7 @@
 #include "ShaderBindingTableD3D12.h"
 #include "PipelineResourceSignature.h"
 #include "DeviceMemoryD3D12.h"
+#include "PipelineStateCacheD3D12.h"
 #include "CommandQueueD3D12.h"
 #include "DeviceContextD3D12.h"
 
@@ -75,6 +76,7 @@ class TopLevelASD3D12Impl;
 class ShaderBindingTableD3D12Impl;
 class PipelineResourceSignatureD3D12Impl;
 class DeviceMemoryD3D12Impl;
+class PipelineStateCacheD3D12Impl;
 
 class FixedBlockMemoryAllocator;
 
@@ -106,6 +108,7 @@ struct EngineD3D12ImplTraits
     using PipelineResourceSignatureInterface = IPipelineResourceSignature;
     using CommandQueueInterface              = ICommandQueueD3D12;
     using DeviceMemoryInterface              = IDeviceMemoryD3D12;
+    using PipelineStateCacheInterface        = IPipelineStateCacheD3D12;
 
     using RenderDeviceImplType              = RenderDeviceD3D12Impl;
     using DeviceContextImplType             = DeviceContextD3D12Impl;
@@ -127,6 +130,7 @@ struct EngineD3D12ImplTraits
     using ShaderBindingTableImplType        = ShaderBindingTableD3D12Impl;
     using PipelineResourceSignatureImplType = PipelineResourceSignatureD3D12Impl;
     using DeviceMemoryImplType              = DeviceMemoryD3D12Impl;
+    using PipelineStateCacheImplType        = PipelineStateCacheD3D12Impl;
 
     using BuffViewObjAllocatorType = FixedBlockMemoryAllocator;
     using TexViewObjAllocatorType  = FixedBlockMemoryAllocator;
