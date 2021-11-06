@@ -111,6 +111,11 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
             LOG_PRS_ERROR_AND_THROW("Incorrect Desc.Resources[", i, "].ResourceType (ACCEL_STRUCT): ray tracing is not supported by device.");
         }
 
+        if (Res.ResourceType == SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT && Res.ShaderStages != SHADER_TYPE_PIXEL)
+        {
+            LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].ResourceType (INPUT_ATTACHMENT) is only supported in pixel shader but ShaderStages are ", GetShaderStagesString(Res.ShaderStages), ".");
+        }
+
         auto AllowedResourceFlags = GetValidPipelineResourceFlags(Res.ResourceType);
         if ((Res.Flags & ~AllowedResourceFlags) != 0)
         {

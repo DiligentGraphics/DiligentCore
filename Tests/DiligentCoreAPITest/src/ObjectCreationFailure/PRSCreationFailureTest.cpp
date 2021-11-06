@@ -497,4 +497,17 @@ TEST(PRSCreationFailureTest, InvalidImmutableSamplerStages)
     TestCreatePRSFailure(PRSDesc, "Texture 'g_Texture' is defined for the following shader stages: SHADER_TYPE_VERTEX, SHADER_TYPE_PIXEL, but immutable sampler that is assigned to it uses only some of these stages: SHADER_TYPE_VERTEX");
 }
 
+TEST(PRSCreationFailureTest, InvalidInputAttachmentStages)
+{
+    PipelineResourceSignatureDesc PRSDesc;
+    PRSDesc.Name = "Invalid input attachment stages";
+    PipelineResourceDesc Resources[]{
+        {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_InputAttachment", 1, SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE}};
+
+    PRSDesc.UseCombinedTextureSamplers = true;
+    PRSDesc.Resources                  = Resources;
+    PRSDesc.NumResources               = _countof(Resources);
+    TestCreatePRSFailure(PRSDesc, "Desc.Resources[0].ResourceType (INPUT_ATTACHMENT) is only supported in pixel shader but ShaderStages are SHADER_TYPE_VERTEX, SHADER_TYPE_PIXEL");
+}
+
 } // namespace
