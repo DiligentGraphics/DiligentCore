@@ -8,6 +8,7 @@ set(SOURCE
 )
 
 set(INTERFACE
+    interface/Archive.h
     interface/BasicTypes.h
     interface/CommonDefinitions.h
     interface/DataBlob.h

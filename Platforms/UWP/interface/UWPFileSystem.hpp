@@ -54,7 +54,7 @@ public:
 
     size_t GetPos();
 
-    void SetPos(size_t Offset, FilePosOrigin Origin);
+    bool SetPos(size_t Offset, FilePosOrigin Origin);
 
 private:
     // We have to do such tricks, because we cannot #include <wrl.h>
