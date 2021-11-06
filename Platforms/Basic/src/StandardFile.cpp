@@ -103,11 +103,11 @@ size_t StandardFile::GetPos()
     return ftell(m_pFile);
 }
 
-void StandardFile::SetPos(size_t Offset, FilePosOrigin Origin)
+bool StandardFile::SetPos(size_t Offset, FilePosOrigin Origin)
 {
     VERIFY(m_pFile, "File is not opened");
     if (!m_pFile)
-        return;
+        return false;
 
     int orig = SEEK_SET;
     switch (Origin)
@@ -120,5 +120,5 @@ void StandardFile::SetPos(size_t Offset, FilePosOrigin Origin)
         default: UNEXPECTED("Unknown origin");
     }
 
-    fseek(m_pFile, static_cast<long>(Offset), orig);
+    return fseek(m_pFile, static_cast<long>(Offset), orig) == 0;
 }

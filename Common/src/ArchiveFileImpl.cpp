@@ -1,6 +1,5 @@
 /*
  *  Copyright 2019-2021 Diligent Graphics LLC
- *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -25,31 +24,42 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
+#include "ArchiveFileImpl.hpp"
 
-#include <stdio.h>
-
-#include "../../../Primitives/interface/DataBlob.h"
-#include "BasicFileSystem.hpp"
-
-class StandardFile : public BasicFile
+namespace Diligent
 {
-public:
-    StandardFile(const FileOpenAttribs& OpenAttribs, Diligent::Char SlashSymbol);
-    virtual ~StandardFile() override;
 
-    void Read(Diligent::IDataBlob* pData);
+ArchiveFileImpl::ArchiveFileImpl(IReferenceCounters* pRefCounters, const Char* Path) :
+    TObjectBase{pRefCounters},
+    m_File{Path, EFileAccessMode::Read},
+    m_FileSize{m_File ? m_File->GetSize() : 0}
+{
+    if (!m_File)
+        LOG_ERROR_AND_THROW("Failed to open file '", Path, "'");
+}
 
-    bool Read(void* Data, size_t Size);
+Bool ArchiveFileImpl::Read(Uint64 Offset, Uint64 Size, void* pData)
+{
+    if (Size == 0)
+        return True;
 
-    bool Write(const void* Data, size_t Size);
+    if (Offset >= m_FileSize)
+        return False;
 
-    size_t GetSize();
+    DEV_CHECK_ERR(pData != nullptr, "pData must not be null");
 
-    size_t GetPos();
+    std::unique_lock<std::mutex> Lock{m_Mtx};
 
-    bool SetPos(size_t Offset, FilePosOrigin Origin);
+    if (!m_File->SetPos(StaticCast<size_t>(Offset), FilePosOrigin::Start))
+        return False;
 
-protected:
-    FILE* m_pFile = nullptr;
-};
+    const auto RemainingSize = m_FileSize - Offset;
+    return m_File->Read(pData, StaticCast<size_t>(std::min(Size, RemainingSize))) && Size <= RemainingSize;
+}
+
+RefCntAutoPtr<IArchive> ArchiveFileImpl::Create(const Char* Path)
+{
+    return RefCntAutoPtr<IArchive>{MakeNewRCObj<ArchiveFileImpl>()(Path)};
+}
+
+} // namespace Diligent

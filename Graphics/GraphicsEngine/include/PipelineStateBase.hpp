@@ -536,21 +536,25 @@ protected:
         ReserveResourceSignatures(CreateInfo, MemPool);
     }
 
+public:
     template <typename ShaderImplType, typename TShaderStages>
-    void ExtractShaders(const GraphicsPipelineStateCreateInfo& CreateInfo,
-                        TShaderStages&                         ShaderStages)
+    static void ExtractShaders(const GraphicsPipelineStateCreateInfo& CreateInfo,
+                               TShaderStages&                         ShaderStages,
+                               SHADER_TYPE&                           ActiveShaderStages)
     {
-        VERIFY_EXPR(this->m_Desc.IsAnyGraphicsPipeline());
+        VERIFY_EXPR(CreateInfo.PSODesc.IsAnyGraphicsPipeline());
 
         ShaderStages.clear();
+        ActiveShaderStages = SHADER_TYPE_UNKNOWN;
+
         auto AddShaderStage = [&](IShader* pShader) {
             if (pShader != nullptr)
             {
                 ShaderStages.emplace_back(ClassPtrCast<ShaderImplType>(pShader));
                 const auto ShaderType = pShader->GetDesc().ShaderType;
-                VERIFY((m_ActiveShaderStages & ShaderType) == 0,
-                       "Shader stage ", GetShaderTypeLiteralName(ShaderType), " has already been initialized in PSO '", this->m_Desc.Name, "'.");
-                m_ActiveShaderStages |= ShaderType;
+                VERIFY((ActiveShaderStages & ShaderType) == 0,
+                       "Shader stage ", GetShaderTypeLiteralName(ShaderType), " has already been initialized in PSO.");
+                ActiveShaderStages |= ShaderType;
 #ifdef DILIGENT_DEBUG
                 for (size_t i = 0; i + 1 < ShaderStages.size(); ++i)
                     VERIFY_EXPR(GetShaderStageType(ShaderStages[i]) != ShaderType);
@@ -588,10 +592,11 @@ protected:
     }
 
     template <typename ShaderImplType, typename TShaderStages>
-    void ExtractShaders(const ComputePipelineStateCreateInfo& CreateInfo,
-                        TShaderStages&                        ShaderStages)
+    static void ExtractShaders(const ComputePipelineStateCreateInfo& CreateInfo,
+                               TShaderStages&                        ShaderStages,
+                               SHADER_TYPE&                          ActiveShaderStages)
     {
-        VERIFY_EXPR(this->m_Desc.IsComputePipeline());
+        VERIFY_EXPR(CreateInfo.PSODesc.IsComputePipeline());
 
         ShaderStages.clear();
 
@@ -600,32 +605,34 @@ protected:
         VERIFY_EXPR(CreateInfo.pCS->GetDesc().ShaderType == SHADER_TYPE_COMPUTE);
 
         ShaderStages.emplace_back(ClassPtrCast<ShaderImplType>(CreateInfo.pCS));
-        m_ActiveShaderStages = SHADER_TYPE_COMPUTE;
+        ActiveShaderStages = SHADER_TYPE_COMPUTE;
 
         VERIFY_EXPR(!ShaderStages.empty());
     }
 
     template <typename ShaderImplType, typename TShaderStages>
-    void ExtractShaders(const RayTracingPipelineStateCreateInfo& CreateInfo,
-                        TShaderStages&                           ShaderStages)
+    static void ExtractShaders(const RayTracingPipelineStateCreateInfo& CreateInfo,
+                               TShaderStages&                           ShaderStages,
+                               SHADER_TYPE&                             ActiveShaderStages)
     {
-        VERIFY_EXPR(this->m_Desc.IsRayTracingPipeline());
+        VERIFY_EXPR(CreateInfo.PSODesc.IsRayTracingPipeline());
 
         std::unordered_set<IShader*> UniqueShaders;
 
-        auto AddShader = [&ShaderStages, &UniqueShaders, this](IShader* pShader) {
+        auto AddShader = [&ShaderStages, &UniqueShaders, &ActiveShaderStages](IShader* pShader) {
             if (pShader != nullptr && UniqueShaders.insert(pShader).second)
             {
                 const auto ShaderType = pShader->GetDesc().ShaderType;
                 const auto StageInd   = GetShaderTypePipelineIndex(ShaderType, PIPELINE_TYPE_RAY_TRACING);
                 auto&      Stage      = ShaderStages[StageInd];
-                m_ActiveShaderStages |= ShaderType;
+                ActiveShaderStages |= ShaderType;
                 Stage.Append(ClassPtrCast<ShaderImplType>(pShader));
             }
         };
 
         ShaderStages.clear();
         ShaderStages.resize(MAX_SHADERS_IN_PIPELINE);
+        ActiveShaderStages = SHADER_TYPE_UNKNOWN;
 
         for (Uint32 i = 0; i < CreateInfo.GeneralShaderCount; ++i)
         {
@@ -662,10 +669,11 @@ protected:
     }
 
     template <typename ShaderImplType, typename TShaderStages>
-    void ExtractShaders(const TilePipelineStateCreateInfo& CreateInfo,
-                        TShaderStages&                     ShaderStages)
+    static void ExtractShaders(const TilePipelineStateCreateInfo& CreateInfo,
+                               TShaderStages&                     ShaderStages,
+                               SHADER_TYPE&                       ActiveShaderStages)
     {
-        VERIFY_EXPR(this->m_Desc.IsTilePipeline());
+        VERIFY_EXPR(CreateInfo.PSODesc.IsTilePipeline());
 
         ShaderStages.clear();
 
@@ -674,9 +682,18 @@ protected:
         VERIFY_EXPR(CreateInfo.pTS->GetDesc().ShaderType == SHADER_TYPE_TILE);
 
         ShaderStages.emplace_back(ClassPtrCast<ShaderImplType>(CreateInfo.pTS));
-        m_ActiveShaderStages = SHADER_TYPE_TILE;
+        ActiveShaderStages = SHADER_TYPE_TILE;
 
         VERIFY_EXPR(!ShaderStages.empty());
+    }
+
+protected:
+    template <typename ShaderImplType, typename PSOCreateInfoType, typename TShaderStages>
+    void ExtractShaders(const PSOCreateInfoType& PSOCreateInfo,
+                        TShaderStages&           ShaderStages)
+    {
+        VERIFY_EXPR(this->m_Desc.PipelineType == PSOCreateInfo.PSODesc.PipelineType);
+        ExtractShaders<ShaderImplType>(PSOCreateInfo, ShaderStages, m_ActiveShaderStages);
     }
 
     void InitializePipelineDesc(const GraphicsPipelineStateCreateInfo& CreateInfo,
@@ -904,14 +921,12 @@ protected:
         }
     };
 
-    ResourceAttribution GetResourceAttribution(const char* Name, SHADER_TYPE Stage) const
+    template <typename PipelineResourceSignatureImplPtrType>
+    static ResourceAttribution GetResourceAttribution(const char* Name, SHADER_TYPE Stage, const PipelineResourceSignatureImplPtrType* pSignatures, Uint32 SignCount)
     {
-        const auto* const pThis = static_cast<const PipelineStateImplType*>(this);
-
-        const auto SignCount = pThis->GetResourceSignatureCount();
         for (Uint32 sign = 0; sign < SignCount; ++sign)
         {
-            const PipelineResourceSignatureImplType* const pSignature = pThis->GetResourceSignature(sign);
+            const PipelineResourceSignatureImplType* const pSignature = pSignatures[sign];
             if (pSignature == nullptr)
                 continue;
 
@@ -926,6 +941,12 @@ protected:
             }
         }
         return ResourceAttribution{};
+    }
+
+    ResourceAttribution GetResourceAttribution(const char* Name, SHADER_TYPE Stage) const
+    {
+        const auto* const pThis = static_cast<const PipelineStateImplType*>(this);
+        return GetResourceAttribution(Name, Stage, pThis->m_Signatures, pThis->m_SignatureCount);
     }
 
     template <typename... ExtraArgsType>

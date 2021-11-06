@@ -5,6 +5,7 @@ project(Diligent-GraphicsEngineVk CXX)
 set(INCLUDE
     include/BufferVkImpl.hpp
     include/BufferViewVkImpl.hpp
+    include/BottomLevelASVkImpl.hpp
     include/CommandListVkImpl.hpp
     include/CommandPoolManager.hpp
     include/CommandQueueVkImpl.hpp
@@ -14,12 +15,14 @@ set(INCLUDE
     include/EngineVkImplTraits.hpp
     include/FenceVkImpl.hpp
     include/FramebufferVkImpl.hpp
-    include/VulkanDynamicHeap.hpp
     include/FramebufferCache.hpp
     include/GenerateMipsVkHelper.hpp
+    include/ManagedVulkanObject.hpp
     include/pch.h
     include/PipelineLayoutVk.hpp
     include/PipelineStateVkImpl.hpp
+    include/PipelineResourceSignatureVkImpl.hpp
+    include/PipelineResourceAttribsVk.hpp
     include/QueryManagerVk.hpp
     include/QueryVkImpl.hpp
     include/RenderDeviceVkImpl.hpp
@@ -27,21 +30,18 @@ set(INCLUDE
     include/RenderPassCache.hpp
     include/SamplerVkImpl.hpp
     include/ShaderVkImpl.hpp
-    include/ManagedVulkanObject.hpp
     include/ShaderResourceBindingVkImpl.hpp
     include/ShaderResourceCacheVk.hpp
     include/ShaderVariableManagerVk.hpp
+    include/ShaderBindingTableVkImpl.hpp
     include/SwapChainVkImpl.hpp
     include/TextureVkImpl.hpp
     include/TextureViewVkImpl.hpp
+    include/TopLevelASVkImpl.hpp
+    include/VulkanDynamicHeap.hpp
     include/VulkanErrors.hpp
     include/VulkanTypeConversions.hpp
     include/VulkanUploadHeap.hpp
-    include/BottomLevelASVkImpl.hpp
-    include/TopLevelASVkImpl.hpp
-    include/ShaderBindingTableVkImpl.hpp
-    include/PipelineResourceSignatureVkImpl.hpp
-    include/PipelineResourceAttribsVk.hpp
 )
 
 set(VULKAN_UTILS_INCLUDE
@@ -61,6 +61,7 @@ set(VULKAN_UTILS_INCLUDE
 set(INTERFACE
     interface/BufferVk.h
     interface/BufferViewVk.h
+    interface/BottomLevelASVk.h
     interface/CommandQueueVk.h
     interface/DeviceContextVk.h
     interface/DeviceMemoryVk.h
@@ -74,18 +75,18 @@ set(INTERFACE
     interface/SamplerVk.h
     interface/ShaderVk.h
     interface/ShaderResourceBindingVk.h
+    interface/ShaderBindingTableVk.h
     interface/SwapChainVk.h
     interface/TextureVk.h
     interface/TextureViewVk.h
-    interface/BottomLevelASVk.h
     interface/TopLevelASVk.h
-    interface/ShaderBindingTableVk.h
 )
 
 
 set(SRC
     src/BufferVkImpl.cpp
     src/BufferViewVkImpl.cpp
+    src/BottomLevelASVkImpl.cpp
     src/CommandPoolManager.cpp
     src/CommandQueueVkImpl.cpp
     src/DescriptorPoolManager.cpp
@@ -94,11 +95,11 @@ set(SRC
     src/EngineFactoryVk.cpp
     src/FenceVkImpl.cpp
     src/FramebufferVkImpl.cpp
-    src/VulkanDynamicHeap.cpp
     src/FramebufferCache.cpp
     src/GenerateMipsVkHelper.cpp
     src/PipelineLayoutVk.cpp
     src/PipelineStateVkImpl.cpp
+    src/PipelineResourceSignatureVkImpl.cpp
     src/QueryManagerVk.cpp
     src/QueryVkImpl.cpp
     src/RenderDeviceVkImpl.cpp
@@ -109,15 +110,14 @@ set(SRC
     src/ShaderResourceBindingVkImpl.cpp
     src/ShaderResourceCacheVk.cpp
     src/ShaderVariableManagerVk.cpp
+    src/ShaderBindingTableVkImpl.cpp
     src/SwapChainVkImpl.cpp
     src/TextureVkImpl.cpp
     src/TextureViewVkImpl.cpp
+    src/TopLevelASVkImpl.cpp
+    src/VulkanDynamicHeap.cpp
     src/VulkanTypeConversions.cpp
     src/VulkanUploadHeap.cpp
-    src/BottomLevelASVkImpl.cpp
-    src/TopLevelASVkImpl.cpp
-    src/ShaderBindingTableVkImpl.cpp
-    src/PipelineResourceSignatureVkImpl.cpp
 )
 
 set(VULKAN_UTILS_SRC

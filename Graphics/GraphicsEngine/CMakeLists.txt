@@ -5,6 +5,7 @@ project(Diligent-GraphicsEngine CXX)
 set(INCLUDE 
     include/BufferBase.hpp
     include/BufferViewBase.hpp
+    include/BottomLevelASBase.hpp
     include/CommandListBase.hpp
     include/DefaultShaderSourceStreamFactory.h
     include/Defines.h
@@ -17,6 +18,7 @@ set(INCLUDE
     include/FramebufferBase.hpp
     include/IndexWrapper.hpp
     include/PipelineStateBase.hpp
+    include/PipelineResourceSignatureBase.hpp
     include/PrivateConstants.h
     include/QueryBase.hpp
     include/RenderDeviceBase.hpp
@@ -27,11 +29,11 @@ set(INCLUDE
     include/ShaderResourceBindingBase.hpp
     include/ShaderResourceCacheCommon.hpp
     include/ShaderResourceVariableBase.hpp
+    include/ShaderBindingTableBase.hpp
     include/StateObjectsRegistry.hpp
     include/SwapChainBase.hpp
     include/TextureBase.hpp
     include/TextureViewBase.hpp
-    include/BottomLevelASBase.hpp
     include/TopLevelASBase.hpp
     include/ShaderBindingTableBase.hpp
     include/PipelineResourceSignatureBase.hpp
@@ -42,6 +44,7 @@ set(INTERFACE
     interface/BlendState.h
     interface/Buffer.h
     interface/BufferView.h
+    interface/BottomLevelAS.h
     interface/CommandList.h
     interface/Constants.h
     interface/CommandQueue.h
@@ -65,12 +68,11 @@ set(INTERFACE
     interface/Shader.h
     interface/ShaderResourceBinding.h
     interface/ShaderResourceVariable.h
+    interface/ShaderBindingTable.h
     interface/SwapChain.h
     interface/Texture.h
     interface/TextureView.h
-    interface/BottomLevelAS.h
     interface/TopLevelAS.h
-    interface/ShaderBindingTable.h
 )
 
 if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
@@ -91,9 +93,9 @@ set(SOURCE
     src/PipelineStateBase.cpp
     src/RenderDeviceBase.cpp
     src/ResourceMappingBase.cpp
+    src/RenderPassBase.cpp
     src/ShaderBindingTableBase.cpp
     src/SamplerBase.cpp
-    src/RenderPassBase.cpp
     src/TextureBase.cpp
     src/TopLevelASBase.cpp
 )

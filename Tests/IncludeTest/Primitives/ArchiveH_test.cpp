@@ -1,6 +1,5 @@
 /*
  *  Copyright 2019-2021 Diligent Graphics LLC
- *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -25,31 +24,4 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
-
-#include <stdio.h>
-
-#include "../../../Primitives/interface/DataBlob.h"
-#include "BasicFileSystem.hpp"
-
-class StandardFile : public BasicFile
-{
-public:
-    StandardFile(const FileOpenAttribs& OpenAttribs, Diligent::Char SlashSymbol);
-    virtual ~StandardFile() override;
-
-    void Read(Diligent::IDataBlob* pData);
-
-    bool Read(void* Data, size_t Size);
-
-    bool Write(const void* Data, size_t Size);
-
-    size_t GetSize();
-
-    size_t GetPos();
-
-    bool SetPos(size_t Offset, FilePosOrigin Origin);
-
-protected:
-    FILE* m_pFile = nullptr;
-};
+#include "DiligentCore/Primitives/interface/Archive.h"

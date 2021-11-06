@@ -58,7 +58,7 @@ enum class DescriptorType : Uint8
     InputAttachment_General,
     AccelerationStructure,
     Count,
-    Unknown = 0xFF,
+    Unknown = 0xFFu,
 };
 
 

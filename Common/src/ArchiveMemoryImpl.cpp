@@ -1,6 +1,5 @@
 /*
  *  Copyright 2019-2021 Diligent Graphics LLC
- *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -25,31 +24,45 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
+#include "ArchiveMemoryImpl.hpp"
 
-#include <stdio.h>
+#include <cstring>
 
-#include "../../../Primitives/interface/DataBlob.h"
-#include "BasicFileSystem.hpp"
-
-class StandardFile : public BasicFile
+namespace Diligent
 {
-public:
-    StandardFile(const FileOpenAttribs& OpenAttribs, Diligent::Char SlashSymbol);
-    virtual ~StandardFile() override;
 
-    void Read(Diligent::IDataBlob* pData);
+ArchiveMemoryImpl::ArchiveMemoryImpl(IReferenceCounters* pRefCounters, IDataBlob* pBlob) :
+    TObjectBase{pRefCounters},
+    m_pBlob{pBlob}
+{
+    if (!m_pBlob)
+        LOG_ERROR_AND_THROW("pBlob must not be null");
+}
 
-    bool Read(void* Data, size_t Size);
+ArchiveMemoryImpl::~ArchiveMemoryImpl()
+{
+}
 
-    bool Write(const void* Data, size_t Size);
+Bool ArchiveMemoryImpl::Read(Uint64 Offset, Uint64 Size, void* pData)
+{
+    if (Size == 0)
+        return True;
 
-    size_t GetSize();
+    const auto BlobSize = m_pBlob->GetSize();
+    if (Offset >= BlobSize)
+        return False;
 
-    size_t GetPos();
+    DEV_CHECK_ERR(pData != nullptr, "pData must not be null");
+    const auto* pSrcData = reinterpret_cast<const Uint8*>(m_pBlob->GetConstDataPtr());
 
-    bool SetPos(size_t Offset, FilePosOrigin Origin);
+    const auto RemainingSize = BlobSize - Offset;
+    std::memcpy(pData, pSrcData + StaticCast<size_t>(Offset), StaticCast<size_t>(std::min(Size, RemainingSize)));
+    return Size <= RemainingSize;
+}
 
-protected:
-    FILE* m_pFile = nullptr;
-};
+RefCntAutoPtr<IArchive> ArchiveMemoryImpl::Create(IDataBlob* pBlob)
+{
+    return RefCntAutoPtr<IArchive>{MakeNewRCObj<ArchiveMemoryImpl>()(pBlob)};
+}
+
+} // namespace Diligent

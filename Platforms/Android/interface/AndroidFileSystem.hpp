@@ -54,7 +54,7 @@ public:
 
     size_t GetPos();
 
-    void SetPos(size_t Offset, FilePosOrigin Origin);
+    bool SetPos(size_t Offset, FilePosOrigin Origin);
 
     static bool Open(const char* FileName, std::ifstream& IFS, AAsset*& AssetFile, size_t& Size);
 

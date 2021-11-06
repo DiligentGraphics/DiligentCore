@@ -1,6 +1,5 @@
 /*
  *  Copyright 2019-2021 Diligent Graphics LLC
- *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -27,71 +26,36 @@
 
 #pragma once
 
-#include "../../Primitives/interface/Errors.hpp"
-#include "../../Platforms/Basic/interface/DebugUtilities.hpp"
-#include "../../Platforms/interface/FileSystem.hpp"
+/// \file
+/// Implementation of the Diligent::ArchiveMemoryImpl class
+
+#include "../../Primitives/interface/DataBlob.h"
+#include "Archive.h"
+#include "ObjectBase.hpp"
+#include "RefCntAutoPtr.hpp"
 
 namespace Diligent
 {
 
-class FileWrapper
+/// Memory-based archive implementation.
+class ArchiveMemoryImpl final : public ObjectBase<IArchive>
 {
 public:
-    FileWrapper() :
-        m_pFile{nullptr}
-    {}
+    using TObjectBase = ObjectBase<IArchive>;
 
-    explicit FileWrapper(const Char*     Path,
-                         EFileAccessMode Access = EFileAccessMode::Read) :
-        m_pFile{nullptr}
-    {
-        FileOpenAttribs OpenAttribs(Path, Access);
-        Open(OpenAttribs);
-    }
+    static RefCntAutoPtr<IArchive> Create(IDataBlob* pBlob);
 
-    ~FileWrapper()
-    {
-        Close();
-    }
+    ArchiveMemoryImpl(IReferenceCounters* pRefCounters, IDataBlob* pBlob);
+    ~ArchiveMemoryImpl();
 
-    void Open(const FileOpenAttribs& OpenAttribs)
-    {
-        VERIFY(!m_pFile, "Another file already attached");
-        Close();
-        m_pFile = FileSystem::OpenFile(OpenAttribs);
-    }
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_Archive, TObjectBase)
 
-    CFile* Detach()
-    {
-        CFile* pFile = m_pFile;
-        m_pFile      = nullptr;
-        return pFile;
-    }
+    virtual Bool DILIGENT_CALL_TYPE Read(Uint64 Offset, Uint64 Size, void* pData) override final;
 
-    void Attach(CFile* pFile)
-    {
-        VERIFY(!m_pFile, "Another file already attached");
-        Close();
-        m_pFile = pFile;
-    }
-
-    void Close()
-    {
-        if (m_pFile)
-            FileSystem::ReleaseFile(m_pFile);
-        m_pFile = nullptr;
-    }
-
-    operator CFile*() { return m_pFile; }
-    CFile* operator->() { return m_pFile; }
-
-    explicit operator bool() const { return m_pFile != nullptr; }
+    virtual Uint64 DILIGENT_CALL_TYPE GetSize() const override final { return m_pBlob->GetSize(); }
 
 private:
-    FileWrapper(const FileWrapper&);
-    const FileWrapper& operator=(const FileWrapper&);
-
-    CFile* m_pFile;
+    RefCntAutoPtr<IDataBlob> m_pBlob;
 };
 
 } // namespace Diligent
