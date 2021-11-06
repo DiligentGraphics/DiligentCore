@@ -45,6 +45,7 @@
 #include "Sampler.h"
 #include "RenderPass.h"
 #include "PipelineResourceSignature.h"
+#include "PipelineStateCache.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
@@ -462,11 +463,12 @@ struct PipelineStateCreateInfo
     /// The number of elements in ppResourceSignatures array.
     Uint32 ResourceSignaturesCount DEFAULT_INITIALIZER(0);
 
-    // In 32-bit, there might be a problem that may cause mismatch between C++ and C interfaces:
-    // PSODesc contains a Uint64 member, so the entire structure has 64-bit alignment. When
-    // another struct is derived from PipelineStateCreateInfo, though, the compiler may place
-    // another member in this space. To fix this, we add padding.
-    Uint32 _Padding;
+
+    /// Optional pipeline state cache that is used to accelerate
+    /// PSO creation. If PSODesc.Name is found in the cache, the cache
+    /// data is used to create the PSO. Otherwise, the PSO
+    /// is added to the cache.
+    IPipelineStateCache* pPSOCache DEFAULT_INITIALIZER(nullptr);
 };
 typedef struct PipelineStateCreateInfo PipelineStateCreateInfo;
 

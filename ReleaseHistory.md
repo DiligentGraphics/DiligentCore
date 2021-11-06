@@ -1,3 +1,8 @@
+## Current progress
+
+* Added pipeline state cache (API Version 250012)
+
+
 ## v2.5.1
 
 * Added subsampled render targets for VRS (API Version 250011)

@@ -23,6 +23,7 @@ set(INCLUDE
     include/PipelineStateVkImpl.hpp
     include/PipelineResourceSignatureVkImpl.hpp
     include/PipelineResourceAttribsVk.hpp
+    include/PipelineStateCacheVkImpl.hpp
     include/QueryManagerVk.hpp
     include/QueryVkImpl.hpp
     include/RenderDeviceVkImpl.hpp
@@ -69,6 +70,7 @@ set(INTERFACE
     interface/FenceVk.h
     interface/FramebufferVk.h
     interface/PipelineStateVk.h
+    interface/PipelineStateCacheVk.h
     interface/QueryVk.h
     interface/RenderDeviceVk.h
     interface/RenderPassVk.h
@@ -100,6 +102,7 @@ set(SRC
     src/PipelineLayoutVk.cpp
     src/PipelineStateVkImpl.cpp
     src/PipelineResourceSignatureVkImpl.cpp
+    src/PipelineStateCacheVkImpl.cpp
     src/QueryManagerVk.cpp
     src/QueryVkImpl.cpp
     src/RenderDeviceVkImpl.cpp

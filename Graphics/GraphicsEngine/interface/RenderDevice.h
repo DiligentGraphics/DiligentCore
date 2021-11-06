@@ -43,6 +43,7 @@
 #include "TextureView.h"
 #include "BufferView.h"
 #include "PipelineState.h"
+#include "PipelineStateCache.h"
 #include "Fence.h"
 #include "Query.h"
 #include "RenderPass.h"
@@ -308,6 +309,21 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     VIRTUAL void METHOD(CreateDeviceMemory)(THIS_
                                             const DeviceMemoryCreateInfo REF CreateInfo,
                                             IDeviceMemory**                  ppMemory) PURE;
+
+
+    /// Creates a pipeline state cache object.
+
+    /// \param [in]  CreateInfo - Pipeline state cache create info, see Diligent::PiplineStateCacheCreateInfo for details.
+    /// \param [out] ppPSOCache - Address of the memory location where the pointer to the
+    ///                           pipeline state cache interface will be stored.
+    ///                           The function calls AddRef(), so that the new object will have
+    ///                           one reference.
+    ///
+    /// \remarks    On devices that don't support pipeline state caches (e.g. Direct3D11, OpenGL),
+    ///             the method will silently do nothing.
+    VIRTUAL void METHOD(CreatePipelineStateCache)(THIS_
+                                                  const PipelineStateCacheCreateInfo REF CreateInfo,
+                                                  IPipelineStateCache**                  ppPSOCache) PURE;
 
 
     /// Returns the device information, see Diligent::RenderDeviceInfo for details.

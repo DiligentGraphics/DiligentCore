@@ -334,6 +334,12 @@ void RenderDeviceD3D11Impl::CreateDeviceMemory(const DeviceMemoryCreateInfo& Cre
     CreateDeviceMemoryImpl(ppMemory, CreateInfo);
 }
 
+void RenderDeviceD3D11Impl::CreatePipelineStateCache(const PipelineStateCacheCreateInfo& CreateInfo,
+                                                     IPipelineStateCache**               ppPSOCache)
+{
+    *ppPSOCache = nullptr;
+}
+
 void RenderDeviceD3D11Impl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
                                                             IPipelineResourceSignature**         ppSignature,
                                                             SHADER_TYPE                          ShaderStages,

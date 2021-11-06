@@ -552,6 +552,12 @@ void RenderDeviceGLImpl::CreateDeviceMemory(const DeviceMemoryCreateInfo& Create
     *ppMemory = nullptr;
 }
 
+void RenderDeviceGLImpl::CreatePipelineStateCache(const PipelineStateCacheCreateInfo& CreateInfo,
+                                                  IPipelineStateCache**               ppPSOCache)
+{
+    *ppPSOCache = nullptr;
+}
+
 SparseTextureFormatInfo RenderDeviceGLImpl::GetSparseTextureFormatInfo(TEXTURE_FORMAT     TexFormat,
                                                                        RESOURCE_DIMENSION Dimension,
                                                                        Uint32             SampleCount) const

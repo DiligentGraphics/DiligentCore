@@ -73,7 +73,7 @@ public:
     struct ShaderStageInfo
     {
         ShaderStageInfo() {}
-        ShaderStageInfo(const ShaderVkImpl* pShader);
+        explicit ShaderStageInfo(const ShaderVkImpl* pShader);
 
         void   Append(const ShaderVkImpl* pShader);
         size_t Count() const;
