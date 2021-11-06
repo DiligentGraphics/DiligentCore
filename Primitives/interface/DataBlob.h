@@ -48,7 +48,7 @@ static const struct INTERFACE_ID IID_DataBlob =
     IObjectInclusiveMethods;      \
     IDataBlobMethods DataBlob
 
-/// Base interface for a file stream
+/// Binary data blob
 DILIGENT_BEGIN_INTERFACE(IDataBlob, IObject)
 {
     /// Sets the size of the internal data buffer

@@ -9,6 +9,8 @@ set(INCLUDE
 set(INTERFACE
     interface/AdvancedMath.hpp
     interface/Align.hpp
+    interface/ArchiveFileImpl.hpp
+    interface/ArchiveMemoryImpl.hpp
     interface/BasicMath.hpp
     interface/BasicFileStream.hpp
     interface/DataBlobImpl.hpp
@@ -37,6 +39,8 @@ set(INTERFACE
 )
 
 set(SOURCE
+    src/ArchiveFileImpl.cpp
+    src/ArchiveMemoryImpl.cpp
     src/BasicFileStream.cpp
     src/DataBlobImpl.cpp
     src/DefaultRawMemoryAllocator.cpp

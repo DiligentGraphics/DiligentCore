@@ -285,9 +285,10 @@ size_t AndroidFile::GetPos()
     return 0;
 }
 
-void AndroidFile::SetPos(size_t Offset, FilePosOrigin Origin)
+bool AndroidFile::SetPos(size_t Offset, FilePosOrigin Origin)
 {
     UNSUPPORTED("Not implemented");
+    return false;
 }
 
 

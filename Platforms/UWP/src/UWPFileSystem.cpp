@@ -192,9 +192,10 @@ size_t WindowsStoreFile::GetPos()
     return 0;
 }
 
-void WindowsStoreFile::SetPos(size_t Offset, FilePosOrigin Origin)
+bool WindowsStoreFile::SetPos(size_t Offset, FilePosOrigin Origin)
 {
     UNSUPPORTED("Not implemented");
+    return false;
 }
 
 
