@@ -802,6 +802,7 @@ DILIGENT_END_INTERFACE
 
 #    define IPipelineState_GetGraphicsPipelineDesc(This)           CALL_IFACE_METHOD(PipelineState, GetGraphicsPipelineDesc,      This)
 #    define IPipelineState_GetRayTracingPipelineDesc(This)         CALL_IFACE_METHOD(PipelineState, GetRayTracingPipelineDesc,    This)
+#    define IPipelineState_GetTilePipelineDesc(This)               CALL_IFACE_METHOD(PipelineState, GetTilePipelineDesc,          This)
 #    define IPipelineState_BindStaticResources(This, ...)          CALL_IFACE_METHOD(PipelineState, BindStaticResources,          This, __VA_ARGS__)
 #    define IPipelineState_GetStaticVariableCount(This, ...)       CALL_IFACE_METHOD(PipelineState, GetStaticVariableCount,       This, __VA_ARGS__)
 #    define IPipelineState_GetStaticVariableByName(This, ...)      CALL_IFACE_METHOD(PipelineState, GetStaticVariableByName,      This, __VA_ARGS__)
