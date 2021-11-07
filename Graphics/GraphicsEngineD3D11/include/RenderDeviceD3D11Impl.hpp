@@ -118,6 +118,10 @@ public:
     virtual void DILIGENT_CALL_TYPE CreateDeviceMemory(const DeviceMemoryCreateInfo& CreateInfo,
                                                        IDeviceMemory**               ppMemory) override final;
 
+    /// Implementation of IRenderDevice::CreatePipelineStateCache() in Direct3D11 backend.
+    virtual void DILIGENT_CALL_TYPE CreatePipelineStateCache(const PipelineStateCacheCreateInfo& CreateInfo,
+                                                             IPipelineStateCache**               ppPSOCache) override final;
+
     void CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
                                          IPipelineResourceSignature**         ppSignature,
                                          SHADER_TYPE                          ShaderStages,

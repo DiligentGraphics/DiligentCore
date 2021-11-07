@@ -614,7 +614,7 @@ void PipelineStateD3D12Impl::DvpVerifySRBResources(const DeviceContextD3D12Impl*
 template <typename PSOCreateInfoType>
 void PipelineStateD3D12Impl::InitInternalObjects(const PSOCreateInfoType& CreateInfo,
                                                  TShaderStages&           ShaderStages,
-                                                 LocalRootSignatureD3D12* pLocalRootSig)
+                                                 LocalRootSignatureD3D12* pLocalRootSig) noexcept(false)
 {
     ExtractShaders<ShaderD3D12Impl>(CreateInfo, ShaderStages);
 

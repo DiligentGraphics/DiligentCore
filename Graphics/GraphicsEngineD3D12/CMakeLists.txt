@@ -27,6 +27,7 @@ set(INCLUDE
     include/pch.h
     include/PipelineResourceAttribsD3D12.hpp
     include/PipelineResourceSignatureD3D12Impl.hpp
+    include/PipelineStateCacheD3D12Impl.hpp
     include/PipelineStateD3D12Impl.hpp
     include/QueryD3D12Impl.hpp
     include/QueryManagerD3D12.hpp
@@ -56,6 +57,7 @@ set(INTERFACE
     interface/DeviceMemoryD3D12.h
     interface/EngineFactoryD3D12.h
     interface/FenceD3D12.h
+    interface/PipelineStateCacheD3D12.h
     interface/PipelineStateD3D12.h
     interface/QueryD3D12.h
     interface/RenderDeviceD3D12.h
@@ -87,6 +89,7 @@ set(SRC
     src/FramebufferD3D12Impl.cpp
     src/GenerateMips.cpp
     src/PipelineResourceSignatureD3D12Impl.cpp
+    src/PipelineStateCacheD3D12Impl.cpp
     src/PipelineStateD3D12Impl.cpp
     src/QueryD3D12Impl.cpp
     src/QueryManagerD3D12.cpp

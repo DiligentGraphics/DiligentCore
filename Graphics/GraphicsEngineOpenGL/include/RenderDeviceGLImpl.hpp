@@ -170,6 +170,10 @@ public:
     virtual void DILIGENT_CALL_TYPE CreateDeviceMemory(const DeviceMemoryCreateInfo& CreateInfo,
                                                        IDeviceMemory**               ppMemory) override final;
 
+    /// Implementation of IRenderDevice::CreatePipelineStateCache() in OpenGL backend.
+    virtual void DILIGENT_CALL_TYPE CreatePipelineStateCache(const PipelineStateCacheCreateInfo& CreateInfo,
+                                                             IPipelineStateCache**               ppPSOCache) override final;
+
     /// Implementation of IRenderDevice::GetSparseTextureFormatInfo() in OpenGL backend.
     virtual SparseTextureFormatInfo DILIGENT_CALL_TYPE GetSparseTextureFormatInfo(TEXTURE_FORMAT     TexFormat,
                                                                                   RESOURCE_DIMENSION Dimension,

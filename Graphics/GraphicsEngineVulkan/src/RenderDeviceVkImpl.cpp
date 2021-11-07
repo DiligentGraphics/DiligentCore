@@ -43,8 +43,8 @@
 #include "BottomLevelASVkImpl.hpp"
 #include "TopLevelASVkImpl.hpp"
 #include "ShaderBindingTableVkImpl.hpp"
-#include "PipelineResourceSignatureVkImpl.hpp"
 #include "DeviceMemoryVkImpl.hpp"
+#include "PipelineStateCacheVkImpl.hpp"
 #include "CommandQueueVkImpl.hpp"
 
 #include "VulkanTypeConversions.hpp"
@@ -703,6 +703,11 @@ void RenderDeviceVkImpl::CreatePipelineResourceSignature(const PipelineResourceS
 void RenderDeviceVkImpl::CreateDeviceMemory(const DeviceMemoryCreateInfo& CreateInfo, IDeviceMemory** ppMemory)
 {
     CreateDeviceMemoryImpl(ppMemory, CreateInfo);
+}
+
+void RenderDeviceVkImpl::CreatePipelineStateCache(const PipelineStateCacheCreateInfo& CreateInfo, IPipelineStateCache** ppPipelineStateCache)
+{
+    CreatePipelineStateCacheImpl(ppPipelineStateCache, CreateInfo);
 }
 
 std::vector<uint32_t> RenderDeviceVkImpl::ConvertCmdQueueIdsToQueueFamilies(Uint64 CommandQueueMask) const
