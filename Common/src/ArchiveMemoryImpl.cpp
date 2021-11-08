@@ -27,6 +27,7 @@
 #include "ArchiveMemoryImpl.hpp"
 
 #include <cstring>
+#include <algorithm>
 
 namespace Diligent
 {

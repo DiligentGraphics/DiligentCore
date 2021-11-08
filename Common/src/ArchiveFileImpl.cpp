@@ -26,6 +26,8 @@
 
 #include "ArchiveFileImpl.hpp"
 
+#include <algorithm>
+
 namespace Diligent
 {
 
