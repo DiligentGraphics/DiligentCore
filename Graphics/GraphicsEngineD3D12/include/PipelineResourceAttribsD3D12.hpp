@@ -106,6 +106,11 @@ public:
         VERIFY(GetD3D12RootParamType() == _RootParamType, "Not enough bits to represent root parameter type");
     }
 
+    // Only for serialization
+    PipelineResourceAttribsD3D12() noexcept :
+        PipelineResourceAttribsD3D12{0, 0, 0, 0, 0, 0, 0, false, D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE}
+    {}
+
     bool IsImmutableSamplerAssigned() const
     {
         return ImtblSamplerAssigned != 0;

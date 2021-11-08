@@ -57,14 +57,27 @@ class PipelineResourceSignatureD3D12Impl final : public PipelineResourceSignatur
 public:
     using TPipelineResourceSignatureBase = PipelineResourceSignatureBase<EngineD3D12ImplTraits>;
 
+    using ResourceAttribs = TPipelineResourceSignatureBase::PipelineResourceAttribsType;
+
+    struct SerializedData
+    {
+        PipelineResourceSignatureSerializedData Base;
+        const ResourceAttribs*                  pResourceAttribs = nullptr; // [NumResources]
+        Uint32                                  NumResources     = 0;
+    };
+
     PipelineResourceSignatureD3D12Impl(IReferenceCounters*                  pRefCounters,
                                        RenderDeviceD3D12Impl*               pDevice,
                                        const PipelineResourceSignatureDesc& Desc,
                                        SHADER_TYPE                          ShaderStages      = SHADER_TYPE_UNKNOWN,
                                        bool                                 bIsDeviceInternal = false);
-    ~PipelineResourceSignatureD3D12Impl();
 
-    using ResourceAttribs = TPipelineResourceSignatureBase::PipelineResourceAttribsType;
+    PipelineResourceSignatureD3D12Impl(IReferenceCounters*                  pRefCounters,
+                                       RenderDeviceD3D12Impl*               pDevice,
+                                       const PipelineResourceSignatureDesc& Desc,
+                                       const SerializedData&                Serialized);
+
+    ~PipelineResourceSignatureD3D12Impl();
 
     struct ImmutableSamplerAttribs
     {
@@ -150,6 +163,8 @@ public:
 
     // Returns true if there is an immutable sampler array in the given shader stage.
     bool HasImmutableSamplerArray(SHADER_TYPE ShaderStage) const;
+
+    void Serialize(SerializedData& Serialized) const;
 
 #ifdef DILIGENT_DEVELOPMENT
     /// Verifies committed resource using the resource attributes from the PSO.

@@ -707,6 +707,13 @@ void RenderDeviceVkImpl::CreatePipelineResourceSignature(const PipelineResourceS
     CreatePipelineResourceSignatureImpl(ppSignature, Desc, ShaderStages, IsDeviceInternal);
 }
 
+void RenderDeviceVkImpl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc&                   Desc,
+                                                         const PipelineResourceSignatureVkImpl::SerializedData& SerializedData,
+                                                         IPipelineResourceSignature**                           ppSignature)
+{
+    CreatePipelineResourceSignatureImpl(ppSignature, Desc, SerializedData);
+}
+
 void RenderDeviceVkImpl::CreateDeviceMemory(const DeviceMemoryCreateInfo& CreateInfo, IDeviceMemory** ppMemory)
 {
     CreateDeviceMemoryImpl(ppMemory, CreateInfo);

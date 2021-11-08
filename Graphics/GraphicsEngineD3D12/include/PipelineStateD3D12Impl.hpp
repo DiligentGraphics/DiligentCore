@@ -75,30 +75,41 @@ public:
                                const ShaderResourceCacheArrayType& ResourceCaches) const;
 #endif
 
-private:
     struct ShaderStageInfo
     {
         ShaderStageInfo() {}
-        ShaderStageInfo(ShaderD3D12Impl* _pShader);
+        explicit ShaderStageInfo(const ShaderD3D12Impl* _pShader);
 
-        void   Append(ShaderD3D12Impl* pShader);
+        void   Append(const ShaderD3D12Impl* pShader);
         size_t Count() const;
 
-        SHADER_TYPE                    Type = SHADER_TYPE_UNKNOWN;
-        std::vector<ShaderD3D12Impl*>  Shaders;
-        std::vector<CComPtr<ID3DBlob>> ByteCodes;
+        SHADER_TYPE                         Type = SHADER_TYPE_UNKNOWN;
+        std::vector<const ShaderD3D12Impl*> Shaders;
+        std::vector<CComPtr<ID3DBlob>>      ByteCodes;
 
         friend SHADER_TYPE GetShaderStageType(const ShaderStageInfo& Stage) { return Stage.Type; }
     };
     using TShaderStages = std::vector<ShaderStageInfo>;
 
+    using TValidateShaderResourcesFn = std::function<void(const ShaderD3D12Impl* pShader, const LocalRootSignatureD3D12* pLocalRootSig)>;
+    static void RemapShaderResources(
+        TShaderStages&                                           ShaderStages,
+        const RefCntAutoPtr<PipelineResourceSignatureD3D12Impl>* pSignatures,
+        Uint32                                                   SignatureCount,
+        const RootSignatureD3D12&                                RootSig,
+        class IDXCompiler*                                       pDxCompiler,
+        LocalRootSignatureD3D12*                                 pLocalRootSig             = nullptr,
+        const TValidateShaderResourcesFn&                        ValidateShaderResourcesFn = {}) noexcept(false);
+
+private:
     template <typename PSOCreateInfoType>
     void InitInternalObjects(const PSOCreateInfoType& CreateInfo,
                              TShaderStages&           ShaderStages,
-                             LocalRootSignatureD3D12* pLocalRootSig = nullptr);
+                             LocalRootSignatureD3D12* pLocalRootSig = nullptr) noexcept(false);
 
-    void InitRootSignature(TShaderStages&           ShaderStages,
-                           LocalRootSignatureD3D12* pLocalRootSig);
+    void InitRootSignature(bool                     RemapResources,
+                           TShaderStages&           ShaderStages,
+                           LocalRootSignatureD3D12* pLocalRootSig) noexcept(false);
 
     RefCntAutoPtr<PipelineResourceSignatureD3D12Impl> CreateDefaultResourceSignature(
         TShaderStages&           ShaderStages,

@@ -125,6 +125,12 @@ public:
         // clang-format on
     }
 
+    // Only for serialization
+    PipelineResourceAttribsVk() noexcept :
+        PipelineResourceAttribsVk{0, 0, 0, DescriptorType::Unknown, 0, false, 0, 0}
+    {}
+
+
     Uint32 CacheOffset(ResourceCacheContentType CacheType) const
     {
         return CacheType == ResourceCacheContentType::SRB ? SRBCacheOffset : StaticCacheOffset;

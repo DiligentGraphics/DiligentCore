@@ -12,6 +12,7 @@ set(INCLUDE
     include/DescriptorPoolManager.hpp
     include/DeviceContextVkImpl.hpp
     include/DeviceMemoryVkImpl.hpp
+    include/DeviceObjectArchiveVkImpl.hpp
     include/EngineVkImplTraits.hpp
     include/FenceVkImpl.hpp
     include/FramebufferVkImpl.hpp
@@ -30,6 +31,7 @@ set(INCLUDE
     include/RenderPassVkImpl.hpp
     include/RenderPassCache.hpp
     include/SamplerVkImpl.hpp
+    include/DearchiverVkImpl.hpp
     include/ShaderVkImpl.hpp
     include/ShaderResourceBindingVkImpl.hpp
     include/ShaderResourceCacheVk.hpp
@@ -94,6 +96,7 @@ set(SRC
     src/DescriptorPoolManager.cpp
     src/DeviceContextVkImpl.cpp
     src/DeviceMemoryVkImpl.cpp
+    src/DeviceObjectArchiveVkImpl.cpp
     src/EngineFactoryVk.cpp
     src/FenceVkImpl.cpp
     src/FramebufferVkImpl.cpp
@@ -109,6 +112,7 @@ set(SRC
     src/RenderPassVkImpl.cpp
     src/RenderPassCache.cpp
     src/SamplerVkImpl.cpp
+    src/DearchiverVkImpl.cpp
     src/ShaderVkImpl.cpp
     src/ShaderResourceBindingVkImpl.cpp
     src/ShaderResourceCacheVk.cpp

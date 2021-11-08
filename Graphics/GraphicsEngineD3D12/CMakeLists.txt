@@ -20,6 +20,7 @@ set(INCLUDE
     include/DescriptorHeap.hpp
     include/DeviceContextD3D12Impl.hpp
     include/DeviceMemoryD3D12Impl.hpp
+    include/DeviceObjectArchiveD3D12Impl.hpp
     include/EngineD3D12ImplTraits.hpp
     include/FenceD3D12Impl.hpp
     include/FramebufferD3D12Impl.hpp
@@ -36,6 +37,7 @@ set(INCLUDE
     include/RootParamsManager.hpp
     include/RootSignature.hpp
     include/SamplerD3D12Impl.hpp
+    include/DearchiverD3D12Impl.hpp
     include/ShaderBindingTableD3D12Impl.hpp
     include/ShaderD3D12Impl.hpp
     include/ShaderResourceBindingD3D12Impl.hpp
@@ -84,6 +86,7 @@ set(SRC
     src/DescriptorHeap.cpp
     src/DeviceContextD3D12Impl.cpp
     src/DeviceMemoryD3D12Impl.cpp
+    src/DeviceObjectArchiveD3D12Impl.cpp
     src/EngineFactoryD3D12.cpp
     src/FenceD3D12Impl.cpp
     src/FramebufferD3D12Impl.cpp
@@ -98,6 +101,7 @@ set(SRC
     src/RootParamsManager.cpp
     src/RootSignature.cpp
     src/SamplerD3D12Impl.cpp
+    src/DearchiverD3D12Impl.cpp
     src/ShaderBindingTableD3D12Impl.cpp
     src/ShaderD3D12Impl.cpp
     src/ShaderResourceBindingD3D12Impl.cpp

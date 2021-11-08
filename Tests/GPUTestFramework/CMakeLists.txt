@@ -141,3 +141,8 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${ALL_SOURCE})
 set_target_properties(Diligent-GPUTestFramework PROPERTIES
     FOLDER "DiligentCore/Tests"
 )
+
+if (TARGET Diligent-Archiver-interface)
+    target_link_libraries(Diligent-GPUTestFramework PUBLIC Diligent-Archiver-interface)
+    target_compile_definitions(Diligent-GPUTestFramework PUBLIC ARCHIVER_SUPPORTED=1)
+endif()

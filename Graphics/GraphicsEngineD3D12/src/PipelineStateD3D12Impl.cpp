@@ -296,14 +296,14 @@ void GetShaderIdentifiers(ID3D12DeviceChild*                       pSO,
 } // namespace
 
 
-PipelineStateD3D12Impl::ShaderStageInfo::ShaderStageInfo(ShaderD3D12Impl* _pShader) :
+PipelineStateD3D12Impl::ShaderStageInfo::ShaderStageInfo(const ShaderD3D12Impl* _pShader) :
     Type{_pShader->GetDesc().ShaderType},
     Shaders{_pShader},
     ByteCodes{_pShader->GetShaderByteCode()}
 {
 }
 
-void PipelineStateD3D12Impl::ShaderStageInfo::Append(ShaderD3D12Impl* pShader)
+void PipelineStateD3D12Impl::ShaderStageInfo::Append(const ShaderD3D12Impl* pShader)
 {
     VERIFY_EXPR(pShader != nullptr);
     VERIFY(std::find(Shaders.begin(), Shaders.end(), pShader) == Shaders.end(),
@@ -408,30 +408,14 @@ RefCntAutoPtr<PipelineResourceSignatureD3D12Impl> PipelineStateD3D12Impl::Create
     return TPipelineStateBase::CreateDefaultSignature(Resources, pCombinedSamplerSuffix, pImmutableSamplers, GetActiveShaderStages(), bIsDeviceInternal);
 }
 
-void PipelineStateD3D12Impl::InitRootSignature(TShaderStages&           ShaderStages,
-                                               LocalRootSignatureD3D12* pLocalRootSig)
+void PipelineStateD3D12Impl::RemapShaderResources(TShaderStages&                                           ShaderStages,
+                                                  const RefCntAutoPtr<PipelineResourceSignatureD3D12Impl>* pSignatures,
+                                                  Uint32                                                   SignatureCount,
+                                                  const RootSignatureD3D12&                                RootSig,
+                                                  IDXCompiler*                                             pDxCompiler,
+                                                  LocalRootSignatureD3D12*                                 pLocalRootSig,
+                                                  const TValidateShaderResourcesFn&                        ValidateShaderResourcesFn) noexcept(false)
 {
-    if (m_UsingImplicitSignature)
-    {
-        VERIFY_EXPR(m_SignatureCount == 1);
-        m_Signatures[0] = CreateDefaultResourceSignature(ShaderStages, pLocalRootSig);
-        VERIFY_EXPR(!m_Signatures[0] || m_Signatures[0]->GetDesc().BindingIndex == 0);
-    }
-
-    m_RootSig = GetDevice()->GetRootSignatureCache().GetRootSig(m_Signatures, m_SignatureCount);
-    if (!m_RootSig)
-        LOG_ERROR_AND_THROW("Failed to create root signature for pipeline '", m_Desc.Name, "'.");
-
-    if (pLocalRootSig != nullptr && pLocalRootSig->IsDefined())
-    {
-        if (!pLocalRootSig->Create(GetDevice()->GetD3D12Device(), m_RootSig->GetTotalSpaces()))
-            LOG_ERROR_AND_THROW("Failed to create local root signature for pipeline '", m_Desc.Name, "'.");
-    }
-
-    // Verify that pipeline layout is compatible with shader resources and
-    // remap resource bindings.
-    auto* compiler = GetDevice()->GetDxCompiler();
-
     for (size_t s = 0; s < ShaderStages.size(); ++s)
     {
         const auto& Shaders    = ShaderStages[s].Shaders;
@@ -441,15 +425,15 @@ void PipelineStateD3D12Impl::InitRootSignature(TShaderStages&           ShaderSt
         bool                  HasImtblSamArray = false;
         ResourceBinding::TMap ResourceMap;
         // Note that we must use signatures from m_ResourceSignatures for resource binding map,
-        // because signatures from m_RootSig may have resources with different names.
-        for (Uint32 sign = 0; sign < m_SignatureCount; ++sign)
+        // because signatures from RootSig may have resources with different names.
+        for (Uint32 sign = 0; sign < SignatureCount; ++sign)
         {
-            const PipelineResourceSignatureD3D12Impl* const pSignature = m_Signatures[sign];
+            const PipelineResourceSignatureD3D12Impl* const pSignature = pSignatures[sign];
             if (pSignature == nullptr)
                 continue;
 
             VERIFY_EXPR(pSignature->GetDesc().BindingIndex == sign);
-            pSignature->UpdateShaderResourceBindingMap(ResourceMap, ShaderType, m_RootSig->GetBaseRegisterSpace(sign));
+            pSignature->UpdateShaderResourceBindingMap(ResourceMap, ShaderType, RootSig.GetBaseRegisterSpace(sign));
 
             if (pSignature->HasImmutableSamplerArray(ShaderType))
                 HasImtblSamArray = true;
@@ -483,7 +467,7 @@ void PipelineStateD3D12Impl::InitRootSignature(TShaderStages&           ShaderSt
                 LOG_ERROR_AND_THROW("One of resource signatures uses immutable sampler array that is not allowed in shader model 5.1 and above.");
             }
 
-            if (m_RootSig->GetTotalSpaces() > 1 && !IsSM51orAbove)
+            if (RootSig.GetTotalSpaces() > 1 && !IsSM51orAbove)
             {
                 LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name,
                                     "' is compiled using SM5.0 or below that only supports single register space. "
@@ -491,15 +475,16 @@ void PipelineStateD3D12Impl::InitRootSignature(TShaderStages&           ShaderSt
             }
 
             // Validate resources before remapping
-            ValidateShaderResources(pShader, pLocalRootSig);
+            if (ValidateShaderResourcesFn)
+                ValidateShaderResourcesFn(pShader, pLocalRootSig);
 
             CComPtr<ID3DBlob> pBlob;
             if (IsDXILBytecode(pBytecode->GetBufferPointer(), pBytecode->GetBufferSize()))
             {
-                if (!compiler)
+                if (!pDxCompiler)
                     LOG_ERROR_AND_THROW("DXC compiler does not exists, can not remap resource bindings");
 
-                if (!compiler->RemapResourceBindings(ResourceMap, reinterpret_cast<IDxcBlob*>(pBytecode.p), reinterpret_cast<IDxcBlob**>(&pBlob)))
+                if (!pDxCompiler->RemapResourceBindings(ResourceMap, reinterpret_cast<IDxcBlob*>(pBytecode.p), reinterpret_cast<IDxcBlob**>(&pBlob)))
                     LOG_ERROR_AND_THROW("Failed to remap resource bindings in shader '", pShader->GetDesc().Name, "'.");
             }
             else
@@ -512,6 +497,42 @@ void PipelineStateD3D12Impl::InitRootSignature(TShaderStages&           ShaderSt
             }
             pBytecode = pBlob;
         }
+    }
+}
+
+void PipelineStateD3D12Impl::InitRootSignature(bool                     RemapResources,
+                                               TShaderStages&           ShaderStages,
+                                               LocalRootSignatureD3D12* pLocalRootSig) noexcept(false)
+{
+    if (m_UsingImplicitSignature)
+    {
+        VERIFY_EXPR(m_SignatureCount == 1);
+        m_Signatures[0] = CreateDefaultResourceSignature(ShaderStages, pLocalRootSig);
+        VERIFY_EXPR(!m_Signatures[0] || m_Signatures[0]->GetDesc().BindingIndex == 0);
+    }
+
+    m_RootSig = GetDevice()->GetRootSignatureCache().GetRootSig(m_Signatures, m_SignatureCount);
+    if (!m_RootSig)
+        LOG_ERROR_AND_THROW("Failed to create root signature for pipeline '", m_Desc.Name, "'.");
+
+    if (pLocalRootSig != nullptr && pLocalRootSig->IsDefined())
+    {
+        if (!pLocalRootSig->Create(GetDevice()->GetD3D12Device(), m_RootSig->GetTotalSpaces()))
+            LOG_ERROR_AND_THROW("Failed to create local root signature for pipeline '", m_Desc.Name, "'.");
+    }
+
+    // Verify that pipeline layout is compatible with shader resources and remap resource bindings.
+    if (RemapResources)
+    {
+        RemapShaderResources(ShaderStages,
+                             m_Signatures,
+                             m_SignatureCount,
+                             *m_RootSig,
+                             GetDevice()->GetDxCompiler(),
+                             pLocalRootSig,
+                             [this](const ShaderD3D12Impl* pShader, const LocalRootSignatureD3D12* pLocalRootSig) {
+                                 ValidateShaderResources(pShader, pLocalRootSig);
+                             });
     }
 }
 
@@ -629,7 +650,7 @@ void PipelineStateD3D12Impl::InitInternalObjects(const PSOCreateInfoType& Create
     // It is important to construct all objects before initializing them because if an exception is thrown,
     // destructors will be called for all objects
 
-    InitRootSignature(ShaderStages, pLocalRootSig);
+    InitRootSignature((CreateInfo.Flags & PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES) == 0, ShaderStages, pLocalRootSig);
 }
 
 
