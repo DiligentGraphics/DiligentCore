@@ -115,12 +115,6 @@ void InitPipelineShaderStages(const VulkanUtilities::VulkanLogicalDevice&       
             auto* pShader = Shaders[i];
             auto& SPIRV   = SPIRVs[i];
 
-            // We have to strip reflection instructions to fix the following validation error:
-            //     SPIR-V module not valid: DecorateStringGOOGLE requires one of the following extensions: SPV_GOOGLE_decorate_string
-            // Optimizer also performs validation and may catch problems with the byte code.
-            if (!StripReflection(SPIRV))
-                LOG_ERROR("Failed to strip reflection information from shader '", pShader->GetDesc().Name, "'. This may indicate a problem with the byte code.");
-
             ShaderModuleCI.codeSize = SPIRV.size() * sizeof(uint32_t);
             ShaderModuleCI.pCode    = SPIRV.data();
 
@@ -658,21 +652,15 @@ RefCntAutoPtr<PipelineResourceSignatureVkImpl> PipelineStateVkImpl::CreateDefaul
     return TPipelineStateBase::CreateDefaultSignature(Resources, pCombinedSamplerSuffix, pImmutableSamplers, GetActiveShaderStages(), bIsDeviceInternal);
 }
 
-void PipelineStateVkImpl::InitPipelineLayout(TShaderStages& ShaderStages)
+void PipelineStateVkImpl::RemapShaderResources(TShaderStages&                          ShaderStages,
+                                               const PipelineResourceSignatureVkImpl** pSignatures,
+                                               const Uint32                            SignatureCount,
+                                               const TBindIndexToDescSetIndex&         BindIndexToDescSetIndex,
+                                               bool                                    bStripReflection,
+                                               const char*                             PipelineName,
+                                               TShaderResources*                       pDvpShaderResources,
+                                               TResourceAttibutions*                   pDvpResourceAttibutions) noexcept(false)
 {
-    if (m_UsingImplicitSignature)
-    {
-        VERIFY_EXPR(m_SignatureCount == 1);
-        m_Signatures[0] = CreateDefaultSignature(ShaderStages);
-        VERIFY_EXPR(!m_Signatures[0] || m_Signatures[0]->GetDesc().BindingIndex == 0);
-    }
-
-#ifdef DILIGENT_DEVELOPMENT
-    DvpValidateResourceLimits();
-#endif
-
-    m_PipelineLayout.Create(GetDevice(), m_Signatures, m_SignatureCount);
-
     // Verify that pipeline layout is compatible with shader resources and
     // remap resource bindings.
     for (size_t s = 0; s < ShaderStages.size(); ++s)
@@ -689,19 +677,19 @@ void PipelineStateVkImpl::InitPipelineLayout(TShaderStages& ShaderStages)
             auto& SPIRV   = SPIRVs[i];
 
             const auto& pShaderResources = pShader->GetShaderResources();
-#ifdef DILIGENT_DEVELOPMENT
-            m_ShaderResources.emplace_back(pShaderResources);
-#endif
+
+            if (pDvpShaderResources)
+                pDvpShaderResources->emplace_back(pShaderResources);
 
             pShaderResources->ProcessResources(
                 [&](const SPIRVShaderResourceAttribs& SPIRVAttribs, Uint32) //
                 {
-                    auto ResAttribution = GetResourceAttribution(SPIRVAttribs.Name, ShaderType);
+                    auto ResAttribution = GetResourceAttribution(SPIRVAttribs.Name, ShaderType, pSignatures, SignatureCount);
                     if (!ResAttribution)
                     {
                         LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' contains resource '", SPIRVAttribs.Name,
                                             "' that is not present in any pipeline resource signature used to create pipeline state '",
-                                            m_Desc.Name, "'.");
+                                            PipelineName, "'.");
                     }
 
                     const auto& SignDesc = ResAttribution.pSignature->GetDesc();
@@ -740,13 +728,61 @@ void PipelineStateVkImpl::InitPipelineLayout(TShaderStages& ShaderStages)
 
                     VERIFY_EXPR(ResourceBinding != ~0u && DescriptorSet != ~0u);
                     SPIRV[SPIRVAttribs.BindingDecorationOffset]       = ResourceBinding;
-                    SPIRV[SPIRVAttribs.DescriptorSetDecorationOffset] = m_PipelineLayout.GetFirstDescrSetIndex(SignDesc.BindingIndex) + DescriptorSet;
+                    SPIRV[SPIRVAttribs.DescriptorSetDecorationOffset] = BindIndexToDescSetIndex[SignDesc.BindingIndex] + DescriptorSet;
+
+                    if (pDvpResourceAttibutions)
+                        pDvpResourceAttibutions->emplace_back(ResAttribution);
+                });
+
+            if (bStripReflection)
+            {
+                // We have to strip reflection instructions to fix the following validation error:
+                //     SPIR-V module not valid: DecorateStringGOOGLE requires one of the following extensions: SPV_GOOGLE_decorate_string
+                // Optimizer also performs validation and may catch problems with the byte code.
+                if (!StripReflection(SPIRV))
+                    LOG_ERROR("Failed to strip reflection information from shader '", pShader->GetDesc().Name, "'. This may indicate a problem with the byte code.");
+            }
+        }
+    }
+}
+
+void PipelineStateVkImpl::InitPipelineLayout(bool RemapResources, TShaderStages& ShaderStages) noexcept(false)
+{
+    if (m_UsingImplicitSignature)
+    {
+        VERIFY_EXPR(m_SignatureCount == 1);
+        m_Signatures[0] = CreateDefaultSignature(ShaderStages);
+        VERIFY_EXPR(!m_Signatures[0] || m_Signatures[0]->GetDesc().BindingIndex == 0);
+    }
 
 #ifdef DILIGENT_DEVELOPMENT
-                    m_ResourceAttibutions.emplace_back(ResAttribution);
+    DvpValidateResourceLimits();
 #endif
-                });
+
+    m_PipelineLayout.Create(GetDevice(), m_Signatures, m_SignatureCount);
+
+    if (RemapResources)
+    {
+        TBindIndexToDescSetIndex                                                    BindIndexToDescSetIndex = {};
+        std::array<const PipelineResourceSignatureVkImpl*, MAX_RESOURCE_SIGNATURES> Signatures              = {};
+        for (Uint32 i = 0; i < m_SignatureCount; ++i)
+        {
+            Signatures[i]              = m_Signatures[i].RawPtr();
+            BindIndexToDescSetIndex[i] = m_PipelineLayout.GetFirstDescrSetIndex(i);
         }
+
+        RemapShaderResources(ShaderStages,
+                             Signatures.data(),
+                             m_SignatureCount,
+                             BindIndexToDescSetIndex,
+                             true, // bStripReflection
+                             m_Desc.Name,
+#ifdef DILIGENT_DEVELOPMENT
+                             &m_ShaderResources, &m_ResourceAttibutions
+#else
+                             nullptr, nullptr
+#endif
+        );
     }
 }
 
@@ -769,7 +805,7 @@ PipelineStateVkImpl::TShaderStages PipelineStateVkImpl::InitInternalObjects(
 
     InitializePipelineDesc(CreateInfo, MemPool);
 
-    InitPipelineLayout(ShaderStages);
+    InitPipelineLayout((CreateInfo.Flags & PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES) == 0, ShaderStages);
 
     // Create shader modules and initialize shader stages
     InitPipelineShaderStages(LogicalDevice, ShaderStages, ShaderModules, vkShaderStages);

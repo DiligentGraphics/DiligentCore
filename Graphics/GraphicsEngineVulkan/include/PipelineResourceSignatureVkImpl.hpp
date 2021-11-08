@@ -76,11 +76,26 @@ public:
 
     static_assert(ResourceAttribs::MaxDescriptorSets >= MAX_DESCRIPTOR_SETS, "Not enough bits to store descriptor set index");
 
+    struct SerializedData
+    {
+        PipelineResourceSignatureSerializedData Base;
+        const ResourceAttribs*                  pResourceAttribs          = nullptr; // [NumResources]
+        Uint32                                  NumResources              = 0;
+        Uint16                                  DynamicUniformBufferCount = 0;
+        Uint16                                  DynamicStorageBufferCount = 0;
+    };
+
     PipelineResourceSignatureVkImpl(IReferenceCounters*                  pRefCounters,
                                     RenderDeviceVkImpl*                  pDevice,
                                     const PipelineResourceSignatureDesc& Desc,
                                     SHADER_TYPE                          ShaderStages      = SHADER_TYPE_UNKNOWN,
                                     bool                                 bIsDeviceInternal = false);
+
+    PipelineResourceSignatureVkImpl(IReferenceCounters*                  pRefCounters,
+                                    RenderDeviceVkImpl*                  pDevice,
+                                    const PipelineResourceSignatureDesc& Desc,
+                                    const SerializedData&                Serialized);
+
     ~PipelineResourceSignatureVkImpl();
 
     Uint32 GetDynamicOffsetCount() const { return m_DynamicUniformBufferCount + m_DynamicStorageBufferCount; }
@@ -108,7 +123,8 @@ public:
 
     VkDescriptorSetLayout GetVkDescriptorSetLayout(DESCRIPTOR_SET_ID SetId) const { return m_VkDescrSetLayouts[SetId]; }
 
-    bool HasDescriptorSet(DESCRIPTOR_SET_ID SetId) const { return m_VkDescrSetLayouts[SetId] != VK_NULL_HANDLE; }
+    bool   HasDescriptorSet(DESCRIPTOR_SET_ID SetId) const { return m_VkDescrSetLayouts[SetId] != VK_NULL_HANDLE; }
+    Uint32 GetDescriptorSetSize(DESCRIPTOR_SET_ID SetId) const { return m_DescriptorSetSizes[SetId]; }
 
     void InitSRBResourceCache(ShaderResourceCacheVk& ResourceCache);
 
@@ -132,6 +148,8 @@ public:
     // Returns the descriptor set index in the resource cache
     template <DESCRIPTOR_SET_ID SetId>
     Uint32 GetDescriptorSetIndex() const;
+
+    void Serialize(SerializedData& Serialized) const;
 
 private:
     // Resource cache group identifier

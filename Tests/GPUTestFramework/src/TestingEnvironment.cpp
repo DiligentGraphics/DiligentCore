@@ -55,6 +55,10 @@
 #    include "EngineFactoryMtl.h"
 #endif
 
+#if ARCHIVER_SUPPORTED
+#    include "ArchiverFactoryLoader.h"
+#endif
+
 
 namespace Diligent
 {
@@ -517,6 +521,7 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
     AdapterInfoStr = "Adapter description: ";
     AdapterInfoStr += AdapterInfo.Description;
     AdapterInfoStr += ". Vendor: ";
+    static_assert(ADAPTER_VENDOR_LAST == 10, "Please update the switch below to handle the new adapter type");
     switch (AdapterInfo.Vendor)
     {
         case ADAPTER_VENDOR_NVIDIA:
@@ -560,6 +565,21 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
     AdapterInfoStr += std::to_string(AdapterInfo.Memory.UnifiedMemory >> 20);
     AdapterInfoStr += " MB.";
     LOG_INFO_MESSAGE(AdapterInfoStr);
+
+#if ARCHIVER_SUPPORTED
+    // Create archiver factory
+    {
+#    if EXPLICITLY_LOAD_ARCHIVER_FACTORY_DLL
+        auto GetArchiverFactory = LoadArchiverFactory();
+        if (GetArchiverFactory != nullptr)
+        {
+            m_ArchiverFactory = GetArchiverFactory();
+        }
+#    else
+        m_ArchiverFactory = GetArchiverFactory();
+#    endif
+    }
+#endif
 }
 
 TestingEnvironment::~TestingEnvironment()

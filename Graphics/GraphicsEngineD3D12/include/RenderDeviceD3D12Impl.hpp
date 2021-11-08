@@ -44,6 +44,7 @@
 #include "GenerateMips.hpp"
 #include "DXCompiler.hpp"
 #include "RootSignature.hpp"
+#include "PipelineResourceSignatureD3D12Impl.hpp"
 
 
 // The macros below are only defined in Win SDK 19041+ and are missing in 17763
@@ -153,6 +154,10 @@ public:
                                          IPipelineResourceSignature**         ppSignature,
                                          SHADER_TYPE                          ShaderStages,
                                          bool                                 IsDeviceInternal);
+
+    void CreatePipelineResourceSignature(const PipelineResourceSignatureDesc&                      Desc,
+                                         const PipelineResourceSignatureD3D12Impl::SerializedData& SerializedData,
+                                         IPipelineResourceSignature**                              ppSignature);
 
     /// Implementation of IRenderDevice::CreateDeviceMemory() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE CreateDeviceMemory(const DeviceMemoryCreateInfo& CreateInfo,

@@ -97,15 +97,27 @@ public:
     void DvpValidateResourceLimits() const;
 #endif
 
+    using TShaderResources         = std::vector<std::shared_ptr<const SPIRVShaderResources>>;
+    using TResourceAttibutions     = std::vector<ResourceAttribution>;
+    using TBindIndexToDescSetIndex = std::array<Uint32, MAX_RESOURCE_SIGNATURES>;
+    static void RemapShaderResources(TShaderStages&                          ShaderStages,
+                                     const PipelineResourceSignatureVkImpl** pSignatures,
+                                     Uint32                                  SignatureCount,
+                                     const TBindIndexToDescSetIndex&         BindIndexToDescSetIndex,
+                                     bool                                    bStripReflection,
+                                     const char*                             PipelineName         = "",
+                                     TShaderResources*                       pShaderResources     = nullptr,
+                                     TResourceAttibutions*                   pResourceAttibutions = nullptr) noexcept(false);
+
 private:
     template <typename PSOCreateInfoType>
     TShaderStages InitInternalObjects(const PSOCreateInfoType&                           CreateInfo,
                                       std::vector<VkPipelineShaderStageCreateInfo>&      vkShaderStages,
-                                      std::vector<VulkanUtilities::ShaderModuleWrapper>& ShaderModules);
+                                      std::vector<VulkanUtilities::ShaderModuleWrapper>& ShaderModules) noexcept(false);
 
-    void InitPipelineLayout(TShaderStages& ShaderStages);
+    void InitPipelineLayout(bool RemapResources, TShaderStages& ShaderStages) noexcept(false);
 
-    RefCntAutoPtr<PipelineResourceSignatureVkImpl> CreateDefaultSignature(const TShaderStages& ShaderStages);
+    RefCntAutoPtr<PipelineResourceSignatureVkImpl> CreateDefaultSignature(const TShaderStages& ShaderStages) noexcept(false);
 
     void Destruct();
 
@@ -114,9 +126,9 @@ private:
 
 #ifdef DILIGENT_DEVELOPMENT
     // Shader resources for all shaders in all shader stages
-    std::vector<std::shared_ptr<const SPIRVShaderResources>> m_ShaderResources;
+    TShaderResources m_ShaderResources;
     // Resource attributions for every resource in m_ShaderResources, in the same order
-    std::vector<ResourceAttribution> m_ResourceAttibutions;
+    TResourceAttibutions m_ResourceAttibutions;
 #endif
 };
 

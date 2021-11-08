@@ -167,6 +167,8 @@ PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCount
 
 void PipelineResourceSignatureVkImpl::CreateSetLayouts()
 {
+    auto* const pDevice = GetDevice();
+
     // Initialize static resource cache first
     if (auto NumStaticResStages = GetNumStaticResStages())
     {
@@ -391,7 +393,7 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts()
         vkSetLayoutBinding.descriptorCount    = 1;
         vkSetLayoutBinding.stageFlags         = ShaderTypesToVkShaderStageFlags(SamplerDesc.ShaderStages);
         vkSetLayoutBinding.descriptorType     = VK_DESCRIPTOR_TYPE_SAMPLER;
-        vkSetLayoutBinding.pImmutableSamplers = TempAllocator.Construct<VkSampler>(ImmutableSampler.Ptr.RawPtr<SamplerVkImpl>()->GetVkSampler());
+        vkSetLayoutBinding.pImmutableSamplers = ImmutableSampler.Ptr ? TempAllocator.Construct<VkSampler>(ImmutableSampler.Ptr.RawPtr<SamplerVkImpl>()->GetVkSampler()) : VK_NULL_HANDLE;
     }
 
     Uint32 NumSets = 0;
@@ -908,5 +910,45 @@ bool PipelineResourceSignatureVkImpl::DvpValidateCommittedResource(const DeviceC
     return BindingsOK;
 }
 #endif
+
+PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCounters*                  pRefCounters,
+                                                                 RenderDeviceVkImpl*                  pDevice,
+                                                                 const PipelineResourceSignatureDesc& Desc,
+                                                                 const SerializedData&                Serialized) :
+    TPipelineResourceSignatureBase{pRefCounters, pDevice, Desc, Serialized.Base}
+//m_DynamicUniformBufferCount{Serialized.DynamicUniformBufferCount}
+//m_DynamicStorageBufferCount{Serialized.DynamicStorageBufferCount}
+{
+    try
+    {
+        InitializeSerialized(
+            GetRawAllocator(), Desc, Serialized, m_ImmutableSamplers,
+            [this, &Serialized]() //
+            {
+                CreateSetLayouts(); // Az TODO: optimize
+                VERIFY_EXPR(m_DynamicUniformBufferCount == Serialized.DynamicUniformBufferCount);
+                VERIFY_EXPR(m_DynamicStorageBufferCount == Serialized.DynamicStorageBufferCount);
+            },
+            [this]() //
+            {
+                return ShaderResourceCacheVk::GetRequiredMemorySize(GetNumDescriptorSets(), m_DescriptorSetSizes.data());
+            });
+    }
+    catch (...)
+    {
+        Destruct();
+        throw;
+    }
+}
+
+void PipelineResourceSignatureVkImpl::Serialize(SerializedData& Serialized) const
+{
+    TPipelineResourceSignatureBase::Serialize(Serialized.Base);
+
+    Serialized.pResourceAttribs          = m_pResourceAttribs;
+    Serialized.NumResources              = GetDesc().NumResources;
+    Serialized.DynamicStorageBufferCount = m_DynamicStorageBufferCount;
+    Serialized.DynamicUniformBufferCount = m_DynamicUniformBufferCount;
+}
 
 } // namespace Diligent

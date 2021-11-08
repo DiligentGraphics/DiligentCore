@@ -94,6 +94,18 @@ void CopyPipelineResourceSignatureDesc(FixedLinearAllocator&                    
                                        PipelineResourceSignatureDesc&                                   DstDesc,
                                        std::array<Uint16, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES + 1>& ResourceOffsets);
 
+// AZ TODO
+struct PipelineResourceSignatureSerializedData
+{
+    // AZ TODO:
+    //void* pAttribs;
+    //Uint32 AttribsSize;
+    SHADER_TYPE                               ShaderStages          = SHADER_TYPE_UNKNOWN;
+    SHADER_TYPE                               StaticResShaderStages = SHADER_TYPE_UNKNOWN;
+    PIPELINE_TYPE                             PipelineType          = PIPELINE_TYPE_INVALID;
+    std::array<Int8, MAX_SHADERS_IN_PIPELINE> StaticResStageIndex   = {};
+};
+
 /// Template class implementing base functionality of the pipeline resource signature object.
 
 /// \tparam EngineImplTraits - Engine implementation type traits.
@@ -174,6 +186,27 @@ public:
             }
             VERIFY_EXPR(StaticVarStageIdx == GetNumStaticResStages());
         }
+    }
+
+    PipelineResourceSignatureBase(IReferenceCounters*                            pRefCounters,
+                                  RenderDeviceImplType*                          pDevice,
+                                  const PipelineResourceSignatureDesc&           Desc,
+                                  const PipelineResourceSignatureSerializedData& Serialized) :
+        TDeviceObjectBase{pRefCounters, pDevice, Desc, false /*bIsDeviceInternal*/},
+        m_ShaderStages{Serialized.ShaderStages},
+        m_StaticResShaderStages{Serialized.StaticResShaderStages},
+        m_PipelineType{Serialized.PipelineType},
+        m_StaticResStageIndex{Serialized.StaticResStageIndex},
+        m_SRBMemAllocator{GetRawAllocator()}
+    {
+        // Don't read from m_Desc until it was allocated and copied in CopyPipelineResourceSignatureDesc()
+        this->m_Desc.Resources             = nullptr;
+        this->m_Desc.ImmutableSamplers     = nullptr;
+        this->m_Desc.CombinedSamplerSuffix = nullptr;
+
+#ifdef DILIGENT_DEVELOPMENT
+        ValidatePipelineResourceSignatureDesc(Desc, pDevice);
+#endif
     }
 
     ~PipelineResourceSignatureBase()
@@ -570,6 +603,23 @@ protected:
         pThisImpl->CalculateHash();
     }
 
+protected:
+    template <typename ImmutableSamplerAttribsType, typename SerializedData>
+    void InitializeSerialized(IMemoryAllocator&                    RawAllocator,
+                              const PipelineResourceSignatureDesc& Desc,
+                              const SerializedData&                Serialized,
+                              ImmutableSamplerAttribsType*&        ImmutableSamAttribs,
+                              const std::function<void()>&         InitResourceLayout,
+                              const std::function<size_t()>&       GetRequiredResourceCacheMemorySize) noexcept(false)
+    {
+        VERIFY_EXPR(Desc.NumResources == Serialized.NumResources);
+
+        Initialize(RawAllocator, Desc, ImmutableSamAttribs, InitResourceLayout, GetRequiredResourceCacheMemorySize,
+                   [&Serialized](FixedLinearAllocator& Allocator) {
+                       return Allocator.CopyArray<PipelineResourceAttribsType>(Serialized.pResourceAttribs, Serialized.NumResources);
+                   });
+    }
+
     struct PRSDescWrapper
     {
         PipelineResourceSignatureDesc     Desc;
@@ -628,6 +678,15 @@ protected:
 
         return UpdatedDesc;
     }
+
+    void Serialize(PipelineResourceSignatureSerializedData& Serialized) const
+    {
+        Serialized.ShaderStages          = m_ShaderStages;
+        Serialized.StaticResShaderStages = m_StaticResShaderStages;
+        Serialized.PipelineType          = m_PipelineType;
+        Serialized.StaticResStageIndex   = m_StaticResStageIndex;
+    }
+
 
 protected:
     void Destruct()
