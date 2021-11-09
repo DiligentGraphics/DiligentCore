@@ -588,4 +588,39 @@ bool PipelineResourceSignatureGLImpl::DvpValidateCommittedResource(const ShaderR
 }
 #endif // DILIGENT_DEVELOPMENT
 
+
+PipelineResourceSignatureGLImpl::PipelineResourceSignatureGLImpl(IReferenceCounters*                              pRefCounters,
+                                                                 RenderDeviceGLImpl*                              pDeviceGL,
+                                                                 const PipelineResourceSignatureDesc&             Desc,
+                                                                 const PipelineResourceSignatureSerializedDataGL& Serialized) :
+    TPipelineResourceSignatureBase{pRefCounters, pDeviceGL, Desc, Serialized.Base}
+{
+    try
+    {
+        InitializeSerialized(
+            GetRawAllocator(), Desc, Serialized, m_ImmutableSamplers,
+            [this]() //
+            {
+                CreateLayout();
+            },
+            [this]() //
+            {
+                return ShaderResourceCacheGL::GetRequiredMemorySize(m_BindingCount);
+            });
+    }
+    catch (...)
+    {
+        Destruct();
+        throw;
+    }
+}
+
+void PipelineResourceSignatureGLImpl::Serialize(PipelineResourceSignatureSerializedDataGL& Serialized) const
+{
+    TPipelineResourceSignatureBase::Serialize(Serialized.Base);
+
+    Serialized.pResourceAttribs = m_pResourceAttribs;
+    Serialized.NumResources     = GetDesc().NumResources;
+}
+
 } // namespace Diligent

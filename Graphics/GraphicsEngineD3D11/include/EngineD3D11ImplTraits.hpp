@@ -80,6 +80,7 @@ class ShaderResourceCacheD3D11;
 class ShaderVariableManagerD3D11;
 
 struct PipelineResourceAttribsD3D11;
+struct PipelineResourceSignatureSerializedDataD3D11;
 
 struct EngineD3D11ImplTraits
 {

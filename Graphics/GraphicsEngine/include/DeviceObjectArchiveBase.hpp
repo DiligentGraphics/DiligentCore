@@ -40,7 +40,7 @@
 // | ***DataHeader | --> offset --> | device specific data |
 
 #include <array>
-#include <shared_mutex>
+#include <mutex>
 
 #include "Dearchiver.h"
 #include "DeviceObjectArchive.h"
@@ -111,7 +111,7 @@ protected:
 
         Count
     };
-    using TBlockBaseOffsets = std::array<Uint32, Uint32{BlockOffsetType::Count}>;
+    using TBlockBaseOffsets = std::array<Uint32, static_cast<Uint32>(BlockOffsetType::Count)>;
 
     struct ArchiveHeader
     {
@@ -154,7 +154,7 @@ protected:
 
     struct BaseDataHeader
     {
-        using Uint32Array = std::array<Uint32, Uint32{DeviceType::Count}>;
+        using Uint32Array = std::array<Uint32, static_cast<Uint32>(DeviceType::Count)>;
 
         static constexpr Uint32 InvalidOffset = ~0u;
 
@@ -162,14 +162,14 @@ protected:
         Uint32Array m_DeviceSpecificDataSize;
         Uint32Array m_DeviceSpecificDataOffset;
 
-        Uint32 GetSize(DeviceType DevType) const { return m_DeviceSpecificDataSize[Uint32{DevType}]; }
-        Uint32 GetOffset(DeviceType DevType) const { return m_DeviceSpecificDataOffset[Uint32{DevType}]; }
-        Uint32 GetEndOffset(DeviceType DevType) const { return m_DeviceSpecificDataOffset[Uint32{DevType}] + m_DeviceSpecificDataSize[Uint32{DevType}]; }
+        Uint32 GetSize(DeviceType DevType) const { return m_DeviceSpecificDataSize[static_cast<Uint32>(DevType)]; }
+        Uint32 GetOffset(DeviceType DevType) const { return m_DeviceSpecificDataOffset[static_cast<Uint32>(DevType)]; }
+        Uint32 GetEndOffset(DeviceType DevType) const { return GetOffset(DevType) + GetSize(DevType); }
 
         void InitOffsets() { m_DeviceSpecificDataOffset.fill(InvalidOffset); }
 
-        void SetSize(DeviceType DevType, Uint32 Size) { m_DeviceSpecificDataSize[Uint32{DevType}] = Size; }
-        void SetOffset(DeviceType DevType, Uint32 Offset) { m_DeviceSpecificDataOffset[Uint32{DevType}] = Offset; }
+        void SetSize(DeviceType DevType, Uint32 Size) { m_DeviceSpecificDataSize[static_cast<Uint32>(DevType)] = Size; }
+        void SetOffset(DeviceType DevType, Uint32 Offset) { m_DeviceSpecificDataOffset[static_cast<Uint32>(DevType)] = Offset; }
     };
 
     struct PRSDataHeader : BaseDataHeader
@@ -223,12 +223,12 @@ private:
     TRPOffsetAndCacheMap   m_RenderPassMap;
     TResourceOffsetAndSize m_Shaders;
 
-    std::shared_mutex m_PRSMapGuard;
-    std::shared_mutex m_GraphicsPSOMapGuard;
-    std::shared_mutex m_ComputePSOMapGuard;
-    std::shared_mutex m_RayTracingPSOMapGuard;
-    std::shared_mutex m_RenderPassMapGuard;
-    std::shared_mutex m_ShadersGuard;
+    std::mutex m_PRSMapGuard;
+    std::mutex m_GraphicsPSOMapGuard;
+    std::mutex m_ComputePSOMapGuard;
+    std::mutex m_RayTracingPSOMapGuard;
+    std::mutex m_RenderPassMapGuard;
+    std::mutex m_ShadersGuard;
 
     struct
     {
@@ -240,14 +240,14 @@ private:
     TBlockBaseOffsets       m_BaseOffsets = {};
 
     template <typename ResType>
-    void ReadNamedResources(const ChunkHeader& Chunk, TNameOffsetMap<ResType>& NameAndOffset, std::shared_mutex& Guard) noexcept(false);
-    void ReadIndexedResources(const ChunkHeader& Chunk, TResourceOffsetAndSize& Resources, std::shared_mutex& Guard) noexcept(false);
+    void ReadNamedResources(const ChunkHeader& Chunk, TNameOffsetMap<ResType>& NameAndOffset, std::mutex& Guard) noexcept(false);
+    void ReadIndexedResources(const ChunkHeader& Chunk, TResourceOffsetAndSize& Resources, std::mutex& Guard) noexcept(false);
     void ReadArchiveDebugInfo(const ChunkHeader& Chunk) noexcept(false);
 
     template <typename ResType>
-    bool GetCachedResource(const String& Name, TNameOffsetMap<ResType>& Cache, std::shared_mutex& Guard, ResType*& pResource);
+    bool GetCachedResource(const String& Name, TNameOffsetMap<ResType>& Cache, std::mutex& Guard, ResType*& pResource);
     template <typename ResType>
-    void CacheResource(const String& Name, TNameOffsetMap<ResType>& Cache, std::shared_mutex& Guard, ResType* pResource);
+    void CacheResource(const String& Name, TNameOffsetMap<ResType>& Cache, std::mutex& Guard, ResType* pResource);
 
 protected:
     using TPRSNames = std::array<const char*, MAX_RESOURCE_SIGNATURES>;
@@ -314,7 +314,7 @@ private:
 
     template <typename ResType, typename FnType>
     bool LoadResourceData(const TNameOffsetMap<ResType>& NameAndOffset,
-                          std::shared_mutex&             Guard,
+                          std::mutex&                    Guard,
                           const String&                  ResourceName,
                           DynamicLinearAllocator&        Allocator,
                           const char*                    ResTypeName,

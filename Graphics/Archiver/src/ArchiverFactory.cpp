@@ -26,6 +26,7 @@
 
 #include "ArchiverFactory.h"
 #include "ArchiverFactoryLoader.h"
+#include "DefaultShaderSourceStreamFactory.h"
 
 // defined in Windows.h
 #undef GetObject
@@ -120,6 +121,11 @@ public:
 
     virtual void DILIGENT_CALL_TYPE CreateDefaultShaderSourceStreamFactory(const Char* SearchDirectories, struct IShaderSourceInputStreamFactory** ppShaderSourceFactory) const override final
     {
+        DEV_CHECK_ERR(ppShaderSourceFactory != nullptr, "ppShaderSourceFactory must not be null");
+        if (!ppShaderSourceFactory)
+            return;
+
+        Diligent::CreateDefaultShaderSourceStreamFactory(SearchDirectories, ppShaderSourceFactory);
     }
 
 private:

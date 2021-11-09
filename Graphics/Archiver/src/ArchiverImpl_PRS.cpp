@@ -36,20 +36,37 @@ const SerializedMemory& ArchiverImpl::PRSData::GetSharedData() const
 
 const SerializedMemory& ArchiverImpl::PRSData::GetDeviceData(Uint32 Idx) const
 {
-    static const SerializedMemory Empty;
     switch (static_cast<DeviceType>(Idx))
     {
         // clang-format off
+#if D3D11_SUPPORTED
+        case DeviceType::Direct3D11: return pPRS->GetSerializedMemoryD3D11();
+#else
+        case DeviceType::Direct3D11: break;
+#endif
+#if D3D12_SUPPORTED
         case DeviceType::Direct3D12: return pPRS->GetSerializedMemoryD3D12();
+#else
+        case DeviceType::Direct3D12: break;
+#endif
+#if GL_SUPPORTED || GLES_SUPPORTED
+        case DeviceType::OpenGL:     return pPRS->GetSerializedMemoryGL();
+#else
+        case DeviceType::OpenGL:     break;
+#endif
+#if VULKAN_SUPPORTED
         case DeviceType::Vulkan:     return pPRS->GetSerializedMemoryVk();
-        case DeviceType::OpenGL:
-        case DeviceType::Direct3D11:
-        case DeviceType::Metal:
+#else
+        case DeviceType::Vulkan:     break;
+#endif
+        case DeviceType::Metal:      break; // AZ TODO
         // clang-format on
         case DeviceType::Count:
-        default:
-            return Empty;
+            break;
     }
+
+    static const SerializedMemory Empty;
+    return Empty;
 }
 
 bool ArchiverImpl::AddPipelineResourceSignature(IPipelineResourceSignature* pPRS)

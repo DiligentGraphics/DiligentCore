@@ -108,6 +108,15 @@ public:
                                const BaseBindingsArrayType&        BaseBindings) const;
 #endif
 
+    using TCompileShaderFn           = std::function<void(size_t ShaderIdx, ShaderD3D11Impl* pShader, ID3DBlob* pPatchedBytecode)>;
+    using TValidateShaderResourcesFn = std::function<void(ShaderD3D11Impl* pShader)>;
+    static void RemapShaderResources(const std::vector<ShaderD3D11Impl*>&                     Shaders,
+                                     const RefCntAutoPtr<PipelineResourceSignatureD3D11Impl>* pSignatures,
+                                     Uint32                                                   SignatureCount,
+                                     D3D11ShaderResourceCounters*                             pBaseBindings, // [SignatureCount]
+                                     const TCompileShaderFn&                                  CompileShaderFn,
+                                     const TValidateShaderResourcesFn&                        ValidateShaderResourcesFn = {}) noexcept(false);
+
 private:
     template <typename PSOCreateInfoType>
     void InitInternalObjects(const PSOCreateInfoType& CreateInfo,

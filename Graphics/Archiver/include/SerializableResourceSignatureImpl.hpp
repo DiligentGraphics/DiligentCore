@@ -36,8 +36,14 @@
 namespace Diligent
 {
 
+#if D3D11_SUPPORTED
+class PipelineResourceSignatureD3D11Impl;
+#endif
 #if D3D12_SUPPORTED
 class PipelineResourceSignatureD3D12Impl;
+#endif
+#if GL_SUPPORTED || GLES_SUPPORTED
+class PipelineResourceSignatureGLImpl;
 #endif
 #if VULKAN_SUPPORTED
 class PipelineResourceSignatureVkImpl;
@@ -85,9 +91,17 @@ public:
 
     const SerializedMemory& GetSharedSerializedMemory() const { return m_SharedData; }
 
+#if D3D11_SUPPORTED
+    PipelineResourceSignatureD3D11Impl* GetSignatureD3D11() const;
+    const SerializedMemory&             GetSerializedMemoryD3D11() const;
+#endif
 #if D3D12_SUPPORTED
     PipelineResourceSignatureD3D12Impl* GetSignatureD3D12() const;
     const SerializedMemory&             GetSerializedMemoryD3D12() const;
+#endif
+#if GL_SUPPORTED || GLES_SUPPORTED
+    PipelineResourceSignatureGLImpl* GetSignatureGL() const;
+    const SerializedMemory&          GetSerializedMemoryGL() const;
 #endif
 #if VULKAN_SUPPORTED
     PipelineResourceSignatureVkImpl* GetSignatureVk() const;
@@ -100,11 +114,15 @@ private:
     SerializedMemory                               m_DescMem;
     SerializedMemory                               m_SharedData;
 
-    using DeviceType = DeviceObjectArchiveBase::DeviceType;
-
     template <typename ImplType> struct TPRS;
+#if D3D11_SUPPORTED
+    std::unique_ptr<TPRS<PipelineResourceSignatureD3D11Impl>> m_pPRSD3D11;
+#endif
 #if D3D12_SUPPORTED
     std::unique_ptr<TPRS<PipelineResourceSignatureD3D12Impl>> m_pPRSD3D12;
+#endif
+#if GL_SUPPORTED || GLES_SUPPORTED
+    std::unique_ptr<TPRS<PipelineResourceSignatureGLImpl>> m_pPRSGL;
 #endif
 #if VULKAN_SUPPORTED
     std::unique_ptr<TPRS<PipelineResourceSignatureVkImpl>> m_pPRSVk;

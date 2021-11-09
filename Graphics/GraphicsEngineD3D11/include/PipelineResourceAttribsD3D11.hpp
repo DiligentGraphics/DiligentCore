@@ -297,6 +297,11 @@ public:
         VERIFY(SamplerInd == _SamplerInd, "Sampler index (", _SamplerInd, ") exceeds maximum representable value.");
     }
 
+    // Only for serialization
+    PipelineResourceAttribsD3D11() noexcept :
+        PipelineResourceAttribsD3D11{0, false}
+    {}
+
     bool IsSamplerAssigned() const { return SamplerInd != InvalidSamplerInd; }
     bool IsImmutableSamplerAssigned() const { return ImtblSamplerAssigned != 0; }
 

@@ -33,6 +33,7 @@
 #include "RenderDeviceGLImpl.hpp"
 #include "DeviceContextGLImpl.hpp"
 #include "EngineFactoryBase.hpp"
+#include "DearchiverGLImpl.hpp"
 #include "EngineMemory.h"
 
 #if !DILIGENT_NO_HLSL
@@ -104,11 +105,19 @@ public:
                                                       Uint32&              NumAdapters,
                                                       GraphicsAdapterInfo* Adapters) const override final;
 
+    virtual IDearchiver* DILIGENT_CALL_TYPE GetDearchiver() override final
+    {
+        return &m_Dearchiver;
+    }
+
 #if PLATFORM_ANDROID
     virtual void InitAndroidFileSystem(struct ANativeActivity* NativeActivity,
                                        const char*             NativeActivityClassName,
                                        struct AAssetManager*   AssetManager) const override final;
 #endif
+
+private:
+    DearchiverGLImpl m_Dearchiver{nullptr}; // AZ TODO
 };
 
 static void SetDefaultGraphicsAdapterInfo(GraphicsAdapterInfo& AdapterInfo)

@@ -52,9 +52,9 @@ public:
         template <typename T>
         using TQual = typename Serializer<Mode>::template TQual<T>;
 
-        static void SerializePRS(Serializer<Mode>&                                          Ser,
-                                 TQual<PipelineResourceSignatureD3D12Impl::SerializedData>& Serialized,
-                                 DynamicLinearAllocator*                                    Allocator);
+        static void SerializePRS(Serializer<Mode>&                                    Ser,
+                                 TQual<PipelineResourceSignatureSerializedDataD3D12>& Serialized,
+                                 DynamicLinearAllocator*                              Allocator);
     };
 };
 

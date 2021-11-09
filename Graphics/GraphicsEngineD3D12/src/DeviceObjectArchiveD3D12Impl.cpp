@@ -47,7 +47,7 @@ void DeviceObjectArchiveD3D12Impl::UnpackResourceSignature(const ResourceSignatu
         DeArchiveInfo, pSignature,
         [&DeArchiveInfo](PRSData& PRS, Serializer<SerializerMode::Read>& Ser, IPipelineResourceSignature*& pSignature) //
         {
-            PipelineResourceSignatureD3D12Impl::SerializedData SerializedData;
+            PipelineResourceSignatureSerializedDataD3D12 SerializedData;
             SerializedData.Base = PRS.Serialized;
             SerializerD3D12Impl<SerializerMode::Read>::SerializePRS(Ser, SerializedData, &PRS.Allocator);
             VERIFY_EXPR(Ser.IsEnd());
@@ -59,9 +59,9 @@ void DeviceObjectArchiveD3D12Impl::UnpackResourceSignature(const ResourceSignatu
 
 template <SerializerMode Mode>
 void DeviceObjectArchiveD3D12Impl::SerializerD3D12Impl<Mode>::SerializePRS(
-    Serializer<Mode>&                                          Ser,
-    TQual<PipelineResourceSignatureD3D12Impl::SerializedData>& Serialized,
-    DynamicLinearAllocator*                                    Allocator)
+    Serializer<Mode>&                                    Ser,
+    TQual<PipelineResourceSignatureSerializedDataD3D12>& Serialized,
+    DynamicLinearAllocator*                              Allocator)
 {
     Ser(Serialized.NumResources);
 
@@ -72,7 +72,7 @@ void DeviceObjectArchiveD3D12Impl::SerializerD3D12Impl<Mode>::SerializePRS(
     }
 
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(Serialized) == 32, "Did you add a new member to PipelineResourceSignatureD3D12Impl::SerializedData? Please add serialization here.");
+    static_assert(sizeof(Serialized) == 32, "Did you add a new member to PipelineResourceSignatureSerializedDataD3D12? Please add serialization here.");
 #endif
 }
 

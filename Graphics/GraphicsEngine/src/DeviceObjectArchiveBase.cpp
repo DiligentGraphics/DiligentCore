@@ -65,14 +65,14 @@ DeviceObjectArchiveBase::DeviceObjectArchiveBase(IReferenceCounters* pRefCounter
         LOG_ERROR_AND_THROW("Failed to read chunk headers");
     }
 
-    std::bitset<Uint32{ChunkType::Count}> ProcessedBits{};
+    std::bitset<static_cast<Uint32>(ChunkType::Count)> ProcessedBits{};
     for (const auto& Chunk : Chunks)
     {
-        if (ProcessedBits[Uint32{Chunk.Type}])
+        if (ProcessedBits[static_cast<Uint32>(Chunk.Type)])
         {
             LOG_ERROR_AND_THROW("Multiple chunks with the same types are not allowed");
         }
-        ProcessedBits[Uint32{Chunk.Type}] = true;
+        ProcessedBits[static_cast<Uint32>(Chunk.Type)] = true;
 
         switch (Chunk.Type)
         {
@@ -113,7 +113,7 @@ void DeviceObjectArchiveBase::ReadArchiveDebugInfo(const ChunkHeader& Chunk) noe
 }
 
 template <typename ResType>
-void DeviceObjectArchiveBase::ReadNamedResources(const ChunkHeader& Chunk, TNameOffsetMap<ResType>& NameAndOffset, std::shared_mutex& Guard) noexcept(false)
+void DeviceObjectArchiveBase::ReadNamedResources(const ChunkHeader& Chunk, TNameOffsetMap<ResType>& NameAndOffset, std::mutex& Guard) noexcept(false)
 {
     VERIFY_EXPR(Chunk.Type == ChunkType::ResourceSignature ||
                 Chunk.Type == ChunkType::GraphicsPipelineStates ||
@@ -146,7 +146,7 @@ void DeviceObjectArchiveBase::ReadNamedResources(const ChunkHeader& Chunk, TName
 
     const char* NameDataPtr = reinterpret_cast<char*>(&Data[OffsetInHeader]);
 
-    std::unique_lock<std::shared_mutex> WriteLock{Guard};
+    std::unique_lock<std::mutex> WriteLock{Guard};
 
     // Read names
     Uint32 Offset = 0;
@@ -167,7 +167,7 @@ void DeviceObjectArchiveBase::ReadNamedResources(const ChunkHeader& Chunk, TName
     }
 }
 
-void DeviceObjectArchiveBase::ReadIndexedResources(const ChunkHeader& Chunk, TResourceOffsetAndSize& Resources, std::shared_mutex& Guard) noexcept(false)
+void DeviceObjectArchiveBase::ReadIndexedResources(const ChunkHeader& Chunk, TResourceOffsetAndSize& Resources, std::mutex& Guard) noexcept(false)
 {
     VERIFY_EXPR(Chunk.Type == ChunkType::Shaders);
     VERIFY_EXPR(Chunk.Size == sizeof(ShadersDataHeader));
@@ -190,7 +190,7 @@ void DeviceObjectArchiveBase::ReadIndexedResources(const ChunkHeader& Chunk, TRe
             VERIFY_EXPR(DataSize % sizeof(TResourceOffsetAndSize::value_type) == 0);
             const size_t Count = DataSize / sizeof(TResourceOffsetAndSize::value_type);
 
-            std::unique_lock<std::shared_mutex> WriteLock{Guard};
+            std::unique_lock<std::mutex> WriteLock{Guard};
             Resources.resize(Count);
             std::memcpy(Resources.data(), pData, Resources.size() * sizeof(Resources[0]));
         });
@@ -198,7 +198,7 @@ void DeviceObjectArchiveBase::ReadIndexedResources(const ChunkHeader& Chunk, TRe
 
 template <typename ResType, typename FnType>
 bool DeviceObjectArchiveBase::LoadResourceData(const TNameOffsetMap<ResType>& NameAndOffset,
-                                               std::shared_mutex&             Guard,
+                                               std::mutex&                    Guard,
                                                const String&                  ResourceName,
                                                DynamicLinearAllocator&        Allocator,
                                                const char*                    ResTypeName,
@@ -207,7 +207,7 @@ bool DeviceObjectArchiveBase::LoadResourceData(const TNameOffsetMap<ResType>& Na
     FileOffsetAndSize OffsetAndSize;
     const char*       ResName = nullptr;
     {
-        std::shared_lock<std::shared_mutex> ReadLock{Guard};
+        std::unique_lock<std::mutex> ReadLock{Guard};
 
         auto Iter = NameAndOffset.find(ResourceName);
         if (Iter == NameAndOffset.end())
@@ -238,7 +238,7 @@ void DeviceObjectArchiveBase::LoadDeviceSpecificData(const HeaderType&       Hea
                                                      BlockOffsetType         BlockType,
                                                      const FnType&           Fn)
 {
-    const auto BaseOffset = m_BaseOffsets[Uint32{BlockType}];
+    const auto BaseOffset = m_BaseOffsets[static_cast<Uint32>(BlockType)];
     if (BaseOffset > m_pSource->GetSize())
     {
         LOG_ERROR_MESSAGE("Required block is not exists in archive");
@@ -375,9 +375,9 @@ bool DeviceObjectArchiveBase::ReadRayTracingPSOData(const String& Name, PSOData<
 }
 
 template <typename ResType>
-bool DeviceObjectArchiveBase::GetCachedResource(const String& Name, TNameOffsetMap<ResType>& Cache, std::shared_mutex& Guard, ResType*& pResource)
+bool DeviceObjectArchiveBase::GetCachedResource(const String& Name, TNameOffsetMap<ResType>& Cache, std::mutex& Guard, ResType*& pResource)
 {
-    std::shared_lock<std::shared_mutex> Lock{Guard};
+    std::unique_lock<std::mutex> ReadLock{Guard};
 
     pResource = nullptr;
 
@@ -394,11 +394,11 @@ bool DeviceObjectArchiveBase::GetCachedResource(const String& Name, TNameOffsetM
 }
 
 template <typename ResType>
-void DeviceObjectArchiveBase::CacheResource(const String& Name, TNameOffsetMap<ResType>& Cache, std::shared_mutex& Guard, ResType* pResource)
+void DeviceObjectArchiveBase::CacheResource(const String& Name, TNameOffsetMap<ResType>& Cache, std::mutex& Guard, ResType* pResource)
 {
     VERIFY_EXPR(pResource != nullptr);
 
-    std::unique_lock<std::shared_mutex> WriteLock{Guard};
+    std::unique_lock<std::mutex> WriteLock{Guard};
 
     auto Iter = Cache.find(Name);
     if (Iter == Cache.end())
@@ -556,7 +556,7 @@ bool DeviceObjectArchiveBase::CreateResourceSignatures(PSOData<CreateInfoType>& 
     if (PSO.CreateInfo.ResourceSignaturesCount == 0)
         return true;
 
-    auto* ppResourceSignatures = PSO.Allocator.Allocate<IPipelineResourceSignature*>(PSO.CreateInfo.ResourceSignaturesCount);
+    auto* ppResourceSignatures = PSO.Allocator.template Allocate<IPipelineResourceSignature*>(PSO.CreateInfo.ResourceSignaturesCount);
 
     ResourceSignatureUnpackInfo UnpackInfo;
     UnpackInfo.SRBAllocationGranularity = DefaultSRBAllocationGranularity;
@@ -584,9 +584,9 @@ bool DeviceObjectArchiveBase::LoadShaders(Serializer<SerializerMode::Read>&    S
 
     Shaders.resize(ShaderIndices.Count);
 
-    const auto BaseOffset = m_BaseOffsets[Uint32{static_cast<BlockOffsetType>(m_DevType)}]; // AZ TODO
+    const auto BaseOffset = m_BaseOffsets[static_cast<Uint32>(static_cast<BlockOffsetType>(m_DevType))]; // AZ TODO
 
-    std::shared_lock<std::shared_mutex> ReadLock{m_ShadersGuard};
+    std::unique_lock<std::mutex> ReadLock{m_ShadersGuard};
 
     for (Uint32 i = 0; i < ShaderIndices.Count; ++i)
     {
@@ -602,9 +602,24 @@ bool DeviceObjectArchiveBase::LoadShaders(Serializer<SerializerMode::Read>&    S
 
         Serializer<SerializerMode::Read> Ser2{pData, OffsetAndSize.Size};
         ShaderCreateInfo                 ShaderCI;
-        Ser2(ShaderCI.Desc.ShaderType, ShaderCI.EntryPoint);
-        ShaderCI.ByteCode     = Ser2.GetCurrentPtr();
-        ShaderCI.ByteCodeSize = Ser2.GetRemainSize();
+        Ser2(ShaderCI.Desc.ShaderType, ShaderCI.EntryPoint, ShaderCI.SourceLanguage, ShaderCI.ShaderCompiler);
+
+        if (m_DevType == DeviceType::OpenGL)
+        {
+            ShaderCI.Source                     = static_cast<const Char*>(Ser2.GetCurrentPtr());
+            ShaderCI.SourceLength               = Ser2.GetRemainSize();
+            ShaderCI.UseCombinedTextureSamplers = true;
+
+            VERIFY_EXPR(ShaderCI.SourceLength == strlen(ShaderCI.Source) + 1);
+        }
+        else
+        {
+            VERIFY_EXPR(ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_DEFAULT);
+            VERIFY_EXPR(ShaderCI.ShaderCompiler == SHADER_COMPILER_DEFAULT);
+
+            ShaderCI.ByteCode     = Ser2.GetCurrentPtr();
+            ShaderCI.ByteCodeSize = Ser2.GetRemainSize();
+        }
 
         pDevice->CreateShader(ShaderCI, &Shaders[i]);
         if (!Shaders[i])
@@ -980,9 +995,6 @@ void DeviceObjectArchiveBase::SerializerImpl<Mode>::SerializeComputePSO(
 {
     SerializePSO(Ser, CreateInfo, PRSNames, Allocator);
 
-    // AZ TODO: read ComputePipelineStateCreateInfo
-
-    // skip NodeMask
     // skip shaders - they are device specific
 
 #if defined(_MSC_VER) && defined(_WIN64)

@@ -48,6 +48,7 @@
 #include "ShaderBindingTableD3D12Impl.hpp"
 #include "DeviceMemoryD3D12Impl.hpp"
 #include "PipelineStateCacheD3D12Impl.hpp"
+#include "PipelineResourceSignatureD3D12Impl.hpp"
 
 #include "EngineMemory.h"
 #include "D3D12TypeConversions.hpp"
@@ -640,9 +641,9 @@ void RenderDeviceD3D12Impl::CreatePipelineResourceSignature(const PipelineResour
     CreatePipelineResourceSignatureImpl(ppSignature, Desc, ShaderStages, IsDeviceInternal);
 }
 
-void RenderDeviceD3D12Impl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc&                      Desc,
-                                                            const PipelineResourceSignatureD3D12Impl::SerializedData& SerializedData,
-                                                            IPipelineResourceSignature**                              ppSignature)
+void RenderDeviceD3D12Impl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc&                Desc,
+                                                            const PipelineResourceSignatureSerializedDataD3D12& SerializedData,
+                                                            IPipelineResourceSignature**                        ppSignature)
 {
     CreatePipelineResourceSignatureImpl(ppSignature, Desc, SerializedData);
 }

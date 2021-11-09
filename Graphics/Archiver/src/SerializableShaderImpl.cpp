@@ -28,10 +28,20 @@
 #include "FixedLinearAllocator.hpp"
 #include "EngineMemory.h"
 
+#if D3D11_SUPPORTED
+#    include "../../GraphicsEngineD3D11/include/pch.h"
+#    include "RenderDeviceD3D11Impl.hpp"
+#    include "ShaderD3D11Impl.hpp"
+#endif
 #if D3D12_SUPPORTED
 #    include "../../GraphicsEngineD3D12/include/pch.h"
 #    include "RenderDeviceD3D12Impl.hpp"
 #    include "ShaderD3D12Impl.hpp"
+#endif
+#if GL_SUPPORTED || GLES_SUPPORTED
+#    include "../../GraphicsEngineOpenGL/include/pch.h"
+#    include "RenderDeviceGLImpl.hpp"
+#    include "ShaderGLImpl.hpp"
 #endif
 #if VULKAN_SUPPORTED
 #    include "VulkanUtilities/VulkanHeaders.h"
@@ -41,6 +51,23 @@
 
 namespace Diligent
 {
+
+#if D3D11_SUPPORTED
+struct SerializableShaderImpl::CompiledShaderD3D11
+{
+    ShaderD3D11Impl ShaderD3D11;
+
+    CompiledShaderD3D11(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI, const ShaderD3D11Impl::CreateInfo& D3D11ShaderCI) :
+        ShaderD3D11{pRefCounters, nullptr, ShaderCI, D3D11ShaderCI, true}
+    {}
+};
+
+ShaderD3D11Impl* SerializableShaderImpl::GetShaderD3D11() const
+{
+    return m_pShaderD3D11 ? &m_pShaderD3D11->ShaderD3D11 : nullptr;
+}
+#endif // D3D11_SUPPORTED
+
 
 #if D3D12_SUPPORTED
 struct SerializableShaderImpl::CompiledShaderD3D12
@@ -99,8 +126,15 @@ SerializableShaderImpl::SerializableShaderImpl(IReferenceCounters*      pRefCoun
         {
 #if D3D11_SUPPORTED
             case RENDER_DEVICE_TYPE_D3D11:
-                // AZ TODO
+            {
+                const ShaderD3D11Impl::CreateInfo D3D11ShaderCI{
+                    pDevice->GetDevice()->GetDeviceInfo(),
+                    pDevice->GetDevice()->GetAdapterInfo(),
+                    pDevice->GetD3D11FeatureLevel() //
+                };
+                m_pShaderD3D11.reset(new CompiledShaderD3D11{pRefCounters, ShaderCI, D3D11ShaderCI});
                 break;
+            }
 #endif
 
 #if D3D12_SUPPORTED
@@ -120,7 +154,8 @@ SerializableShaderImpl::SerializableShaderImpl(IReferenceCounters*      pRefCoun
 #if GL_SUPPORTED || GLES_SUPPORTED
             case RENDER_DEVICE_TYPE_GL:
             case RENDER_DEVICE_TYPE_GLES:
-                // AZ TODO
+                // shader compilation is not supported for OpenGL, use GetCreateInfo() to get source
+                // AZ TODO: validate source using glslang
                 break;
 #endif
 
@@ -171,7 +206,7 @@ void SerializableShaderImpl::CopyShaderCreateInfo(const ShaderCreateInfo& Shader
         if (ShaderCI.SourceLength == 0)
             Allocator.AddSpaceForString(ShaderCI.Source);
         else
-            Allocator.AddSpace<decltype(*ShaderCI.Source)>(sizeof(*ShaderCI.Source) * ShaderCI.SourceLength);
+            Allocator.AddSpace<decltype(*ShaderCI.Source)>(sizeof(*ShaderCI.Source) * (ShaderCI.SourceLength + 1));
     }
 
     if (ShaderCI.ByteCode && ShaderCI.ByteCodeSize > 0)
@@ -203,14 +238,19 @@ void SerializableShaderImpl::CopyShaderCreateInfo(const ShaderCreateInfo& Shader
     if (ShaderCI.Source)
     {
         if (ShaderCI.SourceLength == 0)
-            m_CreateInfo.Source = Allocator.CopyString(ShaderCI.Source);
+        {
+            m_CreateInfo.Source       = Allocator.CopyString(ShaderCI.Source);
+            m_CreateInfo.SourceLength = strlen(m_CreateInfo.Source) + 1;
+        }
         else
         {
-            const size_t Size    = sizeof(*ShaderCI.Source) * ShaderCI.SourceLength;
+            const size_t Size    = sizeof(*ShaderCI.Source) * (ShaderCI.SourceLength + 1);
             auto*        pSource = Allocator.Allocate<Char>(Size);
             std::memcpy(pSource, ShaderCI.Source, Size);
-            m_CreateInfo.Source = pSource;
+            pSource[m_CreateInfo.SourceLength++] = '\0';
+            m_CreateInfo.Source                  = pSource;
         }
+        VERIFY_EXPR(m_CreateInfo.SourceLength == strlen(m_CreateInfo.Source) + 1);
     }
 
     if (ShaderCI.ByteCode && ShaderCI.ByteCodeSize > 0)

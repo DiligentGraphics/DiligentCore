@@ -53,7 +53,6 @@
 #include "RenderPassCache.hpp"
 #include "CommandPoolManager.hpp"
 #include "DXCompiler.hpp"
-#include "PipelineResourceSignatureVkImpl.hpp"
 
 namespace Diligent
 {
@@ -147,9 +146,9 @@ public:
                                          SHADER_TYPE                          ShaderStages,
                                          bool                                 IsDeviceInternal);
 
-    void CreatePipelineResourceSignature(const PipelineResourceSignatureDesc&                   Desc,
-                                         const PipelineResourceSignatureVkImpl::SerializedData& SerializedData,
-                                         IPipelineResourceSignature**                           ppSignature);
+    void CreatePipelineResourceSignature(const PipelineResourceSignatureDesc&             Desc,
+                                         const PipelineResourceSignatureSerializedDataVk& SerializedData,
+                                         IPipelineResourceSignature**                     ppSignature);
 
     /// Implementation of IRenderDevice::CreateDeviceMemory() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE CreateDeviceMemory(const DeviceMemoryCreateInfo& CreateInfo,

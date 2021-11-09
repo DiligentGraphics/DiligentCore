@@ -32,7 +32,7 @@ namespace Diligent
 template <typename T>
 struct IsTriviallySerializable
 {
-    static constexpr bool value = std::is_floating_point_v<T> || std::is_integral_v<T> || std::is_enum_v<T>;
+    static constexpr bool value = std::is_floating_point<T>::value || std::is_integral<T>::value || std::is_enum<T>::value;
 };
 
 template <typename T, size_t Size>
@@ -73,7 +73,7 @@ public:
     using TEnable = typename std::enable_if_t<IsTriviallySerializable<T>::value, void>;
 
     template <typename T>
-    using TEnableStr = typename std::enable_if_t<(std::is_same_v<const char* const, T> || std::is_same_v<const char*, T>), void>;
+    using TEnableStr = typename std::enable_if_t<(std::is_same<const char* const, T>::value || std::is_same<const char*, T>::value), void>;
     using InCharPtr  = typename std::conditional_t<Mode == SerializerMode::Read, const char*&, const char*>;
 
     template <typename T>
@@ -113,7 +113,7 @@ public:
     template <typename T>
     TReadOnly<T> Cast()
     {
-        static_assert(std::is_trivial_v<T>, "Can not cast to non triavial type");
+        static_assert(std::is_trivial<T>::value, "Can not cast to non triavial type");
         VERIFY(reinterpret_cast<size_t>(m_Ptr) % alignof(T) == 0, "Pointer must be properly aligned");
         VERIFY_EXPR(m_Ptr + sizeof(T) <= m_End);
         auto* Ptr = m_Ptr;
@@ -145,7 +145,7 @@ public:
         return m_End - m_Ptr;
     }
 
-    TPointer GetCurrentPtr() const
+    const void* GetCurrentPtr() const
     {
         return m_Ptr;
     }

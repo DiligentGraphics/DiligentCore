@@ -24,40 +24,11 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
+#include "DiligentCore/Graphics/Archiver/interface/ArchiverFactory.h"
 
-/// \file
-/// Declaration of Diligent::DeviceObjectArchiveVkImpl class
-
-#include "Dearchiver.h"
-
-#include "EngineVkImplTraits.hpp"
-#include "DeviceObjectArchiveBase.hpp"
-
-namespace Diligent
+void TestArchiverFactory_CInterface(IArchiverFactory* pArchiverFactory)
 {
-
-/// Device object archive object implementation in Vulkan backend.
-class DeviceObjectArchiveVkImpl final : public DeviceObjectArchiveBase
-{
-public:
-    DeviceObjectArchiveVkImpl(IReferenceCounters* pRefCounters, IArchive* pSource);
-    ~DeviceObjectArchiveVkImpl();
-
-    void UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature*& pSignature) override;
-
-    template <SerializerMode Mode>
-    struct SerializerVkImpl
-    {
-        template <typename T>
-        using TQual = typename Serializer<Mode>::template TQual<T>;
-
-        static void SerializePRS(Serializer<Mode>&                                 Ser,
-                                 TQual<PipelineResourceSignatureSerializedDataVk>& Serialized,
-                                 DynamicLinearAllocator*                           Allocator);
-    };
-};
-
-DECL_TRIVIALLY_SERIALIZABLE(PipelineResourceAttribsVk);
-
-} // namespace Diligent
+    IArchiverFactory_CreateSerializationDevice(pArchiverFactory, (ISerializationDevice**)NULL);
+    IArchiverFactory_CreateArchiver(pArchiverFactory, (ISerializationDevice*)NULL, (IArchiver**)NULL);
+    IArchiverFactory_CreateDefaultShaderSourceStreamFactory(pArchiverFactory, (const Char*)NULL, (IShaderSourceInputStreamFactory**)NULL);
+}

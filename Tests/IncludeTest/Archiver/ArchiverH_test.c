@@ -24,40 +24,15 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
+#include "DiligentCore/Graphics/Archiver/interface/Archiver.h"
 
-/// \file
-/// Declaration of Diligent::DeviceObjectArchiveVkImpl class
-
-#include "Dearchiver.h"
-
-#include "EngineVkImplTraits.hpp"
-#include "DeviceObjectArchiveBase.hpp"
-
-namespace Diligent
+void TestArchiver_CInterface(IArchiver* pArchiver)
 {
-
-/// Device object archive object implementation in Vulkan backend.
-class DeviceObjectArchiveVkImpl final : public DeviceObjectArchiveBase
-{
-public:
-    DeviceObjectArchiveVkImpl(IReferenceCounters* pRefCounters, IArchive* pSource);
-    ~DeviceObjectArchiveVkImpl();
-
-    void UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature*& pSignature) override;
-
-    template <SerializerMode Mode>
-    struct SerializerVkImpl
-    {
-        template <typename T>
-        using TQual = typename Serializer<Mode>::template TQual<T>;
-
-        static void SerializePRS(Serializer<Mode>&                                 Ser,
-                                 TQual<PipelineResourceSignatureSerializedDataVk>& Serialized,
-                                 DynamicLinearAllocator*                           Allocator);
-    };
-};
-
-DECL_TRIVIALLY_SERIALIZABLE(PipelineResourceAttribsVk);
-
-} // namespace Diligent
+    IArchiver_SerializeToBlob(pArchiver, (IDataBlob**)NULL);
+    IArchiver_SerializeToStream(pArchiver, (IFileStream*)NULL);
+    IArchiver_ArchiveGraphicsPipelineState(pArchiver, (const GraphicsPipelineStateCreateInfo*)NULL, (const PipelineStateArchiveInfo*)NULL);
+    IArchiver_ArchiveComputePipelineState(pArchiver, (const ComputePipelineStateCreateInfo*)NULL, (const PipelineStateArchiveInfo*)NULL);
+    IArchiver_ArchiveRayTracingPipelineState(pArchiver, (const RayTracingPipelineStateCreateInfo*)NULL, (const PipelineStateArchiveInfo*)NULL);
+    IArchiver_ArchiveTilePipelineState(pArchiver, (const TilePipelineStateCreateInfo*)NULL, (const PipelineStateArchiveInfo*)NULL);
+    IArchiver_ArchivePipelineResourceSignature(pArchiver, (const PipelineResourceSignatureDesc*)NULL, (const ResourceSignatureArchiveInfo*)NULL);
+}

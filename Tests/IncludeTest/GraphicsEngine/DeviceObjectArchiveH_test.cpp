@@ -24,34 +24,4 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
-
-namespace Diligent
-{
-
-struct SerializedMemory
-{
-    void*  Ptr  = nullptr;
-    size_t Size = 0;
-
-    SerializedMemory() {}
-
-    SerializedMemory(void* _Ptr, size_t _Size) :
-        Ptr{_Ptr}, Size{_Size}
-    {}
-
-    SerializedMemory(SerializedMemory&& Other) :
-        Ptr{Other.Ptr}, Size{Other.Size}
-    {
-        Other.Ptr  = nullptr;
-        Other.Size = 0;
-    }
-
-    ~SerializedMemory();
-
-    SerializedMemory& operator=(SerializedMemory&& Rhs);
-
-    explicit operator bool() const { return Ptr != nullptr; }
-};
-
-} // namespace Diligent
+#include "DiligentCore/Graphics/GraphicsEngine/interface/DeviceObjectArchive.h"
