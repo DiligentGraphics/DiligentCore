@@ -35,8 +35,8 @@
 #include "../../../Primitives/interface/DataBlob.h"
 #include "../../../Primitives/interface/FileStream.h"
 #include "../../../Platforms/interface/PlatformDefinitions.h"
+#include "../../../Primitives/interface/Archive.h"
 #include "GraphicsTypes.h"
-#include "Archive.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
@@ -52,7 +52,7 @@ static const INTERFACE_ID IID_DeviceObjectArchive =
 // clang-format off
 
 #define IDeviceObjectArchiveInclusiveMethods \
-    IDeviceObjectInclusiveMethods \
+    IObjectInclusiveMethods \
     /*IDeviceObjectArchiveMethods DeviceObjectArchive*/
 
 #if DILIGENT_CPP_INTERFACE

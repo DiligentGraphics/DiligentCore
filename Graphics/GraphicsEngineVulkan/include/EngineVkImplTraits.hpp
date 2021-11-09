@@ -86,6 +86,7 @@ class ShaderResourceCacheVk;
 class ShaderVariableManagerVk;
 
 struct PipelineResourceAttribsVk;
+struct PipelineResourceSignatureSerializedDataVk;
 
 struct EngineVkImplTraits
 {

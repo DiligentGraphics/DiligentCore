@@ -25,47 +25,45 @@
  */
 
 #include "pch.h"
-#include "RenderDeviceVkImpl.hpp"
-#include "DeviceObjectArchiveVkImpl.hpp"
-#include "PipelineResourceSignatureVkImpl.hpp"
+#include "RenderDeviceD3D11Impl.hpp"
+#include "DeviceObjectArchiveD3D11Impl.hpp"
+#include "PipelineResourceSignatureD3D11Impl.hpp"
 
 namespace Diligent
 {
 
-DeviceObjectArchiveVkImpl::DeviceObjectArchiveVkImpl(IReferenceCounters* pRefCounters, IArchive* pSource) :
-    DeviceObjectArchiveBase{pRefCounters, pSource, DeviceType::Vulkan}
+DeviceObjectArchiveD3D11Impl::DeviceObjectArchiveD3D11Impl(IReferenceCounters* pRefCounters, IArchive* pSource) :
+    DeviceObjectArchiveBase{pRefCounters, pSource, DeviceType::Direct3D11}
 {
 }
 
-DeviceObjectArchiveVkImpl::~DeviceObjectArchiveVkImpl()
+DeviceObjectArchiveD3D11Impl::~DeviceObjectArchiveD3D11Impl()
 {
 }
 
-void DeviceObjectArchiveVkImpl::UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature*& pSignature)
+void DeviceObjectArchiveD3D11Impl::UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature*& pSignature)
 {
     DeviceObjectArchiveBase::UnpackResourceSignatureImpl(
         DeArchiveInfo, pSignature,
         [&DeArchiveInfo](PRSData& PRS, Serializer<SerializerMode::Read>& Ser, IPipelineResourceSignature*& pSignature) //
         {
-            PipelineResourceSignatureSerializedDataVk SerializedData;
+            PipelineResourceSignatureSerializedDataD3D11 SerializedData;
             SerializedData.Base = PRS.Serialized;
-            SerializerVkImpl<SerializerMode::Read>::SerializePRS(Ser, SerializedData, &PRS.Allocator);
+            SerializerD3D11Impl<SerializerMode::Read>::SerializePRS(Ser, SerializedData, &PRS.Allocator);
             VERIFY_EXPR(Ser.IsEnd());
 
-            auto* pRenderDeviceVk = ClassPtrCast<RenderDeviceVkImpl>(DeArchiveInfo.pDevice);
-            pRenderDeviceVk->CreatePipelineResourceSignature(PRS.Desc, SerializedData, &pSignature);
+            auto* pRenderDeviceD3D11 = ClassPtrCast<RenderDeviceD3D11Impl>(DeArchiveInfo.pDevice);
+            pRenderDeviceD3D11->CreatePipelineResourceSignature(PRS.Desc, SerializedData, &pSignature);
         });
 }
 
 template <SerializerMode Mode>
-void DeviceObjectArchiveVkImpl::SerializerVkImpl<Mode>::SerializePRS(
-    Serializer<Mode>&                                 Ser,
-    TQual<PipelineResourceSignatureSerializedDataVk>& Serialized,
-    DynamicLinearAllocator*                           Allocator)
+void DeviceObjectArchiveD3D11Impl::SerializerD3D11Impl<Mode>::SerializePRS(
+    Serializer<Mode>&                                    Ser,
+    TQual<PipelineResourceSignatureSerializedDataD3D11>& Serialized,
+    DynamicLinearAllocator*                              Allocator)
 {
-    Ser(Serialized.NumResources,
-        Serialized.DynamicUniformBufferCount,
-        Serialized.DynamicStorageBufferCount);
+    Ser(Serialized.NumResources);
 
     auto* pAttribs = ArraySerializerHelper<Mode>::Create(Serialized.pResourceAttribs, Serialized.NumResources, Allocator);
     for (Uint32 i = 0; i < Serialized.NumResources; ++i)
@@ -74,12 +72,12 @@ void DeviceObjectArchiveVkImpl::SerializerVkImpl<Mode>::SerializePRS(
     }
 
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(Serialized) == 32, "Did you add a new member to PipelineResourceSignatureSerializedDataVk? Please add serialization here.");
+    static_assert(sizeof(Serialized) == 32, "Did you add a new member to PipelineResourceSignatureSerializedDataD3D11? Please add serialization here.");
 #endif
 }
 
-template struct DeviceObjectArchiveVkImpl::SerializerVkImpl<SerializerMode::Read>;
-template struct DeviceObjectArchiveVkImpl::SerializerVkImpl<SerializerMode::Write>;
-template struct DeviceObjectArchiveVkImpl::SerializerVkImpl<SerializerMode::Measure>;
+template struct DeviceObjectArchiveD3D11Impl::SerializerD3D11Impl<SerializerMode::Read>;
+template struct DeviceObjectArchiveD3D11Impl::SerializerD3D11Impl<SerializerMode::Write>;
+template struct DeviceObjectArchiveD3D11Impl::SerializerD3D11Impl<SerializerMode::Measure>;
 
 } // namespace Diligent

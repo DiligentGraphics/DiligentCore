@@ -70,6 +70,11 @@ public:
         VERIFY(!_ImtblSamplerAssigned || SamplerInd != InvalidSamplerInd, "Immutable sampler is assigned, but sampler index is not valid");
     }
 
+    // Only for serialization
+    PipelineResourceAttribsGL() noexcept :
+        PipelineResourceAttribsGL{0, 0, false}
+    {}
+
     bool IsSamplerAssigned() const
     {
         return SamplerInd != InvalidSamplerInd;

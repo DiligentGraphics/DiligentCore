@@ -40,6 +40,7 @@
 #include "D3D11TypeConversions.hpp"
 #include "EngineMemory.h"
 #include "EngineFactoryD3DBase.hpp"
+#include "DearchiverD3D11Impl.hpp"
 
 namespace Diligent
 {
@@ -80,12 +81,19 @@ public:
     virtual GraphicsAdapterInfo GetGraphicsAdapterInfo(void*          pd3dDevice,
                                                        IDXGIAdapter1* pDXIAdapter) const override final;
 
+    virtual IDearchiver* DILIGENT_CALL_TYPE GetDearchiver() override final
+    {
+        return &m_Dearchiver;
+    }
+
 private:
     static void CreateD3D11DeviceAndContextForAdapter(IDXGIAdapter*         pAdapter,
                                                       D3D_DRIVER_TYPE       DriverType,
                                                       UINT                  Flags,
                                                       ID3D11Device**        ppd3d11Device,
                                                       ID3D11DeviceContext** ppd3d11Context);
+
+    DearchiverD3D11Impl m_Dearchiver{nullptr}; // AZ TODO
 };
 
 

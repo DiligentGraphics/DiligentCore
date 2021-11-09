@@ -25,47 +25,45 @@
  */
 
 #include "pch.h"
-#include "RenderDeviceVkImpl.hpp"
-#include "DeviceObjectArchiveVkImpl.hpp"
-#include "PipelineResourceSignatureVkImpl.hpp"
+#include "RenderDeviceGLImpl.hpp"
+#include "DeviceObjectArchiveGLImpl.hpp"
+#include "PipelineResourceSignatureGLImpl.hpp"
 
 namespace Diligent
 {
 
-DeviceObjectArchiveVkImpl::DeviceObjectArchiveVkImpl(IReferenceCounters* pRefCounters, IArchive* pSource) :
-    DeviceObjectArchiveBase{pRefCounters, pSource, DeviceType::Vulkan}
+DeviceObjectArchiveGLImpl::DeviceObjectArchiveGLImpl(IReferenceCounters* pRefCounters, IArchive* pSource) :
+    DeviceObjectArchiveBase{pRefCounters, pSource, DeviceType::OpenGL}
 {
 }
 
-DeviceObjectArchiveVkImpl::~DeviceObjectArchiveVkImpl()
+DeviceObjectArchiveGLImpl::~DeviceObjectArchiveGLImpl()
 {
 }
 
-void DeviceObjectArchiveVkImpl::UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature*& pSignature)
+void DeviceObjectArchiveGLImpl::UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature*& pSignature)
 {
     DeviceObjectArchiveBase::UnpackResourceSignatureImpl(
         DeArchiveInfo, pSignature,
         [&DeArchiveInfo](PRSData& PRS, Serializer<SerializerMode::Read>& Ser, IPipelineResourceSignature*& pSignature) //
         {
-            PipelineResourceSignatureSerializedDataVk SerializedData;
+            PipelineResourceSignatureSerializedDataGL SerializedData;
             SerializedData.Base = PRS.Serialized;
-            SerializerVkImpl<SerializerMode::Read>::SerializePRS(Ser, SerializedData, &PRS.Allocator);
+            SerializerGLImpl<SerializerMode::Read>::SerializePRS(Ser, SerializedData, &PRS.Allocator);
             VERIFY_EXPR(Ser.IsEnd());
 
-            auto* pRenderDeviceVk = ClassPtrCast<RenderDeviceVkImpl>(DeArchiveInfo.pDevice);
-            pRenderDeviceVk->CreatePipelineResourceSignature(PRS.Desc, SerializedData, &pSignature);
+            auto* pRenderDeviceGL = ClassPtrCast<RenderDeviceGLImpl>(DeArchiveInfo.pDevice);
+            pRenderDeviceGL->CreatePipelineResourceSignature(PRS.Desc, SerializedData, &pSignature);
         });
 }
 
 template <SerializerMode Mode>
-void DeviceObjectArchiveVkImpl::SerializerVkImpl<Mode>::SerializePRS(
+void DeviceObjectArchiveGLImpl::SerializerGLImpl<Mode>::SerializePRS(
     Serializer<Mode>&                                 Ser,
-    TQual<PipelineResourceSignatureSerializedDataVk>& Serialized,
+    TQual<PipelineResourceSignatureSerializedDataGL>& Serialized,
     DynamicLinearAllocator*                           Allocator)
 {
-    Ser(Serialized.NumResources,
-        Serialized.DynamicUniformBufferCount,
-        Serialized.DynamicStorageBufferCount);
+    Ser(Serialized.NumResources);
 
     auto* pAttribs = ArraySerializerHelper<Mode>::Create(Serialized.pResourceAttribs, Serialized.NumResources, Allocator);
     for (Uint32 i = 0; i < Serialized.NumResources; ++i)
@@ -74,12 +72,12 @@ void DeviceObjectArchiveVkImpl::SerializerVkImpl<Mode>::SerializePRS(
     }
 
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(Serialized) == 32, "Did you add a new member to PipelineResourceSignatureSerializedDataVk? Please add serialization here.");
+    static_assert(sizeof(Serialized) == 32, "Did you add a new member to PipelineResourceSignatureSerializedDataGL? Please add serialization here.");
 #endif
 }
 
-template struct DeviceObjectArchiveVkImpl::SerializerVkImpl<SerializerMode::Read>;
-template struct DeviceObjectArchiveVkImpl::SerializerVkImpl<SerializerMode::Write>;
-template struct DeviceObjectArchiveVkImpl::SerializerVkImpl<SerializerMode::Measure>;
+template struct DeviceObjectArchiveGLImpl::SerializerGLImpl<SerializerMode::Read>;
+template struct DeviceObjectArchiveGLImpl::SerializerGLImpl<SerializerMode::Write>;
+template struct DeviceObjectArchiveGLImpl::SerializerGLImpl<SerializerMode::Measure>;
 
 } // namespace Diligent

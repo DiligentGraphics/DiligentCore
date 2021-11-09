@@ -110,6 +110,45 @@ RefCntAutoPtr<PipelineResourceSignatureD3D11Impl> PipelineStateD3D11Impl::Create
     return TPipelineStateBase::CreateDefaultSignature(Resources, pCombinedSamplerSuffix, pImmutableSamplers, GetActiveShaderStages(), IsDeviceInternal);
 }
 
+void PipelineStateD3D11Impl::RemapShaderResources(const std::vector<ShaderD3D11Impl*>&                     Shaders,
+                                                  const RefCntAutoPtr<PipelineResourceSignatureD3D11Impl>* pSignatures,
+                                                  Uint32                                                   SignatureCount,
+                                                  D3D11ShaderResourceCounters*                             pBaseBindings, // [SignatureCount]
+                                                  const TCompileShaderFn&                                  CompileShaderFn,
+                                                  const TValidateShaderResourcesFn&                        ValidateShaderResourcesFn) noexcept(false)
+{
+    // Verify that pipeline layout is compatible with shader resources and remap resource bindings.
+    for (size_t s = 0; s < Shaders.size(); ++s)
+    {
+        auto* const pShader    = Shaders[s];
+        auto const  ShaderType = pShader->GetDesc().ShaderType;
+        auto* const pBytecode  = Shaders[s]->GetBytecode();
+
+        ResourceBinding::TMap ResourceMap;
+        for (Uint32 sign = 0; sign < SignatureCount; ++sign)
+        {
+            const PipelineResourceSignatureD3D11Impl* const pSignature = pSignatures[sign];
+            if (pSignature == nullptr)
+                continue;
+
+            VERIFY_EXPR(pSignature->GetDesc().BindingIndex == sign);
+            pSignature->UpdateShaderResourceBindingMap(ResourceMap, ShaderType, pBaseBindings[sign]);
+        }
+
+        if (ValidateShaderResourcesFn)
+            ValidateShaderResourcesFn(pShader);
+
+        CComPtr<ID3DBlob> pPatchedBytecode;
+        D3DCreateBlob(pBytecode->GetBufferSize(), &pPatchedBytecode);
+        memcpy(pPatchedBytecode->GetBufferPointer(), pBytecode->GetBufferPointer(), pBytecode->GetBufferSize());
+
+        if (!DXBCUtils::RemapResourceBindings(ResourceMap, pPatchedBytecode->GetBufferPointer(), pPatchedBytecode->GetBufferSize()))
+            LOG_ERROR_AND_THROW("Failed to remap resource bindings in shader '", pShader->GetDesc().Name, "'.");
+
+        CompileShaderFn(s, pShader, pPatchedBytecode);
+    }
+}
+
 void PipelineStateD3D11Impl::InitResourceLayouts(const std::vector<ShaderD3D11Impl*>& Shaders,
                                                  CComPtr<ID3DBlob>&                   pVSByteCode)
 {
@@ -163,39 +202,23 @@ void PipelineStateD3D11Impl::InitResourceLayouts(const std::vector<ShaderD3D11Im
     }
 #endif
 
-    // Verify that pipeline layout is compatible with shader resources and remap resource bindings.
-    for (size_t s = 0; s < Shaders.size(); ++s)
-    {
-        auto* const pShader    = Shaders[s];
-        auto const  ShaderType = pShader->GetDesc().ShaderType;
-        auto* const pBytecode  = Shaders[s]->GetBytecode();
-
-        ResourceBinding::TMap ResourceMap;
-        for (Uint32 sign = 0; sign < m_SignatureCount; ++sign)
+    RemapShaderResources(
+        Shaders,
+        m_Signatures,
+        m_SignatureCount,
+        m_BaseBindings,
+        [this, &pVSByteCode](size_t ShaderIdx, ShaderD3D11Impl* pShader, ID3DBlob* pPatchedBytecode) //
         {
-            const PipelineResourceSignatureD3D11Impl* const pSignature = m_Signatures[sign];
-            if (pSignature == nullptr)
-                continue;
+            m_ppd3d11Shaders[ShaderIdx] = pShader->GetD3D11Shader(pPatchedBytecode);
+            VERIFY_EXPR(m_ppd3d11Shaders[ShaderIdx]); // GetD3D11Shader() throws an exception in case of an error
 
-            VERIFY_EXPR(pSignature->GetDesc().BindingIndex == sign);
-            pSignature->UpdateShaderResourceBindingMap(ResourceMap, ShaderType, GetBaseBindings(sign));
-        }
-
-        ValidateShaderResources(pShader);
-
-        CComPtr<ID3DBlob> pPatchedBytecode;
-        D3DCreateBlob(pBytecode->GetBufferSize(), &pPatchedBytecode);
-        memcpy(pPatchedBytecode->GetBufferPointer(), pBytecode->GetBufferPointer(), pBytecode->GetBufferSize());
-
-        if (!DXBCUtils::RemapResourceBindings(ResourceMap, pPatchedBytecode->GetBufferPointer(), pPatchedBytecode->GetBufferSize()))
-            LOG_ERROR_AND_THROW("Failed to remap resource bindings in shader '", pShader->GetDesc().Name, "'.");
-
-        m_ppd3d11Shaders[s] = pShader->GetD3D11Shader(pPatchedBytecode);
-        VERIFY_EXPR(m_ppd3d11Shaders[s]); // GetD3D11Shader() throws an exception in case of an error
-
-        if (ShaderType == SHADER_TYPE_VERTEX)
-            pVSByteCode = pPatchedBytecode;
-    }
+            if (pShader->GetDesc().ShaderType == SHADER_TYPE_VERTEX)
+                pVSByteCode = pPatchedBytecode;
+        },
+        [this](ShaderD3D11Impl* pShader) //
+        {
+            ValidateShaderResources(pShader);
+        });
 }
 
 template <typename PSOCreateInfoType>

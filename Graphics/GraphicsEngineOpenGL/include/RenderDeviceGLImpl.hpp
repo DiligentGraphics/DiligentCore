@@ -142,6 +142,10 @@ public:
                                          SHADER_TYPE                          ShaderStages,
                                          bool                                 IsDeviceInternal);
 
+    void CreatePipelineResourceSignature(const PipelineResourceSignatureDesc&             Desc,
+                                         const PipelineResourceSignatureSerializedDataGL& SerializedData,
+                                         IPipelineResourceSignature**                     ppSignature);
+
     /// Implementation of IRenderDeviceGL::CreateTextureFromGLHandle().
     virtual void DILIGENT_CALL_TYPE CreateTextureFromGLHandle(Uint32             GLHandle,
                                                               Uint32             GLBindTarget,

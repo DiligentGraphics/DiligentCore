@@ -48,20 +48,31 @@
 namespace Diligent
 {
 
+struct PipelineResourceSignatureSerializedDataD3D11
+{
+    PipelineResourceSignatureSerializedData Base;
+    const PipelineResourceAttribsD3D11*     pResourceAttribs = nullptr; // [NumResources]
+    Uint32                                  NumResources     = 0;
+};
+
 /// Implementation of the Diligent::PipelineResourceSignatureD3D11Impl class
 class PipelineResourceSignatureD3D11Impl final : public PipelineResourceSignatureBase<EngineD3D11ImplTraits>
 {
 public:
     using TPipelineResourceSignatureBase = PipelineResourceSignatureBase<EngineD3D11ImplTraits>;
 
+    using ResourceAttribs = TPipelineResourceSignatureBase::PipelineResourceAttribsType;
+
     PipelineResourceSignatureD3D11Impl(IReferenceCounters*                  pRefCounters,
                                        RenderDeviceD3D11Impl*               pDevice,
                                        const PipelineResourceSignatureDesc& Desc,
                                        SHADER_TYPE                          ShaderStages      = SHADER_TYPE_UNKNOWN,
                                        bool                                 bIsDeviceInternal = false);
+    PipelineResourceSignatureD3D11Impl(IReferenceCounters*                                 pRefCounters,
+                                       RenderDeviceD3D11Impl*                              pDevice,
+                                       const PipelineResourceSignatureDesc&                Desc,
+                                       const PipelineResourceSignatureSerializedDataD3D11& Serialized);
     ~PipelineResourceSignatureD3D11Impl();
-
-    using ResourceAttribs = TPipelineResourceSignatureBase::PipelineResourceAttribsType;
 
     // sizeof(ImmutableSamplerAttribs) == 24, x64
     struct ImmutableSamplerAttribs
@@ -95,6 +106,8 @@ public:
 
     // Copies static resources from the static resource cache to the destination cache
     void CopyStaticResources(ShaderResourceCacheD3D11& ResourceCache) const;
+
+    void Serialize(PipelineResourceSignatureSerializedDataD3D11& Serialized) const;
 
 #ifdef DILIGENT_DEVELOPMENT
     /// Verifies committed resource using the D3D resource attributes from the PSO.

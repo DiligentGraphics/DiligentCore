@@ -27,37 +27,37 @@
 #pragma once
 
 /// \file
-/// Declaration of Diligent::DeviceObjectArchiveVkImpl class
+/// Declaration of Diligent::DeviceObjectArchiveGLImpl class
 
 #include "Dearchiver.h"
 
-#include "EngineVkImplTraits.hpp"
+#include "EngineGLImplTraits.hpp"
 #include "DeviceObjectArchiveBase.hpp"
 
 namespace Diligent
 {
 
-/// Device object archive object implementation in Vulkan backend.
-class DeviceObjectArchiveVkImpl final : public DeviceObjectArchiveBase
+/// Device object archive object implementation in OpenGL backend.
+class DeviceObjectArchiveGLImpl final : public DeviceObjectArchiveBase
 {
 public:
-    DeviceObjectArchiveVkImpl(IReferenceCounters* pRefCounters, IArchive* pSource);
-    ~DeviceObjectArchiveVkImpl();
+    DeviceObjectArchiveGLImpl(IReferenceCounters* pRefCounters, IArchive* pSource);
+    ~DeviceObjectArchiveGLImpl();
 
     void UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature*& pSignature) override;
 
     template <SerializerMode Mode>
-    struct SerializerVkImpl
+    struct SerializerGLImpl
     {
         template <typename T>
         using TQual = typename Serializer<Mode>::template TQual<T>;
 
         static void SerializePRS(Serializer<Mode>&                                 Ser,
-                                 TQual<PipelineResourceSignatureSerializedDataVk>& Serialized,
+                                 TQual<PipelineResourceSignatureSerializedDataGL>& Serialized,
                                  DynamicLinearAllocator*                           Allocator);
     };
 };
 
-DECL_TRIVIALLY_SERIALIZABLE(PipelineResourceAttribsVk);
+DECL_TRIVIALLY_SERIALIZABLE(PipelineResourceAttribsGL);
 
 } // namespace Diligent

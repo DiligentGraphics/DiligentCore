@@ -29,9 +29,9 @@
 /// \file
 /// Defines Diligent::ISerializationDevice interface
 
-#include "Shader.h"
-#include "RenderPass.h"
-#include "PipelineResourceSignature.h"
+#include "../../GraphicsEngine/interface/Shader.h"
+#include "../../GraphicsEngine/interface/RenderPass.h"
+#include "../../GraphicsEngine/interface/PipelineResourceSignature.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
@@ -74,6 +74,10 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
+
+#    define ISerializationDevice_CreateShader(This, ...)                    CALL_IFACE_METHOD(SerializationDevice, CreateShader,                    This, __VA_ARGS__)
+#    define ISerializationDevice_CreateRenderPass(This, ...)                CALL_IFACE_METHOD(SerializationDevice, CreateRenderPass,                This, __VA_ARGS__)
+#    define ISerializationDevice_CreatePipelineResourceSignature(This, ...) CALL_IFACE_METHOD(SerializationDevice, CreatePipelineResourceSignature, This, __VA_ARGS__)
 
 #endif
 

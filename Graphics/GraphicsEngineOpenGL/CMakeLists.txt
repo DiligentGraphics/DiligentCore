@@ -7,6 +7,8 @@ set(INCLUDE
     include/BufferGLImpl.hpp
     include/BufferViewGLImpl.hpp
     include/DeviceContextGLImpl.hpp
+    include/DeviceObjectArchiveGLImpl.hpp
+    include/DearchiverGLImpl.hpp
     include/EngineGLImplTraits.hpp
     include/FBOCache.hpp
     include/FenceGLImpl.hpp
@@ -14,21 +16,21 @@ set(INCLUDE
     include/GLContext.hpp
     include/GLContextState.hpp
     include/GLObjectWrapper.hpp
-    include/ShaderResourceCacheGL.hpp
-    include/ShaderVariableManagerGL.hpp
-    include/ShaderResourcesGL.hpp
-    include/GLTypeConversions.hpp
     include/GLStubs.h
+    include/GLTypeConversions.hpp
     include/pch.h
-    include/PipelineStateGLImpl.hpp
-    include/PipelineResourceSignatureGLImpl.hpp
     include/PipelineResourceAttribsGL.hpp
+    include/PipelineResourceSignatureGLImpl.hpp
+    include/PipelineStateGLImpl.hpp
     include/QueryGLImpl.hpp
     include/RenderDeviceGLImpl.hpp
     include/RenderPassGLImpl.hpp
     include/SamplerGLImpl.hpp
     include/ShaderGLImpl.hpp
     include/ShaderResourceBindingGLImpl.hpp
+    include/ShaderResourceCacheGL.hpp
+    include/ShaderResourcesGL.hpp
+    include/ShaderVariableManagerGL.hpp
     include/SwapChainGLBase.hpp
     include/TexRegionRender.hpp
     include/Texture1D_GL.hpp
@@ -65,24 +67,26 @@ set(SOURCE
     src/BufferGLImpl.cpp
     src/BufferViewGLImpl.cpp
     src/DeviceContextGLImpl.cpp
+    src/DeviceObjectArchiveGLImpl.cpp
+    src/DearchiverGLImpl.cpp
     src/EngineFactoryOpenGL.cpp
     src/FBOCache.cpp
     src/FenceGLImpl.cpp
     src/FramebufferGLImpl.cpp
     src/GLContextState.cpp
     src/GLObjectWrapper.cpp
-    src/ShaderResourceCacheGL.cpp
-    src/ShaderVariableManagerGL.cpp
-    src/ShaderResourcesGL.cpp
     src/GLTypeConversions.cpp
-    src/PipelineStateGLImpl.cpp
     src/PipelineResourceSignatureGLImpl.cpp
+    src/PipelineStateGLImpl.cpp
     src/QueryGLImpl.cpp
     src/RenderDeviceGLImpl.cpp
     src/RenderPassGLImpl.cpp
     src/SamplerGLImpl.cpp
     src/ShaderGLImpl.cpp
     src/ShaderResourceBindingGLImpl.cpp
+    src/ShaderResourceCacheGL.cpp
+    src/ShaderResourcesGL.cpp
+    src/ShaderVariableManagerGL.cpp
     src/TexRegionRender.cpp
     src/Texture1D_GL.cpp
     src/Texture1DArray_GL.cpp

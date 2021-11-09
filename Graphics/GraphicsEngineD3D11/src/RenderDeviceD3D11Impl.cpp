@@ -334,6 +334,21 @@ void RenderDeviceD3D11Impl::CreatePipelineResourceSignature(const PipelineResour
     CreatePipelineResourceSignature(Desc, ppSignature, SHADER_TYPE_UNKNOWN, false);
 }
 
+void RenderDeviceD3D11Impl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
+                                                            IPipelineResourceSignature**         ppSignature,
+                                                            SHADER_TYPE                          ShaderStages,
+                                                            bool                                 IsDeviceInternal)
+{
+    CreatePipelineResourceSignatureImpl(ppSignature, Desc, ShaderStages, IsDeviceInternal);
+}
+
+void RenderDeviceD3D11Impl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc&                Desc,
+                                                            const PipelineResourceSignatureSerializedDataD3D11& SerializedData,
+                                                            IPipelineResourceSignature**                        ppSignature)
+{
+    CreatePipelineResourceSignatureImpl(ppSignature, Desc, SerializedData);
+}
+
 void RenderDeviceD3D11Impl::CreateDeviceMemory(const DeviceMemoryCreateInfo& CreateInfo, IDeviceMemory** ppMemory)
 {
     CreateDeviceMemoryImpl(ppMemory, CreateInfo);
@@ -343,14 +358,6 @@ void RenderDeviceD3D11Impl::CreatePipelineStateCache(const PipelineStateCacheCre
                                                      IPipelineStateCache**               ppPSOCache)
 {
     *ppPSOCache = nullptr;
-}
-
-void RenderDeviceD3D11Impl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
-                                                            IPipelineResourceSignature**         ppSignature,
-                                                            SHADER_TYPE                          ShaderStages,
-                                                            bool                                 IsDeviceInternal)
-{
-    CreatePipelineResourceSignatureImpl(ppSignature, Desc, ShaderStages, IsDeviceInternal);
 }
 
 void RenderDeviceD3D11Impl::IdleGPU()

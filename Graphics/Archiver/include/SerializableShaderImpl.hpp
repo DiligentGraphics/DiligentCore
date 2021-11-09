@@ -34,6 +34,9 @@
 namespace Diligent
 {
 
+#if D3D11_SUPPORTED
+class ShaderD3D11Impl;
+#endif
 #if D3D12_SUPPORTED
 class ShaderD3D12Impl;
 #endif
@@ -66,6 +69,9 @@ public:
 
     virtual IObject* DILIGENT_CALL_TYPE GetUserData() const override final { return nullptr; }
 
+#if D3D11_SUPPORTED
+    ShaderD3D11Impl* GetShaderD3D11() const;
+#endif
 #if D3D12_SUPPORTED
     const ShaderD3D12Impl* GetShaderD3D12() const;
 #endif
@@ -73,12 +79,21 @@ public:
     const ShaderVkImpl* GetShaderVk() const;
 #endif
 
+    const ShaderCreateInfo& GetCreateInfo() const
+    {
+        return m_CreateInfo;
+    }
+
 private:
     void CopyShaderCreateInfo(const ShaderCreateInfo& ShaderCI);
 
     ShaderCreateInfo                              m_CreateInfo;
     std::unique_ptr<void, STDDeleterRawMem<void>> m_pRawMemory;
 
+#if D3D11_SUPPORTED
+    struct CompiledShaderD3D11;
+    std::unique_ptr<CompiledShaderD3D11> m_pShaderD3D11;
+#endif
 #if D3D12_SUPPORTED
     struct CompiledShaderD3D12;
     std::unique_ptr<CompiledShaderD3D12> m_pShaderD3D12;

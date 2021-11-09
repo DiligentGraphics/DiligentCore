@@ -29,10 +29,10 @@
 /// \file
 /// Defines Diligent::IArchiver interface
 
-#include "Dearchiver.h"
-#include "PipelineResourceSignature.h"
-#include "PipelineState.h"
-#include "DeviceObjectArchive.h"
+#include "../../GraphicsEngine/interface/Dearchiver.h"
+#include "../../GraphicsEngine/interface/PipelineResourceSignature.h"
+#include "../../GraphicsEngine/interface/PipelineState.h"
+#include "../../GraphicsEngine/interface/DeviceObjectArchive.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 

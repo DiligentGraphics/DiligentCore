@@ -27,37 +27,37 @@
 #pragma once
 
 /// \file
-/// Declaration of Diligent::DeviceObjectArchiveVkImpl class
+/// Declaration of Diligent::DeviceObjectArchiveD3D11Impl class
 
 #include "Dearchiver.h"
 
-#include "EngineVkImplTraits.hpp"
+#include "EngineD3D11ImplTraits.hpp"
 #include "DeviceObjectArchiveBase.hpp"
 
 namespace Diligent
 {
 
-/// Device object archive object implementation in Vulkan backend.
-class DeviceObjectArchiveVkImpl final : public DeviceObjectArchiveBase
+/// Device object archive object implementation in Direct3D11 backend.
+class DeviceObjectArchiveD3D11Impl final : public DeviceObjectArchiveBase
 {
 public:
-    DeviceObjectArchiveVkImpl(IReferenceCounters* pRefCounters, IArchive* pSource);
-    ~DeviceObjectArchiveVkImpl();
+    DeviceObjectArchiveD3D11Impl(IReferenceCounters* pRefCounters, IArchive* pSource);
+    ~DeviceObjectArchiveD3D11Impl();
 
     void UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature*& pSignature) override;
 
     template <SerializerMode Mode>
-    struct SerializerVkImpl
+    struct SerializerD3D11Impl
     {
         template <typename T>
         using TQual = typename Serializer<Mode>::template TQual<T>;
 
-        static void SerializePRS(Serializer<Mode>&                                 Ser,
-                                 TQual<PipelineResourceSignatureSerializedDataVk>& Serialized,
-                                 DynamicLinearAllocator*                           Allocator);
+        static void SerializePRS(Serializer<Mode>&                                    Ser,
+                                 TQual<PipelineResourceSignatureSerializedDataD3D11>& Serialized,
+                                 DynamicLinearAllocator*                              Allocator);
     };
 };
 
-DECL_TRIVIALLY_SERIALIZABLE(PipelineResourceAttribsVk);
+DECL_TRIVIALLY_SERIALIZABLE(PipelineResourceAttribsD3D11);
 
 } // namespace Diligent

@@ -199,7 +199,7 @@ void ArchiverImpl::ReserveSpace(size_t& SharedDataSize, std::array<size_t, Devic
         }
     }
 
-    static_assert(Uint32{ChunkType::Count} == 8, "Reserve space for new chunk type");
+    static_assert(ChunkCount == 8, "Reserve space for new chunk type");
 }
 
 void ArchiverImpl::WriteResourceSignatureData(PendingData& Pending) const
@@ -207,7 +207,7 @@ void ArchiverImpl::WriteResourceSignatureData(PendingData& Pending) const
     if (m_PRSMap.empty())
         return;
 
-    const auto ChunkInd        = Uint32{ChunkType::ResourceSignature};
+    const auto ChunkInd        = static_cast<Uint32>(ChunkType::ResourceSignature);
     auto&      Chunk           = Pending.ChunkData[ChunkInd];
     auto&      DataOffsetArray = Pending.DataOffsetArrayPerChunk[ChunkInd];
     Uint32*    DataSizeArray   = nullptr;
@@ -266,7 +266,7 @@ void ArchiverImpl::WriteRenderPassData(PendingData& Pending) const
     if (m_RPMap.empty())
         return;
 
-    const auto ChunkInd        = Uint32{ChunkType::RenderPass};
+    const auto ChunkInd        = static_cast<Uint32>(ChunkType::RenderPass);
     auto&      Chunk           = Pending.ChunkData[ChunkInd];
     auto&      DataOffsetArray = Pending.DataOffsetArrayPerChunk[ChunkInd];
     Uint32*    DataSizeArray   = nullptr;
@@ -306,7 +306,7 @@ void ArchiverImpl::WriteGraphicsPSOData(PendingData& Pending) const
     if (m_GraphicsPSOMap.empty())
         return;
 
-    const auto ChunkInd        = Uint32{ChunkType::GraphicsPipelineStates};
+    const auto ChunkInd        = static_cast<Uint32>(ChunkType::GraphicsPipelineStates);
     auto&      Chunk           = Pending.ChunkData[ChunkInd];
     auto&      DataOffsetArray = Pending.DataOffsetArrayPerChunk[ChunkInd];
     Uint32*    DataSizeArray   = nullptr;
@@ -373,7 +373,7 @@ void ArchiverImpl::WriteShaderData(PendingData& Pending) const
             return;
     }
 
-    const auto ChunkInd        = Uint32{ChunkType::Shaders};
+    const auto ChunkInd        = static_cast<Uint32>(ChunkType::Shaders);
     auto&      Chunk           = Pending.ChunkData[ChunkInd];
     Uint32*    DataOffsetArray = nullptr; // Pending.DataOffsetArrayPerChunk[ChunkInd];
     Uint32*    DataSizeArray   = nullptr;
@@ -472,7 +472,7 @@ void ArchiverImpl::UpdateOffsetsInArchive(PendingData& Pending) const
         for (Uint32 i = 0; i < NumChunks; ++i)
         {
             const auto& Chunk    = ChunkPtr[i];
-            const auto  ChunkInd = Uint32{Chunk.Type};
+            const auto  ChunkInd = static_cast<Uint32>(Chunk.Type);
             const auto  Count    = Pending.ResourceCountPerChunk[ChunkInd];
 
             for (Uint32 j = 0; j < Count; ++j)
@@ -550,7 +550,7 @@ Bool ArchiverImpl::SerializeToStream(IFileStream* pStream)
             Pending.PerDeviceData[dev].reserve(ArchiveDataSize[dev]);
     }
 
-    static_assert(Uint32{ChunkType::Count} == 8, "Write data for new chunk type");
+    static_assert(ChunkCount == 8, "Write data for new chunk type");
     WriteShaderData(Pending);
     WriteResourceSignatureData(Pending);
     WriteRenderPassData(Pending);

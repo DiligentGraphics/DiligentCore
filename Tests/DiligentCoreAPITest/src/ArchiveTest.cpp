@@ -175,6 +175,7 @@ TEST(ArchiveTest, ResourceSignature)
 
             PipelineResourceSignatureDesc PRSDesc;
             PRSDesc.Name         = PRS1Name;
+            PRSDesc.BindingIndex = 0;
             PRSDesc.Resources    = Resources;
             PRSDesc.NumResources = _countof(Resources);
 
@@ -205,6 +206,7 @@ TEST(ArchiveTest, ResourceSignature)
 
             PipelineResourceSignatureDesc PRSDesc;
             PRSDesc.Name         = PRS2Name;
+            PRSDesc.BindingIndex = 2;
             PRSDesc.Resources    = Resources;
             PRSDesc.NumResources = _countof(Resources);
 
@@ -311,14 +313,6 @@ float4 main(in PSInput PSIn) : SV_Target
     return Color + Normal + Depth + float4(PSIn.Color.rgb, 1.0);
 }
 )";
-
-struct Constants
-{
-    float4 UVScale;
-    float4 ColorScale;
-    float4 NormalScale;
-    float4 DepthScale;
-};
 } // namespace HLSL
 
 
@@ -687,9 +681,16 @@ TEST(ArchiveTest, GraphicsPipeline)
         }
     }
 
+    struct Constants
+    {
+        float4 UVScale;
+        float4 ColorScale;
+        float4 NormalScale;
+        float4 DepthScale;
+    };
     RefCntAutoPtr<IBuffer> pConstants;
     {
-        HLSL::Constants Const;
+        Constants Const;
         Const.UVScale     = float4{0.9f, 0.8f, 0.0f, 0.0f};
         Const.ColorScale  = float4{0.15f};
         Const.NormalScale = float4{0.2f};

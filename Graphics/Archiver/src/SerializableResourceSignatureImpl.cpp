@@ -29,11 +29,23 @@
 #include "FixedLinearAllocator.hpp"
 #include "EngineMemory.h"
 
+#if D3D11_SUPPORTED
+#    include "../../GraphicsEngineD3D11/include/pch.h"
+#    include "RenderDeviceD3D11Impl.hpp"
+#    include "PipelineResourceSignatureD3D11Impl.hpp"
+#    include "DeviceObjectArchiveD3D11Impl.hpp"
+#endif
 #if D3D12_SUPPORTED
 #    include "../../GraphicsEngineD3D12/include/pch.h"
 #    include "RenderDeviceD3D12Impl.hpp"
 #    include "PipelineResourceSignatureD3D12Impl.hpp"
 #    include "DeviceObjectArchiveD3D12Impl.hpp"
+#endif
+#if GL_SUPPORTED || GLES_SUPPORTED
+#    include "../../GraphicsEngineOpenGL/include/pch.h"
+#    include "RenderDeviceGLImpl.hpp"
+#    include "PipelineResourceSignatureGLImpl.hpp"
+#    include "DeviceObjectArchiveGLImpl.hpp"
 #endif
 #if VULKAN_SUPPORTED
 #    include "VulkanUtilities/VulkanHeaders.h"
@@ -239,8 +251,16 @@ SerializableResourceSignatureImpl::SerializableResourceSignatureImpl(IReferenceC
         {
 #if D3D11_SUPPORTED
             case RENDER_DEVICE_TYPE_D3D11:
-                // AZ TODO
+            {
+                m_pPRSD3D11.reset(new TPRS<PipelineResourceSignatureD3D11Impl>{pRefCounters, Desc});
+                auto* pPRSD3D11 = &m_pPRSD3D11->PRS;
+
+                PipelineResourceSignatureSerializedDataD3D11 SerializedData;
+                pPRSD3D11->Serialize(SerializedData);
+                AddPRSDesc(pPRSD3D11->GetDesc(), SerializedData.Base);
+                CopyPRSSerializedData<DeviceObjectArchiveD3D11Impl::SerializerD3D11Impl>(SerializedData, m_pPRSD3D11->Mem);
                 break;
+            }
 #endif
 
 #if D3D12_SUPPORTED
@@ -249,7 +269,7 @@ SerializableResourceSignatureImpl::SerializableResourceSignatureImpl(IReferenceC
                 m_pPRSD3D12.reset(new TPRS<PipelineResourceSignatureD3D12Impl>{pRefCounters, Desc});
                 auto* pPRSD3D12 = &m_pPRSD3D12->PRS;
 
-                PipelineResourceSignatureD3D12Impl::SerializedData SerializedData;
+                PipelineResourceSignatureSerializedDataD3D12 SerializedData;
                 pPRSD3D12->Serialize(SerializedData);
                 AddPRSDesc(pPRSD3D12->GetDesc(), SerializedData.Base);
                 CopyPRSSerializedData<DeviceObjectArchiveD3D12Impl::SerializerD3D12Impl>(SerializedData, m_pPRSD3D12->Mem);
@@ -260,8 +280,16 @@ SerializableResourceSignatureImpl::SerializableResourceSignatureImpl(IReferenceC
 #if GL_SUPPORTED || GLES_SUPPORTED
             case RENDER_DEVICE_TYPE_GL:
             case RENDER_DEVICE_TYPE_GLES:
-                // AZ TODO
+            {
+                m_pPRSGL.reset(new TPRS<PipelineResourceSignatureGLImpl>{pRefCounters, Desc});
+                auto* pPRSGL = &m_pPRSGL->PRS;
+
+                PipelineResourceSignatureSerializedDataGL SerializedData;
+                pPRSGL->Serialize(SerializedData);
+                AddPRSDesc(pPRSGL->GetDesc(), SerializedData.Base);
+                CopyPRSSerializedData<DeviceObjectArchiveGLImpl::SerializerGLImpl>(SerializedData, m_pPRSGL->Mem);
                 break;
+            }
 #endif
 
 #if VULKAN_SUPPORTED
@@ -270,7 +298,7 @@ SerializableResourceSignatureImpl::SerializableResourceSignatureImpl(IReferenceC
                 m_pPRSVk.reset(new TPRS<PipelineResourceSignatureVkImpl>{pRefCounters, Desc});
                 auto* pPRSVk = &m_pPRSVk->PRS;
 
-                PipelineResourceSignatureVkImpl::SerializedData SerializedData;
+                PipelineResourceSignatureSerializedDataVk SerializedData;
                 pPRSVk->Serialize(SerializedData);
                 AddPRSDesc(pPRSVk->GetDesc(), SerializedData.Base);
                 CopyPRSSerializedData<DeviceObjectArchiveVkImpl::SerializerVkImpl>(SerializedData, m_pPRSVk->Mem);
@@ -297,6 +325,18 @@ SerializableResourceSignatureImpl::~SerializableResourceSignatureImpl()
 {
 }
 
+#if D3D11_SUPPORTED
+PipelineResourceSignatureD3D11Impl* SerializableResourceSignatureImpl::GetSignatureD3D11() const
+{
+    return &m_pPRSD3D11->PRS;
+}
+
+const SerializedMemory& SerializableResourceSignatureImpl::GetSerializedMemoryD3D11() const
+{
+    return m_pPRSD3D11->Mem;
+}
+#endif
+
 #if D3D12_SUPPORTED
 PipelineResourceSignatureD3D12Impl* SerializableResourceSignatureImpl::GetSignatureD3D12() const
 {
@@ -306,6 +346,18 @@ PipelineResourceSignatureD3D12Impl* SerializableResourceSignatureImpl::GetSignat
 const SerializedMemory& SerializableResourceSignatureImpl::GetSerializedMemoryD3D12() const
 {
     return m_pPRSD3D12->Mem;
+}
+#endif
+
+#if GL_SUPPORTED || GLES_SUPPORTED
+PipelineResourceSignatureGLImpl* SerializableResourceSignatureImpl::GetSignatureGL() const
+{
+    return &m_pPRSGL->PRS;
+}
+
+const SerializedMemory& SerializableResourceSignatureImpl::GetSerializedMemoryGL() const
+{
+    return m_pPRSGL->Mem;
 }
 #endif
 

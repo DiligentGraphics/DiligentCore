@@ -52,6 +52,14 @@
 #include "SerializableRenderPassImpl.hpp"
 #include "SerializableResourceSignatureImpl.hpp"
 
+#if D3D11_SUPPORTED
+#    include "../../GraphicsEngineD3D11/include/pch.h"
+#    include "RenderDeviceD3D11Impl.hpp"
+#    include "PipelineResourceSignatureD3D11Impl.hpp"
+#    include "PipelineStateD3D11Impl.hpp"
+#    include "ShaderD3D11Impl.hpp"
+#    include "DeviceObjectArchiveD3D11Impl.hpp"
+#endif
 #if D3D12_SUPPORTED
 #    include "../../GraphicsEngineD3D12/include/pch.h"
 #    include "RenderDeviceD3D12Impl.hpp"
@@ -59,6 +67,14 @@
 #    include "PipelineStateD3D12Impl.hpp"
 #    include "ShaderD3D12Impl.hpp"
 #    include "DeviceObjectArchiveD3D12Impl.hpp"
+#endif
+#if GL_SUPPORTED || GLES_SUPPORTED
+#    include "../../GraphicsEngineOpenGL/include/pch.h"
+#    include "RenderDeviceGLImpl.hpp"
+#    include "PipelineResourceSignatureGLImpl.hpp"
+#    include "PipelineStateGLImpl.hpp"
+#    include "ShaderGLImpl.hpp"
+#    include "DeviceObjectArchiveGLImpl.hpp"
 #endif
 #if VULKAN_SUPPORTED
 #    include "VulkanUtilities/VulkanHeaders.h"
@@ -123,7 +139,8 @@ private:
     using ShaderIndexArray         = DeviceObjectArchiveBase::ShaderIndexArray;
 
     static constexpr auto   InvalidOffset   = DeviceObjectArchiveBase::BaseDataHeader::InvalidOffset;
-    static constexpr Uint32 DeviceDataCount = Uint32{DeviceType::Count};
+    static constexpr Uint32 DeviceDataCount = static_cast<Uint32>(DeviceType::Count);
+    static constexpr Uint32 ChunkCount      = static_cast<Uint32>(ChunkType::Count);
     using TPerDeviceData                    = std::array<SerializedMemory, DeviceDataCount>;
 
     struct PRSData
@@ -158,7 +175,7 @@ private:
     {
         std::unordered_map<ShaderKey, /*Index*/ size_t, ShaderKeyHash> Map;
     };
-    std::array<PerDeviceShaders, Uint32{DeviceType::Count}> m_Shaders;
+    std::array<PerDeviceShaders, static_cast<Uint32>(DeviceType::Count)> m_Shaders;
 
     template <typename CreateInfoType>
     struct TPSOData
@@ -186,13 +203,13 @@ private:
     struct PendingData
     {
         // AZ TODO: use SerializedMemory instead of vector
-        std::vector<Uint8>                                       HeaderData;                   // ArchiveHeader, ChunkHeader[]
-        std::array<std::vector<Uint8>, Uint32{ChunkType::Count}> ChunkData;                    // NamedResourceArrayHeader
-        std::array<Uint32*, Uint32{ChunkType::Count}>            DataOffsetArrayPerChunk = {}; // pointer to NamedResourceArrayHeader::DataOffset - offsets to ***DataHeader
-        std::array<Uint32, Uint32{ChunkType::Count}>             ResourceCountPerChunk   = {}; //
-        std::vector<Uint8>                                       SharedData;                   // ***DataHeader
-        std::array<std::vector<Uint8>, DeviceDataCount>          PerDeviceData;                // device specific data
-        size_t                                                   OffsetInFile = 0;
+        std::vector<Uint8>                              HeaderData;                   // ArchiveHeader, ChunkHeader[]
+        std::array<std::vector<Uint8>, ChunkCount>      ChunkData;                    // NamedResourceArrayHeader
+        std::array<Uint32*, ChunkCount>                 DataOffsetArrayPerChunk = {}; // pointer to NamedResourceArrayHeader::DataOffset - offsets to ***DataHeader
+        std::array<Uint32, ChunkCount>                  ResourceCountPerChunk   = {}; //
+        std::vector<Uint8>                              SharedData;                   // ***DataHeader
+        std::array<std::vector<Uint8>, DeviceDataCount> PerDeviceData;                // device specific data
+        size_t                                          OffsetInFile = 0;
     };
 
     void ReserveSpace(size_t& SharedDataSize, std::array<size_t, DeviceDataCount>& PerDeviceDataSize) const;
@@ -210,10 +227,17 @@ private:
                       const CreateInfoType&                                 PSOCreateInfo,
                       const PipelineStateArchiveInfo&                       ArchiveInfo) noexcept;
 
+    void SerializeShaderBytecode(TShaderIndices& ShaderIndices, DeviceType DevType, const ShaderCreateInfo& CI, const void* Bytecode, size_t BytecodeSize);
+    void SerializeShaderSource(TShaderIndices& ShaderIndices, DeviceType DevType, const ShaderCreateInfo& CI);
+
     template <typename CreateInfoType>
     bool PatchShadersVk(const CreateInfoType& CreateInfo, TShaderIndices& ShaderIndices);
     template <typename CreateInfoType>
     bool PatchShadersD3D12(const CreateInfoType& CreateInfo, TShaderIndices& ShaderIndices);
+    template <typename CreateInfoType>
+    bool PatchShadersD3D11(const CreateInfoType& CreateInfo, TShaderIndices& ShaderIndices);
+    template <typename CreateInfoType>
+    bool PatchShadersGL(const CreateInfoType& CreateInfo, TShaderIndices& ShaderIndices);
 
     void SerializeShadersForPSO(const TShaderIndices& ShaderIndices, SerializedMemory& DeviceData) const;
 

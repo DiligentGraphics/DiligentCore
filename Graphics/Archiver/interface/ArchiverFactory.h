@@ -31,7 +31,6 @@
 
 #include "../../../Primitives/interface/Object.h"
 #include "Archiver.h"
-#include "Shader.h"
 #include "SerializationDevice.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)

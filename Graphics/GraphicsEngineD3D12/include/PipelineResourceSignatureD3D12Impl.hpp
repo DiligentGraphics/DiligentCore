@@ -51,6 +51,13 @@ namespace Diligent
 class CommandContext;
 struct D3DShaderResourceAttribs;
 
+struct PipelineResourceSignatureSerializedDataD3D12
+{
+    PipelineResourceSignatureSerializedData Base;
+    const PipelineResourceAttribsD3D12*     pResourceAttribs = nullptr; // [NumResources]
+    Uint32                                  NumResources     = 0;
+};
+
 /// Implementation of the Diligent::PipelineResourceSignatureD3D12Impl class
 class PipelineResourceSignatureD3D12Impl final : public PipelineResourceSignatureBase<EngineD3D12ImplTraits>
 {
@@ -59,23 +66,16 @@ public:
 
     using ResourceAttribs = TPipelineResourceSignatureBase::PipelineResourceAttribsType;
 
-    struct SerializedData
-    {
-        PipelineResourceSignatureSerializedData Base;
-        const ResourceAttribs*                  pResourceAttribs = nullptr; // [NumResources]
-        Uint32                                  NumResources     = 0;
-    };
-
     PipelineResourceSignatureD3D12Impl(IReferenceCounters*                  pRefCounters,
                                        RenderDeviceD3D12Impl*               pDevice,
                                        const PipelineResourceSignatureDesc& Desc,
                                        SHADER_TYPE                          ShaderStages      = SHADER_TYPE_UNKNOWN,
                                        bool                                 bIsDeviceInternal = false);
 
-    PipelineResourceSignatureD3D12Impl(IReferenceCounters*                  pRefCounters,
-                                       RenderDeviceD3D12Impl*               pDevice,
-                                       const PipelineResourceSignatureDesc& Desc,
-                                       const SerializedData&                Serialized);
+    PipelineResourceSignatureD3D12Impl(IReferenceCounters*                                 pRefCounters,
+                                       RenderDeviceD3D12Impl*                              pDevice,
+                                       const PipelineResourceSignatureDesc&                Desc,
+                                       const PipelineResourceSignatureSerializedDataD3D12& Serialized);
 
     ~PipelineResourceSignatureD3D12Impl();
 
@@ -164,7 +164,7 @@ public:
     // Returns true if there is an immutable sampler array in the given shader stage.
     bool HasImmutableSamplerArray(SHADER_TYPE ShaderStage) const;
 
-    void Serialize(SerializedData& Serialized) const;
+    void Serialize(PipelineResourceSignatureSerializedDataD3D12& Serialized) const;
 
 #ifdef DILIGENT_DEVELOPMENT
     /// Verifies committed resource using the resource attributes from the PSO.

@@ -812,18 +812,18 @@ bool PipelineResourceSignatureD3D12Impl::DvpValidateCommittedResource(const Devi
 #endif
 
 
-PipelineResourceSignatureD3D12Impl::PipelineResourceSignatureD3D12Impl(IReferenceCounters*                  pRefCounters,
-                                                                       RenderDeviceD3D12Impl*               pDevice,
-                                                                       const PipelineResourceSignatureDesc& Desc,
-                                                                       const SerializedData&                Serialized) :
+PipelineResourceSignatureD3D12Impl::PipelineResourceSignatureD3D12Impl(IReferenceCounters*                                 pRefCounters,
+                                                                       RenderDeviceD3D12Impl*                              pDevice,
+                                                                       const PipelineResourceSignatureDesc&                Desc,
+                                                                       const PipelineResourceSignatureSerializedDataD3D12& Serialized) :
     TPipelineResourceSignatureBase{pRefCounters, pDevice, Desc, Serialized.Base}
 {
     try
     {
         ValidatePipelineResourceSignatureDescD3D12(Desc);
 
-        Initialize(
-            GetRawAllocator(), DecoupleCombinedSamplers(Desc), m_ImmutableSamplers,
+        InitializeSerialized(
+            GetRawAllocator(), DecoupleCombinedSamplers(Desc), Serialized, m_ImmutableSamplers,
             [this]() //
             {
                 AllocateRootParameters();
@@ -840,7 +840,7 @@ PipelineResourceSignatureD3D12Impl::PipelineResourceSignatureD3D12Impl(IReferenc
     }
 }
 
-void PipelineResourceSignatureD3D12Impl::Serialize(SerializedData& Serialized) const
+void PipelineResourceSignatureD3D12Impl::Serialize(PipelineResourceSignatureSerializedDataD3D12& Serialized) const
 {
     TPipelineResourceSignatureBase::Serialize(Serialized.Base);
 

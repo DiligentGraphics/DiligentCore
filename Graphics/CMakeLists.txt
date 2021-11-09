@@ -49,7 +49,7 @@ endif()
 
 
 if(PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_MACOS)
-    add_subdirectory(ArchiveBuilder)
+    add_subdirectory(Archiver)
 endif()
 
 add_subdirectory(GraphicsTools)

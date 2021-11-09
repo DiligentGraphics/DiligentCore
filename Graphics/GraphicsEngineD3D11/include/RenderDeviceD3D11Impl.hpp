@@ -114,6 +114,15 @@ public:
     virtual void DILIGENT_CALL_TYPE CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
                                                                     IPipelineResourceSignature**         ppSignature) override final;
 
+    void CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
+                                         IPipelineResourceSignature**         ppSignature,
+                                         SHADER_TYPE                          ShaderStages,
+                                         bool                                 IsDeviceInternal);
+
+    void CreatePipelineResourceSignature(const PipelineResourceSignatureDesc&                Desc,
+                                         const PipelineResourceSignatureSerializedDataD3D11& SerializedData,
+                                         IPipelineResourceSignature**                        ppSignature);
+
     /// Implementation of IRenderDevice::CreateDeviceMemory() in Direct3D11 backend.
     virtual void DILIGENT_CALL_TYPE CreateDeviceMemory(const DeviceMemoryCreateInfo& CreateInfo,
                                                        IDeviceMemory**               ppMemory) override final;
@@ -121,11 +130,6 @@ public:
     /// Implementation of IRenderDevice::CreatePipelineStateCache() in Direct3D11 backend.
     virtual void DILIGENT_CALL_TYPE CreatePipelineStateCache(const PipelineStateCacheCreateInfo& CreateInfo,
                                                              IPipelineStateCache**               ppPSOCache) override final;
-
-    void CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
-                                         IPipelineResourceSignature**         ppSignature,
-                                         SHADER_TYPE                          ShaderStages,
-                                         bool                                 IsDeviceInternal);
 
     /// Implementation of IRenderDeviceD3D11::GetD3D11Device() in Direct3D11 backend.
     ID3D11Device* DILIGENT_CALL_TYPE GetD3D11Device() override final { return m_pd3d11Device; }

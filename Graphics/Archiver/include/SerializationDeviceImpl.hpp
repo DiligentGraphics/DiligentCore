@@ -31,6 +31,11 @@
 #include "ObjectBase.hpp"
 #include "DXCompiler.hpp"
 
+#if D3D11_SUPPORTED
+#    include "../../GraphicsEngineD3D11/include/pch.h"
+#endif
+
+
 namespace Diligent
 {
 
@@ -197,6 +202,14 @@ public:
     virtual void DILIGENT_CALL_TYPE CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
                                                                     Uint32                               DeviceBits,
                                                                     IPipelineResourceSignature**         ppSignature) override final;
+
+#if D3D11_SUPPORTED
+    D3D_FEATURE_LEVEL GetD3D11FeatureLevel() const
+    {
+        return D3D_FEATURE_LEVEL_11_1;
+    }
+#endif
+
 
 #if D3D12_SUPPORTED
     IDXCompiler* GetDxCompilerForDirect3D12() const

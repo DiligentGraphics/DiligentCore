@@ -81,6 +81,68 @@ const SerializedMemory& ArchiverImpl::RPData::GetSharedData() const
     return pRP->GetSharedSerializedMemory();
 }
 
+void ArchiverImpl::SerializeShaderBytecode(TShaderIndices& ShaderIndices, DeviceType DevType, const ShaderCreateInfo& CI, const void* Bytecode, size_t BytecodeSize)
+{
+    auto&                        ShaderMap       = m_Shaders[static_cast<Uint32>(DevType)].Map;
+    auto&                        RawMemAllocator = GetRawAllocator();
+    const SHADER_SOURCE_LANGUAGE SourceLanguage  = SHADER_SOURCE_LANGUAGE_DEFAULT;
+    const SHADER_COMPILER        ShaderCompiler  = SHADER_COMPILER_DEFAULT;
+
+    Serializer<SerializerMode::Measure> MeasureSer;
+    MeasureSer(CI.Desc.ShaderType, CI.EntryPoint, SourceLanguage, ShaderCompiler);
+
+    const auto   Size   = MeasureSer.GetSize(nullptr) + BytecodeSize;
+    void*        Ptr    = ALLOCATE_RAW(RawMemAllocator, "", Size);
+    const Uint8* pBytes = static_cast<const Uint8*>(Bytecode);
+
+    Serializer<SerializerMode::Write> Ser{Ptr, Size};
+    Ser(CI.Desc.ShaderType, CI.EntryPoint, SourceLanguage, ShaderCompiler);
+
+    for (size_t s = 0; s < BytecodeSize; ++s)
+        Ser(pBytes[s]);
+
+    VERIFY_EXPR(Ser.IsEnd());
+
+    ShaderKey Key;
+    Key.Data = SerializedMemory{Ptr, Size};
+
+    auto Iter = ShaderMap.emplace(std::move(Key), ShaderMap.size()).first;
+    ShaderIndices.push_back(StaticCast<Uint32>(Iter->second));
+}
+
+void ArchiverImpl::SerializeShaderSource(TShaderIndices& ShaderIndices, DeviceType DevType, const ShaderCreateInfo& CI)
+{
+    auto& ShaderMap       = m_Shaders[static_cast<Uint32>(DevType)].Map;
+    auto& RawMemAllocator = GetRawAllocator();
+
+    VERIFY_EXPR(CI.SourceLength > 0);
+    VERIFY_EXPR(CI.Macros == nullptr); // AZ TODO: not supported
+    VERIFY_EXPR(CI.UseCombinedTextureSamplers == true);
+    VERIFY_EXPR(String{"_sampler"} == CI.CombinedSamplerSuffix);
+
+    Serializer<SerializerMode::Measure> MeasureSer;
+    MeasureSer(CI.Desc.ShaderType, CI.EntryPoint, CI.SourceLanguage, CI.ShaderCompiler);
+
+    const auto   BytecodeSize = CI.SourceLength * sizeof(*CI.Source);
+    const auto   Size         = MeasureSer.GetSize(nullptr) + BytecodeSize;
+    void*        Ptr          = ALLOCATE_RAW(RawMemAllocator, "", Size);
+    const Uint8* pBytes       = reinterpret_cast<const Uint8*>(CI.Source);
+
+    Serializer<SerializerMode::Write> Ser{Ptr, Size};
+    Ser(CI.Desc.ShaderType, CI.EntryPoint, CI.SourceLanguage, CI.ShaderCompiler);
+
+    for (size_t s = 0; s < BytecodeSize; ++s)
+        Ser(pBytes[s]);
+
+    VERIFY_EXPR(Ser.IsEnd());
+
+    ShaderKey Key;
+    Key.Data = SerializedMemory{Ptr, Size};
+
+    auto Iter = ShaderMap.emplace(std::move(Key), ShaderMap.size()).first;
+    ShaderIndices.push_back(StaticCast<Uint32>(Iter->second));
+}
+
 #if VULKAN_SUPPORTED
 template <typename CreateInfoType>
 bool ArchiverImpl::PatchShadersVk(const CreateInfoType& CreateInfo, TShaderIndices& ShaderIndices)
@@ -91,13 +153,17 @@ bool ArchiverImpl::PatchShadersVk(const CreateInfoType& CreateInfo, TShaderIndic
             ShaderStageInfo{} {}
 
         ShaderStageInfoVk(const SerializableShaderImpl* pShader) :
-            ShaderStageInfo{pShader->GetShaderVk()}
+            ShaderStageInfo{pShader->GetShaderVk()},
+            Serializable{pShader}
         {}
 
         void Append(const SerializableShaderImpl* pShader)
         {
             ShaderStageInfo::Append(pShader->GetShaderVk());
+            Serializable.push_back(pShader);
         }
+
+        std::vector<const SerializableShaderImpl*> Serializable;
     };
 
     std::vector<ShaderStageInfoVk> ShaderStages;
@@ -114,22 +180,24 @@ bool ArchiverImpl::PatchShadersVk(const CreateInfoType& CreateInfo, TShaderIndic
         Dst.SPIRVs  = std::move(Src.SPIRVs);
     }
 
-    std::array<const PipelineResourceSignatureVkImpl*, MAX_RESOURCE_SIGNATURES> Signatures              = {};
-    PipelineStateVkImpl::TBindIndexToDescSetIndex                               BindIndexToDescSetIndex = {};
-
     try
     {
+        std::array<const PipelineResourceSignatureVkImpl*, MAX_RESOURCE_SIGNATURES> Signatures              = {};
+        PipelineStateVkImpl::TBindIndexToDescSetIndex                               BindIndexToDescSetIndex = {};
+
+        Uint32 SignaturesCount = 0;
         for (Uint32 i = 0; i < CreateInfo.ResourceSignaturesCount; ++i)
         {
             const auto* pSerPRS = ClassPtrCast<SerializableResourceSignatureImpl>(CreateInfo.ppResourceSignatures[i]);
             const auto& Desc    = pSerPRS->GetDesc();
 
             Signatures[Desc.BindingIndex] = pSerPRS->GetSignatureVk();
+            SignaturesCount               = std::max(SignaturesCount, static_cast<Uint32>(Desc.BindingIndex) + 1);
         }
 
         // Same as PipelineLayoutVk::Create()
         Uint32 DescSetLayoutCount = 0;
-        for (Uint32 i = 0; i < CreateInfo.ResourceSignaturesCount; ++i)
+        for (Uint32 i = 0; i < SignaturesCount; ++i)
         {
             const auto& pSignature = Signatures[i];
             if (pSignature == nullptr)
@@ -149,7 +217,7 @@ bool ArchiverImpl::PatchShadersVk(const CreateInfoType& CreateInfo, TShaderIndic
 
         PipelineStateVkImpl::RemapShaderResources(ShaderStagesVk,
                                                   Signatures.data(),
-                                                  CreateInfo.ResourceSignaturesCount,
+                                                  SignaturesCount,
                                                   BindIndexToDescSetIndex,
                                                   true); // bStripReflection
     }
@@ -158,34 +226,15 @@ bool ArchiverImpl::PatchShadersVk(const CreateInfoType& CreateInfo, TShaderIndic
         return false;
     }
 
-    auto& ShaderMap       = m_Shaders[Uint32{DeviceType::Vulkan}].Map;
-    auto& RawMemAllocator = GetRawAllocator();
-
     for (size_t j = 0; j < ShaderStagesVk.size(); ++j)
     {
         const auto& Stage = ShaderStagesVk[j];
         for (size_t i = 0; i < Stage.Count(); ++i)
         {
-            const char* Entry = Stage.Shaders[i]->GetEntryPoint();
+            const auto& CI    = ShaderStages[j].Serializable[i]->GetCreateInfo();
             const auto& SPIRV = Stage.SPIRVs[i];
 
-            Serializer<SerializerMode::Measure> MeasureSer;
-            MeasureSer(Stage.Type, Entry);
-
-            const auto Size = MeasureSer.GetSize(nullptr) + SPIRV.size() * sizeof(SPIRV[0]);
-            void*      Ptr  = ALLOCATE_RAW(RawMemAllocator, "", Size);
-
-            Serializer<SerializerMode::Write> Ser{Ptr, Size};
-            Ser(Stage.Type, Entry);
-
-            for (size_t s = 0; s < SPIRV.size(); ++s)
-                Ser(SPIRV[s]);
-
-            ShaderKey Key;
-            Key.Data = SerializedMemory{Ptr, Ser.GetSize(Ptr)};
-
-            auto Iter = ShaderMap.emplace(std::move(Key), ShaderMap.size()).first;
-            ShaderIndices.push_back(StaticCast<Uint32>(Iter->second));
+            SerializeShaderBytecode(ShaderIndices, DeviceType::Vulkan, CI, SPIRV.data(), SPIRV.size() * sizeof(SPIRV[0]));
         }
     }
 
@@ -194,6 +243,113 @@ bool ArchiverImpl::PatchShadersVk(const CreateInfoType& CreateInfo, TShaderIndic
     return true;
 }
 #endif // VULKAN_SUPPORTED
+
+
+#if D3D11_SUPPORTED
+struct ShaderStageInfoD3D11
+{
+    ShaderStageInfoD3D11() {}
+
+    ShaderStageInfoD3D11(const SerializableShaderImpl* _pShader) :
+        Type{_pShader->GetDesc().ShaderType},
+        pShader{_pShader->GetShaderD3D11()},
+        pSerializable{_pShader}
+    {}
+
+    // Needed only for ray tracing
+    void Append(const SerializableShaderImpl*) {}
+
+    Uint32 Count() const { return 1; }
+
+    SHADER_TYPE                   Type          = SHADER_TYPE_UNKNOWN;
+    ShaderD3D11Impl*              pShader       = nullptr;
+    const SerializableShaderImpl* pSerializable = nullptr;
+
+    friend SHADER_TYPE GetShaderStageType(const ShaderStageInfoD3D11& Stage) { return Stage.Type; }
+};
+
+template <typename CreateInfoType>
+void InitD3D11ShaderResourceCounters(const CreateInfoType& CreateInfo, D3D11ShaderResourceCounters& ResCounters)
+{}
+
+void InitD3D11ShaderResourceCounters(const GraphicsPipelineStateCreateInfo& CreateInfo, D3D11ShaderResourceCounters& ResCounters)
+{
+    VERIFY_EXPR(CreateInfo.PSODesc.IsAnyGraphicsPipeline());
+
+    // In Direct3D11, UAVs use the same register space as render targets
+    ResCounters[D3D11_RESOURCE_RANGE_UAV][PSInd] = CreateInfo.GraphicsPipeline.NumRenderTargets;
+}
+
+template <typename CreateInfoType>
+bool ArchiverImpl::PatchShadersD3D11(const CreateInfoType& CreateInfo, TShaderIndices& ShaderIndices)
+{
+    std::vector<ShaderStageInfoD3D11> ShaderStages;
+    SHADER_TYPE                       ActiveShaderStages = SHADER_TYPE_UNKNOWN;
+    PipelineStateD3D11Impl::ExtractShaders<SerializableShaderImpl>(CreateInfo, ShaderStages, ActiveShaderStages);
+
+    std::vector<ShaderD3D11Impl*>  ShadersD3D11{ShaderStages.size()};
+    std::vector<CComPtr<ID3DBlob>> ShaderBytecode{ShaderStages.size()};
+    for (size_t i = 0; i < ShadersD3D11.size(); ++i)
+    {
+        auto& Src = ShaderStages[i];
+        auto& Dst = ShadersD3D11[i];
+        Dst       = Src.pShader;
+    }
+
+    try
+    {
+        std::array<RefCntAutoPtr<PipelineResourceSignatureD3D11Impl>, MAX_RESOURCE_SIGNATURES> Signatures   = {};
+        std::array<D3D11ShaderResourceCounters, MAX_RESOURCE_SIGNATURES>                       BaseBindings = {};
+
+        D3D11ShaderResourceCounters ResCounters = {};
+        InitD3D11ShaderResourceCounters(CreateInfo, ResCounters);
+
+        Uint32 SignaturesCount = 0;
+        for (Uint32 i = 0; i < CreateInfo.ResourceSignaturesCount; ++i)
+        {
+            const auto* pSerPRS = ClassPtrCast<SerializableResourceSignatureImpl>(CreateInfo.ppResourceSignatures[i]);
+            const auto& Desc    = pSerPRS->GetDesc();
+
+            Signatures[Desc.BindingIndex] = pSerPRS->GetSignatureD3D11();
+            SignaturesCount               = std::max(SignaturesCount, static_cast<Uint32>(Desc.BindingIndex) + 1);
+        }
+
+        for (Uint32 i = 0; i < SignaturesCount; ++i)
+        {
+            const PipelineResourceSignatureD3D11Impl* const pSignature = Signatures[i];
+            if (pSignature == nullptr)
+                continue;
+
+            BaseBindings[i] = ResCounters;
+            pSignature->ShiftBindings(ResCounters);
+        }
+
+        PipelineStateD3D11Impl::RemapShaderResources(
+            ShadersD3D11,
+            Signatures.data(),
+            SignaturesCount,
+            BaseBindings.data(),
+            [&ShaderBytecode](size_t ShaderIdx, ShaderD3D11Impl* pShader, ID3DBlob* pPatchedBytecode) //
+            {
+                ShaderBytecode[ShaderIdx] = pPatchedBytecode;
+            });
+    }
+    catch (...)
+    {
+        return false;
+    }
+
+    for (size_t i = 0; i < ShadersD3D11.size(); ++i)
+    {
+        const auto& CI        = ShaderStages[i].pSerializable->GetCreateInfo();
+        const auto& pBytecode = ShaderBytecode[i];
+
+        SerializeShaderBytecode(ShaderIndices, DeviceType::Direct3D11, CI, pBytecode->GetBufferPointer(), pBytecode->GetBufferSize());
+    }
+    return true;
+}
+#endif // D3D11_SUPPORTED
+
 
 #if D3D12_SUPPORTED
 template <typename CreateInfoType>
@@ -205,13 +361,17 @@ bool ArchiverImpl::PatchShadersD3D12(const CreateInfoType& CreateInfo, TShaderIn
             ShaderStageInfo{} {}
 
         ShaderStageInfoD3D12(const SerializableShaderImpl* pShader) :
-            ShaderStageInfo{pShader->GetShaderD3D12()}
+            ShaderStageInfo{pShader->GetShaderD3D12()},
+            Serializable{pShader}
         {}
 
         void Append(const SerializableShaderImpl* pShader)
         {
             ShaderStageInfo::Append(pShader->GetShaderD3D12());
+            Serializable.push_back(pShader);
         }
+
+        std::vector<const SerializableShaderImpl*> Serializable;
     };
 
     std::vector<ShaderStageInfoD3D12> ShaderStages;
@@ -231,18 +391,21 @@ bool ArchiverImpl::PatchShadersD3D12(const CreateInfoType& CreateInfo, TShaderIn
     try
     {
         std::array<RefCntAutoPtr<PipelineResourceSignatureD3D12Impl>, MAX_RESOURCE_SIGNATURES> Signatures = {};
+
+        Uint32 SignaturesCount = 0;
         for (Uint32 i = 0; i < CreateInfo.ResourceSignaturesCount; ++i)
         {
             const auto* pSerPRS = ClassPtrCast<SerializableResourceSignatureImpl>(CreateInfo.ppResourceSignatures[i]);
             const auto& Desc    = pSerPRS->GetDesc();
 
             Signatures[Desc.BindingIndex] = pSerPRS->GetSignatureD3D12();
+            SignaturesCount               = std::max(SignaturesCount, static_cast<Uint32>(Desc.BindingIndex) + 1);
         }
 
-        RootSignatureD3D12 RootSig{nullptr, nullptr, Signatures.data(), CreateInfo.ResourceSignaturesCount, 0};
+        RootSignatureD3D12 RootSig{nullptr, nullptr, Signatures.data(), SignaturesCount, 0};
         PipelineStateD3D12Impl::RemapShaderResources(ShaderStagesD3D12,
                                                      Signatures.data(),
-                                                     CreateInfo.ResourceSignaturesCount,
+                                                     SignaturesCount,
                                                      RootSig,
                                                      m_pSerializationDevice->GetDxCompilerForDirect3D12());
     }
@@ -251,35 +414,15 @@ bool ArchiverImpl::PatchShadersD3D12(const CreateInfoType& CreateInfo, TShaderIn
         return false;
     }
 
-    auto& ShaderMap       = m_Shaders[Uint32{DeviceType::Direct3D12}].Map;
-    auto& RawMemAllocator = GetRawAllocator();
-
     for (size_t j = 0; j < ShaderStagesD3D12.size(); ++j)
     {
         const auto& Stage = ShaderStagesD3D12[j];
         for (size_t i = 0; i < Stage.Count(); ++i)
         {
-            const char* Entry     = Stage.Shaders[i]->GetEntryPoint();
+            const auto& CI        = ShaderStages[j].Serializable[i]->GetCreateInfo();
             const auto& pBytecode = Stage.ByteCodes[i];
 
-            Serializer<SerializerMode::Measure> MeasureSer;
-            MeasureSer(Stage.Type, Entry);
-
-            const auto   Size   = MeasureSer.GetSize(nullptr) + pBytecode->GetBufferSize();
-            void*        Ptr    = ALLOCATE_RAW(RawMemAllocator, "", Size);
-            const Uint8* pBytes = static_cast<const Uint8*>(pBytecode->GetBufferPointer());
-
-            Serializer<SerializerMode::Write> Ser{Ptr, Size};
-            Ser(Stage.Type, Entry);
-
-            for (size_t s = 0; s < pBytecode->GetBufferSize(); ++s)
-                Ser(pBytes[s]);
-
-            ShaderKey Key;
-            Key.Data = SerializedMemory{Ptr, Ser.GetSize(Ptr)};
-
-            auto Iter = ShaderMap.emplace(std::move(Key), ShaderMap.size()).first;
-            ShaderIndices.push_back(StaticCast<Uint32>(Iter->second));
+            SerializeShaderBytecode(ShaderIndices, DeviceType::Direct3D12, CI, pBytecode->GetBufferPointer(), pBytecode->GetBufferSize());
         }
     }
 
@@ -288,6 +431,43 @@ bool ArchiverImpl::PatchShadersD3D12(const CreateInfoType& CreateInfo, TShaderIn
     return true;
 }
 #endif // D3D12_SUPPORTED
+
+
+#if GL_SUPPORTED || GLES_SUPPORTED
+struct ShaderStageInfoGL
+{
+    ShaderStageInfoGL() {}
+
+    ShaderStageInfoGL(const SerializableShaderImpl* _pShader) :
+        Type{_pShader->GetDesc().ShaderType},
+        pShader{_pShader}
+    {}
+
+    // Needed only for ray tracing
+    void Append(const SerializableShaderImpl*) {}
+
+    Uint32 Count() const { return 1; }
+
+    SHADER_TYPE                   Type    = SHADER_TYPE_UNKNOWN;
+    const SerializableShaderImpl* pShader = nullptr;
+
+    friend SHADER_TYPE GetShaderStageType(const ShaderStageInfoGL& Stage) { return Stage.Type; }
+};
+
+template <typename CreateInfoType>
+bool ArchiverImpl::PatchShadersGL(const CreateInfoType& CreateInfo, TShaderIndices& ShaderIndices)
+{
+    std::vector<ShaderStageInfoGL> ShaderStages;
+    SHADER_TYPE                    ActiveShaderStages = SHADER_TYPE_UNKNOWN;
+    PipelineStateGLImpl::ExtractShaders<SerializableShaderImpl>(CreateInfo, ShaderStages, ActiveShaderStages);
+
+    for (size_t i = 0; i < ShaderStages.size(); ++i)
+    {
+        SerializeShaderSource(ShaderIndices, DeviceType::OpenGL, ShaderStages[i].pShader->GetCreateInfo());
+    }
+    return true;
+}
+#endif // GL_SUPPORTED || GLES_SUPPORTED
 
 
 void ArchiverImpl::SerializeShadersForPSO(const TShaderIndices& ShaderIndices, SerializedMemory& DeviceData) const
@@ -427,8 +607,14 @@ bool ArchiverImpl::SerializePSO(std::unordered_map<String, TPSOData<CreateInfoTy
         {
 #if D3D11_SUPPORTED
             case RENDER_DEVICE_TYPE_D3D11:
-                // AZ TODO
+            {
+                TShaderIndices ShaderIndices;
+                if (!PatchShadersD3D11(PSOCreateInfo, ShaderIndices))
+                    return false;
+
+                SerializeShadersForPSO(ShaderIndices, Data.PerDeviceData[static_cast<Uint32>(DeviceType::Direct3D11)]);
                 break;
+            }
 #endif
 
 #if D3D12_SUPPORTED
@@ -438,7 +624,7 @@ bool ArchiverImpl::SerializePSO(std::unordered_map<String, TPSOData<CreateInfoTy
                 if (!PatchShadersD3D12(PSOCreateInfo, ShaderIndices))
                     return false;
 
-                SerializeShadersForPSO(ShaderIndices, Data.PerDeviceData[Uint32{DeviceType::Direct3D12}]);
+                SerializeShadersForPSO(ShaderIndices, Data.PerDeviceData[static_cast<Uint32>(DeviceType::Direct3D12)]);
                 break;
             }
 #endif
@@ -446,8 +632,14 @@ bool ArchiverImpl::SerializePSO(std::unordered_map<String, TPSOData<CreateInfoTy
 #if GL_SUPPORTED || GLES_SUPPORTED
             case RENDER_DEVICE_TYPE_GL:
             case RENDER_DEVICE_TYPE_GLES:
-                // AZ TODO
+            {
+                TShaderIndices ShaderIndices;
+                if (!PatchShadersGL(PSOCreateInfo, ShaderIndices))
+                    return false;
+
+                SerializeShadersForPSO(ShaderIndices, Data.PerDeviceData[static_cast<Uint32>(DeviceType::OpenGL)]);
                 break;
+            }
 #endif
 
 #if VULKAN_SUPPORTED
@@ -457,7 +649,7 @@ bool ArchiverImpl::SerializePSO(std::unordered_map<String, TPSOData<CreateInfoTy
                 if (!PatchShadersVk(PSOCreateInfo, ShaderIndices))
                     return false;
 
-                SerializeShadersForPSO(ShaderIndices, Data.PerDeviceData[Uint32{DeviceType::Vulkan}]);
+                SerializeShadersForPSO(ShaderIndices, Data.PerDeviceData[static_cast<Uint32>(DeviceType::Vulkan)]);
                 break;
             }
 #endif

@@ -51,6 +51,15 @@ namespace Diligent
 struct SPIRVShaderResourceAttribs;
 class DeviceContextVkImpl;
 
+struct PipelineResourceSignatureSerializedDataVk
+{
+    PipelineResourceSignatureSerializedData Base;
+    const PipelineResourceAttribsVk*        pResourceAttribs          = nullptr; // [NumResources]
+    Uint32                                  NumResources              = 0;
+    Uint16                                  DynamicUniformBufferCount = 0;
+    Uint16                                  DynamicStorageBufferCount = 0;
+};
+
 /// Implementation of the Diligent::PipelineResourceSignatureVkImpl class
 class PipelineResourceSignatureVkImpl final : public PipelineResourceSignatureBase<EngineVkImplTraits>
 {
@@ -76,25 +85,16 @@ public:
 
     static_assert(ResourceAttribs::MaxDescriptorSets >= MAX_DESCRIPTOR_SETS, "Not enough bits to store descriptor set index");
 
-    struct SerializedData
-    {
-        PipelineResourceSignatureSerializedData Base;
-        const ResourceAttribs*                  pResourceAttribs          = nullptr; // [NumResources]
-        Uint32                                  NumResources              = 0;
-        Uint16                                  DynamicUniformBufferCount = 0;
-        Uint16                                  DynamicStorageBufferCount = 0;
-    };
-
     PipelineResourceSignatureVkImpl(IReferenceCounters*                  pRefCounters,
                                     RenderDeviceVkImpl*                  pDevice,
                                     const PipelineResourceSignatureDesc& Desc,
                                     SHADER_TYPE                          ShaderStages      = SHADER_TYPE_UNKNOWN,
                                     bool                                 bIsDeviceInternal = false);
 
-    PipelineResourceSignatureVkImpl(IReferenceCounters*                  pRefCounters,
-                                    RenderDeviceVkImpl*                  pDevice,
-                                    const PipelineResourceSignatureDesc& Desc,
-                                    const SerializedData&                Serialized);
+    PipelineResourceSignatureVkImpl(IReferenceCounters*                              pRefCounters,
+                                    RenderDeviceVkImpl*                              pDevice,
+                                    const PipelineResourceSignatureDesc&             Desc,
+                                    const PipelineResourceSignatureSerializedDataVk& Serialized);
 
     ~PipelineResourceSignatureVkImpl();
 
@@ -149,7 +149,7 @@ public:
     template <DESCRIPTOR_SET_ID SetId>
     Uint32 GetDescriptorSetIndex() const;
 
-    void Serialize(SerializedData& Serialized) const;
+    void Serialize(PipelineResourceSignatureSerializedDataVk& Serialized) const;
 
 private:
     // Resource cache group identifier

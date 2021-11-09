@@ -911,10 +911,10 @@ bool PipelineResourceSignatureVkImpl::DvpValidateCommittedResource(const DeviceC
 }
 #endif
 
-PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCounters*                  pRefCounters,
-                                                                 RenderDeviceVkImpl*                  pDevice,
-                                                                 const PipelineResourceSignatureDesc& Desc,
-                                                                 const SerializedData&                Serialized) :
+PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCounters*                              pRefCounters,
+                                                                 RenderDeviceVkImpl*                              pDevice,
+                                                                 const PipelineResourceSignatureDesc&             Desc,
+                                                                 const PipelineResourceSignatureSerializedDataVk& Serialized) :
     TPipelineResourceSignatureBase{pRefCounters, pDevice, Desc, Serialized.Base}
 //m_DynamicUniformBufferCount{Serialized.DynamicUniformBufferCount}
 //m_DynamicStorageBufferCount{Serialized.DynamicStorageBufferCount}
@@ -941,7 +941,7 @@ PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCount
     }
 }
 
-void PipelineResourceSignatureVkImpl::Serialize(SerializedData& Serialized) const
+void PipelineResourceSignatureVkImpl::Serialize(PipelineResourceSignatureSerializedDataVk& Serialized) const
 {
     TPipelineResourceSignatureBase::Serialize(Serialized.Base);
 

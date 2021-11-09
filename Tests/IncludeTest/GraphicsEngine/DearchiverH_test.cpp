@@ -24,40 +24,4 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
-
-/// \file
-/// Declaration of Diligent::DeviceObjectArchiveVkImpl class
-
-#include "Dearchiver.h"
-
-#include "EngineVkImplTraits.hpp"
-#include "DeviceObjectArchiveBase.hpp"
-
-namespace Diligent
-{
-
-/// Device object archive object implementation in Vulkan backend.
-class DeviceObjectArchiveVkImpl final : public DeviceObjectArchiveBase
-{
-public:
-    DeviceObjectArchiveVkImpl(IReferenceCounters* pRefCounters, IArchive* pSource);
-    ~DeviceObjectArchiveVkImpl();
-
-    void UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature*& pSignature) override;
-
-    template <SerializerMode Mode>
-    struct SerializerVkImpl
-    {
-        template <typename T>
-        using TQual = typename Serializer<Mode>::template TQual<T>;
-
-        static void SerializePRS(Serializer<Mode>&                                 Ser,
-                                 TQual<PipelineResourceSignatureSerializedDataVk>& Serialized,
-                                 DynamicLinearAllocator*                           Allocator);
-    };
-};
-
-DECL_TRIVIALLY_SERIALIZABLE(PipelineResourceAttribsVk);
-
-} // namespace Diligent
+#include "DiligentCore/Graphics/GraphicsEngine/interface/Dearchiver.h"
