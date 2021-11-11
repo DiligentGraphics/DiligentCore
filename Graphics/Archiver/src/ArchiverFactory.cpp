@@ -100,7 +100,7 @@ public:
         }
     }
 
-    virtual void DILIGENT_CALL_TYPE CreateSerializationDevice(ISerializationDevice** ppDevice) override final
+    virtual void DILIGENT_CALL_TYPE CreateSerializationDevice(const SerializationDeviceCreateInfo& CreateInfo, ISerializationDevice** ppDevice) override final
     {
         DEV_CHECK_ERR(ppDevice != nullptr, "ppDevice must not be null");
         if (!ppDevice)
@@ -110,7 +110,7 @@ public:
         try
         {
             auto& RawMemAllocator = GetRawAllocator();
-            auto* pDeviceImpl(NEW_RC_OBJ(RawMemAllocator, "Serialization device instance", SerializationDeviceImpl)());
+            auto* pDeviceImpl(NEW_RC_OBJ(RawMemAllocator, "Serialization device instance", SerializationDeviceImpl)(CreateInfo));
             pDeviceImpl->QueryInterface(IID_SerializationDevice, reinterpret_cast<IObject**>(ppDevice));
         }
         catch (...)

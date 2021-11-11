@@ -24,15 +24,40 @@
  *  of the possibility of such damages.
  */
 
-#include "DiligentCore/Graphics/Archiver/interface/Archiver.h"
+#pragma once
 
-void TestArchiver_CInterface(IArchiver* pArchiver)
+/// \file
+/// Definition of the Diligent::IPipelineStateCacheMtl interface
+
+#include "../../GraphicsEngine/interface/PipelineStateCache.h"
+
+DILIGENT_BEGIN_NAMESPACE(Diligent)
+
+// {03CF61A7-BBAF-47E6-8E09-A9BCAD701A27}
+static const INTERFACE_ID IID_PipelineStateCacheMtl =
+    {0x3cf61a7, 0xbbaf, 0x47e6, {0x8e, 0x9, 0xa9, 0xbc, 0xad, 0x70, 0x1a, 0x27}};
+
+
+#define DILIGENT_INTERFACE_NAME IPipelineStateCacheMtl
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+#define IPipelineStateCacheMtlInclusiveMethods \
+    IPipelineStateCacheInclusiveMethods;       \
+    IPipelineStateCacheMtlMethods PipelineStateCacheMtl
+
+// clang-format off
+
+/// Exposes Metal-specific functionality of a pipeline state cache object.
+DILIGENT_BEGIN_INTERFACE(IPipelineStateCacheMtl, IPipelineStateCache)
 {
-    IArchiver_SerializeToBlob(pArchiver, (IDataBlob**)NULL);
-    IArchiver_SerializeToStream(pArchiver, (IFileStream*)NULL);
-    IArchiver_AddGraphicsPipelineState(pArchiver, (const GraphicsPipelineStateCreateInfo*)NULL, (const PipelineStateArchiveInfo*)NULL);
-    IArchiver_AddComputePipelineState(pArchiver, (const ComputePipelineStateCreateInfo*)NULL, (const PipelineStateArchiveInfo*)NULL);
-    IArchiver_AddRayTracingPipelineState(pArchiver, (const RayTracingPipelineStateCreateInfo*)NULL, (const PipelineStateArchiveInfo*)NULL);
-    IArchiver_AddTilePipelineState(pArchiver, (const TilePipelineStateCreateInfo*)NULL, (const PipelineStateArchiveInfo*)NULL);
-    IArchiver_AddPipelineResourceSignature(pArchiver, (const PipelineResourceSignatureDesc*)NULL, (const ResourceSignatureArchiveInfo*)NULL);
-}
+};
+DILIGENT_END_INTERFACE
+
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

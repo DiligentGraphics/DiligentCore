@@ -24,15 +24,50 @@
  *  of the possibility of such damages.
  */
 
-#include "DiligentCore/Graphics/Archiver/interface/Archiver.h"
+#include "ArchiverImpl.hpp"
 
-void TestArchiver_CInterface(IArchiver* pArchiver)
+#include "RenderDeviceMtlImpl.hpp"
+#include "PipelineResourceSignatureMtlImpl.hpp"
+#include "PipelineStateMtlImpl.hpp"
+#include "ShaderMtlImpl.hpp"
+#include "DeviceObjectArchiveMtlImpl.hpp"
+
+namespace Diligent
 {
-    IArchiver_SerializeToBlob(pArchiver, (IDataBlob**)NULL);
-    IArchiver_SerializeToStream(pArchiver, (IFileStream*)NULL);
-    IArchiver_AddGraphicsPipelineState(pArchiver, (const GraphicsPipelineStateCreateInfo*)NULL, (const PipelineStateArchiveInfo*)NULL);
-    IArchiver_AddComputePipelineState(pArchiver, (const ComputePipelineStateCreateInfo*)NULL, (const PipelineStateArchiveInfo*)NULL);
-    IArchiver_AddRayTracingPipelineState(pArchiver, (const RayTracingPipelineStateCreateInfo*)NULL, (const PipelineStateArchiveInfo*)NULL);
-    IArchiver_AddTilePipelineState(pArchiver, (const TilePipelineStateCreateInfo*)NULL, (const PipelineStateArchiveInfo*)NULL);
-    IArchiver_AddPipelineResourceSignature(pArchiver, (const PipelineResourceSignatureDesc*)NULL, (const ResourceSignatureArchiveInfo*)NULL);
+    
+struct ShaderStageInfoMtl
+{
+    ShaderStageInfoMtl() {}
+
+    ShaderStageInfoMtl(const SerializableShaderImpl* _pShader) :
+        Type{_pShader->GetDesc().ShaderType},
+        pShader{_pShader}
+    {}
+
+    // Needed only for ray tracing
+    void Append(const SerializableShaderImpl*) {}
+
+    Uint32 Count() const { return 1; }
+
+    SHADER_TYPE                   Type    = SHADER_TYPE_UNKNOWN;
+    const SerializableShaderImpl* pShader = nullptr;
+
+    friend SHADER_TYPE GetShaderStageType(const ShaderStageInfoMtl& Stage) { return Stage.Type; }
+};
+
+template <typename CreateInfoType>
+bool PatchShadersMtlImpl(const CreateInfoType& CreateInfo)
+{
+    TShaderIndices ShaderIndices;
+
+    std::vector<ShaderStageInfoMtl> ShaderStages;
+    SHADER_TYPE                     ActiveShaderStages = SHADER_TYPE_UNKNOWN;
+    PipelineStateMtlImpl::ExtractShaders<SerializableShaderImpl>(CreateInfo, ShaderStages, ActiveShaderStages);
+
+
+
+    SerializeShadersForPSO(ShaderIndices, Data.PerDeviceData[static_cast<Uint32>(DeviceType::Metal)]);
+    return true;
 }
+
+} // namespace Diligent

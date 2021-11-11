@@ -180,7 +180,7 @@ protected:
 
     struct PSODataHeader : BaseDataHeader
     {
-        //GraphicsPipelineStateCreateInfo | ComputePipelineStateCreateInfo | RayTracingPipelineStateCreateInfo
+        //GraphicsPipelineStateCreateInfo | ComputePipelineStateCreateInfo | TilePipelineStateCreateInfo | RayTracingPipelineStateCreateInfo
     };
 
     struct ShadersDataHeader : BaseDataHeader
@@ -219,6 +219,7 @@ private:
     TPRSOffsetAndCacheMap  m_PRSMap;
     TPSOOffsetAndCacheMap  m_GraphicsPSOMap;
     TPSOOffsetAndCacheMap  m_ComputePSOMap;
+    TPSOOffsetAndCacheMap  m_TilePSOMap;
     TPSOOffsetAndCacheMap  m_RayTracingPSOMap;
     TRPOffsetAndCacheMap   m_RenderPassMap;
     TResourceOffsetAndSize m_Shaders;
@@ -226,6 +227,7 @@ private:
     std::mutex m_PRSMapGuard;
     std::mutex m_GraphicsPSOMapGuard;
     std::mutex m_ComputePSOMapGuard;
+    std::mutex m_TilePSOMapGuard;
     std::mutex m_RayTracingPSOMapGuard;
     std::mutex m_RenderPassMapGuard;
     std::mutex m_ShadersGuard;
@@ -285,6 +287,7 @@ private:
 
     bool ReadGraphicsPSOData(const String& Name, PSOData<GraphicsPipelineStateCreateInfo>& PSO);
     bool ReadComputePSOData(const String& Name, PSOData<ComputePipelineStateCreateInfo>& PSO);
+    bool ReadTilePSOData(const String& Name, PSOData<TilePipelineStateCreateInfo>& PSO);
     bool ReadRayTracingPSOData(const String& Name, PSOData<RayTracingPipelineStateCreateInfo>& PSO);
 
     bool GetCachedGraphicsPSO(const String& Name, IPipelineState*& pPSO);
@@ -353,10 +356,13 @@ protected:
 
     virtual void UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature*& pSignature) = 0;
 
+    static constexpr Uint32 GetHeaderVersion() { return HeaderVersion; }
+
 public:
     void UnpackGraphicsPSO(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState*& pPSO);
     void UnpackComputePSO(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState*& pPSO);
     void UnpackRayTracingPSO(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState*& pPSO);
+    void UnpackTilePSO(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState*& pPSO);
     void UnpackRenderPass(const RenderPassUnpackInfo& DeArchiveInfo, IRenderPass*& pRP);
 
     template <SerializerMode Mode>

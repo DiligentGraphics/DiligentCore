@@ -104,25 +104,25 @@ public:
     /// Implementation of IArchiver::SerializeToStream().
     virtual Bool DILIGENT_CALL_TYPE SerializeToStream(IFileStream* pStream) override final;
 
-    /// Implementation of IArchiver::ArchiveGraphicsPipelineState().
-    virtual Bool DILIGENT_CALL_TYPE ArchiveGraphicsPipelineState(const GraphicsPipelineStateCreateInfo& PSOCreateInfo,
-                                                                 const PipelineStateArchiveInfo&        ArchiveInfo) override final;
+    /// Implementation of IArchiver::AddGraphicsPipelineState().
+    virtual Bool DILIGENT_CALL_TYPE AddGraphicsPipelineState(const GraphicsPipelineStateCreateInfo& PSOCreateInfo,
+                                                             const PipelineStateArchiveInfo&        ArchiveInfo) override final;
 
-    /// Implementation of IArchiver::ArchiveComputePipelineState().
-    virtual Bool DILIGENT_CALL_TYPE ArchiveComputePipelineState(const ComputePipelineStateCreateInfo& PSOCreateInfo,
-                                                                const PipelineStateArchiveInfo&       ArchiveInfo) override final;
+    /// Implementation of IArchiver::AddComputePipelineState().
+    virtual Bool DILIGENT_CALL_TYPE AddComputePipelineState(const ComputePipelineStateCreateInfo& PSOCreateInfo,
+                                                            const PipelineStateArchiveInfo&       ArchiveInfo) override final;
 
-    /// Implementation of IArchiver::ArchiveRayTracingPipelineState().
-    virtual Bool DILIGENT_CALL_TYPE ArchiveRayTracingPipelineState(const RayTracingPipelineStateCreateInfo& PSOCreateInfo,
-                                                                   const PipelineStateArchiveInfo&          ArchiveInfo) override final;
+    /// Implementation of IArchiver::AddRayTracingPipelineState().
+    virtual Bool DILIGENT_CALL_TYPE AddRayTracingPipelineState(const RayTracingPipelineStateCreateInfo& PSOCreateInfo,
+                                                               const PipelineStateArchiveInfo&          ArchiveInfo) override final;
 
-    /// Implementation of IArchiver::ArchiveTilePipelineState().
-    virtual Bool DILIGENT_CALL_TYPE ArchiveTilePipelineState(const TilePipelineStateCreateInfo& PSOCreateInfo,
-                                                             const PipelineStateArchiveInfo&    ArchiveInfo) override final;
+    /// Implementation of IArchiver::AddTilePipelineState().
+    virtual Bool DILIGENT_CALL_TYPE AddTilePipelineState(const TilePipelineStateCreateInfo& PSOCreateInfo,
+                                                         const PipelineStateArchiveInfo&    ArchiveInfo) override final;
 
-    /// Implementation of IArchiver::ArchivePipelineResourceSignature().
-    virtual Bool DILIGENT_CALL_TYPE ArchivePipelineResourceSignature(const PipelineResourceSignatureDesc& SignatureDesc,
-                                                                     const ResourceSignatureArchiveInfo&  ArchiveInfo) override final;
+    /// Implementation of IArchiver::AddPipelineResourceSignature().
+    virtual Bool DILIGENT_CALL_TYPE AddPipelineResourceSignature(const PipelineResourceSignatureDesc& SignatureDesc,
+                                                                 const ResourceSignatureArchiveInfo&  ArchiveInfo) override final;
 
 private:
     using DeviceType               = DeviceObjectArchiveBase::DeviceType;
@@ -202,7 +202,6 @@ private:
 private:
     struct PendingData
     {
-        // AZ TODO: use SerializedMemory instead of vector
         std::vector<Uint8>                              HeaderData;                   // ArchiveHeader, ChunkHeader[]
         std::array<std::vector<Uint8>, ChunkCount>      ChunkData;                    // NamedResourceArrayHeader
         std::array<Uint32*, ChunkCount>                 DataOffsetArrayPerChunk = {}; // pointer to NamedResourceArrayHeader::DataOffset - offsets to ***DataHeader
@@ -231,13 +230,22 @@ private:
     void SerializeShaderSource(TShaderIndices& ShaderIndices, DeviceType DevType, const ShaderCreateInfo& CI);
 
     template <typename CreateInfoType>
-    bool PatchShadersVk(const CreateInfoType& CreateInfo, TShaderIndices& ShaderIndices);
+    bool PatchShadersVk(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data);
     template <typename CreateInfoType>
-    bool PatchShadersD3D12(const CreateInfoType& CreateInfo, TShaderIndices& ShaderIndices);
+    bool PatchShadersD3D12(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data);
     template <typename CreateInfoType>
-    bool PatchShadersD3D11(const CreateInfoType& CreateInfo, TShaderIndices& ShaderIndices);
+    bool PatchShadersD3D11(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data);
     template <typename CreateInfoType>
-    bool PatchShadersGL(const CreateInfoType& CreateInfo, TShaderIndices& ShaderIndices);
+    bool PatchShadersGL(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data);
+
+#if METAL_SUPPORTED
+    template <typename CreateInfoType>
+    bool PatchShadersMtlImpl(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data);
+    bool PatchShadersMtl(const GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data) { return PatchShadersMtlImpl(CreateInfo, Data); }
+    bool PatchShadersMtl(const ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data) { return PatchShadersMtlImpl(CreateInfo, Data); }
+    bool PatchShadersMtl(const TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data) { return PatchShadersMtlImpl(CreateInfo, Data); }
+    bool PatchShadersMtl(const RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data) { return PatchShadersMtlImpl(CreateInfo, Data); }
+#endif
 
     void SerializeShadersForPSO(const TShaderIndices& ShaderIndices, SerializedMemory& DeviceData) const;
 

@@ -36,6 +36,8 @@
 #include "ResourceLayoutTestCommon.hpp"
 #include "gtest/gtest.h"
 
+#if ARCHIVER_SUPPORTED
+
 using namespace Diligent;
 using namespace Diligent::Testing;
 
@@ -45,24 +47,24 @@ namespace
 static Uint32 GetDeviceBits()
 {
     Uint32 DeviceBits = 0;
-#if D3D11_SUPPORTED
+#    if D3D11_SUPPORTED
     DeviceBits |= 1 << RENDER_DEVICE_TYPE_D3D11;
-#endif
-#if D3D12_SUPPORTED
+#    endif
+#    if D3D12_SUPPORTED
     DeviceBits |= 1 << RENDER_DEVICE_TYPE_D3D12;
-#endif
-#if GL_SUPPORTED
+#    endif
+#    if GL_SUPPORTED
     DeviceBits |= 1 << RENDER_DEVICE_TYPE_GL;
-#endif
-#if GLES_SUPPORTED
+#    endif
+#    if GLES_SUPPORTED
     DeviceBits |= 1 << RENDER_DEVICE_TYPE_GLES;
-#endif
-#if VULKAN_SUPPORTED
+#    endif
+#    if VULKAN_SUPPORTED
     DeviceBits |= 1 << RENDER_DEVICE_TYPE_VULKAN;
-#endif
-#if METAL_SUPPORTED
+#    endif
+#    if METAL_SUPPORTED
     DeviceBits |= 1 << RENDER_DEVICE_TYPE_METAL;
-#endif
+#    endif
     return DeviceBits;
 }
 
@@ -154,7 +156,8 @@ TEST(ArchiveTest, ResourceSignature)
     RefCntAutoPtr<IDeviceObjectArchive>       pArchive;
     {
         RefCntAutoPtr<ISerializationDevice> pSerializationDevice;
-        pArchiverFactory->CreateSerializationDevice(&pSerializationDevice);
+        SerializationDeviceCreateInfo       DeviceCI;
+        pArchiverFactory->CreateSerializationDevice(DeviceCI, &pSerializationDevice);
         ASSERT_NE(pSerializationDevice, nullptr);
 
         RefCntAutoPtr<IArchiver> pBuilder;
@@ -188,7 +191,7 @@ TEST(ArchiveTest, ResourceSignature)
 
             ResourceSignatureArchiveInfo ArchiveInfo;
             ArchiveInfo.DeviceBits = GetDeviceBits();
-            ASSERT_TRUE(pBuilder->ArchivePipelineResourceSignature(PRSDesc, ArchiveInfo));
+            ASSERT_TRUE(pBuilder->AddPipelineResourceSignature(PRSDesc, ArchiveInfo));
 
             pDevice->CreatePipelineResourceSignature(PRSDesc, &pRefPRS_1);
             ASSERT_NE(pRefPRS_1, nullptr);
@@ -212,7 +215,7 @@ TEST(ArchiveTest, ResourceSignature)
 
             ResourceSignatureArchiveInfo ArchiveInfo;
             ArchiveInfo.DeviceBits = GetDeviceBits();
-            ASSERT_TRUE(pBuilder->ArchivePipelineResourceSignature(PRSDesc, ArchiveInfo));
+            ASSERT_TRUE(pBuilder->AddPipelineResourceSignature(PRSDesc, ArchiveInfo));
 
             pDevice->CreatePipelineResourceSignature(PRSDesc, &pRefPRS_2);
             ASSERT_NE(pRefPRS_2, nullptr);
@@ -335,7 +338,8 @@ TEST(ArchiveTest, GraphicsPipeline)
     auto* pSwapChain = pEnv->GetSwapChain();
 
     RefCntAutoPtr<ISerializationDevice> pSerializationDevice;
-    pArchiverFactory->CreateSerializationDevice(&pSerializationDevice);
+    SerializationDeviceCreateInfo       DeviceCI;
+    pArchiverFactory->CreateSerializationDevice(DeviceCI, &pSerializationDevice);
     ASSERT_NE(pSerializationDevice, nullptr);
 
     RefCntAutoPtr<IRenderPass> pRenderPass1;
@@ -540,7 +544,7 @@ TEST(ArchiveTest, GraphicsPipeline)
 
             PipelineStateArchiveInfo ArchiveInfo;
             ArchiveInfo.DeviceBits = GetDeviceBits();
-            ASSERT_TRUE(pBuilder->ArchiveGraphicsPipelineState(PSOCreateInfo2, ArchiveInfo));
+            ASSERT_TRUE(pBuilder->AddGraphicsPipelineState(PSOCreateInfo2, ArchiveInfo));
 
             pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pRefPSO_1);
             ASSERT_NE(pRefPSO_1, nullptr);
@@ -558,7 +562,7 @@ TEST(ArchiveTest, GraphicsPipeline)
 
             PipelineStateArchiveInfo ArchiveInfo;
             ArchiveInfo.DeviceBits = GetDeviceBits();
-            ASSERT_TRUE(pBuilder->ArchiveGraphicsPipelineState(PSOCreateInfo2, ArchiveInfo));
+            ASSERT_TRUE(pBuilder->AddGraphicsPipelineState(PSOCreateInfo2, ArchiveInfo));
 
             GraphicsPipeline.pRenderPass = pRenderPass1;
 
@@ -791,3 +795,5 @@ TEST(ArchiveTest, GraphicsPipeline)
 
 
 } // namespace
+
+#endif // ARCHIVER_SUPPORTED

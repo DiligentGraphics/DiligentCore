@@ -24,15 +24,17 @@
  *  of the possibility of such damages.
  */
 
-#include "DiligentCore/Graphics/Archiver/interface/Archiver.h"
+#include <stdio.h>
+#include "SerializableShaderImpl.hpp"
 
-void TestArchiver_CInterface(IArchiver* pArchiver)
+#include "RenderDeviceMtlImpl.hpp"
+#include "ShaderMtlImpl.hpp"
+
+namespace Diligent
 {
-    IArchiver_SerializeToBlob(pArchiver, (IDataBlob**)NULL);
-    IArchiver_SerializeToStream(pArchiver, (IFileStream*)NULL);
-    IArchiver_AddGraphicsPipelineState(pArchiver, (const GraphicsPipelineStateCreateInfo*)NULL, (const PipelineStateArchiveInfo*)NULL);
-    IArchiver_AddComputePipelineState(pArchiver, (const ComputePipelineStateCreateInfo*)NULL, (const PipelineStateArchiveInfo*)NULL);
-    IArchiver_AddRayTracingPipelineState(pArchiver, (const RayTracingPipelineStateCreateInfo*)NULL, (const PipelineStateArchiveInfo*)NULL);
-    IArchiver_AddTilePipelineState(pArchiver, (const TilePipelineStateCreateInfo*)NULL, (const PipelineStateArchiveInfo*)NULL);
-    IArchiver_AddPipelineResourceSignature(pArchiver, (const PipelineResourceSignatureDesc*)NULL, (const ResourceSignatureArchiveInfo*)NULL);
+
+void SerializableShaderImpl::CompileShaderMtl(SerializationDeviceImpl* pDevice, const ShaderCreateInfo& ShaderCI) noexcept(false)
+{
 }
+
+} // namespace Diligent

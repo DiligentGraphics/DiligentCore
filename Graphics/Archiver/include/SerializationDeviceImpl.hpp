@@ -31,11 +31,6 @@
 #include "ObjectBase.hpp"
 #include "DXCompiler.hpp"
 
-#if D3D11_SUPPORTED
-#    include "../../GraphicsEngineD3D11/include/pch.h"
-#endif
-
-
 namespace Diligent
 {
 
@@ -63,7 +58,7 @@ class DummyRenderDevice final : public ObjectBase<IRenderDevice>
 public:
     using TBase = ObjectBase<IRenderDevice>;
 
-    explicit DummyRenderDevice(IReferenceCounters* pRefCounters);
+    DummyRenderDevice(IReferenceCounters* pRefCounters, const RenderDeviceInfo& DeviceInfo, const GraphicsAdapterInfo& AdapterInfo);
     ~DummyRenderDevice();
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_RenderDevice, TBase)
@@ -176,8 +171,8 @@ public:
     virtual IEngineFactory* DILIGENT_CALL_TYPE GetEngineFactory() const override final { return nullptr; }
 
 private:
-    RenderDeviceInfo    m_DeviceInfo;
-    GraphicsAdapterInfo m_AdapterInfo;
+    const RenderDeviceInfo    m_DeviceInfo;
+    const GraphicsAdapterInfo m_AdapterInfo;
 };
 
 
@@ -187,7 +182,7 @@ class SerializationDeviceImpl final : public ObjectBase<ISerializationDevice>
 public:
     using TBase = ObjectBase<ISerializationDevice>;
 
-    explicit SerializationDeviceImpl(IReferenceCounters* pRefCounters);
+    SerializationDeviceImpl(IReferenceCounters* pRefCounters, const SerializationDeviceCreateInfo& CreateInfo);
     ~SerializationDeviceImpl();
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_SerializationDevice, TBase)
@@ -204,9 +199,9 @@ public:
                                                                     IPipelineResourceSignature**         ppSignature) override final;
 
 #if D3D11_SUPPORTED
-    D3D_FEATURE_LEVEL GetD3D11FeatureLevel() const
+    Uint32 GetD3D11FeatureLevel() const
     {
-        return D3D_FEATURE_LEVEL_11_1;
+        return (m_D3D11FeatureLevel.Major << 12) | (m_D3D11FeatureLevel.Minor << 8);
     }
 #endif
 
@@ -219,7 +214,7 @@ public:
 
     ShaderVersion GetD3D12ShaderVersion() const
     {
-        return ShaderVersion{6, 5};
+        return m_D3D12ShaderVersion;
     }
 #endif
 
@@ -229,8 +224,8 @@ public:
         return m_pVkDxCompiler.get();
     }
 
-    Uint32 GetVkVersion() const { return /*VK_API_VERSION_1_0*/ (1u << 22) | (0u << 12); } // AZ TODO
-    bool   HasSpirv14() const { return false; }                                            // AZ TODO
+    Uint32 GetVkVersion() const { return (m_VkVersion.Major << 22) | (m_VkVersion.Minor << 12); }
+    bool   HasSpirv14() const { return m_VkSupportedSpirv14; }
 #endif
 
     static Uint32 GetValidDeviceBits();
@@ -238,9 +233,19 @@ public:
     DummyRenderDevice* GetDevice() { return &m_Device; }
 
 private:
-    DummyRenderDevice            m_Device;
+    DummyRenderDevice m_Device;
+
+    // D3D11
+    Version m_D3D11FeatureLevel{11, 0};
+
+    // D3D12
     std::unique_ptr<IDXCompiler> m_pDxCompiler;
+    Version                      m_D3D12ShaderVersion{6, 5};
+
+    // Vulkan
     std::unique_ptr<IDXCompiler> m_pVkDxCompiler;
+    Version                      m_VkVersion{1, 0};
+    bool                         m_VkSupportedSpirv14 = false;
 };
 
 } // namespace Diligent

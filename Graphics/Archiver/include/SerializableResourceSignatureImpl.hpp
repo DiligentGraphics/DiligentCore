@@ -48,6 +48,9 @@ class PipelineResourceSignatureGLImpl;
 #if VULKAN_SUPPORTED
 class PipelineResourceSignatureVkImpl;
 #endif
+#if METAL_SUPPORTED
+class PipelineResourceSignatureMtlImpl;
+#endif
 
 class SerializableResourceSignatureImpl final : public ObjectBase<IPipelineResourceSignature>
 {
@@ -107,8 +110,20 @@ public:
     PipelineResourceSignatureVkImpl* GetSignatureVk() const;
     const SerializedMemory&          GetSerializedMemoryVk() const;
 #endif
+#if METAL_SUPPORTED
+    PipelineResourceSignatureMtlImpl* GetSignatureMtl() const
+    {
+        return m_pPRSMtl->GetPRS();
+    }
+    const SerializedMemory& GetSerializedMemoryMtl() const
+    {
+        return m_pPRSMtl->GetMem();
+    }
+#endif
 
 private:
+    void AddPRSDesc(const PipelineResourceSignatureDesc& Desc, const PipelineResourceSignatureSerializedData& Serialized);
+
     const PipelineResourceSignatureDesc*           m_pDesc       = nullptr;
     const PipelineResourceSignatureSerializedData* m_pSerialized = nullptr;
     SerializedMemory                               m_DescMem;
@@ -126,6 +141,18 @@ private:
 #endif
 #if VULKAN_SUPPORTED
     std::unique_ptr<TPRS<PipelineResourceSignatureVkImpl>> m_pPRSVk;
+#endif
+#if METAL_SUPPORTED
+    void CompilePRSMtl(IReferenceCounters* pRefCounters, const PipelineResourceSignatureDesc& Desc);
+
+    struct IPRSMtl
+    {
+        virtual ~IPRSMtl() {}
+        virtual PipelineResourceSignatureMtlImpl* GetPRS() = 0;
+        virtual SerializedMemory const&           GetMem() = 0;
+    };
+    struct PRSMtlImpl;
+    std::unique_ptr<IPRSMtl> m_pPRSMtl;
 #endif
 };
 

@@ -63,32 +63,33 @@ static constexpr Uint32 ValidDeviceBits = GetDeviceBits();
 } // namespace
 
 
-DummyRenderDevice::DummyRenderDevice(IReferenceCounters* pRefCounters) :
-    TBase{pRefCounters}
+DummyRenderDevice::DummyRenderDevice(IReferenceCounters* pRefCounters, const RenderDeviceInfo& DeviceInfo, const GraphicsAdapterInfo& AdapterInfo) :
+    TBase{pRefCounters},
+    m_DeviceInfo{DeviceInfo},
+    m_AdapterInfo{AdapterInfo}
 {
-    m_DeviceInfo.Features  = DeviceFeatures{DEVICE_FEATURE_STATE_ENABLED};
-    m_AdapterInfo.Features = DeviceFeatures{DEVICE_FEATURE_STATE_ENABLED};
 }
 
 DummyRenderDevice::~DummyRenderDevice()
 {}
 
 
-SerializationDeviceImpl::SerializationDeviceImpl(IReferenceCounters* pRefCounters) :
+SerializationDeviceImpl::SerializationDeviceImpl(IReferenceCounters* pRefCounters, const SerializationDeviceCreateInfo& CreateInfo) :
     TBase{pRefCounters},
-    m_Device { pRefCounters }
-// clang-format off
-#if D3D12_SUPPORTED
-    , m_pDxCompiler{CreateDXCompiler(DXCompilerTarget::Direct3D12, 0, nullptr)}
-#endif
-#if VULKAN_SUPPORTED
-    , m_pVkDxCompiler{CreateDXCompiler(DXCompilerTarget::Vulkan, GetVkVersion(), nullptr)}
-#endif
-// clang-format on
+    m_Device{pRefCounters, CreateInfo.DeviceInfo, CreateInfo.AdapterInfo}
 {
 #if !DILIGENT_NO_GLSLANG
     GLSLangUtils::InitializeGlslang();
 #endif
+
+    m_D3D11FeatureLevel = CreateInfo.D3D11.FeatureLevel;
+
+    m_D3D12ShaderVersion = CreateInfo.D3D12.ShaderVersion;
+    m_pDxCompiler        = CreateDXCompiler(DXCompilerTarget::Direct3D12, 0, CreateInfo.D3D12.DxCompilerPath);
+
+    m_VkVersion          = CreateInfo.Vulkan.ApiVersion;
+    m_VkSupportedSpirv14 = (m_VkVersion >= Version{1, 2} ? true : CreateInfo.Vulkan.SupportedSpirv14);
+    m_pVkDxCompiler      = CreateDXCompiler(DXCompilerTarget::Vulkan, GetVkVersion(), CreateInfo.Vulkan.DxCompilerPath);
 }
 
 SerializationDeviceImpl::~SerializationDeviceImpl()

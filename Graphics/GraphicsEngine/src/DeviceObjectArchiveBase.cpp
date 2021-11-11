@@ -50,9 +50,9 @@ DeviceObjectArchiveBase::DeviceObjectArchiveBase(IReferenceCounters* pRefCounter
         {
             LOG_ERROR_AND_THROW("Archive header magic number is incorrect");
         }
-        if (Header.Version != HeaderVersion)
+        if (Header.Version != GetHeaderVersion())
         {
-            LOG_ERROR_AND_THROW("Archive header version (", Header.Version, ") is not supported, expected (", HeaderVersion, ")");
+            LOG_ERROR_AND_THROW("Archive header version (", Header.Version, ") is not supported, expected (", GetHeaderVersion(), ")");
         }
 
         m_BaseOffsets = Header.BlockBaseOffsets;
@@ -353,6 +353,27 @@ bool DeviceObjectArchiveBase::ReadComputePSOData(const String& Name, PSOData<Com
         });
 }
 
+bool DeviceObjectArchiveBase::ReadTilePSOData(const String& Name, PSOData<TilePipelineStateCreateInfo>& PSO)
+{
+    return LoadResourceData(
+        m_TilePSOMap, m_TilePSOMapGuard, Name, PSO.Allocator,
+        "Tile pipeline",
+        [&PSO](const char* Name, Serializer<SerializerMode::Read>& Ser) -> bool //
+        {
+            PSO.CreateInfo.PSODesc.Name = Name;
+            PSO.pHeader                 = Ser.Cast<PSODataHeader>();
+            if (PSO.pHeader->Type != ChunkType::ComputePipelineStates)
+            {
+                LOG_ERROR_MESSAGE("Invalid tile pipeline header in archive");
+                return false;
+            }
+
+            SerializerImpl<SerializerMode::Read>::SerializeTilePSO(Ser, PSO.CreateInfo, PSO.PRSNames, &PSO.Allocator);
+            VERIFY_EXPR(Ser.IsEnd());
+            return true;
+        });
+}
+
 bool DeviceObjectArchiveBase::ReadRayTracingPSOData(const String& Name, PSOData<RayTracingPipelineStateCreateInfo>& PSO)
 {
     return LoadResourceData(
@@ -513,6 +534,22 @@ inline DeviceObjectArchiveBase::ReleaseTempResourceRefs<ComputePipelineStateCrea
 
     if (PSO.CreateInfo.pCS != nullptr)
         PSO.CreateInfo.pCS->Release();
+}
+
+template <>
+inline DeviceObjectArchiveBase::ReleaseTempResourceRefs<TilePipelineStateCreateInfo>::~ReleaseTempResourceRefs()
+{
+    if (PSO.CreateInfo.ppResourceSignatures != nullptr)
+    {
+        for (Uint32 i = 0; i < PSO.CreateInfo.ResourceSignaturesCount; ++i)
+        {
+            if (PSO.CreateInfo.ppResourceSignatures[i] != nullptr)
+                PSO.CreateInfo.ppResourceSignatures[i]->Release();
+        }
+    }
+
+    if (PSO.CreateInfo.pTS != nullptr)
+        PSO.CreateInfo.pTS->Release();
 }
 
 template <>
@@ -716,9 +753,61 @@ void DeviceObjectArchiveBase::UnpackComputePSO(const PipelineStateUnpackInfo& De
         [&](void* pData, size_t DataSize)        //
         {
             Serializer<SerializerMode::Read> Ser{pData, DataSize};
-            // AZ TODO
+
+            std::vector<RefCntAutoPtr<IShader>> Shaders;
+            if (!LoadShaders(Ser, DeArchiveInfo.pDevice, Shaders))
+                return;
+
+            if (Shaders.size() != 1 || Shaders[0]->GetDesc().ShaderType != SHADER_TYPE_COMPUTE)
+                return;
+
+            PSO.CreateInfo.pCS = Shaders[0];
+            Shaders[0]->AddRef();
 
             DeArchiveInfo.pDevice->CreateComputePipelineState(PSO.CreateInfo, &pPSO);
+            CacheComputePSOResource(DeArchiveInfo.Name, pPSO);
+        });
+}
+
+void DeviceObjectArchiveBase::UnpackTilePSO(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState*& pPSO)
+{
+    VERIFY_EXPR(DeArchiveInfo.pDevice != nullptr);
+
+    if (GetCachedComputePSO(DeArchiveInfo.Name, pPSO))
+        return;
+
+    PSOData<TilePipelineStateCreateInfo> PSO{GetRawAllocator()};
+    if (!ReadTilePSOData(DeArchiveInfo.Name, PSO))
+        return;
+
+    ReleaseTempResourceRefs<TilePipelineStateCreateInfo> ReleaseRefs{PSO};
+
+    if (!CreateResourceSignatures(PSO, DeArchiveInfo.pDevice))
+        return;
+
+    PSO.CreateInfo.PSODesc.SRBAllocationGranularity = DeArchiveInfo.SRBAllocationGranularity;
+    PSO.CreateInfo.PSODesc.ImmediateContextMask     = DeArchiveInfo.ImmediateContextMask;
+
+    LoadDeviceSpecificData(
+        *PSO.pHeader,
+        PSO.Allocator,
+        "Tile pipeline",
+        static_cast<BlockOffsetType>(m_DevType), // AZ TODO
+        [&](void* pData, size_t DataSize)        //
+        {
+            Serializer<SerializerMode::Read> Ser{pData, DataSize};
+
+            std::vector<RefCntAutoPtr<IShader>> Shaders;
+            if (!LoadShaders(Ser, DeArchiveInfo.pDevice, Shaders))
+                return;
+
+            if (Shaders.size() != 1 || Shaders[0]->GetDesc().ShaderType != SHADER_TYPE_TILE)
+                return;
+
+            PSO.CreateInfo.pTS = Shaders[0];
+            Shaders[0]->AddRef();
+
+            DeArchiveInfo.pDevice->CreateTilePipelineState(PSO.CreateInfo, &pPSO);
             CacheComputePSOResource(DeArchiveInfo.Name, pPSO);
         });
 }
