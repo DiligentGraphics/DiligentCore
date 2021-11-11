@@ -130,7 +130,7 @@ SerializableShaderImpl::SerializableShaderImpl(IReferenceCounters*      pRefCoun
                 const ShaderD3D11Impl::CreateInfo D3D11ShaderCI{
                     pDevice->GetDevice()->GetDeviceInfo(),
                     pDevice->GetDevice()->GetAdapterInfo(),
-                    pDevice->GetD3D11FeatureLevel() //
+                    static_cast<D3D_FEATURE_LEVEL>(pDevice->GetD3D11FeatureLevel()) //
                 };
                 m_pShaderD3D11.reset(new CompiledShaderD3D11{pRefCounters, ShaderCI, D3D11ShaderCI});
                 break;
@@ -176,7 +176,7 @@ SerializableShaderImpl::SerializableShaderImpl(IReferenceCounters*      pRefCoun
 
 #if METAL_SUPPORTED
             case RENDER_DEVICE_TYPE_METAL:
-                // AZ TODO
+                CompileShaderMtl(pRefCounters, pDevice, ShaderCI);
                 break;
 #endif
 

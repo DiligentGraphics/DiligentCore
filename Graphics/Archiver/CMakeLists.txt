@@ -30,6 +30,12 @@ set(SOURCE
     src/SerializedMemory.cpp
 )
 
+if(METAL_SUPPORTED)
+    list(APPEND SOURCE src/SerializableShaderImpl.mm)
+    list(APPEND SOURCE src/SerializableResourceSignatureImpl.mm)
+    list(APPEND SOURCE src/ArchiverImpl_PSO.mm)
+endif()
+
 add_library(Diligent-Archiver-interface INTERFACE)
 
 target_include_directories(Diligent-Archiver-interface INTERFACE interface)

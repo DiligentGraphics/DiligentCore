@@ -28,7 +28,7 @@
 
 void TestArchiverFactory_CInterface(IArchiverFactory* pArchiverFactory)
 {
-    IArchiverFactory_CreateSerializationDevice(pArchiverFactory, (ISerializationDevice**)NULL);
+    IArchiverFactory_CreateSerializationDevice(pArchiverFactory, (const SerializationDeviceCreateInfo*)NULL, (ISerializationDevice**)NULL);
     IArchiverFactory_CreateArchiver(pArchiverFactory, (ISerializationDevice*)NULL, (IArchiver**)NULL);
     IArchiverFactory_CreateDefaultShaderSourceStreamFactory(pArchiverFactory, (const Char*)NULL, (IShaderSourceInputStreamFactory**)NULL);
 }

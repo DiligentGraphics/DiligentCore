@@ -78,6 +78,12 @@ public:
 #if VULKAN_SUPPORTED
     const ShaderVkImpl* GetShaderVk() const;
 #endif
+#if METAL_SUPPORTED
+    const SerializedMemory& GetShaderMtl() const
+    {
+        return m_pShaderBinaryMtl;
+    }
+#endif
 
     const ShaderCreateInfo& GetCreateInfo() const
     {
@@ -101,6 +107,10 @@ private:
 #if VULKAN_SUPPORTED
     struct CompiledShaderVk;
     std::unique_ptr<CompiledShaderVk> m_pShaderVk;
+#endif
+#if METAL_SUPPORTED
+    void             CompileShaderMtl(SerializationDeviceImpl* pDevice, const ShaderCreateInfo& ShaderCI) noexcept(false);
+    SerializedMemory m_pShaderBinaryMtl;
 #endif
 };
 

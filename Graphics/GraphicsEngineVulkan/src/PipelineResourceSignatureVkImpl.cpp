@@ -923,11 +923,11 @@ PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCount
     {
         InitializeSerialized(
             GetRawAllocator(), Desc, Serialized, m_ImmutableSamplers,
-            [this, &Serialized]() //
+            [this]() //
             {
                 CreateSetLayouts(); // Az TODO: optimize
-                VERIFY_EXPR(m_DynamicUniformBufferCount == Serialized.DynamicUniformBufferCount);
-                VERIFY_EXPR(m_DynamicStorageBufferCount == Serialized.DynamicStorageBufferCount);
+                //VERIFY_EXPR(m_DynamicUniformBufferCount == Serialized.DynamicUniformBufferCount);
+                //VERIFY_EXPR(m_DynamicStorageBufferCount == Serialized.DynamicStorageBufferCount);
             },
             [this]() //
             {

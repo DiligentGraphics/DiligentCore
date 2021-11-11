@@ -52,7 +52,8 @@ DILIGENT_BEGIN_INTERFACE(IArchiverFactory, IObject)
 {
     // AZ TODO
     VIRTUAL void METHOD(CreateSerializationDevice)(THIS_
-                                                   ISerializationDevice** ppDevice) PURE;
+                                                   const SerializationDeviceCreateInfo REF CreateInfo,
+                                                   ISerializationDevice**                  ppDevice) PURE;
 
     // AZ TODO
     VIRTUAL void METHOD(CreateArchiver)(THIS_

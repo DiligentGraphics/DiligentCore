@@ -145,7 +145,7 @@ void ArchiverImpl::SerializeShaderSource(TShaderIndices& ShaderIndices, DeviceTy
 
 #if VULKAN_SUPPORTED
 template <typename CreateInfoType>
-bool ArchiverImpl::PatchShadersVk(const CreateInfoType& CreateInfo, TShaderIndices& ShaderIndices)
+bool ArchiverImpl::PatchShadersVk(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data)
 {
     struct ShaderStageInfoVk : PipelineStateVkImpl::ShaderStageInfo
     {
@@ -165,6 +165,8 @@ bool ArchiverImpl::PatchShadersVk(const CreateInfoType& CreateInfo, TShaderIndic
 
         std::vector<const SerializableShaderImpl*> Serializable;
     };
+
+    TShaderIndices ShaderIndices;
 
     std::vector<ShaderStageInfoVk> ShaderStages;
     SHADER_TYPE                    ActiveShaderStages = SHADER_TYPE_UNKNOWN;
@@ -240,6 +242,7 @@ bool ArchiverImpl::PatchShadersVk(const CreateInfoType& CreateInfo, TShaderIndic
 
     // AZ TODO: map ray tracing shaders to shader indices
 
+    SerializeShadersForPSO(ShaderIndices, Data.PerDeviceData[static_cast<Uint32>(DeviceType::Vulkan)]);
     return true;
 }
 #endif // VULKAN_SUPPORTED
@@ -281,8 +284,10 @@ void InitD3D11ShaderResourceCounters(const GraphicsPipelineStateCreateInfo& Crea
 }
 
 template <typename CreateInfoType>
-bool ArchiverImpl::PatchShadersD3D11(const CreateInfoType& CreateInfo, TShaderIndices& ShaderIndices)
+bool ArchiverImpl::PatchShadersD3D11(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data)
 {
+    TShaderIndices ShaderIndices;
+
     std::vector<ShaderStageInfoD3D11> ShaderStages;
     SHADER_TYPE                       ActiveShaderStages = SHADER_TYPE_UNKNOWN;
     PipelineStateD3D11Impl::ExtractShaders<SerializableShaderImpl>(CreateInfo, ShaderStages, ActiveShaderStages);
@@ -346,6 +351,7 @@ bool ArchiverImpl::PatchShadersD3D11(const CreateInfoType& CreateInfo, TShaderIn
 
         SerializeShaderBytecode(ShaderIndices, DeviceType::Direct3D11, CI, pBytecode->GetBufferPointer(), pBytecode->GetBufferSize());
     }
+    SerializeShadersForPSO(ShaderIndices, Data.PerDeviceData[static_cast<Uint32>(DeviceType::Direct3D11)]);
     return true;
 }
 #endif // D3D11_SUPPORTED
@@ -353,7 +359,7 @@ bool ArchiverImpl::PatchShadersD3D11(const CreateInfoType& CreateInfo, TShaderIn
 
 #if D3D12_SUPPORTED
 template <typename CreateInfoType>
-bool ArchiverImpl::PatchShadersD3D12(const CreateInfoType& CreateInfo, TShaderIndices& ShaderIndices)
+bool ArchiverImpl::PatchShadersD3D12(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data)
 {
     struct ShaderStageInfoD3D12 : PipelineStateD3D12Impl::ShaderStageInfo
     {
@@ -373,6 +379,8 @@ bool ArchiverImpl::PatchShadersD3D12(const CreateInfoType& CreateInfo, TShaderIn
 
         std::vector<const SerializableShaderImpl*> Serializable;
     };
+
+    TShaderIndices ShaderIndices;
 
     std::vector<ShaderStageInfoD3D12> ShaderStages;
     SHADER_TYPE                       ActiveShaderStages = SHADER_TYPE_UNKNOWN;
@@ -428,6 +436,7 @@ bool ArchiverImpl::PatchShadersD3D12(const CreateInfoType& CreateInfo, TShaderIn
 
     // AZ TODO: map ray tracing shaders to shader indices
 
+    SerializeShadersForPSO(ShaderIndices, Data.PerDeviceData[static_cast<Uint32>(DeviceType::Direct3D12)]);
     return true;
 }
 #endif // D3D12_SUPPORTED
@@ -455,8 +464,10 @@ struct ShaderStageInfoGL
 };
 
 template <typename CreateInfoType>
-bool ArchiverImpl::PatchShadersGL(const CreateInfoType& CreateInfo, TShaderIndices& ShaderIndices)
+bool ArchiverImpl::PatchShadersGL(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data)
 {
+    TShaderIndices ShaderIndices;
+
     std::vector<ShaderStageInfoGL> ShaderStages;
     SHADER_TYPE                    ActiveShaderStages = SHADER_TYPE_UNKNOWN;
     PipelineStateGLImpl::ExtractShaders<SerializableShaderImpl>(CreateInfo, ShaderStages, ActiveShaderStages);
@@ -465,6 +476,7 @@ bool ArchiverImpl::PatchShadersGL(const CreateInfoType& CreateInfo, TShaderIndic
     {
         SerializeShaderSource(ShaderIndices, DeviceType::OpenGL, ShaderStages[i].pShader->GetCreateInfo());
     }
+    SerializeShadersForPSO(ShaderIndices, Data.PerDeviceData[static_cast<Uint32>(DeviceType::OpenGL)]);
     return true;
 }
 #endif // GL_SUPPORTED || GLES_SUPPORTED
@@ -608,11 +620,8 @@ bool ArchiverImpl::SerializePSO(std::unordered_map<String, TPSOData<CreateInfoTy
 #if D3D11_SUPPORTED
             case RENDER_DEVICE_TYPE_D3D11:
             {
-                TShaderIndices ShaderIndices;
-                if (!PatchShadersD3D11(PSOCreateInfo, ShaderIndices))
+                if (!PatchShadersD3D11(PSOCreateInfo, Data))
                     return false;
-
-                SerializeShadersForPSO(ShaderIndices, Data.PerDeviceData[static_cast<Uint32>(DeviceType::Direct3D11)]);
                 break;
             }
 #endif
@@ -620,11 +629,8 @@ bool ArchiverImpl::SerializePSO(std::unordered_map<String, TPSOData<CreateInfoTy
 #if D3D12_SUPPORTED
             case RENDER_DEVICE_TYPE_D3D12:
             {
-                TShaderIndices ShaderIndices;
-                if (!PatchShadersD3D12(PSOCreateInfo, ShaderIndices))
+                if (!PatchShadersD3D12(PSOCreateInfo, Data))
                     return false;
-
-                SerializeShadersForPSO(ShaderIndices, Data.PerDeviceData[static_cast<Uint32>(DeviceType::Direct3D12)]);
                 break;
             }
 #endif
@@ -633,11 +639,8 @@ bool ArchiverImpl::SerializePSO(std::unordered_map<String, TPSOData<CreateInfoTy
             case RENDER_DEVICE_TYPE_GL:
             case RENDER_DEVICE_TYPE_GLES:
             {
-                TShaderIndices ShaderIndices;
-                if (!PatchShadersGL(PSOCreateInfo, ShaderIndices))
+                if (!PatchShadersGL(PSOCreateInfo, Data))
                     return false;
-
-                SerializeShadersForPSO(ShaderIndices, Data.PerDeviceData[static_cast<Uint32>(DeviceType::OpenGL)]);
                 break;
             }
 #endif
@@ -645,19 +648,19 @@ bool ArchiverImpl::SerializePSO(std::unordered_map<String, TPSOData<CreateInfoTy
 #if VULKAN_SUPPORTED
             case RENDER_DEVICE_TYPE_VULKAN:
             {
-                TShaderIndices ShaderIndices;
-                if (!PatchShadersVk(PSOCreateInfo, ShaderIndices))
+                if (!PatchShadersVk(PSOCreateInfo, Data))
                     return false;
-
-                SerializeShadersForPSO(ShaderIndices, Data.PerDeviceData[static_cast<Uint32>(DeviceType::Vulkan)]);
                 break;
             }
 #endif
 
 #if METAL_SUPPORTED
             case RENDER_DEVICE_TYPE_METAL:
-                // AZ TODO
+            {
+                if (!PatchShadersMtl(PSOCreateInfo, Data))
+                    return false;
                 break;
+            }
 #endif
 
             case RENDER_DEVICE_TYPE_UNDEFINED:
@@ -670,8 +673,8 @@ bool ArchiverImpl::SerializePSO(std::unordered_map<String, TPSOData<CreateInfoTy
     return true;
 }
 
-Bool ArchiverImpl::ArchiveGraphicsPipelineState(const GraphicsPipelineStateCreateInfo& PSOCreateInfo,
-                                                const PipelineStateArchiveInfo&        ArchiveInfo)
+Bool ArchiverImpl::AddGraphicsPipelineState(const GraphicsPipelineStateCreateInfo& PSOCreateInfo,
+                                            const PipelineStateArchiveInfo&        ArchiveInfo)
 {
     if (PSOCreateInfo.GraphicsPipeline.pRenderPass != nullptr)
     {
@@ -682,20 +685,20 @@ Bool ArchiverImpl::ArchiveGraphicsPipelineState(const GraphicsPipelineStateCreat
     return SerializePSO(m_GraphicsPSOMap, PSOCreateInfo, ArchiveInfo);
 }
 
-Bool ArchiverImpl::ArchiveComputePipelineState(const ComputePipelineStateCreateInfo& PSOCreateInfo,
-                                               const PipelineStateArchiveInfo&       ArchiveInfo)
+Bool ArchiverImpl::AddComputePipelineState(const ComputePipelineStateCreateInfo& PSOCreateInfo,
+                                           const PipelineStateArchiveInfo&       ArchiveInfo)
 {
     return SerializePSO(m_ComputePSOMap, PSOCreateInfo, ArchiveInfo);
 }
 
-Bool ArchiverImpl::ArchiveRayTracingPipelineState(const RayTracingPipelineStateCreateInfo& PSOCreateInfo,
-                                                  const PipelineStateArchiveInfo&          ArchiveInfo)
+Bool ArchiverImpl::AddRayTracingPipelineState(const RayTracingPipelineStateCreateInfo& PSOCreateInfo,
+                                              const PipelineStateArchiveInfo&          ArchiveInfo)
 {
     return SerializePSO(m_RayTracingPSOMap, PSOCreateInfo, ArchiveInfo);
 }
 
-Bool ArchiverImpl::ArchiveTilePipelineState(const TilePipelineStateCreateInfo& PSOCreateInfo,
-                                            const PipelineStateArchiveInfo&    ArchiveInfo)
+Bool ArchiverImpl::AddTilePipelineState(const TilePipelineStateCreateInfo& PSOCreateInfo,
+                                        const PipelineStateArchiveInfo&    ArchiveInfo)
 {
     return SerializePSO(m_TilePSOMap, PSOCreateInfo, ArchiveInfo);
 }

@@ -59,7 +59,11 @@ const SerializedMemory& ArchiverImpl::PRSData::GetDeviceData(Uint32 Idx) const
 #else
         case DeviceType::Vulkan:     break;
 #endif
-        case DeviceType::Metal:      break; // AZ TODO
+#if METAL_SUPPORTED
+        case DeviceType::Metal:      return pPRS->GetSerializedMemoryMtl();
+#else
+        case DeviceType::Metal:      break;
+#endif
         // clang-format on
         case DeviceType::Count:
             break;
@@ -92,8 +96,8 @@ bool ArchiverImpl::AddPipelineResourceSignature(IPipelineResourceSignature* pPRS
     return true;
 }
 
-Bool ArchiverImpl::ArchivePipelineResourceSignature(const PipelineResourceSignatureDesc& SignatureDesc,
-                                                    const ResourceSignatureArchiveInfo&  ArchiveInfo)
+Bool ArchiverImpl::AddPipelineResourceSignature(const PipelineResourceSignatureDesc& SignatureDesc,
+                                                const ResourceSignatureArchiveInfo&  ArchiveInfo)
 {
     RefCntAutoPtr<IPipelineResourceSignature> pPRS;
     m_pSerializationDevice->CreatePipelineResourceSignature(SignatureDesc, ArchiveInfo.DeviceBits, &pPRS);

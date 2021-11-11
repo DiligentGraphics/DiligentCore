@@ -85,31 +85,31 @@ DILIGENT_BEGIN_INTERFACE(IArchiver, IObject)
     /// Multiple pipeline states may be packed into the same archive as long as
     /// they use unique names.
     /// Pipeline resource signatures used by the pipeline stats will be packed into the same archive.
-    VIRTUAL Bool METHOD(ArchiveGraphicsPipelineState)(THIS_
-                                                      const GraphicsPipelineStateCreateInfo REF PSOCreateInfo,
-                                                      const PipelineStateArchiveInfo REF        ArchiveInfo) PURE;
+    VIRTUAL Bool METHOD(AddGraphicsPipelineState)(THIS_
+                                                  const GraphicsPipelineStateCreateInfo REF PSOCreateInfo,
+                                                  const PipelineStateArchiveInfo REF        ArchiveInfo) PURE;
     
     // AZ TODO
-    VIRTUAL Bool METHOD(ArchiveComputePipelineState)(THIS_
-                                                     const ComputePipelineStateCreateInfo REF PSOCreateInfo,
-                                                     const PipelineStateArchiveInfo REF       ArchiveInfo) PURE;
+    VIRTUAL Bool METHOD(AddComputePipelineState)(THIS_
+                                                 const ComputePipelineStateCreateInfo REF PSOCreateInfo,
+                                                 const PipelineStateArchiveInfo REF       ArchiveInfo) PURE;
     
     // AZ TODO
-    VIRTUAL Bool METHOD(ArchiveRayTracingPipelineState)(THIS_
-                                                        const RayTracingPipelineStateCreateInfo REF PSOCreateInfo,
-                                                        const PipelineStateArchiveInfo REF          ArchiveInfo) PURE;
+    VIRTUAL Bool METHOD(AddRayTracingPipelineState)(THIS_
+                                                    const RayTracingPipelineStateCreateInfo REF PSOCreateInfo,
+                                                    const PipelineStateArchiveInfo REF          ArchiveInfo) PURE;
     
     // AZ TODO
-    VIRTUAL Bool METHOD(ArchiveTilePipelineState)(THIS_
-                                                  const TilePipelineStateCreateInfo REF PSOCreateInfo,
-                                                  const PipelineStateArchiveInfo REF    ArchiveInfo) PURE;
+    VIRTUAL Bool METHOD(AddTilePipelineState)(THIS_
+                                              const TilePipelineStateCreateInfo REF PSOCreateInfo,
+                                              const PipelineStateArchiveInfo REF    ArchiveInfo) PURE;
     
 
     /// Multiple PSOs and signatures may be packed into the same archive as long as they use
     /// distinct names
-    VIRTUAL Bool METHOD(ArchivePipelineResourceSignature)(THIS_
-                                                          const PipelineResourceSignatureDesc REF SignatureDesc,
-                                                          const ResourceSignatureArchiveInfo REF  ArchiveInfo) PURE;
+    VIRTUAL Bool METHOD(AddPipelineResourceSignature)(THIS_
+                                                      const PipelineResourceSignatureDesc REF SignatureDesc,
+                                                      const ResourceSignatureArchiveInfo REF  ArchiveInfo) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -117,13 +117,13 @@ DILIGENT_END_INTERFACE
 
 #if DILIGENT_C_INTERFACE
 
-#    define IArchiver_SerializeToBlob(This, ...)                  CALL_IFACE_METHOD(Archiver, SerializeToBlob,                  This, __VA_ARGS__)
-#    define IArchiver_SerializeToStream(This, ...)                CALL_IFACE_METHOD(Archiver, SerializeToStream,                This, __VA_ARGS__)
-#    define IArchiver_ArchiveGraphicsPipelineState(This, ...)     CALL_IFACE_METHOD(Archiver, ArchiveGraphicsPipelineState,     This, __VA_ARGS__)
-#    define IArchiver_ArchiveComputePipelineState(This, ...)      CALL_IFACE_METHOD(Archiver, ArchiveComputePipelineState,      This, __VA_ARGS__)
-#    define IArchiver_ArchiveRayTracingPipelineState(This, ...)   CALL_IFACE_METHOD(Archiver, ArchiveRayTracingPipelineState,   This, __VA_ARGS__)
-#    define IArchiver_ArchiveTilePipelineState(This, ...)         CALL_IFACE_METHOD(Archiver, ArchiveTilePipelineState,         This, __VA_ARGS__)
-#    define IArchiver_ArchivePipelineResourceSignature(This, ...) CALL_IFACE_METHOD(Archiver, ArchivePipelineResourceSignature, This, __VA_ARGS__)
+#    define IArchiver_SerializeToBlob(This, ...)              CALL_IFACE_METHOD(Archiver, SerializeToBlob,              This, __VA_ARGS__)
+#    define IArchiver_SerializeToStream(This, ...)            CALL_IFACE_METHOD(Archiver, SerializeToStream,            This, __VA_ARGS__)
+#    define IArchiver_AddGraphicsPipelineState(This, ...)     CALL_IFACE_METHOD(Archiver, AddGraphicsPipelineState,     This, __VA_ARGS__)
+#    define IArchiver_AddComputePipelineState(This, ...)      CALL_IFACE_METHOD(Archiver, AddComputePipelineState,      This, __VA_ARGS__)
+#    define IArchiver_AddRayTracingPipelineState(This, ...)   CALL_IFACE_METHOD(Archiver, AddRayTracingPipelineState,   This, __VA_ARGS__)
+#    define IArchiver_AddTilePipelineState(This, ...)         CALL_IFACE_METHOD(Archiver, AddTilePipelineState,         This, __VA_ARGS__)
+#    define IArchiver_AddPipelineResourceSignature(This, ...) CALL_IFACE_METHOD(Archiver, AddPipelineResourceSignature, This, __VA_ARGS__)
 
 #endif
 

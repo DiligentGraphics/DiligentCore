@@ -49,6 +49,57 @@ static const INTERFACE_ID IID_SerializationDevice =
 
 // clang-format off
 
+struct SerializationDeviceD3D11Info
+{
+    Version FeatureLevel;
+    
+#if DILIGENT_CPP_INTERFACE
+    SerializationDeviceD3D11Info() noexcept : FeatureLevel{11, 0} {}
+#endif
+};
+
+struct SerializationDeviceD3D12Info
+{
+    Version     ShaderVersion;
+    const Char* DxCompilerPath DEFAULT_INITIALIZER(nullptr);
+    
+#if DILIGENT_CPP_INTERFACE
+    SerializationDeviceD3D12Info() noexcept : ShaderVersion{6, 0} {}
+#endif
+};
+
+struct SerializationDeviceVkInfo
+{
+    Version     ApiVersion;
+    Bool        SupportedSpirv14 DEFAULT_INITIALIZER(False);
+    const Char* DxCompilerPath   DEFAULT_INITIALIZER(nullptr);
+    
+#if DILIGENT_CPP_INTERFACE
+    SerializationDeviceVkInfo() noexcept : ApiVersion{1, 0} {}
+#endif
+};
+
+// AZ TODO
+struct SerializationDeviceCreateInfo
+{
+    RenderDeviceInfo    DeviceInfo;
+    GraphicsAdapterInfo AdapterInfo;
+
+    struct SerializationDeviceD3D11Info D3D11;
+    struct SerializationDeviceD3D12Info D3D12;
+    struct SerializationDeviceVkInfo    Vulkan;
+    
+#if DILIGENT_CPP_INTERFACE
+    SerializationDeviceCreateInfo()
+    {
+        DeviceInfo.Features  = DeviceFeatures{DEVICE_FEATURE_STATE_ENABLED};
+        AdapterInfo.Features = DeviceFeatures{DEVICE_FEATURE_STATE_ENABLED};
+    }
+#endif
+};
+typedef struct SerializationDeviceCreateInfo SerializationDeviceCreateInfo;
+
+
 // AZ TODO
 DILIGENT_BEGIN_INTERFACE(ISerializationDevice, IObject)
 {

@@ -215,6 +215,20 @@ struct SerializableResourceSignatureImpl::TPRS
 };
 
 
+void SerializableResourceSignatureImpl::AddPRSDesc(const PipelineResourceSignatureDesc& Desc, const PipelineResourceSignatureSerializedData& Serialized)
+{
+    if (m_DescMem)
+    {
+        VERIFY_EXPR(m_pDesc != nullptr);
+        VERIFY_EXPR(m_pSerialized != nullptr);
+
+        if (!(*m_pDesc == Desc) || !(*m_pSerialized == Serialized))
+            LOG_ERROR_AND_THROW("Pipeline resource signature description is not the same for different backends");
+    }
+    else
+        CopyPRSDesc(Desc, Serialized, m_pDesc, m_pSerialized, m_DescMem, m_SharedData);
+}
+
 SerializableResourceSignatureImpl::SerializableResourceSignatureImpl(IReferenceCounters*                  pRefCounters,
                                                                      SerializationDeviceImpl*             pDevice,
                                                                      const PipelineResourceSignatureDesc& Desc,
@@ -222,20 +236,6 @@ SerializableResourceSignatureImpl::SerializableResourceSignatureImpl(IReferenceC
     TBase{pRefCounters}
 {
     ValidatePipelineResourceSignatureDesc(Desc, pDevice->GetDevice());
-
-    const auto AddPRSDesc = [this](const PipelineResourceSignatureDesc& Desc, const PipelineResourceSignatureSerializedData& Serialized) //
-    {
-        if (m_DescMem)
-        {
-            VERIFY_EXPR(m_pDesc != nullptr);
-            VERIFY_EXPR(m_pSerialized != nullptr);
-
-            if (!(*m_pDesc == Desc) || !(*m_pSerialized == Serialized))
-                LOG_ERROR_AND_THROW("Pipeline resource signature description is not the same for different backends");
-        }
-        else
-            CopyPRSDesc(Desc, Serialized, m_pDesc, m_pSerialized, m_DescMem, m_SharedData);
-    };
 
     if ((DeviceBits & pDevice->GetValidDeviceBits()) != DeviceBits)
     {
@@ -308,7 +308,7 @@ SerializableResourceSignatureImpl::SerializableResourceSignatureImpl(IReferenceC
 
 #if METAL_SUPPORTED
             case RENDER_DEVICE_TYPE_METAL:
-                // AZ TODO
+                CompilePRSMtl(pRefCounters, Desc);
                 break;
 #endif
 
