@@ -54,6 +54,7 @@ namespace Diligent
 {
 
 /// Validates pipeline resource signature description and throws an exception in case of an error.
+/// \note  pDevice can be null if PRS is used for serialization.
 void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& Desc,
                                            const IRenderDevice*                 pDevice) noexcept(false);
 
@@ -268,7 +269,7 @@ public:
                                                                 bool                     InitStaticResources) override final
     {
         auto* pThisImpl{static_cast<PipelineResourceSignatureImplType*>(this)};
-        auto& SRBAllocator{pThisImpl->m_pDevice->GetSRBAllocator()};
+        auto& SRBAllocator{pThisImpl->GetDevice()->GetSRBAllocator()};
         auto* pResBindingImpl{NEW_RC_OBJ(SRBAllocator, "ShaderResourceBinding instance", ShaderResourceBindingImplType)(pThisImpl)};
         if (InitStaticResources)
             pThisImpl->InitializeStaticSRBResources(pResBindingImpl);

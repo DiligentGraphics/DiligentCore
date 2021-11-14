@@ -282,7 +282,7 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts()
                 auto&       ImmutableSampler     = m_ImmutableSamplers[SrcImmutableSamplerInd];
                 const auto& ImmutableSamplerDesc = m_Desc.ImmutableSamplers[SrcImmutableSamplerInd].Desc;
                 // The same immutable sampler may be used by different resources in different shader stages.
-                if (!ImmutableSampler.Ptr)
+                if (!ImmutableSampler.Ptr && HasDevice())
                     GetDevice()->CreateSampler(ImmutableSamplerDesc, &ImmutableSampler.Ptr);
 
                 pVkImmutableSamplers = TempAllocator.ConstructArray<VkSampler>(ResDesc.ArraySize, ImmutableSampler.Ptr.RawPtr<SamplerVkImpl>()->GetVkSampler());
@@ -377,7 +377,8 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts()
                       "There are no descriptor sets in this signature, which indicates there are no other "
                       "resources besides immutable samplers. This is not currently allowed.");
 
-        GetDevice()->CreateSampler(SamplerDesc.Desc, &ImmutableSampler.Ptr);
+        if (HasDevice())
+            GetDevice()->CreateSampler(SamplerDesc.Desc, &ImmutableSampler.Ptr);
 
         auto& BindingIndex            = BindingIndices[SetId * 3 + CACHE_GROUP_OTHER];
         ImmutableSampler.DescrSet     = DSMapping[SetId];
@@ -422,20 +423,22 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts()
     SetLayoutCI.pNext = nullptr;
     SetLayoutCI.flags = 0;
 
-    const auto& LogicalDevice = GetDevice()->GetLogicalDevice();
-
-    for (size_t i = 0; i < vkSetLayoutBindings.size(); ++i)
+    if (HasDevice())
     {
-        auto& vkSetLayoutBinding = vkSetLayoutBindings[i];
-        if (vkSetLayoutBinding.empty())
-            continue;
+        const auto& LogicalDevice = GetDevice()->GetLogicalDevice();
 
-        SetLayoutCI.bindingCount = static_cast<Uint32>(vkSetLayoutBinding.size());
-        SetLayoutCI.pBindings    = vkSetLayoutBinding.data();
-        m_VkDescrSetLayouts[i]   = LogicalDevice.CreateDescriptorSetLayout(SetLayoutCI);
+        for (size_t i = 0; i < vkSetLayoutBindings.size(); ++i)
+        {
+            auto& vkSetLayoutBinding = vkSetLayoutBindings[i];
+            if (vkSetLayoutBinding.empty())
+                continue;
+
+            SetLayoutCI.bindingCount = static_cast<Uint32>(vkSetLayoutBinding.size());
+            SetLayoutCI.pBindings    = vkSetLayoutBinding.data();
+            m_VkDescrSetLayouts[i]   = LogicalDevice.CreateDescriptorSetLayout(SetLayoutCI);
+        }
+        VERIFY_EXPR(NumSets == GetNumDescriptorSets());
     }
-
-    VERIFY_EXPR(NumSets == GetNumDescriptorSets());
 }
 
 PipelineResourceSignatureVkImpl::~PipelineResourceSignatureVkImpl()

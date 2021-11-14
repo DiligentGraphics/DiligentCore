@@ -180,12 +180,12 @@ public:
     {
         try
         {
-            ValidatePSOCreateInfo(pDevice, CreateInfo);
+            ValidatePSOCreateInfo(this->GetDevice(), CreateInfo);
 
-            Uint64 DeviceQueuesMask = pDevice->GetCommandQueueMask();
+            Uint64 DeviceQueuesMask = this->GetDevice()->GetCommandQueueMask();
             DEV_CHECK_ERR((this->m_Desc.ImmediateContextMask & DeviceQueuesMask) != 0,
                           "No bits in the immediate mask (0x", std::hex, this->m_Desc.ImmediateContextMask,
-                          ") correspond to one of ", pDevice->GetCommandQueueCount(), " available software command queues.");
+                          ") correspond to one of ", this->GetDevice()->GetCommandQueueCount(), " available software command queues.");
             this->m_Desc.ImmediateContextMask &= DeviceQueuesMask;
         }
         catch (...)
@@ -505,7 +505,7 @@ protected:
     {
         size_t RTDataSize = sizeof(RayTracingPipelineData);
         // Reserve space for shader handles
-        const auto ShaderHandleSize = this->m_pDevice->GetAdapterInfo().RayTracing.ShaderGroupHandleSize;
+        const auto ShaderHandleSize = this->GetDevice()->GetAdapterInfo().RayTracing.ShaderGroupHandleSize;
         RTDataSize += ShaderHandleSize * (CreateInfo.GeneralShaderCount + CreateInfo.TriangleHitShaderCount + CreateInfo.ProceduralHitShaderCount);
         // Extra bytes were reserved to avoid compiler errors on zero-sized arrays
         RTDataSize -= sizeof(RayTracingPipelineData::ShaderHandles);
@@ -847,7 +847,7 @@ protected:
     {
         size_t RTDataSize = sizeof(RayTracingPipelineData);
         // Allocate space for shader handles
-        const auto ShaderHandleSize = this->m_pDevice->GetAdapterInfo().RayTracing.ShaderGroupHandleSize;
+        const auto ShaderHandleSize = this->GetDevice()->GetAdapterInfo().RayTracing.ShaderGroupHandleSize;
         const auto ShaderDataSize   = ShaderHandleSize * (CreateInfo.GeneralShaderCount + CreateInfo.TriangleHitShaderCount + CreateInfo.ProceduralHitShaderCount);
         RTDataSize += ShaderDataSize;
         // Extra bytes were reserved to avoid compiler errors on zero-sized arrays

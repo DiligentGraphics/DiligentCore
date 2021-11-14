@@ -106,8 +106,11 @@ void PipelineResourceSignatureGLImpl::CreateLayout()
 {
     TBindings StaticResCounter = {};
 
-    for (Uint32 s = 0; s < m_Desc.NumImmutableSamplers; ++s)
-        GetDevice()->CreateSampler(m_Desc.ImmutableSamplers[s].Desc, &m_ImmutableSamplers[s]);
+    if (HasDevice())
+    {
+        for (Uint32 s = 0; s < m_Desc.NumImmutableSamplers; ++s)
+            GetDevice()->CreateSampler(m_Desc.ImmutableSamplers[s].Desc, &m_ImmutableSamplers[s]);
+    }
 
     for (Uint32 i = 0; i < m_Desc.NumResources; ++i)
     {

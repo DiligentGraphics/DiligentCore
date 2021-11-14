@@ -170,7 +170,8 @@ void PipelineResourceSignatureD3D11Impl::CreateLayout()
         const auto& ImtblSamp        = GetImmutableSamplerDesc(i);
         auto&       ImtblSampAttribs = m_ImmutableSamplers[i];
         AllocBindPoints(m_ResourceCounters, ImtblSampAttribs.BindPoints, ImtblSamp.ShaderStages, ImtblSampAttribs.ArraySize, D3D11_RESOURCE_RANGE_SAMPLER);
-        GetDevice()->CreateSampler(ImtblSamp.Desc, ImtblSampAttribs.pSampler.DblPtr<ISampler>());
+        if (HasDevice())
+            GetDevice()->CreateSampler(ImtblSamp.Desc, ImtblSampAttribs.pSampler.DblPtr<ISampler>());
     }
 
     D3D11ShaderResourceCounters StaticResCounters;

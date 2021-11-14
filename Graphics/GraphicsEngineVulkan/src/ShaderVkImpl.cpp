@@ -53,7 +53,9 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
     {
         pRefCounters,
         pRenderDeviceVk,
-        ShaderCI.Desc
+        ShaderCI.Desc,
+        pRenderDeviceVk->GetDeviceInfo(),
+        pRenderDeviceVk->GetAdapterInfo()
     }
 // clang-format on
 {

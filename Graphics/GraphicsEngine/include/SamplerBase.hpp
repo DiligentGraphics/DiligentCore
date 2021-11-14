@@ -63,7 +63,7 @@ public:
     SamplerBase(IReferenceCounters* pRefCounters, RenderDeviceImplType* pDevice, const SamplerDesc& SamDesc, bool bIsDeviceInternal = false) :
         TDeviceObjectBase{pRefCounters, pDevice, SamDesc, bIsDeviceInternal}
     {
-        ValidateSamplerDesc(this->m_Desc, pDevice);
+        ValidateSamplerDesc(this->m_Desc, this->GetDevice());
     }
 
     ~SamplerBase()

@@ -66,6 +66,8 @@ public:
         // Do not keep strong reference to the device if the object is an internal device object
         if (!m_bIsDeviceInternal)
         {
+            // Device can be null if object is used for serialization
+            VERIFY_EXPR(m_pDevice != nullptr);
             m_pDevice->AddRef();
         }
 
@@ -172,7 +174,13 @@ public:
         return Id1 == Id2;
     }
 
-    RenderDeviceImplType* GetDevice() const { return m_pDevice; }
+    bool HasDevice() const { return m_pDevice != nullptr; }
+
+    RenderDeviceImplType* GetDevice() const
+    {
+        VERIFY_EXPR(m_pDevice);
+        return m_pDevice;
+    }
 
 protected:
     /// Pointer to the device

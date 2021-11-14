@@ -92,7 +92,9 @@ ShaderD3D11Impl::ShaderD3D11Impl(IReferenceCounters*     pRefCounters,
     {
         pRefCounters,
         pRenderDeviceD3D11,
-        ShaderCI.Desc
+        ShaderCI.Desc,
+        pRenderDeviceD3D11->GetDeviceInfo(),
+        pRenderDeviceD3D11->GetAdapterInfo()
     },
     ShaderD3DBase{ShaderCI, GetD3D11ShaderModel(pRenderDeviceD3D11->GetD3D11Device(), ShaderCI.HLSLVersion), nullptr}
 // clang-format on
@@ -104,7 +106,8 @@ ShaderD3D11Impl::ShaderD3D11Impl(IReferenceCounters*     pRefCounters,
     m_pShaderResources.reset(pResources, STDDeleterRawMem<ShaderResourcesD3D11>(Allocator));
 
     // Add shader to the cache
-    GetD3D11Shader(m_pShaderByteCode);
+    if (HasDevice())
+        GetD3D11Shader(m_pShaderByteCode);
 }
 
 ShaderD3D11Impl::~ShaderD3D11Impl()
@@ -140,7 +143,7 @@ ID3D11DeviceChild* ShaderD3D11Impl::GetD3D11Shader(ID3DBlob* pBlob) noexcept(fal
 
     VERIFY(pBlob->GetBufferSize() == m_pShaderByteCode->GetBufferSize(), "The byte code size does not match the size of original byte code");
 
-    auto* pd3d11Device = m_pDevice->GetD3D11Device();
+    auto* pd3d11Device = GetDevice()->GetD3D11Device();
 
     CComPtr<ID3D11DeviceChild> pd3d11Shader;
     switch (m_Desc.ShaderType)

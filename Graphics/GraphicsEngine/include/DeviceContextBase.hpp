@@ -161,6 +161,7 @@ public:
         }
     // clang-format on
     {
+        VERIFY_EXPR(m_pDevice != nullptr);
     }
 
     ~DeviceContextBase()

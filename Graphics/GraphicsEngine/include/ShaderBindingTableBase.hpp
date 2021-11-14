@@ -81,8 +81,8 @@ public:
                            bool                          bIsDeviceInternal = false) :
         TDeviceObjectBase{pRefCounters, pDevice, Desc, bIsDeviceInternal}
     {
-        const auto& RTProps = this->m_pDevice->GetAdapterInfo().RayTracing;
-        if (!pDevice->GetFeatures().RayTracing)
+        const auto& RTProps = this->GetDevice()->GetAdapterInfo().RayTracing;
+        if (!this->GetDevice()->GetFeatures().RayTracing)
             LOG_ERROR_AND_THROW("Ray tracing is not supported by device");
 
         ValidateShaderBindingTableDesc(this->m_Desc, RTProps.ShaderGroupHandleSize, RTProps.MaxShaderRecordStride);
@@ -113,7 +113,7 @@ public:
 
         this->m_Desc.pPSO = pPSO;
 
-        const auto& RayTracingProps = this->m_pDevice->GetAdapterInfo().RayTracing;
+        const auto& RayTracingProps = this->GetDevice()->GetAdapterInfo().RayTracing;
         try
         {
             ValidateShaderBindingTableDesc(this->m_Desc, RayTracingProps.ShaderGroupHandleSize, RayTracingProps.MaxShaderRecordStride);
@@ -147,7 +147,7 @@ public:
         this->m_RayGenShaderRecord.resize(this->m_ShaderRecordStride, Uint8{EmptyElem});
         this->m_pPSO->CopyShaderHandle(pShaderGroupName, this->m_RayGenShaderRecord.data(), this->m_ShaderRecordStride);
 
-        const Uint32 GroupSize = this->m_pDevice->GetAdapterInfo().RayTracing.ShaderGroupHandleSize;
+        const Uint32 GroupSize = this->GetDevice()->GetAdapterInfo().RayTracing.ShaderGroupHandleSize;
         std::memcpy(this->m_RayGenShaderRecord.data() + GroupSize, pData, DataSize);
         this->m_Changed = true;
     }
@@ -158,7 +158,7 @@ public:
         VERIFY_EXPR((pData == nullptr) == (DataSize == 0));
         VERIFY_EXPR((pData == nullptr) || (DataSize == this->m_ShaderRecordSize));
 
-        const Uint32 GroupSize = this->m_pDevice->GetAdapterInfo().RayTracing.ShaderGroupHandleSize;
+        const Uint32 GroupSize = this->GetDevice()->GetAdapterInfo().RayTracing.ShaderGroupHandleSize;
         const size_t Stride    = this->m_ShaderRecordStride;
         const size_t Offset    = MissIndex * Stride;
         this->m_MissShadersRecord.resize(std::max(this->m_MissShadersRecord.size(), Offset + Stride), Uint8{EmptyElem});
@@ -178,7 +178,7 @@ public:
         VERIFY_EXPR((pData == nullptr) || (DataSize == this->m_ShaderRecordSize));
 
         const size_t Stride    = this->m_ShaderRecordStride;
-        const Uint32 GroupSize = this->m_pDevice->GetAdapterInfo().RayTracing.ShaderGroupHandleSize;
+        const Uint32 GroupSize = this->GetDevice()->GetAdapterInfo().RayTracing.ShaderGroupHandleSize;
         const size_t Offset    = BindingIndex * Stride;
 
         this->m_HitGroupsRecord.resize(std::max(this->m_HitGroupsRecord.size(), Offset + Stride), Uint8{EmptyElem});
@@ -220,7 +220,7 @@ public:
 
         const Uint32 Index     = InstanceOffset + GeometryIndex * Info.HitGroupStride + RayOffsetInHitGroupIndex;
         const size_t Stride    = this->m_ShaderRecordStride;
-        const Uint32 GroupSize = this->m_pDevice->GetAdapterInfo().RayTracing.ShaderGroupHandleSize;
+        const Uint32 GroupSize = this->GetDevice()->GetAdapterInfo().RayTracing.ShaderGroupHandleSize;
         const size_t Offset    = Index * Stride;
 
         this->m_HitGroupsRecord.resize(std::max(this->m_HitGroupsRecord.size(), Offset + Stride), Uint8{EmptyElem});
@@ -271,7 +271,7 @@ public:
 
         const Uint32 BeginIndex = InstanceOffset;
         const size_t EndIndex   = InstanceOffset + GeometryCount * Info.HitGroupStride;
-        const Uint32 GroupSize  = this->m_pDevice->GetAdapterInfo().RayTracing.ShaderGroupHandleSize;
+        const Uint32 GroupSize  = this->GetDevice()->GetAdapterInfo().RayTracing.ShaderGroupHandleSize;
         const size_t Stride     = this->m_ShaderRecordStride;
 
         this->m_HitGroupsRecord.resize(std::max(this->m_HitGroupsRecord.size(), EndIndex * Stride), Uint8{EmptyElem});
@@ -310,7 +310,7 @@ public:
                     Info.BindingMode == HIT_GROUP_BINDING_MODE_PER_TLAS);
         VERIFY_EXPR(RayOffsetInHitGroupIndex < Info.HitGroupStride);
 
-        const Uint32 GroupSize = this->m_pDevice->GetAdapterInfo().RayTracing.ShaderGroupHandleSize;
+        const Uint32 GroupSize = this->GetDevice()->GetAdapterInfo().RayTracing.ShaderGroupHandleSize;
         const size_t Stride    = this->m_ShaderRecordStride;
         this->m_HitGroupsRecord.resize(std::max(this->m_HitGroupsRecord.size(), (Info.LastContributionToHitGroupIndex + 1) * Stride), Uint8{EmptyElem});
         this->m_Changed = true;
@@ -338,7 +338,7 @@ public:
         VERIFY_EXPR((pData == nullptr) == (DataSize == 0));
         VERIFY_EXPR((pData == nullptr) || (DataSize == this->m_ShaderRecordSize));
 
-        const Uint32 GroupSize = this->m_pDevice->GetAdapterInfo().RayTracing.ShaderGroupHandleSize;
+        const Uint32 GroupSize = this->GetDevice()->GetAdapterInfo().RayTracing.ShaderGroupHandleSize;
         const size_t Offset    = CallableIndex * this->m_ShaderRecordStride;
         this->m_CallableShadersRecord.resize(std::max(this->m_CallableShadersRecord.size(), Offset + this->m_ShaderRecordStride), Uint8{EmptyElem});
 
@@ -354,7 +354,7 @@ public:
         static_assert(EmptyElem != 0, "must not be zero");
 
         const auto Stride      = this->m_ShaderRecordStride;
-        const auto ShSize      = this->m_pDevice->GetAdapterInfo().RayTracing.ShaderGroupHandleSize;
+        const auto ShSize      = this->GetDevice()->GetAdapterInfo().RayTracing.ShaderGroupHandleSize;
         const auto FindPattern = [&](const std::vector<Uint8>& Data, const char* GroupName) -> bool //
         {
             for (size_t i = 0; i < Data.size(); i += Stride)
@@ -449,7 +449,7 @@ protected:
                  BindingTable&    HitShaderBindingTable,
                  BindingTable&    CallableShaderBindingTable)
     {
-        const auto ShaderGroupBaseAlignment = this->m_pDevice->GetAdapterInfo().RayTracing.ShaderGroupBaseAlignment;
+        const auto ShaderGroupBaseAlignment = this->GetDevice()->GetAdapterInfo().RayTracing.ShaderGroupBaseAlignment;
 
         const auto AlignToLarger = [ShaderGroupBaseAlignment](size_t offset) -> Uint32 {
             return AlignUp(static_cast<Uint32>(offset), ShaderGroupBaseAlignment);
@@ -473,7 +473,7 @@ protected:
             BuffDesc.BindFlags = BIND_RAY_TRACING;
             BuffDesc.Size      = BufSize;
 
-            this->m_pDevice->CreateBuffer(BuffDesc, nullptr, m_pBuffer.template DblPtr<IBuffer>());
+            this->GetDevice()->CreateBuffer(BuffDesc, nullptr, m_pBuffer.template DblPtr<IBuffer>());
             VERIFY_EXPR(m_pBuffer != nullptr);
         }
 

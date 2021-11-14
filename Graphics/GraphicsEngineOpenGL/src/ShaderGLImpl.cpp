@@ -53,6 +53,8 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
         pRefCounters,
         pDeviceGL,
         ShaderCI.Desc,
+        pDeviceGL->GetDeviceInfo(),
+        pDeviceGL->GetAdapterInfo(),
         bIsDeviceInternal
     },
     m_SourceLanguage{ShaderCI.SourceLanguage},

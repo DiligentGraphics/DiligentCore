@@ -62,13 +62,15 @@ public:
     /// \param ShdrDesc          - Shader description.
     /// \param bIsDeviceInternal - Flag indicating if the shader is an internal device object and
     ///							   must not keep a strong reference to the device.
-    ShaderBase(IReferenceCounters*   pRefCounters,
-               RenderDeviceImplType* pDevice,
-               const ShaderDesc&     ShdrDesc,
-               bool                  bIsDeviceInternal = false) :
+    ShaderBase(IReferenceCounters*        pRefCounters,
+               RenderDeviceImplType*      pDevice,
+               const ShaderDesc&          ShdrDesc,
+               const RenderDeviceInfo&    DeviceInfo,
+               const GraphicsAdapterInfo& AdapterInfo,
+               bool                       bIsDeviceInternal = false) :
         TDeviceObjectBase{pRefCounters, pDevice, ShdrDesc, bIsDeviceInternal}
     {
-        const auto& deviceFeatures = pDevice->GetFeatures();
+        const auto& deviceFeatures = DeviceInfo.Features;
         if (ShdrDesc.ShaderType == SHADER_TYPE_GEOMETRY && !deviceFeatures.GeometryShaders)
             LOG_ERROR_AND_THROW("Geometry shaders are not supported by this device.");
 
@@ -83,7 +85,7 @@ public:
 
         if ((ShdrDesc.ShaderType & SHADER_TYPE_ALL_RAY_TRACING) != 0)
         {
-            const auto RTCaps = pDevice->GetAdapterInfo().RayTracing.CapFlags;
+            const auto RTCaps = AdapterInfo.RayTracing.CapFlags;
             if (!deviceFeatures.RayTracing || (RTCaps & RAY_TRACING_CAP_FLAG_STANDALONE_SHADERS) == 0)
                 LOG_ERROR_AND_THROW("Standalone ray tracing shaders are not supported by this device.");
         }

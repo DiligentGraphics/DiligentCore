@@ -68,7 +68,7 @@ public:
         TDeviceObjectBase{pRefCounters, pDevice, Desc, bIsDeviceInternal},
         m_pRenderPass{Desc.pRenderPass}
     {
-        ValidateFramebufferDesc(this->m_Desc, pDevice);
+        ValidateFramebufferDesc(this->m_Desc, this->GetDevice());
 
         if (this->m_Desc.Width == 0 || this->m_Desc.Height == 0 || this->m_Desc.NumArraySlices == 0)
         {

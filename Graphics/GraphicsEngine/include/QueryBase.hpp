@@ -74,7 +74,7 @@ public:
               bool                  bIsDeviceInternal = false) :
         TDeviceObjectBase{pRefCounters, pDevice, Desc, bIsDeviceInternal}
     {
-        const auto& deviceFeatures = pDevice->GetFeatures();
+        const auto& deviceFeatures = this->GetDevice()->GetFeatures();
         static_assert(QUERY_TYPE_NUM_TYPES == 6, "Not all QUERY_TYPE enum values are handled below");
         switch (Desc.Type)
         {

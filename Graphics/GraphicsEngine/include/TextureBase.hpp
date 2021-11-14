@@ -129,14 +129,14 @@ public:
             }
         }
 
-        Uint64 DeviceQueuesMask = pDevice->GetCommandQueueMask();
+        Uint64 DeviceQueuesMask = this->GetDevice()->GetCommandQueueMask();
         DEV_CHECK_ERR((this->m_Desc.ImmediateContextMask & DeviceQueuesMask) != 0,
                       "No bits in the immediate context mask (0x", std::hex, this->m_Desc.ImmediateContextMask,
-                      ") correspond to one of ", pDevice->GetCommandQueueCount(), " available software command queues");
+                      ") correspond to one of ", this->GetDevice()->GetCommandQueueCount(), " available software command queues");
         this->m_Desc.ImmediateContextMask &= DeviceQueuesMask;
 
         // Validate correctness of texture description
-        ValidateTextureDesc(this->m_Desc, this->m_pDevice);
+        ValidateTextureDesc(this->m_Desc, this->GetDevice());
 
         if ((this->m_Desc.BindFlags & BIND_INPUT_ATTACHMENT) != 0)
             this->m_Desc.BindFlags |= BIND_SHADER_RESOURCE;
@@ -339,7 +339,7 @@ private:
         const auto NumViews       = GetNumDefaultViews();
         auto**     ppDefaultViews = GetDefaultViewsArrayPtr();
 
-        auto& TexViewAllocator = this->m_pDevice->GetTexViewObjAllocator();
+        auto& TexViewAllocator = this->GetDevice()->GetTexViewObjAllocator();
         VERIFY(&TexViewAllocator == &m_dbgTexViewObjAllocator, "Texture view allocator does not match allocator provided during texture initialization");
 
         for (Uint32 i = 0; i < NumViews; ++i)

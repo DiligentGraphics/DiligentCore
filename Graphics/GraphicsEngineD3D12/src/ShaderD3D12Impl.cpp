@@ -88,7 +88,9 @@ ShaderD3D12Impl::ShaderD3D12Impl(IReferenceCounters*     pRefCounters,
     {
         pRefCounters,
         pRenderDeviceD3D12,
-        ShaderCI.Desc
+        ShaderCI.Desc,
+        pRenderDeviceD3D12->GetDeviceInfo(),
+        pRenderDeviceD3D12->GetAdapterInfo()
     },
     ShaderD3DBase{ShaderCI, GetD3D12ShaderModel(pRenderDeviceD3D12, ShaderCI.HLSLVersion, ShaderCI.ShaderCompiler), pRenderDeviceD3D12->GetDxCompiler()},
     m_EntryPoint{ShaderCI.EntryPoint}

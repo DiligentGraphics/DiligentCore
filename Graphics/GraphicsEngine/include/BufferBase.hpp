@@ -94,12 +94,12 @@ public:
         m_pDefaultUAV{nullptr, STDDeleter<BufferViewImplType, TBuffViewObjAllocator>(BuffViewObjAllocator)},
         m_pDefaultSRV{nullptr, STDDeleter<BufferViewImplType, TBuffViewObjAllocator>(BuffViewObjAllocator)}
     {
-        ValidateBufferDesc(this->m_Desc, pDevice);
+        ValidateBufferDesc(this->m_Desc, this->GetDevice());
 
-        Uint64 DeviceQueuesMask = pDevice->GetCommandQueueMask();
+        Uint64 DeviceQueuesMask = this->GetDevice()->GetCommandQueueMask();
         DEV_CHECK_ERR((this->m_Desc.ImmediateContextMask & DeviceQueuesMask) != 0,
                       "No bits in the immediate context mask (0x", std::hex, this->m_Desc.ImmediateContextMask,
-                      ") correspond to one of ", pDevice->GetCommandQueueCount(), " available software command queues");
+                      ") correspond to one of ", this->GetDevice()->GetCommandQueueCount(), " available software command queues");
         this->m_Desc.ImmediateContextMask &= DeviceQueuesMask;
     }
 

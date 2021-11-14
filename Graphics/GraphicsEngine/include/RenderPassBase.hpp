@@ -86,7 +86,7 @@ public:
     {
         try
         {
-            ValidateRenderPassDesc(this->m_Desc, pDevice);
+            ValidateRenderPassDesc(this->m_Desc, this->GetDevice());
 
             auto&                RawAllocator = GetRawAllocator();
             FixedLinearAllocator MemPool{RawAllocator};
