@@ -762,6 +762,17 @@ template <class T> struct Matrix2x2
     {
     }
 
+    // clang-format off
+    constexpr Matrix2x2(const Vector2<T>& Row0,
+                        const Vector2<T>& Row1) noexcept:
+        _11{Row0.x}, _12{Row0.y},
+        _21{Row1.x}, _22{Row1.y}
+    // clang-format on
+    {
+    }
+
+
+
     template <typename Y>
     constexpr static Matrix2x2 MakeMatrix(const Y& vals)
     {
@@ -927,6 +938,17 @@ template <class T> struct Matrix3x3
         _11{i11}, _12{i12}, _13{i13},
         _21{i21}, _22{i22}, _23{i23},
         _31{i31}, _32{i32}, _33{i33}
+    // clang-format on
+    {
+    }
+
+    // clang-format off
+    constexpr Matrix3x3(const Vector3<T>& Row0,
+                        const Vector3<T>& Row1,
+                        const Vector3<T>& Row2) noexcept :
+        _11{Row0.x}, _12{Row0.y}, _13{Row0.z},
+        _21{Row1.x}, _22{Row1.y}, _23{Row1.z},
+        _31{Row2.x}, _32{Row2.y}, _33{Row2.z}
     // clang-format on
     {
     }
