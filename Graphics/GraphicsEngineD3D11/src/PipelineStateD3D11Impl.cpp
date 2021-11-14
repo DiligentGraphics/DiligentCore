@@ -149,7 +149,8 @@ void PipelineStateD3D11Impl::RemapShaderResources(const std::vector<ShaderD3D11I
     }
 }
 
-void PipelineStateD3D11Impl::InitResourceLayouts(const std::vector<ShaderD3D11Impl*>& Shaders,
+void PipelineStateD3D11Impl::InitResourceLayouts(bool                                 RemapResources,
+                                                 const std::vector<ShaderD3D11Impl*>& Shaders,
                                                  CComPtr<ID3DBlob>&                   pVSByteCode)
 {
     if (m_UsingImplicitSignature)
@@ -202,23 +203,38 @@ void PipelineStateD3D11Impl::InitResourceLayouts(const std::vector<ShaderD3D11Im
     }
 #endif
 
-    RemapShaderResources(
-        Shaders,
-        m_Signatures,
-        m_SignatureCount,
-        m_BaseBindings,
-        [this, &pVSByteCode](size_t ShaderIdx, ShaderD3D11Impl* pShader, ID3DBlob* pPatchedBytecode) //
+    if (RemapResources)
+    {
+        RemapShaderResources(
+            Shaders,
+            m_Signatures,
+            m_SignatureCount,
+            m_BaseBindings,
+            [this, &pVSByteCode](size_t ShaderIdx, ShaderD3D11Impl* pShader, ID3DBlob* pPatchedBytecode) //
+            {
+                m_ppd3d11Shaders[ShaderIdx] = pShader->GetD3D11Shader(pPatchedBytecode);
+                VERIFY_EXPR(m_ppd3d11Shaders[ShaderIdx]); // GetD3D11Shader() throws an exception in case of an error
+
+                if (pShader->GetDesc().ShaderType == SHADER_TYPE_VERTEX)
+                    pVSByteCode = pPatchedBytecode;
+            },
+            [this](ShaderD3D11Impl* pShader) //
+            {
+                ValidateShaderResources(pShader);
+            });
+    }
+    else
+    {
+        for (size_t s = 0; s < Shaders.size(); ++s)
         {
-            m_ppd3d11Shaders[ShaderIdx] = pShader->GetD3D11Shader(pPatchedBytecode);
-            VERIFY_EXPR(m_ppd3d11Shaders[ShaderIdx]); // GetD3D11Shader() throws an exception in case of an error
+            auto* const pShader = Shaders[s];
+            m_ppd3d11Shaders[s] = pShader->GetD3D11Shader();
+            VERIFY_EXPR(m_ppd3d11Shaders[s]);
 
             if (pShader->GetDesc().ShaderType == SHADER_TYPE_VERTEX)
-                pVSByteCode = pPatchedBytecode;
-        },
-        [this](ShaderD3D11Impl* pShader) //
-        {
-            ValidateShaderResources(pShader);
-        });
+                pVSByteCode = pShader->GetBytecode();
+        }
+    }
 }
 
 template <typename PSOCreateInfoType>
@@ -251,7 +267,7 @@ void PipelineStateD3D11Impl::InitInternalObjects(const PSOCreateInfoType& Create
     m_ppd3d11Shaders = MemPool.ConstructArray<D3D11ShaderAutoPtrType>(m_NumShaders);
     m_BaseBindings   = MemPool.ConstructArray<D3D11ShaderResourceCounters>(SignCount);
 
-    InitResourceLayouts(Shaders, pVSByteCode);
+    InitResourceLayouts((CreateInfo.Flags & PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES) == 0, Shaders, pVSByteCode);
 }
 
 

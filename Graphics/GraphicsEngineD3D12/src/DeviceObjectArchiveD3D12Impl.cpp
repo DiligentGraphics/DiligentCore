@@ -63,16 +63,18 @@ void PSOSerializerD3D12<Mode>::SerializePRS(
     TQual<PipelineResourceSignatureSerializedDataD3D12>& Serialized,
     DynamicLinearAllocator*                              Allocator)
 {
-    Ser(Serialized.NumResources);
+    Ser(Serialized.NumResources, Serialized.NumImmutableSamplers);
 
-    auto* pAttribs = PSOSerializer_ArrayHelper<Mode>::Create(Serialized.pResourceAttribs, Serialized.NumResources, Allocator);
+    auto* pResources = PSOSerializer_ArrayHelper<Mode>::Create(Serialized.pResourceAttribs, Serialized.NumResources, Allocator);
     for (Uint32 i = 0; i < Serialized.NumResources; ++i)
-    {
-        Ser(pAttribs[i]);
-    }
+        Ser(pResources[i]);
+
+    auto* pImtblSamplers = PSOSerializer_ArrayHelper<Mode>::Create(Serialized.pImmutableSamplers, Serialized.NumImmutableSamplers, Allocator);
+    for (Uint32 i = 0; i < Serialized.NumImmutableSamplers; ++i)
+        Ser(pImtblSamplers[i]);
 
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(Serialized) == 32, "Did you add a new member to PipelineResourceSignatureSerializedDataD3D12? Please add serialization here.");
+    static_assert(sizeof(Serialized) == 48, "Did you add a new member to PipelineResourceSignatureSerializedDataD3D12? Please add serialization here.");
 #endif
 }
 

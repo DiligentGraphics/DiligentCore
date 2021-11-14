@@ -509,15 +509,17 @@ public:
     }
 
 protected:
-    using AllocResourceAttribsCallbackType = std::function<PipelineResourceAttribsType*(FixedLinearAllocator&)>;
+    using AllocResourceAttribsCallbackType         = std::function<PipelineResourceAttribsType*(FixedLinearAllocator&)>;
+    using AllocImmutableSamplerAttribsCallbackType = std::function<void*(FixedLinearAllocator&)>;
 
     template <typename ImmutableSamplerAttribsType>
-    void Initialize(IMemoryAllocator&                       RawAllocator,
-                    const PipelineResourceSignatureDesc&    Desc,
-                    ImmutableSamplerAttribsType*&           ImmutableSamAttribs,
-                    const std::function<void()>&            InitResourceLayout,
-                    const std::function<size_t()>&          GetRequiredResourceCacheMemorySize,
-                    const AllocResourceAttribsCallbackType& AllocResourceAttribs = nullptr) noexcept(false)
+    void Initialize(IMemoryAllocator&                               RawAllocator,
+                    const PipelineResourceSignatureDesc&            Desc,
+                    ImmutableSamplerAttribsType*&                   ImmutableSamAttribs,
+                    const std::function<void()>&                    InitResourceLayout,
+                    const std::function<size_t()>&                  GetRequiredResourceCacheMemorySize,
+                    const AllocResourceAttribsCallbackType&         AllocResourceAttribs  = nullptr,
+                    const AllocImmutableSamplerAttribsCallbackType& AllocImmutableSampler = nullptr) noexcept(false)
     {
         FixedLinearAllocator Allocator{RawAllocator};
 
@@ -566,7 +568,9 @@ protected:
             m_StaticVarsMgrs = Allocator.ConstructArray<ShaderVariableManagerImplType>(NumStaticResStages, std::ref(*this), std::ref(*m_pStaticResCache));
         }
 
-        ImmutableSamAttribs = Allocator.ConstructArray<ImmutableSamplerAttribsType>(Desc.NumImmutableSamplers);
+        ImmutableSamAttribs = AllocImmutableSampler ?
+            static_cast<ImmutableSamplerAttribsType*>(AllocImmutableSampler(Allocator)) :
+            Allocator.ConstructArray<ImmutableSamplerAttribsType>(Desc.NumImmutableSamplers);
 
         InitResourceLayout();
 
@@ -614,10 +618,16 @@ protected:
     {
         VERIFY_EXPR(Desc.NumResources == Serialized.NumResources);
 
-        Initialize(RawAllocator, Desc, ImmutableSamAttribs, InitResourceLayout, GetRequiredResourceCacheMemorySize,
-                   [&Serialized](FixedLinearAllocator& Allocator) {
-                       return Allocator.CopyArray<PipelineResourceAttribsType>(Serialized.pResourceAttribs, Serialized.NumResources);
-                   });
+        Initialize(
+            RawAllocator, Desc, ImmutableSamAttribs, InitResourceLayout, GetRequiredResourceCacheMemorySize,
+            [&Serialized](FixedLinearAllocator& Allocator) {
+                return Allocator.CopyArray<PipelineResourceAttribsType>(Serialized.pResourceAttribs, Serialized.NumResources);
+            },
+            [&Desc, &Serialized](FixedLinearAllocator& Allocator) {
+                return Serialized.pImmutableSamplers ?
+                    Allocator.CopyConstructArray<ImmutableSamplerAttribsType>(Serialized.pImmutableSamplers, Serialized.NumImmutableSamplers) :
+                    Allocator.ConstructArray<ImmutableSamplerAttribsType>(Desc.NumImmutableSamplers);
+            });
     }
 
     struct PRSDescWrapper

@@ -263,8 +263,20 @@ private:
     static constexpr Uint32 MaxCounter      = (Uint32{1} << NumBitsPerStage) - 1;
 
     // 0      1      2      3      4      5      6      7      8
-    // |  PS  |  VS  |  GS  |  HS  |  DS  |  CS  |unused|unused|
-    Uint64 PackedCounters = 0;
+    // |  VS  |  PS  |  GS  |  HS  |  DS  |  CS  |unused|unused|
+    union
+    {
+        Uint64 PackedCounters = 0;
+        struct
+        {
+            Uint64 VS : NumBitsPerStage;
+            Uint64 PS : NumBitsPerStage;
+            Uint64 GS : NumBitsPerStage;
+            Uint64 HS : NumBitsPerStage;
+            Uint64 DS : NumBitsPerStage;
+            Uint64 CS : NumBitsPerStage;
+        } _Packed;
+    };
 };
 
 /// Resource counters for all shader stages and all resource types
@@ -285,13 +297,15 @@ public:
     const Uint32 SamplerInd           : _SamplerIndBits;       // Index of the assigned sampler in m_Desc.Resources.
     const Uint32 ImtblSamplerAssigned : _SamplerAssignedBits;  // Immutable sampler flag for Texture SRV or Sampler.
     // clang-format on
-    D3D11ResourceBindPoints BindPoints;
+    const D3D11ResourceBindPoints BindPoints;
 
-    PipelineResourceAttribsD3D11(Uint32 _SamplerInd,
-                                 bool   _ImtblSamplerAssigned) noexcept :
+    PipelineResourceAttribsD3D11(const D3D11ResourceBindPoints& _BindPoints,
+                                 Uint32                         _SamplerInd,
+                                 bool                           _ImtblSamplerAssigned) noexcept :
         // clang-format off
         SamplerInd          {_SamplerInd                    },
-        ImtblSamplerAssigned{_ImtblSamplerAssigned ? 1u : 0u}
+        ImtblSamplerAssigned{_ImtblSamplerAssigned ? 1u : 0u},
+        BindPoints          {_BindPoints                    }
     // clang-format on
     {
         VERIFY(SamplerInd == _SamplerInd, "Sampler index (", _SamplerInd, ") exceeds maximum representable value.");
@@ -299,7 +313,7 @@ public:
 
     // Only for serialization
     PipelineResourceAttribsD3D11() noexcept :
-        PipelineResourceAttribsD3D11{0, false}
+        PipelineResourceAttribsD3D11{{}, 0, false}
     {}
 
     bool IsSamplerAssigned() const { return SamplerInd != InvalidSamplerInd; }

@@ -192,11 +192,13 @@ private:
     using ComputePSOData    = TPSOData<ComputePipelineStateCreateInfo>;
     using TilePSOData       = TPSOData<TilePipelineStateCreateInfo>;
     using RayTracingPSOData = TPSOData<RayTracingPipelineStateCreateInfo>;
+    template <typename PSOType>
+    using TPSOMap = std::unordered_map<String, PSOType>;
 
-    std::unordered_map<String, GraphicsPSOData>   m_GraphicsPSOMap;
-    std::unordered_map<String, ComputePSOData>    m_ComputePSOMap;
-    std::unordered_map<String, TilePSOData>       m_TilePSOMap;
-    std::unordered_map<String, RayTracingPSOData> m_RayTracingPSOMap;
+    TPSOMap<GraphicsPSOData>   m_GraphicsPSOMap;
+    TPSOMap<ComputePSOData>    m_ComputePSOMap;
+    TPSOMap<TilePSOData>       m_TilePSOMap;
+    TPSOMap<RayTracingPSOData> m_RayTracingPSOMap;
 
     SerializationDeviceImpl* m_pSerializationDevice = nullptr;
 
@@ -216,7 +218,8 @@ private:
     void WriteResourceSignatureData(PendingData& Pending) const;
     void WriteShaderData(PendingData& Pending) const;
     void WriteRenderPassData(PendingData& Pending) const;
-    void WriteGraphicsPSOData(PendingData& Pending) const;
+    template <typename PSOType>
+    void WritePSOData(PendingData& Pending, TPSOMap<PSOType>& Map, ChunkType Chunk) const;
     void UpdateOffsetsInArchive(PendingData& Pending) const;
     void WritePendingDataToStream(const PendingData& Pending, IFileStream* pStream) const;
 

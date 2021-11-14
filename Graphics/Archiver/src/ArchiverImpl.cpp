@@ -186,20 +186,27 @@ void ArchiverImpl::ReserveSpace(size_t& SharedDataSize, std::array<size_t, Devic
         SharedDataSize += RP.second.GetSharedData().Size;
     }
 
-    // Reserve space for graphics pipelines
-    for (auto& PSO : m_GraphicsPSOMap)
+    // Reserve space for pipelines
+    const auto ReserveSpaceForPSO = [&SharedDataSize, &PerDeviceDataSize](auto& PSOMap) //
     {
-        SharedDataSize += sizeof(PSODataHeader) + PSO.second.SharedData.Size;
-
-        for (Uint32 dev = 0; dev < DeviceDataCount; ++dev)
+        for (auto& PSO : PSOMap)
         {
-            auto&       Dst = PerDeviceDataSize[dev];
-            const auto& Src = PSO.second.PerDeviceData[dev];
-            Dst += Src.Size;
-        }
-    }
+            SharedDataSize += sizeof(PSODataHeader) + PSO.second.SharedData.Size;
 
-    static_assert(ChunkCount == 8, "Reserve space for new chunk type");
+            for (Uint32 dev = 0; dev < DeviceDataCount; ++dev)
+            {
+                auto&       Dst = PerDeviceDataSize[dev];
+                const auto& Src = PSO.second.PerDeviceData[dev];
+                Dst += Src.Size;
+            }
+        }
+    };
+    ReserveSpaceForPSO(m_GraphicsPSOMap);
+    ReserveSpaceForPSO(m_ComputePSOMap);
+    ReserveSpaceForPSO(m_TilePSOMap);
+    ReserveSpaceForPSO(m_RayTracingPSOMap);
+
+    static_assert(ChunkCount == 9, "Reserve space for new chunk type");
 }
 
 void ArchiverImpl::WriteResourceSignatureData(PendingData& Pending) const
@@ -301,20 +308,21 @@ void ArchiverImpl::WriteRenderPassData(PendingData& Pending) const
     }
 }
 
-void ArchiverImpl::WriteGraphicsPSOData(PendingData& Pending) const
+template <typename PSOType>
+void ArchiverImpl::WritePSOData(PendingData& Pending, TPSOMap<PSOType>& PSOMap, ChunkType PSOChunkType) const
 {
-    if (m_GraphicsPSOMap.empty())
+    if (PSOMap.empty())
         return;
 
-    const auto ChunkInd        = static_cast<Uint32>(ChunkType::GraphicsPipelineStates);
+    const auto ChunkInd        = static_cast<Uint32>(PSOChunkType);
     auto&      Chunk           = Pending.ChunkData[ChunkInd];
     auto&      DataOffsetArray = Pending.DataOffsetArrayPerChunk[ChunkInd];
     Uint32*    DataSizeArray   = nullptr;
-    InitNamedResourceArrayHeader(Chunk, m_GraphicsPSOMap, DataSizeArray, DataOffsetArray);
-    Pending.ResourceCountPerChunk[ChunkInd] = StaticCast<Uint32>(m_GraphicsPSOMap.size());
+    InitNamedResourceArrayHeader(Chunk, PSOMap, DataSizeArray, DataOffsetArray);
+    Pending.ResourceCountPerChunk[ChunkInd] = StaticCast<Uint32>(PSOMap.size());
 
     Uint32 j = 0;
-    for (auto& PSO : m_GraphicsPSOMap)
+    for (auto& PSO : PSOMap)
     {
         PSODataHeader* pHeader = nullptr;
 
@@ -328,14 +336,14 @@ void ArchiverImpl::WriteGraphicsPSOData(PendingData& Pending) const
             Dst.resize(NewSize);
 
             pHeader       = reinterpret_cast<decltype(pHeader)>(&Dst[Offset]);
-            pHeader->Type = ChunkType::GraphicsPipelineStates;
+            pHeader->Type = PSOChunkType;
             // DeviceSpecificDataSize & DeviceSpecificDataOffset will be initialized later
             pHeader->InitOffsets();
 
             DataOffsetArray[j] = StaticCast<Uint32>(Offset);
             Offset += sizeof(*pHeader);
 
-            // Copy GraphicsPipelineStateCreateInfo
+            // Copy ***PipelineStateCreateInfo
             std::memcpy(&Dst[Offset], Src.Ptr, Src.Size);
         }
 
@@ -550,11 +558,14 @@ Bool ArchiverImpl::SerializeToStream(IFileStream* pStream)
             Pending.PerDeviceData[dev].reserve(ArchiveDataSize[dev]);
     }
 
-    static_assert(ChunkCount == 8, "Write data for new chunk type");
+    static_assert(ChunkCount == 9, "Write data for new chunk type");
     WriteShaderData(Pending);
     WriteResourceSignatureData(Pending);
     WriteRenderPassData(Pending);
-    WriteGraphicsPSOData(Pending);
+    WritePSOData(Pending, m_GraphicsPSOMap, ChunkType::GraphicsPipelineStates);
+    WritePSOData(Pending, m_ComputePSOMap, ChunkType::ComputePipelineStates);
+    WritePSOData(Pending, m_TilePSOMap, ChunkType::TilePipelineStates);
+    WritePSOData(Pending, m_RayTracingPSOMap, ChunkType::RayTracingPipelineStates);
 
     UpdateOffsetsInArchive(Pending);
     WritePendingDataToStream(Pending, pStream);

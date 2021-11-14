@@ -51,11 +51,51 @@ namespace Diligent
 class CommandContext;
 struct D3DShaderResourceAttribs;
 
+struct PipelineResourceImmutableSamplerAttribsD3D12
+{
+private:
+    static constexpr Uint32 _ShaderRegisterBits    = 24;
+    static constexpr Uint32 _RegisterSpaceBits     = 8;
+    static constexpr Uint32 _InvalidShaderRegister = (1u << _ShaderRegisterBits) - 1;
+    static constexpr Uint32 _InvalidRegisterSpace  = (1u << _RegisterSpaceBits) - 1;
+
+public:
+    Uint32 ArraySize = 1;
+    Uint32 ShaderRegister : _ShaderRegisterBits;
+    Uint32 RegisterSpace : _RegisterSpaceBits;
+
+    PipelineResourceImmutableSamplerAttribsD3D12() :
+        ShaderRegister{_InvalidShaderRegister},
+        RegisterSpace{_InvalidRegisterSpace}
+    {}
+
+    PipelineResourceImmutableSamplerAttribsD3D12(Uint32 _ArraySize,
+                                                 Uint32 _ShaderRegister,
+                                                 Uint32 _RegisterSpace) noexcept :
+        // clang-format off
+            ArraySize     {_ArraySize     },
+            ShaderRegister{_ShaderRegister},
+            RegisterSpace {_RegisterSpace }
+    // clang-format on
+    {
+        VERIFY(ShaderRegister == _ShaderRegister, "Shader register (", _ShaderRegister, ") exceeds maximum representable value");
+        VERIFY(RegisterSpace == _RegisterSpace, "Shader register space (", _RegisterSpace, ") exceeds maximum representable value");
+    }
+
+    bool IsValid() const
+    {
+        return (ShaderRegister != _InvalidShaderRegister &&
+                RegisterSpace != _InvalidRegisterSpace);
+    }
+};
+
 struct PipelineResourceSignatureSerializedDataD3D12
 {
-    PipelineResourceSignatureSerializedData Base;
-    const PipelineResourceAttribsD3D12*     pResourceAttribs = nullptr; // [NumResources]
-    Uint32                                  NumResources     = 0;
+    PipelineResourceSignatureSerializedData             Base;
+    const PipelineResourceAttribsD3D12*                 pResourceAttribs     = nullptr; // [NumResources]
+    Uint32                                              NumResources         = 0;
+    const PipelineResourceImmutableSamplerAttribsD3D12* pImmutableSamplers   = nullptr; // [NumImmutableSamplers]
+    Uint32                                              NumImmutableSamplers = 0;
 };
 
 /// Implementation of the Diligent::PipelineResourceSignatureD3D12Impl class
@@ -64,7 +104,8 @@ class PipelineResourceSignatureD3D12Impl final : public PipelineResourceSignatur
 public:
     using TPipelineResourceSignatureBase = PipelineResourceSignatureBase<EngineD3D12ImplTraits>;
 
-    using ResourceAttribs = TPipelineResourceSignatureBase::PipelineResourceAttribsType;
+    using ResourceAttribs         = TPipelineResourceSignatureBase::PipelineResourceAttribsType;
+    using ImmutableSamplerAttribs = PipelineResourceImmutableSamplerAttribsD3D12;
 
     PipelineResourceSignatureD3D12Impl(IReferenceCounters*                  pRefCounters,
                                        RenderDeviceD3D12Impl*               pDevice,
@@ -78,44 +119,6 @@ public:
                                        const PipelineResourceSignatureSerializedDataD3D12& Serialized);
 
     ~PipelineResourceSignatureD3D12Impl();
-
-    struct ImmutableSamplerAttribs
-    {
-    private:
-        static constexpr Uint32 _ShaderRegisterBits    = 24;
-        static constexpr Uint32 _RegisterSpaceBits     = 8;
-        static constexpr Uint32 _InvalidShaderRegister = (1u << _ShaderRegisterBits) - 1;
-        static constexpr Uint32 _InvalidRegisterSpace  = (1u << _RegisterSpaceBits) - 1;
-
-    public:
-        Uint32 ArraySize = 1;
-        Uint32 ShaderRegister : _ShaderRegisterBits;
-        Uint32 RegisterSpace : _RegisterSpaceBits;
-
-        ImmutableSamplerAttribs() :
-            ShaderRegister{_InvalidShaderRegister},
-            RegisterSpace{_InvalidRegisterSpace}
-        {}
-
-        ImmutableSamplerAttribs(Uint32 _ArraySize,
-                                Uint32 _ShaderRegister,
-                                Uint32 _RegisterSpace) noexcept :
-            // clang-format off
-            ArraySize     {_ArraySize     },
-            ShaderRegister{_ShaderRegister},
-            RegisterSpace {_RegisterSpace }
-        // clang-format on
-        {
-            VERIFY(ShaderRegister == _ShaderRegister, "Shader register (", _ShaderRegister, ") exceeds maximum representable value");
-            VERIFY(RegisterSpace == _RegisterSpace, "Shader register space (", _RegisterSpace, ") exceeds maximum representable value");
-        }
-
-        bool IsValid() const
-        {
-            return (ShaderRegister != _InvalidShaderRegister &&
-                    RegisterSpace != _InvalidRegisterSpace);
-        }
-    };
 
     const ImmutableSamplerAttribs& GetImmutableSamplerAttribs(Uint32 SampIndex) const
     {
@@ -177,7 +180,7 @@ public:
 #endif
 
 private:
-    void AllocateRootParameters();
+    void AllocateRootParameters(bool IsSerialized);
 
     void Destruct();
 

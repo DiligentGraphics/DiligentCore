@@ -67,12 +67,10 @@ void PSOSerializerGL<Mode>::SerializePRS(
 
     auto* pAttribs = PSOSerializer_ArrayHelper<Mode>::Create(Serialized.pResourceAttribs, Serialized.NumResources, Allocator);
     for (Uint32 i = 0; i < Serialized.NumResources; ++i)
-    {
         Ser(pAttribs[i]);
-    }
 
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(Serialized) == 32, "Did you add a new member to PipelineResourceSignatureSerializedDataGL? Please add serialization here.");
+    static_assert(sizeof(Serialized) == 48, "Did you add a new member to PipelineResourceSignatureSerializedDataGL? Please add serialization here.");
 #endif
 }
 

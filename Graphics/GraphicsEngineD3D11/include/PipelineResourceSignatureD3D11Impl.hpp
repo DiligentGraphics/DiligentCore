@@ -48,11 +48,26 @@
 namespace Diligent
 {
 
+struct PipelineResourceImmutableSamplerAttribsD3D11
+{
+public:
+    Uint32                  ArraySize = 1;
+    D3D11ResourceBindPoints BindPoints;
+
+    PipelineResourceImmutableSamplerAttribsD3D11() noexcept {}
+
+    bool IsAllocated() const { return !BindPoints.IsEmpty(); }
+};
+
 struct PipelineResourceSignatureSerializedDataD3D11
 {
-    PipelineResourceSignatureSerializedData Base;
-    const PipelineResourceAttribsD3D11*     pResourceAttribs = nullptr; // [NumResources]
-    Uint32                                  NumResources     = 0;
+    PipelineResourceSignatureSerializedData             Base;
+    const PipelineResourceAttribsD3D11*                 pResourceAttribs     = nullptr; // [NumResources]
+    Uint32                                              NumResources         = 0;
+    const PipelineResourceImmutableSamplerAttribsD3D11* pImmutableSamplers   = nullptr; // [NumImmutableSamplers]
+    Uint32                                              NumImmutableSamplers = 0;
+
+    std::unique_ptr<PipelineResourceImmutableSamplerAttribsD3D11> m_pImmutableSamplers;
 };
 
 /// Implementation of the Diligent::PipelineResourceSignatureD3D11Impl class
@@ -75,16 +90,13 @@ public:
     ~PipelineResourceSignatureD3D11Impl();
 
     // sizeof(ImmutableSamplerAttribs) == 24, x64
-    struct ImmutableSamplerAttribs
+    struct ImmutableSamplerAttribs : PipelineResourceImmutableSamplerAttribsD3D11
     {
-    public:
         RefCntAutoPtr<SamplerD3D11Impl> pSampler;
-        Uint32                          ArraySize = 1;
-        D3D11ResourceBindPoints         BindPoints;
 
         ImmutableSamplerAttribs() noexcept {}
-
-        bool IsAllocated() const { return !BindPoints.IsEmpty(); }
+        explicit ImmutableSamplerAttribs(const PipelineResourceImmutableSamplerAttribsD3D11& Attribs) noexcept :
+            PipelineResourceImmutableSamplerAttribsD3D11{Attribs} {}
     };
 
     const ImmutableSamplerAttribs& GetImmutableSamplerAttribs(Uint32 SampIndex) const
@@ -119,7 +131,7 @@ public:
 #endif
 
 private:
-    void CreateLayout();
+    void CreateLayout(bool IsSerialized);
 
     void Destruct();
 

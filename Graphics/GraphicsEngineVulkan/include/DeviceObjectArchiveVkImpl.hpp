@@ -59,5 +59,6 @@ struct PSOSerializerVk
 };
 
 DECL_TRIVIALLY_SERIALIZABLE(PipelineResourceAttribsVk);
+DECL_TRIVIALLY_SERIALIZABLE(PipelineResourceImmutableSamplerAttribsVk);
 
 } // namespace Diligent

@@ -126,7 +126,7 @@ PipelineResourceSignatureD3D12Impl::PipelineResourceSignatureD3D12Impl(IReferenc
             GetRawAllocator(), DecoupleCombinedSamplers(Desc), m_ImmutableSamplers,
             [this]() //
             {
-                AllocateRootParameters();
+                AllocateRootParameters(/*IsSerialized*/ false);
             },
             [this]() //
             {
@@ -140,7 +140,7 @@ PipelineResourceSignatureD3D12Impl::PipelineResourceSignatureD3D12Impl(IReferenc
     }
 }
 
-void PipelineResourceSignatureD3D12Impl::AllocateRootParameters()
+void PipelineResourceSignatureD3D12Impl::AllocateRootParameters(const bool IsSerialized)
 {
     // Index of the assigned sampler, for every texture SRV in m_Desc.Resources, or InvalidSamplerInd.
     std::vector<Uint32> TextureSrvToAssignedSamplerInd(m_Desc.NumResources, ResourceAttribs::InvalidSamplerInd);
@@ -194,12 +194,19 @@ void PipelineResourceSignatureD3D12Impl::AllocateRootParameters()
     // Allocate registers for immutable samplers first
     for (Uint32 i = 0; i < m_Desc.NumImmutableSamplers; ++i)
     {
-        auto& ImmutableSampler = m_ImmutableSamplers[i];
-
+        auto&          ImmutableSampler    = m_ImmutableSamplers[i];
         constexpr auto DescriptorRangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
-
-        ImmutableSampler.RegisterSpace  = 0;
-        ImmutableSampler.ShaderRegister = NumResources[DescriptorRangeType];
+        if (!IsSerialized)
+        {
+            ImmutableSampler.RegisterSpace  = 0;
+            ImmutableSampler.ShaderRegister = NumResources[DescriptorRangeType];
+        }
+        else
+        {
+            // AZ TODO: throw exception?
+            VERIFY_EXPR(ImmutableSampler.RegisterSpace == 0);
+            VERIFY_EXPR(ImmutableSampler.ShaderRegister == NumResources[DescriptorRangeType]);
+        }
         NumResources[DescriptorRangeType] += ImmutableSampler.ArraySize;
     }
 
@@ -304,18 +311,35 @@ void PipelineResourceSignatureD3D12Impl::AllocateRootParameters()
             Register = ImtblSamAttribs.ShaderRegister;
         }
 
-        new (m_pResourceAttribs + i) ResourceAttribs //
-            {
-                Register,
-                Space,
-                AssignedSamplerInd,
-                SRBRootIndex,
-                SRBOffsetFromTableStart,
-                SigRootIndex,
-                SigOffsetFromTableStart,
-                SrcImmutableSamplerInd != InvalidImmutableSamplerIndex,
-                d3d12RootParamType //
-            };
+        auto* const pAttrib = (m_pResourceAttribs + i);
+        if (!IsSerialized)
+        {
+            new (pAttrib) ResourceAttribs //
+                {
+                    Register,
+                    Space,
+                    AssignedSamplerInd,
+                    SRBRootIndex,
+                    SRBOffsetFromTableStart,
+                    SigRootIndex,
+                    SigOffsetFromTableStart,
+                    SrcImmutableSamplerInd != InvalidImmutableSamplerIndex,
+                    d3d12RootParamType //
+                };
+        }
+        else
+        {
+            // AZ TODO: throw exception?
+            VERIFY_EXPR(pAttrib->Register == Register);
+            VERIFY_EXPR(pAttrib->Space == Space);
+            VERIFY_EXPR(pAttrib->SamplerInd == AssignedSamplerInd);
+            VERIFY_EXPR(pAttrib->SRBRootIndex == SRBRootIndex);
+            VERIFY_EXPR(pAttrib->SRBOffsetFromTableStart == SRBOffsetFromTableStart);
+            VERIFY_EXPR(pAttrib->SigRootIndex == SigRootIndex);
+            VERIFY_EXPR(pAttrib->SigOffsetFromTableStart == SigOffsetFromTableStart);
+            VERIFY_EXPR(pAttrib->IsImmutableSamplerAssigned() == (SrcImmutableSamplerInd != InvalidImmutableSamplerIndex));
+            VERIFY_EXPR(pAttrib->GetD3D12RootParamType() == d3d12RootParamType);
+        }
     }
     ParamsBuilder.InitializeMgr(GetRawAllocator(), m_RootParams);
 
@@ -746,6 +770,7 @@ bool PipelineResourceSignatureD3D12Impl::DvpValidateCommittedResource(const Devi
             }
         }
 
+        static_assert(SHADER_RESOURCE_TYPE_LAST == 8, "Please update the switch below to handle the new shader resource type");
         switch (ResDesc.ResourceType)
         {
             case SHADER_RESOURCE_TYPE_TEXTURE_SRV:
@@ -826,7 +851,7 @@ PipelineResourceSignatureD3D12Impl::PipelineResourceSignatureD3D12Impl(IReferenc
             GetRawAllocator(), DecoupleCombinedSamplers(Desc), Serialized, m_ImmutableSamplers,
             [this]() //
             {
-                AllocateRootParameters();
+                AllocateRootParameters(/*IsSerialized*/ true);
             },
             [this]() //
             {
@@ -844,8 +869,10 @@ void PipelineResourceSignatureD3D12Impl::Serialize(PipelineResourceSignatureSeri
 {
     TPipelineResourceSignatureBase::Serialize(Serialized.Base);
 
-    Serialized.pResourceAttribs = m_pResourceAttribs;
-    Serialized.NumResources     = GetDesc().NumResources;
+    Serialized.pResourceAttribs     = m_pResourceAttribs;
+    Serialized.NumResources         = GetDesc().NumResources;
+    Serialized.pImmutableSamplers   = m_ImmutableSamplers;
+    Serialized.NumImmutableSamplers = GetDesc().NumImmutableSamplers;
 }
 
 } // namespace Diligent

@@ -139,6 +139,7 @@ protected:
         GraphicsPipelineStates,
         ComputePipelineStates,
         RayTracingPipelineStates,
+        TilePipelineStates,
         RenderPass,
         Shaders,
         //PipelineCache,

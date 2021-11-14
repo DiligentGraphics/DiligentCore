@@ -59,5 +59,6 @@ struct PSOSerializerD3D11
 };
 
 DECL_TRIVIALLY_SERIALIZABLE(PipelineResourceAttribsD3D11);
+DECL_TRIVIALLY_SERIALIZABLE(PipelineResourceImmutableSamplerAttribsD3D11);
 
 } // namespace Diligent
