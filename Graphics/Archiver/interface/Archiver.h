@@ -49,64 +49,70 @@ static const INTERFACE_ID IID_Archiver =
 
 // clang-format off
 
-// AZ TODO
+/// Pipeline state archive info
 struct PipelineStateArchiveInfo
 {
+    /// Pipeline state archive flags, see Diligent::PSO_ARCHIVE_FLAGS
     PSO_ARCHIVE_FLAGS Flags DEFAULT_INITIALIZER(PSO_ARCHIVE_FLAG_NONE);
     
-    // RENDER_DEVICE_TYPE
+    /// Bitset of RENDER_DEVICE_TYPE.
+    /// Specifies for which backends these pipeline state can be created.
     Uint32 DeviceBits DEFAULT_INITIALIZER(0);
 };
 typedef struct PipelineStateArchiveInfo PipelineStateArchiveInfo;
 
-// AZ TODO
+// Pipeline resource signature archive info
 struct ResourceSignatureArchiveInfo
 {
-    // RENDER_DEVICE_TYPE
+    /// Bitset of RENDER_DEVICE_TYPE.
+    /// Specifies for which backends these resource signature can be created.
     Uint32 DeviceBits DEFAULT_INITIALIZER(0);
 };
 typedef struct ResourceSignatureArchiveInfo ResourceSignatureArchiveInfo;
 
 
-// AZ TODO
+/// Defines the methods to manipulate a Archive object
 DILIGENT_BEGIN_INTERFACE(IArchiver, IObject)
 {
-    // AZ TODO
+    /// Write archive to memory blob
     VIRTUAL Bool METHOD(SerializeToBlob)(THIS_
                                          IDataBlob** ppBlob) PURE;
     
-    // AZ TODO
+    /// Write archive to file stream
     VIRTUAL Bool METHOD(SerializeToStream)(THIS_
                                            IFileStream* pStream) PURE;
 
-    // AZ TODO
+   
     /// Pipeline archival requires the same information as PSO creation
-
-    /// Multiple pipeline states may be packed into the same archive as long as
-    /// they use unique names.
+    /// Multiple pipeline states may be packed into the same archive as long as they use unique names.
     /// Pipeline resource signatures used by the pipeline stats will be packed into the same archive.
+   
+    /// Add graphics pipeline state to archive.
+    /// All dependent objects (render pass, resource signatures, shaders) will be added too.
     VIRTUAL Bool METHOD(AddGraphicsPipelineState)(THIS_
                                                   const GraphicsPipelineStateCreateInfo REF PSOCreateInfo,
                                                   const PipelineStateArchiveInfo REF        ArchiveInfo) PURE;
     
-    // AZ TODO
+    /// Add compute pipeline state to archive.
+    /// All dependent objects (resource signatures, shaders) will be added too.
     VIRTUAL Bool METHOD(AddComputePipelineState)(THIS_
                                                  const ComputePipelineStateCreateInfo REF PSOCreateInfo,
                                                  const PipelineStateArchiveInfo REF       ArchiveInfo) PURE;
     
-    // AZ TODO
+    /// Add ray tracing pipeline state to archive.
+    /// All dependent objects (resource signatures, shaders) will be added too.
     VIRTUAL Bool METHOD(AddRayTracingPipelineState)(THIS_
                                                     const RayTracingPipelineStateCreateInfo REF PSOCreateInfo,
                                                     const PipelineStateArchiveInfo REF          ArchiveInfo) PURE;
     
-    // AZ TODO
+    /// Add tile pipeline state to archive.
+    /// All dependent objects (resource signatures, shaders) will be added too.
     VIRTUAL Bool METHOD(AddTilePipelineState)(THIS_
                                               const TilePipelineStateCreateInfo REF PSOCreateInfo,
                                               const PipelineStateArchiveInfo REF    ArchiveInfo) PURE;
     
-
-    /// Multiple PSOs and signatures may be packed into the same archive as long as they use
-    /// distinct names
+    /// Add pipeline resource signature to archive.
+    /// Multiple PSOs and signatures may be packed into the same archive as long as they use distinct names.
     VIRTUAL Bool METHOD(AddPipelineResourceSignature)(THIS_
                                                       const PipelineResourceSignatureDesc REF SignatureDesc,
                                                       const ResourceSignatureArchiveInfo REF  ArchiveInfo) PURE;

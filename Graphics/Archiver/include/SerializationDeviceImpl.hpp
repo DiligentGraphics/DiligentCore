@@ -198,6 +198,10 @@ public:
                                                                     Uint32                               DeviceBits,
                                                                     IPipelineResourceSignature**         ppSignature) override final;
 
+    virtual void DILIGENT_CALL_TYPE GetPipelineResourceBindings(const PipelineResourceBindingAttribs& Attribs,
+                                                                Uint32&                               NumBindings,
+                                                                const PipelineResourceBinding*&       pBindings) override final;
+
 #if D3D11_SUPPORTED
     Uint32 GetD3D11FeatureLevel() const
     {
@@ -246,6 +250,8 @@ private:
     std::unique_ptr<IDXCompiler> m_pVkDxCompiler;
     Version                      m_VkVersion{1, 0};
     bool                         m_VkSupportedSpirv14 = false;
+
+    std::vector<PipelineResourceBinding> m_ResourceBindings;
 };
 
 } // namespace Diligent

@@ -85,16 +85,17 @@ public:
 
 
     /// \param pRefCounters - Reference counters object that controls the lifetime of this device object archive.
-    /// \param pSource      - AZ TODO
+    /// \param pArchive     - AZ TODO
+    /// \param DevType      - AZ TODO
     DeviceObjectArchiveBase(IReferenceCounters* pRefCounters,
-                            IArchive*           pSource,
+                            IArchive*           pArchive,
                             DeviceType          DevType);
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_DeviceObjectArchive, TObjectBase)
 
 protected:
     static constexpr Uint32 HeaderMagicNumber = 0xDE00000A;
-    static constexpr Uint32 HeaderVersion     = 1;
+    static constexpr Uint32 HeaderVersion     = (DILIGENT_API_VERSION << 12) | 1;
     static constexpr Uint32 DataPtrAlign      = sizeof(Uint64);
 
     friend class ArchiverImpl;
@@ -232,7 +233,7 @@ private:
     TPSOOffsetAndCacheMap  m_TilePSOMap;
     TPSOOffsetAndCacheMap  m_RayTracingPSOMap;
     TRPOffsetAndCacheMap   m_RenderPassMap;
-    TResourceOffsetAndSize m_Shaders;
+    TResourceOffsetAndSize m_Shaders; // AZ TODO: shader cache?
 
     std::mutex m_PRSMapGuard;
     std::mutex m_GraphicsPSOMapGuard;
@@ -247,7 +248,7 @@ private:
         String GitHash;
     } m_DebugInfo;
 
-    RefCntAutoPtr<IArchive> m_pSource; // archive source is thread-safe
+    RefCntAutoPtr<IArchive> m_pArchive; // archive is thread-safe
     const DeviceType        m_DevType;
     TBlockBaseOffsets       m_BaseOffsets = {};
 
@@ -260,6 +261,8 @@ private:
     bool GetCachedResource(const String& Name, TNameOffsetMap<ResType>& Cache, std::mutex& Guard, ResType*& pResource);
     template <typename ResType>
     void CacheResource(const String& Name, TNameOffsetMap<ResType>& Cache, std::mutex& Guard, ResType* pResource);
+
+    BlockOffsetType GetBlockOffsetType() const { return static_cast<BlockOffsetType>(m_DevType); }
 
 protected:
     struct PRSData

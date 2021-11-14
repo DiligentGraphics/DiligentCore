@@ -40,33 +40,12 @@ namespace Diligent
 namespace
 {
 
-D3D11_RESOURCE_RANGE ShaderResourceTypeToRange(SHADER_RESOURCE_TYPE Type)
-{
-    static_assert(SHADER_RESOURCE_TYPE_LAST == 8, "Please update the switch below to handle the new shader resource type");
-    switch (Type)
-    {
-        // clang-format off
-        case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:  return D3D11_RESOURCE_RANGE_CBV;
-        case SHADER_RESOURCE_TYPE_TEXTURE_SRV:      return D3D11_RESOURCE_RANGE_SRV;
-        case SHADER_RESOURCE_TYPE_BUFFER_SRV:       return D3D11_RESOURCE_RANGE_SRV;
-        case SHADER_RESOURCE_TYPE_TEXTURE_UAV:      return D3D11_RESOURCE_RANGE_UAV;
-        case SHADER_RESOURCE_TYPE_BUFFER_UAV:       return D3D11_RESOURCE_RANGE_UAV;
-        case SHADER_RESOURCE_TYPE_SAMPLER:          return D3D11_RESOURCE_RANGE_SAMPLER;
-        case SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT: return D3D11_RESOURCE_RANGE_SRV;
-            // clang-format on
-        default:
-            UNEXPECTED("Unsupported resource type");
-            return D3D11_RESOURCE_RANGE_UNKNOWN;
-    }
-}
-
-
 void ValidatePipelineResourceSignatureDescD3D11(const PipelineResourceSignatureDesc& Desc) noexcept(false)
 {
     for (Uint32 i = 0; i < Desc.NumResources; ++i)
     {
         const auto& ResDesc = Desc.Resources[i];
-        const auto  Range   = ShaderResourceTypeToRange(ResDesc.ResourceType);
+        const auto  Range   = PipelineResourceSignatureD3D11Impl::ShaderResourceTypeToRange(ResDesc.ResourceType);
 
         constexpr SHADER_TYPE UAVStages = SHADER_TYPE_PIXEL | SHADER_TYPE_COMPUTE;
         if (Range == D3D11_RESOURCE_RANGE_UAV && (ResDesc.ShaderStages & ~UAVStages) != 0)
@@ -106,6 +85,26 @@ PipelineResourceSignatureD3D11Impl::PipelineResourceSignatureD3D11Impl(IReferenc
     {
         Destruct();
         throw;
+    }
+}
+
+D3D11_RESOURCE_RANGE PipelineResourceSignatureD3D11Impl::ShaderResourceTypeToRange(SHADER_RESOURCE_TYPE Type)
+{
+    static_assert(SHADER_RESOURCE_TYPE_LAST == 8, "Please update the switch below to handle the new shader resource type");
+    switch (Type)
+    {
+        // clang-format off
+        case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:  return D3D11_RESOURCE_RANGE_CBV;
+        case SHADER_RESOURCE_TYPE_TEXTURE_SRV:      return D3D11_RESOURCE_RANGE_SRV;
+        case SHADER_RESOURCE_TYPE_BUFFER_SRV:       return D3D11_RESOURCE_RANGE_SRV;
+        case SHADER_RESOURCE_TYPE_TEXTURE_UAV:      return D3D11_RESOURCE_RANGE_UAV;
+        case SHADER_RESOURCE_TYPE_BUFFER_UAV:       return D3D11_RESOURCE_RANGE_UAV;
+        case SHADER_RESOURCE_TYPE_SAMPLER:          return D3D11_RESOURCE_RANGE_SAMPLER;
+        case SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT: return D3D11_RESOURCE_RANGE_SRV;
+            // clang-format on
+        default:
+            UNEXPECTED("Unsupported resource type");
+            return D3D11_RESOURCE_RANGE_UNKNOWN;
     }
 }
 

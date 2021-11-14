@@ -473,7 +473,9 @@ DILIGENT_TYPED_ENUM(PSO_CREATE_FLAGS, Uint32)
     /// Use this flag to silence these warnings.
     PSO_CREATE_FLAG_IGNORE_MISSING_IMMUTABLE_SAMPLERS = 0x02,
 
-    /// AZ TODO
+    /// Don't remap shader resources.
+    /// All resource signatures must have correct bindings.
+    /// Should be used only for deserialization.
     PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES       = 0x04,
 };
 DEFINE_FLAG_ENUM_OPERATORS(PSO_CREATE_FLAGS);

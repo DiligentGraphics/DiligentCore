@@ -24,6 +24,7 @@
  *  of the possibility of such damages.
  */
 
+#include "ArchiverImpl.hpp"
 #include "SerializationDeviceImpl.hpp"
 #include "GLSLangUtils.hpp"
 #include "SerializableShaderImpl.hpp"
@@ -159,6 +160,242 @@ void SerializationDeviceImpl::CreatePipelineResourceSignature(const PipelineReso
     {
         LOG_ERROR_MESSAGE("Failed to create the resource signature");
     }
+}
+
+template <typename SignatureType>
+using SignatureArray = std::array<RefCntAutoPtr<SignatureType>, MAX_RESOURCE_SIGNATURES>;
+
+template <typename SignatureType>
+static void SortResourceSignatures(const PipelineResourceBindingAttribs& Info, SignatureArray<SignatureType>& Signatures, Uint32& SignaturesCount)
+{
+    for (Uint32 i = 0; i < Info.ResourceSignaturesCount; ++i)
+    {
+        const auto* pSerPRS = ClassPtrCast<SerializableResourceSignatureImpl>(Info.ppResourceSignatures[i]);
+        const auto& Desc    = pSerPRS->GetDesc();
+
+        Signatures[Desc.BindingIndex] = pSerPRS->GetSignature<SignatureType>();
+        SignaturesCount               = std::max(SignaturesCount, static_cast<Uint32>(Desc.BindingIndex) + 1);
+    }
+}
+
+void SerializationDeviceImpl::GetPipelineResourceBindings(const PipelineResourceBindingAttribs& Info,
+                                                          Uint32&                               NumBindings,
+                                                          const PipelineResourceBinding*&       pBindings)
+{
+    NumBindings = 0;
+    pBindings   = nullptr;
+    m_ResourceBindings.clear();
+
+    const auto       ShaderStages = (Info.ShaderStages == SHADER_TYPE_UNKNOWN ? static_cast<SHADER_TYPE>(~0u) : Info.ShaderStages);
+    constexpr Uint32 RuntimeArray = 0;
+
+    switch (Info.DeviceType)
+    {
+#if D3D11_SUPPORTED
+        case RENDER_DEVICE_TYPE_D3D11:
+        {
+            DEV_CHECK_ERR(IsPowerOfTwo(ShaderStages), "For Direct3D11 only one shader stage is supported");
+            DEV_CHECK_ERR(ShaderStages >= SHADER_TYPE_VERTEX && ShaderStages <= SHADER_TYPE_COMPUTE, "ShaderStages must be valid shader type for Direct3D11");
+
+            SignatureArray<PipelineResourceSignatureD3D11Impl> Signatures      = {};
+            Uint32                                             SignaturesCount = 0;
+            SortResourceSignatures(Info, Signatures, SignaturesCount);
+
+            D3D11ShaderResourceCounters BaseBindings = {};
+            // In Direct3D11, UAVs use the same register space as render targets
+            BaseBindings[D3D11_RESOURCE_RANGE_UAV][PSInd] = Info.NumRenderTargets;
+
+            const auto ShaderInd = GetShaderTypeIndex(ShaderStages);
+            for (Uint32 sign = 0; sign < SignaturesCount; ++sign)
+            {
+                const PipelineResourceSignatureD3D11Impl* const pSignature = Signatures[sign];
+                if (pSignature == nullptr)
+                    continue;
+
+                for (Uint32 r = 0; r < pSignature->GetTotalResourceCount(); ++r)
+                {
+                    const auto& ResDesc = pSignature->GetResourceDesc(r);
+                    const auto& ResAttr = pSignature->GetResourceAttribs(r);
+                    const auto  Range   = PipelineResourceSignatureD3D11Impl::ShaderResourceTypeToRange(ResDesc.ResourceType);
+
+                    if ((ResDesc.ShaderStages & ShaderStages) == 0)
+                        continue;
+
+                    VERIFY_EXPR(ResAttr.BindPoints.IsStageActive(ShaderInd));
+                    const auto Binding = Uint32{BaseBindings[Range][ShaderInd]} + Uint32{ResAttr.BindPoints[ShaderInd]};
+
+                    PipelineResourceBinding Dst{};
+                    Dst.Name         = ResDesc.Name;
+                    Dst.ResourceType = ResDesc.ResourceType;
+                    Dst.Register     = Binding;
+                    Dst.Space        = 0;
+                    Dst.ArraySize    = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) == 0 ? ResDesc.ArraySize : RuntimeArray;
+                    Dst.ShaderStages = ResDesc.ShaderStages;
+                    m_ResourceBindings.push_back(Dst);
+                }
+
+                for (Uint32 samp = 0; samp < pSignature->GetImmutableSamplerCount(); ++samp)
+                {
+                    const auto& ImtblSam = pSignature->GetImmutableSamplerDesc(samp);
+                    const auto& SampAttr = pSignature->GetImmutableSamplerAttribs(samp);
+                    const auto  Range    = D3D11_RESOURCE_RANGE_SAMPLER;
+
+                    if ((ImtblSam.ShaderStages & ShaderStages) == 0)
+                        continue;
+
+                    VERIFY_EXPR(SampAttr.BindPoints.IsStageActive(ShaderInd));
+                    const auto Binding = Uint32{BaseBindings[Range][ShaderInd]} + Uint32{SampAttr.BindPoints[ShaderInd]};
+
+                    PipelineResourceBinding Dst{};
+                    Dst.Name         = ImtblSam.SamplerOrTextureName;
+                    Dst.ResourceType = SHADER_RESOURCE_TYPE_SAMPLER;
+                    Dst.Register     = Binding;
+                    Dst.Space        = 0;
+                    Dst.ArraySize    = SampAttr.ArraySize;
+                    Dst.ShaderStages = ImtblSam.ShaderStages;
+                    m_ResourceBindings.push_back(Dst);
+                }
+                pSignature->ShiftBindings(BaseBindings);
+            }
+            break;
+        }
+#endif
+#if D3D12_SUPPORTED
+        case RENDER_DEVICE_TYPE_D3D12:
+        {
+            SignatureArray<PipelineResourceSignatureD3D12Impl> Signatures      = {};
+            Uint32                                             SignaturesCount = 0;
+            SortResourceSignatures(Info, Signatures, SignaturesCount);
+
+            RootSignatureD3D12 RootSig{nullptr, nullptr, Signatures.data(), SignaturesCount, 0};
+            const bool         HasSpaces = RootSig.GetTotalSpaces() > 1;
+
+            for (Uint32 sign = 0; sign < SignaturesCount; ++sign)
+            {
+                const auto& pSignature = Signatures[sign];
+                if (pSignature == nullptr)
+                    continue;
+
+                const auto BaseRegisterSpace = RootSig.GetBaseRegisterSpace(sign);
+
+                for (Uint32 r = 0; r < pSignature->GetTotalResourceCount(); ++r)
+                {
+                    const auto& ResDesc = pSignature->GetResourceDesc(r);
+                    const auto& ResAttr = pSignature->GetResourceAttribs(r);
+
+                    if ((ResDesc.ShaderStages & ShaderStages) == 0)
+                        continue;
+
+                    PipelineResourceBinding Dst{};
+                    Dst.Name         = ResDesc.Name;
+                    Dst.ResourceType = ResDesc.ResourceType;
+                    Dst.Register     = ResAttr.Register;
+                    Dst.Space        = StaticCast<Uint16>(BaseRegisterSpace + ResAttr.Space);
+                    Dst.ArraySize    = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) == 0 ? ResDesc.ArraySize : RuntimeArray;
+                    Dst.ShaderStages = ResDesc.ShaderStages;
+                    m_ResourceBindings.push_back(Dst);
+                }
+            }
+            break;
+        }
+#endif
+#if GL_SUPPORTED || GLES_SUPPORTED
+        case RENDER_DEVICE_TYPE_GL:
+        case RENDER_DEVICE_TYPE_GLES:
+        {
+            SignatureArray<PipelineResourceSignatureGLImpl> Signatures      = {};
+            Uint32                                          SignaturesCount = 0;
+            SortResourceSignatures(Info, Signatures, SignaturesCount);
+
+            PipelineResourceSignatureGLImpl::TBindings BaseBindings = {};
+            for (Uint32 s = 0; s < SignaturesCount; ++s)
+            {
+                const auto& pSignature = Signatures[s];
+                if (pSignature == nullptr)
+                    continue;
+
+                for (Uint32 r = 0; r < pSignature->GetTotalResourceCount(); ++r)
+                {
+                    const auto& ResDesc = pSignature->GetResourceDesc(r);
+                    const auto& ResAttr = pSignature->GetResourceAttribs(r);
+                    const auto  Range   = PipelineResourceToBindingRange(ResDesc);
+
+                    if ((ResDesc.ShaderStages & ShaderStages) == 0)
+                        continue;
+
+                    PipelineResourceBinding Dst{};
+                    Dst.Name         = ResDesc.Name;
+                    Dst.ResourceType = ResDesc.ResourceType;
+                    Dst.Register     = BaseBindings[Range] + ResAttr.CacheOffset;
+                    Dst.Space        = 0;
+                    Dst.ArraySize    = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) == 0 ? ResDesc.ArraySize : RuntimeArray;
+                    Dst.ShaderStages = ResDesc.ShaderStages;
+                    m_ResourceBindings.push_back(Dst);
+                }
+                pSignature->ShiftBindings(BaseBindings);
+            }
+            break;
+        }
+#endif
+#if VULKAN_SUPPORTED
+        case RENDER_DEVICE_TYPE_VULKAN:
+        {
+            SignatureArray<PipelineResourceSignatureVkImpl> Signatures      = {};
+            Uint32                                          SignaturesCount = 0;
+            SortResourceSignatures(Info, Signatures, SignaturesCount);
+
+            // Same as PipelineLayoutVk::Create()
+            Uint32 DescSetLayoutCount = 0;
+            for (Uint32 sign = 0; sign < SignaturesCount; ++sign)
+            {
+                const auto& pSignature = Signatures[sign];
+                if (pSignature == nullptr)
+                    continue;
+
+                for (Uint32 r = 0; r < pSignature->GetTotalResourceCount(); ++r)
+                {
+                    const auto& ResDesc = pSignature->GetResourceDesc(r);
+                    const auto& ResAttr = pSignature->GetResourceAttribs(r);
+
+                    if ((ResDesc.ShaderStages & ShaderStages) == 0)
+                        continue;
+
+                    PipelineResourceBinding Dst{};
+                    Dst.Name         = ResDesc.Name;
+                    Dst.ResourceType = ResDesc.ResourceType;
+                    Dst.Register     = ResAttr.BindingIndex;
+                    Dst.Space        = StaticCast<Uint16>(DescSetLayoutCount + ResAttr.DescrSet);
+                    Dst.ArraySize    = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) == 0 ? ResDesc.ArraySize : RuntimeArray;
+                    Dst.ShaderStages = ResDesc.ShaderStages;
+                    m_ResourceBindings.push_back(Dst);
+                }
+
+                for (auto SetId : {PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_STATIC_MUTABLE, PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_DYNAMIC})
+                {
+                    if (pSignature->GetDescriptorSetSize(SetId) != ~0u)
+                        ++DescSetLayoutCount;
+                }
+            }
+            VERIFY_EXPR(DescSetLayoutCount <= MAX_RESOURCE_SIGNATURES * 2);
+            VERIFY_EXPR(DescSetLayoutCount >= Info.ResourceSignaturesCount);
+            break;
+        }
+#endif
+#if METAL_SUPPORTED
+        case RENDER_DEVICE_TYPE_METAL:
+        {
+            break;
+        }
+#endif
+
+        case RENDER_DEVICE_TYPE_UNDEFINED:
+        case RENDER_DEVICE_TYPE_COUNT:
+        default:
+            return;
+    }
+
+    NumBindings = static_cast<Uint32>(m_ResourceBindings.size());
+    pBindings   = m_ResourceBindings.data();
 }
 
 } // namespace Diligent

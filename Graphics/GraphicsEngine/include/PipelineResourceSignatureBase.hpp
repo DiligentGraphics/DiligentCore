@@ -94,16 +94,23 @@ void CopyPipelineResourceSignatureDesc(FixedLinearAllocator&                    
                                        PipelineResourceSignatureDesc&                                   DstDesc,
                                        std::array<Uint16, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES + 1>& ResourceOffsets);
 
-// AZ TODO
+/// Pipeline resource signature serialization data
 struct PipelineResourceSignatureSerializedData
 {
-    // AZ TODO:
-    //void* pAttribs;
-    //Uint32 AttribsSize;
     SHADER_TYPE                               ShaderStages          = SHADER_TYPE_UNKNOWN;
     SHADER_TYPE                               StaticResShaderStages = SHADER_TYPE_UNKNOWN;
     PIPELINE_TYPE                             PipelineType          = PIPELINE_TYPE_INVALID;
     std::array<Int8, MAX_SHADERS_IN_PIPELINE> StaticResStageIndex   = {};
+
+    bool operator==(const PipelineResourceSignatureSerializedData& Rhs) const
+    {
+        // clang-format off
+        return ShaderStages          == Rhs.ShaderStages          &&
+               StaticResShaderStages == Rhs.StaticResShaderStages &&
+               PipelineType          == Rhs.PipelineType          &&
+               StaticResStageIndex   == Rhs.StaticResStageIndex;
+        // clang-format on
+    }
 };
 
 /// Template class implementing base functionality of the pipeline resource signature object.

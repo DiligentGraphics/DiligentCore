@@ -185,6 +185,7 @@ private:
         CreateInfoType*  pCreateInfo = nullptr;
         SerializedMemory SharedData;
         TPerDeviceData   PerDeviceData;
+        // AZ TODO: serialize base bindings ?
 
         const SerializedMemory& GetSharedData() const { return SharedData; }
     };
@@ -215,6 +216,7 @@ private:
     };
 
     void ReserveSpace(size_t& SharedDataSize, std::array<size_t, DeviceDataCount>& PerDeviceDataSize) const;
+    void WriteDebugInfo(PendingData& Pending) const;
     void WriteResourceSignatureData(PendingData& Pending) const;
     void WriteShaderData(PendingData& Pending) const;
     void WriteRenderPassData(PendingData& Pending) const;
@@ -261,6 +263,9 @@ private:
 
     bool AddPipelineResourceSignature(IPipelineResourceSignature* pPRS);
     bool AddRenderPass(IRenderPass* pRP);
+
+    template <SerializerMode Mode>
+    void SerializeDebugInfo(Serializer<Mode>& Ser) const;
 };
 
 } // namespace Diligent
