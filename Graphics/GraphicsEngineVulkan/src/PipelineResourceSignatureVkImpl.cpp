@@ -167,8 +167,6 @@ PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCount
 
 void PipelineResourceSignatureVkImpl::CreateSetLayouts()
 {
-    auto* const pDevice = GetDevice();
-
     // Initialize static resource cache first
     if (auto NumStaticResStages = GetNumStaticResStages())
     {

@@ -49,7 +49,7 @@ void DeviceObjectArchiveVkImpl::UnpackResourceSignature(const ResourceSignatureU
         {
             PipelineResourceSignatureSerializedDataVk SerializedData;
             SerializedData.Base = PRS.Serialized;
-            SerializerVkImpl<SerializerMode::Read>::SerializePRS(Ser, SerializedData, &PRS.Allocator);
+            PSOSerializerVk<SerializerMode::Read>::SerializePRS(Ser, SerializedData, &PRS.Allocator);
             VERIFY_EXPR(Ser.IsEnd());
 
             auto* pRenderDeviceVk = ClassPtrCast<RenderDeviceVkImpl>(DeArchiveInfo.pDevice);
@@ -58,7 +58,7 @@ void DeviceObjectArchiveVkImpl::UnpackResourceSignature(const ResourceSignatureU
 }
 
 template <SerializerMode Mode>
-void DeviceObjectArchiveVkImpl::SerializerVkImpl<Mode>::SerializePRS(
+void PSOSerializerVk<Mode>::SerializePRS(
     Serializer<Mode>&                                 Ser,
     TQual<PipelineResourceSignatureSerializedDataVk>& Serialized,
     DynamicLinearAllocator*                           Allocator)
@@ -67,7 +67,7 @@ void DeviceObjectArchiveVkImpl::SerializerVkImpl<Mode>::SerializePRS(
         Serialized.DynamicUniformBufferCount,
         Serialized.DynamicStorageBufferCount);
 
-    auto* pAttribs = ArraySerializerHelper<Mode>::Create(Serialized.pResourceAttribs, Serialized.NumResources, Allocator);
+    auto* pAttribs = PSOSerializer_ArrayHelper<Mode>::Create(Serialized.pResourceAttribs, Serialized.NumResources, Allocator);
     for (Uint32 i = 0; i < Serialized.NumResources; ++i)
     {
         Ser(pAttribs[i]);
@@ -78,8 +78,8 @@ void DeviceObjectArchiveVkImpl::SerializerVkImpl<Mode>::SerializePRS(
 #endif
 }
 
-template struct DeviceObjectArchiveVkImpl::SerializerVkImpl<SerializerMode::Read>;
-template struct DeviceObjectArchiveVkImpl::SerializerVkImpl<SerializerMode::Write>;
-template struct DeviceObjectArchiveVkImpl::SerializerVkImpl<SerializerMode::Measure>;
+template struct PSOSerializerVk<SerializerMode::Read>;
+template struct PSOSerializerVk<SerializerMode::Write>;
+template struct PSOSerializerVk<SerializerMode::Measure>;
 
 } // namespace Diligent

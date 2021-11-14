@@ -138,7 +138,8 @@ private:
     using TPRSNames                = DeviceObjectArchiveBase::TPRSNames;
     using ShaderIndexArray         = DeviceObjectArchiveBase::ShaderIndexArray;
 
-    static constexpr auto   InvalidOffset   = DeviceObjectArchiveBase::BaseDataHeader::InvalidOffset;
+    static constexpr Uint32 InvalidOffset() { return DeviceObjectArchiveBase::BaseDataHeader::InvalidOffset(); }
+
     static constexpr Uint32 DeviceDataCount = static_cast<Uint32>(DeviceType::Count);
     static constexpr Uint32 ChunkCount      = static_cast<Uint32>(ChunkType::Count);
     using TPerDeviceData                    = std::array<SerializedMemory, DeviceDataCount>;
@@ -241,10 +242,10 @@ private:
 #if METAL_SUPPORTED
     template <typename CreateInfoType>
     bool PatchShadersMtlImpl(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data);
-    bool PatchShadersMtl(const GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data) { return PatchShadersMtlImpl(CreateInfo, Data); }
-    bool PatchShadersMtl(const ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data) { return PatchShadersMtlImpl(CreateInfo, Data); }
-    bool PatchShadersMtl(const TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data) { return PatchShadersMtlImpl(CreateInfo, Data); }
-    bool PatchShadersMtl(const RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data) { return PatchShadersMtlImpl(CreateInfo, Data); }
+    bool PatchShadersMtl(const GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data);
+    bool PatchShadersMtl(const ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data);
+    bool PatchShadersMtl(const TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data);
+    bool PatchShadersMtl(const RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data);
 #endif
 
     void SerializeShadersForPSO(const TShaderIndices& ShaderIndices, SerializedMemory& DeviceData) const;
@@ -258,8 +259,5 @@ private:
     bool AddPipelineResourceSignature(IPipelineResourceSignature* pPRS);
     bool AddRenderPass(IRenderPass* pRP);
 };
-
-template <SerializerMode Mode>
-using SerializerImpl = DeviceObjectArchiveBase::SerializerImpl<Mode>;
 
 } // namespace Diligent

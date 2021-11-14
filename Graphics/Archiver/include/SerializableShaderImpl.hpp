@@ -30,6 +30,7 @@
 #include "ObjectBase.hpp"
 #include "STDAllocator.hpp"
 #include "SerializationDeviceImpl.hpp"
+#include "SerializedMemory.hpp"
 
 namespace Diligent
 {

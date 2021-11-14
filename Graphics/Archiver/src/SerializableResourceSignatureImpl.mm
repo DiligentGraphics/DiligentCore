@@ -51,21 +51,21 @@ void SerializableResourceSignatureImpl::CompilePRSMtl(IReferenceCounters* pRefCo
     auto* pPRSMtl = new PRSMtlImpl{pRefCounters, Desc};
     m_pPRSMtl.reset(pPRSMtl);
 
-    PipelineResourceSignatureSerializedDataVk SerializedData;
+    PipelineResourceSignatureSerializedDataMtl SerializedData;
     pPRSMtl->PRS.Serialize(SerializedData);
     AddPRSDesc(pPRSMtl->PRS.GetDesc(), SerializedData.Base);
     
     Serializer<SerializerMode::Measure> MeasureSer;
-    DeviceObjectArchiveMtlImpl::SerializerMtlImpl<SerializerMode::Measure>::SerializePRS(MeasureSer, SerializedData, nullptr);
+    PSOSerializerMtl<SerializerMode::Measure>::SerializePRS(MeasureSer, SerializedData, nullptr);
 
     const size_t SerSize = MeasureSer.GetSize(nullptr);
     void*        SerPtr  = ALLOCATE_RAW(GetRawAllocator(), "", SerSize);
 
     Serializer<SerializerMode::Write> Ser{SerPtr, SerSize};
-    DeviceObjectArchiveMtlImpl::SerializerMtlImpl<SerializerMode::Write>::SerializePRS(Ser, SerializedData, nullptr);
+    PSOSerializerMtl<SerializerMode::Write>::SerializePRS(Ser, SerializedData, nullptr);
     VERIFY_EXPR(Ser.IsEnd());
 
-    m_pPRSMtl->Mem = SerializedMemory{SerPtr, SerSize};
+    pPRSMtl->Mem = SerializedMemory{SerPtr, SerSize};
 }
 
 } // namespace Diligent

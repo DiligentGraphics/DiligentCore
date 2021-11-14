@@ -489,13 +489,13 @@ void ArchiverImpl::SerializeShadersForPSO(const TShaderIndices& ShaderIndices, S
     ShaderIndexArray Indices{ShaderIndices.data(), static_cast<Uint32>(ShaderIndices.size())};
 
     Serializer<SerializerMode::Measure> MeasureSer;
-    SerializerImpl<SerializerMode::Measure>::SerializeShaders(MeasureSer, Indices, nullptr);
+    PSOSerializer<SerializerMode::Measure>::SerializeShaders(MeasureSer, Indices, nullptr);
 
     const size_t SerSize = MeasureSer.GetSize(nullptr);
     void*        SerPtr  = ALLOCATE_RAW(RawMemAllocator, "", SerSize);
 
     Serializer<SerializerMode::Write> Ser{SerPtr, SerSize};
-    SerializerImpl<SerializerMode::Write>::SerializeShaders(Ser, Indices, nullptr);
+    PSOSerializer<SerializerMode::Write>::SerializeShaders(Ser, Indices, nullptr);
     VERIFY_EXPR(Ser.IsEnd());
 
     DeviceData = SerializedMemory{SerPtr, SerSize};
@@ -528,36 +528,36 @@ namespace
 {
 
 template <SerializerMode Mode>
-void PSOSerializer(Serializer<Mode>&                                 Ser,
-                   const GraphicsPipelineStateCreateInfo&            PSOCreateInfo,
-                   std::array<const char*, MAX_RESOURCE_SIGNATURES>& PRSNames)
+void SerializerPSOImpl(Serializer<Mode>&                                 Ser,
+                       const GraphicsPipelineStateCreateInfo&            PSOCreateInfo,
+                       std::array<const char*, MAX_RESOURCE_SIGNATURES>& PRSNames)
 {
     const char* RPName = PSOCreateInfo.GraphicsPipeline.pRenderPass != nullptr ? PSOCreateInfo.GraphicsPipeline.pRenderPass->GetDesc().Name : "";
-    SerializerImpl<Mode>::SerializeGraphicsPSO(Ser, PSOCreateInfo, PRSNames, RPName, nullptr);
+    PSOSerializer<Mode>::SerializeGraphicsPSO(Ser, PSOCreateInfo, PRSNames, RPName, nullptr);
 }
 
 template <SerializerMode Mode>
-void PSOSerializer(Serializer<Mode>&                                 Ser,
-                   const ComputePipelineStateCreateInfo&             PSOCreateInfo,
-                   std::array<const char*, MAX_RESOURCE_SIGNATURES>& PRSNames)
+void SerializerPSOImpl(Serializer<Mode>&                                 Ser,
+                       const ComputePipelineStateCreateInfo&             PSOCreateInfo,
+                       std::array<const char*, MAX_RESOURCE_SIGNATURES>& PRSNames)
 {
-    SerializerImpl<Mode>::SerializeComputePSO(Ser, PSOCreateInfo, PRSNames, nullptr);
+    PSOSerializer<Mode>::SerializeComputePSO(Ser, PSOCreateInfo, PRSNames, nullptr);
 }
 
 template <SerializerMode Mode>
-void PSOSerializer(Serializer<Mode>&                                 Ser,
-                   const TilePipelineStateCreateInfo&                PSOCreateInfo,
-                   std::array<const char*, MAX_RESOURCE_SIGNATURES>& PRSNames)
+void SerializerPSOImpl(Serializer<Mode>&                                 Ser,
+                       const TilePipelineStateCreateInfo&                PSOCreateInfo,
+                       std::array<const char*, MAX_RESOURCE_SIGNATURES>& PRSNames)
 {
-    SerializerImpl<Mode>::SerializeTilePSO(Ser, PSOCreateInfo, PRSNames, nullptr);
+    PSOSerializer<Mode>::SerializeTilePSO(Ser, PSOCreateInfo, PRSNames, nullptr);
 }
 
 template <SerializerMode Mode>
-void PSOSerializer(Serializer<Mode>&                                 Ser,
-                   const RayTracingPipelineStateCreateInfo&          PSOCreateInfo,
-                   std::array<const char*, MAX_RESOURCE_SIGNATURES>& PRSNames)
+void SerializerPSOImpl(Serializer<Mode>&                                 Ser,
+                       const RayTracingPipelineStateCreateInfo&          PSOCreateInfo,
+                       std::array<const char*, MAX_RESOURCE_SIGNATURES>& PRSNames)
 {
-    SerializerImpl<Mode>::SerializeRayTracingPSO(Ser, PSOCreateInfo, PRSNames, nullptr);
+    PSOSerializer<Mode>::SerializeRayTracingPSO(Ser, PSOCreateInfo, PRSNames, nullptr);
 }
 
 } // namespace
@@ -598,13 +598,13 @@ bool ArchiverImpl::SerializePSO(std::unordered_map<String, TPSOData<CreateInfoTy
         }
 
         Serializer<SerializerMode::Measure> MeasureSer;
-        PSOSerializer(MeasureSer, PSOCreateInfo, PRSNames);
+        SerializerPSOImpl(MeasureSer, PSOCreateInfo, PRSNames);
 
         const size_t SerSize = MeasureSer.GetSize(nullptr);
         void*        SerPtr  = ALLOCATE_RAW(RawMemAllocator, "", SerSize);
 
         Serializer<SerializerMode::Write> Ser{SerPtr, SerSize};
-        PSOSerializer(Ser, PSOCreateInfo, PRSNames);
+        SerializerPSOImpl(Ser, PSOCreateInfo, PRSNames);
         VERIFY_EXPR(Ser.IsEnd());
 
         Data.SharedData = SerializedMemory{SerPtr, SerSize};

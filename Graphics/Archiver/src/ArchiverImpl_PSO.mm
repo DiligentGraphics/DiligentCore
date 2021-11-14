@@ -56,7 +56,7 @@ struct ShaderStageInfoMtl
 };
 
 template <typename CreateInfoType>
-bool PatchShadersMtlImpl(const CreateInfoType& CreateInfo)
+bool ArchiverImpl::PatchShadersMtlImpl(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data)
 {
     TShaderIndices ShaderIndices;
 
@@ -68,6 +68,26 @@ bool PatchShadersMtlImpl(const CreateInfoType& CreateInfo)
 
     SerializeShadersForPSO(ShaderIndices, Data.PerDeviceData[static_cast<Uint32>(DeviceType::Metal)]);
     return true;
+}
+
+bool ArchiverImpl::PatchShadersMtl(const GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data)
+{
+    return PatchShadersMtlImpl(CreateInfo, Data);
+}
+
+bool ArchiverImpl::PatchShadersMtl(const ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data)
+{
+    return PatchShadersMtlImpl(CreateInfo, Data);
+}
+
+bool ArchiverImpl::PatchShadersMtl(const TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data)
+{
+    return PatchShadersMtlImpl(CreateInfo, Data);
+}
+
+bool ArchiverImpl::PatchShadersMtl(const RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data)
+{
+    return PatchShadersMtlImpl(CreateInfo, Data);
 }
 
 } // namespace Diligent

@@ -49,7 +49,7 @@ void DeviceObjectArchiveD3D12Impl::UnpackResourceSignature(const ResourceSignatu
         {
             PipelineResourceSignatureSerializedDataD3D12 SerializedData;
             SerializedData.Base = PRS.Serialized;
-            SerializerD3D12Impl<SerializerMode::Read>::SerializePRS(Ser, SerializedData, &PRS.Allocator);
+            PSOSerializerD3D12<SerializerMode::Read>::SerializePRS(Ser, SerializedData, &PRS.Allocator);
             VERIFY_EXPR(Ser.IsEnd());
 
             auto* pRenderDeviceD3D12 = ClassPtrCast<RenderDeviceD3D12Impl>(DeArchiveInfo.pDevice);
@@ -58,14 +58,14 @@ void DeviceObjectArchiveD3D12Impl::UnpackResourceSignature(const ResourceSignatu
 }
 
 template <SerializerMode Mode>
-void DeviceObjectArchiveD3D12Impl::SerializerD3D12Impl<Mode>::SerializePRS(
+void PSOSerializerD3D12<Mode>::SerializePRS(
     Serializer<Mode>&                                    Ser,
     TQual<PipelineResourceSignatureSerializedDataD3D12>& Serialized,
     DynamicLinearAllocator*                              Allocator)
 {
     Ser(Serialized.NumResources);
 
-    auto* pAttribs = ArraySerializerHelper<Mode>::Create(Serialized.pResourceAttribs, Serialized.NumResources, Allocator);
+    auto* pAttribs = PSOSerializer_ArrayHelper<Mode>::Create(Serialized.pResourceAttribs, Serialized.NumResources, Allocator);
     for (Uint32 i = 0; i < Serialized.NumResources; ++i)
     {
         Ser(pAttribs[i]);
@@ -76,8 +76,8 @@ void DeviceObjectArchiveD3D12Impl::SerializerD3D12Impl<Mode>::SerializePRS(
 #endif
 }
 
-template struct DeviceObjectArchiveD3D12Impl::SerializerD3D12Impl<SerializerMode::Read>;
-template struct DeviceObjectArchiveD3D12Impl::SerializerD3D12Impl<SerializerMode::Write>;
-template struct DeviceObjectArchiveD3D12Impl::SerializerD3D12Impl<SerializerMode::Measure>;
+template struct PSOSerializerD3D12<SerializerMode::Read>;
+template struct PSOSerializerD3D12<SerializerMode::Write>;
+template struct PSOSerializerD3D12<SerializerMode::Measure>;
 
 } // namespace Diligent

@@ -45,17 +45,17 @@ public:
     ~DeviceObjectArchiveGLImpl();
 
     void UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature*& pSignature) override;
+};
 
-    template <SerializerMode Mode>
-    struct SerializerGLImpl
-    {
-        template <typename T>
-        using TQual = typename Serializer<Mode>::template TQual<T>;
+template <SerializerMode Mode>
+struct PSOSerializerGL
+{
+    template <typename T>
+    using TQual = typename Serializer<Mode>::template TQual<T>;
 
-        static void SerializePRS(Serializer<Mode>&                                 Ser,
-                                 TQual<PipelineResourceSignatureSerializedDataGL>& Serialized,
-                                 DynamicLinearAllocator*                           Allocator);
-    };
+    static void SerializePRS(Serializer<Mode>&                                 Ser,
+                             TQual<PipelineResourceSignatureSerializedDataGL>& Serialized,
+                             DynamicLinearAllocator*                           Allocator);
 };
 
 DECL_TRIVIALLY_SERIALIZABLE(PipelineResourceAttribsGL);

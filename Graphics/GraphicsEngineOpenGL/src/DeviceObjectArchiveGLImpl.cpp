@@ -49,7 +49,7 @@ void DeviceObjectArchiveGLImpl::UnpackResourceSignature(const ResourceSignatureU
         {
             PipelineResourceSignatureSerializedDataGL SerializedData;
             SerializedData.Base = PRS.Serialized;
-            SerializerGLImpl<SerializerMode::Read>::SerializePRS(Ser, SerializedData, &PRS.Allocator);
+            PSOSerializerGL<SerializerMode::Read>::SerializePRS(Ser, SerializedData, &PRS.Allocator);
             VERIFY_EXPR(Ser.IsEnd());
 
             auto* pRenderDeviceGL = ClassPtrCast<RenderDeviceGLImpl>(DeArchiveInfo.pDevice);
@@ -58,14 +58,14 @@ void DeviceObjectArchiveGLImpl::UnpackResourceSignature(const ResourceSignatureU
 }
 
 template <SerializerMode Mode>
-void DeviceObjectArchiveGLImpl::SerializerGLImpl<Mode>::SerializePRS(
+void PSOSerializerGL<Mode>::SerializePRS(
     Serializer<Mode>&                                 Ser,
     TQual<PipelineResourceSignatureSerializedDataGL>& Serialized,
     DynamicLinearAllocator*                           Allocator)
 {
     Ser(Serialized.NumResources);
 
-    auto* pAttribs = ArraySerializerHelper<Mode>::Create(Serialized.pResourceAttribs, Serialized.NumResources, Allocator);
+    auto* pAttribs = PSOSerializer_ArrayHelper<Mode>::Create(Serialized.pResourceAttribs, Serialized.NumResources, Allocator);
     for (Uint32 i = 0; i < Serialized.NumResources; ++i)
     {
         Ser(pAttribs[i]);
@@ -76,8 +76,8 @@ void DeviceObjectArchiveGLImpl::SerializerGLImpl<Mode>::SerializePRS(
 #endif
 }
 
-template struct DeviceObjectArchiveGLImpl::SerializerGLImpl<SerializerMode::Read>;
-template struct DeviceObjectArchiveGLImpl::SerializerGLImpl<SerializerMode::Write>;
-template struct DeviceObjectArchiveGLImpl::SerializerGLImpl<SerializerMode::Measure>;
+template struct PSOSerializerGL<SerializerMode::Read>;
+template struct PSOSerializerGL<SerializerMode::Write>;
+template struct PSOSerializerGL<SerializerMode::Measure>;
 
 } // namespace Diligent

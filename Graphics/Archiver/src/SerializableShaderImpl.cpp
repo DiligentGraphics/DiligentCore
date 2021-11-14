@@ -176,7 +176,7 @@ SerializableShaderImpl::SerializableShaderImpl(IReferenceCounters*      pRefCoun
 
 #if METAL_SUPPORTED
             case RENDER_DEVICE_TYPE_METAL:
-                CompileShaderMtl(pRefCounters, pDevice, ShaderCI);
+                CompileShaderMtl(pDevice, ShaderCI);
                 break;
 #endif
 
