@@ -44,7 +44,7 @@ using namespace Diligent::Testing;
 namespace
 {
 
-static Uint32 GetDeviceBits()
+static constexpr Uint32 GetDeviceBits()
 {
     Uint32 DeviceBits = 0;
 #    if D3D11_SUPPORTED
@@ -67,74 +67,6 @@ static Uint32 GetDeviceBits()
 #    endif
     return DeviceBits;
 }
-
-bool operator==(const RenderPassDesc& Lhs, const RenderPassDesc& Rhs)
-{
-    if (Lhs.AttachmentCount != Rhs.AttachmentCount ||
-        Lhs.SubpassCount != Rhs.SubpassCount ||
-        Lhs.DependencyCount != Rhs.DependencyCount)
-        return false;
-
-    for (Uint32 i = 0; i < Lhs.AttachmentCount; ++i)
-    {
-        const auto& LhsAttach = Lhs.pAttachments[i];
-        const auto& RhsAttach = Rhs.pAttachments[i];
-        if (!(LhsAttach == RhsAttach))
-            return false;
-    }
-
-    for (Uint32 i = 0; i < Lhs.SubpassCount; ++i)
-    {
-        const auto& LhsSubpass = Lhs.pSubpasses[i];
-        const auto& RhsSubpass = Rhs.pSubpasses[i];
-        if (!(LhsSubpass == RhsSubpass))
-            return false;
-    }
-
-    for (Uint32 i = 0; i < Lhs.DependencyCount; ++i)
-    {
-        const auto& LhsDep = Lhs.pDependencies[i];
-        const auto& RhsDep = Rhs.pDependencies[i];
-        if (!(LhsDep == RhsDep))
-            return false;
-    }
-    return true;
-}
-
-bool operator==(const GraphicsPipelineDesc& Lhs, const GraphicsPipelineDesc& Rhs)
-{
-    if (!(Lhs.BlendDesc == Rhs.BlendDesc &&
-          Lhs.SampleMask == Rhs.SampleMask &&
-          Lhs.RasterizerDesc == Rhs.RasterizerDesc &&
-          Lhs.DepthStencilDesc == Rhs.DepthStencilDesc &&
-          Lhs.InputLayout == Rhs.InputLayout &&
-          Lhs.PrimitiveTopology == Rhs.PrimitiveTopology &&
-          Lhs.NumViewports == Rhs.NumViewports &&
-          Lhs.NumRenderTargets == Rhs.NumRenderTargets &&
-          Lhs.SubpassIndex == Rhs.SubpassIndex &&
-          Lhs.ShadingRateFlags == Rhs.ShadingRateFlags &&
-          Lhs.DSVFormat == Rhs.DSVFormat &&
-          Lhs.SmplDesc.Count == Rhs.SmplDesc.Count &&
-          Lhs.SmplDesc.Quality == Rhs.SmplDesc.Quality))
-        return false;
-
-    for (Uint32 i = 0; i < Lhs.NumRenderTargets; ++i)
-    {
-        if (Lhs.RTVFormats[i] != Rhs.RTVFormats[i])
-            return false;
-    }
-
-    if ((Lhs.pRenderPass != nullptr) != (Rhs.pRenderPass != nullptr))
-        return false;
-
-    if (Lhs.pRenderPass)
-    {
-        if (!(Lhs.pRenderPass->GetDesc() == Rhs.pRenderPass->GetDesc()))
-            return false;
-    }
-    return true;
-}
-
 
 TEST(ArchiveTest, ResourceSignature)
 {
@@ -794,6 +726,181 @@ TEST(ArchiveTest, GraphicsPipeline)
 }
 
 
+namespace HLSL
+{
+const std::string ComputeTest_CS = R"(
+
+RWTexture2D</*format=rgba8*/ float4> g_tex2DUAV : register(u0);
+
+[numthreads(16, 16, 1)]
+void main(uint3 DTid : SV_DispatchThreadID)
+{
+    uint2 ui2Dim;
+    g_tex2DUAV.GetDimensions(ui2Dim.x, ui2Dim.y);
+    if (DTid.x >= ui2Dim.x || DTid.y >= ui2Dim.y)
+        return;
+
+    g_tex2DUAV[DTid.xy] = float4(float2(DTid.xy % 256u) / 256.0, 0.0, 1.0);
+}
+)";
+} // namespace HLSL
+
+
+TEST(ArchiveTest, ComputePipeline)
+{
+    auto* pEnv             = TestingEnvironment::GetInstance();
+    auto* pDevice          = pEnv->GetDevice();
+    auto* pArchiverFactory = pEnv->GetArchiverFactory();
+    auto* pDearchiver      = pDevice->GetEngineFactory()->GetDearchiver();
+
+    if (!pDearchiver || !pArchiverFactory)
+        return;
+
+    constexpr char PSO1Name[] = "PSO archive test - 1";
+
+    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+
+    auto*       pSwapChain = pEnv->GetSwapChain();
+    const auto& SCDesc     = pSwapChain->GetDesc();
+
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_TestingSwapChain};
+    if (!pTestingSwapChain)
+    {
+        GTEST_SKIP() << "Compute shader test requires testing swap chain";
+    }
+
+    RefCntAutoPtr<ISerializationDevice> pSerializationDevice;
+    SerializationDeviceCreateInfo       DeviceCI;
+    pArchiverFactory->CreateSerializationDevice(DeviceCI, &pSerializationDevice);
+    ASSERT_NE(pSerializationDevice, nullptr);
+
+    RefCntAutoPtr<IPipelineResourceSignature> pRefPRS;
+    RefCntAutoPtr<IPipelineResourceSignature> pSerializedPRS;
+    {
+        const PipelineResourceDesc Resources[] = {{SHADER_TYPE_COMPUTE, "g_tex2DUAV", 1, SHADER_RESOURCE_TYPE_TEXTURE_UAV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC}};
+
+        PipelineResourceSignatureDesc PRSDesc;
+        PRSDesc.Name         = "PRS archive test - 1";
+        PRSDesc.Resources    = Resources;
+        PRSDesc.NumResources = _countof(Resources);
+
+        pSerializationDevice->CreatePipelineResourceSignature(PRSDesc, GetDeviceBits(), &pSerializedPRS);
+        ASSERT_NE(pSerializedPRS, nullptr);
+
+        pDevice->CreatePipelineResourceSignature(PRSDesc, &pRefPRS);
+        ASSERT_NE(pRefPRS, nullptr);
+    }
+
+    RefCntAutoPtr<IPipelineState>       pRefPSO;
+    RefCntAutoPtr<IDeviceObjectArchive> pArchive;
+    {
+        RefCntAutoPtr<IArchiver> pArchiver;
+        pArchiverFactory->CreateArchiver(pSerializationDevice, &pArchiver);
+        ASSERT_NE(pArchiver, nullptr);
+
+        ShaderCreateInfo ShaderCI;
+        ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
+        ShaderCI.ShaderCompiler             = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+        ShaderCI.UseCombinedTextureSamplers = true;
+
+        RefCntAutoPtr<IShader> pCS;
+        RefCntAutoPtr<IShader> pSerializedCS;
+        {
+            ShaderCI.Desc.ShaderType = SHADER_TYPE_COMPUTE;
+            ShaderCI.EntryPoint      = "main";
+            ShaderCI.Desc.Name       = "Compute shader test";
+            ShaderCI.Source          = HLSL::ComputeTest_CS.c_str();
+
+            pDevice->CreateShader(ShaderCI, &pCS);
+            ASSERT_NE(pCS, nullptr);
+
+            pSerializationDevice->CreateShader(ShaderCI, GetDeviceBits(), &pSerializedCS);
+            ASSERT_NE(pSerializedCS, nullptr);
+        }
+        {
+            ComputePipelineStateCreateInfo PSOCreateInfo;
+            PSOCreateInfo.PSODesc.Name         = PSO1Name;
+            PSOCreateInfo.PSODesc.PipelineType = PIPELINE_TYPE_COMPUTE;
+            PSOCreateInfo.pCS                  = pCS;
+
+            IPipelineResourceSignature* Signatures[] = {pRefPRS};
+            PSOCreateInfo.ResourceSignaturesCount    = _countof(Signatures);
+            PSOCreateInfo.ppResourceSignatures       = Signatures;
+
+            pDevice->CreateComputePipelineState(PSOCreateInfo, &pRefPSO);
+            ASSERT_NE(pRefPSO, nullptr);
+        }
+        {
+            ComputePipelineStateCreateInfo PSOCreateInfo;
+            PSOCreateInfo.PSODesc.Name         = PSO1Name;
+            PSOCreateInfo.PSODesc.PipelineType = PIPELINE_TYPE_COMPUTE;
+            PSOCreateInfo.pCS                  = pSerializedCS;
+
+            IPipelineResourceSignature* Signatures[] = {pSerializedPRS};
+            PSOCreateInfo.ResourceSignaturesCount    = _countof(Signatures);
+            PSOCreateInfo.ppResourceSignatures       = Signatures;
+
+            PipelineStateArchiveInfo ArchiveInfo;
+            ArchiveInfo.DeviceBits = GetDeviceBits();
+            ASSERT_TRUE(pArchiver->AddComputePipelineState(PSOCreateInfo, ArchiveInfo));
+        }
+        RefCntAutoPtr<IDataBlob> pBlob;
+        pArchiver->SerializeToBlob(&pBlob);
+        ASSERT_NE(pBlob, nullptr);
+
+        RefCntAutoPtr<IArchive> pSource{MakeNewRCObj<ArchiveMemoryImpl>{}(pBlob)};
+        pDearchiver->CreateDeviceObjectArchive(pSource, &pArchive);
+        ASSERT_NE(pArchive, nullptr);
+    }
+
+    // Unpack PSO
+    RefCntAutoPtr<IPipelineState> pUnpackedPSO;
+    {
+        PipelineStateUnpackInfo UnpackInfo;
+        UnpackInfo.Name         = PSO1Name;
+        UnpackInfo.pArchive     = pArchive;
+        UnpackInfo.pDevice      = pDevice;
+        UnpackInfo.PipelineType = PIPELINE_TYPE_COMPUTE;
+
+        pDearchiver->UnpackPipelineState(UnpackInfo, &pUnpackedPSO);
+        ASSERT_NE(pUnpackedPSO, nullptr);
+    }
+
+    RefCntAutoPtr<IShaderResourceBinding> pSRB;
+    pRefPRS->CreateShaderResourceBinding(&pSRB);
+    ASSERT_NE(pSRB, nullptr);
+
+    auto*      pContext = pEnv->GetDeviceContext();
+    const auto Dispatch = [&](IPipelineState* pPSO, ITextureView* pTextureUAV) //
+    {
+        pSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_tex2DUAV")->Set(pTextureUAV);
+
+        pContext->SetPipelineState(pPSO);
+        pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+        DispatchComputeAttribs DispatchAttribs;
+        DispatchAttribs.ThreadGroupCountX = (SCDesc.Width + 15) / 16;
+        DispatchAttribs.ThreadGroupCountY = (SCDesc.Height + 15) / 16;
+        pContext->DispatchCompute(DispatchAttribs);
+    };
+
+    // Dispatch reference
+    Dispatch(pRefPSO, pTestingSwapChain->GetCurrentBackBufferUAV());
+
+    ITexture*           pTexUAV = pTestingSwapChain->GetCurrentBackBufferUAV()->GetTexture();
+    StateTransitionDesc Barrier{pTexUAV, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE};
+    pContext->TransitionResourceStates(1, &Barrier);
+
+    pContext->Flush();
+    pContext->InvalidateState(); // because TakeSnapshot() will clear state in D3D11
+
+    pTestingSwapChain->TakeSnapshot(pTexUAV);
+
+    // Dispatch
+    Dispatch(pUnpackedPSO, pTestingSwapChain->GetCurrentBackBufferUAV());
+
+    pSwapChain->Present();
+}
 } // namespace
 
 #endif // ARCHIVER_SUPPORTED

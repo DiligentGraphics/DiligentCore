@@ -349,6 +349,9 @@ bool DeviceObjectArchiveBase::ReadComputePSOData(const String& Name, PSOData<Com
 
             PSOSerializer<SerializerMode::Read>::SerializeComputePSO(Ser, PSO.CreateInfo, PSO.PRSNames, &PSO.Allocator);
             VERIFY_EXPR(Ser.IsEnd());
+
+            // AZ TODO: required only if PSO has resource signatures
+            PSO.CreateInfo.Flags |= PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES;
             return true;
         });
 }
@@ -370,6 +373,9 @@ bool DeviceObjectArchiveBase::ReadTilePSOData(const String& Name, PSOData<TilePi
 
             PSOSerializer<SerializerMode::Read>::SerializeTilePSO(Ser, PSO.CreateInfo, PSO.PRSNames, &PSO.Allocator);
             VERIFY_EXPR(Ser.IsEnd());
+
+            // AZ TODO: required only if PSO has resource signatures
+            PSO.CreateInfo.Flags |= PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES;
             return true;
         });
 }
@@ -391,6 +397,9 @@ bool DeviceObjectArchiveBase::ReadRayTracingPSOData(const String& Name, PSOData<
 
             PSOSerializer<SerializerMode::Read>::SerializeRayTracingPSO(Ser, PSO.CreateInfo, PSO.PRSNames, &PSO.Allocator);
             VERIFY_EXPR(Ser.IsEnd());
+
+            // AZ TODO: required only if PSO has resource signatures
+            PSO.CreateInfo.Flags |= PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES;
             return true;
         });
 }

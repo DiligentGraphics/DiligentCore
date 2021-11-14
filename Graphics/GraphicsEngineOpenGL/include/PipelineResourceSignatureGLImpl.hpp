@@ -61,8 +61,15 @@ const char*   GetBindingRangeName(BINDING_RANGE Range);
 struct PipelineResourceSignatureSerializedDataGL
 {
     PipelineResourceSignatureSerializedData Base;
-    const PipelineResourceAttribsGL*        pResourceAttribs = nullptr; // [NumResources]
-    Uint32                                  NumResources     = 0;
+    const PipelineResourceAttribsGL*        pResourceAttribs     = nullptr; // [NumResources]
+    Uint32                                  NumResources         = 0;
+    const RefCntAutoPtr<ISampler>*          pImmutableSamplers   = nullptr; // unused
+    Uint32                                  NumImmutableSamplers = 0;       // unused
+
+    // AZ TODO: serialize?
+    //TBindings m_BindingCount = {};
+    //Uint64 m_DynamicUBOMask = 0;
+    //Uint64 m_DynamicSSBOMask = 0;
 };
 
 /// Implementation of the Diligent::PipelineResourceSignatureGLImpl class
@@ -136,7 +143,7 @@ public:
     void Serialize(PipelineResourceSignatureSerializedDataGL& Serialized) const;
 
 private:
-    void CreateLayout();
+    void CreateLayout(bool IsSerialized);
 
     void Destruct();
 

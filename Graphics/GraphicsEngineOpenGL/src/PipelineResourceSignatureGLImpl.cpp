@@ -88,7 +88,7 @@ PipelineResourceSignatureGLImpl::PipelineResourceSignatureGLImpl(IReferenceCount
             GetRawAllocator(), Desc, m_ImmutableSamplers,
             [this]() //
             {
-                CreateLayout();
+                CreateLayout(/*IsSerialized*/ false);
             },
             [this]() //
             {
@@ -102,7 +102,7 @@ PipelineResourceSignatureGLImpl::PipelineResourceSignatureGLImpl(IReferenceCount
     }
 }
 
-void PipelineResourceSignatureGLImpl::CreateLayout()
+void PipelineResourceSignatureGLImpl::CreateLayout(const bool IsSerialized)
 {
     TBindings StaticResCounter = {};
 
@@ -117,16 +117,27 @@ void PipelineResourceSignatureGLImpl::CreateLayout()
         const auto& ResDesc = m_Desc.Resources[i];
         VERIFY(i == 0 || ResDesc.VarType >= m_Desc.Resources[i - 1].VarType, "Resources must be sorted by variable type");
 
+        auto* const pAttribs = (m_pResourceAttribs + i);
         if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER)
         {
             const auto ImtblSamplerIdx = FindImmutableSampler(ResDesc.ShaderStages, ResDesc.Name);
             // Create sampler resource without cache space
-            new (m_pResourceAttribs + i) ResourceAttribs //
-                {
-                    ResourceAttribs::InvalidCacheOffset,
-                    ImtblSamplerIdx == InvalidImmutableSamplerIndex ? ResourceAttribs::InvalidSamplerInd : ImtblSamplerIdx,
-                    ImtblSamplerIdx != InvalidImmutableSamplerIndex //
-                };
+            if (!IsSerialized)
+            {
+                new (pAttribs) ResourceAttribs //
+                    {
+                        ResourceAttribs::InvalidCacheOffset,
+                        ImtblSamplerIdx == InvalidImmutableSamplerIndex ? ResourceAttribs::InvalidSamplerInd : ImtblSamplerIdx,
+                        ImtblSamplerIdx != InvalidImmutableSamplerIndex //
+                    };
+            }
+            else
+            {
+                // AZ TODO: throw exception?
+                VERIFY_EXPR(pAttribs->CacheOffset == ResourceAttribs::InvalidCacheOffset);
+                VERIFY_EXPR(pAttribs->SamplerInd == (ImtblSamplerIdx == InvalidImmutableSamplerIndex ? ResourceAttribs::InvalidSamplerInd : ImtblSamplerIdx));
+                VERIFY_EXPR(pAttribs->IsImmutableSamplerAssigned() == (ImtblSamplerIdx != InvalidImmutableSamplerIndex));
+            }
         }
         else
         {
@@ -147,12 +158,22 @@ void PipelineResourceSignatureGLImpl::CreateLayout()
             }
 
             auto& CacheOffset = m_BindingCount[Range];
-            new (m_pResourceAttribs + i) ResourceAttribs //
-                {
-                    CacheOffset,
-                    SamplerIdx,
-                    ImtblSamplerIdx != InvalidImmutableSamplerIndex // _ImtblSamplerAssigned
-                };
+            if (!IsSerialized)
+            {
+                new (pAttribs) ResourceAttribs //
+                    {
+                        CacheOffset,
+                        SamplerIdx,
+                        ImtblSamplerIdx != InvalidImmutableSamplerIndex // _ImtblSamplerAssigned
+                    };
+            }
+            else
+            {
+                // AZ TODO: throw exception?
+                VERIFY_EXPR(pAttribs->CacheOffset == CacheOffset);
+                VERIFY_EXPR(pAttribs->SamplerInd == SamplerIdx);
+                VERIFY_EXPR(pAttribs->IsImmutableSamplerAssigned() == (ImtblSamplerIdx != InvalidImmutableSamplerIndex));
+            }
 
             if (Range == BINDING_RANGE_UNIFORM_BUFFER && (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0)
             {
@@ -601,7 +622,7 @@ PipelineResourceSignatureGLImpl::PipelineResourceSignatureGLImpl(IReferenceCount
             GetRawAllocator(), Desc, Serialized, m_ImmutableSamplers,
             [this]() //
             {
-                CreateLayout();
+                CreateLayout(/*IsSerialized*/ true);
             },
             [this]() //
             {
