@@ -137,3 +137,5 @@ else()
         OUTPUT_NAME Archiver
     )
 endif()
+
+set_common_target_properties(Diligent-Archiver)

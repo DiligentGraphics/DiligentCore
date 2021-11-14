@@ -45,17 +45,17 @@ public:
     ~DeviceObjectArchiveD3D11Impl();
 
     void UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature*& pSignature) override;
+};
 
-    template <SerializerMode Mode>
-    struct SerializerD3D11Impl
-    {
-        template <typename T>
-        using TQual = typename Serializer<Mode>::template TQual<T>;
+template <SerializerMode Mode>
+struct PSOSerializerD3D11
+{
+    template <typename T>
+    using TQual = typename Serializer<Mode>::template TQual<T>;
 
-        static void SerializePRS(Serializer<Mode>&                                    Ser,
-                                 TQual<PipelineResourceSignatureSerializedDataD3D11>& Serialized,
-                                 DynamicLinearAllocator*                              Allocator);
-    };
+    static void SerializePRS(Serializer<Mode>&                                    Ser,
+                             TQual<PipelineResourceSignatureSerializedDataD3D11>& Serialized,
+                             DynamicLinearAllocator*                              Allocator);
 };
 
 DECL_TRIVIALLY_SERIALIZABLE(PipelineResourceAttribsD3D11);

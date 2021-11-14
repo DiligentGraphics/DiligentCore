@@ -281,7 +281,7 @@ bool DeviceObjectArchiveBase::ReadPRSData(const String& Name, PRSData& PRS)
                 return false;
             }
 
-            SerializerImpl<SerializerMode::Read>::SerializePRS(Ser, PRS.Desc, PRS.Serialized, &PRS.Allocator);
+            PSOSerializer<SerializerMode::Read>::SerializePRS(Ser, PRS.Desc, PRS.Serialized, &PRS.Allocator);
             VERIFY_EXPR(Ser.IsEnd());
             return true;
         });
@@ -302,7 +302,7 @@ bool DeviceObjectArchiveBase::ReadRPData(const String& Name, RPData& RP)
                 return false;
             }
 
-            SerializerImpl<SerializerMode::Read>::SerializeRenderPass(Ser, RP.Desc, &RP.Allocator);
+            PSOSerializer<SerializerMode::Read>::SerializeRenderPass(Ser, RP.Desc, &RP.Allocator);
             VERIFY_EXPR(Ser.IsEnd());
             return true;
         });
@@ -323,7 +323,7 @@ bool DeviceObjectArchiveBase::ReadGraphicsPSOData(const String& Name, PSOData<Gr
                 return false;
             }
 
-            SerializerImpl<SerializerMode::Read>::SerializeGraphicsPSO(Ser, PSO.CreateInfo, PSO.PRSNames, PSO.RenderPassName, &PSO.Allocator);
+            PSOSerializer<SerializerMode::Read>::SerializeGraphicsPSO(Ser, PSO.CreateInfo, PSO.PRSNames, PSO.RenderPassName, &PSO.Allocator);
             VERIFY_EXPR(Ser.IsEnd());
 
             // AZ TODO: required only if PSO has resource signatures
@@ -347,7 +347,7 @@ bool DeviceObjectArchiveBase::ReadComputePSOData(const String& Name, PSOData<Com
                 return false;
             }
 
-            SerializerImpl<SerializerMode::Read>::SerializeComputePSO(Ser, PSO.CreateInfo, PSO.PRSNames, &PSO.Allocator);
+            PSOSerializer<SerializerMode::Read>::SerializeComputePSO(Ser, PSO.CreateInfo, PSO.PRSNames, &PSO.Allocator);
             VERIFY_EXPR(Ser.IsEnd());
             return true;
         });
@@ -368,7 +368,7 @@ bool DeviceObjectArchiveBase::ReadTilePSOData(const String& Name, PSOData<TilePi
                 return false;
             }
 
-            SerializerImpl<SerializerMode::Read>::SerializeTilePSO(Ser, PSO.CreateInfo, PSO.PRSNames, &PSO.Allocator);
+            PSOSerializer<SerializerMode::Read>::SerializeTilePSO(Ser, PSO.CreateInfo, PSO.PRSNames, &PSO.Allocator);
             VERIFY_EXPR(Ser.IsEnd());
             return true;
         });
@@ -389,7 +389,7 @@ bool DeviceObjectArchiveBase::ReadRayTracingPSOData(const String& Name, PSOData<
                 return false;
             }
 
-            SerializerImpl<SerializerMode::Read>::SerializeRayTracingPSO(Ser, PSO.CreateInfo, PSO.PRSNames, &PSO.Allocator);
+            PSOSerializer<SerializerMode::Read>::SerializeRayTracingPSO(Ser, PSO.CreateInfo, PSO.PRSNames, &PSO.Allocator);
             VERIFY_EXPR(Ser.IsEnd());
             return true;
         });
@@ -617,7 +617,7 @@ bool DeviceObjectArchiveBase::LoadShaders(Serializer<SerializerMode::Read>&    S
     DynamicLinearAllocator Allocator{GetRawAllocator()};
 
     ShaderIndexArray ShaderIndices;
-    SerializerImpl<SerializerMode::Read>::SerializeShaders(Ser, ShaderIndices, &Allocator);
+    PSOSerializer<SerializerMode::Read>::SerializeShaders(Ser, ShaderIndices, &Allocator);
 
     Shaders.resize(ShaderIndices.Count);
 
@@ -889,7 +889,7 @@ void DeviceObjectArchiveBase::UnpackResourceSignatureImpl(const ResourceSignatur
 }
 
 template <SerializerMode Mode>
-void DeviceObjectArchiveBase::SerializerImpl<Mode>::SerializeImmutableSampler(
+void PSOSerializer<Mode>::SerializeImmutableSampler(
     Serializer<Mode>&            Ser,
     TQual<ImmutableSamplerDesc>& SampDesc)
 {
@@ -916,7 +916,7 @@ void DeviceObjectArchiveBase::SerializerImpl<Mode>::SerializeImmutableSampler(
 }
 
 template <SerializerMode Mode>
-void DeviceObjectArchiveBase::SerializerImpl<Mode>::SerializePRS(
+void PSOSerializer<Mode>::SerializePRS(
     Serializer<Mode>&                               Ser,
     TQual<PipelineResourceSignatureDesc>&           Desc,
     TQual<PipelineResourceSignatureSerializedData>& Serialized,
@@ -931,7 +931,7 @@ void DeviceObjectArchiveBase::SerializerImpl<Mode>::SerializePRS(
     // skip Name
     // skip SRBAllocationGranularity
 
-    auto* pResources = ArraySerializerHelper<Mode>::Create(Desc.Resources, Desc.NumResources, Allocator);
+    auto* pResources = PSOSerializer_ArrayHelper<Mode>::Create(Desc.Resources, Desc.NumResources, Allocator);
     for (Uint32 r = 0; r < Desc.NumResources; ++r)
     {
         // Serialize PipelineResourceDesc
@@ -944,7 +944,7 @@ void DeviceObjectArchiveBase::SerializerImpl<Mode>::SerializePRS(
             ResDesc.Flags);
     }
 
-    auto* pImmutableSamplers = ArraySerializerHelper<Mode>::Create(Desc.ImmutableSamplers, Desc.NumImmutableSamplers, Allocator);
+    auto* pImmutableSamplers = PSOSerializer_ArrayHelper<Mode>::Create(Desc.ImmutableSamplers, Desc.NumImmutableSamplers, Allocator);
     for (Uint32 s = 0; s < Desc.NumImmutableSamplers; ++s)
     {
         // Serialize ImmutableSamplerDesc
@@ -966,7 +966,7 @@ void DeviceObjectArchiveBase::SerializerImpl<Mode>::SerializePRS(
 }
 
 template <SerializerMode Mode>
-void DeviceObjectArchiveBase::SerializerImpl<Mode>::SerializePSO(
+void PSOSerializer<Mode>::SerializePSO(
     Serializer<Mode>&               Ser,
     TQual<PipelineStateCreateInfo>& CreateInfo,
     TQual<TPRSNames>&               PRSNames,
@@ -995,7 +995,7 @@ void DeviceObjectArchiveBase::SerializerImpl<Mode>::SerializePSO(
             ResLayout.NumVariables,
             ResLayout.NumImmutableSamplers);
 
-        auto* pVariables = ArraySerializerHelper<Mode>::Create(ResLayout.Variables, ResLayout.NumVariables, Allocator);
+        auto* pVariables = PSOSerializer_ArrayHelper<Mode>::Create(ResLayout.Variables, ResLayout.NumVariables, Allocator);
         for (Uint32 i = 0; i < ResLayout.NumVariables; ++i)
         {
             // Serialize ShaderResourceVariableDesc
@@ -1005,7 +1005,7 @@ void DeviceObjectArchiveBase::SerializerImpl<Mode>::SerializePSO(
                 Var.Type,
                 Var.Flags);
         }
-        auto* pImmutableSamplers = ArraySerializerHelper<Mode>::Create(ResLayout.ImmutableSamplers, ResLayout.NumImmutableSamplers, Allocator);
+        auto* pImmutableSamplers = PSOSerializer_ArrayHelper<Mode>::Create(ResLayout.ImmutableSamplers, ResLayout.NumImmutableSamplers, Allocator);
         for (Uint32 i = 0; i < ResLayout.NumImmutableSamplers; ++i)
         {
             // Serialize ImmutableSamplerDesc
@@ -1021,7 +1021,7 @@ void DeviceObjectArchiveBase::SerializerImpl<Mode>::SerializePSO(
 }
 
 template <SerializerMode Mode>
-void DeviceObjectArchiveBase::SerializerImpl<Mode>::SerializeGraphicsPSO(
+void PSOSerializer<Mode>::SerializeGraphicsPSO(
     Serializer<Mode>&                       Ser,
     TQual<GraphicsPipelineStateCreateInfo>& CreateInfo,
     TQual<TPRSNames>&                       PRSNames,
@@ -1039,7 +1039,7 @@ void DeviceObjectArchiveBase::SerializerImpl<Mode>::SerializeGraphicsPSO(
     {
         auto& InputLayout = CreateInfo.GraphicsPipeline.InputLayout;
         Ser(InputLayout.NumElements);
-        auto* pLayoutElements = ArraySerializerHelper<Mode>::Create(InputLayout.LayoutElements, InputLayout.NumElements, Allocator);
+        auto* pLayoutElements = PSOSerializer_ArrayHelper<Mode>::Create(InputLayout.LayoutElements, InputLayout.NumElements, Allocator);
         for (Uint32 i = 0; i < InputLayout.NumElements; ++i)
         {
             // Serialize LayoutElement
@@ -1076,7 +1076,7 @@ void DeviceObjectArchiveBase::SerializerImpl<Mode>::SerializeGraphicsPSO(
 }
 
 template <SerializerMode Mode>
-void DeviceObjectArchiveBase::SerializerImpl<Mode>::SerializeComputePSO(
+void PSOSerializer<Mode>::SerializeComputePSO(
     Serializer<Mode>&                      Ser,
     TQual<ComputePipelineStateCreateInfo>& CreateInfo,
     TQual<TPRSNames>&                      PRSNames,
@@ -1092,7 +1092,7 @@ void DeviceObjectArchiveBase::SerializerImpl<Mode>::SerializeComputePSO(
 }
 
 template <SerializerMode Mode>
-void DeviceObjectArchiveBase::SerializerImpl<Mode>::SerializeTilePSO(
+void PSOSerializer<Mode>::SerializeTilePSO(
     Serializer<Mode>&                   Ser,
     TQual<TilePipelineStateCreateInfo>& CreateInfo,
     TQual<TPRSNames>&                   PRSNames,
@@ -1111,7 +1111,7 @@ void DeviceObjectArchiveBase::SerializerImpl<Mode>::SerializeTilePSO(
 }
 
 template <SerializerMode Mode>
-void DeviceObjectArchiveBase::SerializerImpl<Mode>::SerializeRayTracingPSO(
+void PSOSerializer<Mode>::SerializeRayTracingPSO(
     Serializer<Mode>&                         Ser,
     TQual<RayTracingPipelineStateCreateInfo>& CreateInfo,
     TQual<TPRSNames>&                         PRSNames,
@@ -1130,7 +1130,7 @@ void DeviceObjectArchiveBase::SerializerImpl<Mode>::SerializeRayTracingPSO(
 }
 
 template <SerializerMode Mode>
-void DeviceObjectArchiveBase::SerializerImpl<Mode>::SerializeRenderPass(
+void PSOSerializer<Mode>::SerializeRenderPass(
     Serializer<Mode>&       Ser,
     TQual<RenderPassDesc>&  RPDesc,
     DynamicLinearAllocator* Allocator)
@@ -1140,7 +1140,7 @@ void DeviceObjectArchiveBase::SerializerImpl<Mode>::SerializeRenderPass(
         RPDesc.SubpassCount,
         RPDesc.DependencyCount);
 
-    auto* pAttachments = ArraySerializerHelper<Mode>::Create(RPDesc.pAttachments, RPDesc.AttachmentCount, Allocator);
+    auto* pAttachments = PSOSerializer_ArrayHelper<Mode>::Create(RPDesc.pAttachments, RPDesc.AttachmentCount, Allocator);
     for (Uint32 i = 0; i < RPDesc.AttachmentCount; ++i)
     {
         // Serialize RenderPassAttachmentDesc
@@ -1155,7 +1155,7 @@ void DeviceObjectArchiveBase::SerializerImpl<Mode>::SerializeRenderPass(
             Attachment.FinalState);
     }
 
-    auto* pSubpasses = ArraySerializerHelper<Mode>::Create(RPDesc.pSubpasses, RPDesc.SubpassCount, Allocator);
+    auto* pSubpasses = PSOSerializer_ArrayHelper<Mode>::Create(RPDesc.pSubpasses, RPDesc.SubpassCount, Allocator);
     for (Uint32 i = 0; i < RPDesc.SubpassCount; ++i)
     {
         // Serialize SubpassDesc
@@ -1171,7 +1171,7 @@ void DeviceObjectArchiveBase::SerializerImpl<Mode>::SerializeRenderPass(
             HasDepthStencilAttachment,
             HasShadingRateAttachment);
 
-        auto* pInputAttachments = ArraySerializerHelper<Mode>::Create(Subpass.pInputAttachments, Subpass.InputAttachmentCount, Allocator);
+        auto* pInputAttachments = PSOSerializer_ArrayHelper<Mode>::Create(Subpass.pInputAttachments, Subpass.InputAttachmentCount, Allocator);
         for (Uint32 j = 0; j < Subpass.InputAttachmentCount; ++j)
         {
             auto& InputAttach = pInputAttachments[j];
@@ -1179,7 +1179,7 @@ void DeviceObjectArchiveBase::SerializerImpl<Mode>::SerializeRenderPass(
                 InputAttach.State);
         }
 
-        auto* pRenderTargetAttachments = ArraySerializerHelper<Mode>::Create(Subpass.pRenderTargetAttachments, Subpass.RenderTargetAttachmentCount, Allocator);
+        auto* pRenderTargetAttachments = PSOSerializer_ArrayHelper<Mode>::Create(Subpass.pRenderTargetAttachments, Subpass.RenderTargetAttachmentCount, Allocator);
         for (Uint32 j = 0; j < Subpass.RenderTargetAttachmentCount; ++j)
         {
             auto& RTAttach = pRenderTargetAttachments[j];
@@ -1187,7 +1187,7 @@ void DeviceObjectArchiveBase::SerializerImpl<Mode>::SerializeRenderPass(
                 RTAttach.State);
         }
 
-        auto* pPreserveAttachments = ArraySerializerHelper<Mode>::Create(Subpass.pPreserveAttachments, Subpass.PreserveAttachmentCount, Allocator);
+        auto* pPreserveAttachments = PSOSerializer_ArrayHelper<Mode>::Create(Subpass.pPreserveAttachments, Subpass.PreserveAttachmentCount, Allocator);
         for (Uint32 j = 0; j < Subpass.PreserveAttachmentCount; ++j)
         {
             auto& Attach = pPreserveAttachments[j];
@@ -1196,7 +1196,7 @@ void DeviceObjectArchiveBase::SerializerImpl<Mode>::SerializeRenderPass(
 
         if (HasResolveAttachments)
         {
-            auto* pResolveAttachments = ArraySerializerHelper<Mode>::Create(Subpass.pResolveAttachments, Subpass.RenderTargetAttachmentCount, Allocator);
+            auto* pResolveAttachments = PSOSerializer_ArrayHelper<Mode>::Create(Subpass.pResolveAttachments, Subpass.RenderTargetAttachmentCount, Allocator);
             for (Uint32 j = 0; j < Subpass.RenderTargetAttachmentCount; ++j)
             {
                 auto& ResAttach = pResolveAttachments[j];
@@ -1206,20 +1206,20 @@ void DeviceObjectArchiveBase::SerializerImpl<Mode>::SerializeRenderPass(
         }
         if (HasDepthStencilAttachment)
         {
-            auto* pDepthStencilAttachment = ArraySerializerHelper<Mode>::Create(Subpass.pDepthStencilAttachment, 1, Allocator);
+            auto* pDepthStencilAttachment = PSOSerializer_ArrayHelper<Mode>::Create(Subpass.pDepthStencilAttachment, 1, Allocator);
             Ser(pDepthStencilAttachment->AttachmentIndex,
                 pDepthStencilAttachment->State);
         }
         if (HasShadingRateAttachment)
         {
-            auto* pShadingRateAttachment = ArraySerializerHelper<Mode>::Create(Subpass.pShadingRateAttachment, 1, Allocator);
+            auto* pShadingRateAttachment = PSOSerializer_ArrayHelper<Mode>::Create(Subpass.pShadingRateAttachment, 1, Allocator);
             Ser(pShadingRateAttachment->Attachment.AttachmentIndex,
                 pShadingRateAttachment->Attachment.State,
                 pShadingRateAttachment->TileSize);
         }
     }
 
-    auto* pDependencies = ArraySerializerHelper<Mode>::Create(RPDesc.pDependencies, RPDesc.DependencyCount, Allocator);
+    auto* pDependencies = PSOSerializer_ArrayHelper<Mode>::Create(RPDesc.pDependencies, RPDesc.DependencyCount, Allocator);
     for (Uint32 i = 0; i < RPDesc.DependencyCount; ++i)
     {
         // Serialize SubpassDependencyDesc
@@ -1243,21 +1243,21 @@ void DeviceObjectArchiveBase::SerializerImpl<Mode>::SerializeRenderPass(
 }
 
 template <SerializerMode Mode>
-void DeviceObjectArchiveBase::SerializerImpl<Mode>::SerializeShaders(
+void PSOSerializer<Mode>::SerializeShaders(
     Serializer<Mode>&        Ser,
     TQual<ShaderIndexArray>& Shaders,
     DynamicLinearAllocator*  Allocator)
 {
     Ser(Shaders.Count);
 
-    auto* pIndices = ArraySerializerHelper<Mode>::Create(Shaders.pIndices, Shaders.Count, Allocator);
+    auto* pIndices = PSOSerializer_ArrayHelper<Mode>::Create(Shaders.pIndices, Shaders.Count, Allocator);
     for (Uint32 i = 0; i < Shaders.Count; ++i)
         Ser(pIndices[i]);
 }
 
-template struct DeviceObjectArchiveBase::SerializerImpl<SerializerMode::Read>;
-template struct DeviceObjectArchiveBase::SerializerImpl<SerializerMode::Write>;
-template struct DeviceObjectArchiveBase::SerializerImpl<SerializerMode::Measure>;
+template struct PSOSerializer<SerializerMode::Read>;
+template struct PSOSerializer<SerializerMode::Write>;
+template struct PSOSerializer<SerializerMode::Measure>;
 
 
 } // namespace Diligent

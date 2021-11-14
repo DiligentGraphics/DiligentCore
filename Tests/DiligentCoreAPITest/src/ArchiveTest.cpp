@@ -160,9 +160,9 @@ TEST(ArchiveTest, ResourceSignature)
         pArchiverFactory->CreateSerializationDevice(DeviceCI, &pSerializationDevice);
         ASSERT_NE(pSerializationDevice, nullptr);
 
-        RefCntAutoPtr<IArchiver> pBuilder;
-        pArchiverFactory->CreateArchiver(pSerializationDevice, &pBuilder);
-        ASSERT_NE(pBuilder, nullptr);
+        RefCntAutoPtr<IArchiver> pArchiver;
+        pArchiverFactory->CreateArchiver(pSerializationDevice, &pArchiver);
+        ASSERT_NE(pArchiver, nullptr);
 
         // PRS 1
         {
@@ -191,7 +191,7 @@ TEST(ArchiveTest, ResourceSignature)
 
             ResourceSignatureArchiveInfo ArchiveInfo;
             ArchiveInfo.DeviceBits = GetDeviceBits();
-            ASSERT_TRUE(pBuilder->AddPipelineResourceSignature(PRSDesc, ArchiveInfo));
+            ASSERT_TRUE(pArchiver->AddPipelineResourceSignature(PRSDesc, ArchiveInfo));
 
             pDevice->CreatePipelineResourceSignature(PRSDesc, &pRefPRS_1);
             ASSERT_NE(pRefPRS_1, nullptr);
@@ -215,14 +215,14 @@ TEST(ArchiveTest, ResourceSignature)
 
             ResourceSignatureArchiveInfo ArchiveInfo;
             ArchiveInfo.DeviceBits = GetDeviceBits();
-            ASSERT_TRUE(pBuilder->AddPipelineResourceSignature(PRSDesc, ArchiveInfo));
+            ASSERT_TRUE(pArchiver->AddPipelineResourceSignature(PRSDesc, ArchiveInfo));
 
             pDevice->CreatePipelineResourceSignature(PRSDesc, &pRefPRS_2);
             ASSERT_NE(pRefPRS_2, nullptr);
         }
 
         RefCntAutoPtr<IDataBlob> pBlob;
-        pBuilder->SerializeToBlob(&pBlob);
+        pArchiver->SerializeToBlob(&pBlob);
         ASSERT_NE(pBlob, nullptr);
 
         RefCntAutoPtr<IArchive> pSource{MakeNewRCObj<ArchiveMemoryImpl>{}(pBlob)};
@@ -463,9 +463,9 @@ TEST(ArchiveTest, GraphicsPipeline)
     RefCntAutoPtr<IPipelineState>       pRefPSO_2;
     RefCntAutoPtr<IDeviceObjectArchive> pArchive;
     {
-        RefCntAutoPtr<IArchiver> pBuilder;
-        pArchiverFactory->CreateArchiver(pSerializationDevice, &pBuilder);
-        ASSERT_NE(pBuilder, nullptr);
+        RefCntAutoPtr<IArchiver> pArchiver;
+        pArchiverFactory->CreateArchiver(pSerializationDevice, &pArchiver);
+        ASSERT_NE(pArchiver, nullptr);
 
         ShaderCreateInfo ShaderCI;
         ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
@@ -544,7 +544,7 @@ TEST(ArchiveTest, GraphicsPipeline)
 
             PipelineStateArchiveInfo ArchiveInfo;
             ArchiveInfo.DeviceBits = GetDeviceBits();
-            ASSERT_TRUE(pBuilder->AddGraphicsPipelineState(PSOCreateInfo2, ArchiveInfo));
+            ASSERT_TRUE(pArchiver->AddGraphicsPipelineState(PSOCreateInfo2, ArchiveInfo));
 
             pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pRefPSO_1);
             ASSERT_NE(pRefPSO_1, nullptr);
@@ -562,7 +562,7 @@ TEST(ArchiveTest, GraphicsPipeline)
 
             PipelineStateArchiveInfo ArchiveInfo;
             ArchiveInfo.DeviceBits = GetDeviceBits();
-            ASSERT_TRUE(pBuilder->AddGraphicsPipelineState(PSOCreateInfo2, ArchiveInfo));
+            ASSERT_TRUE(pArchiver->AddGraphicsPipelineState(PSOCreateInfo2, ArchiveInfo));
 
             GraphicsPipeline.pRenderPass = pRenderPass1;
 
@@ -571,7 +571,7 @@ TEST(ArchiveTest, GraphicsPipeline)
         }
 
         RefCntAutoPtr<IDataBlob> pBlob;
-        pBuilder->SerializeToBlob(&pBlob);
+        pArchiver->SerializeToBlob(&pBlob);
         ASSERT_NE(pBlob, nullptr);
 
         RefCntAutoPtr<IArchive> pSource{MakeNewRCObj<ArchiveMemoryImpl>{}(pBlob)};

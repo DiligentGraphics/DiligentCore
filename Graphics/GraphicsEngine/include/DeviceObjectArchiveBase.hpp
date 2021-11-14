@@ -75,6 +75,15 @@ public:
         Count
     };
 
+    using TPRSNames = std::array<const char*, MAX_RESOURCE_SIGNATURES>;
+
+    struct ShaderIndexArray
+    {
+        const Uint32* pIndices = nullptr;
+        Uint32        Count    = 0;
+    };
+
+
     /// \param pRefCounters - Reference counters object that controls the lifetime of this device object archive.
     /// \param pSource      - AZ TODO
     DeviceObjectArchiveBase(IReferenceCounters* pRefCounters,
@@ -156,7 +165,7 @@ protected:
     {
         using Uint32Array = std::array<Uint32, static_cast<Uint32>(DeviceType::Count)>;
 
-        static constexpr Uint32 InvalidOffset = ~0u;
+        static constexpr Uint32 InvalidOffset() { return ~0u; }
 
         ChunkType   Type;
         Uint32Array m_DeviceSpecificDataSize;
@@ -166,7 +175,7 @@ protected:
         Uint32 GetOffset(DeviceType DevType) const { return m_DeviceSpecificDataOffset[static_cast<Uint32>(DevType)]; }
         Uint32 GetEndOffset(DeviceType DevType) const { return GetOffset(DevType) + GetSize(DevType); }
 
-        void InitOffsets() { m_DeviceSpecificDataOffset.fill(InvalidOffset); }
+        void InitOffsets() { m_DeviceSpecificDataOffset.fill(InvalidOffset()); }
 
         void SetSize(DeviceType DevType, Uint32 Size) { m_DeviceSpecificDataSize[static_cast<Uint32>(DevType)] = Size; }
         void SetOffset(DeviceType DevType, Uint32 Offset) { m_DeviceSpecificDataOffset[static_cast<Uint32>(DevType)] = Offset; }
@@ -252,8 +261,6 @@ private:
     void CacheResource(const String& Name, TNameOffsetMap<ResType>& Cache, std::mutex& Guard, ResType* pResource);
 
 protected:
-    using TPRSNames = std::array<const char*, MAX_RESOURCE_SIGNATURES>;
-
     struct PRSData
     {
         DynamicLinearAllocator                  Allocator;
@@ -364,92 +371,92 @@ public:
     void UnpackRayTracingPSO(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState*& pPSO);
     void UnpackTilePSO(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState*& pPSO);
     void UnpackRenderPass(const RenderPassUnpackInfo& DeArchiveInfo, IRenderPass*& pRP);
-
-    template <SerializerMode Mode>
-    struct ArraySerializerHelper
-    {
-        template <typename T>
-        static const T* Create(const T*                SrcArray,
-                               Uint32                  Count,
-                               DynamicLinearAllocator* Allocator)
-        {
-            VERIFY_EXPR(Allocator == nullptr);
-            VERIFY_EXPR((SrcArray != nullptr) == (Count != 0));
-            return SrcArray;
-        }
-    };
-
-    template <>
-    struct ArraySerializerHelper<SerializerMode::Read>
-    {
-        template <typename T>
-        static T* Create(const T*&               DstArray,
-                         Uint32                  Count,
-                         DynamicLinearAllocator* Allocator)
-        {
-            VERIFY_EXPR(Allocator != nullptr);
-            VERIFY_EXPR(DstArray == nullptr);
-            auto* pArray = Allocator->ConstructArray<T>(Count);
-            DstArray     = pArray;
-            return pArray;
-        }
-    };
-
-    struct ShaderIndexArray
-    {
-        const Uint32* pIndices = nullptr;
-        Uint32        Count    = 0;
-    };
-
-    template <SerializerMode Mode>
-    struct SerializerImpl
-    {
-        template <typename T>
-        using TQual = typename Serializer<Mode>::template TQual<T>;
-
-        static void SerializeImmutableSampler(Serializer<Mode>&            Ser,
-                                              TQual<ImmutableSamplerDesc>& SampDesc);
-
-        static void SerializePRS(Serializer<Mode>&                               Ser,
-                                 TQual<PipelineResourceSignatureDesc>&           Desc,
-                                 TQual<PipelineResourceSignatureSerializedData>& Serialized,
-                                 DynamicLinearAllocator*                         Allocator);
-
-        static void SerializePSO(Serializer<Mode>&               Ser,
-                                 TQual<PipelineStateCreateInfo>& CreateInfo,
-                                 TQual<TPRSNames>&               PRSNames,
-                                 DynamicLinearAllocator*         Allocator);
-
-        static void SerializeGraphicsPSO(Serializer<Mode>&                       Ser,
-                                         TQual<GraphicsPipelineStateCreateInfo>& CreateInfo,
-                                         TQual<TPRSNames>&                       PRSNames,
-                                         TQual<const char*>&                     RenderPassName,
-                                         DynamicLinearAllocator*                 Allocator);
-
-        static void SerializeComputePSO(Serializer<Mode>&                      Ser,
-                                        TQual<ComputePipelineStateCreateInfo>& CreateInfo,
-                                        TQual<TPRSNames>&                      PRSNames,
-                                        DynamicLinearAllocator*                Allocator);
-
-        static void SerializeTilePSO(Serializer<Mode>&                   Ser,
-                                     TQual<TilePipelineStateCreateInfo>& CreateInfo,
-                                     TQual<TPRSNames>&                   PRSNames,
-                                     DynamicLinearAllocator*             Allocator);
-
-        static void SerializeRayTracingPSO(Serializer<Mode>&                         Ser,
-                                           TQual<RayTracingPipelineStateCreateInfo>& CreateInfo,
-                                           TQual<TPRSNames>&                         PRSNames,
-                                           DynamicLinearAllocator*                   Allocator);
-
-        static void SerializeRenderPass(Serializer<Mode>&       Ser,
-                                        TQual<RenderPassDesc>&  RPDesc,
-                                        DynamicLinearAllocator* Allocator);
-
-        static void SerializeShaders(Serializer<Mode>&        Ser,
-                                     TQual<ShaderIndexArray>& Shaders,
-                                     DynamicLinearAllocator*  Allocator);
-    };
 };
+
+
+template <SerializerMode Mode>
+struct PSOSerializer_ArrayHelper
+{
+    template <typename T>
+    static const T* Create(const T*                SrcArray,
+                           Uint32                  Count,
+                           DynamicLinearAllocator* Allocator)
+    {
+        VERIFY_EXPR(Allocator == nullptr);
+        VERIFY_EXPR((SrcArray != nullptr) == (Count != 0));
+        return SrcArray;
+    }
+};
+
+template <>
+struct PSOSerializer_ArrayHelper<SerializerMode::Read>
+{
+    template <typename T>
+    static T* Create(const T*&               DstArray,
+                     Uint32                  Count,
+                     DynamicLinearAllocator* Allocator)
+    {
+        VERIFY_EXPR(Allocator != nullptr);
+        VERIFY_EXPR(DstArray == nullptr);
+        auto* pArray = Allocator->ConstructArray<T>(Count);
+        DstArray     = pArray;
+        return pArray;
+    }
+};
+
+
+template <SerializerMode Mode>
+struct PSOSerializer
+{
+    template <typename T>
+    using TQual = typename Serializer<Mode>::template TQual<T>;
+
+    using TPRSNames        = DeviceObjectArchiveBase::TPRSNames;
+    using ShaderIndexArray = DeviceObjectArchiveBase::ShaderIndexArray;
+
+    static void SerializeImmutableSampler(Serializer<Mode>&            Ser,
+                                          TQual<ImmutableSamplerDesc>& SampDesc);
+
+    static void SerializePRS(Serializer<Mode>&                               Ser,
+                             TQual<PipelineResourceSignatureDesc>&           Desc,
+                             TQual<PipelineResourceSignatureSerializedData>& Serialized,
+                             DynamicLinearAllocator*                         Allocator);
+
+    static void SerializePSO(Serializer<Mode>&               Ser,
+                             TQual<PipelineStateCreateInfo>& CreateInfo,
+                             TQual<TPRSNames>&               PRSNames,
+                             DynamicLinearAllocator*         Allocator);
+
+    static void SerializeGraphicsPSO(Serializer<Mode>&                       Ser,
+                                     TQual<GraphicsPipelineStateCreateInfo>& CreateInfo,
+                                     TQual<TPRSNames>&                       PRSNames,
+                                     TQual<const char*>&                     RenderPassName,
+                                     DynamicLinearAllocator*                 Allocator);
+
+    static void SerializeComputePSO(Serializer<Mode>&                      Ser,
+                                    TQual<ComputePipelineStateCreateInfo>& CreateInfo,
+                                    TQual<TPRSNames>&                      PRSNames,
+                                    DynamicLinearAllocator*                Allocator);
+
+    static void SerializeTilePSO(Serializer<Mode>&                   Ser,
+                                 TQual<TilePipelineStateCreateInfo>& CreateInfo,
+                                 TQual<TPRSNames>&                   PRSNames,
+                                 DynamicLinearAllocator*             Allocator);
+
+    static void SerializeRayTracingPSO(Serializer<Mode>&                         Ser,
+                                       TQual<RayTracingPipelineStateCreateInfo>& CreateInfo,
+                                       TQual<TPRSNames>&                         PRSNames,
+                                       DynamicLinearAllocator*                   Allocator);
+
+    static void SerializeRenderPass(Serializer<Mode>&       Ser,
+                                    TQual<RenderPassDesc>&  RPDesc,
+                                    DynamicLinearAllocator* Allocator);
+
+    static void SerializeShaders(Serializer<Mode>&        Ser,
+                                 TQual<ShaderIndexArray>& Shaders,
+                                 DynamicLinearAllocator*  Allocator);
+};
+
 
 DECL_TRIVIALLY_SERIALIZABLE(BlendStateDesc);
 DECL_TRIVIALLY_SERIALIZABLE(RasterizerStateDesc);

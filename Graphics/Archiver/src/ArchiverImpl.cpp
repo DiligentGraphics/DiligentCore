@@ -481,7 +481,7 @@ void ArchiverImpl::UpdateOffsetsInArchive(PendingData& Pending) const
                 if (Pending.DataOffsetArrayPerChunk[ChunkInd] != nullptr)
                 {
                     Uint32& Offset = Pending.DataOffsetArrayPerChunk[ChunkInd][j];
-                    Offset         = (Offset == InvalidOffset ? InvalidOffset : StaticCast<Uint32>(Offset + OffsetInFile));
+                    Offset         = (Offset == InvalidOffset() ? InvalidOffset() : StaticCast<Uint32>(Offset + OffsetInFile));
                 }
             }
         }
@@ -494,7 +494,7 @@ void ArchiverImpl::UpdateOffsetsInArchive(PendingData& Pending) const
     {
         if (Pending.PerDeviceData[dev].empty())
         {
-            FileHeader.BlockBaseOffsets[dev] = InvalidOffset;
+            FileHeader.BlockBaseOffsets[dev] = InvalidOffset();
         }
         else
         {

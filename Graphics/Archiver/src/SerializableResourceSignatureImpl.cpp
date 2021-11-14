@@ -59,65 +59,6 @@ namespace Diligent
 namespace
 {
 
-bool operator==(const PipelineResourceDesc& Lhs, const PipelineResourceDesc& Rhs)
-{
-    VERIFY_EXPR(Lhs.Name != nullptr || Rhs.Name != nullptr);
-
-    // clang-format off
-    return Lhs.ShaderStages == Rhs.ShaderStages &&
-           Lhs.ArraySize    == Rhs.ArraySize    &&
-           Lhs.ResourceType == Rhs.ResourceType &&
-           Lhs.VarType      == Rhs.VarType      &&
-           Lhs.Flags        == Rhs.Flags        &&
-           std::strcmp(Lhs.Name, Rhs.Name) == 0;
-    // clang-format on
-}
-
-bool operator==(const ImmutableSamplerDesc& Lhs, const ImmutableSamplerDesc& Rhs)
-{
-    VERIFY_EXPR(Lhs.SamplerOrTextureName != nullptr || Rhs.SamplerOrTextureName != nullptr);
-    VERIFY_EXPR(Lhs.Desc.Name != nullptr || Rhs.Desc.Name != nullptr);
-
-    // clang-format off
-    return Lhs.ShaderStages == Rhs.ShaderStages           &&
-           Lhs.Desc         == Rhs.Desc                   &&
-           std::strcmp(Lhs.Desc.Name, Rhs.Desc.Name) == 0 &&
-           std::strcmp(Lhs.SamplerOrTextureName, Rhs.SamplerOrTextureName) == 0;
-    // clang-format on
-}
-
-bool operator==(const PipelineResourceSignatureDesc& Lhs, const PipelineResourceSignatureDesc& Rhs)
-{
-    // clang-format off
-    if (Lhs.NumResources               != Rhs.NumResources         ||
-        Lhs.NumImmutableSamplers       != Rhs.NumImmutableSamplers ||
-        Lhs.BindingIndex               != Rhs.BindingIndex         ||
-        Lhs.UseCombinedTextureSamplers != Rhs.UseCombinedTextureSamplers)
-        return false;
-    // clang-format on
-
-    if (Lhs.UseCombinedTextureSamplers)
-    {
-        VERIFY_EXPR(Lhs.CombinedSamplerSuffix != nullptr || Rhs.CombinedSamplerSuffix != nullptr);
-        if (std::strcmp(Lhs.CombinedSamplerSuffix, Rhs.CombinedSamplerSuffix) != 0)
-            return false;
-    }
-
-    // ignore SRBAllocationGranularity
-
-    for (Uint32 r = 0; r < Lhs.NumResources; ++r)
-    {
-        if (!(Lhs.Resources[r] == Rhs.Resources[r]))
-            return false;
-    }
-    for (Uint32 s = 0; s < Lhs.NumImmutableSamplers; ++s)
-    {
-        if (!(Lhs.ImmutableSamplers[s] == Rhs.ImmutableSamplers[s]))
-            return false;
-    }
-    return true;
-}
-
 bool operator==(const PipelineResourceSignatureSerializedData& Lhs, const PipelineResourceSignatureSerializedData& Rhs)
 {
     // clang-format off
@@ -127,9 +68,6 @@ bool operator==(const PipelineResourceSignatureSerializedData& Lhs, const Pipeli
            Lhs.StaticResStageIndex   == Rhs.StaticResStageIndex;
     // clang-format on
 }
-
-template <SerializerMode Mode>
-using SerializerImpl = DeviceObjectArchiveBase::SerializerImpl<Mode>;
 
 void CopyPRSDesc(const PipelineResourceSignatureDesc&            SrcDesc,
                  const PipelineResourceSignatureSerializedData&  SrcSerialized,
@@ -169,13 +107,13 @@ void CopyPRSDesc(const PipelineResourceSignatureDesc&            SrcDesc,
     // Serialize description & serialization data
     {
         Serializer<SerializerMode::Measure> MeasureSer;
-        SerializerImpl<SerializerMode::Measure>::SerializePRS(MeasureSer, SrcDesc, SrcSerialized, nullptr);
+        PSOSerializer<SerializerMode::Measure>::SerializePRS(MeasureSer, SrcDesc, SrcSerialized, nullptr);
 
         const size_t SerSize = MeasureSer.GetSize(nullptr);
         void*        SerPtr  = ALLOCATE_RAW(RawAllocator, "", SerSize);
 
         Serializer<SerializerMode::Write> Ser{SerPtr, SerSize};
-        SerializerImpl<SerializerMode::Write>::SerializePRS(Ser, SrcDesc, SrcSerialized, nullptr);
+        PSOSerializer<SerializerMode::Write>::SerializePRS(Ser, SrcDesc, SrcSerialized, nullptr);
         VERIFY_EXPR(Ser.IsEnd());
 
         SharedPtr = SerializedMemory{SerPtr, SerSize};
@@ -258,7 +196,7 @@ SerializableResourceSignatureImpl::SerializableResourceSignatureImpl(IReferenceC
                 PipelineResourceSignatureSerializedDataD3D11 SerializedData;
                 pPRSD3D11->Serialize(SerializedData);
                 AddPRSDesc(pPRSD3D11->GetDesc(), SerializedData.Base);
-                CopyPRSSerializedData<DeviceObjectArchiveD3D11Impl::SerializerD3D11Impl>(SerializedData, m_pPRSD3D11->Mem);
+                CopyPRSSerializedData<PSOSerializerD3D11>(SerializedData, m_pPRSD3D11->Mem);
                 break;
             }
 #endif
@@ -272,7 +210,7 @@ SerializableResourceSignatureImpl::SerializableResourceSignatureImpl(IReferenceC
                 PipelineResourceSignatureSerializedDataD3D12 SerializedData;
                 pPRSD3D12->Serialize(SerializedData);
                 AddPRSDesc(pPRSD3D12->GetDesc(), SerializedData.Base);
-                CopyPRSSerializedData<DeviceObjectArchiveD3D12Impl::SerializerD3D12Impl>(SerializedData, m_pPRSD3D12->Mem);
+                CopyPRSSerializedData<PSOSerializerD3D12>(SerializedData, m_pPRSD3D12->Mem);
                 break;
             }
 #endif
@@ -287,7 +225,7 @@ SerializableResourceSignatureImpl::SerializableResourceSignatureImpl(IReferenceC
                 PipelineResourceSignatureSerializedDataGL SerializedData;
                 pPRSGL->Serialize(SerializedData);
                 AddPRSDesc(pPRSGL->GetDesc(), SerializedData.Base);
-                CopyPRSSerializedData<DeviceObjectArchiveGLImpl::SerializerGLImpl>(SerializedData, m_pPRSGL->Mem);
+                CopyPRSSerializedData<PSOSerializerGL>(SerializedData, m_pPRSGL->Mem);
                 break;
             }
 #endif
@@ -301,7 +239,7 @@ SerializableResourceSignatureImpl::SerializableResourceSignatureImpl(IReferenceC
                 PipelineResourceSignatureSerializedDataVk SerializedData;
                 pPRSVk->Serialize(SerializedData);
                 AddPRSDesc(pPRSVk->GetDesc(), SerializedData.Base);
-                CopyPRSSerializedData<DeviceObjectArchiveVkImpl::SerializerVkImpl>(SerializedData, m_pPRSVk->Mem);
+                CopyPRSSerializedData<PSOSerializerVk>(SerializedData, m_pPRSVk->Mem);
                 break;
             }
 #endif

@@ -30,22 +30,19 @@
 namespace Diligent
 {
 
-template <SerializerMode Mode>
-using SerializerImpl = DeviceObjectArchiveBase::SerializerImpl<Mode>;
-
 SerializableRenderPassImpl::SerializableRenderPassImpl(IReferenceCounters*      pRefCounters,
                                                        SerializationDeviceImpl* pDevice,
                                                        const RenderPassDesc&    Desc) :
     TBase{pRefCounters, pDevice->GetDevice(), Desc, true}
 {
     Serializer<SerializerMode::Measure> MeasureSer;
-    SerializerImpl<SerializerMode::Measure>::SerializeRenderPass(MeasureSer, m_Desc, nullptr);
+    PSOSerializer<SerializerMode::Measure>::SerializeRenderPass(MeasureSer, m_Desc, nullptr);
 
     const size_t SerSize = MeasureSer.GetSize(nullptr);
     void*        SerPtr  = ALLOCATE_RAW(GetRawAllocator(), "", SerSize);
 
     Serializer<SerializerMode::Write> Ser{SerPtr, SerSize};
-    SerializerImpl<SerializerMode::Write>::SerializeRenderPass(Ser, m_Desc, nullptr);
+    PSOSerializer<SerializerMode::Write>::SerializeRenderPass(Ser, m_Desc, nullptr);
     VERIFY_EXPR(Ser.IsEnd());
 
     m_SharedData = SerializedMemory{SerPtr, SerSize};
