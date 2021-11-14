@@ -48,14 +48,15 @@ static const INTERFACE_ID IID_ArchiverFactory =
 
 // clang-format off
 
+/// Defines the methods to manipulate a archiver factory object
 DILIGENT_BEGIN_INTERFACE(IArchiverFactory, IObject)
 {
-    // AZ TODO
+    /// Creates serialization device.
     VIRTUAL void METHOD(CreateSerializationDevice)(THIS_
                                                    const SerializationDeviceCreateInfo REF CreateInfo,
                                                    ISerializationDevice**                  ppDevice) PURE;
-
-    // AZ TODO
+    
+    /// Creates archiver.
     VIRTUAL void METHOD(CreateArchiver)(THIS_
                                         ISerializationDevice* pDevice,
                                         IArchiver**           ppArchiver) PURE;

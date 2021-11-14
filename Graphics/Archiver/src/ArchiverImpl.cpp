@@ -144,8 +144,25 @@ Bool ArchiverImpl::SerializeToBlob(IDataBlob** ppBlob)
     return true;
 }
 
+template <SerializerMode Mode>
+void ArchiverImpl::SerializeDebugInfo(Serializer<Mode>& Ser) const
+{
+    const char* GitHash = nullptr;
+#ifdef DILIGENT_CORE_COMMIT_HASH
+    GitHash = DILIGENT_CORE_COMMIT_HASH;
+#endif
+    Ser(GitHash);
+}
+
 void ArchiverImpl::ReserveSpace(size_t& SharedDataSize, std::array<size_t, DeviceDataCount>& PerDeviceDataSize) const
 {
+    // Reserve space for debug info
+    {
+        Serializer<SerializerMode::Measure> MeasureSer;
+        SerializeDebugInfo(MeasureSer);
+        SharedDataSize += MeasureSer.GetSize(nullptr);
+    }
+
     // Reserve space for pipeline resource signatures
     for (auto& PRS : m_PRSMap)
     {
@@ -207,6 +224,24 @@ void ArchiverImpl::ReserveSpace(size_t& SharedDataSize, std::array<size_t, Devic
     ReserveSpaceForPSO(m_RayTracingPSOMap);
 
     static_assert(ChunkCount == 9, "Reserve space for new chunk type");
+}
+
+void ArchiverImpl::WriteDebugInfo(PendingData& Pending) const
+{
+    const auto ChunkInd = static_cast<Uint32>(ChunkType::ArchiveDebugInfo);
+    auto&      Chunk    = Pending.ChunkData[ChunkInd];
+
+    Serializer<SerializerMode::Measure> MeasureSer;
+    SerializeDebugInfo(MeasureSer);
+
+    VERIFY_EXPR(Chunk.empty());
+    Chunk.resize(MeasureSer.GetSize(nullptr));
+
+    if (Chunk.empty())
+        return;
+
+    Serializer<SerializerMode::Write> Ser{Chunk.data(), Chunk.size()};
+    SerializeDebugInfo(Ser);
 }
 
 void ArchiverImpl::WriteResourceSignatureData(PendingData& Pending) const
@@ -559,6 +594,7 @@ Bool ArchiverImpl::SerializeToStream(IFileStream* pStream)
     }
 
     static_assert(ChunkCount == 9, "Write data for new chunk type");
+    WriteDebugInfo(Pending);
     WriteShaderData(Pending);
     WriteResourceSignatureData(Pending);
     WriteRenderPassData(Pending);

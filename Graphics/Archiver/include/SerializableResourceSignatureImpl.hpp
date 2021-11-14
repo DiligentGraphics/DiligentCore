@@ -120,6 +120,8 @@ public:
         return m_pPRSMtl->GetMem();
     }
 #endif
+    template <typename SignatureType>
+    SignatureType* GetSignature() const;
 
 private:
     void AddPRSDesc(const PipelineResourceSignatureDesc& Desc, const PipelineResourceSignatureSerializedData& Serialized);
@@ -155,5 +157,42 @@ private:
     std::unique_ptr<IPRSMtl> m_pPRSMtl;
 #endif
 };
+
+
+#if D3D11_SUPPORTED
+template <>
+inline PipelineResourceSignatureD3D11Impl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureD3D11Impl>() const
+{
+    return GetSignatureD3D11();
+}
+#endif
+#if D3D12_SUPPORTED
+template <>
+inline PipelineResourceSignatureD3D12Impl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureD3D12Impl>() const
+{
+    return GetSignatureD3D12();
+}
+#endif
+#if GL_SUPPORTED || GLES_SUPPORTED
+template <>
+inline PipelineResourceSignatureGLImpl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureGLImpl>() const
+{
+    return GetSignatureGL();
+}
+#endif
+#if VULKAN_SUPPORTED
+template <>
+inline PipelineResourceSignatureVkImpl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureVkImpl>() const
+{
+    return GetSignatureVk();
+}
+#endif
+#if METAL_SUPPORTED
+template <>
+inline PipelineResourceSignatureMtlImpl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureMtlImpl>() const
+{
+    return GetSignatureMtl();
+}
+#endif
 
 } // namespace Diligent

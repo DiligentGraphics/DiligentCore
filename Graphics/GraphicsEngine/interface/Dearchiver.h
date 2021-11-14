@@ -38,9 +38,6 @@
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
-
-
-// AZ TODO
 /// Resource signature unpack parameters
 struct ResourceSignatureUnpackInfo
 {
@@ -60,9 +57,7 @@ struct ResourceSignatureUnpackInfo
 };
 typedef struct ResourceSignatureUnpackInfo ResourceSignatureUnpackInfo;
 
-
-
-// AZ TODO
+/// Pipeline state archive flags
 DILIGENT_TYPED_ENUM(PSO_ARCHIVE_FLAGS, Uint32)
 {
     PSO_ARCHIVE_FLAG_NONE = 0u,
@@ -78,7 +73,7 @@ DILIGENT_TYPED_ENUM(PSO_ARCHIVE_FLAGS, Uint32)
     PSO_ARCHIVE_FLAG_STRIP_REFLECTION = 1u << 0,
 };
 
-// AZ TODO
+/// Pipeline state unpack flags
 DILIGENT_TYPED_ENUM(PSO_UNPACK_FLAGS, Uint32)
 {
     PSO_UNPACK_FLAG_NONE = 0u,
@@ -94,7 +89,7 @@ DILIGENT_TYPED_ENUM(PSO_UNPACK_FLAGS, Uint32)
     PSO_UNPACK_FLAG_NO_VALIDATION = 1u << 0,
 };
 
-// AZ TODO
+/// Pipeline state unpack override flags
 DILIGENT_TYPED_ENUM(PSO_UNPACK_OVERRIDE_FLAGS, Uint32)
 {
     PSO_UNPACK_OVERRIDE_FLAG_NONE = 0,
@@ -104,7 +99,6 @@ DILIGENT_TYPED_ENUM(PSO_UNPACK_OVERRIDE_FLAGS, Uint32)
     // AZ TODO: flags
 };
 
-// AZ TODO
 /// Pipeline state unpack parameters
 struct PipelineStateUnpackInfo
 {
@@ -120,8 +114,9 @@ struct PipelineStateUnpackInfo
 
     union
     {
-         const GraphicsPipelineDesc* pGraphicsPipelineDesc DEFAULT_INITIALIZER(nullptr);
-         //const ComputePipelineDesc* pComputePipelineDesc;
+         const GraphicsPipelineDesc*   pGraphicsPipelineDesc DEFAULT_INITIALIZER(nullptr);
+         //const ComputePipelineDesc*  pComputePipelineDesc;
+         const TilePipelineDesc*       pTilePipelineDesc;
          const RayTracingPipelineDesc* pRayTracingPipelineDesc;
     };
 
@@ -145,13 +140,13 @@ struct PipelineStateUnpackInfo
     ///             will actually be used. Do not set unnecessary bits as this will result in extra overhead.
     Uint64 ImmediateContextMask     DEFAULT_INITIALIZER(1);
 
-    // Optional PSO cache
+    /// Optional PSO cache
     IPipelineStateCache* pCache DEFAULT_INITIALIZER(nullptr);
 };
 typedef struct PipelineStateUnpackInfo PipelineStateUnpackInfo;
 
 
-/// AZ TODO
+/// Render pass unpack parameters
 struct RenderPassUnpackInfo
 {
     struct IRenderDevice* pDevice  DEFAULT_INITIALIZER(nullptr);
@@ -183,22 +178,23 @@ static const INTERFACE_ID IID_Dearchiver =
 /// Dearchiver interface
 DILIGENT_BEGIN_INTERFACE(IDearchiver, IObject)
 {
-    // AZ TODO
+    /// Creates device object archive.
     VIRTUAL void METHOD(CreateDeviceObjectArchive)(THIS_
                                                    IArchive*              pSource,
                                                    IDeviceObjectArchive** ppArchive) PURE;
     
+    /// Creates pipeline state from archive.
     /// Resource signatures used by the PSO will be unpacked from the same archive.
     VIRTUAL void METHOD(UnpackPipelineState)(THIS_
                                              const PipelineStateUnpackInfo REF DeArchiveInfo,
                                              IPipelineState**                  ppPSO) PURE;
     
-    // AZ TODO
+    /// Creates resource signature from archive.
     VIRTUAL void METHOD(UnpackResourceSignature)(THIS_
                                                  const ResourceSignatureUnpackInfo REF DeArchiveInfo,
                                                  IPipelineResourceSignature**          ppSignature) PURE;
     
-    // AZ TODO
+    /// Creates render pass from archive.
     VIRTUAL void METHOD(UnpackRenderPass)(THIS_
                                           const RenderPassUnpackInfo REF DeArchiveInfo,
                                           IRenderPass**                  ppRP) PURE;

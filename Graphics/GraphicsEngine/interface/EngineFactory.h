@@ -92,7 +92,7 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactory, IObject)
                                            Uint32 REF           NumAdapters,
                                            GraphicsAdapterInfo* Adapters) CONST PURE;
 
-    // AZ TODO
+    /// Returns pointer to a dearchiver.
     VIRTUAL struct IDearchiver* METHOD(GetDearchiver)(THIS) PURE;
 
 #if PLATFORM_ANDROID

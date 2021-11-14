@@ -31,18 +31,18 @@
 namespace Diligent
 {
 
-DeviceObjectArchiveBase::DeviceObjectArchiveBase(IReferenceCounters* pRefCounters, IArchive* pSource, DeviceType DevType) :
+DeviceObjectArchiveBase::DeviceObjectArchiveBase(IReferenceCounters* pRefCounters, IArchive* pArchive, DeviceType DevType) :
     TObjectBase{pRefCounters},
-    m_pSource{pSource},
+    m_pArchive{pArchive},
     m_DevType{DevType}
 {
-    if (m_pSource == nullptr)
+    if (m_pArchive == nullptr)
         LOG_ERROR_AND_THROW("pSource must not be null");
 
     // Read header
     ArchiveHeader Header{};
     {
-        if (!m_pSource->Read(0, sizeof(Header), &Header))
+        if (!m_pArchive->Read(0, sizeof(Header), &Header))
         {
             LOG_ERROR_AND_THROW("Failed to read archive header");
         }
@@ -60,7 +60,7 @@ DeviceObjectArchiveBase::DeviceObjectArchiveBase(IReferenceCounters* pRefCounter
 
     // Read chunks
     std::vector<ChunkHeader> Chunks{Header.NumChunks};
-    if (!m_pSource->Read(sizeof(Header), sizeof(Chunks[0]) * Chunks.size(), Chunks.data()))
+    if (!m_pArchive->Read(sizeof(Header), sizeof(Chunks[0]) * Chunks.size(), Chunks.data()))
     {
         LOG_ERROR_AND_THROW("Failed to read chunk headers");
     }
@@ -98,7 +98,7 @@ void DeviceObjectArchiveBase::ReadArchiveDebugInfo(const ChunkHeader& Chunk) noe
     std::vector<Uint8> Data; // AZ TODO: optimize
     Data.resize(Chunk.Size);
 
-    if (!m_pSource->Read(Chunk.Offset, Data.size(), Data.data()))
+    if (!m_pArchive->Read(Chunk.Offset, Data.size(), Data.data()))
     {
         LOG_ERROR_AND_THROW("Failed to read archive debug info");
     }
@@ -110,6 +110,11 @@ void DeviceObjectArchiveBase::ReadArchiveDebugInfo(const ChunkHeader& Chunk) noe
 
     VERIFY_EXPR(Ser.IsEnd());
     m_DebugInfo.GitHash = String{GitHash};
+
+#ifdef DILIGENT_CORE_COMMIT_HASH
+    if (m_DebugInfo.GitHash != DILIGENT_CORE_COMMIT_HASH)
+        LOG_INFO_MESSAGE("Archive was builded with Diligent Core git hash '", m_DebugInfo.GitHash, "' but used with '", DILIGENT_CORE_COMMIT_HASH, "'.");
+#endif
 }
 
 template <typename ResType>
@@ -124,7 +129,7 @@ void DeviceObjectArchiveBase::ReadNamedResources(const ChunkHeader& Chunk, TName
     std::vector<Uint8> Data; // AZ TODO: optimize
     Data.resize(Chunk.Size);
 
-    if (!m_pSource->Read(Chunk.Offset, Data.size(), Data.data()))
+    if (!m_pArchive->Read(Chunk.Offset, Data.size(), Data.data()))
     {
         LOG_ERROR_AND_THROW("Failed to read resource list from archive");
     }
@@ -156,7 +161,7 @@ void DeviceObjectArchiveBase::ReadNamedResources(const ChunkHeader& Chunk, TName
         {
             LOG_ERROR_AND_THROW("Failed to read archive data");
         }
-        if (DataOffsetArray[i] + DataSizeArray[i] > m_pSource->GetSize())
+        if (DataOffsetArray[i] + DataSizeArray[i] > m_pArchive->GetSize())
         {
             LOG_ERROR_AND_THROW("Failed to read archive data");
         }
@@ -173,7 +178,7 @@ void DeviceObjectArchiveBase::ReadIndexedResources(const ChunkHeader& Chunk, TRe
     VERIFY_EXPR(Chunk.Size == sizeof(ShadersDataHeader));
 
     ShadersDataHeader Header;
-    if (!m_pSource->Read(Chunk.Offset, sizeof(Header), &Header))
+    if (!m_pArchive->Read(Chunk.Offset, sizeof(Header), &Header))
     {
         LOG_ERROR_AND_THROW("Failed to read indexed resources info from archive");
     }
@@ -183,8 +188,8 @@ void DeviceObjectArchiveBase::ReadIndexedResources(const ChunkHeader& Chunk, TRe
         Header,
         Allocator,
         "Shader list",
-        static_cast<BlockOffsetType>(m_DevType), // AZ TODO
-        [&](const void* pData, size_t DataSize)  //
+        GetBlockOffsetType(),
+        [&](const void* pData, size_t DataSize) //
         {
             // AZ TODO: reuse allocated data
             VERIFY_EXPR(DataSize % sizeof(TResourceOffsetAndSize::value_type) == 0);
@@ -221,7 +226,7 @@ bool DeviceObjectArchiveBase::LoadResourceData(const TNameOffsetMap<ResType>& Na
 
     const auto DataSize = OffsetAndSize.Size;
     void*      pData    = Allocator.Allocate(DataSize, DataPtrAlign);
-    if (!m_pSource->Read(OffsetAndSize.Offset, DataSize, pData))
+    if (!m_pArchive->Read(OffsetAndSize.Offset, DataSize, pData))
     {
         LOG_ERROR_MESSAGE("Failed to read ", ResTypeName, " with name '", ResourceName, "' data from archive");
         return false;
@@ -239,7 +244,7 @@ void DeviceObjectArchiveBase::LoadDeviceSpecificData(const HeaderType&       Hea
                                                      const FnType&           Fn)
 {
     const auto BaseOffset = m_BaseOffsets[static_cast<Uint32>(BlockType)];
-    if (BaseOffset > m_pSource->GetSize())
+    if (BaseOffset > m_pArchive->GetSize())
     {
         LOG_ERROR_MESSAGE("Required block is not exists in archive");
         return;
@@ -249,7 +254,7 @@ void DeviceObjectArchiveBase::LoadDeviceSpecificData(const HeaderType&       Hea
         LOG_ERROR_MESSAGE("Device specific data is not specified for ", ResTypeName);
         return;
     }
-    if (BaseOffset + Header.GetEndOffset(m_DevType) > m_pSource->GetSize())
+    if (BaseOffset + Header.GetEndOffset(m_DevType) > m_pArchive->GetSize())
     {
         LOG_ERROR_MESSAGE("Invalid offset in archive");
         return;
@@ -257,7 +262,7 @@ void DeviceObjectArchiveBase::LoadDeviceSpecificData(const HeaderType&       Hea
 
     const auto DataSize = Header.GetSize(m_DevType);
     auto*      pData    = Allocator.Allocate(DataSize, DataPtrAlign);
-    if (!m_pSource->Read(BaseOffset + Header.GetOffset(m_DevType), DataSize, pData))
+    if (!m_pArchive->Read(BaseOffset + Header.GetOffset(m_DevType), DataSize, pData))
     {
         LOG_ERROR_MESSAGE("Failed to read resource signature data");
         return;
@@ -630,7 +635,7 @@ bool DeviceObjectArchiveBase::LoadShaders(Serializer<SerializerMode::Read>&    S
 
     Shaders.resize(ShaderIndices.Count);
 
-    const auto BaseOffset = m_BaseOffsets[static_cast<Uint32>(static_cast<BlockOffsetType>(m_DevType))]; // AZ TODO
+    const auto BaseOffset = m_BaseOffsets[static_cast<Uint32>(GetBlockOffsetType())];
 
     std::unique_lock<std::mutex> ReadLock{m_ShadersGuard};
 
@@ -643,7 +648,7 @@ bool DeviceObjectArchiveBase::LoadShaders(Serializer<SerializerMode::Read>&    S
         const auto& OffsetAndSize = m_Shaders[Idx];
         void*       pData         = Allocator.Allocate(OffsetAndSize.Size, DataPtrAlign);
 
-        if (!m_pSource->Read(BaseOffset + OffsetAndSize.Offset, OffsetAndSize.Size, pData))
+        if (!m_pArchive->Read(BaseOffset + OffsetAndSize.Offset, OffsetAndSize.Size, pData))
             return false;
 
         Serializer<SerializerMode::Read> Ser2{pData, OffsetAndSize.Size};
@@ -702,8 +707,8 @@ void DeviceObjectArchiveBase::UnpackGraphicsPSO(const PipelineStateUnpackInfo& D
         *PSO.pHeader,
         PSO.Allocator,
         "Graphics pipeline",
-        static_cast<BlockOffsetType>(m_DevType), // AZ TODO
-        [&](void* pData, size_t DataSize)        //
+        GetBlockOffsetType(),
+        [&](void* pData, size_t DataSize) //
         {
             Serializer<SerializerMode::Read> Ser{pData, DataSize};
 
@@ -758,8 +763,8 @@ void DeviceObjectArchiveBase::UnpackComputePSO(const PipelineStateUnpackInfo& De
         *PSO.pHeader,
         PSO.Allocator,
         "Compute pipeline",
-        static_cast<BlockOffsetType>(m_DevType), // AZ TODO
-        [&](void* pData, size_t DataSize)        //
+        GetBlockOffsetType(),
+        [&](void* pData, size_t DataSize) //
         {
             Serializer<SerializerMode::Read> Ser{pData, DataSize};
 
@@ -801,8 +806,8 @@ void DeviceObjectArchiveBase::UnpackTilePSO(const PipelineStateUnpackInfo& DeArc
         *PSO.pHeader,
         PSO.Allocator,
         "Tile pipeline",
-        static_cast<BlockOffsetType>(m_DevType), // AZ TODO
-        [&](void* pData, size_t DataSize)        //
+        GetBlockOffsetType(),
+        [&](void* pData, size_t DataSize) //
         {
             Serializer<SerializerMode::Read> Ser{pData, DataSize};
 
@@ -844,8 +849,8 @@ void DeviceObjectArchiveBase::UnpackRayTracingPSO(const PipelineStateUnpackInfo&
         *PSO.pHeader,
         PSO.Allocator,
         "Ray tracing pipeline",
-        static_cast<BlockOffsetType>(m_DevType), // AZ TODO
-        [&](void* pData, size_t DataSize)        //
+        GetBlockOffsetType(),
+        [&](void* pData, size_t DataSize) //
         {
             Serializer<SerializerMode::Read> Ser{pData, DataSize};
             // AZ TODO
@@ -887,8 +892,8 @@ void DeviceObjectArchiveBase::UnpackResourceSignatureImpl(const ResourceSignatur
         *PRS.pHeader,
         PRS.Allocator,
         "Resource signature",
-        static_cast<BlockOffsetType>(m_DevType), // AZ TODO
-        [&](void* pData, size_t DataSize)        //
+        GetBlockOffsetType(),
+        [&](void* pData, size_t DataSize) //
         {
             Serializer<SerializerMode::Read> Ser{pData, DataSize};
 

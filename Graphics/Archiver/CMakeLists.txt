@@ -58,6 +58,7 @@ PRIVATE
 target_link_libraries(Diligent-Archiver
 PRIVATE
     Diligent-BuildSettings
+    Diligent-GraphicsEngine # for DILIGENT_CORE_COMMIT_HASH
 PUBLIC
     Diligent-PlatformInterface
     Diligent-Common

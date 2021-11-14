@@ -49,6 +49,7 @@ static const INTERFACE_ID IID_SerializationDevice =
 
 // clang-format off
 
+/// Attributes for Direct3D11 backend
 struct SerializationDeviceD3D11Info
 {
     Version FeatureLevel;
@@ -58,6 +59,7 @@ struct SerializationDeviceD3D11Info
 #endif
 };
 
+/// Attributes for Direct3D12 backend
 struct SerializationDeviceD3D12Info
 {
     Version     ShaderVersion;
@@ -68,6 +70,7 @@ struct SerializationDeviceD3D12Info
 #endif
 };
 
+/// Attributes for Vulkan backend
 struct SerializationDeviceVkInfo
 {
     Version     ApiVersion;
@@ -79,7 +82,7 @@ struct SerializationDeviceVkInfo
 #endif
 };
 
-// AZ TODO
+/// Serialization device creation information
 struct SerializationDeviceCreateInfo
 {
     RenderDeviceInfo    DeviceInfo;
@@ -100,25 +103,72 @@ struct SerializationDeviceCreateInfo
 typedef struct SerializationDeviceCreateInfo SerializationDeviceCreateInfo;
 
 
-// AZ TODO
+/// Contains attributes to calculate pipeline resource bindings
+struct PipelineResourceBindingAttribs
+{
+    /// An array of ResourceSignaturesCount shader resource signatures that
+    /// define the layout of shader resources in this pipeline state object.
+    /// See Diligent::IPipelineResourceSignature.
+    IPipelineResourceSignature** ppResourceSignatures      DEFAULT_INITIALIZER(nullptr);
+    
+    /// The number of elements in ppResourceSignatures array.
+    Uint32                       ResourceSignaturesCount   DEFAULT_INITIALIZER(0);
+    
+    /// Number of render targets, only for graphics pipeline.
+    /// \note Required for Direct3D11.
+    Uint32                       NumRenderTargets DEFAULT_INITIALIZER(0);
+    
+    /// Number of vertex buffers, only for graphics pipeline.
+    /// \note Required for Metal.
+    Uint32                       NumVertexBuffers DEFAULT_INITIALIZER(0);
+
+    /// Combination of shader stages.
+    /// \note Required single shader stage for Direct3D11, OpenGL, Metal.
+    SHADER_TYPE                  ShaderStages     DEFAULT_INITIALIZER(SHADER_TYPE_UNKNOWN);
+    
+    /// Device type for which resource binding will be calculated.
+    enum RENDER_DEVICE_TYPE      DeviceType       DEFAULT_INITIALIZER(RENDER_DEVICE_TYPE_UNDEFINED);
+};
+typedef struct PipelineResourceBindingAttribs PipelineResourceBindingAttribs;
+
+/// Pipeline resource binding
+struct PipelineResourceBinding
+{
+    const Char*          Name;
+    SHADER_RESOURCE_TYPE ResourceType;
+    SHADER_TYPE          ShaderStages;
+    Uint16               Space;
+    Uint32               Register;
+    Uint32               ArraySize;
+};
+typedef struct PipelineResourceBinding PipelineResourceBinding;
+
+
+/// Defines the methods to manipulate a serialization device object
 DILIGENT_BEGIN_INTERFACE(ISerializationDevice, IObject)
 {
-    // AZ TODO
+    /// Creates serialized shader.
     VIRTUAL void METHOD(CreateShader)(THIS_
                                       const ShaderCreateInfo REF ShaderCI,
                                       Uint32                     DeviceBits,
                                       IShader**                  ppShader) PURE;
     
-    // AZ TODO
+    /// Creates serialized render pass.
     VIRTUAL void METHOD(CreateRenderPass)(THIS_
                                           const RenderPassDesc REF Desc,
                                           IRenderPass**            ppRenderPass) PURE;
     
-    // AZ TODO
+    /// Creates serialized pipeline resource signature.
     VIRTUAL void METHOD(CreatePipelineResourceSignature)(THIS_
                                                          const PipelineResourceSignatureDesc REF Desc,
                                                          Uint32                                  DeviceBits,
                                                          IPipelineResourceSignature**            ppSignature) PURE;
+
+    /// Returns array of pipeline resource bindings.
+    VIRTUAL void METHOD(GetPipelineResourceBindings)(THIS_
+                                                     const PipelineResourceBindingAttribs REF Attribs,
+                                                     Uint32 REF                               NumBindings,
+                                                     const PipelineResourceBinding* REF       pBindings) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -129,6 +179,7 @@ DILIGENT_END_INTERFACE
 #    define ISerializationDevice_CreateShader(This, ...)                    CALL_IFACE_METHOD(SerializationDevice, CreateShader,                    This, __VA_ARGS__)
 #    define ISerializationDevice_CreateRenderPass(This, ...)                CALL_IFACE_METHOD(SerializationDevice, CreateRenderPass,                This, __VA_ARGS__)
 #    define ISerializationDevice_CreatePipelineResourceSignature(This, ...) CALL_IFACE_METHOD(SerializationDevice, CreatePipelineResourceSignature, This, __VA_ARGS__)
+#    define ISerializationDevice_GetPipelineResourceBindings(This, ...)     CALL_IFACE_METHOD(SerializationDevice, GetPipelineResourceBindings,     This, __VA_ARGS__)
 
 #endif
 

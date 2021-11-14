@@ -130,6 +130,8 @@ public:
                                       const char*                     PSOName) const;
 #endif
 
+    static D3D11_RESOURCE_RANGE ShaderResourceTypeToRange(SHADER_RESOURCE_TYPE Type);
+
 private:
     void CreateLayout(bool IsSerialized);
 

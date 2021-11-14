@@ -59,16 +59,6 @@ namespace Diligent
 namespace
 {
 
-bool operator==(const PipelineResourceSignatureSerializedData& Lhs, const PipelineResourceSignatureSerializedData& Rhs)
-{
-    // clang-format off
-    return Lhs.ShaderStages          == Rhs.ShaderStages          &&
-           Lhs.StaticResShaderStages == Rhs.StaticResShaderStages &&
-           Lhs.PipelineType          == Rhs.PipelineType          &&
-           Lhs.StaticResStageIndex   == Rhs.StaticResStageIndex;
-    // clang-format on
-}
-
 void CopyPRSDesc(const PipelineResourceSignatureDesc&            SrcDesc,
                  const PipelineResourceSignatureSerializedData&  SrcSerialized,
                  PipelineResourceSignatureDesc const*&           pDstDesc,

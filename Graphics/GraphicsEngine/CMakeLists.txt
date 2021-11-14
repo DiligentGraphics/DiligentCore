@@ -137,3 +137,14 @@ set_target_properties(Diligent-GraphicsEngine PROPERTIES
 if(DILIGENT_INSTALL_CORE)
     install_core_lib(Diligent-GraphicsEngine)
 endif()
+
+find_package(Git QUIET)
+if(Git_FOUND)
+    execute_process(
+        COMMAND "${GIT_EXECUTABLE}" describe --dirty=+ --tags --always
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+        OUTPUT_VARIABLE DILIGENT_CORE_COMMIT_HASH
+        ERROR_QUIET
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+    target_compile_definitions(Diligent-GraphicsEngine PUBLIC DILIGENT_CORE_COMMIT_HASH="${DILIGENT_CORE_COMMIT_HASH}")
+endif()
