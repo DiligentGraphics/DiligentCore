@@ -50,7 +50,6 @@ struct PipelineStateCacheCreateInfo
 {
     PipelineStateCacheDesc Desc;
 
-    // AZ TODO
     /// All fields can be null to create an empty cache
     const void* pCacheData    DEFAULT_INITIALIZER(nullptr);
 

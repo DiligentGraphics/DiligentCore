@@ -405,6 +405,41 @@ struct RenderPassDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
     /// Pointer to the array of subpass dependencies, see Diligent::SubpassDependencyDesc.
     const SubpassDependencyDesc*     pDependencies      DEFAULT_INITIALIZER(nullptr);
+
+#if DILIGENT_CPP_INTERFACE
+    bool operator==(const RenderPassDesc& Rhs) const
+    {
+        if (AttachmentCount != Rhs.AttachmentCount ||
+            SubpassCount    != Rhs.SubpassCount    ||
+            DependencyCount != Rhs.DependencyCount)
+            return false;
+
+        for (Uint32 i = 0; i < AttachmentCount; ++i)
+        {
+            const auto& LhsAttach = pAttachments[i];
+            const auto& RhsAttach = Rhs.pAttachments[i];
+            if (!(LhsAttach == RhsAttach))
+                return false;
+        }
+
+        for (Uint32 i = 0; i < SubpassCount; ++i)
+        {
+            const auto& LhsSubpass = pSubpasses[i];
+            const auto& RhsSubpass = Rhs.pSubpasses[i];
+            if (!(LhsSubpass == RhsSubpass))
+                return false;
+        }
+
+        for (Uint32 i = 0; i < DependencyCount; ++i)
+        {
+            const auto& LhsDep = pDependencies[i];
+            const auto& RhsDep = Rhs.pDependencies[i];
+            if (!(LhsDep == RhsDep))
+                return false;
+        }
+        return true;
+    }
+#endif
 };
 typedef struct RenderPassDesc RenderPassDesc;
 

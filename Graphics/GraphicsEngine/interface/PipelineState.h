@@ -247,6 +247,43 @@ struct GraphicsPipelineDesc
 
     /// Node mask.
     Uint32 NodeMask DEFAULT_INITIALIZER(0);
+
+#if DILIGENT_CPP_INTERFACE
+    bool operator==(const GraphicsPipelineDesc& Rhs) const
+    {
+        if (!(BlendDesc         == Rhs.BlendDesc         &&
+              SampleMask        == Rhs.SampleMask        &&
+              RasterizerDesc    == Rhs.RasterizerDesc    &&
+              DepthStencilDesc  == Rhs.DepthStencilDesc  &&
+              InputLayout       == Rhs.InputLayout       &&
+              PrimitiveTopology == Rhs.PrimitiveTopology &&
+              NumViewports      == Rhs.NumViewports      &&
+              NumRenderTargets  == Rhs.NumRenderTargets  &&
+              SubpassIndex      == Rhs.SubpassIndex      &&
+              ShadingRateFlags  == Rhs.ShadingRateFlags  &&
+              DSVFormat         == Rhs.DSVFormat         &&
+              SmplDesc.Count    == Rhs.SmplDesc.Count    &&
+              SmplDesc.Quality  == Rhs.SmplDesc.Quality))
+            return false;
+
+        for (Uint32 i = 0; i < NumRenderTargets; ++i)
+        {
+            if (RTVFormats[i] != Rhs.RTVFormats[i])
+                return false;
+        }
+
+        // AZ TODO: check render pass compatibility
+        if ((pRenderPass != nullptr) != (Rhs.pRenderPass != nullptr))
+            return false;
+
+        if (pRenderPass)
+        {
+            if (!(pRenderPass->GetDesc() == Rhs.pRenderPass->GetDesc()))
+                return false;
+        }
+        return true;
+    }
+#endif
 };
 typedef struct GraphicsPipelineDesc GraphicsPipelineDesc;
 
