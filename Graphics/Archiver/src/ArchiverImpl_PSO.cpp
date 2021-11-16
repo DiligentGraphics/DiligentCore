@@ -54,12 +54,6 @@ void ValidatePipelineStateArchiveInfo(const PipelineStateCreateInfo&  PSOCreateI
     VERIFY_PSO((PSOCreateInfo.ResourceSignaturesCount != 0) == (PSOCreateInfo.ppResourceSignatures != nullptr),
                "ppResourceSignatures must not be null if ResourceSignaturesCount is not zero");
 
-    // AZ TODO: serialize default PRS
-    VERIFY_PSO((PSOCreateInfo.PSODesc.ResourceLayout.NumImmutableSamplers == 0 &&
-                PSOCreateInfo.PSODesc.ResourceLayout.NumVariables == 0 &&
-                PSOCreateInfo.PSODesc.ResourceLayout.DefaultVariableType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC),
-               "Default resource signature is not supported");
-
     std::bitset<MAX_RESOURCE_SIGNATURES> PRSExists{0};
     for (Uint32 i = 0; i < PSOCreateInfo.ResourceSignaturesCount; ++i)
     {
@@ -70,6 +64,24 @@ void ValidatePipelineStateArchiveInfo(const PipelineStateCreateInfo&  PSOCreateI
 
         VERIFY_PSO(!PRSExists[Desc.BindingIndex], "PRS binding index must be unique");
         PRSExists[Desc.BindingIndex] = true;
+    }
+}
+
+template <typename SignatureType>
+using SignatureArray = std::array<RefCntAutoPtr<SignatureType>, MAX_RESOURCE_SIGNATURES>;
+
+template <typename CreateInfoType, typename SignatureType>
+static void SortResourceSignatures(const CreateInfoType& CreateInfo, SignatureArray<SignatureType>& Signatures, Uint32& SignaturesCount)
+{
+    for (Uint32 i = 0; i < CreateInfo.ResourceSignaturesCount; ++i)
+    {
+        const auto* pSerPRS = ClassPtrCast<SerializableResourceSignatureImpl>(CreateInfo.ppResourceSignatures[i]);
+        VERIFY_EXPR(pSerPRS != nullptr);
+
+        const auto& Desc = pSerPRS->GetDesc();
+
+        Signatures[Desc.BindingIndex] = pSerPRS->template GetSignature<SignatureType>();
+        SignaturesCount               = std::max(SignaturesCount, static_cast<Uint32>(Desc.BindingIndex) + 1);
     }
 }
 
@@ -143,9 +155,42 @@ void ArchiverImpl::SerializeShaderSource(TShaderIndices& ShaderIndices, DeviceTy
     ShaderIndices.push_back(StaticCast<Uint32>(Iter->second));
 }
 
+template <typename FnType>
+bool ArchiverImpl::CreateDefaultResourceSignature(DefaultPRSInfo& DefPRS, const FnType& CreatePRS)
+{
+    try
+    {
+        RefCntAutoPtr<IPipelineResourceSignature> pDefaultPRS = CreatePRS(); // may throw exception
+        if (pDefaultPRS == nullptr)
+            return false;
+
+        if (DefPRS.pPRS)
+        {
+            if (!(DefPRS.pPRS.RawPtr<SerializableResourceSignatureImpl>()->IsCompatible(*pDefaultPRS.RawPtr<SerializableResourceSignatureImpl>(), DefPRS.DeviceBits)))
+            {
+                LOG_ERROR_MESSAGE("Default signatures does not match between different backends");
+                return false;
+            }
+            pDefaultPRS = DefPRS.pPRS;
+        }
+        else
+        {
+            if (!CachePipelineResourceSignature(pDefaultPRS))
+                return false;
+            DefPRS.pPRS = pDefaultPRS;
+        }
+    }
+    catch (...)
+    {
+        LOG_ERROR_MESSAGE("Failed to create default resource signature");
+        return false;
+    }
+    return true;
+}
+
 #if VULKAN_SUPPORTED
 template <typename CreateInfoType>
-bool ArchiverImpl::PatchShadersVk(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data)
+bool ArchiverImpl::PatchShadersVk(CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data, DefaultPRSInfo& DefPRS)
 {
     struct ShaderStageInfoVk : PipelineStateVkImpl::ShaderStageInfo
     {
@@ -182,23 +227,40 @@ bool ArchiverImpl::PatchShadersVk(const CreateInfoType& CreateInfo, TPSOData<Cre
         Dst.SPIRVs  = std::move(Src.SPIRVs);
     }
 
-    try
+    IPipelineResourceSignature* DefaultSignatures[1] = {};
+    if (CreateInfo.ResourceSignaturesCount == 0)
     {
-        std::array<const PipelineResourceSignatureVkImpl*, MAX_RESOURCE_SIGNATURES> Signatures              = {};
-        PipelineStateVkImpl::TBindIndexToDescSetIndex                               BindIndexToDescSetIndex = {};
-
-        Uint32 SignaturesCount = 0;
-        for (Uint32 i = 0; i < CreateInfo.ResourceSignaturesCount; ++i)
+        if (!CreateDefaultResourceSignature(
+                DefPRS, [&]() {
+                    std::vector<PipelineResourceDesc> Resources;
+                    std::vector<ImmutableSamplerDesc> ImmutableSamplers;
+                    PipelineResourceSignatureDesc     SignDesc;
+                    PipelineStateVkImpl::GetDefaultResourceSignatureDesc(ShaderStagesVk, CreateInfo.PSODesc.ResourceLayout, "Default resource signature",
+                                                                         Resources, ImmutableSamplers, SignDesc);
+                    SignDesc.Name = DefPRS.UniqueName.c_str();
+                    RefCntAutoPtr<IPipelineResourceSignature> pDefaultPRS;
+                    m_pSerializationDevice->CreatePipelineResourceSignature(SignDesc, DefPRS.DeviceBits, ActiveShaderStages, &pDefaultPRS);
+                    return pDefaultPRS;
+                }))
         {
-            const auto* pSerPRS = ClassPtrCast<SerializableResourceSignatureImpl>(CreateInfo.ppResourceSignatures[i]);
-            const auto& Desc    = pSerPRS->GetDesc();
-
-            Signatures[Desc.BindingIndex] = pSerPRS->GetSignatureVk();
-            SignaturesCount               = std::max(SignaturesCount, static_cast<Uint32>(Desc.BindingIndex) + 1);
+            return false;
         }
 
+        DefaultSignatures[0]               = DefPRS.pPRS;
+        CreateInfo.ResourceSignaturesCount = 1;
+        CreateInfo.ppResourceSignatures    = DefaultSignatures;
+        CreateInfo.PSODesc.ResourceLayout  = {};
+    }
+
+    try
+    {
+        SignatureArray<PipelineResourceSignatureVkImpl> Signatures      = {};
+        Uint32                                          SignaturesCount = 0;
+        SortResourceSignatures(CreateInfo, Signatures, SignaturesCount);
+
         // Same as PipelineLayoutVk::Create()
-        Uint32 DescSetLayoutCount = 0;
+        PipelineStateVkImpl::TBindIndexToDescSetIndex BindIndexToDescSetIndex = {};
+        Uint32                                        DescSetLayoutCount      = 0;
         for (Uint32 i = 0; i < SignaturesCount; ++i)
         {
             const auto& pSignature = Signatures[i];
@@ -225,6 +287,7 @@ bool ArchiverImpl::PatchShadersVk(const CreateInfoType& CreateInfo, TPSOData<Cre
     }
     catch (...)
     {
+        LOG_ERROR_MESSAGE("Failed to remap shader resources in Vulkan shaders");
         return false;
     }
 
@@ -249,6 +312,8 @@ bool ArchiverImpl::PatchShadersVk(const CreateInfoType& CreateInfo, TPSOData<Cre
 
 
 #if D3D11_SUPPORTED
+namespace
+{
 struct ShaderStageInfoD3D11
 {
     ShaderStageInfoD3D11() {}
@@ -282,9 +347,10 @@ void InitD3D11ShaderResourceCounters(const GraphicsPipelineStateCreateInfo& Crea
     // In Direct3D11, UAVs use the same register space as render targets
     ResCounters[D3D11_RESOURCE_RANGE_UAV][PSInd] = CreateInfo.GraphicsPipeline.NumRenderTargets;
 }
+} // namespace
 
 template <typename CreateInfoType>
-bool ArchiverImpl::PatchShadersD3D11(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data)
+bool ArchiverImpl::PatchShadersD3D11(CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data, DefaultPRSInfo& DefPRS)
 {
     TShaderIndices ShaderIndices;
 
@@ -301,24 +367,40 @@ bool ArchiverImpl::PatchShadersD3D11(const CreateInfoType& CreateInfo, TPSOData<
         Dst       = Src.pShader;
     }
 
+    IPipelineResourceSignature* DefaultSignatures[1] = {};
+    if (CreateInfo.ResourceSignaturesCount == 0)
+    {
+        if (!CreateDefaultResourceSignature(
+                DefPRS, [&]() {
+                    std::vector<PipelineResourceDesc> Resources;
+                    std::vector<ImmutableSamplerDesc> ImmutableSamplers;
+                    PipelineResourceSignatureDesc     SignDesc;
+                    PipelineStateD3D11Impl::GetDefaultResourceSignatureDesc(ShadersD3D11, CreateInfo.PSODesc.ResourceLayout, "Default resource signature",
+                                                                            Resources, ImmutableSamplers, SignDesc);
+                    SignDesc.Name = DefPRS.UniqueName.c_str();
+                    RefCntAutoPtr<IPipelineResourceSignature> pDefaultPRS;
+                    m_pSerializationDevice->CreatePipelineResourceSignature(SignDesc, DefPRS.DeviceBits, ActiveShaderStages, &pDefaultPRS);
+                    return pDefaultPRS;
+                }))
+        {
+            return false;
+        }
+
+        DefaultSignatures[0]               = DefPRS.pPRS;
+        CreateInfo.ResourceSignaturesCount = 1;
+        CreateInfo.ppResourceSignatures    = DefaultSignatures;
+        CreateInfo.PSODesc.ResourceLayout  = {};
+    }
+
     try
     {
-        std::array<RefCntAutoPtr<PipelineResourceSignatureD3D11Impl>, MAX_RESOURCE_SIGNATURES> Signatures   = {};
-        std::array<D3D11ShaderResourceCounters, MAX_RESOURCE_SIGNATURES>                       BaseBindings = {};
+        SignatureArray<PipelineResourceSignatureD3D11Impl> Signatures      = {};
+        Uint32                                             SignaturesCount = 0;
+        SortResourceSignatures(CreateInfo, Signatures, SignaturesCount);
 
         D3D11ShaderResourceCounters ResCounters = {};
         InitD3D11ShaderResourceCounters(CreateInfo, ResCounters);
-
-        Uint32 SignaturesCount = 0;
-        for (Uint32 i = 0; i < CreateInfo.ResourceSignaturesCount; ++i)
-        {
-            const auto* pSerPRS = ClassPtrCast<SerializableResourceSignatureImpl>(CreateInfo.ppResourceSignatures[i]);
-            const auto& Desc    = pSerPRS->GetDesc();
-
-            Signatures[Desc.BindingIndex] = pSerPRS->GetSignatureD3D11();
-            SignaturesCount               = std::max(SignaturesCount, static_cast<Uint32>(Desc.BindingIndex) + 1);
-        }
-
+        std::array<D3D11ShaderResourceCounters, MAX_RESOURCE_SIGNATURES> BaseBindings = {};
         for (Uint32 i = 0; i < SignaturesCount; ++i)
         {
             const PipelineResourceSignatureD3D11Impl* const pSignature = Signatures[i];
@@ -341,6 +423,7 @@ bool ArchiverImpl::PatchShadersD3D11(const CreateInfoType& CreateInfo, TPSOData<
     }
     catch (...)
     {
+        LOG_ERROR_MESSAGE("Failed to remap shader resources in Direct3D11 shaders");
         return false;
     }
 
@@ -359,7 +442,7 @@ bool ArchiverImpl::PatchShadersD3D11(const CreateInfoType& CreateInfo, TPSOData<
 
 #if D3D12_SUPPORTED
 template <typename CreateInfoType>
-bool ArchiverImpl::PatchShadersD3D12(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data)
+bool ArchiverImpl::PatchShadersD3D12(CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data, DefaultPRSInfo& DefPRS)
 {
     struct ShaderStageInfoD3D12 : PipelineStateD3D12Impl::ShaderStageInfo
     {
@@ -396,19 +479,36 @@ bool ArchiverImpl::PatchShadersD3D12(const CreateInfoType& CreateInfo, TPSOData<
         Dst.ByteCodes = std::move(Src.ByteCodes);
     }
 
+    IPipelineResourceSignature* DefaultSignatures[1] = {};
+    if (CreateInfo.ResourceSignaturesCount == 0)
+    {
+        if (!CreateDefaultResourceSignature(
+                DefPRS, [&]() {
+                    std::vector<PipelineResourceDesc> Resources;
+                    std::vector<ImmutableSamplerDesc> ImmutableSamplers;
+                    PipelineResourceSignatureDesc     SignDesc;
+                    PipelineStateD3D12Impl::GetDefaultResourceSignatureDesc(ShaderStagesD3D12, CreateInfo.PSODesc.ResourceLayout, "Default resource signature", nullptr,
+                                                                            Resources, ImmutableSamplers, SignDesc);
+                    SignDesc.Name = DefPRS.UniqueName.c_str();
+                    RefCntAutoPtr<IPipelineResourceSignature> pDefaultPRS;
+                    m_pSerializationDevice->CreatePipelineResourceSignature(SignDesc, DefPRS.DeviceBits, ActiveShaderStages, &pDefaultPRS);
+                    return pDefaultPRS;
+                }))
+        {
+            return false;
+        }
+
+        DefaultSignatures[0]               = DefPRS.pPRS;
+        CreateInfo.ResourceSignaturesCount = 1;
+        CreateInfo.ppResourceSignatures    = DefaultSignatures;
+        CreateInfo.PSODesc.ResourceLayout  = {};
+    }
+
     try
     {
-        std::array<RefCntAutoPtr<PipelineResourceSignatureD3D12Impl>, MAX_RESOURCE_SIGNATURES> Signatures = {};
-
-        Uint32 SignaturesCount = 0;
-        for (Uint32 i = 0; i < CreateInfo.ResourceSignaturesCount; ++i)
-        {
-            const auto* pSerPRS = ClassPtrCast<SerializableResourceSignatureImpl>(CreateInfo.ppResourceSignatures[i]);
-            const auto& Desc    = pSerPRS->GetDesc();
-
-            Signatures[Desc.BindingIndex] = pSerPRS->GetSignatureD3D12();
-            SignaturesCount               = std::max(SignaturesCount, static_cast<Uint32>(Desc.BindingIndex) + 1);
-        }
+        SignatureArray<PipelineResourceSignatureD3D12Impl> Signatures      = {};
+        Uint32                                             SignaturesCount = 0;
+        SortResourceSignatures(CreateInfo, Signatures, SignaturesCount);
 
         RootSignatureD3D12 RootSig{nullptr, nullptr, Signatures.data(), SignaturesCount, 0};
         PipelineStateD3D12Impl::RemapShaderResources(ShaderStagesD3D12,
@@ -419,6 +519,7 @@ bool ArchiverImpl::PatchShadersD3D12(const CreateInfoType& CreateInfo, TPSOData<
     }
     catch (...)
     {
+        LOG_ERROR_MESSAGE("Failed to remap shader resources in Direct3D12 shaders");
         return false;
     }
 
@@ -443,6 +544,8 @@ bool ArchiverImpl::PatchShadersD3D12(const CreateInfoType& CreateInfo, TPSOData<
 
 
 #if GL_SUPPORTED || GLES_SUPPORTED
+namespace
+{
 struct ShaderStageInfoGL
 {
     ShaderStageInfoGL() {}
@@ -462,15 +565,18 @@ struct ShaderStageInfoGL
 
     friend SHADER_TYPE GetShaderStageType(const ShaderStageInfoGL& Stage) { return Stage.Type; }
 };
+} // namespace
 
 template <typename CreateInfoType>
-bool ArchiverImpl::PatchShadersGL(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data)
+bool ArchiverImpl::PatchShadersGL(CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data, DefaultPRSInfo& DefPRS)
 {
     TShaderIndices ShaderIndices;
 
     std::vector<ShaderStageInfoGL> ShaderStages;
     SHADER_TYPE                    ActiveShaderStages = SHADER_TYPE_UNKNOWN;
     PipelineStateGLImpl::ExtractShaders<SerializableShaderImpl>(CreateInfo, ShaderStages, ActiveShaderStages);
+
+    // AZ TODO: default PRS
 
     for (size_t i = 0; i < ShaderStages.size(); ++i)
     {
@@ -564,9 +670,10 @@ void SerializerPSOImpl(Serializer<Mode>&                                 Ser,
 
 template <typename CreateInfoType>
 bool ArchiverImpl::SerializePSO(std::unordered_map<String, TPSOData<CreateInfoType>>& PSOMap,
-                                const CreateInfoType&                                 PSOCreateInfo,
+                                const CreateInfoType&                                 InPSOCreateInfo,
                                 const PipelineStateArchiveInfo&                       ArchiveInfo) noexcept
 {
+    CreateInfoType PSOCreateInfo = InPSOCreateInfo;
     try
     {
         ValidatePipelineStateArchiveInfo(PSOCreateInfo, ArchiveInfo, m_PRSMap, m_pSerializationDevice->GetValidDeviceBits());
@@ -584,11 +691,80 @@ bool ArchiverImpl::SerializePSO(std::unordered_map<String, TPSOData<CreateInfoTy
         return false;
     }
 
-    auto& Data            = IterAndInserted.first->second;
-    auto& RawMemAllocator = GetRawAllocator();
+    auto&      Data            = IterAndInserted.first->second;
+    auto&      RawMemAllocator = GetRawAllocator();
+    const bool UseDefaultPRS   = (PSOCreateInfo.ResourceSignaturesCount == 0);
+
+    DefaultPRSInfo DefPRS;
+    if (UseDefaultPRS)
+    {
+        DefPRS.DeviceBits = ArchiveInfo.DeviceBits;
+        DefPRS.UniqueName = UniquePRSName();
+    }
+
+    for (Uint32 Bits = ArchiveInfo.DeviceBits; Bits != 0;)
+    {
+        const auto Type = static_cast<RENDER_DEVICE_TYPE>(PlatformMisc::GetLSB(ExtractLSB(Bits)));
+
+        static_assert(RENDER_DEVICE_TYPE_COUNT == 7, "Please update the switch below to handle the new render device type");
+        switch (Type)
+        {
+#if D3D11_SUPPORTED
+            case RENDER_DEVICE_TYPE_D3D11:
+                if (!PatchShadersD3D11(PSOCreateInfo, Data, DefPRS))
+                    return false;
+                break;
+#endif
+#if D3D12_SUPPORTED
+            case RENDER_DEVICE_TYPE_D3D12:
+                if (!PatchShadersD3D12(PSOCreateInfo, Data, DefPRS))
+                    return false;
+                break;
+#endif
+#if GL_SUPPORTED || GLES_SUPPORTED
+            case RENDER_DEVICE_TYPE_GL:
+            case RENDER_DEVICE_TYPE_GLES:
+                if (!PatchShadersGL(PSOCreateInfo, Data, DefPRS))
+                    return false;
+                break;
+#endif
+#if VULKAN_SUPPORTED
+            case RENDER_DEVICE_TYPE_VULKAN:
+                if (!PatchShadersVk(PSOCreateInfo, Data, DefPRS))
+                    return false;
+                break;
+#endif
+#if METAL_SUPPORTED
+            case RENDER_DEVICE_TYPE_METAL:
+                if (!PatchShadersMtl(PSOCreateInfo, Data, DefPRS))
+                    return false;
+                break;
+#endif
+            case RENDER_DEVICE_TYPE_UNDEFINED:
+            case RENDER_DEVICE_TYPE_COUNT:
+            default:
+                LOG_ERROR_MESSAGE("Unexpected render device type");
+                break;
+        }
+        if (UseDefaultPRS)
+        {
+            PSOCreateInfo.ResourceSignaturesCount = 0;
+            PSOCreateInfo.ppResourceSignatures    = nullptr;
+            PSOCreateInfo.PSODesc.ResourceLayout  = InPSOCreateInfo.PSODesc.ResourceLayout;
+        }
+    }
 
     if (!Data.SharedData)
     {
+        IPipelineResourceSignature* DefaultSignatures[1] = {};
+        if (UseDefaultPRS)
+        {
+            DefaultSignatures[0]                  = DefPRS.pPRS;
+            PSOCreateInfo.ResourceSignaturesCount = 1;
+            PSOCreateInfo.ppResourceSignatures    = DefaultSignatures;
+        }
+        VERIFY_EXPR(PSOCreateInfo.ResourceSignaturesCount != 0);
+
         TPRSNames PRSNames = {};
         for (Uint32 i = 0; i < PSOCreateInfo.ResourceSignaturesCount; ++i)
         {
@@ -608,67 +784,6 @@ bool ArchiverImpl::SerializePSO(std::unordered_map<String, TPSOData<CreateInfoTy
         VERIFY_EXPR(Ser.IsEnd());
 
         Data.SharedData = SerializedMemory{SerPtr, SerSize};
-    }
-
-    for (Uint32 Bits = ArchiveInfo.DeviceBits; Bits != 0;)
-    {
-        const auto Type = static_cast<RENDER_DEVICE_TYPE>(PlatformMisc::GetLSB(ExtractLSB(Bits)));
-
-        static_assert(RENDER_DEVICE_TYPE_COUNT == 7, "Please update the switch below to handle the new render device type");
-        switch (Type)
-        {
-#if D3D11_SUPPORTED
-            case RENDER_DEVICE_TYPE_D3D11:
-            {
-                if (!PatchShadersD3D11(PSOCreateInfo, Data))
-                    return false;
-                break;
-            }
-#endif
-
-#if D3D12_SUPPORTED
-            case RENDER_DEVICE_TYPE_D3D12:
-            {
-                if (!PatchShadersD3D12(PSOCreateInfo, Data))
-                    return false;
-                break;
-            }
-#endif
-
-#if GL_SUPPORTED || GLES_SUPPORTED
-            case RENDER_DEVICE_TYPE_GL:
-            case RENDER_DEVICE_TYPE_GLES:
-            {
-                if (!PatchShadersGL(PSOCreateInfo, Data))
-                    return false;
-                break;
-            }
-#endif
-
-#if VULKAN_SUPPORTED
-            case RENDER_DEVICE_TYPE_VULKAN:
-            {
-                if (!PatchShadersVk(PSOCreateInfo, Data))
-                    return false;
-                break;
-            }
-#endif
-
-#if METAL_SUPPORTED
-            case RENDER_DEVICE_TYPE_METAL:
-            {
-                if (!PatchShadersMtl(PSOCreateInfo, Data))
-                    return false;
-                break;
-            }
-#endif
-
-            case RENDER_DEVICE_TYPE_UNDEFINED:
-            case RENDER_DEVICE_TYPE_COUNT:
-            default:
-                LOG_ERROR_MESSAGE("Unexpected render device type");
-                break;
-        }
     }
     return true;
 }

@@ -46,12 +46,20 @@ __forceinline SHADER_TYPE GetShaderStageType(const ShaderD3D11Impl* pShader)
     return pShader->GetDesc().ShaderType;
 }
 
-RefCntAutoPtr<PipelineResourceSignatureD3D11Impl> PipelineStateD3D11Impl::CreateDefaultResourceSignature(const std::vector<ShaderD3D11Impl*>& Shaders)
+void PipelineStateD3D11Impl::GetDefaultResourceSignatureDesc(const TShaderStages&               Shaders,
+                                                             const PipelineResourceLayoutDesc&  ResourceLayout,
+                                                             const char*                        PSOName,
+                                                             std::vector<PipelineResourceDesc>& Resources,
+                                                             std::vector<ImmutableSamplerDesc>& ImmutableSamplers,
+                                                             PipelineResourceSignatureDesc&     SignDesc) noexcept(false)
 {
-    std::unordered_map<ShaderResourceHashKey, const D3DShaderResourceAttribs&, ShaderResourceHashKey::Hasher> UniqueResources;
+    Resources.clear();
+    ImmutableSamplers.clear();
+    SignDesc = {};
 
-    std::vector<PipelineResourceDesc> Resources;
-    const char*                       pCombinedSamplerSuffix = nullptr;
+    SignDesc.CombinedSamplerSuffix = nullptr;
+
+    std::unordered_map<ShaderResourceHashKey, const D3DShaderResourceAttribs&, ShaderResourceHashKey::Hasher> UniqueResources;
 
     for (auto* pShader : Shaders)
     {
@@ -67,7 +75,7 @@ RefCntAutoPtr<PipelineResourceSignatureD3D11Impl> PipelineStateD3D11Impl::Create
                     ShaderResources.GetCombinedSamplerSuffix() :
                     nullptr;
 
-                const auto VarDesc = FindPipelineResourceLayoutVariable(m_Desc.ResourceLayout, Attribs.Name, ShaderType, SamplerSuffix);
+                const auto VarDesc = FindPipelineResourceLayoutVariable(ResourceLayout, Attribs.Name, ShaderType, SamplerSuffix);
                 // Note that Attribs.Name != VarDesc.Name for combined samplers
                 const auto it_assigned = UniqueResources.emplace(ShaderResourceHashKey{Attribs.Name, VarDesc.ShaderStages}, Attribs);
                 if (it_assigned.second)
@@ -84,7 +92,7 @@ RefCntAutoPtr<PipelineResourceSignatureD3D11Impl> PipelineStateD3D11Impl::Create
                 }
                 else
                 {
-                    VerifyD3DResourceMerge(m_Desc.Name, it_assigned.first->second, Attribs);
+                    VerifyD3DResourceMerge(PSOName, it_assigned.first->second, Attribs);
                 }
             } //
         );
@@ -92,25 +100,39 @@ RefCntAutoPtr<PipelineResourceSignatureD3D11Impl> PipelineStateD3D11Impl::Create
         // merge combined sampler suffixes
         if (ShaderResources.IsUsingCombinedTextureSamplers() && ShaderResources.GetNumSamplers() > 0)
         {
-            if (pCombinedSamplerSuffix != nullptr)
+            if (SignDesc.CombinedSamplerSuffix != nullptr)
             {
-                if (strcmp(pCombinedSamplerSuffix, ShaderResources.GetCombinedSamplerSuffix()) != 0)
+                if (strcmp(SignDesc.CombinedSamplerSuffix, ShaderResources.GetCombinedSamplerSuffix()) != 0)
                     LOG_ERROR_AND_THROW("CombinedSamplerSuffix is not compatible between shaders");
             }
             else
             {
-                pCombinedSamplerSuffix = ShaderResources.GetCombinedSamplerSuffix();
+                SignDesc.CombinedSamplerSuffix = ShaderResources.GetCombinedSamplerSuffix();
             }
         }
     }
 
-    // Use immutable samplers from ResourceLayout.
-    constexpr ImmutableSamplerDesc* pImmutableSamplers = nullptr;
-    constexpr bool                  IsDeviceInternal   = false;
-    return TPipelineStateBase::CreateDefaultSignature(Resources, pCombinedSamplerSuffix, pImmutableSamplers, GetActiveShaderStages(), IsDeviceInternal);
+    SignDesc.NumResources               = static_cast<Uint32>(Resources.size());
+    SignDesc.Resources                  = SignDesc.NumResources > 0 ? Resources.data() : nullptr;
+    SignDesc.NumImmutableSamplers       = ResourceLayout.NumImmutableSamplers;
+    SignDesc.ImmutableSamplers          = ResourceLayout.ImmutableSamplers;
+    SignDesc.BindingIndex               = 0;
+    SignDesc.UseCombinedTextureSamplers = SignDesc.CombinedSamplerSuffix != nullptr;
 }
 
-void PipelineStateD3D11Impl::RemapShaderResources(const std::vector<ShaderD3D11Impl*>&                     Shaders,
+RefCntAutoPtr<PipelineResourceSignatureD3D11Impl> PipelineStateD3D11Impl::CreateDefaultResourceSignature(const TShaderStages& Shaders)
+{
+    std::vector<PipelineResourceDesc> Resources;
+    std::vector<ImmutableSamplerDesc> ImmutableSamplers;
+    PipelineResourceSignatureDesc     SignDesc;
+    GetDefaultResourceSignatureDesc(Shaders, m_Desc.ResourceLayout, m_Desc.Name, Resources, ImmutableSamplers, SignDesc);
+
+    // Use immutable samplers from ResourceLayout.
+    constexpr bool IsDeviceInternal = false;
+    return TPipelineStateBase::CreateDefaultSignature(SignDesc, GetActiveShaderStages(), IsDeviceInternal);
+}
+
+void PipelineStateD3D11Impl::RemapShaderResources(const TShaderStages&                                     Shaders,
                                                   const RefCntAutoPtr<PipelineResourceSignatureD3D11Impl>* pSignatures,
                                                   Uint32                                                   SignatureCount,
                                                   D3D11ShaderResourceCounters*                             pBaseBindings, // [SignatureCount]

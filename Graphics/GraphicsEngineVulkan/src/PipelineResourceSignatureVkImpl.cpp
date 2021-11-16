@@ -281,11 +281,15 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
             {
                 auto&       ImmutableSampler     = m_ImmutableSamplers[SrcImmutableSamplerInd];
                 const auto& ImmutableSamplerDesc = m_Desc.ImmutableSamplers[SrcImmutableSamplerInd].Desc;
-                // The same immutable sampler may be used by different resources in different shader stages.
-                if (!ImmutableSampler.Ptr && HasDevice())
-                    GetDevice()->CreateSampler(ImmutableSamplerDesc, &ImmutableSampler.Ptr);
-
-                pVkImmutableSamplers = TempAllocator.ConstructArray<VkSampler>(ResDesc.ArraySize, ImmutableSampler.Ptr.RawPtr<SamplerVkImpl>()->GetVkSampler());
+                VkSampler   vkSampler            = VK_NULL_HANDLE;
+                if (HasDevice())
+                {
+                    // The same immutable sampler may be used by different resources in different shader stages.
+                    if (!ImmutableSampler.Ptr)
+                        GetDevice()->CreateSampler(ImmutableSamplerDesc, &ImmutableSampler.Ptr);
+                    vkSampler = ImmutableSampler.Ptr.RawPtr<SamplerVkImpl>()->GetVkSampler();
+                }
+                pVkImmutableSamplers = TempAllocator.ConstructArray<VkSampler>(ResDesc.ArraySize, vkSampler);
             }
         }
 

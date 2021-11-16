@@ -605,8 +605,10 @@ template <typename CreateInfoType>
 bool DeviceObjectArchiveBase::CreateResourceSignatures(PSOData<CreateInfoType>& PSO, IRenderDevice* pRenderDevice)
 {
     if (PSO.CreateInfo.ResourceSignaturesCount == 0)
+    {
+        UNEXPECTED("PSO must have at least one resource signature");
         return true;
-
+    }
     auto* ppResourceSignatures = PSO.Allocator.template Allocate<IPipelineResourceSignature*>(PSO.CreateInfo.ResourceSignaturesCount);
 
     ResourceSignatureUnpackInfo UnpackInfo;
@@ -999,33 +1001,6 @@ void PSOSerializer<Mode>::SerializePSO(
     for (Uint32 i = 0; i < CreateInfo.ResourceSignaturesCount; ++i)
     {
         Ser(PRSNames[i]);
-    }
-
-    //   Serialize PipelineResourceLayoutDesc
-    {
-        auto& ResLayout = CreateInfo.PSODesc.ResourceLayout;
-        Ser(ResLayout.DefaultVariableType,
-            ResLayout.DefaultVariableMergeStages,
-            ResLayout.NumVariables,
-            ResLayout.NumImmutableSamplers);
-
-        auto* pVariables = PSOSerializer_ArrayHelper<Mode>::Create(ResLayout.Variables, ResLayout.NumVariables, Allocator);
-        for (Uint32 i = 0; i < ResLayout.NumVariables; ++i)
-        {
-            // Serialize ShaderResourceVariableDesc
-            auto& Var = pVariables[i];
-            Ser(Var.ShaderStages,
-                Var.Name,
-                Var.Type,
-                Var.Flags);
-        }
-        auto* pImmutableSamplers = PSOSerializer_ArrayHelper<Mode>::Create(ResLayout.ImmutableSamplers, ResLayout.NumImmutableSamplers, Allocator);
-        for (Uint32 i = 0; i < ResLayout.NumImmutableSamplers; ++i)
-        {
-            // Serialize ImmutableSamplerDesc
-            auto& SampDesc = pImmutableSamplers[i];
-            SerializeImmutableSampler(Ser, SampDesc);
-        }
     }
 
 #if defined(_MSC_VER) && defined(_WIN64)

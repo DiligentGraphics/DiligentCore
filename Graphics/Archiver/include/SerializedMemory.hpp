@@ -49,11 +49,18 @@ struct SerializedMemory
         Other.Size = 0;
     }
 
+    SerializedMemory(const SerializedMemory&) = delete;
+
     ~SerializedMemory();
 
     SerializedMemory& operator=(SerializedMemory&& Rhs);
+    SerializedMemory& operator=(const SerializedMemory&) = delete;
 
     explicit operator bool() const { return Ptr != nullptr; }
+
+    bool operator==(const SerializedMemory& Rhs) const;
+
+    size_t CalcHash() const;
 };
 
 } // namespace Diligent

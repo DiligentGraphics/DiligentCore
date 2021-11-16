@@ -36,38 +36,42 @@ const SerializedMemory& ArchiverImpl::PRSData::GetSharedData() const
 
 const SerializedMemory& ArchiverImpl::PRSData::GetDeviceData(Uint32 Idx) const
 {
+    const SerializedMemory* Result = nullptr;
     switch (static_cast<DeviceType>(Idx))
     {
         // clang-format off
+        case DeviceType::Direct3D11:
 #if D3D11_SUPPORTED
-        case DeviceType::Direct3D11: return pPRS->GetSerializedMemoryD3D11();
-#else
-        case DeviceType::Direct3D11: break;
+            Result = pPRS->GetSerializedMemoryD3D11();
 #endif
+            break;
+        case DeviceType::Direct3D12:
 #if D3D12_SUPPORTED
-        case DeviceType::Direct3D12: return pPRS->GetSerializedMemoryD3D12();
-#else
-        case DeviceType::Direct3D12: break;
+            Result = pPRS->GetSerializedMemoryD3D12();
 #endif
+            break;
+        case DeviceType::OpenGL:
 #if GL_SUPPORTED || GLES_SUPPORTED
-        case DeviceType::OpenGL:     return pPRS->GetSerializedMemoryGL();
-#else
-        case DeviceType::OpenGL:     break;
+            Result = pPRS->GetSerializedMemoryGL();
 #endif
+            break;
+        case DeviceType::Vulkan:
 #if VULKAN_SUPPORTED
-        case DeviceType::Vulkan:     return pPRS->GetSerializedMemoryVk();
-#else
-        case DeviceType::Vulkan:     break;
+            Result = pPRS->GetSerializedMemoryVk();
 #endif
+            break;
+        case DeviceType::Metal:
 #if METAL_SUPPORTED
-        case DeviceType::Metal:      return pPRS->GetSerializedMemoryMtl();
-#else
-        case DeviceType::Metal:      break;
+            Result = pPRS->GetSerializedMemoryMtl();
 #endif
+            break;
         // clang-format on
         case DeviceType::Count:
             break;
     }
+
+    if (Result != nullptr)
+        return *Result;
 
     static const SerializedMemory Empty;
     return Empty;
@@ -81,6 +85,7 @@ bool ArchiverImpl::AddPipelineResourceSignature(IPipelineResourceSignature* pPRS
 
     auto* pPRSImpl        = ClassPtrCast<SerializableResourceSignatureImpl>(pPRS);
     auto  IterAndInserted = m_PRSMap.emplace(String{pPRSImpl->GetDesc().Name}, PRSData{});
+
     if (!IterAndInserted.second)
     {
         if (IterAndInserted.first->second.pPRS != pPRSImpl)
@@ -92,8 +97,32 @@ bool ArchiverImpl::AddPipelineResourceSignature(IPipelineResourceSignature* pPRS
             return true;
     }
 
+    m_PRSCache.insert(RefCntAutoPtr<SerializableResourceSignatureImpl>{pPRSImpl});
+
     IterAndInserted.first->second.pPRS = pPRSImpl;
     return true;
+}
+
+bool ArchiverImpl::CachePipelineResourceSignature(RefCntAutoPtr<IPipelineResourceSignature>& pPRS)
+{
+    auto* pPRSImpl        = pPRS.RawPtr<SerializableResourceSignatureImpl>();
+    auto  IterAndInserted = m_PRSCache.insert(RefCntAutoPtr<SerializableResourceSignatureImpl>{pPRSImpl});
+
+    // Found same PRS in cache
+    if (!IterAndInserted.second)
+    {
+        pPRS     = *IterAndInserted.first;
+        pPRSImpl = pPRS.RawPtr<SerializableResourceSignatureImpl>();
+
+#ifdef DILIGENT_DEBUG
+        auto Iter = m_PRSMap.find(String{pPRSImpl->GetDesc().Name});
+        VERIFY_EXPR(Iter != m_PRSMap.end());
+        VERIFY_EXPR(Iter->second.pPRS == pPRSImpl);
+#endif
+        return true;
+    }
+
+    return AddPipelineResourceSignature(pPRS);
 }
 
 Bool ArchiverImpl::AddPipelineResourceSignature(const PipelineResourceSignatureDesc& SignatureDesc,
@@ -105,6 +134,23 @@ Bool ArchiverImpl::AddPipelineResourceSignature(const PipelineResourceSignatureD
         return false;
 
     return AddPipelineResourceSignature(pPRS);
+}
+
+String ArchiverImpl::UniquePRSName()
+{
+    String       PRSName = "Default PRS - ";
+    const size_t Pos     = PRSName.length();
+
+    // AZ TODO: optimize (binary search?)
+    for (Uint32 Index = 0; Index < 10000; ++Index)
+    {
+        PRSName.resize(Pos);
+        PRSName += std::to_string(Index);
+
+        if (m_PRSMap.find(PRSName) == m_PRSMap.end())
+            return PRSName;
+    }
+    return "";
 }
 
 } // namespace Diligent

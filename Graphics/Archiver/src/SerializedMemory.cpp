@@ -26,6 +26,7 @@
 
 #include "SerializedMemory.hpp"
 #include "EngineMemory.h"
+#include "HashUtils.hpp"
 
 namespace Diligent
 {
@@ -53,6 +54,35 @@ SerializedMemory& SerializedMemory::operator=(SerializedMemory&& Rhs)
     Rhs.Ptr  = nullptr;
     Rhs.Size = 0;
     return *this;
+}
+
+size_t SerializedMemory::CalcHash() const
+{
+    if (Ptr == nullptr || Size == 0)
+        return 0;
+
+    size_t Hash = 0;
+    if (reinterpret_cast<size_t>(Ptr) % 4 == 0 && Size % 4 == 0)
+    {
+        const auto* UintPtr = static_cast<const Uint32*>(Ptr);
+        for (size_t i = 0, Count = Size / 4; i < Count; ++i)
+            HashCombine(Hash, UintPtr[i]);
+    }
+    else
+    {
+        const auto* BytePtr = static_cast<const Uint8*>(Ptr);
+        for (size_t i = 0; i < Size; ++i)
+            HashCombine(Hash, BytePtr[i]);
+    }
+    return Hash;
+}
+
+bool SerializedMemory::operator==(const SerializedMemory& Rhs) const
+{
+    if (Size != Rhs.Size)
+        return false;
+
+    return std::memcmp(Ptr, Rhs.Ptr, Size) == 0;
 }
 
 } // namespace Diligent
