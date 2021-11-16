@@ -517,15 +517,15 @@ std::vector<VkRayTracingShaderGroupCreateInfoKHR> BuildRTShaderGroupDescription(
     return ShaderGroups;
 }
 
-void VerifyResourceMerge(const PipelineStateDesc&          PSODesc,
+void VerifyResourceMerge(const char*                       PSOName,
                          const SPIRVShaderResourceAttribs& ExistingRes,
                          const SPIRVShaderResourceAttribs& NewResAttribs)
 {
-#define LOG_RESOURCE_MERGE_ERROR_AND_THROW(PropertyName)                                                          \
-    LOG_ERROR_AND_THROW("Shader variable '", NewResAttribs.Name,                                                  \
-                        "' is shared between multiple shaders in pipeline '", (PSODesc.Name ? PSODesc.Name : ""), \
-                        "', but its " PropertyName " varies. A variable shared between multiple shaders "         \
-                        "must be defined identically in all shaders. Either use separate variables for "          \
+#define LOG_RESOURCE_MERGE_ERROR_AND_THROW(PropertyName)                                                  \
+    LOG_ERROR_AND_THROW("Shader variable '", NewResAttribs.Name,                                          \
+                        "' is shared between multiple shaders in pipeline '", (PSOName ? PSOName : ""),   \
+                        "', but its " PropertyName " varies. A variable shared between multiple shaders " \
+                        "must be defined identically in all shaders. Either use separate variables for "  \
                         "different shader stages, change resource name or make sure that " PropertyName " is consistent.");
 
     if (ExistingRes.Type != NewResAttribs.Type)
@@ -579,12 +579,21 @@ size_t PipelineStateVkImpl::ShaderStageInfo::Count() const
     return Shaders.size();
 }
 
-RefCntAutoPtr<PipelineResourceSignatureVkImpl> PipelineStateVkImpl::CreateDefaultSignature(const TShaderStages& ShaderStages) noexcept(false)
+void PipelineStateVkImpl::GetDefaultResourceSignatureDesc(
+    const TShaderStages&               ShaderStages,
+    const PipelineResourceLayoutDesc&  ResourceLayout,
+    const char*                        PSOName,
+    std::vector<PipelineResourceDesc>& Resources,
+    std::vector<ImmutableSamplerDesc>& ImmutableSamplers,
+    PipelineResourceSignatureDesc&     SignDesc) noexcept(false)
 {
-    std::unordered_map<ShaderResourceHashKey, const SPIRVShaderResourceAttribs&, ShaderResourceHashKey::Hasher> UniqueResources;
+    Resources.clear();
+    ImmutableSamplers.clear();
+    SignDesc = {};
 
-    std::vector<PipelineResourceDesc> Resources;
-    const char*                       pCombinedSamplerSuffix = nullptr;
+    SignDesc.CombinedSamplerSuffix = nullptr;
+
+    std::unordered_map<ShaderResourceHashKey, const SPIRVShaderResourceAttribs&, ShaderResourceHashKey::Hasher> UniqueResources;
 
     for (auto& Stage : ShaderStages)
     {
@@ -609,7 +618,7 @@ RefCntAutoPtr<PipelineResourceSignatureVkImpl> PipelineStateVkImpl::CreateDefaul
                         ShaderResources.GetCombinedSamplerSuffix() :
                         nullptr;
 
-                    const auto VarDesc = FindPipelineResourceLayoutVariable(m_Desc.ResourceLayout, Attribs.Name, Stage.Type, SamplerSuffix);
+                    const auto VarDesc = FindPipelineResourceLayoutVariable(ResourceLayout, Attribs.Name, Stage.Type, SamplerSuffix);
                     // Note that Attribs.Name != VarDesc.Name for combined samplers
                     const auto it_assigned = UniqueResources.emplace(ShaderResourceHashKey{Attribs.Name, VarDesc.ShaderStages}, Attribs);
                     if (it_assigned.second)
@@ -626,40 +635,55 @@ RefCntAutoPtr<PipelineResourceSignatureVkImpl> PipelineStateVkImpl::CreateDefaul
                     }
                     else
                     {
-                        VerifyResourceMerge(m_Desc, it_assigned.first->second, Attribs);
+                        VerifyResourceMerge(PSOName, it_assigned.first->second, Attribs);
                     }
                 });
 
             // Merge combined sampler suffixes
             if (ShaderResources.IsUsingCombinedSamplers() && ShaderResources.GetNumSepSmplrs() > 0)
             {
-                if (pCombinedSamplerSuffix != nullptr)
+                if (SignDesc.CombinedSamplerSuffix != nullptr)
                 {
-                    if (strcmp(pCombinedSamplerSuffix, ShaderResources.GetCombinedSamplerSuffix()) != 0)
+                    if (strcmp(SignDesc.CombinedSamplerSuffix, ShaderResources.GetCombinedSamplerSuffix()) != 0)
                         LOG_ERROR_AND_THROW("CombinedSamplerSuffix is not compatible between shaders");
                 }
                 else
                 {
-                    pCombinedSamplerSuffix = ShaderResources.GetCombinedSamplerSuffix();
+                    SignDesc.CombinedSamplerSuffix = ShaderResources.GetCombinedSamplerSuffix();
                 }
             }
         }
     }
 
-    constexpr bool bIsDeviceInternal = false;
-    // Use immutable samplers from ResourceLayout.
-    constexpr ImmutableSamplerDesc* pImmutableSamplers = nullptr;
-    return TPipelineStateBase::CreateDefaultSignature(Resources, pCombinedSamplerSuffix, pImmutableSamplers, GetActiveShaderStages(), bIsDeviceInternal);
+    SignDesc.NumResources               = static_cast<Uint32>(Resources.size());
+    SignDesc.Resources                  = SignDesc.NumResources > 0 ? Resources.data() : nullptr;
+    SignDesc.NumImmutableSamplers       = ResourceLayout.NumImmutableSamplers;
+    SignDesc.ImmutableSamplers          = ResourceLayout.ImmutableSamplers;
+    SignDesc.BindingIndex               = 0;
+    SignDesc.UseCombinedTextureSamplers = SignDesc.CombinedSamplerSuffix != nullptr;
 }
 
-void PipelineStateVkImpl::RemapShaderResources(TShaderStages&                          ShaderStages,
-                                               const PipelineResourceSignatureVkImpl** pSignatures,
-                                               const Uint32                            SignatureCount,
-                                               const TBindIndexToDescSetIndex&         BindIndexToDescSetIndex,
-                                               bool                                    bStripReflection,
-                                               const char*                             PipelineName,
-                                               TShaderResources*                       pDvpShaderResources,
-                                               TResourceAttibutions*                   pDvpResourceAttibutions) noexcept(false)
+RefCntAutoPtr<PipelineResourceSignatureVkImpl> PipelineStateVkImpl::CreateDefaultSignature(const TShaderStages& ShaderStages) noexcept(false)
+{
+    std::vector<PipelineResourceDesc> Resources;
+    std::vector<ImmutableSamplerDesc> ImmutableSamplers;
+    PipelineResourceSignatureDesc     SignDesc;
+    GetDefaultResourceSignatureDesc(ShaderStages, m_Desc.ResourceLayout, m_Desc.Name, Resources, ImmutableSamplers, SignDesc);
+
+    constexpr bool bIsDeviceInternal = false;
+    // Use immutable samplers from ResourceLayout.
+    return TPipelineStateBase::CreateDefaultSignature(SignDesc, GetActiveShaderStages(), bIsDeviceInternal);
+}
+
+void PipelineStateVkImpl::RemapShaderResources(
+    TShaderStages&                                        ShaderStages,
+    const RefCntAutoPtr<PipelineResourceSignatureVkImpl>* pSignatures,
+    const Uint32                                          SignatureCount,
+    const TBindIndexToDescSetIndex&                       BindIndexToDescSetIndex,
+    bool                                                  bStripReflection,
+    const char*                                           PipelineName,
+    TShaderResources*                                     pDvpShaderResources,
+    TResourceAttibutions*                                 pDvpResourceAttibutions) noexcept(false)
 {
     // Verify that pipeline layout is compatible with shader resources and
     // remap resource bindings.
@@ -763,16 +787,12 @@ void PipelineStateVkImpl::InitPipelineLayout(bool RemapResources, TShaderStages&
 
     if (RemapResources)
     {
-        TBindIndexToDescSetIndex                                                    BindIndexToDescSetIndex = {};
-        std::array<const PipelineResourceSignatureVkImpl*, MAX_RESOURCE_SIGNATURES> Signatures              = {};
+        TBindIndexToDescSetIndex BindIndexToDescSetIndex = {};
         for (Uint32 i = 0; i < m_SignatureCount; ++i)
-        {
-            Signatures[i]              = m_Signatures[i].RawPtr();
             BindIndexToDescSetIndex[i] = m_PipelineLayout.GetFirstDescrSetIndex(i);
-        }
 
         RemapShaderResources(ShaderStages,
-                             Signatures.data(),
+                             m_Signatures,
                              m_SignatureCount,
                              BindIndexToDescSetIndex,
                              true, // bStripReflection

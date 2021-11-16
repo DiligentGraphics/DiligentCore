@@ -42,7 +42,7 @@ struct SerializableResourceSignatureImpl::PRSMtlImpl final : IPRSMtl
     {}
 
     PipelineResourceSignatureMtlImpl* GetPRS() override { return &PRS; }
-    SerializedMemory const&           GetMem() override { return Mem; }
+    SerializedMemory const*           GetMem() override { return &Mem; }
     
 };
 

@@ -951,27 +951,17 @@ protected:
 
     template <typename... ExtraArgsType>
     RefCntAutoPtr<PipelineResourceSignatureImplType> CreateDefaultSignature(
-        const std::vector<PipelineResourceDesc>& Resources,
-        const char*                              pCombinedSamplerSuffix,
-        const ImmutableSamplerDesc*              pImmutableSamplers,
+        const PipelineResourceSignatureDesc& SrcSignDesc,
         const ExtraArgsType&... ExtraArgs)
     {
         VERIFY_EXPR(m_UsingImplicitSignature);
 
         VERIFY_EXPR(this->m_Desc.Name != nullptr);
         const String SignName{String{"Implicit signature of PSO '"} + this->m_Desc.Name + '\''};
-        const auto&  LayoutDesc = this->m_Desc.ResourceLayout;
 
-        PipelineResourceSignatureDesc SignDesc;
-        SignDesc.Name                       = SignName.c_str();
-        SignDesc.NumResources               = static_cast<Uint32>(Resources.size());
-        SignDesc.Resources                  = SignDesc.NumResources > 0 ? Resources.data() : nullptr;
-        SignDesc.NumImmutableSamplers       = LayoutDesc.NumImmutableSamplers;
-        SignDesc.ImmutableSamplers          = pImmutableSamplers != nullptr ? pImmutableSamplers : LayoutDesc.ImmutableSamplers;
-        SignDesc.BindingIndex               = 0;
-        SignDesc.SRBAllocationGranularity   = this->m_Desc.SRBAllocationGranularity;
-        SignDesc.UseCombinedTextureSamplers = pCombinedSamplerSuffix != nullptr;
-        SignDesc.CombinedSamplerSuffix      = pCombinedSamplerSuffix;
+        PipelineResourceSignatureDesc SignDesc{SrcSignDesc};
+        SignDesc.Name                     = SignName.c_str();
+        SignDesc.SRBAllocationGranularity = this->m_Desc.SRBAllocationGranularity;
 
         RefCntAutoPtr<PipelineResourceSignatureImplType> pImplicitSignature;
         this->GetDevice()->CreatePipelineResourceSignature(SignDesc, pImplicitSignature.template DblPtr<IPipelineResourceSignature>(), ExtraArgs...);

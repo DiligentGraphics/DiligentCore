@@ -101,6 +101,15 @@ public:
         LocalRootSignatureD3D12*                                 pLocalRootSig             = nullptr,
         const TValidateShaderResourcesFn&                        ValidateShaderResourcesFn = {}) noexcept(false);
 
+    static void GetDefaultResourceSignatureDesc(
+        const TShaderStages&               ShaderStages,
+        const PipelineResourceLayoutDesc&  ResourceLayout,
+        const char*                        PSOName,
+        const LocalRootSignatureD3D12*     pLocalRootSig,
+        std::vector<PipelineResourceDesc>& Resources,
+        std::vector<ImmutableSamplerDesc>& ImmutableSamplers,
+        PipelineResourceSignatureDesc&     SignDesc) noexcept(false);
+
 private:
     template <typename PSOCreateInfoType>
     void InitInternalObjects(const PSOCreateInfoType& CreateInfo,

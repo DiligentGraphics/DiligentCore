@@ -576,7 +576,7 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
             m_ArchiverFactory = GetArchiverFactory();
         }
 #    else
-        m_ArchiverFactory = GetArchiverFactory();
+        m_ArchiverFactory = Diligent::GetArchiverFactory();
 #    endif
     }
 #endif

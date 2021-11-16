@@ -34,7 +34,9 @@
 
 namespace Diligent
 {
-    
+namespace
+{
+
 struct ShaderStageInfoMtl
 {
     ShaderStageInfoMtl() {}
@@ -55,8 +57,11 @@ struct ShaderStageInfoMtl
     friend SHADER_TYPE GetShaderStageType(const ShaderStageInfoMtl& Stage) { return Stage.Type; }
 };
 
+} // namespace
+
+
 template <typename CreateInfoType>
-bool ArchiverImpl::PatchShadersMtlImpl(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data)
+bool ArchiverImpl::PatchShadersMtlImpl(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data, DefaultPRSInfo& DefPRS)
 {
     TShaderIndices ShaderIndices;
 
@@ -70,24 +75,24 @@ bool ArchiverImpl::PatchShadersMtlImpl(const CreateInfoType& CreateInfo, TPSODat
     return true;
 }
 
-bool ArchiverImpl::PatchShadersMtl(const GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data)
+bool ArchiverImpl::PatchShadersMtl(const GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS)
 {
-    return PatchShadersMtlImpl(CreateInfo, Data);
+    return PatchShadersMtlImpl(CreateInfo, Data, DefPRS);
 }
 
-bool ArchiverImpl::PatchShadersMtl(const ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data)
+bool ArchiverImpl::PatchShadersMtl(const ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS)
 {
-    return PatchShadersMtlImpl(CreateInfo, Data);
+    return PatchShadersMtlImpl(CreateInfo, Data, DefPRS);
 }
 
-bool ArchiverImpl::PatchShadersMtl(const TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data)
+bool ArchiverImpl::PatchShadersMtl(const TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS)
 {
-    return PatchShadersMtlImpl(CreateInfo, Data);
+    return PatchShadersMtlImpl(CreateInfo, Data, DefPRS);
 }
 
-bool ArchiverImpl::PatchShadersMtl(const RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data)
+bool ArchiverImpl::PatchShadersMtl(const RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS)
 {
-    return PatchShadersMtlImpl(CreateInfo, Data);
+    return PatchShadersMtlImpl(CreateInfo, Data, DefPRS);
 }
 
 } // namespace Diligent

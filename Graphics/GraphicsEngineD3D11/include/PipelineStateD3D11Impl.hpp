@@ -110,12 +110,21 @@ public:
 
     using TCompileShaderFn           = std::function<void(size_t ShaderIdx, ShaderD3D11Impl* pShader, ID3DBlob* pPatchedBytecode)>;
     using TValidateShaderResourcesFn = std::function<void(ShaderD3D11Impl* pShader)>;
-    static void RemapShaderResources(const std::vector<ShaderD3D11Impl*>&                     Shaders,
+    using TShaderStages              = std::vector<ShaderD3D11Impl*>;
+
+    static void RemapShaderResources(const TShaderStages&                                     Shaders,
                                      const RefCntAutoPtr<PipelineResourceSignatureD3D11Impl>* pSignatures,
                                      Uint32                                                   SignatureCount,
                                      D3D11ShaderResourceCounters*                             pBaseBindings, // [SignatureCount]
                                      const TCompileShaderFn&                                  CompileShaderFn,
                                      const TValidateShaderResourcesFn&                        ValidateShaderResourcesFn = {}) noexcept(false);
+
+    static void GetDefaultResourceSignatureDesc(const TShaderStages&               ShaderStages,
+                                                const PipelineResourceLayoutDesc&  ResourceLayout,
+                                                const char*                        PSOName,
+                                                std::vector<PipelineResourceDesc>& Resources,
+                                                std::vector<ImmutableSamplerDesc>& ImmutableSamplers,
+                                                PipelineResourceSignatureDesc&     SignDesc) noexcept(false);
 
 private:
     template <typename PSOCreateInfoType>

@@ -36,17 +36,13 @@ if(METAL_SUPPORTED)
     list(APPEND SOURCE src/ArchiverImpl_PSO.mm)
 endif()
 
-add_library(Diligent-Archiver-interface INTERFACE)
-
-target_include_directories(Diligent-Archiver-interface INTERFACE interface)
-
 add_library(Diligent-Archiver SHARED
     ${SOURCE} ${INTERFACE} ${INCLUDE}
 )
 
-target_link_libraries(Diligent-Archiver PUBLIC Diligent-Archiver-interface)
-
 target_include_directories(Diligent-Archiver
+PUBLIC
+    interface
 PRIVATE
     include
     ../GraphicsEngine/include
@@ -58,7 +54,6 @@ PRIVATE
 target_link_libraries(Diligent-Archiver
 PRIVATE
     Diligent-BuildSettings
-    Diligent-GraphicsEngine # for DILIGENT_CORE_COMMIT_HASH
 PUBLIC
     Diligent-PlatformInterface
     Diligent-Common
@@ -140,3 +135,6 @@ else()
 endif()
 
 set_common_target_properties(Diligent-Archiver)
+if(DEFINED DILIGENT_CORE_COMMIT_HASH)
+    target_compile_definitions(Diligent-Archiver PRIVATE DILIGENT_CORE_COMMIT_HASH="${DILIGENT_CORE_COMMIT_HASH}")
+endif()

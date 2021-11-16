@@ -61,6 +61,22 @@ static constexpr Uint32 GetDeviceBits()
 }
 
 static constexpr Uint32 ValidDeviceBits = GetDeviceBits();
+
+template <typename SignatureType>
+using SignatureArray = std::array<RefCntAutoPtr<SignatureType>, MAX_RESOURCE_SIGNATURES>;
+
+template <typename SignatureType>
+static void SortResourceSignatures(const PipelineResourceBindingAttribs& Info, SignatureArray<SignatureType>& Signatures, Uint32& SignaturesCount)
+{
+    for (Uint32 i = 0; i < Info.ResourceSignaturesCount; ++i)
+    {
+        const auto* pSerPRS = ClassPtrCast<SerializableResourceSignatureImpl>(Info.ppResourceSignatures[i]);
+        const auto& Desc    = pSerPRS->GetDesc();
+
+        Signatures[Desc.BindingIndex] = pSerPRS->GetSignature<SignatureType>();
+        SignaturesCount               = std::max(SignaturesCount, static_cast<Uint32>(Desc.BindingIndex) + 1);
+    }
+}
 } // namespace
 
 
@@ -145,6 +161,14 @@ void SerializationDeviceImpl::CreateRenderPass(const RenderPassDesc& Desc, IRend
 
 void SerializationDeviceImpl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc, Uint32 DeviceBits, IPipelineResourceSignature** ppSignature)
 {
+    CreatePipelineResourceSignature(Desc, DeviceBits, SHADER_TYPE_UNKNOWN, ppSignature);
+}
+
+void SerializationDeviceImpl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
+                                                              Uint32                               DeviceBits,
+                                                              SHADER_TYPE                          ShaderStages,
+                                                              IPipelineResourceSignature**         ppSignature)
+{
     DEV_CHECK_ERR(ppSignature != nullptr, "ppSignature must not be null");
     if (!ppSignature)
         return;
@@ -153,28 +177,12 @@ void SerializationDeviceImpl::CreatePipelineResourceSignature(const PipelineReso
     try
     {
         auto& RawMemAllocator = GetRawAllocator();
-        auto* pSignatureImpl(NEW_RC_OBJ(RawMemAllocator, "Pipeline resource signature instance", SerializableResourceSignatureImpl)(this, Desc, DeviceBits));
+        auto* pSignatureImpl(NEW_RC_OBJ(RawMemAllocator, "Pipeline resource signature instance", SerializableResourceSignatureImpl)(this, Desc, DeviceBits, ShaderStages));
         pSignatureImpl->QueryInterface(IID_PipelineResourceSignature, reinterpret_cast<IObject**>(ppSignature));
     }
     catch (...)
     {
         LOG_ERROR_MESSAGE("Failed to create the resource signature");
-    }
-}
-
-template <typename SignatureType>
-using SignatureArray = std::array<RefCntAutoPtr<SignatureType>, MAX_RESOURCE_SIGNATURES>;
-
-template <typename SignatureType>
-static void SortResourceSignatures(const PipelineResourceBindingAttribs& Info, SignatureArray<SignatureType>& Signatures, Uint32& SignaturesCount)
-{
-    for (Uint32 i = 0; i < Info.ResourceSignaturesCount; ++i)
-    {
-        const auto* pSerPRS = ClassPtrCast<SerializableResourceSignatureImpl>(Info.ppResourceSignatures[i]);
-        const auto& Desc    = pSerPRS->GetDesc();
-
-        Signatures[Desc.BindingIndex] = pSerPRS->GetSignature<SignatureType>();
-        SignaturesCount               = std::max(SignaturesCount, static_cast<Uint32>(Desc.BindingIndex) + 1);
     }
 }
 
@@ -230,7 +238,7 @@ void SerializationDeviceImpl::GetPipelineResourceBindings(const PipelineResource
                     Dst.Register     = Binding;
                     Dst.Space        = 0;
                     Dst.ArraySize    = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) == 0 ? ResDesc.ArraySize : RuntimeArray;
-                    Dst.ShaderStages = ResDesc.ShaderStages;
+                    Dst.ShaderStages = ShaderStages;
                     m_ResourceBindings.push_back(Dst);
                 }
 
@@ -252,7 +260,7 @@ void SerializationDeviceImpl::GetPipelineResourceBindings(const PipelineResource
                     Dst.Register     = Binding;
                     Dst.Space        = 0;
                     Dst.ArraySize    = SampAttr.ArraySize;
-                    Dst.ShaderStages = ImtblSam.ShaderStages;
+                    Dst.ShaderStages = ShaderStages;
                     m_ResourceBindings.push_back(Dst);
                 }
                 pSignature->ShiftBindings(BaseBindings);
@@ -329,7 +337,7 @@ void SerializationDeviceImpl::GetPipelineResourceBindings(const PipelineResource
                     Dst.Register     = BaseBindings[Range] + ResAttr.CacheOffset;
                     Dst.Space        = 0;
                     Dst.ArraySize    = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) == 0 ? ResDesc.ArraySize : RuntimeArray;
-                    Dst.ShaderStages = ResDesc.ShaderStages;
+                    Dst.ShaderStages = ShaderStages;
                     m_ResourceBindings.push_back(Dst);
                 }
                 pSignature->ShiftBindings(BaseBindings);
@@ -344,7 +352,6 @@ void SerializationDeviceImpl::GetPipelineResourceBindings(const PipelineResource
             Uint32                                          SignaturesCount = 0;
             SortResourceSignatures(Info, Signatures, SignaturesCount);
 
-            // Same as PipelineLayoutVk::Create()
             Uint32 DescSetLayoutCount = 0;
             for (Uint32 sign = 0; sign < SignaturesCount; ++sign)
             {
@@ -370,6 +377,7 @@ void SerializationDeviceImpl::GetPipelineResourceBindings(const PipelineResource
                     m_ResourceBindings.push_back(Dst);
                 }
 
+                // Same as PipelineLayoutVk::Create()
                 for (auto SetId : {PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_STATIC_MUTABLE, PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_DYNAMIC})
                 {
                     if (pSignature->GetDescriptorSetSize(SetId) != ~0u)

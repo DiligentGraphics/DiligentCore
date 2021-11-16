@@ -60,7 +60,8 @@ public:
     SerializableResourceSignatureImpl(IReferenceCounters*                  pRefCounters,
                                       SerializationDeviceImpl*             pDevice,
                                       const PipelineResourceSignatureDesc& Desc,
-                                      Uint32                               DeviceBits);
+                                      Uint32                               DeviceBits,
+                                      SHADER_TYPE                          ShaderStages = SHADER_TYPE_UNKNOWN);
     ~SerializableResourceSignatureImpl() override;
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_PipelineResourceSignature, TBase)
@@ -92,32 +93,36 @@ public:
 
     virtual IObject* DILIGENT_CALL_TYPE GetUserData() const override final { return nullptr; }
 
+    bool   IsCompatible(const SerializableResourceSignatureImpl& Rhs, Uint32 DeviceBits) const;
+    bool   Equal(const SerializableResourceSignatureImpl& Rhs) const;
+    size_t CalcHash() const;
+
     const SerializedMemory& GetSharedSerializedMemory() const { return m_SharedData; }
 
 #if D3D11_SUPPORTED
     PipelineResourceSignatureD3D11Impl* GetSignatureD3D11() const;
-    const SerializedMemory&             GetSerializedMemoryD3D11() const;
+    const SerializedMemory*             GetSerializedMemoryD3D11() const;
 #endif
 #if D3D12_SUPPORTED
     PipelineResourceSignatureD3D12Impl* GetSignatureD3D12() const;
-    const SerializedMemory&             GetSerializedMemoryD3D12() const;
+    const SerializedMemory*             GetSerializedMemoryD3D12() const;
 #endif
 #if GL_SUPPORTED || GLES_SUPPORTED
     PipelineResourceSignatureGLImpl* GetSignatureGL() const;
-    const SerializedMemory&          GetSerializedMemoryGL() const;
+    const SerializedMemory*          GetSerializedMemoryGL() const;
 #endif
 #if VULKAN_SUPPORTED
     PipelineResourceSignatureVkImpl* GetSignatureVk() const;
-    const SerializedMemory&          GetSerializedMemoryVk() const;
+    const SerializedMemory*          GetSerializedMemoryVk() const;
 #endif
 #if METAL_SUPPORTED
     PipelineResourceSignatureMtlImpl* GetSignatureMtl() const
     {
-        return m_pPRSMtl->GetPRS();
+        return m_pPRSMtl ? m_pPRSMtl->GetPRS() : nullptr;
     }
-    const SerializedMemory& GetSerializedMemoryMtl() const
+    const SerializedMemory* GetSerializedMemoryMtl() const
     {
-        return m_pPRSMtl->GetMem();
+        return m_pPRSMtl ? m_pPRSMtl->GetMem() : nullptr;
     }
 #endif
     template <typename SignatureType>
@@ -151,7 +156,7 @@ private:
     {
         virtual ~IPRSMtl() {}
         virtual PipelineResourceSignatureMtlImpl* GetPRS() = 0;
-        virtual SerializedMemory const&           GetMem() = 0;
+        virtual SerializedMemory const*           GetMem() = 0;
     };
     struct PRSMtlImpl;
     std::unique_ptr<IPRSMtl> m_pPRSMtl;

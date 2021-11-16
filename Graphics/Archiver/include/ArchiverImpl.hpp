@@ -154,6 +154,22 @@ private:
     //std::unordered_map<HashMapStringKey, PRSData, HashMapStringKey::Hasher> m_PRSMap;
     std::unordered_map<String, PRSData> m_PRSMap;
 
+    struct SerializablePRSHash
+    {
+        size_t operator()(const RefCntAutoPtr<SerializableResourceSignatureImpl>& PRS) const
+        {
+            return PRS->CalcHash();
+        }
+    };
+    struct SerializablePRSEqual
+    {
+        bool operator()(const RefCntAutoPtr<SerializableResourceSignatureImpl>& Lhs, const RefCntAutoPtr<SerializableResourceSignatureImpl>& Rhs) const
+        {
+            return Lhs->Equal(*Rhs);
+        }
+    };
+    std::unordered_set<RefCntAutoPtr<SerializableResourceSignatureImpl>, SerializablePRSHash, SerializablePRSEqual> m_PRSCache;
+
     struct RPData
     {
         RefCntAutoPtr<SerializableRenderPassImpl> pRP;
@@ -235,22 +251,29 @@ private:
     void SerializeShaderBytecode(TShaderIndices& ShaderIndices, DeviceType DevType, const ShaderCreateInfo& CI, const void* Bytecode, size_t BytecodeSize);
     void SerializeShaderSource(TShaderIndices& ShaderIndices, DeviceType DevType, const ShaderCreateInfo& CI);
 
+    struct DefaultPRSInfo
+    {
+        RefCntAutoPtr<IPipelineResourceSignature> pPRS;
+        Uint32                                    DeviceBits = 0;
+        String                                    UniqueName;
+    };
+
     template <typename CreateInfoType>
-    bool PatchShadersVk(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data);
+    bool PatchShadersVk(CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data, DefaultPRSInfo& DefPRS);
     template <typename CreateInfoType>
-    bool PatchShadersD3D12(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data);
+    bool PatchShadersD3D12(CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data, DefaultPRSInfo& DefPRS);
     template <typename CreateInfoType>
-    bool PatchShadersD3D11(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data);
+    bool PatchShadersD3D11(CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data, DefaultPRSInfo& DefPRS);
     template <typename CreateInfoType>
-    bool PatchShadersGL(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data);
+    bool PatchShadersGL(CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data, DefaultPRSInfo& DefPRS);
 
 #if METAL_SUPPORTED
     template <typename CreateInfoType>
-    bool PatchShadersMtlImpl(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data);
-    bool PatchShadersMtl(const GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data);
-    bool PatchShadersMtl(const ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data);
-    bool PatchShadersMtl(const TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data);
-    bool PatchShadersMtl(const RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data);
+    bool PatchShadersMtlImpl(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data, DefaultPRSInfo& DefPRS);
+    bool PatchShadersMtl(const GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
+    bool PatchShadersMtl(const ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
+    bool PatchShadersMtl(const TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
+    bool PatchShadersMtl(const RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
 #endif
 
     void SerializeShadersForPSO(const TShaderIndices& ShaderIndices, SerializedMemory& DeviceData) const;
@@ -262,10 +285,16 @@ private:
                                              Uint32*&                                    DataOffsetArray);
 
     bool AddPipelineResourceSignature(IPipelineResourceSignature* pPRS);
+    bool CachePipelineResourceSignature(RefCntAutoPtr<IPipelineResourceSignature>& pPRS);
     bool AddRenderPass(IRenderPass* pRP);
 
     template <SerializerMode Mode>
     void SerializeDebugInfo(Serializer<Mode>& Ser) const;
+
+    String UniquePRSName();
+
+    template <typename FnType>
+    bool CreateDefaultResourceSignature(DefaultPRSInfo& DefPRS, const FnType& CreatePRS);
 };
 
 } // namespace Diligent

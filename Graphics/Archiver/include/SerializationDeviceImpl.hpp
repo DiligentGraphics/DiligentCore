@@ -198,6 +198,11 @@ public:
                                                                     Uint32                               DeviceBits,
                                                                     IPipelineResourceSignature**         ppSignature) override final;
 
+    void CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
+                                         Uint32                               DeviceBits,
+                                         SHADER_TYPE                          ShaderStages,
+                                         IPipelineResourceSignature**         ppSignature);
+
     virtual void DILIGENT_CALL_TYPE GetPipelineResourceBindings(const PipelineResourceBindingAttribs& Attribs,
                                                                 Uint32&                               NumBindings,
                                                                 const PipelineResourceBinding*&       pBindings) override final;
