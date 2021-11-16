@@ -151,6 +151,14 @@ TEST(Common_FixedLinearAllocator, ObjectConstruction)
     {
         char data[1024];
     };
+    struct TObj2
+    {
+        TObj2(int i) :
+            f{static_cast<float>(i)}
+        {}
+
+        float f;
+    };
 
     const std::string SrcStr = "123456789";
 
@@ -161,14 +169,17 @@ TEST(Common_FixedLinearAllocator, ObjectConstruction)
     Allocator.AddSpace(0, 16);
     EXPECT_EQ(Allocator.GetReservedSize(), size_t{4});
     Allocator.AddSpaceForString(SrcStr);
-    EXPECT_EQ(Allocator.GetReservedSize(), size_t{4 + 10});
+    Allocator.AddSpaceForString("");
+    Allocator.AddSpaceForString("");
+    EXPECT_EQ(Allocator.GetReservedSize(), size_t{4 + 10 + 1 + 1});
     Allocator.AddSpace<uint32_t>(5);
-    EXPECT_EQ(Allocator.GetReservedSize(), size_t{14 + 3 + 5 * 4});
+    EXPECT_EQ(Allocator.GetReservedSize(), size_t{16 + 3 + 5 * 4});
     Allocator.AddSpace<uint64_t>(3);
-    EXPECT_EQ(Allocator.GetReservedSize(), size_t{37 + 4 + 3 * 8});
+    EXPECT_EQ(Allocator.GetReservedSize(), size_t{39 + 4 + 3 * 8});
     Allocator.AddSpace(0, 16);
-    EXPECT_EQ(Allocator.GetReservedSize(), size_t{65});
+    EXPECT_EQ(Allocator.GetReservedSize(), size_t{67});
     Allocator.AddSpace<TObj1k>(4);
+    Allocator.AddSpace<TObj2>(4);
 
     Allocator.Reserve();
 
@@ -192,6 +203,14 @@ TEST(Common_FixedLinearAllocator, ObjectConstruction)
     {
         auto* DstStr = Allocator.CopyString(SrcStr.c_str());
         EXPECT_STREQ(DstStr, SrcStr.c_str());
+    }
+    {
+        auto* DstStr = Allocator.CopyString("");
+        EXPECT_STREQ(DstStr, "");
+    }
+    {
+        auto* DstStr = Allocator.CopyString("");
+        EXPECT_STREQ(DstStr, "");
     }
 
     {
@@ -218,6 +237,14 @@ TEST(Common_FixedLinearAllocator, ObjectConstruction)
     {
         auto* pObj = Allocator.Allocate<TObj1k>(4);
         EXPECT_EQ(pObj, AlignUp(pObj, alignof(TObj1k)));
+    }
+
+    {
+        std::array<int, 4> RefArray = {1, 20, 300, 400};
+
+        auto* pObj = Allocator.CopyConstructArray<TObj2>(RefArray.data(), 4);
+        for (size_t i = 0; i < RefArray.size(); ++i)
+            EXPECT_EQ(pObj[i].f, static_cast<float>(RefArray[i]));
     }
 }
 

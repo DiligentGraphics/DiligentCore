@@ -237,8 +237,8 @@ public:
         return Construct<T>(Src);
     }
 
-    template <typename T>
-    NODISCARD T* CopyArray(const T* Src, size_t count)
+    template <typename T, typename ArgType>
+    NODISCARD T* CopyConstructArray(const ArgType* Src, size_t count)
     {
         T* Dst = Allocate<T>(count);
         for (size_t i = 0; i < count; ++i)
@@ -248,7 +248,13 @@ public:
         return Dst;
     }
 
-    NODISCARD Char* CopyString(const char* Str)
+    template <typename T>
+    NODISCARD T* CopyArray(const T* Src, size_t count)
+    {
+        return CopyConstructArray<T, T>(Src, count);
+    }
+
+    NODISCARD const Char* CopyString(const char* Str)
     {
         if (Str == nullptr)
             return nullptr;
@@ -270,7 +276,7 @@ public:
         return Ptr;
     }
 
-    NODISCARD Char* CopyString(const std::string& Str)
+    NODISCARD const Char* CopyString(const std::string& Str)
     {
         return CopyString(Str.c_str());
     }
