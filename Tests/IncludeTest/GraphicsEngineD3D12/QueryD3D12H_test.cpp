@@ -25,5 +25,5 @@
  *  of the possibility of such damages.
  */
 
-#include <d3d11.h>
-#include "DiligentCore/Graphics/GraphicsEngineD3D11/interface/QueryD3D11.h"
+#include <d3d12.h>
+#include "DiligentCore/Graphics/GraphicsEngineD3D12/interface/QueryD3D12.h"
