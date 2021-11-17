@@ -378,7 +378,7 @@ RefCntAutoPtr<PipelineResourceSignatureD3D12Impl> PipelineStateD3D12Impl::Create
                     }
                     else
                     {
-                        VerifyD3DResourceMerge(m_Desc, it_assigned.first->second, Attribs);
+                        VerifyD3DResourceMerge(m_Desc.Name, it_assigned.first->second, Attribs);
                     }
                 } //
             );

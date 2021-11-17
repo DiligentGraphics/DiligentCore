@@ -53,15 +53,15 @@ RESOURCE_DIMENSION D3DSrvDimensionToResourceDimension(D3D_SRV_DIMENSION SrvDim)
     }
 }
 
-void VerifyD3DResourceMerge(const PipelineStateDesc&        PSODesc,
+void VerifyD3DResourceMerge(const char*                     PSOName,
                             const D3DShaderResourceAttribs& ExistingRes,
                             const D3DShaderResourceAttribs& NewResAttribs) noexcept(false)
 {
-#define LOG_RESOURCE_MERGE_ERROR_AND_THROW(PropertyName)                                                          \
-    LOG_ERROR_AND_THROW("Shader variable '", NewResAttribs.Name,                                                  \
-                        "' is shared between multiple shaders in pipeline '", (PSODesc.Name ? PSODesc.Name : ""), \
-                        "', but its " PropertyName " varies. A variable shared between multiple shaders "         \
-                        "must be defined identically in all shaders. Either use separate variables for "          \
+#define LOG_RESOURCE_MERGE_ERROR_AND_THROW(PropertyName)                                                  \
+    LOG_ERROR_AND_THROW("Shader variable '", NewResAttribs.Name,                                          \
+                        "' is shared between multiple shaders in pipeline '", (PSOName ? PSOName : ""),   \
+                        "', but its " PropertyName " varies. A variable shared between multiple shaders " \
+                        "must be defined identically in all shaders. Either use separate variables for "  \
                         "different shader stages, change resource name or make sure that " PropertyName " is consistent.");
 
     if (ExistingRes.GetInputType() != NewResAttribs.GetInputType())
