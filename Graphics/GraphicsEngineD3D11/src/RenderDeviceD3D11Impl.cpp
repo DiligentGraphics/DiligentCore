@@ -178,7 +178,12 @@ void RenderDeviceD3D11Impl::CreateBuffer(const BufferDesc& BuffDesc, const Buffe
 
 void RenderDeviceD3D11Impl::CreateShader(const ShaderCreateInfo& ShaderCI, IShader** ppShader)
 {
-    CreateShaderImpl(ppShader, ShaderCI);
+    const ShaderD3D11Impl::CreateInfo D3D11ShaderCI{
+        GetDeviceInfo(),
+        GetAdapterInfo(),
+        GetD3D11Device()->GetFeatureLevel() //
+    };
+    CreateShaderImpl(ppShader, ShaderCI, D3D11ShaderCI);
 }
 
 void RenderDeviceD3D11Impl::CreateTexture1DFromD3DResource(ID3D11Texture1D* pd3d11Texture, RESOURCE_STATE InitialState, ITexture** ppTexture)

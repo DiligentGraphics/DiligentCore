@@ -50,9 +50,8 @@ static const ShaderVersion HLSLValidateShaderVersion(const ShaderVersion& Versio
     return ModelVer;
 }
 
-static const ShaderVersion GetD3D11ShaderModel(ID3D11Device* pd3d11Device, const ShaderVersion& HLSLVersion)
+static const ShaderVersion GetD3D11ShaderModel(D3D_FEATURE_LEVEL d3dDeviceFeatureLevel, const ShaderVersion& HLSLVersion)
 {
-    auto d3dDeviceFeatureLevel = pd3d11Device->GetFeatureLevel();
     switch (d3dDeviceFeatureLevel)
     {
         // Direct3D11 only supports shader model 5.0 even if the device feature level is
@@ -86,28 +85,31 @@ static const ShaderVersion GetD3D11ShaderModel(ID3D11Device* pd3d11Device, const
 
 ShaderD3D11Impl::ShaderD3D11Impl(IReferenceCounters*     pRefCounters,
                                  RenderDeviceD3D11Impl*  pRenderDeviceD3D11,
-                                 const ShaderCreateInfo& ShaderCI) :
+                                 const ShaderCreateInfo& ShaderCI,
+                                 const CreateInfo&       D3D11ShaderCI,
+                                 bool                    IsDeviceInternal) :
     // clang-format off
     TShaderBase
     {
         pRefCounters,
         pRenderDeviceD3D11,
         ShaderCI.Desc,
-        pRenderDeviceD3D11->GetDeviceInfo(),
-        pRenderDeviceD3D11->GetAdapterInfo()
+        D3D11ShaderCI.DeviceInfo,
+        D3D11ShaderCI.AdapterInfo,
+        IsDeviceInternal
     },
-    ShaderD3DBase{ShaderCI, GetD3D11ShaderModel(pRenderDeviceD3D11->GetD3D11Device(), ShaderCI.HLSLVersion), nullptr}
+    ShaderD3DBase{ShaderCI, GetD3D11ShaderModel(D3D11ShaderCI.FeatureLevel, ShaderCI.HLSLVersion), nullptr}
 // clang-format on
 {
     // Load shader resources
     auto& Allocator  = GetRawAllocator();
     auto* pRawMem    = ALLOCATE(Allocator, "Allocator for ShaderResources", ShaderResourcesD3D11, 1);
-    auto* pResources = new (pRawMem) ShaderResourcesD3D11(pRenderDeviceD3D11, m_pShaderByteCode, m_Desc, ShaderCI.UseCombinedTextureSamplers ? ShaderCI.CombinedSamplerSuffix : nullptr);
+    auto* pResources = new (pRawMem) ShaderResourcesD3D11{m_pShaderByteCode, m_Desc, ShaderCI.UseCombinedTextureSamplers ? ShaderCI.CombinedSamplerSuffix : nullptr};
     m_pShaderResources.reset(pResources, STDDeleterRawMem<ShaderResourcesD3D11>(Allocator));
 
     // Add shader to the cache
     if (HasDevice())
-        GetD3D11Shader(m_pShaderByteCode);
+        m_d3dDefaultShader = GetD3D11Shader(m_pShaderByteCode);
 }
 
 ShaderD3D11Impl::~ShaderD3D11Impl()

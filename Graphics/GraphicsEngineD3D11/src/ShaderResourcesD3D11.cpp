@@ -36,21 +36,18 @@
 namespace Diligent
 {
 
-ShaderResourcesD3D11::ShaderResourcesD3D11(RenderDeviceD3D11Impl* pDeviceD3D11Impl,
-                                           ID3DBlob*              pShaderBytecode,
-                                           const ShaderDesc&      ShdrDesc,
-                                           const char*            CombinedSamplerSuffix) :
+ShaderResourcesD3D11::ShaderResourcesD3D11(ID3DBlob*         pShaderBytecode,
+                                           const ShaderDesc& ShdrDesc,
+                                           const char*       CombinedSamplerSuffix) :
     ShaderResources{ShdrDesc.ShaderType}
 {
     class NewResourceHandler
     {
     public:
-        NewResourceHandler(RenderDeviceD3D11Impl* const _pDeviceD3D11Impl,
-                           const ShaderDesc&            _ShdrDesc,
-                           const char*                  _CombinedSamplerSuffix,
-                           ShaderResourcesD3D11&        _Resources) :
+        NewResourceHandler(const ShaderDesc&     _ShdrDesc,
+                           const char*           _CombinedSamplerSuffix,
+                           ShaderResourcesD3D11& _Resources) :
             // clang-format off
-            pDeviceD3D11Impl     {_pDeviceD3D11Impl     },
             ShdrDesc             {_ShdrDesc             },
             CombinedSamplerSuffix{_CombinedSamplerSuffix},
             Resources            {_Resources            }
@@ -103,10 +100,9 @@ ShaderResourcesD3D11::ShaderResourcesD3D11(RenderDeviceD3D11Impl* pDeviceD3D11Im
         }
 
     private:
-        RenderDeviceD3D11Impl* const pDeviceD3D11Impl;
-        const ShaderDesc&            ShdrDesc;
-        const char*                  CombinedSamplerSuffix;
-        ShaderResourcesD3D11&        Resources;
+        const ShaderDesc&     ShdrDesc;
+        const char*           CombinedSamplerSuffix;
+        ShaderResourcesD3D11& Resources;
     };
 
     CComPtr<ID3D11ShaderReflection> pShaderReflection;
@@ -116,7 +112,7 @@ ShaderResourcesD3D11::ShaderResourcesD3D11(RenderDeviceD3D11Impl* pDeviceD3D11Im
 
     Initialize<D3D11_SHADER_DESC, D3D11_SHADER_INPUT_BIND_DESC>(
         static_cast<ID3D11ShaderReflection*>(pShaderReflection),
-        NewResourceHandler{pDeviceD3D11Impl, ShdrDesc, CombinedSamplerSuffix, *this},
+        NewResourceHandler{ShdrDesc, CombinedSamplerSuffix, *this},
         ShdrDesc.Name,
         CombinedSamplerSuffix);
 }

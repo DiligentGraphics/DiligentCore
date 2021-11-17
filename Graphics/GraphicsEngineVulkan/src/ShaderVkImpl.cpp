@@ -47,15 +47,18 @@ namespace Diligent
 
 ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
                            RenderDeviceVkImpl*     pRenderDeviceVk,
-                           const ShaderCreateInfo& ShaderCI) :
+                           const ShaderCreateInfo& ShaderCI,
+                           const CreateInfo&       VkShaderCI,
+                           bool                    IsDeviceInternal) :
     // clang-format off
     TShaderBase
     {
         pRefCounters,
         pRenderDeviceVk,
         ShaderCI.Desc,
-        pRenderDeviceVk->GetDeviceInfo(),
-        pRenderDeviceVk->GetAdapterInfo()
+        VkShaderCI.DeviceInfo,
+        VkShaderCI.AdapterInfo,
+        IsDeviceInternal
     }
 // clang-format on
 {
@@ -77,7 +80,7 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
         auto ShaderCompiler = ShaderCI.ShaderCompiler;
         if (ShaderCompiler == SHADER_COMPILER_DXC)
         {
-            auto* pDXCompiler = pRenderDeviceVk->GetDxCompiler();
+            auto* pDXCompiler = VkShaderCI.pDXCompiler;
             if (pDXCompiler == nullptr || !pDXCompiler->IsLoaded())
             {
                 LOG_WARNING_MESSAGE("DX Compiler is not loaded. Using default shader compiler");
@@ -89,7 +92,7 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
         {
             case SHADER_COMPILER_DXC:
             {
-                auto* pDXCompiler = pRenderDeviceVk->GetDxCompiler();
+                auto* pDXCompiler = VkShaderCI.pDXCompiler;
                 VERIFY_EXPR(pDXCompiler != nullptr && pDXCompiler->IsLoaded());
                 pDXCompiler->Compile(ShaderCI, ShaderVersion{}, VulkanDefine, nullptr, &m_SPIRV, ShaderCI.ppCompilerOutput);
             }
@@ -126,14 +129,10 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
                     {
                         // Build the full source code string that will contain GLSL version declaration,
                         // platform definitions, user-provided shader macros, etc.
-                        GLSLSourceString = BuildGLSLSourceString(ShaderCI, pRenderDeviceVk->GetDeviceInfo(), pRenderDeviceVk->GetAdapterInfo(),
-                                                                 TargetGLSLCompiler::glslang, VulkanDefine);
+                        GLSLSourceString = BuildGLSLSourceString(ShaderCI, VkShaderCI.DeviceInfo, VkShaderCI.AdapterInfo, TargetGLSLCompiler::glslang, VulkanDefine);
                         ShaderSource     = GLSLSourceString.c_str();
                         SourceLength     = GLSLSourceString.length();
                     }
-
-                    const auto& ExtFeats  = GetDevice()->GetLogicalDevice().GetEnabledExtFeatures();
-                    const auto  VkVersion = GetDevice()->GetVkVersion();
 
                     GLSLangUtils::GLSLtoSPIRVAttribs Attribs;
                     Attribs.ShaderType                 = m_Desc.ShaderType;
@@ -145,10 +144,10 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
                     Attribs.pShaderSourceStreamFactory = ShaderCI.pShaderSourceStreamFactory;
                     Attribs.ppCompilerOutput           = ShaderCI.ppCompilerOutput;
 
-                    if (VkVersion >= VK_API_VERSION_1_2)
+                    if (VkShaderCI.VkVersion >= VK_API_VERSION_1_2)
                         Attribs.Version = GLSLangUtils::SpirvVersion::Vk120;
-                    else if (VkVersion >= VK_API_VERSION_1_1)
-                        Attribs.Version = ExtFeats.Spirv14 ? GLSLangUtils::SpirvVersion::Vk110_Spirv14 : GLSLangUtils::SpirvVersion::Vk110;
+                    else if (VkShaderCI.VkVersion >= VK_API_VERSION_1_1)
+                        Attribs.Version = VkShaderCI.HasSpirv14 ? GLSLangUtils::SpirvVersion::Vk110_Spirv14 : GLSLangUtils::SpirvVersion::Vk110;
 
                     m_SPIRV = GLSLangUtils::GLSLtoSPIRV(Attribs);
                 }

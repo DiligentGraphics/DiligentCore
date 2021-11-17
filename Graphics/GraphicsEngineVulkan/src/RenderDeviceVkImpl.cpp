@@ -585,7 +585,14 @@ void RenderDeviceVkImpl::CreateBuffer(const BufferDesc& BuffDesc, const BufferDa
 
 void RenderDeviceVkImpl::CreateShader(const ShaderCreateInfo& ShaderCI, IShader** ppShader)
 {
-    CreateShaderImpl(ppShader, ShaderCI);
+    const ShaderVkImpl::CreateInfo VkShaderCI{
+        GetDxCompiler(),
+        GetDeviceInfo(),
+        GetAdapterInfo(),
+        GetVkVersion(),
+        GetLogicalDevice().GetEnabledExtFeatures().Spirv14 //
+    };
+    CreateShaderImpl(ppShader, ShaderCI, VkShaderCI);
 }
 
 

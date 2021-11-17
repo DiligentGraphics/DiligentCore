@@ -51,9 +51,17 @@ class ShaderD3D11Impl final : public ShaderBase<EngineD3D11ImplTraits>, public S
 public:
     using TShaderBase = ShaderBase<EngineD3D11ImplTraits>;
 
+    struct CreateInfo
+    {
+        const RenderDeviceInfo&    DeviceInfo;
+        const GraphicsAdapterInfo& AdapterInfo;
+        const D3D_FEATURE_LEVEL    FeatureLevel;
+    };
     ShaderD3D11Impl(IReferenceCounters*          pRefCounters,
                     class RenderDeviceD3D11Impl* pRenderDeviceD3D11,
-                    const ShaderCreateInfo&      ShaderCI);
+                    const ShaderCreateInfo&      ShaderCI,
+                    const CreateInfo&            D3D11ShaderCI,
+                    bool                         IsDeviceInternal = false);
     ~ShaderD3D11Impl();
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
@@ -79,9 +87,7 @@ public:
     /// Implementation of IShaderD3D11::GetD3D11Shader() method.
     virtual ID3D11DeviceChild* DILIGENT_CALL_TYPE GetD3D11Shader() override final
     {
-        // GetD3D11Shader(m_pShaderByteCode) should not throw as the shader must
-        // already have been created.
-        return GetD3D11Shader(m_pShaderByteCode);
+        return m_d3dDefaultShader;
     }
 
     ID3DBlob* GetBytecode() { return m_pShaderByteCode; }
@@ -139,6 +145,8 @@ private:
 
     std::mutex                                                                       m_d3dShaderCacheMtx;
     std::unordered_map<BlobHashKey, CComPtr<ID3D11DeviceChild>, BlobHashKey::Hasher> m_d3dShaderCache;
+
+    CComPtr<ID3D11DeviceChild> m_d3dDefaultShader;
 
     // ShaderResources class instance must be referenced through the shared pointer, because
     // it is referenced by ShaderResourceLayoutD3D11 class instances

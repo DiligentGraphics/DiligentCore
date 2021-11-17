@@ -40,10 +40,9 @@ class ShaderResourcesD3D11 : public ShaderResources
 {
 public:
     // Loads shader resources from the compiled shader bytecode
-    ShaderResourcesD3D11(class RenderDeviceD3D11Impl* pDeviceD3D11Impl,
-                         ID3DBlob*                    pShaderBytecode,
-                         const ShaderDesc&            ShdrDesc,
-                         const char*                  CombinedSamplerSuffix);
+    ShaderResourcesD3D11(ID3DBlob*         pShaderBytecode,
+                         const ShaderDesc& ShdrDesc,
+                         const char*       CombinedSamplerSuffix);
     ~ShaderResourcesD3D11();
 
     // clang-format off
