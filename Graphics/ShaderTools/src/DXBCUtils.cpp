@@ -1720,10 +1720,10 @@ bool RemapResourceBindings(const TResourceBindingMap& ResourceMap,
         DWORD Checksum[4] = {};
         CalculateDXBCChecksum(reinterpret_cast<BYTE*>(Ptr), static_cast<DWORD>(Size), Checksum);
 
-        DEV_CHECK_ERR(Checksum[0] == Header.Checksum[0] &&
-                          Checksum[1] == Header.Checksum[1] &&
-                          Checksum[2] == Header.Checksum[2] &&
-                          Checksum[3] == Header.Checksum[3],
+        DEV_CHECK_ERR((Checksum[0] == Header.Checksum[0] &&
+                       Checksum[1] == Header.Checksum[1] &&
+                       Checksum[2] == Header.Checksum[2] &&
+                       Checksum[3] == Header.Checksum[3]),
                       "Unexpected checksum. The byte code may be corrupted or the container format may have changed.");
     }
 #endif
