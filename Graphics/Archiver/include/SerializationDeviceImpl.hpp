@@ -244,6 +244,10 @@ public:
     const GraphicsAdapterInfo& GetAdapterInfo() const { return m_Device.GetAdapterInfo(); }
 
 private:
+    static void GetMetalPipelineResourceBindings(const PipelineResourceBindingAttribs& Attribs,
+                                                 std::vector<PipelineResourceBinding>& ResourceBindings,
+                                                 const Uint32                          MaxBufferArgs);
+
     DummyRenderDevice m_Device;
 
     // D3D11
