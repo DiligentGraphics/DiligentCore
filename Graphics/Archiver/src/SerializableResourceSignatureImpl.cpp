@@ -160,18 +160,18 @@ void SerializableResourceSignatureImpl::AddPRSDesc(const PipelineResourceSignatu
 SerializableResourceSignatureImpl::SerializableResourceSignatureImpl(IReferenceCounters*                  pRefCounters,
                                                                      SerializationDeviceImpl*             pDevice,
                                                                      const PipelineResourceSignatureDesc& Desc,
-                                                                     Uint32                               DeviceBits,
+                                                                     RENDER_DEVICE_TYPE_FLAGS             DeviceFlags,
                                                                      SHADER_TYPE                          ShaderStages) :
     TBase{pRefCounters}
 {
     ValidatePipelineResourceSignatureDesc(Desc, pDevice->GetDevice());
 
-    if ((DeviceBits & pDevice->GetValidDeviceBits()) != DeviceBits)
+    if ((DeviceFlags & pDevice->GetValidDeviceFlags()) != DeviceFlags)
     {
-        LOG_ERROR_AND_THROW("DeviceBits contains unsupported device type");
+        LOG_ERROR_AND_THROW("DeviceFlags contain unsupported device type");
     }
 
-    for (Uint32 Bits = DeviceBits; Bits != 0;)
+    for (Uint32 Bits = DeviceFlags; Bits != 0;)
     {
         const auto Type = static_cast<RENDER_DEVICE_TYPE>(PlatformMisc::GetLSB(ExtractLSB(Bits)));
 
@@ -254,11 +254,11 @@ SerializableResourceSignatureImpl::~SerializableResourceSignatureImpl()
 {
 }
 
-bool SerializableResourceSignatureImpl::IsCompatible(const SerializableResourceSignatureImpl& Rhs, Uint32 DeviceBits) const
+bool SerializableResourceSignatureImpl::IsCompatible(const SerializableResourceSignatureImpl& Rhs, RENDER_DEVICE_TYPE_FLAGS DeviceFlags) const
 {
-    for (Uint32 Bits = DeviceBits; Bits != 0;)
+    for (auto DeviceBits = DeviceFlags; DeviceBits != 0;)
     {
-        const auto Type = static_cast<RENDER_DEVICE_TYPE>(PlatformMisc::GetLSB(ExtractLSB(Bits)));
+        const auto Type = static_cast<RENDER_DEVICE_TYPE>(PlatformMisc::GetLSB(ExtractLSB(DeviceBits)));
         switch (Type)
         {
 #if D3D11_SUPPORTED

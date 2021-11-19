@@ -48,20 +48,20 @@ static const INTERFACE_ID IID_ArchiverFactory =
 
 // clang-format off
 
-/// Defines the methods to manipulate a archiver factory object
+/// Defines the methods to manipulate an archiver factory object
 DILIGENT_BEGIN_INTERFACE(IArchiverFactory, IObject)
 {
-    /// Creates serialization device.
+    /// Creates a serialization device.
     VIRTUAL void METHOD(CreateSerializationDevice)(THIS_
                                                    const SerializationDeviceCreateInfo REF CreateInfo,
                                                    ISerializationDevice**                  ppDevice) PURE;
-    
-    /// Creates archiver.
+
+    /// Creates an archiver.
     VIRTUAL void METHOD(CreateArchiver)(THIS_
                                         ISerializationDevice* pDevice,
                                         IArchiver**           ppArchiver) PURE;
-    
-    /// Creates default shader source input stream factory
+
+    /// Creates a default shader source input stream factory
 
     /// \param [in]  SearchDirectories           - Semicolon-separated list of search directories.
     /// \param [out] ppShaderSourceStreamFactory - Memory address where the pointer to the shader source stream factory will be written.
@@ -69,7 +69,7 @@ DILIGENT_BEGIN_INTERFACE(IArchiverFactory, IObject)
                         THIS_
                         const Char*                              SearchDirectories,
                         struct IShaderSourceInputStreamFactory** ppShaderSourceFactory) CONST PURE;
-    
+
 };
 DILIGENT_END_INTERFACE
 

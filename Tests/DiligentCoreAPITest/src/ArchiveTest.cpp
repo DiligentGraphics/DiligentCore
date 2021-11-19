@@ -42,26 +42,26 @@ using namespace Diligent::Testing;
 namespace
 {
 
-static constexpr Uint32 GetDeviceBits()
+static constexpr RENDER_DEVICE_TYPE_FLAGS GetDeviceBits()
 {
-    Uint32 DeviceBits = 0;
+    RENDER_DEVICE_TYPE_FLAGS DeviceBits = RENDER_DEVICE_TYPE_FLAG_NONE;
 #if D3D11_SUPPORTED
-    DeviceBits |= 1 << RENDER_DEVICE_TYPE_D3D11;
+    DeviceBits = DeviceBits | RENDER_DEVICE_TYPE_FLAG_D3D11;
 #endif
 #if D3D12_SUPPORTED
-    DeviceBits |= 1 << RENDER_DEVICE_TYPE_D3D12;
+    DeviceBits = DeviceBits | RENDER_DEVICE_TYPE_FLAG_D3D12;
 #endif
 #if GL_SUPPORTED
-    DeviceBits |= 1 << RENDER_DEVICE_TYPE_GL;
+    DeviceBits = DeviceBits | RENDER_DEVICE_TYPE_FLAG_GL;
 #endif
 #if GLES_SUPPORTED
-    DeviceBits |= 1 << RENDER_DEVICE_TYPE_GLES;
+    DeviceBits = DeviceBits | RENDER_DEVICE_TYPE_FLAG_GLES;
 #endif
 #if VULKAN_SUPPORTED
-    DeviceBits |= 1 << RENDER_DEVICE_TYPE_VULKAN;
+    DeviceBits = DeviceBits | RENDER_DEVICE_TYPE_FLAG_VULKAN;
 #endif
 #if METAL_SUPPORTED
-    DeviceBits |= 1 << RENDER_DEVICE_TYPE_METAL;
+    DeviceBits = DeviceBits | RENDER_DEVICE_TYPE_FLAG_METAL;
 #endif
     return DeviceBits;
 }
@@ -120,7 +120,7 @@ TEST(ArchiveTest, ResourceSignature)
             PRSDesc.NumImmutableSamplers = _countof(ImmutableSamplers);
 
             ResourceSignatureArchiveInfo ArchiveInfo;
-            ArchiveInfo.DeviceBits = GetDeviceBits();
+            ArchiveInfo.DeviceFlags = GetDeviceBits();
             ASSERT_TRUE(pArchiver->AddPipelineResourceSignature(PRSDesc, ArchiveInfo));
 
             pDevice->CreatePipelineResourceSignature(PRSDesc, &pRefPRS_1);
@@ -144,7 +144,7 @@ TEST(ArchiveTest, ResourceSignature)
             PRSDesc.NumResources = _countof(Resources);
 
             ResourceSignatureArchiveInfo ArchiveInfo;
-            ArchiveInfo.DeviceBits = GetDeviceBits();
+            ArchiveInfo.DeviceFlags = GetDeviceBits();
             ASSERT_TRUE(pArchiver->AddPipelineResourceSignature(PRSDesc, ArchiveInfo));
 
             pDevice->CreatePipelineResourceSignature(PRSDesc, &pRefPRS_2);
@@ -482,7 +482,7 @@ TEST(ArchiveTest, GraphicsPipeline)
             PSOCreateInfo2.PSODesc.ResourceLayout = LayoutDesc;
 
             PipelineStateArchiveInfo ArchiveInfo;
-            ArchiveInfo.DeviceBits = GetDeviceBits();
+            ArchiveInfo.DeviceFlags = GetDeviceBits();
             ASSERT_TRUE(pArchiver->AddGraphicsPipelineState(PSOCreateInfo2, ArchiveInfo));
 
             PSOCreateInfo2.PSODesc.Name = PSO3Name;
@@ -510,7 +510,7 @@ TEST(ArchiveTest, GraphicsPipeline)
             GraphicsPipeline2.RTVFormats[0]    = TEX_FORMAT_UNKNOWN;
 
             PipelineStateArchiveInfo ArchiveInfo;
-            ArchiveInfo.DeviceBits = GetDeviceBits();
+            ArchiveInfo.DeviceFlags = GetDeviceBits();
             ASSERT_TRUE(pArchiver->AddGraphicsPipelineState(PSOCreateInfo2, ArchiveInfo));
 
             IPipelineResourceSignature* Signatures[] = {pRefPRS};
@@ -905,7 +905,7 @@ TEST(ArchiveTest, ComputePipeline)
             PSOCreateInfo.ppResourceSignatures       = Signatures;
 
             PipelineStateArchiveInfo ArchiveInfo;
-            ArchiveInfo.DeviceBits = GetDeviceBits();
+            ArchiveInfo.DeviceFlags = GetDeviceBits();
             ASSERT_TRUE(pArchiver->AddComputePipelineState(PSOCreateInfo, ArchiveInfo));
         }
         RefCntAutoPtr<IDataBlob> pBlob;
@@ -980,10 +980,11 @@ TEST(ArchiveTest, ResourceSignatureBindings)
     pArchiverFactory->CreateSerializationDevice(DeviceCI, &pSerializationDevice);
     ASSERT_NE(pSerializationDevice, nullptr);
 
-    for (Uint32 AllDeviceBits = GetDeviceBits(); AllDeviceBits != 0;)
+    for (auto AllDeviceBits = GetDeviceBits(); AllDeviceBits != 0;)
     {
-        const auto DeviceType = static_cast<RENDER_DEVICE_TYPE>(PlatformMisc::GetLSB(ExtractLSB(AllDeviceBits)));
-        const auto DeviceBits = 1u << DeviceType;
+        const auto DeviceBit  = ExtractLSB(AllDeviceBits);
+        const auto DeviceType = static_cast<RENDER_DEVICE_TYPE>(PlatformMisc::GetLSB(DeviceBit));
+
 
         const auto VS_PS = SHADER_TYPE_PIXEL | SHADER_TYPE_VERTEX;
         const auto PS    = SHADER_TYPE_PIXEL;
@@ -1021,7 +1022,7 @@ TEST(ArchiveTest, ResourceSignatureBindings)
             PRSDesc.ImmutableSamplers    = ImmutableSamplers;
             PRSDesc.NumImmutableSamplers = _countof(ImmutableSamplers);
 
-            pSerializationDevice->CreatePipelineResourceSignature(PRSDesc, DeviceBits, &pPRS1);
+            pSerializationDevice->CreatePipelineResourceSignature(PRSDesc, DeviceBit, &pPRS1);
             ASSERT_NE(pPRS1, nullptr);
         }
 
@@ -1044,7 +1045,7 @@ TEST(ArchiveTest, ResourceSignatureBindings)
             PRSDesc.Resources    = Resources;
             PRSDesc.NumResources = _countof(Resources);
 
-            pSerializationDevice->CreatePipelineResourceSignature(PRSDesc, DeviceBits, &pPRS2);
+            pSerializationDevice->CreatePipelineResourceSignature(PRSDesc, DeviceBit, &pPRS2);
             ASSERT_NE(pPRS2, nullptr);
         }
 

@@ -59,7 +59,7 @@ public:
     SerializableShaderImpl(IReferenceCounters*      pRefCounters,
                            SerializationDeviceImpl* pDevice,
                            const ShaderCreateInfo&  ShaderCI,
-                           Uint32                   DeviceBits);
+                           RENDER_DEVICE_TYPE_FLAGS DeviceFlags);
     ~SerializableShaderImpl();
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_Shader, TBase)

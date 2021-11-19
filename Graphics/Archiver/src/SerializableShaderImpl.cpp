@@ -138,14 +138,14 @@ const ShaderVkImpl* SerializableShaderImpl::GetShaderVk() const
 SerializableShaderImpl::SerializableShaderImpl(IReferenceCounters*      pRefCounters,
                                                SerializationDeviceImpl* pDevice,
                                                const ShaderCreateInfo&  InShaderCI,
-                                               Uint32                   DeviceBits) :
+                                               RENDER_DEVICE_TYPE_FLAGS DeviceFlags) :
     TBase{pRefCounters},
     m_pDevice{pDevice},
     m_CreateInfo{InShaderCI}
 {
-    if ((DeviceBits & m_pDevice->GetValidDeviceBits()) != DeviceBits)
+    if ((DeviceFlags & m_pDevice->GetValidDeviceFlags()) != DeviceFlags)
     {
-        LOG_ERROR_AND_THROW("DeviceBits contains unsupported device type");
+        LOG_ERROR_AND_THROW("DeviceFlags contain unsupported device type");
     }
 
     CopyShaderCreateInfo(InShaderCI);
@@ -153,7 +153,7 @@ SerializableShaderImpl::SerializableShaderImpl(IReferenceCounters*      pRefCoun
     auto   ShaderCI = m_CreateInfo;
     String CompilationLog;
 
-    for (Uint32 Bits = DeviceBits; Bits != 0;)
+    for (auto Bits = DeviceFlags; Bits != 0;)
     {
         const auto Type = static_cast<RENDER_DEVICE_TYPE>(PlatformMisc::GetLSB(ExtractLSB(Bits)));
 

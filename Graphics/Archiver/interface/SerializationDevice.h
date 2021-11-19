@@ -49,54 +49,46 @@ static const INTERFACE_ID IID_SerializationDevice =
 
 // clang-format off
 
-/// Attributes for Direct3D11 backend
+/// Serialization device attributes for Direct3D11 backend
 struct SerializationDeviceD3D11Info
 {
-    Version FeatureLevel;
-    
-#if DILIGENT_CPP_INTERFACE
-    SerializationDeviceD3D11Info() noexcept : FeatureLevel{11, 0} {}
-#endif
+    Version FeatureLevel DEFAULT_INITIALIZER(Version(11, 0));
 };
+typedef struct SerializationDeviceD3D11Info SerializationDeviceD3D11Info;
 
-/// Attributes for Direct3D12 backend
+/// Serialization device attributes for Direct3D12 backend
 struct SerializationDeviceD3D12Info
 {
-    Version     ShaderVersion;
+    Version     ShaderVersion  DEFAULT_INITIALIZER(Version(6, 0));
     const Char* DxCompilerPath DEFAULT_INITIALIZER(nullptr);
-    
-#if DILIGENT_CPP_INTERFACE
-    SerializationDeviceD3D12Info() noexcept : ShaderVersion{6, 0} {}
-#endif
 };
+typedef struct SerializationDeviceD3D12Info SerializationDeviceD3D12Info;
 
-/// Attributes for Vulkan backend
+/// Serialization device attributes for Vulkan backend
 struct SerializationDeviceVkInfo
 {
-    Version     ApiVersion;
+    Version     ApiVersion       DEFAULT_INITIALIZER(Version(1, 0));
     Bool        SupportedSpirv14 DEFAULT_INITIALIZER(False);
     const Char* DxCompilerPath   DEFAULT_INITIALIZER(nullptr);
-    
-#if DILIGENT_CPP_INTERFACE
-    SerializationDeviceVkInfo() noexcept : ApiVersion{1, 0} {}
-#endif
 };
+typedef struct SerializationDeviceVkInfo SerializationDeviceVkInfo;
 
-/// Attributes for Metal backend
+/// Serialization device attributes for Metal backend
 struct SerializationDeviceMtlInfo
 {
     /// Path to folder where temporary Metal shaders will be stored and compiled to bytecode.
     const Char* TempShaderFolder   DEFAULT_INITIALIZER(nullptr);
-    
+
     /// 
     const Char* CompileOptions     DEFAULT_INITIALIZER(nullptr);
-    
+
     /// 
     const Char* LinkOptions        DEFAULT_INITIALIZER(nullptr);
 
     /// Name of command-line application which is used to preprocess Metal shader source before compiling to bytecode.
     const Char* MslPreprocessorCmd DEFAULT_INITIALIZER(nullptr);
 };
+typedef struct SerializationDeviceMtlInfo SerializationDeviceMtlInfo;
 
 /// Serialization device creation information
 struct SerializationDeviceCreateInfo
@@ -104,13 +96,13 @@ struct SerializationDeviceCreateInfo
     RenderDeviceInfo    DeviceInfo;
     GraphicsAdapterInfo AdapterInfo;
 
-    struct SerializationDeviceD3D11Info D3D11;
-    struct SerializationDeviceD3D12Info D3D12;
-    struct SerializationDeviceVkInfo    Vulkan;
-    struct SerializationDeviceMtlInfo   Metal;
-    
+    SerializationDeviceD3D11Info D3D11;
+    SerializationDeviceD3D12Info D3D12;
+    SerializationDeviceVkInfo    Vulkan;
+    SerializationDeviceMtlInfo   Metal;
+
 #if DILIGENT_CPP_INTERFACE
-    SerializationDeviceCreateInfo()
+    SerializationDeviceCreateInfo() noexcept
     {
         DeviceInfo.Features  = DeviceFeatures{DEVICE_FEATURE_STATE_ENABLED};
         AdapterInfo.Features = DeviceFeatures{DEVICE_FEATURE_STATE_ENABLED};
@@ -127,26 +119,26 @@ struct PipelineResourceBindingAttribs
     /// define the layout of shader resources in this pipeline state object.
     /// See Diligent::IPipelineResourceSignature.
     IPipelineResourceSignature** ppResourceSignatures      DEFAULT_INITIALIZER(nullptr);
-    
+
     /// The number of elements in ppResourceSignatures array.
     Uint32                       ResourceSignaturesCount   DEFAULT_INITIALIZER(0);
-    
-    /// Number of render targets, only for graphics pipeline.
-    /// \note Required for Direct3D11.
+
+    /// The number of render targets, only for graphics pipeline.
+    /// \note Required for Direct3D11 graphics pipelines that use UAVs.
     Uint32                       NumRenderTargets  DEFAULT_INITIALIZER(0);
-    
-    /// Number of vertex buffers, only for graphics pipeline.
+
+    /// The number of vertex buffers, only for graphics pipeline.
     /// \note Required for Metal.
     Uint32                       NumVertexBuffers  DEFAULT_INITIALIZER(0);
-    
+
     /// Vertex buffer names.
     /// \note Required for Metal.
     Char const* const*           VertexBufferNames DEFAULT_INITIALIZER(nullptr);
 
     /// Combination of shader stages.
-    /// \note Required single shader stage for Direct3D11, OpenGL, Metal.
+    /// \note Single shader stage is required for Direct3D11, OpenGL, Metal.
     SHADER_TYPE                  ShaderStages      DEFAULT_INITIALIZER(SHADER_TYPE_UNKNOWN);
-    
+
     /// Device type for which resource binding will be calculated.
     enum RENDER_DEVICE_TYPE      DeviceType        DEFAULT_INITIALIZER(RENDER_DEVICE_TYPE_UNDEFINED);
 };
@@ -168,24 +160,24 @@ typedef struct PipelineResourceBinding PipelineResourceBinding;
 /// Defines the methods to manipulate a serialization device object
 DILIGENT_BEGIN_INTERFACE(ISerializationDevice, IObject)
 {
-    /// Creates serialized shader.
+    /// Creates a serialized shader.
     VIRTUAL void METHOD(CreateShader)(THIS_
                                       const ShaderCreateInfo REF ShaderCI,
-                                      Uint32                     DeviceBits,
+                                      RENDER_DEVICE_TYPE_FLAGS   DeviceFlags,
                                       IShader**                  ppShader) PURE;
-    
-    /// Creates serialized render pass.
+
+    /// Creates a serialized render pass.
     VIRTUAL void METHOD(CreateRenderPass)(THIS_
                                           const RenderPassDesc REF Desc,
                                           IRenderPass**            ppRenderPass) PURE;
-    
-    /// Creates serialized pipeline resource signature.
+
+    /// Creates a serialized pipeline resource signature.
     VIRTUAL void METHOD(CreatePipelineResourceSignature)(THIS_
                                                          const PipelineResourceSignatureDesc REF Desc,
-                                                         Uint32                                  DeviceBits,
+                                                         RENDER_DEVICE_TYPE_FLAGS                DeviceFlags,
                                                          IPipelineResourceSignature**            ppSignature) PURE;
 
-    /// Returns array of pipeline resource bindings.
+    /// Populates an array of pipeline resource bindings.
     VIRTUAL void METHOD(GetPipelineResourceBindings)(THIS_
                                                      const PipelineResourceBindingAttribs REF Attribs,
                                                      Uint32 REF                               NumBindings,
