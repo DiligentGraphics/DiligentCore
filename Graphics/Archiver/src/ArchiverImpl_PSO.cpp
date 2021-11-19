@@ -95,7 +95,7 @@ const SerializedMemory& ArchiverImpl::RPData::GetSharedData() const
 
 void ArchiverImpl::SerializeShaderBytecode(TShaderIndices& ShaderIndices, DeviceType DevType, const ShaderCreateInfo& CI, const void* Bytecode, size_t BytecodeSize)
 {
-    auto&                        ShaderMap       = m_Shaders[static_cast<Uint32>(DevType)].Map;
+    auto&                        Shaders         = m_Shaders[static_cast<Uint32>(DevType)];
     auto&                        RawMemAllocator = GetRawAllocator();
     const SHADER_SOURCE_LANGUAGE SourceLanguage  = SHADER_SOURCE_LANGUAGE_DEFAULT;
     const SHADER_COMPILER        ShaderCompiler  = SHADER_COMPILER_DEFAULT;
@@ -115,16 +115,21 @@ void ArchiverImpl::SerializeShaderBytecode(TShaderIndices& ShaderIndices, Device
 
     VERIFY_EXPR(Ser.IsEnd());
 
-    ShaderKey Key;
-    Key.Data = SerializedMemory{Ptr, Size};
+    ShaderKey Key{std::make_shared<SerializedMemory>(Ptr, Size)};
 
-    auto Iter = ShaderMap.emplace(std::move(Key), ShaderMap.size()).first;
+    auto IterAndInserted = Shaders.Map.emplace(Key, Shaders.List.size());
+    auto Iter            = IterAndInserted.first;
+    if (IterAndInserted.second)
+    {
+        VERIFY_EXPR(Shaders.List.size() == Iter->second);
+        Shaders.List.push_back(Key);
+    }
     ShaderIndices.push_back(StaticCast<Uint32>(Iter->second));
 }
 
 void ArchiverImpl::SerializeShaderSource(TShaderIndices& ShaderIndices, DeviceType DevType, const ShaderCreateInfo& CI)
 {
-    auto& ShaderMap       = m_Shaders[static_cast<Uint32>(DevType)].Map;
+    auto& Shaders         = m_Shaders[static_cast<Uint32>(DevType)];
     auto& RawMemAllocator = GetRawAllocator();
 
     VERIFY_EXPR(CI.SourceLength > 0);
@@ -135,7 +140,7 @@ void ArchiverImpl::SerializeShaderSource(TShaderIndices& ShaderIndices, DeviceTy
     Serializer<SerializerMode::Measure> MeasureSer;
     MeasureSer(CI.Desc.ShaderType, CI.EntryPoint, CI.SourceLanguage, CI.ShaderCompiler);
 
-    const auto   BytecodeSize = CI.SourceLength * sizeof(*CI.Source);
+    const auto   BytecodeSize = (CI.SourceLength + 1) * sizeof(*CI.Source);
     const auto   Size         = MeasureSer.GetSize(nullptr) + BytecodeSize;
     void*        Ptr          = ALLOCATE_RAW(RawMemAllocator, "", Size);
     const Uint8* pBytes       = reinterpret_cast<const Uint8*>(CI.Source);
@@ -148,10 +153,15 @@ void ArchiverImpl::SerializeShaderSource(TShaderIndices& ShaderIndices, DeviceTy
 
     VERIFY_EXPR(Ser.IsEnd());
 
-    ShaderKey Key;
-    Key.Data = SerializedMemory{Ptr, Size};
+    ShaderKey Key{std::make_shared<SerializedMemory>(Ptr, Size)};
 
-    auto Iter = ShaderMap.emplace(std::move(Key), ShaderMap.size()).first;
+    auto IterAndInserted = Shaders.Map.emplace(Key, Shaders.List.size());
+    auto Iter            = IterAndInserted.first;
+    if (IterAndInserted.second)
+    {
+        VERIFY_EXPR(Shaders.List.size() == Iter->second);
+        Shaders.List.push_back(Key);
+    }
     ShaderIndices.push_back(StaticCast<Uint32>(Iter->second));
 }
 

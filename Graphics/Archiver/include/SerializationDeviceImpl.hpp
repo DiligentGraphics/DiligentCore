@@ -239,7 +239,9 @@ public:
 
     static Uint32 GetValidDeviceBits();
 
-    DummyRenderDevice* GetDevice() { return &m_Device; }
+    DummyRenderDevice*         GetDevice() { return &m_Device; }
+    const RenderDeviceInfo&    GetDeviceInfo() const { return m_Device.GetDeviceInfo(); }
+    const GraphicsAdapterInfo& GetAdapterInfo() const { return m_Device.GetAdapterInfo(); }
 
 private:
     DummyRenderDevice m_Device;

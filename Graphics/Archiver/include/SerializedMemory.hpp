@@ -61,6 +61,14 @@ struct SerializedMemory
     bool operator==(const SerializedMemory& Rhs) const;
 
     size_t CalcHash() const;
+
+    struct Hash
+    {
+        size_t operator()(const SerializedMemory& Mem) const
+        {
+            return Mem.CalcHash();
+        }
+    };
 };
 
 } // namespace Diligent

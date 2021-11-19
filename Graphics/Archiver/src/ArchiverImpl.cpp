@@ -29,38 +29,6 @@
 namespace Diligent
 {
 
-
-bool ArchiverImpl::ShaderKey::operator==(const ShaderKey& Rhs) const
-{
-    return Data.Size == Rhs.Data.Size &&
-        std::memcmp(Data.Ptr, Rhs.Data.Ptr, Data.Size) == 0;
-}
-
-size_t ArchiverImpl::ShaderKeyHash::operator()(const ShaderKey& Key) const
-{
-    size_t Hash = 0;
-    HashCombine(Hash, Key.Data.Size);
-
-    if (Key.Data.Size % 4 == 0)
-    {
-        VERIFY_EXPR(reinterpret_cast<size_t>(Key.Data.Ptr) % 4 == 0);
-
-        const Uint32* Ptr   = static_cast<Uint32*>(Key.Data.Ptr);
-        const size_t  Count = Key.Data.Size / 4;
-
-        for (Uint32 i = 0; i < Count; ++i)
-            HashCombine(Hash, Ptr[i]);
-    }
-    else
-    {
-        const Uint8* Ptr = static_cast<Uint8*>(Key.Data.Ptr);
-        for (Uint32 i = 0; i < Key.Data.Size; ++i)
-            HashCombine(Hash, Ptr[i]);
-    }
-    return Hash;
-}
-
-
 ArchiverImpl::ArchiverImpl(IReferenceCounters* pRefCounters, SerializationDeviceImpl* pDevice) :
     TBase{pRefCounters},
     m_pSerializationDevice{pDevice}
@@ -183,14 +151,14 @@ void ArchiverImpl::ReserveSpace(size_t& SharedDataSize, std::array<size_t, Devic
         {
             const auto& Shaders = m_Shaders[dev];
             auto&       Dst     = PerDeviceDataSize[dev];
-            if (Shaders.Map.empty())
+            if (Shaders.List.empty())
                 continue;
 
             HasShaders = true;
-            Dst += Shaders.Map.size() * sizeof(FileOffsetAndSize);
-            for (auto& Sh : Shaders.Map)
+            Dst += Shaders.List.size() * sizeof(FileOffsetAndSize);
+            for (auto& Sh : Shaders.List)
             {
-                Dst += Sh.first.Data.Size;
+                Dst += Sh.Ptr->Size;
             }
         }
         if (HasShaders)
@@ -409,7 +377,7 @@ void ArchiverImpl::WriteShaderData(PendingData& Pending) const
         bool HasShaders = false;
         for (Uint32 dev = 0; dev < DeviceDataCount; ++dev)
         {
-            if (!m_Shaders[dev].Map.empty())
+            if (!m_Shaders[dev].List.empty())
                 HasShaders = true;
         }
         if (!HasShaders)
@@ -438,7 +406,7 @@ void ArchiverImpl::WriteShaderData(PendingData& Pending) const
         const auto& Shaders = m_Shaders[dev];
         auto&       Dst     = Pending.PerDeviceData[dev];
 
-        if (Shaders.Map.empty())
+        if (Shaders.List.empty())
             continue;
 
         VERIFY(Dst.empty(), "Shaders must be written first");
@@ -447,7 +415,7 @@ void ArchiverImpl::WriteShaderData(PendingData& Pending) const
         FileOffsetAndSize* pOffsetAndSize = nullptr;
         {
             const auto Offset  = Dst.size();
-            const auto Size    = Shaders.Map.size() * sizeof(FileOffsetAndSize);
+            const auto Size    = Shaders.List.size() * sizeof(FileOffsetAndSize);
             const auto NewSize = Offset + Size;
             VERIFY_EXPR(NewSize <= Dst.capacity());
             Dst.resize(NewSize);
@@ -458,9 +426,9 @@ void ArchiverImpl::WriteShaderData(PendingData& Pending) const
             DataSizeArray[dev]   = StaticCast<Uint32>(Size);
         }
 
-        for (auto& Sh : Shaders.Map)
+        for (auto& Sh : Shaders.List)
         {
-            const auto& Src     = Sh.first.Data;
+            const auto& Src     = *Sh.Ptr;
             const auto  Offset  = Dst.size();
             const auto  NewSize = Offset + Src.Size;
             VERIFY_EXPR(NewSize <= Dst.capacity());

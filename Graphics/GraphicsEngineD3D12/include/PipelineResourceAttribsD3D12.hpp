@@ -49,7 +49,7 @@ private:
     static constexpr Uint32 _SpaceBits           = 8;
     static constexpr Uint32 _SigRootIndexBits    = 3;
     static constexpr Uint32 _SamplerAssignedBits = 1;
-    static constexpr Uint32 _RootParamTypeBits   = 3;
+    static constexpr Uint32 _RootParamTypeBits   = 4;
 
     // clang-format off
     static_assert((1u << _RegisterBits)      >= MAX_RESOURCES_IN_SIGNATURE,        "Not enough bits to store shader register");

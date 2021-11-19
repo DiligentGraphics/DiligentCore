@@ -27,6 +27,9 @@
 #include "SerializableShaderImpl.hpp"
 #include "FixedLinearAllocator.hpp"
 #include "EngineMemory.h"
+#include "DataBlobImpl.hpp"
+#include "PlatformMisc.hpp"
+#include "BasicMath.hpp"
 
 #if D3D11_SUPPORTED
 #    include "../../GraphicsEngineD3D11/include/pch.h"
@@ -51,6 +54,35 @@
 
 namespace Diligent
 {
+namespace
+{
+
+template <typename ShaderType, typename... ArgTypes>
+void CreateShader(std::unique_ptr<ShaderType>& pShader, String& CompilationLog, const char* DeviceTypeName, IReferenceCounters* pRefCounters, ShaderCreateInfo& ShaderCI, const ArgTypes&... Args)
+{
+    // Mem leak when used RefCntAutoPtr
+    IDataBlob* pLog           = nullptr;
+    ShaderCI.ppCompilerOutput = &pLog;
+    try
+    {
+        pShader.reset(new ShaderType{pRefCounters, ShaderCI, Args...});
+    }
+    catch (...)
+    {
+        if (pLog && pLog->GetConstDataPtr())
+        {
+            CompilationLog += "Failed to compile ";
+            CompilationLog += DeviceTypeName;
+            CompilationLog += " shader:\n";
+            CompilationLog += static_cast<const char*>(pLog->GetConstDataPtr());
+        }
+    }
+
+    if (pLog)
+        pLog->Release();
+}
+
+} // namespace
 
 #if D3D11_SUPPORTED
 struct SerializableShaderImpl::CompiledShaderD3D11
@@ -105,17 +137,20 @@ const ShaderVkImpl* SerializableShaderImpl::GetShaderVk() const
 
 SerializableShaderImpl::SerializableShaderImpl(IReferenceCounters*      pRefCounters,
                                                SerializationDeviceImpl* pDevice,
-                                               const ShaderCreateInfo&  ShaderCI,
+                                               const ShaderCreateInfo&  InShaderCI,
                                                Uint32                   DeviceBits) :
     TBase{pRefCounters},
-    m_CreateInfo{ShaderCI}
+    m_CreateInfo{InShaderCI}
 {
     if ((DeviceBits & pDevice->GetValidDeviceBits()) != DeviceBits)
     {
         LOG_ERROR_AND_THROW("DeviceBits contains unsupported device type");
     }
 
-    CopyShaderCreateInfo(ShaderCI);
+    CopyShaderCreateInfo(InShaderCI);
+
+    auto   ShaderCI = m_CreateInfo;
+    String CompilationLog;
 
     for (Uint32 Bits = DeviceBits; Bits != 0;)
     {
@@ -128,11 +163,11 @@ SerializableShaderImpl::SerializableShaderImpl(IReferenceCounters*      pRefCoun
             case RENDER_DEVICE_TYPE_D3D11:
             {
                 const ShaderD3D11Impl::CreateInfo D3D11ShaderCI{
-                    pDevice->GetDevice()->GetDeviceInfo(),
-                    pDevice->GetDevice()->GetAdapterInfo(),
+                    pDevice->GetDeviceInfo(),
+                    pDevice->GetAdapterInfo(),
                     static_cast<D3D_FEATURE_LEVEL>(pDevice->GetD3D11FeatureLevel()) //
                 };
-                m_pShaderD3D11.reset(new CompiledShaderD3D11{pRefCounters, ShaderCI, D3D11ShaderCI});
+                CreateShader(m_pShaderD3D11, CompilationLog, "Direct3D11", pRefCounters, ShaderCI, D3D11ShaderCI);
                 break;
             }
 #endif
@@ -142,11 +177,11 @@ SerializableShaderImpl::SerializableShaderImpl(IReferenceCounters*      pRefCoun
             {
                 const ShaderD3D12Impl::CreateInfo D3D12ShaderCI{
                     pDevice->GetDxCompilerForDirect3D12(),
-                    pDevice->GetDevice()->GetDeviceInfo(),
-                    pDevice->GetDevice()->GetAdapterInfo(),
+                    pDevice->GetDeviceInfo(),
+                    pDevice->GetAdapterInfo(),
                     pDevice->GetD3D12ShaderVersion() //
                 };
-                m_pShaderD3D12.reset(new CompiledShaderD3D12{pRefCounters, ShaderCI, D3D12ShaderCI});
+                CreateShader(m_pShaderD3D12, CompilationLog, "Direct3D12", pRefCounters, ShaderCI, D3D12ShaderCI);
                 break;
             }
 #endif
@@ -164,12 +199,12 @@ SerializableShaderImpl::SerializableShaderImpl(IReferenceCounters*      pRefCoun
             {
                 const ShaderVkImpl::CreateInfo VkShaderCI{
                     pDevice->GetDxCompilerForVulkan(),
-                    pDevice->GetDevice()->GetDeviceInfo(),
-                    pDevice->GetDevice()->GetAdapterInfo(),
+                    pDevice->GetDeviceInfo(),
+                    pDevice->GetAdapterInfo(),
                     pDevice->GetVkVersion(),
                     pDevice->HasSpirv14() //
                 };
-                m_pShaderVk.reset(new CompiledShaderVk{pRefCounters, ShaderCI, VkShaderCI});
+                CreateShader(m_pShaderVk, CompilationLog, "Vulkan", pRefCounters, ShaderCI, VkShaderCI);
                 break;
             }
 #endif
@@ -187,30 +222,65 @@ SerializableShaderImpl::SerializableShaderImpl(IReferenceCounters*      pRefCoun
                 break;
         }
     }
+
+    if (!CompilationLog.empty())
+    {
+        if (InShaderCI.ppCompilerOutput)
+        {
+            auto* pLogBlob = MakeNewRCObj<DataBlobImpl>{}(CompilationLog.size() + 1);
+            std::memcpy(pLogBlob->GetDataPtr(), CompilationLog.c_str(), CompilationLog.size() + 1);
+            pLogBlob->QueryInterface(IID_DataBlob, reinterpret_cast<IObject**>(InShaderCI.ppCompilerOutput));
+        }
+        LOG_ERROR_AND_THROW("Shader '", (InShaderCI.Desc.Name ? InShaderCI.Desc.Name : ""), "' compilation failed for some backends");
+    }
 }
 
 void SerializableShaderImpl::CopyShaderCreateInfo(const ShaderCreateInfo& ShaderCI)
 {
-    m_CreateInfo.ppCompilerOutput = nullptr;
+    m_CreateInfo.ppCompilerOutput           = nullptr;
+    m_CreateInfo.FilePath                   = nullptr;
+    m_CreateInfo.pShaderSourceStreamFactory = nullptr;
 
-    auto&                RawAllocator = GetRawAllocator();
-    FixedLinearAllocator Allocator{RawAllocator};
+    auto&                    RawAllocator = GetRawAllocator();
+    FixedLinearAllocator     Allocator{RawAllocator};
+    RefCntAutoPtr<IDataBlob> pSourceFileData;
 
-    Allocator.AddSpaceForString(ShaderCI.FilePath);
     Allocator.AddSpaceForString(ShaderCI.EntryPoint);
     Allocator.AddSpaceForString(ShaderCI.CombinedSamplerSuffix);
     Allocator.AddSpaceForString(ShaderCI.Desc.Name);
 
-    if (ShaderCI.Source)
+    const auto* SourceCode    = ShaderCI.Source;
+    size_t      SourceCodeLen = ShaderCI.SourceLength;
+
+    if (ShaderCI.Source == nullptr &&
+        ShaderCI.ByteCode == nullptr &&
+        ShaderCI.FilePath != nullptr &&
+        ShaderCI.pShaderSourceStreamFactory != nullptr)
     {
-        if (ShaderCI.SourceLength == 0)
-            Allocator.AddSpaceForString(ShaderCI.Source);
-        else
-            Allocator.AddSpace<decltype(*ShaderCI.Source)>(sizeof(*ShaderCI.Source) * (ShaderCI.SourceLength + 1));
+        RefCntAutoPtr<IFileStream> pSourceStream;
+        ShaderCI.pShaderSourceStreamFactory->CreateInputStream(ShaderCI.FilePath, &pSourceStream);
+
+        pSourceFileData = MakeNewRCObj<DataBlobImpl>{}(0);
+        pSourceStream->ReadBlob(pSourceFileData);
+        SourceCode    = static_cast<char*>(pSourceFileData->GetDataPtr());
+        SourceCodeLen = pSourceFileData->GetSize();
     }
 
-    if (ShaderCI.ByteCode && ShaderCI.ByteCodeSize > 0)
+    if (SourceCode)
+    {
+        if (SourceCodeLen == 0)
+            Allocator.AddSpaceForString(SourceCode);
+        else
+            Allocator.AddSpace<decltype(*SourceCode)>(SourceCodeLen + 1);
+    }
+    else if (ShaderCI.ByteCode && ShaderCI.ByteCodeSize > 0)
+    {
         Allocator.AddSpace(ShaderCI.ByteCodeSize, alignof(Uint32));
+    }
+    else
+    {
+        LOG_ERROR_AND_THROW("Shader create info must contains Source, Bytecode or FilePath with pShaderSourceStreamFactory");
+    }
 
     Uint32 MacroCount = 0;
     if (ShaderCI.Macros)
@@ -235,22 +305,25 @@ void SerializableShaderImpl::CopyShaderCreateInfo(const ShaderCreateInfo& Shader
     m_CreateInfo.CombinedSamplerSuffix = Allocator.CopyString(ShaderCI.CombinedSamplerSuffix);
     m_CreateInfo.Desc.Name             = Allocator.CopyString(ShaderCI.Desc.Name);
 
-    if (ShaderCI.Source)
+    if (m_CreateInfo.Desc.Name == nullptr)
+        m_CreateInfo.Desc.Name = "";
+
+    if (SourceCode)
     {
-        if (ShaderCI.SourceLength == 0)
+        if (SourceCodeLen == 0)
         {
-            m_CreateInfo.Source       = Allocator.CopyString(ShaderCI.Source);
-            m_CreateInfo.SourceLength = strlen(m_CreateInfo.Source) + 1;
+            m_CreateInfo.Source       = Allocator.CopyString(SourceCode);
+            m_CreateInfo.SourceLength = strlen(m_CreateInfo.Source);
         }
         else
         {
-            const size_t Size    = sizeof(*ShaderCI.Source) * (ShaderCI.SourceLength + 1);
+            const size_t Size    = sizeof(*SourceCode) * (SourceCodeLen + 1);
             auto*        pSource = Allocator.Allocate<Char>(Size);
-            std::memcpy(pSource, ShaderCI.Source, Size);
-            pSource[m_CreateInfo.SourceLength++] = '\0';
-            m_CreateInfo.Source                  = pSource;
+            std::memcpy(pSource, SourceCode, Size);
+            pSource[m_CreateInfo.SourceLength + 1] = '\0';
+            m_CreateInfo.Source                    = pSource;
         }
-        VERIFY_EXPR(m_CreateInfo.SourceLength == strlen(m_CreateInfo.Source) + 1);
+        VERIFY_EXPR(m_CreateInfo.SourceLength == strlen(m_CreateInfo.Source));
     }
 
     if (ShaderCI.ByteCode && ShaderCI.ByteCodeSize > 0)

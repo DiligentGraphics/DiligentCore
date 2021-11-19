@@ -62,18 +62,12 @@ size_t SerializedMemory::CalcHash() const
         return 0;
 
     size_t Hash = 0;
-    if (reinterpret_cast<size_t>(Ptr) % 4 == 0 && Size % 4 == 0)
-    {
-        const auto* UintPtr = static_cast<const Uint32*>(Ptr);
-        for (size_t i = 0, Count = Size / 4; i < Count; ++i)
-            HashCombine(Hash, UintPtr[i]);
-    }
-    else
-    {
-        const auto* BytePtr = static_cast<const Uint8*>(Ptr);
-        for (size_t i = 0; i < Size; ++i)
-            HashCombine(Hash, BytePtr[i]);
-    }
+    HashCombine(Hash, Size);
+
+    const auto* BytePtr = static_cast<const Uint8*>(Ptr);
+    for (size_t i = 0; i < Size; ++i)
+        HashCombine(Hash, BytePtr[i]);
+
     return Hash;
 }
 
