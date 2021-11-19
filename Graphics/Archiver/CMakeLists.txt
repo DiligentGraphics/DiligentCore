@@ -31,6 +31,7 @@ set(SOURCE
 )
 
 if(METAL_SUPPORTED)
+    list(APPEND SOURCE src/SerializationDeviceImpl.mm)
     list(APPEND SOURCE src/SerializableShaderImpl.mm)
     list(APPEND SOURCE src/SerializableResourceSignatureImpl.mm)
     list(APPEND SOURCE src/ArchiverImpl_PSO.mm)

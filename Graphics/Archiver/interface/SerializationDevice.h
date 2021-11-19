@@ -116,18 +116,22 @@ struct PipelineResourceBindingAttribs
     
     /// Number of render targets, only for graphics pipeline.
     /// \note Required for Direct3D11.
-    Uint32                       NumRenderTargets DEFAULT_INITIALIZER(0);
+    Uint32                       NumRenderTargets  DEFAULT_INITIALIZER(0);
     
     /// Number of vertex buffers, only for graphics pipeline.
     /// \note Required for Metal.
-    Uint32                       NumVertexBuffers DEFAULT_INITIALIZER(0);
+    Uint32                       NumVertexBuffers  DEFAULT_INITIALIZER(0);
+    
+    /// Vertex buffer names.
+    /// \note Required for Metal.
+    Char const* const*           VertexBufferNames DEFAULT_INITIALIZER(nullptr);
 
     /// Combination of shader stages.
     /// \note Required single shader stage for Direct3D11, OpenGL, Metal.
-    SHADER_TYPE                  ShaderStages     DEFAULT_INITIALIZER(SHADER_TYPE_UNKNOWN);
+    SHADER_TYPE                  ShaderStages      DEFAULT_INITIALIZER(SHADER_TYPE_UNKNOWN);
     
     /// Device type for which resource binding will be calculated.
-    enum RENDER_DEVICE_TYPE      DeviceType       DEFAULT_INITIALIZER(RENDER_DEVICE_TYPE_UNDEFINED);
+    enum RENDER_DEVICE_TYPE      DeviceType        DEFAULT_INITIALIZER(RENDER_DEVICE_TYPE_UNDEFINED);
 };
 typedef struct PipelineResourceBindingAttribs PipelineResourceBindingAttribs;
 

@@ -963,9 +963,8 @@ TEST(ArchiveTest, ComputePipeline)
 
 TEST(ArchiveTest, ResourceSignatureBindings)
 {
-    auto*       pEnv             = TestingEnvironment::GetInstance();
-    auto*       pArchiverFactory = pEnv->GetArchiverFactory();
-    const auto& DeviceInfo       = pEnv->GetDevice()->GetDeviceInfo();
+    auto* pEnv             = TestingEnvironment::GetInstance();
+    auto* pArchiverFactory = pEnv->GetArchiverFactory();
 
     if (!pArchiverFactory)
         return;
@@ -975,213 +974,256 @@ TEST(ArchiveTest, ResourceSignatureBindings)
     pArchiverFactory->CreateSerializationDevice(DeviceCI, &pSerializationDevice);
     ASSERT_NE(pSerializationDevice, nullptr);
 
-    const Uint32 DeviceBits = 1u << DeviceInfo.Type;
-
-    // PRS 1
-    RefCntAutoPtr<IPipelineResourceSignature> pPRS1;
+    for (Uint32 AllDeviceBits = GetDeviceBits(); AllDeviceBits != 0;)
     {
-        constexpr auto VarType = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE;
+        const auto DeviceType = static_cast<RENDER_DEVICE_TYPE>(PlatformMisc::GetLSB(ExtractLSB(AllDeviceBits)));
+        const auto DeviceBits = 1u << DeviceType;
 
-        std::vector<PipelineResourceDesc> Resources =
+        const auto VS_PS = SHADER_TYPE_PIXEL | SHADER_TYPE_VERTEX;
+        const auto PS    = SHADER_TYPE_PIXEL;
+        const auto VS    = SHADER_TYPE_VERTEX;
+
+        // PRS 1
+        RefCntAutoPtr<IPipelineResourceSignature> pPRS1;
+        {
+            const auto VarType = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE;
+
+            std::vector<PipelineResourceDesc> Resources =
+                {
+                    // clang-format off
+                    {PS,    "g_DiffuseTexs",  100, SHADER_RESOURCE_TYPE_TEXTURE_SRV,      VarType, PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY},
+                    {PS,    "g_NormalTexs",   100, SHADER_RESOURCE_TYPE_TEXTURE_SRV,      VarType, PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY},
+                    {VS_PS, "ConstBuff_1",      1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,  VarType},
+                    {VS_PS, "PerObjectConst",   8, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,  VarType},
+                    {PS,    "g_SubpassInput",   1, SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT, VarType}
+                    // clang-format on
+                };
+
+            if (DeviceType == RENDER_DEVICE_TYPE_D3D12 || DeviceType == RENDER_DEVICE_TYPE_VULKAN)
+                Resources.emplace_back(PS, "g_TLAS", 1, SHADER_RESOURCE_TYPE_ACCEL_STRUCT, VarType);
+
+            PipelineResourceSignatureDesc PRSDesc;
+            PRSDesc.Name         = "PRS 1";
+            PRSDesc.BindingIndex = 0;
+            PRSDesc.Resources    = Resources.data();
+            PRSDesc.NumResources = static_cast<Uint32>(Resources.size());
+
+            const ImmutableSamplerDesc ImmutableSamplers[] = //
+                {
+                    {PS, "g_Sampler", SamplerDesc{}} //
+                };
+            PRSDesc.ImmutableSamplers    = ImmutableSamplers;
+            PRSDesc.NumImmutableSamplers = _countof(ImmutableSamplers);
+
+            pSerializationDevice->CreatePipelineResourceSignature(PRSDesc, DeviceBits, &pPRS1);
+            ASSERT_NE(pPRS1, nullptr);
+        }
+
+        // PRS 2
+        RefCntAutoPtr<IPipelineResourceSignature> pPRS2;
+        {
+            const auto VarType = SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC;
+
+            const PipelineResourceDesc Resources[] = //
+                {
+                    // clang-format off
+                    {PS,    "g_RWTex2D",   2, SHADER_RESOURCE_TYPE_TEXTURE_UAV, VarType},
+                    {VS_PS, "g_TexelBuff", 1, SHADER_RESOURCE_TYPE_BUFFER_SRV,  VarType, PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER}
+                    // clang-format on
+                };
+
+            PipelineResourceSignatureDesc PRSDesc;
+            PRSDesc.Name         = "PRS 2";
+            PRSDesc.BindingIndex = 2;
+            PRSDesc.Resources    = Resources;
+            PRSDesc.NumResources = _countof(Resources);
+
+            pSerializationDevice->CreatePipelineResourceSignature(PRSDesc, DeviceBits, &pPRS2);
+            ASSERT_NE(pPRS2, nullptr);
+        }
+
+        IPipelineResourceSignature* Signatures[] = {pPRS2, pPRS1};
+        Char const* const           VBNames[]    = {"VBPosition", "VBTexcoord"};
+
+        PipelineResourceBindingAttribs Info;
+        Info.ppResourceSignatures    = Signatures;
+        Info.ResourceSignaturesCount = _countof(Signatures);
+        Info.ShaderStages            = SHADER_TYPE_ALL_GRAPHICS;
+        Info.DeviceType              = DeviceType;
+
+        if (DeviceType == RENDER_DEVICE_TYPE_METAL)
+        {
+            Info.NumVertexBuffers  = _countof(VBNames);
+            Info.VertexBufferNames = VBNames;
+        }
+
+        Uint32                         NumBindings = 0;
+        const PipelineResourceBinding* Bindings    = nullptr;
+        pSerializationDevice->GetPipelineResourceBindings(Info, NumBindings, Bindings);
+        ASSERT_NE(NumBindings, 0u);
+        ASSERT_NE(Bindings, nullptr);
+
+        const auto CompareBindings = [NumBindings, Bindings](const PipelineResourceBinding* RefBindings, Uint32 Count) //
+        {
+            EXPECT_EQ(NumBindings, Count);
+            if (NumBindings != Count)
+                return;
+
+            struct Key
             {
-                // clang-format off
-                {SHADER_TYPE_ALL_GRAPHICS, "g_DiffuseTexs",  100, SHADER_RESOURCE_TYPE_TEXTURE_SRV,      VarType, PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY},
-                {SHADER_TYPE_ALL_GRAPHICS, "g_NormalTexs",   100, SHADER_RESOURCE_TYPE_TEXTURE_SRV,      VarType, PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY},
-                {SHADER_TYPE_ALL_GRAPHICS, "ConstBuff_1",    1,   SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,  VarType},
-                {SHADER_TYPE_ALL_GRAPHICS, "PerObjectConst", 8,   SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,  VarType},
-                {SHADER_TYPE_PIXEL,        "g_SubpassInput", 1,   SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT, VarType}
-                // clang-format on
+                HashMapStringKey Name;
+                SHADER_TYPE      Stages;
+
+                Key(const char* _Name, SHADER_TYPE _Stages) :
+                    Name{_Name}, Stages{_Stages} {}
+
+                bool operator==(const Key& Rhs) const
+                {
+                    return Name == Rhs.Name && Stages == Rhs.Stages;
+                }
+
+                struct Hasher
+                {
+                    size_t operator()(const Key& key) const
+                    {
+                        size_t Hash = key.Name.GetHash();
+                        HashCombine(Hash, key.Stages);
+                        return Hash;
+                    }
+                };
             };
 
-        if (DeviceInfo.Type == RENDER_DEVICE_TYPE_D3D12 || DeviceInfo.Type == RENDER_DEVICE_TYPE_VULKAN)
-            Resources.emplace_back(SHADER_TYPE_PIXEL, "g_TLAS", 1, SHADER_RESOURCE_TYPE_ACCEL_STRUCT, VarType);
+            std::unordered_map<Key, const PipelineResourceBinding*, Key::Hasher> BindingMap;
+            for (Uint32 i = 0; i < NumBindings; ++i)
+                BindingMap.emplace(Key{Bindings[i].Name, Bindings[i].ShaderStages}, Bindings + i);
 
-        PipelineResourceSignatureDesc PRSDesc;
-        PRSDesc.Name         = "PRS 1";
-        PRSDesc.BindingIndex = 0;
-        PRSDesc.Resources    = Resources.data();
-        PRSDesc.NumResources = static_cast<Uint32>(Resources.size());
-
-        const ImmutableSamplerDesc ImmutableSamplers[] = //
+            for (Uint32 i = 0; i < Count; ++i)
             {
-                {SHADER_TYPE_ALL_GRAPHICS, "g_Sampler", SamplerDesc{}} //
-            };
-        PRSDesc.ImmutableSamplers    = ImmutableSamplers;
-        PRSDesc.NumImmutableSamplers = _countof(ImmutableSamplers);
+                auto Iter = BindingMap.find(Key{RefBindings[i].Name, RefBindings[i].ShaderStages});
+                EXPECT_TRUE(Iter != BindingMap.end());
+                if (Iter == BindingMap.end())
+                    continue;
 
-        pSerializationDevice->CreatePipelineResourceSignature(PRSDesc, DeviceBits, &pPRS1);
-        ASSERT_NE(pPRS1, nullptr);
-    }
+                const auto& Lhs = *Iter->second;
+                const auto& Rhs = RefBindings[i];
 
-    // PRS 2
-    RefCntAutoPtr<IPipelineResourceSignature> pPRS2;
-    {
-        constexpr auto VarType = SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC;
+                EXPECT_EQ(Lhs.Register, Rhs.Register);
+                EXPECT_EQ(Lhs.Space, Rhs.Space);
+                EXPECT_EQ(Lhs.ArraySize, Rhs.ArraySize);
+                EXPECT_EQ(Lhs.ResourceType, Rhs.ResourceType);
+            }
+        };
 
-        constexpr PipelineResourceDesc Resources[] = //
+        constexpr Uint32 RuntimeArray = 0;
+        switch (DeviceType)
+        {
+            case RENDER_DEVICE_TYPE_D3D11:
             {
-                // clang-format off
-                {SHADER_TYPE_PIXEL,        "g_RWTex2D",   2, SHADER_RESOURCE_TYPE_TEXTURE_UAV, VarType},
-                {SHADER_TYPE_ALL_GRAPHICS, "g_TexelBuff", 1, SHADER_RESOURCE_TYPE_BUFFER_SRV,  VarType, PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER}
-                // clang-format on
-            };
+                const PipelineResourceBinding RefBindings[] =
+                    {
+                        // clang-format off
+                        {"g_DiffuseTexs",  SHADER_RESOURCE_TYPE_TEXTURE_SRV,      PS,  0,   0, RuntimeArray},
+                        {"g_NormalTexs",   SHADER_RESOURCE_TYPE_TEXTURE_SRV,      PS,  0, 100, RuntimeArray},
+                        {"g_SubpassInput", SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT, PS,  0, 200, 1},
+                        {"g_TexelBuff",    SHADER_RESOURCE_TYPE_BUFFER_SRV,       PS,  0, 201, 1},
+                        {"ConstBuff_1",    SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,  PS,  0,   0, 1},
+                        {"PerObjectConst", SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,  PS,  0,   1, 8},
+                        {"g_RWTex2D",      SHADER_RESOURCE_TYPE_TEXTURE_UAV,      PS,  0,   0, 2},
+                        {"g_Sampler",      SHADER_RESOURCE_TYPE_SAMPLER,          PS,  0,   0, 1},
+                        
+                        {"ConstBuff_1",    SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,  VS,  0,   0, 1},
+                        {"PerObjectConst", SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,  VS,  0,   1, 8},
+                        {"g_TexelBuff",    SHADER_RESOURCE_TYPE_BUFFER_SRV,       VS,  0,   0, 1}
+                        // clang-format on
 
-        PipelineResourceSignatureDesc PRSDesc;
-        PRSDesc.Name         = "PRS 2";
-        PRSDesc.BindingIndex = 2;
-        PRSDesc.Resources    = Resources;
-        PRSDesc.NumResources = _countof(Resources);
-
-        pSerializationDevice->CreatePipelineResourceSignature(PRSDesc, DeviceBits, &pPRS2);
-        ASSERT_NE(pPRS2, nullptr);
-    }
-
-    IPipelineResourceSignature* Signatures[] = {pPRS2, pPRS1};
-
-    PipelineResourceBindingAttribs Info;
-    Info.ppResourceSignatures    = Signatures;
-    Info.ResourceSignaturesCount = _countof(Signatures);
-    Info.ShaderStages            = SHADER_TYPE_ALL_GRAPHICS;
-    Info.DeviceType              = DeviceInfo.Type;
-
-    switch (DeviceInfo.Type)
-    {
-        case RENDER_DEVICE_TYPE_D3D11:
-            Info.NumRenderTargets = 2;
-            Info.ShaderStages     = SHADER_TYPE_PIXEL;
-            break;
-        case RENDER_DEVICE_TYPE_GL:
-        case RENDER_DEVICE_TYPE_GLES:
-            Info.ShaderStages = SHADER_TYPE_PIXEL;
-            break;
-        case RENDER_DEVICE_TYPE_METAL:
-            Info.ShaderStages     = SHADER_TYPE_PIXEL;
-            Info.NumVertexBuffers = 1;
-            break;
-        case RENDER_DEVICE_TYPE_D3D12:
-        case RENDER_DEVICE_TYPE_VULKAN:
-            break;
-        default:
-            LOG_ERROR_AND_THROW("Unsupported device type");
-    }
-
-    Uint32                         NumBindings = 0;
-    const PipelineResourceBinding* Bindings    = nullptr;
-    pSerializationDevice->GetPipelineResourceBindings(Info, NumBindings, Bindings);
-    ASSERT_NE(NumBindings, 0u);
-    ASSERT_NE(Bindings, nullptr);
-
-    const auto CompareBindings = [NumBindings, Bindings](const PipelineResourceBinding* RefBindings, Uint32 Count) //
-    {
-        EXPECT_EQ(NumBindings, Count);
-        if (NumBindings != Count)
-            return;
-
-        std::unordered_map<HashMapStringKey, const PipelineResourceBinding*, HashMapStringKey::Hasher> BindingMap;
-        for (Uint32 i = 0; i < NumBindings; ++i)
-            BindingMap.emplace(HashMapStringKey{Bindings[i].Name}, Bindings + i);
-
-        for (Uint32 i = 0; i < Count; ++i)
-        {
-            auto Iter = BindingMap.find(HashMapStringKey{RefBindings[i].Name});
-            EXPECT_TRUE(Iter != BindingMap.end());
-            if (Iter == BindingMap.end())
-                continue;
-
-            const auto& Lhs = *Iter->second;
-            const auto& Rhs = RefBindings[i];
-
-            EXPECT_EQ(Lhs.Register, Rhs.Register);
-            EXPECT_EQ(Lhs.Space, Rhs.Space);
-            EXPECT_EQ(Lhs.ArraySize, Rhs.ArraySize);
-            EXPECT_EQ(Lhs.ResourceType, Rhs.ResourceType);
+                    };
+                CompareBindings(RefBindings, _countof(RefBindings));
+                break;
+            }
+            case RENDER_DEVICE_TYPE_D3D12:
+            {
+                const PipelineResourceBinding RefBindings[] =
+                    {
+                        // clang-format off
+                        {"ConstBuff_1",    SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,  VS_PS, 0, 0, 1},
+                        {"PerObjectConst", SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,  VS_PS, 0, 1, 8},
+                        {"g_SubpassInput", SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT, PS,    0, 0, 1},
+                        {"g_TLAS",         SHADER_RESOURCE_TYPE_ACCEL_STRUCT,     PS,    0, 1, 1},
+                        {"g_DiffuseTexs",  SHADER_RESOURCE_TYPE_TEXTURE_SRV,      PS,    1, 0, RuntimeArray},
+                        {"g_NormalTexs",   SHADER_RESOURCE_TYPE_TEXTURE_SRV,      PS,    2, 0, RuntimeArray},
+                        {"g_RWTex2D",      SHADER_RESOURCE_TYPE_TEXTURE_UAV,      PS,    3, 0, 2},
+                        {"g_TexelBuff",    SHADER_RESOURCE_TYPE_BUFFER_SRV,       VS_PS, 3, 0, 1}
+                        // clang-format on
+                    };
+                CompareBindings(RefBindings, _countof(RefBindings));
+                break;
+            }
+            case RENDER_DEVICE_TYPE_GL:
+            case RENDER_DEVICE_TYPE_GLES:
+            {
+                const PipelineResourceBinding RefBindings[] =
+                    {
+                        // clang-format off
+                        {"g_DiffuseTexs",  SHADER_RESOURCE_TYPE_TEXTURE_SRV,      PS,  0,   0, RuntimeArray},
+                        {"g_NormalTexs",   SHADER_RESOURCE_TYPE_TEXTURE_SRV,      PS,  0, 100, RuntimeArray},
+                        {"g_SubpassInput", SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT, PS,  0, 200, 1},
+                        {"g_TexelBuff",    SHADER_RESOURCE_TYPE_BUFFER_SRV,       PS,  0, 201, 1},
+                        {"ConstBuff_1",    SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,  PS,  0,   0, 1},
+                        {"PerObjectConst", SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,  PS,  0,   1, 8},
+                        {"g_RWTex2D",      SHADER_RESOURCE_TYPE_TEXTURE_UAV,      PS,  0,   0, 2},
+                        
+                        {"ConstBuff_1",    SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,  VS,  0,   0, 1},
+                        {"PerObjectConst", SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,  VS,  0,   1, 8},
+                        {"g_TexelBuff",    SHADER_RESOURCE_TYPE_BUFFER_SRV,       VS,  0, 201, 1},
+                        // clang-format on
+                    };
+                CompareBindings(RefBindings, _countof(RefBindings));
+                break;
+            }
+            case RENDER_DEVICE_TYPE_VULKAN:
+            {
+                const PipelineResourceBinding RefBindings[] =
+                    {
+                        // clang-format off
+                        {"ConstBuff_1",    SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,  VS_PS, 0, 0, 1},
+                        {"PerObjectConst", SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,  VS_PS, 0, 1, 8},
+                        {"g_DiffuseTexs",  SHADER_RESOURCE_TYPE_TEXTURE_SRV,      PS,    0, 2, RuntimeArray},
+                        {"g_NormalTexs",   SHADER_RESOURCE_TYPE_TEXTURE_SRV,      PS,    0, 3, RuntimeArray},
+                        {"g_SubpassInput", SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT, PS,    0, 4, 1},
+                        {"g_TLAS",         SHADER_RESOURCE_TYPE_ACCEL_STRUCT,     PS,    0, 5, 1},
+                        {"g_RWTex2D",      SHADER_RESOURCE_TYPE_TEXTURE_UAV,      PS,    1, 0, 2},
+                        {"g_TexelBuff",    SHADER_RESOURCE_TYPE_BUFFER_SRV,       VS_PS, 1, 1, 1}
+                        // clang-format on
+                    };
+                CompareBindings(RefBindings, _countof(RefBindings));
+                break;
+            }
+            case RENDER_DEVICE_TYPE_METAL:
+            {
+                const PipelineResourceBinding RefBindings[] =
+                    {
+                        // clang-format off
+                        {"g_DiffuseTexs",  SHADER_RESOURCE_TYPE_TEXTURE_SRV,      PS,  0,   0, RuntimeArray},
+                        {"g_NormalTexs",   SHADER_RESOURCE_TYPE_TEXTURE_SRV,      PS,  0, 100, RuntimeArray},
+                        {"g_SubpassInput", SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT, PS,  0, 200, 1},
+                        {"g_RWTex2D",      SHADER_RESOURCE_TYPE_TEXTURE_UAV,      PS,  0, 201, 2},
+                        {"g_TexelBuff",    SHADER_RESOURCE_TYPE_BUFFER_SRV,       PS,  0, 203, 1},
+                        {"ConstBuff_1",    SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,  PS,  0,   0, 1},
+                        {"PerObjectConst", SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,  PS,  0,   1, 8},
+                    
+                        {"ConstBuff_1",    SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,  VS,  0,   0, 1},
+                        {"PerObjectConst", SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,  VS,  0,   1, 8},
+                        {"VBPosition",     SHADER_RESOURCE_TYPE_BUFFER_SRV,       VS,  0,  29, 1},
+                        {"VBTexcoord",     SHADER_RESOURCE_TYPE_BUFFER_SRV,       VS,  0,  30, 1},
+                        {"g_TexelBuff",    SHADER_RESOURCE_TYPE_BUFFER_SRV,       VS,  0,   0, 1}
+                        // clang-format on
+                    };
+                CompareBindings(RefBindings, _countof(RefBindings));
+                break;
+            }
+            default:
+                LOG_ERROR_AND_THROW("Unsupported device type");
         }
-    };
-
-    constexpr Uint32 RuntimeArray = 0;
-    switch (DeviceInfo.Type)
-    {
-        case RENDER_DEVICE_TYPE_D3D11:
-        {
-            const PipelineResourceBinding RefBindings[] =
-                {
-                    // clang-format off
-                    {"g_DiffuseTexs",  SHADER_RESOURCE_TYPE_TEXTURE_SRV,      SHADER_TYPE_PIXEL, 0,   0, RuntimeArray},
-                    {"g_NormalTexs",   SHADER_RESOURCE_TYPE_TEXTURE_SRV,      SHADER_TYPE_PIXEL, 0, 100, RuntimeArray},
-                    {"g_SubpassInput", SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT, SHADER_TYPE_PIXEL, 0, 200, 1},
-                    {"g_TexelBuff",    SHADER_RESOURCE_TYPE_BUFFER_SRV,       SHADER_TYPE_PIXEL, 0, 201, 1},
-                    {"ConstBuff_1",    SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,  SHADER_TYPE_PIXEL, 0,   0, 1},
-                    {"PerObjectConst", SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,  SHADER_TYPE_PIXEL, 0,   1, 8},
-                    {"g_RWTex2D",      SHADER_RESOURCE_TYPE_TEXTURE_UAV,      SHADER_TYPE_PIXEL, 0,   2, 2},
-                    {"g_Sampler",      SHADER_RESOURCE_TYPE_SAMPLER,          SHADER_TYPE_PIXEL, 0,   0, 1}
-                    // clang-format on
-
-                };
-            CompareBindings(RefBindings, _countof(RefBindings));
-            break;
-        }
-        case RENDER_DEVICE_TYPE_D3D12:
-        {
-            const PipelineResourceBinding RefBindings[] =
-                {
-                    // clang-format off
-                    {"ConstBuff_1",    SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,  SHADER_TYPE_ALL_GRAPHICS, 0, 0, 1},
-                    {"PerObjectConst", SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,  SHADER_TYPE_ALL_GRAPHICS, 0, 1, 8},
-                    {"g_SubpassInput", SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT, SHADER_TYPE_PIXEL,        0, 0, 1},
-                    {"g_TLAS",         SHADER_RESOURCE_TYPE_ACCEL_STRUCT,     SHADER_TYPE_ALL_GRAPHICS, 0, 1, 1},
-                    {"g_DiffuseTexs",  SHADER_RESOURCE_TYPE_TEXTURE_SRV,      SHADER_TYPE_ALL_GRAPHICS, 1, 0, RuntimeArray},
-                    {"g_NormalTexs",   SHADER_RESOURCE_TYPE_TEXTURE_SRV,      SHADER_TYPE_ALL_GRAPHICS, 2, 0, RuntimeArray},
-                    {"g_RWTex2D",      SHADER_RESOURCE_TYPE_TEXTURE_UAV,      SHADER_TYPE_PIXEL,        3, 0, 2},
-                    {"g_TexelBuff",    SHADER_RESOURCE_TYPE_BUFFER_SRV,       SHADER_TYPE_ALL_GRAPHICS, 3, 0, 1},
-                    // clang-format on
-                };
-            CompareBindings(RefBindings, _countof(RefBindings));
-            break;
-        }
-        case RENDER_DEVICE_TYPE_GL:
-        case RENDER_DEVICE_TYPE_GLES:
-        {
-            const PipelineResourceBinding RefBindings[] =
-                {
-                    // clang-format off
-                    {"g_DiffuseTexs",  SHADER_RESOURCE_TYPE_TEXTURE_SRV,      SHADER_TYPE_PIXEL, 0,   0, RuntimeArray},
-                    {"g_NormalTexs",   SHADER_RESOURCE_TYPE_TEXTURE_SRV,      SHADER_TYPE_PIXEL, 0, 100, RuntimeArray},
-                    {"g_SubpassInput", SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT, SHADER_TYPE_PIXEL, 0, 200, 1},
-                    {"g_TexelBuff",    SHADER_RESOURCE_TYPE_BUFFER_SRV,       SHADER_TYPE_PIXEL, 0, 201, 1},
-                    {"ConstBuff_1",    SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,  SHADER_TYPE_PIXEL, 0,   0, 1},
-                    {"PerObjectConst", SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,  SHADER_TYPE_PIXEL, 0,   1, 8},
-                    {"g_RWTex2D",      SHADER_RESOURCE_TYPE_TEXTURE_UAV,      SHADER_TYPE_PIXEL, 0,   0, 2}
-                    // clang-format on
-                };
-            CompareBindings(RefBindings, _countof(RefBindings));
-            break;
-        }
-        case RENDER_DEVICE_TYPE_VULKAN:
-        {
-            const PipelineResourceBinding RefBindings[] =
-                {
-                    // clang-format off
-                    {"ConstBuff_1",    SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,  SHADER_TYPE_ALL_GRAPHICS, 0, 0, 1},
-                    {"PerObjectConst", SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,  SHADER_TYPE_ALL_GRAPHICS, 0, 1, 8},
-                    {"g_DiffuseTexs",  SHADER_RESOURCE_TYPE_TEXTURE_SRV,      SHADER_TYPE_ALL_GRAPHICS, 0, 2, RuntimeArray},
-                    {"g_NormalTexs",   SHADER_RESOURCE_TYPE_TEXTURE_SRV,      SHADER_TYPE_ALL_GRAPHICS, 0, 3, RuntimeArray},
-                    {"g_SubpassInput", SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT, SHADER_TYPE_PIXEL,        0, 4, 1},
-                    {"g_TLAS",         SHADER_RESOURCE_TYPE_ACCEL_STRUCT,     SHADER_TYPE_ALL_GRAPHICS, 0, 5, 1},
-                    {"g_RWTex2D",      SHADER_RESOURCE_TYPE_TEXTURE_UAV,      SHADER_TYPE_PIXEL,        1, 0, 2},
-                    {"g_TexelBuff",    SHADER_RESOURCE_TYPE_BUFFER_SRV,       SHADER_TYPE_ALL_GRAPHICS, 1, 1, 1}
-                    // clang-format on
-                };
-            CompareBindings(RefBindings, _countof(RefBindings));
-            break;
-        }
-        case RENDER_DEVICE_TYPE_METAL:
-        {
-            const PipelineResourceBinding RefBindings[1] = {};
-            CompareBindings(RefBindings, _countof(RefBindings));
-            break;
-        }
-        default:
-            LOG_ERROR_AND_THROW("Unsupported device type");
     }
 }
 
