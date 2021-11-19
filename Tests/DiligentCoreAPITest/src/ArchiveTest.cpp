@@ -407,7 +407,7 @@ TEST(ArchiveTest, GraphicsPipeline)
         {
             ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
             ShaderCI.EntryPoint      = "main";
-            ShaderCI.Desc.Name       = "Draw command test vertex shader";
+            ShaderCI.Desc.Name       = "Archive test vertex shader";
             ShaderCI.Source          = HLSL::DrawTest_VS.c_str();
 
             pDevice->CreateShader(ShaderCI, &pVS);
@@ -422,7 +422,7 @@ TEST(ArchiveTest, GraphicsPipeline)
         {
             ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
             ShaderCI.EntryPoint      = "main";
-            ShaderCI.Desc.Name       = "Draw command test pixel shader";
+            ShaderCI.Desc.Name       = "Archive test pixel shader";
             ShaderCI.Source          = HLSL::DrawTest_PS.c_str();
 
             pDevice->CreateShader(ShaderCI, &pPS);
@@ -547,7 +547,6 @@ TEST(ArchiveTest, GraphicsPipeline)
     }
 
     // Unpack PSO 1
-    RefCntAutoPtr<IPipelineState> pUnpackedPSO_1;
     {
         PipelineStateUnpackInfo UnpackInfo;
         UnpackInfo.Name         = PSO1Name;
@@ -555,25 +554,28 @@ TEST(ArchiveTest, GraphicsPipeline)
         UnpackInfo.pDevice      = pDevice;
         UnpackInfo.PipelineType = PIPELINE_TYPE_GRAPHICS;
 
+        RefCntAutoPtr<IPipelineState> pUnpackedPSO_1;
         pDearchiver->UnpackPipelineState(UnpackInfo, &pUnpackedPSO_1);
         ASSERT_NE(pUnpackedPSO_1, nullptr);
 
         EXPECT_EQ(pUnpackedPSO_1->GetGraphicsPipelineDesc(), pRefPSO_1->GetGraphicsPipelineDesc());
         EXPECT_EQ(pUnpackedPSO_1->GetResourceSignatureCount(), pRefPSO_1->GetResourceSignatureCount());
 
-        // AZ TODO: failed in OpenGL
-        /*
-        for (Uint32 s = 0, SCnt = std::min(pUnpackedPSO_1->GetResourceSignatureCount(), pRefPSO_1->GetResourceSignatureCount()); s < SCnt; ++s)
+        // AZ TODO: OpenGL PRS have immutable samplers as resources which is not supported in comparator
+        if (!pDevice->GetDeviceInfo().IsGLDevice())
         {
-            auto* pLhsSign = pUnpackedPSO_1->GetResourceSignature(s);
-            auto* pRhsSign = pRefPSO_1->GetResourceSignature(s);
-            EXPECT_EQ((pLhsSign != nullptr), (pRhsSign != nullptr));
-            if ((pLhsSign != nullptr) != (pRhsSign != nullptr))
-                continue;
+            for (Uint32 s = 0, SCnt = std::min(pUnpackedPSO_1->GetResourceSignatureCount(), pRefPSO_1->GetResourceSignatureCount()); s < SCnt; ++s)
+            {
+                auto* pLhsSign = pUnpackedPSO_1->GetResourceSignature(s);
+                auto* pRhsSign = pRefPSO_1->GetResourceSignature(s);
+                EXPECT_EQ((pLhsSign != nullptr), (pRhsSign != nullptr));
+                if ((pLhsSign != nullptr) != (pRhsSign != nullptr))
+                    continue;
 
-            EXPECT_EQ(pLhsSign->GetDesc(), pRhsSign->GetDesc());
+                EXPECT_EQ(pLhsSign->GetDesc(), pRhsSign->GetDesc());
+            }
         }
-        */
+
         // Check default PRS cache
         RefCntAutoPtr<IPipelineState> pUnpackedPSO_3;
         UnpackInfo.Name = PSO3Name;

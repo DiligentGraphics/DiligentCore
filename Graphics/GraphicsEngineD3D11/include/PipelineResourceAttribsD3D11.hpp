@@ -171,7 +171,7 @@ private:
     // |  PS  |  VS  |  GS  |  HS  |  DS  |  CS  |
     std::array<Uint8, NumShaderTypes> Bindings{InvalidBindPoint, InvalidBindPoint, InvalidBindPoint, InvalidBindPoint, InvalidBindPoint, InvalidBindPoint};
 
-    Uint8 ActiveStages = 0;
+    Uint16 ActiveStages = 0;
 };
 
 

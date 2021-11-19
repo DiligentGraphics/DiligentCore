@@ -180,17 +180,20 @@ private:
 
     struct ShaderKey
     {
-        SerializedMemory Data;
+        std::shared_ptr<SerializedMemory> Ptr;
 
-        bool operator==(const ShaderKey& Rhs) const;
+        bool operator==(const ShaderKey& Rhs) const { return *Ptr == *Rhs.Ptr; }
+
+        struct Hash
+        {
+            size_t operator()(const ShaderKey& Key) const { return Key.Ptr->CalcHash(); }
+        };
     };
-    struct ShaderKeyHash
-    {
-        size_t operator()(const ShaderKey& Key) const;
-    };
+
     struct PerDeviceShaders
     {
-        std::unordered_map<ShaderKey, /*Index*/ size_t, ShaderKeyHash> Map;
+        std::vector<ShaderKey>                                                   List;
+        std::unordered_map<ShaderKey, /*Index in List*/ size_t, ShaderKey::Hash> Map;
     };
     std::array<PerDeviceShaders, static_cast<Uint32>(DeviceType::Count)> m_Shaders;
 
@@ -269,11 +272,11 @@ private:
 
 #if METAL_SUPPORTED
     template <typename CreateInfoType>
-    bool PatchShadersMtlImpl(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data, DefaultPRSInfo& DefPRS);
-    bool PatchShadersMtl(const GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
-    bool PatchShadersMtl(const ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
-    bool PatchShadersMtl(const TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
-    bool PatchShadersMtl(const RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
+    bool PatchShadersMtlImpl(CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data, DefaultPRSInfo& DefPRS);
+    bool PatchShadersMtl(GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
+    bool PatchShadersMtl(ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
+    bool PatchShadersMtl(TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
+    bool PatchShadersMtl(RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
 #endif
 
     void SerializeShadersForPSO(const TShaderIndices& ShaderIndices, SerializedMemory& DeviceData) const;

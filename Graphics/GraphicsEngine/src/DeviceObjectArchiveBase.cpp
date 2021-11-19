@@ -243,8 +243,9 @@ void DeviceObjectArchiveBase::LoadDeviceSpecificData(const HeaderType&       Hea
                                                      BlockOffsetType         BlockType,
                                                      const FnType&           Fn)
 {
-    const auto BaseOffset = m_BaseOffsets[static_cast<Uint32>(BlockType)];
-    if (BaseOffset > m_pArchive->GetSize())
+    const auto BaseOffset  = m_BaseOffsets[static_cast<Uint32>(BlockType)];
+    const auto ArchiveSize = m_pArchive->GetSize();
+    if (BaseOffset > ArchiveSize)
     {
         LOG_ERROR_MESSAGE("Required block is not exists in archive");
         return;
@@ -254,7 +255,7 @@ void DeviceObjectArchiveBase::LoadDeviceSpecificData(const HeaderType&       Hea
         LOG_ERROR_MESSAGE("Device specific data is not specified for ", ResTypeName);
         return;
     }
-    if (BaseOffset + Header.GetEndOffset(m_DevType) > m_pArchive->GetSize())
+    if (BaseOffset + Header.GetEndOffset(m_DevType) > ArchiveSize)
     {
         LOG_ERROR_MESSAGE("Invalid offset in archive");
         return;
@@ -660,10 +661,10 @@ bool DeviceObjectArchiveBase::LoadShaders(Serializer<SerializerMode::Read>&    S
         if (m_DevType == DeviceType::OpenGL)
         {
             ShaderCI.Source                     = static_cast<const Char*>(Ser2.GetCurrentPtr());
-            ShaderCI.SourceLength               = Ser2.GetRemainSize();
+            ShaderCI.SourceLength               = Ser2.GetRemainSize() - 1;
             ShaderCI.UseCombinedTextureSamplers = true;
 
-            VERIFY_EXPR(ShaderCI.SourceLength == strlen(ShaderCI.Source) + 1);
+            VERIFY_EXPR(ShaderCI.SourceLength == strlen(ShaderCI.Source));
         }
         else
         {
