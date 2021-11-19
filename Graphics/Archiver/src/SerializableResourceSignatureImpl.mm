@@ -46,14 +46,14 @@ struct SerializableResourceSignatureImpl::PRSMtlImpl final : IPRSMtl
     
 };
 
-void SerializableResourceSignatureImpl::CompilePRSMtl(IReferenceCounters* pRefCounters, const PipelineResourceSignatureDesc& Desc)
+void SerializableResourceSignatureImpl::SerializePRSMtl(IReferenceCounters* pRefCounters, const PipelineResourceSignatureDesc& Desc)
 {
     auto* pPRSMtl = new PRSMtlImpl{pRefCounters, Desc};
     m_pPRSMtl.reset(pPRSMtl);
 
     PipelineResourceSignatureSerializedDataMtl SerializedData;
     pPRSMtl->PRS.Serialize(SerializedData);
-    AddPRSDesc(pPRSMtl->PRS.GetDesc(), SerializedData.Base);
+    AddPRSDesc(pPRSMtl->PRS.GetDesc(), SerializedData);
     
     Serializer<SerializerMode::Measure> MeasureSer;
     PSOSerializerMtl<SerializerMode::Measure>::SerializePRS(MeasureSer, SerializedData, nullptr);

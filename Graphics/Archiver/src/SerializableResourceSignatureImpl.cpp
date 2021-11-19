@@ -237,7 +237,7 @@ SerializableResourceSignatureImpl::SerializableResourceSignatureImpl(IReferenceC
 
 #if METAL_SUPPORTED
             case RENDER_DEVICE_TYPE_METAL:
-                CompilePRSMtl(pRefCounters, Desc);
+                SerializePRSMtl(pRefCounters, Desc);
                 break;
 #endif
 

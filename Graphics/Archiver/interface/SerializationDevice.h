@@ -82,6 +82,22 @@ struct SerializationDeviceVkInfo
 #endif
 };
 
+/// Attributes for Metal backend
+struct SerializationDeviceMtlInfo
+{
+    /// Path to folder where temporary Metal shaders will be stored and compiled to bytecode.
+    const Char* TempShaderFolder   DEFAULT_INITIALIZER(nullptr);
+    
+    /// 
+    const Char* CompileOptions     DEFAULT_INITIALIZER(nullptr);
+    
+    /// 
+    const Char* LinkOptions        DEFAULT_INITIALIZER(nullptr);
+
+    /// Name of command-line application which is used to preprocess Metal shader source before compiling to bytecode.
+    const Char* MslPreprocessorCmd DEFAULT_INITIALIZER(nullptr);
+};
+
 /// Serialization device creation information
 struct SerializationDeviceCreateInfo
 {
@@ -91,6 +107,7 @@ struct SerializationDeviceCreateInfo
     struct SerializationDeviceD3D11Info D3D11;
     struct SerializationDeviceD3D12Info D3D12;
     struct SerializationDeviceVkInfo    Vulkan;
+    struct SerializationDeviceMtlInfo   Metal;
     
 #if DILIGENT_CPP_INTERFACE
     SerializationDeviceCreateInfo()

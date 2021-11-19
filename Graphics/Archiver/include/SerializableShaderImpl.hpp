@@ -28,6 +28,7 @@
 
 #include "Shader.h"
 #include "ObjectBase.hpp"
+#include "RefCntAutoPtr.hpp"
 #include "STDAllocator.hpp"
 #include "SerializationDeviceImpl.hpp"
 #include "SerializedMemory.hpp"
@@ -43,6 +44,11 @@ class ShaderD3D12Impl;
 #endif
 #if VULKAN_SUPPORTED
 class ShaderVkImpl;
+#endif
+#if METAL_SUPPORTED
+class PipelineResourceSignatureMtlImpl;
+class SPIRVShaderResources;
+using MtlArchiverResourceCounters = std::array<std::array<Uint16, 4>, 2>; // same as MtlResourceCounters
 #endif
 
 class SerializableShaderImpl final : public ObjectBase<IShader>
@@ -80,10 +86,10 @@ public:
     const ShaderVkImpl* GetShaderVk() const;
 #endif
 #if METAL_SUPPORTED
-    const SerializedMemory& GetShaderMtl() const
-    {
-        return m_pShaderBinaryMtl;
-    }
+    SerializedMemory            PatchShaderMtl(const RefCntAutoPtr<PipelineResourceSignatureMtlImpl>* pSignatures,
+                                               const MtlArchiverResourceCounters*                     pBaseBindings,
+                                               const Uint32                                           SignatureCount) const noexcept(false);
+    const SPIRVShaderResources* GetMtlShaderSPIRVResources() const;
 #endif
 
     const ShaderCreateInfo& GetCreateInfo() const
@@ -94,6 +100,7 @@ public:
 private:
     void CopyShaderCreateInfo(const ShaderCreateInfo& ShaderCI);
 
+    SerializationDeviceImpl*                      m_pDevice;
     ShaderCreateInfo                              m_CreateInfo;
     std::unique_ptr<void, STDDeleterRawMem<void>> m_pRawMemory;
 
@@ -110,8 +117,18 @@ private:
     std::unique_ptr<CompiledShaderVk> m_pShaderVk;
 #endif
 #if METAL_SUPPORTED
-    void             CompileShaderMtl(SerializationDeviceImpl* pDevice, const ShaderCreateInfo& ShaderCI) noexcept(false);
-    SerializedMemory m_pShaderBinaryMtl;
+    struct ICompiledShaderMtl
+    {
+        virtual ~ICompiledShaderMtl() {}
+    };
+    struct CompiledShaderMtlImpl;
+    std::unique_ptr<ICompiledShaderMtl> m_pShaderMtl;
+
+    void CompileShaderMtl(ShaderCreateInfo& ShaderCI, String& CompilationLog) noexcept(false);
+
+    SerializedMemory PatchShaderMtl(const RefCntAutoPtr<PipelineResourceSignatureMtlImpl>* pSignatures,
+                                    const MtlArchiverResourceCounters*                     pBaseBindings,
+                                    const Uint32                                           SignatureCount) noexcept(false);
 #endif
 };
 
