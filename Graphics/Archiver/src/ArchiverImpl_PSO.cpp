@@ -45,10 +45,10 @@ template <typename PRSMapType>
 void ValidatePipelineStateArchiveInfo(const PipelineStateCreateInfo&  PSOCreateInfo,
                                       const PipelineStateArchiveInfo& ArchiveInfo,
                                       const PRSMapType&               PRSMap,
-                                      const Uint32                    ValidDeviceBits) noexcept(false)
+                                      const RENDER_DEVICE_TYPE_FLAGS  ValidDeviceFlags) noexcept(false)
 {
-    VERIFY_PSO(ArchiveInfo.DeviceBits != 0, "At least one bit must be set in DeviceBits");
-    VERIFY_PSO((ArchiveInfo.DeviceBits & ValidDeviceBits) == ArchiveInfo.DeviceBits, "DeviceBits contains unsupported device type");
+    VERIFY_PSO(ArchiveInfo.DeviceFlags != RENDER_DEVICE_TYPE_FLAG_NONE, "At least one bit must be set in Devices");
+    VERIFY_PSO((ArchiveInfo.DeviceFlags & ValidDeviceFlags) == ArchiveInfo.DeviceFlags, "Devices contain unsupported device type");
 
     VERIFY_PSO(PSOCreateInfo.PSODesc.Name != nullptr, "Pipeline name in PSOCreateInfo.PSODesc.Name must not be null");
     VERIFY_PSO((PSOCreateInfo.ResourceSignaturesCount != 0) == (PSOCreateInfo.ppResourceSignatures != nullptr),
@@ -176,7 +176,7 @@ bool ArchiverImpl::CreateDefaultResourceSignature(DefaultPRSInfo& DefPRS, const 
 
         if (DefPRS.pPRS)
         {
-            if (!(DefPRS.pPRS.RawPtr<SerializableResourceSignatureImpl>()->IsCompatible(*pDefaultPRS.RawPtr<SerializableResourceSignatureImpl>(), DefPRS.DeviceBits)))
+            if (!(DefPRS.pPRS.RawPtr<SerializableResourceSignatureImpl>()->IsCompatible(*pDefaultPRS.RawPtr<SerializableResourceSignatureImpl>(), DefPRS.DeviceFlags)))
             {
                 LOG_ERROR_MESSAGE("Default signatures does not match between different backends");
                 return false;
@@ -250,7 +250,7 @@ bool ArchiverImpl::PatchShadersVk(CreateInfoType& CreateInfo, TPSOData<CreateInf
                     SignDesc.Name = DefPRS.UniqueName.c_str();
 
                     RefCntAutoPtr<IPipelineResourceSignature> pDefaultPRS;
-                    m_pSerializationDevice->CreatePipelineResourceSignature(SignDesc, DefPRS.DeviceBits, ActiveShaderStages, &pDefaultPRS);
+                    m_pSerializationDevice->CreatePipelineResourceSignature(SignDesc, DefPRS.DeviceFlags, ActiveShaderStages, &pDefaultPRS);
                     return pDefaultPRS;
                 }))
         {
@@ -393,7 +393,7 @@ bool ArchiverImpl::PatchShadersD3D11(CreateInfoType& CreateInfo, TPSOData<Create
                     SignDesc.Name = DefPRS.UniqueName.c_str();
 
                     RefCntAutoPtr<IPipelineResourceSignature> pDefaultPRS;
-                    m_pSerializationDevice->CreatePipelineResourceSignature(SignDesc, DefPRS.DeviceBits, ActiveShaderStages, &pDefaultPRS);
+                    m_pSerializationDevice->CreatePipelineResourceSignature(SignDesc, DefPRS.DeviceFlags, ActiveShaderStages, &pDefaultPRS);
                     return pDefaultPRS;
                 }))
         {
@@ -506,7 +506,7 @@ bool ArchiverImpl::PatchShadersD3D12(CreateInfoType& CreateInfo, TPSOData<Create
                     SignDesc.Name = DefPRS.UniqueName.c_str();
 
                     RefCntAutoPtr<IPipelineResourceSignature> pDefaultPRS;
-                    m_pSerializationDevice->CreatePipelineResourceSignature(SignDesc, DefPRS.DeviceBits, ActiveShaderStages, &pDefaultPRS);
+                    m_pSerializationDevice->CreatePipelineResourceSignature(SignDesc, DefPRS.DeviceFlags, ActiveShaderStages, &pDefaultPRS);
                     return pDefaultPRS;
                 }))
         {
@@ -695,7 +695,7 @@ bool ArchiverImpl::SerializePSO(std::unordered_map<String, TPSOData<CreateInfoTy
     CreateInfoType PSOCreateInfo = InPSOCreateInfo;
     try
     {
-        ValidatePipelineStateArchiveInfo(PSOCreateInfo, ArchiveInfo, m_PRSMap, m_pSerializationDevice->GetValidDeviceBits());
+        ValidatePipelineStateArchiveInfo(PSOCreateInfo, ArchiveInfo, m_PRSMap, m_pSerializationDevice->GetValidDeviceFlags());
         ValidatePSOCreateInfo(m_pSerializationDevice->GetDevice(), PSOCreateInfo);
     }
     catch (...)
@@ -717,13 +717,13 @@ bool ArchiverImpl::SerializePSO(std::unordered_map<String, TPSOData<CreateInfoTy
     DefaultPRSInfo DefPRS;
     if (UseDefaultPRS)
     {
-        DefPRS.DeviceBits = ArchiveInfo.DeviceBits;
-        DefPRS.UniqueName = UniquePRSName();
+        DefPRS.DeviceFlags = ArchiveInfo.DeviceFlags;
+        DefPRS.UniqueName  = UniquePRSName();
     }
 
-    for (Uint32 Bits = ArchiveInfo.DeviceBits; Bits != 0;)
+    for (auto DeviceBits = ArchiveInfo.DeviceFlags; DeviceBits != 0;)
     {
-        const auto Type = static_cast<RENDER_DEVICE_TYPE>(PlatformMisc::GetLSB(ExtractLSB(Bits)));
+        const auto Type = static_cast<RENDER_DEVICE_TYPE>(PlatformMisc::GetLSB(ExtractLSB(DeviceBits)));
 
         static_assert(RENDER_DEVICE_TYPE_COUNT == 7, "Please update the switch below to handle the new render device type");
         switch (Type)

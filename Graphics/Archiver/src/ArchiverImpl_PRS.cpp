@@ -129,7 +129,7 @@ Bool ArchiverImpl::AddPipelineResourceSignature(const PipelineResourceSignatureD
                                                 const ResourceSignatureArchiveInfo&  ArchiveInfo)
 {
     RefCntAutoPtr<IPipelineResourceSignature> pPRS;
-    m_pSerializationDevice->CreatePipelineResourceSignature(SignatureDesc, ArchiveInfo.DeviceBits, &pPRS);
+    m_pSerializationDevice->CreatePipelineResourceSignature(SignatureDesc, ArchiveInfo.DeviceFlags, &pPRS);
     if (!pPRS)
         return false;
 

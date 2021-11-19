@@ -52,67 +52,78 @@ static const INTERFACE_ID IID_Archiver =
 /// Pipeline state archive info
 struct PipelineStateArchiveInfo
 {
-    /// Pipeline state archive flags, see Diligent::PSO_ARCHIVE_FLAGS
+    /// Pipeline state archive flags, see Diligent::PSO_ARCHIVE_FLAGS.
     PSO_ARCHIVE_FLAGS Flags DEFAULT_INITIALIZER(PSO_ARCHIVE_FLAG_NONE);
-    
-    /// Bitset of RENDER_DEVICE_TYPE.
-    /// Specifies for which backends these pipeline state can be created.
-    Uint32 DeviceBits DEFAULT_INITIALIZER(0);
+
+    /// Bitset of Diligent::RENDER_DEVICE_TYPE_FLAGS.
+    /// Specifies for which backends the pipeline state can be created.
+    RENDER_DEVICE_TYPE_FLAGS DeviceFlags DEFAULT_INITIALIZER(RENDER_DEVICE_TYPE_FLAG_NONE);
 };
 typedef struct PipelineStateArchiveInfo PipelineStateArchiveInfo;
 
 // Pipeline resource signature archive info
 struct ResourceSignatureArchiveInfo
 {
-    /// Bitset of RENDER_DEVICE_TYPE.
-    /// Specifies for which backends these resource signature can be created.
-    Uint32 DeviceBits DEFAULT_INITIALIZER(0);
+    /// Bitset of RENDER_DEVICE_TYPE_FLAGS.
+    /// Specifies for which backends the resource signature can be created.
+    RENDER_DEVICE_TYPE_FLAGS DeviceFlags DEFAULT_INITIALIZER(RENDER_DEVICE_TYPE_FLAG_NONE);
 };
 typedef struct ResourceSignatureArchiveInfo ResourceSignatureArchiveInfo;
 
 
-/// Defines the methods to manipulate a Archive object
+/// Defines the methods to manipulate an Archive object
 DILIGENT_BEGIN_INTERFACE(IArchiver, IObject)
 {
-    /// Write archive to memory blob
+    /// Writes an archive to a memory blob
     VIRTUAL Bool METHOD(SerializeToBlob)(THIS_
                                          IDataBlob** ppBlob) PURE;
-    
-    /// Write archive to file stream
+
+    /// Writes an archive to a file stream
     VIRTUAL Bool METHOD(SerializeToStream)(THIS_
                                            IFileStream* pStream) PURE;
 
-   
-    /// Pipeline archival requires the same information as PSO creation
-    /// Multiple pipeline states may be packed into the same archive as long as they use unique names.
-    /// Pipeline resource signatures used by the pipeline stats will be packed into the same archive.
-   
-    /// Add graphics pipeline state to archive.
-    /// All dependent objects (render pass, resource signatures, shaders) will be added too.
+
+    /// Adds a graphics pipeline state to the archive currently being created.
+
+    /// \note
+    ///     All dependent objects (render pass, resource signatures, shaders) will be added too.
+    ///
+    /// \remarks
+    ///     Pipeline archival requires the same information as PSO creation.
+    ///     Multiple pipeline states may be packed into the same archive as long as they use unique names.
+    ///     Pipeline resource signatures used by the pipeline state will be packed into the same archive.
     VIRTUAL Bool METHOD(AddGraphicsPipelineState)(THIS_
                                                   const GraphicsPipelineStateCreateInfo REF PSOCreateInfo,
                                                   const PipelineStateArchiveInfo REF        ArchiveInfo) PURE;
-    
-    /// Add compute pipeline state to archive.
-    /// All dependent objects (resource signatures, shaders) will be added too.
+
+
+    /// Adds a compute pipeline state to the archive currently being created.
+
+    /// \note   All dependent objects (resource signatures, shaders) will be added too.
     VIRTUAL Bool METHOD(AddComputePipelineState)(THIS_
                                                  const ComputePipelineStateCreateInfo REF PSOCreateInfo,
                                                  const PipelineStateArchiveInfo REF       ArchiveInfo) PURE;
-    
-    /// Add ray tracing pipeline state to archive.
-    /// All dependent objects (resource signatures, shaders) will be added too.
+
+
+    /// Adds a ray tracing pipeline state to the archive currently being created.
+
+    /// \note   All dependent objects (resource signatures, shaders) will be added too.
     VIRTUAL Bool METHOD(AddRayTracingPipelineState)(THIS_
                                                     const RayTracingPipelineStateCreateInfo REF PSOCreateInfo,
                                                     const PipelineStateArchiveInfo REF          ArchiveInfo) PURE;
-    
-    /// Add tile pipeline state to archive.
-    /// All dependent objects (resource signatures, shaders) will be added too.
+
+
+    /// Adds a tile pipeline state to the archive currently being created.
+
+    /// \note   All dependent objects (resource signatures, shaders) will be added too.
     VIRTUAL Bool METHOD(AddTilePipelineState)(THIS_
                                               const TilePipelineStateCreateInfo REF PSOCreateInfo,
                                               const PipelineStateArchiveInfo REF    ArchiveInfo) PURE;
-    
-    /// Add pipeline resource signature to archive.
-    /// Multiple PSOs and signatures may be packed into the same archive as long as they use distinct names.
+
+
+    /// Adds a pipeline resource signature to the archive currently being created.
+
+    /// \note   Multiple PSOs and signatures may be packed into the same archive as long as they use distinct names.
     VIRTUAL Bool METHOD(AddPipelineResourceSignature)(THIS_
                                                       const PipelineResourceSignatureDesc REF SignatureDesc,
                                                       const ResourceSignatureArchiveInfo REF  ArchiveInfo) PURE;

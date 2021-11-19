@@ -257,7 +257,7 @@ private:
     struct DefaultPRSInfo
     {
         RefCntAutoPtr<IPipelineResourceSignature> pPRS;
-        Uint32                                    DeviceBits = 0;
+        RENDER_DEVICE_TYPE_FLAGS                  DeviceFlags = RENDER_DEVICE_TYPE_FLAG_NONE;
         String                                    UniqueName;
     };
 

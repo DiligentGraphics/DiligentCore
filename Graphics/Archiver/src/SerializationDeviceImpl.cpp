@@ -36,31 +36,29 @@ namespace Diligent
 {
 namespace
 {
-static constexpr Uint32 GetDeviceBits()
+static constexpr RENDER_DEVICE_TYPE_FLAGS GetSupportedDeviceFlags()
 {
-    Uint32 DeviceBits = 0;
+    RENDER_DEVICE_TYPE_FLAGS Flags = RENDER_DEVICE_TYPE_FLAG_NONE;
 #if D3D11_SUPPORTED
-    DeviceBits |= 1 << RENDER_DEVICE_TYPE_D3D11;
+    Flags = Flags | RENDER_DEVICE_TYPE_FLAG_D3D11;
 #endif
 #if D3D12_SUPPORTED
-    DeviceBits |= 1 << RENDER_DEVICE_TYPE_D3D12;
+    Flags = Flags | RENDER_DEVICE_TYPE_FLAG_D3D12;
 #endif
 #if GL_SUPPORTED
-    DeviceBits |= 1 << RENDER_DEVICE_TYPE_GL;
+    Flags = Flags | RENDER_DEVICE_TYPE_FLAG_GL;
 #endif
 #if GLES_SUPPORTED
-    DeviceBits |= 1 << RENDER_DEVICE_TYPE_GLES;
+    Flags = Flags | RENDER_DEVICE_TYPE_FLAG_GLES;
 #endif
 #if VULKAN_SUPPORTED
-    DeviceBits |= 1 << RENDER_DEVICE_TYPE_VULKAN;
+    Flags = Flags | RENDER_DEVICE_TYPE_FLAG_VULKAN;
 #endif
 #if METAL_SUPPORTED
-    DeviceBits |= 1 << RENDER_DEVICE_TYPE_METAL;
+    Flags = Flags | RENDER_DEVICE_TYPE_FLAG_METAL;
 #endif
-    return DeviceBits;
+    return Flags;
 }
-
-static constexpr Uint32 ValidDeviceBits = GetDeviceBits();
 
 template <typename SignatureType>
 using SignatureArray = std::array<RefCntAutoPtr<SignatureType>, MAX_RESOURCE_SIGNATURES>;
@@ -126,12 +124,14 @@ SerializationDeviceImpl::~SerializationDeviceImpl()
 #endif
 }
 
-Uint32 SerializationDeviceImpl::GetValidDeviceBits()
+RENDER_DEVICE_TYPE_FLAGS SerializationDeviceImpl::GetValidDeviceFlags()
 {
-    return ValidDeviceBits;
+    return GetSupportedDeviceFlags();
 }
 
-void SerializationDeviceImpl::CreateShader(const ShaderCreateInfo& ShaderCI, Uint32 DeviceBits, IShader** ppShader)
+void SerializationDeviceImpl::CreateShader(const ShaderCreateInfo&  ShaderCI,
+                                           RENDER_DEVICE_TYPE_FLAGS DeviceFlags,
+                                           IShader**                ppShader)
 {
     DEV_CHECK_ERR(ppShader != nullptr, "ppShader must not be null");
     if (!ppShader)
@@ -141,7 +141,7 @@ void SerializationDeviceImpl::CreateShader(const ShaderCreateInfo& ShaderCI, Uin
     try
     {
         auto& RawMemAllocator = GetRawAllocator();
-        auto* pShaderImpl(NEW_RC_OBJ(RawMemAllocator, "Shader instance", SerializableShaderImpl)(this, ShaderCI, DeviceBits));
+        auto* pShaderImpl(NEW_RC_OBJ(RawMemAllocator, "Shader instance", SerializableShaderImpl)(this, ShaderCI, DeviceFlags));
         pShaderImpl->QueryInterface(IID_Shader, reinterpret_cast<IObject**>(ppShader));
     }
     catch (...)
@@ -169,13 +169,15 @@ void SerializationDeviceImpl::CreateRenderPass(const RenderPassDesc& Desc, IRend
     }
 }
 
-void SerializationDeviceImpl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc, Uint32 DeviceBits, IPipelineResourceSignature** ppSignature)
+void SerializationDeviceImpl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
+                                                              RENDER_DEVICE_TYPE_FLAGS             DeviceFlags,
+                                                              IPipelineResourceSignature**         ppSignature)
 {
-    CreatePipelineResourceSignature(Desc, DeviceBits, SHADER_TYPE_UNKNOWN, ppSignature);
+    CreatePipelineResourceSignature(Desc, DeviceFlags, SHADER_TYPE_UNKNOWN, ppSignature);
 }
 
 void SerializationDeviceImpl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
-                                                              Uint32                               DeviceBits,
+                                                              RENDER_DEVICE_TYPE_FLAGS             DeviceFlags,
                                                               SHADER_TYPE                          ShaderStages,
                                                               IPipelineResourceSignature**         ppSignature)
 {
@@ -187,7 +189,7 @@ void SerializationDeviceImpl::CreatePipelineResourceSignature(const PipelineReso
     try
     {
         auto& RawMemAllocator = GetRawAllocator();
-        auto* pSignatureImpl(NEW_RC_OBJ(RawMemAllocator, "Pipeline resource signature instance", SerializableResourceSignatureImpl)(this, Desc, DeviceBits, ShaderStages));
+        auto* pSignatureImpl(NEW_RC_OBJ(RawMemAllocator, "Pipeline resource signature instance", SerializableResourceSignatureImpl)(this, Desc, DeviceFlags, ShaderStages));
         pSignatureImpl->QueryInterface(IID_PipelineResourceSignature, reinterpret_cast<IObject**>(ppSignature));
     }
     catch (...)

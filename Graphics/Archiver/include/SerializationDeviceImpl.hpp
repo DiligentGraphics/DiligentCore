@@ -187,19 +187,19 @@ public:
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_SerializationDevice, TBase)
 
-    virtual void DILIGENT_CALL_TYPE CreateShader(const ShaderCreateInfo& ShaderCI,
-                                                 Uint32                  DeviceBits,
-                                                 IShader**               ppShader) override final;
+    virtual void DILIGENT_CALL_TYPE CreateShader(const ShaderCreateInfo&  ShaderCI,
+                                                 RENDER_DEVICE_TYPE_FLAGS DeviceFlags,
+                                                 IShader**                ppShader) override final;
 
     virtual void DILIGENT_CALL_TYPE CreateRenderPass(const RenderPassDesc& Desc,
                                                      IRenderPass**         ppRenderPass) override final;
 
     virtual void DILIGENT_CALL_TYPE CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
-                                                                    Uint32                               DeviceBits,
+                                                                    RENDER_DEVICE_TYPE_FLAGS             DeviceFlags,
                                                                     IPipelineResourceSignature**         ppSignature) override final;
 
     void CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
-                                         Uint32                               DeviceBits,
+                                         RENDER_DEVICE_TYPE_FLAGS             DeviceFlags,
                                          SHADER_TYPE                          ShaderStages,
                                          IPipelineResourceSignature**         ppSignature);
 
@@ -260,7 +260,7 @@ public:
     }
 #endif
 
-    static Uint32 GetValidDeviceBits();
+    static RENDER_DEVICE_TYPE_FLAGS GetValidDeviceFlags();
 
     DummyRenderDevice*         GetDevice() { return &m_Device; }
     const RenderDeviceInfo&    GetDeviceInfo() const { return m_Device.GetDeviceInfo(); }
