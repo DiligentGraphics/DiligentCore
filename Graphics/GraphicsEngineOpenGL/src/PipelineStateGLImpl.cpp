@@ -156,10 +156,10 @@ RefCntAutoPtr<PipelineResourceSignatureGLImpl> PipelineStateGLImpl::CreateDefaul
         pImmutableSamplers = ImmutableSamplers.data();
     }
 
-    SignDesc.NumResources               = static_cast<Uint32>(Resources.size());
+    SignDesc.NumResources               = StaticCast<Uint32>(Resources.size());
     SignDesc.Resources                  = SignDesc.NumResources > 0 ? Resources.data() : nullptr;
     SignDesc.NumImmutableSamplers       = LayoutDesc.NumImmutableSamplers;
-    SignDesc.ImmutableSamplers          = LayoutDesc.ImmutableSamplers;
+    SignDesc.ImmutableSamplers          = pImmutableSamplers;
     SignDesc.BindingIndex               = 0;
     SignDesc.UseCombinedTextureSamplers = true;
 

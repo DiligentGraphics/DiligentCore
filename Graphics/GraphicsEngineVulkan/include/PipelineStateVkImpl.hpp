@@ -101,22 +101,21 @@ public:
     using TResourceAttibutions     = std::vector<ResourceAttribution>;
     using TBindIndexToDescSetIndex = std::array<Uint32, MAX_RESOURCE_SIGNATURES>;
     static void RemapShaderResources(
-        TShaderStages&                                        ShaderStages,
-        const RefCntAutoPtr<PipelineResourceSignatureVkImpl>* pSignatures,
-        Uint32                                                SignatureCount,
-        const TBindIndexToDescSetIndex&                       BindIndexToDescSetIndex,
-        bool                                                  bStripReflection,
-        const char*                                           PipelineName         = "",
-        TShaderResources*                                     pShaderResources     = nullptr,
-        TResourceAttibutions*                                 pResourceAttibutions = nullptr) noexcept(false);
+        TShaderStages&                                       ShaderStages,
+        const RefCntAutoPtr<PipelineResourceSignatureVkImpl> pSignatures[],
+        Uint32                                               SignatureCount,
+        const TBindIndexToDescSetIndex&                      BindIndexToDescSetIndex,
+        bool                                                 bStripReflection,
+        const char*                                          PipelineName         = "",
+        TShaderResources*                                    pShaderResources     = nullptr,
+        TResourceAttibutions*                                pResourceAttibutions = nullptr) noexcept(false);
 
-    static void GetDefaultResourceSignatureDesc(
+    static PipelineResourceSignatureDesc GetDefaultResourceSignatureDesc(
         const TShaderStages&               ShaderStages,
         const PipelineResourceLayoutDesc&  ResourceLayout,
         const char*                        PSOName,
         std::vector<PipelineResourceDesc>& Resources,
-        std::vector<ImmutableSamplerDesc>& ImmutableSamplers,
-        PipelineResourceSignatureDesc&     SignDesc) noexcept(false);
+        std::vector<ImmutableSamplerDesc>& ImmutableSamplers) noexcept(false);
 
 private:
     template <typename PSOCreateInfoType>

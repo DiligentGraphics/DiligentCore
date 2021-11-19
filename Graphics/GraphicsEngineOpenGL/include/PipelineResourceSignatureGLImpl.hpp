@@ -58,18 +58,12 @@ enum BINDING_RANGE : Uint32
 BINDING_RANGE PipelineResourceToBindingRange(const PipelineResourceDesc& Desc);
 const char*   GetBindingRangeName(BINDING_RANGE Range);
 
-struct PipelineResourceSignatureSerializedDataGL
+struct PipelineResourceSignatureSerializedDataGL : PipelineResourceSignatureSerializedData
 {
-    PipelineResourceSignatureSerializedData Base;
-    const PipelineResourceAttribsGL*        pResourceAttribs     = nullptr; // [NumResources]
-    Uint32                                  NumResources         = 0;
-    const RefCntAutoPtr<ISampler>*          pImmutableSamplers   = nullptr; // unused
-    Uint32                                  NumImmutableSamplers = 0;       // unused
-
-    // AZ TODO: serialize?
-    //TBindings m_BindingCount = {};
-    //Uint64 m_DynamicUBOMask = 0;
-    //Uint64 m_DynamicSSBOMask = 0;
+    const PipelineResourceAttribsGL* pResourceAttribs     = nullptr; // [NumResources]
+    Uint32                           NumResources         = 0;
+    const RefCntAutoPtr<ISampler>*   pImmutableSamplers   = nullptr; // unused
+    Uint32                           NumImmutableSamplers = 0;       // unused
 };
 
 /// Implementation of the Diligent::PipelineResourceSignatureGLImpl class

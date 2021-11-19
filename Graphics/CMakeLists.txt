@@ -48,7 +48,7 @@ if(GL_SUPPORTED OR GLES_SUPPORTED)
 endif()
 
 
-if(PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_MACOS)
+if(ARCHIVER_SUPPORTED)
     add_subdirectory(Archiver)
 endif()
 

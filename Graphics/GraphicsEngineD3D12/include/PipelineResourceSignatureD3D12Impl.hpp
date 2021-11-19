@@ -89,9 +89,8 @@ public:
     }
 };
 
-struct PipelineResourceSignatureSerializedDataD3D12
+struct PipelineResourceSignatureSerializedDataD3D12 : PipelineResourceSignatureSerializedData
 {
-    PipelineResourceSignatureSerializedData             Base;
     const PipelineResourceAttribsD3D12*                 pResourceAttribs     = nullptr; // [NumResources]
     Uint32                                              NumResources         = 0;
     const PipelineResourceImmutableSamplerAttribsD3D12* pImmutableSamplers   = nullptr; // [NumImmutableSamplers]

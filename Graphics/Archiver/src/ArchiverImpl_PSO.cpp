@@ -234,10 +234,11 @@ bool ArchiverImpl::PatchShadersVk(CreateInfoType& CreateInfo, TPSOData<CreateInf
                 DefPRS, [&]() {
                     std::vector<PipelineResourceDesc> Resources;
                     std::vector<ImmutableSamplerDesc> ImmutableSamplers;
-                    PipelineResourceSignatureDesc     SignDesc;
-                    PipelineStateVkImpl::GetDefaultResourceSignatureDesc(ShaderStagesVk, CreateInfo.PSODesc.ResourceLayout, "Default resource signature",
-                                                                         Resources, ImmutableSamplers, SignDesc);
+
+                    auto SignDesc = PipelineStateVkImpl::GetDefaultResourceSignatureDesc(
+                        ShaderStagesVk, CreateInfo.PSODesc.ResourceLayout, "Default resource signature", Resources, ImmutableSamplers);
                     SignDesc.Name = DefPRS.UniqueName.c_str();
+
                     RefCntAutoPtr<IPipelineResourceSignature> pDefaultPRS;
                     m_pSerializationDevice->CreatePipelineResourceSignature(SignDesc, DefPRS.DeviceBits, ActiveShaderStages, &pDefaultPRS);
                     return pDefaultPRS;
@@ -314,6 +315,7 @@ bool ArchiverImpl::PatchShadersVk(CreateInfoType& CreateInfo, TPSOData<CreateInf
 #if D3D11_SUPPORTED
 namespace
 {
+
 struct ShaderStageInfoD3D11
 {
     ShaderStageInfoD3D11() {}
@@ -332,9 +334,9 @@ struct ShaderStageInfoD3D11
     SHADER_TYPE                   Type          = SHADER_TYPE_UNKNOWN;
     ShaderD3D11Impl*              pShader       = nullptr;
     const SerializableShaderImpl* pSerializable = nullptr;
-
-    friend SHADER_TYPE GetShaderStageType(const ShaderStageInfoD3D11& Stage) { return Stage.Type; }
 };
+
+inline SHADER_TYPE GetShaderStageType(const ShaderStageInfoD3D11& Stage) { return Stage.Type; }
 
 template <typename CreateInfoType>
 void InitD3D11ShaderResourceCounters(const CreateInfoType& CreateInfo, D3D11ShaderResourceCounters& ResCounters)
@@ -347,6 +349,7 @@ void InitD3D11ShaderResourceCounters(const GraphicsPipelineStateCreateInfo& Crea
     // In Direct3D11, UAVs use the same register space as render targets
     ResCounters[D3D11_RESOURCE_RANGE_UAV][PSInd] = CreateInfo.GraphicsPipeline.NumRenderTargets;
 }
+
 } // namespace
 
 template <typename CreateInfoType>
@@ -374,10 +377,11 @@ bool ArchiverImpl::PatchShadersD3D11(CreateInfoType& CreateInfo, TPSOData<Create
                 DefPRS, [&]() {
                     std::vector<PipelineResourceDesc> Resources;
                     std::vector<ImmutableSamplerDesc> ImmutableSamplers;
-                    PipelineResourceSignatureDesc     SignDesc;
-                    PipelineStateD3D11Impl::GetDefaultResourceSignatureDesc(ShadersD3D11, CreateInfo.PSODesc.ResourceLayout, "Default resource signature",
-                                                                            Resources, ImmutableSamplers, SignDesc);
+
+                    auto SignDesc = PipelineStateD3D11Impl::GetDefaultResourceSignatureDesc(
+                        ShadersD3D11, CreateInfo.PSODesc.ResourceLayout, "Default resource signature", Resources, ImmutableSamplers);
                     SignDesc.Name = DefPRS.UniqueName.c_str();
+
                     RefCntAutoPtr<IPipelineResourceSignature> pDefaultPRS;
                     m_pSerializationDevice->CreatePipelineResourceSignature(SignDesc, DefPRS.DeviceBits, ActiveShaderStages, &pDefaultPRS);
                     return pDefaultPRS;
@@ -486,10 +490,11 @@ bool ArchiverImpl::PatchShadersD3D12(CreateInfoType& CreateInfo, TPSOData<Create
                 DefPRS, [&]() {
                     std::vector<PipelineResourceDesc> Resources;
                     std::vector<ImmutableSamplerDesc> ImmutableSamplers;
-                    PipelineResourceSignatureDesc     SignDesc;
-                    PipelineStateD3D12Impl::GetDefaultResourceSignatureDesc(ShaderStagesD3D12, CreateInfo.PSODesc.ResourceLayout, "Default resource signature", nullptr,
-                                                                            Resources, ImmutableSamplers, SignDesc);
+
+                    auto SignDesc = PipelineStateD3D12Impl::GetDefaultResourceSignatureDesc(
+                        ShaderStagesD3D12, CreateInfo.PSODesc.ResourceLayout, "Default resource signature", nullptr, Resources, ImmutableSamplers);
                     SignDesc.Name = DefPRS.UniqueName.c_str();
+
                     RefCntAutoPtr<IPipelineResourceSignature> pDefaultPRS;
                     m_pSerializationDevice->CreatePipelineResourceSignature(SignDesc, DefPRS.DeviceBits, ActiveShaderStages, &pDefaultPRS);
                     return pDefaultPRS;
@@ -546,6 +551,7 @@ bool ArchiverImpl::PatchShadersD3D12(CreateInfoType& CreateInfo, TPSOData<Create
 #if GL_SUPPORTED || GLES_SUPPORTED
 namespace
 {
+
 struct ShaderStageInfoGL
 {
     ShaderStageInfoGL() {}
@@ -562,9 +568,10 @@ struct ShaderStageInfoGL
 
     SHADER_TYPE                   Type    = SHADER_TYPE_UNKNOWN;
     const SerializableShaderImpl* pShader = nullptr;
-
-    friend SHADER_TYPE GetShaderStageType(const ShaderStageInfoGL& Stage) { return Stage.Type; }
 };
+
+inline SHADER_TYPE GetShaderStageType(const ShaderStageInfoGL& Stage) { return Stage.Type; }
+
 } // namespace
 
 template <typename CreateInfoType>

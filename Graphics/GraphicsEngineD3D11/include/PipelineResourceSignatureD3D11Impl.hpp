@@ -59,15 +59,14 @@ public:
     bool IsAllocated() const { return !BindPoints.IsEmpty(); }
 };
 
-struct PipelineResourceSignatureSerializedDataD3D11
+struct PipelineResourceSignatureSerializedDataD3D11 : PipelineResourceSignatureSerializedData
 {
-    PipelineResourceSignatureSerializedData             Base;
     const PipelineResourceAttribsD3D11*                 pResourceAttribs     = nullptr; // [NumResources]
     Uint32                                              NumResources         = 0;
     const PipelineResourceImmutableSamplerAttribsD3D11* pImmutableSamplers   = nullptr; // [NumImmutableSamplers]
     Uint32                                              NumImmutableSamplers = 0;
 
-    std::unique_ptr<PipelineResourceImmutableSamplerAttribsD3D11> m_pImmutableSamplers;
+    std::unique_ptr<PipelineResourceImmutableSamplerAttribsD3D11[]> m_pImmutableSamplers;
 };
 
 /// Implementation of the Diligent::PipelineResourceSignatureD3D11Impl class

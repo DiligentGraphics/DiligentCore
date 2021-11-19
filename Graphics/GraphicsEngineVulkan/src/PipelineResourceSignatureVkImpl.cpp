@@ -293,7 +293,7 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
             }
         }
 
-        auto* const pAttribs = (m_pResourceAttribs + i);
+        auto* const pAttribs = m_pResourceAttribs + i;
         if (!IsSerialized)
         {
             new (pAttribs) ResourceAttribs //
@@ -310,15 +310,20 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
         }
         else
         {
-            // AZ TODO: throw exception?
-            VERIFY_EXPR(pAttribs->BindingIndex == BindingIndices[CacheGroup]);
-            VERIFY_EXPR(pAttribs->SamplerInd == AssignedSamplerInd);
-            VERIFY_EXPR(pAttribs->ArraySize == ResDesc.ArraySize);
-            VERIFY_EXPR(pAttribs->GetDescriptorType() == DescrType);
-            VERIFY_EXPR(pAttribs->DescrSet == DSMapping[SetId]);
-            VERIFY_EXPR(pAttribs->IsImmutableSamplerAssigned() == (pVkImmutableSamplers != nullptr));
-            VERIFY_EXPR(pAttribs->SRBCacheOffset == CacheGroupOffsets[CacheGroup]);
-            VERIFY_EXPR(pAttribs->StaticCacheOffset == (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC ? StaticCacheOffset : ~0u));
+            DEV_CHECK_ERR(pAttribs->BindingIndex == BindingIndices[CacheGroup],
+                          "Deserialized binding index (", pAttribs->BindingIndex, ") is invalid: ", BindingIndices[CacheGroup], " is expected.");
+            DEV_CHECK_ERR(pAttribs->SamplerInd == AssignedSamplerInd,
+                          "Deserialized sampler index (", pAttribs->SamplerInd, ") is invalid: ", AssignedSamplerInd, " is expected.");
+            DEV_CHECK_ERR(pAttribs->ArraySize == ResDesc.ArraySize,
+                          "Deserialized array size (", pAttribs->ArraySize, ") is invalid: ", ResDesc.ArraySize, " is expected.");
+            DEV_CHECK_ERR(pAttribs->GetDescriptorType() == DescrType, "Deserialized descriptor type in invalid");
+            DEV_CHECK_ERR(pAttribs->DescrSet == DSMapping[SetId],
+                          "Deserialized descriotor set (", pAttribs->DescrSet, ") is invalid: ", DSMapping[SetId], " is expected.");
+            DEV_CHECK_ERR(pAttribs->IsImmutableSamplerAssigned() == (pVkImmutableSamplers != nullptr), "Immutable sampler flag is invalid");
+            DEV_CHECK_ERR(pAttribs->SRBCacheOffset == CacheGroupOffsets[CacheGroup],
+                          "SRB cache offset (", pAttribs->SRBCacheOffset, ") is invalid: ", CacheGroupOffsets[CacheGroup], " is expected.");
+            DEV_CHECK_ERR(pAttribs->StaticCacheOffset == (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC ? StaticCacheOffset : ~0u),
+                          "Static cache offset is invalid.");
         }
 
         BindingIndices[CacheGroup] += 1;
@@ -409,9 +414,10 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
         }
         else
         {
-            // AZ TODO: throw exception?
-            VERIFY_EXPR(ImmutableSampler.DescrSet == DSMapping[SetId]);
-            VERIFY_EXPR(ImmutableSampler.BindingIndex == BindingIndex);
+            DEV_CHECK_ERR(ImmutableSampler.DescrSet == DSMapping[SetId],
+                          "Immutable sampler descriptor set (", ImmutableSampler.DescrSet, ") is invalid: ", DSMapping[SetId], " is expected.");
+            DEV_CHECK_ERR(ImmutableSampler.BindingIndex == BindingIndex,
+                          "Immutable sampler bind index (", ImmutableSampler.BindingIndex, ") is invalid: ", BindingIndex, " is expected.");
         }
         ++BindingIndex;
 
@@ -944,13 +950,13 @@ PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCount
                                                                  RenderDeviceVkImpl*                              pDevice,
                                                                  const PipelineResourceSignatureDesc&             Desc,
                                                                  const PipelineResourceSignatureSerializedDataVk& Serialized) :
-    TPipelineResourceSignatureBase{pRefCounters, pDevice, Desc, Serialized.Base}
+    TPipelineResourceSignatureBase{pRefCounters, pDevice, Desc, Serialized}
 //m_DynamicUniformBufferCount{Serialized.DynamicUniformBufferCount}
 //m_DynamicStorageBufferCount{Serialized.DynamicStorageBufferCount}
 {
     try
     {
-        InitializeSerialized(
+        Deserialize(
             GetRawAllocator(), Desc, Serialized, m_ImmutableSamplers,
             [this]() //
             {
@@ -972,21 +978,22 @@ PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCount
 
 void PipelineResourceSignatureVkImpl::Serialize(PipelineResourceSignatureSerializedDataVk& Serialized) const
 {
-    TPipelineResourceSignatureBase::Serialize(Serialized.Base);
+    TPipelineResourceSignatureBase::Serialize(Serialized);
 
-    if (GetDesc().NumImmutableSamplers > 0)
+    const auto NumImmutableSamplers = GetDesc().NumImmutableSamplers;
+    if (NumImmutableSamplers > 0)
     {
         VERIFY_EXPR(m_ImmutableSamplers != nullptr);
-        Serialized.m_pImmutableSamplers.reset(new PipelineResourceImmutableSamplerAttribsVk[GetDesc().NumImmutableSamplers]);
+        Serialized.m_pImmutableSamplers = std::make_unique<PipelineResourceImmutableSamplerAttribsVk[]>(NumImmutableSamplers);
 
-        for (Uint32 i = 0; i < GetDesc().NumImmutableSamplers; ++i)
-            Serialized.m_pImmutableSamplers.get()[i] = m_ImmutableSamplers[i];
+        for (Uint32 i = 0; i < NumImmutableSamplers; ++i)
+            Serialized.m_pImmutableSamplers[i] = m_ImmutableSamplers[i];
     }
 
     Serialized.pResourceAttribs          = m_pResourceAttribs;
     Serialized.NumResources              = GetDesc().NumResources;
     Serialized.pImmutableSamplers        = Serialized.m_pImmutableSamplers.get();
-    Serialized.NumImmutableSamplers      = GetDesc().NumImmutableSamplers;
+    Serialized.NumImmutableSamplers      = NumImmutableSamplers;
     Serialized.DynamicStorageBufferCount = m_DynamicStorageBufferCount;
     Serialized.DynamicUniformBufferCount = m_DynamicUniformBufferCount;
 }

@@ -186,7 +186,7 @@ SerializableResourceSignatureImpl::SerializableResourceSignatureImpl(IReferenceC
 
                 PipelineResourceSignatureSerializedDataD3D11 SerializedData;
                 pPRSD3D11->Serialize(SerializedData);
-                AddPRSDesc(pPRSD3D11->GetDesc(), SerializedData.Base);
+                AddPRSDesc(pPRSD3D11->GetDesc(), SerializedData);
                 CopyPRSSerializedData<PSOSerializerD3D11>(SerializedData, m_pPRSD3D11->Mem);
                 break;
             }
@@ -200,7 +200,7 @@ SerializableResourceSignatureImpl::SerializableResourceSignatureImpl(IReferenceC
 
                 PipelineResourceSignatureSerializedDataD3D12 SerializedData;
                 pPRSD3D12->Serialize(SerializedData);
-                AddPRSDesc(pPRSD3D12->GetDesc(), SerializedData.Base);
+                AddPRSDesc(pPRSD3D12->GetDesc(), SerializedData);
                 CopyPRSSerializedData<PSOSerializerD3D12>(SerializedData, m_pPRSD3D12->Mem);
                 break;
             }
@@ -215,7 +215,7 @@ SerializableResourceSignatureImpl::SerializableResourceSignatureImpl(IReferenceC
 
                 PipelineResourceSignatureSerializedDataGL SerializedData;
                 pPRSGL->Serialize(SerializedData);
-                AddPRSDesc(pPRSGL->GetDesc(), SerializedData.Base);
+                AddPRSDesc(pPRSGL->GetDesc(), SerializedData);
                 CopyPRSSerializedData<PSOSerializerGL>(SerializedData, m_pPRSGL->Mem);
                 break;
             }
@@ -229,7 +229,7 @@ SerializableResourceSignatureImpl::SerializableResourceSignatureImpl(IReferenceC
 
                 PipelineResourceSignatureSerializedDataVk SerializedData;
                 pPRSVk->Serialize(SerializedData);
-                AddPRSDesc(pPRSVk->GetDesc(), SerializedData.Base);
+                AddPRSDesc(pPRSVk->GetDesc(), SerializedData);
                 CopyPRSSerializedData<PSOSerializerVk>(SerializedData, m_pPRSVk->Mem);
                 break;
             }

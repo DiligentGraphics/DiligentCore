@@ -117,7 +117,7 @@ void PipelineResourceSignatureGLImpl::CreateLayout(const bool IsSerialized)
         const auto& ResDesc = m_Desc.Resources[i];
         VERIFY(i == 0 || ResDesc.VarType >= m_Desc.Resources[i - 1].VarType, "Resources must be sorted by variable type");
 
-        auto* const pAttribs = (m_pResourceAttribs + i);
+        auto* const pAttribs = m_pResourceAttribs + i;
         if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER)
         {
             const auto ImtblSamplerIdx = FindImmutableSampler(ResDesc.ShaderStages, ResDesc.Name);
@@ -133,10 +133,11 @@ void PipelineResourceSignatureGLImpl::CreateLayout(const bool IsSerialized)
             }
             else
             {
-                // AZ TODO: throw exception?
-                VERIFY_EXPR(pAttribs->CacheOffset == ResourceAttribs::InvalidCacheOffset);
-                VERIFY_EXPR(pAttribs->SamplerInd == (ImtblSamplerIdx == InvalidImmutableSamplerIndex ? ResourceAttribs::InvalidSamplerInd : ImtblSamplerIdx));
-                VERIFY_EXPR(pAttribs->IsImmutableSamplerAssigned() == (ImtblSamplerIdx != InvalidImmutableSamplerIndex));
+                DEV_CHECK_ERR(pAttribs->CacheOffset == ResourceAttribs::InvalidCacheOffset, "Deserialized cache offset is invalid.");
+                DEV_CHECK_ERR(pAttribs->SamplerInd == (ImtblSamplerIdx == InvalidImmutableSamplerIndex ? ResourceAttribs::InvalidSamplerInd : ImtblSamplerIdx),
+                              "Deserialized sampler index is invalid.");
+                DEV_CHECK_ERR(pAttribs->IsImmutableSamplerAssigned() == (ImtblSamplerIdx != InvalidImmutableSamplerIndex),
+                              "Deserialized immutable sampler flag is invalid.");
             }
         }
         else
@@ -169,10 +170,10 @@ void PipelineResourceSignatureGLImpl::CreateLayout(const bool IsSerialized)
             }
             else
             {
-                // AZ TODO: throw exception?
-                VERIFY_EXPR(pAttribs->CacheOffset == CacheOffset);
-                VERIFY_EXPR(pAttribs->SamplerInd == SamplerIdx);
-                VERIFY_EXPR(pAttribs->IsImmutableSamplerAssigned() == (ImtblSamplerIdx != InvalidImmutableSamplerIndex));
+                DEV_CHECK_ERR(pAttribs->CacheOffset == CacheOffset, "Deserialized cache offset (", pAttribs->CacheOffset, ") is invalid: ", CacheOffset, " is expected.");
+                DEV_CHECK_ERR(pAttribs->SamplerInd == SamplerIdx, "Deserialized sampler index (", pAttribs->SamplerInd, ") is invalid: ", SamplerIdx, " is expected.");
+                DEV_CHECK_ERR(pAttribs->IsImmutableSamplerAssigned() == (ImtblSamplerIdx != InvalidImmutableSamplerIndex),
+                              "Deserialized immutable sampler flag is invalid.");
             }
 
             if (Range == BINDING_RANGE_UNIFORM_BUFFER && (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0)
@@ -614,11 +615,11 @@ PipelineResourceSignatureGLImpl::PipelineResourceSignatureGLImpl(IReferenceCount
                                                                  RenderDeviceGLImpl*                              pDeviceGL,
                                                                  const PipelineResourceSignatureDesc&             Desc,
                                                                  const PipelineResourceSignatureSerializedDataGL& Serialized) :
-    TPipelineResourceSignatureBase{pRefCounters, pDeviceGL, Desc, Serialized.Base}
+    TPipelineResourceSignatureBase{pRefCounters, pDeviceGL, Desc, Serialized}
 {
     try
     {
-        InitializeSerialized(
+        Deserialize(
             GetRawAllocator(), Desc, Serialized, m_ImmutableSamplers,
             [this]() //
             {
@@ -638,7 +639,7 @@ PipelineResourceSignatureGLImpl::PipelineResourceSignatureGLImpl(IReferenceCount
 
 void PipelineResourceSignatureGLImpl::Serialize(PipelineResourceSignatureSerializedDataGL& Serialized) const
 {
-    TPipelineResourceSignatureBase::Serialize(Serialized.Base);
+    TPipelineResourceSignatureBase::Serialize(Serialized);
 
     Serialized.pResourceAttribs = m_pResourceAttribs;
     Serialized.NumResources     = GetDesc().NumResources;
