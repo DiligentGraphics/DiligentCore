@@ -237,6 +237,29 @@ public:
     bool   HasSpirv14() const { return m_VkSupportedSpirv14; }
 #endif
 
+#if METAL_SUPPORTED
+    const String& GetMtlTempShaderFolder() const
+    {
+        return m_MtlTempShaderFolder;
+    }
+    const String& GetMslPreprocessorCmd() const
+    {
+        return m_MslPreprocessorCmd;
+    }
+    const String& GetMtlCompileOptions() const
+    {
+        return m_MtlCompileOptions;
+    }
+    const String& GetMtlLinkOptions() const
+    {
+        return m_MtlLinkOptions;
+    }
+    Uint32 MtlMaxBufferFunctionArgumets() const
+    {
+        return 31;
+    }
+#endif
+
     static Uint32 GetValidDeviceBits();
 
     DummyRenderDevice*         GetDevice() { return &m_Device; }
@@ -261,6 +284,12 @@ private:
     std::unique_ptr<IDXCompiler> m_pVkDxCompiler;
     Version                      m_VkVersion{1, 0};
     bool                         m_VkSupportedSpirv14 = false;
+
+    // Metal
+    String m_MtlTempShaderFolder;
+    String m_MtlCompileOptions;
+    String m_MtlLinkOptions;
+    String m_MslPreprocessorCmd;
 
     std::vector<PipelineResourceBinding> m_ResourceBindings;
 };

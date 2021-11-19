@@ -593,6 +593,8 @@ bool ArchiverImpl::PatchShadersGL(CreateInfoType& CreateInfo, TPSOData<CreateInf
     SHADER_TYPE                    ActiveShaderStages = SHADER_TYPE_UNKNOWN;
     PipelineStateGLImpl::ExtractShaders<SerializableShaderImpl>(CreateInfo, ShaderStages, ActiveShaderStages);
 
+    (void)GetShaderStageType(ShaderStageInfoGL{});
+
     // AZ TODO: default PRS
 
     for (size_t i = 0; i < ShaderStages.size(); ++i)

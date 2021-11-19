@@ -99,7 +99,13 @@ if(GL_SUPPORTED OR GLES_SUPPORTED)
 endif()
 
 if(METAL_SUPPORTED)
-    target_link_libraries(Diligent-Archiver PRIVATE Diligent-GraphicsEngineMetal-static)
+    target_link_libraries(Diligent-Archiver
+    PRIVATE
+    	Diligent-GraphicsEngineMetal-static
+        spirv-cross-core
+        spirv-cross-msl
+        spirv-cross-glsl
+   	)
     target_include_directories(Diligent-Archiver PRIVATE ../GraphicsEngineMetal/include)
 endif()
 

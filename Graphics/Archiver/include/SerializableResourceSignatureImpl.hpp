@@ -150,7 +150,7 @@ private:
     std::unique_ptr<TPRS<PipelineResourceSignatureVkImpl>> m_pPRSVk;
 #endif
 #if METAL_SUPPORTED
-    void CompilePRSMtl(IReferenceCounters* pRefCounters, const PipelineResourceSignatureDesc& Desc);
+    void SerializePRSMtl(IReferenceCounters* pRefCounters, const PipelineResourceSignatureDesc& Desc);
 
     struct IPRSMtl
     {

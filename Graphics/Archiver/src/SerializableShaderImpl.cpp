@@ -140,9 +140,10 @@ SerializableShaderImpl::SerializableShaderImpl(IReferenceCounters*      pRefCoun
                                                const ShaderCreateInfo&  InShaderCI,
                                                Uint32                   DeviceBits) :
     TBase{pRefCounters},
+    m_pDevice{pDevice},
     m_CreateInfo{InShaderCI}
 {
-    if ((DeviceBits & pDevice->GetValidDeviceBits()) != DeviceBits)
+    if ((DeviceBits & m_pDevice->GetValidDeviceBits()) != DeviceBits)
     {
         LOG_ERROR_AND_THROW("DeviceBits contains unsupported device type");
     }
@@ -163,9 +164,9 @@ SerializableShaderImpl::SerializableShaderImpl(IReferenceCounters*      pRefCoun
             case RENDER_DEVICE_TYPE_D3D11:
             {
                 const ShaderD3D11Impl::CreateInfo D3D11ShaderCI{
-                    pDevice->GetDeviceInfo(),
-                    pDevice->GetAdapterInfo(),
-                    static_cast<D3D_FEATURE_LEVEL>(pDevice->GetD3D11FeatureLevel()) //
+                    m_pDevice->GetDeviceInfo(),
+                    m_pDevice->GetAdapterInfo(),
+                    static_cast<D3D_FEATURE_LEVEL>(m_pDevice->GetD3D11FeatureLevel()) //
                 };
                 CreateShader(m_pShaderD3D11, CompilationLog, "Direct3D11", pRefCounters, ShaderCI, D3D11ShaderCI);
                 break;
@@ -176,10 +177,10 @@ SerializableShaderImpl::SerializableShaderImpl(IReferenceCounters*      pRefCoun
             case RENDER_DEVICE_TYPE_D3D12:
             {
                 const ShaderD3D12Impl::CreateInfo D3D12ShaderCI{
-                    pDevice->GetDxCompilerForDirect3D12(),
-                    pDevice->GetDeviceInfo(),
-                    pDevice->GetAdapterInfo(),
-                    pDevice->GetD3D12ShaderVersion() //
+                    m_pDevice->GetDxCompilerForDirect3D12(),
+                    m_pDevice->GetDeviceInfo(),
+                    m_pDevice->GetAdapterInfo(),
+                    m_pDevice->GetD3D12ShaderVersion() //
                 };
                 CreateShader(m_pShaderD3D12, CompilationLog, "Direct3D12", pRefCounters, ShaderCI, D3D12ShaderCI);
                 break;
@@ -198,11 +199,11 @@ SerializableShaderImpl::SerializableShaderImpl(IReferenceCounters*      pRefCoun
             case RENDER_DEVICE_TYPE_VULKAN:
             {
                 const ShaderVkImpl::CreateInfo VkShaderCI{
-                    pDevice->GetDxCompilerForVulkan(),
-                    pDevice->GetDeviceInfo(),
-                    pDevice->GetAdapterInfo(),
-                    pDevice->GetVkVersion(),
-                    pDevice->HasSpirv14() //
+                    m_pDevice->GetDxCompilerForVulkan(),
+                    m_pDevice->GetDeviceInfo(),
+                    m_pDevice->GetAdapterInfo(),
+                    m_pDevice->GetVkVersion(),
+                    m_pDevice->HasSpirv14() //
                 };
                 CreateShader(m_pShaderVk, CompilationLog, "Vulkan", pRefCounters, ShaderCI, VkShaderCI);
                 break;
@@ -211,7 +212,7 @@ SerializableShaderImpl::SerializableShaderImpl(IReferenceCounters*      pRefCoun
 
 #if METAL_SUPPORTED
             case RENDER_DEVICE_TYPE_METAL:
-                CompileShaderMtl(pDevice, ShaderCI);
+                CompileShaderMtl(ShaderCI, CompilationLog);
                 break;
 #endif
 

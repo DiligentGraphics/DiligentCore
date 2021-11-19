@@ -268,8 +268,11 @@ TEST(ArchiveTest, GraphicsPipeline)
 
     auto* pSwapChain = pEnv->GetSwapChain();
 
+    SerializationDeviceCreateInfo DeviceCI;
+    DeviceCI.Metal.CompileOptions = "-target air64";
+    DeviceCI.Metal.LinkOptions    = "-target air64";
+
     RefCntAutoPtr<ISerializationDevice> pSerializationDevice;
-    SerializationDeviceCreateInfo       DeviceCI;
     pArchiverFactory->CreateSerializationDevice(DeviceCI, &pSerializationDevice);
     ASSERT_NE(pSerializationDevice, nullptr);
 
@@ -827,8 +830,11 @@ TEST(ArchiveTest, ComputePipeline)
         GTEST_SKIP() << "Compute shader test requires testing swap chain";
     }
 
+    SerializationDeviceCreateInfo DeviceCI;
+    DeviceCI.Metal.CompileOptions = "-target air64";
+    DeviceCI.Metal.LinkOptions    = "-target air64";
+
     RefCntAutoPtr<ISerializationDevice> pSerializationDevice;
-    SerializationDeviceCreateInfo       DeviceCI;
     pArchiverFactory->CreateSerializationDevice(DeviceCI, &pSerializationDevice);
     ASSERT_NE(pSerializationDevice, nullptr);
 
