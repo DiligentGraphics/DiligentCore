@@ -922,7 +922,10 @@ protected:
     };
 
     template <typename PipelineResourceSignatureImplPtrType>
-    static ResourceAttribution GetResourceAttribution(const char* Name, SHADER_TYPE Stage, const PipelineResourceSignatureImplPtrType* pSignatures, Uint32 SignCount)
+    static ResourceAttribution GetResourceAttribution(const char*                                Name,
+                                                      SHADER_TYPE                                Stage,
+                                                      const PipelineResourceSignatureImplPtrType pSignatures[],
+                                                      Uint32                                     SignCount)
     {
         for (Uint32 sign = 0; sign < SignCount; ++sign)
         {

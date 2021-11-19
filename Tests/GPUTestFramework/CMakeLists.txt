@@ -144,5 +144,4 @@ set_target_properties(Diligent-GPUTestFramework PROPERTIES
 
 if (TARGET Diligent-Archiver)
     target_link_libraries(Diligent-GPUTestFramework PUBLIC Diligent-Archiver)
-    target_compile_definitions(Diligent-GPUTestFramework PUBLIC ARCHIVER_SUPPORTED=1)
 endif()

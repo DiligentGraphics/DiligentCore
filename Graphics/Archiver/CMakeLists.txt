@@ -59,6 +59,7 @@ PUBLIC
     Diligent-Common
     Diligent-GraphicsAccessories
 )
+target_compile_definitions(Diligent-Archiver PUBLIC ARCHIVER_SUPPORTED=1)
 
 if(D3D11_SUPPORTED)
     target_link_libraries(Diligent-Archiver PRIVATE Diligent-GraphicsEngineD3D11-static)

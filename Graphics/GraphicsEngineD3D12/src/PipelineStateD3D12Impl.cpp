@@ -333,19 +333,18 @@ size_t PipelineStateD3D12Impl::ShaderStageInfo::Count() const
 }
 
 
-void PipelineStateD3D12Impl::GetDefaultResourceSignatureDesc(
+PipelineResourceSignatureDesc PipelineStateD3D12Impl::GetDefaultResourceSignatureDesc(
     const TShaderStages&               ShaderStages,
     const PipelineResourceLayoutDesc&  ResourceLayout,
     const char*                        PSOName,
     const LocalRootSignatureD3D12*     pLocalRootSig,
     std::vector<PipelineResourceDesc>& Resources,
-    std::vector<ImmutableSamplerDesc>& ImmutableSamplers,
-    PipelineResourceSignatureDesc&     SignDesc) noexcept(false)
+    std::vector<ImmutableSamplerDesc>& ImmutableSamplers) noexcept(false)
 {
     Resources.clear();
     ImmutableSamplers.clear();
-    SignDesc = {};
 
+    PipelineResourceSignatureDesc SignDesc;
     SignDesc.CombinedSamplerSuffix = nullptr;
 
     std::unordered_map<ShaderResourceHashKey, const D3DShaderResourceAttribs&, ShaderResourceHashKey::Hasher> UniqueResources;
@@ -411,6 +410,8 @@ void PipelineStateD3D12Impl::GetDefaultResourceSignatureDesc(
     SignDesc.ImmutableSamplers          = ResourceLayout.ImmutableSamplers;
     SignDesc.BindingIndex               = 0;
     SignDesc.UseCombinedTextureSamplers = SignDesc.CombinedSamplerSuffix != nullptr;
+
+    return SignDesc;
 }
 
 RefCntAutoPtr<PipelineResourceSignatureD3D12Impl> PipelineStateD3D12Impl::CreateDefaultResourceSignature(
@@ -419,8 +420,8 @@ RefCntAutoPtr<PipelineResourceSignatureD3D12Impl> PipelineStateD3D12Impl::Create
 {
     std::vector<PipelineResourceDesc> Resources;
     std::vector<ImmutableSamplerDesc> ImmutableSamplers;
-    PipelineResourceSignatureDesc     SignDesc;
-    GetDefaultResourceSignatureDesc(ShaderStages, m_Desc.ResourceLayout, m_Desc.Name, pLocalRootSig, Resources, ImmutableSamplers, SignDesc);
+
+    const auto SignDesc = GetDefaultResourceSignatureDesc(ShaderStages, m_Desc.ResourceLayout, m_Desc.Name, pLocalRootSig, Resources, ImmutableSamplers);
 
     // Always initialize default resource signature as internal device object.
     // This is necessary to avoid cyclic references from GenerateMips.

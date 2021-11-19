@@ -57,9 +57,8 @@ struct PipelineResourceImmutableSamplerAttribsVk
     Uint32 BindingIndex = ~0u;
 };
 
-struct PipelineResourceSignatureSerializedDataVk
+struct PipelineResourceSignatureSerializedDataVk : PipelineResourceSignatureSerializedData
 {
-    PipelineResourceSignatureSerializedData          Base;
     const PipelineResourceAttribsVk*                 pResourceAttribs          = nullptr; // [NumResources]
     Uint32                                           NumResources              = 0;
     const PipelineResourceImmutableSamplerAttribsVk* pImmutableSamplers        = nullptr; // [NumImmutableSamplers]
@@ -67,7 +66,7 @@ struct PipelineResourceSignatureSerializedDataVk
     Uint16                                           DynamicUniformBufferCount = 0;
     Uint16                                           DynamicStorageBufferCount = 0;
 
-    std::unique_ptr<PipelineResourceImmutableSamplerAttribsVk> m_pImmutableSamplers;
+    std::unique_ptr<PipelineResourceImmutableSamplerAttribsVk[]> m_pImmutableSamplers;
 };
 
 /// Implementation of the Diligent::PipelineResourceSignatureVkImpl class

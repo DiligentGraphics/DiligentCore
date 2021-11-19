@@ -616,12 +616,12 @@ protected:
 
 protected:
     template <typename ImmutableSamplerAttribsType, typename SerializedData>
-    void InitializeSerialized(IMemoryAllocator&                    RawAllocator,
-                              const PipelineResourceSignatureDesc& Desc,
-                              const SerializedData&                Serialized,
-                              ImmutableSamplerAttribsType*&        ImmutableSamAttribs,
-                              const std::function<void()>&         InitResourceLayout,
-                              const std::function<size_t()>&       GetRequiredResourceCacheMemorySize) noexcept(false)
+    void Deserialize(IMemoryAllocator&                    RawAllocator,
+                     const PipelineResourceSignatureDesc& Desc,
+                     const SerializedData&                Serialized,
+                     ImmutableSamplerAttribsType*&        ImmutableSamAttribs,
+                     const std::function<void()>&         InitResourceLayout,
+                     const std::function<size_t()>&       GetRequiredResourceCacheMemorySize) noexcept(false)
     {
         VERIFY_EXPR(Desc.NumResources == Serialized.NumResources);
 

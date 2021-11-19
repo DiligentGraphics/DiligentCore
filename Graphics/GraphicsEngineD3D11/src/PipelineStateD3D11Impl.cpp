@@ -46,17 +46,17 @@ __forceinline SHADER_TYPE GetShaderStageType(const ShaderD3D11Impl* pShader)
     return pShader->GetDesc().ShaderType;
 }
 
-void PipelineStateD3D11Impl::GetDefaultResourceSignatureDesc(const TShaderStages&               Shaders,
-                                                             const PipelineResourceLayoutDesc&  ResourceLayout,
-                                                             const char*                        PSOName,
-                                                             std::vector<PipelineResourceDesc>& Resources,
-                                                             std::vector<ImmutableSamplerDesc>& ImmutableSamplers,
-                                                             PipelineResourceSignatureDesc&     SignDesc) noexcept(false)
+PipelineResourceSignatureDesc PipelineStateD3D11Impl::GetDefaultResourceSignatureDesc(
+    const TShaderStages&               Shaders,
+    const PipelineResourceLayoutDesc&  ResourceLayout,
+    const char*                        PSOName,
+    std::vector<PipelineResourceDesc>& Resources,
+    std::vector<ImmutableSamplerDesc>& ImmutableSamplers) noexcept(false)
 {
     Resources.clear();
     ImmutableSamplers.clear();
-    SignDesc = {};
 
+    PipelineResourceSignatureDesc SignDesc;
     SignDesc.CombinedSamplerSuffix = nullptr;
 
     std::unordered_map<ShaderResourceHashKey, const D3DShaderResourceAttribs&, ShaderResourceHashKey::Hasher> UniqueResources;
@@ -112,20 +112,22 @@ void PipelineStateD3D11Impl::GetDefaultResourceSignatureDesc(const TShaderStages
         }
     }
 
-    SignDesc.NumResources               = static_cast<Uint32>(Resources.size());
+    SignDesc.NumResources               = StaticCast<Uint32>(Resources.size());
     SignDesc.Resources                  = SignDesc.NumResources > 0 ? Resources.data() : nullptr;
     SignDesc.NumImmutableSamplers       = ResourceLayout.NumImmutableSamplers;
     SignDesc.ImmutableSamplers          = ResourceLayout.ImmutableSamplers;
     SignDesc.BindingIndex               = 0;
     SignDesc.UseCombinedTextureSamplers = SignDesc.CombinedSamplerSuffix != nullptr;
+
+    return SignDesc;
 }
 
 RefCntAutoPtr<PipelineResourceSignatureD3D11Impl> PipelineStateD3D11Impl::CreateDefaultResourceSignature(const TShaderStages& Shaders)
 {
     std::vector<PipelineResourceDesc> Resources;
     std::vector<ImmutableSamplerDesc> ImmutableSamplers;
-    PipelineResourceSignatureDesc     SignDesc;
-    GetDefaultResourceSignatureDesc(Shaders, m_Desc.ResourceLayout, m_Desc.Name, Resources, ImmutableSamplers, SignDesc);
+
+    const auto SignDesc = GetDefaultResourceSignatureDesc(Shaders, m_Desc.ResourceLayout, m_Desc.Name, Resources, ImmutableSamplers);
 
     // Use immutable samplers from ResourceLayout.
     constexpr bool IsDeviceInternal = false;

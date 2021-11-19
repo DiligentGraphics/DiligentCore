@@ -36,8 +36,6 @@
 #include "ResourceLayoutTestCommon.hpp"
 #include "gtest/gtest.h"
 
-#if ARCHIVER_SUPPORTED
-
 using namespace Diligent;
 using namespace Diligent::Testing;
 
@@ -47,24 +45,24 @@ namespace
 static constexpr Uint32 GetDeviceBits()
 {
     Uint32 DeviceBits = 0;
-#    if D3D11_SUPPORTED
+#if D3D11_SUPPORTED
     DeviceBits |= 1 << RENDER_DEVICE_TYPE_D3D11;
-#    endif
-#    if D3D12_SUPPORTED
+#endif
+#if D3D12_SUPPORTED
     DeviceBits |= 1 << RENDER_DEVICE_TYPE_D3D12;
-#    endif
-#    if GL_SUPPORTED
+#endif
+#if GL_SUPPORTED
     DeviceBits |= 1 << RENDER_DEVICE_TYPE_GL;
-#    endif
-#    if GLES_SUPPORTED
+#endif
+#if GLES_SUPPORTED
     DeviceBits |= 1 << RENDER_DEVICE_TYPE_GLES;
-#    endif
-#    if VULKAN_SUPPORTED
+#endif
+#if VULKAN_SUPPORTED
     DeviceBits |= 1 << RENDER_DEVICE_TYPE_VULKAN;
-#    endif
-#    if METAL_SUPPORTED
+#endif
+#if METAL_SUPPORTED
     DeviceBits |= 1 << RENDER_DEVICE_TYPE_METAL;
-#    endif
+#endif
     return DeviceBits;
 }
 
@@ -98,9 +96,9 @@ TEST(ArchiveTest, ResourceSignature)
 
         // PRS 1
         {
-            const auto VarType = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE;
+            constexpr auto VarType = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE;
 
-            const PipelineResourceDesc Resources[] = //
+            constexpr PipelineResourceDesc Resources[] = //
                 {
                     {SHADER_TYPE_ALL_GRAPHICS, "g_Tex2D_1", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, VarType},
                     {SHADER_TYPE_ALL_GRAPHICS, "g_Tex2D_2", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, VarType},
@@ -114,7 +112,7 @@ TEST(ArchiveTest, ResourceSignature)
             PRSDesc.Resources    = Resources;
             PRSDesc.NumResources = _countof(Resources);
 
-            const ImmutableSamplerDesc ImmutableSamplers[] = //
+            constexpr ImmutableSamplerDesc ImmutableSamplers[] = //
                 {
                     {SHADER_TYPE_ALL_GRAPHICS, "g_Sampler", SamplerDesc{}} //
                 };
@@ -131,9 +129,9 @@ TEST(ArchiveTest, ResourceSignature)
 
         // PRS 2
         {
-            const auto VarType = SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC;
+            constexpr auto VarType = SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC;
 
-            const PipelineResourceDesc Resources[] = //
+            constexpr PipelineResourceDesc Resources[] = //
                 {
                     {SHADER_TYPE_COMPUTE, "g_RWTex2D", 2, SHADER_RESOURCE_TYPE_TEXTURE_UAV, VarType},
                     {SHADER_TYPE_COMPUTE, "ConstBuff", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, VarType}, //
@@ -360,9 +358,9 @@ TEST(ArchiveTest, GraphicsPipeline)
 
     RefCntAutoPtr<IPipelineResourceSignature> pRefPRS;
     RefCntAutoPtr<IPipelineResourceSignature> pSerializedPRS;
-    const auto                                VarType = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE;
+    constexpr auto                            VarType = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE;
     {
-        const PipelineResourceDesc Resources[] = //
+        constexpr PipelineResourceDesc Resources[] = //
             {
                 {SHADER_TYPE_PIXEL, "g_GBuffer_Color", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, VarType},
                 {SHADER_TYPE_PIXEL, "g_GBuffer_Normal", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, VarType},
@@ -375,7 +373,7 @@ TEST(ArchiveTest, GraphicsPipeline)
         PRSDesc.Resources    = Resources;
         PRSDesc.NumResources = _countof(Resources);
 
-        const ImmutableSamplerDesc ImmutableSamplers[] = //
+        constexpr ImmutableSamplerDesc ImmutableSamplers[] = //
             {
                 {SHADER_TYPE_PIXEL, "g_GBuffer_Color_sampler", SamplerDesc{}},
                 {SHADER_TYPE_PIXEL, "g_GBuffer_Normal_sampler", SamplerDesc{}},
@@ -466,7 +464,7 @@ TEST(ArchiveTest, GraphicsPipeline)
         {
             PipelineResourceLayoutDesc LayoutDesc{};
 
-            const ImmutableSamplerDesc ImmutableSamplers[] = //
+            constexpr ImmutableSamplerDesc ImmutableSamplers[] = //
                 {
                     {SHADER_TYPE_PIXEL, "g_GBuffer_Color", SamplerDesc{}},
                     {SHADER_TYPE_PIXEL, "g_GBuffer_Normal", SamplerDesc{}},
@@ -622,7 +620,7 @@ TEST(ArchiveTest, GraphicsPipeline)
         float3 Color;
         float2 UV;
     };
-    const Vertex Vert[] =
+    constexpr Vertex Vert[] =
         {
             {float4{-1.0f, -0.5f, 0.f, 1.f}, float3{1.f, 0.f, 0.f}, float2{0.0f, 0.0f}},
             {float4{-0.5f, +0.5f, 0.f, 1.f}, float3{0.f, 1.f, 0.f}, float2{0.5f, 1.0f}},
@@ -632,7 +630,7 @@ TEST(ArchiveTest, GraphicsPipeline)
             {float4{+0.5f, +0.5f, 0.f, 1.f}, float3{0.f, 1.f, 0.f}, float2{0.5f, 1.0f}},
             {float4{+1.0f, -0.5f, 0.f, 1.f}, float3{0.f, 0.f, 1.f}, float2{1.0f, 0.0f}} //
         };
-    const Vertex Triangles[] =
+    constexpr Vertex Triangles[] =
         {
             Vert[0], Vert[1], Vert[2],
             Vert[3], Vert[4], Vert[5] //
@@ -835,7 +833,7 @@ TEST(ArchiveTest, ComputePipeline)
     RefCntAutoPtr<IPipelineResourceSignature> pRefPRS;
     RefCntAutoPtr<IPipelineResourceSignature> pSerializedPRS;
     {
-        const PipelineResourceDesc Resources[] = {{SHADER_TYPE_COMPUTE, "g_tex2DUAV", 1, SHADER_RESOURCE_TYPE_TEXTURE_UAV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC}};
+        constexpr PipelineResourceDesc Resources[] = {{SHADER_TYPE_COMPUTE, "g_tex2DUAV", 1, SHADER_RESOURCE_TYPE_TEXTURE_UAV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC}};
 
         PipelineResourceSignatureDesc PRSDesc;
         PRSDesc.Name         = "PRS archive test - 1";
@@ -980,7 +978,7 @@ TEST(ArchiveTest, ResourceSignatureBindings)
     // PRS 1
     RefCntAutoPtr<IPipelineResourceSignature> pPRS1;
     {
-        const auto VarType = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE;
+        constexpr auto VarType = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE;
 
         std::vector<PipelineResourceDesc> Resources =
             {
@@ -1016,9 +1014,9 @@ TEST(ArchiveTest, ResourceSignatureBindings)
     // PRS 2
     RefCntAutoPtr<IPipelineResourceSignature> pPRS2;
     {
-        const auto VarType = SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC;
+        constexpr auto VarType = SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC;
 
-        const PipelineResourceDesc Resources[] = //
+        constexpr PipelineResourceDesc Resources[] = //
             {
                 // clang-format off
                 {SHADER_TYPE_PIXEL,        "g_RWTex2D",   2, SHADER_RESOURCE_TYPE_TEXTURE_UAV, VarType},
@@ -1186,5 +1184,3 @@ TEST(ArchiveTest, ResourceSignatureBindings)
 }
 
 } // namespace
-
-#endif // ARCHIVER_SUPPORTED
