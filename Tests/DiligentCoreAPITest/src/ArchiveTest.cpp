@@ -74,7 +74,7 @@ TEST(ArchiveTest, ResourceSignature)
     auto* pDearchiver      = pDevice->GetEngineFactory()->GetDearchiver();
 
     if (!pDearchiver || !pArchiverFactory)
-        return;
+        GTEST_SKIP() << "Archiver library is not loaded";
 
     constexpr char PRS1Name[] = "PRS archive test - 1";
     constexpr char PRS2Name[] = "PRS archive test - 2";
@@ -256,8 +256,11 @@ TEST(ArchiveTest, GraphicsPipeline)
     auto* pArchiverFactory = pEnv->GetArchiverFactory();
     auto* pDearchiver      = pDevice->GetEngineFactory()->GetDearchiver();
 
+    if (pDevice->GetDeviceInfo().Features.SeparablePrograms != DEVICE_FEATURE_STATE_ENABLED)
+        GTEST_SKIP() << "Non separable programs are not supported";
+
     if (!pDearchiver || !pArchiverFactory)
-        return;
+        GTEST_SKIP() << "Archiver library is not loaded";
 
     constexpr char PSO1Name[] = "PSO archive test - 1";
     constexpr char PSO2Name[] = "PSO archive test - 2";
@@ -815,7 +818,7 @@ TEST(ArchiveTest, ComputePipeline)
     auto* pDearchiver      = pDevice->GetEngineFactory()->GetDearchiver();
 
     if (!pDearchiver || !pArchiverFactory)
-        return;
+        GTEST_SKIP() << "Archiver library is not loaded";
 
     constexpr char PSO1Name[] = "PSO archive test - 1";
 
@@ -973,7 +976,7 @@ TEST(ArchiveTest, ResourceSignatureBindings)
     auto* pArchiverFactory = pEnv->GetArchiverFactory();
 
     if (!pArchiverFactory)
-        return;
+        GTEST_SKIP() << "Archiver library is not loaded";
 
     RefCntAutoPtr<ISerializationDevice> pSerializationDevice;
     SerializationDeviceCreateInfo       DeviceCI;
