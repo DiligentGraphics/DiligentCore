@@ -20,8 +20,7 @@ set(INTERFACE
 
 set(SOURCE
     src/ArchiverImpl.cpp
-    src/ArchiverImpl_PRS.cpp
-    src/ArchiverImpl_PSO.cpp
+    src/ArchiverImpl_Inc.hpp
     src/ArchiverFactory.cpp
     src/SerializationDeviceImpl.cpp
     src/SerializableShaderImpl.cpp
@@ -30,11 +29,28 @@ set(SOURCE
     src/SerializedMemory.cpp
 )
 
+if(D3D11_SUPPORTED)
+    list(APPEND SOURCE src/ArchiverImpl_D3D11.cpp)
+endif()
+
+if(D3D12_SUPPORTED)
+    list(APPEND SOURCE src/ArchiverImpl_D3D12.cpp)
+endif()
+
+if(VULKAN_SUPPORTED)
+    list(APPEND SOURCE src/ArchiverImpl_Vk.cpp)
+endif()
+
+if(GL_SUPPORTED)
+    list(APPEND SOURCE src/ArchiverImpl_GL.cpp)
+endif()
+
+
 if(METAL_SUPPORTED)
     list(APPEND SOURCE src/SerializationDeviceImpl.mm)
     list(APPEND SOURCE src/SerializableShaderImpl.mm)
     list(APPEND SOURCE src/SerializableResourceSignatureImpl.mm)
-    list(APPEND SOURCE src/ArchiverImpl_PSO.mm)
+    list(APPEND SOURCE src/ArchiverImpl_Mtl.mm)
 endif()
 
 add_library(Diligent-Archiver SHARED
