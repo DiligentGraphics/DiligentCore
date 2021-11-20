@@ -104,14 +104,14 @@ void VerifyResourceMerge(const char*                       PSOName,
 
 
 template <typename CreateInfoType>
-bool ArchiverImpl::PatchShadersMtlImpl(CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data, DefaultPRSInfo& DefPRS)
+bool ArchiverImpl::PatchShadersMtl(CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data, DefaultPRSInfo& DefPRS)
 {
     TShaderIndices ShaderIndices;
 
     std::vector<ShaderStageInfoMtl> ShaderStages;
     SHADER_TYPE                     ActiveShaderStages = SHADER_TYPE_UNKNOWN;
     PipelineStateMtlImpl::ExtractShaders<SerializableShaderImpl>(CreateInfo, ShaderStages, ActiveShaderStages);
-    
+
     IPipelineResourceSignature* DefaultSignatures[1] = {};
     if (CreateInfo.ResourceSignaturesCount == 0)
     {
@@ -121,7 +121,7 @@ bool ArchiverImpl::PatchShadersMtlImpl(CreateInfoType& CreateInfo, TPSOData<Crea
             std::vector<ImmutableSamplerDesc> ImmutableSamplers;
             PipelineResourceSignatureDesc     SignDesc;
             const auto&                       ResourceLayout = CreateInfo.PSODesc.ResourceLayout;
-        
+
             std::unordered_map<ShaderResourceHashKey, const SPIRVShaderResourceAttribs&, ShaderResourceHashKey::Hasher> UniqueResources;
 
             for (auto& Stage : ShaderStages)
@@ -243,29 +243,14 @@ bool ArchiverImpl::PatchShadersMtlImpl(CreateInfoType& CreateInfo, TPSOData<Crea
         LOG_ERROR_MESSAGE("Failed to compile Metal shaders");
         return false;
     }
-    
+
     SerializeShadersForPSO(ShaderIndices, Data.PerDeviceData[static_cast<Uint32>(DeviceType::Metal)]);
     return true;
 }
 
-bool ArchiverImpl::PatchShadersMtl(GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS)
-{
-    return PatchShadersMtlImpl(CreateInfo, Data, DefPRS);
-}
-
-bool ArchiverImpl::PatchShadersMtl(ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS)
-{
-    return PatchShadersMtlImpl(CreateInfo, Data, DefPRS);
-}
-
-bool ArchiverImpl::PatchShadersMtl(TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS)
-{
-    return PatchShadersMtlImpl(CreateInfo, Data, DefPRS);
-}
-
-bool ArchiverImpl::PatchShadersMtl(RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS)
-{
-    return PatchShadersMtlImpl(CreateInfo, Data, DefPRS);
-}
+template bool ArchiverImpl::PatchShadersMtl<GraphicsPipelineStateCreateInfo>(GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
+template bool ArchiverImpl::PatchShadersMtl<ComputePipelineStateCreateInfo>(ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
+template bool ArchiverImpl::PatchShadersMtl<TilePipelineStateCreateInfo>(TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
+template bool ArchiverImpl::PatchShadersMtl<RayTracingPipelineStateCreateInfo>(RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
 
 } // namespace Diligent

@@ -577,4 +577,471 @@ Bool ArchiverImpl::SerializeToStream(IFileStream* pStream)
     return true;
 }
 
+
+const SerializedMemory& ArchiverImpl::PRSData::GetSharedData() const
+{
+    return pPRS->GetSharedSerializedMemory();
+}
+
+const SerializedMemory& ArchiverImpl::PRSData::GetDeviceData(Uint32 Idx) const
+{
+    const SerializedMemory* Result = nullptr;
+    switch (static_cast<DeviceType>(Idx))
+    {
+        case DeviceType::Direct3D11:
+#if D3D11_SUPPORTED
+            Result = pPRS->GetSerializedMemoryD3D11();
+#endif
+            break;
+        case DeviceType::Direct3D12:
+#if D3D12_SUPPORTED
+            Result = pPRS->GetSerializedMemoryD3D12();
+#endif
+            break;
+        case DeviceType::OpenGL:
+#if GL_SUPPORTED || GLES_SUPPORTED
+            Result = pPRS->GetSerializedMemoryGL();
+#endif
+            break;
+        case DeviceType::Vulkan:
+#if VULKAN_SUPPORTED
+            Result = pPRS->GetSerializedMemoryVk();
+#endif
+            break;
+        case DeviceType::Metal:
+#if METAL_SUPPORTED
+            Result = pPRS->GetSerializedMemoryMtl();
+#endif
+            break;
+        case DeviceType::Count:
+            break;
+    }
+
+    if (Result != nullptr)
+        return *Result;
+
+    static const SerializedMemory Empty;
+    return Empty;
+}
+
+bool ArchiverImpl::AddPipelineResourceSignature(IPipelineResourceSignature* pPRS)
+{
+    DEV_CHECK_ERR(pPRS != nullptr, "pPRS must not be null");
+    if (pPRS == nullptr)
+        return false;
+
+    auto* pPRSImpl        = ClassPtrCast<SerializableResourceSignatureImpl>(pPRS);
+    auto  IterAndInserted = m_PRSMap.emplace(String{pPRSImpl->GetDesc().Name}, PRSData{});
+
+    if (!IterAndInserted.second)
+    {
+        if (IterAndInserted.first->second.pPRS != pPRSImpl)
+        {
+            LOG_ERROR_MESSAGE("Pipeline resource signature must have unique name");
+            return false;
+        }
+        else
+            return true;
+    }
+
+    m_PRSCache.insert(RefCntAutoPtr<SerializableResourceSignatureImpl>{pPRSImpl});
+
+    IterAndInserted.first->second.pPRS = pPRSImpl;
+    return true;
+}
+
+bool ArchiverImpl::CachePipelineResourceSignature(RefCntAutoPtr<IPipelineResourceSignature>& pPRS)
+{
+    auto* pPRSImpl        = pPRS.RawPtr<SerializableResourceSignatureImpl>();
+    auto  IterAndInserted = m_PRSCache.insert(RefCntAutoPtr<SerializableResourceSignatureImpl>{pPRSImpl});
+
+    // Found same PRS in cache
+    if (!IterAndInserted.second)
+    {
+        pPRS     = *IterAndInserted.first;
+        pPRSImpl = pPRS.RawPtr<SerializableResourceSignatureImpl>();
+
+#ifdef DILIGENT_DEBUG
+        auto Iter = m_PRSMap.find(String{pPRSImpl->GetDesc().Name});
+        VERIFY_EXPR(Iter != m_PRSMap.end());
+        VERIFY_EXPR(Iter->second.pPRS == pPRSImpl);
+#endif
+        return true;
+    }
+
+    return AddPipelineResourceSignature(pPRS);
+}
+
+Bool ArchiverImpl::AddPipelineResourceSignature(const PipelineResourceSignatureDesc& SignatureDesc,
+                                                const ResourceSignatureArchiveInfo&  ArchiveInfo)
+{
+    RefCntAutoPtr<IPipelineResourceSignature> pPRS;
+    m_pSerializationDevice->CreatePipelineResourceSignature(SignatureDesc, ArchiveInfo.DeviceFlags, &pPRS);
+    if (!pPRS)
+        return false;
+
+    return AddPipelineResourceSignature(pPRS);
+}
+
+String ArchiverImpl::UniquePRSName()
+{
+    String       PRSName = "Default PRS - ";
+    const size_t Pos     = PRSName.length();
+
+    // AZ TODO: optimize (binary search?)
+    for (Uint32 Index = 0; Index < 10000; ++Index)
+    {
+        PRSName.resize(Pos);
+        PRSName += std::to_string(Index);
+
+        if (m_PRSMap.find(PRSName) == m_PRSMap.end())
+            return PRSName;
+    }
+    return "";
+}
+
+
+const SerializedMemory& ArchiverImpl::RPData::GetSharedData() const
+{
+    return pRP->GetSharedSerializedMemory();
+}
+
+void ArchiverImpl::SerializeShaderBytecode(TShaderIndices& ShaderIndices, DeviceType DevType, const ShaderCreateInfo& CI, const void* Bytecode, size_t BytecodeSize)
+{
+    auto&                        Shaders         = m_Shaders[static_cast<Uint32>(DevType)];
+    auto&                        RawMemAllocator = GetRawAllocator();
+    const SHADER_SOURCE_LANGUAGE SourceLanguage  = SHADER_SOURCE_LANGUAGE_DEFAULT;
+    const SHADER_COMPILER        ShaderCompiler  = SHADER_COMPILER_DEFAULT;
+
+    Serializer<SerializerMode::Measure> MeasureSer;
+    MeasureSer(CI.Desc.ShaderType, CI.EntryPoint, SourceLanguage, ShaderCompiler);
+
+    const auto   Size   = MeasureSer.GetSize(nullptr) + BytecodeSize;
+    void*        Ptr    = ALLOCATE_RAW(RawMemAllocator, "", Size);
+    const Uint8* pBytes = static_cast<const Uint8*>(Bytecode);
+
+    Serializer<SerializerMode::Write> Ser{Ptr, Size};
+    Ser(CI.Desc.ShaderType, CI.EntryPoint, SourceLanguage, ShaderCompiler);
+
+    for (size_t s = 0; s < BytecodeSize; ++s)
+        Ser(pBytes[s]);
+
+    VERIFY_EXPR(Ser.IsEnd());
+
+    ShaderKey Key{std::make_shared<SerializedMemory>(Ptr, Size)};
+
+    auto IterAndInserted = Shaders.Map.emplace(Key, Shaders.List.size());
+    auto Iter            = IterAndInserted.first;
+    if (IterAndInserted.second)
+    {
+        VERIFY_EXPR(Shaders.List.size() == Iter->second);
+        Shaders.List.push_back(Key);
+    }
+    ShaderIndices.push_back(StaticCast<Uint32>(Iter->second));
+}
+
+void ArchiverImpl::SerializeShaderSource(TShaderIndices& ShaderIndices, DeviceType DevType, const ShaderCreateInfo& CI)
+{
+    auto& Shaders         = m_Shaders[static_cast<Uint32>(DevType)];
+    auto& RawMemAllocator = GetRawAllocator();
+
+    VERIFY_EXPR(CI.SourceLength > 0);
+    VERIFY_EXPR(CI.Macros == nullptr); // AZ TODO: not supported
+    VERIFY_EXPR(CI.UseCombinedTextureSamplers == true);
+    VERIFY_EXPR(String{"_sampler"} == CI.CombinedSamplerSuffix);
+
+    Serializer<SerializerMode::Measure> MeasureSer;
+    MeasureSer(CI.Desc.ShaderType, CI.EntryPoint, CI.SourceLanguage, CI.ShaderCompiler);
+
+    const auto   BytecodeSize = (CI.SourceLength + 1) * sizeof(*CI.Source);
+    const auto   Size         = MeasureSer.GetSize(nullptr) + BytecodeSize;
+    void*        Ptr          = ALLOCATE_RAW(RawMemAllocator, "", Size);
+    const Uint8* pBytes       = reinterpret_cast<const Uint8*>(CI.Source);
+
+    Serializer<SerializerMode::Write> Ser{Ptr, Size};
+    Ser(CI.Desc.ShaderType, CI.EntryPoint, CI.SourceLanguage, CI.ShaderCompiler);
+
+    for (size_t s = 0; s < BytecodeSize; ++s)
+        Ser(pBytes[s]);
+
+    VERIFY_EXPR(Ser.IsEnd());
+
+    ShaderKey Key{std::make_shared<SerializedMemory>(Ptr, Size)};
+
+    auto IterAndInserted = Shaders.Map.emplace(Key, Shaders.List.size());
+    auto Iter            = IterAndInserted.first;
+    if (IterAndInserted.second)
+    {
+        VERIFY_EXPR(Shaders.List.size() == Iter->second);
+        Shaders.List.push_back(Key);
+    }
+    ShaderIndices.push_back(StaticCast<Uint32>(Iter->second));
+}
+
+void ArchiverImpl::SerializeShadersForPSO(const TShaderIndices& ShaderIndices, SerializedMemory& DeviceData) const
+{
+    auto& RawMemAllocator = GetRawAllocator();
+
+    ShaderIndexArray Indices{ShaderIndices.data(), static_cast<Uint32>(ShaderIndices.size())};
+
+    Serializer<SerializerMode::Measure> MeasureSer;
+    PSOSerializer<SerializerMode::Measure>::SerializeShaders(MeasureSer, Indices, nullptr);
+
+    const size_t SerSize = MeasureSer.GetSize(nullptr);
+    void*        SerPtr  = ALLOCATE_RAW(RawMemAllocator, "", SerSize);
+
+    Serializer<SerializerMode::Write> Ser{SerPtr, SerSize};
+    PSOSerializer<SerializerMode::Write>::SerializeShaders(Ser, Indices, nullptr);
+    VERIFY_EXPR(Ser.IsEnd());
+
+    DeviceData = SerializedMemory{SerPtr, SerSize};
+}
+
+bool ArchiverImpl::AddRenderPass(IRenderPass* pRP)
+{
+    DEV_CHECK_ERR(pRP != nullptr, "pRP must not be null");
+    if (pRP == nullptr)
+        return false;
+
+    auto* pRPImpl         = ClassPtrCast<SerializableRenderPassImpl>(pRP);
+    auto  IterAndInserted = m_RPMap.emplace(String{pRPImpl->GetDesc().Name}, RPData{});
+    if (!IterAndInserted.second)
+    {
+        if (IterAndInserted.first->second.pRP != pRPImpl)
+        {
+            LOG_ERROR_MESSAGE("Render pass must have unique name");
+            return false;
+        }
+        else
+            return true;
+    }
+
+    IterAndInserted.first->second.pRP = pRPImpl;
+    return true;
+}
+
+namespace
+{
+
+template <SerializerMode Mode>
+void SerializerPSOImpl(Serializer<Mode>&                                 Ser,
+                       const GraphicsPipelineStateCreateInfo&            PSOCreateInfo,
+                       std::array<const char*, MAX_RESOURCE_SIGNATURES>& PRSNames)
+{
+    const char* RPName = PSOCreateInfo.GraphicsPipeline.pRenderPass != nullptr ? PSOCreateInfo.GraphicsPipeline.pRenderPass->GetDesc().Name : "";
+    PSOSerializer<Mode>::SerializeGraphicsPSO(Ser, PSOCreateInfo, PRSNames, RPName, nullptr);
+}
+
+template <SerializerMode Mode>
+void SerializerPSOImpl(Serializer<Mode>&                                 Ser,
+                       const ComputePipelineStateCreateInfo&             PSOCreateInfo,
+                       std::array<const char*, MAX_RESOURCE_SIGNATURES>& PRSNames)
+{
+    PSOSerializer<Mode>::SerializeComputePSO(Ser, PSOCreateInfo, PRSNames, nullptr);
+}
+
+template <SerializerMode Mode>
+void SerializerPSOImpl(Serializer<Mode>&                                 Ser,
+                       const TilePipelineStateCreateInfo&                PSOCreateInfo,
+                       std::array<const char*, MAX_RESOURCE_SIGNATURES>& PRSNames)
+{
+    PSOSerializer<Mode>::SerializeTilePSO(Ser, PSOCreateInfo, PRSNames, nullptr);
+}
+
+template <SerializerMode Mode>
+void SerializerPSOImpl(Serializer<Mode>&                                 Ser,
+                       const RayTracingPipelineStateCreateInfo&          PSOCreateInfo,
+                       std::array<const char*, MAX_RESOURCE_SIGNATURES>& PRSNames)
+{
+    PSOSerializer<Mode>::SerializeRayTracingPSO(Ser, PSOCreateInfo, PRSNames, nullptr);
+}
+
+#define LOG_PSO_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of PSO is invalid: ", ##__VA_ARGS__)
+#define VERIFY_PSO(Expr, ...)                     \
+    do                                            \
+    {                                             \
+        if (!(Expr))                              \
+        {                                         \
+            LOG_PSO_ERROR_AND_THROW(__VA_ARGS__); \
+        }                                         \
+    } while (false)
+
+template <typename PRSMapType>
+void ValidatePipelineStateArchiveInfo(const PipelineStateCreateInfo&  PSOCreateInfo,
+                                      const PipelineStateArchiveInfo& ArchiveInfo,
+                                      const PRSMapType&               PRSMap,
+                                      const RENDER_DEVICE_TYPE_FLAGS  ValidDeviceFlags) noexcept(false)
+{
+    VERIFY_PSO(ArchiveInfo.DeviceFlags != RENDER_DEVICE_TYPE_FLAG_NONE, "At least one bit must be set in DeviceFlags");
+    VERIFY_PSO((ArchiveInfo.DeviceFlags & ValidDeviceFlags) == ArchiveInfo.DeviceFlags, "DeviceFlags contain unsupported device type");
+
+    VERIFY_PSO(PSOCreateInfo.PSODesc.Name != nullptr, "Pipeline name in PSOCreateInfo.PSODesc.Name must not be null");
+    VERIFY_PSO((PSOCreateInfo.ResourceSignaturesCount != 0) == (PSOCreateInfo.ppResourceSignatures != nullptr),
+               "ppResourceSignatures must not be null if ResourceSignaturesCount is not zero");
+
+    std::bitset<MAX_RESOURCE_SIGNATURES> PRSExists{0};
+    for (Uint32 i = 0; i < PSOCreateInfo.ResourceSignaturesCount; ++i)
+    {
+        VERIFY_PSO(PSOCreateInfo.ppResourceSignatures[i] != nullptr, "ppResourceSignatures[", i, "] must not be null");
+
+        const auto& Desc = PSOCreateInfo.ppResourceSignatures[i]->GetDesc();
+        VERIFY_EXPR(Desc.BindingIndex < PRSExists.size());
+
+        VERIFY_PSO(!PRSExists[Desc.BindingIndex], "PRS binding index must be unique");
+        PRSExists[Desc.BindingIndex] = true;
+    }
+}
+
+} // namespace
+
+template <typename CreateInfoType>
+bool ArchiverImpl::SerializePSO(std::unordered_map<String, TPSOData<CreateInfoType>>& PSOMap,
+                                const CreateInfoType&                                 InPSOCreateInfo,
+                                const PipelineStateArchiveInfo&                       ArchiveInfo) noexcept
+{
+    CreateInfoType PSOCreateInfo = InPSOCreateInfo;
+    try
+    {
+        ValidatePipelineStateArchiveInfo(PSOCreateInfo, ArchiveInfo, m_PRSMap, m_pSerializationDevice->GetValidDeviceFlags());
+        ValidatePSOCreateInfo(m_pSerializationDevice->GetDevice(), PSOCreateInfo);
+    }
+    catch (...)
+    {
+        return false;
+    }
+
+    auto IterAndInserted = PSOMap.emplace(String{PSOCreateInfo.PSODesc.Name}, TPSOData<CreateInfoType>{});
+    if (!IterAndInserted.second)
+    {
+        LOG_ERROR_MESSAGE("Pipeline must have unique name");
+        return false;
+    }
+
+    auto&      Data            = IterAndInserted.first->second;
+    auto&      RawMemAllocator = GetRawAllocator();
+    const bool UseDefaultPRS   = (PSOCreateInfo.ResourceSignaturesCount == 0);
+
+    DefaultPRSInfo DefPRS;
+    if (UseDefaultPRS)
+    {
+        DefPRS.DeviceFlags = ArchiveInfo.DeviceFlags;
+        DefPRS.UniqueName  = UniquePRSName();
+    }
+
+    for (auto DeviceBits = ArchiveInfo.DeviceFlags; DeviceBits != 0;)
+    {
+        const auto Type = static_cast<RENDER_DEVICE_TYPE>(PlatformMisc::GetLSB(ExtractLSB(DeviceBits)));
+
+        static_assert(RENDER_DEVICE_TYPE_COUNT == 7, "Please update the switch below to handle the new render device type");
+        switch (Type)
+        {
+#if D3D11_SUPPORTED
+            case RENDER_DEVICE_TYPE_D3D11:
+                if (!PatchShadersD3D11(PSOCreateInfo, Data, DefPRS))
+                    return false;
+                break;
+#endif
+#if D3D12_SUPPORTED
+            case RENDER_DEVICE_TYPE_D3D12:
+                if (!PatchShadersD3D12(PSOCreateInfo, Data, DefPRS))
+                    return false;
+                break;
+#endif
+#if GL_SUPPORTED || GLES_SUPPORTED
+            case RENDER_DEVICE_TYPE_GL:
+            case RENDER_DEVICE_TYPE_GLES:
+                if (!PatchShadersGL(PSOCreateInfo, Data, DefPRS))
+                    return false;
+                break;
+#endif
+#if VULKAN_SUPPORTED
+            case RENDER_DEVICE_TYPE_VULKAN:
+                if (!PatchShadersVk(PSOCreateInfo, Data, DefPRS))
+                    return false;
+                break;
+#endif
+#if METAL_SUPPORTED
+            case RENDER_DEVICE_TYPE_METAL:
+                if (!PatchShadersMtl(PSOCreateInfo, Data, DefPRS))
+                    return false;
+                break;
+#endif
+            case RENDER_DEVICE_TYPE_UNDEFINED:
+            case RENDER_DEVICE_TYPE_COUNT:
+            default:
+                LOG_ERROR_MESSAGE("Unexpected render device type");
+                break;
+        }
+        if (UseDefaultPRS)
+        {
+            PSOCreateInfo.ResourceSignaturesCount = 0;
+            PSOCreateInfo.ppResourceSignatures    = nullptr;
+            PSOCreateInfo.PSODesc.ResourceLayout  = InPSOCreateInfo.PSODesc.ResourceLayout;
+        }
+    }
+
+    if (!Data.SharedData)
+    {
+        IPipelineResourceSignature* DefaultSignatures[1] = {};
+        if (UseDefaultPRS)
+        {
+            DefaultSignatures[0]                  = DefPRS.pPRS;
+            PSOCreateInfo.ResourceSignaturesCount = 1;
+            PSOCreateInfo.ppResourceSignatures    = DefaultSignatures;
+        }
+        VERIFY_EXPR(PSOCreateInfo.ResourceSignaturesCount != 0);
+
+        TPRSNames PRSNames = {};
+        for (Uint32 i = 0; i < PSOCreateInfo.ResourceSignaturesCount; ++i)
+        {
+            if (!AddPipelineResourceSignature(PSOCreateInfo.ppResourceSignatures[i]))
+                return false;
+            PRSNames[i] = PSOCreateInfo.ppResourceSignatures[i]->GetDesc().Name;
+        }
+
+        Serializer<SerializerMode::Measure> MeasureSer;
+        SerializerPSOImpl(MeasureSer, PSOCreateInfo, PRSNames);
+
+        const size_t SerSize = MeasureSer.GetSize(nullptr);
+        void*        SerPtr  = ALLOCATE_RAW(RawMemAllocator, "", SerSize);
+
+        Serializer<SerializerMode::Write> Ser{SerPtr, SerSize};
+        SerializerPSOImpl(Ser, PSOCreateInfo, PRSNames);
+        VERIFY_EXPR(Ser.IsEnd());
+
+        Data.SharedData = SerializedMemory{SerPtr, SerSize};
+    }
+    return true;
+}
+
+Bool ArchiverImpl::AddGraphicsPipelineState(const GraphicsPipelineStateCreateInfo& PSOCreateInfo,
+                                            const PipelineStateArchiveInfo&        ArchiveInfo)
+{
+    if (PSOCreateInfo.GraphicsPipeline.pRenderPass != nullptr)
+    {
+        if (!AddRenderPass(PSOCreateInfo.GraphicsPipeline.pRenderPass))
+            return false;
+    }
+
+    return SerializePSO(m_GraphicsPSOMap, PSOCreateInfo, ArchiveInfo);
+}
+
+Bool ArchiverImpl::AddComputePipelineState(const ComputePipelineStateCreateInfo& PSOCreateInfo,
+                                           const PipelineStateArchiveInfo&       ArchiveInfo)
+{
+    return SerializePSO(m_ComputePSOMap, PSOCreateInfo, ArchiveInfo);
+}
+
+Bool ArchiverImpl::AddRayTracingPipelineState(const RayTracingPipelineStateCreateInfo& PSOCreateInfo,
+                                              const PipelineStateArchiveInfo&          ArchiveInfo)
+{
+    return SerializePSO(m_RayTracingPSOMap, PSOCreateInfo, ArchiveInfo);
+}
+
+Bool ArchiverImpl::AddTilePipelineState(const TilePipelineStateCreateInfo& PSOCreateInfo,
+                                        const PipelineStateArchiveInfo&    ArchiveInfo)
+{
+    return SerializePSO(m_TilePSOMap, PSOCreateInfo, ArchiveInfo);
+}
+
 } // namespace Diligent
