@@ -32,7 +32,7 @@
 namespace Diligent
 {
 
-DearchiverGLImpl::DearchiverGLImpl(IReferenceCounters* pRefCounters) :
+DearchiverGLImpl::DearchiverGLImpl(IReferenceCounters* pRefCounters) noexcept :
     TDearchiverBase{pRefCounters}
 {
 }
@@ -40,69 +40,22 @@ DearchiverGLImpl::DearchiverGLImpl(IReferenceCounters* pRefCounters) :
 void DearchiverGLImpl::CreateDeviceObjectArchive(IArchive*              pSource,
                                                  IDeviceObjectArchive** ppArchive)
 {
-    DEV_CHECK_ERR(ppArchive != nullptr, "ppArchive must not be null");
-    if (!ppArchive)
-        return;
-
-    *ppArchive = nullptr;
-    try
-    {
-        auto& RawMemAllocator = GetRawAllocator();
-        auto* pArchiveImpl(NEW_RC_OBJ(RawMemAllocator, "Device object archive instance", DeviceObjectArchiveGLImpl)(pSource));
-        pArchiveImpl->QueryInterface(IID_DeviceObjectArchive, reinterpret_cast<IObject**>(ppArchive));
-    }
-    catch (...)
-    {
-        LOG_ERROR("Failed to create the device object archive");
-    }
+    CreateDeviceObjectArchiveImpl<DeviceObjectArchiveGLImpl>(pSource, ppArchive);
 }
 
 void DearchiverGLImpl::UnpackPipelineState(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState** ppPSO)
 {
-    if (!VerifyUnpackPipelineState(DeArchiveInfo, ppPSO))
-        return;
-
-    auto* pArchiveGL = ClassPtrCast<DeviceObjectArchiveGLImpl>(DeArchiveInfo.pArchive);
-
-    *ppPSO = nullptr;
-    switch (DeArchiveInfo.PipelineType)
-    {
-        case PIPELINE_TYPE_GRAPHICS:
-            pArchiveGL->UnpackGraphicsPSO(DeArchiveInfo, *ppPSO);
-            break;
-        case PIPELINE_TYPE_COMPUTE:
-            pArchiveGL->UnpackComputePSO(DeArchiveInfo, *ppPSO);
-            break;
-        case PIPELINE_TYPE_MESH:
-        case PIPELINE_TYPE_RAY_TRACING:
-        case PIPELINE_TYPE_TILE:
-        case PIPELINE_TYPE_INVALID:
-        default:
-            LOG_ERROR_MESSAGE("Unsupported pipeline type");
-            return;
-    }
+    UnpackPipelineStateImpl<DeviceObjectArchiveGLImpl>(DeArchiveInfo, ppPSO);
 }
 
 void DearchiverGLImpl::UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature** ppSignature)
 {
-    if (!VerifyUnpackResourceSignature(DeArchiveInfo, ppSignature))
-        return;
-
-    auto* pArchiveGL = ClassPtrCast<DeviceObjectArchiveGLImpl>(DeArchiveInfo.pArchive);
-
-    *ppSignature = nullptr;
-    pArchiveGL->UnpackResourceSignature(DeArchiveInfo, *ppSignature);
+    UnpackResourceSignatureImpl<DeviceObjectArchiveGLImpl>(DeArchiveInfo, ppSignature);
 }
 
 void DearchiverGLImpl::UnpackRenderPass(const RenderPassUnpackInfo& DeArchiveInfo, IRenderPass** ppRP)
 {
-    if (!VerifyUnpackRenderPass(DeArchiveInfo, ppRP))
-        return;
-
-    auto* pArchiveGL = ClassPtrCast<DeviceObjectArchiveGLImpl>(DeArchiveInfo.pArchive);
-
-    *ppRP = nullptr;
-    pArchiveGL->UnpackRenderPass(DeArchiveInfo, *ppRP);
+    UnpackRenderPassImpl<DeviceObjectArchiveGLImpl>(DeArchiveInfo, ppRP);
 }
 
 } // namespace Diligent

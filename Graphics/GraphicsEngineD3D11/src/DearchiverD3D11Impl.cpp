@@ -32,7 +32,7 @@
 namespace Diligent
 {
 
-DearchiverD3D11Impl::DearchiverD3D11Impl(IReferenceCounters* pRefCounters) :
+DearchiverD3D11Impl::DearchiverD3D11Impl(IReferenceCounters* pRefCounters) noexcept :
     TDearchiverBase{pRefCounters}
 {
 }
@@ -40,69 +40,22 @@ DearchiverD3D11Impl::DearchiverD3D11Impl(IReferenceCounters* pRefCounters) :
 void DearchiverD3D11Impl::CreateDeviceObjectArchive(IArchive*              pSource,
                                                     IDeviceObjectArchive** ppArchive)
 {
-    DEV_CHECK_ERR(ppArchive != nullptr, "ppArchive must not be null");
-    if (!ppArchive)
-        return;
-
-    *ppArchive = nullptr;
-    try
-    {
-        auto& RawMemAllocator = GetRawAllocator();
-        auto* pArchiveImpl(NEW_RC_OBJ(RawMemAllocator, "Device object archive instance", DeviceObjectArchiveD3D11Impl)(pSource));
-        pArchiveImpl->QueryInterface(IID_DeviceObjectArchive, reinterpret_cast<IObject**>(ppArchive));
-    }
-    catch (...)
-    {
-        LOG_ERROR("Failed to create the device object archive");
-    }
+    CreateDeviceObjectArchiveImpl<DeviceObjectArchiveD3D11Impl>(pSource, ppArchive);
 }
 
 void DearchiverD3D11Impl::UnpackPipelineState(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState** ppPSO)
 {
-    if (!VerifyUnpackPipelineState(DeArchiveInfo, ppPSO))
-        return;
-
-    auto* pArchiveD3D11 = ClassPtrCast<DeviceObjectArchiveD3D11Impl>(DeArchiveInfo.pArchive);
-
-    *ppPSO = nullptr;
-    switch (DeArchiveInfo.PipelineType)
-    {
-        case PIPELINE_TYPE_GRAPHICS:
-            pArchiveD3D11->UnpackGraphicsPSO(DeArchiveInfo, *ppPSO);
-            break;
-        case PIPELINE_TYPE_COMPUTE:
-            pArchiveD3D11->UnpackComputePSO(DeArchiveInfo, *ppPSO);
-            break;
-        case PIPELINE_TYPE_RAY_TRACING:
-        case PIPELINE_TYPE_MESH:
-        case PIPELINE_TYPE_TILE:
-        case PIPELINE_TYPE_INVALID:
-        default:
-            LOG_ERROR_MESSAGE("Unsupported pipeline type");
-            return;
-    }
+    UnpackPipelineStateImpl<DeviceObjectArchiveD3D11Impl>(DeArchiveInfo, ppPSO);
 }
 
 void DearchiverD3D11Impl::UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature** ppSignature)
 {
-    if (!VerifyUnpackResourceSignature(DeArchiveInfo, ppSignature))
-        return;
-
-    auto* pArchiveD3D11 = ClassPtrCast<DeviceObjectArchiveD3D11Impl>(DeArchiveInfo.pArchive);
-
-    *ppSignature = nullptr;
-    pArchiveD3D11->UnpackResourceSignature(DeArchiveInfo, *ppSignature);
+    UnpackResourceSignatureImpl<DeviceObjectArchiveD3D11Impl>(DeArchiveInfo, ppSignature);
 }
 
 void DearchiverD3D11Impl::UnpackRenderPass(const RenderPassUnpackInfo& DeArchiveInfo, IRenderPass** ppRP)
 {
-    if (!VerifyUnpackRenderPass(DeArchiveInfo, ppRP))
-        return;
-
-    auto* pArchiveD3D11 = ClassPtrCast<DeviceObjectArchiveD3D11Impl>(DeArchiveInfo.pArchive);
-
-    *ppRP = nullptr;
-    pArchiveD3D11->UnpackRenderPass(DeArchiveInfo, *ppRP);
+    UnpackRenderPassImpl<DeviceObjectArchiveD3D11Impl>(DeArchiveInfo, ppRP);
 }
 
 } // namespace Diligent

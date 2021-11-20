@@ -32,7 +32,7 @@
 namespace Diligent
 {
 
-DearchiverD3D12Impl::DearchiverD3D12Impl(IReferenceCounters* pRefCounters) :
+DearchiverD3D12Impl::DearchiverD3D12Impl(IReferenceCounters* pRefCounters) noexcept :
     TDearchiverBase{pRefCounters}
 {
 }
@@ -40,71 +40,22 @@ DearchiverD3D12Impl::DearchiverD3D12Impl(IReferenceCounters* pRefCounters) :
 void DearchiverD3D12Impl::CreateDeviceObjectArchive(IArchive*              pSource,
                                                     IDeviceObjectArchive** ppArchive)
 {
-    DEV_CHECK_ERR(ppArchive != nullptr, "ppArchive must not be null");
-    if (!ppArchive)
-        return;
-
-    *ppArchive = nullptr;
-    try
-    {
-        auto& RawMemAllocator = GetRawAllocator();
-        auto* pArchiveImpl(NEW_RC_OBJ(RawMemAllocator, "Device object archive instance", DeviceObjectArchiveD3D12Impl)(pSource));
-        pArchiveImpl->QueryInterface(IID_DeviceObjectArchive, reinterpret_cast<IObject**>(ppArchive));
-    }
-    catch (...)
-    {
-        LOG_ERROR("Failed to create the device object archive");
-    }
+    CreateDeviceObjectArchiveImpl<DeviceObjectArchiveD3D12Impl>(pSource, ppArchive);
 }
 
 void DearchiverD3D12Impl::UnpackPipelineState(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState** ppPSO)
 {
-    if (!VerifyUnpackPipelineState(DeArchiveInfo, ppPSO))
-        return;
-
-    auto* pArchiveD3D12 = ClassPtrCast<DeviceObjectArchiveD3D12Impl>(DeArchiveInfo.pArchive);
-
-    *ppPSO = nullptr;
-    switch (DeArchiveInfo.PipelineType)
-    {
-        case PIPELINE_TYPE_GRAPHICS:
-        case PIPELINE_TYPE_MESH:
-            pArchiveD3D12->UnpackGraphicsPSO(DeArchiveInfo, *ppPSO);
-            break;
-        case PIPELINE_TYPE_COMPUTE:
-            pArchiveD3D12->UnpackComputePSO(DeArchiveInfo, *ppPSO);
-            break;
-        case PIPELINE_TYPE_RAY_TRACING:
-            pArchiveD3D12->UnpackRayTracingPSO(DeArchiveInfo, *ppPSO);
-            break;
-        case PIPELINE_TYPE_TILE:
-        case PIPELINE_TYPE_INVALID:
-        default:
-            LOG_ERROR_MESSAGE("Unsupported pipeline type");
-            return;
-    }
+    UnpackPipelineStateImpl<DeviceObjectArchiveD3D12Impl>(DeArchiveInfo, ppPSO);
 }
 
 void DearchiverD3D12Impl::UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature** ppSignature)
 {
-    if (!VerifyUnpackResourceSignature(DeArchiveInfo, ppSignature))
-        return;
-
-    auto* pArchiveD3D12 = ClassPtrCast<DeviceObjectArchiveD3D12Impl>(DeArchiveInfo.pArchive);
-
-    *ppSignature = nullptr;
-    pArchiveD3D12->UnpackResourceSignature(DeArchiveInfo, *ppSignature);
+    UnpackResourceSignatureImpl<DeviceObjectArchiveD3D12Impl>(DeArchiveInfo, ppSignature);
 }
 
 void DearchiverD3D12Impl::UnpackRenderPass(const RenderPassUnpackInfo& DeArchiveInfo, IRenderPass** ppRP)
 {
-    if (!VerifyUnpackRenderPass(DeArchiveInfo, ppRP))
-        return;
-
-    auto* pArchiveD3D12 = ClassPtrCast<DeviceObjectArchiveD3D12Impl>(DeArchiveInfo.pArchive);
-
-    *ppRP = nullptr;
-    pArchiveD3D12->UnpackRenderPass(DeArchiveInfo, *ppRP);
+    UnpackRenderPassImpl<DeviceObjectArchiveD3D12Impl>(DeArchiveInfo, ppRP);
 }
 
 } // namespace Diligent
