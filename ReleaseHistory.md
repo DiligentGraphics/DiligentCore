@@ -1,5 +1,6 @@
 ## Current progress
 
+* Added device object serialization/deserialization (API Version 250013)
 * Added pipeline state cache (API Version 250012)
 
 
