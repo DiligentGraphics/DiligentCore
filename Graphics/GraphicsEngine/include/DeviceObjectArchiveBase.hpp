@@ -305,6 +305,8 @@ private:
     void CacheGraphicsPSOResource(const String& Name, IPipelineState* pPSO);
     bool GetCachedComputePSO(const String& Name, IPipelineState*& pPSO);
     void CacheComputePSOResource(const String& Name, IPipelineState* pPSO);
+    bool GetCachedTilePSO(const String& Name, IPipelineState*& pPSO);
+    void CacheTilePSOResource(const String& Name, IPipelineState* pPSO);
     bool GetCachedRayTracingPSO(const String& Name, IPipelineState*& pPSO);
     void CacheRayTracingPSOResource(const String& Name, IPipelineState* pPSO);
 
