@@ -26,6 +26,39 @@
 
 #include "ArchiverImpl.hpp"
 
+#if D3D11_SUPPORTED
+#    include "../../GraphicsEngineD3D11/include/pch.h"
+#    include "RenderDeviceD3D11Impl.hpp"
+#    include "PipelineResourceSignatureD3D11Impl.hpp"
+#    include "PipelineStateD3D11Impl.hpp"
+#    include "ShaderD3D11Impl.hpp"
+#    include "DeviceObjectArchiveD3D11Impl.hpp"
+#endif
+#if D3D12_SUPPORTED
+#    include "../../GraphicsEngineD3D12/include/pch.h"
+#    include "RenderDeviceD3D12Impl.hpp"
+#    include "PipelineResourceSignatureD3D12Impl.hpp"
+#    include "PipelineStateD3D12Impl.hpp"
+#    include "ShaderD3D12Impl.hpp"
+#    include "DeviceObjectArchiveD3D12Impl.hpp"
+#endif
+#if GL_SUPPORTED || GLES_SUPPORTED
+#    include "../../GraphicsEngineOpenGL/include/pch.h"
+#    include "RenderDeviceGLImpl.hpp"
+#    include "PipelineResourceSignatureGLImpl.hpp"
+#    include "PipelineStateGLImpl.hpp"
+#    include "ShaderGLImpl.hpp"
+#    include "DeviceObjectArchiveGLImpl.hpp"
+#endif
+#if VULKAN_SUPPORTED
+#    include "VulkanUtilities/VulkanHeaders.h"
+#    include "RenderDeviceVkImpl.hpp"
+#    include "PipelineResourceSignatureVkImpl.hpp"
+#    include "PipelineStateVkImpl.hpp"
+#    include "ShaderVkImpl.hpp"
+#    include "DeviceObjectArchiveVkImpl.hpp"
+#endif
+
 namespace Diligent
 {
 namespace
@@ -47,8 +80,8 @@ void ValidatePipelineStateArchiveInfo(const PipelineStateCreateInfo&  PSOCreateI
                                       const PRSMapType&               PRSMap,
                                       const RENDER_DEVICE_TYPE_FLAGS  ValidDeviceFlags) noexcept(false)
 {
-    VERIFY_PSO(ArchiveInfo.DeviceFlags != RENDER_DEVICE_TYPE_FLAG_NONE, "At least one bit must be set in Devices");
-    VERIFY_PSO((ArchiveInfo.DeviceFlags & ValidDeviceFlags) == ArchiveInfo.DeviceFlags, "Devices contain unsupported device type");
+    VERIFY_PSO(ArchiveInfo.DeviceFlags != RENDER_DEVICE_TYPE_FLAG_NONE, "At least one bit must be set in DeviceFlags");
+    VERIFY_PSO((ArchiveInfo.DeviceFlags & ValidDeviceFlags) == ArchiveInfo.DeviceFlags, "DeviceFlags contain unsupported device type");
 
     VERIFY_PSO(PSOCreateInfo.PSODesc.Name != nullptr, "Pipeline name in PSOCreateInfo.PSODesc.Name must not be null");
     VERIFY_PSO((PSOCreateInfo.ResourceSignaturesCount != 0) == (PSOCreateInfo.ppResourceSignatures != nullptr),

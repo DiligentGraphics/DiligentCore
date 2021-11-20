@@ -395,8 +395,8 @@ void ArchiverImpl::WriteShaderData(PendingData& Pending) const
         auto* pHeader = reinterpret_cast<ShadersDataHeader*>(Chunk.data());
         pHeader->Type = ChunkType::Shaders;
         pHeader->InitOffsets();
-        DataSizeArray   = pHeader->m_DeviceSpecificDataSize.data();
-        DataOffsetArray = pHeader->m_DeviceSpecificDataOffset.data();
+        DataSizeArray   = pHeader->DeviceSpecificDataSize.data();
+        DataOffsetArray = pHeader->DeviceSpecificDataOffset.data();
 
         Pending.ResourceCountPerChunk[ChunkInd] = DeviceDataCount;
     }

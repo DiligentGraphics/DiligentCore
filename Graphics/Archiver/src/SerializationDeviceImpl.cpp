@@ -32,6 +32,39 @@
 #include "SerializableResourceSignatureImpl.hpp"
 #include "EngineMemory.h"
 
+#if D3D11_SUPPORTED
+#    include "../../GraphicsEngineD3D11/include/pch.h"
+#    include "RenderDeviceD3D11Impl.hpp"
+#    include "PipelineResourceSignatureD3D11Impl.hpp"
+#    include "PipelineStateD3D11Impl.hpp"
+#    include "ShaderD3D11Impl.hpp"
+#    include "DeviceObjectArchiveD3D11Impl.hpp"
+#endif
+#if D3D12_SUPPORTED
+#    include "../../GraphicsEngineD3D12/include/pch.h"
+#    include "RenderDeviceD3D12Impl.hpp"
+#    include "PipelineResourceSignatureD3D12Impl.hpp"
+#    include "PipelineStateD3D12Impl.hpp"
+#    include "ShaderD3D12Impl.hpp"
+#    include "DeviceObjectArchiveD3D12Impl.hpp"
+#endif
+#if GL_SUPPORTED || GLES_SUPPORTED
+#    include "../../GraphicsEngineOpenGL/include/pch.h"
+#    include "RenderDeviceGLImpl.hpp"
+#    include "PipelineResourceSignatureGLImpl.hpp"
+#    include "PipelineStateGLImpl.hpp"
+#    include "ShaderGLImpl.hpp"
+#    include "DeviceObjectArchiveGLImpl.hpp"
+#endif
+#if VULKAN_SUPPORTED
+#    include "VulkanUtilities/VulkanHeaders.h"
+#    include "RenderDeviceVkImpl.hpp"
+#    include "PipelineResourceSignatureVkImpl.hpp"
+#    include "PipelineStateVkImpl.hpp"
+#    include "ShaderVkImpl.hpp"
+#    include "DeviceObjectArchiveVkImpl.hpp"
+#endif
+
 namespace Diligent
 {
 namespace
@@ -141,7 +174,7 @@ void SerializationDeviceImpl::CreateShader(const ShaderCreateInfo&  ShaderCI,
     try
     {
         auto& RawMemAllocator = GetRawAllocator();
-        auto* pShaderImpl(NEW_RC_OBJ(RawMemAllocator, "Shader instance", SerializableShaderImpl)(this, ShaderCI, DeviceFlags));
+        auto* pShaderImpl     = NEW_RC_OBJ(RawMemAllocator, "Shader instance", SerializableShaderImpl)(this, ShaderCI, DeviceFlags);
         pShaderImpl->QueryInterface(IID_Shader, reinterpret_cast<IObject**>(ppShader));
     }
     catch (...)
@@ -160,7 +193,7 @@ void SerializationDeviceImpl::CreateRenderPass(const RenderPassDesc& Desc, IRend
     try
     {
         auto& RawMemAllocator = GetRawAllocator();
-        auto* pRenderPassImpl(NEW_RC_OBJ(RawMemAllocator, "Render pass instance", SerializableRenderPassImpl)(this, Desc));
+        auto* pRenderPassImpl = NEW_RC_OBJ(RawMemAllocator, "Render pass instance", SerializableRenderPassImpl)(this, Desc);
         pRenderPassImpl->QueryInterface(IID_RenderPass, reinterpret_cast<IObject**>(ppRenderPass));
     }
     catch (...)
@@ -189,7 +222,7 @@ void SerializationDeviceImpl::CreatePipelineResourceSignature(const PipelineReso
     try
     {
         auto& RawMemAllocator = GetRawAllocator();
-        auto* pSignatureImpl(NEW_RC_OBJ(RawMemAllocator, "Pipeline resource signature instance", SerializableResourceSignatureImpl)(this, Desc, DeviceFlags, ShaderStages));
+        auto* pSignatureImpl  = NEW_RC_OBJ(RawMemAllocator, "Pipeline resource signature instance", SerializableResourceSignatureImpl)(this, Desc, DeviceFlags, ShaderStages);
         pSignatureImpl->QueryInterface(IID_PipelineResourceSignature, reinterpret_cast<IObject**>(ppSignature));
     }
     catch (...)

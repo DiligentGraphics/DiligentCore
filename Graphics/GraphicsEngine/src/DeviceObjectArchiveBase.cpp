@@ -52,7 +52,7 @@ DeviceObjectArchiveBase::DeviceObjectArchiveBase(IReferenceCounters* pRefCounter
         }
         if (Header.Version != GetHeaderVersion())
         {
-            LOG_ERROR_AND_THROW("Archive header version (", Header.Version, ") is not supported, expected (", GetHeaderVersion(), ")");
+            LOG_ERROR_AND_THROW("Archive version (", Header.Version, ") is not supported; expected version: ", GetHeaderVersion(), ".");
         }
 
         m_BaseOffsets = Header.BlockBaseOffsets;
@@ -65,14 +65,14 @@ DeviceObjectArchiveBase::DeviceObjectArchiveBase(IReferenceCounters* pRefCounter
         LOG_ERROR_AND_THROW("Failed to read chunk headers");
     }
 
-    std::bitset<static_cast<Uint32>(ChunkType::Count)> ProcessedBits{};
+    std::bitset<static_cast<size_t>(ChunkType::Count)> ProcessedBits{};
     for (const auto& Chunk : Chunks)
     {
-        if (ProcessedBits[static_cast<Uint32>(Chunk.Type)])
+        if (ProcessedBits[static_cast<size_t>(Chunk.Type)])
         {
             LOG_ERROR_AND_THROW("Multiple chunks with the same types are not allowed");
         }
-        ProcessedBits[static_cast<Uint32>(Chunk.Type)] = true;
+        ProcessedBits[static_cast<size_t>(Chunk.Type)] = true;
 
         switch (Chunk.Type)
         {
@@ -95,9 +95,7 @@ void DeviceObjectArchiveBase::ReadArchiveDebugInfo(const ChunkHeader& Chunk) noe
 {
     VERIFY_EXPR(Chunk.Type == ChunkType::ArchiveDebugInfo);
 
-    std::vector<Uint8> Data; // AZ TODO: optimize
-    Data.resize(Chunk.Size);
-
+    std::vector<Uint8> Data(Chunk.Size); // AZ TODO: optimize
     if (!m_pArchive->Read(Chunk.Offset, Data.size(), Data.data()))
     {
         LOG_ERROR_AND_THROW("Failed to read archive debug info");
@@ -113,7 +111,7 @@ void DeviceObjectArchiveBase::ReadArchiveDebugInfo(const ChunkHeader& Chunk) noe
 
 #ifdef DILIGENT_CORE_COMMIT_HASH
     if (m_DebugInfo.GitHash != DILIGENT_CORE_COMMIT_HASH)
-        LOG_INFO_MESSAGE("Archive was builded with Diligent Core git hash '", m_DebugInfo.GitHash, "' but used with '", DILIGENT_CORE_COMMIT_HASH, "'.");
+        LOG_INFO_MESSAGE("Archive was built with Diligent Core git hash '", m_DebugInfo.GitHash, "' but is used with '", DILIGENT_CORE_COMMIT_HASH, "'.");
 #endif
 }
 
@@ -126,9 +124,7 @@ void DeviceObjectArchiveBase::ReadNamedResources(const ChunkHeader& Chunk, TName
                 Chunk.Type == ChunkType::RayTracingPipelineStates ||
                 Chunk.Type == ChunkType::RenderPass);
 
-    std::vector<Uint8> Data; // AZ TODO: optimize
-    Data.resize(Chunk.Size);
-
+    std::vector<Uint8> Data(Chunk.Size); // AZ TODO: optimize
     if (!m_pArchive->Read(Chunk.Offset, Data.size(), Data.data()))
     {
         LOG_ERROR_AND_THROW("Failed to read resource list from archive");
@@ -180,7 +176,7 @@ void DeviceObjectArchiveBase::ReadIndexedResources(const ChunkHeader& Chunk, TRe
     ShadersDataHeader Header;
     if (!m_pArchive->Read(Chunk.Offset, sizeof(Header), &Header))
     {
-        LOG_ERROR_AND_THROW("Failed to read indexed resources info from archive");
+        LOG_ERROR_AND_THROW("Failed to read indexed resources info from the archive");
     }
 
     DynamicLinearAllocator Allocator{GetRawAllocator()};
@@ -217,7 +213,7 @@ bool DeviceObjectArchiveBase::LoadResourceData(const TNameOffsetMap<ResType>& Na
         auto Iter = NameAndOffset.find(ResourceName);
         if (Iter == NameAndOffset.end())
         {
-            LOG_ERROR_MESSAGE(ResTypeName, " with name '", ResourceName, "' is not present in archive");
+            LOG_ERROR_MESSAGE(ResTypeName, " with name '", ResourceName, "' is not present in the archive");
             return false;
         }
         OffsetAndSize = Iter->second;
@@ -228,7 +224,7 @@ bool DeviceObjectArchiveBase::LoadResourceData(const TNameOffsetMap<ResType>& Na
     void*      pData    = Allocator.Allocate(DataSize, DataPtrAlign);
     if (!m_pArchive->Read(OffsetAndSize.Offset, DataSize, pData))
     {
-        LOG_ERROR_MESSAGE("Failed to read ", ResTypeName, " with name '", ResourceName, "' data from archive");
+        LOG_ERROR_MESSAGE("Failed to read ", ResTypeName, " with name '", ResourceName, "' data from the archive");
         return false;
     }
 
@@ -247,7 +243,7 @@ void DeviceObjectArchiveBase::LoadDeviceSpecificData(const HeaderType&       Hea
     const auto ArchiveSize = m_pArchive->GetSize();
     if (BaseOffset > ArchiveSize)
     {
-        LOG_ERROR_MESSAGE("Required block is not exists in archive");
+        LOG_ERROR_MESSAGE("Required block does not exists in archive");
         return;
     }
     if (Header.GetSize(m_DevType) == 0)
@@ -257,7 +253,7 @@ void DeviceObjectArchiveBase::LoadDeviceSpecificData(const HeaderType&       Hea
     }
     if (BaseOffset + Header.GetEndOffset(m_DevType) > ArchiveSize)
     {
-        LOG_ERROR_MESSAGE("Invalid offset in archive");
+        LOG_ERROR_MESSAGE("Invalid offset in the archive");
         return;
     }
 
@@ -265,7 +261,7 @@ void DeviceObjectArchiveBase::LoadDeviceSpecificData(const HeaderType&       Hea
     auto*      pData    = Allocator.Allocate(DataSize, DataPtrAlign);
     if (!m_pArchive->Read(BaseOffset + Header.GetOffset(m_DevType), DataSize, pData))
     {
-        LOG_ERROR_MESSAGE("Failed to read resource signature data");
+        LOG_ERROR_MESSAGE("Failed to read resource-specific data");
         return;
     }
 
@@ -283,7 +279,7 @@ bool DeviceObjectArchiveBase::ReadPRSData(const String& Name, PRSData& PRS)
             PRS.pHeader   = Ser.Cast<PRSDataHeader>();
             if (PRS.pHeader->Type != ChunkType::ResourceSignature)
             {
-                LOG_ERROR_MESSAGE("Invalid PRS header in archive");
+                LOG_ERROR_MESSAGE("Invalid PRS header in the archive");
                 return false;
             }
 
@@ -304,7 +300,7 @@ bool DeviceObjectArchiveBase::ReadRPData(const String& Name, RPData& RP)
             RP.pHeader   = Ser.Cast<RPDataHeader>();
             if (RP.pHeader->Type != ChunkType::RenderPass)
             {
-                LOG_ERROR_MESSAGE("Invalid render pass header in archive");
+                LOG_ERROR_MESSAGE("Invalid render pass header in the archive");
                 return false;
             }
 
@@ -325,7 +321,7 @@ bool DeviceObjectArchiveBase::ReadGraphicsPSOData(const String& Name, PSOData<Gr
             PSO.pHeader                 = Ser.Cast<PSODataHeader>();
             if (PSO.pHeader->Type != ChunkType::GraphicsPipelineStates)
             {
-                LOG_ERROR_MESSAGE("Invalid graphics pipeline header in archive");
+                LOG_ERROR_MESSAGE("Invalid graphics pipeline header in the archive");
                 return false;
             }
 
@@ -349,7 +345,7 @@ bool DeviceObjectArchiveBase::ReadComputePSOData(const String& Name, PSOData<Com
             PSO.pHeader                 = Ser.Cast<PSODataHeader>();
             if (PSO.pHeader->Type != ChunkType::ComputePipelineStates)
             {
-                LOG_ERROR_MESSAGE("Invalid compute pipeline header in archive");
+                LOG_ERROR_MESSAGE("Invalid compute pipeline header in the archive");
                 return false;
             }
 
@@ -373,7 +369,7 @@ bool DeviceObjectArchiveBase::ReadTilePSOData(const String& Name, PSOData<TilePi
             PSO.pHeader                 = Ser.Cast<PSODataHeader>();
             if (PSO.pHeader->Type != ChunkType::ComputePipelineStates)
             {
-                LOG_ERROR_MESSAGE("Invalid tile pipeline header in archive");
+                LOG_ERROR_MESSAGE("Invalid tile pipeline header in the archive");
                 return false;
             }
 
@@ -397,7 +393,7 @@ bool DeviceObjectArchiveBase::ReadRayTracingPSOData(const String& Name, PSOData<
             PSO.pHeader                 = Ser.Cast<PSODataHeader>();
             if (PSO.pHeader->Type != ChunkType::RayTracingPipelineStates)
             {
-                LOG_ERROR_MESSAGE("Invalid ray tracing pipeline header in archive");
+                LOG_ERROR_MESSAGE("Invalid ray tracing pipeline header in the archive");
                 return false;
             }
 

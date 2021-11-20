@@ -65,7 +65,7 @@ void CreateShader(std::unique_ptr<ShaderType>& pShader, String& CompilationLog, 
     ShaderCI.ppCompilerOutput = &pLog;
     try
     {
-        pShader.reset(new ShaderType{pRefCounters, ShaderCI, Args...});
+        pShader = std::make_unique<ShaderType>(pRefCounters, ShaderCI, Args...);
     }
     catch (...)
     {
