@@ -143,7 +143,6 @@ SerializationDeviceImpl::SerializationDeviceImpl(IReferenceCounters* pRefCounter
     m_pVkDxCompiler      = CreateDXCompiler(DXCompilerTarget::Vulkan, GetVkVersion(), CreateInfo.Vulkan.DxCompilerPath);
 #endif
 #if METAL_SUPPORTED
-    m_MtlTempShaderFolder = CreateInfo.Metal.TempShaderFolder ? CreateInfo.Metal.TempShaderFolder : "";
     m_MslPreprocessorCmd  = CreateInfo.Metal.MslPreprocessorCmd ? CreateInfo.Metal.MslPreprocessorCmd : "";
     m_MtlCompileOptions   = CreateInfo.Metal.CompileOptions ? CreateInfo.Metal.CompileOptions : "";
     m_MtlLinkOptions      = CreateInfo.Metal.LinkOptions ? CreateInfo.Metal.LinkOptions : "";

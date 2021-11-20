@@ -76,13 +76,10 @@ typedef struct SerializationDeviceVkInfo SerializationDeviceVkInfo;
 /// Serialization device attributes for Metal backend
 struct SerializationDeviceMtlInfo
 {
-    /// Path to folder where temporary Metal shaders will be stored and compiled to bytecode.
-    const Char* TempShaderFolder   DEFAULT_INITIALIZER(nullptr);
-
-    /// 
+    /// Additional compilation options for Metal command-line compiler.
     const Char* CompileOptions     DEFAULT_INITIALIZER(nullptr);
 
-    /// 
+    /// Additional linker options for Metal command-line linker.
     const Char* LinkOptions        DEFAULT_INITIALIZER(nullptr);
 
     /// Name of command-line application which is used to preprocess Metal shader source before compiling to bytecode.
@@ -93,7 +90,14 @@ typedef struct SerializationDeviceMtlInfo SerializationDeviceMtlInfo;
 /// Serialization device creation information
 struct SerializationDeviceCreateInfo
 {
+    /// Device info, contains enabled device features.
+    /// Can be used to validate shader, render pass, resource signature and pipeline state.
+    ///
+    /// \note For OpenGL which is not support separable programs disable SeparablePrograms feature.
     RenderDeviceInfo    DeviceInfo;
+
+    /// Adapter info, contains device parameters.
+    /// Can be used to validate shader, render pass, resource signature and pipeline state.
     GraphicsAdapterInfo AdapterInfo;
 
     SerializationDeviceD3D11Info D3D11;

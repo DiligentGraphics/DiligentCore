@@ -238,10 +238,6 @@ public:
 #endif
 
 #if METAL_SUPPORTED
-    const String& GetMtlTempShaderFolder() const
-    {
-        return m_MtlTempShaderFolder;
-    }
     const String& GetMslPreprocessorCmd() const
     {
         return m_MslPreprocessorCmd;
@@ -286,7 +282,6 @@ private:
     bool                         m_VkSupportedSpirv14 = false;
 
     // Metal
-    String m_MtlTempShaderFolder;
     String m_MtlCompileOptions;
     String m_MtlLinkOptions;
     String m_MslPreprocessorCmd;
