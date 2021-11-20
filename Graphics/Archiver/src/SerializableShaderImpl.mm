@@ -37,7 +37,7 @@ namespace Diligent
 {
 static_assert(std::is_same_v<MtlArchiverResourceCounters, MtlResourceCounters>,
               "MtlArchiverResourceCounters and MtlResourceCounters must be same types");
-    
+
 struct SerializableShaderImpl::CompiledShaderMtlImpl final : ICompiledShaderMtl
 {
     String                                      MslSource;
@@ -101,7 +101,7 @@ SerializedMemory SerializableShaderImpl::PatchShaderMtl(const RefCntAutoPtr<Pipe
         //std::remove("Shader.metallibsym");
     };
     RemoveTempFiles();
-    
+
     auto*  pShaderMtl = static_cast<const CompiledShaderMtlImpl*>(m_pShaderMtl.get());
     String MslSource  = pShaderMtl->MslSource;
     MtlFunctionArguments::BufferTypeInfoMapType BufferTypeInfoMap;
@@ -122,7 +122,7 @@ SerializedMemory SerializableShaderImpl::PatchShaderMtl(const RefCntAutoPtr<Pipe
                                                        pBaseBindings,
                                                        GetDesc(),
                                                        ""); // may throw exception
-        
+
             MslSource = ShaderMtlImpl::SPIRVtoMSL(pShaderMtl->SPIRV,
                                                   GetCreateInfo(),
                                                   &ResRemapping,
@@ -133,10 +133,7 @@ SerializedMemory SerializableShaderImpl::PatchShaderMtl(const RefCntAutoPtr<Pipe
             LOG_ERROR_AND_THROW("Failed to patch Metal shader");
         }
     }
-    
-    //if (!pDevice->GetMtlTempShaderFolder().empty())
-    //    chdir(pDevice->GetMtlTempShaderFolder().c_str());
-    
+
     // Save to 'Shader.metal'
     {
         FILE* File = fopen("Shader.metal", "wb");
@@ -157,14 +154,14 @@ SerializedMemory SerializableShaderImpl::PatchShaderMtl(const RefCntAutoPtr<Pipe
         char Output[512];
         while (fgets(Output, _countof(Output), File) != nullptr)
             printf("%s", Output);
-    
+
         auto status = pclose(File);
         if (status == -1)
             LOG_ERROR_MESSAGE("Failed to close process");
     }
 
     // https://developer.apple.com/documentation/metal/libraries/generating_and_loading_a_metal_library_symbol_file?language=objc
-    
+
     // Compile MSL to AIR file
     {
         String cmd{"xcrun -sdk macosx metal "};
@@ -178,7 +175,7 @@ SerializedMemory SerializableShaderImpl::PatchShaderMtl(const RefCntAutoPtr<Pipe
         char Output[512];
         while (fgets(Output, _countof(Output), File) != nullptr)
             printf("%s", Output);
-    
+
         auto status = pclose(File);
         if (status == -1)
             LOG_ERROR_MESSAGE("Failed to close process");
@@ -197,7 +194,7 @@ SerializedMemory SerializableShaderImpl::PatchShaderMtl(const RefCntAutoPtr<Pipe
         char Output[512];
         while (fgets(Output, _countof(Output), File) != nullptr)
             printf("%s", Output);
-    
+
         auto status = pclose(File);
         if (status == -1)
             LOG_ERROR_MESSAGE("Failed to close process");
@@ -222,12 +219,12 @@ SerializedMemory SerializableShaderImpl::PatchShaderMtl(const RefCntAutoPtr<Pipe
 
         fclose(File);
     }
-    
+
     RemoveTempFiles();
 
     if (BytecodeSize == 0)
         LOG_ERROR_AND_THROW("Metal shader library is empty");
-    
+
     // AZ TODO: serialize BufferTypeInfoMap
 
     return SerializedMemory{Bytecode.release(), BytecodeSize};
