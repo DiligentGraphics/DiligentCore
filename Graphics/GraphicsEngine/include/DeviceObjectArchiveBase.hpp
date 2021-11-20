@@ -95,7 +95,7 @@ public:
 
 protected:
     static constexpr Uint32 HeaderMagicNumber = 0xDE00000A;
-    static constexpr Uint32 HeaderVersion     = (DILIGENT_API_VERSION << 12) | 1;
+    static constexpr Uint32 HeaderVersion     = 1;
     static constexpr Uint32 DataPtrAlign      = sizeof(Uint64);
 
     friend class ArchiverImpl;
@@ -246,6 +246,7 @@ private:
     struct
     {
         String GitHash;
+        Uint32 APIVersion = 0;
     } m_DebugInfo;
 
     RefCntAutoPtr<IArchive> m_pArchive; // archive is thread-safe

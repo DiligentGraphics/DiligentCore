@@ -115,6 +115,9 @@ Bool ArchiverImpl::SerializeToBlob(IDataBlob** ppBlob)
 template <SerializerMode Mode>
 void ArchiverImpl::SerializeDebugInfo(Serializer<Mode>& Ser) const
 {
+    Uint32 APIVersion = DILIGENT_API_VERSION;
+    Ser(APIVersion);
+
     const char* GitHash = nullptr;
 #ifdef DILIGENT_CORE_COMMIT_HASH
     GitHash = DILIGENT_CORE_COMMIT_HASH;

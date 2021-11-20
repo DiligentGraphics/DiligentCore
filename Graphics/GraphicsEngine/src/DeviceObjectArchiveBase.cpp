@@ -103,12 +103,16 @@ void DeviceObjectArchiveBase::ReadArchiveDebugInfo(const ChunkHeader& Chunk) noe
 
     Serializer<SerializerMode::Read> Ser{Data.data(), Data.size()};
 
+    Ser(m_DebugInfo.APIVersion);
+
     const char* GitHash = nullptr;
     Ser(GitHash);
 
     VERIFY_EXPR(Ser.IsEnd());
     m_DebugInfo.GitHash = String{GitHash};
 
+    if (m_DebugInfo.APIVersion != DILIGENT_API_VERSION)
+        LOG_INFO_MESSAGE("Archive was created with Engine API version (", m_DebugInfo.APIVersion, ") but is used with (", DILIGENT_API_VERSION, ")");
 #ifdef DILIGENT_CORE_COMMIT_HASH
     if (m_DebugInfo.GitHash != DILIGENT_CORE_COMMIT_HASH)
         LOG_INFO_MESSAGE("Archive was built with Diligent Core git hash '", m_DebugInfo.GitHash, "' but is used with '", DILIGENT_CORE_COMMIT_HASH, "'.");
