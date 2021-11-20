@@ -85,8 +85,8 @@ public:
 
 
     /// \param pRefCounters - Reference counters object that controls the lifetime of this device object archive.
-    /// \param pArchive     - AZ TODO
-    /// \param DevType      - AZ TODO
+    /// \param pArchive     - Source data that this archive will be created from.
+    /// \param DevType      - Device type.
     DeviceObjectArchiveBase(IReferenceCounters* pRefCounters,
                             IArchive*           pArchive,
                             DeviceType          DevType);
@@ -101,8 +101,8 @@ protected:
     friend class ArchiverImpl;
 
     // Archive header contains offsets for blocks.
-    // Any block can be added or removed without patching all offsets in archive,
-    // you need to patch only base offsets.
+    // Any block can be added or removed without patching all offsets in the archive,
+    // you need to patch only the base offsets.
     enum class BlockOffsetType : Uint32
     {
         // Device specific data
@@ -121,14 +121,14 @@ protected:
 
         Count
     };
-    using TBlockBaseOffsets = std::array<Uint32, static_cast<Uint32>(BlockOffsetType::Count)>;
+    using TBlockBaseOffsets = std::array<Uint32, static_cast<size_t>(BlockOffsetType::Count)>;
 
     struct ArchiveHeader
     {
-        Uint32            MagicNumber;
-        Uint32            Version;
-        TBlockBaseOffsets BlockBaseOffsets;
-        Uint32            NumChunks;
+        Uint32            MagicNumber      = 0;
+        Uint32            Version          = 0;
+        TBlockBaseOffsets BlockBaseOffsets = {};
+        Uint32            NumChunks        = 0;
         //ChunkHeader     Chunks  [NumChunks]
     };
     static_assert(sizeof(ArchiveHeader) == 32, "Archive header size must be 32 bytes");
@@ -149,9 +149,9 @@ protected:
 
     struct ChunkHeader
     {
-        ChunkType Type;
-        Uint32    Size;
-        Uint32    Offset; // offset to NamedResourceArrayHeader
+        ChunkType Type   = ChunkType::Count;
+        Uint32    Size   = 0;
+        Uint32    Offset = 0; // offset to NamedResourceArrayHeader
     };
 
     struct NamedResourceArrayHeader
@@ -165,22 +165,22 @@ protected:
 
     struct BaseDataHeader
     {
-        using Uint32Array = std::array<Uint32, static_cast<Uint32>(DeviceType::Count)>;
+        using Uint32Array = std::array<Uint32, static_cast<size_t>(DeviceType::Count)>;
 
         static constexpr Uint32 InvalidOffset() { return ~0u; }
 
         ChunkType   Type;
-        Uint32Array m_DeviceSpecificDataSize;
-        Uint32Array m_DeviceSpecificDataOffset;
+        Uint32Array DeviceSpecificDataSize;
+        Uint32Array DeviceSpecificDataOffset;
 
-        Uint32 GetSize(DeviceType DevType) const { return m_DeviceSpecificDataSize[static_cast<Uint32>(DevType)]; }
-        Uint32 GetOffset(DeviceType DevType) const { return m_DeviceSpecificDataOffset[static_cast<Uint32>(DevType)]; }
+        Uint32 GetSize(DeviceType DevType) const { return DeviceSpecificDataSize[static_cast<size_t>(DevType)]; }
+        Uint32 GetOffset(DeviceType DevType) const { return DeviceSpecificDataOffset[static_cast<size_t>(DevType)]; }
         Uint32 GetEndOffset(DeviceType DevType) const { return GetOffset(DevType) + GetSize(DevType); }
 
-        void InitOffsets() { m_DeviceSpecificDataOffset.fill(InvalidOffset()); }
+        void InitOffsets() { DeviceSpecificDataOffset.fill(InvalidOffset()); }
 
-        void SetSize(DeviceType DevType, Uint32 Size) { m_DeviceSpecificDataSize[static_cast<Uint32>(DevType)] = Size; }
-        void SetOffset(DeviceType DevType, Uint32 Offset) { m_DeviceSpecificDataOffset[static_cast<Uint32>(DevType)] = Offset; }
+        void SetSize(DeviceType DevType, Uint32 Size) { DeviceSpecificDataSize[static_cast<size_t>(DevType)] = Size; }
+        void SetOffset(DeviceType DevType, Uint32 Offset) { DeviceSpecificDataOffset[static_cast<size_t>(DevType)] = Offset; }
     };
 
     struct PRSDataHeader : BaseDataHeader
