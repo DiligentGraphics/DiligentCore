@@ -92,11 +92,23 @@ DILIGENT_TYPED_ENUM(PSO_UNPACK_FLAGS, Uint32)
 /// Pipeline state unpack override flags
 DILIGENT_TYPED_ENUM(PSO_UNPACK_OVERRIDE_FLAGS, Uint32)
 {
-    PSO_UNPACK_OVERRIDE_FLAG_NONE = 0,
-    PSO_UNPACK_OVERRIDE_FLAG_NAME = 1u << 0,
-    PSO_UNPACK_OVERRIDE_FLAG_RASTERIZER = 1u << 1,
-    PSO_UNPACK_OVERRIDE_FLAG_BLEND_STATE = 1u << 1,
-    // AZ TODO: flags
+    PSO_UNPACK_OVERRIDE_FLAG_NONE                   = 0,
+    PSO_UNPACK_OVERRIDE_FLAG_NAME                   = 1u << 0,
+
+    PSO_UNPACK_OVERRIDE_FLAG_RASTERIZER             = 1u << 1,  ///< GraphicsPipelineDesc::RasterizerDesc or TilePipelineDesc::SampleCount
+    PSO_UNPACK_OVERRIDE_FLAG_BLEND_STATE            = 1u << 2,  ///< GraphicsPipelineDesc::BlendDesc
+    PSO_UNPACK_OVERRIDE_FLAG_SAMPLE_MASK            = 1u << 3,  ///< GraphicsPipelineDesc::SampleMask
+    PSO_UNPACK_OVERRIDE_FLAG_DEPTH_STENCIL_DESC     = 1u << 4,  ///< GraphicsPipelineDesc::DepthStencilDesc
+    PSO_UNPACK_OVERRIDE_FLAG_INPUT_LAYOUT           = 1u << 5,  ///< GraphicsPipelineDesc::InputLayout
+    PSO_UNPACK_OVERRIDE_FLAG_PRIMITIVE_TOPOLOGY     = 1u << 6,  ///< GraphicsPipelineDesc::PrimitiveTopology
+    PSO_UNPACK_OVERRIDE_FLAG_NUM_VIEWPORTS          = 1u << 7,  ///< GraphicsPipelineDesc::NumViewports
+    PSO_UNPACK_OVERRIDE_FLAG_RENDER_TARGETS         = 1u << 8,  ///< GraphicsPipelineDesc::NumRenderTargets & RTVFormats or TilePipelineDesc::NumRenderTargets & RTVFormats
+    PSO_UNPACK_OVERRIDE_FLAG_RENDER_PASS            = 1u << 9,  ///< GraphicsPipelineDesc::pRenderPass & SubpassIndex
+    PSO_UNPACK_OVERRIDE_FLAG_SHADING_RATE           = 1u << 10, ///< GraphicsPipelineDesc::ShadingRateFlags
+    PSO_UNPACK_OVERRIDE_FLAG_DEPTH_STENCIL_TARGET   = 1u << 11, ///< GraphicsPipelineDesc::DSVFormat
+    PSO_UNPACK_OVERRIDE_FLAG_SAMPLE_DESC            = 1u << 12, ///< GraphicsPipelineDesc::SmplDesc
+    
+    PSO_UNPACK_OVERRIDE_FLAG_LAST = PSO_UNPACK_OVERRIDE_FLAG_SAMPLE_DESC
 };
 
 /// Pipeline state unpack parameters
@@ -146,6 +158,30 @@ struct PipelineStateUnpackInfo
 typedef struct PipelineStateUnpackInfo PipelineStateUnpackInfo;
 
 
+/// Render pass unpack override flags
+DILIGENT_TYPED_ENUM(RP_UNPACK_OVERRIDE_FLAGS, Uint32)
+{
+    RP_UNPACK_OVERRIDE_FLAG_NONE             = 0,
+    RP_UNPACK_OVERRIDE_FLAG_FORMAT           = 1u << 0,
+    RP_UNPACK_OVERRIDE_FLAG_SAMPLE_COUNT     = 1u << 1,
+    RP_UNPACK_OVERRIDE_FLAG_LOAD_OP          = 1u << 2,
+    RP_UNPACK_OVERRIDE_FLAG_STORE_OP         = 1u << 3,
+    RP_UNPACK_OVERRIDE_FLAG_STENCIL_LOAD_OP  = 1u << 4,
+    RP_UNPACK_OVERRIDE_FLAG_STENCIL_STORE_OP = 1u << 5,
+    RP_UNPACK_OVERRIDE_FLAG_INITIAL_STATE    = 1u << 6,
+    RP_UNPACK_OVERRIDE_FLAG_FINAL_STATE      = 1u << 7,
+    RP_UNPACK_OVERRIDE_FLAG_LAST             = RP_UNPACK_OVERRIDE_FLAG_FINAL_STATE
+};
+
+///
+struct OverrideRenderPassAttachmentDesc
+{
+    RenderPassAttachmentDesc AttachmentDesc;
+    Uint32                   AttachmentIndex DEFAULT_INITIALIZER(~0u);
+    RP_UNPACK_OVERRIDE_FLAGS OverrideFlags   DEFAULT_INITIALIZER(RP_UNPACK_OVERRIDE_FLAG_NONE);
+};
+typedef struct OverrideRenderPassAttachmentDesc OverrideRenderPassAttachmentDesc;
+
 /// Render pass unpack parameters
 struct RenderPassUnpackInfo
 {
@@ -155,6 +191,12 @@ struct RenderPassUnpackInfo
     
     /// Render pass name to unpack.
     const char* Name DEFAULT_INITIALIZER(nullptr);
+
+    /// The number of attachments used by the render pass.
+    Uint32                                   AttachmentCount DEFAULT_INITIALIZER(0);
+
+    /// Pointer to the array of subpass attachments, see Diligent::RenderPassAttachmentDesc.
+    const OverrideRenderPassAttachmentDesc*  pAttachments    DEFAULT_INITIALIZER(nullptr);
 };
 typedef struct RenderPassUnpackInfo RenderPassUnpackInfo;
 
