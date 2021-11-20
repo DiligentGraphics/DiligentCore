@@ -169,7 +169,6 @@ void SerializableShaderImpl::CopyShaderCreateInfo(const ShaderCreateInfo& Shader
 
     m_pRawMemory = decltype(m_pRawMemory){Allocator.ReleaseOwnership(), STDDeleterRawMem<void>{RawAllocator}};
 
-    m_CreateInfo.FilePath              = Allocator.CopyString(ShaderCI.FilePath);
     m_CreateInfo.EntryPoint            = Allocator.CopyString(ShaderCI.EntryPoint);
     m_CreateInfo.CombinedSamplerSuffix = Allocator.CopyString(ShaderCI.CombinedSamplerSuffix);
     m_CreateInfo.Desc.Name             = Allocator.CopyString(ShaderCI.Desc.Name);
@@ -187,10 +186,11 @@ void SerializableShaderImpl::CopyShaderCreateInfo(const ShaderCreateInfo& Shader
         else
         {
             const size_t Size    = sizeof(*SourceCode) * (SourceCodeLen + 1);
-            auto*        pSource = Allocator.Allocate<Char>(Size);
+            auto*        pSource = static_cast<Char*>(Allocator.Allocate(Size, alignof(Char)));
             std::memcpy(pSource, SourceCode, Size);
-            pSource[m_CreateInfo.SourceLength + 1] = '\0';
-            m_CreateInfo.Source                    = pSource;
+            pSource[SourceCodeLen]    = '\0';
+            m_CreateInfo.SourceLength = SourceCodeLen;
+            m_CreateInfo.Source       = pSource;
         }
         VERIFY_EXPR(m_CreateInfo.SourceLength == strlen(m_CreateInfo.Source));
     }

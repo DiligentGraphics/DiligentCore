@@ -790,26 +790,6 @@ TEST(ArchiveTest, GraphicsPipeline)
 }
 
 
-namespace HLSL
-{
-const std::string ComputeTest_CS = R"(
-
-RWTexture2D</*format=rgba8*/ float4> g_tex2DUAV : register(u0);
-
-[numthreads(16, 16, 1)]
-void main(uint3 DTid : SV_DispatchThreadID)
-{
-    uint2 ui2Dim;
-    g_tex2DUAV.GetDimensions(ui2Dim.x, ui2Dim.y);
-    if (DTid.x >= ui2Dim.x || DTid.y >= ui2Dim.y)
-        return;
-
-    g_tex2DUAV[DTid.xy] = float4(float2(DTid.xy % 256u) / 256.0, 0.0, 1.0);
-}
-)";
-} // namespace HLSL
-
-
 TEST(ArchiveTest, ComputePipeline)
 {
     auto* pEnv             = TestingEnvironment::GetInstance();
@@ -873,10 +853,14 @@ TEST(ArchiveTest, ComputePipeline)
         RefCntAutoPtr<IShader> pCS;
         RefCntAutoPtr<IShader> pSerializedCS;
         {
-            ShaderCI.Desc.ShaderType = SHADER_TYPE_COMPUTE;
-            ShaderCI.EntryPoint      = "main";
-            ShaderCI.Desc.Name       = "Compute shader test";
-            ShaderCI.Source          = HLSL::ComputeTest_CS.c_str();
+            RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
+            pDevice->GetEngineFactory()->CreateDefaultShaderSourceStreamFactory("shaders", &pShaderSourceFactory);
+
+            ShaderCI.Desc.ShaderType            = SHADER_TYPE_COMPUTE;
+            ShaderCI.EntryPoint                 = "main";
+            ShaderCI.Desc.Name                  = "Compute shader test";
+            ShaderCI.FilePath                   = "ArchiveTest.csh";
+            ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
 
             pDevice->CreateShader(ShaderCI, &pCS);
             ASSERT_NE(pCS, nullptr);
