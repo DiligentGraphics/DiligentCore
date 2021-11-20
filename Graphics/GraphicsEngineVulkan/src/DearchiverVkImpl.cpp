@@ -32,7 +32,7 @@
 namespace Diligent
 {
 
-DearchiverVkImpl::DearchiverVkImpl(IReferenceCounters* pRefCounters) :
+DearchiverVkImpl::DearchiverVkImpl(IReferenceCounters* pRefCounters) noexcept :
     TDearchiverBase{pRefCounters}
 {
 }
@@ -40,71 +40,22 @@ DearchiverVkImpl::DearchiverVkImpl(IReferenceCounters* pRefCounters) :
 void DearchiverVkImpl::CreateDeviceObjectArchive(IArchive*              pSource,
                                                  IDeviceObjectArchive** ppArchive)
 {
-    DEV_CHECK_ERR(ppArchive != nullptr, "ppArchive must not be null");
-    if (!ppArchive)
-        return;
-
-    *ppArchive = nullptr;
-    try
-    {
-        auto& RawMemAllocator = GetRawAllocator();
-        auto* pArchiveImpl(NEW_RC_OBJ(RawMemAllocator, "Device object archive instance", DeviceObjectArchiveVkImpl)(pSource));
-        pArchiveImpl->QueryInterface(IID_DeviceObjectArchive, reinterpret_cast<IObject**>(ppArchive));
-    }
-    catch (...)
-    {
-        LOG_ERROR("Failed to create the device object archive");
-    }
+    CreateDeviceObjectArchiveImpl<DeviceObjectArchiveVkImpl>(pSource, ppArchive);
 }
 
 void DearchiverVkImpl::UnpackPipelineState(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState** ppPSO)
 {
-    if (!VerifyUnpackPipelineState(DeArchiveInfo, ppPSO))
-        return;
-
-    auto* pArchiveVk = ClassPtrCast<DeviceObjectArchiveVkImpl>(DeArchiveInfo.pArchive);
-
-    *ppPSO = nullptr;
-    switch (DeArchiveInfo.PipelineType)
-    {
-        case PIPELINE_TYPE_GRAPHICS:
-        case PIPELINE_TYPE_MESH:
-            pArchiveVk->UnpackGraphicsPSO(DeArchiveInfo, *ppPSO);
-            break;
-        case PIPELINE_TYPE_COMPUTE:
-            pArchiveVk->UnpackComputePSO(DeArchiveInfo, *ppPSO);
-            break;
-        case PIPELINE_TYPE_RAY_TRACING:
-            pArchiveVk->UnpackRayTracingPSO(DeArchiveInfo, *ppPSO);
-            break;
-        case PIPELINE_TYPE_TILE:
-        case PIPELINE_TYPE_INVALID:
-        default:
-            LOG_ERROR_MESSAGE("Unsupported pipeline type");
-            return;
-    }
+    UnpackPipelineStateImpl<DeviceObjectArchiveVkImpl>(DeArchiveInfo, ppPSO);
 }
 
 void DearchiverVkImpl::UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature** ppSignature)
 {
-    if (!VerifyUnpackResourceSignature(DeArchiveInfo, ppSignature))
-        return;
-
-    auto* pArchiveVk = ClassPtrCast<DeviceObjectArchiveVkImpl>(DeArchiveInfo.pArchive);
-
-    *ppSignature = nullptr;
-    pArchiveVk->UnpackResourceSignature(DeArchiveInfo, *ppSignature);
+    UnpackResourceSignatureImpl<DeviceObjectArchiveVkImpl>(DeArchiveInfo, ppSignature);
 }
 
 void DearchiverVkImpl::UnpackRenderPass(const RenderPassUnpackInfo& DeArchiveInfo, IRenderPass** ppRP)
 {
-    if (!VerifyUnpackRenderPass(DeArchiveInfo, ppRP))
-        return;
-
-    auto* pArchiveVk = ClassPtrCast<DeviceObjectArchiveVkImpl>(DeArchiveInfo.pArchive);
-
-    *ppRP = nullptr;
-    pArchiveVk->UnpackRenderPass(DeArchiveInfo, *ppRP);
+    UnpackRenderPassImpl<DeviceObjectArchiveVkImpl>(DeArchiveInfo, ppRP);
 }
 
 } // namespace Diligent

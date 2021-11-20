@@ -40,7 +40,7 @@ class DearchiverGLImpl : public DearchiverBase
 public:
     using TDearchiverBase = DearchiverBase;
 
-    explicit DearchiverGLImpl(IReferenceCounters* pRefCounters);
+    explicit DearchiverGLImpl(IReferenceCounters* pRefCounters) noexcept;
 
     /// Implementation of IDearchiver::CreateDeviceObjectArchive() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE CreateDeviceObjectArchive(IArchive*              pSource,

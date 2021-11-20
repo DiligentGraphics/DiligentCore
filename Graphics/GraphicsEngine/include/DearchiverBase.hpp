@@ -31,6 +31,7 @@
 
 #include "Dearchiver.h"
 #include "ObjectBase.hpp"
+#include "EngineMemory.h"
 
 namespace Diligent
 {
@@ -44,7 +45,7 @@ public:
 
     using TObjectBase = ObjectBase<BaseInterface>;
 
-    explicit DearchiverBase(IReferenceCounters* pRefCounters) :
+    explicit DearchiverBase(IReferenceCounters* pRefCounters) noexcept :
         TObjectBase{pRefCounters}
     {
     }
@@ -52,9 +53,91 @@ public:
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_Dearchiver, TObjectBase)
 
 protected:
-    bool VerifyUnpackPipelineState(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState** ppPSO);
-    bool VerifyUnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature** ppSignature);
-    bool VerifyUnpackRenderPass(const RenderPassUnpackInfo& DeArchiveInfo, IRenderPass** ppRP);
+    template <typename DeviceObjectArchiveImplType>
+    void CreateDeviceObjectArchiveImpl(IArchive*              pSource,
+                                       IDeviceObjectArchive** ppArchive)
+    {
+        DEV_CHECK_ERR(ppArchive != nullptr, "ppArchive must not be null");
+        if (!ppArchive)
+            return;
+
+        *ppArchive = nullptr;
+        try
+        {
+            auto& RawMemAllocator = GetRawAllocator();
+            auto* pArchiveImpl    = NEW_RC_OBJ(RawMemAllocator, "Device object archive instance", DeviceObjectArchiveImplType)(pSource);
+            pArchiveImpl->QueryInterface(IID_DeviceObjectArchive, reinterpret_cast<IObject**>(ppArchive));
+        }
+        catch (...)
+        {
+            LOG_ERROR("Failed to create the device object archive");
+        }
+    }
+
+    template <typename DeviceObjectArchiveImplType>
+    void UnpackPipelineStateImpl(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState** ppPSO)
+    {
+        if (!VerifyPipelineStateUnpackInfo(DeArchiveInfo, ppPSO))
+            return;
+
+        *ppPSO = nullptr;
+
+        auto* pArchiveImpl = ClassPtrCast<DeviceObjectArchiveImplType>(DeArchiveInfo.pArchive);
+        switch (DeArchiveInfo.PipelineType)
+        {
+            case PIPELINE_TYPE_GRAPHICS:
+            case PIPELINE_TYPE_MESH:
+                pArchiveImpl->UnpackGraphicsPSO(DeArchiveInfo, *ppPSO);
+                break;
+
+            case PIPELINE_TYPE_COMPUTE:
+                pArchiveImpl->UnpackComputePSO(DeArchiveInfo, *ppPSO);
+                break;
+
+            case PIPELINE_TYPE_RAY_TRACING:
+                pArchiveImpl->UnpackRayTracingPSO(DeArchiveInfo, *ppPSO);
+                break;
+
+            case PIPELINE_TYPE_TILE:
+                pArchiveImpl->UnpackTilePSO(DeArchiveInfo, *ppPSO);
+                break;
+
+            case PIPELINE_TYPE_INVALID:
+            default:
+                LOG_ERROR_MESSAGE("Unsupported pipeline type");
+                return;
+        }
+    }
+
+    template <typename DeviceObjectArchiveImplType>
+    void UnpackResourceSignatureImpl(const ResourceSignatureUnpackInfo& DeArchiveInfo,
+                                     IPipelineResourceSignature**       ppSignature)
+    {
+        if (!VerifyResourceSignatureUnpackInfo(DeArchiveInfo, ppSignature))
+            return;
+
+        *ppSignature = nullptr;
+
+        auto* pArchiveImpl = ClassPtrCast<DeviceObjectArchiveImplType>(DeArchiveInfo.pArchive);
+        pArchiveImpl->UnpackResourceSignature(DeArchiveInfo, *ppSignature);
+    }
+
+    template <typename DeviceObjectArchiveImplType>
+    void UnpackRenderPassImpl(const RenderPassUnpackInfo& DeArchiveInfo, IRenderPass** ppRP)
+    {
+        if (!VerifyRenderPassUnpackInfo(DeArchiveInfo, ppRP))
+            return;
+
+        *ppRP = nullptr;
+
+        auto* pArchiveImpl = ClassPtrCast<DeviceObjectArchiveImplType>(DeArchiveInfo.pArchive);
+        pArchiveImpl->UnpackRenderPass(DeArchiveInfo, *ppRP);
+    }
+
+
+    bool VerifyPipelineStateUnpackInfo(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState** ppPSO);
+    bool VerifyResourceSignatureUnpackInfo(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature** ppSignature);
+    bool VerifyRenderPassUnpackInfo(const RenderPassUnpackInfo& DeArchiveInfo, IRenderPass** ppRP);
 };
 
 } // namespace Diligent

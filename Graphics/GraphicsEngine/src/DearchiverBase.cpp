@@ -31,52 +31,47 @@
 namespace Diligent
 {
 
-bool DearchiverBase::VerifyUnpackPipelineState(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState** ppPSO)
-{
-    DEV_CHECK_ERR(ppPSO != nullptr, "ppPSO must not be null");
-    DEV_CHECK_ERR(DeArchiveInfo.pArchive != nullptr, "pArchive must not be null");
-    DEV_CHECK_ERR(DeArchiveInfo.Name != nullptr, "Name must not be null");
-    DEV_CHECK_ERR(DeArchiveInfo.pDevice != nullptr, "pDevice must not be null");
-    DEV_CHECK_ERR(DeArchiveInfo.PipelineType <= PIPELINE_TYPE_LAST, "PipelineType must be valid");
+#define CHECK_UNPACK_PARAMATER(Expr, ...)   \
+    do                                      \
+    {                                       \
+        DEV_CHECK_ERR(Expr, ##__VA_ARGS__); \
+        if (!(Expr))                        \
+            return false;                   \
+    } while (false)
 
-    if (!ppPSO ||
-        !DeArchiveInfo.pArchive ||
-        !DeArchiveInfo.Name ||
-        !DeArchiveInfo.pDevice ||
-        DeArchiveInfo.PipelineType > PIPELINE_TYPE_LAST)
-        return false;
+bool DearchiverBase::VerifyPipelineStateUnpackInfo(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState** ppPSO)
+{
+#define CHECK_UNPACK_PSO_PARAM(Expr, ...) CHECK_UNPACK_PARAMATER("Invalid PSO unpack parameter: ", ##__VA_ARGS__)
+    CHECK_UNPACK_PSO_PARAM(ppPSO != nullptr, "ppPSO must not be null");
+    CHECK_UNPACK_PSO_PARAM(DeArchiveInfo.pArchive != nullptr, "pArchive must not be null");
+    CHECK_UNPACK_PSO_PARAM(DeArchiveInfo.Name != nullptr, "Name must not be null");
+    CHECK_UNPACK_PSO_PARAM(DeArchiveInfo.pDevice != nullptr, "pDevice must not be null");
+    CHECK_UNPACK_PSO_PARAM(DeArchiveInfo.PipelineType <= PIPELINE_TYPE_LAST, "PipelineType must be valid");
+#undef CHECK_UNPACK_PSO_PARAM
 
     return true;
 }
 
-bool DearchiverBase::VerifyUnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature** ppSignature)
+bool DearchiverBase::VerifyResourceSignatureUnpackInfo(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature** ppSignature)
 {
-    DEV_CHECK_ERR(ppSignature != nullptr, "ppSignature must not be null");
-    DEV_CHECK_ERR(DeArchiveInfo.pArchive != nullptr, "pArchive must not be null");
-    DEV_CHECK_ERR(DeArchiveInfo.Name != nullptr, "Name must not be null");
-    DEV_CHECK_ERR(DeArchiveInfo.pDevice != nullptr, "pDevice must not be null");
-
-    if (!ppSignature ||
-        !DeArchiveInfo.pArchive ||
-        !DeArchiveInfo.Name ||
-        !DeArchiveInfo.pDevice)
-        return false;
+#define CHECK_UNPACK_SIGN_PARAM(Expr, ...) CHECK_UNPACK_PARAMATER("Invalid signature unpack parameter: ", ##__VA_ARGS__)
+    CHECK_UNPACK_SIGN_PARAM(ppSignature != nullptr, "ppSignature must not be null");
+    CHECK_UNPACK_SIGN_PARAM(DeArchiveInfo.pArchive != nullptr, "pArchive must not be null");
+    CHECK_UNPACK_SIGN_PARAM(DeArchiveInfo.Name != nullptr, "Name must not be null");
+    CHECK_UNPACK_SIGN_PARAM(DeArchiveInfo.pDevice != nullptr, "pDevice must not be null");
+#undef CHECK_UNPACK_SIGN_PARAM
 
     return true;
 }
 
-bool DearchiverBase::VerifyUnpackRenderPass(const RenderPassUnpackInfo& DeArchiveInfo, IRenderPass** ppRP)
+bool DearchiverBase::VerifyRenderPassUnpackInfo(const RenderPassUnpackInfo& DeArchiveInfo, IRenderPass** ppRP)
 {
-    DEV_CHECK_ERR(ppRP != nullptr, "ppRP must not be null");
-    DEV_CHECK_ERR(DeArchiveInfo.pArchive != nullptr, "pArchive must not be null");
-    DEV_CHECK_ERR(DeArchiveInfo.Name != nullptr, "Name must not be null");
-    DEV_CHECK_ERR(DeArchiveInfo.pDevice != nullptr, "pDevice must not be null");
-
-    if (!ppRP ||
-        !DeArchiveInfo.pArchive ||
-        !DeArchiveInfo.Name ||
-        !DeArchiveInfo.pDevice)
-        return false;
+#define CHECK_UNPACK_RENDER_PASS_PARAM(Expr, ...) CHECK_UNPACK_PARAMATER("Invalid signature unpack parameter: ", ##__VA_ARGS__)
+    CHECK_UNPACK_RENDER_PASS_PARAM(ppRP != nullptr, "ppRP must not be null");
+    CHECK_UNPACK_RENDER_PASS_PARAM(DeArchiveInfo.pArchive != nullptr, "pArchive must not be null");
+    CHECK_UNPACK_RENDER_PASS_PARAM(DeArchiveInfo.Name != nullptr, "Name must not be null");
+    CHECK_UNPACK_RENDER_PASS_PARAM(DeArchiveInfo.pDevice != nullptr, "pDevice must not be null");
+#undef CHECK_UNPACK_RENDER_PASS_PARAM
 
     return true;
 }
