@@ -36,6 +36,7 @@
 #else
 #    include <cstdint>
 #    include <string>
+#    include <cstring>
 #endif
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)

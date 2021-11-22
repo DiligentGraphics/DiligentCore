@@ -1790,6 +1790,19 @@ struct DeviceFeatures
         static_assert(sizeof(*this) == 39, "Did you add a new feature to DeviceFeatures? Please handle its status above.");
 #   endif
     }
+
+
+    /// Comparison operator tests if two structures are equivalent
+    
+    /// \param [in] RHS - reference to the structure to perform comparison with
+    /// \return
+    /// - True if all members of the two structures are equal.
+    /// - False otherwise.
+    bool operator == (const DeviceFeatures& RHS) const 
+    {
+        return memcmp(this, &RHS, sizeof(DeviceFeatures)) == 0;        
+    }
+
 #endif
 };
 typedef struct DeviceFeatures DeviceFeatures;
@@ -1964,6 +1977,31 @@ struct TextureProperties
 
     /// Indicates if device supports 2D views from 3D texture.
     Bool TextureView2DOn3DSupported DEFAULT_INITIALIZER(False);
+
+
+#if DILIGENT_CPP_INTERFACE
+    /// Comparison operator tests if two structures are equivalent
+
+    /// \param [in] RHS - reference to the structure to perform comparison with
+    /// \return
+    /// - True if all members of the two structures are equal.
+    /// - False otherwise.
+    constexpr bool operator==(const TextureProperties& RHS) const
+    {
+        return MaxTexture1DDimension      == RHS.MaxTexture1DDimension     &&
+               MaxTexture1DArraySlices    == RHS.MaxTexture1DArraySlices   &&
+               MaxTexture2DDimension      == RHS.MaxTexture2DDimension     &&
+               MaxTexture2DArraySlices    == RHS.MaxTexture2DArraySlices   &&
+               MaxTexture3DDimension      == RHS.MaxTexture3DDimension     &&
+               MaxTextureCubeDimension    == RHS.MaxTextureCubeDimension   &&
+               Texture2DMSSupported       == RHS.Texture2DMSSupported      &&
+               Texture2DMSArraySupported  == RHS.Texture2DMSArraySupported &&
+               TextureViewSupported       == RHS.TextureViewSupported      &&
+               CubemapArraysSupported     == RHS.CubemapArraysSupported    &&
+               TextureView2DOn3DSupported == RHS.TextureView2DOn3DSupported;
+    }
+#endif
+
 };
 typedef struct TextureProperties TextureProperties;
 
@@ -1979,6 +2017,22 @@ struct SamplerProperties
 
     /// Indicates if device supports MIP load bias
     Bool LODBiasSupported              DEFAULT_INITIALIZER(False);
+
+#if DILIGENT_CPP_INTERFACE
+    /// Comparison operator tests if two structures are equivalent
+
+    /// \param [in] RHS - reference to the structure to perform comparison with
+    /// \return
+    /// - True if all members of the two structures are equal.
+    /// - False otherwise.
+    constexpr bool operator==(const SamplerProperties& RHS) const
+    {
+        return BorderSamplingModeSupported   == RHS.BorderSamplingModeSupported   &&
+               AnisotropicFilteringSupported == RHS.AnisotropicFilteringSupported && 
+               LODBiasSupported              == RHS.LODBiasSupported;
+    }
+#endif
+
 };
 typedef struct SamplerProperties SamplerProperties;
 
@@ -2000,6 +2054,23 @@ struct WaveOpProperties
 
     /// Indicates which groups of wave operations are supported by this device.
     WAVE_FEATURE Features        DEFAULT_INITIALIZER(WAVE_FEATURE_UNKNOWN);
+
+#if DILIGENT_CPP_INTERFACE
+    /// Comparison operator tests if two structures are equivalent
+
+    /// \param [in] RHS - reference to the structure to perform comparison with
+    /// \return
+    /// - True if all members of the two structures are equal.
+    /// - False otherwise.
+    constexpr bool operator==(const WaveOpProperties& RHS) const 
+    {
+        return MinSize         == RHS.MinSize         &&
+               MaxSize         == RHS.MaxSize         && 
+               SupportedStages == RHS.SupportedStages &&
+               Features        == RHS.Features;
+    }
+#endif
+
 };
 typedef struct WaveOpProperties WaveOpProperties;
 
@@ -2018,6 +2089,21 @@ struct BufferProperties
     /// the Offset parameter passed to IShaderResourceVariable::SetBufferOffset() method used to
     /// set the offset of a structured buffer, must be an integer multiple of this limit.
     Uint32 StructuredBufferOffsetAlignment DEFAULT_INITIALIZER(0);
+
+#if DILIGENT_CPP_INTERFACE
+    /// Comparison operator tests if two structures are equivalent
+
+    /// \param [in] RHS - reference to the structure to perform comparison with
+    /// \return
+    /// - True if all members of the two structures are equal.
+    /// - False otherwise.
+    constexpr bool operator==(const BufferProperties& RHS) const
+    {
+        return ConstantBufferOffsetAlignment   == RHS.ConstantBufferOffsetAlignment &&
+               StructuredBufferOffsetAlignment == RHS.StructuredBufferOffsetAlignment;         
+    }
+#endif
+
 };
 typedef struct BufferProperties BufferProperties;
 
@@ -2085,6 +2171,33 @@ struct RayTracingProperties
 
     /// Ray tracing capability flags, see Diligent::RAY_TRACING_CAP_FLAGS.
     RAY_TRACING_CAP_FLAGS CapFlags  DEFAULT_INITIALIZER(RAY_TRACING_CAP_FLAG_NONE);
+
+#if DILIGENT_CPP_INTERFACE
+    /// Comparison operator tests if two structures are equivalent
+
+    /// \param [in] RHS - reference to the structure to perform comparison with
+    /// \return
+    /// - True if all members of the two structures are equal.
+    /// - False otherwise.
+    constexpr bool operator==(const RayTracingProperties& RHS) const 
+    {
+        return MaxRecursionDepth        == RHS.MaxRecursionDepth        &&
+               ShaderGroupHandleSize    == RHS.ShaderGroupHandleSize    &&
+               MaxShaderRecordStride    == RHS.MaxShaderRecordStride    &&
+               ShaderGroupBaseAlignment == RHS.ShaderGroupBaseAlignment &&
+               MaxRayGenThreads         == RHS.MaxRayGenThreads         &&
+               MaxInstancesPerTLAS      == RHS.MaxInstancesPerTLAS      &&
+               MaxPrimitivesPerBLAS     == RHS.MaxPrimitivesPerBLAS     &&
+               MaxGeometriesPerBLAS     == RHS.MaxGeometriesPerBLAS     &&
+               VertexBufferAlignment    == RHS.VertexBufferAlignment    &&
+               IndexBufferAlignment     == RHS.IndexBufferAlignment     &&
+               TransformBufferAlignment == RHS.TransformBufferAlignment &&
+               BoxBufferAlignment       == RHS.BoxBufferAlignment       &&
+               ScratchBufferAlignment   == RHS.ScratchBufferAlignment   &&
+               InstanceBufferAlignment  == RHS.InstanceBufferAlignment  &&
+               CapFlags                 == RHS.CapFlags;         
+    }
+#endif
 };
 typedef struct RayTracingProperties RayTracingProperties;
 
@@ -2094,6 +2207,19 @@ struct MeshShaderProperties
 {
     /// The maximum number of mesh shader tasks per draw command.
     Uint32 MaxTaskCount DEFAULT_INITIALIZER(0);
+
+#if DILIGENT_CPP_INTERFACE
+    /// Comparison operator tests if two structures are equivalent
+
+    /// \param [in] RHS - reference to the structure to perform comparison with
+    /// \return
+    /// - True if all members of the two structures are equal.
+    /// - False otherwise.
+    constexpr bool operator==(const MeshShaderProperties& RHS) const
+    {
+        return MaxTaskCount == RHS.MaxTaskCount;
+    }
+#endif
 };
 typedef struct MeshShaderProperties MeshShaderProperties;
 
@@ -2123,6 +2249,28 @@ struct ComputeShaderProperties
     /// The maximum number of thread groups that can be dispatched
     /// in Z dimension.
     Uint32 MaxThreadGroupCountZ       DEFAULT_INITIALIZER(0);
+
+#if DILIGENT_CPP_INTERFACE
+    /// Comparison operator tests if two structures are equivalent
+
+    /// \param [in] RHS - reference to the structure to perform comparison with
+    /// \return
+    /// - True if all members of the two structures are equal.
+    /// - False otherwise.
+    constexpr bool operator == (const ComputeShaderProperties& RHS) const 
+    {
+        return SharedMemorySize          == RHS.SharedMemorySize          &&
+               MaxThreadGroupInvocations == RHS.MaxThreadGroupInvocations &&
+               MaxThreadGroupSizeX       == RHS.MaxThreadGroupSizeX       &&
+               MaxThreadGroupSizeY       == RHS.MaxThreadGroupSizeY       &&
+               MaxThreadGroupSizeZ       == RHS.MaxThreadGroupSizeZ       &&
+               MaxThreadGroupCountX      == RHS.MaxThreadGroupCountX      &&
+               MaxThreadGroupCountY      == RHS.MaxThreadGroupCountY      &&
+               MaxThreadGroupCountZ      == RHS.MaxThreadGroupCountZ;
+    }
+
+#endif   
+
 };
 typedef struct ComputeShaderProperties ComputeShaderProperties;
 
@@ -2142,6 +2290,20 @@ struct NDCAttribs
         // d = z * ZtoDepthScale + ZtoDepthBias
         return -MinZ * ZtoDepthScale;
     }
+
+    /// Comparison operator tests if two structures are equivalent
+
+    /// \param [in] RHS - reference to the structure to perform comparison with
+    /// \return
+    /// - True if all members of the two structures are equal.
+    /// - False otherwise.
+    constexpr bool operator == (const NDCAttribs& RHS) const 
+    {
+        return MinZ          == RHS.MinZ          &&
+               ZtoDepthScale == RHS.ZtoDepthScale &&
+               YtoVScale     == RHS.YtoVScale;
+    }
+
 #endif
 };
 typedef struct NDCAttribs NDCAttribs;
@@ -2194,6 +2356,21 @@ struct RenderDeviceInfo
     {
         return NDC;
     }
+
+    /// Comparison operator tests if two structures are equivalent
+
+    /// \param [in] RHS - reference to the structure to perform comparison with
+    /// \return
+    /// - True if all members of the two structures are equal.
+    /// - False otherwise.
+    constexpr bool operator == (const RenderDeviceInfo& RHS) const 
+    {
+        return Type       == RHS.Type       &&
+               APIVersion == RHS.APIVersion &&
+               Features   == RHS.Features   &&
+               NDC        == RHS.NDC; 
+    }
+
 #endif
 };
 typedef struct RenderDeviceInfo RenderDeviceInfo;
@@ -2307,6 +2484,25 @@ struct AdapterMemoryInfo
     /// Indicates if device supports color and depth attachments in on-chip memory.
     /// If supported, it will be combination of the following flags: BIND_RENDER_TARGET, BIND_DEPTH_STENCIL, BIND_INPUT_ATTACHMENT.
     BIND_FLAGS MemorylessTextureBindFlags DEFAULT_INITIALIZER(BIND_NONE);
+
+#if DILIGENT_CPP_INTERFACE
+    /// Comparison operator tests if two structures are equivalent
+
+    /// \param [in] RHS - reference to the structure to perform comparison with
+    /// \return
+    /// - True if all members of the two structures are equal.
+    /// - False otherwise.
+    constexpr bool operator==(const AdapterMemoryInfo& RHS) const
+    {
+        return LocalMemory                == RHS.LocalMemory            &&
+               HostVisibleMemory          == RHS.HostVisibleMemory      &&             
+               UnifiedMemory              == RHS.UnifiedMemory          &&
+               MaxMemoryAllocation        == RHS.MaxMemoryAllocation    &&
+               UnifiedMemoryCPUAccess     == RHS.UnifiedMemoryCPUAccess &&
+               MemorylessTextureBindFlags == RHS.MemorylessTextureBindFlags;
+    }
+#endif
+
 };
 typedef struct AdapterMemoryInfo AdapterMemoryInfo;
 
@@ -2455,6 +2651,17 @@ struct ShadingRateMode
     {
         return (SampleBits & SampleCount) != 0;
     }
+  
+    /// Comparison operator tests if two structures are equivalent
+
+    /// \param [in] RHS - reference to the structure to perform comparison with
+    /// \return
+    /// - True if all members of the two structures are equal.
+    /// - False otherwise.
+    constexpr bool operator==(const ShadingRateMode& RHS) const
+    {
+        return Rate == RHS.Rate && SampleBits == RHS.SampleBits;
+    }
 #endif
 };
 typedef struct ShadingRateMode ShadingRateMode;
@@ -2579,6 +2786,28 @@ struct ShadingRateProperties
 
     /// Maximum size of the texture array created with MISC_TEXTURE_FLAG_SUBSAMPLED flag.
     Uint32                 MaxSabsampledArraySlices DEFAULT_INITIALIZER(0);
+
+#if DILIGENT_CPP_INTERFACE
+    /// Comparison operator tests if two structures are equivalent
+
+    /// \param [in] RHS - reference to the structure to perform comparison with
+    /// \return
+    /// - True if all members of the two structures are equal.
+    /// - False otherwise.
+    bool operator==(const ShadingRateProperties& RHS) const
+    {
+        return NumShadingRates          == RHS.NumShadingRates          &&
+               CapFlags                 == RHS.CapFlags                 &&
+               Combiners                == RHS.Combiners                &&
+               Format                   == RHS.Format                   &&
+               ShadingRateTextureAccess == RHS.ShadingRateTextureAccess &&
+               BindFlags                == RHS.BindFlags                &&
+               MaxSabsampledArraySlices == RHS.MaxSabsampledArraySlices && 
+               memcmp(ShadingRates, RHS.ShadingRates, sizeof(ShadingRates)) == 0 &&
+               memcmp(MinTileSize,  RHS.MinTileSize,  sizeof(MinTileSize))  == 0 &&
+               memcmp(MaxTileSize,  RHS.MaxTileSize,  sizeof(MaxTileSize))  == 0;
+    }
+#endif
 };
 typedef struct ShadingRateProperties ShadingRateProperties;
 
@@ -2622,6 +2851,19 @@ struct DrawCommandProperties
     /// Maximum supported draw commands counter for IDeviceContext::DrawIndirect() and
     /// IDeviceContext::DrawIndexedIndirect().
     Uint32                 MaxDrawIndirectCount DEFAULT_INITIALIZER(0);
+
+#if DILIGENT_CPP_INTERFACE
+    /// Comparison operator tests if two structures are equivalent
+
+    /// \param [in] RHS - reference to the structure to perform comparison with
+    /// \return
+    /// - True if all members of the two structures are equal.
+    /// - False otherwise.
+    constexpr bool operator==(const DrawCommandProperties& RHS) const
+    {
+        return CapFlags == RHS.CapFlags && MaxIndexValue == RHS.MaxIndexValue && MaxDrawIndirectCount == RHS.MaxDrawIndirectCount;
+    }
+#endif
 };
 typedef struct DrawCommandProperties DrawCommandProperties;
 
@@ -2775,6 +3017,24 @@ struct SparseResourceProperties
     BIND_FLAGS BufferBindFlags  DEFAULT_INITIALIZER(BIND_NONE);
 
     Uint32 _Padding;
+
+#if DILIGENT_CPP_INTERFACE
+    /// Comparison operator tests if two structures are equivalent
+
+    /// \param [in] RHS - reference to the structure to perform comparison with
+    /// \return
+    /// - True if all members of the two structures are equal.
+    /// - False otherwise.
+    constexpr bool operator==(const SparseResourceProperties& RHS) const 
+    {
+        return AddressSpaceSize  == RHS.AddressSpaceSize  &&
+               ResourceSpaceSize == RHS.ResourceSpaceSize &&
+               CapFlags          == RHS.CapFlags          &&
+               StandardBlockSize == RHS.StandardBlockSize &&
+               BufferBindFlags   == RHS.BufferBindFlags;
+    }
+#endif
+
 };
 typedef struct SparseResourceProperties SparseResourceProperties;
 
@@ -2796,6 +3056,20 @@ struct CommandQueueInfo
     ///          Graphics and compute queues don't have alignment requirements (e.g
     ///          TextureCopyGranularity is always {1,1,1}).
     Uint32  TextureCopyGranularity[3] DEFAULT_INITIALIZER({});
+
+#if DILIGENT_CPP_INTERFACE
+    /// Comparison operator tests if two structures are equivalent
+
+    /// \param [in] RHS - reference to the structure to perform comparison with
+    /// \return
+    /// - True if all members of the two structures are equal.
+    /// - False otherwise.
+    bool operator==(const CommandQueueInfo& RHS) const 
+    {
+        return QueueType == RHS.QueueType && MaxDeviceContexts == RHS.MaxDeviceContexts && memcmp(TextureCopyGranularity, RHS.TextureCopyGranularity, sizeof(TextureCopyGranularity)) == 0;
+    }
+#endif
+
 };
 typedef struct CommandQueueInfo CommandQueueInfo;
 
@@ -2867,6 +3141,39 @@ struct GraphicsAdapterInfo
 
     /// The number of queues in Queues array.
     Uint32     NumQueues DEFAULT_INITIALIZER(0);
+
+#if DILIGENT_CPP_INTERFACE
+    /// Comparison operator tests if two structures are equivalent
+
+    /// \param [in] RHS - reference to the structure to perform comparison with
+    /// \return
+    /// - True if all members of the two structures are equal.
+    /// - False otherwise.
+    bool operator==(const GraphicsAdapterInfo& RHS) const
+    {
+        return Type            == RHS.Type            &&
+               Vendor          == RHS.Vendor          &&
+               VendorId        == RHS.VendorId        &&
+               DeviceId        == RHS.DeviceId        &&
+               NumOutputs      == RHS.NumOutputs      &&
+               Memory          == RHS.Memory          &&
+               RayTracing      == RHS.RayTracing      &&
+               WaveOp          == RHS.WaveOp          &&
+               Buffer          == RHS.Buffer          &&
+               Texture         == RHS.Texture         &&
+               Sampler         == RHS.Sampler         &&
+               MeshShader      == RHS.MeshShader      &&
+               ShadingRate     == RHS.ShadingRate     &&
+               ComputeShader   == RHS.ComputeShader   &&
+               DrawCommand     == RHS.DrawCommand     &&
+               SparseResources == RHS.SparseResources &&
+               Features        == RHS.Features        &&
+               NumQueues       == RHS.NumQueues       &&
+               memcmp(Description, RHS.Description, sizeof(Description)) == 0 &&
+               memcmp(Queues, RHS.Queues, sizeof(Queues))                == 0;
+    }
+#endif
+
 };
 typedef struct GraphicsAdapterInfo GraphicsAdapterInfo;
 

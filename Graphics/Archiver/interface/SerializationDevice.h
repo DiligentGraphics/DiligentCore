@@ -54,6 +54,20 @@ static const INTERFACE_ID IID_SerializationDevice =
 struct SerializationDeviceD3D11Info
 {
     Version FeatureLevel DEFAULT_INITIALIZER(Version(11, 0));
+
+#if DILIGENT_CPP_INTERFACE
+    /// Comparison operator tests if two structures are equivalent
+
+    /// \param [in] RHS - reference to the structure to perform comparison with
+    /// \return
+    /// - True if all members of the two structures are equal.
+    /// - False otherwise.
+    constexpr bool operator==(const SerializationDeviceD3D11Info& RHS) const
+    {
+        return FeatureLevel == RHS.FeatureLevel;
+    }
+#endif
+
 };
 typedef struct SerializationDeviceD3D11Info SerializationDeviceD3D11Info;
 
@@ -62,6 +76,26 @@ struct SerializationDeviceD3D12Info
 {
     Version     ShaderVersion  DEFAULT_INITIALIZER(Version(6, 0));
     const Char* DxCompilerPath DEFAULT_INITIALIZER(nullptr);
+
+#if DILIGENT_CPP_INTERFACE
+    /// Comparison operator tests if two structures are equivalent
+
+    /// \param [in] RHS - reference to the structure to perform comparison with
+    /// \return
+    /// - True if all members of the two structures are equal.
+    /// - False otherwise.
+    bool operator==(const SerializationDeviceD3D12Info& RHS) const
+    {
+        if ((DxCompilerPath == nullptr) != (RHS.DxCompilerPath == nullptr))
+            return false;
+
+        if (DxCompilerPath != nullptr && RHS.DxCompilerPath != nullptr && strcmp(DxCompilerPath, RHS.DxCompilerPath) != 0)
+            return false;
+
+        return ShaderVersion == RHS.ShaderVersion;
+    }
+#endif
+
 };
 typedef struct SerializationDeviceD3D12Info SerializationDeviceD3D12Info;
 
@@ -71,6 +105,27 @@ struct SerializationDeviceVkInfo
     Version     ApiVersion       DEFAULT_INITIALIZER(Version(1, 0));
     Bool        SupportedSpirv14 DEFAULT_INITIALIZER(False);
     const Char* DxCompilerPath   DEFAULT_INITIALIZER(nullptr);
+
+#if DILIGENT_CPP_INTERFACE
+    /// Comparison operator tests if two structures are equivalent
+
+    /// \param [in] RHS - reference to the structure to perform comparison with
+    /// \return
+    /// - True if all members of the two structures are equal.
+    /// - False otherwise.
+    bool operator==(const SerializationDeviceVkInfo& RHS) const 
+    {
+        if ((DxCompilerPath == nullptr) != (RHS.DxCompilerPath == nullptr))
+            return false;
+
+        if (DxCompilerPath != nullptr && RHS.DxCompilerPath != nullptr && strcmp(DxCompilerPath, RHS.DxCompilerPath) != 0)
+            return false;
+
+        return ApiVersion       == RHS.ApiVersion &&
+               SupportedSpirv14 == RHS.SupportedSpirv14;
+    }
+#endif
+
 };
 typedef struct SerializationDeviceVkInfo SerializationDeviceVkInfo;
 
@@ -90,6 +145,36 @@ struct SerializationDeviceMtlInfo
 
     Bool  CompileForMacOS DEFAULT_INITIALIZER(True);
     Bool  CompileForiOS   DEFAULT_INITIALIZER(True);
+
+#if DILIGENT_CPP_INTERFACE
+    /// Comparison operator tests if two structures are equivalent
+
+    /// \param [in] RHS - reference to the structure to perform comparison with
+    /// \return
+    /// - True if all members of the two structures are equal.
+    /// - False otherwise.
+    bool operator==(const SerializationDeviceMtlInfo& RHS) const 
+    {
+        auto CompareStr = [](const Char* StrLHS, const Char* StrRHS) -> bool {
+            if ((StrLHS == nullptr) != (StrRHS == nullptr))
+                return false;
+
+            if (StrLHS != nullptr && StrRHS != nullptr && strcmp(StrLHS, StrRHS) != 0)
+                return false;
+
+            return true;
+        };
+
+        return CompareStr(CompileOptionsMacOS, RHS.CompileOptionsMacOS) &&
+               CompareStr(CompileOptionsiOS, RHS.CompileOptionsiOS)     &&
+               CompareStr(LinkOptionsMacOS, RHS.LinkOptionsMacOS)       &&
+               CompareStr(LinkOptionsiOS, RHS.LinkOptionsiOS)           &&
+               CompareStr(MslPreprocessorCmd, RHS.MslPreprocessorCmd)   &&
+               CompileForMacOS == RHS.CompileForMacOS                   &&
+               CompileForiOS   == RHS.CompileForiOS;
+    }
+#endif
+
 };
 typedef struct SerializationDeviceMtlInfo SerializationDeviceMtlInfo;
 
