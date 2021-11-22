@@ -666,10 +666,10 @@ bool DeviceObjectArchiveBase::LoadShaders(Serializer<SerializerMode::Read>&    S
 
         if (m_DevType == DeviceType::OpenGL)
         {
-            ShaderCI.Source                     = static_cast<const Char*>(Ser2.GetCurrentPtr());
-            ShaderCI.SourceLength               = Ser2.GetRemainSize() - 1;
-            ShaderCI.UseCombinedTextureSamplers = true;
+            Ser2(ShaderCI.UseCombinedTextureSamplers, ShaderCI.CombinedSamplerSuffix);
 
+            ShaderCI.Source       = static_cast<const Char*>(Ser2.GetCurrentPtr());
+            ShaderCI.SourceLength = Ser2.GetRemainSize() - 1;
             VERIFY_EXPR(ShaderCI.SourceLength == strlen(ShaderCI.Source));
         }
         else
