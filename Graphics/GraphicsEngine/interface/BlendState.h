@@ -33,6 +33,7 @@
 /// Blend state description
 
 #include "../../../Primitives/interface/BasicTypes.h"
+#include "../../../Primitives/interface/FlagEnum.h"
 #include "Constants.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
@@ -169,27 +170,28 @@ DILIGENT_TYPED_ENUM(BLEND_OPERATION, Int8)
 
 /// These flags are used by RenderTargetBlendDesc structure to define
 /// writable components of the render target
-DILIGENT_TYPED_ENUM(COLOR_MASK, Int8)
+DILIGENT_TYPED_ENUM(COLOR_MASK, Uint8)
 {
     /// Do not store any components.
-    COLOR_MASK_NONE  = 0,
+    COLOR_MASK_NONE  = 0u,
 
     /// Allow data to be stored in the red component.
-    COLOR_MASK_RED   = 1,
+    COLOR_MASK_RED   = 1u << 0u,
 
     /// Allow data to be stored in the green component.
-    COLOR_MASK_GREEN = 2,
+    COLOR_MASK_GREEN = 1u << 1u,
 
     /// Allow data to be stored in the blue component.
-    COLOR_MASK_BLUE  = 4,
+    COLOR_MASK_BLUE  = 1u << 2u,
 
     /// Allow data to be stored in the alpha component.
-    COLOR_MASK_ALPHA = 8,
+    COLOR_MASK_ALPHA = 1u << 3u,
 
     /// Allow data to be stored in all components.
     COLOR_MASK_ALL   = (((COLOR_MASK_RED | COLOR_MASK_GREEN) | COLOR_MASK_BLUE) | COLOR_MASK_ALPHA)
 };
 
+DEFINE_FLAG_ENUM_OPERATORS(COLOR_MASK);
 
 /// Logic operation
 
@@ -315,7 +317,7 @@ struct RenderTargetBlendDesc
 
     /// Render target write mask.
     /// Default value: Diligent::COLOR_MASK_ALL.
-    Uint8           RenderTargetWriteMask DEFAULT_INITIALIZER(COLOR_MASK_ALL);
+    COLOR_MASK      RenderTargetWriteMask DEFAULT_INITIALIZER(COLOR_MASK_ALL);
 
 #if DILIGENT_CPP_INTERFACE
 
@@ -331,7 +333,7 @@ struct RenderTargetBlendDesc
                           BLEND_FACTOR    _DestBlendAlpha        = RenderTargetBlendDesc{}.DestBlendAlpha,
                           BLEND_OPERATION _BlendOpAlpha          = RenderTargetBlendDesc{}.BlendOpAlpha,
                           LOGIC_OPERATION _LogicOp               = RenderTargetBlendDesc{}.LogicOp,
-                          Uint8           _RenderTargetWriteMask = RenderTargetBlendDesc{}.RenderTargetWriteMask) :
+                          COLOR_MASK      _RenderTargetWriteMask = RenderTargetBlendDesc{}.RenderTargetWriteMask) :
         BlendEnable          {_BlendEnable          },
         LogicOperationEnable {_LogicOperationEnable },
         SrcBlend             {_SrcBlend             },
