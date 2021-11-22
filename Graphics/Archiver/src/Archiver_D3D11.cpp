@@ -25,7 +25,7 @@
  */
 
 #include "ArchiverImpl.hpp"
-#include "ArchiverImpl_Inc.hpp"
+#include "Archiver_Inc.hpp"
 
 #include "../../GraphicsEngineD3D11/include/pch.h"
 #include "RenderDeviceD3D11Impl.hpp"
@@ -170,5 +170,133 @@ template bool ArchiverImpl::PatchShadersD3D11<GraphicsPipelineStateCreateInfo>(G
 template bool ArchiverImpl::PatchShadersD3D11<ComputePipelineStateCreateInfo>(ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
 template bool ArchiverImpl::PatchShadersD3D11<TilePipelineStateCreateInfo>(TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
 template bool ArchiverImpl::PatchShadersD3D11<RayTracingPipelineStateCreateInfo>(RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
+
+
+struct SerializableShaderImpl::CompiledShaderD3D11 : ICompiledShader
+{
+    ShaderD3D11Impl ShaderD3D11;
+
+    CompiledShaderD3D11(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI, const ShaderD3D11Impl::CreateInfo& D3D11ShaderCI) :
+        ShaderD3D11{pRefCounters, nullptr, ShaderCI, D3D11ShaderCI, true}
+    {}
+};
+
+ShaderD3D11Impl* SerializableShaderImpl::GetShaderD3D11() const
+{
+    return m_pShaderD3D11 ? &reinterpret_cast<CompiledShaderD3D11*>(m_pShaderD3D11.get())->ShaderD3D11 : nullptr;
+}
+
+void SerializableShaderImpl::CreateShaderD3D11(IReferenceCounters* pRefCounters, ShaderCreateInfo& ShaderCI, String& CompilationLog)
+{
+    const ShaderD3D11Impl::CreateInfo D3D11ShaderCI{
+        m_pDevice->GetDeviceInfo(),
+        m_pDevice->GetAdapterInfo(),
+        static_cast<D3D_FEATURE_LEVEL>(m_pDevice->GetD3D11FeatureLevel()) //
+    };
+    CreateShader<CompiledShaderD3D11>(m_pShaderD3D11, CompilationLog, "Direct3D11", pRefCounters, ShaderCI, D3D11ShaderCI);
+}
+
+
+PipelineResourceSignatureD3D11Impl* SerializableResourceSignatureImpl::GetSignatureD3D11() const
+{
+    return m_pPRSD3D11 ? m_pPRSD3D11->GetPRS<PipelineResourceSignatureD3D11Impl>() : nullptr;
+}
+
+const SerializedMemory* SerializableResourceSignatureImpl::GetSerializedMemoryD3D11() const
+{
+    return m_pPRSD3D11 ? m_pPRSD3D11->GetMem() : nullptr;
+}
+
+void SerializableResourceSignatureImpl::CreatePRSD3D11(IReferenceCounters* pRefCounters, const PipelineResourceSignatureDesc& Desc, SHADER_TYPE ShaderStages)
+{
+    auto pPRSD3D11 = std::make_unique<TPRS<PipelineResourceSignatureD3D11Impl>>(pRefCounters, Desc, ShaderStages);
+
+    PipelineResourceSignatureSerializedDataD3D11 SerializedData;
+    pPRSD3D11->PRS.Serialize(SerializedData);
+    AddPRSDesc(pPRSD3D11->PRS.GetDesc(), SerializedData);
+    CopyPRSSerializedData<PSOSerializerD3D11>(SerializedData, pPRSD3D11->Mem);
+
+    m_pPRSD3D11.reset(pPRSD3D11.release());
+}
+
+
+void SerializationDeviceImpl::GetPipelineResourceBindingsD3D11(const PipelineResourceBindingAttribs& Info,
+                                                               std::vector<PipelineResourceBinding>& ResourceBindings)
+{
+    const auto            ShaderStages        = (Info.ShaderStages == SHADER_TYPE_UNKNOWN ? static_cast<SHADER_TYPE>(~0u) : Info.ShaderStages);
+    constexpr SHADER_TYPE SupportedStagesMask = (SHADER_TYPE_ALL_GRAPHICS | SHADER_TYPE_COMPUTE);
+
+    SignatureArray<PipelineResourceSignatureD3D11Impl> Signatures      = {};
+    Uint32                                             SignaturesCount = 0;
+    SortResourceSignatures(Info, Signatures, SignaturesCount);
+
+    D3D11ShaderResourceCounters BaseBindings = {};
+    // In Direct3D11, UAVs use the same register space as render targets
+    BaseBindings[D3D11_RESOURCE_RANGE_UAV][PSInd] = Info.NumRenderTargets;
+
+    for (Uint32 sign = 0; sign < SignaturesCount; ++sign)
+    {
+        const PipelineResourceSignatureD3D11Impl* const pSignature = Signatures[sign];
+        if (pSignature == nullptr)
+            continue;
+
+        for (Uint32 r = 0; r < pSignature->GetTotalResourceCount(); ++r)
+        {
+            const auto& ResDesc = pSignature->GetResourceDesc(r);
+            const auto& ResAttr = pSignature->GetResourceAttribs(r);
+            const auto  Range   = PipelineResourceSignatureD3D11Impl::ShaderResourceTypeToRange(ResDesc.ResourceType);
+
+            for (auto Stages = ShaderStages & SupportedStagesMask; Stages != 0;)
+            {
+                const auto ShaderStage = ExtractLSB(Stages);
+                const auto ShaderInd   = GetShaderTypeIndex(ShaderStage);
+
+                if ((ResDesc.ShaderStages & ShaderStage) == 0)
+                    continue;
+
+                VERIFY_EXPR(ResAttr.BindPoints.IsStageActive(ShaderInd));
+                const auto Binding = Uint32{BaseBindings[Range][ShaderInd]} + Uint32{ResAttr.BindPoints[ShaderInd]};
+
+                PipelineResourceBinding Dst{};
+                Dst.Name         = ResDesc.Name;
+                Dst.ResourceType = ResDesc.ResourceType;
+                Dst.Register     = Binding;
+                Dst.Space        = 0;
+                Dst.ArraySize    = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) == 0 ? ResDesc.ArraySize : RuntimeArray;
+                Dst.ShaderStages = ShaderStage;
+                ResourceBindings.push_back(Dst);
+            }
+        }
+
+        for (Uint32 samp = 0; samp < pSignature->GetImmutableSamplerCount(); ++samp)
+        {
+            const auto& ImtblSam = pSignature->GetImmutableSamplerDesc(samp);
+            const auto& SampAttr = pSignature->GetImmutableSamplerAttribs(samp);
+            const auto  Range    = D3D11_RESOURCE_RANGE_SAMPLER;
+
+            for (auto Stages = ShaderStages & SupportedStagesMask; Stages != 0;)
+            {
+                const auto ShaderStage = ExtractLSB(Stages);
+                const auto ShaderInd   = GetShaderTypeIndex(ShaderStage);
+
+                if ((ImtblSam.ShaderStages & ShaderStage) == 0)
+                    continue;
+
+                VERIFY_EXPR(SampAttr.BindPoints.IsStageActive(ShaderInd));
+                const auto Binding = Uint32{BaseBindings[Range][ShaderInd]} + Uint32{SampAttr.BindPoints[ShaderInd]};
+
+                PipelineResourceBinding Dst{};
+                Dst.Name         = ImtblSam.SamplerOrTextureName;
+                Dst.ResourceType = SHADER_RESOURCE_TYPE_SAMPLER;
+                Dst.Register     = Binding;
+                Dst.Space        = 0;
+                Dst.ArraySize    = SampAttr.ArraySize;
+                Dst.ShaderStages = ShaderStage;
+                ResourceBindings.push_back(Dst);
+            }
+        }
+        pSignature->ShiftBindings(BaseBindings);
+    }
+}
 
 } // namespace Diligent

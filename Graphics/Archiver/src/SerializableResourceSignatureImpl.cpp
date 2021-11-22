@@ -29,31 +29,6 @@
 #include "FixedLinearAllocator.hpp"
 #include "EngineMemory.h"
 
-#if D3D11_SUPPORTED
-#    include "../../GraphicsEngineD3D11/include/pch.h"
-#    include "RenderDeviceD3D11Impl.hpp"
-#    include "PipelineResourceSignatureD3D11Impl.hpp"
-#    include "DeviceObjectArchiveD3D11Impl.hpp"
-#endif
-#if D3D12_SUPPORTED
-#    include "../../GraphicsEngineD3D12/include/pch.h"
-#    include "RenderDeviceD3D12Impl.hpp"
-#    include "PipelineResourceSignatureD3D12Impl.hpp"
-#    include "DeviceObjectArchiveD3D12Impl.hpp"
-#endif
-#if GL_SUPPORTED || GLES_SUPPORTED
-#    include "../../GraphicsEngineOpenGL/include/pch.h"
-#    include "RenderDeviceGLImpl.hpp"
-#    include "PipelineResourceSignatureGLImpl.hpp"
-#    include "DeviceObjectArchiveGLImpl.hpp"
-#endif
-#if VULKAN_SUPPORTED
-#    include "VulkanUtilities/VulkanHeaders.h"
-#    include "RenderDeviceVkImpl.hpp"
-#    include "PipelineResourceSignatureVkImpl.hpp"
-#    include "DeviceObjectArchiveVkImpl.hpp"
-#endif
-
 namespace Diligent
 {
 namespace
@@ -110,37 +85,7 @@ void CopyPRSDesc(const PipelineResourceSignatureDesc&            SrcDesc,
     }
 }
 
-template <template <SerializerMode> class TSerializerImpl,
-          typename TSerializedData>
-void CopyPRSSerializedData(const TSerializedData& SrcSerialized,
-                           SerializedMemory&      SerializedPtr)
-{
-    Serializer<SerializerMode::Measure> MeasureSer;
-    TSerializerImpl<SerializerMode::Measure>::SerializePRS(MeasureSer, SrcSerialized, nullptr);
-
-    const size_t SerSize = MeasureSer.GetSize(nullptr);
-    void*        SerPtr  = ALLOCATE_RAW(GetRawAllocator(), "", SerSize);
-
-    Serializer<SerializerMode::Write> Ser{SerPtr, SerSize};
-    TSerializerImpl<SerializerMode::Write>::SerializePRS(Ser, SrcSerialized, nullptr);
-    VERIFY_EXPR(Ser.IsEnd());
-
-    SerializedPtr = SerializedMemory{SerPtr, SerSize};
-}
-
 } // namespace
-
-
-template <typename ImplType>
-struct SerializableResourceSignatureImpl::TPRS
-{
-    ImplType         PRS;
-    SerializedMemory Mem;
-
-    TPRS(IReferenceCounters* pRefCounters, const PipelineResourceSignatureDesc& SignatureDesc, SHADER_TYPE ShaderStages) :
-        PRS{pRefCounters, nullptr, SignatureDesc, ShaderStages, true}
-    {}
-};
 
 
 void SerializableResourceSignatureImpl::AddPRSDesc(const PipelineResourceSignatureDesc& Desc, const PipelineResourceSignatureSerializedData& Serialized)
@@ -180,67 +125,30 @@ SerializableResourceSignatureImpl::SerializableResourceSignatureImpl(IReferenceC
         {
 #if D3D11_SUPPORTED
             case RENDER_DEVICE_TYPE_D3D11:
-            {
-                m_pPRSD3D11.reset(new TPRS<PipelineResourceSignatureD3D11Impl>{pRefCounters, Desc, ShaderStages});
-                auto* pPRSD3D11 = &m_pPRSD3D11->PRS;
-
-                PipelineResourceSignatureSerializedDataD3D11 SerializedData;
-                pPRSD3D11->Serialize(SerializedData);
-                AddPRSDesc(pPRSD3D11->GetDesc(), SerializedData);
-                CopyPRSSerializedData<PSOSerializerD3D11>(SerializedData, m_pPRSD3D11->Mem);
+                CreatePRSD3D11(pRefCounters, Desc, ShaderStages);
                 break;
-            }
 #endif
-
 #if D3D12_SUPPORTED
             case RENDER_DEVICE_TYPE_D3D12:
-            {
-                m_pPRSD3D12.reset(new TPRS<PipelineResourceSignatureD3D12Impl>{pRefCounters, Desc, ShaderStages});
-                auto* pPRSD3D12 = &m_pPRSD3D12->PRS;
-
-                PipelineResourceSignatureSerializedDataD3D12 SerializedData;
-                pPRSD3D12->Serialize(SerializedData);
-                AddPRSDesc(pPRSD3D12->GetDesc(), SerializedData);
-                CopyPRSSerializedData<PSOSerializerD3D12>(SerializedData, m_pPRSD3D12->Mem);
+                CreatePRSD3D12(pRefCounters, Desc, ShaderStages);
                 break;
-            }
 #endif
-
 #if GL_SUPPORTED || GLES_SUPPORTED
             case RENDER_DEVICE_TYPE_GL:
             case RENDER_DEVICE_TYPE_GLES:
-            {
-                m_pPRSGL.reset(new TPRS<PipelineResourceSignatureGLImpl>{pRefCounters, Desc, ShaderStages});
-                auto* pPRSGL = &m_pPRSGL->PRS;
-
-                PipelineResourceSignatureSerializedDataGL SerializedData;
-                pPRSGL->Serialize(SerializedData);
-                AddPRSDesc(pPRSGL->GetDesc(), SerializedData);
-                CopyPRSSerializedData<PSOSerializerGL>(SerializedData, m_pPRSGL->Mem);
+                CreatePRSGL(pRefCounters, Desc, ShaderStages);
                 break;
-            }
 #endif
-
 #if VULKAN_SUPPORTED
             case RENDER_DEVICE_TYPE_VULKAN:
-            {
-                m_pPRSVk.reset(new TPRS<PipelineResourceSignatureVkImpl>{pRefCounters, Desc, ShaderStages});
-                auto* pPRSVk = &m_pPRSVk->PRS;
-
-                PipelineResourceSignatureSerializedDataVk SerializedData;
-                pPRSVk->Serialize(SerializedData);
-                AddPRSDesc(pPRSVk->GetDesc(), SerializedData);
-                CopyPRSSerializedData<PSOSerializerVk>(SerializedData, m_pPRSVk->Mem);
+                CreatePRSVk(pRefCounters, Desc, ShaderStages);
                 break;
-            }
 #endif
-
 #if METAL_SUPPORTED
             case RENDER_DEVICE_TYPE_METAL:
                 SerializePRSMtl(pRefCounters, Desc);
                 break;
 #endif
-
             case RENDER_DEVICE_TYPE_UNDEFINED:
             case RENDER_DEVICE_TYPE_COUNT:
             default:
@@ -256,6 +164,10 @@ SerializableResourceSignatureImpl::~SerializableResourceSignatureImpl()
 
 bool SerializableResourceSignatureImpl::IsCompatible(const SerializableResourceSignatureImpl& Rhs, RENDER_DEVICE_TYPE_FLAGS DeviceFlags) const
 {
+    auto ComparePRS = [](auto* Lhs, auto* Rhs) {
+        return reinterpret_cast<IPipelineResourceSignature*>(Lhs)->IsCompatibleWith(reinterpret_cast<IPipelineResourceSignature*>(Rhs));
+    };
+
     for (auto DeviceBits = DeviceFlags; DeviceBits != 0;)
     {
         const auto Type = static_cast<RENDER_DEVICE_TYPE>(PlatformMisc::GetLSB(ExtractLSB(DeviceBits)));
@@ -263,32 +175,32 @@ bool SerializableResourceSignatureImpl::IsCompatible(const SerializableResourceS
         {
 #if D3D11_SUPPORTED
             case RENDER_DEVICE_TYPE_D3D11:
-                if (!GetSignatureD3D11()->IsCompatibleWith(Rhs.GetSignatureD3D11()))
+                if (!ComparePRS(GetSignatureD3D11(), Rhs.GetSignatureD3D11()))
                     return false;
                 break;
 #endif
 #if D3D12_SUPPORTED
             case RENDER_DEVICE_TYPE_D3D12:
-                if (!GetSignatureD3D12()->IsCompatibleWith(Rhs.GetSignatureD3D12()))
+                if (!ComparePRS(GetSignatureD3D12(), Rhs.GetSignatureD3D12()))
                     return false;
                 break;
 #endif
 #if GL_SUPPORTED || GLES_SUPPORTED
             case RENDER_DEVICE_TYPE_GL:
             case RENDER_DEVICE_TYPE_GLES:
-                if (!GetSignatureGL()->IsCompatibleWith(Rhs.GetSignatureGL()))
+                if (!ComparePRS(GetSignatureGL(), Rhs.GetSignatureGL()))
                     return false;
                 break;
 #endif
 #if VULKAN_SUPPORTED
             case RENDER_DEVICE_TYPE_VULKAN:
-                if (!GetSignatureVk()->IsCompatibleWith(Rhs.GetSignatureVk()))
+                if (!ComparePRS(GetSignatureVk(), Rhs.GetSignatureVk()))
                     return false;
                 break;
 #endif
 #if METAL_SUPPORTED
             case RENDER_DEVICE_TYPE_METAL:
-                if (!reinterpret_cast<IPipelineResourceSignature*>(GetSignatureMtl())->IsCompatibleWith(reinterpret_cast<IPipelineResourceSignature*>(Rhs.GetSignatureMtl())))
+                if (!ComparePRS(GetSignatureMtl(), Rhs.GetSignatureMtl()))
                     return false;
                 break;
 #endif
@@ -368,53 +280,5 @@ size_t SerializableResourceSignatureImpl::CalcHash() const
 #endif
     return Hash;
 }
-
-#if D3D11_SUPPORTED
-PipelineResourceSignatureD3D11Impl* SerializableResourceSignatureImpl::GetSignatureD3D11() const
-{
-    return m_pPRSD3D11 ? &m_pPRSD3D11->PRS : nullptr;
-}
-
-const SerializedMemory* SerializableResourceSignatureImpl::GetSerializedMemoryD3D11() const
-{
-    return m_pPRSD3D11 ? &m_pPRSD3D11->Mem : nullptr;
-}
-#endif
-
-#if D3D12_SUPPORTED
-PipelineResourceSignatureD3D12Impl* SerializableResourceSignatureImpl::GetSignatureD3D12() const
-{
-    return m_pPRSD3D12 ? &m_pPRSD3D12->PRS : nullptr;
-}
-
-const SerializedMemory* SerializableResourceSignatureImpl::GetSerializedMemoryD3D12() const
-{
-    return m_pPRSD3D12 ? &m_pPRSD3D12->Mem : nullptr;
-}
-#endif
-
-#if GL_SUPPORTED || GLES_SUPPORTED
-PipelineResourceSignatureGLImpl* SerializableResourceSignatureImpl::GetSignatureGL() const
-{
-    return m_pPRSGL ? &m_pPRSGL->PRS : nullptr;
-}
-
-const SerializedMemory* SerializableResourceSignatureImpl::GetSerializedMemoryGL() const
-{
-    return m_pPRSGL ? &m_pPRSGL->Mem : nullptr;
-}
-#endif
-
-#if VULKAN_SUPPORTED
-PipelineResourceSignatureVkImpl* SerializableResourceSignatureImpl::GetSignatureVk() const
-{
-    return m_pPRSVk ? &m_pPRSVk->PRS : nullptr;
-}
-
-const SerializedMemory* SerializableResourceSignatureImpl::GetSerializedMemoryVk() const
-{
-    return m_pPRSVk ? &m_pPRSVk->Mem : nullptr;
-}
-#endif
 
 } // namespace Diligent
