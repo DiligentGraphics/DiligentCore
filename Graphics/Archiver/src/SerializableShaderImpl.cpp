@@ -31,109 +31,8 @@
 #include "PlatformMisc.hpp"
 #include "BasicMath.hpp"
 
-#if D3D11_SUPPORTED
-#    include "../../GraphicsEngineD3D11/include/pch.h"
-#    include "RenderDeviceD3D11Impl.hpp"
-#    include "ShaderD3D11Impl.hpp"
-#endif
-#if D3D12_SUPPORTED
-#    include "../../GraphicsEngineD3D12/include/pch.h"
-#    include "RenderDeviceD3D12Impl.hpp"
-#    include "ShaderD3D12Impl.hpp"
-#endif
-#if GL_SUPPORTED || GLES_SUPPORTED
-#    include "../../GraphicsEngineOpenGL/include/pch.h"
-#    include "RenderDeviceGLImpl.hpp"
-#    include "ShaderGLImpl.hpp"
-#endif
-#if VULKAN_SUPPORTED
-#    include "VulkanUtilities/VulkanHeaders.h"
-#    include "RenderDeviceVkImpl.hpp"
-#    include "ShaderVkImpl.hpp"
-#endif
-
 namespace Diligent
 {
-namespace
-{
-
-template <typename ShaderType, typename... ArgTypes>
-void CreateShader(std::unique_ptr<ShaderType>& pShader, String& CompilationLog, const char* DeviceTypeName, IReferenceCounters* pRefCounters, ShaderCreateInfo& ShaderCI, const ArgTypes&... Args)
-{
-    // Mem leak when used RefCntAutoPtr
-    IDataBlob* pLog           = nullptr;
-    ShaderCI.ppCompilerOutput = &pLog;
-    try
-    {
-        pShader = std::make_unique<ShaderType>(pRefCounters, ShaderCI, Args...);
-    }
-    catch (...)
-    {
-        if (pLog && pLog->GetConstDataPtr())
-        {
-            CompilationLog += "Failed to compile ";
-            CompilationLog += DeviceTypeName;
-            CompilationLog += " shader:\n";
-            CompilationLog += static_cast<const char*>(pLog->GetConstDataPtr());
-        }
-    }
-
-    if (pLog)
-        pLog->Release();
-}
-
-} // namespace
-
-#if D3D11_SUPPORTED
-struct SerializableShaderImpl::CompiledShaderD3D11
-{
-    ShaderD3D11Impl ShaderD3D11;
-
-    CompiledShaderD3D11(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI, const ShaderD3D11Impl::CreateInfo& D3D11ShaderCI) :
-        ShaderD3D11{pRefCounters, nullptr, ShaderCI, D3D11ShaderCI, true}
-    {}
-};
-
-ShaderD3D11Impl* SerializableShaderImpl::GetShaderD3D11() const
-{
-    return m_pShaderD3D11 ? &m_pShaderD3D11->ShaderD3D11 : nullptr;
-}
-#endif // D3D11_SUPPORTED
-
-
-#if D3D12_SUPPORTED
-struct SerializableShaderImpl::CompiledShaderD3D12
-{
-    ShaderD3D12Impl ShaderD3D12;
-
-    CompiledShaderD3D12(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI, const ShaderD3D12Impl::CreateInfo& D3D12ShaderCI) :
-        ShaderD3D12{pRefCounters, nullptr, ShaderCI, D3D12ShaderCI, true}
-    {}
-};
-
-const ShaderD3D12Impl* SerializableShaderImpl::GetShaderD3D12() const
-{
-    return m_pShaderD3D12 ? &m_pShaderD3D12->ShaderD3D12 : nullptr;
-}
-#endif // D3D12_SUPPORTED
-
-
-#if VULKAN_SUPPORTED
-struct SerializableShaderImpl::CompiledShaderVk
-{
-    ShaderVkImpl ShaderVk;
-
-    CompiledShaderVk(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI, const ShaderVkImpl::CreateInfo& VkShaderCI) :
-        ShaderVk{pRefCounters, nullptr, ShaderCI, VkShaderCI, true}
-    {}
-};
-
-const ShaderVkImpl* SerializableShaderImpl::GetShaderVk() const
-{
-    return m_pShaderVk ? &m_pShaderVk->ShaderVk : nullptr;
-}
-#endif // VULKAN_SUPPORTED
-
 
 SerializableShaderImpl::SerializableShaderImpl(IReferenceCounters*      pRefCounters,
                                                SerializationDeviceImpl* pDevice,
@@ -162,60 +61,29 @@ SerializableShaderImpl::SerializableShaderImpl(IReferenceCounters*      pRefCoun
         {
 #if D3D11_SUPPORTED
             case RENDER_DEVICE_TYPE_D3D11:
-            {
-                const ShaderD3D11Impl::CreateInfo D3D11ShaderCI{
-                    m_pDevice->GetDeviceInfo(),
-                    m_pDevice->GetAdapterInfo(),
-                    static_cast<D3D_FEATURE_LEVEL>(m_pDevice->GetD3D11FeatureLevel()) //
-                };
-                CreateShader(m_pShaderD3D11, CompilationLog, "Direct3D11", pRefCounters, ShaderCI, D3D11ShaderCI);
+                CreateShaderD3D11(pRefCounters, ShaderCI, CompilationLog);
                 break;
-            }
 #endif
-
 #if D3D12_SUPPORTED
             case RENDER_DEVICE_TYPE_D3D12:
-            {
-                const ShaderD3D12Impl::CreateInfo D3D12ShaderCI{
-                    m_pDevice->GetDxCompilerForDirect3D12(),
-                    m_pDevice->GetDeviceInfo(),
-                    m_pDevice->GetAdapterInfo(),
-                    m_pDevice->GetD3D12ShaderVersion() //
-                };
-                CreateShader(m_pShaderD3D12, CompilationLog, "Direct3D12", pRefCounters, ShaderCI, D3D12ShaderCI);
+                CreateShaderD3D12(pRefCounters, ShaderCI, CompilationLog);
                 break;
-            }
 #endif
-
-#if GL_SUPPORTED || GLES_SUPPORTED
             case RENDER_DEVICE_TYPE_GL:
             case RENDER_DEVICE_TYPE_GLES:
                 // shader compilation is not supported for OpenGL, use GetCreateInfo() to get source
                 // AZ TODO: validate source using glslang
                 break;
-#endif
-
 #if VULKAN_SUPPORTED
             case RENDER_DEVICE_TYPE_VULKAN:
-            {
-                const ShaderVkImpl::CreateInfo VkShaderCI{
-                    m_pDevice->GetDxCompilerForVulkan(),
-                    m_pDevice->GetDeviceInfo(),
-                    m_pDevice->GetAdapterInfo(),
-                    m_pDevice->GetVkVersion(),
-                    m_pDevice->HasSpirv14() //
-                };
-                CreateShader(m_pShaderVk, CompilationLog, "Vulkan", pRefCounters, ShaderCI, VkShaderCI);
+                CreateShaderVk(pRefCounters, ShaderCI, CompilationLog);
                 break;
-            }
 #endif
-
 #if METAL_SUPPORTED
             case RENDER_DEVICE_TYPE_METAL:
-                CompileShaderMtl(ShaderCI, CompilationLog);
+                CreateShaderMtl(ShaderCI, CompilationLog);
                 break;
 #endif
-
             case RENDER_DEVICE_TYPE_UNDEFINED:
             case RENDER_DEVICE_TYPE_COUNT:
             default:

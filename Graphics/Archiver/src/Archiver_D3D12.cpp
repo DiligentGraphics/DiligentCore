@@ -25,7 +25,7 @@
  */
 
 #include "ArchiverImpl.hpp"
-#include "ArchiverImpl_Inc.hpp"
+#include "Archiver_Inc.hpp"
 
 #include "../../GraphicsEngineD3D12/include/pch.h"
 #include "RenderDeviceD3D12Impl.hpp"
@@ -142,5 +142,95 @@ template bool ArchiverImpl::PatchShadersD3D12<GraphicsPipelineStateCreateInfo>(G
 template bool ArchiverImpl::PatchShadersD3D12<ComputePipelineStateCreateInfo>(ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
 template bool ArchiverImpl::PatchShadersD3D12<TilePipelineStateCreateInfo>(TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
 template bool ArchiverImpl::PatchShadersD3D12<RayTracingPipelineStateCreateInfo>(RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
+
+
+struct SerializableShaderImpl::CompiledShaderD3D12 : ICompiledShader
+{
+    ShaderD3D12Impl ShaderD3D12;
+
+    CompiledShaderD3D12(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI, const ShaderD3D12Impl::CreateInfo& D3D12ShaderCI) :
+        ShaderD3D12{pRefCounters, nullptr, ShaderCI, D3D12ShaderCI, true}
+    {}
+};
+
+const ShaderD3D12Impl* SerializableShaderImpl::GetShaderD3D12() const
+{
+    return m_pShaderD3D12 ? &reinterpret_cast<CompiledShaderD3D12*>(m_pShaderD3D12.get())->ShaderD3D12 : nullptr;
+}
+
+void SerializableShaderImpl::CreateShaderD3D12(IReferenceCounters* pRefCounters, ShaderCreateInfo& ShaderCI, String& CompilationLog)
+{
+    const ShaderD3D12Impl::CreateInfo D3D12ShaderCI{
+        m_pDevice->GetDxCompilerForDirect3D12(),
+        m_pDevice->GetDeviceInfo(),
+        m_pDevice->GetAdapterInfo(),
+        m_pDevice->GetD3D12ShaderVersion() //
+    };
+    CreateShader<CompiledShaderD3D12>(m_pShaderD3D12, CompilationLog, "Direct3D12", pRefCounters, ShaderCI, D3D12ShaderCI);
+}
+
+
+PipelineResourceSignatureD3D12Impl* SerializableResourceSignatureImpl::GetSignatureD3D12() const
+{
+    return m_pPRSD3D12 ? m_pPRSD3D12->GetPRS<PipelineResourceSignatureD3D12Impl>() : nullptr;
+}
+
+const SerializedMemory* SerializableResourceSignatureImpl::GetSerializedMemoryD3D12() const
+{
+    return m_pPRSD3D12 ? m_pPRSD3D12->GetMem() : nullptr;
+}
+
+void SerializableResourceSignatureImpl::CreatePRSD3D12(IReferenceCounters* pRefCounters, const PipelineResourceSignatureDesc& Desc, SHADER_TYPE ShaderStages)
+{
+    auto pPRSD3D12 = std::make_unique<TPRS<PipelineResourceSignatureD3D12Impl>>(pRefCounters, Desc, ShaderStages);
+
+    PipelineResourceSignatureSerializedDataD3D12 SerializedData;
+    pPRSD3D12->PRS.Serialize(SerializedData);
+    AddPRSDesc(pPRSD3D12->PRS.GetDesc(), SerializedData);
+    CopyPRSSerializedData<PSOSerializerD3D12>(SerializedData, pPRSD3D12->Mem);
+
+    m_pPRSD3D12.reset(pPRSD3D12.release());
+}
+
+
+void SerializationDeviceImpl::GetPipelineResourceBindingsD3D12(const PipelineResourceBindingAttribs& Info,
+                                                               std::vector<PipelineResourceBinding>& ResourceBindings)
+{
+    const auto ShaderStages = (Info.ShaderStages == SHADER_TYPE_UNKNOWN ? static_cast<SHADER_TYPE>(~0u) : Info.ShaderStages);
+
+    SignatureArray<PipelineResourceSignatureD3D12Impl> Signatures      = {};
+    Uint32                                             SignaturesCount = 0;
+    SortResourceSignatures(Info, Signatures, SignaturesCount);
+
+    RootSignatureD3D12 RootSig{nullptr, nullptr, Signatures.data(), SignaturesCount, 0};
+    const bool         HasSpaces = RootSig.GetTotalSpaces() > 1;
+
+    for (Uint32 sign = 0; sign < SignaturesCount; ++sign)
+    {
+        const auto& pSignature = Signatures[sign];
+        if (pSignature == nullptr)
+            continue;
+
+        const auto BaseRegisterSpace = RootSig.GetBaseRegisterSpace(sign);
+
+        for (Uint32 r = 0; r < pSignature->GetTotalResourceCount(); ++r)
+        {
+            const auto& ResDesc = pSignature->GetResourceDesc(r);
+            const auto& ResAttr = pSignature->GetResourceAttribs(r);
+
+            if ((ResDesc.ShaderStages & ShaderStages) == 0)
+                continue;
+
+            PipelineResourceBinding Dst{};
+            Dst.Name         = ResDesc.Name;
+            Dst.ResourceType = ResDesc.ResourceType;
+            Dst.Register     = ResAttr.Register;
+            Dst.Space        = StaticCast<Uint16>(BaseRegisterSpace + ResAttr.Space);
+            Dst.ArraySize    = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) == 0 ? ResDesc.ArraySize : RuntimeArray;
+            Dst.ShaderStages = ResDesc.ShaderStages;
+            ResourceBindings.push_back(Dst);
+        }
+    }
+}
 
 } // namespace Diligent

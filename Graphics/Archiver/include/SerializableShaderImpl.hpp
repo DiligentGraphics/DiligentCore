@@ -104,28 +104,40 @@ private:
     ShaderCreateInfo                              m_CreateInfo;
     std::unique_ptr<void, STDDeleterRawMem<void>> m_pRawMemory;
 
-#if D3D11_SUPPORTED
-    struct CompiledShaderD3D11;
-    std::unique_ptr<CompiledShaderD3D11> m_pShaderD3D11;
-#endif
-#if D3D12_SUPPORTED
-    struct CompiledShaderD3D12;
-    std::unique_ptr<CompiledShaderD3D12> m_pShaderD3D12;
-#endif
-#if VULKAN_SUPPORTED
-    struct CompiledShaderVk;
-    std::unique_ptr<CompiledShaderVk> m_pShaderVk;
-#endif
-#if METAL_SUPPORTED
-    struct ICompiledShaderMtl
+    struct ICompiledShader
     {
-        virtual ~ICompiledShaderMtl() {}
+        virtual ~ICompiledShader() {}
     };
+
+    template <typename ShaderType, typename... ArgTypes>
+    static void CreateShader(std::unique_ptr<ICompiledShader>& pShader, String& CompilationLog, const char* DeviceTypeName, IReferenceCounters* pRefCounters, ShaderCreateInfo& ShaderCI, const ArgTypes&... Args);
+
+#if D3D11_SUPPORTED
+    void CreateShaderD3D11(IReferenceCounters* pRefCounters, ShaderCreateInfo& ShaderCI, String& CompilationLog);
+
+    struct CompiledShaderD3D11;
+    std::unique_ptr<ICompiledShader> m_pShaderD3D11;
+#endif
+
+#if D3D12_SUPPORTED
+    void CreateShaderD3D12(IReferenceCounters* pRefCounters, ShaderCreateInfo& ShaderCI, String& CompilationLog);
+
+    struct CompiledShaderD3D12;
+    std::unique_ptr<ICompiledShader> m_pShaderD3D12;
+#endif
+
+#if VULKAN_SUPPORTED
+    void CreateShaderVk(IReferenceCounters* pRefCounters, ShaderCreateInfo& ShaderCI, String& CompilationLog);
+
+    struct CompiledShaderVk;
+    std::unique_ptr<ICompiledShader> m_pShaderVk;
+#endif
+
+#if METAL_SUPPORTED
     struct CompiledShaderMtlImpl;
-    std::unique_ptr<ICompiledShaderMtl> m_pShaderMtl;
+    std::unique_ptr<ICompiledShader> m_pShaderMtl;
 
-    void CompileShaderMtl(ShaderCreateInfo& ShaderCI, String& CompilationLog) noexcept(false);
-
+    void             CreateShaderMtl(ShaderCreateInfo& ShaderCI, String& CompilationLog);
     SerializedMemory PatchShaderMtl(const RefCntAutoPtr<PipelineResourceSignatureMtlImpl>* pSignatures,
                                     const MtlArchiverResourceCounters*                     pBaseBindings,
                                     const Uint32                                           SignatureCount) noexcept(false);

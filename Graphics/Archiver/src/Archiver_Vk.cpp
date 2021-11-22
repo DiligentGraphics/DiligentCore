@@ -25,7 +25,7 @@
  */
 
 #include "ArchiverImpl.hpp"
-#include "ArchiverImpl_Inc.hpp"
+#include "Archiver_Inc.hpp"
 
 #include "VulkanUtilities/VulkanHeaders.h"
 #include "RenderDeviceVkImpl.hpp"
@@ -162,5 +162,101 @@ template bool ArchiverImpl::PatchShadersVk<GraphicsPipelineStateCreateInfo>(Grap
 template bool ArchiverImpl::PatchShadersVk<ComputePipelineStateCreateInfo>(ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
 template bool ArchiverImpl::PatchShadersVk<TilePipelineStateCreateInfo>(TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
 template bool ArchiverImpl::PatchShadersVk<RayTracingPipelineStateCreateInfo>(RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
+
+
+struct SerializableShaderImpl::CompiledShaderVk : ICompiledShader
+{
+    ShaderVkImpl ShaderVk;
+
+    CompiledShaderVk(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI, const ShaderVkImpl::CreateInfo& VkShaderCI) :
+        ShaderVk{pRefCounters, nullptr, ShaderCI, VkShaderCI, true}
+    {}
+};
+
+const ShaderVkImpl* SerializableShaderImpl::GetShaderVk() const
+{
+    return m_pShaderVk ? &reinterpret_cast<CompiledShaderVk*>(m_pShaderVk.get())->ShaderVk : nullptr;
+}
+
+void SerializableShaderImpl::CreateShaderVk(IReferenceCounters* pRefCounters, ShaderCreateInfo& ShaderCI, String& CompilationLog)
+{
+    const ShaderVkImpl::CreateInfo VkShaderCI{
+        m_pDevice->GetDxCompilerForVulkan(),
+        m_pDevice->GetDeviceInfo(),
+        m_pDevice->GetAdapterInfo(),
+        m_pDevice->GetVkVersion(),
+        m_pDevice->HasSpirv14() //
+    };
+    CreateShader<CompiledShaderVk>(m_pShaderVk, CompilationLog, "Vulkan", pRefCounters, ShaderCI, VkShaderCI);
+}
+
+
+PipelineResourceSignatureVkImpl* SerializableResourceSignatureImpl::GetSignatureVk() const
+{
+    return m_pPRSVk ? m_pPRSVk->GetPRS<PipelineResourceSignatureVkImpl>() : nullptr;
+}
+
+const SerializedMemory* SerializableResourceSignatureImpl::GetSerializedMemoryVk() const
+{
+    return m_pPRSVk ? m_pPRSVk->GetMem() : nullptr;
+}
+
+void SerializableResourceSignatureImpl::CreatePRSVk(IReferenceCounters* pRefCounters, const PipelineResourceSignatureDesc& Desc, SHADER_TYPE ShaderStages)
+{
+    auto pPRSVk = std::make_unique<TPRS<PipelineResourceSignatureVkImpl>>(pRefCounters, Desc, ShaderStages);
+
+    PipelineResourceSignatureSerializedDataVk SerializedData;
+    pPRSVk->PRS.Serialize(SerializedData);
+    AddPRSDesc(pPRSVk->PRS.GetDesc(), SerializedData);
+    CopyPRSSerializedData<PSOSerializerVk>(SerializedData, pPRSVk->Mem);
+
+    m_pPRSVk.reset(pPRSVk.release());
+}
+
+
+void SerializationDeviceImpl::GetPipelineResourceBindingsVk(const PipelineResourceBindingAttribs& Info,
+                                                            std::vector<PipelineResourceBinding>& ResourceBindings)
+{
+    const auto ShaderStages = (Info.ShaderStages == SHADER_TYPE_UNKNOWN ? static_cast<SHADER_TYPE>(~0u) : Info.ShaderStages);
+
+    SignatureArray<PipelineResourceSignatureVkImpl> Signatures      = {};
+    Uint32                                          SignaturesCount = 0;
+    SortResourceSignatures(Info, Signatures, SignaturesCount);
+
+    Uint32 DescSetLayoutCount = 0;
+    for (Uint32 sign = 0; sign < SignaturesCount; ++sign)
+    {
+        const auto& pSignature = Signatures[sign];
+        if (pSignature == nullptr)
+            continue;
+
+        for (Uint32 r = 0; r < pSignature->GetTotalResourceCount(); ++r)
+        {
+            const auto& ResDesc = pSignature->GetResourceDesc(r);
+            const auto& ResAttr = pSignature->GetResourceAttribs(r);
+
+            if ((ResDesc.ShaderStages & ShaderStages) == 0)
+                continue;
+
+            PipelineResourceBinding Dst{};
+            Dst.Name         = ResDesc.Name;
+            Dst.ResourceType = ResDesc.ResourceType;
+            Dst.Register     = ResAttr.BindingIndex;
+            Dst.Space        = StaticCast<Uint16>(DescSetLayoutCount + ResAttr.DescrSet);
+            Dst.ArraySize    = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) == 0 ? ResDesc.ArraySize : RuntimeArray;
+            Dst.ShaderStages = ResDesc.ShaderStages;
+            ResourceBindings.push_back(Dst);
+        }
+
+        // Same as PipelineLayoutVk::Create()
+        for (auto SetId : {PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_STATIC_MUTABLE, PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_DYNAMIC})
+        {
+            if (pSignature->GetDescriptorSetSize(SetId) != ~0u)
+                ++DescSetLayoutCount;
+        }
+    }
+    VERIFY_EXPR(DescSetLayoutCount <= MAX_RESOURCE_SIGNATURES * 2);
+    VERIFY_EXPR(DescSetLayoutCount >= Info.ResourceSignaturesCount);
+}
 
 } // namespace Diligent

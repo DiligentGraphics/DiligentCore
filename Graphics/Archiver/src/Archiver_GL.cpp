@@ -25,7 +25,7 @@
  */
 
 #include "ArchiverImpl.hpp"
-#include "ArchiverImpl_Inc.hpp"
+#include "Archiver_Inc.hpp"
 
 #include "../../GraphicsEngineOpenGL/include/pch.h"
 #include "RenderDeviceGLImpl.hpp"
@@ -87,5 +87,73 @@ template bool ArchiverImpl::PatchShadersGL<GraphicsPipelineStateCreateInfo>(Grap
 template bool ArchiverImpl::PatchShadersGL<ComputePipelineStateCreateInfo>(ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
 template bool ArchiverImpl::PatchShadersGL<TilePipelineStateCreateInfo>(TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
 template bool ArchiverImpl::PatchShadersGL<RayTracingPipelineStateCreateInfo>(RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
+
+
+PipelineResourceSignatureGLImpl* SerializableResourceSignatureImpl::GetSignatureGL() const
+{
+    return m_pPRSGL ? m_pPRSGL->GetPRS<PipelineResourceSignatureGLImpl>() : nullptr;
+}
+
+const SerializedMemory* SerializableResourceSignatureImpl::GetSerializedMemoryGL() const
+{
+    return m_pPRSGL ? m_pPRSGL->GetMem() : nullptr;
+}
+
+void SerializableResourceSignatureImpl::CreatePRSGL(IReferenceCounters* pRefCounters, const PipelineResourceSignatureDesc& Desc, SHADER_TYPE ShaderStages)
+{
+    auto pPRSGL = std::make_unique<TPRS<PipelineResourceSignatureGLImpl>>(pRefCounters, Desc, ShaderStages);
+
+    PipelineResourceSignatureSerializedDataGL SerializedData;
+    pPRSGL->PRS.Serialize(SerializedData);
+    AddPRSDesc(pPRSGL->PRS.GetDesc(), SerializedData);
+    CopyPRSSerializedData<PSOSerializerGL>(SerializedData, pPRSGL->Mem);
+
+    m_pPRSGL.reset(pPRSGL.release());
+}
+
+
+void SerializationDeviceImpl::GetPipelineResourceBindingsGL(const PipelineResourceBindingAttribs& Info,
+                                                            std::vector<PipelineResourceBinding>& ResourceBindings)
+{
+    const auto            ShaderStages        = (Info.ShaderStages == SHADER_TYPE_UNKNOWN ? static_cast<SHADER_TYPE>(~0u) : Info.ShaderStages);
+    constexpr SHADER_TYPE SupportedStagesMask = (SHADER_TYPE_ALL_GRAPHICS | SHADER_TYPE_COMPUTE);
+
+    SignatureArray<PipelineResourceSignatureGLImpl> Signatures      = {};
+    Uint32                                          SignaturesCount = 0;
+    SortResourceSignatures(Info, Signatures, SignaturesCount);
+
+    PipelineResourceSignatureGLImpl::TBindings BaseBindings = {};
+    for (Uint32 s = 0; s < SignaturesCount; ++s)
+    {
+        const auto& pSignature = Signatures[s];
+        if (pSignature == nullptr)
+            continue;
+
+        for (Uint32 r = 0; r < pSignature->GetTotalResourceCount(); ++r)
+        {
+            const auto& ResDesc = pSignature->GetResourceDesc(r);
+            const auto& ResAttr = pSignature->GetResourceAttribs(r);
+            const auto  Range   = PipelineResourceToBindingRange(ResDesc);
+
+            for (auto Stages = ShaderStages & SupportedStagesMask; Stages != 0;)
+            {
+                const auto ShaderStage = ExtractLSB(Stages);
+
+                if ((ResDesc.ShaderStages & ShaderStage) == 0)
+                    continue;
+
+                PipelineResourceBinding Dst{};
+                Dst.Name         = ResDesc.Name;
+                Dst.ResourceType = ResDesc.ResourceType;
+                Dst.Register     = BaseBindings[Range] + ResAttr.CacheOffset;
+                Dst.Space        = 0;
+                Dst.ArraySize    = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) == 0 ? ResDesc.ArraySize : RuntimeArray;
+                Dst.ShaderStages = ShaderStage;
+                ResourceBindings.push_back(Dst);
+            }
+        }
+        pSignature->ShiftBindings(BaseBindings);
+    }
+}
 
 } // namespace Diligent

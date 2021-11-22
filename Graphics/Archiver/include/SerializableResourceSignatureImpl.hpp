@@ -118,7 +118,7 @@ public:
 #if METAL_SUPPORTED
     PipelineResourceSignatureMtlImpl* GetSignatureMtl() const
     {
-        return m_pPRSMtl ? m_pPRSMtl->GetPRS() : nullptr;
+        return m_pPRSMtl ? reinterpret_cast<PipelineResourceSignatureMtlImpl*>(m_pPRSMtl->GetPRS()) : nullptr;
     }
     const SerializedMemory* GetSerializedMemoryMtl() const
     {
@@ -136,30 +136,45 @@ private:
     SerializedMemory                               m_DescMem;
     SerializedMemory                               m_SharedData;
 
+    struct IPRSWapper
+    {
+        virtual ~IPRSWapper() {}
+        virtual IPipelineResourceSignature* GetPRS() = 0;
+        virtual SerializedMemory const*     GetMem() = 0;
+
+        template <typename SigType>
+        SigType* GetPRS() { return static_cast<SigType*>(GetPRS()); }
+    };
+
     template <typename ImplType> struct TPRS;
 #if D3D11_SUPPORTED
-    std::unique_ptr<TPRS<PipelineResourceSignatureD3D11Impl>> m_pPRSD3D11;
-#endif
-#if D3D12_SUPPORTED
-    std::unique_ptr<TPRS<PipelineResourceSignatureD3D12Impl>> m_pPRSD3D12;
-#endif
-#if GL_SUPPORTED || GLES_SUPPORTED
-    std::unique_ptr<TPRS<PipelineResourceSignatureGLImpl>> m_pPRSGL;
-#endif
-#if VULKAN_SUPPORTED
-    std::unique_ptr<TPRS<PipelineResourceSignatureVkImpl>> m_pPRSVk;
-#endif
-#if METAL_SUPPORTED
-    void SerializePRSMtl(IReferenceCounters* pRefCounters, const PipelineResourceSignatureDesc& Desc);
+    std::unique_ptr<IPRSWapper> m_pPRSD3D11;
 
-    struct IPRSMtl
-    {
-        virtual ~IPRSMtl() {}
-        virtual PipelineResourceSignatureMtlImpl* GetPRS() = 0;
-        virtual SerializedMemory const*           GetMem() = 0;
-    };
-    struct PRSMtlImpl;
-    std::unique_ptr<IPRSMtl> m_pPRSMtl;
+    void CreatePRSD3D11(IReferenceCounters* pRefCounters, const PipelineResourceSignatureDesc& Desc, SHADER_TYPE ShaderStages);
+#endif
+
+#if D3D12_SUPPORTED
+    std::unique_ptr<IPRSWapper> m_pPRSD3D12;
+
+    void CreatePRSD3D12(IReferenceCounters* pRefCounters, const PipelineResourceSignatureDesc& Desc, SHADER_TYPE ShaderStages);
+#endif
+
+#if GL_SUPPORTED || GLES_SUPPORTED
+    std::unique_ptr<IPRSWapper> m_pPRSGL;
+
+    void CreatePRSGL(IReferenceCounters* pRefCounters, const PipelineResourceSignatureDesc& Desc, SHADER_TYPE ShaderStages);
+#endif
+
+#if VULKAN_SUPPORTED
+    std::unique_ptr<IPRSWapper> m_pPRSVk;
+
+    void CreatePRSVk(IReferenceCounters* pRefCounters, const PipelineResourceSignatureDesc& Desc, SHADER_TYPE ShaderStages);
+#endif
+
+#if METAL_SUPPORTED
+    std::unique_ptr<IPRSWapper> m_pPRSMtl;
+
+    void SerializePRSMtl(IReferenceCounters* pRefCounters, const PipelineResourceSignatureDesc& Desc);
 #endif
 };
 
