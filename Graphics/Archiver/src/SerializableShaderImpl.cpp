@@ -156,7 +156,7 @@ void SerializableShaderImpl::CopyShaderCreateInfo(const ShaderCreateInfo& Shader
     {
         for (auto* Macro = ShaderCI.Macros; Macro->Name != nullptr && Macro->Definition != nullptr; ++Macro, ++MacroCount)
         {}
-        Allocator.AddSpace<ShaderMacro>(MacroCount);
+        Allocator.AddSpace<ShaderMacro>(MacroCount + 1);
 
         for (Uint32 i = 0; i < MacroCount; ++i)
         {
@@ -204,13 +204,15 @@ void SerializableShaderImpl::CopyShaderCreateInfo(const ShaderCreateInfo& Shader
 
     if (MacroCount > 0)
     {
-        auto* pMacros       = Allocator.Allocate<ShaderMacro>(MacroCount);
+        auto* pMacros       = Allocator.Allocate<ShaderMacro>(MacroCount + 1);
         m_CreateInfo.Macros = pMacros;
         for (auto* Macro = ShaderCI.Macros; Macro->Name != nullptr && Macro->Definition != nullptr; ++Macro, ++pMacros)
         {
             pMacros->Name       = Allocator.CopyString(Macro->Name);
             pMacros->Definition = Allocator.CopyString(Macro->Definition);
         }
+        pMacros->Name       = nullptr;
+        pMacros->Definition = nullptr;
     }
 }
 

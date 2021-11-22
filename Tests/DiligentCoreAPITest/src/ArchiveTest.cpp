@@ -32,6 +32,7 @@
 #include "GraphicsAccessories.hpp"
 #include "ArchiveMemoryImpl.hpp"
 #include "Dearchiver.h"
+#include "ShaderMacroHelper.hpp"
 
 #include "ResourceLayoutTestCommon.hpp"
 #include "gtest/gtest.h"
@@ -403,10 +404,14 @@ TEST(ArchiveTest, GraphicsPipeline)
         pArchiverFactory->CreateArchiver(pSerializationDevice, &pArchiver);
         ASSERT_NE(pArchiver, nullptr);
 
+        ShaderMacroHelper Macros;
+        Macros.AddShaderMacro("TEST_MACRO", 1u);
+
         ShaderCreateInfo ShaderCI;
         ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
         ShaderCI.ShaderCompiler             = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
         ShaderCI.UseCombinedTextureSamplers = true;
+        ShaderCI.Macros                     = Macros;
 
         RefCntAutoPtr<IShader> pVS;
         RefCntAutoPtr<IShader> pSerializedVS;

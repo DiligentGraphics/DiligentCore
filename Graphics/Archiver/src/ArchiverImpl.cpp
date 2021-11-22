@@ -25,6 +25,7 @@
  */
 
 #include "ArchiverImpl.hpp"
+#include "ShaderToolsCommon.hpp"
 
 namespace Diligent
 {
@@ -749,20 +750,24 @@ void ArchiverImpl::SerializeShaderSource(TShaderIndices& ShaderIndices, DeviceTy
     auto& RawMemAllocator = GetRawAllocator();
 
     VERIFY_EXPR(CI.SourceLength > 0);
-    VERIFY_EXPR(CI.Macros == nullptr); // AZ TODO: not supported
-    VERIFY_EXPR(CI.UseCombinedTextureSamplers == true);
-    VERIFY_EXPR(String{"_sampler"} == CI.CombinedSamplerSuffix);
+
+    String Source{CI.Source, CI.SourceLength};
+    if (CI.Macros == nullptr)
+    {
+        DEV_CHECK_ERR(CI.SourceLanguage != SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM, "Shader macros are ignored when compiling GLSL verbatim in OpenGL backend");
+        AppendShaderMacros(Source, CI.Macros);
+    }
 
     Serializer<SerializerMode::Measure> MeasureSer;
-    MeasureSer(CI.Desc.ShaderType, CI.EntryPoint, CI.SourceLanguage, CI.ShaderCompiler);
+    MeasureSer(CI.Desc.ShaderType, CI.EntryPoint, CI.SourceLanguage, CI.ShaderCompiler, CI.UseCombinedTextureSamplers, CI.CombinedSamplerSuffix);
 
-    const auto   BytecodeSize = (CI.SourceLength + 1) * sizeof(*CI.Source);
+    const auto   BytecodeSize = (Source.size() + 1) * sizeof(Source[0]);
     const auto   Size         = MeasureSer.GetSize(nullptr) + BytecodeSize;
     void*        Ptr          = ALLOCATE_RAW(RawMemAllocator, "", Size);
-    const Uint8* pBytes       = reinterpret_cast<const Uint8*>(CI.Source);
+    const Uint8* pBytes       = reinterpret_cast<const Uint8*>(Source.c_str());
 
     Serializer<SerializerMode::Write> Ser{Ptr, Size};
-    Ser(CI.Desc.ShaderType, CI.EntryPoint, CI.SourceLanguage, CI.ShaderCompiler);
+    Ser(CI.Desc.ShaderType, CI.EntryPoint, CI.SourceLanguage, CI.ShaderCompiler, CI.UseCombinedTextureSamplers, CI.CombinedSamplerSuffix);
 
     for (size_t s = 0; s < BytecodeSize; ++s)
         Ser(pBytes[s]);
