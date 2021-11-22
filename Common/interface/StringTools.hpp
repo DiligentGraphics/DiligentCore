@@ -32,8 +32,8 @@
 #include <locale>
 #include <algorithm>
 #include <cctype>
-#include <string.h>
 
+#include "StringTools.h"
 #include "../../Platforms/Basic/interface/DebugUtilities.hpp"
 
 namespace Diligent
@@ -179,82 +179,6 @@ inline std::string StrToLower(std::string str)
 {
     StrToLowerInPlace(str);
     return str;
-}
-
-inline bool IsNum(char c)
-{
-    return c >= '0' && c <= '9';
-}
-
-/// Returns the number of characters at the beginning of the string that form a
-/// floating point number.
-inline size_t CountFloatNumberChars(const char* str)
-{
-    if (str == nullptr)
-        return 0;
-
-    const auto* num_end = str;
-    const auto* c       = str;
-    if (*c == 0)
-        return 0;
-
-    if (*c == '+' || *c == '-')
-        ++c;
-
-    if (*c == 0)
-        return 0;
-
-    if (*c == '0' && IsNum(*(c + 1)))
-    {
-        // 01 is invalid
-        return c - str + 1;
-    }
-
-    while (IsNum(*c))
-        num_end = ++c;
-
-    if (*c == '.')
-    {
-        if (c != str && IsNum(c[-1]))
-        {
-            // . as well as +. or -. are not valid numbers, however 0., +0., and -0. are.
-            num_end = c + 1;
-        }
-
-        ++c;
-        while (IsNum(*c))
-            num_end = ++c;
-
-        if (*c == 'e' || *c == 'E')
-        {
-            if (c - str < 2 || !IsNum(c[-2]))
-            {
-                // .e as well as +.e are invalid
-                return num_end - str;
-            }
-        }
-    }
-    else if (*c == 'e' || *c == 'E')
-    {
-        if (c - str < 1 || !IsNum(c[-1]))
-        {
-            // e as well as e+1 are invalid
-            return num_end - str;
-        }
-    }
-
-    if (*c == 'e' || *c == 'E')
-    {
-        ++c;
-        if (*c != '+' && *c != '-')
-            return num_end - str;
-
-        ++c;
-        while (IsNum(*c))
-            num_end = ++c;
-    }
-
-    return num_end - str;
 }
 
 } // namespace Diligent

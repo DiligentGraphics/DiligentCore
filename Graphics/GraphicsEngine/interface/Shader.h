@@ -30,6 +30,7 @@
 /// \file
 /// Definition of the Diligent::IShader interface and related data structures
 
+#include "../../../Common/interface/StringTools.h"
 #include "../../../Primitives/interface/FileStream.h"
 #include "../../../Primitives/interface/FlagEnum.h"
 #include "DeviceObject.h"
@@ -115,6 +116,20 @@ struct ShaderDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
     /// Shader type. See Diligent::SHADER_TYPE.
     SHADER_TYPE ShaderType DEFAULT_INITIALIZER(SHADER_TYPE_UNKNOWN);
+
+#if DILIGENT_CPP_INTERFACE
+    /// Comparison operator tests if two structures are equivalent
+
+    /// \param [in] RHS - reference to the structure to perform comparison with
+    /// \return
+    /// - True if all members of the two structures are equal.
+    /// - False otherwise.
+    bool operator==(const ShaderDesc& RHS) const
+    {
+        return ShaderType == RHS.ShaderType && SafeStrEqual(Name, RHS.Name);
+    }
+#endif
+
 };
 typedef struct ShaderDesc ShaderDesc;
 

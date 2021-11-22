@@ -30,6 +30,7 @@ set(INTERFACE
     interface/RefCountedObjectImpl.hpp
     interface/STDAllocator.hpp
     interface/StringDataBlobImpl.hpp
+    interface/StringTools.h
     interface/StringTools.hpp
     interface/StringPool.hpp
     interface/ThreadSignal.hpp

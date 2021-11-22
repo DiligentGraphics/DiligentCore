@@ -34,6 +34,7 @@
 
 #include "../../../Primitives/interface/Object.h"
 #include "../../../Platforms/interface/PlatformDefinitions.h"
+#include "../../../Common/interface/StringTools.h"
 #include "GraphicsTypes.h"
 #include "BlendState.h"
 #include "RasterizerState.h"
@@ -68,6 +69,18 @@ struct SampleDesc
         Count   {_Count  },
         Quality {_Quality}
     {}
+
+    /// Comparison operator tests if two structures are equivalent
+
+    /// \param [in] RHS - reference to the structure to perform comparison with
+    /// \return
+    /// - True if all members of the two structures are equal.
+    /// - False otherwise.
+    bool operator==(const SampleDesc& RHS) const
+    {
+        return Count == RHS.Count && Quality == RHS.Quality;
+    }
+
 #endif
 };
 typedef struct SampleDesc SampleDesc;
@@ -127,6 +140,21 @@ struct ShaderResourceVariableDesc
         Type        {_Type        },
         Flags       {_Flags       }
     {}
+
+    /// Comparison operator tests if two structures are equivalent
+
+    /// \param [in] RHS - reference to the structure to perform comparison with
+    /// \return
+    /// - True if all members of the two structures are equal.
+    /// - False otherwise.
+    bool operator==(const ShaderResourceVariableDesc& RHS) const
+    {
+        return ShaderStages == RHS.ShaderStages && 
+               Type         == RHS.Type         &&
+               Flags        == RHS.Flags        &&
+               SafeStrEqual(Name, RHS.Name);
+    }
+
 #endif
 };
 typedef struct ShaderResourceVariableDesc ShaderResourceVariableDesc;
@@ -183,6 +211,34 @@ struct PipelineResourceLayoutDesc
 
     /// Array of immutable sampler descriptions
     const ImmutableSamplerDesc*         ImmutableSamplers    DEFAULT_INITIALIZER(nullptr);
+
+#if DILIGENT_CPP_INTERFACE
+    /// Comparison operator tests if two structures are equivalent
+
+    /// \param [in] RHS - reference to the structure to perform comparison with
+    /// \return
+    /// - True if all members of the two structures are equal.
+    /// - False otherwise.
+    constexpr bool operator==(const PipelineResourceLayoutDesc& RHS) const
+    {
+        if (!(DefaultVariableType        == RHS.DefaultVariableType &&
+              DefaultVariableMergeStages == RHS.DefaultVariableMergeStages &&
+              NumVariables               == RHS.NumVariables &&
+              NumImmutableSamplers       == RHS.NumImmutableSamplers))
+           return false;
+
+        for (Uint32 i = 0; i < NumVariables; ++i)
+            if (!(Variables[i] == RHS.Variables[i]))
+                return false;
+
+        for (Uint32 i = 0; i < NumImmutableSamplers; ++i)
+            if (!(ImmutableSamplers[i] == RHS.ImmutableSamplers[i]))
+                return false;
+
+        return true;
+    }
+#endif
+
 };
 typedef struct PipelineResourceLayoutDesc PipelineResourceLayoutDesc;
 
@@ -386,6 +442,21 @@ struct RayTracingPipelineDesc
     /// Zero means no tracing of rays at all, only ray-gen shader will be executed.
     /// See DeviceProperties::MaxRayTracingRecursionDepth.
     Uint8   MaxRecursionDepth  DEFAULT_INITIALIZER(0);
+
+#if DILIGENT_CPP_INTERFACE
+    /// Comparison operator tests if two structures are equivalent
+
+    /// \param [in] RHS - reference to the structure to perform comparison with
+    /// \return
+    /// - True if all members of the two structures are equal.
+    /// - False otherwise.
+    constexpr bool operator==(const RayTracingPipelineDesc& RHS) const
+    {
+        return ShaderRecordSize  == RHS.ShaderRecordSize &&
+               MaxRecursionDepth == RHS.MaxRecursionDepth;
+    }
+#endif
+
 };
 typedef struct RayTracingPipelineDesc RayTracingPipelineDesc;
 
@@ -442,6 +513,21 @@ struct PipelineStateDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     PipelineResourceLayoutDesc ResourceLayout;
 
 #if DILIGENT_CPP_INTERFACE
+    /// Comparison operator tests if two structures are equivalent
+
+    /// \param [in] RHS - reference to the structure to perform comparison with
+    /// \return
+    /// - True if all members of the two structures are equal.
+    /// - False otherwise.
+    bool operator==(const PipelineStateDesc& RHS) const
+    {
+        return PipelineType             == RHS.PipelineType             &&
+               SRBAllocationGranularity == RHS.SRBAllocationGranularity &&
+               ImmediateContextMask     == RHS.ImmediateContextMask     &&
+               ResourceLayout           == RHS.ResourceLayout           &&
+               SafeStrEqual(Name, RHS.Name);
+    }
+
     bool IsAnyGraphicsPipeline() const { return PipelineType == PIPELINE_TYPE_GRAPHICS || PipelineType == PIPELINE_TYPE_MESH; }
     bool IsComputePipeline()     const { return PipelineType == PIPELINE_TYPE_COMPUTE; }
     bool IsRayTracingPipeline()  const { return PipelineType == PIPELINE_TYPE_RAY_TRACING; }
@@ -622,6 +708,26 @@ struct TilePipelineDesc
 
     /// Render target formats.
     TEXTURE_FORMAT RTVFormats[DILIGENT_MAX_RENDER_TARGETS] DEFAULT_INITIALIZER({});
+
+#if DILIGENT_CPP_INTERFACE
+    /// Comparison operator tests if two structures are equivalent
+
+    /// \param [in] RHS - reference to the structure to perform comparison with
+    /// \return
+    /// - True if all members of the two structures are equal.
+    /// - False otherwise.
+    constexpr bool operator==(const TilePipelineDesc& RHS) const
+    {
+        if (!(NumRenderTargets == RHS.NumRenderTargets && SampleCount == RHS.SampleCount))
+            return false;
+
+        for (Uint32 i = 0; i < DILIGENT_MAX_RENDER_TARGETS; i++)
+            if (RTVFormats[i] != RHS.RTVFormats[i])
+                return false;
+
+        return true;
+    }
+#endif
 };
 typedef struct TilePipelineDesc TilePipelineDesc;
 
