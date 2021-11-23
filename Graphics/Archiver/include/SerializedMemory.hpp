@@ -59,6 +59,10 @@ struct SerializedMemory
     explicit operator bool() const { return Ptr != nullptr; }
 
     bool operator==(const SerializedMemory& Rhs) const;
+    bool operator!=(const SerializedMemory& Rhs) const
+    {
+        return !(*this == Rhs);
+    }
 
     size_t CalcHash() const;
 

@@ -31,6 +31,7 @@
 
 namespace Diligent
 {
+
 namespace
 {
 
@@ -164,115 +165,52 @@ SerializableResourceSignatureImpl::~SerializableResourceSignatureImpl()
 
 bool SerializableResourceSignatureImpl::IsCompatible(const SerializableResourceSignatureImpl& Rhs, RENDER_DEVICE_TYPE_FLAGS DeviceFlags) const
 {
-    auto ComparePRS = [](const auto& Lhs, const auto& Rhs) {
-        const auto* pRRS0 = Lhs ? Lhs->GetPRS() : nullptr;
-        const auto* pRRS1 = Rhs ? Rhs->GetPRS() : nullptr;
-        if (pRRS0 == nullptr)
-            return pRRS1 == nullptr;
-        else
-            return pRRS0->IsCompatibleWith(pRRS1);
-    };
-
     for (auto DeviceBits = DeviceFlags; DeviceBits != 0;)
     {
-        const auto Type = static_cast<RENDER_DEVICE_TYPE>(PlatformMisc::GetLSB(ExtractLSB(DeviceBits)));
-        switch (Type)
-        {
-#if D3D11_SUPPORTED
-            case RENDER_DEVICE_TYPE_D3D11:
-                return ComparePRS(m_pPRSD3D11, Rhs.m_pPRSD3D11);
-#endif
-#if D3D12_SUPPORTED
-            case RENDER_DEVICE_TYPE_D3D12:
-                return ComparePRS(m_pPRSD3D12, Rhs.m_pPRSD3D12);
-#endif
-#if GL_SUPPORTED || GLES_SUPPORTED
-            case RENDER_DEVICE_TYPE_GL:
-            case RENDER_DEVICE_TYPE_GLES:
-                return ComparePRS(m_pPRSGL, Rhs.m_pPRSGL);
-#endif
-#if VULKAN_SUPPORTED
-            case RENDER_DEVICE_TYPE_VULKAN:
-                return ComparePRS(m_pPRSVk, Rhs.m_pPRSVk);
-#endif
-#if METAL_SUPPORTED
-            case RENDER_DEVICE_TYPE_METAL:
-                return ComparePRS(m_pPRSMtl, Rhs.m_pPRSMtl);
-#endif
+        const auto DeviceType        = static_cast<RENDER_DEVICE_TYPE>(PlatformMisc::GetLSB(ExtractLSB(DeviceBits)));
+        const auto ArchiveDeviceType = DeviceObjectArchiveBase::RenderDeviceTypeToArchiveDeviceType(DeviceType);
 
-            case RENDER_DEVICE_TYPE_UNDEFINED:
-            case RENDER_DEVICE_TYPE_COUNT:
-            default:
-                LOG_ERROR_MESSAGE("Unexpected render device type");
-                break;
-        }
+        const auto* pPRS0 = GetPRS(ArchiveDeviceType);
+        const auto* pPRS1 = Rhs.GetPRS(ArchiveDeviceType);
+        if ((pPRS0 == nullptr) != (pPRS1 == nullptr))
+            return false;
+
+        if ((pPRS0 != nullptr) && (pPRS1 != nullptr) && !pPRS0->IsCompatibleWith(pPRS1))
+            return false;
     }
     return true;
 }
 
-bool SerializableResourceSignatureImpl::Equal(const SerializableResourceSignatureImpl& Rhs) const
+bool SerializableResourceSignatureImpl::operator==(const SerializableResourceSignatureImpl& Rhs) const
 {
-    const auto Equal = [](const SerializedMemory* Mem1, const SerializedMemory* Mem2) //
+    if (GetSharedSerializedMemory() != Rhs.GetSharedSerializedMemory())
+        return false;
+
+    for (size_t type = 0; type < static_cast<size_t>(DeviceType::Count); ++type)
     {
-        if ((Mem1 != nullptr) != (Mem2 != nullptr))
+        const auto  Type  = static_cast<DeviceType>(type);
+        const auto* pMem0 = GetSerializedMemory(Type);
+        const auto* pMem1 = Rhs.GetSerializedMemory(Type);
+
+        if ((pMem0 != nullptr) != (pMem1 != nullptr))
             return false;
 
-        if (Mem1 != nullptr && Mem2 != nullptr && !(*Mem1 == *Mem2))
+        if ((pMem0 != nullptr) && (pMem1 != nullptr) && (*pMem0 != *pMem1))
             return false;
+    }
 
-        return true;
-    };
-
-    if (!Equal(&GetSharedSerializedMemory(), &Rhs.GetSharedSerializedMemory()))
-        return false;
-
-#if D3D11_SUPPORTED
-    if (!Equal(GetSerializedMemoryD3D11(), Rhs.GetSerializedMemoryD3D11()))
-        return false;
-#endif
-#if D3D12_SUPPORTED
-    if (!Equal(GetSerializedMemoryD3D12(), Rhs.GetSerializedMemoryD3D12()))
-        return false;
-#endif
-#if GL_SUPPORTED || GLES_SUPPORTED
-    if (!Equal(GetSerializedMemoryGL(), Rhs.GetSerializedMemoryGL()))
-        return false;
-#endif
-#if VULKAN_SUPPORTED
-    if (!Equal(GetSerializedMemoryVk(), Rhs.GetSerializedMemoryVk()))
-        return false;
-#endif
-#if METAL_SUPPORTED
-    if (!Equal(GetSerializedMemoryMtl(), Rhs.GetSerializedMemoryMtl()))
-        return false;
-#endif
     return true;
 }
 
 size_t SerializableResourceSignatureImpl::CalcHash() const
 {
-    size_t     Hash    = 0;
-    const auto AddHash = [&Hash](const SerializedMemory* Mem) {
-        if (Mem != nullptr)
-            HashCombine(Hash, Mem->CalcHash());
-    };
-
-    AddHash(&GetSharedSerializedMemory());
-#if D3D11_SUPPORTED
-    AddHash(GetSerializedMemoryD3D11());
-#endif
-#if D3D12_SUPPORTED
-    AddHash(GetSerializedMemoryD3D12());
-#endif
-#if GL_SUPPORTED || GLES_SUPPORTED
-    AddHash(GetSerializedMemoryGL());
-#endif
-#if VULKAN_SUPPORTED
-    AddHash(GetSerializedMemoryVk());
-#endif
-#if METAL_SUPPORTED
-    AddHash(GetSerializedMemoryMtl());
-#endif
+    size_t Hash = 0;
+    for (size_t type = 0; type < static_cast<size_t>(DeviceType::Count); ++type)
+    {
+        const auto* pMem = GetSerializedMemory(static_cast<DeviceType>(type));
+        if (pMem != nullptr)
+            HashCombine(Hash, pMem->CalcHash());
+    }
     return Hash;
 }
 

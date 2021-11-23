@@ -637,12 +637,16 @@ PipelineResourceSignatureGLImpl::PipelineResourceSignatureGLImpl(IReferenceCount
     }
 }
 
-void PipelineResourceSignatureGLImpl::Serialize(PipelineResourceSignatureSerializedDataGL& Serialized) const
+PipelineResourceSignatureSerializedDataGL PipelineResourceSignatureGLImpl::Serialize() const
 {
+    PipelineResourceSignatureSerializedDataGL Serialized;
+
     TPipelineResourceSignatureBase::Serialize(Serialized);
 
     Serialized.pResourceAttribs = m_pResourceAttribs;
     Serialized.NumResources     = GetDesc().NumResources;
+
+    return Serialized;
 }
 
 } // namespace Diligent

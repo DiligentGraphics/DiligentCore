@@ -116,39 +116,15 @@ void SerializableShaderImpl::CreateShader(std::unique_ptr<ICompiledShader>& pSha
 
 
 template <typename ImplType>
-struct SerializableResourceSignatureImpl::TPRS final : IPRSWapper
+struct SerializableResourceSignatureImpl::TPRS final : PRSWapperBase
 {
-    ImplType         PRS;
-    SerializedMemory Mem;
+    ImplType PRS;
 
     TPRS(IReferenceCounters* pRefCounters, const PipelineResourceSignatureDesc& SignatureDesc, SHADER_TYPE ShaderStages) :
         PRS{pRefCounters, nullptr, SignatureDesc, ShaderStages, true}
     {}
 
     IPipelineResourceSignature* GetPRS() override { return &PRS; }
-    SerializedMemory const*     GetMem() override { return &Mem; }
 };
-
-
-namespace
-{
-template <template <SerializerMode> class TSerializerImpl,
-          typename TSerializedData>
-void CopyPRSSerializedData(const TSerializedData& SrcSerialized,
-                           SerializedMemory&      SerializedPtr)
-{
-    Serializer<SerializerMode::Measure> MeasureSer;
-    TSerializerImpl<SerializerMode::Measure>::SerializePRS(MeasureSer, SrcSerialized, nullptr);
-
-    const size_t SerSize = MeasureSer.GetSize(nullptr);
-    void*        SerPtr  = ALLOCATE_RAW(GetRawAllocator(), "", SerSize);
-
-    Serializer<SerializerMode::Write> Ser{SerPtr, SerSize};
-    TSerializerImpl<SerializerMode::Write>::SerializePRS(Ser, SrcSerialized, nullptr);
-    VERIFY_EXPR(Ser.IsEnd());
-
-    SerializedPtr = SerializedMemory{SerPtr, SerSize};
-}
-} // namespace
 
 } // namespace Diligent

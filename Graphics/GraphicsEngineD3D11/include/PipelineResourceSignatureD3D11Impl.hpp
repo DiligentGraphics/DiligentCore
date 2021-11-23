@@ -118,7 +118,7 @@ public:
     // Copies static resources from the static resource cache to the destination cache
     void CopyStaticResources(ShaderResourceCacheD3D11& ResourceCache) const;
 
-    void Serialize(PipelineResourceSignatureSerializedDataD3D11& Serialized) const;
+    PipelineResourceSignatureSerializedDataD3D11 Serialize() const;
 
 #ifdef DILIGENT_DEVELOPMENT
     /// Verifies committed resource using the D3D resource attributes from the PSO.

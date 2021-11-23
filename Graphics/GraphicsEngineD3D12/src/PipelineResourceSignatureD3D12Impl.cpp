@@ -873,14 +873,18 @@ PipelineResourceSignatureD3D12Impl::PipelineResourceSignatureD3D12Impl(IReferenc
     }
 }
 
-void PipelineResourceSignatureD3D12Impl::Serialize(PipelineResourceSignatureSerializedDataD3D12& Serialized) const
+PipelineResourceSignatureSerializedDataD3D12 PipelineResourceSignatureD3D12Impl::Serialize() const
 {
+    PipelineResourceSignatureSerializedDataD3D12 Serialized;
+
     TPipelineResourceSignatureBase::Serialize(Serialized);
 
     Serialized.pResourceAttribs     = m_pResourceAttribs;
     Serialized.NumResources         = GetDesc().NumResources;
     Serialized.pImmutableSamplers   = m_ImmutableSamplers;
     Serialized.NumImmutableSamplers = GetDesc().NumImmutableSamplers;
+
+    return Serialized;
 }
 
 } // namespace Diligent

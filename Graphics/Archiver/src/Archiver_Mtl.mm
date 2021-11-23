@@ -37,6 +37,16 @@
 
 namespace Diligent
 {
+
+template <>
+struct SerializableResourceSignatureImpl::SignatureTraits<PipelineResourceSignatureMtlImpl>
+{
+    static constexpr DeviceType Type = DeviceType::Metal;
+
+    template <SerializerMode Mode>
+    using PSOSerializerType = PSOSerializerMtl<Mode>;
+};
+
 namespace
 {
 
@@ -301,11 +311,7 @@ void SerializableShaderImpl::CreateShaderMtl(ShaderCreateInfo& ShaderCI, String&
         pLog->Release();
 }
 
-template<>
-PipelineResourceSignatureMtlImpl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureMtlImpl>() const
-{
-    return m_pPRSMtl ? reinterpret_cast<PipelineResourceSignatureMtlImpl*>(m_pPRSMtl->GetPRS()) : nullptr;
-}
+template PipelineResourceSignatureMtlImpl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureMtlImpl>() const;
 
 const SPIRVShaderResources* SerializableShaderImpl::GetMtlShaderSPIRVResources() const
 {

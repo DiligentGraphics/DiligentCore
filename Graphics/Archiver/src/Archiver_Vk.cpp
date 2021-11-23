@@ -37,6 +37,15 @@
 namespace Diligent
 {
 
+template <>
+struct SerializableResourceSignatureImpl::SignatureTraits<PipelineResourceSignatureVkImpl>
+{
+    static constexpr DeviceType Type = DeviceType::Vulkan;
+
+    template <SerializerMode Mode>
+    using PSOSerializerType = PSOSerializerVk<Mode>;
+};
+
 template <typename CreateInfoType>
 bool ArchiverImpl::PatchShadersVk(CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data, DefaultPRSInfo& DefPRS)
 {
@@ -191,27 +200,13 @@ void SerializableShaderImpl::CreateShaderVk(IReferenceCounters* pRefCounters, Sh
 }
 
 
-template <>
-PipelineResourceSignatureVkImpl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureVkImpl>() const
+template PipelineResourceSignatureVkImpl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureVkImpl>() const;
+
+void SerializableResourceSignatureImpl::CreatePRSVk(IReferenceCounters*                  pRefCounters,
+                                                    const PipelineResourceSignatureDesc& Desc,
+                                                    SHADER_TYPE                          ShaderStages)
 {
-    return m_pPRSVk ? m_pPRSVk->GetPRS<PipelineResourceSignatureVkImpl>() : nullptr;
-}
-
-const SerializedMemory* SerializableResourceSignatureImpl::GetSerializedMemoryVk() const
-{
-    return m_pPRSVk ? m_pPRSVk->GetMem() : nullptr;
-}
-
-void SerializableResourceSignatureImpl::CreatePRSVk(IReferenceCounters* pRefCounters, const PipelineResourceSignatureDesc& Desc, SHADER_TYPE ShaderStages)
-{
-    auto pPRSVk = std::make_unique<TPRS<PipelineResourceSignatureVkImpl>>(pRefCounters, Desc, ShaderStages);
-
-    PipelineResourceSignatureSerializedDataVk SerializedData;
-    pPRSVk->PRS.Serialize(SerializedData);
-    AddPRSDesc(pPRSVk->PRS.GetDesc(), SerializedData);
-    CopyPRSSerializedData<PSOSerializerVk>(SerializedData, pPRSVk->Mem);
-
-    m_pPRSVk.reset(pPRSVk.release());
+    CreateSignature<PipelineResourceSignatureVkImpl>(pRefCounters, Desc, ShaderStages);
 }
 
 

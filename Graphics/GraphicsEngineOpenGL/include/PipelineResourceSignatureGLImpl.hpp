@@ -134,7 +134,7 @@ public:
         return ImtblSamIdx;
     }
 
-    void Serialize(PipelineResourceSignatureSerializedDataGL& Serialized) const;
+    PipelineResourceSignatureSerializedDataGL Serialize() const;
 
 private:
     void CreateLayout(bool IsSerialized);
