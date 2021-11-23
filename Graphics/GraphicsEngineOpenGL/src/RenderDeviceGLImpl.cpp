@@ -525,6 +525,13 @@ void RenderDeviceGLImpl::CreatePipelineResourceSignature(const PipelineResourceS
     CreatePipelineResourceSignatureImpl(ppSignature, Desc, ShaderStages, IsDeviceInternal);
 }
 
+void RenderDeviceGLImpl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc&             Desc,
+                                                         const PipelineResourceSignatureSerializedDataGL& SerializedData,
+                                                         IPipelineResourceSignature**                     ppSignature)
+{
+    CreatePipelineResourceSignatureImpl(ppSignature, Desc, SerializedData);
+}
+
 void RenderDeviceGLImpl::CreateBLAS(const BottomLevelASDesc& Desc,
                                     IBottomLevelAS**         ppBLAS)
 {

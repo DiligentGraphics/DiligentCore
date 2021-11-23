@@ -46,6 +46,7 @@
 #include "DeviceMemoryVkImpl.hpp"
 #include "PipelineStateCacheVkImpl.hpp"
 #include "CommandQueueVkImpl.hpp"
+#include "PipelineResourceSignatureVkImpl.hpp"
 
 #include "VulkanTypeConversions.hpp"
 #include "EngineMemory.h"
@@ -705,6 +706,13 @@ void RenderDeviceVkImpl::CreatePipelineResourceSignature(const PipelineResourceS
                                                          bool                                 IsDeviceInternal)
 {
     CreatePipelineResourceSignatureImpl(ppSignature, Desc, ShaderStages, IsDeviceInternal);
+}
+
+void RenderDeviceVkImpl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc&             Desc,
+                                                         const PipelineResourceSignatureSerializedDataVk& SerializedData,
+                                                         IPipelineResourceSignature**                     ppSignature)
+{
+    CreatePipelineResourceSignatureImpl(ppSignature, Desc, SerializedData);
 }
 
 void RenderDeviceVkImpl::CreateDeviceMemory(const DeviceMemoryCreateInfo& CreateInfo, IDeviceMemory** ppMemory)

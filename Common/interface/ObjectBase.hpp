@@ -66,7 +66,7 @@ template <typename BaseInterface>
 class ObjectBase : public RefCountedObject<BaseInterface>
 {
 public:
-    explicit ObjectBase(IReferenceCounters* pRefCounters) :
+    explicit ObjectBase(IReferenceCounters* pRefCounters) noexcept :
         RefCountedObject<BaseInterface>{pRefCounters}
     {}
 

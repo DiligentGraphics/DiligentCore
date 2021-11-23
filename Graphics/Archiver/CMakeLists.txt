@@ -1,0 +1,156 @@
+cmake_minimum_required (VERSION 3.6)
+
+project(Diligent-Archiver CXX)
+
+set(INCLUDE
+    include/ArchiverImpl.hpp
+    include/SerializationDeviceImpl.hpp
+    include/SerializableShaderImpl.hpp
+    include/SerializableRenderPassImpl.hpp
+    include/SerializableResourceSignatureImpl.hpp
+    include/SerializedMemory.hpp
+)
+
+set(INTERFACE
+    interface/Archiver.h
+    interface/ArchiverFactory.h
+    interface/ArchiverFactoryLoader.h
+    interface/SerializationDevice.h
+)
+
+set(SOURCE
+    src/ArchiverImpl.cpp
+    src/Archiver_Inc.hpp
+    src/ArchiverFactory.cpp
+    src/SerializationDeviceImpl.cpp
+    src/SerializableShaderImpl.cpp
+    src/SerializableResourceSignatureImpl.cpp
+    src/SerializableRenderPassImpl.cpp
+    src/SerializedMemory.cpp
+)
+
+if(D3D11_SUPPORTED)
+    list(APPEND SOURCE src/Archiver_D3D11.cpp)
+endif()
+if(D3D12_SUPPORTED)
+    list(APPEND SOURCE src/Archiver_D3D12.cpp)
+endif()
+if(VULKAN_SUPPORTED)
+    list(APPEND SOURCE src/Archiver_Vk.cpp)
+endif()
+if(GL_SUPPORTED)
+    list(APPEND SOURCE src/Archiver_GL.cpp)
+endif()
+if(METAL_SUPPORTED)
+    list(APPEND SOURCE src/Archiver_Mtl.mm)
+endif()
+
+add_library(Diligent-Archiver SHARED
+    ${SOURCE} ${INTERFACE} ${INCLUDE}
+)
+
+target_include_directories(Diligent-Archiver
+PUBLIC
+    interface
+PRIVATE
+    include
+    ../GraphicsEngine/include
+    ../GraphicsEngineD3DBase/include
+    ../GraphicsEngineNextGenBase/include
+    ../ShaderTools/include
+)
+
+target_link_libraries(Diligent-Archiver
+PRIVATE
+    Diligent-BuildSettings
+PUBLIC
+    Diligent-PlatformInterface
+    Diligent-Common
+    Diligent-GraphicsAccessories
+)
+target_compile_definitions(Diligent-Archiver PUBLIC ARCHIVER_SUPPORTED=1)
+
+if(D3D11_SUPPORTED)
+    target_link_libraries(Diligent-Archiver PRIVATE Diligent-GraphicsEngineD3D11-static)
+    target_include_directories(Diligent-Archiver PRIVATE ../GraphicsEngineD3D11/include)
+endif()
+
+if(D3D12_SUPPORTED)
+    target_link_libraries(Diligent-Archiver PRIVATE Diligent-GraphicsEngineD3D12-static)
+    target_include_directories(Diligent-Archiver PRIVATE ../GraphicsEngineD3D12/include)
+endif()
+
+if(VULKAN_SUPPORTED)
+    target_link_libraries(Diligent-Archiver PRIVATE Diligent-GraphicsEngineVk-static)
+    target_include_directories(Diligent-Archiver
+    PRIVATE
+        ../GraphicsEngineVulkan/include
+        ../../ThirdParty/Vulkan-Headers/include
+    )
+    target_compile_definitions(Diligent-Archiver PRIVATE DILIGENT_NO_GLSLANG=$<BOOL:${DILIGENT_NO_GLSLANG}>)
+endif()
+
+if(GL_SUPPORTED OR GLES_SUPPORTED)
+    target_link_libraries(Diligent-Archiver PRIVATE Diligent-GraphicsEngineOpenGL-static)
+    target_include_directories(Diligent-Archiver PRIVATE ../GraphicsEngineOpenGL/include)
+    
+    if(PLATFORM_WIN32)
+        target_link_libraries(Diligent-Archiver PRIVATE glew-static opengl32.lib)
+    elseif(PLATFORM_LINUX)
+        target_link_libraries(Diligent-Archiver PRIVATE glew-static GL X11)
+    elseif(PLATFORM_MACOS)
+        find_package(OpenGL REQUIRED)
+        target_link_libraries(Diligent-Archiver PRIVATE glew-static ${OPENGL_LIBRARY})
+    else()
+        message(FATAL_ERROR "Unknown platform")
+    endif()
+endif()
+
+if(METAL_SUPPORTED)
+    target_link_libraries(Diligent-Archiver
+    PRIVATE
+    	Diligent-GraphicsEngineMetal-static
+        spirv-cross-core
+        spirv-cross-msl
+        spirv-cross-glsl
+   	)
+    target_include_directories(Diligent-Archiver PRIVATE ../GraphicsEngineMetal/include)
+endif()
+
+if(MSVC)
+    target_sources(Diligent-Archiver PRIVATE
+        src/DLLMain.cpp
+        src/Archiver.def
+    )
+endif()
+
+source_group("source" FILES ${SOURCE})
+source_group("include" FILES ${INCLUDE})
+source_group("interface" FILES ${INTERFACE})
+
+source_group("dll" FILES
+    src/DLLMain.cpp
+    src/Archiver.def
+)
+
+set_target_properties(Diligent-Archiver PROPERTIES
+    FOLDER DiligentCore/Graphics
+)
+
+if(PLATFORM_WIN32)
+    # Do not add 'lib' prefix when building with MinGW
+    set_target_properties(Diligent-Archiver PROPERTIES PREFIX "")
+
+    # Set output name to Archiver{32|64}{r|d}
+    set_dll_output_name(Diligent-Archiver Archiver)
+
+else()
+    set_target_properties(Diligent-Archiver PROPERTIES
+        OUTPUT_NAME Archiver
+    )
+endif()
+
+set_common_target_properties(Diligent-Archiver)
+if(DEFINED DILIGENT_CORE_COMMIT_HASH)
+    target_compile_definitions(Diligent-Archiver PRIVATE DILIGENT_CORE_COMMIT_HASH="${DILIGENT_CORE_COMMIT_HASH}")
+endif()

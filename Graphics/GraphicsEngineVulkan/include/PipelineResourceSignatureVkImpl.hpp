@@ -51,6 +51,24 @@ namespace Diligent
 struct SPIRVShaderResourceAttribs;
 class DeviceContextVkImpl;
 
+struct PipelineResourceImmutableSamplerAttribsVk
+{
+    Uint32 DescrSet     = ~0u;
+    Uint32 BindingIndex = ~0u;
+};
+
+struct PipelineResourceSignatureSerializedDataVk : PipelineResourceSignatureSerializedData
+{
+    const PipelineResourceAttribsVk*                 pResourceAttribs          = nullptr; // [NumResources]
+    Uint32                                           NumResources              = 0;
+    const PipelineResourceImmutableSamplerAttribsVk* pImmutableSamplers        = nullptr; // [NumImmutableSamplers]
+    Uint32                                           NumImmutableSamplers      = 0;
+    Uint16                                           DynamicUniformBufferCount = 0;
+    Uint16                                           DynamicStorageBufferCount = 0;
+
+    std::unique_ptr<PipelineResourceImmutableSamplerAttribsVk[]> m_pImmutableSamplers;
+};
+
 /// Implementation of the Diligent::PipelineResourceSignatureVkImpl class
 class PipelineResourceSignatureVkImpl final : public PipelineResourceSignatureBase<EngineVkImplTraits>
 {
@@ -81,6 +99,12 @@ public:
                                     const PipelineResourceSignatureDesc& Desc,
                                     SHADER_TYPE                          ShaderStages      = SHADER_TYPE_UNKNOWN,
                                     bool                                 bIsDeviceInternal = false);
+
+    PipelineResourceSignatureVkImpl(IReferenceCounters*                              pRefCounters,
+                                    RenderDeviceVkImpl*                              pDevice,
+                                    const PipelineResourceSignatureDesc&             Desc,
+                                    const PipelineResourceSignatureSerializedDataVk& Serialized);
+
     ~PipelineResourceSignatureVkImpl();
 
     Uint32 GetDynamicOffsetCount() const { return m_DynamicUniformBufferCount + m_DynamicStorageBufferCount; }
@@ -92,12 +116,13 @@ public:
         return (HasDescriptorSet(DESCRIPTOR_SET_ID_STATIC_MUTABLE) ? 1 : 0) + (HasDescriptorSet(DESCRIPTOR_SET_ID_DYNAMIC) ? 1 : 0);
     }
 
-    struct ImmutableSamplerAttribs
+    struct ImmutableSamplerAttribs : PipelineResourceImmutableSamplerAttribsVk
     {
         RefCntAutoPtr<ISampler> Ptr;
 
-        Uint32 DescrSet     = ~0u;
-        Uint32 BindingIndex = ~0u;
+        ImmutableSamplerAttribs() noexcept {}
+        explicit ImmutableSamplerAttribs(const PipelineResourceImmutableSamplerAttribsVk& Attribs) noexcept :
+            PipelineResourceImmutableSamplerAttribsVk{Attribs} {}
     };
 
     const ImmutableSamplerAttribs& GetImmutableSamplerAttribs(Uint32 SampIndex) const
@@ -108,7 +133,8 @@ public:
 
     VkDescriptorSetLayout GetVkDescriptorSetLayout(DESCRIPTOR_SET_ID SetId) const { return m_VkDescrSetLayouts[SetId]; }
 
-    bool HasDescriptorSet(DESCRIPTOR_SET_ID SetId) const { return m_VkDescrSetLayouts[SetId] != VK_NULL_HANDLE; }
+    bool   HasDescriptorSet(DESCRIPTOR_SET_ID SetId) const { return m_VkDescrSetLayouts[SetId] != VK_NULL_HANDLE; }
+    Uint32 GetDescriptorSetSize(DESCRIPTOR_SET_ID SetId) const { return m_DescriptorSetSizes[SetId]; }
 
     void InitSRBResourceCache(ShaderResourceCacheVk& ResourceCache);
 
@@ -132,6 +158,8 @@ public:
     // Returns the descriptor set index in the resource cache
     template <DESCRIPTOR_SET_ID SetId>
     Uint32 GetDescriptorSetIndex() const;
+
+    PipelineResourceSignatureSerializedDataVk Serialize() const;
 
 private:
     // Resource cache group identifier
@@ -159,7 +187,7 @@ private:
 
     void Destruct();
 
-    void CreateSetLayouts();
+    void CreateSetLayouts(bool IsSerialized);
 
     static inline CACHE_GROUP       GetResourceCacheGroup(const PipelineResourceDesc& Res);
     static inline DESCRIPTOR_SET_ID VarTypeToDescriptorSetId(SHADER_RESOURCE_VARIABLE_TYPE VarType);

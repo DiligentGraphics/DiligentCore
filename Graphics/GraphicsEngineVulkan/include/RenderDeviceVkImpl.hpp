@@ -146,6 +146,10 @@ public:
                                          SHADER_TYPE                          ShaderStages,
                                          bool                                 IsDeviceInternal);
 
+    void CreatePipelineResourceSignature(const PipelineResourceSignatureDesc&             Desc,
+                                         const PipelineResourceSignatureSerializedDataVk& SerializedData,
+                                         IPipelineResourceSignature**                     ppSignature);
+
     /// Implementation of IRenderDevice::CreateDeviceMemory() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE CreateDeviceMemory(const DeviceMemoryCreateInfo& CreateInfo,
                                                        IDeviceMemory**               ppMemory) override final;

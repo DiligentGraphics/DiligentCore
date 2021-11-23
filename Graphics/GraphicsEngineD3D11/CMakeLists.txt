@@ -11,24 +11,26 @@ set(INCLUDE
     include/D3D11TypeDefinitions.h
     include/DeviceContextD3D11Impl.hpp
     include/DeviceMemoryD3D11Impl.hpp
+    include/DeviceObjectArchiveD3D11Impl.hpp
+    include/DearchiverD3D11Impl.hpp
     include/DisjointQueryPool.hpp
     include/EngineD3D11ImplTraits.hpp
-    include/pch.h
     include/FenceD3D11Impl.hpp
     include/FramebufferD3D11Impl.hpp
-    include/PipelineStateD3D11Impl.hpp
+    include/pch.h
     include/PipelineResourceAttribsD3D11.hpp
     include/PipelineResourceSignatureD3D11Impl.hpp
+    include/PipelineStateD3D11Impl.hpp
     include/QueryD3D11Impl.hpp
     include/RenderDeviceD3D11Impl.hpp
-    include/ResourceD3D11Base.hpp
     include/RenderPassD3D11Impl.hpp
+    include/ResourceD3D11Base.hpp
     include/SamplerD3D11Impl.hpp
     include/ShaderD3D11Impl.hpp
     include/ShaderResourceBindingD3D11Impl.hpp
     include/ShaderResourceCacheD3D11.hpp
-    include/ShaderVariableManagerD3D11.hpp
     include/ShaderResourcesD3D11.hpp
+    include/ShaderVariableManagerD3D11.hpp
     include/SwapChainD3D11Impl.hpp
     include/targetver.h
     include/Texture1D_D3D11.hpp
@@ -64,12 +66,14 @@ set(SRC
     src/D3D11TypeConversions.cpp
     src/DeviceContextD3D11Impl.cpp
     src/DeviceMemoryD3D11Impl.cpp
+    src/DeviceObjectArchiveD3D11Impl.cpp
+    src/DearchiverD3D11Impl.cpp
     src/EngineFactoryD3D11.cpp
     src/FenceD3D11Impl.cpp
     src/FramebufferD3D11Impl.cpp
     src/GUIDDef.cpp
-    src/PipelineStateD3D11Impl.cpp
     src/PipelineResourceSignatureD3D11Impl.cpp
+    src/PipelineStateD3D11Impl.cpp
     src/QueryD3D11Impl.cpp
     src/RenderDeviceD3D11Impl.cpp
     src/RenderPassD3D11Impl.cpp
@@ -77,8 +81,8 @@ set(SRC
     src/ShaderD3D11Impl.cpp
     src/ShaderResourceBindingD3D11Impl.cpp
     src/ShaderResourceCacheD3D11.cpp
-    src/ShaderVariableManagerD3D11.cpp
     src/ShaderResourcesD3D11.cpp
+    src/ShaderVariableManagerD3D11.cpp
     src/SwapChainD3D11Impl.cpp
     src/Texture1D_D3D11.cpp
     src/Texture2D_D3D11.cpp

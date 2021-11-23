@@ -28,6 +28,8 @@
 #include "GL/TestingEnvironmentGL.hpp"
 #include "GL/TestingSwapChainGL.hpp"
 
+#include "TextureGL.h"
+
 namespace Diligent
 {
 
@@ -133,14 +135,27 @@ TestingSwapChainGL::~TestingSwapChainGL()
 
 void TestingSwapChainGL::TakeSnapshot(ITexture* pCopyFrom)
 {
-    VERIFY(pCopyFrom == nullptr, "Not implemented");
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, m_FBO);
+    if (pCopyFrom != nullptr)
+    {
+        RefCntAutoPtr<ITextureGL> pSrcTexGL{pCopyFrom, IID_TextureGL};
+        VERIFY_EXPR(pSrcTexGL);
+
+        glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pSrcTexGL->GetGLTextureHandle(), 0);
+        VERIFY_EXPR(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
+    }
 
     m_ReferenceDataPitch = m_SwapChainDesc.Width * 4;
     m_ReferenceData.resize(m_SwapChainDesc.Height * m_ReferenceDataPitch);
     glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-    glBindFramebuffer(GL_READ_FRAMEBUFFER, m_FBO);
     glReadPixels(0, 0, m_SwapChainDesc.Width, m_SwapChainDesc.Height, GL_RGBA, GL_UNSIGNED_BYTE, m_ReferenceData.data());
     VERIFY(glGetError() == GL_NO_ERROR, "Failed to read pixels from the framebuffer");
+
+    if (pCopyFrom != nullptr)
+    {
+        glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_RenderTarget, 0);
+        VERIFY_EXPR(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
+    }
 }
 
 void CreateTestingSwapChainGL(IRenderDevice*       pDevice,

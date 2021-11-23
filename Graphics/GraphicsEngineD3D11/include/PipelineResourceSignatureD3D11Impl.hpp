@@ -48,32 +48,54 @@
 namespace Diligent
 {
 
+struct PipelineResourceImmutableSamplerAttribsD3D11
+{
+public:
+    Uint32                  ArraySize = 1;
+    D3D11ResourceBindPoints BindPoints;
+
+    PipelineResourceImmutableSamplerAttribsD3D11() noexcept {}
+
+    bool IsAllocated() const { return !BindPoints.IsEmpty(); }
+};
+
+struct PipelineResourceSignatureSerializedDataD3D11 : PipelineResourceSignatureSerializedData
+{
+    const PipelineResourceAttribsD3D11*                 pResourceAttribs     = nullptr; // [NumResources]
+    Uint32                                              NumResources         = 0;
+    const PipelineResourceImmutableSamplerAttribsD3D11* pImmutableSamplers   = nullptr; // [NumImmutableSamplers]
+    Uint32                                              NumImmutableSamplers = 0;
+
+    std::unique_ptr<PipelineResourceImmutableSamplerAttribsD3D11[]> m_pImmutableSamplers;
+};
+
 /// Implementation of the Diligent::PipelineResourceSignatureD3D11Impl class
 class PipelineResourceSignatureD3D11Impl final : public PipelineResourceSignatureBase<EngineD3D11ImplTraits>
 {
 public:
     using TPipelineResourceSignatureBase = PipelineResourceSignatureBase<EngineD3D11ImplTraits>;
 
+    using ResourceAttribs = TPipelineResourceSignatureBase::PipelineResourceAttribsType;
+
     PipelineResourceSignatureD3D11Impl(IReferenceCounters*                  pRefCounters,
                                        RenderDeviceD3D11Impl*               pDevice,
                                        const PipelineResourceSignatureDesc& Desc,
                                        SHADER_TYPE                          ShaderStages      = SHADER_TYPE_UNKNOWN,
                                        bool                                 bIsDeviceInternal = false);
+    PipelineResourceSignatureD3D11Impl(IReferenceCounters*                                 pRefCounters,
+                                       RenderDeviceD3D11Impl*                              pDevice,
+                                       const PipelineResourceSignatureDesc&                Desc,
+                                       const PipelineResourceSignatureSerializedDataD3D11& Serialized);
     ~PipelineResourceSignatureD3D11Impl();
 
-    using ResourceAttribs = TPipelineResourceSignatureBase::PipelineResourceAttribsType;
-
     // sizeof(ImmutableSamplerAttribs) == 24, x64
-    struct ImmutableSamplerAttribs
+    struct ImmutableSamplerAttribs : PipelineResourceImmutableSamplerAttribsD3D11
     {
-    public:
         RefCntAutoPtr<SamplerD3D11Impl> pSampler;
-        Uint32                          ArraySize = 1;
-        D3D11ResourceBindPoints         BindPoints;
 
         ImmutableSamplerAttribs() noexcept {}
-
-        bool IsAllocated() const { return !BindPoints.IsEmpty(); }
+        explicit ImmutableSamplerAttribs(const PipelineResourceImmutableSamplerAttribsD3D11& Attribs) noexcept :
+            PipelineResourceImmutableSamplerAttribsD3D11{Attribs} {}
     };
 
     const ImmutableSamplerAttribs& GetImmutableSamplerAttribs(Uint32 SampIndex) const
@@ -96,6 +118,8 @@ public:
     // Copies static resources from the static resource cache to the destination cache
     void CopyStaticResources(ShaderResourceCacheD3D11& ResourceCache) const;
 
+    PipelineResourceSignatureSerializedDataD3D11 Serialize() const;
+
 #ifdef DILIGENT_DEVELOPMENT
     /// Verifies committed resource using the D3D resource attributes from the PSO.
     bool DvpValidateCommittedResource(const D3DShaderResourceAttribs& D3DAttribs,
@@ -105,8 +129,10 @@ public:
                                       const char*                     PSOName) const;
 #endif
 
+    static D3D11_RESOURCE_RANGE ShaderResourceTypeToRange(SHADER_RESOURCE_TYPE Type);
+
 private:
-    void CreateLayout();
+    void CreateLayout(bool IsSerialized);
 
     void Destruct();
 

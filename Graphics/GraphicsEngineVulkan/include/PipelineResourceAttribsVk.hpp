@@ -58,7 +58,7 @@ enum class DescriptorType : Uint8
     InputAttachment_General,
     AccelerationStructure,
     Count,
-    Unknown = 0xFFu,
+    Unknown = 31,
 };
 
 
@@ -68,15 +68,15 @@ struct PipelineResourceAttribsVk
 private:
     static constexpr Uint32 _BindingIndexBits    = 16;
     static constexpr Uint32 _SamplerIndBits      = 16;
-    static constexpr Uint32 _ArraySizeBits       = 26;
-    static constexpr Uint32 _DescrTypeBits       = 4;
+    static constexpr Uint32 _ArraySizeBits       = 25;
+    static constexpr Uint32 _DescrTypeBits       = 5;
     static constexpr Uint32 _DescrSetBits        = 1;
     static constexpr Uint32 _SamplerAssignedBits = 1;
 
     static_assert((_BindingIndexBits + _ArraySizeBits + _SamplerIndBits + _DescrTypeBits + _DescrSetBits + _SamplerAssignedBits) % 32 == 0, "Bits are not optimally packed");
 
     // clang-format off
-    static_assert((1u << _DescrTypeBits)    >= static_cast<Uint32>(DescriptorType::Count), "Not enough bits to store DescriptorType values");
+    static_assert((1u << _DescrTypeBits)    >  static_cast<Uint32>(DescriptorType::Count), "Not enough bits to store DescriptorType values");
     static_assert((1u << _BindingIndexBits) >= MAX_RESOURCES_IN_SIGNATURE,                 "Not enough bits to store resource binding index");
     static_assert((1u << _SamplerIndBits)   >= MAX_RESOURCES_IN_SIGNATURE,                 "Not enough bits to store sampler resource index");
     // clang-format on
@@ -124,6 +124,12 @@ public:
         VERIFY(DescrSet            == _DescrSet,     "Descriptor set (", _DescrSet, ") exceeds maximum representable value");
         // clang-format on
     }
+
+    // Only for serialization
+    PipelineResourceAttribsVk() noexcept :
+        PipelineResourceAttribsVk{0, 0, 0, DescriptorType::Unknown, 0, false, 0, 0}
+    {}
+
 
     Uint32 CacheOffset(ResourceCacheContentType CacheType) const
     {

@@ -58,6 +58,13 @@ enum BINDING_RANGE : Uint32
 BINDING_RANGE PipelineResourceToBindingRange(const PipelineResourceDesc& Desc);
 const char*   GetBindingRangeName(BINDING_RANGE Range);
 
+struct PipelineResourceSignatureSerializedDataGL : PipelineResourceSignatureSerializedData
+{
+    const PipelineResourceAttribsGL* pResourceAttribs     = nullptr; // [NumResources]
+    Uint32                           NumResources         = 0;
+    const RefCntAutoPtr<ISampler>*   pImmutableSamplers   = nullptr; // unused
+    Uint32                           NumImmutableSamplers = 0;       // unused
+};
 
 /// Implementation of the Diligent::PipelineResourceSignatureGLImpl class
 class PipelineResourceSignatureGLImpl final : public PipelineResourceSignatureBase<EngineGLImplTraits>
@@ -70,6 +77,10 @@ public:
                                     const PipelineResourceSignatureDesc& Desc,
                                     SHADER_TYPE                          ShaderStages      = SHADER_TYPE_UNKNOWN,
                                     bool                                 bIsDeviceInternal = false);
+    PipelineResourceSignatureGLImpl(IReferenceCounters*                              pRefCounters,
+                                    RenderDeviceGLImpl*                              pDevice,
+                                    const PipelineResourceSignatureDesc&             Desc,
+                                    const PipelineResourceSignatureSerializedDataGL& Serialized);
     ~PipelineResourceSignatureGLImpl();
 
     using ResourceAttribs = TPipelineResourceSignatureBase::PipelineResourceAttribsType;
@@ -123,8 +134,10 @@ public:
         return ImtblSamIdx;
     }
 
+    PipelineResourceSignatureSerializedDataGL Serialize() const;
+
 private:
-    void CreateLayout();
+    void CreateLayout(bool IsSerialized);
 
     void Destruct();
 

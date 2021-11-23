@@ -49,7 +49,7 @@ private:
     static constexpr Uint32 _SpaceBits           = 8;
     static constexpr Uint32 _SigRootIndexBits    = 3;
     static constexpr Uint32 _SamplerAssignedBits = 1;
-    static constexpr Uint32 _RootParamTypeBits   = 3;
+    static constexpr Uint32 _RootParamTypeBits   = 4;
 
     // clang-format off
     static_assert((1u << _RegisterBits)      >= MAX_RESOURCES_IN_SIGNATURE,        "Not enough bits to store shader register");
@@ -105,6 +105,11 @@ public:
         VERIFY(Space == _Space, "Space (", _Space, ") exceeds maximum representable value");
         VERIFY(GetD3D12RootParamType() == _RootParamType, "Not enough bits to represent root parameter type");
     }
+
+    // Only for serialization
+    PipelineResourceAttribsD3D12() noexcept :
+        PipelineResourceAttribsD3D12{0, 0, 0, 0, 0, 0, 0, false, D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE}
+    {}
 
     bool IsImmutableSamplerAssigned() const
     {

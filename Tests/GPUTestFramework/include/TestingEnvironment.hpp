@@ -37,7 +37,9 @@
 #include "SwapChain.h"
 #include "GraphicsTypesOutputInserters.hpp"
 #include "NativeWindow.h"
-
+#if ARCHIVER_SUPPORTED
+#    include "ArchiverFactory.h"
+#endif
 #include "gtest/gtest.h"
 
 namespace Diligent
@@ -107,7 +109,17 @@ public:
         }
     };
 
-    IRenderDevice*  GetDevice() { return m_pDevice; }
+#if ARCHIVER_SUPPORTED
+    IArchiverFactory* GetArchiverFactory()
+    {
+        return m_ArchiverFactory;
+    }
+#endif
+
+    IRenderDevice* GetDevice()
+    {
+        return m_pDevice;
+    }
     IDeviceContext* GetDeviceContext(size_t ctx = 0)
     {
         VERIFY_EXPR(ctx < m_NumImmediateContexts);
@@ -182,6 +194,10 @@ protected:
     // Shader resource array indexing always references array element 0 when shaders are compiled.
     // A workaround is to use SM5.0 and default shader compiler.
     bool m_NeedWARPResourceArrayIndexingBugWorkaround = false;
+
+#if ARCHIVER_SUPPORTED
+    RefCntAutoPtr<IArchiverFactory> m_ArchiverFactory;
+#endif
 };
 
 } // namespace Testing

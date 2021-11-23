@@ -47,4 +47,9 @@ if(GL_SUPPORTED OR GLES_SUPPORTED)
     add_subdirectory(GraphicsEngineOpenGL)
 endif()
 
+
+if(ARCHIVER_SUPPORTED)
+    add_subdirectory(Archiver)
+endif()
+
 add_subdirectory(GraphicsTools)

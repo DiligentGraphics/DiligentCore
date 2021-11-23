@@ -44,6 +44,7 @@
 #include "EngineFactoryBase.hpp"
 #include "EngineMemory.h"
 #include "CommandQueueD3D12Impl.hpp"
+#include "DearchiverD3D12Impl.hpp"
 
 #ifndef NOMINMAX
 #    define NOMINMAX
@@ -109,12 +110,18 @@ public:
     virtual GraphicsAdapterInfo GetGraphicsAdapterInfo(void*          pd3dDevice,
                                                        IDXGIAdapter1* pDXIAdapter) const override final;
 
+    virtual IDearchiver* DILIGENT_CALL_TYPE GetDearchiver() override final
+    {
+        return &m_Dearchiver;
+    }
 
 private:
 #if USE_D3D12_LOADER
     HMODULE     m_hD3D12Dll = NULL;
     std::string m_DllName;
 #endif
+
+    DearchiverD3D12Impl m_Dearchiver{nullptr}; // AZ TODO
 };
 
 bool EngineFactoryD3D12Impl::LoadD3D12(const char* DllName)

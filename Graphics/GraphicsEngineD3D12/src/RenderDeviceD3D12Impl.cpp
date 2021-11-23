@@ -48,6 +48,7 @@
 #include "ShaderBindingTableD3D12Impl.hpp"
 #include "DeviceMemoryD3D12Impl.hpp"
 #include "PipelineStateCacheD3D12Impl.hpp"
+#include "PipelineResourceSignatureD3D12Impl.hpp"
 
 #include "EngineMemory.h"
 #include "D3D12TypeConversions.hpp"
@@ -638,6 +639,13 @@ void RenderDeviceD3D12Impl::CreatePipelineResourceSignature(const PipelineResour
                                                             bool                                 IsDeviceInternal)
 {
     CreatePipelineResourceSignatureImpl(ppSignature, Desc, ShaderStages, IsDeviceInternal);
+}
+
+void RenderDeviceD3D12Impl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc&                Desc,
+                                                            const PipelineResourceSignatureSerializedDataD3D12& SerializedData,
+                                                            IPipelineResourceSignature**                        ppSignature)
+{
+    CreatePipelineResourceSignatureImpl(ppSignature, Desc, SerializedData);
 }
 
 DescriptorHeapAllocation RenderDeviceD3D12Impl::AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count /*= 1*/)

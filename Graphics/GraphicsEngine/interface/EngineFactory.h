@@ -42,6 +42,7 @@ struct AAssetManager;
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 struct IShaderSourceInputStreamFactory;
+struct IDearchiver;
 
 // {D932B052-4ED6-4729-A532-F31DEEC100F3}
 static const INTERFACE_ID IID_EngineFactory =
@@ -91,6 +92,9 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactory, IObject)
                                            Uint32 REF           NumAdapters,
                                            GraphicsAdapterInfo* Adapters) CONST PURE;
 
+    /// Returns a pointer to the dearchiver object (see Diligent::IDearchiver).
+    VIRTUAL struct IDearchiver* METHOD(GetDearchiver)(THIS) PURE;
+
 #if PLATFORM_ANDROID
     /// On Android platform, it is necessary to initialize the file system before
     /// CreateDefaultShaderSourceStreamFactory() method can be called.
@@ -120,6 +124,7 @@ DILIGENT_END_INTERFACE
 #    define IEngineFactory_CreateDefaultShaderSourceStreamFactory(This, ...) CALL_IFACE_METHOD(EngineFactory, CreateDefaultShaderSourceStreamFactory, This, __VA_ARGS__)
 #    define IEngineFactory_EnumerateAdapters(This, ...)                      CALL_IFACE_METHOD(EngineFactory, EnumerateAdapters,                      This, __VA_ARGS__)
 #    define IEngineFactory_InitAndroidFileSystem(This, ...)                  CALL_IFACE_METHOD(EngineFactory, InitAndroidFileSystem,                  This, __VA_ARGS__)
+#    define IEngineFactory_GetDearchiver(This)                               CALL_IFACE_METHOD(EngineFactory, GetDearchiver,                          This)
 
 // clang-format on
 

@@ -12,6 +12,7 @@ set(INCLUDE
     include/DeviceContextBase.hpp
     include/DeviceMemoryBase.hpp
     include/DeviceObjectBase.hpp
+    include/DeviceObjectArchiveBase.hpp
     include/EngineFactoryBase.hpp
     include/EngineMemory.h
     include/FenceBase.hpp
@@ -26,6 +27,7 @@ set(INCLUDE
     include/RenderPassBase.hpp
     include/ResourceMappingImpl.hpp
     include/SamplerBase.hpp
+    include/DearchiverBase.hpp
     include/ShaderBase.hpp
     include/ShaderResourceBindingBase.hpp
     include/ShaderResourceCacheCommon.hpp
@@ -36,6 +38,7 @@ set(INCLUDE
     include/TextureBase.hpp
     include/TextureViewBase.hpp
     include/TopLevelASBase.hpp
+    include/Serializer.hpp
 )
 
 set(INTERFACE 
@@ -51,6 +54,7 @@ set(INTERFACE
     interface/DeviceContext.h
     interface/DeviceMemory.h
     interface/DeviceObject.h
+    interface/DeviceObjectArchive.h
     interface/EngineFactory.h
     interface/Fence.h
     interface/Framebuffer.h
@@ -65,6 +69,7 @@ set(INTERFACE
     interface/RenderPass.h
     interface/ResourceMapping.h
     interface/Sampler.h
+    interface/Dearchiver.h
     interface/Shader.h
     interface/ShaderResourceBinding.h
     interface/ShaderResourceVariable.h
@@ -86,6 +91,7 @@ set(SOURCE
     src/DefaultShaderSourceStreamFactory.cpp
     src/DeviceContextBase.cpp
     src/DeviceMemoryBase.cpp
+    src/DeviceObjectArchiveBase.cpp
     src/EngineMemory.cpp
     src/EngineFactoryBase.cpp
     src/FramebufferBase.cpp
@@ -97,6 +103,7 @@ set(SOURCE
     src/RenderPassBase.cpp
     src/ShaderBindingTableBase.cpp
     src/SamplerBase.cpp
+    src/DearchiverBase.cpp
     src/TextureBase.cpp
     src/TopLevelASBase.cpp
 )
@@ -129,4 +136,16 @@ set_target_properties(Diligent-GraphicsEngine PROPERTIES
 
 if(DILIGENT_INSTALL_CORE)
     install_core_lib(Diligent-GraphicsEngine)
+endif()
+
+find_package(Git QUIET)
+if(Git_FOUND)
+    execute_process(
+        COMMAND "${GIT_EXECUTABLE}" describe --dirty=+ --tags --always
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+        OUTPUT_VARIABLE DILIGENT_CORE_COMMIT_HASH
+        ERROR_QUIET
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+    set(DILIGENT_CORE_COMMIT_HASH "${DILIGENT_CORE_COMMIT_HASH}" CACHE INTERNAL "" FORCE)
+    target_compile_definitions(Diligent-GraphicsEngine PRIVATE DILIGENT_CORE_COMMIT_HASH="${DILIGENT_CORE_COMMIT_HASH}")
 endif()

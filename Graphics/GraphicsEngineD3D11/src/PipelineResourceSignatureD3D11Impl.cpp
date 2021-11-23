@@ -40,33 +40,12 @@ namespace Diligent
 namespace
 {
 
-D3D11_RESOURCE_RANGE ShaderResourceTypeToRange(SHADER_RESOURCE_TYPE Type)
-{
-    static_assert(SHADER_RESOURCE_TYPE_LAST == 8, "Please update the switch below to handle the new shader resource type");
-    switch (Type)
-    {
-        // clang-format off
-        case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:  return D3D11_RESOURCE_RANGE_CBV;
-        case SHADER_RESOURCE_TYPE_TEXTURE_SRV:      return D3D11_RESOURCE_RANGE_SRV;
-        case SHADER_RESOURCE_TYPE_BUFFER_SRV:       return D3D11_RESOURCE_RANGE_SRV;
-        case SHADER_RESOURCE_TYPE_TEXTURE_UAV:      return D3D11_RESOURCE_RANGE_UAV;
-        case SHADER_RESOURCE_TYPE_BUFFER_UAV:       return D3D11_RESOURCE_RANGE_UAV;
-        case SHADER_RESOURCE_TYPE_SAMPLER:          return D3D11_RESOURCE_RANGE_SAMPLER;
-        case SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT: return D3D11_RESOURCE_RANGE_SRV;
-            // clang-format on
-        default:
-            UNEXPECTED("Unsupported resource type");
-            return D3D11_RESOURCE_RANGE_UNKNOWN;
-    }
-}
-
-
 void ValidatePipelineResourceSignatureDescD3D11(const PipelineResourceSignatureDesc& Desc) noexcept(false)
 {
     for (Uint32 i = 0; i < Desc.NumResources; ++i)
     {
         const auto& ResDesc = Desc.Resources[i];
-        const auto  Range   = ShaderResourceTypeToRange(ResDesc.ResourceType);
+        const auto  Range   = PipelineResourceSignatureD3D11Impl::ShaderResourceTypeToRange(ResDesc.ResourceType);
 
         constexpr SHADER_TYPE UAVStages = SHADER_TYPE_PIXEL | SHADER_TYPE_COMPUTE;
         if (Range == D3D11_RESOURCE_RANGE_UAV && (ResDesc.ShaderStages & ~UAVStages) != 0)
@@ -95,7 +74,7 @@ PipelineResourceSignatureD3D11Impl::PipelineResourceSignatureD3D11Impl(IReferenc
             GetRawAllocator(), DecoupleCombinedSamplers(Desc), m_ImmutableSamplers,
             [this]() //
             {
-                CreateLayout();
+                CreateLayout(/*IsSerialized*/ false);
             },
             [this]() //
             {
@@ -109,7 +88,27 @@ PipelineResourceSignatureD3D11Impl::PipelineResourceSignatureD3D11Impl(IReferenc
     }
 }
 
-void PipelineResourceSignatureD3D11Impl::CreateLayout()
+D3D11_RESOURCE_RANGE PipelineResourceSignatureD3D11Impl::ShaderResourceTypeToRange(SHADER_RESOURCE_TYPE Type)
+{
+    static_assert(SHADER_RESOURCE_TYPE_LAST == 8, "Please update the switch below to handle the new shader resource type");
+    switch (Type)
+    {
+        // clang-format off
+        case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:  return D3D11_RESOURCE_RANGE_CBV;
+        case SHADER_RESOURCE_TYPE_TEXTURE_SRV:      return D3D11_RESOURCE_RANGE_SRV;
+        case SHADER_RESOURCE_TYPE_BUFFER_SRV:       return D3D11_RESOURCE_RANGE_SRV;
+        case SHADER_RESOURCE_TYPE_TEXTURE_UAV:      return D3D11_RESOURCE_RANGE_UAV;
+        case SHADER_RESOURCE_TYPE_BUFFER_UAV:       return D3D11_RESOURCE_RANGE_UAV;
+        case SHADER_RESOURCE_TYPE_SAMPLER:          return D3D11_RESOURCE_RANGE_SAMPLER;
+        case SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT: return D3D11_RESOURCE_RANGE_SRV;
+            // clang-format on
+        default:
+            UNEXPECTED("Unsupported resource type");
+            return D3D11_RESOURCE_RANGE_UNKNOWN;
+    }
+}
+
+void PipelineResourceSignatureD3D11Impl::CreateLayout(const bool IsSerialized)
 {
     const auto AllocBindPoints = [](D3D11ShaderResourceCounters& ResCounters,
                                     D3D11ResourceBindPoints&     BindPoints,
@@ -167,11 +166,20 @@ void PipelineResourceSignatureD3D11Impl::CreateLayout()
     // Allocate registers for immutable samplers first
     for (Uint32 i = 0; i < m_Desc.NumImmutableSamplers; ++i)
     {
-        const auto& ImtblSamp        = GetImmutableSamplerDesc(i);
-        auto&       ImtblSampAttribs = m_ImmutableSamplers[i];
-        AllocBindPoints(m_ResourceCounters, ImtblSampAttribs.BindPoints, ImtblSamp.ShaderStages, ImtblSampAttribs.ArraySize, D3D11_RESOURCE_RANGE_SAMPLER);
-        if (HasDevice())
-            GetDevice()->CreateSampler(ImtblSamp.Desc, ImtblSampAttribs.pSampler.DblPtr<ISampler>());
+        const auto&             ImtblSamp        = GetImmutableSamplerDesc(i);
+        auto&                   ImtblSampAttribs = m_ImmutableSamplers[i];
+        D3D11ResourceBindPoints BindPoints;
+        AllocBindPoints(m_ResourceCounters, BindPoints, ImtblSamp.ShaderStages, ImtblSampAttribs.ArraySize, D3D11_RESOURCE_RANGE_SAMPLER);
+        if (!IsSerialized)
+        {
+            ImtblSampAttribs.BindPoints = BindPoints;
+            if (HasDevice())
+                GetDevice()->CreateSampler(ImtblSamp.Desc, ImtblSampAttribs.pSampler.DblPtr<ISampler>());
+        }
+        else
+        {
+            DEV_CHECK_ERR(ImtblSampAttribs.BindPoints == BindPoints, "Deserialized immutable sampler bind points are invalid");
+        }
     }
 
     D3D11ShaderResourceCounters StaticResCounters;
@@ -190,18 +198,14 @@ void PipelineResourceSignatureD3D11Impl::CreateLayout()
             SrcImmutableSamplerInd = ResourceToImmutableSamplerInd[AssignedSamplerInd];
         }
 
-        auto* const pAttrib = new (m_pResourceAttribs + i) ResourceAttribs //
-            {
-                AssignedSamplerInd,
-                SrcImmutableSamplerInd != InvalidImmutableSamplerIndex // For samplers or Tex SRVs combined with samplers
-            };
+        D3D11ResourceBindPoints BindPoints;
 
         // Do not allocate resource slot for immutable samplers that are also defined as resource
         if (!(ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER && SrcImmutableSamplerInd != InvalidImmutableSamplerIndex))
         {
             const auto Range = ShaderResourceTypeToRange(ResDesc.ResourceType);
 
-            AllocBindPoints(m_ResourceCounters, pAttrib->BindPoints, ResDesc.ShaderStages, ResDesc.ArraySize, Range);
+            AllocBindPoints(m_ResourceCounters, BindPoints, ResDesc.ShaderStages, ResDesc.ArraySize, Range);
             if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
             {
                 // Since resources in the static cache are indexed by the same bindings, we need to
@@ -221,7 +225,7 @@ void PipelineResourceSignatureD3D11Impl::CreateLayout()
                 for (auto ShaderStages = ResDesc.ShaderStages; ShaderStages != SHADER_TYPE_UNKNOWN;)
                 {
                     const auto ShaderInd = ExtractFirstShaderStageIndex(ShaderStages);
-                    const auto BindPoint = Uint16{pAttrib->BindPoints[ShaderInd]};
+                    const auto BindPoint = Uint16{BindPoints[ShaderInd]};
                     for (Uint32 elem = 0; elem < ResDesc.ArraySize; ++elem)
                     {
                         VERIFY_EXPR(BindPoint + elem < sizeof(m_DynamicCBSlotsMask[0]) * 8);
@@ -234,8 +238,26 @@ void PipelineResourceSignatureD3D11Impl::CreateLayout()
         {
             VERIFY(AssignedSamplerInd == ResourceAttribs::InvalidSamplerInd, "Sampler can't be assigned to another sampler.");
             // Use bind points from the immutable sampler.
-            pAttrib->BindPoints = m_ImmutableSamplers[SrcImmutableSamplerInd].BindPoints;
-            VERIFY_EXPR(!pAttrib->BindPoints.IsEmpty());
+            BindPoints = m_ImmutableSamplers[SrcImmutableSamplerInd].BindPoints;
+            VERIFY_EXPR(!BindPoints.IsEmpty());
+        }
+
+        auto* const pAttrib = m_pResourceAttribs + i;
+        if (!IsSerialized)
+        {
+            new (pAttrib) ResourceAttribs //
+                {
+                    BindPoints,
+                    AssignedSamplerInd,
+                    SrcImmutableSamplerInd != InvalidImmutableSamplerIndex // For samplers or Tex SRVs combined with samplers
+                };
+        }
+        else
+        {
+            DEV_CHECK_ERR(pAttrib->BindPoints == BindPoints, "Deserialized bind points are invalid");
+            DEV_CHECK_ERR(pAttrib->SamplerInd == AssignedSamplerInd, "Deserialized sampler index is invalid");
+            DEV_CHECK_ERR(pAttrib->IsImmutableSamplerAssigned() == (SrcImmutableSamplerInd != InvalidImmutableSamplerIndex),
+                          "Deserialized immutable sampler flag is invalid");
         }
     }
 
@@ -531,5 +553,58 @@ bool PipelineResourceSignatureD3D11Impl::DvpValidateCommittedResource(const D3DS
     return BindingsOK;
 }
 #endif // DILIGENT_DEVELOPMENT
+
+
+PipelineResourceSignatureD3D11Impl::PipelineResourceSignatureD3D11Impl(IReferenceCounters*                                 pRefCounters,
+                                                                       RenderDeviceD3D11Impl*                              pDevice,
+                                                                       const PipelineResourceSignatureDesc&                Desc,
+                                                                       const PipelineResourceSignatureSerializedDataD3D11& Serialized) :
+    TPipelineResourceSignatureBase{pRefCounters, pDevice, Desc, Serialized}
+{
+    try
+    {
+        ValidatePipelineResourceSignatureDescD3D11(Desc);
+
+        Deserialize(
+            GetRawAllocator(), DecoupleCombinedSamplers(Desc), Serialized, m_ImmutableSamplers,
+            [this]() //
+            {
+                CreateLayout(/*IsSerialized*/ true);
+            },
+            [this]() //
+            {
+                return ShaderResourceCacheD3D11::GetRequiredMemorySize(m_ResourceCounters);
+            });
+    }
+    catch (...)
+    {
+        Destruct();
+        throw;
+    }
+}
+
+PipelineResourceSignatureSerializedDataD3D11 PipelineResourceSignatureD3D11Impl::Serialize() const
+{
+    PipelineResourceSignatureSerializedDataD3D11 Serialized;
+
+    TPipelineResourceSignatureBase::Serialize(Serialized);
+
+    const auto NumImmutableSamplers = GetDesc().NumImmutableSamplers;
+    if (NumImmutableSamplers > 0)
+    {
+        VERIFY_EXPR(m_ImmutableSamplers != nullptr);
+        Serialized.m_pImmutableSamplers = std::make_unique<PipelineResourceImmutableSamplerAttribsD3D11[]>(NumImmutableSamplers);
+
+        for (Uint32 i = 0; i < NumImmutableSamplers; ++i)
+            Serialized.m_pImmutableSamplers[i] = m_ImmutableSamplers[i];
+    }
+
+    Serialized.pResourceAttribs     = m_pResourceAttribs;
+    Serialized.NumResources         = GetDesc().NumResources;
+    Serialized.pImmutableSamplers   = Serialized.m_pImmutableSamplers.get();
+    Serialized.NumImmutableSamplers = NumImmutableSamplers;
+
+    return Serialized;
+}
 
 } // namespace Diligent
