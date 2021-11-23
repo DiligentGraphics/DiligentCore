@@ -191,7 +191,8 @@ void SerializableShaderImpl::CreateShaderVk(IReferenceCounters* pRefCounters, Sh
 }
 
 
-PipelineResourceSignatureVkImpl* SerializableResourceSignatureImpl::GetSignatureVk() const
+template <>
+PipelineResourceSignatureVkImpl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureVkImpl>() const
 {
     return m_pPRSVk ? m_pPRSVk->GetPRS<PipelineResourceSignatureVkImpl>() : nullptr;
 }

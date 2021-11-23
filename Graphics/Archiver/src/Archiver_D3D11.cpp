@@ -197,7 +197,8 @@ void SerializableShaderImpl::CreateShaderD3D11(IReferenceCounters* pRefCounters,
 }
 
 
-PipelineResourceSignatureD3D11Impl* SerializableResourceSignatureImpl::GetSignatureD3D11() const
+template <>
+PipelineResourceSignatureD3D11Impl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureD3D11Impl>() const
 {
     return m_pPRSD3D11 ? m_pPRSD3D11->GetPRS<PipelineResourceSignatureD3D11Impl>() : nullptr;
 }

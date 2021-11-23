@@ -301,6 +301,12 @@ void SerializableShaderImpl::CreateShaderMtl(ShaderCreateInfo& ShaderCI, String&
         pLog->Release();
 }
 
+template<>
+PipelineResourceSignatureMtlImpl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureMtlImpl>() const
+{
+    return m_pPRSMtl ? reinterpret_cast<PipelineResourceSignatureMtlImpl*>(m_pPRSMtl->GetPRS()) : nullptr;
+}
+
 const SPIRVShaderResources* SerializableShaderImpl::GetMtlShaderSPIRVResources() const
 {
     auto* pShaderMtl = static_cast<const CompiledShaderMtlImpl*>(m_pShaderMtl.get());
