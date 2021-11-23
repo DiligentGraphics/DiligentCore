@@ -37,6 +37,16 @@
 namespace Diligent
 {
 
+template <>
+struct SerializableResourceSignatureImpl::SignatureTraits<PipelineResourceSignatureD3D12Impl>
+{
+    static constexpr DeviceType Type = DeviceType::Direct3D12;
+
+    template <SerializerMode Mode>
+    using PSOSerializerType = PSOSerializerD3D12<Mode>;
+};
+
+
 template <typename CreateInfoType>
 bool ArchiverImpl::PatchShadersD3D12(CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data, DefaultPRSInfo& DefPRS)
 {
@@ -170,27 +180,13 @@ void SerializableShaderImpl::CreateShaderD3D12(IReferenceCounters* pRefCounters,
 }
 
 
-template <>
-PipelineResourceSignatureD3D12Impl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureD3D12Impl>() const
+template PipelineResourceSignatureD3D12Impl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureD3D12Impl>() const;
+
+void SerializableResourceSignatureImpl::CreatePRSD3D12(IReferenceCounters*                  pRefCounters,
+                                                       const PipelineResourceSignatureDesc& Desc,
+                                                       SHADER_TYPE                          ShaderStages)
 {
-    return m_pPRSD3D12 ? m_pPRSD3D12->GetPRS<PipelineResourceSignatureD3D12Impl>() : nullptr;
-}
-
-const SerializedMemory* SerializableResourceSignatureImpl::GetSerializedMemoryD3D12() const
-{
-    return m_pPRSD3D12 ? m_pPRSD3D12->GetMem() : nullptr;
-}
-
-void SerializableResourceSignatureImpl::CreatePRSD3D12(IReferenceCounters* pRefCounters, const PipelineResourceSignatureDesc& Desc, SHADER_TYPE ShaderStages)
-{
-    auto pPRSD3D12 = std::make_unique<TPRS<PipelineResourceSignatureD3D12Impl>>(pRefCounters, Desc, ShaderStages);
-
-    PipelineResourceSignatureSerializedDataD3D12 SerializedData;
-    pPRSD3D12->PRS.Serialize(SerializedData);
-    AddPRSDesc(pPRSD3D12->PRS.GetDesc(), SerializedData);
-    CopyPRSSerializedData<PSOSerializerD3D12>(SerializedData, pPRSD3D12->Mem);
-
-    m_pPRSD3D12.reset(pPRSD3D12.release());
+    CreateSignature<PipelineResourceSignatureD3D12Impl>(pRefCounters, Desc, ShaderStages);
 }
 
 

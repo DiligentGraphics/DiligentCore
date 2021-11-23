@@ -27,14 +27,17 @@
 #pragma once
 
 #include <unordered_map>
+#include <unordered_set>
 #include <array>
-#include <bitset>
+#include <vector>
+#include <memory>
 
 #include "Archiver.h"
 #include "ArchiverFactory.h"
 #include "RenderDevice.h"
+#include "PipelineResourceSignature.h"
+#include "PipelineState.h"
 
-#include "PipelineResourceSignatureBase.hpp"
 #include "DeviceObjectArchiveBase.hpp"
 #include "RefCntAutoPtr.hpp"
 #include "ObjectBase.hpp"
@@ -44,7 +47,6 @@
 #include "PlatformMisc.hpp"
 #include "DataBlobImpl.hpp"
 #include "MemoryFileStream.hpp"
-#include "PipelineStateBase.hpp"
 
 #include "SerializationDeviceImpl.hpp"
 #include "SerializedMemory.hpp"
@@ -121,7 +123,7 @@ private:
     //std::unordered_map<HashMapStringKey, PRSData, HashMapStringKey::Hasher> m_PRSMap;
     std::unordered_map<String, PRSData> m_PRSMap;
 
-    struct SerializablePRSHash
+    struct SerializablePRSHasher
     {
         size_t operator()(const RefCntAutoPtr<SerializableResourceSignatureImpl>& PRS) const
         {
@@ -132,10 +134,14 @@ private:
     {
         bool operator()(const RefCntAutoPtr<SerializableResourceSignatureImpl>& Lhs, const RefCntAutoPtr<SerializableResourceSignatureImpl>& Rhs) const
         {
-            return Lhs->Equal(*Rhs);
+            if ((Lhs == nullptr) != (Rhs == nullptr))
+                return false;
+            if ((Lhs == nullptr) && (Rhs == nullptr))
+                return true;
+            return *Lhs == *Rhs;
         }
     };
-    std::unordered_set<RefCntAutoPtr<SerializableResourceSignatureImpl>, SerializablePRSHash, SerializablePRSEqual> m_PRSCache;
+    std::unordered_set<RefCntAutoPtr<SerializableResourceSignatureImpl>, SerializablePRSHasher, SerializablePRSEqual> m_PRSCache;
 
     struct RPData
     {

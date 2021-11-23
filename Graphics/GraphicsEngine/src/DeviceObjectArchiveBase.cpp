@@ -31,6 +31,40 @@
 namespace Diligent
 {
 
+DeviceObjectArchiveBase::DeviceType DeviceObjectArchiveBase::RenderDeviceTypeToArchiveDeviceType(RENDER_DEVICE_TYPE RenderDeviceType)
+{
+    static_assert(RENDER_DEVICE_TYPE_COUNT == 7, "Please handle the new device type below");
+    switch (RenderDeviceType)
+    {
+        case RENDER_DEVICE_TYPE_UNDEFINED:
+            UNEXPECTED("Render device type is undefined");
+            return DeviceType::Count;
+
+        case RENDER_DEVICE_TYPE_D3D11:
+            return DeviceType::Direct3D11;
+
+        case RENDER_DEVICE_TYPE_D3D12:
+            return DeviceType::Direct3D12;
+
+        case RENDER_DEVICE_TYPE_GL:
+        case RENDER_DEVICE_TYPE_GLES:
+            return DeviceType::OpenGL;
+
+        case RENDER_DEVICE_TYPE_VULKAN:
+            return DeviceType::Vulkan;
+
+        case RENDER_DEVICE_TYPE_METAL:
+            return DeviceType::Metal;
+
+        case RENDER_DEVICE_TYPE_COUNT:
+            return DeviceType::Count;
+
+        default:
+            UNEXPECTED("Unexpected device type");
+            return DeviceType::Count;
+    }
+}
+
 DeviceObjectArchiveBase::DeviceObjectArchiveBase(IReferenceCounters* pRefCounters, IArchive* pArchive, DeviceType DevType) :
     TObjectBase{pRefCounters},
     m_pArchive{pArchive},

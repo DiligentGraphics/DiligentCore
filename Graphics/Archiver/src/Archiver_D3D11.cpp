@@ -36,6 +36,17 @@
 
 namespace Diligent
 {
+
+template <>
+struct SerializableResourceSignatureImpl::SignatureTraits<PipelineResourceSignatureD3D11Impl>
+{
+    static constexpr DeviceType Type = DeviceType::Direct3D11;
+    using SerializedDataType         = PipelineResourceSignatureSerializedDataD3D11;
+
+    template <SerializerMode Mode>
+    using PSOSerializerType = PSOSerializerD3D11<Mode>;
+};
+
 namespace
 {
 
@@ -197,29 +208,14 @@ void SerializableShaderImpl::CreateShaderD3D11(IReferenceCounters* pRefCounters,
 }
 
 
-template <>
-PipelineResourceSignatureD3D11Impl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureD3D11Impl>() const
+template PipelineResourceSignatureD3D11Impl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureD3D11Impl>() const;
+
+void SerializableResourceSignatureImpl::CreatePRSD3D11(IReferenceCounters*                  pRefCounters,
+                                                       const PipelineResourceSignatureDesc& Desc,
+                                                       SHADER_TYPE                          ShaderStages)
 {
-    return m_pPRSD3D11 ? m_pPRSD3D11->GetPRS<PipelineResourceSignatureD3D11Impl>() : nullptr;
+    CreateSignature<PipelineResourceSignatureD3D11Impl>(pRefCounters, Desc, ShaderStages);
 }
-
-const SerializedMemory* SerializableResourceSignatureImpl::GetSerializedMemoryD3D11() const
-{
-    return m_pPRSD3D11 ? m_pPRSD3D11->GetMem() : nullptr;
-}
-
-void SerializableResourceSignatureImpl::CreatePRSD3D11(IReferenceCounters* pRefCounters, const PipelineResourceSignatureDesc& Desc, SHADER_TYPE ShaderStages)
-{
-    auto pPRSD3D11 = std::make_unique<TPRS<PipelineResourceSignatureD3D11Impl>>(pRefCounters, Desc, ShaderStages);
-
-    PipelineResourceSignatureSerializedDataD3D11 SerializedData;
-    pPRSD3D11->PRS.Serialize(SerializedData);
-    AddPRSDesc(pPRSD3D11->PRS.GetDesc(), SerializedData);
-    CopyPRSSerializedData<PSOSerializerD3D11>(SerializedData, pPRSD3D11->Mem);
-
-    m_pPRSD3D11.reset(pPRSD3D11.release());
-}
-
 
 void SerializationDeviceImpl::GetPipelineResourceBindingsD3D11(const PipelineResourceBindingAttribs& Info,
                                                                std::vector<PipelineResourceBinding>& ResourceBindings)

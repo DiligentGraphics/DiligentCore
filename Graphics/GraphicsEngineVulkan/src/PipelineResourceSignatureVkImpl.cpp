@@ -976,8 +976,10 @@ PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCount
     }
 }
 
-void PipelineResourceSignatureVkImpl::Serialize(PipelineResourceSignatureSerializedDataVk& Serialized) const
+PipelineResourceSignatureSerializedDataVk PipelineResourceSignatureVkImpl::Serialize() const
 {
+    PipelineResourceSignatureSerializedDataVk Serialized;
+
     TPipelineResourceSignatureBase::Serialize(Serialized);
 
     const auto NumImmutableSamplers = GetDesc().NumImmutableSamplers;
@@ -996,6 +998,8 @@ void PipelineResourceSignatureVkImpl::Serialize(PipelineResourceSignatureSeriali
     Serialized.NumImmutableSamplers      = NumImmutableSamplers;
     Serialized.DynamicStorageBufferCount = m_DynamicStorageBufferCount;
     Serialized.DynamicUniformBufferCount = m_DynamicUniformBufferCount;
+
+    return Serialized;
 }
 
 } // namespace Diligent

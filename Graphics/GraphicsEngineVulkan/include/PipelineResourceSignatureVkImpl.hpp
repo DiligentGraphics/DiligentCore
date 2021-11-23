@@ -159,7 +159,7 @@ public:
     template <DESCRIPTOR_SET_ID SetId>
     Uint32 GetDescriptorSetIndex() const;
 
-    void Serialize(PipelineResourceSignatureSerializedDataVk& Serialized) const;
+    PipelineResourceSignatureSerializedDataVk Serialize() const;
 
 private:
     // Resource cache group identifier

@@ -25,7 +25,11 @@
  */
 
 #include "ArchiverImpl.hpp"
+
+#include <bitset>
+
 #include "ShaderToolsCommon.hpp"
+#include "PipelineStateBase.hpp"
 
 namespace Diligent
 {
@@ -589,38 +593,7 @@ const SerializedMemory& ArchiverImpl::PRSData::GetSharedData() const
 
 const SerializedMemory& ArchiverImpl::PRSData::GetDeviceData(Uint32 Idx) const
 {
-    const SerializedMemory* Result = nullptr;
-    switch (static_cast<DeviceType>(Idx))
-    {
-        case DeviceType::Direct3D11:
-#if D3D11_SUPPORTED
-            Result = pPRS->GetSerializedMemoryD3D11();
-#endif
-            break;
-        case DeviceType::Direct3D12:
-#if D3D12_SUPPORTED
-            Result = pPRS->GetSerializedMemoryD3D12();
-#endif
-            break;
-        case DeviceType::OpenGL:
-#if GL_SUPPORTED || GLES_SUPPORTED
-            Result = pPRS->GetSerializedMemoryGL();
-#endif
-            break;
-        case DeviceType::Vulkan:
-#if VULKAN_SUPPORTED
-            Result = pPRS->GetSerializedMemoryVk();
-#endif
-            break;
-        case DeviceType::Metal:
-#if METAL_SUPPORTED
-            Result = pPRS->GetSerializedMemoryMtl();
-#endif
-            break;
-        case DeviceType::Count:
-            break;
-    }
-
+    const auto* Result = pPRS->GetSerializedMemory(static_cast<DeviceType>(Idx));
     if (Result != nullptr)
         return *Result;
 

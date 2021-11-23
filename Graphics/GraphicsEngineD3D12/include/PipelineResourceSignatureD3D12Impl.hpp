@@ -166,7 +166,7 @@ public:
     // Returns true if there is an immutable sampler array in the given shader stage.
     bool HasImmutableSamplerArray(SHADER_TYPE ShaderStage) const;
 
-    void Serialize(PipelineResourceSignatureSerializedDataD3D12& Serialized) const;
+    PipelineResourceSignatureSerializedDataD3D12 Serialize() const;
 
 #ifdef DILIGENT_DEVELOPMENT
     /// Verifies committed resource using the resource attributes from the PSO.

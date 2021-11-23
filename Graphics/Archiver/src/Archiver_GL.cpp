@@ -37,6 +37,15 @@
 namespace Diligent
 {
 
+template <>
+struct SerializableResourceSignatureImpl::SignatureTraits<PipelineResourceSignatureGLImpl>
+{
+    static constexpr DeviceType Type = DeviceType::OpenGL;
+
+    template <SerializerMode Mode>
+    using PSOSerializerType = PSOSerializerGL<Mode>;
+};
+
 namespace
 {
 
@@ -89,27 +98,13 @@ template bool ArchiverImpl::PatchShadersGL<TilePipelineStateCreateInfo>(TilePipe
 template bool ArchiverImpl::PatchShadersGL<RayTracingPipelineStateCreateInfo>(RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
 
 
-template <>
-PipelineResourceSignatureGLImpl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureGLImpl>() const
+template PipelineResourceSignatureGLImpl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureGLImpl>() const;
+
+void SerializableResourceSignatureImpl::CreatePRSGL(IReferenceCounters*                  pRefCounters,
+                                                    const PipelineResourceSignatureDesc& Desc,
+                                                    SHADER_TYPE                          ShaderStages)
 {
-    return m_pPRSGL ? m_pPRSGL->GetPRS<PipelineResourceSignatureGLImpl>() : nullptr;
-}
-
-const SerializedMemory* SerializableResourceSignatureImpl::GetSerializedMemoryGL() const
-{
-    return m_pPRSGL ? m_pPRSGL->GetMem() : nullptr;
-}
-
-void SerializableResourceSignatureImpl::CreatePRSGL(IReferenceCounters* pRefCounters, const PipelineResourceSignatureDesc& Desc, SHADER_TYPE ShaderStages)
-{
-    auto pPRSGL = std::make_unique<TPRS<PipelineResourceSignatureGLImpl>>(pRefCounters, Desc, ShaderStages);
-
-    PipelineResourceSignatureSerializedDataGL SerializedData;
-    pPRSGL->PRS.Serialize(SerializedData);
-    AddPRSDesc(pPRSGL->PRS.GetDesc(), SerializedData);
-    CopyPRSSerializedData<PSOSerializerGL>(SerializedData, pPRSGL->Mem);
-
-    m_pPRSGL.reset(pPRSGL.release());
+    CreateSignature<PipelineResourceSignatureGLImpl>(pRefCounters, Desc, ShaderStages);
 }
 
 

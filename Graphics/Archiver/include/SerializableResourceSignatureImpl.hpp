@@ -52,10 +52,13 @@ class PipelineResourceSignatureVkImpl;
 class PipelineResourceSignatureMtlImpl;
 #endif
 
+
 class SerializableResourceSignatureImpl final : public ObjectBase<IPipelineResourceSignature>
 {
 public:
     using TBase = ObjectBase<IPipelineResourceSignature>;
+
+    using DeviceType = DeviceObjectArchiveBase::DeviceType;
 
     SerializableResourceSignatureImpl(IReferenceCounters*                  pRefCounters,
                                       SerializationDeviceImpl*             pDevice,
@@ -94,31 +97,28 @@ public:
     virtual IObject* DILIGENT_CALL_TYPE GetUserData() const override final { return nullptr; }
 
     bool   IsCompatible(const SerializableResourceSignatureImpl& Rhs, RENDER_DEVICE_TYPE_FLAGS DeviceFlags) const;
-    bool   Equal(const SerializableResourceSignatureImpl& Rhs) const;
+    bool   operator==(const SerializableResourceSignatureImpl& Rhs) const;
     size_t CalcHash() const;
 
     const SerializedMemory& GetSharedSerializedMemory() const { return m_SharedData; }
 
-#if D3D11_SUPPORTED
-    const SerializedMemory* GetSerializedMemoryD3D11() const;
-#endif
-#if D3D12_SUPPORTED
-    const SerializedMemory* GetSerializedMemoryD3D12() const;
-#endif
-#if GL_SUPPORTED || GLES_SUPPORTED
-    const SerializedMemory* GetSerializedMemoryGL() const;
-#endif
-#if VULKAN_SUPPORTED
-    const SerializedMemory* GetSerializedMemoryVk() const;
-#endif
-#if METAL_SUPPORTED
-    const SerializedMemory* GetSerializedMemoryMtl() const
+    const SerializedMemory* GetSerializedMemory(DeviceType Type) const
     {
-        return m_pPRSMtl ? m_pPRSMtl->GetMem() : nullptr;
+        auto& Wrpr = m_pPRSWrappers[static_cast<size_t>(Type)];
+        return Wrpr ? &Wrpr->Mem : nullptr;
     }
-#endif
+
     template <typename SignatureType>
-    SignatureType* GetSignature() const;
+    struct SignatureTraits;
+
+    template <typename SignatureType>
+    SignatureType* GetSignature() const
+    {
+        constexpr auto Type = SignatureTraits<SignatureType>::Type;
+
+        auto& Wrpr = m_pPRSWrappers[static_cast<size_t>(Type)];
+        return Wrpr ? Wrpr->GetPRS<SignatureType>() : nullptr;
+    }
 
 private:
     void AddPRSDesc(const PipelineResourceSignatureDesc& Desc, const PipelineResourceSignatureSerializedData& Serialized);
@@ -128,63 +128,93 @@ private:
     SerializedMemory                               m_DescMem;
     SerializedMemory                               m_SharedData;
 
-    struct IPRSWapper
+    struct PRSWapperBase
     {
-        virtual ~IPRSWapper() {}
+        virtual ~PRSWapperBase() {}
         virtual IPipelineResourceSignature* GetPRS() = 0;
-        virtual SerializedMemory const*     GetMem() = 0;
 
         template <typename SigType>
         SigType* GetPRS() { return ClassPtrCast<SigType>(GetPRS()); }
+
+        SerializedMemory Mem;
     };
 
     template <typename ImplType> struct TPRS;
-#if D3D11_SUPPORTED
-    std::unique_ptr<IPRSWapper> m_pPRSD3D11;
 
+    std::array<std::unique_ptr<PRSWapperBase>, static_cast<size_t>(DeviceType::Count)> m_pPRSWrappers;
+
+    const IPipelineResourceSignature* GetPRS(DeviceType Type) const
+    {
+        auto& Wrpr = m_pPRSWrappers[static_cast<size_t>(Type)];
+        return Wrpr ? Wrpr->GetPRS() : nullptr;
+    }
+
+    template <typename SignatureImplType>
+    void CreateSignature(IReferenceCounters* pRefCounters, const PipelineResourceSignatureDesc& Desc, SHADER_TYPE ShaderStages)
+    {
+        using Traits                = SignatureTraits<SignatureImplType>;
+        using MeasureSerializerType = typename Traits::template PSOSerializerType<SerializerMode::Measure>;
+        using WriteSerializerType   = typename Traits::template PSOSerializerType<SerializerMode::Write>;
+
+        auto PRSWrpr = std::make_unique<TPRS<SignatureImplType>>(pRefCounters, Desc, ShaderStages);
+
+        auto SerializedData = PRSWrpr->PRS.Serialize();
+        AddPRSDesc(PRSWrpr->PRS.GetDesc(), SerializedData);
+
+        Serializer<SerializerMode::Measure> MeasureSer;
+        MeasureSerializerType::SerializePRS(MeasureSer, SerializedData, nullptr);
+
+        const auto SerSize = MeasureSer.GetSize(nullptr);
+        void*      SerPtr  = ALLOCATE_RAW(GetRawAllocator(), "", SerSize);
+
+        Serializer<SerializerMode::Write> Ser{SerPtr, SerSize};
+        WriteSerializerType::SerializePRS(Ser, SerializedData, nullptr);
+        VERIFY_EXPR(Ser.IsEnd());
+
+        PRSWrpr->Mem = SerializedMemory{SerPtr, SerSize};
+
+        m_pPRSWrappers[static_cast<size_t>(Traits::Type)] = std::move(PRSWrpr);
+    }
+#if D3D11_SUPPORTED
     void CreatePRSD3D11(IReferenceCounters* pRefCounters, const PipelineResourceSignatureDesc& Desc, SHADER_TYPE ShaderStages);
 #endif
 
 #if D3D12_SUPPORTED
-    std::unique_ptr<IPRSWapper> m_pPRSD3D12;
-
     void CreatePRSD3D12(IReferenceCounters* pRefCounters, const PipelineResourceSignatureDesc& Desc, SHADER_TYPE ShaderStages);
 #endif
 
 #if GL_SUPPORTED || GLES_SUPPORTED
-    std::unique_ptr<IPRSWapper> m_pPRSGL;
-
     void CreatePRSGL(IReferenceCounters* pRefCounters, const PipelineResourceSignatureDesc& Desc, SHADER_TYPE ShaderStages);
 #endif
 
 #if VULKAN_SUPPORTED
-    std::unique_ptr<IPRSWapper> m_pPRSVk;
-
     void CreatePRSVk(IReferenceCounters* pRefCounters, const PipelineResourceSignatureDesc& Desc, SHADER_TYPE ShaderStages);
 #endif
 
 #if METAL_SUPPORTED
-    std::unique_ptr<IPRSWapper> m_pPRSMtl;
-
     void SerializePRSMtl(IReferenceCounters* pRefCounters, const PipelineResourceSignatureDesc& Desc);
 #endif
 };
 
 
 #if D3D11_SUPPORTED
-template <> PipelineResourceSignatureD3D11Impl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureD3D11Impl>() const;
+extern template PipelineResourceSignatureD3D11Impl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureD3D11Impl>() const;
 #endif
+
 #if D3D12_SUPPORTED
-template <> PipelineResourceSignatureD3D12Impl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureD3D12Impl>() const;
+extern template PipelineResourceSignatureD3D12Impl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureD3D12Impl>() const;
 #endif
+
 #if GL_SUPPORTED || GLES_SUPPORTED
-template <> PipelineResourceSignatureGLImpl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureGLImpl>() const;
+extern template PipelineResourceSignatureGLImpl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureGLImpl>() const;
 #endif
+
 #if VULKAN_SUPPORTED
-template <> PipelineResourceSignatureVkImpl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureVkImpl>() const;
+extern template PipelineResourceSignatureVkImpl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureVkImpl>() const;
 #endif
+
 #if METAL_SUPPORTED
-template <> PipelineResourceSignatureMtlImpl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureMtlImpl>() const;
+extern template PipelineResourceSignatureMtlImpl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureMtlImpl>() const;
 #endif
 
 } // namespace Diligent
