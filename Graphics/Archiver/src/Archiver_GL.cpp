@@ -89,7 +89,8 @@ template bool ArchiverImpl::PatchShadersGL<TilePipelineStateCreateInfo>(TilePipe
 template bool ArchiverImpl::PatchShadersGL<RayTracingPipelineStateCreateInfo>(RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
 
 
-PipelineResourceSignatureGLImpl* SerializableResourceSignatureImpl::GetSignatureGL() const
+template <>
+PipelineResourceSignatureGLImpl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureGLImpl>() const
 {
     return m_pPRSGL ? m_pPRSGL->GetPRS<PipelineResourceSignatureGLImpl>() : nullptr;
 }

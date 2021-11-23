@@ -100,26 +100,18 @@ public:
     const SerializedMemory& GetSharedSerializedMemory() const { return m_SharedData; }
 
 #if D3D11_SUPPORTED
-    PipelineResourceSignatureD3D11Impl* GetSignatureD3D11() const;
-    const SerializedMemory*             GetSerializedMemoryD3D11() const;
+    const SerializedMemory* GetSerializedMemoryD3D11() const;
 #endif
 #if D3D12_SUPPORTED
-    PipelineResourceSignatureD3D12Impl* GetSignatureD3D12() const;
-    const SerializedMemory*             GetSerializedMemoryD3D12() const;
+    const SerializedMemory* GetSerializedMemoryD3D12() const;
 #endif
 #if GL_SUPPORTED || GLES_SUPPORTED
-    PipelineResourceSignatureGLImpl* GetSignatureGL() const;
-    const SerializedMemory*          GetSerializedMemoryGL() const;
+    const SerializedMemory* GetSerializedMemoryGL() const;
 #endif
 #if VULKAN_SUPPORTED
-    PipelineResourceSignatureVkImpl* GetSignatureVk() const;
-    const SerializedMemory*          GetSerializedMemoryVk() const;
+    const SerializedMemory* GetSerializedMemoryVk() const;
 #endif
 #if METAL_SUPPORTED
-    PipelineResourceSignatureMtlImpl* GetSignatureMtl() const
-    {
-        return m_pPRSMtl ? reinterpret_cast<PipelineResourceSignatureMtlImpl*>(m_pPRSMtl->GetPRS()) : nullptr;
-    }
     const SerializedMemory* GetSerializedMemoryMtl() const
     {
         return m_pPRSMtl ? m_pPRSMtl->GetMem() : nullptr;
@@ -143,7 +135,7 @@ private:
         virtual SerializedMemory const*     GetMem() = 0;
 
         template <typename SigType>
-        SigType* GetPRS() { return static_cast<SigType*>(GetPRS()); }
+        SigType* GetPRS() { return ClassPtrCast<SigType>(GetPRS()); }
     };
 
     template <typename ImplType> struct TPRS;
@@ -180,39 +172,19 @@ private:
 
 
 #if D3D11_SUPPORTED
-template <>
-inline PipelineResourceSignatureD3D11Impl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureD3D11Impl>() const
-{
-    return GetSignatureD3D11();
-}
+template <> PipelineResourceSignatureD3D11Impl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureD3D11Impl>() const;
 #endif
 #if D3D12_SUPPORTED
-template <>
-inline PipelineResourceSignatureD3D12Impl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureD3D12Impl>() const
-{
-    return GetSignatureD3D12();
-}
+template <> PipelineResourceSignatureD3D12Impl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureD3D12Impl>() const;
 #endif
 #if GL_SUPPORTED || GLES_SUPPORTED
-template <>
-inline PipelineResourceSignatureGLImpl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureGLImpl>() const
-{
-    return GetSignatureGL();
-}
+template <> PipelineResourceSignatureGLImpl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureGLImpl>() const;
 #endif
 #if VULKAN_SUPPORTED
-template <>
-inline PipelineResourceSignatureVkImpl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureVkImpl>() const
-{
-    return GetSignatureVk();
-}
+template <> PipelineResourceSignatureVkImpl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureVkImpl>() const;
 #endif
 #if METAL_SUPPORTED
-template <>
-inline PipelineResourceSignatureMtlImpl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureMtlImpl>() const
-{
-    return GetSignatureMtl();
-}
+template <> PipelineResourceSignatureMtlImpl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureMtlImpl>() const;
 #endif
 
 } // namespace Diligent

@@ -164,8 +164,13 @@ SerializableResourceSignatureImpl::~SerializableResourceSignatureImpl()
 
 bool SerializableResourceSignatureImpl::IsCompatible(const SerializableResourceSignatureImpl& Rhs, RENDER_DEVICE_TYPE_FLAGS DeviceFlags) const
 {
-    auto ComparePRS = [](auto* Lhs, auto* Rhs) {
-        return reinterpret_cast<IPipelineResourceSignature*>(Lhs)->IsCompatibleWith(reinterpret_cast<IPipelineResourceSignature*>(Rhs));
+    auto ComparePRS = [](const auto& Lhs, const auto& Rhs) {
+        const auto* pRRS0 = Lhs ? Lhs->GetPRS() : nullptr;
+        const auto* pRRS1 = Rhs ? Rhs->GetPRS() : nullptr;
+        if (pRRS0 == nullptr)
+            return pRRS1 == nullptr;
+        else
+            return pRRS0->IsCompatibleWith(pRRS1);
     };
 
     for (auto DeviceBits = DeviceFlags; DeviceBits != 0;)
@@ -175,34 +180,24 @@ bool SerializableResourceSignatureImpl::IsCompatible(const SerializableResourceS
         {
 #if D3D11_SUPPORTED
             case RENDER_DEVICE_TYPE_D3D11:
-                if (!ComparePRS(GetSignatureD3D11(), Rhs.GetSignatureD3D11()))
-                    return false;
-                break;
+                return ComparePRS(m_pPRSD3D11, Rhs.m_pPRSD3D11);
 #endif
 #if D3D12_SUPPORTED
             case RENDER_DEVICE_TYPE_D3D12:
-                if (!ComparePRS(GetSignatureD3D12(), Rhs.GetSignatureD3D12()))
-                    return false;
-                break;
+                return ComparePRS(m_pPRSD3D12, Rhs.m_pPRSD3D12);
 #endif
 #if GL_SUPPORTED || GLES_SUPPORTED
             case RENDER_DEVICE_TYPE_GL:
             case RENDER_DEVICE_TYPE_GLES:
-                if (!ComparePRS(GetSignatureGL(), Rhs.GetSignatureGL()))
-                    return false;
-                break;
+                return ComparePRS(m_pPRSGL, Rhs.m_pPRSGL);
 #endif
 #if VULKAN_SUPPORTED
             case RENDER_DEVICE_TYPE_VULKAN:
-                if (!ComparePRS(GetSignatureVk(), Rhs.GetSignatureVk()))
-                    return false;
-                break;
+                return ComparePRS(m_pPRSVk, Rhs.m_pPRSVk);
 #endif
 #if METAL_SUPPORTED
             case RENDER_DEVICE_TYPE_METAL:
-                if (!ComparePRS(GetSignatureMtl(), Rhs.GetSignatureMtl()))
-                    return false;
-                break;
+                return ComparePRS(m_pPRSMtl, Rhs.m_pPRSMtl);
 #endif
 
             case RENDER_DEVICE_TYPE_UNDEFINED:

@@ -170,7 +170,8 @@ void SerializableShaderImpl::CreateShaderD3D12(IReferenceCounters* pRefCounters,
 }
 
 
-PipelineResourceSignatureD3D12Impl* SerializableResourceSignatureImpl::GetSignatureD3D12() const
+template <>
+PipelineResourceSignatureD3D12Impl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureD3D12Impl>() const
 {
     return m_pPRSD3D12 ? m_pPRSD3D12->GetPRS<PipelineResourceSignatureD3D12Impl>() : nullptr;
 }
