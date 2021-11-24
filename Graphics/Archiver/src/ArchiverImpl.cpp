@@ -44,45 +44,32 @@ ArchiverImpl::~ArchiverImpl()
 }
 
 template <typename MapType>
-void ArchiverImpl::InitNamedResourceArrayHeader(std::vector<Uint8>& ChunkData,
-                                                const MapType&      Map,
-                                                Uint32*&            DataSizeArray,
-                                                Uint32*&            DataOffsetArray)
+ArchiverImpl::TChunkData ArchiverImpl::InitNamedResourceArrayHeader(const MapType& Map,
+                                                                    Uint32*&       DataSizeArray,
+                                                                    Uint32*&       DataOffsetArray)
 {
+    ArchiverImpl::TChunkData ChunkData{GetRawAllocator()};
+
     VERIFY_EXPR(!Map.empty());
 
     const Uint32 Count = static_cast<Uint32>(Map.size());
 
-    size_t Size = sizeof(NamedResourceArrayHeader);
-    Size += sizeof(Uint32) * Count; // NameLength
-    Size += sizeof(Uint32) * Count; // ***DataSize
-    Size += sizeof(Uint32) * Count; // ***DataOffset
+    ChunkData.AddSpace<NamedResourceArrayHeader>();
+    ChunkData.AddSpace<Uint32>(Count); // NameLength
+    ChunkData.AddSpace<Uint32>(Count); // ***DataSize
+    ChunkData.AddSpace<Uint32>(Count); // ***DataOffset
 
     for (const auto& NameAndData : Map)
-    {
-        Size += strlen(NameAndData.first.GetStr());
-    }
+        ChunkData.AddSpaceForString(NameAndData.first.GetStr());
 
-    VERIFY_EXPR(ChunkData.empty());
-    ChunkData.resize(Size);
+    ChunkData.Reserve();
 
-    auto& Header = *reinterpret_cast<NamedResourceArrayHeader*>(&ChunkData[0]);
+    auto& Header = *ChunkData.Construct<NamedResourceArrayHeader>();
     Header.Count = Count;
 
-    auto  OffsetInHeader  = sizeof(Header);
-    auto* NameLengthArray = reinterpret_cast<Uint32*>(&ChunkData[OffsetInHeader]);
-    OffsetInHeader += sizeof(*NameLengthArray) * Header.Count;
-    VERIFY_EXPR(reinterpret_cast<size_t>(NameLengthArray) % alignof(decltype(*NameLengthArray)) == 0);
-
-    DataSizeArray = reinterpret_cast<Uint32*>(&ChunkData[OffsetInHeader]);
-    OffsetInHeader += sizeof(*DataSizeArray) * Header.Count;
-    VERIFY_EXPR(reinterpret_cast<size_t>(DataSizeArray) % alignof(decltype(*DataSizeArray)) == 0);
-
-    DataOffsetArray = reinterpret_cast<Uint32*>(&ChunkData[OffsetInHeader]);
-    OffsetInHeader += sizeof(*DataOffsetArray) * Header.Count;
-    VERIFY_EXPR(reinterpret_cast<size_t>(DataOffsetArray) % alignof(decltype(*DataOffsetArray)) == 0);
-
-    char* NameDataPtr = reinterpret_cast<char*>(&ChunkData[OffsetInHeader]);
+    auto* NameLengthArray = ChunkData.Allocate<Uint32>(Count);
+    DataSizeArray         = ChunkData.Allocate<Uint32>(Count);
+    DataOffsetArray       = ChunkData.ConstructArray<Uint32>(Count, 0u); // will be initialized later
 
     Uint32 i = 0;
     for (const auto& NameAndData : Map)
@@ -90,15 +77,15 @@ void ArchiverImpl::InitNamedResourceArrayHeader(std::vector<Uint8>& ChunkData,
         const auto* Name    = NameAndData.first.GetStr();
         const auto  NameLen = strlen(Name);
 
-        NameLengthArray[i] = StaticCast<Uint32>(NameLen);
+        auto* pStr = ChunkData.CopyString(Name, NameLen);
+        (void)pStr;
+
+        NameLengthArray[i] = StaticCast<Uint32>(NameLen + 1);
         DataSizeArray[i]   = StaticCast<Uint32>(NameAndData.second.GetSharedData().Size);
-        DataOffsetArray[i] = 0; // will be initialized later
-        std::memcpy(NameDataPtr, Name, NameLen);
-        NameDataPtr += NameLen;
         ++i;
     }
 
-    VERIFY_EXPR(static_cast<void*>(NameDataPtr) == ChunkData.data() + ChunkData.size());
+    return ChunkData;
 }
 
 Bool ArchiverImpl::SerializeToBlob(IDataBlob** ppBlob)
@@ -212,13 +199,15 @@ void ArchiverImpl::WriteDebugInfo(PendingData& Pending) const
     Serializer<SerializerMode::Measure> MeasureSer;
     SerializeDebugInfo(MeasureSer);
 
-    VERIFY_EXPR(Chunk.empty());
-    Chunk.resize(MeasureSer.GetSize(nullptr));
-
-    if (Chunk.empty())
+    VERIFY_EXPR(Chunk.IsEmpty());
+    const auto Size = MeasureSer.GetSize(nullptr);
+    if (Size == 0)
         return;
 
-    Serializer<SerializerMode::Write> Ser{Chunk.data(), Chunk.size()};
+    Chunk = FixedLinearAllocator{GetRawAllocator()};
+    Chunk.AddSpace(Size);
+    Chunk.Reserve();
+    Serializer<SerializerMode::Write> Ser{Chunk.Allocate(Size), Size};
     SerializeDebugInfo(Ser);
 }
 
@@ -228,10 +217,10 @@ void ArchiverImpl::WriteResourceSignatureData(PendingData& Pending) const
         return;
 
     const auto ChunkInd        = static_cast<Uint32>(ChunkType::ResourceSignature);
-    auto&      Chunk           = Pending.ChunkData[ChunkInd];
     auto&      DataOffsetArray = Pending.DataOffsetArrayPerChunk[ChunkInd];
     Uint32*    DataSizeArray   = nullptr;
-    InitNamedResourceArrayHeader(Chunk, m_PRSMap, DataSizeArray, DataOffsetArray);
+
+    Pending.ChunkData[ChunkInd]             = InitNamedResourceArrayHeader(m_PRSMap, DataSizeArray, DataOffsetArray);
     Pending.ResourceCountPerChunk[ChunkInd] = StaticCast<Uint32>(m_PRSMap.size());
 
     Uint32 j = 0;
@@ -287,10 +276,10 @@ void ArchiverImpl::WriteRenderPassData(PendingData& Pending) const
         return;
 
     const auto ChunkInd        = static_cast<Uint32>(ChunkType::RenderPass);
-    auto&      Chunk           = Pending.ChunkData[ChunkInd];
     auto&      DataOffsetArray = Pending.DataOffsetArrayPerChunk[ChunkInd];
     Uint32*    DataSizeArray   = nullptr;
-    InitNamedResourceArrayHeader(Chunk, m_RPMap, DataSizeArray, DataOffsetArray);
+
+    Pending.ChunkData[ChunkInd]             = InitNamedResourceArrayHeader(m_RPMap, DataSizeArray, DataOffsetArray);
     Pending.ResourceCountPerChunk[ChunkInd] = StaticCast<Uint32>(m_RPMap.size());
 
     Uint32 j = 0;
@@ -328,10 +317,10 @@ void ArchiverImpl::WritePSOData(PendingData& Pending, TNamedObjectHashMap<PSOTyp
         return;
 
     const auto ChunkInd        = static_cast<Uint32>(PSOChunkType);
-    auto&      Chunk           = Pending.ChunkData[ChunkInd];
     auto&      DataOffsetArray = Pending.DataOffsetArrayPerChunk[ChunkInd];
     Uint32*    DataSizeArray   = nullptr;
-    InitNamedResourceArrayHeader(Chunk, PSOMap, DataSizeArray, DataOffsetArray);
+
+    Pending.ChunkData[ChunkInd]             = InitNamedResourceArrayHeader(PSOMap, DataSizeArray, DataOffsetArray);
     Pending.ResourceCountPerChunk[ChunkInd] = StaticCast<Uint32>(PSOMap.size());
 
     Uint32 j = 0;
@@ -399,10 +388,12 @@ void ArchiverImpl::WriteShaderData(PendingData& Pending) const
     Uint32*    DataOffsetArray = nullptr; // Pending.DataOffsetArrayPerChunk[ChunkInd];
     Uint32*    DataSizeArray   = nullptr;
     {
-        VERIFY_EXPR(Chunk.empty());
-        Chunk.resize(sizeof(ShadersDataHeader));
+        VERIFY_EXPR(Chunk.IsEmpty());
+        Chunk = FixedLinearAllocator{GetRawAllocator()};
+        Chunk.AddSpace<ShadersDataHeader>();
+        Chunk.Reserve();
 
-        auto* pHeader = reinterpret_cast<ShadersDataHeader*>(Chunk.data());
+        auto* pHeader = Chunk.Construct<ShadersDataHeader>();
         pHeader->Type = ChunkType::Shaders;
         pHeader->InitOffsets();
         DataSizeArray   = pHeader->DeviceSpecificDataSize.data();
@@ -461,7 +452,7 @@ void ArchiverImpl::UpdateOffsetsInArchive(PendingData& Pending) const
     Uint32 NumChunks = 0;
     for (auto& Chunk : ChunkData)
     {
-        NumChunks += (Chunk.empty() ? 0 : 1);
+        NumChunks += (Chunk.IsEmpty() ? 0 : 1);
     }
 
     HeaderData.resize(sizeof(ArchiveHeader) + sizeof(ChunkHeader) * NumChunks);
@@ -477,11 +468,11 @@ void ArchiverImpl::UpdateOffsetsInArchive(PendingData& Pending) const
     auto* CurrChunkPtr = ChunkPtr;
     for (Uint32 i = 0; i < ChunkData.size(); ++i)
     {
-        if (ChunkData[i].empty())
+        if (ChunkData[i].IsEmpty())
             continue;
 
         CurrChunkPtr->Type   = static_cast<ChunkType>(i);
-        CurrChunkPtr->Size   = StaticCast<Uint32>(ChunkData[i].size());
+        CurrChunkPtr->Size   = StaticCast<Uint32>(ChunkData[i].GetCurrentSize());
         CurrChunkPtr->Offset = StaticCast<Uint32>(OffsetInFile);
 
         OffsetInFile += CurrChunkPtr->Size;
@@ -532,10 +523,10 @@ void ArchiverImpl::WritePendingDataToStream(const PendingData& Pending, IFileStr
 
     for (auto& Chunk : Pending.ChunkData)
     {
-        if (Chunk.empty())
+        if (Chunk.IsEmpty())
             continue;
 
-        pStream->Write(Chunk.data(), Chunk.size());
+        pStream->Write(Chunk.GetDataPtr(), Chunk.GetCurrentSize());
     }
 
     pStream->Write(Pending.SharedData.data(), Pending.SharedData.size());
