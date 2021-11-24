@@ -50,13 +50,28 @@ struct SerializableResourceSignatureImpl::SignatureTraits<PipelineResourceSignat
 namespace
 {
 
+struct CompiledShaderD3D11 : SerializableShaderImpl::ICompiledShader
+{
+    ShaderD3D11Impl ShaderD3D11;
+
+    CompiledShaderD3D11(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI, const ShaderD3D11Impl::CreateInfo& D3D11ShaderCI) :
+        ShaderD3D11{pRefCounters, nullptr, ShaderCI, D3D11ShaderCI, true}
+    {}
+};
+
+inline ShaderD3D11Impl* GetShaderD3D11(const SerializableShaderImpl* pShader)
+{
+    auto* pCompiledShaderD3D11 = pShader->GetShader<CompiledShaderD3D11>(DeviceObjectArchiveBase::DeviceType::Direct3D11);
+    return pCompiledShaderD3D11 != nullptr ? &pCompiledShaderD3D11->ShaderD3D11 : nullptr;
+}
+
 struct ShaderStageInfoD3D11
 {
     ShaderStageInfoD3D11() {}
 
     ShaderStageInfoD3D11(const SerializableShaderImpl* _pShader) :
         Type{_pShader->GetDesc().ShaderType},
-        pShader{_pShader->GetShaderD3D11()},
+        pShader{GetShaderD3D11(_pShader)},
         pSerializable{_pShader}
     {}
 
@@ -182,21 +197,6 @@ template bool ArchiverImpl::PatchShadersD3D11<ComputePipelineStateCreateInfo>(Co
 template bool ArchiverImpl::PatchShadersD3D11<TilePipelineStateCreateInfo>(TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
 template bool ArchiverImpl::PatchShadersD3D11<RayTracingPipelineStateCreateInfo>(RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
 
-
-struct SerializableShaderImpl::CompiledShaderD3D11 : ICompiledShader
-{
-    ShaderD3D11Impl ShaderD3D11;
-
-    CompiledShaderD3D11(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI, const ShaderD3D11Impl::CreateInfo& D3D11ShaderCI) :
-        ShaderD3D11{pRefCounters, nullptr, ShaderCI, D3D11ShaderCI, true}
-    {}
-};
-
-ShaderD3D11Impl* SerializableShaderImpl::GetShaderD3D11() const
-{
-    return m_pShaderD3D11 ? &reinterpret_cast<CompiledShaderD3D11*>(m_pShaderD3D11.get())->ShaderD3D11 : nullptr;
-}
-
 void SerializableShaderImpl::CreateShaderD3D11(IReferenceCounters* pRefCounters, ShaderCreateInfo& ShaderCI, String& CompilationLog)
 {
     const ShaderD3D11Impl::CreateInfo D3D11ShaderCI{
@@ -204,7 +204,7 @@ void SerializableShaderImpl::CreateShaderD3D11(IReferenceCounters* pRefCounters,
         m_pDevice->GetAdapterInfo(),
         static_cast<D3D_FEATURE_LEVEL>(m_pDevice->GetD3D11FeatureLevel()) //
     };
-    CreateShader<CompiledShaderD3D11>(m_pShaderD3D11, CompilationLog, "Direct3D11", pRefCounters, ShaderCI, D3D11ShaderCI);
+    CreateShader<CompiledShaderD3D11>(DeviceType::Direct3D11, CompilationLog, "Direct3D11", pRefCounters, ShaderCI, D3D11ShaderCI);
 }
 
 

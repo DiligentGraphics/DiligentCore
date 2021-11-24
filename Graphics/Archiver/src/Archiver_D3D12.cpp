@@ -37,6 +37,21 @@
 namespace Diligent
 {
 
+struct CompiledShaderD3D12 : SerializableShaderImpl::ICompiledShader
+{
+    ShaderD3D12Impl ShaderD3D12;
+
+    CompiledShaderD3D12(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI, const ShaderD3D12Impl::CreateInfo& D3D12ShaderCI) :
+        ShaderD3D12{pRefCounters, nullptr, ShaderCI, D3D12ShaderCI, true}
+    {}
+};
+
+inline const ShaderD3D12Impl* GetShaderD3D12(const SerializableShaderImpl* pShader)
+{
+    const auto* pCompiledShaderD3D12 = pShader->GetShader<const CompiledShaderD3D12>(DeviceObjectArchiveBase::DeviceType::Direct3D12);
+    return pCompiledShaderD3D12 != nullptr ? &pCompiledShaderD3D12->ShaderD3D12 : nullptr;
+}
+
 template <>
 struct SerializableResourceSignatureImpl::SignatureTraits<PipelineResourceSignatureD3D12Impl>
 {
@@ -56,13 +71,13 @@ bool ArchiverImpl::PatchShadersD3D12(CreateInfoType& CreateInfo, TPSOData<Create
             ShaderStageInfo{} {}
 
         ShaderStageInfoD3D12(const SerializableShaderImpl* pShader) :
-            ShaderStageInfo{pShader->GetShaderD3D12()},
+            ShaderStageInfo{GetShaderD3D12(pShader)},
             Serializable{pShader}
         {}
 
         void Append(const SerializableShaderImpl* pShader)
         {
-            ShaderStageInfo::Append(pShader->GetShaderD3D12());
+            ShaderStageInfo::Append(GetShaderD3D12(pShader));
             Serializable.push_back(pShader);
         }
 
@@ -154,20 +169,6 @@ template bool ArchiverImpl::PatchShadersD3D12<TilePipelineStateCreateInfo>(TileP
 template bool ArchiverImpl::PatchShadersD3D12<RayTracingPipelineStateCreateInfo>(RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
 
 
-struct SerializableShaderImpl::CompiledShaderD3D12 : ICompiledShader
-{
-    ShaderD3D12Impl ShaderD3D12;
-
-    CompiledShaderD3D12(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI, const ShaderD3D12Impl::CreateInfo& D3D12ShaderCI) :
-        ShaderD3D12{pRefCounters, nullptr, ShaderCI, D3D12ShaderCI, true}
-    {}
-};
-
-const ShaderD3D12Impl* SerializableShaderImpl::GetShaderD3D12() const
-{
-    return m_pShaderD3D12 ? &reinterpret_cast<CompiledShaderD3D12*>(m_pShaderD3D12.get())->ShaderD3D12 : nullptr;
-}
-
 void SerializableShaderImpl::CreateShaderD3D12(IReferenceCounters* pRefCounters, ShaderCreateInfo& ShaderCI, String& CompilationLog)
 {
     const ShaderD3D12Impl::CreateInfo D3D12ShaderCI{
@@ -176,7 +177,7 @@ void SerializableShaderImpl::CreateShaderD3D12(IReferenceCounters* pRefCounters,
         m_pDevice->GetAdapterInfo(),
         m_pDevice->GetD3D12ShaderVersion() //
     };
-    CreateShader<CompiledShaderD3D12>(m_pShaderD3D12, CompilationLog, "Direct3D12", pRefCounters, ShaderCI, D3D12ShaderCI);
+    CreateShader<CompiledShaderD3D12>(DeviceType::Direct3D12, CompilationLog, "Direct3D12", pRefCounters, ShaderCI, D3D12ShaderCI);
 }
 
 

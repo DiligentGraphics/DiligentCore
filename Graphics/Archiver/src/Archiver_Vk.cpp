@@ -37,6 +37,21 @@
 namespace Diligent
 {
 
+struct CompiledShaderVk : SerializableShaderImpl::ICompiledShader
+{
+    ShaderVkImpl ShaderVk;
+
+    CompiledShaderVk(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI, const ShaderVkImpl::CreateInfo& VkShaderCI) :
+        ShaderVk{pRefCounters, nullptr, ShaderCI, VkShaderCI, true}
+    {}
+};
+
+inline const ShaderVkImpl* GetShaderVk(const SerializableShaderImpl* pShader)
+{
+    const auto* pCompiledShaderVk = pShader->GetShader<const CompiledShaderVk>(DeviceObjectArchiveBase::DeviceType::Vulkan);
+    return pCompiledShaderVk != nullptr ? &pCompiledShaderVk->ShaderVk : nullptr;
+}
+
 template <>
 struct SerializableResourceSignatureImpl::SignatureTraits<PipelineResourceSignatureVkImpl>
 {
@@ -55,13 +70,13 @@ bool ArchiverImpl::PatchShadersVk(CreateInfoType& CreateInfo, TPSOData<CreateInf
             ShaderStageInfo{} {}
 
         ShaderStageInfoVk(const SerializableShaderImpl* pShader) :
-            ShaderStageInfo{pShader->GetShaderVk()},
+            ShaderStageInfo{GetShaderVk(pShader)},
             Serializable{pShader}
         {}
 
         void Append(const SerializableShaderImpl* pShader)
         {
-            ShaderStageInfo::Append(pShader->GetShaderVk());
+            ShaderStageInfo::Append(GetShaderVk(pShader));
             Serializable.push_back(pShader);
         }
 
@@ -173,20 +188,6 @@ template bool ArchiverImpl::PatchShadersVk<TilePipelineStateCreateInfo>(TilePipe
 template bool ArchiverImpl::PatchShadersVk<RayTracingPipelineStateCreateInfo>(RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
 
 
-struct SerializableShaderImpl::CompiledShaderVk : ICompiledShader
-{
-    ShaderVkImpl ShaderVk;
-
-    CompiledShaderVk(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI, const ShaderVkImpl::CreateInfo& VkShaderCI) :
-        ShaderVk{pRefCounters, nullptr, ShaderCI, VkShaderCI, true}
-    {}
-};
-
-const ShaderVkImpl* SerializableShaderImpl::GetShaderVk() const
-{
-    return m_pShaderVk ? &reinterpret_cast<CompiledShaderVk*>(m_pShaderVk.get())->ShaderVk : nullptr;
-}
-
 void SerializableShaderImpl::CreateShaderVk(IReferenceCounters* pRefCounters, ShaderCreateInfo& ShaderCI, String& CompilationLog)
 {
     const ShaderVkImpl::CreateInfo VkShaderCI{
@@ -196,7 +197,7 @@ void SerializableShaderImpl::CreateShaderVk(IReferenceCounters* pRefCounters, Sh
         m_pDevice->GetVkVersion(),
         m_pDevice->HasSpirv14() //
     };
-    CreateShader<CompiledShaderVk>(m_pShaderVk, CompilationLog, "Vulkan", pRefCounters, ShaderCI, VkShaderCI);
+    CreateShader<CompiledShaderVk>(DeviceType::Vulkan, CompilationLog, "Vulkan", pRefCounters, ShaderCI, VkShaderCI);
 }
 
 

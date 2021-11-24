@@ -85,11 +85,11 @@ bool ArchiverImpl::CreateDefaultResourceSignature(DefaultPRSInfo& DefPRS, const 
 
 
 template <typename ShaderType, typename... ArgTypes>
-void SerializableShaderImpl::CreateShader(std::unique_ptr<ICompiledShader>& pShader,
-                                          String&                           CompilationLog,
-                                          const char*                       DeviceTypeName,
-                                          IReferenceCounters*               pRefCounters,
-                                          ShaderCreateInfo&                 ShaderCI,
+void SerializableShaderImpl::CreateShader(DeviceType          Type,
+                                          String&             CompilationLog,
+                                          const char*         DeviceTypeName,
+                                          IReferenceCounters* pRefCounters,
+                                          ShaderCreateInfo&   ShaderCI,
                                           const ArgTypes&... Args)
 {
     // Mem leak when used RefCntAutoPtr
@@ -97,7 +97,7 @@ void SerializableShaderImpl::CreateShader(std::unique_ptr<ICompiledShader>& pSha
     ShaderCI.ppCompilerOutput = &pLog;
     try
     {
-        pShader = std::make_unique<ShaderType>(pRefCounters, ShaderCI, Args...);
+        m_Shaders[static_cast<size_t>(Type)] = std::make_unique<ShaderType>(pRefCounters, ShaderCI, Args...);
     }
     catch (...)
     {
