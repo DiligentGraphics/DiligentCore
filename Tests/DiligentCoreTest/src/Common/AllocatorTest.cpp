@@ -143,6 +143,39 @@ TEST(Common_FixedLinearAllocator, LargeAlignment)
     EXPECT_EQ(Ptr, AlignUp(Ptr, 8192));
 }
 
+TEST(Common_FixedLinearAllocator, MoveCtor)
+{
+    FixedLinearAllocator Allocator{DefaultRawMemoryAllocator::GetAllocator()};
+    Allocator.AddSpace(256);
+    Allocator.AddSpace(256);
+    Allocator.Reserve();
+    auto* Ptr = Allocator.Allocate(256);
+    EXPECT_NE(Ptr, nullptr);
+
+    FixedLinearAllocator Allocator2{std::move(Allocator)};
+    EXPECT_TRUE(Allocator.IsEmpty());
+    Ptr = Allocator2.Allocate(256);
+    EXPECT_NE(Ptr, nullptr);
+    EXPECT_EQ(Allocator2.GetCurrentSize(), Allocator2.GetReservedSize());
+}
+
+TEST(Common_FixedLinearAllocator, MoveAssign)
+{
+    FixedLinearAllocator Allocator{DefaultRawMemoryAllocator::GetAllocator()};
+    Allocator.AddSpace(256);
+    Allocator.AddSpace(256);
+    Allocator.Reserve();
+    auto* Ptr = Allocator.Allocate(256);
+    EXPECT_NE(Ptr, nullptr);
+
+    FixedLinearAllocator Allocator2;
+    Allocator2 = std::move(Allocator);
+    EXPECT_TRUE(Allocator.IsEmpty());
+    Ptr = Allocator2.Allocate(256);
+    EXPECT_NE(Ptr, nullptr);
+    EXPECT_EQ(Allocator2.GetCurrentSize(), Allocator2.GetReservedSize());
+}
+
 TEST(Common_FixedLinearAllocator, ObjectConstruction)
 {
     FixedLinearAllocator Allocator{DefaultRawMemoryAllocator::GetAllocator()};
