@@ -69,19 +69,21 @@ public:
     /// Implementation of IShader::GetResourceCount() in Direct3D11 backend.
     virtual Uint32 DILIGENT_CALL_TYPE GetResourceCount() const override final
     {
-        return m_pShaderResources->GetTotalResources();
+        return m_pShaderResources ? m_pShaderResources->GetTotalResources() : 0;
     }
 
     /// Implementation of IShader::GetResource() in Direct3D11 backend.
     virtual void DILIGENT_CALL_TYPE GetResourceDesc(Uint32 Index, ShaderResourceDesc& ResourceDesc) const override final
     {
-        ResourceDesc = m_pShaderResources->GetHLSLShaderResourceDesc(Index);
+        if (m_pShaderResources)
+            ResourceDesc = m_pShaderResources->GetHLSLShaderResourceDesc(Index);
     }
 
     /// Implementation of IShaderD3D::GetHLSLResource() method.
     virtual void DILIGENT_CALL_TYPE GetHLSLResource(Uint32 Index, HLSLShaderResourceDesc& ResourceDesc) const override final
     {
-        ResourceDesc = m_pShaderResources->GetHLSLShaderResourceDesc(Index);
+        if (m_pShaderResources)
+            ResourceDesc = m_pShaderResources->GetHLSLShaderResourceDesc(Index);
     }
 
     /// Implementation of IShaderD3D11::GetD3D11Shader() method.

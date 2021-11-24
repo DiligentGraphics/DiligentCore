@@ -165,7 +165,7 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
         LOG_ERROR_AND_THROW(ErrorMsgSS.str().c_str());
     }
 
-    if (DeviceInfo.Features.SeparablePrograms)
+    if (DeviceInfo.Features.SeparablePrograms && (ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_SKIP_REFLECTION) == 0)
     {
         ShaderGLImpl* const            ThisShader[] = {this};
         GLObjectWrappers::GLProgramObj Program      = LinkProgram(ThisShader, 1, true);
@@ -254,7 +254,7 @@ Uint32 ShaderGLImpl::GetResourceCount() const
 {
     if (m_pDevice->GetFeatures().SeparablePrograms)
     {
-        return m_pShaderResources->GetVariableCount();
+        return m_pShaderResources ? m_pShaderResources->GetVariableCount() : 0;
     }
     else
     {
@@ -268,7 +268,8 @@ void ShaderGLImpl::GetResourceDesc(Uint32 Index, ShaderResourceDesc& ResourceDes
     if (m_pDevice->GetFeatures().SeparablePrograms)
     {
         DEV_CHECK_ERR(Index < GetResourceCount(), "Index is out of range");
-        ResourceDesc = m_pShaderResources->GetResourceDesc(Index);
+        if (m_pShaderResources)
+            ResourceDesc = m_pShaderResources->GetResourceDesc(Index);
     }
     else
     {

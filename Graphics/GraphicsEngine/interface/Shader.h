@@ -190,7 +190,10 @@ DILIGENT_TYPED_ENUM(SHADER_COMPILE_FLAGS, Uint32)
     /// Enable unbounded resource arrays (e.g. Texture2D g_Texture[]).
     SHADER_COMPILE_FLAG_ENABLE_UNBOUNDED_ARRAYS = 0x01,
 
-    SHADER_COMPILE_FLAG_LAST = SHADER_COMPILE_FLAG_ENABLE_UNBOUNDED_ARRAYS
+    /// Don't load shader reflection.
+    SHADER_COMPILE_FLAG_SKIP_REFLECTION         = 0x02,
+
+    SHADER_COMPILE_FLAG_LAST = SHADER_COMPILE_FLAG_SKIP_REFLECTION
 };
 DEFINE_FLAG_ENUM_OPERATORS(SHADER_COMPILE_FLAGS);
 
@@ -232,10 +235,14 @@ struct ShaderCreateInfo
     /// Compiled shader bytecode.
 
     /// If shader byte code is provided, FilePath and Source members must be null
-    /// \note. This option is supported for D3D11, D3D12 and Vulkan backends.
-    ///        For D3D11 and D3D12 backends, HLSL bytecode should be provided. Vulkan
-    ///        backend expects SPIRV bytecode.
-    ///        The bytecode must contain reflection information. If shaders were compiled
+    /// \note. This option is supported for D3D11, D3D12, Vulkan and Metal backends.
+    ///        For D3D11 and D3D12 backends, DXBC should be provided.
+    ///        Vulkan backend expects SPIRV bytecode.
+    ///        Metal backend supports .metallib bytecode to create MTLLibrary
+    ///        or SPIRV to translate it to MSL and compile (may be slow).
+    ///
+    /// \note. if SHADER_COMPILE_FLAG_SKIP_REFLECTION flag is not used the bytecode
+    ///        must contain reflection information. If shaders were compiled
     ///        using fxc, make sure that /Qstrip_reflect option is *not* specified.
     ///        HLSL shaders need to be compiled against 4.0 profile or higher.
     const void* ByteCode DEFAULT_INITIALIZER(nullptr);

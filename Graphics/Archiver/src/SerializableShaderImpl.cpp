@@ -47,6 +47,11 @@ SerializableShaderImpl::SerializableShaderImpl(IReferenceCounters*      pRefCoun
         LOG_ERROR_AND_THROW("DeviceFlags contain unsupported device type");
     }
 
+    if (InShaderCI.CompileFlags & SHADER_COMPILE_FLAG_SKIP_REFLECTION)
+    {
+        LOG_ERROR_AND_THROW("Serialized shader must not contain SHADER_COMPILE_FLAG_SKIP_REFLECTION flag");
+    }
+
     CopyShaderCreateInfo(InShaderCI);
 
     auto   ShaderCI = m_CreateInfo;

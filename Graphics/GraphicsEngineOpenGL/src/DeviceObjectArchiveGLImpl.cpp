@@ -65,6 +65,8 @@ void DeviceObjectArchiveGLImpl::ReadAndCreateShader(Serializer<SerializerMode::R
     ShaderCI.SourceLength = Ser.GetRemainSize() - 1;
     VERIFY_EXPR(ShaderCI.SourceLength == strlen(ShaderCI.Source));
 
+    ShaderCI.CompileFlags &= ~SHADER_COMPILE_FLAG_SKIP_REFLECTION; // AZ TODO: remove
+
     pDevice->CreateShader(ShaderCI, ppShader);
 }
 

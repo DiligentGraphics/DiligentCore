@@ -64,7 +64,7 @@ public:
     /// Implementation of IShader::GetResourceCount() in Vulkan backend.
     virtual Uint32 DILIGENT_CALL_TYPE GetResourceCount() const override final
     {
-        return m_pShaderResources->GetTotalResources();
+        return m_pShaderResources ? m_pShaderResources->GetTotalResources() : 0;
     }
 
     /// Implementation of IShader::GetResource() in Vulkan backend.

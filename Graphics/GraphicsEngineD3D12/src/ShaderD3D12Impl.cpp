@@ -107,16 +107,19 @@ ShaderD3D12Impl::ShaderD3D12Impl(IReferenceCounters*     pRefCounters,
 // clang-format on
 {
     // Load shader resources
-    auto& Allocator  = GetRawAllocator();
-    auto* pRawMem    = ALLOCATE(Allocator, "Allocator for ShaderResources", ShaderResourcesD3D12, 1);
-    auto* pResources = new (pRawMem) ShaderResourcesD3D12 //
-        {
-            m_pShaderByteCode,
-            m_Desc,
-            ShaderCI.UseCombinedTextureSamplers ? ShaderCI.CombinedSamplerSuffix : nullptr,
-            D3D12ShaderCI.pDXCompiler //
-        };
-    m_pShaderResources.reset(pResources, STDDeleterRawMem<ShaderResourcesD3D12>(Allocator));
+    if ((ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_SKIP_REFLECTION) == 0)
+    {
+        auto& Allocator  = GetRawAllocator();
+        auto* pRawMem    = ALLOCATE(Allocator, "Allocator for ShaderResources", ShaderResourcesD3D12, 1);
+        auto* pResources = new (pRawMem) ShaderResourcesD3D12 //
+            {
+                m_pShaderByteCode,
+                m_Desc,
+                ShaderCI.UseCombinedTextureSamplers ? ShaderCI.CombinedSamplerSuffix : nullptr,
+                D3D12ShaderCI.pDXCompiler //
+            };
+        m_pShaderResources.reset(pResources, STDDeleterRawMem<ShaderResourcesD3D12>(Allocator));
+    }
 }
 
 ShaderD3D12Impl::~ShaderD3D12Impl()

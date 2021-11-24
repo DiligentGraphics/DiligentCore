@@ -733,6 +733,7 @@ bool DeviceObjectArchiveBase::LoadShaders(Serializer<SerializerMode::Read>&    S
         ShaderCreateInfo                 ShaderCI;
         Ser2(ShaderCI.Desc.ShaderType, ShaderCI.EntryPoint, ShaderCI.SourceLanguage, ShaderCI.ShaderCompiler);
 
+        ShaderCI.CompileFlags |= SHADER_COMPILE_FLAG_SKIP_REFLECTION;
 
         ReadAndCreateShader(Ser2, ShaderCI, pDevice, &Shaders[i]);
         if (!Shaders[i])
