@@ -212,30 +212,36 @@ protected:
     };
 
 private:
-    template <typename T>
+    template <typename ResPtrType>
     struct FileOffsetAndResCache : FileOffsetAndSize
     {
-        RefCntWeakPtr<T> Cache;
+        ResPtrType Cache;
 
+        FileOffsetAndResCache() {}
         FileOffsetAndResCache(const FileOffsetAndSize& OffsetAndSize) :
             FileOffsetAndSize{OffsetAndSize}
         {}
     };
 
+    template <typename ResPtrType>
+    using TNameOffsetMap = std::unordered_map<HashMapStringKey, FileOffsetAndResCache<ResPtrType>, HashMapStringKey::Hasher>;
     template <typename T>
-    using TNameOffsetMap         = std::unordered_map<HashMapStringKey, FileOffsetAndResCache<T>, HashMapStringKey::Hasher>;
-    using TPRSOffsetAndCacheMap  = TNameOffsetMap<IPipelineResourceSignature>;
-    using TPSOOffsetAndCacheMap  = TNameOffsetMap<IPipelineState>;
-    using TRPOffsetAndCacheMap   = TNameOffsetMap<IRenderPass>;
-    using TResourceOffsetAndSize = std::vector<FileOffsetAndSize>;
+    using TNameOffsetMapAndWeakCache = TNameOffsetMap<RefCntWeakPtr<T>>;
+    template <typename T>
+    using TNameOffsetMapAndStrongCache = TNameOffsetMap<RefCntAutoPtr<T>>;
 
-    TPRSOffsetAndCacheMap  m_PRSMap;
-    TPSOOffsetAndCacheMap  m_GraphicsPSOMap;
-    TPSOOffsetAndCacheMap  m_ComputePSOMap;
-    TPSOOffsetAndCacheMap  m_TilePSOMap;
-    TPSOOffsetAndCacheMap  m_RayTracingPSOMap;
-    TRPOffsetAndCacheMap   m_RenderPassMap;
-    TResourceOffsetAndSize m_Shaders; // AZ TODO: shader cache?
+    using TPRSOffsetAndCacheMap = TNameOffsetMapAndWeakCache<IPipelineResourceSignature>;
+    using TPSOOffsetAndCacheMap = TNameOffsetMapAndWeakCache<IPipelineState>;
+    using TRPOffsetAndCacheMap  = TNameOffsetMapAndWeakCache<IRenderPass>;
+    using TShaderOffsetAndCache = std::vector<FileOffsetAndResCache<RefCntAutoPtr<IShader>>>; // reference to the shader is not acquired in PSO, so weak ptr have no effect
+
+    TPRSOffsetAndCacheMap m_PRSMap;
+    TPSOOffsetAndCacheMap m_GraphicsPSOMap;
+    TPSOOffsetAndCacheMap m_ComputePSOMap;
+    TPSOOffsetAndCacheMap m_TilePSOMap;
+    TPSOOffsetAndCacheMap m_RayTracingPSOMap;
+    TRPOffsetAndCacheMap  m_RenderPassMap;
+    TShaderOffsetAndCache m_Shaders;
 
     std::mutex m_PRSMapGuard;
     std::mutex m_GraphicsPSOMapGuard;
@@ -257,13 +263,17 @@ private:
 
     template <typename ResType>
     void ReadNamedResources(const ChunkHeader& Chunk, TNameOffsetMap<ResType>& NameAndOffset, std::mutex& Guard) noexcept(false);
-    void ReadIndexedResources(const ChunkHeader& Chunk, TResourceOffsetAndSize& Resources, std::mutex& Guard) noexcept(false);
+    void ReadIndexedResources(const ChunkHeader& Chunk, TShaderOffsetAndCache& Resources, std::mutex& Guard) noexcept(false);
     void ReadArchiveDebugInfo(const ChunkHeader& Chunk) noexcept(false);
 
     template <typename ResType>
-    bool GetCachedResource(const char* Name, TNameOffsetMap<ResType>& Cache, std::mutex& Guard, ResType*& pResource);
+    bool GetCachedResource(const char* Name, TNameOffsetMapAndWeakCache<ResType>& Cache, std::mutex& Guard, ResType** ppResource);
     template <typename ResType>
-    void CacheResource(const char* Name, TNameOffsetMap<ResType>& Cache, std::mutex& Guard, ResType* pResource);
+    bool GetCachedResource(const char* Name, TNameOffsetMapAndStrongCache<ResType>& Cache, std::mutex& Guard, ResType** ppResource);
+    template <typename ResType>
+    void CacheResource(const char* Name, TNameOffsetMapAndWeakCache<ResType>& Cache, std::mutex& Guard, ResType* pResource);
+    template <typename ResType>
+    void CacheResource(const char* Name, TNameOffsetMapAndStrongCache<ResType>& Cache, std::mutex& Guard, ResType* pResource);
 
     BlockOffsetType GetBlockOffsetType() const;
 
@@ -296,22 +306,10 @@ protected:
 
 private:
     bool ReadPRSData(const char* Name, PRSData& PRS);
-    bool GetCachedPRS(const char* Name, IPipelineResourceSignature*& pSignature);
-    void CachePRSResource(const char* Name, IPipelineResourceSignature* pSignature);
-
     bool ReadGraphicsPSOData(const char* Name, PSOData<GraphicsPipelineStateCreateInfo>& PSO);
     bool ReadComputePSOData(const char* Name, PSOData<ComputePipelineStateCreateInfo>& PSO);
     bool ReadTilePSOData(const char* Name, PSOData<TilePipelineStateCreateInfo>& PSO);
     bool ReadRayTracingPSOData(const char* Name, PSOData<RayTracingPipelineStateCreateInfo>& PSO);
-
-    bool GetCachedGraphicsPSO(const char* Name, IPipelineState*& pPSO);
-    void CacheGraphicsPSOResource(const char* Name, IPipelineState* pPSO);
-    bool GetCachedComputePSO(const char* Name, IPipelineState*& pPSO);
-    void CacheComputePSOResource(const char* Name, IPipelineState* pPSO);
-    bool GetCachedTilePSO(const char* Name, IPipelineState*& pPSO);
-    void CacheTilePSOResource(const char* Name, IPipelineState* pPSO);
-    bool GetCachedRayTracingPSO(const char* Name, IPipelineState*& pPSO);
-    void CacheRayTracingPSOResource(const char* Name, IPipelineState* pPSO);
 
     bool LoadShaders(Serializer<SerializerMode::Read>&    Ser,
                      IRenderDevice*                       pDevice,
@@ -328,8 +326,6 @@ private:
         {}
     };
     bool ReadRPData(const char* Name, RPData& RP);
-    bool GetCachedRP(const char* Name, IRenderPass*& pRP);
-    void CacheRPResource(const char* Name, IRenderPass* pRP);
 
     template <typename ResType, typename FnType>
     bool LoadResourceData(const TNameOffsetMap<ResType>& NameAndOffset,
@@ -381,6 +377,8 @@ public:
     void UnpackRayTracingPSO(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState*& pPSO);
     void UnpackTilePSO(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState*& pPSO);
     void UnpackRenderPass(const RenderPassUnpackInfo& DeArchiveInfo, IRenderPass*& pRP);
+
+    virtual void DILIGENT_CALL_TYPE ClearResourceCache() override final;
 };
 
 

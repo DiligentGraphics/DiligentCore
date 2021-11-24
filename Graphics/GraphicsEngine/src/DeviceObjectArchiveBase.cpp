@@ -225,7 +225,7 @@ void DeviceObjectArchiveBase::ReadNamedResources(const ChunkHeader& Chunk, TName
     }
 }
 
-void DeviceObjectArchiveBase::ReadIndexedResources(const ChunkHeader& Chunk, TResourceOffsetAndSize& Resources, std::mutex& Guard) noexcept(false)
+void DeviceObjectArchiveBase::ReadIndexedResources(const ChunkHeader& Chunk, TShaderOffsetAndCache& Resources, std::mutex& Guard) noexcept(false)
 {
     VERIFY_EXPR(Chunk.Type == ChunkType::Shaders);
     VERIFY_EXPR(Chunk.Size == sizeof(ShadersDataHeader));
@@ -244,13 +244,16 @@ void DeviceObjectArchiveBase::ReadIndexedResources(const ChunkHeader& Chunk, TRe
         GetBlockOffsetType(),
         [&](const void* pData, size_t DataSize) //
         {
-            // AZ TODO: reuse allocated data
-            VERIFY_EXPR(DataSize % sizeof(TResourceOffsetAndSize::value_type) == 0);
-            const size_t Count = DataSize / sizeof(TResourceOffsetAndSize::value_type);
+            VERIFY_EXPR(DataSize % sizeof(FileOffsetAndSize) == 0);
+            const size_t Count = DataSize / sizeof(FileOffsetAndSize);
+
+            const auto* pFileOffsetAndSize = reinterpret_cast<const FileOffsetAndSize*>(pData);
 
             std::unique_lock<std::mutex> WriteLock{Guard};
             Resources.resize(Count);
-            std::memcpy(Resources.data(), pData, Resources.size() * sizeof(Resources[0]));
+
+            for (Uint32 i = 0; i < Count; ++i)
+                Resources[i] = pFileOffsetAndSize[i];
         });
 }
 
@@ -460,11 +463,12 @@ bool DeviceObjectArchiveBase::ReadRayTracingPSOData(const char* Name, PSOData<Ra
 }
 
 template <typename ResType>
-bool DeviceObjectArchiveBase::GetCachedResource(const char* Name, TNameOffsetMap<ResType>& Cache, std::mutex& Guard, ResType*& pResource)
+bool DeviceObjectArchiveBase::GetCachedResource(const char* Name, TNameOffsetMapAndWeakCache<ResType>& Cache, std::mutex& Guard, ResType** ppResource)
 {
     std::unique_lock<std::mutex> ReadLock{Guard};
 
-    pResource = nullptr;
+    VERIFY_EXPR(ppResource != nullptr);
+    *ppResource = nullptr;
 
     auto Iter = Cache.find(Name);
     if (Iter == Cache.end())
@@ -474,12 +478,12 @@ bool DeviceObjectArchiveBase::GetCachedResource(const char* Name, TNameOffsetMap
     if (Ptr == nullptr)
         return false;
 
-    pResource = Ptr.Detach();
+    *ppResource = Ptr.Detach();
     return true;
 }
 
 template <typename ResType>
-void DeviceObjectArchiveBase::CacheResource(const char* Name, TNameOffsetMap<ResType>& Cache, std::mutex& Guard, ResType* pResource)
+void DeviceObjectArchiveBase::CacheResource(const char* Name, TNameOffsetMapAndWeakCache<ResType>& Cache, std::mutex& Guard, ResType* pResource)
 {
     VERIFY_EXPR(pResource != nullptr);
 
@@ -496,66 +500,42 @@ void DeviceObjectArchiveBase::CacheResource(const char* Name, TNameOffsetMap<Res
     Iter->second.Cache = pResource;
 }
 
-bool DeviceObjectArchiveBase::GetCachedPRS(const char* Name, IPipelineResourceSignature*& pSignature)
+template <typename ResType>
+bool DeviceObjectArchiveBase::GetCachedResource(const char* Name, TNameOffsetMapAndStrongCache<ResType>& Cache, std::mutex& Guard, ResType** ppResource)
 {
-    return GetCachedResource(Name, m_PRSMap, m_PRSMapGuard, pSignature);
+    std::unique_lock<std::mutex> ReadLock{Guard};
+
+    VERIFY_EXPR(ppResource != nullptr);
+    *ppResource = nullptr;
+
+    auto Iter = Cache.find(Name);
+    if (Iter == Cache.end())
+        return false;
+
+    if (Iter->second.Cache == nullptr)
+        return false;
+
+    *ppResource = Iter->second.Cache;
+    *ppResource->AddRef();
+    return true;
 }
 
-void DeviceObjectArchiveBase::CachePRSResource(const char* Name, IPipelineResourceSignature* pSignature)
+template <typename ResType>
+void DeviceObjectArchiveBase::CacheResource(const char* Name, TNameOffsetMapAndStrongCache<ResType>& Cache, std::mutex& Guard, ResType* pResource)
 {
-    return CacheResource(Name, m_PRSMap, m_PRSMapGuard, pSignature);
-}
+    VERIFY_EXPR(pResource != nullptr);
 
-bool DeviceObjectArchiveBase::GetCachedGraphicsPSO(const char* Name, IPipelineState*& pPSO)
-{
-    return GetCachedResource(Name, m_GraphicsPSOMap, m_GraphicsPSOMapGuard, pPSO);
-}
+    std::unique_lock<std::mutex> WriteLock{Guard};
 
-void DeviceObjectArchiveBase::CacheGraphicsPSOResource(const char* Name, IPipelineState* pPSO)
-{
-    return CacheResource(Name, m_GraphicsPSOMap, m_GraphicsPSOMapGuard, pPSO);
-}
+    auto Iter = Cache.find(Name);
+    if (Iter == Cache.end())
+        return;
 
-bool DeviceObjectArchiveBase::GetCachedComputePSO(const char* Name, IPipelineState*& pPSO)
-{
-    return GetCachedResource(Name, m_ComputePSOMap, m_ComputePSOMapGuard, pPSO);
-}
+    if (Iter->second.Cache != nullptr)
+        return;
 
-void DeviceObjectArchiveBase::CacheComputePSOResource(const char* Name, IPipelineState* pPSO)
-{
-    return CacheResource(Name, m_ComputePSOMap, m_ComputePSOMapGuard, pPSO);
+    Iter->second.Cache = pResource;
 }
-
-bool DeviceObjectArchiveBase::GetCachedTilePSO(const char* Name, IPipelineState*& pPSO)
-{
-    return GetCachedResource(Name, m_TilePSOMap, m_TilePSOMapGuard, pPSO);
-}
-
-void DeviceObjectArchiveBase::CacheTilePSOResource(const char* Name, IPipelineState* pPSO)
-{
-    return CacheResource(Name, m_TilePSOMap, m_TilePSOMapGuard, pPSO);
-}
-
-bool DeviceObjectArchiveBase::GetCachedRayTracingPSO(const char* Name, IPipelineState*& pPSO)
-{
-    return GetCachedResource(Name, m_RayTracingPSOMap, m_RayTracingPSOMapGuard, pPSO);
-}
-
-void DeviceObjectArchiveBase::CacheRayTracingPSOResource(const char* Name, IPipelineState* pPSO)
-{
-    return CacheResource(Name, m_RayTracingPSOMap, m_RayTracingPSOMapGuard, pPSO);
-}
-
-bool DeviceObjectArchiveBase::GetCachedRP(const char* Name, IRenderPass*& pRP)
-{
-    return GetCachedResource(Name, m_RenderPassMap, m_RenderPassMapGuard, pRP);
-}
-
-void DeviceObjectArchiveBase::CacheRPResource(const char* Name, IRenderPass* pRP)
-{
-    return CacheResource(Name, m_RenderPassMap, m_RenderPassMapGuard, pRP);
-}
-
 
 template <>
 inline DeviceObjectArchiveBase::ReleaseTempResourceRefs<GraphicsPipelineStateCreateInfo>::~ReleaseTempResourceRefs()
@@ -571,27 +551,6 @@ inline DeviceObjectArchiveBase::ReleaseTempResourceRefs<GraphicsPipelineStateCre
 
     if (PSO.CreateInfo.GraphicsPipeline.pRenderPass != nullptr)
         PSO.CreateInfo.GraphicsPipeline.pRenderPass->Release();
-
-    if (PSO.CreateInfo.pVS != nullptr)
-        PSO.CreateInfo.pVS->Release();
-
-    if (PSO.CreateInfo.pPS != nullptr)
-        PSO.CreateInfo.pPS->Release();
-
-    if (PSO.CreateInfo.pDS != nullptr)
-        PSO.CreateInfo.pDS->Release();
-
-    if (PSO.CreateInfo.pHS != nullptr)
-        PSO.CreateInfo.pHS->Release();
-
-    if (PSO.CreateInfo.pGS != nullptr)
-        PSO.CreateInfo.pGS->Release();
-
-    if (PSO.CreateInfo.pAS != nullptr)
-        PSO.CreateInfo.pAS->Release();
-
-    if (PSO.CreateInfo.pMS != nullptr)
-        PSO.CreateInfo.pMS->Release();
 }
 
 template <>
@@ -605,9 +564,6 @@ inline DeviceObjectArchiveBase::ReleaseTempResourceRefs<ComputePipelineStateCrea
                 PSO.CreateInfo.ppResourceSignatures[i]->Release();
         }
     }
-
-    if (PSO.CreateInfo.pCS != nullptr)
-        PSO.CreateInfo.pCS->Release();
 }
 
 template <>
@@ -621,9 +577,6 @@ inline DeviceObjectArchiveBase::ReleaseTempResourceRefs<TilePipelineStateCreateI
                 PSO.CreateInfo.ppResourceSignatures[i]->Release();
         }
     }
-
-    if (PSO.CreateInfo.pTS != nullptr)
-        PSO.CreateInfo.pTS->Release();
 }
 
 template <>
@@ -637,8 +590,6 @@ inline DeviceObjectArchiveBase::ReleaseTempResourceRefs<RayTracingPipelineStateC
                 PSO.CreateInfo.ppResourceSignatures[i]->Release();
         }
     }
-
-    // AZ TODO: release shaders
 }
 
 
@@ -715,16 +666,28 @@ bool DeviceObjectArchiveBase::LoadShaders(Serializer<SerializerMode::Read>&    S
 
     Shaders.resize(ShaderIndices.Count);
 
-    std::unique_lock<std::mutex> ReadLock{m_ShadersGuard};
-
     for (Uint32 i = 0; i < ShaderIndices.Count; ++i)
     {
         const Uint32 Idx = ShaderIndices.pIndices[i];
-        if (Idx >= m_Shaders.size())
-            return false;
 
-        const auto& OffsetAndSize = m_Shaders[Idx];
-        void*       pData         = Allocator.Allocate(OffsetAndSize.Size, DataPtrAlign);
+        FileOffsetAndSize OffsetAndSize;
+        {
+            std::unique_lock<std::mutex> ReadLock{m_ShadersGuard};
+
+            if (Idx >= m_Shaders.size())
+                return false;
+
+            // Try to get cached shader
+            if (m_Shaders[Idx].Cache)
+            {
+                Shaders[i] = m_Shaders[Idx].Cache;
+                continue;
+            }
+
+            OffsetAndSize = m_Shaders[Idx];
+        }
+
+        void* pData = Allocator.Allocate(OffsetAndSize.Size, DataPtrAlign);
 
         if (!m_pArchive->Read(BaseOffset + OffsetAndSize.Offset, OffsetAndSize.Size, pData))
             return false;
@@ -735,11 +698,18 @@ bool DeviceObjectArchiveBase::LoadShaders(Serializer<SerializerMode::Read>&    S
 
         ShaderCI.CompileFlags |= SHADER_COMPILE_FLAG_SKIP_REFLECTION;
 
-        ReadAndCreateShader(Ser2, ShaderCI, pDevice, &Shaders[i]);
-        if (!Shaders[i])
+        RefCntAutoPtr<IShader> pShader;
+        ReadAndCreateShader(Ser2, ShaderCI, pDevice, &pShader);
+        if (!pShader)
             return false;
 
-        // AZ TODO: cache shaders ?
+        Shaders[i] = pShader;
+
+        // Add to cache
+        {
+            std::unique_lock<std::mutex> WriteLock{m_ShadersGuard};
+            m_Shaders[Idx].Cache = pShader;
+        }
     }
     return true;
 }
@@ -751,7 +721,7 @@ void DeviceObjectArchiveBase::UnpackGraphicsPSO(const PipelineStateUnpackInfo& D
     const bool HasOverrideFlags = DeArchiveInfo.OverrideFlags != PSO_UNPACK_OVERRIDE_FLAG_NONE;
     DEV_CHECK_ERR(!HasOverrideFlags || DeArchiveInfo.pGraphicsPipelineDesc != nullptr, "pGraphicsPipelineDesc must not be null");
 
-    if (!HasOverrideFlags && GetCachedGraphicsPSO(DeArchiveInfo.Name, pPSO))
+    if (!HasOverrideFlags && GetCachedResource(DeArchiveInfo.Name, m_GraphicsPSOMap, m_GraphicsPSOMapGuard, &pPSO))
         return;
 
     PSOData<GraphicsPipelineStateCreateInfo> PSO{GetRawAllocator()};
@@ -787,13 +757,13 @@ void DeviceObjectArchiveBase::UnpackGraphicsPSO(const PipelineStateUnpackInfo& D
                 switch (Shader->GetDesc().ShaderType)
                 {
                     // clang-format off
-                    case SHADER_TYPE_VERTEX:        PSO.CreateInfo.pVS = Shader; Shader->AddRef(); break;
-                    case SHADER_TYPE_PIXEL:         PSO.CreateInfo.pPS = Shader; Shader->AddRef(); break;
-                    case SHADER_TYPE_GEOMETRY:      PSO.CreateInfo.pGS = Shader; Shader->AddRef(); break;
-                    case SHADER_TYPE_HULL:          PSO.CreateInfo.pHS = Shader; Shader->AddRef(); break; 
-                    case SHADER_TYPE_DOMAIN:        PSO.CreateInfo.pDS = Shader; Shader->AddRef(); break;
-                    case SHADER_TYPE_AMPLIFICATION: PSO.CreateInfo.pAS = Shader; Shader->AddRef(); break;
-                    case SHADER_TYPE_MESH:          PSO.CreateInfo.pMS = Shader; Shader->AddRef(); break;
+                    case SHADER_TYPE_VERTEX:        PSO.CreateInfo.pVS = Shader; break;
+                    case SHADER_TYPE_PIXEL:         PSO.CreateInfo.pPS = Shader; break;
+                    case SHADER_TYPE_GEOMETRY:      PSO.CreateInfo.pGS = Shader; break;
+                    case SHADER_TYPE_HULL:          PSO.CreateInfo.pHS = Shader; break; 
+                    case SHADER_TYPE_DOMAIN:        PSO.CreateInfo.pDS = Shader; break;
+                    case SHADER_TYPE_AMPLIFICATION: PSO.CreateInfo.pAS = Shader; break;
+                    case SHADER_TYPE_MESH:          PSO.CreateInfo.pMS = Shader; break;
                     // clang-format on
                     default:
                         LOG_ERROR_MESSAGE("Unsupported shader type for graphics pipeline");
@@ -857,7 +827,7 @@ void DeviceObjectArchiveBase::UnpackGraphicsPSO(const PipelineStateUnpackInfo& D
 
             DeArchiveInfo.pDevice->CreateGraphicsPipelineState(PSO.CreateInfo, &pPSO);
             if (!HasOverrideFlags)
-                CacheGraphicsPSOResource(DeArchiveInfo.Name, pPSO);
+                CacheResource(DeArchiveInfo.Name, m_GraphicsPSOMap, m_GraphicsPSOMapGuard, pPSO);
         });
 }
 
@@ -868,7 +838,7 @@ void DeviceObjectArchiveBase::UnpackComputePSO(const PipelineStateUnpackInfo& De
     const bool HasOverrideFlags = DeArchiveInfo.OverrideFlags != PSO_UNPACK_OVERRIDE_FLAG_NONE;
     DEV_CHECK_ERR(!HasOverrideFlags, "Override flags are not supported for Compute PSO");
 
-    if (GetCachedComputePSO(DeArchiveInfo.Name, pPSO))
+    if (GetCachedResource(DeArchiveInfo.Name, m_ComputePSOMap, m_ComputePSOMapGuard, &pPSO))
         return;
 
     PSOData<ComputePipelineStateCreateInfo> PSO{GetRawAllocator()};
@@ -900,11 +870,10 @@ void DeviceObjectArchiveBase::UnpackComputePSO(const PipelineStateUnpackInfo& De
                 return;
 
             PSO.CreateInfo.pCS = Shaders[0];
-            Shaders[0]->AddRef();
 
             DeArchiveInfo.pDevice->CreateComputePipelineState(PSO.CreateInfo, &pPSO);
             if (!HasOverrideFlags)
-                CacheComputePSOResource(DeArchiveInfo.Name, pPSO);
+                CacheResource(DeArchiveInfo.Name, m_ComputePSOMap, m_ComputePSOMapGuard, pPSO);
         });
 }
 
@@ -915,7 +884,7 @@ void DeviceObjectArchiveBase::UnpackTilePSO(const PipelineStateUnpackInfo& DeArc
     const bool HasOverrideFlags = DeArchiveInfo.OverrideFlags != PSO_UNPACK_OVERRIDE_FLAG_NONE;
     DEV_CHECK_ERR(!HasOverrideFlags || DeArchiveInfo.pTilePipelineDesc != nullptr, "pTilePipelineDesc must not be null");
 
-    if (!HasOverrideFlags && GetCachedTilePSO(DeArchiveInfo.Name, pPSO))
+    if (!HasOverrideFlags && GetCachedResource(DeArchiveInfo.Name, m_TilePSOMap, m_TilePSOMapGuard, &pPSO))
         return;
 
     PSOData<TilePipelineStateCreateInfo> PSO{GetRawAllocator()};
@@ -947,7 +916,6 @@ void DeviceObjectArchiveBase::UnpackTilePSO(const PipelineStateUnpackInfo& DeArc
                 return;
 
             PSO.CreateInfo.pTS = Shaders[0];
-            Shaders[0]->AddRef();
 
             for (auto OverrideFlags = DeArchiveInfo.OverrideFlags; OverrideFlags != 0;)
             {
@@ -974,7 +942,7 @@ void DeviceObjectArchiveBase::UnpackTilePSO(const PipelineStateUnpackInfo& DeArc
 
             DeArchiveInfo.pDevice->CreateTilePipelineState(PSO.CreateInfo, &pPSO);
             if (!HasOverrideFlags)
-                CacheTilePSOResource(DeArchiveInfo.Name, pPSO);
+                CacheResource(DeArchiveInfo.Name, m_TilePSOMap, m_TilePSOMapGuard, pPSO);
         });
 }
 
@@ -985,7 +953,7 @@ void DeviceObjectArchiveBase::UnpackRayTracingPSO(const PipelineStateUnpackInfo&
     const bool HasOverrideFlags = DeArchiveInfo.OverrideFlags != PSO_UNPACK_OVERRIDE_FLAG_NONE;
     DEV_CHECK_ERR(!HasOverrideFlags, "Override flags are not supported for Ray tracing PSO");
 
-    if (GetCachedRayTracingPSO(DeArchiveInfo.Name, pPSO))
+    if (GetCachedResource(DeArchiveInfo.Name, m_RayTracingPSOMap, m_RayTracingPSOMapGuard, &pPSO))
         return;
 
     PSOData<RayTracingPipelineStateCreateInfo> PSO{GetRawAllocator()};
@@ -1012,7 +980,7 @@ void DeviceObjectArchiveBase::UnpackRayTracingPSO(const PipelineStateUnpackInfo&
 
             DeArchiveInfo.pDevice->CreateRayTracingPipelineState(PSO.CreateInfo, &pPSO);
             if (!HasOverrideFlags)
-                CacheRayTracingPSOResource(DeArchiveInfo.Name, pPSO);
+                CacheResource(DeArchiveInfo.Name, m_RayTracingPSOMap, m_RayTracingPSOMapGuard, pPSO);
         });
 }
 
@@ -1022,7 +990,7 @@ void DeviceObjectArchiveBase::UnpackRenderPass(const RenderPassUnpackInfo& DeArc
 
     const bool OverrideAttachments = DeArchiveInfo.AttachmentCount != 0;
 
-    if (!OverrideAttachments && GetCachedRP(DeArchiveInfo.Name, pRP))
+    if (!OverrideAttachments && GetCachedResource(DeArchiveInfo.Name, m_RenderPassMap, m_RenderPassMapGuard, &pRP))
         return;
 
     RPData RP{GetRawAllocator()};
@@ -1066,14 +1034,14 @@ void DeviceObjectArchiveBase::UnpackRenderPass(const RenderPassUnpackInfo& DeArc
 
     DeArchiveInfo.pDevice->CreateRenderPass(RP.Desc, &pRP);
     if (!OverrideAttachments)
-        CacheRPResource(DeArchiveInfo.Name, pRP);
+        CacheResource(DeArchiveInfo.Name, m_RenderPassMap, m_RenderPassMapGuard, pRP);
 }
 
 void DeviceObjectArchiveBase::UnpackResourceSignatureImpl(const ResourceSignatureUnpackInfo& DeArchiveInfo,
                                                           IPipelineResourceSignature*&       pSignature,
                                                           const CreateSignatureType&         CreateSignature)
 {
-    if (GetCachedPRS(DeArchiveInfo.Name, pSignature))
+    if (GetCachedResource(DeArchiveInfo.Name, m_PRSMap, m_PRSMapGuard, &pSignature))
         return;
 
     PRSData PRS{GetRawAllocator()};
@@ -1092,9 +1060,20 @@ void DeviceObjectArchiveBase::UnpackResourceSignatureImpl(const ResourceSignatur
             Serializer<SerializerMode::Read> Ser{pData, DataSize};
 
             CreateSignature(PRS, Ser, pSignature);
-            CachePRSResource(DeArchiveInfo.Name, pSignature);
+            CacheResource(DeArchiveInfo.Name, m_PRSMap, m_PRSMapGuard, pSignature);
         });
 }
+
+void DeviceObjectArchiveBase::ClearResourceCache()
+{
+    std::unique_lock<std::mutex> WriteLock{m_ShadersGuard};
+
+    for (auto& Shader : m_Shaders)
+    {
+        Shader.Cache.Release();
+    }
+}
+
 
 template <SerializerMode Mode>
 void PSOSerializer<Mode>::SerializeImmutableSampler(

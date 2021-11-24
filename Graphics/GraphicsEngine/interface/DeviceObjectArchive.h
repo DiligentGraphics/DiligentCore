@@ -49,13 +49,11 @@ static const INTERFACE_ID IID_DeviceObjectArchive =
 #define DILIGENT_INTERFACE_NAME IDeviceObjectArchive
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
-// clang-format off
-
 #define IDeviceObjectArchiveInclusiveMethods \
-    IObjectInclusiveMethods \
-    /*IDeviceObjectArchiveMethods DeviceObjectArchive*/
+    IObjectInclusiveMethods;                 \
+    IDeviceObjectArchiveMethods DeviceObjectArchive
 
-#if DILIGENT_CPP_INTERFACE
+// clang-format off
 
 /// Device object archive interface
 DILIGENT_BEGIN_INTERFACE(IDeviceObjectArchive, IObject)
@@ -64,25 +62,17 @@ DILIGENT_BEGIN_INTERFACE(IDeviceObjectArchive, IObject)
     //VIRTUAL Bool METHOD(PrefetchPipelineStates)(THIS_
     //                                            const Char* const* pNames,
     //                                            Uint32             NameCount) PURE;
+
+    /// Release strong references for objects which was created by device object archive.
+    VIRTUAL void METHOD(ClearResourceCache)(THIS) PURE;
 };
 DILIGENT_END_INTERFACE
-
-#endif // DILIGENT_CPP_INTERFACE
-
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
 
-typedef struct IDeviceObjectArchiveVtbl
-{
-    IDeviceObjectArchiveInclusiveMethods;
-} IDeviceObjectArchiveVtbl;
-
-typedef struct IDeviceObjectArchive
-{
-    struct IDeviceObjectArchiveVtbl* pVtbl;
-} IDeviceObjectArchive;
+#    define IDeviceObjectArchive_ClearResourceCache(This) CALL_IFACE_METHOD(DeviceObjectArchive, ClearResourceCache, This)
 
 #endif
 

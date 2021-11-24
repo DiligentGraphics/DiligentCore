@@ -68,6 +68,8 @@ DILIGENT_BEGIN_INTERFACE(IArchive, IObject)
                               void*  pData) PURE;
 
     /// Returns the archive size, in bytes
+    /// 
+    /// \remarks    The method is thread-safe
     VIRTUAL Uint64 METHOD(GetSize)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE
