@@ -67,7 +67,7 @@ void CopyPRSDesc(const PipelineResourceSignatureDesc&            SrcDesc,
         CopyPipelineResourceSignatureDesc(Allocator, SrcDesc, DstDesc, ResourceOffsets);
 
         pDstSerialized = Allocator.Copy(SrcSerialized);
-        DescPtr        = SerializedMemory{Allocator.ReleaseOwnership(), Allocator.GetCurrentSize()};
+        DescPtr        = SerializedMemory{Allocator.ReleaseOwnership(), Allocator.GetCurrentSize(), &RawAllocator};
     }
 
     // Serialize description & serialization data
@@ -75,14 +75,10 @@ void CopyPRSDesc(const PipelineResourceSignatureDesc&            SrcDesc,
         Serializer<SerializerMode::Measure> MeasureSer;
         PSOSerializer<SerializerMode::Measure>::SerializePRS(MeasureSer, SrcDesc, SrcSerialized, nullptr);
 
-        const size_t SerSize = MeasureSer.GetSize(nullptr);
-        void*        SerPtr  = ALLOCATE_RAW(RawAllocator, "", SerSize);
-
-        Serializer<SerializerMode::Write> Ser{SerPtr, SerSize};
+        SharedPtr = SerializedMemory{MeasureSer.GetSize(nullptr)};
+        Serializer<SerializerMode::Write> Ser{SharedPtr.Ptr(), SharedPtr.Size()};
         PSOSerializer<SerializerMode::Write>::SerializePRS(Ser, SrcDesc, SrcSerialized, nullptr);
         VERIFY_EXPR(Ser.IsEnd());
-
-        SharedPtr = SerializedMemory{SerPtr, SerSize};
     }
 }
 

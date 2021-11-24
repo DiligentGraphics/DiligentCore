@@ -33,6 +33,11 @@
 namespace Diligent
 {
 
+RefCntAutoPtr<MemoryFileStream> MemoryFileStream::Create(IDataBlob* pData)
+{
+    return RefCntAutoPtr<MemoryFileStream>{MakeNewRCObj<MemoryFileStream>()(pData)};
+}
+
 MemoryFileStream::MemoryFileStream(IReferenceCounters* pRefCounters,
                                    IDataBlob*          pData) :
     TBase{pRefCounters},

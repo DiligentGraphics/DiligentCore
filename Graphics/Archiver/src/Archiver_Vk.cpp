@@ -163,7 +163,7 @@ bool ArchiverImpl::PatchShadersVk(CreateInfoType& CreateInfo, TPSOData<CreateInf
 
     // AZ TODO: map ray tracing shaders to shader indices
 
-    SerializeShadersForPSO(ShaderIndices, Data.PerDeviceData[static_cast<Uint32>(DeviceType::Vulkan)]);
+    Data.PerDeviceData[static_cast<size_t>(DeviceType::Vulkan)] = SerializeShadersForPSO(ShaderIndices);
     return true;
 }
 

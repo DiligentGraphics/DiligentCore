@@ -173,7 +173,7 @@ bool ArchiverImpl::PatchShadersD3D11(CreateInfoType& CreateInfo, TPSOData<Create
 
         SerializeShaderBytecode(ShaderIndices, DeviceType::Direct3D11, CI, pBytecode->GetBufferPointer(), pBytecode->GetBufferSize());
     }
-    SerializeShadersForPSO(ShaderIndices, Data.PerDeviceData[static_cast<Uint32>(DeviceType::Direct3D11)]);
+    Data.PerDeviceData[static_cast<size_t>(DeviceType::Direct3D11)] = SerializeShadersForPSO(ShaderIndices);
     return true;
 }
 

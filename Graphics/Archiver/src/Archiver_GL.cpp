@@ -88,7 +88,7 @@ bool ArchiverImpl::PatchShadersGL(CreateInfoType& CreateInfo, TPSOData<CreateInf
     {
         SerializeShaderSource(ShaderIndices, DeviceType::OpenGL, ShaderStages[i].pShader->GetCreateInfo());
     }
-    SerializeShadersForPSO(ShaderIndices, Data.PerDeviceData[static_cast<Uint32>(DeviceType::OpenGL)]);
+    Data.PerDeviceData[static_cast<size_t>(DeviceType::OpenGL)] = SerializeShadersForPSO(ShaderIndices);
     return true;
 }
 

@@ -63,6 +63,8 @@ public:
 
     virtual bool DILIGENT_CALL_TYPE IsValid() override;
 
+    static RefCntAutoPtr<MemoryFileStream> Create(IDataBlob* pData);
+
 private:
     RefCntAutoPtr<IDataBlob> m_DataBlob;
     size_t                   m_CurrentOffset = 0;
