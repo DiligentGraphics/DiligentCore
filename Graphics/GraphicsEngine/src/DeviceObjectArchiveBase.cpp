@@ -68,7 +68,8 @@ DeviceObjectArchiveBase::DeviceType DeviceObjectArchiveBase::RenderDeviceTypeToA
 DeviceObjectArchiveBase::DeviceObjectArchiveBase(IReferenceCounters* pRefCounters, IArchive* pArchive, DeviceType DevType) :
     TObjectBase{pRefCounters},
     m_pArchive{pArchive},
-    m_DevType{DevType}
+    m_DevType{DevType},
+    m_StringAllocator{GetRawAllocator(), 4 << 20}
 {
     if (m_pArchive == nullptr)
         LOG_ERROR_AND_THROW("pSource must not be null");
@@ -219,7 +220,8 @@ void DeviceObjectArchiveBase::ReadNamedResources(const ChunkHeader& Chunk, TName
         }
         VERIFY_EXPR(strlen(NameDataPtr + Offset) + 1 == NameLengthArray[i]);
 
-        bool Inserted = NameAndOffset.emplace(HashMapStringKey{NameDataPtr + Offset, true}, FileOffsetAndSize{DataOffsetArray[i], DataSizeArray[i]}).second;
+        const char* ResName  = m_StringAllocator.CopyString(NameDataPtr + Offset);
+        bool        Inserted = NameAndOffset.emplace(HashMapStringKey{ResName}, FileOffsetAndSize{DataOffsetArray[i], DataSizeArray[i]}).second;
         DEV_CHECK_ERR(Inserted, "Each name in the resource names array must be unique");
         Offset += NameLengthArray[i];
     }

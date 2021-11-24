@@ -260,6 +260,7 @@ private:
     RefCntAutoPtr<IArchive> m_pArchive; // archive is thread-safe
     const DeviceType        m_DevType;
     TBlockBaseOffsets       m_BaseOffsets = {};
+    DynamicLinearAllocator  m_StringAllocator;
 
     template <typename ResType>
     void ReadNamedResources(const ChunkHeader& Chunk, TNameOffsetMap<ResType>& NameAndOffset, std::mutex& Guard) noexcept(false);
