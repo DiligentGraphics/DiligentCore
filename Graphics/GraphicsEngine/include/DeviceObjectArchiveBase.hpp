@@ -168,7 +168,7 @@ protected:
     {
         using Uint32Array = std::array<Uint32, static_cast<size_t>(DeviceType::Count)>;
 
-        static constexpr Uint32 InvalidOffset() { return ~0u; }
+        static constexpr Uint32 InvalidOffset = ~0u;
 
         ChunkType   Type;
         Uint32Array DeviceSpecificDataSize;
@@ -178,7 +178,7 @@ protected:
         Uint32 GetOffset(DeviceType DevType) const { return DeviceSpecificDataOffset[static_cast<size_t>(DevType)]; }
         Uint32 GetEndOffset(DeviceType DevType) const { return GetOffset(DevType) + GetSize(DevType); }
 
-        void InitOffsets() { DeviceSpecificDataOffset.fill(InvalidOffset()); }
+        void InitOffsets() { DeviceSpecificDataOffset.fill(Uint32{InvalidOffset}); }
 
         void SetSize(DeviceType DevType, Uint32 Size) { DeviceSpecificDataSize[static_cast<size_t>(DevType)] = Size; }
         void SetOffset(DeviceType DevType, Uint32 Offset) { DeviceSpecificDataOffset[static_cast<size_t>(DevType)] = Offset; }

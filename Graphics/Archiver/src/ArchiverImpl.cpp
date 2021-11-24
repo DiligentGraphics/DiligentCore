@@ -43,23 +43,24 @@ ArchiverImpl::~ArchiverImpl()
 {
 }
 
-template <typename DataType>
-void ArchiverImpl::InitNamedResourceArrayHeader(std::vector<Uint8>&                         ChunkData,
-                                                const std::unordered_map<String, DataType>& Map,
-                                                Uint32*&                                    DataSizeArray,
-                                                Uint32*&                                    DataOffsetArray)
+template <typename MapType>
+void ArchiverImpl::InitNamedResourceArrayHeader(std::vector<Uint8>& ChunkData,
+                                                const MapType&      Map,
+                                                Uint32*&            DataSizeArray,
+                                                Uint32*&            DataOffsetArray)
 {
     VERIFY_EXPR(!Map.empty());
 
     const Uint32 Count = static_cast<Uint32>(Map.size());
-    Uint32       Size  = sizeof(NamedResourceArrayHeader);
+
+    size_t Size = sizeof(NamedResourceArrayHeader);
     Size += sizeof(Uint32) * Count; // NameLength
     Size += sizeof(Uint32) * Count; // ***DataSize
     Size += sizeof(Uint32) * Count; // ***DataOffset
 
-    for (auto& NameAndData : Map)
+    for (const auto& NameAndData : Map)
     {
-        Size += static_cast<Uint32>(NameAndData.first.size());
+        Size += strlen(NameAndData.first.GetStr());
     }
 
     VERIFY_EXPR(ChunkData.empty());
@@ -68,8 +69,8 @@ void ArchiverImpl::InitNamedResourceArrayHeader(std::vector<Uint8>&             
     auto& Header = *reinterpret_cast<NamedResourceArrayHeader*>(&ChunkData[0]);
     Header.Count = Count;
 
-    size_t OffsetInHeader  = sizeof(Header);
-    auto*  NameLengthArray = reinterpret_cast<Uint32*>(&ChunkData[OffsetInHeader]);
+    auto  OffsetInHeader  = sizeof(Header);
+    auto* NameLengthArray = reinterpret_cast<Uint32*>(&ChunkData[OffsetInHeader]);
     OffsetInHeader += sizeof(*NameLengthArray) * Header.Count;
     VERIFY_EXPR(reinterpret_cast<size_t>(NameLengthArray) % alignof(decltype(*NameLengthArray)) == 0);
 
@@ -84,15 +85,16 @@ void ArchiverImpl::InitNamedResourceArrayHeader(std::vector<Uint8>&             
     char* NameDataPtr = reinterpret_cast<char*>(&ChunkData[OffsetInHeader]);
 
     Uint32 i = 0;
-    for (auto& NameAndData : Map)
+    for (const auto& NameAndData : Map)
     {
-        const auto& Name = NameAndData.first;
+        const auto* Name    = NameAndData.first.GetStr();
+        const auto  NameLen = strlen(Name);
 
-        NameLengthArray[i] = static_cast<Uint32>(Name.size());
+        NameLengthArray[i] = StaticCast<Uint32>(NameLen);
         DataSizeArray[i]   = StaticCast<Uint32>(NameAndData.second.GetSharedData().Size);
         DataOffsetArray[i] = 0; // will be initialized later
-        std::memcpy(NameDataPtr, Name.c_str(), Name.size());
-        NameDataPtr += Name.size();
+        std::memcpy(NameDataPtr, Name, NameLen);
+        NameDataPtr += NameLen;
         ++i;
     }
 
@@ -140,7 +142,7 @@ void ArchiverImpl::ReserveSpace(size_t& SharedDataSize, std::array<size_t, Devic
     }
 
     // Reserve space for pipeline resource signatures
-    for (auto& PRS : m_PRSMap)
+    for (const auto& PRS : m_PRSMap)
     {
         SharedDataSize += sizeof(PRSDataHeader) + PRS.second.GetSharedData().Size;
 
@@ -174,7 +176,7 @@ void ArchiverImpl::ReserveSpace(size_t& SharedDataSize, std::array<size_t, Devic
     }
 
     // Reserve space for render passes
-    for (auto& RP : m_RPMap)
+    for (const auto& RP : m_RPMap)
     {
         SharedDataSize += RP.second.GetSharedData().Size;
     }
@@ -233,7 +235,7 @@ void ArchiverImpl::WriteResourceSignatureData(PendingData& Pending) const
     Pending.ResourceCountPerChunk[ChunkInd] = StaticCast<Uint32>(m_PRSMap.size());
 
     Uint32 j = 0;
-    for (auto& PRS : m_PRSMap)
+    for (const auto& PRS : m_PRSMap)
     {
         PRSDataHeader* pHeader = nullptr;
 
@@ -292,7 +294,7 @@ void ArchiverImpl::WriteRenderPassData(PendingData& Pending) const
     Pending.ResourceCountPerChunk[ChunkInd] = StaticCast<Uint32>(m_RPMap.size());
 
     Uint32 j = 0;
-    for (auto& RP : m_RPMap)
+    for (const auto& RP : m_RPMap)
     {
         RPDataHeader* pHeader = nullptr;
 
@@ -320,7 +322,7 @@ void ArchiverImpl::WriteRenderPassData(PendingData& Pending) const
 }
 
 template <typename PSOType>
-void ArchiverImpl::WritePSOData(PendingData& Pending, TPSOMap<PSOType>& PSOMap, ChunkType PSOChunkType) const
+void ArchiverImpl::WritePSOData(PendingData& Pending, TNamedObjectHashMap<PSOType>& PSOMap, ChunkType PSOChunkType) const
 {
     if (PSOMap.empty())
         return;
@@ -500,7 +502,7 @@ void ArchiverImpl::UpdateOffsetsInArchive(PendingData& Pending) const
                 if (Pending.DataOffsetArrayPerChunk[ChunkInd] != nullptr)
                 {
                     Uint32& Offset = Pending.DataOffsetArrayPerChunk[ChunkInd][j];
-                    Offset         = (Offset == InvalidOffset() ? InvalidOffset() : StaticCast<Uint32>(Offset + OffsetInFile));
+                    Offset         = (Offset == InvalidOffset ? InvalidOffset : StaticCast<Uint32>(Offset + OffsetInFile));
                 }
             }
         }
@@ -513,7 +515,7 @@ void ArchiverImpl::UpdateOffsetsInArchive(PendingData& Pending) const
     {
         if (Pending.PerDeviceData[dev].empty())
         {
-            FileHeader.BlockBaseOffsets[dev] = InvalidOffset();
+            FileHeader.BlockBaseOffsets[dev] = InvalidOffset;
         }
         else
         {
@@ -593,12 +595,12 @@ const SerializedMemory& ArchiverImpl::PRSData::GetSharedData() const
 
 const SerializedMemory& ArchiverImpl::PRSData::GetDeviceData(Uint32 Idx) const
 {
-    const auto* Result = pPRS->GetSerializedMemory(static_cast<DeviceType>(Idx));
-    if (Result != nullptr)
-        return *Result;
+    const auto* pMem = pPRS->GetSerializedMemory(static_cast<DeviceType>(Idx));
+    if (pMem != nullptr)
+        return *pMem;
 
-    static const SerializedMemory Empty;
-    return Empty;
+    static const SerializedMemory NullMem;
+    return NullMem;
 }
 
 bool ArchiverImpl::AddPipelineResourceSignature(IPipelineResourceSignature* pPRS)
@@ -608,7 +610,7 @@ bool ArchiverImpl::AddPipelineResourceSignature(IPipelineResourceSignature* pPRS
         return false;
 
     auto* pPRSImpl        = ClassPtrCast<SerializableResourceSignatureImpl>(pPRS);
-    auto  IterAndInserted = m_PRSMap.emplace(String{pPRSImpl->GetDesc().Name}, PRSData{});
+    auto  IterAndInserted = m_PRSMap.emplace(HashMapStringKey{pPRSImpl->GetDesc().Name, true}, PRSData{});
 
     if (!IterAndInserted.second)
     {
@@ -639,7 +641,7 @@ bool ArchiverImpl::CachePipelineResourceSignature(RefCntAutoPtr<IPipelineResourc
         pPRSImpl = pPRS.RawPtr<SerializableResourceSignatureImpl>();
 
 #ifdef DILIGENT_DEBUG
-        auto Iter = m_PRSMap.find(String{pPRSImpl->GetDesc().Name});
+        auto Iter = m_PRSMap.find(pPRSImpl->GetDesc().Name);
         VERIFY_EXPR(Iter != m_PRSMap.end());
         VERIFY_EXPR(Iter->second.pPRS == pPRSImpl);
 #endif
@@ -671,7 +673,7 @@ String ArchiverImpl::UniquePRSName()
         PRSName.resize(Pos);
         PRSName += std::to_string(Index);
 
-        if (m_PRSMap.find(PRSName) == m_PRSMap.end())
+        if (m_PRSMap.find(PRSName.c_str()) == m_PRSMap.end())
             return PRSName;
     }
     return "";
@@ -785,7 +787,7 @@ bool ArchiverImpl::AddRenderPass(IRenderPass* pRP)
         return false;
 
     auto* pRPImpl         = ClassPtrCast<SerializableRenderPassImpl>(pRP);
-    auto  IterAndInserted = m_RPMap.emplace(String{pRPImpl->GetDesc().Name}, RPData{});
+    auto  IterAndInserted = m_RPMap.emplace(HashMapStringKey{pRPImpl->GetDesc().Name, true}, RPData{});
     if (!IterAndInserted.second)
     {
         if (IterAndInserted.first->second.pRP != pRPImpl)
@@ -876,9 +878,9 @@ void ValidatePipelineStateArchiveInfo(const PipelineStateCreateInfo&  PSOCreateI
 } // namespace
 
 template <typename CreateInfoType>
-bool ArchiverImpl::SerializePSO(std::unordered_map<String, TPSOData<CreateInfoType>>& PSOMap,
-                                const CreateInfoType&                                 InPSOCreateInfo,
-                                const PipelineStateArchiveInfo&                       ArchiveInfo) noexcept
+bool ArchiverImpl::SerializePSO(TNamedObjectHashMap<TPSOData<CreateInfoType>>& PSOMap,
+                                const CreateInfoType&                          InPSOCreateInfo,
+                                const PipelineStateArchiveInfo&                ArchiveInfo) noexcept
 {
     CreateInfoType PSOCreateInfo = InPSOCreateInfo;
     try
@@ -891,7 +893,7 @@ bool ArchiverImpl::SerializePSO(std::unordered_map<String, TPSOData<CreateInfoTy
         return false;
     }
 
-    auto IterAndInserted = PSOMap.emplace(String{PSOCreateInfo.PSODesc.Name}, TPSOData<CreateInfoType>{});
+    auto IterAndInserted = PSOMap.emplace(HashMapStringKey{PSOCreateInfo.PSODesc.Name, true}, TPSOData<CreateInfoType>{});
     if (!IterAndInserted.second)
     {
         LOG_ERROR_MESSAGE("Pipeline must have unique name");
