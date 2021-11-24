@@ -515,7 +515,7 @@ void ValidateRayTracingPipelineCreateInfo(IRenderDevice*                        
 
     if (DeviceInfo.Type == RENDER_DEVICE_TYPE_D3D12)
     {
-        if ((CreateInfo.pShaderRecordName != nullptr) != (CreateInfo.RayTracingPipeline.ShaderRecordSize > 0))
+        if ((CreateInfo.pShaderRecordName != nullptr && *CreateInfo.pShaderRecordName != '\0') != (CreateInfo.RayTracingPipeline.ShaderRecordSize > 0))
             LOG_PSO_ERROR_AND_THROW("pShaderRecordName must not be null if RayTracingPipeline.ShaderRecordSize is not zero.");
     }
 

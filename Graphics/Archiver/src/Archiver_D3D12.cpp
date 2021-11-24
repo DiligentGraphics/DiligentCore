@@ -36,6 +36,8 @@
 
 namespace Diligent
 {
+namespace
+{
 
 struct CompiledShaderD3D12 : SerializableShaderImpl::ICompiledShader
 {
@@ -52,6 +54,26 @@ inline const ShaderD3D12Impl* GetShaderD3D12(const SerializableShaderImpl* pShad
     return pCompiledShaderD3D12 != nullptr ? &pCompiledShaderD3D12->ShaderD3D12 : nullptr;
 }
 
+struct ShaderStageInfoD3D12 : PipelineStateD3D12Impl::ShaderStageInfo
+{
+    ShaderStageInfoD3D12() :
+        ShaderStageInfo{} {}
+
+    ShaderStageInfoD3D12(const SerializableShaderImpl* pShader) :
+        ShaderStageInfo{GetShaderD3D12(pShader)},
+        Serializable{pShader}
+    {}
+
+    void Append(const SerializableShaderImpl* pShader)
+    {
+        ShaderStageInfo::Append(GetShaderD3D12(pShader));
+        Serializable.push_back(pShader);
+    }
+
+    std::vector<const SerializableShaderImpl*> Serializable;
+};
+} // namespace
+
 template <>
 struct SerializableResourceSignatureImpl::SignatureTraits<PipelineResourceSignatureD3D12Impl>
 {
@@ -61,31 +83,9 @@ struct SerializableResourceSignatureImpl::SignatureTraits<PipelineResourceSignat
     using PSOSerializerType = PSOSerializerD3D12<Mode>;
 };
 
-
 template <typename CreateInfoType>
 bool ArchiverImpl::PatchShadersD3D12(CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data, DefaultPRSInfo& DefPRS)
 {
-    struct ShaderStageInfoD3D12 : PipelineStateD3D12Impl::ShaderStageInfo
-    {
-        ShaderStageInfoD3D12() :
-            ShaderStageInfo{} {}
-
-        ShaderStageInfoD3D12(const SerializableShaderImpl* pShader) :
-            ShaderStageInfo{GetShaderD3D12(pShader)},
-            Serializable{pShader}
-        {}
-
-        void Append(const SerializableShaderImpl* pShader)
-        {
-            ShaderStageInfo::Append(GetShaderD3D12(pShader));
-            Serializable.push_back(pShader);
-        }
-
-        std::vector<const SerializableShaderImpl*> Serializable;
-    };
-
-    TShaderIndices ShaderIndices;
-
     std::vector<ShaderStageInfoD3D12> ShaderStages;
     SHADER_TYPE                       ActiveShaderStages = SHADER_TYPE_UNKNOWN;
     PipelineStateD3D12Impl::ExtractShaders<SerializableShaderImpl>(CreateInfo, ShaderStages, ActiveShaderStages);
@@ -145,6 +145,7 @@ bool ArchiverImpl::PatchShadersD3D12(CreateInfoType& CreateInfo, TPSOData<Create
         return false;
     }
 
+    TShaderIndices ShaderIndices;
     for (size_t j = 0; j < ShaderStagesD3D12.size(); ++j)
     {
         const auto& Stage = ShaderStagesD3D12[j];
@@ -156,8 +157,6 @@ bool ArchiverImpl::PatchShadersD3D12(CreateInfoType& CreateInfo, TPSOData<Create
             SerializeShaderBytecode(ShaderIndices, DeviceType::Direct3D12, CI, pBytecode->GetBufferPointer(), pBytecode->GetBufferSize());
         }
     }
-
-    // AZ TODO: map ray tracing shaders to shader indices
 
     Data.PerDeviceData[static_cast<size_t>(DeviceType::Direct3D12)] = SerializeShadersForPSO(ShaderIndices);
     return true;
@@ -229,6 +228,15 @@ void SerializationDeviceImpl::GetPipelineResourceBindingsD3D12(const PipelineRes
             ResourceBindings.push_back(Dst);
         }
     }
+}
+
+void ExtractShadersD3D12(const RayTracingPipelineStateCreateInfo& CreateInfo, RayTracingShaderMap& ShaderMap)
+{
+    std::vector<ShaderStageInfoD3D12> ShaderStages;
+    SHADER_TYPE                       ActiveShaderStages = SHADER_TYPE_UNKNOWN;
+    PipelineStateD3D12Impl::ExtractShaders<SerializableShaderImpl>(CreateInfo, ShaderStages, ActiveShaderStages);
+
+    ExtractRayTracingShaders(ShaderStages, ShaderMap);
 }
 
 } // namespace Diligent

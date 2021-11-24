@@ -456,7 +456,11 @@ bool DeviceObjectArchiveBase::ReadRayTracingPSOData(const char* Name, PSOData<Ra
                 return false;
             }
 
-            PSOSerializer<SerializerMode::Read>::SerializeRayTracingPSO(Ser, PSO.CreateInfo, PSO.PRSNames, &PSO.Allocator);
+            auto RemapShaders = [](Uint32& InIndex, IShader*& outShader) {
+                outShader = BitCast<IShader*>(size_t{InIndex});
+            };
+
+            PSOSerializer<SerializerMode::Read>::SerializeRayTracingPSO(Ser, PSO.CreateInfo, PSO.PRSNames, RemapShaders, &PSO.Allocator);
             VERIFY_EXPR(Ser.IsEnd());
 
             PSO.CreateInfo.Flags |= PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES;
@@ -827,6 +831,8 @@ void DeviceObjectArchiveBase::UnpackGraphicsPSO(const PipelineStateUnpackInfo& D
                 }
             }
 
+            VERIFY_EXPR(Ser.IsEnd());
+
             DeArchiveInfo.pDevice->CreateGraphicsPipelineState(PSO.CreateInfo, &pPSO);
             if (!HasOverrideFlags)
                 CacheResource(DeArchiveInfo.Name, m_GraphicsPSOMap, m_GraphicsPSOMapGuard, pPSO);
@@ -872,6 +878,8 @@ void DeviceObjectArchiveBase::UnpackComputePSO(const PipelineStateUnpackInfo& De
                 return;
 
             PSO.CreateInfo.pCS = Shaders[0];
+
+            VERIFY_EXPR(Ser.IsEnd());
 
             DeArchiveInfo.pDevice->CreateComputePipelineState(PSO.CreateInfo, &pPSO);
             if (!HasOverrideFlags)
@@ -942,6 +950,8 @@ void DeviceObjectArchiveBase::UnpackTilePSO(const PipelineStateUnpackInfo& DeArc
                 }
             }
 
+            VERIFY_EXPR(Ser.IsEnd());
+
             DeArchiveInfo.pDevice->CreateTilePipelineState(PSO.CreateInfo, &pPSO);
             if (!HasOverrideFlags)
                 CacheResource(DeArchiveInfo.Name, m_TilePSOMap, m_TilePSOMapGuard, pPSO);
@@ -978,7 +988,41 @@ void DeviceObjectArchiveBase::UnpackRayTracingPSO(const PipelineStateUnpackInfo&
         [&](void* pData, size_t DataSize) //
         {
             Serializer<SerializerMode::Read> Ser{pData, DataSize};
-            // AZ TODO
+
+            std::vector<RefCntAutoPtr<IShader>> Shaders;
+            if (!LoadShaders(Ser, DeArchiveInfo.pDevice, Shaders))
+                return;
+
+            auto RemapShader = [&Shaders](IShader* const& inoutShader) //
+            {
+                size_t ShaderIndex = BitCast<size_t>(inoutShader);
+                if (ShaderIndex < Shaders.size())
+                    const_cast<IShader*&>(inoutShader) = Shaders[ShaderIndex];
+                else
+                {
+                    VERIFY(ShaderIndex == ~0u, "Failed to remap shader");
+                    const_cast<IShader*&>(inoutShader) = nullptr;
+                }
+            };
+
+            // Set shaders to CreateInfo
+            for (Uint32 i = 0; i < PSO.CreateInfo.GeneralShaderCount; ++i)
+            {
+                RemapShader(PSO.CreateInfo.pGeneralShaders[i].pShader);
+            }
+            for (Uint32 i = 0; i < PSO.CreateInfo.TriangleHitShaderCount; ++i)
+            {
+                RemapShader(PSO.CreateInfo.pTriangleHitShaders[i].pClosestHitShader);
+                RemapShader(PSO.CreateInfo.pTriangleHitShaders[i].pAnyHitShader);
+            }
+            for (Uint32 i = 0; i < PSO.CreateInfo.ProceduralHitShaderCount; ++i)
+            {
+                RemapShader(PSO.CreateInfo.pProceduralHitShaders[i].pIntersectionShader);
+                RemapShader(PSO.CreateInfo.pProceduralHitShaders[i].pClosestHitShader);
+                RemapShader(PSO.CreateInfo.pProceduralHitShaders[i].pAnyHitShader);
+            }
+
+            VERIFY_EXPR(Ser.IsEnd());
 
             DeArchiveInfo.pDevice->CreateRayTracingPipelineState(PSO.CreateInfo, &pPSO);
             if (!HasOverrideFlags)
@@ -1274,20 +1318,104 @@ void PSOSerializer<Mode>::SerializeTilePSO(
 
 template <SerializerMode Mode>
 void PSOSerializer<Mode>::SerializeRayTracingPSO(
-    Serializer<Mode>&                         Ser,
-    TQual<RayTracingPipelineStateCreateInfo>& CreateInfo,
-    TQual<TPRSNames>&                         PRSNames,
-    DynamicLinearAllocator*                   Allocator)
+    Serializer<Mode>&                                     Ser,
+    TQual<RayTracingPipelineStateCreateInfo>&             CreateInfo,
+    TQual<TPRSNames>&                                     PRSNames,
+    const std::function<void(Uint32&, TQual<IShader*>&)>& ShaderToIndex,
+    DynamicLinearAllocator*                               Allocator)
 {
+    const bool IsReading = (Allocator != nullptr);
+    const bool IsWriting = !IsReading;
+
     SerializePSO(Ser, CreateInfo, PRSNames, Allocator);
 
-    // AZ TODO: read RayTracingPipelineStateCreateInfo
+    // Serialize RayTracingPipelineDesc
+    Ser(CreateInfo.RayTracingPipeline.ShaderRecordSize,
+        CreateInfo.RayTracingPipeline.MaxRecursionDepth);
+
+    // Serialize RayTracingPipelineStateCreateInfo
+    Ser(CreateInfo.pShaderRecordName,
+        CreateInfo.MaxAttributeSize,
+        CreateInfo.MaxPayloadSize);
+
+    //  Serialize RayTracingGeneralShaderGroup
+    {
+        Ser(CreateInfo.GeneralShaderCount);
+        auto* pGeneralShaders = PSOSerializer_ArrayHelper<Mode>::Create(CreateInfo.pGeneralShaders, CreateInfo.GeneralShaderCount, Allocator);
+        for (Uint32 i = 0; i < CreateInfo.GeneralShaderCount; ++i)
+        {
+            auto&  Group       = pGeneralShaders[i];
+            Uint32 ShaderIndex = ~0u;
+            if (IsWriting)
+            {
+                ShaderToIndex(ShaderIndex, Group.pShader);
+            }
+            Ser(Group.Name, ShaderIndex);
+            VERIFY_EXPR(ShaderIndex != ~0u);
+            if (IsReading)
+            {
+                ShaderToIndex(ShaderIndex, Group.pShader);
+            }
+        }
+    }
+    //  Serialize RayTracingTriangleHitShaderGroup
+    {
+        Ser(CreateInfo.TriangleHitShaderCount);
+        auto* pTriangleHitShaders = PSOSerializer_ArrayHelper<Mode>::Create(CreateInfo.pTriangleHitShaders, CreateInfo.TriangleHitShaderCount, Allocator);
+        for (Uint32 i = 0; i < CreateInfo.TriangleHitShaderCount; ++i)
+        {
+            auto&  Group                 = pTriangleHitShaders[i];
+            Uint32 ClosestHitShaderIndex = ~0u;
+            Uint32 AnyHitShaderIndex     = ~0u;
+            if (IsWriting)
+            {
+                ShaderToIndex(ClosestHitShaderIndex, Group.pClosestHitShader);
+                ShaderToIndex(AnyHitShaderIndex, Group.pAnyHitShader);
+            }
+            Ser(Group.Name, ClosestHitShaderIndex, AnyHitShaderIndex);
+            VERIFY_EXPR(ClosestHitShaderIndex != ~0u);
+            if (IsReading)
+            {
+                ShaderToIndex(ClosestHitShaderIndex, Group.pClosestHitShader);
+                ShaderToIndex(AnyHitShaderIndex, Group.pAnyHitShader);
+            }
+        }
+    }
+    //  Serialize RayTracingProceduralHitShaderGroup
+    {
+        Ser(CreateInfo.ProceduralHitShaderCount);
+        auto* pProceduralHitShaders = PSOSerializer_ArrayHelper<Mode>::Create(CreateInfo.pProceduralHitShaders, CreateInfo.ProceduralHitShaderCount, Allocator);
+        for (Uint32 i = 0; i < CreateInfo.ProceduralHitShaderCount; ++i)
+        {
+            auto&  Group                   = pProceduralHitShaders[i];
+            Uint32 IntersectionShaderIndex = ~0u;
+            Uint32 ClosestHitShaderIndex   = ~0u;
+            Uint32 AnyHitShaderIndex       = ~0u;
+            if (IsWriting)
+            {
+                ShaderToIndex(IntersectionShaderIndex, Group.pIntersectionShader);
+                ShaderToIndex(ClosestHitShaderIndex, Group.pClosestHitShader);
+                ShaderToIndex(AnyHitShaderIndex, Group.pAnyHitShader);
+            }
+            Ser(Group.Name, IntersectionShaderIndex, ClosestHitShaderIndex, AnyHitShaderIndex);
+            VERIFY_EXPR(IntersectionShaderIndex != ~0u);
+            if (IsReading)
+            {
+                ShaderToIndex(IntersectionShaderIndex, Group.pIntersectionShader);
+                ShaderToIndex(ClosestHitShaderIndex, Group.pClosestHitShader);
+                ShaderToIndex(AnyHitShaderIndex, Group.pAnyHitShader);
+            }
+        }
+    }
 
     // skip NodeMask
     // skip shaders - they are device specific
 
 #if defined(_MSC_VER) && defined(_WIN64)
     static_assert(sizeof(RayTracingPipelineStateCreateInfo) == 168, "Did you add a new member to RayTracingPipelineStateCreateInfo? Please add serialization here.");
+    static_assert(sizeof(RayTracingGeneralShaderGroup) == 16, "Did you add a new member to RayTracingGeneralShaderGroup? Please add serialization here.");
+    static_assert(sizeof(RayTracingTriangleHitShaderGroup) == 24, "Did you add a new member to RayTracingTriangleHitShaderGroup? Please add serialization here.");
+    static_assert(sizeof(RayTracingProceduralHitShaderGroup) == 32, "Did you add a new member to RayTracingProceduralHitShaderGroup? Please add serialization here.");
 #endif
 }
 

@@ -36,6 +36,8 @@
 
 namespace Diligent
 {
+namespace
+{
 
 struct CompiledShaderVk : SerializableShaderImpl::ICompiledShader
 {
@@ -52,6 +54,27 @@ inline const ShaderVkImpl* GetShaderVk(const SerializableShaderImpl* pShader)
     return pCompiledShaderVk != nullptr ? &pCompiledShaderVk->ShaderVk : nullptr;
 }
 
+struct ShaderStageInfoVk : PipelineStateVkImpl::ShaderStageInfo
+{
+    ShaderStageInfoVk() :
+        ShaderStageInfo{} {}
+
+    ShaderStageInfoVk(const SerializableShaderImpl* pShader) :
+        ShaderStageInfo{GetShaderVk(pShader)},
+        Serializable{pShader}
+    {}
+
+    void Append(const SerializableShaderImpl* pShader)
+    {
+        ShaderStageInfo::Append(GetShaderVk(pShader));
+        Serializable.push_back(pShader);
+    }
+
+    std::vector<const SerializableShaderImpl*> Serializable;
+};
+} // namespace
+
+
 template <>
 struct SerializableResourceSignatureImpl::SignatureTraits<PipelineResourceSignatureVkImpl>
 {
@@ -64,27 +87,6 @@ struct SerializableResourceSignatureImpl::SignatureTraits<PipelineResourceSignat
 template <typename CreateInfoType>
 bool ArchiverImpl::PatchShadersVk(CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data, DefaultPRSInfo& DefPRS)
 {
-    struct ShaderStageInfoVk : PipelineStateVkImpl::ShaderStageInfo
-    {
-        ShaderStageInfoVk() :
-            ShaderStageInfo{} {}
-
-        ShaderStageInfoVk(const SerializableShaderImpl* pShader) :
-            ShaderStageInfo{GetShaderVk(pShader)},
-            Serializable{pShader}
-        {}
-
-        void Append(const SerializableShaderImpl* pShader)
-        {
-            ShaderStageInfo::Append(GetShaderVk(pShader));
-            Serializable.push_back(pShader);
-        }
-
-        std::vector<const SerializableShaderImpl*> Serializable;
-    };
-
-    TShaderIndices ShaderIndices;
-
     std::vector<ShaderStageInfoVk> ShaderStages;
     SHADER_TYPE                    ActiveShaderStages = SHADER_TYPE_UNKNOWN;
     PipelineStateVkImpl::ExtractShaders<SerializableShaderImpl>(CreateInfo, ShaderStages, ActiveShaderStages);
@@ -164,6 +166,7 @@ bool ArchiverImpl::PatchShadersVk(CreateInfoType& CreateInfo, TPSOData<CreateInf
         return false;
     }
 
+    TShaderIndices ShaderIndices;
     for (size_t j = 0; j < ShaderStagesVk.size(); ++j)
     {
         const auto& Stage = ShaderStagesVk[j];
@@ -175,8 +178,6 @@ bool ArchiverImpl::PatchShadersVk(CreateInfoType& CreateInfo, TPSOData<CreateInf
             SerializeShaderBytecode(ShaderIndices, DeviceType::Vulkan, CI, SPIRV.data(), SPIRV.size() * sizeof(SPIRV[0]));
         }
     }
-
-    // AZ TODO: map ray tracing shaders to shader indices
 
     Data.PerDeviceData[static_cast<size_t>(DeviceType::Vulkan)] = SerializeShadersForPSO(ShaderIndices);
     return true;
@@ -254,6 +255,15 @@ void SerializationDeviceImpl::GetPipelineResourceBindingsVk(const PipelineResour
     }
     VERIFY_EXPR(DescSetLayoutCount <= MAX_RESOURCE_SIGNATURES * 2);
     VERIFY_EXPR(DescSetLayoutCount >= Info.ResourceSignaturesCount);
+}
+
+void ExtractShadersVk(const RayTracingPipelineStateCreateInfo& CreateInfo, RayTracingShaderMap& ShaderMap)
+{
+    std::vector<ShaderStageInfoVk> ShaderStages;
+    SHADER_TYPE                    ActiveShaderStages = SHADER_TYPE_UNKNOWN;
+    PipelineStateVkImpl::ExtractShaders<SerializableShaderImpl>(CreateInfo, ShaderStages, ActiveShaderStages);
+
+    ExtractRayTracingShaders(ShaderStages, ShaderMap);
 }
 
 } // namespace Diligent

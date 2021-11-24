@@ -38,7 +38,6 @@
 #include "gtest/gtest.h"
 
 #include "InlineShaders/RayTracingTestHLSL.h"
-#include "InlineShaders/RayTracingTestGLSL.h"
 #include "InlineShaders/RayTracingTestMSL.h"
 #include "RayTracingTestConstants.hpp"
 

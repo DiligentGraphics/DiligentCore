@@ -235,13 +235,13 @@ struct ShaderCreateInfo
     /// Compiled shader bytecode.
 
     /// If shader byte code is provided, FilePath and Source members must be null
-    /// \note. This option is supported for D3D11, D3D12, Vulkan and Metal backends.
+    /// \note  This option is supported for D3D11, D3D12, Vulkan and Metal backends.
     ///        For D3D11 and D3D12 backends, DXBC should be provided.
     ///        Vulkan backend expects SPIRV bytecode.
     ///        Metal backend supports .metallib bytecode to create MTLLibrary
     ///        or SPIRV to translate it to MSL and compile (may be slow).
     ///
-    /// \note. if SHADER_COMPILE_FLAG_SKIP_REFLECTION flag is not used the bytecode
+    /// \note  If SHADER_COMPILE_FLAG_SKIP_REFLECTION flag is not used, the bytecode
     ///        must contain reflection information. If shaders were compiled
     ///        using fxc, make sure that /Qstrip_reflect option is *not* specified.
     ///        HLSL shaders need to be compiled against 4.0 profile or higher.

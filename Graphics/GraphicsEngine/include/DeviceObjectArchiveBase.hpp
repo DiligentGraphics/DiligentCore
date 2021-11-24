@@ -452,10 +452,11 @@ struct PSOSerializer
                                  TQual<TPRSNames>&                   PRSNames,
                                  DynamicLinearAllocator*             Allocator);
 
-    static void SerializeRayTracingPSO(Serializer<Mode>&                         Ser,
-                                       TQual<RayTracingPipelineStateCreateInfo>& CreateInfo,
-                                       TQual<TPRSNames>&                         PRSNames,
-                                       DynamicLinearAllocator*                   Allocator);
+    static void SerializeRayTracingPSO(Serializer<Mode>&                                     Ser,
+                                       TQual<RayTracingPipelineStateCreateInfo>&             CreateInfo,
+                                       TQual<TPRSNames>&                                     PRSNames,
+                                       const std::function<void(Uint32&, TQual<IShader*>&)>& ShaderToIndex,
+                                       DynamicLinearAllocator*                               Allocator);
 
     static void SerializeRenderPass(Serializer<Mode>&       Ser,
                                     TQual<RenderPassDesc>&  RPDesc,

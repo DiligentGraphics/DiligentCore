@@ -127,4 +127,24 @@ struct SerializableResourceSignatureImpl::TPRS final : PRSWapperBase
     IPipelineResourceSignature* GetPRS() override { return &PRS; }
 };
 
+
+using RayTracingShaderMap = std::unordered_map<const IShader*, /*Index in TShaderIndices*/ Uint32>;
+
+void ExtractShadersD3D12(const RayTracingPipelineStateCreateInfo& CreateInfo, RayTracingShaderMap& ShaderMap);
+void ExtractShadersVk(const RayTracingPipelineStateCreateInfo& CreateInfo, RayTracingShaderMap& ShaderMap);
+
+template <typename ShaderStage>
+void ExtractRayTracingShaders(const std::vector<ShaderStage>& ShaderStages, RayTracingShaderMap& ShaderMap)
+{
+    Uint32 ShaderIndex = 0;
+    for (auto& Stage : ShaderStages)
+    {
+        for (auto* pShader : Stage.Serializable)
+        {
+            if (ShaderMap.emplace(pShader, ShaderIndex).second)
+                ++ShaderIndex;
+        }
+    }
+}
+
 } // namespace Diligent

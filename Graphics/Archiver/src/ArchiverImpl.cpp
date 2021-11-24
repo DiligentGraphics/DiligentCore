@@ -25,6 +25,7 @@
  */
 
 #include "ArchiverImpl.hpp"
+#include "Archiver_Inc.hpp"
 
 #include <bitset>
 
@@ -828,7 +829,40 @@ void SerializerPSOImpl(Serializer<Mode>&                                 Ser,
                        const RayTracingPipelineStateCreateInfo&          PSOCreateInfo,
                        std::array<const char*, MAX_RESOURCE_SIGNATURES>& PRSNames)
 {
-    PSOSerializer<Mode>::SerializeRayTracingPSO(Ser, PSOCreateInfo, PRSNames, nullptr);
+    RayTracingShaderMap ShaderMapVk;
+    RayTracingShaderMap ShaderMapD3D12;
+#if VULKAN_SUPPORTED
+    ExtractShadersVk(PSOCreateInfo, ShaderMapVk);
+    VERIFY_EXPR(!ShaderMapVk.empty());
+#endif
+#if D3D12_SUPPORTED
+    ExtractShadersD3D12(PSOCreateInfo, ShaderMapD3D12);
+    VERIFY_EXPR(!ShaderMapD3D12.empty());
+#endif
+#if !VULKAN_SUPPORTED && !D3D12_SUPPORTED
+    return;
+#endif
+
+    VERIFY(ShaderMapVk.empty() || ShaderMapD3D12.empty() || ShaderMapVk == ShaderMapD3D12,
+           "Ray tracing shader map must be same for Vulkan and Direct3D12 backends");
+
+    RayTracingShaderMap ShaderMap;
+    if (!ShaderMapVk.empty())
+        std::swap(ShaderMap, ShaderMapVk);
+    else if (!ShaderMapD3D12.empty())
+        std::swap(ShaderMap, ShaderMapD3D12);
+    else
+        return;
+
+    auto RemapShaders = [&ShaderMap](Uint32& outIndex, IShader* const& inShader) //
+    {
+        auto Iter = ShaderMap.find(inShader);
+        if (Iter != ShaderMap.end())
+            outIndex = Iter->second;
+        else
+            outIndex = ~0u;
+    };
+    PSOSerializer<Mode>::SerializeRayTracingPSO(Ser, PSOCreateInfo, PRSNames, RemapShaders, nullptr);
 }
 
 #define LOG_PSO_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of PSO is invalid: ", ##__VA_ARGS__)
