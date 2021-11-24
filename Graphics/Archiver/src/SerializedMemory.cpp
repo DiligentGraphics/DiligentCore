@@ -31,52 +31,80 @@
 namespace Diligent
 {
 
-SerializedMemory::~SerializedMemory()
+SerializedMemory::SerializedMemory(void* pData, size_t Size, IMemoryAllocator* pAllocator) noexcept :
+    m_pAllocator{pAllocator},
+    m_Ptr{pData},
+    m_Size{Size}
 {
-    if (Ptr)
-    {
-        auto& RawMemAllocator = GetRawAllocator();
-        RawMemAllocator.Free(Ptr);
-    }
+    VERIFY_EXPR((m_Ptr != nullptr) == (m_Size > 0));
+    VERIFY_EXPR((m_Ptr != nullptr) == (m_pAllocator != nullptr));
 }
 
-SerializedMemory& SerializedMemory::operator=(SerializedMemory&& Rhs)
+SerializedMemory::SerializedMemory(size_t Size, IMemoryAllocator* pAllocator) noexcept :
+    m_pAllocator{pAllocator != nullptr ? pAllocator : &GetRawAllocator()},
+    m_Ptr{ALLOCATE_RAW(*m_pAllocator, "Serialized memory", Size)},
+    m_Size{Size}
 {
-    if (Ptr)
+}
+
+SerializedMemory::~SerializedMemory()
+{
+    Free();
+}
+
+void SerializedMemory::Free()
+{
+    if (m_Ptr)
     {
-        auto& RawMemAllocator = GetRawAllocator();
-        RawMemAllocator.Free(Ptr);
+        VERIFY_EXPR(m_pAllocator != nullptr);
+        m_pAllocator->Free(m_Ptr);
     }
 
-    Ptr  = Rhs.Ptr;
-    Size = Rhs.Size;
+    m_pAllocator = nullptr;
+    m_Ptr        = nullptr;
+    m_Size       = 0;
+}
 
-    Rhs.Ptr  = nullptr;
-    Rhs.Size = 0;
+SerializedMemory& SerializedMemory::operator=(SerializedMemory&& Rhs) noexcept
+{
+    Free();
+
+    m_pAllocator = Rhs.m_pAllocator;
+    m_Ptr        = Rhs.m_Ptr;
+    m_Size       = Rhs.m_Size;
+
+    Rhs.m_pAllocator = nullptr;
+    Rhs.m_Ptr        = nullptr;
+    Rhs.m_Size       = 0;
     return *this;
 }
 
 size_t SerializedMemory::CalcHash() const
 {
-    if (Ptr == nullptr || Size == 0)
+    if (m_Ptr == nullptr || m_Size == 0)
         return 0;
 
-    size_t Hash = 0;
-    HashCombine(Hash, Size);
+    if (m_Hash.load() != 0)
+        return m_Hash;
 
-    const auto* BytePtr = static_cast<const Uint8*>(Ptr);
-    for (size_t i = 0; i < Size; ++i)
+    size_t Hash = 0;
+    HashCombine(Hash, m_Size);
+
+    const auto* BytePtr = static_cast<const Uint8*>(m_Ptr);
+    for (size_t i = 0; i < m_Size; ++i)
         HashCombine(Hash, BytePtr[i]);
+
+    m_Hash.store(Hash);
 
     return Hash;
 }
 
 bool SerializedMemory::operator==(const SerializedMemory& Rhs) const
 {
-    if (Size != Rhs.Size)
+    if (m_Size != Rhs.m_Size)
         return false;
 
-    return std::memcmp(Ptr, Rhs.Ptr, Size) == 0;
+    return std::memcmp(m_Ptr, Rhs.m_Ptr, m_Size) == 0;
 }
 
 } // namespace Diligent

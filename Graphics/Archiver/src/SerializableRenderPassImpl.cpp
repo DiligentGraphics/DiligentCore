@@ -38,14 +38,11 @@ SerializableRenderPassImpl::SerializableRenderPassImpl(IReferenceCounters*      
     Serializer<SerializerMode::Measure> MeasureSer;
     PSOSerializer<SerializerMode::Measure>::SerializeRenderPass(MeasureSer, m_Desc, nullptr);
 
-    const size_t SerSize = MeasureSer.GetSize(nullptr);
-    void*        SerPtr  = ALLOCATE_RAW(GetRawAllocator(), "", SerSize);
+    m_SharedData = SerializedMemory{MeasureSer.GetSize(nullptr)};
 
-    Serializer<SerializerMode::Write> Ser{SerPtr, SerSize};
+    Serializer<SerializerMode::Write> Ser{m_SharedData.Ptr(), m_SharedData.Size()};
     PSOSerializer<SerializerMode::Write>::SerializeRenderPass(Ser, m_Desc, nullptr);
     VERIFY_EXPR(Ser.IsEnd());
-
-    m_SharedData = SerializedMemory{SerPtr, SerSize};
 }
 
 SerializableRenderPassImpl::~SerializableRenderPassImpl()

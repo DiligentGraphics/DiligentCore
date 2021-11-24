@@ -26,37 +26,41 @@
 
 #pragma once
 
+#include <atomic>
+
 #include "BasicTypes.h"
+#include "MemoryAllocator.h"
 
 namespace Diligent
 {
 
-struct SerializedMemory
+class SerializedMemory
 {
-    void*  Ptr  = nullptr;
-    size_t Size = 0;
-
+public:
     SerializedMemory() {}
 
-    SerializedMemory(void* _Ptr, size_t _Size) :
-        Ptr{_Ptr}, Size{_Size}
-    {}
+    explicit SerializedMemory(size_t Size, IMemoryAllocator* pAllocator = nullptr) noexcept;
 
-    SerializedMemory(SerializedMemory&& Other) :
-        Ptr{Other.Ptr}, Size{Other.Size}
+    SerializedMemory(void* pData, size_t Size, IMemoryAllocator* pAllocator) noexcept;
+
+    SerializedMemory(SerializedMemory&& Other) noexcept :
+        m_pAllocator{Other.m_pAllocator},
+        m_Ptr{Other.m_Ptr},
+        m_Size{Other.m_Size}
     {
-        Other.Ptr  = nullptr;
-        Other.Size = 0;
+        Other.m_pAllocator = nullptr;
+        Other.m_Ptr        = nullptr;
+        Other.m_Size       = 0;
     }
 
+    SerializedMemory& operator=(SerializedMemory&& Rhs) noexcept;
+
     SerializedMemory(const SerializedMemory&) = delete;
+    SerializedMemory& operator=(const SerializedMemory&) = delete;
 
     ~SerializedMemory();
 
-    SerializedMemory& operator=(SerializedMemory&& Rhs);
-    SerializedMemory& operator=(const SerializedMemory&) = delete;
-
-    explicit operator bool() const { return Ptr != nullptr; }
+    explicit operator bool() const { return m_Ptr != nullptr; }
 
     bool operator==(const SerializedMemory& Rhs) const;
     bool operator!=(const SerializedMemory& Rhs) const
@@ -64,15 +68,41 @@ struct SerializedMemory
         return !(*this == Rhs);
     }
 
+    void*  Ptr() const { return m_Ptr; }
+    size_t Size() const { return m_Size; }
+
     size_t CalcHash() const;
 
-    struct Hash
+    void Free();
+
+    struct Hasher
     {
         size_t operator()(const SerializedMemory& Mem) const
         {
             return Mem.CalcHash();
         }
     };
+
+private:
+    IMemoryAllocator* m_pAllocator = nullptr;
+
+    void*  m_Ptr  = nullptr;
+    size_t m_Size = 0;
+
+    mutable std::atomic<size_t> m_Hash{0};
 };
 
 } // namespace Diligent
+
+namespace std
+{
+template <>
+struct hash<Diligent::SerializedMemory>
+{
+    size_t operator()(const Diligent::SerializedMemory& Mem) const
+    {
+        return Mem.CalcHash();
+    }
+};
+
+} // namespace std

@@ -164,14 +164,11 @@ private:
         Serializer<SerializerMode::Measure> MeasureSer;
         MeasureSerializerType::SerializePRS(MeasureSer, SerializedData, nullptr);
 
-        const auto SerSize = MeasureSer.GetSize(nullptr);
-        void*      SerPtr  = ALLOCATE_RAW(GetRawAllocator(), "", SerSize);
+        PRSWrpr->Mem = SerializedMemory{MeasureSer.GetSize(nullptr)};
 
-        Serializer<SerializerMode::Write> Ser{SerPtr, SerSize};
+        Serializer<SerializerMode::Write> Ser{PRSWrpr->Mem.Ptr(), PRSWrpr->Mem.Size()};
         WriteSerializerType::SerializePRS(Ser, SerializedData, nullptr);
         VERIFY_EXPR(Ser.IsEnd());
-
-        PRSWrpr->Mem = SerializedMemory{SerPtr, SerSize};
 
         m_pPRSWrappers[static_cast<size_t>(Traits::Type)] = std::move(PRSWrpr);
     }

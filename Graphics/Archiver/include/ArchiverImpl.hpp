@@ -157,13 +157,13 @@ private:
 
     struct ShaderKey
     {
-        std::shared_ptr<SerializedMemory> Ptr;
+        std::shared_ptr<SerializedMemory> Mem;
 
-        bool operator==(const ShaderKey& Rhs) const { return *Ptr == *Rhs.Ptr; }
+        bool operator==(const ShaderKey& Rhs) const { return *Mem == *Rhs.Mem; }
 
         struct Hash
         {
-            size_t operator()(const ShaderKey& Key) const { return Key.Ptr->CalcHash(); }
+            size_t operator()(const ShaderKey& Key) const { return Key.Mem->CalcHash(); }
         };
     };
 
@@ -254,7 +254,7 @@ private:
     bool PatchShadersMtl(CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data, DefaultPRSInfo& DefPRS);
 
 
-    void SerializeShadersForPSO(const TShaderIndices& ShaderIndices, SerializedMemory& DeviceData) const;
+    SerializedMemory SerializeShadersForPSO(const TShaderIndices& ShaderIndices) const;
 
     template <typename MapType>
     static TChunkData InitNamedResourceArrayHeader(const MapType& Map,

@@ -144,7 +144,7 @@ bool ArchiverImpl::PatchShadersD3D12(CreateInfoType& CreateInfo, TPSOData<Create
 
     // AZ TODO: map ray tracing shaders to shader indices
 
-    SerializeShadersForPSO(ShaderIndices, Data.PerDeviceData[static_cast<Uint32>(DeviceType::Direct3D12)]);
+    Data.PerDeviceData[static_cast<size_t>(DeviceType::Direct3D12)] = SerializeShadersForPSO(ShaderIndices);
     return true;
 }
 
