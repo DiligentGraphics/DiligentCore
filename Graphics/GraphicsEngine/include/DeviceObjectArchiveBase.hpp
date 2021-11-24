@@ -221,8 +221,7 @@ private:
     };
 
     template <typename T>
-    using TNameOffsetMap = std::unordered_map<String, FileOffsetAndResCache<T>>;
-    //using TNameOffsetMap = std::unordered_map<HashMapStringKey, FileOffsetAndSize, HashMapStringKey::Hasher>; // AZ TODO
+    using TNameOffsetMap         = std::unordered_map<HashMapStringKey, FileOffsetAndResCache<T>, HashMapStringKey::Hasher>;
     using TPRSOffsetAndCacheMap  = TNameOffsetMap<IPipelineResourceSignature>;
     using TPSOOffsetAndCacheMap  = TNameOffsetMap<IPipelineState>;
     using TRPOffsetAndCacheMap   = TNameOffsetMap<IRenderPass>;
@@ -260,9 +259,9 @@ private:
     void ReadArchiveDebugInfo(const ChunkHeader& Chunk) noexcept(false);
 
     template <typename ResType>
-    bool GetCachedResource(const String& Name, TNameOffsetMap<ResType>& Cache, std::mutex& Guard, ResType*& pResource);
+    bool GetCachedResource(const char* Name, TNameOffsetMap<ResType>& Cache, std::mutex& Guard, ResType*& pResource);
     template <typename ResType>
-    void CacheResource(const String& Name, TNameOffsetMap<ResType>& Cache, std::mutex& Guard, ResType* pResource);
+    void CacheResource(const char* Name, TNameOffsetMap<ResType>& Cache, std::mutex& Guard, ResType* pResource);
 
     BlockOffsetType GetBlockOffsetType() const { return static_cast<BlockOffsetType>(m_DevType); }
 
@@ -294,23 +293,23 @@ protected:
     };
 
 private:
-    bool ReadPRSData(const String& Name, PRSData& PRS);
-    bool GetCachedPRS(const String& Name, IPipelineResourceSignature*& pSignature);
-    void CachePRSResource(const String& Name, IPipelineResourceSignature* pSignature);
+    bool ReadPRSData(const char* Name, PRSData& PRS);
+    bool GetCachedPRS(const char* Name, IPipelineResourceSignature*& pSignature);
+    void CachePRSResource(const char* Name, IPipelineResourceSignature* pSignature);
 
-    bool ReadGraphicsPSOData(const String& Name, PSOData<GraphicsPipelineStateCreateInfo>& PSO);
-    bool ReadComputePSOData(const String& Name, PSOData<ComputePipelineStateCreateInfo>& PSO);
-    bool ReadTilePSOData(const String& Name, PSOData<TilePipelineStateCreateInfo>& PSO);
-    bool ReadRayTracingPSOData(const String& Name, PSOData<RayTracingPipelineStateCreateInfo>& PSO);
+    bool ReadGraphicsPSOData(const char* Name, PSOData<GraphicsPipelineStateCreateInfo>& PSO);
+    bool ReadComputePSOData(const char* Name, PSOData<ComputePipelineStateCreateInfo>& PSO);
+    bool ReadTilePSOData(const char* Name, PSOData<TilePipelineStateCreateInfo>& PSO);
+    bool ReadRayTracingPSOData(const char* Name, PSOData<RayTracingPipelineStateCreateInfo>& PSO);
 
-    bool GetCachedGraphicsPSO(const String& Name, IPipelineState*& pPSO);
-    void CacheGraphicsPSOResource(const String& Name, IPipelineState* pPSO);
-    bool GetCachedComputePSO(const String& Name, IPipelineState*& pPSO);
-    void CacheComputePSOResource(const String& Name, IPipelineState* pPSO);
-    bool GetCachedTilePSO(const String& Name, IPipelineState*& pPSO);
-    void CacheTilePSOResource(const String& Name, IPipelineState* pPSO);
-    bool GetCachedRayTracingPSO(const String& Name, IPipelineState*& pPSO);
-    void CacheRayTracingPSOResource(const String& Name, IPipelineState* pPSO);
+    bool GetCachedGraphicsPSO(const char* Name, IPipelineState*& pPSO);
+    void CacheGraphicsPSOResource(const char* Name, IPipelineState* pPSO);
+    bool GetCachedComputePSO(const char* Name, IPipelineState*& pPSO);
+    void CacheComputePSOResource(const char* Name, IPipelineState* pPSO);
+    bool GetCachedTilePSO(const char* Name, IPipelineState*& pPSO);
+    void CacheTilePSOResource(const char* Name, IPipelineState* pPSO);
+    bool GetCachedRayTracingPSO(const char* Name, IPipelineState*& pPSO);
+    void CacheRayTracingPSOResource(const char* Name, IPipelineState* pPSO);
 
     bool LoadShaders(Serializer<SerializerMode::Read>&    Ser,
                      IRenderDevice*                       pDevice,
@@ -326,14 +325,14 @@ private:
             Allocator{Allocator, BlockSize}
         {}
     };
-    bool ReadRPData(const String& Name, RPData& RP);
-    bool GetCachedRP(const String& Name, IRenderPass*& pRP);
-    void CacheRPResource(const String& Name, IRenderPass* pRP);
+    bool ReadRPData(const char* Name, RPData& RP);
+    bool GetCachedRP(const char* Name, IRenderPass*& pRP);
+    void CacheRPResource(const char* Name, IRenderPass* pRP);
 
     template <typename ResType, typename FnType>
     bool LoadResourceData(const TNameOffsetMap<ResType>& NameAndOffset,
                           std::mutex&                    Guard,
-                          const String&                  ResourceName,
+                          const char*                    ResourceName,
                           DynamicLinearAllocator&        Allocator,
                           const char*                    ResTypeName,
                           const FnType&                  Fn);

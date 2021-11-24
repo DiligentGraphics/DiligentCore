@@ -47,6 +47,7 @@
 #include "PlatformMisc.hpp"
 #include "DataBlobImpl.hpp"
 #include "MemoryFileStream.hpp"
+#include "FixedLinearAllocator.hpp"
 
 #include "SerializationDeviceImpl.hpp"
 #include "SerializedMemory.hpp"
@@ -197,10 +198,12 @@ private:
     SerializationDeviceImpl* const m_pSerializationDevice;
 
 private:
+    using TChunkData      = FixedLinearAllocator;
+    using TChunkDataArray = std::array<TChunkData, ChunkCount>;
     struct PendingData
     {
         std::vector<Uint8>                              HeaderData;                   // ArchiveHeader, ChunkHeader[]
-        std::array<std::vector<Uint8>, ChunkCount>      ChunkData;                    // NamedResourceArrayHeader
+        TChunkDataArray                                 ChunkData;                    // NamedResourceArrayHeader
         std::array<Uint32*, ChunkCount>                 DataOffsetArrayPerChunk = {}; // pointer to NamedResourceArrayHeader::DataOffset - offsets to ***DataHeader
         std::array<Uint32, ChunkCount>                  ResourceCountPerChunk   = {}; //
         std::vector<Uint8>                              SharedData;                   // ***DataHeader
@@ -254,10 +257,9 @@ private:
     void SerializeShadersForPSO(const TShaderIndices& ShaderIndices, SerializedMemory& DeviceData) const;
 
     template <typename MapType>
-    static void InitNamedResourceArrayHeader(std::vector<Uint8>& ChunkData,
-                                             const MapType&      Map,
-                                             Uint32*&            DataSizeArray,
-                                             Uint32*&            DataOffsetArray);
+    static TChunkData InitNamedResourceArrayHeader(const MapType& Map,
+                                                   Uint32*&       DataSizeArray,
+                                                   Uint32*&       DataOffsetArray);
 
     bool AddPipelineResourceSignature(IPipelineResourceSignature* pPRS);
     bool CachePipelineResourceSignature(RefCntAutoPtr<IPipelineResourceSignature>& pPRS);

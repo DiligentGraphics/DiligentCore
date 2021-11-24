@@ -199,8 +199,9 @@ void DeviceObjectArchiveBase::ReadNamedResources(const ChunkHeader& Chunk, TName
         {
             LOG_ERROR_AND_THROW("Failed to read archive data");
         }
+        VERIFY_EXPR(strlen(NameDataPtr + Offset) + 1 == NameLengthArray[i]);
 
-        bool Inserted = NameAndOffset.emplace(String{NameDataPtr + Offset, NameLengthArray[i]}, FileOffsetAndSize{DataOffsetArray[i], DataSizeArray[i]}).second;
+        bool Inserted = NameAndOffset.emplace(HashMapStringKey{NameDataPtr + Offset, true}, FileOffsetAndSize{DataOffsetArray[i], DataSizeArray[i]}).second;
         DEV_CHECK_ERR(Inserted, "Each name in the resource names array must be unique");
         Offset += NameLengthArray[i];
     }
@@ -238,7 +239,7 @@ void DeviceObjectArchiveBase::ReadIndexedResources(const ChunkHeader& Chunk, TRe
 template <typename ResType, typename FnType>
 bool DeviceObjectArchiveBase::LoadResourceData(const TNameOffsetMap<ResType>& NameAndOffset,
                                                std::mutex&                    Guard,
-                                               const String&                  ResourceName,
+                                               const char*                    ResourceName,
                                                DynamicLinearAllocator&        Allocator,
                                                const char*                    ResTypeName,
                                                const FnType&                  Fn)
@@ -255,7 +256,7 @@ bool DeviceObjectArchiveBase::LoadResourceData(const TNameOffsetMap<ResType>& Na
             return false;
         }
         OffsetAndSize = Iter->second;
-        ResName       = Iter->first.c_str();
+        ResName       = Iter->first.GetStr();
     }
 
     const auto DataSize = OffsetAndSize.Size;
@@ -306,7 +307,7 @@ void DeviceObjectArchiveBase::LoadDeviceSpecificData(const HeaderType&       Hea
     return Fn(pData, DataSize);
 }
 
-bool DeviceObjectArchiveBase::ReadPRSData(const String& Name, PRSData& PRS)
+bool DeviceObjectArchiveBase::ReadPRSData(const char* Name, PRSData& PRS)
 {
     return LoadResourceData(
         m_PRSMap, m_PRSMapGuard, Name, PRS.Allocator,
@@ -327,7 +328,7 @@ bool DeviceObjectArchiveBase::ReadPRSData(const String& Name, PRSData& PRS)
         });
 }
 
-bool DeviceObjectArchiveBase::ReadRPData(const String& Name, RPData& RP)
+bool DeviceObjectArchiveBase::ReadRPData(const char* Name, RPData& RP)
 {
     return LoadResourceData(
         m_RenderPassMap, m_RenderPassMapGuard, Name, RP.Allocator,
@@ -348,7 +349,7 @@ bool DeviceObjectArchiveBase::ReadRPData(const String& Name, RPData& RP)
         });
 }
 
-bool DeviceObjectArchiveBase::ReadGraphicsPSOData(const String& Name, PSOData<GraphicsPipelineStateCreateInfo>& PSO)
+bool DeviceObjectArchiveBase::ReadGraphicsPSOData(const char* Name, PSOData<GraphicsPipelineStateCreateInfo>& PSO)
 {
     return LoadResourceData(
         m_GraphicsPSOMap, m_GraphicsPSOMapGuard, Name, PSO.Allocator,
@@ -371,7 +372,7 @@ bool DeviceObjectArchiveBase::ReadGraphicsPSOData(const String& Name, PSOData<Gr
         });
 }
 
-bool DeviceObjectArchiveBase::ReadComputePSOData(const String& Name, PSOData<ComputePipelineStateCreateInfo>& PSO)
+bool DeviceObjectArchiveBase::ReadComputePSOData(const char* Name, PSOData<ComputePipelineStateCreateInfo>& PSO)
 {
     return LoadResourceData(
         m_ComputePSOMap, m_ComputePSOMapGuard, Name, PSO.Allocator,
@@ -394,7 +395,7 @@ bool DeviceObjectArchiveBase::ReadComputePSOData(const String& Name, PSOData<Com
         });
 }
 
-bool DeviceObjectArchiveBase::ReadTilePSOData(const String& Name, PSOData<TilePipelineStateCreateInfo>& PSO)
+bool DeviceObjectArchiveBase::ReadTilePSOData(const char* Name, PSOData<TilePipelineStateCreateInfo>& PSO)
 {
     return LoadResourceData(
         m_TilePSOMap, m_TilePSOMapGuard, Name, PSO.Allocator,
@@ -417,7 +418,7 @@ bool DeviceObjectArchiveBase::ReadTilePSOData(const String& Name, PSOData<TilePi
         });
 }
 
-bool DeviceObjectArchiveBase::ReadRayTracingPSOData(const String& Name, PSOData<RayTracingPipelineStateCreateInfo>& PSO)
+bool DeviceObjectArchiveBase::ReadRayTracingPSOData(const char* Name, PSOData<RayTracingPipelineStateCreateInfo>& PSO)
 {
     return LoadResourceData(
         m_RayTracingPSOMap, m_RayTracingPSOMapGuard, Name, PSO.Allocator,
@@ -441,7 +442,7 @@ bool DeviceObjectArchiveBase::ReadRayTracingPSOData(const String& Name, PSOData<
 }
 
 template <typename ResType>
-bool DeviceObjectArchiveBase::GetCachedResource(const String& Name, TNameOffsetMap<ResType>& Cache, std::mutex& Guard, ResType*& pResource)
+bool DeviceObjectArchiveBase::GetCachedResource(const char* Name, TNameOffsetMap<ResType>& Cache, std::mutex& Guard, ResType*& pResource)
 {
     std::unique_lock<std::mutex> ReadLock{Guard};
 
@@ -460,7 +461,7 @@ bool DeviceObjectArchiveBase::GetCachedResource(const String& Name, TNameOffsetM
 }
 
 template <typename ResType>
-void DeviceObjectArchiveBase::CacheResource(const String& Name, TNameOffsetMap<ResType>& Cache, std::mutex& Guard, ResType* pResource)
+void DeviceObjectArchiveBase::CacheResource(const char* Name, TNameOffsetMap<ResType>& Cache, std::mutex& Guard, ResType* pResource)
 {
     VERIFY_EXPR(pResource != nullptr);
 
@@ -477,62 +478,62 @@ void DeviceObjectArchiveBase::CacheResource(const String& Name, TNameOffsetMap<R
     Iter->second.Cache = pResource;
 }
 
-bool DeviceObjectArchiveBase::GetCachedPRS(const String& Name, IPipelineResourceSignature*& pSignature)
+bool DeviceObjectArchiveBase::GetCachedPRS(const char* Name, IPipelineResourceSignature*& pSignature)
 {
     return GetCachedResource(Name, m_PRSMap, m_PRSMapGuard, pSignature);
 }
 
-void DeviceObjectArchiveBase::CachePRSResource(const String& Name, IPipelineResourceSignature* pSignature)
+void DeviceObjectArchiveBase::CachePRSResource(const char* Name, IPipelineResourceSignature* pSignature)
 {
     return CacheResource(Name, m_PRSMap, m_PRSMapGuard, pSignature);
 }
 
-bool DeviceObjectArchiveBase::GetCachedGraphicsPSO(const String& Name, IPipelineState*& pPSO)
+bool DeviceObjectArchiveBase::GetCachedGraphicsPSO(const char* Name, IPipelineState*& pPSO)
 {
     return GetCachedResource(Name, m_GraphicsPSOMap, m_GraphicsPSOMapGuard, pPSO);
 }
 
-void DeviceObjectArchiveBase::CacheGraphicsPSOResource(const String& Name, IPipelineState* pPSO)
+void DeviceObjectArchiveBase::CacheGraphicsPSOResource(const char* Name, IPipelineState* pPSO)
 {
     return CacheResource(Name, m_GraphicsPSOMap, m_GraphicsPSOMapGuard, pPSO);
 }
 
-bool DeviceObjectArchiveBase::GetCachedComputePSO(const String& Name, IPipelineState*& pPSO)
+bool DeviceObjectArchiveBase::GetCachedComputePSO(const char* Name, IPipelineState*& pPSO)
 {
     return GetCachedResource(Name, m_ComputePSOMap, m_ComputePSOMapGuard, pPSO);
 }
 
-void DeviceObjectArchiveBase::CacheComputePSOResource(const String& Name, IPipelineState* pPSO)
+void DeviceObjectArchiveBase::CacheComputePSOResource(const char* Name, IPipelineState* pPSO)
 {
     return CacheResource(Name, m_ComputePSOMap, m_ComputePSOMapGuard, pPSO);
 }
 
-bool DeviceObjectArchiveBase::GetCachedTilePSO(const String& Name, IPipelineState*& pPSO)
+bool DeviceObjectArchiveBase::GetCachedTilePSO(const char* Name, IPipelineState*& pPSO)
 {
     return GetCachedResource(Name, m_TilePSOMap, m_TilePSOMapGuard, pPSO);
 }
 
-void DeviceObjectArchiveBase::CacheTilePSOResource(const String& Name, IPipelineState* pPSO)
+void DeviceObjectArchiveBase::CacheTilePSOResource(const char* Name, IPipelineState* pPSO)
 {
     return CacheResource(Name, m_TilePSOMap, m_TilePSOMapGuard, pPSO);
 }
 
-bool DeviceObjectArchiveBase::GetCachedRayTracingPSO(const String& Name, IPipelineState*& pPSO)
+bool DeviceObjectArchiveBase::GetCachedRayTracingPSO(const char* Name, IPipelineState*& pPSO)
 {
     return GetCachedResource(Name, m_RayTracingPSOMap, m_RayTracingPSOMapGuard, pPSO);
 }
 
-void DeviceObjectArchiveBase::CacheRayTracingPSOResource(const String& Name, IPipelineState* pPSO)
+void DeviceObjectArchiveBase::CacheRayTracingPSOResource(const char* Name, IPipelineState* pPSO)
 {
     return CacheResource(Name, m_RayTracingPSOMap, m_RayTracingPSOMapGuard, pPSO);
 }
 
-bool DeviceObjectArchiveBase::GetCachedRP(const String& Name, IRenderPass*& pRP)
+bool DeviceObjectArchiveBase::GetCachedRP(const char* Name, IRenderPass*& pRP)
 {
     return GetCachedResource(Name, m_RenderPassMap, m_RenderPassMapGuard, pRP);
 }
 
-void DeviceObjectArchiveBase::CacheRPResource(const String& Name, IRenderPass* pRP)
+void DeviceObjectArchiveBase::CacheRPResource(const char* Name, IRenderPass* pRP)
 {
     return CacheResource(Name, m_RenderPassMap, m_RenderPassMapGuard, pRP);
 }
