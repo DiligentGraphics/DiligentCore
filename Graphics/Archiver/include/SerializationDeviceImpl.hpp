@@ -242,17 +242,41 @@ public:
     {
         return m_MslPreprocessorCmd;
     }
-    const String& GetMtlCompileOptions() const
-    {
-        return m_MtlCompileOptions;
-    }
-    const String& GetMtlLinkOptions() const
-    {
-        return m_MtlLinkOptions;
-    }
     Uint32 MtlMaxBufferFunctionArgumets() const
     {
         return 31;
+    }
+
+    // MacOS
+    bool MtlCompileForMacOS() const
+    {
+        return m_MtlCompileForMacOS;
+    }
+    const String& GetMtlCompileOptionsMacOS() const
+    {
+        VERIFY_EXPR(m_MtlCompileForMacOS);
+        return m_MtlCompileOptionsMacOS;
+    }
+    const String& GetMtlLinkOptionsMacOS() const
+    {
+        VERIFY_EXPR(m_MtlCompileForMacOS);
+        return m_MtlLinkOptionsMacOS;
+    }
+
+    // iOS
+    bool MtlCompileForiOS() const
+    {
+        return m_MtlCompileForiOS;
+    }
+    const String& GetMtlCompileOptionsiOS() const
+    {
+        VERIFY_EXPR(m_MtlCompileForiOS);
+        return m_MtlCompileOptionsiOS;
+    }
+    const String& GetMtlLinkOptionsiOS() const
+    {
+        VERIFY_EXPR(m_MtlCompileForiOS);
+        return m_MtlLinkOptionsiOS;
     }
 #endif
 
@@ -274,7 +298,8 @@ private:
     static void GetPipelineResourceBindingsVk(const PipelineResourceBindingAttribs& Attribs,
                                               std::vector<PipelineResourceBinding>& ResourceBindings);
     static void GetPipelineResourceBindingsMtl(const PipelineResourceBindingAttribs& Attribs,
-                                               std::vector<PipelineResourceBinding>& ResourceBindings);
+                                               std::vector<PipelineResourceBinding>& ResourceBindings,
+                                               const Uint32                          MaxBufferArgs);
 
     DummyRenderDevice m_Device;
 
@@ -291,9 +316,13 @@ private:
     bool                         m_VkSupportedSpirv14 = false;
 
     // Metal
-    String m_MtlCompileOptions;
-    String m_MtlLinkOptions;
+    String m_MtlCompileOptionsMacOS;
+    String m_MtlCompileOptionsiOS;
+    String m_MtlLinkOptionsMacOS;
+    String m_MtlLinkOptionsiOS;
     String m_MslPreprocessorCmd;
+    bool   m_MtlCompileForMacOS = false;
+    bool   m_MtlCompileForiOS   = false;
 
     std::vector<PipelineResourceBinding> m_ResourceBindings;
 };

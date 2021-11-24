@@ -71,7 +71,8 @@ public:
         Direct3D11,
         Direct3D12,
         Vulkan,
-        Metal,
+        Metal_iOS,
+        Metal_MacOS,
         Count
     };
     static DeviceType RenderDeviceTypeToArchiveDeviceType(RENDER_DEVICE_TYPE RenderDeviceType);
@@ -96,7 +97,7 @@ public:
 
 protected:
     static constexpr Uint32 HeaderMagicNumber = 0xDE00000A;
-    static constexpr Uint32 HeaderVersion     = 1;
+    static constexpr Uint32 HeaderVersion     = 2;
     static constexpr Uint32 DataPtrAlign      = sizeof(Uint64);
 
     friend class ArchiverImpl;
@@ -111,7 +112,8 @@ protected:
         Direct3D11,
         Direct3D12,
         Vulkan,
-        Metal,
+        Metal_iOS,
+        Metal_MacOS,
 
         //Direct3D12_PSOCache,
         //Vulkan_PSOCache,
@@ -132,7 +134,7 @@ protected:
         Uint32            NumChunks        = 0;
         //ChunkHeader     Chunks  [NumChunks]
     };
-    static_assert(sizeof(ArchiveHeader) == 32, "Archive header size must be 32 bytes");
+    static_assert(sizeof(ArchiveHeader) == 36, "Archive header size must be 36 bytes");
 
     enum class ChunkType : Uint32
     {
@@ -263,7 +265,7 @@ private:
     template <typename ResType>
     void CacheResource(const char* Name, TNameOffsetMap<ResType>& Cache, std::mutex& Guard, ResType* pResource);
 
-    BlockOffsetType GetBlockOffsetType() const { return static_cast<BlockOffsetType>(m_DevType); }
+    BlockOffsetType GetBlockOffsetType() const;
 
 protected:
     struct PRSData
@@ -369,6 +371,7 @@ protected:
                                      const CreateSignatureType&         CreateSignature);
 
     virtual void UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature*& pSignature) = 0;
+    virtual void ReadAndCreateShader(Serializer<SerializerMode::Read>& Ser, ShaderCreateInfo& ShaderCI, IRenderDevice* pDevice, IShader** ppShader);
 
     static constexpr Uint32 GetHeaderVersion() { return HeaderVersion; }
 

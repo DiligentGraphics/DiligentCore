@@ -111,8 +111,18 @@ SerializationDeviceImpl::SerializationDeviceImpl(IReferenceCounters* pRefCounter
 #endif
 #if METAL_SUPPORTED
     m_MslPreprocessorCmd = CreateInfo.Metal.MslPreprocessorCmd ? CreateInfo.Metal.MslPreprocessorCmd : "";
-    m_MtlCompileOptions  = CreateInfo.Metal.CompileOptions ? CreateInfo.Metal.CompileOptions : "";
-    m_MtlLinkOptions     = CreateInfo.Metal.LinkOptions ? CreateInfo.Metal.LinkOptions : "";
+    if (CreateInfo.Metal.CompileForMacOS)
+    {
+        m_MtlCompileForMacOS     = true;
+        m_MtlCompileOptionsMacOS = CreateInfo.Metal.CompileOptionsMacOS ? CreateInfo.Metal.CompileOptionsMacOS : "";
+        m_MtlLinkOptionsMacOS    = CreateInfo.Metal.LinkOptionsMacOS ? CreateInfo.Metal.LinkOptionsMacOS : "";
+    }
+    if (CreateInfo.Metal.CompileForiOS)
+    {
+        m_MtlCompileForiOS     = true;
+        m_MtlCompileOptionsiOS = CreateInfo.Metal.CompileOptionsiOS ? CreateInfo.Metal.CompileOptionsiOS : "";
+        m_MtlLinkOptionsiOS    = CreateInfo.Metal.LinkOptionsiOS ? CreateInfo.Metal.LinkOptionsiOS : "";
+    }
 #endif
 }
 
@@ -230,7 +240,7 @@ void SerializationDeviceImpl::GetPipelineResourceBindings(const PipelineResource
 #endif
 #if METAL_SUPPORTED
         case RENDER_DEVICE_TYPE_METAL:
-            GetMetalPipelineResourceBindings(Info, m_ResourceBindings, MtlMaxBufferFunctionArgumets());
+            GetPipelineResourceBindingsMtl(Info, m_ResourceBindings, MtlMaxBufferFunctionArgumets());
             break;
 #endif
         case RENDER_DEVICE_TYPE_UNDEFINED:

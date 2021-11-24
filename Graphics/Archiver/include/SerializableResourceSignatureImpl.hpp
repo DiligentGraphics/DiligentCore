@@ -58,7 +58,8 @@ class SerializableResourceSignatureImpl final : public ObjectBase<IPipelineResou
 public:
     using TBase = ObjectBase<IPipelineResourceSignature>;
 
-    using DeviceType = DeviceObjectArchiveBase::DeviceType;
+    using DeviceType                    = DeviceObjectArchiveBase::DeviceType;
+    static constexpr Uint32 DeviceCount = static_cast<Uint32>(DeviceType::Metal_MacOS);
 
     SerializableResourceSignatureImpl(IReferenceCounters*                  pRefCounters,
                                       SerializationDeviceImpl*             pDevice,
@@ -104,6 +105,7 @@ public:
 
     const SerializedMemory* GetSerializedMemory(DeviceType Type) const
     {
+        VERIFY_EXPR(static_cast<Uint32>(Type) < DeviceCount);
         auto& Wrpr = m_pPRSWrappers[static_cast<size_t>(Type)];
         return Wrpr ? &Wrpr->Mem : nullptr;
     }
@@ -141,10 +143,11 @@ private:
 
     template <typename ImplType> struct TPRS;
 
-    std::array<std::unique_ptr<PRSWapperBase>, static_cast<size_t>(DeviceType::Count)> m_pPRSWrappers;
+    std::array<std::unique_ptr<PRSWapperBase>, DeviceCount> m_pPRSWrappers;
 
     const IPipelineResourceSignature* GetPRS(DeviceType Type) const
     {
+        VERIFY_EXPR(static_cast<Uint32>(Type) < DeviceCount);
         auto& Wrpr = m_pPRSWrappers[static_cast<size_t>(Type)];
         return Wrpr ? Wrpr->GetPRS() : nullptr;
     }
@@ -189,7 +192,7 @@ private:
 #endif
 
 #if METAL_SUPPORTED
-    void SerializePRSMtl(IReferenceCounters* pRefCounters, const PipelineResourceSignatureDesc& Desc);
+    void CreatePRSMtl(IReferenceCounters* pRefCounters, const PipelineResourceSignatureDesc& Desc, SHADER_TYPE ShaderStages);
 #endif
 };
 

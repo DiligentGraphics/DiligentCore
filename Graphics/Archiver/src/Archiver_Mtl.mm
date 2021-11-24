@@ -41,7 +41,7 @@ namespace Diligent
 template <>
 struct SerializableResourceSignatureImpl::SignatureTraits<PipelineResourceSignatureMtlImpl>
 {
-    static constexpr DeviceType Type = DeviceType::Metal;
+    static constexpr DeviceType Type = DeviceType::Metal_iOS;
 
     template <SerializerMode Mode>
     using PSOSerializerType = PSOSerializerMtl<Mode>;
@@ -69,24 +69,6 @@ struct ShaderStageInfoMtl
 
     friend SHADER_TYPE GetShaderStageType(const ShaderStageInfoMtl& Stage) { return Stage.Type; }
 };
-
-template <typename SignatureType>
-using SignatureArray = std::array<RefCntAutoPtr<SignatureType>, MAX_RESOURCE_SIGNATURES>;
-
-template <typename CreateInfoType, typename SignatureType>
-static void SortResourceSignatures(const CreateInfoType& CreateInfo, SignatureArray<SignatureType>& Signatures, Uint32& SignaturesCount)
-{
-    for (Uint32 i = 0; i < CreateInfo.ResourceSignaturesCount; ++i)
-    {
-        const auto* pSerPRS = ClassPtrCast<SerializableResourceSignatureImpl>(CreateInfo.ppResourceSignatures[i]);
-        VERIFY_EXPR(pSerPRS != nullptr);
-
-        const auto& Desc = pSerPRS->GetDesc();
-
-        Signatures[Desc.BindingIndex] = pSerPRS->template GetSignature<SignatureType>();
-        SignaturesCount               = std::max(SignaturesCount, static_cast<Uint32>(Desc.BindingIndex) + 1);
-    }
-}
 
 void VerifyResourceMerge(const char*                       PSOName,
                          const SPIRVShaderResourceAttribs& ExistingRes,
@@ -119,8 +101,6 @@ void VerifyResourceMerge(const char*                       PSOName,
 template <typename CreateInfoType>
 bool ArchiverImpl::PatchShadersMtl(CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data, DefaultPRSInfo& DefPRS)
 {
-    TShaderIndices ShaderIndices;
-
     std::vector<ShaderStageInfoMtl> ShaderStages;
     SHADER_TYPE                     ActiveShaderStages = SHADER_TYPE_UNKNOWN;
     PipelineStateMtlImpl::ExtractShaders<SerializableShaderImpl>(CreateInfo, ShaderStages, ActiveShaderStages);
@@ -196,13 +176,13 @@ bool ArchiverImpl::PatchShadersMtl(CreateInfoType& CreateInfo, TPSOData<CreateIn
             SignDesc.UseCombinedTextureSamplers = SignDesc.CombinedSamplerSuffix != nullptr;
 
             RefCntAutoPtr<IPipelineResourceSignature> pDefaultPRS;
-            m_pSerializationDevice->CreatePipelineResourceSignature(SignDesc, DefPRS.DeviceBits, ActiveShaderStages, &pDefaultPRS);
+            m_pSerializationDevice->CreatePipelineResourceSignature(SignDesc, DefPRS.DeviceFlags, ActiveShaderStages, &pDefaultPRS);
             if (pDefaultPRS == nullptr)
                 return false;
 
             if (DefPRS.pPRS)
             {
-                if (!(DefPRS.pPRS.RawPtr<SerializableResourceSignatureImpl>()->IsCompatible(*pDefaultPRS.RawPtr<SerializableResourceSignatureImpl>(), DefPRS.DeviceBits)))
+                if (!(DefPRS.pPRS.RawPtr<SerializableResourceSignatureImpl>()->IsCompatible(*pDefaultPRS.RawPtr<SerializableResourceSignatureImpl>(), DefPRS.DeviceFlags)))
                 {
                     LOG_ERROR_MESSAGE("Default signatures does not match between different backends");
                     return false;
@@ -227,6 +207,11 @@ bool ArchiverImpl::PatchShadersMtl(CreateInfoType& CreateInfo, TPSOData<CreateIn
         CreateInfo.ppResourceSignatures    = DefaultSignatures;
         CreateInfo.PSODesc.ResourceLayout  = {};
     }
+    
+    TShaderIndices ShaderIndicesMacOS;
+    TShaderIndices ShaderIndicesiOS;
+    const bool     SerializeMacOS = m_pSerializationDevice->MtlCompileForMacOS();
+    const bool     SerializeiOS   = m_pSerializationDevice->MtlCompileForiOS();
 
     try
     {
@@ -246,9 +231,17 @@ bool ArchiverImpl::PatchShadersMtl(CreateInfoType& CreateInfo, TPSOData<CreateIn
 
         for (size_t j = 0; j < ShaderStages.size(); ++j)
         {
-            const auto&      Stage           = ShaderStages[j];
-            SerializedMemory PatchedBytecode = Stage.pShader->PatchShaderMtl(Signatures.data(), BaseBindings.data(), SignaturesCount); // throw exception
-            SerializeShaderBytecode(ShaderIndices, DeviceType::Metal, Stage.pShader->GetCreateInfo(), PatchedBytecode.Ptr, PatchedBytecode.Size);
+            const auto& Stage = ShaderStages[j];
+            if (SerializeiOS)
+            {
+                SerializedMemory PatchedBytecode = Stage.pShader->PatchShaderMtl(Signatures.data(), BaseBindings.data(), SignaturesCount, /*IsForMacOS*/false); // throw exception
+                SerializeShaderBytecode(ShaderIndicesiOS, DeviceType::Metal_iOS, Stage.pShader->GetCreateInfo(), PatchedBytecode.Ptr(), PatchedBytecode.Size());
+            }
+            if (SerializeMacOS)
+            {
+                SerializedMemory PatchedBytecode = Stage.pShader->PatchShaderMtl(Signatures.data(), BaseBindings.data(), SignaturesCount, /*IsForMacOS*/true); // throw exception
+                SerializeShaderBytecode(ShaderIndicesMacOS, DeviceType::Metal_MacOS, Stage.pShader->GetCreateInfo(), PatchedBytecode.Ptr(), PatchedBytecode.Size());
+            }
         }
     }
     catch (...)
@@ -257,7 +250,10 @@ bool ArchiverImpl::PatchShadersMtl(CreateInfoType& CreateInfo, TPSOData<CreateIn
         return false;
     }
     
-    SerializeShadersForPSO(ShaderIndices, Data.PerDeviceData[static_cast<Uint32>(DeviceType::Metal)]);
+    if (SerializeiOS)
+        Data.PerDeviceData[static_cast<Uint32>(DeviceType::Metal_iOS)] = SerializeShadersForPSO(ShaderIndicesiOS);
+    if (SerializeMacOS)
+        Data.PerDeviceData[static_cast<Uint32>(DeviceType::Metal_MacOS)] = SerializeShadersForPSO(ShaderIndicesMacOS);
     return true;
 }
 
@@ -319,10 +315,38 @@ const SPIRVShaderResources* SerializableShaderImpl::GetMtlShaderSPIRVResources()
     return pShaderMtl && pShaderMtl->SPIRVResources ? pShaderMtl->SPIRVResources.get() : nullptr;
 }
 
+namespace
+{
+template <SerializerMode Mode>
+void SerializeBufferTypeInfoMapAndComputeGroupSize(Serializer<Mode>                                  &Ser,
+                                                   const MtlFunctionArguments::BufferTypeInfoMapType &BufferTypeInfoMap,
+                                                   const SHADER_TYPE                                  ShaderType,
+                                                   const std::unique_ptr<SPIRVShaderResources>       &SPIRVResources)
+{
+    const auto Count = static_cast<Uint32>(BufferTypeInfoMap.size());
+    Ser(Count);
+    
+    for (auto& BuffInfo : BufferTypeInfoMap)
+    {
+        const char* Name = BuffInfo.second.Name.c_str();
+        Ser(BuffInfo.first, Name, BuffInfo.second.ArraySize, BuffInfo.second.ResourceType);
+    }
+
+    if (ShaderType == SHADER_TYPE_COMPUTE)
+    {
+        std::array<Uint32,3> GroupSize = {};
+        if (SPIRVResources)
+            GroupSize = SPIRVResources->GetComputeGroupSize();
+        
+        Ser(GroupSize);
+    }
+}
+} // namespace
 
 SerializedMemory SerializableShaderImpl::PatchShaderMtl(const RefCntAutoPtr<PipelineResourceSignatureMtlImpl>* pSignatures,
                                                         const MtlResourceCounters*                             pBaseBindings,
-                                                        const Uint32                                           SignatureCount) const noexcept(false)
+                                                        const Uint32                                           SignatureCount,
+                                                        const bool                                             IsForMacOS) const noexcept(false)
 {
     VERIFY_EXPR(SignatureCount > 0);
     VERIFY_EXPR(pSignatures != nullptr);
@@ -361,6 +385,8 @@ SerializedMemory SerializableShaderImpl::PatchShaderMtl(const RefCntAutoPtr<Pipe
                                                   GetCreateInfo(),
                                                   &ResRemapping,
                                                   BufferTypeInfoMap); // may throw exception
+
+            VERIFY_EXPR(BufferTypeInfoMap.size() == pShaderMtl->BufferTypeInfoMap.size());
         }
         catch (...)
         {
@@ -372,7 +398,7 @@ SerializedMemory SerializableShaderImpl::PatchShaderMtl(const RefCntAutoPtr<Pipe
     {
         FILE* File = fopen("Shader.metal", "wb");
         if (File == nullptr)
-            LOG_ERROR_AND_THROW("Failed to save shader source");
+            LOG_ERROR_AND_THROW("Failed to save Metal shader source");
 
         fwrite(MslSource.c_str(), sizeof(MslSource[0]), MslSource.size(), File);
         fclose(File);
@@ -394,12 +420,12 @@ SerializedMemory SerializableShaderImpl::PatchShaderMtl(const RefCntAutoPtr<Pipe
             LOG_ERROR_MESSAGE("Failed to close process");
     }
 
-    // https://developer.apple.com/documentation/metal/libraries/generating_and_loading_a_metal_library_symbol_file?language=objc
+    // https://developer.apple.com/documentation/metal/libraries/generating_and_loading_a_metal_library_symbol_file
 
     // Compile MSL to AIR file
     {
-        String cmd{"xcrun -sdk macosx metal "};
-        cmd += m_pDevice->GetMtlCompileOptions();
+        String cmd{"xcrun "};
+        cmd += (IsForMacOS ? m_pDevice->GetMtlCompileOptionsMacOS() : m_pDevice->GetMtlCompileOptionsiOS());
         cmd += " -c Shader.metal -o Shader.air";
 
         FILE* File = popen(cmd.c_str(), "r");
@@ -417,9 +443,9 @@ SerializedMemory SerializableShaderImpl::PatchShaderMtl(const RefCntAutoPtr<Pipe
 
     // Generate a Metal library
     {
-        String cmd{"xcrun -sdk macosx metallib "};
-        cmd += m_pDevice->GetMtlLinkOptions();
-        cmd += " Shader.air -o Shader.metallib";
+        String cmd{"xcrun "};
+        cmd += (IsForMacOS ? m_pDevice->GetMtlLinkOptionsMacOS() : m_pDevice->GetMtlLinkOptionsiOS());
+        cmd += " -o Shader.metallib Shader.air";
 
         FILE* File = popen(cmd.c_str(), "r");
         if (File == nullptr)
@@ -433,12 +459,18 @@ SerializedMemory SerializableShaderImpl::PatchShaderMtl(const RefCntAutoPtr<Pipe
         if (status == -1)
             LOG_ERROR_MESSAGE("Failed to close process");
     }
+    
+    size_t BytecodeOffset = 0;
+    {
+        Serializer<SerializerMode::Measure> MeasureSer;
+        SerializeBufferTypeInfoMapAndComputeGroupSize(MeasureSer, BufferTypeInfoMap, GetDesc().ShaderType, pShaderMtl->SPIRVResources);
+        BytecodeOffset = MeasureSer.GetSize(nullptr);
+    }
 
-    // AZ TODO: separate debug info ?
-
-    // Read 'default.metallib'
-    std::unique_ptr<Uint8> Bytecode;
-    size_t                 BytecodeSize = 0;
+    // Read 'Shader.metallib'
+    auto&            RawAllocator = GetRawAllocator();
+    SerializedMemory Bytecode;
+    size_t           BytecodeSize = 0;
     {
         FILE* File = fopen("Shader.metallib", "rb");
         if (File == nullptr)
@@ -448,8 +480,8 @@ SerializedMemory SerializableShaderImpl::PatchShaderMtl(const RefCntAutoPtr<Pipe
         long size = ftell(File);
         fseek(File, 0, SEEK_SET);
 
-        Bytecode.reset(new Uint8[size]);
-        BytecodeSize = fread(Bytecode.get(), 1, size, File);
+        Bytecode = SerializedMemory{ALLOCATE_RAW(RawAllocator, "", BytecodeOffset + size), BytecodeOffset + size, &RawAllocator};
+        BytecodeSize = fread(&static_cast<Uint8*>(Bytecode.Ptr())[BytecodeOffset], 1, size, File);
 
         fclose(File);
     }
@@ -458,47 +490,18 @@ SerializedMemory SerializableShaderImpl::PatchShaderMtl(const RefCntAutoPtr<Pipe
 
     if (BytecodeSize == 0)
         LOG_ERROR_AND_THROW("Metal shader library is empty");
+    
+    Serializer<SerializerMode::Write> Ser{Bytecode.Ptr(), BytecodeOffset};
+    SerializeBufferTypeInfoMapAndComputeGroupSize(Ser, BufferTypeInfoMap, GetDesc().ShaderType, pShaderMtl->SPIRVResources);
+    VERIFY_EXPR(Ser.IsEnd());
 
-    // AZ TODO: serialize BufferTypeInfoMap
-
-    return SerializedMemory{Bytecode.release(), BytecodeSize};
+    return Bytecode;
 }
 
 
-struct SerializableResourceSignatureImpl::PRSMtlImpl final : IPRSMtl
+void SerializableResourceSignatureImpl::CreatePRSMtl(IReferenceCounters* pRefCounters, const PipelineResourceSignatureDesc& Desc, SHADER_TYPE ShaderStages)
 {
-    PipelineResourceSignatureMtlImpl PRS;
-    SerializedMemory                 Mem;
-
-    PRSMtlImpl(IReferenceCounters* pRefCounters, const PipelineResourceSignatureDesc& SignatureDesc) :
-        PRS{pRefCounters, nullptr, SignatureDesc, nullptr, SHADER_TYPE_UNKNOWN, true}
-    {}
-
-    PipelineResourceSignatureMtlImpl* GetPRS() override { return &PRS; }
-    SerializedMemory const*           GetMem() override { return &Mem; }
-    
-};
-
-void SerializableResourceSignatureImpl::SerializePRSMtl(IReferenceCounters* pRefCounters, const PipelineResourceSignatureDesc& Desc)
-{
-    auto* pPRSMtl = new PRSMtlImpl{pRefCounters, Desc};
-    m_pPRSMtl.reset(pPRSMtl);
-
-    PipelineResourceSignatureSerializedDataMtl SerializedData;
-    pPRSMtl->PRS.Serialize(SerializedData);
-    AddPRSDesc(pPRSMtl->PRS.GetDesc(), SerializedData);
-    
-    Serializer<SerializerMode::Measure> MeasureSer;
-    PSOSerializerMtl<SerializerMode::Measure>::SerializePRS(MeasureSer, SerializedData, nullptr);
-
-    const size_t SerSize = MeasureSer.GetSize(nullptr);
-    void*        SerPtr  = ALLOCATE_RAW(GetRawAllocator(), "", SerSize);
-
-    Serializer<SerializerMode::Write> Ser{SerPtr, SerSize};
-    PSOSerializerMtl<SerializerMode::Write>::SerializePRS(Ser, SerializedData, nullptr);
-    VERIFY_EXPR(Ser.IsEnd());
-
-    pPRSMtl->Mem = SerializedMemory{SerPtr, SerSize};
+    CreateSignature<PipelineResourceSignatureMtlImpl>(pRefCounters, Desc, ShaderStages);
 }
 
 

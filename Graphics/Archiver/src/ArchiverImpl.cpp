@@ -135,8 +135,12 @@ void ArchiverImpl::ReserveSpace(size_t& SharedDataSize, std::array<size_t, Devic
 
         for (Uint32 dev = 0; dev < DeviceDataCount; ++dev)
         {
+            DeviceType type = static_cast<DeviceType>(dev);
+            if (type == DeviceType::Metal_MacOS)
+                type = DeviceType::Metal_iOS; // MacOS & iOS have the same PRS
+
             auto&       Dst = PerDeviceDataSize[dev];
-            const auto& Src = PRS.second.GetDeviceData(dev);
+            const auto& Src = PRS.second.GetDeviceData(static_cast<Uint32>(type));
             Dst += Src.Size();
         }
     }
@@ -250,7 +254,11 @@ void ArchiverImpl::WriteResourceSignatureData(PendingData& Pending) const
 
         for (Uint32 dev = 0; dev < DeviceDataCount; ++dev)
         {
-            const auto& Src = PRS.second.GetDeviceData(dev);
+            DeviceType type = static_cast<DeviceType>(dev);
+            if (type == DeviceType::Metal_MacOS)
+                type = DeviceType::Metal_iOS; // MacOS & iOS have the same PRS
+
+            const auto& Src = PRS.second.GetDeviceData(static_cast<Uint32>(type));
             if (!Src)
                 continue;
 

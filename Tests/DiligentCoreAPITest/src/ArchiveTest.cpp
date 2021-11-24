@@ -273,8 +273,12 @@ TEST(ArchiveTest, GraphicsPipeline)
     auto* pSwapChain = pEnv->GetSwapChain();
 
     SerializationDeviceCreateInfo DeviceCI;
-    DeviceCI.Metal.CompileOptions = "-target air64";
-    DeviceCI.Metal.LinkOptions    = "-target air64";
+    DeviceCI.Metal.CompileForMacOS     = True;
+    DeviceCI.Metal.CompileOptionsMacOS = "-sdk macosx metal -std=macos-metal2.0 -mmacos-version-min=10.0";
+    DeviceCI.Metal.LinkOptionsMacOS    = "-sdk macosx metallib";
+    DeviceCI.Metal.CompileForiOS       = True;
+    DeviceCI.Metal.CompileOptionsiOS   = "-sdk iphoneos metal -std=ios-metal2.0 -mios-version-min=10.0";
+    DeviceCI.Metal.LinkOptionsiOS      = "-sdk iphoneos metallib";
 
     RefCntAutoPtr<ISerializationDevice> pSerializationDevice;
     pArchiverFactory->CreateSerializationDevice(DeviceCI, &pSerializationDevice);
@@ -485,7 +489,6 @@ TEST(ArchiveTest, GraphicsPipeline)
             LayoutDesc.NumImmutableSamplers = _countof(ImmutableSamplers);
             LayoutDesc.DefaultVariableType  = VarType;
 
-
             PSOCreateInfo2.PSODesc.Name           = PSO1Name;
             PSOCreateInfo2.PSODesc.ResourceLayout = LayoutDesc;
 
@@ -572,8 +575,9 @@ TEST(ArchiveTest, GraphicsPipeline)
         EXPECT_EQ(pUnpackedPSO_1->GetGraphicsPipelineDesc(), pRefPSO_1->GetGraphicsPipelineDesc());
         EXPECT_EQ(pUnpackedPSO_1->GetResourceSignatureCount(), pRefPSO_1->GetResourceSignatureCount());
 
-        // AZ TODO: OpenGL PRS have immutable samplers as resources which is not supported in comparator
-        if (!pDevice->GetDeviceInfo().IsGLDevice())
+        // AZ TODO: OpenGL PRS have immutable samplers as resources which is not supported in comparator.
+        // AZ TODO: Metal PRS in Archiver generated from SPIRV, in Engine - from reflection and may have different resource order.
+        if (!pDevice->GetDeviceInfo().IsGLDevice() && !pDevice->GetDeviceInfo().IsMetalDevice())
         {
             for (Uint32 s = 0, SCnt = std::min(pUnpackedPSO_1->GetResourceSignatureCount(), pRefPSO_1->GetResourceSignatureCount()); s < SCnt; ++s)
             {
@@ -584,6 +588,7 @@ TEST(ArchiveTest, GraphicsPipeline)
                     continue;
 
                 EXPECT_EQ(pLhsSign->GetDesc(), pRhsSign->GetDesc());
+                EXPECT_TRUE(pLhsSign->IsCompatibleWith(pRhsSign));
             }
         }
 
@@ -622,6 +627,7 @@ TEST(ArchiveTest, GraphicsPipeline)
                 continue;
 
             EXPECT_EQ(pLhsSign->GetDesc(), pRhsSign->GetDesc());
+            EXPECT_TRUE(pLhsSign->IsCompatibleWith(pRhsSign));
         }
     }
 
@@ -818,12 +824,8 @@ TEST(ArchiveTest, ComputePipeline)
         GTEST_SKIP() << "Compute shader test requires testing swap chain";
     }
 
-    SerializationDeviceCreateInfo DeviceCI;
-    DeviceCI.Metal.CompileOptions = "-target air64";
-    DeviceCI.Metal.LinkOptions    = "-target air64";
-
     RefCntAutoPtr<ISerializationDevice> pSerializationDevice;
-    pArchiverFactory->CreateSerializationDevice(DeviceCI, &pSerializationDevice);
+    pArchiverFactory->CreateSerializationDevice(SerializationDeviceCreateInfo{}, &pSerializationDevice);
     ASSERT_NE(pSerializationDevice, nullptr);
 
     RefCntAutoPtr<IPipelineResourceSignature> pRefPRS;
@@ -968,15 +970,13 @@ TEST(ArchiveTest, ResourceSignatureBindings)
         GTEST_SKIP() << "Archiver library is not loaded";
 
     RefCntAutoPtr<ISerializationDevice> pSerializationDevice;
-    SerializationDeviceCreateInfo       DeviceCI;
-    pArchiverFactory->CreateSerializationDevice(DeviceCI, &pSerializationDevice);
+    pArchiverFactory->CreateSerializationDevice(SerializationDeviceCreateInfo{}, &pSerializationDevice);
     ASSERT_NE(pSerializationDevice, nullptr);
 
     for (auto AllDeviceBits = GetDeviceBits(); AllDeviceBits != 0;)
     {
         const auto DeviceBit  = ExtractLSB(AllDeviceBits);
         const auto DeviceType = static_cast<RENDER_DEVICE_TYPE>(PlatformMisc::GetLSB(DeviceBit));
-
 
         const auto VS_PS = SHADER_TYPE_PIXEL | SHADER_TYPE_VERTEX;
         const auto PS    = SHADER_TYPE_PIXEL;
@@ -1212,16 +1212,16 @@ TEST(ArchiveTest, ResourceSignatureBindings)
                     
                         {"ConstBuff_1",    SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,  VS,  0,   0, 1},
                         {"PerObjectConst", SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,  VS,  0,   1, 8},
+                        {"g_TexelBuff",    SHADER_RESOURCE_TYPE_BUFFER_SRV,       VS,  0,   0, 1},
                         {"VBPosition",     SHADER_RESOURCE_TYPE_BUFFER_SRV,       VS,  0,  29, 1},
-                        {"VBTexcoord",     SHADER_RESOURCE_TYPE_BUFFER_SRV,       VS,  0,  30, 1},
-                        {"g_TexelBuff",    SHADER_RESOURCE_TYPE_BUFFER_SRV,       VS,  0,   0, 1}
+                        {"VBTexcoord",     SHADER_RESOURCE_TYPE_BUFFER_SRV,       VS,  0,  30, 1}
                         // clang-format on
                     };
                 CompareBindings(RefBindings, _countof(RefBindings));
                 break;
             }
             default:
-                LOG_ERROR_AND_THROW("Unsupported device type");
+                GTEST_FAIL() << "Unsupported device type";
         }
     }
 }

@@ -77,13 +77,18 @@ typedef struct SerializationDeviceVkInfo SerializationDeviceVkInfo;
 struct SerializationDeviceMtlInfo
 {
     /// Additional compilation options for Metal command-line compiler.
-    const Char* CompileOptions     DEFAULT_INITIALIZER(nullptr);
+    const Char* CompileOptionsMacOS DEFAULT_INITIALIZER("-sdk macosx metal");
+    const Char* CompileOptionsiOS   DEFAULT_INITIALIZER("-sdk iphoneos metal");
 
     /// Additional linker options for Metal command-line linker.
-    const Char* LinkOptions        DEFAULT_INITIALIZER(nullptr);
+    const Char* LinkOptionsMacOS  DEFAULT_INITIALIZER("-sdk macosx metallib");
+    const Char* LinkOptionsiOS    DEFAULT_INITIALIZER("-sdk iphoneos metallib");
 
     /// Name of command-line application which is used to preprocess Metal shader source before compiling to bytecode.
     const Char* MslPreprocessorCmd DEFAULT_INITIALIZER(nullptr);
+
+    Bool  CompileForMacOS DEFAULT_INITIALIZER(True);
+    Bool  CompileForiOS   DEFAULT_INITIALIZER(True);
 };
 typedef struct SerializationDeviceMtlInfo SerializationDeviceMtlInfo;
 
@@ -140,7 +145,6 @@ struct PipelineResourceBindingAttribs
     Char const* const*           VertexBufferNames DEFAULT_INITIALIZER(nullptr);
 
     /// Combination of shader stages.
-    /// \note Single shader stage is required for Direct3D11, OpenGL, Metal.
     SHADER_TYPE                  ShaderStages      DEFAULT_INITIALIZER(SHADER_TYPE_UNKNOWN);
 
     /// Device type for which resource binding will be calculated.

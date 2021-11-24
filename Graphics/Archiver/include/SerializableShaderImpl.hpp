@@ -92,7 +92,8 @@ public:
 #if METAL_SUPPORTED
     SerializedMemory            PatchShaderMtl(const RefCntAutoPtr<PipelineResourceSignatureMtlImpl>* pSignatures,
                                                const MtlArchiverResourceCounters*                     pBaseBindings,
-                                               const Uint32                                           SignatureCount) const noexcept(false);
+                                               const Uint32                                           SignatureCount,
+                                               const bool                                             IsForMacOS) const noexcept(false);
     const SPIRVShaderResources* GetMtlShaderSPIRVResources() const;
 #endif
 
@@ -129,10 +130,7 @@ private:
     struct CompiledShaderMtlImpl;
     std::unique_ptr<ICompiledShader> m_pShaderMtl;
 
-    void             CreateShaderMtl(ShaderCreateInfo& ShaderCI, String& CompilationLog);
-    SerializedMemory PatchShaderMtl(const RefCntAutoPtr<PipelineResourceSignatureMtlImpl>* pSignatures,
-                                    const MtlArchiverResourceCounters*                     pBaseBindings,
-                                    const Uint32                                           SignatureCount) noexcept(false);
+    void CreateShaderMtl(ShaderCreateInfo& ShaderCI, String& CompilationLog);
 #endif
 };
 

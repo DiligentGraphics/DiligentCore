@@ -54,7 +54,7 @@ DeviceObjectArchiveBase::DeviceType DeviceObjectArchiveBase::RenderDeviceTypeToA
             return DeviceType::Vulkan;
 
         case RENDER_DEVICE_TYPE_METAL:
-            return DeviceType::Metal;
+            return DeviceType::Metal_iOS;
 
         case RENDER_DEVICE_TYPE_COUNT:
             return DeviceType::Count;
@@ -122,6 +122,24 @@ DeviceObjectArchiveBase::DeviceObjectArchiveBase(IReferenceCounters* pRefCounter
             default:
                 LOG_ERROR_AND_THROW("Unknown chunk type (", static_cast<Uint32>(Chunk.Type), ")");
         }
+    }
+}
+
+DeviceObjectArchiveBase::BlockOffsetType DeviceObjectArchiveBase::GetBlockOffsetType() const
+{
+    switch (m_DevType)
+    {
+        // clang-format off
+        case DeviceType::OpenGL:      return BlockOffsetType::OpenGL;
+        case DeviceType::Direct3D11:  return BlockOffsetType::Direct3D11;
+        case DeviceType::Direct3D12:  return BlockOffsetType::Direct3D12;
+        case DeviceType::Vulkan:      return BlockOffsetType::Vulkan;
+        case DeviceType::Metal_iOS:   return BlockOffsetType::Metal_iOS;
+        case DeviceType::Metal_MacOS: return BlockOffsetType::Metal_MacOS;
+            // clang-format on
+        default:
+            UNEXPECTED("Unexpected device type");
+            return BlockOffsetType::Count;
     }
 }
 
@@ -668,18 +686,34 @@ bool DeviceObjectArchiveBase::CreateResourceSignatures(PSOData<CreateInfoType>& 
     return true;
 }
 
+void DeviceObjectArchiveBase::ReadAndCreateShader(Serializer<SerializerMode::Read>& Ser, ShaderCreateInfo& ShaderCI, IRenderDevice* pDevice, IShader** ppShader)
+{
+    VERIFY_EXPR(ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_DEFAULT);
+    VERIFY_EXPR(ShaderCI.ShaderCompiler == SHADER_COMPILER_DEFAULT);
+
+    ShaderCI.ByteCode     = Ser.GetCurrentPtr();
+    ShaderCI.ByteCodeSize = Ser.GetRemainSize();
+
+    pDevice->CreateShader(ShaderCI, ppShader);
+}
+
 bool DeviceObjectArchiveBase::LoadShaders(Serializer<SerializerMode::Read>&    Ser,
                                           IRenderDevice*                       pDevice,
                                           std::vector<RefCntAutoPtr<IShader>>& Shaders)
 {
+    const auto BaseOffset = m_BaseOffsets[static_cast<Uint32>(GetBlockOffsetType())];
+    if (BaseOffset > m_pArchive->GetSize())
+    {
+        LOG_ERROR_MESSAGE("Required block does not exists in archive");
+        return false;
+    }
+
     DynamicLinearAllocator Allocator{GetRawAllocator()};
 
     ShaderIndexArray ShaderIndices;
     PSOSerializer<SerializerMode::Read>::SerializeShaders(Ser, ShaderIndices, &Allocator);
 
     Shaders.resize(ShaderIndices.Count);
-
-    const auto BaseOffset = m_BaseOffsets[static_cast<Uint32>(GetBlockOffsetType())];
 
     std::unique_lock<std::mutex> ReadLock{m_ShadersGuard};
 
@@ -699,24 +733,8 @@ bool DeviceObjectArchiveBase::LoadShaders(Serializer<SerializerMode::Read>&    S
         ShaderCreateInfo                 ShaderCI;
         Ser2(ShaderCI.Desc.ShaderType, ShaderCI.EntryPoint, ShaderCI.SourceLanguage, ShaderCI.ShaderCompiler);
 
-        if (m_DevType == DeviceType::OpenGL)
-        {
-            Ser2(ShaderCI.UseCombinedTextureSamplers, ShaderCI.CombinedSamplerSuffix);
 
-            ShaderCI.Source       = static_cast<const Char*>(Ser2.GetCurrentPtr());
-            ShaderCI.SourceLength = Ser2.GetRemainSize() - 1;
-            VERIFY_EXPR(ShaderCI.SourceLength == strlen(ShaderCI.Source));
-        }
-        else
-        {
-            VERIFY_EXPR(ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_DEFAULT);
-            VERIFY_EXPR(ShaderCI.ShaderCompiler == SHADER_COMPILER_DEFAULT);
-
-            ShaderCI.ByteCode     = Ser2.GetCurrentPtr();
-            ShaderCI.ByteCodeSize = Ser2.GetRemainSize();
-        }
-
-        pDevice->CreateShader(ShaderCI, &Shaders[i]);
+        ReadAndCreateShader(Ser2, ShaderCI, pDevice, &Shaders[i]);
         if (!Shaders[i])
             return false;
 

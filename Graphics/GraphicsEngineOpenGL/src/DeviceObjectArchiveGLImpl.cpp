@@ -57,6 +57,17 @@ void DeviceObjectArchiveGLImpl::UnpackResourceSignature(const ResourceSignatureU
         });
 }
 
+void DeviceObjectArchiveGLImpl::ReadAndCreateShader(Serializer<SerializerMode::Read>& Ser, ShaderCreateInfo& ShaderCI, IRenderDevice* pDevice, IShader** ppShader)
+{
+    Ser(ShaderCI.UseCombinedTextureSamplers, ShaderCI.CombinedSamplerSuffix);
+
+    ShaderCI.Source       = static_cast<const Char*>(Ser.GetCurrentPtr());
+    ShaderCI.SourceLength = Ser.GetRemainSize() - 1;
+    VERIFY_EXPR(ShaderCI.SourceLength == strlen(ShaderCI.Source));
+
+    pDevice->CreateShader(ShaderCI, ppShader);
+}
+
 template <SerializerMode Mode>
 void PSOSerializerGL<Mode>::SerializePRS(
     Serializer<Mode>&                                 Ser,

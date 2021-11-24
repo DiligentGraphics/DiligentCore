@@ -45,6 +45,7 @@ public:
     ~DeviceObjectArchiveGLImpl();
 
     void UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature*& pSignature) override;
+    void ReadAndCreateShader(Serializer<SerializerMode::Read>& Ser, ShaderCreateInfo &ShaderCI, IRenderDevice* pDevice, IShader** ppShader) override;
 };
 
 template <SerializerMode Mode>

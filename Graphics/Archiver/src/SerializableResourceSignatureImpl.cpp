@@ -143,7 +143,7 @@ SerializableResourceSignatureImpl::SerializableResourceSignatureImpl(IReferenceC
 #endif
 #if METAL_SUPPORTED
             case RENDER_DEVICE_TYPE_METAL:
-                SerializePRSMtl(pRefCounters, Desc);
+                CreatePRSMtl(pRefCounters, Desc, ShaderStages);
                 break;
 #endif
             case RENDER_DEVICE_TYPE_UNDEFINED:
@@ -182,7 +182,7 @@ bool SerializableResourceSignatureImpl::operator==(const SerializableResourceSig
     if (GetSharedSerializedMemory() != Rhs.GetSharedSerializedMemory())
         return false;
 
-    for (size_t type = 0; type < static_cast<size_t>(DeviceType::Count); ++type)
+    for (size_t type = 0; type < DeviceCount; ++type)
     {
         const auto  Type  = static_cast<DeviceType>(type);
         const auto* pMem0 = GetSerializedMemory(Type);
@@ -201,7 +201,7 @@ bool SerializableResourceSignatureImpl::operator==(const SerializableResourceSig
 size_t SerializableResourceSignatureImpl::CalcHash() const
 {
     size_t Hash = 0;
-    for (size_t type = 0; type < static_cast<size_t>(DeviceType::Count); ++type)
+    for (size_t type = 0; type < DeviceCount; ++type)
     {
         const auto* pMem = GetSerializedMemory(static_cast<DeviceType>(type));
         if (pMem != nullptr)
