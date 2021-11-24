@@ -48,8 +48,10 @@ public:
     // clang-format off
     FixedLinearAllocator           (const FixedLinearAllocator&) = delete;
     FixedLinearAllocator& operator=(const FixedLinearAllocator&) = delete;
-    FixedLinearAllocator& operator=(FixedLinearAllocator&&)      = delete;
     // clang-format on
+
+    FixedLinearAllocator() noexcept
+    {}
 
     explicit FixedLinearAllocator(IMemoryAllocator& Allocator) noexcept :
         m_pAllocator{&Allocator}
@@ -69,6 +71,24 @@ public:
     // clang-format on
     {
         Other.Reset();
+    }
+
+    FixedLinearAllocator& operator=(FixedLinearAllocator&& Rhs) noexcept
+    {
+        VERIFY_EXPR(IsEmpty());
+
+        m_pDataStart    = Rhs.m_pDataStart;
+        m_pCurrPtr      = Rhs.m_pCurrPtr;
+        m_ReservedSize  = Rhs.m_ReservedSize;
+        m_CurrAlignment = Rhs.m_CurrAlignment;
+        m_pAllocator    = Rhs.m_pAllocator;
+#if DILIGENT_DEBUG
+        m_DbgCurrAllocation = Rhs.m_DbgCurrAllocation;
+        m_DbgAllocations    = std::move(Rhs.m_DbgAllocations);
+#endif
+        Rhs.Reset();
+
+        return *this;
     }
 
     ~FixedLinearAllocator()
@@ -103,7 +123,7 @@ public:
         return m_pDataStart;
     }
 
-    void AddSpace(size_t size, size_t alignment) noexcept
+    void AddSpace(size_t size, size_t alignment = 1) noexcept
     {
         VERIFY(m_pDataStart == nullptr, "Memory has already been allocated");
         VERIFY(IsPowerOfTwo(alignment), "Alignment is not a power of two!");
@@ -174,7 +194,7 @@ public:
         m_CurrAlignment = sizeof(void*);
     }
 
-    NODISCARD void* Allocate(size_t size, size_t alignment)
+    NODISCARD void* Allocate(size_t size, size_t alignment = 1)
     {
         VERIFY(size == 0 || m_pDataStart != nullptr, "Memory has not been allocated");
         VERIFY(IsPowerOfTwo(alignment), "Alignment is not a power of two!");
@@ -254,12 +274,17 @@ public:
         return CopyConstructArray<T, T>(Src, count);
     }
 
-    NODISCARD const Char* CopyString(const char* Str)
+    NODISCARD const Char* CopyString(const char* Str, size_t StrLen = 0)
     {
         if (Str == nullptr)
             return nullptr;
 
-        auto* Ptr = reinterpret_cast<Char*>(Allocate(strlen(Str) + 1, 1));
+        if (StrLen == 0)
+            StrLen = strlen(Str);
+        else
+            VERIFY_EXPR(StrLen == strlen(Str));
+
+        auto* Ptr = reinterpret_cast<Char*>(Allocate(StrLen + 1, 1));
         Char* Dst = Ptr;
 
         const auto* pDataEnd = reinterpret_cast<Char*>(m_pDataStart) + m_ReservedSize;
@@ -290,6 +315,11 @@ public:
     NODISCARD size_t GetReservedSize() const
     {
         return m_ReservedSize;
+    }
+
+    NODISCARD bool IsEmpty() const
+    {
+        return m_ReservedSize == 0;
     }
 
 private:

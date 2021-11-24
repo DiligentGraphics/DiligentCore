@@ -192,6 +192,18 @@ public:
         return CopyWString(Str.c_str(), Str.length());
     }
 
+    size_t GetBlockCount() const
+    {
+        return m_Blocks.size();
+    }
+
+    template <typename HandlerType>
+    void ProcessBlocks(HandlerType& Handler) const
+    {
+        for (const auto& Block : m_Blocks)
+            Handler(Block.Data, Block.Size);
+    }
+
 private:
     struct Block
     {
