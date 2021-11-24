@@ -49,10 +49,22 @@ PipelineStateCacheVkImpl::PipelineStateCacheVkImpl(IReferenceCounters*          
     VkPipelineCacheCreateInfo VkPipelineStateCacheCI{};
     VkPipelineStateCacheCI.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
 
-    if (CreateInfo.pCacheData != nullptr && CreateInfo.CacheDataSize > 0)
+    if (CreateInfo.pCacheData != nullptr && CreateInfo.CacheDataSize > sizeof(VkPipelineCacheHeaderVersionOne))
     {
-        VkPipelineStateCacheCI.initialDataSize = CreateInfo.CacheDataSize;
-        VkPipelineStateCacheCI.pInitialData    = CreateInfo.pCacheData;
+        const auto& Props = GetDevice()->GetPhysicalDevice().GetProperties();
+
+        VkPipelineCacheHeaderVersionOne HeaderVersion;
+        std::memcpy(&HeaderVersion, CreateInfo.pCacheData, sizeof(HeaderVersion));
+
+        if (HeaderVersion.headerVersion == VK_PIPELINE_CACHE_HEADER_VERSION_ONE &&
+            HeaderVersion.headerSize == 32 && // from specs
+            HeaderVersion.deviceID == Props.deviceID &&
+            HeaderVersion.vendorID == Props.vendorID &&
+            std::memcmp(HeaderVersion.pipelineCacheUUID, Props.pipelineCacheUUID, sizeof(HeaderVersion.pipelineCacheUUID)) == 0)
+        {
+            VkPipelineStateCacheCI.initialDataSize = CreateInfo.CacheDataSize;
+            VkPipelineStateCacheCI.pInitialData    = CreateInfo.pCacheData;
+        }
     }
 
     m_PipelineStateCache = m_pDevice->GetLogicalDevice().CreatePipelineCache(VkPipelineStateCacheCI, m_Desc.Name);
