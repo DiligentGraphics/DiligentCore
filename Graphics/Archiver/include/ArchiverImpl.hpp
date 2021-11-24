@@ -107,11 +107,14 @@ private:
     using TPRSNames                = DeviceObjectArchiveBase::TPRSNames;
     using ShaderIndexArray         = DeviceObjectArchiveBase::ShaderIndexArray;
 
-    static constexpr Uint32 InvalidOffset() { return DeviceObjectArchiveBase::BaseDataHeader::InvalidOffset(); }
+    static constexpr auto InvalidOffset   = DeviceObjectArchiveBase::BaseDataHeader::InvalidOffset;
+    static constexpr auto DeviceDataCount = static_cast<size_t>(DeviceType::Count);
+    static constexpr auto ChunkCount      = static_cast<size_t>(ChunkType::Count);
 
-    static constexpr Uint32 DeviceDataCount = static_cast<Uint32>(DeviceType::Count);
-    static constexpr Uint32 ChunkCount      = static_cast<Uint32>(ChunkType::Count);
-    using TPerDeviceData                    = std::array<SerializedMemory, DeviceDataCount>;
+    using TPerDeviceData = std::array<SerializedMemory, DeviceDataCount>;
+
+    template <typename Type>
+    using TNamedObjectHashMap = std::unordered_map<HashMapStringKey, Type, HashMapStringKey::Hasher>;
 
     struct PRSData
     {
@@ -120,14 +123,13 @@ private:
         const SerializedMemory& GetSharedData() const;
         const SerializedMemory& GetDeviceData(Uint32 Idx) const;
     };
-    //std::unordered_map<HashMapStringKey, PRSData, HashMapStringKey::Hasher> m_PRSMap;
-    std::unordered_map<String, PRSData> m_PRSMap;
+    TNamedObjectHashMap<PRSData> m_PRSMap;
 
     struct SerializablePRSHasher
     {
         size_t operator()(const RefCntAutoPtr<SerializableResourceSignatureImpl>& PRS) const
         {
-            return PRS->CalcHash();
+            return PRS ? PRS->CalcHash() : 0;
         }
     };
     struct SerializablePRSEqual
@@ -149,7 +151,8 @@ private:
 
         const SerializedMemory& GetSharedData() const;
     };
-    std::unordered_map<String, RPData> m_RPMap;
+    using RPMapType = std::unordered_map<HashMapStringKey, RPData, HashMapStringKey::Hasher>;
+    RPMapType m_RPMap;
 
     struct ShaderKey
     {
@@ -185,15 +188,13 @@ private:
     using ComputePSOData    = TPSOData<ComputePipelineStateCreateInfo>;
     using TilePSOData       = TPSOData<TilePipelineStateCreateInfo>;
     using RayTracingPSOData = TPSOData<RayTracingPipelineStateCreateInfo>;
-    template <typename PSOType>
-    using TPSOMap = std::unordered_map<String, PSOType>;
 
-    TPSOMap<GraphicsPSOData>   m_GraphicsPSOMap;
-    TPSOMap<ComputePSOData>    m_ComputePSOMap;
-    TPSOMap<TilePSOData>       m_TilePSOMap;
-    TPSOMap<RayTracingPSOData> m_RayTracingPSOMap;
+    TNamedObjectHashMap<GraphicsPSOData>   m_GraphicsPSOMap;
+    TNamedObjectHashMap<ComputePSOData>    m_ComputePSOMap;
+    TNamedObjectHashMap<TilePSOData>       m_TilePSOMap;
+    TNamedObjectHashMap<RayTracingPSOData> m_RayTracingPSOMap;
 
-    SerializationDeviceImpl* m_pSerializationDevice = nullptr;
+    SerializationDeviceImpl* const m_pSerializationDevice;
 
 private:
     struct PendingData
@@ -213,16 +214,16 @@ private:
     void WriteShaderData(PendingData& Pending) const;
     void WriteRenderPassData(PendingData& Pending) const;
     template <typename PSOType>
-    void WritePSOData(PendingData& Pending, TPSOMap<PSOType>& Map, ChunkType Chunk) const;
+    void WritePSOData(PendingData& Pending, TNamedObjectHashMap<PSOType>& Map, ChunkType Chunk) const;
     void UpdateOffsetsInArchive(PendingData& Pending) const;
     void WritePendingDataToStream(const PendingData& Pending, IFileStream* pStream) const;
 
     using TShaderIndices = std::vector<Uint32>; // shader data indices in device specific block
 
     template <typename CreateInfoType>
-    bool SerializePSO(std::unordered_map<String, TPSOData<CreateInfoType>>& PSOMap,
-                      const CreateInfoType&                                 PSOCreateInfo,
-                      const PipelineStateArchiveInfo&                       ArchiveInfo) noexcept;
+    bool SerializePSO(TNamedObjectHashMap<TPSOData<CreateInfoType>>& PSOMap,
+                      const CreateInfoType&                          PSOCreateInfo,
+                      const PipelineStateArchiveInfo&                ArchiveInfo) noexcept;
 
     void SerializeShaderBytecode(TShaderIndices& ShaderIndices, DeviceType DevType, const ShaderCreateInfo& CI, const void* Bytecode, size_t BytecodeSize);
     void SerializeShaderSource(TShaderIndices& ShaderIndices, DeviceType DevType, const ShaderCreateInfo& CI);
@@ -252,11 +253,11 @@ private:
 
     void SerializeShadersForPSO(const TShaderIndices& ShaderIndices, SerializedMemory& DeviceData) const;
 
-    template <typename DataType>
-    static void InitNamedResourceArrayHeader(std::vector<Uint8>&                         ChunkData,
-                                             const std::unordered_map<String, DataType>& Map,
-                                             Uint32*&                                    DataSizeArray,
-                                             Uint32*&                                    DataOffsetArray);
+    template <typename MapType>
+    static void InitNamedResourceArrayHeader(std::vector<Uint8>& ChunkData,
+                                             const MapType&      Map,
+                                             Uint32*&            DataSizeArray,
+                                             Uint32*&            DataOffsetArray);
 
     bool AddPipelineResourceSignature(IPipelineResourceSignature* pPRS);
     bool CachePipelineResourceSignature(RefCntAutoPtr<IPipelineResourceSignature>& pPRS);
