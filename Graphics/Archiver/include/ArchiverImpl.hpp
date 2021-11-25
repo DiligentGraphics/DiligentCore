@@ -94,10 +94,13 @@ public:
     virtual Bool DILIGENT_CALL_TYPE AddPipelineResourceSignature(const PipelineResourceSignatureDesc& SignatureDesc,
                                                                  const ResourceSignatureArchiveInfo&  ArchiveInfo) override final;
 
+public:
+    using DeviceType   = DeviceObjectArchiveBase::DeviceType;
+    using ChunkType    = DeviceObjectArchiveBase::ChunkType;
+    using TDataElement = FixedLinearAllocator;
+
 private:
-    using DeviceType               = DeviceObjectArchiveBase::DeviceType;
     using ArchiveHeader            = DeviceObjectArchiveBase::ArchiveHeader;
-    using ChunkType                = DeviceObjectArchiveBase::ChunkType;
     using ChunkHeader              = DeviceObjectArchiveBase::ChunkHeader;
     using NamedResourceArrayHeader = DeviceObjectArchiveBase::NamedResourceArrayHeader;
     using FileOffsetAndSize        = DeviceObjectArchiveBase::FileOffsetAndSize;
@@ -197,8 +200,6 @@ private:
 
     RefCntAutoPtr<SerializationDeviceImpl> m_pSerializationDevice;
 
-private:
-    using TDataElement = FixedLinearAllocator;
     struct PendingData
     {
         TDataElement                              HeaderData;                   // ArchiveHeader, ChunkHeader[]
@@ -270,9 +271,6 @@ private:
     bool AddPipelineResourceSignature(IPipelineResourceSignature* pPRS);
     bool CachePipelineResourceSignature(RefCntAutoPtr<IPipelineResourceSignature>& pPRS);
     bool AddRenderPass(IRenderPass* pRP);
-
-    template <SerializerMode Mode>
-    void SerializeDebugInfo(Serializer<Mode>& Ser) const;
 
     String UniquePRSName() const;
 

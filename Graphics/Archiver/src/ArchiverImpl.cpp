@@ -107,19 +107,6 @@ Bool ArchiverImpl::SerializeToBlob(IDataBlob** ppBlob)
     return true;
 }
 
-template <SerializerMode Mode>
-void ArchiverImpl::SerializeDebugInfo(Serializer<Mode>& Ser) const
-{
-    Uint32 APIVersion = DILIGENT_API_VERSION;
-    Ser(APIVersion);
-
-    const char* GitHash = nullptr;
-#ifdef DILIGENT_CORE_COMMIT_HASH
-    GitHash = DILIGENT_CORE_COMMIT_HASH;
-#endif
-    Ser(GitHash);
-}
-
 void ArchiverImpl::ReserveSpace(PendingData& Pending) const
 {
     auto& SharedData    = Pending.SharedData;
@@ -199,6 +186,18 @@ void ArchiverImpl::WriteDebugInfo(PendingData& Pending) const
 {
     auto& Chunk = Pending.ChunkData[static_cast<size_t>(ChunkType::ArchiveDebugInfo)];
 
+    auto SerializeDebugInfo = [](auto& Ser) //
+    {
+        Uint32 APIVersion = DILIGENT_API_VERSION;
+        Ser(APIVersion);
+
+        const char* GitHash = nullptr;
+#ifdef DILIGENT_CORE_COMMIT_HASH
+        GitHash = DILIGENT_CORE_COMMIT_HASH;
+#endif
+        Ser(GitHash);
+    };
+
     Serializer<SerializerMode::Measure> MeasureSer;
     SerializeDebugInfo(MeasureSer);
 
@@ -214,6 +213,42 @@ void ArchiverImpl::WriteDebugInfo(PendingData& Pending) const
     SerializeDebugInfo(Ser);
 }
 
+template <typename HeaderType>
+HeaderType* WriteHeader(ArchiverImpl::ChunkType     Type,
+                        const SerializedMemory&     SrcMem,
+                        ArchiverImpl::TDataElement& DstChunk,
+                        Uint32&                     DstOffset,
+                        Uint32&                     DstArraySize)
+{
+    auto* pHeader = DstChunk.Construct<HeaderType>(Type);
+    VERIFY_EXPR(pHeader->Type == Type);
+    DstOffset = StaticCast<Uint32>(reinterpret_cast<const Uint8*>(pHeader) - DstChunk.GetDataPtr<const Uint8>());
+    // DeviceSpecificDataSize & DeviceSpecificDataOffset will be initialized later
+
+    auto* const pDst = DstChunk.Allocate(SrcMem.Size());
+    std::memcpy(pDst, SrcMem.Ptr(), SrcMem.Size());
+
+    DstArraySize += sizeof(*pHeader);
+
+    return pHeader;
+}
+
+template <typename HeaderType>
+void WritePerDeviceData(HeaderType&                 Header,
+                        ArchiverImpl::DeviceType    Type,
+                        const SerializedMemory&     SrcMem,
+                        ArchiverImpl::TDataElement& DstChunk)
+{
+    if (!SrcMem)
+        return;
+
+    auto*      pDst   = DstChunk.Allocate(SrcMem.Size());
+    const auto Offset = reinterpret_cast<const Uint8*>(pDst) - DstChunk.GetDataPtr<const Uint8>();
+    Header.SetSize(Type, StaticCast<Uint32>(SrcMem.Size()));
+    Header.SetOffset(Type, StaticCast<Uint32>(Offset));
+    std::memcpy(pDst, SrcMem.Ptr(), SrcMem.Size());
+}
+
 void ArchiverImpl::WriteResourceSignatureData(PendingData& Pending) const
 {
     if (m_PRSMap.empty())
@@ -226,41 +261,19 @@ void ArchiverImpl::WriteResourceSignatureData(PendingData& Pending) const
     Pending.ChunkData[ChunkInd]             = InitNamedResourceArrayHeader(m_PRSMap, DataSizeArray, DataOffsetArray);
     Pending.ResourceCountPerChunk[ChunkInd] = StaticCast<Uint32>(m_PRSMap.size());
 
-    auto& SharedData = Pending.SharedData;
-
     Uint32 j = 0;
     for (const auto& PRS : m_PRSMap)
     {
-        auto* pHeader      = SharedData.Construct<PRSDataHeader>(ChunkType::ResourceSignature);
-        DataOffsetArray[j] = StaticCast<Uint32>(reinterpret_cast<const Uint8*>(pHeader) - SharedData.GetDataPtr<const Uint8>());
-
-        // DeviceSpecificDataSize & DeviceSpecificDataOffset will be initialized later
-
-        {
-            // Copy PipelineResourceSignatureDesc & PipelineResourceSignatureSerializedData
-            const auto& Src  = PRS.second.GetSharedData();
-            auto* const pDst = SharedData.Allocate(Src.Size());
-            std::memcpy(pDst, Src.Ptr(), Src.Size());
-        }
+        auto* pHeader = WriteHeader<PRSDataHeader>(ChunkType::ResourceSignature, PRS.second.GetSharedData(), Pending.SharedData, DataOffsetArray[j], DataSizeArray[j]);
 
         for (Uint32 type = 0; type < DeviceDataCount; ++type)
         {
-            DeviceType Type = static_cast<DeviceType>(type);
+            auto Type = static_cast<DeviceType>(type);
             if (Type == DeviceType::Metal_MacOS)
                 Type = DeviceType::Metal_iOS; // MacOS & iOS have the same PRS
 
-            const auto& Src = PRS.second.GetDeviceData(Type);
-            if (!Src)
-                continue;
-
-            auto&      DeviceData = Pending.PerDeviceData[type];
-            auto*      pDst       = DeviceData.Allocate(Src.Size());
-            const auto Offset     = reinterpret_cast<const Uint8*>(pDst) - DeviceData.GetDataPtr<const Uint8>();
-            pHeader->SetSize(Type, StaticCast<Uint32>(Src.Size()));
-            pHeader->SetOffset(Type, StaticCast<Uint32>(Offset));
-            std::memcpy(pDst, Src.Ptr(), Src.Size());
+            WritePerDeviceData(*pHeader, Type, PRS.second.GetDeviceData(Type), Pending.PerDeviceData[type]);
         }
-        DataSizeArray[j] += sizeof(*pHeader);
         ++j;
     }
 }
@@ -280,17 +293,7 @@ void ArchiverImpl::WriteRenderPassData(PendingData& Pending) const
     Uint32 j = 0;
     for (const auto& RP : m_RPMap)
     {
-        // Write shared data
-        {
-            auto* pHeader      = Pending.SharedData.Construct<RPDataHeader>(ChunkType::RenderPass);
-            DataOffsetArray[j] = StaticCast<Uint32>(reinterpret_cast<const Uint8*>(pHeader) - reinterpret_cast<const Uint8*>(Pending.SharedData.GetDataPtr()));
-
-            const auto& Src  = RP.second.GetSharedData();
-            auto* const pDst = Pending.SharedData.Allocate(Src.Size());
-            // Copy PipelineResourceSignatureDesc & PipelineResourceSignatureSerializedData
-            std::memcpy(pDst, Src.Ptr(), Src.Size());
-        }
-        DataSizeArray[j] += sizeof(RPDataHeader);
+        WriteHeader<RPDataHeader>(ChunkType::RenderPass, RP.second.GetSharedData(), Pending.SharedData, DataOffsetArray[j], DataSizeArray[j]);
         ++j;
     }
 }
@@ -311,33 +314,13 @@ void ArchiverImpl::WritePSOData(PendingData& Pending, TNamedObjectHashMap<PSOTyp
     Uint32 j = 0;
     for (auto& PSO : PSOMap)
     {
-        auto* pHeader = Pending.SharedData.Construct<PSODataHeader>(PSOChunkType);
-        VERIFY_EXPR(pHeader->Type == PSOChunkType);
-        // DeviceSpecificDataSize & DeviceSpecificDataOffset will be initialized later
+        auto* pHeader = WriteHeader<PSODataHeader>(PSOChunkType, PSO.second.GetSharedData(), Pending.SharedData, DataOffsetArray[j], DataSizeArray[j]);
 
-        DataOffsetArray[j] = StaticCast<Uint32>(reinterpret_cast<const Uint8*>(pHeader) - Pending.SharedData.GetDataPtr<const Uint8>());
-
-        // write shared data
+        for (Uint32 type = 0; type < DeviceDataCount; ++type)
         {
-            const auto& Src  = PSO.second.SharedData;
-            auto* const pDst = Pending.SharedData.Allocate(Src.Size());
-            // Copy ***PipelineStateCreateInfo
-            std::memcpy(pDst, Src.Ptr(), Src.Size());
+            const auto Type = static_cast<DeviceType>(type);
+            WritePerDeviceData(*pHeader, Type, PSO.second.PerDeviceData[type], Pending.PerDeviceData[type]);
         }
-
-        for (Uint32 dev = 0; dev < DeviceDataCount; ++dev)
-        {
-            const auto& Src = PSO.second.PerDeviceData[dev];
-            if (!Src)
-                continue;
-
-            auto& DeviceData = Pending.PerDeviceData[dev];
-            auto* pDst       = DeviceData.Allocate(Src.Size());
-            pHeader->SetSize(static_cast<DeviceType>(dev), StaticCast<Uint32>(Src.Size()));
-            pHeader->SetOffset(static_cast<DeviceType>(dev), StaticCast<Uint32>(reinterpret_cast<const Uint8*>(pDst) - DeviceData.GetDataPtr<const Uint8>()));
-            std::memcpy(pDst, Src.Ptr(), Src.Size());
-        }
-        DataSizeArray[j] += sizeof(*pHeader);
         ++j;
     }
 }
@@ -511,7 +494,6 @@ Bool ArchiverImpl::SerializeToStream(IFileStream* pStream)
 
     PendingData Pending;
     ReserveSpace(Pending);
-    static_assert(ChunkCount == 9, "Write data for new chunk type");
     WriteDebugInfo(Pending);
     WriteShaderData(Pending);
     WriteResourceSignatureData(Pending);
@@ -520,6 +502,7 @@ Bool ArchiverImpl::SerializeToStream(IFileStream* pStream)
     WritePSOData(Pending, m_ComputePSOMap, ChunkType::ComputePipelineStates);
     WritePSOData(Pending, m_TilePSOMap, ChunkType::TilePipelineStates);
     WritePSOData(Pending, m_RayTracingPSOMap, ChunkType::RayTracingPipelineStates);
+    static_assert(ChunkCount == 9, "Write data for new chunk type");
 
     UpdateOffsetsInArchive(Pending);
     WritePendingDataToStream(Pending, pStream);
