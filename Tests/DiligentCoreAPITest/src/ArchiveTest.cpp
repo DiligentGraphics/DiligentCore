@@ -33,6 +33,8 @@
 #include "ArchiveMemoryImpl.hpp"
 #include "Dearchiver.h"
 #include "ShaderMacroHelper.hpp"
+#include "DataBlobImpl.hpp"
+#include "MemoryFileStream.hpp"
 
 #include "ResourceLayoutTestCommon.hpp"
 #include "gtest/gtest.h"
@@ -70,8 +72,15 @@ static constexpr RENDER_DEVICE_TYPE_FLAGS GetDeviceBits()
     return DeviceBits;
 }
 
-TEST(ArchiveTest, ResourceSignature)
+static void ArchivePRS(RefCntAutoPtr<IArchive>&                   pSource,
+                       RefCntAutoPtr<IPipelineResourceSignature>& pRefPRS_1,
+                       RefCntAutoPtr<IPipelineResourceSignature>& pRefPRS_2,
+                       RENDER_DEVICE_TYPE_FLAGS                   DeviceBits)
 {
+
+    constexpr char PRS1Name[] = "PRS archive test - 1";
+    constexpr char PRS2Name[] = "PRS archive test - 2";
+
     auto* pEnv             = TestingEnvironment::GetInstance();
     auto* pDevice          = pEnv->GetDevice();
     auto* pArchiverFactory = pEnv->GetArchiverFactory();
@@ -80,89 +89,96 @@ TEST(ArchiveTest, ResourceSignature)
     if (!pDearchiver || !pArchiverFactory)
         GTEST_SKIP() << "Archiver library is not loaded";
 
+    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+
+    RefCntAutoPtr<ISerializationDevice> pSerializationDevice;
+    SerializationDeviceCreateInfo       DeviceCI;
+    pArchiverFactory->CreateSerializationDevice(DeviceCI, &pSerializationDevice);
+    ASSERT_NE(pSerializationDevice, nullptr);
+
+    RefCntAutoPtr<IArchiver> pArchiver;
+    pArchiverFactory->CreateArchiver(pSerializationDevice, &pArchiver);
+    ASSERT_NE(pArchiver, nullptr);
+
+    // PRS 1
+    {
+        constexpr auto VarType = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE;
+
+        constexpr PipelineResourceDesc Resources[] = //
+            {
+                {SHADER_TYPE_ALL_GRAPHICS, "g_Tex2D_1", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, VarType},
+                {SHADER_TYPE_ALL_GRAPHICS, "g_Tex2D_2", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, VarType},
+                {SHADER_TYPE_ALL_GRAPHICS, "ConstBuff_1", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, VarType},
+                {SHADER_TYPE_ALL_GRAPHICS, "ConstBuff_2", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, VarType}, //
+            };
+
+        PipelineResourceSignatureDesc PRSDesc;
+        PRSDesc.Name         = PRS1Name;
+        PRSDesc.BindingIndex = 0;
+        PRSDesc.Resources    = Resources;
+        PRSDesc.NumResources = _countof(Resources);
+
+        constexpr ImmutableSamplerDesc ImmutableSamplers[] = //
+            {
+                {SHADER_TYPE_ALL_GRAPHICS, "g_Sampler", SamplerDesc{}} //
+            };
+        PRSDesc.ImmutableSamplers    = ImmutableSamplers;
+        PRSDesc.NumImmutableSamplers = _countof(ImmutableSamplers);
+
+        ResourceSignatureArchiveInfo ArchiveInfo;
+        ArchiveInfo.DeviceFlags = DeviceBits;
+        ASSERT_TRUE(pArchiver->AddPipelineResourceSignature(PRSDesc, ArchiveInfo));
+
+        pDevice->CreatePipelineResourceSignature(PRSDesc, &pRefPRS_1);
+        ASSERT_NE(pRefPRS_1, nullptr);
+    }
+
+    // PRS 2
+    {
+        constexpr auto VarType = SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC;
+
+        constexpr PipelineResourceDesc Resources[] = //
+            {
+                {SHADER_TYPE_COMPUTE, "g_RWTex2D", 2, SHADER_RESOURCE_TYPE_TEXTURE_UAV, VarType},
+                {SHADER_TYPE_COMPUTE, "ConstBuff", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, VarType}, //
+            };
+
+        PipelineResourceSignatureDesc PRSDesc;
+        PRSDesc.Name         = PRS2Name;
+        PRSDesc.BindingIndex = 2;
+        PRSDesc.Resources    = Resources;
+        PRSDesc.NumResources = _countof(Resources);
+
+        ResourceSignatureArchiveInfo ArchiveInfo;
+        ArchiveInfo.DeviceFlags = DeviceBits;
+        ASSERT_TRUE(pArchiver->AddPipelineResourceSignature(PRSDesc, ArchiveInfo));
+
+        pDevice->CreatePipelineResourceSignature(PRSDesc, &pRefPRS_2);
+        ASSERT_NE(pRefPRS_2, nullptr);
+    }
+
+    RefCntAutoPtr<IDataBlob> pBlob;
+    pArchiver->SerializeToBlob(&pBlob);
+    ASSERT_NE(pBlob, nullptr);
+
+    pSource = RefCntAutoPtr<IArchive>{MakeNewRCObj<ArchiveMemoryImpl>{}(pBlob)};
+}
+
+static void TestPRS(IArchive*                   pSource,
+                    IPipelineResourceSignature* pRefPRS_1,
+                    IPipelineResourceSignature* pRefPRS_2)
+{
+
     constexpr char PRS1Name[] = "PRS archive test - 1";
     constexpr char PRS2Name[] = "PRS archive test - 2";
 
-    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+    auto* pEnv        = TestingEnvironment::GetInstance();
+    auto* pDevice     = pEnv->GetDevice();
+    auto* pDearchiver = pDevice->GetEngineFactory()->GetDearchiver();
 
-    RefCntAutoPtr<IPipelineResourceSignature> pRefPRS_1;
-    RefCntAutoPtr<IPipelineResourceSignature> pRefPRS_2;
-    RefCntAutoPtr<IDeviceObjectArchive>       pArchive;
-    {
-        RefCntAutoPtr<ISerializationDevice> pSerializationDevice;
-        SerializationDeviceCreateInfo       DeviceCI;
-        pArchiverFactory->CreateSerializationDevice(DeviceCI, &pSerializationDevice);
-        ASSERT_NE(pSerializationDevice, nullptr);
-
-        RefCntAutoPtr<IArchiver> pArchiver;
-        pArchiverFactory->CreateArchiver(pSerializationDevice, &pArchiver);
-        ASSERT_NE(pArchiver, nullptr);
-
-        // PRS 1
-        {
-            constexpr auto VarType = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE;
-
-            constexpr PipelineResourceDesc Resources[] = //
-                {
-                    {SHADER_TYPE_ALL_GRAPHICS, "g_Tex2D_1", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, VarType},
-                    {SHADER_TYPE_ALL_GRAPHICS, "g_Tex2D_2", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, VarType},
-                    {SHADER_TYPE_ALL_GRAPHICS, "ConstBuff_1", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, VarType},
-                    {SHADER_TYPE_ALL_GRAPHICS, "ConstBuff_2", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, VarType}, //
-                };
-
-            PipelineResourceSignatureDesc PRSDesc;
-            PRSDesc.Name         = PRS1Name;
-            PRSDesc.BindingIndex = 0;
-            PRSDesc.Resources    = Resources;
-            PRSDesc.NumResources = _countof(Resources);
-
-            constexpr ImmutableSamplerDesc ImmutableSamplers[] = //
-                {
-                    {SHADER_TYPE_ALL_GRAPHICS, "g_Sampler", SamplerDesc{}} //
-                };
-            PRSDesc.ImmutableSamplers    = ImmutableSamplers;
-            PRSDesc.NumImmutableSamplers = _countof(ImmutableSamplers);
-
-            ResourceSignatureArchiveInfo ArchiveInfo;
-            ArchiveInfo.DeviceFlags = GetDeviceBits();
-            ASSERT_TRUE(pArchiver->AddPipelineResourceSignature(PRSDesc, ArchiveInfo));
-
-            pDevice->CreatePipelineResourceSignature(PRSDesc, &pRefPRS_1);
-            ASSERT_NE(pRefPRS_1, nullptr);
-        }
-
-        // PRS 2
-        {
-            constexpr auto VarType = SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC;
-
-            constexpr PipelineResourceDesc Resources[] = //
-                {
-                    {SHADER_TYPE_COMPUTE, "g_RWTex2D", 2, SHADER_RESOURCE_TYPE_TEXTURE_UAV, VarType},
-                    {SHADER_TYPE_COMPUTE, "ConstBuff", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, VarType}, //
-                };
-
-            PipelineResourceSignatureDesc PRSDesc;
-            PRSDesc.Name         = PRS2Name;
-            PRSDesc.BindingIndex = 2;
-            PRSDesc.Resources    = Resources;
-            PRSDesc.NumResources = _countof(Resources);
-
-            ResourceSignatureArchiveInfo ArchiveInfo;
-            ArchiveInfo.DeviceFlags = GetDeviceBits();
-            ASSERT_TRUE(pArchiver->AddPipelineResourceSignature(PRSDesc, ArchiveInfo));
-
-            pDevice->CreatePipelineResourceSignature(PRSDesc, &pRefPRS_2);
-            ASSERT_NE(pRefPRS_2, nullptr);
-        }
-
-        RefCntAutoPtr<IDataBlob> pBlob;
-        pArchiver->SerializeToBlob(&pBlob);
-        ASSERT_NE(pBlob, nullptr);
-
-        RefCntAutoPtr<IArchive> pSource{MakeNewRCObj<ArchiveMemoryImpl>{}(pBlob)};
-        pDearchiver->CreateDeviceObjectArchive(pSource, &pArchive);
-        ASSERT_NE(pArchive, nullptr);
-    }
+    RefCntAutoPtr<IDeviceObjectArchive> pArchive;
+    pDearchiver->CreateDeviceObjectArchive(pSource, &pArchive);
+    ASSERT_NE(pArchive, nullptr);
 
     // Unpack PRS 1
     {
@@ -172,11 +188,21 @@ TEST(ArchiveTest, ResourceSignature)
         UnpackInfo.pDevice                  = pDevice;
         UnpackInfo.SRBAllocationGranularity = 10;
 
+        if (pRefPRS_1 == nullptr)
+            TestingEnvironment::SetErrorAllowance(1);
+
         RefCntAutoPtr<IPipelineResourceSignature> pUnpackedPRS;
         pDearchiver->UnpackResourceSignature(UnpackInfo, &pUnpackedPRS);
-        ASSERT_NE(pUnpackedPRS, nullptr);
 
-        ASSERT_TRUE(pUnpackedPRS->IsCompatibleWith(pRefPRS_1)); // AZ TODO: names are ignored
+        if (pRefPRS_1 != nullptr)
+        {
+            ASSERT_NE(pUnpackedPRS, nullptr);
+            ASSERT_TRUE(pUnpackedPRS->IsCompatibleWith(pRefPRS_1)); // AZ TODO: names are ignored
+        }
+        else
+        {
+            ASSERT_EQ(pUnpackedPRS, nullptr);
+        }
     }
 
     // Unpack PRS 2
@@ -187,11 +213,134 @@ TEST(ArchiveTest, ResourceSignature)
         UnpackInfo.pDevice                  = pDevice;
         UnpackInfo.SRBAllocationGranularity = 10;
 
+        if (pRefPRS_2 == nullptr)
+            TestingEnvironment::SetErrorAllowance(1);
+
         RefCntAutoPtr<IPipelineResourceSignature> pUnpackedPRS;
         pDearchiver->UnpackResourceSignature(UnpackInfo, &pUnpackedPRS);
-        ASSERT_NE(pUnpackedPRS, nullptr);
 
-        ASSERT_TRUE(pUnpackedPRS->IsCompatibleWith(pRefPRS_2)); // AZ TODO: names are ignored
+        if (pRefPRS_2 != nullptr)
+        {
+            ASSERT_NE(pUnpackedPRS, nullptr);
+            ASSERT_TRUE(pUnpackedPRS->IsCompatibleWith(pRefPRS_2)); // AZ TODO: names are ignored
+        }
+        else
+        {
+            ASSERT_EQ(pUnpackedPRS, nullptr);
+        }
+    }
+}
+
+
+TEST(ArchiveTest, ResourceSignature)
+{
+    RefCntAutoPtr<IArchive>                   pArchive;
+    RefCntAutoPtr<IPipelineResourceSignature> pRefPRS_1;
+    RefCntAutoPtr<IPipelineResourceSignature> pRefPRS_2;
+    ArchivePRS(pArchive, pRefPRS_1, pRefPRS_2, GetDeviceBits());
+    TestPRS(pArchive, pRefPRS_1, pRefPRS_2);
+}
+
+
+TEST(ArchiveTest, RemoveDeviceData)
+{
+    auto* pEnv             = TestingEnvironment::GetInstance();
+    auto* pDevice          = pEnv->GetDevice();
+    auto* pArchiverFactory = pEnv->GetArchiverFactory();
+    auto* pDearchiver      = pDevice->GetEngineFactory()->GetDearchiver();
+
+    if (!pDearchiver || !pArchiverFactory)
+        GTEST_SKIP() << "Archiver library is not loaded";
+
+    const auto CurrentDeviceFlag = static_cast<RENDER_DEVICE_TYPE_FLAGS>(1u << pDevice->GetDeviceInfo().Type);
+    const auto AllDeviceFlags    = GetDeviceBits();
+
+    if ((AllDeviceFlags & ~CurrentDeviceFlag) == 0)
+        GTEST_SKIP() << "Test requires support for at least 2 backends";
+
+    RefCntAutoPtr<IArchive> pArchive1;
+    {
+        RefCntAutoPtr<IPipelineResourceSignature> pRefPRS_1;
+        RefCntAutoPtr<IPipelineResourceSignature> pRefPRS_2;
+        ArchivePRS(pArchive1, pRefPRS_1, pRefPRS_2, AllDeviceFlags);
+        TestPRS(pArchive1, pRefPRS_1, pRefPRS_2);
+    }
+
+    {
+        auto pDataBlob  = DataBlobImpl::Create(0);
+        auto pMemStream = MemoryFileStream::Create(pDataBlob);
+
+        ASSERT_TRUE(pArchiverFactory->RemoveDeviceData(pArchive1, CurrentDeviceFlag, pMemStream));
+
+        RefCntAutoPtr<IArchive> pArchive2{MakeNewRCObj<ArchiveMemoryImpl>{}(pDataBlob)};
+
+        // PRS creation must fail
+        TestPRS(pArchive2, nullptr, nullptr);
+    }
+}
+
+
+TEST(ArchiveTest, AppendDeviceData)
+{
+    auto* pEnv             = TestingEnvironment::GetInstance();
+    auto* pDevice          = pEnv->GetDevice();
+    auto* pArchiverFactory = pEnv->GetArchiverFactory();
+    auto* pDearchiver      = pDevice->GetEngineFactory()->GetDearchiver();
+
+    if (!pDearchiver || !pArchiverFactory)
+        GTEST_SKIP() << "Archiver library is not loaded";
+
+    const auto CurrentDeviceFlag = static_cast<RENDER_DEVICE_TYPE_FLAGS>(1u << pDevice->GetDeviceInfo().Type);
+    auto       AllDeviceFlags    = GetDeviceBits() & ~CurrentDeviceFlag;
+
+    if (AllDeviceFlags == 0)
+        GTEST_SKIP() << "Test requires support for at least 2 backends";
+
+    RefCntAutoPtr<IArchive> pArchive;
+    for (; AllDeviceFlags != 0;)
+    {
+        const auto DeviceFlag = ExtractLSB(AllDeviceFlags);
+
+        RefCntAutoPtr<IArchive>                   pArchive2;
+        RefCntAutoPtr<IPipelineResourceSignature> pRefPRS_1;
+        RefCntAutoPtr<IPipelineResourceSignature> pRefPRS_2;
+        ArchivePRS(pArchive2, pRefPRS_1, pRefPRS_2, DeviceFlag);
+        // PRS creation must fail
+        TestPRS(pArchive2, nullptr, nullptr);
+
+        if (pArchive != nullptr)
+        {
+            auto pDataBlob  = DataBlobImpl::Create(0);
+            auto pMemStream = MemoryFileStream::Create(pDataBlob);
+
+            // pArchive  - without DeviceFlag
+            // pArchive2 - with DeviceFlag
+            ASSERT_TRUE(pArchiverFactory->AppendDeviceData(pArchive, DeviceFlag, pArchive2, pMemStream));
+
+            pArchive = RefCntAutoPtr<IArchive>{MakeNewRCObj<ArchiveMemoryImpl>{}(pDataBlob)};
+        }
+        else
+        {
+            pArchive = pArchive2;
+        }
+    }
+
+    RefCntAutoPtr<IArchive>                   pArchive3;
+    RefCntAutoPtr<IPipelineResourceSignature> pRefPRS_1;
+    RefCntAutoPtr<IPipelineResourceSignature> pRefPRS_2;
+    ArchivePRS(pArchive3, pRefPRS_1, pRefPRS_2, CurrentDeviceFlag);
+
+    // Append device data
+    {
+        auto pDataBlob  = DataBlobImpl::Create(0);
+        auto pMemStream = MemoryFileStream::Create(pDataBlob);
+
+        // pArchive  - without CurrentDeviceFlag
+        // pArchive3 - with CurrentDeviceFlag
+        ASSERT_TRUE(pArchiverFactory->AppendDeviceData(pArchive, CurrentDeviceFlag, pArchive3, pMemStream));
+
+        pArchive = RefCntAutoPtr<IArchive>{MakeNewRCObj<ArchiveMemoryImpl>{}(pDataBlob)};
+        TestPRS(pArchive, pRefPRS_1, pRefPRS_2);
     }
 }
 

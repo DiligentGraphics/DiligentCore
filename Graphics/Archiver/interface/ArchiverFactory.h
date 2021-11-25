@@ -70,6 +70,33 @@ DILIGENT_BEGIN_INTERFACE(IArchiverFactory, IObject)
                         const Char*                              SearchDirectories,
                         struct IShaderSourceInputStreamFactory** ppShaderSourceFactory) CONST PURE;
 
+
+    /// Remove device specific data from archive and write new archive to the stream.
+    
+    /// \param [in]  pSrcArchive - Source archive from which device specific data will be removed.
+    /// \param [in]  DeviceFlags - Combination of device types which will be removed.
+    /// \param [in]  pStream     - Destination file stream.
+    VIRTUAL Bool METHOD(RemoveDeviceData)(THIS_
+                                          IArchive*                pSrcArchive,
+                                          RENDER_DEVICE_TYPE_FLAGS DeviceFlags,
+                                          IFileStream*             pStream) CONST PURE;
+
+    /// Copy device specific data from source archive to destination and write new archive to the stream.
+    
+    /// \param [in]  pSrcArchive    - Source archive to which new device specific data will be added.
+    /// \param [in]  DeviceFlags    - Combination of device types which will be copied.
+    /// \param [in]  pDeviceArchive - Archive which contains same shared data and device specific data.
+    /// \param [in]  pStream        - Destination file stream.
+    VIRTUAL Bool METHOD(AppendDeviceData)(THIS_
+                                          IArchive*                pSrcArchive,
+                                          RENDER_DEVICE_TYPE_FLAGS DeviceFlags,
+                                          IArchive*                pDeviceArchive,
+                                          IFileStream*             pStream) CONST PURE;
+    
+    /// Print archive content for debuging and validating.
+    VIRTUAL Bool METHOD(PrintArchiveContent)(THIS_
+                                             IArchive* pArchive) CONST PURE;
+
 };
 DILIGENT_END_INTERFACE
 
@@ -80,6 +107,9 @@ DILIGENT_END_INTERFACE
 #    define IArchiverFactory_CreateArchiver(This, ...)                          CALL_IFACE_METHOD(ArchiverFactory, CreateArchiver,                         This, __VA_ARGS__)
 #    define IArchiverFactory_CreateSerializationDevice(This, ...)               CALL_IFACE_METHOD(ArchiverFactory, CreateSerializationDevice,              This, __VA_ARGS__)
 #    define IArchiverFactory_CreateDefaultShaderSourceStreamFactory(This, ...)  CALL_IFACE_METHOD(ArchiverFactory, CreateDefaultShaderSourceStreamFactory, This, __VA_ARGS__)
+#    define IArchiverFactory_RemoveDeviceData(This, ...)                        CALL_IFACE_METHOD(ArchiverFactory, RemoveDeviceData,                       This, __VA_ARGS__)
+#    define IArchiverFactory_AppendDeviceData(This, ...)                        CALL_IFACE_METHOD(ArchiverFactory, AppendDeviceData,                       This, __VA_ARGS__)
+#    define IArchiverFactory_PrintArchiveContent(This, ...)                     CALL_IFACE_METHOD(ArchiverFactory, PrintArchiveContent,                    This, __VA_ARGS__)
 
 #endif
 

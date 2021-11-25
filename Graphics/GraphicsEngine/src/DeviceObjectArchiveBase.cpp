@@ -176,6 +176,18 @@ void DeviceObjectArchiveBase::ReadArchiveDebugInfo(const ChunkHeader& Chunk) noe
 template <typename ResType>
 void DeviceObjectArchiveBase::ReadNamedResources(const ChunkHeader& Chunk, TNameOffsetMap<ResType>& NameAndOffset, std::mutex& Guard) noexcept(false)
 {
+    ReadNamedResources(m_pArchive, Chunk, NameAndOffset, Guard);
+}
+
+void DeviceObjectArchiveBase::ReadNamedResources2(IArchive* pArchive, const ChunkHeader& Chunk, NameOffsetMap& NameAndOffset) noexcept(false)
+{
+    std::mutex Temp;
+    ReadNamedResources(pArchive, Chunk, NameAndOffset, Temp);
+}
+
+template <typename MapType>
+void DeviceObjectArchiveBase::ReadNamedResources(IArchive* pArchive, const ChunkHeader& Chunk, MapType& NameAndOffset, std::mutex& Guard) noexcept(false)
+{
     VERIFY_EXPR(Chunk.Type == ChunkType::ResourceSignature ||
                 Chunk.Type == ChunkType::GraphicsPipelineStates ||
                 Chunk.Type == ChunkType::ComputePipelineStates ||
@@ -183,7 +195,7 @@ void DeviceObjectArchiveBase::ReadNamedResources(const ChunkHeader& Chunk, TName
                 Chunk.Type == ChunkType::RenderPass);
 
     std::vector<Uint8> Data(Chunk.Size);
-    if (!m_pArchive->Read(Chunk.Offset, Data.size(), Data.data()))
+    if (!pArchive->Read(Chunk.Offset, Data.size(), Data.data()))
     {
         LOG_ERROR_AND_THROW("Failed to read resource list from archive");
     }
@@ -204,7 +216,7 @@ void DeviceObjectArchiveBase::ReadNamedResources(const ChunkHeader& Chunk, TName
         {
             LOG_ERROR_AND_THROW("Failed to read archive data");
         }
-        if (DataOffsetArray[i] + DataSizeArray[i] > m_pArchive->GetSize())
+        if (DataOffsetArray[i] + DataSizeArray[i] > pArchive->GetSize())
         {
             LOG_ERROR_AND_THROW("Failed to read archive data");
         }

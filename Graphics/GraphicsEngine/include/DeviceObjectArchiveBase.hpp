@@ -101,6 +101,7 @@ protected:
     static constexpr Uint32 DataPtrAlign      = sizeof(Uint64);
 
     friend class ArchiverImpl;
+    friend class ArchiveRepacker;
 
     // Archive header contains offsets for blocks.
     // Any block can be added or removed without patching all offsets in the archive,
@@ -163,6 +164,8 @@ protected:
         Uint32    Size     = 0;
         Uint32    Offset   = 0; // offset to NamedResourceArrayHeader
         Uint32    _Padding = ~0u;
+
+        bool operator==(const ChunkHeader& Rhs) const { return Type == Rhs.Type && Size == Rhs.Size && Offset == Rhs.Offset; }
     };
     CHECK_HEADER_SIZE(ChunkHeader, 16)
 
@@ -259,13 +262,15 @@ protected:
 
 #undef CHECK_HEADER_SIZE
 
+private:
     struct FileOffsetAndSize
     {
         Uint32 Offset = 0;
         Uint32 Size   = 0;
+
+        bool operator==(const FileOffsetAndSize& Rhs) const { return Offset == Rhs.Offset && Size == Rhs.Size; }
     };
 
-private:
     template <typename ResPtrType>
     struct FileOffsetAndResCache : FileOffsetAndSize
     {
@@ -277,6 +282,7 @@ private:
         {}
     };
 
+    using NameOffsetMap = std::unordered_map<HashMapStringKey, FileOffsetAndSize, HashMapStringKey::Hasher>;
     template <typename ResPtrType>
     using TNameOffsetMap = std::unordered_map<HashMapStringKey, FileOffsetAndResCache<ResPtrType>, HashMapStringKey::Hasher>;
     template <typename T>
@@ -313,6 +319,9 @@ private:
     const DeviceType        m_DevType;
     TBlockBaseOffsets       m_BaseOffsets = {};
 
+    template <typename MapType>
+    static void ReadNamedResources(IArchive* pArchive, const ChunkHeader& Chunk, MapType& NameAndOffset, std::mutex& Guard) noexcept(false);
+    static void ReadNamedResources2(IArchive* pArchive, const ChunkHeader& Chunk, NameOffsetMap& NameAndOffset) noexcept(false);
     template <typename ResType>
     void ReadNamedResources(const ChunkHeader& Chunk, TNameOffsetMap<ResType>& NameAndOffset, std::mutex& Guard) noexcept(false);
     void ReadIndexedResources(const ChunkHeader& Chunk, TShaderOffsetAndCache& Resources, std::mutex& Guard) noexcept(false);

@@ -4,6 +4,7 @@ project(Diligent-Archiver CXX)
 
 set(INCLUDE
     include/ArchiverImpl.hpp
+    include/ArchiveRepacker.hpp
     include/SerializationDeviceImpl.hpp
     include/SerializableShaderImpl.hpp
     include/SerializableRenderPassImpl.hpp
@@ -22,6 +23,7 @@ set(SOURCE
     src/ArchiverImpl.cpp
     src/Archiver_Inc.hpp
     src/ArchiverFactory.cpp
+    src/ArchiveRepacker.cpp
     src/SerializationDeviceImpl.cpp
     src/SerializableShaderImpl.cpp
     src/SerializableResourceSignatureImpl.cpp
