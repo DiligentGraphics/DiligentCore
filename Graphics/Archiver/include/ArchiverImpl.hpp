@@ -122,7 +122,7 @@ private:
         RefCntAutoPtr<SerializableResourceSignatureImpl> pPRS;
 
         const SerializedMemory& GetSharedData() const;
-        const SerializedMemory& GetDeviceData(Uint32 Idx) const;
+        const SerializedMemory& GetDeviceData(DeviceType Type) const;
     };
     TNamedObjectHashMap<PRSData> m_PRSMap;
 
@@ -195,23 +195,22 @@ private:
     TNamedObjectHashMap<TilePSOData>       m_TilePSOMap;
     TNamedObjectHashMap<RayTracingPSOData> m_RayTracingPSOMap;
 
-    SerializationDeviceImpl* const m_pSerializationDevice;
+    RefCntAutoPtr<SerializationDeviceImpl> m_pSerializationDevice;
 
 private:
-    using TChunkData      = FixedLinearAllocator;
-    using TChunkDataArray = std::array<TChunkData, ChunkCount>;
+    using TDataElement = FixedLinearAllocator;
     struct PendingData
     {
-        std::vector<Uint8>                              HeaderData;                   // ArchiveHeader, ChunkHeader[]
-        TChunkDataArray                                 ChunkData;                    // NamedResourceArrayHeader
-        std::array<Uint32*, ChunkCount>                 DataOffsetArrayPerChunk = {}; // pointer to NamedResourceArrayHeader::DataOffset - offsets to ***DataHeader
-        std::array<Uint32, ChunkCount>                  ResourceCountPerChunk   = {}; //
-        std::vector<Uint8>                              SharedData;                   // ***DataHeader
-        std::array<std::vector<Uint8>, DeviceDataCount> PerDeviceData;                // device specific data
-        size_t                                          OffsetInFile = 0;
+        TDataElement                              HeaderData;                   // ArchiveHeader, ChunkHeader[]
+        std::array<TDataElement, ChunkCount>      ChunkData;                    // NamedResourceArrayHeader
+        std::array<Uint32*, ChunkCount>           DataOffsetArrayPerChunk = {}; // pointer to NamedResourceArrayHeader::DataOffset - offsets to ***DataHeader
+        std::array<Uint32, ChunkCount>            ResourceCountPerChunk   = {}; //
+        TDataElement                              SharedData;                   // ***DataHeader
+        std::array<TDataElement, DeviceDataCount> PerDeviceData;                // device specific data
+        size_t                                    OffsetInFile = 0;
     };
 
-    void ReserveSpace(size_t& SharedDataSize, std::array<size_t, DeviceDataCount>& PerDeviceDataSize) const;
+    void ReserveSpace(PendingData& Pending) const;
     void WriteDebugInfo(PendingData& Pending) const;
     void WriteResourceSignatureData(PendingData& Pending) const;
     void WriteShaderData(PendingData& Pending) const;
@@ -257,9 +256,9 @@ private:
     SerializedMemory SerializeShadersForPSO(const TShaderIndices& ShaderIndices) const;
 
     template <typename MapType>
-    static TChunkData InitNamedResourceArrayHeader(const MapType& Map,
-                                                   Uint32*&       DataSizeArray,
-                                                   Uint32*&       DataOffsetArray);
+    static TDataElement InitNamedResourceArrayHeader(const MapType& Map,
+                                                     Uint32*&       DataSizeArray,
+                                                     Uint32*&       DataOffsetArray);
 
     bool AddPipelineResourceSignature(IPipelineResourceSignature* pPRS);
     bool CachePipelineResourceSignature(RefCntAutoPtr<IPipelineResourceSignature>& pPRS);

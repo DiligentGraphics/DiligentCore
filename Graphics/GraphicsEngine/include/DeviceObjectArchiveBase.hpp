@@ -133,12 +133,15 @@ protected:
         TBlockBaseOffsets BlockBaseOffsets = {};
         Uint32            NumChunks        = 0;
         //ChunkHeader     Chunks  [NumChunks]
+        Uint32 _Padding = ~0u;
     };
-    static_assert(sizeof(ArchiveHeader) == 36, "Archive header size must be 36 bytes");
+    static_assert(sizeof(ArchiveHeader) % 8 == 0, "Archive header size must be a multiple of 8. Use padding to align it.");
+    static_assert(sizeof(ArchiveHeader) == 40, "Archive header size must be 40. Reading binary archive will result in invalid memory access.");
 
     enum class ChunkType : Uint32
     {
-        ArchiveDebugInfo = 1,
+        Undefined = 0,
+        ArchiveDebugInfo,
         ResourceSignature,
         GraphicsPipelineStates,
         ComputePipelineStates,
@@ -152,19 +155,25 @@ protected:
 
     struct ChunkHeader
     {
-        ChunkType Type   = ChunkType::Count;
-        Uint32    Size   = 0;
-        Uint32    Offset = 0; // offset to NamedResourceArrayHeader
+        ChunkType Type     = ChunkType::Undefined;
+        Uint32    Size     = 0;
+        Uint32    Offset   = 0; // offset to NamedResourceArrayHeader
+        Uint32    _Padding = ~0u;
     };
+    static_assert(sizeof(ChunkHeader) % 8 == 0, "Chunk header size must be a multiple of 8. Use padding to align it.");
+    static_assert(sizeof(ChunkHeader) == 16, "Chunk header size must be 16. Reading binary archive will result in invalid memory access.");
 
     struct NamedResourceArrayHeader
     {
-        Uint32 Count;
+        Uint32 Count = 0;
         //Uint32 NameLength    [Count]
         //Uint32 ***DataSize   [Count]
         //Uint32 ***DataOffset [Count] // for PRSDataHeader / PSODataHeader
         //char   NameData      []
+        Uint32 _Padding = ~0u;
     };
+    static_assert(sizeof(NamedResourceArrayHeader) % 8 == 0, "Named resource array header size must be a multiple of 8. Use padding to align it.");
+    static_assert(sizeof(NamedResourceArrayHeader) == 8, "Named resource array header size must be 8. Reading binary archive will result in invalid memory access.");
 
     struct BaseDataHeader
     {
@@ -175,6 +184,7 @@ protected:
         ChunkType   Type;
         Uint32Array DeviceSpecificDataSize;
         Uint32Array DeviceSpecificDataOffset;
+        Uint32      _Padding;
 
         Uint32 GetSize(DeviceType DevType) const { return DeviceSpecificDataSize[static_cast<size_t>(DevType)]; }
         Uint32 GetOffset(DeviceType DevType) const { return DeviceSpecificDataOffset[static_cast<size_t>(DevType)]; }
@@ -185,25 +195,39 @@ protected:
         void SetSize(DeviceType DevType, Uint32 Size) { DeviceSpecificDataSize[static_cast<size_t>(DevType)] = Size; }
         void SetOffset(DeviceType DevType, Uint32 Offset) { DeviceSpecificDataOffset[static_cast<size_t>(DevType)] = Offset; }
     };
+    static_assert(sizeof(BaseDataHeader) % 8 == 0, "Base data header size must be a multiple of 8. Use padding to align it.");
+    static_assert(sizeof(BaseDataHeader) == 56, "Base data header size must be 56. Reading binary archive will result in invalid memory access.");
 
     struct PRSDataHeader : BaseDataHeader
     {
         //PipelineResourceSignatureDesc
         //PipelineResourceSignatureSerializedData
     };
+    static_assert(sizeof(PRSDataHeader) % 8 == 0, "PRS data header size must be a multiple of 8. Use padding to align it.");
+    static_assert(sizeof(PRSDataHeader) == 56, "PRS header size must be 56. Reading binary archive will result in invalid memory access.");
+
 
     struct PSODataHeader : BaseDataHeader
     {
         //GraphicsPipelineStateCreateInfo | ComputePipelineStateCreateInfo | TilePipelineStateCreateInfo | RayTracingPipelineStateCreateInfo
     };
+    static_assert(sizeof(PSODataHeader) % 8 == 0, "PSO data header size must be a multiple of 8. Use padding to align it.");
+    static_assert(sizeof(PSODataHeader) == 56, "PSO header size must be 56. Reading binary archive will result in invalid memory access.");
 
     struct ShadersDataHeader : BaseDataHeader
     {};
+    static_assert(sizeof(ShadersDataHeader) % 8 == 0, "Shader data header size must be a multiple of 8. Use padding to align it.");
+    static_assert(sizeof(ShadersDataHeader) == 56, "Shader data header size must be 56. Reading binary archive will result in invalid memory access.");
+
 
     struct RPDataHeader
     {
         ChunkType Type;
+        Uint32    _Padding1;
     };
+    static_assert(sizeof(RPDataHeader) % 8 == 0, "Render pass data header size must be a multiple of 8. Use padding to align it.");
+    static_assert(sizeof(RPDataHeader) == 8, "Render pass data header size must be 8. Reading binary archive will result in invalid memory access.");
+
 
     struct FileOffsetAndSize
     {

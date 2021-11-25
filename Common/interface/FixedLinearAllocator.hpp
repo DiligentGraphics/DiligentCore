@@ -123,6 +123,13 @@ public:
         return m_pDataStart;
     }
 
+    template <typename Type>
+    NODISCARD Type* GetDataPtr() const noexcept
+    {
+        VERIFY(AlignDown(m_pDataStart, alignof(Type)) == m_pDataStart, "Data pointer is not aligned for the requested type");
+        return reinterpret_cast<Type*>(m_pDataStart);
+    }
+
     void AddSpace(size_t size, size_t alignment = 1) noexcept
     {
         VERIFY(m_pDataStart == nullptr, "Memory has already been allocated");
