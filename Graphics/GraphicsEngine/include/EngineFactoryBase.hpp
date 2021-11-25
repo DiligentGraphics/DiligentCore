@@ -34,6 +34,7 @@
 #include "EngineFactory.h"
 #include "DefaultShaderSourceStreamFactory.h"
 #include "Atomics.hpp"
+#include "DummyReferenceCounters.hpp"
 
 namespace Diligent
 {
@@ -102,60 +103,8 @@ public:
     }
 
 private:
-    class DummyReferenceCounters final : public IReferenceCounters
-    {
-    public:
-        DummyReferenceCounters(EngineFactoryBase& Factory) noexcept :
-            m_Factory{Factory}
-        {
-            m_lNumStrongReferences = 0;
-            m_lNumWeakReferences   = 0;
-        }
-
-        virtual ReferenceCounterValueType AddStrongRef() override final
-        {
-            return Atomics::AtomicIncrement(m_lNumStrongReferences);
-        }
-
-        virtual ReferenceCounterValueType ReleaseStrongRef() override final
-        {
-            return Atomics::AtomicDecrement(m_lNumStrongReferences);
-        }
-
-        virtual ReferenceCounterValueType AddWeakRef() override final
-        {
-            return Atomics::AtomicIncrement(m_lNumWeakReferences);
-        }
-
-        virtual ReferenceCounterValueType ReleaseWeakRef() override final
-        {
-            return Atomics::AtomicDecrement(m_lNumWeakReferences);
-        }
-
-        virtual void GetObject(IObject** ppObject) override final
-        {
-            if (ppObject != nullptr)
-                m_Factory.QueryInterface(IID_Unknown, ppObject);
-        }
-
-        virtual ReferenceCounterValueType GetNumStrongRefs() const override final
-        {
-            return m_lNumStrongReferences;
-        }
-
-        virtual ReferenceCounterValueType GetNumWeakRefs() const override final
-        {
-            return m_lNumWeakReferences;
-        }
-
-    private:
-        EngineFactoryBase&  m_Factory;
-        Atomics::AtomicLong m_lNumStrongReferences;
-        Atomics::AtomicLong m_lNumWeakReferences;
-    };
-
-    const INTERFACE_ID     m_FactoryIID;
-    DummyReferenceCounters m_RefCounters;
+    const INTERFACE_ID                        m_FactoryIID;
+    DummyReferenceCounters<EngineFactoryBase> m_RefCounters;
 };
 
 } // namespace Diligent

@@ -15,6 +15,7 @@ set(INTERFACE
     interface/BasicFileStream.hpp
     interface/DataBlobImpl.hpp
     interface/DefaultRawMemoryAllocator.hpp
+    interface/DummyReferenceCounters.hpp
     interface/FastRand.hpp
     interface/FileWrapper.hpp
     interface/FilteringTools.hpp

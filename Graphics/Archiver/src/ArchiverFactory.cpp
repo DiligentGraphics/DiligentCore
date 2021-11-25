@@ -31,6 +31,7 @@
 // defined in Windows.h
 #undef GetObject
 
+#include "DummyReferenceCounters.hpp"
 #include "ArchiverImpl.hpp"
 #include "SerializationDeviceImpl.hpp"
 #include "EngineMemory.h"
@@ -129,60 +130,7 @@ public:
     }
 
 private:
-    // AZ TODO: move to separate file
-    class DummyReferenceCounters final : public IReferenceCounters
-    {
-    public:
-        DummyReferenceCounters(ArchiverFactoryImpl& Factory) noexcept :
-            m_Factory{Factory}
-        {
-            m_lNumStrongReferences = 0;
-            m_lNumWeakReferences   = 0;
-        }
-
-        virtual ReferenceCounterValueType AddStrongRef() override final
-        {
-            return Atomics::AtomicIncrement(m_lNumStrongReferences);
-        }
-
-        virtual ReferenceCounterValueType ReleaseStrongRef() override final
-        {
-            return Atomics::AtomicDecrement(m_lNumStrongReferences);
-        }
-
-        virtual ReferenceCounterValueType AddWeakRef() override final
-        {
-            return Atomics::AtomicIncrement(m_lNumWeakReferences);
-        }
-
-        virtual ReferenceCounterValueType ReleaseWeakRef() override final
-        {
-            return Atomics::AtomicDecrement(m_lNumWeakReferences);
-        }
-
-        virtual void GetObject(IObject** ppObject) override final
-        {
-            if (ppObject != nullptr)
-                m_Factory.QueryInterface(IID_Unknown, ppObject);
-        }
-
-        virtual ReferenceCounterValueType GetNumStrongRefs() const override final
-        {
-            return m_lNumStrongReferences;
-        }
-
-        virtual ReferenceCounterValueType GetNumWeakRefs() const override final
-        {
-            return m_lNumWeakReferences;
-        }
-
-    private:
-        ArchiverFactoryImpl& m_Factory;
-        Atomics::AtomicLong  m_lNumStrongReferences{0};
-        Atomics::AtomicLong  m_lNumWeakReferences{0};
-    };
-
-    DummyReferenceCounters m_RefCounters;
+    DummyReferenceCounters<ArchiverFactoryImpl> m_RefCounters;
 };
 
 } // namespace
