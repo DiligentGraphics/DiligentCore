@@ -31,6 +31,7 @@
 /// Defines Diligent::FixedLinearAllocator class
 
 #include <vector>
+#include <cstring>
 
 #include "../../Primitives/interface/BasicTypes.h"
 #include "../../Primitives/interface/MemoryAllocator.h"
@@ -262,6 +263,13 @@ public:
     NODISCARD T* Copy(const T& Src)
     {
         return Construct<T>(Src);
+    }
+
+    void* Copy(void* Src, size_t size, size_t alignment = 1)
+    {
+        auto* Dst = Allocate(size, alignment);
+        std::memcpy(Dst, Src, size);
+        return Dst;
     }
 
     template <typename T, typename ArgType>

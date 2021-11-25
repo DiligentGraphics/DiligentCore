@@ -65,12 +65,12 @@ ArchiverImpl::TDataElement ArchiverImpl::InitNamedResourceArrayHeader(const MapT
 
     ChunkData.Reserve();
 
-    auto& Header = *ChunkData.Construct<NamedResourceArrayHeader>();
-    Header.Count = StaticCast<Uint32>(Count);
+    auto& Header = *ChunkData.Construct<NamedResourceArrayHeader>(StaticCast<Uint32>(Count));
+    VERIFY_EXPR(Header.Count == Count);
 
-    auto* NameLengthArray = ChunkData.Allocate<Uint32>(Count);
-    DataSizeArray         = ChunkData.Allocate<Uint32>(Count);
-    DataOffsetArray       = ChunkData.ConstructArray<Uint32>(Count, 0u); // will be initialized later
+    auto* NameLengthArray = ChunkData.ConstructArray<Uint32>(Count);
+    DataSizeArray         = ChunkData.ConstructArray<Uint32>(Count);
+    DataOffsetArray       = ChunkData.ConstructArray<Uint32>(Count); // will be initialized later
 
     Uint32 i = 0;
     for (const auto& NameAndData : Map)
@@ -225,9 +225,7 @@ HeaderType* WriteHeader(ArchiverImpl::ChunkType     Type,
     DstOffset = StaticCast<Uint32>(reinterpret_cast<const Uint8*>(pHeader) - DstChunk.GetDataPtr<const Uint8>());
     // DeviceSpecificDataSize & DeviceSpecificDataOffset will be initialized later
 
-    auto* const pDst = DstChunk.Allocate(SrcMem.Size());
-    std::memcpy(pDst, SrcMem.Ptr(), SrcMem.Size());
-
+    DstChunk.Copy(SrcMem.Ptr(), SrcMem.Size());
     DstArraySize += sizeof(*pHeader);
 
     return pHeader;
@@ -242,11 +240,10 @@ void WritePerDeviceData(HeaderType&                 Header,
     if (!SrcMem)
         return;
 
-    auto*      pDst   = DstChunk.Allocate(SrcMem.Size());
-    const auto Offset = reinterpret_cast<const Uint8*>(pDst) - DstChunk.GetDataPtr<const Uint8>();
+    auto* const pDst   = DstChunk.Copy(SrcMem.Ptr(), SrcMem.Size());
+    const auto  Offset = reinterpret_cast<const Uint8*>(pDst) - DstChunk.GetDataPtr<const Uint8>();
     Header.SetSize(Type, StaticCast<Uint32>(SrcMem.Size()));
     Header.SetOffset(Type, StaticCast<Uint32>(Offset));
-    std::memcpy(pDst, SrcMem.Ptr(), SrcMem.Size());
 }
 
 void ArchiverImpl::WriteResourceSignatureData(PendingData& Pending) const
@@ -370,8 +367,7 @@ void ArchiverImpl::WriteShaderData(PendingData& Pending) const
         for (auto& Sh : Shaders.List)
         {
             const auto& Src  = *Sh.Mem;
-            auto* const pDst = Dst.Allocate(Src.Size());
-            std::memcpy(pDst, Src.Ptr(), Src.Size());
+            auto* const pDst = Dst.Copy(Src.Ptr(), Src.Size());
 
             pOffsetAndSize->Offset = StaticCast<Uint32>(reinterpret_cast<const Uint8*>(pDst) - Dst.GetDataPtr<const Uint8>());
             pOffsetAndSize->Size   = StaticCast<Uint32>(Src.Size());
