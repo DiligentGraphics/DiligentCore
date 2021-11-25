@@ -53,7 +53,7 @@ ArchiverImpl::TDataElement ArchiverImpl::InitNamedResourceArrayHeader(const MapT
 
     VERIFY_EXPR(!Map.empty());
 
-    const Uint32 Count = static_cast<Uint32>(Map.size());
+    const auto Count = Map.size();
 
     ChunkData.AddSpace<NamedResourceArrayHeader>();
     ChunkData.AddSpace<Uint32>(Count); // NameLength
@@ -66,7 +66,7 @@ ArchiverImpl::TDataElement ArchiverImpl::InitNamedResourceArrayHeader(const MapT
     ChunkData.Reserve();
 
     auto& Header = *ChunkData.Construct<NamedResourceArrayHeader>();
-    Header.Count = Count;
+    Header.Count = StaticCast<Uint32>(Count);
 
     auto* NameLengthArray = ChunkData.Allocate<Uint32>(Count);
     DataSizeArray         = ChunkData.Allocate<Uint32>(Count);
@@ -130,16 +130,17 @@ void ArchiverImpl::ReserveSpace(PendingData& Pending) const
         DeviceData = TDataElement{GetRawAllocator()};
 
     // Reserve space for shaders
-    for (Uint32 dev = 0; dev < DeviceDataCount; ++dev)
+    for (Uint32 type = 0; type < DeviceDataCount; ++type)
     {
-        const auto& Shaders = m_Shaders[dev];
+        const auto& Shaders = m_Shaders[type];
         if (Shaders.List.empty())
             continue;
 
-        PerDeviceData[dev].AddSpace<FileOffsetAndSize>(Shaders.List.size());
+        auto& DeviceData = PerDeviceData[type];
+        DeviceData.AddSpace<FileOffsetAndSize>(Shaders.List.size());
         for (const auto& Sh : Shaders.List)
         {
-            PerDeviceData[dev].AddSpace(Sh.Mem->Size());
+            DeviceData.AddSpace(Sh.Mem->Size());
         }
     }
 
@@ -175,10 +176,10 @@ void ArchiverImpl::ReserveSpace(PendingData& Pending) const
             SharedData.AddSpace<PSODataHeader>();
             SharedData.AddSpace(PSO.second.SharedData.Size());
 
-            for (Uint32 dev = 0; dev < DeviceDataCount; ++dev)
+            for (Uint32 type = 0; type < DeviceDataCount; ++type)
             {
-                const auto& Src = PSO.second.PerDeviceData[dev];
-                PerDeviceData[dev].AddSpace(Src.Size());
+                const auto& Src = PSO.second.PerDeviceData[type];
+                PerDeviceData[type].AddSpace(Src.Size());
             }
         }
     };
@@ -230,12 +231,10 @@ void ArchiverImpl::WriteResourceSignatureData(PendingData& Pending) const
     Uint32 j = 0;
     for (const auto& PRS : m_PRSMap)
     {
-        auto* pHeader      = SharedData.Construct<PRSDataHeader>();
+        auto* pHeader      = SharedData.Construct<PRSDataHeader>(ChunkType::ResourceSignature);
         DataOffsetArray[j] = StaticCast<Uint32>(reinterpret_cast<const Uint8*>(pHeader) - SharedData.GetDataPtr<const Uint8>());
 
-        pHeader->Type = ChunkType::ResourceSignature;
         // DeviceSpecificDataSize & DeviceSpecificDataOffset will be initialized later
-        pHeader->InitOffsets();
 
         {
             // Copy PipelineResourceSignatureDesc & PipelineResourceSignatureSerializedData
@@ -283,8 +282,7 @@ void ArchiverImpl::WriteRenderPassData(PendingData& Pending) const
     {
         // Write shared data
         {
-            auto* pHeader      = Pending.SharedData.Construct<RPDataHeader>();
-            pHeader->Type      = ChunkType::RenderPass;
+            auto* pHeader      = Pending.SharedData.Construct<RPDataHeader>(ChunkType::RenderPass);
             DataOffsetArray[j] = StaticCast<Uint32>(reinterpret_cast<const Uint8*>(pHeader) - reinterpret_cast<const Uint8*>(Pending.SharedData.GetDataPtr()));
 
             const auto& Src  = RP.second.GetSharedData();
@@ -313,10 +311,10 @@ void ArchiverImpl::WritePSOData(PendingData& Pending, TNamedObjectHashMap<PSOTyp
     Uint32 j = 0;
     for (auto& PSO : PSOMap)
     {
-        auto* pHeader = Pending.SharedData.Construct<PSODataHeader>();
-        pHeader->Type = PSOChunkType;
+        auto* pHeader = Pending.SharedData.Construct<PSODataHeader>(PSOChunkType);
+        VERIFY_EXPR(pHeader->Type == PSOChunkType);
         // DeviceSpecificDataSize & DeviceSpecificDataOffset will be initialized later
-        pHeader->InitOffsets();
+
         DataOffsetArray[j] = StaticCast<Uint32>(reinterpret_cast<const Uint8*>(pHeader) - Pending.SharedData.GetDataPtr<const Uint8>());
 
         // write shared data
@@ -364,9 +362,7 @@ void ArchiverImpl::WriteShaderData(PendingData& Pending) const
         Chunk.AddSpace<ShadersDataHeader>();
         Chunk.Reserve();
 
-        auto& Header = *Chunk.Construct<ShadersDataHeader>();
-        Header.Type  = ChunkType::Shaders;
-        Header.InitOffsets();
+        auto& Header    = *Chunk.Construct<ShadersDataHeader>(ChunkType::Shaders);
         DataSizeArray   = Header.DeviceSpecificDataSize.data();
         DataOffsetArray = Header.DeviceSpecificDataOffset.data();
 
@@ -606,7 +602,7 @@ Bool ArchiverImpl::AddPipelineResourceSignature(const PipelineResourceSignatureD
     return AddPipelineResourceSignature(pPRS);
 }
 
-String ArchiverImpl::UniquePRSName()
+String ArchiverImpl::UniquePRSName() const
 {
     String       PRSName = "Default PRS - ";
     const size_t Pos     = PRSName.length();
@@ -629,7 +625,11 @@ const SerializedMemory& ArchiverImpl::RPData::GetSharedData() const
     return pRP->GetSharedSerializedMemory();
 }
 
-void ArchiverImpl::SerializeShaderBytecode(TShaderIndices& ShaderIndices, DeviceType DevType, const ShaderCreateInfo& CI, const void* Bytecode, size_t BytecodeSize)
+void ArchiverImpl::SerializeShaderBytecode(TShaderIndices&         ShaderIndices,
+                                           DeviceType              DevType,
+                                           const ShaderCreateInfo& CI,
+                                           const void*             Bytecode,
+                                           size_t                  BytecodeSize)
 {
     auto&                        Shaders        = m_Shaders[static_cast<Uint32>(DevType)];
     const SHADER_SOURCE_LANGUAGE SourceLanguage = SHADER_SOURCE_LANGUAGE_DEFAULT;

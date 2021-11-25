@@ -181,16 +181,21 @@ protected:
 
         static constexpr Uint32 InvalidOffset = ~0u;
 
-        ChunkType   Type;
-        Uint32Array DeviceSpecificDataSize;
-        Uint32Array DeviceSpecificDataOffset;
-        Uint32      _Padding;
+        BaseDataHeader(ChunkType _Type) noexcept :
+            Type{_Type}
+        {
+            DeviceSpecificDataOffset.fill(Uint32{InvalidOffset});
+        }
+
+        const ChunkType Type      = ChunkType::Undefined;
+        const Uint32    _Padding0 = ~0u;
+
+        Uint32Array DeviceSpecificDataSize{};
+        Uint32Array DeviceSpecificDataOffset{};
 
         Uint32 GetSize(DeviceType DevType) const { return DeviceSpecificDataSize[static_cast<size_t>(DevType)]; }
         Uint32 GetOffset(DeviceType DevType) const { return DeviceSpecificDataOffset[static_cast<size_t>(DevType)]; }
         Uint32 GetEndOffset(DeviceType DevType) const { return GetOffset(DevType) + GetSize(DevType); }
-
-        void InitOffsets() { DeviceSpecificDataOffset.fill(Uint32{InvalidOffset}); }
 
         void SetSize(DeviceType DevType, Uint32 Size) { DeviceSpecificDataSize[static_cast<size_t>(DevType)] = Size; }
         void SetOffset(DeviceType DevType, Uint32 Offset) { DeviceSpecificDataOffset[static_cast<size_t>(DevType)] = Offset; }
@@ -200,6 +205,11 @@ protected:
 
     struct PRSDataHeader : BaseDataHeader
     {
+        PRSDataHeader(ChunkType _Type) noexcept :
+            BaseDataHeader{_Type}
+        {
+            VERIFY_EXPR(Type == ChunkType::ResourceSignature);
+        }
         //PipelineResourceSignatureDesc
         //PipelineResourceSignatureSerializedData
     };
@@ -209,21 +219,42 @@ protected:
 
     struct PSODataHeader : BaseDataHeader
     {
+        PSODataHeader(ChunkType _Type) noexcept :
+            BaseDataHeader{_Type}
+        {
+            VERIFY_EXPR((Type == ChunkType::GraphicsPipelineStates ||
+                         Type == ChunkType::ComputePipelineStates ||
+                         Type == ChunkType::RayTracingPipelineStates ||
+                         Type == ChunkType::TilePipelineStates));
+        }
+
         //GraphicsPipelineStateCreateInfo | ComputePipelineStateCreateInfo | TilePipelineStateCreateInfo | RayTracingPipelineStateCreateInfo
     };
     static_assert(sizeof(PSODataHeader) % 8 == 0, "PSO data header size must be a multiple of 8. Use padding to align it.");
     static_assert(sizeof(PSODataHeader) == 56, "PSO header size must be 56. Reading binary archive will result in invalid memory access.");
 
     struct ShadersDataHeader : BaseDataHeader
-    {};
+    {
+        ShadersDataHeader(ChunkType _Type = ChunkType::Shaders) noexcept :
+            BaseDataHeader{_Type}
+        {
+            VERIFY_EXPR(Type == ChunkType::Shaders);
+        }
+    };
     static_assert(sizeof(ShadersDataHeader) % 8 == 0, "Shader data header size must be a multiple of 8. Use padding to align it.");
     static_assert(sizeof(ShadersDataHeader) == 56, "Shader data header size must be 56. Reading binary archive will result in invalid memory access.");
 
 
     struct RPDataHeader
     {
-        ChunkType Type;
-        Uint32    _Padding1;
+        RPDataHeader(ChunkType _Type) noexcept :
+            Type{_Type}
+        {
+            VERIFY_EXPR(Type == ChunkType::RenderPass);
+        }
+
+        const ChunkType Type      = ChunkType::RenderPass;
+        const Uint32    _Padding1 = ~0u;
     };
     static_assert(sizeof(RPDataHeader) % 8 == 0, "Render pass data header size must be a multiple of 8. Use padding to align it.");
     static_assert(sizeof(RPDataHeader) == 8, "Render pass data header size must be 8. Reading binary archive will result in invalid memory access.");
@@ -231,8 +262,8 @@ protected:
 
     struct FileOffsetAndSize
     {
-        Uint32 Offset;
-        Uint32 Size;
+        Uint32 Offset = 0;
+        Uint32 Size   = 0;
     };
 
 private:

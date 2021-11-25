@@ -227,8 +227,15 @@ private:
                       const CreateInfoType&                          PSOCreateInfo,
                       const PipelineStateArchiveInfo&                ArchiveInfo) noexcept;
 
-    void SerializeShaderBytecode(TShaderIndices& ShaderIndices, DeviceType DevType, const ShaderCreateInfo& CI, const void* Bytecode, size_t BytecodeSize);
-    void SerializeShaderSource(TShaderIndices& ShaderIndices, DeviceType DevType, const ShaderCreateInfo& CI);
+    void SerializeShaderBytecode(TShaderIndices&         ShaderIndices,
+                                 DeviceType              DevType,
+                                 const ShaderCreateInfo& CI,
+                                 const void*             Bytecode,
+                                 size_t                  BytecodeSize);
+
+    void SerializeShaderSource(TShaderIndices&         ShaderIndices,
+                               DeviceType              DevType,
+                               const ShaderCreateInfo& CI);
 
     struct DefaultPRSInfo
     {
@@ -267,7 +274,7 @@ private:
     template <SerializerMode Mode>
     void SerializeDebugInfo(Serializer<Mode>& Ser) const;
 
-    String UniquePRSName();
+    String UniquePRSName() const;
 
     template <typename FnType>
     bool CreateDefaultResourceSignature(DefaultPRSInfo& DefPRS, const FnType& CreatePRS);
