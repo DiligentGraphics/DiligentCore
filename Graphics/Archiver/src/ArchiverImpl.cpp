@@ -45,16 +45,21 @@ ArchiverImpl::~ArchiverImpl()
 }
 
 template <typename MapType>
-ArchiverImpl::TDataElement ArchiverImpl::InitNamedResourceArrayHeader(const MapType& Map,
-                                                                      Uint32*&       DataSizeArray,
-                                                                      Uint32*&       DataOffsetArray)
+Uint32* ArchiverImpl::InitNamedResourceArrayHeader(ChunkType      Type,
+                                                   const MapType& Map,
+                                                   PendingData&   Pending)
 {
-    ArchiverImpl::TDataElement ChunkData{GetRawAllocator()};
-
     VERIFY_EXPR(!Map.empty());
 
-    const auto Count = Map.size();
+    const auto ChunkInd = static_cast<size_t>(Type);
 
+    auto& DataOffsetArray = Pending.DataOffsetArrayPerChunk[ChunkInd];
+    auto& ChunkData       = Pending.ChunkData[ChunkInd];
+    auto& Count           = Pending.ResourceCountPerChunk[ChunkInd];
+
+    Count = StaticCast<Uint32>(Map.size());
+
+    ChunkData = TDataElement{GetRawAllocator()};
     ChunkData.AddSpace<NamedResourceArrayHeader>();
     ChunkData.AddSpace<Uint32>(Count); // NameLength
     ChunkData.AddSpace<Uint32>(Count); // ***DataSize
@@ -65,11 +70,11 @@ ArchiverImpl::TDataElement ArchiverImpl::InitNamedResourceArrayHeader(const MapT
 
     ChunkData.Reserve();
 
-    auto& Header = *ChunkData.Construct<NamedResourceArrayHeader>(StaticCast<Uint32>(Count));
+    auto& Header = *ChunkData.Construct<NamedResourceArrayHeader>(Count);
     VERIFY_EXPR(Header.Count == Count);
 
     auto* NameLengthArray = ChunkData.ConstructArray<Uint32>(Count);
-    DataSizeArray         = ChunkData.ConstructArray<Uint32>(Count);
+    auto* DataSizeArray   = ChunkData.ConstructArray<Uint32>(Count);
     DataOffsetArray       = ChunkData.ConstructArray<Uint32>(Count); // will be initialized later
 
     Uint32 i = 0;
@@ -86,7 +91,7 @@ ArchiverImpl::TDataElement ArchiverImpl::InitNamedResourceArrayHeader(const MapT
         ++i;
     }
 
-    return ChunkData;
+    return DataSizeArray;
 }
 
 Bool ArchiverImpl::SerializeToBlob(IDataBlob** ppBlob)
@@ -251,17 +256,14 @@ void ArchiverImpl::WriteResourceSignatureData(PendingData& Pending) const
     if (m_PRSMap.empty())
         return;
 
-    const auto ChunkInd        = static_cast<size_t>(ChunkType::ResourceSignature);
-    auto&      DataOffsetArray = Pending.DataOffsetArrayPerChunk[ChunkInd];
-    Uint32*    DataSizeArray   = nullptr;
-
-    Pending.ChunkData[ChunkInd]             = InitNamedResourceArrayHeader(m_PRSMap, DataSizeArray, DataOffsetArray);
-    Pending.ResourceCountPerChunk[ChunkInd] = StaticCast<Uint32>(m_PRSMap.size());
+    auto* DataSizeArray   = InitNamedResourceArrayHeader(ChunkType::ResourceSignature, m_PRSMap, Pending);
+    auto* DataOffsetArray = Pending.DataOffsetArrayPerChunk[static_cast<size_t>(ChunkType::ResourceSignature)];
 
     Uint32 j = 0;
     for (const auto& PRS : m_PRSMap)
     {
-        auto* pHeader = WriteHeader<PRSDataHeader>(ChunkType::ResourceSignature, PRS.second.GetSharedData(), Pending.SharedData, DataOffsetArray[j], DataSizeArray[j]);
+        auto* pHeader = WriteHeader<PRSDataHeader>(ChunkType::ResourceSignature, PRS.second.GetSharedData(), Pending.SharedData,
+                                                   DataOffsetArray[j], DataSizeArray[j]);
 
         for (Uint32 type = 0; type < DeviceDataCount; ++type)
         {
@@ -280,17 +282,14 @@ void ArchiverImpl::WriteRenderPassData(PendingData& Pending) const
     if (m_RPMap.empty())
         return;
 
-    const auto ChunkInd        = static_cast<Uint32>(ChunkType::RenderPass);
-    auto&      DataOffsetArray = Pending.DataOffsetArrayPerChunk[ChunkInd];
-    Uint32*    DataSizeArray   = nullptr;
-
-    Pending.ChunkData[ChunkInd]             = InitNamedResourceArrayHeader(m_RPMap, DataSizeArray, DataOffsetArray);
-    Pending.ResourceCountPerChunk[ChunkInd] = StaticCast<Uint32>(m_RPMap.size());
+    auto* DataSizeArray   = InitNamedResourceArrayHeader(ChunkType::RenderPass, m_RPMap, Pending);
+    auto* DataOffsetArray = Pending.DataOffsetArrayPerChunk[static_cast<size_t>(ChunkType::RenderPass)];
 
     Uint32 j = 0;
     for (const auto& RP : m_RPMap)
     {
-        WriteHeader<RPDataHeader>(ChunkType::RenderPass, RP.second.GetSharedData(), Pending.SharedData, DataOffsetArray[j], DataSizeArray[j]);
+        WriteHeader<RPDataHeader>(ChunkType::RenderPass, RP.second.GetSharedData(), Pending.SharedData,
+                                  DataOffsetArray[j], DataSizeArray[j]);
         ++j;
     }
 }
@@ -301,17 +300,14 @@ void ArchiverImpl::WritePSOData(PendingData& Pending, TNamedObjectHashMap<PSOTyp
     if (PSOMap.empty())
         return;
 
-    const auto ChunkInd        = static_cast<Uint32>(PSOChunkType);
-    auto&      DataOffsetArray = Pending.DataOffsetArrayPerChunk[ChunkInd];
-    Uint32*    DataSizeArray   = nullptr;
-
-    Pending.ChunkData[ChunkInd]             = InitNamedResourceArrayHeader(PSOMap, DataSizeArray, DataOffsetArray);
-    Pending.ResourceCountPerChunk[ChunkInd] = StaticCast<Uint32>(PSOMap.size());
+    auto* DataSizeArray   = InitNamedResourceArrayHeader(PSOChunkType, PSOMap, Pending);
+    auto* DataOffsetArray = Pending.DataOffsetArrayPerChunk[static_cast<size_t>(PSOChunkType)];
 
     Uint32 j = 0;
     for (auto& PSO : PSOMap)
     {
-        auto* pHeader = WriteHeader<PSODataHeader>(PSOChunkType, PSO.second.GetSharedData(), Pending.SharedData, DataOffsetArray[j], DataSizeArray[j]);
+        auto* pHeader = WriteHeader<PSODataHeader>(PSOChunkType, PSO.second.GetSharedData(), Pending.SharedData,
+                                                   DataOffsetArray[j], DataSizeArray[j]);
 
         for (Uint32 type = 0; type < DeviceDataCount; ++type)
         {

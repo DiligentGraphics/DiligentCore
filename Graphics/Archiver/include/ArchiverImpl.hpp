@@ -264,9 +264,9 @@ private:
     SerializedMemory SerializeShadersForPSO(const TShaderIndices& ShaderIndices) const;
 
     template <typename MapType>
-    static TDataElement InitNamedResourceArrayHeader(const MapType& Map,
-                                                     Uint32*&       DataSizeArray,
-                                                     Uint32*&       DataOffsetArray);
+    static Uint32* InitNamedResourceArrayHeader(ChunkType      Type,
+                                                const MapType& Map,
+                                                PendingData&   Pending);
 
     bool AddPipelineResourceSignature(IPipelineResourceSignature* pPRS);
     bool CachePipelineResourceSignature(RefCntAutoPtr<IPipelineResourceSignature>& pPRS);
