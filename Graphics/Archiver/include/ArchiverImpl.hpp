@@ -191,7 +191,6 @@ private:
         CreateInfoType*  pCreateInfo = nullptr;
         SerializedMemory SharedData;
         TPerDeviceData   PerDeviceData;
-        // AZ TODO: serialize base bindings ?
 
         const SerializedMemory& GetSharedData() const { return SharedData; }
     };

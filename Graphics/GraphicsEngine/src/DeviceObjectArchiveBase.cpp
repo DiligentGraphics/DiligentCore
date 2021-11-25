@@ -117,6 +117,7 @@ DeviceObjectArchiveBase::DeviceObjectArchiveBase(IReferenceCounters* pRefCounter
             case ChunkType::GraphicsPipelineStates:   ReadNamedResources(Chunk,   m_GraphicsPSOMap,   m_GraphicsPSOMapGuard);   break;
             case ChunkType::ComputePipelineStates:    ReadNamedResources(Chunk,   m_ComputePSOMap,    m_ComputePSOMapGuard);    break;
             case ChunkType::RayTracingPipelineStates: ReadNamedResources(Chunk,   m_RayTracingPSOMap, m_RayTracingPSOMapGuard); break;
+            case ChunkType::TilePipelineStates:       ReadNamedResources(Chunk,   m_TilePSOMap,       m_TilePSOMapGuard);       break;
             case ChunkType::RenderPass:               ReadNamedResources(Chunk,   m_RenderPassMap,    m_RenderPassMapGuard);    break;
             case ChunkType::Shaders:                  ReadIndexedResources(Chunk, m_Shaders,          m_ShadersGuard);          break;
             // clang-format on
@@ -192,6 +193,7 @@ void DeviceObjectArchiveBase::ReadNamedResources(IArchive* pArchive, const Chunk
                 Chunk.Type == ChunkType::GraphicsPipelineStates ||
                 Chunk.Type == ChunkType::ComputePipelineStates ||
                 Chunk.Type == ChunkType::RayTracingPipelineStates ||
+                Chunk.Type == ChunkType::TilePipelineStates ||
                 Chunk.Type == ChunkType::RenderPass);
 
     std::vector<Uint8> Data(Chunk.Size);
@@ -1210,9 +1212,11 @@ void PSOSerializer<Mode>::SerializePSOCreateInfo(
 {
     SerializePSOCreateInfo(Ser, static_cast<TQual<PipelineStateCreateInfo>&>(CreateInfo), PRSNames, Allocator);
 
-    // AZ TODO: read TilePipelineStateCreateInfo
+    // Serialize TilePipelineDesc
+    Ser(CreateInfo.TilePipeline.NumRenderTargets,
+        CreateInfo.TilePipeline.SampleCount,
+        CreateInfo.TilePipeline.RTVFormats);
 
-    // skip NodeMask
     // skip shaders - they are device specific
 
 #if defined(_MSC_VER) && defined(_WIN64)
@@ -1312,7 +1316,6 @@ void PSOSerializer<Mode>::SerializePSOCreateInfo(
         }
     }
 
-    // skip NodeMask
     // skip shaders - they are device specific
 
 #if defined(_MSC_VER) && defined(_WIN64)

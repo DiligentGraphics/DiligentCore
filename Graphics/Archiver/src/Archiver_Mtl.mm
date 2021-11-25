@@ -525,7 +525,6 @@ void SerializationDeviceImpl::GetPipelineResourceBindingsMtl(const PipelineResou
 
     const auto            ShaderStages        = (Info.ShaderStages == SHADER_TYPE_UNKNOWN ? static_cast<SHADER_TYPE>(~0u) : Info.ShaderStages);
     constexpr SHADER_TYPE SupportedStagesMask = (SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL | SHADER_TYPE_COMPUTE | SHADER_TYPE_TILE);
-    constexpr Uint32      RuntimeArray        = 0;
     MtlResourceCounters   BaseBindings{};
 
     for (Uint32 sign = 0; sign < SignaturesCount; ++sign)

@@ -232,7 +232,7 @@ bool ArchiveRepacker::ArchiveBlock::Read(Uint64 OffsetInBlock, Uint64 DataSize, 
     {
         if (OffsetInBlock < Memory.size() && OffsetInBlock + DataSize <= Memory.size())
         {
-            memcpy(pData, &Memory[OffsetInBlock], static_cast<size_t>(DataSize));
+            memcpy(pData, &Memory[static_cast<size_t>(OffsetInBlock)], static_cast<size_t>(DataSize));
             return true;
         }
         return false;
@@ -254,7 +254,7 @@ bool ArchiveRepacker::ArchiveBlock::Write(Uint64 OffsetInBlock, Uint64 DataSize,
     {
         if (OffsetInBlock < Memory.size() && OffsetInBlock + DataSize <= Memory.size())
         {
-            memcpy(&Memory[OffsetInBlock], pData, static_cast<size_t>(DataSize));
+            memcpy(&Memory[static_cast<size_t>(OffsetInBlock)], pData, static_cast<size_t>(DataSize));
             return true;
         }
     }

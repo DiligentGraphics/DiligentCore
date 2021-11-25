@@ -447,10 +447,11 @@ Bool ArchiverImpl::SerializeToStream(IFileStream* pStream)
 
     auto WritePRSPerDeviceData = [&Pending](PRSDataHeader& Header, DeviceType Type, const PRSData& Src) //
     {
-        if (Type == DeviceType::Metal_MacOS)
-            Type = DeviceType::Metal_iOS; // MacOS & iOS have the same PRS
+        auto PRSDevType = Type;
+        if (PRSDevType == DeviceType::Metal_MacOS)
+            PRSDevType = DeviceType::Metal_iOS; // MacOS & iOS have the same PRS
 
-        WritePerDeviceData(Header, Type, Src.GetDeviceData(Type), Pending.PerDeviceData[static_cast<size_t>(Type)]);
+        WritePerDeviceData(Header, Type, Src.GetDeviceData(PRSDevType), Pending.PerDeviceData[static_cast<size_t>(Type)]);
     };
     WriteDeviceObjectData<PRSDataHeader>(ChunkType::ResourceSignature, Pending, m_PRSMap, WritePRSPerDeviceData);
 
@@ -610,7 +611,7 @@ void ArchiverImpl::SerializeShaderSource(TShaderIndices& ShaderIndices, DeviceTy
     VERIFY_EXPR(CI.SourceLength > 0);
 
     String Source{CI.Source, CI.SourceLength};
-    if (CI.Macros == nullptr)
+    if (CI.Macros != nullptr)
     {
         DEV_CHECK_ERR(CI.SourceLanguage != SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM, "Shader macros are ignored when compiling GLSL verbatim in OpenGL backend");
         AppendShaderMacros(Source, CI.Macros);

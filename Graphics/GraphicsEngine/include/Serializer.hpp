@@ -115,6 +115,7 @@ public:
     template <typename T>
     TReadOnly<T> Cast()
     {
+        static_assert(std::is_trivially_destructible<T>::value, "Can not cast to non triavial type");
         VERIFY(reinterpret_cast<size_t>(m_Ptr) % alignof(T) == 0, "Pointer must be properly aligned");
         VERIFY_EXPR(m_Ptr + sizeof(T) <= m_End);
         auto* Ptr = m_Ptr;
