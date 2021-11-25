@@ -585,21 +585,16 @@ Bool ArchiverImpl::AddPipelineResourceSignature(const PipelineResourceSignatureD
     return AddPipelineResourceSignature(pPRS);
 }
 
-String ArchiverImpl::UniquePRSName() const
+String ArchiverImpl::GetDefaultPRSName(const char* PSOName) const
 {
-    String       PRSName = "Default PRS - ";
-    const size_t Pos     = PRSName.length();
-
-    // AZ TODO: optimize (binary search?)
-    for (Uint32 Index = 0; Index < 10000; ++Index)
+    VERIFY_EXPR(PSOName != nullptr);
+    const String PRSName0 = String{"Default Signature of PSO '"} + PSOName + '\'';
+    for (Uint32 Index = 0;; ++Index)
     {
-        PRSName.resize(Pos);
-        PRSName += std::to_string(Index);
-
+        auto PRSName = Index == 0 ? PRSName0 : PRSName0 + std::to_string(Index);
         if (m_PRSMap.find(PRSName.c_str()) == m_PRSMap.end())
             return PRSName;
     }
-    return "";
 }
 
 
@@ -861,7 +856,7 @@ bool ArchiverImpl::SerializePSO(TNamedObjectHashMap<TPSOData<CreateInfoType>>& P
     if (UseDefaultPRS)
     {
         DefPRS.DeviceFlags = ArchiveInfo.DeviceFlags;
-        DefPRS.UniqueName  = UniquePRSName();
+        DefPRS.UniqueName  = GetDefaultPRSName(PSOCreateInfo.PSODesc.Name);
     }
 
     for (auto DeviceBits = ArchiveInfo.DeviceFlags; DeviceBits != 0;)

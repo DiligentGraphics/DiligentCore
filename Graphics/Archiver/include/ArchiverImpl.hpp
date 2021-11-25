@@ -272,7 +272,7 @@ private:
     bool CachePipelineResourceSignature(RefCntAutoPtr<IPipelineResourceSignature>& pPRS);
     bool AddRenderPass(IRenderPass* pRP);
 
-    String UniquePRSName() const;
+    String GetDefaultPRSName(const char* PSOName) const;
 
     template <typename FnType>
     bool CreateDefaultResourceSignature(DefaultPRSInfo& DefPRS, const FnType& CreatePRS);
