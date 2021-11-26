@@ -58,6 +58,17 @@ public:
         m_pAllocator{&Allocator}
     {}
 
+    FixedLinearAllocator(void* pData, size_t DataSize) noexcept :
+        m_pDataStart{reinterpret_cast<uint8_t*>(pData)},
+        m_pCurrPtr{m_pDataStart},
+        m_ReservedSize{DataSize},
+        m_CurrAlignment{sizeof(void*)}
+    {
+#if DILIGENT_DEBUG
+        m_DbgUsingExternalMemory = true;
+#endif
+    }
+
     FixedLinearAllocator(FixedLinearAllocator&& Other) noexcept :
         // clang-format off
         m_pDataStart   {Other.m_pDataStart   },
@@ -68,6 +79,7 @@ public:
 #if DILIGENT_DEBUG
         , m_DbgCurrAllocation{Other.m_DbgCurrAllocation}
         , m_DbgAllocations{std::move(Other.m_DbgAllocations)}
+        , m_DbgUsingExternalMemory{Other.m_DbgUsingExternalMemory}
 #endif
     // clang-format on
     {
@@ -84,8 +96,9 @@ public:
         m_CurrAlignment = Rhs.m_CurrAlignment;
         m_pAllocator    = Rhs.m_pAllocator;
 #if DILIGENT_DEBUG
-        m_DbgCurrAllocation = Rhs.m_DbgCurrAllocation;
-        m_DbgAllocations    = std::move(Rhs.m_DbgAllocations);
+        m_DbgCurrAllocation      = Rhs.m_DbgCurrAllocation;
+        m_DbgAllocations         = std::move(Rhs.m_DbgAllocations);
+        m_DbgUsingExternalMemory = Rhs.m_DbgUsingExternalMemory;
 #endif
         Rhs.Reset();
 
@@ -133,7 +146,7 @@ public:
 
     void AddSpace(size_t size, size_t alignment = 1) noexcept
     {
-        VERIFY(m_pDataStart == nullptr, "Memory has already been allocated");
+        VERIFY(m_pDataStart == nullptr, "Memory has already been allocated or assigned");
         VERIFY(IsPowerOfTwo(alignment), "Alignment is not a power of two!");
 
         if (size == 0)
@@ -213,17 +226,27 @@ public:
         size = AlignUp(size, alignment);
 
 #if DILIGENT_DEBUG
-        VERIFY(m_DbgCurrAllocation < m_DbgAllocations.size(), "Allocation number exceed the number of allocations that were originally reserved.");
-        const auto& CurrAllocation = m_DbgAllocations[m_DbgCurrAllocation++];
-        VERIFY(CurrAllocation.size == size, "Allocation size (", size, ") does not match the initially requested size (", CurrAllocation.size, ")");
-        VERIFY(CurrAllocation.alignment == alignment, "Allocation alignment (", alignment, ") does not match the initially requested alignment (", CurrAllocation.alignment, ")");
+        size_t dbgReservedSize = 0;
+        if (!m_DbgUsingExternalMemory)
+        {
+            VERIFY(m_DbgCurrAllocation < m_DbgAllocations.size(), "Allocation number exceed the number of allocations that were originally reserved.");
+            const auto& CurrAllocation = m_DbgAllocations[m_DbgCurrAllocation++];
+            VERIFY(CurrAllocation.size == size, "Allocation size (", size, ") does not match the initially requested size (", CurrAllocation.size, ")");
+            VERIFY(CurrAllocation.alignment == alignment, "Allocation alignment (", alignment, ") does not match the initially requested alignment (", CurrAllocation.alignment, ")");
+            dbgReservedSize = CurrAllocation.reserved_size;
+        }
+        else
+        {
+            // Allocating in place in assigned memory
+            VERIFY_EXPR(m_DbgAllocations.empty());
+        }
 #endif
 
         VERIFY(AlignUp(m_pCurrPtr, m_CurrAlignment) == m_pCurrPtr, "Current pointer is not aligned as expected");
         m_pCurrPtr      = AlignUp(m_pCurrPtr, alignment);
         m_CurrAlignment = alignment;
 
-        VERIFY(m_pCurrPtr + size <= m_pDataStart + CurrAllocation.reserved_size,
+        VERIFY(m_DbgUsingExternalMemory || m_pCurrPtr + size <= m_pDataStart + dbgReservedSize,
                "Allocation size exceeds the initially reserved space. This is likely a bug.");
 
         auto* ptr = m_pCurrPtr;
@@ -349,6 +372,7 @@ private:
 #if DILIGENT_DEBUG
         m_DbgCurrAllocation = 0;
         m_DbgAllocations.clear();
+        m_DbgUsingExternalMemory = false;
 #endif
     }
 
@@ -374,6 +398,8 @@ private:
         }
     };
     std::vector<DbgAllocationInfo> m_DbgAllocations;
+
+    bool m_DbgUsingExternalMemory = false;
 #endif
 };
 
