@@ -122,6 +122,9 @@ private:
 
     struct PRSData
     {
+        explicit PRSData(SerializableResourceSignatureImpl* _pPRS) :
+            pPRS{_pPRS}
+        {}
         RefCntAutoPtr<SerializableResourceSignatureImpl> pPRS;
 
         const SerializedMemory& GetSharedData() const;
@@ -147,10 +150,14 @@ private:
             return *Lhs == *Rhs;
         }
     };
+    // Cache to deduplicate resource signatures
     std::unordered_set<RefCntAutoPtr<SerializableResourceSignatureImpl>, SerializablePRSHasher, SerializablePRSEqual> m_PRSCache;
 
     struct RPData
     {
+        explicit RPData(SerializableRenderPassImpl* _pRP) :
+            pRP{_pRP}
+        {}
         RefCntAutoPtr<SerializableRenderPassImpl> pRP;
 
         const SerializedMemory& GetSharedData() const;

@@ -444,14 +444,15 @@ Bool ArchiverImpl::SerializeToStream(IFileStream* pStream)
     ReserveSpace(Pending);
     WriteDebugInfo(Pending);
     WriteShaderData(Pending);
-    WriteDeviceObjectData<PRSDataHeader>(ChunkType::ResourceSignature, Pending, m_PRSMap,
-                                         [&Pending](PRSDataHeader& Header, DeviceType Type, const PRSData& Src) //
-                                         {
-                                             if (Type == DeviceType::Metal_MacOS)
-                                                 Type = DeviceType::Metal_iOS; // MacOS & iOS have the same PRS
 
-                                             WritePerDeviceData(Header, Type, Src.GetDeviceData(Type), Pending.PerDeviceData[static_cast<size_t>(Type)]);
-                                         });
+    auto WritePRSPerDeviceData = [&Pending](PRSDataHeader& Header, DeviceType Type, const PRSData& Src) //
+    {
+        if (Type == DeviceType::Metal_MacOS)
+            Type = DeviceType::Metal_iOS; // MacOS & iOS have the same PRS
+
+        WritePerDeviceData(Header, Type, Src.GetDeviceData(Type), Pending.PerDeviceData[static_cast<size_t>(Type)]);
+    };
+    WriteDeviceObjectData<PRSDataHeader>(ChunkType::ResourceSignature, Pending, m_PRSMap, WritePRSPerDeviceData);
 
     WriteDeviceObjectData<RPDataHeader>(ChunkType::RenderPass, Pending, m_RPMap, [](RPDataHeader& Header, DeviceType Type, const RPData&) {});
 
@@ -493,14 +494,15 @@ bool ArchiverImpl::AddPipelineResourceSignature(IPipelineResourceSignature* pPRS
     if (pPRS == nullptr)
         return false;
 
-    auto* pPRSImpl        = ClassPtrCast<SerializableResourceSignatureImpl>(pPRS);
-    auto  IterAndInserted = m_PRSMap.emplace(HashMapStringKey{pPRSImpl->GetDesc().Name, true}, PRSData{});
+    auto* const pPRSImpl = ClassPtrCast<SerializableResourceSignatureImpl>(pPRS);
+    const auto* Name     = pPRSImpl->GetDesc().Name;
 
+    auto IterAndInserted = m_PRSMap.emplace(HashMapStringKey{Name, true}, PRSData{pPRSImpl});
     if (!IterAndInserted.second)
     {
         if (IterAndInserted.first->second.pPRS != pPRSImpl)
         {
-            LOG_ERROR_MESSAGE("Pipeline resource signature must have unique name");
+            LOG_ERROR_MESSAGE("Pipeline resource signature with name '", Name, "' is already present in the archive. All signature names must be unique.");
             return false;
         }
         else
@@ -509,7 +511,6 @@ bool ArchiverImpl::AddPipelineResourceSignature(IPipelineResourceSignature* pPRS
 
     m_PRSCache.insert(RefCntAutoPtr<SerializableResourceSignatureImpl>{pPRSImpl});
 
-    IterAndInserted.first->second.pPRS = pPRSImpl;
     return true;
 }
 
@@ -570,9 +571,10 @@ void ArchiverImpl::SerializeShaderBytecode(TShaderIndices&         ShaderIndices
                                            const void*             Bytecode,
                                            size_t                  BytecodeSize)
 {
-    auto&                        Shaders        = m_Shaders[static_cast<Uint32>(DevType)];
-    const SHADER_SOURCE_LANGUAGE SourceLanguage = SHADER_SOURCE_LANGUAGE_DEFAULT;
-    const SHADER_COMPILER        ShaderCompiler = SHADER_COMPILER_DEFAULT;
+    auto& Shaders{m_Shaders[static_cast<Uint32>(DevType)]};
+
+    constexpr SHADER_SOURCE_LANGUAGE SourceLanguage = SHADER_SOURCE_LANGUAGE_DEFAULT;
+    constexpr SHADER_COMPILER        ShaderCompiler = SHADER_COMPILER_DEFAULT;
 
     Serializer<SerializerMode::Measure> MeasureSer;
     MeasureSer(CI.Desc.ShaderType, CI.EntryPoint, SourceLanguage, ShaderCompiler);
@@ -664,7 +666,7 @@ bool ArchiverImpl::AddRenderPass(IRenderPass* pRP)
         return false;
 
     auto* pRPImpl         = ClassPtrCast<SerializableRenderPassImpl>(pRP);
-    auto  IterAndInserted = m_RPMap.emplace(HashMapStringKey{pRPImpl->GetDesc().Name, true}, RPData{});
+    auto  IterAndInserted = m_RPMap.emplace(HashMapStringKey{pRPImpl->GetDesc().Name, true}, RPData{pRPImpl});
     if (!IterAndInserted.second)
     {
         if (IterAndInserted.first->second.pRP != pRPImpl)
@@ -675,8 +677,6 @@ bool ArchiverImpl::AddRenderPass(IRenderPass* pRP)
         else
             return true;
     }
-
-    IterAndInserted.first->second.pRP = pRPImpl;
     return true;
 }
 
