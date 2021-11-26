@@ -294,7 +294,7 @@ void DeviceObjectArchiveBase::LoadDeviceSpecificData(const HeaderType&       Hea
     const auto ArchiveSize = m_pArchive->GetSize();
     if (BaseOffset > ArchiveSize)
     {
-        LOG_ERROR_MESSAGE("Required block does not exists in archive");
+        LOG_ERROR_MESSAGE("Required block does not exist in archive");
         return;
     }
     if (Header.GetSize(m_DevType) == 0)
@@ -334,7 +334,7 @@ bool DeviceObjectArchiveBase::ReadPRSData(const char* Name, PRSData& PRS)
                 return false;
             }
 
-            PSOSerializer<SerializerMode::Read>::SerializePRS(Ser, PRS.Desc, PRS.Serialized, &PRS.Allocator);
+            PSOSerializer<SerializerMode::Read>::SerializePRSDesc(Ser, PRS.Desc, PRS.Serialized, &PRS.Allocator);
             VERIFY_EXPR(Ser.IsEnd());
             return true;
         });
@@ -355,7 +355,7 @@ bool DeviceObjectArchiveBase::ReadRPData(const char* Name, RPData& RP)
                 return false;
             }
 
-            PSOSerializer<SerializerMode::Read>::SerializeRenderPass(Ser, RP.Desc, &RP.Allocator);
+            PSOSerializer<SerializerMode::Read>::SerializeRenderPassDesc(Ser, RP.Desc, &RP.Allocator);
             VERIFY_EXPR(Ser.IsEnd());
             return true;
         });
@@ -383,7 +383,7 @@ bool DeviceObjectArchiveBase::ReadPSOData(ChunkType                   Type,
                 return false;
             }
 
-            PSOSerializer<SerializerMode::Read>::SerializePSOData(Ser, PSO.CreateInfo, PSO.PRSNames, &PSO.Allocator, std::forward<ExtraArgsType>(ExtraArgs)...);
+            PSOSerializer<SerializerMode::Read>::SerializePSOCreateInfo(Ser, PSO.CreateInfo, PSO.PRSNames, &PSO.Allocator, std::forward<ExtraArgsType>(ExtraArgs)...);
             VERIFY_EXPR(Ser.IsEnd());
 
             PSO.CreateInfo.Flags |= PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES;
@@ -430,42 +430,6 @@ void DeviceObjectArchiveBase::CacheResource(const char* Name, TNameOffsetMapAndW
     Iter->second.Cache = pResource;
 }
 
-template <typename ResType>
-bool DeviceObjectArchiveBase::GetCachedResource(const char* Name, TNameOffsetMapAndStrongCache<ResType>& Cache, std::mutex& Guard, ResType** ppResource)
-{
-    std::unique_lock<std::mutex> ReadLock{Guard};
-
-    VERIFY_EXPR(ppResource != nullptr);
-    *ppResource = nullptr;
-
-    auto Iter = Cache.find(Name);
-    if (Iter == Cache.end())
-        return false;
-
-    if (Iter->second.Cache == nullptr)
-        return false;
-
-    *ppResource = Iter->second.Cache;
-    *ppResource->AddRef();
-    return true;
-}
-
-template <typename ResType>
-void DeviceObjectArchiveBase::CacheResource(const char* Name, TNameOffsetMapAndStrongCache<ResType>& Cache, std::mutex& Guard, ResType* pResource)
-{
-    VERIFY_EXPR(pResource != nullptr);
-
-    std::unique_lock<std::mutex> WriteLock{Guard};
-
-    auto Iter = Cache.find(Name);
-    if (Iter == Cache.end())
-        return;
-
-    if (Iter->second.Cache != nullptr)
-        return;
-
-    Iter->second.Cache = pResource;
-}
 
 template <>
 inline DeviceObjectArchiveBase::ReleaseTempResourceRefs<GraphicsPipelineStateCreateInfo>::~ReleaseTempResourceRefs()
@@ -997,7 +961,7 @@ void DeviceObjectArchiveBase::UnpackRenderPass(const RenderPassUnpackInfo& DeArc
                     case RP_UNPACK_OVERRIDE_FLAG_STENCIL_STORE_OP: Dst.StencilStoreOp = Override.AttachmentDesc.StencilStoreOp; break;
                     case RP_UNPACK_OVERRIDE_FLAG_INITIAL_STATE:    Dst.InitialState   = Override.AttachmentDesc.InitialState;   break;
                     case RP_UNPACK_OVERRIDE_FLAG_FINAL_STATE:      Dst.FinalState     = Override.AttachmentDesc.FinalState;     break;
-                        // clang-format on
+                    // clang-format on
                     default:
                         UNEXPECTED("Unexpected RP unpack override flag");
                         break;
@@ -1054,7 +1018,7 @@ void PSOSerializer<Mode>::SerializeImmutableSampler(
     Serializer<Mode>&            Ser,
     TQual<ImmutableSamplerDesc>& SampDesc)
 {
-    Ser(SampDesc.SamplerOrTextureName, // AZ TODO: global cache for names ?
+    Ser(SampDesc.SamplerOrTextureName,
         SampDesc.ShaderStages,
         SampDesc.Desc.Name,
         SampDesc.Desc.MinFilter,
@@ -1077,7 +1041,7 @@ void PSOSerializer<Mode>::SerializeImmutableSampler(
 }
 
 template <SerializerMode Mode>
-void PSOSerializer<Mode>::SerializePRS(
+void PSOSerializer<Mode>::SerializePRSDesc(
     Serializer<Mode>&                               Ser,
     TQual<PipelineResourceSignatureDesc>&           Desc,
     TQual<PipelineResourceSignatureSerializedData>& Serialized,
@@ -1097,7 +1061,7 @@ void PSOSerializer<Mode>::SerializePRS(
     {
         // Serialize PipelineResourceDesc
         auto& ResDesc = pResources[r];
-        Ser(ResDesc.Name, // AZ TODO: global cache for names ?
+        Ser(ResDesc.Name,
             ResDesc.ShaderStages,
             ResDesc.ArraySize,
             ResDesc.ResourceType,
@@ -1127,7 +1091,7 @@ void PSOSerializer<Mode>::SerializePRS(
 }
 
 template <SerializerMode Mode>
-void PSOSerializer<Mode>::SerializePSO(
+void PSOSerializer<Mode>::SerializePSOCreateInfo(
     Serializer<Mode>&               Ser,
     TQual<PipelineStateCreateInfo>& CreateInfo,
     TQual<TPRSNames>&               PRSNames,
@@ -1155,14 +1119,14 @@ void PSOSerializer<Mode>::SerializePSO(
 }
 
 template <SerializerMode Mode>
-void PSOSerializer<Mode>::SerializePSOData(
+void PSOSerializer<Mode>::SerializePSOCreateInfo(
     Serializer<Mode>&                       Ser,
     TQual<GraphicsPipelineStateCreateInfo>& CreateInfo,
     TQual<TPRSNames>&                       PRSNames,
     DynamicLinearAllocator*                 Allocator,
     TQual<const char*>&                     RenderPassName)
 {
-    SerializePSO(Ser, CreateInfo, PRSNames, Allocator);
+    SerializePSOCreateInfo(Ser, static_cast<TQual<PipelineStateCreateInfo>&>(CreateInfo), PRSNames, Allocator);
 
     // Serialize GraphicsPipelineDesc
     Ser(CreateInfo.GraphicsPipeline.BlendDesc,
@@ -1178,7 +1142,7 @@ void PSOSerializer<Mode>::SerializePSOData(
         {
             // Serialize LayoutElement
             auto& Elem = pLayoutElements[i];
-            Ser(Elem.HLSLSemantic, // AZ TODO: global cache for names ?
+            Ser(Elem.HLSLSemantic,
                 Elem.InputIndex,
                 Elem.BufferSlot,
                 Elem.NumComponents,
@@ -1210,13 +1174,13 @@ void PSOSerializer<Mode>::SerializePSOData(
 }
 
 template <SerializerMode Mode>
-void PSOSerializer<Mode>::SerializePSOData(
+void PSOSerializer<Mode>::SerializePSOCreateInfo(
     Serializer<Mode>&                      Ser,
     TQual<ComputePipelineStateCreateInfo>& CreateInfo,
     TQual<TPRSNames>&                      PRSNames,
     DynamicLinearAllocator*                Allocator)
 {
-    SerializePSO(Ser, CreateInfo, PRSNames, Allocator);
+    SerializePSOCreateInfo(Ser, static_cast<TQual<PipelineStateCreateInfo>&>(CreateInfo), PRSNames, Allocator);
 
     // skip shaders - they are device specific
 
@@ -1226,13 +1190,13 @@ void PSOSerializer<Mode>::SerializePSOData(
 }
 
 template <SerializerMode Mode>
-void PSOSerializer<Mode>::SerializePSOData(
+void PSOSerializer<Mode>::SerializePSOCreateInfo(
     Serializer<Mode>&                   Ser,
     TQual<TilePipelineStateCreateInfo>& CreateInfo,
     TQual<TPRSNames>&                   PRSNames,
     DynamicLinearAllocator*             Allocator)
 {
-    SerializePSO(Ser, CreateInfo, PRSNames, Allocator);
+    SerializePSOCreateInfo(Ser, static_cast<TQual<PipelineStateCreateInfo>&>(CreateInfo), PRSNames, Allocator);
 
     // AZ TODO: read TilePipelineStateCreateInfo
 
@@ -1245,7 +1209,7 @@ void PSOSerializer<Mode>::SerializePSOData(
 }
 
 template <SerializerMode Mode>
-void PSOSerializer<Mode>::SerializePSOData(
+void PSOSerializer<Mode>::SerializePSOCreateInfo(
     Serializer<Mode>&                                     Ser,
     TQual<RayTracingPipelineStateCreateInfo>&             CreateInfo,
     TQual<TPRSNames>&                                     PRSNames,
@@ -1255,7 +1219,7 @@ void PSOSerializer<Mode>::SerializePSOData(
     const bool IsReading = (Allocator != nullptr);
     const bool IsWriting = !IsReading;
 
-    SerializePSO(Ser, CreateInfo, PRSNames, Allocator);
+    SerializePSOCreateInfo(Ser, static_cast<TQual<PipelineStateCreateInfo>&>(CreateInfo), PRSNames, Allocator);
 
     // Serialize RayTracingPipelineDesc
     Ser(CreateInfo.RayTracingPipeline.ShaderRecordSize,
@@ -1348,7 +1312,7 @@ void PSOSerializer<Mode>::SerializePSOData(
 }
 
 template <SerializerMode Mode>
-void PSOSerializer<Mode>::SerializeRenderPass(
+void PSOSerializer<Mode>::SerializeRenderPassDesc(
     Serializer<Mode>&       Ser,
     TQual<RenderPassDesc>&  RPDesc,
     DynamicLinearAllocator* Allocator)

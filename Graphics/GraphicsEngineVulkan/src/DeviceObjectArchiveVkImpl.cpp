@@ -49,7 +49,7 @@ void DeviceObjectArchiveVkImpl::UnpackResourceSignature(const ResourceSignatureU
         {
             PipelineResourceSignatureSerializedDataVk SerializedData;
             static_cast<PipelineResourceSignatureSerializedData&>(SerializedData) = PRS.Serialized;
-            PSOSerializerVk<SerializerMode::Read>::SerializePRS(Ser, SerializedData, &PRS.Allocator);
+            PSOSerializerVk<SerializerMode::Read>::SerializePRSDesc(Ser, SerializedData, &PRS.Allocator);
             VERIFY_EXPR(Ser.IsEnd());
 
             auto* pRenderDeviceVk = ClassPtrCast<RenderDeviceVkImpl>(DeArchiveInfo.pDevice);
@@ -58,7 +58,7 @@ void DeviceObjectArchiveVkImpl::UnpackResourceSignature(const ResourceSignatureU
 }
 
 template <SerializerMode Mode>
-void PSOSerializerVk<Mode>::SerializePRS(
+void PSOSerializerVk<Mode>::SerializePRSDesc(
     Serializer<Mode>&                                 Ser,
     TQual<PipelineResourceSignatureSerializedDataVk>& Serialized,
     DynamicLinearAllocator*                           Allocator)

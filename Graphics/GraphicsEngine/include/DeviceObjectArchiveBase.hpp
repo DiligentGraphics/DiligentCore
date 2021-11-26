@@ -281,8 +281,6 @@ private:
     using TNameOffsetMap = std::unordered_map<HashMapStringKey, FileOffsetAndResCache<ResPtrType>, HashMapStringKey::Hasher>;
     template <typename T>
     using TNameOffsetMapAndWeakCache = TNameOffsetMap<RefCntWeakPtr<T>>;
-    template <typename T>
-    using TNameOffsetMapAndStrongCache = TNameOffsetMap<RefCntAutoPtr<T>>;
 
     using TPRSOffsetAndCacheMap = TNameOffsetMapAndWeakCache<IPipelineResourceSignature>;
     using TPSOOffsetAndCacheMap = TNameOffsetMapAndWeakCache<IPipelineState>;
@@ -323,11 +321,7 @@ private:
     template <typename ResType>
     bool GetCachedResource(const char* Name, TNameOffsetMapAndWeakCache<ResType>& Cache, std::mutex& Guard, ResType** ppResource);
     template <typename ResType>
-    bool GetCachedResource(const char* Name, TNameOffsetMapAndStrongCache<ResType>& Cache, std::mutex& Guard, ResType** ppResource);
-    template <typename ResType>
     void CacheResource(const char* Name, TNameOffsetMapAndWeakCache<ResType>& Cache, std::mutex& Guard, ResType* pResource);
-    template <typename ResType>
-    void CacheResource(const char* Name, TNameOffsetMapAndStrongCache<ResType>& Cache, std::mutex& Guard, ResType* pResource);
 
     BlockOffsetType GetBlockOffsetType() const;
 
@@ -484,41 +478,41 @@ struct PSOSerializer
     static void SerializeImmutableSampler(Serializer<Mode>&            Ser,
                                           TQual<ImmutableSamplerDesc>& SampDesc);
 
-    static void SerializePRS(Serializer<Mode>&                               Ser,
-                             TQual<PipelineResourceSignatureDesc>&           Desc,
-                             TQual<PipelineResourceSignatureSerializedData>& Serialized,
-                             DynamicLinearAllocator*                         Allocator);
+    static void SerializePRSDesc(Serializer<Mode>&                               Ser,
+                                 TQual<PipelineResourceSignatureDesc>&           Desc,
+                                 TQual<PipelineResourceSignatureSerializedData>& Serialized,
+                                 DynamicLinearAllocator*                         Allocator);
 
-    static void SerializePSO(Serializer<Mode>&               Ser,
-                             TQual<PipelineStateCreateInfo>& CreateInfo,
-                             TQual<TPRSNames>&               PRSNames,
-                             DynamicLinearAllocator*         Allocator);
+    static void SerializePSOCreateInfo(Serializer<Mode>&               Ser,
+                                       TQual<PipelineStateCreateInfo>& CreateInfo,
+                                       TQual<TPRSNames>&               PRSNames,
+                                       DynamicLinearAllocator*         Allocator);
 
-    static void SerializePSOData(Serializer<Mode>&                       Ser,
-                                 TQual<GraphicsPipelineStateCreateInfo>& CreateInfo,
-                                 TQual<TPRSNames>&                       PRSNames,
-                                 DynamicLinearAllocator*                 Allocator,
-                                 TQual<const char*>&                     RenderPassName);
+    static void SerializePSOCreateInfo(Serializer<Mode>&                       Ser,
+                                       TQual<GraphicsPipelineStateCreateInfo>& CreateInfo,
+                                       TQual<TPRSNames>&                       PRSNames,
+                                       DynamicLinearAllocator*                 Allocator,
+                                       TQual<const char*>&                     RenderPassName);
 
-    static void SerializePSOData(Serializer<Mode>&                      Ser,
-                                 TQual<ComputePipelineStateCreateInfo>& CreateInfo,
-                                 TQual<TPRSNames>&                      PRSNames,
-                                 DynamicLinearAllocator*                Allocator);
+    static void SerializePSOCreateInfo(Serializer<Mode>&                      Ser,
+                                       TQual<ComputePipelineStateCreateInfo>& CreateInfo,
+                                       TQual<TPRSNames>&                      PRSNames,
+                                       DynamicLinearAllocator*                Allocator);
 
-    static void SerializePSOData(Serializer<Mode>&                   Ser,
-                                 TQual<TilePipelineStateCreateInfo>& CreateInfo,
-                                 TQual<TPRSNames>&                   PRSNames,
-                                 DynamicLinearAllocator*             Allocator);
+    static void SerializePSOCreateInfo(Serializer<Mode>&                   Ser,
+                                       TQual<TilePipelineStateCreateInfo>& CreateInfo,
+                                       TQual<TPRSNames>&                   PRSNames,
+                                       DynamicLinearAllocator*             Allocator);
 
-    static void SerializePSOData(Serializer<Mode>&                                     Ser,
-                                 TQual<RayTracingPipelineStateCreateInfo>&             CreateInfo,
-                                 TQual<TPRSNames>&                                     PRSNames,
-                                 DynamicLinearAllocator*                               Allocator,
-                                 const std::function<void(Uint32&, TQual<IShader*>&)>& ShaderToIndex);
+    static void SerializePSOCreateInfo(Serializer<Mode>&                                     Ser,
+                                       TQual<RayTracingPipelineStateCreateInfo>&             CreateInfo,
+                                       TQual<TPRSNames>&                                     PRSNames,
+                                       DynamicLinearAllocator*                               Allocator,
+                                       const std::function<void(Uint32&, TQual<IShader*>&)>& ShaderToIndex);
 
-    static void SerializeRenderPass(Serializer<Mode>&       Ser,
-                                    TQual<RenderPassDesc>&  RPDesc,
-                                    DynamicLinearAllocator* Allocator);
+    static void SerializeRenderPassDesc(Serializer<Mode>&       Ser,
+                                        TQual<RenderPassDesc>&  RPDesc,
+                                        DynamicLinearAllocator* Allocator);
 
     static void SerializeShaders(Serializer<Mode>&        Ser,
                                  TQual<ShaderIndexArray>& Shaders,

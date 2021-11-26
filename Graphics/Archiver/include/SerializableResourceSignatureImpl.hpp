@@ -165,12 +165,12 @@ private:
         AddPRSDesc(PRSWrpr->PRS.GetDesc(), SerializedData);
 
         Serializer<SerializerMode::Measure> MeasureSer;
-        MeasureSerializerType::SerializePRS(MeasureSer, SerializedData, nullptr);
+        MeasureSerializerType::SerializePRSDesc(MeasureSer, SerializedData, nullptr);
 
         PRSWrpr->Mem = SerializedMemory{MeasureSer.GetSize(nullptr)};
 
         Serializer<SerializerMode::Write> Ser{PRSWrpr->Mem.Ptr(), PRSWrpr->Mem.Size()};
-        WriteSerializerType::SerializePRS(Ser, SerializedData, nullptr);
+        WriteSerializerType::SerializePRSDesc(Ser, SerializedData, nullptr);
         VERIFY_EXPR(Ser.IsEnd());
 
         m_pPRSWrappers[static_cast<size_t>(Traits::Type)] = std::move(PRSWrpr);

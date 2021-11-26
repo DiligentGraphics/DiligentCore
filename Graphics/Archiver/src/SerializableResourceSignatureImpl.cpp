@@ -73,11 +73,11 @@ void CopyPRSDesc(const PipelineResourceSignatureDesc&            SrcDesc,
     // Serialize description & serialization data
     {
         Serializer<SerializerMode::Measure> MeasureSer;
-        PSOSerializer<SerializerMode::Measure>::SerializePRS(MeasureSer, SrcDesc, SrcSerialized, nullptr);
+        PSOSerializer<SerializerMode::Measure>::SerializePRSDesc(MeasureSer, SrcDesc, SrcSerialized, nullptr);
 
         SharedPtr = SerializedMemory{MeasureSer.GetSize(nullptr)};
         Serializer<SerializerMode::Write> Ser{SharedPtr.Ptr(), SharedPtr.Size()};
-        PSOSerializer<SerializerMode::Write>::SerializePRS(Ser, SrcDesc, SrcSerialized, nullptr);
+        PSOSerializer<SerializerMode::Write>::SerializePRSDesc(Ser, SrcDesc, SrcSerialized, nullptr);
         VERIFY_EXPR(Ser.IsEnd());
     }
 }

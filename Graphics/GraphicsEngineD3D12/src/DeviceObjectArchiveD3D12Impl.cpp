@@ -49,7 +49,7 @@ void DeviceObjectArchiveD3D12Impl::UnpackResourceSignature(const ResourceSignatu
         {
             PipelineResourceSignatureSerializedDataD3D12 SerializedData;
             static_cast<PipelineResourceSignatureSerializedData&>(SerializedData) = PRS.Serialized;
-            PSOSerializerD3D12<SerializerMode::Read>::SerializePRS(Ser, SerializedData, &PRS.Allocator);
+            PSOSerializerD3D12<SerializerMode::Read>::SerializePRSDesc(Ser, SerializedData, &PRS.Allocator);
             VERIFY_EXPR(Ser.IsEnd());
 
             auto* pRenderDeviceD3D12 = ClassPtrCast<RenderDeviceD3D12Impl>(DeArchiveInfo.pDevice);
@@ -58,7 +58,7 @@ void DeviceObjectArchiveD3D12Impl::UnpackResourceSignature(const ResourceSignatu
 }
 
 template <SerializerMode Mode>
-void PSOSerializerD3D12<Mode>::SerializePRS(
+void PSOSerializerD3D12<Mode>::SerializePRSDesc(
     Serializer<Mode>&                                    Ser,
     TQual<PipelineResourceSignatureSerializedDataD3D12>& Serialized,
     DynamicLinearAllocator*                              Allocator)

@@ -49,7 +49,7 @@ void DeviceObjectArchiveGLImpl::UnpackResourceSignature(const ResourceSignatureU
         {
             PipelineResourceSignatureSerializedDataGL SerializedData;
             static_cast<PipelineResourceSignatureSerializedData&>(SerializedData) = PRS.Serialized;
-            PSOSerializerGL<SerializerMode::Read>::SerializePRS(Ser, SerializedData, &PRS.Allocator);
+            PSOSerializerGL<SerializerMode::Read>::SerializePRSDesc(Ser, SerializedData, &PRS.Allocator);
             VERIFY_EXPR(Ser.IsEnd());
 
             auto* pRenderDeviceGL = ClassPtrCast<RenderDeviceGLImpl>(DeArchiveInfo.pDevice);
@@ -71,7 +71,7 @@ void DeviceObjectArchiveGLImpl::ReadAndCreateShader(Serializer<SerializerMode::R
 }
 
 template <SerializerMode Mode>
-void PSOSerializerGL<Mode>::SerializePRS(
+void PSOSerializerGL<Mode>::SerializePRSDesc(
     Serializer<Mode>&                                 Ser,
     TQual<PipelineResourceSignatureSerializedDataGL>& Serialized,
     DynamicLinearAllocator*                           Allocator)

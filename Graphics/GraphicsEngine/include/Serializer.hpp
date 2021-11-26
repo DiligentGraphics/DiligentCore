@@ -189,7 +189,7 @@ template <>
 template <typename T>
 typename Serializer<SerializerMode::Read>::TEnableStr<T> Serializer<SerializerMode::Read>::Serialize(InCharPtr Str)
 {
-    Uint16 Length = 0;
+    Uint32 Length = 0;
     VERIFY_EXPR(m_Ptr + sizeof(Length) <= m_End);
     std::memcpy(&Length, m_Ptr, sizeof(Length));
     m_Ptr += sizeof(Length);
@@ -203,7 +203,7 @@ template <>
 template <typename T>
 typename Serializer<SerializerMode::Write>::TEnableStr<T> Serializer<SerializerMode::Write>::Serialize(InCharPtr Str)
 {
-    const Uint16 Length = static_cast<Uint16>((Str != nullptr && *Str != 0) ? strlen(Str) + 1 : 0);
+    const Uint32 Length = static_cast<Uint32>((Str != nullptr && *Str != 0) ? strlen(Str) + 1 : 0);
 
     VERIFY_EXPR(m_Ptr + sizeof(Length) <= m_End);
     Copy(m_Ptr, &Length, sizeof(Length));
@@ -218,7 +218,7 @@ template <>
 template <typename T>
 typename Serializer<SerializerMode::Measure>::TEnableStr<T> Serializer<SerializerMode::Measure>::Serialize(InCharPtr Str)
 {
-    const Uint16 Length = static_cast<Uint16>((Str != nullptr && *Str != 0) ? strlen(Str) + 1 : 0);
+    const Uint32 Length = static_cast<Uint32>((Str != nullptr && *Str != 0) ? strlen(Str) + 1 : 0);
     m_Ptr += sizeof(Length);
     m_Ptr += Length;
 }
