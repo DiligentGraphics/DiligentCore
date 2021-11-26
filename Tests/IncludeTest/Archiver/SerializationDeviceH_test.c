@@ -29,7 +29,6 @@
 void TestSerializationDevice_CInterface(ISerializationDevice* pSerializationDevice)
 {
     ISerializationDevice_CreateShader(pSerializationDevice, (const ShaderCreateInfo*)NULL, ~0u, (IShader**)NULL);
-    ISerializationDevice_CreateRenderPass(pSerializationDevice, (const RenderPassDesc*)NULL, (IRenderPass**)NULL);
     ISerializationDevice_CreatePipelineResourceSignature(pSerializationDevice, (const PipelineResourceSignatureDesc*)NULL, ~0u, (IPipelineResourceSignature**)NULL);
     ISerializationDevice_GetPipelineResourceBindings(pSerializationDevice, (const PipelineResourceBindingAttribs*)NULL, (Uint32*)NULL, (const PipelineResourceBinding**)NULL);
 }

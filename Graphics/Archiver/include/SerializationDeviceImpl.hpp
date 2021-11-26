@@ -34,7 +34,7 @@
 namespace Diligent
 {
 
-class DummyRenderDevice;
+class SerializationDeviceImpl;
 class SerializableShaderImpl;
 class SerializableRenderPassImpl;
 class SerializableResourceSignatureImpl;
@@ -46,22 +46,21 @@ struct SerializationEngineImplTraits
     using RenderPassInterface                = IRenderPass;
     using PipelineResourceSignatureInterface = IPipelineResourceSignature;
 
-    using RenderDeviceImplType              = DummyRenderDevice;
+    using RenderDeviceImplType              = SerializationDeviceImpl;
     using ShaderImplType                    = SerializableShaderImpl;
     using RenderPassImplType                = SerializableRenderPassImpl;
     using PipelineResourceSignatureImplType = SerializableResourceSignatureImpl;
 };
 
-
-class DummyRenderDevice final : public ObjectBase<IRenderDevice>
+class SerializationDeviceImpl final : public ObjectBase<ISerializationDevice>
 {
 public:
-    using TBase = ObjectBase<IRenderDevice>;
+    using TBase = ObjectBase<ISerializationDevice>;
 
-    DummyRenderDevice(IReferenceCounters* pRefCounters, const RenderDeviceInfo& DeviceInfo, const GraphicsAdapterInfo& AdapterInfo);
-    ~DummyRenderDevice();
+    SerializationDeviceImpl(IReferenceCounters* pRefCounters, const SerializationDeviceCreateInfo& CreateInfo);
+    ~SerializationDeviceImpl();
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_RenderDevice, TBase)
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of IRenderDevice::CreateGraphicsPipelineState().
     virtual void DILIGENT_CALL_TYPE CreateGraphicsPipelineState(const GraphicsPipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState) override final {}
@@ -99,7 +98,7 @@ public:
 
     /// Implementation of IRenderDevice::CreateRenderPass().
     virtual void DILIGENT_CALL_TYPE CreateRenderPass(const RenderPassDesc& Desc,
-                                                     IRenderPass**         ppRenderPass) override final {}
+                                                     IRenderPass**         ppRenderPass) override final;
 
     /// Implementation of IRenderDevice::CreateFramebuffer().
     virtual void DILIGENT_CALL_TYPE CreateFramebuffer(const FramebufferDesc& Desc,
@@ -170,29 +169,9 @@ public:
     /// Implementation of IRenderDevice::GetEngineFactory().
     virtual IEngineFactory* DILIGENT_CALL_TYPE GetEngineFactory() const override final { return nullptr; }
 
-private:
-    const RenderDeviceInfo    m_DeviceInfo;
-    const GraphicsAdapterInfo m_AdapterInfo;
-};
-
-
-
-class SerializationDeviceImpl final : public ObjectBase<ISerializationDevice>
-{
-public:
-    using TBase = ObjectBase<ISerializationDevice>;
-
-    SerializationDeviceImpl(IReferenceCounters* pRefCounters, const SerializationDeviceCreateInfo& CreateInfo);
-    ~SerializationDeviceImpl();
-
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_SerializationDevice, TBase)
-
     virtual void DILIGENT_CALL_TYPE CreateShader(const ShaderCreateInfo&  ShaderCI,
                                                  RENDER_DEVICE_TYPE_FLAGS DeviceFlags,
                                                  IShader**                ppShader) override final;
-
-    virtual void DILIGENT_CALL_TYPE CreateRenderPass(const RenderPassDesc& Desc,
-                                                     IRenderPass**         ppRenderPass) override final;
 
     virtual void DILIGENT_CALL_TYPE CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
                                                                     RENDER_DEVICE_TYPE_FLAGS             DeviceFlags,
@@ -282,9 +261,7 @@ public:
 
     static RENDER_DEVICE_TYPE_FLAGS GetValidDeviceFlags();
 
-    DummyRenderDevice*         GetDevice() { return &m_Device; }
-    const RenderDeviceInfo&    GetDeviceInfo() const { return m_Device.GetDeviceInfo(); }
-    const GraphicsAdapterInfo& GetAdapterInfo() const { return m_Device.GetAdapterInfo(); }
+    SerializationDeviceImpl* GetDevice() { return this; }
 
 private:
     static constexpr Uint32 RuntimeArray = 0;
@@ -301,7 +278,8 @@ private:
                                                std::vector<PipelineResourceBinding>& ResourceBindings,
                                                const Uint32                          MaxBufferArgs);
 
-    DummyRenderDevice m_Device;
+    const RenderDeviceInfo    m_DeviceInfo;
+    const GraphicsAdapterInfo m_AdapterInfo;
 
     // D3D11
     Version m_D3D11FeatureLevel{11, 0};

@@ -29,6 +29,7 @@
 /// \file
 /// Defines Diligent::ISerializationDevice interface
 
+#include "../../GraphicsEngine/interface/RenderDevice.h"
 #include "../../GraphicsEngine/interface/Shader.h"
 #include "../../GraphicsEngine/interface/RenderPass.h"
 #include "../../GraphicsEngine/interface/PipelineResourceSignature.h"
@@ -44,7 +45,7 @@ static const INTERFACE_ID IID_SerializationDevice =
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
 #define ISerializationDeviceInclusiveMethods \
-    IObjectInclusiveMethods;                 \
+    IRenderDeviceInclusiveMethods;           \
     ISerializationDeviceMethods SerializationDevice
 
 // clang-format off
@@ -166,7 +167,7 @@ typedef struct PipelineResourceBinding PipelineResourceBinding;
 
 
 /// Defines the methods to manipulate a serialization device object
-DILIGENT_BEGIN_INTERFACE(ISerializationDevice, IObject)
+DILIGENT_BEGIN_INTERFACE(ISerializationDevice, IRenderDevice)
 {
     /// Creates a serialized shader.
     VIRTUAL void METHOD(CreateShader)(THIS_
@@ -174,11 +175,7 @@ DILIGENT_BEGIN_INTERFACE(ISerializationDevice, IObject)
                                       RENDER_DEVICE_TYPE_FLAGS   DeviceFlags,
                                       IShader**                  ppShader) PURE;
 
-    /// Creates a serialized render pass.
-    VIRTUAL void METHOD(CreateRenderPass)(THIS_
-                                          const RenderPassDesc REF Desc,
-                                          IRenderPass**            ppRenderPass) PURE;
-
+ 
     /// Creates a serialized pipeline resource signature.
     VIRTUAL void METHOD(CreatePipelineResourceSignature)(THIS_
                                                          const PipelineResourceSignatureDesc REF Desc,
@@ -198,7 +195,6 @@ DILIGENT_END_INTERFACE
 #if DILIGENT_C_INTERFACE
 
 #    define ISerializationDevice_CreateShader(This, ...)                    CALL_IFACE_METHOD(SerializationDevice, CreateShader,                    This, __VA_ARGS__)
-#    define ISerializationDevice_CreateRenderPass(This, ...)                CALL_IFACE_METHOD(SerializationDevice, CreateRenderPass,                This, __VA_ARGS__)
 #    define ISerializationDevice_CreatePipelineResourceSignature(This, ...) CALL_IFACE_METHOD(SerializationDevice, CreatePipelineResourceSignature, This, __VA_ARGS__)
 #    define ISerializationDevice_GetPipelineResourceBindings(This, ...)     CALL_IFACE_METHOD(SerializationDevice, GetPipelineResourceBindings,     This, __VA_ARGS__)
 

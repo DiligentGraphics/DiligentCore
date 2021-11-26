@@ -78,20 +78,10 @@ static void SortResourceSignatures(const PipelineResourceBindingAttribs& Info, S
 } // namespace
 
 
-DummyRenderDevice::DummyRenderDevice(IReferenceCounters* pRefCounters, const RenderDeviceInfo& DeviceInfo, const GraphicsAdapterInfo& AdapterInfo) :
-    TBase{pRefCounters},
-    m_DeviceInfo{DeviceInfo},
-    m_AdapterInfo{AdapterInfo}
-{
-}
-
-DummyRenderDevice::~DummyRenderDevice()
-{}
-
-
 SerializationDeviceImpl::SerializationDeviceImpl(IReferenceCounters* pRefCounters, const SerializationDeviceCreateInfo& CreateInfo) :
     TBase{pRefCounters},
-    m_Device{pRefCounters, CreateInfo.DeviceInfo, CreateInfo.AdapterInfo}
+    m_DeviceInfo{CreateInfo.DeviceInfo},
+    m_AdapterInfo{CreateInfo.AdapterInfo}
 {
 #if !DILIGENT_NO_GLSLANG
     GLSLangUtils::InitializeGlslang();
@@ -124,6 +114,21 @@ SerializationDeviceImpl::SerializationDeviceImpl(IReferenceCounters* pRefCounter
         m_MtlLinkOptionsiOS    = CreateInfo.Metal.LinkOptionsiOS ? CreateInfo.Metal.LinkOptionsiOS : "";
     }
 #endif
+}
+
+void DILIGENT_CALL_TYPE SerializationDeviceImpl::QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)
+{
+    if (ppInterface == nullptr)
+        return;
+    if (IID == IID_SerializationDevice || IID == IID_RenderDevice)
+    {
+        *ppInterface = this;
+        (*ppInterface)->AddRef();
+    }
+    else
+    {
+        TBase::QueryInterface(IID, ppInterface);
+    }
 }
 
 SerializationDeviceImpl::~SerializationDeviceImpl()
