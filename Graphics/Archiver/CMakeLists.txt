@@ -116,7 +116,7 @@ if(METAL_SUPPORTED)
         spirv-cross-msl
         spirv-cross-glsl
    	)
-    target_include_directories(Diligent-Archiver PRIVATE ../GraphicsEngineMetal/include)
+    target_include_directories(Diligent-Archiver PRIVATE ../../../DiligentCorePro/Graphics/GraphicsEngineMetal/include)
 endif()
 
 if(MSVC)

@@ -263,7 +263,7 @@ template bool ArchiverImpl::PatchShadersMtl<TilePipelineStateCreateInfo>(TilePip
 template bool ArchiverImpl::PatchShadersMtl<RayTracingPipelineStateCreateInfo>(RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
 
 
-static_assert(std::is_same_v<MtlArchiverResourceCounters, MtlResourceCounters>,
+static_assert(std::is_same<MtlArchiverResourceCounters, MtlResourceCounters>::value,
               "MtlArchiverResourceCounters and MtlResourceCounters must be same types");
 
 struct SerializableShaderImpl::CompiledShaderMtlImpl final : ICompiledShader
