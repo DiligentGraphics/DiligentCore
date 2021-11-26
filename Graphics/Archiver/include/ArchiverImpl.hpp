@@ -213,11 +213,10 @@ private:
 
     void ReserveSpace(PendingData& Pending) const;
     void WriteDebugInfo(PendingData& Pending) const;
-    void WriteResourceSignatureData(PendingData& Pending) const;
     void WriteShaderData(PendingData& Pending) const;
-    void WriteRenderPassData(PendingData& Pending) const;
-    template <typename PSOType>
-    void WritePSOData(PendingData& Pending, TNamedObjectHashMap<PSOType>& Map, ChunkType Chunk) const;
+    template <typename DataHeaderType, typename MapType, typename WritePerDeviceDataType>
+    void WriteDeviceObjectData(ChunkType Type, PendingData& Pending, MapType& Map, WritePerDeviceDataType WriteDeviceData) const;
+
     void UpdateOffsetsInArchive(PendingData& Pending) const;
     void WritePendingDataToStream(const PendingData& Pending, IFileStream* pStream) const;
 

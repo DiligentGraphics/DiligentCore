@@ -251,68 +251,24 @@ void WritePerDeviceData(HeaderType&                 Header,
     Header.SetOffset(Type, StaticCast<Uint32>(Offset));
 }
 
-void ArchiverImpl::WriteResourceSignatureData(PendingData& Pending) const
+template <typename DataHeaderType, typename MapType, typename WritePerDeviceDataType>
+void ArchiverImpl::WriteDeviceObjectData(ChunkType Type, PendingData& Pending, MapType& ObjectMap, WritePerDeviceDataType WriteDeviceData) const
 {
-    if (m_PRSMap.empty())
+    if (ObjectMap.empty())
         return;
 
-    auto* DataSizeArray   = InitNamedResourceArrayHeader(ChunkType::ResourceSignature, m_PRSMap, Pending);
-    auto* DataOffsetArray = Pending.DataOffsetArrayPerChunk[static_cast<size_t>(ChunkType::ResourceSignature)];
+    auto* DataSizeArray   = InitNamedResourceArrayHeader(Type, ObjectMap, Pending);
+    auto* DataOffsetArray = Pending.DataOffsetArrayPerChunk[static_cast<size_t>(Type)];
 
     Uint32 j = 0;
-    for (const auto& PRS : m_PRSMap)
+    for (auto& Obj : ObjectMap)
     {
-        auto* pHeader = WriteHeader<PRSDataHeader>(ChunkType::ResourceSignature, PRS.second.GetSharedData(), Pending.SharedData,
-                                                   DataOffsetArray[j], DataSizeArray[j]);
+        auto* pHeader = WriteHeader<DataHeaderType>(Type, Obj.second.GetSharedData(), Pending.SharedData,
+                                                    DataOffsetArray[j], DataSizeArray[j]);
 
         for (Uint32 type = 0; type < DeviceDataCount; ++type)
         {
-            auto Type = static_cast<DeviceType>(type);
-            if (Type == DeviceType::Metal_MacOS)
-                Type = DeviceType::Metal_iOS; // MacOS & iOS have the same PRS
-
-            WritePerDeviceData(*pHeader, Type, PRS.second.GetDeviceData(Type), Pending.PerDeviceData[type]);
-        }
-        ++j;
-    }
-}
-
-void ArchiverImpl::WriteRenderPassData(PendingData& Pending) const
-{
-    if (m_RPMap.empty())
-        return;
-
-    auto* DataSizeArray   = InitNamedResourceArrayHeader(ChunkType::RenderPass, m_RPMap, Pending);
-    auto* DataOffsetArray = Pending.DataOffsetArrayPerChunk[static_cast<size_t>(ChunkType::RenderPass)];
-
-    Uint32 j = 0;
-    for (const auto& RP : m_RPMap)
-    {
-        WriteHeader<RPDataHeader>(ChunkType::RenderPass, RP.second.GetSharedData(), Pending.SharedData,
-                                  DataOffsetArray[j], DataSizeArray[j]);
-        ++j;
-    }
-}
-
-template <typename PSOType>
-void ArchiverImpl::WritePSOData(PendingData& Pending, TNamedObjectHashMap<PSOType>& PSOMap, ChunkType PSOChunkType) const
-{
-    if (PSOMap.empty())
-        return;
-
-    auto* DataSizeArray   = InitNamedResourceArrayHeader(PSOChunkType, PSOMap, Pending);
-    auto* DataOffsetArray = Pending.DataOffsetArrayPerChunk[static_cast<size_t>(PSOChunkType)];
-
-    Uint32 j = 0;
-    for (auto& PSO : PSOMap)
-    {
-        auto* pHeader = WriteHeader<PSODataHeader>(PSOChunkType, PSO.second.GetSharedData(), Pending.SharedData,
-                                                   DataOffsetArray[j], DataSizeArray[j]);
-
-        for (Uint32 type = 0; type < DeviceDataCount; ++type)
-        {
-            const auto Type = static_cast<DeviceType>(type);
-            WritePerDeviceData(*pHeader, Type, PSO.second.PerDeviceData[type], Pending.PerDeviceData[type]);
+            WriteDeviceData(*pHeader, static_cast<DeviceType>(type), Obj.second);
         }
         ++j;
     }
@@ -488,12 +444,25 @@ Bool ArchiverImpl::SerializeToStream(IFileStream* pStream)
     ReserveSpace(Pending);
     WriteDebugInfo(Pending);
     WriteShaderData(Pending);
-    WriteResourceSignatureData(Pending);
-    WriteRenderPassData(Pending);
-    WritePSOData(Pending, m_GraphicsPSOMap, ChunkType::GraphicsPipelineStates);
-    WritePSOData(Pending, m_ComputePSOMap, ChunkType::ComputePipelineStates);
-    WritePSOData(Pending, m_TilePSOMap, ChunkType::TilePipelineStates);
-    WritePSOData(Pending, m_RayTracingPSOMap, ChunkType::RayTracingPipelineStates);
+    WriteDeviceObjectData<PRSDataHeader>(ChunkType::ResourceSignature, Pending, m_PRSMap,
+                                         [&Pending](PRSDataHeader& Header, DeviceType Type, const PRSData& Src) //
+                                         {
+                                             if (Type == DeviceType::Metal_MacOS)
+                                                 Type = DeviceType::Metal_iOS; // MacOS & iOS have the same PRS
+
+                                             WritePerDeviceData(Header, Type, Src.GetDeviceData(Type), Pending.PerDeviceData[static_cast<size_t>(Type)]);
+                                         });
+
+    WriteDeviceObjectData<RPDataHeader>(ChunkType::RenderPass, Pending, m_RPMap, [](RPDataHeader& Header, DeviceType Type, const RPData&) {});
+
+    auto WritePSOPerDeviceData = [&Pending](PSODataHeader& Header, DeviceType Type, const auto& Src) //
+    {
+        WritePerDeviceData(Header, Type, Src.PerDeviceData[static_cast<size_t>(Type)], Pending.PerDeviceData[static_cast<size_t>(Type)]);
+    };
+    WriteDeviceObjectData<PSODataHeader>(ChunkType::GraphicsPipelineStates, Pending, m_GraphicsPSOMap, WritePSOPerDeviceData);
+    WriteDeviceObjectData<PSODataHeader>(ChunkType::ComputePipelineStates, Pending, m_ComputePSOMap, WritePSOPerDeviceData);
+    WriteDeviceObjectData<PSODataHeader>(ChunkType::TilePipelineStates, Pending, m_TilePSOMap, WritePSOPerDeviceData);
+    WriteDeviceObjectData<PSODataHeader>(ChunkType::RayTracingPipelineStates, Pending, m_RayTracingPSOMap, WritePSOPerDeviceData);
     static_assert(ChunkCount == 9, "Write data for new chunk type");
 
     UpdateOffsetsInArchive(Pending);
