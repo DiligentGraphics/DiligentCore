@@ -263,9 +263,10 @@ public:
 
     SerializationDeviceImpl* GetDevice() { return this; }
 
-private:
-    static constexpr Uint32 RuntimeArray = 0;
+protected:
+    static PipelineResourceBinding ResDescToPipelineResBinding(const PipelineResourceDesc& ResDesc, SHADER_TYPE Stages, Uint32 Register, Uint32 Space);
 
+private:
     static void GetPipelineResourceBindingsD3D11(const PipelineResourceBindingAttribs& Attribs,
                                                  std::vector<PipelineResourceBinding>& ResourceBindings);
     static void GetPipelineResourceBindingsD3D12(const PipelineResourceBindingAttribs& Attribs,

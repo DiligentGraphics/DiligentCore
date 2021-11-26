@@ -134,18 +134,10 @@ void SerializationDeviceImpl::GetPipelineResourceBindingsGL(const PipelineResour
             for (auto Stages = ShaderStages & SupportedStagesMask; Stages != 0;)
             {
                 const auto ShaderStage = ExtractLSB(Stages);
-
                 if ((ResDesc.ShaderStages & ShaderStage) == 0)
                     continue;
 
-                PipelineResourceBinding Dst{};
-                Dst.Name         = ResDesc.Name;
-                Dst.ResourceType = ResDesc.ResourceType;
-                Dst.Register     = BaseBindings[Range] + ResAttr.CacheOffset;
-                Dst.Space        = 0;
-                Dst.ArraySize    = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) == 0 ? ResDesc.ArraySize : RuntimeArray;
-                Dst.ShaderStages = ShaderStage;
-                ResourceBindings.push_back(Dst);
+                ResourceBindings.push_back(ResDescToPipelineResBinding(ResDesc, ShaderStage, BaseBindings[Range] + ResAttr.CacheOffset, 0 /*space*/));
             }
         }
         pSignature->ShiftBindings(BaseBindings);

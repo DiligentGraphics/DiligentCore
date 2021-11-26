@@ -233,21 +233,12 @@ void SerializationDeviceImpl::GetPipelineResourceBindingsD3D11(const PipelineRes
             {
                 const auto ShaderStage = ExtractLSB(Stages);
                 const auto ShaderInd   = GetShaderTypeIndex(ShaderStage);
-
                 if ((ResDesc.ShaderStages & ShaderStage) == 0)
                     continue;
 
                 VERIFY_EXPR(ResAttr.BindPoints.IsStageActive(ShaderInd));
-                const auto Binding = Uint32{BaseBindings[Range][ShaderInd]} + Uint32{ResAttr.BindPoints[ShaderInd]};
-
-                PipelineResourceBinding Dst{};
-                Dst.Name         = ResDesc.Name;
-                Dst.ResourceType = ResDesc.ResourceType;
-                Dst.Register     = Binding;
-                Dst.Space        = 0;
-                Dst.ArraySize    = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) == 0 ? ResDesc.ArraySize : RuntimeArray;
-                Dst.ShaderStages = ShaderStage;
-                ResourceBindings.push_back(Dst);
+                const auto Register = Uint32{BaseBindings[Range][ShaderInd]} + Uint32{ResAttr.BindPoints[ShaderInd]};
+                ResourceBindings.push_back(ResDescToPipelineResBinding(ResDesc, ShaderStage, Register, 0 /*space*/));
             }
         }
 

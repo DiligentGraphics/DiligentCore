@@ -218,18 +218,10 @@ void SerializationDeviceImpl::GetPipelineResourceBindingsVk(const PipelineResour
         {
             const auto& ResDesc = pSignature->GetResourceDesc(r);
             const auto& ResAttr = pSignature->GetResourceAttribs(r);
-
             if ((ResDesc.ShaderStages & ShaderStages) == 0)
                 continue;
 
-            PipelineResourceBinding Dst{};
-            Dst.Name         = ResDesc.Name;
-            Dst.ResourceType = ResDesc.ResourceType;
-            Dst.Register     = ResAttr.BindingIndex;
-            Dst.Space        = StaticCast<Uint16>(DescSetLayoutCount + ResAttr.DescrSet);
-            Dst.ArraySize    = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) == 0 ? ResDesc.ArraySize : RuntimeArray;
-            Dst.ShaderStages = ResDesc.ShaderStages;
-            ResourceBindings.push_back(Dst);
+            ResourceBindings.push_back(ResDescToPipelineResBinding(ResDesc, ResDesc.ShaderStages, ResAttr.BindingIndex, DescSetLayoutCount + ResAttr.DescrSet));
         }
 
         // Same as PipelineLayoutVk::Create()

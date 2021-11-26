@@ -156,12 +156,12 @@ typedef struct PipelineResourceBindingAttribs PipelineResourceBindingAttribs;
 /// Pipeline resource binding
 struct PipelineResourceBinding
 {
-    const Char*          Name;
-    SHADER_RESOURCE_TYPE ResourceType;
-    SHADER_TYPE          ShaderStages;
-    Uint16               Space;
-    Uint32               Register;
-    Uint32               ArraySize;
+    const Char*          Name           DEFAULT_INITIALIZER(nullptr);
+    SHADER_RESOURCE_TYPE ResourceType   DEFAULT_INITIALIZER(SHADER_RESOURCE_TYPE_UNKNOWN);
+    SHADER_TYPE          ShaderStages   DEFAULT_INITIALIZER(SHADER_TYPE_UNKNOWN);
+    Uint16               Space          DEFAULT_INITIALIZER(0);
+    Uint32               Register       DEFAULT_INITIALIZER(0);
+    Uint32               ArraySize      DEFAULT_INITIALIZER(0);
 };
 typedef struct PipelineResourceBinding PipelineResourceBinding;
 

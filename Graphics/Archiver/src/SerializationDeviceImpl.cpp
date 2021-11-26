@@ -258,4 +258,19 @@ void SerializationDeviceImpl::GetPipelineResourceBindings(const PipelineResource
     pBindings   = m_ResourceBindings.data();
 }
 
+PipelineResourceBinding SerializationDeviceImpl::ResDescToPipelineResBinding(const PipelineResourceDesc& ResDesc,
+                                                                             SHADER_TYPE                 Stages,
+                                                                             Uint32                      Register,
+                                                                             Uint32                      Space)
+{
+    PipelineResourceBinding BindigDesc;
+    BindigDesc.Name         = ResDesc.Name;
+    BindigDesc.ResourceType = ResDesc.ResourceType;
+    BindigDesc.Register     = Register;
+    BindigDesc.Space        = StaticCast<Uint16>(Space);
+    BindigDesc.ArraySize    = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) == 0 ? ResDesc.ArraySize : 0;
+    BindigDesc.ShaderStages = Stages;
+    return BindigDesc;
+}
+
 } // namespace Diligent

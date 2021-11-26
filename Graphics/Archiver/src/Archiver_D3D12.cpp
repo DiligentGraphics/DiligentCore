@@ -200,18 +200,10 @@ void SerializationDeviceImpl::GetPipelineResourceBindingsD3D12(const PipelineRes
         {
             const auto& ResDesc = pSignature->GetResourceDesc(r);
             const auto& ResAttr = pSignature->GetResourceAttribs(r);
-
             if ((ResDesc.ShaderStages & ShaderStages) == 0)
                 continue;
 
-            PipelineResourceBinding Dst{};
-            Dst.Name         = ResDesc.Name;
-            Dst.ResourceType = ResDesc.ResourceType;
-            Dst.Register     = ResAttr.Register;
-            Dst.Space        = StaticCast<Uint16>(BaseRegisterSpace + ResAttr.Space);
-            Dst.ArraySize    = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) == 0 ? ResDesc.ArraySize : RuntimeArray;
-            Dst.ShaderStages = ResDesc.ShaderStages;
-            ResourceBindings.push_back(Dst);
+            ResourceBindings.push_back(ResDescToPipelineResBinding(ResDesc, ResDesc.ShaderStages, ResAttr.Register, BaseRegisterSpace + ResAttr.Space));
         }
     }
 }
