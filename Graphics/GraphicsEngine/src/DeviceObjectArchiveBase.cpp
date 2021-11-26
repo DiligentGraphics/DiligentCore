@@ -68,8 +68,7 @@ DeviceObjectArchiveBase::DeviceType DeviceObjectArchiveBase::RenderDeviceTypeToA
 DeviceObjectArchiveBase::DeviceObjectArchiveBase(IReferenceCounters* pRefCounters, IArchive* pArchive, DeviceType DevType) :
     TObjectBase{pRefCounters},
     m_pArchive{pArchive},
-    m_DevType{DevType},
-    m_StringAllocator{GetRawAllocator(), 4 << 20}
+    m_DevType{DevType}
 {
     if (m_pArchive == nullptr)
         LOG_ERROR_AND_THROW("pSource must not be null");
@@ -109,6 +108,7 @@ DeviceObjectArchiveBase::DeviceObjectArchiveBase(IReferenceCounters* pRefCounter
         }
         ProcessedBits[static_cast<size_t>(Chunk.Type)] = true;
 
+        static_assert(static_cast<size_t>(ChunkType::Count) == 9, "Please handle the new chunk type below");
         switch (Chunk.Type)
         {
             // clang-format off
@@ -128,6 +128,7 @@ DeviceObjectArchiveBase::DeviceObjectArchiveBase(IReferenceCounters* pRefCounter
 
 DeviceObjectArchiveBase::BlockOffsetType DeviceObjectArchiveBase::GetBlockOffsetType() const
 {
+    static_assert(static_cast<size_t>(DeviceType::Count) == 6, "Please handle the new device type below");
     switch (m_DevType)
     {
         // clang-format off
@@ -137,7 +138,7 @@ DeviceObjectArchiveBase::BlockOffsetType DeviceObjectArchiveBase::GetBlockOffset
         case DeviceType::Vulkan:      return BlockOffsetType::Vulkan;
         case DeviceType::Metal_iOS:   return BlockOffsetType::Metal_iOS;
         case DeviceType::Metal_MacOS: return BlockOffsetType::Metal_MacOS;
-            // clang-format on
+        // clang-format on
         default:
             UNEXPECTED("Unexpected device type");
             return BlockOffsetType::Count;
@@ -181,36 +182,25 @@ void DeviceObjectArchiveBase::ReadNamedResources(const ChunkHeader& Chunk, TName
                 Chunk.Type == ChunkType::RayTracingPipelineStates ||
                 Chunk.Type == ChunkType::RenderPass);
 
-    std::vector<Uint8> Data(Chunk.Size); // AZ TODO: optimize
+    std::vector<Uint8> Data(Chunk.Size);
     if (!m_pArchive->Read(Chunk.Offset, Data.size(), Data.data()))
     {
         LOG_ERROR_AND_THROW("Failed to read resource list from archive");
     }
 
-    const auto& Header         = *reinterpret_cast<const NamedResourceArrayHeader*>(Data.data());
-    size_t      OffsetInHeader = sizeof(Header);
+    FixedLinearAllocator InPlaceAlloc{Data.data(), Data.size()};
 
-    const auto* NameLengthArray = reinterpret_cast<const Uint32*>(&Data[OffsetInHeader]);
-    OffsetInHeader += sizeof(*NameLengthArray) * Header.Count;
-    VERIFY_EXPR(reinterpret_cast<size_t>(NameLengthArray) % alignof(decltype(*NameLengthArray)) == 0);
-
-    const auto* DataSizeArray = reinterpret_cast<const Uint32*>(&Data[OffsetInHeader]);
-    OffsetInHeader += sizeof(*DataSizeArray) * Header.Count;
-    VERIFY_EXPR(reinterpret_cast<size_t>(DataSizeArray) % alignof(decltype(*DataSizeArray)) == 0);
-
-    const auto* DataOffsetArray = reinterpret_cast<const Uint32*>(&Data[OffsetInHeader]);
-    OffsetInHeader += sizeof(*DataOffsetArray) * Header.Count;
-    VERIFY_EXPR(reinterpret_cast<size_t>(DataOffsetArray) % alignof(decltype(*DataOffsetArray)) == 0);
-
-    const char* NameDataPtr = reinterpret_cast<char*>(&Data[OffsetInHeader]);
+    const auto& Header          = *InPlaceAlloc.Allocate<NamedResourceArrayHeader>();
+    const auto* NameLengthArray = InPlaceAlloc.Allocate<Uint32>(Header.Count);
+    const auto* DataSizeArray   = InPlaceAlloc.Allocate<Uint32>(Header.Count);
+    const auto* DataOffsetArray = InPlaceAlloc.Allocate<Uint32>(Header.Count);
 
     std::unique_lock<std::mutex> WriteLock{Guard};
 
     // Read names
-    Uint32 Offset = 0;
     for (Uint32 i = 0; i < Header.Count; ++i)
     {
-        if (Offset + NameLengthArray[i] > Data.size())
+        if (InPlaceAlloc.GetCurrentSize() + NameLengthArray[i] > Data.size())
         {
             LOG_ERROR_AND_THROW("Failed to read archive data");
         }
@@ -218,12 +208,11 @@ void DeviceObjectArchiveBase::ReadNamedResources(const ChunkHeader& Chunk, TName
         {
             LOG_ERROR_AND_THROW("Failed to read archive data");
         }
-        VERIFY_EXPR(strlen(NameDataPtr + Offset) + 1 == NameLengthArray[i]);
+        const auto* Name = InPlaceAlloc.Allocate<char>(NameLengthArray[i]);
+        VERIFY_EXPR(strlen(Name) + 1 == NameLengthArray[i]);
 
-        const char* ResName  = m_StringAllocator.CopyString(NameDataPtr + Offset);
-        bool        Inserted = NameAndOffset.emplace(HashMapStringKey{ResName}, FileOffsetAndSize{DataOffsetArray[i], DataSizeArray[i]}).second;
+        bool Inserted = NameAndOffset.emplace(HashMapStringKey{Name, true}, FileOffsetAndSize{DataOffsetArray[i], DataSizeArray[i]}).second;
         DEV_CHECK_ERR(Inserted, "Each name in the resource names array must be unique");
-        Offset += NameLengthArray[i];
     }
 }
 
@@ -372,22 +361,29 @@ bool DeviceObjectArchiveBase::ReadRPData(const char* Name, RPData& RP)
         });
 }
 
-bool DeviceObjectArchiveBase::ReadGraphicsPSOData(const char* Name, PSOData<GraphicsPipelineStateCreateInfo>& PSO)
+template <typename PSOHashMapType, typename PSOCreateInfoType, typename... ExtraArgsType>
+bool DeviceObjectArchiveBase::ReadPSOData(ChunkType                   Type,
+                                          const char*                 Name,
+                                          PSOHashMapType&             PSOMap,
+                                          std::mutex&                 PSOMapGuard,
+                                          const char*                 ResTypeName,
+                                          PSOData<PSOCreateInfoType>& PSO,
+                                          ExtraArgsType&&... ExtraArgs)
 {
     return LoadResourceData(
-        m_GraphicsPSOMap, m_GraphicsPSOMapGuard, Name, PSO.Allocator,
-        "Graphics pipeline",
-        [&PSO](const char* Name, Serializer<SerializerMode::Read>& Ser) -> bool //
+        PSOMap, PSOMapGuard, Name, PSO.Allocator, ResTypeName,
+        [&](const char* Name, Serializer<SerializerMode::Read>& Ser) -> bool //
         {
             PSO.CreateInfo.PSODesc.Name = Name;
-            PSO.pHeader                 = Ser.Cast<PSODataHeader>();
-            if (PSO.pHeader->Type != ChunkType::GraphicsPipelineStates)
+
+            PSO.pHeader = Ser.Cast<PSODataHeader>();
+            if (PSO.pHeader->Type != Type)
             {
-                LOG_ERROR_MESSAGE("Invalid graphics pipeline header in the archive");
+                LOG_ERROR_MESSAGE("Invalid ", ResTypeName, " header in the archive");
                 return false;
             }
 
-            PSOSerializer<SerializerMode::Read>::SerializeGraphicsPSO(Ser, PSO.CreateInfo, PSO.PRSNames, PSO.RenderPassName, &PSO.Allocator);
+            PSOSerializer<SerializerMode::Read>::SerializePSOData(Ser, PSO.CreateInfo, PSO.PRSNames, &PSO.Allocator, std::forward<ExtraArgsType>(ExtraArgs)...);
             VERIFY_EXPR(Ser.IsEnd());
 
             PSO.CreateInfo.Flags |= PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES;
@@ -395,78 +391,6 @@ bool DeviceObjectArchiveBase::ReadGraphicsPSOData(const char* Name, PSOData<Grap
         });
 }
 
-bool DeviceObjectArchiveBase::ReadComputePSOData(const char* Name, PSOData<ComputePipelineStateCreateInfo>& PSO)
-{
-    return LoadResourceData(
-        m_ComputePSOMap, m_ComputePSOMapGuard, Name, PSO.Allocator,
-        "Compute pipeline",
-        [&PSO](const char* Name, Serializer<SerializerMode::Read>& Ser) -> bool //
-        {
-            PSO.CreateInfo.PSODesc.Name = Name;
-            PSO.pHeader                 = Ser.Cast<PSODataHeader>();
-            if (PSO.pHeader->Type != ChunkType::ComputePipelineStates)
-            {
-                LOG_ERROR_MESSAGE("Invalid compute pipeline header in the archive");
-                return false;
-            }
-
-            PSOSerializer<SerializerMode::Read>::SerializeComputePSO(Ser, PSO.CreateInfo, PSO.PRSNames, &PSO.Allocator);
-            VERIFY_EXPR(Ser.IsEnd());
-
-            PSO.CreateInfo.Flags |= PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES;
-            return true;
-        });
-}
-
-bool DeviceObjectArchiveBase::ReadTilePSOData(const char* Name, PSOData<TilePipelineStateCreateInfo>& PSO)
-{
-    return LoadResourceData(
-        m_TilePSOMap, m_TilePSOMapGuard, Name, PSO.Allocator,
-        "Tile pipeline",
-        [&PSO](const char* Name, Serializer<SerializerMode::Read>& Ser) -> bool //
-        {
-            PSO.CreateInfo.PSODesc.Name = Name;
-            PSO.pHeader                 = Ser.Cast<PSODataHeader>();
-            if (PSO.pHeader->Type != ChunkType::ComputePipelineStates)
-            {
-                LOG_ERROR_MESSAGE("Invalid tile pipeline header in the archive");
-                return false;
-            }
-
-            PSOSerializer<SerializerMode::Read>::SerializeTilePSO(Ser, PSO.CreateInfo, PSO.PRSNames, &PSO.Allocator);
-            VERIFY_EXPR(Ser.IsEnd());
-
-            PSO.CreateInfo.Flags |= PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES;
-            return true;
-        });
-}
-
-bool DeviceObjectArchiveBase::ReadRayTracingPSOData(const char* Name, PSOData<RayTracingPipelineStateCreateInfo>& PSO)
-{
-    return LoadResourceData(
-        m_RayTracingPSOMap, m_RayTracingPSOMapGuard, Name, PSO.Allocator,
-        "Ray tracing pipeline",
-        [&PSO](const char* Name, Serializer<SerializerMode::Read>& Ser) -> bool //
-        {
-            PSO.CreateInfo.PSODesc.Name = Name;
-            PSO.pHeader                 = Ser.Cast<PSODataHeader>();
-            if (PSO.pHeader->Type != ChunkType::RayTracingPipelineStates)
-            {
-                LOG_ERROR_MESSAGE("Invalid ray tracing pipeline header in the archive");
-                return false;
-            }
-
-            auto RemapShaders = [](Uint32& InIndex, IShader*& outShader) {
-                outShader = BitCast<IShader*>(size_t{InIndex});
-            };
-
-            PSOSerializer<SerializerMode::Read>::SerializeRayTracingPSO(Ser, PSO.CreateInfo, PSO.PRSNames, RemapShaders, &PSO.Allocator);
-            VERIFY_EXPR(Ser.IsEnd());
-
-            PSO.CreateInfo.Flags |= PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES;
-            return true;
-        });
-}
 
 template <typename ResType>
 bool DeviceObjectArchiveBase::GetCachedResource(const char* Name, TNameOffsetMapAndWeakCache<ResType>& Cache, std::mutex& Guard, ResType** ppResource)
@@ -731,7 +655,7 @@ void DeviceObjectArchiveBase::UnpackGraphicsPSO(const PipelineStateUnpackInfo& D
         return;
 
     PSOData<GraphicsPipelineStateCreateInfo> PSO{GetRawAllocator()};
-    if (!ReadGraphicsPSOData(DeArchiveInfo.Name, PSO))
+    if (!ReadPSOData(ChunkType::GraphicsPipelineStates, DeArchiveInfo.Name, m_GraphicsPSOMap, m_GraphicsPSOMapGuard, "Graphics Pipeline", PSO, PSO.RenderPassName))
         return;
 
     ReleaseTempResourceRefs<GraphicsPipelineStateCreateInfo> ReleaseRefs{PSO};
@@ -850,7 +774,7 @@ void DeviceObjectArchiveBase::UnpackComputePSO(const PipelineStateUnpackInfo& De
         return;
 
     PSOData<ComputePipelineStateCreateInfo> PSO{GetRawAllocator()};
-    if (!ReadComputePSOData(DeArchiveInfo.Name, PSO))
+    if (!ReadPSOData(ChunkType::ComputePipelineStates, DeArchiveInfo.Name, m_ComputePSOMap, m_ComputePSOMapGuard, "Compute Pipeline", PSO))
         return;
 
     ReleaseTempResourceRefs<ComputePipelineStateCreateInfo> ReleaseRefs{PSO};
@@ -898,7 +822,7 @@ void DeviceObjectArchiveBase::UnpackTilePSO(const PipelineStateUnpackInfo& DeArc
         return;
 
     PSOData<TilePipelineStateCreateInfo> PSO{GetRawAllocator()};
-    if (!ReadTilePSOData(DeArchiveInfo.Name, PSO))
+    if (!ReadPSOData(ChunkType::TilePipelineStates, DeArchiveInfo.Name, m_TilePSOMap, m_TilePSOMapGuard, "Tile Pipeline", PSO))
         return;
 
     ReleaseTempResourceRefs<TilePipelineStateCreateInfo> ReleaseRefs{PSO};
@@ -969,7 +893,11 @@ void DeviceObjectArchiveBase::UnpackRayTracingPSO(const PipelineStateUnpackInfo&
         return;
 
     PSOData<RayTracingPipelineStateCreateInfo> PSO{GetRawAllocator()};
-    if (!ReadRayTracingPSOData(DeArchiveInfo.Name, PSO))
+
+    auto RemapShaders = [](Uint32& InIndex, IShader*& outShader) {
+        outShader = BitCast<IShader*>(size_t{InIndex});
+    };
+    if (!ReadPSOData(ChunkType::RayTracingPipelineStates, DeArchiveInfo.Name, m_RayTracingPSOMap, m_RayTracingPSOMapGuard, "Ray Tracing Pipeline", PSO, RemapShaders))
         return;
 
     ReleaseTempResourceRefs<RayTracingPipelineStateCreateInfo> ReleaseRefs{PSO};
@@ -1227,12 +1155,12 @@ void PSOSerializer<Mode>::SerializePSO(
 }
 
 template <SerializerMode Mode>
-void PSOSerializer<Mode>::SerializeGraphicsPSO(
+void PSOSerializer<Mode>::SerializePSOData(
     Serializer<Mode>&                       Ser,
     TQual<GraphicsPipelineStateCreateInfo>& CreateInfo,
     TQual<TPRSNames>&                       PRSNames,
-    TQual<const char*>&                     RenderPassName,
-    DynamicLinearAllocator*                 Allocator)
+    DynamicLinearAllocator*                 Allocator,
+    TQual<const char*>&                     RenderPassName)
 {
     SerializePSO(Ser, CreateInfo, PRSNames, Allocator);
 
@@ -1282,7 +1210,7 @@ void PSOSerializer<Mode>::SerializeGraphicsPSO(
 }
 
 template <SerializerMode Mode>
-void PSOSerializer<Mode>::SerializeComputePSO(
+void PSOSerializer<Mode>::SerializePSOData(
     Serializer<Mode>&                      Ser,
     TQual<ComputePipelineStateCreateInfo>& CreateInfo,
     TQual<TPRSNames>&                      PRSNames,
@@ -1298,7 +1226,7 @@ void PSOSerializer<Mode>::SerializeComputePSO(
 }
 
 template <SerializerMode Mode>
-void PSOSerializer<Mode>::SerializeTilePSO(
+void PSOSerializer<Mode>::SerializePSOData(
     Serializer<Mode>&                   Ser,
     TQual<TilePipelineStateCreateInfo>& CreateInfo,
     TQual<TPRSNames>&                   PRSNames,
@@ -1317,12 +1245,12 @@ void PSOSerializer<Mode>::SerializeTilePSO(
 }
 
 template <SerializerMode Mode>
-void PSOSerializer<Mode>::SerializeRayTracingPSO(
+void PSOSerializer<Mode>::SerializePSOData(
     Serializer<Mode>&                                     Ser,
     TQual<RayTracingPipelineStateCreateInfo>&             CreateInfo,
     TQual<TPRSNames>&                                     PRSNames,
-    const std::function<void(Uint32&, TQual<IShader*>&)>& ShaderToIndex,
-    DynamicLinearAllocator*                               Allocator)
+    DynamicLinearAllocator*                               Allocator,
+    const std::function<void(Uint32&, TQual<IShader*>&)>& ShaderToIndex)
 {
     const bool IsReading = (Allocator != nullptr);
     const bool IsWriting = !IsReading;

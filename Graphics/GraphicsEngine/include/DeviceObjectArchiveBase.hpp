@@ -107,7 +107,7 @@ protected:
     // you need to patch only the base offsets.
     enum class BlockOffsetType : Uint32
     {
-        // Device specific data
+        // Device-specific data
         OpenGL,
         Direct3D11,
         Direct3D12,
@@ -126,6 +126,11 @@ protected:
     };
     using TBlockBaseOffsets = std::array<Uint32, static_cast<size_t>(BlockOffsetType::Count)>;
 
+#define CHECK_HEADER_SIZE(Header, Size)                                                                                                           \
+    static_assert(sizeof(Header) % 8 == 0, "sizeof(" #Header ") must be a multiple of 8. Use padding to align it.");                              \
+    static_assert(sizeof(Header) == Size, "sizeof(" #Header ") must be " #Size ". Reading binary archive will result in invalid memory access."); \
+    static_assert(sizeof(Header) % alignof(Header) == 0, "sizeof(" #Header ") is not a multiple of its alignment.");
+
     struct ArchiveHeader
     {
         Uint32            MagicNumber      = 0;
@@ -135,8 +140,7 @@ protected:
         //ChunkHeader     Chunks  [NumChunks]
         Uint32 _Padding = ~0u;
     };
-    static_assert(sizeof(ArchiveHeader) % 8 == 0, "Archive header size must be a multiple of 8. Use padding to align it.");
-    static_assert(sizeof(ArchiveHeader) == 40, "Archive header size must be 40. Reading binary archive will result in invalid memory access.");
+    CHECK_HEADER_SIZE(ArchiveHeader, 40)
 
     enum class ChunkType : Uint32
     {
@@ -160,8 +164,7 @@ protected:
         Uint32    Offset   = 0; // offset to NamedResourceArrayHeader
         Uint32    _Padding = ~0u;
     };
-    static_assert(sizeof(ChunkHeader) % 8 == 0, "Chunk header size must be a multiple of 8. Use padding to align it.");
-    static_assert(sizeof(ChunkHeader) == 16, "Chunk header size must be 16. Reading binary archive will result in invalid memory access.");
+    CHECK_HEADER_SIZE(ChunkHeader, 16)
 
     struct NamedResourceArrayHeader
     {
@@ -172,8 +175,7 @@ protected:
         //char   NameData      []
         Uint32 _Padding = ~0u;
     };
-    static_assert(sizeof(NamedResourceArrayHeader) % 8 == 0, "Named resource array header size must be a multiple of 8. Use padding to align it.");
-    static_assert(sizeof(NamedResourceArrayHeader) == 8, "Named resource array header size must be 8. Reading binary archive will result in invalid memory access.");
+    CHECK_HEADER_SIZE(NamedResourceArrayHeader, 8)
 
     struct BaseDataHeader
     {
@@ -200,8 +202,7 @@ protected:
         void SetSize(DeviceType DevType, Uint32 Size) { DeviceSpecificDataSize[static_cast<size_t>(DevType)] = Size; }
         void SetOffset(DeviceType DevType, Uint32 Offset) { DeviceSpecificDataOffset[static_cast<size_t>(DevType)] = Offset; }
     };
-    static_assert(sizeof(BaseDataHeader) % 8 == 0, "Base data header size must be a multiple of 8. Use padding to align it.");
-    static_assert(sizeof(BaseDataHeader) == 56, "Base data header size must be 56. Reading binary archive will result in invalid memory access.");
+    CHECK_HEADER_SIZE(BaseDataHeader, 56)
 
     struct PRSDataHeader : BaseDataHeader
     {
@@ -213,8 +214,7 @@ protected:
         //PipelineResourceSignatureDesc
         //PipelineResourceSignatureSerializedData
     };
-    static_assert(sizeof(PRSDataHeader) % 8 == 0, "PRS data header size must be a multiple of 8. Use padding to align it.");
-    static_assert(sizeof(PRSDataHeader) == 56, "PRS header size must be 56. Reading binary archive will result in invalid memory access.");
+    CHECK_HEADER_SIZE(PRSDataHeader, 56)
 
 
     struct PSODataHeader : BaseDataHeader
@@ -230,8 +230,8 @@ protected:
 
         //GraphicsPipelineStateCreateInfo | ComputePipelineStateCreateInfo | TilePipelineStateCreateInfo | RayTracingPipelineStateCreateInfo
     };
-    static_assert(sizeof(PSODataHeader) % 8 == 0, "PSO data header size must be a multiple of 8. Use padding to align it.");
-    static_assert(sizeof(PSODataHeader) == 56, "PSO header size must be 56. Reading binary archive will result in invalid memory access.");
+    CHECK_HEADER_SIZE(PSODataHeader, 56)
+
 
     struct ShadersDataHeader : BaseDataHeader
     {
@@ -241,8 +241,7 @@ protected:
             VERIFY_EXPR(Type == ChunkType::Shaders);
         }
     };
-    static_assert(sizeof(ShadersDataHeader) % 8 == 0, "Shader data header size must be a multiple of 8. Use padding to align it.");
-    static_assert(sizeof(ShadersDataHeader) == 56, "Shader data header size must be 56. Reading binary archive will result in invalid memory access.");
+    CHECK_HEADER_SIZE(ShadersDataHeader, 56)
 
 
     struct RPDataHeader
@@ -256,9 +255,9 @@ protected:
         const ChunkType Type      = ChunkType::RenderPass;
         const Uint32    _Padding1 = ~0u;
     };
-    static_assert(sizeof(RPDataHeader) % 8 == 0, "Render pass data header size must be a multiple of 8. Use padding to align it.");
-    static_assert(sizeof(RPDataHeader) == 8, "Render pass data header size must be 8. Reading binary archive will result in invalid memory access.");
+    CHECK_HEADER_SIZE(RPDataHeader, 8)
 
+#undef CHECK_HEADER_SIZE
 
     struct FileOffsetAndSize
     {
@@ -288,7 +287,7 @@ private:
     using TPRSOffsetAndCacheMap = TNameOffsetMapAndWeakCache<IPipelineResourceSignature>;
     using TPSOOffsetAndCacheMap = TNameOffsetMapAndWeakCache<IPipelineState>;
     using TRPOffsetAndCacheMap  = TNameOffsetMapAndWeakCache<IRenderPass>;
-    using TShaderOffsetAndCache = std::vector<FileOffsetAndResCache<RefCntAutoPtr<IShader>>>; // reference to the shader is not acquired in PSO, so weak ptr have no effect
+    using TShaderOffsetAndCache = std::vector<FileOffsetAndResCache<RefCntAutoPtr<IShader>>>; // reference to the shader is not acquired in PSO, so weak ptr has no effect
 
     TPRSOffsetAndCacheMap m_PRSMap;
     TPSOOffsetAndCacheMap m_GraphicsPSOMap;
@@ -315,7 +314,6 @@ private:
     RefCntAutoPtr<IArchive> m_pArchive; // archive is thread-safe
     const DeviceType        m_DevType;
     TBlockBaseOffsets       m_BaseOffsets = {};
-    DynamicLinearAllocator  m_StringAllocator;
 
     template <typename ResType>
     void ReadNamedResources(const ChunkHeader& Chunk, TNameOffsetMap<ResType>& NameAndOffset, std::mutex& Guard) noexcept(false);
@@ -352,7 +350,7 @@ protected:
         DynamicLinearAllocator Allocator;
         const PSODataHeader*   pHeader = nullptr;
         CreateInfoType         CreateInfo{};
-        TPRSNames              PRSNames;
+        TPRSNames              PRSNames{};
         const char*            RenderPassName = nullptr;
 
         explicit PSOData(IMemoryAllocator& Allocator, Uint32 BlockSize = 4 << 10) :
@@ -362,10 +360,15 @@ protected:
 
 private:
     bool ReadPRSData(const char* Name, PRSData& PRS);
-    bool ReadGraphicsPSOData(const char* Name, PSOData<GraphicsPipelineStateCreateInfo>& PSO);
-    bool ReadComputePSOData(const char* Name, PSOData<ComputePipelineStateCreateInfo>& PSO);
-    bool ReadTilePSOData(const char* Name, PSOData<TilePipelineStateCreateInfo>& PSO);
-    bool ReadRayTracingPSOData(const char* Name, PSOData<RayTracingPipelineStateCreateInfo>& PSO);
+
+    template <typename PSOHashMapType, typename PSOCreateInfoType, typename... ExtraArgsType>
+    bool ReadPSOData(ChunkType                   Type,
+                     const char*                 Name,
+                     PSOHashMapType&             PSOMap,
+                     std::mutex&                 PSOMapGuard,
+                     const char*                 ResTypeName,
+                     PSOData<PSOCreateInfoType>& PSO,
+                     ExtraArgsType&&... ExtraArgs);
 
     bool LoadShaders(Serializer<SerializerMode::Read>&    Ser,
                      IRenderDevice*                       pDevice,
@@ -491,27 +494,27 @@ struct PSOSerializer
                              TQual<TPRSNames>&               PRSNames,
                              DynamicLinearAllocator*         Allocator);
 
-    static void SerializeGraphicsPSO(Serializer<Mode>&                       Ser,
-                                     TQual<GraphicsPipelineStateCreateInfo>& CreateInfo,
-                                     TQual<TPRSNames>&                       PRSNames,
-                                     TQual<const char*>&                     RenderPassName,
-                                     DynamicLinearAllocator*                 Allocator);
+    static void SerializePSOData(Serializer<Mode>&                       Ser,
+                                 TQual<GraphicsPipelineStateCreateInfo>& CreateInfo,
+                                 TQual<TPRSNames>&                       PRSNames,
+                                 DynamicLinearAllocator*                 Allocator,
+                                 TQual<const char*>&                     RenderPassName);
 
-    static void SerializeComputePSO(Serializer<Mode>&                      Ser,
-                                    TQual<ComputePipelineStateCreateInfo>& CreateInfo,
-                                    TQual<TPRSNames>&                      PRSNames,
-                                    DynamicLinearAllocator*                Allocator);
+    static void SerializePSOData(Serializer<Mode>&                      Ser,
+                                 TQual<ComputePipelineStateCreateInfo>& CreateInfo,
+                                 TQual<TPRSNames>&                      PRSNames,
+                                 DynamicLinearAllocator*                Allocator);
 
-    static void SerializeTilePSO(Serializer<Mode>&                   Ser,
+    static void SerializePSOData(Serializer<Mode>&                   Ser,
                                  TQual<TilePipelineStateCreateInfo>& CreateInfo,
                                  TQual<TPRSNames>&                   PRSNames,
                                  DynamicLinearAllocator*             Allocator);
 
-    static void SerializeRayTracingPSO(Serializer<Mode>&                                     Ser,
-                                       TQual<RayTracingPipelineStateCreateInfo>&             CreateInfo,
-                                       TQual<TPRSNames>&                                     PRSNames,
-                                       const std::function<void(Uint32&, TQual<IShader*>&)>& ShaderToIndex,
-                                       DynamicLinearAllocator*                               Allocator);
+    static void SerializePSOData(Serializer<Mode>&                                     Ser,
+                                 TQual<RayTracingPipelineStateCreateInfo>&             CreateInfo,
+                                 TQual<TPRSNames>&                                     PRSNames,
+                                 DynamicLinearAllocator*                               Allocator,
+                                 const std::function<void(Uint32&, TQual<IShader*>&)>& ShaderToIndex);
 
     static void SerializeRenderPass(Serializer<Mode>&       Ser,
                                     TQual<RenderPassDesc>&  RPDesc,
