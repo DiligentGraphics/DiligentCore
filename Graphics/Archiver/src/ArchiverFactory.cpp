@@ -178,8 +178,8 @@ private:
 
     private:
         ArchiverFactoryImpl& m_Factory;
-        Atomics::AtomicLong  m_lNumStrongReferences;
-        Atomics::AtomicLong  m_lNumWeakReferences;
+        Atomics::AtomicLong  m_lNumStrongReferences{0};
+        Atomics::AtomicLong  m_lNumWeakReferences{0};
     };
 
     DummyReferenceCounters m_RefCounters;

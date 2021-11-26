@@ -280,8 +280,12 @@ private:
 
     String GetDefaultPRSName(const char* PSOName) const;
 
-    template <typename FnType>
-    bool CreateDefaultResourceSignature(DefaultPRSInfo& DefPRS, const FnType& CreatePRS);
+    template <typename PipelineStateImplType, typename ShaderStagesArrayType, typename... ExtraArgsType>
+    bool CreateDefaultResourceSignature(DefaultPRSInfo&              DefPRS,
+                                        const PipelineStateDesc&     PSODesc,
+                                        SHADER_TYPE                  ActiveShaderStages,
+                                        const ShaderStagesArrayType& ShaderStages,
+                                        const ExtraArgsType&... ExtraArgs);
 };
 
 #if D3D11_SUPPORTED

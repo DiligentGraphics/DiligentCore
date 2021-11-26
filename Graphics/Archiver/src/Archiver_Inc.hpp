@@ -50,12 +50,23 @@ static void SortResourceSignatures(const CreateInfoType& CreateInfo, SignatureAr
 } // namespace
 
 
-template <typename FnType>
-bool ArchiverImpl::CreateDefaultResourceSignature(DefaultPRSInfo& DefPRS, const FnType& CreatePRS)
+template <typename PipelineStateImplType, typename ShaderStagesArrayType, typename... ExtraArgsType>
+bool ArchiverImpl::CreateDefaultResourceSignature(DefaultPRSInfo&              DefPRS,
+                                                  const PipelineStateDesc&     PSODesc,
+                                                  SHADER_TYPE                  ActiveShaderStages,
+                                                  const ShaderStagesArrayType& ShaderStages,
+                                                  const ExtraArgsType&... ExtraArgs)
 {
     try
     {
-        RefCntAutoPtr<IPipelineResourceSignature> pDefaultPRS = CreatePRS(); // may throw exception
+        std::vector<PipelineResourceDesc> Resources;
+        std::vector<ImmutableSamplerDesc> ImmutableSamplers;
+
+        auto SignDesc = PipelineStateImplType::GetDefaultResourceSignatureDesc(ShaderStages, PSODesc.ResourceLayout, PSODesc.Name, Resources, ImmutableSamplers, ExtraArgs...);
+        SignDesc.Name = DefPRS.UniqueName.c_str();
+
+        RefCntAutoPtr<IPipelineResourceSignature> pDefaultPRS;
+        m_pSerializationDevice->CreatePipelineResourceSignature(SignDesc, DefPRS.DeviceFlags, ActiveShaderStages, &pDefaultPRS);
         if (pDefaultPRS == nullptr)
             return false;
 
@@ -63,7 +74,7 @@ bool ArchiverImpl::CreateDefaultResourceSignature(DefaultPRSInfo& DefPRS, const 
         {
             if (!(DefPRS.pPRS.RawPtr<SerializableResourceSignatureImpl>()->IsCompatible(*pDefaultPRS.RawPtr<SerializableResourceSignatureImpl>(), DefPRS.DeviceFlags)))
             {
-                LOG_ERROR_MESSAGE("Default signatures does not match between different backends");
+                LOG_ERROR_MESSAGE("Default signatures do not match between different backends");
                 return false;
             }
             pDefaultPRS = DefPRS.pPRS;

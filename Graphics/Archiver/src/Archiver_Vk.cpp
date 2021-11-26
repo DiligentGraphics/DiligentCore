@@ -104,22 +104,8 @@ bool ArchiverImpl::PatchShadersVk(CreateInfoType& CreateInfo, TPSOData<CreateInf
     IPipelineResourceSignature* DefaultSignatures[1] = {};
     if (CreateInfo.ResourceSignaturesCount == 0)
     {
-        if (!CreateDefaultResourceSignature(
-                DefPRS, [&]() {
-                    std::vector<PipelineResourceDesc> Resources;
-                    std::vector<ImmutableSamplerDesc> ImmutableSamplers;
-
-                    auto SignDesc = PipelineStateVkImpl::GetDefaultResourceSignatureDesc(
-                        ShaderStagesVk, CreateInfo.PSODesc.ResourceLayout, "Default resource signature", Resources, ImmutableSamplers);
-                    SignDesc.Name = DefPRS.UniqueName.c_str();
-
-                    RefCntAutoPtr<IPipelineResourceSignature> pDefaultPRS;
-                    m_pSerializationDevice->CreatePipelineResourceSignature(SignDesc, DefPRS.DeviceFlags, ActiveShaderStages, &pDefaultPRS);
-                    return pDefaultPRS;
-                }))
-        {
+        if (!CreateDefaultResourceSignature<PipelineStateVkImpl>(DefPRS, CreateInfo.PSODesc, ActiveShaderStages, ShaderStagesVk))
             return false;
-        }
 
         DefaultSignatures[0]               = DefPRS.pPRS;
         CreateInfo.ResourceSignaturesCount = 1;

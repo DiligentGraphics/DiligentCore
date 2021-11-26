@@ -105,9 +105,9 @@ public:
         const TShaderStages&               ShaderStages,
         const PipelineResourceLayoutDesc&  ResourceLayout,
         const char*                        PSOName,
-        const LocalRootSignatureD3D12*     pLocalRootSig,
         std::vector<PipelineResourceDesc>& Resources,
-        std::vector<ImmutableSamplerDesc>& ImmutableSamplers) noexcept(false);
+        std::vector<ImmutableSamplerDesc>& ImmutableSamplers,
+        const LocalRootSignatureD3D12*     pLocalRootSig) noexcept(false);
 
 private:
     template <typename PSOCreateInfoType>

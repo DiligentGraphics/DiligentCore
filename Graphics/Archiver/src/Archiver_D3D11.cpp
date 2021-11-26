@@ -111,8 +111,7 @@ bool ArchiverImpl::PatchShadersD3D11(CreateInfoType& CreateInfo, TPSOData<Create
     SHADER_TYPE                       ActiveShaderStages = SHADER_TYPE_UNKNOWN;
     PipelineStateD3D11Impl::ExtractShaders<SerializableShaderImpl>(CreateInfo, ShaderStages, ActiveShaderStages);
 
-    std::vector<ShaderD3D11Impl*>  ShadersD3D11{ShaderStages.size()};
-    std::vector<CComPtr<ID3DBlob>> ShaderBytecode{ShaderStages.size()};
+    std::vector<ShaderD3D11Impl*> ShadersD3D11{ShaderStages.size()};
     for (size_t i = 0; i < ShadersD3D11.size(); ++i)
     {
         auto& Src = ShaderStages[i];
@@ -123,22 +122,8 @@ bool ArchiverImpl::PatchShadersD3D11(CreateInfoType& CreateInfo, TPSOData<Create
     IPipelineResourceSignature* DefaultSignatures[1] = {};
     if (CreateInfo.ResourceSignaturesCount == 0)
     {
-        if (!CreateDefaultResourceSignature(
-                DefPRS, [&]() {
-                    std::vector<PipelineResourceDesc> Resources;
-                    std::vector<ImmutableSamplerDesc> ImmutableSamplers;
-
-                    auto SignDesc = PipelineStateD3D11Impl::GetDefaultResourceSignatureDesc(
-                        ShadersD3D11, CreateInfo.PSODesc.ResourceLayout, "Default resource signature", Resources, ImmutableSamplers);
-                    SignDesc.Name = DefPRS.UniqueName.c_str();
-
-                    RefCntAutoPtr<IPipelineResourceSignature> pDefaultPRS;
-                    m_pSerializationDevice->CreatePipelineResourceSignature(SignDesc, DefPRS.DeviceFlags, ActiveShaderStages, &pDefaultPRS);
-                    return pDefaultPRS;
-                }))
-        {
+        if (!CreateDefaultResourceSignature<PipelineStateD3D11Impl>(DefPRS, CreateInfo.PSODesc, ActiveShaderStages, ShadersD3D11))
             return false;
-        }
 
         DefaultSignatures[0]               = DefPRS.pPRS;
         CreateInfo.ResourceSignaturesCount = 1;
@@ -146,6 +131,7 @@ bool ArchiverImpl::PatchShadersD3D11(CreateInfoType& CreateInfo, TPSOData<Create
         CreateInfo.PSODesc.ResourceLayout  = {};
     }
 
+    std::vector<CComPtr<ID3DBlob>> ShaderBytecode{ShaderStages.size()};
     try
     {
         SignatureArray<PipelineResourceSignatureD3D11Impl> Signatures      = {};
@@ -243,7 +229,7 @@ void SerializationDeviceImpl::GetPipelineResourceBindingsD3D11(const PipelineRes
             const auto& ResAttr = pSignature->GetResourceAttribs(r);
             const auto  Range   = PipelineResourceSignatureD3D11Impl::ShaderResourceTypeToRange(ResDesc.ResourceType);
 
-            for (auto Stages = ShaderStages & SupportedStagesMask; Stages != 0;)
+            for (auto Stages = (ShaderStages & SupportedStagesMask); Stages != 0;)
             {
                 const auto ShaderStage = ExtractLSB(Stages);
                 const auto ShaderInd   = GetShaderTypeIndex(ShaderStage);
@@ -271,7 +257,7 @@ void SerializationDeviceImpl::GetPipelineResourceBindingsD3D11(const PipelineRes
             const auto& SampAttr = pSignature->GetImmutableSamplerAttribs(samp);
             const auto  Range    = D3D11_RESOURCE_RANGE_SAMPLER;
 
-            for (auto Stages = ShaderStages & SupportedStagesMask; Stages != 0;)
+            for (auto Stages = (ShaderStages & SupportedStagesMask); Stages != 0;)
             {
                 const auto ShaderStage = ExtractLSB(Stages);
                 const auto ShaderInd   = GetShaderTypeIndex(ShaderStage);

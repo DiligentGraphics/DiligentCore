@@ -337,9 +337,9 @@ PipelineResourceSignatureDesc PipelineStateD3D12Impl::GetDefaultResourceSignatur
     const TShaderStages&               ShaderStages,
     const PipelineResourceLayoutDesc&  ResourceLayout,
     const char*                        PSOName,
-    const LocalRootSignatureD3D12*     pLocalRootSig,
     std::vector<PipelineResourceDesc>& Resources,
-    std::vector<ImmutableSamplerDesc>& ImmutableSamplers) noexcept(false)
+    std::vector<ImmutableSamplerDesc>& ImmutableSamplers,
+    const LocalRootSignatureD3D12*     pLocalRootSig) noexcept(false)
 {
     Resources.clear();
     ImmutableSamplers.clear();
@@ -421,7 +421,7 @@ RefCntAutoPtr<PipelineResourceSignatureD3D12Impl> PipelineStateD3D12Impl::Create
     std::vector<PipelineResourceDesc> Resources;
     std::vector<ImmutableSamplerDesc> ImmutableSamplers;
 
-    const auto SignDesc = GetDefaultResourceSignatureDesc(ShaderStages, m_Desc.ResourceLayout, m_Desc.Name, pLocalRootSig, Resources, ImmutableSamplers);
+    const auto SignDesc = GetDefaultResourceSignatureDesc(ShaderStages, m_Desc.ResourceLayout, m_Desc.Name, Resources, ImmutableSamplers, pLocalRootSig);
 
     // Always initialize default resource signature as internal device object.
     // This is necessary to avoid cyclic references from GenerateMips.

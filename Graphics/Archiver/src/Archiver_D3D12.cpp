@@ -103,22 +103,8 @@ bool ArchiverImpl::PatchShadersD3D12(CreateInfoType& CreateInfo, TPSOData<Create
     IPipelineResourceSignature* DefaultSignatures[1] = {};
     if (CreateInfo.ResourceSignaturesCount == 0)
     {
-        if (!CreateDefaultResourceSignature(
-                DefPRS, [&]() {
-                    std::vector<PipelineResourceDesc> Resources;
-                    std::vector<ImmutableSamplerDesc> ImmutableSamplers;
-
-                    auto SignDesc = PipelineStateD3D12Impl::GetDefaultResourceSignatureDesc(
-                        ShaderStagesD3D12, CreateInfo.PSODesc.ResourceLayout, "Default resource signature", nullptr, Resources, ImmutableSamplers);
-                    SignDesc.Name = DefPRS.UniqueName.c_str();
-
-                    RefCntAutoPtr<IPipelineResourceSignature> pDefaultPRS;
-                    m_pSerializationDevice->CreatePipelineResourceSignature(SignDesc, DefPRS.DeviceFlags, ActiveShaderStages, &pDefaultPRS);
-                    return pDefaultPRS;
-                }))
-        {
+        if (!CreateDefaultResourceSignature<PipelineStateD3D12Impl>(DefPRS, CreateInfo.PSODesc, ActiveShaderStages, ShaderStagesD3D12, nullptr))
             return false;
-        }
 
         DefaultSignatures[0]               = DefPRS.pPRS;
         CreateInfo.ResourceSignaturesCount = 1;
