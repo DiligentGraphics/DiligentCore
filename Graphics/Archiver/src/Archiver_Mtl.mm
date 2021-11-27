@@ -67,7 +67,10 @@ struct ShaderStageInfoMtl
     SHADER_TYPE                   Type    = SHADER_TYPE_UNKNOWN;
     const SerializableShaderImpl* pShader = nullptr;
 
-    friend SHADER_TYPE GetShaderStageType(const ShaderStageInfoMtl& Stage) { return Stage.Type; }
+    SHADER_TYPE GetShaderStageType(const ShaderStageInfoMtl& Stage)
+    {
+        return Stage.Type;
+    }
 };
 
 void VerifyResourceMerge(const char*                       PSOName,
