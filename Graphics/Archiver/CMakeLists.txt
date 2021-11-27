@@ -70,7 +70,12 @@ PUBLIC
     Diligent-Common
     Diligent-GraphicsAccessories
 )
-target_compile_definitions(Diligent-Archiver PUBLIC ARCHIVER_SUPPORTED=1)
+target_compile_definitions(Diligent-Archiver
+PUBLIC
+    ARCHIVER_SUPPORTED=1
+PRIVATE
+    DILIGENT_NO_GLSLANG=$<BOOL:${DILIGENT_NO_GLSLANG}>
+)
 
 if(D3D11_SUPPORTED)
     target_link_libraries(Diligent-Archiver PRIVATE Diligent-GraphicsEngineD3D11-static)
@@ -89,7 +94,6 @@ if(VULKAN_SUPPORTED)
         ../GraphicsEngineVulkan/include
         ../../ThirdParty/Vulkan-Headers/include
     )
-    target_compile_definitions(Diligent-Archiver PRIVATE DILIGENT_NO_GLSLANG=$<BOOL:${DILIGENT_NO_GLSLANG}>)
 endif()
 
 if(GL_SUPPORTED OR GLES_SUPPORTED)
