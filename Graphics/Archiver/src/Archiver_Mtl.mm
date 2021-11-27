@@ -62,16 +62,18 @@ struct ShaderStageInfoMtl
     // Needed only for ray tracing
     void Append(const SerializableShaderImpl*) {}
 
-    Uint32 Count() const { return 1; }
+    constexpr Uint32 Count() const { return 1; }
 
     SHADER_TYPE                   Type    = SHADER_TYPE_UNKNOWN;
     const SerializableShaderImpl* pShader = nullptr;
-
-    SHADER_TYPE GetShaderStageType(const ShaderStageInfoMtl& Stage)
-    {
-        return Stage.Type;
-    }
 };
+
+#ifdef DILIGENT_DEBUG
+inline SHADER_TYPE GetShaderStageType(const ShaderStageInfoMtl& Stage)
+{
+    return Stage.Type;
+}
+#endif
 
 void VerifyResourceMerge(const char*                       PSOName,
                          const SPIRVShaderResourceAttribs& ExistingRes,
