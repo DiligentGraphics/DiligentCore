@@ -137,4 +137,40 @@ TEST(Platforms_FileSystem, SimplifyPath)
     EXPECT_STREQ(FileSystem::SimplifyPath("..\\..", '\\').c_str(), "..\\..");
 }
 
+TEST(Platforms_FileSystem, SplitPathList)
+{
+    auto TestPaths = [](const char* PathList, std::vector<std::string> Expected) {
+        std::vector<std::string> Paths;
+        FileSystem::SplitPathList(PathList,
+                                  [&Paths](const char* Path, size_t Len) //
+                                  {
+                                      Paths.emplace_back(std::string{Path, Len});
+                                      return true;
+                                  });
+        EXPECT_EQ(Paths.size(), Expected.size());
+        if (Paths.size() != Expected.size())
+            return;
+
+        for (size_t i = 0; i < Expected.size(); ++i)
+        {
+            EXPECT_EQ(Paths[i], Expected[i]);
+        }
+    };
+    TestPaths("", {});
+    TestPaths(";", {});
+    TestPaths(";;", {});
+    TestPaths("path", {{"path"}});
+    TestPaths(";path", {{"path"}});
+    TestPaths("path;", {{"path"}});
+    TestPaths("path;;", {{"path"}});
+    TestPaths(";;path;;", {{"path"}});
+    TestPaths("path1;path2", {{"path1"}, {"path2"}});
+    TestPaths("path1;;path2", {{"path1"}, {"path2"}});
+    TestPaths("path1;;path2;", {{"path1"}, {"path2"}});
+    TestPaths("path1;;path2;", {{"path1"}, {"path2"}});
+    TestPaths(";;path1;;path2;", {{"path1"}, {"path2"}});
+    TestPaths("c:\\windows\\path1;c:\\windows\\path2", {{"c:\\windows\\path1"}, {"c:\\windows\\path2"}});
+    TestPaths("/unix/path1;/unix/path2", {{"/unix/path1"}, {"/unix/path2"}});
+}
+
 } // namespace

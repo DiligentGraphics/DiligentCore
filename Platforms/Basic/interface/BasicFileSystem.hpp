@@ -114,6 +114,31 @@ public:
     /// - Removes leading and trailing slashes (/a/b/c/ -> a/b/c)
     static std::string SimplifyPath(const Diligent::Char* Path, Diligent::Char SlashSymbol);
 
+
+    /// Splits a list of paths separated by a given separator and calls a user callback for every individual path.
+    /// Empty paths are skipped.
+    template <typename CallbackType>
+    static void SplitPathList(const Diligent::Char* PathList, CallbackType Callback, const char Separator = ';')
+    {
+        const auto* Pos = PathList;
+        while (*Pos != '\0')
+        {
+            while (*Pos != '\0' && *Pos == Separator)
+                ++Pos;
+            if (*Pos == '\0')
+                break;
+
+            const auto* End = Pos + 1;
+            while (*End != '\0' && *End != Separator)
+                ++End;
+
+            if (!Callback(Pos, static_cast<size_t>(End - Pos)))
+                break;
+
+            Pos = End;
+        }
+    }
+
 protected:
     static Diligent::String m_strWorkingDirectory;
 };
