@@ -31,7 +31,7 @@ void TestArchiverFactory_CInterface(IArchiverFactory* pArchiverFactory)
     IArchiverFactory_CreateSerializationDevice(pArchiverFactory, (const SerializationDeviceCreateInfo*)NULL, (ISerializationDevice**)NULL);
     IArchiverFactory_CreateArchiver(pArchiverFactory, (ISerializationDevice*)NULL, (IArchiver**)NULL);
     IArchiverFactory_CreateDefaultShaderSourceStreamFactory(pArchiverFactory, (const Char*)NULL, (IShaderSourceInputStreamFactory**)NULL);
-    IArchiverFactory_RemoveDeviceData(pArchiverFactory, (IArchive*)NULL, RENDER_DEVICE_TYPE_FLAG_NONE, (IFileStream*)NULL);
-    IArchiverFactory_AppendDeviceData(pArchiverFactory, (IArchive*)NULL, RENDER_DEVICE_TYPE_FLAG_NONE, (IArchive*)NULL, (IFileStream*)NULL);
+    IArchiverFactory_RemoveDeviceData(pArchiverFactory, (IArchive*)NULL, ARCHIVE_DEVICE_DATA_FLAG_NONE, (IFileStream*)NULL);
+    IArchiverFactory_AppendDeviceData(pArchiverFactory, (IArchive*)NULL, ARCHIVE_DEVICE_DATA_FLAG_NONE, (IArchive*)NULL, (IFileStream*)NULL);
     IArchiverFactory_PrintArchiveContent(pArchiverFactory, (IArchive*)NULL);
 }

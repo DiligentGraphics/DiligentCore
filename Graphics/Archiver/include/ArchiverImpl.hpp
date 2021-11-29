@@ -246,7 +246,7 @@ private:
     struct DefaultPRSInfo
     {
         RefCntAutoPtr<IPipelineResourceSignature> pPRS;
-        RENDER_DEVICE_TYPE_FLAGS                  DeviceFlags = RENDER_DEVICE_TYPE_FLAG_NONE;
+        ARCHIVE_DEVICE_DATA_FLAGS                 DeviceFlags = ARCHIVE_DEVICE_DATA_FLAG_NONE;
         String                                    UniqueName;
     };
 

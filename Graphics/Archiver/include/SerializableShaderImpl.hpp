@@ -58,10 +58,10 @@ public:
     using TBase      = ObjectBase<IShader>;
     using DeviceType = DeviceObjectArchiveBase::DeviceType;
 
-    SerializableShaderImpl(IReferenceCounters*      pRefCounters,
-                           SerializationDeviceImpl* pDevice,
-                           const ShaderCreateInfo&  ShaderCI,
-                           RENDER_DEVICE_TYPE_FLAGS DeviceFlags);
+    SerializableShaderImpl(IReferenceCounters*       pRefCounters,
+                           SerializationDeviceImpl*  pDevice,
+                           const ShaderCreateInfo&   ShaderCI,
+                           ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags);
     ~SerializableShaderImpl();
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_Shader, TBase)

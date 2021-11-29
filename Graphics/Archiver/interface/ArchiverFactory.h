@@ -72,27 +72,27 @@ DILIGENT_BEGIN_INTERFACE(IArchiverFactory, IObject)
 
 
     /// Remove device specific data from archive and write new archive to the stream.
-    
+
     /// \param [in]  pSrcArchive - Source archive from which device specific data will be removed.
-    /// \param [in]  DeviceFlags - Combination of device types which will be removed.
+    /// \param [in]  DeviceFlags - Combination of device types that will be removed.
     /// \param [in]  pStream     - Destination file stream.
     VIRTUAL Bool METHOD(RemoveDeviceData)(THIS_
-                                          IArchive*                pSrcArchive,
-                                          RENDER_DEVICE_TYPE_FLAGS DeviceFlags,
-                                          IFileStream*             pStream) CONST PURE;
+                                          IArchive*                 pSrcArchive,
+                                          ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags,
+                                          IFileStream*              pStream) CONST PURE;
 
     /// Copy device specific data from source archive to destination and write new archive to the stream.
-    
+
     /// \param [in]  pSrcArchive    - Source archive to which new device specific data will be added.
-    /// \param [in]  DeviceFlags    - Combination of device types which will be copied.
+    /// \param [in]  DeviceFlags    - Combination of device types that will be copied.
     /// \param [in]  pDeviceArchive - Archive which contains same shared data and device specific data.
     /// \param [in]  pStream        - Destination file stream.
     VIRTUAL Bool METHOD(AppendDeviceData)(THIS_
-                                          IArchive*                pSrcArchive,
-                                          RENDER_DEVICE_TYPE_FLAGS DeviceFlags,
-                                          IArchive*                pDeviceArchive,
-                                          IFileStream*             pStream) CONST PURE;
-    
+                                          IArchive*                 pSrcArchive,
+                                          ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags,
+                                          IArchive*                 pDeviceArchive,
+                                          IFileStream*              pStream) CONST PURE;
+
     /// Print archive content for debuging and validating.
     VIRTUAL Bool METHOD(PrintArchiveContent)(THIS_
                                              IArchive* pArchive) CONST PURE;

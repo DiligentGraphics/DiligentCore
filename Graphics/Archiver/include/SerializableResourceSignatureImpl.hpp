@@ -64,7 +64,7 @@ public:
     SerializableResourceSignatureImpl(IReferenceCounters*                  pRefCounters,
                                       SerializationDeviceImpl*             pDevice,
                                       const PipelineResourceSignatureDesc& Desc,
-                                      RENDER_DEVICE_TYPE_FLAGS             DeviceFlags,
+                                      ARCHIVE_DEVICE_DATA_FLAGS            DeviceFlags,
                                       SHADER_TYPE                          ShaderStages = SHADER_TYPE_UNKNOWN);
     ~SerializableResourceSignatureImpl() override;
 
@@ -97,7 +97,7 @@ public:
 
     virtual IObject* DILIGENT_CALL_TYPE GetUserData() const override final { return nullptr; }
 
-    bool   IsCompatible(const SerializableResourceSignatureImpl& Rhs, RENDER_DEVICE_TYPE_FLAGS DeviceFlags) const;
+    bool   IsCompatible(const SerializableResourceSignatureImpl& Rhs, ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags) const;
     bool   operator==(const SerializableResourceSignatureImpl& Rhs) const;
     size_t CalcHash() const;
 

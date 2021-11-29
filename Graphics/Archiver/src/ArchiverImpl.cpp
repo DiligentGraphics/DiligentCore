@@ -764,9 +764,9 @@ template <typename PRSMapType>
 void ValidatePipelineStateArchiveInfo(const PipelineStateCreateInfo&  PSOCreateInfo,
                                       const PipelineStateArchiveInfo& ArchiveInfo,
                                       const PRSMapType&               PRSMap,
-                                      const RENDER_DEVICE_TYPE_FLAGS  ValidDeviceFlags) noexcept(false)
+                                      const ARCHIVE_DEVICE_DATA_FLAGS ValidDeviceFlags) noexcept(false)
 {
-    VERIFY_PSO(ArchiveInfo.DeviceFlags != RENDER_DEVICE_TYPE_FLAG_NONE, "At least one bit must be set in DeviceFlags");
+    VERIFY_PSO(ArchiveInfo.DeviceFlags != ARCHIVE_DEVICE_DATA_FLAG_NONE, "At least one bit must be set in DeviceFlags");
     VERIFY_PSO((ArchiveInfo.DeviceFlags & ValidDeviceFlags) == ArchiveInfo.DeviceFlags, "DeviceFlags contain unsupported device type");
 
     VERIFY_PSO(PSOCreateInfo.PSODesc.Name != nullptr, "Pipeline name in PSOCreateInfo.PSODesc.Name must not be null");
@@ -823,44 +823,45 @@ bool ArchiverImpl::SerializePSO(TNamedObjectHashMap<TPSOData<CreateInfoType>>& P
 
     for (auto DeviceBits = ArchiveInfo.DeviceFlags; DeviceBits != 0;)
     {
-        const auto Type = static_cast<RENDER_DEVICE_TYPE>(PlatformMisc::GetLSB(ExtractLSB(DeviceBits)));
+        const auto Flag = ExtractLSB(DeviceBits);
 
-        static_assert(RENDER_DEVICE_TYPE_COUNT == 7, "Please update the switch below to handle the new render device type");
-        switch (Type)
+        static_assert(ARCHIVE_DEVICE_DATA_FLAG_LAST == ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS, "Please update the switch below to handle the new data type");
+        switch (Flag)
         {
 #if D3D11_SUPPORTED
-            case RENDER_DEVICE_TYPE_D3D11:
+            case ARCHIVE_DEVICE_DATA_FLAG_D3D11:
                 if (!PatchShadersD3D11(PSOCreateInfo, Data, DefPRS))
                     return false;
                 break;
 #endif
 #if D3D12_SUPPORTED
-            case RENDER_DEVICE_TYPE_D3D12:
+            case ARCHIVE_DEVICE_DATA_FLAG_D3D12:
                 if (!PatchShadersD3D12(PSOCreateInfo, Data, DefPRS))
                     return false;
                 break;
 #endif
 #if GL_SUPPORTED || GLES_SUPPORTED
-            case RENDER_DEVICE_TYPE_GL:
-            case RENDER_DEVICE_TYPE_GLES:
+            case ARCHIVE_DEVICE_DATA_FLAG_GL:
+            case ARCHIVE_DEVICE_DATA_FLAG_GLES:
                 if (!PatchShadersGL(PSOCreateInfo, Data, DefPRS))
                     return false;
                 break;
 #endif
 #if VULKAN_SUPPORTED
-            case RENDER_DEVICE_TYPE_VULKAN:
+            case ARCHIVE_DEVICE_DATA_FLAG_VULKAN:
                 if (!PatchShadersVk(PSOCreateInfo, Data, DefPRS))
                     return false;
                 break;
 #endif
 #if METAL_SUPPORTED
-            case RENDER_DEVICE_TYPE_METAL:
+            case ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS:
+            case ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS:
                 if (!PatchShadersMtl(PSOCreateInfo, Data, DefPRS))
                     return false;
                 break;
 #endif
-            case RENDER_DEVICE_TYPE_UNDEFINED:
-            case RENDER_DEVICE_TYPE_COUNT:
+            case ARCHIVE_DEVICE_DATA_FLAG_NONE:
+            case ARCHIVE_DEVICE_DATA_FLAG_LAST:
             default:
                 LOG_ERROR_MESSAGE("Unexpected render device type");
                 break;

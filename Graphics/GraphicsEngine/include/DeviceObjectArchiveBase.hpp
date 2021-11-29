@@ -75,7 +75,6 @@ public:
         Metal_MacOS,
         Count
     };
-    static DeviceType RenderDeviceTypeToArchiveDeviceType(RENDER_DEVICE_TYPE RenderDeviceType);
 
     using TPRSNames = std::array<const char*, MAX_RESOURCE_SIGNATURES>;
 

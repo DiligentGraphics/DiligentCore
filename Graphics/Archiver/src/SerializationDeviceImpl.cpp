@@ -36,30 +36,6 @@ namespace Diligent
 {
 namespace
 {
-static constexpr RENDER_DEVICE_TYPE_FLAGS GetSupportedDeviceFlags()
-{
-    RENDER_DEVICE_TYPE_FLAGS Flags = RENDER_DEVICE_TYPE_FLAG_NONE;
-#if D3D11_SUPPORTED
-    Flags = Flags | RENDER_DEVICE_TYPE_FLAG_D3D11;
-#endif
-#if D3D12_SUPPORTED
-    Flags = Flags | RENDER_DEVICE_TYPE_FLAG_D3D12;
-#endif
-#if GL_SUPPORTED
-    Flags = Flags | RENDER_DEVICE_TYPE_FLAG_GL;
-#endif
-#if GLES_SUPPORTED
-    Flags = Flags | RENDER_DEVICE_TYPE_FLAG_GLES;
-#endif
-#if VULKAN_SUPPORTED
-    Flags = Flags | RENDER_DEVICE_TYPE_FLAG_VULKAN;
-#endif
-#if METAL_SUPPORTED
-    Flags = Flags | RENDER_DEVICE_TYPE_FLAG_METAL;
-#endif
-    return Flags;
-}
-
 template <typename SignatureType>
 using SignatureArray = std::array<RefCntAutoPtr<SignatureType>, MAX_RESOURCE_SIGNATURES>;
 
@@ -87,18 +63,31 @@ SerializationDeviceImpl::SerializationDeviceImpl(IReferenceCounters* pRefCounter
     GLSLangUtils::InitializeGlslang();
 #endif
 
+#if GL_SUPPORTED
+    m_DeviceFlags = m_DeviceFlags | ARCHIVE_DEVICE_DATA_FLAG_GL;
+#endif
+#if GLES_SUPPORTED
+    m_DeviceFlags = m_DeviceFlags | ARCHIVE_DEVICE_DATA_FLAG_GLES;
+#endif
+
 #if D3D11_SUPPORTED
     m_D3D11FeatureLevel = CreateInfo.D3D11.FeatureLevel;
+    m_DeviceFlags       = m_DeviceFlags | ARCHIVE_DEVICE_DATA_FLAG_D3D11;
 #endif
+
 #if D3D12_SUPPORTED
     m_D3D12ShaderVersion = CreateInfo.D3D12.ShaderVersion;
     m_pDxCompiler        = CreateDXCompiler(DXCompilerTarget::Direct3D12, 0, CreateInfo.D3D12.DxCompilerPath);
+    m_DeviceFlags        = m_DeviceFlags | ARCHIVE_DEVICE_DATA_FLAG_D3D12;
 #endif
+
 #if VULKAN_SUPPORTED
     m_VkVersion          = CreateInfo.Vulkan.ApiVersion;
     m_VkSupportedSpirv14 = (m_VkVersion >= Version{1, 2} ? true : CreateInfo.Vulkan.SupportedSpirv14);
     m_pVkDxCompiler      = CreateDXCompiler(DXCompilerTarget::Vulkan, GetVkVersion(), CreateInfo.Vulkan.DxCompilerPath);
+    m_DeviceFlags        = m_DeviceFlags | ARCHIVE_DEVICE_DATA_FLAG_VULKAN;
 #endif
+
 #if METAL_SUPPORTED
     m_MslPreprocessorCmd = CreateInfo.Metal.MslPreprocessorCmd ? CreateInfo.Metal.MslPreprocessorCmd : "";
     if (CreateInfo.Metal.CompileForMacOS)
@@ -106,12 +95,14 @@ SerializationDeviceImpl::SerializationDeviceImpl(IReferenceCounters* pRefCounter
         m_MtlCompileForMacOS     = true;
         m_MtlCompileOptionsMacOS = CreateInfo.Metal.CompileOptionsMacOS ? CreateInfo.Metal.CompileOptionsMacOS : "";
         m_MtlLinkOptionsMacOS    = CreateInfo.Metal.LinkOptionsMacOS ? CreateInfo.Metal.LinkOptionsMacOS : "";
+        m_DeviceFlags            = m_DeviceFlags | ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS;
     }
     if (CreateInfo.Metal.CompileForiOS)
     {
         m_MtlCompileForiOS     = true;
         m_MtlCompileOptionsiOS = CreateInfo.Metal.CompileOptionsiOS ? CreateInfo.Metal.CompileOptionsiOS : "";
         m_MtlLinkOptionsiOS    = CreateInfo.Metal.LinkOptionsiOS ? CreateInfo.Metal.LinkOptionsiOS : "";
+        m_DeviceFlags          = m_DeviceFlags | ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS;
     }
 #endif
 }
@@ -138,14 +129,9 @@ SerializationDeviceImpl::~SerializationDeviceImpl()
 #endif
 }
 
-RENDER_DEVICE_TYPE_FLAGS SerializationDeviceImpl::GetValidDeviceFlags()
-{
-    return GetSupportedDeviceFlags();
-}
-
-void SerializationDeviceImpl::CreateShader(const ShaderCreateInfo&  ShaderCI,
-                                           RENDER_DEVICE_TYPE_FLAGS DeviceFlags,
-                                           IShader**                ppShader)
+void SerializationDeviceImpl::CreateShader(const ShaderCreateInfo&   ShaderCI,
+                                           ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags,
+                                           IShader**                 ppShader)
 {
     DEV_CHECK_ERR(ppShader != nullptr, "ppShader must not be null");
     if (!ppShader)
@@ -184,14 +170,14 @@ void SerializationDeviceImpl::CreateRenderPass(const RenderPassDesc& Desc, IRend
 }
 
 void SerializationDeviceImpl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
-                                                              RENDER_DEVICE_TYPE_FLAGS             DeviceFlags,
+                                                              ARCHIVE_DEVICE_DATA_FLAGS            DeviceFlags,
                                                               IPipelineResourceSignature**         ppSignature)
 {
     CreatePipelineResourceSignature(Desc, DeviceFlags, SHADER_TYPE_UNKNOWN, ppSignature);
 }
 
 void SerializationDeviceImpl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
-                                                              RENDER_DEVICE_TYPE_FLAGS             DeviceFlags,
+                                                              ARCHIVE_DEVICE_DATA_FLAGS            DeviceFlags,
                                                               SHADER_TYPE                          ShaderStages,
                                                               IPipelineResourceSignature**         ppSignature)
 {

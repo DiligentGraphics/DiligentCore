@@ -32,6 +32,8 @@
 namespace Diligent
 {
 
+DeviceObjectArchiveBase::DeviceType ArchiveDeviceDataFlagToArchiveDeviceType(ARCHIVE_DEVICE_DATA_FLAGS DataTypeFlag);
+
 namespace
 {
 
@@ -102,7 +104,7 @@ void SerializableResourceSignatureImpl::AddPRSDesc(const PipelineResourceSignatu
 SerializableResourceSignatureImpl::SerializableResourceSignatureImpl(IReferenceCounters*                  pRefCounters,
                                                                      SerializationDeviceImpl*             pDevice,
                                                                      const PipelineResourceSignatureDesc& Desc,
-                                                                     RENDER_DEVICE_TYPE_FLAGS             DeviceFlags,
+                                                                     ARCHIVE_DEVICE_DATA_FLAGS            DeviceFlags,
                                                                      SHADER_TYPE                          ShaderStages) :
     TBase{pRefCounters}
 {
@@ -159,12 +161,12 @@ SerializableResourceSignatureImpl::~SerializableResourceSignatureImpl()
 {
 }
 
-bool SerializableResourceSignatureImpl::IsCompatible(const SerializableResourceSignatureImpl& Rhs, RENDER_DEVICE_TYPE_FLAGS DeviceFlags) const
+bool SerializableResourceSignatureImpl::IsCompatible(const SerializableResourceSignatureImpl& Rhs, ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags) const
 {
-    for (auto DeviceBits = DeviceFlags; DeviceBits != 0;)
+    while (DeviceFlags != ARCHIVE_DEVICE_DATA_FLAG_NONE)
     {
-        const auto DeviceType        = static_cast<RENDER_DEVICE_TYPE>(PlatformMisc::GetLSB(ExtractLSB(DeviceBits)));
-        const auto ArchiveDeviceType = DeviceObjectArchiveBase::RenderDeviceTypeToArchiveDeviceType(DeviceType);
+        const auto DataTypeFlag      = ExtractLSB(DeviceFlags);
+        const auto ArchiveDeviceType = ArchiveDeviceDataFlagToArchiveDeviceType(DataTypeFlag);
 
         const auto* pPRS0 = GetPRS(ArchiveDeviceType);
         const auto* pPRS1 = Rhs.GetPRS(ArchiveDeviceType);

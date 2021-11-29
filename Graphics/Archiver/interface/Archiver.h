@@ -49,24 +49,55 @@ static const INTERFACE_ID IID_Archiver =
 
 // clang-format off
 
+/// Flags that indicate which device data will be packed into the archive
+DILIGENT_TYPED_ENUM(ARCHIVE_DEVICE_DATA_FLAGS, Uint32)
+{
+    /// No data
+    ARCHIVE_DEVICE_DATA_FLAG_NONE        = 0u,
+
+    /// Archive will contain Direct3D11 device data.
+    ARCHIVE_DEVICE_DATA_FLAG_D3D11       = 1u << RENDER_DEVICE_TYPE_D3D11,
+
+    /// Archive will contain Direct3D12 device data
+    ARCHIVE_DEVICE_DATA_FLAG_D3D12       = 1u << RENDER_DEVICE_TYPE_D3D12,
+
+    /// Archive will contain OpenGL device data
+    ARCHIVE_DEVICE_DATA_FLAG_GL          = 1u << RENDER_DEVICE_TYPE_GL,
+
+    /// Archive will contain OpenGLES device data
+    ARCHIVE_DEVICE_DATA_FLAG_GLES        = 1u << RENDER_DEVICE_TYPE_GLES,
+
+    /// Archive will contain Vulkan device data
+    ARCHIVE_DEVICE_DATA_FLAG_VULKAN      = 1u << RENDER_DEVICE_TYPE_VULKAN,
+
+    /// Archive will contain Metal device data for MacOS
+    ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS = 1u << RENDER_DEVICE_TYPE_METAL,
+
+    /// Archive will contain Metal device data for iOS
+    ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS   = 2u << RENDER_DEVICE_TYPE_METAL,
+
+    ARCHIVE_DEVICE_DATA_FLAG_LAST        = ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS
+};
+DEFINE_FLAG_ENUM_OPERATORS(ARCHIVE_DEVICE_DATA_FLAGS)
+
 /// Pipeline state archive info
 struct PipelineStateArchiveInfo
 {
     /// Pipeline state archive flags, see Diligent::PSO_ARCHIVE_FLAGS.
-    PSO_ARCHIVE_FLAGS Flags DEFAULT_INITIALIZER(PSO_ARCHIVE_FLAG_NONE);
+    PSO_ARCHIVE_FLAGS PSOFlags DEFAULT_INITIALIZER(PSO_ARCHIVE_FLAG_NONE);
 
-    /// Bitset of Diligent::RENDER_DEVICE_TYPE_FLAGS.
-    /// Specifies for which backends the pipeline state can be created.
-    RENDER_DEVICE_TYPE_FLAGS DeviceFlags DEFAULT_INITIALIZER(RENDER_DEVICE_TYPE_FLAG_NONE);
+    /// Bitset of Diligent::ARCHIVE_DEVICE_DATA_FLAGS.
+    /// Specifies for which backends the pipeline state data will be archived.
+    ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags DEFAULT_INITIALIZER(ARCHIVE_DEVICE_DATA_FLAG_NONE);
 };
 typedef struct PipelineStateArchiveInfo PipelineStateArchiveInfo;
 
 // Pipeline resource signature archive info
 struct ResourceSignatureArchiveInfo
 {
-    /// Bitset of RENDER_DEVICE_TYPE_FLAGS.
-    /// Specifies for which backends the resource signature can be created.
-    RENDER_DEVICE_TYPE_FLAGS DeviceFlags DEFAULT_INITIALIZER(RENDER_DEVICE_TYPE_FLAG_NONE);
+    /// Bitset of ARCHIVE_DEVICE_DATA_FLAGS.
+    /// Specifies for which backends the resource signature data will be archived.
+    ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags DEFAULT_INITIALIZER(ARCHIVE_DEVICE_DATA_FLAG_NONE);
 };
 typedef struct ResourceSignatureArchiveInfo ResourceSignatureArchiveInfo;
 

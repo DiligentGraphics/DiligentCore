@@ -169,16 +169,16 @@ public:
     /// Implementation of IRenderDevice::GetEngineFactory().
     virtual IEngineFactory* DILIGENT_CALL_TYPE GetEngineFactory() const override final { return nullptr; }
 
-    virtual void DILIGENT_CALL_TYPE CreateShader(const ShaderCreateInfo&  ShaderCI,
-                                                 RENDER_DEVICE_TYPE_FLAGS DeviceFlags,
-                                                 IShader**                ppShader) override final;
+    virtual void DILIGENT_CALL_TYPE CreateShader(const ShaderCreateInfo&   ShaderCI,
+                                                 ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags,
+                                                 IShader**                 ppShader) override final;
 
     virtual void DILIGENT_CALL_TYPE CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
-                                                                    RENDER_DEVICE_TYPE_FLAGS             DeviceFlags,
+                                                                    ARCHIVE_DEVICE_DATA_FLAGS            DeviceFlags,
                                                                     IPipelineResourceSignature**         ppSignature) override final;
 
     void CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
-                                         RENDER_DEVICE_TYPE_FLAGS             DeviceFlags,
+                                         ARCHIVE_DEVICE_DATA_FLAGS            DeviceFlags,
                                          SHADER_TYPE                          ShaderStages,
                                          IPipelineResourceSignature**         ppSignature);
 
@@ -259,7 +259,10 @@ public:
     }
 #endif
 
-    static RENDER_DEVICE_TYPE_FLAGS GetValidDeviceFlags();
+    ARCHIVE_DEVICE_DATA_FLAGS GetValidDeviceFlags() const
+    {
+        return m_DeviceFlags;
+    }
 
     SerializationDeviceImpl* GetDevice() { return this; }
 
@@ -279,6 +282,7 @@ private:
                                                std::vector<PipelineResourceBinding>& ResourceBindings,
                                                const Uint32                          MaxBufferArgs);
 
+    ARCHIVE_DEVICE_DATA_FLAGS m_DeviceFlags = ARCHIVE_DEVICE_DATA_FLAG_NONE;
     const RenderDeviceInfo    m_DeviceInfo;
     const GraphicsAdapterInfo m_AdapterInfo;
 

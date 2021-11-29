@@ -40,6 +40,42 @@
 
 namespace Diligent
 {
+
+DeviceObjectArchiveBase::DeviceType ArchiveDeviceDataFlagToArchiveDeviceType(ARCHIVE_DEVICE_DATA_FLAGS DeviceFlag)
+{
+    using DeviceType = DeviceObjectArchiveBase::DeviceType;
+    VERIFY(IsPowerOfTwo(DeviceFlag), "Only single flag is expected");
+    static_assert(ARCHIVE_DEVICE_DATA_FLAG_LAST == ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS, "Please handle the new data type below");
+    switch (DeviceFlag)
+    {
+        case ARCHIVE_DEVICE_DATA_FLAG_NONE:
+            UNEXPECTED("Archive data type is undefined");
+            return DeviceType::Count;
+
+        case ARCHIVE_DEVICE_DATA_FLAG_D3D11:
+            return DeviceType::Direct3D11;
+
+        case ARCHIVE_DEVICE_DATA_FLAG_D3D12:
+            return DeviceType::Direct3D12;
+
+        case ARCHIVE_DEVICE_DATA_FLAG_GL:
+        case ARCHIVE_DEVICE_DATA_FLAG_GLES:
+            return DeviceType::OpenGL;
+
+        case ARCHIVE_DEVICE_DATA_FLAG_VULKAN:
+            return DeviceType::Vulkan;
+
+        case ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS:
+            return DeviceType::Metal_MacOS;
+
+        case ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS:
+            return DeviceType::Metal_iOS;
+
+        default:
+            UNEXPECTED("Unexpected data type");
+            return DeviceType::Count;
+    }
+}
 namespace
 {
 
@@ -76,8 +112,8 @@ public:
     virtual void DILIGENT_CALL_TYPE CreateArchiver(ISerializationDevice* pDevice, IArchiver** ppArchiver) override final;
     virtual void DILIGENT_CALL_TYPE CreateSerializationDevice(const SerializationDeviceCreateInfo& CreateInfo, ISerializationDevice** ppDevice) override final;
     virtual void DILIGENT_CALL_TYPE CreateDefaultShaderSourceStreamFactory(const Char* SearchDirectories, struct IShaderSourceInputStreamFactory** ppShaderSourceFactory) const override final;
-    virtual Bool DILIGENT_CALL_TYPE RemoveDeviceData(IArchive* pSrcArchive, RENDER_DEVICE_TYPE_FLAGS DeviceFlags, IFileStream* pStream) const override final;
-    virtual Bool DILIGENT_CALL_TYPE AppendDeviceData(IArchive* pSrcArchive, RENDER_DEVICE_TYPE_FLAGS DeviceFlags, IArchive* pDeviceArchive, IFileStream* pStream) const override final;
+    virtual Bool DILIGENT_CALL_TYPE RemoveDeviceData(IArchive* pSrcArchive, ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags, IFileStream* pStream) const override final;
+    virtual Bool DILIGENT_CALL_TYPE AppendDeviceData(IArchive* pSrcArchive, ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags, IArchive* pDeviceArchive, IFileStream* pStream) const override final;
     virtual Bool DILIGENT_CALL_TYPE PrintArchiveContent(IArchive* pArchive) const override final;
 
 private:
@@ -145,7 +181,7 @@ void ArchiverFactoryImpl::CreateDefaultShaderSourceStreamFactory(const Char* Sea
     Diligent::CreateDefaultShaderSourceStreamFactory(SearchDirectories, ppShaderSourceFactory);
 }
 
-Bool ArchiverFactoryImpl::RemoveDeviceData(IArchive* pSrcArchive, RENDER_DEVICE_TYPE_FLAGS DeviceFlags, IFileStream* pStream) const
+Bool ArchiverFactoryImpl::RemoveDeviceData(IArchive* pSrcArchive, ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags, IFileStream* pStream) const
 {
     DEV_CHECK_ERR(pSrcArchive != nullptr, "pSrcArchive must not be null");
     DEV_CHECK_ERR(pStream != nullptr, "pStream must not be null");
@@ -156,10 +192,10 @@ Bool ArchiverFactoryImpl::RemoveDeviceData(IArchive* pSrcArchive, RENDER_DEVICE_
     {
         ArchiveRepacker Repacker{pSrcArchive};
 
-        for (; DeviceFlags != 0;)
+        while (DeviceFlags != ARCHIVE_DEVICE_DATA_FLAG_NONE)
         {
-            const auto DeviceType        = static_cast<RENDER_DEVICE_TYPE>(PlatformMisc::GetLSB(ExtractLSB(DeviceFlags)));
-            const auto ArchiveDeviceType = DeviceObjectArchiveBase::RenderDeviceTypeToArchiveDeviceType(DeviceType);
+            const auto DataTypeFlag      = ExtractLSB(DeviceFlags);
+            const auto ArchiveDeviceType = ArchiveDeviceDataFlagToArchiveDeviceType(DataTypeFlag);
 
             Repacker.RemoveDeviceData(ArchiveDeviceType);
         }
@@ -173,7 +209,7 @@ Bool ArchiverFactoryImpl::RemoveDeviceData(IArchive* pSrcArchive, RENDER_DEVICE_
     }
 }
 
-Bool ArchiverFactoryImpl::AppendDeviceData(IArchive* pSrcArchive, RENDER_DEVICE_TYPE_FLAGS DeviceFlags, IArchive* pDeviceArchive, IFileStream* pStream) const
+Bool ArchiverFactoryImpl::AppendDeviceData(IArchive* pSrcArchive, ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags, IArchive* pDeviceArchive, IFileStream* pStream) const
 {
     DEV_CHECK_ERR(pSrcArchive != nullptr, "pSrcArchive must not be null");
     DEV_CHECK_ERR(pDeviceArchive != nullptr, "pDeviceArchive must not be null");
@@ -186,10 +222,10 @@ Bool ArchiverFactoryImpl::AppendDeviceData(IArchive* pSrcArchive, RENDER_DEVICE_
         ArchiveRepacker       SrcRepacker{pSrcArchive};
         const ArchiveRepacker DevRepacker{pDeviceArchive};
 
-        for (; DeviceFlags != 0;)
+        while (DeviceFlags != ARCHIVE_DEVICE_DATA_FLAG_NONE)
         {
-            const auto DeviceType        = static_cast<RENDER_DEVICE_TYPE>(PlatformMisc::GetLSB(ExtractLSB(DeviceFlags)));
-            const auto ArchiveDeviceType = DeviceObjectArchiveBase::RenderDeviceTypeToArchiveDeviceType(DeviceType);
+            const auto DataTypeFlag      = ExtractLSB(DeviceFlags);
+            const auto ArchiveDeviceType = ArchiveDeviceDataFlagToArchiveDeviceType(DataTypeFlag);
 
             SrcRepacker.AppendDeviceData(DevRepacker, ArchiveDeviceType);
         }
