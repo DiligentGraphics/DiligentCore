@@ -160,6 +160,11 @@ protected:
 
     struct ChunkHeader
     {
+        ChunkHeader() noexcept {}
+        ChunkHeader(ChunkType _Type) noexcept :
+            Type{_Type}
+        {}
+
         ChunkType Type     = ChunkType::Undefined;
         Uint32    Size     = 0;
         Uint32    Offset   = 0; // offset to NamedResourceArrayHeader
