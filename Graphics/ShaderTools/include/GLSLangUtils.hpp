@@ -43,6 +43,9 @@ enum class SpirvVersion
     Vk110,         // SPIRV 1.3
     Vk110_Spirv14, // SPIRV 1.4 (extension)
     Vk120,         // SPIRV 1.5
+
+    GL,   // SPIRV 1.0
+    GLES, // SPIRV 1.0
 };
 
 void InitializeGlslang();
@@ -63,6 +66,7 @@ struct GLSLtoSPIRVAttribs
 std::vector<unsigned int> GLSLtoSPIRV(const GLSLtoSPIRVAttribs& Attribs);
 
 std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& ShaderCI,
+                                      SpirvVersion            Version,
                                       const char*             ExtraDefinitions,
                                       IDataBlob**             ppCompilerOutput);
 

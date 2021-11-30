@@ -243,14 +243,15 @@ std::vector<unsigned int> CompileShaderInternal(::glslang::TShader&           Sh
                                                 const char*                   ShaderSource,
                                                 size_t                        SourceCodeLen,
                                                 bool                          AssignBindings,
+                                                ::EProfile                    shProfile,
                                                 IDataBlob**                   ppCompilerOutput)
 {
     Shader.setAutoMapBindings(true);
     TBuiltInResource Resources = InitResources();
 
     auto ParseResult = pIncluder != nullptr ?
-        Shader.parse(&Resources, 100, false, messages, *pIncluder) :
-        Shader.parse(&Resources, 100, false, messages);
+        Shader.parse(&Resources, 100, shProfile, false, false, messages, *pIncluder) :
+        Shader.parse(&Resources, 100, shProfile, false, false, messages);
     if (!ParseResult)
     {
         LogCompilerError("Failed to parse shader source: \n", Shader.getInfoLog(), Shader.getInfoDebugLog(), ShaderSource, SourceCodeLen, ppCompilerOutput);
@@ -334,15 +335,75 @@ private:
     std::unordered_map<IncludeResult*, RefCntAutoPtr<IDataBlob>> m_DataBlobs;
 };
 
+void SetupWithSpirvVersion(::glslang::TShader&  Shader,
+                           spv_target_env&      spvTarget,
+                           ::EProfile&          shProfile,
+                           EShLanguage          ShLang,
+                           SpirvVersion         Version,
+                           ::glslang::EShSource ShSource)
+{
+    shProfile = EProfile::ENoProfile;
+    switch (Version)
+    {
+        case SpirvVersion::Vk100:
+            Shader.setEnvInput(ShSource, ShLang, ::glslang::EShClientVulkan, 100);
+            Shader.setEnvClient(::glslang::EShClientVulkan, ::glslang::EShTargetVulkan_1_0);
+            Shader.setEnvTarget(::glslang::EShTargetSpv, ::glslang::EShTargetSpv_1_0);
+            spvTarget = SPV_ENV_VULKAN_1_0;
+            break;
+        case SpirvVersion::Vk110:
+            Shader.setEnvInput(ShSource, ShLang, ::glslang::EShClientVulkan, 110);
+            Shader.setEnvClient(::glslang::EShClientVulkan, ::glslang::EShTargetVulkan_1_1);
+            Shader.setEnvTarget(::glslang::EShTargetSpv, ::glslang::EShTargetSpv_1_3);
+            spvTarget = SPV_ENV_VULKAN_1_1;
+            break;
+        case SpirvVersion::Vk110_Spirv14:
+            Shader.setEnvInput(ShSource, ShLang, ::glslang::EShClientVulkan, 110);
+            Shader.setEnvClient(::glslang::EShClientVulkan, ::glslang::EShTargetVulkan_1_1);
+            Shader.setEnvTarget(::glslang::EShTargetSpv, ::glslang::EShTargetSpv_1_4);
+            spvTarget = SPV_ENV_VULKAN_1_1_SPIRV_1_4;
+            break;
+        case SpirvVersion::Vk120:
+            Shader.setEnvInput(ShSource, ShLang, ::glslang::EShClientVulkan, 120);
+            Shader.setEnvClient(::glslang::EShClientVulkan, ::glslang::EShTargetVulkan_1_2);
+            Shader.setEnvTarget(::glslang::EShTargetSpv, ::glslang::EShTargetSpv_1_5);
+            spvTarget = SPV_ENV_VULKAN_1_2;
+            break;
+
+        case SpirvVersion::GL:
+            Shader.setEnvInput(ShSource, ShLang, ::glslang::EShClientOpenGL, 450);
+            Shader.setEnvClient(::glslang::EShClientOpenGL, ::glslang::EShTargetOpenGL_450);
+            Shader.setEnvTarget(::glslang::EShTargetSpv, ::glslang::EShTargetSpv_1_0);
+            spvTarget = SPV_ENV_VULKAN_1_0;
+            shProfile = EProfile::ECoreProfile;
+            break;
+        case SpirvVersion::GLES:
+            Shader.setEnvInput(ShSource, ShLang, ::glslang::EShClientOpenGL, 450);
+            Shader.setEnvClient(::glslang::EShClientOpenGL, ::glslang::EShTargetOpenGL_450);
+            Shader.setEnvTarget(::glslang::EShTargetSpv, ::glslang::EShTargetSpv_1_0);
+            spvTarget = SPV_ENV_VULKAN_1_0;
+            shProfile = EProfile::EEsProfile;
+            break;
+
+        default:
+            UNEXPECTED("Unknown SPIRV version");
+    }
+}
+
 } // namespace
 
 std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& ShaderCI,
+                                      SpirvVersion            Version,
                                       const char*             ExtraDefinitions,
                                       IDataBlob**             ppCompilerOutput)
 {
     EShLanguage        ShLang = ShaderTypeToShLanguage(ShaderCI.Desc.ShaderType);
     ::glslang::TShader Shader{ShLang};
-    EShMessages        messages = (EShMessages)(EShMsgSpvRules | EShMsgVulkanRules | EShMsgReadHlsl | EShMsgHlslLegalization);
+    EShMessages        messages  = (EShMessages)(EShMsgSpvRules | EShMsgVulkanRules | EShMsgReadHlsl | EShMsgHlslLegalization);
+    spv_target_env     spvTarget = SPV_ENV_VULKAN_1_0;
+    ::EProfile         shProfile = EProfile::ENoProfile;
+
+    SetupWithSpirvVersion(Shader, spvTarget, shProfile, ShLang, Version, ::glslang::EShSourceHlsl);
 
     VERIFY_EXPR(ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL);
 
@@ -351,9 +412,6 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& ShaderCI,
     VERIFY(ShLang != EShLangTaskNV && ShLang != EShLangMeshNV,
            "Mesh shaders are not supported, use DXCompiler to build SPIRV from HLSL");
 
-    Shader.setEnvInput(::glslang::EShSourceHlsl, ShLang, ::glslang::EShClientVulkan, 100);
-    Shader.setEnvClient(::glslang::EShClientVulkan, ::glslang::EShTargetVulkan_1_0);
-    Shader.setEnvTarget(::glslang::EShTargetSpv, ::glslang::EShTargetSpv_1_0);
     Shader.setHlslIoMapping(true);
     Shader.setEntryPoint(ShaderCI.EntryPoint);
     Shader.setEnvTargetHlslFunctionality1();
@@ -384,13 +442,13 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& ShaderCI,
 
     IncluderImpl Includer{ShaderCI.pShaderSourceStreamFactory};
 
-    auto SPIRV = CompileShaderInternal(Shader, messages, &Includer, SourceCode, SourceCodeLen, true, ppCompilerOutput);
+    auto SPIRV = CompileShaderInternal(Shader, messages, &Includer, SourceCode, SourceCodeLen, true, shProfile, ppCompilerOutput);
     if (SPIRV.empty())
         return SPIRV;
 
     // SPIR-V bytecode generated from HLSL must be legalized to
     // turn it into a valid vulkan SPIR-V shader
-    spvtools::Optimizer SpirvOptimizer{SPV_ENV_VULKAN_1_0};
+    spvtools::Optimizer SpirvOptimizer{spvTarget};
     SpirvOptimizer.SetMessageConsumer(SpvOptimizerMessageConsumer);
     SpirvOptimizer.RegisterLegalizationPasses();
     SpirvOptimizer.RegisterPerformancePasses();
@@ -410,36 +468,12 @@ std::vector<unsigned int> GLSLtoSPIRV(const GLSLtoSPIRVAttribs& Attribs)
 {
     VERIFY_EXPR(Attribs.ShaderSource != nullptr && Attribs.SourceCodeLen > 0);
 
-    EShLanguage        ShLang = ShaderTypeToShLanguage(Attribs.ShaderType);
+    const EShLanguage  ShLang = ShaderTypeToShLanguage(Attribs.ShaderType);
     ::glslang::TShader Shader(ShLang);
     spv_target_env     spvTarget = SPV_ENV_VULKAN_1_0;
+    ::EProfile         shProfile = EProfile::ENoProfile;
 
-    switch (Attribs.Version)
-    {
-        case SpirvVersion::Vk100:
-            // keep default
-            break;
-        case SpirvVersion::Vk110:
-            Shader.setEnvInput(::glslang::EShSourceGlsl, ShLang, ::glslang::EShClientVulkan, 110);
-            Shader.setEnvClient(::glslang::EShClientVulkan, ::glslang::EShTargetVulkan_1_1);
-            Shader.setEnvTarget(::glslang::EShTargetSpv, ::glslang::EShTargetSpv_1_3);
-            spvTarget = SPV_ENV_VULKAN_1_1;
-            break;
-        case SpirvVersion::Vk110_Spirv14:
-            Shader.setEnvInput(::glslang::EShSourceGlsl, ShLang, ::glslang::EShClientVulkan, 110);
-            Shader.setEnvClient(::glslang::EShClientVulkan, ::glslang::EShTargetVulkan_1_1);
-            Shader.setEnvTarget(::glslang::EShTargetSpv, ::glslang::EShTargetSpv_1_4);
-            spvTarget = SPV_ENV_VULKAN_1_1_SPIRV_1_4;
-            break;
-        case SpirvVersion::Vk120:
-            Shader.setEnvInput(::glslang::EShSourceGlsl, ShLang, ::glslang::EShClientVulkan, 120);
-            Shader.setEnvClient(::glslang::EShClientVulkan, ::glslang::EShTargetVulkan_1_2);
-            Shader.setEnvTarget(::glslang::EShTargetSpv, ::glslang::EShTargetSpv_1_5);
-            spvTarget = SPV_ENV_VULKAN_1_2;
-            break;
-        default:
-            UNEXPECTED("Unknown SPIRV version");
-    }
+    SetupWithSpirvVersion(Shader, spvTarget, shProfile, ShLang, Attribs.Version, ::glslang::EShSourceGlsl);
 
     EShMessages messages = (EShMessages)(EShMsgSpvRules | EShMsgVulkanRules);
 
@@ -456,7 +490,7 @@ std::vector<unsigned int> GLSLtoSPIRV(const GLSLtoSPIRVAttribs& Attribs)
 
     IncluderImpl Includer{Attribs.pShaderSourceStreamFactory};
 
-    auto SPIRV = CompileShaderInternal(Shader, messages, &Includer, Attribs.ShaderSource, Attribs.SourceCodeLen, Attribs.AssignBindings, Attribs.ppCompilerOutput);
+    auto SPIRV = CompileShaderInternal(Shader, messages, &Includer, Attribs.ShaderSource, Attribs.SourceCodeLen, Attribs.AssignBindings, shProfile, Attribs.ppCompilerOutput);
     if (SPIRV.empty())
         return SPIRV;
 

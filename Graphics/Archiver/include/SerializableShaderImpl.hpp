@@ -122,6 +122,10 @@ private:
     void CreateShaderD3D12(IReferenceCounters* pRefCounters, ShaderCreateInfo& ShaderCI, String& CompilationLog);
 #endif
 
+#if (GL_SUPPORTED || GLES_SUPPORTED) && !DILIGENT_NO_GLSLANG
+    void CreateShaderGL(IReferenceCounters* pRefCounters, ShaderCreateInfo& ShaderCI, String& CompilationLog, RENDER_DEVICE_TYPE DeviceType);
+#endif
+
 #if VULKAN_SUPPORTED
     void CreateShaderVk(IReferenceCounters* pRefCounters, ShaderCreateInfo& ShaderCI, String& CompilationLog);
 #endif

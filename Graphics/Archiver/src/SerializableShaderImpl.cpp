@@ -57,40 +57,44 @@ SerializableShaderImpl::SerializableShaderImpl(IReferenceCounters*       pRefCou
     auto   ShaderCI = m_CreateInfo;
     String CompilationLog;
 
-    for (auto Bits = DeviceFlags; Bits != 0;)
+    while (DeviceFlags != ARCHIVE_DEVICE_DATA_FLAG_NONE)
     {
-        const auto Type = static_cast<RENDER_DEVICE_TYPE>(PlatformMisc::GetLSB(ExtractLSB(Bits)));
+        const auto Flag = ExtractLSB(DeviceFlags);
 
-        static_assert(RENDER_DEVICE_TYPE_COUNT == 7, "Please update the switch below to handle the new render device type");
-        switch (Type)
+        static_assert(ARCHIVE_DEVICE_DATA_FLAG_LAST == ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS, "Please update the switch below to handle the new device data type");
+        switch (Flag)
         {
 #if D3D11_SUPPORTED
-            case RENDER_DEVICE_TYPE_D3D11:
+            case ARCHIVE_DEVICE_DATA_FLAG_D3D11:
                 CreateShaderD3D11(pRefCounters, ShaderCI, CompilationLog);
                 break;
 #endif
 #if D3D12_SUPPORTED
-            case RENDER_DEVICE_TYPE_D3D12:
+            case ARCHIVE_DEVICE_DATA_FLAG_D3D12:
                 CreateShaderD3D12(pRefCounters, ShaderCI, CompilationLog);
                 break;
 #endif
-            case RENDER_DEVICE_TYPE_GL:
-            case RENDER_DEVICE_TYPE_GLES:
-                // shader compilation is not supported for OpenGL, use GetCreateInfo() to get source
-                // AZ TODO: validate source using glslang
+            case ARCHIVE_DEVICE_DATA_FLAG_GL:
+            case ARCHIVE_DEVICE_DATA_FLAG_GLES:
+#if (GL_SUPPORTED || GLES_SUPPORTED) && !DILIGENT_NO_GLSLANG
+                CreateShaderGL(pRefCounters, ShaderCI, CompilationLog, Flag == ARCHIVE_DEVICE_DATA_FLAG_GL ? RENDER_DEVICE_TYPE_GL : RENDER_DEVICE_TYPE_GLES);
+#endif
                 break;
 #if VULKAN_SUPPORTED
-            case RENDER_DEVICE_TYPE_VULKAN:
+            case ARCHIVE_DEVICE_DATA_FLAG_VULKAN:
                 CreateShaderVk(pRefCounters, ShaderCI, CompilationLog);
                 break;
 #endif
 #if METAL_SUPPORTED
-            case RENDER_DEVICE_TYPE_METAL:
+            case ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS:
+            case ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS:
                 CreateShaderMtl(ShaderCI, CompilationLog);
                 break;
 #endif
-            case RENDER_DEVICE_TYPE_UNDEFINED:
-            case RENDER_DEVICE_TYPE_COUNT:
+            case ARCHIVE_DEVICE_DATA_FLAG_NONE:
+                UNEXPECTED("ARCHIVE_DEVICE_DATA_FLAG_NONE(0) should never occur");
+                break;
+
             default:
                 LOG_ERROR_MESSAGE("Unexpected render device type");
                 break;

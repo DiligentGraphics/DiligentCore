@@ -106,7 +106,7 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
 #else
                 if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL)
                 {
-                    m_SPIRV = GLSLangUtils::HLSLtoSPIRV(ShaderCI, VulkanDefine, ShaderCI.ppCompilerOutput);
+                    m_SPIRV = GLSLangUtils::HLSLtoSPIRV(ShaderCI, GLSLangUtils::SpirvVersion::Vk100, VulkanDefine, ShaderCI.ppCompilerOutput);
                 }
                 else
                 {
