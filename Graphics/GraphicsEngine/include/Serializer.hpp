@@ -27,6 +27,10 @@
 #pragma once
 
 #include <type_traits>
+#include <array>
+#include <cstring>
+#include "BasicTypes.h"
+#include "DebugUtilities.hpp"
 
 namespace Diligent
 {

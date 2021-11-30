@@ -28,6 +28,7 @@
 #include "RenderDeviceVkImpl.hpp"
 #include "DeviceObjectArchiveVkImpl.hpp"
 #include "PipelineResourceSignatureVkImpl.hpp"
+#include "PSOSerializer.hpp"
 
 namespace Diligent
 {

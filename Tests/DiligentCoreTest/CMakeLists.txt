@@ -2,11 +2,7 @@ cmake_minimum_required (VERSION 3.6)
 
 project(DiligentCoreTest)
 
-file(GLOB COMMON_SOURCE src/Common/*)
-file(GLOB GRAPHICS_ACCESSORIES_SOURCE src/GraphicsAccessories/*)
-file(GLOB PLATFORMS_SOURCE src/Platforms/*)
-
-set(SOURCE ${COMMON_SOURCE} ${GRAPHICS_ACCESSORIES_SOURCE} ${PLATFORMS_SOURCE})
+file(GLOB_RECURSE SOURCE LIST_DIRECTORIES false src/*)
 set(INCLUDE)
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -29,6 +25,7 @@ PRIVATE
     Diligent-GraphicsAccessories
     Diligent-Common
     Diligent-GraphicsTools
+    Diligent-GraphicsEngine
 )
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCE} ${INCLUDE})

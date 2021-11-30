@@ -721,7 +721,7 @@ struct TilePipelineDesc
         if (!(NumRenderTargets == RHS.NumRenderTargets && SampleCount == RHS.SampleCount))
             return false;
 
-        for (Uint32 i = 0; i < DILIGENT_MAX_RENDER_TARGETS; i++)
+        for (Uint32 i = 0; i < NumRenderTargets; i++)
             if (RTVFormats[i] != RHS.RTVFormats[i])
                 return false;
 

@@ -28,6 +28,7 @@
 #include "PipelineResourceSignatureBase.hpp"
 #include "FixedLinearAllocator.hpp"
 #include "EngineMemory.h"
+#include "PSOSerializer.hpp"
 
 namespace Diligent
 {

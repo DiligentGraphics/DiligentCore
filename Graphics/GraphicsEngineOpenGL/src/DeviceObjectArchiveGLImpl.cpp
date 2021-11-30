@@ -28,6 +28,7 @@
 #include "RenderDeviceGLImpl.hpp"
 #include "DeviceObjectArchiveGLImpl.hpp"
 #include "PipelineResourceSignatureGLImpl.hpp"
+#include "PSOSerializer.hpp"
 
 namespace Diligent
 {

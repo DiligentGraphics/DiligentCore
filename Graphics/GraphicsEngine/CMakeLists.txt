@@ -7,6 +7,7 @@ set(INCLUDE
     include/BufferViewBase.hpp
     include/BottomLevelASBase.hpp
     include/CommandListBase.hpp
+    include/DearchiverBase.hpp
     include/DefaultShaderSourceStreamFactory.h
     include/Defines.h
     include/DeviceContextBase.hpp
@@ -22,12 +23,13 @@ set(INCLUDE
     include/PipelineResourceSignatureBase.hpp
     include/PipelineStateCacheBase.hpp
     include/PrivateConstants.h
+    include/PSOSerializer.hpp
     include/QueryBase.hpp
     include/RenderDeviceBase.hpp
     include/RenderPassBase.hpp
     include/ResourceMappingImpl.hpp
     include/SamplerBase.hpp
-    include/DearchiverBase.hpp
+    include/Serializer.hpp
     include/ShaderBase.hpp
     include/ShaderResourceBindingBase.hpp
     include/ShaderResourceCacheCommon.hpp
@@ -38,7 +40,6 @@ set(INCLUDE
     include/TextureBase.hpp
     include/TextureViewBase.hpp
     include/TopLevelASBase.hpp
-    include/Serializer.hpp
 )
 
 set(INTERFACE 
@@ -50,6 +51,7 @@ set(INTERFACE
     interface/CommandList.h
     interface/Constants.h
     interface/CommandQueue.h
+    interface/Dearchiver.h
     interface/DepthStencilState.h
     interface/DeviceContext.h
     interface/DeviceMemory.h
@@ -69,7 +71,6 @@ set(INTERFACE
     interface/RenderPass.h
     interface/ResourceMapping.h
     interface/Sampler.h
-    interface/Dearchiver.h
     interface/Shader.h
     interface/ShaderResourceBinding.h
     interface/ShaderResourceVariable.h
@@ -88,6 +89,7 @@ set(SOURCE
     src/APIInfo.cpp
     src/BottomLevelASBase.cpp
     src/BufferBase.cpp
+    src/DearchiverBase.cpp
     src/DefaultShaderSourceStreamFactory.cpp
     src/DeviceContextBase.cpp
     src/DeviceMemoryBase.cpp
@@ -98,12 +100,12 @@ set(SOURCE
     src/PipelineResourceSignatureBase.cpp
     src/PipelineStateBase.cpp
     src/PipelineStateCacheBase.cpp
+    src/PSOSerializer.cpp
     src/RenderDeviceBase.cpp
     src/ResourceMappingBase.cpp
     src/RenderPassBase.cpp
     src/ShaderBindingTableBase.cpp
     src/SamplerBase.cpp
-    src/DearchiverBase.cpp
     src/TextureBase.cpp
     src/TopLevelASBase.cpp
 )

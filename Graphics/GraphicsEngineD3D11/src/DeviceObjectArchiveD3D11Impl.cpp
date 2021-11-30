@@ -28,6 +28,7 @@
 #include "RenderDeviceD3D11Impl.hpp"
 #include "DeviceObjectArchiveD3D11Impl.hpp"
 #include "PipelineResourceSignatureD3D11Impl.hpp"
+#include "PSOSerializer.hpp"
 
 namespace Diligent
 {
