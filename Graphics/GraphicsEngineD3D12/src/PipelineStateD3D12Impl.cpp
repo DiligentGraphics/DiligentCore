@@ -28,6 +28,7 @@
 #include "pch.h"
 
 #include "PipelineStateD3D12Impl.hpp"
+#include "PipelineStateCacheD3D12Impl.hpp"
 
 #include <array>
 #include <sstream>
@@ -683,6 +684,8 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
 {
     try
     {
+        const auto WName = WidenString(m_Desc.Name);
+
         TShaderStages ShaderStages;
         InitInternalObjects(CreateInfo, ShaderStages);
 
@@ -766,9 +769,20 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
             // The only valid bit is D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG, which can only be set on WARP devices.
             d3d12PSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
 
-            HRESULT hr = pd3d12Device->CreateGraphicsPipelineState(&d3d12PSODesc, IID_PPV_ARGS(&m_pd3d12PSO));
-            if (FAILED(hr))
-                LOG_ERROR_AND_THROW("Failed to create pipeline state");
+            // Try to load from the cache
+            auto* const pPSOCacheD3D12 = ClassPtrCast<PipelineStateCacheD3D12Impl>(CreateInfo.pPSOCache);
+            if (pPSOCacheD3D12 != nullptr && !WName.empty())
+                m_pd3d12PSO = pPSOCacheD3D12->LoadGraphicsPipeline(WName.c_str(), d3d12PSODesc);
+            if (!m_pd3d12PSO)
+            {
+                HRESULT hr = pd3d12Device->CreateGraphicsPipelineState(&d3d12PSODesc, IID_PPV_ARGS(&m_pd3d12PSO));
+                if (FAILED(hr))
+                    LOG_ERROR_AND_THROW("Failed to create pipeline state");
+
+                // Add to the cache
+                if (pPSOCacheD3D12 != nullptr && !WName.empty())
+                    pPSOCacheD3D12->StorePipeline(WName.c_str(), m_pd3d12PSO);
+            }
         }
 #ifdef D3D12_H_HAS_MESH_SHADER
         else if (m_Desc.PipelineType == PIPELINE_TYPE_MESH)
@@ -858,9 +872,9 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
             LOG_ERROR_AND_THROW("Unsupported pipeline type");
         }
 
-        if (*m_Desc.Name != 0)
+        if (!WName.empty())
         {
-            m_pd3d12PSO->SetName(WidenString(m_Desc.Name).c_str());
+            m_pd3d12PSO->SetName(WName.c_str());
         }
     }
     catch (...)
@@ -903,13 +917,25 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
 
         d3d12PSODesc.pRootSignature = m_RootSig->GetD3D12RootSignature();
 
-        HRESULT hr = pd3d12Device->CreateComputePipelineState(&d3d12PSODesc, IID_PPV_ARGS(&m_pd3d12PSO));
-        if (FAILED(hr))
-            LOG_ERROR_AND_THROW("Failed to create pipeline state");
-
-        if (*m_Desc.Name != 0)
+        // Try to load from the cache
+        const auto  WName          = WidenString(m_Desc.Name);
+        auto* const pPSOCacheD3D12 = ClassPtrCast<PipelineStateCacheD3D12Impl>(CreateInfo.pPSOCache);
+        if (pPSOCacheD3D12 != nullptr && !WName.empty())
+            m_pd3d12PSO = pPSOCacheD3D12->LoadComputePipeline(WName.c_str(), d3d12PSODesc);
+        if (!m_pd3d12PSO)
         {
-            m_pd3d12PSO->SetName(WidenString(m_Desc.Name).c_str());
+            HRESULT hr = pd3d12Device->CreateComputePipelineState(&d3d12PSODesc, IID_PPV_ARGS(&m_pd3d12PSO));
+            if (FAILED(hr))
+                LOG_ERROR_AND_THROW("Failed to create pipeline state");
+
+            // Add to the cache
+            if (pPSOCacheD3D12 != nullptr && !WName.empty())
+                pPSOCacheD3D12->StorePipeline(WName.c_str(), m_pd3d12PSO);
+        }
+
+        if (!WName.empty())
+        {
+            m_pd3d12PSO->SetName(WName.c_str());
         }
     }
     catch (...)

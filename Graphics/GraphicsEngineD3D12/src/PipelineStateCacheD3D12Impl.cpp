@@ -45,17 +45,69 @@ PipelineStateCacheD3D12Impl::PipelineStateCacheD3D12Impl(IReferenceCounters*    
     }
 // clang-format on
 {
-    // AZ TODO
+    auto hr = pRenderDeviceD3D12->GetD3D12Device1()->CreatePipelineLibrary(nullptr, 0, IID_PPV_ARGS(&m_pLibrary));
+    if (FAILED(hr))
+        LOG_ERROR_AND_THROW("Failed to create D3D12 pipeline library");
 }
 
 PipelineStateCacheD3D12Impl::~PipelineStateCacheD3D12Impl()
 {
+    // D3D12 object can only be destroyed when it is no longer used by the GPU
+    GetDevice()->SafeReleaseDeviceObject(std::move(m_pLibrary), ~Uint64{0});
+}
+
+CComPtr<ID3D12DeviceChild> PipelineStateCacheD3D12Impl::LoadComputePipeline(const wchar_t* Name, const D3D12_COMPUTE_PIPELINE_STATE_DESC& Desc)
+{
+    VERIFY_EXPR(Name != nullptr);
+    CComPtr<ID3D12DeviceChild> d3d12PSO;
+    if ((m_Desc.Mode & PSO_CACHE_MODE_LOAD) != 0)
+    {
+        auto hr = m_pLibrary->LoadComputePipeline(Name, &Desc, IID_PPV_ARGS(&d3d12PSO));
+        DEV_CHECK_ERR(SUCCEEDED(hr), "Failed to load compute pipeline from the library");
+    }
+    return d3d12PSO;
+}
+
+CComPtr<ID3D12DeviceChild> PipelineStateCacheD3D12Impl::LoadGraphicsPipeline(const wchar_t* Name, const D3D12_GRAPHICS_PIPELINE_STATE_DESC& Desc)
+{
+    VERIFY_EXPR(Name != nullptr);
+    CComPtr<ID3D12DeviceChild> d3d12PSO;
+    if ((m_Desc.Mode & PSO_CACHE_MODE_LOAD) != 0)
+    {
+        auto hr = m_pLibrary->LoadGraphicsPipeline(Name, &Desc, IID_PPV_ARGS(&d3d12PSO));
+        DEV_CHECK_ERR(SUCCEEDED(hr), "Failed to load graphics pipeline from the library");
+    }
+    return d3d12PSO;
+}
+
+bool PipelineStateCacheD3D12Impl::StorePipeline(const wchar_t* Name, ID3D12DeviceChild* pPSO)
+{
+    VERIFY_EXPR(Name != nullptr);
+    if ((m_Desc.Mode & PSO_CACHE_MODE_STORE) == 0)
+        return false;
+
+    auto hr = m_pLibrary->StorePipeline(Name, static_cast<ID3D12PipelineState*>(pPSO));
+    if (FAILED(hr))
+        LOG_INFO_MESSAGE("Failed to add pipeline to the library");
+
+    return SUCCEEDED(hr);
 }
 
 void PipelineStateCacheD3D12Impl::GetData(IDataBlob** ppBlob)
 {
     DEV_CHECK_ERR(ppBlob != nullptr, "ppBlob must not be null");
     *ppBlob = nullptr;
+
+    auto pDataBlob = DataBlobImpl::Create(m_pLibrary->GetSerializedSize());
+
+    auto hr = m_pLibrary->Serialize(pDataBlob->GetDataPtr(), pDataBlob->GetSize());
+    if (FAILED(hr))
+    {
+        LOG_ERROR_MESSAGE("Failed to serialize D3D12 pipeline library");
+        return;
+    }
+
+    *ppBlob = pDataBlob.Detach();
 }
 
 } // namespace Diligent

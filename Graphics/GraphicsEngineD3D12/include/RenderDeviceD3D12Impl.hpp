@@ -316,6 +316,8 @@ private:
     // Dummy heap required by NvAPI_D3D12_CreateReservedResource.
     CComPtr<ID3D12Heap> m_pNVApiHeap;
 
+    bool m_IsPSOCacheSupported = false;
+
 #ifdef DILIGENT_DEVELOPMENT
     Uint32 m_MaxD3D12DeviceVersion = 0;
 #endif

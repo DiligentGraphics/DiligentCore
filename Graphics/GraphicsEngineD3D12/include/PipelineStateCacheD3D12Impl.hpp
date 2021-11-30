@@ -51,8 +51,13 @@ public:
     /// Implementation of IPipelineStateCache::GetData().
     virtual void DILIGENT_CALL_TYPE GetData(IDataBlob** ppBlob) override final;
 
+    CComPtr<ID3D12DeviceChild> LoadComputePipeline(const wchar_t* Name, const D3D12_COMPUTE_PIPELINE_STATE_DESC& Desc);
+    CComPtr<ID3D12DeviceChild> LoadGraphicsPipeline(const wchar_t* Name, const D3D12_GRAPHICS_PIPELINE_STATE_DESC& Desc);
+
+    bool StorePipeline(const wchar_t* Name, ID3D12DeviceChild* pPSO);
+
 private:
-    // AZ TODO
+    CComPtr<ID3D12PipelineLibrary> m_pLibrary;
 };
 
 } // namespace Diligent

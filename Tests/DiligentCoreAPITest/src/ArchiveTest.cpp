@@ -419,6 +419,11 @@ TEST(ArchiveTest, GraphicsPipeline)
     if (!pDearchiver || !pArchiverFactory)
         GTEST_SKIP() << "Archiver library is not loaded";
 
+    RefCntAutoPtr<IPipelineStateCache> pPSOCache;
+    PipelineStateCacheCreateInfo       PSOCacheCI;
+    PSOCacheCI.Desc.Mode = /*PSO_CACHE_MODE_LOAD |*/ PSO_CACHE_MODE_STORE;
+    pDevice->CreatePipelineStateCache(PSOCacheCI, &pPSOCache);
+
     constexpr char PSO1Name[] = "PSO archive test - 1";
     constexpr char PSO2Name[] = "PSO archive test - 2";
     constexpr char PSO3Name[] = "PSO archive test - 3";
@@ -655,6 +660,7 @@ TEST(ArchiveTest, GraphicsPipeline)
             PSOCreateInfo2.PSODesc.Name = PSO3Name;
             ASSERT_TRUE(pArchiver->AddGraphicsPipelineState(PSOCreateInfo2, ArchiveInfo));
 
+            PSOCreateInfo.pPSOCache              = pPSOCache;
             PSOCreateInfo.PSODesc.Name           = PSO1Name;
             PSOCreateInfo.PSODesc.ResourceLayout = LayoutDesc;
 
@@ -684,6 +690,7 @@ TEST(ArchiveTest, GraphicsPipeline)
             PSOCreateInfo.ResourceSignaturesCount    = _countof(Signatures);
             PSOCreateInfo.ppResourceSignatures       = Signatures;
 
+            PSOCreateInfo.pPSOCache           = pPSOCache;
             PSOCreateInfo.PSODesc.Name        = PSO2Name;
             GraphicsPipeline.pRenderPass      = pRenderPass1;
             GraphicsPipeline.NumRenderTargets = 0;
@@ -723,6 +730,7 @@ TEST(ArchiveTest, GraphicsPipeline)
         UnpackInfo.pArchive     = pArchive;
         UnpackInfo.pDevice      = pDevice;
         UnpackInfo.PipelineType = PIPELINE_TYPE_GRAPHICS;
+        UnpackInfo.pCache       = pPSOCache;
 
         RefCntAutoPtr<IPipelineState> pUnpackedPSO_1;
         pDearchiver->UnpackPipelineState(UnpackInfo, &pUnpackedPSO_1);
@@ -766,6 +774,7 @@ TEST(ArchiveTest, GraphicsPipeline)
         UnpackInfo.pArchive     = pArchive;
         UnpackInfo.pDevice      = pDevice;
         UnpackInfo.PipelineType = PIPELINE_TYPE_GRAPHICS;
+        UnpackInfo.pCache       = pPSOCache;
 
         pDearchiver->UnpackPipelineState(UnpackInfo, &pUnpackedPSO_2);
         ASSERT_NE(pUnpackedPSO_2, nullptr);
@@ -954,6 +963,14 @@ TEST(ArchiveTest, GraphicsPipeline)
     }
 
     pSwapChain->Present();
+
+    if (pPSOCache)
+    {
+        RefCntAutoPtr<IDataBlob> pCacheData;
+        pPSOCache->GetData(&pCacheData);
+        ASSERT_NE(pCacheData, nullptr);
+        ASSERT_NE(pCacheData->GetSize(), 0u);
+    }
 }
 
 

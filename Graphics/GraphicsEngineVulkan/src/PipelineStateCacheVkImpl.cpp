@@ -46,6 +46,9 @@ PipelineStateCacheVkImpl::PipelineStateCacheVkImpl(IReferenceCounters*          
     }
 // clang-format on
 {
+    // Separate load/store is not supported in Vulkan.
+    m_Desc.Mode |= PSO_CACHE_MODE_LOAD | PSO_CACHE_MODE_STORE;
+
     VkPipelineCacheCreateInfo VkPipelineStateCacheCI{};
     VkPipelineStateCacheCI.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
 

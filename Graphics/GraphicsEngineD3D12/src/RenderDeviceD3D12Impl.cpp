@@ -239,6 +239,16 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
 
         if (IsNvApiEnabled())
             m_pNVApiHeap = CreateDummyNVApiHeap(m_pd3d12Device);
+
+        // Check PSO cache support
+        {
+            D3D12_FEATURE_DATA_SHADER_CACHE ShaderCacheFeature{};
+            if (SUCCEEDED(m_pd3d12Device->CheckFeatureSupport(D3D12_FEATURE_SHADER_CACHE, &ShaderCacheFeature, sizeof(ShaderCacheFeature))))
+            {
+                // AZ TODO: add support for D3D12_SHADER_CACHE_SUPPORT_SINGLE_PSO
+                m_IsPSOCacheSupported = (ShaderCacheFeature.SupportFlags & D3D12_SHADER_CACHE_SUPPORT_LIBRARY) != 0;
+            }
+        }
     }
     catch (...)
     {
@@ -675,7 +685,13 @@ void RenderDeviceD3D12Impl::CreateDeviceMemory(const DeviceMemoryCreateInfo& Cre
 void RenderDeviceD3D12Impl::CreatePipelineStateCache(const PipelineStateCacheCreateInfo& CreateInfo,
                                                      IPipelineStateCache**               ppPipelineStateCache)
 {
-    CreatePipelineStateCacheImpl(ppPipelineStateCache, CreateInfo);
+    if (m_IsPSOCacheSupported)
+        CreatePipelineStateCacheImpl(ppPipelineStateCache, CreateInfo);
+    else
+    {
+        LOG_INFO_MESSAGE("Pipeline state cache is not supported");
+        *ppPipelineStateCache = nullptr;
+    }
 }
 
 SparseTextureFormatInfo RenderDeviceD3D12Impl::GetSparseTextureFormatInfo(TEXTURE_FORMAT     TexFormat,
