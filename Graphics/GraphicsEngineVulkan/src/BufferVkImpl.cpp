@@ -303,11 +303,16 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
             VERIFY_EXPR(RequiredAlignment % MemReqs.alignment == 0);
         }
 
-        if ((m_Desc.CPUAccessFlags & (CPU_ACCESS_READ | CPU_ACCESS_WRITE)) != 0 && (m_MemoryProperties & MEMORY_PROPERTY_HOST_COHERENT) == 0)
+        const bool AlignToNonCoherentAtomSize = (m_Desc.CPUAccessFlags & (CPU_ACCESS_READ | CPU_ACCESS_WRITE)) != 0 && (m_MemoryProperties & MEMORY_PROPERTY_HOST_COHERENT) == 0;
+        if (AlignToNonCoherentAtomSize)
         {
-            // Just in case, make sure that the allocation is properly aligned for non-coherent memory access
-            // (if for some reason MemReqs.alignment is not large enough).
+            // From specs:
+            //  If the device memory was allocated without the VK_MEMORY_PROPERTY_HOST_COHERENT_BIT set,
+            //  these guarantees must be made for an extended range: the application must round down the start
+            //  of the range to the nearest multiple of VkPhysicalDeviceLimits::nonCoherentAtomSize,
+            //  and round the end of the range up to the nearest multiple of VkPhysicalDeviceLimits::nonCoherentAtomSize.
             RequiredAlignment = std::max(RequiredAlignment, DeviceLimits.nonCoherentAtomSize);
+            MemReqs.size      = AlignUp(MemReqs.size, DeviceLimits.nonCoherentAtomSize);
         }
 
         VERIFY(IsPowerOfTwo(RequiredAlignment), "Alignment is not power of 2!");
@@ -318,6 +323,8 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
         auto Memory = m_MemoryAllocation.Page->GetVkMemory();
         auto err    = LogicalDevice.BindBufferMemory(m_VulkanBuffer, Memory, m_BufferMemoryAlignedOffset);
         CHECK_VK_ERROR_AND_THROW(err, "Failed to bind buffer memory");
+
+        VERIFY(!AlignToNonCoherentAtomSize || (m_BufferMemoryAlignedOffset + MemReqs.size) % DeviceLimits.nonCoherentAtomSize == 0, "End offset is not properly aligned");
 
 #ifdef DILIGENT_DEBUG
         if ((m_Desc.BindFlags & BIND_RAY_TRACING) != 0)
@@ -350,14 +357,7 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
                 if ((MemoryPropFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) == 0)
                 {
                     // Explicit flush is required
-                    VkMappedMemoryRange FlushRange = {};
-
-                    FlushRange.sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-                    FlushRange.pNext  = nullptr;
-                    FlushRange.memory = m_MemoryAllocation.Page->GetVkMemory();
-                    FlushRange.offset = m_BufferMemoryAlignedOffset;
-                    FlushRange.size   = MemReqs.size;
-                    LogicalDevice.FlushMappedMemoryRanges(1, &FlushRange);
+                    FlushMappedRange(0, MemReqs.size);
                 }
             }
             else
