@@ -357,7 +357,7 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
                 if ((MemoryPropFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) == 0)
                 {
                     // Explicit flush is required
-                    FlushMappedRange(0, MemReqs.size);
+                    FlushMappedRange(0, m_Desc.Size);
                 }
             }
             else
