@@ -31,6 +31,7 @@
 /// Defines Diligent::DynamicLinearAllocator class
 
 #include <vector>
+#include <cstring>
 
 #include "../../Primitives/interface/BasicTypes.h"
 #include "../../Primitives/interface/MemoryAllocator.h"
