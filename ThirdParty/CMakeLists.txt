@@ -45,7 +45,7 @@ if(VULKAN_SUPPORTED OR METAL_SUPPORTED)
         set_directory_root_folder("SPIRV-Tools" "DiligentCore/ThirdParty/SPIRV-Tools")
         # We only need SPIRV-Tools-opt for glslang that also depends on SPIRV-Tools-static.
         # Exclude all other targets from the build to save build time
-        set(SPIRV_TOOLS_EXCLUDE_TARGETS SPIRV-Tools-link SPIRV-Tools-reduce SPIRV-Tools-shared)
+        set(SPIRV_TOOLS_EXCLUDE_TARGETS SPIRV-Tools-link SPIRV-Tools-lint SPIRV-Tools-reduce SPIRV-Tools-shared)
         set_target_properties(${SPIRV_TOOLS_EXCLUDE_TARGETS} PROPERTIES EXCLUDE_FROM_ALL 1 EXCLUDE_FROM_DEFAULT_BUILD 1)
 
         set(THIRD_PARTY_LIBS SPIRV-Tools-static SPIRV-Tools-opt)
