@@ -862,7 +862,9 @@ bool ArchiverImpl::SerializePSO(TNamedObjectHashMap<TPSOData<CreateInfoType>>& P
                 break;
 #endif
             case ARCHIVE_DEVICE_DATA_FLAG_NONE:
-            case ARCHIVE_DEVICE_DATA_FLAG_LAST:
+                UNEXPECTED("ARCHIVE_DEVICE_DATA_FLAG_NONE (0) should never occur");
+                break;
+
             default:
                 LOG_ERROR_MESSAGE("Unexpected render device type");
                 break;
