@@ -30,7 +30,6 @@
 /// \file
 /// Definition of the Diligent::IShader interface and related data structures
 
-#include "../../../Common/interface/StringTools.h"
 #include "../../../Primitives/interface/FileStream.h"
 #include "../../../Primitives/interface/FlagEnum.h"
 #include "DeviceObject.h"
@@ -189,6 +188,17 @@ struct ShaderMacro
         Name{_Name},
         Definition{_Def}
     {}
+
+    /// Comparison operator tests if two structures are equivalent
+
+    /// \param [in] RHS - reference to the structure to perform comparison with
+    /// \return
+    /// - True if all members of the two structures are equal.
+    /// - False otherwise.
+    bool operator==(const ShaderMacro& RHS) const
+    {
+        return SafeStrEqual(Name, RHS.Name) && SafeStrEqual(Definition, RHS.Definition);
+    }
 #endif
 };
 typedef struct ShaderMacro ShaderMacro;
@@ -383,6 +393,17 @@ DILIGENT_TYPED_ENUM(SHADER_RESOURCE_TYPE, Uint8)
 /// Shader resource description
 struct ShaderResourceDesc
 {
+    // clang-format off
+    /// Shader resource name
+    const char*          Name      DEFAULT_INITIALIZER(nullptr);
+
+    /// Shader resource type, see Diligent::SHADER_RESOURCE_TYPE.
+    SHADER_RESOURCE_TYPE Type      DEFAULT_INITIALIZER(SHADER_RESOURCE_TYPE_UNKNOWN);
+
+    /// Array size. For non-array resource this value is 1.
+    Uint32               ArraySize DEFAULT_INITIALIZER(0);
+    // clang-format on
+
 #if DILIGENT_CPP_INTERFACE
     constexpr ShaderResourceDesc() noexcept
     {}
@@ -394,18 +415,19 @@ struct ShaderResourceDesc
         Type{_Type},
         ArraySize{_ArraySize}
     {}
+
+    /// Comparison operator tests if two structures are equivalent
+
+    /// \param [in] RHS - reference to the structure to perform comparison with
+    /// \return
+    /// - True if all members of the two structures are equal.
+    /// - False otherwise.
+    bool operator==(const ShaderResourceDesc& RHS) const
+    {
+        return Type == RHS.Type && ArraySize == RHS.ArraySize && SafeStrEqual(Name, RHS.Name);
+    }
+
 #endif
-
-    // clang-format off
-    /// Shader resource name
-    const char*          Name      DEFAULT_INITIALIZER(nullptr);
-
-    /// Shader resource type, see Diligent::SHADER_RESOURCE_TYPE.
-    SHADER_RESOURCE_TYPE Type      DEFAULT_INITIALIZER(SHADER_RESOURCE_TYPE_UNKNOWN);
-
-    /// Array size. For non-array resource this value is 1.
-    Uint32               ArraySize DEFAULT_INITIALIZER(0);
-    // clang-format on
 };
 typedef struct ShaderResourceDesc ShaderResourceDesc;
 

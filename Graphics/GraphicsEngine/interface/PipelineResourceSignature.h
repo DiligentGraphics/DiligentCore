@@ -73,14 +73,9 @@ struct ImmutableSamplerDesc
 
     bool operator==(const ImmutableSamplerDesc& Rhs) const
     {
-        if ((SamplerOrTextureName == nullptr) != (Rhs.SamplerOrTextureName == nullptr))
-            return false;
-
-        if (SamplerOrTextureName != nullptr && Rhs.SamplerOrTextureName != nullptr && strcmp(SamplerOrTextureName, Rhs.SamplerOrTextureName) != 0)
-            return false;
-
         return ShaderStages == Rhs.ShaderStages &&
-               Desc         == Rhs.Desc;
+               Desc         == Rhs.Desc &&
+               SafeStrEqual(SamplerOrTextureName, Rhs.SamplerOrTextureName);
     }
 #endif
 };
@@ -179,17 +174,12 @@ struct PipelineResourceDesc
 
     bool operator==(const PipelineResourceDesc& Rhs) const
     {
-        if ((Name == nullptr) != (Rhs.Name == nullptr))
-            return false;
-
-        if (Name != nullptr && Rhs.Name != nullptr && strcmp(Name, Rhs.Name) != 0)
-            return false;
-
         return ShaderStages == Rhs.ShaderStages &&
                ArraySize    == Rhs.ArraySize    &&
                ResourceType == Rhs.ResourceType &&
                VarType      == Rhs.VarType      &&
-               Flags        == Rhs.Flags;
+               Flags        == Rhs.Flags        &&
+               SafeStrEqual(Name, Rhs.Name);
     }
 #endif
 };
@@ -241,6 +231,7 @@ struct PipelineResourceSignatureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     Uint32 SRBAllocationGranularity DEFAULT_INITIALIZER(1);
 
 #if DILIGENT_CPP_INTERFACE
+
     bool operator==(const PipelineResourceSignatureDesc& Rhs) const
     {
         if (NumResources               != Rhs.NumResources         ||
@@ -249,15 +240,8 @@ struct PipelineResourceSignatureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
             UseCombinedTextureSamplers != Rhs.UseCombinedTextureSamplers)
             return false;
 
-        if (UseCombinedTextureSamplers)
-        {
-            if ((CombinedSamplerSuffix == nullptr) != (Rhs.CombinedSamplerSuffix == nullptr))
-                return false;
-
-            if (CombinedSamplerSuffix != nullptr && Rhs.CombinedSamplerSuffix != nullptr &&
-                strcmp(CombinedSamplerSuffix, Rhs.CombinedSamplerSuffix) != 0)
-                return false;
-        }
+        if (UseCombinedTextureSamplers && !SafeStrEqual(CombinedSamplerSuffix, Rhs.CombinedSamplerSuffix))
+            return false;
 
         // ignore SRBAllocationGranularity
 
