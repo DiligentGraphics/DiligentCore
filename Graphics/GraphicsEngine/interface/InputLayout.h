@@ -32,8 +32,6 @@
 /// \file
 /// Definition input layout
 
-#include <string.h>
-
 #include "GraphicsTypes.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
@@ -176,16 +174,16 @@ struct LayoutElement
 
     bool operator == (const LayoutElement& rhs) const
     {
-        return strcmp(HLSLSemantic, rhs.HLSLSemantic) == 0 &&
-               InputIndex           == rhs.InputIndex      &&
-               BufferSlot           == rhs.BufferSlot      &&
-               NumComponents        == rhs.NumComponents   &&
-               ValueType            == rhs.ValueType       &&
-               IsNormalized         == rhs.IsNormalized    &&
-               RelativeOffset       == rhs.RelativeOffset  &&
-               Stride               == rhs.Stride          &&
-               Frequency            == rhs.Frequency       &&
-               InstanceDataStepRate == rhs.InstanceDataStepRate;
+        return InputIndex           == rhs.InputIndex            &&
+               BufferSlot           == rhs.BufferSlot            &&
+               NumComponents        == rhs.NumComponents         &&
+               ValueType            == rhs.ValueType             &&
+               IsNormalized         == rhs.IsNormalized          &&
+               RelativeOffset       == rhs.RelativeOffset        &&
+               Stride               == rhs.Stride                &&
+               Frequency            == rhs.Frequency             &&
+               InstanceDataStepRate == rhs.InstanceDataStepRate  &&
+               SafeStrEqual(HLSLSemantic, rhs.HLSLSemantic);
     }
 
     bool operator != (const LayoutElement& rhs) const

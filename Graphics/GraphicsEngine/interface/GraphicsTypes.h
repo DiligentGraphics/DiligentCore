@@ -38,6 +38,7 @@
 #include "../../../Primitives/interface/DebugOutput.h"
 #include "../../../Primitives/interface/FlagEnum.h"
 #include "../../../Platforms/interface/NativeWindow.h"
+#include "../../../Common/interface/StringTools.h"
 #include "APIInfo.h"
 #include "Constants.h"
 
