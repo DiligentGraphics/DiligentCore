@@ -440,6 +440,10 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& ShaderCI,
     const char* Names[]               = {ShaderCI.FilePath != nullptr ? ShaderCI.FilePath : ""};
     Shader.setStringsWithLengthsAndNames(ShaderStrings, ShaderStringLengths, Names, 1);
 
+    // By default, PSInput.SV_Position.w == 1 / VSOutput.SV_Position.w.
+    // Make the behavior consistent with DX:
+    Shader.setDxPositionW(true);
+
     IncluderImpl Includer{ShaderCI.pShaderSourceStreamFactory};
 
     auto SPIRV = CompileShaderInternal(Shader, messages, &Includer, SourceCode, SourceCodeLen, true, shProfile, ppCompilerOutput);
