@@ -3144,6 +3144,13 @@ struct GraphicsAdapterInfo
     /// - False otherwise.
     bool operator==(const GraphicsAdapterInfo& RHS) const
     {
+        if (NumQueues != RHS.NumQueues)
+            return false;
+
+        for (Uint32 i = 0; i < NumQueues; i++)
+            if (!(Queues[i] == RHS.Queues[i]))
+                return false;
+
         return Type            == RHS.Type            &&
                Vendor          == RHS.Vendor          &&
                VendorId        == RHS.VendorId        &&
@@ -3161,9 +3168,7 @@ struct GraphicsAdapterInfo
                DrawCommand     == RHS.DrawCommand     &&
                SparseResources == RHS.SparseResources &&
                Features        == RHS.Features        &&
-               NumQueues       == RHS.NumQueues       &&
-               memcmp(Description, RHS.Description, sizeof(Description)) == 0 &&
-               memcmp(Queues, RHS.Queues, sizeof(Queues))                == 0;
+               memcmp(Description, RHS.Description, sizeof(Description)) == 0;
     }
 #endif
 
