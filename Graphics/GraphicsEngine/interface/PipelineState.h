@@ -563,6 +563,8 @@ DILIGENT_TYPED_ENUM(PSO_CREATE_FLAGS, Uint32)
     /// All resource signatures must have correct bindings.
     /// Should be used only for deserialization.
     PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES       = 0x04,
+
+    PSO_CREATE_FLAG_LAST = PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES
 };
 DEFINE_FLAG_ENUM_OPERATORS(PSO_CREATE_FLAGS);
 
