@@ -160,3 +160,7 @@ set_common_target_properties(Diligent-Archiver)
 if(DEFINED DILIGENT_CORE_COMMIT_HASH)
     target_compile_definitions(Diligent-Archiver PRIVATE DILIGENT_CORE_COMMIT_HASH="${DILIGENT_CORE_COMMIT_HASH}")
 endif()
+
+if(DILIGENT_INSTALL_CORE)
+    install_core_lib(Diligent-Archiver)
+endif()
