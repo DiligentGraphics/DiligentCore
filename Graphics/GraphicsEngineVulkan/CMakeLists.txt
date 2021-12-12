@@ -138,6 +138,11 @@ set(VULKAN_UTILS_SRC
     src/VulkanUtilities/VulkanSyncObjectManager.cpp
 )
 
+set(DLL_SOURCE
+    src/DLLMain.cpp
+    src/GraphicsEngineVk.def
+)
+
 add_library(Diligent-GraphicsEngineVkInterface INTERFACE)
 target_link_libraries     (Diligent-GraphicsEngineVkInterface INTERFACE Diligent-GraphicsEngineInterface)
 target_include_directories(Diligent-GraphicsEngineVkInterface INTERFACE interface)
@@ -153,10 +158,7 @@ add_library(Diligent-GraphicsEngineVk-shared SHARED
 )
 
 if(MSVC)
-    target_sources(Diligent-GraphicsEngineVk-shared PRIVATE
-        src/DLLMain.cpp
-        src/GraphicsEngineVk.def
-    )
+    target_sources(Diligent-GraphicsEngineVk-shared PRIVATE ${DLL_SOURCE})
 endif()
 
 target_include_directories(Diligent-GraphicsEngineVk-static
@@ -345,11 +347,7 @@ set_common_target_properties(Diligent-GraphicsEngineVk-static)
 
 source_group("src" FILES ${SRC})
 source_group("src\\Vulkan Utilities" FILES ${VULKAN_UTILS_SRC})
-
-source_group("dll" FILES
-    src/DLLMain.cpp
-    src/GraphicsEngineVk.def
-)
+source_group("dll" FILES ${DLL_SOURCE})
 
 source_group("include" FILES ${INCLUDE})
 source_group("interface" FILES ${INTERFACE})

@@ -91,6 +91,11 @@ set(SRC
     src/TextureViewD3D11Impl.cpp
 )
 
+set(DLL_SRC
+    src/DLLMain.cpp
+    src/GraphicsEngineD3D11.def
+)
+
 add_library(Diligent-GraphicsEngineD3D11Interface INTERFACE)
 target_link_libraries     (Diligent-GraphicsEngineD3D11Interface INTERFACE Diligent-GraphicsEngineD3DBaseInterface)
 target_include_directories(Diligent-GraphicsEngineD3D11Interface INTERFACE interface)
@@ -102,8 +107,7 @@ add_library(Diligent-GraphicsEngineD3D11-static STATIC
 )
 
 add_library(Diligent-GraphicsEngineD3D11-shared SHARED 
-    src/DLLMain.cpp
-    src/GraphicsEngineD3D11.def
+    ${DLL_SRC}
     readme.md
 )
 
@@ -141,13 +145,8 @@ PUBLIC
 )
 target_compile_definitions(Diligent-GraphicsEngineD3D11-shared PUBLIC ENGINE_DLL=1)
 
-source_group("src" FILES ${SRC} )
-
-source_group("dll" FILES 
-    src/DLLMain.cpp
-    src/GraphicsEngineD3D11.def
-)
-
+source_group("src" FILES ${SRC})
+source_group("dll" FILES ${DLL_SRC})
 source_group("include" FILES ${INCLUDE})
 source_group("interface" FILES ${INTERFACE})
 

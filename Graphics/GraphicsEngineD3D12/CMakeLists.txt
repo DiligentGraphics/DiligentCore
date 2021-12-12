@@ -114,6 +114,11 @@ set(SRC
     src/TopLevelASD3D12Impl.cpp
 )
 
+set(DLL_SRC
+    src/DLLMain.cpp
+    src/GraphicsEngineD3D12.def
+)
+
 if(PLATFORM_WIN32)
     list(APPEND INCLUDE include/D3D12Loader.hpp)
     list(APPEND SRC src/D3D12Loader.cpp)
@@ -157,8 +162,7 @@ add_library(Diligent-GraphicsEngineD3D12-static STATIC
 )
 
 add_library(Diligent-GraphicsEngineD3D12-shared SHARED
-    src/DLLMain.cpp
-    src/GraphicsEngineD3D12.def
+    ${DLL_SRC}
     readme.md
 )
 
@@ -209,11 +213,7 @@ set_common_target_properties(Diligent-GraphicsEngineD3D12-shared)
 set_common_target_properties(Diligent-GraphicsEngineD3D12-static)
 
 source_group("src" FILES ${SRC})
-
-source_group("dll" FILES
-    src/DLLMain.cpp
-    src/GraphicsEngineD3D12.def
-)
+source_group("dll" FILES ${DLL_SRC})
 
 source_group("include" FILES ${INCLUDE})
 source_group("interface" FILES ${INTERFACE})

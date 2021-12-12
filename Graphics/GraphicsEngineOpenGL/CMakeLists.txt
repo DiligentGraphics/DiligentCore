@@ -100,6 +100,11 @@ set(SOURCE
     src/VAOCache.cpp
 )
 
+set(DLL_SOURCE
+    src/DLLMain.cpp
+    src/GraphicsEngineOpenGL.def
+)
+
 if(PLATFORM_WIN32)
     list(APPEND SOURCE src/GLContextWindows.cpp)
     list(APPEND SOURCE src/SwapChainGLImpl.cpp)
@@ -162,11 +167,7 @@ add_library(Diligent-GraphicsEngineOpenGL-shared SHARED
     readme.md
 )
 if(MSVC)
-    target_sources(Diligent-GraphicsEngineOpenGL-shared
-    PRIVATE
-        src/DLLMain.cpp
-        src/GraphicsEngineOpenGL.def
-    )
+    target_sources(Diligent-GraphicsEngineOpenGL-shared PRIVATE ${DLL_SOURCE})
 endif()
 
 target_include_directories(Diligent-GraphicsEngineOpenGL-static
@@ -297,10 +298,7 @@ set_common_target_properties(Diligent-GraphicsEngineOpenGL-static)
 
 source_group("src" FILES ${SOURCE})
 if(PLATFORM_WIN32)
-    source_group("dll" FILES
-        src/DLLMain.cpp
-        src/GraphicsEngineOpenGL.def
-    )
+    source_group("dll" FILES ${DLL_SOURCE})
 endif()
 
 source_group("include" FILES ${INCLUDE})
