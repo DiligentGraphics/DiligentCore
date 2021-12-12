@@ -236,22 +236,14 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
             COMPILE_FLAGS " -Wno-unused-variable"
         )
     endif()
-elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-    set_target_properties(Diligent-GraphicsEngineOpenGL-shared PROPERTIES
-        # Disallow missing direct and indirect dependencies to ensure that .so is self-contained
-        LINK_FLAGS "-Wl,--no-undefined -Wl,--no-allow-shlib-undefined"
+endif()
+
+if (MINGW_BUILD)
+    # Restrict export to GetEngineFactoryOpenGL
+    file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/export.map
+        "{ global: *GetEngineFactoryOpenGL*; local: *; };"
     )
-    if(PLATFORM_WIN32)
-        # MinGW
-        # Restrict export to GetEngineFactoryOpenGL
-        file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/export.map
-            "{ global: *GetEngineFactoryOpenGL*; local: *; };"
-        )
-        # set_target_properties does not append link flags, but overwrites them
-        set_property(TARGET Diligent-GraphicsEngineOpenGL-shared APPEND_STRING PROPERTY
-            LINK_FLAGS " -Wl,--version-script=export.map"
-        )
-    endif()
+    target_link_options(Diligent-GraphicsEngineOpenGL-shared PRIVATE LINKER:--version-script=export.map)
 endif()
 
 target_link_libraries(Diligent-GraphicsEngineOpenGL-static
@@ -280,13 +272,11 @@ elseif(PLATFORM_EMSCRIPTEN)
 endif()
 
 if(PLATFORM_WIN32)
-
     # Do not add 'lib' prefix when building with MinGW
     set_target_properties(Diligent-GraphicsEngineOpenGL-shared PROPERTIES PREFIX "")
 
     # Set output name to GraphicsEngineOpenGL_{32|64}{r|d}
     set_dll_output_name(Diligent-GraphicsEngineOpenGL-shared GraphicsEngineOpenGL)
-
 else()
     set_target_properties(Diligent-GraphicsEngineOpenGL-shared PROPERTIES
         OUTPUT_NAME GraphicsEngineOpenGL

@@ -284,22 +284,13 @@ PUBLIC
     ${PUBLIC_DEPENDENCIES}
 )
 
-if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-    set_target_properties(Diligent-GraphicsEngineVk-shared PROPERTIES
-        # Disallow missing direct and indirect dependencies to ensure that .so is self-contained
-        LINK_FLAGS "-Wl,--no-undefined -Wl,--no-allow-shlib-undefined"
+if (MINGW_BUILD)
+    # Restrict export to GetEngineFactoryVk
+    file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/export.map
+        "{ global: *GetEngineFactoryVk*; local: *; };"
     )
-    if(PLATFORM_WIN32)
-        # MinGW
-        # Restrict export to GetEngineFactoryVk
-        file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/export.map
-            "{ global: *GetEngineFactoryVk*; local: *; };"
-        )
-        # set_target_properties does not append link flags, but overwrites them
-        set_property(TARGET Diligent-GraphicsEngineVk-shared APPEND_STRING PROPERTY
-            LINK_FLAGS " -Wl,--version-script=export.map"
-        )
-    endif()
+    # set_target_properties does not append link flags, but overwrites them
+    target_link_options(Diligent-GraphicsEngineVk-shared PRIVATE LINKER:--version-script=export.map)
 endif()
 
 if(PLATFORM_WIN32)

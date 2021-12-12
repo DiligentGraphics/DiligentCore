@@ -182,7 +182,16 @@ function(set_common_target_properties TARGET)
                 CXX_EXTENSIONS OFF
             )
         endif()
-    endif()
+
+        if(CMAKE_CXX_COMPILER_ID MATCHES "GNU" AND TARGET_TYPE STREQUAL SHARED_LIBRARY)
+            target_link_options(${TARGET}
+            PRIVATE
+                # Disallow missing direct and indirect dependencies to ensure that .so is self-contained
+                LINKER:--no-undefined
+                LINKER:--no-allow-shlib-undefined
+            )
+        endif()
+    endif() # if(MSVC)
 
     if(COMMAND custom_post_configure_target)
         custom_post_configure_target(${TARGET})
