@@ -136,7 +136,7 @@ void CopyBLASGeometryDesc(const BottomLevelASDesc& SrcDesc,
                 ActualIndex = iter->second.ActualIndex;
             }
 
-            bool IsUniqueName = DstNameToIndex.emplace(SrcGeoName, BLASGeomIndex{i, ActualIndex}).second;
+            bool IsUniqueName = DstNameToIndex.emplace(pTriangles[i].GeometryName, BLASGeomIndex{i, ActualIndex}).second;
             if (!IsUniqueName)
                 LOG_ERROR_AND_THROW("Geometry name '", SrcGeoName, "' is not unique");
         }
