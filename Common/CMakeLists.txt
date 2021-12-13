@@ -33,6 +33,7 @@ set(INTERFACE
     interface/StringTools.h
     interface/StringTools.hpp
     interface/StringPool.hpp
+    interface/ThreadPool.hpp
     interface/ThreadSignal.hpp
     interface/Timer.hpp
     interface/UniqueIdentifier.hpp
@@ -49,6 +50,7 @@ set(SOURCE
     src/FixedBlockMemoryAllocator.cpp
     src/LockHelper.cpp
     src/MemoryFileStream.cpp
+    src/ThreadPool.cpp
     src/Timer.cpp
 )
 
