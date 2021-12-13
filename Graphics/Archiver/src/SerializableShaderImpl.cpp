@@ -54,12 +54,12 @@ SerializableShaderImpl::SerializableShaderImpl(IReferenceCounters*       pRefCou
 
     CopyShaderCreateInfo(InShaderCI);
 
-    auto   ShaderCI = m_CreateInfo;
     String CompilationLog;
 
     while (DeviceFlags != ARCHIVE_DEVICE_DATA_FLAG_NONE)
     {
-        const auto Flag = ExtractLSB(DeviceFlags);
+        auto       ShaderCI = InShaderCI;
+        const auto Flag     = ExtractLSB(DeviceFlags);
 
         static_assert(ARCHIVE_DEVICE_DATA_FLAG_LAST == ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS, "Please update the switch below to handle the new device data type");
         switch (Flag)
@@ -77,6 +77,7 @@ SerializableShaderImpl::SerializableShaderImpl(IReferenceCounters*       pRefCou
             case ARCHIVE_DEVICE_DATA_FLAG_GL:
             case ARCHIVE_DEVICE_DATA_FLAG_GLES:
 #if (GL_SUPPORTED || GLES_SUPPORTED) && !DILIGENT_NO_GLSLANG
+                ShaderCI = m_CreateInfo;
                 CreateShaderGL(pRefCounters, ShaderCI, CompilationLog, Flag == ARCHIVE_DEVICE_DATA_FLAG_GL ? RENDER_DEVICE_TYPE_GL : RENDER_DEVICE_TYPE_GLES);
 #endif
                 break;
