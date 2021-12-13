@@ -170,7 +170,10 @@ bool SerializableResourceSignatureImpl::IsCompatible(const SerializableResourceS
     while (DeviceFlags != ARCHIVE_DEVICE_DATA_FLAG_NONE)
     {
         const auto DataTypeFlag      = ExtractLSB(DeviceFlags);
-        const auto ArchiveDeviceType = ArchiveDeviceDataFlagToArchiveDeviceType(DataTypeFlag);
+        auto       ArchiveDeviceType = ArchiveDeviceDataFlagToArchiveDeviceType(DataTypeFlag);
+
+        if (ArchiveDeviceType == DeviceType::Metal_MacOS)
+            ArchiveDeviceType = DeviceType::Metal_iOS;
 
         const auto* pPRS0 = GetPRS(ArchiveDeviceType);
         const auto* pPRS1 = Rhs.GetPRS(ArchiveDeviceType);
