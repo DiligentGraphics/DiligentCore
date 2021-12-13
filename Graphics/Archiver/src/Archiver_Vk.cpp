@@ -138,7 +138,6 @@ bool ArchiverImpl::PatchShadersVk(CreateInfoType& CreateInfo, TPSOData<CreateInf
             }
         }
         VERIFY_EXPR(DescSetLayoutCount <= MAX_RESOURCE_SIGNATURES * 2);
-        VERIFY_EXPR(DescSetLayoutCount >= CreateInfo.ResourceSignaturesCount);
 
         PipelineStateVkImpl::RemapShaderResources(ShaderStagesVk,
                                                   Signatures.data(),
