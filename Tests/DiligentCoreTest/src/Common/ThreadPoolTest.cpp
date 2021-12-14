@@ -291,54 +291,63 @@ TEST(Common_ThreadPool, Reprioritize)
 
 TEST(Common_ThreadPool, Priorities)
 {
-    constexpr Uint32 NumThreads = 1;
-    constexpr Uint32 NumTasks   = 8;
+    constexpr Uint32 NumThreads  = 1;
+    constexpr Uint32 NumTasks    = 8;
+    constexpr Uint32 RepeatCount = 10;
 
-    auto pThreadPool = CreateThreadPool(ThreadPoolCreateInfo{NumThreads});
-    ASSERT_NE(pThreadPool, nullptr);
-
-    ThreadingTools::Signal Signal;
+    for (Uint32 k = 0; k < RepeatCount; ++k)
     {
-        auto Task = MakeNewRCObj<WaitTask>()(Signal, NumThreads);
-        pThreadPool->EnqueueTask(Task);
+        auto pThreadPool = CreateThreadPool(ThreadPoolCreateInfo{NumThreads});
+        ASSERT_NE(pThreadPool, nullptr);
+
+        ThreadingTools::Signal  Signal;
+        RefCntAutoPtr<WaitTask> pWaitTask;
+        {
+            pWaitTask = MakeNewRCObj<WaitTask>()(Signal, NumThreads);
+            pThreadPool->EnqueueTask(pWaitTask);
+        }
+
+        // Wait until the task is running to make sure that higher-priority tasks don't start first
+        pWaitTask->WaitUntilRunning();
+
+        std::vector<int> CompletionOrder;
+        CompletionOrder.reserve(NumTasks);
+        std::array<RefCntAutoPtr<IAsyncTask>, NumTasks> Tasks;
+        for (Uint32 i = 0; i < NumTasks; ++i)
+        {
+            Tasks[i] =
+                EnqueueAsyncWork(pThreadPool,
+                                 [&CompletionOrder, i](Uint32 ThreadId) //
+                                 {
+                                     CompletionOrder.push_back(i);
+                                 });
+        }
+
+        Tasks[0]->SetPriority(10);
+        Tasks[1]->SetPriority(10);
+        auto res = pThreadPool->ReprioritizeTask(Tasks[1]);
+        EXPECT_TRUE(res);
+        res = pThreadPool->ReprioritizeTask(Tasks[0]);
+        EXPECT_TRUE(res);
+
+        Tasks[4]->SetPriority(100);
+        Tasks[5]->SetPriority(100);
+        Tasks[7]->SetPriority(101);
+        pThreadPool->ReprioritizeAllTasks();
+
+        // The tasks can't start since the thread is waiting for the signal
+        EXPECT_GE(pThreadPool->GetQueueSize(), Tasks.size());
+        EXPECT_FALSE(pWaitTask->IsFinished());
+
+        Signal.Trigger(true, 1);
+
+        pThreadPool->WaitForAllTasks();
+
+        const std::vector<int> ExpectedOrder = {7, 4, 5, 1, 0, 2, 3, 6};
+        ASSERT_EQ(ExpectedOrder.size(), CompletionOrder.size());
+        for (size_t i = 0; i < ExpectedOrder.size(); ++i)
+            EXPECT_EQ(ExpectedOrder[i], CompletionOrder[i]) << "i=" << i << " (N=" << k << ")";
     }
-
-    std::vector<int> CompletionOrder;
-    CompletionOrder.reserve(NumTasks);
-    std::array<RefCntAutoPtr<IAsyncTask>, NumTasks> Tasks;
-    for (Uint32 i = 0; i < NumTasks; ++i)
-    {
-        Tasks[i] =
-            EnqueueAsyncWork(pThreadPool,
-                             [&CompletionOrder, i](Uint32 ThreadId) //
-                             {
-                                 CompletionOrder.push_back(i);
-                             });
-    }
-
-    Tasks[0]->SetPriority(10);
-    Tasks[1]->SetPriority(10);
-    auto res = pThreadPool->ReprioritizeTask(Tasks[1]);
-    EXPECT_TRUE(res);
-    res = pThreadPool->ReprioritizeTask(Tasks[0]);
-    EXPECT_TRUE(res);
-
-    Tasks[4]->SetPriority(100);
-    Tasks[5]->SetPriority(100);
-    Tasks[7]->SetPriority(101);
-    pThreadPool->ReprioritizeAllTasks();
-
-    // The tasks can't start since the thread is waiting for the signal
-    EXPECT_GE(pThreadPool->GetQueueSize(), Tasks.size());
-
-    Signal.Trigger(true, 1);
-
-    pThreadPool->WaitForAllTasks();
-
-    const std::vector<int> ExpectedOrder = {7, 4, 5, 1, 0, 2, 3, 6};
-    ASSERT_EQ(ExpectedOrder.size(), CompletionOrder.size());
-    for (size_t i = 0; i < ExpectedOrder.size(); ++i)
-        EXPECT_EQ(ExpectedOrder[i], CompletionOrder[i]) << "i=" << i;
 }
 
 } // namespace
