@@ -488,11 +488,16 @@ TEST(DynamicTextureAtlas, AllocFreeRace)
 #endif
     for (size_t i = 0; i < NumIterations; ++i)
     {
+        DynamicTextureAtlasUsageStats UsageStats;
+        pAtlas->GetUsageStats(UsageStats);
+        EXPECT_EQ(UsageStats.AllocationCount, 0u) << "iteration: " << i;
+
         // Use half of the atlas
-        for (auto& pAlloc : pAllocations)
+        for (size_t j = 0; j < pAllocations.size(); ++j)
         {
+            auto& pAlloc = pAllocations[j];
             pAtlas->Allocate(AllocDim, AllocDim, &pAlloc);
-            EXPECT_TRUE(pAlloc);
+            EXPECT_TRUE(pAlloc) << "alloc idx: " << j << "; iteration: " << i;
         }
 
         NumThreadsReady.store(0);
