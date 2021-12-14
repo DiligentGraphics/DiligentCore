@@ -127,7 +127,7 @@ public:
 
     /// \param[in] pTask - Task to run.
     ///
-    /// \remarks   Thread pool will keep strong reference to the task,
+    /// \remarks   Thread pool will keep a strong reference to the task,
     ///            so an application is free to release it after enqueuing.
     virtual void EnqueueTask(IAsyncTask* pTask) = 0;
 
@@ -336,6 +336,8 @@ public:
 
     virtual bool IsFinished() const override final
     {
+        static_assert(ASYNC_TASK_STATUS_COMPLETE > ASYNC_TASK_STATUS_CANCELLED && ASYNC_TASK_STATUS_CANCELLED > ASYNC_TASK_STATUS_RUNNING,
+                      "Unexpected enum values");
         return m_TaskStatus.load() >= ASYNC_TASK_STATUS_CANCELLED;
     }
 

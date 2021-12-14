@@ -76,6 +76,12 @@ public:
             std::unique_lock<std::mutex> lock{m_TasksQueueMtx};
             if (WaitForTask)
             {
+                // The effects of notify_one()/notify_all() and each of the three atomic parts of
+                // wait()/wait_for()/wait_until() (unlock+wait, wakeup, and lock) take place in a
+                // single total order that can be viewed as modification order of an atomic variable:
+                // the order is specific to this individual condition variable. This makes it impossible
+                // for notify_one() to, for example, be delayed and unblock a thread that started waiting
+                // just after the call to notify_one() was made.
                 m_Condition.wait(lock,
                                  [this] //
                                  {
@@ -136,7 +142,7 @@ public:
                 if (m_TasksQueue.empty() && m_NumRunningTasks.load() == 0)
                     return;
             }
-            m_Condition.notify_one();
+            std::this_thread::yield();
         }
     }
 

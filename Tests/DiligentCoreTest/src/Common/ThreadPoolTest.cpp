@@ -42,7 +42,7 @@ namespace
 TEST(Common_ThreadPool, EnqueueTask)
 {
     constexpr Uint32     NumThreads = 4;
-    constexpr Uint32     NumTasks   = 16;
+    constexpr Uint32     NumTasks   = 32;
     ThreadPoolCreateInfo PoolCI{NumThreads};
 
     std::array<std::atomic<bool>, NumThreads> ThreadStarted{};
@@ -92,17 +92,20 @@ TEST(Common_ThreadPool, EnqueueTask)
     }
 
     pThreadPool.Release();
-    EXPECT_EQ(NumThreadsFinished, PoolCI.NumThreads);
+    EXPECT_EQ(NumThreadsFinished.load(), PoolCI.NumThreads);
 }
 
 
 TEST(Common_ThreadPool, ProcessTask)
 {
+    constexpr Uint32 NumThreads = 4;
+    constexpr Uint32 NumTasks   = 32;
+
     auto pThreadPool = CreateThreadPool(ThreadPoolCreateInfo{0});
     ASSERT_NE(pThreadPool, nullptr);
 
-    std::vector<std::thread> WorkerThreads(4);
-    for (Uint32 i = 0; i < WorkerThreads.size(); ++i)
+    std::vector<std::thread> WorkerThreads(NumThreads);
+    for (Uint32 i = 0; i < NumThreads; ++i)
     {
         WorkerThreads[i] = std::thread{
             [&ThreadPool = *pThreadPool, i] //
@@ -113,8 +116,8 @@ TEST(Common_ThreadPool, ProcessTask)
             }};
     }
 
-    std::array<std::atomic<float>, 16> Results{};
-    std::array<std::atomic<bool>, 16>  WorkComplete{};
+    std::array<std::atomic<float>, NumTasks> Results{};
+    std::array<std::atomic<bool>, NumTasks>  WorkComplete{};
     for (size_t i = 0; i < Results.size(); ++i)
     {
         EnqueueAsyncWork(pThreadPool,
@@ -155,22 +158,19 @@ class WaitTask : public AsyncTaskBase
 {
 public:
     WaitTask(IReferenceCounters*     pRefCounters,
-             ThreadingTools::Signal& WaitSignal,
-             int                     NumThreadsToWait) :
+             ThreadingTools::Signal& WaitSignal) :
         AsyncTaskBase{pRefCounters},
-        m_WaitSignal{WaitSignal},
-        m_NumThreadsToWait{NumThreadsToWait}
+        m_WaitSignal{WaitSignal}
     {}
 
     virtual void Run(Uint32 ThreadId) override final
     {
-        m_WaitSignal.Wait(false, m_NumThreadsToWait);
+        m_WaitSignal.Wait();
         SetStatus(ASYNC_TASK_STATUS_COMPLETE);
     }
 
 private:
     ThreadingTools::Signal& m_WaitSignal;
-    const int               m_NumThreadsToWait;
 };
 
 class DummyTask : public AsyncTaskBase
@@ -199,7 +199,7 @@ TEST(Common_ThreadPool, RemoveTask)
     std::array<RefCntAutoPtr<WaitTask>, NumThreads> WaitTasks;
     for (auto& Task : WaitTasks)
     {
-        Task = MakeNewRCObj<WaitTask>()(Signal, NumThreads);
+        Task = MakeNewRCObj<WaitTask>()(Signal);
         pThreadPool->EnqueueTask(Task);
     }
 
@@ -253,7 +253,7 @@ TEST(Common_ThreadPool, Reprioritize)
     std::array<RefCntAutoPtr<WaitTask>, NumThreads> WaitTasks;
     for (auto& Task : WaitTasks)
     {
-        Task = MakeNewRCObj<WaitTask>()(Signal, NumThreads);
+        Task = MakeNewRCObj<WaitTask>()(Signal);
         pThreadPool->EnqueueTask(Task);
     }
 
@@ -303,7 +303,7 @@ TEST(Common_ThreadPool, Priorities)
         ThreadingTools::Signal  Signal;
         RefCntAutoPtr<WaitTask> pWaitTask;
         {
-            pWaitTask = MakeNewRCObj<WaitTask>()(Signal, NumThreads);
+            pWaitTask = MakeNewRCObj<WaitTask>()(Signal);
             pThreadPool->EnqueueTask(pWaitTask);
         }
 
