@@ -90,6 +90,7 @@ public:
                 );
             }
 
+            // m_Stop must be accessed under the mutex
             if (m_Stop.load() && m_TasksQueue.empty())
                 return false;
 
@@ -150,8 +151,13 @@ public:
     {
         {
             std::unique_lock<std::mutex> lock{m_TasksQueueMtx};
+            // NB: even if the shared variable is atomic, it must be modified under the mutex
+            //     in order to correctly publish the modification to the waiting thread.
             m_Stop.store(true);
         }
+        // Note that if there are outstanding tasks in the queue, the threads may be woken up
+        // by the corresponding notify_one() as notify*() and wait*() take place in a single
+        // total order.
         m_Condition.notify_all();
         for (std::thread& worker : m_WorkerThreads)
             worker.join();
