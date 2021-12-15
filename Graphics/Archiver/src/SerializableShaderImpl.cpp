@@ -114,7 +114,7 @@ SerializableShaderImpl::SerializableShaderImpl(IReferenceCounters*       pRefCou
     }
 }
 
-void SerializableShaderImpl::CopyShaderCreateInfo(const ShaderCreateInfo& ShaderCI)
+void SerializableShaderImpl::CopyShaderCreateInfo(const ShaderCreateInfo& ShaderCI) noexcept(false)
 {
     m_CreateInfo.ppCompilerOutput           = nullptr;
     m_CreateInfo.FilePath                   = nullptr;
@@ -138,6 +138,9 @@ void SerializableShaderImpl::CopyShaderCreateInfo(const ShaderCreateInfo& Shader
     {
         RefCntAutoPtr<IFileStream> pSourceStream;
         ShaderCI.pShaderSourceStreamFactory->CreateInputStream(ShaderCI.FilePath, &pSourceStream);
+
+        if (pSourceStream == nullptr)
+            LOG_ERROR_AND_THROW("Failed to open shader source file ", ShaderCI.FilePath);
 
         pSourceFileData = MakeNewRCObj<DataBlobImpl>{}(0);
         pSourceStream->ReadBlob(pSourceFileData);

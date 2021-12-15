@@ -103,7 +103,7 @@ public:
     }
 
 private:
-    void CopyShaderCreateInfo(const ShaderCreateInfo& ShaderCI);
+    void CopyShaderCreateInfo(const ShaderCreateInfo& ShaderCI) noexcept(false);
 
     SerializationDeviceImpl*                      m_pDevice;
     ShaderCreateInfo                              m_CreateInfo;
