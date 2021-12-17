@@ -593,10 +593,7 @@ void DeviceObjectArchiveBase::UnpackGraphicsPSO(const PipelineStateUnpackInfo& D
 {
     VERIFY_EXPR(DeArchiveInfo.pDevice != nullptr);
 
-    const bool HasOverrideFlags = DeArchiveInfo.OverrideFlags != PSO_UNPACK_OVERRIDE_FLAG_NONE;
-    DEV_CHECK_ERR(!HasOverrideFlags || DeArchiveInfo.pGraphicsPipelineDesc != nullptr, "pGraphicsPipelineDesc must not be null");
-
-    if (!HasOverrideFlags && GetCachedResource(DeArchiveInfo.Name, m_GraphicsPSOMap, m_GraphicsPSOMapGuard, &pPSO))
+    if (DeArchiveInfo.ModifyPipelineStateCreateInfo == nullptr && GetCachedResource(DeArchiveInfo.Name, m_GraphicsPSOMap, m_GraphicsPSOMapGuard, &pPSO))
         return;
 
     PSOData<GraphicsPipelineStateCreateInfo> PSO{GetRawAllocator()};
@@ -613,6 +610,7 @@ void DeviceObjectArchiveBase::UnpackGraphicsPSO(const PipelineStateUnpackInfo& D
 
     PSO.CreateInfo.PSODesc.SRBAllocationGranularity = DeArchiveInfo.SRBAllocationGranularity;
     PSO.CreateInfo.PSODesc.ImmediateContextMask     = DeArchiveInfo.ImmediateContextMask;
+    PSO.CreateInfo.pPSOCache                        = DeArchiveInfo.pCache;
 
     LoadDeviceSpecificData(
         *PSO.pHeader,
@@ -646,64 +644,14 @@ void DeviceObjectArchiveBase::UnpackGraphicsPSO(const PipelineStateUnpackInfo& D
                 }
             }
 
-            for (auto OverrideFlags = DeArchiveInfo.OverrideFlags; OverrideFlags != 0;)
-            {
-                auto OverrideFlag = ExtractLSB(OverrideFlags);
-
-                static_assert(PSO_UNPACK_OVERRIDE_FLAG_LAST == (1u << 12), "Please update the switch below to handle the new PSO unpack override flag");
-                switch (OverrideFlag)
-                {
-                    case PSO_UNPACK_OVERRIDE_FLAG_NAME:
-                        PSO.CreateInfo.PSODesc.Name = "AZ TODO";
-                        break;
-                    case PSO_UNPACK_OVERRIDE_FLAG_RASTERIZER:
-                        PSO.CreateInfo.GraphicsPipeline.RasterizerDesc = DeArchiveInfo.pGraphicsPipelineDesc->RasterizerDesc;
-                        break;
-                    case PSO_UNPACK_OVERRIDE_FLAG_BLEND_STATE:
-                        PSO.CreateInfo.GraphicsPipeline.BlendDesc = DeArchiveInfo.pGraphicsPipelineDesc->BlendDesc;
-                        break;
-                    case PSO_UNPACK_OVERRIDE_FLAG_SAMPLE_MASK:
-                        PSO.CreateInfo.GraphicsPipeline.SampleMask = DeArchiveInfo.pGraphicsPipelineDesc->SampleMask;
-                        break;
-                    case PSO_UNPACK_OVERRIDE_FLAG_DEPTH_STENCIL_DESC:
-                        PSO.CreateInfo.GraphicsPipeline.DepthStencilDesc = DeArchiveInfo.pGraphicsPipelineDesc->DepthStencilDesc;
-                        break;
-                    case PSO_UNPACK_OVERRIDE_FLAG_INPUT_LAYOUT:
-                        PSO.CreateInfo.GraphicsPipeline.InputLayout = DeArchiveInfo.pGraphicsPipelineDesc->InputLayout;
-                        break;
-                    case PSO_UNPACK_OVERRIDE_FLAG_PRIMITIVE_TOPOLOGY:
-                        PSO.CreateInfo.GraphicsPipeline.PrimitiveTopology = DeArchiveInfo.pGraphicsPipelineDesc->PrimitiveTopology;
-                        break;
-                    case PSO_UNPACK_OVERRIDE_FLAG_NUM_VIEWPORTS:
-                        PSO.CreateInfo.GraphicsPipeline.NumViewports = DeArchiveInfo.pGraphicsPipelineDesc->NumViewports;
-                        break;
-                    case PSO_UNPACK_OVERRIDE_FLAG_RENDER_TARGETS:
-                        PSO.CreateInfo.GraphicsPipeline.NumRenderTargets = DeArchiveInfo.pGraphicsPipelineDesc->NumRenderTargets;
-                        memcpy(PSO.CreateInfo.GraphicsPipeline.RTVFormats, DeArchiveInfo.pGraphicsPipelineDesc->RTVFormats, sizeof(PSO.CreateInfo.GraphicsPipeline.RTVFormats));
-                        break;
-                    case PSO_UNPACK_OVERRIDE_FLAG_RENDER_PASS:
-                        PSO.CreateInfo.GraphicsPipeline.pRenderPass  = DeArchiveInfo.pGraphicsPipelineDesc->pRenderPass;
-                        PSO.CreateInfo.GraphicsPipeline.SubpassIndex = DeArchiveInfo.pGraphicsPipelineDesc->SubpassIndex;
-                        break;
-                    case PSO_UNPACK_OVERRIDE_FLAG_SHADING_RATE:
-                        PSO.CreateInfo.GraphicsPipeline.ShadingRateFlags = DeArchiveInfo.pGraphicsPipelineDesc->ShadingRateFlags;
-                        break;
-                    case PSO_UNPACK_OVERRIDE_FLAG_DEPTH_STENCIL_TARGET:
-                        PSO.CreateInfo.GraphicsPipeline.DSVFormat = DeArchiveInfo.pGraphicsPipelineDesc->DSVFormat;
-                        break;
-                    case PSO_UNPACK_OVERRIDE_FLAG_SAMPLE_DESC:
-                        PSO.CreateInfo.GraphicsPipeline.SmplDesc = DeArchiveInfo.pGraphicsPipelineDesc->SmplDesc;
-                        break;
-                    default:
-                        UNEXPECTED("Unexpected PSO unpack override flag");
-                        break;
-                }
-            }
-
             VERIFY_EXPR(Ser.IsEnd());
 
+            if (DeArchiveInfo.ModifyPipelineStateCreateInfo != nullptr)
+                DeArchiveInfo.ModifyPipelineStateCreateInfo(PSO.CreateInfo, DeArchiveInfo.pUserData);
+
             DeArchiveInfo.pDevice->CreateGraphicsPipelineState(PSO.CreateInfo, &pPSO);
-            if (!HasOverrideFlags)
+
+            if (DeArchiveInfo.ModifyPipelineStateCreateInfo == nullptr)
                 CacheResource(DeArchiveInfo.Name, m_GraphicsPSOMap, m_GraphicsPSOMapGuard, pPSO);
         });
 }
@@ -712,10 +660,7 @@ void DeviceObjectArchiveBase::UnpackComputePSO(const PipelineStateUnpackInfo& De
 {
     VERIFY_EXPR(DeArchiveInfo.pDevice != nullptr);
 
-    const bool HasOverrideFlags = DeArchiveInfo.OverrideFlags != PSO_UNPACK_OVERRIDE_FLAG_NONE;
-    DEV_CHECK_ERR(!HasOverrideFlags, "Override flags are not supported for Compute PSO");
-
-    if (GetCachedResource(DeArchiveInfo.Name, m_ComputePSOMap, m_ComputePSOMapGuard, &pPSO))
+    if (DeArchiveInfo.ModifyPipelineStateCreateInfo == nullptr && GetCachedResource(DeArchiveInfo.Name, m_ComputePSOMap, m_ComputePSOMapGuard, &pPSO))
         return;
 
     PSOData<ComputePipelineStateCreateInfo> PSO{GetRawAllocator()};
@@ -729,6 +674,7 @@ void DeviceObjectArchiveBase::UnpackComputePSO(const PipelineStateUnpackInfo& De
 
     PSO.CreateInfo.PSODesc.SRBAllocationGranularity = DeArchiveInfo.SRBAllocationGranularity;
     PSO.CreateInfo.PSODesc.ImmediateContextMask     = DeArchiveInfo.ImmediateContextMask;
+    PSO.CreateInfo.pPSOCache                        = DeArchiveInfo.pCache;
 
     LoadDeviceSpecificData(
         *PSO.pHeader,
@@ -750,8 +696,12 @@ void DeviceObjectArchiveBase::UnpackComputePSO(const PipelineStateUnpackInfo& De
 
             VERIFY_EXPR(Ser.IsEnd());
 
+            if (DeArchiveInfo.ModifyPipelineStateCreateInfo != nullptr)
+                DeArchiveInfo.ModifyPipelineStateCreateInfo(PSO.CreateInfo, DeArchiveInfo.pUserData);
+
             DeArchiveInfo.pDevice->CreateComputePipelineState(PSO.CreateInfo, &pPSO);
-            if (!HasOverrideFlags)
+
+            if (DeArchiveInfo.ModifyPipelineStateCreateInfo == nullptr)
                 CacheResource(DeArchiveInfo.Name, m_ComputePSOMap, m_ComputePSOMapGuard, pPSO);
         });
 }
@@ -760,10 +710,7 @@ void DeviceObjectArchiveBase::UnpackTilePSO(const PipelineStateUnpackInfo& DeArc
 {
     VERIFY_EXPR(DeArchiveInfo.pDevice != nullptr);
 
-    const bool HasOverrideFlags = DeArchiveInfo.OverrideFlags != PSO_UNPACK_OVERRIDE_FLAG_NONE;
-    DEV_CHECK_ERR(!HasOverrideFlags || DeArchiveInfo.pTilePipelineDesc != nullptr, "pTilePipelineDesc must not be null");
-
-    if (!HasOverrideFlags && GetCachedResource(DeArchiveInfo.Name, m_TilePSOMap, m_TilePSOMapGuard, &pPSO))
+    if (DeArchiveInfo.ModifyPipelineStateCreateInfo == nullptr && GetCachedResource(DeArchiveInfo.Name, m_TilePSOMap, m_TilePSOMapGuard, &pPSO))
         return;
 
     PSOData<TilePipelineStateCreateInfo> PSO{GetRawAllocator()};
@@ -777,6 +724,7 @@ void DeviceObjectArchiveBase::UnpackTilePSO(const PipelineStateUnpackInfo& DeArc
 
     PSO.CreateInfo.PSODesc.SRBAllocationGranularity = DeArchiveInfo.SRBAllocationGranularity;
     PSO.CreateInfo.PSODesc.ImmediateContextMask     = DeArchiveInfo.ImmediateContextMask;
+    PSO.CreateInfo.pPSOCache                        = DeArchiveInfo.pCache;
 
     LoadDeviceSpecificData(
         *PSO.pHeader,
@@ -796,33 +744,15 @@ void DeviceObjectArchiveBase::UnpackTilePSO(const PipelineStateUnpackInfo& DeArc
 
             PSO.CreateInfo.pTS = Shaders[0];
 
-            for (auto OverrideFlags = DeArchiveInfo.OverrideFlags; OverrideFlags != 0;)
-            {
-                auto OverrideFlag = ExtractLSB(OverrideFlags);
-
-                static_assert(PSO_UNPACK_OVERRIDE_FLAG_LAST == (1u << 12), "Please update the switch below to handle the new PSO unpack override flag");
-                switch (OverrideFlag)
-                {
-                    case PSO_UNPACK_OVERRIDE_FLAG_NAME:
-                        PSO.CreateInfo.PSODesc.Name = "AZ TODO";
-                        break;
-                    case PSO_UNPACK_OVERRIDE_FLAG_RASTERIZER:
-                        PSO.CreateInfo.TilePipeline.SampleCount = DeArchiveInfo.pTilePipelineDesc->SampleCount;
-                        break;
-                    case PSO_UNPACK_OVERRIDE_FLAG_RENDER_TARGETS:
-                        PSO.CreateInfo.TilePipeline.NumRenderTargets = DeArchiveInfo.pTilePipelineDesc->NumRenderTargets;
-                        memcpy(PSO.CreateInfo.TilePipeline.RTVFormats, DeArchiveInfo.pTilePipelineDesc->RTVFormats, sizeof(PSO.CreateInfo.TilePipeline.RTVFormats));
-                        break;
-                    default:
-                        UNEXPECTED("Unexpected PSO unpack override flag");
-                        break;
-                }
-            }
 
             VERIFY_EXPR(Ser.IsEnd());
 
+            if (DeArchiveInfo.ModifyPipelineStateCreateInfo != nullptr)
+                DeArchiveInfo.ModifyPipelineStateCreateInfo(PSO.CreateInfo, DeArchiveInfo.pUserData);
+
             DeArchiveInfo.pDevice->CreateTilePipelineState(PSO.CreateInfo, &pPSO);
-            if (!HasOverrideFlags)
+
+            if (DeArchiveInfo.ModifyPipelineStateCreateInfo == nullptr)
                 CacheResource(DeArchiveInfo.Name, m_TilePSOMap, m_TilePSOMapGuard, pPSO);
         });
 }
@@ -831,10 +761,7 @@ void DeviceObjectArchiveBase::UnpackRayTracingPSO(const PipelineStateUnpackInfo&
 {
     VERIFY_EXPR(DeArchiveInfo.pDevice != nullptr);
 
-    const bool HasOverrideFlags = DeArchiveInfo.OverrideFlags != PSO_UNPACK_OVERRIDE_FLAG_NONE;
-    DEV_CHECK_ERR(!HasOverrideFlags, "Override flags are not supported for Ray tracing PSO");
-
-    if (GetCachedResource(DeArchiveInfo.Name, m_RayTracingPSOMap, m_RayTracingPSOMapGuard, &pPSO))
+    if (DeArchiveInfo.ModifyPipelineStateCreateInfo == nullptr && GetCachedResource(DeArchiveInfo.Name, m_RayTracingPSOMap, m_RayTracingPSOMapGuard, &pPSO))
         return;
 
     PSOData<RayTracingPipelineStateCreateInfo> PSO{GetRawAllocator()};
@@ -852,6 +779,7 @@ void DeviceObjectArchiveBase::UnpackRayTracingPSO(const PipelineStateUnpackInfo&
 
     PSO.CreateInfo.PSODesc.SRBAllocationGranularity = DeArchiveInfo.SRBAllocationGranularity;
     PSO.CreateInfo.PSODesc.ImmediateContextMask     = DeArchiveInfo.ImmediateContextMask;
+    PSO.CreateInfo.pPSOCache                        = DeArchiveInfo.pCache;
 
     LoadDeviceSpecificData(
         *PSO.pHeader,
@@ -897,8 +825,12 @@ void DeviceObjectArchiveBase::UnpackRayTracingPSO(const PipelineStateUnpackInfo&
 
             VERIFY_EXPR(Ser.IsEnd());
 
+            if (DeArchiveInfo.ModifyPipelineStateCreateInfo != nullptr)
+                DeArchiveInfo.ModifyPipelineStateCreateInfo(PSO.CreateInfo, DeArchiveInfo.pUserData);
+
             DeArchiveInfo.pDevice->CreateRayTracingPipelineState(PSO.CreateInfo, &pPSO);
-            if (!HasOverrideFlags)
+
+            if (DeArchiveInfo.ModifyPipelineStateCreateInfo == nullptr)
                 CacheResource(DeArchiveInfo.Name, m_RayTracingPSOMap, m_RayTracingPSOMapGuard, pPSO);
         });
 }
@@ -907,52 +839,19 @@ void DeviceObjectArchiveBase::UnpackRenderPass(const RenderPassUnpackInfo& DeArc
 {
     VERIFY_EXPR(DeArchiveInfo.pDevice != nullptr);
 
-    const bool OverrideAttachments = DeArchiveInfo.AttachmentCount != 0;
-
-    if (!OverrideAttachments && GetCachedResource(DeArchiveInfo.Name, m_RenderPassMap, m_RenderPassMapGuard, &pRP))
+    if (DeArchiveInfo.ModifyRenderPassDesc == nullptr && GetCachedResource(DeArchiveInfo.Name, m_RenderPassMap, m_RenderPassMapGuard, &pRP))
         return;
 
     RPData RP{GetRawAllocator()};
     if (!ReadRPData(DeArchiveInfo.Name, RP))
         return;
 
-    if (OverrideAttachments)
-    {
-        auto* pAttachments   = RP.Allocator.CopyArray(RP.Desc.pAttachments, RP.Desc.AttachmentCount);
-        RP.Desc.pAttachments = pAttachments;
-
-        for (Uint32 i = 0; i < DeArchiveInfo.AttachmentCount; ++i)
-        {
-            const auto& Override = DeArchiveInfo.pAttachments[i];
-            auto&       Dst      = pAttachments[Override.AttachmentIndex];
-
-            for (auto OverrideFlags = Override.OverrideFlags; OverrideFlags != 0;)
-            {
-                const auto OverrideFlag = ExtractLSB(OverrideFlags);
-
-                static_assert(RP_UNPACK_OVERRIDE_FLAG_LAST == (1u << 7), "Please update the switch below to handle the new RP unpack override flag");
-                switch (OverrideFlag)
-                {
-                    // clang-format off
-                    case RP_UNPACK_OVERRIDE_FLAG_FORMAT:           Dst.Format         = Override.AttachmentDesc.Format;         break;
-                    case RP_UNPACK_OVERRIDE_FLAG_SAMPLE_COUNT:     Dst.SampleCount    = Override.AttachmentDesc.SampleCount;    break;
-                    case RP_UNPACK_OVERRIDE_FLAG_LOAD_OP:          Dst.LoadOp         = Override.AttachmentDesc.LoadOp;         break;
-                    case RP_UNPACK_OVERRIDE_FLAG_STORE_OP:         Dst.StoreOp        = Override.AttachmentDesc.StoreOp;        break;
-                    case RP_UNPACK_OVERRIDE_FLAG_STENCIL_LOAD_OP:  Dst.StencilLoadOp  = Override.AttachmentDesc.StencilLoadOp;  break;
-                    case RP_UNPACK_OVERRIDE_FLAG_STENCIL_STORE_OP: Dst.StencilStoreOp = Override.AttachmentDesc.StencilStoreOp; break;
-                    case RP_UNPACK_OVERRIDE_FLAG_INITIAL_STATE:    Dst.InitialState   = Override.AttachmentDesc.InitialState;   break;
-                    case RP_UNPACK_OVERRIDE_FLAG_FINAL_STATE:      Dst.FinalState     = Override.AttachmentDesc.FinalState;     break;
-                    // clang-format on
-                    default:
-                        UNEXPECTED("Unexpected RP unpack override flag");
-                        break;
-                }
-            }
-        }
-    }
+    if (DeArchiveInfo.ModifyRenderPassDesc != nullptr)
+        DeArchiveInfo.ModifyRenderPassDesc(RP.Desc, DeArchiveInfo.pUserData);
 
     DeArchiveInfo.pDevice->CreateRenderPass(RP.Desc, &pRP);
-    if (!OverrideAttachments)
+
+    if (DeArchiveInfo.ModifyRenderPassDesc == nullptr)
         CacheResource(DeArchiveInfo.Name, m_RenderPassMap, m_RenderPassMapGuard, pRP);
 }
 
@@ -960,7 +859,7 @@ void DeviceObjectArchiveBase::UnpackResourceSignatureImpl(const ResourceSignatur
                                                           IPipelineResourceSignature*&       pSignature,
                                                           const CreateSignatureType&         CreateSignature)
 {
-    if (GetCachedResource(DeArchiveInfo.Name, m_PRSMap, m_PRSMapGuard, &pSignature))
+    if (DeArchiveInfo.ModifySignatureDesc == nullptr && GetCachedResource(DeArchiveInfo.Name, m_PRSMap, m_PRSMapGuard, &pSignature))
         return;
 
     PRSData PRS{GetRawAllocator()};
@@ -978,8 +877,13 @@ void DeviceObjectArchiveBase::UnpackResourceSignatureImpl(const ResourceSignatur
         {
             Serializer<SerializerMode::Read> Ser{pData, DataSize};
 
+            if (DeArchiveInfo.ModifySignatureDesc != nullptr)
+                DeArchiveInfo.ModifySignatureDesc(PRS.Desc, DeArchiveInfo.pUserData);
+
             CreateSignature(PRS, Ser, pSignature);
-            CacheResource(DeArchiveInfo.Name, m_PRSMap, m_PRSMapGuard, pSignature);
+
+            if (DeArchiveInfo.ModifySignatureDesc == nullptr)
+                CacheResource(DeArchiveInfo.Name, m_PRSMap, m_PRSMapGuard, pSignature);
         });
 }
 

@@ -26,8 +26,6 @@
 
 #pragma once
 
-// clang-format off
-
 /// \file
 /// Definition of the Diligent::IDearchiver interface and related data structures
 
@@ -38,22 +36,38 @@
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
+#if DILIGENT_C_INTERFACE
+#    define REF *
+#else
+#    define REF &
+#endif
+
+// clang-format off
+
 /// Resource signature unpack parameters
 struct ResourceSignatureUnpackInfo
 {
     struct IRenderDevice* pDevice DEFAULT_INITIALIZER(nullptr);
 
+    /// A pointer to the device object archive
     IDeviceObjectArchive* pArchive DEFAULT_INITIALIZER(nullptr);
 
-    /// Signature name to unpack. If there is only
+    /// Name of the signature to unpack. If there is only
     /// one signature in the archive, the name may be null.
     const char* Name DEFAULT_INITIALIZER(nullptr);
 
-    /// Shader resource binding allocation granularity
+    /// Shader resource binding allocation granularity.
 
     /// This member defines the allocation granularity for internal resources required by
     /// the shader resource binding object instances.
     Uint32 SRBAllocationGranularity DEFAULT_INITIALIZER(1);
+
+    /// An optional function to be called by the dearchiver to let the application modify
+    /// the pipeline resource signature description.
+    void (*ModifySignatureDesc)(PipelineResourceSignatureDesc REF Desc, void* pUserData) DEFAULT_INITIALIZER(nullptr);
+
+    /// A pointer to the user data to pass to the ModifySignatureDesc function.
+    void* pUserData DEFAULT_INITIALIZER(nullptr);
 };
 typedef struct ResourceSignatureUnpackInfo ResourceSignatureUnpackInfo;
 
@@ -89,50 +103,21 @@ DILIGENT_TYPED_ENUM(PSO_UNPACK_FLAGS, Uint32)
     PSO_UNPACK_FLAG_NO_VALIDATION = 1u << 0,
 };
 
-/// Pipeline state unpack override flags
-DILIGENT_TYPED_ENUM(PSO_UNPACK_OVERRIDE_FLAGS, Uint32)
-{
-    PSO_UNPACK_OVERRIDE_FLAG_NONE                   = 0,
-    PSO_UNPACK_OVERRIDE_FLAG_NAME                   = 1u << 0,
-
-    PSO_UNPACK_OVERRIDE_FLAG_RASTERIZER             = 1u << 1,  ///< GraphicsPipelineDesc::RasterizerDesc or TilePipelineDesc::SampleCount
-    PSO_UNPACK_OVERRIDE_FLAG_BLEND_STATE            = 1u << 2,  ///< GraphicsPipelineDesc::BlendDesc
-    PSO_UNPACK_OVERRIDE_FLAG_SAMPLE_MASK            = 1u << 3,  ///< GraphicsPipelineDesc::SampleMask
-    PSO_UNPACK_OVERRIDE_FLAG_DEPTH_STENCIL_DESC     = 1u << 4,  ///< GraphicsPipelineDesc::DepthStencilDesc
-    PSO_UNPACK_OVERRIDE_FLAG_INPUT_LAYOUT           = 1u << 5,  ///< GraphicsPipelineDesc::InputLayout
-    PSO_UNPACK_OVERRIDE_FLAG_PRIMITIVE_TOPOLOGY     = 1u << 6,  ///< GraphicsPipelineDesc::PrimitiveTopology
-    PSO_UNPACK_OVERRIDE_FLAG_NUM_VIEWPORTS          = 1u << 7,  ///< GraphicsPipelineDesc::NumViewports
-    PSO_UNPACK_OVERRIDE_FLAG_RENDER_TARGETS         = 1u << 8,  ///< GraphicsPipelineDesc::NumRenderTargets & RTVFormats or TilePipelineDesc::NumRenderTargets & RTVFormats
-    PSO_UNPACK_OVERRIDE_FLAG_RENDER_PASS            = 1u << 9,  ///< GraphicsPipelineDesc::pRenderPass & SubpassIndex
-    PSO_UNPACK_OVERRIDE_FLAG_SHADING_RATE           = 1u << 10, ///< GraphicsPipelineDesc::ShadingRateFlags
-    PSO_UNPACK_OVERRIDE_FLAG_DEPTH_STENCIL_TARGET   = 1u << 11, ///< GraphicsPipelineDesc::DSVFormat
-    PSO_UNPACK_OVERRIDE_FLAG_SAMPLE_DESC            = 1u << 12, ///< GraphicsPipelineDesc::SmplDesc
-    
-    PSO_UNPACK_OVERRIDE_FLAG_LAST = PSO_UNPACK_OVERRIDE_FLAG_SAMPLE_DESC
-};
 
 /// Pipeline state unpack parameters
 struct PipelineStateUnpackInfo
 {
     struct IRenderDevice* pDevice DEFAULT_INITIALIZER(nullptr);
 
+    /// A pointer to the device object archive
     IDeviceObjectArchive* pArchive DEFAULT_INITIALIZER(nullptr);
 
-    /// PSO name to unpack. If there is only
+    /// Name of the PSO to unpack. If there is only
     /// one PSO in the archive, the name may be null.
     const char* Name DEFAULT_INITIALIZER(nullptr);
 
+    /// The type of the pipeline state to unpack, see Diligent::PIPELINE_TYPE.
     PIPELINE_TYPE PipelineType DEFAULT_INITIALIZER(PIPELINE_TYPE_INVALID);
-
-    union
-    {
-         const GraphicsPipelineDesc*   pGraphicsPipelineDesc DEFAULT_INITIALIZER(nullptr);
-         //const ComputePipelineDesc*  pComputePipelineDesc;
-         const TilePipelineDesc*       pTilePipelineDesc;
-         const RayTracingPipelineDesc* pRayTracingPipelineDesc;
-    };
-
-   PSO_UNPACK_OVERRIDE_FLAGS OverrideFlags DEFAULT_INITIALIZER(PSO_UNPACK_OVERRIDE_FLAG_NONE);
 
     /// Shader resource binding allocation granularity
 
@@ -152,53 +137,40 @@ struct PipelineStateUnpackInfo
     ///             will actually be used. Do not set unnecessary bits as this will result in extra overhead.
     Uint64 ImmediateContextMask     DEFAULT_INITIALIZER(1);
 
-    /// Optional PSO cache
+    /// Optional PSO cache.
     IPipelineStateCache* pCache DEFAULT_INITIALIZER(nullptr);
+
+    /// An optional function to be called by the dearchiver to let the application modify
+    /// the pipeline state create info.
+    void (*ModifyPipelineStateCreateInfo)(PipelineStateCreateInfo REF PipelineCI, void* pUserData) DEFAULT_INITIALIZER(nullptr);
+
+    /// A pointer to the user data to pass to the ModifyPipelineStateCreateInfo function.
+    void* pUserData DEFAULT_INITIALIZER(nullptr);
 };
 typedef struct PipelineStateUnpackInfo PipelineStateUnpackInfo;
 
-
-/// Render pass unpack override flags
-DILIGENT_TYPED_ENUM(RP_UNPACK_OVERRIDE_FLAGS, Uint32)
-{
-    RP_UNPACK_OVERRIDE_FLAG_NONE             = 0,
-    RP_UNPACK_OVERRIDE_FLAG_FORMAT           = 1u << 0,
-    RP_UNPACK_OVERRIDE_FLAG_SAMPLE_COUNT     = 1u << 1,
-    RP_UNPACK_OVERRIDE_FLAG_LOAD_OP          = 1u << 2,
-    RP_UNPACK_OVERRIDE_FLAG_STORE_OP         = 1u << 3,
-    RP_UNPACK_OVERRIDE_FLAG_STENCIL_LOAD_OP  = 1u << 4,
-    RP_UNPACK_OVERRIDE_FLAG_STENCIL_STORE_OP = 1u << 5,
-    RP_UNPACK_OVERRIDE_FLAG_INITIAL_STATE    = 1u << 6,
-    RP_UNPACK_OVERRIDE_FLAG_FINAL_STATE      = 1u << 7,
-    RP_UNPACK_OVERRIDE_FLAG_LAST             = RP_UNPACK_OVERRIDE_FLAG_FINAL_STATE
-};
-
-///
-struct OverrideRenderPassAttachmentDesc
-{
-    RenderPassAttachmentDesc AttachmentDesc;
-    Uint32                   AttachmentIndex DEFAULT_INITIALIZER(~0u);
-    RP_UNPACK_OVERRIDE_FLAGS OverrideFlags   DEFAULT_INITIALIZER(RP_UNPACK_OVERRIDE_FLAG_NONE);
-};
-typedef struct OverrideRenderPassAttachmentDesc OverrideRenderPassAttachmentDesc;
 
 /// Render pass unpack parameters
 struct RenderPassUnpackInfo
 {
     struct IRenderDevice* pDevice  DEFAULT_INITIALIZER(nullptr);
 
+    /// A pointer to the device object archive
     IDeviceObjectArchive* pArchive DEFAULT_INITIALIZER(nullptr);
-    
-    /// Render pass name to unpack.
+
+    /// Name of the render pass to unpack.
     const char* Name DEFAULT_INITIALIZER(nullptr);
 
-    /// The number of attachments used by the render pass.
-    Uint32                                   AttachmentCount DEFAULT_INITIALIZER(0);
+    /// An optional function to be called by the dearchiver to let the application modify
+    /// the render pass description.
+    void (*ModifyRenderPassDesc)(RenderPassDesc REF Desc, void* pUserData) DEFAULT_INITIALIZER(nullptr);
 
-    /// Pointer to the array of subpass attachments, see Diligent::RenderPassAttachmentDesc.
-    const OverrideRenderPassAttachmentDesc*  pAttachments    DEFAULT_INITIALIZER(nullptr);
+    /// A pointer to the user data to pass to the ModifyRenderPassDesc function.
+    void* pUserData DEFAULT_INITIALIZER(nullptr);
 };
 typedef struct RenderPassUnpackInfo RenderPassUnpackInfo;
+
+#undef REF
 
 // clang-format on
 
@@ -220,25 +192,50 @@ static const INTERFACE_ID IID_Dearchiver =
 /// Dearchiver interface
 DILIGENT_BEGIN_INTERFACE(IDearchiver, IObject)
 {
-    /// Creates device object archive.
+    /// Creates a device object archive.
+
+    /// \param [in]  pSource   - A pointer to the source raw data to create the object archive from.
+    /// \param [out] ppArchive - Address of the memory location where a pointer to the
+    ///                          device object archive will be stored.
+    ///                          The function calls AddRef(), so that the archive object will have
+    ///                          one reference.
     VIRTUAL void METHOD(CreateDeviceObjectArchive)(THIS_
                                                    IArchive*              pSource,
                                                    IDeviceObjectArchive** ppArchive) PURE;
-    
-    /// Creates pipeline state from archive.
-    /// Resource signatures used by the PSO will be unpacked from the same archive.
+
+    /// Unpacks a pipeline state object from the device object archive.
+
+    /// \param [in]  UnpackInfo - Pipeline state unpack info, see Diligent::PipelineStateUnpackInfo.
+    /// \param [out] ppPSO      - Address of the memory location where a pointer to the
+    ///                           unpacked pipeline state object will be stored.
+    ///                           The function calls AddRef(), so that the PSO will have
+    ///                           one reference.
+    ///
+    /// \note   Resource signatures used by the PSO will be unpacked from the same archive.
     VIRTUAL void METHOD(UnpackPipelineState)(THIS_
-                                             const PipelineStateUnpackInfo REF DeArchiveInfo,
+                                             const PipelineStateUnpackInfo REF UnpackInfo,
                                              IPipelineState**                  ppPSO) PURE;
-    
-    /// Creates resource signature from archive.
+
+    /// Unpacks resource signature from the device object archive.
+
+    /// \param [in]  UnpackInfo  - Resource signature unpack info, see Diligent::ResourceSignatureUnpackInfo.
+    /// \param [out] ppSignature - Address of the memory location where a pointer to the
+    ///                            unpacked pipeline resource signature object will be stored.
+    ///                            The function calls AddRef(), so that the resource signature will have
+    ///                            one reference.
     VIRTUAL void METHOD(UnpackResourceSignature)(THIS_
-                                                 const ResourceSignatureUnpackInfo REF DeArchiveInfo,
+                                                 const ResourceSignatureUnpackInfo REF UnpackInfo,
                                                  IPipelineResourceSignature**          ppSignature) PURE;
-    
-    /// Creates render pass from archive.
+
+    /// Unpacks render pass from the device object archive.
+
+    /// \param [in]  UnpackInfo  - Render pass unpack info, see Diligent::RenderPassUnpackInfo.
+    /// \param [out] ppSignature - Address of the memory location where a pointer to the
+    ///                            unpacked render pass object will be stored.
+    ///                            The function calls AddRef(), so that the render pass will have
+    ///                            one reference.
     VIRTUAL void METHOD(UnpackRenderPass)(THIS_
-                                          const RenderPassUnpackInfo REF DeArchiveInfo,
+                                          const RenderPassUnpackInfo REF UnpackInfo,
                                           IRenderPass**                  ppRP) PURE;
 };
 DILIGENT_END_INTERFACE
