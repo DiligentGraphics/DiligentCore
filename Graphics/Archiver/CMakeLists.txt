@@ -80,7 +80,7 @@ PRIVATE
 
 target_compile_definitions(Diligent-Archiver-static
 PRIVATE
-    DILIGENT_NO_GLSLANG=$<BOOL:${DILIGENT_NO_GLSLANG}>
+    DILIGENT_NO_GLSLANG=$<BOOL:$<NOT:$<TARGET_EXISTS:glslang>>>
 )
 if(DEFINED DILIGENT_CORE_COMMIT_HASH)
     target_compile_definitions(Diligent-Archiver-static PRIVATE DILIGENT_CORE_COMMIT_HASH="${DILIGENT_CORE_COMMIT_HASH}")

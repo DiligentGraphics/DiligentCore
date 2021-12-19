@@ -725,9 +725,6 @@ void SerializerPSOImpl(Serializer<Mode>&                                 Ser,
     ExtractShadersD3D12(PSOCreateInfo, ShaderMapD3D12);
     VERIFY_EXPR(!ShaderMapD3D12.empty());
 #endif
-#if !VULKAN_SUPPORTED && !D3D12_SUPPORTED
-    return;
-#endif
 
     VERIFY(ShaderMapVk.empty() || ShaderMapD3D12.empty() || ShaderMapVk == ShaderMapD3D12,
            "Ray tracing shader map must be same for Vulkan and Direct3D12 backends");
