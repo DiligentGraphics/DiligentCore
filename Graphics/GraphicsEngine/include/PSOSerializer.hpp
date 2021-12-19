@@ -73,6 +73,14 @@ struct PSOSerializer
     using TPRSNames        = DeviceObjectArchiveBase::TPRSNames;
     using ShaderIndexArray = DeviceObjectArchiveBase::ShaderIndexArray;
 
+
+    template <typename ArrayElemType, typename CountType, typename ArrayElemSerializerType>
+    static void SerializeArray(Serializer<Mode>&       Ser,
+                               DynamicLinearAllocator* Allocator,
+                               ArrayElemType&          Elements,
+                               CountType&              Count,
+                               ArrayElemSerializerType ElemSerializer);
+
     static void SerializeImmutableSampler(Serializer<Mode>&            Ser,
                                           TQual<ImmutableSamplerDesc>& SampDesc);
 

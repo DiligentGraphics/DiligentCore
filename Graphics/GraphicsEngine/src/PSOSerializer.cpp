@@ -57,6 +57,22 @@ void PSOSerializer<Mode>::SerializeImmutableSampler(
 }
 
 template <SerializerMode Mode>
+template <typename ArrayElemType, typename CountType, typename ArrayElemSerializerType>
+void PSOSerializer<Mode>::SerializeArray(Serializer<Mode>&       Ser,
+                                         DynamicLinearAllocator* Allocator,
+                                         ArrayElemType&          Elements,
+                                         CountType&              Count,
+                                         ArrayElemSerializerType ElemSerializer)
+{
+    Ser(Count);
+    auto* pElements = PSOSerializer_ArrayHelper<Mode>::Create(Elements, Count, Allocator);
+    for (Uint32 i = 0; i < Count; ++i)
+    {
+        ElemSerializer(Ser, pElements[i]);
+    }
+}
+
+template <SerializerMode Mode>
 void PSOSerializer<Mode>::SerializePRSDesc(
     Serializer<Mode>&                               Ser,
     TQual<PipelineResourceSignatureDesc>&           Desc,
@@ -64,34 +80,25 @@ void PSOSerializer<Mode>::SerializePRSDesc(
     DynamicLinearAllocator*                         Allocator)
 {
     // Serialize PipelineResourceSignatureDesc
-    Ser(Desc.NumResources,
-        Desc.NumImmutableSamplers,
-        Desc.BindingIndex,
+    Ser(Desc.BindingIndex,
         Desc.UseCombinedTextureSamplers,
         Desc.CombinedSamplerSuffix);
     // skip Name
     // skip SRBAllocationGranularity
 
-    auto* pResources = PSOSerializer_ArrayHelper<Mode>::Create(Desc.Resources, Desc.NumResources, Allocator);
-    for (Uint32 r = 0; r < Desc.NumResources; ++r)
-    {
-        // Serialize PipelineResourceDesc
-        auto& ResDesc = pResources[r];
-        Ser(ResDesc.Name,
-            ResDesc.ShaderStages,
-            ResDesc.ArraySize,
-            ResDesc.ResourceType,
-            ResDesc.VarType,
-            ResDesc.Flags);
-    }
+    SerializeArray(Ser, Allocator, Desc.Resources, Desc.NumResources,
+                   [](Serializer<Mode>&            Ser,
+                      TQual<PipelineResourceDesc>& ResDesc) //
+                   {
+                       Ser(ResDesc.Name,
+                           ResDesc.ShaderStages,
+                           ResDesc.ArraySize,
+                           ResDesc.ResourceType,
+                           ResDesc.VarType,
+                           ResDesc.Flags);
+                   });
 
-    auto* pImmutableSamplers = PSOSerializer_ArrayHelper<Mode>::Create(Desc.ImmutableSamplers, Desc.NumImmutableSamplers, Allocator);
-    for (Uint32 s = 0; s < Desc.NumImmutableSamplers; ++s)
-    {
-        // Serialize ImmutableSamplerDesc
-        auto& SampDesc = pImmutableSamplers[s];
-        SerializeImmutableSampler(Ser, SampDesc);
-    }
+    SerializeArray(Ser, Allocator, Desc.ImmutableSamplers, Desc.NumImmutableSamplers, SerializeImmutableSampler);
 
     // Serialize PipelineResourceSignatureSerializedData
     Ser(Serialized.ShaderStages,
@@ -149,27 +156,27 @@ void PSOSerializer<Mode>::SerializePSOCreateInfo(
         CreateInfo.GraphicsPipeline.SampleMask,
         CreateInfo.GraphicsPipeline.RasterizerDesc,
         CreateInfo.GraphicsPipeline.DepthStencilDesc);
+
     //   Serialize InputLayoutDesc
     {
         auto& InputLayout = CreateInfo.GraphicsPipeline.InputLayout;
-        Ser(InputLayout.NumElements);
-        auto* pLayoutElements = PSOSerializer_ArrayHelper<Mode>::Create(InputLayout.LayoutElements, InputLayout.NumElements, Allocator);
-        for (Uint32 i = 0; i < InputLayout.NumElements; ++i)
-        {
-            // Serialize LayoutElement
-            auto& Elem = pLayoutElements[i];
-            Ser(Elem.HLSLSemantic,
-                Elem.InputIndex,
-                Elem.BufferSlot,
-                Elem.NumComponents,
-                Elem.ValueType,
-                Elem.IsNormalized,
-                Elem.RelativeOffset,
-                Elem.Stride,
-                Elem.Frequency,
-                Elem.InstanceDataStepRate);
-        }
+        SerializeArray(Ser, Allocator, InputLayout.LayoutElements, InputLayout.NumElements,
+                       [](Serializer<Mode>&     Ser,
+                          TQual<LayoutElement>& Elem) //
+                       {
+                           Ser(Elem.HLSLSemantic,
+                               Elem.InputIndex,
+                               Elem.BufferSlot,
+                               Elem.NumComponents,
+                               Elem.ValueType,
+                               Elem.IsNormalized,
+                               Elem.RelativeOffset,
+                               Elem.Stride,
+                               Elem.Frequency,
+                               Elem.InstanceDataStepRate);
+                       });
     }
+
     Ser(CreateInfo.GraphicsPipeline.PrimitiveTopology,
         CreateInfo.GraphicsPipeline.NumViewports,
         CreateInfo.GraphicsPipeline.NumRenderTargets,
@@ -249,76 +256,69 @@ void PSOSerializer<Mode>::SerializePSOCreateInfo(
         CreateInfo.MaxPayloadSize);
 
     //  Serialize RayTracingGeneralShaderGroup
-    {
-        Ser(CreateInfo.GeneralShaderCount);
-        auto* pGeneralShaders = PSOSerializer_ArrayHelper<Mode>::Create(CreateInfo.pGeneralShaders, CreateInfo.GeneralShaderCount, Allocator);
-        for (Uint32 i = 0; i < CreateInfo.GeneralShaderCount; ++i)
-        {
-            auto&  Group       = pGeneralShaders[i];
-            Uint32 ShaderIndex = ~0u;
-            if (IsWriting)
-            {
-                ShaderToIndex(ShaderIndex, Group.pShader);
-            }
-            Ser(Group.Name, ShaderIndex);
-            VERIFY_EXPR(ShaderIndex != ~0u);
-            if (IsReading)
-            {
-                ShaderToIndex(ShaderIndex, Group.pShader);
-            }
-        }
-    }
-    //  Serialize RayTracingTriangleHitShaderGroup
-    {
-        Ser(CreateInfo.TriangleHitShaderCount);
-        auto* pTriangleHitShaders = PSOSerializer_ArrayHelper<Mode>::Create(CreateInfo.pTriangleHitShaders, CreateInfo.TriangleHitShaderCount, Allocator);
-        for (Uint32 i = 0; i < CreateInfo.TriangleHitShaderCount; ++i)
-        {
-            auto&  Group                 = pTriangleHitShaders[i];
-            Uint32 ClosestHitShaderIndex = ~0u;
-            Uint32 AnyHitShaderIndex     = ~0u;
-            if (IsWriting)
-            {
-                ShaderToIndex(ClosestHitShaderIndex, Group.pClosestHitShader);
-                ShaderToIndex(AnyHitShaderIndex, Group.pAnyHitShader);
-            }
-            Ser(Group.Name, ClosestHitShaderIndex, AnyHitShaderIndex);
-            VERIFY_EXPR(ClosestHitShaderIndex != ~0u);
-            if (IsReading)
-            {
-                ShaderToIndex(ClosestHitShaderIndex, Group.pClosestHitShader);
-                ShaderToIndex(AnyHitShaderIndex, Group.pAnyHitShader);
-            }
-        }
-    }
-    //  Serialize RayTracingProceduralHitShaderGroup
-    {
-        Ser(CreateInfo.ProceduralHitShaderCount);
-        auto* pProceduralHitShaders = PSOSerializer_ArrayHelper<Mode>::Create(CreateInfo.pProceduralHitShaders, CreateInfo.ProceduralHitShaderCount, Allocator);
-        for (Uint32 i = 0; i < CreateInfo.ProceduralHitShaderCount; ++i)
-        {
-            auto&  Group                   = pProceduralHitShaders[i];
-            Uint32 IntersectionShaderIndex = ~0u;
-            Uint32 ClosestHitShaderIndex   = ~0u;
-            Uint32 AnyHitShaderIndex       = ~0u;
-            if (IsWriting)
-            {
-                ShaderToIndex(IntersectionShaderIndex, Group.pIntersectionShader);
-                ShaderToIndex(ClosestHitShaderIndex, Group.pClosestHitShader);
-                ShaderToIndex(AnyHitShaderIndex, Group.pAnyHitShader);
-            }
-            Ser(Group.Name, IntersectionShaderIndex, ClosestHitShaderIndex, AnyHitShaderIndex);
-            VERIFY_EXPR(IntersectionShaderIndex != ~0u);
-            if (IsReading)
-            {
-                ShaderToIndex(IntersectionShaderIndex, Group.pIntersectionShader);
-                ShaderToIndex(ClosestHitShaderIndex, Group.pClosestHitShader);
-                ShaderToIndex(AnyHitShaderIndex, Group.pAnyHitShader);
-            }
-        }
-    }
+    SerializeArray(Ser, Allocator, CreateInfo.pGeneralShaders, CreateInfo.GeneralShaderCount,
+                   [&](Serializer<Mode>&                    Ser,
+                       TQual<RayTracingGeneralShaderGroup>& Group) //
+                   {
+                       Uint32 ShaderIndex = ~0u;
+                       if (IsWriting)
+                       {
+                           ShaderToIndex(ShaderIndex, Group.pShader);
+                       }
+                       Ser(Group.Name, ShaderIndex);
+                       VERIFY_EXPR(ShaderIndex != ~0u);
+                       if (IsReading)
+                       {
+                           ShaderToIndex(ShaderIndex, Group.pShader);
+                       }
+                   });
 
-    // skip shaders - they are device specific
+    //  Serialize RayTracingTriangleHitShaderGroup
+    SerializeArray(Ser, Allocator, CreateInfo.pTriangleHitShaders, CreateInfo.TriangleHitShaderCount,
+                   [&](Serializer<Mode>&                        Ser,
+                       TQual<RayTracingTriangleHitShaderGroup>& Group) //
+                   {
+                       Uint32 ClosestHitShaderIndex = ~0u;
+                       Uint32 AnyHitShaderIndex     = ~0u;
+                       if (IsWriting)
+                       {
+                           ShaderToIndex(ClosestHitShaderIndex, Group.pClosestHitShader);
+                           ShaderToIndex(AnyHitShaderIndex, Group.pAnyHitShader);
+                       }
+                       Ser(Group.Name, ClosestHitShaderIndex, AnyHitShaderIndex);
+                       VERIFY_EXPR(ClosestHitShaderIndex != ~0u);
+                       if (IsReading)
+                       {
+                           ShaderToIndex(ClosestHitShaderIndex, Group.pClosestHitShader);
+                           ShaderToIndex(AnyHitShaderIndex, Group.pAnyHitShader);
+                       }
+                   });
+
+    //  Serialize RayTracingProceduralHitShaderGroup
+    SerializeArray(Ser, Allocator, CreateInfo.pProceduralHitShaders, CreateInfo.ProceduralHitShaderCount,
+                   [&](Serializer<Mode>&                          Ser,
+                       TQual<RayTracingProceduralHitShaderGroup>& Group) //
+                   {
+                       Uint32 IntersectionShaderIndex = ~0u;
+                       Uint32 ClosestHitShaderIndex   = ~0u;
+                       Uint32 AnyHitShaderIndex       = ~0u;
+                       if (IsWriting)
+                       {
+                           ShaderToIndex(IntersectionShaderIndex, Group.pIntersectionShader);
+                           ShaderToIndex(ClosestHitShaderIndex, Group.pClosestHitShader);
+                           ShaderToIndex(AnyHitShaderIndex, Group.pAnyHitShader);
+                       }
+                       Ser(Group.Name, IntersectionShaderIndex, ClosestHitShaderIndex, AnyHitShaderIndex);
+                       VERIFY_EXPR(IntersectionShaderIndex != ~0u);
+                       if (IsReading)
+                       {
+                           ShaderToIndex(IntersectionShaderIndex, Group.pIntersectionShader);
+                           ShaderToIndex(ClosestHitShaderIndex, Group.pClosestHitShader);
+                           ShaderToIndex(AnyHitShaderIndex, Group.pAnyHitShader);
+                       }
+                   });
+
+    // skip shaders - they are device-specific
 
 #if defined(_MSC_VER) && defined(_WIN64)
     static_assert(sizeof(RayTracingPipelineStateCreateInfo) == 168, "Did you add a new member to RayTracingPipelineStateCreateInfo? Please add serialization here.");
@@ -334,102 +334,69 @@ void PSOSerializer<Mode>::SerializeRenderPassDesc(
     TQual<RenderPassDesc>&  RPDesc,
     DynamicLinearAllocator* Allocator)
 {
-    // Serialize RenderPassDesc
-    Ser(RPDesc.AttachmentCount,
-        RPDesc.SubpassCount,
-        RPDesc.DependencyCount);
+    SerializeArray(Ser, Allocator, RPDesc.pAttachments, RPDesc.AttachmentCount,
+                   [](Serializer<Mode>&                Ser,
+                      TQual<RenderPassAttachmentDesc>& Attachment) //
+                   {
+                       Ser(Attachment.Format,
+                           Attachment.SampleCount,
+                           Attachment.LoadOp,
+                           Attachment.StoreOp,
+                           Attachment.StencilLoadOp,
+                           Attachment.StencilStoreOp,
+                           Attachment.InitialState,
+                           Attachment.FinalState);
+                   });
 
-    auto* pAttachments = PSOSerializer_ArrayHelper<Mode>::Create(RPDesc.pAttachments, RPDesc.AttachmentCount, Allocator);
-    for (Uint32 i = 0; i < RPDesc.AttachmentCount; ++i)
-    {
-        // Serialize RenderPassAttachmentDesc
-        auto& Attachment = pAttachments[i];
-        Ser(Attachment.Format,
-            Attachment.SampleCount,
-            Attachment.LoadOp,
-            Attachment.StoreOp,
-            Attachment.StencilLoadOp,
-            Attachment.StencilStoreOp,
-            Attachment.InitialState,
-            Attachment.FinalState);
-    }
+    SerializeArray(Ser, Allocator, RPDesc.pSubpasses, RPDesc.SubpassCount,
+                   [&Allocator](Serializer<Mode>&   Ser,
+                                TQual<SubpassDesc>& Subpass) //
+                   {
+                       auto SerializeAttachmentRef = [](Serializer<Mode>&           Ser,
+                                                        TQual<AttachmentReference>& AttachRef) //
+                       {
+                           Ser(AttachRef.AttachmentIndex,
+                               AttachRef.State);
+                       };
+                       SerializeArray(Ser, Allocator, Subpass.pInputAttachments, Subpass.InputAttachmentCount, SerializeAttachmentRef);
+                       SerializeArray(Ser, Allocator, Subpass.pRenderTargetAttachments, Subpass.RenderTargetAttachmentCount, SerializeAttachmentRef);
 
-    auto* pSubpasses = PSOSerializer_ArrayHelper<Mode>::Create(RPDesc.pSubpasses, RPDesc.SubpassCount, Allocator);
-    for (Uint32 i = 0; i < RPDesc.SubpassCount; ++i)
-    {
-        // Serialize SubpassDesc
-        auto& Subpass                   = pSubpasses[i];
-        bool  HasResolveAttachments     = Subpass.pResolveAttachments != nullptr;
-        bool  HasDepthStencilAttachment = Subpass.pDepthStencilAttachment != nullptr;
-        bool  HasShadingRateAttachment  = Subpass.pShadingRateAttachment != nullptr;
+                       // Note: when reading, ResolveAttachCount, DepthStencilAttachCount, and ShadingRateAttachCount will be overwritten
+                       Uint32 ResolveAttachCount = Subpass.pResolveAttachments != nullptr ? Subpass.RenderTargetAttachmentCount : 0;
+                       SerializeArray(Ser, Allocator, Subpass.pResolveAttachments, ResolveAttachCount, SerializeAttachmentRef);
 
-        Ser(Subpass.InputAttachmentCount,
-            Subpass.RenderTargetAttachmentCount,
-            Subpass.PreserveAttachmentCount,
-            HasResolveAttachments,
-            HasDepthStencilAttachment,
-            HasShadingRateAttachment);
+                       Uint32 DepthStencilAttachCount = Subpass.pDepthStencilAttachment != nullptr ? 1 : 0;
+                       SerializeArray(Ser, Allocator, Subpass.pDepthStencilAttachment, DepthStencilAttachCount, SerializeAttachmentRef);
 
-        auto* pInputAttachments = PSOSerializer_ArrayHelper<Mode>::Create(Subpass.pInputAttachments, Subpass.InputAttachmentCount, Allocator);
-        for (Uint32 j = 0; j < Subpass.InputAttachmentCount; ++j)
-        {
-            auto& InputAttach = pInputAttachments[j];
-            Ser(InputAttach.AttachmentIndex,
-                InputAttach.State);
-        }
+                       SerializeArray(Ser, Allocator, Subpass.pPreserveAttachments, Subpass.PreserveAttachmentCount,
+                                      [](Serializer<Mode>& Ser,
+                                         TQual<Uint32>&    Attach) //
+                                      {
+                                          Ser(Attach);
+                                      });
 
-        auto* pRenderTargetAttachments = PSOSerializer_ArrayHelper<Mode>::Create(Subpass.pRenderTargetAttachments, Subpass.RenderTargetAttachmentCount, Allocator);
-        for (Uint32 j = 0; j < Subpass.RenderTargetAttachmentCount; ++j)
-        {
-            auto& RTAttach = pRenderTargetAttachments[j];
-            Ser(RTAttach.AttachmentIndex,
-                RTAttach.State);
-        }
+                       Uint32 ShadingRateAttachCount = Subpass.pShadingRateAttachment != nullptr ? 1 : 0;
+                       SerializeArray(Ser, Allocator, Subpass.pShadingRateAttachment, ShadingRateAttachCount,
+                                      [](Serializer<Mode>&             Ser,
+                                         TQual<ShadingRateAttachment>& SRAttachment) //
+                                      {
+                                          Ser(SRAttachment.Attachment.AttachmentIndex,
+                                              SRAttachment.Attachment.State,
+                                              SRAttachment.TileSize);
+                                      });
+                   });
 
-        auto* pPreserveAttachments = PSOSerializer_ArrayHelper<Mode>::Create(Subpass.pPreserveAttachments, Subpass.PreserveAttachmentCount, Allocator);
-        for (Uint32 j = 0; j < Subpass.PreserveAttachmentCount; ++j)
-        {
-            auto& Attach = pPreserveAttachments[j];
-            Ser(Attach);
-        }
-
-        if (HasResolveAttachments)
-        {
-            auto* pResolveAttachments = PSOSerializer_ArrayHelper<Mode>::Create(Subpass.pResolveAttachments, Subpass.RenderTargetAttachmentCount, Allocator);
-            for (Uint32 j = 0; j < Subpass.RenderTargetAttachmentCount; ++j)
-            {
-                auto& ResAttach = pResolveAttachments[j];
-                Ser(ResAttach.AttachmentIndex,
-                    ResAttach.State);
-            }
-        }
-        if (HasDepthStencilAttachment)
-        {
-            auto* pDepthStencilAttachment = PSOSerializer_ArrayHelper<Mode>::Create(Subpass.pDepthStencilAttachment, 1, Allocator);
-            Ser(pDepthStencilAttachment->AttachmentIndex,
-                pDepthStencilAttachment->State);
-        }
-        if (HasShadingRateAttachment)
-        {
-            auto* pShadingRateAttachment = PSOSerializer_ArrayHelper<Mode>::Create(Subpass.pShadingRateAttachment, 1, Allocator);
-            Ser(pShadingRateAttachment->Attachment.AttachmentIndex,
-                pShadingRateAttachment->Attachment.State,
-                pShadingRateAttachment->TileSize);
-        }
-    }
-
-    auto* pDependencies = PSOSerializer_ArrayHelper<Mode>::Create(RPDesc.pDependencies, RPDesc.DependencyCount, Allocator);
-    for (Uint32 i = 0; i < RPDesc.DependencyCount; ++i)
-    {
-        // Serialize SubpassDependencyDesc
-        auto& Dep = pDependencies[i];
-        Ser(Dep.SrcSubpass,
-            Dep.DstSubpass,
-            Dep.SrcStageMask,
-            Dep.DstStageMask,
-            Dep.SrcAccessMask,
-            Dep.DstAccessMask);
-    }
+    SerializeArray(Ser, Allocator, RPDesc.pDependencies, RPDesc.DependencyCount,
+                   [](Serializer<Mode>&             Ser,
+                      TQual<SubpassDependencyDesc>& Dep) //
+                   {
+                       Ser(Dep.SrcSubpass,
+                           Dep.DstSubpass,
+                           Dep.SrcStageMask,
+                           Dep.DstStageMask,
+                           Dep.SrcAccessMask,
+                           Dep.DstAccessMask);
+                   });
 
 #if defined(_MSC_VER) && defined(_WIN64)
     static_assert(sizeof(RenderPassDesc) == 56, "Did you add a new member to RenderPassDesc? Please add serialization here.");
