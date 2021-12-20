@@ -64,15 +64,8 @@ void PSOSerializerD3D11<Mode>::SerializePRSDesc(
     TQual<PipelineResourceSignatureSerializedDataD3D11>& Serialized,
     DynamicLinearAllocator*                              Allocator)
 {
-    Ser(Serialized.NumResources, Serialized.NumImmutableSamplers);
-
-    auto* pResources = PSOSerializer_ArrayHelper<Mode>::Create(Serialized.pResourceAttribs, Serialized.NumResources, Allocator);
-    for (Uint32 i = 0; i < Serialized.NumResources; ++i)
-        Ser(pResources[i]);
-
-    auto* pImtblSamplers = PSOSerializer_ArrayHelper<Mode>::Create(Serialized.pImmutableSamplers, Serialized.NumImmutableSamplers, Allocator);
-    for (Uint32 i = 0; i < Serialized.NumImmutableSamplers; ++i)
-        Ser(pImtblSamplers[i]);
+    PSOSerializer<Mode>::SerializeArrayRaw(Ser, Allocator, Serialized.pResourceAttribs, Serialized.NumResources);
+    PSOSerializer<Mode>::SerializeArrayRaw(Ser, Allocator, Serialized.pImmutableSamplers, Serialized.NumImmutableSamplers);
 
 #if defined(_MSC_VER) && defined(_WIN64)
     static_assert(sizeof(Serialized) == 56, "Did you add a new member to PipelineResourceSignatureSerializedDataD3D11? Please add serialization here.");

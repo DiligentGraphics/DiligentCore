@@ -77,11 +77,7 @@ void PSOSerializerGL<Mode>::SerializePRSDesc(
     TQual<PipelineResourceSignatureSerializedDataGL>& Serialized,
     DynamicLinearAllocator*                           Allocator)
 {
-    Ser(Serialized.NumResources);
-
-    auto* pAttribs = PSOSerializer_ArrayHelper<Mode>::Create(Serialized.pResourceAttribs, Serialized.NumResources, Allocator);
-    for (Uint32 i = 0; i < Serialized.NumResources; ++i)
-        Ser(pAttribs[i]);
+    PSOSerializer<Mode>::SerializeArrayRaw(Ser, Allocator, Serialized.pResourceAttribs, Serialized.NumResources);
 
 #if defined(_MSC_VER) && defined(_WIN64)
     static_assert(sizeof(Serialized) == 48, "Did you add a new member to PipelineResourceSignatureSerializedDataGL? Please add serialization here.");

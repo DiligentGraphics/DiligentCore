@@ -81,6 +81,12 @@ struct PSOSerializer
                                CountType&              Count,
                                ArrayElemSerializerType ElemSerializer);
 
+    template <typename ArrayElemType, typename CountType>
+    static void SerializeArrayRaw(Serializer<Mode>&       Ser,
+                                  DynamicLinearAllocator* Allocator,
+                                  ArrayElemType&          Elements,
+                                  CountType&              Count);
+
     static void SerializeImmutableSampler(Serializer<Mode>&            Ser,
                                           TQual<ImmutableSamplerDesc>& SampDesc);
 
@@ -125,6 +131,36 @@ struct PSOSerializer
                                  DynamicLinearAllocator*  Allocator);
 };
 
+template <SerializerMode Mode>
+template <typename ArrayElemType, typename CountType, typename ArrayElemSerializerType>
+void PSOSerializer<Mode>::SerializeArray(Serializer<Mode>&       Ser,
+                                         DynamicLinearAllocator* Allocator,
+                                         ArrayElemType&          Elements,
+                                         CountType&              Count,
+                                         ArrayElemSerializerType ElemSerializer)
+{
+    Ser(Count);
+    auto* pElements = PSOSerializer_ArrayHelper<Mode>::Create(Elements, Count, Allocator);
+    for (Uint32 i = 0; i < Count; ++i)
+    {
+        ElemSerializer(Ser, pElements[i]);
+    }
+}
+
+template <SerializerMode Mode>
+template <typename ArrayElemType, typename CountType>
+void PSOSerializer<Mode>::SerializeArrayRaw(Serializer<Mode>&       Ser,
+                                            DynamicLinearAllocator* Allocator,
+                                            ArrayElemType&          Elements,
+                                            CountType&              Count)
+{
+    SerializeArray(Ser, Allocator, Elements, Count,
+                   [](Serializer<Mode>& Ser,
+                      auto&             Elem) //
+                   {
+                       Ser(Elem);
+                   });
+}
 
 DECL_TRIVIALLY_SERIALIZABLE(BlendStateDesc);
 DECL_TRIVIALLY_SERIALIZABLE(RasterizerStateDesc);
