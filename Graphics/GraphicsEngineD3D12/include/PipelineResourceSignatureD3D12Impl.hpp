@@ -95,6 +95,13 @@ struct PipelineResourceSignatureSerializedDataD3D12 : PipelineResourceSignatureS
     Uint32                                              NumResources         = 0;
     const PipelineResourceImmutableSamplerAttribsD3D12* pImmutableSamplers   = nullptr; // [NumImmutableSamplers]
     Uint32                                              NumImmutableSamplers = 0;
+
+    PipelineResourceSignatureSerializedDataD3D12() noexcept
+    {}
+
+    explicit PipelineResourceSignatureSerializedDataD3D12(const PipelineResourceSignatureSerializedData& SerializedData) noexcept :
+        PipelineResourceSignatureSerializedData{SerializedData}
+    {}
 };
 
 /// Implementation of the Diligent::PipelineResourceSignatureD3D12Impl class

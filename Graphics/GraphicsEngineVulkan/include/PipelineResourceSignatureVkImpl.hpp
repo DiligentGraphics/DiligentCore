@@ -67,6 +67,13 @@ struct PipelineResourceSignatureSerializedDataVk : PipelineResourceSignatureSeri
     Uint16                                           DynamicStorageBufferCount = 0;
 
     std::unique_ptr<PipelineResourceImmutableSamplerAttribsVk[]> m_pImmutableSamplers;
+
+    PipelineResourceSignatureSerializedDataVk() noexcept
+    {}
+
+    explicit PipelineResourceSignatureSerializedDataVk(const PipelineResourceSignatureSerializedData& SerializedData) noexcept :
+        PipelineResourceSignatureSerializedData{SerializedData}
+    {}
 };
 
 /// Implementation of the Diligent::PipelineResourceSignatureVkImpl class

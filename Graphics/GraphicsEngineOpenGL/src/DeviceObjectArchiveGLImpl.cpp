@@ -48,8 +48,7 @@ void DeviceObjectArchiveGLImpl::UnpackResourceSignature(const ResourceSignatureU
         DeArchiveInfo, pSignature,
         [&DeArchiveInfo](PRSData& PRS, Serializer<SerializerMode::Read>& Ser, IPipelineResourceSignature*& pSignature) //
         {
-            PipelineResourceSignatureSerializedDataGL SerializedData;
-            static_cast<PipelineResourceSignatureSerializedData&>(SerializedData) = PRS.Serialized;
+            PipelineResourceSignatureSerializedDataGL SerializedData{PRS.Serialized};
             PSOSerializerGL<SerializerMode::Read>::SerializePRSDesc(Ser, SerializedData, &PRS.Allocator);
             VERIFY_EXPR(Ser.IsEnd());
 

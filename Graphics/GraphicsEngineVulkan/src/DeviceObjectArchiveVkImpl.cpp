@@ -48,8 +48,7 @@ void DeviceObjectArchiveVkImpl::UnpackResourceSignature(const ResourceSignatureU
         DeArchiveInfo, pSignature,
         [&DeArchiveInfo](PRSData& PRS, Serializer<SerializerMode::Read>& Ser, IPipelineResourceSignature*& pSignature) //
         {
-            PipelineResourceSignatureSerializedDataVk SerializedData;
-            static_cast<PipelineResourceSignatureSerializedData&>(SerializedData) = PRS.Serialized;
+            PipelineResourceSignatureSerializedDataVk SerializedData{PRS.Serialized};
             PSOSerializerVk<SerializerMode::Read>::SerializePRSDesc(Ser, SerializedData, &PRS.Allocator);
             VERIFY_EXPR(Ser.IsEnd());
 

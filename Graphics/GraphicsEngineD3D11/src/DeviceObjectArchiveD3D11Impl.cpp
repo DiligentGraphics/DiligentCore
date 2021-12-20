@@ -48,8 +48,7 @@ void DeviceObjectArchiveD3D11Impl::UnpackResourceSignature(const ResourceSignatu
         DeArchiveInfo, pSignature,
         [&DeArchiveInfo](PRSData& PRS, Serializer<SerializerMode::Read>& Ser, IPipelineResourceSignature*& pSignature) //
         {
-            PipelineResourceSignatureSerializedDataD3D11 SerializedData;
-            static_cast<PipelineResourceSignatureSerializedData&>(SerializedData) = PRS.Serialized;
+            PipelineResourceSignatureSerializedDataD3D11 SerializedData{PRS.Serialized};
             PSOSerializerD3D11<SerializerMode::Read>::SerializePRSDesc(Ser, SerializedData, &PRS.Allocator);
             VERIFY_EXPR(Ser.IsEnd());
 

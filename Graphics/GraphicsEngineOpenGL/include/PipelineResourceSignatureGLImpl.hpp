@@ -64,6 +64,13 @@ struct PipelineResourceSignatureSerializedDataGL : PipelineResourceSignatureSeri
     Uint32                           NumResources         = 0;
     const RefCntAutoPtr<ISampler>*   pImmutableSamplers   = nullptr; // unused
     Uint32                           NumImmutableSamplers = 0;       // unused
+
+    PipelineResourceSignatureSerializedDataGL() noexcept
+    {}
+
+    explicit PipelineResourceSignatureSerializedDataGL(const PipelineResourceSignatureSerializedData& SerializedData) noexcept :
+        PipelineResourceSignatureSerializedData{SerializedData}
+    {}
 };
 
 /// Implementation of the Diligent::PipelineResourceSignatureGLImpl class
