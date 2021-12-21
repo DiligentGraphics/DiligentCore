@@ -49,7 +49,7 @@ add_library(Diligent-GraphicsEngineD3DBase STATIC
 )
 
 add_custom_command(OUTPUT ${HLSL_DEFINITIONS_INC} # We must use full path here!
-                   COMMAND ${FILE2STRING_PATH} ${HLSL_DEFINITIONS} include/HLSLDefinitions_inc.fxh
+                   COMMAND ${PYTHON_EXECUTABLE} ${FILE2STRING_PATH} ${HLSL_DEFINITIONS} include/HLSLDefinitions_inc.fxh
                    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
                    MAIN_DEPENDENCY ${HLSL_DEFINITIONS}
                    COMMENT "Processing HLSLDefinitions.fxh"

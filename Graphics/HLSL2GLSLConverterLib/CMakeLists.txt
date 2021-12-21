@@ -53,7 +53,7 @@ PUBLIC
 
 if(NOT FILE2STRING_PATH STREQUAL "")
     add_custom_command(OUTPUT ${GLSL_DEFINITIONS_INC} # We must use full path here!
-                       COMMAND ${FILE2STRING_PATH} ${GLSL_DEFINITIONS} include/GLSLDefinitions_inc.h
+                       COMMAND ${PYTHON_EXECUTABLE} ${FILE2STRING_PATH} ${GLSL_DEFINITIONS} include/GLSLDefinitions_inc.h
                        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
                        MAIN_DEPENDENCY ${GLSL_DEFINITIONS}
                        COMMENT "Processing GLSLDefinitions.h"
