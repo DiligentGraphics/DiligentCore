@@ -84,7 +84,7 @@ struct SerializableResourceSignatureImpl::SignatureTraits<PipelineResourceSignat
 };
 
 template <typename CreateInfoType>
-bool ArchiverImpl::PatchShadersD3D12(CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data, DefaultPRSInfo& DefPRS)
+bool ArchiverImpl::PatchShadersD3D12(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data, DefaultPRSInfo& DefPRS)
 {
     std::vector<ShaderStageInfoD3D12> ShaderStages;
     SHADER_TYPE                       ActiveShaderStages = SHADER_TYPE_UNKNOWN;
@@ -100,23 +100,26 @@ bool ArchiverImpl::PatchShadersD3D12(CreateInfoType& CreateInfo, TPSOData<Create
         Dst.ByteCodes = std::move(Src.ByteCodes);
     }
 
+    auto** ppSignatures    = CreateInfo.ppResourceSignatures;
+    auto   SignaturesCount = CreateInfo.ResourceSignaturesCount;
+
     IPipelineResourceSignature* DefaultSignatures[1] = {};
     if (CreateInfo.ResourceSignaturesCount == 0)
     {
         if (!CreateDefaultResourceSignature<PipelineStateD3D12Impl>(DefPRS, CreateInfo.PSODesc, ActiveShaderStages, ShaderStagesD3D12, nullptr))
             return false;
 
-        DefaultSignatures[0]               = DefPRS.pPRS;
-        CreateInfo.ResourceSignaturesCount = 1;
-        CreateInfo.ppResourceSignatures    = DefaultSignatures;
-        CreateInfo.PSODesc.ResourceLayout  = {};
+        DefaultSignatures[0] = DefPRS.pPRS;
+        SignaturesCount      = 1;
+        ppSignatures         = DefaultSignatures;
     }
 
     try
     {
-        SignatureArray<PipelineResourceSignatureD3D12Impl> Signatures      = {};
-        Uint32                                             SignaturesCount = 0;
-        SortResourceSignatures(CreateInfo, Signatures, SignaturesCount);
+        // Sort signatures by binding index.
+        // Note that SignaturesCount will be overwritten with the maximum binding index.
+        SignatureArray<PipelineResourceSignatureD3D12Impl> Signatures = {};
+        SortResourceSignatures(ppSignatures, SignaturesCount, Signatures, SignaturesCount);
 
         RootSignatureD3D12 RootSig{nullptr, nullptr, Signatures.data(), SignaturesCount, 0};
         PipelineStateD3D12Impl::RemapShaderResources(ShaderStagesD3D12,
@@ -148,10 +151,10 @@ bool ArchiverImpl::PatchShadersD3D12(CreateInfoType& CreateInfo, TPSOData<Create
     return true;
 }
 
-template bool ArchiverImpl::PatchShadersD3D12<GraphicsPipelineStateCreateInfo>(GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
-template bool ArchiverImpl::PatchShadersD3D12<ComputePipelineStateCreateInfo>(ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
-template bool ArchiverImpl::PatchShadersD3D12<TilePipelineStateCreateInfo>(TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
-template bool ArchiverImpl::PatchShadersD3D12<RayTracingPipelineStateCreateInfo>(RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
+template bool ArchiverImpl::PatchShadersD3D12<GraphicsPipelineStateCreateInfo>(const GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
+template bool ArchiverImpl::PatchShadersD3D12<ComputePipelineStateCreateInfo>(const ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
+template bool ArchiverImpl::PatchShadersD3D12<TilePipelineStateCreateInfo>(const TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
+template bool ArchiverImpl::PatchShadersD3D12<RayTracingPipelineStateCreateInfo>(const RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
 
 
 void SerializableShaderImpl::CreateShaderD3D12(IReferenceCounters* pRefCounters, ShaderCreateInfo& ShaderCI, String& CompilationLog)
@@ -183,7 +186,7 @@ void SerializationDeviceImpl::GetPipelineResourceBindingsD3D12(const PipelineRes
 
     SignatureArray<PipelineResourceSignatureD3D12Impl> Signatures      = {};
     Uint32                                             SignaturesCount = 0;
-    SortResourceSignatures(Info, Signatures, SignaturesCount);
+    SortResourceSignatures(Info.ppResourceSignatures, Info.ResourceSignaturesCount, Signatures, SignaturesCount);
 
     RootSignatureD3D12 RootSig{nullptr, nullptr, Signatures.data(), SignaturesCount, 0};
     const bool         HasSpaces = RootSig.GetTotalSpaces() > 1;

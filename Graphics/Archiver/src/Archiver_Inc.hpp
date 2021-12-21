@@ -32,18 +32,23 @@ namespace
 template <typename SignatureType>
 using SignatureArray = std::array<RefCntAutoPtr<SignatureType>, MAX_RESOURCE_SIGNATURES>;
 
-template <typename CreateInfoType, typename SignatureType>
-static void SortResourceSignatures(const CreateInfoType& CreateInfo, SignatureArray<SignatureType>& Signatures, Uint32& SignaturesCount)
+template <typename SignatureType>
+static void SortResourceSignatures(IPipelineResourceSignature**   ppSrcSignatures,
+                                   Uint32                         SrcSignaturesCount,
+                                   SignatureArray<SignatureType>& SortedSignatures,
+                                   Uint32&                        SortedSignaturesCount)
 {
-    for (Uint32 i = 0; i < CreateInfo.ResourceSignaturesCount; ++i)
+    for (Uint32 i = 0; i < SrcSignaturesCount; ++i)
     {
-        const auto* pSerPRS = ClassPtrCast<SerializableResourceSignatureImpl>(CreateInfo.ppResourceSignatures[i]);
+        const auto* pSerPRS = ClassPtrCast<SerializableResourceSignatureImpl>(ppSrcSignatures[i]);
         VERIFY_EXPR(pSerPRS != nullptr);
 
         const auto& Desc = pSerPRS->GetDesc();
 
-        Signatures[Desc.BindingIndex] = pSerPRS->template GetSignature<SignatureType>();
-        SignaturesCount               = std::max(SignaturesCount, static_cast<Uint32>(Desc.BindingIndex) + 1);
+        VERIFY(!SortedSignatures[Desc.BindingIndex], "Multiple signatures use the same binding index (", Desc.BindingIndex, ").");
+        SortedSignatures[Desc.BindingIndex] = pSerPRS->template GetSignature<SignatureType>();
+
+        SortedSignaturesCount = std::max(SortedSignaturesCount, Uint32{Desc.BindingIndex} + 1u);
     }
 }
 

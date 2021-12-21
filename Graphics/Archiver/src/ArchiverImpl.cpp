@@ -866,12 +866,6 @@ bool ArchiverImpl::SerializePSO(TNamedObjectHashMap<TPSOData<CreateInfoType>>& P
                 LOG_ERROR_MESSAGE("Unexpected render device type");
                 break;
         }
-        if (UseDefaultPRS)
-        {
-            PSOCreateInfo.ResourceSignaturesCount = 0;
-            PSOCreateInfo.ppResourceSignatures    = nullptr;
-            PSOCreateInfo.PSODesc.ResourceLayout  = InPSOCreateInfo.PSODesc.ResourceLayout;
-        }
     }
 
     if (!Data.SharedData)

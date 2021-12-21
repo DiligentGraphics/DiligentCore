@@ -104,12 +104,15 @@ void VerifyResourceMerge(const char*                       PSOName,
 
 
 template <typename CreateInfoType>
-bool ArchiverImpl::PatchShadersMtl(CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data, DefaultPRSInfo& DefPRS)
+bool ArchiverImpl::PatchShadersMtl(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data, DefaultPRSInfo& DefPRS)
 {
     std::vector<ShaderStageInfoMtl> ShaderStages;
     SHADER_TYPE                     ActiveShaderStages = SHADER_TYPE_UNKNOWN;
     PipelineStateMtlImpl::ExtractShaders<SerializableShaderImpl>(CreateInfo, ShaderStages, ActiveShaderStages);
     
+    auto** ppSignatures    = CreateInfo.ppResourceSignatures;
+    auto   SignaturesCount = CreateInfo.ResourceSignaturesCount;
+
     IPipelineResourceSignature* DefaultSignatures[1] = {};
     if (CreateInfo.ResourceSignaturesCount == 0)
     {
@@ -207,10 +210,9 @@ bool ArchiverImpl::PatchShadersMtl(CreateInfoType& CreateInfo, TPSOData<CreateIn
             return false;
         }
 
-        DefaultSignatures[0]               = DefPRS.pPRS;
-        CreateInfo.ResourceSignaturesCount = 1;
-        CreateInfo.ppResourceSignatures    = DefaultSignatures;
-        CreateInfo.PSODesc.ResourceLayout  = {};
+        DefaultSignatures[0] = DefPRS.pPRS;
+        SignaturesCount      = 1;
+        ppSignatures         = DefaultSignatures;
     }
     
     TShaderIndices ShaderIndicesMacOS;
@@ -220,9 +222,10 @@ bool ArchiverImpl::PatchShadersMtl(CreateInfoType& CreateInfo, TPSOData<CreateIn
 
     try
     {
+        // Sort signatures by binding index.
+        // Note that SignaturesCount will be overwritten with the maximum binding index.
         SignatureArray<PipelineResourceSignatureMtlImpl> Signatures      = {};
-        Uint32                                           SignaturesCount = 0;
-        SortResourceSignatures(CreateInfo, Signatures, SignaturesCount);
+        SortResourceSignatures(ppSignatures, SignaturesCount, Signatures, SignaturesCount);
 
         std::array<MtlResourceCounters, MAX_RESOURCE_SIGNATURES> BaseBindings{};
         MtlResourceCounters                                      CurrBindings{};
@@ -262,10 +265,10 @@ bool ArchiverImpl::PatchShadersMtl(CreateInfoType& CreateInfo, TPSOData<CreateIn
     return true;
 }
 
-template bool ArchiverImpl::PatchShadersMtl<GraphicsPipelineStateCreateInfo>(GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
-template bool ArchiverImpl::PatchShadersMtl<ComputePipelineStateCreateInfo>(ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
-template bool ArchiverImpl::PatchShadersMtl<TilePipelineStateCreateInfo>(TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
-template bool ArchiverImpl::PatchShadersMtl<RayTracingPipelineStateCreateInfo>(RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
+template bool ArchiverImpl::PatchShadersMtl<GraphicsPipelineStateCreateInfo>(const GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
+template bool ArchiverImpl::PatchShadersMtl<ComputePipelineStateCreateInfo>(const ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
+template bool ArchiverImpl::PatchShadersMtl<TilePipelineStateCreateInfo>(const TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
+template bool ArchiverImpl::PatchShadersMtl<RayTracingPipelineStateCreateInfo>(const RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
 
 
 static_assert(std::is_same<MtlArchiverResourceCounters, MtlResourceCounters>::value,

@@ -103,7 +103,7 @@ void InitD3D11ShaderResourceCounters(const GraphicsPipelineStateCreateInfo& Crea
 
 
 template <typename CreateInfoType>
-bool ArchiverImpl::PatchShadersD3D11(CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data, DefaultPRSInfo& DefPRS)
+bool ArchiverImpl::PatchShadersD3D11(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data, DefaultPRSInfo& DefPRS)
 {
     TShaderIndices ShaderIndices;
 
@@ -119,24 +119,27 @@ bool ArchiverImpl::PatchShadersD3D11(CreateInfoType& CreateInfo, TPSOData<Create
         Dst       = Src.pShader;
     }
 
+    auto** ppSignatures    = CreateInfo.ppResourceSignatures;
+    auto   SignaturesCount = CreateInfo.ResourceSignaturesCount;
+
     IPipelineResourceSignature* DefaultSignatures[1] = {};
     if (CreateInfo.ResourceSignaturesCount == 0)
     {
         if (!CreateDefaultResourceSignature<PipelineStateD3D11Impl>(DefPRS, CreateInfo.PSODesc, ActiveShaderStages, ShadersD3D11))
             return false;
 
-        DefaultSignatures[0]               = DefPRS.pPRS;
-        CreateInfo.ResourceSignaturesCount = 1;
-        CreateInfo.ppResourceSignatures    = DefaultSignatures;
-        CreateInfo.PSODesc.ResourceLayout  = {};
+        DefaultSignatures[0] = DefPRS.pPRS;
+        SignaturesCount      = 1;
+        ppSignatures         = DefaultSignatures;
     }
 
     std::vector<CComPtr<ID3DBlob>> ShaderBytecode{ShaderStages.size()};
     try
     {
-        SignatureArray<PipelineResourceSignatureD3D11Impl> Signatures      = {};
-        Uint32                                             SignaturesCount = 0;
-        SortResourceSignatures(CreateInfo, Signatures, SignaturesCount);
+        // Sort signatures by binding index.
+        // Note that SignaturesCount will be overwritten with the maximum binding index.
+        SignatureArray<PipelineResourceSignatureD3D11Impl> Signatures = {};
+        SortResourceSignatures(ppSignatures, SignaturesCount, Signatures, SignaturesCount);
 
         D3D11ShaderResourceCounters ResCounters = {};
         InitD3D11ShaderResourceCounters(CreateInfo, ResCounters);
@@ -178,10 +181,10 @@ bool ArchiverImpl::PatchShadersD3D11(CreateInfoType& CreateInfo, TPSOData<Create
     return true;
 }
 
-template bool ArchiverImpl::PatchShadersD3D11<GraphicsPipelineStateCreateInfo>(GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
-template bool ArchiverImpl::PatchShadersD3D11<ComputePipelineStateCreateInfo>(ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
-template bool ArchiverImpl::PatchShadersD3D11<TilePipelineStateCreateInfo>(TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
-template bool ArchiverImpl::PatchShadersD3D11<RayTracingPipelineStateCreateInfo>(RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
+template bool ArchiverImpl::PatchShadersD3D11<GraphicsPipelineStateCreateInfo>(const GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
+template bool ArchiverImpl::PatchShadersD3D11<ComputePipelineStateCreateInfo>(const ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
+template bool ArchiverImpl::PatchShadersD3D11<TilePipelineStateCreateInfo>(const TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
+template bool ArchiverImpl::PatchShadersD3D11<RayTracingPipelineStateCreateInfo>(const RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
 
 void SerializableShaderImpl::CreateShaderD3D11(IReferenceCounters* pRefCounters, ShaderCreateInfo& ShaderCI, String& CompilationLog)
 {
@@ -211,7 +214,7 @@ void SerializationDeviceImpl::GetPipelineResourceBindingsD3D11(const PipelineRes
 
     SignatureArray<PipelineResourceSignatureD3D11Impl> Signatures      = {};
     Uint32                                             SignaturesCount = 0;
-    SortResourceSignatures(Info, Signatures, SignaturesCount);
+    SortResourceSignatures(Info.ppResourceSignatures, Info.ResourceSignaturesCount, Signatures, SignaturesCount);
 
     D3D11ShaderResourceCounters BaseBindings = {};
     // In Direct3D11, UAVs use the same register space as render targets

@@ -34,25 +34,6 @@
 
 namespace Diligent
 {
-namespace
-{
-template <typename SignatureType>
-using SignatureArray = std::array<RefCntAutoPtr<SignatureType>, MAX_RESOURCE_SIGNATURES>;
-
-template <typename SignatureType>
-static void SortResourceSignatures(const PipelineResourceBindingAttribs& Info, SignatureArray<SignatureType>& Signatures, Uint32& SignaturesCount)
-{
-    for (Uint32 i = 0; i < Info.ResourceSignaturesCount; ++i)
-    {
-        const auto* pSerPRS = ClassPtrCast<SerializableResourceSignatureImpl>(Info.ppResourceSignatures[i]);
-        const auto& Desc    = pSerPRS->GetDesc();
-
-        Signatures[Desc.BindingIndex] = pSerPRS->GetSignature<SignatureType>();
-        SignaturesCount               = std::max(SignaturesCount, static_cast<Uint32>(Desc.BindingIndex) + 1);
-    }
-}
-} // namespace
-
 
 SerializationDeviceImpl::SerializationDeviceImpl(IReferenceCounters* pRefCounters, const SerializationDeviceCreateInfo& CreateInfo) :
     TBase{pRefCounters},

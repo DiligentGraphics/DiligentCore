@@ -85,7 +85,7 @@ struct SerializableResourceSignatureImpl::SignatureTraits<PipelineResourceSignat
 };
 
 template <typename CreateInfoType>
-bool ArchiverImpl::PatchShadersVk(CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data, DefaultPRSInfo& DefPRS)
+bool ArchiverImpl::PatchShadersVk(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data, DefaultPRSInfo& DefPRS)
 {
     std::vector<ShaderStageInfoVk> ShaderStages;
     SHADER_TYPE                    ActiveShaderStages = SHADER_TYPE_UNKNOWN;
@@ -101,23 +101,26 @@ bool ArchiverImpl::PatchShadersVk(CreateInfoType& CreateInfo, TPSOData<CreateInf
         Dst.SPIRVs  = std::move(Src.SPIRVs);
     }
 
+    auto** ppSignatures    = CreateInfo.ppResourceSignatures;
+    auto   SignaturesCount = CreateInfo.ResourceSignaturesCount;
+
     IPipelineResourceSignature* DefaultSignatures[1] = {};
     if (CreateInfo.ResourceSignaturesCount == 0)
     {
         if (!CreateDefaultResourceSignature<PipelineStateVkImpl>(DefPRS, CreateInfo.PSODesc, ActiveShaderStages, ShaderStagesVk))
             return false;
 
-        DefaultSignatures[0]               = DefPRS.pPRS;
-        CreateInfo.ResourceSignaturesCount = 1;
-        CreateInfo.ppResourceSignatures    = DefaultSignatures;
-        CreateInfo.PSODesc.ResourceLayout  = {};
+        DefaultSignatures[0] = DefPRS.pPRS;
+        SignaturesCount      = 1;
+        ppSignatures         = DefaultSignatures;
     }
 
     try
     {
-        SignatureArray<PipelineResourceSignatureVkImpl> Signatures      = {};
-        Uint32                                          SignaturesCount = 0;
-        SortResourceSignatures(CreateInfo, Signatures, SignaturesCount);
+        // Sort signatures by binding index.
+        // Note that SignaturesCount will be overwritten with the maximum binding index.
+        SignatureArray<PipelineResourceSignatureVkImpl> Signatures = {};
+        SortResourceSignatures(ppSignatures, SignaturesCount, Signatures, SignaturesCount);
 
         // Same as PipelineLayoutVk::Create()
         PipelineStateVkImpl::TBindIndexToDescSetIndex BindIndexToDescSetIndex = {};
@@ -168,10 +171,10 @@ bool ArchiverImpl::PatchShadersVk(CreateInfoType& CreateInfo, TPSOData<CreateInf
     return true;
 }
 
-template bool ArchiverImpl::PatchShadersVk<GraphicsPipelineStateCreateInfo>(GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
-template bool ArchiverImpl::PatchShadersVk<ComputePipelineStateCreateInfo>(ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
-template bool ArchiverImpl::PatchShadersVk<TilePipelineStateCreateInfo>(TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
-template bool ArchiverImpl::PatchShadersVk<RayTracingPipelineStateCreateInfo>(RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
+template bool ArchiverImpl::PatchShadersVk<GraphicsPipelineStateCreateInfo>(const GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
+template bool ArchiverImpl::PatchShadersVk<ComputePipelineStateCreateInfo>(const ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
+template bool ArchiverImpl::PatchShadersVk<TilePipelineStateCreateInfo>(const TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
+template bool ArchiverImpl::PatchShadersVk<RayTracingPipelineStateCreateInfo>(const RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
 
 
 void SerializableShaderImpl::CreateShaderVk(IReferenceCounters* pRefCounters, ShaderCreateInfo& ShaderCI, String& CompilationLog)
@@ -204,7 +207,7 @@ void SerializationDeviceImpl::GetPipelineResourceBindingsVk(const PipelineResour
 
     SignatureArray<PipelineResourceSignatureVkImpl> Signatures      = {};
     Uint32                                          SignaturesCount = 0;
-    SortResourceSignatures(Info, Signatures, SignaturesCount);
+    SortResourceSignatures(Info.ppResourceSignatures, Info.ResourceSignaturesCount, Signatures, SignaturesCount);
 
     Uint32 DescSetLayoutCount = 0;
     for (Uint32 sign = 0; sign < SignaturesCount; ++sign)

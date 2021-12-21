@@ -77,7 +77,7 @@ inline SHADER_TYPE GetShaderStageType(const ShaderStageInfoGL& Stage) { return S
 } // namespace
 
 template <typename CreateInfoType>
-bool ArchiverImpl::PatchShadersGL(CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data, DefaultPRSInfo& DefPRS)
+bool ArchiverImpl::PatchShadersGL(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data, DefaultPRSInfo& DefPRS)
 {
     TShaderIndices ShaderIndices;
 
@@ -97,10 +97,10 @@ bool ArchiverImpl::PatchShadersGL(CreateInfoType& CreateInfo, TPSOData<CreateInf
     return true;
 }
 
-template bool ArchiverImpl::PatchShadersGL<GraphicsPipelineStateCreateInfo>(GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
-template bool ArchiverImpl::PatchShadersGL<ComputePipelineStateCreateInfo>(ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
-template bool ArchiverImpl::PatchShadersGL<TilePipelineStateCreateInfo>(TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
-template bool ArchiverImpl::PatchShadersGL<RayTracingPipelineStateCreateInfo>(RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
+template bool ArchiverImpl::PatchShadersGL<GraphicsPipelineStateCreateInfo>(const GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
+template bool ArchiverImpl::PatchShadersGL<ComputePipelineStateCreateInfo>(const ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
+template bool ArchiverImpl::PatchShadersGL<TilePipelineStateCreateInfo>(const TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
+template bool ArchiverImpl::PatchShadersGL<RayTracingPipelineStateCreateInfo>(const RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
 
 
 template PipelineResourceSignatureGLImpl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureGLImpl>() const;
@@ -121,7 +121,7 @@ void SerializationDeviceImpl::GetPipelineResourceBindingsGL(const PipelineResour
 
     SignatureArray<PipelineResourceSignatureGLImpl> Signatures      = {};
     Uint32                                          SignaturesCount = 0;
-    SortResourceSignatures(Info, Signatures, SignaturesCount);
+    SortResourceSignatures(Info.ppResourceSignatures, Info.ResourceSignaturesCount, Signatures, SignaturesCount);
 
     PipelineResourceSignatureGLImpl::TBindings BaseBindings = {};
     for (Uint32 s = 0; s < SignaturesCount; ++s)
