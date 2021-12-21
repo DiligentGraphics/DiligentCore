@@ -435,9 +435,10 @@ protected:
     using CreateSignatureType = std::function<RefCntAutoPtr<IPipelineResourceSignature>(PRSData& PRS, Serializer<SerializerMode::Read>& Ser)>;
     RefCntAutoPtr<IPipelineResourceSignature> UnpackResourceSignatureImpl(
         const ResourceSignatureUnpackInfo& DeArchiveInfo,
+        bool                               IsImplicit,
         const CreateSignatureType&         CreateSignature);
 
-    virtual RefCntAutoPtr<IPipelineResourceSignature> UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo) = 0;
+    virtual RefCntAutoPtr<IPipelineResourceSignature> UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, bool IsImplicit) = 0;
 
     virtual void ReadAndCreateShader(Serializer<SerializerMode::Read>& Ser,
                                      ShaderCreateInfo&                 ShaderCI,

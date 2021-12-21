@@ -871,16 +871,16 @@ bool ArchiverImpl::SerializePSO(TNamedObjectHashMap<TPSOData<CreateInfoType>>& P
     if (!Data.SharedData)
     {
         IPipelineResourceSignature* DefaultSignatures[1] = {};
+        auto                        SignaturesCount      = PSOCreateInfo.ResourceSignaturesCount;
         if (UseDefaultPRS)
         {
-            DefaultSignatures[0]                  = DefPRS.pPRS;
-            PSOCreateInfo.ResourceSignaturesCount = 1;
-            PSOCreateInfo.ppResourceSignatures    = DefaultSignatures;
+            DefaultSignatures[0]               = DefPRS.pPRS;
+            PSOCreateInfo.ppResourceSignatures = DefaultSignatures;
+            SignaturesCount                    = 1;
         }
-        VERIFY_EXPR(PSOCreateInfo.ResourceSignaturesCount != 0);
 
         TPRSNames PRSNames = {};
-        for (Uint32 i = 0; i < PSOCreateInfo.ResourceSignaturesCount; ++i)
+        for (Uint32 i = 0; i < SignaturesCount; ++i)
         {
             if (!AddPipelineResourceSignature(PSOCreateInfo.ppResourceSignatures[i]))
                 return false;

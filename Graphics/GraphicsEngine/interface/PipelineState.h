@@ -541,7 +541,7 @@ typedef struct PipelineStateDesc PipelineStateDesc;
 DILIGENT_TYPED_ENUM(PSO_CREATE_FLAGS, Uint32)
 {
     /// Null flag.
-    PSO_CREATE_FLAG_NONE                              = 0x00,
+    PSO_CREATE_FLAG_NONE                              = 0u,
 
     /// Ignore missing variables.
 
@@ -549,7 +549,7 @@ DILIGENT_TYPED_ENUM(PSO_CREATE_FLAGS, Uint32)
     /// provided as part of the pipeline resource layout description
     /// that is not found in any of the designated shader stages.
     /// Use this flag to silence these warnings.
-    PSO_CREATE_FLAG_IGNORE_MISSING_VARIABLES          = 0x01,
+    PSO_CREATE_FLAG_IGNORE_MISSING_VARIABLES          = 1u << 0u,
 
     /// Ignore missing immutable samplers.
 
@@ -557,14 +557,19 @@ DILIGENT_TYPED_ENUM(PSO_CREATE_FLAGS, Uint32)
     /// provided as part of the pipeline resource layout description
     /// that is not found in any of the designated shader stages.
     /// Use this flag to silence these warnings.
-    PSO_CREATE_FLAG_IGNORE_MISSING_IMMUTABLE_SAMPLERS = 0x02,
+    PSO_CREATE_FLAG_IGNORE_MISSING_IMMUTABLE_SAMPLERS = 1u << 1u,
 
     /// Don't remap shader resources.
     /// All resource signatures must have correct bindings.
     /// Should be used only for deserialization.
-    PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES       = 0x04,
+    PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES       = 1u << 2u,
 
-    PSO_CREATE_FLAG_LAST = PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES
+    /// Pipeline resource signature 0 is the implicit singature
+    /// created from the resource layout.
+    /// Should be used only for deserialization.
+    PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0               = 1u << 3u,
+
+    PSO_CREATE_FLAG_LAST = PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0
 };
 DEFINE_FLAG_ENUM_OPERATORS(PSO_CREATE_FLAGS);
 

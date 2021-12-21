@@ -176,7 +176,7 @@ public:
                       const PSOCreateInfoType& CreateInfo,
                       bool                     bIsDeviceInternal = false) :
         TDeviceObjectBase{pRefCounters, pDevice, CreateInfo.PSODesc, bIsDeviceInternal},
-        m_UsingImplicitSignature{CreateInfo.ppResourceSignatures == nullptr || CreateInfo.ResourceSignaturesCount == 0}
+        m_UsingImplicitSignature{CreateInfo.ppResourceSignatures == nullptr || CreateInfo.ResourceSignaturesCount == 0 || (CreateInfo.Flags & PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0) != 0}
     {
         try
         {
@@ -1045,7 +1045,7 @@ private:
 
     void ReserveResourceSignatures(const PipelineStateCreateInfo& CreateInfo, FixedLinearAllocator& MemPool)
     {
-        if (m_UsingImplicitSignature)
+        if (m_UsingImplicitSignature && (CreateInfo.Flags & PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0) == 0)
         {
             VERIFY_EXPR(CreateInfo.ResourceSignaturesCount == 0 || CreateInfo.ppResourceSignatures == nullptr);
             m_SignatureCount = 1;
@@ -1077,7 +1077,7 @@ private:
     void CopyResourceSignatures(const PipelineStateCreateInfo& CreateInfo, FixedLinearAllocator& MemPool)
     {
         m_Signatures = MemPool.ConstructArray<SignatureAutoPtrType>(m_SignatureCount);
-        if (!m_UsingImplicitSignature)
+        if (!m_UsingImplicitSignature || (CreateInfo.Flags & PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0) != 0)
         {
             VERIFY_EXPR(CreateInfo.ResourceSignaturesCount != 0 && CreateInfo.ppResourceSignatures != nullptr);
             for (Uint32 i = 0; i < CreateInfo.ResourceSignaturesCount; ++i)

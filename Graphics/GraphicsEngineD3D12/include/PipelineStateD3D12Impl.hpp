@@ -115,7 +115,7 @@ private:
                              TShaderStages&           ShaderStages,
                              LocalRootSignatureD3D12* pLocalRootSig = nullptr) noexcept(false);
 
-    void InitRootSignature(bool                     RemapResources,
+    void InitRootSignature(PSO_CREATE_FLAGS         Flags,
                            TShaderStages&           ShaderStages,
                            LocalRootSignatureD3D12* pLocalRootSig) noexcept(false);
 

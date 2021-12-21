@@ -170,10 +170,11 @@ RefCntAutoPtr<PipelineResourceSignatureGLImpl> PipelineStateGLImpl::CreateDefaul
     return TPipelineStateBase::CreateDefaultSignature(SignDesc, GetActiveShaderStages(), bIsDeviceInternal);
 }
 
-void PipelineStateGLImpl::InitResourceLayout(const TShaderStages& ShaderStages,
+void PipelineStateGLImpl::InitResourceLayout(PSO_CREATE_FLAGS     Flags,
+                                             const TShaderStages& ShaderStages,
                                              SHADER_TYPE          ActiveStages)
 {
-    if (m_UsingImplicitSignature)
+    if (m_UsingImplicitSignature && (Flags & PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0) == 0)
     {
         VERIFY_EXPR(m_SignatureCount == 1);
         m_Signatures[0] = CreateDefaultSignature(ShaderStages, ActiveStages);
@@ -284,7 +285,7 @@ void PipelineStateGLImpl::InitInternalObjects(const PSOCreateInfoType& CreateInf
         m_GLPrograms[0].SetName(m_Desc.Name);
     }
 
-    InitResourceLayout(ShaderStages, ActiveStages);
+    InitResourceLayout(CreateInfo.Flags, ShaderStages, ActiveStages);
 }
 
 PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*                    pRefCounters,

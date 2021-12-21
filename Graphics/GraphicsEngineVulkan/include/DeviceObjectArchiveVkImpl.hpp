@@ -44,7 +44,7 @@ public:
     DeviceObjectArchiveVkImpl(IReferenceCounters* pRefCounters, IArchive* pSource);
     ~DeviceObjectArchiveVkImpl();
 
-    RefCntAutoPtr<IPipelineResourceSignature> UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo) override final;
+    RefCntAutoPtr<IPipelineResourceSignature> UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, bool IsImplicit) override final;
 };
 
 template <SerializerMode Mode>

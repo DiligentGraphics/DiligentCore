@@ -42,10 +42,10 @@ DeviceObjectArchiveGLImpl::~DeviceObjectArchiveGLImpl()
 {
 }
 
-RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveGLImpl::UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo)
+RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveGLImpl::UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, bool IsImplicit)
 {
     return DeviceObjectArchiveBase::UnpackResourceSignatureImpl(
-        DeArchiveInfo,
+        DeArchiveInfo, IsImplicit,
         [&DeArchiveInfo](PRSData& PRS, Serializer<SerializerMode::Read>& Ser) //
         {
             PipelineResourceSignatureSerializedDataGL SerializedData{PRS.Serialized};

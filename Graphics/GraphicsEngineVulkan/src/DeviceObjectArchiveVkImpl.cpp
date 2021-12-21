@@ -42,10 +42,10 @@ DeviceObjectArchiveVkImpl::~DeviceObjectArchiveVkImpl()
 {
 }
 
-RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveVkImpl::UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo)
+RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveVkImpl::UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, bool IsImplicit)
 {
     return DeviceObjectArchiveBase::UnpackResourceSignatureImpl(
-        DeArchiveInfo,
+        DeArchiveInfo, IsImplicit,
         [&DeArchiveInfo](PRSData& PRS, Serializer<SerializerMode::Read>& Ser) //
         {
             PipelineResourceSignatureSerializedDataVk SerializedData{PRS.Serialized};

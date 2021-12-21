@@ -188,6 +188,9 @@ void ValidatePipelineResourceSignatures(const PipelineStateCreateInfo& CreateInf
 {
     const auto& PSODesc = CreateInfo.PSODesc;
 
+    if ((CreateInfo.Flags & PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0) != 0 && CreateInfo.ResourceSignaturesCount != 1)
+        LOG_PSO_ERROR_AND_THROW("When PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0 flag is set, ResourceSignaturesCount (", CreateInfo.ResourceSignaturesCount, ") must be 1.");
+
     if (CreateInfo.ResourceSignaturesCount != 0 && CreateInfo.ppResourceSignatures == nullptr)
         LOG_PSO_ERROR_AND_THROW("ppResourceSignatures is null, but ResourceSignaturesCount (", CreateInfo.ResourceSignaturesCount, ") is not zero.");
 
@@ -202,18 +205,20 @@ void ValidatePipelineResourceSignatures(const PipelineStateCreateInfo& CreateInf
         LOG_WARNING_MESSAGE("PSODesc.SRBAllocationGranularity is ignored when explicit resource signatures are used. Use default value (1) to silence this warning.");
     }
 
-    if (CreateInfo.PSODesc.ResourceLayout.NumVariables != 0)
+    if ((CreateInfo.Flags & PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0) == 0)
     {
-        LOG_PSO_ERROR_AND_THROW("The number of variables defined through resource layout (", CreateInfo.PSODesc.ResourceLayout.NumVariables,
-                                ") must be zero when resource signatures are used.");
-    }
+        if (CreateInfo.PSODesc.ResourceLayout.NumVariables != 0)
+        {
+            LOG_PSO_ERROR_AND_THROW("The number of variables defined through resource layout (", CreateInfo.PSODesc.ResourceLayout.NumVariables,
+                                    ") must be zero when resource signatures are used.");
+        }
 
-    if (CreateInfo.PSODesc.ResourceLayout.NumImmutableSamplers != 0)
-    {
-        LOG_PSO_ERROR_AND_THROW("The number of immutable samplers defined through resource layout (", CreateInfo.PSODesc.ResourceLayout.NumImmutableSamplers,
-                                ") must be zero when resource signatures are used.");
+        if (CreateInfo.PSODesc.ResourceLayout.NumImmutableSamplers != 0)
+        {
+            LOG_PSO_ERROR_AND_THROW("The number of immutable samplers defined through resource layout (", CreateInfo.PSODesc.ResourceLayout.NumImmutableSamplers,
+                                    ") must be zero when resource signatures are used.");
+        }
     }
-
 
     std::unordered_multimap<HashMapStringKey, std::pair<SHADER_TYPE, const IPipelineResourceSignature*>, HashMapStringKey::Hasher> AllResources;
     std::unordered_multimap<HashMapStringKey, std::pair<SHADER_TYPE, const IPipelineResourceSignature*>, HashMapStringKey::Hasher> AllImtblSamplers;

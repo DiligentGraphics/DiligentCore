@@ -113,8 +113,22 @@ void PSOSerializer<Mode>::SerializePSOCreateInfo(
     // skip ImmediateContextMask
     // skip pPSOCache
 
+    auto& ResourceLayout = CreateInfo.PSODesc.ResourceLayout;
+    Ser(ResourceLayout.DefaultVariableType, ResourceLayout.DefaultVariableMergeStages);
+    SerializeArray(Ser, Allocator, ResourceLayout.Variables, ResourceLayout.NumVariables,
+                   [](Serializer<Mode>&                  Ser,
+                      TQual<ShaderResourceVariableDesc>& VarDesc) //
+                   {
+                       Ser(VarDesc.Name,
+                           VarDesc.ShaderStages,
+                           VarDesc.Type,
+                           VarDesc.Flags);
+                   });
+
+    SerializeArray(Ser, Allocator, ResourceLayout.ImmutableSamplers, ResourceLayout.NumImmutableSamplers, SerializeImmutableSampler);
+
     // instead of ppResourceSignatures
-    for (Uint32 i = 0; i < CreateInfo.ResourceSignaturesCount; ++i)
+    for (Uint32 i = 0; i < std::max(CreateInfo.ResourceSignaturesCount, 1u); ++i)
     {
         Ser(PRSNames[i]);
     }

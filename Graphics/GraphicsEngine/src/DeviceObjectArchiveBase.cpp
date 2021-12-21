@@ -372,6 +372,13 @@ bool DeviceObjectArchiveBase::ReadPSOData(ChunkType                   Type,
             VERIFY_EXPR(Ser.IsEnd());
 
             PSO.CreateInfo.Flags |= PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES;
+
+            if (PSO.CreateInfo.ResourceSignaturesCount == 0)
+            {
+                PSO.CreateInfo.ResourceSignaturesCount = 1;
+                PSO.CreateInfo.Flags |= PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0;
+            }
+
             return true;
         });
 }
@@ -380,6 +387,8 @@ bool DeviceObjectArchiveBase::ReadPSOData(ChunkType                   Type,
 template <typename ResType>
 bool DeviceObjectArchiveBase::GetCachedResource(const char* Name, TNameOffsetMapAndWeakCache<ResType>& Cache, std::mutex& Guard, ResType** ppResource)
 {
+    VERIFY_EXPR(Name != nullptr);
+
     std::unique_lock<std::mutex> ReadLock{Guard};
 
     VERIFY_EXPR(ppResource != nullptr);
@@ -400,6 +409,7 @@ bool DeviceObjectArchiveBase::GetCachedResource(const char* Name, TNameOffsetMap
 template <typename ResType>
 void DeviceObjectArchiveBase::CacheResource(const char* Name, TNameOffsetMapAndWeakCache<ResType>& Cache, std::mutex& Guard, ResType* pResource)
 {
+    VERIFY_EXPR(Name != nullptr && Name[0] != '\0');
     VERIFY_EXPR(pResource != nullptr);
 
     std::unique_lock<std::mutex> WriteLock{Guard};
@@ -438,23 +448,24 @@ bool DeviceObjectArchiveBase::CreateRenderPass(PSOData<GraphicsPipelineStateCrea
 template <typename CreateInfoType>
 bool DeviceObjectArchiveBase::CreateResourceSignatures(PSOData<CreateInfoType>& PSO, IRenderDevice* pRenderDevice)
 {
-    if (PSO.CreateInfo.ResourceSignaturesCount == 0)
+    const auto ResourceSignaturesCount = PSO.CreateInfo.ResourceSignaturesCount;
+    if (ResourceSignaturesCount == 0)
     {
-        UNEXPECTED("PSO must have at least one resource signature");
+        UNEXPECTED("PSO must have at least one resource signature (including PSOs that use implicit signature)");
         return true;
     }
-    auto* ppResourceSignatures = PSO.Allocator.template Allocate<IPipelineResourceSignature*>(PSO.CreateInfo.ResourceSignaturesCount);
+    auto* const ppResourceSignatures = PSO.Allocator.template Allocate<IPipelineResourceSignature*>(ResourceSignaturesCount);
 
     ResourceSignatureUnpackInfo UnpackInfo;
     UnpackInfo.SRBAllocationGranularity = DefaultSRBAllocationGranularity;
     UnpackInfo.pDevice                  = pRenderDevice;
 
     PSO.CreateInfo.ppResourceSignatures = ppResourceSignatures;
-    for (Uint32 i = 0; i < PSO.CreateInfo.ResourceSignaturesCount; ++i)
+    for (Uint32 i = 0; i < ResourceSignaturesCount; ++i)
     {
         UnpackInfo.Name = PSO.PRSNames[i];
 
-        auto pSignature = UnpackResourceSignature(UnpackInfo);
+        auto pSignature = UnpackResourceSignature(UnpackInfo, (PSO.CreateInfo.Flags & PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0) != 0);
         if (!pSignature)
             return false;
 
@@ -850,10 +861,12 @@ void DeviceObjectArchiveBase::UnpackRenderPass(const RenderPassUnpackInfo& DeArc
 
 RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveBase::UnpackResourceSignatureImpl(
     const ResourceSignatureUnpackInfo& DeArchiveInfo,
+    bool                               IsImplicit,
     const CreateSignatureType&         CreateSignature)
 {
     RefCntAutoPtr<IPipelineResourceSignature> pSignature;
-    if (GetCachedResource(DeArchiveInfo.Name, m_PRSMap, m_PRSMapGuard, pSignature.RawDblPtr()))
+    // Do not reuse implicit signatures
+    if (!IsImplicit && GetCachedResource(DeArchiveInfo.Name, m_PRSMap, m_PRSMapGuard, pSignature.RawDblPtr()))
         return pSignature;
 
     PRSData PRS{GetRawAllocator()};
@@ -872,7 +885,8 @@ RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveBase::UnpackResourc
             Serializer<SerializerMode::Read> Ser{pData, DataSize};
 
             pSignature = CreateSignature(PRS, Ser);
-            CacheResource(DeArchiveInfo.Name, m_PRSMap, m_PRSMapGuard, pSignature.RawPtr());
+            if (!IsImplicit)
+                CacheResource(DeArchiveInfo.Name, m_PRSMap, m_PRSMapGuard, pSignature.RawPtr());
         });
 
     return pSignature;

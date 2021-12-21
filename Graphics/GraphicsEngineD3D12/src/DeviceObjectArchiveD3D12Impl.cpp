@@ -42,10 +42,10 @@ DeviceObjectArchiveD3D12Impl::~DeviceObjectArchiveD3D12Impl()
 {
 }
 
-RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveD3D12Impl::UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo)
+RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveD3D12Impl::UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, bool IsImplicit)
 {
     return DeviceObjectArchiveBase::UnpackResourceSignatureImpl(
-        DeArchiveInfo,
+        DeArchiveInfo, IsImplicit,
         [&DeArchiveInfo](PRSData& PRS, Serializer<SerializerMode::Read>& Ser) //
         {
             PipelineResourceSignatureSerializedDataD3D12 SerializedData{PRS.Serialized};

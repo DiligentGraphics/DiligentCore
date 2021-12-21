@@ -84,7 +84,8 @@ private:
     template <typename PSOCreateInfoType>
     void InitInternalObjects(const PSOCreateInfoType& CreateInfo, const TShaderStages& ShaderStages);
 
-    void InitResourceLayout(const TShaderStages& ShaderStages,
+    void InitResourceLayout(PSO_CREATE_FLAGS     Flags,
+                            const TShaderStages& ShaderStages,
                             SHADER_TYPE          ActiveStages);
 
     RefCntAutoPtr<PipelineResourceSignatureGLImpl> CreateDefaultSignature(

@@ -523,11 +523,11 @@ void PipelineStateD3D12Impl::RemapShaderResources(TShaderStages&                
     }
 }
 
-void PipelineStateD3D12Impl::InitRootSignature(bool                     RemapResources,
+void PipelineStateD3D12Impl::InitRootSignature(PSO_CREATE_FLAGS         Flags,
                                                TShaderStages&           ShaderStages,
                                                LocalRootSignatureD3D12* pLocalRootSig) noexcept(false)
 {
-    if (m_UsingImplicitSignature)
+    if (m_UsingImplicitSignature && (Flags & PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0) == 0)
     {
         VERIFY_EXPR(m_SignatureCount == 1);
         m_Signatures[0] = CreateDefaultResourceSignature(ShaderStages, pLocalRootSig);
@@ -545,7 +545,7 @@ void PipelineStateD3D12Impl::InitRootSignature(bool                     RemapRes
     }
 
     // Verify that pipeline layout is compatible with shader resources and remap resource bindings.
-    if (RemapResources)
+    if ((Flags & PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES) == 0)
     {
         RemapShaderResources(ShaderStages,
                              m_Signatures,
@@ -673,7 +673,7 @@ void PipelineStateD3D12Impl::InitInternalObjects(const PSOCreateInfoType& Create
     // It is important to construct all objects before initializing them because if an exception is thrown,
     // destructors will be called for all objects
 
-    InitRootSignature((CreateInfo.Flags & PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES) == 0, ShaderStages, pLocalRootSig);
+    InitRootSignature(CreateInfo.Flags, ShaderStages, pLocalRootSig);
 }
 
 

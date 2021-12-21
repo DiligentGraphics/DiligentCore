@@ -44,7 +44,7 @@ public:
     DeviceObjectArchiveGLImpl(IReferenceCounters* pRefCounters, IArchive* pSource);
     ~DeviceObjectArchiveGLImpl();
 
-    RefCntAutoPtr<IPipelineResourceSignature> UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo) override final;
+    RefCntAutoPtr<IPipelineResourceSignature> UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, bool IsImplicit) override final;
 
     void ReadAndCreateShader(Serializer<SerializerMode::Read>& Ser, ShaderCreateInfo& ShaderCI, IRenderDevice* pDevice, IShader** ppShader) override final;
 };

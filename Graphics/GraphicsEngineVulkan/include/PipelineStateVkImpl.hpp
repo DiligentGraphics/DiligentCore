@@ -123,7 +123,7 @@ private:
                                       std::vector<VkPipelineShaderStageCreateInfo>&      vkShaderStages,
                                       std::vector<VulkanUtilities::ShaderModuleWrapper>& ShaderModules) noexcept(false);
 
-    void InitPipelineLayout(bool RemapResources, TShaderStages& ShaderStages) noexcept(false);
+    void InitPipelineLayout(PSO_CREATE_FLAGS Flags, TShaderStages& ShaderStages) noexcept(false);
 
     RefCntAutoPtr<PipelineResourceSignatureVkImpl> CreateDefaultSignature(const TShaderStages& ShaderStages) noexcept(false);
 

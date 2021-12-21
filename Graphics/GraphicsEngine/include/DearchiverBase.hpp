@@ -119,7 +119,7 @@ protected:
         *ppSignature = nullptr;
 
         auto* pArchiveImpl = ClassPtrCast<DeviceObjectArchiveImplType>(DeArchiveInfo.pArchive);
-        auto  pSignature   = pArchiveImpl->UnpackResourceSignature(DeArchiveInfo);
+        auto  pSignature   = pArchiveImpl->UnpackResourceSignature(DeArchiveInfo, false /*IsImplicit*/);
         *ppSignature       = pSignature.Detach();
     }
 

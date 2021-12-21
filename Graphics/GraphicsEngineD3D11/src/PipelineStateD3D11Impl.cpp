@@ -173,11 +173,11 @@ void PipelineStateD3D11Impl::RemapShaderResources(const TShaderStages&          
     }
 }
 
-void PipelineStateD3D11Impl::InitResourceLayouts(bool                                 RemapResources,
+void PipelineStateD3D11Impl::InitResourceLayouts(PSO_CREATE_FLAGS                     Flags,
                                                  const std::vector<ShaderD3D11Impl*>& Shaders,
                                                  CComPtr<ID3DBlob>&                   pVSByteCode)
 {
-    if (m_UsingImplicitSignature)
+    if (m_UsingImplicitSignature && (Flags & PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0) == 0)
     {
         VERIFY_EXPR(m_SignatureCount == 1);
         m_Signatures[0] = CreateDefaultResourceSignature(Shaders);
@@ -227,7 +227,7 @@ void PipelineStateD3D11Impl::InitResourceLayouts(bool                           
     }
 #endif
 
-    if (RemapResources)
+    if ((Flags & PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES) == 0)
     {
         RemapShaderResources(
             Shaders,
@@ -291,7 +291,7 @@ void PipelineStateD3D11Impl::InitInternalObjects(const PSOCreateInfoType& Create
     m_ppd3d11Shaders = MemPool.ConstructArray<D3D11ShaderAutoPtrType>(m_NumShaders);
     m_BaseBindings   = MemPool.ConstructArray<D3D11ShaderResourceCounters>(SignCount);
 
-    InitResourceLayouts((CreateInfo.Flags & PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES) == 0, Shaders, pVSByteCode);
+    InitResourceLayouts(CreateInfo.Flags, Shaders, pVSByteCode);
 }
 
 

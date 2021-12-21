@@ -763,7 +763,7 @@ TEST(ArchiveTest, GraphicsPipeline)
         ASSERT_NE(pUnpackedPSO_3, nullptr);
 
         EXPECT_EQ(pUnpackedPSO_3->GetResourceSignatureCount(), 1u);
-        EXPECT_EQ(pUnpackedPSO_3->GetResourceSignature(0), pUnpackedPSO_1->GetResourceSignature(0)); // same objects
+        EXPECT_TRUE(pUnpackedPSO_3->GetResourceSignature(0)->IsCompatibleWith(pUnpackedPSO_1->GetResourceSignature(0)));
     }
 
     // Unpack PSO 2
