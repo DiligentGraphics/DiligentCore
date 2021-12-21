@@ -41,6 +41,7 @@
 
 #include <array>
 #include <mutex>
+#include <vector>
 
 #include "Dearchiver.h"
 #include "DeviceObjectArchive.h"
@@ -93,6 +94,14 @@ public:
                             DeviceType          DevType);
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_DeviceObjectArchive, TObjectBase)
+
+    virtual void DILIGENT_CALL_TYPE ClearResourceCache() override final;
+
+    void UnpackGraphicsPSO(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState** ppPSO);
+    void UnpackComputePSO(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState** ppPSO);
+    void UnpackRayTracingPSO(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState** ppPSO);
+    void UnpackTilePSO(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState** ppPSO);
+    void UnpackRenderPass(const RenderPassUnpackInfo& DeArchiveInfo, IRenderPass** ppRP);
 
 protected:
     static constexpr Uint32 HeaderMagicNumber = 0xDE00000A;
@@ -360,6 +369,9 @@ protected:
         TPRSNames              PRSNames{};
         const char*            RenderPassName = nullptr;
 
+        // Strong references to pipeline resource signatures, render pass, etc.
+        std::vector<RefCntAutoPtr<IDeviceObject>> Objects;
+
         explicit PSOData(IMemoryAllocator& Allocator, Uint32 BlockSize = 4 << 10) :
             Allocator{Allocator, BlockSize}
         {}
@@ -413,38 +425,22 @@ private:
     template <typename CreateInfoType>
     bool CreateResourceSignatures(PSOData<CreateInfoType>& PSO, IRenderDevice* pDevice);
 
-    template <typename CreateInfoType>
-    struct ReleaseTempResourceRefs
-    {
-        PSOData<CreateInfoType>& PSO;
-
-        explicit ReleaseTempResourceRefs(PSOData<CreateInfoType>& _PSO) :
-            PSO{_PSO} {}
-
-        ~ReleaseTempResourceRefs();
-    };
-
     bool CreateRenderPass(PSOData<GraphicsPipelineStateCreateInfo>& PSO, IRenderDevice* pDevice);
 
 protected:
-    using CreateSignatureType = std::function<void(PRSData& PRS, Serializer<SerializerMode::Read>& Ser, IPipelineResourceSignature*& pSignature)>;
-    void UnpackResourceSignatureImpl(const ResourceSignatureUnpackInfo& DeArchiveInfo,
-                                     IPipelineResourceSignature*&       pSignature,
-                                     const CreateSignatureType&         CreateSignature);
+    using CreateSignatureType = std::function<RefCntAutoPtr<IPipelineResourceSignature>(PRSData& PRS, Serializer<SerializerMode::Read>& Ser)>;
+    RefCntAutoPtr<IPipelineResourceSignature> UnpackResourceSignatureImpl(
+        const ResourceSignatureUnpackInfo& DeArchiveInfo,
+        const CreateSignatureType&         CreateSignature);
 
-    virtual void UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature*& pSignature) = 0;
-    virtual void ReadAndCreateShader(Serializer<SerializerMode::Read>& Ser, ShaderCreateInfo& ShaderCI, IRenderDevice* pDevice, IShader** ppShader);
+    virtual RefCntAutoPtr<IPipelineResourceSignature> UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo) = 0;
+
+    virtual void ReadAndCreateShader(Serializer<SerializerMode::Read>& Ser,
+                                     ShaderCreateInfo&                 ShaderCI,
+                                     IRenderDevice*                    pDevice,
+                                     IShader**                         ppShader);
 
     static constexpr Uint32 GetHeaderVersion() { return HeaderVersion; }
-
-public:
-    void UnpackGraphicsPSO(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState*& pPSO);
-    void UnpackComputePSO(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState*& pPSO);
-    void UnpackRayTracingPSO(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState*& pPSO);
-    void UnpackTilePSO(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState*& pPSO);
-    void UnpackRenderPass(const RenderPassUnpackInfo& DeArchiveInfo, IRenderPass*& pRP);
-
-    virtual void DILIGENT_CALL_TYPE ClearResourceCache() override final;
 };
 
 } // namespace Diligent

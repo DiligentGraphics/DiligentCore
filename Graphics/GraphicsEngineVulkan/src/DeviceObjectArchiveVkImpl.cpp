@@ -42,18 +42,21 @@ DeviceObjectArchiveVkImpl::~DeviceObjectArchiveVkImpl()
 {
 }
 
-void DeviceObjectArchiveVkImpl::UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature*& pSignature)
+RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveVkImpl::UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo)
 {
-    DeviceObjectArchiveBase::UnpackResourceSignatureImpl(
-        DeArchiveInfo, pSignature,
-        [&DeArchiveInfo](PRSData& PRS, Serializer<SerializerMode::Read>& Ser, IPipelineResourceSignature*& pSignature) //
+    return DeviceObjectArchiveBase::UnpackResourceSignatureImpl(
+        DeArchiveInfo,
+        [&DeArchiveInfo](PRSData& PRS, Serializer<SerializerMode::Read>& Ser) //
         {
             PipelineResourceSignatureSerializedDataVk SerializedData{PRS.Serialized};
             PSOSerializerVk<SerializerMode::Read>::SerializePRSDesc(Ser, SerializedData, &PRS.Allocator);
             VERIFY_EXPR(Ser.IsEnd());
 
             auto* pRenderDeviceVk = ClassPtrCast<RenderDeviceVkImpl>(DeArchiveInfo.pDevice);
+
+            RefCntAutoPtr<IPipelineResourceSignature> pSignature;
             pRenderDeviceVk->CreatePipelineResourceSignature(PRS.Desc, SerializedData, &pSignature);
+            return pSignature;
         });
 }
 

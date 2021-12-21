@@ -44,7 +44,7 @@ public:
     DeviceObjectArchiveD3D12Impl(IReferenceCounters* pRefCounters, IArchive* pSource);
     ~DeviceObjectArchiveD3D12Impl();
 
-    void UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature*& pSignature) override;
+    RefCntAutoPtr<IPipelineResourceSignature> UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo) override final;
 };
 
 template <SerializerMode Mode>

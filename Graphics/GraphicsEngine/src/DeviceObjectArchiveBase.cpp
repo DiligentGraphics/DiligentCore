@@ -411,63 +411,6 @@ void DeviceObjectArchiveBase::CacheResource(const char* Name, TNameOffsetMapAndW
     Iter->second.Cache = pResource;
 }
 
-
-template <>
-inline DeviceObjectArchiveBase::ReleaseTempResourceRefs<GraphicsPipelineStateCreateInfo>::~ReleaseTempResourceRefs()
-{
-    if (PSO.CreateInfo.ppResourceSignatures != nullptr)
-    {
-        for (Uint32 i = 0; i < PSO.CreateInfo.ResourceSignaturesCount; ++i)
-        {
-            if (PSO.CreateInfo.ppResourceSignatures[i] != nullptr)
-                PSO.CreateInfo.ppResourceSignatures[i]->Release();
-        }
-    }
-
-    if (PSO.CreateInfo.GraphicsPipeline.pRenderPass != nullptr)
-        PSO.CreateInfo.GraphicsPipeline.pRenderPass->Release();
-}
-
-template <>
-inline DeviceObjectArchiveBase::ReleaseTempResourceRefs<ComputePipelineStateCreateInfo>::~ReleaseTempResourceRefs()
-{
-    if (PSO.CreateInfo.ppResourceSignatures != nullptr)
-    {
-        for (Uint32 i = 0; i < PSO.CreateInfo.ResourceSignaturesCount; ++i)
-        {
-            if (PSO.CreateInfo.ppResourceSignatures[i] != nullptr)
-                PSO.CreateInfo.ppResourceSignatures[i]->Release();
-        }
-    }
-}
-
-template <>
-inline DeviceObjectArchiveBase::ReleaseTempResourceRefs<TilePipelineStateCreateInfo>::~ReleaseTempResourceRefs()
-{
-    if (PSO.CreateInfo.ppResourceSignatures != nullptr)
-    {
-        for (Uint32 i = 0; i < PSO.CreateInfo.ResourceSignaturesCount; ++i)
-        {
-            if (PSO.CreateInfo.ppResourceSignatures[i] != nullptr)
-                PSO.CreateInfo.ppResourceSignatures[i]->Release();
-        }
-    }
-}
-
-template <>
-inline DeviceObjectArchiveBase::ReleaseTempResourceRefs<RayTracingPipelineStateCreateInfo>::~ReleaseTempResourceRefs()
-{
-    if (PSO.CreateInfo.ppResourceSignatures != nullptr)
-    {
-        for (Uint32 i = 0; i < PSO.CreateInfo.ResourceSignaturesCount; ++i)
-        {
-            if (PSO.CreateInfo.ppResourceSignatures[i] != nullptr)
-                PSO.CreateInfo.ppResourceSignatures[i]->Release();
-        }
-    }
-}
-
-
 bool DeviceObjectArchiveBase::CreateRenderPass(PSOData<GraphicsPipelineStateCreateInfo>& PSO, IRenderDevice* pRenderDevice)
 {
     VERIFY_EXPR(pRenderDevice != nullptr);
@@ -478,12 +421,13 @@ bool DeviceObjectArchiveBase::CreateRenderPass(PSOData<GraphicsPipelineStateCrea
     UnpackInfo.Name    = PSO.RenderPassName;
     UnpackInfo.pDevice = pRenderDevice;
 
-    IRenderPass* pRP = nullptr;
-    UnpackRenderPass(UnpackInfo, pRP); // Reference released in ~ReleaseTempResourceRefs()
-    if (pRP == nullptr)
+    RefCntAutoPtr<IRenderPass> pRenderPass;
+    UnpackRenderPass(UnpackInfo, &pRenderPass);
+    if (!pRenderPass)
         return false;
 
-    PSO.CreateInfo.GraphicsPipeline.pRenderPass = pRP;
+    PSO.CreateInfo.GraphicsPipeline.pRenderPass = pRenderPass;
+    PSO.Objects.emplace_back(std::move(pRenderPass));
     return true;
 }
 
@@ -505,9 +449,13 @@ bool DeviceObjectArchiveBase::CreateResourceSignatures(PSOData<CreateInfoType>& 
     for (Uint32 i = 0; i < PSO.CreateInfo.ResourceSignaturesCount; ++i)
     {
         UnpackInfo.Name = PSO.PRSNames[i];
-        UnpackResourceSignature(UnpackInfo, ppResourceSignatures[i]); // Reference released in ~ReleaseTempResourceRefs()
-        if (ppResourceSignatures[i] == nullptr)
+
+        auto pSignature = UnpackResourceSignature(UnpackInfo);
+        if (!pSignature)
             return false;
+
+        ppResourceSignatures[i] = pSignature;
+        PSO.Objects.emplace_back(std::move(pSignature));
     }
     return true;
 }
@@ -589,18 +537,16 @@ bool DeviceObjectArchiveBase::LoadShaders(Serializer<SerializerMode::Read>&    S
     return true;
 }
 
-void DeviceObjectArchiveBase::UnpackGraphicsPSO(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState*& pPSO)
+void DeviceObjectArchiveBase::UnpackGraphicsPSO(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState** ppPSO)
 {
     VERIFY_EXPR(DeArchiveInfo.pDevice != nullptr);
 
-    if (DeArchiveInfo.ModifyPipelineStateCreateInfo == nullptr && GetCachedResource(DeArchiveInfo.Name, m_GraphicsPSOMap, m_GraphicsPSOMapGuard, &pPSO))
+    if (DeArchiveInfo.ModifyPipelineStateCreateInfo == nullptr && GetCachedResource(DeArchiveInfo.Name, m_GraphicsPSOMap, m_GraphicsPSOMapGuard, ppPSO))
         return;
 
     PSOData<GraphicsPipelineStateCreateInfo> PSO{GetRawAllocator()};
     if (!ReadPSOData(ChunkType::GraphicsPipelineStates, DeArchiveInfo.Name, m_GraphicsPSOMap, m_GraphicsPSOMapGuard, "Graphics Pipeline", PSO, PSO.RenderPassName))
         return;
-
-    ReleaseTempResourceRefs<GraphicsPipelineStateCreateInfo> ReleaseRefs{PSO};
 
     if (!CreateRenderPass(PSO, DeArchiveInfo.pDevice))
         return;
@@ -649,25 +595,23 @@ void DeviceObjectArchiveBase::UnpackGraphicsPSO(const PipelineStateUnpackInfo& D
             if (DeArchiveInfo.ModifyPipelineStateCreateInfo != nullptr)
                 DeArchiveInfo.ModifyPipelineStateCreateInfo(PSO.CreateInfo, DeArchiveInfo.pUserData);
 
-            DeArchiveInfo.pDevice->CreateGraphicsPipelineState(PSO.CreateInfo, &pPSO);
+            DeArchiveInfo.pDevice->CreateGraphicsPipelineState(PSO.CreateInfo, ppPSO);
 
             if (DeArchiveInfo.ModifyPipelineStateCreateInfo == nullptr)
-                CacheResource(DeArchiveInfo.Name, m_GraphicsPSOMap, m_GraphicsPSOMapGuard, pPSO);
+                CacheResource(DeArchiveInfo.Name, m_GraphicsPSOMap, m_GraphicsPSOMapGuard, *ppPSO);
         });
 }
 
-void DeviceObjectArchiveBase::UnpackComputePSO(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState*& pPSO)
+void DeviceObjectArchiveBase::UnpackComputePSO(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState** ppPSO)
 {
     VERIFY_EXPR(DeArchiveInfo.pDevice != nullptr);
 
-    if (DeArchiveInfo.ModifyPipelineStateCreateInfo == nullptr && GetCachedResource(DeArchiveInfo.Name, m_ComputePSOMap, m_ComputePSOMapGuard, &pPSO))
+    if (DeArchiveInfo.ModifyPipelineStateCreateInfo == nullptr && GetCachedResource(DeArchiveInfo.Name, m_ComputePSOMap, m_ComputePSOMapGuard, ppPSO))
         return;
 
     PSOData<ComputePipelineStateCreateInfo> PSO{GetRawAllocator()};
     if (!ReadPSOData(ChunkType::ComputePipelineStates, DeArchiveInfo.Name, m_ComputePSOMap, m_ComputePSOMapGuard, "Compute Pipeline", PSO))
         return;
-
-    ReleaseTempResourceRefs<ComputePipelineStateCreateInfo> ReleaseRefs{PSO};
 
     if (!CreateResourceSignatures(PSO, DeArchiveInfo.pDevice))
         return;
@@ -699,25 +643,23 @@ void DeviceObjectArchiveBase::UnpackComputePSO(const PipelineStateUnpackInfo& De
             if (DeArchiveInfo.ModifyPipelineStateCreateInfo != nullptr)
                 DeArchiveInfo.ModifyPipelineStateCreateInfo(PSO.CreateInfo, DeArchiveInfo.pUserData);
 
-            DeArchiveInfo.pDevice->CreateComputePipelineState(PSO.CreateInfo, &pPSO);
+            DeArchiveInfo.pDevice->CreateComputePipelineState(PSO.CreateInfo, ppPSO);
 
             if (DeArchiveInfo.ModifyPipelineStateCreateInfo == nullptr)
-                CacheResource(DeArchiveInfo.Name, m_ComputePSOMap, m_ComputePSOMapGuard, pPSO);
+                CacheResource(DeArchiveInfo.Name, m_ComputePSOMap, m_ComputePSOMapGuard, *ppPSO);
         });
 }
 
-void DeviceObjectArchiveBase::UnpackTilePSO(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState*& pPSO)
+void DeviceObjectArchiveBase::UnpackTilePSO(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState** ppPSO)
 {
     VERIFY_EXPR(DeArchiveInfo.pDevice != nullptr);
 
-    if (DeArchiveInfo.ModifyPipelineStateCreateInfo == nullptr && GetCachedResource(DeArchiveInfo.Name, m_TilePSOMap, m_TilePSOMapGuard, &pPSO))
+    if (DeArchiveInfo.ModifyPipelineStateCreateInfo == nullptr && GetCachedResource(DeArchiveInfo.Name, m_TilePSOMap, m_TilePSOMapGuard, ppPSO))
         return;
 
     PSOData<TilePipelineStateCreateInfo> PSO{GetRawAllocator()};
     if (!ReadPSOData(ChunkType::TilePipelineStates, DeArchiveInfo.Name, m_TilePSOMap, m_TilePSOMapGuard, "Tile Pipeline", PSO))
         return;
-
-    ReleaseTempResourceRefs<TilePipelineStateCreateInfo> ReleaseRefs{PSO};
 
     if (!CreateResourceSignatures(PSO, DeArchiveInfo.pDevice))
         return;
@@ -750,18 +692,18 @@ void DeviceObjectArchiveBase::UnpackTilePSO(const PipelineStateUnpackInfo& DeArc
             if (DeArchiveInfo.ModifyPipelineStateCreateInfo != nullptr)
                 DeArchiveInfo.ModifyPipelineStateCreateInfo(PSO.CreateInfo, DeArchiveInfo.pUserData);
 
-            DeArchiveInfo.pDevice->CreateTilePipelineState(PSO.CreateInfo, &pPSO);
+            DeArchiveInfo.pDevice->CreateTilePipelineState(PSO.CreateInfo, ppPSO);
 
             if (DeArchiveInfo.ModifyPipelineStateCreateInfo == nullptr)
-                CacheResource(DeArchiveInfo.Name, m_TilePSOMap, m_TilePSOMapGuard, pPSO);
+                CacheResource(DeArchiveInfo.Name, m_TilePSOMap, m_TilePSOMapGuard, *ppPSO);
         });
 }
 
-void DeviceObjectArchiveBase::UnpackRayTracingPSO(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState*& pPSO)
+void DeviceObjectArchiveBase::UnpackRayTracingPSO(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState** ppPSO)
 {
     VERIFY_EXPR(DeArchiveInfo.pDevice != nullptr);
 
-    if (DeArchiveInfo.ModifyPipelineStateCreateInfo == nullptr && GetCachedResource(DeArchiveInfo.Name, m_RayTracingPSOMap, m_RayTracingPSOMapGuard, &pPSO))
+    if (DeArchiveInfo.ModifyPipelineStateCreateInfo == nullptr && GetCachedResource(DeArchiveInfo.Name, m_RayTracingPSOMap, m_RayTracingPSOMapGuard, ppPSO))
         return;
 
     PSOData<RayTracingPipelineStateCreateInfo> PSO{GetRawAllocator()};
@@ -771,8 +713,6 @@ void DeviceObjectArchiveBase::UnpackRayTracingPSO(const PipelineStateUnpackInfo&
     };
     if (!ReadPSOData(ChunkType::RayTracingPipelineStates, DeArchiveInfo.Name, m_RayTracingPSOMap, m_RayTracingPSOMapGuard, "Ray Tracing Pipeline", PSO, RemapShaders))
         return;
-
-    ReleaseTempResourceRefs<RayTracingPipelineStateCreateInfo> ReleaseRefs{PSO};
 
     if (!CreateResourceSignatures(PSO, DeArchiveInfo.pDevice))
         return;
@@ -828,18 +768,18 @@ void DeviceObjectArchiveBase::UnpackRayTracingPSO(const PipelineStateUnpackInfo&
             if (DeArchiveInfo.ModifyPipelineStateCreateInfo != nullptr)
                 DeArchiveInfo.ModifyPipelineStateCreateInfo(PSO.CreateInfo, DeArchiveInfo.pUserData);
 
-            DeArchiveInfo.pDevice->CreateRayTracingPipelineState(PSO.CreateInfo, &pPSO);
+            DeArchiveInfo.pDevice->CreateRayTracingPipelineState(PSO.CreateInfo, ppPSO);
 
             if (DeArchiveInfo.ModifyPipelineStateCreateInfo == nullptr)
-                CacheResource(DeArchiveInfo.Name, m_RayTracingPSOMap, m_RayTracingPSOMapGuard, pPSO);
+                CacheResource(DeArchiveInfo.Name, m_RayTracingPSOMap, m_RayTracingPSOMapGuard, *ppPSO);
         });
 }
 
-void DeviceObjectArchiveBase::UnpackRenderPass(const RenderPassUnpackInfo& DeArchiveInfo, IRenderPass*& pRP)
+void DeviceObjectArchiveBase::UnpackRenderPass(const RenderPassUnpackInfo& DeArchiveInfo, IRenderPass** ppRP)
 {
     VERIFY_EXPR(DeArchiveInfo.pDevice != nullptr);
 
-    if (DeArchiveInfo.ModifyRenderPassDesc == nullptr && GetCachedResource(DeArchiveInfo.Name, m_RenderPassMap, m_RenderPassMapGuard, &pRP))
+    if (DeArchiveInfo.ModifyRenderPassDesc == nullptr && GetCachedResource(DeArchiveInfo.Name, m_RenderPassMap, m_RenderPassMapGuard, ppRP))
         return;
 
     RPData RP{GetRawAllocator()};
@@ -849,22 +789,23 @@ void DeviceObjectArchiveBase::UnpackRenderPass(const RenderPassUnpackInfo& DeArc
     if (DeArchiveInfo.ModifyRenderPassDesc != nullptr)
         DeArchiveInfo.ModifyRenderPassDesc(RP.Desc, DeArchiveInfo.pUserData);
 
-    DeArchiveInfo.pDevice->CreateRenderPass(RP.Desc, &pRP);
+    DeArchiveInfo.pDevice->CreateRenderPass(RP.Desc, ppRP);
 
     if (DeArchiveInfo.ModifyRenderPassDesc == nullptr)
-        CacheResource(DeArchiveInfo.Name, m_RenderPassMap, m_RenderPassMapGuard, pRP);
+        CacheResource(DeArchiveInfo.Name, m_RenderPassMap, m_RenderPassMapGuard, *ppRP);
 }
 
-void DeviceObjectArchiveBase::UnpackResourceSignatureImpl(const ResourceSignatureUnpackInfo& DeArchiveInfo,
-                                                          IPipelineResourceSignature*&       pSignature,
-                                                          const CreateSignatureType&         CreateSignature)
+RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveBase::UnpackResourceSignatureImpl(
+    const ResourceSignatureUnpackInfo& DeArchiveInfo,
+    const CreateSignatureType&         CreateSignature)
 {
-    if (DeArchiveInfo.ModifySignatureDesc == nullptr && GetCachedResource(DeArchiveInfo.Name, m_PRSMap, m_PRSMapGuard, &pSignature))
-        return;
+    RefCntAutoPtr<IPipelineResourceSignature> pSignature;
+    if (DeArchiveInfo.ModifySignatureDesc == nullptr && GetCachedResource(DeArchiveInfo.Name, m_PRSMap, m_PRSMapGuard, pSignature.RawDblPtr()))
+        return pSignature;
 
     PRSData PRS{GetRawAllocator()};
     if (!ReadPRSData(DeArchiveInfo.Name, PRS))
-        return;
+        return {};
 
     PRS.Desc.SRBAllocationGranularity = DeArchiveInfo.SRBAllocationGranularity;
 
@@ -880,11 +821,13 @@ void DeviceObjectArchiveBase::UnpackResourceSignatureImpl(const ResourceSignatur
             if (DeArchiveInfo.ModifySignatureDesc != nullptr)
                 DeArchiveInfo.ModifySignatureDesc(PRS.Desc, DeArchiveInfo.pUserData);
 
-            CreateSignature(PRS, Ser, pSignature);
+            pSignature = CreateSignature(PRS, Ser);
 
             if (DeArchiveInfo.ModifySignatureDesc == nullptr)
-                CacheResource(DeArchiveInfo.Name, m_PRSMap, m_PRSMapGuard, pSignature);
+                CacheResource(DeArchiveInfo.Name, m_PRSMap, m_PRSMapGuard, pSignature.RawPtr());
         });
+
+    return pSignature;
 }
 
 void DeviceObjectArchiveBase::ClearResourceCache()

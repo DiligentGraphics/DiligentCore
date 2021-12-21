@@ -42,18 +42,21 @@ DeviceObjectArchiveD3D12Impl::~DeviceObjectArchiveD3D12Impl()
 {
 }
 
-void DeviceObjectArchiveD3D12Impl::UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature*& pSignature)
+RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveD3D12Impl::UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo)
 {
-    DeviceObjectArchiveBase::UnpackResourceSignatureImpl(
-        DeArchiveInfo, pSignature,
-        [&DeArchiveInfo](PRSData& PRS, Serializer<SerializerMode::Read>& Ser, IPipelineResourceSignature*& pSignature) //
+    return DeviceObjectArchiveBase::UnpackResourceSignatureImpl(
+        DeArchiveInfo,
+        [&DeArchiveInfo](PRSData& PRS, Serializer<SerializerMode::Read>& Ser) //
         {
             PipelineResourceSignatureSerializedDataD3D12 SerializedData{PRS.Serialized};
             PSOSerializerD3D12<SerializerMode::Read>::SerializePRSDesc(Ser, SerializedData, &PRS.Allocator);
             VERIFY_EXPR(Ser.IsEnd());
 
             auto* pRenderDeviceD3D12 = ClassPtrCast<RenderDeviceD3D12Impl>(DeArchiveInfo.pDevice);
+
+            RefCntAutoPtr<IPipelineResourceSignature> pSignature;
             pRenderDeviceD3D12->CreatePipelineResourceSignature(PRS.Desc, SerializedData, &pSignature);
+            return pSignature;
         });
 }
 

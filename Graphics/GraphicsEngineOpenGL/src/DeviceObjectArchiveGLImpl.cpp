@@ -42,18 +42,21 @@ DeviceObjectArchiveGLImpl::~DeviceObjectArchiveGLImpl()
 {
 }
 
-void DeviceObjectArchiveGLImpl::UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature*& pSignature)
+RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveGLImpl::UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo)
 {
-    DeviceObjectArchiveBase::UnpackResourceSignatureImpl(
-        DeArchiveInfo, pSignature,
-        [&DeArchiveInfo](PRSData& PRS, Serializer<SerializerMode::Read>& Ser, IPipelineResourceSignature*& pSignature) //
+    return DeviceObjectArchiveBase::UnpackResourceSignatureImpl(
+        DeArchiveInfo,
+        [&DeArchiveInfo](PRSData& PRS, Serializer<SerializerMode::Read>& Ser) //
         {
             PipelineResourceSignatureSerializedDataGL SerializedData{PRS.Serialized};
             PSOSerializerGL<SerializerMode::Read>::SerializePRSDesc(Ser, SerializedData, &PRS.Allocator);
             VERIFY_EXPR(Ser.IsEnd());
 
             auto* pRenderDeviceGL = ClassPtrCast<RenderDeviceGLImpl>(DeArchiveInfo.pDevice);
+
+            RefCntAutoPtr<IPipelineResourceSignature> pSignature;
             pRenderDeviceGL->CreatePipelineResourceSignature(PRS.Desc, SerializedData, &pSignature);
+            return pSignature;
         });
 }
 

@@ -87,19 +87,19 @@ protected:
         {
             case PIPELINE_TYPE_GRAPHICS:
             case PIPELINE_TYPE_MESH:
-                pArchiveImpl->UnpackGraphicsPSO(DeArchiveInfo, *ppPSO);
+                pArchiveImpl->UnpackGraphicsPSO(DeArchiveInfo, ppPSO);
                 break;
 
             case PIPELINE_TYPE_COMPUTE:
-                pArchiveImpl->UnpackComputePSO(DeArchiveInfo, *ppPSO);
+                pArchiveImpl->UnpackComputePSO(DeArchiveInfo, ppPSO);
                 break;
 
             case PIPELINE_TYPE_RAY_TRACING:
-                pArchiveImpl->UnpackRayTracingPSO(DeArchiveInfo, *ppPSO);
+                pArchiveImpl->UnpackRayTracingPSO(DeArchiveInfo, ppPSO);
                 break;
 
             case PIPELINE_TYPE_TILE:
-                pArchiveImpl->UnpackTilePSO(DeArchiveInfo, *ppPSO);
+                pArchiveImpl->UnpackTilePSO(DeArchiveInfo, ppPSO);
                 break;
 
             case PIPELINE_TYPE_INVALID:
@@ -119,7 +119,8 @@ protected:
         *ppSignature = nullptr;
 
         auto* pArchiveImpl = ClassPtrCast<DeviceObjectArchiveImplType>(DeArchiveInfo.pArchive);
-        pArchiveImpl->UnpackResourceSignature(DeArchiveInfo, *ppSignature);
+        auto  pSignature   = pArchiveImpl->UnpackResourceSignature(DeArchiveInfo);
+        *ppSignature       = pSignature.Detach();
     }
 
     template <typename DeviceObjectArchiveImplType>
@@ -131,7 +132,7 @@ protected:
         *ppRP = nullptr;
 
         auto* pArchiveImpl = ClassPtrCast<DeviceObjectArchiveImplType>(DeArchiveInfo.pArchive);
-        pArchiveImpl->UnpackRenderPass(DeArchiveInfo, *ppRP);
+        pArchiveImpl->UnpackRenderPass(DeArchiveInfo, ppRP);
     }
 
 
