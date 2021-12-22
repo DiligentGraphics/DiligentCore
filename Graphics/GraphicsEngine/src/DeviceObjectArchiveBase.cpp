@@ -25,6 +25,10 @@
  */
 
 #include <bitset>
+#include <vector>
+#include <unordered_set>
+#include <algorithm>
+
 #include "DeviceObjectArchiveBase.hpp"
 #include "DebugUtilities.hpp"
 #include "PSOSerializer.hpp"
@@ -537,6 +541,55 @@ bool DeviceObjectArchiveBase::LoadShaders(Serializer<SerializerMode::Read>&    S
     return true;
 }
 
+template <typename PSOCreateInfoType>
+bool DeviceObjectArchiveBase::ModifyPipelineStateCreateInfo(PSOCreateInfoType&             CreateInfo,
+                                                            const PipelineStateUnpackInfo& DeArchiveInfo)
+{
+    if (DeArchiveInfo.ModifyPipelineStateCreateInfo == nullptr)
+        return true;
+
+    const auto PipelineType = CreateInfo.PSODesc.PipelineType;
+
+    auto ResourceLayout = CreateInfo.PSODesc.ResourceLayout;
+
+    std::unordered_set<std::string> Strings;
+
+    std::vector<ShaderResourceVariableDesc> Variables{ResourceLayout.Variables, ResourceLayout.Variables + ResourceLayout.NumVariables};
+    for (auto& Var : Variables)
+        Var.Name = Strings.emplace(Var.Name).first->c_str();
+
+    std::vector<ImmutableSamplerDesc> ImmutableSamplers{ResourceLayout.ImmutableSamplers, ResourceLayout.ImmutableSamplers + ResourceLayout.NumImmutableSamplers};
+    for (auto& Sam : ImmutableSamplers)
+        Sam.SamplerOrTextureName = Strings.emplace(Sam.SamplerOrTextureName).first->c_str();
+
+    ResourceLayout.Variables         = Variables.data();
+    ResourceLayout.ImmutableSamplers = ImmutableSamplers.data();
+
+    std::vector<IPipelineResourceSignature*> pSignatures{CreateInfo.ppResourceSignatures, CreateInfo.ppResourceSignatures + CreateInfo.ResourceSignaturesCount};
+
+    DeArchiveInfo.ModifyPipelineStateCreateInfo(CreateInfo, DeArchiveInfo.pUserData);
+
+    if (PipelineType != CreateInfo.PSODesc.PipelineType)
+    {
+        LOG_ERROR_MESSAGE("Modifying pipeline type is not allowed");
+        return false;
+    }
+
+    if (!(ResourceLayout == CreateInfo.PSODesc.ResourceLayout))
+    {
+        LOG_ERROR_MESSAGE("Modifying resource layout is not allowed");
+        return false;
+    }
+
+    if (!std::equal(pSignatures.begin(), pSignatures.end(), CreateInfo.ppResourceSignatures, CreateInfo.ppResourceSignatures + CreateInfo.ResourceSignaturesCount))
+    {
+        LOG_ERROR_MESSAGE("Modifying resource singatures is not allowed");
+        return false;
+    }
+
+    return true;
+}
+
 void DeviceObjectArchiveBase::UnpackGraphicsPSO(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState** ppPSO)
 {
     VERIFY_EXPR(DeArchiveInfo.pDevice != nullptr);
@@ -592,8 +645,8 @@ void DeviceObjectArchiveBase::UnpackGraphicsPSO(const PipelineStateUnpackInfo& D
 
             VERIFY_EXPR(Ser.IsEnd());
 
-            if (DeArchiveInfo.ModifyPipelineStateCreateInfo != nullptr)
-                DeArchiveInfo.ModifyPipelineStateCreateInfo(PSO.CreateInfo, DeArchiveInfo.pUserData);
+            if (!ModifyPipelineStateCreateInfo(PSO.CreateInfo, DeArchiveInfo))
+                return;
 
             DeArchiveInfo.pDevice->CreateGraphicsPipelineState(PSO.CreateInfo, ppPSO);
 
@@ -640,8 +693,8 @@ void DeviceObjectArchiveBase::UnpackComputePSO(const PipelineStateUnpackInfo& De
 
             VERIFY_EXPR(Ser.IsEnd());
 
-            if (DeArchiveInfo.ModifyPipelineStateCreateInfo != nullptr)
-                DeArchiveInfo.ModifyPipelineStateCreateInfo(PSO.CreateInfo, DeArchiveInfo.pUserData);
+            if (!ModifyPipelineStateCreateInfo(PSO.CreateInfo, DeArchiveInfo))
+                return;
 
             DeArchiveInfo.pDevice->CreateComputePipelineState(PSO.CreateInfo, ppPSO);
 
@@ -689,8 +742,8 @@ void DeviceObjectArchiveBase::UnpackTilePSO(const PipelineStateUnpackInfo& DeArc
 
             VERIFY_EXPR(Ser.IsEnd());
 
-            if (DeArchiveInfo.ModifyPipelineStateCreateInfo != nullptr)
-                DeArchiveInfo.ModifyPipelineStateCreateInfo(PSO.CreateInfo, DeArchiveInfo.pUserData);
+            if (!ModifyPipelineStateCreateInfo(PSO.CreateInfo, DeArchiveInfo))
+                return;
 
             DeArchiveInfo.pDevice->CreateTilePipelineState(PSO.CreateInfo, ppPSO);
 
@@ -765,8 +818,8 @@ void DeviceObjectArchiveBase::UnpackRayTracingPSO(const PipelineStateUnpackInfo&
 
             VERIFY_EXPR(Ser.IsEnd());
 
-            if (DeArchiveInfo.ModifyPipelineStateCreateInfo != nullptr)
-                DeArchiveInfo.ModifyPipelineStateCreateInfo(PSO.CreateInfo, DeArchiveInfo.pUserData);
+            if (!ModifyPipelineStateCreateInfo(PSO.CreateInfo, DeArchiveInfo))
+                return;
 
             DeArchiveInfo.pDevice->CreateRayTracingPipelineState(PSO.CreateInfo, ppPSO);
 
@@ -800,7 +853,7 @@ RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveBase::UnpackResourc
     const CreateSignatureType&         CreateSignature)
 {
     RefCntAutoPtr<IPipelineResourceSignature> pSignature;
-    if (DeArchiveInfo.ModifySignatureDesc == nullptr && GetCachedResource(DeArchiveInfo.Name, m_PRSMap, m_PRSMapGuard, pSignature.RawDblPtr()))
+    if (GetCachedResource(DeArchiveInfo.Name, m_PRSMap, m_PRSMapGuard, pSignature.RawDblPtr()))
         return pSignature;
 
     PRSData PRS{GetRawAllocator()};
@@ -818,13 +871,8 @@ RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveBase::UnpackResourc
         {
             Serializer<SerializerMode::Read> Ser{pData, DataSize};
 
-            if (DeArchiveInfo.ModifySignatureDesc != nullptr)
-                DeArchiveInfo.ModifySignatureDesc(PRS.Desc, DeArchiveInfo.pUserData);
-
             pSignature = CreateSignature(PRS, Ser);
-
-            if (DeArchiveInfo.ModifySignatureDesc == nullptr)
-                CacheResource(DeArchiveInfo.Name, m_PRSMap, m_PRSMapGuard, pSignature.RawPtr());
+            CacheResource(DeArchiveInfo.Name, m_PRSMap, m_PRSMapGuard, pSignature.RawPtr());
         });
 
     return pSignature;

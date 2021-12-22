@@ -427,6 +427,10 @@ private:
 
     bool CreateRenderPass(PSOData<GraphicsPipelineStateCreateInfo>& PSO, IRenderDevice* pDevice);
 
+    template <typename PSOCreateInfoType>
+    bool ModifyPipelineStateCreateInfo(PSOCreateInfoType&             CreateInfo,
+                                       const PipelineStateUnpackInfo& DeArchiveInfo);
+
 protected:
     using CreateSignatureType = std::function<RefCntAutoPtr<IPipelineResourceSignature>(PRSData& PRS, Serializer<SerializerMode::Read>& Ser)>;
     RefCntAutoPtr<IPipelineResourceSignature> UnpackResourceSignatureImpl(

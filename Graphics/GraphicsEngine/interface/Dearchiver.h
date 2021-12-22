@@ -61,13 +61,6 @@ struct ResourceSignatureUnpackInfo
     /// This member defines the allocation granularity for internal resources required by
     /// the shader resource binding object instances.
     Uint32 SRBAllocationGranularity DEFAULT_INITIALIZER(1);
-
-    /// An optional function to be called by the dearchiver to let the application modify
-    /// the pipeline resource signature description.
-    void (*ModifySignatureDesc)(PipelineResourceSignatureDesc REF Desc, void* pUserData) DEFAULT_INITIALIZER(nullptr);
-
-    /// A pointer to the user data to pass to the ModifySignatureDesc function.
-    void* pUserData DEFAULT_INITIALIZER(nullptr);
 };
 typedef struct ResourceSignatureUnpackInfo ResourceSignatureUnpackInfo;
 
@@ -142,6 +135,24 @@ struct PipelineStateUnpackInfo
 
     /// An optional function to be called by the dearchiver to let the application modify
     /// the pipeline state create info.
+    ///
+    /// \remarks    An application should check the pipeline type (PipelineCI.Desc.PipelineType) and cast
+    ///             the reference to the appropriate PSO create info struct, e.g. for PIPELINE_TYPE_GRAPHICS:
+    ///
+    ///                 auto& GraphicsPipelineCI = static_cast<GraphicsPipelineStateCreateInfo>(PipelineCI);
+    ///
+    ///             Modifying graphics pipeline states (e.g. rasterizer, depth-stencil, blend, render
+    ///             target formats, etc.) is the most expected usage of the callback.
+    ///
+    ///             The following members of the structure must not be modified:
+    ///             - PipelineCI.PSODesc.PipelineType
+    ///             - PipelineCI.PSODesc.ResourceLayout
+    ///             - PipelineCI.ppResourceSignatures
+    ///             - PipelineCI.ResourceSignaturesCount
+    ///
+    ///             An application may modify shader pointers (e.g. GraphicsPipelineCI.pVS), but it must
+    ///             ensure that the shader layout is compatible with the pipeline state, otherwise hard-to-debug
+    ///             errors will occur.
     void (*ModifyPipelineStateCreateInfo)(PipelineStateCreateInfo REF PipelineCI, void* pUserData) DEFAULT_INITIALIZER(nullptr);
 
     /// A pointer to the user data to pass to the ModifyPipelineStateCreateInfo function.
