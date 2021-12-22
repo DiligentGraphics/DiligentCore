@@ -69,6 +69,10 @@ PRIVATE
 PUBLIC
     Diligent-TargetPlatform
 )
+if(PLATFORM_LINUX)
+    target_link_libraries(Diligent-Common PRIVATE pthread)
+endif()
+
 set_common_target_properties(Diligent-Common)
 
 source_group("src" FILES ${SOURCE})
