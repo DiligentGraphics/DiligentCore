@@ -390,7 +390,8 @@ void ArchiverImpl::UpdateOffsetsInArchive(PendingData& Pending) const
         }
 
         // TODO AZ: verify this is correct wrt data alignment
-        OffsetInFile += Pending.SharedData.GetCurrentSize();
+        if (!Pending.SharedData.IsEmpty())
+            OffsetInFile += Pending.SharedData.GetCurrentSize();
     }
 
     // Device specific data
@@ -422,7 +423,8 @@ void ArchiverImpl::WritePendingDataToStream(const PendingData& Pending, IFileStr
         pStream->Write(Chunk.GetDataPtr(), Chunk.GetCurrentSize());
     }
 
-    pStream->Write(Pending.SharedData.GetDataPtr(), Pending.SharedData.GetCurrentSize());
+    if (!Pending.SharedData.IsEmpty())
+        pStream->Write(Pending.SharedData.GetDataPtr(), Pending.SharedData.GetCurrentSize());
 
     for (auto& DevData : Pending.PerDeviceData)
     {
