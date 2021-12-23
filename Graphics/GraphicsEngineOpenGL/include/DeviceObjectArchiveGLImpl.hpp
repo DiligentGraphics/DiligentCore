@@ -55,9 +55,11 @@ struct PSOSerializerGL
     template <typename T>
     using TQual = typename Serializer<Mode>::template TQual<T>;
 
-    static void SerializePRSDesc(Serializer<Mode>&                                 Ser,
-                                 TQual<PipelineResourceSignatureSerializedDataGL>& Serialized,
-                                 DynamicLinearAllocator*                           Allocator);
+    using PRSSerializedDataType = PipelineResourceSignatureSerializedDataGL;
+
+    static void SerializePRSDesc(Serializer<Mode>&             Ser,
+                                 TQual<PRSSerializedDataType>& Serialized,
+                                 DynamicLinearAllocator*       Allocator);
 };
 
 DECL_TRIVIALLY_SERIALIZABLE(PipelineResourceAttribsGL);

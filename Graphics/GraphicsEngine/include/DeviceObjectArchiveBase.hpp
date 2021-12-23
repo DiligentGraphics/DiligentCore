@@ -413,12 +413,13 @@ private:
                           const char*                    ResTypeName,
                           const FnType&                  Fn);
 
-    template <typename HeaderType, typename FnType>
-    void LoadDeviceSpecificData(const HeaderType&       Header,
-                                DynamicLinearAllocator& Allocator,
-                                const char*             ResTypeName,
-                                BlockOffsetType         BlockType,
-                                const FnType&           Fn);
+    template <typename HeaderType>
+    bool GetDeviceSpecificData(const HeaderType&       Header,
+                               DynamicLinearAllocator& Allocator,
+                               const char*             ResTypeName,
+                               BlockOffsetType         BlockType,
+                               void*&                  pData,
+                               size_t&                 Size);
 
     static constexpr Uint32 DefaultSRBAllocationGranularity = 1;
 
@@ -433,10 +434,11 @@ private:
 
 protected:
     using CreateSignatureType = std::function<RefCntAutoPtr<IPipelineResourceSignature>(PRSData& PRS, Serializer<SerializerMode::Read>& Ser)>;
+
+    template <typename RenderDeviceImplType, typename PSOSerializerType>
     RefCntAutoPtr<IPipelineResourceSignature> UnpackResourceSignatureImpl(
         const ResourceSignatureUnpackInfo& DeArchiveInfo,
-        bool                               IsImplicit,
-        const CreateSignatureType&         CreateSignature);
+        bool                               IsImplicit);
 
     virtual RefCntAutoPtr<IPipelineResourceSignature> UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, bool IsImplicit) = 0;
 
@@ -447,5 +449,42 @@ protected:
 
     static constexpr Uint32 GetHeaderVersion() { return HeaderVersion; }
 };
+
+template <typename RenderDeviceImplType, typename PSOSerializerType>
+RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveBase::UnpackResourceSignatureImpl(
+    const ResourceSignatureUnpackInfo& DeArchiveInfo,
+    bool                               IsImplicit)
+{
+    RefCntAutoPtr<IPipelineResourceSignature> pSignature;
+    // Do not reuse implicit signatures
+    if (!IsImplicit && GetCachedResource(DeArchiveInfo.Name, m_PRSMap, m_PRSMapGuard, pSignature.RawDblPtr()))
+        return pSignature;
+
+    PRSData PRS{GetRawAllocator()};
+    if (!ReadPRSData(DeArchiveInfo.Name, PRS))
+        return {};
+
+    PRS.Desc.SRBAllocationGranularity = DeArchiveInfo.SRBAllocationGranularity;
+
+    void*  pData    = nullptr;
+    size_t DataSize = 0;
+    if (!GetDeviceSpecificData(*PRS.pHeader, PRS.Allocator, "Resource signature", GetBlockOffsetType(), pData, DataSize))
+        return {};
+
+    Serializer<SerializerMode::Read> Ser{pData, DataSize};
+
+    typename PSOSerializerType::PRSSerializedDataType SerializedData{PRS.Serialized};
+    PSOSerializerType::SerializePRSDesc(Ser, SerializedData, &PRS.Allocator);
+    VERIFY_EXPR(Ser.IsEnd());
+
+    auto* pRenderDevice = ClassPtrCast<RenderDeviceImplType>(DeArchiveInfo.pDevice);
+    pRenderDevice->CreatePipelineResourceSignature(PRS.Desc, SerializedData, &pSignature);
+
+    if (!IsImplicit)
+        CacheResource(DeArchiveInfo.Name, m_PRSMap, m_PRSMapGuard, pSignature.RawPtr());
+
+    return pSignature;
+}
+
 
 } // namespace Diligent

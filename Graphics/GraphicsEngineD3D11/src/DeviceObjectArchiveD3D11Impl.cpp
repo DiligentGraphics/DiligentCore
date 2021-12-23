@@ -44,20 +44,7 @@ DeviceObjectArchiveD3D11Impl::~DeviceObjectArchiveD3D11Impl()
 
 RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveD3D11Impl::UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, bool IsImplicit)
 {
-    return DeviceObjectArchiveBase::UnpackResourceSignatureImpl(
-        DeArchiveInfo, IsImplicit,
-        [&DeArchiveInfo](PRSData& PRS, Serializer<SerializerMode::Read>& Ser) //
-        {
-            PipelineResourceSignatureSerializedDataD3D11 SerializedData{PRS.Serialized};
-            PSOSerializerD3D11<SerializerMode::Read>::SerializePRSDesc(Ser, SerializedData, &PRS.Allocator);
-            VERIFY_EXPR(Ser.IsEnd());
-
-            auto* pRenderDeviceD3D11 = ClassPtrCast<RenderDeviceD3D11Impl>(DeArchiveInfo.pDevice);
-
-            RefCntAutoPtr<IPipelineResourceSignature> pSignature;
-            pRenderDeviceD3D11->CreatePipelineResourceSignature(PRS.Desc, SerializedData, &pSignature);
-            return pSignature;
-        });
+    return DeviceObjectArchiveBase::UnpackResourceSignatureImpl<RenderDeviceD3D11Impl, PSOSerializerD3D11<SerializerMode::Read>>(DeArchiveInfo, IsImplicit);
 }
 
 template <SerializerMode Mode>

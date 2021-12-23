@@ -212,25 +212,23 @@ void DeviceObjectArchiveBase::ReadIndexedResources(const ChunkHeader& Chunk, TSh
         LOG_ERROR_AND_THROW("Failed to read indexed resources info from the archive");
     }
 
+    void*  pData    = nullptr;
+    size_t DataSize = 0;
+
     DynamicLinearAllocator Allocator{GetRawAllocator()};
-    LoadDeviceSpecificData(
-        Header,
-        Allocator,
-        "Shader list",
-        GetBlockOffsetType(),
-        [&](const void* pData, size_t DataSize) //
-        {
-            VERIFY_EXPR(DataSize % sizeof(FileOffsetAndSize) == 0);
-            const size_t Count = DataSize / sizeof(FileOffsetAndSize);
+    if (!GetDeviceSpecificData(Header, Allocator, "Shader list", GetBlockOffsetType(), pData, DataSize))
+        return;
 
-            const auto* pFileOffsetAndSize = reinterpret_cast<const FileOffsetAndSize*>(pData);
+    VERIFY_EXPR(DataSize % sizeof(FileOffsetAndSize) == 0);
+    const size_t Count = DataSize / sizeof(FileOffsetAndSize);
 
-            std::unique_lock<std::mutex> WriteLock{Guard};
-            Resources.resize(Count);
+    const auto* pFileOffsetAndSize = reinterpret_cast<const FileOffsetAndSize*>(pData);
 
-            for (Uint32 i = 0; i < Count; ++i)
-                Resources[i] = pFileOffsetAndSize[i];
-        });
+    std::unique_lock<std::mutex> WriteLock{Guard};
+    Resources.resize(Count);
+
+    for (Uint32 i = 0; i < Count; ++i)
+        Resources[i] = pFileOffsetAndSize[i];
 }
 
 template <typename ResType, typename FnType>
@@ -268,40 +266,44 @@ bool DeviceObjectArchiveBase::LoadResourceData(const TNameOffsetMap<ResType>& Na
     return Fn(ResName, Ser);
 }
 
-template <typename HeaderType, typename FnType>
-void DeviceObjectArchiveBase::LoadDeviceSpecificData(const HeaderType&       Header,
-                                                     DynamicLinearAllocator& Allocator,
-                                                     const char*             ResTypeName,
-                                                     BlockOffsetType         BlockType,
-                                                     const FnType&           Fn)
+template <typename HeaderType>
+bool DeviceObjectArchiveBase::GetDeviceSpecificData(const HeaderType&       Header,
+                                                    DynamicLinearAllocator& Allocator,
+                                                    const char*             ResTypeName,
+                                                    BlockOffsetType         BlockType,
+                                                    void*&                  pData,
+                                                    size_t&                 Size)
 {
+    pData = nullptr;
+    Size  = 0;
+
     const auto BaseOffset  = m_BaseOffsets[static_cast<Uint32>(BlockType)];
     const auto ArchiveSize = m_pArchive->GetSize();
     if (BaseOffset > ArchiveSize)
     {
         LOG_ERROR_MESSAGE("Required block does not exist in archive");
-        return;
+        return false;
     }
     if (Header.GetSize(m_DevType) == 0)
     {
         LOG_ERROR_MESSAGE("Device specific data is not specified for ", ResTypeName);
-        return;
+        return false;
     }
     if (BaseOffset + Header.GetEndOffset(m_DevType) > ArchiveSize)
     {
         LOG_ERROR_MESSAGE("Invalid offset in the archive");
-        return;
+        return false;
     }
 
-    const auto DataSize = Header.GetSize(m_DevType);
-    auto*      pData    = Allocator.Allocate(DataSize, DataPtrAlign);
-    if (!m_pArchive->Read(BaseOffset + Header.GetOffset(m_DevType), DataSize, pData))
+    Size  = Header.GetSize(m_DevType);
+    pData = Allocator.Allocate(Size, DataPtrAlign);
+    if (!m_pArchive->Read(BaseOffset + Header.GetOffset(m_DevType), Size, pData))
     {
         LOG_ERROR_MESSAGE("Failed to read resource-specific data");
-        return;
+        return false;
     }
 
-    return Fn(pData, DataSize);
+    return true;
 }
 
 bool DeviceObjectArchiveBase::ReadPRSData(const char* Name, PRSData& PRS)
@@ -424,6 +426,25 @@ void DeviceObjectArchiveBase::CacheResource(const char* Name, TNameOffsetMapAndW
 
     Iter->second.Cache = pResource;
 }
+
+// Instantiations are required by UnpackResourceSignatureImpl
+template bool DeviceObjectArchiveBase::GetDeviceSpecificData<DeviceObjectArchiveBase::PRSDataHeader>(
+    const PRSDataHeader&    Header,
+    DynamicLinearAllocator& Allocator,
+    const char*             ResTypeName,
+    BlockOffsetType         BlockType,
+    void*&                  pData,
+    size_t&                 Size);
+template bool DeviceObjectArchiveBase::GetCachedResource<IPipelineResourceSignature>(
+    const char*                                             Name,
+    TNameOffsetMapAndWeakCache<IPipelineResourceSignature>& Cache,
+    std::mutex&                                             Guard,
+    IPipelineResourceSignature**                            ppResource);
+template void DeviceObjectArchiveBase::CacheResource<IPipelineResourceSignature>(
+    const char*                                             Name,
+    TNameOffsetMapAndWeakCache<IPipelineResourceSignature>& Cache,
+    std::mutex&                                             Guard,
+    IPipelineResourceSignature*                             pResource);
 
 bool DeviceObjectArchiveBase::CreateRenderPass(PSOData<GraphicsPipelineStateCreateInfo>& PSO, IRenderDevice* pRenderDevice)
 {
@@ -622,24 +643,23 @@ void DeviceObjectArchiveBase::UnpackGraphicsPSO(const PipelineStateUnpackInfo& D
     PSO.CreateInfo.PSODesc.ImmediateContextMask     = DeArchiveInfo.ImmediateContextMask;
     PSO.CreateInfo.pPSOCache                        = DeArchiveInfo.pCache;
 
-    LoadDeviceSpecificData(
-        *PSO.pHeader,
-        PSO.Allocator,
-        "Graphics pipeline",
-        GetBlockOffsetType(),
-        [&](void* pData, size_t DataSize) //
+
+    void*  pData    = nullptr;
+    size_t DataSize = 0;
+    if (!GetDeviceSpecificData(*PSO.pHeader, PSO.Allocator, "Graphics pipeline", GetBlockOffsetType(), pData, DataSize))
+        return;
+
+    Serializer<SerializerMode::Read> Ser{pData, DataSize};
+
+    std::vector<RefCntAutoPtr<IShader>> Shaders;
+    if (!LoadShaders(Ser, DeArchiveInfo.pDevice, Shaders))
+        return;
+
+    for (auto& Shader : Shaders)
+    {
+        switch (Shader->GetDesc().ShaderType)
         {
-            Serializer<SerializerMode::Read> Ser{pData, DataSize};
-
-            std::vector<RefCntAutoPtr<IShader>> Shaders;
-            if (!LoadShaders(Ser, DeArchiveInfo.pDevice, Shaders))
-                return;
-
-            for (auto& Shader : Shaders)
-            {
-                switch (Shader->GetDesc().ShaderType)
-                {
-                    // clang-format off
+                // clang-format off
                     case SHADER_TYPE_VERTEX:        PSO.CreateInfo.pVS = Shader; break;
                     case SHADER_TYPE_PIXEL:         PSO.CreateInfo.pPS = Shader; break;
                     case SHADER_TYPE_GEOMETRY:      PSO.CreateInfo.pGS = Shader; break;
@@ -647,23 +667,22 @@ void DeviceObjectArchiveBase::UnpackGraphicsPSO(const PipelineStateUnpackInfo& D
                     case SHADER_TYPE_DOMAIN:        PSO.CreateInfo.pDS = Shader; break;
                     case SHADER_TYPE_AMPLIFICATION: PSO.CreateInfo.pAS = Shader; break;
                     case SHADER_TYPE_MESH:          PSO.CreateInfo.pMS = Shader; break;
-                    // clang-format on
-                    default:
-                        LOG_ERROR_MESSAGE("Unsupported shader type for graphics pipeline");
-                        return;
-                }
-            }
-
-            VERIFY_EXPR(Ser.IsEnd());
-
-            if (!ModifyPipelineStateCreateInfo(PSO.CreateInfo, DeArchiveInfo))
+            // clang-format on
+            default:
+                LOG_ERROR_MESSAGE("Unsupported shader type for graphics pipeline");
                 return;
+        }
+    }
 
-            DeArchiveInfo.pDevice->CreateGraphicsPipelineState(PSO.CreateInfo, ppPSO);
+    VERIFY_EXPR(Ser.IsEnd());
 
-            if (DeArchiveInfo.ModifyPipelineStateCreateInfo == nullptr)
-                CacheResource(DeArchiveInfo.Name, m_GraphicsPSOMap, m_GraphicsPSOMapGuard, *ppPSO);
-        });
+    if (!ModifyPipelineStateCreateInfo(PSO.CreateInfo, DeArchiveInfo))
+        return;
+
+    DeArchiveInfo.pDevice->CreateGraphicsPipelineState(PSO.CreateInfo, ppPSO);
+
+    if (DeArchiveInfo.ModifyPipelineStateCreateInfo == nullptr)
+        CacheResource(DeArchiveInfo.Name, m_GraphicsPSOMap, m_GraphicsPSOMapGuard, *ppPSO);
 }
 
 void DeviceObjectArchiveBase::UnpackComputePSO(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState** ppPSO)
@@ -684,34 +703,31 @@ void DeviceObjectArchiveBase::UnpackComputePSO(const PipelineStateUnpackInfo& De
     PSO.CreateInfo.PSODesc.ImmediateContextMask     = DeArchiveInfo.ImmediateContextMask;
     PSO.CreateInfo.pPSOCache                        = DeArchiveInfo.pCache;
 
-    LoadDeviceSpecificData(
-        *PSO.pHeader,
-        PSO.Allocator,
-        "Compute pipeline",
-        GetBlockOffsetType(),
-        [&](void* pData, size_t DataSize) //
-        {
-            Serializer<SerializerMode::Read> Ser{pData, DataSize};
+    void*  pData    = nullptr;
+    size_t DataSize = 0;
+    if (!GetDeviceSpecificData(*PSO.pHeader, PSO.Allocator, "Compute pipeline", GetBlockOffsetType(), pData, DataSize))
+        return;
 
-            std::vector<RefCntAutoPtr<IShader>> Shaders;
-            if (!LoadShaders(Ser, DeArchiveInfo.pDevice, Shaders))
-                return;
+    Serializer<SerializerMode::Read> Ser{pData, DataSize};
 
-            if (Shaders.size() != 1 || Shaders[0]->GetDesc().ShaderType != SHADER_TYPE_COMPUTE)
-                return;
+    std::vector<RefCntAutoPtr<IShader>> Shaders;
+    if (!LoadShaders(Ser, DeArchiveInfo.pDevice, Shaders))
+        return;
 
-            PSO.CreateInfo.pCS = Shaders[0];
+    if (Shaders.size() != 1 || Shaders[0]->GetDesc().ShaderType != SHADER_TYPE_COMPUTE)
+        return;
 
-            VERIFY_EXPR(Ser.IsEnd());
+    PSO.CreateInfo.pCS = Shaders[0];
 
-            if (!ModifyPipelineStateCreateInfo(PSO.CreateInfo, DeArchiveInfo))
-                return;
+    VERIFY_EXPR(Ser.IsEnd());
 
-            DeArchiveInfo.pDevice->CreateComputePipelineState(PSO.CreateInfo, ppPSO);
+    if (!ModifyPipelineStateCreateInfo(PSO.CreateInfo, DeArchiveInfo))
+        return;
 
-            if (DeArchiveInfo.ModifyPipelineStateCreateInfo == nullptr)
-                CacheResource(DeArchiveInfo.Name, m_ComputePSOMap, m_ComputePSOMapGuard, *ppPSO);
-        });
+    DeArchiveInfo.pDevice->CreateComputePipelineState(PSO.CreateInfo, ppPSO);
+
+    if (DeArchiveInfo.ModifyPipelineStateCreateInfo == nullptr)
+        CacheResource(DeArchiveInfo.Name, m_ComputePSOMap, m_ComputePSOMapGuard, *ppPSO);
 }
 
 void DeviceObjectArchiveBase::UnpackTilePSO(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState** ppPSO)
@@ -732,35 +748,32 @@ void DeviceObjectArchiveBase::UnpackTilePSO(const PipelineStateUnpackInfo& DeArc
     PSO.CreateInfo.PSODesc.ImmediateContextMask     = DeArchiveInfo.ImmediateContextMask;
     PSO.CreateInfo.pPSOCache                        = DeArchiveInfo.pCache;
 
-    LoadDeviceSpecificData(
-        *PSO.pHeader,
-        PSO.Allocator,
-        "Tile pipeline",
-        GetBlockOffsetType(),
-        [&](void* pData, size_t DataSize) //
-        {
-            Serializer<SerializerMode::Read> Ser{pData, DataSize};
+    void*  pData    = nullptr;
+    size_t DataSize = 0;
+    if (!GetDeviceSpecificData(*PSO.pHeader, PSO.Allocator, "Tile pipeline", GetBlockOffsetType(), pData, DataSize))
+        return;
 
-            std::vector<RefCntAutoPtr<IShader>> Shaders;
-            if (!LoadShaders(Ser, DeArchiveInfo.pDevice, Shaders))
-                return;
+    Serializer<SerializerMode::Read> Ser{pData, DataSize};
 
-            if (Shaders.size() != 1 || Shaders[0]->GetDesc().ShaderType != SHADER_TYPE_TILE)
-                return;
+    std::vector<RefCntAutoPtr<IShader>> Shaders;
+    if (!LoadShaders(Ser, DeArchiveInfo.pDevice, Shaders))
+        return;
 
-            PSO.CreateInfo.pTS = Shaders[0];
+    if (Shaders.size() != 1 || Shaders[0]->GetDesc().ShaderType != SHADER_TYPE_TILE)
+        return;
+
+    PSO.CreateInfo.pTS = Shaders[0];
 
 
-            VERIFY_EXPR(Ser.IsEnd());
+    VERIFY_EXPR(Ser.IsEnd());
 
-            if (!ModifyPipelineStateCreateInfo(PSO.CreateInfo, DeArchiveInfo))
-                return;
+    if (!ModifyPipelineStateCreateInfo(PSO.CreateInfo, DeArchiveInfo))
+        return;
 
-            DeArchiveInfo.pDevice->CreateTilePipelineState(PSO.CreateInfo, ppPSO);
+    DeArchiveInfo.pDevice->CreateTilePipelineState(PSO.CreateInfo, ppPSO);
 
-            if (DeArchiveInfo.ModifyPipelineStateCreateInfo == nullptr)
-                CacheResource(DeArchiveInfo.Name, m_TilePSOMap, m_TilePSOMapGuard, *ppPSO);
-        });
+    if (DeArchiveInfo.ModifyPipelineStateCreateInfo == nullptr)
+        CacheResource(DeArchiveInfo.Name, m_TilePSOMap, m_TilePSOMapGuard, *ppPSO);
 }
 
 void DeviceObjectArchiveBase::UnpackRayTracingPSO(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState** ppPSO)
@@ -785,58 +798,55 @@ void DeviceObjectArchiveBase::UnpackRayTracingPSO(const PipelineStateUnpackInfo&
     PSO.CreateInfo.PSODesc.ImmediateContextMask     = DeArchiveInfo.ImmediateContextMask;
     PSO.CreateInfo.pPSOCache                        = DeArchiveInfo.pCache;
 
-    LoadDeviceSpecificData(
-        *PSO.pHeader,
-        PSO.Allocator,
-        "Ray tracing pipeline",
-        GetBlockOffsetType(),
-        [&](void* pData, size_t DataSize) //
+    void*  pData    = nullptr;
+    size_t DataSize = 0;
+    if (!GetDeviceSpecificData(*PSO.pHeader, PSO.Allocator, "Ray tracing pipeline", GetBlockOffsetType(), pData, DataSize))
+        return;
+
+    Serializer<SerializerMode::Read> Ser{pData, DataSize};
+
+    std::vector<RefCntAutoPtr<IShader>> Shaders;
+    if (!LoadShaders(Ser, DeArchiveInfo.pDevice, Shaders))
+        return;
+
+    auto RemapShader = [&Shaders](IShader* const& inoutShader) //
+    {
+        size_t ShaderIndex = BitCast<size_t>(inoutShader);
+        if (ShaderIndex < Shaders.size())
+            const_cast<IShader*&>(inoutShader) = Shaders[ShaderIndex];
+        else
         {
-            Serializer<SerializerMode::Read> Ser{pData, DataSize};
+            VERIFY(ShaderIndex == ~0u, "Failed to remap shader");
+            const_cast<IShader*&>(inoutShader) = nullptr;
+        }
+    };
 
-            std::vector<RefCntAutoPtr<IShader>> Shaders;
-            if (!LoadShaders(Ser, DeArchiveInfo.pDevice, Shaders))
-                return;
+    // Set shaders to CreateInfo
+    for (Uint32 i = 0; i < PSO.CreateInfo.GeneralShaderCount; ++i)
+    {
+        RemapShader(PSO.CreateInfo.pGeneralShaders[i].pShader);
+    }
+    for (Uint32 i = 0; i < PSO.CreateInfo.TriangleHitShaderCount; ++i)
+    {
+        RemapShader(PSO.CreateInfo.pTriangleHitShaders[i].pClosestHitShader);
+        RemapShader(PSO.CreateInfo.pTriangleHitShaders[i].pAnyHitShader);
+    }
+    for (Uint32 i = 0; i < PSO.CreateInfo.ProceduralHitShaderCount; ++i)
+    {
+        RemapShader(PSO.CreateInfo.pProceduralHitShaders[i].pIntersectionShader);
+        RemapShader(PSO.CreateInfo.pProceduralHitShaders[i].pClosestHitShader);
+        RemapShader(PSO.CreateInfo.pProceduralHitShaders[i].pAnyHitShader);
+    }
 
-            auto RemapShader = [&Shaders](IShader* const& inoutShader) //
-            {
-                size_t ShaderIndex = BitCast<size_t>(inoutShader);
-                if (ShaderIndex < Shaders.size())
-                    const_cast<IShader*&>(inoutShader) = Shaders[ShaderIndex];
-                else
-                {
-                    VERIFY(ShaderIndex == ~0u, "Failed to remap shader");
-                    const_cast<IShader*&>(inoutShader) = nullptr;
-                }
-            };
+    VERIFY_EXPR(Ser.IsEnd());
 
-            // Set shaders to CreateInfo
-            for (Uint32 i = 0; i < PSO.CreateInfo.GeneralShaderCount; ++i)
-            {
-                RemapShader(PSO.CreateInfo.pGeneralShaders[i].pShader);
-            }
-            for (Uint32 i = 0; i < PSO.CreateInfo.TriangleHitShaderCount; ++i)
-            {
-                RemapShader(PSO.CreateInfo.pTriangleHitShaders[i].pClosestHitShader);
-                RemapShader(PSO.CreateInfo.pTriangleHitShaders[i].pAnyHitShader);
-            }
-            for (Uint32 i = 0; i < PSO.CreateInfo.ProceduralHitShaderCount; ++i)
-            {
-                RemapShader(PSO.CreateInfo.pProceduralHitShaders[i].pIntersectionShader);
-                RemapShader(PSO.CreateInfo.pProceduralHitShaders[i].pClosestHitShader);
-                RemapShader(PSO.CreateInfo.pProceduralHitShaders[i].pAnyHitShader);
-            }
+    if (!ModifyPipelineStateCreateInfo(PSO.CreateInfo, DeArchiveInfo))
+        return;
 
-            VERIFY_EXPR(Ser.IsEnd());
+    DeArchiveInfo.pDevice->CreateRayTracingPipelineState(PSO.CreateInfo, ppPSO);
 
-            if (!ModifyPipelineStateCreateInfo(PSO.CreateInfo, DeArchiveInfo))
-                return;
-
-            DeArchiveInfo.pDevice->CreateRayTracingPipelineState(PSO.CreateInfo, ppPSO);
-
-            if (DeArchiveInfo.ModifyPipelineStateCreateInfo == nullptr)
-                CacheResource(DeArchiveInfo.Name, m_RayTracingPSOMap, m_RayTracingPSOMapGuard, *ppPSO);
-        });
+    if (DeArchiveInfo.ModifyPipelineStateCreateInfo == nullptr)
+        CacheResource(DeArchiveInfo.Name, m_RayTracingPSOMap, m_RayTracingPSOMapGuard, *ppPSO);
 }
 
 void DeviceObjectArchiveBase::UnpackRenderPass(const RenderPassUnpackInfo& DeArchiveInfo, IRenderPass** ppRP)
@@ -857,39 +867,6 @@ void DeviceObjectArchiveBase::UnpackRenderPass(const RenderPassUnpackInfo& DeArc
 
     if (DeArchiveInfo.ModifyRenderPassDesc == nullptr)
         CacheResource(DeArchiveInfo.Name, m_RenderPassMap, m_RenderPassMapGuard, *ppRP);
-}
-
-RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveBase::UnpackResourceSignatureImpl(
-    const ResourceSignatureUnpackInfo& DeArchiveInfo,
-    bool                               IsImplicit,
-    const CreateSignatureType&         CreateSignature)
-{
-    RefCntAutoPtr<IPipelineResourceSignature> pSignature;
-    // Do not reuse implicit signatures
-    if (!IsImplicit && GetCachedResource(DeArchiveInfo.Name, m_PRSMap, m_PRSMapGuard, pSignature.RawDblPtr()))
-        return pSignature;
-
-    PRSData PRS{GetRawAllocator()};
-    if (!ReadPRSData(DeArchiveInfo.Name, PRS))
-        return {};
-
-    PRS.Desc.SRBAllocationGranularity = DeArchiveInfo.SRBAllocationGranularity;
-
-    LoadDeviceSpecificData(
-        *PRS.pHeader,
-        PRS.Allocator,
-        "Resource signature",
-        GetBlockOffsetType(),
-        [&](void* pData, size_t DataSize) //
-        {
-            Serializer<SerializerMode::Read> Ser{pData, DataSize};
-
-            pSignature = CreateSignature(PRS, Ser);
-            if (!IsImplicit)
-                CacheResource(DeArchiveInfo.Name, m_PRSMap, m_PRSMapGuard, pSignature.RawPtr());
-        });
-
-    return pSignature;
 }
 
 void DeviceObjectArchiveBase::ClearResourceCache()
