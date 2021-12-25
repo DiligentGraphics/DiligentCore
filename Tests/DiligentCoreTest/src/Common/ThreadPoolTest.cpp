@@ -91,6 +91,9 @@ TEST(Common_ThreadPool, EnqueueTask)
         EXPECT_NE(Results[i], 0.f);
     }
 
+    // Check that multiple calls to WaitForAllTasks work fine
+    pThreadPool->WaitForAllTasks();
+
     pThreadPool.Release();
     EXPECT_EQ(NumThreadsFinished.load(), PoolCI.NumThreads);
 }
@@ -143,6 +146,9 @@ TEST(Common_ThreadPool, ProcessTask)
         EXPECT_TRUE(WorkComplete[i]) << "i=" << i;
         EXPECT_NE(Results[i], 0.f);
     }
+
+    // Check that multiple calls to WaitForAllTasks work fine
+    pThreadPool->WaitForAllTasks();
 
     // We must stop all threads
     pThreadPool->StopThreads();

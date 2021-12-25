@@ -82,11 +82,11 @@ public:
                 // the order is specific to this individual condition variable. This makes it impossible
                 // for notify_one() to, for example, be delayed and unblock a thread that started waiting
                 // just after the call to notify_one() was made.
-                m_Condition.wait(lock,
-                                 [this] //
-                                 {
-                                     return m_Stop.load() || !m_TasksQueue.empty();
-                                 } //
+                m_NextTaskCond.wait(lock,
+                                    [this] //
+                                    {
+                                        return m_Stop.load() || !m_TasksQueue.empty();
+                                    } //
                 );
             }
 
@@ -113,7 +113,16 @@ public:
             DEV_CHECK_ERR((pTask->GetStatus() == ASYNC_TASK_STATUS_COMPLETE ||
                            pTask->GetStatus() == ASYNC_TASK_STATUS_CANCELLED),
                           "Finished tasks must be in COMPLETE or CANCELLED state");
-            m_NumRunningTasks.fetch_add(-1);
+
+            {
+                std::unique_lock<std::mutex> lock{m_TasksQueueMtx};
+
+                const auto NumRunningTasks = m_NumRunningTasks.fetch_add(-1) - 1;
+                if (m_TasksQueue.empty() && NumRunningTasks == 0)
+                {
+                    m_TasksFinishedCond.notify_one();
+                }
+            }
         }
 
         return true;
@@ -131,19 +140,20 @@ public:
 
             m_TasksQueue.emplace(pTask->GetPriority(), pTask);
         }
-        m_Condition.notify_one();
+        m_NextTaskCond.notify_one();
     }
 
     virtual void WaitForAllTasks() override final
     {
-        while (true)
+        std::unique_lock<std::mutex> lock{m_TasksQueueMtx};
+        if (!m_TasksQueue.empty() || m_NumRunningTasks.load() > 0)
         {
-            {
-                std::unique_lock<std::mutex> lock{m_TasksQueueMtx};
-                if (m_TasksQueue.empty() && m_NumRunningTasks.load() == 0)
-                    return;
-            }
-            std::this_thread::yield();
+            m_TasksFinishedCond.wait(lock,
+                                     [this] //
+                                     {
+                                         return m_TasksQueue.empty() && m_NumRunningTasks.load() == 0;
+                                     } //
+            );
         }
     }
 
@@ -158,7 +168,7 @@ public:
         // Note that if there are outstanding tasks in the queue, the threads may be woken up
         // by the corresponding notify_one() as notify*() and wait*() take place in a single
         // total order.
-        m_Condition.notify_all();
+        m_NextTaskCond.notify_all();
         for (std::thread& worker : m_WorkerThreads)
             worker.join();
 
@@ -263,7 +273,8 @@ private:
 
     std::vector<std::pair<float, RefCntAutoPtr<IAsyncTask>>> m_ReprioritizationList;
 
-    std::condition_variable m_Condition{};
+    std::condition_variable m_NextTaskCond{};
+    std::condition_variable m_TasksFinishedCond{};
     std::atomic<bool>       m_Stop{false};
 
     std::atomic<int> m_NumRunningTasks{0};
