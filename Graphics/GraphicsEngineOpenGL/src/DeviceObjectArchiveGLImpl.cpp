@@ -68,9 +68,7 @@ void PSOSerializerGL<Mode>::SerializePRSDesc(
 {
     PSOSerializer<Mode>::SerializeArrayRaw(Ser, Allocator, Serialized.pResourceAttribs, Serialized.NumResources);
 
-#if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(Serialized) == 48, "Did you add a new member to PipelineResourceSignatureSerializedDataGL? Please add serialization here.");
-#endif
+    ASSERT_SIZEOF64(Serialized, 48, "Did you add a new member to PipelineResourceSignatureSerializedDataGL? Please add serialization here.");
 }
 
 template struct PSOSerializerGL<SerializerMode::Read>;

@@ -59,9 +59,7 @@ void PSOSerializerVk<Mode>::SerializePRSDesc(
     PSOSerializer<Mode>::SerializeArrayRaw(Ser, Allocator, Serialized.pResourceAttribs, Serialized.NumResources);
     PSOSerializer<Mode>::SerializeArrayRaw(Ser, Allocator, Serialized.pImmutableSamplers, Serialized.NumImmutableSamplers);
 
-#if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(Serialized) == 56, "Did you add a new member to PipelineResourceSignatureSerializedDataVk? Please add serialization here.");
-#endif
+    ASSERT_SIZEOF64(Serialized, 56, "Did you add a new member to PipelineResourceSignatureSerializedDataVk? Please add serialization here.");
 }
 
 template struct PSOSerializerVk<SerializerMode::Read>;

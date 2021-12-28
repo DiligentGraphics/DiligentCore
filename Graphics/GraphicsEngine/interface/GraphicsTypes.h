@@ -1775,9 +1775,7 @@ struct DeviceFeatures
         VariableRateShading               {State},
         SparseResources                   {State}
     {
-#   if defined(_MSC_VER) && defined(_WIN64)
         static_assert(sizeof(*this) == 39, "Did you add a new feature to DeviceFeatures? Please handle its status above.");
-#   endif
     }
 
 

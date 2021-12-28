@@ -2018,9 +2018,7 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
     Features.DurationQueries        = DEVICE_FEATURE_STATE_DISABLED;
 #endif
 
-#if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(DeviceFeatures) == 39, "Did you add a new feature to DeviceFeatures? Please handle its satus here (if necessary).");
-#endif
+    ASSERT_SIZEOF(DeviceFeatures, 39, "Did you add a new feature to DeviceFeatures? Please handle its satus here (if necessary).");
 
     return Features;
 }

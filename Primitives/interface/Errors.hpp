@@ -30,6 +30,7 @@
 #include <stdexcept>
 #include <string>
 #include <iostream>
+#include <cstdint>
 
 #include "DebugOutput.h"
 #include "FormatString.hpp"
@@ -163,3 +164,12 @@ void LogError(bool IsFatal, const char* Function, const char* FullFilePath, int 
             LOG_ERROR_AND_THROW(##__VA_ARGS__); \
         }                                       \
     } while (false)
+
+
+#define ASSERT_SIZEOF(Struct, Size, ...) static_assert(sizeof(Struct) == Size, "sizeof(" #Struct ") is expected to be " #Size ". " #__VA_ARGS__)
+
+#if UINTPTR_MAX == UINT64_MAX
+#    define ASSERT_SIZEOF64 ASSERT_SIZEOF
+#else
+#    define ASSERT_SIZEOF64(...)
+#endif

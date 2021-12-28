@@ -51,9 +51,7 @@ void PSOSerializer<Mode>::SerializeImmutableSampler(
         SampDesc.Desc.MinLOD,
         SampDesc.Desc.MaxLOD);
 
-#if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(ImmutableSamplerDesc) == 72, "Did you add a new member to ImmutableSamplerDesc? Please add serialization here.");
-#endif
+    ASSERT_SIZEOF64(ImmutableSamplerDesc, 72, "Did you add a new member to ImmutableSamplerDesc? Please add serialization here.");
 }
 
 template <SerializerMode Mode>
@@ -90,11 +88,9 @@ void PSOSerializer<Mode>::SerializePRSDesc(
         Serialized.PipelineType,
         Serialized.StaticResStageIndex);
 
-#if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(PipelineResourceSignatureDesc) == 56, "Did you add a new member to PipelineResourceSignatureDesc? Please add serialization here.");
-    static_assert(sizeof(PipelineResourceDesc) == 24, "Did you add a new member to PipelineResourceDesc? Please add serialization here.");
-    static_assert(sizeof(PipelineResourceSignatureSerializedData) == 16, "Did you add a new member to PipelineResourceSignatureSerializedData? Please add serialization here.");
-#endif
+    ASSERT_SIZEOF64(PipelineResourceSignatureDesc, 56, "Did you add a new member to PipelineResourceSignatureDesc? Please add serialization here.");
+    ASSERT_SIZEOF64(PipelineResourceDesc, 24, "Did you add a new member to PipelineResourceDesc? Please add serialization here.");
+    ASSERT_SIZEOF(PipelineResourceSignatureSerializedData, 16, "Did you add a new member to PipelineResourceSignatureSerializedData? Please add serialization here.");
 }
 
 template <SerializerMode Mode>
@@ -133,10 +129,8 @@ void PSOSerializer<Mode>::SerializePSOCreateInfo(
         Ser(PRSNames[i]);
     }
 
-#if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(ShaderResourceVariableDesc) == 24, "Did you add a new member to ShaderResourceVariableDesc? Please add serialization here.");
-    static_assert(sizeof(PipelineStateCreateInfo) == 96, "Did you add a new member to PipelineStateCreateInfo? Please add serialization here.");
-#endif
+    ASSERT_SIZEOF64(ShaderResourceVariableDesc, 24, "Did you add a new member to ShaderResourceVariableDesc? Please add serialization here.");
+    ASSERT_SIZEOF64(PipelineStateCreateInfo, 96, "Did you add a new member to PipelineStateCreateInfo? Please add serialization here.");
 }
 
 template <SerializerMode Mode>
@@ -188,10 +182,8 @@ void PSOSerializer<Mode>::SerializePSOCreateInfo(
     // skip NodeMask
     // skip shaders - they are device specific
 
-#if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(GraphicsPipelineStateCreateInfo) == 344, "Did you add a new member to GraphicsPipelineStateCreateInfo? Please add serialization here.");
-    static_assert(sizeof(LayoutElement) == 40, "Did you add a new member to LayoutElement? Please add serialization here.");
-#endif
+    ASSERT_SIZEOF64(GraphicsPipelineStateCreateInfo, 344, "Did you add a new member to GraphicsPipelineStateCreateInfo? Please add serialization here.");
+    ASSERT_SIZEOF64(LayoutElement, 40, "Did you add a new member to LayoutElement? Please add serialization here.");
 }
 
 template <SerializerMode Mode>
@@ -205,9 +197,7 @@ void PSOSerializer<Mode>::SerializePSOCreateInfo(
 
     // skip shaders - they are device specific
 
-#if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(ComputePipelineStateCreateInfo) == 104, "Did you add a new member to ComputePipelineStateCreateInfo? Please add serialization here.");
-#endif
+    ASSERT_SIZEOF64(ComputePipelineStateCreateInfo, 104, "Did you add a new member to ComputePipelineStateCreateInfo? Please add serialization here.");
 }
 
 template <SerializerMode Mode>
@@ -226,9 +216,7 @@ void PSOSerializer<Mode>::SerializePSOCreateInfo(
 
     // skip shaders - they are device specific
 
-#if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(TilePipelineStateCreateInfo) == 128, "Did you add a new member to TilePipelineStateCreateInfo? Please add serialization here.");
-#endif
+    ASSERT_SIZEOF64(TilePipelineStateCreateInfo, 128, "Did you add a new member to TilePipelineStateCreateInfo? Please add serialization here.");
 }
 
 template <SerializerMode Mode>
@@ -318,12 +306,10 @@ void PSOSerializer<Mode>::SerializePSOCreateInfo(
 
     // skip shaders - they are device-specific
 
-#if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(RayTracingPipelineStateCreateInfo) == 168, "Did you add a new member to RayTracingPipelineStateCreateInfo? Please add serialization here.");
-    static_assert(sizeof(RayTracingGeneralShaderGroup) == 16, "Did you add a new member to RayTracingGeneralShaderGroup? Please add serialization here.");
-    static_assert(sizeof(RayTracingTriangleHitShaderGroup) == 24, "Did you add a new member to RayTracingTriangleHitShaderGroup? Please add serialization here.");
-    static_assert(sizeof(RayTracingProceduralHitShaderGroup) == 32, "Did you add a new member to RayTracingProceduralHitShaderGroup? Please add serialization here.");
-#endif
+    ASSERT_SIZEOF64(RayTracingPipelineStateCreateInfo, 168, "Did you add a new member to RayTracingPipelineStateCreateInfo? Please add serialization here.");
+    ASSERT_SIZEOF64(RayTracingGeneralShaderGroup, 16, "Did you add a new member to RayTracingGeneralShaderGroup? Please add serialization here.");
+    ASSERT_SIZEOF64(RayTracingTriangleHitShaderGroup, 24, "Did you add a new member to RayTracingTriangleHitShaderGroup? Please add serialization here.");
+    ASSERT_SIZEOF64(RayTracingProceduralHitShaderGroup, 32, "Did you add a new member to RayTracingProceduralHitShaderGroup? Please add serialization here.");
 }
 
 template <SerializerMode Mode>
@@ -396,14 +382,12 @@ void PSOSerializer<Mode>::SerializeRenderPassDesc(
                            Dep.DstAccessMask);
                    });
 
-#if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(RenderPassDesc) == 56, "Did you add a new member to RenderPassDesc? Please add serialization here.");
-    static_assert(sizeof(RenderPassAttachmentDesc) == 16, "Did you add a new member to RenderPassAttachmentDesc? Please add serialization here.");
-    static_assert(sizeof(SubpassDesc) == 72, "Did you add a new member to SubpassDesc? Please add serialization here.");
-    static_assert(sizeof(SubpassDependencyDesc) == 24, "Did you add a new member to SubpassDependencyDesc? Please add serialization here.");
-    static_assert(sizeof(ShadingRateAttachment) == 16, "Did you add a new member to ShadingRateAttachment? Please add serialization here.");
-    static_assert(sizeof(AttachmentReference) == 8, "Did you add a new member to AttachmentReference? Please add serialization here.");
-#endif
+    ASSERT_SIZEOF64(RenderPassDesc, 56, "Did you add a new member to RenderPassDesc? Please add serialization here.");
+    ASSERT_SIZEOF64(SubpassDesc, 72, "Did you add a new member to SubpassDesc? Please add serialization here.");
+    ASSERT_SIZEOF(RenderPassAttachmentDesc, 16, "Did you add a new member to RenderPassAttachmentDesc? Please add serialization here.");
+    ASSERT_SIZEOF(SubpassDependencyDesc, 24, "Did you add a new member to SubpassDependencyDesc? Please add serialization here.");
+    ASSERT_SIZEOF(ShadingRateAttachment, 16, "Did you add a new member to ShadingRateAttachment? Please add serialization here.");
+    ASSERT_SIZEOF(AttachmentReference, 8, "Did you add a new member to AttachmentReference? Please add serialization here.");
 }
 
 template <SerializerMode Mode>

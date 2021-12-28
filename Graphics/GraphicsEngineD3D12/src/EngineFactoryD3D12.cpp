@@ -767,9 +767,7 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
 
             auto& MeshProps{AdapterInfo.MeshShader};
             MeshProps.MaxTaskCount = 64000; // from specs: https://microsoft.github.io/DirectX-Specs/d3d/MeshShader.html#dispatchmesh-api
-#if defined(_MSC_VER) && defined(_WIN64)
-            static_assert(sizeof(MeshProps) == 4, "Did you add a new member to MeshShaderProperties? Please initialize it here.");
-#endif
+            ASSERT_SIZEOF(MeshProps, 4, "Did you add a new member to MeshShaderProperties? Please initialize it here.");
         }
 
         Features.ShaderResourceRuntimeArray = DEVICE_FEATURE_STATE_ENABLED;
@@ -863,9 +861,7 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
                     for (Uint32 q = 0; q < AdapterInfo.NumQueues; ++q)
                         AdapterInfo.Queues[q].QueueType |= COMMAND_QUEUE_TYPE_SPARSE_BINDING;
 
-#if defined(_MSC_VER) && defined(_WIN64)
-                    static_assert(sizeof(SparseRes) == 32, "Did you add a new member to SparseResourceProperties? Please initialize it here.");
-#endif
+                    ASSERT_SIZEOF(SparseRes, 32, "Did you add a new member to SparseResourceProperties? Please initialize it here.");
                 }
             }
 
@@ -883,9 +879,8 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
                     WaveOpProps.Features        = WAVE_FEATURE_BASIC | WAVE_FEATURE_VOTE | WAVE_FEATURE_ARITHMETIC | WAVE_FEATURE_BALLOUT | WAVE_FEATURE_QUAD;
                     if (MeshShadersSupported)
                         WaveOpProps.SupportedStages |= SHADER_TYPE_AMPLIFICATION | SHADER_TYPE_MESH;
-#if defined(_MSC_VER) && defined(_WIN64)
-                    static_assert(sizeof(WaveOpProps) == 16, "Did you add a new member to WaveOpProperties? Please initialize it here.");
-#endif
+
+                    ASSERT_SIZEOF(WaveOpProps, 16, "Did you add a new member to WaveOpProperties? Please initialize it here.");
                 }
             }
 
@@ -935,9 +930,7 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
                 {
                     RayTracingProps.CapFlags |= RAY_TRACING_CAP_FLAG_INLINE_RAY_TRACING | RAY_TRACING_CAP_FLAG_INDIRECT_RAY_TRACING;
                 }
-#if defined(_MSC_VER) && defined(_WIN64)
-                static_assert(sizeof(RayTracingProps) == 60, "Did you add a new member to RayTracingProperites? Please initialize it here.");
-#endif
+                ASSERT_SIZEOF(RayTracingProps, 60, "Did you add a new member to RayTracingProperites? Please initialize it here.");
             }
 
 #ifdef NTDDI_WIN10_19H1
@@ -1000,9 +993,7 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
 
                 // TODO: add support for D3D12_FEATURE_DATA_D3D12_OPTIONS10
 
-#    if defined(_MSC_VER) && defined(_WIN64)
-                static_assert(sizeof(ShadingRateProps) == 52, "Did you add a new member to ShadingRateProperties? Please initialize it here.");
-#    endif
+                ASSERT_SIZEOF(ShadingRateProps, 52, "Did you add a new member to ShadingRateProperties? Please initialize it here.");
             }
 #endif // NTDDI_WIN10_19H1
         }
@@ -1012,9 +1003,7 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
             auto& BufferProps{AdapterInfo.Buffer};
             BufferProps.ConstantBufferOffsetAlignment   = D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT;
             BufferProps.StructuredBufferOffsetAlignment = D3D12_RAW_UAV_SRV_BYTE_ALIGNMENT;
-#if defined(_MSC_VER) && defined(_WIN64)
-            static_assert(sizeof(BufferProps) == 8, "Did you add a new member to BufferProperites? Please initialize it here.");
-#endif
+            ASSERT_SIZEOF(BufferProps, 8, "Did you add a new member to BufferProperites? Please initialize it here.");
         }
     }
 
@@ -1032,9 +1021,7 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
         TexProps.TextureViewSupported       = True;
         TexProps.CubemapArraysSupported     = True;
         TexProps.TextureView2DOn3DSupported = True;
-#if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(TexProps) == 32, "Did you add a new member to TextureProperites? Please initialize it here.");
-#endif
+        ASSERT_SIZEOF(TexProps, 32, "Did you add a new member to TextureProperites? Please initialize it here.");
     }
 
     // Sampler properties
@@ -1044,9 +1031,7 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
         SamProps.BorderSamplingModeSupported   = True;
         SamProps.AnisotropicFilteringSupported = True;
         SamProps.LODBiasSupported              = True;
-#if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(SamProps) == 3, "Did you add a new member to SamplerProperites? Please initialize it here.");
-#endif
+        ASSERT_SIZEOF(SamProps, 3, "Did you add a new member to SamplerProperites? Please initialize it here.");
     }
 
     // Compute shader properties
@@ -1060,9 +1045,7 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
         CompProps.MaxThreadGroupCountX      = D3D12_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
         CompProps.MaxThreadGroupCountY      = D3D12_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
         CompProps.MaxThreadGroupCountZ      = D3D12_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
-#if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(CompProps) == 32, "Did you add a new member to ComputeShaderProperties? Please initialize it here.");
-#endif
+        ASSERT_SIZEOF(CompProps, 32, "Did you add a new member to ComputeShaderProperties? Please initialize it here.");
     }
 
     // Draw command properties
@@ -1077,14 +1060,10 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
             DRAW_COMMAND_CAP_FLAG_BASE_VERTEX |
             DRAW_COMMAND_CAP_FLAG_NATIVE_MULTI_DRAW_INDIRECT |
             DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNTER_BUFFER;
-#if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(DrawCommandProps) == 12, "Did you add a new member to DrawCommandProperties? Please initialize it here.");
-#endif
+        ASSERT_SIZEOF(DrawCommandProps, 12, "Did you add a new member to DrawCommandProperties? Please initialize it here.");
     }
 
-#if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(DeviceFeatures) == 39, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
-#endif
+    ASSERT_SIZEOF(DeviceFeatures, 39, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 
     return AdapterInfo;
 }

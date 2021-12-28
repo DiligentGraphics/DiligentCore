@@ -219,9 +219,7 @@ public:
             Mem.UnifiedMemory       = 0;
             Mem.MaxMemoryAllocation = 0; // no way to query
 
-#if defined(_MSC_VER) && defined(_WIN64)
-            static_assert(sizeof(Mem) == 40, "Did you add a new member to AdapterMemoryInfo? Please initialize it here.");
-#endif
+            ASSERT_SIZEOF(Mem, 40, "Did you add a new member to AdapterMemoryInfo? Please initialize it here.");
         }
 
         // Draw command properties

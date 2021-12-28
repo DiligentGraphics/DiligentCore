@@ -56,9 +56,7 @@ void PSOSerializerD3D12<Mode>::SerializePRSDesc(
     PSOSerializer<Mode>::SerializeArrayRaw(Ser, Allocator, Serialized.pResourceAttribs, Serialized.NumResources);
     PSOSerializer<Mode>::SerializeArrayRaw(Ser, Allocator, Serialized.pImmutableSamplers, Serialized.NumImmutableSamplers);
 
-#if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(Serialized) == 48, "Did you add a new member to PipelineResourceSignatureSerializedDataD3D12? Please add serialization here.");
-#endif
+    ASSERT_SIZEOF64(Serialized, 48, "Did you add a new member to PipelineResourceSignatureSerializedDataD3D12? Please add serialization here.");
 }
 
 template struct PSOSerializerD3D12<SerializerMode::Read>;

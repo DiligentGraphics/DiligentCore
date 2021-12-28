@@ -442,10 +442,7 @@ GraphicsAdapterInfo EngineFactoryD3D11Impl::GetGraphicsAdapterInfo(void*        
         }
         Features.ShaderFloat16 = ShaderFloat16Supported ? DEVICE_FEATURE_STATE_ENABLED : DEVICE_FEATURE_STATE_DISABLED;
     }
-#if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(Features) == 39, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
-#endif
-
+    ASSERT_SIZEOF(Features, 39, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 
     // Texture properties
     {
@@ -461,9 +458,7 @@ GraphicsAdapterInfo EngineFactoryD3D11Impl::GetGraphicsAdapterInfo(void*        
         TexProps.TextureViewSupported       = True;
         TexProps.CubemapArraysSupported     = True;
         TexProps.TextureView2DOn3DSupported = True;
-#if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(TexProps) == 32, "Did you add a new member to TextureProperites? Please initialize it here.");
-#endif
+        ASSERT_SIZEOF(TexProps, 32, "Did you add a new member to TextureProperites? Please initialize it here.");
     }
 
     // Sampler properties
@@ -472,9 +467,7 @@ GraphicsAdapterInfo EngineFactoryD3D11Impl::GetGraphicsAdapterInfo(void*        
         SamProps.BorderSamplingModeSupported   = True;
         SamProps.AnisotropicFilteringSupported = True;
         SamProps.LODBiasSupported              = True;
-#if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(SamProps) == 3, "Did you add a new member to SamplerProperites? Please initialize it here.");
-#endif
+        ASSERT_SIZEOF(SamProps, 3, "Did you add a new member to SamplerProperites? Please initialize it here.");
     }
 
     // Buffer properties
@@ -485,9 +478,7 @@ GraphicsAdapterInfo EngineFactoryD3D11Impl::GetGraphicsAdapterInfo(void*        
         // i.e. 256 bytes.
         BufferProps.ConstantBufferOffsetAlignment   = 256;
         BufferProps.StructuredBufferOffsetAlignment = D3D11_RAW_UAV_SRV_BYTE_ALIGNMENT;
-#if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(BufferProps) == 8, "Did you add a new member to BufferProperites? Please initialize it here.");
-#endif
+        ASSERT_SIZEOF(BufferProps, 8, "Did you add a new member to BufferProperites? Please initialize it here.");
     }
 
     // Compute shader properties
@@ -501,9 +492,7 @@ GraphicsAdapterInfo EngineFactoryD3D11Impl::GetGraphicsAdapterInfo(void*        
         CompProps.MaxThreadGroupCountX      = D3D11_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
         CompProps.MaxThreadGroupCountY      = D3D11_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
         CompProps.MaxThreadGroupCountZ      = D3D11_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
-#if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(CompProps) == 32, "Did you add a new member to ComputeShaderProperties? Please initialize it here.");
-#endif
+        ASSERT_SIZEOF(CompProps, 32, "Did you add a new member to ComputeShaderProperties? Please initialize it here.");
     }
 
     NVApiLoader NVApi;
@@ -523,9 +512,7 @@ GraphicsAdapterInfo EngineFactoryD3D11Impl::GetGraphicsAdapterInfo(void*        
         {
             DrawCommandProps.CapFlags |= DRAW_COMMAND_CAP_FLAG_NATIVE_MULTI_DRAW_INDIRECT;
         }
-#if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(DrawCommandProps) == 12, "Did you add a new member to DrawCommandProperties? Please initialize it here.");
-#endif
+        ASSERT_SIZEOF(DrawCommandProps, 12, "Did you add a new member to DrawCommandProperties? Please initialize it here.");
     }
 
 
@@ -594,9 +581,7 @@ GraphicsAdapterInfo EngineFactoryD3D11Impl::GetGraphicsAdapterInfo(void*        
                 for (Uint32 q = 0; q < AdapterInfo.NumQueues; ++q)
                     AdapterInfo.Queues[q].QueueType |= COMMAND_QUEUE_TYPE_SPARSE_BINDING;
 
-#    if defined(_MSC_VER) && defined(_WIN64)
-                static_assert(sizeof(SparseRes) == 32, "Did you add a new member to SparseResourceProperties? Please initialize it here.");
-#    endif
+                ASSERT_SIZEOF(SparseRes, 32, "Did you add a new member to SparseResourceProperties? Please initialize it here.");
             }
         }
     }
