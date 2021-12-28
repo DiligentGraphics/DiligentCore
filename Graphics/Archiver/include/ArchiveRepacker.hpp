@@ -50,10 +50,11 @@ private:
     using ChunkHeader       = DeviceObjectArchiveBase::ChunkHeader;
     using ChunkType         = DeviceObjectArchiveBase::ChunkType;
     using FileOffsetAndSize = DeviceObjectArchiveBase::FileOffsetAndSize;
-    using NameOffsetMap     = DeviceObjectArchiveBase::NameOffsetMap;
     using BaseDataHeader    = DeviceObjectArchiveBase::BaseDataHeader;
     using RPDataHeader      = DeviceObjectArchiveBase::RPDataHeader;
     using ShadersDataHeader = DeviceObjectArchiveBase::ShadersDataHeader;
+
+    using NameOffsetMap = std::unordered_map<HashMapStringKey, FileOffsetAndSize, HashMapStringKey::Hasher>;
 
     static constexpr Uint32 HeaderMagicNumber = DeviceObjectArchiveBase::HeaderMagicNumber;
     static constexpr Uint32 HeaderVersion     = DeviceObjectArchiveBase::HeaderVersion;
@@ -89,12 +90,13 @@ private:
     DeviceSpecificBlocks m_DeviceSpecific;
 
     std::vector<ChunkHeader> m_Chunks;
-    NameOffsetMap            m_PRSMap;
-    NameOffsetMap            m_GraphicsPSOMap;
-    NameOffsetMap            m_ComputePSOMap;
-    NameOffsetMap            m_TilePSOMap;
-    NameOffsetMap            m_RayTracingPSOMap;
-    NameOffsetMap            m_RenderPassMap;
+
+    NameOffsetMap m_PRSMap;
+    NameOffsetMap m_GraphicsPSOMap;
+    NameOffsetMap m_ComputePSOMap;
+    NameOffsetMap m_TilePSOMap;
+    NameOffsetMap m_RayTracingPSOMap;
+    NameOffsetMap m_RenderPassMap;
 };
 
 } // namespace Diligent

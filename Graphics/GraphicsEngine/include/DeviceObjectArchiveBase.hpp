@@ -281,46 +281,105 @@ private:
         Uint32 Offset = 0;
         Uint32 Size   = 0;
 
-        bool operator==(const FileOffsetAndSize& Rhs) const { return Offset == Rhs.Offset && Size == Rhs.Size; }
+        constexpr bool operator==(const FileOffsetAndSize& Rhs) const { return Offset == Rhs.Offset && Size == Rhs.Size; }
+
+        static constexpr FileOffsetAndSize Invalid() { return {~0u, ~0u}; }
     };
 
-    template <typename ResPtrType>
-    struct FileOffsetAndResCache : FileOffsetAndSize
+    template <typename ResPtrType> // RefCntAutoPtr or RefCntWeakPtr
+    struct FileOffsetSizeAndRes : FileOffsetAndSize
     {
-        ResPtrType Cache;
+        ResPtrType pRes;
 
-        FileOffsetAndResCache() {}
-        FileOffsetAndResCache(const FileOffsetAndSize& OffsetAndSize) :
+        explicit FileOffsetSizeAndRes(const FileOffsetAndSize& OffsetAndSize) noexcept :
             FileOffsetAndSize{OffsetAndSize}
         {}
     };
 
-    using NameOffsetMap = std::unordered_map<HashMapStringKey, FileOffsetAndSize, HashMapStringKey::Hasher>;
-    template <typename ResPtrType>
-    using TNameOffsetMap = std::unordered_map<HashMapStringKey, FileOffsetAndResCache<ResPtrType>, HashMapStringKey::Hasher>;
-    template <typename T>
-    using TNameOffsetMapAndWeakCache = TNameOffsetMap<RefCntWeakPtr<T>>;
 
-    using TPRSOffsetAndCacheMap = TNameOffsetMapAndWeakCache<IPipelineResourceSignature>;
-    using TPSOOffsetAndCacheMap = TNameOffsetMapAndWeakCache<IPipelineState>;
-    using TRPOffsetAndCacheMap  = TNameOffsetMapAndWeakCache<IRenderPass>;
-    using TShaderOffsetAndCache = std::vector<FileOffsetAndResCache<RefCntAutoPtr<IShader>>>; // reference to the shader is not acquired in PSO, so weak ptr has no effect
+    template <typename ResType>
+    class OffsetSizeAndResourceMap
+    {
+    public:
+        void Insert(const char* Name, Uint32 Offset, Uint32 Size)
+        {
+            std::unique_lock<std::mutex> Lock{m_Mtx};
 
-    TPRSOffsetAndCacheMap m_PRSMap;
-    TPSOOffsetAndCacheMap m_GraphicsPSOMap;
-    TPSOOffsetAndCacheMap m_ComputePSOMap;
-    TPSOOffsetAndCacheMap m_TilePSOMap;
-    TPSOOffsetAndCacheMap m_RayTracingPSOMap;
-    TRPOffsetAndCacheMap  m_RenderPassMap;
+            bool Inserted = m_Map.emplace(HashMapStringKey{Name, true}, FileOffsetAndSize{Offset, Size}).second;
+            DEV_CHECK_ERR(Inserted, "Each name in the resource map must be unique");
+        }
+
+        FileOffsetAndSize GetOffsetAndSize(const char* Name, const char*& StoredNamePtr)
+        {
+            std::unique_lock<std::mutex> Lock{m_Mtx};
+
+            auto it = m_Map.find(Name);
+            if (it != m_Map.end())
+            {
+                StoredNamePtr = it->first.GetStr();
+                return it->second;
+            }
+            else
+            {
+                StoredNamePtr = nullptr;
+                return FileOffsetAndSize::Invalid();
+            }
+        }
+
+        bool GetResource(const char* Name, ResType** ppResource)
+        {
+            VERIFY_EXPR(Name != nullptr);
+            VERIFY_EXPR(ppResource != nullptr && *ppResource == nullptr);
+            *ppResource = nullptr;
+
+            std::unique_lock<std::mutex> Lock{m_Mtx};
+
+            auto it = m_Map.find(Name);
+            if (it == m_Map.end())
+                return false;
+
+            auto Ptr = it->second.pRes.Lock();
+            if (Ptr == nullptr)
+                return false;
+
+            *ppResource = Ptr.Detach();
+            return true;
+        }
+
+        void SetResource(const char* Name, ResType* pResource)
+        {
+            VERIFY_EXPR(Name != nullptr && Name[0] != '\0');
+            VERIFY_EXPR(pResource != nullptr);
+
+            std::unique_lock<std::mutex> Lock{m_Mtx};
+
+            auto it = m_Map.find(Name);
+            if (it == m_Map.end())
+                return;
+
+            if (it->second.pRes.IsValid())
+                return;
+
+            it->second.pRes = pResource;
+        }
+
+    private:
+        std::mutex m_Mtx;
+
+        std::unordered_map<HashMapStringKey, FileOffsetSizeAndRes<RefCntWeakPtr<ResType>>, HashMapStringKey::Hasher> m_Map;
+    };
+
+    OffsetSizeAndResourceMap<IPipelineResourceSignature> m_PRSMap;
+    OffsetSizeAndResourceMap<IPipelineState>             m_GraphicsPSOMap;
+    OffsetSizeAndResourceMap<IPipelineState>             m_ComputePSOMap;
+    OffsetSizeAndResourceMap<IPipelineState>             m_TilePSOMap;
+    OffsetSizeAndResourceMap<IPipelineState>             m_RayTracingPSOMap;
+    OffsetSizeAndResourceMap<IRenderPass>                m_RenderPassMap;
+
+    using TShaderOffsetAndCache = std::vector<FileOffsetSizeAndRes<RefCntAutoPtr<IShader>>>; // reference to the shader is not acquired in PSO, so weak ptr has no effect
+
+    std::mutex            m_ShadersGuard;
     TShaderOffsetAndCache m_Shaders;
-
-    std::mutex m_PRSMapGuard;
-    std::mutex m_GraphicsPSOMapGuard;
-    std::mutex m_ComputePSOMapGuard;
-    std::mutex m_TilePSOMapGuard;
-    std::mutex m_RayTracingPSOMapGuard;
-    std::mutex m_RenderPassMapGuard;
-    std::mutex m_ShadersGuard;
 
     struct
     {
@@ -332,18 +391,15 @@ private:
     const DeviceType        m_DevType;
     TBlockBaseOffsets       m_BaseOffsets = {};
 
-    template <typename MapType>
-    static void ReadNamedResources(IArchive* pArchive, const ChunkHeader& Chunk, MapType& NameAndOffset, std::mutex& Guard) noexcept(false);
-    static void ReadNamedResources2(IArchive* pArchive, const ChunkHeader& Chunk, NameOffsetMap& NameAndOffset) noexcept(false);
-    template <typename ResType>
-    void ReadNamedResources(const ChunkHeader& Chunk, TNameOffsetMap<ResType>& NameAndOffset, std::mutex& Guard) noexcept(false);
-    void ReadIndexedResources(const ChunkHeader& Chunk, TShaderOffsetAndCache& Resources, std::mutex& Guard) noexcept(false);
-    void ReadArchiveDebugInfo(const ChunkHeader& Chunk) noexcept(false);
+    template <typename ResourceHandlerType>
+    static void ReadNamedResources(IArchive*           pArchive,
+                                   const ChunkHeader&  Chunk,
+                                   ResourceHandlerType Handler) noexcept(false);
 
     template <typename ResType>
-    bool GetCachedResource(const char* Name, TNameOffsetMapAndWeakCache<ResType>& Cache, std::mutex& Guard, ResType** ppResource);
-    template <typename ResType>
-    void CacheResource(const char* Name, TNameOffsetMapAndWeakCache<ResType>& Cache, std::mutex& Guard, ResType* pResource);
+    void ReadNamedResources(const ChunkHeader& Chunk, OffsetSizeAndResourceMap<ResType>& ResourceMap) noexcept(false);
+    void ReadIndexedResources(const ChunkHeader& Chunk, TShaderOffsetAndCache& Resources, std::mutex& Guard) noexcept(false);
+    void ReadArchiveDebugInfo(const ChunkHeader& Chunk) noexcept(false);
 
     BlockOffsetType GetBlockOffsetType() const;
 
@@ -384,7 +440,6 @@ private:
     bool ReadPSOData(ChunkType                   Type,
                      const char*                 Name,
                      PSOHashMapType&             PSOMap,
-                     std::mutex&                 PSOMapGuard,
                      const char*                 ResTypeName,
                      PSOData<PSOCreateInfoType>& PSO,
                      ExtraArgsType&&... ExtraArgs);
@@ -406,12 +461,11 @@ private:
     bool ReadRPData(const char* Name, RPData& RP);
 
     template <typename ResType, typename FnType>
-    bool LoadResourceData(const TNameOffsetMap<ResType>& NameAndOffset,
-                          std::mutex&                    Guard,
-                          const char*                    ResourceName,
-                          DynamicLinearAllocator&        Allocator,
-                          const char*                    ResTypeName,
-                          const FnType&                  Fn);
+    bool LoadResourceData(OffsetSizeAndResourceMap<ResType>& ResourceMap,
+                          const char*                        ResourceName,
+                          DynamicLinearAllocator&            Allocator,
+                          const char*                        ResTypeName,
+                          const FnType&                      Fn);
 
     template <typename HeaderType>
     bool GetDeviceSpecificData(const HeaderType&       Header,
@@ -446,8 +500,6 @@ protected:
                                      ShaderCreateInfo&                 ShaderCI,
                                      IRenderDevice*                    pDevice,
                                      IShader**                         ppShader);
-
-    static constexpr Uint32 GetHeaderVersion() { return HeaderVersion; }
 };
 
 template <typename RenderDeviceImplType, typename PSOSerializerType>
@@ -457,7 +509,7 @@ RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveBase::UnpackResourc
 {
     RefCntAutoPtr<IPipelineResourceSignature> pSignature;
     // Do not reuse implicit signatures
-    if (!IsImplicit && GetCachedResource(DeArchiveInfo.Name, m_PRSMap, m_PRSMapGuard, pSignature.RawDblPtr()))
+    if (!IsImplicit && m_PRSMap.GetResource(DeArchiveInfo.Name, pSignature.RawDblPtr()))
         return pSignature;
 
     PRSData PRS{GetRawAllocator()};
@@ -481,10 +533,53 @@ RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveBase::UnpackResourc
     pRenderDevice->CreatePipelineResourceSignature(PRS.Desc, SerializedData, &pSignature);
 
     if (!IsImplicit)
-        CacheResource(DeArchiveInfo.Name, m_PRSMap, m_PRSMapGuard, pSignature.RawPtr());
+        m_PRSMap.SetResource(DeArchiveInfo.Name, pSignature.RawPtr());
 
     return pSignature;
 }
 
+
+template <typename ResourceHandlerType>
+void DeviceObjectArchiveBase::ReadNamedResources(IArchive*           pArchive,
+                                                 const ChunkHeader&  Chunk,
+                                                 ResourceHandlerType Handler) noexcept(false)
+{
+    VERIFY_EXPR(Chunk.Type == ChunkType::ResourceSignature ||
+                Chunk.Type == ChunkType::GraphicsPipelineStates ||
+                Chunk.Type == ChunkType::ComputePipelineStates ||
+                Chunk.Type == ChunkType::RayTracingPipelineStates ||
+                Chunk.Type == ChunkType::TilePipelineStates ||
+                Chunk.Type == ChunkType::RenderPass);
+
+    std::vector<Uint8> Data(Chunk.Size);
+    if (!pArchive->Read(Chunk.Offset, Data.size(), Data.data()))
+    {
+        LOG_ERROR_AND_THROW("Failed to read resource list from archive");
+    }
+
+    FixedLinearAllocator InPlaceAlloc{Data.data(), Data.size()};
+
+    const auto& Header          = *InPlaceAlloc.Allocate<NamedResourceArrayHeader>();
+    const auto* NameLengthArray = InPlaceAlloc.Allocate<Uint32>(Header.Count);
+    const auto* DataSizeArray   = InPlaceAlloc.Allocate<Uint32>(Header.Count);
+    const auto* DataOffsetArray = InPlaceAlloc.Allocate<Uint32>(Header.Count);
+
+    // Read names
+    for (Uint32 i = 0; i < Header.Count; ++i)
+    {
+        if (InPlaceAlloc.GetCurrentSize() + NameLengthArray[i] > Data.size())
+        {
+            LOG_ERROR_AND_THROW("Failed to read archive data");
+        }
+        if (DataOffsetArray[i] + DataSizeArray[i] > pArchive->GetSize())
+        {
+            LOG_ERROR_AND_THROW("Failed to read archive data");
+        }
+        const auto* Name = InPlaceAlloc.Allocate<char>(NameLengthArray[i]);
+        VERIFY_EXPR(strlen(Name) + 1 == NameLengthArray[i]);
+
+        Handler(Name, DataOffsetArray[i], DataSizeArray[i]);
+    }
+}
 
 } // namespace Diligent

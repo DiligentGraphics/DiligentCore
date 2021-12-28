@@ -477,7 +477,11 @@ void ArchiveRepacker::Serialize(IFileStream* pStream) noexcept(false)
 void ArchiveRepacker::ReadNamedResources(const ChunkHeader& Chunk, NameOffsetMap& NameAndOffset) noexcept(false)
 {
     auto* pArchive = m_SharedData.pArchive.RawPtr<IArchive>();
-    DeviceObjectArchiveBase::ReadNamedResources2(pArchive, Chunk, NameAndOffset);
+    DeviceObjectArchiveBase::ReadNamedResources(pArchive, Chunk,
+                                                [&NameAndOffset](const char* Name, Uint32 Offset, Uint32 Size) //
+                                                {
+                                                    NameAndOffset.emplace(HashMapStringKey{Name, true}, FileOffsetAndSize{Offset, Size});
+                                                });
 }
 
 namespace
