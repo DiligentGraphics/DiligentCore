@@ -97,11 +97,11 @@ public:
 
     virtual void DILIGENT_CALL_TYPE ClearResourceCache() override final;
 
-    void UnpackGraphicsPSO(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState** ppPSO);
-    void UnpackComputePSO(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState** ppPSO);
-    void UnpackRayTracingPSO(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState** ppPSO);
-    void UnpackTilePSO(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState** ppPSO);
-    void UnpackRenderPass(const RenderPassUnpackInfo& DeArchiveInfo, IRenderPass** ppRP);
+    void UnpackGraphicsPSO(const PipelineStateUnpackInfo& UnpackInfo, IPipelineState** ppPSO);
+    void UnpackComputePSO(const PipelineStateUnpackInfo& UnpackInfo, IPipelineState** ppPSO);
+    void UnpackRayTracingPSO(const PipelineStateUnpackInfo& UnpackInfo, IPipelineState** ppPSO);
+    void UnpackTilePSO(const PipelineStateUnpackInfo& UnpackInfo, IPipelineState** ppPSO);
+    void UnpackRenderPass(const RenderPassUnpackInfo& UnpackInfo, IRenderPass** ppRP);
 
 protected:
     static constexpr Uint32 HeaderMagicNumber = 0xDE00000A;
@@ -301,6 +301,13 @@ private:
     class OffsetSizeAndResourceMap
     {
     public:
+        OffsetSizeAndResourceMap() noexcept {};
+
+        OffsetSizeAndResourceMap(const OffsetSizeAndResourceMap&) = delete;
+        OffsetSizeAndResourceMap(OffsetSizeAndResourceMap&&)      = delete;
+        OffsetSizeAndResourceMap& operator=(const OffsetSizeAndResourceMap&) = delete;
+        OffsetSizeAndResourceMap& operator=(OffsetSizeAndResourceMap&&) = delete;
+
         void Insert(const char* Name, Uint32 Offset, Uint32 Size)
         {
             std::unique_lock<std::mutex> Lock{m_Mtx};
@@ -398,7 +405,7 @@ private:
 
     template <typename ResType>
     void ReadNamedResources(const ChunkHeader& Chunk, OffsetSizeAndResourceMap<ResType>& ResourceMap) noexcept(false);
-    void ReadIndexedResources(const ChunkHeader& Chunk, TShaderOffsetAndCache& Resources, std::mutex& Guard) noexcept(false);
+    void ReadShaders(const ChunkHeader& Chunk) noexcept(false);
     void ReadArchiveDebugInfo(const ChunkHeader& Chunk) noexcept(false);
 
     BlockOffsetType GetBlockOffsetType() const;
@@ -411,7 +418,7 @@ protected:
         PipelineResourceSignatureDesc           Desc{};
         PipelineResourceSignatureSerializedData Serialized{};
 
-        explicit PRSData(IMemoryAllocator& Allocator, Uint32 BlockSize = 4 << 10) :
+        explicit PRSData(IMemoryAllocator& Allocator, Uint32 BlockSize = 1 << 10) :
             Allocator{Allocator, BlockSize}
         {}
     };
@@ -427,8 +434,15 @@ protected:
 
         // Strong references to pipeline resource signatures, render pass, etc.
         std::vector<RefCntAutoPtr<IDeviceObject>> Objects;
+        std::vector<RefCntAutoPtr<IShader>>       Shaders;
 
-        explicit PSOData(IMemoryAllocator& Allocator, Uint32 BlockSize = 4 << 10) :
+        void Deserialize(Serializer<SerializerMode::Read>& Ser);
+        void AssignShaders();
+        void CreatePipeline(IRenderDevice* pDevice, IPipelineState** ppPSO);
+
+        static const ChunkType ExpectedChunkType;
+
+        explicit PSOData(IMemoryAllocator& Allocator, Uint32 BlockSize = 2 << 10) :
             Allocator{Allocator, BlockSize}
         {}
     };
@@ -436,17 +450,11 @@ protected:
 private:
     bool ReadPRSData(const char* Name, PRSData& PRS);
 
-    template <typename PSOHashMapType, typename PSOCreateInfoType, typename... ExtraArgsType>
-    bool ReadPSOData(ChunkType                   Type,
-                     const char*                 Name,
+    template <typename PSOHashMapType, typename PSOCreateInfoType>
+    bool ReadPSOData(const char*                 Name,
                      PSOHashMapType&             PSOMap,
                      const char*                 ResTypeName,
-                     PSOData<PSOCreateInfoType>& PSO,
-                     ExtraArgsType&&... ExtraArgs);
-
-    bool LoadShaders(Serializer<SerializerMode::Read>&    Ser,
-                     IRenderDevice*                       pDevice,
-                     std::vector<RefCntAutoPtr<IShader>>& Shaders);
+                     PSOData<PSOCreateInfoType>& PSO);
 
     struct RPData
     {
@@ -454,7 +462,7 @@ private:
         const RPDataHeader*    pHeader = nullptr;
         RenderPassDesc         Desc{};
 
-        explicit RPData(IMemoryAllocator& Allocator, Uint32 BlockSize = 4 << 10) :
+        explicit RPData(IMemoryAllocator& Allocator, Uint32 BlockSize = 1 << 10) :
             Allocator{Allocator, BlockSize}
         {}
     };
@@ -475,16 +483,26 @@ private:
                                void*&                  pData,
                                size_t&                 Size);
 
-    static constexpr Uint32 DefaultSRBAllocationGranularity = 1;
+    template <typename CreateInfoType>
+    bool UnpackPSOSignatures(PSOData<CreateInfoType>& PSO, IRenderDevice* pDevice);
 
     template <typename CreateInfoType>
-    bool CreateResourceSignatures(PSOData<CreateInfoType>& PSO, IRenderDevice* pDevice);
+    bool UnpackPSORenderPass(PSOData<CreateInfoType>& PSO, IRenderDevice* pDevice) { return true; }
 
-    bool CreateRenderPass(PSOData<GraphicsPipelineStateCreateInfo>& PSO, IRenderDevice* pDevice);
+    template <typename CreateInfoType>
+    bool UnpackPSOShaders(PSOData<CreateInfoType>& PSO,
+                          IRenderDevice*           pDevice,
+                          const char*              PipelineTypeName);
 
     template <typename PSOCreateInfoType>
     bool ModifyPipelineStateCreateInfo(PSOCreateInfoType&             CreateInfo,
                                        const PipelineStateUnpackInfo& DeArchiveInfo);
+
+    template <typename CreateInfoType>
+    void UnpackPipelineStateImpl(const PipelineStateUnpackInfo&            UnpackInfo,
+                                 IPipelineState**                          ppPSO,
+                                 OffsetSizeAndResourceMap<IPipelineState>& PSOMap,
+                                 const char*                               PipelineTypeName);
 
 protected:
     using CreateSignatureType = std::function<RefCntAutoPtr<IPipelineResourceSignature>(PRSData& PRS, Serializer<SerializerMode::Read>& Ser)>;
@@ -496,10 +514,9 @@ protected:
 
     virtual RefCntAutoPtr<IPipelineResourceSignature> UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, bool IsImplicit) = 0;
 
-    virtual void ReadAndCreateShader(Serializer<SerializerMode::Read>& Ser,
-                                     ShaderCreateInfo&                 ShaderCI,
-                                     IRenderDevice*                    pDevice,
-                                     IShader**                         ppShader);
+    virtual RefCntAutoPtr<IShader> UnpackShader(Serializer<SerializerMode::Read>& Ser,
+                                                ShaderCreateInfo&                 ShaderCI,
+                                                IRenderDevice*                    pDevice);
 };
 
 template <typename RenderDeviceImplType, typename PSOSerializerType>

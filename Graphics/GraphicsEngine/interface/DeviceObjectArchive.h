@@ -58,11 +58,6 @@ static const INTERFACE_ID IID_DeviceObjectArchive =
 /// Device object archive interface
 DILIGENT_BEGIN_INTERFACE(IDeviceObjectArchive, IObject)
 {
-    // AZ TODO
-    //VIRTUAL Bool METHOD(PrefetchPipelineStates)(THIS_
-    //                                            const Char* const* pNames,
-    //                                            Uint32             NameCount) PURE;
-
     /// Release strong references for objects which was created by device object archive.
     VIRTUAL void METHOD(ClearResourceCache)(THIS) PURE;
 };

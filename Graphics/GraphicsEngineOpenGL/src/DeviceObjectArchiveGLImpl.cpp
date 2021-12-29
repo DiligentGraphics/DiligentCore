@@ -47,7 +47,9 @@ RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveGLImpl::UnpackResou
     return DeviceObjectArchiveBase::UnpackResourceSignatureImpl<RenderDeviceGLImpl, PSOSerializerGL<SerializerMode::Read>>(DeArchiveInfo, IsImplicit);
 }
 
-void DeviceObjectArchiveGLImpl::ReadAndCreateShader(Serializer<SerializerMode::Read>& Ser, ShaderCreateInfo& ShaderCI, IRenderDevice* pDevice, IShader** ppShader)
+RefCntAutoPtr<IShader> DeviceObjectArchiveGLImpl::UnpackShader(Serializer<SerializerMode::Read>& Ser,
+                                                               ShaderCreateInfo&                 ShaderCI,
+                                                               IRenderDevice*                    pDevice)
 {
     Ser(ShaderCI.UseCombinedTextureSamplers, ShaderCI.CombinedSamplerSuffix);
 
@@ -57,7 +59,9 @@ void DeviceObjectArchiveGLImpl::ReadAndCreateShader(Serializer<SerializerMode::R
 
     ShaderCI.CompileFlags &= ~SHADER_COMPILE_FLAG_SKIP_REFLECTION; // AZ TODO: remove
 
-    pDevice->CreateShader(ShaderCI, ppShader);
+    RefCntAutoPtr<IShader> pShader;
+    pDevice->CreateShader(ShaderCI, &pShader);
+    return pShader;
 }
 
 template <SerializerMode Mode>
