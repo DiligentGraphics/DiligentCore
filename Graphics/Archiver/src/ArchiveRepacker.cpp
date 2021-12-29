@@ -24,8 +24,9 @@
  *  of the possibility of such damages.
  */
 
-#include <bitset>
 #include "ArchiveRepacker.hpp"
+
+#include <bitset>
 
 namespace Diligent
 {
@@ -135,7 +136,7 @@ ArchiveRepacker::ArchiveRepacker(IArchive* pArchive)
 
 void ArchiveRepacker::RemoveDeviceData(DeviceType Dev) noexcept(false)
 {
-    m_DeviceSpecific[static_cast<Uint32>(Dev)] = ArchiveBlock{};
+    m_DeviceSpecific[static_cast<size_t>(Dev)] = ArchiveBlock{};
 
     ArchiveBlock NewSharedBlock = m_SharedData;
     if (!NewSharedBlock.LoadToMemory())
@@ -159,8 +160,8 @@ void ArchiveRepacker::RemoveDeviceData(DeviceType Dev) noexcept(false)
             if (Header.Type != chunkType)
                 continue;
 
-            Header.DeviceSpecificDataSize[static_cast<Uint32>(Dev)]   = 0;
-            Header.DeviceSpecificDataOffset[static_cast<Uint32>(Dev)] = InvalidOffset;
+            Header.DeviceSpecificDataSize[static_cast<size_t>(Dev)]   = 0;
+            Header.DeviceSpecificDataOffset[static_cast<size_t>(Dev)] = InvalidOffset;
 
             // Update header
             NewSharedBlock.Write(Res.second.Offset, sizeof(Header), &Header);
@@ -191,8 +192,8 @@ void ArchiveRepacker::RemoveDeviceData(DeviceType Dev) noexcept(false)
             {
                 VERIFY_EXPR(Header.Type == ChunkType::Shaders);
 
-                Header.DeviceSpecificDataSize[static_cast<Uint32>(Dev)]   = 0;
-                Header.DeviceSpecificDataOffset[static_cast<Uint32>(Dev)] = InvalidOffset;
+                Header.DeviceSpecificDataSize[static_cast<size_t>(Dev)]   = 0;
+                Header.DeviceSpecificDataOffset[static_cast<size_t>(Dev)] = InvalidOffset;
 
                 // Update header
                 NewSharedBlock.Write(Chunk.Offset, sizeof(Header), &Header);
@@ -232,7 +233,7 @@ bool ArchiveRepacker::ArchiveBlock::Read(Uint64 OffsetInBlock, Uint64 DataSize, 
     {
         if (OffsetInBlock < Memory.size() && OffsetInBlock + DataSize <= Memory.size())
         {
-            memcpy(pData, &Memory[static_cast<size_t>(OffsetInBlock)], static_cast<size_t>(DataSize));
+            memcpy(pData, &Memory[StaticCast<size_t>(OffsetInBlock)], StaticCast<size_t>(DataSize));
             return true;
         }
         return false;
@@ -268,7 +269,7 @@ void ArchiveRepacker::AppendDeviceData(const ArchiveRepacker& Src, DeviceType De
     if (!Src.m_SharedData.IsValid())
         LOG_ERROR_AND_THROW("Shared data block is not present");
 
-    if (!Src.m_DeviceSpecific[static_cast<Uint32>(Dev)].IsValid())
+    if (!Src.m_DeviceSpecific[static_cast<size_t>(Dev)].IsValid())
         LOG_ERROR_AND_THROW("Can not append device specific block - block is not present");
 
     ArchiveBlock NewSharedBlock = m_SharedData;

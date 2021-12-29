@@ -56,9 +56,9 @@ private:
 
     using NameOffsetMap = std::unordered_map<HashMapStringKey, FileOffsetAndSize, HashMapStringKey::Hasher>;
 
-    static constexpr Uint32 HeaderMagicNumber = DeviceObjectArchiveBase::HeaderMagicNumber;
-    static constexpr Uint32 HeaderVersion     = DeviceObjectArchiveBase::HeaderVersion;
-    static constexpr Uint32 InvalidOffset     = DeviceObjectArchiveBase::BaseDataHeader::InvalidOffset;
+    static constexpr auto HeaderMagicNumber = DeviceObjectArchiveBase::HeaderMagicNumber;
+    static constexpr auto HeaderVersion     = DeviceObjectArchiveBase::HeaderVersion;
+    static constexpr auto InvalidOffset     = DeviceObjectArchiveBase::BaseDataHeader::InvalidOffset;
 
     void ReadNamedResources(const ChunkHeader& Chunk, NameOffsetMap& NameAndOffset) noexcept(false);
 
