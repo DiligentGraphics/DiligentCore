@@ -37,6 +37,76 @@
 namespace Diligent
 {
 
+template <typename ResType>
+void DeviceObjectArchiveBase::OffsetSizeAndResourceMap<ResType>::Insert(const char* Name, Uint32 Offset, Uint32 Size)
+{
+    std::unique_lock<std::mutex> Lock{m_Mtx};
+
+    bool Inserted = m_Map.emplace(HashMapStringKey{Name, true}, FileOffsetAndSize{Offset, Size}).second;
+    DEV_CHECK_ERR(Inserted, "Each name in the resource map must be unique");
+}
+
+
+template <typename ResType>
+DeviceObjectArchiveBase::FileOffsetAndSize DeviceObjectArchiveBase::OffsetSizeAndResourceMap<ResType>::GetOffsetAndSize(const char* Name, const char*& StoredNamePtr)
+{
+    std::unique_lock<std::mutex> Lock{m_Mtx};
+
+    auto it = m_Map.find(Name);
+    if (it != m_Map.end())
+    {
+        StoredNamePtr = it->first.GetStr();
+        return it->second;
+    }
+    else
+    {
+        StoredNamePtr = nullptr;
+        return FileOffsetAndSize::Invalid();
+    }
+}
+
+template <typename ResType>
+bool DeviceObjectArchiveBase::OffsetSizeAndResourceMap<ResType>::GetResource(const char* Name, ResType** ppResource)
+{
+    VERIFY_EXPR(Name != nullptr);
+    VERIFY_EXPR(ppResource != nullptr && *ppResource == nullptr);
+    *ppResource = nullptr;
+
+    std::unique_lock<std::mutex> Lock{m_Mtx};
+
+    auto it = m_Map.find(Name);
+    if (it == m_Map.end())
+        return false;
+
+    auto Ptr = it->second.pRes.Lock();
+    if (Ptr == nullptr)
+        return false;
+
+    *ppResource = Ptr.Detach();
+    return true;
+}
+
+template <typename ResType>
+void DeviceObjectArchiveBase::OffsetSizeAndResourceMap<ResType>::SetResource(const char* Name, ResType* pResource)
+{
+    VERIFY_EXPR(Name != nullptr && Name[0] != '\0');
+    VERIFY_EXPR(pResource != nullptr);
+
+    std::unique_lock<std::mutex> Lock{m_Mtx};
+
+    auto it = m_Map.find(Name);
+    if (it == m_Map.end())
+        return;
+
+    if (it->second.pRes.IsValid())
+        return;
+
+    it->second.pRes = pResource;
+}
+
+// Instantiation is required by UnpackResourceSignatureImpl
+template class DeviceObjectArchiveBase::OffsetSizeAndResourceMap<IPipelineResourceSignature>;
+
 DeviceObjectArchiveBase::DeviceObjectArchiveBase(IReferenceCounters* pRefCounters, IArchive* pArchive, DeviceType DevType) :
     TObjectBase{pRefCounters},
     m_pArchive{pArchive},
