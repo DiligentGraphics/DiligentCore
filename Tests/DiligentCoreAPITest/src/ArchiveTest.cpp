@@ -648,7 +648,17 @@ TEST(ArchiveTest, GraphicsPipeline)
                 };
             LayoutDesc.ImmutableSamplers    = ImmutableSamplers;
             LayoutDesc.NumImmutableSamplers = _countof(ImmutableSamplers);
-            LayoutDesc.DefaultVariableType  = VarType;
+
+            constexpr ShaderResourceVariableDesc Variables[] = //
+                {
+                    {SHADER_TYPE_ALL_GRAPHICS, "cbConstants", SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+                    {SHADER_TYPE_PIXEL, "g_GBuffer_Color", SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+                    {SHADER_TYPE_PIXEL, "g_GBuffer_Normal", SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+                    {SHADER_TYPE_PIXEL, "g_GBuffer_Depth", SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE} //
+                };
+            LayoutDesc.Variables           = Variables;
+            LayoutDesc.NumVariables        = _countof(Variables);
+            LayoutDesc.DefaultVariableType = VarType;
 
             PSOCreateInfo2.PSODesc.Name           = PSO1Name;
             PSOCreateInfo2.PSODesc.ResourceLayout = LayoutDesc;

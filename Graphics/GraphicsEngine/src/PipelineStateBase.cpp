@@ -220,8 +220,21 @@ void ValidatePipelineResourceSignatures(const PipelineStateCreateInfo& CreateInf
         }
     }
 
-    std::unordered_multimap<HashMapStringKey, std::pair<SHADER_TYPE, const IPipelineResourceSignature*>, HashMapStringKey::Hasher> AllResources;
-    std::unordered_multimap<HashMapStringKey, std::pair<SHADER_TYPE, const IPipelineResourceSignature*>, HashMapStringKey::Hasher> AllImtblSamplers;
+    struct ResourceInfo
+    {
+        const SHADER_TYPE                 Stages;
+        const IPipelineResourceSignature* pSign;
+        const PipelineResourceDesc&       Desc;
+    };
+    struct ImtblSamInfo
+    {
+        const SHADER_TYPE                 Stages;
+        const IPipelineResourceSignature* pSign;
+        const ImmutableSamplerDesc&       Desc;
+    };
+
+    std::unordered_multimap<HashMapStringKey, ResourceInfo, HashMapStringKey::Hasher> AllResources;
+    std::unordered_multimap<HashMapStringKey, ImtblSamInfo, HashMapStringKey::Hasher> AllImtblSamplers;
 
     std::array<const IPipelineResourceSignature*, MAX_RESOURCE_SIGNATURES> ppSignatures = {};
     for (Uint32 i = 0; i < CreateInfo.ResourceSignaturesCount; ++i)
@@ -251,28 +264,28 @@ void ValidatePipelineResourceSignatures(const PipelineStateCreateInfo& CreateInf
             auto range = AllResources.equal_range(ResDesc.Name);
             for (auto it = range.first; it != range.second; ++it)
             {
-                const auto& StageSig = it->second;
-                if ((StageSig.first & ResDesc.ShaderStages) != 0)
+                const auto& OtherRes = it->second;
+                if ((OtherRes.Stages & ResDesc.ShaderStages) != 0)
                 {
-                    VERIFY(StageSig.second != pSignature, "Overlapping resources in one signature should've been caught by ValidatePipelineResourceSignatureDesc()");
+                    VERIFY(OtherRes.pSign != pSignature, "Overlapping resources in one signature should've been caught by ValidatePipelineResourceSignatureDesc()");
 
                     LOG_PSO_ERROR_AND_THROW("Shader resource '", ResDesc.Name, "' is found in more than one resource signature ('", SignDesc.Name,
-                                            "' and '", StageSig.second->GetDesc().Name,
+                                            "' and '", OtherRes.pSign->GetDesc().Name,
                                             "') in the same shader stage. Every shader resource in the PSO must be unambiguously defined by only one resource signature.");
                 }
 
                 if (Features.SeparablePrograms == DEVICE_FEATURE_STATE_DISABLED)
                 {
-                    VERIFY_EXPR(StageSig.first != SHADER_TYPE_UNKNOWN);
-                    VERIFY(StageSig.second != pSignature, "Resources with the same name in one signature should've been caught by ValidatePipelineResourceSignatureDesc()");
+                    VERIFY_EXPR(OtherRes.Stages != SHADER_TYPE_UNKNOWN);
+                    VERIFY(OtherRes.pSign != pSignature, "Resources with the same name in one signature should've been caught by ValidatePipelineResourceSignatureDesc()");
 
                     LOG_PSO_ERROR_AND_THROW("This device does not support separable programs, but shader resource '", ResDesc.Name, "' is found in more than one resource signature ('",
-                                            SignDesc.Name, "' and '", StageSig.second->GetDesc().Name,
+                                            SignDesc.Name, "' and '", OtherRes.pSign->GetDesc().Name,
                                             "') in different stages. When separable programs are not supported, every resource is always shared between all stages. "
                                             "Use distinct resource names for each stage or define a single resource for all stages.");
                 }
             }
-            AllResources.emplace(ResDesc.Name, std::make_pair(ResDesc.ShaderStages, pSignature));
+            AllResources.emplace(ResDesc.Name, ResourceInfo{ResDesc.ShaderStages, pSignature, ResDesc});
         }
 
         for (Uint32 res = 0; res < SignDesc.NumImmutableSamplers; ++res)
@@ -284,28 +297,126 @@ void ValidatePipelineResourceSignatures(const PipelineStateCreateInfo& CreateInf
             auto range = AllImtblSamplers.equal_range(SamDesc.SamplerOrTextureName);
             for (auto it = range.first; it != range.second; ++it)
             {
-                const auto& StageSig = it->second;
-                if ((StageSig.first & SamDesc.ShaderStages) != 0)
+                const auto& OtherSam = it->second;
+                if ((OtherSam.Stages & SamDesc.ShaderStages) != 0)
                 {
-                    VERIFY(StageSig.second != pSignature, "Overlapping immutable samplers in one signature should've been caught by ValidatePipelineResourceSignatureDesc()");
+                    VERIFY(OtherSam.pSign != pSignature, "Overlapping immutable samplers in one signature should've been caught by ValidatePipelineResourceSignatureDesc()");
 
                     LOG_PSO_ERROR_AND_THROW("Immutable sampler '", SamDesc.SamplerOrTextureName, "' is found in more than one resource signature ('", SignDesc.Name,
-                                            "' and '", StageSig.second->GetDesc().Name,
+                                            "' and '", OtherSam.pSign->GetDesc().Name,
                                             "') in the same stage. Every immutable sampler in the PSO must be unambiguously defined by only one resource signature.");
                 }
 
                 if (Features.SeparablePrograms == DEVICE_FEATURE_STATE_DISABLED)
                 {
-                    VERIFY_EXPR(StageSig.first != SHADER_TYPE_UNKNOWN);
-                    VERIFY(StageSig.second != pSignature, "Immutable samplers with the same name in one signature should've been caught by ValidatePipelineResourceSignatureDesc()");
+                    VERIFY_EXPR(OtherSam.Stages != SHADER_TYPE_UNKNOWN);
+                    VERIFY(OtherSam.pSign != pSignature, "Immutable samplers with the same name in one signature should've been caught by ValidatePipelineResourceSignatureDesc()");
 
                     LOG_PSO_ERROR_AND_THROW("This device does not support separable programs, but immutable sampler '", SamDesc.SamplerOrTextureName, "' is found in more than one resource signature ('",
-                                            SignDesc.Name, "' and '", StageSig.second->GetDesc().Name,
+                                            SignDesc.Name, "' and '", OtherSam.pSign->GetDesc().Name,
                                             "') in different stages. When separable programs are not supported, every resource is always shared between all stages. "
                                             "Use distinct resource names for each stage or define a single immutable sampler for all stages.");
                 }
             }
-            AllImtblSamplers.emplace(SamDesc.SamplerOrTextureName, std::make_pair(SamDesc.ShaderStages, pSignature));
+            AllImtblSamplers.emplace(SamDesc.SamplerOrTextureName, ImtblSamInfo{SamDesc.ShaderStages, pSignature, SamDesc});
+        }
+    }
+
+
+    if ((CreateInfo.Flags & PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0) != 0)
+    {
+        const auto& ResLayout = CreateInfo.PSODesc.ResourceLayout;
+        for (Uint32 i = 0; i < ResLayout.NumVariables; ++i)
+        {
+            const auto& Var = ResLayout.Variables[i];
+            if (Var.Name == nullptr)
+                LOG_PSO_ERROR_AND_THROW("ResourceLayout.Variables[", i, "].Name is null");
+
+            auto range = AllResources.equal_range(Var.Name);
+            auto it    = range.first;
+            for (; it != range.second; ++it)
+            {
+                const auto& SignRes = it->second;
+                if ((SignRes.Stages & Var.ShaderStages) == 0)
+                    continue;
+
+                if (SignRes.Stages != Var.ShaderStages)
+                {
+                    LOG_PSO_ERROR_AND_THROW("Shader stages of variable '", Var.Name, "' defined by the resource layout (", GetShaderStagesString(Var.ShaderStages),
+                                            ") do not match the stages defined by the implicit resource signatre (", GetShaderStagesString(SignRes.Stages),
+                                            "). Note that PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0 flag is for internal use only. If you see this message while "
+                                            "unpacking PSO from the archive, this might indicate a bug.");
+                }
+
+                if (SignRes.Desc.VarType != Var.Type)
+                {
+                    LOG_PSO_ERROR_AND_THROW("The type of variable '", Var.Name, "' defined by the resource layout (", GetShaderVariableTypeLiteralName(Var.Type),
+                                            ") does not match the type defined by the implicit resource signatre (", GetShaderVariableTypeLiteralName(SignRes.Desc.VarType),
+                                            "). Note that PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0 flag is for internal use only. If you see this message while "
+                                            "unpacking PSO from the archive, this might indicate a bug.");
+                }
+
+                break;
+            }
+            if (it == range.second)
+            {
+                LOG_PSO_ERROR_AND_THROW("Resource layout contains variable '", Var.Name, "' that is not present in the implicit resource signatre. ",
+                                        "Note that PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0 flag is for internal use only. If you see this message while "
+                                        "unpacking PSO from the archive, this might indicate a bug.");
+            }
+
+            AllResources.erase(it);
+        }
+        for (const auto& it : AllResources)
+        {
+            const auto& ResDesc = it.second.Desc;
+            if (ResDesc.VarType != ResLayout.DefaultVariableType)
+            {
+                LOG_PSO_ERROR_AND_THROW("The type of variable '", ResDesc.Name, "' not explicitly defined by the resource layout (", GetShaderVariableTypeLiteralName(ResDesc.VarType),
+                                        ") does not match the default varaible type defined by the implicit resource signatre (", GetShaderVariableTypeLiteralName(ResLayout.DefaultVariableType),
+                                        "). Note that PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0 flag is for internal use only. If you see this message while "
+                                        "unpacking PSO from the archive, this might indicate a bug.");
+            }
+        }
+
+        for (Uint32 i = 0; i < ResLayout.NumImmutableSamplers; ++i)
+        {
+            const auto& ImtblSam = ResLayout.ImmutableSamplers[i];
+            if (ImtblSam.SamplerOrTextureName == nullptr)
+                LOG_PSO_ERROR_AND_THROW("ResourceLayout.ImmutableSamplers[", i, "].SamplerOrTextureName is null");
+            auto range = AllImtblSamplers.equal_range(ImtblSam.SamplerOrTextureName);
+            auto it    = range.first;
+            for (; it != range.second; ++it)
+            {
+                const auto& SignSam = it->second;
+                if ((SignSam.Stages & ImtblSam.ShaderStages) == 0)
+                    continue;
+
+                if (SignSam.Stages != ImtblSam.ShaderStages)
+                {
+                    LOG_PSO_ERROR_AND_THROW("Shader stages of immutable sampler '", ImtblSam.SamplerOrTextureName, "' defined by the resource layout (", GetShaderStagesString(ImtblSam.ShaderStages),
+                                            ") do not match the stages defined by the implicit resource signatre (", GetShaderStagesString(ImtblSam.ShaderStages),
+                                            "). Note that PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0 flag is for internal use only. If you see this message while "
+                                            "unpacking PSO from the archive, this might indicate a bug.");
+                }
+
+                break;
+            }
+            if (it == range.second)
+            {
+                LOG_PSO_ERROR_AND_THROW("Resource layout contains immutable sampler '", ImtblSam.SamplerOrTextureName, "' that is not present in the implicit resource signatre. ",
+                                        "Note that PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0 flag is for internal use only. If you see this message while "
+                                        "unpacking PSO from the archive, this might indicate a bug.");
+            }
+
+            AllImtblSamplers.erase(it);
+        }
+        if (!AllImtblSamplers.empty())
+        {
+            const auto& SamDesc = AllImtblSamplers.begin()->second.Desc;
+            LOG_PSO_ERROR_AND_THROW("Implicit resource signature contains immutable sampler '", SamDesc.SamplerOrTextureName, "' that is not present in the resource layout. ",
+                                    "Note that PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0 flag is for internal use only. If you see this message while "
+                                    "unpacking PSO from the archive, this might indicate a bug.");
         }
     }
 }
