@@ -104,6 +104,14 @@ void DeviceObjectArchiveBase::OffsetSizeAndResourceMap<ResType>::SetResource(con
     it->second.pRes = pResource;
 }
 
+template <typename ResType>
+void DeviceObjectArchiveBase::OffsetSizeAndResourceMap<ResType>::ReleaseResources()
+{
+    std::unique_lock<std::mutex> Lock{m_Mtx};
+    for (auto& it : m_Map)
+        it.second.pRes.Release();
+}
+
 // Instantiation is required by UnpackResourceSignatureImpl
 template class DeviceObjectArchiveBase::OffsetSizeAndResourceMap<IPipelineResourceSignature>;
 
@@ -146,7 +154,7 @@ DeviceObjectArchiveBase::DeviceObjectArchiveBase(IReferenceCounters* pRefCounter
     {
         if (ProcessedBits[static_cast<size_t>(Chunk.Type)])
         {
-            LOG_ERROR_AND_THROW("Multiple chunks with the same types are not allowed");
+            LOG_ERROR_AND_THROW("Multiple chunks with the same type are not allowed");
         }
         ProcessedBits[static_cast<size_t>(Chunk.Type)] = true;
 
@@ -300,7 +308,19 @@ bool DeviceObjectArchiveBase::LoadResourceData(OffsetSizeAndResourceMap<ResType>
     }
 
     Serializer<SerializerMode::Read> Ser{pData, DataSize};
-    return ResData.Deserialize(StoredResourceName, Ser);
+
+    using HeaderType = typename std::remove_reference<decltype(*ResData.pHeader)>::type;
+    ResData.pHeader  = Ser.Cast<HeaderType>();
+    if (ResData.pHeader->Type != ResData.ExpectedChunkType)
+    {
+        LOG_ERROR_MESSAGE("Invalid chunk header: ", ChunkTypeToResName(ResData.pHeader->Type),
+                          "; expected: ", ChunkTypeToResName(ResData.ExpectedChunkType), ".");
+        return false;
+    }
+
+    auto Res = ResData.Deserialize(StoredResourceName, Ser);
+    VERIFY_EXPR(Ser.IsEnd());
+    return Res;
 }
 
 // Instantiation is required by UnpackResourceSignatureImpl
@@ -361,30 +381,14 @@ template bool DeviceObjectArchiveBase::GetDeviceSpecificData<DeviceObjectArchive
 bool DeviceObjectArchiveBase::PRSData::Deserialize(const char* Name, Serializer<SerializerMode::Read>& Ser)
 {
     Desc.Name = Name;
-    pHeader   = Ser.Cast<PRSDataHeader>();
-    if (pHeader->Type != ExpectedChunkType)
-    {
-        LOG_ERROR_MESSAGE("Invalid Resource Signature header type in the archive: ", ChunkTypeToResName(pHeader->Type));
-        return false;
-    }
-
     PSOSerializer<SerializerMode::Read>::SerializePRSDesc(Ser, Desc, Serialized, &Allocator);
-    VERIFY_EXPR(Ser.IsEnd());
     return true;
 }
 
 bool DeviceObjectArchiveBase::RPData::Deserialize(const char* Name, Serializer<SerializerMode::Read>& Ser)
 {
     Desc.Name = Name;
-    pHeader   = Ser.Cast<RPDataHeader>();
-    if (pHeader->Type != ExpectedChunkType)
-    {
-        LOG_ERROR_MESSAGE("Invalid render pass header type in the archive: ", ChunkTypeToResName(pHeader->Type));
-        return false;
-    }
-
     PSOSerializer<SerializerMode::Read>::SerializeRenderPassDesc(Ser, Desc, &Allocator);
-    VERIFY_EXPR(Ser.IsEnd());
     return true;
 }
 
@@ -410,29 +414,12 @@ void DeviceObjectArchiveBase::PSOData<RayTracingPipelineStateCreateInfo>::Deseri
     PSOSerializer<SerializerMode::Read>::SerializePSOCreateInfo(Ser, CreateInfo, PRSNames, &Allocator, RemapShaders);
 }
 
-template <>
-const DeviceObjectArchiveBase::ChunkType DeviceObjectArchiveBase::PSOData<GraphicsPipelineStateCreateInfo>::ExpectedChunkType = DeviceObjectArchiveBase::ChunkType::GraphicsPipelineStates;
-template <>
-const DeviceObjectArchiveBase::ChunkType DeviceObjectArchiveBase::PSOData<ComputePipelineStateCreateInfo>::ExpectedChunkType = DeviceObjectArchiveBase::ChunkType::ComputePipelineStates;
-template <>
-const DeviceObjectArchiveBase::ChunkType DeviceObjectArchiveBase::PSOData<TilePipelineStateCreateInfo>::ExpectedChunkType = DeviceObjectArchiveBase::ChunkType::TilePipelineStates;
-template <>
-const DeviceObjectArchiveBase::ChunkType DeviceObjectArchiveBase::PSOData<RayTracingPipelineStateCreateInfo>::ExpectedChunkType = DeviceObjectArchiveBase::ChunkType::RayTracingPipelineStates;
-
 template <typename CreateInfoType>
 bool DeviceObjectArchiveBase::PSOData<CreateInfoType>::Deserialize(const char* Name, Serializer<SerializerMode::Read>& Ser)
 {
     CreateInfo.PSODesc.Name = Name;
 
-    pHeader = Ser.Cast<PSODataHeader>();
-    if (pHeader->Type != ExpectedChunkType)
-    {
-        LOG_ERROR_MESSAGE("Invalid ", ChunkTypeToResName(ExpectedChunkType), " header in the archive", ChunkTypeToResName(pHeader->Type));
-        return false;
-    }
-
     DeserializeInternal(Ser);
-    VERIFY_EXPR(Ser.IsEnd());
 
     CreateInfo.Flags |= PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES;
 
@@ -444,6 +431,16 @@ bool DeviceObjectArchiveBase::PSOData<CreateInfoType>::Deserialize(const char* N
 
     return true;
 }
+
+template <>
+const DeviceObjectArchiveBase::ChunkType DeviceObjectArchiveBase::PSOData<GraphicsPipelineStateCreateInfo>::ExpectedChunkType = DeviceObjectArchiveBase::ChunkType::GraphicsPipelineStates;
+template <>
+const DeviceObjectArchiveBase::ChunkType DeviceObjectArchiveBase::PSOData<ComputePipelineStateCreateInfo>::ExpectedChunkType = DeviceObjectArchiveBase::ChunkType::ComputePipelineStates;
+template <>
+const DeviceObjectArchiveBase::ChunkType DeviceObjectArchiveBase::PSOData<TilePipelineStateCreateInfo>::ExpectedChunkType = DeviceObjectArchiveBase::ChunkType::TilePipelineStates;
+template <>
+const DeviceObjectArchiveBase::ChunkType DeviceObjectArchiveBase::PSOData<RayTracingPipelineStateCreateInfo>::ExpectedChunkType = DeviceObjectArchiveBase::ChunkType::RayTracingPipelineStates;
+
 
 template <>
 bool DeviceObjectArchiveBase::UnpackPSORenderPass<GraphicsPipelineStateCreateInfo>(PSOData<GraphicsPipelineStateCreateInfo>& PSO, IRenderDevice* pRenderDevice)
@@ -671,7 +668,7 @@ bool DeviceObjectArchiveBase::UnpackPSOShaders(PSOData<CreateInfoType>& PSO,
                 return false;
         }
 
-        // Add to cache
+        // Add to the cache
         {
             std::unique_lock<std::mutex> WriteLock{m_ShadersGuard};
             m_Shaders[Idx].pRes = pShader;
@@ -812,11 +809,17 @@ void DeviceObjectArchiveBase::UnpackRenderPass(const RenderPassUnpackInfo& Unpac
 
 void DeviceObjectArchiveBase::ClearResourceCache()
 {
-    std::unique_lock<std::mutex> WriteLock{m_ShadersGuard};
+    m_PRSMap.ReleaseResources();
+    m_GraphicsPSOMap.ReleaseResources();
+    m_ComputePSOMap.ReleaseResources();
+    m_TilePSOMap.ReleaseResources();
+    m_RayTracingPSOMap.ReleaseResources();
+    m_RenderPassMap.ReleaseResources();
 
-    for (auto& Shader : m_Shaders)
     {
-        Shader.pRes.Release();
+        std::unique_lock<std::mutex> WriteLock{m_ShadersGuard};
+        for (auto& Shader : m_Shaders)
+            Shader.pRes.Release();
     }
 }
 

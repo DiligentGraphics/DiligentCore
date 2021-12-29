@@ -62,10 +62,7 @@ namespace Diligent
 class DeviceObjectArchiveBase : public ObjectBase<IDeviceObjectArchive>
 {
 public:
-    // Base interface that this class inherits.
-    using BaseInterface = IDeviceObjectArchive;
-
-    using TObjectBase = ObjectBase<BaseInterface>;
+    using TObjectBase = ObjectBase<IDeviceObjectArchive>;
 
     enum class DeviceType : Uint32
     {
@@ -112,9 +109,9 @@ protected:
     friend class ArchiverImpl;
     friend class ArchiveRepacker;
 
-    // Archive header contains offsets for blocks.
+    // Archive header contains the block offsets.
     // Any block can be added or removed without patching all offsets in the archive,
-    // you need to patch only the base offsets.
+    // only the base offsets need to be patched.
     enum class BlockOffsetType : Uint32
     {
         // Device-specific data
@@ -309,9 +306,11 @@ private:
         bool GetResource(const char* Name, ResType** ppResource);
         void SetResource(const char* Name, ResType* pResource);
 
+        void ReleaseResources();
+
     private:
         std::mutex m_Mtx;
-
+        // Keep weak resource references in the cache
         std::unordered_map<HashMapStringKey, FileOffsetSizeAndRes<RefCntWeakPtr<ResType>>, HashMapStringKey::Hasher> m_Map;
     };
 
@@ -322,7 +321,8 @@ private:
     OffsetSizeAndResourceMap<IPipelineState>             m_RayTracingPSOMap;
     OffsetSizeAndResourceMap<IRenderPass>                m_RenderPassMap;
 
-    using TShaderOffsetAndCache = std::vector<FileOffsetSizeAndRes<RefCntAutoPtr<IShader>>>; // reference to the shader is not acquired in PSO, so weak ptr has no effect
+    // Use strong references for shaders
+    using TShaderOffsetAndCache = std::vector<FileOffsetSizeAndRes<RefCntAutoPtr<IShader>>>;
 
     std::mutex            m_ShadersGuard;
     TShaderOffsetAndCache m_Shaders;
@@ -443,8 +443,6 @@ private:
                                  OffsetSizeAndResourceMap<IPipelineState>& PSOMap);
 
 protected:
-    using CreateSignatureType = std::function<RefCntAutoPtr<IPipelineResourceSignature>(PRSData& PRS, Serializer<SerializerMode::Read>& Ser)>;
-
     template <typename RenderDeviceImplType, typename PSOSerializerType>
     RefCntAutoPtr<IPipelineResourceSignature> UnpackResourceSignatureImpl(
         const ResourceSignatureUnpackInfo& DeArchiveInfo,

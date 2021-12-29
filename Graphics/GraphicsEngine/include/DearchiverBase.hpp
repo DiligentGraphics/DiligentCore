@@ -40,10 +40,7 @@ namespace Diligent
 class DearchiverBase : public ObjectBase<IDearchiver>
 {
 public:
-    // Base interface that this class inherits.
-    using BaseInterface = IDearchiver;
-
-    using TObjectBase = ObjectBase<BaseInterface>;
+    using TObjectBase = ObjectBase<IDearchiver>;
 
     explicit DearchiverBase(IReferenceCounters* pRefCounters) noexcept :
         TObjectBase{pRefCounters}
