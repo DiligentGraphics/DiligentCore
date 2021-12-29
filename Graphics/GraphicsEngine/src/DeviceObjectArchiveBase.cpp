@@ -24,12 +24,13 @@
  *  of the possibility of such damages.
  */
 
+#include "DeviceObjectArchiveBase.hpp"
+
 #include <bitset>
 #include <vector>
 #include <unordered_set>
 #include <algorithm>
 
-#include "DeviceObjectArchiveBase.hpp"
 #include "DebugUtilities.hpp"
 #include "PSOSerializer.hpp"
 
@@ -117,6 +118,27 @@ DeviceObjectArchiveBase::BlockOffsetType DeviceObjectArchiveBase::GetBlockOffset
     }
 }
 
+const char* DeviceObjectArchiveBase::ChunkTypeToResName(ChunkType Type)
+{
+    switch (Type)
+    {
+        // clang-format off
+        case ChunkType::Undefined:                return "Undefined";
+        case ChunkType::ArchiveDebugInfo:         return "Debug Info";
+        case ChunkType::ResourceSignature:        return "Resource Signature";
+        case ChunkType::GraphicsPipelineStates:   return "Graphics Pipeline";
+        case ChunkType::ComputePipelineStates:    return "Compute Pipeline";
+        case ChunkType::RayTracingPipelineStates: return "Ray-Tracing Pipeline";
+        case ChunkType::TilePipelineStates:       return "Tile Pipeline";
+        case ChunkType::RenderPass:               return "Render Pass";
+        case ChunkType::Shaders:                  return "Shader";
+        // clang-format on
+        default:
+            UNEXPECTED("Unexpected chunk type");
+            return "";
+    }
+}
+
 void DeviceObjectArchiveBase::ReadArchiveDebugInfo(const ChunkHeader& Chunk) noexcept(false)
 {
     VERIFY_EXPR(Chunk.Type == ChunkType::ArchiveDebugInfo);
@@ -184,34 +206,38 @@ void DeviceObjectArchiveBase::ReadShaders(const ChunkHeader& Chunk) noexcept(fal
         m_Shaders.emplace_back(pFileOffsetAndSize[i]);
 }
 
-template <typename ResType, typename FnType>
+template <typename ResType, typename ReourceDataType>
 bool DeviceObjectArchiveBase::LoadResourceData(OffsetSizeAndResourceMap<ResType>& ResourceMap,
                                                const char*                        ResourceName,
-                                               DynamicLinearAllocator&            Allocator,
-                                               const char*                        ResTypeName,
-                                               const FnType&                      Fn)
+                                               ReourceDataType&                   ResData)
 {
     const char* StoredResourceName = nullptr;
 
     const auto OffsetAndSize = ResourceMap.GetOffsetAndSize(ResourceName, StoredResourceName);
     if (OffsetAndSize == FileOffsetAndSize::Invalid())
     {
-        LOG_ERROR_MESSAGE(ResTypeName, " with name '", ResourceName, "' is not present in the archive");
+        LOG_ERROR_MESSAGE(ChunkTypeToResName(ResData.ExpectedChunkType), " with name '", ResourceName, "' is not present in the archive");
         return false;
     }
     VERIFY_EXPR(StoredResourceName != nullptr && StoredResourceName != ResourceName && strcmp(ResourceName, StoredResourceName) == 0);
 
     const auto DataSize = OffsetAndSize.Size;
-    void*      pData    = Allocator.Allocate(DataSize, DataPtrAlign);
+    void*      pData    = ResData.Allocator.Allocate(DataSize, DataPtrAlign);
     if (!m_pArchive->Read(OffsetAndSize.Offset, DataSize, pData))
     {
-        LOG_ERROR_MESSAGE("Failed to read ", ResTypeName, " with name '", ResourceName, "' data from the archive");
+        LOG_ERROR_MESSAGE("Failed to read ", ChunkTypeToResName(ResData.ExpectedChunkType), " with name '", ResourceName, "' data from the archive");
         return false;
     }
 
     Serializer<SerializerMode::Read> Ser{pData, DataSize};
-    return Fn(StoredResourceName, Ser);
+    return ResData.Deserialize(StoredResourceName, Ser);
 }
+
+// Instantiation is required by UnpackResourceSignatureImpl
+template bool DeviceObjectArchiveBase::LoadResourceData<IPipelineResourceSignature, DeviceObjectArchiveBase::PRSData>(
+    OffsetSizeAndResourceMap<IPipelineResourceSignature>& ResourceMap,
+    const char*                                           ResourceName,
+    PRSData&                                              ResData);
 
 template <typename HeaderType>
 bool DeviceObjectArchiveBase::GetDeviceSpecificData(const HeaderType&       Header,
@@ -224,8 +250,8 @@ bool DeviceObjectArchiveBase::GetDeviceSpecificData(const HeaderType&       Head
     pData = nullptr;
     Size  = 0;
 
-    const auto BaseOffset  = m_BaseOffsets[static_cast<Uint32>(BlockType)];
-    const auto ArchiveSize = m_pArchive->GetSize();
+    const Uint64 BaseOffset  = m_BaseOffsets[static_cast<size_t>(BlockType)];
+    const auto   ArchiveSize = m_pArchive->GetSize();
     if (BaseOffset > ArchiveSize)
     {
         LOG_ERROR_MESSAGE("Required block does not exist in archive");
@@ -262,63 +288,51 @@ template bool DeviceObjectArchiveBase::GetDeviceSpecificData<DeviceObjectArchive
     void*&                  pData,
     size_t&                 Size);
 
-bool DeviceObjectArchiveBase::ReadPRSData(const char* Name, PRSData& PRS)
+bool DeviceObjectArchiveBase::PRSData::Deserialize(const char* Name, Serializer<SerializerMode::Read>& Ser)
 {
-    return LoadResourceData(
-        m_PRSMap, Name, PRS.Allocator,
-        "Resource signature",
-        [&PRS](const char* Name, Serializer<SerializerMode::Read>& Ser) -> bool //
-        {
-            PRS.Desc.Name = Name;
-            PRS.pHeader   = Ser.Cast<PRSDataHeader>();
-            if (PRS.pHeader->Type != ChunkType::ResourceSignature)
-            {
-                LOG_ERROR_MESSAGE("Invalid PRS header in the archive");
-                return false;
-            }
+    Desc.Name = Name;
+    pHeader   = Ser.Cast<PRSDataHeader>();
+    if (pHeader->Type != ExpectedChunkType)
+    {
+        LOG_ERROR_MESSAGE("Invalid Resource Signature header type in the archive: ", ChunkTypeToResName(pHeader->Type));
+        return false;
+    }
 
-            PSOSerializer<SerializerMode::Read>::SerializePRSDesc(Ser, PRS.Desc, PRS.Serialized, &PRS.Allocator);
-            VERIFY_EXPR(Ser.IsEnd());
-            return true;
-        });
+    PSOSerializer<SerializerMode::Read>::SerializePRSDesc(Ser, Desc, Serialized, &Allocator);
+    VERIFY_EXPR(Ser.IsEnd());
+    return true;
 }
 
-bool DeviceObjectArchiveBase::ReadRPData(const char* Name, RPData& RP)
+bool DeviceObjectArchiveBase::RPData::Deserialize(const char* Name, Serializer<SerializerMode::Read>& Ser)
 {
-    return LoadResourceData(
-        m_RenderPassMap, Name, RP.Allocator,
-        "Render pass",
-        [&RP](const char* Name, Serializer<SerializerMode::Read>& Ser) -> bool //
-        {
-            RP.Desc.Name = Name;
-            RP.pHeader   = Ser.Cast<RPDataHeader>();
-            if (RP.pHeader->Type != ChunkType::RenderPass)
-            {
-                LOG_ERROR_MESSAGE("Invalid render pass header in the archive");
-                return false;
-            }
+    Desc.Name = Name;
+    pHeader   = Ser.Cast<RPDataHeader>();
+    if (pHeader->Type != ExpectedChunkType)
+    {
+        LOG_ERROR_MESSAGE("Invalid render pass header type in the archive: ", ChunkTypeToResName(pHeader->Type));
+        return false;
+    }
 
-            PSOSerializer<SerializerMode::Read>::SerializeRenderPassDesc(Ser, RP.Desc, &RP.Allocator);
-            VERIFY_EXPR(Ser.IsEnd());
-            return true;
-        });
+    PSOSerializer<SerializerMode::Read>::SerializeRenderPassDesc(Ser, Desc, &Allocator);
+    VERIFY_EXPR(Ser.IsEnd());
+    return true;
 }
 
 
 template <typename CreateInfoType>
-void DeviceObjectArchiveBase::PSOData<CreateInfoType>::Deserialize(Serializer<SerializerMode::Read>& Ser)
+void DeviceObjectArchiveBase::PSOData<CreateInfoType>::DeserializeInternal(Serializer<SerializerMode::Read>& Ser)
 {
     PSOSerializer<SerializerMode::Read>::SerializePSOCreateInfo(Ser, CreateInfo, PRSNames, &Allocator);
 }
 
 template <>
-void DeviceObjectArchiveBase::PSOData<GraphicsPipelineStateCreateInfo>::Deserialize(Serializer<SerializerMode::Read>& Ser)
+void DeviceObjectArchiveBase::PSOData<GraphicsPipelineStateCreateInfo>::DeserializeInternal(Serializer<SerializerMode::Read>& Ser)
 {
     PSOSerializer<SerializerMode::Read>::SerializePSOCreateInfo(Ser, CreateInfo, PRSNames, &Allocator, RenderPassName);
 }
 
 template <>
-void DeviceObjectArchiveBase::PSOData<RayTracingPipelineStateCreateInfo>::Deserialize(Serializer<SerializerMode::Read>& Ser)
+void DeviceObjectArchiveBase::PSOData<RayTracingPipelineStateCreateInfo>::DeserializeInternal(Serializer<SerializerMode::Read>& Ser)
 {
     auto RemapShaders = [](Uint32& InIndex, IShader*& outShader) {
         outShader = BitCast<IShader*>(size_t{InIndex});
@@ -335,40 +349,31 @@ const DeviceObjectArchiveBase::ChunkType DeviceObjectArchiveBase::PSOData<TilePi
 template <>
 const DeviceObjectArchiveBase::ChunkType DeviceObjectArchiveBase::PSOData<RayTracingPipelineStateCreateInfo>::ExpectedChunkType = DeviceObjectArchiveBase::ChunkType::RayTracingPipelineStates;
 
-template <typename PSOHashMapType, typename PSOCreateInfoType>
-bool DeviceObjectArchiveBase::ReadPSOData(const char*                 Name,
-                                          PSOHashMapType&             PSOMap,
-                                          const char*                 ResTypeName,
-                                          PSOData<PSOCreateInfoType>& PSO)
+template <typename CreateInfoType>
+bool DeviceObjectArchiveBase::PSOData<CreateInfoType>::Deserialize(const char* Name, Serializer<SerializerMode::Read>& Ser)
 {
-    return LoadResourceData(
-        PSOMap, Name, PSO.Allocator, ResTypeName,
-        [&](const char* Name, Serializer<SerializerMode::Read>& Ser) -> bool //
-        {
-            PSO.CreateInfo.PSODesc.Name = Name;
+    CreateInfo.PSODesc.Name = Name;
 
-            PSO.pHeader = Ser.Cast<PSODataHeader>();
-            if (PSO.pHeader->Type != PSO.ExpectedChunkType)
-            {
-                LOG_ERROR_MESSAGE("Invalid ", ResTypeName, " header in the archive");
-                return false;
-            }
+    pHeader = Ser.Cast<PSODataHeader>();
+    if (pHeader->Type != ExpectedChunkType)
+    {
+        LOG_ERROR_MESSAGE("Invalid ", ChunkTypeToResName(ExpectedChunkType), " header in the archive", ChunkTypeToResName(pHeader->Type));
+        return false;
+    }
 
-            PSO.Deserialize(Ser);
-            VERIFY_EXPR(Ser.IsEnd());
+    DeserializeInternal(Ser);
+    VERIFY_EXPR(Ser.IsEnd());
 
-            PSO.CreateInfo.Flags |= PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES;
+    CreateInfo.Flags |= PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES;
 
-            if (PSO.CreateInfo.ResourceSignaturesCount == 0)
-            {
-                PSO.CreateInfo.ResourceSignaturesCount = 1;
-                PSO.CreateInfo.Flags |= PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0;
-            }
+    if (CreateInfo.ResourceSignaturesCount == 0)
+    {
+        CreateInfo.ResourceSignaturesCount = 1;
+        CreateInfo.Flags |= PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0;
+    }
 
-            return true;
-        });
+    return true;
 }
-
 
 template <>
 bool DeviceObjectArchiveBase::UnpackPSORenderPass<GraphicsPipelineStateCreateInfo>(PSOData<GraphicsPipelineStateCreateInfo>& PSO, IRenderDevice* pRenderDevice)
@@ -534,13 +539,12 @@ void DeviceObjectArchiveBase::PSOData<RayTracingPipelineStateCreateInfo>::Create
 
 template <typename CreateInfoType>
 bool DeviceObjectArchiveBase::UnpackPSOShaders(PSOData<CreateInfoType>& PSO,
-                                               IRenderDevice*           pDevice,
-                                               const char*              PipelineTypeName)
+                                               IRenderDevice*           pDevice)
 {
     void*  pShaderData    = nullptr;
     size_t ShaderDataSize = 0;
 
-    if (!GetDeviceSpecificData(*PSO.pHeader, PSO.Allocator, PipelineTypeName, GetBlockOffsetType(), pShaderData, ShaderDataSize))
+    if (!GetDeviceSpecificData(*PSO.pHeader, PSO.Allocator, ChunkTypeToResName(PSO.ExpectedChunkType), GetBlockOffsetType(), pShaderData, ShaderDataSize))
         return false;
 
     Serializer<SerializerMode::Read> Ser{pShaderData, ShaderDataSize};
@@ -659,8 +663,7 @@ bool DeviceObjectArchiveBase::ModifyPipelineStateCreateInfo(PSOCreateInfoType&  
 template <typename CreateInfoType>
 void DeviceObjectArchiveBase::UnpackPipelineStateImpl(const PipelineStateUnpackInfo&            UnpackInfo,
                                                       IPipelineState**                          ppPSO,
-                                                      OffsetSizeAndResourceMap<IPipelineState>& PSOMap,
-                                                      const char*                               PipelineTypeName)
+                                                      OffsetSizeAndResourceMap<IPipelineState>& PSOMap)
 {
     VERIFY_EXPR(UnpackInfo.pArchive == nullptr || UnpackInfo.pArchive == this);
     VERIFY_EXPR(UnpackInfo.pDevice != nullptr);
@@ -669,7 +672,7 @@ void DeviceObjectArchiveBase::UnpackPipelineStateImpl(const PipelineStateUnpackI
         return;
 
     PSOData<CreateInfoType> PSO{GetRawAllocator()};
-    if (!ReadPSOData(UnpackInfo.Name, PSOMap, PipelineTypeName, PSO))
+    if (!LoadResourceData(PSOMap, UnpackInfo.Name, PSO))
         return;
 
     if (!UnpackPSORenderPass(PSO, UnpackInfo.pDevice))
@@ -678,7 +681,7 @@ void DeviceObjectArchiveBase::UnpackPipelineStateImpl(const PipelineStateUnpackI
     if (!UnpackPSOSignatures(PSO, UnpackInfo.pDevice))
         return;
 
-    if (!UnpackPSOShaders(PSO, UnpackInfo.pDevice, PipelineTypeName))
+    if (!UnpackPSOShaders(PSO, UnpackInfo.pDevice))
         return;
 
     PSO.AssignShaders();
@@ -698,22 +701,22 @@ void DeviceObjectArchiveBase::UnpackPipelineStateImpl(const PipelineStateUnpackI
 
 void DeviceObjectArchiveBase::UnpackGraphicsPSO(const PipelineStateUnpackInfo& UnpackInfo, IPipelineState** ppPSO)
 {
-    UnpackPipelineStateImpl<GraphicsPipelineStateCreateInfo>(UnpackInfo, ppPSO, m_GraphicsPSOMap, "Graphics Pipeline");
+    UnpackPipelineStateImpl<GraphicsPipelineStateCreateInfo>(UnpackInfo, ppPSO, m_GraphicsPSOMap);
 }
 
 void DeviceObjectArchiveBase::UnpackComputePSO(const PipelineStateUnpackInfo& UnpackInfo, IPipelineState** ppPSO)
 {
-    UnpackPipelineStateImpl<ComputePipelineStateCreateInfo>(UnpackInfo, ppPSO, m_ComputePSOMap, "Compute Pipeline");
+    UnpackPipelineStateImpl<ComputePipelineStateCreateInfo>(UnpackInfo, ppPSO, m_ComputePSOMap);
 }
 
 void DeviceObjectArchiveBase::UnpackTilePSO(const PipelineStateUnpackInfo& UnpackInfo, IPipelineState** ppPSO)
 {
-    UnpackPipelineStateImpl<TilePipelineStateCreateInfo>(UnpackInfo, ppPSO, m_TilePSOMap, "Tile Pipeline");
+    UnpackPipelineStateImpl<TilePipelineStateCreateInfo>(UnpackInfo, ppPSO, m_TilePSOMap);
 }
 
 void DeviceObjectArchiveBase::UnpackRayTracingPSO(const PipelineStateUnpackInfo& UnpackInfo, IPipelineState** ppPSO)
 {
-    UnpackPipelineStateImpl<RayTracingPipelineStateCreateInfo>(UnpackInfo, ppPSO, m_RayTracingPSOMap, "Ray Tracing Pipeline");
+    UnpackPipelineStateImpl<RayTracingPipelineStateCreateInfo>(UnpackInfo, ppPSO, m_RayTracingPSOMap);
 }
 
 void DeviceObjectArchiveBase::UnpackRenderPass(const RenderPassUnpackInfo& UnpackInfo, IRenderPass** ppRP)
@@ -725,7 +728,7 @@ void DeviceObjectArchiveBase::UnpackRenderPass(const RenderPassUnpackInfo& Unpac
         return;
 
     RPData RP{GetRawAllocator()};
-    if (!ReadRPData(UnpackInfo.Name, RP))
+    if (!LoadResourceData(m_RenderPassMap, UnpackInfo.Name, RP))
         return;
 
     if (UnpackInfo.ModifyRenderPassDesc != nullptr)

@@ -45,10 +45,11 @@
 
 #include "Dearchiver.h"
 #include "DeviceObjectArchive.h"
-#include "PipelineResourceSignatureBase.hpp"
 #include "PipelineState.h"
 
 #include "ObjectBase.hpp"
+#include "PipelineResourceSignatureBase.hpp"
+
 #include "HashUtils.hpp"
 #include "RefCntAutoPtr.hpp"
 #include "DynamicLinearAllocator.hpp"
@@ -123,14 +124,6 @@ protected:
         Vulkan,
         Metal_iOS,
         Metal_MacOS,
-
-        //Direct3D12_PSOCache,
-        //Vulkan_PSOCache,
-        //Metal_PSOCache,
-
-        //Direct3D12_Debug,
-        //Vulkan_Debug,
-
         Count
     };
     using TBlockBaseOffsets = std::array<Uint32, static_cast<size_t>(BlockOffsetType::Count)>;
@@ -146,8 +139,9 @@ protected:
         Uint32            Version          = 0;
         TBlockBaseOffsets BlockBaseOffsets = {};
         Uint32            NumChunks        = 0;
+        Uint32            _Padding         = ~0u;
+
         //ChunkHeader     Chunks  [NumChunks]
-        Uint32 _Padding = ~0u;
     };
     CHECK_HEADER_SIZE(ArchiveHeader, 40)
 
@@ -162,7 +156,6 @@ protected:
         TilePipelineStates,
         RenderPass,
         Shaders,
-        //PipelineCache,
         Count
     };
 
@@ -184,12 +177,13 @@ protected:
 
     struct NamedResourceArrayHeader
     {
-        Uint32 Count = 0;
+        Uint32 Count    = 0;
+        Uint32 _Padding = ~0u;
+
         //Uint32 NameLength    [Count]
         //Uint32 ***DataSize   [Count]
         //Uint32 ***DataOffset [Count] // for PRSDataHeader / PSODataHeader
         //char   NameData      []
-        Uint32 _Padding = ~0u;
     };
     CHECK_HEADER_SIZE(NamedResourceArrayHeader, 8)
 
@@ -410,6 +404,8 @@ private:
 
     BlockOffsetType GetBlockOffsetType() const;
 
+    static const char* ChunkTypeToResName(ChunkType Type);
+
 protected:
     struct PRSData
     {
@@ -418,9 +414,13 @@ protected:
         PipelineResourceSignatureDesc           Desc{};
         PipelineResourceSignatureSerializedData Serialized{};
 
+        static constexpr ChunkType ExpectedChunkType = ChunkType::ResourceSignature;
+
         explicit PRSData(IMemoryAllocator& Allocator, Uint32 BlockSize = 1 << 10) :
             Allocator{Allocator, BlockSize}
         {}
+
+        bool Deserialize(const char* Name, Serializer<SerializerMode::Read>& Ser);
     };
 
     template <typename CreateInfoType>
@@ -436,44 +436,40 @@ protected:
         std::vector<RefCntAutoPtr<IDeviceObject>> Objects;
         std::vector<RefCntAutoPtr<IShader>>       Shaders;
 
-        void Deserialize(Serializer<SerializerMode::Read>& Ser);
-        void AssignShaders();
-        void CreatePipeline(IRenderDevice* pDevice, IPipelineState** ppPSO);
-
         static const ChunkType ExpectedChunkType;
 
         explicit PSOData(IMemoryAllocator& Allocator, Uint32 BlockSize = 2 << 10) :
             Allocator{Allocator, BlockSize}
         {}
+
+        bool Deserialize(const char* Name, Serializer<SerializerMode::Read>& Ser);
+        void AssignShaders();
+        void CreatePipeline(IRenderDevice* pDevice, IPipelineState** ppPSO);
+
+    private:
+        void DeserializeInternal(Serializer<SerializerMode::Read>& Ser);
     };
 
 private:
-    bool ReadPRSData(const char* Name, PRSData& PRS);
-
-    template <typename PSOHashMapType, typename PSOCreateInfoType>
-    bool ReadPSOData(const char*                 Name,
-                     PSOHashMapType&             PSOMap,
-                     const char*                 ResTypeName,
-                     PSOData<PSOCreateInfoType>& PSO);
-
     struct RPData
     {
         DynamicLinearAllocator Allocator;
         const RPDataHeader*    pHeader = nullptr;
         RenderPassDesc         Desc{};
 
+        static constexpr ChunkType ExpectedChunkType = ChunkType::RenderPass;
+
         explicit RPData(IMemoryAllocator& Allocator, Uint32 BlockSize = 1 << 10) :
             Allocator{Allocator, BlockSize}
         {}
-    };
-    bool ReadRPData(const char* Name, RPData& RP);
 
-    template <typename ResType, typename FnType>
+        bool Deserialize(const char* Name, Serializer<SerializerMode::Read>& Ser);
+    };
+
+    template <typename ResType, typename ReourceDataType>
     bool LoadResourceData(OffsetSizeAndResourceMap<ResType>& ResourceMap,
                           const char*                        ResourceName,
-                          DynamicLinearAllocator&            Allocator,
-                          const char*                        ResTypeName,
-                          const FnType&                      Fn);
+                          ReourceDataType&                   ResData);
 
     template <typename HeaderType>
     bool GetDeviceSpecificData(const HeaderType&       Header,
@@ -490,9 +486,7 @@ private:
     bool UnpackPSORenderPass(PSOData<CreateInfoType>& PSO, IRenderDevice* pDevice) { return true; }
 
     template <typename CreateInfoType>
-    bool UnpackPSOShaders(PSOData<CreateInfoType>& PSO,
-                          IRenderDevice*           pDevice,
-                          const char*              PipelineTypeName);
+    bool UnpackPSOShaders(PSOData<CreateInfoType>& PSO, IRenderDevice* pDevice);
 
     template <typename PSOCreateInfoType>
     bool ModifyPipelineStateCreateInfo(PSOCreateInfoType&             CreateInfo,
@@ -501,8 +495,7 @@ private:
     template <typename CreateInfoType>
     void UnpackPipelineStateImpl(const PipelineStateUnpackInfo&            UnpackInfo,
                                  IPipelineState**                          ppPSO,
-                                 OffsetSizeAndResourceMap<IPipelineState>& PSOMap,
-                                 const char*                               PipelineTypeName);
+                                 OffsetSizeAndResourceMap<IPipelineState>& PSOMap);
 
 protected:
     using CreateSignatureType = std::function<RefCntAutoPtr<IPipelineResourceSignature>(PRSData& PRS, Serializer<SerializerMode::Read>& Ser)>;
@@ -530,7 +523,7 @@ RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveBase::UnpackResourc
         return pSignature;
 
     PRSData PRS{GetRawAllocator()};
-    if (!ReadPRSData(DeArchiveInfo.Name, PRS))
+    if (!LoadResourceData(m_PRSMap, DeArchiveInfo.Name, PRS))
         return {};
 
     PRS.Desc.SRBAllocationGranularity = DeArchiveInfo.SRBAllocationGranularity;
