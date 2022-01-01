@@ -137,18 +137,29 @@ set(SHADERS
     shaders/GenerateMips/GenerateMipsLinearOddXCS.hlsl
     shaders/GenerateMips/GenerateMipsLinearOddYCS.hlsl
 )
+set_source_files_properties(${SHADERS} PROPERTIES VS_TOOL_OVERRIDE "None")
 
+# Set up custom commands to compile shaders
 set(COMPILED_SHADERS_DIR ${CMAKE_CURRENT_BINARY_DIR}/CompiledShaders/GenerateMips)
 file(MAKE_DIRECTORY "${COMPILED_SHADERS_DIR}")
 
-set_source_files_properties(${SHADERS} PROPERTIES
-    VS_SHADER_TYPE Compute
-    VS_SHADER_ENTRYPOINT main
-    VS_SHADER_MODEL 5.0
-    VS_SHADER_VARIABLE_NAME "g_p%(Filename)"
-    VS_SHADER_OUTPUT_HEADER_FILE "${COMPILED_SHADERS_DIR}/%(Filename).h"
-    #VS_SHADER_FLAGS "/O3"
-)
+foreach(SRC_SHADER ${SHADERS})
+    get_filename_component(SHADER_NAME ${SRC_SHADER} NAME_WE)
+    set(COMPILED_SHADER ${COMPILED_SHADERS_DIR}/${SHADER_NAME}.h)
+    list(APPEND COMPILED_SHADERS ${COMPILED_SHADER})
+
+    add_custom_command(OUTPUT ${COMPILED_SHADER} # We must use full path here!
+                       COMMAND fxc /T cs_5_0 /E main /Vn g_p${SHADER_NAME} /Fh "${COMPILED_SHADER}" "${SRC_SHADER}"
+                       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+                       MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/shaders/GenerateMips/GenerateMipsCS.hlsli"
+                       COMMENT "Compiling ${SRC_SHADER}"
+                       VERBATIM
+    )
+endforeach(SRC_SHADER)
+
+# NB: we must use the full path, otherwise the build system will not be able to properly detect
+#     changes and shader compilation custom command will run every time
+set_source_files_properties(${COMPILED_SHADERS} PROPERTIES GENERATED TRUE)
 
 add_library(Diligent-GraphicsEngineD3D12Interface INTERFACE)
 target_link_libraries     (Diligent-GraphicsEngineD3D12Interface INTERFACE Diligent-GraphicsEngineD3DBaseInterface)
@@ -159,6 +170,9 @@ add_library(Diligent-GraphicsEngineD3D12-static STATIC
     ${SRC} ${INTERFACE} ${INCLUDE} ${SHADERS}
     readme.md
     shaders/GenerateMips/GenerateMipsCS.hlsli
+    # A target created in the same directory (CMakeLists.txt file) that specifies any output of the
+    # custom command as a source file is given a rule to generate the file using the command at build time.
+    ${COMPILED_SHADERS}
 )
 
 add_library(Diligent-GraphicsEngineD3D12-shared SHARED
@@ -221,6 +235,8 @@ source_group("shaders" FILES
     ${SHADERS}
     shaders/GenerateMips/GenerateMipsCS.hlsli
 )
+source_group("generated" FILES ${COMPILED_SHADERS})
+
 
 option(DILIGENT_LOAD_PIX_EVENT_RUNTIME OFF "Download WinPixEventRuntime to enable Direct3D12 debug utils")
 if(${DILIGENT_LOAD_PIX_EVENT_RUNTIME})
