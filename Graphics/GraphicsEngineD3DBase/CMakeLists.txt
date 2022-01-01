@@ -13,7 +13,6 @@ set(INCLUDE
     include/D3DViewDescConversionImpl.hpp
     include/DXGITypeConversions.hpp
     include/EngineFactoryD3DBase.hpp
-    include/HLSLDefinitions.fxh
     include/RenderDeviceD3DBase.hpp
     include/ShaderD3DBase.hpp
     include/ShaderResources.hpp
@@ -33,27 +32,8 @@ set(SOURCE
     src/ShaderResources.cpp
 )
 
-set(HLSL_DEFINITIONS include/HLSLDefinitions.fxh)
-
-# We must use the full path, otherwise the build system will not be able to properly detect
-# changes and shader conversion custom command will run every time
-set(HLSL_DEFINITIONS_INC ${CMAKE_CURRENT_SOURCE_DIR}/include/HLSLDefinitions_inc.fxh)
-set_source_files_properties(${HLSL_DEFINITIONS_INC} PROPERTIES GENERATED TRUE)
-
 add_library(Diligent-GraphicsEngineD3DBase STATIC
     ${SOURCE} ${INCLUDE} ${INTERFACE}
-
-    # A target created in the same directory (CMakeLists.txt file) that specifies any output of the
-    # custom command as a source file is given a rule to generate the file using the command at build time.
-    ${HLSL_DEFINITIONS_INC}
-)
-
-add_custom_command(OUTPUT ${HLSL_DEFINITIONS_INC} # We must use full path here!
-                   COMMAND ${PYTHON_EXECUTABLE} ${FILE2STRING_PATH} ${HLSL_DEFINITIONS} include/HLSLDefinitions_inc.fxh
-                   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-                   MAIN_DEPENDENCY ${HLSL_DEFINITIONS}
-                   COMMENT "Processing HLSLDefinitions.fxh"
-                   VERBATIM
 )
 
 add_library(Diligent-GraphicsEngineD3DBaseInterface INTERFACE)
@@ -79,7 +59,6 @@ set_common_target_properties(Diligent-GraphicsEngineD3DBase)
 source_group("src" FILES ${SOURCE})
 source_group("include" FILES ${INCLUDE})
 source_group("interface" FILES ${INTERFACE})
-source_group("generated" FILES include/HLSLDefinitions_inc.fxh)
 
 set_target_properties(Diligent-GraphicsEngineD3DBase PROPERTIES
     FOLDER DiligentCore/Graphics

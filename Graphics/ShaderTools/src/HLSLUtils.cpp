@@ -36,9 +36,9 @@ namespace Diligent
 {
 
 // clang-format off
-static const char g_HLSLDefinitions[] =
+static constexpr char g_HLSLDefinitions[] =
 {
-#include "../../GraphicsEngineD3DBase/include/HLSLDefinitions_inc.fxh"
+#include "HLSLDefinitions_inc.fxh"
 };
 // clang-format on
 

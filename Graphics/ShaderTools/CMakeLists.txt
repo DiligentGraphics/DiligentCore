@@ -4,6 +4,7 @@ project(Diligent-ShaderTools CXX)
 
 set(INCLUDE
     include/ShaderToolsCommon.hpp
+    include/HLSLDefinitions.fxh
 )
 
 set(SOURCE
@@ -157,6 +158,28 @@ if(ENABLE_SPIRV)
     endif()
 endif()
 
+
+set(HLSL_DEFINITIONS include/HLSLDefinitions.fxh)
+
+# We must use the full path, otherwise the build system will not be able to properly detect
+# changes and shader conversion custom command will run every time
+set(HLSL_DEFINITIONS_INC ${CMAKE_CURRENT_SOURCE_DIR}/include/HLSLDefinitions_inc.fxh)
+set_source_files_properties(${HLSL_DEFINITIONS_INC} PROPERTIES GENERATED TRUE)
+
+target_sources(Diligent-ShaderTools PRIVATE
+    # A target created in the same directory (CMakeLists.txt file) that specifies any output of the
+    # custom command as a source file is given a rule to generate the file using the command at build time.
+    ${HLSL_DEFINITIONS_INC}
+)
+
+add_custom_command(OUTPUT ${HLSL_DEFINITIONS_INC} # We must use full path here!
+                   COMMAND ${PYTHON_EXECUTABLE} ${FILE2STRING_PATH} ${HLSL_DEFINITIONS} include/HLSLDefinitions_inc.fxh
+                   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                   MAIN_DEPENDENCY ${HLSL_DEFINITIONS}
+                   COMMENT "Processing HLSLDefinitions.fxh"
+                   VERBATIM
+)
+
 set_common_target_properties(Diligent-ShaderTools)
 
 source_group("src" FILES ${SOURCE})
@@ -165,6 +188,7 @@ source_group("interface" FILES ${INTERFACE})
 if (DXBC_CHECKSUM_SOURCE)
     source_group("ThirdParty\\DXBCChecksum" FILES ${DXBC_CHECKSUM_SOURCE})
 endif()
+source_group("generated" FILES include/HLSLDefinitions_inc.fxh)
 
 set_target_properties(Diligent-ShaderTools PROPERTIES
     FOLDER DiligentCore/Graphics
