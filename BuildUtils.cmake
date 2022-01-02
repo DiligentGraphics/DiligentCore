@@ -312,12 +312,15 @@ function(install_combined_static_lib COMBINED_LIB_NAME LIBS_LIST CUSTOM_TARGET_N
 
     if(MSVC)
         add_custom_command(
-            OUTPUT ${COMBINED_LIB_NAME}
-            COMMAND lib.exe /OUT:${COMBINED_LIB_NAME} ${COMBINED_LIB_TARGET_FILES}
+            OUTPUT "$<CONFIG>/${COMBINED_LIB_NAME}"
+            COMMAND lib.exe /OUT:"$<CONFIG>/${COMBINED_LIB_NAME}" ${COMBINED_LIB_TARGET_FILES}
             DEPENDS ${LIBS_LIST}
             COMMENT "Combining libraries..."
         )
-        add_custom_target(${CUSTOM_TARGET_NAME} ALL DEPENDS ${COMBINED_LIB_NAME})
+        add_custom_target(${CUSTOM_TARGET_NAME} ALL DEPENDS "$<CONFIG>/${COMBINED_LIB_NAME}")
+        install(FILES "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/${COMBINED_LIB_NAME}"
+                DESTINATION ${INSTALL_DESTINATION}
+        )
     else()
 
         if(PLATFORM_WIN32)
@@ -354,15 +357,15 @@ function(install_combined_static_lib COMBINED_LIB_NAME LIBS_LIST CUSTOM_TARGET_N
             )
 
             add_custom_target(${CUSTOM_TARGET_NAME} ALL DEPENDS ${COMBINED_LIB_NAME})
+            install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${COMBINED_LIB_NAME}"
+                    DESTINATION ${INSTALL_DESTINATION}
+            )
         else()
             message("ar command is not found")
         endif()
     endif()
 
     if(TARGET ${CUSTOM_TARGET_NAME})
-        install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${COMBINED_LIB_NAME}"
-                DESTINATION ${INSTALL_DESTINATION}
-        )
         set_target_properties(${CUSTOM_TARGET_NAME} PROPERTIES
             FOLDER ${CUSTOM_TARGET_FOLDER}
         )
