@@ -128,6 +128,13 @@ function(set_common_target_properties TARGET)
 
     get_target_property(TARGET_TYPE ${TARGET} TYPE)
 
+    set_target_properties(${TARGET} PROPERTIES
+        # It is crucial to set CXX_STANDARD flag to only affect c++ files and avoid failures compiling c-files:
+        # error: invalid argument '-std=c++14' not allowed with 'C/ObjC'
+        CXX_STANDARD 14
+        CXX_STANDARD_REQUIRED ON
+    )
+
     if(MSVC)
         # For msvc, enable link-time code generation for release builds (I was not able to
         # find any way to set these settings through interface library BuildSettings)
@@ -168,12 +175,7 @@ function(set_common_target_properties TARGET)
             #      dynamic linking and avoiding any limit on the size of the global offset table.
             POSITION_INDEPENDENT_CODE ON
 
-            # It is crucial to set CXX_STANDARD flag to only affect c++ files and avoid failures compiling c-files:
-            # error: invalid argument '-std=c++14' not allowed with 'C/ObjC'
-            CXX_STANDARD 14
-            CXX_STANDARD_REQUIRED ON
-
-            C_STANDARD 11
+            C_STANDARD 11 # MSVC requires legacy C standard
         )
 
         if(NOT MINGW_BUILD)
