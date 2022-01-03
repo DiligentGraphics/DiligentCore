@@ -26,6 +26,8 @@
  */
 
 #include <d3d11.h>
+#undef GetObject
+
 #include "DiligentCore/Graphics/GraphicsEngineD3D11/interface/SamplerD3D11.h"
 
 void TestSamplerD3D11_CInterface(struct ISamplerD3D11* pSampler)

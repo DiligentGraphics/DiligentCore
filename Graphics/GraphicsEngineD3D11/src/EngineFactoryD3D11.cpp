@@ -30,8 +30,10 @@
 
 #include "pch.h"
 
+#include "WinHPreface.h"
 #include <Windows.h>
 #include <dxgi1_3.h>
+#include "WinHPostface.h"
 
 #include "EngineFactoryD3D11.h"
 #include "RenderDeviceD3D11Impl.hpp"

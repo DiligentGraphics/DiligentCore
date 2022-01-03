@@ -29,7 +29,9 @@
 
 #include "ShaderResourcesD3D11.hpp"
 
+#include "WinHPreface.h"
 #include <d3dcompiler.h>
+#include "WinHPostface.h"
 
 #include "RenderDeviceD3D11Impl.hpp"
 

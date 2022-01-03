@@ -30,10 +30,9 @@
 /// \file
 /// Implementation of the Diligent::RenderDeviceBase template class and related structures
 
-#ifndef NOMINMAX
-#    define NOMINMAX
-#endif
+#include "WinHPreface.h"
 #include <dxgi.h>
+#include "WinHPostface.h"
 
 #include "RenderDeviceBase.hpp"
 #include "NVApiLoader.hpp"

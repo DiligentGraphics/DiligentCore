@@ -25,5 +25,6 @@
  *  of the possibility of such damages.
  */
 
+#include "WinHPreface.h"
 #define INITGUID
 #include <d3dcommon.h>

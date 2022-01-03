@@ -25,7 +25,9 @@
  *  of the possibility of such damages.
  */
 
-#include <D3D12.h>
+#include <d3d12.h>
+#undef GetObject
+
 #include "DiligentCore/Graphics/GraphicsEngineD3D12/interface/ShaderBindingTableD3D12.h"
 
 void TestShaderBindingTableD3D12_CInterface(IShaderBindingTableD3D12* pSBT)

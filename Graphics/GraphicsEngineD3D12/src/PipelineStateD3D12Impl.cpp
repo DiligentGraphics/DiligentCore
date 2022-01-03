@@ -33,11 +33,10 @@
 #include <array>
 #include <sstream>
 #include <unordered_map>
-#include <d3dcompiler.h>
 
-#ifdef FindResource
-#    undef FindResource
-#endif
+#include "WinHPreface.h"
+#include <d3dcompiler.h>
+#include "WinHPostface.h"
 
 #include "RenderDeviceD3D12Impl.hpp"
 #include "ShaderD3D12Impl.hpp"

@@ -26,6 +26,8 @@
  */
 
 #include <d3d12.h>
+#undef GetObject
+
 #include "DiligentCore/Graphics/GraphicsEngineD3D12/interface/QueryD3D12.h"
 
 void TestQueryD3D12_CInterface(struct IQueryD3D12* pQuery)

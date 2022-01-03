@@ -27,10 +27,6 @@
 
 #include "pch.h"
 
-#ifdef FindResource
-#    undef FindResource
-#endif
-
 #include "PipelineStateGLImpl.hpp"
 
 #include <unordered_map>

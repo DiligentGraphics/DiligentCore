@@ -30,7 +30,10 @@
 /// \file
 /// Declaration of Diligent::SwapChainD3D12Impl class
 
+#include "WinHPreface.h"
 #include <dxgi1_4.h>
+#include "WinHPostface.h"
+
 #include "SwapChainD3D12.h"
 #include "SwapChainD3DBase.hpp"
 

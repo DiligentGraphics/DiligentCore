@@ -29,7 +29,9 @@
 
 #include "ShaderD3D12Impl.hpp"
 
-#include <D3Dcompiler.h>
+#include "WinHPreface.h"
+#include <d3dcompiler.h>
+#include "WinHPostface.h"
 
 #include "RenderDeviceD3D12Impl.hpp"
 #include "DataBlobImpl.hpp"

@@ -27,12 +27,10 @@
 
 #include "TestingSwapChainBase.hpp"
 
-#ifndef NOMINMAX
-#    define NOMINMAX
-#endif
-
+#include "WinHPreface.h"
 #include <d3d12.h>
 #include <atlcomcli.h>
+#include "WinHPostface.h"
 
 namespace Diligent
 {

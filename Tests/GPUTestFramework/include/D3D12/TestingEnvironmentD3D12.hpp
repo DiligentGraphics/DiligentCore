@@ -31,13 +31,12 @@
 
 #include "TestingEnvironment.hpp"
 
-#ifndef NOMINMAX
-#    define NOMINMAX
-#endif
-
+#include "WinHPreface.h"
 #include <d3d12.h>
 #include <d3dcompiler.h>
 #include <atlcomcli.h>
+#include "WinHPostface.h"
+
 #include "DXCompiler.hpp"
 
 namespace Diligent

@@ -30,15 +30,15 @@
 /// \file
 /// Common D3D type conversion utilities
 
-#ifndef NOMINMAX
-#    define NOMINMAX
-#endif
+#include "WinHPreface.h"
 #include <dxgi.h>
+#include "WinHPostface.h"
 
 #include "GraphicsTypes.h"
 
 namespace Diligent
 {
+
 DXGI_FORMAT    TexFormatToDXGI_Format(TEXTURE_FORMAT TexFormat, Uint32 BindFlags = 0);
 TEXTURE_FORMAT DXGI_FormatToTexFormat(DXGI_FORMAT DXGIFormat);
 DXGI_FORMAT    TypeToDXGI_Format(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNormalized);

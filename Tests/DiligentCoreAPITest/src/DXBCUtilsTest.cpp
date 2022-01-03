@@ -28,11 +28,10 @@
 #include <string>
 #include <unordered_set>
 
-#ifndef NOMINMAX
-#    define NOMINMAX
-#endif
+#include "WinHPreface.h"
 #include <atlcomcli.h>
 #include <d3dcompiler.h>
+#include "WinHPostface.h"
 
 #include "DXBCUtils.hpp"
 #include "TestingEnvironment.hpp"

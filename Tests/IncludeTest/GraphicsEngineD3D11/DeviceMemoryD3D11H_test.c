@@ -25,6 +25,8 @@
  */
 
 #include <d3d11.h>
+#undef GetObject
+
 #include "DiligentCore/Graphics/GraphicsEngineD3D11/interface/DeviceMemoryD3D11.h"
 
 void TestDeviceMemoryD3D11_CInterface(struct IDeviceMemoryD3D11* pMem)

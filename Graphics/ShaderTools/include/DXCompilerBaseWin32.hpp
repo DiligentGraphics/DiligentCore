@@ -25,12 +25,16 @@
  *  of the possibility of such damages.
  */
 
+#include "WinHPreface.h"
+
 #include <Unknwn.h>
 #include <guiddef.h>
 #include <atlbase.h>
 #include <atlcom.h>
 
 #include "dxc/dxcapi.h"
+
+#include "WinHPostface.h"
 
 #include "DXCompiler.hpp"
 

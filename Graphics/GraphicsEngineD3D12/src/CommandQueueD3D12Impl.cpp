@@ -26,7 +26,11 @@
  */
 
 #include "pch.h"
+
+#include "WinHPreface.h"
 #include <dxgi1_4.h>
+#include "WinHPostface.h"
+
 #include "CommandQueueD3D12Impl.hpp"
 #include "NVApiLoader.hpp"
 

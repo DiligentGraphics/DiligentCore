@@ -27,7 +27,10 @@
 
 #pragma once
 
+#include "WinHPreface.h"
 #include <d3dcommon.h>
+#include "WinHPostface.h"
+
 #include "Shader.h"
 
 /// \file

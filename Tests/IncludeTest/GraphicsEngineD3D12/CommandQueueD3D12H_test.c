@@ -26,6 +26,8 @@
  */
 
 #include <d3d12.h>
+#undef GetObject
+
 #include "DiligentCore/Graphics/GraphicsEngineD3D12/interface/CommandQueueD3D12.h"
 
 void TestCommandQueueD3D12CInterface(ICommandQueueD3D12* pQueue)

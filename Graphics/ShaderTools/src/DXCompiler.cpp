@@ -49,7 +49,9 @@
 #include "ShaderToolsCommon.hpp"
 
 #if D3D12_SUPPORTED
+#    include "WinHPreface.h"
 #    include <d3d12shader.h>
+#    include "WinHPostface.h"
 
 #    ifndef NTDDI_WIN10_VB // First defined in Win SDK 10.0.19041.0
 #        define NO_D3D_SIT_ACCELSTRUCT_FEEDBACK_TEX 1

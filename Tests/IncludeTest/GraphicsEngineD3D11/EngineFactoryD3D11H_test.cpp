@@ -29,6 +29,7 @@
 #    define NOMINMAX
 #endif
 #include <Windows.h>
+#undef GetObject
 
 #ifndef ENGINE_DLL
 #    define ENGINE_DLL 1

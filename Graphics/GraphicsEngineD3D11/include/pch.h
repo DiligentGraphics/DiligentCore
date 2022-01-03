@@ -32,21 +32,16 @@
 
 #pragma once
 
-#include "targetver.h"
-
-#ifndef WIN32_LEAN_AND_MEAN
-#    define WIN32_LEAN_AND_MEAN // Exclude rarely-used stuff from Windows headers
-#endif
-
-#ifndef NOMINMAX
-#    define NOMINMAX
-#endif
-
-#include "PlatformDefinitions.h"
-
 #include <vector>
 #include <exception>
 #include <algorithm>
+
+
+#include "WinHPreface.h"
+
+#include "targetver.h"
+
+#include "PlatformDefinitions.h"
 
 #if PLATFORM_WIN32
 #    ifndef D3D11_VERSION
@@ -70,6 +65,10 @@
 #    include <d3d11_4.h>
 #endif
 
+#include <atlbase.h>
+
+#include "WinHPostface.h"
+
 #include "Errors.hpp"
 #include "RefCntAutoPtr.hpp"
 #include "DebugUtilities.hpp"
@@ -77,6 +76,3 @@
 #include "RenderDeviceBase.hpp"
 #include "D3D11TypeConversions.hpp"
 #include "Cast.hpp"
-
-#include <atlbase.h>
-#undef FindResource // Leaks from WinBase.h

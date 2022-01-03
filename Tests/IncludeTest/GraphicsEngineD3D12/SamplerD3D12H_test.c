@@ -26,6 +26,8 @@
  */
 
 #include <d3d12.h>
+#undef GetObject
+
 #include "DiligentCore/Graphics/GraphicsEngineD3D12/interface/SamplerD3D12.h"
 
 void TestSamplerD3D12_CInterface(ISamplerD3D12* pSampler)

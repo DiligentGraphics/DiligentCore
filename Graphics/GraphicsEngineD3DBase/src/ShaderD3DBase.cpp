@@ -29,12 +29,11 @@
 #include <vector>
 #include <memory>
 
-#ifndef NOMINMAX
-#    define NOMINMAX
-#endif
+#include "WinHPreface.h"
 #include <D3Dcompiler.h>
-
 #include <atlcomcli.h>
+#include "WinHPostface.h"
+
 #include "dxc/dxcapi.h"
 
 #include "D3DErrors.hpp"

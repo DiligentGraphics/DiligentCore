@@ -27,19 +27,22 @@
 
 #pragma once
 
-#ifndef WIN32_LEAN_AND_MEAN
-#    define WIN32_LEAN_AND_MEAN // Exclude rarely-used stuff from Windows headers
-#endif
-
-#ifndef NOMINMAX
-#    define NOMINMAX
-#endif
-
-
 #include <vector>
 #include <exception>
 #include <algorithm>
+
+#include "WinHPreface.h"
+
 #include <d3d12.h>
+#include <atlbase.h>
+
+#if USE_D3D12_LOADER
+// On Win32 we manually load d3d12.dll and get entry points,
+// but UWP does not support this, so we link with d3d12.lib
+#    include "D3D12Loader.hpp"
+#endif
+
+#include "WinHPostface.h"
 
 #ifndef NTDDI_WIN10_VB // First defined in Win SDK 10.0.19041.0
 #    define D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_RAYS static_cast<D3D12_INDIRECT_ARGUMENT_TYPE>(D3D12_INDIRECT_ARGUMENT_TYPE_UNORDERED_ACCESS_VIEW + 1)
@@ -64,13 +67,3 @@ constexpr D3D12_RESOURCE_STATES D3D12_RESOURCE_STATE_SHADING_RATE_SOURCE = stati
 #include "D3DErrors.hpp"
 #include "Cast.hpp"
 #include "STDAllocator.hpp"
-
-#include <atlbase.h>
-
-#if USE_D3D12_LOADER
-// On Win32 we manually load d3d12.dll and get entry points,
-// but UWP does not support this, so we link with d3d12.lib
-#    include "D3D12Loader.hpp"
-#endif
-
-#undef FindResource // Leaks from WinBase.h

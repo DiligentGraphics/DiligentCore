@@ -29,7 +29,9 @@
 
 #include "ShaderResourcesD3D12.hpp"
 
+#include "WinHPreface.h"
 #include <d3dcompiler.h>
+#include "WinHPostface.h"
 
 #include "ShaderD3DBase.hpp"
 #include "ShaderBase.hpp"

@@ -31,6 +31,10 @@
 #    define VK_NO_PROTOTYPES
 #endif
 
+#if PLATFORM_WIN32
+#    include "WinHPreface.h"
+#endif
+
 #define VK_ENABLE_BETA_EXTENSIONS
 #include "vulkan/vulkan.h"
 
@@ -38,6 +42,10 @@
 
 #if DILIGENT_USE_VOLK
 #    include "volk/volk.h"
+#endif
+
+#if PLATFORM_WIN32
+#    include "WinHPostface.h"
 #endif
 
 #ifdef _WINBASE_

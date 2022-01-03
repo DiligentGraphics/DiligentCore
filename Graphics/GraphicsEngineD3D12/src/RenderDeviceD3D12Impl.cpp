@@ -29,8 +29,11 @@
 
 #include "RenderDeviceD3D12Impl.hpp"
 
-#include <dxgi1_4.h>
 #include <vector>
+
+#include "WinHPreface.h"
+#include <dxgi1_4.h>
+#include "WinHPostface.h"
 
 #include "PipelineStateD3D12Impl.hpp"
 #include "ShaderD3D12Impl.hpp"

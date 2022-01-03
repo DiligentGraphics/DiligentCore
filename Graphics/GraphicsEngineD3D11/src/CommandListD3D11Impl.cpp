@@ -29,8 +29,6 @@
 
 #include "CommandListD3D11Impl.hpp"
 
-#include <atlbase.h>
-
 #include "RenderDeviceD3D11Impl.hpp"
 #include "DeviceContextD3D11Impl.hpp"
 #include "EngineMemory.h"

@@ -45,12 +45,12 @@
 #        define GLEW_STATIC // Must be defined to use static version of glew
 #    endif
 #    include "GL/glew.h"
+
+#    include "WinHPreface.h"
 // Glew includes <windows.h>
-#    ifndef NOMINMAX
-#        define NOMINMAX
-#    endif
 #    include "GL/wglew.h"
 #    include <GL/GL.h>
+#    include "WinHPostface.h"
 
 #elif PLATFORM_LINUX
 
@@ -156,8 +156,4 @@
         do                          \
         {                           \
         } while (false)
-#endif
-
-#ifdef FindResource
-#    undef FindResource /// Leaks from WinBase.h
 #endif

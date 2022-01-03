@@ -48,8 +48,9 @@ void WindowsStoreFileSystem::DeleteFile(const Diligent::Char* strPath)
 }
 
 
-#define NOMINMAX
+#include "WinHPreface.h"
 #include <wrl.h>
+#include "WinHPostface.h"
 
 using namespace Diligent;
 using namespace Microsoft::WRL;

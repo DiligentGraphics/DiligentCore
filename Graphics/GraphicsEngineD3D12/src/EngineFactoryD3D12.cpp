@@ -46,11 +46,10 @@
 #include "CommandQueueD3D12Impl.hpp"
 #include "DearchiverD3D12Impl.hpp"
 
-#ifndef NOMINMAX
-#    define NOMINMAX
-#endif
+#include "WinHPreface.h"
 #include <Windows.h>
 #include <dxgi1_4.h>
+#include "WinHPostface.h"
 
 namespace Diligent
 {

@@ -26,6 +26,8 @@
  */
 
 #include <d3d11.h>
+#undef GetObject
+
 #include "DiligentCore/Graphics/GraphicsEngineD3D11/interface/BufferViewD3D11.h"
 
 void TestBufferViewD3D11_CInterface(struct IBufferViewD3D11* pView)

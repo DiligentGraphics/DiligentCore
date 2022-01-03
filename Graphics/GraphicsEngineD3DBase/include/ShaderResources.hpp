@@ -58,8 +58,9 @@
 
 #include <memory>
 
-#define NOMINMAX
+#include "WinHPreface.h"
 #include <d3dcommon.h>
+#include "WinHPostface.h"
 
 #ifndef NTDDI_WIN10_VB // First defined in Win SDK 10.0.19041.0
 #    define D3D_SIT_RTACCELERATIONSTRUCTURE (D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER + 1)

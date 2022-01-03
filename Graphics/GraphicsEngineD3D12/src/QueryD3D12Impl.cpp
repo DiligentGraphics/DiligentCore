@@ -29,7 +29,9 @@
 
 #include "QueryD3D12Impl.hpp"
 
+#include "WinHPreface.h"
 #include <atlbase.h>
+#include "WinHPostface.h"
 
 #include "RenderDeviceD3D12Impl.hpp"
 #include "GraphicsAccessories.hpp"

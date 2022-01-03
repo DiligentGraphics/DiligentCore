@@ -26,6 +26,8 @@
  */
 
 #include <d3d12.h>
+#undef GetObject
+
 #include "DiligentCore/Graphics/GraphicsEngineD3D12/interface/PipelineStateD3D12.h"
 
 void TestPipelineStateD3D12CInterface(struct IPipelineStateD3D12* pPSO)

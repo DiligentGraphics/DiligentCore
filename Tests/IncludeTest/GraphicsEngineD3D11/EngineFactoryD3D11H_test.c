@@ -30,6 +30,7 @@
 #endif
 #include <Windows.h>
 #include <d3d11.h>
+#undef GetObject
 
 #ifndef ENGINE_DLL
 #    define ENGINE_DLL 1

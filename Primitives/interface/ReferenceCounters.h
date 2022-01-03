@@ -32,6 +32,10 @@
 
 #include "InterfaceID.h"
 
+#if defined(_MSC_VER) && defined(GetObject)
+#    error One of Windows headers leaks GetObject macro, which may result in odd errors. You need to undef the macro.
+#endif
+
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 typedef long ReferenceCounterValueType;

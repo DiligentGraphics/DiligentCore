@@ -25,14 +25,14 @@
  *  of the possibility of such damages.
  */
 
-#include <atlcomcli.h>
-#include <d3dcompiler.h>
-
-#include <d3d11shader.h>
 #include <array>
 #include <vector>
+
+#include "WinHPreface.h"
 #include <atlcomcli.h>
 #include <d3dcompiler.h>
+#include <d3d11shader.h>
+#include "WinHPostface.h"
 
 #include "DXBCUtils.hpp"
 #include "../../../ThirdParty/GPUOpenShaderUtils/DXBCChecksum.h"

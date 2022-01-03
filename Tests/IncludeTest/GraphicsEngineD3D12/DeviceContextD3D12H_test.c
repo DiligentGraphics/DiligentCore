@@ -26,6 +26,8 @@
  */
 
 #include <d3d12.h>
+#undef GetObject
+
 #include "DiligentCore/Graphics/GraphicsEngineD3D12/interface/DeviceContextD3D12.h"
 
 void TestDeviceContextD3D12_CInterface(IDeviceContextD3D12* pCtx)

@@ -50,6 +50,10 @@
 #include "ShaderResourceCacheCommon.hpp"
 #include "HashUtils.hpp"
 
+#if defined(_MSC_VER) && defined(FindResource)
+#    error One of Windows headers leaks FindResource macro, which may result in odd errors. You need to undef the macro.
+#endif
+
 namespace Diligent
 {
 

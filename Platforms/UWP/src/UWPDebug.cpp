@@ -29,8 +29,9 @@
 #include "FormatString.hpp"
 #include <csignal>
 
-#define NOMINMAX
+#include "WinHPreface.h"
 #include <windows.h>
+#include "WinHPostface.h"
 
 using namespace Diligent;
 

@@ -29,10 +29,9 @@
 #include "D3D12Loader.hpp"
 #include "Errors.hpp"
 
-#ifndef NOMINMAX
-#    define NOMINMAX
-#endif
+#include "WinHPreface.h"
 #include <Windows.h>
+#include "WinHPostface.h"
 
 namespace Diligent
 {

@@ -1,6 +1,5 @@
 /*
  *  Copyright 2019-2022 Diligent Graphics LLC
- *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -25,45 +24,18 @@
  *  of the possibility of such damages.
  */
 
-#include "TestingEnvironment.hpp"
-
-#include "WinHPreface.h"
-#include <Windows.h>
-#include "WinHPostface.h"
-
-namespace Diligent
-{
-
-namespace Testing
-{
-
-Win32NativeWindow TestingEnvironment::CreateNativeWindow()
-{
-#ifdef UNICODE
-    const auto* const WindowClassName = L"SampleApp";
-#else
-    const auto* const WindowClassName = "SampleApp";
+#ifdef GetObject
+#    undef GetObject
 #endif
-    // Register window class
-    HINSTANCE instance = NULL;
 
-    WNDCLASSEX wcex = {sizeof(WNDCLASSEX), CS_HREDRAW | CS_VREDRAW, DefWindowProc,
-                       0L, 0L, instance, NULL, NULL, NULL, NULL, WindowClassName, NULL};
-    RegisterClassEx(&wcex);
+#ifdef FindResource
+#    undef FindResource
+#endif
 
-    LONG WindowWidth  = 512;
-    LONG WindowHeight = 512;
-    RECT rc           = {0, 0, WindowWidth, WindowHeight};
-    AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, FALSE);
-    HWND wnd = CreateWindowA("SampleApp", "Dummy Window",
-                             WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
-                             rc.right - rc.left, rc.bottom - rc.top, NULL, NULL, instance, NULL);
-    if (wnd == NULL)
-        LOG_ERROR_AND_THROW("Unable to create a window");
+#ifdef min
+#    undef min
+#endif
 
-    return Win32NativeWindow{wnd};
-}
-
-} // namespace Testing
-
-} // namespace Diligent
+#ifdef max
+#    undef max
+#endif

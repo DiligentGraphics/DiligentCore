@@ -27,10 +27,9 @@
 
 #include "D3D11/CreateObjFromNativeResD3D11.hpp"
 
-#ifndef NOMINMAX
-#    define NOMINMAX
-#endif
+#include "WinHPreface.h"
 #include <d3d11.h>
+#include "WinHPostface.h"
 
 #include "RenderDeviceD3D11.h"
 #include "TextureD3D11.h"

@@ -31,7 +31,10 @@
 
 #include <array>
 #include <unordered_map>
+
+#include "WinHPreface.h"
 #include <d3dcompiler.h>
+#include "WinHPostface.h"
 
 #include "RenderDeviceD3D11Impl.hpp"
 #include "ShaderResourceBindingD3D11Impl.hpp"

@@ -25,4 +25,6 @@
  *  of the possibility of such damages.
  */
 #include <d3d12.h>
+#undef GetObject
+
 #include "DiligentCore/Graphics/GraphicsEngineD3D12/interface/ShaderResourceBindingD3D12.h"

@@ -27,7 +27,9 @@
 
 #include "pch.h"
 
+#include "WinHPreface.h"
 #include <d3dcompiler.h>
+#include "WinHPostface.h"
 
 #include "ShaderVariableManagerD3D11.hpp"
 #include "ShaderResourceCacheD3D11.hpp"

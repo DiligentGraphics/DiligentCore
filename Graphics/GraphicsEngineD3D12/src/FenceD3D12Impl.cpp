@@ -30,7 +30,10 @@
 #include "FenceD3D12Impl.hpp"
 
 #include <thread>
+
+#include "WinHPreface.h"
 #include <atlbase.h>
+#include "WinHPostface.h"
 
 #include "RenderDeviceD3D12Impl.hpp"
 

@@ -27,10 +27,9 @@
 
 #include "D3D12/CreateObjFromNativeResD3D12.hpp"
 
-#ifndef NOMINMAX
-#    define NOMINMAX
-#endif
+#include "WinHPreface.h"
 #include <d3d12.h>
+#include "WinHPostface.h"
 
 #include "RenderDeviceD3D12.h"
 #include "TextureD3D12.h"

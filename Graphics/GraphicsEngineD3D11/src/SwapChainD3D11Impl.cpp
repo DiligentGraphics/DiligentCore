@@ -26,7 +26,10 @@
  */
 
 #include "pch.h"
+
+#include "WinHPreface.h"
 #include <dxgi1_3.h>
+#include "WinHPostface.h"
 
 #include "SwapChainD3D11Impl.hpp"
 #include "RenderDeviceD3D11Impl.hpp"

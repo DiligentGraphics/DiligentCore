@@ -32,16 +32,6 @@
 
 #pragma once
 
-#ifdef PLATFORM_WIN32
-#    ifndef WIN32_LEAN_AND_MEAN
-#        define WIN32_LEAN_AND_MEAN // Exclude rarely-used stuff from Windows headers
-#    endif
-
-#    ifndef NOMINMAX
-#        define NOMINMAX
-#    endif
-#endif
-
 #include <vector>
 #include <exception>
 #include <algorithm>
@@ -76,7 +66,3 @@ template <> struct hash<VkFormat>
 #include "VulkanErrors.hpp"
 #include "RenderDeviceBase.hpp"
 #include "Cast.hpp"
-
-#ifdef FindResource
-#    undef FindResource /// Leaks from WinBase.h
-#endif
