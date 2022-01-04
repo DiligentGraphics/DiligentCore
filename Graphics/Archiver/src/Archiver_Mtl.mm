@@ -63,7 +63,7 @@ std::string GetTmpFolder()
     const auto ThreadId = std::this_thread::get_id();
     std::stringstream FolderPath;
     FolderPath << filesystem::temp_directory_path().c_str()
-               << "/DiligentArchiver/"
+               << "/DiligentArchiver-"
                << ProcId << '-'
                << ThreadId << '/';
     return FolderPath.str();
