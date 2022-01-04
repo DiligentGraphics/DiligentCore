@@ -358,14 +358,16 @@ void ValidatePipelineResourceSignatures(const PipelineStateCreateInfo& CreateInf
 
                 break;
             }
+
             if (it == range.second)
             {
-                LOG_PSO_ERROR_AND_THROW("Resource layout contains variable '", Var.Name, "' that is not present in the implicit resource signatre. ",
-                                        "Note that PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0 flag is for internal use only. If you see this message while "
-                                        "unpacking PSO from the archive, this might indicate a bug.");
+                // It is OK - there may be variables in the resource layout
+                // that don't present in any shader.
             }
-
-            AllResources.erase(it);
+            else
+            {
+                AllResources.erase(it);
+            }
         }
         for (const auto& it : AllResources)
         {
@@ -373,7 +375,7 @@ void ValidatePipelineResourceSignatures(const PipelineStateCreateInfo& CreateInf
             if (ResDesc.VarType != ResLayout.DefaultVariableType)
             {
                 LOG_PSO_ERROR_AND_THROW("The type of variable '", ResDesc.Name, "' not explicitly defined by the resource layout (", GetShaderVariableTypeLiteralName(ResDesc.VarType),
-                                        ") does not match the default varaible type defined by the implicit resource signatre (", GetShaderVariableTypeLiteralName(ResLayout.DefaultVariableType),
+                                        ") does not match the default varaible type (", GetShaderVariableTypeLiteralName(ResLayout.DefaultVariableType),
                                         "). Note that PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0 flag is for internal use only. If you see this message while "
                                         "unpacking PSO from the archive, this might indicate a bug.");
             }

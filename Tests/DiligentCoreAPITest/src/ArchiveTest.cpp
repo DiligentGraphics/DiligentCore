@@ -655,7 +655,8 @@ TEST(ArchiveTest, GraphicsPipeline)
                     {SHADER_TYPE_ALL_GRAPHICS, "cbConstants", SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
                     {SHADER_TYPE_PIXEL, "g_GBuffer_Color", SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
                     {SHADER_TYPE_PIXEL, "g_GBuffer_Normal", SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
-                    {SHADER_TYPE_PIXEL, "g_GBuffer_Depth", SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE} //
+                    {SHADER_TYPE_PIXEL, "g_GBuffer_Depth", SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+                    {SHADER_TYPE_PIXEL, "g_Dummy", SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC} //
                 };
             LayoutDesc.Variables           = Variables;
             LayoutDesc.NumVariables        = _countof(Variables);
