@@ -27,6 +27,11 @@
 #include "ArchiverImpl.hpp"
 #include "Archiver_Inc.hpp"
 
+#include <thread>
+#include <sstream>
+#include <filesystem>
+#include <unistd.h>
+
 #include "RenderDeviceMtlImpl.hpp"
 #include "PipelineResourceSignatureMtlImpl.hpp"
 #include "PipelineStateMtlImpl.hpp"
@@ -34,6 +39,8 @@
 #include "DeviceObjectArchiveMtlImpl.hpp"
 
 #include "spirv_msl.hpp"
+
+namespace filesystem = std::__fs::filesystem;
 
 namespace Diligent
 {
@@ -49,6 +56,18 @@ struct SerializableResourceSignatureImpl::SignatureTraits<PipelineResourceSignat
 
 namespace
 {
+
+std::string GetTmpFolder()
+{
+    const auto ProcId   = getpid();
+    const auto ThreadId = std::this_thread::get_id();
+    std::stringstream FolderPath;
+    FolderPath << filesystem::temp_directory_path().c_str()
+               << "/DiligentArchiver/"
+               << ProcId << '-'
+               << ThreadId << '/';
+    return FolderPath.str();
+}
 
 struct ShaderStageInfoMtl
 {
@@ -333,7 +352,7 @@ void SerializeBufferTypeInfoMapAndComputeGroupSize(Serializer<Mode>             
 {
     const auto Count = static_cast<Uint32>(BufferTypeInfoMap.size());
     Ser(Count);
-    
+
     for (auto& BuffInfo : BufferTypeInfoMap)
     {
         const char* Name = BuffInfo.second.Name.c_str();
@@ -345,7 +364,7 @@ void SerializeBufferTypeInfoMapAndComputeGroupSize(Serializer<Mode>             
         std::array<Uint32,3> GroupSize = {};
         if (SPIRVResources)
             GroupSize = SPIRVResources->GetComputeGroupSize();
-        
+
         Ser(GroupSize);
     }
 }
@@ -360,13 +379,27 @@ SerializedMemory SerializableShaderImpl::PatchShaderMtl(const RefCntAutoPtr<Pipe
     VERIFY_EXPR(pSignatures != nullptr);
     VERIFY_EXPR(pBaseBindings != nullptr);
 
-    const auto RemoveTempFiles = []() {
-        std::remove("Shader.metal");
-        std::remove("Shader.air");
-        std::remove("Shader.metallib");
-        //std::remove("Shader.metallibsym");
+    const auto TmpFolder = GetTmpFolder();
+    filesystem::create_directories(TmpFolder.c_str());
+
+    struct TmpDirRemover
+    {
+        explicit TmpDirRemover(const std::string& _Path) noexcept :
+            Path{_Path}
+        {}
+
+        ~TmpDirRemover()
+        {
+            filesystem::remove_all(Path.c_str());
+        }
+    private:
+        const std::string Path;
     };
-    RemoveTempFiles();
+    TmpDirRemover DirRemover{TmpFolder};
+
+    const auto MetalFile    = TmpFolder + "Shader.metal";
+    const auto AirFile      = TmpFolder + "Shader.air";
+    const auto MetalLibFile = TmpFolder + "Shader.metallib";
 
     auto*  pShaderMtl = static_cast<const CompiledShaderMtlImpl*>(m_pShaderMtl.get());
     String MslSource  = pShaderMtl->MslSource;
@@ -404,7 +437,7 @@ SerializedMemory SerializableShaderImpl::PatchShaderMtl(const RefCntAutoPtr<Pipe
 
     // Save to 'Shader.metal'
     {
-        FILE* File = fopen("Shader.metal", "wb");
+        FILE* File = fopen(MetalFile.c_str(), "wb");
         if (File == nullptr)
             LOG_ERROR_AND_THROW("Failed to save Metal shader source");
 
@@ -415,7 +448,7 @@ SerializedMemory SerializableShaderImpl::PatchShaderMtl(const RefCntAutoPtr<Pipe
     // Run user-defined MSL preprocessor
     if (!m_pDevice->GetMslPreprocessorCmd().empty())
     {
-        FILE* File = popen((m_pDevice->GetMslPreprocessorCmd() + " Shader.metal").c_str(), "r");
+        FILE* File = popen((m_pDevice->GetMslPreprocessorCmd() + " " + MetalFile).c_str(), "r");
         if (File == nullptr)
             LOG_ERROR_AND_THROW("Failed to run command line Metal shader compiler");
 
@@ -434,7 +467,7 @@ SerializedMemory SerializableShaderImpl::PatchShaderMtl(const RefCntAutoPtr<Pipe
     {
         String cmd{"xcrun "};
         cmd += (IsForMacOS ? m_pDevice->GetMtlCompileOptionsMacOS() : m_pDevice->GetMtlCompileOptionsiOS());
-        cmd += " -c Shader.metal -o Shader.air";
+        cmd += " -c " + MetalFile + " -o " + AirFile;
 
         FILE* File = popen(cmd.c_str(), "r");
         if (File == nullptr)
@@ -453,7 +486,7 @@ SerializedMemory SerializableShaderImpl::PatchShaderMtl(const RefCntAutoPtr<Pipe
     {
         String cmd{"xcrun "};
         cmd += (IsForMacOS ? m_pDevice->GetMtlLinkOptionsMacOS() : m_pDevice->GetMtlLinkOptionsiOS());
-        cmd += " -o Shader.metallib Shader.air";
+        cmd += " -o " + MetalLibFile + " " + AirFile;
 
         FILE* File = popen(cmd.c_str(), "r");
         if (File == nullptr)
@@ -480,7 +513,7 @@ SerializedMemory SerializableShaderImpl::PatchShaderMtl(const RefCntAutoPtr<Pipe
     SerializedMemory Bytecode;
     size_t           BytecodeSize = 0;
     {
-        FILE* File = fopen("Shader.metallib", "rb");
+        FILE* File = fopen(MetalLibFile.c_str(), "rb");
         if (File == nullptr)
             LOG_ERROR_AND_THROW("Failed to read shader library");
 
@@ -494,11 +527,9 @@ SerializedMemory SerializableShaderImpl::PatchShaderMtl(const RefCntAutoPtr<Pipe
         fclose(File);
     }
 
-    RemoveTempFiles();
-
     if (BytecodeSize == 0)
         LOG_ERROR_AND_THROW("Metal shader library is empty");
-    
+
     Serializer<SerializerMode::Write> Ser{Bytecode.Ptr(), BytecodeOffset};
     SerializeBufferTypeInfoMapAndComputeGroupSize(Ser, BufferTypeInfoMap, GetDesc().ShaderType, pShaderMtl->SPIRVResources);
     VERIFY_EXPR(Ser.IsEnd());
