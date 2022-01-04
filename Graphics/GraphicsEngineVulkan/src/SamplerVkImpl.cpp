@@ -87,9 +87,15 @@ SamplerVkImpl::SamplerVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImp
     m_VkSampler = LogicalDevice.CreateSampler(SamplerCI);
 }
 
+SamplerVkImpl::SamplerVkImpl(IReferenceCounters* pRefCounters, const SamplerDesc& SamplerDesc) noexcept :
+    TSamplerBase{pRefCounters, SamplerDesc}
+{
+}
+
 SamplerVkImpl::~SamplerVkImpl()
 {
-    m_pDevice->SafeReleaseDeviceObject(std::move(m_VkSampler), m_ImmediateContextMask);
+    if (m_VkSampler)
+        m_pDevice->SafeReleaseDeviceObject(std::move(m_VkSampler), m_ImmediateContextMask);
 }
 
 } // namespace Diligent

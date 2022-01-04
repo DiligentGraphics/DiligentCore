@@ -137,7 +137,7 @@ struct SerializableResourceSignatureImpl::TPRS final : PRSWapperBase
     ImplType PRS;
 
     TPRS(IReferenceCounters* pRefCounters, const PipelineResourceSignatureDesc& SignatureDesc, SHADER_TYPE ShaderStages) :
-        PRS{pRefCounters, nullptr, SignatureDesc, ShaderStages, true}
+        PRS{pRefCounters, nullptr, SignatureDesc, ShaderStages, true /*Pretend device internal to allow null device*/}
     {}
 
     IPipelineResourceSignature* GetPRS() override { return &PRS; }

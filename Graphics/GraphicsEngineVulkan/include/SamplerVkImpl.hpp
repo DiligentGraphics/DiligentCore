@@ -44,6 +44,8 @@ public:
     using TSamplerBase = SamplerBase<EngineVkImplTraits>;
 
     SamplerVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl* pRenderDeviceVk, const SamplerDesc& SamplerDesc);
+    // Special constructor for serialization
+    SamplerVkImpl(IReferenceCounters* pRefCounters, const SamplerDesc& SamplerDesc) noexcept;
     ~SamplerVkImpl();
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_SamplerVk, TSamplerBase)

@@ -125,11 +125,18 @@ public:
 
     struct ImmutableSamplerAttribs : PipelineResourceImmutableSamplerAttribsVk
     {
-        RefCntAutoPtr<ISampler> Ptr;
-
         ImmutableSamplerAttribs() noexcept {}
         explicit ImmutableSamplerAttribs(const PipelineResourceImmutableSamplerAttribsVk& Attribs) noexcept :
             PipelineResourceImmutableSamplerAttribsVk{Attribs} {}
+
+        void Init(RenderDeviceVkImpl* pDevice, const SamplerDesc& Desc);
+
+        explicit operator bool() const { return Ptr != nullptr; }
+
+        VkSampler GetVkSampler() const;
+
+    private:
+        RefCntAutoPtr<ISampler> Ptr;
     };
 
     const ImmutableSamplerAttribs& GetImmutableSamplerAttribs(Uint32 SampIndex) const

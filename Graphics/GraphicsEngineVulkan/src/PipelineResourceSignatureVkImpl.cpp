@@ -165,6 +165,25 @@ PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCount
     }
 }
 
+void PipelineResourceSignatureVkImpl::ImmutableSamplerAttribs::Init(RenderDeviceVkImpl* pDevice, const SamplerDesc& Desc)
+{
+    VERIFY_EXPR(!Ptr);
+    if (pDevice != nullptr)
+    {
+        pDevice->CreateSampler(Desc, &Ptr);
+    }
+    else
+    {
+        Ptr = NEW_RC_OBJ(GetRawAllocator(), "Dummy sampler instance", SamplerVkImpl)(Desc);
+    }
+}
+
+VkSampler PipelineResourceSignatureVkImpl::ImmutableSamplerAttribs::GetVkSampler() const
+{
+    VERIFY_EXPR(Ptr);
+    return Ptr.RawPtr<SamplerVkImpl>()->GetVkSampler();
+}
+
 void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
 {
     // Initialize static resource cache first
@@ -246,7 +265,7 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
 
     std::array<std::vector<VkDescriptorSetLayoutBinding>, DESCRIPTOR_SET_ID_NUM_SETS> vkSetLayoutBindings;
 
-    DynamicLinearAllocator TempAllocator{GetRawAllocator()};
+    DynamicLinearAllocator TempAllocator{GetRawAllocator(), 256};
 
     for (Uint32 i = 0; i < m_Desc.NumResources; ++i)
     {
@@ -279,17 +298,14 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
             const auto SrcImmutableSamplerInd = FindImmutableSamplerVk(ResDesc, DescrType, m_Desc, GetCombinedSamplerSuffix());
             if (SrcImmutableSamplerInd != InvalidImmutableSamplerIndex)
             {
-                auto&       ImmutableSampler     = m_ImmutableSamplers[SrcImmutableSamplerInd];
-                const auto& ImmutableSamplerDesc = m_Desc.ImmutableSamplers[SrcImmutableSamplerInd].Desc;
-                VkSampler   vkSampler            = VK_NULL_HANDLE;
-                if (HasDevice())
+                auto& ImmutableSampler = m_ImmutableSamplers[SrcImmutableSamplerInd];
+                if (!ImmutableSampler)
                 {
+                    const auto& ImmutableSamplerDesc = m_Desc.ImmutableSamplers[SrcImmutableSamplerInd].Desc;
                     // The same immutable sampler may be used by different resources in different shader stages.
-                    if (!ImmutableSampler.Ptr)
-                        GetDevice()->CreateSampler(ImmutableSamplerDesc, &ImmutableSampler.Ptr);
-                    vkSampler = ImmutableSampler.Ptr.RawPtr<SamplerVkImpl>()->GetVkSampler();
+                    ImmutableSampler.Init(HasDevice() ? GetDevice() : nullptr, ImmutableSamplerDesc);
                 }
-                pVkImmutableSamplers = TempAllocator.ConstructArray<VkSampler>(ResDesc.ArraySize, vkSampler);
+                pVkImmutableSamplers = TempAllocator.ConstructArray<VkSampler>(ResDesc.ArraySize, ImmutableSampler.GetVkSampler());
             }
         }
 
@@ -329,14 +345,13 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
         BindingIndices[CacheGroup] += 1;
         CacheGroupOffsets[CacheGroup] += ResDesc.ArraySize;
 
-        vkSetLayoutBindings[SetId].emplace_back();
-        auto& vkSetLayoutBinding = vkSetLayoutBindings[SetId].back();
-
+        VkDescriptorSetLayoutBinding vkSetLayoutBinding{};
         vkSetLayoutBinding.binding            = pAttribs->BindingIndex;
         vkSetLayoutBinding.descriptorCount    = ResDesc.ArraySize;
         vkSetLayoutBinding.stageFlags         = ShaderTypesToVkShaderStageFlags(ResDesc.ShaderStages);
         vkSetLayoutBinding.pImmutableSamplers = pVkImmutableSamplers;
         vkSetLayoutBinding.descriptorType     = DescriptorTypeToVkDescriptorType(pAttribs->GetDescriptorType());
+        vkSetLayoutBindings[SetId].push_back(vkSetLayoutBinding);
 
         if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
         {
@@ -381,7 +396,7 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
     //
     //  Host:
     //      PipelineResourceDesc Resources[]         = {{SHADER_TYPE_PIXEL, "g_Texture", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, ...}};
-    //      ImmutableSamplerDesc ImmutableSamplers[] ={{SHADER_TYPE_PIXEL, "g_Texture", SamDesc}};
+    //      ImmutableSamplerDesc ImmutableSamplers[] = {{SHADER_TYPE_PIXEL, "g_Texture", SamDesc}};
     //
     //  In the situation above, 'g_Texture_sampler' will not be assigned to separate image
     // 'g_Texture'. Instead, we initialize an immutable sampler with name 'g_Texture'. It will then
@@ -390,7 +405,7 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
     for (Uint32 i = 0; i < m_Desc.NumImmutableSamplers; ++i)
     {
         auto& ImmutableSampler = m_ImmutableSamplers[i];
-        if (ImmutableSampler.Ptr)
+        if (ImmutableSampler)
         {
             // Immutable sampler has already been initialized as resource
             continue;
@@ -403,8 +418,7 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
                       "There are no descriptor sets in this signature, which indicates there are no other "
                       "resources besides immutable samplers. This is not currently allowed.");
 
-        if (HasDevice())
-            GetDevice()->CreateSampler(SamplerDesc.Desc, &ImmutableSampler.Ptr);
+        ImmutableSampler.Init(HasDevice() ? GetDevice() : nullptr, SamplerDesc.Desc);
 
         auto& BindingIndex = BindingIndices[SetId * 3 + CACHE_GROUP_OTHER];
         if (!IsSerialized)
@@ -421,14 +435,13 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
         }
         ++BindingIndex;
 
-        vkSetLayoutBindings[SetId].emplace_back();
-        auto& vkSetLayoutBinding = vkSetLayoutBindings[SetId].back();
-
+        VkDescriptorSetLayoutBinding vkSetLayoutBinding{};
         vkSetLayoutBinding.binding            = ImmutableSampler.BindingIndex;
         vkSetLayoutBinding.descriptorCount    = 1;
         vkSetLayoutBinding.stageFlags         = ShaderTypesToVkShaderStageFlags(SamplerDesc.ShaderStages);
         vkSetLayoutBinding.descriptorType     = VK_DESCRIPTOR_TYPE_SAMPLER;
-        vkSetLayoutBinding.pImmutableSamplers = ImmutableSampler.Ptr ? TempAllocator.Construct<VkSampler>(ImmutableSampler.Ptr.RawPtr<SamplerVkImpl>()->GetVkSampler()) : VK_NULL_HANDLE;
+        vkSetLayoutBinding.pImmutableSamplers = TempAllocator.Construct<VkSampler>(ImmutableSampler.GetVkSampler());
+        vkSetLayoutBindings[SetId].push_back(vkSetLayoutBinding);
     }
 
     Uint32 NumSets = 0;
@@ -470,7 +483,7 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
             if (vkSetLayoutBinding.empty())
                 continue;
 
-            SetLayoutCI.bindingCount = static_cast<Uint32>(vkSetLayoutBinding.size());
+            SetLayoutCI.bindingCount = StaticCast<uint32_t>(vkSetLayoutBinding.size());
             SetLayoutCI.pBindings    = vkSetLayoutBinding.data();
             m_VkDescrSetLayouts[i]   = LogicalDevice.CreateDescriptorSetLayout(SetLayoutCI);
         }

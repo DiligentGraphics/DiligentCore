@@ -66,12 +66,21 @@ public:
         ValidateSamplerDesc(this->m_Desc, this->GetDevice());
     }
 
+    /// Special constructor that is only used for serialization when there is no device
+    SamplerBase(IReferenceCounters* pRefCounters, const SamplerDesc& SamDesc) noexcept :
+        TDeviceObjectBase{pRefCounters, nullptr, SamDesc, true /*Pretend device internal to allow null device*/}
+    {
+    }
+
     ~SamplerBase()
     {
         /// \note Destructor cannot directly remove the object from the registry as this may cause a
         ///       deadlock.
-        auto& SamplerRegistry = this->GetDevice()->GetSamplerRegistry();
-        SamplerRegistry.ReportDeletedObject();
+        if (this->HasDevice())
+        {
+            auto& SamplerRegistry = this->GetDevice()->GetSamplerRegistry();
+            SamplerRegistry.ReportDeletedObject();
+        }
     }
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_Sampler, TDeviceObjectBase)

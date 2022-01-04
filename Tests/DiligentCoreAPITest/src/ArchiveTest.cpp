@@ -124,6 +124,7 @@ static void ArchivePRS(RefCntAutoPtr<IArchive>&                   pSource,
 
         constexpr ImmutableSamplerDesc ImmutableSamplers[] = //
             {
+                {SHADER_TYPE_ALL_GRAPHICS, "g_Tex2D_1_sampler", SamplerDesc{}},
                 {SHADER_TYPE_ALL_GRAPHICS, "g_Sampler", SamplerDesc{}} //
             };
         PRSDesc.ImmutableSamplers    = ImmutableSamplers;
