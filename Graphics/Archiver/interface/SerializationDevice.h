@@ -127,10 +127,6 @@ struct SerializationDeviceMtlInfo
     const Char* CompileOptionsMacOS DEFAULT_INITIALIZER("-sdk macosx metal");
     const Char* CompileOptionsiOS   DEFAULT_INITIALIZER("-sdk iphoneos metal");
 
-    /// Additional linker options for Metal command-line linker.
-    const Char* LinkOptionsMacOS  DEFAULT_INITIALIZER("-sdk macosx metallib");
-    const Char* LinkOptionsiOS    DEFAULT_INITIALIZER("-sdk iphoneos metallib");
-
     /// Name of command-line application which is used to preprocess Metal shader source before compiling to bytecode.
     const Char* MslPreprocessorCmd DEFAULT_INITIALIZER(nullptr);
 
@@ -148,8 +144,6 @@ struct SerializationDeviceMtlInfo
     {
         return SafeStrEqual(CompileOptionsMacOS, RHS.CompileOptionsMacOS) &&
                SafeStrEqual(CompileOptionsiOS,   RHS.CompileOptionsiOS)   &&
-               SafeStrEqual(LinkOptionsMacOS,    RHS.LinkOptionsMacOS)    &&
-               SafeStrEqual(LinkOptionsiOS,      RHS.LinkOptionsiOS)      &&
                SafeStrEqual(MslPreprocessorCmd,  RHS.MslPreprocessorCmd)  &&
                CompileForMacOS == RHS.CompileForMacOS                     &&
                CompileForiOS   == RHS.CompileForiOS;

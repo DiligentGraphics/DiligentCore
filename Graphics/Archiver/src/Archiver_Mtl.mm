@@ -398,7 +398,6 @@ SerializedMemory SerializableShaderImpl::PatchShaderMtl(const RefCntAutoPtr<Pipe
     TmpDirRemover DirRemover{TmpFolder};
 
     const auto MetalFile    = TmpFolder + "Shader.metal";
-    const auto AirFile      = TmpFolder + "Shader.air";
     const auto MetalLibFile = TmpFolder + "Shader.metallib";
 
     auto*  pShaderMtl = static_cast<const CompiledShaderMtlImpl*>(m_pShaderMtl.get());
@@ -463,15 +462,15 @@ SerializedMemory SerializableShaderImpl::PatchShaderMtl(const RefCntAutoPtr<Pipe
 
     // https://developer.apple.com/documentation/metal/libraries/generating_and_loading_a_metal_library_symbol_file
 
-    // Compile MSL to AIR file
+    // Compile MSL to Metal library
     {
         String cmd{"xcrun "};
         cmd += (IsForMacOS ? m_pDevice->GetMtlCompileOptionsMacOS() : m_pDevice->GetMtlCompileOptionsiOS());
-        cmd += " -c " + MetalFile + " -o " + AirFile;
+        cmd += " " + MetalFile + " -o " + MetalLibFile;
 
         FILE* File = popen(cmd.c_str(), "r");
         if (File == nullptr)
-            LOG_ERROR_AND_THROW("Failed to compile MSL to AIR");
+            LOG_ERROR_AND_THROW("Failed to compile MSL.");
 
         char Output[512];
         while (fgets(Output, _countof(Output), File) != nullptr)
@@ -482,25 +481,6 @@ SerializedMemory SerializableShaderImpl::PatchShaderMtl(const RefCntAutoPtr<Pipe
             LOG_ERROR_MESSAGE("Failed to close process");
     }
 
-    // Generate a Metal library
-    {
-        String cmd{"xcrun "};
-        cmd += (IsForMacOS ? m_pDevice->GetMtlLinkOptionsMacOS() : m_pDevice->GetMtlLinkOptionsiOS());
-        cmd += " -o " + MetalLibFile + " " + AirFile;
-
-        FILE* File = popen(cmd.c_str(), "r");
-        if (File == nullptr)
-            LOG_ERROR_AND_THROW("Failed to generate Metal library");
-
-        char Output[512];
-        while (fgets(Output, _countof(Output), File) != nullptr)
-            printf("%s", Output);
-
-        auto status = pclose(File);
-        if (status == -1)
-            LOG_ERROR_MESSAGE("Failed to close process");
-    }
-    
     size_t BytecodeOffset = 0;
     {
         Serializer<SerializerMode::Measure> MeasureSer;

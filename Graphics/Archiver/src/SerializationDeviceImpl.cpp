@@ -70,20 +70,34 @@ SerializationDeviceImpl::SerializationDeviceImpl(IReferenceCounters* pRefCounter
 #endif
 
 #if METAL_SUPPORTED
-    m_MslPreprocessorCmd = CreateInfo.Metal.MslPreprocessorCmd ? CreateInfo.Metal.MslPreprocessorCmd : "";
+    m_MslPreprocessorCmd = CreateInfo.Metal.MslPreprocessorCmd != nullptr ? CreateInfo.Metal.MslPreprocessorCmd : "";
     if (CreateInfo.Metal.CompileForMacOS)
     {
-        m_MtlCompileForMacOS     = true;
-        m_MtlCompileOptionsMacOS = CreateInfo.Metal.CompileOptionsMacOS ? CreateInfo.Metal.CompileOptionsMacOS : "";
-        m_MtlLinkOptionsMacOS    = CreateInfo.Metal.LinkOptionsMacOS ? CreateInfo.Metal.LinkOptionsMacOS : "";
-        m_DeviceFlags            = m_DeviceFlags | ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS;
+        const auto* CompileOptionsMacOS = CreateInfo.Metal.CompileOptionsMacOS;
+        if (CompileOptionsMacOS != nullptr && CompileOptionsMacOS[0] != '\0')
+        {
+            m_MtlCompileOptionsMacOS = CompileOptionsMacOS;
+            m_DeviceFlags            = m_DeviceFlags | ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS;
+        }
+        else
+        {
+            LOG_ERROR_MESSAGE("Metal.CompileForMacOS is set to true, but Metal.CompileOptionsMacOS is null or empty. "
+                              "Compilation for MacOS will be disabled.");
+        }
     }
     if (CreateInfo.Metal.CompileForiOS)
     {
-        m_MtlCompileForiOS     = true;
-        m_MtlCompileOptionsiOS = CreateInfo.Metal.CompileOptionsiOS ? CreateInfo.Metal.CompileOptionsiOS : "";
-        m_MtlLinkOptionsiOS    = CreateInfo.Metal.LinkOptionsiOS ? CreateInfo.Metal.LinkOptionsiOS : "";
-        m_DeviceFlags          = m_DeviceFlags | ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS;
+        const auto* CompileOptionsiOS = CreateInfo.Metal.CompileOptionsiOS;
+        if (CompileOptionsiOS != nullptr && CompileOptionsiOS[0] != '\0')
+        {
+            m_MtlCompileOptionsiOS = CompileOptionsiOS;
+            m_DeviceFlags          = m_DeviceFlags | ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS;
+        }
+        else
+        {
+            LOG_ERROR_MESSAGE("Metal.CompileForiOS is set to true, but Metal.CompileOptionsiOS is null or empty. "
+                              "Compilation for iOS will be disabled.");
+        }
     }
 #endif
 }

@@ -229,33 +229,22 @@ public:
     // MacOS
     bool MtlCompileForMacOS() const
     {
-        return m_MtlCompileForMacOS;
+        return !m_MtlCompileOptionsMacOS.empty();
     }
     const String& GetMtlCompileOptionsMacOS() const
     {
-        VERIFY_EXPR(m_MtlCompileForMacOS);
+        VERIFY_EXPR(MtlCompileForMacOS());
         return m_MtlCompileOptionsMacOS;
     }
-    const String& GetMtlLinkOptionsMacOS() const
-    {
-        VERIFY_EXPR(m_MtlCompileForMacOS);
-        return m_MtlLinkOptionsMacOS;
-    }
-
     // iOS
     bool MtlCompileForiOS() const
     {
-        return m_MtlCompileForiOS;
+        return !m_MtlCompileOptionsiOS.empty();
     }
     const String& GetMtlCompileOptionsiOS() const
     {
-        VERIFY_EXPR(m_MtlCompileForiOS);
+        VERIFY_EXPR(MtlCompileForiOS());
         return m_MtlCompileOptionsiOS;
-    }
-    const String& GetMtlLinkOptionsiOS() const
-    {
-        VERIFY_EXPR(m_MtlCompileForiOS);
-        return m_MtlLinkOptionsiOS;
     }
 #endif
 
@@ -301,11 +290,7 @@ private:
     // Metal
     String m_MtlCompileOptionsMacOS;
     String m_MtlCompileOptionsiOS;
-    String m_MtlLinkOptionsMacOS;
-    String m_MtlLinkOptionsiOS;
     String m_MslPreprocessorCmd;
-    bool   m_MtlCompileForMacOS = false;
-    bool   m_MtlCompileForiOS   = false;
 
     std::vector<PipelineResourceBinding> m_ResourceBindings;
 };

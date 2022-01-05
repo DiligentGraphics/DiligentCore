@@ -437,10 +437,8 @@ TEST(ArchiveTest, GraphicsPipeline)
     SerializationDeviceCreateInfo DeviceCI;
     DeviceCI.Metal.CompileForMacOS     = True;
     DeviceCI.Metal.CompileOptionsMacOS = "-sdk macosx metal -std=macos-metal2.0 -mmacos-version-min=10.0";
-    DeviceCI.Metal.LinkOptionsMacOS    = "-sdk macosx metallib";
     DeviceCI.Metal.CompileForiOS       = True;
     DeviceCI.Metal.CompileOptionsiOS   = "-sdk iphoneos metal -std=ios-metal2.0 -mios-version-min=10.0";
-    DeviceCI.Metal.LinkOptionsiOS      = "-sdk iphoneos metallib";
 
     RefCntAutoPtr<ISerializationDevice> pSerializationDevice;
     pArchiverFactory->CreateSerializationDevice(DeviceCI, &pSerializationDevice);
