@@ -123,12 +123,17 @@ void VerifyResourceMerge(const char*                       PSOName,
 
 
 template <typename CreateInfoType>
-bool ArchiverImpl::PatchShadersMtl(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data, DefaultPRSInfo& DefPRS)
+bool ArchiverImpl::PatchShadersMtl(const CreateInfoType&     CreateInfo,
+                                   TPSOData<CreateInfoType>& Data,
+                                   DefaultPRSInfo&           DefPRS,
+                                   DeviceType                DevType)
 {
+    VERIFY_EXPR(DevType == DeviceType::Metal_MacOS || DevType == DeviceType::Metal_iOS);
+
     std::vector<ShaderStageInfoMtl> ShaderStages;
     SHADER_TYPE                     ActiveShaderStages = SHADER_TYPE_UNKNOWN;
     PipelineStateMtlImpl::ExtractShaders<SerializableShaderImpl>(CreateInfo, ShaderStages, ActiveShaderStages);
-    
+
     auto** ppSignatures    = CreateInfo.ppResourceSignatures;
     auto   SignaturesCount = CreateInfo.ResourceSignaturesCount;
 
@@ -141,7 +146,7 @@ bool ArchiverImpl::PatchShadersMtl(const CreateInfoType& CreateInfo, TPSOData<Cr
             std::vector<ImmutableSamplerDesc> ImmutableSamplers;
             PipelineResourceSignatureDesc     SignDesc;
             const auto&                       ResourceLayout = CreateInfo.PSODesc.ResourceLayout;
-        
+
             std::unordered_map<ShaderResourceHashKey, const SPIRVShaderResourceAttribs&, ShaderResourceHashKey::Hasher> UniqueResources;
 
             for (auto& Stage : ShaderStages)
@@ -233,12 +238,8 @@ bool ArchiverImpl::PatchShadersMtl(const CreateInfoType& CreateInfo, TPSOData<Cr
         SignaturesCount      = 1;
         ppSignatures         = DefaultSignatures;
     }
-    
-    TShaderIndices ShaderIndicesMacOS;
-    TShaderIndices ShaderIndicesiOS;
-    const bool     SerializeMacOS = m_pSerializationDevice->MtlCompileForMacOS();
-    const bool     SerializeiOS   = m_pSerializationDevice->MtlCompileForiOS();
 
+    TShaderIndices ShaderIndices;
     try
     {
         // Sort signatures by binding index.
@@ -259,16 +260,8 @@ bool ArchiverImpl::PatchShadersMtl(const CreateInfoType& CreateInfo, TPSOData<Cr
         for (size_t j = 0; j < ShaderStages.size(); ++j)
         {
             const auto& Stage = ShaderStages[j];
-            if (SerializeiOS)
-            {
-                SerializedMemory PatchedBytecode = Stage.pShader->PatchShaderMtl(Signatures.data(), BaseBindings.data(), SignaturesCount, /*IsForMacOS*/false); // throw exception
-                SerializeShaderBytecode(ShaderIndicesiOS, DeviceType::Metal_iOS, Stage.pShader->GetCreateInfo(), PatchedBytecode.Ptr(), PatchedBytecode.Size());
-            }
-            if (SerializeMacOS)
-            {
-                SerializedMemory PatchedBytecode = Stage.pShader->PatchShaderMtl(Signatures.data(), BaseBindings.data(), SignaturesCount, /*IsForMacOS*/true); // throw exception
-                SerializeShaderBytecode(ShaderIndicesMacOS, DeviceType::Metal_MacOS, Stage.pShader->GetCreateInfo(), PatchedBytecode.Ptr(), PatchedBytecode.Size());
-            }
+            SerializedMemory PatchedBytecode = Stage.pShader->PatchShaderMtl(Signatures.data(), BaseBindings.data(), SignaturesCount, DevType); // May throw
+            SerializeShaderBytecode(ShaderIndices, DevType, Stage.pShader->GetCreateInfo(), PatchedBytecode.Ptr(), PatchedBytecode.Size());
         }
     }
     catch (...)
@@ -276,18 +269,16 @@ bool ArchiverImpl::PatchShadersMtl(const CreateInfoType& CreateInfo, TPSOData<Cr
         LOG_ERROR_MESSAGE("Failed to compile Metal shaders");
         return false;
     }
-    
-    if (SerializeiOS)
-        Data.PerDeviceData[static_cast<Uint32>(DeviceType::Metal_iOS)] = SerializeShadersForPSO(ShaderIndicesiOS);
-    if (SerializeMacOS)
-        Data.PerDeviceData[static_cast<Uint32>(DeviceType::Metal_MacOS)] = SerializeShadersForPSO(ShaderIndicesMacOS);
+
+    Data.PerDeviceData[static_cast<size_t>(DevType)] = SerializeShadersForPSO(ShaderIndices);
+
     return true;
 }
 
-template bool ArchiverImpl::PatchShadersMtl<GraphicsPipelineStateCreateInfo>(const GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
-template bool ArchiverImpl::PatchShadersMtl<ComputePipelineStateCreateInfo>(const ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
-template bool ArchiverImpl::PatchShadersMtl<TilePipelineStateCreateInfo>(const TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
-template bool ArchiverImpl::PatchShadersMtl<RayTracingPipelineStateCreateInfo>(const RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
+template bool ArchiverImpl::PatchShadersMtl<GraphicsPipelineStateCreateInfo>(const GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS, DeviceType DevType);
+template bool ArchiverImpl::PatchShadersMtl<ComputePipelineStateCreateInfo>(const ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS, DeviceType DevType);
+template bool ArchiverImpl::PatchShadersMtl<TilePipelineStateCreateInfo>(const TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS, DeviceType DevType);
+template bool ArchiverImpl::PatchShadersMtl<RayTracingPipelineStateCreateInfo>(const RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS, DeviceType DevType);
 
 
 static_assert(std::is_same<MtlArchiverResourceCounters, MtlResourceCounters>::value,
@@ -361,9 +352,9 @@ void SerializeBufferTypeInfoMapAndComputeGroupSize(Serializer<Mode>             
 
     if (ShaderType == SHADER_TYPE_COMPUTE)
     {
-        std::array<Uint32,3> GroupSize = {};
-        if (SPIRVResources)
-            GroupSize = SPIRVResources->GetComputeGroupSize();
+        const auto GroupSize = SPIRVResources ?
+            SPIRVResources->GetComputeGroupSize() :
+            std::array<Uint32,3>{};
 
         Ser(GroupSize);
     }
@@ -373,7 +364,7 @@ void SerializeBufferTypeInfoMapAndComputeGroupSize(Serializer<Mode>             
 SerializedMemory SerializableShaderImpl::PatchShaderMtl(const RefCntAutoPtr<PipelineResourceSignatureMtlImpl>* pSignatures,
                                                         const MtlResourceCounters*                             pBaseBindings,
                                                         const Uint32                                           SignatureCount,
-                                                        const bool                                             IsForMacOS) const noexcept(false)
+                                                        DeviceType                                             DevType) const noexcept(false)
 {
     VERIFY_EXPR(SignatureCount > 0);
     VERIFY_EXPR(pSignatures != nullptr);
@@ -444,10 +435,14 @@ SerializedMemory SerializableShaderImpl::PatchShaderMtl(const RefCntAutoPtr<Pipe
         fclose(File);
     }
 
+    const auto& MtlProps = m_pDevice->GetMtlProperties();
     // Run user-defined MSL preprocessor
-    if (!m_pDevice->GetMslPreprocessorCmd().empty())
+    if (MtlProps.MslPreprocessorCmd != nullptr)
     {
-        FILE* File = popen((m_pDevice->GetMslPreprocessorCmd() + " " + MetalFile).c_str(), "r");
+        String cmd{MtlProps.MslPreprocessorCmd};
+        cmd += ' ';
+        cmd += MetalFile;
+        FILE* File = popen(cmd.c_str(), "r");
         if (File == nullptr)
             LOG_ERROR_AND_THROW("Failed to run command line Metal shader compiler");
 
@@ -465,7 +460,7 @@ SerializedMemory SerializableShaderImpl::PatchShaderMtl(const RefCntAutoPtr<Pipe
     // Compile MSL to Metal library
     {
         String cmd{"xcrun "};
-        cmd += (IsForMacOS ? m_pDevice->GetMtlCompileOptionsMacOS() : m_pDevice->GetMtlCompileOptionsiOS());
+        cmd += (DevType == DeviceType::Metal_MacOS ? MtlProps.CompileOptionsMacOS : MtlProps.CompileOptionsIOS);
         cmd += " " + MetalFile + " -o " + MetalLibFile;
 
         FILE* File = popen(cmd.c_str(), "r");

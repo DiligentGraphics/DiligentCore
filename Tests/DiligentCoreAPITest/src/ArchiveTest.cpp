@@ -67,11 +67,8 @@ static constexpr ARCHIVE_DEVICE_DATA_FLAGS GetDeviceBits()
     DeviceBits = DeviceBits | ARCHIVE_DEVICE_DATA_FLAG_VULKAN;
 #endif
 #if METAL_SUPPORTED
-#    if PLATFORM_MACOS
     DeviceBits = DeviceBits | ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS;
-#    else
     DeviceBits = DeviceBits | ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS;
-#    endif
 #endif
     return DeviceBits;
 }
@@ -297,6 +294,8 @@ TEST(ArchiveTest, AppendDeviceData)
 
     const auto CurrentDeviceFlag = static_cast<ARCHIVE_DEVICE_DATA_FLAGS>(1u << pDevice->GetDeviceInfo().Type);
     auto       AllDeviceFlags    = GetDeviceBits() & ~CurrentDeviceFlag;
+    if (CurrentDeviceFlag == ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS)
+        AllDeviceFlags &= ~ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS;
 
     if (AllDeviceFlags == 0)
         GTEST_SKIP() << "Test requires support for at least 2 backends";
@@ -435,9 +434,7 @@ TEST(ArchiveTest, GraphicsPipeline)
     auto* pSwapChain = pEnv->GetSwapChain();
 
     SerializationDeviceCreateInfo DeviceCI;
-    DeviceCI.Metal.CompileForMacOS     = True;
     DeviceCI.Metal.CompileOptionsMacOS = "-sdk macosx metal -std=macos-metal2.0 -mmacos-version-min=10.0";
-    DeviceCI.Metal.CompileForiOS       = True;
     DeviceCI.Metal.CompileOptionsiOS   = "-sdk iphoneos metal -std=ios-metal2.0 -mios-version-min=10.0";
 
     RefCntAutoPtr<ISerializationDevice> pSerializationDevice;

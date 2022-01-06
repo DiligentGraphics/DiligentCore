@@ -90,10 +90,11 @@ public:
     }
 
 #if METAL_SUPPORTED
-    SerializedMemory            PatchShaderMtl(const RefCntAutoPtr<PipelineResourceSignatureMtlImpl>* pSignatures,
-                                               const MtlArchiverResourceCounters*                     pBaseBindings,
-                                               const Uint32                                           SignatureCount,
-                                               const bool                                             IsForMacOS) const noexcept(false);
+    SerializedMemory PatchShaderMtl(const RefCntAutoPtr<PipelineResourceSignatureMtlImpl>* pSignatures,
+                                    const MtlArchiverResourceCounters*                     pBaseBindings,
+                                    const Uint32                                           SignatureCount,
+                                    DeviceType                                             DevType) const noexcept(false);
+
     const SPIRVShaderResources* GetMtlShaderSPIRVResources() const;
 #endif
 

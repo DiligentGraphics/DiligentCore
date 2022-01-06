@@ -179,12 +179,16 @@ template bool ArchiverImpl::PatchShadersVk<RayTracingPipelineStateCreateInfo>(co
 
 void SerializableShaderImpl::CreateShaderVk(IReferenceCounters* pRefCounters, ShaderCreateInfo& ShaderCI, String& CompilationLog)
 {
+    const auto& VkProps     = m_pDevice->GetVkProperties();
+    const auto& DeviceInfo  = m_pDevice->GetDeviceInfo();
+    const auto& AdapterInfo = m_pDevice->GetAdapterInfo();
+
     const ShaderVkImpl::CreateInfo VkShaderCI{
-        m_pDevice->GetDxCompilerForVulkan(),
-        m_pDevice->GetDeviceInfo(),
-        m_pDevice->GetAdapterInfo(),
-        m_pDevice->GetVkVersion(),
-        m_pDevice->HasSpirv14() //
+        VkProps.pDxCompiler,
+        DeviceInfo,
+        AdapterInfo,
+        VkProps.VkVersion,
+        VkProps.SupportsSpirv14 //
     };
     CreateShader<CompiledShaderVk>(DeviceType::Vulkan, CompilationLog, "Vulkan", pRefCounters, ShaderCI, VkShaderCI);
 }

@@ -126,7 +126,7 @@ bool ArchiverImpl::PatchShadersD3D12(const CreateInfoType& CreateInfo, TPSOData<
                                                      Signatures.data(),
                                                      SignaturesCount,
                                                      RootSig,
-                                                     m_pSerializationDevice->GetDxCompilerForDirect3D12());
+                                                     m_pSerializationDevice->GetD3D12Properties().pDxCompiler);
     }
     catch (...)
     {
@@ -159,11 +159,15 @@ template bool ArchiverImpl::PatchShadersD3D12<RayTracingPipelineStateCreateInfo>
 
 void SerializableShaderImpl::CreateShaderD3D12(IReferenceCounters* pRefCounters, ShaderCreateInfo& ShaderCI, String& CompilationLog)
 {
+    const auto& D3D12Props  = m_pDevice->GetD3D12Properties();
+    const auto& DeviceInfo  = m_pDevice->GetDeviceInfo();
+    const auto& AdapterInfo = m_pDevice->GetAdapterInfo();
+
     const ShaderD3D12Impl::CreateInfo D3D12ShaderCI{
-        m_pDevice->GetDxCompilerForDirect3D12(),
-        m_pDevice->GetDeviceInfo(),
-        m_pDevice->GetAdapterInfo(),
-        m_pDevice->GetD3D12ShaderVersion() //
+        D3D12Props.pDxCompiler,
+        DeviceInfo,
+        AdapterInfo,
+        D3D12Props.ShaderVersion //
     };
     CreateShader<CompiledShaderD3D12>(DeviceType::Direct3D12, CompilationLog, "Direct3D12", pRefCounters, ShaderCI, D3D12ShaderCI);
 }

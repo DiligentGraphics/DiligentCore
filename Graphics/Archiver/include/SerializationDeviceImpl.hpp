@@ -186,71 +186,41 @@ public:
                                                                 Uint32&                               NumBindings,
                                                                 const PipelineResourceBinding*&       pBindings) override final;
 
-#if D3D11_SUPPORTED
-    Uint32 GetD3D11FeatureLevel() const
+    struct D3D11Properties
     {
-        return (m_D3D11FeatureLevel.Major << 12) | (m_D3D11FeatureLevel.Minor << 8);
-    }
-#endif
+        Uint32 FeatureLevel = 0;
+    };
 
+    struct D3D12Properties
+    {
+        IDXCompiler* pDxCompiler = nullptr;
+        Version      ShaderVersion;
+    };
 
-#if D3D12_SUPPORTED
-    IDXCompiler* GetDxCompilerForDirect3D12() const
+    struct VkProperties
     {
-        return m_pDxCompiler.get();
-    }
+        IDXCompiler* pDxCompiler     = nullptr;
+        Uint32       VkVersion       = 0;
+        bool         SupportsSpirv14 = false;
+    };
 
-    ShaderVersion GetD3D12ShaderVersion() const
+    struct MtlProperties
     {
-        return m_D3D12ShaderVersion;
-    }
-#endif
+        const char* CompileOptionsMacOS = nullptr;
+        const char* CompileOptionsIOS   = nullptr;
+        const char* MslPreprocessorCmd  = nullptr;
 
-#if VULKAN_SUPPORTED
-    IDXCompiler* GetDxCompilerForVulkan() const
-    {
-        return m_pVkDxCompiler.get();
-    }
+        const Uint32 MaxBufferFunctionArgumets = 31;
+    };
 
-    Uint32 GetVkVersion() const { return (m_VkVersion.Major << 22) | (m_VkVersion.Minor << 12); }
-    bool   HasSpirv14() const { return m_VkSupportedSpirv14; }
-#endif
-
-#if METAL_SUPPORTED
-    const String& GetMslPreprocessorCmd() const
-    {
-        return m_MslPreprocessorCmd;
-    }
-    Uint32 MtlMaxBufferFunctionArgumets() const
-    {
-        return 31;
-    }
-
-    // MacOS
-    bool MtlCompileForMacOS() const
-    {
-        return !m_MtlCompileOptionsMacOS.empty();
-    }
-    const String& GetMtlCompileOptionsMacOS() const
-    {
-        VERIFY_EXPR(MtlCompileForMacOS());
-        return m_MtlCompileOptionsMacOS;
-    }
-    // iOS
-    bool MtlCompileForiOS() const
-    {
-        return !m_MtlCompileOptionsiOS.empty();
-    }
-    const String& GetMtlCompileOptionsiOS() const
-    {
-        VERIFY_EXPR(MtlCompileForiOS());
-        return m_MtlCompileOptionsiOS;
-    }
-#endif
+    const D3D11Properties& GetD3D11Properties() { return m_D3D11Props; }
+    const D3D12Properties& GetD3D12Properties() { return m_D3D12Props; }
+    const VkProperties&    GetVkProperties() { return m_VkProps; }
+    const MtlProperties&   GetMtlProperties() { return m_MtlProps; }
 
     ARCHIVE_DEVICE_DATA_FLAGS GetValidDeviceFlags() const
     {
-        return m_DeviceFlags;
+        return m_ValidDeviceFlags;
     }
 
     SerializationDeviceImpl* GetDevice() { return this; }
@@ -271,21 +241,17 @@ private:
                                                std::vector<PipelineResourceBinding>& ResourceBindings,
                                                const Uint32                          MaxBufferArgs);
 
-    ARCHIVE_DEVICE_DATA_FLAGS m_DeviceFlags = ARCHIVE_DEVICE_DATA_FLAG_NONE;
+    ARCHIVE_DEVICE_DATA_FLAGS m_ValidDeviceFlags = ARCHIVE_DEVICE_DATA_FLAG_NONE;
     const RenderDeviceInfo    m_DeviceInfo;
     const GraphicsAdapterInfo m_AdapterInfo;
 
-    // D3D11
-    Version m_D3D11FeatureLevel{11, 0};
-
-    // D3D12
     std::unique_ptr<IDXCompiler> m_pDxCompiler;
-    Version                      m_D3D12ShaderVersion{6, 5};
-
-    // Vulkan
     std::unique_ptr<IDXCompiler> m_pVkDxCompiler;
-    Version                      m_VkVersion{1, 0};
-    bool                         m_VkSupportedSpirv14 = false;
+
+    D3D11Properties m_D3D11Props;
+    D3D12Properties m_D3D12Props;
+    VkProperties    m_VkProps;
+    MtlProperties   m_MtlProps;
 
     // Metal
     String m_MtlCompileOptionsMacOS;

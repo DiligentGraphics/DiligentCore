@@ -191,7 +191,7 @@ void SerializableShaderImpl::CreateShaderD3D11(IReferenceCounters* pRefCounters,
     const ShaderD3D11Impl::CreateInfo D3D11ShaderCI{
         m_pDevice->GetDeviceInfo(),
         m_pDevice->GetAdapterInfo(),
-        static_cast<D3D_FEATURE_LEVEL>(m_pDevice->GetD3D11FeatureLevel()) //
+        static_cast<D3D_FEATURE_LEVEL>(m_pDevice->GetD3D11Properties().FeatureLevel) //
     };
     CreateShader<CompiledShaderD3D11>(DeviceType::Direct3D11, CompilationLog, "Direct3D11", pRefCounters, ShaderCI, D3D11ShaderCI);
 }

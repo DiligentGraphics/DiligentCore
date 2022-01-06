@@ -35,6 +35,31 @@
 namespace Diligent
 {
 
+static constexpr ARCHIVE_DEVICE_DATA_FLAGS GetSupportedDeviceFlags()
+{
+    ARCHIVE_DEVICE_DATA_FLAGS Flags = ARCHIVE_DEVICE_DATA_FLAG_NONE;
+#if GL_SUPPORTED
+    Flags = Flags | ARCHIVE_DEVICE_DATA_FLAG_GL;
+#endif
+#if GLES_SUPPORTED
+    Flags = Flags | ARCHIVE_DEVICE_DATA_FLAG_GLES;
+#endif
+#if D3D11_SUPPORTED
+    Flags = Flags | ARCHIVE_DEVICE_DATA_FLAG_D3D11;
+#endif
+#if D3D12_SUPPORTED
+    Flags = Flags | ARCHIVE_DEVICE_DATA_FLAG_D3D12;
+#endif
+#if VULKAN_SUPPORTED
+    Flags = Flags | ARCHIVE_DEVICE_DATA_FLAG_VULKAN;
+#endif
+#if METAL_SUPPORTED
+    Flags = Flags | ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS;
+    Flags = Flags | ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS;
+#endif
+    return Flags;
+}
+
 SerializationDeviceImpl::SerializationDeviceImpl(IReferenceCounters* pRefCounters, const SerializationDeviceCreateInfo& CreateInfo) :
     TBase{pRefCounters},
     m_DeviceInfo{CreateInfo.DeviceInfo},
@@ -44,62 +69,68 @@ SerializationDeviceImpl::SerializationDeviceImpl(IReferenceCounters* pRefCounter
     GLSLangUtils::InitializeGlslang();
 #endif
 
-#if GL_SUPPORTED
-    m_DeviceFlags = m_DeviceFlags | ARCHIVE_DEVICE_DATA_FLAG_GL;
-#endif
-#if GLES_SUPPORTED
-    m_DeviceFlags = m_DeviceFlags | ARCHIVE_DEVICE_DATA_FLAG_GLES;
-#endif
+    m_ValidDeviceFlags = GetSupportedDeviceFlags();
 
-#if D3D11_SUPPORTED
-    m_D3D11FeatureLevel = CreateInfo.D3D11.FeatureLevel;
-    m_DeviceFlags       = m_DeviceFlags | ARCHIVE_DEVICE_DATA_FLAG_D3D11;
-#endif
+    if (m_ValidDeviceFlags & ARCHIVE_DEVICE_DATA_FLAG_D3D11)
+    {
+        m_D3D11Props.FeatureLevel = (CreateInfo.D3D11.FeatureLevel.Major << 12u) | (CreateInfo.D3D11.FeatureLevel.Minor << 8u);
+    }
 
-#if D3D12_SUPPORTED
-    m_D3D12ShaderVersion = CreateInfo.D3D12.ShaderVersion;
-    m_pDxCompiler        = CreateDXCompiler(DXCompilerTarget::Direct3D12, 0, CreateInfo.D3D12.DxCompilerPath);
-    m_DeviceFlags        = m_DeviceFlags | ARCHIVE_DEVICE_DATA_FLAG_D3D12;
-#endif
+    if (m_ValidDeviceFlags & ARCHIVE_DEVICE_DATA_FLAG_D3D12)
+    {
+        m_pDxCompiler              = CreateDXCompiler(DXCompilerTarget::Direct3D12, 0, CreateInfo.D3D12.DxCompilerPath);
+        m_D3D12Props.pDxCompiler   = m_pDxCompiler.get();
+        m_D3D12Props.ShaderVersion = CreateInfo.D3D12.ShaderVersion;
+    }
 
-#if VULKAN_SUPPORTED
-    m_VkVersion          = CreateInfo.Vulkan.ApiVersion;
-    m_VkSupportedSpirv14 = (m_VkVersion >= Version{1, 2} ? true : CreateInfo.Vulkan.SupportedSpirv14);
-    m_pVkDxCompiler      = CreateDXCompiler(DXCompilerTarget::Vulkan, GetVkVersion(), CreateInfo.Vulkan.DxCompilerPath);
-    m_DeviceFlags        = m_DeviceFlags | ARCHIVE_DEVICE_DATA_FLAG_VULKAN;
-#endif
+    if (m_ValidDeviceFlags & ARCHIVE_DEVICE_DATA_FLAG_VULKAN)
+    {
+        const auto& ApiVersion    = CreateInfo.Vulkan.ApiVersion;
+        m_VkProps.VkVersion       = (ApiVersion.Major << 22u) | (ApiVersion.Minor << 12u);
+        m_pVkDxCompiler           = CreateDXCompiler(DXCompilerTarget::Vulkan, m_VkProps.VkVersion, CreateInfo.Vulkan.DxCompilerPath);
+        m_VkProps.pDxCompiler     = m_pVkDxCompiler.get();
+        m_VkProps.SupportsSpirv14 = ApiVersion >= Version{1, 2} || CreateInfo.Vulkan.SupportsSpirv14;
+    }
 
-#if METAL_SUPPORTED
-    m_MslPreprocessorCmd = CreateInfo.Metal.MslPreprocessorCmd != nullptr ? CreateInfo.Metal.MslPreprocessorCmd : "";
-    if (CreateInfo.Metal.CompileForMacOS)
+    if (m_ValidDeviceFlags & ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS)
     {
         const auto* CompileOptionsMacOS = CreateInfo.Metal.CompileOptionsMacOS;
         if (CompileOptionsMacOS != nullptr && CompileOptionsMacOS[0] != '\0')
         {
-            m_MtlCompileOptionsMacOS = CompileOptionsMacOS;
-            m_DeviceFlags            = m_DeviceFlags | ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS;
+            m_MtlCompileOptionsMacOS       = CompileOptionsMacOS;
+            m_MtlProps.CompileOptionsMacOS = m_MtlCompileOptionsMacOS.c_str();
         }
         else
         {
-            LOG_ERROR_MESSAGE("Metal.CompileForMacOS is set to true, but Metal.CompileOptionsMacOS is null or empty. "
-                              "Compilation for MacOS will be disabled.");
+            LOG_WARNING_MESSAGE("CreateInfo.Metal.CompileOptionsMacOS is null or empty. Compilation for MacOS will be disabled.");
+            m_ValidDeviceFlags &= ~ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS;
         }
     }
-    if (CreateInfo.Metal.CompileForiOS)
+
+    if (m_ValidDeviceFlags & ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS)
     {
         const auto* CompileOptionsiOS = CreateInfo.Metal.CompileOptionsiOS;
         if (CompileOptionsiOS != nullptr && CompileOptionsiOS[0] != '\0')
         {
-            m_MtlCompileOptionsiOS = CompileOptionsiOS;
-            m_DeviceFlags          = m_DeviceFlags | ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS;
+            m_MtlCompileOptionsiOS       = CompileOptionsiOS;
+            m_MtlProps.CompileOptionsIOS = m_MtlCompileOptionsiOS.c_str();
         }
         else
         {
-            LOG_ERROR_MESSAGE("Metal.CompileForiOS is set to true, but Metal.CompileOptionsiOS is null or empty. "
-                              "Compilation for iOS will be disabled.");
+            LOG_WARNING_MESSAGE("CreateInfo.Metal.CompileOptionsiOS is null or empty. Compilation for iOS will be disabled.");
+            m_ValidDeviceFlags &= ~ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS;
         }
     }
-#endif
+
+    if (m_ValidDeviceFlags & (ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS | ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS))
+    {
+        const auto* MslPreprocessorCmd = CreateInfo.Metal.MslPreprocessorCmd;
+        if (MslPreprocessorCmd != nullptr && MslPreprocessorCmd[0] != '\0')
+        {
+            m_MslPreprocessorCmd          = CreateInfo.Metal.MslPreprocessorCmd;
+            m_MtlProps.MslPreprocessorCmd = m_MslPreprocessorCmd.c_str();
+        }
+    }
 }
 
 void DILIGENT_CALL_TYPE SerializationDeviceImpl::QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)
@@ -226,7 +257,7 @@ void SerializationDeviceImpl::GetPipelineResourceBindings(const PipelineResource
 #endif
 #if METAL_SUPPORTED
         case RENDER_DEVICE_TYPE_METAL:
-            GetPipelineResourceBindingsMtl(Info, m_ResourceBindings, MtlMaxBufferFunctionArgumets());
+            GetPipelineResourceBindingsMtl(Info, m_ResourceBindings, m_MtlProps.MaxBufferFunctionArgumets);
             break;
 #endif
         case RENDER_DEVICE_TYPE_UNDEFINED:

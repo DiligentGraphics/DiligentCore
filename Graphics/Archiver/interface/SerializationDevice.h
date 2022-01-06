@@ -98,9 +98,9 @@ typedef struct SerializationDeviceD3D12Info SerializationDeviceD3D12Info;
 /// Serialization device attributes for Vulkan backend
 struct SerializationDeviceVkInfo
 {
-    Version     ApiVersion       DEFAULT_INITIALIZER(Version(1, 0));
-    Bool        SupportedSpirv14 DEFAULT_INITIALIZER(False);
-    const Char* DxCompilerPath   DEFAULT_INITIALIZER(nullptr);
+    Version     ApiVersion      DEFAULT_INITIALIZER(Version(1, 0));
+    Bool        SupportsSpirv14 DEFAULT_INITIALIZER(False);
+    const Char* DxCompilerPath  DEFAULT_INITIALIZER(nullptr);
 
 #if DILIGENT_CPP_INTERFACE
     /// Comparison operator tests if two structures are equivalent
@@ -111,8 +111,8 @@ struct SerializationDeviceVkInfo
     /// - False otherwise.
     constexpr bool operator==(const SerializationDeviceVkInfo& RHS) const 
     {
-        return ApiVersion       == RHS.ApiVersion &&
-               SupportedSpirv14 == RHS.SupportedSpirv14 &&
+        return ApiVersion      == RHS.ApiVersion &&
+               SupportsSpirv14 == RHS.SupportsSpirv14 &&
                SafeStrEqual(DxCompilerPath, RHS.DxCompilerPath);
     }
 #endif
@@ -130,9 +130,6 @@ struct SerializationDeviceMtlInfo
     /// Name of command-line application which is used to preprocess Metal shader source before compiling to bytecode.
     const Char* MslPreprocessorCmd DEFAULT_INITIALIZER(nullptr);
 
-    Bool  CompileForMacOS DEFAULT_INITIALIZER(True);
-    Bool  CompileForiOS   DEFAULT_INITIALIZER(True);
-
 #if DILIGENT_CPP_INTERFACE
     /// Comparison operator tests if two structures are equivalent
 
@@ -144,9 +141,7 @@ struct SerializationDeviceMtlInfo
     {
         return SafeStrEqual(CompileOptionsMacOS, RHS.CompileOptionsMacOS) &&
                SafeStrEqual(CompileOptionsiOS,   RHS.CompileOptionsiOS)   &&
-               SafeStrEqual(MslPreprocessorCmd,  RHS.MslPreprocessorCmd)  &&
-               CompileForMacOS == RHS.CompileForMacOS                     &&
-               CompileForiOS   == RHS.CompileForiOS;
+               SafeStrEqual(MslPreprocessorCmd,  RHS.MslPreprocessorCmd);
     }
 #endif
 

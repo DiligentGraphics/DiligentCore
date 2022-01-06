@@ -36,6 +36,8 @@
 namespace Diligent
 {
 
+DeviceObjectArchiveBase::DeviceType ArchiveDeviceDataFlagToArchiveDeviceType(ARCHIVE_DEVICE_DATA_FLAGS DataTypeFlag);
+
 ArchiverImpl::ArchiverImpl(IReferenceCounters* pRefCounters, SerializationDeviceImpl* pDevice) :
     TBase{pRefCounters},
     m_pSerializationDevice{pDevice}
@@ -856,7 +858,7 @@ bool ArchiverImpl::SerializePSO(TNamedObjectHashMap<TPSOData<CreateInfoType>>& P
 #if METAL_SUPPORTED
             case ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS:
             case ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS:
-                if (!PatchShadersMtl(PSOCreateInfo, Data, DefPRS))
+                if (!PatchShadersMtl(PSOCreateInfo, Data, DefPRS, ArchiveDeviceDataFlagToArchiveDeviceType(Flag)))
                     return false;
                 break;
 #endif
