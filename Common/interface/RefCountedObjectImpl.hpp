@@ -151,7 +151,7 @@ public:
         return NumWeakReferences;
     }
 
-    inline virtual void GetObject(struct IObject** ppObject) override final
+    inline virtual void QueryObject(struct IObject** ppObject) override final
     {
         if (m_ObjectState != ObjectState::Alive)
             return; // Early exit
@@ -165,7 +165,7 @@ public:
         //
         //                                      m_lNumStrongReferences == 1
         //
-        //    Thread 1 - ReleaseStrongRef()    |     Thread 2 - GetObject()        |     Thread 3 - GetObject()
+        //    Thread 1 - ReleaseStrongRef()    |    Thread 2 - QueryObject()       |    Thread 3 - QueryObject()
         //                                     |                                   |
         //  - Decrement m_lNumStrongReferences | -Increment m_lNumStrongReferences | -Increment m_lNumStrongReferences
         //  - Read RefCount == 0               | -Read StrongRefCnt==1             | -Read StrongRefCnt==2
@@ -272,7 +272,7 @@ private:
     void TryDestroyObject()
     {
         // Since RefCount==0, there are no more strong references and the only place
-        // where strong ref counter can be incremented is from GetObject().
+        // where strong ref counter can be incremented is from QueryObject().
 
         // If several threads were allowed to get to this point, there would
         // be serious risk that <this> had already been destroyed and m_LockFlag expired.
@@ -285,7 +285,7 @@ private:
         //                                      |
         // 1. Decrement m_lNumStrongReferences  |
         //    Read RefCount==0, no lock acquired|
-        //                                      |   1. Run GetObject()
+        //                                      |   1. Run QueryObject()
         //                                      |      - acquire the lock
         //                                      |      - increment m_lNumStrongReferences
         //                                      |      - release the lock
@@ -303,13 +303,13 @@ private:
         //  IT IS CRUCIALLY IMPORTANT TO ASSURE THAT ONLY ONE THREAD WILL EVER
         //  EXECUTE THIS CODE
 
-        // The solution is to atomically increment strong ref counter in GetObject().
+        // The solution is to atomically increment strong ref counter in QueryObject().
         // There are two possible scenarios depending on who first increments the counter:
 
 
         //                                                     Scenario I
         //
-        //             This thread              |      Another thread - GetObject()         |   One more thread - GetObject()
+        //             This thread              |     Another thread - QueryObject()        |  One more thread - QueryObject()
         //                                      |                                           |
         //                       m_lNumStrongReferences == 1                                |
         //                                      |                                           |
@@ -333,12 +333,12 @@ private:
         // 6. DESTROY the object                |                                           |
         //                                      |                                           |
 
-        //  GetObject() MUST BE SERIALIZED for this to work properly!
+        //  QueryObject() MUST BE SERIALIZED for this to work properly!
 
 
         //                                   Scenario II
         //
-        //             This thread              |      Another thread - GetObject()
+        //             This thread              |     Another thread - QueryObject()
         //                                      |
         //                       m_lNumStrongReferences == 1
         //                                      |
@@ -361,10 +361,10 @@ private:
         // Acquire the lock.
         ThreadingTools::LockHelper Lock(m_LockFlag);
 
-        // GetObject() first acquires the lock, and only then increments and
+        // QueryObject() first acquires the lock, and only then increments and
         // decrements the ref counter. If it reads 1 after incrementing the counter,
         // it does not return the reference to the object and decrements the counter.
-        // If we acquired the lock, GetObject() will not start until we are done
+        // If we acquired the lock, QueryObject() will not start until we are done
         VERIFY_EXPR(m_lNumStrongReferences == 0 && m_ObjectState == ObjectState::Alive);
 
         // Extra caution

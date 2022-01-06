@@ -32,10 +32,6 @@
 
 #include "InterfaceID.h"
 
-#if defined(_MSC_VER) && defined(GetObject)
-#    error One of Windows headers leaks GetObject macro, which may result in odd errors. You need to undef the macro.
-#endif
-
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 typedef long ReferenceCounterValueType;
@@ -92,7 +88,7 @@ public:
     virtual ReferenceCounterValueType ReleaseWeakRef() = 0;
 
 
-    /// Gets the pointer to the IUnknown interface of the referenced object.
+    /// Queries a pointer to the IUnknown interface of the referenced object.
 
     /// \param [out] ppObject - Memory address where the pointer to the object
     ///                         will be stored.
@@ -101,7 +97,7 @@ public:
     ///         will be stored. In this case, the number of strong references to the object
     ///         will be incremented by 1.\n
     ///         The method is thread-safe and does not require explicit synchronization.
-    virtual void GetObject(struct IObject** ppObject) = 0;
+    virtual void QueryObject(struct IObject** ppObject) = 0;
 
 
     /// Returns the number of outstanding strong references.
@@ -135,7 +131,7 @@ typedef struct IReferenceCountersMethods
     ReferenceCounterValueType (*ReleaseStrongRef)  (struct IReferenceCounters*);
     ReferenceCounterValueType (*AddWeakRef)        (struct IReferenceCounters*);
     ReferenceCounterValueType (*ReleaseWeakRef)    (struct IReferenceCounters*);
-    void                      (*GetObject)         (struct IReferenceCounters*, struct IObject** ppObject);
+    void                      (*QueryObject)       (struct IReferenceCounters*, struct IObject** ppObject);
     ReferenceCounterValueType (*GetNumStrongRefs)  (struct IReferenceCounters*);
     ReferenceCounterValueType (*GetNumWeakRefs)    (struct IReferenceCounters*);
 } IReferenceCountersMethods;
@@ -158,7 +154,7 @@ typedef struct IReferenceCounters
 #    define IReferenceCounters_ReleaseStrongRef(This)  CALL_IFACE_METHOD(ReferenceCounters, ReleaseStrongRef, This)
 #    define IReferenceCounters_AddWeakRef(This)        CALL_IFACE_METHOD(ReferenceCounters, AddWeakRef,       This)
 #    define IReferenceCounters_ReleaseWeakRef(This)    CALL_IFACE_METHOD(ReferenceCounters, ReleaseWeakRef,   This)
-#    define IReferenceCounters_GetObject(This, ...)    CALL_IFACE_METHOD(ReferenceCounters, GetObject,        This, __VA_ARGS__)
+#    define IReferenceCounters_QueryObject(This, ...)  CALL_IFACE_METHOD(ReferenceCounters, QueryObject,      This, __VA_ARGS__)
 #    define IReferenceCounters_GetNumStrongRefs(This)  CALL_IFACE_METHOD(ReferenceCounters, GetNumStrongRefs, This)
 #    define IReferenceCounters_GetNumWeakRefs(This)    CALL_IFACE_METHOD(ReferenceCounters, GetNumWeakRefs,   This)
 

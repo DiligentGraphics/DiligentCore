@@ -753,9 +753,9 @@ void RefCntAutoPtrThreadingTest::WorkerThreadFunc(RefCntAutoPtrThreadingTest* Th
             }
 
             {
-                // Test interferences of ReleaseStrongRef() and GetObject()
+                // Test interferences of ReleaseStrongRef() and QueryObject()
 
-                // Goal: catch scenario when GetObject() runs between
+                // Goal: catch scenario when QueryObject() runs between
                 // AtomicDecrement() and acquiring the lock in ReleaseStrongRef():
 
                 //                       m_lNumStrongReferences == 1

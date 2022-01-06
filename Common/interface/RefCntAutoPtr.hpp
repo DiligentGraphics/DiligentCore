@@ -418,12 +418,12 @@ public:
         RefCntAutoPtr<T> spObj;
         if (m_pRefCounters)
         {
-            // Try to obtain pointer to the owner object.
+            // Try to obtain a pointer to the owner object.
             // spOwner is only used to keep the object
             // alive while obtaining strong reference from
             // the raw pointer m_pObject
             RefCntAutoPtr<IObject> spOwner;
-            m_pRefCounters->GetObject(&spOwner);
+            m_pRefCounters->QueryObject(&spOwner);
             if (spOwner)
             {
                 // If owner is alive, we can use our RAW pointer to
@@ -447,8 +447,8 @@ protected:
     RefCountersImpl* m_pRefCounters;
     // We need to store raw pointer to object itself,
     // because if the object is owned by another object,
-    // m_pRefCounters->GetObject( &pObj ) will return
-    // pointer to owner, which is not what we need.
+    // m_pRefCounters->QueryObject(&pObj) will return
+    // a pointer to the owner, which is not what we need.
     T* m_pObject;
 };
 

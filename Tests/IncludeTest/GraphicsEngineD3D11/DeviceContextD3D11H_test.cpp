@@ -26,6 +26,5 @@
  */
 
 #include <d3d11.h>
-#undef GetObject
 
 #include "DiligentCore/Graphics/GraphicsEngineD3D11/interface/DeviceContextD3D11.h"

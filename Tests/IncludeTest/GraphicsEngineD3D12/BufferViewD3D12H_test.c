@@ -26,7 +26,6 @@
  */
 
 #include <d3d12.h>
-#undef GetObject
 
 #include "DiligentCore/Graphics/GraphicsEngineD3D12/interface/BufferViewD3D12.h"
 

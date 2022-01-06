@@ -38,7 +38,7 @@ void TestReferenceCounters_CInterface(IReferenceCounters* pRefCounters)
     rc = IReferenceCounters_ReleaseWeakRef(pRefCounters);
 
     struct IObject* pObject = NULL;
-    IReferenceCounters_GetObject(pRefCounters, &pObject);
+    IReferenceCounters_QueryObject(pRefCounters, &pObject);
     IObject_Release(pObject);
 
     rc = IReferenceCounters_GetNumStrongRefs(pRefCounters);

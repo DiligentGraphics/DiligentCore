@@ -28,9 +28,6 @@
 #include "ArchiverFactoryLoader.h"
 #include "DefaultShaderSourceStreamFactory.h"
 
-// defined in Windows.h
-#undef GetObject
-
 #include "DummyReferenceCounters.hpp"
 #include "ArchiverImpl.hpp"
 #include "SerializationDeviceImpl.hpp"

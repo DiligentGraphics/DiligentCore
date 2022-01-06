@@ -63,7 +63,7 @@ public:
         return Atomics::AtomicDecrement(m_lNumWeakReferences);
     }
 
-    virtual void GetObject(IObject** ppObject) override final
+    virtual void QueryObject(IObject** ppObject) override final
     {
         if (ppObject != nullptr)
             m_Object.QueryInterface(IID_Unknown, ppObject);

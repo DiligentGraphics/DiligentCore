@@ -43,9 +43,6 @@
 #    define NOMINMAX
 #endif
 #include <Windows.h>
-#ifdef GetObject
-#    undef GetObject
-#endif
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
