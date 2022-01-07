@@ -73,7 +73,7 @@ DefaultShaderSourceStreamFactory::DefaultShaderSourceStreamFactory(IReferenceCou
         if (SearchPath.length() > 0)
         {
             if (SearchPath.back() != '\\' && SearchPath.back() != '/')
-                SearchPath.push_back('\\');
+                SearchPath.push_back(FileSystem::GetSlashSymbol());
             m_SearchDirectories.push_back(SearchPath);
         }
     }
@@ -90,27 +90,37 @@ void DefaultShaderSourceStreamFactory::CreateInputStream2(const Char*           
                                                           CREATE_SHADER_SOURCE_INPUT_STREAM_FLAGS Flags,
                                                           IFileStream**                           ppStream)
 {
-    bool                                     bFileCreated = false;
-    Diligent::RefCntAutoPtr<BasicFileStream> pBasicFileStream;
-    for (const auto& SearchDir : m_SearchDirectories)
+    auto CreateFileStream = [](const char* Path) //
     {
-        String FullPath = SearchDir + ((Name[0] == '\\' || Name[0] == '/') ? Name + 1 : Name);
-        if (!FileSystem::FileExists(FullPath.c_str()))
-            continue;
-        pBasicFileStream = MakeNewRCObj<BasicFileStream>()(FullPath.c_str(), EFileAccessMode::Read);
-        if (pBasicFileStream->IsValid())
+        Diligent::RefCntAutoPtr<BasicFileStream> pFileStream;
+        if (FileSystem::FileExists(Path))
         {
-            bFileCreated = true;
-            break;
+            pFileStream = MakeNewRCObj<BasicFileStream>()(Path, EFileAccessMode::Read);
+            if (!pFileStream->IsValid())
+                pFileStream.Release();
         }
-        else
+        return pFileStream;
+    };
+
+    Diligent::RefCntAutoPtr<BasicFileStream> pFileStream;
+    if (FileSystem::IsPathAbsolute(Name))
+    {
+        pFileStream = CreateFileStream(Name);
+    }
+    else
+    {
+        for (const auto& SearchDir : m_SearchDirectories)
         {
-            pBasicFileStream.Release();
+            const auto FullPath = SearchDir + ((Name[0] == '\\' || Name[0] == '/') ? Name + 1 : Name);
+            pFileStream         = CreateFileStream(FullPath.c_str());
+            if (pFileStream)
+                break;
         }
     }
-    if (bFileCreated)
+
+    if (pFileStream)
     {
-        pBasicFileStream->QueryInterface(IID_FileStream, reinterpret_cast<IObject**>(ppStream));
+        pFileStream->QueryInterface(IID_FileStream, reinterpret_cast<IObject**>(ppStream));
     }
     else
     {
