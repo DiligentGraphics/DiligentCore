@@ -27,6 +27,7 @@
 #include "SerializedMemory.hpp"
 #include "EngineMemory.h"
 #include "HashUtils.hpp"
+#include "Align.hpp"
 
 namespace Diligent
 {
@@ -87,13 +88,7 @@ size_t SerializedMemory::CalcHash() const
     if (m_Hash.load() != 0)
         return m_Hash;
 
-    size_t Hash = 0;
-    HashCombine(Hash, m_Size);
-
-    const auto* BytePtr = static_cast<const Uint8*>(m_Ptr);
-    for (size_t i = 0; i < m_Size; ++i)
-        HashCombine(Hash, BytePtr[i]);
-
+    const auto Hash = ComputeHash(m_Size, ComputeHashRaw(m_Ptr, m_Size));
     m_Hash.store(Hash);
 
     return Hash;

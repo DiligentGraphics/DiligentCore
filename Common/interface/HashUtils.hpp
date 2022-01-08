@@ -33,6 +33,7 @@
 
 #include "../../Primitives/interface/Errors.hpp"
 #include "../../Platforms/Basic/interface/DebugUtilities.hpp"
+#include "Align.hpp"
 
 #define LOG_HASH_CONFLICTS 1
 
@@ -59,6 +60,51 @@ std::size_t ComputeHash(const ArgsType&... Args)
     std::size_t Seed = 0;
     HashCombine(Seed, Args...);
     return Seed;
+}
+
+inline std::size_t ComputeHashRaw(const void* pData, size_t Size)
+{
+    size_t Hash = 0;
+
+    const auto* BytePtr  = static_cast<const Uint8*>(pData);
+    const auto* EndPtr   = BytePtr + Size;
+    const auto* DwordPtr = static_cast<const Uint32*>(AlignUp(pData, alignof(Uint32)));
+
+    // Process initial bytes before we get to the 32-bit aligned pointer
+    Uint64 Buffer = 0;
+    Uint64 Shift  = 0;
+    while (BytePtr < EndPtr && BytePtr < reinterpret_cast<const Uint8*>(DwordPtr))
+    {
+        Buffer |= Uint64{*(BytePtr++)} << Shift;
+        Shift += 8;
+    }
+    VERIFY_EXPR(Shift <= 24);
+
+    // Process dwords
+    while (DwordPtr + 1 <= reinterpret_cast<const Uint32*>(EndPtr))
+    {
+        Buffer |= Uint64{*(DwordPtr++)} << Shift;
+        HashCombine(Hash, static_cast<Uint32>(Buffer & ~Uint32{0}));
+        Buffer = Buffer >> Uint64{32};
+    }
+
+    // Process the remaining bytes
+    BytePtr = reinterpret_cast<const Uint8*>(DwordPtr);
+    while (BytePtr < EndPtr)
+    {
+        Buffer |= Uint64{*(BytePtr++)} << Shift;
+        Shift += 8;
+    }
+    VERIFY_EXPR(Shift <= (3 + 3) * 8);
+
+    while (Shift != 0)
+    {
+        HashCombine(Hash, static_cast<Uint32>(Buffer & ~Uint32{0}));
+        Buffer = Buffer >> Uint64{32};
+        Shift -= std::min(Shift, Uint64{32});
+    }
+
+    return Hash;
 }
 
 template <typename CharType>

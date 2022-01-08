@@ -26,6 +26,8 @@
  */
 
 #include <unordered_map>
+#include <unordered_set>
+#include <array>
 
 #include "HashUtils.hpp"
 
@@ -113,6 +115,42 @@ TEST(Common_HashUtils, HashMapStringKey)
 
         it = TestMap.find(HashMapStringKey{std::string{Str3}});
         EXPECT_EQ(it, TestMap.end());
+    }
+}
+
+TEST(Common_HashUtils, ComputeHashRaw)
+{
+    {
+        std::array<Uint8, 16> Data{};
+        for (Uint8 i = 0; i < Data.size(); ++i)
+            Data[i] = 1u + i * 3u;
+
+        std::unordered_set<size_t> Hashes;
+        for (size_t start = 0; start < Data.size() - 1; ++start)
+        {
+            for (size_t size = 1; size <= Data.size() - start; ++size)
+            {
+                auto Hash = ComputeHashRaw(&Data[start], size);
+                EXPECT_NE(Hash, size_t{0});
+                auto inserted = Hashes.insert(Hash).second;
+                EXPECT_TRUE(inserted) << Hash;
+            }
+        }
+    }
+
+    {
+        std::array<Uint8, 16> RefData = {1, 3, 5, 7, 11, 13, 21, 35, 2, 4, 8, 10, 22, 40, 60, 82};
+        for (size_t size = 1; size <= RefData.size(); ++size)
+        {
+            auto RefHash = ComputeHashRaw(RefData.data(), size);
+            for (size_t offset = 0; offset < RefData.size() - size; ++offset)
+            {
+                std::array<Uint8, RefData.size()> Data{};
+                std::copy(RefData.begin(), RefData.begin() + size, Data.begin() + offset);
+                auto Hash = ComputeHashRaw(&Data[offset], size);
+                EXPECT_EQ(RefHash, Hash) << offset << " " << size;
+            }
+        }
     }
 }
 
