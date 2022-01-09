@@ -333,22 +333,16 @@ size_t PipelineStateD3D12Impl::ShaderStageInfo::Count() const
 }
 
 
-PipelineResourceSignatureDesc PipelineStateD3D12Impl::GetDefaultResourceSignatureDesc(
-    const TShaderStages&               ShaderStages,
-    const PipelineResourceLayoutDesc&  ResourceLayout,
-    const char*                        PSOName,
-    std::vector<PipelineResourceDesc>& Resources,
-    std::vector<ImmutableSamplerDesc>& ImmutableSamplers,
-    const LocalRootSignatureD3D12*     pLocalRootSig) noexcept(false)
+PipelineResourceSignatureDescWrapper PipelineStateD3D12Impl::GetDefaultResourceSignatureDesc(
+    const TShaderStages&              ShaderStages,
+    const char*                       PSOName,
+    const PipelineResourceLayoutDesc& ResourceLayout,
+    Uint32                            SRBAllocationGranularity,
+    const LocalRootSignatureD3D12*    pLocalRootSig) noexcept(false)
 {
-    Resources.clear();
-    ImmutableSamplers.clear();
-
-    PipelineResourceSignatureDesc SignDesc;
-    SignDesc.CombinedSamplerSuffix = nullptr;
+    PipelineResourceSignatureDescWrapper SignDesc{PSOName, ResourceLayout, SRBAllocationGranularity};
 
     std::unordered_map<ShaderResourceHashKey, const D3DShaderResourceAttribs&, ShaderResourceHashKey::Hasher> UniqueResources;
-
     for (auto& Stage : ShaderStages)
     {
         for (auto* pShader : Stage.Shaders)
@@ -379,7 +373,7 @@ PipelineResourceSignatureDesc PipelineStateD3D12Impl::GetDefaultResourceSignatur
 
                         const auto ResType  = Attribs.GetShaderResourceType();
                         const auto ResFlags = Attribs.GetPipelineResourceFlags() | ShaderVariableFlagsToPipelineResourceFlags(VarDesc.Flags);
-                        Resources.emplace_back(VarDesc.ShaderStages, Attribs.Name, Attribs.BindCount, ResType, VarDesc.Type, ResFlags);
+                        SignDesc.AddResource(VarDesc.ShaderStages, Attribs.Name, Attribs.BindCount, ResType, VarDesc.Type, ResFlags);
                     }
                     else
                     {
@@ -391,43 +385,12 @@ PipelineResourceSignatureDesc PipelineStateD3D12Impl::GetDefaultResourceSignatur
             // merge combined sampler suffixes
             if (ShaderResources.IsUsingCombinedTextureSamplers() && ShaderResources.GetNumSamplers() > 0)
             {
-                if (SignDesc.CombinedSamplerSuffix != nullptr)
-                {
-                    if (strcmp(SignDesc.CombinedSamplerSuffix, ShaderResources.GetCombinedSamplerSuffix()) != 0)
-                        LOG_ERROR_AND_THROW("CombinedSamplerSuffix is not compatible between shaders");
-                }
-                else
-                {
-                    SignDesc.CombinedSamplerSuffix = ShaderResources.GetCombinedSamplerSuffix();
-                }
+                SignDesc.SetCombinedSamplerSuffix(ShaderResources.GetCombinedSamplerSuffix());
             }
         }
     }
 
-    SignDesc.NumResources               = static_cast<Uint32>(Resources.size());
-    SignDesc.Resources                  = SignDesc.NumResources > 0 ? Resources.data() : nullptr;
-    SignDesc.NumImmutableSamplers       = ResourceLayout.NumImmutableSamplers;
-    SignDesc.ImmutableSamplers          = ResourceLayout.ImmutableSamplers;
-    SignDesc.BindingIndex               = 0;
-    SignDesc.UseCombinedTextureSamplers = SignDesc.CombinedSamplerSuffix != nullptr;
-
     return SignDesc;
-}
-
-RefCntAutoPtr<PipelineResourceSignatureD3D12Impl> PipelineStateD3D12Impl::CreateDefaultResourceSignature(
-    TShaderStages&           ShaderStages,
-    LocalRootSignatureD3D12* pLocalRootSig)
-{
-    std::vector<PipelineResourceDesc> Resources;
-    std::vector<ImmutableSamplerDesc> ImmutableSamplers;
-
-    const auto SignDesc = GetDefaultResourceSignatureDesc(ShaderStages, m_Desc.ResourceLayout, m_Desc.Name, Resources, ImmutableSamplers, pLocalRootSig);
-
-    // Always initialize default resource signature as internal device object.
-    // This is necessary to avoid cyclic references from GenerateMips.
-    // This may never be a problem as the PSO keeps the reference to the device if necessary.
-    constexpr bool bIsDeviceInternal = true;
-    return TPipelineStateBase::CreateDefaultSignature(SignDesc, GetActiveShaderStages(), bIsDeviceInternal);
 }
 
 void PipelineStateD3D12Impl::RemapShaderResources(TShaderStages&                                           ShaderStages,
@@ -528,9 +491,14 @@ void PipelineStateD3D12Impl::InitRootSignature(PSO_CREATE_FLAGS         Flags,
 {
     if (m_UsingImplicitSignature && (Flags & PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0) == 0)
     {
-        VERIFY_EXPR(m_SignatureCount == 1);
-        m_Signatures[0] = CreateDefaultResourceSignature(ShaderStages, pLocalRootSig);
-        VERIFY_EXPR(!m_Signatures[0] || m_Signatures[0]->GetDesc().BindingIndex == 0);
+        const auto SignDesc = GetDefaultResourceSignatureDesc(ShaderStages, m_Desc.Name, m_Desc.ResourceLayout, m_Desc.SRBAllocationGranularity, pLocalRootSig);
+
+        // Always initialize default resource signature as internal device object.
+        // This is necessary to avoid cyclic references from GenerateMips.
+        // This may never be a problem as the PSO keeps the reference to the device if necessary.
+        constexpr bool bIsDeviceInternal = true;
+        InitDefaultSignature(SignDesc, GetActiveShaderStages(), bIsDeviceInternal);
+        VERIFY_EXPR(m_Signatures[0]);
     }
 
     m_RootSig = GetDevice()->GetRootSignatureCache().GetRootSig(m_Signatures, m_SignatureCount);

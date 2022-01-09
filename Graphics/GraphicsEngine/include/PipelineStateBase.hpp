@@ -138,6 +138,138 @@ struct ShaderResourceHashKey
     };
 };
 
+/// Helper class that wraps the pipeline resource signature description.
+class PipelineResourceSignatureDescWrapper
+{
+public:
+    PipelineResourceSignatureDescWrapper() = default;
+
+    // Note: any copy or move requires updating string pointers
+    PipelineResourceSignatureDescWrapper(const PipelineResourceSignatureDescWrapper&) = delete;
+    PipelineResourceSignatureDescWrapper& operator=(const PipelineResourceSignatureDescWrapper&) = delete;
+    PipelineResourceSignatureDescWrapper& operator=(PipelineResourceSignatureDescWrapper&&) = delete;
+
+    PipelineResourceSignatureDescWrapper(const char*                       PSOName,
+                                         const PipelineResourceLayoutDesc& ResourceLayout,
+                                         Uint32                            SRBAllocationGranularity)
+    {
+        if (PSOName != nullptr)
+        {
+            m_Name = "Implicit signature of PSO '";
+            m_Name += PSOName;
+            m_Name += '\'';
+            m_Desc.Name = m_Name.c_str();
+        }
+
+        m_ImmutableSamplers.reserve(ResourceLayout.NumImmutableSamplers);
+        for (Uint32 i = 0; i < ResourceLayout.NumImmutableSamplers; ++i)
+            AddImmutableSampler(ResourceLayout.ImmutableSamplers[i]);
+
+        m_Desc.SRBAllocationGranularity = SRBAllocationGranularity;
+    }
+
+    PipelineResourceSignatureDescWrapper(PipelineResourceSignatureDescWrapper&& rhs) noexcept :
+        // clang-format off
+        m_Name                 {std::move(rhs.m_Name)},
+        m_CombinedSamplerSuffix{std::move(rhs.m_CombinedSamplerSuffix)},
+        m_Resources            {std::move(rhs.m_Resources)},
+        m_ImmutableSamplers    {std::move(rhs.m_ImmutableSamplers)},
+        m_StringPool           {std::move(rhs.m_StringPool)},
+        m_Desc                 {rhs.m_Desc}
+    // clang-format on
+    {
+        UpdatePointers();
+    }
+
+    template <typename... ArgsType>
+    void AddResource(ArgsType&&... Args)
+    {
+        m_Resources.emplace_back(std::forward<ArgsType>(Args)...);
+        m_Desc.NumResources = StaticCast<Uint32>(m_Resources.size());
+        m_Desc.Resources    = m_Resources.data();
+
+        auto& Res{m_Resources.back()};
+        Res.Name = m_StringPool.insert(Res.Name).first->c_str();
+    }
+
+    template <typename... ArgsType>
+    void AddImmutableSampler(ArgsType&&... Args)
+    {
+        m_ImmutableSamplers.emplace_back(std::forward<ArgsType>(Args)...);
+        m_Desc.NumImmutableSamplers = StaticCast<Uint32>(m_ImmutableSamplers.size());
+        m_Desc.ImmutableSamplers    = m_ImmutableSamplers.data();
+
+        auto& ImtblSam{m_ImmutableSamplers.back()};
+        ImtblSam.SamplerOrTextureName = m_StringPool.insert(ImtblSam.SamplerOrTextureName).first->c_str();
+    }
+
+    template <class HandlerType>
+    void ProcessImmutableSamplers(HandlerType Handler)
+    {
+        for (auto& ImtblSam : m_ImmutableSamplers)
+        {
+            const char* OrigName = ImtblSam.SamplerOrTextureName;
+            Handler(ImtblSam);
+            if (ImtblSam.SamplerOrTextureName != OrigName) // Compare pointers, not strings!
+                ImtblSam.SamplerOrTextureName = m_StringPool.insert(ImtblSam.SamplerOrTextureName).first->c_str();
+        }
+    }
+
+    void SetCombinedSamplerSuffix(const char* Suffix)
+    {
+        VERIFY_EXPR(Suffix != nullptr);
+        if (m_Desc.UseCombinedTextureSamplers)
+        {
+            if (strcmp(m_Desc.CombinedSamplerSuffix, Suffix) != 0)
+            {
+                LOG_ERROR_AND_THROW("New Combined Sampler Suffix (", Suffix, ") does not match the current suffix (", m_Desc.CombinedSamplerSuffix,
+                                    "). This indicates that the pipeline state uses shaders with different sampler suffixes, which is not allowed.");
+            }
+        }
+        else
+        {
+            m_CombinedSamplerSuffix           = Suffix;
+            m_Desc.CombinedSamplerSuffix      = m_CombinedSamplerSuffix.c_str();
+            m_Desc.UseCombinedTextureSamplers = true;
+        }
+    }
+
+    void SetName(const char* Name)
+    {
+        m_Name      = Name;
+        m_Desc.Name = m_Name.c_str();
+    }
+
+    operator const PipelineResourceSignatureDesc&() const
+    {
+        return m_Desc;
+    }
+
+private:
+    void UpdatePointers()
+    {
+        m_Desc.Name                  = m_Name.c_str();
+        m_Desc.CombinedSamplerSuffix = m_CombinedSamplerSuffix.c_str();
+
+        m_Desc.NumResources = StaticCast<Uint32>(m_Resources.size());
+        m_Desc.Resources    = m_Resources.data();
+
+        m_Desc.NumImmutableSamplers = StaticCast<Uint32>(m_ImmutableSamplers.size());
+        m_Desc.ImmutableSamplers    = m_ImmutableSamplers.data();
+    }
+
+private:
+    String m_Name;
+    String m_CombinedSamplerSuffix;
+
+    std::vector<PipelineResourceDesc> m_Resources;
+    std::vector<ImmutableSamplerDesc> m_ImmutableSamplers;
+    std::unordered_set<String>        m_StringPool;
+
+    PipelineResourceSignatureDesc m_Desc;
+
+    // NB: when adding new members, don't forget to update move ctor!
+};
 
 /// Template class implementing base functionality of the pipeline state object.
 
@@ -953,18 +1085,10 @@ protected:
     }
 
     template <typename... ExtraArgsType>
-    RefCntAutoPtr<PipelineResourceSignatureImplType> CreateDefaultSignature(
-        const PipelineResourceSignatureDesc& SrcSignDesc,
-        const ExtraArgsType&... ExtraArgs)
+    void InitDefaultSignature(const PipelineResourceSignatureDesc& SignDesc,
+                              const ExtraArgsType&... ExtraArgs)
     {
-        VERIFY_EXPR(m_UsingImplicitSignature);
-
-        VERIFY_EXPR(this->m_Desc.Name != nullptr);
-        const String SignName{String{"Implicit signature of PSO '"} + this->m_Desc.Name + '\''};
-
-        PipelineResourceSignatureDesc SignDesc{SrcSignDesc};
-        SignDesc.Name                     = SignName.c_str();
-        SignDesc.SRBAllocationGranularity = this->m_Desc.SRBAllocationGranularity;
+        VERIFY_EXPR(m_SignatureCount == 1 && m_UsingImplicitSignature);
 
         RefCntAutoPtr<PipelineResourceSignatureImplType> pImplicitSignature;
         this->GetDevice()->CreatePipelineResourceSignature(SignDesc, pImplicitSignature.template DblPtr<IPipelineResourceSignature>(), ExtraArgs...);
@@ -972,7 +1096,8 @@ protected:
         if (!pImplicitSignature)
             LOG_ERROR_AND_THROW("Failed to create implicit resource signature for pipeline state '", this->m_Desc.Name, "'.");
 
-        return pImplicitSignature;
+        VERIFY_EXPR(pImplicitSignature->GetDesc().BindingIndex == 0);
+        m_Signatures[0] = std::move(pImplicitSignature);
     }
 
 private:

@@ -101,13 +101,12 @@ public:
         LocalRootSignatureD3D12*                                 pLocalRootSig             = nullptr,
         const TValidateShaderResourcesFn&                        ValidateShaderResourcesFn = {}) noexcept(false);
 
-    static PipelineResourceSignatureDesc GetDefaultResourceSignatureDesc(
-        const TShaderStages&               ShaderStages,
-        const PipelineResourceLayoutDesc&  ResourceLayout,
-        const char*                        PSOName,
-        std::vector<PipelineResourceDesc>& Resources,
-        std::vector<ImmutableSamplerDesc>& ImmutableSamplers,
-        const LocalRootSignatureD3D12*     pLocalRootSig) noexcept(false);
+    static PipelineResourceSignatureDescWrapper GetDefaultResourceSignatureDesc(
+        const TShaderStages&              ShaderStages,
+        const char*                       PSOName,
+        const PipelineResourceLayoutDesc& ResourceLayout,
+        Uint32                            SRBAllocationGranularity,
+        const LocalRootSignatureD3D12*    pLocalRootSig) noexcept(false);
 
 private:
     template <typename PSOCreateInfoType>
@@ -118,10 +117,6 @@ private:
     void InitRootSignature(PSO_CREATE_FLAGS         Flags,
                            TShaderStages&           ShaderStages,
                            LocalRootSignatureD3D12* pLocalRootSig) noexcept(false);
-
-    RefCntAutoPtr<PipelineResourceSignatureD3D12Impl> CreateDefaultResourceSignature(
-        TShaderStages&           ShaderStages,
-        LocalRootSignatureD3D12* pLocalRootSig);
 
     void Destruct();
 

@@ -88,7 +88,7 @@ private:
                             const TShaderStages& ShaderStages,
                             SHADER_TYPE          ActiveStages);
 
-    RefCntAutoPtr<PipelineResourceSignatureGLImpl> CreateDefaultSignature(
+    PipelineResourceSignatureDescWrapper GetDefaultSignatureDesc(
         const TShaderStages& ShaderStages,
         SHADER_TYPE          ActiveStages);
 

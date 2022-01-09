@@ -579,21 +579,15 @@ size_t PipelineStateVkImpl::ShaderStageInfo::Count() const
     return Shaders.size();
 }
 
-PipelineResourceSignatureDesc PipelineStateVkImpl::GetDefaultResourceSignatureDesc(
-    const TShaderStages&               ShaderStages,
-    const PipelineResourceLayoutDesc&  ResourceLayout,
-    const char*                        PSOName,
-    std::vector<PipelineResourceDesc>& Resources,
-    std::vector<ImmutableSamplerDesc>& ImmutableSamplers) noexcept(false)
+PipelineResourceSignatureDescWrapper PipelineStateVkImpl::GetDefaultResourceSignatureDesc(
+    const TShaderStages&              ShaderStages,
+    const char*                       PSOName,
+    const PipelineResourceLayoutDesc& ResourceLayout,
+    Uint32                            SRBAllocationGranularity) noexcept(false)
 {
-    Resources.clear();
-    ImmutableSamplers.clear();
-
-    PipelineResourceSignatureDesc SignDesc;
-    SignDesc.CombinedSamplerSuffix = nullptr;
+    PipelineResourceSignatureDescWrapper SignDesc{PSOName, ResourceLayout, SRBAllocationGranularity};
 
     std::unordered_map<ShaderResourceHashKey, const SPIRVShaderResourceAttribs&, ShaderResourceHashKey::Hasher> UniqueResources;
-
     for (auto& Stage : ShaderStages)
     {
         for (auto* pShader : Stage.Shaders)
@@ -630,7 +624,7 @@ PipelineResourceSignatureDesc PipelineStateVkImpl::GetDefaultResourceSignatureDe
 
                         const auto ResType = SPIRVShaderResourceAttribs::GetShaderResourceType(Attribs.Type);
                         const auto Flags   = SPIRVShaderResourceAttribs::GetPipelineResourceFlags(Attribs.Type) | ShaderVariableFlagsToPipelineResourceFlags(VarDesc.Flags);
-                        Resources.emplace_back(VarDesc.ShaderStages, Attribs.Name, Attribs.ArraySize, ResType, VarDesc.Type, Flags);
+                        SignDesc.AddResource(VarDesc.ShaderStages, Attribs.Name, Attribs.ArraySize, ResType, VarDesc.Type, Flags);
                     }
                     else
                     {
@@ -641,39 +635,12 @@ PipelineResourceSignatureDesc PipelineStateVkImpl::GetDefaultResourceSignatureDe
             // Merge combined sampler suffixes
             if (ShaderResources.IsUsingCombinedSamplers() && ShaderResources.GetNumSepSmplrs() > 0)
             {
-                if (SignDesc.CombinedSamplerSuffix != nullptr)
-                {
-                    if (strcmp(SignDesc.CombinedSamplerSuffix, ShaderResources.GetCombinedSamplerSuffix()) != 0)
-                        LOG_ERROR_AND_THROW("CombinedSamplerSuffix is not compatible between shaders");
-                }
-                else
-                {
-                    SignDesc.CombinedSamplerSuffix = ShaderResources.GetCombinedSamplerSuffix();
-                }
+                SignDesc.SetCombinedSamplerSuffix(ShaderResources.GetCombinedSamplerSuffix());
             }
         }
     }
 
-    SignDesc.NumResources               = StaticCast<Uint32>(Resources.size());
-    SignDesc.Resources                  = SignDesc.NumResources > 0 ? Resources.data() : nullptr;
-    SignDesc.NumImmutableSamplers       = ResourceLayout.NumImmutableSamplers;
-    SignDesc.ImmutableSamplers          = ResourceLayout.ImmutableSamplers;
-    SignDesc.BindingIndex               = 0;
-    SignDesc.UseCombinedTextureSamplers = SignDesc.CombinedSamplerSuffix != nullptr;
-
     return SignDesc;
-}
-
-RefCntAutoPtr<PipelineResourceSignatureVkImpl> PipelineStateVkImpl::CreateDefaultSignature(const TShaderStages& ShaderStages) noexcept(false)
-{
-    std::vector<PipelineResourceDesc> Resources;
-    std::vector<ImmutableSamplerDesc> ImmutableSamplers;
-
-    const auto SignDesc = GetDefaultResourceSignatureDesc(ShaderStages, m_Desc.ResourceLayout, m_Desc.Name, Resources, ImmutableSamplers);
-
-    constexpr bool bIsDeviceInternal = false;
-    // Use immutable samplers from ResourceLayout.
-    return TPipelineStateBase::CreateDefaultSignature(SignDesc, GetActiveShaderStages(), bIsDeviceInternal);
 }
 
 void PipelineStateVkImpl::RemapShaderResources(
@@ -775,9 +742,9 @@ void PipelineStateVkImpl::InitPipelineLayout(PSO_CREATE_FLAGS Flags, TShaderStag
 {
     if (m_UsingImplicitSignature && (Flags & PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0) == 0)
     {
-        VERIFY_EXPR(m_SignatureCount == 1);
-        m_Signatures[0] = CreateDefaultSignature(ShaderStages);
-        VERIFY_EXPR(!m_Signatures[0] || m_Signatures[0]->GetDesc().BindingIndex == 0);
+        const auto SignDesc = GetDefaultResourceSignatureDesc(ShaderStages, m_Desc.Name, m_Desc.ResourceLayout, m_Desc.SRBAllocationGranularity);
+        InitDefaultSignature(SignDesc, GetActiveShaderStages(), false /*bIsDeviceInternal*/);
+        VERIFY_EXPR(m_Signatures[0]);
     }
 
 #ifdef DILIGENT_DEVELOPMENT

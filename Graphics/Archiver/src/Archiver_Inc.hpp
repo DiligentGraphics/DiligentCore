@@ -64,11 +64,8 @@ bool ArchiverImpl::CreateDefaultResourceSignature(DefaultPRSInfo&              D
 {
     try
     {
-        std::vector<PipelineResourceDesc> Resources;
-        std::vector<ImmutableSamplerDesc> ImmutableSamplers;
-
-        auto SignDesc = PipelineStateImplType::GetDefaultResourceSignatureDesc(ShaderStages, PSODesc.ResourceLayout, PSODesc.Name, Resources, ImmutableSamplers, ExtraArgs...);
-        SignDesc.Name = DefPRS.UniqueName.c_str();
+        auto SignDesc = PipelineStateImplType::GetDefaultResourceSignatureDesc(ShaderStages, PSODesc.Name, PSODesc.ResourceLayout, PSODesc.SRBAllocationGranularity, ExtraArgs...);
+        SignDesc.SetName(DefPRS.UniqueName.c_str());
 
         RefCntAutoPtr<IPipelineResourceSignature> pDefaultPRS;
         m_pSerializationDevice->CreatePipelineResourceSignature(SignDesc, DefPRS.DeviceFlags, ActiveShaderStages, &pDefaultPRS);

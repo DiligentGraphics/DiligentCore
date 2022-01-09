@@ -110,12 +110,11 @@ public:
         TShaderResources*                                    pShaderResources     = nullptr,
         TResourceAttibutions*                                pResourceAttibutions = nullptr) noexcept(false);
 
-    static PipelineResourceSignatureDesc GetDefaultResourceSignatureDesc(
-        const TShaderStages&               ShaderStages,
-        const PipelineResourceLayoutDesc&  ResourceLayout,
-        const char*                        PSOName,
-        std::vector<PipelineResourceDesc>& Resources,
-        std::vector<ImmutableSamplerDesc>& ImmutableSamplers) noexcept(false);
+    static PipelineResourceSignatureDescWrapper GetDefaultResourceSignatureDesc(
+        const TShaderStages&              ShaderStages,
+        const char*                       PSOName,
+        const PipelineResourceLayoutDesc& ResourceLayout,
+        Uint32                            SRBAllocationGranularity) noexcept(false);
 
 private:
     template <typename PSOCreateInfoType>
@@ -124,8 +123,6 @@ private:
                                       std::vector<VulkanUtilities::ShaderModuleWrapper>& ShaderModules) noexcept(false);
 
     void InitPipelineLayout(PSO_CREATE_FLAGS Flags, TShaderStages& ShaderStages) noexcept(false);
-
-    RefCntAutoPtr<PipelineResourceSignatureVkImpl> CreateDefaultSignature(const TShaderStages& ShaderStages) noexcept(false);
 
     void Destruct();
 

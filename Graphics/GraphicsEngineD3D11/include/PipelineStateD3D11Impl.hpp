@@ -119,12 +119,11 @@ public:
                                      const TCompileShaderFn&                                  CompileShaderFn,
                                      const TValidateShaderResourcesFn&                        ValidateShaderResourcesFn = {}) noexcept(false);
 
-    static PipelineResourceSignatureDesc GetDefaultResourceSignatureDesc(
-        const TShaderStages&               ShaderStages,
-        const PipelineResourceLayoutDesc&  ResourceLayout,
-        const char*                        PSOName,
-        std::vector<PipelineResourceDesc>& Resources,
-        std::vector<ImmutableSamplerDesc>& ImmutableSamplers) noexcept(false);
+    static PipelineResourceSignatureDescWrapper GetDefaultResourceSignatureDesc(
+        const TShaderStages&              ShaderStages,
+        const char*                       PSOName,
+        const PipelineResourceLayoutDesc& ResourceLayout,
+        Uint32                            SRBAllocationGranularity) noexcept(false);
 
 private:
     template <typename PSOCreateInfoType>
@@ -134,8 +133,6 @@ private:
     void InitResourceLayouts(PSO_CREATE_FLAGS                     Flags,
                              const std::vector<ShaderD3D11Impl*>& Shaders,
                              CComPtr<ID3DBlob>&                   pVSByteCode);
-
-    RefCntAutoPtr<PipelineResourceSignatureD3D11Impl> CreateDefaultResourceSignature(const std::vector<ShaderD3D11Impl*>& Shaders);
 
     void Destruct();
 
