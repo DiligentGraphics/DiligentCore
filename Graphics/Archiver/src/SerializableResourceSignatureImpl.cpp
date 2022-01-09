@@ -102,29 +102,29 @@ SerializableResourceSignatureImpl::SerializableResourceSignatureImpl(IReferenceC
         {
 #if D3D11_SUPPORTED
             case ARCHIVE_DEVICE_DATA_FLAG_D3D11:
-                CreatePRSD3D11(pRefCounters, Desc, ShaderStages);
+                CreateSignature<PipelineResourceSignatureD3D11Impl>(pRefCounters, Desc, ShaderStages);
                 break;
 #endif
 #if D3D12_SUPPORTED
             case ARCHIVE_DEVICE_DATA_FLAG_D3D12:
-                CreatePRSD3D12(pRefCounters, Desc, ShaderStages);
+                CreateSignature<PipelineResourceSignatureD3D12Impl>(pRefCounters, Desc, ShaderStages);
                 break;
 #endif
 #if GL_SUPPORTED || GLES_SUPPORTED
             case ARCHIVE_DEVICE_DATA_FLAG_GL:
             case ARCHIVE_DEVICE_DATA_FLAG_GLES:
-                CreatePRSGL(pRefCounters, Desc, ShaderStages);
+                CreateSignature<PipelineResourceSignatureGLImpl>(pRefCounters, Desc, ShaderStages);
                 break;
 #endif
 #if VULKAN_SUPPORTED
             case ARCHIVE_DEVICE_DATA_FLAG_VULKAN:
-                CreatePRSVk(pRefCounters, Desc, ShaderStages);
+                CreateSignature<PipelineResourceSignatureVkImpl>(pRefCounters, Desc, ShaderStages);
                 break;
 #endif
 #if METAL_SUPPORTED
             case ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS:
             case ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS:
-                CreatePRSMtl(pRefCounters, Desc, ShaderStages);
+                CreateSignature<PipelineResourceSignatureMtlImpl>(pRefCounters, Desc, ShaderStages);
                 break;
 #endif
             case ARCHIVE_DEVICE_DATA_FLAG_NONE:

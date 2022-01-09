@@ -402,11 +402,10 @@ SerializedMemory SerializableShaderImpl::PatchShaderMtl(const RefCntAutoPtr<Pipe
     return Bytecode;
 }
 
-
-void SerializableResourceSignatureImpl::CreatePRSMtl(IReferenceCounters* pRefCounters, const PipelineResourceSignatureDesc& Desc, SHADER_TYPE ShaderStages)
-{
-    CreateSignature<PipelineResourceSignatureMtlImpl>(pRefCounters, Desc, ShaderStages);
-}
+template void SerializableResourceSignatureImpl::CreateSignature<PipelineResourceSignatureMtlImpl>(
+    IReferenceCounters*                  pRefCounters,
+    const PipelineResourceSignatureDesc& Desc,
+    SHADER_TYPE                          ShaderStages);
 
 
 void SerializationDeviceImpl::GetPipelineResourceBindingsMtl(const PipelineResourceBindingAttribs& Info,

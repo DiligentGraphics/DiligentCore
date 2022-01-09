@@ -199,12 +199,10 @@ void SerializableShaderImpl::CreateShaderD3D11(IReferenceCounters* pRefCounters,
 
 template PipelineResourceSignatureD3D11Impl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureD3D11Impl>() const;
 
-void SerializableResourceSignatureImpl::CreatePRSD3D11(IReferenceCounters*                  pRefCounters,
-                                                       const PipelineResourceSignatureDesc& Desc,
-                                                       SHADER_TYPE                          ShaderStages)
-{
-    CreateSignature<PipelineResourceSignatureD3D11Impl>(pRefCounters, Desc, ShaderStages);
-}
+template void SerializableResourceSignatureImpl::CreateSignature<PipelineResourceSignatureD3D11Impl>(
+    IReferenceCounters*                  pRefCounters,
+    const PipelineResourceSignatureDesc& Desc,
+    SHADER_TYPE                          ShaderStages);
 
 void SerializationDeviceImpl::GetPipelineResourceBindingsD3D11(const PipelineResourceBindingAttribs& Info,
                                                                std::vector<PipelineResourceBinding>& ResourceBindings)

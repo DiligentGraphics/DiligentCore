@@ -105,12 +105,10 @@ template bool ArchiverImpl::PatchShadersGL<RayTracingPipelineStateCreateInfo>(co
 
 template PipelineResourceSignatureGLImpl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureGLImpl>() const;
 
-void SerializableResourceSignatureImpl::CreatePRSGL(IReferenceCounters*                  pRefCounters,
-                                                    const PipelineResourceSignatureDesc& Desc,
-                                                    SHADER_TYPE                          ShaderStages)
-{
-    CreateSignature<PipelineResourceSignatureGLImpl>(pRefCounters, Desc, ShaderStages);
-}
+template void SerializableResourceSignatureImpl::CreateSignature<PipelineResourceSignatureGLImpl>(
+    IReferenceCounters*                  pRefCounters,
+    const PipelineResourceSignatureDesc& Desc,
+    SHADER_TYPE                          ShaderStages);
 
 
 void SerializationDeviceImpl::GetPipelineResourceBindingsGL(const PipelineResourceBindingAttribs& Info,

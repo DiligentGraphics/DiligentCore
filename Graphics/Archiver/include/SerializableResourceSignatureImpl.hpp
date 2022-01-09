@@ -153,72 +153,52 @@ private:
     }
 
     template <typename SignatureImplType>
-    void CreateSignature(IReferenceCounters* pRefCounters, const PipelineResourceSignatureDesc& Desc, SHADER_TYPE ShaderStages)
-    {
-        using Traits                = SignatureTraits<SignatureImplType>;
-        using MeasureSerializerType = typename Traits::template PSOSerializerType<SerializerMode::Measure>;
-        using WriteSerializerType   = typename Traits::template PSOSerializerType<SerializerMode::Write>;
-
-        auto PRSWrpr = std::make_unique<TPRS<SignatureImplType>>(pRefCounters, Desc, ShaderStages);
-        AddPRSDesc(PRSWrpr->PRS.GetDesc());
-
-        const auto InternalData = PRSWrpr->PRS.GetInternalData();
-
-        {
-            Serializer<SerializerMode::Measure> MeasureSer;
-            MeasureSerializerType::SerializePRSInternalData(MeasureSer, InternalData, nullptr);
-
-            PRSWrpr->Mem = SerializedMemory{MeasureSer.GetSize(nullptr)};
-        }
-
-        {
-            Serializer<SerializerMode::Write> Ser{PRSWrpr->Mem.Ptr(), PRSWrpr->Mem.Size()};
-            WriteSerializerType::SerializePRSInternalData(Ser, InternalData, nullptr);
-            VERIFY_EXPR(Ser.IsEnd());
-        }
-
-        m_pPRSWrappers[static_cast<size_t>(Traits::Type)] = std::move(PRSWrpr);
-    }
-#if D3D11_SUPPORTED
-    void CreatePRSD3D11(IReferenceCounters* pRefCounters, const PipelineResourceSignatureDesc& Desc, SHADER_TYPE ShaderStages);
-#endif
-
-#if D3D12_SUPPORTED
-    void CreatePRSD3D12(IReferenceCounters* pRefCounters, const PipelineResourceSignatureDesc& Desc, SHADER_TYPE ShaderStages);
-#endif
-
-#if GL_SUPPORTED || GLES_SUPPORTED
-    void CreatePRSGL(IReferenceCounters* pRefCounters, const PipelineResourceSignatureDesc& Desc, SHADER_TYPE ShaderStages);
-#endif
-
-#if VULKAN_SUPPORTED
-    void CreatePRSVk(IReferenceCounters* pRefCounters, const PipelineResourceSignatureDesc& Desc, SHADER_TYPE ShaderStages);
-#endif
-
-#if METAL_SUPPORTED
-    void CreatePRSMtl(IReferenceCounters* pRefCounters, const PipelineResourceSignatureDesc& Desc, SHADER_TYPE ShaderStages);
-#endif
+    void CreateSignature(IReferenceCounters* pRefCounters, const PipelineResourceSignatureDesc& Desc, SHADER_TYPE ShaderStages);
 };
-
 
 #if D3D11_SUPPORTED
 extern template PipelineResourceSignatureD3D11Impl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureD3D11Impl>() const;
+
+extern template void SerializableResourceSignatureImpl::CreateSignature<PipelineResourceSignatureD3D11Impl>(
+    IReferenceCounters*                  pRefCounters,
+    const PipelineResourceSignatureDesc& Desc,
+    SHADER_TYPE                          ShaderStages);
 #endif
 
 #if D3D12_SUPPORTED
 extern template PipelineResourceSignatureD3D12Impl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureD3D12Impl>() const;
+
+extern template void SerializableResourceSignatureImpl::CreateSignature<PipelineResourceSignatureD3D12Impl>(
+    IReferenceCounters*                  pRefCounters,
+    const PipelineResourceSignatureDesc& Desc,
+    SHADER_TYPE                          ShaderStages);
 #endif
 
 #if GL_SUPPORTED || GLES_SUPPORTED
 extern template PipelineResourceSignatureGLImpl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureGLImpl>() const;
+
+extern template void SerializableResourceSignatureImpl::CreateSignature<PipelineResourceSignatureGLImpl>(
+    IReferenceCounters*                  pRefCounters,
+    const PipelineResourceSignatureDesc& Desc,
+    SHADER_TYPE                          ShaderStages);
 #endif
 
 #if VULKAN_SUPPORTED
 extern template PipelineResourceSignatureVkImpl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureVkImpl>() const;
+
+extern template void SerializableResourceSignatureImpl::CreateSignature<PipelineResourceSignatureVkImpl>(
+    IReferenceCounters*                  pRefCounters,
+    const PipelineResourceSignatureDesc& Desc,
+    SHADER_TYPE                          ShaderStages);
 #endif
 
 #if METAL_SUPPORTED
 extern template PipelineResourceSignatureMtlImpl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureMtlImpl>() const;
+
+extern template void SerializableResourceSignatureImpl::CreateSignature<PipelineResourceSignatureMtlImpl>(
+    IReferenceCounters*                  pRefCounters,
+    const PipelineResourceSignatureDesc& Desc,
+    SHADER_TYPE                          ShaderStages);
 #endif
 
 } // namespace Diligent

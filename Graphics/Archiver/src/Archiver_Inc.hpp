@@ -141,6 +141,35 @@ struct SerializableResourceSignatureImpl::TPRS final : PRSWapperBase
 };
 
 
+template <typename SignatureImplType>
+void SerializableResourceSignatureImpl::CreateSignature(IReferenceCounters* pRefCounters, const PipelineResourceSignatureDesc& Desc, SHADER_TYPE ShaderStages)
+{
+    using Traits                = SignatureTraits<SignatureImplType>;
+    using MeasureSerializerType = typename Traits::template PSOSerializerType<SerializerMode::Measure>;
+    using WriteSerializerType   = typename Traits::template PSOSerializerType<SerializerMode::Write>;
+
+    auto PRSWrpr = std::make_unique<TPRS<SignatureImplType>>(pRefCounters, Desc, ShaderStages);
+    AddPRSDesc(PRSWrpr->PRS.GetDesc());
+
+    const auto InternalData = PRSWrpr->PRS.GetInternalData();
+
+    {
+        Serializer<SerializerMode::Measure> MeasureSer;
+        MeasureSerializerType::SerializePRSInternalData(MeasureSer, InternalData, nullptr);
+
+        PRSWrpr->Mem = SerializedMemory{MeasureSer.GetSize(nullptr)};
+    }
+
+    {
+        Serializer<SerializerMode::Write> Ser{PRSWrpr->Mem.Ptr(), PRSWrpr->Mem.Size()};
+        WriteSerializerType::SerializePRSInternalData(Ser, InternalData, nullptr);
+        VERIFY_EXPR(Ser.IsEnd());
+    }
+
+    m_pPRSWrappers[static_cast<size_t>(Traits::Type)] = std::move(PRSWrpr);
+}
+
+
 using RayTracingShaderMap = std::unordered_map<const IShader*, /*Index in TShaderIndices*/ Uint32>;
 
 void ExtractShadersD3D12(const RayTracingPipelineStateCreateInfo& CreateInfo, RayTracingShaderMap& ShaderMap);
