@@ -555,18 +555,18 @@ bool PipelineResourceSignatureD3D11Impl::DvpValidateCommittedResource(const D3DS
 #endif // DILIGENT_DEVELOPMENT
 
 
-PipelineResourceSignatureD3D11Impl::PipelineResourceSignatureD3D11Impl(IReferenceCounters*                                 pRefCounters,
-                                                                       RenderDeviceD3D11Impl*                              pDevice,
-                                                                       const PipelineResourceSignatureDesc&                Desc,
-                                                                       const PipelineResourceSignatureSerializedDataD3D11& Serialized) :
-    TPipelineResourceSignatureBase{pRefCounters, pDevice, Desc, Serialized}
+PipelineResourceSignatureD3D11Impl::PipelineResourceSignatureD3D11Impl(IReferenceCounters*                               pRefCounters,
+                                                                       RenderDeviceD3D11Impl*                            pDevice,
+                                                                       const PipelineResourceSignatureDesc&              Desc,
+                                                                       const PipelineResourceSignatureInternalDataD3D11& InternalData) :
+    TPipelineResourceSignatureBase{pRefCounters, pDevice, Desc, InternalData}
 {
     try
     {
         ValidatePipelineResourceSignatureDescD3D11(Desc);
 
         Deserialize(
-            GetRawAllocator(), DecoupleCombinedSamplers(Desc), Serialized, m_ImmutableSamplers,
+            GetRawAllocator(), DecoupleCombinedSamplers(Desc), InternalData, m_ImmutableSamplers,
             [this]() //
             {
                 CreateLayout(/*IsSerialized*/ true);
@@ -583,28 +583,28 @@ PipelineResourceSignatureD3D11Impl::PipelineResourceSignatureD3D11Impl(IReferenc
     }
 }
 
-PipelineResourceSignatureSerializedDataD3D11 PipelineResourceSignatureD3D11Impl::Serialize() const
+PipelineResourceSignatureInternalDataD3D11 PipelineResourceSignatureD3D11Impl::GetInternalData() const
 {
-    PipelineResourceSignatureSerializedDataD3D11 Serialized;
+    PipelineResourceSignatureInternalDataD3D11 InternalData;
 
-    TPipelineResourceSignatureBase::Serialize(Serialized);
+    TPipelineResourceSignatureBase::GetInternalData(InternalData);
 
     const auto NumImmutableSamplers = GetDesc().NumImmutableSamplers;
     if (NumImmutableSamplers > 0)
     {
         VERIFY_EXPR(m_ImmutableSamplers != nullptr);
-        Serialized.m_pImmutableSamplers = std::make_unique<PipelineResourceImmutableSamplerAttribsD3D11[]>(NumImmutableSamplers);
+        InternalData.m_pImmutableSamplers = std::make_unique<PipelineResourceImmutableSamplerAttribsD3D11[]>(NumImmutableSamplers);
 
         for (Uint32 i = 0; i < NumImmutableSamplers; ++i)
-            Serialized.m_pImmutableSamplers[i] = m_ImmutableSamplers[i];
+            InternalData.m_pImmutableSamplers[i] = m_ImmutableSamplers[i];
     }
 
-    Serialized.pResourceAttribs     = m_pResourceAttribs;
-    Serialized.NumResources         = GetDesc().NumResources;
-    Serialized.pImmutableSamplers   = Serialized.m_pImmutableSamplers.get();
-    Serialized.NumImmutableSamplers = NumImmutableSamplers;
+    InternalData.pResourceAttribs     = m_pResourceAttribs;
+    InternalData.NumResources         = GetDesc().NumResources;
+    InternalData.pImmutableSamplers   = InternalData.m_pImmutableSamplers.get();
+    InternalData.NumImmutableSamplers = NumImmutableSamplers;
 
-    return Serialized;
+    return InternalData;
 }
 
 } // namespace Diligent

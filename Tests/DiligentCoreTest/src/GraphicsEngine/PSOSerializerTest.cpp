@@ -252,7 +252,7 @@ TEST(PSOSerializerTest, SerializePRSDesc)
 
         RndValue(SrcPRSDesc.BindingIndex, Uint8{0}, Uint8{DILIGENT_MAX_RESOURCE_SIGNATURES - 1});
 
-        PipelineResourceSignatureSerializedData SrcSerialized;
+        PipelineResourceSignatureInternalData SrcSerialized;
 
         RndValue(SrcSerialized.ShaderStages, SHADER_TYPE_VERTEX, (SHADER_TYPE_LAST << 1) - 1);
         RndValue(SrcSerialized.StaticResShaderStages, SHADER_TYPE_VERTEX, (SHADER_TYPE_LAST << 1) - 1);
@@ -273,8 +273,8 @@ TEST(PSOSerializerTest, SerializePRSDesc)
 
         ASSERT_EQ(DataSize, WSer.GetSize(DataPtr));
 
-        PipelineResourceSignatureDesc           DstPRSDesc;
-        PipelineResourceSignatureSerializedData DstSerialized;
+        PipelineResourceSignatureDesc         DstPRSDesc;
+        PipelineResourceSignatureInternalData DstSerialized;
 
         Serializer<SerializerMode::Read> RSer{DataPtr, DataSize};
         PSOSerializer<SerializerMode::Read>::SerializePRSDesc(RSer, DstPRSDesc, DstSerialized, &Allocator);

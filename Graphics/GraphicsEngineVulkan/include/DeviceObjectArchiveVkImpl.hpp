@@ -53,11 +53,11 @@ struct PSOSerializerVk
     template <typename T>
     using TQual = typename Serializer<Mode>::template TQual<T>;
 
-    using PRSSerializedDataType = PipelineResourceSignatureSerializedDataVk;
+    using PRSInternalDataType = PipelineResourceSignatureInternalDataVk;
 
-    static void SerializePRSDesc(Serializer<Mode>&             Ser,
-                                 TQual<PRSSerializedDataType>& Serialized,
-                                 DynamicLinearAllocator*       Allocator);
+    static void SerializePRSInternalData(Serializer<Mode>&           Ser,
+                                         TQual<PRSInternalDataType>& InternalData,
+                                         DynamicLinearAllocator*     Allocator);
 };
 
 DECL_TRIVIALLY_SERIALIZABLE(PipelineResourceAttribsVk);

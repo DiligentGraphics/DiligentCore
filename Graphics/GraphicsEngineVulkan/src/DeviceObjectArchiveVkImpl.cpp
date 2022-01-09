@@ -48,18 +48,18 @@ RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveVkImpl::UnpackResou
 }
 
 template <SerializerMode Mode>
-void PSOSerializerVk<Mode>::SerializePRSDesc(
-    Serializer<Mode>&                                 Ser,
-    TQual<PipelineResourceSignatureSerializedDataVk>& Serialized,
-    DynamicLinearAllocator*                           Allocator)
+void PSOSerializerVk<Mode>::SerializePRSInternalData(
+    Serializer<Mode>&                               Ser,
+    TQual<PipelineResourceSignatureInternalDataVk>& InternalData,
+    DynamicLinearAllocator*                         Allocator)
 {
-    Ser(Serialized.DynamicUniformBufferCount,
-        Serialized.DynamicStorageBufferCount);
+    Ser(InternalData.DynamicUniformBufferCount,
+        InternalData.DynamicStorageBufferCount);
 
-    PSOSerializer<Mode>::SerializeArrayRaw(Ser, Allocator, Serialized.pResourceAttribs, Serialized.NumResources);
-    PSOSerializer<Mode>::SerializeArrayRaw(Ser, Allocator, Serialized.pImmutableSamplers, Serialized.NumImmutableSamplers);
+    PSOSerializer<Mode>::SerializeArrayRaw(Ser, Allocator, InternalData.pResourceAttribs, InternalData.NumResources);
+    PSOSerializer<Mode>::SerializeArrayRaw(Ser, Allocator, InternalData.pImmutableSamplers, InternalData.NumImmutableSamplers);
 
-    ASSERT_SIZEOF64(Serialized, 56, "Did you add a new member to PipelineResourceSignatureSerializedDataVk? Please add serialization here.");
+    ASSERT_SIZEOF64(InternalData, 56, "Did you add a new member to PipelineResourceSignatureInternalDataVk? Please add serialization here.");
 }
 
 template struct PSOSerializerVk<SerializerMode::Read>;

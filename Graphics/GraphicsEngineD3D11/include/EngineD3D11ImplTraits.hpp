@@ -81,7 +81,7 @@ class ShaderVariableManagerD3D11;
 
 struct PipelineResourceAttribsD3D11;
 struct PipelineResourceImmutableSamplerAttribsD3D11;
-struct PipelineResourceSignatureSerializedDataD3D11;
+struct PipelineResourceSignatureInternalDataD3D11;
 
 struct EngineD3D11ImplTraits
 {

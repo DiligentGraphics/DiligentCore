@@ -959,18 +959,18 @@ bool PipelineResourceSignatureVkImpl::DvpValidateCommittedResource(const DeviceC
 }
 #endif
 
-PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCounters*                              pRefCounters,
-                                                                 RenderDeviceVkImpl*                              pDevice,
-                                                                 const PipelineResourceSignatureDesc&             Desc,
-                                                                 const PipelineResourceSignatureSerializedDataVk& Serialized) :
-    TPipelineResourceSignatureBase{pRefCounters, pDevice, Desc, Serialized}
+PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCounters*                            pRefCounters,
+                                                                 RenderDeviceVkImpl*                            pDevice,
+                                                                 const PipelineResourceSignatureDesc&           Desc,
+                                                                 const PipelineResourceSignatureInternalDataVk& InternalData) :
+    TPipelineResourceSignatureBase{pRefCounters, pDevice, Desc, InternalData}
 //m_DynamicUniformBufferCount{Serialized.DynamicUniformBufferCount}
 //m_DynamicStorageBufferCount{Serialized.DynamicStorageBufferCount}
 {
     try
     {
         Deserialize(
-            GetRawAllocator(), Desc, Serialized, m_ImmutableSamplers,
+            GetRawAllocator(), Desc, InternalData, m_ImmutableSamplers,
             [this]() //
             {
                 CreateSetLayouts(/*IsSerialized*/ true);
@@ -989,30 +989,30 @@ PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCount
     }
 }
 
-PipelineResourceSignatureSerializedDataVk PipelineResourceSignatureVkImpl::Serialize() const
+PipelineResourceSignatureInternalDataVk PipelineResourceSignatureVkImpl::GetInternalData() const
 {
-    PipelineResourceSignatureSerializedDataVk Serialized;
+    PipelineResourceSignatureInternalDataVk InternalData;
 
-    TPipelineResourceSignatureBase::Serialize(Serialized);
+    TPipelineResourceSignatureBase::GetInternalData(InternalData);
 
     const auto NumImmutableSamplers = GetDesc().NumImmutableSamplers;
     if (NumImmutableSamplers > 0)
     {
         VERIFY_EXPR(m_ImmutableSamplers != nullptr);
-        Serialized.m_pImmutableSamplers = std::make_unique<PipelineResourceImmutableSamplerAttribsVk[]>(NumImmutableSamplers);
+        InternalData.m_pImmutableSamplers = std::make_unique<PipelineResourceImmutableSamplerAttribsVk[]>(NumImmutableSamplers);
 
         for (Uint32 i = 0; i < NumImmutableSamplers; ++i)
-            Serialized.m_pImmutableSamplers[i] = m_ImmutableSamplers[i];
+            InternalData.m_pImmutableSamplers[i] = m_ImmutableSamplers[i];
     }
 
-    Serialized.pResourceAttribs          = m_pResourceAttribs;
-    Serialized.NumResources              = GetDesc().NumResources;
-    Serialized.pImmutableSamplers        = Serialized.m_pImmutableSamplers.get();
-    Serialized.NumImmutableSamplers      = NumImmutableSamplers;
-    Serialized.DynamicStorageBufferCount = m_DynamicStorageBufferCount;
-    Serialized.DynamicUniformBufferCount = m_DynamicUniformBufferCount;
+    InternalData.pResourceAttribs          = m_pResourceAttribs;
+    InternalData.NumResources              = GetDesc().NumResources;
+    InternalData.pImmutableSamplers        = InternalData.m_pImmutableSamplers.get();
+    InternalData.NumImmutableSamplers      = NumImmutableSamplers;
+    InternalData.DynamicStorageBufferCount = m_DynamicStorageBufferCount;
+    InternalData.DynamicUniformBufferCount = m_DynamicUniformBufferCount;
 
-    return Serialized;
+    return InternalData;
 }
 
 } // namespace Diligent

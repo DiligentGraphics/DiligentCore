@@ -56,10 +56,10 @@ void PSOSerializer<Mode>::SerializeImmutableSampler(
 
 template <SerializerMode Mode>
 void PSOSerializer<Mode>::SerializePRSDesc(
-    Serializer<Mode>&                               Ser,
-    TQual<PipelineResourceSignatureDesc>&           Desc,
-    TQual<PipelineResourceSignatureSerializedData>& Serialized,
-    DynamicLinearAllocator*                         Allocator)
+    Serializer<Mode>&                             Ser,
+    TQual<PipelineResourceSignatureDesc>&         Desc,
+    TQual<PipelineResourceSignatureInternalData>& InternalData,
+    DynamicLinearAllocator*                       Allocator)
 {
     // Serialize PipelineResourceSignatureDesc
     Ser(Desc.BindingIndex,
@@ -82,15 +82,15 @@ void PSOSerializer<Mode>::SerializePRSDesc(
 
     SerializeArray(Ser, Allocator, Desc.ImmutableSamplers, Desc.NumImmutableSamplers, SerializeImmutableSampler);
 
-    // Serialize PipelineResourceSignatureSerializedData
-    Ser(Serialized.ShaderStages,
-        Serialized.StaticResShaderStages,
-        Serialized.PipelineType,
-        Serialized.StaticResStageIndex);
+    // Serialize PipelineResourceSignatureInternalData
+    Ser(InternalData.ShaderStages,
+        InternalData.StaticResShaderStages,
+        InternalData.PipelineType,
+        InternalData.StaticResStageIndex);
 
     ASSERT_SIZEOF64(PipelineResourceSignatureDesc, 56, "Did you add a new member to PipelineResourceSignatureDesc? Please add serialization here.");
     ASSERT_SIZEOF64(PipelineResourceDesc, 24, "Did you add a new member to PipelineResourceDesc? Please add serialization here.");
-    ASSERT_SIZEOF(PipelineResourceSignatureSerializedData, 16, "Did you add a new member to PipelineResourceSignatureSerializedData? Please add serialization here.");
+    ASSERT_SIZEOF(PipelineResourceSignatureInternalData, 16, "Did you add a new member to PipelineResourceSignatureInternalData? Please add serialization here.");
 }
 
 template <SerializerMode Mode>

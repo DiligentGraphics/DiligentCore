@@ -98,15 +98,15 @@ void CopyPipelineResourceSignatureDesc(FixedLinearAllocator&                    
                                        PipelineResourceSignatureDesc&                                   DstDesc,
                                        std::array<Uint16, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES + 1>& ResourceOffsets);
 
-/// Pipeline resource signature serialization data
-struct PipelineResourceSignatureSerializedData
+/// Pipeline resource signature internal data required for serialization/deserialization.
+struct PipelineResourceSignatureInternalData
 {
     SHADER_TYPE                               ShaderStages          = SHADER_TYPE_UNKNOWN;
     SHADER_TYPE                               StaticResShaderStages = SHADER_TYPE_UNKNOWN;
     PIPELINE_TYPE                             PipelineType          = PIPELINE_TYPE_INVALID;
     std::array<Int8, MAX_SHADERS_IN_PIPELINE> StaticResStageIndex   = {};
 
-    bool operator==(const PipelineResourceSignatureSerializedData& Rhs) const
+    bool operator==(const PipelineResourceSignatureInternalData& Rhs) const
     {
         // clang-format off
         return ShaderStages          == Rhs.ShaderStages          &&
@@ -199,16 +199,18 @@ public:
         }
     }
 
-    PipelineResourceSignatureBase(IReferenceCounters*                            pRefCounters,
-                                  RenderDeviceImplType*                          pDevice,
-                                  const PipelineResourceSignatureDesc&           Desc,
-                                  const PipelineResourceSignatureSerializedData& Serialized) :
+    PipelineResourceSignatureBase(IReferenceCounters*                          pRefCounters,
+                                  RenderDeviceImplType*                        pDevice,
+                                  const PipelineResourceSignatureDesc&         Desc,
+                                  const PipelineResourceSignatureInternalData& InternalData) :
         TDeviceObjectBase{pRefCounters, pDevice, Desc, false /*bIsDeviceInternal*/},
-        m_ShaderStages{Serialized.ShaderStages},
-        m_StaticResShaderStages{Serialized.StaticResShaderStages},
-        m_PipelineType{Serialized.PipelineType},
-        m_StaticResStageIndex{Serialized.StaticResStageIndex},
-        m_SRBMemAllocator{GetRawAllocator()}
+        // clang-format off
+        m_ShaderStages         {InternalData.ShaderStages},
+        m_StaticResShaderStages{InternalData.StaticResShaderStages},
+        m_PipelineType         {InternalData.PipelineType},
+        m_StaticResStageIndex  {InternalData.StaticResStageIndex},
+        m_SRBMemAllocator      {GetRawAllocator()}
+    // clang-format on
     {
         // Don't read from m_Desc until it was allocated and copied in CopyPipelineResourceSignatureDesc()
         this->m_Desc.Resources             = nullptr;
@@ -700,12 +702,12 @@ protected:
         return UpdatedDesc;
     }
 
-    void Serialize(PipelineResourceSignatureSerializedData& Serialized) const
+    void GetInternalData(PipelineResourceSignatureInternalData& InternalData) const
     {
-        Serialized.ShaderStages          = m_ShaderStages;
-        Serialized.StaticResShaderStages = m_StaticResShaderStages;
-        Serialized.PipelineType          = m_PipelineType;
-        Serialized.StaticResStageIndex   = m_StaticResStageIndex;
+        InternalData.ShaderStages          = m_ShaderStages;
+        InternalData.StaticResShaderStages = m_StaticResShaderStages;
+        InternalData.PipelineType          = m_PipelineType;
+        InternalData.StaticResStageIndex   = m_StaticResStageIndex;
     }
 
 

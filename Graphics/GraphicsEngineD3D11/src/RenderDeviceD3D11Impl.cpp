@@ -342,11 +342,11 @@ void RenderDeviceD3D11Impl::CreatePipelineResourceSignature(const PipelineResour
     CreatePipelineResourceSignatureImpl(ppSignature, Desc, ShaderStages, IsDeviceInternal);
 }
 
-void RenderDeviceD3D11Impl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc&                Desc,
-                                                            const PipelineResourceSignatureSerializedDataD3D11& SerializedData,
-                                                            IPipelineResourceSignature**                        ppSignature)
+void RenderDeviceD3D11Impl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc&              Desc,
+                                                            const PipelineResourceSignatureInternalDataD3D11& InternalData,
+                                                            IPipelineResourceSignature**                      ppSignature)
 {
-    CreatePipelineResourceSignatureImpl(ppSignature, Desc, SerializedData);
+    CreatePipelineResourceSignatureImpl(ppSignature, Desc, InternalData);
 }
 
 void RenderDeviceD3D11Impl::CreateDeviceMemory(const DeviceMemoryCreateInfo& CreateInfo, IDeviceMemory** ppMemory)

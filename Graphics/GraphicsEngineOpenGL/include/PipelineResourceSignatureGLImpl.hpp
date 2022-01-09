@@ -58,18 +58,18 @@ enum BINDING_RANGE : Uint32
 BINDING_RANGE PipelineResourceToBindingRange(const PipelineResourceDesc& Desc);
 const char*   GetBindingRangeName(BINDING_RANGE Range);
 
-struct PipelineResourceSignatureSerializedDataGL : PipelineResourceSignatureSerializedData
+struct PipelineResourceSignatureInternalDataGL : PipelineResourceSignatureInternalData
 {
     const PipelineResourceAttribsGL* pResourceAttribs     = nullptr; // [NumResources]
     Uint32                           NumResources         = 0;
     const RefCntAutoPtr<ISampler>*   pImmutableSamplers   = nullptr; // unused
     Uint32                           NumImmutableSamplers = 0;       // unused
 
-    PipelineResourceSignatureSerializedDataGL() noexcept
+    PipelineResourceSignatureInternalDataGL() noexcept
     {}
 
-    explicit PipelineResourceSignatureSerializedDataGL(const PipelineResourceSignatureSerializedData& SerializedData) noexcept :
-        PipelineResourceSignatureSerializedData{SerializedData}
+    explicit PipelineResourceSignatureInternalDataGL(const PipelineResourceSignatureInternalData& InternalData) noexcept :
+        PipelineResourceSignatureInternalData{InternalData}
     {}
 };
 
@@ -84,10 +84,10 @@ public:
                                     const PipelineResourceSignatureDesc& Desc,
                                     SHADER_TYPE                          ShaderStages      = SHADER_TYPE_UNKNOWN,
                                     bool                                 bIsDeviceInternal = false);
-    PipelineResourceSignatureGLImpl(IReferenceCounters*                              pRefCounters,
-                                    RenderDeviceGLImpl*                              pDevice,
-                                    const PipelineResourceSignatureDesc&             Desc,
-                                    const PipelineResourceSignatureSerializedDataGL& Serialized);
+    PipelineResourceSignatureGLImpl(IReferenceCounters*                            pRefCounters,
+                                    RenderDeviceGLImpl*                            pDevice,
+                                    const PipelineResourceSignatureDesc&           Desc,
+                                    const PipelineResourceSignatureInternalDataGL& InternalData);
     ~PipelineResourceSignatureGLImpl();
 
     using ResourceAttribs = TPipelineResourceSignatureBase::PipelineResourceAttribsType;
@@ -141,7 +141,7 @@ public:
         return ImtblSamIdx;
     }
 
-    PipelineResourceSignatureSerializedDataGL Serialize() const;
+    PipelineResourceSignatureInternalDataGL GetInternalData() const;
 
 private:
     void CreateLayout(bool IsSerialized);

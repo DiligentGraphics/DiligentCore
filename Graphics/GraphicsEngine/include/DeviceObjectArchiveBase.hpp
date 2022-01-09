@@ -219,7 +219,7 @@ protected:
             VERIFY_EXPR(Type == ChunkType::ResourceSignature);
         }
         //PipelineResourceSignatureDesc
-        //PipelineResourceSignatureSerializedData
+        //PipelineResourceSignatureInternalData
     };
     CHECK_HEADER_SIZE(PRSDataHeader, 56)
 
@@ -354,10 +354,10 @@ private:
 protected:
     struct PRSData
     {
-        DynamicLinearAllocator                  Allocator;
-        const PRSDataHeader*                    pHeader = nullptr;
-        PipelineResourceSignatureDesc           Desc{};
-        PipelineResourceSignatureSerializedData Serialized{};
+        DynamicLinearAllocator                Allocator;
+        const PRSDataHeader*                  pHeader = nullptr;
+        PipelineResourceSignatureDesc         Desc{};
+        PipelineResourceSignatureInternalData InternalData{};
 
         static constexpr ChunkType ExpectedChunkType = ChunkType::ResourceSignature;
 
@@ -478,12 +478,12 @@ RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveBase::UnpackResourc
 
     Serializer<SerializerMode::Read> Ser{pData, DataSize};
 
-    typename PSOSerializerType::PRSSerializedDataType SerializedData{PRS.Serialized};
-    PSOSerializerType::SerializePRSDesc(Ser, SerializedData, &PRS.Allocator);
+    typename PSOSerializerType::PRSInternalDataType InternalData{PRS.InternalData};
+    PSOSerializerType::SerializePRSInternalData(Ser, InternalData, &PRS.Allocator);
     VERIFY_EXPR(Ser.IsEnd());
 
     auto* pRenderDevice = ClassPtrCast<RenderDeviceImplType>(DeArchiveInfo.pDevice);
-    pRenderDevice->CreatePipelineResourceSignature(PRS.Desc, SerializedData, &pSignature);
+    pRenderDevice->CreatePipelineResourceSignature(PRS.Desc, InternalData, &pSignature);
 
     if (!IsImplicit)
         m_PRSMap.SetResource(DeArchiveInfo.Name, pSignature.RawPtr());

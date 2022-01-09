@@ -57,7 +57,7 @@ struct PipelineResourceImmutableSamplerAttribsVk
     Uint32 BindingIndex = ~0u;
 };
 
-struct PipelineResourceSignatureSerializedDataVk : PipelineResourceSignatureSerializedData
+struct PipelineResourceSignatureInternalDataVk : PipelineResourceSignatureInternalData
 {
     const PipelineResourceAttribsVk*                 pResourceAttribs          = nullptr; // [NumResources]
     Uint32                                           NumResources              = 0;
@@ -68,11 +68,11 @@ struct PipelineResourceSignatureSerializedDataVk : PipelineResourceSignatureSeri
 
     std::unique_ptr<PipelineResourceImmutableSamplerAttribsVk[]> m_pImmutableSamplers;
 
-    PipelineResourceSignatureSerializedDataVk() noexcept
+    PipelineResourceSignatureInternalDataVk() noexcept
     {}
 
-    explicit PipelineResourceSignatureSerializedDataVk(const PipelineResourceSignatureSerializedData& SerializedData) noexcept :
-        PipelineResourceSignatureSerializedData{SerializedData}
+    explicit PipelineResourceSignatureInternalDataVk(const PipelineResourceSignatureInternalData& InternalData) noexcept :
+        PipelineResourceSignatureInternalData{InternalData}
     {}
 };
 
@@ -107,10 +107,10 @@ public:
                                     SHADER_TYPE                          ShaderStages      = SHADER_TYPE_UNKNOWN,
                                     bool                                 bIsDeviceInternal = false);
 
-    PipelineResourceSignatureVkImpl(IReferenceCounters*                              pRefCounters,
-                                    RenderDeviceVkImpl*                              pDevice,
-                                    const PipelineResourceSignatureDesc&             Desc,
-                                    const PipelineResourceSignatureSerializedDataVk& Serialized);
+    PipelineResourceSignatureVkImpl(IReferenceCounters*                            pRefCounters,
+                                    RenderDeviceVkImpl*                            pDevice,
+                                    const PipelineResourceSignatureDesc&           Desc,
+                                    const PipelineResourceSignatureInternalDataVk& InternalData);
 
     ~PipelineResourceSignatureVkImpl();
 
@@ -173,7 +173,7 @@ public:
     template <DESCRIPTOR_SET_ID SetId>
     Uint32 GetDescriptorSetIndex() const;
 
-    PipelineResourceSignatureSerializedDataVk Serialize() const;
+    PipelineResourceSignatureInternalDataVk GetInternalData() const;
 
 private:
     // Resource cache group identifier

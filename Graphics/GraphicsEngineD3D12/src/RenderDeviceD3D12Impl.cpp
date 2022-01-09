@@ -654,11 +654,11 @@ void RenderDeviceD3D12Impl::CreatePipelineResourceSignature(const PipelineResour
     CreatePipelineResourceSignatureImpl(ppSignature, Desc, ShaderStages, IsDeviceInternal);
 }
 
-void RenderDeviceD3D12Impl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc&                Desc,
-                                                            const PipelineResourceSignatureSerializedDataD3D12& SerializedData,
-                                                            IPipelineResourceSignature**                        ppSignature)
+void RenderDeviceD3D12Impl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc&              Desc,
+                                                            const PipelineResourceSignatureInternalDataD3D12& InternalData,
+                                                            IPipelineResourceSignature**                      ppSignature)
 {
-    CreatePipelineResourceSignatureImpl(ppSignature, Desc, SerializedData);
+    CreatePipelineResourceSignatureImpl(ppSignature, Desc, InternalData);
 }
 
 DescriptorHeapAllocation RenderDeviceD3D12Impl::AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count /*= 1*/)

@@ -65,14 +65,14 @@ RefCntAutoPtr<IShader> DeviceObjectArchiveGLImpl::UnpackShader(Serializer<Serial
 }
 
 template <SerializerMode Mode>
-void PSOSerializerGL<Mode>::SerializePRSDesc(
-    Serializer<Mode>&                                 Ser,
-    TQual<PipelineResourceSignatureSerializedDataGL>& Serialized,
-    DynamicLinearAllocator*                           Allocator)
+void PSOSerializerGL<Mode>::SerializePRSInternalData(
+    Serializer<Mode>&                               Ser,
+    TQual<PipelineResourceSignatureInternalDataGL>& InternalData,
+    DynamicLinearAllocator*                         Allocator)
 {
-    PSOSerializer<Mode>::SerializeArrayRaw(Ser, Allocator, Serialized.pResourceAttribs, Serialized.NumResources);
+    PSOSerializer<Mode>::SerializeArrayRaw(Ser, Allocator, InternalData.pResourceAttribs, InternalData.NumResources);
 
-    ASSERT_SIZEOF64(Serialized, 48, "Did you add a new member to PipelineResourceSignatureSerializedDataGL? Please add serialization here.");
+    ASSERT_SIZEOF64(InternalData, 48, "Did you add a new member to PipelineResourceSignatureInternalDataGL? Please add serialization here.");
 }
 
 template struct PSOSerializerGL<SerializerMode::Read>;

@@ -119,9 +119,9 @@ public:
                                          SHADER_TYPE                          ShaderStages,
                                          bool                                 IsDeviceInternal);
 
-    void CreatePipelineResourceSignature(const PipelineResourceSignatureDesc&                Desc,
-                                         const PipelineResourceSignatureSerializedDataD3D11& SerializedData,
-                                         IPipelineResourceSignature**                        ppSignature);
+    void CreatePipelineResourceSignature(const PipelineResourceSignatureDesc&              Desc,
+                                         const PipelineResourceSignatureInternalDataD3D11& InternalData,
+                                         IPipelineResourceSignature**                      ppSignature);
 
     /// Implementation of IRenderDevice::CreateDeviceMemory() in Direct3D11 backend.
     virtual void DILIGENT_CALL_TYPE CreateDeviceMemory(const DeviceMemoryCreateInfo& CreateInfo,

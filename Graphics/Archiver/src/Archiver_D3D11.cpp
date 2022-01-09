@@ -41,7 +41,7 @@ template <>
 struct SerializableResourceSignatureImpl::SignatureTraits<PipelineResourceSignatureD3D11Impl>
 {
     static constexpr DeviceType Type = DeviceType::Direct3D11;
-    using SerializedDataType         = PipelineResourceSignatureSerializedDataD3D11;
+    using InternalDataType           = PipelineResourceSignatureInternalDataD3D11;
 
     template <SerializerMode Mode>
     using PSOSerializerType = PSOSerializerD3D11<Mode>;

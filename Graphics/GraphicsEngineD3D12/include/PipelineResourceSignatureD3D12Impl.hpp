@@ -89,18 +89,18 @@ public:
     }
 };
 
-struct PipelineResourceSignatureSerializedDataD3D12 : PipelineResourceSignatureSerializedData
+struct PipelineResourceSignatureInternalDataD3D12 : PipelineResourceSignatureInternalData
 {
     const PipelineResourceAttribsD3D12*                 pResourceAttribs     = nullptr; // [NumResources]
     Uint32                                              NumResources         = 0;
     const PipelineResourceImmutableSamplerAttribsD3D12* pImmutableSamplers   = nullptr; // [NumImmutableSamplers]
     Uint32                                              NumImmutableSamplers = 0;
 
-    PipelineResourceSignatureSerializedDataD3D12() noexcept
+    PipelineResourceSignatureInternalDataD3D12() noexcept
     {}
 
-    explicit PipelineResourceSignatureSerializedDataD3D12(const PipelineResourceSignatureSerializedData& SerializedData) noexcept :
-        PipelineResourceSignatureSerializedData{SerializedData}
+    explicit PipelineResourceSignatureInternalDataD3D12(const PipelineResourceSignatureInternalData& InternalData) noexcept :
+        PipelineResourceSignatureInternalData{InternalData}
     {}
 };
 
@@ -119,10 +119,10 @@ public:
                                        SHADER_TYPE                          ShaderStages      = SHADER_TYPE_UNKNOWN,
                                        bool                                 bIsDeviceInternal = false);
 
-    PipelineResourceSignatureD3D12Impl(IReferenceCounters*                                 pRefCounters,
-                                       RenderDeviceD3D12Impl*                              pDevice,
-                                       const PipelineResourceSignatureDesc&                Desc,
-                                       const PipelineResourceSignatureSerializedDataD3D12& Serialized);
+    PipelineResourceSignatureD3D12Impl(IReferenceCounters*                               pRefCounters,
+                                       RenderDeviceD3D12Impl*                            pDevice,
+                                       const PipelineResourceSignatureDesc&              Desc,
+                                       const PipelineResourceSignatureInternalDataD3D12& InternalData);
 
     ~PipelineResourceSignatureD3D12Impl();
 
@@ -173,7 +173,7 @@ public:
     // Returns true if there is an immutable sampler array in the given shader stage.
     bool HasImmutableSamplerArray(SHADER_TYPE ShaderStage) const;
 
-    PipelineResourceSignatureSerializedDataD3D12 Serialize() const;
+    PipelineResourceSignatureInternalDataD3D12 GetInternalData() const;
 
 #ifdef DILIGENT_DEVELOPMENT
     /// Verifies committed resource using the resource attributes from the PSO.

@@ -48,15 +48,15 @@ RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveD3D11Impl::UnpackRe
 }
 
 template <SerializerMode Mode>
-void PSOSerializerD3D11<Mode>::SerializePRSDesc(
-    Serializer<Mode>&                                    Ser,
-    TQual<PipelineResourceSignatureSerializedDataD3D11>& Serialized,
-    DynamicLinearAllocator*                              Allocator)
+void PSOSerializerD3D11<Mode>::SerializePRSInternalData(
+    Serializer<Mode>&                                  Ser,
+    TQual<PipelineResourceSignatureInternalDataD3D11>& InternalData,
+    DynamicLinearAllocator*                            Allocator)
 {
-    PSOSerializer<Mode>::SerializeArrayRaw(Ser, Allocator, Serialized.pResourceAttribs, Serialized.NumResources);
-    PSOSerializer<Mode>::SerializeArrayRaw(Ser, Allocator, Serialized.pImmutableSamplers, Serialized.NumImmutableSamplers);
+    PSOSerializer<Mode>::SerializeArrayRaw(Ser, Allocator, InternalData.pResourceAttribs, InternalData.NumResources);
+    PSOSerializer<Mode>::SerializeArrayRaw(Ser, Allocator, InternalData.pImmutableSamplers, InternalData.NumImmutableSamplers);
 
-    ASSERT_SIZEOF64(Serialized, 56, "Did you add a new member to PipelineResourceSignatureSerializedDataD3D11? Please add serialization here.");
+    ASSERT_SIZEOF64(InternalData, 56, "Did you add a new member to PipelineResourceSignatureInternalDataD3D11? Please add serialization here.");
 }
 
 template struct PSOSerializerD3D11<SerializerMode::Read>;

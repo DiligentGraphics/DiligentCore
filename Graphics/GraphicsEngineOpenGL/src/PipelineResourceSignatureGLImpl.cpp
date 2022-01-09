@@ -611,16 +611,16 @@ bool PipelineResourceSignatureGLImpl::DvpValidateCommittedResource(const ShaderR
 #endif // DILIGENT_DEVELOPMENT
 
 
-PipelineResourceSignatureGLImpl::PipelineResourceSignatureGLImpl(IReferenceCounters*                              pRefCounters,
-                                                                 RenderDeviceGLImpl*                              pDeviceGL,
-                                                                 const PipelineResourceSignatureDesc&             Desc,
-                                                                 const PipelineResourceSignatureSerializedDataGL& Serialized) :
-    TPipelineResourceSignatureBase{pRefCounters, pDeviceGL, Desc, Serialized}
+PipelineResourceSignatureGLImpl::PipelineResourceSignatureGLImpl(IReferenceCounters*                            pRefCounters,
+                                                                 RenderDeviceGLImpl*                            pDeviceGL,
+                                                                 const PipelineResourceSignatureDesc&           Desc,
+                                                                 const PipelineResourceSignatureInternalDataGL& InternalData) :
+    TPipelineResourceSignatureBase{pRefCounters, pDeviceGL, Desc, InternalData}
 {
     try
     {
         Deserialize(
-            GetRawAllocator(), Desc, Serialized, m_ImmutableSamplers,
+            GetRawAllocator(), Desc, InternalData, m_ImmutableSamplers,
             [this]() //
             {
                 CreateLayout(/*IsSerialized*/ true);
@@ -637,16 +637,16 @@ PipelineResourceSignatureGLImpl::PipelineResourceSignatureGLImpl(IReferenceCount
     }
 }
 
-PipelineResourceSignatureSerializedDataGL PipelineResourceSignatureGLImpl::Serialize() const
+PipelineResourceSignatureInternalDataGL PipelineResourceSignatureGLImpl::GetInternalData() const
 {
-    PipelineResourceSignatureSerializedDataGL Serialized;
+    PipelineResourceSignatureInternalDataGL InternalData;
 
-    TPipelineResourceSignatureBase::Serialize(Serialized);
+    TPipelineResourceSignatureBase::GetInternalData(InternalData);
 
-    Serialized.pResourceAttribs = m_pResourceAttribs;
-    Serialized.NumResources     = GetDesc().NumResources;
+    InternalData.pResourceAttribs = m_pResourceAttribs;
+    InternalData.NumResources     = GetDesc().NumResources;
 
-    return Serialized;
+    return InternalData;
 }
 
 } // namespace Diligent

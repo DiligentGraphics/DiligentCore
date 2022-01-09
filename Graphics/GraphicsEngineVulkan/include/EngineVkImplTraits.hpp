@@ -87,7 +87,7 @@ class ShaderVariableManagerVk;
 
 struct PipelineResourceAttribsVk;
 struct PipelineResourceImmutableSamplerAttribsVk;
-struct PipelineResourceSignatureSerializedDataVk;
+struct PipelineResourceSignatureInternalDataVk;
 
 struct EngineVkImplTraits
 {

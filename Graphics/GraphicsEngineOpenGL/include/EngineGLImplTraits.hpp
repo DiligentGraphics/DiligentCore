@@ -78,7 +78,7 @@ class ShaderResourceCacheGL;
 class ShaderVariableManagerGL;
 
 struct PipelineResourceAttribsGL;
-struct PipelineResourceSignatureSerializedDataGL;
+struct PipelineResourceSignatureInternalDataGL;
 
 struct EngineGLImplTraits
 {

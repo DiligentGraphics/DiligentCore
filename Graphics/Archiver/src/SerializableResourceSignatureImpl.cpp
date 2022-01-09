@@ -38,12 +38,12 @@ DeviceObjectArchiveBase::DeviceType ArchiveDeviceDataFlagToArchiveDeviceType(ARC
 namespace
 {
 
-void CopyPRSDesc(const PipelineResourceSignatureDesc&            SrcDesc,
-                 const PipelineResourceSignatureSerializedData&  SrcSerialized,
-                 PipelineResourceSignatureDesc const*&           pDstDesc,
-                 PipelineResourceSignatureSerializedData const*& pDstSerialized,
-                 SerializedMemory&                               DescPtr,
-                 SerializedMemory&                               SharedPtr)
+void CopyPRSDesc(const PipelineResourceSignatureDesc&          SrcDesc,
+                 const PipelineResourceSignatureInternalData&  SrcSerialized,
+                 PipelineResourceSignatureDesc const*&         pDstDesc,
+                 PipelineResourceSignatureInternalData const*& pDstSerialized,
+                 SerializedMemory&                             DescPtr,
+                 SerializedMemory&                             SharedPtr)
 {
     auto& RawAllocator = GetRawAllocator();
 
@@ -55,7 +55,7 @@ void CopyPRSDesc(const PipelineResourceSignatureDesc&            SrcDesc,
         Allocator.AddSpaceForString(SrcDesc.Name);
         ReserveSpaceForPipelineResourceSignatureDesc(Allocator, SrcDesc);
 
-        Allocator.AddSpace<PipelineResourceSignatureSerializedData>();
+        Allocator.AddSpace<PipelineResourceSignatureInternalData>();
 
         Allocator.Reserve();
 
@@ -88,18 +88,18 @@ void CopyPRSDesc(const PipelineResourceSignatureDesc&            SrcDesc,
 } // namespace
 
 
-void SerializableResourceSignatureImpl::AddPRSDesc(const PipelineResourceSignatureDesc& Desc, const PipelineResourceSignatureSerializedData& Serialized)
+void SerializableResourceSignatureImpl::AddPRSDesc(const PipelineResourceSignatureDesc& Desc, const PipelineResourceSignatureInternalData& Serialized)
 {
     if (m_DescMem)
     {
         VERIFY_EXPR(m_pDesc != nullptr);
-        VERIFY_EXPR(m_pSerialized != nullptr);
+        VERIFY_EXPR(m_pInternalData != nullptr);
 
-        if (!(*m_pDesc == Desc) || !(*m_pSerialized == Serialized))
+        if (!(*m_pDesc == Desc) || !(*m_pInternalData == Serialized))
             LOG_ERROR_AND_THROW("Pipeline resource signature description is not the same for different backends");
     }
     else
-        CopyPRSDesc(Desc, Serialized, m_pDesc, m_pSerialized, m_DescMem, m_SharedData);
+        CopyPRSDesc(Desc, Serialized, m_pDesc, m_pInternalData, m_DescMem, m_SharedData);
 }
 
 SerializableResourceSignatureImpl::SerializableResourceSignatureImpl(IReferenceCounters*                  pRefCounters,

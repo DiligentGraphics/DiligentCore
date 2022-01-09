@@ -59,7 +59,7 @@ public:
     bool IsAllocated() const { return !BindPoints.IsEmpty(); }
 };
 
-struct PipelineResourceSignatureSerializedDataD3D11 : PipelineResourceSignatureSerializedData
+struct PipelineResourceSignatureInternalDataD3D11 : PipelineResourceSignatureInternalData
 {
     const PipelineResourceAttribsD3D11*                 pResourceAttribs     = nullptr; // [NumResources]
     Uint32                                              NumResources         = 0;
@@ -68,11 +68,11 @@ struct PipelineResourceSignatureSerializedDataD3D11 : PipelineResourceSignatureS
 
     std::unique_ptr<PipelineResourceImmutableSamplerAttribsD3D11[]> m_pImmutableSamplers;
 
-    PipelineResourceSignatureSerializedDataD3D11() noexcept
+    PipelineResourceSignatureInternalDataD3D11() noexcept
     {}
 
-    explicit PipelineResourceSignatureSerializedDataD3D11(const PipelineResourceSignatureSerializedData& Serialized) noexcept :
-        PipelineResourceSignatureSerializedData{Serialized}
+    explicit PipelineResourceSignatureInternalDataD3D11(const PipelineResourceSignatureInternalData& Serialized) noexcept :
+        PipelineResourceSignatureInternalData{Serialized}
     {}
 };
 
@@ -89,10 +89,10 @@ public:
                                        const PipelineResourceSignatureDesc& Desc,
                                        SHADER_TYPE                          ShaderStages      = SHADER_TYPE_UNKNOWN,
                                        bool                                 bIsDeviceInternal = false);
-    PipelineResourceSignatureD3D11Impl(IReferenceCounters*                                 pRefCounters,
-                                       RenderDeviceD3D11Impl*                              pDevice,
-                                       const PipelineResourceSignatureDesc&                Desc,
-                                       const PipelineResourceSignatureSerializedDataD3D11& Serialized);
+    PipelineResourceSignatureD3D11Impl(IReferenceCounters*                               pRefCounters,
+                                       RenderDeviceD3D11Impl*                            pDevice,
+                                       const PipelineResourceSignatureDesc&              Desc,
+                                       const PipelineResourceSignatureInternalDataD3D11& InternalData);
     ~PipelineResourceSignatureD3D11Impl();
 
     // sizeof(ImmutableSamplerAttribs) == 24, x64
@@ -125,7 +125,7 @@ public:
     // Copies static resources from the static resource cache to the destination cache
     void CopyStaticResources(ShaderResourceCacheD3D11& ResourceCache) const;
 
-    PipelineResourceSignatureSerializedDataD3D11 Serialize() const;
+    PipelineResourceSignatureInternalDataD3D11 GetInternalData() const;
 
 #ifdef DILIGENT_DEVELOPMENT
     /// Verifies committed resource using the D3D resource attributes from the PSO.

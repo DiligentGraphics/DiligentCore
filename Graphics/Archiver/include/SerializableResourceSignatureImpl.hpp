@@ -123,12 +123,12 @@ public:
     }
 
 private:
-    void AddPRSDesc(const PipelineResourceSignatureDesc& Desc, const PipelineResourceSignatureSerializedData& Serialized);
+    void AddPRSDesc(const PipelineResourceSignatureDesc& Desc, const PipelineResourceSignatureInternalData& InternalData);
 
-    const PipelineResourceSignatureDesc*           m_pDesc       = nullptr;
-    const PipelineResourceSignatureSerializedData* m_pSerialized = nullptr;
-    SerializedMemory                               m_DescMem;
-    SerializedMemory                               m_SharedData;
+    const PipelineResourceSignatureDesc*         m_pDesc         = nullptr;
+    const PipelineResourceSignatureInternalData* m_pInternalData = nullptr;
+    SerializedMemory                             m_DescMem;
+    SerializedMemory                             m_SharedData;
 
     struct PRSWapperBase
     {
@@ -161,16 +161,16 @@ private:
 
         auto PRSWrpr = std::make_unique<TPRS<SignatureImplType>>(pRefCounters, Desc, ShaderStages);
 
-        auto SerializedData = PRSWrpr->PRS.Serialize();
-        AddPRSDesc(PRSWrpr->PRS.GetDesc(), SerializedData);
+        auto InternalData = PRSWrpr->PRS.GetInternalData();
+        AddPRSDesc(PRSWrpr->PRS.GetDesc(), InternalData);
 
         Serializer<SerializerMode::Measure> MeasureSer;
-        MeasureSerializerType::SerializePRSDesc(MeasureSer, SerializedData, nullptr);
+        MeasureSerializerType::SerializePRSInternalData(MeasureSer, InternalData, nullptr);
 
         PRSWrpr->Mem = SerializedMemory{MeasureSer.GetSize(nullptr)};
 
         Serializer<SerializerMode::Write> Ser{PRSWrpr->Mem.Ptr(), PRSWrpr->Mem.Size()};
-        WriteSerializerType::SerializePRSDesc(Ser, SerializedData, nullptr);
+        WriteSerializerType::SerializePRSInternalData(Ser, InternalData, nullptr);
         VERIFY_EXPR(Ser.IsEnd());
 
         m_pPRSWrappers[static_cast<size_t>(Traits::Type)] = std::move(PRSWrpr);
