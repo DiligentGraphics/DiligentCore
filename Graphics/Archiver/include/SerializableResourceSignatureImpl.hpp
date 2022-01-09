@@ -123,12 +123,12 @@ public:
     }
 
 private:
-    void AddPRSDesc(const PipelineResourceSignatureDesc& Desc, const PipelineResourceSignatureInternalData& InternalData);
+    void AddPRSDesc(const PipelineResourceSignatureDesc& Desc);
 
-    const PipelineResourceSignatureDesc*         m_pDesc         = nullptr;
-    const PipelineResourceSignatureInternalData* m_pInternalData = nullptr;
-    SerializedMemory                             m_DescMem;
-    SerializedMemory                             m_SharedData;
+    const PipelineResourceSignatureDesc*          m_pDesc = nullptr;
+    std::unique_ptr<void, STDDeleterRawMem<void>> m_pRawMemory;
+
+    SerializedMemory m_SharedData;
 
     struct PRSWapperBase
     {
@@ -160,18 +160,22 @@ private:
         using WriteSerializerType   = typename Traits::template PSOSerializerType<SerializerMode::Write>;
 
         auto PRSWrpr = std::make_unique<TPRS<SignatureImplType>>(pRefCounters, Desc, ShaderStages);
+        AddPRSDesc(PRSWrpr->PRS.GetDesc());
 
-        auto InternalData = PRSWrpr->PRS.GetInternalData();
-        AddPRSDesc(PRSWrpr->PRS.GetDesc(), InternalData);
+        const auto InternalData = PRSWrpr->PRS.GetInternalData();
 
-        Serializer<SerializerMode::Measure> MeasureSer;
-        MeasureSerializerType::SerializePRSInternalData(MeasureSer, InternalData, nullptr);
+        {
+            Serializer<SerializerMode::Measure> MeasureSer;
+            MeasureSerializerType::SerializePRSInternalData(MeasureSer, InternalData, nullptr);
 
-        PRSWrpr->Mem = SerializedMemory{MeasureSer.GetSize(nullptr)};
+            PRSWrpr->Mem = SerializedMemory{MeasureSer.GetSize(nullptr)};
+        }
 
-        Serializer<SerializerMode::Write> Ser{PRSWrpr->Mem.Ptr(), PRSWrpr->Mem.Size()};
-        WriteSerializerType::SerializePRSInternalData(Ser, InternalData, nullptr);
-        VERIFY_EXPR(Ser.IsEnd());
+        {
+            Serializer<SerializerMode::Write> Ser{PRSWrpr->Mem.Ptr(), PRSWrpr->Mem.Size()};
+            WriteSerializerType::SerializePRSInternalData(Ser, InternalData, nullptr);
+            VERIFY_EXPR(Ser.IsEnd());
+        }
 
         m_pPRSWrappers[static_cast<size_t>(Traits::Type)] = std::move(PRSWrpr);
     }

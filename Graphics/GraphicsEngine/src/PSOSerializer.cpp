@@ -56,10 +56,9 @@ void PSOSerializer<Mode>::SerializeImmutableSampler(
 
 template <SerializerMode Mode>
 void PSOSerializer<Mode>::SerializePRSDesc(
-    Serializer<Mode>&                             Ser,
-    TQual<PipelineResourceSignatureDesc>&         Desc,
-    TQual<PipelineResourceSignatureInternalData>& InternalData,
-    DynamicLinearAllocator*                       Allocator)
+    Serializer<Mode>&                     Ser,
+    TQual<PipelineResourceSignatureDesc>& Desc,
+    DynamicLinearAllocator*               Allocator)
 {
     // Serialize PipelineResourceSignatureDesc
     Ser(Desc.BindingIndex,
@@ -82,14 +81,19 @@ void PSOSerializer<Mode>::SerializePRSDesc(
 
     SerializeArray(Ser, Allocator, Desc.ImmutableSamplers, Desc.NumImmutableSamplers, SerializeImmutableSampler);
 
-    // Serialize PipelineResourceSignatureInternalData
+    ASSERT_SIZEOF64(PipelineResourceSignatureDesc, 56, "Did you add a new member to PipelineResourceSignatureDesc? Please add serialization here.");
+    ASSERT_SIZEOF64(PipelineResourceDesc, 24, "Did you add a new member to PipelineResourceDesc? Please add serialization here.");
+}
+
+template <SerializerMode Mode>
+void PSOSerializer<Mode>::SerializePRSInternalData(Serializer<Mode>&                             Ser,
+                                                   TQual<PipelineResourceSignatureInternalData>& InternalData,
+                                                   DynamicLinearAllocator*                       Allocator)
+{
     Ser(InternalData.ShaderStages,
         InternalData.StaticResShaderStages,
         InternalData.PipelineType,
         InternalData.StaticResStageIndex);
-
-    ASSERT_SIZEOF64(PipelineResourceSignatureDesc, 56, "Did you add a new member to PipelineResourceSignatureDesc? Please add serialization here.");
-    ASSERT_SIZEOF64(PipelineResourceDesc, 24, "Did you add a new member to PipelineResourceDesc? Please add serialization here.");
     ASSERT_SIZEOF(PipelineResourceSignatureInternalData, 16, "Did you add a new member to PipelineResourceSignatureInternalData? Please add serialization here.");
 }
 

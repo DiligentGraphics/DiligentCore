@@ -90,10 +90,13 @@ struct PSOSerializer
     static void SerializeImmutableSampler(Serializer<Mode>&            Ser,
                                           TQual<ImmutableSamplerDesc>& SampDesc);
 
-    static void SerializePRSDesc(Serializer<Mode>&                             Ser,
-                                 TQual<PipelineResourceSignatureDesc>&         Desc,
-                                 TQual<PipelineResourceSignatureInternalData>& InternalData,
-                                 DynamicLinearAllocator*                       Allocator);
+    static void SerializePRSDesc(Serializer<Mode>&                     Ser,
+                                 TQual<PipelineResourceSignatureDesc>& Desc,
+                                 DynamicLinearAllocator*               Allocator);
+
+    static void SerializePRSInternalData(Serializer<Mode>&                             Ser,
+                                         TQual<PipelineResourceSignatureInternalData>& InternalData,
+                                         DynamicLinearAllocator*                       Allocator);
 
     static void SerializePSOCreateInfo(Serializer<Mode>&               Ser,
                                        TQual<PipelineStateCreateInfo>& CreateInfo,

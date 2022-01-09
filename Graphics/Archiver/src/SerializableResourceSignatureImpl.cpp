@@ -35,71 +35,48 @@ namespace Diligent
 
 DeviceObjectArchiveBase::DeviceType ArchiveDeviceDataFlagToArchiveDeviceType(ARCHIVE_DEVICE_DATA_FLAGS DataTypeFlag);
 
-namespace
+void SerializableResourceSignatureImpl::AddPRSDesc(const PipelineResourceSignatureDesc& SrcDesc)
 {
-
-void CopyPRSDesc(const PipelineResourceSignatureDesc&          SrcDesc,
-                 const PipelineResourceSignatureInternalData&  SrcSerialized,
-                 PipelineResourceSignatureDesc const*&         pDstDesc,
-                 PipelineResourceSignatureInternalData const*& pDstSerialized,
-                 SerializedMemory&                             DescPtr,
-                 SerializedMemory&                             SharedPtr)
-{
-    auto& RawAllocator = GetRawAllocator();
-
-    // Copy description & serialization data
+    if (m_pDesc == nullptr)
     {
-        FixedLinearAllocator Allocator{RawAllocator};
+        {
+            auto&                RawAllocator = GetRawAllocator();
+            FixedLinearAllocator Allocator{RawAllocator};
 
-        Allocator.AddSpace<PipelineResourceSignatureDesc>();
-        Allocator.AddSpaceForString(SrcDesc.Name);
-        ReserveSpaceForPipelineResourceSignatureDesc(Allocator, SrcDesc);
+            Allocator.AddSpace<PipelineResourceSignatureDesc>();
+            Allocator.AddSpaceForString(SrcDesc.Name);
+            ReserveSpaceForPipelineResourceSignatureDesc(Allocator, SrcDesc);
 
-        Allocator.AddSpace<PipelineResourceSignatureInternalData>();
+            Allocator.Reserve();
 
-        Allocator.Reserve();
+            auto* pDesc = Allocator.Copy(SrcDesc);
 
-        auto& DstDesc = *Allocator.Copy(SrcDesc);
-        pDstDesc      = &DstDesc;
+            pDesc->Name = Allocator.CopyString(SrcDesc.Name);
+            if (pDesc->Name == nullptr)
+                pDesc->Name = "";
 
-        DstDesc.Name = Allocator.CopyString(SrcDesc.Name);
-        if (DstDesc.Name == nullptr)
-            DstDesc.Name = "";
+            std::array<Uint16, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES + 1> ResourceOffsets = {};
+            CopyPipelineResourceSignatureDesc(Allocator, SrcDesc, *pDesc, ResourceOffsets);
 
-        std::array<Uint16, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES + 1> ResourceOffsets = {};
-        CopyPipelineResourceSignatureDesc(Allocator, SrcDesc, DstDesc, ResourceOffsets);
+            m_pRawMemory = decltype(m_pRawMemory){Allocator.ReleaseOwnership(), STDDeleterRawMem<void>{RawAllocator}};
+            m_pDesc      = pDesc;
+        }
 
-        pDstSerialized = Allocator.Copy(SrcSerialized);
-        DescPtr        = SerializedMemory{Allocator.ReleaseOwnership(), Allocator.GetCurrentSize(), &RawAllocator};
-    }
+        {
+            Serializer<SerializerMode::Measure> MeasureSer;
+            PSOSerializer<SerializerMode::Measure>::SerializePRSDesc(MeasureSer, SrcDesc, nullptr);
 
-    // Serialize description & serialization data
-    {
-        Serializer<SerializerMode::Measure> MeasureSer;
-        PSOSerializer<SerializerMode::Measure>::SerializePRSDesc(MeasureSer, SrcDesc, SrcSerialized, nullptr);
-
-        SharedPtr = SerializedMemory{MeasureSer.GetSize(nullptr)};
-        Serializer<SerializerMode::Write> Ser{SharedPtr.Ptr(), SharedPtr.Size()};
-        PSOSerializer<SerializerMode::Write>::SerializePRSDesc(Ser, SrcDesc, SrcSerialized, nullptr);
-        VERIFY_EXPR(Ser.IsEnd());
-    }
-}
-
-} // namespace
-
-
-void SerializableResourceSignatureImpl::AddPRSDesc(const PipelineResourceSignatureDesc& Desc, const PipelineResourceSignatureInternalData& Serialized)
-{
-    if (m_DescMem)
-    {
-        VERIFY_EXPR(m_pDesc != nullptr);
-        VERIFY_EXPR(m_pInternalData != nullptr);
-
-        if (!(*m_pDesc == Desc) || !(*m_pInternalData == Serialized))
-            LOG_ERROR_AND_THROW("Pipeline resource signature description is not the same for different backends");
+            m_SharedData = SerializedMemory{MeasureSer.GetSize(nullptr)};
+            Serializer<SerializerMode::Write> WSer{m_SharedData.Ptr(), m_SharedData.Size()};
+            PSOSerializer<SerializerMode::Write>::SerializePRSDesc(WSer, SrcDesc, nullptr);
+            VERIFY_EXPR(WSer.IsEnd());
+        }
     }
     else
-        CopyPRSDesc(Desc, Serialized, m_pDesc, m_pInternalData, m_DescMem, m_SharedData);
+    {
+        if (!(*m_pDesc == SrcDesc))
+            LOG_ERROR_AND_THROW("Pipeline resource signature description is not the same for different backends");
+    }
 }
 
 SerializableResourceSignatureImpl::SerializableResourceSignatureImpl(IReferenceCounters*                  pRefCounters,

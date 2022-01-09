@@ -70,6 +70,8 @@ void PSOSerializerGL<Mode>::SerializePRSInternalData(
     TQual<PipelineResourceSignatureInternalDataGL>& InternalData,
     DynamicLinearAllocator*                         Allocator)
 {
+    PSOSerializer<Mode>::SerializePRSInternalData(Ser, InternalData, Allocator);
+
     PSOSerializer<Mode>::SerializeArrayRaw(Ser, Allocator, InternalData.pResourceAttribs, InternalData.NumResources);
 
     ASSERT_SIZEOF64(InternalData, 48, "Did you add a new member to PipelineResourceSignatureInternalDataGL? Please add serialization here.");

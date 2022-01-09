@@ -53,6 +53,8 @@ void PSOSerializerD3D11<Mode>::SerializePRSInternalData(
     TQual<PipelineResourceSignatureInternalDataD3D11>& InternalData,
     DynamicLinearAllocator*                            Allocator)
 {
+    PSOSerializer<Mode>::SerializePRSInternalData(Ser, InternalData, Allocator);
+
     PSOSerializer<Mode>::SerializeArrayRaw(Ser, Allocator, InternalData.pResourceAttribs, InternalData.NumResources);
     PSOSerializer<Mode>::SerializeArrayRaw(Ser, Allocator, InternalData.pImmutableSamplers, InternalData.NumImmutableSamplers);
 

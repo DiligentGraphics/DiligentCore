@@ -381,7 +381,7 @@ template bool DeviceObjectArchiveBase::GetDeviceSpecificData<DeviceObjectArchive
 bool DeviceObjectArchiveBase::PRSData::Deserialize(const char* Name, Serializer<SerializerMode::Read>& Ser)
 {
     Desc.Name = Name;
-    PSOSerializer<SerializerMode::Read>::SerializePRSDesc(Ser, Desc, InternalData, &Allocator);
+    PSOSerializer<SerializerMode::Read>::SerializePRSDesc(Ser, Desc, &Allocator);
     return true;
 }
 

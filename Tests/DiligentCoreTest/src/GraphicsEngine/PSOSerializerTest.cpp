@@ -252,36 +252,47 @@ TEST(PSOSerializerTest, SerializePRSDesc)
 
         RndValue(SrcPRSDesc.BindingIndex, Uint8{0}, Uint8{DILIGENT_MAX_RESOURCE_SIGNATURES - 1});
 
-        PipelineResourceSignatureInternalData SrcSerialized;
+        PipelineResourceSignatureInternalData SrcInternalData;
 
-        RndValue(SrcSerialized.ShaderStages, SHADER_TYPE_VERTEX, (SHADER_TYPE_LAST << 1) - 1);
-        RndValue(SrcSerialized.StaticResShaderStages, SHADER_TYPE_VERTEX, (SHADER_TYPE_LAST << 1) - 1);
-        RndValue(SrcSerialized.PipelineType, PIPELINE_TYPE_GRAPHICS, PIPELINE_TYPE_LAST);
+        RndValue(SrcInternalData.ShaderStages, SHADER_TYPE_VERTEX, (SHADER_TYPE_LAST << 1) - 1);
+        RndValue(SrcInternalData.StaticResShaderStages, SHADER_TYPE_VERTEX, (SHADER_TYPE_LAST << 1) - 1);
+        RndValue(SrcInternalData.PipelineType, PIPELINE_TYPE_GRAPHICS, PIPELINE_TYPE_LAST);
 
-        for (size_t i = 0; i < SrcSerialized.StaticResStageIndex.size(); ++i)
-            RndValue(SrcSerialized.StaticResStageIndex[i], static_cast<Int8>(std::numeric_limits<Int8>::min() + i), static_cast<Int8>(std::numeric_limits<Int8>::max() - i));
+        for (size_t i = 0; i < SrcInternalData.StaticResStageIndex.size(); ++i)
+            RndValue(SrcInternalData.StaticResStageIndex[i], static_cast<Int8>(std::numeric_limits<Int8>::min() + i), static_cast<Int8>(std::numeric_limits<Int8>::max() - i));
 
-        Serializer<SerializerMode::Measure> MSer;
-        PSOSerializer<SerializerMode::Measure>::SerializePRSDesc(MSer, SrcPRSDesc, SrcSerialized, nullptr);
-
+        size_t                 DataSize = 0;
+        void*                  DataPtr  = nullptr;
         DynamicLinearAllocator Allocator{GetRawAllocator()};
-        const size_t           DataSize = MSer.GetSize(nullptr);
-        void*                  DataPtr  = Allocator.Allocate(DataSize, 1);
+        {
+            Serializer<SerializerMode::Measure> MSer;
+            PSOSerializer<SerializerMode::Measure>::SerializePRSDesc(MSer, SrcPRSDesc, nullptr);
+            PSOSerializer<SerializerMode::Measure>::SerializePRSInternalData(MSer, SrcInternalData, nullptr);
 
-        Serializer<SerializerMode::Write> WSer{DataPtr, DataSize};
-        PSOSerializer<SerializerMode::Write>::SerializePRSDesc(WSer, SrcPRSDesc, SrcSerialized, nullptr);
+            DataSize = MSer.GetSize(nullptr);
+            DataPtr  = Allocator.Allocate(DataSize, 1);
+        }
 
-        ASSERT_EQ(DataSize, WSer.GetSize(DataPtr));
+        {
+            Serializer<SerializerMode::Write> WSer{DataPtr, DataSize};
+            PSOSerializer<SerializerMode::Write>::SerializePRSDesc(WSer, SrcPRSDesc, nullptr);
+            PSOSerializer<SerializerMode::Write>::SerializePRSInternalData(WSer, SrcInternalData, nullptr);
+
+            EXPECT_EQ(DataSize, WSer.GetSize(DataPtr));
+        }
 
         PipelineResourceSignatureDesc         DstPRSDesc;
-        PipelineResourceSignatureInternalData DstSerialized;
+        PipelineResourceSignatureInternalData DstInternalData;
+        {
+            Serializer<SerializerMode::Read> RSer{DataPtr, DataSize};
+            PSOSerializer<SerializerMode::Read>::SerializePRSDesc(RSer, DstPRSDesc, &Allocator);
+            PSOSerializer<SerializerMode::Read>::SerializePRSInternalData(RSer, DstInternalData, nullptr);
 
-        Serializer<SerializerMode::Read> RSer{DataPtr, DataSize};
-        PSOSerializer<SerializerMode::Read>::SerializePRSDesc(RSer, DstPRSDesc, DstSerialized, &Allocator);
+            EXPECT_TRUE(RSer.IsEnd());
+        }
 
-        ASSERT_TRUE(RSer.IsEnd());
-        ASSERT_EQ(SrcPRSDesc, DstPRSDesc);
-        ASSERT_EQ(SrcSerialized, DstSerialized);
+        EXPECT_EQ(SrcPRSDesc, DstPRSDesc);
+        EXPECT_EQ(SrcInternalData, DstInternalData);
 
     } while (!RndValue.IsComplete());
 }
@@ -327,19 +338,19 @@ static void TestSerializePSOCreateInfo(HelperType&& Helper)
         Serializer<SerializerMode::Read> RSer{DataPtr, DataSize};
         Helper.Read(RSer, DstPSO, DstPRSNames, &Allocator);
 
-        ASSERT_TRUE(RSer.IsEnd());
-        ASSERT_EQ(SrcPSO, DstPSO);
-        ASSERT_NE(SrcPSO.PSODesc.SRBAllocationGranularity, DstPSO.PSODesc.SRBAllocationGranularity);
+        EXPECT_TRUE(RSer.IsEnd());
+        EXPECT_EQ(SrcPSO, DstPSO);
+        EXPECT_NE(SrcPSO.PSODesc.SRBAllocationGranularity, DstPSO.PSODesc.SRBAllocationGranularity);
 
         for (size_t i = 0; i < DstPRSNames.size(); ++i)
         {
             if (i < SrcPSO.ResourceSignaturesCount)
             {
-                ASSERT_EQ(PRSNames[i], DstPRSNames[i]);
+                EXPECT_EQ(PRSNames[i], DstPRSNames[i]);
             }
             else
             {
-                ASSERT_EQ(DstPRSNames[i], nullptr);
+                EXPECT_EQ(DstPRSNames[i], nullptr);
             }
         }
 
@@ -473,7 +484,7 @@ TEST(PSOSerializerTest, SerializeGraphicsPSOCreateInfo)
         {
             const char* RPName = nullptr;
             PSOSerializer<SerializerMode::Read>::SerializePSOCreateInfo(Ser, CI, PRSNames, Allocator, RPName);
-            ASSERT_EQ(SrcRenderPassName, RPName);
+            EXPECT_EQ(SrcRenderPassName, RPName);
         }
     };
     TestSerializePSOCreateInfo<GraphicsPipelineStateCreateInfo>(Helper{});
@@ -764,15 +775,15 @@ TEST(PSOSerializerTest, SerializeRenderPassDesc)
         Serializer<SerializerMode::Write> WSer{DataPtr, DataSize};
         PSOSerializer<SerializerMode::Write>::SerializeRenderPassDesc(WSer, SrcRP, nullptr);
 
-        ASSERT_EQ(DataSize, WSer.GetSize(DataPtr));
+        EXPECT_EQ(DataSize, WSer.GetSize(DataPtr));
 
         RenderPassDesc DstRP;
 
         Serializer<SerializerMode::Read> RSer{DataPtr, DataSize};
         PSOSerializer<SerializerMode::Read>::SerializeRenderPassDesc(RSer, DstRP, &Allocator);
 
-        ASSERT_TRUE(RSer.IsEnd());
-        ASSERT_EQ(SrcRP, DstRP);
+        EXPECT_TRUE(RSer.IsEnd());
+        EXPECT_EQ(SrcRP, DstRP);
 
     } while (!RndValue.IsComplete());
 }

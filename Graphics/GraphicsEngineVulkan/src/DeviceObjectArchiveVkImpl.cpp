@@ -53,6 +53,8 @@ void PSOSerializerVk<Mode>::SerializePRSInternalData(
     TQual<PipelineResourceSignatureInternalDataVk>& InternalData,
     DynamicLinearAllocator*                         Allocator)
 {
+    PSOSerializer<Mode>::SerializePRSInternalData(Ser, InternalData, Allocator);
+
     Ser(InternalData.DynamicUniformBufferCount,
         InternalData.DynamicStorageBufferCount);
 
