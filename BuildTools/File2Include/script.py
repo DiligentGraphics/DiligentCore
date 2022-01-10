@@ -41,7 +41,7 @@ def main():
             for line in src_file:
                 dst_file.write('\"')
 
-                for i, c in enumerate(line[:-1]):
+                for i, c in enumerate(line.rstrip()):
                     if special_chars.find(c) != -1:
                         dst_file.write('\\')
                     dst_file.write(c)
