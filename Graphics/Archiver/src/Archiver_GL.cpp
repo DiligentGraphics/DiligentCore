@@ -106,7 +106,6 @@ template bool ArchiverImpl::PatchShadersGL<RayTracingPipelineStateCreateInfo>(co
 template PipelineResourceSignatureGLImpl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureGLImpl>() const;
 
 template void SerializableResourceSignatureImpl::CreateSignature<PipelineResourceSignatureGLImpl>(
-    IReferenceCounters*                  pRefCounters,
     const PipelineResourceSignatureDesc& Desc,
     SHADER_TYPE                          ShaderStages);
 

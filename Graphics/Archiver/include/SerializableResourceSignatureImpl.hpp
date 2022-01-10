@@ -122,9 +122,11 @@ public:
         return Wrpr ? Wrpr->GetPRS<SignatureType>() : nullptr;
     }
 
-private:
-    void AddPRSDesc(const PipelineResourceSignatureDesc& Desc);
 
+    template <typename SignatureImplType>
+    void CreateSignature(const PipelineResourceSignatureDesc& Desc, SHADER_TYPE ShaderStages);
+
+private:
     const PipelineResourceSignatureDesc*          m_pDesc = nullptr;
     std::unique_ptr<void, STDDeleterRawMem<void>> m_pRawMemory;
 
@@ -151,16 +153,12 @@ private:
         auto& Wrpr = m_pPRSWrappers[static_cast<size_t>(Type)];
         return Wrpr ? Wrpr->GetPRS() : nullptr;
     }
-
-    template <typename SignatureImplType>
-    void CreateSignature(IReferenceCounters* pRefCounters, const PipelineResourceSignatureDesc& Desc, SHADER_TYPE ShaderStages);
 };
 
 #if D3D11_SUPPORTED
 extern template PipelineResourceSignatureD3D11Impl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureD3D11Impl>() const;
 
 extern template void SerializableResourceSignatureImpl::CreateSignature<PipelineResourceSignatureD3D11Impl>(
-    IReferenceCounters*                  pRefCounters,
     const PipelineResourceSignatureDesc& Desc,
     SHADER_TYPE                          ShaderStages);
 #endif
@@ -169,7 +167,6 @@ extern template void SerializableResourceSignatureImpl::CreateSignature<Pipeline
 extern template PipelineResourceSignatureD3D12Impl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureD3D12Impl>() const;
 
 extern template void SerializableResourceSignatureImpl::CreateSignature<PipelineResourceSignatureD3D12Impl>(
-    IReferenceCounters*                  pRefCounters,
     const PipelineResourceSignatureDesc& Desc,
     SHADER_TYPE                          ShaderStages);
 #endif
@@ -178,7 +175,6 @@ extern template void SerializableResourceSignatureImpl::CreateSignature<Pipeline
 extern template PipelineResourceSignatureGLImpl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureGLImpl>() const;
 
 extern template void SerializableResourceSignatureImpl::CreateSignature<PipelineResourceSignatureGLImpl>(
-    IReferenceCounters*                  pRefCounters,
     const PipelineResourceSignatureDesc& Desc,
     SHADER_TYPE                          ShaderStages);
 #endif
@@ -187,7 +183,6 @@ extern template void SerializableResourceSignatureImpl::CreateSignature<Pipeline
 extern template PipelineResourceSignatureVkImpl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureVkImpl>() const;
 
 extern template void SerializableResourceSignatureImpl::CreateSignature<PipelineResourceSignatureVkImpl>(
-    IReferenceCounters*                  pRefCounters,
     const PipelineResourceSignatureDesc& Desc,
     SHADER_TYPE                          ShaderStages);
 #endif
@@ -196,7 +191,6 @@ extern template void SerializableResourceSignatureImpl::CreateSignature<Pipeline
 extern template PipelineResourceSignatureMtlImpl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureMtlImpl>() const;
 
 extern template void SerializableResourceSignatureImpl::CreateSignature<PipelineResourceSignatureMtlImpl>(
-    IReferenceCounters*                  pRefCounters,
     const PipelineResourceSignatureDesc& Desc,
     SHADER_TYPE                          ShaderStages);
 #endif

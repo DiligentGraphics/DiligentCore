@@ -35,50 +35,6 @@ namespace Diligent
 
 DeviceObjectArchiveBase::DeviceType ArchiveDeviceDataFlagToArchiveDeviceType(ARCHIVE_DEVICE_DATA_FLAGS DataTypeFlag);
 
-void SerializableResourceSignatureImpl::AddPRSDesc(const PipelineResourceSignatureDesc& SrcDesc)
-{
-    if (m_pDesc == nullptr)
-    {
-        {
-            auto&                RawAllocator = GetRawAllocator();
-            FixedLinearAllocator Allocator{RawAllocator};
-
-            Allocator.AddSpace<PipelineResourceSignatureDesc>();
-            Allocator.AddSpaceForString(SrcDesc.Name);
-            ReserveSpaceForPipelineResourceSignatureDesc(Allocator, SrcDesc);
-
-            Allocator.Reserve();
-
-            auto* pDesc = Allocator.Copy(SrcDesc);
-
-            pDesc->Name = Allocator.CopyString(SrcDesc.Name);
-            if (pDesc->Name == nullptr)
-                pDesc->Name = "";
-
-            std::array<Uint16, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES + 1> ResourceOffsets = {};
-            CopyPipelineResourceSignatureDesc(Allocator, SrcDesc, *pDesc, ResourceOffsets);
-
-            m_pRawMemory = decltype(m_pRawMemory){Allocator.ReleaseOwnership(), STDDeleterRawMem<void>{RawAllocator}};
-            m_pDesc      = pDesc;
-        }
-
-        {
-            Serializer<SerializerMode::Measure> MeasureSer;
-            PSOSerializer<SerializerMode::Measure>::SerializePRSDesc(MeasureSer, SrcDesc, nullptr);
-
-            m_SharedData = SerializedMemory{MeasureSer.GetSize(nullptr)};
-            Serializer<SerializerMode::Write> WSer{m_SharedData.Ptr(), m_SharedData.Size()};
-            PSOSerializer<SerializerMode::Write>::SerializePRSDesc(WSer, SrcDesc, nullptr);
-            VERIFY_EXPR(WSer.IsEnd());
-        }
-    }
-    else
-    {
-        if (!(*m_pDesc == SrcDesc))
-            LOG_ERROR_AND_THROW("Pipeline resource signature description is not the same for different backends");
-    }
-}
-
 SerializableResourceSignatureImpl::SerializableResourceSignatureImpl(IReferenceCounters*                  pRefCounters,
                                                                      SerializationDeviceImpl*             pDevice,
                                                                      const PipelineResourceSignatureDesc& Desc,
@@ -93,6 +49,39 @@ SerializableResourceSignatureImpl::SerializableResourceSignatureImpl(IReferenceC
         LOG_ERROR_AND_THROW("DeviceFlags contain unsupported device type");
     }
 
+    {
+        auto&                RawAllocator = GetRawAllocator();
+        FixedLinearAllocator Allocator{RawAllocator};
+
+        Allocator.AddSpace<PipelineResourceSignatureDesc>();
+        Allocator.AddSpaceForString(Desc.Name);
+        ReserveSpaceForPipelineResourceSignatureDesc(Allocator, Desc);
+
+        Allocator.Reserve();
+
+        auto* pDstDesc = Allocator.Copy(Desc);
+
+        pDstDesc->Name = Allocator.CopyString(pDstDesc->Name);
+        if (pDstDesc->Name == nullptr)
+            pDstDesc->Name = "";
+
+        std::array<Uint16, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES + 1> ResourceOffsets = {};
+        CopyPipelineResourceSignatureDesc(Allocator, Desc, *pDstDesc, ResourceOffsets);
+
+        m_pRawMemory = decltype(m_pRawMemory){Allocator.ReleaseOwnership(), STDDeleterRawMem<void>{RawAllocator}};
+        m_pDesc      = pDstDesc;
+    }
+
+    {
+        Serializer<SerializerMode::Measure> MeasureSer;
+        PSOSerializer<SerializerMode::Measure>::SerializePRSDesc(MeasureSer, Desc, nullptr);
+
+        m_SharedData = SerializedMemory{MeasureSer.GetSize(nullptr)};
+        Serializer<SerializerMode::Write> WSer{m_SharedData.Ptr(), m_SharedData.Size()};
+        PSOSerializer<SerializerMode::Write>::SerializePRSDesc(WSer, Desc, nullptr);
+        VERIFY_EXPR(WSer.IsEnd());
+    }
+
     while (DeviceFlags != ARCHIVE_DEVICE_DATA_FLAG_NONE)
     {
         const auto Flag = ExtractLSB(DeviceFlags);
@@ -102,29 +91,29 @@ SerializableResourceSignatureImpl::SerializableResourceSignatureImpl(IReferenceC
         {
 #if D3D11_SUPPORTED
             case ARCHIVE_DEVICE_DATA_FLAG_D3D11:
-                CreateSignature<PipelineResourceSignatureD3D11Impl>(pRefCounters, Desc, ShaderStages);
+                CreateSignature<PipelineResourceSignatureD3D11Impl>(Desc, ShaderStages);
                 break;
 #endif
 #if D3D12_SUPPORTED
             case ARCHIVE_DEVICE_DATA_FLAG_D3D12:
-                CreateSignature<PipelineResourceSignatureD3D12Impl>(pRefCounters, Desc, ShaderStages);
+                CreateSignature<PipelineResourceSignatureD3D12Impl>(Desc, ShaderStages);
                 break;
 #endif
 #if GL_SUPPORTED || GLES_SUPPORTED
             case ARCHIVE_DEVICE_DATA_FLAG_GL:
             case ARCHIVE_DEVICE_DATA_FLAG_GLES:
-                CreateSignature<PipelineResourceSignatureGLImpl>(pRefCounters, Desc, ShaderStages);
+                CreateSignature<PipelineResourceSignatureGLImpl>(Desc, ShaderStages);
                 break;
 #endif
 #if VULKAN_SUPPORTED
             case ARCHIVE_DEVICE_DATA_FLAG_VULKAN:
-                CreateSignature<PipelineResourceSignatureVkImpl>(pRefCounters, Desc, ShaderStages);
+                CreateSignature<PipelineResourceSignatureVkImpl>(Desc, ShaderStages);
                 break;
 #endif
 #if METAL_SUPPORTED
             case ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS:
             case ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS:
-                CreateSignature<PipelineResourceSignatureMtlImpl>(pRefCounters, Desc, ShaderStages);
+                CreateSignature<PipelineResourceSignatureMtlImpl>(Desc, ShaderStages);
                 break;
 #endif
             case ARCHIVE_DEVICE_DATA_FLAG_NONE:

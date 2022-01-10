@@ -107,7 +107,7 @@ bool ArchiverImpl::PatchShadersVk(const CreateInfoType& CreateInfo, TPSOData<Cre
     IPipelineResourceSignature* DefaultSignatures[1] = {};
     if (CreateInfo.ResourceSignaturesCount == 0)
     {
-        if (!CreateDefaultResourceSignature<PipelineStateVkImpl>(DefPRS, CreateInfo.PSODesc, ActiveShaderStages, ShaderStagesVk))
+        if (!CreateDefaultResourceSignature<PipelineStateVkImpl, PipelineResourceSignatureVkImpl>(DefPRS, CreateInfo.PSODesc, ActiveShaderStages, ShaderStagesVk))
             return false;
 
         DefaultSignatures[0] = DefPRS.pPRS;
@@ -197,7 +197,6 @@ void SerializableShaderImpl::CreateShaderVk(IReferenceCounters* pRefCounters, Sh
 template PipelineResourceSignatureVkImpl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureVkImpl>() const;
 
 template void SerializableResourceSignatureImpl::CreateSignature<PipelineResourceSignatureVkImpl>(
-    IReferenceCounters*                  pRefCounters,
     const PipelineResourceSignatureDesc& Desc,
     SHADER_TYPE                          ShaderStages);
 

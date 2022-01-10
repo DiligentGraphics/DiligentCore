@@ -520,21 +520,20 @@ bool ArchiverImpl::AddPipelineResourceSignature(IPipelineResourceSignature* pPRS
     return true;
 }
 
-bool ArchiverImpl::CachePipelineResourceSignature(RefCntAutoPtr<IPipelineResourceSignature>& pPRS)
+bool ArchiverImpl::CachePipelineResourceSignature(RefCntAutoPtr<SerializableResourceSignatureImpl>& pPRS)
 {
-    auto* pPRSImpl        = pPRS.RawPtr<SerializableResourceSignatureImpl>();
-    auto  IterAndInserted = m_PRSCache.insert(RefCntAutoPtr<SerializableResourceSignatureImpl>{pPRSImpl});
+    VERIFY_EXPR(pPRS);
+    auto IterAndInserted = m_PRSCache.insert(pPRS);
 
     // Found same PRS in cache
     if (!IterAndInserted.second)
     {
-        pPRS     = *IterAndInserted.first;
-        pPRSImpl = pPRS.RawPtr<SerializableResourceSignatureImpl>();
+        pPRS = *IterAndInserted.first;
 
 #ifdef DILIGENT_DEBUG
-        auto Iter = m_PRSMap.find(pPRSImpl->GetDesc().Name);
+        auto Iter = m_PRSMap.find(pPRS->GetDesc().Name);
         VERIFY_EXPR(Iter != m_PRSMap.end());
-        VERIFY_EXPR(Iter->second.pPRS == pPRSImpl);
+        VERIFY_EXPR(Iter->second.pPRS == pPRS);
 #endif
         return true;
     }

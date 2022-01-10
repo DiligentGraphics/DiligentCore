@@ -245,9 +245,10 @@ private:
 
     struct DefaultPRSInfo
     {
-        RefCntAutoPtr<IPipelineResourceSignature> pPRS;
-        ARCHIVE_DEVICE_DATA_FLAGS                 DeviceFlags = ARCHIVE_DEVICE_DATA_FLAG_NONE;
-        String                                    UniqueName;
+        RefCntAutoPtr<SerializableResourceSignatureImpl> pPRS;
+
+        ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags = ARCHIVE_DEVICE_DATA_FLAG_NONE;
+        String                    UniqueName;
     };
 
     template <typename CreateInfoType>
@@ -277,12 +278,12 @@ private:
                                                 PendingData&   Pending);
 
     bool AddPipelineResourceSignature(IPipelineResourceSignature* pPRS);
-    bool CachePipelineResourceSignature(RefCntAutoPtr<IPipelineResourceSignature>& pPRS);
+    bool CachePipelineResourceSignature(RefCntAutoPtr<SerializableResourceSignatureImpl>& pPRS);
     bool AddRenderPass(IRenderPass* pRP);
 
     String GetDefaultPRSName(const char* PSOName) const;
 
-    template <typename PipelineStateImplType, typename ShaderStagesArrayType, typename... ExtraArgsType>
+    template <typename PipelineStateImplType, typename SignatureImplType, typename ShaderStagesArrayType, typename... ExtraArgsType>
     bool CreateDefaultResourceSignature(DefaultPRSInfo&              DefPRS,
                                         const PipelineStateDesc&     PSODesc,
                                         SHADER_TYPE                  ActiveShaderStages,

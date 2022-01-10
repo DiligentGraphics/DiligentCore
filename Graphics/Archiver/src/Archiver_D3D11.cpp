@@ -125,7 +125,7 @@ bool ArchiverImpl::PatchShadersD3D11(const CreateInfoType& CreateInfo, TPSOData<
     IPipelineResourceSignature* DefaultSignatures[1] = {};
     if (CreateInfo.ResourceSignaturesCount == 0)
     {
-        if (!CreateDefaultResourceSignature<PipelineStateD3D11Impl>(DefPRS, CreateInfo.PSODesc, ActiveShaderStages, ShadersD3D11))
+        if (!CreateDefaultResourceSignature<PipelineStateD3D11Impl, PipelineResourceSignatureD3D11Impl>(DefPRS, CreateInfo.PSODesc, ActiveShaderStages, ShadersD3D11))
             return false;
 
         DefaultSignatures[0] = DefPRS.pPRS;
@@ -200,7 +200,6 @@ void SerializableShaderImpl::CreateShaderD3D11(IReferenceCounters* pRefCounters,
 template PipelineResourceSignatureD3D11Impl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureD3D11Impl>() const;
 
 template void SerializableResourceSignatureImpl::CreateSignature<PipelineResourceSignatureD3D11Impl>(
-    IReferenceCounters*                  pRefCounters,
     const PipelineResourceSignatureDesc& Desc,
     SHADER_TYPE                          ShaderStages);
 

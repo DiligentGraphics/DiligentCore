@@ -24,8 +24,15 @@
  *  of the possibility of such damages.
  */
 
+#include <memory>
+#include <array>
+#include <unordered_map>
+#include <vector>
+#include <algorithm>
+
 namespace Diligent
 {
+
 namespace
 {
 
@@ -55,10 +62,10 @@ static void SortResourceSignatures(IPipelineResourceSignature**   ppSrcSignature
 } // namespace
 
 
-template <typename PipelineStateImplType, typename ShaderStagesArrayType, typename... ExtraArgsType>
+template <typename PipelineStateImplType, typename SignatureImplType, typename ShaderStagesArrayType, typename... ExtraArgsType>
 bool ArchiverImpl::CreateDefaultResourceSignature(DefaultPRSInfo&              DefPRS,
                                                   const PipelineStateDesc&     PSODesc,
-                                                  SHADER_TYPE                  ActiveShaderStages,
+                                                  SHADER_TYPE                  ActiveShaderStageFlags,
                                                   const ShaderStagesArrayType& ShaderStages,
                                                   const ExtraArgsType&... ExtraArgs)
 {
@@ -67,26 +74,28 @@ bool ArchiverImpl::CreateDefaultResourceSignature(DefaultPRSInfo&              D
         auto SignDesc = PipelineStateImplType::GetDefaultResourceSignatureDesc(ShaderStages, PSODesc.Name, PSODesc.ResourceLayout, PSODesc.SRBAllocationGranularity, ExtraArgs...);
         SignDesc.SetName(DefPRS.UniqueName.c_str());
 
-        RefCntAutoPtr<IPipelineResourceSignature> pDefaultPRS;
-        m_pSerializationDevice->CreatePipelineResourceSignature(SignDesc, DefPRS.DeviceFlags, ActiveShaderStages, &pDefaultPRS);
-        if (pDefaultPRS == nullptr)
-            return false;
-
-        if (DefPRS.pPRS)
+        RefCntAutoPtr<SerializableResourceSignatureImpl> pDefaultPRS;
+        if (!DefPRS.pPRS)
         {
-            if (!(DefPRS.pPRS.RawPtr<SerializableResourceSignatureImpl>()->IsCompatible(*pDefaultPRS.RawPtr<SerializableResourceSignatureImpl>(), DefPRS.DeviceFlags)))
-            {
-                LOG_ERROR_MESSAGE("Default signatures do not match between different backends");
+            m_pSerializationDevice->CreatePipelineResourceSignature(SignDesc, ARCHIVE_DEVICE_DATA_FLAG_NONE, ActiveShaderStageFlags, pDefaultPRS.template RawDblPtr<IPipelineResourceSignature>());
+            if (pDefaultPRS == nullptr)
                 return false;
-            }
-            pDefaultPRS = DefPRS.pPRS;
-        }
-        else
-        {
+
             if (!CachePipelineResourceSignature(pDefaultPRS))
                 return false;
             DefPRS.pPRS = pDefaultPRS;
         }
+        else
+        {
+            pDefaultPRS = DefPRS.pPRS;
+            if (!(pDefaultPRS->GetDesc() == SignDesc))
+            {
+                LOG_ERROR_MESSAGE("Default signatures do not match between different backends");
+                return false;
+            }
+        }
+
+        pDefaultPRS->CreateSignature<SignatureImplType>(SignDesc, ActiveShaderStageFlags);
     }
     catch (...)
     {
@@ -142,14 +151,14 @@ struct SerializableResourceSignatureImpl::TPRS final : PRSWapperBase
 
 
 template <typename SignatureImplType>
-void SerializableResourceSignatureImpl::CreateSignature(IReferenceCounters* pRefCounters, const PipelineResourceSignatureDesc& Desc, SHADER_TYPE ShaderStages)
+void SerializableResourceSignatureImpl::CreateSignature(const PipelineResourceSignatureDesc& Desc, SHADER_TYPE ShaderStages)
 {
     using Traits                = SignatureTraits<SignatureImplType>;
     using MeasureSerializerType = typename Traits::template PSOSerializerType<SerializerMode::Measure>;
     using WriteSerializerType   = typename Traits::template PSOSerializerType<SerializerMode::Write>;
 
-    auto PRSWrpr = std::make_unique<TPRS<SignatureImplType>>(pRefCounters, Desc, ShaderStages);
-    AddPRSDesc(PRSWrpr->PRS.GetDesc());
+    auto PRSWrpr = std::make_unique<TPRS<SignatureImplType>>(GetReferenceCounters(), Desc, ShaderStages);
+    VERIFY_EXPR(Desc == PRSWrpr->PRS.GetDesc());
 
     const auto InternalData = PRSWrpr->PRS.GetInternalData();
 
@@ -166,6 +175,7 @@ void SerializableResourceSignatureImpl::CreateSignature(IReferenceCounters* pRef
         VERIFY_EXPR(Ser.IsEnd());
     }
 
+    VERIFY(!m_pPRSWrappers[static_cast<size_t>(Traits::Type)], "The signature has already been initialized");
     m_pPRSWrappers[static_cast<size_t>(Traits::Type)] = std::move(PRSWrpr);
 }
 
