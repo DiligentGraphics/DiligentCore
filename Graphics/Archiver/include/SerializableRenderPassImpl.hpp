@@ -45,10 +45,10 @@ public:
 
     ~SerializableRenderPassImpl() override;
 
-    const SerializedMemory& GetSharedSerializedMemory() const { return m_SharedData; }
+    const SerializedMemory& GetCommonData() const { return m_CommonData; }
 
 private:
-    SerializedMemory m_SharedData;
+    SerializedMemory m_CommonData;
 };
 
 } // namespace Diligent

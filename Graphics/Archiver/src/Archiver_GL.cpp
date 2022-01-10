@@ -103,9 +103,9 @@ template bool ArchiverImpl::PatchShadersGL<TilePipelineStateCreateInfo>(const Ti
 template bool ArchiverImpl::PatchShadersGL<RayTracingPipelineStateCreateInfo>(const RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
 
 
-template PipelineResourceSignatureGLImpl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureGLImpl>() const;
+template PipelineResourceSignatureGLImpl* SerializableResourceSignatureImpl::GetDeviceSignature<PipelineResourceSignatureGLImpl>() const;
 
-template void SerializableResourceSignatureImpl::CreateSignature<PipelineResourceSignatureGLImpl>(
+template void SerializableResourceSignatureImpl::CreateDeviceSignature<PipelineResourceSignatureGLImpl>(
     const PipelineResourceSignatureDesc& Desc,
     SHADER_TYPE                          ShaderStages);
 

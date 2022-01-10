@@ -92,8 +92,8 @@ ArchiveRepacker::ArchiveRepacker(IArchive* pArchive)
                 m_DeviceSpecific[j] = ArchiveBlock{pArchive, BaseOffset, BlockSize};
         }
 
-        m_SharedData = ArchiveBlock{pArchive, 0, SortedOffsets.front()};
-        VERIFY_EXPR(m_SharedData.IsValid());
+        m_CommonData = ArchiveBlock{pArchive, 0, SortedOffsets.front()};
+        VERIFY_EXPR(m_CommonData.IsValid());
     }
 
     // Read chunks
@@ -138,9 +138,9 @@ void ArchiveRepacker::RemoveDeviceData(DeviceType Dev) noexcept(false)
 {
     m_DeviceSpecific[static_cast<size_t>(Dev)] = ArchiveBlock{};
 
-    ArchiveBlock NewSharedBlock = m_SharedData;
-    if (!NewSharedBlock.LoadToMemory())
-        LOG_ERROR_AND_THROW("Failed to load shared block");
+    ArchiveBlock NewCommonBlock = m_CommonData;
+    if (!NewCommonBlock.LoadToMemory())
+        LOG_ERROR_AND_THROW("Failed to load common block");
 
     std::vector<Uint8> Temp;
 
@@ -149,7 +149,7 @@ void ArchiveRepacker::RemoveDeviceData(DeviceType Dev) noexcept(false)
         for (auto& Res : ResMap)
         {
             Temp.resize(Res.second.Size);
-            if (!NewSharedBlock.Read(Res.second.Offset, Temp.size(), Temp.data()))
+            if (!NewCommonBlock.Read(Res.second.Offset, Temp.size(), Temp.data()))
                 continue;
 
             BaseDataHeader Header{ChunkType::Undefined};
@@ -164,7 +164,7 @@ void ArchiveRepacker::RemoveDeviceData(DeviceType Dev) noexcept(false)
             Header.DeviceSpecificDataOffset[static_cast<size_t>(Dev)] = InvalidOffset;
 
             // Update header
-            NewSharedBlock.Write(Res.second.Offset, sizeof(Header), &Header);
+            NewCommonBlock.Write(Res.second.Offset, sizeof(Header), &Header);
         }
     };
 
@@ -188,7 +188,7 @@ void ArchiveRepacker::RemoveDeviceData(DeviceType Dev) noexcept(false)
             ShadersDataHeader Header;
             VERIFY_EXPR(sizeof(Header) == Chunk.Size);
 
-            if (NewSharedBlock.Read(Chunk.Offset, sizeof(Header), &Header))
+            if (NewCommonBlock.Read(Chunk.Offset, sizeof(Header), &Header))
             {
                 VERIFY_EXPR(Header.Type == ChunkType::Shaders);
 
@@ -196,13 +196,13 @@ void ArchiveRepacker::RemoveDeviceData(DeviceType Dev) noexcept(false)
                 Header.DeviceSpecificDataOffset[static_cast<size_t>(Dev)] = InvalidOffset;
 
                 // Update header
-                NewSharedBlock.Write(Chunk.Offset, sizeof(Header), &Header);
+                NewCommonBlock.Write(Chunk.Offset, sizeof(Header), &Header);
             }
             break;
         }
     }
 
-    m_SharedData = std::move(NewSharedBlock);
+    m_CommonData = std::move(NewCommonBlock);
 
     VERIFY_EXPR(Validate());
 }
@@ -266,15 +266,15 @@ bool ArchiveRepacker::ArchiveBlock::Write(Uint64 OffsetInBlock, Uint64 DataSize,
 
 void ArchiveRepacker::AppendDeviceData(const ArchiveRepacker& Src, DeviceType Dev) noexcept(false)
 {
-    if (!Src.m_SharedData.IsValid())
-        LOG_ERROR_AND_THROW("Shared data block is not present");
+    if (!Src.m_CommonData.IsValid())
+        LOG_ERROR_AND_THROW("Common data block is not present");
 
     if (!Src.m_DeviceSpecific[static_cast<size_t>(Dev)].IsValid())
         LOG_ERROR_AND_THROW("Can not append device specific block - block is not present");
 
-    ArchiveBlock NewSharedBlock = m_SharedData;
-    if (!NewSharedBlock.LoadToMemory())
-        LOG_ERROR_AND_THROW("Failed to load shared block in destination archive");
+    ArchiveBlock NewCommonBlock = m_CommonData;
+    if (!NewCommonBlock.LoadToMemory())
+        LOG_ERROR_AND_THROW("Failed to load common block in destination archive");
 
     const auto LoadResource = [](std::vector<Uint8>& Data, const NameOffsetMap::value_type& Res, const ArchiveBlock& Block) //
     {
@@ -302,11 +302,11 @@ void ArchiveRepacker::AppendDeviceData(const ArchiveRepacker& Src, DeviceType De
                 LOG_ERROR_AND_THROW(ResTypeName, " '", DstRes.first.GetStr(), "' is not found");
 
             const auto& SrcRes = *Iter;
-            if (!LoadResource(TempDst, DstRes, NewSharedBlock) || !LoadResource(TempSrc, SrcRes, Src.m_SharedData))
-                LOG_ERROR_AND_THROW("Failed to load ", ResTypeName, " '", DstRes.first.GetStr(), "' shared data");
+            if (!LoadResource(TempDst, DstRes, NewCommonBlock) || !LoadResource(TempSrc, SrcRes, Src.m_CommonData))
+                LOG_ERROR_AND_THROW("Failed to load ", ResTypeName, " '", DstRes.first.GetStr(), "' common data");
 
             if (TempSrc.size() != TempDst.size())
-                LOG_ERROR_AND_THROW(ResTypeName, " '", DstRes.first.GetStr(), "' shared data size must match");
+                LOG_ERROR_AND_THROW(ResTypeName, " '", DstRes.first.GetStr(), "' common data size must match");
 
             BaseDataHeader SrcHeader{ChunkType::Undefined};
             BaseDataHeader DstHeader{ChunkType::Undefined};
@@ -314,7 +314,7 @@ void ArchiveRepacker::AppendDeviceData(const ArchiveRepacker& Src, DeviceType De
                 LOG_ERROR_AND_THROW(ResTypeName, " '", DstRes.first.GetStr(), "' data size is too small to have header");
 
             if (memcmp(&TempSrc[sizeof(SrcHeader)], &TempDst[sizeof(DstHeader)], TempDst.size() - sizeof(DstHeader)) != 0)
-                LOG_ERROR_AND_THROW(ResTypeName, " '", DstRes.first.GetStr(), "' shared data must match");
+                LOG_ERROR_AND_THROW(ResTypeName, " '", DstRes.first.GetStr(), "' common data must match");
 
             memcpy(&SrcHeader, TempSrc.data(), sizeof(SrcHeader));
             memcpy(&DstHeader, TempDst.data(), sizeof(DstHeader));
@@ -334,7 +334,7 @@ void ArchiveRepacker::AppendDeviceData(const ArchiveRepacker& Src, DeviceType De
             DstHeader.DeviceSpecificDataOffset[static_cast<Uint32>(Dev)] = SrcOffset;
 
             // Update header
-            NewSharedBlock.Write(DstRes.second.Offset, sizeof(DstHeader), &DstHeader);
+            NewCommonBlock.Write(DstRes.second.Offset, sizeof(DstHeader), &DstHeader);
         }
     };
 
@@ -359,11 +359,11 @@ void ArchiveRepacker::AppendDeviceData(const ArchiveRepacker& Src, DeviceType De
                 LOG_ERROR_AND_THROW("RenderPass '", DstRes.first.GetStr(), "' is not found");
 
             const auto& SrcRes = *Iter;
-            if (!LoadResource(TempDst, DstRes, NewSharedBlock) || !LoadResource(TempSrc, SrcRes, Src.m_SharedData))
-                LOG_ERROR_AND_THROW("Failed to load RenderPass '", DstRes.first.GetStr(), "' shared data");
+            if (!LoadResource(TempDst, DstRes, NewCommonBlock) || !LoadResource(TempSrc, SrcRes, Src.m_CommonData))
+                LOG_ERROR_AND_THROW("Failed to load RenderPass '", DstRes.first.GetStr(), "' common data");
 
             if (TempSrc != TempDst)
-                LOG_ERROR_AND_THROW("RenderPass '", DstRes.first.GetStr(), "' shared data must match");
+                LOG_ERROR_AND_THROW("RenderPass '", DstRes.first.GetStr(), "' common data must match");
         }
     }
 
@@ -394,11 +394,11 @@ void ArchiveRepacker::AppendDeviceData(const ArchiveRepacker& Src, DeviceType De
 
         ShadersDataHeader DstHeader;
         Uint32            DstHeaderOffset = 0;
-        if (ReadShaderHeader(DstHeader, DstHeaderOffset, m_Chunks, m_SharedData))
+        if (ReadShaderHeader(DstHeader, DstHeaderOffset, m_Chunks, m_CommonData))
         {
             ShadersDataHeader SrcHeader;
             Uint32            SrcHeaderOffset = 0;
-            if (!ReadShaderHeader(SrcHeader, SrcHeaderOffset, Src.m_Chunks, Src.m_SharedData))
+            if (!ReadShaderHeader(SrcHeader, SrcHeaderOffset, Src.m_Chunks, Src.m_CommonData))
                 LOG_ERROR_AND_THROW("Failed to find shaders in source archive");
 
             const auto  SrcSize   = SrcHeader.DeviceSpecificDataSize[static_cast<Uint32>(Dev)];
@@ -413,11 +413,11 @@ void ArchiveRepacker::AppendDeviceData(const ArchiveRepacker& Src, DeviceType De
             DstHeader.DeviceSpecificDataOffset[static_cast<Uint32>(Dev)] = SrcOffset;
 
             // Update header
-            NewSharedBlock.Write(DstHeaderOffset, sizeof(DstHeader), &DstHeader);
+            NewCommonBlock.Write(DstHeaderOffset, sizeof(DstHeader), &DstHeader);
         }
     }
 
-    m_SharedData = std::move(NewSharedBlock);
+    m_CommonData = std::move(NewCommonBlock);
 
     m_DeviceSpecific[static_cast<Uint32>(Dev)] = Src.m_DeviceSpecific[static_cast<Uint32>(Dev)];
 
@@ -444,7 +444,7 @@ void ArchiveRepacker::Serialize(IFileStream* pStream) noexcept(false)
     Header.Version     = HeaderVersion;
     Header.NumChunks   = StaticCast<Uint32>(m_Chunks.size());
 
-    size_t Offset = m_SharedData.Size;
+    size_t Offset = m_CommonData.Size;
     for (size_t dev = 0; dev < m_DeviceSpecific.size(); ++dev)
     {
         const auto& Block = m_DeviceSpecific[dev];
@@ -459,7 +459,7 @@ void ArchiveRepacker::Serialize(IFileStream* pStream) noexcept(false)
     }
 
     pStream->Write(&Header, sizeof(Header));
-    CopyToStream(m_SharedData, sizeof(Header));
+    CopyToStream(m_CommonData, sizeof(Header));
 
     for (size_t dev = 0; dev < m_DeviceSpecific.size(); ++dev)
     {
@@ -477,7 +477,7 @@ void ArchiveRepacker::Serialize(IFileStream* pStream) noexcept(false)
 
 void ArchiveRepacker::ReadNamedResources(const ChunkHeader& Chunk, NameOffsetMap& NameAndOffset) noexcept(false)
 {
-    auto* pArchive = m_SharedData.pArchive.RawPtr<IArchive>();
+    auto* pArchive = m_CommonData.pArchive.RawPtr<IArchive>();
     DeviceObjectArchiveBase::ReadNamedResources(pArchive, Chunk,
                                                 [&NameAndOffset](const char* Name, Uint32 Offset, Uint32 Size) //
                                                 {
@@ -518,16 +518,16 @@ bool ArchiveRepacker::Validate() const
     {
         Temp.clear();
 
-        // ignore m_SharedData.Offset
-        if (Res.second.Offset > m_SharedData.Size || Res.second.Offset + Res.second.Size > m_SharedData.Size)
+        // ignore m_CommonData.Offset
+        if (Res.second.Offset > m_CommonData.Size || Res.second.Offset + Res.second.Size > m_CommonData.Size)
         {
-            VALIDATE_RES("shared data in range [", Res.second.Offset, "; ", Res.second.Offset + Res.second.Size,
-                         "] is out of shared block size (", m_SharedData.Size, ")");
+            VALIDATE_RES("common data in range [", Res.second.Offset, "; ", Res.second.Offset + Res.second.Size,
+                         "] is out of common block size (", m_CommonData.Size, ")");
             return false;
         }
 
         Temp.resize(Res.second.Size);
-        if (!m_SharedData.Read(Res.second.Offset, Temp.size(), Temp.data()))
+        if (!m_CommonData.Read(Res.second.Offset, Temp.size(), Temp.data()))
         {
             VALIDATE_RES("failed to read data from archive");
             return false;
@@ -624,7 +624,7 @@ bool ArchiveRepacker::Validate() const
             ShadersDataHeader Header;
             VERIFY_EXPR(sizeof(Header) == Chunk.Size);
 
-            if (m_SharedData.Read(Chunk.Offset, sizeof(Header), &Header))
+            if (m_CommonData.Read(Chunk.Offset, sizeof(Header), &Header))
             {
                 if (Header.Type != ChunkType::Shaders)
                 {
@@ -672,7 +672,7 @@ void ArchiveRepacker::Print() const
     std::vector<Uint8> Temp;
     String             Output           = "Archive content:\n";
     size_t             MaxDevNameLen    = 0;
-    const char         SharedDataName[] = "Shared";
+    const char         CommonDataName[] = "Common";
 
     for (Uint32 i = 0, Cnt = static_cast<Uint32>(DeviceType::Count); i < Cnt; ++i)
     {
@@ -683,12 +683,12 @@ void ArchiveRepacker::Print() const
     {
         Temp.clear();
 
-        // ignore m_SharedData.Offset
-        if (Res.second.Offset > m_SharedData.Size || Res.second.Offset + Res.second.Size > m_SharedData.Size)
+        // ignore m_CommonData.Offset
+        if (Res.second.Offset > m_CommonData.Size || Res.second.Offset + Res.second.Size > m_CommonData.Size)
             return false;
 
         Temp.resize(Res.second.Size);
-        return m_SharedData.Read(Res.second.Offset, Temp.size(), Temp.data());
+        return m_CommonData.Read(Res.second.Offset, Temp.size(), Temp.data());
     };
 
     const auto PrintResources = [&](const NameOffsetMap& ResMap, const char* ResTypeName) //
@@ -714,11 +714,11 @@ void ArchiveRepacker::Print() const
                 memcpy(&Header, Temp.data(), sizeof(Header));
                 Log += '\n';
 
-                // Shared data & header
+                // Common data & header
                 {
                     Log += "    ";
-                    Log += SharedDataName;
-                    for (size_t i = strlen(SharedDataName); i < MaxDevNameLen; ++i)
+                    Log += CommonDataName;
+                    for (size_t i = strlen(CommonDataName); i < MaxDevNameLen; ++i)
                         Log += ' ';
                     Log += " - [" + std::to_string(Res.second.Offset) + "; " + std::to_string(Res.second.Offset + Res.second.Size) + "]\n";
                 }
@@ -791,7 +791,7 @@ void ArchiveRepacker::Print() const
             if (Chunk.Type == ChunkType::ArchiveDebugInfo)
             {
                 Temp.resize(Chunk.Size);
-                if (m_SharedData.Read(Chunk.Offset, Temp.size(), Temp.data()))
+                if (m_CommonData.Read(Chunk.Offset, Temp.size(), Temp.data()))
                 {
                     Serializer<SerializerMode::Read> Ser{Temp.data(), Temp.size()};
 
@@ -812,10 +812,10 @@ void ArchiveRepacker::Print() const
     {
         Output += "------------------\nBlocks\n";
         Output += "  ";
-        Output += SharedDataName;
-        for (size_t i = strlen(SharedDataName); i < MaxDevNameLen; ++i)
+        Output += CommonDataName;
+        for (size_t i = strlen(CommonDataName); i < MaxDevNameLen; ++i)
             Output += ' ';
-        Output += " - " + std::to_string(m_SharedData.Size) + " bytes\n";
+        Output += " - " + std::to_string(m_CommonData.Size) + " bytes\n";
 
         for (Uint32 dev = 0, Cnt = static_cast<Uint32>(DeviceType::Count); dev < Cnt; ++dev)
         {
@@ -860,10 +860,10 @@ void ArchiveRepacker::Print() const
                 {
                     Log += '\n';
 
-                    // Shared data & header
+                    // Common data & header
                     {
                         Log += "    ";
-                        Log += SharedDataName;
+                        Log += CommonDataName;
                         Log += " - [" + std::to_string(Res.second.Offset) + "; " + std::to_string(Res.second.Offset + Res.second.Size) + "]\n";
                     }
                 }
@@ -881,7 +881,7 @@ void ArchiveRepacker::Print() const
                 ShadersDataHeader Header;
                 VERIFY_EXPR(sizeof(Header) == Chunk.Size);
 
-                if (m_SharedData.Read(Chunk.Offset, sizeof(Header), &Header))
+                if (m_CommonData.Read(Chunk.Offset, sizeof(Header), &Header))
                 {
                     Output += "------------------\nShaders\n";
                     for (Uint32 dev = 0; dev < Header.DeviceSpecificDataSize.size(); ++dev)

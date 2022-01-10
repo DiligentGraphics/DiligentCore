@@ -215,7 +215,7 @@ void SerializableShaderImpl::CreateShaderMtl(ShaderCreateInfo& ShaderCI, String&
         pLog->Release();
 }
 
-template PipelineResourceSignatureMtlImpl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureMtlImpl>() const;
+template PipelineResourceSignatureMtlImpl* SerializableResourceSignatureImpl::GetDeviceSignature<PipelineResourceSignatureMtlImpl>() const;
 
 const SPIRVShaderResources* SerializableShaderImpl::GetMtlShaderSPIRVResources() const
 {
@@ -402,7 +402,7 @@ SerializedMemory SerializableShaderImpl::PatchShaderMtl(const RefCntAutoPtr<Pipe
     return Bytecode;
 }
 
-template void SerializableResourceSignatureImpl::CreateSignature<PipelineResourceSignatureMtlImpl>(
+template void SerializableResourceSignatureImpl::CreateDeviceSignature<PipelineResourceSignatureMtlImpl>(
     const PipelineResourceSignatureDesc& Desc,
     SHADER_TYPE                          ShaderStages);
 
@@ -421,7 +421,7 @@ void SerializationDeviceImpl::GetPipelineResourceBindingsMtl(const PipelineResou
         const auto* pSerPRS = ClassPtrCast<SerializableResourceSignatureImpl>(Info.ppResourceSignatures[i]);
         const auto& Desc    = pSerPRS->GetDesc();
 
-        Signatures[Desc.BindingIndex] = pSerPRS->GetSignature<PipelineResourceSignatureMtlImpl>();
+        Signatures[Desc.BindingIndex] = pSerPRS->GetDeviceSignature<PipelineResourceSignatureMtlImpl>();
         SignaturesCount               = std::max(SignaturesCount, static_cast<Uint32>(Desc.BindingIndex) + 1);
     }
 

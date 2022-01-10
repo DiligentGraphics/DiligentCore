@@ -197,9 +197,9 @@ void SerializableShaderImpl::CreateShaderD3D11(IReferenceCounters* pRefCounters,
 }
 
 
-template PipelineResourceSignatureD3D11Impl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureD3D11Impl>() const;
+template PipelineResourceSignatureD3D11Impl* SerializableResourceSignatureImpl::GetDeviceSignature<PipelineResourceSignatureD3D11Impl>() const;
 
-template void SerializableResourceSignatureImpl::CreateSignature<PipelineResourceSignatureD3D11Impl>(
+template void SerializableResourceSignatureImpl::CreateDeviceSignature<PipelineResourceSignatureD3D11Impl>(
     const PipelineResourceSignatureDesc& Desc,
     SHADER_TYPE                          ShaderStages);
 

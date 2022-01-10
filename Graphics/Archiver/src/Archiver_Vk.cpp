@@ -194,9 +194,9 @@ void SerializableShaderImpl::CreateShaderVk(IReferenceCounters* pRefCounters, Sh
 }
 
 
-template PipelineResourceSignatureVkImpl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureVkImpl>() const;
+template PipelineResourceSignatureVkImpl* SerializableResourceSignatureImpl::GetDeviceSignature<PipelineResourceSignatureVkImpl>() const;
 
-template void SerializableResourceSignatureImpl::CreateSignature<PipelineResourceSignatureVkImpl>(
+template void SerializableResourceSignatureImpl::CreateDeviceSignature<PipelineResourceSignatureVkImpl>(
     const PipelineResourceSignatureDesc& Desc,
     SHADER_TYPE                          ShaderStages);
 

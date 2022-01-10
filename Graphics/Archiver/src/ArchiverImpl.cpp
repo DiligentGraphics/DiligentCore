@@ -90,7 +90,7 @@ Uint32* ArchiverImpl::InitNamedResourceArrayHeader(ChunkType      Type,
         (void)pStr;
 
         NameLengthArray[i] = StaticCast<Uint32>(NameLen + 1);
-        DataSizeArray[i]   = StaticCast<Uint32>(NameAndData.second.GetSharedData().Size());
+        DataSizeArray[i]   = StaticCast<Uint32>(NameAndData.second.GetCommonData().Size());
         ++i;
     }
 
@@ -117,10 +117,10 @@ Bool ArchiverImpl::SerializeToBlob(IDataBlob** ppBlob)
 
 void ArchiverImpl::ReserveSpace(PendingData& Pending) const
 {
-    auto& SharedData    = Pending.SharedData;
+    auto& CommonData    = Pending.CommonData;
     auto& PerDeviceData = Pending.PerDeviceData;
 
-    SharedData = TDataElement{GetRawAllocator()};
+    CommonData = TDataElement{GetRawAllocator()};
     for (auto& DeviceData : PerDeviceData)
         DeviceData = TDataElement{GetRawAllocator()};
 
@@ -142,8 +142,8 @@ void ArchiverImpl::ReserveSpace(PendingData& Pending) const
     // Reserve space for pipeline resource signatures
     for (const auto& PRS : m_PRSMap)
     {
-        SharedData.AddSpace<PRSDataHeader>();
-        SharedData.AddSpace(PRS.second.GetSharedData().Size());
+        CommonData.AddSpace<PRSDataHeader>();
+        CommonData.AddSpace(PRS.second.GetCommonData().Size());
 
         for (Uint32 type = 0; type < DeviceDataCount; ++type)
         {
@@ -159,17 +159,17 @@ void ArchiverImpl::ReserveSpace(PendingData& Pending) const
     // Reserve space for render passes
     for (const auto& RP : m_RPMap)
     {
-        SharedData.AddSpace<RPDataHeader>();
-        SharedData.AddSpace(RP.second.GetSharedData().Size());
+        CommonData.AddSpace<RPDataHeader>();
+        CommonData.AddSpace(RP.second.GetCommonData().Size());
     }
 
     // Reserve space for pipelines
-    const auto ReserveSpaceForPSO = [&SharedData, &PerDeviceData](auto& PSOMap) //
+    const auto ReserveSpaceForPSO = [&CommonData, &PerDeviceData](auto& PSOMap) //
     {
         for (const auto& PSO : PSOMap)
         {
-            SharedData.AddSpace<PSODataHeader>();
-            SharedData.AddSpace(PSO.second.SharedData.Size());
+            CommonData.AddSpace<PSODataHeader>();
+            CommonData.AddSpace(PSO.second.CommonData.Size());
 
             for (Uint32 type = 0; type < DeviceDataCount; ++type)
             {
@@ -185,7 +185,7 @@ void ArchiverImpl::ReserveSpace(PendingData& Pending) const
 
     static_assert(ChunkCount == 9, "Reserve space for new chunk type");
 
-    Pending.SharedData.Reserve();
+    Pending.CommonData.Reserve();
     for (auto& DeviceData : Pending.PerDeviceData)
         DeviceData.Reserve();
 }
@@ -266,7 +266,7 @@ void ArchiverImpl::WriteDeviceObjectData(ChunkType Type, PendingData& Pending, M
     Uint32 j = 0;
     for (auto& Obj : ObjectMap)
     {
-        auto* pHeader = WriteHeader<DataHeaderType>(Type, Obj.second.GetSharedData(), Pending.SharedData,
+        auto* pHeader = WriteHeader<DataHeaderType>(Type, Obj.second.GetCommonData(), Pending.CommonData,
                                                     DataOffsetArray[j], DataSizeArray[j]);
 
         for (Uint32 type = 0; type < DeviceDataCount; ++type)
@@ -314,7 +314,7 @@ void ArchiverImpl::WriteShaderData(PendingData& Pending) const
 
         VERIFY(Dst.GetCurrentSize() == 0, "Shaders must be written first");
 
-        // write shared data
+        // Write common data
         auto* pOffsetAndSize = Dst.ConstructArray<FileOffsetAndSize>(Shaders.List.size());
         DataOffsetArray[dev] = StaticCast<Uint32>(reinterpret_cast<const Uint8*>(pOffsetAndSize) - Dst.GetDataPtr<const Uint8>());
         DataSizeArray[dev]   = StaticCast<Uint32>(sizeof(FileOffsetAndSize) * Shaders.List.size());
@@ -371,7 +371,7 @@ void ArchiverImpl::UpdateOffsetsInArchive(PendingData& Pending) const
         OffsetInFile += ChunkHdr.Size;
     }
 
-    // Shared data
+    // Common data
     {
         for (Uint32 i = 0; i < NumChunks; ++i)
         {
@@ -392,8 +392,8 @@ void ArchiverImpl::UpdateOffsetsInArchive(PendingData& Pending) const
         }
 
         // TODO AZ: verify this is correct wrt data alignment
-        if (!Pending.SharedData.IsEmpty())
-            OffsetInFile += Pending.SharedData.GetCurrentSize();
+        if (!Pending.CommonData.IsEmpty())
+            OffsetInFile += Pending.CommonData.GetCurrentSize();
     }
 
     // Device specific data
@@ -425,8 +425,8 @@ void ArchiverImpl::WritePendingDataToStream(const PendingData& Pending, IFileStr
         pStream->Write(Chunk.GetDataPtr(), Chunk.GetCurrentSize());
     }
 
-    if (!Pending.SharedData.IsEmpty())
-        pStream->Write(Pending.SharedData.GetDataPtr(), Pending.SharedData.GetCurrentSize());
+    if (!Pending.CommonData.IsEmpty())
+        pStream->Write(Pending.CommonData.GetDataPtr(), Pending.CommonData.GetCurrentSize());
 
     for (auto& DevData : Pending.PerDeviceData)
     {
@@ -479,14 +479,14 @@ Bool ArchiverImpl::SerializeToStream(IFileStream* pStream)
 }
 
 
-const SerializedMemory& ArchiverImpl::PRSData::GetSharedData() const
+const SerializedMemory& ArchiverImpl::PRSData::GetCommonData() const
 {
-    return pPRS->GetSharedSerializedMemory();
+    return pPRS->GetCommonData();
 }
 
 const SerializedMemory& ArchiverImpl::PRSData::GetDeviceData(DeviceType Type) const
 {
-    const auto* pMem = pPRS->GetSerializedMemory(Type);
+    const auto* pMem = pPRS->GetDeviceData(Type);
     if (pMem != nullptr)
         return *pMem;
 
@@ -565,9 +565,9 @@ String ArchiverImpl::GetDefaultPRSName(const char* PSOName) const
 }
 
 
-const SerializedMemory& ArchiverImpl::RPData::GetSharedData() const
+const SerializedMemory& ArchiverImpl::RPData::GetCommonData() const
 {
-    return pRP->GetSharedSerializedMemory();
+    return pRP->GetCommonData();
 }
 
 void ArchiverImpl::SerializeShaderBytecode(TShaderIndices&         ShaderIndices,
@@ -871,7 +871,7 @@ bool ArchiverImpl::SerializePSO(TNamedObjectHashMap<TPSOData<CreateInfoType>>& P
         }
     }
 
-    if (!Data.SharedData)
+    if (!Data.CommonData)
     {
         IPipelineResourceSignature* DefaultSignatures[1] = {};
         auto                        SignaturesCount      = PSOCreateInfo.ResourceSignaturesCount;
@@ -893,8 +893,8 @@ bool ArchiverImpl::SerializePSO(TNamedObjectHashMap<TPSOData<CreateInfoType>>& P
         Serializer<SerializerMode::Measure> MeasureSer;
         SerializerPSOImpl(MeasureSer, PSOCreateInfo, PRSNames);
 
-        Data.SharedData = SerializedMemory{MeasureSer.GetSize(nullptr)};
-        Serializer<SerializerMode::Write> Ser{Data.SharedData.Ptr(), Data.SharedData.Size()};
+        Data.CommonData = SerializedMemory{MeasureSer.GetSize(nullptr)};
+        Serializer<SerializerMode::Write> Ser{Data.CommonData.Ptr(), Data.CommonData.Size()};
         SerializerPSOImpl(Ser, PSOCreateInfo, PRSNames);
         VERIFY_EXPR(Ser.IsEnd());
     }

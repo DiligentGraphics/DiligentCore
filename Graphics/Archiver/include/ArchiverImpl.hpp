@@ -127,7 +127,7 @@ private:
         {}
         RefCntAutoPtr<SerializableResourceSignatureImpl> pPRS;
 
-        const SerializedMemory& GetSharedData() const;
+        const SerializedMemory& GetCommonData() const;
         const SerializedMemory& GetDeviceData(DeviceType Type) const;
     };
     TNamedObjectHashMap<PRSData> m_PRSMap;
@@ -160,7 +160,7 @@ private:
         {}
         RefCntAutoPtr<SerializableRenderPassImpl> pRP;
 
-        const SerializedMemory& GetSharedData() const;
+        const SerializedMemory& GetCommonData() const;
     };
     using RPMapType = std::unordered_map<HashMapStringKey, RPData, HashMapStringKey::Hasher>;
     RPMapType m_RPMap;
@@ -189,10 +189,10 @@ private:
     {
         SerializedMemory DescMem;
         CreateInfoType*  pCreateInfo = nullptr;
-        SerializedMemory SharedData;
+        SerializedMemory CommonData;
         TPerDeviceData   PerDeviceData;
 
-        const SerializedMemory& GetSharedData() const { return SharedData; }
+        const SerializedMemory& GetCommonData() const { return CommonData; }
     };
     using GraphicsPSOData   = TPSOData<GraphicsPipelineStateCreateInfo>;
     using ComputePSOData    = TPSOData<ComputePipelineStateCreateInfo>;
@@ -212,7 +212,7 @@ private:
         std::array<TDataElement, ChunkCount>      ChunkData;                    // NamedResourceArrayHeader
         std::array<Uint32*, ChunkCount>           DataOffsetArrayPerChunk = {}; // pointer to NamedResourceArrayHeader::DataOffset - offsets to ***DataHeader
         std::array<Uint32, ChunkCount>            ResourceCountPerChunk   = {}; //
-        TDataElement                              SharedData;                   // ***DataHeader
+        TDataElement                              CommonData;                   // ***DataHeader
         std::array<TDataElement, DeviceDataCount> PerDeviceData;                // device specific data
         size_t                                    OffsetInFile = 0;
     };

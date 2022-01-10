@@ -101,12 +101,12 @@ public:
     bool   operator==(const SerializableResourceSignatureImpl& Rhs) const;
     size_t CalcHash() const;
 
-    const SerializedMemory& GetSharedSerializedMemory() const { return m_SharedData; }
+    const SerializedMemory& GetCommonData() const { return m_CommonData; }
 
-    const SerializedMemory* GetSerializedMemory(DeviceType Type) const
+    const SerializedMemory* GetDeviceData(DeviceType Type) const
     {
         VERIFY_EXPR(static_cast<Uint32>(Type) < DeviceCount);
-        auto& Wrpr = m_pPRSWrappers[static_cast<size_t>(Type)];
+        auto& Wrpr = m_pDeviceSignatures[static_cast<size_t>(Type)];
         return Wrpr ? &Wrpr->Mem : nullptr;
     }
 
@@ -114,23 +114,31 @@ public:
     struct SignatureTraits;
 
     template <typename SignatureType>
-    SignatureType* GetSignature() const
+    SignatureType* GetDeviceSignature() const
     {
         constexpr auto Type = SignatureTraits<SignatureType>::Type;
 
-        auto& Wrpr = m_pPRSWrappers[static_cast<size_t>(Type)];
+        auto& Wrpr = m_pDeviceSignatures[static_cast<size_t>(Type)];
         return Wrpr ? Wrpr->GetPRS<SignatureType>() : nullptr;
     }
 
 
     template <typename SignatureImplType>
-    void CreateSignature(const PipelineResourceSignatureDesc& Desc, SHADER_TYPE ShaderStages);
+    void CreateDeviceSignature(const PipelineResourceSignatureDesc& Desc, SHADER_TYPE ShaderStages);
+
+private:
+    const IPipelineResourceSignature* GetPRS(DeviceType Type) const
+    {
+        VERIFY_EXPR(static_cast<Uint32>(Type) < DeviceCount);
+        auto& Wrpr = m_pDeviceSignatures[static_cast<size_t>(Type)];
+        return Wrpr ? Wrpr->GetPRS() : nullptr;
+    }
 
 private:
     const PipelineResourceSignatureDesc*          m_pDesc = nullptr;
     std::unique_ptr<void, STDDeleterRawMem<void>> m_pRawMemory;
 
-    SerializedMemory m_SharedData;
+    SerializedMemory m_CommonData;
 
     struct PRSWapperBase
     {
@@ -145,52 +153,45 @@ private:
 
     template <typename ImplType> struct TPRS;
 
-    std::array<std::unique_ptr<PRSWapperBase>, DeviceCount> m_pPRSWrappers;
-
-    const IPipelineResourceSignature* GetPRS(DeviceType Type) const
-    {
-        VERIFY_EXPR(static_cast<Uint32>(Type) < DeviceCount);
-        auto& Wrpr = m_pPRSWrappers[static_cast<size_t>(Type)];
-        return Wrpr ? Wrpr->GetPRS() : nullptr;
-    }
+    std::array<std::unique_ptr<PRSWapperBase>, DeviceCount> m_pDeviceSignatures;
 };
 
 #if D3D11_SUPPORTED
-extern template PipelineResourceSignatureD3D11Impl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureD3D11Impl>() const;
+extern template PipelineResourceSignatureD3D11Impl* SerializableResourceSignatureImpl::GetDeviceSignature<PipelineResourceSignatureD3D11Impl>() const;
 
-extern template void SerializableResourceSignatureImpl::CreateSignature<PipelineResourceSignatureD3D11Impl>(
+extern template void SerializableResourceSignatureImpl::CreateDeviceSignature<PipelineResourceSignatureD3D11Impl>(
     const PipelineResourceSignatureDesc& Desc,
     SHADER_TYPE                          ShaderStages);
 #endif
 
 #if D3D12_SUPPORTED
-extern template PipelineResourceSignatureD3D12Impl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureD3D12Impl>() const;
+extern template PipelineResourceSignatureD3D12Impl* SerializableResourceSignatureImpl::GetDeviceSignature<PipelineResourceSignatureD3D12Impl>() const;
 
-extern template void SerializableResourceSignatureImpl::CreateSignature<PipelineResourceSignatureD3D12Impl>(
+extern template void SerializableResourceSignatureImpl::CreateDeviceSignature<PipelineResourceSignatureD3D12Impl>(
     const PipelineResourceSignatureDesc& Desc,
     SHADER_TYPE                          ShaderStages);
 #endif
 
 #if GL_SUPPORTED || GLES_SUPPORTED
-extern template PipelineResourceSignatureGLImpl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureGLImpl>() const;
+extern template PipelineResourceSignatureGLImpl* SerializableResourceSignatureImpl::GetDeviceSignature<PipelineResourceSignatureGLImpl>() const;
 
-extern template void SerializableResourceSignatureImpl::CreateSignature<PipelineResourceSignatureGLImpl>(
+extern template void SerializableResourceSignatureImpl::CreateDeviceSignature<PipelineResourceSignatureGLImpl>(
     const PipelineResourceSignatureDesc& Desc,
     SHADER_TYPE                          ShaderStages);
 #endif
 
 #if VULKAN_SUPPORTED
-extern template PipelineResourceSignatureVkImpl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureVkImpl>() const;
+extern template PipelineResourceSignatureVkImpl* SerializableResourceSignatureImpl::GetDeviceSignature<PipelineResourceSignatureVkImpl>() const;
 
-extern template void SerializableResourceSignatureImpl::CreateSignature<PipelineResourceSignatureVkImpl>(
+extern template void SerializableResourceSignatureImpl::CreateDeviceSignature<PipelineResourceSignatureVkImpl>(
     const PipelineResourceSignatureDesc& Desc,
     SHADER_TYPE                          ShaderStages);
 #endif
 
 #if METAL_SUPPORTED
-extern template PipelineResourceSignatureMtlImpl* SerializableResourceSignatureImpl::GetSignature<PipelineResourceSignatureMtlImpl>() const;
+extern template PipelineResourceSignatureMtlImpl* SerializableResourceSignatureImpl::GetDeviceSignature<PipelineResourceSignatureMtlImpl>() const;
 
-extern template void SerializableResourceSignatureImpl::CreateSignature<PipelineResourceSignatureMtlImpl>(
+extern template void SerializableResourceSignatureImpl::CreateDeviceSignature<PipelineResourceSignatureMtlImpl>(
     const PipelineResourceSignatureDesc& Desc,
     SHADER_TYPE                          ShaderStages);
 #endif

@@ -76,8 +76,8 @@ SerializableResourceSignatureImpl::SerializableResourceSignatureImpl(IReferenceC
         Serializer<SerializerMode::Measure> MeasureSer;
         PSOSerializer<SerializerMode::Measure>::SerializePRSDesc(MeasureSer, Desc, nullptr);
 
-        m_SharedData = SerializedMemory{MeasureSer.GetSize(nullptr)};
-        Serializer<SerializerMode::Write> WSer{m_SharedData.Ptr(), m_SharedData.Size()};
+        m_CommonData = SerializedMemory{MeasureSer.GetSize(nullptr)};
+        Serializer<SerializerMode::Write> WSer{m_CommonData.Ptr(), m_CommonData.Size()};
         PSOSerializer<SerializerMode::Write>::SerializePRSDesc(WSer, Desc, nullptr);
         VERIFY_EXPR(WSer.IsEnd());
     }
@@ -91,29 +91,29 @@ SerializableResourceSignatureImpl::SerializableResourceSignatureImpl(IReferenceC
         {
 #if D3D11_SUPPORTED
             case ARCHIVE_DEVICE_DATA_FLAG_D3D11:
-                CreateSignature<PipelineResourceSignatureD3D11Impl>(Desc, ShaderStages);
+                CreateDeviceSignature<PipelineResourceSignatureD3D11Impl>(Desc, ShaderStages);
                 break;
 #endif
 #if D3D12_SUPPORTED
             case ARCHIVE_DEVICE_DATA_FLAG_D3D12:
-                CreateSignature<PipelineResourceSignatureD3D12Impl>(Desc, ShaderStages);
+                CreateDeviceSignature<PipelineResourceSignatureD3D12Impl>(Desc, ShaderStages);
                 break;
 #endif
 #if GL_SUPPORTED || GLES_SUPPORTED
             case ARCHIVE_DEVICE_DATA_FLAG_GL:
             case ARCHIVE_DEVICE_DATA_FLAG_GLES:
-                CreateSignature<PipelineResourceSignatureGLImpl>(Desc, ShaderStages);
+                CreateDeviceSignature<PipelineResourceSignatureGLImpl>(Desc, ShaderStages);
                 break;
 #endif
 #if VULKAN_SUPPORTED
             case ARCHIVE_DEVICE_DATA_FLAG_VULKAN:
-                CreateSignature<PipelineResourceSignatureVkImpl>(Desc, ShaderStages);
+                CreateDeviceSignature<PipelineResourceSignatureVkImpl>(Desc, ShaderStages);
                 break;
 #endif
 #if METAL_SUPPORTED
             case ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS:
             case ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS:
-                CreateSignature<PipelineResourceSignatureMtlImpl>(Desc, ShaderStages);
+                CreateDeviceSignature<PipelineResourceSignatureMtlImpl>(Desc, ShaderStages);
                 break;
 #endif
             case ARCHIVE_DEVICE_DATA_FLAG_NONE:
@@ -154,14 +154,14 @@ bool SerializableResourceSignatureImpl::IsCompatible(const SerializableResourceS
 
 bool SerializableResourceSignatureImpl::operator==(const SerializableResourceSignatureImpl& Rhs) const
 {
-    if (GetSharedSerializedMemory() != Rhs.GetSharedSerializedMemory())
+    if (GetCommonData() != Rhs.GetCommonData())
         return false;
 
     for (size_t type = 0; type < DeviceCount; ++type)
     {
         const auto  Type  = static_cast<DeviceType>(type);
-        const auto* pMem0 = GetSerializedMemory(Type);
-        const auto* pMem1 = Rhs.GetSerializedMemory(Type);
+        const auto* pMem0 = GetDeviceData(Type);
+        const auto* pMem1 = Rhs.GetDeviceData(Type);
 
         if ((pMem0 != nullptr) != (pMem1 != nullptr))
             return false;
@@ -178,7 +178,7 @@ size_t SerializableResourceSignatureImpl::CalcHash() const
     size_t Hash = 0;
     for (size_t type = 0; type < DeviceCount; ++type)
     {
-        const auto* pMem = GetSerializedMemory(static_cast<DeviceType>(type));
+        const auto* pMem = GetDeviceData(static_cast<DeviceType>(type));
         if (pMem != nullptr)
             HashCombine(Hash, pMem->CalcHash());
     }

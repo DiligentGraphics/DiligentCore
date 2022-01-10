@@ -53,7 +53,7 @@ static void SortResourceSignatures(IPipelineResourceSignature**   ppSrcSignature
         const auto& Desc = pSerPRS->GetDesc();
 
         VERIFY(!SortedSignatures[Desc.BindingIndex], "Multiple signatures use the same binding index (", Desc.BindingIndex, ").");
-        SortedSignatures[Desc.BindingIndex] = pSerPRS->template GetSignature<SignatureType>();
+        SortedSignatures[Desc.BindingIndex] = pSerPRS->template GetDeviceSignature<SignatureType>();
 
         SortedSignaturesCount = std::max(SortedSignaturesCount, Uint32{Desc.BindingIndex} + 1u);
     }
@@ -95,7 +95,7 @@ bool ArchiverImpl::CreateDefaultResourceSignature(DefaultPRSInfo&              D
             }
         }
 
-        pDefaultPRS->CreateSignature<SignatureImplType>(SignDesc, ActiveShaderStageFlags);
+        pDefaultPRS->CreateDeviceSignature<SignatureImplType>(SignDesc, ActiveShaderStageFlags);
     }
     catch (...)
     {
@@ -151,7 +151,7 @@ struct SerializableResourceSignatureImpl::TPRS final : PRSWapperBase
 
 
 template <typename SignatureImplType>
-void SerializableResourceSignatureImpl::CreateSignature(const PipelineResourceSignatureDesc& Desc, SHADER_TYPE ShaderStages)
+void SerializableResourceSignatureImpl::CreateDeviceSignature(const PipelineResourceSignatureDesc& Desc, SHADER_TYPE ShaderStages)
 {
     using Traits                = SignatureTraits<SignatureImplType>;
     using MeasureSerializerType = typename Traits::template PSOSerializerType<SerializerMode::Measure>;
@@ -175,8 +175,8 @@ void SerializableResourceSignatureImpl::CreateSignature(const PipelineResourceSi
         VERIFY_EXPR(Ser.IsEnd());
     }
 
-    VERIFY(!m_pPRSWrappers[static_cast<size_t>(Traits::Type)], "The signature has already been initialized");
-    m_pPRSWrappers[static_cast<size_t>(Traits::Type)] = std::move(PRSWrpr);
+    VERIFY(!m_pDeviceSignatures[static_cast<size_t>(Traits::Type)], "The signature has already been initialized");
+    m_pDeviceSignatures[static_cast<size_t>(Traits::Type)] = std::move(PRSWrpr);
 }
 
 

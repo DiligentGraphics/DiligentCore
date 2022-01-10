@@ -39,9 +39,9 @@ SerializableRenderPassImpl::SerializableRenderPassImpl(IReferenceCounters*      
     Serializer<SerializerMode::Measure> MeasureSer;
     PSOSerializer<SerializerMode::Measure>::SerializeRenderPassDesc(MeasureSer, m_Desc, nullptr);
 
-    m_SharedData = SerializedMemory{MeasureSer.GetSize(nullptr)};
+    m_CommonData = SerializedMemory{MeasureSer.GetSize(nullptr)};
 
-    Serializer<SerializerMode::Write> Ser{m_SharedData.Ptr(), m_SharedData.Size()};
+    Serializer<SerializerMode::Write> Ser{m_CommonData.Ptr(), m_CommonData.Size()};
     PSOSerializer<SerializerMode::Write>::SerializeRenderPassDesc(Ser, m_Desc, nullptr);
     VERIFY_EXPR(Ser.IsEnd());
 }

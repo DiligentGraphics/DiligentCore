@@ -86,7 +86,7 @@ private:
     };
     using DeviceSpecificBlocks = std::array<ArchiveBlock, static_cast<size_t>(BlockOffsetType::Count)>;
 
-    ArchiveBlock         m_SharedData;
+    ArchiveBlock         m_CommonData;
     DeviceSpecificBlocks m_DeviceSpecific;
 
     std::vector<ChunkHeader> m_Chunks;
