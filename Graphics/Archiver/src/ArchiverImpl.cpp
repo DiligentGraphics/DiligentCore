@@ -816,12 +816,6 @@ bool ArchiverImpl::SerializePSO(TNamedObjectHashMap<TPSOData<CreateInfoType>>& P
     const bool UseDefaultPRS = (PSOCreateInfo.ResourceSignaturesCount == 0);
 
     DefaultPRSInfo DefPRS;
-    if (UseDefaultPRS)
-    {
-        DefPRS.DeviceFlags = ArchiveInfo.DeviceFlags;
-        DefPRS.UniqueName  = GetDefaultPRSName(PSOCreateInfo.PSODesc.Name);
-    }
-
     for (auto DeviceBits = ArchiveInfo.DeviceFlags; DeviceBits != 0;)
     {
         const auto Flag = ExtractLSB(DeviceBits);

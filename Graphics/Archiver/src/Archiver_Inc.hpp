@@ -72,23 +72,37 @@ bool ArchiverImpl::CreateDefaultResourceSignature(DefaultPRSInfo&              D
     try
     {
         auto SignDesc = PipelineStateImplType::GetDefaultResourceSignatureDesc(ShaderStages, PSODesc.Name, PSODesc.ResourceLayout, PSODesc.SRBAllocationGranularity, ExtraArgs...);
-        SignDesc.SetName(DefPRS.UniqueName.c_str());
 
         RefCntAutoPtr<SerializableResourceSignatureImpl> pDefaultPRS;
         if (!DefPRS.pPRS)
         {
+            // Get unique name that is not yet present in the cache
+            const auto UniqueName = GetDefaultPRSName(PSODesc.Name);
+            SignDesc.SetName(UniqueName.c_str());
+
             m_pSerializationDevice->CreatePipelineResourceSignature(SignDesc, ARCHIVE_DEVICE_DATA_FLAG_NONE, ActiveShaderStageFlags, pDefaultPRS.template RawDblPtr<IPipelineResourceSignature>());
             if (pDefaultPRS == nullptr)
                 return false;
 
+            // Even though we are not going to reuse the default PRS, we need to add it to the cache
+            // to make its name unavailable for future signatures
             if (!CachePipelineResourceSignature(pDefaultPRS))
+            {
+                UNEXPECTED("Failed to add default signature '", UniqueName, "' to the cache. This should've never happened as we generated the unique name.");
                 return false;
+            }
+
             DefPRS.pPRS = pDefaultPRS;
         }
         else
         {
             pDefaultPRS = DefPRS.pPRS;
-            if (!(pDefaultPRS->GetDesc() == SignDesc))
+
+            const auto& Sign0Desc = pDefaultPRS->GetDesc();
+            // Override the name to make sure it is consistent for all devices
+            SignDesc.SetName(Sign0Desc.Name);
+
+            if (!(Sign0Desc == SignDesc))
             {
                 LOG_ERROR_MESSAGE("Default signatures do not match between different backends");
                 return false;

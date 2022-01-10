@@ -246,9 +246,6 @@ private:
     struct DefaultPRSInfo
     {
         RefCntAutoPtr<SerializableResourceSignatureImpl> pPRS;
-
-        ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags = ARCHIVE_DEVICE_DATA_FLAG_NONE;
-        String                    UniqueName;
     };
 
     template <typename CreateInfoType>
