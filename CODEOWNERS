@@ -1,8 +1,1 @@
-*                       @TheMostDiligent
-/Graphics/Archiver/     @azhirnov
-
-/Graphics/ShaderTools/src/DXBCUtils.cpp         @azhirnov
-/Graphics/ShaderTools/src/DXCompiler.cpp        @azhirnov
-/Graphics/ShaderTools/src/DXILUtilsStub.cpp     @azhirnov
-/Graphics/ShaderTools/include/DXBCUtils.hpp     @azhirnov
-/Graphics/ShaderTools/include/DXCompiler*.hpp   @azhirnov
+* @TheMostDiligent
