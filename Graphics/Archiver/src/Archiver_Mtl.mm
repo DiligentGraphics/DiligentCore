@@ -120,7 +120,7 @@ bool ArchiverImpl::PatchShadersMtl(const CreateInfoType&     CreateInfo,
     IPipelineResourceSignature* DefaultSignatures[1] = {};
     if (CreateInfo.ResourceSignaturesCount == 0)
     {
-        if (!CreateDefaultResourceSignature<PipelineStateMtlImpl, PipelineResourceSignatureMtlImpl>(Data.pDefaultSignature, CreateInfo.PSODesc, ActiveShaderStages, StageResources))
+        if (!CreateDefaultResourceSignature<PipelineStateMtlImpl, PipelineResourceSignatureMtlImpl>(DevType, Data.pDefaultSignature, CreateInfo.PSODesc, ActiveShaderStages, StageResources))
             return false;
 
         DefaultSignatures[0] = Data.pDefaultSignature;
@@ -402,6 +402,7 @@ SerializedMemory SerializableShaderImpl::PatchShaderMtl(const RefCntAutoPtr<Pipe
 }
 
 template void SerializableResourceSignatureImpl::CreateDeviceSignature<PipelineResourceSignatureMtlImpl>(
+    DeviceType                           Type,
     const PipelineResourceSignatureDesc& Desc,
     SHADER_TYPE                          ShaderStages);
 

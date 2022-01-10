@@ -84,36 +84,37 @@ SerializableResourceSignatureImpl::SerializableResourceSignatureImpl(IReferenceC
 
     while (DeviceFlags != ARCHIVE_DEVICE_DATA_FLAG_NONE)
     {
-        const auto Flag = ExtractLSB(DeviceFlags);
+        const auto Flag    = ExtractLSB(DeviceFlags);
+        const auto DevType = ArchiveDeviceDataFlagToArchiveDeviceType(Flag);
 
         static_assert(ARCHIVE_DEVICE_DATA_FLAG_LAST == ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS, "Please update the switch below to handle the new device data type");
         switch (Flag)
         {
 #if D3D11_SUPPORTED
             case ARCHIVE_DEVICE_DATA_FLAG_D3D11:
-                CreateDeviceSignature<PipelineResourceSignatureD3D11Impl>(Desc, ShaderStages);
+                CreateDeviceSignature<PipelineResourceSignatureD3D11Impl>(DevType, Desc, ShaderStages);
                 break;
 #endif
 #if D3D12_SUPPORTED
             case ARCHIVE_DEVICE_DATA_FLAG_D3D12:
-                CreateDeviceSignature<PipelineResourceSignatureD3D12Impl>(Desc, ShaderStages);
+                CreateDeviceSignature<PipelineResourceSignatureD3D12Impl>(DevType, Desc, ShaderStages);
                 break;
 #endif
 #if GL_SUPPORTED || GLES_SUPPORTED
             case ARCHIVE_DEVICE_DATA_FLAG_GL:
             case ARCHIVE_DEVICE_DATA_FLAG_GLES:
-                CreateDeviceSignature<PipelineResourceSignatureGLImpl>(Desc, ShaderStages);
+                CreateDeviceSignature<PipelineResourceSignatureGLImpl>(DevType, Desc, ShaderStages);
                 break;
 #endif
 #if VULKAN_SUPPORTED
             case ARCHIVE_DEVICE_DATA_FLAG_VULKAN:
-                CreateDeviceSignature<PipelineResourceSignatureVkImpl>(Desc, ShaderStages);
+                CreateDeviceSignature<PipelineResourceSignatureVkImpl>(DevType, Desc, ShaderStages);
                 break;
 #endif
 #if METAL_SUPPORTED
             case ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS:
             case ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS:
-                CreateDeviceSignature<PipelineResourceSignatureMtlImpl>(Desc, ShaderStages);
+                CreateDeviceSignature<PipelineResourceSignatureMtlImpl>(DevType, Desc, ShaderStages);
                 break;
 #endif
             case ARCHIVE_DEVICE_DATA_FLAG_NONE:

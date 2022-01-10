@@ -107,7 +107,7 @@ bool ArchiverImpl::PatchShadersVk(const CreateInfoType& CreateInfo, TPSOData<Cre
     IPipelineResourceSignature* DefaultSignatures[1] = {};
     if (CreateInfo.ResourceSignaturesCount == 0)
     {
-        if (!CreateDefaultResourceSignature<PipelineStateVkImpl, PipelineResourceSignatureVkImpl>(Data.pDefaultSignature, CreateInfo.PSODesc, ActiveShaderStages, ShaderStagesVk))
+        if (!CreateDefaultResourceSignature<PipelineStateVkImpl, PipelineResourceSignatureVkImpl>(DeviceType::Vulkan, Data.pDefaultSignature, CreateInfo.PSODesc, ActiveShaderStages, ShaderStagesVk))
             return false;
 
         DefaultSignatures[0] = Data.pDefaultSignature;
@@ -197,6 +197,7 @@ void SerializableShaderImpl::CreateShaderVk(IReferenceCounters* pRefCounters, Sh
 template PipelineResourceSignatureVkImpl* SerializableResourceSignatureImpl::GetDeviceSignature<PipelineResourceSignatureVkImpl>() const;
 
 template void SerializableResourceSignatureImpl::CreateDeviceSignature<PipelineResourceSignatureVkImpl>(
+    DeviceType                           Type,
     const PipelineResourceSignatureDesc& Desc,
     SHADER_TYPE                          ShaderStages);
 

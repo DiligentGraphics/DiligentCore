@@ -275,7 +275,8 @@ private:
     String GetDefaultPRSName(const char* PSOName) const;
 
     template <typename PipelineStateImplType, typename SignatureImplType, typename ShaderStagesArrayType, typename... ExtraArgsType>
-    bool CreateDefaultResourceSignature(RefCntAutoPtr<SerializableResourceSignatureImpl>& pSignature,
+    bool CreateDefaultResourceSignature(DeviceType                                        Type,
+                                        RefCntAutoPtr<SerializableResourceSignatureImpl>& pSignature,
                                         const PipelineStateDesc&                          PSODesc,
                                         SHADER_TYPE                                       ActiveShaderStages,
                                         const ShaderStagesArrayType&                      ShaderStages,

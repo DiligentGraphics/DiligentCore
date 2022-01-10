@@ -124,7 +124,9 @@ public:
 
 
     template <typename SignatureImplType>
-    void CreateDeviceSignature(const PipelineResourceSignatureDesc& Desc, SHADER_TYPE ShaderStages);
+    void CreateDeviceSignature(DeviceType                           Type,
+                               const PipelineResourceSignatureDesc& Desc,
+                               SHADER_TYPE                          ShaderStages);
 
 private:
     const IPipelineResourceSignature* GetPRS(DeviceType Type) const
@@ -160,6 +162,7 @@ private:
 extern template PipelineResourceSignatureD3D11Impl* SerializableResourceSignatureImpl::GetDeviceSignature<PipelineResourceSignatureD3D11Impl>() const;
 
 extern template void SerializableResourceSignatureImpl::CreateDeviceSignature<PipelineResourceSignatureD3D11Impl>(
+    DeviceType                           Type,
     const PipelineResourceSignatureDesc& Desc,
     SHADER_TYPE                          ShaderStages);
 #endif
@@ -168,6 +171,7 @@ extern template void SerializableResourceSignatureImpl::CreateDeviceSignature<Pi
 extern template PipelineResourceSignatureD3D12Impl* SerializableResourceSignatureImpl::GetDeviceSignature<PipelineResourceSignatureD3D12Impl>() const;
 
 extern template void SerializableResourceSignatureImpl::CreateDeviceSignature<PipelineResourceSignatureD3D12Impl>(
+    DeviceType                           Type,
     const PipelineResourceSignatureDesc& Desc,
     SHADER_TYPE                          ShaderStages);
 #endif
@@ -176,6 +180,7 @@ extern template void SerializableResourceSignatureImpl::CreateDeviceSignature<Pi
 extern template PipelineResourceSignatureGLImpl* SerializableResourceSignatureImpl::GetDeviceSignature<PipelineResourceSignatureGLImpl>() const;
 
 extern template void SerializableResourceSignatureImpl::CreateDeviceSignature<PipelineResourceSignatureGLImpl>(
+    DeviceType                           Type,
     const PipelineResourceSignatureDesc& Desc,
     SHADER_TYPE                          ShaderStages);
 #endif
@@ -184,6 +189,7 @@ extern template void SerializableResourceSignatureImpl::CreateDeviceSignature<Pi
 extern template PipelineResourceSignatureVkImpl* SerializableResourceSignatureImpl::GetDeviceSignature<PipelineResourceSignatureVkImpl>() const;
 
 extern template void SerializableResourceSignatureImpl::CreateDeviceSignature<PipelineResourceSignatureVkImpl>(
+    DeviceType                           Type,
     const PipelineResourceSignatureDesc& Desc,
     SHADER_TYPE                          ShaderStages);
 #endif
@@ -192,6 +198,7 @@ extern template void SerializableResourceSignatureImpl::CreateDeviceSignature<Pi
 extern template PipelineResourceSignatureMtlImpl* SerializableResourceSignatureImpl::GetDeviceSignature<PipelineResourceSignatureMtlImpl>() const;
 
 extern template void SerializableResourceSignatureImpl::CreateDeviceSignature<PipelineResourceSignatureMtlImpl>(
+    DeviceType                           Type,
     const PipelineResourceSignatureDesc& Desc,
     SHADER_TYPE                          ShaderStages);
 #endif

@@ -63,7 +63,8 @@ static void SortResourceSignatures(IPipelineResourceSignature**   ppSrcSignature
 
 
 template <typename PipelineStateImplType, typename SignatureImplType, typename ShaderStagesArrayType, typename... ExtraArgsType>
-bool ArchiverImpl::CreateDefaultResourceSignature(RefCntAutoPtr<SerializableResourceSignatureImpl>& pSignature,
+bool ArchiverImpl::CreateDefaultResourceSignature(DeviceType                                        Type,
+                                                  RefCntAutoPtr<SerializableResourceSignatureImpl>& pSignature,
                                                   const PipelineStateDesc&                          PSODesc,
                                                   SHADER_TYPE                                       ActiveShaderStageFlags,
                                                   const ShaderStagesArrayType&                      ShaderStages,
@@ -104,7 +105,7 @@ bool ArchiverImpl::CreateDefaultResourceSignature(RefCntAutoPtr<SerializableReso
             }
         }
 
-        pSignature->CreateDeviceSignature<SignatureImplType>(SignDesc, ActiveShaderStageFlags);
+        pSignature->CreateDeviceSignature<SignatureImplType>(Type, SignDesc, ActiveShaderStageFlags);
     }
     catch (...)
     {
@@ -160,7 +161,9 @@ struct SerializableResourceSignatureImpl::TPRS final : PRSWapperBase
 
 
 template <typename SignatureImplType>
-void SerializableResourceSignatureImpl::CreateDeviceSignature(const PipelineResourceSignatureDesc& Desc, SHADER_TYPE ShaderStages)
+void SerializableResourceSignatureImpl::CreateDeviceSignature(DeviceType                           Type,
+                                                              const PipelineResourceSignatureDesc& Desc,
+                                                              SHADER_TYPE                          ShaderStages)
 {
     using Traits                = SignatureTraits<SignatureImplType>;
     using MeasureSerializerType = typename Traits::template PSOSerializerType<SerializerMode::Measure>;
@@ -184,8 +187,9 @@ void SerializableResourceSignatureImpl::CreateDeviceSignature(const PipelineReso
         VERIFY_EXPR(Ser.IsEnd());
     }
 
-    VERIFY(!m_pDeviceSignatures[static_cast<size_t>(Traits::Type)], "The signature has already been initialized");
-    m_pDeviceSignatures[static_cast<size_t>(Traits::Type)] = std::move(PRSWrpr);
+    VERIFY_EXPR(Type == Traits::Type || (Type == DeviceType::Metal_MacOS && Traits::Type == DeviceType::Metal_iOS));
+    VERIFY(!m_pDeviceSignatures[static_cast<size_t>(Type)], "Signature for this device type has already been initialized");
+    m_pDeviceSignatures[static_cast<size_t>(Type)] = std::move(PRSWrpr);
 }
 
 
