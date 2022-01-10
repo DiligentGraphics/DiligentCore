@@ -103,7 +103,7 @@ void InitD3D11ShaderResourceCounters(const GraphicsPipelineStateCreateInfo& Crea
 
 
 template <typename CreateInfoType>
-bool ArchiverImpl::PatchShadersD3D11(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data, DefaultPRSInfo& DefPRS)
+bool ArchiverImpl::PatchShadersD3D11(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data)
 {
     TShaderIndices ShaderIndices;
 
@@ -125,10 +125,10 @@ bool ArchiverImpl::PatchShadersD3D11(const CreateInfoType& CreateInfo, TPSOData<
     IPipelineResourceSignature* DefaultSignatures[1] = {};
     if (CreateInfo.ResourceSignaturesCount == 0)
     {
-        if (!CreateDefaultResourceSignature<PipelineStateD3D11Impl, PipelineResourceSignatureD3D11Impl>(DefPRS, CreateInfo.PSODesc, ActiveShaderStages, ShadersD3D11))
+        if (!CreateDefaultResourceSignature<PipelineStateD3D11Impl, PipelineResourceSignatureD3D11Impl>(Data.pDefaultSignature, CreateInfo.PSODesc, ActiveShaderStages, ShadersD3D11))
             return false;
 
-        DefaultSignatures[0] = DefPRS.pPRS;
+        DefaultSignatures[0] = Data.pDefaultSignature;
         SignaturesCount      = 1;
         ppSignatures         = DefaultSignatures;
     }
@@ -181,10 +181,10 @@ bool ArchiverImpl::PatchShadersD3D11(const CreateInfoType& CreateInfo, TPSOData<
     return true;
 }
 
-template bool ArchiverImpl::PatchShadersD3D11<GraphicsPipelineStateCreateInfo>(const GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
-template bool ArchiverImpl::PatchShadersD3D11<ComputePipelineStateCreateInfo>(const ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
-template bool ArchiverImpl::PatchShadersD3D11<TilePipelineStateCreateInfo>(const TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
-template bool ArchiverImpl::PatchShadersD3D11<RayTracingPipelineStateCreateInfo>(const RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
+template bool ArchiverImpl::PatchShadersD3D11<GraphicsPipelineStateCreateInfo>(const GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data);
+template bool ArchiverImpl::PatchShadersD3D11<ComputePipelineStateCreateInfo>(const ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data);
+template bool ArchiverImpl::PatchShadersD3D11<TilePipelineStateCreateInfo>(const TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data);
+template bool ArchiverImpl::PatchShadersD3D11<RayTracingPipelineStateCreateInfo>(const RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data);
 
 void SerializableShaderImpl::CreateShaderD3D11(IReferenceCounters* pRefCounters, ShaderCreateInfo& ShaderCI, String& CompilationLog)
 {

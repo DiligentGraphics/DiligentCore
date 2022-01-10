@@ -192,6 +192,8 @@ private:
         SerializedMemory CommonData;
         TPerDeviceData   PerDeviceData;
 
+        RefCntAutoPtr<SerializableResourceSignatureImpl> pDefaultSignature;
+
         const SerializedMemory& GetCommonData() const { return CommonData; }
     };
     using GraphicsPSOData   = TPSOData<GraphicsPipelineStateCreateInfo>;
@@ -243,28 +245,20 @@ private:
                                DeviceType              DevType,
                                const ShaderCreateInfo& CI);
 
-    struct DefaultPRSInfo
-    {
-        RefCntAutoPtr<SerializableResourceSignatureImpl> pPRS;
-    };
+    template <typename CreateInfoType>
+    bool PatchShadersVk(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data);
 
     template <typename CreateInfoType>
-    bool PatchShadersVk(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data, DefaultPRSInfo& DefPRS);
+    bool PatchShadersD3D12(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data);
 
     template <typename CreateInfoType>
-    bool PatchShadersD3D12(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data, DefaultPRSInfo& DefPRS);
+    bool PatchShadersD3D11(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data);
 
     template <typename CreateInfoType>
-    bool PatchShadersD3D11(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data, DefaultPRSInfo& DefPRS);
+    bool PatchShadersGL(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data);
 
     template <typename CreateInfoType>
-    bool PatchShadersGL(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data, DefaultPRSInfo& DefPRS);
-
-    template <typename CreateInfoType>
-    bool PatchShadersMtl(const CreateInfoType&     CreateInfo,
-                         TPSOData<CreateInfoType>& Data,
-                         DefaultPRSInfo&           DefPRS,
-                         DeviceType                DevType);
+    bool PatchShadersMtl(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data, DeviceType DevType);
 
 
     SerializedMemory SerializeShadersForPSO(const TShaderIndices& ShaderIndices) const;
@@ -281,46 +275,46 @@ private:
     String GetDefaultPRSName(const char* PSOName) const;
 
     template <typename PipelineStateImplType, typename SignatureImplType, typename ShaderStagesArrayType, typename... ExtraArgsType>
-    bool CreateDefaultResourceSignature(DefaultPRSInfo&              DefPRS,
-                                        const PipelineStateDesc&     PSODesc,
-                                        SHADER_TYPE                  ActiveShaderStages,
-                                        const ShaderStagesArrayType& ShaderStages,
+    bool CreateDefaultResourceSignature(RefCntAutoPtr<SerializableResourceSignatureImpl>& pSignature,
+                                        const PipelineStateDesc&                          PSODesc,
+                                        SHADER_TYPE                                       ActiveShaderStages,
+                                        const ShaderStagesArrayType&                      ShaderStages,
                                         const ExtraArgsType&... ExtraArgs);
 };
 
 #if D3D11_SUPPORTED
-extern template bool ArchiverImpl::PatchShadersD3D11<GraphicsPipelineStateCreateInfo>(const GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
-extern template bool ArchiverImpl::PatchShadersD3D11<ComputePipelineStateCreateInfo>(const ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
-extern template bool ArchiverImpl::PatchShadersD3D11<TilePipelineStateCreateInfo>(const TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
-extern template bool ArchiverImpl::PatchShadersD3D11<RayTracingPipelineStateCreateInfo>(const RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
+extern template bool ArchiverImpl::PatchShadersD3D11<GraphicsPipelineStateCreateInfo>(const GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data);
+extern template bool ArchiverImpl::PatchShadersD3D11<ComputePipelineStateCreateInfo>(const ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data);
+extern template bool ArchiverImpl::PatchShadersD3D11<TilePipelineStateCreateInfo>(const TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data);
+extern template bool ArchiverImpl::PatchShadersD3D11<RayTracingPipelineStateCreateInfo>(const RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data);
 #endif
 
 #if D3D12_SUPPORTED
-extern template bool ArchiverImpl::PatchShadersD3D12<GraphicsPipelineStateCreateInfo>(const GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
-extern template bool ArchiverImpl::PatchShadersD3D12<ComputePipelineStateCreateInfo>(const ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
-extern template bool ArchiverImpl::PatchShadersD3D12<TilePipelineStateCreateInfo>(const TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
-extern template bool ArchiverImpl::PatchShadersD3D12<RayTracingPipelineStateCreateInfo>(const RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
+extern template bool ArchiverImpl::PatchShadersD3D12<GraphicsPipelineStateCreateInfo>(const GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data);
+extern template bool ArchiverImpl::PatchShadersD3D12<ComputePipelineStateCreateInfo>(const ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data);
+extern template bool ArchiverImpl::PatchShadersD3D12<TilePipelineStateCreateInfo>(const TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data);
+extern template bool ArchiverImpl::PatchShadersD3D12<RayTracingPipelineStateCreateInfo>(const RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data);
 #endif
 
 #if GL_SUPPORTED
-extern template bool ArchiverImpl::PatchShadersGL<GraphicsPipelineStateCreateInfo>(const GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
-extern template bool ArchiverImpl::PatchShadersGL<ComputePipelineStateCreateInfo>(const ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
-extern template bool ArchiverImpl::PatchShadersGL<TilePipelineStateCreateInfo>(const TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
-extern template bool ArchiverImpl::PatchShadersGL<RayTracingPipelineStateCreateInfo>(const RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
+extern template bool ArchiverImpl::PatchShadersGL<GraphicsPipelineStateCreateInfo>(const GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data);
+extern template bool ArchiverImpl::PatchShadersGL<ComputePipelineStateCreateInfo>(const ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data);
+extern template bool ArchiverImpl::PatchShadersGL<TilePipelineStateCreateInfo>(const TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data);
+extern template bool ArchiverImpl::PatchShadersGL<RayTracingPipelineStateCreateInfo>(const RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data);
 #endif
 
 #if VULKAN_SUPPORTED
-extern template bool ArchiverImpl::PatchShadersVk<GraphicsPipelineStateCreateInfo>(const GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
-extern template bool ArchiverImpl::PatchShadersVk<ComputePipelineStateCreateInfo>(const ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
-extern template bool ArchiverImpl::PatchShadersVk<TilePipelineStateCreateInfo>(const TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
-extern template bool ArchiverImpl::PatchShadersVk<RayTracingPipelineStateCreateInfo>(const RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
+extern template bool ArchiverImpl::PatchShadersVk<GraphicsPipelineStateCreateInfo>(const GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data);
+extern template bool ArchiverImpl::PatchShadersVk<ComputePipelineStateCreateInfo>(const ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data);
+extern template bool ArchiverImpl::PatchShadersVk<TilePipelineStateCreateInfo>(const TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data);
+extern template bool ArchiverImpl::PatchShadersVk<RayTracingPipelineStateCreateInfo>(const RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data);
 #endif
 
 #if METAL_SUPPORTED
-extern template bool ArchiverImpl::PatchShadersMtl<GraphicsPipelineStateCreateInfo>(const GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS, DeviceType DevType);
-extern template bool ArchiverImpl::PatchShadersMtl<ComputePipelineStateCreateInfo>(const ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS, DeviceType DevType);
-extern template bool ArchiverImpl::PatchShadersMtl<TilePipelineStateCreateInfo>(const TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS, DeviceType DevType);
-extern template bool ArchiverImpl::PatchShadersMtl<RayTracingPipelineStateCreateInfo>(const RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS, DeviceType DevType);
+extern template bool ArchiverImpl::PatchShadersMtl<GraphicsPipelineStateCreateInfo>(const GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data, DeviceType DevType);
+extern template bool ArchiverImpl::PatchShadersMtl<ComputePipelineStateCreateInfo>(const ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data, DeviceType DevType);
+extern template bool ArchiverImpl::PatchShadersMtl<TilePipelineStateCreateInfo>(const TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data, DeviceType DevType);
+extern template bool ArchiverImpl::PatchShadersMtl<RayTracingPipelineStateCreateInfo>(const RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data, DeviceType DevType);
 #endif
 
 } // namespace Diligent

@@ -63,42 +63,37 @@ static void SortResourceSignatures(IPipelineResourceSignature**   ppSrcSignature
 
 
 template <typename PipelineStateImplType, typename SignatureImplType, typename ShaderStagesArrayType, typename... ExtraArgsType>
-bool ArchiverImpl::CreateDefaultResourceSignature(DefaultPRSInfo&              DefPRS,
-                                                  const PipelineStateDesc&     PSODesc,
-                                                  SHADER_TYPE                  ActiveShaderStageFlags,
-                                                  const ShaderStagesArrayType& ShaderStages,
+bool ArchiverImpl::CreateDefaultResourceSignature(RefCntAutoPtr<SerializableResourceSignatureImpl>& pSignature,
+                                                  const PipelineStateDesc&                          PSODesc,
+                                                  SHADER_TYPE                                       ActiveShaderStageFlags,
+                                                  const ShaderStagesArrayType&                      ShaderStages,
                                                   const ExtraArgsType&... ExtraArgs)
 {
     try
     {
         auto SignDesc = PipelineStateImplType::GetDefaultResourceSignatureDesc(ShaderStages, PSODesc.Name, PSODesc.ResourceLayout, PSODesc.SRBAllocationGranularity, ExtraArgs...);
 
-        RefCntAutoPtr<SerializableResourceSignatureImpl> pDefaultPRS;
-        if (!DefPRS.pPRS)
+        if (!pSignature)
         {
             // Get unique name that is not yet present in the cache
             const auto UniqueName = GetDefaultPRSName(PSODesc.Name);
             SignDesc.SetName(UniqueName.c_str());
 
-            m_pSerializationDevice->CreatePipelineResourceSignature(SignDesc, ARCHIVE_DEVICE_DATA_FLAG_NONE, ActiveShaderStageFlags, pDefaultPRS.template RawDblPtr<IPipelineResourceSignature>());
-            if (pDefaultPRS == nullptr)
+            m_pSerializationDevice->CreatePipelineResourceSignature(SignDesc, ARCHIVE_DEVICE_DATA_FLAG_NONE, ActiveShaderStageFlags, pSignature.template RawDblPtr<IPipelineResourceSignature>());
+            if (!pSignature)
                 return false;
 
             // Even though we are not going to reuse the default PRS, we need to add it to the cache
             // to make its name unavailable for future signatures
-            if (!CachePipelineResourceSignature(pDefaultPRS))
+            if (!CachePipelineResourceSignature(pSignature))
             {
                 UNEXPECTED("Failed to add default signature '", UniqueName, "' to the cache. This should've never happened as we generated the unique name.");
                 return false;
             }
-
-            DefPRS.pPRS = pDefaultPRS;
         }
         else
         {
-            pDefaultPRS = DefPRS.pPRS;
-
-            const auto& Sign0Desc = pDefaultPRS->GetDesc();
+            const auto& Sign0Desc = pSignature->GetDesc();
             // Override the name to make sure it is consistent for all devices
             SignDesc.SetName(Sign0Desc.Name);
 
@@ -109,7 +104,7 @@ bool ArchiverImpl::CreateDefaultResourceSignature(DefaultPRSInfo&              D
             }
         }
 
-        pDefaultPRS->CreateDeviceSignature<SignatureImplType>(SignDesc, ActiveShaderStageFlags);
+        pSignature->CreateDeviceSignature<SignatureImplType>(SignDesc, ActiveShaderStageFlags);
     }
     catch (...)
     {

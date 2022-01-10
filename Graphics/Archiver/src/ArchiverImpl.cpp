@@ -812,10 +812,7 @@ bool ArchiverImpl::SerializePSO(TNamedObjectHashMap<TPSOData<CreateInfoType>>& P
         return false;
     }
 
-    auto&      Data          = IterAndInserted.first->second;
-    const bool UseDefaultPRS = (PSOCreateInfo.ResourceSignaturesCount == 0);
-
-    DefaultPRSInfo DefPRS;
+    auto& Data = IterAndInserted.first->second;
     for (auto DeviceBits = ArchiveInfo.DeviceFlags; DeviceBits != 0;)
     {
         const auto Flag = ExtractLSB(DeviceBits);
@@ -825,33 +822,33 @@ bool ArchiverImpl::SerializePSO(TNamedObjectHashMap<TPSOData<CreateInfoType>>& P
         {
 #if D3D11_SUPPORTED
             case ARCHIVE_DEVICE_DATA_FLAG_D3D11:
-                if (!PatchShadersD3D11(PSOCreateInfo, Data, DefPRS))
+                if (!PatchShadersD3D11(PSOCreateInfo, Data))
                     return false;
                 break;
 #endif
 #if D3D12_SUPPORTED
             case ARCHIVE_DEVICE_DATA_FLAG_D3D12:
-                if (!PatchShadersD3D12(PSOCreateInfo, Data, DefPRS))
+                if (!PatchShadersD3D12(PSOCreateInfo, Data))
                     return false;
                 break;
 #endif
 #if GL_SUPPORTED || GLES_SUPPORTED
             case ARCHIVE_DEVICE_DATA_FLAG_GL:
             case ARCHIVE_DEVICE_DATA_FLAG_GLES:
-                if (!PatchShadersGL(PSOCreateInfo, Data, DefPRS))
+                if (!PatchShadersGL(PSOCreateInfo, Data))
                     return false;
                 break;
 #endif
 #if VULKAN_SUPPORTED
             case ARCHIVE_DEVICE_DATA_FLAG_VULKAN:
-                if (!PatchShadersVk(PSOCreateInfo, Data, DefPRS))
+                if (!PatchShadersVk(PSOCreateInfo, Data))
                     return false;
                 break;
 #endif
 #if METAL_SUPPORTED
             case ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS:
             case ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS:
-                if (!PatchShadersMtl(PSOCreateInfo, Data, DefPRS, ArchiveDeviceDataFlagToArchiveDeviceType(Flag)))
+                if (!PatchShadersMtl(PSOCreateInfo, Data, ArchiveDeviceDataFlagToArchiveDeviceType(Flag)))
                     return false;
                 break;
 #endif
@@ -869,9 +866,9 @@ bool ArchiverImpl::SerializePSO(TNamedObjectHashMap<TPSOData<CreateInfoType>>& P
     {
         IPipelineResourceSignature* DefaultSignatures[1] = {};
         auto                        SignaturesCount      = PSOCreateInfo.ResourceSignaturesCount;
-        if (UseDefaultPRS)
+        if (Data.pDefaultSignature)
         {
-            DefaultSignatures[0]               = DefPRS.pPRS;
+            DefaultSignatures[0]               = Data.pDefaultSignature;
             PSOCreateInfo.ppResourceSignatures = DefaultSignatures;
             SignaturesCount                    = 1;
         }

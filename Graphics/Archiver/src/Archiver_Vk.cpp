@@ -85,7 +85,7 @@ struct SerializableResourceSignatureImpl::SignatureTraits<PipelineResourceSignat
 };
 
 template <typename CreateInfoType>
-bool ArchiverImpl::PatchShadersVk(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data, DefaultPRSInfo& DefPRS)
+bool ArchiverImpl::PatchShadersVk(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data)
 {
     std::vector<ShaderStageInfoVk> ShaderStages;
     SHADER_TYPE                    ActiveShaderStages = SHADER_TYPE_UNKNOWN;
@@ -107,10 +107,10 @@ bool ArchiverImpl::PatchShadersVk(const CreateInfoType& CreateInfo, TPSOData<Cre
     IPipelineResourceSignature* DefaultSignatures[1] = {};
     if (CreateInfo.ResourceSignaturesCount == 0)
     {
-        if (!CreateDefaultResourceSignature<PipelineStateVkImpl, PipelineResourceSignatureVkImpl>(DefPRS, CreateInfo.PSODesc, ActiveShaderStages, ShaderStagesVk))
+        if (!CreateDefaultResourceSignature<PipelineStateVkImpl, PipelineResourceSignatureVkImpl>(Data.pDefaultSignature, CreateInfo.PSODesc, ActiveShaderStages, ShaderStagesVk))
             return false;
 
-        DefaultSignatures[0] = DefPRS.pPRS;
+        DefaultSignatures[0] = Data.pDefaultSignature;
         SignaturesCount      = 1;
         ppSignatures         = DefaultSignatures;
     }
@@ -171,10 +171,10 @@ bool ArchiverImpl::PatchShadersVk(const CreateInfoType& CreateInfo, TPSOData<Cre
     return true;
 }
 
-template bool ArchiverImpl::PatchShadersVk<GraphicsPipelineStateCreateInfo>(const GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
-template bool ArchiverImpl::PatchShadersVk<ComputePipelineStateCreateInfo>(const ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
-template bool ArchiverImpl::PatchShadersVk<TilePipelineStateCreateInfo>(const TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
-template bool ArchiverImpl::PatchShadersVk<RayTracingPipelineStateCreateInfo>(const RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS);
+template bool ArchiverImpl::PatchShadersVk<GraphicsPipelineStateCreateInfo>(const GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data);
+template bool ArchiverImpl::PatchShadersVk<ComputePipelineStateCreateInfo>(const ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data);
+template bool ArchiverImpl::PatchShadersVk<TilePipelineStateCreateInfo>(const TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data);
+template bool ArchiverImpl::PatchShadersVk<RayTracingPipelineStateCreateInfo>(const RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data);
 
 
 void SerializableShaderImpl::CreateShaderVk(IReferenceCounters* pRefCounters, ShaderCreateInfo& ShaderCI, String& CompilationLog)

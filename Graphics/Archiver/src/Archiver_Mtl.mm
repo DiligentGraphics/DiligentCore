@@ -100,7 +100,6 @@ inline SHADER_TYPE GetShaderStageType(const ShaderStageInfoMtl& Stage)
 template <typename CreateInfoType>
 bool ArchiverImpl::PatchShadersMtl(const CreateInfoType&     CreateInfo,
                                    TPSOData<CreateInfoType>& Data,
-                                   DefaultPRSInfo&           DefPRS,
                                    DeviceType                DevType)
 {
     VERIFY_EXPR(DevType == DeviceType::Metal_MacOS || DevType == DeviceType::Metal_iOS);
@@ -121,10 +120,10 @@ bool ArchiverImpl::PatchShadersMtl(const CreateInfoType&     CreateInfo,
     IPipelineResourceSignature* DefaultSignatures[1] = {};
     if (CreateInfo.ResourceSignaturesCount == 0)
     {
-        if (!CreateDefaultResourceSignature<PipelineStateMtlImpl, PipelineResourceSignatureMtlImpl>(DefPRS, CreateInfo.PSODesc, ActiveShaderStages, StageResources))
+        if (!CreateDefaultResourceSignature<PipelineStateMtlImpl, PipelineResourceSignatureMtlImpl>(Data.pDefaultSignature, CreateInfo.PSODesc, ActiveShaderStages, StageResources))
             return false;
 
-        DefaultSignatures[0] = DefPRS.pPRS;
+        DefaultSignatures[0] = Data.pDefaultSignature;
         SignaturesCount      = 1;
         ppSignatures         = DefaultSignatures;
     }
@@ -165,10 +164,10 @@ bool ArchiverImpl::PatchShadersMtl(const CreateInfoType&     CreateInfo,
     return true;
 }
 
-template bool ArchiverImpl::PatchShadersMtl<GraphicsPipelineStateCreateInfo>(const GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS, DeviceType DevType);
-template bool ArchiverImpl::PatchShadersMtl<ComputePipelineStateCreateInfo>(const ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS, DeviceType DevType);
-template bool ArchiverImpl::PatchShadersMtl<TilePipelineStateCreateInfo>(const TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS, DeviceType DevType);
-template bool ArchiverImpl::PatchShadersMtl<RayTracingPipelineStateCreateInfo>(const RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data, DefaultPRSInfo& DefPRS, DeviceType DevType);
+template bool ArchiverImpl::PatchShadersMtl<GraphicsPipelineStateCreateInfo>(const GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data, DeviceType DevType);
+template bool ArchiverImpl::PatchShadersMtl<ComputePipelineStateCreateInfo>(const ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data, DeviceType DevType);
+template bool ArchiverImpl::PatchShadersMtl<TilePipelineStateCreateInfo>(const TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data, DeviceType DevType);
+template bool ArchiverImpl::PatchShadersMtl<RayTracingPipelineStateCreateInfo>(const RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data, DeviceType DevType);
 
 
 static_assert(std::is_same<MtlArchiverResourceCounters, MtlResourceCounters>::value,
