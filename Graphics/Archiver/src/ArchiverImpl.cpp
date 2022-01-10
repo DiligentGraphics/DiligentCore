@@ -147,11 +147,7 @@ void ArchiverImpl::ReserveSpace(PendingData& Pending) const
 
         for (Uint32 type = 0; type < DeviceDataCount; ++type)
         {
-            DeviceType Type = static_cast<DeviceType>(type);
-            if (Type == DeviceType::Metal_MacOS)
-                Type = DeviceType::Metal_iOS; // MacOS & iOS have the same PRS
-
-            const auto& Src = PRS.second.GetDeviceData(Type);
+            const auto& Src = PRS.second.GetDeviceData(static_cast<DeviceType>(type));
             PerDeviceData[type].AddSpace(Src.Size());
         }
     }
@@ -452,11 +448,7 @@ Bool ArchiverImpl::SerializeToStream(IFileStream* pStream)
 
     auto WritePRSPerDeviceData = [&Pending](PRSDataHeader& Header, DeviceType Type, const PRSData& Src) //
     {
-        auto PRSDevType = Type;
-        if (PRSDevType == DeviceType::Metal_MacOS)
-            PRSDevType = DeviceType::Metal_iOS; // MacOS & iOS have the same PRS
-
-        WritePerDeviceData(Header, Type, Src.GetDeviceData(PRSDevType), Pending.PerDeviceData[static_cast<size_t>(Type)]);
+        WritePerDeviceData(Header, Type, Src.GetDeviceData(Type), Pending.PerDeviceData[static_cast<size_t>(Type)]);
     };
     WriteDeviceObjectData<PRSDataHeader>(ChunkType::ResourceSignature, Pending, m_PRSMap, WritePRSPerDeviceData);
 

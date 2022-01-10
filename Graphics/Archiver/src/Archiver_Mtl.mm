@@ -48,7 +48,7 @@ namespace Diligent
 template <>
 struct SerializableResourceSignatureImpl::SignatureTraits<PipelineResourceSignatureMtlImpl>
 {
-    static constexpr DeviceType Type = DeviceType::Metal_iOS;
+    static constexpr DeviceType Type = DeviceType::Metal_MacOS;
 
     template <SerializerMode Mode>
     using PSOSerializerType = PSOSerializerMtl<Mode>;
@@ -134,7 +134,7 @@ bool ArchiverImpl::PatchShadersMtl(const CreateInfoType&     CreateInfo,
         // Sort signatures by binding index.
         // Note that SignaturesCount will be overwritten with the maximum binding index.
         SignatureArray<PipelineResourceSignatureMtlImpl> Signatures      = {};
-        SortResourceSignatures(ppSignatures, SignaturesCount, Signatures, SignaturesCount);
+        SortResourceSignatures(ppSignatures, SignaturesCount, Signatures, SignaturesCount, DevType);
 
         std::array<MtlResourceCounters, MAX_RESOURCE_SIGNATURES> BaseBindings{};
         MtlResourceCounters                                      CurrBindings{};
@@ -214,7 +214,7 @@ void SerializableShaderImpl::CreateShaderMtl(ShaderCreateInfo& ShaderCI, String&
         pLog->Release();
 }
 
-template PipelineResourceSignatureMtlImpl* SerializableResourceSignatureImpl::GetDeviceSignature<PipelineResourceSignatureMtlImpl>() const;
+template PipelineResourceSignatureMtlImpl* SerializableResourceSignatureImpl::GetDeviceSignature<PipelineResourceSignatureMtlImpl>(DeviceType Type) const;
 
 const SPIRVShaderResources* SerializableShaderImpl::GetMtlShaderSPIRVResources() const
 {
@@ -421,7 +421,7 @@ void SerializationDeviceImpl::GetPipelineResourceBindingsMtl(const PipelineResou
         const auto* pSerPRS = ClassPtrCast<SerializableResourceSignatureImpl>(Info.ppResourceSignatures[i]);
         const auto& Desc    = pSerPRS->GetDesc();
 
-        Signatures[Desc.BindingIndex] = pSerPRS->GetDeviceSignature<PipelineResourceSignatureMtlImpl>();
+        Signatures[Desc.BindingIndex] = pSerPRS->GetDeviceSignature<PipelineResourceSignatureMtlImpl>(DeviceObjectArchiveBase::DeviceType::Metal_MacOS);
         SignaturesCount               = std::max(SignaturesCount, static_cast<Uint32>(Desc.BindingIndex) + 1);
     }
 

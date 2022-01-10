@@ -59,7 +59,7 @@ public:
     using TBase = ObjectBase<IPipelineResourceSignature>;
 
     using DeviceType                    = DeviceObjectArchiveBase::DeviceType;
-    static constexpr Uint32 DeviceCount = static_cast<Uint32>(DeviceType::Metal_MacOS);
+    static constexpr Uint32 DeviceCount = static_cast<Uint32>(DeviceType::Count);
 
     SerializableResourceSignatureImpl(IReferenceCounters*                  pRefCounters,
                                       SerializationDeviceImpl*             pDevice,
@@ -114,9 +114,10 @@ public:
     struct SignatureTraits;
 
     template <typename SignatureType>
-    SignatureType* GetDeviceSignature() const
+    SignatureType* GetDeviceSignature(DeviceType Type) const
     {
-        constexpr auto Type = SignatureTraits<SignatureType>::Type;
+        constexpr auto TraitsType = SignatureTraits<SignatureType>::Type;
+        VERIFY_EXPR(Type == TraitsType || (Type == DeviceType::Metal_iOS && TraitsType == DeviceType::Metal_MacOS));
 
         auto& Wrpr = m_pDeviceSignatures[static_cast<size_t>(Type)];
         return Wrpr ? Wrpr->GetPRS<SignatureType>() : nullptr;
@@ -159,7 +160,7 @@ private:
 };
 
 #if D3D11_SUPPORTED
-extern template PipelineResourceSignatureD3D11Impl* SerializableResourceSignatureImpl::GetDeviceSignature<PipelineResourceSignatureD3D11Impl>() const;
+extern template PipelineResourceSignatureD3D11Impl* SerializableResourceSignatureImpl::GetDeviceSignature<PipelineResourceSignatureD3D11Impl>(DeviceType Type) const;
 
 extern template void SerializableResourceSignatureImpl::CreateDeviceSignature<PipelineResourceSignatureD3D11Impl>(
     DeviceType                           Type,
@@ -168,7 +169,7 @@ extern template void SerializableResourceSignatureImpl::CreateDeviceSignature<Pi
 #endif
 
 #if D3D12_SUPPORTED
-extern template PipelineResourceSignatureD3D12Impl* SerializableResourceSignatureImpl::GetDeviceSignature<PipelineResourceSignatureD3D12Impl>() const;
+extern template PipelineResourceSignatureD3D12Impl* SerializableResourceSignatureImpl::GetDeviceSignature<PipelineResourceSignatureD3D12Impl>(DeviceType Type) const;
 
 extern template void SerializableResourceSignatureImpl::CreateDeviceSignature<PipelineResourceSignatureD3D12Impl>(
     DeviceType                           Type,
@@ -177,7 +178,7 @@ extern template void SerializableResourceSignatureImpl::CreateDeviceSignature<Pi
 #endif
 
 #if GL_SUPPORTED || GLES_SUPPORTED
-extern template PipelineResourceSignatureGLImpl* SerializableResourceSignatureImpl::GetDeviceSignature<PipelineResourceSignatureGLImpl>() const;
+extern template PipelineResourceSignatureGLImpl* SerializableResourceSignatureImpl::GetDeviceSignature<PipelineResourceSignatureGLImpl>(DeviceType Type) const;
 
 extern template void SerializableResourceSignatureImpl::CreateDeviceSignature<PipelineResourceSignatureGLImpl>(
     DeviceType                           Type,
@@ -186,7 +187,7 @@ extern template void SerializableResourceSignatureImpl::CreateDeviceSignature<Pi
 #endif
 
 #if VULKAN_SUPPORTED
-extern template PipelineResourceSignatureVkImpl* SerializableResourceSignatureImpl::GetDeviceSignature<PipelineResourceSignatureVkImpl>() const;
+extern template PipelineResourceSignatureVkImpl* SerializableResourceSignatureImpl::GetDeviceSignature<PipelineResourceSignatureVkImpl>(DeviceType Type) const;
 
 extern template void SerializableResourceSignatureImpl::CreateDeviceSignature<PipelineResourceSignatureVkImpl>(
     DeviceType                           Type,
@@ -195,7 +196,7 @@ extern template void SerializableResourceSignatureImpl::CreateDeviceSignature<Pi
 #endif
 
 #if METAL_SUPPORTED
-extern template PipelineResourceSignatureMtlImpl* SerializableResourceSignatureImpl::GetDeviceSignature<PipelineResourceSignatureMtlImpl>() const;
+extern template PipelineResourceSignatureMtlImpl* SerializableResourceSignatureImpl::GetDeviceSignature<PipelineResourceSignatureMtlImpl>(DeviceType Type) const;
 
 extern template void SerializableResourceSignatureImpl::CreateDeviceSignature<PipelineResourceSignatureMtlImpl>(
     DeviceType                           Type,

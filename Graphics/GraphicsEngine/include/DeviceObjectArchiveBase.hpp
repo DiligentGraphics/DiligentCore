@@ -70,8 +70,8 @@ public:
         Direct3D11,
         Direct3D12,
         Vulkan,
-        Metal_iOS,
         Metal_MacOS,
+        Metal_iOS,
         Count
     };
 
@@ -119,8 +119,8 @@ protected:
         Direct3D11,
         Direct3D12,
         Vulkan,
-        Metal_iOS,
         Metal_MacOS,
+        Metal_iOS,
         Count
     };
     using TBlockBaseOffsets = std::array<Uint32, static_cast<size_t>(BlockOffsetType::Count)>;

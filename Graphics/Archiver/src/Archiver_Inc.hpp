@@ -40,10 +40,11 @@ template <typename SignatureType>
 using SignatureArray = std::array<RefCntAutoPtr<SignatureType>, MAX_RESOURCE_SIGNATURES>;
 
 template <typename SignatureType>
-static void SortResourceSignatures(IPipelineResourceSignature**   ppSrcSignatures,
-                                   Uint32                         SrcSignaturesCount,
-                                   SignatureArray<SignatureType>& SortedSignatures,
-                                   Uint32&                        SortedSignaturesCount)
+void SortResourceSignatures(IPipelineResourceSignature**                  ppSrcSignatures,
+                            Uint32                                        SrcSignaturesCount,
+                            SignatureArray<SignatureType>&                SortedSignatures,
+                            Uint32&                                       SortedSignaturesCount,
+                            SerializableResourceSignatureImpl::DeviceType Type)
 {
     for (Uint32 i = 0; i < SrcSignaturesCount; ++i)
     {
@@ -53,10 +54,22 @@ static void SortResourceSignatures(IPipelineResourceSignature**   ppSrcSignature
         const auto& Desc = pSerPRS->GetDesc();
 
         VERIFY(!SortedSignatures[Desc.BindingIndex], "Multiple signatures use the same binding index (", Desc.BindingIndex, ").");
-        SortedSignatures[Desc.BindingIndex] = pSerPRS->template GetDeviceSignature<SignatureType>();
+        SortedSignatures[Desc.BindingIndex] = pSerPRS->template GetDeviceSignature<SignatureType>(Type);
 
         SortedSignaturesCount = std::max(SortedSignaturesCount, Uint32{Desc.BindingIndex} + 1u);
     }
+}
+
+template <typename SignatureType>
+void SortResourceSignatures(IPipelineResourceSignature**   ppSrcSignatures,
+                            Uint32                         SrcSignaturesCount,
+                            SignatureArray<SignatureType>& SortedSignatures,
+                            Uint32&                        SortedSignaturesCount)
+{
+    constexpr auto Type = SerializableResourceSignatureImpl::SignatureTraits<SignatureType>::Type;
+    SortResourceSignatures<SignatureType>(ppSrcSignatures, SrcSignaturesCount,
+                                          SortedSignatures, SortedSignaturesCount,
+                                          Type);
 }
 
 } // namespace
@@ -187,7 +200,7 @@ void SerializableResourceSignatureImpl::CreateDeviceSignature(DeviceType        
         VERIFY_EXPR(Ser.IsEnd());
     }
 
-    VERIFY_EXPR(Type == Traits::Type || (Type == DeviceType::Metal_MacOS && Traits::Type == DeviceType::Metal_iOS));
+    VERIFY_EXPR(Type == Traits::Type || (Type == DeviceType::Metal_iOS && Traits::Type == DeviceType::Metal_MacOS));
     VERIFY(!m_pDeviceSignatures[static_cast<size_t>(Type)], "Signature for this device type has already been initialized");
     m_pDeviceSignatures[static_cast<size_t>(Type)] = std::move(PRSWrpr);
 }
