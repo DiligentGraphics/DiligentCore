@@ -1794,6 +1794,17 @@ void TestSamplers(bool UseImtblSamplers)
         TEXTURE_VIEW_SHADER_RESOURCE //
     };
 
+    static constexpr size_t Buff_StaticIdx[] = {2, 1};
+    static constexpr size_t Buff_MutIdx[]    = {3, 0};
+    static constexpr size_t Buff_DynIdx[]    = {5, 4};
+
+    ReferenceBuffers RefBuffers{
+        6,
+        USAGE_DEFAULT,
+        BIND_UNIFORM_BUFFER //
+    };
+
+
     if (!UseImtblSamplers)
     {
         RefCntAutoPtr<ISampler> pSampler;
@@ -1835,12 +1846,17 @@ void TestSamplers(bool UseImtblSamplers)
             Macros.AddShaderMacro("MUTABLE_TEX_ARRAY_SIZE", static_cast<int>(MutableTexArraySize));
             Macros.AddShaderMacro("DYNAMIC_TEX_ARRAY_SIZE", static_cast<int>(DynamicTexArraySize));
 
-            RefTextures.ClearUsedValues();
-
             // Add macros that define reference colors
+
+            RefTextures.ClearUsedValues();
             Macros.AddShaderMacro("Tex2D_Static_Ref", RefTextures.GetColor(Tex2D_StaticIdx[s]));
             Macros.AddShaderMacro("Tex2D_Mut_Ref", RefTextures.GetColor(Tex2D_MutIdx[s]));
             Macros.AddShaderMacro("Tex2D_Dyn_Ref", RefTextures.GetColor(Tex2D_DynIdx[s]));
+
+            RefBuffers.ClearUsedValues();
+            Macros.AddShaderMacro("Buff_Static_Ref", RefBuffers.GetValue(Buff_StaticIdx[s]));
+            Macros.AddShaderMacro("Buff_Mut_Ref", RefBuffers.GetValue(Buff_MutIdx[s]));
+            Macros.AddShaderMacro("Buff_Dyn_Ref", RefBuffers.GetValue(Buff_DynIdx[s]));
 
             for (Uint32 i = 0; i < StaticTexArraySize; ++i)
                 Macros.AddShaderMacro((std::string{"Tex2DArr_Static_Ref"} + std::to_string(i)).c_str(), RefTextures.GetColor(Tex2DArr_StaticIdx[s] + i));
@@ -1855,7 +1871,7 @@ void TestSamplers(bool UseImtblSamplers)
         };
 
         RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
-        pDevice->GetEngineFactory()->CreateDefaultShaderSourceStreamFactory("shaders/ShaderResourceLayout", &pShaderSourceFactory);
+        pDevice->GetEngineFactory()->CreateDefaultShaderSourceStreamFactory("shaders/Archiver", &pShaderSourceFactory);
 
         ShaderCreateInfo ShaderCI;
         ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
@@ -1873,7 +1889,7 @@ void TestSamplers(bool UseImtblSamplers)
         {
             PrepareMacros(VSResArrId);
             ShaderCI.Macros          = Macros;
-            ShaderCI.FilePath        = "ImmutableSamplers.hlsl";
+            ShaderCI.FilePath        = "Samplers.hlsl";
             ShaderCI.Desc.Name       = "Archiver.Samplers - VS";
             ShaderCI.EntryPoint      = "VSMain";
             ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
@@ -1886,7 +1902,7 @@ void TestSamplers(bool UseImtblSamplers)
         {
             PrepareMacros(PSResArrId);
             ShaderCI.Macros          = Macros;
-            ShaderCI.FilePath        = "ImmutableSamplers.hlsl";
+            ShaderCI.FilePath        = "Samplers.hlsl";
             ShaderCI.Desc.Name       = "Archiver.Samplers - PS";
             ShaderCI.EntryPoint      = "PSMain";
             ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
@@ -1911,7 +1927,12 @@ void TestSamplers(bool UseImtblSamplers)
                 Vars.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, Name, VarType);
             }
         };
+
         // clang-format off
+        AddVar("UniformBuff_Stat",  SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+        AddVar("UniformBuff_Mut",   SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE);
+        AddVar("UniformBuff_Dyn",   SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
+
         AddVar("g_Tex2D_Static",    SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
       //AddVar("g_Tex2D_Mut",       SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE); // Default type
         AddVar("g_Tex2D_Dyn",       SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
@@ -1978,12 +1999,15 @@ void TestSamplers(bool UseImtblSamplers)
     auto BindResources = [&](SHADER_TYPE ShaderType) {
         const auto id = ShaderType == SHADER_TYPE_VERTEX ? VSResArrId : PSResArrId;
 
+        pPSO->GetStaticVariableByName(ShaderType, "UniformBuff_Stat")->Set(RefBuffers.GetBuffer(Buff_StaticIdx[id]));
         pPSO->GetStaticVariableByName(ShaderType, "g_Tex2D_Static")->Set(RefTextures.GetViewObjects(Tex2D_StaticIdx[id])[0]);
         pPSO->GetStaticVariableByName(ShaderType, "g_Tex2DArr_Static")->SetArray(RefTextures.GetViewObjects(Tex2DArr_StaticIdx[id]), 0, StaticTexArraySize);
 
+        pSRB->GetVariableByName(ShaderType, "UniformBuff_Mut")->Set(RefBuffers.GetBuffer(Buff_MutIdx[id]));
         pSRB->GetVariableByName(ShaderType, "g_Tex2D_Mut")->Set(RefTextures.GetViewObjects(Tex2D_MutIdx[id])[0]);
         pSRB->GetVariableByName(ShaderType, "g_Tex2DArr_Mut")->SetArray(RefTextures.GetViewObjects(Tex2DArr_MutIdx[id]), 0, MutableTexArraySize);
 
+        pSRB->GetVariableByName(ShaderType, "UniformBuff_Dyn")->Set(RefBuffers.GetBuffer(Buff_DynIdx[id]));
         pSRB->GetVariableByName(ShaderType, "g_Tex2D_Dyn")->Set(RefTextures.GetViewObjects(Tex2D_DynIdx[id])[0]);
         pSRB->GetVariableByName(ShaderType, "g_Tex2DArr_Dyn")->SetArray(RefTextures.GetViewObjects(Tex2DArr_DynIdx[id]), 0, DynamicTexArraySize);
     };
