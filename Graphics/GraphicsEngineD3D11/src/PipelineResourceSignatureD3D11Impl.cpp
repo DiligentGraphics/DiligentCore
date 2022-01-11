@@ -173,13 +173,13 @@ void PipelineResourceSignatureD3D11Impl::CreateLayout(const bool IsSerialized)
         if (!IsSerialized)
         {
             ImtblSampAttribs.BindPoints = BindPoints;
-            if (HasDevice())
-                GetDevice()->CreateSampler(ImtblSamp.Desc, ImtblSampAttribs.pSampler.DblPtr<ISampler>());
         }
         else
         {
             DEV_CHECK_ERR(ImtblSampAttribs.BindPoints == BindPoints, "Deserialized immutable sampler bind points are invalid");
         }
+        if (HasDevice())
+            GetDevice()->CreateSampler(ImtblSamp.Desc, ImtblSampAttribs.pSampler.DblPtr<ISampler>());
     }
 
     D3D11ShaderResourceCounters StaticResCounters;
