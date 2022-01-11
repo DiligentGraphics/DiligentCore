@@ -372,10 +372,22 @@ void ValidatePipelineResourceSignatures(const PipelineStateCreateInfo& CreateInf
         for (const auto& it : AllResources)
         {
             const auto& ResDesc = it.second.Desc;
-            if (ResDesc.VarType != ResLayout.DefaultVariableType)
+
+            auto VarTypeOK = ResDesc.VarType == ResLayout.DefaultVariableType;
+            if (!VarTypeOK && ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER)
+            {
+                const auto& SignDesc = it.second.pSign->GetDesc();
+                if (SignDesc.UseCombinedTextureSamplers)
+                {
+                    const auto RefDesc = FindPipelineResourceLayoutVariable(PSODesc.ResourceLayout, ResDesc.Name, ResDesc.ShaderStages, SignDesc.CombinedSamplerSuffix);
+                    // The type of the immutable sampler must match the type of the texture variable it is assigned to
+                    VarTypeOK = RefDesc.Type == ResDesc.VarType;
+                }
+            }
+            if (!VarTypeOK)
             {
                 LOG_PSO_ERROR_AND_THROW("The type of variable '", ResDesc.Name, "' not explicitly defined by the resource layout (", GetShaderVariableTypeLiteralName(ResDesc.VarType),
-                                        ") does not match the default varaible type (", GetShaderVariableTypeLiteralName(ResLayout.DefaultVariableType),
+                                        ") does not match the default variable type (", GetShaderVariableTypeLiteralName(ResLayout.DefaultVariableType),
                                         "). Note that PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0 flag is for internal use only. If you see this message while "
                                         "unpacking PSO from the archive, this might indicate a bug.");
             }

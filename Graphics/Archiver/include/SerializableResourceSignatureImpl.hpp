@@ -66,11 +66,14 @@ public:
                                       const PipelineResourceSignatureDesc& Desc,
                                       ARCHIVE_DEVICE_DATA_FLAGS            DeviceFlags,
                                       SHADER_TYPE                          ShaderStages = SHADER_TYPE_UNKNOWN);
+
+    SerializableResourceSignatureImpl(IReferenceCounters* pRefCounters, const char* Name) noexcept;
+
     ~SerializableResourceSignatureImpl() override;
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_PipelineResourceSignature, TBase)
 
-    virtual const PipelineResourceSignatureDesc& DILIGENT_CALL_TYPE GetDesc() const override final { return *m_pDesc; }
+    virtual const PipelineResourceSignatureDesc& DILIGENT_CALL_TYPE GetDesc() const override final;
 
     virtual void DILIGENT_CALL_TYPE CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding,
                                                                 bool                     InitStaticResources) override final {}
@@ -123,6 +126,7 @@ public:
         return Wrpr ? Wrpr->GetPRS<SignatureType>() : nullptr;
     }
 
+    const char* GetName() const { return m_Name.c_str(); }
 
     template <typename SignatureImplType>
     void CreateDeviceSignature(DeviceType                           Type,
@@ -133,13 +137,14 @@ private:
     const IPipelineResourceSignature* GetPRS(DeviceType Type) const
     {
         VERIFY_EXPR(static_cast<Uint32>(Type) < DeviceCount);
-        auto& Wrpr = m_pDeviceSignatures[static_cast<size_t>(Type)];
+        const auto& Wrpr = m_pDeviceSignatures[static_cast<size_t>(Type)];
         return Wrpr ? Wrpr->GetPRS() : nullptr;
     }
 
+    void InitCommonData(const PipelineResourceSignatureDesc& Desc);
+
 private:
-    const PipelineResourceSignatureDesc*          m_pDesc = nullptr;
-    std::unique_ptr<void, STDDeleterRawMem<void>> m_pRawMemory;
+    const std::string m_Name;
 
     SerializedMemory m_CommonData;
 

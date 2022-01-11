@@ -199,13 +199,13 @@ void SerializationDeviceImpl::CreatePipelineResourceSignature(const PipelineReso
                                                               ARCHIVE_DEVICE_DATA_FLAGS            DeviceFlags,
                                                               IPipelineResourceSignature**         ppSignature)
 {
-    CreatePipelineResourceSignature(Desc, DeviceFlags, SHADER_TYPE_UNKNOWN, ppSignature);
+    CreateSerializableResourceSignature(Desc, DeviceFlags, SHADER_TYPE_UNKNOWN, reinterpret_cast<SerializableResourceSignatureImpl**>(ppSignature));
 }
 
-void SerializationDeviceImpl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
-                                                              ARCHIVE_DEVICE_DATA_FLAGS            DeviceFlags,
-                                                              SHADER_TYPE                          ShaderStages,
-                                                              IPipelineResourceSignature**         ppSignature)
+void SerializationDeviceImpl::CreateSerializableResourceSignature(const PipelineResourceSignatureDesc& Desc,
+                                                                  ARCHIVE_DEVICE_DATA_FLAGS            DeviceFlags,
+                                                                  SHADER_TYPE                          ShaderStages,
+                                                                  SerializableResourceSignatureImpl**  ppSignature)
 {
     DEV_CHECK_ERR(ppSignature != nullptr, "ppSignature must not be null");
     if (!ppSignature)
@@ -222,6 +222,13 @@ void SerializationDeviceImpl::CreatePipelineResourceSignature(const PipelineReso
     {
         LOG_ERROR_MESSAGE("Failed to create the resource signature");
     }
+}
+
+void SerializationDeviceImpl::CreateSerializableResourceSignature(SerializableResourceSignatureImpl** ppSignature, const char* Name)
+{
+    auto& RawMemAllocator = GetRawAllocator();
+    auto* pSignatureImpl  = NEW_RC_OBJ(RawMemAllocator, "Pipeline resource signature instance", SerializableResourceSignatureImpl)(Name);
+    pSignatureImpl->QueryInterface(IID_PipelineResourceSignature, reinterpret_cast<IObject**>(ppSignature));
 }
 
 void SerializationDeviceImpl::GetPipelineResourceBindings(const PipelineResourceBindingAttribs& Info,

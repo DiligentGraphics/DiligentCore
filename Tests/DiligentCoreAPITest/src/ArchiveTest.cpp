@@ -1746,4 +1746,275 @@ TEST(ArchiveTest, ResourceSignatureBindings)
     }
 }
 
+void TestSamplers(bool UseImtblSamplers)
+{
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+
+    auto* const pEnv             = TestingEnvironment::GetInstance();
+    auto* const pDevice          = pEnv->GetDevice();
+    auto* const pSwapChain       = pEnv->GetSwapChain();
+    const auto& deviceCaps       = pDevice->GetDeviceInfo();
+    auto* const pArchiverFactory = pEnv->GetArchiverFactory();
+    auto* const pDearchiver      = pDevice->GetEngineFactory()->GetDearchiver();
+
+    if (!pDearchiver || !pArchiverFactory)
+        GTEST_SKIP() << "Archiver library is not loaded";
+
+    if (deviceCaps.IsGLDevice())
+        GTEST_SKIP() << "Default signatures in the archive currently do not work in OpenGL";
+
+    float ClearColor[] = {0.125, 0.75, 0.5, 0.5};
+    RenderDrawCommandReference(pSwapChain, ClearColor);
+
+    // Texture indices for vertex/shader bindings
+    static constexpr size_t Tex2D_StaticIdx[] = {2, 10};
+    static constexpr size_t Tex2D_MutIdx[]    = {0, 11};
+    static constexpr size_t Tex2D_DynIdx[]    = {1, 9};
+
+    static constexpr size_t Tex2DArr_StaticIdx[] = {7, 0};
+    static constexpr size_t Tex2DArr_MutIdx[]    = {3, 5};
+    static constexpr size_t Tex2DArr_DynIdx[]    = {9, 2};
+
+    const Uint32 VSResArrId = 0;
+    const Uint32 PSResArrId = deviceCaps.Features.SeparablePrograms ? 1 : 0;
+    VERIFY_EXPR(deviceCaps.IsGLDevice() || PSResArrId != VSResArrId);
+
+
+    // Prepare reference textures filled with different colors
+    // Texture array sizes in the shader
+    static constexpr Uint32 StaticTexArraySize  = 2;
+    static constexpr Uint32 MutableTexArraySize = 4;
+    static constexpr Uint32 DynamicTexArraySize = 3;
+
+    ReferenceTextures RefTextures{
+        3 + StaticTexArraySize + MutableTexArraySize + DynamicTexArraySize,
+        128, 128,
+        USAGE_DEFAULT,
+        BIND_SHADER_RESOURCE,
+        TEXTURE_VIEW_SHADER_RESOURCE //
+    };
+
+    if (!UseImtblSamplers)
+    {
+        RefCntAutoPtr<ISampler> pSampler;
+        pDevice->CreateSampler(SamplerDesc{}, &pSampler);
+        for (Uint32 i = 0; i < RefTextures.GetTextureCount(); ++i)
+            RefTextures.GetView(i)->SetSampler(pSampler);
+    }
+
+    constexpr char PSOName[] = "Archiver sampler test";
+
+    RefCntAutoPtr<IDeviceObjectArchive> pArchive;
+    {
+        RefCntAutoPtr<ISerializationDevice> pSerializationDevice;
+        pArchiverFactory->CreateSerializationDevice(SerializationDeviceCreateInfo{}, &pSerializationDevice);
+        ASSERT_NE(pSerializationDevice, nullptr);
+
+        RefCntAutoPtr<IArchiver> pArchiver;
+        pArchiverFactory->CreateArchiver(pSerializationDevice, &pArchiver);
+        ASSERT_NE(pArchiver, nullptr);
+
+        // clang-format off
+        constexpr ImmutableSamplerDesc ImtblSamplers[] =
+        {
+            {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2D_Static",    SamplerDesc{}},
+            {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2D_Mut",       SamplerDesc{}},
+            {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2D_Dyn",       SamplerDesc{}},
+            {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2DArr_Static", SamplerDesc{}},
+            {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2DArr_Mut",    SamplerDesc{}},
+            {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2DArr_Dyn",    SamplerDesc{}}
+        };
+        // clang-format on
+
+        ShaderMacroHelper Macros;
+
+        auto PrepareMacros = [&](Uint32 s) {
+            Macros.Clear();
+
+            Macros.AddShaderMacro("STATIC_TEX_ARRAY_SIZE", static_cast<int>(StaticTexArraySize));
+            Macros.AddShaderMacro("MUTABLE_TEX_ARRAY_SIZE", static_cast<int>(MutableTexArraySize));
+            Macros.AddShaderMacro("DYNAMIC_TEX_ARRAY_SIZE", static_cast<int>(DynamicTexArraySize));
+
+            RefTextures.ClearUsedValues();
+
+            // Add macros that define reference colors
+            Macros.AddShaderMacro("Tex2D_Static_Ref", RefTextures.GetColor(Tex2D_StaticIdx[s]));
+            Macros.AddShaderMacro("Tex2D_Mut_Ref", RefTextures.GetColor(Tex2D_MutIdx[s]));
+            Macros.AddShaderMacro("Tex2D_Dyn_Ref", RefTextures.GetColor(Tex2D_DynIdx[s]));
+
+            for (Uint32 i = 0; i < StaticTexArraySize; ++i)
+                Macros.AddShaderMacro((std::string{"Tex2DArr_Static_Ref"} + std::to_string(i)).c_str(), RefTextures.GetColor(Tex2DArr_StaticIdx[s] + i));
+
+            for (Uint32 i = 0; i < MutableTexArraySize; ++i)
+                Macros.AddShaderMacro((std::string{"Tex2DArr_Mut_Ref"} + std::to_string(i)).c_str(), RefTextures.GetColor(Tex2DArr_MutIdx[s] + i));
+
+            for (Uint32 i = 0; i < DynamicTexArraySize; ++i)
+                Macros.AddShaderMacro((std::string{"Tex2DArr_Dyn_Ref"} + std::to_string(i)).c_str(), RefTextures.GetColor(Tex2DArr_DynIdx[s] + i));
+
+            return static_cast<const ShaderMacro*>(Macros);
+        };
+
+        RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
+        pDevice->GetEngineFactory()->CreateDefaultShaderSourceStreamFactory("shaders/ShaderResourceLayout", &pShaderSourceFactory);
+
+        ShaderCreateInfo ShaderCI;
+        ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
+        ShaderCI.UseCombinedTextureSamplers = deviceCaps.IsGLDevice();
+        ShaderCI.ShaderCompiler             = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+        ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
+        ShaderCI.UseCombinedTextureSamplers = true;
+
+        // Immutable sampler arrays are not allowed in 5.1, and DXC only supports 6.0+
+        ShaderCI.ShaderCompiler = SHADER_COMPILER_DEFAULT;
+        // Note that due to bug in D3D12 WARP, we have to use SM5.0 with old compiler
+        ShaderCI.HLSLVersion = ShaderVersion{5, 0};
+
+        RefCntAutoPtr<IShader> pSerializedVS;
+        {
+            PrepareMacros(VSResArrId);
+            ShaderCI.Macros          = Macros;
+            ShaderCI.FilePath        = "ImmutableSamplers.hlsl";
+            ShaderCI.Desc.Name       = "Archiver.Samplers - VS";
+            ShaderCI.EntryPoint      = "VSMain";
+            ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
+
+            pSerializationDevice->CreateShader(ShaderCI, GetDeviceBits(), &pSerializedVS);
+            ASSERT_NE(pSerializedVS, nullptr);
+        }
+
+        RefCntAutoPtr<IShader> pSerializedPS;
+        {
+            PrepareMacros(PSResArrId);
+            ShaderCI.Macros          = Macros;
+            ShaderCI.FilePath        = "ImmutableSamplers.hlsl";
+            ShaderCI.Desc.Name       = "Archiver.Samplers - PS";
+            ShaderCI.EntryPoint      = "PSMain";
+            ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
+
+            pSerializationDevice->CreateShader(ShaderCI, GetDeviceBits(), &pSerializedPS);
+            ASSERT_NE(pSerializedPS, nullptr);
+        }
+
+        std::vector<ShaderResourceVariableDesc> Vars;
+
+        auto AddVar = [&](const char* Name, SHADER_RESOURCE_VARIABLE_TYPE VarType) //
+        {
+            if (deviceCaps.Features.SeparablePrograms)
+            {
+                // Use separate variables for each stage
+                Vars.emplace_back(SHADER_TYPE_VERTEX, Name, VarType);
+                Vars.emplace_back(SHADER_TYPE_PIXEL, Name, VarType);
+            }
+            else
+            {
+                // Use one shared variable
+                Vars.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, Name, VarType);
+            }
+        };
+        // clang-format off
+        AddVar("g_Tex2D_Static",    SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+      //AddVar("g_Tex2D_Mut",       SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE); // Default type
+        AddVar("g_Tex2D_Dyn",       SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
+
+        AddVar("g_Tex2DArr_Static", SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+        AddVar("g_Tex2DArr_Mut",    SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE);
+        AddVar("g_Tex2DArr_Dyn",    SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
+        // clang-format on
+
+        GraphicsPipelineStateCreateInfo PSOCreateInfo;
+
+        auto& PSODesc          = PSOCreateInfo.PSODesc;
+        auto& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
+
+        PSODesc.Name = PSOName;
+
+        auto& ResourceLayout{PSODesc.ResourceLayout};
+        ResourceLayout.DefaultVariableType  = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE;
+        ResourceLayout.Variables            = Vars.data();
+        ResourceLayout.NumVariables         = static_cast<Uint32>(Vars.size());
+        ResourceLayout.ImmutableSamplers    = UseImtblSamplers ? ImtblSamplers : nullptr;
+        ResourceLayout.NumImmutableSamplers = UseImtblSamplers ? _countof(ImtblSamplers) : 0;
+
+        PSOCreateInfo.pVS = pSerializedVS;
+        PSOCreateInfo.pPS = pSerializedPS;
+
+        GraphicsPipeline.PrimitiveTopology = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        GraphicsPipeline.NumRenderTargets  = 1;
+        GraphicsPipeline.RTVFormats[0]     = TEX_FORMAT_RGBA8_UNORM;
+        GraphicsPipeline.DSVFormat         = TEX_FORMAT_UNKNOWN;
+
+        GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
+        GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+
+        PipelineStateArchiveInfo ArchiveInfo;
+        ArchiveInfo.DeviceFlags = GetDeviceBits();
+        ASSERT_TRUE(pArchiver->AddGraphicsPipelineState(PSOCreateInfo, ArchiveInfo));
+
+        RefCntAutoPtr<IDataBlob> pBlob;
+        pArchiver->SerializeToBlob(&pBlob);
+        ASSERT_NE(pBlob, nullptr);
+
+        RefCntAutoPtr<IArchive> pSource{MakeNewRCObj<ArchiveMemoryImpl>{}(pBlob)};
+        pDearchiver->CreateDeviceObjectArchive(pSource, &pArchive);
+        ASSERT_NE(pArchive, nullptr);
+    }
+
+    RefCntAutoPtr<IPipelineState> pPSO;
+    {
+        PipelineStateUnpackInfo UnpackInfo;
+        UnpackInfo.Name         = PSOName;
+        UnpackInfo.pArchive     = pArchive;
+        UnpackInfo.pDevice      = pDevice;
+        UnpackInfo.PipelineType = PIPELINE_TYPE_GRAPHICS;
+
+        pDearchiver->UnpackPipelineState(UnpackInfo, &pPSO);
+        ASSERT_NE(pPSO, nullptr);
+    }
+
+    RefCntAutoPtr<IShaderResourceBinding> pSRB;
+    pPSO->CreateShaderResourceBinding(&pSRB, false);
+    ASSERT_NE(pSRB, nullptr);
+
+    auto BindResources = [&](SHADER_TYPE ShaderType) {
+        const auto id = ShaderType == SHADER_TYPE_VERTEX ? VSResArrId : PSResArrId;
+
+        pPSO->GetStaticVariableByName(ShaderType, "g_Tex2D_Static")->Set(RefTextures.GetViewObjects(Tex2D_StaticIdx[id])[0]);
+        pPSO->GetStaticVariableByName(ShaderType, "g_Tex2DArr_Static")->SetArray(RefTextures.GetViewObjects(Tex2DArr_StaticIdx[id]), 0, StaticTexArraySize);
+
+        pSRB->GetVariableByName(ShaderType, "g_Tex2D_Mut")->Set(RefTextures.GetViewObjects(Tex2D_MutIdx[id])[0]);
+        pSRB->GetVariableByName(ShaderType, "g_Tex2DArr_Mut")->SetArray(RefTextures.GetViewObjects(Tex2DArr_MutIdx[id]), 0, MutableTexArraySize);
+
+        pSRB->GetVariableByName(ShaderType, "g_Tex2D_Dyn")->Set(RefTextures.GetViewObjects(Tex2D_DynIdx[id])[0]);
+        pSRB->GetVariableByName(ShaderType, "g_Tex2DArr_Dyn")->SetArray(RefTextures.GetViewObjects(Tex2DArr_DynIdx[id]), 0, DynamicTexArraySize);
+    };
+    BindResources(SHADER_TYPE_VERTEX);
+    BindResources(SHADER_TYPE_PIXEL);
+
+    pPSO->InitializeStaticSRBResources(pSRB);
+
+    auto* pContext = pEnv->GetDeviceContext();
+
+    ITextureView* ppRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
+    pContext->SetRenderTargets(1, ppRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    pContext->ClearRenderTarget(ppRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    pContext->SetPipelineState(pPSO);
+    pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    DrawAttribs DrawAttrs{6, DRAW_FLAG_VERIFY_ALL};
+    pContext->Draw(DrawAttrs);
+
+    pSwapChain->Present();
+}
+
+TEST(ArchiveTest, Samplers)
+{
+    TestSamplers(false);
+}
+
+TEST(ArchiveTest, ImmutableSamplers)
+{
+    TestSamplers(true);
+}
+
 } // namespace

@@ -30,6 +30,8 @@
 #include <vector>
 #include <algorithm>
 
+#include "PSOSerializer.hpp"
+
 namespace Diligent
 {
 
@@ -93,7 +95,8 @@ bool ArchiverImpl::CreateDefaultResourceSignature(DeviceType                    
             const auto UniqueName = GetDefaultPRSName(PSODesc.Name);
             SignDesc.SetName(UniqueName.c_str());
 
-            m_pSerializationDevice->CreatePipelineResourceSignature(SignDesc, ARCHIVE_DEVICE_DATA_FLAG_NONE, ActiveShaderStageFlags, pSignature.template RawDblPtr<IPipelineResourceSignature>());
+            // Create empty serializable signature
+            m_pSerializationDevice->CreateSerializableResourceSignature(&pSignature, UniqueName.c_str());
             if (!pSignature)
                 return false;
 
@@ -107,15 +110,8 @@ bool ArchiverImpl::CreateDefaultResourceSignature(DeviceType                    
         }
         else
         {
-            const auto& Sign0Desc = pSignature->GetDesc();
             // Override the name to make sure it is consistent for all devices
-            SignDesc.SetName(Sign0Desc.Name);
-
-            if (!(Sign0Desc == SignDesc))
-            {
-                LOG_ERROR_MESSAGE("Default signatures do not match between different backends");
-                return false;
-            }
+            SignDesc.SetName(pSignature->GetName());
         }
 
         pSignature->CreateDeviceSignature<SignatureImplType>(Type, SignDesc, ActiveShaderStageFlags);
@@ -182,27 +178,47 @@ void SerializableResourceSignatureImpl::CreateDeviceSignature(DeviceType        
     using MeasureSerializerType = typename Traits::template PSOSerializerType<SerializerMode::Measure>;
     using WriteSerializerType   = typename Traits::template PSOSerializerType<SerializerMode::Write>;
 
-    auto PRSWrpr = std::make_unique<TPRS<SignatureImplType>>(GetReferenceCounters(), Desc, ShaderStages);
-    VERIFY_EXPR(Desc == PRSWrpr->PRS.GetDesc());
+    VERIFY_EXPR(Type == Traits::Type || (Type == DeviceType::Metal_iOS && Traits::Type == DeviceType::Metal_MacOS));
+    VERIFY(!m_pDeviceSignatures[static_cast<size_t>(Type)], "Signature for this device type has already been initialized");
 
-    const auto InternalData = PRSWrpr->PRS.GetInternalData();
+    auto  pDeviceSignature = std::make_unique<TPRS<SignatureImplType>>(GetReferenceCounters(), Desc, ShaderStages);
+    auto& DeviceSignature  = *pDeviceSignature;
+    // We must initialize at least one device signature before calling InitCommonData()
+    m_pDeviceSignatures[static_cast<size_t>(Type)] = std::move(pDeviceSignature);
+
+    const auto& SignDesc = DeviceSignature.GetPRS()->GetDesc();
+    InitCommonData(SignDesc);
+
+    const auto InternalData = DeviceSignature.PRS.GetInternalData();
+
+    const auto& CommonDesc = GetDesc();
+
+    // Check if the device signature description differs from common description
+    bool SpecialDesc = !(CommonDesc == SignDesc);
 
     {
         Serializer<SerializerMode::Measure> MeasureSer;
+
+        MeasureSer(SpecialDesc);
+        if (SpecialDesc)
+            PSOSerializer<SerializerMode::Measure>::SerializePRSDesc(MeasureSer, SignDesc, nullptr);
+
         MeasureSerializerType::SerializePRSInternalData(MeasureSer, InternalData, nullptr);
 
-        PRSWrpr->Mem = SerializedMemory{MeasureSer.GetSize(nullptr)};
+        DeviceSignature.Mem = SerializedMemory{MeasureSer.GetSize(nullptr)};
     }
 
     {
-        Serializer<SerializerMode::Write> Ser{PRSWrpr->Mem.Ptr(), PRSWrpr->Mem.Size()};
+        Serializer<SerializerMode::Write> Ser{DeviceSignature.Mem.Ptr(), DeviceSignature.Mem.Size()};
+
+        Ser(SpecialDesc);
+        if (SpecialDesc)
+            PSOSerializer<SerializerMode::Write>::SerializePRSDesc(Ser, SignDesc, nullptr);
+
         WriteSerializerType::SerializePRSInternalData(Ser, InternalData, nullptr);
+
         VERIFY_EXPR(Ser.IsEnd());
     }
-
-    VERIFY_EXPR(Type == Traits::Type || (Type == DeviceType::Metal_iOS && Traits::Type == DeviceType::Metal_MacOS));
-    VERIFY(!m_pDeviceSignatures[static_cast<size_t>(Type)], "Signature for this device type has already been initialized");
-    m_pDeviceSignatures[static_cast<size_t>(Type)] = std::move(PRSWrpr);
 }
 
 

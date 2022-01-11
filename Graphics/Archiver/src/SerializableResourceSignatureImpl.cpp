@@ -40,46 +40,14 @@ SerializableResourceSignatureImpl::SerializableResourceSignatureImpl(IReferenceC
                                                                      const PipelineResourceSignatureDesc& Desc,
                                                                      ARCHIVE_DEVICE_DATA_FLAGS            DeviceFlags,
                                                                      SHADER_TYPE                          ShaderStages) :
-    TBase{pRefCounters}
+    TBase{pRefCounters},
+    m_Name{Desc.Name}
 {
     ValidatePipelineResourceSignatureDesc(Desc, pDevice->GetDevice());
 
     if ((DeviceFlags & pDevice->GetValidDeviceFlags()) != DeviceFlags)
     {
         LOG_ERROR_AND_THROW("DeviceFlags contain unsupported device type");
-    }
-
-    {
-        auto&                RawAllocator = GetRawAllocator();
-        FixedLinearAllocator Allocator{RawAllocator};
-
-        Allocator.AddSpace<PipelineResourceSignatureDesc>();
-        Allocator.AddSpaceForString(Desc.Name);
-        ReserveSpaceForPipelineResourceSignatureDesc(Allocator, Desc);
-
-        Allocator.Reserve();
-
-        auto* pDstDesc = Allocator.Copy(Desc);
-
-        pDstDesc->Name = Allocator.CopyString(pDstDesc->Name);
-        if (pDstDesc->Name == nullptr)
-            pDstDesc->Name = "";
-
-        std::array<Uint16, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES + 1> ResourceOffsets = {};
-        CopyPipelineResourceSignatureDesc(Allocator, Desc, *pDstDesc, ResourceOffsets);
-
-        m_pRawMemory = decltype(m_pRawMemory){Allocator.ReleaseOwnership(), STDDeleterRawMem<void>{RawAllocator}};
-        m_pDesc      = pDstDesc;
-    }
-
-    {
-        Serializer<SerializerMode::Measure> MeasureSer;
-        PSOSerializer<SerializerMode::Measure>::SerializePRSDesc(MeasureSer, Desc, nullptr);
-
-        m_CommonData = SerializedMemory{MeasureSer.GetSize(nullptr)};
-        Serializer<SerializerMode::Write> WSer{m_CommonData.Ptr(), m_CommonData.Size()};
-        PSOSerializer<SerializerMode::Write>::SerializePRSDesc(WSer, Desc, nullptr);
-        VERIFY_EXPR(WSer.IsEnd());
     }
 
     while (DeviceFlags != ARCHIVE_DEVICE_DATA_FLAG_NONE)
@@ -128,8 +96,48 @@ SerializableResourceSignatureImpl::SerializableResourceSignatureImpl(IReferenceC
     }
 }
 
+SerializableResourceSignatureImpl::SerializableResourceSignatureImpl(IReferenceCounters* pRefCounters, const char* Name) noexcept :
+    TBase{pRefCounters},
+    m_Name{Name}
+{
+}
+
 SerializableResourceSignatureImpl::~SerializableResourceSignatureImpl()
 {
+}
+
+const PipelineResourceSignatureDesc& SerializableResourceSignatureImpl::GetDesc() const
+{
+    for (const auto& pDeviceSign : m_pDeviceSignatures)
+    {
+        if (pDeviceSign)
+            return pDeviceSign->GetPRS()->GetDesc();
+    }
+
+    UNEXPECTED("No device signatures initialized!");
+    static constexpr PipelineResourceSignatureDesc NullDesc;
+    return NullDesc;
+}
+
+
+void SerializableResourceSignatureImpl::InitCommonData(const PipelineResourceSignatureDesc& Desc)
+{
+    VERIFY(m_Name == Desc.Name, "Inconsistent signature name");
+
+    if (!m_CommonData)
+    {
+        // Use description of the first signature as common description.
+
+        Serializer<SerializerMode::Measure> MeasureSer;
+        PSOSerializer<SerializerMode::Measure>::SerializePRSDesc(MeasureSer, Desc, nullptr);
+
+        m_CommonData = SerializedMemory{MeasureSer.GetSize(nullptr)};
+        Serializer<SerializerMode::Write> WSer{m_CommonData.Ptr(), m_CommonData.Size()};
+        PSOSerializer<SerializerMode::Write>::SerializePRSDesc(WSer, Desc, nullptr);
+        VERIFY_EXPR(WSer.IsEnd());
+
+        VERIFY_EXPR(GetDesc() == Desc);
+    }
 }
 
 bool SerializableResourceSignatureImpl::IsCompatible(const SerializableResourceSignatureImpl& Rhs, ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags) const

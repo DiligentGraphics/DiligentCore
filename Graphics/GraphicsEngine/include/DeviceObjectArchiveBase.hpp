@@ -479,6 +479,17 @@ RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveBase::UnpackResourc
     Serializer<SerializerMode::Read> Ser{pData, DataSize};
 
     typename PSOSerializerType::PRSInternalDataType InternalData{PRS.InternalData};
+
+    bool SpecialDesc = false;
+    Ser(SpecialDesc);
+    if (SpecialDesc)
+    {
+        // The signature uses special description that differs from the common
+        const auto* Name = PRS.Desc.Name;
+        PRS.Desc         = {};
+        PRS.Deserialize(Name, Ser);
+    }
+
     PSOSerializerType::SerializePRSInternalData(Ser, InternalData, &PRS.Allocator);
     VERIFY_EXPR(Ser.IsEnd());
 

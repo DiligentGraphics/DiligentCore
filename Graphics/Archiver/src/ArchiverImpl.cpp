@@ -493,7 +493,7 @@ bool ArchiverImpl::AddPipelineResourceSignature(IPipelineResourceSignature* pPRS
         return false;
 
     auto* const pPRSImpl = ClassPtrCast<SerializableResourceSignatureImpl>(pPRS);
-    const auto* Name     = pPRSImpl->GetDesc().Name;
+    const auto* Name     = pPRSImpl->GetName();
 
     auto IterAndInserted = m_PRSMap.emplace(HashMapStringKey{Name, true}, PRSData{pPRSImpl});
     if (!IterAndInserted.second)
@@ -523,7 +523,7 @@ bool ArchiverImpl::CachePipelineResourceSignature(RefCntAutoPtr<SerializableReso
         pPRS = *IterAndInserted.first;
 
 #ifdef DILIGENT_DEBUG
-        auto Iter = m_PRSMap.find(pPRS->GetDesc().Name);
+        auto Iter = m_PRSMap.find(pPRS->GetName());
         VERIFY_EXPR(Iter != m_PRSMap.end());
         VERIFY_EXPR(Iter->second.pPRS == pPRS);
 #endif

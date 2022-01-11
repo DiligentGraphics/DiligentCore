@@ -177,10 +177,12 @@ public:
                                                                     ARCHIVE_DEVICE_DATA_FLAGS            DeviceFlags,
                                                                     IPipelineResourceSignature**         ppSignature) override final;
 
-    void CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
-                                         ARCHIVE_DEVICE_DATA_FLAGS            DeviceFlags,
-                                         SHADER_TYPE                          ShaderStages,
-                                         IPipelineResourceSignature**         ppSignature);
+    void CreateSerializableResourceSignature(const PipelineResourceSignatureDesc& Desc,
+                                             ARCHIVE_DEVICE_DATA_FLAGS            DeviceFlags,
+                                             SHADER_TYPE                          ShaderStages,
+                                             SerializableResourceSignatureImpl**  ppSignature);
+
+    void CreateSerializableResourceSignature(SerializableResourceSignatureImpl** ppSignature, const char* Name);
 
     virtual void DILIGENT_CALL_TYPE GetPipelineResourceBindings(const PipelineResourceBindingAttribs& Attribs,
                                                                 Uint32&                               NumBindings,
