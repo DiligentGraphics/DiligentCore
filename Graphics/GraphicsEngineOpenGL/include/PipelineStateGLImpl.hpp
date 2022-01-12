@@ -69,6 +69,14 @@ public:
         return m_BaseBindings[Index];
     }
 
+    using TShaderStages = std::vector<ShaderGLImpl*>;
+
+    static PipelineResourceSignatureDescWrapper GetDefaultResourceSignatureDesc(
+        const TShaderStages&              ShaderStages,
+        const char*                       PSOName,
+        const PipelineResourceLayoutDesc& ResourceLayout,
+        Uint32                            SRBAllocationGranularity) noexcept(false);
+
 #ifdef DILIGENT_DEVELOPMENT
     using ShaderResourceCacheArrayType = std::array<ShaderResourceCacheGL*, MAX_RESOURCE_SIGNATURES>;
     using BaseBindingsArrayType        = std::array<TBindings, MAX_RESOURCE_SIGNATURES>;
@@ -77,8 +85,6 @@ public:
 #endif
 
 private:
-    using TShaderStages = std::vector<ShaderGLImpl*>;
-
     GLObjectWrappers::GLPipelineObj& GetGLProgramPipeline(GLContext::NativeGLContextType Context);
 
     template <typename PSOCreateInfoType>

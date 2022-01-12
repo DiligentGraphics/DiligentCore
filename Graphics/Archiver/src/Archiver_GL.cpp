@@ -72,9 +72,23 @@ struct ShaderStageInfoGL
     const SerializableShaderImpl* pShader = nullptr;
 };
 
-inline SHADER_TYPE GetShaderStageType(const ShaderStageInfoGL& Stage) { return Stage.Type; }
+#ifdef DILIGENT_DEBUG
+inline SHADER_TYPE GetShaderStageType(const ShaderStageInfoGL& Stage)
+{
+    return Stage.Type;
+}
+#endif
 
 } // namespace
+
+template <typename CreateInfoType>
+bool ArchiverImpl::PrepareDefaultSignatureGL(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data)
+{
+    // Add empty device signature - there must be some device-specific data for OpenGL in the archive
+    // or there will be an error when unpacking the signature.
+    std::vector<ShaderGLImpl*> DummyShadersGL;
+    return CreateDefaultResourceSignature<PipelineStateGLImpl, PipelineResourceSignatureGLImpl>(DeviceType::OpenGL, Data.pDefaultSignature, CreateInfo.PSODesc, SHADER_TYPE_UNKNOWN, DummyShadersGL);
+}
 
 template <typename CreateInfoType>
 bool ArchiverImpl::PatchShadersGL(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data)
@@ -84,10 +98,6 @@ bool ArchiverImpl::PatchShadersGL(const CreateInfoType& CreateInfo, TPSOData<Cre
     std::vector<ShaderStageInfoGL> ShaderStages;
     SHADER_TYPE                    ActiveShaderStages = SHADER_TYPE_UNKNOWN;
     PipelineStateGLImpl::ExtractShaders<SerializableShaderImpl>(CreateInfo, ShaderStages, ActiveShaderStages);
-
-    (void)GetShaderStageType(ShaderStageInfoGL{});
-
-    // AZ TODO: default PRS
 
     for (size_t i = 0; i < ShaderStages.size(); ++i)
     {
@@ -101,6 +111,11 @@ template bool ArchiverImpl::PatchShadersGL<GraphicsPipelineStateCreateInfo>(cons
 template bool ArchiverImpl::PatchShadersGL<ComputePipelineStateCreateInfo>(const ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data);
 template bool ArchiverImpl::PatchShadersGL<TilePipelineStateCreateInfo>(const TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data);
 template bool ArchiverImpl::PatchShadersGL<RayTracingPipelineStateCreateInfo>(const RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data);
+
+template bool ArchiverImpl::PrepareDefaultSignatureGL<GraphicsPipelineStateCreateInfo>(const GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data);
+template bool ArchiverImpl::PrepareDefaultSignatureGL<ComputePipelineStateCreateInfo>(const ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data);
+template bool ArchiverImpl::PrepareDefaultSignatureGL<TilePipelineStateCreateInfo>(const TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data);
+template bool ArchiverImpl::PrepareDefaultSignatureGL<RayTracingPipelineStateCreateInfo>(const RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data);
 
 
 template PipelineResourceSignatureGLImpl* SerializableResourceSignatureImpl::GetDeviceSignature<PipelineResourceSignatureGLImpl>(DeviceType Type) const;
@@ -167,7 +182,7 @@ void SerializableShaderImpl::CreateShaderGL(IReferenceCounters* pRefCounters,
         if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL)
         {
             if (GLSLangUtils::HLSLtoSPIRV(ShaderCI, Attribs.Version, "", Attribs.ppCompilerOutput).empty())
-                LOG_ERROR_AND_THROW("HLSLtoSPIRV failed");
+                LOG_ERROR_AND_THROW("Failed to compile HLSL shader source");
         }
         else if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_DEFAULT ||
                  ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL)
@@ -179,7 +194,7 @@ void SerializableShaderImpl::CreateShaderGL(IReferenceCounters* pRefCounters,
             Attribs.Macros        = ShaderCI.Macros;
 
             if (GLSLangUtils::GLSLtoSPIRV(Attribs).empty())
-                LOG_ERROR_AND_THROW("GLSLtoSPIRV failed");
+                LOG_ERROR_AND_THROW("Failed to compile GLSL shader source");
         }
         else if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM)
         {
@@ -190,7 +205,7 @@ void SerializableShaderImpl::CreateShaderGL(IReferenceCounters* pRefCounters,
             Attribs.SourceCodeLen = static_cast<int>(ShaderCI.SourceLength);
 
             if (GLSLangUtils::GLSLtoSPIRV(Attribs).empty())
-                LOG_ERROR_AND_THROW("GLSLtoSPIRV failed");
+                LOG_ERROR_AND_THROW("Failed to compile GLSL shader source");
         }
     }
     catch (...)

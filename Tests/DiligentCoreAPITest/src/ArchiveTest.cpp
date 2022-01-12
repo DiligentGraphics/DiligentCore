@@ -1760,9 +1760,6 @@ void TestSamplers(bool UseImtblSamplers)
     if (!pDearchiver || !pArchiverFactory)
         GTEST_SKIP() << "Archiver library is not loaded";
 
-    if (deviceCaps.IsGLDevice())
-        GTEST_SKIP() << "Default signatures in the archive currently do not work in OpenGL";
-
     float ClearColor[] = {0.125, 0.75, 0.5, 0.5};
     RenderDrawCommandReference(pSwapChain, ClearColor);
 

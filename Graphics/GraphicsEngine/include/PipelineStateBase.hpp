@@ -50,27 +50,27 @@ namespace Diligent
 {
 
 template <typename PSOCreateInfoType>
-void ValidatePSOCreateInfo(IRenderDevice*           pDevice,
+void ValidatePSOCreateInfo(const IRenderDevice*     pDevice,
                            const PSOCreateInfoType& CreateInfo) noexcept(false);
 
 // Validates graphics pipeline create attributes and throws an exception in case of an error.
 template <>
-void ValidatePSOCreateInfo<GraphicsPipelineStateCreateInfo>(IRenderDevice*                         pDevice,
+void ValidatePSOCreateInfo<GraphicsPipelineStateCreateInfo>(const IRenderDevice*                   pDevice,
                                                             const GraphicsPipelineStateCreateInfo& CreateInfo) noexcept(false);
 
 // Validates compute pipeline create attributes and throws an exception in case of an error.
 template <>
-void ValidatePSOCreateInfo<ComputePipelineStateCreateInfo>(IRenderDevice*                        pDevice,
+void ValidatePSOCreateInfo<ComputePipelineStateCreateInfo>(const IRenderDevice*                  pDevice,
                                                            const ComputePipelineStateCreateInfo& CreateInfo) noexcept(false);
 
 // Validates ray-tracing pipeline create attributes and throws an exception in case of an error.
 template <>
-void ValidatePSOCreateInfo<RayTracingPipelineStateCreateInfo>(IRenderDevice*                           pDevice,
+void ValidatePSOCreateInfo<RayTracingPipelineStateCreateInfo>(const IRenderDevice*                     pDevice,
                                                               const RayTracingPipelineStateCreateInfo& CreateInfo) noexcept(false);
 
 // Validates tile pipeline create attributes and throws an exception in case of an error.
 template <>
-void ValidatePSOCreateInfo<TilePipelineStateCreateInfo>(IRenderDevice*                     pDevice,
+void ValidatePSOCreateInfo<TilePipelineStateCreateInfo>(const IRenderDevice*               pDevice,
                                                         const TilePipelineStateCreateInfo& CreateInfo) noexcept(false);
 
 /// Validates that pipeline resource description 'ResDesc' is compatible with the actual resource
@@ -1097,6 +1097,7 @@ protected:
             LOG_ERROR_AND_THROW("Failed to create implicit resource signature for pipeline state '", this->m_Desc.Name, "'.");
 
         VERIFY_EXPR(pImplicitSignature->GetDesc().BindingIndex == 0);
+        VERIFY(!m_Signatures[0], "Signature 0 has already been initialized.");
         m_Signatures[0] = std::move(pImplicitSignature);
     }
 

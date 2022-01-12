@@ -91,6 +91,14 @@ PIPELINE_RESOURCE_FLAGS PipelineStateGLImpl::GetSamplerResourceFlag(const TShade
     return SamplerResourceFlag;
 }
 
+PipelineResourceSignatureDescWrapper PipelineStateGLImpl::GetDefaultResourceSignatureDesc(
+    const TShaderStages&              ShaderStages,
+    const char*                       PSOName,
+    const PipelineResourceLayoutDesc& ResourceLayout,
+    Uint32                            SRBAllocationGranularity) noexcept(false)
+{
+    return {};
+}
 
 PipelineResourceSignatureDescWrapper PipelineStateGLImpl::GetDefaultSignatureDesc(
     const TShaderStages& ShaderStages,
@@ -155,8 +163,15 @@ void PipelineStateGLImpl::InitResourceLayout(PSO_CREATE_FLAGS     Flags,
                                              const TShaderStages& ShaderStages,
                                              SHADER_TYPE          ActiveStages)
 {
-    if (m_UsingImplicitSignature && (Flags & PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0) == 0)
+    if (m_UsingImplicitSignature)
     {
+        if ((Flags & PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0) != 0)
+        {
+            // Release deserialized default signature as it is empty in OpenGL.
+            // We need to create a new one from scratch.
+            m_Signatures[0].Release();
+        }
+
         const auto SignDesc = GetDefaultSignatureDesc(ShaderStages, ActiveStages);
         // Always initialize default resource signature as internal device object.
         // This is necessary to avoid cyclic references from TexRegionRenderer.

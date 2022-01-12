@@ -606,12 +606,13 @@ void ArchiverImpl::SerializeShaderSource(TShaderIndices& ShaderIndices, DeviceTy
 
     VERIFY_EXPR(CI.SourceLength > 0);
 
-    String Source{CI.Source, CI.SourceLength};
+    String Source;
     if (CI.Macros != nullptr)
     {
         DEV_CHECK_ERR(CI.SourceLanguage != SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM, "Shader macros are ignored when compiling GLSL verbatim in OpenGL backend");
         AppendShaderMacros(Source, CI.Macros);
     }
+    Source.append(CI.Source, CI.SourceLength);
 
     Serializer<SerializerMode::Measure> MeasureSer;
     MeasureSer(CI.Desc.ShaderType, CI.EntryPoint, CI.SourceLanguage, CI.ShaderCompiler, CI.UseCombinedTextureSamplers, CI.CombinedSamplerSuffix);
@@ -856,8 +857,22 @@ bool ArchiverImpl::SerializePSO(TNamedObjectHashMap<TPSOData<CreateInfoType>>& P
 
     if (!Data.CommonData)
     {
+        auto SignaturesCount = PSOCreateInfo.ResourceSignaturesCount;
+
+        if (SignaturesCount == 0)
+        {
+#if GL_SUPPORTED || GLES_SUPPORTED
+            if (ArchiveInfo.DeviceFlags & (ARCHIVE_DEVICE_DATA_FLAG_GL | ARCHIVE_DEVICE_DATA_FLAG_GLES))
+            {
+                // We must add empty device signature for OpenGL after all other devices are processed,
+                // otherwise this empty description will be used as common signature description.
+                if (!PrepareDefaultSignatureGL(PSOCreateInfo, Data))
+                    return false;
+            }
+#endif
+        }
+
         IPipelineResourceSignature* DefaultSignatures[1] = {};
-        auto                        SignaturesCount      = PSOCreateInfo.ResourceSignaturesCount;
         if (Data.pDefaultSignature)
         {
             DefaultSignatures[0]               = Data.pDefaultSignature;

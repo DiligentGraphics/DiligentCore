@@ -260,6 +260,11 @@ private:
     template <typename CreateInfoType>
     bool PatchShadersMtl(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data, DeviceType DevType);
 
+#if GL_SUPPORTED || GLES_SUPPORTED
+    // Default signatures in OpenGL are not serialized and require special handling.
+    template <typename CreateInfoType>
+    bool PrepareDefaultSignatureGL(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data);
+#endif
 
     SerializedMemory SerializeShadersForPSO(const TShaderIndices& ShaderIndices) const;
 
@@ -302,6 +307,11 @@ extern template bool ArchiverImpl::PatchShadersGL<GraphicsPipelineStateCreateInf
 extern template bool ArchiverImpl::PatchShadersGL<ComputePipelineStateCreateInfo>(const ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data);
 extern template bool ArchiverImpl::PatchShadersGL<TilePipelineStateCreateInfo>(const TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data);
 extern template bool ArchiverImpl::PatchShadersGL<RayTracingPipelineStateCreateInfo>(const RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data);
+
+extern template bool ArchiverImpl::PrepareDefaultSignatureGL<GraphicsPipelineStateCreateInfo>(const GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data);
+extern template bool ArchiverImpl::PrepareDefaultSignatureGL<ComputePipelineStateCreateInfo>(const ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data);
+extern template bool ArchiverImpl::PrepareDefaultSignatureGL<TilePipelineStateCreateInfo>(const TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data);
+extern template bool ArchiverImpl::PrepareDefaultSignatureGL<RayTracingPipelineStateCreateInfo>(const RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data);
 #endif
 
 #if VULKAN_SUPPORTED

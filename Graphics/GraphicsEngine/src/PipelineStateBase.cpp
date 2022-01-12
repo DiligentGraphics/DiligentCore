@@ -184,8 +184,12 @@ void CorrectBlendStateDesc(GraphicsPipelineDesc& GraphicsPipeline) noexcept
 
 
 void ValidatePipelineResourceSignatures(const PipelineStateCreateInfo& CreateInfo,
-                                        const DeviceFeatures&          Features) noexcept(false)
+                                        const IRenderDevice*           pDevice) noexcept(false)
 {
+    VERIFY_EXPR(pDevice != nullptr);
+    const auto& DeviceInfo = pDevice->GetDeviceInfo();
+    const auto& Features   = DeviceInfo.Features;
+
     const auto& PSODesc = CreateInfo.PSODesc;
 
     if ((CreateInfo.Flags & PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0) != 0 && CreateInfo.ResourceSignaturesCount != 1)
@@ -323,7 +327,9 @@ void ValidatePipelineResourceSignatures(const PipelineStateCreateInfo& CreateInf
     }
 
 
-    if ((CreateInfo.Flags & PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0) != 0)
+    if ((CreateInfo.Flags & PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0) != 0 &&
+        // Deserialized default signatures are empty in OpenGL.
+        !DeviceInfo.IsGLDevice())
     {
         const auto& ResLayout = CreateInfo.PSODesc.ResourceLayout;
         for (Uint32 i = 0; i < ResLayout.NumVariables; ++i)
@@ -343,7 +349,7 @@ void ValidatePipelineResourceSignatures(const PipelineStateCreateInfo& CreateInf
                 if (SignRes.Stages != Var.ShaderStages)
                 {
                     LOG_PSO_ERROR_AND_THROW("Shader stages of variable '", Var.Name, "' defined by the resource layout (", GetShaderStagesString(Var.ShaderStages),
-                                            ") do not match the stages defined by the implicit resource signatre (", GetShaderStagesString(SignRes.Stages),
+                                            ") do not match the stages defined by the implicit resource signature (", GetShaderStagesString(SignRes.Stages),
                                             "). Note that PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0 flag is for internal use only. If you see this message while "
                                             "unpacking PSO from the archive, this might indicate a bug.");
                 }
@@ -351,7 +357,7 @@ void ValidatePipelineResourceSignatures(const PipelineStateCreateInfo& CreateInf
                 if (SignRes.Desc.VarType != Var.Type)
                 {
                     LOG_PSO_ERROR_AND_THROW("The type of variable '", Var.Name, "' defined by the resource layout (", GetShaderVariableTypeLiteralName(Var.Type),
-                                            ") does not match the type defined by the implicit resource signatre (", GetShaderVariableTypeLiteralName(SignRes.Desc.VarType),
+                                            ") does not match the type defined by the implicit resource signature (", GetShaderVariableTypeLiteralName(SignRes.Desc.VarType),
                                             "). Note that PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0 flag is for internal use only. If you see this message while "
                                             "unpacking PSO from the archive, this might indicate a bug.");
                 }
@@ -524,14 +530,17 @@ void ValidatePipelineResourceLayoutDesc(const PipelineStateDesc& PSODesc, const 
     }
 
 void ValidateGraphicsPipelineCreateInfo(const GraphicsPipelineStateCreateInfo& CreateInfo,
-                                        const DeviceFeatures&                  Features,
-                                        const GraphicsAdapterInfo&             AdapterInfo) noexcept(false)
+                                        const IRenderDevice*                   pDevice) noexcept(false)
 {
+    VERIFY_EXPR(pDevice != nullptr);
+    const auto& Features    = pDevice->GetDeviceInfo().Features;
+    const auto& AdapterInfo = pDevice->GetAdapterInfo();
+
     const auto& PSODesc = CreateInfo.PSODesc;
     if (PSODesc.PipelineType != PIPELINE_TYPE_GRAPHICS && PSODesc.PipelineType != PIPELINE_TYPE_MESH)
         LOG_PSO_ERROR_AND_THROW("Pipeline type must be GRAPHICS or MESH.");
 
-    ValidatePipelineResourceSignatures(CreateInfo, Features);
+    ValidatePipelineResourceSignatures(CreateInfo, pDevice);
 
     const auto& GraphicsPipeline = CreateInfo.GraphicsPipeline;
 
@@ -613,13 +622,16 @@ void ValidateGraphicsPipelineCreateInfo(const GraphicsPipelineStateCreateInfo& C
 }
 
 void ValidateComputePipelineCreateInfo(const ComputePipelineStateCreateInfo& CreateInfo,
-                                       const DeviceFeatures&                 Features) noexcept(false)
+                                       const IRenderDevice*                  pDevice) noexcept(false)
 {
+    VERIFY_EXPR(pDevice != nullptr);
+    const auto& Features = pDevice->GetDeviceInfo().Features;
+
     const auto& PSODesc = CreateInfo.PSODesc;
     if (PSODesc.PipelineType != PIPELINE_TYPE_COMPUTE)
         LOG_PSO_ERROR_AND_THROW("Pipeline type must be COMPUTE.");
 
-    ValidatePipelineResourceSignatures(CreateInfo, Features);
+    ValidatePipelineResourceSignatures(CreateInfo, pDevice);
     ValidatePipelineResourceLayoutDesc(PSODesc, Features);
 
     if (CreateInfo.pCS == nullptr)
@@ -628,7 +640,7 @@ void ValidateComputePipelineCreateInfo(const ComputePipelineStateCreateInfo& Cre
     VALIDATE_SHADER_TYPE(CreateInfo.pCS, SHADER_TYPE_COMPUTE, "compute")
 }
 
-void ValidateRayTracingPipelineCreateInfo(IRenderDevice*                           pDevice,
+void ValidateRayTracingPipelineCreateInfo(const IRenderDevice*                     pDevice,
                                           const RayTracingPipelineStateCreateInfo& CreateInfo) noexcept(false)
 {
     const auto& DeviceInfo = pDevice->GetDeviceInfo();
@@ -640,7 +652,7 @@ void ValidateRayTracingPipelineCreateInfo(IRenderDevice*                        
     if (!DeviceInfo.Features.RayTracing || (RTProps.CapFlags & RAY_TRACING_CAP_FLAG_STANDALONE_SHADERS) == 0)
         LOG_PSO_ERROR_AND_THROW("Standalone ray tracing shaders are not supported");
 
-    ValidatePipelineResourceSignatures(CreateInfo, DeviceInfo.Features);
+    ValidatePipelineResourceSignatures(CreateInfo, pDevice);
     ValidatePipelineResourceLayoutDesc(PSODesc, DeviceInfo.Features);
 
     if (DeviceInfo.Type == RENDER_DEVICE_TYPE_D3D12)
@@ -719,13 +731,16 @@ void ValidateRayTracingPipelineCreateInfo(IRenderDevice*                        
 }
 
 void ValidateTilePipelineCreateInfo(const TilePipelineStateCreateInfo& CreateInfo,
-                                    const DeviceFeatures&              Features) noexcept(false)
+                                    const IRenderDevice*               pDevice) noexcept(false)
 {
+    VERIFY_EXPR(pDevice != nullptr);
+    const auto& Features = pDevice->GetDeviceInfo().Features;
+
     const auto& PSODesc = CreateInfo.PSODesc;
     if (PSODesc.PipelineType != PIPELINE_TYPE_TILE)
         LOG_PSO_ERROR_AND_THROW("Pipeline type must be TILE.");
 
-    ValidatePipelineResourceSignatures(CreateInfo, Features);
+    ValidatePipelineResourceSignatures(CreateInfo, pDevice);
     ValidatePipelineResourceLayoutDesc(PSODesc, Features);
 
     if (CreateInfo.pTS == nullptr)
@@ -867,24 +882,24 @@ ShaderResourceVariableDesc FindPipelineResourceLayoutVariable(
 
 
 template <>
-void ValidatePSOCreateInfo<GraphicsPipelineStateCreateInfo>(IRenderDevice*                         pDevice,
+void ValidatePSOCreateInfo<GraphicsPipelineStateCreateInfo>(const IRenderDevice*                   pDevice,
                                                             const GraphicsPipelineStateCreateInfo& CreateInfo) noexcept(false)
 {
     VERIFY_EXPR(pDevice != nullptr);
-    ValidateGraphicsPipelineCreateInfo(CreateInfo, pDevice->GetDeviceInfo().Features, pDevice->GetAdapterInfo());
+    ValidateGraphicsPipelineCreateInfo(CreateInfo, pDevice);
 }
 
 template <>
-void ValidatePSOCreateInfo<ComputePipelineStateCreateInfo>(IRenderDevice*                        pDevice,
+void ValidatePSOCreateInfo<ComputePipelineStateCreateInfo>(const IRenderDevice*                  pDevice,
                                                            const ComputePipelineStateCreateInfo& CreateInfo) noexcept(false)
 {
     VERIFY_EXPR(pDevice != nullptr);
-    ValidateComputePipelineCreateInfo(CreateInfo, pDevice->GetDeviceInfo().Features);
+    ValidateComputePipelineCreateInfo(CreateInfo, pDevice);
 }
 
 
 template <>
-void ValidatePSOCreateInfo<RayTracingPipelineStateCreateInfo>(IRenderDevice*                           pDevice,
+void ValidatePSOCreateInfo<RayTracingPipelineStateCreateInfo>(const IRenderDevice*                     pDevice,
                                                               const RayTracingPipelineStateCreateInfo& CreateInfo) noexcept(false)
 {
     VERIFY_EXPR(pDevice != nullptr);
@@ -892,11 +907,11 @@ void ValidatePSOCreateInfo<RayTracingPipelineStateCreateInfo>(IRenderDevice*    
 }
 
 template <>
-void ValidatePSOCreateInfo<TilePipelineStateCreateInfo>(IRenderDevice*                     pDevice,
+void ValidatePSOCreateInfo<TilePipelineStateCreateInfo>(const IRenderDevice*               pDevice,
                                                         const TilePipelineStateCreateInfo& CreateInfo) noexcept(false)
 {
     VERIFY_EXPR(pDevice != nullptr);
-    ValidateTilePipelineCreateInfo(CreateInfo, pDevice->GetDeviceInfo().Features);
+    ValidateTilePipelineCreateInfo(CreateInfo, pDevice);
 }
 
 } // namespace Diligent
