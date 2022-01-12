@@ -108,11 +108,8 @@ SerializableResourceSignatureImpl::~SerializableResourceSignatureImpl()
 
 const PipelineResourceSignatureDesc& SerializableResourceSignatureImpl::GetDesc() const
 {
-    for (const auto& pDeviceSign : m_pDeviceSignatures)
-    {
-        if (pDeviceSign)
-            return pDeviceSign->GetPRS()->GetDesc();
-    }
+    if (m_pDesc != nullptr)
+        return *m_pDesc;
 
     UNEXPECTED("No device signatures initialized!");
     static constexpr PipelineResourceSignatureDesc NullDesc;
@@ -126,7 +123,9 @@ void SerializableResourceSignatureImpl::InitCommonData(const PipelineResourceSig
 
     if (!m_CommonData)
     {
-        // Use description of the first signature as common description.
+        // Use description of the first signature initialized as common description.
+        // Note that since Desc is kept by the device signatures, there is no need to copy the data.
+        m_pDesc = &Desc;
 
         Serializer<SerializerMode::Measure> MeasureSer;
         PSOSerializer<SerializerMode::Measure>::SerializePRSDesc(MeasureSer, Desc, nullptr);
@@ -145,13 +144,10 @@ bool SerializableResourceSignatureImpl::IsCompatible(const SerializableResourceS
     while (DeviceFlags != ARCHIVE_DEVICE_DATA_FLAG_NONE)
     {
         const auto DataTypeFlag      = ExtractLSB(DeviceFlags);
-        auto       ArchiveDeviceType = ArchiveDeviceDataFlagToArchiveDeviceType(DataTypeFlag);
+        const auto ArchiveDeviceType = ArchiveDeviceDataFlagToArchiveDeviceType(DataTypeFlag);
 
-        if (ArchiveDeviceType == DeviceType::Metal_MacOS)
-            ArchiveDeviceType = DeviceType::Metal_iOS;
-
-        const auto* pPRS0 = GetPRS(ArchiveDeviceType);
-        const auto* pPRS1 = Rhs.GetPRS(ArchiveDeviceType);
+        const auto* pPRS0 = GetDeviceSignature(ArchiveDeviceType);
+        const auto* pPRS1 = Rhs.GetDeviceSignature(ArchiveDeviceType);
         if ((pPRS0 == nullptr) != (pPRS1 == nullptr))
             return false;
 

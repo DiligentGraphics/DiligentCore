@@ -36,23 +36,6 @@
 namespace Diligent
 {
 
-#if D3D11_SUPPORTED
-class PipelineResourceSignatureD3D11Impl;
-#endif
-#if D3D12_SUPPORTED
-class PipelineResourceSignatureD3D12Impl;
-#endif
-#if GL_SUPPORTED || GLES_SUPPORTED
-class PipelineResourceSignatureGLImpl;
-#endif
-#if VULKAN_SUPPORTED
-class PipelineResourceSignatureVkImpl;
-#endif
-#if METAL_SUPPORTED
-class PipelineResourceSignatureMtlImpl;
-#endif
-
-
 class SerializableResourceSignatureImpl final : public ObjectBase<IPipelineResourceSignature>
 {
 public:
@@ -122,8 +105,7 @@ public:
         constexpr auto TraitsType = SignatureTraits<SignatureType>::Type;
         VERIFY_EXPR(Type == TraitsType || (Type == DeviceType::Metal_iOS && TraitsType == DeviceType::Metal_MacOS));
 
-        auto& Wrpr = m_pDeviceSignatures[static_cast<size_t>(Type)];
-        return Wrpr ? Wrpr->GetPRS<SignatureType>() : nullptr;
+        return ClassPtrCast<SignatureType>(GetDeviceSignature(Type));
     }
 
     const char* GetName() const { return m_Name.c_str(); }
@@ -134,7 +116,7 @@ public:
                                SHADER_TYPE                          ShaderStages);
 
 private:
-    const IPipelineResourceSignature* GetPRS(DeviceType Type) const
+    IPipelineResourceSignature* GetDeviceSignature(DeviceType Type) const
     {
         VERIFY_EXPR(static_cast<Uint32>(Type) < DeviceCount);
         const auto& Wrpr = m_pDeviceSignatures[static_cast<size_t>(Type)];
@@ -146,15 +128,14 @@ private:
 private:
     const std::string m_Name;
 
+    const PipelineResourceSignatureDesc* m_pDesc = nullptr;
+
     SerializedMemory m_CommonData;
 
     struct PRSWapperBase
     {
         virtual ~PRSWapperBase() {}
         virtual IPipelineResourceSignature* GetPRS() = 0;
-
-        template <typename SigType>
-        SigType* GetPRS() { return ClassPtrCast<SigType>(GetPRS()); }
 
         SerializedMemory Mem;
     };
@@ -164,7 +145,10 @@ private:
     std::array<std::unique_ptr<PRSWapperBase>, DeviceCount> m_pDeviceSignatures;
 };
 
+
 #if D3D11_SUPPORTED
+class PipelineResourceSignatureD3D11Impl;
+
 extern template PipelineResourceSignatureD3D11Impl* SerializableResourceSignatureImpl::GetDeviceSignature<PipelineResourceSignatureD3D11Impl>(DeviceType Type) const;
 
 extern template void SerializableResourceSignatureImpl::CreateDeviceSignature<PipelineResourceSignatureD3D11Impl>(
@@ -173,7 +157,10 @@ extern template void SerializableResourceSignatureImpl::CreateDeviceSignature<Pi
     SHADER_TYPE                          ShaderStages);
 #endif
 
+
 #if D3D12_SUPPORTED
+class PipelineResourceSignatureD3D12Impl;
+
 extern template PipelineResourceSignatureD3D12Impl* SerializableResourceSignatureImpl::GetDeviceSignature<PipelineResourceSignatureD3D12Impl>(DeviceType Type) const;
 
 extern template void SerializableResourceSignatureImpl::CreateDeviceSignature<PipelineResourceSignatureD3D12Impl>(
@@ -182,7 +169,10 @@ extern template void SerializableResourceSignatureImpl::CreateDeviceSignature<Pi
     SHADER_TYPE                          ShaderStages);
 #endif
 
+
 #if GL_SUPPORTED || GLES_SUPPORTED
+class PipelineResourceSignatureGLImpl;
+
 extern template PipelineResourceSignatureGLImpl* SerializableResourceSignatureImpl::GetDeviceSignature<PipelineResourceSignatureGLImpl>(DeviceType Type) const;
 
 extern template void SerializableResourceSignatureImpl::CreateDeviceSignature<PipelineResourceSignatureGLImpl>(
@@ -191,7 +181,10 @@ extern template void SerializableResourceSignatureImpl::CreateDeviceSignature<Pi
     SHADER_TYPE                          ShaderStages);
 #endif
 
+
 #if VULKAN_SUPPORTED
+class PipelineResourceSignatureVkImpl;
+
 extern template PipelineResourceSignatureVkImpl* SerializableResourceSignatureImpl::GetDeviceSignature<PipelineResourceSignatureVkImpl>(DeviceType Type) const;
 
 extern template void SerializableResourceSignatureImpl::CreateDeviceSignature<PipelineResourceSignatureVkImpl>(
@@ -200,7 +193,10 @@ extern template void SerializableResourceSignatureImpl::CreateDeviceSignature<Pi
     SHADER_TYPE                          ShaderStages);
 #endif
 
+
 #if METAL_SUPPORTED
+class PipelineResourceSignatureMtlImpl;
+
 extern template PipelineResourceSignatureMtlImpl* SerializableResourceSignatureImpl::GetDeviceSignature<PipelineResourceSignatureMtlImpl>(DeviceType Type) const;
 
 extern template void SerializableResourceSignatureImpl::CreateDeviceSignature<PipelineResourceSignatureMtlImpl>(

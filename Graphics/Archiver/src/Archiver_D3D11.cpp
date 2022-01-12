@@ -78,7 +78,7 @@ struct ShaderStageInfoD3D11
     // Needed only for ray tracing
     void Append(const SerializableShaderImpl*) {}
 
-    Uint32 Count() const { return 1; }
+    constexpr Uint32 Count() const { return 1; }
 
     SHADER_TYPE                   Type          = SHADER_TYPE_UNKNOWN;
     ShaderD3D11Impl*              pShader       = nullptr;
@@ -113,11 +113,7 @@ bool ArchiverImpl::PatchShadersD3D11(const CreateInfoType& CreateInfo, TPSOData<
 
     std::vector<ShaderD3D11Impl*> ShadersD3D11{ShaderStages.size()};
     for (size_t i = 0; i < ShadersD3D11.size(); ++i)
-    {
-        auto& Src = ShaderStages[i];
-        auto& Dst = ShadersD3D11[i];
-        Dst       = Src.pShader;
-    }
+        ShadersD3D11[i] = ShaderStages[i].pShader;
 
     auto** ppSignatures    = CreateInfo.ppResourceSignatures;
     auto   SignaturesCount = CreateInfo.ResourceSignaturesCount;
