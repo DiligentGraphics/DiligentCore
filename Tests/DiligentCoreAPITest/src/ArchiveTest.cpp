@@ -59,8 +59,6 @@ static constexpr ARCHIVE_DEVICE_DATA_FLAGS GetDeviceBits()
 #endif
 #if GL_SUPPORTED
     DeviceBits = DeviceBits | ARCHIVE_DEVICE_DATA_FLAG_GL;
-#endif
-#if GLES_SUPPORTED
     DeviceBits = DeviceBits | ARCHIVE_DEVICE_DATA_FLAG_GLES;
 #endif
 #if VULKAN_SUPPORTED
@@ -294,8 +292,12 @@ TEST(ArchiveTest, AppendDeviceData)
 
     const auto CurrentDeviceFlag = static_cast<ARCHIVE_DEVICE_DATA_FLAGS>(1u << pDevice->GetDeviceInfo().Type);
     auto       AllDeviceFlags    = GetDeviceBits() & ~CurrentDeviceFlag;
-    if (CurrentDeviceFlag == ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS)
-        AllDeviceFlags &= ~ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS;
+    // OpenGL and GLES use the same device-specific data.
+    // When one is removed, the other is removed too.
+    if (CurrentDeviceFlag == ARCHIVE_DEVICE_DATA_FLAG_GLES)
+        AllDeviceFlags &= ~ARCHIVE_DEVICE_DATA_FLAG_GL;
+    else if (CurrentDeviceFlag == ARCHIVE_DEVICE_DATA_FLAG_GL)
+        AllDeviceFlags &= ~ARCHIVE_DEVICE_DATA_FLAG_GLES;
 
     if (AllDeviceFlags == 0)
         GTEST_SKIP() << "Test requires support for at least 2 backends";
