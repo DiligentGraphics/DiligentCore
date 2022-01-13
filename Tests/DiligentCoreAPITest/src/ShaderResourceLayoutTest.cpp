@@ -219,7 +219,7 @@ protected:
             pPSO->CreateShaderResourceBinding(&pSRB, false);
     }
 
-    void TestTexturesAndImtblSamplers(bool TestImtblSamplers);
+    void TestTexturesAndImtblSamplers(bool TestImtblSamplers, SHADER_SOURCE_LANGUAGE ShaderLang);
     void TestStructuredOrFormattedBuffer(bool IsFormatted);
     void TestRWStructuredOrFormattedBuffer(bool IsFormatted);
 };
@@ -244,7 +244,7 @@ protected:
     } while (false)
 
 
-void ShaderResourceLayoutTest::TestTexturesAndImtblSamplers(bool TestImtblSamplers)
+void ShaderResourceLayoutTest::TestTexturesAndImtblSamplers(bool TestImtblSamplers, SHADER_SOURCE_LANGUAGE ShaderLang)
 {
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
@@ -252,6 +252,9 @@ void ShaderResourceLayoutTest::TestTexturesAndImtblSamplers(bool TestImtblSample
     auto* const pDevice    = pEnv->GetDevice();
     auto* const pSwapChain = pEnv->GetSwapChain();
     const auto& deviceCaps = pDevice->GetDeviceInfo();
+
+    if (ShaderLang != SHADER_SOURCE_LANGUAGE_HLSL && deviceCaps.IsD3DDevice())
+        GTEST_SKIP() << "Direct3D backends support HLSL only";
 
     float ClearColor[] = {0.25, 0.5, 0.75, 0.125};
     RenderDrawCommandReference(pSwapChain, ClearColor);
@@ -293,28 +296,33 @@ void ShaderResourceLayoutTest::TestTexturesAndImtblSamplers(bool TestImtblSample
         ShaderResourceDesc{"g_Tex2DArr_Mut",      SHADER_RESOURCE_TYPE_TEXTURE_SRV, MutableTexArraySize},
         ShaderResourceDesc{"g_Tex2DArr_Dyn",      SHADER_RESOURCE_TYPE_TEXTURE_SRV, DynamicTexArraySize}
     };
-    if (!deviceCaps.IsGLDevice())
+    // clang-format on
+    if (ShaderLang == SHADER_SOURCE_LANGUAGE_HLSL && !deviceCaps.IsGLDevice())
     {
         if (TestImtblSamplers)
         {
+            // clang-format off
             Resources.emplace_back("g_Tex2D_Static_sampler",    SHADER_RESOURCE_TYPE_SAMPLER, 1);
             Resources.emplace_back("g_Tex2D_Mut_sampler",       SHADER_RESOURCE_TYPE_SAMPLER, 1);
             Resources.emplace_back("g_Tex2D_Dyn_sampler",       SHADER_RESOURCE_TYPE_SAMPLER, 1);
             Resources.emplace_back("g_Tex2DArr_Static_sampler", SHADER_RESOURCE_TYPE_SAMPLER, 1);
             Resources.emplace_back("g_Tex2DArr_Mut_sampler",    SHADER_RESOURCE_TYPE_SAMPLER, MutableTexArraySize);
             Resources.emplace_back("g_Tex2DArr_Dyn_sampler",    SHADER_RESOURCE_TYPE_SAMPLER, DynamicTexArraySize);
+            // clang-format on
         }
         else
         {
             Resources.emplace_back("g_Sampler", SHADER_RESOURCE_TYPE_SAMPLER, 1);
         }
     }
-    // clang-format on
 
     ShaderMacroHelper Macros;
 
     auto PrepareMacros = [&](Uint32 s) {
         Macros.Clear();
+
+        if (ShaderLang == SHADER_SOURCE_LANGUAGE_GLSL)
+            Macros.AddShaderMacro("float4", "vec4");
 
         Macros.AddShaderMacro("STATIC_TEX_ARRAY_SIZE", static_cast<int>(StaticTexArraySize));
         Macros.AddShaderMacro("MUTABLE_TEX_ARRAY_SIZE", static_cast<int>(MutableTexArraySize));
@@ -339,34 +347,61 @@ void ShaderResourceLayoutTest::TestTexturesAndImtblSamplers(bool TestImtblSample
         return static_cast<const ShaderMacro*>(Macros);
     };
 
-    auto ModifyShaderCI = [TestImtblSamplers, pEnv](ShaderCreateInfo& ShaderCI) {
-        if (TestImtblSamplers)
+    auto ModifyShaderCI = [TestImtblSamplers, ShaderLang, pEnv](ShaderCreateInfo& ShaderCI) {
+        if (ShaderLang == SHADER_SOURCE_LANGUAGE_HLSL)
+        {
+            if (TestImtblSamplers)
+            {
+                ShaderCI.UseCombinedTextureSamplers = true;
+                // Immutable sampler arrays are not allowed in 5.1, and DXC only supports 6.0+
+                ShaderCI.ShaderCompiler = SHADER_COMPILER_DEFAULT;
+                ShaderCI.HLSLVersion    = ShaderVersion{5, 0};
+            }
+
+            if (pEnv->NeedWARPResourceArrayIndexingBugWorkaround())
+            {
+                // Due to bug in D3D12 WARP, we have to use SM5.0 with old compiler
+                ShaderCI.ShaderCompiler = SHADER_COMPILER_DEFAULT;
+                ShaderCI.HLSLVersion    = ShaderVersion{5, 0};
+            }
+        }
+        else if (ShaderLang == SHADER_SOURCE_LANGUAGE_GLSL)
         {
             ShaderCI.UseCombinedTextureSamplers = true;
-            // Immutable sampler arrays are not allowed in 5.1, and DXC only supports 6.0+
-            ShaderCI.ShaderCompiler = SHADER_COMPILER_DEFAULT;
-            ShaderCI.HLSLVersion    = ShaderVersion{5, 0};
         }
-
-        if (pEnv->NeedWARPResourceArrayIndexingBugWorkaround())
+        else
         {
-            // Due to bug in D3D12 WARP, we have to use SM5.0 with old compiler
-            ShaderCI.ShaderCompiler = SHADER_COMPILER_DEFAULT;
-            ShaderCI.HLSLVersion    = ShaderVersion{5, 0};
+            UNEXPECTED("Unexpected shader language");
         }
     };
 
-    auto pVS = CreateShader(TestImtblSamplers ? "ShaderResourceLayoutTest.ImtblSamplers - VS" : "ShaderResourceLayoutTest.Textures - VS",
-                            TestImtblSamplers ? "ImmutableSamplers.hlsl" : "Textures.hlsl",
-                            "VSMain",
-                            SHADER_TYPE_VERTEX, SHADER_SOURCE_LANGUAGE_HLSL, PrepareMacros(VSResArrId),
+    const char* ShaderPath = nullptr;
+    std::string Name       = "ShaderResourceLayoutTest.";
+    switch (ShaderLang)
+    {
+        case SHADER_SOURCE_LANGUAGE_HLSL:
+            ShaderPath = TestImtblSamplers ? "ImmutableSamplers.hlsl" : "Textures.hlsl";
+            Name += TestImtblSamplers ? "ImtblSamplers" : "Textures";
+            break;
+
+        case SHADER_SOURCE_LANGUAGE_GLSL:
+            ShaderPath = "CombinedSamplers.glsl";
+            Name += TestImtblSamplers ? "CombinedImtblSamplers_GLSL" : "CombinedSamplers_GLSL";
+            break;
+
+        default:
+            UNSUPPORTED("Unsupported shader language");
+    }
+
+    auto pVS = CreateShader((Name + " - VS").c_str(), ShaderPath,
+                            ShaderLang == SHADER_SOURCE_LANGUAGE_GLSL ? "main" : "VSMain",
+                            SHADER_TYPE_VERTEX, ShaderLang, PrepareMacros(VSResArrId),
                             Resources.data(), static_cast<Uint32>(Resources.size()),
                             ModifyShaderCI);
 
-    auto pPS = CreateShader(TestImtblSamplers ? "ShaderResourceLayoutTest.ImtblSamplers - PS" : "ShaderResourceLayoutTest.Textures - PS",
-                            TestImtblSamplers ? "ImmutableSamplers.hlsl" : "Textures.hlsl",
-                            "PSMain",
-                            SHADER_TYPE_PIXEL, SHADER_SOURCE_LANGUAGE_HLSL, PrepareMacros(PSResArrId),
+    auto pPS = CreateShader((Name + " - PS").c_str(), ShaderPath,
+                            ShaderLang == SHADER_SOURCE_LANGUAGE_GLSL ? "main" : "PSMain",
+                            SHADER_TYPE_PIXEL, ShaderLang, PrepareMacros(PSResArrId),
                             Resources.data(), static_cast<Uint32>(Resources.size()),
                             ModifyShaderCI);
     ASSERT_NE(pVS, nullptr);
@@ -397,23 +432,39 @@ void ShaderResourceLayoutTest::TestTexturesAndImtblSamplers(bool TestImtblSample
     AddVar("g_Tex2DArr_Static", SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
     AddVar("g_Tex2DArr_Mut",    SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE);
     AddVar("g_Tex2DArr_Dyn",    SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
+    // clang-format on
 
     std::vector<ImmutableSamplerDesc> ImtblSamplers;
     if (TestImtblSamplers)
     {
+        // clang-format off
         ImtblSamplers.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2D_Static",    SamplerDesc{});
         ImtblSamplers.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2D_Mut",       SamplerDesc{});
         ImtblSamplers.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2D_Dyn",       SamplerDesc{});
         ImtblSamplers.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2DArr_Static", SamplerDesc{});
         ImtblSamplers.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2DArr_Mut",    SamplerDesc{});
         ImtblSamplers.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2DArr_Dyn",    SamplerDesc{});
+        // clang-format on
     }
     else
     {
-        if(!deviceCaps.IsGLDevice())
-            ImtblSamplers.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Sampler", SamplerDesc{});
+        if (ShaderLang == SHADER_SOURCE_LANGUAGE_HLSL)
+        {
+            if (!deviceCaps.IsGLDevice())
+                ImtblSamplers.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Sampler", SamplerDesc{});
+        }
+        else if (ShaderLang == SHADER_SOURCE_LANGUAGE_GLSL)
+        {
+            RefCntAutoPtr<ISampler> pSampler;
+            pDevice->CreateSampler(SamplerDesc{}, &pSampler);
+            for (Uint32 i = 0; i < RefTextures.GetTextureCount(); ++i)
+                RefTextures.GetView(i)->SetSampler(pSampler);
+        }
+        else
+        {
+            UNEXPECTED("Unexpected shader language");
+        }
     }
-    // clang-format on
 
     PipelineResourceLayoutDesc ResourceLayout;
     ResourceLayout.Variables            = Vars.data();
@@ -474,12 +525,22 @@ void ShaderResourceLayoutTest::TestTexturesAndImtblSamplers(bool TestImtblSample
 
 TEST_F(ShaderResourceLayoutTest, Textures)
 {
-    TestTexturesAndImtblSamplers(false);
+    TestTexturesAndImtblSamplers(false /*TestImtblSamplers*/, SHADER_SOURCE_LANGUAGE_HLSL);
 }
 
 TEST_F(ShaderResourceLayoutTest, ImmutableSamplers)
 {
-    TestTexturesAndImtblSamplers(true);
+    TestTexturesAndImtblSamplers(true /*TestImtblSamplers*/, SHADER_SOURCE_LANGUAGE_HLSL);
+}
+
+TEST_F(ShaderResourceLayoutTest, CombinedSamplers_GLSL)
+{
+    TestTexturesAndImtblSamplers(false /*TestImtblSamplers*/, SHADER_SOURCE_LANGUAGE_GLSL);
+}
+
+TEST_F(ShaderResourceLayoutTest, CombinedImmutableSamplers_GLSL)
+{
+    TestTexturesAndImtblSamplers(true /*TestImtblSamplers*/, SHADER_SOURCE_LANGUAGE_GLSL);
 }
 
 

@@ -6,21 +6,6 @@ uniform sampler2D g_Tex2D_Dyn;
 uniform sampler2D g_Tex2DArr_Dyn[DYNAMIC_TEX_ARRAY_SIZE];
 uniform sampler2D g_Tex2DArr_Static[STATIC_TEX_ARRAY_SIZE];
 
-uniform UniformBuff_Stat
-{
-    vec4 f4Data;
-}g_Data_Stat;
-
-uniform UniformBuff_Mut
-{
-    vec4 f4Data;
-}g_Data_Mut;
-
-uniform UniformBuff_Dyn
-{
-    vec4 f4Data;
-}g_Data_Dyn;
-
 vec4 CheckValue(vec4 Val, vec4 Expected)
 {
     return vec4(Val.x == Expected.x ? 1.0 : 0.0,
@@ -32,10 +17,6 @@ vec4 CheckValue(vec4 Val, vec4 Expected)
 vec4 VerifyResources()
 {
     vec4 AllCorrect = vec4(1.0, 1.0, 1.0, 1.0);
-
-    AllCorrect *= CheckValue(g_Data_Stat.f4Data, Buff_Static_Ref);
-    AllCorrect *= CheckValue(g_Data_Mut.f4Data,  Buff_Mut_Ref);
-    AllCorrect *= CheckValue(g_Data_Dyn.f4Data,  Buff_Dyn_Ref);
 
     vec2 UV = vec2(0.5, 0.5);
 
