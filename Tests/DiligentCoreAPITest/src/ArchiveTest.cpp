@@ -59,8 +59,6 @@ static constexpr ARCHIVE_DEVICE_DATA_FLAGS GetDeviceBits()
 #endif
 #if GL_SUPPORTED
     DeviceBits = DeviceBits | ARCHIVE_DEVICE_DATA_FLAG_GL;
-#endif
-#if GLES_SUPPORTED
     DeviceBits = DeviceBits | ARCHIVE_DEVICE_DATA_FLAG_GLES;
 #endif
 #if VULKAN_SUPPORTED
@@ -294,8 +292,12 @@ TEST(ArchiveTest, AppendDeviceData)
 
     const auto CurrentDeviceFlag = static_cast<ARCHIVE_DEVICE_DATA_FLAGS>(1u << pDevice->GetDeviceInfo().Type);
     auto       AllDeviceFlags    = GetDeviceBits() & ~CurrentDeviceFlag;
-    if (CurrentDeviceFlag == ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS)
-        AllDeviceFlags &= ~ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS;
+    // OpenGL and GLES use the same device-specific data.
+    // When one is removed, the other is removed too.
+    if (CurrentDeviceFlag == ARCHIVE_DEVICE_DATA_FLAG_GLES)
+        AllDeviceFlags &= ~ARCHIVE_DEVICE_DATA_FLAG_GL;
+    else if (CurrentDeviceFlag == ARCHIVE_DEVICE_DATA_FLAG_GL)
+        AllDeviceFlags &= ~ARCHIVE_DEVICE_DATA_FLAG_GLES;
 
     if (AllDeviceFlags == 0)
         GTEST_SKIP() << "Test requires support for at least 2 backends";
@@ -1746,7 +1748,7 @@ TEST(ArchiveTest, ResourceSignatureBindings)
     }
 }
 
-void TestSamplers(bool UseImtblSamplers)
+void TestSamplers(bool UseImtblSamplers, SHADER_SOURCE_LANGUAGE ShaderLang)
 {
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
@@ -1756,6 +1758,9 @@ void TestSamplers(bool UseImtblSamplers)
     const auto& deviceCaps       = pDevice->GetDeviceInfo();
     auto* const pArchiverFactory = pEnv->GetArchiverFactory();
     auto* const pDearchiver      = pDevice->GetEngineFactory()->GetDearchiver();
+
+    if (ShaderLang != SHADER_SOURCE_LANGUAGE_HLSL && deviceCaps.IsD3DDevice())
+        GTEST_SKIP() << "Direct3D backends support HLSL only";
 
     if (!pDearchiver || !pArchiverFactory)
         GTEST_SKIP() << "Archiver library is not loaded";
@@ -1839,6 +1844,9 @@ void TestSamplers(bool UseImtblSamplers)
         auto PrepareMacros = [&](Uint32 s) {
             Macros.Clear();
 
+            if (ShaderLang == SHADER_SOURCE_LANGUAGE_GLSL)
+                Macros.AddShaderMacro("float4", "vec4");
+
             Macros.AddShaderMacro("STATIC_TEX_ARRAY_SIZE", static_cast<int>(StaticTexArraySize));
             Macros.AddShaderMacro("MUTABLE_TEX_ARRAY_SIZE", static_cast<int>(MutableTexArraySize));
             Macros.AddShaderMacro("DYNAMIC_TEX_ARRAY_SIZE", static_cast<int>(DynamicTexArraySize));
@@ -1874,24 +1882,38 @@ void TestSamplers(bool UseImtblSamplers)
         ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
         ShaderCI.UseCombinedTextureSamplers = deviceCaps.IsGLDevice();
         ShaderCI.ShaderCompiler             = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
-        ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
         ShaderCI.UseCombinedTextureSamplers = true;
 
-        // Immutable sampler arrays are not allowed in 5.1, and DXC only supports 6.0+
-        ShaderCI.ShaderCompiler = SHADER_COMPILER_DEFAULT;
-        // Note that due to bug in D3D12 WARP, we have to use SM5.0 with old compiler
-        ShaderCI.HLSLVersion = ShaderVersion{5, 0};
+        ShaderCI.SourceLanguage = ShaderLang;
+        switch (ShaderLang)
+        {
+            case SHADER_SOURCE_LANGUAGE_HLSL:
+                ShaderCI.FilePath = "Samplers.hlsl";
+                // Immutable sampler arrays are not allowed in 5.1, and DXC only supports 6.0+
+                ShaderCI.ShaderCompiler = SHADER_COMPILER_DEFAULT;
+                // Note that due to bug in D3D12 WARP, we have to use SM5.0 with old compiler
+                ShaderCI.HLSLVersion = ShaderVersion{5, 0};
+                break;
+            case SHADER_SOURCE_LANGUAGE_GLSL:
+                ShaderCI.FilePath = "Samplers.glsl";
+                break;
+            default:
+                UNEXPECTED("Unexpected shader language");
+        }
+
+        auto PackFlags = GetDeviceBits();
+        if (ShaderLang != SHADER_SOURCE_LANGUAGE_HLSL)
+            PackFlags &= ~(ARCHIVE_DEVICE_DATA_FLAG_D3D11 | ARCHIVE_DEVICE_DATA_FLAG_D3D12);
 
         RefCntAutoPtr<IShader> pSerializedVS;
         {
             PrepareMacros(VSResArrId);
             ShaderCI.Macros          = Macros;
-            ShaderCI.FilePath        = "Samplers.hlsl";
             ShaderCI.Desc.Name       = "Archiver.Samplers - VS";
-            ShaderCI.EntryPoint      = "VSMain";
+            ShaderCI.EntryPoint      = ShaderLang == SHADER_SOURCE_LANGUAGE_GLSL ? "main" : "VSMain";
             ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
 
-            pSerializationDevice->CreateShader(ShaderCI, GetDeviceBits(), &pSerializedVS);
+            pSerializationDevice->CreateShader(ShaderCI, PackFlags, &pSerializedVS);
             ASSERT_NE(pSerializedVS, nullptr);
         }
 
@@ -1899,12 +1921,11 @@ void TestSamplers(bool UseImtblSamplers)
         {
             PrepareMacros(PSResArrId);
             ShaderCI.Macros          = Macros;
-            ShaderCI.FilePath        = "Samplers.hlsl";
             ShaderCI.Desc.Name       = "Archiver.Samplers - PS";
-            ShaderCI.EntryPoint      = "PSMain";
+            ShaderCI.EntryPoint      = ShaderLang == SHADER_SOURCE_LANGUAGE_GLSL ? "main" : "PSMain";
             ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
 
-            pSerializationDevice->CreateShader(ShaderCI, GetDeviceBits(), &pSerializedPS);
+            pSerializationDevice->CreateShader(ShaderCI, PackFlags, &pSerializedPS);
             ASSERT_NE(pSerializedPS, nullptr);
         }
 
@@ -1965,7 +1986,7 @@ void TestSamplers(bool UseImtblSamplers)
         GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
 
         PipelineStateArchiveInfo ArchiveInfo;
-        ArchiveInfo.DeviceFlags = GetDeviceBits();
+        ArchiveInfo.DeviceFlags = PackFlags;
         ASSERT_TRUE(pArchiver->AddGraphicsPipelineState(PSOCreateInfo, ArchiveInfo));
 
         RefCntAutoPtr<IDataBlob> pBlob;
@@ -2030,12 +2051,22 @@ void TestSamplers(bool UseImtblSamplers)
 
 TEST(ArchiveTest, Samplers)
 {
-    TestSamplers(false);
+    TestSamplers(false /*UseImtblSamplers*/, SHADER_SOURCE_LANGUAGE_HLSL);
 }
 
 TEST(ArchiveTest, ImmutableSamplers)
 {
-    TestSamplers(true);
+    TestSamplers(true /*UseImtblSamplers*/, SHADER_SOURCE_LANGUAGE_HLSL);
+}
+
+TEST(ArchiveTest, Samplers_GLSL)
+{
+    TestSamplers(false, SHADER_SOURCE_LANGUAGE_GLSL);
+}
+
+TEST(ArchiveTest, ImmutableSamplers_GLSL)
+{
+    TestSamplers(true, SHADER_SOURCE_LANGUAGE_GLSL);
 }
 
 } // namespace

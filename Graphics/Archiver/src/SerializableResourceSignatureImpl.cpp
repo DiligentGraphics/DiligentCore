@@ -50,6 +50,12 @@ SerializableResourceSignatureImpl::SerializableResourceSignatureImpl(IReferenceC
         LOG_ERROR_AND_THROW("DeviceFlags contain unsupported device type");
     }
 
+    if ((DeviceFlags & ARCHIVE_DEVICE_DATA_FLAG_GL) != 0 && (DeviceFlags & ARCHIVE_DEVICE_DATA_FLAG_GLES) != 0)
+    {
+        // OpenGL and GLES use the same device signature. Clear one flag to avoid duplicate signature initialization error.
+        DeviceFlags &= ~ARCHIVE_DEVICE_DATA_FLAG_GLES;
+    }
+
     while (DeviceFlags != ARCHIVE_DEVICE_DATA_FLAG_NONE)
     {
         const auto Flag    = ExtractLSB(DeviceFlags);
