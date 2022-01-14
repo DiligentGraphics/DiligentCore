@@ -29,12 +29,81 @@
 #include <type_traits>
 #include <array>
 #include <cstring>
+#include <atomic>
 
-#include "BasicTypes.h"
-#include "DebugUtilities.hpp"
+#include "../../Primitives/interface/BasicTypes.h"
+#include "../../Primitives/interface/MemoryAllocator.h"
+#include "../../Platforms/Basic/interface/DebugUtilities.hpp"
 
 namespace Diligent
 {
+
+class SerializedData
+{
+public:
+    SerializedData() {}
+
+    SerializedData(void* pData, size_t Size) noexcept;
+
+    SerializedData(size_t Size, IMemoryAllocator& Allocator) noexcept;
+
+    SerializedData(SerializedData&& Other) noexcept :
+        // clang-format off
+        m_pAllocator{Other.m_pAllocator},
+        m_Ptr       {Other.m_Ptr},
+        m_Size      {Other.m_Size},
+        m_Hash      {Other.m_Hash.load()}
+    // clang-format on
+    {
+        Other.m_pAllocator = nullptr;
+        Other.m_Ptr        = nullptr;
+        Other.m_Size       = 0;
+        Other.m_Hash.store(0);
+    }
+
+    SerializedData& operator=(SerializedData&& Rhs) noexcept;
+
+    SerializedData(const SerializedData&) = delete;
+    SerializedData& operator=(const SerializedData&) = delete;
+
+    ~SerializedData();
+
+    explicit operator bool() const { return m_Ptr != nullptr; }
+
+    bool operator==(const SerializedData& Rhs) const;
+    bool operator!=(const SerializedData& Rhs) const
+    {
+        return !(*this == Rhs);
+    }
+
+    void*  Ptr() const { return m_Ptr; }
+    size_t Size() const { return m_Size; }
+
+    template <typename T>
+    T* Ptr() const { return reinterpret_cast<T*>(m_Ptr); }
+
+    size_t GetHash() const;
+
+    void Free();
+
+    struct Hasher
+    {
+        size_t operator()(const SerializedData& Mem) const
+        {
+            return Mem.GetHash();
+        }
+    };
+
+private:
+    IMemoryAllocator* m_pAllocator = nullptr;
+
+    void*  m_Ptr  = nullptr;
+    size_t m_Size = 0;
+
+    mutable std::atomic<size_t> m_Hash{0};
+};
+
+
 
 template <typename T>
 struct IsTriviallySerializable
@@ -93,17 +162,23 @@ public:
 
 
     Serializer() :
-        m_Ptr{nullptr},
-        m_End{m_Ptr + ~0u}
+        // clang-format off
+        m_Start{nullptr},
+        m_End  {m_Start + ~0u},
+        m_Ptr  {m_Start}
+    // clang-format on
     {
-        static_assert(Mode == SerializerMode::Measure, "only Meause mode is supported");
+        static_assert(Mode == SerializerMode::Measure, "Only Measure mode is supported");
     }
 
-    Serializer(ConstQual<void*> Ptr, size_t Size) :
-        m_Ptr{static_cast<TPointer>(Ptr)},
-        m_End{m_Ptr + Size}
+    explicit Serializer(const SerializedData& Data) :
+        // clang-format off
+        m_Start{static_cast<TPointer>(Data.Ptr())},
+        m_End  {m_Start + Data.Size()},
+        m_Ptr  {m_Start}
+    // clang-format on
     {
-        static_assert(Mode == SerializerMode::Read || Mode == SerializerMode::Write, "only Read or Write mode are supported");
+        static_assert(Mode == SerializerMode::Read || Mode == SerializerMode::Write, "Only Read or Write mode is supported");
     }
 
     template <typename T>
@@ -141,13 +216,13 @@ public:
         Serialize<RawType<Arg0Type>>(Arg0);
     }
 
-    size_t GetSize(const void* Ptr) const
+    size_t GetSize() const
     {
-        VERIFY_EXPR(m_Ptr >= Ptr);
-        return m_Ptr - static_cast<const Uint8*>(Ptr);
+        VERIFY_EXPR(m_Ptr >= m_Start);
+        return m_Ptr - m_Start;
     }
 
-    size_t GetRemainSize() const
+    size_t GetRemainingSize() const
     {
         return m_End - m_Ptr;
     }
@@ -157,7 +232,7 @@ public:
         return m_Ptr;
     }
 
-    bool IsEnd() const
+    bool IsEnded() const
     {
         return m_Ptr == m_End;
     }
@@ -166,8 +241,10 @@ private:
     template <typename T1, typename T2>
     static void Copy(T1* Lhs, T2* Rhs, size_t Size);
 
-    TPointer       m_Ptr = nullptr;
-    TPointer const m_End = nullptr;
+    TPointer const m_Start = nullptr;
+    TPointer const m_End   = nullptr;
+
+    TPointer m_Ptr = nullptr;
 };
 
 
@@ -230,3 +307,18 @@ typename Serializer<SerializerMode::Measure>::TEnableStr<T> Serializer<Serialize
 }
 
 } // namespace Diligent
+
+
+namespace std
+{
+
+template <>
+struct hash<Diligent::SerializedData>
+{
+    size_t operator()(const Diligent::SerializedData& Data) const
+    {
+        return Data.GetHash();
+    }
+};
+
+} // namespace std

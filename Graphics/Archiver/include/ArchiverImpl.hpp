@@ -50,7 +50,7 @@
 #include "FixedLinearAllocator.hpp"
 
 #include "SerializationDeviceImpl.hpp"
-#include "SerializedMemory.hpp"
+#include "Serializer.hpp"
 #include "SerializableShaderImpl.hpp"
 #include "SerializableRenderPassImpl.hpp"
 #include "SerializableResourceSignatureImpl.hpp"
@@ -115,7 +115,7 @@ private:
     static constexpr auto DeviceDataCount = static_cast<size_t>(DeviceType::Count);
     static constexpr auto ChunkCount      = static_cast<size_t>(ChunkType::Count);
 
-    using TPerDeviceData = std::array<SerializedMemory, DeviceDataCount>;
+    using TPerDeviceData = std::array<SerializedData, DeviceDataCount>;
 
     template <typename Type>
     using TNamedObjectHashMap = std::unordered_map<HashMapStringKey, Type, HashMapStringKey::Hasher>;
@@ -127,8 +127,8 @@ private:
         {}
         RefCntAutoPtr<SerializableResourceSignatureImpl> pPRS;
 
-        const SerializedMemory& GetCommonData() const;
-        const SerializedMemory& GetDeviceData(DeviceType Type) const;
+        const SerializedData& GetCommonData() const;
+        const SerializedData& GetDeviceData(DeviceType Type) const;
     };
     TNamedObjectHashMap<PRSData> m_PRSMap;
 
@@ -160,20 +160,20 @@ private:
         {}
         RefCntAutoPtr<SerializableRenderPassImpl> pRP;
 
-        const SerializedMemory& GetCommonData() const;
+        const SerializedData& GetCommonData() const;
     };
     using RPMapType = std::unordered_map<HashMapStringKey, RPData, HashMapStringKey::Hasher>;
     RPMapType m_RPMap;
 
     struct ShaderKey
     {
-        std::shared_ptr<SerializedMemory> Mem;
+        std::shared_ptr<SerializedData> Data;
 
-        bool operator==(const ShaderKey& Rhs) const { return *Mem == *Rhs.Mem; }
+        bool operator==(const ShaderKey& Rhs) const { return *Data == *Rhs.Data; }
 
         struct Hash
         {
-            size_t operator()(const ShaderKey& Key) const { return Key.Mem->CalcHash(); }
+            size_t operator()(const ShaderKey& Key) const { return Key.Data->GetHash(); }
         };
     };
 
@@ -187,13 +187,13 @@ private:
     template <typename CreateInfoType>
     struct TPSOData
     {
-        CreateInfoType*  pCreateInfo = nullptr;
-        SerializedMemory CommonData;
-        TPerDeviceData   PerDeviceData;
+        CreateInfoType* pCreateInfo = nullptr;
+        SerializedData  CommonData;
+        TPerDeviceData  PerDeviceData;
 
         RefCntAutoPtr<SerializableResourceSignatureImpl> pDefaultSignature;
 
-        const SerializedMemory& GetCommonData() const { return CommonData; }
+        const SerializedData& GetCommonData() const { return CommonData; }
     };
     using GraphicsPSOData   = TPSOData<GraphicsPipelineStateCreateInfo>;
     using ComputePSOData    = TPSOData<ComputePipelineStateCreateInfo>;
@@ -265,7 +265,7 @@ private:
     bool PrepareDefaultSignatureGL(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data);
 #endif
 
-    SerializedMemory SerializeShadersForPSO(const TShaderIndices& ShaderIndices) const;
+    SerializedData SerializeShadersForPSO(const TShaderIndices& ShaderIndices) const;
 
     template <typename MapType>
     static Uint32* InitNamedResourceArrayHeader(ChunkType      Type,

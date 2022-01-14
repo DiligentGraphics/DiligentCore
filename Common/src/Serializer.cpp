@@ -4,7 +4,7 @@
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
- *
+ * 
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing, software
@@ -24,63 +24,60 @@
  *  of the possibility of such damages.
  */
 
-#include "SerializedMemory.hpp"
-#include "EngineMemory.h"
+#include "Serializer.hpp"
+
 #include "HashUtils.hpp"
-#include "Align.hpp"
 
 namespace Diligent
 {
 
-SerializedMemory::SerializedMemory(void* pData, size_t Size, IMemoryAllocator* pAllocator) noexcept :
-    m_pAllocator{pAllocator},
+SerializedData::SerializedData(void* pData, size_t Size) noexcept :
     m_Ptr{pData},
     m_Size{Size}
-{
-    VERIFY_EXPR((m_Ptr != nullptr) == (m_Size > 0));
-    VERIFY_EXPR((m_Ptr != nullptr) == (m_pAllocator != nullptr));
-}
+{}
 
-SerializedMemory::SerializedMemory(size_t Size, IMemoryAllocator* pAllocator) noexcept :
-    m_pAllocator{pAllocator != nullptr ? pAllocator : &GetRawAllocator()},
-    m_Ptr{ALLOCATE_RAW(*m_pAllocator, "Serialized memory", Size)},
+SerializedData::SerializedData(size_t Size, IMemoryAllocator& Allocator) noexcept :
+    m_pAllocator{&Allocator},
+    m_Ptr{Allocator.Allocate(Size, "Serialized data memory", __FILE__, __LINE__)},
     m_Size{Size}
 {
 }
 
-SerializedMemory::~SerializedMemory()
+SerializedData::~SerializedData()
 {
     Free();
 }
 
-void SerializedMemory::Free()
+void SerializedData::Free()
 {
-    if (m_Ptr)
+    if (m_pAllocator != nullptr)
     {
-        VERIFY_EXPR(m_pAllocator != nullptr);
         m_pAllocator->Free(m_Ptr);
     }
 
     m_pAllocator = nullptr;
     m_Ptr        = nullptr;
     m_Size       = 0;
+    m_Hash.store(0);
 }
 
-SerializedMemory& SerializedMemory::operator=(SerializedMemory&& Rhs) noexcept
+SerializedData& SerializedData::operator=(SerializedData&& Rhs) noexcept
 {
     Free();
 
     m_pAllocator = Rhs.m_pAllocator;
     m_Ptr        = Rhs.m_Ptr;
     m_Size       = Rhs.m_Size;
+    m_Hash.store(Rhs.m_Hash.load());
 
     Rhs.m_pAllocator = nullptr;
     Rhs.m_Ptr        = nullptr;
     Rhs.m_Size       = 0;
+    Rhs.m_Hash.store(0);
     return *this;
 }
 
-size_t SerializedMemory::CalcHash() const
+size_t SerializedData::GetHash() const
 {
     if (m_Ptr == nullptr || m_Size == 0)
         return 0;
@@ -94,7 +91,7 @@ size_t SerializedMemory::CalcHash() const
     return Hash;
 }
 
-bool SerializedMemory::operator==(const SerializedMemory& Rhs) const
+bool SerializedData::operator==(const SerializedData& Rhs) const
 {
     if (m_Size != Rhs.m_Size)
         return false;

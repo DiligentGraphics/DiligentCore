@@ -29,7 +29,7 @@
 #include "RenderPass.h"
 #include "RenderPassBase.hpp"
 #include "SerializationDeviceImpl.hpp"
-#include "SerializedMemory.hpp"
+#include "Serializer.hpp"
 
 namespace Diligent
 {
@@ -45,10 +45,10 @@ public:
 
     ~SerializableRenderPassImpl() override;
 
-    const SerializedMemory& GetCommonData() const { return m_CommonData; }
+    const SerializedData& GetCommonData() const { return m_CommonData; }
 
 private:
-    SerializedMemory m_CommonData;
+    SerializedData m_CommonData;
 };
 
 } // namespace Diligent

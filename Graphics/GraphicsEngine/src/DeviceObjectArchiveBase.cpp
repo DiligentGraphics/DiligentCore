@@ -221,20 +221,20 @@ void DeviceObjectArchiveBase::ReadArchiveDebugInfo(const ChunkHeader& Chunk) noe
 {
     VERIFY_EXPR(Chunk.Type == ChunkType::ArchiveDebugInfo);
 
-    std::vector<Uint8> Data(Chunk.Size);
-    if (!m_pArchive->Read(Chunk.Offset, Data.size(), Data.data()))
+    SerializedData Data{Chunk.Size, GetRawAllocator()};
+    if (!m_pArchive->Read(Chunk.Offset, Data.Size(), Data.Ptr()))
     {
         LOG_ERROR_AND_THROW("Failed to read archive debug info");
     }
 
-    Serializer<SerializerMode::Read> Ser{Data.data(), Data.size()};
+    Serializer<SerializerMode::Read> Ser{Data};
 
     Ser(m_DebugInfo.APIVersion);
 
     const char* GitHash = nullptr;
     Ser(GitHash);
 
-    VERIFY_EXPR(Ser.IsEnd());
+    VERIFY_EXPR(Ser.IsEnded());
     m_DebugInfo.GitHash = String{GitHash};
 
     if (m_DebugInfo.APIVersion != DILIGENT_API_VERSION)
@@ -266,17 +266,16 @@ void DeviceObjectArchiveBase::ReadShaders(const ChunkHeader& Chunk) noexcept(fal
         LOG_ERROR_AND_THROW("Failed to read indexed resources info from the archive");
     }
 
-    void*  pData    = nullptr;
-    size_t DataSize = 0;
-
     DynamicLinearAllocator Allocator{GetRawAllocator()};
-    if (!GetDeviceSpecificData(Header, Allocator, "Shader list", GetBlockOffsetType(), pData, DataSize))
+
+    const auto ShaderData = GetDeviceSpecificData(Header, Allocator, "Shader list", GetBlockOffsetType());
+    if (!ShaderData)
         return;
 
-    VERIFY_EXPR(DataSize % sizeof(FileOffsetAndSize) == 0);
-    const size_t Count = DataSize / sizeof(FileOffsetAndSize);
+    VERIFY_EXPR(ShaderData.Size() % sizeof(FileOffsetAndSize) == 0);
+    const size_t Count = ShaderData.Size() / sizeof(FileOffsetAndSize);
 
-    const auto* pFileOffsetAndSize = reinterpret_cast<const FileOffsetAndSize*>(pData);
+    const auto* pFileOffsetAndSize = ShaderData.Ptr<const FileOffsetAndSize>();
 
     std::unique_lock<std::mutex> WriteLock{m_ShadersGuard};
     m_Shaders.reserve(Count);
@@ -307,7 +306,7 @@ bool DeviceObjectArchiveBase::LoadResourceData(OffsetSizeAndResourceMap<ResType>
         return false;
     }
 
-    Serializer<SerializerMode::Read> Ser{pData, DataSize};
+    Serializer<SerializerMode::Read> Ser{SerializedData{pData, DataSize}};
 
     using HeaderType = typename std::remove_reference<decltype(*ResData.pHeader)>::type;
     ResData.pHeader  = Ser.Cast<HeaderType>();
@@ -319,7 +318,7 @@ bool DeviceObjectArchiveBase::LoadResourceData(OffsetSizeAndResourceMap<ResType>
     }
 
     auto Res = ResData.Deserialize(StoredResourceName, Ser);
-    VERIFY_EXPR(Ser.IsEnd());
+    VERIFY_EXPR(Ser.IsEnded());
     return Res;
 }
 
@@ -330,53 +329,46 @@ template bool DeviceObjectArchiveBase::LoadResourceData<IPipelineResourceSignatu
     PRSData&                                              ResData);
 
 template <typename HeaderType>
-bool DeviceObjectArchiveBase::GetDeviceSpecificData(const HeaderType&       Header,
-                                                    DynamicLinearAllocator& Allocator,
-                                                    const char*             ResTypeName,
-                                                    BlockOffsetType         BlockType,
-                                                    void*&                  pData,
-                                                    size_t&                 Size)
+SerializedData DeviceObjectArchiveBase::GetDeviceSpecificData(const HeaderType&       Header,
+                                                              DynamicLinearAllocator& Allocator,
+                                                              const char*             ResTypeName,
+                                                              BlockOffsetType         BlockType)
 {
-    pData = nullptr;
-    Size  = 0;
-
     const Uint64 BaseOffset  = m_BaseOffsets[static_cast<size_t>(BlockType)];
     const auto   ArchiveSize = m_pArchive->GetSize();
     if (BaseOffset > ArchiveSize)
     {
         LOG_ERROR_MESSAGE("Required block does not exist in archive");
-        return false;
+        return {};
     }
     if (Header.GetSize(m_DevType) == 0)
     {
         LOG_ERROR_MESSAGE("Device specific data is not specified for ", ResTypeName);
-        return false;
+        return {};
     }
     if (BaseOffset + Header.GetEndOffset(m_DevType) > ArchiveSize)
     {
         LOG_ERROR_MESSAGE("Invalid offset in the archive");
-        return false;
+        return {};
     }
 
-    Size  = Header.GetSize(m_DevType);
-    pData = Allocator.Allocate(Size, DataPtrAlign);
+    auto const  Size  = Header.GetSize(m_DevType);
+    auto* const pData = Allocator.Allocate(Size, DataPtrAlign);
     if (!m_pArchive->Read(BaseOffset + Header.GetOffset(m_DevType), Size, pData))
     {
         LOG_ERROR_MESSAGE("Failed to read resource-specific data");
-        return false;
+        return {};
     }
 
-    return true;
+    return {pData, Size};
 }
 
 // Instantiation is required by UnpackResourceSignatureImpl
-template bool DeviceObjectArchiveBase::GetDeviceSpecificData<DeviceObjectArchiveBase::PRSDataHeader>(
+template SerializedData DeviceObjectArchiveBase::GetDeviceSpecificData<DeviceObjectArchiveBase::PRSDataHeader>(
     const PRSDataHeader&    Header,
     DynamicLinearAllocator& Allocator,
     const char*             ResTypeName,
-    BlockOffsetType         BlockType,
-    void*&                  pData,
-    size_t&                 Size);
+    BlockOffsetType         BlockType);
 
 bool DeviceObjectArchiveBase::PRSData::Deserialize(const char* Name, Serializer<SerializerMode::Read>& Ser)
 {
@@ -494,7 +486,7 @@ RefCntAutoPtr<IShader> DeviceObjectArchiveBase::UnpackShader(Serializer<Serializ
     VERIFY_EXPR(ShaderCI.ShaderCompiler == SHADER_COMPILER_DEFAULT);
 
     ShaderCI.ByteCode     = Ser.GetCurrentPtr();
-    ShaderCI.ByteCodeSize = Ser.GetRemainSize();
+    ShaderCI.ByteCodeSize = Ser.GetRemainingSize();
 
     RefCntAutoPtr<IShader> pShader;
     pDevice->CreateShader(ShaderCI, &pShader);
@@ -608,13 +600,11 @@ template <typename CreateInfoType>
 bool DeviceObjectArchiveBase::UnpackPSOShaders(PSOData<CreateInfoType>& PSO,
                                                IRenderDevice*           pDevice)
 {
-    void*  pShaderData    = nullptr;
-    size_t ShaderDataSize = 0;
-
-    if (!GetDeviceSpecificData(*PSO.pHeader, PSO.Allocator, ChunkTypeToResName(PSO.ExpectedChunkType), GetBlockOffsetType(), pShaderData, ShaderDataSize))
+    const auto ShaderData = GetDeviceSpecificData(*PSO.pHeader, PSO.Allocator, ChunkTypeToResName(PSO.ExpectedChunkType), GetBlockOffsetType());
+    if (!ShaderData)
         return false;
 
-    Serializer<SerializerMode::Read> Ser{pShaderData, ShaderDataSize};
+    Serializer<SerializerMode::Read> Ser{ShaderData};
 
     const Uint64 BaseOffset = m_BaseOffsets[static_cast<size_t>(GetBlockOffsetType())];
     if (BaseOffset > m_pArchive->GetSize())
@@ -627,7 +617,7 @@ bool DeviceObjectArchiveBase::UnpackPSOShaders(PSOData<CreateInfoType>& PSO,
 
     ShaderIndexArray ShaderIndices;
     PSOSerializer<SerializerMode::Read>::SerializeShaders(Ser, ShaderIndices, &Allocator);
-    VERIFY_EXPR(Ser.IsEnd());
+    VERIFY_EXPR(Ser.IsEnded());
 
     PSO.Shaders.resize(ShaderIndices.Count);
     for (Uint32 i = 0; i < ShaderIndices.Count; ++i)
@@ -657,7 +647,7 @@ bool DeviceObjectArchiveBase::UnpackPSOShaders(PSOData<CreateInfoType>& PSO,
             return false;
 
         {
-            Serializer<SerializerMode::Read> ShaderSer{pData, OffsetAndSize.Size};
+            Serializer<SerializerMode::Read> ShaderSer{SerializedData{pData, OffsetAndSize.Size}};
             ShaderCreateInfo                 ShaderCI;
             ShaderSer(ShaderCI.Desc.ShaderType, ShaderCI.EntryPoint, ShaderCI.SourceLanguage, ShaderCI.ShaderCompiler);
 

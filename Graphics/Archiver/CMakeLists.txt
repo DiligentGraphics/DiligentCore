@@ -9,7 +9,6 @@ set(INCLUDE
     include/SerializableShaderImpl.hpp
     include/SerializableRenderPassImpl.hpp
     include/SerializableResourceSignatureImpl.hpp
-    include/SerializedMemory.hpp
 )
 
 set(INTERFACE
@@ -28,7 +27,6 @@ set(SOURCE
     src/SerializableShaderImpl.cpp
     src/SerializableResourceSignatureImpl.cpp
     src/SerializableRenderPassImpl.cpp
-    src/SerializedMemory.cpp
 )
 
 if(D3D11_SUPPORTED)

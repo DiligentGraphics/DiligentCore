@@ -29,7 +29,6 @@ set(INCLUDE
     include/RenderPassBase.hpp
     include/ResourceMappingImpl.hpp
     include/SamplerBase.hpp
-    include/Serializer.hpp
     include/ShaderBase.hpp
     include/ShaderResourceBindingBase.hpp
     include/ShaderResourceCacheCommon.hpp

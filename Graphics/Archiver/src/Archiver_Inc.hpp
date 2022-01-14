@@ -205,11 +205,11 @@ void SerializableResourceSignatureImpl::CreateDeviceSignature(DeviceType        
 
         MeasureSerializerType::SerializePRSInternalData(MeasureSer, InternalData, nullptr);
 
-        DeviceSignature.Mem = SerializedMemory{MeasureSer.GetSize(nullptr)};
+        DeviceSignature.Data = SerializedData{MeasureSer.GetSize(), GetRawAllocator()};
     }
 
     {
-        Serializer<SerializerMode::Write> Ser{DeviceSignature.Mem.Ptr(), DeviceSignature.Mem.Size()};
+        Serializer<SerializerMode::Write> Ser{DeviceSignature.Data};
 
         Ser(SpecialDesc);
         if (SpecialDesc)
@@ -217,7 +217,7 @@ void SerializableResourceSignatureImpl::CreateDeviceSignature(DeviceType        
 
         WriteSerializerType::SerializePRSInternalData(Ser, InternalData, nullptr);
 
-        VERIFY_EXPR(Ser.IsEnd());
+        VERIFY_EXPR(Ser.IsEnded());
     }
 }
 

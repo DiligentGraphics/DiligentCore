@@ -261,34 +261,33 @@ TEST(PSOSerializerTest, SerializePRSDesc)
         for (size_t i = 0; i < SrcInternalData.StaticResStageIndex.size(); ++i)
             RndValue(SrcInternalData.StaticResStageIndex[i], static_cast<Int8>(std::numeric_limits<Int8>::min() + i), static_cast<Int8>(std::numeric_limits<Int8>::max() - i));
 
-        size_t                 DataSize = 0;
-        void*                  DataPtr  = nullptr;
+
         DynamicLinearAllocator Allocator{GetRawAllocator()};
+        SerializedData         Data;
         {
             Serializer<SerializerMode::Measure> MSer;
             PSOSerializer<SerializerMode::Measure>::SerializePRSDesc(MSer, SrcPRSDesc, nullptr);
             PSOSerializer<SerializerMode::Measure>::SerializePRSInternalData(MSer, SrcInternalData, nullptr);
 
-            DataSize = MSer.GetSize(nullptr);
-            DataPtr  = Allocator.Allocate(DataSize, 1);
+            Data = SerializedData{MSer.GetSize(), GetRawAllocator()};
         }
 
         {
-            Serializer<SerializerMode::Write> WSer{DataPtr, DataSize};
+            Serializer<SerializerMode::Write> WSer{Data};
             PSOSerializer<SerializerMode::Write>::SerializePRSDesc(WSer, SrcPRSDesc, nullptr);
             PSOSerializer<SerializerMode::Write>::SerializePRSInternalData(WSer, SrcInternalData, nullptr);
 
-            EXPECT_EQ(DataSize, WSer.GetSize(DataPtr));
+            EXPECT_EQ(Data.Size(), WSer.GetSize());
         }
 
         PipelineResourceSignatureDesc         DstPRSDesc;
         PipelineResourceSignatureInternalData DstInternalData;
         {
-            Serializer<SerializerMode::Read> RSer{DataPtr, DataSize};
+            Serializer<SerializerMode::Read> RSer{Data};
             PSOSerializer<SerializerMode::Read>::SerializePRSDesc(RSer, DstPRSDesc, &Allocator);
             PSOSerializer<SerializerMode::Read>::SerializePRSInternalData(RSer, DstInternalData, nullptr);
 
-            EXPECT_TRUE(RSer.IsEnd());
+            EXPECT_TRUE(RSer.IsEnded());
         }
 
         EXPECT_EQ(SrcPRSDesc, DstPRSDesc);
@@ -325,20 +324,19 @@ static void TestSerializePSOCreateInfo(HelperType&& Helper)
         Helper.Measure(MSer, SrcPSO, SrcPRSNames);
 
         DynamicLinearAllocator Allocator{GetRawAllocator()};
-        const size_t           DataSize = MSer.GetSize(nullptr);
-        void*                  DataPtr  = Allocator.Allocate(DataSize, 1);
+        SerializedData         Data{MSer.GetSize(), GetRawAllocator()};
 
-        Serializer<SerializerMode::Write> WSer{DataPtr, DataSize};
+        Serializer<SerializerMode::Write> WSer{Data};
         Helper.Write(WSer, SrcPSO, SrcPRSNames);
-        ASSERT_EQ(DataSize, WSer.GetSize(DataPtr));
+        ASSERT_EQ(Data.Size(), WSer.GetSize());
 
         TPRSNames DstPRSNames = {};
         PSOCIType DstPSO;
 
-        Serializer<SerializerMode::Read> RSer{DataPtr, DataSize};
+        Serializer<SerializerMode::Read> RSer{Data};
         Helper.Read(RSer, DstPSO, DstPRSNames, &Allocator);
 
-        EXPECT_TRUE(RSer.IsEnd());
+        EXPECT_TRUE(RSer.IsEnded());
         EXPECT_EQ(SrcPSO, DstPSO);
         EXPECT_NE(SrcPSO.PSODesc.SRBAllocationGranularity, DstPSO.PSODesc.SRBAllocationGranularity);
 
@@ -769,20 +767,19 @@ TEST(PSOSerializerTest, SerializeRenderPassDesc)
         PSOSerializer<SerializerMode::Measure>::SerializeRenderPassDesc(MSer, SrcRP, nullptr);
 
         DynamicLinearAllocator Allocator{GetRawAllocator()};
-        const size_t           DataSize = MSer.GetSize(nullptr);
-        void*                  DataPtr  = Allocator.Allocate(DataSize, 1);
+        SerializedData         Data{MSer.GetSize(), GetRawAllocator()};
 
-        Serializer<SerializerMode::Write> WSer{DataPtr, DataSize};
+        Serializer<SerializerMode::Write> WSer{Data};
         PSOSerializer<SerializerMode::Write>::SerializeRenderPassDesc(WSer, SrcRP, nullptr);
 
-        EXPECT_EQ(DataSize, WSer.GetSize(DataPtr));
+        EXPECT_EQ(Data.Size(), WSer.GetSize());
 
         RenderPassDesc DstRP;
 
-        Serializer<SerializerMode::Read> RSer{DataPtr, DataSize};
+        Serializer<SerializerMode::Read> RSer{Data};
         PSOSerializer<SerializerMode::Read>::SerializeRenderPassDesc(RSer, DstRP, &Allocator);
 
-        EXPECT_TRUE(RSer.IsEnd());
+        EXPECT_TRUE(RSer.IsEnded());
         EXPECT_EQ(SrcRP, DstRP);
 
     } while (!RndValue.IsComplete());

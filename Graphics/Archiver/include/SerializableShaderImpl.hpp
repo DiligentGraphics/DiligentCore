@@ -31,7 +31,7 @@
 #include "RefCntAutoPtr.hpp"
 #include "STDAllocator.hpp"
 #include "SerializationDeviceImpl.hpp"
-#include "SerializedMemory.hpp"
+#include "Serializer.hpp"
 #include "DeviceObjectArchiveBase.hpp"
 
 namespace Diligent
@@ -81,10 +81,10 @@ public:
     }
 
 #if METAL_SUPPORTED
-    SerializedMemory PatchShaderMtl(const RefCntAutoPtr<PipelineResourceSignatureMtlImpl>* pSignatures,
-                                    const MtlArchiverResourceCounters*                     pBaseBindings,
-                                    const Uint32                                           SignatureCount,
-                                    DeviceType                                             DevType) const noexcept(false);
+    SerializedData PatchShaderMtl(const RefCntAutoPtr<PipelineResourceSignatureMtlImpl>* pSignatures,
+                                  const MtlArchiverResourceCounters*                     pBaseBindings,
+                                  const Uint32                                           SignatureCount,
+                                  DeviceType                                             DevType) const noexcept(false);
 
     const SPIRVShaderResources* GetMtlShaderSPIRVResources() const;
 #endif

@@ -28,6 +28,7 @@ set(INTERFACE
     interface/ObjectBase.hpp
     interface/RefCntAutoPtr.hpp
     interface/RefCountedObjectImpl.hpp
+    interface/Serializer.hpp
     interface/STDAllocator.hpp
     interface/StringDataBlobImpl.hpp
     interface/StringTools.h
@@ -50,6 +51,7 @@ set(SOURCE
     src/FixedBlockMemoryAllocator.cpp
     src/LockHelper.cpp
     src/MemoryFileStream.cpp
+    src/Serializer.cpp
     src/ThreadPool.cpp
     src/Timer.cpp
 )

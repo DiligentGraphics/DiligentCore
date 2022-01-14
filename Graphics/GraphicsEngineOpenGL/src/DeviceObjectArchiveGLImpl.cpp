@@ -54,7 +54,7 @@ RefCntAutoPtr<IShader> DeviceObjectArchiveGLImpl::UnpackShader(Serializer<Serial
     Ser(ShaderCI.UseCombinedTextureSamplers, ShaderCI.CombinedSamplerSuffix);
 
     ShaderCI.Source       = static_cast<const Char*>(Ser.GetCurrentPtr());
-    ShaderCI.SourceLength = Ser.GetRemainSize() - 1;
+    ShaderCI.SourceLength = Ser.GetRemainingSize() - 1;
     VERIFY_EXPR(ShaderCI.SourceLength == strlen(ShaderCI.Source));
 
     ShaderCI.CompileFlags &= ~SHADER_COMPILE_FLAG_SKIP_REFLECTION; // AZ TODO: remove

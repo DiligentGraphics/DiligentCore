@@ -149,7 +149,7 @@ bool ArchiverImpl::PatchShadersMtl(const CreateInfoType&     CreateInfo,
         for (size_t j = 0; j < ShaderStages.size(); ++j)
         {
             const auto& Stage = ShaderStages[j];
-            SerializedMemory PatchedBytecode = Stage.pShader->PatchShaderMtl(Signatures.data(), BaseBindings.data(), SignaturesCount, DevType); // May throw
+            const auto PatchedBytecode = Stage.pShader->PatchShaderMtl(Signatures.data(), BaseBindings.data(), SignaturesCount, DevType); // May throw
             SerializeShaderBytecode(ShaderIndices, DevType, Stage.pShader->GetCreateInfo(), PatchedBytecode.Ptr(), PatchedBytecode.Size());
         }
     }
@@ -246,10 +246,10 @@ void SerializeBufferTypeInfoMapAndComputeGroupSize(Serializer<Mode>             
 }
 } // namespace
 
-SerializedMemory SerializableShaderImpl::PatchShaderMtl(const RefCntAutoPtr<PipelineResourceSignatureMtlImpl>* pSignatures,
-                                                        const MtlResourceCounters*                             pBaseBindings,
-                                                        const Uint32                                           SignatureCount,
-                                                        DeviceType                                             DevType) const noexcept(false)
+SerializedData SerializableShaderImpl::PatchShaderMtl(const RefCntAutoPtr<PipelineResourceSignatureMtlImpl>* pSignatures,
+                                                      const MtlResourceCounters*                             pBaseBindings,
+                                                      const Uint32                                           SignatureCount,
+                                                      DeviceType                                             DevType) const noexcept(false)
 {
     VERIFY_EXPR(SignatureCount > 0);
     VERIFY_EXPR(pSignatures != nullptr);
@@ -365,13 +365,12 @@ SerializedMemory SerializableShaderImpl::PatchShaderMtl(const RefCntAutoPtr<Pipe
     {
         Serializer<SerializerMode::Measure> MeasureSer;
         SerializeBufferTypeInfoMapAndComputeGroupSize(MeasureSer, BufferTypeInfoMap, GetDesc().ShaderType, pShaderMtl->SPIRVResources);
-        BytecodeOffset = MeasureSer.GetSize(nullptr);
+        BytecodeOffset = MeasureSer.GetSize();
     }
 
     // Read 'Shader.metallib'
-    auto&            RawAllocator = GetRawAllocator();
-    SerializedMemory Bytecode;
-    size_t           BytecodeSize = 0;
+    SerializedData Bytecode;
+    size_t         BytecodeSize = 0;
     {
         FILE* File = fopen(MetalLibFile.c_str(), "rb");
         if (File == nullptr)
@@ -381,7 +380,7 @@ SerializedMemory SerializableShaderImpl::PatchShaderMtl(const RefCntAutoPtr<Pipe
         long size = ftell(File);
         fseek(File, 0, SEEK_SET);
 
-        Bytecode = SerializedMemory{ALLOCATE_RAW(RawAllocator, "", BytecodeOffset + size), BytecodeOffset + size, &RawAllocator};
+        Bytecode = SerializedData{BytecodeOffset + size, GetRawAllocator()};
         BytecodeSize = fread(&static_cast<Uint8*>(Bytecode.Ptr())[BytecodeOffset], 1, size, File);
 
         fclose(File);
@@ -390,9 +389,9 @@ SerializedMemory SerializableShaderImpl::PatchShaderMtl(const RefCntAutoPtr<Pipe
     if (BytecodeSize == 0)
         LOG_ERROR_AND_THROW("Metal shader library is empty");
 
-    Serializer<SerializerMode::Write> Ser{Bytecode.Ptr(), BytecodeOffset};
+    Serializer<SerializerMode::Write> Ser{SerializedData{Bytecode.Ptr(), BytecodeOffset}};
     SerializeBufferTypeInfoMapAndComputeGroupSize(Ser, BufferTypeInfoMap, GetDesc().ShaderType, pShaderMtl->SPIRVResources);
-    VERIFY_EXPR(Ser.IsEnd());
+    VERIFY_EXPR(Ser.IsEnded());
 
     return Bytecode;
 }

@@ -137,7 +137,7 @@ void ArchiverImpl::ReserveSpace(PendingData& Pending) const
         DeviceData.AddSpace<FileOffsetAndSize>(Shaders.List.size());
         for (const auto& Sh : Shaders.List)
         {
-            DeviceData.AddSpace(Sh.Mem->Size());
+            DeviceData.AddSpace(Sh.Data->Size());
         }
     }
 
@@ -208,20 +208,20 @@ void ArchiverImpl::WriteDebugInfo(PendingData& Pending) const
     SerializeDebugInfo(MeasureSer);
 
     VERIFY_EXPR(Chunk.IsEmpty());
-    const auto Size = MeasureSer.GetSize(nullptr);
+    const auto Size = MeasureSer.GetSize();
     if (Size == 0)
         return;
 
     Chunk = TDataElement{GetRawAllocator()};
     Chunk.AddSpace(Size);
     Chunk.Reserve();
-    Serializer<SerializerMode::Write> Ser{Chunk.Allocate(Size), Size};
+    Serializer<SerializerMode::Write> Ser{SerializedData{Chunk.Allocate(Size), Size}};
     SerializeDebugInfo(Ser);
 }
 
 template <typename HeaderType>
 HeaderType* WriteHeader(ArchiverImpl::ChunkType     Type,
-                        const SerializedMemory&     SrcMem,
+                        const SerializedData&       SrcData,
                         ArchiverImpl::TDataElement& DstChunk,
                         Uint32&                     DstOffset,
                         Uint32&                     DstArraySize)
@@ -231,7 +231,7 @@ HeaderType* WriteHeader(ArchiverImpl::ChunkType     Type,
     DstOffset = StaticCast<Uint32>(reinterpret_cast<const Uint8*>(pHeader) - DstChunk.GetDataPtr<const Uint8>());
     // DeviceSpecificDataSize & DeviceSpecificDataOffset will be initialized later
 
-    DstChunk.Copy(SrcMem.Ptr(), SrcMem.Size());
+    DstChunk.Copy(SrcData.Ptr(), SrcData.Size());
     DstArraySize += sizeof(*pHeader);
 
     return pHeader;
@@ -240,15 +240,15 @@ HeaderType* WriteHeader(ArchiverImpl::ChunkType     Type,
 template <typename HeaderType>
 void WritePerDeviceData(HeaderType&                 Header,
                         ArchiverImpl::DeviceType    Type,
-                        const SerializedMemory&     SrcMem,
+                        const SerializedData&       SrcData,
                         ArchiverImpl::TDataElement& DstChunk)
 {
-    if (!SrcMem)
+    if (!SrcData)
         return;
 
-    auto* const pDst   = DstChunk.Copy(SrcMem.Ptr(), SrcMem.Size());
+    auto* const pDst   = DstChunk.Copy(SrcData.Ptr(), SrcData.Size());
     const auto  Offset = reinterpret_cast<const Uint8*>(pDst) - DstChunk.GetDataPtr<const Uint8>();
-    Header.SetSize(Type, StaticCast<Uint32>(SrcMem.Size()));
+    Header.SetSize(Type, StaticCast<Uint32>(SrcData.Size()));
     Header.SetOffset(Type, StaticCast<Uint32>(Offset));
 }
 
@@ -319,7 +319,7 @@ void ArchiverImpl::WriteShaderData(PendingData& Pending) const
 
         for (auto& Sh : Shaders.List)
         {
-            const auto& Src  = *Sh.Mem;
+            const auto& Src  = *Sh.Data;
             auto* const pDst = Dst.Copy(Src.Ptr(), Src.Size());
 
             pOffsetAndSize->Offset = StaticCast<Uint32>(reinterpret_cast<const Uint8*>(pDst) - Dst.GetDataPtr<const Uint8>());
@@ -473,19 +473,19 @@ Bool ArchiverImpl::SerializeToStream(IFileStream* pStream)
 }
 
 
-const SerializedMemory& ArchiverImpl::PRSData::GetCommonData() const
+const SerializedData& ArchiverImpl::PRSData::GetCommonData() const
 {
     return pPRS->GetCommonData();
 }
 
-const SerializedMemory& ArchiverImpl::PRSData::GetDeviceData(DeviceType Type) const
+const SerializedData& ArchiverImpl::PRSData::GetDeviceData(DeviceType Type) const
 {
     const auto* pMem = pPRS->GetDeviceData(Type);
     if (pMem != nullptr)
         return *pMem;
 
-    static const SerializedMemory NullMem;
-    return NullMem;
+    static const SerializedData NullData;
+    return NullData;
 }
 
 bool ArchiverImpl::AddPipelineResourceSignature(IPipelineResourceSignature* pPRS)
@@ -559,7 +559,7 @@ String ArchiverImpl::GetDefaultPRSName(const char* PSOName) const
 }
 
 
-const SerializedMemory& ArchiverImpl::RPData::GetCommonData() const
+const SerializedData& ArchiverImpl::RPData::GetCommonData() const
 {
     return pRP->GetCommonData();
 }
@@ -578,18 +578,18 @@ void ArchiverImpl::SerializeShaderBytecode(TShaderIndices&         ShaderIndices
     Serializer<SerializerMode::Measure> MeasureSer;
     MeasureSer(CI.Desc.ShaderType, CI.EntryPoint, SourceLanguage, ShaderCompiler);
 
-    const auto   Size   = MeasureSer.GetSize(nullptr) + BytecodeSize;
+    const auto   Size   = MeasureSer.GetSize() + BytecodeSize;
     const Uint8* pBytes = static_cast<const Uint8*>(Bytecode);
 
-    ShaderKey Key{std::make_shared<SerializedMemory>(Size)};
+    ShaderKey Key{std::make_shared<SerializedData>(Size, GetRawAllocator())};
 
-    Serializer<SerializerMode::Write> Ser{Key.Mem->Ptr(), Size};
+    Serializer<SerializerMode::Write> Ser{*Key.Data};
     Ser(CI.Desc.ShaderType, CI.EntryPoint, SourceLanguage, ShaderCompiler);
 
     for (size_t s = 0; s < BytecodeSize; ++s)
         Ser(pBytes[s]);
 
-    VERIFY_EXPR(Ser.IsEnd());
+    VERIFY_EXPR(Ser.IsEnded());
 
 
     auto IterAndInserted = Shaders.Map.emplace(Key, Shaders.List.size());
@@ -620,18 +620,18 @@ void ArchiverImpl::SerializeShaderSource(TShaderIndices& ShaderIndices, DeviceTy
     MeasureSer(CI.Desc.ShaderType, CI.EntryPoint, CI.SourceLanguage, CI.ShaderCompiler, CI.UseCombinedTextureSamplers, CI.CombinedSamplerSuffix);
 
     const auto   BytecodeSize = (Source.size() + 1) * sizeof(Source[0]);
-    const auto   Size         = MeasureSer.GetSize(nullptr) + BytecodeSize;
+    const auto   Size         = MeasureSer.GetSize() + BytecodeSize;
     const Uint8* pBytes       = reinterpret_cast<const Uint8*>(Source.c_str());
 
-    ShaderKey Key{std::make_shared<SerializedMemory>(Size)};
+    ShaderKey Key{std::make_shared<SerializedData>(Size, GetRawAllocator())};
 
-    Serializer<SerializerMode::Write> Ser{Key.Mem->Ptr(), Size};
+    Serializer<SerializerMode::Write> Ser{*Key.Data};
     Ser(CI.Desc.ShaderType, CI.EntryPoint, CI.SourceLanguage, CI.ShaderCompiler, CI.UseCombinedTextureSamplers, CI.CombinedSamplerSuffix);
 
     for (size_t s = 0; s < BytecodeSize; ++s)
         Ser(pBytes[s]);
 
-    VERIFY_EXPR(Ser.IsEnd());
+    VERIFY_EXPR(Ser.IsEnded());
 
     auto IterAndInserted = Shaders.Map.emplace(Key, Shaders.List.size());
     auto Iter            = IterAndInserted.first;
@@ -643,18 +643,18 @@ void ArchiverImpl::SerializeShaderSource(TShaderIndices& ShaderIndices, DeviceTy
     ShaderIndices.push_back(StaticCast<Uint32>(Iter->second));
 }
 
-SerializedMemory ArchiverImpl::SerializeShadersForPSO(const TShaderIndices& ShaderIndices) const
+SerializedData ArchiverImpl::SerializeShadersForPSO(const TShaderIndices& ShaderIndices) const
 {
     ShaderIndexArray Indices{ShaderIndices.data(), static_cast<Uint32>(ShaderIndices.size())};
 
     Serializer<SerializerMode::Measure> MeasureSer;
     PSOSerializer<SerializerMode::Measure>::SerializeShaders(MeasureSer, Indices, nullptr);
 
-    SerializedMemory DeviceData{MeasureSer.GetSize(nullptr)};
+    SerializedData DeviceData{MeasureSer.GetSize(), GetRawAllocator()};
 
-    Serializer<SerializerMode::Write> Ser{DeviceData.Ptr(), DeviceData.Size()};
+    Serializer<SerializerMode::Write> Ser{DeviceData};
     PSOSerializer<SerializerMode::Write>::SerializeShaders(Ser, Indices, nullptr);
-    VERIFY_EXPR(Ser.IsEnd());
+    VERIFY_EXPR(Ser.IsEnded());
 
     return DeviceData;
 }
@@ -893,10 +893,10 @@ bool ArchiverImpl::SerializePSO(TNamedObjectHashMap<TPSOData<CreateInfoType>>& P
         Serializer<SerializerMode::Measure> MeasureSer;
         SerializerPSOImpl(MeasureSer, PSOCreateInfo, PRSNames);
 
-        Data.CommonData = SerializedMemory{MeasureSer.GetSize(nullptr)};
-        Serializer<SerializerMode::Write> Ser{Data.CommonData.Ptr(), Data.CommonData.Size()};
+        Data.CommonData = SerializedData{MeasureSer.GetSize(), GetRawAllocator()};
+        Serializer<SerializerMode::Write> Ser{Data.CommonData};
         SerializerPSOImpl(Ser, PSOCreateInfo, PRSNames);
-        VERIFY_EXPR(Ser.IsEnd());
+        VERIFY_EXPR(Ser.IsEnded());
     }
     return true;
 }

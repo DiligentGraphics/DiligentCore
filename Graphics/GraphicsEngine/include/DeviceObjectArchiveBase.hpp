@@ -417,12 +417,10 @@ private:
                           ReourceDataType&                   ResData);
 
     template <typename HeaderType>
-    bool GetDeviceSpecificData(const HeaderType&       Header,
-                               DynamicLinearAllocator& Allocator,
-                               const char*             ResTypeName,
-                               BlockOffsetType         BlockType,
-                               void*&                  pData,
-                               size_t&                 Size);
+    SerializedData GetDeviceSpecificData(const HeaderType&       Header,
+                                         DynamicLinearAllocator& Allocator,
+                                         const char*             ResTypeName,
+                                         BlockOffsetType         BlockType);
 
     template <typename CreateInfoType>
     bool UnpackPSOSignatures(PSOData<CreateInfoType>& PSO, IRenderDevice* pDevice);
@@ -471,12 +469,11 @@ RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveBase::UnpackResourc
 
     PRS.Desc.SRBAllocationGranularity = DeArchiveInfo.SRBAllocationGranularity;
 
-    void*  pData    = nullptr;
-    size_t DataSize = 0;
-    if (!GetDeviceSpecificData(*PRS.pHeader, PRS.Allocator, "Resource signature", GetBlockOffsetType(), pData, DataSize))
+    const auto Data = GetDeviceSpecificData(*PRS.pHeader, PRS.Allocator, "Resource signature", GetBlockOffsetType());
+    if (!Data)
         return {};
 
-    Serializer<SerializerMode::Read> Ser{pData, DataSize};
+    Serializer<SerializerMode::Read> Ser{Data};
 
     typename PSOSerializerType::PRSInternalDataType InternalData{PRS.InternalData};
 
@@ -491,7 +488,7 @@ RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveBase::UnpackResourc
     }
 
     PSOSerializerType::SerializePRSInternalData(Ser, InternalData, &PRS.Allocator);
-    VERIFY_EXPR(Ser.IsEnd());
+    VERIFY_EXPR(Ser.IsEnded());
 
     auto* pRenderDevice = ClassPtrCast<RenderDeviceImplType>(DeArchiveInfo.pDevice);
     pRenderDevice->CreatePipelineResourceSignature(PRS.Desc, InternalData, &pSignature);

@@ -29,7 +29,7 @@
 #include "PipelineResourceSignature.h"
 #include "ObjectBase.hpp"
 #include "STDAllocator.hpp"
-#include "SerializedMemory.hpp"
+#include "Serializer.hpp"
 #include "DeviceObjectArchiveBase.hpp"
 #include "SerializationDeviceImpl.hpp"
 
@@ -87,13 +87,13 @@ public:
     bool   operator==(const SerializableResourceSignatureImpl& Rhs) const;
     size_t CalcHash() const;
 
-    const SerializedMemory& GetCommonData() const { return m_CommonData; }
+    const SerializedData& GetCommonData() const { return m_CommonData; }
 
-    const SerializedMemory* GetDeviceData(DeviceType Type) const
+    const SerializedData* GetDeviceData(DeviceType Type) const
     {
         VERIFY_EXPR(static_cast<Uint32>(Type) < DeviceCount);
         auto& Wrpr = m_pDeviceSignatures[static_cast<size_t>(Type)];
-        return Wrpr ? &Wrpr->Mem : nullptr;
+        return Wrpr ? &Wrpr->Data : nullptr;
     }
 
     template <typename SignatureType>
@@ -130,14 +130,14 @@ private:
 
     const PipelineResourceSignatureDesc* m_pDesc = nullptr;
 
-    SerializedMemory m_CommonData;
+    SerializedData m_CommonData;
 
     struct PRSWapperBase
     {
         virtual ~PRSWapperBase() {}
         virtual IPipelineResourceSignature* GetPRS() = 0;
 
-        SerializedMemory Mem;
+        SerializedData Data;
     };
 
     template <typename ImplType> struct TPRS;

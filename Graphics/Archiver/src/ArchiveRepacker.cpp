@@ -793,7 +793,7 @@ void ArchiveRepacker::Print() const
                 Temp.resize(Chunk.Size);
                 if (m_CommonData.Read(Chunk.Offset, Temp.size(), Temp.data()))
                 {
-                    Serializer<SerializerMode::Read> Ser{Temp.data(), Temp.size()};
+                    Serializer<SerializerMode::Read> Ser{SerializedData{Temp.data(), Temp.size()}};
 
                     Uint32      APIVersion = 0;
                     const char* GitHash    = nullptr;
