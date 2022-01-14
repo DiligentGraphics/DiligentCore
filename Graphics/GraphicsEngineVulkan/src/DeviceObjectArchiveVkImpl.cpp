@@ -49,9 +49,9 @@ RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveVkImpl::UnpackResou
 
 template <SerializerMode Mode>
 void PSOSerializerVk<Mode>::SerializePRSInternalData(
-    Serializer<Mode>&                               Ser,
-    TQual<PipelineResourceSignatureInternalDataVk>& InternalData,
-    DynamicLinearAllocator*                         Allocator)
+    Serializer<Mode>&                                   Ser,
+    ConstQual<PipelineResourceSignatureInternalDataVk>& InternalData,
+    DynamicLinearAllocator*                             Allocator)
 {
     PSOSerializer<Mode>::SerializePRSInternalData(Ser, InternalData, Allocator);
 

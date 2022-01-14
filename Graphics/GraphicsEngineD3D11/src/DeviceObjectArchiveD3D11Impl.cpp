@@ -49,9 +49,9 @@ RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveD3D11Impl::UnpackRe
 
 template <SerializerMode Mode>
 void PSOSerializerD3D11<Mode>::SerializePRSInternalData(
-    Serializer<Mode>&                                  Ser,
-    TQual<PipelineResourceSignatureInternalDataD3D11>& InternalData,
-    DynamicLinearAllocator*                            Allocator)
+    Serializer<Mode>&                                      Ser,
+    ConstQual<PipelineResourceSignatureInternalDataD3D11>& InternalData,
+    DynamicLinearAllocator*                                Allocator)
 {
     PSOSerializer<Mode>::SerializePRSInternalData(Ser, InternalData, Allocator);
 

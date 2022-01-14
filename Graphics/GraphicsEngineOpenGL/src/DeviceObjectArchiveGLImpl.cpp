@@ -66,9 +66,9 @@ RefCntAutoPtr<IShader> DeviceObjectArchiveGLImpl::UnpackShader(Serializer<Serial
 
 template <SerializerMode Mode>
 void PSOSerializerGL<Mode>::SerializePRSInternalData(
-    Serializer<Mode>&                               Ser,
-    TQual<PipelineResourceSignatureInternalDataGL>& InternalData,
-    DynamicLinearAllocator*                         Allocator)
+    Serializer<Mode>&                                   Ser,
+    ConstQual<PipelineResourceSignatureInternalDataGL>& InternalData,
+    DynamicLinearAllocator*                             Allocator)
 {
     PSOSerializer<Mode>::SerializePRSInternalData(Ser, InternalData, Allocator);
 

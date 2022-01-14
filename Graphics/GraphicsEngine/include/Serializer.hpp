@@ -29,6 +29,7 @@
 #include <type_traits>
 #include <array>
 #include <cstring>
+
 #include "BasicTypes.h"
 #include "DebugUtilities.hpp"
 
@@ -88,7 +89,7 @@ public:
     using TPointer = typename std::conditional_t<Mode == SerializerMode::Write, Uint8*, const Uint8*>;
 
     template <typename T>
-    using TQual = typename std::conditional_t<Mode == SerializerMode::Read, T, const T>;
+    using ConstQual = typename std::conditional_t<Mode == SerializerMode::Read, T, const T>;
 
 
     Serializer() :
@@ -98,7 +99,7 @@ public:
         static_assert(Mode == SerializerMode::Measure, "only Meause mode is supported");
     }
 
-    Serializer(TQual<void*> Ptr, size_t Size) :
+    Serializer(ConstQual<void*> Ptr, size_t Size) :
         m_Ptr{static_cast<TPointer>(Ptr)},
         m_End{m_Ptr + Size}
     {
@@ -106,7 +107,7 @@ public:
     }
 
     template <typename T>
-    TEnable<T> Serialize(TQual<T>& Value)
+    TEnable<T> Serialize(ConstQual<T>& Value)
     {
         VERIFY_EXPR(m_Ptr + sizeof(Value) <= m_End);
         Copy(m_Ptr, &Value, sizeof(Value));

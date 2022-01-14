@@ -31,8 +31,8 @@ namespace Diligent
 
 template <SerializerMode Mode>
 void PSOSerializer<Mode>::SerializeImmutableSampler(
-    Serializer<Mode>&            Ser,
-    TQual<ImmutableSamplerDesc>& SampDesc)
+    Serializer<Mode>&                Ser,
+    ConstQual<ImmutableSamplerDesc>& SampDesc)
 {
     Ser(SampDesc.SamplerOrTextureName,
         SampDesc.ShaderStages,
@@ -56,9 +56,9 @@ void PSOSerializer<Mode>::SerializeImmutableSampler(
 
 template <SerializerMode Mode>
 void PSOSerializer<Mode>::SerializePRSDesc(
-    Serializer<Mode>&                     Ser,
-    TQual<PipelineResourceSignatureDesc>& Desc,
-    DynamicLinearAllocator*               Allocator)
+    Serializer<Mode>&                         Ser,
+    ConstQual<PipelineResourceSignatureDesc>& Desc,
+    DynamicLinearAllocator*                   Allocator)
 {
     // Serialize PipelineResourceSignatureDesc
     Ser(Desc.BindingIndex,
@@ -68,8 +68,8 @@ void PSOSerializer<Mode>::SerializePRSDesc(
     // skip SRBAllocationGranularity
 
     SerializeArray(Ser, Allocator, Desc.Resources, Desc.NumResources,
-                   [](Serializer<Mode>&            Ser,
-                      TQual<PipelineResourceDesc>& ResDesc) //
+                   [](Serializer<Mode>&                Ser,
+                      ConstQual<PipelineResourceDesc>& ResDesc) //
                    {
                        Ser(ResDesc.Name,
                            ResDesc.ShaderStages,
@@ -86,9 +86,9 @@ void PSOSerializer<Mode>::SerializePRSDesc(
 }
 
 template <SerializerMode Mode>
-void PSOSerializer<Mode>::SerializePRSInternalData(Serializer<Mode>&                             Ser,
-                                                   TQual<PipelineResourceSignatureInternalData>& InternalData,
-                                                   DynamicLinearAllocator*                       Allocator)
+void PSOSerializer<Mode>::SerializePRSInternalData(Serializer<Mode>&                                 Ser,
+                                                   ConstQual<PipelineResourceSignatureInternalData>& InternalData,
+                                                   DynamicLinearAllocator*                           Allocator)
 {
     Ser(InternalData.ShaderStages,
         InternalData.StaticResShaderStages,
@@ -99,10 +99,10 @@ void PSOSerializer<Mode>::SerializePRSInternalData(Serializer<Mode>&            
 
 template <SerializerMode Mode>
 void PSOSerializer<Mode>::SerializePSOCreateInfo(
-    Serializer<Mode>&               Ser,
-    TQual<PipelineStateCreateInfo>& CreateInfo,
-    TQual<TPRSNames>&               PRSNames,
-    DynamicLinearAllocator*         Allocator)
+    Serializer<Mode>&                   Ser,
+    ConstQual<PipelineStateCreateInfo>& CreateInfo,
+    ConstQual<TPRSNames>&               PRSNames,
+    DynamicLinearAllocator*             Allocator)
 {
     // Serialize PipelineStateCreateInfo
     //   Serialize PipelineStateDesc
@@ -116,8 +116,8 @@ void PSOSerializer<Mode>::SerializePSOCreateInfo(
     auto& ResourceLayout = CreateInfo.PSODesc.ResourceLayout;
     Ser(ResourceLayout.DefaultVariableType, ResourceLayout.DefaultVariableMergeStages);
     SerializeArray(Ser, Allocator, ResourceLayout.Variables, ResourceLayout.NumVariables,
-                   [](Serializer<Mode>&                  Ser,
-                      TQual<ShaderResourceVariableDesc>& VarDesc) //
+                   [](Serializer<Mode>&                      Ser,
+                      ConstQual<ShaderResourceVariableDesc>& VarDesc) //
                    {
                        Ser(VarDesc.Name,
                            VarDesc.ShaderStages,
@@ -139,13 +139,13 @@ void PSOSerializer<Mode>::SerializePSOCreateInfo(
 
 template <SerializerMode Mode>
 void PSOSerializer<Mode>::SerializePSOCreateInfo(
-    Serializer<Mode>&                       Ser,
-    TQual<GraphicsPipelineStateCreateInfo>& CreateInfo,
-    TQual<TPRSNames>&                       PRSNames,
-    DynamicLinearAllocator*                 Allocator,
-    TQual<const char*>&                     RenderPassName)
+    Serializer<Mode>&                           Ser,
+    ConstQual<GraphicsPipelineStateCreateInfo>& CreateInfo,
+    ConstQual<TPRSNames>&                       PRSNames,
+    DynamicLinearAllocator*                     Allocator,
+    ConstQual<const char*>&                     RenderPassName)
 {
-    SerializePSOCreateInfo(Ser, static_cast<TQual<PipelineStateCreateInfo>&>(CreateInfo), PRSNames, Allocator);
+    SerializePSOCreateInfo(Ser, static_cast<ConstQual<PipelineStateCreateInfo>&>(CreateInfo), PRSNames, Allocator);
 
     // Serialize GraphicsPipelineDesc
     Ser(CreateInfo.GraphicsPipeline.BlendDesc,
@@ -157,8 +157,8 @@ void PSOSerializer<Mode>::SerializePSOCreateInfo(
     {
         auto& InputLayout = CreateInfo.GraphicsPipeline.InputLayout;
         SerializeArray(Ser, Allocator, InputLayout.LayoutElements, InputLayout.NumElements,
-                       [](Serializer<Mode>&     Ser,
-                          TQual<LayoutElement>& Elem) //
+                       [](Serializer<Mode>&         Ser,
+                          ConstQual<LayoutElement>& Elem) //
                        {
                            Ser(Elem.HLSLSemantic,
                                Elem.InputIndex,
@@ -192,12 +192,12 @@ void PSOSerializer<Mode>::SerializePSOCreateInfo(
 
 template <SerializerMode Mode>
 void PSOSerializer<Mode>::SerializePSOCreateInfo(
-    Serializer<Mode>&                      Ser,
-    TQual<ComputePipelineStateCreateInfo>& CreateInfo,
-    TQual<TPRSNames>&                      PRSNames,
-    DynamicLinearAllocator*                Allocator)
+    Serializer<Mode>&                          Ser,
+    ConstQual<ComputePipelineStateCreateInfo>& CreateInfo,
+    ConstQual<TPRSNames>&                      PRSNames,
+    DynamicLinearAllocator*                    Allocator)
 {
-    SerializePSOCreateInfo(Ser, static_cast<TQual<PipelineStateCreateInfo>&>(CreateInfo), PRSNames, Allocator);
+    SerializePSOCreateInfo(Ser, static_cast<ConstQual<PipelineStateCreateInfo>&>(CreateInfo), PRSNames, Allocator);
 
     // skip shaders - they are device specific
 
@@ -206,12 +206,12 @@ void PSOSerializer<Mode>::SerializePSOCreateInfo(
 
 template <SerializerMode Mode>
 void PSOSerializer<Mode>::SerializePSOCreateInfo(
-    Serializer<Mode>&                   Ser,
-    TQual<TilePipelineStateCreateInfo>& CreateInfo,
-    TQual<TPRSNames>&                   PRSNames,
-    DynamicLinearAllocator*             Allocator)
+    Serializer<Mode>&                       Ser,
+    ConstQual<TilePipelineStateCreateInfo>& CreateInfo,
+    ConstQual<TPRSNames>&                   PRSNames,
+    DynamicLinearAllocator*                 Allocator)
 {
-    SerializePSOCreateInfo(Ser, static_cast<TQual<PipelineStateCreateInfo>&>(CreateInfo), PRSNames, Allocator);
+    SerializePSOCreateInfo(Ser, static_cast<ConstQual<PipelineStateCreateInfo>&>(CreateInfo), PRSNames, Allocator);
 
     // Serialize TilePipelineDesc
     Ser(CreateInfo.TilePipeline.NumRenderTargets,
@@ -225,16 +225,16 @@ void PSOSerializer<Mode>::SerializePSOCreateInfo(
 
 template <SerializerMode Mode>
 void PSOSerializer<Mode>::SerializePSOCreateInfo(
-    Serializer<Mode>&                                     Ser,
-    TQual<RayTracingPipelineStateCreateInfo>&             CreateInfo,
-    TQual<TPRSNames>&                                     PRSNames,
-    DynamicLinearAllocator*                               Allocator,
-    const std::function<void(Uint32&, TQual<IShader*>&)>& ShaderToIndex)
+    Serializer<Mode>&                                         Ser,
+    ConstQual<RayTracingPipelineStateCreateInfo>&             CreateInfo,
+    ConstQual<TPRSNames>&                                     PRSNames,
+    DynamicLinearAllocator*                                   Allocator,
+    const std::function<void(Uint32&, ConstQual<IShader*>&)>& ShaderToIndex)
 {
     const bool IsReading = (Allocator != nullptr);
     const bool IsWriting = !IsReading;
 
-    SerializePSOCreateInfo(Ser, static_cast<TQual<PipelineStateCreateInfo>&>(CreateInfo), PRSNames, Allocator);
+    SerializePSOCreateInfo(Ser, static_cast<ConstQual<PipelineStateCreateInfo>&>(CreateInfo), PRSNames, Allocator);
 
     // Serialize RayTracingPipelineDesc
     Ser(CreateInfo.RayTracingPipeline.ShaderRecordSize,
@@ -247,8 +247,8 @@ void PSOSerializer<Mode>::SerializePSOCreateInfo(
 
     //  Serialize RayTracingGeneralShaderGroup
     SerializeArray(Ser, Allocator, CreateInfo.pGeneralShaders, CreateInfo.GeneralShaderCount,
-                   [&](Serializer<Mode>&                    Ser,
-                       TQual<RayTracingGeneralShaderGroup>& Group) //
+                   [&](Serializer<Mode>&                        Ser,
+                       ConstQual<RayTracingGeneralShaderGroup>& Group) //
                    {
                        Uint32 ShaderIndex = ~0u;
                        if (IsWriting)
@@ -265,8 +265,8 @@ void PSOSerializer<Mode>::SerializePSOCreateInfo(
 
     //  Serialize RayTracingTriangleHitShaderGroup
     SerializeArray(Ser, Allocator, CreateInfo.pTriangleHitShaders, CreateInfo.TriangleHitShaderCount,
-                   [&](Serializer<Mode>&                        Ser,
-                       TQual<RayTracingTriangleHitShaderGroup>& Group) //
+                   [&](Serializer<Mode>&                            Ser,
+                       ConstQual<RayTracingTriangleHitShaderGroup>& Group) //
                    {
                        Uint32 ClosestHitShaderIndex = ~0u;
                        Uint32 AnyHitShaderIndex     = ~0u;
@@ -286,8 +286,8 @@ void PSOSerializer<Mode>::SerializePSOCreateInfo(
 
     //  Serialize RayTracingProceduralHitShaderGroup
     SerializeArray(Ser, Allocator, CreateInfo.pProceduralHitShaders, CreateInfo.ProceduralHitShaderCount,
-                   [&](Serializer<Mode>&                          Ser,
-                       TQual<RayTracingProceduralHitShaderGroup>& Group) //
+                   [&](Serializer<Mode>&                              Ser,
+                       ConstQual<RayTracingProceduralHitShaderGroup>& Group) //
                    {
                        Uint32 IntersectionShaderIndex = ~0u;
                        Uint32 ClosestHitShaderIndex   = ~0u;
@@ -318,13 +318,13 @@ void PSOSerializer<Mode>::SerializePSOCreateInfo(
 
 template <SerializerMode Mode>
 void PSOSerializer<Mode>::SerializeRenderPassDesc(
-    Serializer<Mode>&       Ser,
-    TQual<RenderPassDesc>&  RPDesc,
-    DynamicLinearAllocator* Allocator)
+    Serializer<Mode>&          Ser,
+    ConstQual<RenderPassDesc>& RPDesc,
+    DynamicLinearAllocator*    Allocator)
 {
     SerializeArray(Ser, Allocator, RPDesc.pAttachments, RPDesc.AttachmentCount,
-                   [](Serializer<Mode>&                Ser,
-                      TQual<RenderPassAttachmentDesc>& Attachment) //
+                   [](Serializer<Mode>&                    Ser,
+                      ConstQual<RenderPassAttachmentDesc>& Attachment) //
                    {
                        Ser(Attachment.Format,
                            Attachment.SampleCount,
@@ -337,11 +337,11 @@ void PSOSerializer<Mode>::SerializeRenderPassDesc(
                    });
 
     SerializeArray(Ser, Allocator, RPDesc.pSubpasses, RPDesc.SubpassCount,
-                   [&Allocator](Serializer<Mode>&   Ser,
-                                TQual<SubpassDesc>& Subpass) //
+                   [&Allocator](Serializer<Mode>&       Ser,
+                                ConstQual<SubpassDesc>& Subpass) //
                    {
-                       auto SerializeAttachmentRef = [](Serializer<Mode>&           Ser,
-                                                        TQual<AttachmentReference>& AttachRef) //
+                       auto SerializeAttachmentRef = [](Serializer<Mode>&               Ser,
+                                                        ConstQual<AttachmentReference>& AttachRef) //
                        {
                            Ser(AttachRef.AttachmentIndex,
                                AttachRef.State);
@@ -357,16 +357,16 @@ void PSOSerializer<Mode>::SerializeRenderPassDesc(
                        SerializeArray(Ser, Allocator, Subpass.pDepthStencilAttachment, DepthStencilAttachCount, SerializeAttachmentRef);
 
                        SerializeArray(Ser, Allocator, Subpass.pPreserveAttachments, Subpass.PreserveAttachmentCount,
-                                      [](Serializer<Mode>& Ser,
-                                         TQual<Uint32>&    Attach) //
+                                      [](Serializer<Mode>&  Ser,
+                                         ConstQual<Uint32>& Attach) //
                                       {
                                           Ser(Attach);
                                       });
 
                        Uint32 ShadingRateAttachCount = Subpass.pShadingRateAttachment != nullptr ? 1 : 0;
                        SerializeArray(Ser, Allocator, Subpass.pShadingRateAttachment, ShadingRateAttachCount,
-                                      [](Serializer<Mode>&             Ser,
-                                         TQual<ShadingRateAttachment>& SRAttachment) //
+                                      [](Serializer<Mode>&                 Ser,
+                                         ConstQual<ShadingRateAttachment>& SRAttachment) //
                                       {
                                           Ser(SRAttachment.Attachment.AttachmentIndex,
                                               SRAttachment.Attachment.State,
@@ -375,8 +375,8 @@ void PSOSerializer<Mode>::SerializeRenderPassDesc(
                    });
 
     SerializeArray(Ser, Allocator, RPDesc.pDependencies, RPDesc.DependencyCount,
-                   [](Serializer<Mode>&             Ser,
-                      TQual<SubpassDependencyDesc>& Dep) //
+                   [](Serializer<Mode>&                 Ser,
+                      ConstQual<SubpassDependencyDesc>& Dep) //
                    {
                        Ser(Dep.SrcSubpass,
                            Dep.DstSubpass,
@@ -396,9 +396,9 @@ void PSOSerializer<Mode>::SerializeRenderPassDesc(
 
 template <SerializerMode Mode>
 void PSOSerializer<Mode>::SerializeShaders(
-    Serializer<Mode>&        Ser,
-    TQual<ShaderIndexArray>& Shaders,
-    DynamicLinearAllocator*  Allocator)
+    Serializer<Mode>&            Ser,
+    ConstQual<ShaderIndexArray>& Shaders,
+    DynamicLinearAllocator*      Allocator)
 {
     Ser(Shaders.Count);
 

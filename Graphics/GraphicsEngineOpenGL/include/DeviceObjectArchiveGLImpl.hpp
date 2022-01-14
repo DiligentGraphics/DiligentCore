@@ -55,13 +55,13 @@ template <SerializerMode Mode>
 struct PSOSerializerGL
 {
     template <typename T>
-    using TQual = typename Serializer<Mode>::template TQual<T>;
+    using ConstQual = typename Serializer<Mode>::template ConstQual<T>;
 
     using PRSInternalDataType = PipelineResourceSignatureInternalDataGL;
 
-    static void SerializePRSInternalData(Serializer<Mode>&           Ser,
-                                         TQual<PRSInternalDataType>& InternalData,
-                                         DynamicLinearAllocator*     Allocator);
+    static void SerializePRSInternalData(Serializer<Mode>&               Ser,
+                                         ConstQual<PRSInternalDataType>& InternalData,
+                                         DynamicLinearAllocator*         Allocator);
 };
 
 DECL_TRIVIALLY_SERIALIZABLE(PipelineResourceAttribsGL);

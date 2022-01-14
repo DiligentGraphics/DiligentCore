@@ -68,7 +68,7 @@ template <SerializerMode Mode>
 struct PSOSerializer
 {
     template <typename T>
-    using TQual = typename Serializer<Mode>::template TQual<T>;
+    using ConstQual = typename Serializer<Mode>::template ConstQual<T>;
 
     using TPRSNames        = DeviceObjectArchiveBase::TPRSNames;
     using ShaderIndexArray = DeviceObjectArchiveBase::ShaderIndexArray;
@@ -87,51 +87,51 @@ struct PSOSerializer
                                   ArrayElemType&          Elements,
                                   CountType&              Count);
 
-    static void SerializeImmutableSampler(Serializer<Mode>&            Ser,
-                                          TQual<ImmutableSamplerDesc>& SampDesc);
+    static void SerializeImmutableSampler(Serializer<Mode>&                Ser,
+                                          ConstQual<ImmutableSamplerDesc>& SampDesc);
 
-    static void SerializePRSDesc(Serializer<Mode>&                     Ser,
-                                 TQual<PipelineResourceSignatureDesc>& Desc,
-                                 DynamicLinearAllocator*               Allocator);
+    static void SerializePRSDesc(Serializer<Mode>&                         Ser,
+                                 ConstQual<PipelineResourceSignatureDesc>& Desc,
+                                 DynamicLinearAllocator*                   Allocator);
 
-    static void SerializePRSInternalData(Serializer<Mode>&                             Ser,
-                                         TQual<PipelineResourceSignatureInternalData>& InternalData,
-                                         DynamicLinearAllocator*                       Allocator);
-
-    static void SerializePSOCreateInfo(Serializer<Mode>&               Ser,
-                                       TQual<PipelineStateCreateInfo>& CreateInfo,
-                                       TQual<TPRSNames>&               PRSNames,
-                                       DynamicLinearAllocator*         Allocator);
-
-    static void SerializePSOCreateInfo(Serializer<Mode>&                       Ser,
-                                       TQual<GraphicsPipelineStateCreateInfo>& CreateInfo,
-                                       TQual<TPRSNames>&                       PRSNames,
-                                       DynamicLinearAllocator*                 Allocator,
-                                       TQual<const char*>&                     RenderPassName);
-
-    static void SerializePSOCreateInfo(Serializer<Mode>&                      Ser,
-                                       TQual<ComputePipelineStateCreateInfo>& CreateInfo,
-                                       TQual<TPRSNames>&                      PRSNames,
-                                       DynamicLinearAllocator*                Allocator);
+    static void SerializePRSInternalData(Serializer<Mode>&                                 Ser,
+                                         ConstQual<PipelineResourceSignatureInternalData>& InternalData,
+                                         DynamicLinearAllocator*                           Allocator);
 
     static void SerializePSOCreateInfo(Serializer<Mode>&                   Ser,
-                                       TQual<TilePipelineStateCreateInfo>& CreateInfo,
-                                       TQual<TPRSNames>&                   PRSNames,
+                                       ConstQual<PipelineStateCreateInfo>& CreateInfo,
+                                       ConstQual<TPRSNames>&               PRSNames,
                                        DynamicLinearAllocator*             Allocator);
 
-    static void SerializePSOCreateInfo(Serializer<Mode>&                                     Ser,
-                                       TQual<RayTracingPipelineStateCreateInfo>&             CreateInfo,
-                                       TQual<TPRSNames>&                                     PRSNames,
-                                       DynamicLinearAllocator*                               Allocator,
-                                       const std::function<void(Uint32&, TQual<IShader*>&)>& ShaderToIndex);
+    static void SerializePSOCreateInfo(Serializer<Mode>&                           Ser,
+                                       ConstQual<GraphicsPipelineStateCreateInfo>& CreateInfo,
+                                       ConstQual<TPRSNames>&                       PRSNames,
+                                       DynamicLinearAllocator*                     Allocator,
+                                       ConstQual<const char*>&                     RenderPassName);
 
-    static void SerializeRenderPassDesc(Serializer<Mode>&       Ser,
-                                        TQual<RenderPassDesc>&  RPDesc,
-                                        DynamicLinearAllocator* Allocator);
+    static void SerializePSOCreateInfo(Serializer<Mode>&                          Ser,
+                                       ConstQual<ComputePipelineStateCreateInfo>& CreateInfo,
+                                       ConstQual<TPRSNames>&                      PRSNames,
+                                       DynamicLinearAllocator*                    Allocator);
 
-    static void SerializeShaders(Serializer<Mode>&        Ser,
-                                 TQual<ShaderIndexArray>& Shaders,
-                                 DynamicLinearAllocator*  Allocator);
+    static void SerializePSOCreateInfo(Serializer<Mode>&                       Ser,
+                                       ConstQual<TilePipelineStateCreateInfo>& CreateInfo,
+                                       ConstQual<TPRSNames>&                   PRSNames,
+                                       DynamicLinearAllocator*                 Allocator);
+
+    static void SerializePSOCreateInfo(Serializer<Mode>&                                         Ser,
+                                       ConstQual<RayTracingPipelineStateCreateInfo>&             CreateInfo,
+                                       ConstQual<TPRSNames>&                                     PRSNames,
+                                       DynamicLinearAllocator*                                   Allocator,
+                                       const std::function<void(Uint32&, ConstQual<IShader*>&)>& ShaderToIndex);
+
+    static void SerializeRenderPassDesc(Serializer<Mode>&          Ser,
+                                        ConstQual<RenderPassDesc>& RPDesc,
+                                        DynamicLinearAllocator*    Allocator);
+
+    static void SerializeShaders(Serializer<Mode>&            Ser,
+                                 ConstQual<ShaderIndexArray>& Shaders,
+                                 DynamicLinearAllocator*      Allocator);
 };
 
 template <SerializerMode Mode>

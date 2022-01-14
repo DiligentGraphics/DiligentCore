@@ -51,13 +51,13 @@ template <SerializerMode Mode>
 struct PSOSerializerD3D11
 {
     template <typename T>
-    using TQual = typename Serializer<Mode>::template TQual<T>;
+    using ConstQual = typename Serializer<Mode>::template ConstQual<T>;
 
     using PRSInternalDataType = PipelineResourceSignatureInternalDataD3D11;
 
-    static void SerializePRSInternalData(Serializer<Mode>&           Ser,
-                                         TQual<PRSInternalDataType>& InternalData,
-                                         DynamicLinearAllocator*     Allocator);
+    static void SerializePRSInternalData(Serializer<Mode>&               Ser,
+                                         ConstQual<PRSInternalDataType>& InternalData,
+                                         DynamicLinearAllocator*         Allocator);
 };
 
 DECL_TRIVIALLY_SERIALIZABLE(PipelineResourceAttribsD3D11);
