@@ -32,6 +32,8 @@
 #include "ShaderToolsCommon.hpp"
 #include "PipelineStateBase.hpp"
 #include "PSOSerializer.hpp"
+#include "DataBlobImpl.hpp"
+#include "MemoryFileStream.hpp"
 
 namespace Diligent
 {

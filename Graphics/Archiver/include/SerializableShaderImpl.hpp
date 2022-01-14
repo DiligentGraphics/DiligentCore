@@ -37,15 +37,6 @@
 namespace Diligent
 {
 
-#if D3D11_SUPPORTED
-class ShaderD3D11Impl;
-#endif
-#if D3D12_SUPPORTED
-class ShaderD3D12Impl;
-#endif
-#if VULKAN_SUPPORTED
-class ShaderVkImpl;
-#endif
 #if METAL_SUPPORTED
 class PipelineResourceSignatureMtlImpl;
 class SPIRVShaderResources;
@@ -78,9 +69,9 @@ public:
 
     virtual IObject* DILIGENT_CALL_TYPE GetUserData() const override final { return nullptr; }
 
-    struct ICompiledShader
+    struct CompiledShader
     {
-        virtual ~ICompiledShader() {}
+        virtual ~CompiledShader() {}
     };
 
     template <typename CompiledShaderType>
@@ -110,7 +101,7 @@ private:
     ShaderCreateInfo                              m_CreateInfo;
     std::unique_ptr<void, STDDeleterRawMem<void>> m_pRawMemory;
 
-    std::array<std::unique_ptr<ICompiledShader>, static_cast<size_t>(DeviceType::Count)> m_Shaders;
+    std::array<std::unique_ptr<CompiledShader>, static_cast<size_t>(DeviceType::Count)> m_Shaders;
 
     template <typename ShaderType, typename... ArgTypes>
     void CreateShader(DeviceType Type, String& CompilationLog, const char* DeviceTypeName, IReferenceCounters* pRefCounters, ShaderCreateInfo& ShaderCI, const ArgTypes&... Args);
@@ -133,7 +124,7 @@ private:
 
 #if METAL_SUPPORTED
     struct CompiledShaderMtlImpl;
-    std::unique_ptr<ICompiledShader> m_pShaderMtl;
+    std::unique_ptr<CompiledShader> m_pShaderMtl;
 
     void CreateShaderMtl(ShaderCreateInfo& ShaderCI, String& CompilationLog);
 #endif

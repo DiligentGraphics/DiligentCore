@@ -145,64 +145,43 @@ private:
     std::array<std::unique_ptr<PRSWapperBase>, DeviceCount> m_pDeviceSignatures;
 };
 
+#define INSTANTIATE_GET_DEVICE_SIGNATURE(PRSImplType) template PRSImplType* SerializableResourceSignatureImpl::GetDeviceSignature<PRSImplType>(DeviceType Type) const
+#define DECLARE_GET_DEVICE_SIGNATURE(PRSImplType)     extern INSTANTIATE_GET_DEVICE_SIGNATURE(PRSImplType)
+
+#define INSTANTIATE_CREATE_DEVICE_SIGNATURE(PRSImplType)                                 \
+    template void SerializableResourceSignatureImpl::CreateDeviceSignature<PRSImplType>( \
+        DeviceType                           Type,                                       \
+        const PipelineResourceSignatureDesc& Desc,                                       \
+        SHADER_TYPE                          ShaderStages)
+#define DECLARE_CREATE_DEVICE_SIGNATURE(PRSImplType) extern INSTANTIATE_CREATE_DEVICE_SIGNATURE(PRSImplType)
+
+#define DECLARE_DEVICE_SIGNATURE_METHODS(PRSImplType) \
+    class PRSImplType;                                \
+    DECLARE_GET_DEVICE_SIGNATURE(PRSImplType);        \
+    DECLARE_CREATE_DEVICE_SIGNATURE(PRSImplType);
+
+#define INSTANTIATE_DEVICE_SIGNATURE_METHODS(PRSImplType) \
+    INSTANTIATE_GET_DEVICE_SIGNATURE(PRSImplType);        \
+    INSTANTIATE_CREATE_DEVICE_SIGNATURE(PRSImplType);
 
 #if D3D11_SUPPORTED
-class PipelineResourceSignatureD3D11Impl;
-
-extern template PipelineResourceSignatureD3D11Impl* SerializableResourceSignatureImpl::GetDeviceSignature<PipelineResourceSignatureD3D11Impl>(DeviceType Type) const;
-
-extern template void SerializableResourceSignatureImpl::CreateDeviceSignature<PipelineResourceSignatureD3D11Impl>(
-    DeviceType                           Type,
-    const PipelineResourceSignatureDesc& Desc,
-    SHADER_TYPE                          ShaderStages);
+DECLARE_DEVICE_SIGNATURE_METHODS(PipelineResourceSignatureD3D11Impl)
 #endif
-
 
 #if D3D12_SUPPORTED
-class PipelineResourceSignatureD3D12Impl;
-
-extern template PipelineResourceSignatureD3D12Impl* SerializableResourceSignatureImpl::GetDeviceSignature<PipelineResourceSignatureD3D12Impl>(DeviceType Type) const;
-
-extern template void SerializableResourceSignatureImpl::CreateDeviceSignature<PipelineResourceSignatureD3D12Impl>(
-    DeviceType                           Type,
-    const PipelineResourceSignatureDesc& Desc,
-    SHADER_TYPE                          ShaderStages);
+DECLARE_DEVICE_SIGNATURE_METHODS(PipelineResourceSignatureD3D12Impl)
 #endif
-
 
 #if GL_SUPPORTED || GLES_SUPPORTED
-class PipelineResourceSignatureGLImpl;
-
-extern template PipelineResourceSignatureGLImpl* SerializableResourceSignatureImpl::GetDeviceSignature<PipelineResourceSignatureGLImpl>(DeviceType Type) const;
-
-extern template void SerializableResourceSignatureImpl::CreateDeviceSignature<PipelineResourceSignatureGLImpl>(
-    DeviceType                           Type,
-    const PipelineResourceSignatureDesc& Desc,
-    SHADER_TYPE                          ShaderStages);
+DECLARE_DEVICE_SIGNATURE_METHODS(PipelineResourceSignatureGLImpl)
 #endif
-
 
 #if VULKAN_SUPPORTED
-class PipelineResourceSignatureVkImpl;
-
-extern template PipelineResourceSignatureVkImpl* SerializableResourceSignatureImpl::GetDeviceSignature<PipelineResourceSignatureVkImpl>(DeviceType Type) const;
-
-extern template void SerializableResourceSignatureImpl::CreateDeviceSignature<PipelineResourceSignatureVkImpl>(
-    DeviceType                           Type,
-    const PipelineResourceSignatureDesc& Desc,
-    SHADER_TYPE                          ShaderStages);
+DECLARE_DEVICE_SIGNATURE_METHODS(PipelineResourceSignatureVkImpl)
 #endif
 
-
 #if METAL_SUPPORTED
-class PipelineResourceSignatureMtlImpl;
-
-extern template PipelineResourceSignatureMtlImpl* SerializableResourceSignatureImpl::GetDeviceSignature<PipelineResourceSignatureMtlImpl>(DeviceType Type) const;
-
-extern template void SerializableResourceSignatureImpl::CreateDeviceSignature<PipelineResourceSignatureMtlImpl>(
-    DeviceType                           Type,
-    const PipelineResourceSignatureDesc& Desc,
-    SHADER_TYPE                          ShaderStages);
+DECLARE_DEVICE_SIGNATURE_METHODS(PipelineResourceSignatureMtlImpl)
 #endif
 
 } // namespace Diligent

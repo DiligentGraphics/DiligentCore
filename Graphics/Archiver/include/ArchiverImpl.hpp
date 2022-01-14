@@ -37,6 +37,8 @@
 #include "RenderDevice.h"
 #include "PipelineResourceSignature.h"
 #include "PipelineState.h"
+#include "DataBlob.h"
+#include "FileStream.h"
 
 #include "DeviceObjectArchiveBase.hpp"
 #include "RefCntAutoPtr.hpp"
@@ -45,8 +47,6 @@
 #include "HashUtils.hpp"
 #include "BasicMath.hpp"
 #include "PlatformMisc.hpp"
-#include "DataBlobImpl.hpp"
-#include "MemoryFileStream.hpp"
 #include "FixedLinearAllocator.hpp"
 
 #include "SerializationDeviceImpl.hpp"
@@ -187,7 +187,6 @@ private:
     template <typename CreateInfoType>
     struct TPSOData
     {
-        SerializedMemory DescMem;
         CreateInfoType*  pCreateInfo = nullptr;
         SerializedMemory CommonData;
         TPerDeviceData   PerDeviceData;
@@ -288,44 +287,49 @@ private:
                                         const ExtraArgsType&... ExtraArgs);
 };
 
+#define INSTANTIATE_PATCH_SHADER(MethodName, CreateInfoType, ...) template bool ArchiverImpl::MethodName<CreateInfoType>(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data, ##__VA_ARGS__)
+#define DECLARE_PATCH_SHADER(MethodName, CreateInfoType, ...)     extern INSTANTIATE_PATCH_SHADER(MethodName, CreateInfoType, ##__VA_ARGS__)
+
+#define DECLARE_PATCH_METHODS(MethodName, ...)                                        \
+    DECLARE_PATCH_SHADER(MethodName, GraphicsPipelineStateCreateInfo, ##__VA_ARGS__); \
+    DECLARE_PATCH_SHADER(MethodName, ComputePipelineStateCreateInfo, ##__VA_ARGS__);  \
+    DECLARE_PATCH_SHADER(MethodName, TilePipelineStateCreateInfo, ##__VA_ARGS__);     \
+    DECLARE_PATCH_SHADER(MethodName, RayTracingPipelineStateCreateInfo, ##__VA_ARGS__);
+
+#define INSTANTIATE_PATCH_SHADER_METHODS(MethodName, ...)                                 \
+    INSTANTIATE_PATCH_SHADER(MethodName, GraphicsPipelineStateCreateInfo, ##__VA_ARGS__); \
+    INSTANTIATE_PATCH_SHADER(MethodName, ComputePipelineStateCreateInfo, ##__VA_ARGS__);  \
+    INSTANTIATE_PATCH_SHADER(MethodName, TilePipelineStateCreateInfo, ##__VA_ARGS__);     \
+    INSTANTIATE_PATCH_SHADER(MethodName, RayTracingPipelineStateCreateInfo, ##__VA_ARGS__);
+
+#define INSTANTIATE_PREPARE_DEF_SIGNATURE_GL(CreateInfoType) template bool ArchiverImpl::PrepareDefaultSignatureGL<CreateInfoType>(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data)
+#define DECLARE_PREPARE_DEF_SIGNATURE_GL(CreateInfoType)     extern INSTANTIATE_PREPARE_DEF_SIGNATURE_GL(CreateInfoType)
+#define DECLARE_PREPARE_DEF_SIGNATURE_GL_METHODS()                     \
+    DECLARE_PREPARE_DEF_SIGNATURE_GL(GraphicsPipelineStateCreateInfo); \
+    DECLARE_PREPARE_DEF_SIGNATURE_GL(ComputePipelineStateCreateInfo);  \
+    DECLARE_PREPARE_DEF_SIGNATURE_GL(TilePipelineStateCreateInfo);     \
+    DECLARE_PREPARE_DEF_SIGNATURE_GL(RayTracingPipelineStateCreateInfo);
+
+
 #if D3D11_SUPPORTED
-extern template bool ArchiverImpl::PatchShadersD3D11<GraphicsPipelineStateCreateInfo>(const GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data);
-extern template bool ArchiverImpl::PatchShadersD3D11<ComputePipelineStateCreateInfo>(const ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data);
-extern template bool ArchiverImpl::PatchShadersD3D11<TilePipelineStateCreateInfo>(const TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data);
-extern template bool ArchiverImpl::PatchShadersD3D11<RayTracingPipelineStateCreateInfo>(const RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data);
+DECLARE_PATCH_METHODS(PatchShadersD3D11)
 #endif
 
 #if D3D12_SUPPORTED
-extern template bool ArchiverImpl::PatchShadersD3D12<GraphicsPipelineStateCreateInfo>(const GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data);
-extern template bool ArchiverImpl::PatchShadersD3D12<ComputePipelineStateCreateInfo>(const ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data);
-extern template bool ArchiverImpl::PatchShadersD3D12<TilePipelineStateCreateInfo>(const TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data);
-extern template bool ArchiverImpl::PatchShadersD3D12<RayTracingPipelineStateCreateInfo>(const RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data);
+DECLARE_PATCH_METHODS(PatchShadersD3D12)
 #endif
 
 #if GL_SUPPORTED
-extern template bool ArchiverImpl::PatchShadersGL<GraphicsPipelineStateCreateInfo>(const GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data);
-extern template bool ArchiverImpl::PatchShadersGL<ComputePipelineStateCreateInfo>(const ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data);
-extern template bool ArchiverImpl::PatchShadersGL<TilePipelineStateCreateInfo>(const TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data);
-extern template bool ArchiverImpl::PatchShadersGL<RayTracingPipelineStateCreateInfo>(const RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data);
-
-extern template bool ArchiverImpl::PrepareDefaultSignatureGL<GraphicsPipelineStateCreateInfo>(const GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data);
-extern template bool ArchiverImpl::PrepareDefaultSignatureGL<ComputePipelineStateCreateInfo>(const ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data);
-extern template bool ArchiverImpl::PrepareDefaultSignatureGL<TilePipelineStateCreateInfo>(const TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data);
-extern template bool ArchiverImpl::PrepareDefaultSignatureGL<RayTracingPipelineStateCreateInfo>(const RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data);
+DECLARE_PATCH_METHODS(PatchShadersGL)
+DECLARE_PREPARE_DEF_SIGNATURE_GL_METHODS()
 #endif
 
 #if VULKAN_SUPPORTED
-extern template bool ArchiverImpl::PatchShadersVk<GraphicsPipelineStateCreateInfo>(const GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data);
-extern template bool ArchiverImpl::PatchShadersVk<ComputePipelineStateCreateInfo>(const ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data);
-extern template bool ArchiverImpl::PatchShadersVk<TilePipelineStateCreateInfo>(const TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data);
-extern template bool ArchiverImpl::PatchShadersVk<RayTracingPipelineStateCreateInfo>(const RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data);
+DECLARE_PATCH_METHODS(PatchShadersVk)
 #endif
 
 #if METAL_SUPPORTED
-extern template bool ArchiverImpl::PatchShadersMtl<GraphicsPipelineStateCreateInfo>(const GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data, DeviceType DevType);
-extern template bool ArchiverImpl::PatchShadersMtl<ComputePipelineStateCreateInfo>(const ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data, DeviceType DevType);
-extern template bool ArchiverImpl::PatchShadersMtl<TilePipelineStateCreateInfo>(const TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data, DeviceType DevType);
-extern template bool ArchiverImpl::PatchShadersMtl<RayTracingPipelineStateCreateInfo>(const RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data, DeviceType DevType);
+DECLARE_PATCH_METHODS(PatchShadersMtl, DeviceType DevType)
 #endif
 
 } // namespace Diligent

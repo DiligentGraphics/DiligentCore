@@ -164,16 +164,14 @@ bool ArchiverImpl::PatchShadersMtl(const CreateInfoType&     CreateInfo,
     return true;
 }
 
-template bool ArchiverImpl::PatchShadersMtl<GraphicsPipelineStateCreateInfo>(const GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data, DeviceType DevType);
-template bool ArchiverImpl::PatchShadersMtl<ComputePipelineStateCreateInfo>(const ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data, DeviceType DevType);
-template bool ArchiverImpl::PatchShadersMtl<TilePipelineStateCreateInfo>(const TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data, DeviceType DevType);
-template bool ArchiverImpl::PatchShadersMtl<RayTracingPipelineStateCreateInfo>(const RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data, DeviceType DevType);
+INSTANTIATE_PATCH_SHADER_METHODS(PatchShadersMtl, DeviceType DevType)
+INSTANTIATE_DEVICE_SIGNATURE_METHODS(PipelineResourceSignatureMtlImpl)
 
 
 static_assert(std::is_same<MtlArchiverResourceCounters, MtlResourceCounters>::value,
               "MtlArchiverResourceCounters and MtlResourceCounters must be same types");
 
-struct SerializableShaderImpl::CompiledShaderMtlImpl final : ICompiledShader
+struct SerializableShaderImpl::CompiledShaderMtlImpl final : CompiledShader
 {
     String                                      MslSource;
     std::vector<uint32_t>                       SPIRV;
@@ -213,8 +211,6 @@ void SerializableShaderImpl::CreateShaderMtl(ShaderCreateInfo& ShaderCI, String&
     if (pLog)
         pLog->Release();
 }
-
-template PipelineResourceSignatureMtlImpl* SerializableResourceSignatureImpl::GetDeviceSignature<PipelineResourceSignatureMtlImpl>(DeviceType Type) const;
 
 const SPIRVShaderResources* SerializableShaderImpl::GetMtlShaderSPIRVResources() const
 {
@@ -400,12 +396,6 @@ SerializedMemory SerializableShaderImpl::PatchShaderMtl(const RefCntAutoPtr<Pipe
 
     return Bytecode;
 }
-
-template void SerializableResourceSignatureImpl::CreateDeviceSignature<PipelineResourceSignatureMtlImpl>(
-    DeviceType                           Type,
-    const PipelineResourceSignatureDesc& Desc,
-    SHADER_TYPE                          ShaderStages);
-
 
 void SerializationDeviceImpl::GetPipelineResourceBindingsMtl(const PipelineResourceBindingAttribs& Info,
                                                              std::vector<PipelineResourceBinding>& ResourceBindings,

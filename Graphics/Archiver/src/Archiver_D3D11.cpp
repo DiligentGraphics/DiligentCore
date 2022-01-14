@@ -50,7 +50,7 @@ struct SerializableResourceSignatureImpl::SignatureTraits<PipelineResourceSignat
 namespace
 {
 
-struct CompiledShaderD3D11 : SerializableShaderImpl::ICompiledShader
+struct CompiledShaderD3D11 : SerializableShaderImpl::CompiledShader
 {
     ShaderD3D11Impl ShaderD3D11;
 
@@ -58,12 +58,6 @@ struct CompiledShaderD3D11 : SerializableShaderImpl::ICompiledShader
         ShaderD3D11{pRefCounters, nullptr, ShaderCI, D3D11ShaderCI, true}
     {}
 };
-
-inline ShaderD3D11Impl* GetShaderD3D11(const SerializableShaderImpl* pShader)
-{
-    auto* pCompiledShaderD3D11 = pShader->GetShader<CompiledShaderD3D11>(DeviceObjectArchiveBase::DeviceType::Direct3D11);
-    return pCompiledShaderD3D11 != nullptr ? &pCompiledShaderD3D11->ShaderD3D11 : nullptr;
-}
 
 struct ShaderStageInfoD3D11
 {
@@ -83,6 +77,13 @@ struct ShaderStageInfoD3D11
     SHADER_TYPE                   Type          = SHADER_TYPE_UNKNOWN;
     ShaderD3D11Impl*              pShader       = nullptr;
     const SerializableShaderImpl* pSerializable = nullptr;
+
+private:
+    static ShaderD3D11Impl* GetShaderD3D11(const SerializableShaderImpl* pShader)
+    {
+        auto* pCompiledShaderD3D11 = pShader->GetShader<CompiledShaderD3D11>(DeviceObjectArchiveBase::DeviceType::Direct3D11);
+        return pCompiledShaderD3D11 != nullptr ? &pCompiledShaderD3D11->ShaderD3D11 : nullptr;
+    }
 };
 
 inline SHADER_TYPE GetShaderStageType(const ShaderStageInfoD3D11& Stage) { return Stage.Type; }
@@ -177,10 +178,8 @@ bool ArchiverImpl::PatchShadersD3D11(const CreateInfoType& CreateInfo, TPSOData<
     return true;
 }
 
-template bool ArchiverImpl::PatchShadersD3D11<GraphicsPipelineStateCreateInfo>(const GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data);
-template bool ArchiverImpl::PatchShadersD3D11<ComputePipelineStateCreateInfo>(const ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data);
-template bool ArchiverImpl::PatchShadersD3D11<TilePipelineStateCreateInfo>(const TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data);
-template bool ArchiverImpl::PatchShadersD3D11<RayTracingPipelineStateCreateInfo>(const RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data);
+INSTANTIATE_PATCH_SHADER_METHODS(PatchShadersD3D11)
+INSTANTIATE_DEVICE_SIGNATURE_METHODS(PipelineResourceSignatureD3D11Impl)
 
 void SerializableShaderImpl::CreateShaderD3D11(IReferenceCounters* pRefCounters, ShaderCreateInfo& ShaderCI, String& CompilationLog)
 {
@@ -191,14 +190,6 @@ void SerializableShaderImpl::CreateShaderD3D11(IReferenceCounters* pRefCounters,
     };
     CreateShader<CompiledShaderD3D11>(DeviceType::Direct3D11, CompilationLog, "Direct3D11", pRefCounters, ShaderCI, D3D11ShaderCI);
 }
-
-
-template PipelineResourceSignatureD3D11Impl* SerializableResourceSignatureImpl::GetDeviceSignature<PipelineResourceSignatureD3D11Impl>(DeviceType Type) const;
-
-template void SerializableResourceSignatureImpl::CreateDeviceSignature<PipelineResourceSignatureD3D11Impl>(
-    DeviceType                           Type,
-    const PipelineResourceSignatureDesc& Desc,
-    SHADER_TYPE                          ShaderStages);
 
 void SerializationDeviceImpl::GetPipelineResourceBindingsD3D11(const PipelineResourceBindingAttribs& Info,
                                                                std::vector<PipelineResourceBinding>& ResourceBindings)

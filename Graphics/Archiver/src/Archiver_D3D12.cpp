@@ -39,7 +39,7 @@ namespace Diligent
 namespace
 {
 
-struct CompiledShaderD3D12 : SerializableShaderImpl::ICompiledShader
+struct CompiledShaderD3D12 : SerializableShaderImpl::CompiledShader
 {
     ShaderD3D12Impl ShaderD3D12;
 
@@ -151,10 +151,8 @@ bool ArchiverImpl::PatchShadersD3D12(const CreateInfoType& CreateInfo, TPSOData<
     return true;
 }
 
-template bool ArchiverImpl::PatchShadersD3D12<GraphicsPipelineStateCreateInfo>(const GraphicsPipelineStateCreateInfo& CreateInfo, TPSOData<GraphicsPipelineStateCreateInfo>& Data);
-template bool ArchiverImpl::PatchShadersD3D12<ComputePipelineStateCreateInfo>(const ComputePipelineStateCreateInfo& CreateInfo, TPSOData<ComputePipelineStateCreateInfo>& Data);
-template bool ArchiverImpl::PatchShadersD3D12<TilePipelineStateCreateInfo>(const TilePipelineStateCreateInfo& CreateInfo, TPSOData<TilePipelineStateCreateInfo>& Data);
-template bool ArchiverImpl::PatchShadersD3D12<RayTracingPipelineStateCreateInfo>(const RayTracingPipelineStateCreateInfo& CreateInfo, TPSOData<RayTracingPipelineStateCreateInfo>& Data);
+INSTANTIATE_PATCH_SHADER_METHODS(PatchShadersD3D12)
+INSTANTIATE_DEVICE_SIGNATURE_METHODS(PipelineResourceSignatureD3D12Impl)
 
 
 void SerializableShaderImpl::CreateShaderD3D12(IReferenceCounters* pRefCounters, ShaderCreateInfo& ShaderCI, String& CompilationLog)
@@ -172,15 +170,6 @@ void SerializableShaderImpl::CreateShaderD3D12(IReferenceCounters* pRefCounters,
     CreateShader<CompiledShaderD3D12>(DeviceType::Direct3D12, CompilationLog, "Direct3D12", pRefCounters, ShaderCI, D3D12ShaderCI);
 }
 
-
-template PipelineResourceSignatureD3D12Impl* SerializableResourceSignatureImpl::GetDeviceSignature<PipelineResourceSignatureD3D12Impl>(DeviceType Type) const;
-
-template void SerializableResourceSignatureImpl::CreateDeviceSignature<PipelineResourceSignatureD3D12Impl>(
-    DeviceType                           Type,
-    const PipelineResourceSignatureDesc& Desc,
-    SHADER_TYPE                          ShaderStages);
-
-
 void SerializationDeviceImpl::GetPipelineResourceBindingsD3D12(const PipelineResourceBindingAttribs& Info,
                                                                std::vector<PipelineResourceBinding>& ResourceBindings)
 {
@@ -191,8 +180,6 @@ void SerializationDeviceImpl::GetPipelineResourceBindingsD3D12(const PipelineRes
     SortResourceSignatures(Info.ppResourceSignatures, Info.ResourceSignaturesCount, Signatures, SignaturesCount);
 
     RootSignatureD3D12 RootSig{nullptr, nullptr, Signatures.data(), SignaturesCount, 0};
-    const bool         HasSpaces = RootSig.GetTotalSpaces() > 1;
-
     for (Uint32 sign = 0; sign < SignaturesCount; ++sign)
     {
         const auto& pSignature = Signatures[sign];
