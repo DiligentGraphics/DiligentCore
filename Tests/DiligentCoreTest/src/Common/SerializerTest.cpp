@@ -36,25 +36,32 @@ namespace
 
 TEST(SerializerTest, SerializerTest)
 {
-    const char* RefStr      = "serialized text";
-    const char* RefEmptyStr = "";
-    Uint64      RefU64      = 0x12345678ABCDEF01ull;
-    Uint8       RefU8       = 0x72;
-    Uint32      RefU32      = 0x52830394u;
-    Uint16      RefU16      = 0x4172;
+    const char* const RefStr      = "serialized text";
+    const char* const RefEmptyStr = "";
+    const Uint64      RefU64      = 0x12345678ABCDEF01ull;
+    const Uint8       RefU8       = 0x72;
+    const Uint32      RefU32      = 0x52830394u;
+    const Uint16      RefU16      = 0x4172;
 
-    const auto WriteData = [&](auto& Ser) {
+    const Uint32 RefArraySize           = 3;
+    const Uint32 RefArray[RefArraySize] = {0x1251, 0x620, 0x8816};
+
+    auto& RawAllocator{DefaultRawMemoryAllocator::GetAllocator()};
+
+    DynamicLinearAllocator TmpAllocator{RawAllocator};
+    const auto             WriteData = [&](auto& Ser) {
         Ser(RefU16);
         Ser(RefStr);
         Ser(RefEmptyStr);
         Ser(RefU64, RefU8);
         Ser(RefU32);
+        Ser.SerializeArrayRaw(&TmpAllocator, RefArray, RefArraySize);
     };
 
     Serializer<SerializerMode::Measure> MSer;
     WriteData(MSer);
 
-    SerializedData Data{MSer.GetSize(), DefaultRawMemoryAllocator::GetAllocator()};
+    SerializedData Data{MSer.GetSize(), RawAllocator};
 
     Serializer<SerializerMode::Write> WSer{Data};
     WriteData(WSer);
@@ -97,6 +104,15 @@ TEST(SerializerTest, SerializerTest)
         Uint32 U32 = 0;
         RSer(U32);
         EXPECT_EQ(U32, RefU32);
+    }
+
+    {
+        Uint32  ArraySize = 0;
+        Uint32* pArray    = nullptr;
+        RSer.SerializeArrayRaw(&TmpAllocator, pArray, ArraySize);
+        EXPECT_EQ(ArraySize, RefArraySize);
+        for (Uint32 i = 0; i < RefArraySize; ++i)
+            EXPECT_EQ(RefArray[i], pArray[i]);
     }
 
     EXPECT_TRUE(RSer.IsEnded());

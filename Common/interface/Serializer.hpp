@@ -34,6 +34,7 @@
 #include "../../Primitives/interface/BasicTypes.h"
 #include "../../Primitives/interface/MemoryAllocator.h"
 #include "../../Platforms/Basic/interface/DebugUtilities.hpp"
+#include "DynamicLinearAllocator.hpp"
 
 namespace Diligent
 {
@@ -192,6 +193,17 @@ public:
     template <typename T>
     TEnableStr<T> Serialize(InCharPtr Str);
 
+    template <typename ElemPtrType, typename CountType, typename ArrayElemSerializerType>
+    void SerializeArray(DynamicLinearAllocator* Allocator,
+                        ElemPtrType&            Elements,
+                        CountType&              Count,
+                        ArrayElemSerializerType ElemSerializer);
+
+    template <typename ElemPtrType, typename CountType>
+    void SerializeArrayRaw(DynamicLinearAllocator* Allocator,
+                           ElemPtrType&            Elements,
+                           CountType&              Count);
+
     template <typename T>
     TReadOnly<T> Cast()
     {
@@ -241,6 +253,7 @@ private:
     template <typename T1, typename T2>
     static void Copy(T1* Lhs, T2* Rhs, size_t Size);
 
+private:
     TPointer const m_Start = nullptr;
     TPointer const m_End   = nullptr;
 
@@ -304,6 +317,57 @@ typename Serializer<SerializerMode::Measure>::TEnableStr<T> Serializer<Serialize
     const Uint32 Length = static_cast<Uint32>((Str != nullptr && *Str != 0) ? strlen(Str) + 1 : 0);
     m_Ptr += sizeof(Length);
     m_Ptr += Length;
+}
+
+
+template <SerializerMode Mode>
+template <typename ElemPtrType, typename CountType, typename ArrayElemSerializerType>
+void Serializer<Mode>::SerializeArray(DynamicLinearAllocator* Allocator,
+                                      ElemPtrType&            SrcArray,
+                                      CountType&              Count,
+                                      ArrayElemSerializerType ElemSerializer)
+{
+    VERIFY_EXPR((SrcArray != nullptr) == (Count != 0));
+
+    (*this)(Count);
+    for (size_t i = 0; i < static_cast<size_t>(Count); ++i)
+    {
+        ElemSerializer(*this, SrcArray[i]);
+    }
+}
+
+
+template <>
+template <typename ElemPtrType, typename CountType, typename ArrayElemSerializerType>
+void Serializer<SerializerMode::Read>::SerializeArray(DynamicLinearAllocator* Allocator,
+                                                      ElemPtrType&            DstArray,
+                                                      CountType&              Count,
+                                                      ArrayElemSerializerType ElemSerializer)
+{
+    VERIFY_EXPR(Allocator != nullptr);
+    VERIFY_EXPR(DstArray == nullptr);
+
+    (*this)(Count);
+    auto* pDstElements = Allocator->ConstructArray<RawType<decltype(DstArray[0])>>(Count);
+    for (size_t i = 0; i < static_cast<size_t>(Count); ++i)
+    {
+        ElemSerializer(*this, pDstElements[i]);
+    }
+    DstArray = pDstElements;
+}
+
+
+template <SerializerMode Mode>
+template <typename ElemPtrType, typename CountType>
+void Serializer<Mode>::SerializeArrayRaw(DynamicLinearAllocator* Allocator,
+                                         ElemPtrType&            Elements,
+                                         CountType&              Count)
+{
+    SerializeArray(Allocator, Elements, Count,
+                   [](Serializer<Mode>& Ser, auto& Elem) //
+                   {
+                       Ser(Elem);
+                   });
 }
 
 } // namespace Diligent

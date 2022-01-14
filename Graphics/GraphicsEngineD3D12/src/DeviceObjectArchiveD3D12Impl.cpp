@@ -55,8 +55,8 @@ void PSOSerializerD3D12<Mode>::SerializePRSInternalData(
 {
     PSOSerializer<Mode>::SerializePRSInternalData(Ser, InternalData, Allocator);
 
-    PSOSerializer<Mode>::SerializeArrayRaw(Ser, Allocator, InternalData.pResourceAttribs, InternalData.NumResources);
-    PSOSerializer<Mode>::SerializeArrayRaw(Ser, Allocator, InternalData.pImmutableSamplers, InternalData.NumImmutableSamplers);
+    Ser.SerializeArrayRaw(Allocator, InternalData.pResourceAttribs, InternalData.NumResources);
+    Ser.SerializeArrayRaw(Allocator, InternalData.pImmutableSamplers, InternalData.NumImmutableSamplers);
 
     ASSERT_SIZEOF64(InternalData, 48, "Did you add a new member to PipelineResourceSignatureInternalDataD3D12? Please add serialization here.");
 }
