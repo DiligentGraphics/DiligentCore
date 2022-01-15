@@ -48,7 +48,7 @@ using namespace Diligent::Testing;
 namespace
 {
 
-static constexpr ARCHIVE_DEVICE_DATA_FLAGS GetDeviceBits()
+constexpr ARCHIVE_DEVICE_DATA_FLAGS GetDeviceBits()
 {
     ARCHIVE_DEVICE_DATA_FLAGS DeviceBits = ARCHIVE_DEVICE_DATA_FLAG_NONE;
 #if D3D11_SUPPORTED
@@ -71,15 +71,13 @@ static constexpr ARCHIVE_DEVICE_DATA_FLAGS GetDeviceBits()
     return DeviceBits;
 }
 
-static void ArchivePRS(RefCntAutoPtr<IArchive>&                   pSource,
-                       RefCntAutoPtr<IPipelineResourceSignature>& pRefPRS_1,
-                       RefCntAutoPtr<IPipelineResourceSignature>& pRefPRS_2,
-                       ARCHIVE_DEVICE_DATA_FLAGS                  DeviceBits)
+void ArchivePRS(RefCntAutoPtr<IArchive>&                   pSource,
+                const char*                                PRS1Name,
+                const char*                                PRS2Name,
+                RefCntAutoPtr<IPipelineResourceSignature>& pRefPRS_1,
+                RefCntAutoPtr<IPipelineResourceSignature>& pRefPRS_2,
+                ARCHIVE_DEVICE_DATA_FLAGS                  DeviceBits)
 {
-
-    constexpr char PRS1Name[] = "PRS archive test - 1";
-    constexpr char PRS2Name[] = "PRS archive test - 2";
-
     auto* pEnv             = TestingEnvironment::GetInstance();
     auto* pDevice          = pEnv->GetDevice();
     auto* pArchiverFactory = pEnv->GetArchiverFactory();
@@ -164,14 +162,12 @@ static void ArchivePRS(RefCntAutoPtr<IArchive>&                   pSource,
     pSource = RefCntAutoPtr<IArchive>{MakeNewRCObj<ArchiveMemoryImpl>{}(pBlob)};
 }
 
-static void TestPRS(IArchive*                   pSource,
-                    IPipelineResourceSignature* pRefPRS_1,
-                    IPipelineResourceSignature* pRefPRS_2)
+void UnpackPRS(IArchive*                   pSource,
+               const char*                 PRS1Name,
+               const char*                 PRS2Name,
+               IPipelineResourceSignature* pRefPRS_1,
+               IPipelineResourceSignature* pRefPRS_2)
 {
-
-    constexpr char PRS1Name[] = "PRS archive test - 1";
-    constexpr char PRS2Name[] = "PRS archive test - 2";
-
     auto* pEnv        = TestingEnvironment::GetInstance();
     auto* pDevice     = pEnv->GetDevice();
     auto* pDearchiver = pDevice->GetEngineFactory()->GetDearchiver();
@@ -197,11 +193,11 @@ static void TestPRS(IArchive*                   pSource,
         if (pRefPRS_1 != nullptr)
         {
             ASSERT_NE(pUnpackedPRS, nullptr);
-            ASSERT_TRUE(pUnpackedPRS->IsCompatibleWith(pRefPRS_1)); // AZ TODO: names are ignored
+            EXPECT_TRUE(pUnpackedPRS->IsCompatibleWith(pRefPRS_1));
         }
         else
         {
-            ASSERT_EQ(pUnpackedPRS, nullptr);
+            EXPECT_EQ(pUnpackedPRS, nullptr);
         }
     }
 
@@ -222,11 +218,11 @@ static void TestPRS(IArchive*                   pSource,
         if (pRefPRS_2 != nullptr)
         {
             ASSERT_NE(pUnpackedPRS, nullptr);
-            ASSERT_TRUE(pUnpackedPRS->IsCompatibleWith(pRefPRS_2)); // AZ TODO: names are ignored
+            EXPECT_TRUE(pUnpackedPRS->IsCompatibleWith(pRefPRS_2));
         }
         else
         {
-            ASSERT_EQ(pUnpackedPRS, nullptr);
+            EXPECT_EQ(pUnpackedPRS, nullptr);
         }
     }
 }
@@ -234,11 +230,14 @@ static void TestPRS(IArchive*                   pSource,
 
 TEST(ArchiveTest, ResourceSignature)
 {
+    constexpr char PRS1Name[] = "ArchiveTest.ResourceSignature - PRS 1";
+    constexpr char PRS2Name[] = "ArchiveTest.ResourceSignature - PRS 2";
+
     RefCntAutoPtr<IArchive>                   pArchive;
     RefCntAutoPtr<IPipelineResourceSignature> pRefPRS_1;
     RefCntAutoPtr<IPipelineResourceSignature> pRefPRS_2;
-    ArchivePRS(pArchive, pRefPRS_1, pRefPRS_2, GetDeviceBits());
-    TestPRS(pArchive, pRefPRS_1, pRefPRS_2);
+    ArchivePRS(pArchive, PRS1Name, PRS2Name, pRefPRS_1, pRefPRS_2, GetDeviceBits());
+    UnpackPRS(pArchive, PRS1Name, PRS2Name, pRefPRS_1, pRefPRS_2);
 }
 
 
@@ -258,12 +257,15 @@ TEST(ArchiveTest, RemoveDeviceData)
     if ((AllDeviceFlags & ~CurrentDeviceFlag) == 0)
         GTEST_SKIP() << "Test requires support for at least 2 backends";
 
+    constexpr char PRS1Name[] = "ArchiveTest.RemoveDeviceData - PRS 1";
+    constexpr char PRS2Name[] = "ArchiveTest.RemoveDeviceData - PRS 2";
+
     RefCntAutoPtr<IArchive> pArchive1;
     {
         RefCntAutoPtr<IPipelineResourceSignature> pRefPRS_1;
         RefCntAutoPtr<IPipelineResourceSignature> pRefPRS_2;
-        ArchivePRS(pArchive1, pRefPRS_1, pRefPRS_2, AllDeviceFlags);
-        TestPRS(pArchive1, pRefPRS_1, pRefPRS_2);
+        ArchivePRS(pArchive1, PRS1Name, PRS2Name, pRefPRS_1, pRefPRS_2, AllDeviceFlags);
+        UnpackPRS(pArchive1, PRS1Name, PRS2Name, pRefPRS_1, pRefPRS_2);
     }
 
     {
@@ -275,7 +277,7 @@ TEST(ArchiveTest, RemoveDeviceData)
         RefCntAutoPtr<IArchive> pArchive2{MakeNewRCObj<ArchiveMemoryImpl>{}(pDataBlob)};
 
         // PRS creation must fail
-        TestPRS(pArchive2, nullptr, nullptr);
+        UnpackPRS(pArchive2, PRS1Name, PRS2Name, nullptr, nullptr);
     }
 }
 
@@ -302,6 +304,9 @@ TEST(ArchiveTest, AppendDeviceData)
     if (AllDeviceFlags == 0)
         GTEST_SKIP() << "Test requires support for at least 2 backends";
 
+    constexpr char PRS1Name[] = "ArchiveTest.AppendDeviceData - PRS 1";
+    constexpr char PRS2Name[] = "ArchiveTest.AppendDeviceData - PRS 2";
+
     RefCntAutoPtr<IArchive> pArchive;
     for (; AllDeviceFlags != 0;)
     {
@@ -310,9 +315,9 @@ TEST(ArchiveTest, AppendDeviceData)
         RefCntAutoPtr<IArchive>                   pArchive2;
         RefCntAutoPtr<IPipelineResourceSignature> pRefPRS_1;
         RefCntAutoPtr<IPipelineResourceSignature> pRefPRS_2;
-        ArchivePRS(pArchive2, pRefPRS_1, pRefPRS_2, DeviceFlag);
+        ArchivePRS(pArchive2, PRS1Name, PRS2Name, pRefPRS_1, pRefPRS_2, DeviceFlag);
         // PRS creation must fail
-        TestPRS(pArchive2, nullptr, nullptr);
+        UnpackPRS(pArchive2, PRS1Name, PRS2Name, nullptr, nullptr);
 
         if (pArchive != nullptr)
         {
@@ -334,7 +339,7 @@ TEST(ArchiveTest, AppendDeviceData)
     RefCntAutoPtr<IArchive>                   pArchive3;
     RefCntAutoPtr<IPipelineResourceSignature> pRefPRS_1;
     RefCntAutoPtr<IPipelineResourceSignature> pRefPRS_2;
-    ArchivePRS(pArchive3, pRefPRS_1, pRefPRS_2, CurrentDeviceFlag);
+    ArchivePRS(pArchive3, PRS1Name, PRS2Name, pRefPRS_1, pRefPRS_2, CurrentDeviceFlag);
 
     // Append device data
     {
@@ -346,13 +351,147 @@ TEST(ArchiveTest, AppendDeviceData)
         ASSERT_TRUE(pArchiverFactory->AppendDeviceData(pArchive, CurrentDeviceFlag, pArchive3, pMemStream));
 
         pArchive = RefCntAutoPtr<IArchive>{MakeNewRCObj<ArchiveMemoryImpl>{}(pDataBlob)};
-        TestPRS(pArchive, pRefPRS_1, pRefPRS_2);
+        UnpackPRS(pArchive, PRS1Name, PRS2Name, pRefPRS_1, pRefPRS_2);
     }
 }
 
 
+void CreateTestRenderPass1(IRenderDevice*        pDevice,
+                           ISerializationDevice* pSerializationDevice,
+                           ISwapChain*           pSwapChain,
+                           const char*           RPName,
+                           IRenderPass**         ppRenderPass,
+                           IRenderPass**         ppSerializedRP)
+{
+    auto* pRTV = pSwapChain->GetCurrentBackBufferRTV();
+    ASSERT_NE(pRTV, nullptr);
+    const auto& RTVDesc = pRTV->GetTexture()->GetDesc();
+
+    RenderPassAttachmentDesc Attachments[1];
+    Attachments[0].Format       = RTVDesc.Format;
+    Attachments[0].SampleCount  = static_cast<Uint8>(RTVDesc.SampleCount);
+    Attachments[0].InitialState = RESOURCE_STATE_RENDER_TARGET;
+    Attachments[0].FinalState   = RESOURCE_STATE_RENDER_TARGET;
+    Attachments[0].LoadOp       = ATTACHMENT_LOAD_OP_CLEAR;
+    Attachments[0].StoreOp      = ATTACHMENT_STORE_OP_STORE;
+
+    SubpassDesc Subpasses[1] = {};
+
+    Subpasses[0].RenderTargetAttachmentCount = 1;
+    AttachmentReference RTAttachmentRef{0, RESOURCE_STATE_RENDER_TARGET};
+    Subpasses[0].pRenderTargetAttachments = &RTAttachmentRef;
+
+    RenderPassDesc RPDesc;
+    RPDesc.Name            = RPName;
+    RPDesc.AttachmentCount = _countof(Attachments);
+    RPDesc.pAttachments    = Attachments;
+    RPDesc.SubpassCount    = _countof(Subpasses);
+    RPDesc.pSubpasses      = Subpasses;
+
+    pDevice->CreateRenderPass(RPDesc, ppRenderPass);
+    ASSERT_NE(*ppRenderPass, nullptr);
+
+    pSerializationDevice->CreateRenderPass(RPDesc, ppSerializedRP);
+    ASSERT_NE(*ppSerializedRP, nullptr);
+}
+
+void CreateTestRenderPass2(IRenderDevice*        pDevice,
+                           ISerializationDevice* pSerializationDevice,
+                           ISwapChain*           pSwapChain,
+                           const char*           RPName,
+                           IRenderPass**         ppRenderPass,
+                           IRenderPass**         ppSerializedRP)
+{
+    auto* pRTV = pSwapChain->GetCurrentBackBufferRTV();
+    auto* pDSV = pSwapChain->GetDepthBufferDSV();
+    ASSERT_NE(pRTV, nullptr);
+    ASSERT_NE(pDSV, nullptr);
+    const auto& RTVDesc = pRTV->GetTexture()->GetDesc();
+    const auto& DSVDesc = pDSV->GetTexture()->GetDesc();
+
+    RenderPassAttachmentDesc Attachments[2];
+    Attachments[0].Format       = RTVDesc.Format;
+    Attachments[0].SampleCount  = static_cast<Uint8>(RTVDesc.SampleCount);
+    Attachments[0].InitialState = RESOURCE_STATE_RENDER_TARGET;
+    Attachments[0].FinalState   = RESOURCE_STATE_RENDER_TARGET;
+    Attachments[0].LoadOp       = ATTACHMENT_LOAD_OP_DISCARD;
+    Attachments[0].StoreOp      = ATTACHMENT_STORE_OP_STORE;
+
+    Attachments[1].Format       = DSVDesc.Format;
+    Attachments[1].SampleCount  = static_cast<Uint8>(DSVDesc.SampleCount);
+    Attachments[1].InitialState = RESOURCE_STATE_DEPTH_WRITE;
+    Attachments[1].FinalState   = RESOURCE_STATE_DEPTH_WRITE;
+    Attachments[1].LoadOp       = ATTACHMENT_LOAD_OP_CLEAR;
+    Attachments[1].StoreOp      = ATTACHMENT_STORE_OP_STORE;
+
+    SubpassDesc Subpasses[1] = {};
+
+    Subpasses[0].RenderTargetAttachmentCount = 1;
+    AttachmentReference RTAttachmentRef{0, RESOURCE_STATE_RENDER_TARGET};
+    Subpasses[0].pRenderTargetAttachments = &RTAttachmentRef;
+
+    AttachmentReference DSAttachmentRef{1, RESOURCE_STATE_DEPTH_WRITE};
+    Subpasses[0].pDepthStencilAttachment = &DSAttachmentRef;
+
+    RenderPassDesc RPDesc;
+    RPDesc.Name            = RPName;
+    RPDesc.AttachmentCount = _countof(Attachments);
+    RPDesc.pAttachments    = Attachments;
+    RPDesc.SubpassCount    = _countof(Subpasses);
+    RPDesc.pSubpasses      = Subpasses;
+
+    pDevice->CreateRenderPass(RPDesc, ppRenderPass);
+    ASSERT_NE(*ppRenderPass, nullptr);
+
+    pSerializationDevice->CreateRenderPass(RPDesc, ppSerializedRP);
+    ASSERT_NE(*ppSerializedRP, nullptr);
+}
+
+RefCntAutoPtr<IBuffer> CreateTestVertexBuffer(IRenderDevice* pDevice, IDeviceContext* pContext)
+{
+    struct Vertex
+    {
+        float4 Pos;
+        float3 Color;
+        float2 UV;
+    };
+    constexpr Vertex Vert[] =
+        {
+            {float4{-1.0f, -0.5f, 0.f, 1.f}, float3{1.f, 0.f, 0.f}, float2{0.0f, 0.0f}},
+            {float4{-0.5f, +0.5f, 0.f, 1.f}, float3{0.f, 1.f, 0.f}, float2{0.5f, 1.0f}},
+            {float4{+0.0f, -0.5f, 0.f, 1.f}, float3{0.f, 0.f, 1.f}, float2{1.0f, 0.0f}},
+
+            {float4{+0.0f, -0.5f, 0.f, 1.f}, float3{1.f, 0.f, 0.f}, float2{0.0f, 0.0f}},
+            {float4{+0.5f, +0.5f, 0.f, 1.f}, float3{0.f, 1.f, 0.f}, float2{0.5f, 1.0f}},
+            {float4{+1.0f, -0.5f, 0.f, 1.f}, float3{0.f, 0.f, 1.f}, float2{1.0f, 0.0f}} //
+        };
+    constexpr Vertex Triangles[] =
+        {
+            Vert[0], Vert[1], Vert[2],
+            Vert[3], Vert[4], Vert[5] //
+        };
+
+    RefCntAutoPtr<IBuffer> pVB;
+    BufferDesc             BuffDesc;
+    BuffDesc.Name      = "Vertex buffer";
+    BuffDesc.BindFlags = BIND_VERTEX_BUFFER;
+    BuffDesc.Usage     = USAGE_IMMUTABLE;
+    BuffDesc.Size      = sizeof(Triangles);
+
+    BufferData InitialData{Triangles, sizeof(Triangles)};
+    pDevice->CreateBuffer(BuffDesc, &InitialData, &pVB);
+    if (!pVB)
+        return pVB;
+
+    StateTransitionDesc Barrier{pVB, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_VERTEX_BUFFER, STATE_TRANSITION_FLAG_UPDATE_STATE};
+    pContext->TransitionResourceStates(1, &Barrier);
+
+    return pVB;
+}
+
 namespace HLSL
 {
+
 const std::string Shared{R"(
 struct PSInput
 {
@@ -370,7 +509,7 @@ cbuffer cbConstants
 }
 )"};
 
-const std::string DrawTest_VS = Shared + R"(
+const std::string GraphicsPSOTest_VS = Shared + R"(
 
 struct VSInput
 {
@@ -388,7 +527,8 @@ void main(in  VSInput VSIn,
 }
 )";
 
-const std::string DrawTest_PS = Shared + R"(
+const std::string GraphicsPSOTest_PS = Shared + R"(
+
 Texture2D    g_GBuffer_Color;
 SamplerState g_GBuffer_Color_sampler;
 Texture2D    g_GBuffer_Normal;
@@ -426,10 +566,12 @@ TEST(ArchiveTest, GraphicsPipeline)
     PSOCacheCI.Desc.Mode = /*PSO_CACHE_MODE_LOAD |*/ PSO_CACHE_MODE_STORE;
     pDevice->CreatePipelineStateCache(PSOCacheCI, &pPSOCache);
 
-    constexpr char PSO1Name[] = "PSO archive test - 1";
-    constexpr char PSO2Name[] = "PSO archive test - 2";
-    constexpr char PSO3Name[] = "PSO archive test - 3";
-    constexpr char RPName[]   = "RP archive test - 1";
+    constexpr char PSO1Name[] = "ArchiveTest.GraphicsPipeline - PSO 1";
+    constexpr char PSO2Name[] = "ArchiveTest.GraphicsPipeline - PSO 2";
+    constexpr char PSO3Name[] = "ArchiveTest.GraphicsPipeline - PSO 3";
+    constexpr char PRS1Name[] = "ArchiveTest.GraphicsPipeline - PRS 1";
+    constexpr char RP1Name[]  = "ArchiveTest.GraphicsPipeline - RP 1";
+    constexpr char RP2Name[]  = "ArchiveTest.GraphicsPipeline - RP 2";
 
     TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
@@ -445,90 +587,18 @@ TEST(ArchiveTest, GraphicsPipeline)
 
     RefCntAutoPtr<IRenderPass> pRenderPass1;
     RefCntAutoPtr<IRenderPass> pSerializedRenderPass1;
+    CreateTestRenderPass1(pDevice, pSerializationDevice, pSwapChain, RP1Name, &pRenderPass1, &pSerializedRenderPass1);
+
     {
-        auto* pRTV = pSwapChain->GetCurrentBackBufferRTV();
-        ASSERT_NE(pRTV, nullptr);
-        const auto& RTVDesc = pRTV->GetTexture()->GetDesc();
-
-        RenderPassAttachmentDesc Attachments[1];
-        Attachments[0].Format       = RTVDesc.Format;
-        Attachments[0].SampleCount  = static_cast<Uint8>(RTVDesc.SampleCount);
-        Attachments[0].InitialState = RESOURCE_STATE_RENDER_TARGET;
-        Attachments[0].FinalState   = RESOURCE_STATE_RENDER_TARGET;
-        Attachments[0].LoadOp       = ATTACHMENT_LOAD_OP_CLEAR;
-        Attachments[0].StoreOp      = ATTACHMENT_STORE_OP_STORE;
-
-        SubpassDesc Subpasses[1] = {};
-
-        Subpasses[0].RenderTargetAttachmentCount = 1;
-        AttachmentReference RTAttachmentRef{0, RESOURCE_STATE_RENDER_TARGET};
-        Subpasses[0].pRenderTargetAttachments = &RTAttachmentRef;
-
-        RenderPassDesc RPDesc;
-        RPDesc.Name            = RPName;
-        RPDesc.AttachmentCount = _countof(Attachments);
-        RPDesc.pAttachments    = Attachments;
-        RPDesc.SubpassCount    = _countof(Subpasses);
-        RPDesc.pSubpasses      = Subpasses;
-
-        pDevice->CreateRenderPass(RPDesc, &pRenderPass1);
-        ASSERT_NE(pRenderPass1, nullptr);
-
-        pSerializationDevice->CreateRenderPass(RPDesc, &pSerializedRenderPass1);
-        ASSERT_NE(pSerializedRenderPass1, nullptr);
-    }
-
-    RefCntAutoPtr<IRenderPass> pRenderPass2;
-    RefCntAutoPtr<IRenderPass> pSerializedRenderPass2;
-    {
-        auto* pRTV = pSwapChain->GetCurrentBackBufferRTV();
-        auto* pDSV = pSwapChain->GetDepthBufferDSV();
-        ASSERT_NE(pRTV, nullptr);
-        ASSERT_NE(pDSV, nullptr);
-        const auto& RTVDesc = pRTV->GetTexture()->GetDesc();
-        const auto& DSVDesc = pDSV->GetTexture()->GetDesc();
-
-        RenderPassAttachmentDesc Attachments[2];
-        Attachments[0].Format       = RTVDesc.Format;
-        Attachments[0].SampleCount  = static_cast<Uint8>(RTVDesc.SampleCount);
-        Attachments[0].InitialState = RESOURCE_STATE_RENDER_TARGET;
-        Attachments[0].FinalState   = RESOURCE_STATE_RENDER_TARGET;
-        Attachments[0].LoadOp       = ATTACHMENT_LOAD_OP_DISCARD;
-        Attachments[0].StoreOp      = ATTACHMENT_STORE_OP_STORE;
-
-        Attachments[1].Format       = DSVDesc.Format;
-        Attachments[1].SampleCount  = static_cast<Uint8>(DSVDesc.SampleCount);
-        Attachments[1].InitialState = RESOURCE_STATE_DEPTH_WRITE;
-        Attachments[1].FinalState   = RESOURCE_STATE_DEPTH_WRITE;
-        Attachments[1].LoadOp       = ATTACHMENT_LOAD_OP_CLEAR;
-        Attachments[1].StoreOp      = ATTACHMENT_STORE_OP_STORE;
-
-        SubpassDesc Subpasses[1] = {};
-
-        Subpasses[0].RenderTargetAttachmentCount = 1;
-        AttachmentReference RTAttachmentRef{0, RESOURCE_STATE_RENDER_TARGET};
-        Subpasses[0].pRenderTargetAttachments = &RTAttachmentRef;
-
-        AttachmentReference DSAttachmentRef{1, RESOURCE_STATE_DEPTH_WRITE};
-        Subpasses[0].pDepthStencilAttachment = &DSAttachmentRef;
-
-        RenderPassDesc RPDesc;
-        RPDesc.Name            = "Render pass 2";
-        RPDesc.AttachmentCount = _countof(Attachments);
-        RPDesc.pAttachments    = Attachments;
-        RPDesc.SubpassCount    = _countof(Subpasses);
-        RPDesc.pSubpasses      = Subpasses;
-
-        pDevice->CreateRenderPass(RPDesc, &pRenderPass2);
-        ASSERT_NE(pRenderPass2, nullptr);
-
-        pSerializationDevice->CreateRenderPass(RPDesc, &pSerializedRenderPass2);
-        ASSERT_NE(pSerializedRenderPass2, nullptr);
+        RefCntAutoPtr<IRenderPass> pRenderPass2;
+        RefCntAutoPtr<IRenderPass> pSerializedRenderPass2;
+        CreateTestRenderPass2(pDevice, pSerializationDevice, pSwapChain, RP2Name, &pRenderPass2, &pSerializedRenderPass2);
     }
 
     RefCntAutoPtr<IPipelineResourceSignature> pRefPRS;
     RefCntAutoPtr<IPipelineResourceSignature> pSerializedPRS;
-    constexpr auto                            VarType = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE;
+
+    constexpr auto VarType = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE;
     {
         constexpr PipelineResourceDesc Resources[] = //
             {
@@ -539,7 +609,7 @@ TEST(ArchiveTest, GraphicsPipeline)
             };
 
         PipelineResourceSignatureDesc PRSDesc;
-        PRSDesc.Name         = "PRS archive test - 1";
+        PRSDesc.Name         = PRS1Name;
         PRSDesc.Resources    = Resources;
         PRSDesc.NumResources = _countof(Resources);
 
@@ -582,7 +652,7 @@ TEST(ArchiveTest, GraphicsPipeline)
             ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
             ShaderCI.EntryPoint      = "main";
             ShaderCI.Desc.Name       = "Archive test vertex shader";
-            ShaderCI.Source          = HLSL::DrawTest_VS.c_str();
+            ShaderCI.Source          = HLSL::GraphicsPSOTest_VS.c_str();
 
             pDevice->CreateShader(ShaderCI, &pVS);
             ASSERT_NE(pVS, nullptr);
@@ -597,7 +667,7 @@ TEST(ArchiveTest, GraphicsPipeline)
             ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
             ShaderCI.EntryPoint      = "main";
             ShaderCI.Desc.Name       = "Archive test pixel shader";
-            ShaderCI.Source          = HLSL::DrawTest_PS.c_str();
+            ShaderCI.Source          = HLSL::GraphicsPSOTest_PS.c_str();
 
             pDevice->CreateShader(ShaderCI, &pPS);
             ASSERT_NE(pPS, nullptr);
@@ -607,27 +677,25 @@ TEST(ArchiveTest, GraphicsPipeline)
         }
 
         GraphicsPipelineStateCreateInfo PSOCreateInfo;
-        auto&                           GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
 
-        PSOCreateInfo.PSODesc.PipelineType            = PIPELINE_TYPE_GRAPHICS;
+        auto& GraphicsPipeline{PSOCreateInfo.GraphicsPipeline};
         GraphicsPipeline.NumRenderTargets             = 1;
         GraphicsPipeline.RTVFormats[0]                = pSwapChain->GetDesc().ColorBufferFormat;
         GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
         GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
         GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
 
-        const LayoutElement InstancedElems[] =
+        constexpr LayoutElement InstancedElems[] =
             {
                 LayoutElement{0, 0, 4, VT_FLOAT32},
                 LayoutElement{1, 0, 3, VT_FLOAT32},
                 LayoutElement{2, 0, 2, VT_FLOAT32} //
             };
-
         GraphicsPipeline.InputLayout.LayoutElements = InstancedElems;
         GraphicsPipeline.InputLayout.NumElements    = _countof(InstancedElems);
 
-        GraphicsPipelineStateCreateInfo PSOCreateInfo2    = PSOCreateInfo;
-        auto&                           GraphicsPipeline2 = PSOCreateInfo2.GraphicsPipeline;
+
+        GraphicsPipelineStateCreateInfo PSOCreateInfo2 = PSOCreateInfo;
 
         PSOCreateInfo.pVS  = pVS;
         PSOCreateInfo.pPS  = pPS;
@@ -686,7 +754,9 @@ TEST(ArchiveTest, GraphicsPipeline)
             PSOCreateInfo2.ResourceSignaturesCount             = _countof(SerializedSignatures);
             PSOCreateInfo2.ppResourceSignatures                = SerializedSignatures;
 
-            PSOCreateInfo2.PSODesc.Name        = PSO2Name;
+            PSOCreateInfo2.PSODesc.Name = PSO2Name;
+
+            auto& GraphicsPipeline2{PSOCreateInfo2.GraphicsPipeline};
             GraphicsPipeline2.pRenderPass      = pSerializedRenderPass1;
             GraphicsPipeline2.NumRenderTargets = 0;
             GraphicsPipeline2.RTVFormats[0]    = TEX_FORMAT_UNKNOWN;
@@ -722,7 +792,7 @@ TEST(ArchiveTest, GraphicsPipeline)
     RefCntAutoPtr<IRenderPass> pUnpackedRenderPass;
     {
         RenderPassUnpackInfo UnpackInfo;
-        UnpackInfo.Name     = RPName;
+        UnpackInfo.Name     = RP1Name;
         UnpackInfo.pArchive = pArchive;
         UnpackInfo.pDevice  = pDevice;
 
@@ -748,8 +818,8 @@ TEST(ArchiveTest, GraphicsPipeline)
         EXPECT_EQ(pUnpackedPSO_1->GetGraphicsPipelineDesc(), pRefPSO_1->GetGraphicsPipelineDesc());
         EXPECT_EQ(pUnpackedPSO_1->GetResourceSignatureCount(), pRefPSO_1->GetResourceSignatureCount());
 
-        // AZ TODO: OpenGL PRS have immutable samplers as resources which is not supported in comparator.
-        // AZ TODO: Metal PRS in Archiver generated from SPIRV, in Engine - from reflection and may have different resource order.
+        // OpenGL PRS has immutable samplers as resources, which is not supported in comparator.
+        // Metal PRS in the Archiver is generated from SPIRV, in the Engine - from the reflection, and they thus may have different resource order.
         if (!pDevice->GetDeviceInfo().IsGLDevice() && !pDevice->GetDeviceInfo().IsMetalDevice())
         {
             for (Uint32 s = 0, SCnt = std::min(pUnpackedPSO_1->GetResourceSignatureCount(), pRefPSO_1->GetResourceSignatureCount()); s < SCnt; ++s)
@@ -807,43 +877,8 @@ TEST(ArchiveTest, GraphicsPipeline)
 
     auto* pContext = pEnv->GetDeviceContext();
 
-    struct Vertex
-    {
-        float4 Pos;
-        float3 Color;
-        float2 UV;
-    };
-    constexpr Vertex Vert[] =
-        {
-            {float4{-1.0f, -0.5f, 0.f, 1.f}, float3{1.f, 0.f, 0.f}, float2{0.0f, 0.0f}},
-            {float4{-0.5f, +0.5f, 0.f, 1.f}, float3{0.f, 1.f, 0.f}, float2{0.5f, 1.0f}},
-            {float4{+0.0f, -0.5f, 0.f, 1.f}, float3{0.f, 0.f, 1.f}, float2{1.0f, 0.0f}},
-
-            {float4{+0.0f, -0.5f, 0.f, 1.f}, float3{1.f, 0.f, 0.f}, float2{0.0f, 0.0f}},
-            {float4{+0.5f, +0.5f, 0.f, 1.f}, float3{0.f, 1.f, 0.f}, float2{0.5f, 1.0f}},
-            {float4{+1.0f, -0.5f, 0.f, 1.f}, float3{0.f, 0.f, 1.f}, float2{1.0f, 0.0f}} //
-        };
-    constexpr Vertex Triangles[] =
-        {
-            Vert[0], Vert[1], Vert[2],
-            Vert[3], Vert[4], Vert[5] //
-        };
-
-    RefCntAutoPtr<IBuffer> pVB;
-    {
-        BufferDesc BuffDesc;
-        BuffDesc.Name      = "Vertex buffer";
-        BuffDesc.BindFlags = BIND_VERTEX_BUFFER;
-        BuffDesc.Usage     = USAGE_IMMUTABLE;
-        BuffDesc.Size      = sizeof(Triangles);
-
-        BufferData InitialData{Triangles, sizeof(Triangles)};
-        pDevice->CreateBuffer(BuffDesc, &InitialData, &pVB);
-        ASSERT_NE(pVB, nullptr);
-
-        StateTransitionDesc Barrier{pVB, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_VERTEX_BUFFER, STATE_TRANSITION_FLAG_UPDATE_STATE};
-        pContext->TransitionResourceStates(1, &Barrier);
-    }
+    RefCntAutoPtr<IBuffer> pVB = CreateTestVertexBuffer(pDevice, pContext);
+    ASSERT_NE(pVB, nullptr);
     IBuffer* pVBs[] = {pVB};
 
     std::array<RefCntAutoPtr<ITexture>, 3> GBuffer;
@@ -996,7 +1031,7 @@ TEST(ArchiveTest, ComputePipeline)
     if (!pDevice->GetDeviceInfo().Features.ComputeShaders)
         GTEST_SKIP() << "Compute shaders are not supported by device";
 
-    constexpr char PSO1Name[] = "PSO archive test - 1";
+    constexpr char PSO1Name[] = "ArchiveTest.ComputePipeline - PSO";
 
     TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
@@ -1019,7 +1054,7 @@ TEST(ArchiveTest, ComputePipeline)
         constexpr PipelineResourceDesc Resources[] = {{SHADER_TYPE_COMPUTE, "g_tex2DUAV", 1, SHADER_RESOURCE_TYPE_TEXTURE_UAV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC}};
 
         PipelineResourceSignatureDesc PRSDesc;
-        PRSDesc.Name         = "PRS archive test - 1";
+        PRSDesc.Name         = "ArchiveTest.ComputePipeline - PRS";
         PRSDesc.Resources    = Resources;
         PRSDesc.NumResources = _countof(Resources);
 
@@ -1159,7 +1194,7 @@ TEST(ArchiveTest, RayTracingPipeline)
     if (!pEnv->SupportsRayTracing())
         GTEST_SKIP() << "Ray tracing shaders are not supported by device";
 
-    constexpr char PSO1Name[] = "RT PSO archive test - 1";
+    constexpr char PSO1Name[] = "ArchiveTest.RayTracingPipeline - PSO";
 
     TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
