@@ -60,6 +60,8 @@ public:
         Other.m_Ptr        = nullptr;
         Other.m_Size       = 0;
         Other.m_Hash.store(0);
+
+        ASSERT_SIZEOF64(*this, 32, "Please handle new members here");
     }
 
     SerializedData& operator=(SerializedData&& Rhs) noexcept;
@@ -135,7 +137,7 @@ enum class SerializerMode
 {
     Read,
     Write,
-    Measure,
+    Measure
 };
 
 
@@ -185,9 +187,7 @@ public:
     template <typename T>
     TEnable<T> Serialize(ConstQual<T>& Value)
     {
-        VERIFY_EXPR(m_Ptr + sizeof(Value) <= m_End);
-        Copy(m_Ptr, &Value, sizeof(Value));
-        m_Ptr += sizeof(Value);
+        Copy(&Value, sizeof(Value));
     }
 
     template <typename T>
@@ -236,6 +236,7 @@ public:
 
     size_t GetRemainingSize() const
     {
+        VERIFY_EXPR(m_End >= m_Ptr);
         return m_End - m_Ptr;
     }
 
@@ -250,8 +251,8 @@ public:
     }
 
 private:
-    template <typename T1, typename T2>
-    static void Copy(T1* Lhs, T2* Rhs, size_t Size);
+    template <typename T>
+    void Copy(T* pData, size_t Size);
 
 private:
     TPointer const m_Start = nullptr;
@@ -262,23 +263,29 @@ private:
 
 
 template <>
-template <typename T1, typename T2>
-void Serializer<SerializerMode::Read>::Copy(T1* Lhs, T2* Rhs, size_t Size)
+template <typename T>
+void Serializer<SerializerMode::Read>::Copy(T* pData, size_t Size)
 {
-    std::memcpy(Rhs, Lhs, Size);
+    VERIFY(m_Ptr + Size <= m_End, "Note enough data to read ", Size, " bytes");
+    std::memcpy(pData, m_Ptr, Size);
+    m_Ptr += Size;
 }
 
 template <>
-template <typename T1, typename T2>
-void Serializer<SerializerMode::Write>::Copy(T1* Lhs, T2* Rhs, size_t Size)
+template <typename T>
+void Serializer<SerializerMode::Write>::Copy(T* pData, size_t Size)
 {
-    std::memcpy(Lhs, Rhs, Size);
+    VERIFY(m_Ptr + Size <= m_End, "Note enough data to write ", Size, " bytes");
+    std::memcpy(m_Ptr, pData, Size);
+    m_Ptr += Size;
 }
 
 template <>
-template <typename T1, typename T2>
-void Serializer<SerializerMode::Measure>::Copy(T1* Lhs, T2* Rhs, size_t Size)
+template <typename T>
+void Serializer<SerializerMode::Measure>::Copy(T* pData, size_t Size)
 {
+    VERIFY_EXPR(m_Ptr + Size <= m_End);
+    m_Ptr += Size;
 }
 
 template <>
@@ -286,11 +293,9 @@ template <typename T>
 typename Serializer<SerializerMode::Read>::TEnableStr<T> Serializer<SerializerMode::Read>::Serialize(InCharPtr Str)
 {
     Uint32 Length = 0;
-    VERIFY_EXPR(m_Ptr + sizeof(Length) <= m_End);
-    std::memcpy(&Length, m_Ptr, sizeof(Length));
-    m_Ptr += sizeof(Length);
+    Copy(&Length, sizeof(Length));
 
-    VERIFY_EXPR(m_Ptr + Length <= m_End);
+    VERIFY(m_Ptr + Length <= m_End, "Note enough data to read ", Length, " characters.");
     Str = Length > 1 ? reinterpret_cast<const char*>(m_Ptr) : "";
     m_Ptr += Length;
 }
@@ -300,14 +305,8 @@ template <typename T>
 typename Serializer<SerializerMode::Write>::TEnableStr<T> Serializer<SerializerMode::Write>::Serialize(InCharPtr Str)
 {
     const Uint32 Length = static_cast<Uint32>((Str != nullptr && *Str != 0) ? strlen(Str) + 1 : 0);
-
-    VERIFY_EXPR(m_Ptr + sizeof(Length) <= m_End);
-    Copy(m_Ptr, &Length, sizeof(Length));
-    m_Ptr += sizeof(Length);
-
-    VERIFY_EXPR(m_Ptr + Length <= m_End);
-    Copy(m_Ptr, Str, Length);
-    m_Ptr += Length;
+    Copy(&Length, sizeof(Length));
+    Copy(Str, Length);
 }
 
 template <>

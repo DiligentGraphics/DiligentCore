@@ -65,6 +65,8 @@ SerializedData& SerializedData::operator=(SerializedData&& Rhs) noexcept
 {
     Free();
 
+    ASSERT_SIZEOF64(*this, 32, "Please handle new members here");
+
     m_pAllocator = Rhs.m_pAllocator;
     m_Ptr        = Rhs.m_Ptr;
     m_Size       = Rhs.m_Size;
@@ -82,10 +84,11 @@ size_t SerializedData::GetHash() const
     if (m_Ptr == nullptr || m_Size == 0)
         return 0;
 
-    if (m_Hash.load() != 0)
-        return m_Hash;
+    auto Hash = m_Hash.load();
+    if (Hash != 0)
+        return Hash;
 
-    const auto Hash = ComputeHash(m_Size, ComputeHashRaw(m_Ptr, m_Size));
+    Hash = ComputeHash(m_Size, ComputeHashRaw(m_Ptr, m_Size));
     m_Hash.store(Hash);
 
     return Hash;
