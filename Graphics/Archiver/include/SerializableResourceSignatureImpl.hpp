@@ -26,6 +26,10 @@
 
 #pragma once
 
+#include <atomic>
+#include <array>
+#include <memory>
+
 #include "PipelineResourceSignature.h"
 #include "ObjectBase.hpp"
 #include "STDAllocator.hpp"
@@ -143,6 +147,8 @@ private:
     template <typename ImplType> struct TPRS;
 
     std::array<std::unique_ptr<PRSWapperBase>, DeviceCount> m_pDeviceSignatures;
+
+    mutable std::atomic<size_t> m_Hash{0};
 };
 
 #define INSTANTIATE_GET_DEVICE_SIGNATURE(PRSImplType) template PRSImplType* SerializableResourceSignatureImpl::GetDeviceSignature<PRSImplType>(DeviceType Type) const

@@ -269,7 +269,7 @@ TEST(PSOSerializerTest, SerializePRSDesc)
             PRSSerializer<SerializerMode::Measure>::SerializeDesc(MSer, SrcPRSDesc, nullptr);
             PRSSerializer<SerializerMode::Measure>::SerializeInternalData(MSer, SrcInternalData, nullptr);
 
-            Data = SerializedData{MSer.GetSize(), GetRawAllocator()};
+            Data = MSer.AllocateData(GetRawAllocator());
         }
 
         {

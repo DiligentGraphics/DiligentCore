@@ -61,7 +61,7 @@ TEST(SerializerTest, SerializerTest)
     Serializer<SerializerMode::Measure> MSer;
     WriteData(MSer);
 
-    SerializedData Data{MSer.GetSize(), RawAllocator};
+    auto Data = MSer.AllocateData(RawAllocator);
 
     Serializer<SerializerMode::Write> WSer{Data};
     WriteData(WSer);

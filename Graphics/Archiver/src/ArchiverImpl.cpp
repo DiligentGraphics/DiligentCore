@@ -365,7 +365,6 @@ void ArchiverImpl::UpdateOffsetsInArchive(PendingData& Pending) const
         ChunkHdr.Size   = StaticCast<Uint32>(ChunkData[i].GetCurrentSize());
         ChunkHdr.Offset = StaticCast<Uint32>(OffsetInFile);
 
-        // TODO AZ: verify this is correct wrt data alignment
         OffsetInFile += ChunkHdr.Size;
     }
 
@@ -389,7 +388,6 @@ void ArchiverImpl::UpdateOffsetsInArchive(PendingData& Pending) const
             }
         }
 
-        // TODO AZ: verify this is correct wrt data alignment
         if (!Pending.CommonData.IsEmpty())
             OffsetInFile += Pending.CommonData.GetCurrentSize();
     }
@@ -404,7 +402,6 @@ void ArchiverImpl::UpdateOffsetsInArchive(PendingData& Pending) const
         else
         {
             FileHeader.BlockBaseOffsets[dev] = StaticCast<Uint32>(OffsetInFile);
-            // TODO AZ: verify this is correct wrt data alignment
             OffsetInFile += Pending.PerDeviceData[dev].GetCurrentSize();
         }
     }
@@ -519,7 +516,7 @@ bool ArchiverImpl::CachePipelineResourceSignature(RefCntAutoPtr<SerializableReso
     VERIFY_EXPR(pPRS);
     auto IterAndInserted = m_PRSCache.insert(pPRS);
 
-    // Found same PRS in cache
+    // Found same PRS in the cache
     if (!IterAndInserted.second)
     {
         pPRS = *IterAndInserted.first;
@@ -893,7 +890,7 @@ bool ArchiverImpl::SerializePSO(TNamedObjectHashMap<TPSOData<CreateInfoType>>& P
         Serializer<SerializerMode::Measure> MeasureSer;
         SerializerPSOImpl(MeasureSer, PSOCreateInfo, PRSNames);
 
-        Data.CommonData = SerializedData{MeasureSer.GetSize(), GetRawAllocator()};
+        Data.CommonData = MeasureSer.AllocateData(GetRawAllocator());
         Serializer<SerializerMode::Write> Ser{Data.CommonData};
         SerializerPSOImpl(Ser, PSOCreateInfo, PRSNames);
         VERIFY_EXPR(Ser.IsEnded());

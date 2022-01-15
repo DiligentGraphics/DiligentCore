@@ -205,7 +205,7 @@ void SerializableResourceSignatureImpl::CreateDeviceSignature(DeviceType        
 
         MeasureSerializerType::SerializeInternalData(MeasureSer, InternalData, nullptr);
 
-        DeviceSignature.Data = SerializedData{MeasureSer.GetSize(), GetRawAllocator()};
+        DeviceSignature.Data = MeasureSer.AllocateData(GetRawAllocator());
     }
 
     {

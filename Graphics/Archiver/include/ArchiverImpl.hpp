@@ -34,7 +34,6 @@
 
 #include "Archiver.h"
 #include "ArchiverFactory.h"
-#include "RenderDevice.h"
 #include "PipelineResourceSignature.h"
 #include "PipelineState.h"
 #include "DataBlob.h"
@@ -171,7 +170,7 @@ private:
 
         bool operator==(const ShaderKey& Rhs) const { return *Data == *Rhs.Data; }
 
-        struct Hash
+        struct Hasher
         {
             size_t operator()(const ShaderKey& Key) const { return Key.Data->GetHash(); }
         };
@@ -179,8 +178,8 @@ private:
 
     struct PerDeviceShaders
     {
-        std::vector<ShaderKey>                                                   List;
-        std::unordered_map<ShaderKey, /*Index in List*/ size_t, ShaderKey::Hash> Map;
+        std::vector<ShaderKey>                                                     List;
+        std::unordered_map<ShaderKey, /*Index in List*/ size_t, ShaderKey::Hasher> Map;
     };
     std::array<PerDeviceShaders, static_cast<Uint32>(DeviceType::Count)> m_Shaders;
 
@@ -259,11 +258,9 @@ private:
     template <typename CreateInfoType>
     bool PatchShadersMtl(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data, DeviceType DevType);
 
-#if GL_SUPPORTED || GLES_SUPPORTED
     // Default signatures in OpenGL are not serialized and require special handling.
     template <typename CreateInfoType>
     bool PrepareDefaultSignatureGL(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data);
-#endif
 
     SerializedData SerializeShadersForPSO(const TShaderIndices& ShaderIndices) const;
 

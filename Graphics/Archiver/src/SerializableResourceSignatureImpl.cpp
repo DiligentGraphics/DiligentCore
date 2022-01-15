@@ -136,7 +136,7 @@ void SerializableResourceSignatureImpl::InitCommonData(const PipelineResourceSig
         Serializer<SerializerMode::Measure> MeasureSer;
         PRSSerializer<SerializerMode::Measure>::SerializeDesc(MeasureSer, Desc, nullptr);
 
-        m_CommonData = SerializedData{MeasureSer.GetSize(), GetRawAllocator()};
+        m_CommonData = MeasureSer.AllocateData(GetRawAllocator());
         Serializer<SerializerMode::Write> WSer{m_CommonData};
         PRSSerializer<SerializerMode::Write>::SerializeDesc(WSer, Desc, nullptr);
         VERIFY_EXPR(WSer.IsEnded());
@@ -186,13 +186,17 @@ bool SerializableResourceSignatureImpl::operator==(const SerializableResourceSig
 
 size_t SerializableResourceSignatureImpl::CalcHash() const
 {
-    size_t Hash = 0;
+    auto Hash = m_Hash.load();
+    if (Hash != 0)
+        return Hash;
+
     for (size_t type = 0; type < DeviceCount; ++type)
     {
         const auto* pMem = GetDeviceData(static_cast<DeviceType>(type));
         if (pMem != nullptr)
             HashCombine(Hash, pMem->GetHash());
     }
+    m_Hash.store(Hash);
     return Hash;
 }
 

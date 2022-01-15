@@ -127,7 +127,7 @@ void PSOSerializer<Mode>::SerializeCreateInfo(
 
     Ser.SerializeArray(Allocator, ResourceLayout.ImmutableSamplers, ResourceLayout.NumImmutableSamplers, SerializeImmutableSampler<Mode>);
 
-    // instead of ppResourceSignatures
+    // Instead of ppResourceSignatures
     for (Uint32 i = 0; i < std::max(CreateInfo.ResourceSignaturesCount, 1u); ++i)
     {
         Ser(PRSNames[i]);
@@ -153,7 +153,7 @@ void PSOSerializer<Mode>::SerializeCreateInfo(
         CreateInfo.GraphicsPipeline.RasterizerDesc,
         CreateInfo.GraphicsPipeline.DepthStencilDesc);
 
-    //   Serialize InputLayoutDesc
+    // Serialize InputLayoutDesc
     {
         auto& InputLayout = CreateInfo.GraphicsPipeline.InputLayout;
         Ser.SerializeArray(Allocator, InputLayout.LayoutElements, InputLayout.NumElements,
@@ -183,8 +183,7 @@ void PSOSerializer<Mode>::SerializeCreateInfo(
         CreateInfo.GraphicsPipeline.SmplDesc,
         RenderPassName); // for CreateInfo.GraphicsPipeline.pRenderPass
 
-    // skip NodeMask
-    // skip shaders - they are device specific
+    // Skip NodeMask
 
     ASSERT_SIZEOF64(GraphicsPipelineStateCreateInfo, 344, "Did you add a new member to GraphicsPipelineStateCreateInfo? Please add serialization here.");
     ASSERT_SIZEOF64(LayoutElement, 40, "Did you add a new member to LayoutElement? Please add serialization here.");
@@ -198,8 +197,6 @@ void PSOSerializer<Mode>::SerializeCreateInfo(
     DynamicLinearAllocator*                    Allocator)
 {
     SerializeCreateInfo(Ser, static_cast<ConstQual<PipelineStateCreateInfo>&>(CreateInfo), PRSNames, Allocator);
-
-    // skip shaders - they are device specific
 
     ASSERT_SIZEOF64(ComputePipelineStateCreateInfo, 104, "Did you add a new member to ComputePipelineStateCreateInfo? Please add serialization here.");
 }
@@ -217,8 +214,6 @@ void PSOSerializer<Mode>::SerializeCreateInfo(
     Ser(CreateInfo.TilePipeline.NumRenderTargets,
         CreateInfo.TilePipeline.SampleCount,
         CreateInfo.TilePipeline.RTVFormats);
-
-    // skip shaders - they are device specific
 
     ASSERT_SIZEOF64(TilePipelineStateCreateInfo, 128, "Did you add a new member to TilePipelineStateCreateInfo? Please add serialization here.");
 }
@@ -245,7 +240,7 @@ void PSOSerializer<Mode>::SerializeCreateInfo(
         CreateInfo.MaxAttributeSize,
         CreateInfo.MaxPayloadSize);
 
-    //  Serialize RayTracingGeneralShaderGroup
+    // Serialize RayTracingGeneralShaderGroup
     Ser.SerializeArray(Allocator, CreateInfo.pGeneralShaders, CreateInfo.GeneralShaderCount,
                        [&](Serializer<Mode>&                        Ser,
                            ConstQual<RayTracingGeneralShaderGroup>& Group) //
@@ -263,7 +258,7 @@ void PSOSerializer<Mode>::SerializeCreateInfo(
                            }
                        });
 
-    //  Serialize RayTracingTriangleHitShaderGroup
+    // Serialize RayTracingTriangleHitShaderGroup
     Ser.SerializeArray(Allocator, CreateInfo.pTriangleHitShaders, CreateInfo.TriangleHitShaderCount,
                        [&](Serializer<Mode>&                            Ser,
                            ConstQual<RayTracingTriangleHitShaderGroup>& Group) //
@@ -284,7 +279,7 @@ void PSOSerializer<Mode>::SerializeCreateInfo(
                            }
                        });
 
-    //  Serialize RayTracingProceduralHitShaderGroup
+    // Serialize RayTracingProceduralHitShaderGroup
     Ser.SerializeArray(Allocator, CreateInfo.pProceduralHitShaders, CreateInfo.ProceduralHitShaderCount,
                        [&](Serializer<Mode>&                              Ser,
                            ConstQual<RayTracingProceduralHitShaderGroup>& Group) //
@@ -307,8 +302,6 @@ void PSOSerializer<Mode>::SerializeCreateInfo(
                                ShaderToIndex(AnyHitShaderIndex, Group.pAnyHitShader);
                            }
                        });
-
-    // skip shaders - they are device-specific
 
     ASSERT_SIZEOF64(RayTracingPipelineStateCreateInfo, 168, "Did you add a new member to RayTracingPipelineStateCreateInfo? Please add serialization here.");
     ASSERT_SIZEOF64(RayTracingGeneralShaderGroup, 16, "Did you add a new member to RayTracingGeneralShaderGroup? Please add serialization here.");
@@ -349,7 +342,7 @@ void RPSerializer<Mode>::SerializeDesc(
                            Ser.SerializeArray(Allocator, Subpass.pInputAttachments, Subpass.InputAttachmentCount, SerializeAttachmentRef);
                            Ser.SerializeArray(Allocator, Subpass.pRenderTargetAttachments, Subpass.RenderTargetAttachmentCount, SerializeAttachmentRef);
 
-                           // Note: when reading, ResolveAttachCount, DepthStencilAttachCount, and ShadingRateAttachCount will be overwritten
+                           // Note: in Reda mode, ResolveAttachCount, DepthStencilAttachCount, and ShadingRateAttachCount will be overwritten
                            Uint32 ResolveAttachCount = Subpass.pResolveAttachments != nullptr ? Subpass.RenderTargetAttachmentCount : 0;
                            Ser.SerializeArray(Allocator, Subpass.pResolveAttachments, ResolveAttachCount, SerializeAttachmentRef);
 

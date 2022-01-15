@@ -39,7 +39,7 @@ SerializableRenderPassImpl::SerializableRenderPassImpl(IReferenceCounters*      
     Serializer<SerializerMode::Measure> MeasureSer;
     RPSerializer<SerializerMode::Measure>::SerializeDesc(MeasureSer, m_Desc, nullptr);
 
-    m_CommonData = SerializedData{MeasureSer.GetSize(), GetRawAllocator()};
+    m_CommonData = MeasureSer.AllocateData(GetRawAllocator());
 
     Serializer<SerializerMode::Write> Ser{m_CommonData};
     RPSerializer<SerializerMode::Write>::SerializeDesc(Ser, m_Desc, nullptr);

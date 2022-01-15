@@ -250,6 +250,12 @@ public:
         return m_Ptr == m_End;
     }
 
+    SerializedData AllocateData(IMemoryAllocator& Allocator) const
+    {
+        static_assert(Mode == SerializerMode::Measure, "This method is only allowed in Measure mode");
+        return SerializedData{GetSize(), Allocator};
+    }
+
 private:
     template <typename T>
     void Copy(T* pData, size_t Size);
