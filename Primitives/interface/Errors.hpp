@@ -142,7 +142,7 @@ void LogError(bool IsFatal, const char* Function, const char* FullFilePath, int 
 #define LOG_INFO_MESSAGE_ONCE(...)        LOG_DEBUG_MESSAGE_ONCE(Diligent::DEBUG_MESSAGE_SEVERITY_INFO, ##__VA_ARGS__)
 
 
-#define CHECK(Expr, Severity, ...)                      \
+#define CHECK_EXPR(Expr, Severity, ...)                 \
     do                                                  \
     {                                                   \
         if (!(Expr))                                    \
@@ -151,10 +151,10 @@ void LogError(bool IsFatal, const char* Function, const char* FullFilePath, int 
         }                                               \
     } while (false)
 
-#define CHECK_FATAL_ERR(Expr, ...) CHECK(Expr, Diligent::DEBUG_MESSAGE_SEVERITY_FATAL_ERROR, ##__VA_ARGS__)
-#define CHECK_ERR(Expr, ...)       CHECK(Expr, Diligent::DEBUG_MESSAGE_SEVERITY_ERROR, ##__VA_ARGS__)
-#define CHECK_WARN(Expr, ...)      CHECK(Expr, Diligent::DEBUG_MESSAGE_SEVERITY_WARNING, ##__VA_ARGS__)
-#define CHECK_INFO(Expr, ...)      CHECK(Expr, Diligent::DEBUG_MESSAGE_SEVERITY_INFO, ##__VA_ARGS__)
+#define CHECK_FATAL_ERR(Expr, ...) CHECK_EXPR(Expr, Diligent::DEBUG_MESSAGE_SEVERITY_FATAL_ERROR, ##__VA_ARGS__)
+#define CHECK_ERR(Expr, ...)       CHECK_EXPR(Expr, Diligent::DEBUG_MESSAGE_SEVERITY_ERROR, ##__VA_ARGS__)
+#define CHECK_WARN(Expr, ...)      CHECK_EXPR(Expr, Diligent::DEBUG_MESSAGE_SEVERITY_WARNING, ##__VA_ARGS__)
+#define CHECK_INFO(Expr, ...)      CHECK_EXPR(Expr, Diligent::DEBUG_MESSAGE_SEVERITY_INFO, ##__VA_ARGS__)
 
 #define CHECK_THROW(Expr, ...)                  \
     do                                          \
