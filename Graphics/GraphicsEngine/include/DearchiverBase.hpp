@@ -52,7 +52,7 @@ public:
 protected:
     template <typename DeviceObjectArchiveImplType>
     void CreateDeviceObjectArchiveImpl(IArchive*              pSource,
-                                       IDeviceObjectArchive** ppArchive)
+                                       IDeviceObjectArchive** ppArchive) const
     {
         DEV_CHECK_ERR(ppArchive != nullptr, "ppArchive must not be null");
         if (!ppArchive)
@@ -72,7 +72,7 @@ protected:
     }
 
     template <typename DeviceObjectArchiveImplType>
-    void UnpackPipelineStateImpl(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState** ppPSO)
+    void UnpackPipelineStateImpl(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState** ppPSO) const
     {
         if (!VerifyPipelineStateUnpackInfo(DeArchiveInfo, ppPSO))
             return;
@@ -108,7 +108,7 @@ protected:
 
     template <typename DeviceObjectArchiveImplType>
     void UnpackResourceSignatureImpl(const ResourceSignatureUnpackInfo& DeArchiveInfo,
-                                     IPipelineResourceSignature**       ppSignature)
+                                     IPipelineResourceSignature**       ppSignature) const
     {
         if (!VerifyResourceSignatureUnpackInfo(DeArchiveInfo, ppSignature))
             return;
@@ -121,7 +121,7 @@ protected:
     }
 
     template <typename DeviceObjectArchiveImplType>
-    void UnpackRenderPassImpl(const RenderPassUnpackInfo& DeArchiveInfo, IRenderPass** ppRP)
+    void UnpackRenderPassImpl(const RenderPassUnpackInfo& DeArchiveInfo, IRenderPass** ppRP) const
     {
         if (!VerifyRenderPassUnpackInfo(DeArchiveInfo, ppRP))
             return;
@@ -133,9 +133,9 @@ protected:
     }
 
 
-    bool VerifyPipelineStateUnpackInfo(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState** ppPSO);
-    bool VerifyResourceSignatureUnpackInfo(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature** ppSignature);
-    bool VerifyRenderPassUnpackInfo(const RenderPassUnpackInfo& DeArchiveInfo, IRenderPass** ppRP);
+    bool VerifyPipelineStateUnpackInfo(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState** ppPSO) const;
+    bool VerifyResourceSignatureUnpackInfo(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature** ppSignature) const;
+    bool VerifyRenderPassUnpackInfo(const RenderPassUnpackInfo& DeArchiveInfo, IRenderPass** ppRP) const;
 };
 
 } // namespace Diligent

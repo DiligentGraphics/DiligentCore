@@ -38,22 +38,22 @@ DearchiverGLImpl::DearchiverGLImpl(IReferenceCounters* pRefCounters) noexcept :
 }
 
 void DearchiverGLImpl::CreateDeviceObjectArchive(IArchive*              pSource,
-                                                 IDeviceObjectArchive** ppArchive)
+                                                 IDeviceObjectArchive** ppArchive) const
 {
     CreateDeviceObjectArchiveImpl<DeviceObjectArchiveGLImpl>(pSource, ppArchive);
 }
 
-void DearchiverGLImpl::UnpackPipelineState(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState** ppPSO)
+void DearchiverGLImpl::UnpackPipelineState(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState** ppPSO) const
 {
     UnpackPipelineStateImpl<DeviceObjectArchiveGLImpl>(DeArchiveInfo, ppPSO);
 }
 
-void DearchiverGLImpl::UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature** ppSignature)
+void DearchiverGLImpl::UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature** ppSignature) const
 {
     UnpackResourceSignatureImpl<DeviceObjectArchiveGLImpl>(DeArchiveInfo, ppSignature);
 }
 
-void DearchiverGLImpl::UnpackRenderPass(const RenderPassUnpackInfo& DeArchiveInfo, IRenderPass** ppRP)
+void DearchiverGLImpl::UnpackRenderPass(const RenderPassUnpackInfo& DeArchiveInfo, IRenderPass** ppRP) const
 {
     UnpackRenderPassImpl<DeviceObjectArchiveGLImpl>(DeArchiveInfo, ppRP);
 }

@@ -39,7 +39,7 @@ namespace Diligent
             return false;                   \
     } while (false)
 
-bool DearchiverBase::VerifyPipelineStateUnpackInfo(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState** ppPSO)
+bool DearchiverBase::VerifyPipelineStateUnpackInfo(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState** ppPSO) const
 {
 #define CHECK_UNPACK_PSO_PARAM(Expr, ...) CHECK_UNPACK_PARAMATER("Invalid PSO unpack parameter: ", ##__VA_ARGS__)
     CHECK_UNPACK_PSO_PARAM(ppPSO != nullptr, "ppPSO must not be null");
@@ -52,7 +52,7 @@ bool DearchiverBase::VerifyPipelineStateUnpackInfo(const PipelineStateUnpackInfo
     return true;
 }
 
-bool DearchiverBase::VerifyResourceSignatureUnpackInfo(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature** ppSignature)
+bool DearchiverBase::VerifyResourceSignatureUnpackInfo(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature** ppSignature) const
 {
 #define CHECK_UNPACK_SIGN_PARAM(Expr, ...) CHECK_UNPACK_PARAMATER("Invalid signature unpack parameter: ", ##__VA_ARGS__)
     CHECK_UNPACK_SIGN_PARAM(ppSignature != nullptr, "ppSignature must not be null");
@@ -64,7 +64,7 @@ bool DearchiverBase::VerifyResourceSignatureUnpackInfo(const ResourceSignatureUn
     return true;
 }
 
-bool DearchiverBase::VerifyRenderPassUnpackInfo(const RenderPassUnpackInfo& DeArchiveInfo, IRenderPass** ppRP)
+bool DearchiverBase::VerifyRenderPassUnpackInfo(const RenderPassUnpackInfo& DeArchiveInfo, IRenderPass** ppRP) const
 {
 #define CHECK_UNPACK_RENDER_PASS_PARAM(Expr, ...) CHECK_UNPACK_PARAMATER("Invalid signature unpack parameter: ", ##__VA_ARGS__)
     CHECK_UNPACK_RENDER_PASS_PARAM(ppRP != nullptr, "ppRP must not be null");

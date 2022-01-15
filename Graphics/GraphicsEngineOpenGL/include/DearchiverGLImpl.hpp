@@ -44,19 +44,19 @@ public:
 
     /// Implementation of IDearchiver::CreateDeviceObjectArchive() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE CreateDeviceObjectArchive(IArchive*              pSource,
-                                                              IDeviceObjectArchive** ppArchive) override final;
+                                                              IDeviceObjectArchive** ppArchive) const override final;
 
     /// Implementation of IDearchiver::UnpackPipelineState() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE UnpackPipelineState(const PipelineStateUnpackInfo& DeArchiveInfo,
-                                                        IPipelineState**               ppPSO) override final;
+                                                        IPipelineState**               ppPSO) const override final;
 
     /// Implementation of IDearchiver::UnpackResourceSignature() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo,
-                                                            IPipelineResourceSignature**       ppSignature) override final;
+                                                            IPipelineResourceSignature**       ppSignature) const override final;
 
     /// Implementation of IDearchiver::UnpackRenderPass() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE UnpackRenderPass(const RenderPassUnpackInfo& DeArchiveInfo,
-                                                     IRenderPass**               ppRP) override final;
+                                                     IRenderPass**               ppRP) const override final;
 };
 
 } // namespace Diligent

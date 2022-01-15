@@ -212,7 +212,7 @@ DILIGENT_BEGIN_INTERFACE(IDearchiver, IObject)
     ///                          one reference.
     VIRTUAL void METHOD(CreateDeviceObjectArchive)(THIS_
                                                    IArchive*              pSource,
-                                                   IDeviceObjectArchive** ppArchive) PURE;
+                                                   IDeviceObjectArchive** ppArchive) CONST PURE;
 
     /// Unpacks a pipeline state object from the device object archive.
 
@@ -225,7 +225,7 @@ DILIGENT_BEGIN_INTERFACE(IDearchiver, IObject)
     /// \note   Resource signatures used by the PSO will be unpacked from the same archive.
     VIRTUAL void METHOD(UnpackPipelineState)(THIS_
                                              const PipelineStateUnpackInfo REF UnpackInfo,
-                                             IPipelineState**                  ppPSO) PURE;
+                                             IPipelineState**                  ppPSO) CONST PURE;
 
     /// Unpacks resource signature from the device object archive.
 
@@ -236,7 +236,7 @@ DILIGENT_BEGIN_INTERFACE(IDearchiver, IObject)
     ///                            one reference.
     VIRTUAL void METHOD(UnpackResourceSignature)(THIS_
                                                  const ResourceSignatureUnpackInfo REF UnpackInfo,
-                                                 IPipelineResourceSignature**          ppSignature) PURE;
+                                                 IPipelineResourceSignature**          ppSignature) CONST PURE;
 
     /// Unpacks render pass from the device object archive.
 
@@ -247,7 +247,7 @@ DILIGENT_BEGIN_INTERFACE(IDearchiver, IObject)
     ///                            one reference.
     VIRTUAL void METHOD(UnpackRenderPass)(THIS_
                                           const RenderPassUnpackInfo REF UnpackInfo,
-                                          IRenderPass**                  ppRP) PURE;
+                                          IRenderPass**                  ppRP) CONST PURE;
 };
 DILIGENT_END_INTERFACE
 

@@ -38,22 +38,22 @@ DearchiverVkImpl::DearchiverVkImpl(IReferenceCounters* pRefCounters) noexcept :
 }
 
 void DearchiverVkImpl::CreateDeviceObjectArchive(IArchive*              pSource,
-                                                 IDeviceObjectArchive** ppArchive)
+                                                 IDeviceObjectArchive** ppArchive) const
 {
     CreateDeviceObjectArchiveImpl<DeviceObjectArchiveVkImpl>(pSource, ppArchive);
 }
 
-void DearchiverVkImpl::UnpackPipelineState(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState** ppPSO)
+void DearchiverVkImpl::UnpackPipelineState(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState** ppPSO) const
 {
     UnpackPipelineStateImpl<DeviceObjectArchiveVkImpl>(DeArchiveInfo, ppPSO);
 }
 
-void DearchiverVkImpl::UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature** ppSignature)
+void DearchiverVkImpl::UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature** ppSignature) const
 {
     UnpackResourceSignatureImpl<DeviceObjectArchiveVkImpl>(DeArchiveInfo, ppSignature);
 }
 
-void DearchiverVkImpl::UnpackRenderPass(const RenderPassUnpackInfo& DeArchiveInfo, IRenderPass** ppRP)
+void DearchiverVkImpl::UnpackRenderPass(const RenderPassUnpackInfo& DeArchiveInfo, IRenderPass** ppRP) const
 {
     UnpackRenderPassImpl<DeviceObjectArchiveVkImpl>(DeArchiveInfo, ppRP);
 }
