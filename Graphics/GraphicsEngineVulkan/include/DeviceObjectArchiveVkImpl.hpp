@@ -33,6 +33,7 @@
 
 #include "EngineVkImplTraits.hpp"
 #include "DeviceObjectArchiveBase.hpp"
+#include "PSOSerializer.hpp"
 
 namespace Diligent
 {
@@ -48,16 +49,16 @@ public:
 };
 
 template <SerializerMode Mode>
-struct PSOSerializerVk
+struct PRSSerializerVk : PRSSerializer<Mode>
 {
     template <typename T>
     using ConstQual = typename Serializer<Mode>::template ConstQual<T>;
 
-    using PRSInternalDataType = PipelineResourceSignatureInternalDataVk;
+    using InternalDataType = PipelineResourceSignatureInternalDataVk;
 
-    static void SerializePRSInternalData(Serializer<Mode>&               Ser,
-                                         ConstQual<PRSInternalDataType>& InternalData,
-                                         DynamicLinearAllocator*         Allocator);
+    static void SerializeInternalData(Serializer<Mode>&            Ser,
+                                      ConstQual<InternalDataType>& InternalData,
+                                      DynamicLinearAllocator*      Allocator);
 };
 
 DECL_TRIVIALLY_SERIALIZABLE(PipelineResourceAttribsVk);

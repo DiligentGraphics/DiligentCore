@@ -33,6 +33,7 @@
 
 #include "EngineGLImplTraits.hpp"
 #include "DeviceObjectArchiveBase.hpp"
+#include "PSOSerializer.hpp"
 
 namespace Diligent
 {
@@ -52,16 +53,16 @@ public:
 };
 
 template <SerializerMode Mode>
-struct PSOSerializerGL
+struct PRSSerializerGL : PRSSerializer<Mode>
 {
     template <typename T>
     using ConstQual = typename Serializer<Mode>::template ConstQual<T>;
 
-    using PRSInternalDataType = PipelineResourceSignatureInternalDataGL;
+    using InternalDataType = PipelineResourceSignatureInternalDataGL;
 
-    static void SerializePRSInternalData(Serializer<Mode>&               Ser,
-                                         ConstQual<PRSInternalDataType>& InternalData,
-                                         DynamicLinearAllocator*         Allocator);
+    static void SerializeInternalData(Serializer<Mode>&            Ser,
+                                      ConstQual<InternalDataType>& InternalData,
+                                      DynamicLinearAllocator*      Allocator);
 };
 
 DECL_TRIVIALLY_SERIALIZABLE(PipelineResourceAttribsGL);

@@ -48,7 +48,7 @@ struct SerializableResourceSignatureImpl::SignatureTraits<PipelineResourceSignat
     static constexpr DeviceType Type = DeviceType::OpenGL;
 
     template <SerializerMode Mode>
-    using PSOSerializerType = PSOSerializerGL<Mode>;
+    using PRSSerializerType = PRSSerializerGL<Mode>;
 };
 
 namespace

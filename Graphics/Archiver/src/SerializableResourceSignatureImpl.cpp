@@ -134,11 +134,11 @@ void SerializableResourceSignatureImpl::InitCommonData(const PipelineResourceSig
         m_pDesc = &Desc;
 
         Serializer<SerializerMode::Measure> MeasureSer;
-        PSOSerializer<SerializerMode::Measure>::SerializePRSDesc(MeasureSer, Desc, nullptr);
+        PRSSerializer<SerializerMode::Measure>::SerializeDesc(MeasureSer, Desc, nullptr);
 
         m_CommonData = SerializedData{MeasureSer.GetSize(), GetRawAllocator()};
         Serializer<SerializerMode::Write> WSer{m_CommonData};
-        PSOSerializer<SerializerMode::Write>::SerializePRSDesc(WSer, Desc, nullptr);
+        PRSSerializer<SerializerMode::Write>::SerializeDesc(WSer, Desc, nullptr);
         VERIFY_EXPR(WSer.IsEnded());
 
         VERIFY_EXPR(GetDesc() == Desc);

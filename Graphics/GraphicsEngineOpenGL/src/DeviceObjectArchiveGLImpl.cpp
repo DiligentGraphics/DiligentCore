@@ -28,7 +28,6 @@
 #include "RenderDeviceGLImpl.hpp"
 #include "DeviceObjectArchiveGLImpl.hpp"
 #include "PipelineResourceSignatureGLImpl.hpp"
-#include "PSOSerializer.hpp"
 
 namespace Diligent
 {
@@ -44,7 +43,7 @@ DeviceObjectArchiveGLImpl::~DeviceObjectArchiveGLImpl()
 
 RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveGLImpl::UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, bool IsImplicit)
 {
-    return DeviceObjectArchiveBase::UnpackResourceSignatureImpl<RenderDeviceGLImpl, PSOSerializerGL<SerializerMode::Read>>(DeArchiveInfo, IsImplicit);
+    return DeviceObjectArchiveBase::UnpackResourceSignatureImpl<RenderDeviceGLImpl, PRSSerializerGL<SerializerMode::Read>>(DeArchiveInfo, IsImplicit);
 }
 
 RefCntAutoPtr<IShader> DeviceObjectArchiveGLImpl::UnpackShader(Serializer<SerializerMode::Read>& Ser,
@@ -65,20 +64,20 @@ RefCntAutoPtr<IShader> DeviceObjectArchiveGLImpl::UnpackShader(Serializer<Serial
 }
 
 template <SerializerMode Mode>
-void PSOSerializerGL<Mode>::SerializePRSInternalData(
+void PRSSerializerGL<Mode>::SerializeInternalData(
     Serializer<Mode>&                                   Ser,
     ConstQual<PipelineResourceSignatureInternalDataGL>& InternalData,
     DynamicLinearAllocator*                             Allocator)
 {
-    PSOSerializer<Mode>::SerializePRSInternalData(Ser, InternalData, Allocator);
+    PRSSerializer<Mode>::SerializeInternalData(Ser, InternalData, Allocator);
 
     Ser.SerializeArrayRaw(Allocator, InternalData.pResourceAttribs, InternalData.NumResources);
 
     ASSERT_SIZEOF64(InternalData, 48, "Did you add a new member to PipelineResourceSignatureInternalDataGL? Please add serialization here.");
 }
 
-template struct PSOSerializerGL<SerializerMode::Read>;
-template struct PSOSerializerGL<SerializerMode::Write>;
-template struct PSOSerializerGL<SerializerMode::Measure>;
+template struct PRSSerializerGL<SerializerMode::Read>;
+template struct PRSSerializerGL<SerializerMode::Write>;
+template struct PRSSerializerGL<SerializerMode::Measure>;
 
 } // namespace Diligent

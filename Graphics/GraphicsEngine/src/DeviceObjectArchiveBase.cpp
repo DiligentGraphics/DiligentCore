@@ -373,14 +373,14 @@ template SerializedData DeviceObjectArchiveBase::GetDeviceSpecificData<DeviceObj
 bool DeviceObjectArchiveBase::PRSData::Deserialize(const char* Name, Serializer<SerializerMode::Read>& Ser)
 {
     Desc.Name = Name;
-    PSOSerializer<SerializerMode::Read>::SerializePRSDesc(Ser, Desc, &Allocator);
+    PRSSerializer<SerializerMode::Read>::SerializeDesc(Ser, Desc, &Allocator);
     return true;
 }
 
 bool DeviceObjectArchiveBase::RPData::Deserialize(const char* Name, Serializer<SerializerMode::Read>& Ser)
 {
     Desc.Name = Name;
-    PSOSerializer<SerializerMode::Read>::SerializeRenderPassDesc(Ser, Desc, &Allocator);
+    RPSerializer<SerializerMode::Read>::SerializeDesc(Ser, Desc, &Allocator);
     return true;
 }
 
@@ -388,13 +388,13 @@ bool DeviceObjectArchiveBase::RPData::Deserialize(const char* Name, Serializer<S
 template <typename CreateInfoType>
 void DeviceObjectArchiveBase::PSOData<CreateInfoType>::DeserializeInternal(Serializer<SerializerMode::Read>& Ser)
 {
-    PSOSerializer<SerializerMode::Read>::SerializePSOCreateInfo(Ser, CreateInfo, PRSNames, &Allocator);
+    PSOSerializer<SerializerMode::Read>::SerializeCreateInfo(Ser, CreateInfo, PRSNames, &Allocator);
 }
 
 template <>
 void DeviceObjectArchiveBase::PSOData<GraphicsPipelineStateCreateInfo>::DeserializeInternal(Serializer<SerializerMode::Read>& Ser)
 {
-    PSOSerializer<SerializerMode::Read>::SerializePSOCreateInfo(Ser, CreateInfo, PRSNames, &Allocator, RenderPassName);
+    PSOSerializer<SerializerMode::Read>::SerializeCreateInfo(Ser, CreateInfo, PRSNames, &Allocator, RenderPassName);
 }
 
 template <>
@@ -403,7 +403,7 @@ void DeviceObjectArchiveBase::PSOData<RayTracingPipelineStateCreateInfo>::Deseri
     auto RemapShaders = [](Uint32& InIndex, IShader*& outShader) {
         outShader = BitCast<IShader*>(size_t{InIndex});
     };
-    PSOSerializer<SerializerMode::Read>::SerializePSOCreateInfo(Ser, CreateInfo, PRSNames, &Allocator, RemapShaders);
+    PSOSerializer<SerializerMode::Read>::SerializeCreateInfo(Ser, CreateInfo, PRSNames, &Allocator, RemapShaders);
 }
 
 template <typename CreateInfoType>

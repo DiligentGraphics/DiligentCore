@@ -689,7 +689,7 @@ void SerializerPSOImpl(Serializer<Mode>&                                 Ser,
                        std::array<const char*, MAX_RESOURCE_SIGNATURES>& PRSNames)
 {
     const char* RPName = PSOCreateInfo.GraphicsPipeline.pRenderPass != nullptr ? PSOCreateInfo.GraphicsPipeline.pRenderPass->GetDesc().Name : "";
-    PSOSerializer<Mode>::SerializePSOCreateInfo(Ser, PSOCreateInfo, PRSNames, nullptr, RPName);
+    PSOSerializer<Mode>::SerializeCreateInfo(Ser, PSOCreateInfo, PRSNames, nullptr, RPName);
 }
 
 template <SerializerMode Mode>
@@ -697,7 +697,7 @@ void SerializerPSOImpl(Serializer<Mode>&                                 Ser,
                        const ComputePipelineStateCreateInfo&             PSOCreateInfo,
                        std::array<const char*, MAX_RESOURCE_SIGNATURES>& PRSNames)
 {
-    PSOSerializer<Mode>::SerializePSOCreateInfo(Ser, PSOCreateInfo, PRSNames, nullptr);
+    PSOSerializer<Mode>::SerializeCreateInfo(Ser, PSOCreateInfo, PRSNames, nullptr);
 }
 
 template <SerializerMode Mode>
@@ -705,7 +705,7 @@ void SerializerPSOImpl(Serializer<Mode>&                                 Ser,
                        const TilePipelineStateCreateInfo&                PSOCreateInfo,
                        std::array<const char*, MAX_RESOURCE_SIGNATURES>& PRSNames)
 {
-    PSOSerializer<Mode>::SerializePSOCreateInfo(Ser, PSOCreateInfo, PRSNames, nullptr);
+    PSOSerializer<Mode>::SerializeCreateInfo(Ser, PSOCreateInfo, PRSNames, nullptr);
 }
 
 template <SerializerMode Mode>
@@ -743,7 +743,7 @@ void SerializerPSOImpl(Serializer<Mode>&                                 Ser,
         else
             outIndex = ~0u;
     };
-    PSOSerializer<Mode>::SerializePSOCreateInfo(Ser, PSOCreateInfo, PRSNames, nullptr, RemapShaders);
+    PSOSerializer<Mode>::SerializeCreateInfo(Ser, PSOCreateInfo, PRSNames, nullptr, RemapShaders);
 }
 
 #define LOG_PSO_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of PSO is invalid: ", ##__VA_ARGS__)

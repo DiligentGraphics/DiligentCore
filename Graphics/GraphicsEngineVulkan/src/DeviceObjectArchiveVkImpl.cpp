@@ -28,7 +28,6 @@
 #include "RenderDeviceVkImpl.hpp"
 #include "DeviceObjectArchiveVkImpl.hpp"
 #include "PipelineResourceSignatureVkImpl.hpp"
-#include "PSOSerializer.hpp"
 
 namespace Diligent
 {
@@ -44,16 +43,16 @@ DeviceObjectArchiveVkImpl::~DeviceObjectArchiveVkImpl()
 
 RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveVkImpl::UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, bool IsImplicit)
 {
-    return DeviceObjectArchiveBase::UnpackResourceSignatureImpl<RenderDeviceVkImpl, PSOSerializerVk<SerializerMode::Read>>(DeArchiveInfo, IsImplicit);
+    return DeviceObjectArchiveBase::UnpackResourceSignatureImpl<RenderDeviceVkImpl, PRSSerializerVk<SerializerMode::Read>>(DeArchiveInfo, IsImplicit);
 }
 
 template <SerializerMode Mode>
-void PSOSerializerVk<Mode>::SerializePRSInternalData(
+void PRSSerializerVk<Mode>::SerializeInternalData(
     Serializer<Mode>&                                   Ser,
     ConstQual<PipelineResourceSignatureInternalDataVk>& InternalData,
     DynamicLinearAllocator*                             Allocator)
 {
-    PSOSerializer<Mode>::SerializePRSInternalData(Ser, InternalData, Allocator);
+    PRSSerializer<Mode>::SerializeInternalData(Ser, InternalData, Allocator);
 
     Ser(InternalData.DynamicUniformBufferCount,
         InternalData.DynamicStorageBufferCount);
@@ -64,8 +63,8 @@ void PSOSerializerVk<Mode>::SerializePRSInternalData(
     ASSERT_SIZEOF64(InternalData, 56, "Did you add a new member to PipelineResourceSignatureInternalDataVk? Please add serialization here.");
 }
 
-template struct PSOSerializerVk<SerializerMode::Read>;
-template struct PSOSerializerVk<SerializerMode::Write>;
-template struct PSOSerializerVk<SerializerMode::Measure>;
+template struct PRSSerializerVk<SerializerMode::Read>;
+template struct PRSSerializerVk<SerializerMode::Write>;
+template struct PRSSerializerVk<SerializerMode::Measure>;
 
 } // namespace Diligent

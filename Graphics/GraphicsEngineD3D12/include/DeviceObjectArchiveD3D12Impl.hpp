@@ -33,6 +33,7 @@
 
 #include "EngineD3D12ImplTraits.hpp"
 #include "DeviceObjectArchiveBase.hpp"
+#include "PSOSerializer.hpp"
 
 namespace Diligent
 {
@@ -48,16 +49,16 @@ public:
 };
 
 template <SerializerMode Mode>
-struct PSOSerializerD3D12
+struct PRSSerializerD3D12 : PRSSerializer<Mode>
 {
     template <typename T>
     using ConstQual = typename Serializer<Mode>::template ConstQual<T>;
 
-    using PRSInternalDataType = PipelineResourceSignatureInternalDataD3D12;
+    using InternalDataType = PipelineResourceSignatureInternalDataD3D12;
 
-    static void SerializePRSInternalData(Serializer<Mode>&               Ser,
-                                         ConstQual<PRSInternalDataType>& InternalData,
-                                         DynamicLinearAllocator*         Allocator);
+    static void SerializeInternalData(Serializer<Mode>&            Ser,
+                                      ConstQual<InternalDataType>& InternalData,
+                                      DynamicLinearAllocator*      Allocator);
 };
 
 DECL_TRIVIALLY_SERIALIZABLE(PipelineResourceAttribsD3D12);

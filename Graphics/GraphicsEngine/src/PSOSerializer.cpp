@@ -30,9 +30,9 @@ namespace Diligent
 {
 
 template <SerializerMode Mode>
-void PSOSerializer<Mode>::SerializeImmutableSampler(
-    Serializer<Mode>&                Ser,
-    ConstQual<ImmutableSamplerDesc>& SampDesc)
+void SerializeImmutableSampler(
+    Serializer<Mode>&                                                    Ser,
+    typename Serializer<Mode>::template ConstQual<ImmutableSamplerDesc>& SampDesc)
 {
     Ser(SampDesc.SamplerOrTextureName,
         SampDesc.ShaderStages,
@@ -55,7 +55,7 @@ void PSOSerializer<Mode>::SerializeImmutableSampler(
 }
 
 template <SerializerMode Mode>
-void PSOSerializer<Mode>::SerializePRSDesc(
+void PRSSerializer<Mode>::SerializeDesc(
     Serializer<Mode>&                         Ser,
     ConstQual<PipelineResourceSignatureDesc>& Desc,
     DynamicLinearAllocator*                   Allocator)
@@ -79,16 +79,16 @@ void PSOSerializer<Mode>::SerializePRSDesc(
                                ResDesc.Flags);
                        });
 
-    Ser.SerializeArray(Allocator, Desc.ImmutableSamplers, Desc.NumImmutableSamplers, SerializeImmutableSampler);
+    Ser.SerializeArray(Allocator, Desc.ImmutableSamplers, Desc.NumImmutableSamplers, SerializeImmutableSampler<Mode>);
 
     ASSERT_SIZEOF64(PipelineResourceSignatureDesc, 56, "Did you add a new member to PipelineResourceSignatureDesc? Please add serialization here.");
     ASSERT_SIZEOF64(PipelineResourceDesc, 24, "Did you add a new member to PipelineResourceDesc? Please add serialization here.");
 }
 
 template <SerializerMode Mode>
-void PSOSerializer<Mode>::SerializePRSInternalData(Serializer<Mode>&                                 Ser,
-                                                   ConstQual<PipelineResourceSignatureInternalData>& InternalData,
-                                                   DynamicLinearAllocator*                           Allocator)
+void PRSSerializer<Mode>::SerializeInternalData(Serializer<Mode>&                                 Ser,
+                                                ConstQual<PipelineResourceSignatureInternalData>& InternalData,
+                                                DynamicLinearAllocator*                           Allocator)
 {
     Ser(InternalData.ShaderStages,
         InternalData.StaticResShaderStages,
@@ -98,7 +98,7 @@ void PSOSerializer<Mode>::SerializePRSInternalData(Serializer<Mode>&            
 }
 
 template <SerializerMode Mode>
-void PSOSerializer<Mode>::SerializePSOCreateInfo(
+void PSOSerializer<Mode>::SerializeCreateInfo(
     Serializer<Mode>&                   Ser,
     ConstQual<PipelineStateCreateInfo>& CreateInfo,
     ConstQual<TPRSNames>&               PRSNames,
@@ -125,7 +125,7 @@ void PSOSerializer<Mode>::SerializePSOCreateInfo(
                                VarDesc.Flags);
                        });
 
-    Ser.SerializeArray(Allocator, ResourceLayout.ImmutableSamplers, ResourceLayout.NumImmutableSamplers, SerializeImmutableSampler);
+    Ser.SerializeArray(Allocator, ResourceLayout.ImmutableSamplers, ResourceLayout.NumImmutableSamplers, SerializeImmutableSampler<Mode>);
 
     // instead of ppResourceSignatures
     for (Uint32 i = 0; i < std::max(CreateInfo.ResourceSignaturesCount, 1u); ++i)
@@ -138,14 +138,14 @@ void PSOSerializer<Mode>::SerializePSOCreateInfo(
 }
 
 template <SerializerMode Mode>
-void PSOSerializer<Mode>::SerializePSOCreateInfo(
+void PSOSerializer<Mode>::SerializeCreateInfo(
     Serializer<Mode>&                           Ser,
     ConstQual<GraphicsPipelineStateCreateInfo>& CreateInfo,
     ConstQual<TPRSNames>&                       PRSNames,
     DynamicLinearAllocator*                     Allocator,
     ConstQual<const char*>&                     RenderPassName)
 {
-    SerializePSOCreateInfo(Ser, static_cast<ConstQual<PipelineStateCreateInfo>&>(CreateInfo), PRSNames, Allocator);
+    SerializeCreateInfo(Ser, static_cast<ConstQual<PipelineStateCreateInfo>&>(CreateInfo), PRSNames, Allocator);
 
     // Serialize GraphicsPipelineDesc
     Ser(CreateInfo.GraphicsPipeline.BlendDesc,
@@ -191,13 +191,13 @@ void PSOSerializer<Mode>::SerializePSOCreateInfo(
 }
 
 template <SerializerMode Mode>
-void PSOSerializer<Mode>::SerializePSOCreateInfo(
+void PSOSerializer<Mode>::SerializeCreateInfo(
     Serializer<Mode>&                          Ser,
     ConstQual<ComputePipelineStateCreateInfo>& CreateInfo,
     ConstQual<TPRSNames>&                      PRSNames,
     DynamicLinearAllocator*                    Allocator)
 {
-    SerializePSOCreateInfo(Ser, static_cast<ConstQual<PipelineStateCreateInfo>&>(CreateInfo), PRSNames, Allocator);
+    SerializeCreateInfo(Ser, static_cast<ConstQual<PipelineStateCreateInfo>&>(CreateInfo), PRSNames, Allocator);
 
     // skip shaders - they are device specific
 
@@ -205,13 +205,13 @@ void PSOSerializer<Mode>::SerializePSOCreateInfo(
 }
 
 template <SerializerMode Mode>
-void PSOSerializer<Mode>::SerializePSOCreateInfo(
+void PSOSerializer<Mode>::SerializeCreateInfo(
     Serializer<Mode>&                       Ser,
     ConstQual<TilePipelineStateCreateInfo>& CreateInfo,
     ConstQual<TPRSNames>&                   PRSNames,
     DynamicLinearAllocator*                 Allocator)
 {
-    SerializePSOCreateInfo(Ser, static_cast<ConstQual<PipelineStateCreateInfo>&>(CreateInfo), PRSNames, Allocator);
+    SerializeCreateInfo(Ser, static_cast<ConstQual<PipelineStateCreateInfo>&>(CreateInfo), PRSNames, Allocator);
 
     // Serialize TilePipelineDesc
     Ser(CreateInfo.TilePipeline.NumRenderTargets,
@@ -224,7 +224,7 @@ void PSOSerializer<Mode>::SerializePSOCreateInfo(
 }
 
 template <SerializerMode Mode>
-void PSOSerializer<Mode>::SerializePSOCreateInfo(
+void PSOSerializer<Mode>::SerializeCreateInfo(
     Serializer<Mode>&                                         Ser,
     ConstQual<RayTracingPipelineStateCreateInfo>&             CreateInfo,
     ConstQual<TPRSNames>&                                     PRSNames,
@@ -234,7 +234,7 @@ void PSOSerializer<Mode>::SerializePSOCreateInfo(
     const bool IsReading = (Allocator != nullptr);
     const bool IsWriting = !IsReading;
 
-    SerializePSOCreateInfo(Ser, static_cast<ConstQual<PipelineStateCreateInfo>&>(CreateInfo), PRSNames, Allocator);
+    SerializeCreateInfo(Ser, static_cast<ConstQual<PipelineStateCreateInfo>&>(CreateInfo), PRSNames, Allocator);
 
     // Serialize RayTracingPipelineDesc
     Ser(CreateInfo.RayTracingPipeline.ShaderRecordSize,
@@ -317,7 +317,7 @@ void PSOSerializer<Mode>::SerializePSOCreateInfo(
 }
 
 template <SerializerMode Mode>
-void PSOSerializer<Mode>::SerializeRenderPassDesc(
+void RPSerializer<Mode>::SerializeDesc(
     Serializer<Mode>&          Ser,
     ConstQual<RenderPassDesc>& RPDesc,
     DynamicLinearAllocator*    Allocator)
@@ -406,5 +406,13 @@ void PSOSerializer<Mode>::SerializeShaders(
 template struct PSOSerializer<SerializerMode::Read>;
 template struct PSOSerializer<SerializerMode::Write>;
 template struct PSOSerializer<SerializerMode::Measure>;
+
+template struct PRSSerializer<SerializerMode::Read>;
+template struct PRSSerializer<SerializerMode::Write>;
+template struct PRSSerializer<SerializerMode::Measure>;
+
+template struct RPSerializer<SerializerMode::Read>;
+template struct RPSerializer<SerializerMode::Write>;
+template struct RPSerializer<SerializerMode::Measure>;
 
 } // namespace Diligent

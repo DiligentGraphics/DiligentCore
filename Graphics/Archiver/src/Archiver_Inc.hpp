@@ -175,8 +175,8 @@ void SerializableResourceSignatureImpl::CreateDeviceSignature(DeviceType        
                                                               SHADER_TYPE                          ShaderStages)
 {
     using Traits                = SignatureTraits<SignatureImplType>;
-    using MeasureSerializerType = typename Traits::template PSOSerializerType<SerializerMode::Measure>;
-    using WriteSerializerType   = typename Traits::template PSOSerializerType<SerializerMode::Write>;
+    using MeasureSerializerType = typename Traits::template PRSSerializerType<SerializerMode::Measure>;
+    using WriteSerializerType   = typename Traits::template PRSSerializerType<SerializerMode::Write>;
 
     VERIFY_EXPR(Type == Traits::Type || (Type == DeviceType::Metal_iOS && Traits::Type == DeviceType::Metal_MacOS));
     VERIFY(!m_pDeviceSignatures[static_cast<size_t>(Type)], "Signature for this device type has already been initialized");
@@ -201,9 +201,9 @@ void SerializableResourceSignatureImpl::CreateDeviceSignature(DeviceType        
 
         MeasureSer(SpecialDesc);
         if (SpecialDesc)
-            PSOSerializer<SerializerMode::Measure>::SerializePRSDesc(MeasureSer, SignDesc, nullptr);
+            MeasureSerializerType::SerializeDesc(MeasureSer, SignDesc, nullptr);
 
-        MeasureSerializerType::SerializePRSInternalData(MeasureSer, InternalData, nullptr);
+        MeasureSerializerType::SerializeInternalData(MeasureSer, InternalData, nullptr);
 
         DeviceSignature.Data = SerializedData{MeasureSer.GetSize(), GetRawAllocator()};
     }
@@ -213,9 +213,9 @@ void SerializableResourceSignatureImpl::CreateDeviceSignature(DeviceType        
 
         Ser(SpecialDesc);
         if (SpecialDesc)
-            PSOSerializer<SerializerMode::Write>::SerializePRSDesc(Ser, SignDesc, nullptr);
+            WriteSerializerType::SerializeDesc(Ser, SignDesc, nullptr);
 
-        WriteSerializerType::SerializePRSInternalData(Ser, InternalData, nullptr);
+        WriteSerializerType::SerializeInternalData(Ser, InternalData, nullptr);
 
         VERIFY_EXPR(Ser.IsEnded());
     }

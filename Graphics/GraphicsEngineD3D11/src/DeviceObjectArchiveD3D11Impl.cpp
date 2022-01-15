@@ -28,7 +28,6 @@
 #include "RenderDeviceD3D11Impl.hpp"
 #include "DeviceObjectArchiveD3D11Impl.hpp"
 #include "PipelineResourceSignatureD3D11Impl.hpp"
-#include "PSOSerializer.hpp"
 
 namespace Diligent
 {
@@ -44,16 +43,16 @@ DeviceObjectArchiveD3D11Impl::~DeviceObjectArchiveD3D11Impl()
 
 RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveD3D11Impl::UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, bool IsImplicit)
 {
-    return DeviceObjectArchiveBase::UnpackResourceSignatureImpl<RenderDeviceD3D11Impl, PSOSerializerD3D11<SerializerMode::Read>>(DeArchiveInfo, IsImplicit);
+    return DeviceObjectArchiveBase::UnpackResourceSignatureImpl<RenderDeviceD3D11Impl, PRSSerializerD3D11<SerializerMode::Read>>(DeArchiveInfo, IsImplicit);
 }
 
 template <SerializerMode Mode>
-void PSOSerializerD3D11<Mode>::SerializePRSInternalData(
+void PRSSerializerD3D11<Mode>::SerializeInternalData(
     Serializer<Mode>&                                      Ser,
     ConstQual<PipelineResourceSignatureInternalDataD3D11>& InternalData,
     DynamicLinearAllocator*                                Allocator)
 {
-    PSOSerializer<Mode>::SerializePRSInternalData(Ser, InternalData, Allocator);
+    PRSSerializer<Mode>::SerializeInternalData(Ser, InternalData, Allocator);
 
     Ser.SerializeArrayRaw(Allocator, InternalData.pResourceAttribs, InternalData.NumResources);
     Ser.SerializeArrayRaw(Allocator, InternalData.pImmutableSamplers, InternalData.NumImmutableSamplers);
@@ -61,8 +60,8 @@ void PSOSerializerD3D11<Mode>::SerializePRSInternalData(
     ASSERT_SIZEOF64(InternalData, 56, "Did you add a new member to PipelineResourceSignatureInternalDataD3D11? Please add serialization here.");
 }
 
-template struct PSOSerializerD3D11<SerializerMode::Read>;
-template struct PSOSerializerD3D11<SerializerMode::Write>;
-template struct PSOSerializerD3D11<SerializerMode::Measure>;
+template struct PRSSerializerD3D11<SerializerMode::Read>;
+template struct PRSSerializerD3D11<SerializerMode::Write>;
+template struct PRSSerializerD3D11<SerializerMode::Measure>;
 
 } // namespace Diligent

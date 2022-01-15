@@ -37,12 +37,12 @@ SerializableRenderPassImpl::SerializableRenderPassImpl(IReferenceCounters*      
     TBase{pRefCounters, pDevice->GetDevice(), Desc, true}
 {
     Serializer<SerializerMode::Measure> MeasureSer;
-    PSOSerializer<SerializerMode::Measure>::SerializeRenderPassDesc(MeasureSer, m_Desc, nullptr);
+    RPSerializer<SerializerMode::Measure>::SerializeDesc(MeasureSer, m_Desc, nullptr);
 
     m_CommonData = SerializedData{MeasureSer.GetSize(), GetRawAllocator()};
 
     Serializer<SerializerMode::Write> Ser{m_CommonData};
-    PSOSerializer<SerializerMode::Write>::SerializeRenderPassDesc(Ser, m_Desc, nullptr);
+    RPSerializer<SerializerMode::Write>::SerializeDesc(Ser, m_Desc, nullptr);
     VERIFY_EXPR(Ser.IsEnded());
 }
 

@@ -44,7 +44,7 @@ struct SerializableResourceSignatureImpl::SignatureTraits<PipelineResourceSignat
     using InternalDataType           = PipelineResourceSignatureInternalDataD3D11;
 
     template <SerializerMode Mode>
-    using PSOSerializerType = PSOSerializerD3D11<Mode>;
+    using PRSSerializerType = PRSSerializerD3D11<Mode>;
 };
 
 namespace

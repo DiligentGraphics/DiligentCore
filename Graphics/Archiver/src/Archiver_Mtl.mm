@@ -51,7 +51,7 @@ struct SerializableResourceSignatureImpl::SignatureTraits<PipelineResourceSignat
     static constexpr DeviceType Type = DeviceType::Metal_MacOS;
 
     template <SerializerMode Mode>
-    using PSOSerializerType = PSOSerializerMtl<Mode>;
+    using PRSSerializerType = PRSSerializerMtl<Mode>;
 };
 
 namespace

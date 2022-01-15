@@ -441,7 +441,7 @@ private:
                                  OffsetSizeAndResourceMap<IPipelineState>& PSOMap);
 
 protected:
-    template <typename RenderDeviceImplType, typename PSOSerializerType>
+    template <typename RenderDeviceImplType, typename PRSSerializerType>
     RefCntAutoPtr<IPipelineResourceSignature> UnpackResourceSignatureImpl(
         const ResourceSignatureUnpackInfo& DeArchiveInfo,
         bool                               IsImplicit);
@@ -453,7 +453,7 @@ protected:
                                                 IRenderDevice*                    pDevice);
 };
 
-template <typename RenderDeviceImplType, typename PSOSerializerType>
+template <typename RenderDeviceImplType, typename PRSSerializerType>
 RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveBase::UnpackResourceSignatureImpl(
     const ResourceSignatureUnpackInfo& DeArchiveInfo,
     bool                               IsImplicit)
@@ -475,7 +475,7 @@ RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveBase::UnpackResourc
 
     Serializer<SerializerMode::Read> Ser{Data};
 
-    typename PSOSerializerType::PRSInternalDataType InternalData{PRS.InternalData};
+    typename PRSSerializerType::InternalDataType InternalData{PRS.InternalData};
 
     bool SpecialDesc = false;
     Ser(SpecialDesc);
@@ -487,7 +487,7 @@ RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveBase::UnpackResourc
         PRS.Deserialize(Name, Ser);
     }
 
-    PSOSerializerType::SerializePRSInternalData(Ser, InternalData, &PRS.Allocator);
+    PRSSerializerType::SerializeInternalData(Ser, InternalData, &PRS.Allocator);
     VERIFY_EXPR(Ser.IsEnded());
 
     auto* pRenderDevice = ClassPtrCast<RenderDeviceImplType>(DeArchiveInfo.pDevice);

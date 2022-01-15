@@ -81,7 +81,7 @@ struct SerializableResourceSignatureImpl::SignatureTraits<PipelineResourceSignat
     static constexpr DeviceType Type = DeviceType::Vulkan;
 
     template <SerializerMode Mode>
-    using PSOSerializerType = PSOSerializerVk<Mode>;
+    using PRSSerializerType = PRSSerializerVk<Mode>;
 };
 
 template <typename CreateInfoType>

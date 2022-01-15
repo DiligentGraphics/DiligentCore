@@ -80,7 +80,7 @@ struct SerializableResourceSignatureImpl::SignatureTraits<PipelineResourceSignat
     static constexpr DeviceType Type = DeviceType::Direct3D12;
 
     template <SerializerMode Mode>
-    using PSOSerializerType = PSOSerializerD3D12<Mode>;
+    using PRSSerializerType = PRSSerializerD3D12<Mode>;
 };
 
 template <typename CreateInfoType>
