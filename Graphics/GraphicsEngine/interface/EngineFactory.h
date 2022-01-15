@@ -93,7 +93,7 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactory, IObject)
                                            GraphicsAdapterInfo* Adapters) CONST PURE;
 
     /// Returns a pointer to the dearchiver object (see Diligent::IDearchiver).
-    VIRTUAL struct IDearchiver* METHOD(GetDearchiver)(THIS) PURE;
+    VIRTUAL struct IDearchiver* METHOD(GetDearchiver)(THIS) CONST PURE;
 
 #if PLATFORM_ANDROID
     /// On Android platform, it is necessary to initialize the file system before

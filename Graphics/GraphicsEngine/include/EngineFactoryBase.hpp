@@ -33,8 +33,10 @@
 #include "Object.h"
 #include "EngineFactory.h"
 #include "DefaultShaderSourceStreamFactory.h"
+#include "Dearchiver.h"
 #include "Atomics.hpp"
 #include "DummyReferenceCounters.hpp"
+#include "RefCntAutoPtr.hpp"
 
 namespace Diligent
 {
@@ -53,10 +55,11 @@ template <class BaseInterface>
 class EngineFactoryBase : public BaseInterface
 {
 public:
-    EngineFactoryBase(const INTERFACE_ID& FactoryIID) noexcept :
+    EngineFactoryBase(const INTERFACE_ID& FactoryIID, IDearchiver* pDearchiver) noexcept :
         // clang-format off
         m_FactoryIID  {FactoryIID},
-        m_RefCounters {*this     }
+        m_RefCounters {*this     },
+        m_pDearchiver {pDearchiver}
     // clang-format on
     {
     }
@@ -102,9 +105,16 @@ public:
         Diligent::CreateDefaultShaderSourceStreamFactory(SearchDirectories, ppShaderSourceFactory);
     }
 
+    virtual IDearchiver* DILIGENT_CALL_TYPE GetDearchiver() const override final
+    {
+        return m_pDearchiver.RawPtr<IDearchiver>();
+    }
+
 private:
     const INTERFACE_ID                        m_FactoryIID;
     DummyReferenceCounters<EngineFactoryBase> m_RefCounters;
+
+    RefCntAutoPtr<IDearchiver> m_pDearchiver;
 };
 
 } // namespace Diligent

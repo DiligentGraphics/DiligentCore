@@ -63,7 +63,11 @@ public:
 
     using TBase = EngineFactoryBase<IEngineFactoryVk>;
     EngineFactoryVkImpl() :
-        TBase{IID_EngineFactoryVk}
+        TBase //
+        {
+            IID_EngineFactoryVk,
+            NEW_RC_OBJ(GetRawAllocator(), "DearchiverVkImpl instance", DearchiverVkImpl)() //
+        }
     {
     }
 
@@ -111,11 +115,6 @@ public:
         m_EnableDeviceSimulation = true;
     }
 
-    virtual IDearchiver* DILIGENT_CALL_TYPE GetDearchiver() override final
-    {
-        return &m_Dearchiver;
-    }
-
 #if PLATFORM_ANDROID
     virtual void InitAndroidFileSystem(struct ANativeActivity* NativeActivity,
                                        const char*             NativeActivityClassName,
@@ -129,8 +128,6 @@ private:
     RefCntWeakPtr<IRenderDevice> m_wpDevice;
 
     bool m_EnableDeviceSimulation = false;
-
-    DearchiverVkImpl m_Dearchiver{nullptr}; // AZ TODO
 };
 
 

@@ -42,8 +42,8 @@ class EngineFactoryD3DBase : public EngineFactoryBase<BaseInterface>
 public:
     using TEngineFactoryBase = EngineFactoryBase<BaseInterface>;
 
-    EngineFactoryD3DBase(const INTERFACE_ID& FactoryIID) :
-        TEngineFactoryBase{FactoryIID}
+    EngineFactoryD3DBase(const INTERFACE_ID& FactoryIID, IDearchiver* pDearchiver) :
+        TEngineFactoryBase{FactoryIID, pDearchiver}
     {}
 
 
