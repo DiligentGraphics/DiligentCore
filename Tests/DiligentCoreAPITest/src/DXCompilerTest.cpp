@@ -280,9 +280,10 @@ TEST(DXCompilerTest, RemapBindingsRG)
 TEST(DXCompilerTest, RemapBindingsPS_1)
 {
     const std::string ShaderSource = R"hlsl(
-Texture2D     g_Tex1;
-Texture2D     g_Tex2;
-SamplerState  g_TexSampler;
+Texture2D               g_Tex1;
+Texture2D               g_Tex2;
+SamplerState            g_TexSampler;
+SamplerComparisonState  g_CmpSampler;
 
 cbuffer cbConstants1
 {
@@ -300,8 +301,8 @@ cbuffer cbConstants2
 float4 main() : SV_TARGET
 {
     float2 uv = float2(0.0, 1.0);
-    return g_Tex1.Sample(g_TexSampler, uv) * g_CBData1 +
-           g_Tex2.Sample(g_TexSampler, uv) * g_CBData2;
+    return g_Tex1.Sample   (g_TexSampler, uv)      * g_CBData1 +
+           g_Tex2.SampleCmp(g_CmpSampler, uv, 0.5) * g_CBData2;
 }
 )hlsl";
 
@@ -326,7 +327,8 @@ float4 main() : SV_TARGET
     // clang-format off
     BindigMap["g_Tex1"]       = {101, 0, 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
     BindigMap["g_Tex2"]       = { 22, 0, 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
-    BindigMap["g_TexSampler"] = {  0, 0, 1, SHADER_RESOURCE_TYPE_SAMPLER        };
+    BindigMap["g_TexSampler"] = {  2, 0, 1, SHADER_RESOURCE_TYPE_SAMPLER        };
+    BindigMap["g_CmpSampler"] = {  6, 0, 1, SHADER_RESOURCE_TYPE_SAMPLER        };
     BindigMap["cbConstants1"] = {  9, 0, 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
     BindigMap["cbConstants2"] = {  3, 0, 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
     BindigMap["g_AnotherRes"] = {567, 0, 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
@@ -350,7 +352,11 @@ float4 main() : SV_TARGET
         EXPECT_EQ(BindDesc.Space, 0U);
 
         EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_TexSampler", &BindDesc));
-        EXPECT_EQ(BindDesc.BindPoint, 0U);
+        EXPECT_EQ(BindDesc.BindPoint, 2U);
+        EXPECT_EQ(BindDesc.Space, 0U);
+
+        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_CmpSampler", &BindDesc));
+        EXPECT_EQ(BindDesc.BindPoint, 6U);
         EXPECT_EQ(BindDesc.Space, 0U);
 
         EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("cbConstants1", &BindDesc));
@@ -367,6 +373,7 @@ float4 main() : SV_TARGET
     BindigMap["g_Tex1"]       = {  0, 2, 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
     BindigMap["g_Tex2"]       = { 55, 4, 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
     BindigMap["g_TexSampler"] = {  1, 2, 1, SHADER_RESOURCE_TYPE_SAMPLER        };
+    BindigMap["g_CmpSampler"] = {  4, 5, 1, SHADER_RESOURCE_TYPE_SAMPLER        };
     BindigMap["cbConstants1"] = {  8, 3, 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
     BindigMap["cbConstants2"] = {  4, 6, 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
     BindigMap["g_AnotherRes"] = {567, 0, 1, SHADER_RESOURCE_TYPE_SAMPLER        };
@@ -392,6 +399,10 @@ float4 main() : SV_TARGET
         EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_TexSampler", &BindDesc));
         EXPECT_EQ(BindDesc.BindPoint, 1U);
         EXPECT_EQ(BindDesc.Space, 2U);
+
+        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_CmpSampler", &BindDesc));
+        EXPECT_EQ(BindDesc.BindPoint, 4U);
+        EXPECT_EQ(BindDesc.Space, 5U);
 
         EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("cbConstants1", &BindDesc));
         EXPECT_EQ(BindDesc.BindPoint, 8U);

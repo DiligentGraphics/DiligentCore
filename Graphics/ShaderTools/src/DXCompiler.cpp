@@ -1209,6 +1209,7 @@ void DXCompilerImpl::PatchResourceDeclaration(const TResourceBindingMap& Resourc
     static const String ResourceRecStart      = "= !{";
     static const String ResNameDecl           = ", !\"";
     static const String SamplerPart           = "SamplerState";
+    static const String SamplerComparisonPart = "SamplerComparisonState";
     static const String TexturePart           = "Texture";
     static const String RWTexturePart         = "RWTexture";
     static const String AccelStructPart       = "RaytracingAccelerationStructure";
@@ -1416,6 +1417,8 @@ void DXCompilerImpl::PatchResourceDeclaration(const TResourceBindingMap& Resourc
 
         RES_TYPE ResType = RES_TYPE_INVALID;
         if (std::strncmp(&DXIL[pos], SamplerPart.c_str(), SamplerPart.length()) == 0)
+            ResType = RES_TYPE_SAMPLER;
+        else if (std::strncmp(&DXIL[pos], SamplerComparisonPart.c_str(), SamplerComparisonPart.length()) == 0)
             ResType = RES_TYPE_SAMPLER;
         else if (std::strncmp(&DXIL[pos], TexturePart.c_str(), TexturePart.length()) == 0 && IsTextureSuffix(&DXIL[pos + TexturePart.length()]))
             ResType = RES_TYPE_SRV;
