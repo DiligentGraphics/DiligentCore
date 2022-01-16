@@ -122,11 +122,11 @@ bool ArchiverImpl::PatchShadersD3D12(const CreateInfoType& CreateInfo, TPSOData<
         SortResourceSignatures(ppSignatures, SignaturesCount, Signatures, SignaturesCount);
 
         RootSignatureD3D12 RootSig{nullptr, nullptr, Signatures.data(), SignaturesCount, 0};
-        PipelineStateD3D12Impl::RemapShaderResources(ShaderStagesD3D12,
-                                                     Signatures.data(),
-                                                     SignaturesCount,
-                                                     RootSig,
-                                                     m_pSerializationDevice->GetD3D12Properties().pDxCompiler);
+        PipelineStateD3D12Impl::RemapOrVerifyShaderResources(ShaderStagesD3D12,
+                                                             Signatures.data(),
+                                                             SignaturesCount,
+                                                             RootSig,
+                                                             m_pSerializationDevice->GetD3D12Properties().pDxCompiler);
     }
     catch (...)
     {

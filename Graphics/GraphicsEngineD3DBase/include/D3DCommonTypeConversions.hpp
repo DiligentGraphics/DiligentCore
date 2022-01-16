@@ -31,17 +31,10 @@
 /// Common D3D type conversions
 
 #include "GraphicsTypes.h"
-#include "PipelineResourceSignature.h"
 
 namespace Diligent
 {
-struct D3DShaderResourceAttribs;
 
 RESOURCE_DIMENSION D3DSrvDimensionToResourceDimension(D3D_SRV_DIMENSION SrvDim);
-
-/// Verifies that two pipeline resources are compatible and throws an exception in case of an error
-void VerifyD3DResourceMerge(const char*                     PSOName,
-                            const D3DShaderResourceAttribs& ExistingRes,
-                            const D3DShaderResourceAttribs& NewResAttribs) noexcept(false);
 
 } // namespace Diligent

@@ -1,6 +1,5 @@
 /*
  *  Copyright 2019-2022 Diligent Graphics LLC
- *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -25,34 +24,23 @@
  *  of the possibility of such damages.
  */
 
-#include "ShaderResources.hpp"
+#pragma once
 
-#include "WinHPreface.h"
-#include <d3dcommon.h>
-#include "WinHPostface.h"
+#include "ResourceBindingMap.hpp"
 
 namespace Diligent
 {
+struct D3DShaderResourceAttribs;
+class ShaderResources;
 
-RESOURCE_DIMENSION D3DSrvDimensionToResourceDimension(D3D_SRV_DIMENSION SrvDim)
-{
-    switch (SrvDim)
-    {
-        // clang-format off
-        case D3D_SRV_DIMENSION_BUFFER:           return RESOURCE_DIM_BUFFER;
-        case D3D_SRV_DIMENSION_TEXTURE1D:        return RESOURCE_DIM_TEX_1D;
-        case D3D_SRV_DIMENSION_TEXTURE1DARRAY:   return RESOURCE_DIM_TEX_1D_ARRAY;
-        case D3D_SRV_DIMENSION_TEXTURE2D:        return RESOURCE_DIM_TEX_2D;
-        case D3D_SRV_DIMENSION_TEXTURE2DARRAY:   return RESOURCE_DIM_TEX_2D_ARRAY;
-        case D3D_SRV_DIMENSION_TEXTURE2DMS:      return RESOURCE_DIM_TEX_2D;
-        case D3D_SRV_DIMENSION_TEXTURE2DMSARRAY: return RESOURCE_DIM_TEX_2D_ARRAY;
-        case D3D_SRV_DIMENSION_TEXTURE3D:        return RESOURCE_DIM_TEX_3D;
-        case D3D_SRV_DIMENSION_TEXTURECUBE:      return RESOURCE_DIM_TEX_CUBE;
-        case D3D_SRV_DIMENSION_TEXTURECUBEARRAY: return RESOURCE_DIM_TEX_CUBE_ARRAY;
-        // clang-format on
-        default:
-            return RESOURCE_DIM_BUFFER;
-    }
-}
+/// Verifies that two pipeline resources are compatible and throws an exception in case of an error
+void VerifyD3DResourceMerge(const char*                     PSOName,
+                            const D3DShaderResourceAttribs& ExistingRes,
+                            const D3DShaderResourceAttribs& NewResAttribs) noexcept(false);
+
+/// Verifies that shader resource bindings match the bindings map and throws an exception in case of an error
+void ValidateShaderResourceBindings(const char*                  PSOName,
+                                    const ShaderResources&       Resources,
+                                    const ResourceBinding::TMap& BindingsMap) noexcept(false);
 
 } // namespace Diligent

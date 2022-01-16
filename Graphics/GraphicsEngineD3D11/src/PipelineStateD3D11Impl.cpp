@@ -40,6 +40,7 @@
 #include "ShaderResourceBindingD3D11Impl.hpp"
 #include "EngineMemory.h"
 #include "DXBCUtils.hpp"
+#include "D3DShaderResourceValidation.hpp"
 
 namespace Diligent
 {
@@ -102,37 +103,6 @@ PipelineResourceSignatureDescWrapper PipelineStateD3D11Impl::GetDefaultResourceS
     }
 
     return SignDesc;
-}
-
-static void ValidateShaderResourceBindings(const char*                  PSOName,
-                                           const ShaderD3D11Impl*       pShader,
-                                           const ResourceBinding::TMap& BindingsMap) noexcept(false)
-{
-    const auto& ShaderResources = *pShader->GetShaderResources();
-    ShaderResources.ProcessResources(
-        [&](const D3DShaderResourceAttribs& Attribs, Uint32) //
-        {
-            auto it = BindingsMap.find(Attribs.Name);
-            if (it == BindingsMap.end())
-            {
-                LOG_ERROR_AND_THROW("Resource '", Attribs.Name, "' in shader '", pShader->GetDesc().Name, "' of PSO '", PSOName,
-                                    "' is not present in the resource bindings map.");
-            }
-
-            const auto& Bindings = it->second;
-            if (Bindings.BindPoint != Attribs.BindPoint)
-            {
-                LOG_ERROR_AND_THROW("Resource '", Attribs.Name, "' in shader '", pShader->GetDesc().Name, "' of PSO '", PSOName,
-                                    "' is mapped to register ", Attribs.BindPoint, " in the shader, but the PSO expects it to be mapped to register ", Bindings.BindPoint);
-            }
-
-            if (Bindings.Space != Attribs.Space)
-            {
-                LOG_ERROR_AND_THROW("Resource '", Attribs.Name, "' in shader '", pShader->GetDesc().Name, "' of PSO '", PSOName,
-                                    "' is mapped to space ", Attribs.Space, " in the shader, but the PSO expects it to be mapped to space ", Bindings.Space);
-            }
-        } //
-    );
 }
 
 void PipelineStateD3D11Impl::RemapOrVerifyShaderResources(const TShaderStages&                                     Shaders,
@@ -252,7 +222,7 @@ void PipelineStateD3D11Impl::InitResourceLayouts(PSO_CREATE_INTERNAL_FLAGS      
 
     const auto ValidateBindings = [this](const ShaderD3D11Impl* pShader, const ResourceBinding::TMap& BindingsMap) //
     {
-        ValidateShaderResourceBindings(m_Desc.Name, pShader, BindingsMap);
+        ValidateShaderResourceBindings(m_Desc.Name, *pShader->GetShaderResources(), BindingsMap);
     };
     const auto ValidateBindingsFn = !HandleRemappedBytecodeFn && (InternalFlags & PSO_CREATE_INTERNAL_FLAG_NO_SHADER_REFLECION) == 0 ?
         TValidateShaderBindingsFn{ValidateBindings} :

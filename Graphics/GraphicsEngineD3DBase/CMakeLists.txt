@@ -9,6 +9,7 @@ set(INCLUDE
     include/D3DErrors.hpp
     include/D3DTileMappingHelper.hpp
     include/D3DShaderResourceLoader.hpp
+    include/D3DShaderResourceValidation.hpp
     include/D3DTypeConversionImpl.hpp
     include/D3DViewDescConversionImpl.hpp
     include/DXGITypeConversions.hpp
@@ -27,6 +28,7 @@ set(INTERFACE
 
 set(SOURCE
     src/D3DCommonTypeConversions.cpp
+    src/D3DShaderResourceValidation.cpp
     src/DXGITypeConversions.cpp
     src/ShaderD3DBase.cpp
     src/ShaderResources.cpp

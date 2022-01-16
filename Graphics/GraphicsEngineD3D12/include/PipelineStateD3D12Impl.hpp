@@ -92,14 +92,17 @@ public:
     using TShaderStages = std::vector<ShaderStageInfo>;
 
     using TValidateShaderResourcesFn = std::function<void(const ShaderD3D12Impl* pShader, const LocalRootSignatureD3D12* pLocalRootSig)>;
-    static void RemapShaderResources(
+    using TValidateShaderBindingsFn  = std::function<void(const ShaderD3D12Impl* pShader, const ResourceBinding::TMap& BindingsMap)>;
+
+    static void RemapOrVerifyShaderResources(
         TShaderStages&                                           ShaderStages,
         const RefCntAutoPtr<PipelineResourceSignatureD3D12Impl>* pSignatures,
         Uint32                                                   SignatureCount,
         const RootSignatureD3D12&                                RootSig,
         class IDXCompiler*                                       pDxCompiler,
         LocalRootSignatureD3D12*                                 pLocalRootSig             = nullptr,
-        const TValidateShaderResourcesFn&                        ValidateShaderResourcesFn = {}) noexcept(false);
+        const TValidateShaderResourcesFn&                        ValidateShaderResourcesFn = {},
+        const TValidateShaderBindingsFn&                         VlidateBindingsFn         = {}) noexcept(false);
 
     static PipelineResourceSignatureDescWrapper GetDefaultResourceSignatureDesc(
         const TShaderStages&              ShaderStages,

@@ -48,6 +48,8 @@
 #include "EngineMemory.h"
 #include "StringTools.hpp"
 #include "DynamicLinearAllocator.hpp"
+#include "D3DShaderResourceValidation.hpp"
+
 #include "DXBCUtils.hpp"
 #include "DXCompiler.hpp"
 #include "dxc/dxcapi.h"
@@ -393,13 +395,14 @@ PipelineResourceSignatureDescWrapper PipelineStateD3D12Impl::GetDefaultResourceS
     return SignDesc;
 }
 
-void PipelineStateD3D12Impl::RemapShaderResources(TShaderStages&                                           ShaderStages,
-                                                  const RefCntAutoPtr<PipelineResourceSignatureD3D12Impl>* pSignatures,
-                                                  Uint32                                                   SignatureCount,
-                                                  const RootSignatureD3D12&                                RootSig,
-                                                  IDXCompiler*                                             pDxCompiler,
-                                                  LocalRootSignatureD3D12*                                 pLocalRootSig,
-                                                  const TValidateShaderResourcesFn&                        ValidateShaderResourcesFn) noexcept(false)
+void PipelineStateD3D12Impl::RemapOrVerifyShaderResources(TShaderStages&                                           ShaderStages,
+                                                          const RefCntAutoPtr<PipelineResourceSignatureD3D12Impl>* pSignatures,
+                                                          Uint32                                                   SignatureCount,
+                                                          const RootSignatureD3D12&                                RootSig,
+                                                          IDXCompiler*                                             pDxCompiler,
+                                                          LocalRootSignatureD3D12*                                 pLocalRootSig,
+                                                          const TValidateShaderResourcesFn&                        ValidateShaderResourcesFn,
+                                                          const TValidateShaderBindingsFn&                         VlidateBindingsFn) noexcept(false)
 {
     for (size_t s = 0; s < ShaderStages.size(); ++s)
     {
@@ -440,8 +443,7 @@ void PipelineStateD3D12Impl::RemapShaderResources(TShaderStages&                
 
         for (size_t i = 0; i < Shaders.size(); ++i)
         {
-            const auto* const pShader   = Shaders[i];
-            auto&             pBytecode = ByteCodes[i];
+            const auto* const pShader = Shaders[i];
 
             Uint32 VerMajor, VerMinor;
             pShader->GetShaderResources()->GetShaderModel(VerMajor, VerMinor);
@@ -463,24 +465,33 @@ void PipelineStateD3D12Impl::RemapShaderResources(TShaderStages&                
             if (ValidateShaderResourcesFn)
                 ValidateShaderResourcesFn(pShader, pLocalRootSig);
 
-            CComPtr<ID3DBlob> pBlob;
-            if (IsDXILBytecode(pBytecode->GetBufferPointer(), pBytecode->GetBufferSize()))
+            if (VlidateBindingsFn)
             {
-                if (!pDxCompiler)
-                    LOG_ERROR_AND_THROW("DXC compiler does not exists, can not remap resource bindings");
-
-                if (!pDxCompiler->RemapResourceBindings(ResourceMap, reinterpret_cast<IDxcBlob*>(pBytecode.p), reinterpret_cast<IDxcBlob**>(&pBlob)))
-                    LOG_ERROR_AND_THROW("Failed to remap resource bindings in shader '", pShader->GetDesc().Name, "'.");
+                VlidateBindingsFn(pShader, ResourceMap);
             }
             else
             {
-                D3DCreateBlob(pBytecode->GetBufferSize(), &pBlob);
-                memcpy(pBlob->GetBufferPointer(), pBytecode->GetBufferPointer(), pBytecode->GetBufferSize());
+                auto& pBytecode = ByteCodes[i];
 
-                if (!DXBCUtils::RemapResourceBindings(ResourceMap, pBlob->GetBufferPointer(), pBlob->GetBufferSize()))
-                    LOG_ERROR_AND_THROW("Failed to remap resource bindings in shader '", pShader->GetDesc().Name, "'.");
+                CComPtr<ID3DBlob> pBlob;
+                if (IsDXILBytecode(pBytecode->GetBufferPointer(), pBytecode->GetBufferSize()))
+                {
+                    if (!pDxCompiler)
+                        LOG_ERROR_AND_THROW("DXC compiler does not exists, can not remap resource bindings");
+
+                    if (!pDxCompiler->RemapResourceBindings(ResourceMap, reinterpret_cast<IDxcBlob*>(pBytecode.p), reinterpret_cast<IDxcBlob**>(&pBlob)))
+                        LOG_ERROR_AND_THROW("Failed to remap resource bindings in shader '", pShader->GetDesc().Name, "'.");
+                }
+                else
+                {
+                    D3DCreateBlob(pBytecode->GetBufferSize(), &pBlob);
+                    memcpy(pBlob->GetBufferPointer(), pBytecode->GetBufferPointer(), pBytecode->GetBufferSize());
+
+                    if (!DXBCUtils::RemapResourceBindings(ResourceMap, pBlob->GetBufferPointer(), pBlob->GetBufferSize()))
+                        LOG_ERROR_AND_THROW("Failed to remap resource bindings in shader '", pShader->GetDesc().Name, "'.");
+                }
+                pBytecode = pBlob;
             }
-            pBytecode = pBlob;
         }
     }
 }
@@ -511,18 +522,31 @@ void PipelineStateD3D12Impl::InitRootSignature(PSO_CREATE_INTERNAL_FLAGS Interna
             LOG_ERROR_AND_THROW("Failed to create local root signature for pipeline '", m_Desc.Name, "'.");
     }
 
-    // Verify that pipeline layout is compatible with shader resources and remap resource bindings.
-    if ((InternalFlags & PSO_CREATE_INTERNAL_FLAG_DONT_REMAP_SHADER_RESOURCES) == 0)
+    const auto RemapResources = (InternalFlags & PSO_CREATE_INTERNAL_FLAG_DONT_REMAP_SHADER_RESOURCES) == 0;
+
+    const auto ValidateBindings = [this](const ShaderD3D12Impl* pShader, const ResourceBinding::TMap& BindingsMap) //
     {
-        RemapShaderResources(ShaderStages,
-                             m_Signatures,
-                             m_SignatureCount,
-                             *m_RootSig,
-                             GetDevice()->GetDxCompiler(),
-                             pLocalRootSig,
-                             [this](const ShaderD3D12Impl* pShader, const LocalRootSignatureD3D12* pLocalRootSig) {
-                                 ValidateShaderResources(pShader, pLocalRootSig);
-                             });
+        ValidateShaderResourceBindings(m_Desc.Name, *pShader->GetShaderResources(), BindingsMap);
+    };
+    const auto ValidateBindingsFn = !RemapResources && (InternalFlags & PSO_CREATE_INTERNAL_FLAG_NO_SHADER_REFLECION) == 0 ?
+        TValidateShaderBindingsFn{ValidateBindings} :
+        TValidateShaderBindingsFn{nullptr};
+
+
+    // Verify that pipeline layout is compatible with shader resources and remap resource bindings.
+    if (RemapResources || ValidateBindingsFn)
+    {
+        RemapOrVerifyShaderResources(
+            ShaderStages,
+            m_Signatures,
+            m_SignatureCount,
+            *m_RootSig,
+            GetDevice()->GetDxCompiler(),
+            pLocalRootSig,
+            [this](const ShaderD3D12Impl* pShader, const LocalRootSignatureD3D12* pLocalRootSig) {
+                ValidateShaderResources(pShader, pLocalRootSig);
+            },
+            ValidateBindingsFn);
     }
 }
 
