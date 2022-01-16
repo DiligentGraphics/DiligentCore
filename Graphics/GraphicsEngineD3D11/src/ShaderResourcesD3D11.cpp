@@ -38,6 +38,11 @@
 namespace Diligent
 {
 
+static constexpr Uint32 GetRegisterSpace(const D3D11_SHADER_INPUT_BIND_DESC&)
+{
+    return 0;
+}
+
 ShaderResourcesD3D11::ShaderResourcesD3D11(ID3DBlob*         pShaderBytecode,
                                            const ShaderDesc& ShdrDesc,
                                            const char*       CombinedSamplerSuffix) :

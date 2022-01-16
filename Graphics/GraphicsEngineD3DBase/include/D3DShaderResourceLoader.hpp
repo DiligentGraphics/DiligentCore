@@ -206,6 +206,7 @@ void LoadD3DShaderResources(TShaderReflection*  pShaderReflection,
             it.first->c_str(),
             BindingDesc.BindPoint,
             BindCount,
+            GetRegisterSpace(BindingDesc),
             BindingDesc.Type,
             BindingDesc.Dimension,
             D3DShaderResourceAttribs::InvalidSamplerId);

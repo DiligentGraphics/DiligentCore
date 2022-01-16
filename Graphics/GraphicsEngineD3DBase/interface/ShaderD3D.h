@@ -46,6 +46,7 @@ static const struct INTERFACE_ID IID_ShaderD3D =
 struct HLSLShaderResourceDesc DILIGENT_DERIVE(ShaderResourceDesc)
 
     Uint32 ShaderRegister DEFAULT_INITIALIZER(0);
+    Uint32 RegisterSpace  DEFAULT_INITIALIZER(0);
 };
 typedef struct HLSLShaderResourceDesc HLSLShaderResourceDesc;
 

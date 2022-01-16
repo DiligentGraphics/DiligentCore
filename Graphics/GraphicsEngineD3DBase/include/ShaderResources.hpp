@@ -84,8 +84,9 @@ struct D3DShaderResourceAttribs
 
 /* 0 */ const char* const Name;
 
-/* 8 */ const Uint16 BindPoint;
-/*10 */ const Uint16 BindCount;
+/* 8 */ const Uint32 BindPoint;
+/*12 */ const Uint32 BindCount;
+/*16 */ const Uint32 Space;
 
     //            4               4                 24
     // bit | 0  1  2  3   |  4  5  6  7  |  8   9  10   ...   31  |
@@ -104,10 +105,10 @@ private:
          // There originally was a problem when the type of InputType was D3D_SHADER_INPUT_TYPE:
          // the value of D3D_SIT_UAV_RWBYTEADDRESS (8) was interpreted as -8 (as the underlying enum type
          // is signed) causing errors
-/*12.0*/ const Uint32  InputType          : ShaderInputTypeBits;     // Max value: D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER == 11
-/*12.4*/ const Uint32  SRVDimension       : SRVDimBits;              // Max value: D3D_SRV_DIMENSION_BUFFEREX == 11
-/*13.0*/       Uint32  SamplerOrTexSRVId  : SamplerOrTexSRVIdBits;   // Max value: 2^24-1
-/*16  */ // End of structure
+/*20.0*/ const Uint32  InputType          : ShaderInputTypeBits;     // Max value: D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER == 11
+/*20.4*/ const Uint32  SRVDimension       : SRVDimBits;              // Max value: D3D_SRV_DIMENSION_BUFFEREX == 11
+/*21.0*/       Uint32  SamplerOrTexSRVId  : SamplerOrTexSRVIdBits;   // Max value: 2^24-1
+/*24  */ // End of structure
 
     // clang-format on
 
@@ -115,21 +116,21 @@ public:
     static constexpr const Uint32 InvalidSamplerId = (1U << SamplerOrTexSRVIdBits) - 1U;
     static constexpr const Uint32 MaxSamplerId     = InvalidSamplerId - 1;
     static constexpr const Uint32 InvalidTexSRVId  = (1U << SamplerOrTexSRVIdBits) - 1U;
-    static constexpr const Uint16 InvalidBindPoint = std::numeric_limits<Uint16>::max();
-    static constexpr const Uint16 MaxBindPoint     = InvalidBindPoint - 1;
-    static constexpr const Uint16 MaxBindCount     = std::numeric_limits<Uint16>::max();
+    static constexpr const auto   InvalidBindPoint = std::numeric_limits<decltype(BindPoint)>::max();
 
 
     D3DShaderResourceAttribs(const char*           _Name,
                              UINT                  _BindPoint,
                              UINT                  _BindCount,
+                             UINT                  _Space,
                              D3D_SHADER_INPUT_TYPE _InputType,
                              D3D_SRV_DIMENSION     _SRVDimension,
                              Uint32                _SamplerId) noexcept :
         // clang-format off
         Name               {_Name},
-        BindPoint          {static_cast<decltype(BindPoint)>   (_BindPoint)   },
-        BindCount          {static_cast<decltype(BindCount)>   (_BindCount)   },
+        BindPoint          {_BindPoint},
+        BindCount          {_BindCount},
+        Space              {_Space},
         InputType          {static_cast<decltype(InputType)>   (_InputType)   },
         SRVDimension       {static_cast<decltype(SRVDimension)>(_SRVDimension)},
         SamplerOrTexSRVId  {_SamplerId}
@@ -137,8 +138,6 @@ public:
     {
 #ifdef DILIGENT_DEBUG
         // clang-format off
-        VERIFY(_BindPoint <= MaxBindPoint || _BindPoint == InvalidBindPoint, "Bind Point is out of allowed range");
-        VERIFY(_BindCount <= MaxBindCount, "Bind Count is out of allowed range");
         VERIFY(_InputType    < (1 << ShaderInputTypeBits),   "Shader input type is out of expected range");
         VERIFY(_SRVDimension < (1 << SRVDimBits),            "SRV dimensions is out of expected range");
         VERIFY(_SamplerId    < (1 << SamplerOrTexSRVIdBits), "SamplerOrTexSRVId is out of representable range");
@@ -151,13 +150,14 @@ public:
 #endif
     }
 
-    D3DShaderResourceAttribs(StringPool& NamesPool, const D3DShaderResourceAttribs& rhs, Uint32 _SamplerId, Uint32 _BindPoint) noexcept :
+    D3DShaderResourceAttribs(StringPool& NamesPool, const D3DShaderResourceAttribs& rhs, Uint32 _SamplerId) noexcept :
         // clang-format off
         D3DShaderResourceAttribs
         {
             NamesPool.CopyString(rhs.Name),
-            _BindPoint,
+            rhs.BindPoint,
             rhs.BindCount,
+            rhs.Space,
             rhs.GetInputType(),
             rhs.GetSRVDimension(),
             _SamplerId
@@ -175,6 +175,7 @@ public:
             NamesPool.CopyString(rhs.Name),
             rhs.BindPoint,
             rhs.BindCount,
+            rhs.Space,
             rhs.GetInputType(),
             rhs.GetSRVDimension(),
             rhs.SamplerOrTexSRVId
@@ -226,6 +227,7 @@ public:
     {
         return BindPoint == Attribs.BindPoint &&
             BindCount == Attribs.BindCount &&
+            Space == Attribs.Space &&
             InputType == Attribs.InputType &&
             SRVDimension == Attribs.SRVDimension &&
             SamplerOrTexSRVId == Attribs.SamplerOrTexSRVId;
@@ -233,7 +235,7 @@ public:
 
     size_t GetHash() const
     {
-        return ComputeHash(BindPoint, BindCount, InputType, SRVDimension, SamplerOrTexSRVId);
+        return ComputeHash(BindPoint, BindCount, Space, InputType, SRVDimension, SamplerOrTexSRVId);
     }
 
     HLSLShaderResourceDesc GetHLSLResourceDesc() const
@@ -242,6 +244,7 @@ public:
         ResourceDesc.Name           = Name;
         ResourceDesc.ArraySize      = BindCount;
         ResourceDesc.ShaderRegister = BindPoint;
+        ResourceDesc.RegisterSpace  = Space;
         ResourceDesc.Type           = GetShaderResourceType();
 
         return ResourceDesc;
@@ -272,7 +275,7 @@ private:
         return SamplerOrTexSRVId;
     }
 };
-static_assert(sizeof(D3DShaderResourceAttribs) == sizeof(void*) + sizeof(Uint32) * 2, "Unexpected sizeof(D3DShaderResourceAttribs)");
+static_assert(sizeof(D3DShaderResourceAttribs) == sizeof(void*) + sizeof(Uint32) * 4, "Unexpected sizeof(D3DShaderResourceAttribs)");
 
 
 /// Diligent::ShaderResources class
@@ -554,7 +557,7 @@ void ShaderResources::Initialize(TShaderReflection*  pShaderReflection,
             VERIFY(CurrSampler == GetNumSamplers(), "All samplers must be initialized before texture SRVs");
 
             auto  SamplerId  = CombinedSamplerSuffix != nullptr ? FindAssignedSamplerId(TexAttribs, CombinedSamplerSuffix) : D3DShaderResourceAttribs::InvalidSamplerId;
-            auto* pNewTexSRV = new (&GetTexSRV(CurrTexSRV)) D3DShaderResourceAttribs{ResourceNamesPool, TexAttribs, SamplerId, TexAttribs.BindPoint};
+            auto* pNewTexSRV = new (&GetTexSRV(CurrTexSRV)) D3DShaderResourceAttribs{ResourceNamesPool, TexAttribs, SamplerId};
             if (SamplerId != D3DShaderResourceAttribs::InvalidSamplerId)
             {
                 GetSampler(SamplerId).SetTexSRVId(CurrTexSRV);

@@ -125,6 +125,12 @@ static void ValidateShaderResourceBindings(const char*                  PSOName,
                 LOG_ERROR_AND_THROW("Resource '", Attribs.Name, "' in shader '", pShader->GetDesc().Name, "' of PSO '", PSOName,
                                     "' is mapped to register ", Attribs.BindPoint, " in the shader, but the PSO expects it to be mapped to register ", Bindings.BindPoint);
             }
+
+            if (Bindings.Space != Attribs.Space)
+            {
+                LOG_ERROR_AND_THROW("Resource '", Attribs.Name, "' in shader '", pShader->GetDesc().Name, "' of PSO '", PSOName,
+                                    "' is mapped to space ", Attribs.Space, " in the shader, but the PSO expects it to be mapped to space ", Bindings.Space);
+            }
         } //
     );
 }
