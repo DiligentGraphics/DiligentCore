@@ -30,6 +30,8 @@
 /// \file
 /// Common definitions
 
+#include <stdint.h>
+
 #ifndef DILIGENT_C_INTERFACE
 #    ifdef __cplusplus
 #        define DILIGENT_C_INTERFACE 0
@@ -43,6 +45,14 @@
 #    define DILIGENT_CALL_TYPE __cdecl
 #else
 #    define DILIGENT_CALL_TYPE
+#endif
+
+#if UINTPTR_MAX == UINT64_MAX
+#    define DILIGENT_PLATFORM_64 1
+#elif UINTPTR_MAX == UINT32_MAX
+#    define DILIGENT_PLATFORM_32 1
+#else
+#    pragma error Unexpected value of UINTPTR_MAX
 #endif
 
 #if DILIGENT_C_INTERFACE

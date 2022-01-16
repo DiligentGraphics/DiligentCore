@@ -192,8 +192,11 @@ void ValidatePipelineResourceSignatures(const PipelineStateCreateInfo& CreateInf
 
     const auto& PSODesc = CreateInfo.PSODesc;
 
-    if ((CreateInfo.Flags & PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0) != 0 && CreateInfo.ResourceSignaturesCount != 1)
-        LOG_PSO_ERROR_AND_THROW("When PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0 flag is set, ResourceSignaturesCount (", CreateInfo.ResourceSignaturesCount, ") must be 1.");
+    const auto* pInternalCI   = static_cast<const PSOCreateInternalInfo*>(CreateInfo.pInternalData);
+    const auto  InternalFlags = pInternalCI != nullptr ? pInternalCI->Flags : PSO_CREATE_INTERNAL_FLAG_NONE;
+
+    if ((InternalFlags & PSO_CREATE_INTERNAL_FLAG_IMPLICIT_SIGNATURE0) != 0 && CreateInfo.ResourceSignaturesCount != 1)
+        LOG_PSO_ERROR_AND_THROW("When PSO_CREATE_INTERNAL_FLAG_IMPLICIT_SIGNATURE0 flag is set, ResourceSignaturesCount (", CreateInfo.ResourceSignaturesCount, ") must be 1.");
 
     if (CreateInfo.ResourceSignaturesCount != 0 && CreateInfo.ppResourceSignatures == nullptr)
         LOG_PSO_ERROR_AND_THROW("ppResourceSignatures is null, but ResourceSignaturesCount (", CreateInfo.ResourceSignaturesCount, ") is not zero.");
@@ -209,7 +212,7 @@ void ValidatePipelineResourceSignatures(const PipelineStateCreateInfo& CreateInf
         LOG_WARNING_MESSAGE("PSODesc.SRBAllocationGranularity is ignored when explicit resource signatures are used. Use default value (1) to silence this warning.");
     }
 
-    if ((CreateInfo.Flags & PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0) == 0)
+    if ((InternalFlags & PSO_CREATE_INTERNAL_FLAG_IMPLICIT_SIGNATURE0) == 0)
     {
         if (CreateInfo.PSODesc.ResourceLayout.NumVariables != 0)
         {
@@ -327,7 +330,7 @@ void ValidatePipelineResourceSignatures(const PipelineStateCreateInfo& CreateInf
     }
 
 
-    if ((CreateInfo.Flags & PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0) != 0 &&
+    if ((InternalFlags & PSO_CREATE_INTERNAL_FLAG_IMPLICIT_SIGNATURE0) != 0 &&
         // Deserialized default signatures are empty in OpenGL.
         !DeviceInfo.IsGLDevice())
     {
@@ -350,16 +353,14 @@ void ValidatePipelineResourceSignatures(const PipelineStateCreateInfo& CreateInf
                 {
                     LOG_PSO_ERROR_AND_THROW("Shader stages of variable '", Var.Name, "' defined by the resource layout (", GetShaderStagesString(Var.ShaderStages),
                                             ") do not match the stages defined by the implicit resource signature (", GetShaderStagesString(SignRes.Stages),
-                                            "). Note that PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0 flag is for internal use only. If you see this message while "
-                                            "unpacking PSO from the archive, this might indicate a bug.");
+                                            "). This might indicate a bug in the serialization/deserialization logic.");
                 }
 
                 if (SignRes.Desc.VarType != Var.Type)
                 {
                     LOG_PSO_ERROR_AND_THROW("The type of variable '", Var.Name, "' defined by the resource layout (", GetShaderVariableTypeLiteralName(Var.Type),
                                             ") does not match the type defined by the implicit resource signature (", GetShaderVariableTypeLiteralName(SignRes.Desc.VarType),
-                                            "). Note that PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0 flag is for internal use only. If you see this message while "
-                                            "unpacking PSO from the archive, this might indicate a bug.");
+                                            "). This might indicate a bug in the serialization/deserialization logic.");
                 }
 
                 break;
@@ -394,8 +395,7 @@ void ValidatePipelineResourceSignatures(const PipelineStateCreateInfo& CreateInf
             {
                 LOG_PSO_ERROR_AND_THROW("The type of variable '", ResDesc.Name, "' not explicitly defined by the resource layout (", GetShaderVariableTypeLiteralName(ResDesc.VarType),
                                         ") does not match the default variable type (", GetShaderVariableTypeLiteralName(ResLayout.DefaultVariableType),
-                                        "). Note that PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0 flag is for internal use only. If you see this message while "
-                                        "unpacking PSO from the archive, this might indicate a bug.");
+                                        "). This might indicate a bug in the serialization/deserialization logic.");
             }
         }
 
@@ -416,8 +416,7 @@ void ValidatePipelineResourceSignatures(const PipelineStateCreateInfo& CreateInf
                 {
                     LOG_PSO_ERROR_AND_THROW("Shader stages of immutable sampler '", ImtblSam.SamplerOrTextureName, "' defined by the resource layout (", GetShaderStagesString(ImtblSam.ShaderStages),
                                             ") do not match the stages defined by the implicit resource signatre (", GetShaderStagesString(ImtblSam.ShaderStages),
-                                            "). Note that PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0 flag is for internal use only. If you see this message while "
-                                            "unpacking PSO from the archive, this might indicate a bug.");
+                                            "). This might indicate a bug in the serialization/deserialization logic.");
                 }
 
                 break;
@@ -425,8 +424,7 @@ void ValidatePipelineResourceSignatures(const PipelineStateCreateInfo& CreateInf
             if (it == range.second)
             {
                 LOG_PSO_ERROR_AND_THROW("Resource layout contains immutable sampler '", ImtblSam.SamplerOrTextureName, "' that is not present in the implicit resource signatre. ",
-                                        "Note that PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0 flag is for internal use only. If you see this message while "
-                                        "unpacking PSO from the archive, this might indicate a bug.");
+                                        "This might indicate a bug in the serialization/deserialization logic.");
             }
 
             AllImtblSamplers.erase(it);
@@ -435,8 +433,7 @@ void ValidatePipelineResourceSignatures(const PipelineStateCreateInfo& CreateInf
         {
             const auto& SamDesc = AllImtblSamplers.begin()->second.Desc;
             LOG_PSO_ERROR_AND_THROW("Implicit resource signature contains immutable sampler '", SamDesc.SamplerOrTextureName, "' that is not present in the resource layout. ",
-                                    "Note that PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0 flag is for internal use only. If you see this message while "
-                                    "unpacking PSO from the archive, this might indicate a bug.");
+                                    "This might indicate a bug in the serialization/deserialization logic.");
         }
     }
 }

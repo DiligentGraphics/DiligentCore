@@ -738,9 +738,9 @@ void PipelineStateVkImpl::RemapShaderResources(
     }
 }
 
-void PipelineStateVkImpl::InitPipelineLayout(PSO_CREATE_FLAGS Flags, TShaderStages& ShaderStages) noexcept(false)
+void PipelineStateVkImpl::InitPipelineLayout(PSO_CREATE_INTERNAL_FLAGS InternalFlags, TShaderStages& ShaderStages) noexcept(false)
 {
-    if (m_UsingImplicitSignature && (Flags & PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0) == 0)
+    if (m_UsingImplicitSignature && (InternalFlags & PSO_CREATE_INTERNAL_FLAG_IMPLICIT_SIGNATURE0) == 0)
     {
         const auto SignDesc = GetDefaultResourceSignatureDesc(ShaderStages, m_Desc.Name, m_Desc.ResourceLayout, m_Desc.SRBAllocationGranularity);
         InitDefaultSignature(SignDesc, GetActiveShaderStages(), false /*bIsDeviceInternal*/);
@@ -753,7 +753,7 @@ void PipelineStateVkImpl::InitPipelineLayout(PSO_CREATE_FLAGS Flags, TShaderStag
 
     m_PipelineLayout.Create(GetDevice(), m_Signatures, m_SignatureCount);
 
-    if ((Flags & PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES) == 0)
+    if ((InternalFlags & PSO_CREATE_INTERNAL_FLAG_DONT_REMAP_SHADER_RESOURCES) == 0)
     {
         TBindIndexToDescSetIndex BindIndexToDescSetIndex = {};
         for (Uint32 i = 0; i < m_SignatureCount; ++i)
@@ -793,7 +793,7 @@ PipelineStateVkImpl::TShaderStages PipelineStateVkImpl::InitInternalObjects(
 
     InitializePipelineDesc(CreateInfo, MemPool);
 
-    InitPipelineLayout(CreateInfo.Flags, ShaderStages);
+    InitPipelineLayout(GetInternalCreateFlags(CreateInfo), ShaderStages);
 
     // Create shader modules and initialize shader stages
     InitPipelineShaderStages(LogicalDevice, ShaderStages, ShaderModules, vkShaderStages);

@@ -342,7 +342,7 @@ void RPSerializer<Mode>::SerializeDesc(
                            Ser.SerializeArray(Allocator, Subpass.pInputAttachments, Subpass.InputAttachmentCount, SerializeAttachmentRef);
                            Ser.SerializeArray(Allocator, Subpass.pRenderTargetAttachments, Subpass.RenderTargetAttachmentCount, SerializeAttachmentRef);
 
-                           // Note: in Reda mode, ResolveAttachCount, DepthStencilAttachCount, and ShadingRateAttachCount will be overwritten
+                           // Note: in Read mode, ResolveAttachCount, DepthStencilAttachCount, and ShadingRateAttachCount will be overwritten
                            Uint32 ResolveAttachCount = Subpass.pResolveAttachments != nullptr ? Subpass.RenderTargetAttachmentCount : 0;
                            Ser.SerializeArray(Allocator, Subpass.pResolveAttachments, ResolveAttachCount, SerializeAttachmentRef);
 

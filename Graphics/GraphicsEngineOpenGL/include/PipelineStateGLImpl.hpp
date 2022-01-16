@@ -90,9 +90,9 @@ private:
     template <typename PSOCreateInfoType>
     void InitInternalObjects(const PSOCreateInfoType& CreateInfo, const TShaderStages& ShaderStages);
 
-    void InitResourceLayout(PSO_CREATE_FLAGS     Flags,
-                            const TShaderStages& ShaderStages,
-                            SHADER_TYPE          ActiveStages);
+    void InitResourceLayout(PSO_CREATE_INTERNAL_FLAGS InternalFlags,
+                            const TShaderStages&      ShaderStages,
+                            SHADER_TYPE               ActiveStages);
 
     PipelineResourceSignatureDescWrapper GetDefaultSignatureDesc(
         const TShaderStages& ShaderStages,

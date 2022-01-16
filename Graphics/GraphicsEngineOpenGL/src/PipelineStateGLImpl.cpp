@@ -159,13 +159,13 @@ PipelineResourceSignatureDescWrapper PipelineStateGLImpl::GetDefaultSignatureDes
     return SignDesc;
 }
 
-void PipelineStateGLImpl::InitResourceLayout(PSO_CREATE_FLAGS     Flags,
-                                             const TShaderStages& ShaderStages,
-                                             SHADER_TYPE          ActiveStages)
+void PipelineStateGLImpl::InitResourceLayout(PSO_CREATE_INTERNAL_FLAGS InternalFlags,
+                                             const TShaderStages&      ShaderStages,
+                                             SHADER_TYPE               ActiveStages)
 {
     if (m_UsingImplicitSignature)
     {
-        if ((Flags & PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0) != 0)
+        if ((InternalFlags & PSO_CREATE_INTERNAL_FLAG_IMPLICIT_SIGNATURE0) != 0)
         {
             // Release deserialized default signature as it is empty in OpenGL.
             // We need to create a new one from scratch.
@@ -285,7 +285,7 @@ void PipelineStateGLImpl::InitInternalObjects(const PSOCreateInfoType& CreateInf
         m_GLPrograms[0].SetName(m_Desc.Name);
     }
 
-    InitResourceLayout(CreateInfo.Flags, ShaderStages, ActiveStages);
+    InitResourceLayout(GetInternalCreateFlags(CreateInfo), ShaderStages, ActiveStages);
 }
 
 PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*                    pRefCounters,

@@ -130,7 +130,7 @@ private:
     void InitInternalObjects(const PSOCreateInfoType& CreateInfo,
                              CComPtr<ID3DBlob>&       pVSByteCode);
 
-    void InitResourceLayouts(PSO_CREATE_FLAGS                     Flags,
+    void InitResourceLayouts(PSO_CREATE_INTERNAL_FLAGS            InternalFlags,
                              const std::vector<ShaderD3D11Impl*>& Shaders,
                              CComPtr<ID3DBlob>&                   pVSByteCode);
 

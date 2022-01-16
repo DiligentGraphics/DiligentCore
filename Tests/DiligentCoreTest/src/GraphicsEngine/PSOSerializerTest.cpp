@@ -312,7 +312,7 @@ static void TestSerializePSOCreateInfo(HelperType&& Helper)
         SrcPSO.PSODesc.SRBAllocationGranularity = 11;
 
         RndValue(SrcPSO.PSODesc.PipelineType, PIPELINE_TYPE_GRAPHICS, PIPELINE_TYPE_LAST);
-        RndValue(SrcPSO.Flags, PSO_CREATE_FLAG_NONE, (PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES << 1) - 1);
+        RndValue(SrcPSO.Flags, PSO_CREATE_FLAG_NONE, (PSO_CREATE_FLAG_LAST << 1) - 1);
         RndValue(SrcPSO.ResourceSignaturesCount, 1u, std::min<Uint32>(MAX_RESOURCE_SIGNATURES, _countof(PRSNames)) - 1);
 
         for (Uint32 i = 0; i < SrcPSO.ResourceSignaturesCount; ++i)

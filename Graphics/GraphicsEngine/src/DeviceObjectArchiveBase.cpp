@@ -413,12 +413,14 @@ bool DeviceObjectArchiveBase::PSOData<CreateInfoType>::Deserialize(const char* N
 
     DeserializeInternal(Ser);
 
-    CreateInfo.Flags |= PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES;
+    InternalCI.Flags |= PSO_CREATE_INTERNAL_FLAG_DONT_REMAP_SHADER_RESOURCES;
+
+    CreateInfo.pInternalData = &InternalCI;
 
     if (CreateInfo.ResourceSignaturesCount == 0)
     {
         CreateInfo.ResourceSignaturesCount = 1;
-        CreateInfo.Flags |= PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0;
+        InternalCI.Flags |= PSO_CREATE_INTERNAL_FLAG_IMPLICIT_SIGNATURE0;
     }
 
     return true;
@@ -468,7 +470,7 @@ bool DeviceObjectArchiveBase::UnpackPSOSignatures(PSOData<CreateInfoType>& PSO, 
         ResourceSignatureUnpackInfo UnpackInfo{pRenderDevice, this, PSO.PRSNames[i]};
         UnpackInfo.SRBAllocationGranularity = PSO.CreateInfo.PSODesc.SRBAllocationGranularity;
 
-        auto pSignature = UnpackResourceSignature(UnpackInfo, (PSO.CreateInfo.Flags & PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0) != 0);
+        auto pSignature = UnpackResourceSignature(UnpackInfo, (PSO.InternalCI.Flags & PSO_CREATE_INTERNAL_FLAG_IMPLICIT_SIGNATURE0) != 0);
         if (!pSignature)
             return false;
 

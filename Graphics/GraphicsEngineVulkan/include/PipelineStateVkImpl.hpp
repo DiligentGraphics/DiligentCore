@@ -122,7 +122,7 @@ private:
                                       std::vector<VkPipelineShaderStageCreateInfo>&      vkShaderStages,
                                       std::vector<VulkanUtilities::ShaderModuleWrapper>& ShaderModules) noexcept(false);
 
-    void InitPipelineLayout(PSO_CREATE_FLAGS Flags, TShaderStages& ShaderStages) noexcept(false);
+    void InitPipelineLayout(PSO_CREATE_INTERNAL_FLAGS InternalFlags, TShaderStages& ShaderStages) noexcept(false);
 
     void Destruct();
 

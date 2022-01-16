@@ -559,17 +559,7 @@ DILIGENT_TYPED_ENUM(PSO_CREATE_FLAGS, Uint32)
     /// Use this flag to silence these warnings.
     PSO_CREATE_FLAG_IGNORE_MISSING_IMMUTABLE_SAMPLERS = 1u << 1u,
 
-    /// Don't remap shader resources.
-    /// All resource signatures must have correct bindings.
-    /// Should be used only for deserialization.
-    PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES       = 1u << 2u,
-
-    /// Pipeline resource signature 0 is the implicit singature
-    /// created from the resource layout.
-    /// Should be used only for deserialization.
-    PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0               = 1u << 3u,
-
-    PSO_CREATE_FLAG_LAST = PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0
+    PSO_CREATE_FLAG_LAST = PSO_CREATE_FLAG_IGNORE_MISSING_IMMUTABLE_SAMPLERS
 };
 DEFINE_FLAG_ENUM_OPERATORS(PSO_CREATE_FLAGS);
 
@@ -583,6 +573,9 @@ struct PipelineStateCreateInfo
     /// Pipeline state creation flags, see Diligent::PSO_CREATE_FLAGS.
     PSO_CREATE_FLAGS  Flags      DEFAULT_INITIALIZER(PSO_CREATE_FLAG_NONE);
 
+    /// The number of elements in ppResourceSignatures array.
+    Uint32 ResourceSignaturesCount DEFAULT_INITIALIZER(0);
+
     /// An array of ResourceSignaturesCount shader resource signatures that
     /// define the layout of shader resources in this pipeline state object.
     /// See Diligent::IPipelineResourceSignature.
@@ -595,15 +588,18 @@ struct PipelineStateCreateInfo
     ///             should be in it default state.
     IPipelineResourceSignature** ppResourceSignatures DEFAULT_INITIALIZER(nullptr);
 
-    /// The number of elements in ppResourceSignatures array.
-    Uint32 ResourceSignaturesCount DEFAULT_INITIALIZER(0);
-
-
     /// Optional pipeline state cache that is used to accelerate
     /// PSO creation. If PSODesc.Name is found in the cache, the cache
     /// data is used to create the PSO. Otherwise, the PSO
     /// is added to the cache.
     IPipelineStateCache* pPSOCache DEFAULT_INITIALIZER(nullptr);
+
+    /// For internal use only. Must always be null.
+    void* pInternalData DEFAULT_INITIALIZER(nullptr);
+
+#ifdef DILIGENT_PLATFORM_32
+    Uint32 _Padding DEFAULT_INITIALIZER(0);
+#endif
 };
 typedef struct PipelineStateCreateInfo PipelineStateCreateInfo;
 

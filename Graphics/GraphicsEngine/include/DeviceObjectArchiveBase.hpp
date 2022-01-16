@@ -49,6 +49,7 @@
 
 #include "ObjectBase.hpp"
 #include "PipelineResourceSignatureBase.hpp"
+#include "PipelineStateBase.hpp"
 
 #include "HashUtils.hpp"
 #include "RefCntAutoPtr.hpp"
@@ -374,6 +375,7 @@ protected:
         DynamicLinearAllocator Allocator;
         const PSODataHeader*   pHeader = nullptr;
         CreateInfoType         CreateInfo{};
+        PSOCreateInternalInfo  InternalCI;
         TPRSNames              PRSNames{};
         const char*            RenderPassName = nullptr;
 

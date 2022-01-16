@@ -49,6 +49,32 @@
 namespace Diligent
 {
 
+/// Internal PSO create flags.
+enum PSO_CREATE_INTERNAL_FLAGS : Uint32
+{
+    PSO_CREATE_INTERNAL_FLAG_NONE = 0u,
+
+    /// Don't remap shader resources.
+    /// All resource signatures must have correct bindings.
+    ///
+    /// \note This filag is used for PSO deserialization.
+    PSO_CREATE_INTERNAL_FLAG_DONT_REMAP_SHADER_RESOURCES = 1u << 0u,
+
+    /// Pipeline resource signature 0 is the implicit signature
+    /// created from the resource layout.
+    ///
+    /// \note This filag is used for PSO deserialization.
+    PSO_CREATE_INTERNAL_FLAG_IMPLICIT_SIGNATURE0 = 1u << 1u,
+
+    PSO_CREATE_INTERNAL_FLAG_IMPLICIT_SIGNATURE0LAST = PSO_CREATE_INTERNAL_FLAG_IMPLICIT_SIGNATURE0
+};
+DEFINE_FLAG_ENUM_OPERATORS(PSO_CREATE_INTERNAL_FLAGS);
+
+struct PSOCreateInternalInfo
+{
+    PSO_CREATE_INTERNAL_FLAGS Flags = PSO_CREATE_INTERNAL_FLAG_NONE;
+};
+
 template <typename PSOCreateInfoType>
 void ValidatePSOCreateInfo(const IRenderDevice*     pDevice,
                            const PSOCreateInfoType& CreateInfo) noexcept(false);
@@ -308,7 +334,9 @@ public:
                       const PSOCreateInfoType& CreateInfo,
                       bool                     bIsDeviceInternal = false) :
         TDeviceObjectBase{pRefCounters, pDevice, CreateInfo.PSODesc, bIsDeviceInternal},
-        m_UsingImplicitSignature{CreateInfo.ppResourceSignatures == nullptr || CreateInfo.ResourceSignaturesCount == 0 || (CreateInfo.Flags & PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0) != 0}
+        m_UsingImplicitSignature{CreateInfo.ppResourceSignatures == nullptr ||
+                                 CreateInfo.ResourceSignaturesCount == 0 ||
+                                 (GetInternalCreateFlags(CreateInfo) & PSO_CREATE_INTERNAL_FLAG_IMPLICIT_SIGNATURE0) != 0}
     {
         try
         {
@@ -1101,6 +1129,12 @@ protected:
         m_Signatures[0] = std::move(pImplicitSignature);
     }
 
+    static PSO_CREATE_INTERNAL_FLAGS GetInternalCreateFlags(const PipelineStateCreateInfo& CreateInfo)
+    {
+        const auto* pInternalCI = static_cast<PSOCreateInternalInfo*>(CreateInfo.pInternalData);
+        return pInternalCI != nullptr ? pInternalCI->Flags : PSO_CREATE_INTERNAL_FLAG_NONE;
+    }
+
 private:
     static void ReserveResourceLayout(const PipelineResourceLayoutDesc& SrcLayout, FixedLinearAllocator& MemPool) noexcept
     {
@@ -1171,7 +1205,7 @@ private:
 
     void ReserveResourceSignatures(const PipelineStateCreateInfo& CreateInfo, FixedLinearAllocator& MemPool)
     {
-        if (m_UsingImplicitSignature && (CreateInfo.Flags & PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0) == 0)
+        if (m_UsingImplicitSignature && (GetInternalCreateFlags(CreateInfo) & PSO_CREATE_INTERNAL_FLAG_IMPLICIT_SIGNATURE0) == 0)
         {
             VERIFY_EXPR(CreateInfo.ResourceSignaturesCount == 0 || CreateInfo.ppResourceSignatures == nullptr);
             m_SignatureCount = 1;
@@ -1203,7 +1237,7 @@ private:
     void CopyResourceSignatures(const PipelineStateCreateInfo& CreateInfo, FixedLinearAllocator& MemPool)
     {
         m_Signatures = MemPool.ConstructArray<SignatureAutoPtrType>(m_SignatureCount);
-        if (!m_UsingImplicitSignature || (CreateInfo.Flags & PSO_CREATE_FLAG_IMPLICIT_SIGNATURE0) != 0)
+        if (!m_UsingImplicitSignature || (GetInternalCreateFlags(CreateInfo) & PSO_CREATE_INTERNAL_FLAG_IMPLICIT_SIGNATURE0) != 0)
         {
             VERIFY_EXPR(CreateInfo.ResourceSignaturesCount != 0 && CreateInfo.ppResourceSignatures != nullptr);
             for (Uint32 i = 0; i < CreateInfo.ResourceSignaturesCount; ++i)
