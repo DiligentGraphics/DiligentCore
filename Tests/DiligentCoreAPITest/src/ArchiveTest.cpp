@@ -548,7 +548,7 @@ float4 main(in PSInput PSIn) : SV_Target
 } // namespace HLSL
 
 
-TEST(ArchiveTest, GraphicsPipeline)
+void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
 {
     auto* pEnv             = TestingEnvironment::GetInstance();
     auto* pDevice          = pEnv->GetDevice();
@@ -732,6 +732,7 @@ TEST(ArchiveTest, GraphicsPipeline)
 
             PipelineStateArchiveInfo ArchiveInfo;
             ArchiveInfo.DeviceFlags = GetDeviceBits();
+            ArchiveInfo.PSOFlags    = ArchiveFlags;
             ASSERT_TRUE(pArchiver->AddGraphicsPipelineState(PSOCreateInfo2, ArchiveInfo));
 
             PSOCreateInfo2.PSODesc.Name = PSO3Name;
@@ -763,6 +764,7 @@ TEST(ArchiveTest, GraphicsPipeline)
 
             PipelineStateArchiveInfo ArchiveInfo;
             ArchiveInfo.DeviceFlags = GetDeviceBits();
+            ArchiveInfo.PSOFlags    = ArchiveFlags;
             ASSERT_TRUE(pArchiver->AddGraphicsPipelineState(PSOCreateInfo2, ArchiveInfo));
 
             IPipelineResourceSignature* Signatures[] = {pRefPRS};
@@ -1017,8 +1019,18 @@ TEST(ArchiveTest, GraphicsPipeline)
     }
 }
 
+TEST(ArchiveTest, GraphicsPipeline)
+{
+    TestGraphicsPipeline(PSO_ARCHIVE_FLAG_NONE);
+}
 
-TEST(ArchiveTest, ComputePipeline)
+TEST(ArchiveTest, GraphicsPipeline_NoReflection)
+{
+    TestGraphicsPipeline(PSO_ARCHIVE_FLAG_STRIP_REFLECTION);
+}
+
+
+void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
 {
     auto* pEnv             = TestingEnvironment::GetInstance();
     auto* pDevice          = pEnv->GetDevice();
@@ -1120,6 +1132,7 @@ TEST(ArchiveTest, ComputePipeline)
 
             PipelineStateArchiveInfo ArchiveInfo;
             ArchiveInfo.DeviceFlags = GetDeviceBits();
+            ArchiveInfo.PSOFlags    = ArchiveFlags;
             ASSERT_TRUE(pArchiver->AddComputePipelineState(PSOCreateInfo, ArchiveInfo));
         }
         RefCntAutoPtr<IDataBlob> pBlob;
@@ -1180,6 +1193,15 @@ TEST(ArchiveTest, ComputePipeline)
     pSwapChain->Present();
 }
 
+TEST(ArchiveTest, ComputePipeline)
+{
+    TestComputePipeline(PSO_ARCHIVE_FLAG_NONE);
+}
+
+TEST(ArchiveTest, ComputePipeline_NoReflection)
+{
+    TestComputePipeline(PSO_ARCHIVE_FLAG_STRIP_REFLECTION);
+}
 
 TEST(ArchiveTest, RayTracingPipeline)
 {

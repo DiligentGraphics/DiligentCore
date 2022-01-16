@@ -109,6 +109,7 @@ private:
     using ShadersDataHeader        = DeviceObjectArchiveBase::ShadersDataHeader;
     using TPRSNames                = DeviceObjectArchiveBase::TPRSNames;
     using ShaderIndexArray         = DeviceObjectArchiveBase::ShaderIndexArray;
+    using SerializedPSOAuxData     = DeviceObjectArchiveBase::SerializedPSOAuxData;
 
     static constexpr auto InvalidOffset   = DeviceObjectArchiveBase::BaseDataHeader::InvalidOffset;
     static constexpr auto DeviceDataCount = static_cast<size_t>(DeviceType::Count);
@@ -186,9 +187,10 @@ private:
     template <typename CreateInfoType>
     struct TPSOData
     {
-        CreateInfoType* pCreateInfo = nullptr;
-        SerializedData  CommonData;
-        TPerDeviceData  PerDeviceData;
+        CreateInfoType*      pCreateInfo = nullptr;
+        SerializedPSOAuxData AuxData;
+        SerializedData       CommonData;
+        TPerDeviceData       PerDeviceData;
 
         RefCntAutoPtr<SerializableResourceSignatureImpl> pDefaultSignature;
 

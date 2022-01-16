@@ -643,11 +643,12 @@ PipelineResourceSignatureDescWrapper PipelineStateVkImpl::GetDefaultResourceSign
     return SignDesc;
 }
 
-void PipelineStateVkImpl::RemapShaderResources(
+void PipelineStateVkImpl::RemapOrVerifyShaderResources(
     TShaderStages&                                       ShaderStages,
     const RefCntAutoPtr<PipelineResourceSignatureVkImpl> pSignatures[],
     const Uint32                                         SignatureCount,
     const TBindIndexToDescSetIndex&                      BindIndexToDescSetIndex,
+    bool                                                 bVerifyOnly,
     bool                                                 bStripReflection,
     const char*                                          PipelineName,
     TShaderResources*                                    pDvpShaderResources,
@@ -719,8 +720,29 @@ void PipelineStateVkImpl::RemapShaderResources(
                     }
 
                     VERIFY_EXPR(ResourceBinding != ~0u && DescriptorSet != ~0u);
-                    SPIRV[SPIRVAttribs.BindingDecorationOffset]       = ResourceBinding;
-                    SPIRV[SPIRVAttribs.DescriptorSetDecorationOffset] = BindIndexToDescSetIndex[SignDesc.BindingIndex] + DescriptorSet;
+                    DescriptorSet += BindIndexToDescSetIndex[SignDesc.BindingIndex];
+                    if (bVerifyOnly)
+                    {
+                        const auto SpvBinding  = SPIRV[SPIRVAttribs.BindingDecorationOffset];
+                        const auto SpvDescrSet = SPIRV[SPIRVAttribs.DescriptorSetDecorationOffset];
+                        if (SpvBinding != ResourceBinding)
+                        {
+                            LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' maps resource '", SPIRVAttribs.Name,
+                                                "' to binding ", SpvBinding, ", but the same resource in pipeline resource signature '",
+                                                SignDesc.Name, "' is mapped to binding ", ResourceBinding, '.');
+                        }
+                        if (SpvDescrSet != DescriptorSet)
+                        {
+                            LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' maps resource '", SPIRVAttribs.Name,
+                                                "' to descriptor set ", SpvDescrSet, ", but the same resource in pipeline resource signature '",
+                                                SignDesc.Name, "' is mapped to set ", DescriptorSet, '.');
+                        }
+                    }
+                    else
+                    {
+                        SPIRV[SPIRVAttribs.BindingDecorationOffset]       = ResourceBinding;
+                        SPIRV[SPIRVAttribs.DescriptorSetDecorationOffset] = DescriptorSet;
+                    }
 
                     if (pDvpResourceAttibutions)
                         pDvpResourceAttibutions->emplace_back(ResAttribution);
@@ -753,22 +775,29 @@ void PipelineStateVkImpl::InitPipelineLayout(PSO_CREATE_INTERNAL_FLAGS InternalF
 
     m_PipelineLayout.Create(GetDevice(), m_Signatures, m_SignatureCount);
 
-    if ((InternalFlags & PSO_CREATE_INTERNAL_FLAG_DONT_REMAP_SHADER_RESOURCES) == 0)
+    constexpr auto PSO_CREATE_INTERNAL_FLAG_DONT_REMAP_NO_REFLECTION =
+        PSO_CREATE_INTERNAL_FLAG_DONT_REMAP_SHADER_RESOURCES |
+        PSO_CREATE_INTERNAL_FLAG_NO_SHADER_REFLECION;
+    if ((InternalFlags & PSO_CREATE_INTERNAL_FLAG_DONT_REMAP_NO_REFLECTION) != PSO_CREATE_INTERNAL_FLAG_DONT_REMAP_NO_REFLECTION)
     {
         TBindIndexToDescSetIndex BindIndexToDescSetIndex = {};
         for (Uint32 i = 0; i < m_SignatureCount; ++i)
             BindIndexToDescSetIndex[i] = m_PipelineLayout.GetFirstDescrSetIndex(i);
 
-        RemapShaderResources(ShaderStages,
-                             m_Signatures,
-                             m_SignatureCount,
-                             BindIndexToDescSetIndex,
-                             true, // bStripReflection
-                             m_Desc.Name,
+        // Note that we always need to strip reflection information if it is present
+        const auto VerifyResources = (InternalFlags & PSO_CREATE_INTERNAL_FLAG_DONT_REMAP_SHADER_RESOURCES) != 0;
+        VERIFY((InternalFlags & PSO_CREATE_INTERNAL_FLAG_NO_SHADER_REFLECION) == 0, "Shader reflection information must be present.");
+        RemapOrVerifyShaderResources(ShaderStages,
+                                     m_Signatures,
+                                     m_SignatureCount,
+                                     BindIndexToDescSetIndex,
+                                     VerifyResources, // VerifyOnly
+                                     true,            // bStripReflection
+                                     m_Desc.Name,
 #ifdef DILIGENT_DEVELOPMENT
-                             &m_ShaderResources, &m_ResourceAttibutions
+                                     &m_ShaderResources, &m_ResourceAttibutions
 #else
-                             nullptr, nullptr
+                                     nullptr, nullptr
 #endif
         );
     }

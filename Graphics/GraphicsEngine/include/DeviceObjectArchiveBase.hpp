@@ -84,6 +84,14 @@ public:
         Uint32        Count    = 0;
     };
 
+    // Serialized pipeline state auxiliary data
+    struct SerializedPSOAuxData
+    {
+        // Shaders have been serialized without the shader reflection information.
+        bool NoShaderReflection = false;
+    };
+
+
 
     /// \param pRefCounters - Reference counters object that controls the lifetime of this device object archive.
     /// \param pArchive     - Source data that this archive will be created from.
@@ -376,6 +384,7 @@ protected:
         const PSODataHeader*   pHeader = nullptr;
         CreateInfoType         CreateInfo{};
         PSOCreateInternalInfo  InternalCI;
+        SerializedPSOAuxData   AuxData;
         TPRSNames              PRSNames{};
         const char*            RenderPassName = nullptr;
 

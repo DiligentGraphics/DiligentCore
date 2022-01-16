@@ -804,7 +804,8 @@ bool ArchiverImpl::SerializePSO(TNamedObjectHashMap<TPSOData<CreateInfoType>>& P
         return false;
     }
 
-    auto& Data = IterAndInserted.first->second;
+    auto& Data{IterAndInserted.first->second};
+    Data.AuxData.NoShaderReflection = (ArchiveInfo.PSOFlags & PSO_ARCHIVE_FLAG_STRIP_REFLECTION) != 0;
     for (auto DeviceBits = ArchiveInfo.DeviceFlags; DeviceBits != 0;)
     {
         const auto Flag = ExtractLSB(DeviceBits);
@@ -889,10 +890,13 @@ bool ArchiverImpl::SerializePSO(TNamedObjectHashMap<TPSOData<CreateInfoType>>& P
 
         Serializer<SerializerMode::Measure> MeasureSer;
         SerializerPSOImpl(MeasureSer, PSOCreateInfo, PRSNames);
+        PSOSerializer<SerializerMode::Measure>::SerializeAuxData(MeasureSer, Data.AuxData, nullptr);
 
         Data.CommonData = MeasureSer.AllocateData(GetRawAllocator());
         Serializer<SerializerMode::Write> Ser{Data.CommonData};
         SerializerPSOImpl(Ser, PSOCreateInfo, PRSNames);
+        PSOSerializer<SerializerMode::Write>::SerializeAuxData(Ser, Data.AuxData, nullptr);
+
         VERIFY_EXPR(Ser.IsEnded());
     }
     return true;

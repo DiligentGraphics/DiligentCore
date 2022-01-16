@@ -100,11 +100,12 @@ public:
     using TShaderResources         = std::vector<std::shared_ptr<const SPIRVShaderResources>>;
     using TResourceAttibutions     = std::vector<ResourceAttribution>;
     using TBindIndexToDescSetIndex = std::array<Uint32, MAX_RESOURCE_SIGNATURES>;
-    static void RemapShaderResources(
+    static void RemapOrVerifyShaderResources(
         TShaderStages&                                       ShaderStages,
         const RefCntAutoPtr<PipelineResourceSignatureVkImpl> pSignatures[],
         Uint32                                               SignatureCount,
         const TBindIndexToDescSetIndex&                      BindIndexToDescSetIndex,
+        bool                                                 bVerifyOnly,
         bool                                                 bStripReflection,
         const char*                                          PipelineName         = "",
         TShaderResources*                                    pShaderResources     = nullptr,

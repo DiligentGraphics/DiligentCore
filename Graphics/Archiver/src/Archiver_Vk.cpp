@@ -142,11 +142,13 @@ bool ArchiverImpl::PatchShadersVk(const CreateInfoType& CreateInfo, TPSOData<Cre
         }
         VERIFY_EXPR(DescSetLayoutCount <= MAX_RESOURCE_SIGNATURES * 2);
 
-        PipelineStateVkImpl::RemapShaderResources(ShaderStagesVk,
-                                                  Signatures.data(),
-                                                  SignaturesCount,
-                                                  BindIndexToDescSetIndex,
-                                                  true); // bStripReflection
+        const auto bStripReflection = Data.AuxData.NoShaderReflection;
+        PipelineStateVkImpl::RemapOrVerifyShaderResources(ShaderStagesVk,
+                                                          Signatures.data(),
+                                                          SignaturesCount,
+                                                          BindIndexToDescSetIndex,
+                                                          false, // bVerifyOnly
+                                                          bStripReflection);
     }
     catch (...)
     {

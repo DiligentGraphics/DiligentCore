@@ -412,8 +412,11 @@ bool DeviceObjectArchiveBase::PSOData<CreateInfoType>::Deserialize(const char* N
     CreateInfo.PSODesc.Name = Name;
 
     DeserializeInternal(Ser);
+    PSOSerializer<SerializerMode::Read>::SerializeAuxData(Ser, AuxData, &Allocator);
 
     InternalCI.Flags |= PSO_CREATE_INTERNAL_FLAG_DONT_REMAP_SHADER_RESOURCES;
+    if (AuxData.NoShaderReflection)
+        InternalCI.Flags |= PSO_CREATE_INTERNAL_FLAG_NO_SHADER_REFLECION;
 
     CreateInfo.pInternalData = &InternalCI;
 
@@ -653,7 +656,8 @@ bool DeviceObjectArchiveBase::UnpackPSOShaders(PSOData<CreateInfoType>& PSO,
             ShaderCreateInfo                 ShaderCI;
             ShaderSer(ShaderCI.Desc.ShaderType, ShaderCI.EntryPoint, ShaderCI.SourceLanguage, ShaderCI.ShaderCompiler);
 
-            ShaderCI.CompileFlags |= SHADER_COMPILE_FLAG_SKIP_REFLECTION;
+            if (PSO.AuxData.NoShaderReflection)
+                ShaderCI.CompileFlags |= SHADER_COMPILE_FLAG_SKIP_REFLECTION;
 
             pShader = UnpackShader(ShaderSer, ShaderCI, pDevice);
             if (!pShader)

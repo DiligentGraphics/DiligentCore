@@ -396,6 +396,16 @@ void PSOSerializer<Mode>::SerializeShaders(
     Ser.SerializeArrayRaw(Allocator, Shaders.pIndices, Shaders.Count);
 }
 
+template <SerializerMode Mode>
+void PSOSerializer<Mode>::SerializeAuxData(Serializer<Mode>&                Ser,
+                                           ConstQual<SerializedPSOAuxData>& AuxData,
+                                           DynamicLinearAllocator*          Allocator)
+{
+    Ser(AuxData.NoShaderReflection);
+    ASSERT_SIZEOF(SerializedPSOAuxData, 1, "Did you add a new member to SerializedPSOAuxData? Please add serialization here.");
+}
+
+
 template struct PSOSerializer<SerializerMode::Read>;
 template struct PSOSerializer<SerializerMode::Write>;
 template struct PSOSerializer<SerializerMode::Measure>;

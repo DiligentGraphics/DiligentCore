@@ -183,7 +183,7 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
     if ((ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_SKIP_REFLECTION) == 0)
     {
         auto& Allocator        = GetRawAllocator();
-        auto* pRawMem          = ALLOCATE(Allocator, "Allocator for ShaderResources", SPIRVShaderResources, 1);
+        auto* pRawMem          = ALLOCATE(Allocator, "Memory for SPIRVShaderResources", SPIRVShaderResources, 1);
         auto  LoadShaderInputs = m_Desc.ShaderType == SHADER_TYPE_VERTEX;
         auto* pResources       = new (pRawMem) SPIRVShaderResources //
             {
