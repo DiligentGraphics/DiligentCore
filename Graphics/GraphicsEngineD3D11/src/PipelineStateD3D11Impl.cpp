@@ -104,12 +104,38 @@ PipelineResourceSignatureDescWrapper PipelineStateD3D11Impl::GetDefaultResourceS
     return SignDesc;
 }
 
-void PipelineStateD3D11Impl::RemapShaderResources(const TShaderStages&                                     Shaders,
-                                                  const RefCntAutoPtr<PipelineResourceSignatureD3D11Impl>* pSignatures,
-                                                  Uint32                                                   SignatureCount,
-                                                  D3D11ShaderResourceCounters*                             pBaseBindings, // [SignatureCount]
-                                                  const TCompileShaderFn&                                  CompileShaderFn,
-                                                  const TValidateShaderResourcesFn&                        ValidateShaderResourcesFn) noexcept(false)
+static void ValidateShaderResourceBindings(const char*                  PSOName,
+                                           const ShaderD3D11Impl*       pShader,
+                                           const ResourceBinding::TMap& BindingsMap) noexcept(false)
+{
+    const auto& ShaderResources = *pShader->GetShaderResources();
+    ShaderResources.ProcessResources(
+        [&](const D3DShaderResourceAttribs& Attribs, Uint32) //
+        {
+            auto it = BindingsMap.find(Attribs.Name);
+            if (it == BindingsMap.end())
+            {
+                LOG_ERROR_AND_THROW("Resource '", Attribs.Name, "' in shader '", pShader->GetDesc().Name, "' of PSO '", PSOName,
+                                    "' is not present in the resource bindings map.");
+            }
+
+            const auto& Bindings = it->second;
+            if (Bindings.BindPoint != Attribs.BindPoint)
+            {
+                LOG_ERROR_AND_THROW("Resource '", Attribs.Name, "' in shader '", pShader->GetDesc().Name, "' of PSO '", PSOName,
+                                    "' is mapped to register ", Attribs.BindPoint, " in the shader, but the PSO expects it to be mapped to register ", Bindings.BindPoint);
+            }
+        } //
+    );
+}
+
+void PipelineStateD3D11Impl::RemapOrVerifyShaderResources(const TShaderStages&                                     Shaders,
+                                                          const RefCntAutoPtr<PipelineResourceSignatureD3D11Impl>* pSignatures,
+                                                          Uint32                                                   SignatureCount,
+                                                          D3D11ShaderResourceCounters*                             pBaseBindings, // [SignatureCount]
+                                                          const THandleRemappedBytecodeFn&                         HandleRemappedBytecodeFn,
+                                                          const TValidateShaderResourcesFn&                        ValidateShaderResourcesFn,
+                                                          const TValidateShaderBindingsFn&                         ValidateShaderBindingsFn) noexcept(false)
 {
     // Verify that pipeline layout is compatible with shader resources and remap resource bindings.
     for (size_t s = 0; s < Shaders.size(); ++s)
@@ -132,16 +158,25 @@ void PipelineStateD3D11Impl::RemapShaderResources(const TShaderStages&          
         if (ValidateShaderResourcesFn)
             ValidateShaderResourcesFn(pShader);
 
-        CComPtr<ID3DBlob> pPatchedBytecode;
-        D3DCreateBlob(pBytecode->GetBufferSize(), &pPatchedBytecode);
-        memcpy(pPatchedBytecode->GetBufferPointer(), pBytecode->GetBufferPointer(), pBytecode->GetBufferSize());
+        if (HandleRemappedBytecodeFn)
+        {
+            CComPtr<ID3DBlob> pPatchedBytecode;
+            D3DCreateBlob(pBytecode->GetBufferSize(), &pPatchedBytecode);
+            memcpy(pPatchedBytecode->GetBufferPointer(), pBytecode->GetBufferPointer(), pBytecode->GetBufferSize());
 
-        if (!DXBCUtils::RemapResourceBindings(ResourceMap, pPatchedBytecode->GetBufferPointer(), pPatchedBytecode->GetBufferSize()))
-            LOG_ERROR_AND_THROW("Failed to remap resource bindings in shader '", pShader->GetDesc().Name, "'.");
+            if (!DXBCUtils::RemapResourceBindings(ResourceMap, pPatchedBytecode->GetBufferPointer(), pPatchedBytecode->GetBufferSize()))
+                LOG_ERROR_AND_THROW("Failed to remap resource bindings in shader '", pShader->GetDesc().Name, "'.");
 
-        CompileShaderFn(s, pShader, pPatchedBytecode);
+            HandleRemappedBytecodeFn(s, pShader, pPatchedBytecode);
+        }
+
+        if (ValidateShaderBindingsFn)
+        {
+            ValidateShaderBindingsFn(pShader, ResourceMap);
+        }
     }
 }
+
 
 void PipelineStateD3D11Impl::InitResourceLayouts(PSO_CREATE_INTERNAL_FLAGS            InternalFlags,
                                                  const std::vector<ShaderD3D11Impl*>& Shaders,
@@ -197,27 +232,42 @@ void PipelineStateD3D11Impl::InitResourceLayouts(PSO_CREATE_INTERNAL_FLAGS      
     }
 #endif
 
-    if ((InternalFlags & PSO_CREATE_INTERNAL_FLAG_DONT_REMAP_SHADER_RESOURCES) == 0)
+    const auto HandleRemappedBytecode = [this, &pVSByteCode](size_t ShaderIdx, ShaderD3D11Impl* pShader, ID3DBlob* pPatchedBytecode) //
     {
-        RemapShaderResources(
+        m_ppd3d11Shaders[ShaderIdx] = pShader->GetD3D11Shader(pPatchedBytecode);
+        VERIFY_EXPR(m_ppd3d11Shaders[ShaderIdx]); // GetD3D11Shader() throws an exception in case of an error
+
+        if (pShader->GetDesc().ShaderType == SHADER_TYPE_VERTEX)
+            pVSByteCode = pPatchedBytecode;
+    };
+    const auto HandleRemappedBytecodeFn = (InternalFlags & PSO_CREATE_INTERNAL_FLAG_DONT_REMAP_SHADER_RESOURCES) == 0 ?
+        THandleRemappedBytecodeFn{HandleRemappedBytecode} :
+        THandleRemappedBytecodeFn{nullptr};
+
+    const auto ValidateBindings = [this](const ShaderD3D11Impl* pShader, const ResourceBinding::TMap& BindingsMap) //
+    {
+        ValidateShaderResourceBindings(m_Desc.Name, pShader, BindingsMap);
+    };
+    const auto ValidateBindingsFn = !HandleRemappedBytecodeFn && (InternalFlags & PSO_CREATE_INTERNAL_FLAG_NO_SHADER_REFLECION) == 0 ?
+        TValidateShaderBindingsFn{ValidateBindings} :
+        TValidateShaderBindingsFn{nullptr};
+
+    if (HandleRemappedBytecodeFn || ValidateBindingsFn)
+    {
+        RemapOrVerifyShaderResources(
             Shaders,
             m_Signatures,
             m_SignatureCount,
             m_BaseBindings,
-            [this, &pVSByteCode](size_t ShaderIdx, ShaderD3D11Impl* pShader, ID3DBlob* pPatchedBytecode) //
-            {
-                m_ppd3d11Shaders[ShaderIdx] = pShader->GetD3D11Shader(pPatchedBytecode);
-                VERIFY_EXPR(m_ppd3d11Shaders[ShaderIdx]); // GetD3D11Shader() throws an exception in case of an error
-
-                if (pShader->GetDesc().ShaderType == SHADER_TYPE_VERTEX)
-                    pVSByteCode = pPatchedBytecode;
-            },
+            HandleRemappedBytecodeFn,
             [this](ShaderD3D11Impl* pShader) //
             {
                 ValidateShaderResources(pShader);
-            });
+            },
+            ValidateBindingsFn);
     }
-    else
+
+    if (!HandleRemappedBytecodeFn)
     {
         for (size_t s = 0; s < Shaders.size(); ++s)
         {

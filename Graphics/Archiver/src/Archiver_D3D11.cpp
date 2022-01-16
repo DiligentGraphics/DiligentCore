@@ -151,7 +151,7 @@ bool ArchiverImpl::PatchShadersD3D11(const CreateInfoType& CreateInfo, TPSOData<
             pSignature->ShiftBindings(ResCounters);
         }
 
-        PipelineStateD3D11Impl::RemapShaderResources(
+        PipelineStateD3D11Impl::RemapOrVerifyShaderResources(
             ShadersD3D11,
             Signatures.data(),
             SignaturesCount,
