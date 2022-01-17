@@ -91,8 +91,6 @@ public:
         bool NoShaderReflection = false;
     };
 
-
-
     /// \param pRefCounters - Reference counters object that controls the lifetime of this device object archive.
     /// \param pArchive     - Source data that this archive will be created from.
     /// \param DevType      - Device type.

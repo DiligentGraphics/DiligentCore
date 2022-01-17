@@ -670,6 +670,7 @@ void PipelineStateVkImpl::RemapOrVerifyShaderResources(
             auto& SPIRV   = SPIRVs[i];
 
             const auto& pShaderResources = pShader->GetShaderResources();
+            VERIFY_EXPR(pShaderResources);
 
             if (pDvpShaderResources)
                 pDvpShaderResources->emplace_back(pShaderResources);

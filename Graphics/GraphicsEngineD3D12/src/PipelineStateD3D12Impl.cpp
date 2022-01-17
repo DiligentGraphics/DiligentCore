@@ -532,7 +532,6 @@ void PipelineStateD3D12Impl::InitRootSignature(PSO_CREATE_INTERNAL_FLAGS Interna
         TValidateShaderBindingsFn{ValidateBindings} :
         TValidateShaderBindingsFn{nullptr};
 
-
     // Verify that pipeline layout is compatible with shader resources and remap resource bindings.
     if (RemapResources || ValidateBindingsFn)
     {
