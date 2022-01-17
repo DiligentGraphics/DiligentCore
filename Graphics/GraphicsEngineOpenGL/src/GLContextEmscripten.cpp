@@ -40,7 +40,7 @@ GLContext::GLContext(const EngineGLCreateInfo& InitAttribs, RENDER_DEVICE_TYPE& 
         EmscriptenWebGLContextAttributes ContextAttributes = {};
         emscripten_webgl_init_context_attributes(&ContextAttributes);
 
-        // TODO: Intitialization params
+        // TODO: Initialization params
         ContextAttributes.depth        = true;
         ContextAttributes.majorVersion = 3;
         ContextAttributes.minorVersion = 0;

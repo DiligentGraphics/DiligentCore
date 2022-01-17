@@ -60,7 +60,7 @@ struct DynamicBufferCreateInfo
     ///     multiple of the block size.
     Uint32 MemoryPageSize = 64 << 10;
 
-    /// When Desc.Usage == USAGE_SPARSE, the virual size of the sparse buffer;
+    /// When Desc.Usage == USAGE_SPARSE, the virtual size of the sparse buffer;
     /// ignored otherwise.
     Uint64 VirualSize = Uint64{1} << Uint64{30};
 };

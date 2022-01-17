@@ -1830,7 +1830,7 @@ struct BindSparseResourceMemoryAttribs
 
     /// An array of NumWaitFences fences to wait.
 
-    /// \remarks The context will wait untill all fences have reached the values
+    /// \remarks The context will wait until all fences have reached the values
     ///          specified in pWaitFenceValues.
     IFence**      ppWaitFences       DEFAULT_INITIALIZER(nullptr);
 
@@ -1886,7 +1886,7 @@ DEFINE_FLAG_ENUM_OPERATORS(STATE_TRANSITION_FLAGS);
 /// Resource state transition barrier description
 struct StateTransitionDesc
 {
-    /// Previous resource for aliasing transiton.
+    /// Previous resource for aliasing transition.
     ///
     /// This member is only used for aliasing transition (STATE_TRANSITION_FLAG_ALIASING flag is set),
     /// and ignored otherwise, and must point to a texture or a buffer object.

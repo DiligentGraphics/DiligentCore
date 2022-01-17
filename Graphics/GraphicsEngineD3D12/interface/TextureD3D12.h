@@ -79,7 +79,7 @@ DILIGENT_END_INTERFACE
 #    define ITextureD3D12_SetD3D12ResourceState(This, ...) CALL_IFACE_METHOD(TextureD3D12, SetD3D12ResourceState, This, __VA_ARGS__)
 #    define ITextureD3D12_GetD3D12ResourceState(This)      CALL_IFACE_METHOD(TextureD3D12, GetD3D12ResourceState, This)
 
-// clang-format ons
+// clang-format on
 
 #endif
 

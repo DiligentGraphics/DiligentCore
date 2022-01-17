@@ -93,7 +93,7 @@ DILIGENT_BEGIN_INTERFACE(IArchiverFactory, IObject)
                                           IArchive*                 pDeviceArchive,
                                           IFileStream*              pStream) CONST PURE;
 
-    /// Print archive content for debuging and validating.
+    /// Print archive content for debugging and validating.
     VIRTUAL Bool METHOD(PrintArchiveContent)(THIS_
                                              IArchive* pArchive) CONST PURE;
 

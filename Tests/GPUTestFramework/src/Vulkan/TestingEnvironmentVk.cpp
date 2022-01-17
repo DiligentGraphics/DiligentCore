@@ -371,7 +371,7 @@ VkRenderPassCreateInfo TestingEnvironmentVk::GetRenderPassCreateInfo(
 VkShaderModule TestingEnvironmentVk::CreateShaderModule(const SHADER_TYPE ShaderType, const std::string& ShaderSource)
 {
 #if DILIGENT_NO_GLSLANG
-    LOG_ERROR("GLSLang was not built. Shader compilaton is not possible.");
+    LOG_ERROR("GLSLang was not built. Shader compilation is not possible.");
     return VK_NULL_HANDLE;
 #else
     GLSLangUtils::GLSLtoSPIRVAttribs Attribs;

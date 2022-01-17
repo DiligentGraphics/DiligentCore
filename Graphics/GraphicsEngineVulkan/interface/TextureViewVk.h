@@ -63,7 +63,7 @@ DILIGENT_END_INTERFACE
 
 #    define ITextureViewVk_GetVulkanImageView(This) CALL_IFACE_METHOD(TextureViewVk, GetVulkanImageView, This)
 
-// clang-format ons
+// clang-format on
 
 #endif
 

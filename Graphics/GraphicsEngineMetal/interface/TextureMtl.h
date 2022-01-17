@@ -66,7 +66,7 @@ DILIGENT_END_INTERFACE
 #    define ITextureMtl_GetMtlResource(This) CALL_IFACE_METHOD(TextureMtl, GetMtlResource, This)
 #    define ITextureMtl_GetMtlHeap(This)     CALL_IFACE_METHOD(TextureMtl, GetMtlHeap,     This)
 
-// clang-format ons
+// clang-format on
 #endif
 
 DILIGENT_END_NAMESPACE // namespace Diligent

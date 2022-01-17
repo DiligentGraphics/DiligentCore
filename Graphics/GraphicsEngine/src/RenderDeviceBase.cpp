@@ -114,7 +114,7 @@ DeviceFeatures EnableDeviceFeatures(const DeviceFeatures& SupportedFeatures,
     // clang-format on
 #undef ENABLE_FEATURE
 
-    ASSERT_SIZEOF(Diligent::DeviceFeatures, 39, "Did you add a new feature to DeviceFeatures? Please handle its satus here (if necessary).");
+    ASSERT_SIZEOF(Diligent::DeviceFeatures, 39, "Did you add a new feature to DeviceFeatures? Please handle its status here (if necessary).");
 
     return EnabledFeatures;
 }

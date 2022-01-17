@@ -78,7 +78,7 @@ DILIGENT_END_INTERFACE
 #    define ITextureVk_SetLayout(This, ...) CALL_IFACE_METHOD(TextureVk, SetLayout, This, __VA_ARGS__)
 #    define ITextureVk_GetLayout(This)      CALL_IFACE_METHOD(TextureVk, GetLayout, This)
 
-// clang-format ons
+// clang-format on
 
 #endif
 

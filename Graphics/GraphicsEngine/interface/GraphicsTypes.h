@@ -1929,7 +1929,7 @@ DILIGENT_TYPED_ENUM(VALIDATION_LEVEL, Uint8)
 };
 
 
-/// Texture properites
+/// Texture properties
 struct TextureProperties
 {
     /// Maximum dimension (width) of a 1D texture, or 0 if 1D textures are not supported.
@@ -3227,7 +3227,7 @@ struct EngineCreateInfo
     /// A pointer to the array of NumImmediateContexts structs describing immediate
     /// device contexts to create. See Diligent::ImmediateContextCreateInfo.
 
-    /// Every immediate device contexts encompases a command queue of a specific type.
+    /// Every immediate device contexts encompasses a command queue of a specific type.
     /// It may record commands directly or execute command lists recorded by deferred contexts.
     ///
     /// If not specified, single graphics context will be created.

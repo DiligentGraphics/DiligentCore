@@ -108,7 +108,7 @@ struct ComputeMipLevelAttribs
     /// Alpha cutoff value.
     ///
     /// \remarks
-    ///     When AlphaCutoff is not 0, alpha channel is remaped as follows:
+    ///     When AlphaCutoff is not 0, alpha channel is remapped as follows:
     ///         A_new = max(A_old; 1/3 * A_old + 2/3 * AlphaCutoff)
     float AlphaCutoff          DEFAULT_INITIALIZER(0);
 

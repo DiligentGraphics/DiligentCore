@@ -99,7 +99,7 @@ public:
                 auto front = m_TasksQueue.begin();
                 pTask      = std::move(front->second);
                 // NB: we must increment the running task counter while holding the lock and
-                //     before removing the taks from the queue, otherwise WaitForAllTasks() may
+                //     before removing the task from the queue, otherwise WaitForAllTasks() may
                 //     miss the task.
                 m_NumRunningTasks.fetch_add(1);
                 m_TasksQueue.erase(front);
