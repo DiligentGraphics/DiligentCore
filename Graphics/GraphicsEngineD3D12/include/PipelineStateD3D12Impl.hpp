@@ -117,9 +117,9 @@ private:
                              TShaderStages&           ShaderStages,
                              LocalRootSignatureD3D12* pLocalRootSig = nullptr) noexcept(false);
 
-    void InitRootSignature(PSO_CREATE_INTERNAL_FLAGS InternalFlags,
-                           TShaderStages&            ShaderStages,
-                           LocalRootSignatureD3D12*  pLocalRootSig) noexcept(false);
+    void InitRootSignature(const PipelineStateCreateInfo& CreateInfo,
+                           TShaderStages&                 ShaderStages,
+                           LocalRootSignatureD3D12*       pLocalRootSig) noexcept(false);
 
     void Destruct();
 
