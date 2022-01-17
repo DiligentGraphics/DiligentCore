@@ -414,7 +414,7 @@ bool DeviceObjectArchiveBase::PSOData<CreateInfoType>::Deserialize(const char* N
     DeserializeInternal(Ser);
     PSOSerializer<SerializerMode::Read>::SerializeAuxData(Ser, AuxData, &Allocator);
 
-    InternalCI.Flags |= PSO_CREATE_INTERNAL_FLAG_DONT_REMAP_SHADER_RESOURCES;
+    CreateInfo.Flags |= PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES;
     if (AuxData.NoShaderReflection)
         InternalCI.Flags |= PSO_CREATE_INTERNAL_FLAG_NO_SHADER_REFLECION;
 

@@ -54,24 +54,18 @@ enum PSO_CREATE_INTERNAL_FLAGS : Uint32
 {
     PSO_CREATE_INTERNAL_FLAG_NONE = 0u,
 
-    /// Don't remap shader resources.
-    /// All resource signatures must have correct bindings.
-    ///
-    /// \note This flag is used for PSO deserialization.
-    PSO_CREATE_INTERNAL_FLAG_DONT_REMAP_SHADER_RESOURCES = 1u << 0u,
-
     /// Pipeline resource signature 0 is the implicit signature
     /// created from the resource layout.
     ///
     /// \note This flag is used for PSO deserialization.
-    PSO_CREATE_INTERNAL_FLAG_IMPLICIT_SIGNATURE0 = 1u << 1u,
+    PSO_CREATE_INTERNAL_FLAG_IMPLICIT_SIGNATURE0 = 1u << 0u,
 
     /// Compiled shaders do not contain reflection information.
     ///
     /// \note This flag is used for PSO deserialization.
-    PSO_CREATE_INTERNAL_FLAG_NO_SHADER_REFLECION = 1u << 2u,
+    PSO_CREATE_INTERNAL_FLAG_NO_SHADER_REFLECION = 1u << 1u,
 
-    PSO_CREATE_INTERNAL_FLAG_IMPLICIT_SIGNATURE0LAST = PSO_CREATE_INTERNAL_FLAG_NO_SHADER_REFLECION
+    PSO_CREATE_INTERNAL_FLAG_LAST = PSO_CREATE_INTERNAL_FLAG_NO_SHADER_REFLECION
 };
 DEFINE_FLAG_ENUM_OPERATORS(PSO_CREATE_INTERNAL_FLAGS);
 

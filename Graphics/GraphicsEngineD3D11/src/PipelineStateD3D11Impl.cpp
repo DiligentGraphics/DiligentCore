@@ -154,10 +154,11 @@ void PipelineStateD3D11Impl::RemapOrVerifyShaderResources(const TShaderStages&  
 }
 
 
-void PipelineStateD3D11Impl::InitResourceLayouts(PSO_CREATE_INTERNAL_FLAGS            InternalFlags,
+void PipelineStateD3D11Impl::InitResourceLayouts(const PipelineStateCreateInfo&       CreateInfo,
                                                  const std::vector<ShaderD3D11Impl*>& Shaders,
                                                  CComPtr<ID3DBlob>&                   pVSByteCode)
 {
+    const auto InternalFlags = GetInternalCreateFlags(CreateInfo);
     if (m_UsingImplicitSignature && (InternalFlags & PSO_CREATE_INTERNAL_FLAG_IMPLICIT_SIGNATURE0) == 0)
     {
         const auto SignDesc = GetDefaultResourceSignatureDesc(Shaders, m_Desc.Name, m_Desc.ResourceLayout, m_Desc.SRBAllocationGranularity);
@@ -216,7 +217,7 @@ void PipelineStateD3D11Impl::InitResourceLayouts(PSO_CREATE_INTERNAL_FLAGS      
         if (pShader->GetDesc().ShaderType == SHADER_TYPE_VERTEX)
             pVSByteCode = pPatchedBytecode;
     };
-    const auto HandleRemappedBytecodeFn = (InternalFlags & PSO_CREATE_INTERNAL_FLAG_DONT_REMAP_SHADER_RESOURCES) == 0 ?
+    const auto HandleRemappedBytecodeFn = (CreateInfo.Flags & PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES) == 0 ?
         THandleRemappedBytecodeFn{HandleRemappedBytecode} :
         THandleRemappedBytecodeFn{nullptr};
 
@@ -287,7 +288,7 @@ void PipelineStateD3D11Impl::InitInternalObjects(const PSOCreateInfoType& Create
     m_ppd3d11Shaders = MemPool.ConstructArray<D3D11ShaderAutoPtrType>(m_NumShaders);
     m_BaseBindings   = MemPool.ConstructArray<D3D11ShaderResourceCounters>(SignCount);
 
-    InitResourceLayouts(GetInternalCreateFlags(CreateInfo), Shaders, pVSByteCode);
+    InitResourceLayouts(CreateInfo, Shaders, pVSByteCode);
 }
 
 

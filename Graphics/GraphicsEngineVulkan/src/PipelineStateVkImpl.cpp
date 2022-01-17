@@ -761,8 +761,9 @@ void PipelineStateVkImpl::RemapOrVerifyShaderResources(
     }
 }
 
-void PipelineStateVkImpl::InitPipelineLayout(PSO_CREATE_INTERNAL_FLAGS InternalFlags, TShaderStages& ShaderStages) noexcept(false)
+void PipelineStateVkImpl::InitPipelineLayout(const PipelineStateCreateInfo& CreateInfo, TShaderStages& ShaderStages) noexcept(false)
 {
+    const auto InternalFlags = GetInternalCreateFlags(CreateInfo);
     if (m_UsingImplicitSignature && (InternalFlags & PSO_CREATE_INTERNAL_FLAG_IMPLICIT_SIGNATURE0) == 0)
     {
         const auto SignDesc = GetDefaultResourceSignatureDesc(ShaderStages, m_Desc.Name, m_Desc.ResourceLayout, m_Desc.SRBAllocationGranularity);
@@ -776,24 +777,22 @@ void PipelineStateVkImpl::InitPipelineLayout(PSO_CREATE_INTERNAL_FLAGS InternalF
 
     m_PipelineLayout.Create(GetDevice(), m_Signatures, m_SignatureCount);
 
-    constexpr auto PSO_CREATE_INTERNAL_FLAG_DONT_REMAP_NO_REFLECTION =
-        PSO_CREATE_INTERNAL_FLAG_DONT_REMAP_SHADER_RESOURCES |
-        PSO_CREATE_INTERNAL_FLAG_NO_SHADER_REFLECION;
-    if ((InternalFlags & PSO_CREATE_INTERNAL_FLAG_DONT_REMAP_NO_REFLECTION) != PSO_CREATE_INTERNAL_FLAG_DONT_REMAP_NO_REFLECTION)
+    const auto RemapResources = (CreateInfo.Flags & PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES) == 0;
+    const auto VerifyBindings = !RemapResources && ((InternalFlags & PSO_CREATE_INTERNAL_FLAG_NO_SHADER_REFLECION) == 0);
+    if (RemapResources || VerifyBindings)
     {
+        VERIFY_EXPR(RemapResources ^ VerifyBindings);
         TBindIndexToDescSetIndex BindIndexToDescSetIndex = {};
         for (Uint32 i = 0; i < m_SignatureCount; ++i)
             BindIndexToDescSetIndex[i] = m_PipelineLayout.GetFirstDescrSetIndex(i);
 
-        // Note that we always need to strip reflection information if it is present
-        const auto VerifyResources = (InternalFlags & PSO_CREATE_INTERNAL_FLAG_DONT_REMAP_SHADER_RESOURCES) != 0;
-        VERIFY((InternalFlags & PSO_CREATE_INTERNAL_FLAG_NO_SHADER_REFLECION) == 0, "Shader reflection information must be present.");
+        // Note that we always need to strip reflection information when it is present
         RemapOrVerifyShaderResources(ShaderStages,
                                      m_Signatures,
                                      m_SignatureCount,
                                      BindIndexToDescSetIndex,
-                                     VerifyResources, // VerifyOnly
-                                     true,            // bStripReflection
+                                     VerifyBindings, // VerifyOnly
+                                     true,           // bStripReflection
                                      m_Desc.Name,
 #ifdef DILIGENT_DEVELOPMENT
                                      &m_ShaderResources, &m_ResourceAttibutions
@@ -823,7 +822,7 @@ PipelineStateVkImpl::TShaderStages PipelineStateVkImpl::InitInternalObjects(
 
     InitializePipelineDesc(CreateInfo, MemPool);
 
-    InitPipelineLayout(GetInternalCreateFlags(CreateInfo), ShaderStages);
+    InitPipelineLayout(CreateInfo, ShaderStages);
 
     // Create shader modules and initialize shader stages
     InitPipelineShaderStages(LogicalDevice, ShaderStages, ShaderModules, vkShaderStages);

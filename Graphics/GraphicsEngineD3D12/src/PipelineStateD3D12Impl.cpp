@@ -496,10 +496,11 @@ void PipelineStateD3D12Impl::RemapOrVerifyShaderResources(TShaderStages&        
     }
 }
 
-void PipelineStateD3D12Impl::InitRootSignature(PSO_CREATE_INTERNAL_FLAGS InternalFlags,
-                                               TShaderStages&            ShaderStages,
-                                               LocalRootSignatureD3D12*  pLocalRootSig) noexcept(false)
+void PipelineStateD3D12Impl::InitRootSignature(const PipelineStateCreateInfo& CreateInfo,
+                                               TShaderStages&                 ShaderStages,
+                                               LocalRootSignatureD3D12*       pLocalRootSig) noexcept(false)
 {
+    const auto InternalFlags = GetInternalCreateFlags(CreateInfo);
     if (m_UsingImplicitSignature && (InternalFlags & PSO_CREATE_INTERNAL_FLAG_IMPLICIT_SIGNATURE0) == 0)
     {
         const auto SignDesc = GetDefaultResourceSignatureDesc(ShaderStages, m_Desc.Name, m_Desc.ResourceLayout, m_Desc.SRBAllocationGranularity, pLocalRootSig);
@@ -522,7 +523,7 @@ void PipelineStateD3D12Impl::InitRootSignature(PSO_CREATE_INTERNAL_FLAGS Interna
             LOG_ERROR_AND_THROW("Failed to create local root signature for pipeline '", m_Desc.Name, "'.");
     }
 
-    const auto RemapResources = (InternalFlags & PSO_CREATE_INTERNAL_FLAG_DONT_REMAP_SHADER_RESOURCES) == 0;
+    const auto RemapResources = (CreateInfo.Flags & PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES) == 0;
 
     const auto ValidateBindings = [this](const ShaderD3D12Impl* pShader, const ResourceBinding::TMap& BindingsMap) //
     {
@@ -663,7 +664,7 @@ void PipelineStateD3D12Impl::InitInternalObjects(const PSOCreateInfoType& Create
     // It is important to construct all objects before initializing them because if an exception is thrown,
     // destructors will be called for all objects
 
-    InitRootSignature(GetInternalCreateFlags(CreateInfo), ShaderStages, pLocalRootSig);
+    InitRootSignature(CreateInfo, ShaderStages, pLocalRootSig);
 }
 
 

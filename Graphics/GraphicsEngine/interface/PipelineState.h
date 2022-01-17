@@ -559,7 +559,12 @@ DILIGENT_TYPED_ENUM(PSO_CREATE_FLAGS, Uint32)
     /// Use this flag to silence these warnings.
     PSO_CREATE_FLAG_IGNORE_MISSING_IMMUTABLE_SAMPLERS = 1u << 1u,
 
-    PSO_CREATE_FLAG_LAST = PSO_CREATE_FLAG_IGNORE_MISSING_IMMUTABLE_SAMPLERS
+    /// Do not remap shader resources when creating the pipeline.
+    /// Resource bindings in all shaders must match the bindings expected
+    /// by the PSO's resource signatures.
+    PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES       = 1u << 2u,
+
+    PSO_CREATE_FLAG_LAST = PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES
 };
 DEFINE_FLAG_ENUM_OPERATORS(PSO_CREATE_FLAGS);
 
