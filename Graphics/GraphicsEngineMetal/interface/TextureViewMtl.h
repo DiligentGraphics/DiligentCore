@@ -60,7 +60,7 @@ DILIGENT_END_INTERFACE
 
 #    define ITextureViewMtl_GetMtlTexture(This) CALL_IFACE_METHOD(TextureViewMtl, GetMtlTexture, This)
 
-// clang-format ons
+// clang-format on
 
 #endif
 

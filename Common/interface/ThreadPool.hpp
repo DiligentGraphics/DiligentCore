@@ -192,7 +192,7 @@ public:
     /// \param[in] ThreadId    - Id of the thread that is running this task.
     /// \param[in] WaitForTask - whether the function should wait for the next task:
     ///                          - if true, the function will block the thread until the next task
-    ///                            is retreived from the queue and processed.
+    ///                            is retrieved from the queue and processed.
     ///                          - if false, the function will return immediately if there are no
     ///                            tasks in the queue.
     ///
@@ -312,7 +312,7 @@ public:
                     break;
 
                 default:
-                    UNEXPECTED("Unexpected task satus");
+                    UNEXPECTED("Unexpected task status");
             }
         }
 #endif

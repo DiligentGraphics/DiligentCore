@@ -637,7 +637,7 @@ HLSL2GLSLConverterImpl::HLSL2GLSLConverterImpl()
     DEFINE_STUB("GatherCmp_3", "samplerCubeArrayShadow", "GatherCmp", 3); // GatherCmp( SmplerCmp, Location, CompareValue )
 
     // All load operations should return the same number of components as specified
-    // in texture declaraion, so use swizzling. Example:
+    // in texture declaration, so use swizzling. Example:
     // Texture3D<int2> Tex3D;
     // ...
     // Tex3D.Load(i4Location) -> LoadTex3D_1(Tex3D, i4Location)_SWIZZLE2
@@ -1747,7 +1747,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ParseSamplers(TokenListType::iter
                     break;
                 }
 
-                // Go to the next sampler declaraion or statement end
+                // Go to the next sampler declaration or statement end
                 while (Token != m_Tokens.end() && Token->Type != TokenType::Comma && Token->Type != TokenType::Semicolon)
                     ++Token;
                 VERIFY_PARSER_STATE(Token, Token != m_Tokens.end(), "Unexpected EOF while parsing ", SamplerType, " declaration");
@@ -5065,7 +5065,7 @@ String HLSL2GLSLConverterImpl::ConversionStream::Convert(const Char* EntryPoint,
                     if (TmpToken != m_Tokens.end() && TmpToken->Type == TokenType::OpenBrace)
                     {
                         // We need to go through the function argument
-                        // list as there may be texture declaraions
+                        // list as there may be texture declarations
                         ++Token;
                         // float4 Func ( in float2 f2UV,
                         //               ^

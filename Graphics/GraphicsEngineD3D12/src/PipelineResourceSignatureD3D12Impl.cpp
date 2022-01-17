@@ -330,19 +330,19 @@ void PipelineResourceSignatureD3D12Impl::AllocateRootParameters(const bool IsSer
         else
         {
             DEV_CHECK_ERR(pAttrib->Register == Register,
-                          "Deserialzied shader register (", pAttrib->Register, ") is invalid: ", Register, " is expected.");
+                          "Deserialized shader register (", pAttrib->Register, ") is invalid: ", Register, " is expected.");
             DEV_CHECK_ERR(pAttrib->Space == Space,
-                          "Deserialzied shader space (", pAttrib->Space, ") is invalid: ", Space, " is expected.");
+                          "Deserialized shader space (", pAttrib->Space, ") is invalid: ", Space, " is expected.");
             DEV_CHECK_ERR(pAttrib->SamplerInd == AssignedSamplerInd,
-                          "Deserialzied sampler index (", pAttrib->SamplerInd, ") is invalid: ", AssignedSamplerInd, " is expected.");
+                          "Deserialized sampler index (", pAttrib->SamplerInd, ") is invalid: ", AssignedSamplerInd, " is expected.");
             DEV_CHECK_ERR(pAttrib->SRBRootIndex == SRBRootIndex,
-                          "Deserialzied root index (", pAttrib->SRBRootIndex, ") is invalid: ", SRBRootIndex, " is expected.");
+                          "Deserialized root index (", pAttrib->SRBRootIndex, ") is invalid: ", SRBRootIndex, " is expected.");
             DEV_CHECK_ERR(pAttrib->SRBOffsetFromTableStart == SRBOffsetFromTableStart,
-                          "Deserialzied offset from table start (", pAttrib->SRBOffsetFromTableStart, ") is invalid: ", SRBOffsetFromTableStart, " is expected.");
+                          "Deserialized offset from table start (", pAttrib->SRBOffsetFromTableStart, ") is invalid: ", SRBOffsetFromTableStart, " is expected.");
             DEV_CHECK_ERR(pAttrib->SigRootIndex == SigRootIndex,
-                          "Deserialzied signature root index (", pAttrib->SigRootIndex, ") is invalid: ", SigRootIndex, " is expected.");
+                          "Deserialized signature root index (", pAttrib->SigRootIndex, ") is invalid: ", SigRootIndex, " is expected.");
             DEV_CHECK_ERR(pAttrib->SigOffsetFromTableStart == SigOffsetFromTableStart,
-                          "Deserialzied signature offset from table start (", pAttrib->SigOffsetFromTableStart, ") is invalid: ", SigOffsetFromTableStart, " is expected.");
+                          "Deserialized signature offset from table start (", pAttrib->SigOffsetFromTableStart, ") is invalid: ", SigOffsetFromTableStart, " is expected.");
             DEV_CHECK_ERR(pAttrib->IsImmutableSamplerAssigned() == (SrcImmutableSamplerInd != InvalidImmutableSamplerIndex),
                           "Deserialized immutable sampler flag is invalid");
             DEV_CHECK_ERR(pAttrib->GetD3D12RootParamType() == d3d12RootParamType,

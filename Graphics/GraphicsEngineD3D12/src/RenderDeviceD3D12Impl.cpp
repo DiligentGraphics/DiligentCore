@@ -107,7 +107,7 @@ CComPtr<ID3D12Heap> CreateDummyNVApiHeap(ID3D12Device* pd3d12Device)
 
     // From NVAPI docs:
     //      pHeap is necessary when bTexture2DArrayMipPack is true.
-    //      pHeap can be any heap and this API doens't change anything to it.
+    //      pHeap can be any heap and this API doesn't change anything to it.
     //
     // On D3D12_RESOURCE_HEAP_TIER_1 hardware, we need to specify the heap usage. Use NON_RT_DS_TEXTURES as the
     // most logical for sparse 2D arrays (the documentation says that pHeap can be any heap anyway).

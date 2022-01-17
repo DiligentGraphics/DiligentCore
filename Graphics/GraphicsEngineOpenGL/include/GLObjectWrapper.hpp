@@ -106,7 +106,7 @@ public:
     {
         // This unique ID is used to unambiguously identify the object for
         // tracking purposes.
-        // Niether GL handle nor pointer could be safely used for this purpose
+        // Neither GL handle nor pointer could be safely used for this purpose
         // as both GL reuses released handles and the OS reuses released pointers
         return m_UniqueId.GetID();
     }

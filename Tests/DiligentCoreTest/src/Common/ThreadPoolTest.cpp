@@ -224,7 +224,7 @@ TEST(Common_ThreadPool, RemoveTask)
         EXPECT_TRUE(res);
     }
 
-    // Wait unitl tasks are started
+    // Wait until tasks are started
     for (auto& Task : WaitTasks)
     {
         Task->WaitUntilRunning();

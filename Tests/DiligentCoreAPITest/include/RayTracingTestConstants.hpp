@@ -156,7 +156,7 @@ namespace TestingConstants
         static_assert(_countof(Primitives) == 9, "Update array size in shaders");
         static_assert(_countof(Indices) % 3 == 0, "Invalid index count");
         static_assert(_countof(Indices) / 3 == _countof(Primitives), "Primitive count mismatch");
-        static_assert(ShaderRecordSize == 32, "bust be 32 bytes");
+        static_assert(ShaderRecordSize == 32, "must be 32 bytes");
 
     } // namespace MultiGeometry
 

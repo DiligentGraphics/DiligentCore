@@ -227,7 +227,7 @@ public:
             // not incremented while executing the command buffer (as is the case with Unity command queue).
 
             // As long as resources used by deferred contexts are not released before the command list
-            // is executed through immediate context, this stategy always works.
+            // is executed through immediate context, this strategy always works.
             Queue.ReleaseQueue.DiscardStaleResources(CmdBuffInfo.CmdBufferNumber, CmdBuffInfo.FenceValue);
         }
 
