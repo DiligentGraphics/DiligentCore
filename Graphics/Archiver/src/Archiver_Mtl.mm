@@ -179,14 +179,13 @@ struct SerializableShaderImpl::CompiledShaderMtlImpl final : CompiledShader
     MtlFunctionArguments::BufferTypeInfoMapType BufferTypeInfoMap;
 };
 
-void SerializableShaderImpl::CreateShaderMtl(const ShaderCreateInfo& ShaderCI, String& CompilationLog)
+void SerializableShaderImpl::CreateShaderMtl(ShaderCreateInfo ShaderCI, String& CompilationLog)
 {
     auto* pShaderMtl = new CompiledShaderMtlImpl{};
     m_pShaderMtl.reset(pShaderMtl);
 
-    // Mem leak when used RefCntAutoPtr
-    IDataBlob* pLog           = nullptr;
-    ShaderCI.ppCompilerOutput = &pLog;
+    RefCntAutoPtr<IDataBlob> pLog;
+    ShaderCI.ppCompilerOutput = pLog.RawDblPtr();
 
     // Convert HLSL/GLSL/SPIRV to MSL
     try
@@ -207,9 +206,6 @@ void SerializableShaderImpl::CreateShaderMtl(const ShaderCreateInfo& ShaderCI, S
             CompilationLog += static_cast<const char*>(pLog->GetConstDataPtr());
         }
     }
-
-    if (pLog)
-        pLog->Release();
 }
 
 const SPIRVShaderResources* SerializableShaderImpl::GetMtlShaderSPIRVResources() const

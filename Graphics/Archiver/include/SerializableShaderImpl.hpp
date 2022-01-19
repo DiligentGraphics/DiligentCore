@@ -126,7 +126,7 @@ private:
     struct CompiledShaderMtlImpl;
     std::unique_ptr<CompiledShader> m_pShaderMtl;
 
-    void CreateShaderMtl(const ShaderCreateInfo& ShaderCI, String& CompilationLog);
+    void CreateShaderMtl(ShaderCreateInfo ShaderCI, String& CompilationLog);
 #endif
 };
 
