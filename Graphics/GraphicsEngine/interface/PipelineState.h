@@ -219,7 +219,7 @@ struct PipelineResourceLayoutDesc
     /// \return
     /// - True if all members of the two structures are equal.
     /// - False otherwise.
-    constexpr bool operator==(const PipelineResourceLayoutDesc& RHS) const
+    bool operator==(const PipelineResourceLayoutDesc& RHS) const
     {
         if (!(DefaultVariableType        == RHS.DefaultVariableType &&
               DefaultVariableMergeStages == RHS.DefaultVariableMergeStages &&
