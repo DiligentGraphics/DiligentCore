@@ -25,6 +25,7 @@
  */
 
 #include <array>
+#include <unordered_set>
 
 #include "TestingEnvironment.hpp"
 #include "TestingSwapChainBase.hpp"
@@ -1805,7 +1806,11 @@ TEST(ArchiveTest, ResourceSignatureBindings)
     }
 }
 
-void TestSamplers(bool UseImtblSamplers, SHADER_SOURCE_LANGUAGE ShaderLang)
+using TestSamplersParamType = std::tuple<bool, SHADER_SOURCE_LANGUAGE, bool>;
+class TestSamplers : public testing::TestWithParam<TestSamplersParamType>
+{};
+
+TEST_P(TestSamplers, GraphicsPipeline)
 {
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
@@ -1815,6 +1820,12 @@ void TestSamplers(bool UseImtblSamplers, SHADER_SOURCE_LANGUAGE ShaderLang)
     const auto& deviceCaps       = pDevice->GetDeviceInfo();
     auto* const pArchiverFactory = pEnv->GetArchiverFactory();
     auto* const pDearchiver      = pDevice->GetEngineFactory()->GetDearchiver();
+
+    const auto& Param = GetParam();
+
+    const auto UseImtblSamplers = std::get<0>(Param);
+    const auto ShaderLang       = std::get<1>(Param);
+    const auto UseSignature     = std::get<2>(Param);
 
     if (ShaderLang != SHADER_SOURCE_LANGUAGE_HLSL && deviceCaps.IsD3DDevice())
         GTEST_SKIP() << "Direct3D backends support HLSL only";
@@ -1873,13 +1884,14 @@ void TestSamplers(bool UseImtblSamplers, SHADER_SOURCE_LANGUAGE ShaderLang)
     }
 
     constexpr char PSOName[] = "Archiver sampler test";
+    constexpr char PRSName[] = "SamplerTest - PRS";
+
+    RefCntAutoPtr<ISerializationDevice> pSerializationDevice;
+    pArchiverFactory->CreateSerializationDevice(SerializationDeviceCreateInfo{}, &pSerializationDevice);
+    ASSERT_NE(pSerializationDevice, nullptr);
 
     RefCntAutoPtr<IDeviceObjectArchive> pArchive;
     {
-        RefCntAutoPtr<ISerializationDevice> pSerializationDevice;
-        pArchiverFactory->CreateSerializationDevice(SerializationDeviceCreateInfo{}, &pSerializationDevice);
-        ASSERT_NE(pSerializationDevice, nullptr);
-
         RefCntAutoPtr<IArchiver> pArchiver;
         pArchiverFactory->CreateArchiver(pSerializationDevice, &pArchiver);
         ASSERT_NE(pArchiver, nullptr);
@@ -1987,34 +1999,58 @@ void TestSamplers(bool UseImtblSamplers, SHADER_SOURCE_LANGUAGE ShaderLang)
         }
 
         std::vector<ShaderResourceVariableDesc> Vars;
+        std::vector<PipelineResourceDesc>       Resources;
+        std::vector<PipelineResourceDesc>       Samplers;
+        std::unordered_set<std::string>         StringPool;
 
-        auto AddVar = [&](const char* Name, SHADER_RESOURCE_VARIABLE_TYPE VarType) //
+        auto AddResourceOrVar = [&](const char* Name, Uint32 ArraySize, SHADER_RESOURCE_TYPE ResType, SHADER_RESOURCE_VARIABLE_TYPE VarType) //
         {
+            auto Add = [&](SHADER_TYPE Stage) {
+                if (UseSignature)
+                {
+                    auto Flags = PIPELINE_RESOURCE_FLAG_NONE;
+                    if (ShaderLang == SHADER_SOURCE_LANGUAGE_GLSL && ResType == SHADER_RESOURCE_TYPE_TEXTURE_SRV)
+                        Flags = PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER;
+                    Resources.emplace_back(Stage, Name, ArraySize, ResType, VarType, Flags);
+
+                    if (ShaderLang == SHADER_SOURCE_LANGUAGE_HLSL && ResType == SHADER_RESOURCE_TYPE_TEXTURE_SRV)
+                    {
+                        const auto it = StringPool.emplace(std::string{Name} + PipelineResourceSignatureDesc{}.CombinedSamplerSuffix).first;
+                        Samplers.emplace_back(Stage, it->c_str(), ArraySize, SHADER_RESOURCE_TYPE_SAMPLER, VarType);
+                    }
+                }
+                else
+                {
+                    Vars.emplace_back(Stage, Name, VarType);
+                }
+            };
+
             if (deviceCaps.Features.SeparablePrograms)
             {
                 // Use separate variables for each stage
-                Vars.emplace_back(SHADER_TYPE_VERTEX, Name, VarType);
-                Vars.emplace_back(SHADER_TYPE_PIXEL, Name, VarType);
+                Add(SHADER_TYPE_VERTEX);
+                Add(SHADER_TYPE_PIXEL);
             }
             else
             {
                 // Use one shared variable
-                Vars.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, Name, VarType);
+                Add(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL);
             }
         };
 
         // clang-format off
-        AddVar("UniformBuff_Stat",  SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
-        AddVar("UniformBuff_Mut",   SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE);
-        AddVar("UniformBuff_Dyn",   SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
+        AddResourceOrVar("UniformBuff_Stat",  1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+        AddResourceOrVar("UniformBuff_Mut",   1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE);
+        AddResourceOrVar("UniformBuff_Dyn",   1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
 
-        AddVar("g_Tex2D_Static",    SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
-      //AddVar("g_Tex2D_Mut",       SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE); // Default type
-        AddVar("g_Tex2D_Dyn",       SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
+        AddResourceOrVar("g_Tex2D_Static",    1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+        if (UseSignature)
+            AddResourceOrVar("g_Tex2D_Mut",   1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE); // Default type
+        AddResourceOrVar("g_Tex2D_Dyn",       1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
 
-        AddVar("g_Tex2DArr_Static", SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
-        AddVar("g_Tex2DArr_Mut",    SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE);
-        AddVar("g_Tex2DArr_Dyn",    SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
+        AddResourceOrVar("g_Tex2DArr_Static", 2, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+        AddResourceOrVar("g_Tex2DArr_Mut",    4, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE);
+        AddResourceOrVar("g_Tex2DArr_Dyn",    3, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
         // clang-format on
 
         GraphicsPipelineStateCreateInfo PSOCreateInfo;
@@ -2024,12 +2060,40 @@ void TestSamplers(bool UseImtblSamplers, SHADER_SOURCE_LANGUAGE ShaderLang)
 
         PSODesc.Name = PSOName;
 
-        auto& ResourceLayout{PSODesc.ResourceLayout};
-        ResourceLayout.DefaultVariableType  = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE;
-        ResourceLayout.Variables            = Vars.data();
-        ResourceLayout.NumVariables         = static_cast<Uint32>(Vars.size());
-        ResourceLayout.ImmutableSamplers    = UseImtblSamplers ? ImtblSamplers : nullptr;
-        ResourceLayout.NumImmutableSamplers = UseImtblSamplers ? _countof(ImtblSamplers) : 0;
+        RefCntAutoPtr<IPipelineResourceSignature> pSerializedSignature;
+
+        IPipelineResourceSignature* ppResourceSignatures[1] = {};
+        if (UseSignature)
+        {
+            // Add samplers in the reverse order to make them use registers that are not
+            // the same as texture registers.
+            Resources.insert(Resources.end(), Samplers.rbegin(), Samplers.rend());
+
+            PipelineResourceSignatureDesc PRSDesc;
+            PRSDesc.Name                       = PRSName;
+            PRSDesc.BindingIndex               = 0;
+            PRSDesc.Resources                  = Resources.data();
+            PRSDesc.NumResources               = StaticCast<Uint32>(Resources.size());
+            PRSDesc.ImmutableSamplers          = UseImtblSamplers ? ImtblSamplers : nullptr;
+            PRSDesc.NumImmutableSamplers       = UseImtblSamplers ? _countof(ImtblSamplers) : 0;
+            PRSDesc.UseCombinedTextureSamplers = true;
+
+            pSerializationDevice->CreatePipelineResourceSignature(PRSDesc, GetDeviceBits(), &pSerializedSignature);
+            ASSERT_TRUE(pSerializedSignature);
+
+            ppResourceSignatures[0]               = pSerializedSignature;
+            PSOCreateInfo.ppResourceSignatures    = ppResourceSignatures;
+            PSOCreateInfo.ResourceSignaturesCount = 1;
+        }
+        else
+        {
+            auto& ResourceLayout{PSODesc.ResourceLayout};
+            ResourceLayout.DefaultVariableType  = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE;
+            ResourceLayout.Variables            = Vars.data();
+            ResourceLayout.NumVariables         = static_cast<Uint32>(Vars.size());
+            ResourceLayout.ImmutableSamplers    = UseImtblSamplers ? ImtblSamplers : nullptr;
+            ResourceLayout.NumImmutableSamplers = UseImtblSamplers ? _countof(ImtblSamplers) : 0;
+        }
 
         PSOCreateInfo.pVS = pSerializedVS;
         PSOCreateInfo.pPS = pSerializedPS;
@@ -2067,29 +2131,56 @@ void TestSamplers(bool UseImtblSamplers, SHADER_SOURCE_LANGUAGE ShaderLang)
         ASSERT_NE(pPSO, nullptr);
     }
 
+    RefCntAutoPtr<IPipelineResourceSignature> pSignature;
+    if (UseSignature)
+    {
+        ResourceSignatureUnpackInfo UnpackInfo;
+        UnpackInfo.Name     = PRSName;
+        UnpackInfo.pArchive = pArchive;
+        UnpackInfo.pDevice  = pDevice;
+
+        pDearchiver->UnpackResourceSignature(UnpackInfo, &pSignature);
+        ASSERT_NE(pSignature, nullptr);
+    }
+
     RefCntAutoPtr<IShaderResourceBinding> pSRB;
-    pPSO->CreateShaderResourceBinding(&pSRB, false);
+    if (pSignature)
+        pSignature->CreateShaderResourceBinding(&pSRB, false);
+    else
+        pPSO->CreateShaderResourceBinding(&pSRB, false);
     ASSERT_NE(pSRB, nullptr);
 
     auto BindResources = [&](SHADER_TYPE ShaderType) {
         const auto id = ShaderType == SHADER_TYPE_VERTEX ? VSResArrId : PSResArrId;
 
-        pPSO->GetStaticVariableByName(ShaderType, "UniformBuff_Stat")->Set(RefBuffers.GetBuffer(Buff_StaticIdx[id]));
-        pPSO->GetStaticVariableByName(ShaderType, "g_Tex2D_Static")->Set(RefTextures.GetViewObjects(Tex2D_StaticIdx[id])[0]);
-        pPSO->GetStaticVariableByName(ShaderType, "g_Tex2DArr_Static")->SetArray(RefTextures.GetViewObjects(Tex2DArr_StaticIdx[id]), 0, StaticTexArraySize);
+        if (pSignature)
+        {
+            pSignature->GetStaticVariableByName(ShaderType, "UniformBuff_Stat")->Set(RefBuffers.GetBuffer(Buff_StaticIdx[id]));
+            pSignature->GetStaticVariableByName(ShaderType, "g_Tex2DArr_Static")->SetArray(RefTextures.GetViewObjects(Tex2DArr_StaticIdx[id]), 0, StaticTexArraySize);
+            pSignature->GetStaticVariableByName(ShaderType, "g_Tex2D_Static")->Set(RefTextures.GetViewObjects(Tex2D_StaticIdx[id])[0]);
+        }
+        else
+        {
+            pPSO->GetStaticVariableByName(ShaderType, "UniformBuff_Stat")->Set(RefBuffers.GetBuffer(Buff_StaticIdx[id]));
+            pPSO->GetStaticVariableByName(ShaderType, "g_Tex2DArr_Static")->SetArray(RefTextures.GetViewObjects(Tex2DArr_StaticIdx[id]), 0, StaticTexArraySize);
+            pPSO->GetStaticVariableByName(ShaderType, "g_Tex2D_Static")->Set(RefTextures.GetViewObjects(Tex2D_StaticIdx[id])[0]);
+        }
 
         pSRB->GetVariableByName(ShaderType, "UniformBuff_Mut")->Set(RefBuffers.GetBuffer(Buff_MutIdx[id]));
-        pSRB->GetVariableByName(ShaderType, "g_Tex2D_Mut")->Set(RefTextures.GetViewObjects(Tex2D_MutIdx[id])[0]);
         pSRB->GetVariableByName(ShaderType, "g_Tex2DArr_Mut")->SetArray(RefTextures.GetViewObjects(Tex2DArr_MutIdx[id]), 0, MutableTexArraySize);
+        pSRB->GetVariableByName(ShaderType, "g_Tex2D_Mut")->Set(RefTextures.GetViewObjects(Tex2D_MutIdx[id])[0]);
 
         pSRB->GetVariableByName(ShaderType, "UniformBuff_Dyn")->Set(RefBuffers.GetBuffer(Buff_DynIdx[id]));
-        pSRB->GetVariableByName(ShaderType, "g_Tex2D_Dyn")->Set(RefTextures.GetViewObjects(Tex2D_DynIdx[id])[0]);
         pSRB->GetVariableByName(ShaderType, "g_Tex2DArr_Dyn")->SetArray(RefTextures.GetViewObjects(Tex2DArr_DynIdx[id]), 0, DynamicTexArraySize);
+        pSRB->GetVariableByName(ShaderType, "g_Tex2D_Dyn")->Set(RefTextures.GetViewObjects(Tex2D_DynIdx[id])[0]);
     };
     BindResources(SHADER_TYPE_VERTEX);
     BindResources(SHADER_TYPE_PIXEL);
 
-    pPSO->InitializeStaticSRBResources(pSRB);
+    if (pSignature)
+        pSignature->InitializeStaticSRBResources(pSRB);
+    else
+        pPSO->InitializeStaticSRBResources(pSRB);
 
     auto* pContext = pEnv->GetDeviceContext();
 
@@ -2106,24 +2197,29 @@ void TestSamplers(bool UseImtblSamplers, SHADER_SOURCE_LANGUAGE ShaderLang)
     pSwapChain->Present();
 }
 
-TEST(ArchiveTest, Samplers)
-{
-    TestSamplers(false /*UseImtblSamplers*/, SHADER_SOURCE_LANGUAGE_HLSL);
-}
+INSTANTIATE_TEST_SUITE_P(ArchiveTest,
+                         TestSamplers,
+                         testing::Combine(
+                             testing::Values<bool>(true, false),
+                             testing::Values<SHADER_SOURCE_LANGUAGE>(SHADER_SOURCE_LANGUAGE_HLSL, SHADER_SOURCE_LANGUAGE_GLSL),
+                             testing::Values<bool>(true, false)),
+                         [](const testing::TestParamInfo<TestSamplersParamType>& info) //
+                         {
+                             const auto UseImtblSamplers = std::get<0>(info.param);
+                             const auto ShaderLang       = std::get<1>(info.param);
+                             const auto UseSignature     = std::get<2>(info.param);
 
-TEST(ArchiveTest, ImmutableSamplers)
-{
-    TestSamplers(true /*UseImtblSamplers*/, SHADER_SOURCE_LANGUAGE_HLSL);
-}
+                             std::stringstream name_ss;
+                             if (ShaderLang == SHADER_SOURCE_LANGUAGE_HLSL)
+                                 name_ss << "HLSL";
+                             else if (ShaderLang == SHADER_SOURCE_LANGUAGE_GLSL)
+                                 name_ss << "GLSL";
+                             if (UseImtblSamplers)
+                                 name_ss << "__ImtblSamplers";
+                             if (UseSignature)
+                                 name_ss << "__Signature";
 
-TEST(ArchiveTest, Samplers_GLSL)
-{
-    TestSamplers(false, SHADER_SOURCE_LANGUAGE_GLSL);
-}
-
-TEST(ArchiveTest, ImmutableSamplers_GLSL)
-{
-    TestSamplers(true, SHADER_SOURCE_LANGUAGE_GLSL);
-}
+                             return name_ss.str();
+                         });
 
 } // namespace
