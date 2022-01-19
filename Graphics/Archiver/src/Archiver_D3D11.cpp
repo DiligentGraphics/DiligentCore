@@ -181,7 +181,7 @@ bool ArchiverImpl::PatchShadersD3D11(const CreateInfoType& CreateInfo, TPSOData<
 INSTANTIATE_PATCH_SHADER_METHODS(PatchShadersD3D11)
 INSTANTIATE_DEVICE_SIGNATURE_METHODS(PipelineResourceSignatureD3D11Impl)
 
-void SerializableShaderImpl::CreateShaderD3D11(IReferenceCounters* pRefCounters, ShaderCreateInfo& ShaderCI, String& CompilationLog)
+void SerializableShaderImpl::CreateShaderD3D11(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI, String& CompilationLog)
 {
     const ShaderD3D11Impl::CreateInfo D3D11ShaderCI{
         m_pDevice->GetDeviceInfo(),

@@ -155,7 +155,7 @@ INSTANTIATE_PATCH_SHADER_METHODS(PatchShadersD3D12)
 INSTANTIATE_DEVICE_SIGNATURE_METHODS(PipelineResourceSignatureD3D12Impl)
 
 
-void SerializableShaderImpl::CreateShaderD3D12(IReferenceCounters* pRefCounters, ShaderCreateInfo& ShaderCI, String& CompilationLog)
+void SerializableShaderImpl::CreateShaderD3D12(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI, String& CompilationLog)
 {
     const auto& D3D12Props  = m_pDevice->GetD3D12Properties();
     const auto& DeviceInfo  = m_pDevice->GetDeviceInfo();

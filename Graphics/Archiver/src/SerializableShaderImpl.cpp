@@ -36,30 +36,29 @@ namespace Diligent
 
 SerializableShaderImpl::SerializableShaderImpl(IReferenceCounters*       pRefCounters,
                                                SerializationDeviceImpl*  pDevice,
-                                               const ShaderCreateInfo&   InShaderCI,
+                                               const ShaderCreateInfo&   ShaderCI,
                                                ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags) :
     TBase{pRefCounters},
     m_pDevice{pDevice},
-    m_CreateInfo{InShaderCI}
+    m_CreateInfo{ShaderCI}
 {
     if ((DeviceFlags & m_pDevice->GetValidDeviceFlags()) != DeviceFlags)
     {
         LOG_ERROR_AND_THROW("DeviceFlags contain unsupported device type");
     }
 
-    if (InShaderCI.CompileFlags & SHADER_COMPILE_FLAG_SKIP_REFLECTION)
+    if (ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_SKIP_REFLECTION)
     {
         LOG_ERROR_AND_THROW("Serialized shader must not contain SHADER_COMPILE_FLAG_SKIP_REFLECTION flag");
     }
 
-    CopyShaderCreateInfo(InShaderCI);
+    CopyShaderCreateInfo(ShaderCI);
 
     String CompilationLog;
 
     while (DeviceFlags != ARCHIVE_DEVICE_DATA_FLAG_NONE)
     {
-        auto       ShaderCI = InShaderCI;
-        const auto Flag     = ExtractLSB(DeviceFlags);
+        const auto Flag = ExtractLSB(DeviceFlags);
 
         static_assert(ARCHIVE_DEVICE_DATA_FLAG_LAST == ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS, "Please update the switch below to handle the new device data type");
         switch (Flag)
@@ -69,29 +68,33 @@ SerializableShaderImpl::SerializableShaderImpl(IReferenceCounters*       pRefCou
                 CreateShaderD3D11(pRefCounters, ShaderCI, CompilationLog);
                 break;
 #endif
+
 #if D3D12_SUPPORTED
             case ARCHIVE_DEVICE_DATA_FLAG_D3D12:
                 CreateShaderD3D12(pRefCounters, ShaderCI, CompilationLog);
                 break;
 #endif
+
+#if GL_SUPPORTED || GLES_SUPPORTED
             case ARCHIVE_DEVICE_DATA_FLAG_GL:
             case ARCHIVE_DEVICE_DATA_FLAG_GLES:
-#if (GL_SUPPORTED || GLES_SUPPORTED) && !DILIGENT_NO_GLSLANG
-                ShaderCI = m_CreateInfo;
                 CreateShaderGL(pRefCounters, ShaderCI, CompilationLog, Flag == ARCHIVE_DEVICE_DATA_FLAG_GL ? RENDER_DEVICE_TYPE_GL : RENDER_DEVICE_TYPE_GLES);
-#endif
                 break;
+#endif
+
 #if VULKAN_SUPPORTED
             case ARCHIVE_DEVICE_DATA_FLAG_VULKAN:
                 CreateShaderVk(pRefCounters, ShaderCI, CompilationLog);
                 break;
 #endif
+
 #if METAL_SUPPORTED
             case ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS:
             case ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS:
                 CreateShaderMtl(ShaderCI, CompilationLog);
                 break;
 #endif
+
             case ARCHIVE_DEVICE_DATA_FLAG_NONE:
                 UNEXPECTED("ARCHIVE_DEVICE_DATA_FLAG_NONE(0) should never occur");
                 break;
@@ -104,13 +107,13 @@ SerializableShaderImpl::SerializableShaderImpl(IReferenceCounters*       pRefCou
 
     if (!CompilationLog.empty())
     {
-        if (InShaderCI.ppCompilerOutput)
+        if (ShaderCI.ppCompilerOutput)
         {
             auto* pLogBlob = MakeNewRCObj<DataBlobImpl>{}(CompilationLog.size() + 1);
             std::memcpy(pLogBlob->GetDataPtr(), CompilationLog.c_str(), CompilationLog.size() + 1);
-            pLogBlob->QueryInterface(IID_DataBlob, reinterpret_cast<IObject**>(InShaderCI.ppCompilerOutput));
+            pLogBlob->QueryInterface(IID_DataBlob, reinterpret_cast<IObject**>(ShaderCI.ppCompilerOutput));
         }
-        LOG_ERROR_AND_THROW("Shader '", (InShaderCI.Desc.Name ? InShaderCI.Desc.Name : ""), "' compilation failed for some backends");
+        LOG_ERROR_AND_THROW("Shader '", (ShaderCI.Desc.Name ? ShaderCI.Desc.Name : ""), "' compilation failed for some backends");
     }
 }
 

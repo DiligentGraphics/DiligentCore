@@ -152,12 +152,12 @@ void SerializationDeviceImpl::GetPipelineResourceBindingsGL(const PipelineResour
     }
 }
 
-#if !DILIGENT_NO_GLSLANG
-void SerializableShaderImpl::CreateShaderGL(IReferenceCounters* pRefCounters,
-                                            ShaderCreateInfo&   ShaderCI,
-                                            String&             CompilationLog,
-                                            RENDER_DEVICE_TYPE  DeviceType)
+void SerializableShaderImpl::CreateShaderGL(IReferenceCounters*     pRefCounters,
+                                            const ShaderCreateInfo& ShaderCI,
+                                            String&                 CompilationLog,
+                                            RENDER_DEVICE_TYPE      DeviceType)
 {
+#if !DILIGENT_NO_GLSLANG
     GLSLangUtils::GLSLtoSPIRVAttribs Attribs;
 
     Attribs.ShaderType = ShaderCI.Desc.ShaderType;
@@ -206,7 +206,7 @@ void SerializableShaderImpl::CreateShaderGL(IReferenceCounters* pRefCounters,
             CompilationLog += static_cast<const char*>(pLog->GetConstDataPtr());
         }
     }
-}
 #endif
+}
 
 } // namespace Diligent

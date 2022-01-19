@@ -176,7 +176,7 @@ bool ArchiverImpl::PatchShadersVk(const CreateInfoType& CreateInfo, TPSOData<Cre
 INSTANTIATE_PATCH_SHADER_METHODS(PatchShadersVk)
 INSTANTIATE_DEVICE_SIGNATURE_METHODS(PipelineResourceSignatureVkImpl)
 
-void SerializableShaderImpl::CreateShaderVk(IReferenceCounters* pRefCounters, ShaderCreateInfo& ShaderCI, String& CompilationLog)
+void SerializableShaderImpl::CreateShaderVk(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI, String& CompilationLog)
 {
     const auto& VkProps     = m_pDevice->GetVkProperties();
     const auto& DeviceInfo  = m_pDevice->GetDeviceInfo();

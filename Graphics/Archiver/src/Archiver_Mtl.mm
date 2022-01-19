@@ -179,7 +179,7 @@ struct SerializableShaderImpl::CompiledShaderMtlImpl final : CompiledShader
     MtlFunctionArguments::BufferTypeInfoMapType BufferTypeInfoMap;
 };
 
-void SerializableShaderImpl::CreateShaderMtl(ShaderCreateInfo& ShaderCI, String& CompilationLog)
+void SerializableShaderImpl::CreateShaderMtl(const ShaderCreateInfo& ShaderCI, String& CompilationLog)
 {
     auto* pShaderMtl = new CompiledShaderMtlImpl{};
     m_pShaderMtl.reset(pShaderMtl);

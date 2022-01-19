@@ -130,12 +130,12 @@ void SerializableShaderImpl::CreateShader(DeviceType          Type,
                                           String&             CompilationLog,
                                           const char*         DeviceTypeName,
                                           IReferenceCounters* pRefCounters,
-                                          ShaderCreateInfo&   ShaderCI,
+                                          ShaderCreateInfo    ShaderCI, // Need a copy
                                           const ArgTypes&... Args)
 {
     // Mem leak when used RefCntAutoPtr
-    IDataBlob* pLog           = nullptr;
-    ShaderCI.ppCompilerOutput = &pLog;
+    RefCntAutoPtr<IDataBlob> pLog;
+    ShaderCI.ppCompilerOutput = pLog.RawDblPtr();
     try
     {
         m_Shaders[static_cast<size_t>(Type)] = std::make_unique<ShaderType>(pRefCounters, ShaderCI, Args...);
@@ -150,9 +150,6 @@ void SerializableShaderImpl::CreateShader(DeviceType          Type,
             CompilationLog += static_cast<const char*>(pLog->GetConstDataPtr());
         }
     }
-
-    if (pLog)
-        pLog->Release();
 }
 
 
