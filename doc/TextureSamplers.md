@@ -188,6 +188,22 @@ There are no separate samplers in OpenGL shaders, and `CombinedSamplerSuffix` is
 shaders to GLSL.
 
 
+### Immutable Samplers
+
+Immutable samplers are fully supported for combined image samplers with the only difference that
+texture names must be specified instead of the sampler names:
+
+```
+ImmutableSamplerDesc ImmutableSamplers[] =
+    {
+        {SHADER_TYPE_PIXEL, "g_Texture1", WrapSamplerDesc},
+        {SHADER_TYPE_PIXEL, "g_Texture2", ClampSamplerDesc}
+    };
+ResourceLayout.ImmutableSamplers    = ImmutableSamplers;
+ResourceLayout.NumImmutableSamplers = _countof(ImmutableSamplers);
+```
+
+
 ### Pipeline Resource Signatures
 
 Using combined image samplers with pipeline resource signatures is generally similar:
@@ -275,21 +291,27 @@ are defined through the `ResourceLayout` member of the pipeline description.
 In OpenGL, all samplers are combined samplers. However, for consistency with Direct3D and Metal, GLSL samplers
 are exposed without the `PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER` flag when cross-compiling from HLSL.
 
+#### Universal Combined Sampler Description
 
-### Immutable Samplers
+**HLSL**
 
-Immutable samplers are fully supported for combined image samplers with the only difference that
-texture names must be specified instead of the sampler names:
+HLSL is the universal shading language in Diligent Engine that is supported in all backends and on
+all platforms. Use the following rules to define combined texture samplers in a signature that will
+work across all backends:
 
-```
-ImmutableSamplerDesc ImmutableSamplers[] =
-    {
-        {SHADER_TYPE_PIXEL, "g_Texture1", WrapSamplerDesc},
-        {SHADER_TYPE_PIXEL, "g_Texture2", ClampSamplerDesc}
-    };
-ResourceLayout.ImmutableSamplers    = ImmutableSamplers;
-ResourceLayout.NumImmutableSamplers = _countof(ImmutableSamplers);
-```
+* Always explicitly define the texture + sampler pair in the list of resources
+* Do not use the `PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER` flag as when compiling HLSL to SPIRV,
+  HLSL textures are converted to separate images, not to combined samplers.
+
+**GLSL**
+
+* If you use Vulkan dialect of GLSL, define the texture + sampler pairs for the emulated combined
+  image samplers.
+* Use `PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER` flag for native combined texture samplers.
+
+**MSL**
+
+Follow the same rules as for HLSL.
 
 
 ## Shader Cross-Compilation Considerations
