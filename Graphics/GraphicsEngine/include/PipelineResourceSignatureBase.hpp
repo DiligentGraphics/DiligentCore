@@ -117,6 +117,176 @@ struct PipelineResourceSignatureInternalData
     }
 };
 
+
+/// Helper class that wraps the pipeline resource signature description.
+class PipelineResourceSignatureDescWrapper
+{
+public:
+    PipelineResourceSignatureDescWrapper() = default;
+
+    // Note: any copy or move requires updating string pointers
+    PipelineResourceSignatureDescWrapper(const PipelineResourceSignatureDescWrapper&) = delete;
+    PipelineResourceSignatureDescWrapper& operator=(const PipelineResourceSignatureDescWrapper&) = delete;
+    PipelineResourceSignatureDescWrapper& operator=(PipelineResourceSignatureDescWrapper&&) = delete;
+
+    PipelineResourceSignatureDescWrapper(const char*                       PSOName,
+                                         const PipelineResourceLayoutDesc& ResourceLayout,
+                                         Uint32                            SRBAllocationGranularity)
+    {
+        if (PSOName != nullptr)
+        {
+            m_Name = "Implicit signature of PSO '";
+            m_Name += PSOName;
+            m_Name += '\'';
+            m_Desc.Name = m_Name.c_str();
+        }
+
+        m_ImmutableSamplers.reserve(ResourceLayout.NumImmutableSamplers);
+        for (Uint32 i = 0; i < ResourceLayout.NumImmutableSamplers; ++i)
+            AddImmutableSampler(ResourceLayout.ImmutableSamplers[i]);
+
+        m_Desc.SRBAllocationGranularity = SRBAllocationGranularity;
+    }
+
+    explicit PipelineResourceSignatureDescWrapper(const PipelineResourceSignatureDesc& Desc) :
+        m_Name{Desc.Name != nullptr ? Desc.Name : ""},
+        m_CombinedSamplerSuffix{Desc.CombinedSamplerSuffix != nullptr ? Desc.CombinedSamplerSuffix : ""},
+        m_Desc{Desc}
+    {
+        m_Desc.Name = m_Name.c_str();
+        if (Desc.CombinedSamplerSuffix != nullptr)
+            m_Desc.CombinedSamplerSuffix = m_CombinedSamplerSuffix.c_str();
+
+        m_Resources.reserve(Desc.NumResources);
+        for (Uint32 i = 0; i < Desc.NumResources; ++i)
+            AddResource(Desc.Resources[i]);
+
+        m_ImmutableSamplers.reserve(Desc.NumImmutableSamplers);
+        for (Uint32 i = 0; i < Desc.NumImmutableSamplers; ++i)
+            AddImmutableSampler(Desc.ImmutableSamplers[i]);
+    }
+
+    // We need to update string pointers as they may change
+    PipelineResourceSignatureDescWrapper(PipelineResourceSignatureDescWrapper&& rhs) noexcept :
+        // clang-format off
+        m_Name                 {std::move(rhs.m_Name)},
+        m_CombinedSamplerSuffix{std::move(rhs.m_CombinedSamplerSuffix)},
+        m_Resources            {std::move(rhs.m_Resources)},
+        m_ImmutableSamplers    {std::move(rhs.m_ImmutableSamplers)},
+        m_StringPool           {std::move(rhs.m_StringPool)},
+        m_Desc                 {rhs.m_Desc}
+    // clang-format on
+    {
+        static_assert(sizeof(*this) == sizeof(m_Name) + sizeof(m_CombinedSamplerSuffix) + sizeof(m_Resources) + sizeof(m_ImmutableSamplers) + sizeof(m_StringPool) + sizeof(m_Desc), "Please update move ctor");
+        UpdatePointers();
+    }
+
+    template <typename... ArgsType>
+    void AddResource(ArgsType&&... Args)
+    {
+        m_Resources.emplace_back(std::forward<ArgsType>(Args)...);
+        m_Desc.NumResources = StaticCast<Uint32>(m_Resources.size());
+        m_Desc.Resources    = m_Resources.data();
+
+        auto& Res{m_Resources.back()};
+        Res.Name = m_StringPool.insert(Res.Name).first->c_str();
+    }
+
+    template <typename... ArgsType>
+    void AddImmutableSampler(ArgsType&&... Args)
+    {
+        m_ImmutableSamplers.emplace_back(std::forward<ArgsType>(Args)...);
+        m_Desc.NumImmutableSamplers = StaticCast<Uint32>(m_ImmutableSamplers.size());
+        m_Desc.ImmutableSamplers    = m_ImmutableSamplers.data();
+
+        auto& ImtblSam{m_ImmutableSamplers.back()};
+        ImtblSam.SamplerOrTextureName = m_StringPool.insert(ImtblSam.SamplerOrTextureName).first->c_str();
+    }
+
+    template <class HandlerType>
+    void ProcessImmutableSamplers(HandlerType Handler)
+    {
+        for (auto& ImtblSam : m_ImmutableSamplers)
+        {
+            const char* OrigName = ImtblSam.SamplerOrTextureName;
+            Handler(ImtblSam);
+            if (ImtblSam.SamplerOrTextureName != OrigName) // Compare pointers, not strings!
+                ImtblSam.SamplerOrTextureName = m_StringPool.insert(ImtblSam.SamplerOrTextureName).first->c_str();
+        }
+    }
+
+    template <class HandlerType>
+    void ProcessResources(HandlerType Handler)
+    {
+        for (auto& Res : m_Resources)
+        {
+            const char* OrigName = Res.Name;
+            Handler(Res);
+            if (Res.Name != OrigName) // Compare pointers, not strings!
+                Res.Name = m_StringPool.insert(Res.Name).first->c_str();
+        }
+    }
+
+    void SetCombinedSamplerSuffix(const char* Suffix)
+    {
+        VERIFY_EXPR(Suffix != nullptr);
+        if (m_Desc.UseCombinedTextureSamplers)
+        {
+            if (strcmp(m_Desc.CombinedSamplerSuffix, Suffix) != 0)
+            {
+                LOG_ERROR_AND_THROW("New Combined Sampler Suffix (", Suffix, ") does not match the current suffix (", m_Desc.CombinedSamplerSuffix,
+                                    "). This indicates that the pipeline state uses shaders with different sampler suffixes, which is not allowed.");
+            }
+        }
+        else
+        {
+            m_CombinedSamplerSuffix           = Suffix;
+            m_Desc.CombinedSamplerSuffix      = m_CombinedSamplerSuffix.c_str();
+            m_Desc.UseCombinedTextureSamplers = true;
+        }
+    }
+
+    void SetName(const char* Name)
+    {
+        m_Name      = Name;
+        m_Desc.Name = m_Name.c_str();
+    }
+
+    const PipelineResourceSignatureDesc& Get() const
+    {
+        return m_Desc;
+    }
+    operator const PipelineResourceSignatureDesc&() const
+    {
+        return Get();
+    }
+
+private:
+    void UpdatePointers()
+    {
+        m_Desc.Name                  = m_Name.c_str();
+        m_Desc.CombinedSamplerSuffix = m_CombinedSamplerSuffix.c_str();
+
+        m_Desc.NumResources = StaticCast<Uint32>(m_Resources.size());
+        m_Desc.Resources    = m_Resources.data();
+
+        m_Desc.NumImmutableSamplers = StaticCast<Uint32>(m_ImmutableSamplers.size());
+        m_Desc.ImmutableSamplers    = m_ImmutableSamplers.data();
+    }
+
+private:
+    String m_Name;
+    String m_CombinedSamplerSuffix;
+
+    std::vector<PipelineResourceDesc> m_Resources;
+    std::vector<ImmutableSamplerDesc> m_ImmutableSamplers;
+    std::unordered_set<String>        m_StringPool;
+
+    PipelineResourceSignatureDesc m_Desc;
+
+    // NB: when adding new members, don't forget to update move ctor!
+};
+
 /// Template class implementing base functionality of the pipeline resource signature object.
 
 /// \tparam EngineImplTraits - Engine implementation type traits.
@@ -643,22 +813,10 @@ protected:
             });
     }
 
-    struct PRSDescWrapper
-    {
-        PipelineResourceSignatureDesc     Desc;
-        std::vector<PipelineResourceDesc> Resources;
-        std::unordered_set<std::string>   Names;
-
-        PRSDescWrapper(const PipelineResourceSignatureDesc& _Desc) :
-            Desc{_Desc}
-        {}
-
-        operator const PipelineResourceSignatureDesc&() const { return Desc; }
-    };
     // Decouples combined image samplers into texture SRV + sampler pairs.
-    PRSDescWrapper DecoupleCombinedSamplers(const PipelineResourceSignatureDesc& Desc)
+    PipelineResourceSignatureDescWrapper DecoupleCombinedSamplers(const PipelineResourceSignatureDesc& Desc)
     {
-        PRSDescWrapper UpdatedDesc{Desc};
+        PipelineResourceSignatureDescWrapper UpdatedDesc{Desc};
 
         bool HasCombinedSamplers = false;
         for (Uint32 r = 0; r < Desc.NumResources; ++r)
@@ -675,28 +833,23 @@ protected:
 
             HasCombinedSamplers = true;
 
-            auto SamplerName = std::string{Res.Name} + Desc.CombinedSamplerSuffix;
+            const auto SamplerName = std::string{Res.Name} + Desc.CombinedSamplerSuffix;
             // Check if the sampler is already defined.
             if (Diligent::FindResource(Desc.Resources, Desc.NumResources, Res.ShaderStages, SamplerName.c_str()) == InvalidPipelineResourceIndex)
             {
                 //  Add sampler to the list of resources.
-                auto NameIt = UpdatedDesc.Names.emplace(std::move(SamplerName)).first;
-                UpdatedDesc.Resources.emplace_back(Res.ShaderStages, NameIt->c_str(), Res.ArraySize, SHADER_RESOURCE_TYPE_SAMPLER, Res.VarType);
+                UpdatedDesc.AddResource(Res.ShaderStages, SamplerName.c_str(), Res.ArraySize, SHADER_RESOURCE_TYPE_SAMPLER, Res.VarType);
             }
         }
 
         if (HasCombinedSamplers)
         {
-            // Add original resources
-            UpdatedDesc.Resources.insert(UpdatedDesc.Resources.begin(), Desc.Resources, Desc.Resources + Desc.NumResources);
             // Clear COMBINED_SAMPLER flag
-            for (auto& Res : UpdatedDesc.Resources)
+            UpdatedDesc.ProcessResources([](PipelineResourceDesc& Res) {
                 Res.Flags &= ~PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER;
+            });
 
-            UpdatedDesc.Desc.Resources    = UpdatedDesc.Resources.data();
-            UpdatedDesc.Desc.NumResources = static_cast<Uint32>(UpdatedDesc.Resources.size());
-
-            this->m_Desc.NumResources = UpdatedDesc.Desc.NumResources;
+            this->m_Desc.NumResources = UpdatedDesc.Get().NumResources;
         }
 
         return UpdatedDesc;
