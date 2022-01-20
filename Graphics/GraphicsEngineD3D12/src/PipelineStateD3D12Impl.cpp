@@ -529,7 +529,7 @@ void PipelineStateD3D12Impl::InitRootSignature(const PipelineStateCreateInfo& Cr
     {
         ValidateShaderResourceBindings(m_Desc.Name, *pShader->GetShaderResources(), BindingsMap);
     };
-    const auto ValidateBindingsFn = !RemapResources && (InternalFlags & PSO_CREATE_INTERNAL_FLAG_NO_SHADER_REFLECION) == 0 ?
+    const auto ValidateBindingsFn = !RemapResources && (InternalFlags & PSO_CREATE_INTERNAL_FLAG_NO_SHADER_REFLECTION) == 0 ?
         TValidateShaderBindingsFn{ValidateBindings} :
         TValidateShaderBindingsFn{nullptr};
 

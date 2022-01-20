@@ -778,7 +778,7 @@ void PipelineStateVkImpl::InitPipelineLayout(const PipelineStateCreateInfo& Crea
     m_PipelineLayout.Create(GetDevice(), m_Signatures, m_SignatureCount);
 
     const auto RemapResources = (CreateInfo.Flags & PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES) == 0;
-    const auto VerifyBindings = !RemapResources && ((InternalFlags & PSO_CREATE_INTERNAL_FLAG_NO_SHADER_REFLECION) == 0);
+    const auto VerifyBindings = !RemapResources && ((InternalFlags & PSO_CREATE_INTERNAL_FLAG_NO_SHADER_REFLECTION) == 0);
     if (RemapResources || VerifyBindings)
     {
         VERIFY_EXPR(RemapResources ^ VerifyBindings);

@@ -416,7 +416,7 @@ bool DeviceObjectArchiveBase::PSOData<CreateInfoType>::Deserialize(const char* N
 
     CreateInfo.Flags |= PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES;
     if (AuxData.NoShaderReflection)
-        InternalCI.Flags |= PSO_CREATE_INTERNAL_FLAG_NO_SHADER_REFLECION;
+        InternalCI.Flags |= PSO_CREATE_INTERNAL_FLAG_NO_SHADER_REFLECTION;
 
     CreateInfo.pInternalData = &InternalCI;
 
@@ -656,7 +656,7 @@ bool DeviceObjectArchiveBase::UnpackPSOShaders(PSOData<CreateInfoType>& PSO,
             ShaderCreateInfo                 ShaderCI;
             ShaderSer(ShaderCI.Desc.ShaderType, ShaderCI.EntryPoint, ShaderCI.SourceLanguage, ShaderCI.ShaderCompiler);
 
-            if ((PSO.InternalCI.Flags & PSO_CREATE_INTERNAL_FLAG_NO_SHADER_REFLECION) != 0)
+            if ((PSO.InternalCI.Flags & PSO_CREATE_INTERNAL_FLAG_NO_SHADER_REFLECTION) != 0)
                 ShaderCI.CompileFlags |= SHADER_COMPILE_FLAG_SKIP_REFLECTION;
 
             pShader = UnpackShader(ShaderSer, ShaderCI, pDevice);
@@ -743,7 +743,7 @@ void DeviceObjectArchiveBase::UnpackPipelineStateImpl(const PipelineStateUnpackI
     {
         // We always have reflection information in Direct3D shaders, so always
         // load it in development build to allow the engine verify bindings.
-        PSO.InternalCI.Flags &= ~PSO_CREATE_INTERNAL_FLAG_NO_SHADER_REFLECION;
+        PSO.InternalCI.Flags &= ~PSO_CREATE_INTERNAL_FLAG_NO_SHADER_REFLECTION;
     }
 #endif
 

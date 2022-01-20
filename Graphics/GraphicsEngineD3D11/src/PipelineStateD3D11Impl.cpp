@@ -225,7 +225,7 @@ void PipelineStateD3D11Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
     {
         ValidateShaderResourceBindings(m_Desc.Name, *pShader->GetShaderResources(), BindingsMap);
     };
-    const auto ValidateBindingsFn = !HandleRemappedBytecodeFn && (InternalFlags & PSO_CREATE_INTERNAL_FLAG_NO_SHADER_REFLECION) == 0 ?
+    const auto ValidateBindingsFn = !HandleRemappedBytecodeFn && (InternalFlags & PSO_CREATE_INTERNAL_FLAG_NO_SHADER_REFLECTION) == 0 ?
         TValidateShaderBindingsFn{ValidateBindings} :
         TValidateShaderBindingsFn{nullptr};
 
