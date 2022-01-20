@@ -151,6 +151,7 @@ protected:
     }
 
     static void TestFormattedOrStructuredBuffer(BUFFER_MODE BufferMode);
+    static void TestCombinedImageSamplers(SHADER_SOURCE_LANGUAGE ShaderLang, bool UseEmulatedSamplers = false);
 
     enum SRB_COMPAT_MODE
     {
@@ -1271,13 +1272,16 @@ TEST_F(PipelineResourceSignatureTest, GraphicsAndMeshShader)
 }
 
 
-TEST_F(PipelineResourceSignatureTest, CombinedImageSamplers)
+void PipelineResourceSignatureTest::TestCombinedImageSamplers(SHADER_SOURCE_LANGUAGE ShaderLang, bool UseEmulatedSamplers)
 {
     auto* const pEnv       = TestingEnvironment::GetInstance();
     auto* const pDevice    = pEnv->GetDevice();
     const auto& DeviceInfo = pDevice->GetDeviceInfo();
     auto*       pContext   = pEnv->GetDeviceContext();
     auto*       pSwapChain = pEnv->GetSwapChain();
+
+    if (DeviceInfo.IsD3DDevice() && ShaderLang != SHADER_SOURCE_LANGUAGE_HLSL)
+        GTEST_SKIP() << "Direct3D supports HLSL only";
 
     float ClearColor[] = {0.625, 0.25, 0.375, 1.0};
     RenderDrawCommandReference(pSwapChain, ClearColor);
@@ -1292,10 +1296,8 @@ TEST_F(PipelineResourceSignatureTest, CombinedImageSamplers)
         TEXTURE_VIEW_SHADER_RESOURCE //
     };
 
-    const auto IsDirect3D = DeviceInfo.IsD3DDevice();
-
     ShaderMacroHelper Macros;
-    if (!IsDirect3D)
+    if (ShaderLang == SHADER_SOURCE_LANGUAGE_GLSL)
         Macros.AddShaderMacro("float4", "vec4");
     Macros.AddShaderMacro("Tex2D_Static_Ref", RefTextures.GetColor(0));
     Macros.AddShaderMacro("Tex2DArr_Static_Ref0", RefTextures.GetColor(1));
@@ -1309,17 +1311,17 @@ TEST_F(PipelineResourceSignatureTest, CombinedImageSamplers)
 
     ShaderCreateInfo ShaderCI;
     ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
-    ShaderCI.SourceLanguage             = IsDirect3D ? SHADER_SOURCE_LANGUAGE_HLSL : SHADER_SOURCE_LANGUAGE_GLSL;
+    ShaderCI.SourceLanguage             = ShaderLang;
     ShaderCI.UseCombinedTextureSamplers = true;
     ShaderCI.Macros                     = Macros;
-    ShaderCI.ShaderCompiler             = IsDirect3D ? SHADER_COMPILER_DEFAULT : pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+    ShaderCI.ShaderCompiler             = ShaderLang == SHADER_SOURCE_LANGUAGE_HLSL ? SHADER_COMPILER_DEFAULT : pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
     ShaderCI.HLSLVersion                = {5, 0};
 
     RefCntAutoPtr<IShader> pVS;
     {
         ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
-        ShaderCI.FilePath        = IsDirect3D ? "CombinedImageSamplers.hlsl" : "CombinedImageSamplersGL.vsh";
-        ShaderCI.EntryPoint      = IsDirect3D ? "VSMain" : "main";
+        ShaderCI.FilePath        = ShaderLang == SHADER_SOURCE_LANGUAGE_HLSL ? "CombinedImageSamplers.hlsl" : "CombinedImageSamplersGL.vsh";
+        ShaderCI.EntryPoint      = ShaderLang == SHADER_SOURCE_LANGUAGE_HLSL ? "VSMain" : "main";
         ShaderCI.Desc.Name       = "CombinedImageSamplers - VS";
         pDevice->CreateShader(ShaderCI, &pVS);
     }
@@ -1328,8 +1330,8 @@ TEST_F(PipelineResourceSignatureTest, CombinedImageSamplers)
     RefCntAutoPtr<IShader> pPS;
     {
         ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
-        ShaderCI.FilePath        = IsDirect3D ? "CombinedImageSamplers.hlsl" : "CombinedImageSamplersGL.psh";
-        ShaderCI.EntryPoint      = IsDirect3D ? "PSMain" : "main";
+        ShaderCI.FilePath        = ShaderLang == SHADER_SOURCE_LANGUAGE_HLSL ? "CombinedImageSamplers.hlsl" : "CombinedImageSamplersGL.psh";
+        ShaderCI.EntryPoint      = ShaderLang == SHADER_SOURCE_LANGUAGE_HLSL ? "PSMain" : "main";
         ShaderCI.Desc.Name       = "CombinedImageSamplers - PS";
         pDevice->CreateShader(ShaderCI, &pPS);
     }
@@ -1340,20 +1342,57 @@ TEST_F(PipelineResourceSignatureTest, CombinedImageSamplers)
 
     PRSDesc.UseCombinedTextureSamplers = true;
 
+    auto ResFlag = PIPELINE_RESOURCE_FLAG_NONE;
+    if (ShaderLang == SHADER_SOURCE_LANGUAGE_GLSL)
+    {
+        // Native combined samplers in GLSL
+        ResFlag = PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER;
+        VERIFY_EXPR(!UseEmulatedSamplers);
+        VERIFY_EXPR(!DeviceInfo.IsD3DDevice());
+    }
+    else if (ShaderLang == SHADER_SOURCE_LANGUAGE_HLSL)
+    {
+        if (DeviceInfo.IsD3DDevice() || DeviceInfo.IsMetalDevice())
+            ResFlag = UseEmulatedSamplers ? PIPELINE_RESOURCE_FLAG_NONE : PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER;
+        else if (DeviceInfo.IsVulkanDevice())
+        {
+            // When compiling HLSL to SPIRV, we have to explicitly add samplers because PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER flag is used
+            // to identify native combined samplers
+            UseEmulatedSamplers = true;
+            VERIFY_EXPR(ResFlag == PIPELINE_RESOURCE_FLAG_NONE);
+        }
+    }
+    else
+    {
+        UNEXPECTED("Unexpected shader language");
+    }
+
+    VERIFY_EXPR(ShaderLang == SHADER_SOURCE_LANGUAGE_HLSL || !UseEmulatedSamplers);
+
     constexpr auto SHADER_TYPE_VS_PS = SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL;
     // clang-format off
-    PipelineResourceDesc Resources[]
+    std::vector<PipelineResourceDesc> Resources =
     {
-        {SHADER_TYPE_VS_PS, "g_tex2D_Static",   1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC,  PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER},
-        {SHADER_TYPE_VS_PS, "g_tex2D_Mut",      1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER},
-        {SHADER_TYPE_VS_PS, "g_tex2D_Dyn",      1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC, PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER},
-        {SHADER_TYPE_VS_PS, "g_tex2D_StaticArr",2, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC,  PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER},
-        {SHADER_TYPE_VS_PS, "g_tex2D_MutArr",   2, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER},
-        {SHADER_TYPE_VS_PS, "g_tex2D_DynArr",   2, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC, PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER}
+        {SHADER_TYPE_VS_PS, "g_tex2D_Static",   1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC,  ResFlag},
+        {SHADER_TYPE_VS_PS, "g_tex2D_Mut",      1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, ResFlag},
+        {SHADER_TYPE_VS_PS, "g_tex2D_Dyn",      1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC, ResFlag},
+        {SHADER_TYPE_VS_PS, "g_tex2D_StaticArr",2, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC,  ResFlag},
+        {SHADER_TYPE_VS_PS, "g_tex2D_MutArr",   2, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, ResFlag},
+        {SHADER_TYPE_VS_PS, "g_tex2D_DynArr",   2, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC, ResFlag}
     };
+
+    if (UseEmulatedSamplers)
+    {
+        Resources.emplace_back(SHADER_TYPE_VS_PS, "g_tex2D_Static_sampler",   1, SHADER_RESOURCE_TYPE_SAMPLER, SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+        Resources.emplace_back(SHADER_TYPE_VS_PS, "g_tex2D_Mut_sampler",      1, SHADER_RESOURCE_TYPE_SAMPLER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE);
+        Resources.emplace_back(SHADER_TYPE_VS_PS, "g_tex2D_Dyn_sampler",      1, SHADER_RESOURCE_TYPE_SAMPLER, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
+        Resources.emplace_back(SHADER_TYPE_VS_PS, "g_tex2D_StaticArr_sampler",2, SHADER_RESOURCE_TYPE_SAMPLER, SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+        Resources.emplace_back(SHADER_TYPE_VS_PS, "g_tex2D_MutArr_sampler",   2, SHADER_RESOURCE_TYPE_SAMPLER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE);
+        Resources.emplace_back(SHADER_TYPE_VS_PS, "g_tex2D_DynArr_sampler",   2, SHADER_RESOURCE_TYPE_SAMPLER, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
+    }
     // clang-format on
-    PRSDesc.Resources    = Resources;
-    PRSDesc.NumResources = _countof(Resources);
+    PRSDesc.Resources    = Resources.data();
+    PRSDesc.NumResources = static_cast<Uint32>(Resources.size());
 
     ImmutableSamplerDesc ImmutableSamplers[] = //
         {
@@ -1404,6 +1443,20 @@ TEST_F(PipelineResourceSignatureTest, CombinedImageSamplers)
     pSwapChain->Present();
 }
 
+TEST_F(PipelineResourceSignatureTest, CombinedImageSamplers_HLSL)
+{
+    TestCombinedImageSamplers(SHADER_SOURCE_LANGUAGE_HLSL);
+}
+
+TEST_F(PipelineResourceSignatureTest, CombinedImageSamplers_HLSL_Emulated)
+{
+    TestCombinedImageSamplers(SHADER_SOURCE_LANGUAGE_HLSL, true);
+}
+
+TEST_F(PipelineResourceSignatureTest, CombinedImageSamplers_GLSL)
+{
+    TestCombinedImageSamplers(SHADER_SOURCE_LANGUAGE_GLSL);
+}
 
 void PipelineResourceSignatureTest::TestFormattedOrStructuredBuffer(BUFFER_MODE BufferMode)
 {
