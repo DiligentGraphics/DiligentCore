@@ -56,8 +56,6 @@ RefCntAutoPtr<IShader> DeviceObjectArchiveGLImpl::UnpackShader(Serializer<Serial
     ShaderCI.SourceLength = Ser.GetRemainingSize() - 1;
     VERIFY_EXPR(ShaderCI.SourceLength == strlen(ShaderCI.Source));
 
-    ShaderCI.CompileFlags &= ~SHADER_COMPILE_FLAG_SKIP_REFLECTION; // AZ TODO: remove
-
     RefCntAutoPtr<IShader> pShader;
     pDevice->CreateShader(ShaderCI, &pShader);
     return pShader;

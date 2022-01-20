@@ -165,7 +165,8 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
         LOG_ERROR_AND_THROW(ErrorMsgSS.str().c_str());
     }
 
-    if (DeviceInfo.Features.SeparablePrograms && (ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_SKIP_REFLECTION) == 0)
+    // Note: we have to always read reflection information in OpenGL as bindings are always assigned at run time.
+    if (DeviceInfo.Features.SeparablePrograms /*&& (ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_SKIP_REFLECTION) == 0*/)
     {
         ShaderGLImpl* const            ThisShader[] = {this};
         GLObjectWrappers::GLProgramObj Program      = LinkProgram(ThisShader, 1, true);
