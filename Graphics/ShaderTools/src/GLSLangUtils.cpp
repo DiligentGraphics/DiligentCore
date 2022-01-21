@@ -104,7 +104,7 @@ EShLanguage ShaderTypeToShLanguage(SHADER_TYPE ShaderType)
 
 TBuiltInResource InitResources()
 {
-    TBuiltInResource Resources;
+    TBuiltInResource Resources = {};
 
     Resources.maxLights                                 = 32;
     Resources.maxClipPlanes                             = 6;
@@ -198,16 +198,19 @@ TBuiltInResource InitResources()
     Resources.maxTaskWorkGroupSizeY_NV                  = 1;
     Resources.maxTaskWorkGroupSizeZ_NV                  = 1;
     Resources.maxMeshViewCountNV                        = 4;
+    Resources.maxDualSourceDrawBuffersEXT               = 1;
+    ASSERT_SIZEOF(Resources, 384, "Please initialize new members of Resources struct");
 
-    Resources.limits.nonInductiveForLoops                 = 1;
-    Resources.limits.whileLoops                           = 1;
-    Resources.limits.doWhileLoops                         = 1;
-    Resources.limits.generalUniformIndexing               = 1;
-    Resources.limits.generalAttributeMatrixVectorIndexing = 1;
-    Resources.limits.generalVaryingIndexing               = 1;
-    Resources.limits.generalSamplerIndexing               = 1;
-    Resources.limits.generalVariableIndexing              = 1;
-    Resources.limits.generalConstantMatrixVectorIndexing  = 1;
+    Resources.limits.nonInductiveForLoops                 = true;
+    Resources.limits.whileLoops                           = true;
+    Resources.limits.doWhileLoops                         = true;
+    Resources.limits.generalUniformIndexing               = true;
+    Resources.limits.generalAttributeMatrixVectorIndexing = true;
+    Resources.limits.generalVaryingIndexing               = true;
+    Resources.limits.generalSamplerIndexing               = true;
+    Resources.limits.generalVariableIndexing              = true;
+    Resources.limits.generalConstantMatrixVectorIndexing  = true;
+    ASSERT_SIZEOF(Resources.limits, 9, "Please initialize new members of Resources.limits struct");
 
     return Resources;
 }
