@@ -63,8 +63,8 @@ void VSMain(in  uint    VertId    : SV_VertexID,
     f4Position = Pos[VertId];
 }
 
-float4 PSMain(in float4 in_f4Color : COLOR,
+float4 PSMain(in float4 f4Color    : COLOR,
               in float4 f4Position : SV_Position) : SV_Target
 {
-    return in_f4Color * VerifyResources();
+    return f4Color * VerifyResources();
 }
