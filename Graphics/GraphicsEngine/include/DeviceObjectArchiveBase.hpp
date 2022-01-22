@@ -361,10 +361,9 @@ private:
 protected:
     struct PRSData
     {
-        DynamicLinearAllocator                Allocator;
-        const PRSDataHeader*                  pHeader = nullptr;
-        PipelineResourceSignatureDesc         Desc{};
-        PipelineResourceSignatureInternalData InternalData{};
+        DynamicLinearAllocator        Allocator;
+        const PRSDataHeader*          pHeader = nullptr;
+        PipelineResourceSignatureDesc Desc{};
 
         static constexpr ChunkType ExpectedChunkType = ChunkType::ResourceSignature;
 
@@ -484,8 +483,6 @@ RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveBase::UnpackResourc
 
     Serializer<SerializerMode::Read> Ser{Data};
 
-    typename PRSSerializerType::InternalDataType InternalData{PRS.InternalData};
-
     bool SpecialDesc = false;
     Ser(SpecialDesc);
     if (SpecialDesc)
@@ -496,6 +493,7 @@ RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveBase::UnpackResourc
         PRS.Deserialize(Name, Ser);
     }
 
+    typename PRSSerializerType::InternalDataType InternalData;
     PRSSerializerType::SerializeInternalData(Ser, InternalData, &PRS.Allocator);
     VERIFY_EXPR(Ser.IsEnded());
 
