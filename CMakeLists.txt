@@ -371,6 +371,12 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
             -Wno-error=unguarded-availability-new
         )
     endif()
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "9.0")
+        message(WARNING "gcc 9.0 and above seemingly produce invalid binary code with O2 and O3 optimization levels. Optimization in release configurations will be downgraded to O1. It is strongly recommended to use clang.")
+        set(GCC_OPTIMIZATION_LEVEL "-O1")
+        target_compile_options(Diligent-BuildSettings INTERFACE $<$<CONFIG:Release,RelWithDebInfo>:${GCC_OPTIMIZATION_LEVEL}>)
+    endif()
 endif()
 
 if(PLATFORM_MACOS)
