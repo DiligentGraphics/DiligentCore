@@ -30,6 +30,7 @@
 #include <functional>
 #include <memory>
 #include <cstring>
+#include <algorithm>
 
 #include "../../Primitives/interface/Errors.hpp"
 #include "../../Platforms/Basic/interface/DebugUtilities.hpp"
