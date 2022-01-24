@@ -163,6 +163,18 @@ public:
         }
     }
 
+    errno_t fopen(FILE** ppFile, const char* Mode) const
+    {
+        if (IsLong())
+        {
+            return _wfopen_s(ppFile, GetLong(), WidenString(Mode).c_str());
+        }
+        else
+        {
+            return fopen_s(ppFile, GetShort(), Mode);
+        }
+    }
+
 private:
     bool IsLong() const
     {
@@ -192,26 +204,16 @@ private:
 } // namespace
 
 
-static std::vector<wchar_t> UTF8ToUTF16(LPCSTR lpUTF8)
-{
-    // When last parameter is 0, the function returns the required buffer size, in characters,
-    // including any terminating null character.
-    const auto           nChars = MultiByteToWideChar(CP_UTF8, 0, lpUTF8, -1, NULL, 0);
-    std::vector<wchar_t> wstr(nChars);
-    MultiByteToWideChar(CP_UTF8, 0, lpUTF8, -1, wstr.data(), nChars);
-    return wstr;
-}
-
 WindowsFile::WindowsFile(const FileOpenAttribs& OpenAttribs) :
     StandardFile{OpenAttribs, WindowsFileSystem::GetSlashSymbol()}
 {
     VERIFY_EXPR(m_pFile == nullptr);
-    auto OpenModeStr = WidenString(GetOpenModeStr());
+    const auto ModeStr = GetOpenModeStr();
 
+    const WindowsPathHelper WndPath{m_OpenAttribs.strFilePath};
     for (;;)
     {
-        const auto UTF16FilePath = UTF8ToUTF16(m_OpenAttribs.strFilePath);
-        const auto err           = _wfopen_s(&m_pFile, UTF16FilePath.data(), OpenModeStr.c_str());
+        const auto err = WndPath.fopen(&m_pFile, ModeStr.c_str());
         if (err == 0)
         {
             break;
