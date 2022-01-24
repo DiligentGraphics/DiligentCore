@@ -100,6 +100,8 @@ public:
     static bool FileExists(const Diligent::Char* strFilePath);
     static bool PathExists(const Diligent::Char* strPath);
 
+    static void SetWorkingDirectory(const Diligent::Char* strWorkingDir);
+
     static bool CreateDirectory(const Diligent::Char* strPath);
     static void ClearDirectory(const Diligent::Char* strPath, bool Recursive = false);
     static void DeleteFile(const Diligent::Char* strPath);

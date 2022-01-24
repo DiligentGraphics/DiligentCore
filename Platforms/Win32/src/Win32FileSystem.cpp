@@ -61,11 +61,142 @@ std::string WindowsFileSystem::GetCurrentDirectory()
 
 using namespace Diligent;
 
+namespace
+{
+
+class WindowsPathHelper
+{
+public:
+    explicit WindowsPathHelper(const char* Path) :
+        m_SrcPath{Path != nullptr ? Path : ""},
+        m_PathLen{strlen(m_SrcPath)}
+    {
+        if (IsLong())
+        {
+            const auto WndSlash = WindowsFileSystem::GetSlashSymbol();
+
+            auto SimplifiedPath = WindowsFileSystem::SimplifyPath(Path, WndSlash);
+            if (!WindowsFileSystem::IsPathAbsolute(SimplifiedPath.c_str()))
+            {
+                auto CurrDir = GetCurrentDirectory_();
+                if (CurrDir.back() != WndSlash && SimplifiedPath.front() != WndSlash)
+                    CurrDir.push_back(WndSlash);
+                SimplifiedPath.insert(0, CurrDir);
+            }
+            SimplifiedPath.insert(0, R"(\\?\)");
+            m_LongPathW = WidenString(SimplifiedPath);
+        }
+    }
+
+    explicit WindowsPathHelper(const std::string& Path) :
+        WindowsPathHelper{Path.c_str()}
+    {}
+
+#define CALL_WIN_FUNC(WinFunc, ...) (IsLong() ? WinFunc##W(GetLong(), ##__VA_ARGS__) : WinFunc##A(GetShort(), ##__VA_ARGS__))
+
+    bool PathFileExists_() const
+    {
+        return CALL_WIN_FUNC(PathFileExists) != FALSE;
+    }
+
+    DWORD GetFileAttributes_() const
+    {
+        return CALL_WIN_FUNC(GetFileAttributes);
+    }
+
+    bool SetFileAttributes_(DWORD dwAttributes) const
+    {
+        return CALL_WIN_FUNC(SetFileAttributes, dwAttributes) != FALSE;
+    }
+
+    bool CreateDirectory_() const
+    {
+        return CALL_WIN_FUNC(CreateDirectory, NULL) != FALSE;
+    }
+
+    bool DeleteFile_() const
+    {
+        return CALL_WIN_FUNC(DeleteFile) != FALSE;
+    }
+
+    bool RemoveDirectory_() const
+    {
+        return CALL_WIN_FUNC(RemoveDirectory) != FALSE;
+    }
+#undef CALL_WIN_FUNC
+
+    static std::string GetCurrentDirectory_()
+    {
+        std::string CurrDir;
+        // If the function succeeds, the return value specifies the number of characters that
+        // are written to the buffer, NOT including the terminating null character.
+        // HOWEVER, if the buffer that is pointed to by lpBuffer is not large enough,
+        // the return value specifies the required size of the buffer, in characters,
+        // INCLUDING the null-terminating character.
+        // https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-getcurrentdirectory
+        auto BufferSize = GetCurrentDirectoryA(0, nullptr);
+
+        if (BufferSize > 1)
+        {
+            // Note that std::string::resize(n) resizes the string to a length of n characters.
+            CurrDir.resize(BufferSize - 1);
+
+            // BufferSize must include room for a terminating null character.
+            auto NumChars = GetCurrentDirectoryA(BufferSize, &CurrDir[0]);
+            VERIFY_EXPR(CurrDir.length() == NumChars);
+        }
+        return CurrDir;
+    }
+
+    static bool SetWorkingDirectory(const char* Path)
+    {
+        BasicFileSystem::SetWorkingDirectory(Path);
+        // If slash is missing at the end, it will be added
+        if (strlen(Path) < MAX_PATH - 2)
+        {
+            return SetCurrentDirectoryA(Path) != FALSE;
+        }
+        else
+        {
+            std::wstring PathW = WidenString(Path);
+            return SetCurrentDirectoryW(PathW.c_str()) != FALSE;
+        }
+    }
+
+private:
+    bool IsLong() const
+    {
+        // Null terminator counts towards the MAX_PATH limit
+        return m_PathLen >= MAX_PATH - 1;
+    }
+
+    const char* GetShort() const
+    {
+        VERIFY_EXPR(!IsLong());
+        return m_SrcPath;
+    }
+
+    const wchar_t* GetLong() const
+    {
+        VERIFY_EXPR(IsLong());
+        return m_LongPathW.c_str();
+    }
+
+private:
+    const char* const m_SrcPath;
+    const size_t      m_PathLen;
+
+    std::wstring m_LongPathW;
+};
+
+} // namespace
+
+
 static std::vector<wchar_t> UTF8ToUTF16(LPCSTR lpUTF8)
 {
     // When last parameter is 0, the function returns the required buffer size, in characters,
     // including any terminating null character.
-    auto                 nChars = MultiByteToWideChar(CP_UTF8, 0, lpUTF8, -1, NULL, 0);
+    const auto           nChars = MultiByteToWideChar(CP_UTF8, 0, lpUTF8, -1, NULL, 0);
     std::vector<wchar_t> wstr(nChars);
     MultiByteToWideChar(CP_UTF8, 0, lpUTF8, -1, wstr.data(), nChars);
     return wstr;
@@ -79,8 +210,8 @@ WindowsFile::WindowsFile(const FileOpenAttribs& OpenAttribs) :
 
     for (;;)
     {
-        auto    UTF16FilePath = UTF8ToUTF16(m_OpenAttribs.strFilePath);
-        errno_t err           = _wfopen_s(&m_pFile, UTF16FilePath.data(), OpenModeStr.c_str());
+        const auto UTF16FilePath = UTF8ToUTF16(m_OpenAttribs.strFilePath);
+        const auto err           = _wfopen_s(&m_pFile, UTF16FilePath.data(), OpenModeStr.c_str());
         if (err == 0)
         {
             break;
@@ -109,7 +240,7 @@ WindowsFile* WindowsFileSystem::OpenFile(const FileOpenAttribs& OpenAttribs)
     WindowsFile* pFile = nullptr;
     try
     {
-        pFile = new WindowsFile(OpenAttribs);
+        pFile = new WindowsFile{OpenAttribs};
     }
     catch (const std::runtime_error& /*err*/)
     {
@@ -120,10 +251,12 @@ WindowsFile* WindowsFileSystem::OpenFile(const FileOpenAttribs& OpenAttribs)
 
 bool WindowsFileSystem::FileExists(const Char* strFilePath)
 {
-    if (!PathExists(strFilePath))
+    const WindowsPathHelper WndPath{strFilePath};
+
+    if (!WndPath.PathFileExists_())
         return false;
 
-    auto FileAttribs = GetFileAttributesA(strFilePath);
+    auto FileAttribs = WndPath.GetFileAttributes_();
     if (FileAttribs == INVALID_FILE_ATTRIBUTES)
         return false;
 
@@ -142,11 +275,13 @@ static bool CreateDirectoryImpl(const Char* strPath)
     {
         SlashPos = DirectoryPath.find(SlashSym, (SlashPos != std::string::npos) ? SlashPos + 1 : 0);
 
-        std::string ParentDir = (SlashPos != std::wstring::npos) ? DirectoryPath.substr(0, SlashPos) : DirectoryPath;
-        if (!WindowsFileSystem::PathExists(ParentDir.c_str()))
+        std::string ParentDirPath = (SlashPos != std::wstring::npos) ? DirectoryPath.substr(0, SlashPos) : DirectoryPath;
+
+        const WindowsPathHelper ParentDir{ParentDirPath};
+        if (!ParentDir.PathFileExists_())
         {
             // If there is no directory, create it
-            if (!::CreateDirectoryA(ParentDir.c_str(), NULL))
+            if (!ParentDir.CreateDirectory_())
                 return false;
         }
     } while (SlashPos != std::string::npos);
@@ -186,7 +321,7 @@ void WindowsFileSystem::ClearDirectory(const Char* strPath, bool Recursive)
                     auto SubDirName = Directory + ffd.cFileName;
                     ClearDirectory(SubDirName.c_str(), Recursive);
 
-                    if (RemoveDirectoryA(SubDirName.c_str()) == FALSE)
+                    if (!WindowsPathHelper{SubDirName}.RemoveDirectory_())
                     {
                         LOG_ERROR_MESSAGE("Failed to remove directory '", SubDirName, "'. Error code: ", GetLastError());
                     }
@@ -206,22 +341,24 @@ void WindowsFileSystem::ClearDirectory(const Char* strPath, bool Recursive)
 
 static void DeleteFileImpl(const Char* strPath)
 {
-    if (SetFileAttributesA(strPath, FILE_ATTRIBUTE_NORMAL) == FALSE)
+    const WindowsPathHelper WndPath{strPath};
+    if (!WndPath.SetFileAttributes_(FILE_ATTRIBUTE_NORMAL))
     {
         LOG_WARNING_MESSAGE("Failed to set FILE_ATTRIBUTE_NORMAL for file '", strPath, "'. Error code: ", GetLastError());
     }
 
-    if (DeleteFileA(strPath) == FALSE)
+    if (!WndPath.DeleteFile_())
     {
         LOG_ERROR_MESSAGE("Failed to delete file '", strPath, "'. Error code: ", GetLastError());
     }
 }
 
-void WindowsFileSystem::DeleteDirectory(const Diligent::Char* strPath)
+void WindowsFileSystem::DeleteDirectory(const Char* strPath)
 {
     ClearDirectory(strPath, true);
 
-    if (RemoveDirectoryA(strPath) == FALSE)
+    const WindowsPathHelper WndPath{strPath};
+    if (!WndPath.RemoveDirectory_())
     {
         LOG_ERROR_MESSAGE("Failed to remove directory '", strPath, "'. Error code: ", GetLastError());
     }
@@ -230,7 +367,13 @@ void WindowsFileSystem::DeleteDirectory(const Diligent::Char* strPath)
 
 bool WindowsFileSystem::PathExists(const Char* strPath)
 {
-    return PathFileExistsA(strPath) != FALSE;
+    const WindowsPathHelper WndPath{strPath};
+    return WndPath.PathFileExists_();
+}
+
+void WindowsFileSystem::SetWorkingDirectory(const Char* strWorkingDir)
+{
+    WindowsPathHelper::SetWorkingDirectory(strWorkingDir);
 }
 
 struct WndFindFileData : public FindFileData
@@ -327,46 +470,28 @@ std::string WindowsFileSystem::FileDialog(const FileDialogAttribs& DialogAttribs
     return FileName;
 }
 
-bool WindowsFileSystem::IsDirectory(const Diligent::Char* strPath)
+bool WindowsFileSystem::IsDirectory(const Char* strPath)
 {
-    if (!PathExists(strPath))
+    const WindowsPathHelper WndPath{strPath};
+    if (!WndPath.PathFileExists_())
     {
         LOG_WARNING_MESSAGE("Path '", strPath, "' does not exist. Use PathExists function to check if path exists.");
         return false;
     }
 
-    return (GetFileAttributesA(strPath) & FILE_ATTRIBUTE_DIRECTORY) != 0;
+    return (WndPath.GetFileAttributes_() & FILE_ATTRIBUTE_DIRECTORY) != 0;
 }
 
 std::string GetCurrentDirectoryImpl()
 {
-    std::string CurrDir;
-
-    // If the function succeeds, the return value specifies the number of characters that
-    // are written to the buffer, NOT including the terminating null character.
-    // HOWEVER, if the buffer that is pointed to by lpBuffer is not large enough,
-    // the return value specifies the required size of the buffer, in characters,
-    // INCLUDING the null-terminating character.
-    // https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-getcurrentdirectory
-    auto BufferSize = GetCurrentDirectoryA(0, nullptr);
-
-    if (BufferSize > 1)
-    {
-        // Note that std::string::resize(n) resizes the string to a length of n characters.
-        CurrDir.resize(BufferSize - 1);
-
-        // BufferSize must include room for a terminating null character.
-        auto NumChars = GetCurrentDirectoryA(BufferSize, &CurrDir[0]);
-        VERIFY_EXPR(CurrDir.length() == NumChars);
-    }
-    return CurrDir;
+    return WindowsPathHelper::GetCurrentDirectory_();
 }
 
-bool WindowsFileSystem::GetRelativePath(const Diligent::Char* _strPathFrom,
-                                        bool                  IsFromDirectory,
-                                        const Diligent::Char* _strPathTo,
-                                        bool                  IsToDirectory,
-                                        std::string&          RelativePath)
+bool WindowsFileSystem::GetRelativePath(const Char*  _strPathFrom,
+                                        bool         IsFromDirectory,
+                                        const Char*  _strPathTo,
+                                        bool         IsToDirectory,
+                                        std::string& RelativePath)
 {
     VERIFY(_strPathTo != nullptr, "Destination path must not be null");
 
