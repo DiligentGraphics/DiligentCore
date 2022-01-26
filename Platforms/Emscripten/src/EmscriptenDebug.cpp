@@ -30,7 +30,8 @@
 #include "EmscriptenDebug.hpp"
 #include "FormatString.hpp"
 
-using namespace Diligent;
+namespace Diligent
+{
 
 void EmscriptenDebug::AssertionFailed(const Char* Message, const char* Function, const char* File, int Line)
 {
@@ -39,7 +40,6 @@ void EmscriptenDebug::AssertionFailed(const Char* Message, const char* Function,
 
     raise(SIGTRAP);
 };
-
 
 void EmscriptenDebug::OutputDebugMessage(DEBUG_MESSAGE_SEVERITY Severity, const Char* Message, const char* Function, const char* File, int Line)
 {
@@ -53,9 +53,6 @@ void DebugAssertionFailed(const Diligent::Char* Message, const char* Function, c
     EmscriptenDebug::AssertionFailed(Message, Function, File, Line);
 }
 
-namespace Diligent
-{
-
 DebugMessageCallbackType DebugMessageCallback = EmscriptenDebug::OutputDebugMessage;
 
-}
+} // namespace Diligent

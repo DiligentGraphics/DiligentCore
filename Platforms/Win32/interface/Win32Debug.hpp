@@ -29,6 +29,9 @@
 
 #include "../../Basic/interface/BasicPlatformDebug.hpp"
 
+namespace Diligent
+{
+
 struct WindowsDebug : public BasicPlatformDebug
 {
     static void AssertionFailed(const Diligent::Char* Message,
@@ -41,3 +44,5 @@ struct WindowsDebug : public BasicPlatformDebug
                                    const char*                      File,     // type of __FILE__
                                    int                              Line);
 };
+
+} // namespace Diligent

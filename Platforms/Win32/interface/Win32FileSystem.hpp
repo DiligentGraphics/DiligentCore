@@ -32,6 +32,9 @@
 #include "../../Basic/interface/StandardFile.hpp"
 #include "../../../Primitives/interface/FlagEnum.h"
 
+namespace Diligent
+{
+
 class WindowsFile : public StandardFile
 {
 public:
@@ -136,3 +139,5 @@ public:
                                 bool                  IsToDirectory,
                                 std::string&          RelativePath);
 };
+
+} // namespace Diligent

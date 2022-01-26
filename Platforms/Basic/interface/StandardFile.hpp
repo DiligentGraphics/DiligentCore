@@ -32,13 +32,16 @@
 #include "../../../Primitives/interface/DataBlob.h"
 #include "BasicFileSystem.hpp"
 
+namespace Diligent
+{
+
 class StandardFile : public BasicFile
 {
 public:
-    StandardFile(const FileOpenAttribs& OpenAttribs, Diligent::Char SlashSymbol);
+    StandardFile(const FileOpenAttribs& OpenAttribs, Char SlashSymbol);
     virtual ~StandardFile() override;
 
-    void Read(Diligent::IDataBlob* pData);
+    void Read(IDataBlob* pData);
 
     bool Read(void* Data, size_t Size);
 
@@ -53,3 +56,5 @@ public:
 protected:
     FILE* m_pFile = nullptr;
 };
+
+} // namespace Diligent

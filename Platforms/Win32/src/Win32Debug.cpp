@@ -31,9 +31,10 @@
 #include <iostream>
 #include <Windows.h>
 
-using namespace Diligent;
+namespace Diligent
+{
 
-void WindowsDebug::AssertionFailed(const Diligent::Char* Message, const char* Function, const char* File, int Line)
+void WindowsDebug::AssertionFailed(const Char* Message, const char* Function, const char* File, int Line)
 {
     auto AssertionFailedMessage = FormatAssertionFailedMessage(Message, Function, File, Line);
     OutputDebugMessage(DEBUG_MESSAGE_SEVERITY_ERROR, AssertionFailedMessage.c_str(), nullptr, nullptr, 0);
@@ -78,14 +79,11 @@ void WindowsDebug::OutputDebugMessage(DEBUG_MESSAGE_SEVERITY Severity, const Cha
         std::cout << msg;
 }
 
-void DebugAssertionFailed(const Diligent::Char* Message, const char* Function, const char* File, int Line)
+void DebugAssertionFailed(const Char* Message, const char* Function, const char* File, int Line)
 {
     WindowsDebug::AssertionFailed(Message, Function, File, Line);
 }
 
-namespace Diligent
-{
-
 DebugMessageCallbackType DebugMessageCallback = WindowsDebug::OutputDebugMessage;
 
-}
+} // namespace Diligent

@@ -34,6 +34,10 @@
 
 // Windows.h defines CreateDirectory and DeleteFile as macros.
 // So we need to do some tricks to avoid name mess.
+
+namespace Diligent
+{
+
 static bool CreateDirectoryImpl(const Diligent::Char* strPath);
 
 bool WindowsFileSystem::CreateDirectory(const Diligent::Char* strPath)
@@ -55,13 +59,13 @@ std::string WindowsFileSystem::GetCurrentDirectory()
     return GetCurrentDirectoryImpl();
 }
 
+} // namespace Diligent
+
 #include <Windows.h>
 #include <Shlwapi.h>
 #pragma comment(lib, "Shlwapi.lib")
 
-using namespace Diligent;
-
-namespace
+namespace Diligent
 {
 
 class WindowsPathHelper
@@ -201,7 +205,7 @@ private:
     std::wstring m_LongPathW;
 };
 
-} // namespace
+
 
 
 WindowsFile::WindowsFile(const FileOpenAttribs& OpenAttribs) :
@@ -534,3 +538,5 @@ bool WindowsFileSystem::GetRelativePath(const Char*  _strPathFrom,
 
     return Res != FALSE;
 }
+
+} // namespace Diligent

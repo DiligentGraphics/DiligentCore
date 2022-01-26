@@ -29,18 +29,23 @@
 
 #include "../../../Primitives/interface/Errors.hpp"
 
+namespace Diligent
+{
+
 struct BasicPlatformDebug
 {
-    static Diligent::String FormatAssertionFailedMessage(const Diligent::Char* Message,
-                                                         const char*           Function, // type of __FUNCTION__
-                                                         const char*           File,     // type of __FILE__
-                                                         int                   Line);
-    static Diligent::String FormatDebugMessage(Diligent::DEBUG_MESSAGE_SEVERITY Severity,
-                                               const Diligent::Char*            Message,
-                                               const char*                      Function, // type of __FUNCTION__
-                                               const char*                      File,     // type of __FILE__
-                                               int                              Line);
+    static String FormatAssertionFailedMessage(const Char* Message,
+                                               const char* Function, // type of __FUNCTION__
+                                               const char* File,     // type of __FILE__
+                                               int         Line);
+    static String FormatDebugMessage(DEBUG_MESSAGE_SEVERITY Severity,
+                                     const Char*            Message,
+                                     const char*            Function, // type of __FUNCTION__
+                                     const char*            File,     // type of __FILE__
+                                     int                    Line);
 };
 
 // Forward declarations of platform-specific debug functions
-void DebugAssertionFailed(const Diligent::Char* Message, const char* Function, const char* File, int Line);
+void DebugAssertionFailed(const Char* Message, const char* Function, const char* File, int Line);
+
+} // namespace Diligent

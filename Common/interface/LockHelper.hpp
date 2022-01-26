@@ -41,17 +41,17 @@ public:
         LOCK_FLAG_UNLOCKED = 0,
         LOCK_FLAG_LOCKED   = 1
     };
-    LockFlag(Atomics::Long InitFlag = LOCK_FLAG_UNLOCKED) noexcept
+    LockFlag(Diligent::Atomics::Long InitFlag = LOCK_FLAG_UNLOCKED) noexcept
     {
         //m_Flag.store(InitFlag);
         m_Flag = InitFlag;
     }
 
-    operator Atomics::Long() const { return m_Flag; }
+    operator Diligent::Atomics::Long() const { return m_Flag; }
 
 private:
     friend class LockHelper;
-    Atomics::AtomicLong m_Flag;
+    Diligent::Atomics::AtomicLong m_Flag;
 };
 
 // Spinlock implementation. This kind of lock should be used in scenarios
@@ -86,9 +86,9 @@ public:
 
     static bool UnsafeTryLock(LockFlag& LockFlag) noexcept
     {
-        return Atomics::AtomicCompareExchange(LockFlag.m_Flag,
-                                              static_cast<Atomics::Long>(LockFlag::LOCK_FLAG_LOCKED),
-                                              static_cast<Atomics::Long>(LockFlag::LOCK_FLAG_UNLOCKED)) == LockFlag::LOCK_FLAG_UNLOCKED;
+        return Diligent::Atomics::AtomicCompareExchange(LockFlag.m_Flag,
+                                                        static_cast<Diligent::Atomics::Long>(LockFlag::LOCK_FLAG_LOCKED),
+                                                        static_cast<Diligent::Atomics::Long>(LockFlag::LOCK_FLAG_UNLOCKED)) == LockFlag::LOCK_FLAG_UNLOCKED;
     }
 
     bool TryLock(LockFlag& LockFlag) noexcept

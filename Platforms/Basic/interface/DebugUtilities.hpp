@@ -35,11 +35,11 @@
 
 #    include <typeinfo>
 
-#    define ASSERTION_FAILED(Message, ...)                                       \
-        do                                                                       \
-        {                                                                        \
-            auto msg = Diligent::FormatString(Message, ##__VA_ARGS__);           \
-            DebugAssertionFailed(msg.c_str(), __FUNCTION__, __FILE__, __LINE__); \
+#    define ASSERTION_FAILED(Message, ...)                                                 \
+        do                                                                                 \
+        {                                                                                  \
+            auto msg = Diligent::FormatString(Message, ##__VA_ARGS__);                     \
+            Diligent::DebugAssertionFailed(msg.c_str(), __FUNCTION__, __FILE__, __LINE__); \
         } while (false)
 
 #    define VERIFY(Expr, Message, ...)                    \

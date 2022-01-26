@@ -29,6 +29,9 @@
 
 #include <Windows.h>
 
+namespace Diligent
+{
+
 // The function returns the resulting INCREMENTED value.
 WindowsAtomics::Long WindowsAtomics::AtomicIncrement(AtomicLong& Val)
 {
@@ -65,3 +68,5 @@ WindowsAtomics::Int64 WindowsAtomics::AtomicAdd(AtomicInt64& Destination, Int64 
 {
     return InterlockedAdd64(&Destination, Val);
 }
+
+} // namespace Diligent

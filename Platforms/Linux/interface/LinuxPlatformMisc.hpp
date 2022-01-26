@@ -30,73 +30,78 @@
 #include "../../Basic/interface/BasicPlatformMisc.hpp"
 #include "../../../Platforms/Basic/interface/DebugUtilities.hpp"
 
+namespace Diligent
+{
+
 struct LinuxMisc : public BasicPlatformMisc
 {
-    static Diligent::Uint32 GetMSB(Diligent::Uint32 Val)
+    static Uint32 GetMSB(Uint32 Val)
     {
         if (Val == 0) return 32;
 
         // Returns the number of leading 0-bits in x, starting at the
         // most significant bit position. If x is 0, the result is undefined.
         int  LeadingZeros = __builtin_clz(Val);
-        auto MSB          = static_cast<Diligent::Uint32>(31 - LeadingZeros);
+        auto MSB          = static_cast<Uint32>(31 - LeadingZeros);
         VERIFY_EXPR(MSB == BasicPlatformMisc::GetMSB(Val));
 
         return MSB;
     }
 
-    static Diligent::Uint32 GetLSB(Diligent::Uint32 Val)
+    static Uint32 GetLSB(Uint32 Val)
     {
         if (Val == 0) return 32;
 
         // Returns the number of trailing 0-bits in x, starting at the
         // least significant bit position. If x is 0, the result is undefined.
         auto TrailingZeros = __builtin_ctz(Val);
-        auto LSB           = static_cast<Diligent::Uint32>(TrailingZeros);
+        auto LSB           = static_cast<Uint32>(TrailingZeros);
         VERIFY_EXPR(LSB == BasicPlatformMisc::GetLSB(Val));
 
         return LSB;
     }
 
-    static Diligent::Uint32 GetMSB(Diligent::Uint64 Val)
+    static Uint32 GetMSB(Uint64 Val)
     {
         if (Val == 0) return 64;
 
         // Returns the number of leading 0-bits in x, starting at the
         // most significant bit position. If x is 0, the result is undefined.
         int  LeadingZeros = __builtin_clzll(Val);
-        auto MSB          = static_cast<Diligent::Uint32>(63 - LeadingZeros);
+        auto MSB          = static_cast<Uint32>(63 - LeadingZeros);
         VERIFY_EXPR(MSB == BasicPlatformMisc::GetMSB(Val));
 
         return MSB;
     }
 
-    static Diligent::Uint32 GetLSB(Diligent::Uint64 Val)
+    static Uint32 GetLSB(Uint64 Val)
     {
         if (Val == 0) return 64;
 
         // Returns the number of trailing 0-bits in x, starting at the
         // least significant bit position. If x is 0, the result is undefined.
         auto TrailingZeros = __builtin_ctzll(Val);
-        auto LSB           = static_cast<Diligent::Uint32>(TrailingZeros);
+        auto LSB           = static_cast<Uint32>(TrailingZeros);
         VERIFY_EXPR(LSB == BasicPlatformMisc::GetLSB(Val));
 
         return LSB;
     }
 
-    static Diligent::Uint32 CountOneBits(Diligent::Uint32 Val)
+    static Uint32 CountOneBits(Uint32 Val)
     {
         // Returns the number of 1-bits in x.
-        auto bits = static_cast<Diligent::Uint32>(__builtin_popcount(Val));
+        auto bits = static_cast<Uint32>(__builtin_popcount(Val));
         VERIFY_EXPR(bits == BasicPlatformMisc::CountOneBits(Val));
         return bits;
     }
 
-    static Diligent::Uint32 CountOneBits(Diligent::Uint64 Val)
+    static Uint32 CountOneBits(Uint64 Val)
     {
         // Returns the number of 1-bits in x.
-        auto bits = static_cast<Diligent::Uint32>(__builtin_popcountll(Val));
+        auto bits = static_cast<Uint32>(__builtin_popcountll(Val));
         VERIFY_EXPR(bits == BasicPlatformMisc::CountOneBits(Val));
         return bits;
     }
 };
+
+} // namespace Diligent

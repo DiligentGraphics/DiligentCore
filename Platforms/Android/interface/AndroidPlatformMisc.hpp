@@ -31,6 +31,11 @@
 #include "../../../Platforms/Basic/interface/DebugUtilities.hpp"
 #include "../../Linux/interface/LinuxPlatformMisc.hpp"
 
+namespace Diligent
+{
+
 struct AndroidMisc : public LinuxMisc
 {
 };
+
+} // namespace Diligent

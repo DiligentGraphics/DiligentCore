@@ -27,6 +27,9 @@
 
 #pragma once
 
+namespace Diligent
+{
+
 template <typename CFType>
 class CFObjectWrapper
 {
@@ -51,3 +54,5 @@ private:
 
 using CFStringWrapper = CFObjectWrapper<CFStringRef>;
 using CFURLWrapper    = CFObjectWrapper<CFURLRef>;
+
+} // namespace Diligent

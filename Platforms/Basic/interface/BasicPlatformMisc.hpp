@@ -29,14 +29,17 @@
 
 #include "../../../Primitives/interface/BasicTypes.h"
 
+namespace Diligent
+{
+
 struct BasicPlatformMisc
 {
     template <typename Type>
-    static Diligent::Uint32 GetMSB(Type Val)
+    static Uint32 GetMSB(Type Val)
     {
         if (Val == 0) return sizeof(Type) * 8;
 
-        Diligent::Uint32 MSB = sizeof(Type) * 8 - 1;
+        Uint32 MSB = sizeof(Type) * 8 - 1;
         while (!(Val & (Type{1} << MSB)))
             --MSB;
 
@@ -44,11 +47,11 @@ struct BasicPlatformMisc
     }
 
     template <typename Type>
-    static Diligent::Uint32 GetLSB(Type Val)
+    static Uint32 GetLSB(Type Val)
     {
         if (Val == 0) return sizeof(Type) * 8;
 
-        Diligent::Uint32 LSB = 0;
+        Uint32 LSB = 0;
         while (!(Val & (Type{1} << LSB)))
             ++LSB;
 
@@ -56,9 +59,9 @@ struct BasicPlatformMisc
     }
 
     template <typename Type>
-    static Diligent::Uint32 CountOneBits(Type Val)
+    static Uint32 CountOneBits(Type Val)
     {
-        Diligent::Uint32 bits = 0;
+        Uint32 bits = 0;
         while (Val != 0)
         {
             Val &= (Val - 1);
@@ -70,25 +73,27 @@ struct BasicPlatformMisc
     template <typename Type>
     static typename std::enable_if<sizeof(Type) == 2, Type>::type SwapBytes(Type Val)
     {
-        SwapBytes16(reinterpret_cast<Diligent::Uint16&>(Val));
+        SwapBytes16(reinterpret_cast<Uint16&>(Val));
         return Val;
     }
 
     template <typename Type>
     static typename std::enable_if<sizeof(Type) == 4, Type>::type SwapBytes(Type Val)
     {
-        SwapBytes32(reinterpret_cast<Diligent::Uint32&>(Val));
+        SwapBytes32(reinterpret_cast<Uint32&>(Val));
         return Val;
     }
 
 private:
-    static void SwapBytes16(Diligent::Uint16& Val)
+    static void SwapBytes16(Uint16& Val)
     {
         Val = (Val << 8u) | (Val >> 8u);
     }
 
-    static void SwapBytes32(Diligent::Uint32& Val)
+    static void SwapBytes32(Uint32& Val)
     {
         Val = (Val << 24u) | ((Val & 0xFF00u) << 8u) | ((Val & 0xFF0000u) >> 8u) | (Val >> 24u);
     }
 };
+
+} // namespace Diligent

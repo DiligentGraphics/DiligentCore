@@ -29,9 +29,12 @@
 #include "DebugUtilities.hpp"
 #include <algorithm>
 
-Diligent::String BasicFileSystem::m_strWorkingDirectory;
+namespace Diligent
+{
 
-BasicFile::BasicFile(const FileOpenAttribs& OpenAttribs, Diligent::Char SlashSymbol) :
+String BasicFileSystem::m_strWorkingDirectory;
+
+BasicFile::BasicFile(const FileOpenAttribs& OpenAttribs, Char SlashSymbol) :
     m_OpenAttribs{OpenAttribs},
     m_Path{BasicFileSystem::GetFullPath(OpenAttribs.strFilePath)}
 {
@@ -44,7 +47,7 @@ BasicFile::~BasicFile()
 {
 }
 
-Diligent::String BasicFile::GetOpenModeStr()
+String BasicFile::GetOpenModeStr()
 {
     std::string OpenModeStr;
     switch (m_OpenAttribs.AccessMode)
@@ -63,8 +66,7 @@ Diligent::String BasicFile::GetOpenModeStr()
     return OpenModeStr;
 }
 
-
-std::string BasicFileSystem::GetFullPath(const Diligent::Char* strFilePath)
+std::string BasicFileSystem::GetFullPath(const Char* strFilePath)
 {
     std::string FullPath = m_strWorkingDirectory;
     auto        len      = FullPath.length();
@@ -87,33 +89,33 @@ void BasicFileSystem::ReleaseFile(BasicFile* pFile)
         delete pFile;
 }
 
-bool BasicFileSystem::FileExists(const Diligent::Char* strFilePath)
+bool BasicFileSystem::FileExists(const Char* strFilePath)
 {
     return false;
 }
 
-Diligent::Char BasicFileSystem::GetSlashSymbol()
+Char BasicFileSystem::GetSlashSymbol()
 {
     UNSUPPORTED("Unsupported");
     return 0;
 }
 
-void BasicFileSystem::CorrectSlashes(Diligent::String& Path, Diligent::Char SlashSymbol)
+void BasicFileSystem::CorrectSlashes(String& Path, Char SlashSymbol)
 {
     VERIFY(SlashSymbol == '\\' || SlashSymbol == '/',
            "Incorrect slash symbol");
-    Diligent::Char RevSlashSym = (SlashSymbol == '\\') ? '/' : '\\';
+    Char RevSlashSym = (SlashSymbol == '\\') ? '/' : '\\';
     std::replace(Path.begin(), Path.end(), RevSlashSym, SlashSymbol);
 }
 
-void BasicFileSystem::SplitFilePath(const Diligent::String& FullName,
-                                    Diligent::String*       Path,
-                                    Diligent::String*       Name)
+void BasicFileSystem::SplitFilePath(const String& FullName,
+                                    String*       Path,
+                                    String*       Name)
 {
     auto LastSlashPos = FullName.find_last_of("/\\");
     if (Path)
     {
-        if (LastSlashPos != Diligent::String::npos)
+        if (LastSlashPos != String::npos)
             *Path = FullName.substr(0, LastSlashPos);
         else
             *Path = "";
@@ -121,14 +123,14 @@ void BasicFileSystem::SplitFilePath(const Diligent::String& FullName,
 
     if (Name)
     {
-        if (LastSlashPos != Diligent::String::npos)
+        if (LastSlashPos != String::npos)
             *Name = FullName.substr(LastSlashPos + 1);
         else
             *Name = FullName;
     }
 }
 
-bool BasicFileSystem::IsPathAbsolute(const Diligent::Char* strPath)
+bool BasicFileSystem::IsPathAbsolute(const Char* strPath)
 {
     if (strPath == nullptr || strPath[0] == 0)
         return false;
@@ -142,12 +144,12 @@ bool BasicFileSystem::IsPathAbsolute(const Diligent::Char* strPath)
 #endif
 }
 
-std::string BasicFileSystem::SimplifyPath(const Diligent::Char* Path, Diligent::Char SlashSymbol)
+std::string BasicFileSystem::SimplifyPath(const Char* Path, Char SlashSymbol)
 {
     if (Path == nullptr)
         return "";
 
-    auto IsSlash = [](const Diligent::Char c) {
+    auto IsSlash = [](const Char c) {
         return c == '/' || c == '\\';
     };
 
@@ -194,3 +196,5 @@ std::string BasicFileSystem::SimplifyPath(const Diligent::Char* Path, Diligent::
     }
     return SimplifiedPath;
 }
+
+} // namespace Diligent

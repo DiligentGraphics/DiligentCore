@@ -42,7 +42,7 @@ namespace
 std::string FindResource(const std::string& FilePath)
 {
     std::string dir, name;
-    BasicFileSystem::SplitFilePath(FilePath, &dir, &name);
+    Diligent::BasicFileSystem::SplitFilePath(FilePath, &dir, &name);
     auto        dotPos = name.find(".");
     std::string type   = (dotPos != std::string::npos) ? name.substr(dotPos + 1) : "";
     if (dotPos != std::string::npos)
@@ -56,22 +56,25 @@ std::string FindResource(const std::string& FilePath)
     // https://developer.apple.com/library/content/documentation/CoreFoundation/Conceptual/CFMemoryMgmt/Concepts/Ownership.html
 
     // get bundle and CFStrings
-    CFBundleRef     mainBundle       = CFBundleGetMainBundle();
-    CFStringWrapper cf_resource_path = CFStringCreateWithCString(NULL, dir.c_str(), kCFStringEncodingUTF8);
-    CFStringWrapper cf_filename      = CFStringCreateWithCString(NULL, name.c_str(), kCFStringEncodingUTF8);
-    CFStringWrapper cf_file_type     = CFStringCreateWithCString(NULL, type.c_str(), kCFStringEncodingUTF8);
-    CFURLWrapper    cf_url_resource  = CFBundleCopyResourceURL(mainBundle, cf_filename, cf_file_type, cf_resource_path);
-    std::string     resource_path;
+    CFBundleRef               mainBundle       = CFBundleGetMainBundle();
+    Diligent::CFStringWrapper cf_resource_path = CFStringCreateWithCString(NULL, dir.c_str(), kCFStringEncodingUTF8);
+    Diligent::CFStringWrapper cf_filename      = CFStringCreateWithCString(NULL, name.c_str(), kCFStringEncodingUTF8);
+    Diligent::CFStringWrapper cf_file_type     = CFStringCreateWithCString(NULL, type.c_str(), kCFStringEncodingUTF8);
+    Diligent::CFURLWrapper    cf_url_resource  = CFBundleCopyResourceURL(mainBundle, cf_filename, cf_file_type, cf_resource_path);
+    std::string               resource_path;
     if (cf_url_resource != NULL)
     {
-        CFStringWrapper cf_url_string = CFURLCopyFileSystemPath(cf_url_resource, kCFURLPOSIXPathStyle);
-        const char*     url_string    = CFStringGetCStringPtr(cf_url_string, kCFStringEncodingUTF8);
-        resource_path                 = url_string;
+        Diligent::CFStringWrapper cf_url_string = CFURLCopyFileSystemPath(cf_url_resource, kCFURLPOSIXPathStyle);
+        const char*               url_string    = CFStringGetCStringPtr(cf_url_string, kCFStringEncodingUTF8);
+        resource_path                           = url_string;
     }
     return resource_path;
 }
 
 } // namespace
+
+namespace Diligent
+{
 
 AppleFile* AppleFileSystem::OpenFile(const FileOpenAttribs& OpenAttribs)
 {
@@ -107,8 +110,7 @@ AppleFile* AppleFileSystem::OpenFile(const FileOpenAttribs& OpenAttribs)
     return pFile;
 }
 
-
-bool AppleFileSystem::FileExists(const Diligent::Char* strFilePath)
+bool AppleFileSystem::FileExists(const Char* strFilePath)
 {
     std::string path(strFilePath);
     CorrectSlashes(path, AppleFileSystem::GetSlashSymbol());
@@ -121,30 +123,32 @@ bool AppleFileSystem::FileExists(const Diligent::Char* strFilePath)
     return res == 0;
 }
 
-bool AppleFileSystem::PathExists(const Diligent::Char* strPath)
+bool AppleFileSystem::PathExists(const Char* strPath)
 {
     UNSUPPORTED("Not implemented");
     return false;
 }
 
-bool AppleFileSystem::CreateDirectory(const Diligent::Char* strPath)
+bool AppleFileSystem::CreateDirectory(const Char* strPath)
 {
     UNSUPPORTED("Not implemented");
     return false;
 }
 
-void AppleFileSystem::ClearDirectory(const Diligent::Char* strPath)
+void AppleFileSystem::ClearDirectory(const Char* strPath)
 {
     UNSUPPORTED("Not implemented");
 }
 
-void AppleFileSystem::DeleteFile(const Diligent::Char* strPath)
+void AppleFileSystem::DeleteFile(const Char* strPath)
 {
     remove(strPath);
 }
 
-std::vector<std::unique_ptr<FindFileData>> AppleFileSystem::Search(const Diligent::Char* SearchPattern)
+std::vector<std::unique_ptr<FindFileData>> AppleFileSystem::Search(const Char* SearchPattern)
 {
     UNSUPPORTED("Not implemented");
     return std::vector<std::unique_ptr<FindFileData>>();
 }
+
+} // namespace Diligent

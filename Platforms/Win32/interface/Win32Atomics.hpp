@@ -27,6 +27,9 @@
 
 #pragma once
 
+namespace Diligent
+{
+
 struct WindowsAtomics
 {
     // Use windows-specific atomics. Standard atomic eventually call
@@ -53,3 +56,5 @@ struct WindowsAtomics
     static Long  AtomicAdd(AtomicLong& Destination, Long Val);
     static Int64 AtomicAdd(AtomicInt64& Destination, Int64 Val);
 };
+
+} // namespace Diligent

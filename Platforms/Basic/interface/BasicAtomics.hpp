@@ -29,6 +29,9 @@
 
 #include <atomic>
 
+namespace Diligent
+{
+
 struct BasicAtomics
 {
     using Long        = long;
@@ -67,3 +70,5 @@ struct BasicAtomics
         return std::atomic_fetch_add(&Destination, Val);
     }
 };
+
+} // namespace Diligent

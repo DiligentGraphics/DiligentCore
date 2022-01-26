@@ -29,5 +29,10 @@
 #include "../../Linux/interface/LinuxPlatformMisc.hpp"
 #include "../../../Platforms/Basic/interface/DebugUtilities.hpp"
 
+namespace Diligent
+{
+
 struct EmscriptenMisc : public LinuxMisc
 {};
+
+} // namespace Diligent

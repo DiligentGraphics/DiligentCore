@@ -33,9 +33,10 @@
 #include <windows.h>
 #include "WinHPostface.h"
 
-using namespace Diligent;
+namespace Diligent
+{
 
-void WindowsStoreDebug ::AssertionFailed(const Diligent::Char* Message, const char* Function, const char* File, int Line)
+void WindowsStoreDebug ::AssertionFailed(const Char* Message, const char* Function, const char* File, int Line)
 {
     auto AssertionFailedMessage = FormatAssertionFailedMessage(Message, Function, File, Line);
     OutputDebugMessage(DEBUG_MESSAGE_SEVERITY_ERROR, AssertionFailedMessage.c_str(), nullptr, nullptr, 0);
@@ -70,21 +71,17 @@ void WindowsStoreDebug ::AssertionFailed(const Diligent::Char* Message, const ch
     //    return;
 };
 
-
 void WindowsStoreDebug::OutputDebugMessage(DEBUG_MESSAGE_SEVERITY Severity, const Char* Message, const char* Function, const char* File, int Line)
 {
     auto msg = FormatDebugMessage(Severity, Message, Function, File, Line);
     OutputDebugStringA(msg.c_str());
 }
 
-void DebugAssertionFailed(const Diligent::Char* Message, const char* Function, const char* File, int Line)
+void DebugAssertionFailed(const Char* Message, const char* Function, const char* File, int Line)
 {
     WindowsStoreDebug ::AssertionFailed(Message, Function, File, Line);
 }
 
-namespace Diligent
-{
-
 DebugMessageCallbackType DebugMessageCallback = WindowsStoreDebug::OutputDebugMessage;
 
-}
+} // namespace Diligent

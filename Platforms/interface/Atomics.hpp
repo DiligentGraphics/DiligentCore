@@ -32,12 +32,25 @@
 #if PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS
 
 #    include "../Win32/interface/Win32Atomics.hpp"
-using Atomics = WindowsAtomics;
 
 #else
 
 // Use c++11 standard atomics
 #    include "../Basic/interface/BasicAtomics.hpp"
+
+#endif
+
+DILIGENT_BEGIN_NAMESPACE(Diligent)
+
+#if PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS
+
+using Atomics = WindowsAtomics;
+
+#else
+
+// Use c++11 standard atomics
 using Atomics = BasicAtomics;
 
 #endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

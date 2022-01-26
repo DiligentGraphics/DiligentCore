@@ -33,6 +33,9 @@
 #include "Errors.hpp"
 #include "DebugUtilities.hpp"
 
+namespace Diligent
+{
+
 LinuxFile* LinuxFileSystem::OpenFile(const FileOpenAttribs& OpenAttribs)
 {
     LinuxFile* pFile = nullptr;
@@ -46,8 +49,7 @@ LinuxFile* LinuxFileSystem::OpenFile(const FileOpenAttribs& OpenAttribs)
     return pFile;
 }
 
-
-bool LinuxFileSystem::FileExists(const Diligent::Char* strFilePath)
+bool LinuxFileSystem::FileExists(const Char* strFilePath)
 {
     FileOpenAttribs OpenAttribs;
     OpenAttribs.strFilePath = strFilePath;
@@ -60,30 +62,32 @@ bool LinuxFileSystem::FileExists(const Diligent::Char* strFilePath)
     return Exists;
 }
 
-bool LinuxFileSystem::PathExists(const Diligent::Char* strPath)
+bool LinuxFileSystem::PathExists(const Char* strPath)
 {
     UNSUPPORTED("Not implemented");
     return false;
 }
 
-bool LinuxFileSystem::CreateDirectory(const Diligent::Char* strPath)
+bool LinuxFileSystem::CreateDirectory(const Char* strPath)
 {
     UNSUPPORTED("Not implemented");
     return false;
 }
 
-void LinuxFileSystem::ClearDirectory(const Diligent::Char* strPath)
+void LinuxFileSystem::ClearDirectory(const Char* strPath)
 {
     UNSUPPORTED("Not implemented");
 }
 
-void LinuxFileSystem::DeleteFile(const Diligent::Char* strPath)
+void LinuxFileSystem::DeleteFile(const Char* strPath)
 {
     remove(strPath);
 }
 
-std::vector<std::unique_ptr<FindFileData>> LinuxFileSystem::Search(const Diligent::Char* SearchPattern)
+std::vector<std::unique_ptr<FindFileData>> LinuxFileSystem::Search(const Char* SearchPattern)
 {
     UNSUPPORTED("Not implemented");
     return std::vector<std::unique_ptr<FindFileData>>();
 }
+
+} // namespace Diligent

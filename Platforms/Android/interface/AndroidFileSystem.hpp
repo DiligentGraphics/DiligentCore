@@ -38,13 +38,16 @@
 struct ANativeActivity;
 struct AAssetManager;
 
+namespace Diligent
+{
+
 class AndroidFile : public BasicFile
 {
 public:
     AndroidFile(const FileOpenAttribs& OpenAttribs);
     ~AndroidFile();
 
-    void Read(Diligent::IDataBlob* pData);
+    void Read(IDataBlob* pData);
 
     bool Read(void* Data, size_t BufferSize);
 
@@ -85,15 +88,17 @@ public:
                      struct AAssetManager*   AssetManager);
 
 
-    static AndroidFile*          OpenFile(const FileOpenAttribs& OpenAttribs);
-    static inline Diligent::Char GetSlashSymbol() { return '/'; }
+    static AndroidFile* OpenFile(const FileOpenAttribs& OpenAttribs);
+    static inline Char  GetSlashSymbol() { return '/'; }
 
-    static bool FileExists(const Diligent::Char* strFilePath);
-    static bool PathExists(const Diligent::Char* strPath);
+    static bool FileExists(const Char* strFilePath);
+    static bool PathExists(const Char* strPath);
 
-    static bool CreateDirectory(const Diligent::Char* strPath);
-    static void ClearDirectory(const Diligent::Char* strPath);
-    static void DeleteFile(const Diligent::Char* strPath);
+    static bool CreateDirectory(const Char* strPath);
+    static void ClearDirectory(const Char* strPath);
+    static void DeleteFile(const Char* strPath);
 
-    static std::vector<std::unique_ptr<FindFileData>> Search(const Diligent::Char* SearchPattern);
+    static std::vector<std::unique_ptr<FindFileData>> Search(const Char* SearchPattern);
 };
+
+} // namespace Diligent

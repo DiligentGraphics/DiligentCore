@@ -32,6 +32,9 @@
 #include "Errors.hpp"
 #include "DebugUtilities.hpp"
 
+namespace Diligent
+{
+
 EmscriptenFile* EmscriptenFileSystem::OpenFile(const FileOpenAttribs& OpenAttribs)
 {
     EmscriptenFile* pFile = nullptr;
@@ -45,8 +48,7 @@ EmscriptenFile* EmscriptenFileSystem::OpenFile(const FileOpenAttribs& OpenAttrib
     return pFile;
 }
 
-
-bool EmscriptenFileSystem::FileExists(const Diligent::Char* strFilePath)
+bool EmscriptenFileSystem::FileExists(const Char* strFilePath)
 {
     FileOpenAttribs OpenAttribs;
     OpenAttribs.strFilePath = strFilePath;
@@ -59,30 +61,32 @@ bool EmscriptenFileSystem::FileExists(const Diligent::Char* strFilePath)
     return Exists;
 }
 
-bool EmscriptenFileSystem::PathExists(const Diligent::Char* strPath)
+bool EmscriptenFileSystem::PathExists(const Char* strPath)
 {
     UNSUPPORTED("Not implemented");
     return false;
 }
 
-bool EmscriptenFileSystem::CreateDirectory(const Diligent::Char* strPath)
+bool EmscriptenFileSystem::CreateDirectory(const Char* strPath)
 {
     UNSUPPORTED("Not implemented");
     return false;
 }
 
-void EmscriptenFileSystem::ClearDirectory(const Diligent::Char* strPath)
+void EmscriptenFileSystem::ClearDirectory(const Char* strPath)
 {
     UNSUPPORTED("Not implemented");
 }
 
-void EmscriptenFileSystem::DeleteFile(const Diligent::Char* strPath)
+void EmscriptenFileSystem::DeleteFile(const Char* strPath)
 {
     remove(strPath);
 }
 
-std::vector<std::unique_ptr<FindFileData>> EmscriptenFileSystem::Search(const Diligent::Char* SearchPattern)
+std::vector<std::unique_ptr<FindFileData>> EmscriptenFileSystem::Search(const Char* SearchPattern)
 {
     UNSUPPORTED("Not implemented");
     return std::vector<std::unique_ptr<FindFileData>>();
 }
+
+} // namespace Diligent

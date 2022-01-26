@@ -29,16 +29,16 @@
 #include "AppleDebug.hpp"
 #include "FormatString.hpp"
 
-using namespace Diligent;
+namespace Diligent 
+{
 
-void AppleDebug :: AssertionFailed( const Char *Message, const char *Function, const char *File, int Line )
+void AppleDebug::AssertionFailed(const Char *Message, const char *Function, const char *File, int Line)
 {
     auto AssertionFailedMessage = FormatAssertionFailedMessage(Message, Function, File, Line);
     OutputDebugMessage(DEBUG_MESSAGE_SEVERITY_ERROR, AssertionFailedMessage.c_str(), nullptr, nullptr, 0);
 
     raise( SIGTRAP );
 };
-
 
 void AppleDebug::OutputDebugMessage(DEBUG_MESSAGE_SEVERITY Severity, const Char *Message, const char *Function, const char *File, int Line)
 {
@@ -48,12 +48,11 @@ void AppleDebug::OutputDebugMessage(DEBUG_MESSAGE_SEVERITY Severity, const Char 
     //NSLog(@"%s", str.c_str());
 }
 
-void DebugAssertionFailed(const Diligent::Char* Message, const char* Function, const char* File, int Line)
+void DebugAssertionFailed(const Char* Message, const char* Function, const char* File, int Line)
 {
     AppleDebug :: AssertionFailed( Message, Function, File, Line );
 }
 
-namespace Diligent
-{
 DebugMessageCallbackType DebugMessageCallback = AppleDebug::OutputDebugMessage;
-}
+
+} // namespace Diligent

@@ -33,27 +33,34 @@
 
 // Windows headers define CreateDirectory and DeleteFile as macros.
 // So we need to do some tricks to avoid name mess.
-bool CreateDirectoryImpl(const Diligent::Char* strPath);
 
-bool WindowsStoreFileSystem::CreateDirectory(const Diligent::Char* strPath)
+namespace Diligent
+{
+
+bool CreateDirectoryImpl(const Char* strPath);
+
+bool WindowsStoreFileSystem::CreateDirectory(const Char* strPath)
 {
     return CreateDirectoryImpl(strPath);
 }
 
-void DeleteFileImpl(const Diligent::Char* strPath);
+void DeleteFileImpl(const Char* strPath);
 
-void WindowsStoreFileSystem::DeleteFile(const Diligent::Char* strPath)
+void WindowsStoreFileSystem::DeleteFile(const Char* strPath)
 {
     return DeleteFileImpl(strPath);
 }
 
+} // namespace Diligent
 
 #include "WinHPreface.h"
 #include <wrl.h>
 #include "WinHPostface.h"
 
-using namespace Diligent;
 using namespace Microsoft::WRL;
+
+namespace Diligent
+{
 
 class FileHandleWrapper
 {
@@ -74,7 +81,7 @@ WindowsStoreFile::WindowsStoreFile(const FileOpenAttribs& OpenAttribs) :
     extendedParams.lpSecurityAttributes = nullptr;
     extendedParams.hTemplateFile        = nullptr;
 
-    auto  wstrPath           = Diligent::WidenString(m_OpenAttribs.strFilePath);
+    auto  wstrPath           = WidenString(m_OpenAttribs.strFilePath);
     DWORD dwDesiredAccess    = 0;
     DWORD dwShareMode        = 0;
     DWORD dwCreateDeposition = 0;
@@ -156,7 +163,7 @@ size_t WindowsStoreFile::GetSize()
     return fileInfo.EndOfFile.LowPart;
 }
 
-void WindowsStoreFile::Read(Diligent::IDataBlob* pData)
+void WindowsStoreFile::Read(IDataBlob* pData)
 {
     pData->Resize(GetSize());
 
@@ -166,7 +173,7 @@ void WindowsStoreFile::Read(Diligent::IDataBlob* pData)
     }
 }
 
-void WindowsStoreFile::Write(Diligent::IDataBlob* pData)
+void WindowsStoreFile::Write(IDataBlob* pData)
 {
     DWORD numBytesWritten;
     if (!WriteFile(
@@ -214,7 +221,7 @@ WindowsStoreFile* WindowsStoreFileSystem::OpenFile(const FileOpenAttribs& OpenAt
     return pFile;
 }
 
-bool WindowsStoreFileSystem::FileExists(const Diligent::Char* strFilePath)
+bool WindowsStoreFileSystem::FileExists(const Char* strFilePath)
 {
     FileOpenAttribs OpenAttribs;
     OpenAttribs.AccessMode  = EFileAccessMode::Read;
@@ -231,7 +238,7 @@ bool WindowsStoreFileSystem::FileExists(const Diligent::Char* strFilePath)
     extendedParams.lpSecurityAttributes = nullptr;
     extendedParams.hTemplateFile        = nullptr;
 
-    auto wstrPath = Diligent::WidenString(Path);
+    auto wstrPath = WidenString(Path);
 
     auto Handle = CreateFile2(
         wstrPath.c_str(),
@@ -249,31 +256,33 @@ bool WindowsStoreFileSystem::FileExists(const Diligent::Char* strFilePath)
 }
 
 
-bool WindowsStoreFileSystem::PathExists(const Diligent::Char* strPath)
+bool WindowsStoreFileSystem::PathExists(const Char* strPath)
 {
     UNSUPPORTED("Not implemented");
     return false;
 }
 
-void WindowsStoreFileSystem::ClearDirectory(const Diligent::Char* strPath)
+void WindowsStoreFileSystem::ClearDirectory(const Char* strPath)
 {
     UNSUPPORTED("Not implemented");
 }
 
 
-bool CreateDirectoryImpl(const Diligent::Char* strPath)
+bool CreateDirectoryImpl(const Char* strPath)
 {
     UNSUPPORTED("Not implemented");
     return false;
 }
 
-void DeleteFileImpl(const Diligent::Char* strPath)
+void DeleteFileImpl(const Char* strPath)
 {
     UNSUPPORTED("Not implemented");
 }
 
-std::vector<std::unique_ptr<FindFileData>> WindowsStoreFileSystem::Search(const Diligent::Char* SearchPattern)
+std::vector<std::unique_ptr<FindFileData>> WindowsStoreFileSystem::Search(const Char* SearchPattern)
 {
     UNSUPPORTED("Not implemented");
     return std::vector<std::unique_ptr<FindFileData>>();
 }
+
+} // namespace Diligent

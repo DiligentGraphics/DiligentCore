@@ -31,7 +31,8 @@
 #include "LinuxDebug.hpp"
 #include "FormatString.hpp"
 
-using namespace Diligent;
+namespace Diligent
+{
 
 void LinuxDebug ::AssertionFailed(const Char* Message, const char* Function, const char* File, int Line)
 {
@@ -48,14 +49,11 @@ void LinuxDebug::OutputDebugMessage(DEBUG_MESSAGE_SEVERITY Severity, const Char*
     std::cerr << msg;
 }
 
-void DebugAssertionFailed(const Diligent::Char* Message, const char* Function, const char* File, int Line)
+void DebugAssertionFailed(const Char* Message, const char* Function, const char* File, int Line)
 {
     LinuxDebug ::AssertionFailed(Message, Function, File, Line);
 }
 
-namespace Diligent
-{
-
 DebugMessageCallbackType DebugMessageCallback = LinuxDebug::OutputDebugMessage;
 
-}
+} // namespace Diligent

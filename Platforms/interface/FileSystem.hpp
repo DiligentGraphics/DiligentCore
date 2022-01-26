@@ -32,40 +32,65 @@
 #if PLATFORM_WIN32
 
 #    include "../Win32/interface/Win32FileSystem.hpp"
+
+#elif PLATFORM_UNIVERSAL_WINDOWS
+
+#    include "../UWP/interface/UWPFileSystem.hpp"
+
+#elif PLATFORM_ANDROID
+
+#    include "../Android/interface/AndroidFileSystem.hpp"
+
+#elif PLATFORM_LINUX
+
+#    include "../Linux/interface/LinuxFileSystem.hpp"
+
+#elif PLATFORM_MACOS || PLATFORM_IOS || PLATFORM_TVOS
+
+#    include "../Apple/interface/AppleFileSystem.hpp"
+
+#elif PLATFORM_EMSCRIPTEN
+
+#    include "../Emscripten/interface/EmscriptenFileSystem.hpp"
+
+#else
+#    error Unknown platform. Please define one of the following macros as 1:  PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS, PLATFORM_TVOS, PLATFORM_EMSCRIPTEN.
+#endif
+
+DILIGENT_BEGIN_NAMESPACE(Diligent)
+
+#if PLATFORM_WIN32
+
 using FileSystem = WindowsFileSystem;
 using CFile      = WindowsFile;
 
 #elif PLATFORM_UNIVERSAL_WINDOWS
 
-#    include "../UWP/interface/UWPFileSystem.hpp"
 using FileSystem = WindowsStoreFileSystem;
 using CFile      = WindowsStoreFile;
 
 #elif PLATFORM_ANDROID
 
-#    include "../Android/interface/AndroidFileSystem.hpp"
 using FileSystem = AndroidFileSystem;
 using CFile      = AndroidFile;
 
 #elif PLATFORM_LINUX
 
-#    include "../Linux/interface/LinuxFileSystem.hpp"
 using FileSystem = LinuxFileSystem;
 using CFile      = LinuxFile;
 
 #elif PLATFORM_MACOS || PLATFORM_IOS || PLATFORM_TVOS
 
-#    include "../Apple/interface/AppleFileSystem.hpp"
 using FileSystem = AppleFileSystem;
 using CFile      = AppleFile;
 
 #elif PLATFORM_EMSCRIPTEN
 
-#    include "../Emscripten/interface/EmscriptenFileSystem.hpp"
 using FileSystem = EmscriptenFileSystem;
 using CFile      = EmscriptenFile;
 
 #else
-
 #    error Unknown platform. Please define one of the following macros as 1:  PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS, PLATFORM_TVOS, PLATFORM_EMSCRIPTEN.
 #endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

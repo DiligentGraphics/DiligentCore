@@ -30,29 +30,60 @@
 #include "PlatformDefinitions.h"
 
 #if PLATFORM_WIN32
+
 #    include "../Win32/interface/Win32Debug.hpp"
-using PlatformDebug = WindowsDebug;
 
 #elif PLATFORM_UNIVERSAL_WINDOWS
 #    include "../UWP/interface/UWPDebug.hpp"
+
+#elif PLATFORM_ANDROID
+
+#    include "../Android/interface/AndroidDebug.hpp"
+
+#elif PLATFORM_LINUX
+
+#    include "../Linux/interface/LinuxDebug.hpp"
+
+#elif PLATFORM_MACOS || PLATFORM_IOS || PLATFORM_TVOS
+
+#    include "../Apple/interface/AppleDebug.hpp"
+
+#elif PLATFORM_EMSCRIPTEN
+
+#    include "../Emscripten/interface/EmscriptenDebug.hpp"
+
+#else
+#    error Unknown platform. Please define one of the following macros as 1:  PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS, PLATFORM_TVOS, PLATFORM_EMSCRIPTEN.
+#endif
+
+DILIGENT_BEGIN_NAMESPACE(Diligent)
+
+#if PLATFORM_WIN32
+
+using PlatformDebug = WindowsDebug;
+
+#elif PLATFORM_UNIVERSAL_WINDOWS
+
 using PlatformDebug = WindowsStoreDebug;
 
 #elif PLATFORM_ANDROID
-#    include "../Android/interface/AndroidDebug.hpp"
+
 using PlatformDebug = AndroidDebug;
 
 #elif PLATFORM_LINUX
-#    include "../Linux/interface/LinuxDebug.hpp"
+
 using PlatformDebug = LinuxDebug;
 
 #elif PLATFORM_MACOS || PLATFORM_IOS || PLATFORM_TVOS
-#    include "../Apple/interface/AppleDebug.hpp"
+
 using PlatformDebug = AppleDebug;
 
 #elif PLATFORM_EMSCRIPTEN
-#    include "../Emscripten/interface/EmscriptenDebug.hpp"
+
 using PlatformDebug = EmscriptenDebug;
 
 #else
 #    error Unknown platform. Please define one of the following macros as 1:  PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS, PLATFORM_TVOS, PLATFORM_EMSCRIPTEN.
 #endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

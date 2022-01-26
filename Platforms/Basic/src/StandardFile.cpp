@@ -29,7 +29,10 @@
 #include "DebugUtilities.hpp"
 #include "Errors.hpp"
 
-StandardFile::StandardFile(const FileOpenAttribs& OpenAttribs, Diligent::Char SlashSymbol) :
+namespace Diligent
+{
+
+StandardFile::StandardFile(const FileOpenAttribs& OpenAttribs, Char SlashSymbol) :
     BasicFile{OpenAttribs, SlashSymbol},
     m_pFile{nullptr}
 {
@@ -53,7 +56,7 @@ StandardFile::~StandardFile()
     }
 }
 
-void StandardFile::Read(Diligent::IDataBlob* pData)
+void StandardFile::Read(IDataBlob* pData)
 {
     VERIFY_EXPR(pData != nullptr);
     auto FileSize = GetSize();
@@ -122,3 +125,5 @@ bool StandardFile::SetPos(size_t Offset, FilePosOrigin Origin)
 
     return fseek(m_pFile, static_cast<long>(Offset), orig) == 0;
 }
+
+} // namespace Diligent

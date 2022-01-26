@@ -37,17 +37,20 @@
 //#define NOMINMAX
 //#include <wrl.h>
 
+namespace Diligent
+{
+
 class WindowsStoreFile : public BasicFile
 {
 public:
     WindowsStoreFile(const FileOpenAttribs& OpenAttribs);
     ~WindowsStoreFile();
 
-    void Read(Diligent::IDataBlob* pData);
+    void Read(IDataBlob* pData);
 
     bool Read(void* Data, size_t BufferSize);
 
-    void Write(Diligent::IDataBlob* pData);
+    void Write(IDataBlob* pData);
     bool Write(const void* Data, size_t BufferSize);
 
     size_t GetSize();
@@ -67,14 +70,16 @@ struct WindowsStoreFileSystem : public BasicFileSystem
 public:
     static WindowsStoreFile* OpenFile(const FileOpenAttribs& OpenAttribs);
 
-    static inline Diligent::Char GetSlashSymbol() { return '\\'; }
+    static inline Char GetSlashSymbol() { return '\\'; }
 
-    static bool FileExists(const Diligent::Char* strFilePath);
-    static bool PathExists(const Diligent::Char* strPath);
+    static bool FileExists(const Char* strFilePath);
+    static bool PathExists(const Char* strPath);
 
-    static bool CreateDirectory(const Diligent::Char* strPath);
-    static void ClearDirectory(const Diligent::Char* strPath);
-    static void DeleteFile(const Diligent::Char* strPath);
+    static bool CreateDirectory(const Char* strPath);
+    static void ClearDirectory(const Char* strPath);
+    static void DeleteFile(const Char* strPath);
 
-    static std::vector<std::unique_ptr<FindFileData>> Search(const Diligent::Char* SearchPattern);
+    static std::vector<std::unique_ptr<FindFileData>> Search(const Char* SearchPattern);
 };
+
+} // namespace Diligent

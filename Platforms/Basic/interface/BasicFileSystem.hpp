@@ -30,6 +30,9 @@
 #include <vector>
 #include "../../../Primitives/interface/BasicTypes.h"
 
+namespace Diligent
+{
+
 enum class EFileAccessMode
 {
     Read,
@@ -44,13 +47,12 @@ enum class FilePosOrigin
     End
 };
 
-
 struct FileOpenAttribs
 {
-    const Diligent::Char* strFilePath;
-    EFileAccessMode       AccessMode;
-    FileOpenAttribs(const Diligent::Char* Path   = nullptr,
-                    EFileAccessMode       Access = EFileAccessMode::Read) :
+    const Char*     strFilePath;
+    EFileAccessMode AccessMode;
+    FileOpenAttribs(const Char*     Path   = nullptr,
+                    EFileAccessMode Access = EFileAccessMode::Read) :
         strFilePath{Path},
         AccessMode{Access}
     {}
@@ -59,22 +61,22 @@ struct FileOpenAttribs
 class BasicFile
 {
 public:
-    BasicFile(const FileOpenAttribs& OpenAttribs, Diligent::Char SlashSymbol);
+    BasicFile(const FileOpenAttribs& OpenAttribs, Char SlashSymbol);
     virtual ~BasicFile();
 
-    const Diligent::String& GetPath() { return m_Path; }
+    const String& GetPath() { return m_Path; }
 
 protected:
-    Diligent::String GetOpenModeStr();
+    String GetOpenModeStr();
 
-    FileOpenAttribs  m_OpenAttribs;
-    Diligent::String m_Path;
+    FileOpenAttribs m_OpenAttribs;
+    String          m_Path;
 };
 
 struct FindFileData
 {
-    virtual const Diligent::Char* Name() const        = 0;
-    virtual bool                  IsDirectory() const = 0;
+    virtual const Char* Name() const        = 0;
+    virtual bool        IsDirectory() const = 0;
 
     virtual ~FindFileData() {}
 };
@@ -85,23 +87,23 @@ public:
     static BasicFile* OpenFile(FileOpenAttribs& OpenAttribs);
     static void       ReleaseFile(BasicFile*);
 
-    static std::string GetFullPath(const Diligent::Char* strFilePath);
+    static std::string GetFullPath(const Char* strFilePath);
 
-    static bool FileExists(const Diligent::Char* strFilePath);
+    static bool FileExists(const Char* strFilePath);
 
-    static void SetWorkingDirectory(const Diligent::Char* strWorkingDir) { m_strWorkingDirectory = strWorkingDir; }
+    static void SetWorkingDirectory(const Char* strWorkingDir) { m_strWorkingDirectory = strWorkingDir; }
 
-    static const Diligent::String& GetWorkingDirectory() { return m_strWorkingDirectory; }
+    static const String& GetWorkingDirectory() { return m_strWorkingDirectory; }
 
-    static Diligent::Char GetSlashSymbol();
+    static Char GetSlashSymbol();
 
-    static void CorrectSlashes(Diligent::String& Path, Diligent::Char SlashSymbol);
+    static void CorrectSlashes(String& Path, Char SlashSymbol);
 
-    static void SplitFilePath(const Diligent::String& FullName,
-                              Diligent::String*       Path,
-                              Diligent::String*       Name);
+    static void SplitFilePath(const String& FullName,
+                              String*       Path,
+                              String*       Name);
 
-    static bool IsPathAbsolute(const Diligent::Char* strPath);
+    static bool IsPathAbsolute(const Char* strPath);
 
 
     /// Simplifies the path.
@@ -112,13 +114,13 @@ public:
     /// - Removes redundant . (a/./b -> a/b)
     /// - Collapses .. (a/b/../c -> a/c)
     /// - Removes leading and trailing slashes (/a/b/c/ -> a/b/c)
-    static std::string SimplifyPath(const Diligent::Char* Path, Diligent::Char SlashSymbol);
+    static std::string SimplifyPath(const Char* Path, Char SlashSymbol);
 
 
     /// Splits a list of paths separated by a given separator and calls a user callback for every individual path.
     /// Empty paths are skipped.
     template <typename CallbackType>
-    static void SplitPathList(const Diligent::Char* PathList, CallbackType Callback, const char Separator = ';')
+    static void SplitPathList(const Char* PathList, CallbackType Callback, const char Separator = ';')
     {
         const auto* Pos = PathList;
         while (*Pos != '\0')
@@ -140,5 +142,7 @@ public:
     }
 
 protected:
-    static Diligent::String m_strWorkingDirectory;
+    static String m_strWorkingDirectory;
 };
+
+} // namespace Diligent

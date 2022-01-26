@@ -30,7 +30,8 @@
 #include <android/log.h>
 #include <csignal>
 
-using namespace Diligent;
+namespace Diligent
+{
 
 void AndroidDebug::AssertionFailed(const Char* Message, const char* Function, const char* File, int Line)
 {
@@ -39,7 +40,6 @@ void AndroidDebug::AssertionFailed(const Char* Message, const char* Function, co
 
     raise(SIGTRAP);
 };
-
 
 void AndroidDebug::OutputDebugMessage(DEBUG_MESSAGE_SEVERITY Severity, const Char* Message, const char* Function, const char* File, int Line)
 {
@@ -54,9 +54,6 @@ void DebugAssertionFailed(const Char* Message, const char* Function, const char*
     AndroidDebug::AssertionFailed(Message, Function, File, Line);
 }
 
-namespace Diligent
-{
-
 DebugMessageCallbackType DebugMessageCallback = AndroidDebug::OutputDebugMessage;
 
-}
+} // namespace Diligent

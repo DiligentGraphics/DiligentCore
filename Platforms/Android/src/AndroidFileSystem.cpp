@@ -32,7 +32,6 @@
 #include "Errors.hpp"
 #include "DebugUtilities.hpp"
 
-
 namespace
 {
 
@@ -213,6 +212,8 @@ private:
 
 } // namespace
 
+namespace Diligent
+{
 
 bool AndroidFile::Open(const char* FileName, std::ifstream& IFS, AAsset*& AssetFile, size_t& Size)
 {
@@ -238,7 +239,7 @@ AndroidFile::~AndroidFile()
         AAsset_close(m_AssetFile);
 }
 
-void AndroidFile::Read(Diligent::IDataBlob* pData)
+void AndroidFile::Read(IDataBlob* pData)
 {
     pData->Resize(GetSize());
     Read(pData->GetDataPtr(), pData->GetSize());
@@ -311,8 +312,7 @@ AndroidFile* AndroidFileSystem::OpenFile(const FileOpenAttribs& OpenAttribs)
     return pFile;
 }
 
-
-bool AndroidFileSystem::FileExists(const Diligent::Char* strFilePath)
+bool AndroidFileSystem::FileExists(const Char* strFilePath)
 {
     std::ifstream   IFS;
     AAsset*         AssetFile = nullptr;
@@ -331,30 +331,32 @@ bool AndroidFileSystem::FileExists(const Diligent::Char* strFilePath)
     return Exists;
 }
 
-bool AndroidFileSystem::PathExists(const Diligent::Char* strPath)
+bool AndroidFileSystem::PathExists(const Char* strPath)
 {
     UNSUPPORTED("Not implemented");
     return false;
 }
 
-bool AndroidFileSystem::CreateDirectory(const Diligent::Char* strPath)
+bool AndroidFileSystem::CreateDirectory(const Char* strPath)
 {
     UNSUPPORTED("Not implemented");
     return false;
 }
 
-void AndroidFileSystem::ClearDirectory(const Diligent::Char* strPath)
+void AndroidFileSystem::ClearDirectory(const Char* strPath)
 {
     UNSUPPORTED("Not implemented");
 }
 
-void AndroidFileSystem::DeleteFile(const Diligent::Char* strPath)
+void AndroidFileSystem::DeleteFile(const Char* strPath)
 {
     UNSUPPORTED("Not implemented");
 }
 
-std::vector<std::unique_ptr<FindFileData>> AndroidFileSystem::Search(const Diligent::Char* SearchPattern)
+std::vector<std::unique_ptr<FindFileData>> AndroidFileSystem::Search(const Char* SearchPattern)
 {
     UNSUPPORTED("Not implemented");
     return std::vector<std::unique_ptr<FindFileData>>();
 }
+
+} // namespace Diligent

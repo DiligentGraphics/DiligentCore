@@ -56,6 +56,7 @@
 #elif PLATFORM_TVOS
 
 #    include "../Apple/interface/TVOSNativeWindow.h"
+
 #elif PLATFORM_EMSCRIPTEN
 
 #    include "../Emscripten/interface/EmscriptenNativeWindow.h"

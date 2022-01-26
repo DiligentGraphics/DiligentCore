@@ -32,6 +32,9 @@
 
 #include <intrin.h>
 
+namespace Diligent
+{
+
 struct WindowsMisc : public BasicPlatformMisc
 {
     inline static Diligent::Uint32 GetMSB(Diligent::Uint32 Val)
@@ -162,3 +165,5 @@ struct WindowsMisc : public BasicPlatformMisc
     }
 #endif
 };
+
+} // namespace Diligent

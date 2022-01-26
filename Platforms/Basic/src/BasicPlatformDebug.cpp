@@ -30,7 +30,8 @@
 #include "BasicFileSystem.hpp"
 #include <iostream>
 
-using namespace Diligent;
+namespace Diligent
+{
 
 String BasicPlatformDebug::FormatAssertionFailedMessage(const char* Message,
                                                         const char* Function, // type of __FUNCTION__
@@ -39,7 +40,7 @@ String BasicPlatformDebug::FormatAssertionFailedMessage(const char* Message,
 {
     String FileName;
     BasicFileSystem::SplitFilePath(File, nullptr, &FileName);
-    return Diligent::FormatString("Debug assertion failed in ", Function, "(), file ", FileName, ", line ", Line, ":\n", Message);
+    return FormatString("Debug assertion failed in ", Function, "(), file ", FileName, ", line ", Line, ":\n", Message);
 }
 
 String BasicPlatformDebug::FormatDebugMessage(DEBUG_MESSAGE_SEVERITY Severity,
@@ -73,3 +74,5 @@ String BasicPlatformDebug::FormatDebugMessage(DEBUG_MESSAGE_SEVERITY Severity,
 
     return msg_ss.str();
 }
+
+} // namespace Diligent
