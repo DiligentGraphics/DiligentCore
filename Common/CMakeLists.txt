@@ -40,6 +40,7 @@ set(INTERFACE
     interface/UniqueIdentifier.hpp
     interface/Cast.hpp
     interface/CompilerDefinitions.h
+    interface/CallbackWrapper.hpp
 )
 
 set(SOURCE
