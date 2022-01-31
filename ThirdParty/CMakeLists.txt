@@ -126,6 +126,13 @@ if(${DILIGENT_BUILD_GOOGLE_TEST})
      )
 endif()
 
+option(BUILD_SHARED_LIBS "Build shared library" OFF)
+set(XXHASH_BUILD_XXHSUM OFF)
+set(XXHASH_BUILD_ENABLE_INLINE_API OFF)
+add_subdirectory(xxHash/cmake_unofficial)
+set_directory_root_folder("xxHash/cmake_unofficial" "DiligentCore/ThirdParty/xxHash")
+
+install(FILES xxHash/LICENSE   DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME XXH3-License.txt)
 install(FILES googletest/LICENSE DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME googletest-License.txt)
 install(FILES stb/stb_image_write_license.txt DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}")
 install(FILES volk/LICENSE.md DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME Volk-License.md)

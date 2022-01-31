@@ -18,6 +18,9 @@ set(INTERFACE
     interface/StreamingBuffer.hpp
     interface/TextureUploader.hpp
     interface/TextureUploaderBase.hpp
+    interface/ShaderPreprocessor.hpp
+    interface/XXH128Hasher.hpp
+    interface/BytecodeCache.h  
 )
 
 set(SOURCE
@@ -30,6 +33,9 @@ set(SOURCE
     src/ScopedQueryHelper.cpp
     src/ScreenCapture.cpp
     src/TextureUploader.cpp
+    src/ShaderPreprocessor.cpp
+    src/XXH128Hasher.cpp
+    src/BytecodeCache.cpp
 )
 
 set(DEPENDENCIES)
@@ -66,6 +72,8 @@ PRIVATE
     Diligent-BuildSettings
     Diligent-PlatformInterface
     Diligent-GraphicsAccessories
+    Diligent-ShaderTools
+    xxHash::xxhash
     ${DEPENDENCIES}
 PUBLIC
     Diligent-GraphicsEngineInterface

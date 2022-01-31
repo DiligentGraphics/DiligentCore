@@ -19,3 +19,6 @@
 [submodule "ThirdParty/volk"]
 	path = ThirdParty/volk
 	url = https://github.com/DiligentGraphics/volk.git
+[submodule "ThirdParty/xxHash"]
+	path = ThirdParty/xxHash
+	url = https://github.com/DiligentGraphics/xxHash

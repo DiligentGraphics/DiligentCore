@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.3)
 
-project(WindowsPlatform CXX)
+project(Diligent-Win32Platform CXX)
 
 set(INTERFACE
     interface/Win32Atomics.hpp
