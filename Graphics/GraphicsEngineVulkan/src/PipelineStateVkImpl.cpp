@@ -654,6 +654,9 @@ void PipelineStateVkImpl::RemapOrVerifyShaderResources(
     TShaderResources*                                    pDvpShaderResources,
     TResourceAttibutions*                                pDvpResourceAttibutions) noexcept(false)
 {
+    if (PipelineName == nullptr)
+        PipelineName = "<null>";
+
     // Verify that pipeline layout is compatible with shader resources and
     // remap resource bindings.
     for (size_t s = 0; s < ShaderStages.size(); ++s)
@@ -678,7 +681,7 @@ void PipelineStateVkImpl::RemapOrVerifyShaderResources(
             pShaderResources->ProcessResources(
                 [&](const SPIRVShaderResourceAttribs& SPIRVAttribs, Uint32) //
                 {
-                    auto ResAttribution = GetResourceAttribution(SPIRVAttribs.Name, ShaderType, pSignatures, SignatureCount);
+                    const auto ResAttribution = GetResourceAttribution(SPIRVAttribs.Name, ShaderType, pSignatures, SignatureCount);
                     if (!ResAttribution)
                     {
                         LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' contains resource '", SPIRVAttribs.Name,

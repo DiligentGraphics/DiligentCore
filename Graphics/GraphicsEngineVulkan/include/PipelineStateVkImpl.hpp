@@ -107,7 +107,7 @@ public:
         const TBindIndexToDescSetIndex&                      BindIndexToDescSetIndex,
         bool                                                 bVerifyOnly,
         bool                                                 bStripReflection,
-        const char*                                          PipelineName         = "",
+        const char*                                          PipelineName,
         TShaderResources*                                    pShaderResources     = nullptr,
         TResourceAttibutions*                                pResourceAttibutions = nullptr) noexcept(false);
 

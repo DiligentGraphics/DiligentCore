@@ -148,7 +148,8 @@ bool ArchiverImpl::PatchShadersVk(const CreateInfoType& CreateInfo, TPSOData<Cre
                                                           SignaturesCount,
                                                           BindIndexToDescSetIndex,
                                                           false, // bVerifyOnly
-                                                          bStripReflection);
+                                                          bStripReflection,
+                                                          CreateInfo.PSODesc.Name);
     }
     catch (...)
     {
