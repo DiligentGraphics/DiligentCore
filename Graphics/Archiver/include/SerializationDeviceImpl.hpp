@@ -44,83 +44,48 @@ public:
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
-    /// Implementation of IRenderDevice::CreateGraphicsPipelineState().
-    virtual void DILIGENT_CALL_TYPE CreateGraphicsPipelineState(const GraphicsPipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState) override final {}
+#define UNSUPPORTED_METHOD(MethodName, ...)                                   \
+    virtual void DILIGENT_CALL_TYPE MethodName(__VA_ARGS__) override final    \
+    {                                                                         \
+        UNSUPPORTED(#MethodName " is not supported by serialization device"); \
+    }
 
-    /// Implementation of IRenderDevice::CreateComputePipelineState().
-    virtual void DILIGENT_CALL_TYPE CreateComputePipelineState(const ComputePipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState) override final {}
+    // clang-format off
+    UNSUPPORTED_METHOD(CreateGraphicsPipelineState,   const GraphicsPipelineStateCreateInfo&   PSOCreateInfo, IPipelineState** ppPipelineState)
+    UNSUPPORTED_METHOD(CreateComputePipelineState,    const ComputePipelineStateCreateInfo&    PSOCreateInfo, IPipelineState** ppPipelineState)
+    UNSUPPORTED_METHOD(CreateRayTracingPipelineState, const RayTracingPipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState)
+    UNSUPPORTED_METHOD(CreateTilePipelineState,       const TilePipelineStateCreateInfo&       PSOCreateInfo, IPipelineState** ppPipelineState)
 
-    /// Implementation of IRenderDevice::CreateRayTracingPipelineState().
-    virtual void DILIGENT_CALL_TYPE CreateRayTracingPipelineState(const RayTracingPipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState) override final {}
+    UNSUPPORTED_METHOD(CreateShader,      const ShaderCreateInfo&  CreateInfo, IShader** ppShader)
 
-    /// Implementation of IRenderDevice::CreateTilePipelineState().
-    virtual void DILIGENT_CALL_TYPE CreateTilePipelineState(const TilePipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState) override final {}
+    UNSUPPORTED_METHOD(CreateBuffer,      const BufferDesc&  Desc, const BufferData*  pData, IBuffer**  ppBuffer)
+    UNSUPPORTED_METHOD(CreateTexture,     const TextureDesc& Desc, const TextureData* pData, ITexture** ppTexture)
 
-    /// Implementation of IRenderDevice::CreateBuffer().
-    virtual void DILIGENT_CALL_TYPE CreateBuffer(const BufferDesc& BuffDesc,
-                                                 const BufferData* pBuffData,
-                                                 IBuffer**         ppBuffer) override final {}
-
-    /// Implementation of IRenderDevice::CreateShader().
-    virtual void DILIGENT_CALL_TYPE CreateShader(const ShaderCreateInfo& ShaderCreateInfo, IShader** ppShader) override final {}
-
-    /// Implementation of IRenderDevice::CreateTexture().
-    virtual void DILIGENT_CALL_TYPE CreateTexture(const TextureDesc& TexDesc,
-                                                  const TextureData* pData,
-                                                  ITexture**         ppTexture) override final {}
-
-    /// Implementation of IRenderDevice::CreateSampler().
-    virtual void DILIGENT_CALL_TYPE CreateSampler(const SamplerDesc& SamplerDesc, ISampler** ppSampler) override final {}
-
-    /// Implementation of IRenderDevice::CreateFence().
-    virtual void DILIGENT_CALL_TYPE CreateFence(const FenceDesc& Desc, IFence** ppFence) override final {}
-
-    /// Implementation of IRenderDevice::CreateQuery().
-    virtual void DILIGENT_CALL_TYPE CreateQuery(const QueryDesc& Desc, IQuery** ppQuery) override final {}
+    UNSUPPORTED_METHOD(CreateSampler,     const SamplerDesc&            Desc, ISampler**            ppSampler)
+    UNSUPPORTED_METHOD(CreateFence,       const FenceDesc&              Desc, IFence**              ppFence)
+    UNSUPPORTED_METHOD(CreateQuery,       const QueryDesc&              Desc, IQuery**              ppQuery)
+    UNSUPPORTED_METHOD(CreateFramebuffer, const FramebufferDesc&        Desc, IFramebuffer**        ppFramebuffer)
+    UNSUPPORTED_METHOD(CreateBLAS,        const BottomLevelASDesc&      Desc, IBottomLevelAS**      ppBLAS)
+    UNSUPPORTED_METHOD(CreateTLAS,        const TopLevelASDesc&         Desc, ITopLevelAS**         ppTLAS)
+    UNSUPPORTED_METHOD(CreateSBT,         const ShaderBindingTableDesc& Desc, IShaderBindingTable** ppSBT)
+    UNSUPPORTED_METHOD(CreatePipelineResourceSignature, const PipelineResourceSignatureDesc& Desc, IPipelineResourceSignature** ppSignature)
+    UNSUPPORTED_METHOD(CreateDeviceMemory,       const DeviceMemoryCreateInfo&       CreateInfo, IDeviceMemory**       ppMemory)
+    UNSUPPORTED_METHOD(CreatePipelineStateCache, const PipelineStateCacheCreateInfo& CreateInfo, IPipelineStateCache** ppPSOCache)
+    UNSUPPORTED_METHOD(IdleGPU)
+    UNSUPPORTED_METHOD(ReleaseStaleResources, bool ForceRelease)
+    // clang-format on
+#undef UNSUPPORTED_METHOD
 
     /// Implementation of IRenderDevice::CreateRenderPass().
     virtual void DILIGENT_CALL_TYPE CreateRenderPass(const RenderPassDesc& Desc,
                                                      IRenderPass**         ppRenderPass) override final;
-
-    /// Implementation of IRenderDevice::CreateFramebuffer().
-    virtual void DILIGENT_CALL_TYPE CreateFramebuffer(const FramebufferDesc& Desc,
-                                                      IFramebuffer**         ppFramebuffer) override final {}
-
-    /// Implementation of IRenderDevice::CreateBLAS().
-    virtual void DILIGENT_CALL_TYPE CreateBLAS(const BottomLevelASDesc& Desc,
-                                               IBottomLevelAS**         ppBLAS) override final {}
-
-    /// Implementation of IRenderDevice::CreateTLAS().
-    virtual void DILIGENT_CALL_TYPE CreateTLAS(const TopLevelASDesc& Desc,
-                                               ITopLevelAS**         ppTLAS) override final {}
-
-    /// Implementation of IRenderDevice::CreateSBT().
-    virtual void DILIGENT_CALL_TYPE CreateSBT(const ShaderBindingTableDesc& Desc,
-                                              IShaderBindingTable**         ppSBT) override final {}
-
-    /// Implementation of IRenderDevice::CreatePipelineResourceSignature().
-    virtual void DILIGENT_CALL_TYPE CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
-                                                                    IPipelineResourceSignature**         ppSignature) override final {}
-
-    /// Implementation of IRenderDevice::CreateDeviceMemory().
-    virtual void DILIGENT_CALL_TYPE CreateDeviceMemory(const DeviceMemoryCreateInfo& CreateInfo,
-                                                       IDeviceMemory**               ppMemory) override final {}
-
-    /// Implementation of IRenderDevice::CreatePipelineStateCache().
-    virtual void DILIGENT_CALL_TYPE CreatePipelineStateCache(const PipelineStateCacheCreateInfo& CreateInfo,
-                                                             IPipelineStateCache**               ppPSOCache) override final {}
-
-    /// Implementation of IRenderDevice::IdleGPU().
-    virtual void DILIGENT_CALL_TYPE IdleGPU() override final {}
-
-    /// Implementation of IRenderDevice::ReleaseStaleResources().
-    virtual void DILIGENT_CALL_TYPE ReleaseStaleResources(bool ForceRelease) override final {}
 
     /// Implementation of IRenderDevice::GetSparseTextureFormatInfo().
     virtual SparseTextureFormatInfo DILIGENT_CALL_TYPE GetSparseTextureFormatInfo(TEXTURE_FORMAT     TexFormat,
                                                                                   RESOURCE_DIMENSION Dimension,
                                                                                   Uint32             SampleCount) const override final
     {
+        UNSUPPORTED("GetSparseTextureFormatInfo is not supported by serialization device");
         return SparseTextureFormatInfo{};
     }
 
@@ -198,7 +163,10 @@ private:
                                                std::vector<PipelineResourceBinding>& ResourceBindings,
                                                const Uint32                          MaxBufferArgs);
 
-    virtual void TestTextureFormat(TEXTURE_FORMAT TexFormat) override final {}
+    virtual void TestTextureFormat(TEXTURE_FORMAT TexFormat) override final
+    {
+        UNSUPPORTED("TestTextureFormat is not supported by serialization device");
+    }
 
     ARCHIVE_DEVICE_DATA_FLAGS m_ValidDeviceFlags = ARCHIVE_DEVICE_DATA_FLAG_NONE;
 
