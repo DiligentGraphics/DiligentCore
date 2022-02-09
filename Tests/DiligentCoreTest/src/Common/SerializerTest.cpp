@@ -45,6 +45,8 @@ TEST(SerializerTest, SerializerTest)
 
     const Uint32 RefArraySize           = 3;
     const Uint32 RefArray[RefArraySize] = {0x1251, 0x620, 0x8816};
+    const Uint32 NumBytes               = 7;
+    const Uint8  RefBytes[NumBytes]     = {5, 124, 9, 44, 79, 40, 251};
 
     auto& RawAllocator{DefaultRawMemoryAllocator::GetAllocator()};
 
@@ -56,6 +58,7 @@ TEST(SerializerTest, SerializerTest)
         Ser(RefU64, RefU8);
         Ser(RefU32);
         Ser.SerializeArrayRaw(&TmpAllocator, RefArray, RefArraySize);
+        Ser.CopyBytes(RefBytes, sizeof(RefBytes));
     };
 
     Serializer<SerializerMode::Measure> MSer;
@@ -113,6 +116,13 @@ TEST(SerializerTest, SerializerTest)
         EXPECT_EQ(ArraySize, RefArraySize);
         for (Uint32 i = 0; i < RefArraySize; ++i)
             EXPECT_EQ(RefArray[i], pArray[i]);
+    }
+
+    {
+        Uint8 Bytes[NumBytes] = {};
+        RSer.CopyBytes(Bytes, sizeof(Bytes));
+        for (Uint32 i = 0; i < NumBytes; ++i)
+            EXPECT_EQ(Bytes[i], RefBytes[i]);
     }
 
     EXPECT_TRUE(RSer.IsEnded());

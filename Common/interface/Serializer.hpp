@@ -190,6 +190,11 @@ public:
         Copy(&Value, sizeof(Value));
     }
 
+    void CopyBytes(ConstQual<void>* pData, size_t Size)
+    {
+        Copy(pData, Size);
+    }
+
     template <typename T>
     TEnableStr<T> Serialize(InCharPtr Str);
 
