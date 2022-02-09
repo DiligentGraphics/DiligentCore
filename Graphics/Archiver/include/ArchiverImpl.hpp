@@ -90,8 +90,7 @@ public:
                                                          const PipelineStateArchiveInfo&    ArchiveInfo) override final;
 
     /// Implementation of IArchiver::AddPipelineResourceSignature().
-    virtual Bool DILIGENT_CALL_TYPE AddPipelineResourceSignature(const PipelineResourceSignatureDesc& SignatureDesc,
-                                                                 const ResourceSignatureArchiveInfo&  ArchiveInfo) override final;
+    virtual Bool DILIGENT_CALL_TYPE AddPipelineResourceSignature(IPipelineResourceSignature* pSignature) override final;
 
 public:
     using DeviceType   = DeviceObjectArchiveBase::DeviceType;
@@ -271,7 +270,6 @@ private:
                                                 const MapType& Map,
                                                 PendingData&   Pending);
 
-    bool AddPipelineResourceSignature(IPipelineResourceSignature* pPRS);
     bool CachePipelineResourceSignature(RefCntAutoPtr<SerializableResourceSignatureImpl>& pPRS);
     bool AddRenderPass(IRenderPass* pRP);
 

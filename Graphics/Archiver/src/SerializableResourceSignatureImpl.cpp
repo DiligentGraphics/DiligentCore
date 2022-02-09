@@ -38,13 +38,14 @@ DeviceObjectArchiveBase::DeviceType ArchiveDeviceDataFlagToArchiveDeviceType(ARC
 SerializableResourceSignatureImpl::SerializableResourceSignatureImpl(IReferenceCounters*                  pRefCounters,
                                                                      SerializationDeviceImpl*             pDevice,
                                                                      const PipelineResourceSignatureDesc& Desc,
-                                                                     ARCHIVE_DEVICE_DATA_FLAGS            DeviceFlags,
+                                                                     const ResourceSignatureArchiveInfo&  ArchiveInfo,
                                                                      SHADER_TYPE                          ShaderStages) :
     TBase{pRefCounters},
     m_Name{Desc.Name}
 {
     ValidatePipelineResourceSignatureDesc(Desc, pDevice->GetDevice());
 
+    auto DeviceFlags = ArchiveInfo.DeviceFlags;
     if ((DeviceFlags & pDevice->GetValidDeviceFlags()) != DeviceFlags)
     {
         LOG_ERROR_AND_THROW("DeviceFlags contain unsupported device type");

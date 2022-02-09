@@ -34,5 +34,5 @@ void TestArchiver_CInterface(IArchiver* pArchiver)
     IArchiver_AddComputePipelineState(pArchiver, (const ComputePipelineStateCreateInfo*)NULL, (const PipelineStateArchiveInfo*)NULL);
     IArchiver_AddRayTracingPipelineState(pArchiver, (const RayTracingPipelineStateCreateInfo*)NULL, (const PipelineStateArchiveInfo*)NULL);
     IArchiver_AddTilePipelineState(pArchiver, (const TilePipelineStateCreateInfo*)NULL, (const PipelineStateArchiveInfo*)NULL);
-    IArchiver_AddPipelineResourceSignature(pArchiver, (const PipelineResourceSignatureDesc*)NULL, (const ResourceSignatureArchiveInfo*)NULL);
+    IArchiver_AddPipelineResourceSignature(pArchiver, (IPipelineResourceSignature*)NULL);
 }

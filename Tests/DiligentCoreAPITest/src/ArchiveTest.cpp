@@ -124,9 +124,14 @@ void ArchivePRS(RefCntAutoPtr<IArchive>&                   pSource,
         PRSDesc.ImmutableSamplers    = ImmutableSamplers;
         PRSDesc.NumImmutableSamplers = _countof(ImmutableSamplers);
 
-        ResourceSignatureArchiveInfo ArchiveInfo;
-        ArchiveInfo.DeviceFlags = DeviceBits;
-        ASSERT_TRUE(pArchiver->AddPipelineResourceSignature(PRSDesc, ArchiveInfo));
+        {
+            ResourceSignatureArchiveInfo ArchiveInfo;
+            ArchiveInfo.DeviceFlags = DeviceBits;
+            RefCntAutoPtr<IPipelineResourceSignature> pSerializableSign;
+            pSerializationDevice->CreatePipelineResourceSignature(PRSDesc, ArchiveInfo, &pSerializableSign);
+            ASSERT_NE(pSerializableSign, nullptr);
+            ASSERT_TRUE(pArchiver->AddPipelineResourceSignature(pSerializableSign));
+        }
 
         pDevice->CreatePipelineResourceSignature(PRSDesc, &pRefPRS_1);
         ASSERT_NE(pRefPRS_1, nullptr);
@@ -148,9 +153,14 @@ void ArchivePRS(RefCntAutoPtr<IArchive>&                   pSource,
         PRSDesc.Resources    = Resources;
         PRSDesc.NumResources = _countof(Resources);
 
-        ResourceSignatureArchiveInfo ArchiveInfo;
-        ArchiveInfo.DeviceFlags = DeviceBits;
-        ASSERT_TRUE(pArchiver->AddPipelineResourceSignature(PRSDesc, ArchiveInfo));
+        {
+            ResourceSignatureArchiveInfo ArchiveInfo;
+            ArchiveInfo.DeviceFlags = DeviceBits;
+            RefCntAutoPtr<IPipelineResourceSignature> pSerializableSign;
+            pSerializationDevice->CreatePipelineResourceSignature(PRSDesc, ArchiveInfo, &pSerializableSign);
+            ASSERT_NE(pSerializableSign, nullptr);
+            ASSERT_TRUE(pArchiver->AddPipelineResourceSignature(pSerializableSign));
+        }
 
         pDevice->CreatePipelineResourceSignature(PRSDesc, &pRefPRS_2);
         ASSERT_NE(pRefPRS_2, nullptr);
@@ -623,7 +633,7 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
         PRSDesc.ImmutableSamplers    = ImmutableSamplers;
         PRSDesc.NumImmutableSamplers = _countof(ImmutableSamplers);
 
-        pSerializationDevice->CreatePipelineResourceSignature(PRSDesc, GetDeviceBits(), &pSerializedPRS);
+        pSerializationDevice->CreatePipelineResourceSignature(PRSDesc, ResourceSignatureArchiveInfo{GetDeviceBits()}, &pSerializedPRS);
         ASSERT_NE(pSerializedPRS, nullptr);
 
         pDevice->CreatePipelineResourceSignature(PRSDesc, &pRefPRS);
@@ -1071,7 +1081,7 @@ void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
         PRSDesc.Resources    = Resources;
         PRSDesc.NumResources = _countof(Resources);
 
-        pSerializationDevice->CreatePipelineResourceSignature(PRSDesc, GetDeviceBits(), &pSerializedPRS);
+        pSerializationDevice->CreatePipelineResourceSignature(PRSDesc, ResourceSignatureArchiveInfo{GetDeviceBits()}, &pSerializedPRS);
         ASSERT_NE(pSerializedPRS, nullptr);
 
         pDevice->CreatePipelineResourceSignature(PRSDesc, &pRefPRS);
@@ -1594,7 +1604,7 @@ TEST(ArchiveTest, ResourceSignatureBindings)
             PRSDesc.ImmutableSamplers    = ImmutableSamplers;
             PRSDesc.NumImmutableSamplers = _countof(ImmutableSamplers);
 
-            pSerializationDevice->CreatePipelineResourceSignature(PRSDesc, DeviceBit, &pPRS1);
+            pSerializationDevice->CreatePipelineResourceSignature(PRSDesc, ResourceSignatureArchiveInfo{DeviceBit}, &pPRS1);
             ASSERT_NE(pPRS1, nullptr);
         }
 
@@ -1617,7 +1627,7 @@ TEST(ArchiveTest, ResourceSignatureBindings)
             PRSDesc.Resources    = Resources;
             PRSDesc.NumResources = _countof(Resources);
 
-            pSerializationDevice->CreatePipelineResourceSignature(PRSDesc, DeviceBit, &pPRS2);
+            pSerializationDevice->CreatePipelineResourceSignature(PRSDesc, ResourceSignatureArchiveInfo{DeviceBit}, &pPRS2);
             ASSERT_NE(pPRS2, nullptr);
         }
 
@@ -2078,7 +2088,7 @@ TEST_P(TestSamplers, GraphicsPipeline)
             PRSDesc.NumImmutableSamplers       = UseImtblSamplers ? _countof(ImtblSamplers) : 0;
             PRSDesc.UseCombinedTextureSamplers = true;
 
-            pSerializationDevice->CreatePipelineResourceSignature(PRSDesc, GetDeviceBits(), &pSerializedSignature);
+            pSerializationDevice->CreatePipelineResourceSignature(PRSDesc, ResourceSignatureArchiveInfo{GetDeviceBits()}, &pSerializedSignature);
             ASSERT_TRUE(pSerializedSignature);
 
             ppResourceSignatures[0]               = pSerializedSignature;

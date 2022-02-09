@@ -174,11 +174,11 @@ public:
                                                  IShader**                 ppShader) override final;
 
     virtual void DILIGENT_CALL_TYPE CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
-                                                                    ARCHIVE_DEVICE_DATA_FLAGS            DeviceFlags,
+                                                                    const ResourceSignatureArchiveInfo&  ArchiveInfo,
                                                                     IPipelineResourceSignature**         ppSignature) override final;
 
     void CreateSerializableResourceSignature(const PipelineResourceSignatureDesc& Desc,
-                                             ARCHIVE_DEVICE_DATA_FLAGS            DeviceFlags,
+                                             const ResourceSignatureArchiveInfo&  ArchiveInfo,
                                              SHADER_TYPE                          ShaderStages,
                                              SerializableResourceSignatureImpl**  ppSignature);
 

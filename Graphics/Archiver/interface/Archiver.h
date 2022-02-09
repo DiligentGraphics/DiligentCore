@@ -92,15 +92,6 @@ struct PipelineStateArchiveInfo
 };
 typedef struct PipelineStateArchiveInfo PipelineStateArchiveInfo;
 
-// Pipeline resource signature archive info
-struct ResourceSignatureArchiveInfo
-{
-    /// Bitset of ARCHIVE_DEVICE_DATA_FLAGS.
-    /// Specifies for which backends the resource signature data will be archived.
-    ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags DEFAULT_INITIALIZER(ARCHIVE_DEVICE_DATA_FLAG_NONE);
-};
-typedef struct ResourceSignatureArchiveInfo ResourceSignatureArchiveInfo;
-
 
 /// Defines the methods to manipulate an Archive object
 DILIGENT_BEGIN_INTERFACE(IArchiver, IObject)
@@ -156,8 +147,7 @@ DILIGENT_BEGIN_INTERFACE(IArchiver, IObject)
 
     /// \note   Multiple PSOs and signatures may be packed into the same archive as long as they use distinct names.
     VIRTUAL Bool METHOD(AddPipelineResourceSignature)(THIS_
-                                                      const PipelineResourceSignatureDesc REF SignatureDesc,
-                                                      const ResourceSignatureArchiveInfo REF  ArchiveInfo) PURE;
+                                                      IPipelineResourceSignature* pSignature) PURE;
 };
 DILIGENT_END_INTERFACE
 

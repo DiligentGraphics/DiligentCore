@@ -532,17 +532,6 @@ bool ArchiverImpl::CachePipelineResourceSignature(RefCntAutoPtr<SerializableReso
     return AddPipelineResourceSignature(pPRS);
 }
 
-Bool ArchiverImpl::AddPipelineResourceSignature(const PipelineResourceSignatureDesc& SignatureDesc,
-                                                const ResourceSignatureArchiveInfo&  ArchiveInfo)
-{
-    RefCntAutoPtr<IPipelineResourceSignature> pPRS;
-    m_pSerializationDevice->CreatePipelineResourceSignature(SignatureDesc, ArchiveInfo.DeviceFlags, &pPRS);
-    if (!pPRS)
-        return false;
-
-    return AddPipelineResourceSignature(pPRS);
-}
-
 String ArchiverImpl::GetDefaultPRSName(const char* PSOName) const
 {
     VERIFY_EXPR(PSOName != nullptr);

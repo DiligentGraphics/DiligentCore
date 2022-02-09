@@ -177,6 +177,16 @@ struct SerializationDeviceCreateInfo
 typedef struct SerializationDeviceCreateInfo SerializationDeviceCreateInfo;
 
 
+// Pipeline resource signature archive info
+struct ResourceSignatureArchiveInfo
+{
+    /// Bitset of ARCHIVE_DEVICE_DATA_FLAGS.
+    /// Specifies for which backends the resource signature data will be archived.
+    ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags DEFAULT_INITIALIZER(ARCHIVE_DEVICE_DATA_FLAG_NONE);
+};
+typedef struct ResourceSignatureArchiveInfo ResourceSignatureArchiveInfo;
+
+
 /// Contains attributes to calculate pipeline resource bindings
 struct PipelineResourceBindingAttribs
 {
@@ -234,7 +244,7 @@ DILIGENT_BEGIN_INTERFACE(ISerializationDevice, IRenderDevice)
     /// Creates a serialized pipeline resource signature.
     VIRTUAL void METHOD(CreatePipelineResourceSignature)(THIS_
                                                          const PipelineResourceSignatureDesc REF Desc,
-                                                         ARCHIVE_DEVICE_DATA_FLAGS               DeviceFlags,
+                                                         const ResourceSignatureArchiveInfo REF  ArchiveInfo,
                                                          IPipelineResourceSignature**            ppSignature) PURE;
 
     /// Populates an array of pipeline resource bindings.
