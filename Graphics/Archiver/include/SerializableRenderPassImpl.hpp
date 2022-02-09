@@ -28,7 +28,7 @@
 
 #include "RenderPass.h"
 #include "RenderPassBase.hpp"
-#include "SerializationDeviceImpl.hpp"
+#include "SerializationEngineImplTraits.hpp"
 #include "Serializer.hpp"
 
 namespace Diligent

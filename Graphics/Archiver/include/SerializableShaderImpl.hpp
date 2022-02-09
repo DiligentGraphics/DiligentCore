@@ -27,10 +27,10 @@
 #pragma once
 
 #include "Shader.h"
+#include "SerializationEngineImplTraits.hpp"
 #include "ObjectBase.hpp"
 #include "RefCntAutoPtr.hpp"
 #include "STDAllocator.hpp"
-#include "SerializationDeviceImpl.hpp"
 #include "Serializer.hpp"
 #include "DeviceObjectArchiveBase.hpp"
 

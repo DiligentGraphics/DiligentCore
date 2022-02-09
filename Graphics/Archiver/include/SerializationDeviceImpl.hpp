@@ -26,71 +26,13 @@
 
 #pragma once
 
-#include "RenderDevice.h"
-#include "SerializationDevice.h"
+#include "SerializationEngineImplTraits.hpp"
 #include "ObjectBase.hpp"
 #include "DXCompiler.hpp"
 #include "RenderDeviceBase.hpp"
 
 namespace Diligent
 {
-
-class SerializationDeviceImpl;
-class SerializableShaderImpl;
-class SerializableRenderPassImpl;
-class SerializableResourceSignatureImpl;
-class SerializableObjectStub
-{};
-
-struct SerializationEngineImplTraits
-{
-    using RenderDeviceInterface              = ISerializationDevice;
-    using DeviceContextInterface             = IDeviceContext;
-    using PipelineStateInterface             = IPipelineState;
-    using ShaderResourceBindingInterface     = IShaderResourceBinding;
-    using BufferInterface                    = IBuffer;
-    using BufferViewInterface                = IBufferView;
-    using TextureInterface                   = ITexture;
-    using TextureViewInterface               = ITextureView;
-    using ShaderInterface                    = IShader;
-    using SamplerInterface                   = ISampler;
-    using FenceInterface                     = IFence;
-    using QueryInterface                     = IQuery;
-    using RenderPassInterface                = IRenderPass;
-    using FramebufferInterface               = IFramebuffer;
-    using CommandListInterface               = ICommandList;
-    using BottomLevelASInterface             = IBottomLevelAS;
-    using TopLevelASInterface                = ITopLevelAS;
-    using ShaderBindingTableInterface        = IShaderBindingTable;
-    using PipelineResourceSignatureInterface = IPipelineResourceSignature;
-    using CommandQueueInterface              = ICommandQueue;
-    using DeviceMemoryInterface              = IDeviceMemory;
-    using PipelineStateCacheInterface        = IPipelineStateCache;
-    using DeviceObjectArchiveInterface       = IDeviceObjectArchive;
-
-    using RenderDeviceImplType              = SerializationDeviceImpl;
-    using DeviceContextImplType             = IDeviceContext;
-    using PipelineStateImplType             = SerializableObjectStub;
-    using ShaderResourceBindingImplType     = SerializableObjectStub;
-    using BufferImplType                    = SerializableObjectStub;
-    using BufferViewImplType                = SerializableObjectStub;
-    using TextureImplType                   = SerializableObjectStub;
-    using TextureViewImplType               = SerializableObjectStub;
-    using ShaderImplType                    = SerializableShaderImpl;
-    using SamplerImplType                   = SerializableObjectStub;
-    using FenceImplType                     = SerializableObjectStub;
-    using QueryImplType                     = SerializableObjectStub;
-    using RenderPassImplType                = SerializableRenderPassImpl;
-    using FramebufferImplType               = SerializableObjectStub;
-    using CommandListImplType               = SerializableObjectStub;
-    using BottomLevelASImplType             = SerializableObjectStub;
-    using TopLevelASImplType                = SerializableObjectStub;
-    using ShaderBindingTableImplType        = SerializableObjectStub;
-    using PipelineResourceSignatureImplType = SerializableResourceSignatureImpl;
-    using DeviceMemoryImplType              = SerializableObjectStub;
-    using PipelineStateCacheImplType        = SerializableObjectStub;
-    using DeviceObjectArchiveImplType       = SerializableObjectStub;
-};
 
 class SerializationDeviceImpl final : public RenderDeviceBase<SerializationEngineImplTraits>
 {

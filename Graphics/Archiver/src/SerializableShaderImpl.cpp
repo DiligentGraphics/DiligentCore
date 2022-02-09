@@ -25,6 +25,7 @@
  */
 
 #include "SerializableShaderImpl.hpp"
+#include "SerializationDeviceImpl.hpp"
 #include "FixedLinearAllocator.hpp"
 #include "EngineMemory.h"
 #include "DataBlobImpl.hpp"

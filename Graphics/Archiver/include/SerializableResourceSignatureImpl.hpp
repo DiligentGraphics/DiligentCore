@@ -35,7 +35,7 @@
 #include "STDAllocator.hpp"
 #include "Serializer.hpp"
 #include "DeviceObjectArchiveBase.hpp"
-#include "SerializationDeviceImpl.hpp"
+#include "SerializationEngineImplTraits.hpp"
 
 namespace Diligent
 {

@@ -27,6 +27,7 @@
 #include "SerializableRenderPassImpl.hpp"
 #include "DeviceObjectArchiveBase.hpp"
 #include "PSOSerializer.hpp"
+#include "SerializationDeviceImpl.hpp"
 
 namespace Diligent
 {

@@ -26,6 +26,7 @@
 
 #include "SerializableResourceSignatureImpl.hpp"
 #include "PipelineResourceSignatureBase.hpp"
+#include "SerializationDeviceImpl.hpp"
 #include "FixedLinearAllocator.hpp"
 #include "EngineMemory.h"
 #include "PSOSerializer.hpp"

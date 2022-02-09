@@ -9,6 +9,7 @@ set(INCLUDE
     include/SerializableShaderImpl.hpp
     include/SerializableRenderPassImpl.hpp
     include/SerializableResourceSignatureImpl.hpp
+    include/SerializationEngineImplTraits.hpp
 )
 
 set(INTERFACE
