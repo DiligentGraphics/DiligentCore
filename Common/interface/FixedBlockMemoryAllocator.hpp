@@ -92,8 +92,9 @@ private:
             m_pOwnerAllocator     {&OwnerAllocator}
         // clang-format on
         {
-            auto PageSize = OwnerAllocator.m_BlockSize * OwnerAllocator.m_NumBlocksInPage;
-            m_pPageStart  = reinterpret_cast<Uint8*>(
+            const auto PageSize = OwnerAllocator.m_BlockSize * OwnerAllocator.m_NumBlocksInPage;
+            VERIFY_EXPR(PageSize > 0);
+            m_pPageStart = reinterpret_cast<Uint8*>(
                 OwnerAllocator.m_RawMemoryAllocator.Allocate(PageSize, "FixedBlockMemoryAllocator page", __FILE__, __LINE__));
             m_pNextFreeBlock = m_pPageStart;
             FillWithDebugPattern(m_pPageStart, NewPageMemPattern, PageSize);

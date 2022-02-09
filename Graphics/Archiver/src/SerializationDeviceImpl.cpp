@@ -59,10 +59,10 @@ static constexpr ARCHIVE_DEVICE_DATA_FLAGS GetSupportedDeviceFlags()
 }
 
 SerializationDeviceImpl::SerializationDeviceImpl(IReferenceCounters* pRefCounters, const SerializationDeviceCreateInfo& CreateInfo) :
-    TBase{pRefCounters},
-    m_DeviceInfo{CreateInfo.DeviceInfo},
-    m_AdapterInfo{CreateInfo.AdapterInfo}
+    TBase{pRefCounters, GetRawAllocator(), nullptr, EngineCreateInfo{}, CreateInfo.AdapterInfo}
 {
+    m_DeviceInfo = CreateInfo.DeviceInfo;
+
 #if !DILIGENT_NO_GLSLANG
     GLSLangUtils::InitializeGlslang();
 #endif
@@ -157,47 +157,19 @@ void SerializationDeviceImpl::CreateShader(const ShaderCreateInfo&   ShaderCI,
                                            ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags,
                                            IShader**                 ppShader)
 {
-    DEV_CHECK_ERR(ppShader != nullptr, "ppShader must not be null");
-    if (!ppShader)
-        return;
-
-    *ppShader = nullptr;
-    try
-    {
-        auto& RawMemAllocator = GetRawAllocator();
-        auto* pShaderImpl     = NEW_RC_OBJ(RawMemAllocator, "Shader instance", SerializableShaderImpl)(this, ShaderCI, DeviceFlags);
-        pShaderImpl->QueryInterface(IID_Shader, reinterpret_cast<IObject**>(ppShader));
-    }
-    catch (...)
-    {
-        LOG_ERROR_MESSAGE("Failed to create the shader");
-    }
+    CreateShaderImpl(ppShader, ShaderCI, DeviceFlags);
 }
 
 void SerializationDeviceImpl::CreateRenderPass(const RenderPassDesc& Desc, IRenderPass** ppRenderPass)
 {
-    DEV_CHECK_ERR(ppRenderPass != nullptr, "ppRenderPass must not be null");
-    if (!ppRenderPass)
-        return;
-
-    *ppRenderPass = nullptr;
-    try
-    {
-        auto& RawMemAllocator = GetRawAllocator();
-        auto* pRenderPassImpl = NEW_RC_OBJ(RawMemAllocator, "Render pass instance", SerializableRenderPassImpl)(this, Desc);
-        pRenderPassImpl->QueryInterface(IID_RenderPass, reinterpret_cast<IObject**>(ppRenderPass));
-    }
-    catch (...)
-    {
-        LOG_ERROR_MESSAGE("Failed to create the render pass");
-    }
+    CreateRenderPassImpl(ppRenderPass, Desc);
 }
 
 void SerializationDeviceImpl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
                                                               const ResourceSignatureArchiveInfo&  ArchiveInfo,
                                                               IPipelineResourceSignature**         ppSignature)
 {
-    CreateSerializableResourceSignature(Desc, ArchiveInfo, SHADER_TYPE_UNKNOWN, reinterpret_cast<SerializableResourceSignatureImpl**>(ppSignature));
+    CreatePipelineResourceSignatureImpl(ppSignature, Desc, ArchiveInfo, SHADER_TYPE_UNKNOWN);
 }
 
 void SerializationDeviceImpl::CreateSerializableResourceSignature(const PipelineResourceSignatureDesc& Desc,
@@ -205,21 +177,7 @@ void SerializationDeviceImpl::CreateSerializableResourceSignature(const Pipeline
                                                                   SHADER_TYPE                          ShaderStages,
                                                                   SerializableResourceSignatureImpl**  ppSignature)
 {
-    DEV_CHECK_ERR(ppSignature != nullptr, "ppSignature must not be null");
-    if (!ppSignature)
-        return;
-
-    *ppSignature = nullptr;
-    try
-    {
-        auto& RawMemAllocator = GetRawAllocator();
-        auto* pSignatureImpl  = NEW_RC_OBJ(RawMemAllocator, "Pipeline resource signature instance", SerializableResourceSignatureImpl)(this, Desc, ArchiveInfo, ShaderStages);
-        pSignatureImpl->QueryInterface(IID_PipelineResourceSignature, reinterpret_cast<IObject**>(ppSignature));
-    }
-    catch (...)
-    {
-        LOG_ERROR_MESSAGE("Failed to create the resource signature");
-    }
+    CreatePipelineResourceSignatureImpl(reinterpret_cast<IPipelineResourceSignature**>(ppSignature), Desc, ArchiveInfo, ShaderStages);
 }
 
 void SerializationDeviceImpl::CreateSerializableResourceSignature(SerializableResourceSignatureImpl** ppSignature, const char* Name)

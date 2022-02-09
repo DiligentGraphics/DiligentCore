@@ -35,7 +35,7 @@ namespace Diligent
 
 static size_t AdjustBlockSize(size_t BlockSize)
 {
-    return AlignUp(std::max(BlockSize, size_t{1}), sizeof(void*));
+    return AlignUp(BlockSize, sizeof(void*));
 }
 
 FixedBlockMemoryAllocator::FixedBlockMemoryAllocator(IMemoryAllocator& RawMemoryAllocator,
@@ -51,7 +51,10 @@ FixedBlockMemoryAllocator::FixedBlockMemoryAllocator(IMemoryAllocator& RawMemory
 // clang-format on
 {
     // Allocate one page
-    CreateNewPage();
+    if (m_BlockSize > 0)
+    {
+        CreateNewPage();
+    }
 }
 
 FixedBlockMemoryAllocator::~FixedBlockMemoryAllocator()
@@ -67,6 +70,7 @@ FixedBlockMemoryAllocator::~FixedBlockMemoryAllocator()
 
 void FixedBlockMemoryAllocator::CreateNewPage()
 {
+    VERIFY_EXPR(m_BlockSize > 0);
     m_PagePool.emplace_back(*this);
     m_AvailablePages.insert(m_PagePool.size() - 1);
     m_AddrToPageId.reserve(m_PagePool.size() * m_NumBlocksInPage);

@@ -30,6 +30,7 @@
 #include "SerializationDevice.h"
 #include "ObjectBase.hpp"
 #include "DXCompiler.hpp"
+#include "RenderDeviceBase.hpp"
 
 namespace Diligent
 {
@@ -38,24 +39,63 @@ class SerializationDeviceImpl;
 class SerializableShaderImpl;
 class SerializableRenderPassImpl;
 class SerializableResourceSignatureImpl;
+class SerializableObjectStub
+{};
 
 struct SerializationEngineImplTraits
 {
-    using RenderDeviceInterface              = IRenderDevice;
+    using RenderDeviceInterface              = ISerializationDevice;
+    using DeviceContextInterface             = IDeviceContext;
+    using PipelineStateInterface             = IPipelineState;
+    using ShaderResourceBindingInterface     = IShaderResourceBinding;
+    using BufferInterface                    = IBuffer;
+    using BufferViewInterface                = IBufferView;
+    using TextureInterface                   = ITexture;
+    using TextureViewInterface               = ITextureView;
     using ShaderInterface                    = IShader;
+    using SamplerInterface                   = ISampler;
+    using FenceInterface                     = IFence;
+    using QueryInterface                     = IQuery;
     using RenderPassInterface                = IRenderPass;
+    using FramebufferInterface               = IFramebuffer;
+    using CommandListInterface               = ICommandList;
+    using BottomLevelASInterface             = IBottomLevelAS;
+    using TopLevelASInterface                = ITopLevelAS;
+    using ShaderBindingTableInterface        = IShaderBindingTable;
     using PipelineResourceSignatureInterface = IPipelineResourceSignature;
+    using CommandQueueInterface              = ICommandQueue;
+    using DeviceMemoryInterface              = IDeviceMemory;
+    using PipelineStateCacheInterface        = IPipelineStateCache;
+    using DeviceObjectArchiveInterface       = IDeviceObjectArchive;
 
     using RenderDeviceImplType              = SerializationDeviceImpl;
+    using DeviceContextImplType             = IDeviceContext;
+    using PipelineStateImplType             = SerializableObjectStub;
+    using ShaderResourceBindingImplType     = SerializableObjectStub;
+    using BufferImplType                    = SerializableObjectStub;
+    using BufferViewImplType                = SerializableObjectStub;
+    using TextureImplType                   = SerializableObjectStub;
+    using TextureViewImplType               = SerializableObjectStub;
     using ShaderImplType                    = SerializableShaderImpl;
+    using SamplerImplType                   = SerializableObjectStub;
+    using FenceImplType                     = SerializableObjectStub;
+    using QueryImplType                     = SerializableObjectStub;
     using RenderPassImplType                = SerializableRenderPassImpl;
+    using FramebufferImplType               = SerializableObjectStub;
+    using CommandListImplType               = SerializableObjectStub;
+    using BottomLevelASImplType             = SerializableObjectStub;
+    using TopLevelASImplType                = SerializableObjectStub;
+    using ShaderBindingTableImplType        = SerializableObjectStub;
     using PipelineResourceSignatureImplType = SerializableResourceSignatureImpl;
+    using DeviceMemoryImplType              = SerializableObjectStub;
+    using PipelineStateCacheImplType        = SerializableObjectStub;
+    using DeviceObjectArchiveImplType       = SerializableObjectStub;
 };
 
-class SerializationDeviceImpl final : public ObjectBase<ISerializationDevice>
+class SerializationDeviceImpl final : public RenderDeviceBase<SerializationEngineImplTraits>
 {
 public:
-    using TBase = ObjectBase<ISerializationDevice>;
+    using TBase = RenderDeviceBase<SerializationEngineImplTraits>;
 
     SerializationDeviceImpl(IReferenceCounters* pRefCounters, const SerializationDeviceCreateInfo& CreateInfo);
     ~SerializationDeviceImpl();
@@ -128,10 +168,6 @@ public:
     virtual void DILIGENT_CALL_TYPE CreatePipelineStateCache(const PipelineStateCacheCreateInfo& CreateInfo,
                                                              IPipelineStateCache**               ppPSOCache) override final {}
 
-    /// Implementation of IRenderDevice::CreateResourceMapping().
-    virtual void DILIGENT_CALL_TYPE CreateResourceMapping(const ResourceMappingDesc& MappingDesc,
-                                                          IResourceMapping**         ppMapping) override final {}
-
     /// Implementation of IRenderDevice::IdleGPU().
     virtual void DILIGENT_CALL_TYPE IdleGPU() override final {}
 
@@ -145,29 +181,6 @@ public:
     {
         return SparseTextureFormatInfo{};
     }
-
-    /// Implementation of IRenderDevice::GetDeviceInfo().
-    virtual const RenderDeviceInfo& DILIGENT_CALL_TYPE GetDeviceInfo() const override final { return m_DeviceInfo; }
-
-    /// Implementation of IRenderDevice::GetAdapterInfo().
-    virtual const GraphicsAdapterInfo& DILIGENT_CALL_TYPE GetAdapterInfo() const override final { return m_AdapterInfo; }
-
-    /// Implementation of IRenderDevice::GetTextureFormatInfo().
-    virtual const TextureFormatInfo& DILIGENT_CALL_TYPE GetTextureFormatInfo(TEXTURE_FORMAT TexFormat) override final
-    {
-        static const TextureFormatInfo FmtInfo = {};
-        return FmtInfo;
-    }
-
-    /// Implementation of IRenderDevice::GetTextureFormatInfoExt().
-    virtual const TextureFormatInfoExt& DILIGENT_CALL_TYPE GetTextureFormatInfoExt(TEXTURE_FORMAT TexFormat) override final
-    {
-        static const TextureFormatInfoExt FmtInfo = {};
-        return FmtInfo;
-    }
-
-    /// Implementation of IRenderDevice::GetEngineFactory().
-    virtual IEngineFactory* DILIGENT_CALL_TYPE GetEngineFactory() const override final { return nullptr; }
 
     virtual void DILIGENT_CALL_TYPE CreateShader(const ShaderCreateInfo&   ShaderCI,
                                                  ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags,
@@ -243,9 +256,9 @@ private:
                                                std::vector<PipelineResourceBinding>& ResourceBindings,
                                                const Uint32                          MaxBufferArgs);
 
+    virtual void TestTextureFormat(TEXTURE_FORMAT TexFormat) override final {}
+
     ARCHIVE_DEVICE_DATA_FLAGS m_ValidDeviceFlags = ARCHIVE_DEVICE_DATA_FLAG_NONE;
-    const RenderDeviceInfo    m_DeviceInfo;
-    const GraphicsAdapterInfo m_AdapterInfo;
 
     std::unique_ptr<IDXCompiler> m_pDxCompiler;
     std::unique_ptr<IDXCompiler> m_pVkDxCompiler;
