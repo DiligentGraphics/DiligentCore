@@ -247,6 +247,30 @@ DILIGENT_BEGIN_INTERFACE(ISerializationDevice, IRenderDevice)
                                                          const ResourceSignatureArchiveInfo REF  ArchiveInfo,
                                                          IPipelineResourceSignature**            ppSignature) PURE;
 
+    /// Creates a serialized graphics pipeline state.
+    VIRTUAL void METHOD(CreateGraphicsPipelineState)(THIS_
+                                                     const GraphicsPipelineStateCreateInfo REF PSOCreateInfo,
+                                                     const PipelineStateArchiveInfo REF        ArchiveInfo,
+                                                     IPipelineState**                          ppPipelineState) PURE;
+
+    /// Creates a serialized compute pipeline state.
+    VIRTUAL void METHOD(CreateComputePipelineState)(THIS_
+                                                    const ComputePipelineStateCreateInfo REF PSOCreateInfo,
+                                                    const PipelineStateArchiveInfo REF       ArchiveInfo,
+                                                    IPipelineState**                         ppPipelineState) PURE;
+
+    /// Creates a serialized ray tracing pipeline state.
+    VIRTUAL void METHOD(CreateRayTracingPipelineState)(THIS_
+                                                       const RayTracingPipelineStateCreateInfo REF PSOCreateInfo,
+                                                       const PipelineStateArchiveInfo REF          ArchiveInfo,
+                                                       IPipelineState**                            ppPipelineState) PURE;
+
+    /// Creates a serialized tile pipeline state.
+    VIRTUAL void METHOD(CreateTilePipelineState)(THIS_
+                                                 const TilePipelineStateCreateInfo REF PSOCreateInfo,
+                                                 const PipelineStateArchiveInfo REF    ArchiveInfo,
+                                                 IPipelineState**                      ppPipelineState) PURE;
+
     /// Populates an array of pipeline resource bindings.
     VIRTUAL void METHOD(GetPipelineResourceBindings)(THIS_
                                                      const PipelineResourceBindingAttribs REF Attribs,
@@ -261,6 +285,10 @@ DILIGENT_END_INTERFACE
 
 #    define ISerializationDevice_CreateShader(This, ...)                    CALL_IFACE_METHOD(SerializationDevice, CreateShader,                    This, __VA_ARGS__)
 #    define ISerializationDevice_CreatePipelineResourceSignature(This, ...) CALL_IFACE_METHOD(SerializationDevice, CreatePipelineResourceSignature, This, __VA_ARGS__)
+#    define ISerializationDevice_CreateGraphicsPipelineState(This, ...)     CALL_IFACE_METHOD(SerializationDevice, CreateGraphicsPipelineState,     This, __VA_ARGS__)
+#    define ISerializationDevice_CreateComputePipelineState(This, ...)      CALL_IFACE_METHOD(SerializationDevice, CreateComputePipelineState,      This, __VA_ARGS__)
+#    define ISerializationDevice_CreateRayTracingPipelineState(This, ...)   CALL_IFACE_METHOD(SerializationDevice, CreateRayTracingPipelineState,   This, __VA_ARGS__)
+#    define ISerializationDevice_CreateTilePipelineState(This, ...)         CALL_IFACE_METHOD(SerializationDevice, CreateTilePipelineState,         This, __VA_ARGS__)
 #    define ISerializationDevice_GetPipelineResourceBindings(This, ...)     CALL_IFACE_METHOD(SerializationDevice, GetPipelineResourceBindings,     This, __VA_ARGS__)
 
 #endif

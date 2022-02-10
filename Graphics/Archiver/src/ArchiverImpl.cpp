@@ -29,16 +29,39 @@
 
 #include <bitset>
 
-#include "ShaderToolsCommon.hpp"
 #include "PipelineStateBase.hpp"
 #include "PSOSerializer.hpp"
 #include "DataBlobImpl.hpp"
 #include "MemoryFileStream.hpp"
+#include "SerializablePipelineStateImpl.hpp"
 
 namespace Diligent
 {
 
-DeviceObjectArchiveBase::DeviceType ArchiveDeviceDataFlagToArchiveDeviceType(ARCHIVE_DEVICE_DATA_FLAGS DataTypeFlag);
+static ArchiverImpl::ChunkType PipelineTypeToChunkType(PIPELINE_TYPE PipelineType)
+{
+    using ChunkType = ArchiverImpl::ChunkType;
+    static_assert(PIPELINE_TYPE_COUNT == 5, "Please handle the new pipeline type below");
+    switch (PipelineType)
+    {
+        case PIPELINE_TYPE_GRAPHICS:
+        case PIPELINE_TYPE_MESH:
+            return ChunkType::GraphicsPipelineStates;
+
+        case PIPELINE_TYPE_COMPUTE:
+            return ChunkType::ComputePipelineStates;
+
+        case PIPELINE_TYPE_RAY_TRACING:
+            return ChunkType::RayTracingPipelineStates;
+
+        case PIPELINE_TYPE_TILE:
+            return ChunkType::TilePipelineStates;
+
+        default:
+            UNEXPECTED("Unexpected pipeline type");
+            return ChunkType::Undefined;
+    }
+}
 
 ArchiverImpl::ArchiverImpl(IReferenceCounters* pRefCounters, SerializationDeviceImpl* pDevice) :
     TBase{pRefCounters},
@@ -48,6 +71,30 @@ ArchiverImpl::ArchiverImpl(IReferenceCounters* pRefCounters, SerializationDevice
 ArchiverImpl::~ArchiverImpl()
 {
 }
+
+const SerializedData& ArchiverImpl::GetDeviceData(const SerializableResourceSignatureImpl& PRS, DeviceType Type)
+{
+    const auto* pMem = PRS.GetDeviceData(Type);
+    if (pMem != nullptr)
+        return *pMem;
+
+    static const SerializedData NullData;
+    return NullData;
+}
+
+const SerializedData& ArchiverImpl::GetDeviceData(const PendingData& Pending, const SerializablePipelineStateImpl& PSO, DeviceType Type)
+{
+    auto it = Pending.PSOShaderIndices.find(&PSO);
+    if (it == Pending.PSOShaderIndices.end())
+    {
+        UNEXPECTED("Shader indices are not found for PSO '", PSO.GetDesc().Name, "'. This is likely a bug.");
+        static const SerializedData NullData;
+        return NullData;
+    }
+
+    return it->second[static_cast<size_t>(Type)];
+}
+
 
 template <typename MapType>
 Uint32* ArchiverImpl::InitNamedResourceArrayHeader(ChunkType      Type,
@@ -92,7 +139,7 @@ Uint32* ArchiverImpl::InitNamedResourceArrayHeader(ChunkType      Type,
         (void)pStr;
 
         NameLengthArray[i] = StaticCast<Uint32>(NameLen + 1);
-        DataSizeArray[i]   = StaticCast<Uint32>(NameAndData.second.GetCommonData().Size());
+        DataSizeArray[i]   = StaticCast<Uint32>(NameAndData.second->GetCommonData().Size());
         ++i;
     }
 
@@ -129,57 +176,53 @@ void ArchiverImpl::ReserveSpace(PendingData& Pending) const
     // Reserve space for shaders
     for (Uint32 type = 0; type < DeviceDataCount; ++type)
     {
-        const auto& Shaders = m_Shaders[type];
-        if (Shaders.List.empty())
+        const auto& Shaders = Pending.Shaders[type];
+        if (Shaders.Bytecodes.empty())
             continue;
 
         auto& DeviceData = PerDeviceData[type];
-        DeviceData.AddSpace<FileOffsetAndSize>(Shaders.List.size());
-        for (const auto& Sh : Shaders.List)
+        DeviceData.AddSpace<FileOffsetAndSize>(Shaders.Bytecodes.size());
+        for (const auto& Bytecode : Shaders.Bytecodes)
         {
-            DeviceData.AddSpace(Sh.Data->Size());
+            DeviceData.AddSpace(Bytecode.get().Size());
         }
     }
 
     // Reserve space for pipeline resource signatures
-    for (const auto& PRS : m_PRSMap)
+    for (const auto& PRS : m_Signatures)
     {
         CommonData.AddSpace<PRSDataHeader>();
-        CommonData.AddSpace(PRS.second.GetCommonData().Size());
+        CommonData.AddSpace(PRS.second->GetCommonData().Size());
 
         for (Uint32 type = 0; type < DeviceDataCount; ++type)
         {
-            const auto& Src = PRS.second.GetDeviceData(static_cast<DeviceType>(type));
-            PerDeviceData[type].AddSpace(Src.Size());
+            const auto& Data = GetDeviceData(*PRS.second, static_cast<DeviceType>(type));
+            PerDeviceData[type].AddSpace(Data.Size());
         }
     }
 
     // Reserve space for render passes
-    for (const auto& RP : m_RPMap)
+    for (const auto& RP : m_RenderPasses)
     {
         CommonData.AddSpace<RPDataHeader>();
-        CommonData.AddSpace(RP.second.GetCommonData().Size());
+        CommonData.AddSpace(RP.second->GetCommonData().Size());
     }
 
     // Reserve space for pipelines
-    const auto ReserveSpaceForPSO = [&CommonData, &PerDeviceData](auto& PSOMap) //
+    for (const auto& Pipelines : m_Pipelines)
     {
-        for (const auto& PSO : PSOMap)
+        for (const auto& PSO : Pipelines)
         {
             CommonData.AddSpace<PSODataHeader>();
-            CommonData.AddSpace(PSO.second.CommonData.Size());
+            CommonData.AddSpace(PSO.second->GetCommonData().Size());
 
             for (Uint32 type = 0; type < DeviceDataCount; ++type)
             {
-                const auto& Src = PSO.second.PerDeviceData[type];
-                PerDeviceData[type].AddSpace(Src.Size());
+                const auto& Data = GetDeviceData(Pending, *PSO.second, static_cast<DeviceType>(type));
+                PerDeviceData[type].AddSpace(Data.Size());
             }
         }
-    };
-    ReserveSpaceForPSO(m_GraphicsPSOMap);
-    ReserveSpaceForPSO(m_ComputePSOMap);
-    ReserveSpaceForPSO(m_TilePSOMap);
-    ReserveSpaceForPSO(m_RayTracingPSOMap);
+    }
 
     static_assert(ChunkCount == 9, "Reserve space for new chunk type");
 
@@ -264,7 +307,8 @@ void ArchiverImpl::WriteDeviceObjectData(ChunkType Type, PendingData& Pending, M
     Uint32 j = 0;
     for (auto& Obj : ObjectMap)
     {
-        auto* pHeader = WriteHeader<DataHeaderType>(Type, Obj.second.GetCommonData(), Pending.CommonData,
+        auto* pHeader = WriteHeader<DataHeaderType>(Type, Obj.second->GetCommonData(),
+                                                    Pending.CommonData,
                                                     DataOffsetArray[j], DataSizeArray[j]);
 
         for (Uint32 type = 0; type < DeviceDataCount; ++type)
@@ -280,7 +324,7 @@ void ArchiverImpl::WriteShaderData(PendingData& Pending) const
     {
         bool HasShaders = false;
         for (Uint32 type = 0; type < DeviceDataCount && !HasShaders; ++type)
-            HasShaders = !m_Shaders[type].List.empty();
+            HasShaders = !Pending.Shaders[type].Bytecodes.empty();
         if (!HasShaders)
             return;
     }
@@ -304,22 +348,22 @@ void ArchiverImpl::WriteShaderData(PendingData& Pending) const
 
     for (Uint32 dev = 0; dev < DeviceDataCount; ++dev)
     {
-        const auto& Shaders = m_Shaders[dev];
+        const auto& Shaders = Pending.Shaders[dev];
         auto&       Dst     = Pending.PerDeviceData[dev];
 
-        if (Shaders.List.empty())
+        if (Shaders.Bytecodes.empty())
             continue;
 
         VERIFY(Dst.GetCurrentSize() == 0, "Shaders must be written first");
 
         // Write common data
-        auto* pOffsetAndSize = Dst.ConstructArray<FileOffsetAndSize>(Shaders.List.size());
+        auto* pOffsetAndSize = Dst.ConstructArray<FileOffsetAndSize>(Shaders.Bytecodes.size());
         DataOffsetArray[dev] = StaticCast<Uint32>(reinterpret_cast<const Uint8*>(pOffsetAndSize) - Dst.GetDataPtr<const Uint8>());
-        DataSizeArray[dev]   = StaticCast<Uint32>(sizeof(FileOffsetAndSize) * Shaders.List.size());
+        DataSizeArray[dev]   = StaticCast<Uint32>(sizeof(FileOffsetAndSize) * Shaders.Bytecodes.size());
 
-        for (auto& Sh : Shaders.List)
+        for (const auto& Bytecode : Shaders.Bytecodes)
         {
-            const auto& Src  = *Sh.Data;
+            const auto& Src  = Bytecode.get();
             auto* const pDst = Dst.Copy(Src.Ptr(), Src.Size());
 
             pOffsetAndSize->Offset = StaticCast<Uint32>(reinterpret_cast<const Uint8*>(pDst) - Dst.GetDataPtr<const Uint8>());
@@ -441,26 +485,75 @@ Bool ArchiverImpl::SerializeToStream(IFileStream* pStream)
         return false;
 
     PendingData Pending;
+
+    // Process shader byte codes and initialize PSO shader indices
+    for (const auto& Pipelines : m_Pipelines)
+    {
+        for (const auto& PSO : Pipelines)
+        {
+            auto& PerDeviceShaderIndices = Pending.PSOShaderIndices[PSO.second];
+
+            const auto& SrcPerDeviceShaders = PSO.second->GetData().Shaders;
+            for (size_t device_type = 0; device_type < SrcPerDeviceShaders.size(); ++device_type)
+            {
+                const auto& SrcShaders = SrcPerDeviceShaders[device_type];
+                if (SrcShaders.empty())
+                    continue;
+
+                auto& DstShaders = Pending.Shaders[device_type];
+
+                std::vector<Uint32> ShaderIndices;
+                ShaderIndices.reserve(SrcShaders.size());
+                for (const auto& SrcShader : SrcShaders)
+                {
+                    VERIFY_EXPR(SrcShader.Data);
+
+                    auto it_inserted = DstShaders.HashToIdx.emplace(SrcShader.Hash, StaticCast<Uint32>(DstShaders.Bytecodes.size()));
+                    if (it_inserted.second)
+                    {
+                        DstShaders.Bytecodes.emplace_back(SrcShader.Data);
+                    }
+                    ShaderIndices.emplace_back(it_inserted.first->second);
+                }
+
+                ShaderIndexArray Indices{ShaderIndices.data(), static_cast<Uint32>(ShaderIndices.size())};
+
+                Serializer<SerializerMode::Measure> MeasureSer;
+                PSOSerializer<SerializerMode::Measure>::SerializeShaderIndices(MeasureSer, Indices, nullptr);
+                auto& SerializedIndices{PerDeviceShaderIndices[device_type]};
+                SerializedIndices = MeasureSer.AllocateData(GetRawAllocator());
+
+                Serializer<SerializerMode::Write> Ser{SerializedIndices};
+                PSOSerializer<SerializerMode::Write>::SerializeShaderIndices(Ser, Indices, nullptr);
+                VERIFY_EXPR(Ser.IsEnded());
+            }
+        }
+    }
+
     ReserveSpace(Pending);
     WriteDebugInfo(Pending);
     WriteShaderData(Pending);
 
-    auto WritePRSPerDeviceData = [&Pending](PRSDataHeader& Header, DeviceType Type, const PRSData& Src) //
+    auto WritePRSPerDeviceData = [&Pending](PRSDataHeader& Header, DeviceType Type, const RefCntAutoPtr<SerializableResourceSignatureImpl>& pPRS) //
     {
-        WritePerDeviceData(Header, Type, Src.GetDeviceData(Type), Pending.PerDeviceData[static_cast<size_t>(Type)]);
+        WritePerDeviceData(Header, Type, GetDeviceData(*pPRS, Type), Pending.PerDeviceData[static_cast<size_t>(Type)]);
     };
-    WriteDeviceObjectData<PRSDataHeader>(ChunkType::ResourceSignature, Pending, m_PRSMap, WritePRSPerDeviceData);
+    WriteDeviceObjectData<PRSDataHeader>(ChunkType::ResourceSignature, Pending, m_Signatures, WritePRSPerDeviceData);
 
-    WriteDeviceObjectData<RPDataHeader>(ChunkType::RenderPass, Pending, m_RPMap, [](RPDataHeader& Header, DeviceType Type, const RPData&) {});
+    WriteDeviceObjectData<RPDataHeader>(ChunkType::RenderPass, Pending, m_RenderPasses, [](RPDataHeader& Header, DeviceType Type, const RefCntAutoPtr<SerializableRenderPassImpl>&) {});
 
-    auto WritePSOPerDeviceData = [&Pending](PSODataHeader& Header, DeviceType Type, const auto& Src) //
+    auto WritePSOPerDeviceData = [&Pending](PSODataHeader& Header, DeviceType Type, const auto& pPSO) //
     {
-        WritePerDeviceData(Header, Type, Src.PerDeviceData[static_cast<size_t>(Type)], Pending.PerDeviceData[static_cast<size_t>(Type)]);
+        WritePerDeviceData(Header, Type, GetDeviceData(Pending, *pPSO, Type), Pending.PerDeviceData[static_cast<size_t>(Type)]);
     };
-    WriteDeviceObjectData<PSODataHeader>(ChunkType::GraphicsPipelineStates, Pending, m_GraphicsPSOMap, WritePSOPerDeviceData);
-    WriteDeviceObjectData<PSODataHeader>(ChunkType::ComputePipelineStates, Pending, m_ComputePSOMap, WritePSOPerDeviceData);
-    WriteDeviceObjectData<PSODataHeader>(ChunkType::TilePipelineStates, Pending, m_TilePSOMap, WritePSOPerDeviceData);
-    WriteDeviceObjectData<PSODataHeader>(ChunkType::RayTracingPipelineStates, Pending, m_RayTracingPSOMap, WritePSOPerDeviceData);
+
+    for (Uint32 type = 0; type < m_Pipelines.size(); ++type)
+    {
+        const auto& Pipelines = m_Pipelines[type];
+        const auto  chunkType = PipelineTypeToChunkType(static_cast<PIPELINE_TYPE>(type));
+        WriteDeviceObjectData<PSODataHeader>(chunkType, Pending, Pipelines, WritePSOPerDeviceData);
+    }
+
     static_assert(ChunkCount == 9, "Write data for new chunk type");
 
     UpdateOffsetsInArchive(Pending);
@@ -469,456 +562,108 @@ Bool ArchiverImpl::SerializeToStream(IFileStream* pStream)
     return true;
 }
 
-
-const SerializedData& ArchiverImpl::PRSData::GetCommonData() const
-{
-    return pPRS->GetCommonData();
-}
-
-const SerializedData& ArchiverImpl::PRSData::GetDeviceData(DeviceType Type) const
-{
-    const auto* pMem = pPRS->GetDeviceData(Type);
-    if (pMem != nullptr)
-        return *pMem;
-
-    static const SerializedData NullData;
-    return NullData;
-}
-
 bool ArchiverImpl::AddPipelineResourceSignature(IPipelineResourceSignature* pPRS)
 {
-    DEV_CHECK_ERR(pPRS != nullptr, "pPRS must not be null");
+    DEV_CHECK_ERR(pPRS != nullptr, "Pipeline resource signature must not be null");
     if (pPRS == nullptr)
         return false;
 
-    auto* const pPRSImpl = ClassPtrCast<SerializableResourceSignatureImpl>(pPRS);
-    const auto* Name     = pPRSImpl->GetName();
-
-    auto IterAndInserted = m_PRSMap.emplace(HashMapStringKey{Name, true}, PRSData{pPRSImpl});
-    if (!IterAndInserted.second)
+    RefCntAutoPtr<SerializableResourceSignatureImpl> pSerializedPRS{pPRS, IID_SerializedResourceSignature};
+    if (!pSerializedPRS)
     {
-        if (IterAndInserted.first->second.pPRS != pPRSImpl)
+        UNEXPECTED("Resource signature '", pPRS->GetDesc().Name, "' was not created by a serialization device.");
+        return false;
+    }
+    const auto* Name = pSerializedPRS->GetName();
+
+    std::lock_guard<std::mutex> Lock{m_SignaturesMtx};
+
+    auto it_inserted = m_Signatures.emplace(HashMapStringKey{Name, true}, std::move(pSerializedPRS));
+    if (!it_inserted.second)
+    {
+        if (*it_inserted.first->second != *pSerializedPRS)
         {
-            LOG_ERROR_MESSAGE("Pipeline resource signature with name '", Name, "' is already present in the archive. All signature names must be unique.");
+            LOG_ERROR_MESSAGE("Pipeline resource signature with name '", Name, "' is already present in the archive. All signatures must have unique names.");
             return false;
         }
-        else
-            return true;
     }
-
-    m_PRSCache.insert(RefCntAutoPtr<SerializableResourceSignatureImpl>{pPRSImpl});
-
     return true;
 }
 
-bool ArchiverImpl::CachePipelineResourceSignature(RefCntAutoPtr<SerializableResourceSignatureImpl>& pPRS)
-{
-    VERIFY_EXPR(pPRS);
-    auto IterAndInserted = m_PRSCache.insert(pPRS);
-
-    // Found same PRS in the cache
-    if (!IterAndInserted.second)
-    {
-        pPRS = *IterAndInserted.first;
-
-#ifdef DILIGENT_DEBUG
-        auto Iter = m_PRSMap.find(pPRS->GetName());
-        VERIFY_EXPR(Iter != m_PRSMap.end());
-        VERIFY_EXPR(Iter->second.pPRS == pPRS);
-#endif
-        return true;
-    }
-
-    return AddPipelineResourceSignature(pPRS);
-}
-
-String ArchiverImpl::GetDefaultPRSName(const char* PSOName) const
-{
-    VERIFY_EXPR(PSOName != nullptr);
-    const String PRSName0 = String{"Default Signature of PSO '"} + PSOName + '\'';
-    for (Uint32 Index = 0;; ++Index)
-    {
-        auto PRSName = Index == 0 ? PRSName0 : PRSName0 + std::to_string(Index);
-        if (m_PRSMap.find(PRSName.c_str()) == m_PRSMap.end())
-            return PRSName;
-    }
-}
-
-
-const SerializedData& ArchiverImpl::RPData::GetCommonData() const
-{
-    return pRP->GetCommonData();
-}
-
-void ArchiverImpl::SerializeShaderBytecode(TShaderIndices&         ShaderIndices,
-                                           DeviceType              DevType,
-                                           const ShaderCreateInfo& CI,
-                                           const void*             Bytecode,
-                                           size_t                  BytecodeSize)
-{
-    auto& Shaders{m_Shaders[static_cast<Uint32>(DevType)]};
-
-    constexpr SHADER_SOURCE_LANGUAGE SourceLanguage = SHADER_SOURCE_LANGUAGE_DEFAULT;
-    constexpr SHADER_COMPILER        ShaderCompiler = SHADER_COMPILER_DEFAULT;
-
-    Serializer<SerializerMode::Measure> MeasureSer;
-    MeasureSer(CI.Desc.ShaderType, CI.EntryPoint, SourceLanguage, ShaderCompiler);
-
-    const auto   Size   = MeasureSer.GetSize() + BytecodeSize;
-    const Uint8* pBytes = static_cast<const Uint8*>(Bytecode);
-
-    ShaderKey Key{std::make_shared<SerializedData>(Size, GetRawAllocator())};
-
-    Serializer<SerializerMode::Write> Ser{*Key.Data};
-    Ser(CI.Desc.ShaderType, CI.EntryPoint, SourceLanguage, ShaderCompiler);
-
-    for (size_t s = 0; s < BytecodeSize; ++s)
-        Ser(pBytes[s]);
-
-    VERIFY_EXPR(Ser.IsEnded());
-
-
-    auto IterAndInserted = Shaders.Map.emplace(Key, Shaders.List.size());
-    auto Iter            = IterAndInserted.first;
-    if (IterAndInserted.second)
-    {
-        VERIFY_EXPR(Shaders.List.size() == Iter->second);
-        Shaders.List.push_back(Key);
-    }
-    ShaderIndices.push_back(StaticCast<Uint32>(Iter->second));
-}
-
-void ArchiverImpl::SerializeShaderSource(TShaderIndices& ShaderIndices, DeviceType DevType, const ShaderCreateInfo& CI)
-{
-    auto& Shaders = m_Shaders[static_cast<Uint32>(DevType)];
-
-    VERIFY_EXPR(CI.SourceLength > 0);
-
-    String Source;
-    if (CI.Macros != nullptr)
-    {
-        DEV_CHECK_ERR(CI.SourceLanguage != SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM, "Shader macros are ignored when compiling GLSL verbatim in OpenGL backend");
-        AppendShaderMacros(Source, CI.Macros);
-    }
-    Source.append(CI.Source, CI.SourceLength);
-
-    Serializer<SerializerMode::Measure> MeasureSer;
-    MeasureSer(CI.Desc.ShaderType, CI.EntryPoint, CI.SourceLanguage, CI.ShaderCompiler, CI.UseCombinedTextureSamplers, CI.CombinedSamplerSuffix);
-
-    const auto   BytecodeSize = (Source.size() + 1) * sizeof(Source[0]);
-    const auto   Size         = MeasureSer.GetSize() + BytecodeSize;
-    const Uint8* pBytes       = reinterpret_cast<const Uint8*>(Source.c_str());
-
-    ShaderKey Key{std::make_shared<SerializedData>(Size, GetRawAllocator())};
-
-    Serializer<SerializerMode::Write> Ser{*Key.Data};
-    Ser(CI.Desc.ShaderType, CI.EntryPoint, CI.SourceLanguage, CI.ShaderCompiler, CI.UseCombinedTextureSamplers, CI.CombinedSamplerSuffix);
-
-    for (size_t s = 0; s < BytecodeSize; ++s)
-        Ser(pBytes[s]);
-
-    VERIFY_EXPR(Ser.IsEnded());
-
-    auto IterAndInserted = Shaders.Map.emplace(Key, Shaders.List.size());
-    auto Iter            = IterAndInserted.first;
-    if (IterAndInserted.second)
-    {
-        VERIFY_EXPR(Shaders.List.size() == Iter->second);
-        Shaders.List.push_back(Key);
-    }
-    ShaderIndices.push_back(StaticCast<Uint32>(Iter->second));
-}
-
-SerializedData ArchiverImpl::SerializeShadersForPSO(const TShaderIndices& ShaderIndices) const
-{
-    ShaderIndexArray Indices{ShaderIndices.data(), static_cast<Uint32>(ShaderIndices.size())};
-
-    Serializer<SerializerMode::Measure> MeasureSer;
-    PSOSerializer<SerializerMode::Measure>::SerializeShaders(MeasureSer, Indices, nullptr);
-
-    SerializedData DeviceData{MeasureSer.GetSize(), GetRawAllocator()};
-
-    Serializer<SerializerMode::Write> Ser{DeviceData};
-    PSOSerializer<SerializerMode::Write>::SerializeShaders(Ser, Indices, nullptr);
-    VERIFY_EXPR(Ser.IsEnded());
-
-    return DeviceData;
-}
 
 bool ArchiverImpl::AddRenderPass(IRenderPass* pRP)
 {
-    DEV_CHECK_ERR(pRP != nullptr, "pRP must not be null");
+    DEV_CHECK_ERR(pRP != nullptr, "Render pass must not be null");
     if (pRP == nullptr)
         return false;
 
-    auto* pRPImpl         = ClassPtrCast<SerializableRenderPassImpl>(pRP);
-    auto  IterAndInserted = m_RPMap.emplace(HashMapStringKey{pRPImpl->GetDesc().Name, true}, RPData{pRPImpl});
-    if (!IterAndInserted.second)
+    RefCntAutoPtr<SerializableRenderPassImpl> pSerializedRP{pRP, IID_SerializedRenderPass};
+    if (!pSerializedRP)
     {
-        if (IterAndInserted.first->second.pRP != pRPImpl)
+        UNEXPECTED("Render pass'", pRP->GetDesc().Name, "' was not created by a serialization device.");
+        return false;
+    }
+
+    const auto* Name = pSerializedRP->GetDesc().Name;
+
+    std::lock_guard<std::mutex> Lock{m_RenderPassesMtx};
+
+    auto it_inserted = m_RenderPasses.emplace(HashMapStringKey{Name, true}, std::move(pSerializedRP));
+    if (!it_inserted.second)
+    {
+        if (*it_inserted.first->second != *pSerializedRP)
         {
-            LOG_ERROR_MESSAGE("Render pass must have unique name");
+            LOG_ERROR_MESSAGE("Render pass with name '", Name, "' is already present in the archive. All render passes must have unique names.");
             return false;
         }
-        else
-            return true;
     }
     return true;
 }
 
-namespace
+Bool ArchiverImpl::AddPipelineState(IPipelineState* pPSO)
 {
+    DEV_CHECK_ERR(pPSO != nullptr, "Pipeline state must not be null");
+    if (pPSO == nullptr)
+        return false;
 
-template <SerializerMode Mode>
-void SerializerPSOImpl(Serializer<Mode>&                                 Ser,
-                       const GraphicsPipelineStateCreateInfo&            PSOCreateInfo,
-                       std::array<const char*, MAX_RESOURCE_SIGNATURES>& PRSNames)
-{
-    const char* RPName = PSOCreateInfo.GraphicsPipeline.pRenderPass != nullptr ? PSOCreateInfo.GraphicsPipeline.pRenderPass->GetDesc().Name : "";
-    PSOSerializer<Mode>::SerializeCreateInfo(Ser, PSOCreateInfo, PRSNames, nullptr, RPName);
-}
-
-template <SerializerMode Mode>
-void SerializerPSOImpl(Serializer<Mode>&                                 Ser,
-                       const ComputePipelineStateCreateInfo&             PSOCreateInfo,
-                       std::array<const char*, MAX_RESOURCE_SIGNATURES>& PRSNames)
-{
-    PSOSerializer<Mode>::SerializeCreateInfo(Ser, PSOCreateInfo, PRSNames, nullptr);
-}
-
-template <SerializerMode Mode>
-void SerializerPSOImpl(Serializer<Mode>&                                 Ser,
-                       const TilePipelineStateCreateInfo&                PSOCreateInfo,
-                       std::array<const char*, MAX_RESOURCE_SIGNATURES>& PRSNames)
-{
-    PSOSerializer<Mode>::SerializeCreateInfo(Ser, PSOCreateInfo, PRSNames, nullptr);
-}
-
-template <SerializerMode Mode>
-void SerializerPSOImpl(Serializer<Mode>&                                 Ser,
-                       const RayTracingPipelineStateCreateInfo&          PSOCreateInfo,
-                       std::array<const char*, MAX_RESOURCE_SIGNATURES>& PRSNames)
-{
-    RayTracingShaderMap ShaderMapVk;
-    RayTracingShaderMap ShaderMapD3D12;
-#if VULKAN_SUPPORTED
-    ExtractShadersVk(PSOCreateInfo, ShaderMapVk);
-    VERIFY_EXPR(!ShaderMapVk.empty());
-#endif
-#if D3D12_SUPPORTED
-    ExtractShadersD3D12(PSOCreateInfo, ShaderMapD3D12);
-    VERIFY_EXPR(!ShaderMapD3D12.empty());
-#endif
-
-    VERIFY(ShaderMapVk.empty() || ShaderMapD3D12.empty() || ShaderMapVk == ShaderMapD3D12,
-           "Ray tracing shader map must be same for Vulkan and Direct3D12 backends");
-
-    RayTracingShaderMap ShaderMap;
-    if (!ShaderMapVk.empty())
-        std::swap(ShaderMap, ShaderMapVk);
-    else if (!ShaderMapD3D12.empty())
-        std::swap(ShaderMap, ShaderMapD3D12);
-    else
-        return;
-
-    auto RemapShaders = [&ShaderMap](Uint32& outIndex, IShader* const& inShader) //
+    RefCntAutoPtr<SerializablePipelineStateImpl> pSerializedPSO{pPSO, IID_SerializedPipelineState};
+    if (!pSerializedPSO)
     {
-        auto Iter = ShaderMap.find(inShader);
-        if (Iter != ShaderMap.end())
-            outIndex = Iter->second;
-        else
-            outIndex = ~0u;
-    };
-    PSOSerializer<Mode>::SerializeCreateInfo(Ser, PSOCreateInfo, PRSNames, nullptr, RemapShaders);
-}
-
-#define LOG_PSO_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of PSO is invalid: ", ##__VA_ARGS__)
-#define VERIFY_PSO(Expr, ...)                     \
-    do                                            \
-    {                                             \
-        if (!(Expr))                              \
-        {                                         \
-            LOG_PSO_ERROR_AND_THROW(__VA_ARGS__); \
-        }                                         \
-    } while (false)
-
-template <typename PRSMapType>
-void ValidatePipelineStateArchiveInfo(const PipelineStateCreateInfo&  PSOCreateInfo,
-                                      const PipelineStateArchiveInfo& ArchiveInfo,
-                                      const PRSMapType&               PRSMap,
-                                      const ARCHIVE_DEVICE_DATA_FLAGS ValidDeviceFlags) noexcept(false)
-{
-    VERIFY_PSO(ArchiveInfo.DeviceFlags != ARCHIVE_DEVICE_DATA_FLAG_NONE, "At least one bit must be set in DeviceFlags");
-    VERIFY_PSO((ArchiveInfo.DeviceFlags & ValidDeviceFlags) == ArchiveInfo.DeviceFlags, "DeviceFlags contain unsupported device type");
-
-    VERIFY_PSO(PSOCreateInfo.PSODesc.Name != nullptr, "Pipeline name in PSOCreateInfo.PSODesc.Name must not be null");
-    VERIFY_PSO((PSOCreateInfo.ResourceSignaturesCount != 0) == (PSOCreateInfo.ppResourceSignatures != nullptr),
-               "ppResourceSignatures must not be null if ResourceSignaturesCount is not zero");
-
-    std::bitset<MAX_RESOURCE_SIGNATURES> PRSExists{0};
-    for (Uint32 i = 0; i < PSOCreateInfo.ResourceSignaturesCount; ++i)
-    {
-        VERIFY_PSO(PSOCreateInfo.ppResourceSignatures[i] != nullptr, "ppResourceSignatures[", i, "] must not be null");
-
-        const auto& Desc = PSOCreateInfo.ppResourceSignatures[i]->GetDesc();
-        VERIFY_EXPR(Desc.BindingIndex < PRSExists.size());
-
-        VERIFY_PSO(!PRSExists[Desc.BindingIndex], "PRS binding index must be unique");
-        PRSExists[Desc.BindingIndex] = true;
-    }
-}
-
-} // namespace
-
-template <typename CreateInfoType>
-bool ArchiverImpl::SerializePSO(TNamedObjectHashMap<TPSOData<CreateInfoType>>& PSOMap,
-                                const CreateInfoType&                          InPSOCreateInfo,
-                                const PipelineStateArchiveInfo&                ArchiveInfo) noexcept
-{
-    CreateInfoType PSOCreateInfo = InPSOCreateInfo;
-    try
-    {
-        ValidatePipelineStateArchiveInfo(PSOCreateInfo, ArchiveInfo, m_PRSMap, m_pSerializationDevice->GetValidDeviceFlags());
-        ValidatePSOCreateInfo(m_pSerializationDevice->GetDevice(), PSOCreateInfo);
-    }
-    catch (...)
-    {
+        UNEXPECTED("Pipeline state '", pPSO->GetDesc().Name, "' was not created by a serialization device.");
         return false;
     }
 
-    auto IterAndInserted = PSOMap.emplace(HashMapStringKey{PSOCreateInfo.PSODesc.Name, true}, TPSOData<CreateInfoType>{});
-    if (!IterAndInserted.second)
+    const auto& Desc = pSerializedPSO->GetDesc();
+    const auto* Name = Desc.Name;
+    // Mesh pipelines are serialized as graphics pipeliens
+    const auto PipelineType = Desc.PipelineType == PIPELINE_TYPE_MESH ? PIPELINE_TYPE_GRAPHICS : Desc.PipelineType;
+
     {
-        LOG_ERROR_MESSAGE("Pipeline must have unique name");
-        return false;
-    }
+        std::lock_guard<std::mutex> Lock{m_PipelinesMtx[PipelineType]};
 
-    auto& Data{IterAndInserted.first->second};
-    Data.AuxData.NoShaderReflection = (ArchiveInfo.PSOFlags & PSO_ARCHIVE_FLAG_STRIP_REFLECTION) != 0;
-    for (auto DeviceBits = ArchiveInfo.DeviceFlags; DeviceBits != 0;)
-    {
-        const auto Flag = ExtractLSB(DeviceBits);
-
-        static_assert(ARCHIVE_DEVICE_DATA_FLAG_LAST == ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS, "Please update the switch below to handle the new data type");
-        switch (Flag)
+        auto it_inserted = m_Pipelines[PipelineType].emplace(HashMapStringKey{Name, true}, pSerializedPSO);
+        if (!it_inserted.second)
         {
-#if D3D11_SUPPORTED
-            case ARCHIVE_DEVICE_DATA_FLAG_D3D11:
-                if (!PatchShadersD3D11(PSOCreateInfo, Data))
-                    return false;
-                break;
-#endif
-#if D3D12_SUPPORTED
-            case ARCHIVE_DEVICE_DATA_FLAG_D3D12:
-                if (!PatchShadersD3D12(PSOCreateInfo, Data))
-                    return false;
-                break;
-#endif
-#if GL_SUPPORTED || GLES_SUPPORTED
-            case ARCHIVE_DEVICE_DATA_FLAG_GL:
-            case ARCHIVE_DEVICE_DATA_FLAG_GLES:
-                if (!PatchShadersGL(PSOCreateInfo, Data))
-                    return false;
-                break;
-#endif
-#if VULKAN_SUPPORTED
-            case ARCHIVE_DEVICE_DATA_FLAG_VULKAN:
-                if (!PatchShadersVk(PSOCreateInfo, Data))
-                    return false;
-                break;
-#endif
-#if METAL_SUPPORTED
-            case ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS:
-            case ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS:
-                if (!PatchShadersMtl(PSOCreateInfo, Data, ArchiveDeviceDataFlagToArchiveDeviceType(Flag)))
-                    return false;
-                break;
-#endif
-            case ARCHIVE_DEVICE_DATA_FLAG_NONE:
-                UNEXPECTED("ARCHIVE_DEVICE_DATA_FLAG_NONE (0) should never occur");
-                break;
-
-            default:
-                LOG_ERROR_MESSAGE("Unexpected render device type");
-                break;
-        }
-    }
-
-    if (!Data.CommonData)
-    {
-        auto SignaturesCount = PSOCreateInfo.ResourceSignaturesCount;
-
-        if (SignaturesCount == 0)
-        {
-#if GL_SUPPORTED || GLES_SUPPORTED
-            if (ArchiveInfo.DeviceFlags & (ARCHIVE_DEVICE_DATA_FLAG_GL | ARCHIVE_DEVICE_DATA_FLAG_GLES))
-            {
-                // We must add empty device signature for OpenGL after all other devices are processed,
-                // otherwise this empty description will be used as common signature description.
-                if (!PrepareDefaultSignatureGL(PSOCreateInfo, Data))
-                    return false;
-            }
-#endif
-        }
-
-        IPipelineResourceSignature* DefaultSignatures[1] = {};
-        if (Data.pDefaultSignature)
-        {
-            DefaultSignatures[0]               = Data.pDefaultSignature;
-            PSOCreateInfo.ppResourceSignatures = DefaultSignatures;
-            SignaturesCount                    = 1;
-        }
-
-        TPRSNames PRSNames = {};
-        for (Uint32 i = 0; i < SignaturesCount; ++i)
-        {
-            if (!AddPipelineResourceSignature(PSOCreateInfo.ppResourceSignatures[i]))
-                return false;
-            PRSNames[i] = PSOCreateInfo.ppResourceSignatures[i]->GetDesc().Name;
-        }
-
-        Serializer<SerializerMode::Measure> MeasureSer;
-        SerializerPSOImpl(MeasureSer, PSOCreateInfo, PRSNames);
-        PSOSerializer<SerializerMode::Measure>::SerializeAuxData(MeasureSer, Data.AuxData, nullptr);
-
-        Data.CommonData = MeasureSer.AllocateData(GetRawAllocator());
-        Serializer<SerializerMode::Write> Ser{Data.CommonData};
-        SerializerPSOImpl(Ser, PSOCreateInfo, PRSNames);
-        PSOSerializer<SerializerMode::Write>::SerializeAuxData(Ser, Data.AuxData, nullptr);
-
-        VERIFY_EXPR(Ser.IsEnded());
-    }
-    return true;
-}
-
-Bool ArchiverImpl::AddGraphicsPipelineState(const GraphicsPipelineStateCreateInfo& PSOCreateInfo,
-                                            const PipelineStateArchiveInfo&        ArchiveInfo)
-{
-    if (PSOCreateInfo.GraphicsPipeline.pRenderPass != nullptr)
-    {
-        if (!AddRenderPass(PSOCreateInfo.GraphicsPipeline.pRenderPass))
+            LOG_ERROR_MESSAGE("Pipeline state with name '", Name, "' is already present in the archive. All pipelines of the same type must have unique names.");
             return false;
+        }
     }
 
-    return SerializePSO(m_GraphicsPSOMap, PSOCreateInfo, ArchiveInfo);
-}
+    bool Res = true;
+    if (auto* pRenderPass = pSerializedPSO->GetRenderPass())
+    {
+        if (!AddRenderPass(pRenderPass))
+            Res = false;
+    }
 
-Bool ArchiverImpl::AddComputePipelineState(const ComputePipelineStateCreateInfo& PSOCreateInfo,
-                                           const PipelineStateArchiveInfo&       ArchiveInfo)
-{
-    return SerializePSO(m_ComputePSOMap, PSOCreateInfo, ArchiveInfo);
-}
+    const auto& Signatures = pSerializedPSO->GetSignatures();
+    for (auto& pSign : Signatures)
+    {
+        if (!AddPipelineResourceSignature(pSign.RawPtr<IPipelineResourceSignature>()))
+            Res = false;
+    }
 
-Bool ArchiverImpl::AddRayTracingPipelineState(const RayTracingPipelineStateCreateInfo& PSOCreateInfo,
-                                              const PipelineStateArchiveInfo&          ArchiveInfo)
-{
-    return SerializePSO(m_RayTracingPSOMap, PSOCreateInfo, ArchiveInfo);
-}
-
-Bool ArchiverImpl::AddTilePipelineState(const TilePipelineStateCreateInfo& PSOCreateInfo,
-                                        const PipelineStateArchiveInfo&    ArchiveInfo)
-{
-    return SerializePSO(m_TilePSOMap, PSOCreateInfo, ArchiveInfo);
+    return Res;
 }
 
 } // namespace Diligent

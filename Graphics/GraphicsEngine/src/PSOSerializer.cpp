@@ -388,7 +388,7 @@ void RPSerializer<Mode>::SerializeDesc(
 }
 
 template <SerializerMode Mode>
-void PSOSerializer<Mode>::SerializeShaders(
+void PSOSerializer<Mode>::SerializeShaderIndices(
     Serializer<Mode>&            Ser,
     ConstQual<ShaderIndexArray>& Shaders,
     DynamicLinearAllocator*      Allocator)

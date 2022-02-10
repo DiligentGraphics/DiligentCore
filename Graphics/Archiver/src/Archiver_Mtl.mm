@@ -37,6 +37,7 @@
 #include "PipelineStateMtlImpl.hpp"
 #include "ShaderMtlImpl.hpp"
 #include "DeviceObjectArchiveMtlImpl.hpp"
+#include "SerializablePipelineStateImpl.hpp"
 
 #include "spirv_msl.hpp"
 
@@ -98,9 +99,7 @@ inline SHADER_TYPE GetShaderStageType(const ShaderStageInfoMtl& Stage)
 
 
 template <typename CreateInfoType>
-bool ArchiverImpl::PatchShadersMtl(const CreateInfoType&     CreateInfo,
-                                   TPSOData<CreateInfoType>& Data,
-                                   DeviceType                DevType)
+void SerializablePipelineStateImpl::PatchShadersMtl(const CreateInfoType& CreateInfo, DeviceType DevType) noexcept(false)
 {
     VERIFY_EXPR(DevType == DeviceType::Metal_MacOS || DevType == DeviceType::Metal_iOS);
 
@@ -120,16 +119,13 @@ bool ArchiverImpl::PatchShadersMtl(const CreateInfoType&     CreateInfo,
     IPipelineResourceSignature* DefaultSignatures[1] = {};
     if (CreateInfo.ResourceSignaturesCount == 0)
     {
-        if (!CreateDefaultResourceSignature<PipelineStateMtlImpl, PipelineResourceSignatureMtlImpl>(DevType, Data.pDefaultSignature, CreateInfo.PSODesc, ActiveShaderStages, StageResources))
-            return false;
+        CreateDefaultResourceSignature<PipelineStateMtlImpl, PipelineResourceSignatureMtlImpl>(DevType, CreateInfo.PSODesc, ActiveShaderStages, StageResources);
 
-        DefaultSignatures[0] = Data.pDefaultSignature;
+        DefaultSignatures[0] = m_pDefaultSignature;
         SignaturesCount      = 1;
         ppSignatures         = DefaultSignatures;
     }
 
-    TShaderIndices ShaderIndices;
-    try
     {
         // Sort signatures by binding index.
         // Note that SignaturesCount will be overwritten with the maximum binding index.
@@ -146,22 +142,15 @@ bool ArchiverImpl::PatchShadersMtl(const CreateInfoType&     CreateInfo,
                 pSignature->ShiftBindings(CurrBindings);
         }
 
+        VERIFY_EXPR(m_Data.Shaders[static_cast<size_t>(DevType)].empty());
         for (size_t j = 0; j < ShaderStages.size(); ++j)
         {
             const auto& Stage = ShaderStages[j];
             const auto PatchedBytecode = Stage.pShader->PatchShaderMtl(Signatures.data(), BaseBindings.data(), SignaturesCount, DevType); // May throw
-            SerializeShaderBytecode(ShaderIndices, DevType, Stage.pShader->GetCreateInfo(), PatchedBytecode.Ptr(), PatchedBytecode.Size());
+            SerializeShaderBytecode(DevType, Stage.pShader->GetCreateInfo(), PatchedBytecode.Ptr(), PatchedBytecode.Size());
         }
+        VERIFY_EXPR(m_Data.Shaders[static_cast<size_t>(DevType)].size() == ShaderStages.size());
     }
-    catch (...)
-    {
-        LOG_ERROR_MESSAGE("Failed to compile Metal shaders");
-        return false;
-    }
-
-    Data.PerDeviceData[static_cast<size_t>(DevType)] = SerializeShadersForPSO(ShaderIndices);
-
-    return true;
 }
 
 INSTANTIATE_PATCH_SHADER_METHODS(PatchShadersMtl, DeviceType DevType)

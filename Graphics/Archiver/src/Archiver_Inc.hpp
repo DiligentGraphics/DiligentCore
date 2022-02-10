@@ -76,54 +76,29 @@ void SortResourceSignatures(IPipelineResourceSignature**   ppSrcSignatures,
 
 } // namespace
 
-
 template <typename PipelineStateImplType, typename SignatureImplType, typename ShaderStagesArrayType, typename... ExtraArgsType>
-bool ArchiverImpl::CreateDefaultResourceSignature(DeviceType                                        Type,
-                                                  RefCntAutoPtr<SerializableResourceSignatureImpl>& pSignature,
-                                                  const PipelineStateDesc&                          PSODesc,
-                                                  SHADER_TYPE                                       ActiveShaderStageFlags,
-                                                  const ShaderStagesArrayType&                      ShaderStages,
-                                                  const ExtraArgsType&... ExtraArgs)
+void SerializablePipelineStateImpl::CreateDefaultResourceSignature(DeviceType                   Type,
+                                                                   const PipelineStateDesc&     PSODesc,
+                                                                   SHADER_TYPE                  ActiveShaderStageFlags,
+                                                                   const ShaderStagesArrayType& ShaderStages,
+                                                                   const ExtraArgsType&... ExtraArgs)
 {
-    try
+    auto SignDesc = PipelineStateImplType::GetDefaultResourceSignatureDesc(ShaderStages, PSODesc.Name, PSODesc.ResourceLayout, PSODesc.SRBAllocationGranularity, ExtraArgs...);
+    if (!m_pDefaultSignature)
     {
-        auto SignDesc = PipelineStateImplType::GetDefaultResourceSignatureDesc(ShaderStages, PSODesc.Name, PSODesc.ResourceLayout, PSODesc.SRBAllocationGranularity, ExtraArgs...);
-
-        if (!pSignature)
-        {
-            // Get unique name that is not yet present in the cache
-            const auto UniqueName = GetDefaultPRSName(PSODesc.Name);
-            SignDesc.SetName(UniqueName.c_str());
-
-            // Create empty serializable signature
-            m_pSerializationDevice->CreateSerializableResourceSignature(&pSignature, UniqueName.c_str());
-            if (!pSignature)
-                return false;
-
-            // Even though we are not going to reuse the default PRS, we need to add it to the cache
-            // to make its name unavailable for future signatures
-            if (!CachePipelineResourceSignature(pSignature))
-            {
-                UNEXPECTED("Failed to add default signature '", UniqueName, "' to the cache. This should've never happened as we generated the unique name.");
-                return false;
-            }
-        }
-        else
-        {
-            // Override the name to make sure it is consistent for all devices
-            SignDesc.SetName(pSignature->GetName());
-        }
-
-        pSignature->CreateDeviceSignature<SignatureImplType>(Type, SignDesc, ActiveShaderStageFlags);
+        // Create empty serializable signature
+        m_pSerializationDevice->CreateSerializableResourceSignature(&m_pDefaultSignature, SignDesc.Get().Name);
+        if (!m_pDefaultSignature)
+            LOG_ERROR_AND_THROW("Failed to create default resource signature for PSO '", PSODesc.Name, "'.");
     }
-    catch (...)
+    else
     {
-        LOG_ERROR_MESSAGE("Failed to create default resource signature");
-        return false;
+        // Override the name to make sure it is consistent for all devices
+        SignDesc.SetName(m_pDefaultSignature->GetName());
     }
-    return true;
+
+    m_pDefaultSignature->CreateDeviceSignature<SignatureImplType>(Type, SignDesc, ActiveShaderStageFlags);
 }
-
 
 template <typename ShaderType, typename... ArgTypes>
 void SerializableShaderImpl::CreateShader(DeviceType          Type,
@@ -215,26 +190,6 @@ void SerializableResourceSignatureImpl::CreateDeviceSignature(DeviceType        
         WriteSerializerType::SerializeInternalData(Ser, InternalData, nullptr);
 
         VERIFY_EXPR(Ser.IsEnded());
-    }
-}
-
-
-using RayTracingShaderMap = std::unordered_map<const IShader*, /*Index in TShaderIndices*/ Uint32>;
-
-void ExtractShadersD3D12(const RayTracingPipelineStateCreateInfo& CreateInfo, RayTracingShaderMap& ShaderMap);
-void ExtractShadersVk(const RayTracingPipelineStateCreateInfo& CreateInfo, RayTracingShaderMap& ShaderMap);
-
-template <typename ShaderStage>
-void ExtractRayTracingShaders(const std::vector<ShaderStage>& ShaderStages, RayTracingShaderMap& ShaderMap)
-{
-    Uint32 ShaderIndex = 0;
-    for (auto& Stage : ShaderStages)
-    {
-        for (auto* pShader : Stage.Serializable)
-        {
-            if (ShaderMap.emplace(pShader, ShaderIndex).second)
-                ++ShaderIndex;
-        }
     }
 }
 

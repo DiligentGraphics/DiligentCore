@@ -27,10 +27,9 @@
 #pragma once
 
 #include <unordered_map>
-#include <unordered_set>
 #include <array>
 #include <vector>
-#include <memory>
+#include <mutex>
 
 #include "Archiver.h"
 #include "ArchiverFactory.h"
@@ -47,12 +46,13 @@
 #include "BasicMath.hpp"
 #include "PlatformMisc.hpp"
 #include "FixedLinearAllocator.hpp"
+#include "Serializer.hpp"
 
 #include "SerializationDeviceImpl.hpp"
-#include "Serializer.hpp"
 #include "SerializableShaderImpl.hpp"
 #include "SerializableRenderPassImpl.hpp"
 #include "SerializableResourceSignatureImpl.hpp"
+#include "SerializablePipelineStateImpl.hpp"
 
 namespace Diligent
 {
@@ -73,21 +73,8 @@ public:
     /// Implementation of IArchiver::SerializeToStream().
     virtual Bool DILIGENT_CALL_TYPE SerializeToStream(IFileStream* pStream) override final;
 
-    /// Implementation of IArchiver::AddGraphicsPipelineState().
-    virtual Bool DILIGENT_CALL_TYPE AddGraphicsPipelineState(const GraphicsPipelineStateCreateInfo& PSOCreateInfo,
-                                                             const PipelineStateArchiveInfo&        ArchiveInfo) override final;
-
-    /// Implementation of IArchiver::AddComputePipelineState().
-    virtual Bool DILIGENT_CALL_TYPE AddComputePipelineState(const ComputePipelineStateCreateInfo& PSOCreateInfo,
-                                                            const PipelineStateArchiveInfo&       ArchiveInfo) override final;
-
-    /// Implementation of IArchiver::AddRayTracingPipelineState().
-    virtual Bool DILIGENT_CALL_TYPE AddRayTracingPipelineState(const RayTracingPipelineStateCreateInfo& PSOCreateInfo,
-                                                               const PipelineStateArchiveInfo&          ArchiveInfo) override final;
-
-    /// Implementation of IArchiver::AddTilePipelineState().
-    virtual Bool DILIGENT_CALL_TYPE AddTilePipelineState(const TilePipelineStateCreateInfo& PSOCreateInfo,
-                                                         const PipelineStateArchiveInfo&    ArchiveInfo) override final;
+    /// Implementation of IArchiver::AddPipelineState().
+    virtual Bool DILIGENT_CALL_TYPE AddPipelineState(IPipelineState* pPSO) override final;
 
     /// Implementation of IArchiver::AddPipelineResourceSignature().
     virtual Bool DILIGENT_CALL_TYPE AddPipelineResourceSignature(IPipelineResourceSignature* pSignature) override final;
@@ -114,98 +101,28 @@ private:
     static constexpr auto DeviceDataCount = static_cast<size_t>(DeviceType::Count);
     static constexpr auto ChunkCount      = static_cast<size_t>(ChunkType::Count);
 
-    using TPerDeviceData = std::array<SerializedData, DeviceDataCount>;
+    RefCntAutoPtr<SerializationDeviceImpl> m_pSerializationDevice;
+
 
     template <typename Type>
-    using TNamedObjectHashMap = std::unordered_map<HashMapStringKey, Type, HashMapStringKey::Hasher>;
+    using NamedObjectHashMap = std::unordered_map<HashMapStringKey, Type, HashMapStringKey::Hasher>;
 
-    struct PRSData
+    std::mutex                                                           m_SignaturesMtx;
+    NamedObjectHashMap<RefCntAutoPtr<SerializableResourceSignatureImpl>> m_Signatures;
+
+    std::mutex                                                    m_RenderPassesMtx;
+    NamedObjectHashMap<RefCntAutoPtr<SerializableRenderPassImpl>> m_RenderPasses;
+
+    using PSOHashMapType = NamedObjectHashMap<RefCntAutoPtr<SerializablePipelineStateImpl>>;
+
+    std::array<std::mutex, PIPELINE_TYPE_COUNT>     m_PipelinesMtx;
+    std::array<PSOHashMapType, PIPELINE_TYPE_COUNT> m_Pipelines;
+
+    struct PerDeviceShaderData
     {
-        explicit PRSData(SerializableResourceSignatureImpl* _pPRS) :
-            pPRS{_pPRS}
-        {}
-        RefCntAutoPtr<SerializableResourceSignatureImpl> pPRS;
-
-        const SerializedData& GetCommonData() const;
-        const SerializedData& GetDeviceData(DeviceType Type) const;
+        std::unordered_map<size_t, Uint32>                        HashToIdx;
+        std::vector<std::reference_wrapper<const SerializedData>> Bytecodes;
     };
-    TNamedObjectHashMap<PRSData> m_PRSMap;
-
-    struct SerializablePRSHasher
-    {
-        size_t operator()(const RefCntAutoPtr<SerializableResourceSignatureImpl>& PRS) const
-        {
-            return PRS ? PRS->CalcHash() : 0;
-        }
-    };
-    struct SerializablePRSEqual
-    {
-        bool operator()(const RefCntAutoPtr<SerializableResourceSignatureImpl>& Lhs, const RefCntAutoPtr<SerializableResourceSignatureImpl>& Rhs) const
-        {
-            if ((Lhs == nullptr) != (Rhs == nullptr))
-                return false;
-            if ((Lhs == nullptr) && (Rhs == nullptr))
-                return true;
-            return *Lhs == *Rhs;
-        }
-    };
-    // Cache to deduplicate resource signatures
-    std::unordered_set<RefCntAutoPtr<SerializableResourceSignatureImpl>, SerializablePRSHasher, SerializablePRSEqual> m_PRSCache;
-
-    struct RPData
-    {
-        explicit RPData(SerializableRenderPassImpl* _pRP) :
-            pRP{_pRP}
-        {}
-        RefCntAutoPtr<SerializableRenderPassImpl> pRP;
-
-        const SerializedData& GetCommonData() const;
-    };
-    using RPMapType = std::unordered_map<HashMapStringKey, RPData, HashMapStringKey::Hasher>;
-    RPMapType m_RPMap;
-
-    struct ShaderKey
-    {
-        std::shared_ptr<SerializedData> Data;
-
-        bool operator==(const ShaderKey& Rhs) const { return *Data == *Rhs.Data; }
-
-        struct Hasher
-        {
-            size_t operator()(const ShaderKey& Key) const { return Key.Data->GetHash(); }
-        };
-    };
-
-    struct PerDeviceShaders
-    {
-        std::vector<ShaderKey>                                                     List;
-        std::unordered_map<ShaderKey, /*Index in List*/ size_t, ShaderKey::Hasher> Map;
-    };
-    std::array<PerDeviceShaders, static_cast<Uint32>(DeviceType::Count)> m_Shaders;
-
-    template <typename CreateInfoType>
-    struct TPSOData
-    {
-        CreateInfoType*      pCreateInfo = nullptr;
-        SerializedPSOAuxData AuxData;
-        SerializedData       CommonData;
-        TPerDeviceData       PerDeviceData;
-
-        RefCntAutoPtr<SerializableResourceSignatureImpl> pDefaultSignature;
-
-        const SerializedData& GetCommonData() const { return CommonData; }
-    };
-    using GraphicsPSOData   = TPSOData<GraphicsPipelineStateCreateInfo>;
-    using ComputePSOData    = TPSOData<ComputePipelineStateCreateInfo>;
-    using TilePSOData       = TPSOData<TilePipelineStateCreateInfo>;
-    using RayTracingPSOData = TPSOData<RayTracingPipelineStateCreateInfo>;
-
-    TNamedObjectHashMap<GraphicsPSOData>   m_GraphicsPSOMap;
-    TNamedObjectHashMap<ComputePSOData>    m_ComputePSOMap;
-    TNamedObjectHashMap<TilePSOData>       m_TilePSOMap;
-    TNamedObjectHashMap<RayTracingPSOData> m_RayTracingPSOMap;
-
-    RefCntAutoPtr<SerializationDeviceImpl> m_pSerializationDevice;
 
     struct PendingData
     {
@@ -216,7 +133,14 @@ private:
         TDataElement                              CommonData;                   // ***DataHeader
         std::array<TDataElement, DeviceDataCount> PerDeviceData;                // device specific data
         size_t                                    OffsetInFile = 0;
+
+        std::array<PerDeviceShaderData, DeviceDataCount> Shaders;
+        // Serialized global shader indices in the archive for each shader of each device type
+        std::unordered_map<const SerializablePipelineStateImpl*, std::array<SerializedData, DeviceDataCount>> PSOShaderIndices;
     };
+
+    static const SerializedData& GetDeviceData(const SerializableResourceSignatureImpl& PRS, DeviceType Type);
+    static const SerializedData& GetDeviceData(const PendingData& Pending, const SerializablePipelineStateImpl& PSO, DeviceType Type);
 
     void ReserveSpace(PendingData& Pending) const;
     void WriteDebugInfo(PendingData& Pending) const;
@@ -227,106 +151,12 @@ private:
     void UpdateOffsetsInArchive(PendingData& Pending) const;
     void WritePendingDataToStream(const PendingData& Pending, IFileStream* pStream) const;
 
-    using TShaderIndices = std::vector<Uint32>; // shader data indices in device specific block
-
-    template <typename CreateInfoType>
-    bool SerializePSO(TNamedObjectHashMap<TPSOData<CreateInfoType>>& PSOMap,
-                      const CreateInfoType&                          PSOCreateInfo,
-                      const PipelineStateArchiveInfo&                ArchiveInfo) noexcept;
-
-    void SerializeShaderBytecode(TShaderIndices&         ShaderIndices,
-                                 DeviceType              DevType,
-                                 const ShaderCreateInfo& CI,
-                                 const void*             Bytecode,
-                                 size_t                  BytecodeSize);
-
-    void SerializeShaderSource(TShaderIndices&         ShaderIndices,
-                               DeviceType              DevType,
-                               const ShaderCreateInfo& CI);
-
-    template <typename CreateInfoType>
-    bool PatchShadersVk(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data);
-
-    template <typename CreateInfoType>
-    bool PatchShadersD3D12(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data);
-
-    template <typename CreateInfoType>
-    bool PatchShadersD3D11(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data);
-
-    template <typename CreateInfoType>
-    bool PatchShadersGL(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data);
-
-    template <typename CreateInfoType>
-    bool PatchShadersMtl(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data, DeviceType DevType);
-
-    // Default signatures in OpenGL are not serialized and require special handling.
-    template <typename CreateInfoType>
-    bool PrepareDefaultSignatureGL(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data);
-
-    SerializedData SerializeShadersForPSO(const TShaderIndices& ShaderIndices) const;
-
     template <typename MapType>
     static Uint32* InitNamedResourceArrayHeader(ChunkType      Type,
                                                 const MapType& Map,
                                                 PendingData&   Pending);
 
-    bool CachePipelineResourceSignature(RefCntAutoPtr<SerializableResourceSignatureImpl>& pPRS);
     bool AddRenderPass(IRenderPass* pRP);
-
-    String GetDefaultPRSName(const char* PSOName) const;
-
-    template <typename PipelineStateImplType, typename SignatureImplType, typename ShaderStagesArrayType, typename... ExtraArgsType>
-    bool CreateDefaultResourceSignature(DeviceType                                        Type,
-                                        RefCntAutoPtr<SerializableResourceSignatureImpl>& pSignature,
-                                        const PipelineStateDesc&                          PSODesc,
-                                        SHADER_TYPE                                       ActiveShaderStages,
-                                        const ShaderStagesArrayType&                      ShaderStages,
-                                        const ExtraArgsType&... ExtraArgs);
 };
-
-#define INSTANTIATE_PATCH_SHADER(MethodName, CreateInfoType, ...) template bool ArchiverImpl::MethodName<CreateInfoType>(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data, ##__VA_ARGS__)
-#define DECLARE_PATCH_SHADER(MethodName, CreateInfoType, ...)     extern INSTANTIATE_PATCH_SHADER(MethodName, CreateInfoType, ##__VA_ARGS__)
-
-#define DECLARE_PATCH_METHODS(MethodName, ...)                                        \
-    DECLARE_PATCH_SHADER(MethodName, GraphicsPipelineStateCreateInfo, ##__VA_ARGS__); \
-    DECLARE_PATCH_SHADER(MethodName, ComputePipelineStateCreateInfo, ##__VA_ARGS__);  \
-    DECLARE_PATCH_SHADER(MethodName, TilePipelineStateCreateInfo, ##__VA_ARGS__);     \
-    DECLARE_PATCH_SHADER(MethodName, RayTracingPipelineStateCreateInfo, ##__VA_ARGS__);
-
-#define INSTANTIATE_PATCH_SHADER_METHODS(MethodName, ...)                                 \
-    INSTANTIATE_PATCH_SHADER(MethodName, GraphicsPipelineStateCreateInfo, ##__VA_ARGS__); \
-    INSTANTIATE_PATCH_SHADER(MethodName, ComputePipelineStateCreateInfo, ##__VA_ARGS__);  \
-    INSTANTIATE_PATCH_SHADER(MethodName, TilePipelineStateCreateInfo, ##__VA_ARGS__);     \
-    INSTANTIATE_PATCH_SHADER(MethodName, RayTracingPipelineStateCreateInfo, ##__VA_ARGS__);
-
-#define INSTANTIATE_PREPARE_DEF_SIGNATURE_GL(CreateInfoType) template bool ArchiverImpl::PrepareDefaultSignatureGL<CreateInfoType>(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data)
-#define DECLARE_PREPARE_DEF_SIGNATURE_GL(CreateInfoType)     extern INSTANTIATE_PREPARE_DEF_SIGNATURE_GL(CreateInfoType)
-#define DECLARE_PREPARE_DEF_SIGNATURE_GL_METHODS()                     \
-    DECLARE_PREPARE_DEF_SIGNATURE_GL(GraphicsPipelineStateCreateInfo); \
-    DECLARE_PREPARE_DEF_SIGNATURE_GL(ComputePipelineStateCreateInfo);  \
-    DECLARE_PREPARE_DEF_SIGNATURE_GL(TilePipelineStateCreateInfo);     \
-    DECLARE_PREPARE_DEF_SIGNATURE_GL(RayTracingPipelineStateCreateInfo);
-
-
-#if D3D11_SUPPORTED
-DECLARE_PATCH_METHODS(PatchShadersD3D11)
-#endif
-
-#if D3D12_SUPPORTED
-DECLARE_PATCH_METHODS(PatchShadersD3D12)
-#endif
-
-#if GL_SUPPORTED
-DECLARE_PATCH_METHODS(PatchShadersGL)
-DECLARE_PREPARE_DEF_SIGNATURE_GL_METHODS()
-#endif
-
-#if VULKAN_SUPPORTED
-DECLARE_PATCH_METHODS(PatchShadersVk)
-#endif
-
-#if METAL_SUPPORTED
-DECLARE_PATCH_METHODS(PatchShadersMtl, DeviceType DevType)
-#endif
 
 } // namespace Diligent

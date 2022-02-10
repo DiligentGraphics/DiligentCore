@@ -30,6 +30,7 @@
 #include "SerializableShaderImpl.hpp"
 #include "SerializableRenderPassImpl.hpp"
 #include "SerializableResourceSignatureImpl.hpp"
+#include "SerializablePipelineStateImpl.hpp"
 #include "EngineMemory.h"
 
 namespace Diligent
@@ -185,6 +186,34 @@ void SerializationDeviceImpl::CreateSerializableResourceSignature(SerializableRe
     auto& RawMemAllocator = GetRawAllocator();
     auto* pSignatureImpl  = NEW_RC_OBJ(RawMemAllocator, "Pipeline resource signature instance", SerializableResourceSignatureImpl)(Name);
     pSignatureImpl->QueryInterface(IID_PipelineResourceSignature, reinterpret_cast<IObject**>(ppSignature));
+}
+
+void SerializationDeviceImpl::CreateGraphicsPipelineState(const GraphicsPipelineStateCreateInfo& PSOCreateInfo,
+                                                          const PipelineStateArchiveInfo&        ArchiveInfo,
+                                                          IPipelineState**                       ppPipelineState)
+{
+    CreatePipelineStateImpl(ppPipelineState, PSOCreateInfo, ArchiveInfo);
+}
+
+void SerializationDeviceImpl::CreateComputePipelineState(const ComputePipelineStateCreateInfo& PSOCreateInfo,
+                                                         const PipelineStateArchiveInfo&       ArchiveInfo,
+                                                         IPipelineState**                      ppPipelineState)
+{
+    CreatePipelineStateImpl(ppPipelineState, PSOCreateInfo, ArchiveInfo);
+}
+
+void SerializationDeviceImpl::CreateRayTracingPipelineState(const RayTracingPipelineStateCreateInfo& PSOCreateInfo,
+                                                            const PipelineStateArchiveInfo&          ArchiveInfo,
+                                                            IPipelineState**                         ppPipelineState)
+{
+    CreatePipelineStateImpl(ppPipelineState, PSOCreateInfo, ArchiveInfo);
+}
+
+void SerializationDeviceImpl::CreateTilePipelineState(const TilePipelineStateCreateInfo& PSOCreateInfo,
+                                                      const PipelineStateArchiveInfo&    ArchiveInfo,
+                                                      IPipelineState**                   ppPipelineState)
+{
+    CreatePipelineStateImpl(ppPipelineState, PSOCreateInfo, ArchiveInfo);
 }
 
 void SerializationDeviceImpl::GetPipelineResourceBindings(const PipelineResourceBindingAttribs& Info,

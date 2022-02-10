@@ -40,6 +40,10 @@
 namespace Diligent
 {
 
+// {A4AC2D45-50FF-44EE-A218-5388CA6BF432}
+static const INTERFACE_ID IID_SerializedResourceSignature =
+    {0xa4ac2d45, 0x50ff, 0x44ee, {0xa2, 0x18, 0x53, 0x88, 0xca, 0x6b, 0xf4, 0x32}};
+
 class SerializableResourceSignatureImpl final : public ObjectBase<IPipelineResourceSignature>
 {
 public:
@@ -58,7 +62,7 @@ public:
 
     ~SerializableResourceSignatureImpl() override;
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_PipelineResourceSignature, TBase)
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     virtual const PipelineResourceSignatureDesc& DILIGENT_CALL_TYPE GetDesc() const override final;
 
@@ -87,8 +91,12 @@ public:
 
     virtual IObject* DILIGENT_CALL_TYPE GetUserData() const override final { return nullptr; }
 
-    bool   IsCompatible(const SerializableResourceSignatureImpl& Rhs, ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags) const;
-    bool   operator==(const SerializableResourceSignatureImpl& Rhs) const;
+    bool IsCompatible(const SerializableResourceSignatureImpl& Rhs, ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags) const;
+    bool operator==(const SerializableResourceSignatureImpl& Rhs) const;
+    bool operator!=(const SerializableResourceSignatureImpl& Rhs) const
+    {
+        return !(*this == Rhs);
+    }
     size_t CalcHash() const;
 
     const SerializedData& GetCommonData() const { return m_CommonData; }

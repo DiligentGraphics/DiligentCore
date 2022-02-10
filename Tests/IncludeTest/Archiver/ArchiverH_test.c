@@ -30,9 +30,6 @@ void TestArchiver_CInterface(IArchiver* pArchiver)
 {
     IArchiver_SerializeToBlob(pArchiver, (IDataBlob**)NULL);
     IArchiver_SerializeToStream(pArchiver, (IFileStream*)NULL);
-    IArchiver_AddGraphicsPipelineState(pArchiver, (const GraphicsPipelineStateCreateInfo*)NULL, (const PipelineStateArchiveInfo*)NULL);
-    IArchiver_AddComputePipelineState(pArchiver, (const ComputePipelineStateCreateInfo*)NULL, (const PipelineStateArchiveInfo*)NULL);
-    IArchiver_AddRayTracingPipelineState(pArchiver, (const RayTracingPipelineStateCreateInfo*)NULL, (const PipelineStateArchiveInfo*)NULL);
-    IArchiver_AddTilePipelineState(pArchiver, (const TilePipelineStateCreateInfo*)NULL, (const PipelineStateArchiveInfo*)NULL);
+    IArchiver_AddPipelineState(pArchiver, (IPipelineState*)NULL);
     IArchiver_AddPipelineResourceSignature(pArchiver, (IPipelineResourceSignature*)NULL);
 }

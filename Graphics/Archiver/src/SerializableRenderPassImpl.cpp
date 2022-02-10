@@ -35,7 +35,7 @@ namespace Diligent
 SerializableRenderPassImpl::SerializableRenderPassImpl(IReferenceCounters*      pRefCounters,
                                                        SerializationDeviceImpl* pDevice,
                                                        const RenderPassDesc&    Desc) :
-    TBase{pRefCounters, pDevice->GetDevice(), Desc, true}
+    TBase{pRefCounters, pDevice, Desc, true}
 {
     Serializer<SerializerMode::Measure> MeasureSer;
     RPSerializer<SerializerMode::Measure>::SerializeDesc(MeasureSer, m_Desc, nullptr);
@@ -50,5 +50,24 @@ SerializableRenderPassImpl::SerializableRenderPassImpl(IReferenceCounters*      
 SerializableRenderPassImpl::~SerializableRenderPassImpl()
 {}
 
+bool SerializableRenderPassImpl::operator==(const SerializableRenderPassImpl& Rhs) const
+{
+    return GetCommonData() == Rhs.GetCommonData();
+}
+
+void DILIGENT_CALL_TYPE SerializableRenderPassImpl::QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)
+{
+    if (ppInterface == nullptr)
+        return;
+    if (IID == IID_SerializedRenderPass || IID == IID_RenderPass)
+    {
+        *ppInterface = this;
+        (*ppInterface)->AddRef();
+    }
+    else
+    {
+        TBase::QueryInterface(IID, ppInterface);
+    }
+}
 
 } // namespace Diligent

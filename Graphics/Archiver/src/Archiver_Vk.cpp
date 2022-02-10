@@ -33,6 +33,7 @@
 #include "PipelineStateVkImpl.hpp"
 #include "ShaderVkImpl.hpp"
 #include "DeviceObjectArchiveVkImpl.hpp"
+#include "SerializablePipelineStateImpl.hpp"
 
 namespace Diligent
 {
@@ -85,7 +86,7 @@ struct SerializableResourceSignatureImpl::SignatureTraits<PipelineResourceSignat
 };
 
 template <typename CreateInfoType>
-bool ArchiverImpl::PatchShadersVk(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data)
+void SerializablePipelineStateImpl::PatchShadersVk(const CreateInfoType& CreateInfo) noexcept(false)
 {
     std::vector<ShaderStageInfoVk> ShaderStages;
     SHADER_TYPE                    ActiveShaderStages = SHADER_TYPE_UNKNOWN;
@@ -107,15 +108,13 @@ bool ArchiverImpl::PatchShadersVk(const CreateInfoType& CreateInfo, TPSOData<Cre
     IPipelineResourceSignature* DefaultSignatures[1] = {};
     if (CreateInfo.ResourceSignaturesCount == 0)
     {
-        if (!CreateDefaultResourceSignature<PipelineStateVkImpl, PipelineResourceSignatureVkImpl>(DeviceType::Vulkan, Data.pDefaultSignature, CreateInfo.PSODesc, ActiveShaderStages, ShaderStagesVk))
-            return false;
+        CreateDefaultResourceSignature<PipelineStateVkImpl, PipelineResourceSignatureVkImpl>(DeviceType::Vulkan, CreateInfo.PSODesc, ActiveShaderStages, ShaderStagesVk);
 
-        DefaultSignatures[0] = Data.pDefaultSignature;
+        DefaultSignatures[0] = m_pDefaultSignature;
         SignaturesCount      = 1;
         ppSignatures         = DefaultSignatures;
     }
 
-    try
     {
         // Sort signatures by binding index.
         // Note that SignaturesCount will be overwritten with the maximum binding index.
@@ -142,7 +141,7 @@ bool ArchiverImpl::PatchShadersVk(const CreateInfoType& CreateInfo, TPSOData<Cre
         }
         VERIFY_EXPR(DescSetLayoutCount <= MAX_RESOURCE_SIGNATURES * 2);
 
-        const auto bStripReflection = Data.AuxData.NoShaderReflection;
+        const auto bStripReflection = m_Data.Aux.NoShaderReflection;
         PipelineStateVkImpl::RemapOrVerifyShaderResources(ShaderStagesVk,
                                                           Signatures.data(),
                                                           SignaturesCount,
@@ -151,13 +150,8 @@ bool ArchiverImpl::PatchShadersVk(const CreateInfoType& CreateInfo, TPSOData<Cre
                                                           bStripReflection,
                                                           CreateInfo.PSODesc.Name);
     }
-    catch (...)
-    {
-        LOG_ERROR_MESSAGE("Failed to remap shader resources in Vulkan shaders");
-        return false;
-    }
 
-    TShaderIndices ShaderIndices;
+    VERIFY_EXPR(m_Data.Shaders[static_cast<size_t>(DeviceType::Vulkan)].empty());
     for (size_t j = 0; j < ShaderStagesVk.size(); ++j)
     {
         const auto& Stage = ShaderStagesVk[j];
@@ -166,12 +160,9 @@ bool ArchiverImpl::PatchShadersVk(const CreateInfoType& CreateInfo, TPSOData<Cre
             const auto& CI    = ShaderStages[j].Serializable[i]->GetCreateInfo();
             const auto& SPIRV = Stage.SPIRVs[i];
 
-            SerializeShaderBytecode(ShaderIndices, DeviceType::Vulkan, CI, SPIRV.data(), SPIRV.size() * sizeof(SPIRV[0]));
+            SerializeShaderBytecode(DeviceType::Vulkan, CI, SPIRV.data(), SPIRV.size() * sizeof(SPIRV[0]));
         }
     }
-
-    Data.PerDeviceData[static_cast<size_t>(DeviceType::Vulkan)] = SerializeShadersForPSO(ShaderIndices);
-    return true;
 }
 
 INSTANTIATE_PATCH_SHADER_METHODS(PatchShadersVk)
@@ -230,13 +221,13 @@ void SerializationDeviceImpl::GetPipelineResourceBindingsVk(const PipelineResour
     VERIFY_EXPR(DescSetLayoutCount >= Info.ResourceSignaturesCount);
 }
 
-void ExtractShadersVk(const RayTracingPipelineStateCreateInfo& CreateInfo, RayTracingShaderMap& ShaderMap)
+void SerializablePipelineStateImpl::ExtractShadersVk(const RayTracingPipelineStateCreateInfo& CreateInfo, RayTracingShaderMapType& ShaderMap)
 {
     std::vector<ShaderStageInfoVk> ShaderStages;
     SHADER_TYPE                    ActiveShaderStages = SHADER_TYPE_UNKNOWN;
     PipelineStateVkImpl::ExtractShaders<SerializableShaderImpl>(CreateInfo, ShaderStages, ActiveShaderStages);
 
-    ExtractRayTracingShaders(ShaderStages, ShaderMap);
+    GetRayTracingShaderMap(ShaderStages, ShaderMap);
 }
 
 } // namespace Diligent

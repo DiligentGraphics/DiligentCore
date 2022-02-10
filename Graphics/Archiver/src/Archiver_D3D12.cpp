@@ -33,6 +33,7 @@
 #include "PipelineStateD3D12Impl.hpp"
 #include "ShaderD3D12Impl.hpp"
 #include "DeviceObjectArchiveD3D12Impl.hpp"
+#include "SerializablePipelineStateImpl.hpp"
 
 namespace Diligent
 {
@@ -84,7 +85,7 @@ struct SerializableResourceSignatureImpl::SignatureTraits<PipelineResourceSignat
 };
 
 template <typename CreateInfoType>
-bool ArchiverImpl::PatchShadersD3D12(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data)
+void SerializablePipelineStateImpl::PatchShadersD3D12(const CreateInfoType& CreateInfo) noexcept(false)
 {
     std::vector<ShaderStageInfoD3D12> ShaderStages;
     SHADER_TYPE                       ActiveShaderStages = SHADER_TYPE_UNKNOWN;
@@ -106,15 +107,13 @@ bool ArchiverImpl::PatchShadersD3D12(const CreateInfoType& CreateInfo, TPSOData<
     IPipelineResourceSignature* DefaultSignatures[1] = {};
     if (CreateInfo.ResourceSignaturesCount == 0)
     {
-        if (!CreateDefaultResourceSignature<PipelineStateD3D12Impl, PipelineResourceSignatureD3D12Impl>(DeviceType::Direct3D12, Data.pDefaultSignature, CreateInfo.PSODesc, ActiveShaderStages, ShaderStagesD3D12, nullptr))
-            return false;
+        CreateDefaultResourceSignature<PipelineStateD3D12Impl, PipelineResourceSignatureD3D12Impl>(DeviceType::Direct3D12, CreateInfo.PSODesc, ActiveShaderStages, ShaderStagesD3D12, nullptr);
 
-        DefaultSignatures[0] = Data.pDefaultSignature;
+        DefaultSignatures[0] = m_pDefaultSignature;
         SignaturesCount      = 1;
         ppSignatures         = DefaultSignatures;
     }
 
-    try
     {
         // Sort signatures by binding index.
         // Note that SignaturesCount will be overwritten with the maximum binding index.
@@ -128,13 +127,8 @@ bool ArchiverImpl::PatchShadersD3D12(const CreateInfoType& CreateInfo, TPSOData<
                                                              RootSig,
                                                              m_pSerializationDevice->GetD3D12Properties().pDxCompiler);
     }
-    catch (...)
-    {
-        LOG_ERROR_MESSAGE("Failed to remap shader resources in Direct3D12 shaders");
-        return false;
-    }
 
-    TShaderIndices ShaderIndices;
+    VERIFY_EXPR(m_Data.Shaders[static_cast<size_t>(DeviceType::Direct3D12)].empty());
     for (size_t j = 0; j < ShaderStagesD3D12.size(); ++j)
     {
         const auto& Stage = ShaderStagesD3D12[j];
@@ -143,12 +137,9 @@ bool ArchiverImpl::PatchShadersD3D12(const CreateInfoType& CreateInfo, TPSOData<
             const auto& CI        = ShaderStages[j].Serializable[i]->GetCreateInfo();
             const auto& pBytecode = Stage.ByteCodes[i];
 
-            SerializeShaderBytecode(ShaderIndices, DeviceType::Direct3D12, CI, pBytecode->GetBufferPointer(), pBytecode->GetBufferSize());
+            SerializeShaderBytecode(DeviceType::Direct3D12, CI, pBytecode->GetBufferPointer(), pBytecode->GetBufferSize());
         }
     }
-
-    Data.PerDeviceData[static_cast<size_t>(DeviceType::Direct3D12)] = SerializeShadersForPSO(ShaderIndices);
-    return true;
 }
 
 INSTANTIATE_PATCH_SHADER_METHODS(PatchShadersD3D12)
@@ -200,13 +191,13 @@ void SerializationDeviceImpl::GetPipelineResourceBindingsD3D12(const PipelineRes
     }
 }
 
-void ExtractShadersD3D12(const RayTracingPipelineStateCreateInfo& CreateInfo, RayTracingShaderMap& ShaderMap)
+void SerializablePipelineStateImpl::ExtractShadersD3D12(const RayTracingPipelineStateCreateInfo& CreateInfo, RayTracingShaderMapType& ShaderMap)
 {
     std::vector<ShaderStageInfoD3D12> ShaderStages;
     SHADER_TYPE                       ActiveShaderStages = SHADER_TYPE_UNKNOWN;
     PipelineStateD3D12Impl::ExtractShaders<SerializableShaderImpl>(CreateInfo, ShaderStages, ActiveShaderStages);
 
-    ExtractRayTracingShaders(ShaderStages, ShaderMap);
+    GetRayTracingShaderMap(ShaderStages, ShaderMap);
 }
 
 } // namespace Diligent

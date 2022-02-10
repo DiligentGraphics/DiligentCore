@@ -621,7 +621,7 @@ bool DeviceObjectArchiveBase::UnpackPSOShaders(PSOData<CreateInfoType>& PSO,
     DynamicLinearAllocator Allocator{GetRawAllocator()};
 
     ShaderIndexArray ShaderIndices;
-    PSOSerializer<SerializerMode::Read>::SerializeShaders(Ser, ShaderIndices, &Allocator);
+    PSOSerializer<SerializerMode::Read>::SerializeShaderIndices(Ser, ShaderIndices, &Allocator);
     VERIFY_EXPR(Ser.IsEnded());
 
     PSO.Shaders.resize(ShaderIndices.Count);

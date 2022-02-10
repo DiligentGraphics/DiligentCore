@@ -77,9 +77,9 @@ struct PSOSerializer
                                     DynamicLinearAllocator*                                   Allocator,
                                     const std::function<void(Uint32&, ConstQual<IShader*>&)>& ShaderToIndex);
 
-    static void SerializeShaders(Serializer<Mode>&            Ser,
-                                 ConstQual<ShaderIndexArray>& Shaders,
-                                 DynamicLinearAllocator*      Allocator);
+    static void SerializeShaderIndices(Serializer<Mode>&            Ser,
+                                       ConstQual<ShaderIndexArray>& Shaders,
+                                       DynamicLinearAllocator*      Allocator);
 
     static void SerializeAuxData(Serializer<Mode>&                Ser,
                                  ConstQual<SerializedPSOAuxData>& AuxData,

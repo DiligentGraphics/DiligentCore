@@ -127,10 +127,10 @@ void ArchivePRS(RefCntAutoPtr<IArchive>&                   pSource,
         {
             ResourceSignatureArchiveInfo ArchiveInfo;
             ArchiveInfo.DeviceFlags = DeviceBits;
-            RefCntAutoPtr<IPipelineResourceSignature> pSerializableSign;
-            pSerializationDevice->CreatePipelineResourceSignature(PRSDesc, ArchiveInfo, &pSerializableSign);
-            ASSERT_NE(pSerializableSign, nullptr);
-            ASSERT_TRUE(pArchiver->AddPipelineResourceSignature(pSerializableSign));
+            RefCntAutoPtr<IPipelineResourceSignature> pSerializedPRS;
+            pSerializationDevice->CreatePipelineResourceSignature(PRSDesc, ArchiveInfo, &pSerializedPRS);
+            ASSERT_NE(pSerializedPRS, nullptr);
+            ASSERT_TRUE(pArchiver->AddPipelineResourceSignature(pSerializedPRS));
         }
 
         pDevice->CreatePipelineResourceSignature(PRSDesc, &pRefPRS_1);
@@ -156,10 +156,10 @@ void ArchivePRS(RefCntAutoPtr<IArchive>&                   pSource,
         {
             ResourceSignatureArchiveInfo ArchiveInfo;
             ArchiveInfo.DeviceFlags = DeviceBits;
-            RefCntAutoPtr<IPipelineResourceSignature> pSerializableSign;
-            pSerializationDevice->CreatePipelineResourceSignature(PRSDesc, ArchiveInfo, &pSerializableSign);
-            ASSERT_NE(pSerializableSign, nullptr);
-            ASSERT_TRUE(pArchiver->AddPipelineResourceSignature(pSerializableSign));
+            RefCntAutoPtr<IPipelineResourceSignature> pSerializedPRS;
+            pSerializationDevice->CreatePipelineResourceSignature(PRSDesc, ArchiveInfo, &pSerializedPRS);
+            ASSERT_NE(pSerializedPRS, nullptr);
+            ASSERT_TRUE(pArchiver->AddPipelineResourceSignature(pSerializedPRS));
         }
 
         pDevice->CreatePipelineResourceSignature(PRSDesc, &pRefPRS_2);
@@ -744,10 +744,20 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
             PipelineStateArchiveInfo ArchiveInfo;
             ArchiveInfo.DeviceFlags = GetDeviceBits();
             ArchiveInfo.PSOFlags    = ArchiveFlags;
-            ASSERT_TRUE(pArchiver->AddGraphicsPipelineState(PSOCreateInfo2, ArchiveInfo));
+            {
+                RefCntAutoPtr<IPipelineState> pSerializedPSO;
+                pSerializationDevice->CreateGraphicsPipelineState(PSOCreateInfo2, ArchiveInfo, &pSerializedPSO);
+                ASSERT_NE(pSerializedPSO, nullptr);
+                ASSERT_TRUE(pArchiver->AddPipelineState(pSerializedPSO));
+            }
 
-            PSOCreateInfo2.PSODesc.Name = PSO3Name;
-            ASSERT_TRUE(pArchiver->AddGraphicsPipelineState(PSOCreateInfo2, ArchiveInfo));
+            {
+                PSOCreateInfo2.PSODesc.Name = PSO3Name;
+                RefCntAutoPtr<IPipelineState> pSerializedPSO;
+                pSerializationDevice->CreateGraphicsPipelineState(PSOCreateInfo2, ArchiveInfo, &pSerializedPSO);
+                ASSERT_NE(pSerializedPSO, nullptr);
+                ASSERT_TRUE(pArchiver->AddPipelineState(pSerializedPSO));
+            }
 
             PSOCreateInfo.pPSOCache              = pPSOCache;
             PSOCreateInfo.PSODesc.Name           = PSO1Name;
@@ -773,10 +783,15 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
             GraphicsPipeline2.NumRenderTargets = 0;
             GraphicsPipeline2.RTVFormats[0]    = TEX_FORMAT_UNKNOWN;
 
-            PipelineStateArchiveInfo ArchiveInfo;
-            ArchiveInfo.DeviceFlags = GetDeviceBits();
-            ArchiveInfo.PSOFlags    = ArchiveFlags;
-            ASSERT_TRUE(pArchiver->AddGraphicsPipelineState(PSOCreateInfo2, ArchiveInfo));
+            {
+                PipelineStateArchiveInfo ArchiveInfo;
+                ArchiveInfo.DeviceFlags = GetDeviceBits();
+                ArchiveInfo.PSOFlags    = ArchiveFlags;
+                RefCntAutoPtr<IPipelineState> pSerializedPSO;
+                pSerializationDevice->CreateGraphicsPipelineState(PSOCreateInfo2, ArchiveInfo, &pSerializedPSO);
+                ASSERT_NE(pSerializedPSO, nullptr);
+                ASSERT_TRUE(pArchiver->AddPipelineState(pSerializedPSO));
+            }
 
             IPipelineResourceSignature* Signatures[] = {pRefPRS};
             PSOCreateInfo.ResourceSignaturesCount    = _countof(Signatures);
@@ -1144,7 +1159,10 @@ void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
             PipelineStateArchiveInfo ArchiveInfo;
             ArchiveInfo.DeviceFlags = GetDeviceBits();
             ArchiveInfo.PSOFlags    = ArchiveFlags;
-            ASSERT_TRUE(pArchiver->AddComputePipelineState(PSOCreateInfo, ArchiveInfo));
+            RefCntAutoPtr<IPipelineState> pSerializedPSO;
+            pSerializationDevice->CreateComputePipelineState(PSOCreateInfo, ArchiveInfo, &pSerializedPSO);
+            ASSERT_NE(pSerializedPSO, nullptr);
+            ASSERT_TRUE(pArchiver->AddPipelineState(pSerializedPSO));
         }
         RefCntAutoPtr<IDataBlob> pBlob;
         pArchiver->SerializeToBlob(&pBlob);
@@ -1336,7 +1354,10 @@ TEST(ArchiveTest, RayTracingPipeline)
 
             PipelineStateArchiveInfo ArchiveInfo;
             ArchiveInfo.DeviceFlags = DeviceBits;
-            ASSERT_TRUE(pArchiver->AddRayTracingPipelineState(PSOCreateInfo, ArchiveInfo));
+            RefCntAutoPtr<IPipelineState> pSerializedPSO;
+            pSerializationDevice->CreateRayTracingPipelineState(PSOCreateInfo, ArchiveInfo, &pSerializedPSO);
+            ASSERT_NE(pSerializedPSO, nullptr);
+            ASSERT_TRUE(pArchiver->AddPipelineState(pSerializedPSO));
         }
         RefCntAutoPtr<IDataBlob> pBlob;
         pArchiver->SerializeToBlob(&pBlob);
@@ -2070,7 +2091,7 @@ TEST_P(TestSamplers, GraphicsPipeline)
 
         PSODesc.Name = PSOName;
 
-        RefCntAutoPtr<IPipelineResourceSignature> pSerializedSignature;
+        RefCntAutoPtr<IPipelineResourceSignature> pSerializedPRSature;
 
         IPipelineResourceSignature* ppResourceSignatures[1] = {};
         if (UseSignature)
@@ -2088,10 +2109,10 @@ TEST_P(TestSamplers, GraphicsPipeline)
             PRSDesc.NumImmutableSamplers       = UseImtblSamplers ? _countof(ImtblSamplers) : 0;
             PRSDesc.UseCombinedTextureSamplers = true;
 
-            pSerializationDevice->CreatePipelineResourceSignature(PRSDesc, ResourceSignatureArchiveInfo{GetDeviceBits()}, &pSerializedSignature);
-            ASSERT_TRUE(pSerializedSignature);
+            pSerializationDevice->CreatePipelineResourceSignature(PRSDesc, ResourceSignatureArchiveInfo{GetDeviceBits()}, &pSerializedPRSature);
+            ASSERT_TRUE(pSerializedPRSature);
 
-            ppResourceSignatures[0]               = pSerializedSignature;
+            ppResourceSignatures[0]               = pSerializedPRSature;
             PSOCreateInfo.ppResourceSignatures    = ppResourceSignatures;
             PSOCreateInfo.ResourceSignaturesCount = 1;
         }
@@ -2118,7 +2139,10 @@ TEST_P(TestSamplers, GraphicsPipeline)
 
         PipelineStateArchiveInfo ArchiveInfo;
         ArchiveInfo.DeviceFlags = PackFlags;
-        ASSERT_TRUE(pArchiver->AddGraphicsPipelineState(PSOCreateInfo, ArchiveInfo));
+        RefCntAutoPtr<IPipelineState> pSerializedPSO;
+        pSerializationDevice->CreateGraphicsPipelineState(PSOCreateInfo, ArchiveInfo, &pSerializedPSO);
+        ASSERT_NE(pSerializedPSO, nullptr);
+        ASSERT_TRUE(pArchiver->AddPipelineState(pSerializedPSO));
 
         RefCntAutoPtr<IDataBlob> pBlob;
         pArchiver->SerializeToBlob(&pBlob);

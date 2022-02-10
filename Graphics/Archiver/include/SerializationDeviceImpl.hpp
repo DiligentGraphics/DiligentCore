@@ -97,6 +97,26 @@ public:
                                                                     const ResourceSignatureArchiveInfo&  ArchiveInfo,
                                                                     IPipelineResourceSignature**         ppSignature) override final;
 
+    /// Implementation of ISerializationDevice::CreateGraphicsPipelineState().
+    virtual void DILIGENT_CALL_TYPE CreateGraphicsPipelineState(const GraphicsPipelineStateCreateInfo& PSOCreateInfo,
+                                                                const PipelineStateArchiveInfo&        ArchiveInfo,
+                                                                IPipelineState**                       ppPipelineState) override final;
+
+    /// Implementation of ISerializationDevice::CreateComputePipelineState().
+    virtual void DILIGENT_CALL_TYPE CreateComputePipelineState(const ComputePipelineStateCreateInfo& PSOCreateInfo,
+                                                               const PipelineStateArchiveInfo&       ArchiveInfo,
+                                                               IPipelineState**                      ppPipelineState) override final;
+
+    /// Implementation of ISerializationDevice::CreateRayTracingPipelineState().
+    virtual void DILIGENT_CALL_TYPE CreateRayTracingPipelineState(const RayTracingPipelineStateCreateInfo& PSOCreateInfo,
+                                                                  const PipelineStateArchiveInfo&          ArchiveInfo,
+                                                                  IPipelineState**                         ppPipelineState) override final;
+
+    /// Implementation of ISerializationDevice::CreateTilePipelineState().
+    virtual void DILIGENT_CALL_TYPE CreateTilePipelineState(const TilePipelineStateCreateInfo& PSOCreateInfo,
+                                                            const PipelineStateArchiveInfo&    ArchiveInfo,
+                                                            IPipelineState**                   ppPipelineState) override final;
+
     void CreateSerializableResourceSignature(const PipelineResourceSignatureDesc& Desc,
                                              const ResourceSignatureArchiveInfo&  ArchiveInfo,
                                              SHADER_TYPE                          ShaderStages,
@@ -144,8 +164,6 @@ public:
     {
         return m_ValidDeviceFlags;
     }
-
-    SerializationDeviceImpl* GetDevice() { return this; }
 
 protected:
     static PipelineResourceBinding ResDescToPipelineResBinding(const PipelineResourceDesc& ResDesc, SHADER_TYPE Stages, Uint32 Register, Uint32 Space);

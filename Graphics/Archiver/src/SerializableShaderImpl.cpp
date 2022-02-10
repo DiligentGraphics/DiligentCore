@@ -236,4 +236,19 @@ void SerializableShaderImpl::CopyShaderCreateInfo(const ShaderCreateInfo& Shader
 SerializableShaderImpl::~SerializableShaderImpl()
 {}
 
+void DILIGENT_CALL_TYPE SerializableShaderImpl::QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)
+{
+    if (ppInterface == nullptr)
+        return;
+    if (IID == IID_SerializedShader || IID == IID_Shader)
+    {
+        *ppInterface = this;
+        (*ppInterface)->AddRef();
+    }
+    else
+    {
+        TBase::QueryInterface(IID, ppInterface);
+    }
+}
+
 } // namespace Diligent

@@ -40,6 +40,7 @@ class SerializationDeviceImpl;
 class SerializableShaderImpl;
 class SerializableRenderPassImpl;
 class SerializableResourceSignatureImpl;
+class SerializablePipelineStateImpl;
 class SerializableObjectStub
 {};
 
@@ -71,7 +72,7 @@ struct SerializationEngineImplTraits
 
     using RenderDeviceImplType              = SerializationDeviceImpl;
     using DeviceContextImplType             = IDeviceContext;
-    using PipelineStateImplType             = SerializableObjectStub;
+    using PipelineStateImplType             = SerializablePipelineStateImpl;
     using ShaderResourceBindingImplType     = SerializableObjectStub;
     using BufferImplType                    = SerializableObjectStub;
     using BufferViewImplType                = SerializableObjectStub;

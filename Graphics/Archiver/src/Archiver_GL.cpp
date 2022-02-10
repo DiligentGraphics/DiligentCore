@@ -33,6 +33,7 @@
 #include "PipelineStateGLImpl.hpp"
 #include "ShaderGLImpl.hpp"
 #include "DeviceObjectArchiveGLImpl.hpp"
+#include "SerializablePipelineStateImpl.hpp"
 
 #if !DILIGENT_NO_GLSLANG
 #    include "GLSLUtils.hpp"
@@ -82,29 +83,27 @@ inline SHADER_TYPE GetShaderStageType(const ShaderStageInfoGL& Stage)
 } // namespace
 
 template <typename CreateInfoType>
-bool ArchiverImpl::PrepareDefaultSignatureGL(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data)
+void SerializablePipelineStateImpl::PrepareDefaultSignatureGL(const CreateInfoType& CreateInfo) noexcept(false)
 {
     // Add empty device signature - there must be some device-specific data for OpenGL in the archive
     // or there will be an error when unpacking the signature.
     std::vector<ShaderGLImpl*> DummyShadersGL;
-    return CreateDefaultResourceSignature<PipelineStateGLImpl, PipelineResourceSignatureGLImpl>(DeviceType::OpenGL, Data.pDefaultSignature, CreateInfo.PSODesc, SHADER_TYPE_UNKNOWN, DummyShadersGL);
+    CreateDefaultResourceSignature<PipelineStateGLImpl, PipelineResourceSignatureGLImpl>(DeviceType::OpenGL, CreateInfo.PSODesc, SHADER_TYPE_UNKNOWN, DummyShadersGL);
 }
 
 template <typename CreateInfoType>
-bool ArchiverImpl::PatchShadersGL(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data)
+void SerializablePipelineStateImpl::PatchShadersGL(const CreateInfoType& CreateInfo) noexcept(false)
 {
-    TShaderIndices ShaderIndices;
-
     std::vector<ShaderStageInfoGL> ShaderStages;
     SHADER_TYPE                    ActiveShaderStages = SHADER_TYPE_UNKNOWN;
     PipelineStateGLImpl::ExtractShaders<SerializableShaderImpl>(CreateInfo, ShaderStages, ActiveShaderStages);
 
+    VERIFY_EXPR(m_Data.Shaders[static_cast<size_t>(DeviceType::OpenGL)].empty());
     for (size_t i = 0; i < ShaderStages.size(); ++i)
     {
-        SerializeShaderSource(ShaderIndices, DeviceType::OpenGL, ShaderStages[i].pShader->GetCreateInfo());
+        SerializeShaderSource(DeviceType::OpenGL, ShaderStages[i].pShader->GetCreateInfo());
     }
-    Data.PerDeviceData[static_cast<size_t>(DeviceType::OpenGL)] = SerializeShadersForPSO(ShaderIndices);
-    return true;
+    VERIFY_EXPR(m_Data.Shaders[static_cast<size_t>(DeviceType::OpenGL)].size() == ShaderStages.size());
 }
 
 INSTANTIATE_PATCH_SHADER_METHODS(PatchShadersGL)

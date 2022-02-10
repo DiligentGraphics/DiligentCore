@@ -7,6 +7,7 @@ set(INCLUDE
     include/ArchiveRepacker.hpp
     include/SerializationDeviceImpl.hpp
     include/SerializableShaderImpl.hpp
+    include/SerializablePipelineStateImpl.hpp
     include/SerializableRenderPassImpl.hpp
     include/SerializableResourceSignatureImpl.hpp
     include/SerializationEngineImplTraits.hpp
@@ -26,6 +27,7 @@ set(SOURCE
     src/ArchiveRepacker.cpp
     src/SerializationDeviceImpl.cpp
     src/SerializableShaderImpl.cpp
+    src/SerializablePipelineStateImpl.cpp
     src/SerializableResourceSignatureImpl.cpp
     src/SerializableRenderPassImpl.cpp
 )

@@ -33,6 +33,7 @@
 #include "PipelineStateD3D11Impl.hpp"
 #include "ShaderD3D11Impl.hpp"
 #include "DeviceObjectArchiveD3D11Impl.hpp"
+#include "SerializablePipelineStateImpl.hpp"
 
 namespace Diligent
 {
@@ -104,10 +105,8 @@ void InitD3D11ShaderResourceCounters(const GraphicsPipelineStateCreateInfo& Crea
 
 
 template <typename CreateInfoType>
-bool ArchiverImpl::PatchShadersD3D11(const CreateInfoType& CreateInfo, TPSOData<CreateInfoType>& Data)
+void SerializablePipelineStateImpl::PatchShadersD3D11(const CreateInfoType& CreateInfo) noexcept(false)
 {
-    TShaderIndices ShaderIndices;
-
     std::vector<ShaderStageInfoD3D11> ShaderStages;
     SHADER_TYPE                       ActiveShaderStages = SHADER_TYPE_UNKNOWN;
     PipelineStateD3D11Impl::ExtractShaders<SerializableShaderImpl>(CreateInfo, ShaderStages, ActiveShaderStages);
@@ -122,16 +121,14 @@ bool ArchiverImpl::PatchShadersD3D11(const CreateInfoType& CreateInfo, TPSOData<
     IPipelineResourceSignature* DefaultSignatures[1] = {};
     if (CreateInfo.ResourceSignaturesCount == 0)
     {
-        if (!CreateDefaultResourceSignature<PipelineStateD3D11Impl, PipelineResourceSignatureD3D11Impl>(DeviceType::Direct3D11, Data.pDefaultSignature, CreateInfo.PSODesc, ActiveShaderStages, ShadersD3D11))
-            return false;
+        CreateDefaultResourceSignature<PipelineStateD3D11Impl, PipelineResourceSignatureD3D11Impl>(DeviceType::Direct3D11, CreateInfo.PSODesc, ActiveShaderStages, ShadersD3D11);
 
-        DefaultSignatures[0] = Data.pDefaultSignature;
+        DefaultSignatures[0] = m_pDefaultSignature;
         SignaturesCount      = 1;
         ppSignatures         = DefaultSignatures;
     }
 
     std::vector<CComPtr<ID3DBlob>> ShaderBytecode{ShaderStages.size()};
-    try
     {
         // Sort signatures by binding index.
         // Note that SignaturesCount will be overwritten with the maximum binding index.
@@ -161,21 +158,16 @@ bool ArchiverImpl::PatchShadersD3D11(const CreateInfoType& CreateInfo, TPSOData<
                 ShaderBytecode[ShaderIdx] = pPatchedBytecode;
             });
     }
-    catch (...)
-    {
-        LOG_ERROR_MESSAGE("Failed to remap shader resources in Direct3D11 shaders");
-        return false;
-    }
 
+    VERIFY_EXPR(m_Data.Shaders[static_cast<size_t>(DeviceType::Direct3D11)].empty());
     for (size_t i = 0; i < ShadersD3D11.size(); ++i)
     {
         const auto& CI        = ShaderStages[i].pSerializable->GetCreateInfo();
         const auto& pBytecode = ShaderBytecode[i];
 
-        SerializeShaderBytecode(ShaderIndices, DeviceType::Direct3D11, CI, pBytecode->GetBufferPointer(), pBytecode->GetBufferSize());
+        SerializeShaderBytecode(DeviceType::Direct3D11, CI, pBytecode->GetBufferPointer(), pBytecode->GetBufferSize());
     }
-    Data.PerDeviceData[static_cast<size_t>(DeviceType::Direct3D11)] = SerializeShadersForPSO(ShaderIndices);
-    return true;
+    VERIFY_EXPR(m_Data.Shaders[static_cast<size_t>(DeviceType::Direct3D11)].size() == ShadersD3D11.size());
 }
 
 INSTANTIATE_PATCH_SHADER_METHODS(PatchShadersD3D11)

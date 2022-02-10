@@ -44,7 +44,7 @@ SerializableResourceSignatureImpl::SerializableResourceSignatureImpl(IReferenceC
     TBase{pRefCounters},
     m_Name{Desc.Name}
 {
-    ValidatePipelineResourceSignatureDesc(Desc, pDevice->GetDevice());
+    ValidatePipelineResourceSignatureDesc(Desc, pDevice);
 
     auto DeviceFlags = ArchiveInfo.DeviceFlags;
     if ((DeviceFlags & pDevice->GetValidDeviceFlags()) != DeviceFlags)
@@ -113,6 +113,22 @@ SerializableResourceSignatureImpl::SerializableResourceSignatureImpl(IReferenceC
 SerializableResourceSignatureImpl::~SerializableResourceSignatureImpl()
 {
 }
+
+void DILIGENT_CALL_TYPE SerializableResourceSignatureImpl::QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)
+{
+    if (ppInterface == nullptr)
+        return;
+    if (IID == IID_SerializedResourceSignature || IID == IID_PipelineResourceSignature)
+    {
+        *ppInterface = this;
+        (*ppInterface)->AddRef();
+    }
+    else
+    {
+        TBase::QueryInterface(IID, ppInterface);
+    }
+}
+
 
 const PipelineResourceSignatureDesc& SerializableResourceSignatureImpl::GetDesc() const
 {

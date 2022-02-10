@@ -105,47 +105,27 @@ DILIGENT_BEGIN_INTERFACE(IArchiver, IObject)
                                            IFileStream* pStream) PURE;
 
 
-    /// Adds a graphics pipeline state to the archive currently being created.
+    /// Adds a pipeline state to the archive.
 
     /// \note
+    ///     Pipeline state must have been created by the serialization device.
+    ///
     ///     All dependent objects (render pass, resource signatures, shaders) will be added too.
     ///
     /// \remarks
     ///     Pipeline archival requires the same information as PSO creation.
     ///     Multiple pipeline states may be packed into the same archive as long as they use unique names.
     ///     Pipeline resource signatures used by the pipeline state will be packed into the same archive.
-    VIRTUAL Bool METHOD(AddGraphicsPipelineState)(THIS_
-                                                  const GraphicsPipelineStateCreateInfo REF PSOCreateInfo,
-                                                  const PipelineStateArchiveInfo REF        ArchiveInfo) PURE;
+    VIRTUAL Bool METHOD(AddPipelineState)(THIS_
+                                          IPipelineState* pPSO) PURE;
 
 
-    /// Adds a compute pipeline state to the archive currently being created.
+    /// Adds a pipeline resource signature to the archive.
 
-    /// \note   All dependent objects (resource signatures, shaders) will be added too.
-    VIRTUAL Bool METHOD(AddComputePipelineState)(THIS_
-                                                 const ComputePipelineStateCreateInfo REF PSOCreateInfo,
-                                                 const PipelineStateArchiveInfo REF       ArchiveInfo) PURE;
-
-
-    /// Adds a ray tracing pipeline state to the archive currently being created.
-
-    /// \note   All dependent objects (resource signatures, shaders) will be added too.
-    VIRTUAL Bool METHOD(AddRayTracingPipelineState)(THIS_
-                                                    const RayTracingPipelineStateCreateInfo REF PSOCreateInfo,
-                                                    const PipelineStateArchiveInfo REF          ArchiveInfo) PURE;
-
-
-    /// Adds a tile pipeline state to the archive currently being created.
-
-    /// \note   All dependent objects (resource signatures, shaders) will be added too.
-    VIRTUAL Bool METHOD(AddTilePipelineState)(THIS_
-                                              const TilePipelineStateCreateInfo REF PSOCreateInfo,
-                                              const PipelineStateArchiveInfo REF    ArchiveInfo) PURE;
-
-
-    /// Adds a pipeline resource signature to the archive currently being created.
-
-    /// \note   Multiple PSOs and signatures may be packed into the same archive as long as they use distinct names.
+    /// \note
+    ///     Pipeline resource signature must have been created by the serialization device.
+    ///
+    ///     Multiple PSOs and signatures may be packed into the same archive as long as they use distinct names.
     VIRTUAL Bool METHOD(AddPipelineResourceSignature)(THIS_
                                                       IPipelineResourceSignature* pSignature) PURE;
 };
@@ -157,10 +137,7 @@ DILIGENT_END_INTERFACE
 
 #    define IArchiver_SerializeToBlob(This, ...)              CALL_IFACE_METHOD(Archiver, SerializeToBlob,              This, __VA_ARGS__)
 #    define IArchiver_SerializeToStream(This, ...)            CALL_IFACE_METHOD(Archiver, SerializeToStream,            This, __VA_ARGS__)
-#    define IArchiver_AddGraphicsPipelineState(This, ...)     CALL_IFACE_METHOD(Archiver, AddGraphicsPipelineState,     This, __VA_ARGS__)
-#    define IArchiver_AddComputePipelineState(This, ...)      CALL_IFACE_METHOD(Archiver, AddComputePipelineState,      This, __VA_ARGS__)
-#    define IArchiver_AddRayTracingPipelineState(This, ...)   CALL_IFACE_METHOD(Archiver, AddRayTracingPipelineState,   This, __VA_ARGS__)
-#    define IArchiver_AddTilePipelineState(This, ...)         CALL_IFACE_METHOD(Archiver, AddTilePipelineState,         This, __VA_ARGS__)
+#    define IArchiver_AddPipelineState(This, ...)             CALL_IFACE_METHOD(Archiver, AddPipelineState,             This, __VA_ARGS__)
 #    define IArchiver_AddPipelineResourceSignature(This, ...) CALL_IFACE_METHOD(Archiver, AddPipelineResourceSignature, This, __VA_ARGS__)
 
 #endif
