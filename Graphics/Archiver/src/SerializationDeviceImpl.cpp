@@ -27,10 +27,10 @@
 #include "ArchiverImpl.hpp"
 #include "SerializationDeviceImpl.hpp"
 #include "GLSLangUtils.hpp"
-#include "SerializableShaderImpl.hpp"
-#include "SerializableRenderPassImpl.hpp"
-#include "SerializableResourceSignatureImpl.hpp"
-#include "SerializablePipelineStateImpl.hpp"
+#include "SerializedShaderImpl.hpp"
+#include "SerializedRenderPassImpl.hpp"
+#include "SerializedResourceSignatureImpl.hpp"
+#include "SerializedPipelineStateImpl.hpp"
 #include "EngineMemory.h"
 
 namespace Diligent
@@ -173,18 +173,18 @@ void SerializationDeviceImpl::CreatePipelineResourceSignature(const PipelineReso
     CreatePipelineResourceSignatureImpl(ppSignature, Desc, ArchiveInfo, SHADER_TYPE_UNKNOWN);
 }
 
-void SerializationDeviceImpl::CreateSerializableResourceSignature(const PipelineResourceSignatureDesc& Desc,
-                                                                  const ResourceSignatureArchiveInfo&  ArchiveInfo,
-                                                                  SHADER_TYPE                          ShaderStages,
-                                                                  SerializableResourceSignatureImpl**  ppSignature)
+void SerializationDeviceImpl::CreateSerializedResourceSignature(const PipelineResourceSignatureDesc& Desc,
+                                                                const ResourceSignatureArchiveInfo&  ArchiveInfo,
+                                                                SHADER_TYPE                          ShaderStages,
+                                                                SerializedResourceSignatureImpl**    ppSignature)
 {
     CreatePipelineResourceSignatureImpl(reinterpret_cast<IPipelineResourceSignature**>(ppSignature), Desc, ArchiveInfo, ShaderStages);
 }
 
-void SerializationDeviceImpl::CreateSerializableResourceSignature(SerializableResourceSignatureImpl** ppSignature, const char* Name)
+void SerializationDeviceImpl::CreateSerializedResourceSignature(SerializedResourceSignatureImpl** ppSignature, const char* Name)
 {
     auto& RawMemAllocator = GetRawAllocator();
-    auto* pSignatureImpl  = NEW_RC_OBJ(RawMemAllocator, "Pipeline resource signature instance", SerializableResourceSignatureImpl)(Name);
+    auto* pSignatureImpl  = NEW_RC_OBJ(RawMemAllocator, "Pipeline resource signature instance", SerializedResourceSignatureImpl)(Name);
     pSignatureImpl->QueryInterface(IID_PipelineResourceSignature, reinterpret_cast<IObject**>(ppSignature));
 }
 

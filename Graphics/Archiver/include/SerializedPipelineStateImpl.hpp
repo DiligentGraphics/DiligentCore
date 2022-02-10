@@ -27,6 +27,9 @@
 #pragma once
 
 #include <unordered_map>
+#include <vector>
+#include <array>
+#include <string>
 
 #include "SerializationEngineImplTraits.hpp"
 
@@ -40,24 +43,24 @@
 namespace Diligent
 {
 
-class SerializableResourceSignatureImpl;
+class SerializedResourceSignatureImpl;
 
 // {23DBAA36-B34E-438E-800C-D28C66237361}
 static const INTERFACE_ID IID_SerializedPipelineState =
     {0x23dbaa36, 0xb34e, 0x438e, {0x80, 0xc, 0xd2, 0x8c, 0x66, 0x23, 0x73, 0x61}};
 
-class SerializablePipelineStateImpl final : public ObjectBase<IPipelineState>
+class SerializedPipelineStateImpl final : public ObjectBase<IPipelineState>
 {
 public:
     using TBase = ObjectBase<IPipelineState>;
 
     template <typename PSOCreateInfoType>
-    SerializablePipelineStateImpl(IReferenceCounters*             pRefCounters,
-                                  SerializationDeviceImpl*        pDevice,
-                                  const PSOCreateInfoType&        CreateInfo,
-                                  const PipelineStateArchiveInfo& ArchiveInfo);
+    SerializedPipelineStateImpl(IReferenceCounters*             pRefCounters,
+                                SerializationDeviceImpl*        pDevice,
+                                const PSOCreateInfoType&        CreateInfo,
+                                const PipelineStateArchiveInfo& ArchiveInfo);
 
-    ~SerializablePipelineStateImpl() override;
+    ~SerializedPipelineStateImpl() override;
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
@@ -68,38 +71,38 @@ public:
 
     virtual Int32 DILIGENT_CALL_TYPE GetUniqueID() const override final
     {
-        UNSUPPORTED("This method is not supported by serializable pipeline state.");
+        UNSUPPORTED("This method is not supported by serialized pipeline state.");
         return 0;
     }
 
     virtual void DILIGENT_CALL_TYPE SetUserData(IObject* pUserData) override final
     {
-        UNSUPPORTED("This method is not supported by serializable pipeline state.");
+        UNSUPPORTED("This method is not supported by serialized pipeline state.");
     }
 
     virtual IObject* DILIGENT_CALL_TYPE GetUserData() const override final
     {
-        UNSUPPORTED("This method is not supported by serializable pipeline state.");
+        UNSUPPORTED("This method is not supported by serialized pipeline state.");
         return nullptr;
     }
 
     virtual const GraphicsPipelineDesc& DILIGENT_CALL_TYPE GetGraphicsPipelineDesc() const override final
     {
-        UNSUPPORTED("This method is not supported by serializable pipeline state.");
+        UNSUPPORTED("This method is not supported by serialized pipeline state.");
         static constexpr GraphicsPipelineDesc NullDesc;
         return NullDesc;
     }
 
     virtual const RayTracingPipelineDesc& DILIGENT_CALL_TYPE GetRayTracingPipelineDesc() const override final
     {
-        UNSUPPORTED("This method is not supported by serializable pipeline state.");
+        UNSUPPORTED("This method is not supported by serialized pipeline state.");
         static constexpr RayTracingPipelineDesc NullDesc;
         return NullDesc;
     }
 
     virtual const TilePipelineDesc& DILIGENT_CALL_TYPE GetTilePipelineDesc() const override final
     {
-        UNSUPPORTED("This method is not supported by serializable pipeline state.");
+        UNSUPPORTED("This method is not supported by serialized pipeline state.");
         static constexpr TilePipelineDesc NullDesc;
         return NullDesc;
     }
@@ -108,54 +111,54 @@ public:
                                                         IResourceMapping*           pResourceMapping,
                                                         BIND_SHADER_RESOURCES_FLAGS Flags) override final
     {
-        UNSUPPORTED("This method is not supported by serializable pipeline state.");
+        UNSUPPORTED("This method is not supported by serialized pipeline state.");
     }
 
     virtual Uint32 DILIGENT_CALL_TYPE GetStaticVariableCount(SHADER_TYPE ShaderType) const override final
     {
-        UNSUPPORTED("This method is not supported by serializable pipeline state.");
+        UNSUPPORTED("This method is not supported by serialized pipeline state.");
         return 0;
     }
 
     virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetStaticVariableByName(SHADER_TYPE ShaderType,
                                                                                 const Char* Name) override final
     {
-        UNSUPPORTED("This method is not supported by serializable pipeline state.");
+        UNSUPPORTED("This method is not supported by serialized pipeline state.");
         return nullptr;
     }
 
     virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetStaticVariableByIndex(SHADER_TYPE ShaderType,
                                                                                  Uint32      Index) override final
     {
-        UNSUPPORTED("This method is not supported by serializable pipeline state.");
+        UNSUPPORTED("This method is not supported by serialized pipeline state.");
         return nullptr;
     }
 
     virtual void DILIGENT_CALL_TYPE CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding, bool InitStaticResources) override final
     {
-        UNSUPPORTED("This method is not supported by serializable pipeline state.");
+        UNSUPPORTED("This method is not supported by serialized pipeline state.");
     }
 
     virtual void DILIGENT_CALL_TYPE InitializeStaticSRBResources(IShaderResourceBinding* pShaderResourceBinding) const override final
     {
-        UNSUPPORTED("This method is not supported by serializable pipeline state.");
+        UNSUPPORTED("This method is not supported by serialized pipeline state.");
     }
 
     virtual bool DILIGENT_CALL_TYPE IsCompatibleWith(const IPipelineState* pPSO) const override final
     {
-        UNSUPPORTED("This method is not supported by serializable pipeline state.");
+        UNSUPPORTED("This method is not supported by serialized pipeline state.");
         return false;
     }
 
     virtual Uint32 DILIGENT_CALL_TYPE GetResourceSignatureCount() const override final
     {
-        UNSUPPORTED("This method is not supported by serializable pipeline state.");
+        UNSUPPORTED("This method is not supported by serialized pipeline state.");
         return 0;
     }
 
     virtual IPipelineResourceSignature* DILIGENT_CALL_TYPE GetResourceSignature(Uint32 Index) const override final
     {
-        UNSUPPORTED("This method is not supported by serializable pipeline state.");
+        UNSUPPORTED("This method is not supported by serialized pipeline state.");
         return nullptr;
     }
 
@@ -195,7 +198,7 @@ public:
         Uint32 ShaderIndex = 0;
         for (auto& Stage : ShaderStages)
         {
-            for (auto* pShader : Stage.Serializable)
+            for (auto* pShader : Stage.Serialized)
             {
                 if (ShaderMap.emplace(pShader, ShaderIndex).second)
                     ++ShaderIndex;
@@ -254,16 +257,16 @@ protected:
     const std::string       m_Name;
     const PipelineStateDesc m_Desc;
 
-    RefCntAutoPtr<IRenderPass>                       m_pRenderPass;
-    RefCntAutoPtr<SerializableResourceSignatureImpl> m_pDefaultSignature;
-    SignaturesVector                                 m_Signatures;
+    RefCntAutoPtr<IRenderPass>                     m_pRenderPass;
+    RefCntAutoPtr<SerializedResourceSignatureImpl> m_pDefaultSignature;
+    SignaturesVector                               m_Signatures;
 };
 
-#define INSTANTIATE_SERIALIZED_PSO_CTOR(CreateInfoType)                                                                 \
-    template SerializablePipelineStateImpl::SerializablePipelineStateImpl(IReferenceCounters*             pRefCounters, \
-                                                                          SerializationDeviceImpl*        pDevice,      \
-                                                                          const CreateInfoType&           CreateInfo,   \
-                                                                          const PipelineStateArchiveInfo& ArchiveInfo)
+#define INSTANTIATE_SERIALIZED_PSO_CTOR(CreateInfoType)                                                             \
+    template SerializedPipelineStateImpl::SerializedPipelineStateImpl(IReferenceCounters*             pRefCounters, \
+                                                                      SerializationDeviceImpl*        pDevice,      \
+                                                                      const CreateInfoType&           CreateInfo,   \
+                                                                      const PipelineStateArchiveInfo& ArchiveInfo)
 #define DECLARE_SERIALIZED_PSO_CTOR(CreateInfoType) extern INSTANTIATE_SERIALIZED_PSO_CTOR(CreateInfoType)
 
 DECLARE_SERIALIZED_PSO_CTOR(GraphicsPipelineStateCreateInfo);
@@ -272,7 +275,7 @@ DECLARE_SERIALIZED_PSO_CTOR(TilePipelineStateCreateInfo);
 DECLARE_SERIALIZED_PSO_CTOR(RayTracingPipelineStateCreateInfo);
 
 
-#define INSTANTIATE_PATCH_SHADER(MethodName, CreateInfoType, ...) template void SerializablePipelineStateImpl::MethodName<CreateInfoType>(const CreateInfoType& CreateInfo, ##__VA_ARGS__) noexcept(false)
+#define INSTANTIATE_PATCH_SHADER(MethodName, CreateInfoType, ...) template void SerializedPipelineStateImpl::MethodName<CreateInfoType>(const CreateInfoType& CreateInfo, ##__VA_ARGS__) noexcept(false)
 #define DECLARE_PATCH_SHADER(MethodName, CreateInfoType, ...)     extern INSTANTIATE_PATCH_SHADER(MethodName, CreateInfoType, ##__VA_ARGS__)
 
 #define DECLARE_PATCH_METHODS(MethodName, ...)                                        \
@@ -287,7 +290,7 @@ DECLARE_SERIALIZED_PSO_CTOR(RayTracingPipelineStateCreateInfo);
     INSTANTIATE_PATCH_SHADER(MethodName, TilePipelineStateCreateInfo, ##__VA_ARGS__);     \
     INSTANTIATE_PATCH_SHADER(MethodName, RayTracingPipelineStateCreateInfo, ##__VA_ARGS__);
 
-#define INSTANTIATE_PREPARE_DEF_SIGNATURE_GL(CreateInfoType) template void SerializablePipelineStateImpl::PrepareDefaultSignatureGL<CreateInfoType>(const CreateInfoType& CreateInfo) noexcept(false)
+#define INSTANTIATE_PREPARE_DEF_SIGNATURE_GL(CreateInfoType) template void SerializedPipelineStateImpl::PrepareDefaultSignatureGL<CreateInfoType>(const CreateInfoType& CreateInfo) noexcept(false)
 #define DECLARE_PREPARE_DEF_SIGNATURE_GL(CreateInfoType)     extern INSTANTIATE_PREPARE_DEF_SIGNATURE_GL(CreateInfoType)
 #define DECLARE_PREPARE_DEF_SIGNATURE_GL_METHODS()                     \
     DECLARE_PREPARE_DEF_SIGNATURE_GL(GraphicsPipelineStateCreateInfo); \

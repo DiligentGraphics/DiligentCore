@@ -38,23 +38,23 @@ namespace Diligent
 static const INTERFACE_ID IID_SerializedRenderPass =
     {0x6a00f074, 0xba7b, 0x47b7, {0xb9, 0xc1, 0x16, 0xa7, 0x5, 0xc7, 0x6c, 0x47}};
 
-class SerializableRenderPassImpl final : public RenderPassBase<SerializationEngineImplTraits>
+class SerializedRenderPassImpl final : public RenderPassBase<SerializationEngineImplTraits>
 {
 public:
     using TBase = RenderPassBase<SerializationEngineImplTraits>;
 
-    SerializableRenderPassImpl(IReferenceCounters*      pRefCounters,
-                               SerializationDeviceImpl* pDevice,
-                               const RenderPassDesc&    Desc);
+    SerializedRenderPassImpl(IReferenceCounters*      pRefCounters,
+                             SerializationDeviceImpl* pDevice,
+                             const RenderPassDesc&    Desc);
 
-    ~SerializableRenderPassImpl() override;
+    ~SerializedRenderPassImpl() override;
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     const SerializedData& GetCommonData() const { return m_CommonData; }
 
-    bool operator==(const SerializableRenderPassImpl& Rhs) const;
-    bool operator!=(const SerializableRenderPassImpl& Rhs) const
+    bool operator==(const SerializedRenderPassImpl& Rhs) const;
+    bool operator!=(const SerializedRenderPassImpl& Rhs) const
     {
         return !(*this == Rhs);
     }

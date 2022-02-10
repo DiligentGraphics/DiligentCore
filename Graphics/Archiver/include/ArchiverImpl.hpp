@@ -49,10 +49,10 @@
 #include "Serializer.hpp"
 
 #include "SerializationDeviceImpl.hpp"
-#include "SerializableShaderImpl.hpp"
-#include "SerializableRenderPassImpl.hpp"
-#include "SerializableResourceSignatureImpl.hpp"
-#include "SerializablePipelineStateImpl.hpp"
+#include "SerializedShaderImpl.hpp"
+#include "SerializedRenderPassImpl.hpp"
+#include "SerializedResourceSignatureImpl.hpp"
+#include "SerializedPipelineStateImpl.hpp"
 
 namespace Diligent
 {
@@ -107,13 +107,13 @@ private:
     template <typename Type>
     using NamedObjectHashMap = std::unordered_map<HashMapStringKey, Type, HashMapStringKey::Hasher>;
 
-    std::mutex                                                           m_SignaturesMtx;
-    NamedObjectHashMap<RefCntAutoPtr<SerializableResourceSignatureImpl>> m_Signatures;
+    std::mutex                                                         m_SignaturesMtx;
+    NamedObjectHashMap<RefCntAutoPtr<SerializedResourceSignatureImpl>> m_Signatures;
 
-    std::mutex                                                    m_RenderPassesMtx;
-    NamedObjectHashMap<RefCntAutoPtr<SerializableRenderPassImpl>> m_RenderPasses;
+    std::mutex                                                  m_RenderPassesMtx;
+    NamedObjectHashMap<RefCntAutoPtr<SerializedRenderPassImpl>> m_RenderPasses;
 
-    using PSOHashMapType = NamedObjectHashMap<RefCntAutoPtr<SerializablePipelineStateImpl>>;
+    using PSOHashMapType = NamedObjectHashMap<RefCntAutoPtr<SerializedPipelineStateImpl>>;
 
     std::array<std::mutex, PIPELINE_TYPE_COUNT>     m_PipelinesMtx;
     std::array<PSOHashMapType, PIPELINE_TYPE_COUNT> m_Pipelines;
@@ -136,11 +136,11 @@ private:
 
         std::array<PerDeviceShaderData, DeviceDataCount> Shaders;
         // Serialized global shader indices in the archive for each shader of each device type
-        std::unordered_map<const SerializablePipelineStateImpl*, std::array<SerializedData, DeviceDataCount>> PSOShaderIndices;
+        std::unordered_map<const SerializedPipelineStateImpl*, std::array<SerializedData, DeviceDataCount>> PSOShaderIndices;
     };
 
-    static const SerializedData& GetDeviceData(const SerializableResourceSignatureImpl& PRS, DeviceType Type);
-    static const SerializedData& GetDeviceData(const PendingData& Pending, const SerializablePipelineStateImpl& PSO, DeviceType Type);
+    static const SerializedData& GetDeviceData(const SerializedResourceSignatureImpl& PRS, DeviceType Type);
+    static const SerializedData& GetDeviceData(const PendingData& Pending, const SerializedPipelineStateImpl& PSO, DeviceType Type);
 
     void ReserveSpace(PendingData& Pending) const;
     void WriteDebugInfo(PendingData& Pending) const;

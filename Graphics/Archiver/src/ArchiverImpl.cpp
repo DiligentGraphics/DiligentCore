@@ -33,7 +33,7 @@
 #include "PSOSerializer.hpp"
 #include "DataBlobImpl.hpp"
 #include "MemoryFileStream.hpp"
-#include "SerializablePipelineStateImpl.hpp"
+#include "SerializedPipelineStateImpl.hpp"
 
 namespace Diligent
 {
@@ -72,7 +72,7 @@ ArchiverImpl::~ArchiverImpl()
 {
 }
 
-const SerializedData& ArchiverImpl::GetDeviceData(const SerializableResourceSignatureImpl& PRS, DeviceType Type)
+const SerializedData& ArchiverImpl::GetDeviceData(const SerializedResourceSignatureImpl& PRS, DeviceType Type)
 {
     const auto* pMem = PRS.GetDeviceData(Type);
     if (pMem != nullptr)
@@ -82,7 +82,7 @@ const SerializedData& ArchiverImpl::GetDeviceData(const SerializableResourceSign
     return NullData;
 }
 
-const SerializedData& ArchiverImpl::GetDeviceData(const PendingData& Pending, const SerializablePipelineStateImpl& PSO, DeviceType Type)
+const SerializedData& ArchiverImpl::GetDeviceData(const PendingData& Pending, const SerializedPipelineStateImpl& PSO, DeviceType Type)
 {
     auto it = Pending.PSOShaderIndices.find(&PSO);
     if (it == Pending.PSOShaderIndices.end())
@@ -534,13 +534,13 @@ Bool ArchiverImpl::SerializeToStream(IFileStream* pStream)
     WriteDebugInfo(Pending);
     WriteShaderData(Pending);
 
-    auto WritePRSPerDeviceData = [&Pending](PRSDataHeader& Header, DeviceType Type, const RefCntAutoPtr<SerializableResourceSignatureImpl>& pPRS) //
+    auto WritePRSPerDeviceData = [&Pending](PRSDataHeader& Header, DeviceType Type, const RefCntAutoPtr<SerializedResourceSignatureImpl>& pPRS) //
     {
         WritePerDeviceData(Header, Type, GetDeviceData(*pPRS, Type), Pending.PerDeviceData[static_cast<size_t>(Type)]);
     };
     WriteDeviceObjectData<PRSDataHeader>(ChunkType::ResourceSignature, Pending, m_Signatures, WritePRSPerDeviceData);
 
-    WriteDeviceObjectData<RPDataHeader>(ChunkType::RenderPass, Pending, m_RenderPasses, [](RPDataHeader& Header, DeviceType Type, const RefCntAutoPtr<SerializableRenderPassImpl>&) {});
+    WriteDeviceObjectData<RPDataHeader>(ChunkType::RenderPass, Pending, m_RenderPasses, [](RPDataHeader& Header, DeviceType Type, const RefCntAutoPtr<SerializedRenderPassImpl>&) {});
 
     auto WritePSOPerDeviceData = [&Pending](PSODataHeader& Header, DeviceType Type, const auto& pPSO) //
     {
@@ -568,7 +568,7 @@ bool ArchiverImpl::AddPipelineResourceSignature(IPipelineResourceSignature* pPRS
     if (pPRS == nullptr)
         return false;
 
-    RefCntAutoPtr<SerializableResourceSignatureImpl> pSerializedPRS{pPRS, IID_SerializedResourceSignature};
+    RefCntAutoPtr<SerializedResourceSignatureImpl> pSerializedPRS{pPRS, IID_SerializedResourceSignature};
     if (!pSerializedPRS)
     {
         UNEXPECTED("Resource signature '", pPRS->GetDesc().Name, "' was not created by a serialization device.");
@@ -597,7 +597,7 @@ bool ArchiverImpl::AddRenderPass(IRenderPass* pRP)
     if (pRP == nullptr)
         return false;
 
-    RefCntAutoPtr<SerializableRenderPassImpl> pSerializedRP{pRP, IID_SerializedRenderPass};
+    RefCntAutoPtr<SerializedRenderPassImpl> pSerializedRP{pRP, IID_SerializedRenderPass};
     if (!pSerializedRP)
     {
         UNEXPECTED("Render pass'", pRP->GetDesc().Name, "' was not created by a serialization device.");
@@ -626,7 +626,7 @@ Bool ArchiverImpl::AddPipelineState(IPipelineState* pPSO)
     if (pPSO == nullptr)
         return false;
 
-    RefCntAutoPtr<SerializablePipelineStateImpl> pSerializedPSO{pPSO, IID_SerializedPipelineState};
+    RefCntAutoPtr<SerializedPipelineStateImpl> pSerializedPSO{pPSO, IID_SerializedPipelineState};
     if (!pSerializedPSO)
     {
         UNEXPECTED("Pipeline state '", pPSO->GetDesc().Name, "' was not created by a serialization device.");

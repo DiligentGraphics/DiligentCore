@@ -33,7 +33,7 @@
 #include "PipelineStateGLImpl.hpp"
 #include "ShaderGLImpl.hpp"
 #include "DeviceObjectArchiveGLImpl.hpp"
-#include "SerializablePipelineStateImpl.hpp"
+#include "SerializedPipelineStateImpl.hpp"
 
 #if !DILIGENT_NO_GLSLANG
 #    include "GLSLUtils.hpp"
@@ -44,7 +44,7 @@ namespace Diligent
 {
 
 template <>
-struct SerializableResourceSignatureImpl::SignatureTraits<PipelineResourceSignatureGLImpl>
+struct SerializedResourceSignatureImpl::SignatureTraits<PipelineResourceSignatureGLImpl>
 {
     static constexpr DeviceType Type = DeviceType::OpenGL;
 
@@ -59,18 +59,18 @@ struct ShaderStageInfoGL
 {
     ShaderStageInfoGL() {}
 
-    ShaderStageInfoGL(const SerializableShaderImpl* _pShader) :
+    ShaderStageInfoGL(const SerializedShaderImpl* _pShader) :
         Type{_pShader->GetDesc().ShaderType},
         pShader{_pShader}
     {}
 
     // Needed only for ray tracing
-    void Append(const SerializableShaderImpl*) {}
+    void Append(const SerializedShaderImpl*) {}
 
     Uint32 Count() const { return 1; }
 
-    SHADER_TYPE                   Type    = SHADER_TYPE_UNKNOWN;
-    const SerializableShaderImpl* pShader = nullptr;
+    SHADER_TYPE                 Type    = SHADER_TYPE_UNKNOWN;
+    const SerializedShaderImpl* pShader = nullptr;
 };
 
 #ifdef DILIGENT_DEBUG
@@ -83,7 +83,7 @@ inline SHADER_TYPE GetShaderStageType(const ShaderStageInfoGL& Stage)
 } // namespace
 
 template <typename CreateInfoType>
-void SerializablePipelineStateImpl::PrepareDefaultSignatureGL(const CreateInfoType& CreateInfo) noexcept(false)
+void SerializedPipelineStateImpl::PrepareDefaultSignatureGL(const CreateInfoType& CreateInfo) noexcept(false)
 {
     // Add empty device signature - there must be some device-specific data for OpenGL in the archive
     // or there will be an error when unpacking the signature.
@@ -92,11 +92,11 @@ void SerializablePipelineStateImpl::PrepareDefaultSignatureGL(const CreateInfoTy
 }
 
 template <typename CreateInfoType>
-void SerializablePipelineStateImpl::PatchShadersGL(const CreateInfoType& CreateInfo) noexcept(false)
+void SerializedPipelineStateImpl::PatchShadersGL(const CreateInfoType& CreateInfo) noexcept(false)
 {
     std::vector<ShaderStageInfoGL> ShaderStages;
     SHADER_TYPE                    ActiveShaderStages = SHADER_TYPE_UNKNOWN;
-    PipelineStateGLImpl::ExtractShaders<SerializableShaderImpl>(CreateInfo, ShaderStages, ActiveShaderStages);
+    PipelineStateGLImpl::ExtractShaders<SerializedShaderImpl>(CreateInfo, ShaderStages, ActiveShaderStages);
 
     VERIFY_EXPR(m_Data.Shaders[static_cast<size_t>(DeviceType::OpenGL)].empty());
     for (size_t i = 0; i < ShaderStages.size(); ++i)
@@ -151,10 +151,10 @@ void SerializationDeviceImpl::GetPipelineResourceBindingsGL(const PipelineResour
     }
 }
 
-void SerializableShaderImpl::CreateShaderGL(IReferenceCounters*     pRefCounters,
-                                            const ShaderCreateInfo& ShaderCI,
-                                            String&                 CompilationLog,
-                                            RENDER_DEVICE_TYPE      DeviceType)
+void SerializedShaderImpl::CreateShaderGL(IReferenceCounters*     pRefCounters,
+                                          const ShaderCreateInfo& ShaderCI,
+                                          String&                 CompilationLog,
+                                          RENDER_DEVICE_TYPE      DeviceType)
 {
 #if !DILIGENT_NO_GLSLANG
     GLSLangUtils::GLSLtoSPIRVAttribs Attribs;

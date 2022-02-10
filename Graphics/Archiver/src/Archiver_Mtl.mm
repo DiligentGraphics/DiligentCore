@@ -37,7 +37,7 @@
 #include "PipelineStateMtlImpl.hpp"
 #include "ShaderMtlImpl.hpp"
 #include "DeviceObjectArchiveMtlImpl.hpp"
-#include "SerializablePipelineStateImpl.hpp"
+#include "SerializedPipelineStateImpl.hpp"
 
 #include "spirv_msl.hpp"
 
@@ -47,7 +47,7 @@ namespace Diligent
 {
 
 template <>
-struct SerializableResourceSignatureImpl::SignatureTraits<PipelineResourceSignatureMtlImpl>
+struct SerializedResourceSignatureImpl::SignatureTraits<PipelineResourceSignatureMtlImpl>
 {
     static constexpr DeviceType Type = DeviceType::Metal_MacOS;
 
@@ -74,18 +74,18 @@ struct ShaderStageInfoMtl
 {
     ShaderStageInfoMtl() {}
 
-    ShaderStageInfoMtl(const SerializableShaderImpl* _pShader) :
+    ShaderStageInfoMtl(const SerializedShaderImpl* _pShader) :
         Type{_pShader->GetDesc().ShaderType},
         pShader{_pShader}
     {}
 
     // Needed only for ray tracing
-    void Append(const SerializableShaderImpl*) {}
+    void Append(const SerializedShaderImpl*) {}
 
     constexpr Uint32 Count() const { return 1; }
 
-    SHADER_TYPE                   Type    = SHADER_TYPE_UNKNOWN;
-    const SerializableShaderImpl* pShader = nullptr;
+    SHADER_TYPE                 Type    = SHADER_TYPE_UNKNOWN;
+    const SerializedShaderImpl* pShader = nullptr;
 };
 
 #ifdef DILIGENT_DEBUG
@@ -99,13 +99,13 @@ inline SHADER_TYPE GetShaderStageType(const ShaderStageInfoMtl& Stage)
 
 
 template <typename CreateInfoType>
-void SerializablePipelineStateImpl::PatchShadersMtl(const CreateInfoType& CreateInfo, DeviceType DevType) noexcept(false)
+void SerializedPipelineStateImpl::PatchShadersMtl(const CreateInfoType& CreateInfo, DeviceType DevType) noexcept(false)
 {
     VERIFY_EXPR(DevType == DeviceType::Metal_MacOS || DevType == DeviceType::Metal_iOS);
 
     std::vector<ShaderStageInfoMtl> ShaderStages;
     SHADER_TYPE                     ActiveShaderStages = SHADER_TYPE_UNKNOWN;
-    PipelineStateMtlImpl::ExtractShaders<SerializableShaderImpl>(CreateInfo, ShaderStages, ActiveShaderStages);
+    PipelineStateMtlImpl::ExtractShaders<SerializedShaderImpl>(CreateInfo, ShaderStages, ActiveShaderStages);
 
     std::vector<const SPIRVShaderResources*> StageResources{ShaderStages.size()};
     for (size_t i = 0; i < StageResources.size(); ++i)
@@ -160,7 +160,7 @@ INSTANTIATE_DEVICE_SIGNATURE_METHODS(PipelineResourceSignatureMtlImpl)
 static_assert(std::is_same<MtlArchiverResourceCounters, MtlResourceCounters>::value,
               "MtlArchiverResourceCounters and MtlResourceCounters must be same types");
 
-struct SerializableShaderImpl::CompiledShaderMtlImpl final : CompiledShader
+struct SerializedShaderImpl::CompiledShaderMtlImpl final : CompiledShader
 {
     String                                      MslSource;
     std::vector<uint32_t>                       SPIRV;
@@ -168,7 +168,7 @@ struct SerializableShaderImpl::CompiledShaderMtlImpl final : CompiledShader
     MtlFunctionArguments::BufferTypeInfoMapType BufferTypeInfoMap;
 };
 
-void SerializableShaderImpl::CreateShaderMtl(ShaderCreateInfo ShaderCI, String& CompilationLog)
+void SerializedShaderImpl::CreateShaderMtl(ShaderCreateInfo ShaderCI, String& CompilationLog)
 {
     auto* pShaderMtl = new CompiledShaderMtlImpl{};
     m_pShaderMtl.reset(pShaderMtl);
@@ -197,7 +197,7 @@ void SerializableShaderImpl::CreateShaderMtl(ShaderCreateInfo ShaderCI, String& 
     }
 }
 
-const SPIRVShaderResources* SerializableShaderImpl::GetMtlShaderSPIRVResources() const
+const SPIRVShaderResources* SerializedShaderImpl::GetMtlShaderSPIRVResources() const
 {
     auto* pShaderMtl = static_cast<const CompiledShaderMtlImpl*>(m_pShaderMtl.get());
     return pShaderMtl && pShaderMtl->SPIRVResources ? pShaderMtl->SPIRVResources.get() : nullptr;
@@ -231,10 +231,10 @@ void SerializeBufferTypeInfoMapAndComputeGroupSize(Serializer<Mode>             
 }
 } // namespace
 
-SerializedData SerializableShaderImpl::PatchShaderMtl(const RefCntAutoPtr<PipelineResourceSignatureMtlImpl>* pSignatures,
-                                                      const MtlResourceCounters*                             pBaseBindings,
-                                                      const Uint32                                           SignatureCount,
-                                                      DeviceType                                             DevType) const noexcept(false)
+SerializedData SerializedShaderImpl::PatchShaderMtl(const RefCntAutoPtr<PipelineResourceSignatureMtlImpl>* pSignatures,
+                                                    const MtlResourceCounters*                             pBaseBindings,
+                                                    const Uint32                                           SignatureCount,
+                                                    DeviceType                                             DevType) const noexcept(false)
 {
     VERIFY_EXPR(SignatureCount > 0);
     VERIFY_EXPR(pSignatures != nullptr);
@@ -392,7 +392,7 @@ void SerializationDeviceImpl::GetPipelineResourceBindingsMtl(const PipelineResou
     Uint32 SignaturesCount = 0;
     for (Uint32 i = 0; i < Info.ResourceSignaturesCount; ++i)
     {
-        const auto* pSerPRS = ClassPtrCast<SerializableResourceSignatureImpl>(Info.ppResourceSignatures[i]);
+        const auto* pSerPRS = ClassPtrCast<SerializedResourceSignatureImpl>(Info.ppResourceSignatures[i]);
         const auto& Desc    = pSerPRS->GetDesc();
 
         Signatures[Desc.BindingIndex] = pSerPRS->GetDeviceSignature<PipelineResourceSignatureMtlImpl>(DeviceObjectArchiveBase::DeviceType::Metal_MacOS);

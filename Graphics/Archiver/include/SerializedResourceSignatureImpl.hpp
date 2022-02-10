@@ -29,6 +29,7 @@
 #include <atomic>
 #include <array>
 #include <memory>
+#include <string>
 
 #include "PipelineResourceSignature.h"
 #include "ObjectBase.hpp"
@@ -44,7 +45,7 @@ namespace Diligent
 static const INTERFACE_ID IID_SerializedResourceSignature =
     {0xa4ac2d45, 0x50ff, 0x44ee, {0xa2, 0x18, 0x53, 0x88, 0xca, 0x6b, 0xf4, 0x32}};
 
-class SerializableResourceSignatureImpl final : public ObjectBase<IPipelineResourceSignature>
+class SerializedResourceSignatureImpl final : public ObjectBase<IPipelineResourceSignature>
 {
 public:
     using TBase = ObjectBase<IPipelineResourceSignature>;
@@ -52,15 +53,15 @@ public:
     using DeviceType                    = DeviceObjectArchiveBase::DeviceType;
     static constexpr Uint32 DeviceCount = static_cast<Uint32>(DeviceType::Count);
 
-    SerializableResourceSignatureImpl(IReferenceCounters*                  pRefCounters,
-                                      SerializationDeviceImpl*             pDevice,
-                                      const PipelineResourceSignatureDesc& Desc,
-                                      const ResourceSignatureArchiveInfo&  ArchiveInfo,
-                                      SHADER_TYPE                          ShaderStages = SHADER_TYPE_UNKNOWN);
+    SerializedResourceSignatureImpl(IReferenceCounters*                  pRefCounters,
+                                    SerializationDeviceImpl*             pDevice,
+                                    const PipelineResourceSignatureDesc& Desc,
+                                    const ResourceSignatureArchiveInfo&  ArchiveInfo,
+                                    SHADER_TYPE                          ShaderStages = SHADER_TYPE_UNKNOWN);
 
-    SerializableResourceSignatureImpl(IReferenceCounters* pRefCounters, const char* Name) noexcept;
+    SerializedResourceSignatureImpl(IReferenceCounters* pRefCounters, const char* Name) noexcept;
 
-    ~SerializableResourceSignatureImpl() override;
+    ~SerializedResourceSignatureImpl() override;
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
@@ -91,9 +92,9 @@ public:
 
     virtual IObject* DILIGENT_CALL_TYPE GetUserData() const override final { return nullptr; }
 
-    bool IsCompatible(const SerializableResourceSignatureImpl& Rhs, ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags) const;
-    bool operator==(const SerializableResourceSignatureImpl& Rhs) const;
-    bool operator!=(const SerializableResourceSignatureImpl& Rhs) const
+    bool IsCompatible(const SerializedResourceSignatureImpl& Rhs, ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags) const;
+    bool operator==(const SerializedResourceSignatureImpl& Rhs) const;
+    bool operator!=(const SerializedResourceSignatureImpl& Rhs) const
     {
         return !(*this == Rhs);
     }
@@ -159,13 +160,13 @@ private:
     mutable std::atomic<size_t> m_Hash{0};
 };
 
-#define INSTANTIATE_GET_DEVICE_SIGNATURE(PRSImplType) template PRSImplType* SerializableResourceSignatureImpl::GetDeviceSignature<PRSImplType>(DeviceType Type) const
+#define INSTANTIATE_GET_DEVICE_SIGNATURE(PRSImplType) template PRSImplType* SerializedResourceSignatureImpl::GetDeviceSignature<PRSImplType>(DeviceType Type) const
 #define DECLARE_GET_DEVICE_SIGNATURE(PRSImplType)     extern INSTANTIATE_GET_DEVICE_SIGNATURE(PRSImplType)
 
-#define INSTANTIATE_CREATE_DEVICE_SIGNATURE(PRSImplType)                                 \
-    template void SerializableResourceSignatureImpl::CreateDeviceSignature<PRSImplType>( \
-        DeviceType                           Type,                                       \
-        const PipelineResourceSignatureDesc& Desc,                                       \
+#define INSTANTIATE_CREATE_DEVICE_SIGNATURE(PRSImplType)                               \
+    template void SerializedResourceSignatureImpl::CreateDeviceSignature<PRSImplType>( \
+        DeviceType                           Type,                                     \
+        const PipelineResourceSignatureDesc& Desc,                                     \
         SHADER_TYPE                          ShaderStages)
 #define DECLARE_CREATE_DEVICE_SIGNATURE(PRSImplType) extern INSTANTIATE_CREATE_DEVICE_SIGNATURE(PRSImplType)
 

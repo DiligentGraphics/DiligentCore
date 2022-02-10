@@ -33,13 +33,13 @@
 #include "PipelineStateD3D11Impl.hpp"
 #include "ShaderD3D11Impl.hpp"
 #include "DeviceObjectArchiveD3D11Impl.hpp"
-#include "SerializablePipelineStateImpl.hpp"
+#include "SerializedPipelineStateImpl.hpp"
 
 namespace Diligent
 {
 
 template <>
-struct SerializableResourceSignatureImpl::SignatureTraits<PipelineResourceSignatureD3D11Impl>
+struct SerializedResourceSignatureImpl::SignatureTraits<PipelineResourceSignatureD3D11Impl>
 {
     static constexpr DeviceType Type = DeviceType::Direct3D11;
     using InternalDataType           = PipelineResourceSignatureInternalDataD3D11;
@@ -51,7 +51,7 @@ struct SerializableResourceSignatureImpl::SignatureTraits<PipelineResourceSignat
 namespace
 {
 
-struct CompiledShaderD3D11 : SerializableShaderImpl::CompiledShader
+struct CompiledShaderD3D11 : SerializedShaderImpl::CompiledShader
 {
     ShaderD3D11Impl ShaderD3D11;
 
@@ -64,23 +64,23 @@ struct ShaderStageInfoD3D11
 {
     ShaderStageInfoD3D11() {}
 
-    ShaderStageInfoD3D11(const SerializableShaderImpl* _pShader) :
+    ShaderStageInfoD3D11(const SerializedShaderImpl* _pShader) :
         Type{_pShader->GetDesc().ShaderType},
         pShader{GetShaderD3D11(_pShader)},
-        pSerializable{_pShader}
+        pSerialized{_pShader}
     {}
 
     // Needed only for ray tracing
-    void Append(const SerializableShaderImpl*) {}
+    void Append(const SerializedShaderImpl*) {}
 
     constexpr Uint32 Count() const { return 1; }
 
-    SHADER_TYPE                   Type          = SHADER_TYPE_UNKNOWN;
-    ShaderD3D11Impl*              pShader       = nullptr;
-    const SerializableShaderImpl* pSerializable = nullptr;
+    SHADER_TYPE                 Type        = SHADER_TYPE_UNKNOWN;
+    ShaderD3D11Impl*            pShader     = nullptr;
+    const SerializedShaderImpl* pSerialized = nullptr;
 
 private:
-    static ShaderD3D11Impl* GetShaderD3D11(const SerializableShaderImpl* pShader)
+    static ShaderD3D11Impl* GetShaderD3D11(const SerializedShaderImpl* pShader)
     {
         auto* pCompiledShaderD3D11 = pShader->GetShader<CompiledShaderD3D11>(DeviceObjectArchiveBase::DeviceType::Direct3D11);
         return pCompiledShaderD3D11 != nullptr ? &pCompiledShaderD3D11->ShaderD3D11 : nullptr;
@@ -105,11 +105,11 @@ void InitD3D11ShaderResourceCounters(const GraphicsPipelineStateCreateInfo& Crea
 
 
 template <typename CreateInfoType>
-void SerializablePipelineStateImpl::PatchShadersD3D11(const CreateInfoType& CreateInfo) noexcept(false)
+void SerializedPipelineStateImpl::PatchShadersD3D11(const CreateInfoType& CreateInfo) noexcept(false)
 {
     std::vector<ShaderStageInfoD3D11> ShaderStages;
     SHADER_TYPE                       ActiveShaderStages = SHADER_TYPE_UNKNOWN;
-    PipelineStateD3D11Impl::ExtractShaders<SerializableShaderImpl>(CreateInfo, ShaderStages, ActiveShaderStages);
+    PipelineStateD3D11Impl::ExtractShaders<SerializedShaderImpl>(CreateInfo, ShaderStages, ActiveShaderStages);
 
     std::vector<ShaderD3D11Impl*> ShadersD3D11{ShaderStages.size()};
     for (size_t i = 0; i < ShadersD3D11.size(); ++i)
@@ -162,7 +162,7 @@ void SerializablePipelineStateImpl::PatchShadersD3D11(const CreateInfoType& Crea
     VERIFY_EXPR(m_Data.Shaders[static_cast<size_t>(DeviceType::Direct3D11)].empty());
     for (size_t i = 0; i < ShadersD3D11.size(); ++i)
     {
-        const auto& CI        = ShaderStages[i].pSerializable->GetCreateInfo();
+        const auto& CI        = ShaderStages[i].pSerialized->GetCreateInfo();
         const auto& pBytecode = ShaderBytecode[i];
 
         SerializeShaderBytecode(DeviceType::Direct3D11, CI, pBytecode->GetBufferPointer(), pBytecode->GetBufferSize());
@@ -173,7 +173,7 @@ void SerializablePipelineStateImpl::PatchShadersD3D11(const CreateInfoType& Crea
 INSTANTIATE_PATCH_SHADER_METHODS(PatchShadersD3D11)
 INSTANTIATE_DEVICE_SIGNATURE_METHODS(PipelineResourceSignatureD3D11Impl)
 
-void SerializableShaderImpl::CreateShaderD3D11(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI, String& CompilationLog)
+void SerializedShaderImpl::CreateShaderD3D11(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI, String& CompilationLog)
 {
     const ShaderD3D11Impl::CreateInfo D3D11ShaderCI{
         m_pDevice->GetDeviceInfo(),

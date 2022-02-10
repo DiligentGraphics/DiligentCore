@@ -37,11 +37,11 @@ namespace Diligent
 {
 
 class SerializationDeviceImpl;
-class SerializableShaderImpl;
-class SerializableRenderPassImpl;
-class SerializableResourceSignatureImpl;
-class SerializablePipelineStateImpl;
-class SerializableObjectStub
+class SerializedShaderImpl;
+class SerializedRenderPassImpl;
+class SerializedResourceSignatureImpl;
+class SerializedPipelineStateImpl;
+class SerializedObjectStub
 {};
 
 struct SerializationEngineImplTraits
@@ -72,26 +72,26 @@ struct SerializationEngineImplTraits
 
     using RenderDeviceImplType              = SerializationDeviceImpl;
     using DeviceContextImplType             = IDeviceContext;
-    using PipelineStateImplType             = SerializablePipelineStateImpl;
-    using ShaderResourceBindingImplType     = SerializableObjectStub;
-    using BufferImplType                    = SerializableObjectStub;
-    using BufferViewImplType                = SerializableObjectStub;
-    using TextureImplType                   = SerializableObjectStub;
-    using TextureViewImplType               = SerializableObjectStub;
-    using ShaderImplType                    = SerializableShaderImpl;
-    using SamplerImplType                   = SerializableObjectStub;
-    using FenceImplType                     = SerializableObjectStub;
-    using QueryImplType                     = SerializableObjectStub;
-    using RenderPassImplType                = SerializableRenderPassImpl;
-    using FramebufferImplType               = SerializableObjectStub;
-    using CommandListImplType               = SerializableObjectStub;
-    using BottomLevelASImplType             = SerializableObjectStub;
-    using TopLevelASImplType                = SerializableObjectStub;
-    using ShaderBindingTableImplType        = SerializableObjectStub;
-    using PipelineResourceSignatureImplType = SerializableResourceSignatureImpl;
-    using DeviceMemoryImplType              = SerializableObjectStub;
-    using PipelineStateCacheImplType        = SerializableObjectStub;
-    using DeviceObjectArchiveImplType       = SerializableObjectStub;
+    using PipelineStateImplType             = SerializedPipelineStateImpl;
+    using ShaderResourceBindingImplType     = SerializedObjectStub;
+    using BufferImplType                    = SerializedObjectStub;
+    using BufferViewImplType                = SerializedObjectStub;
+    using TextureImplType                   = SerializedObjectStub;
+    using TextureViewImplType               = SerializedObjectStub;
+    using ShaderImplType                    = SerializedShaderImpl;
+    using SamplerImplType                   = SerializedObjectStub;
+    using FenceImplType                     = SerializedObjectStub;
+    using QueryImplType                     = SerializedObjectStub;
+    using RenderPassImplType                = SerializedRenderPassImpl;
+    using FramebufferImplType               = SerializedObjectStub;
+    using CommandListImplType               = SerializedObjectStub;
+    using BottomLevelASImplType             = SerializedObjectStub;
+    using TopLevelASImplType                = SerializedObjectStub;
+    using ShaderBindingTableImplType        = SerializedObjectStub;
+    using PipelineResourceSignatureImplType = SerializedResourceSignatureImpl;
+    using DeviceMemoryImplType              = SerializedObjectStub;
+    using PipelineStateCacheImplType        = SerializedObjectStub;
+    using DeviceObjectArchiveImplType       = SerializedObjectStub;
 };
 
 } // namespace Diligent

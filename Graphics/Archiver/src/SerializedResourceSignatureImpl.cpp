@@ -24,7 +24,7 @@
  *  of the possibility of such damages.
  */
 
-#include "SerializableResourceSignatureImpl.hpp"
+#include "SerializedResourceSignatureImpl.hpp"
 #include "PipelineResourceSignatureBase.hpp"
 #include "SerializationDeviceImpl.hpp"
 #include "FixedLinearAllocator.hpp"
@@ -36,11 +36,11 @@ namespace Diligent
 
 DeviceObjectArchiveBase::DeviceType ArchiveDeviceDataFlagToArchiveDeviceType(ARCHIVE_DEVICE_DATA_FLAGS DataTypeFlag);
 
-SerializableResourceSignatureImpl::SerializableResourceSignatureImpl(IReferenceCounters*                  pRefCounters,
-                                                                     SerializationDeviceImpl*             pDevice,
-                                                                     const PipelineResourceSignatureDesc& Desc,
-                                                                     const ResourceSignatureArchiveInfo&  ArchiveInfo,
-                                                                     SHADER_TYPE                          ShaderStages) :
+SerializedResourceSignatureImpl::SerializedResourceSignatureImpl(IReferenceCounters*                  pRefCounters,
+                                                                 SerializationDeviceImpl*             pDevice,
+                                                                 const PipelineResourceSignatureDesc& Desc,
+                                                                 const ResourceSignatureArchiveInfo&  ArchiveInfo,
+                                                                 SHADER_TYPE                          ShaderStages) :
     TBase{pRefCounters},
     m_Name{Desc.Name}
 {
@@ -104,17 +104,17 @@ SerializableResourceSignatureImpl::SerializableResourceSignatureImpl(IReferenceC
     }
 }
 
-SerializableResourceSignatureImpl::SerializableResourceSignatureImpl(IReferenceCounters* pRefCounters, const char* Name) noexcept :
+SerializedResourceSignatureImpl::SerializedResourceSignatureImpl(IReferenceCounters* pRefCounters, const char* Name) noexcept :
     TBase{pRefCounters},
     m_Name{Name}
 {
 }
 
-SerializableResourceSignatureImpl::~SerializableResourceSignatureImpl()
+SerializedResourceSignatureImpl::~SerializedResourceSignatureImpl()
 {
 }
 
-void DILIGENT_CALL_TYPE SerializableResourceSignatureImpl::QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)
+void DILIGENT_CALL_TYPE SerializedResourceSignatureImpl::QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)
 {
     if (ppInterface == nullptr)
         return;
@@ -130,7 +130,7 @@ void DILIGENT_CALL_TYPE SerializableResourceSignatureImpl::QueryInterface(const 
 }
 
 
-const PipelineResourceSignatureDesc& SerializableResourceSignatureImpl::GetDesc() const
+const PipelineResourceSignatureDesc& SerializedResourceSignatureImpl::GetDesc() const
 {
     if (m_pDesc != nullptr)
         return *m_pDesc;
@@ -141,7 +141,7 @@ const PipelineResourceSignatureDesc& SerializableResourceSignatureImpl::GetDesc(
 }
 
 
-void SerializableResourceSignatureImpl::InitCommonData(const PipelineResourceSignatureDesc& Desc)
+void SerializedResourceSignatureImpl::InitCommonData(const PipelineResourceSignatureDesc& Desc)
 {
     VERIFY(m_Name == Desc.Name, "Inconsistent signature name");
 
@@ -163,7 +163,7 @@ void SerializableResourceSignatureImpl::InitCommonData(const PipelineResourceSig
     }
 }
 
-bool SerializableResourceSignatureImpl::IsCompatible(const SerializableResourceSignatureImpl& Rhs, ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags) const
+bool SerializedResourceSignatureImpl::IsCompatible(const SerializedResourceSignatureImpl& Rhs, ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags) const
 {
     while (DeviceFlags != ARCHIVE_DEVICE_DATA_FLAG_NONE)
     {
@@ -181,7 +181,7 @@ bool SerializableResourceSignatureImpl::IsCompatible(const SerializableResourceS
     return true;
 }
 
-bool SerializableResourceSignatureImpl::operator==(const SerializableResourceSignatureImpl& Rhs) const
+bool SerializedResourceSignatureImpl::operator==(const SerializedResourceSignatureImpl& Rhs) const
 {
     if (GetCommonData() != Rhs.GetCommonData())
         return false;
@@ -202,7 +202,7 @@ bool SerializableResourceSignatureImpl::operator==(const SerializableResourceSig
     return true;
 }
 
-size_t SerializableResourceSignatureImpl::CalcHash() const
+size_t SerializedResourceSignatureImpl::CalcHash() const
 {
     auto Hash = m_Hash.load();
     if (Hash != 0)

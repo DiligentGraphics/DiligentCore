@@ -24,7 +24,7 @@
  *  of the possibility of such damages.
  */
 
-#include "SerializableShaderImpl.hpp"
+#include "SerializedShaderImpl.hpp"
 #include "SerializationDeviceImpl.hpp"
 #include "FixedLinearAllocator.hpp"
 #include "EngineMemory.h"
@@ -35,10 +35,10 @@
 namespace Diligent
 {
 
-SerializableShaderImpl::SerializableShaderImpl(IReferenceCounters*       pRefCounters,
-                                               SerializationDeviceImpl*  pDevice,
-                                               const ShaderCreateInfo&   ShaderCI,
-                                               ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags) :
+SerializedShaderImpl::SerializedShaderImpl(IReferenceCounters*       pRefCounters,
+                                           SerializationDeviceImpl*  pDevice,
+                                           const ShaderCreateInfo&   ShaderCI,
+                                           ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags) :
     TBase{pRefCounters},
     m_pDevice{pDevice},
     m_CreateInfo{ShaderCI}
@@ -118,7 +118,7 @@ SerializableShaderImpl::SerializableShaderImpl(IReferenceCounters*       pRefCou
     }
 }
 
-void SerializableShaderImpl::CopyShaderCreateInfo(const ShaderCreateInfo& ShaderCI) noexcept(false)
+void SerializedShaderImpl::CopyShaderCreateInfo(const ShaderCreateInfo& ShaderCI) noexcept(false)
 {
     m_CreateInfo.ppCompilerOutput           = nullptr;
     m_CreateInfo.FilePath                   = nullptr;
@@ -233,10 +233,10 @@ void SerializableShaderImpl::CopyShaderCreateInfo(const ShaderCreateInfo& Shader
     }
 }
 
-SerializableShaderImpl::~SerializableShaderImpl()
+SerializedShaderImpl::~SerializedShaderImpl()
 {}
 
-void DILIGENT_CALL_TYPE SerializableShaderImpl::QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)
+void DILIGENT_CALL_TYPE SerializedShaderImpl::QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)
 {
     if (ppInterface == nullptr)
         return;

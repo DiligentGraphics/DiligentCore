@@ -33,14 +33,14 @@
 #include "PipelineStateD3D12Impl.hpp"
 #include "ShaderD3D12Impl.hpp"
 #include "DeviceObjectArchiveD3D12Impl.hpp"
-#include "SerializablePipelineStateImpl.hpp"
+#include "SerializedPipelineStateImpl.hpp"
 
 namespace Diligent
 {
 namespace
 {
 
-struct CompiledShaderD3D12 : SerializableShaderImpl::CompiledShader
+struct CompiledShaderD3D12 : SerializedShaderImpl::CompiledShader
 {
     ShaderD3D12Impl ShaderD3D12;
 
@@ -49,7 +49,7 @@ struct CompiledShaderD3D12 : SerializableShaderImpl::CompiledShader
     {}
 };
 
-inline const ShaderD3D12Impl* GetShaderD3D12(const SerializableShaderImpl* pShader)
+inline const ShaderD3D12Impl* GetShaderD3D12(const SerializedShaderImpl* pShader)
 {
     const auto* pCompiledShaderD3D12 = pShader->GetShader<const CompiledShaderD3D12>(DeviceObjectArchiveBase::DeviceType::Direct3D12);
     return pCompiledShaderD3D12 != nullptr ? &pCompiledShaderD3D12->ShaderD3D12 : nullptr;
@@ -60,23 +60,23 @@ struct ShaderStageInfoD3D12 : PipelineStateD3D12Impl::ShaderStageInfo
     ShaderStageInfoD3D12() :
         ShaderStageInfo{} {}
 
-    ShaderStageInfoD3D12(const SerializableShaderImpl* pShader) :
+    ShaderStageInfoD3D12(const SerializedShaderImpl* pShader) :
         ShaderStageInfo{GetShaderD3D12(pShader)},
-        Serializable{pShader}
+        Serialized{pShader}
     {}
 
-    void Append(const SerializableShaderImpl* pShader)
+    void Append(const SerializedShaderImpl* pShader)
     {
         ShaderStageInfo::Append(GetShaderD3D12(pShader));
-        Serializable.push_back(pShader);
+        Serialized.push_back(pShader);
     }
 
-    std::vector<const SerializableShaderImpl*> Serializable;
+    std::vector<const SerializedShaderImpl*> Serialized;
 };
 } // namespace
 
 template <>
-struct SerializableResourceSignatureImpl::SignatureTraits<PipelineResourceSignatureD3D12Impl>
+struct SerializedResourceSignatureImpl::SignatureTraits<PipelineResourceSignatureD3D12Impl>
 {
     static constexpr DeviceType Type = DeviceType::Direct3D12;
 
@@ -85,11 +85,11 @@ struct SerializableResourceSignatureImpl::SignatureTraits<PipelineResourceSignat
 };
 
 template <typename CreateInfoType>
-void SerializablePipelineStateImpl::PatchShadersD3D12(const CreateInfoType& CreateInfo) noexcept(false)
+void SerializedPipelineStateImpl::PatchShadersD3D12(const CreateInfoType& CreateInfo) noexcept(false)
 {
     std::vector<ShaderStageInfoD3D12> ShaderStages;
     SHADER_TYPE                       ActiveShaderStages = SHADER_TYPE_UNKNOWN;
-    PipelineStateD3D12Impl::ExtractShaders<SerializableShaderImpl>(CreateInfo, ShaderStages, ActiveShaderStages);
+    PipelineStateD3D12Impl::ExtractShaders<SerializedShaderImpl>(CreateInfo, ShaderStages, ActiveShaderStages);
 
     PipelineStateD3D12Impl::TShaderStages ShaderStagesD3D12{ShaderStages.size()};
     for (size_t i = 0; i < ShaderStagesD3D12.size(); ++i)
@@ -134,7 +134,7 @@ void SerializablePipelineStateImpl::PatchShadersD3D12(const CreateInfoType& Crea
         const auto& Stage = ShaderStagesD3D12[j];
         for (size_t i = 0; i < Stage.Count(); ++i)
         {
-            const auto& CI        = ShaderStages[j].Serializable[i]->GetCreateInfo();
+            const auto& CI        = ShaderStages[j].Serialized[i]->GetCreateInfo();
             const auto& pBytecode = Stage.ByteCodes[i];
 
             SerializeShaderBytecode(DeviceType::Direct3D12, CI, pBytecode->GetBufferPointer(), pBytecode->GetBufferSize());
@@ -146,7 +146,7 @@ INSTANTIATE_PATCH_SHADER_METHODS(PatchShadersD3D12)
 INSTANTIATE_DEVICE_SIGNATURE_METHODS(PipelineResourceSignatureD3D12Impl)
 
 
-void SerializableShaderImpl::CreateShaderD3D12(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI, String& CompilationLog)
+void SerializedShaderImpl::CreateShaderD3D12(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI, String& CompilationLog)
 {
     const auto& D3D12Props  = m_pDevice->GetD3D12Properties();
     const auto& DeviceInfo  = m_pDevice->GetDeviceInfo();
@@ -191,11 +191,11 @@ void SerializationDeviceImpl::GetPipelineResourceBindingsD3D12(const PipelineRes
     }
 }
 
-void SerializablePipelineStateImpl::ExtractShadersD3D12(const RayTracingPipelineStateCreateInfo& CreateInfo, RayTracingShaderMapType& ShaderMap)
+void SerializedPipelineStateImpl::ExtractShadersD3D12(const RayTracingPipelineStateCreateInfo& CreateInfo, RayTracingShaderMapType& ShaderMap)
 {
     std::vector<ShaderStageInfoD3D12> ShaderStages;
     SHADER_TYPE                       ActiveShaderStages = SHADER_TYPE_UNKNOWN;
-    PipelineStateD3D12Impl::ExtractShaders<SerializableShaderImpl>(CreateInfo, ShaderStages, ActiveShaderStages);
+    PipelineStateD3D12Impl::ExtractShaders<SerializedShaderImpl>(CreateInfo, ShaderStages, ActiveShaderStages);
 
     GetRayTracingShaderMap(ShaderStages, ShaderMap);
 }

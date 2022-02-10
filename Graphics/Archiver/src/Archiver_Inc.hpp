@@ -42,15 +42,15 @@ template <typename SignatureType>
 using SignatureArray = std::array<RefCntAutoPtr<SignatureType>, MAX_RESOURCE_SIGNATURES>;
 
 template <typename SignatureType>
-void SortResourceSignatures(IPipelineResourceSignature**                  ppSrcSignatures,
-                            Uint32                                        SrcSignaturesCount,
-                            SignatureArray<SignatureType>&                SortedSignatures,
-                            Uint32&                                       SortedSignaturesCount,
-                            SerializableResourceSignatureImpl::DeviceType Type)
+void SortResourceSignatures(IPipelineResourceSignature**                ppSrcSignatures,
+                            Uint32                                      SrcSignaturesCount,
+                            SignatureArray<SignatureType>&              SortedSignatures,
+                            Uint32&                                     SortedSignaturesCount,
+                            SerializedResourceSignatureImpl::DeviceType Type)
 {
     for (Uint32 i = 0; i < SrcSignaturesCount; ++i)
     {
-        const auto* pSerPRS = ClassPtrCast<SerializableResourceSignatureImpl>(ppSrcSignatures[i]);
+        const auto* pSerPRS = ClassPtrCast<SerializedResourceSignatureImpl>(ppSrcSignatures[i]);
         VERIFY_EXPR(pSerPRS != nullptr);
 
         const auto& Desc = pSerPRS->GetDesc();
@@ -68,7 +68,7 @@ void SortResourceSignatures(IPipelineResourceSignature**   ppSrcSignatures,
                             SignatureArray<SignatureType>& SortedSignatures,
                             Uint32&                        SortedSignaturesCount)
 {
-    constexpr auto Type = SerializableResourceSignatureImpl::SignatureTraits<SignatureType>::Type;
+    constexpr auto Type = SerializedResourceSignatureImpl::SignatureTraits<SignatureType>::Type;
     SortResourceSignatures<SignatureType>(ppSrcSignatures, SrcSignaturesCount,
                                           SortedSignatures, SortedSignaturesCount,
                                           Type);
@@ -77,17 +77,17 @@ void SortResourceSignatures(IPipelineResourceSignature**   ppSrcSignatures,
 } // namespace
 
 template <typename PipelineStateImplType, typename SignatureImplType, typename ShaderStagesArrayType, typename... ExtraArgsType>
-void SerializablePipelineStateImpl::CreateDefaultResourceSignature(DeviceType                   Type,
-                                                                   const PipelineStateDesc&     PSODesc,
-                                                                   SHADER_TYPE                  ActiveShaderStageFlags,
-                                                                   const ShaderStagesArrayType& ShaderStages,
-                                                                   const ExtraArgsType&... ExtraArgs)
+void SerializedPipelineStateImpl::CreateDefaultResourceSignature(DeviceType                   Type,
+                                                                 const PipelineStateDesc&     PSODesc,
+                                                                 SHADER_TYPE                  ActiveShaderStageFlags,
+                                                                 const ShaderStagesArrayType& ShaderStages,
+                                                                 const ExtraArgsType&... ExtraArgs)
 {
     auto SignDesc = PipelineStateImplType::GetDefaultResourceSignatureDesc(ShaderStages, PSODesc.Name, PSODesc.ResourceLayout, PSODesc.SRBAllocationGranularity, ExtraArgs...);
     if (!m_pDefaultSignature)
     {
-        // Create empty serializable signature
-        m_pSerializationDevice->CreateSerializableResourceSignature(&m_pDefaultSignature, SignDesc.Get().Name);
+        // Create empty serialized signature
+        m_pSerializationDevice->CreateSerializedResourceSignature(&m_pDefaultSignature, SignDesc.Get().Name);
         if (!m_pDefaultSignature)
             LOG_ERROR_AND_THROW("Failed to create default resource signature for PSO '", PSODesc.Name, "'.");
     }
@@ -101,12 +101,12 @@ void SerializablePipelineStateImpl::CreateDefaultResourceSignature(DeviceType   
 }
 
 template <typename ShaderType, typename... ArgTypes>
-void SerializableShaderImpl::CreateShader(DeviceType          Type,
-                                          String&             CompilationLog,
-                                          const char*         DeviceTypeName,
-                                          IReferenceCounters* pRefCounters,
-                                          ShaderCreateInfo    ShaderCI, // Need a copy
-                                          const ArgTypes&... Args)
+void SerializedShaderImpl::CreateShader(DeviceType          Type,
+                                        String&             CompilationLog,
+                                        const char*         DeviceTypeName,
+                                        IReferenceCounters* pRefCounters,
+                                        ShaderCreateInfo    ShaderCI, // Need a copy
+                                        const ArgTypes&... Args)
 {
     // Mem leak when used RefCntAutoPtr
     RefCntAutoPtr<IDataBlob> pLog;
@@ -129,7 +129,7 @@ void SerializableShaderImpl::CreateShader(DeviceType          Type,
 
 
 template <typename ImplType>
-struct SerializableResourceSignatureImpl::TPRS final : PRSWapperBase
+struct SerializedResourceSignatureImpl::TPRS final : PRSWapperBase
 {
     ImplType PRS;
 
@@ -142,9 +142,9 @@ struct SerializableResourceSignatureImpl::TPRS final : PRSWapperBase
 
 
 template <typename SignatureImplType>
-void SerializableResourceSignatureImpl::CreateDeviceSignature(DeviceType                           Type,
-                                                              const PipelineResourceSignatureDesc& Desc,
-                                                              SHADER_TYPE                          ShaderStages)
+void SerializedResourceSignatureImpl::CreateDeviceSignature(DeviceType                           Type,
+                                                            const PipelineResourceSignatureDesc& Desc,
+                                                            SHADER_TYPE                          ShaderStages)
 {
     using Traits                = SignatureTraits<SignatureImplType>;
     using MeasureSerializerType = typename Traits::template PRSSerializerType<SerializerMode::Measure>;

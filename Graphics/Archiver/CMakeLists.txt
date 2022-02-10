@@ -6,10 +6,10 @@ set(INCLUDE
     include/ArchiverImpl.hpp
     include/ArchiveRepacker.hpp
     include/SerializationDeviceImpl.hpp
-    include/SerializableShaderImpl.hpp
-    include/SerializablePipelineStateImpl.hpp
-    include/SerializableRenderPassImpl.hpp
-    include/SerializableResourceSignatureImpl.hpp
+    include/SerializedShaderImpl.hpp
+    include/SerializedPipelineStateImpl.hpp
+    include/SerializedRenderPassImpl.hpp
+    include/SerializedResourceSignatureImpl.hpp
     include/SerializationEngineImplTraits.hpp
 )
 
@@ -26,10 +26,10 @@ set(SOURCE
     src/ArchiverFactory.cpp
     src/ArchiveRepacker.cpp
     src/SerializationDeviceImpl.cpp
-    src/SerializableShaderImpl.cpp
-    src/SerializablePipelineStateImpl.cpp
-    src/SerializableResourceSignatureImpl.cpp
-    src/SerializableRenderPassImpl.cpp
+    src/SerializedShaderImpl.cpp
+    src/SerializedPipelineStateImpl.cpp
+    src/SerializedResourceSignatureImpl.cpp
+    src/SerializedRenderPassImpl.cpp
 )
 
 if(D3D11_SUPPORTED)

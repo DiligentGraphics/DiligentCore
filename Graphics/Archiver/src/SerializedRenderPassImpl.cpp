@@ -24,7 +24,7 @@
  *  of the possibility of such damages.
  */
 
-#include "SerializableRenderPassImpl.hpp"
+#include "SerializedRenderPassImpl.hpp"
 #include "DeviceObjectArchiveBase.hpp"
 #include "PSOSerializer.hpp"
 #include "SerializationDeviceImpl.hpp"
@@ -32,9 +32,9 @@
 namespace Diligent
 {
 
-SerializableRenderPassImpl::SerializableRenderPassImpl(IReferenceCounters*      pRefCounters,
-                                                       SerializationDeviceImpl* pDevice,
-                                                       const RenderPassDesc&    Desc) :
+SerializedRenderPassImpl::SerializedRenderPassImpl(IReferenceCounters*      pRefCounters,
+                                                   SerializationDeviceImpl* pDevice,
+                                                   const RenderPassDesc&    Desc) :
     TBase{pRefCounters, pDevice, Desc, true}
 {
     Serializer<SerializerMode::Measure> MeasureSer;
@@ -47,15 +47,15 @@ SerializableRenderPassImpl::SerializableRenderPassImpl(IReferenceCounters*      
     VERIFY_EXPR(Ser.IsEnded());
 }
 
-SerializableRenderPassImpl::~SerializableRenderPassImpl()
+SerializedRenderPassImpl::~SerializedRenderPassImpl()
 {}
 
-bool SerializableRenderPassImpl::operator==(const SerializableRenderPassImpl& Rhs) const
+bool SerializedRenderPassImpl::operator==(const SerializedRenderPassImpl& Rhs) const
 {
     return GetCommonData() == Rhs.GetCommonData();
 }
 
-void DILIGENT_CALL_TYPE SerializableRenderPassImpl::QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)
+void DILIGENT_CALL_TYPE SerializedRenderPassImpl::QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)
 {
     if (ppInterface == nullptr)
         return;

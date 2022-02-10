@@ -26,6 +26,9 @@
 
 #pragma once
 
+#include <vector>
+#include <memory>
+
 #include "SerializationEngineImplTraits.hpp"
 #include "ObjectBase.hpp"
 #include "DXCompiler.hpp"
@@ -117,12 +120,12 @@ public:
                                                             const PipelineStateArchiveInfo&    ArchiveInfo,
                                                             IPipelineState**                   ppPipelineState) override final;
 
-    void CreateSerializableResourceSignature(const PipelineResourceSignatureDesc& Desc,
-                                             const ResourceSignatureArchiveInfo&  ArchiveInfo,
-                                             SHADER_TYPE                          ShaderStages,
-                                             SerializableResourceSignatureImpl**  ppSignature);
+    void CreateSerializedResourceSignature(const PipelineResourceSignatureDesc& Desc,
+                                           const ResourceSignatureArchiveInfo&  ArchiveInfo,
+                                           SHADER_TYPE                          ShaderStages,
+                                           SerializedResourceSignatureImpl**    ppSignature);
 
-    void CreateSerializableResourceSignature(SerializableResourceSignatureImpl** ppSignature, const char* Name);
+    void CreateSerializedResourceSignature(SerializedResourceSignatureImpl** ppSignature, const char* Name);
 
     virtual void DILIGENT_CALL_TYPE GetPipelineResourceBindings(const PipelineResourceBindingAttribs& Attribs,
                                                                 Uint32&                               NumBindings,

@@ -26,10 +26,10 @@
 
 #include <bitset>
 
-#include "SerializablePipelineStateImpl.hpp"
+#include "SerializedPipelineStateImpl.hpp"
 #include "Constants.h"
 #include "SerializationDeviceImpl.hpp"
-#include "SerializableResourceSignatureImpl.hpp"
+#include "SerializedResourceSignatureImpl.hpp"
 #include "PSOSerializer.hpp"
 #include "ShaderToolsCommon.hpp"
 
@@ -108,15 +108,15 @@ void SerializePSOCreateInfo(Serializer<Mode>&                                 Se
                             const RayTracingPipelineStateCreateInfo&          PSOCreateInfo,
                             std::array<const char*, MAX_RESOURCE_SIGNATURES>& PRSNames)
 {
-    using RayTracingShaderMapType = SerializablePipelineStateImpl::RayTracingShaderMapType;
+    using RayTracingShaderMapType = SerializedPipelineStateImpl::RayTracingShaderMapType;
     RayTracingShaderMapType ShaderMapVk;
     RayTracingShaderMapType ShaderMapD3D12;
 #if VULKAN_SUPPORTED
-    SerializablePipelineStateImpl::ExtractShadersVk(PSOCreateInfo, ShaderMapVk);
+    SerializedPipelineStateImpl::ExtractShadersVk(PSOCreateInfo, ShaderMapVk);
     VERIFY_EXPR(!ShaderMapVk.empty());
 #endif
 #if D3D12_SUPPORTED
-    SerializablePipelineStateImpl::ExtractShadersD3D12(PSOCreateInfo, ShaderMapD3D12);
+    SerializedPipelineStateImpl::ExtractShadersD3D12(PSOCreateInfo, ShaderMapD3D12);
     VERIFY_EXPR(!ShaderMapD3D12.empty());
 #endif
 
@@ -157,10 +157,10 @@ IRenderPass* RenderPassFromCI(const GraphicsPipelineStateCreateInfo& CreateInfo)
 } // namespace
 
 template <typename PSOCreateInfoType>
-SerializablePipelineStateImpl::SerializablePipelineStateImpl(IReferenceCounters*             pRefCounters,
-                                                             SerializationDeviceImpl*        pDevice,
-                                                             const PSOCreateInfoType&        CreateInfo,
-                                                             const PipelineStateArchiveInfo& ArchiveInfo) :
+SerializedPipelineStateImpl::SerializedPipelineStateImpl(IReferenceCounters*             pRefCounters,
+                                                         SerializationDeviceImpl*        pDevice,
+                                                         const PSOCreateInfoType&        CreateInfo,
+                                                         const PipelineStateArchiveInfo& ArchiveInfo) :
     TBase{pRefCounters},
     m_pSerializationDevice{pDevice},
     m_Name{CreateInfo.PSODesc.Name != nullptr ? CreateInfo.PSODesc.Name : ""},
@@ -286,10 +286,10 @@ INSTANTIATE_SERIALIZED_PSO_CTOR(ComputePipelineStateCreateInfo);
 INSTANTIATE_SERIALIZED_PSO_CTOR(TilePipelineStateCreateInfo);
 INSTANTIATE_SERIALIZED_PSO_CTOR(RayTracingPipelineStateCreateInfo);
 
-SerializablePipelineStateImpl::~SerializablePipelineStateImpl()
+SerializedPipelineStateImpl::~SerializedPipelineStateImpl()
 {}
 
-void DILIGENT_CALL_TYPE SerializablePipelineStateImpl::QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)
+void DILIGENT_CALL_TYPE SerializedPipelineStateImpl::QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)
 {
     if (ppInterface == nullptr)
         return;
@@ -304,10 +304,10 @@ void DILIGENT_CALL_TYPE SerializablePipelineStateImpl::QueryInterface(const INTE
     }
 }
 
-void SerializablePipelineStateImpl::SerializeShaderBytecode(DeviceType              Type,
-                                                            const ShaderCreateInfo& CI,
-                                                            const void*             Bytecode,
-                                                            size_t                  BytecodeSize)
+void SerializedPipelineStateImpl::SerializeShaderBytecode(DeviceType              Type,
+                                                          const ShaderCreateInfo& CI,
+                                                          const void*             Bytecode,
+                                                          size_t                  BytecodeSize)
 {
     constexpr SHADER_SOURCE_LANGUAGE SourceLanguage = SHADER_SOURCE_LANGUAGE_DEFAULT;
     constexpr SHADER_COMPILER        ShaderCompiler = SHADER_COMPILER_DEFAULT;
@@ -336,7 +336,7 @@ void SerializablePipelineStateImpl::SerializeShaderBytecode(DeviceType          
     m_Data.Shaders[static_cast<size_t>(Type)].emplace_back(std::move(ShaderData));
 }
 
-void SerializablePipelineStateImpl::SerializeShaderSource(DeviceType Type, const ShaderCreateInfo& CI)
+void SerializedPipelineStateImpl::SerializeShaderSource(DeviceType Type, const ShaderCreateInfo& CI)
 {
     VERIFY_EXPR(CI.SourceLength > 0);
 

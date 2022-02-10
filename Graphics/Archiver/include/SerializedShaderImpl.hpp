@@ -26,6 +26,9 @@
 
 #pragma once
 
+#include <memory>
+#include <array>
+
 #include "Shader.h"
 #include "SerializationEngineImplTraits.hpp"
 #include "ObjectBase.hpp"
@@ -48,17 +51,17 @@ class SPIRVShaderResources;
 using MtlArchiverResourceCounters = std::array<std::array<Uint16, 4>, 2>; // same as MtlResourceCounters
 #endif
 
-class SerializableShaderImpl final : public ObjectBase<IShader>
+class SerializedShaderImpl final : public ObjectBase<IShader>
 {
 public:
     using TBase      = ObjectBase<IShader>;
     using DeviceType = DeviceObjectArchiveBase::DeviceType;
 
-    SerializableShaderImpl(IReferenceCounters*       pRefCounters,
-                           SerializationDeviceImpl*  pDevice,
-                           const ShaderCreateInfo&   ShaderCI,
-                           ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags);
-    ~SerializableShaderImpl();
+    SerializedShaderImpl(IReferenceCounters*       pRefCounters,
+                         SerializationDeviceImpl*  pDevice,
+                         const ShaderCreateInfo&   ShaderCI,
+                         ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags);
+    ~SerializedShaderImpl();
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 

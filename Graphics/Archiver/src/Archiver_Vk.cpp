@@ -33,14 +33,14 @@
 #include "PipelineStateVkImpl.hpp"
 #include "ShaderVkImpl.hpp"
 #include "DeviceObjectArchiveVkImpl.hpp"
-#include "SerializablePipelineStateImpl.hpp"
+#include "SerializedPipelineStateImpl.hpp"
 
 namespace Diligent
 {
 namespace
 {
 
-struct CompiledShaderVk : SerializableShaderImpl::CompiledShader
+struct CompiledShaderVk : SerializedShaderImpl::CompiledShader
 {
     ShaderVkImpl ShaderVk;
 
@@ -49,7 +49,7 @@ struct CompiledShaderVk : SerializableShaderImpl::CompiledShader
     {}
 };
 
-inline const ShaderVkImpl* GetShaderVk(const SerializableShaderImpl* pShader)
+inline const ShaderVkImpl* GetShaderVk(const SerializedShaderImpl* pShader)
 {
     const auto* pCompiledShaderVk = pShader->GetShader<const CompiledShaderVk>(DeviceObjectArchiveBase::DeviceType::Vulkan);
     return pCompiledShaderVk != nullptr ? &pCompiledShaderVk->ShaderVk : nullptr;
@@ -60,24 +60,24 @@ struct ShaderStageInfoVk : PipelineStateVkImpl::ShaderStageInfo
     ShaderStageInfoVk() :
         ShaderStageInfo{} {}
 
-    ShaderStageInfoVk(const SerializableShaderImpl* pShader) :
+    ShaderStageInfoVk(const SerializedShaderImpl* pShader) :
         ShaderStageInfo{GetShaderVk(pShader)},
-        Serializable{pShader}
+        Serialized{pShader}
     {}
 
-    void Append(const SerializableShaderImpl* pShader)
+    void Append(const SerializedShaderImpl* pShader)
     {
         ShaderStageInfo::Append(GetShaderVk(pShader));
-        Serializable.push_back(pShader);
+        Serialized.push_back(pShader);
     }
 
-    std::vector<const SerializableShaderImpl*> Serializable;
+    std::vector<const SerializedShaderImpl*> Serialized;
 };
 } // namespace
 
 
 template <>
-struct SerializableResourceSignatureImpl::SignatureTraits<PipelineResourceSignatureVkImpl>
+struct SerializedResourceSignatureImpl::SignatureTraits<PipelineResourceSignatureVkImpl>
 {
     static constexpr DeviceType Type = DeviceType::Vulkan;
 
@@ -86,11 +86,11 @@ struct SerializableResourceSignatureImpl::SignatureTraits<PipelineResourceSignat
 };
 
 template <typename CreateInfoType>
-void SerializablePipelineStateImpl::PatchShadersVk(const CreateInfoType& CreateInfo) noexcept(false)
+void SerializedPipelineStateImpl::PatchShadersVk(const CreateInfoType& CreateInfo) noexcept(false)
 {
     std::vector<ShaderStageInfoVk> ShaderStages;
     SHADER_TYPE                    ActiveShaderStages = SHADER_TYPE_UNKNOWN;
-    PipelineStateVkImpl::ExtractShaders<SerializableShaderImpl>(CreateInfo, ShaderStages, ActiveShaderStages);
+    PipelineStateVkImpl::ExtractShaders<SerializedShaderImpl>(CreateInfo, ShaderStages, ActiveShaderStages);
 
     PipelineStateVkImpl::TShaderStages ShaderStagesVk{ShaderStages.size()};
     for (size_t i = 0; i < ShaderStagesVk.size(); ++i)
@@ -157,7 +157,7 @@ void SerializablePipelineStateImpl::PatchShadersVk(const CreateInfoType& CreateI
         const auto& Stage = ShaderStagesVk[j];
         for (size_t i = 0; i < Stage.Count(); ++i)
         {
-            const auto& CI    = ShaderStages[j].Serializable[i]->GetCreateInfo();
+            const auto& CI    = ShaderStages[j].Serialized[i]->GetCreateInfo();
             const auto& SPIRV = Stage.SPIRVs[i];
 
             SerializeShaderBytecode(DeviceType::Vulkan, CI, SPIRV.data(), SPIRV.size() * sizeof(SPIRV[0]));
@@ -168,7 +168,7 @@ void SerializablePipelineStateImpl::PatchShadersVk(const CreateInfoType& CreateI
 INSTANTIATE_PATCH_SHADER_METHODS(PatchShadersVk)
 INSTANTIATE_DEVICE_SIGNATURE_METHODS(PipelineResourceSignatureVkImpl)
 
-void SerializableShaderImpl::CreateShaderVk(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI, String& CompilationLog)
+void SerializedShaderImpl::CreateShaderVk(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI, String& CompilationLog)
 {
     const auto& VkProps     = m_pDevice->GetVkProperties();
     const auto& DeviceInfo  = m_pDevice->GetDeviceInfo();
@@ -221,11 +221,11 @@ void SerializationDeviceImpl::GetPipelineResourceBindingsVk(const PipelineResour
     VERIFY_EXPR(DescSetLayoutCount >= Info.ResourceSignaturesCount);
 }
 
-void SerializablePipelineStateImpl::ExtractShadersVk(const RayTracingPipelineStateCreateInfo& CreateInfo, RayTracingShaderMapType& ShaderMap)
+void SerializedPipelineStateImpl::ExtractShadersVk(const RayTracingPipelineStateCreateInfo& CreateInfo, RayTracingShaderMapType& ShaderMap)
 {
     std::vector<ShaderStageInfoVk> ShaderStages;
     SHADER_TYPE                    ActiveShaderStages = SHADER_TYPE_UNKNOWN;
-    PipelineStateVkImpl::ExtractShaders<SerializableShaderImpl>(CreateInfo, ShaderStages, ActiveShaderStages);
+    PipelineStateVkImpl::ExtractShaders<SerializedShaderImpl>(CreateInfo, ShaderStages, ActiveShaderStages);
 
     GetRayTracingShaderMap(ShaderStages, ShaderMap);
 }
