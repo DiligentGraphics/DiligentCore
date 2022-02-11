@@ -93,7 +93,7 @@ public:
     const SerializedData* GetDeviceData(DeviceType Type) const
     {
         VERIFY_EXPR(static_cast<Uint32>(Type) < DeviceCount);
-        auto& Wrpr = m_pDeviceSignatures[static_cast<size_t>(Type)];
+        const auto& Wrpr = m_pDeviceSignatures[static_cast<size_t>(Type)];
         return Wrpr ? &Wrpr->Data : nullptr;
     }
 

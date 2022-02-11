@@ -73,6 +73,7 @@ DeviceObjectArchiveBase::DeviceType ArchiveDeviceDataFlagToArchiveDeviceType(ARC
             return DeviceType::Count;
     }
 }
+
 namespace
 {
 

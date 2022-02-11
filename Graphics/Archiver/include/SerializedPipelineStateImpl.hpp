@@ -125,9 +125,9 @@ public:
     static void GetRayTracingShaderMap(const std::vector<ShaderStage>& ShaderStages, RayTracingShaderMapType& ShaderMap)
     {
         Uint32 ShaderIndex = 0;
-        for (auto& Stage : ShaderStages)
+        for (const auto& Stage : ShaderStages)
         {
-            for (auto* pShader : Stage.Serialized)
+            for (const auto* pShader : Stage.Serialized)
             {
                 if (ShaderMap.emplace(pShader, ShaderIndex).second)
                     ++ShaderIndex;

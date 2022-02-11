@@ -182,13 +182,17 @@ SerializedPipelineStateImpl::SerializedPipelineStateImpl(IReferenceCounters*    
     ValidatePipelineStateArchiveInfo(CreateInfo, ArchiveInfo, pDevice->GetValidDeviceFlags());
     ValidatePSOCreateInfo(pDevice, CreateInfo);
 
+    auto DeviceBits = ArchiveInfo.DeviceFlags;
+    if ((DeviceBits & ARCHIVE_DEVICE_DATA_FLAG_GL) != 0 && (DeviceBits & ARCHIVE_DEVICE_DATA_FLAG_GLES) != 0)
+    {
+        // OpenGL and GLES use the same device data. Clear one flag to avoid shader duplication.
+        DeviceBits &= ~ARCHIVE_DEVICE_DATA_FLAG_GLES;
+    }
+
     m_Data.Aux.NoShaderReflection = (ArchiveInfo.PSOFlags & PSO_ARCHIVE_FLAG_STRIP_REFLECTION) != 0;
-    for (auto DeviceBits = ArchiveInfo.DeviceFlags; DeviceBits != 0;)
+    while (DeviceBits != 0)
     {
         const auto Flag = ExtractLSB(DeviceBits);
-        static_assert(ARCHIVE_DEVICE_DATA_FLAG_GL < ARCHIVE_DEVICE_DATA_FLAG_GLES, "Unexpected flag values: GL should go before GLES");
-        if (Flag == ARCHIVE_DEVICE_DATA_FLAG_GL)
-            DeviceBits &= ~ARCHIVE_DEVICE_DATA_FLAG_GLES;
 
         static_assert(ARCHIVE_DEVICE_DATA_FLAG_LAST == ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS, "Please update the switch below to handle the new data type");
         switch (Flag)
@@ -265,17 +269,22 @@ SerializedPipelineStateImpl::SerializedPipelineStateImpl(IReferenceCounters*    
             PRSNames[i]     = pSignature->GetDesc().Name;
         }
 
+        auto SerializePsoCI = [&](auto& Ser) //
+        {
+            SerializePSOCreateInfo(Ser, CreateInfo, PRSNames);
+            constexpr auto SerMode = std::remove_reference<decltype(Ser)>::type::GetMode();
+            PSOSerializer<SerMode>::SerializeAuxData(Ser, m_Data.Aux, nullptr);
+        };
+
         {
             Serializer<SerializerMode::Measure> Ser;
-            SerializePSOCreateInfo(Ser, CreateInfo, PRSNames);
-            PSOSerializer<SerializerMode::Measure>::SerializeAuxData(Ser, m_Data.Aux, nullptr);
+            SerializePsoCI(Ser);
             m_Data.Common = Ser.AllocateData(GetRawAllocator());
         }
 
         {
             Serializer<SerializerMode::Write> Ser{m_Data.Common};
-            SerializePSOCreateInfo(Ser, CreateInfo, PRSNames);
-            PSOSerializer<SerializerMode::Write>::SerializeAuxData(Ser, m_Data.Aux, nullptr);
+            SerializePsoCI(Ser);
             VERIFY_EXPR(Ser.IsEnded());
         }
     }
@@ -318,15 +327,14 @@ void SerializedPipelineStateImpl::SerializeShaderBytecode(DeviceType            
         Ser.CopyBytes(Bytecode, BytecodeSize);
     };
 
-    auto MeasureSize = [&]() {
+    auto AllocateData = [&]() {
         Serializer<SerializerMode::Measure> Ser;
         SerializeShaderCI(Ser);
-        return Ser.GetSize();
+        return Ser.AllocateData(GetRawAllocator());
     };
-    const auto Size = MeasureSize();
 
     Data::ShaderInfo ShaderData;
-    ShaderData.Data = SerializedData{Size, GetRawAllocator()};
+    ShaderData.Data = AllocateData();
     ShaderData.Hash = ComputeHashRaw(Bytecode, BytecodeSize);
 
     Serializer<SerializerMode::Write> Ser{ShaderData.Data};
@@ -357,16 +365,15 @@ void SerializedPipelineStateImpl::SerializeShaderSource(DeviceType Type, const S
         Ser.CopyBytes(Source.c_str(), SourceSize);
     };
 
-    auto MeasureSize = [&]() //
+    auto AllocateData = [&]() //
     {
         Serializer<SerializerMode::Measure> Ser;
         SerializeShaderCI(Ser);
-        return Ser.GetSize();
+        return Ser.AllocateData(GetRawAllocator());
     };
-    const auto Size = MeasureSize();
 
     Data::ShaderInfo ShaderData;
-    ShaderData.Data = SerializedData{Size, GetRawAllocator()};
+    ShaderData.Data = AllocateData();
     ShaderData.Hash = ComputeHashRaw(pBytes, SourceSize);
 
     Serializer<SerializerMode::Write> Ser{ShaderData.Data};

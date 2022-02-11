@@ -148,10 +148,10 @@ public:
         const Uint32 MaxBufferFunctionArgumets = 31;
     };
 
-    const D3D11Properties& GetD3D11Properties() { return m_D3D11Props; }
-    const D3D12Properties& GetD3D12Properties() { return m_D3D12Props; }
-    const VkProperties&    GetVkProperties() { return m_VkProps; }
-    const MtlProperties&   GetMtlProperties() { return m_MtlProps; }
+    const D3D11Properties& GetD3D11Properties() const { return m_D3D11Props; }
+    const D3D12Properties& GetD3D12Properties() const { return m_D3D12Props; }
+    const VkProperties&    GetVkProperties() const { return m_VkProps; }
+    const MtlProperties&   GetMtlProperties() const { return m_MtlProps; }
 
     ARCHIVE_DEVICE_DATA_FLAGS GetValidDeviceFlags() const
     {

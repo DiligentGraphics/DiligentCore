@@ -261,6 +261,8 @@ public:
         return SerializedData{GetSize(), Allocator};
     }
 
+    static constexpr SerializerMode GetMode() { return Mode; }
+
 private:
     template <typename T>
     void Copy(T* pData, size_t Size);
