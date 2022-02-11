@@ -67,30 +67,18 @@ public:
 
     virtual const PipelineResourceSignatureDesc& DILIGENT_CALL_TYPE GetDesc() const override final;
 
-    virtual void DILIGENT_CALL_TYPE CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding,
-                                                                bool                     InitStaticResources) override final {}
-
-    virtual void DILIGENT_CALL_TYPE BindStaticResources(SHADER_TYPE                 ShaderStages,
-                                                        IResourceMapping*           pResourceMapping,
-                                                        BIND_SHADER_RESOURCES_FLAGS Flags) override final {}
-
-    virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetStaticVariableByName(SHADER_TYPE ShaderType,
-                                                                                const Char* Name) override final { return nullptr; }
-
-    virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetStaticVariableByIndex(SHADER_TYPE ShaderType,
-                                                                                 Uint32      Index) override final { return nullptr; }
-
-    virtual Uint32 DILIGENT_CALL_TYPE GetStaticVariableCount(SHADER_TYPE ShaderType) const override final { return 0; }
-
-    virtual void DILIGENT_CALL_TYPE InitializeStaticSRBResources(IShaderResourceBinding* pShaderResourceBinding) const override final {}
-
-    virtual bool DILIGENT_CALL_TYPE IsCompatibleWith(const IPipelineResourceSignature* pPRS) const override final { return false; }
-
-    virtual Int32 DILIGENT_CALL_TYPE GetUniqueID() const override final { return 0; }
-
-    virtual void DILIGENT_CALL_TYPE SetUserData(IObject* pUserData) override final {}
-
-    virtual IObject* DILIGENT_CALL_TYPE GetUserData() const override final { return nullptr; }
+    // clang-format off
+    UNSUPPORTED_METHOD      (void, CreateShaderResourceBinding, IShaderResourceBinding** ppShaderResourceBinding, bool InitStaticResources)
+    UNSUPPORTED_METHOD      (void, BindStaticResources,         SHADER_TYPE ShaderStages, IResourceMapping* pResourceMapping, BIND_SHADER_RESOURCES_FLAGS Flags)
+    UNSUPPORTED_METHOD      (IShaderResourceVariable*, GetStaticVariableByName, SHADER_TYPE ShaderType, const Char* Name)
+    UNSUPPORTED_METHOD      (IShaderResourceVariable*, GetStaticVariableByIndex, SHADER_TYPE ShaderType, Uint32 Index)
+    UNSUPPORTED_CONST_METHOD(Uint32,   GetStaticVariableCount,       SHADER_TYPE ShaderType)
+    UNSUPPORTED_CONST_METHOD(void,     InitializeStaticSRBResources, IShaderResourceBinding* pShaderResourceBinding)
+    UNSUPPORTED_CONST_METHOD(bool,     IsCompatibleWith,             const IPipelineResourceSignature* pPRS)
+    UNSUPPORTED_CONST_METHOD(Int32,    GetUniqueID)
+    UNSUPPORTED_METHOD      (void,     SetUserData, IObject* pUserData)
+    UNSUPPORTED_CONST_METHOD(IObject*, GetUserData)
+    // clang-format on
 
     bool IsCompatible(const SerializedResourceSignatureImpl& Rhs, ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags) const;
     bool operator==(const SerializedResourceSignatureImpl& Rhs) const;

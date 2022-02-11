@@ -69,99 +69,28 @@ public:
         return m_Desc;
     }
 
-    virtual Int32 DILIGENT_CALL_TYPE GetUniqueID() const override final
-    {
-        UNSUPPORTED("This method is not supported by serialized pipeline state.");
-        return 0;
-    }
+    // clang-format off
+    UNSUPPORTED_CONST_METHOD(Int32,    GetUniqueID)
+    UNSUPPORTED_METHOD      (void,     SetUserData, IObject* pUserData)
+    UNSUPPORTED_CONST_METHOD(IObject*, GetUserData)
 
-    virtual void DILIGENT_CALL_TYPE SetUserData(IObject* pUserData) override final
-    {
-        UNSUPPORTED("This method is not supported by serialized pipeline state.");
-    }
+    UNSUPPORTED_CONST_METHOD(const GraphicsPipelineDesc&,   GetGraphicsPipelineDesc)
+    UNSUPPORTED_CONST_METHOD(const RayTracingPipelineDesc&, GetRayTracingPipelineDesc)
+    UNSUPPORTED_CONST_METHOD(const TilePipelineDesc&,       GetTilePipelineDesc)
 
-    virtual IObject* DILIGENT_CALL_TYPE GetUserData() const override final
-    {
-        UNSUPPORTED("This method is not supported by serialized pipeline state.");
-        return nullptr;
-    }
+    UNSUPPORTED_METHOD      (void,   BindStaticResources,    SHADER_TYPE ShaderStages, IResourceMapping* pResourceMapping, BIND_SHADER_RESOURCES_FLAGS Flags)
+    UNSUPPORTED_CONST_METHOD(Uint32, GetStaticVariableCount, SHADER_TYPE ShaderType)
 
-    virtual const GraphicsPipelineDesc& DILIGENT_CALL_TYPE GetGraphicsPipelineDesc() const override final
-    {
-        UNSUPPORTED("This method is not supported by serialized pipeline state.");
-        static constexpr GraphicsPipelineDesc NullDesc;
-        return NullDesc;
-    }
+    UNSUPPORTED_METHOD      (IShaderResourceVariable*, GetStaticVariableByName,  SHADER_TYPE ShaderType, const Char* Name)
+    UNSUPPORTED_METHOD      (IShaderResourceVariable*, GetStaticVariableByIndex, SHADER_TYPE ShaderType, Uint32 Index)
 
-    virtual const RayTracingPipelineDesc& DILIGENT_CALL_TYPE GetRayTracingPipelineDesc() const override final
-    {
-        UNSUPPORTED("This method is not supported by serialized pipeline state.");
-        static constexpr RayTracingPipelineDesc NullDesc;
-        return NullDesc;
-    }
+    UNSUPPORTED_METHOD      (void, CreateShaderResourceBinding,  IShaderResourceBinding** ppShaderResourceBinding, bool InitStaticResources)
+    UNSUPPORTED_CONST_METHOD(void, InitializeStaticSRBResources, IShaderResourceBinding* pShaderResourceBinding)
+    UNSUPPORTED_CONST_METHOD(bool, IsCompatibleWith,             const IPipelineState* pPSO)
 
-    virtual const TilePipelineDesc& DILIGENT_CALL_TYPE GetTilePipelineDesc() const override final
-    {
-        UNSUPPORTED("This method is not supported by serialized pipeline state.");
-        static constexpr TilePipelineDesc NullDesc;
-        return NullDesc;
-    }
-
-    virtual void DILIGENT_CALL_TYPE BindStaticResources(SHADER_TYPE                 ShaderStages,
-                                                        IResourceMapping*           pResourceMapping,
-                                                        BIND_SHADER_RESOURCES_FLAGS Flags) override final
-    {
-        UNSUPPORTED("This method is not supported by serialized pipeline state.");
-    }
-
-    virtual Uint32 DILIGENT_CALL_TYPE GetStaticVariableCount(SHADER_TYPE ShaderType) const override final
-    {
-        UNSUPPORTED("This method is not supported by serialized pipeline state.");
-        return 0;
-    }
-
-    virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetStaticVariableByName(SHADER_TYPE ShaderType,
-                                                                                const Char* Name) override final
-    {
-        UNSUPPORTED("This method is not supported by serialized pipeline state.");
-        return nullptr;
-    }
-
-    virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetStaticVariableByIndex(SHADER_TYPE ShaderType,
-                                                                                 Uint32      Index) override final
-    {
-        UNSUPPORTED("This method is not supported by serialized pipeline state.");
-        return nullptr;
-    }
-
-    virtual void DILIGENT_CALL_TYPE CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding, bool InitStaticResources) override final
-    {
-        UNSUPPORTED("This method is not supported by serialized pipeline state.");
-    }
-
-    virtual void DILIGENT_CALL_TYPE InitializeStaticSRBResources(IShaderResourceBinding* pShaderResourceBinding) const override final
-    {
-        UNSUPPORTED("This method is not supported by serialized pipeline state.");
-    }
-
-    virtual bool DILIGENT_CALL_TYPE IsCompatibleWith(const IPipelineState* pPSO) const override final
-    {
-        UNSUPPORTED("This method is not supported by serialized pipeline state.");
-        return false;
-    }
-
-    virtual Uint32 DILIGENT_CALL_TYPE GetResourceSignatureCount() const override final
-    {
-        UNSUPPORTED("This method is not supported by serialized pipeline state.");
-        return 0;
-    }
-
-    virtual IPipelineResourceSignature* DILIGENT_CALL_TYPE GetResourceSignature(Uint32 Index) const override final
-    {
-        UNSUPPORTED("This method is not supported by serialized pipeline state.");
-        return nullptr;
-    }
-
+    UNSUPPORTED_CONST_METHOD(Uint32,                      GetResourceSignatureCount)
+    UNSUPPORTED_CONST_METHOD(IPipelineResourceSignature*, GetResourceSignature, Uint32 Index)
+    // clang-format on
 
     using SerializedPSOAuxData = DeviceObjectArchiveBase::SerializedPSOAuxData;
     using DeviceType           = DeviceObjectArchiveBase::DeviceType;

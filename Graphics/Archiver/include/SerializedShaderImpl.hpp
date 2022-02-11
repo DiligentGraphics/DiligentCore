@@ -65,17 +65,13 @@ public:
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
-    virtual Uint32 DILIGENT_CALL_TYPE GetResourceCount() const override final { return 0; }
-
-    virtual void DILIGENT_CALL_TYPE GetResourceDesc(Uint32 Index, ShaderResourceDesc& ResourceDesc) const override final {}
-
     virtual const ShaderDesc& DILIGENT_CALL_TYPE GetDesc() const override final { return m_CreateInfo.Desc; }
 
-    virtual Int32 DILIGENT_CALL_TYPE GetUniqueID() const override final { return 0; }
-
-    virtual void DILIGENT_CALL_TYPE SetUserData(IObject* pUserData) override final {}
-
-    virtual IObject* DILIGENT_CALL_TYPE GetUserData() const override final { return nullptr; }
+    UNSUPPORTED_CONST_METHOD(Uint32, GetResourceCount)
+    UNSUPPORTED_CONST_METHOD(void, GetResourceDesc, Uint32 Index, ShaderResourceDesc& ResourceDesc)
+    UNSUPPORTED_CONST_METHOD(Int32, GetUniqueID)
+    UNSUPPORTED_METHOD(void, SetUserData, IObject* pUserData)
+    UNSUPPORTED_CONST_METHOD(IObject*, GetUserData)
 
     struct CompiledShader
     {

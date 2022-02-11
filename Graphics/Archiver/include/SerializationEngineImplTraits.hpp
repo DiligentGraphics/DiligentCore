@@ -29,6 +29,7 @@
 /// \file
 /// Declaration of Diligent::SerializationEngineImplTraits struct
 
+#include "CommonDefinitions.h"
 #include "RenderDevice.h"
 #include "DeviceContext.h"
 #include "SerializationDevice.h"
@@ -94,4 +95,35 @@ struct SerializationEngineImplTraits
     using DeviceObjectArchiveImplType       = SerializedObjectStub;
 };
 
+template <typename ReturnType>
+struct _DummyReturn
+{
+    const ReturnType& operator()()
+    {
+        static constexpr typename std::remove_reference<ReturnType>::type NullRet = {};
+        return NullRet;
+    }
+};
+
+template <>
+struct _DummyReturn<void>
+{
+    void operator()()
+    {
+    }
+};
+
+#define UNSUPPORTED_METHOD(RetType, MethodName, ...)                          \
+    virtual RetType DILIGENT_CALL_TYPE MethodName(__VA_ARGS__) override final \
+    {                                                                         \
+        UNSUPPORTED(#MethodName " is not supported in serialization engine"); \
+        return _DummyReturn<RetType>{}();                                     \
+    }
+
+#define UNSUPPORTED_CONST_METHOD(RetType, MethodName, ...)                          \
+    virtual RetType DILIGENT_CALL_TYPE MethodName(__VA_ARGS__) const override final \
+    {                                                                               \
+        UNSUPPORTED(#MethodName " is not supported in serialization engine");       \
+        return _DummyReturn<RetType>{}();                                           \
+    }
 } // namespace Diligent

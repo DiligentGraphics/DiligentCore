@@ -49,50 +49,36 @@ public:
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
-#define UNSUPPORTED_METHOD(MethodName, ...)                                   \
-    virtual void DILIGENT_CALL_TYPE MethodName(__VA_ARGS__) override final    \
-    {                                                                         \
-        UNSUPPORTED(#MethodName " is not supported by serialization device"); \
-    }
-
     // clang-format off
-    UNSUPPORTED_METHOD(CreateGraphicsPipelineState,   const GraphicsPipelineStateCreateInfo&   PSOCreateInfo, IPipelineState** ppPipelineState)
-    UNSUPPORTED_METHOD(CreateComputePipelineState,    const ComputePipelineStateCreateInfo&    PSOCreateInfo, IPipelineState** ppPipelineState)
-    UNSUPPORTED_METHOD(CreateRayTracingPipelineState, const RayTracingPipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState)
-    UNSUPPORTED_METHOD(CreateTilePipelineState,       const TilePipelineStateCreateInfo&       PSOCreateInfo, IPipelineState** ppPipelineState)
+    UNSUPPORTED_METHOD(void, CreateGraphicsPipelineState,   const GraphicsPipelineStateCreateInfo&   PSOCreateInfo, IPipelineState** ppPipelineState)
+    UNSUPPORTED_METHOD(void, CreateComputePipelineState,    const ComputePipelineStateCreateInfo&    PSOCreateInfo, IPipelineState** ppPipelineState)
+    UNSUPPORTED_METHOD(void, CreateRayTracingPipelineState, const RayTracingPipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState)
+    UNSUPPORTED_METHOD(void, CreateTilePipelineState,       const TilePipelineStateCreateInfo&       PSOCreateInfo, IPipelineState** ppPipelineState)
 
-    UNSUPPORTED_METHOD(CreateShader,      const ShaderCreateInfo&  CreateInfo, IShader** ppShader)
+    UNSUPPORTED_METHOD(void, CreateShader,      const ShaderCreateInfo&  CreateInfo, IShader** ppShader)
 
-    UNSUPPORTED_METHOD(CreateBuffer,      const BufferDesc&  Desc, const BufferData*  pData, IBuffer**  ppBuffer)
-    UNSUPPORTED_METHOD(CreateTexture,     const TextureDesc& Desc, const TextureData* pData, ITexture** ppTexture)
+    UNSUPPORTED_METHOD(void, CreateBuffer,      const BufferDesc&  Desc, const BufferData*  pData, IBuffer**  ppBuffer)
+    UNSUPPORTED_METHOD(void, CreateTexture,     const TextureDesc& Desc, const TextureData* pData, ITexture** ppTexture)
 
-    UNSUPPORTED_METHOD(CreateSampler,     const SamplerDesc&            Desc, ISampler**            ppSampler)
-    UNSUPPORTED_METHOD(CreateFence,       const FenceDesc&              Desc, IFence**              ppFence)
-    UNSUPPORTED_METHOD(CreateQuery,       const QueryDesc&              Desc, IQuery**              ppQuery)
-    UNSUPPORTED_METHOD(CreateFramebuffer, const FramebufferDesc&        Desc, IFramebuffer**        ppFramebuffer)
-    UNSUPPORTED_METHOD(CreateBLAS,        const BottomLevelASDesc&      Desc, IBottomLevelAS**      ppBLAS)
-    UNSUPPORTED_METHOD(CreateTLAS,        const TopLevelASDesc&         Desc, ITopLevelAS**         ppTLAS)
-    UNSUPPORTED_METHOD(CreateSBT,         const ShaderBindingTableDesc& Desc, IShaderBindingTable** ppSBT)
-    UNSUPPORTED_METHOD(CreatePipelineResourceSignature, const PipelineResourceSignatureDesc& Desc, IPipelineResourceSignature** ppSignature)
-    UNSUPPORTED_METHOD(CreateDeviceMemory,       const DeviceMemoryCreateInfo&       CreateInfo, IDeviceMemory**       ppMemory)
-    UNSUPPORTED_METHOD(CreatePipelineStateCache, const PipelineStateCacheCreateInfo& CreateInfo, IPipelineStateCache** ppPSOCache)
-    UNSUPPORTED_METHOD(IdleGPU)
-    UNSUPPORTED_METHOD(ReleaseStaleResources, bool ForceRelease)
+    UNSUPPORTED_METHOD(void, CreateSampler,     const SamplerDesc&            Desc, ISampler**            ppSampler)
+    UNSUPPORTED_METHOD(void, CreateFence,       const FenceDesc&              Desc, IFence**              ppFence)
+    UNSUPPORTED_METHOD(void, CreateQuery,       const QueryDesc&              Desc, IQuery**              ppQuery)
+    UNSUPPORTED_METHOD(void, CreateFramebuffer, const FramebufferDesc&        Desc, IFramebuffer**        ppFramebuffer)
+    UNSUPPORTED_METHOD(void, CreateBLAS,        const BottomLevelASDesc&      Desc, IBottomLevelAS**      ppBLAS)
+    UNSUPPORTED_METHOD(void, CreateTLAS,        const TopLevelASDesc&         Desc, ITopLevelAS**         ppTLAS)
+    UNSUPPORTED_METHOD(void, CreateSBT,         const ShaderBindingTableDesc& Desc, IShaderBindingTable** ppSBT)
+    UNSUPPORTED_METHOD(void, CreatePipelineResourceSignature, const PipelineResourceSignatureDesc& Desc, IPipelineResourceSignature** ppSignature)
+    UNSUPPORTED_METHOD(void, CreateDeviceMemory,       const DeviceMemoryCreateInfo&       CreateInfo, IDeviceMemory**       ppMemory)
+    UNSUPPORTED_METHOD(void, CreatePipelineStateCache, const PipelineStateCacheCreateInfo& CreateInfo, IPipelineStateCache** ppPSOCache)
+    UNSUPPORTED_METHOD(void, IdleGPU)
+    UNSUPPORTED_METHOD(void, ReleaseStaleResources, bool ForceRelease)
     // clang-format on
-#undef UNSUPPORTED_METHOD
 
     /// Implementation of IRenderDevice::CreateRenderPass().
     virtual void DILIGENT_CALL_TYPE CreateRenderPass(const RenderPassDesc& Desc,
                                                      IRenderPass**         ppRenderPass) override final;
 
-    /// Implementation of IRenderDevice::GetSparseTextureFormatInfo().
-    virtual SparseTextureFormatInfo DILIGENT_CALL_TYPE GetSparseTextureFormatInfo(TEXTURE_FORMAT     TexFormat,
-                                                                                  RESOURCE_DIMENSION Dimension,
-                                                                                  Uint32             SampleCount) const override final
-    {
-        UNSUPPORTED("GetSparseTextureFormatInfo is not supported by serialization device");
-        return SparseTextureFormatInfo{};
-    }
+    UNSUPPORTED_CONST_METHOD(SparseTextureFormatInfo, GetSparseTextureFormatInfo, TEXTURE_FORMAT TexFormat, RESOURCE_DIMENSION Dimension, Uint32 SampleCount)
 
     /// Implementation of ISerializationDevice::CreateShader().
     virtual void DILIGENT_CALL_TYPE CreateShader(const ShaderCreateInfo&  ShaderCI,
