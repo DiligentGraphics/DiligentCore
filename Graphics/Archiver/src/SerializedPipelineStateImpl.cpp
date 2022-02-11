@@ -335,12 +335,16 @@ void SerializedPipelineStateImpl::SerializeShaderBytecode(DeviceType            
 
     Data::ShaderInfo ShaderData;
     ShaderData.Data = AllocateData();
-    ShaderData.Hash = ComputeHashRaw(Bytecode, BytecodeSize);
 
     Serializer<SerializerMode::Write> Ser{ShaderData.Data};
     SerializeShaderCI(Ser);
     VERIFY_EXPR(Ser.IsEnded());
 
+    ShaderData.Hash = ComputeHashRaw(ShaderData.Data.Ptr(), ShaderData.Data.Size());
+#ifdef DILIGENT_DEBUG
+    for (const auto& Data : m_Data.Shaders[static_cast<size_t>(Type)])
+        VERIFY(Data.Hash != ShaderData.Hash, "Shader with the same hash is already in the list.");
+#endif
     m_Data.Shaders[static_cast<size_t>(Type)].emplace_back(std::move(ShaderData));
 }
 
@@ -356,13 +360,10 @@ void SerializedPipelineStateImpl::SerializeShaderSource(DeviceType Type, const S
     }
     Source.append(CI.Source, CI.SourceLength);
 
-    const auto   SourceSize = (Source.size() + 1) * sizeof(Source[0]);
-    const Uint8* pBytes     = reinterpret_cast<const Uint8*>(Source.c_str());
-
     auto SerializeShaderCI = [&](auto& Ser) //
     {
         Ser(CI.Desc.ShaderType, CI.EntryPoint, CI.SourceLanguage, CI.ShaderCompiler, CI.UseCombinedTextureSamplers, CI.CombinedSamplerSuffix);
-        Ser.CopyBytes(Source.c_str(), SourceSize);
+        Ser.CopyBytes(Source.c_str(), (Source.size() + 1) * sizeof(Source[0]));
     };
 
     auto AllocateData = [&]() //
@@ -374,12 +375,16 @@ void SerializedPipelineStateImpl::SerializeShaderSource(DeviceType Type, const S
 
     Data::ShaderInfo ShaderData;
     ShaderData.Data = AllocateData();
-    ShaderData.Hash = ComputeHashRaw(pBytes, SourceSize);
 
     Serializer<SerializerMode::Write> Ser{ShaderData.Data};
     SerializeShaderCI(Ser);
     VERIFY_EXPR(Ser.IsEnded());
 
+    ShaderData.Hash = ComputeHashRaw(ShaderData.Data.Ptr(), ShaderData.Data.Size());
+#ifdef DILIGENT_DEBUG
+    for (const auto& Data : m_Data.Shaders[static_cast<size_t>(Type)])
+        VERIFY(Data.Hash != ShaderData.Hash, "Shader with the same hash is already in the list.");
+#endif
     m_Data.Shaders[static_cast<size_t>(Type)].emplace_back(std::move(ShaderData));
 }
 
