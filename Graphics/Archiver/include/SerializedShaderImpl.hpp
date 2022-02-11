@@ -57,10 +57,10 @@ public:
     using TBase      = ObjectBase<IShader>;
     using DeviceType = DeviceObjectArchiveBase::DeviceType;
 
-    SerializedShaderImpl(IReferenceCounters*       pRefCounters,
-                         SerializationDeviceImpl*  pDevice,
-                         const ShaderCreateInfo&   ShaderCI,
-                         ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags);
+    SerializedShaderImpl(IReferenceCounters*      pRefCounters,
+                         SerializationDeviceImpl* pDevice,
+                         const ShaderCreateInfo&  ShaderCI,
+                         const ShaderArchiveInfo& ArchiveInfo);
     ~SerializedShaderImpl();
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;

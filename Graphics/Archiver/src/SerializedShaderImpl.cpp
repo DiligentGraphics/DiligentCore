@@ -35,14 +35,15 @@
 namespace Diligent
 {
 
-SerializedShaderImpl::SerializedShaderImpl(IReferenceCounters*       pRefCounters,
-                                           SerializationDeviceImpl*  pDevice,
-                                           const ShaderCreateInfo&   ShaderCI,
-                                           ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags) :
+SerializedShaderImpl::SerializedShaderImpl(IReferenceCounters*      pRefCounters,
+                                           SerializationDeviceImpl* pDevice,
+                                           const ShaderCreateInfo&  ShaderCI,
+                                           const ShaderArchiveInfo& ArchiveInfo) :
     TBase{pRefCounters},
     m_pDevice{pDevice},
     m_CreateInfo{ShaderCI}
 {
+    auto DeviceFlags = ArchiveInfo.DeviceFlags;
     if ((DeviceFlags & m_pDevice->GetValidDeviceFlags()) != DeviceFlags)
     {
         LOG_ERROR_AND_THROW("DeviceFlags contain unsupported device type");

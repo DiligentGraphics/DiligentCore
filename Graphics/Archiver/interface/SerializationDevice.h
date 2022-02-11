@@ -52,139 +52,67 @@ static const INTERFACE_ID IID_SerializationDevice =
 
 // clang-format off
 
-/// Serialization device attributes for Direct3D11 backend
-struct SerializationDeviceD3D11Info
+/// Flags that indicate which device data will be serialized.
+DILIGENT_TYPED_ENUM(ARCHIVE_DEVICE_DATA_FLAGS, Uint32)
 {
-    Version FeatureLevel DEFAULT_INITIALIZER(Version(11, 0));
+    /// No data will be serialized.
+    ARCHIVE_DEVICE_DATA_FLAG_NONE        = 0u,
 
-#if DILIGENT_CPP_INTERFACE
-    /// Comparison operator tests if two structures are equivalent
+    /// Direct3D11 device data will be serialized.
+    ARCHIVE_DEVICE_DATA_FLAG_D3D11       = 1u << RENDER_DEVICE_TYPE_D3D11,
 
-    /// \param [in] RHS - reference to the structure to perform comparison with
-    /// \return
-    /// - True if all members of the two structures are equal.
-    /// - False otherwise.
-    constexpr bool operator==(const SerializationDeviceD3D11Info& RHS) const
-    {
-        return FeatureLevel == RHS.FeatureLevel;
-    }
-#endif
+    /// Direct3D12 device data will be serialized.
+    ARCHIVE_DEVICE_DATA_FLAG_D3D12       = 1u << RENDER_DEVICE_TYPE_D3D12,
 
+    /// OpenGL device data will be serialized.
+    ARCHIVE_DEVICE_DATA_FLAG_GL          = 1u << RENDER_DEVICE_TYPE_GL,
+
+    /// OpenGLES device data will be serialized.
+    ARCHIVE_DEVICE_DATA_FLAG_GLES        = 1u << RENDER_DEVICE_TYPE_GLES,
+
+    /// Vulkan device data will be serialized.
+    ARCHIVE_DEVICE_DATA_FLAG_VULKAN      = 1u << RENDER_DEVICE_TYPE_VULKAN,
+
+    /// Metal device data for MacOS will be serialized.
+    ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS = 1u << RENDER_DEVICE_TYPE_METAL,
+
+    /// Metal device data for iOS will be serialized.
+    ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS   = 2u << RENDER_DEVICE_TYPE_METAL,
+
+    ARCHIVE_DEVICE_DATA_FLAG_LAST        = ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS
 };
-typedef struct SerializationDeviceD3D11Info SerializationDeviceD3D11Info;
+DEFINE_FLAG_ENUM_OPERATORS(ARCHIVE_DEVICE_DATA_FLAGS)
 
-/// Serialization device attributes for Direct3D12 backend
-struct SerializationDeviceD3D12Info
+
+/// Shader archive info
+struct ShaderArchiveInfo
 {
-    Version     ShaderVersion  DEFAULT_INITIALIZER(Version(6, 0));
-    const Char* DxCompilerPath DEFAULT_INITIALIZER(nullptr);
-
-#if DILIGENT_CPP_INTERFACE
-    /// Comparison operator tests if two structures are equivalent
-
-    /// \param [in] RHS - reference to the structure to perform comparison with
-    /// \return
-    /// - True if all members of the two structures are equal.
-    /// - False otherwise.
-    constexpr bool operator==(const SerializationDeviceD3D12Info& RHS) const
-    {
-        return ShaderVersion == RHS.ShaderVersion && SafeStrEqual(DxCompilerPath, RHS.DxCompilerPath);
-    }
-#endif
-
+    /// Bitset of Diligent::ARCHIVE_DEVICE_DATA_FLAGS.
+    /// Specifies for which backends the shader data will be serialized.
+    ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags DEFAULT_INITIALIZER(ARCHIVE_DEVICE_DATA_FLAG_NONE);
 };
-typedef struct SerializationDeviceD3D12Info SerializationDeviceD3D12Info;
+typedef struct ShaderArchiveInfo ShaderArchiveInfo;
 
-/// Serialization device attributes for Vulkan backend
-struct SerializationDeviceVkInfo
-{
-    Version     ApiVersion      DEFAULT_INITIALIZER(Version(1, 0));
-    Bool        SupportsSpirv14 DEFAULT_INITIALIZER(False);
-    const Char* DxCompilerPath  DEFAULT_INITIALIZER(nullptr);
-
-#if DILIGENT_CPP_INTERFACE
-    /// Comparison operator tests if two structures are equivalent
-
-    /// \param [in] RHS - reference to the structure to perform comparison with
-    /// \return
-    /// - True if all members of the two structures are equal.
-    /// - False otherwise.
-    constexpr bool operator==(const SerializationDeviceVkInfo& RHS) const 
-    {
-        return ApiVersion      == RHS.ApiVersion &&
-               SupportsSpirv14 == RHS.SupportsSpirv14 &&
-               SafeStrEqual(DxCompilerPath, RHS.DxCompilerPath);
-    }
-#endif
-
-};
-typedef struct SerializationDeviceVkInfo SerializationDeviceVkInfo;
-
-/// Serialization device attributes for Metal backend
-struct SerializationDeviceMtlInfo
-{
-    /// Additional compilation options for Metal command-line compiler.
-    const Char* CompileOptionsMacOS DEFAULT_INITIALIZER("-sdk macosx metal");
-    const Char* CompileOptionsiOS   DEFAULT_INITIALIZER("-sdk iphoneos metal");
-
-    /// Name of command-line application which is used to preprocess Metal shader source before compiling to bytecode.
-    const Char* MslPreprocessorCmd DEFAULT_INITIALIZER(nullptr);
-
-#if DILIGENT_CPP_INTERFACE
-    /// Comparison operator tests if two structures are equivalent
-
-    /// \param [in] RHS - reference to the structure to perform comparison with
-    /// \return
-    /// - True if all members of the two structures are equal.
-    /// - False otherwise.
-    bool operator==(const SerializationDeviceMtlInfo& RHS) const 
-    {
-        return SafeStrEqual(CompileOptionsMacOS, RHS.CompileOptionsMacOS) &&
-               SafeStrEqual(CompileOptionsiOS,   RHS.CompileOptionsiOS)   &&
-               SafeStrEqual(MslPreprocessorCmd,  RHS.MslPreprocessorCmd);
-    }
-#endif
-
-};
-typedef struct SerializationDeviceMtlInfo SerializationDeviceMtlInfo;
-
-/// Serialization device creation information
-struct SerializationDeviceCreateInfo
-{
-    /// Device info, contains enabled device features.
-    /// Can be used to validate shader, render pass, resource signature and pipeline state.
-    ///
-    /// \note For OpenGL which is not support separable programs disable SeparablePrograms feature.
-    RenderDeviceInfo    DeviceInfo;
-
-    /// Adapter info, contains device parameters.
-    /// Can be used to validate shader, render pass, resource signature and pipeline state.
-    GraphicsAdapterInfo AdapterInfo;
-
-    SerializationDeviceD3D11Info D3D11;
-    SerializationDeviceD3D12Info D3D12;
-    SerializationDeviceVkInfo    Vulkan;
-    SerializationDeviceMtlInfo   Metal;
-
-#if DILIGENT_CPP_INTERFACE
-    SerializationDeviceCreateInfo() noexcept
-    {
-        DeviceInfo.Features  = DeviceFeatures{DEVICE_FEATURE_STATE_ENABLED};
-        AdapterInfo.Features = DeviceFeatures{DEVICE_FEATURE_STATE_ENABLED};
-    }
-#endif
-};
-typedef struct SerializationDeviceCreateInfo SerializationDeviceCreateInfo;
-
-
-// Pipeline resource signature archive info
+/// Pipeline resource signature archive info
 struct ResourceSignatureArchiveInfo
 {
-    /// Bitset of ARCHIVE_DEVICE_DATA_FLAGS.
-    /// Specifies for which backends the resource signature data will be archived.
+    /// Bitset of Diligent::ARCHIVE_DEVICE_DATA_FLAGS.
+    /// Specifies for which backends the resource signature data will be serialized.
     ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags DEFAULT_INITIALIZER(ARCHIVE_DEVICE_DATA_FLAG_NONE);
 };
 typedef struct ResourceSignatureArchiveInfo ResourceSignatureArchiveInfo;
+
+/// Pipeline state archive info
+struct PipelineStateArchiveInfo
+{
+    /// Pipeline state archive flags, see Diligent::PSO_ARCHIVE_FLAGS.
+    PSO_ARCHIVE_FLAGS PSOFlags DEFAULT_INITIALIZER(PSO_ARCHIVE_FLAG_NONE);
+
+    /// Bitset of Diligent::ARCHIVE_DEVICE_DATA_FLAGS.
+    /// Specifies for which backends the pipeline state data will be serialized.
+    ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags DEFAULT_INITIALIZER(ARCHIVE_DEVICE_DATA_FLAG_NONE);
+};
+typedef struct PipelineStateArchiveInfo PipelineStateArchiveInfo;
 
 
 /// Contains attributes to calculate pipeline resource bindings
@@ -221,55 +149,127 @@ typedef struct PipelineResourceBindingAttribs PipelineResourceBindingAttribs;
 /// Pipeline resource binding
 struct PipelineResourceBinding
 {
+    /// Resource name
     const Char*          Name           DEFAULT_INITIALIZER(nullptr);
+
+    /// Resource type, see Diligent::SHADER_RESOURCE_TYPE.
     SHADER_RESOURCE_TYPE ResourceType   DEFAULT_INITIALIZER(SHADER_RESOURCE_TYPE_UNKNOWN);
+
+    /// Shader resource stages, see Diligent::SHADER_TYPE.
     SHADER_TYPE          ShaderStages   DEFAULT_INITIALIZER(SHADER_TYPE_UNKNOWN);
+
+    /// Shader register space.
     Uint16               Space          DEFAULT_INITIALIZER(0);
+
+    /// Shader register.
     Uint32               Register       DEFAULT_INITIALIZER(0);
+
+    /// Array size
     Uint32               ArraySize      DEFAULT_INITIALIZER(0);
 };
 typedef struct PipelineResourceBinding PipelineResourceBinding;
 
 
-/// Defines the methods to manipulate a serialization device object
+/// Serialization device interface
 DILIGENT_BEGIN_INTERFACE(ISerializationDevice, IRenderDevice)
 {
     /// Creates a serialized shader.
+
+    /// \param [in]  ShaderCI    - Shader create info, see Diligent::ShaderCreateInfo for details.
+    /// \param [in]  ArchiveInfo - Shader archive info, see Diligent::ShaderArchiveInfo for details.
+    /// \param [out] ppShader    - Address of the memory location where a pointer to the
+    ///                            shader interface will be written.
+    ///
+    /// \note
+    ///     The method is thread-safe and may be called from multiple threads simultaneously.
     VIRTUAL void METHOD(CreateShader)(THIS_
-                                      const ShaderCreateInfo REF ShaderCI,
-                                      ARCHIVE_DEVICE_DATA_FLAGS  DeviceFlags,
-                                      IShader**                  ppShader) PURE;
+                                      const ShaderCreateInfo REF  ShaderCI,
+                                      const ShaderArchiveInfo REF ArchiveInfo,
+                                      IShader**                   ppShader) PURE;
 
  
     /// Creates a serialized pipeline resource signature.
+
+    /// \param [in]  Desc        - Pipeline resource signature description, see Diligent::PipelineResourceSignatureDesc for details.
+    /// \param [in]  ArchiveInfo - Signature archive info, see Diligent::ResourceSignatureArchiveInfo for details.
+    /// \param [out] ppShader    - Address of the memory location where a pointer to the serialized
+    ///                            pipeline resource signature object will be written.
+    ///
+    /// \note
+    ///     The method is thread-safe and may be called from multiple threads simultaneously.
     VIRTUAL void METHOD(CreatePipelineResourceSignature)(THIS_
                                                          const PipelineResourceSignatureDesc REF Desc,
                                                          const ResourceSignatureArchiveInfo REF  ArchiveInfo,
                                                          IPipelineResourceSignature**            ppSignature) PURE;
 
     /// Creates a serialized graphics pipeline state.
+
+    /// \param [in]  PSOCreateInfo   - Graphics pipeline state create info, see Diligent::GraphicsPipelineStateCreateInfo for details.
+    /// \param [in]  ArchiveInfo     - Pipeline state archive info, see Diligent::PipelineStateArchiveInfo for details.
+    /// \param [out] ppPipelineState - Address of the memory location where a pointer to the serialized
+    ///                                pipeline state object will be written.
+    ///
+    /// \note
+    ///     All objects that PSOCreateInfo references (shaders, render pass, resource signatures) must be
+    ///     serialized objects created by the same serialization device.
+    ///
+    ///     The method is thread-safe and may be called from multiple threads simultaneously.
     VIRTUAL void METHOD(CreateGraphicsPipelineState)(THIS_
                                                      const GraphicsPipelineStateCreateInfo REF PSOCreateInfo,
                                                      const PipelineStateArchiveInfo REF        ArchiveInfo,
                                                      IPipelineState**                          ppPipelineState) PURE;
 
     /// Creates a serialized compute pipeline state.
+
+    /// \param [in]  PSOCreateInfo   - Compute pipeline state create info, see Diligent::ComputePipelineStateCreateInfo for details.
+    /// \param [in]  ArchiveInfo     - Pipeline state archive info, see Diligent::PipelineStateArchiveInfo for details.
+    /// \param [out] ppPipelineState - Address of the memory location where a pointer to the serialized
+    ///                                pipeline state object will be written.
+    ///
+    /// \note
+    ///     All objects that PSOCreateInfo references (shaders, resource signatures) must be
+    ///     serialized objects created by the same serialization device.
+    ///
+    ///     The method is thread-safe and may be called from multiple threads simultaneously.
     VIRTUAL void METHOD(CreateComputePipelineState)(THIS_
                                                     const ComputePipelineStateCreateInfo REF PSOCreateInfo,
                                                     const PipelineStateArchiveInfo REF       ArchiveInfo,
                                                     IPipelineState**                         ppPipelineState) PURE;
 
     /// Creates a serialized ray tracing pipeline state.
+
+    /// \param [in]  PSOCreateInfo   - Ray tracing pipeline state create info, see Diligent::RayTracingPipelineStateCreateInfo for details.
+    /// \param [in]  ArchiveInfo     - Pipeline state archive info, see Diligent::PipelineStateArchiveInfo for details.
+    /// \param [out] ppPipelineState - Address of the memory location where a pointer to the serialized
+    ///                                pipeline state object will be written.
+    ///
+    /// \note
+    ///     All objects that PSOCreateInfo references (shaders, resource signatures) must be
+    ///     serialized objects created by the same serialization device.
+    ///
+    ///     The method is thread-safe and may be called from multiple threads simultaneously.
     VIRTUAL void METHOD(CreateRayTracingPipelineState)(THIS_
                                                        const RayTracingPipelineStateCreateInfo REF PSOCreateInfo,
                                                        const PipelineStateArchiveInfo REF          ArchiveInfo,
                                                        IPipelineState**                            ppPipelineState) PURE;
 
     /// Creates a serialized tile pipeline state.
+
+    /// \param [in]  PSOCreateInfo   - Tile pipeline state create info, see Diligent::TilePipelineStateCreateInfo for details.
+    /// \param [in]  ArchiveInfo     - Pipeline state archive info, see Diligent::PipelineStateArchiveInfo for details.
+    /// \param [out] ppPipelineState - Address of the memory location where a pointer to the serialized
+    ///                                pipeline state interface will be written.
+    ///
+    /// \note
+    ///     All objects that PSOCreateInfo references (shaders, resource signatures) must be
+    ///     serialized objects created by the same serialization device.
+    ///
+    ///     The method is thread-safe and may be called from multiple threads simultaneously.
     VIRTUAL void METHOD(CreateTilePipelineState)(THIS_
                                                  const TilePipelineStateCreateInfo REF PSOCreateInfo,
                                                  const PipelineStateArchiveInfo REF    ArchiveInfo,
                                                  IPipelineState**                      ppPipelineState) PURE;
+
 
     /// Populates an array of pipeline resource bindings.
     VIRTUAL void METHOD(GetPipelineResourceBindings)(THIS_

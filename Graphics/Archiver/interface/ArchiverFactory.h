@@ -27,10 +27,9 @@
 #pragma once
 
 /// \file
-/// Defines Diligent::IArchiverFactory interface
+/// Defines Diligent::IArchiverFactory interface and related structures.
 
 #include "../../../Primitives/interface/Object.h"
-#include "Archiver.h"
 #include "SerializationDevice.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
@@ -48,15 +47,166 @@ static const INTERFACE_ID IID_ArchiverFactory =
 
 // clang-format off
 
-/// Defines the methods to manipulate an archiver factory object
+/// Serialization device attributes for Direct3D11 backend
+struct SerializationDeviceD3D11Info
+{
+    /// Direct3D11 feature level
+    Version FeatureLevel DEFAULT_INITIALIZER(Version(11, 0));
+
+#if DILIGENT_CPP_INTERFACE
+    /// Tests if two structures are equivalent
+    constexpr bool operator==(const SerializationDeviceD3D11Info& RHS) const
+    {
+        return FeatureLevel == RHS.FeatureLevel;
+    }
+    constexpr bool operator!=(const SerializationDeviceD3D11Info& RHS) const
+    {
+        return !(*this == RHS);
+    }
+#endif
+
+};
+typedef struct SerializationDeviceD3D11Info SerializationDeviceD3D11Info;
+
+
+/// Serialization device attributes for Direct3D12 backend
+struct SerializationDeviceD3D12Info
+{
+    /// Shader version supported by the device
+    Version     ShaderVersion  DEFAULT_INITIALIZER(Version(6, 0));
+
+    /// DX Compiler path
+    const Char* DxCompilerPath DEFAULT_INITIALIZER(nullptr);
+
+#if DILIGENT_CPP_INTERFACE
+    /// Tests if two structures are equivalent
+    bool operator==(const SerializationDeviceD3D12Info& RHS) const
+    {
+        return ShaderVersion == RHS.ShaderVersion && SafeStrEqual(DxCompilerPath, RHS.DxCompilerPath);
+    }
+    bool operator!=(const SerializationDeviceD3D12Info& RHS) const
+    {
+        return !(*this == RHS);
+    }
+#endif
+
+};
+typedef struct SerializationDeviceD3D12Info SerializationDeviceD3D12Info;
+
+
+/// Serialization device attributes for Vulkan backend
+struct SerializationDeviceVkInfo
+{
+    /// Vulkan API version
+    Version     ApiVersion      DEFAULT_INITIALIZER(Version(1, 0));
+
+    /// Indicates whether the device supports SPIRV 1.4 or above
+    Bool        SupportsSpirv14 DEFAULT_INITIALIZER(False);
+
+    /// Path to DX compiler for Vulkan
+    const Char* DxCompilerPath  DEFAULT_INITIALIZER(nullptr);
+
+#if DILIGENT_CPP_INTERFACE
+    /// Tests if two structures are equivalent
+    bool operator==(const SerializationDeviceVkInfo& RHS) const 
+    {
+        return ApiVersion      == RHS.ApiVersion &&
+               SupportsSpirv14 == RHS.SupportsSpirv14 &&
+               SafeStrEqual(DxCompilerPath, RHS.DxCompilerPath);
+    }
+    bool operator!=(const SerializationDeviceVkInfo& RHS) const
+    {
+        return !(*this == RHS);
+    }
+#endif
+
+};
+typedef struct SerializationDeviceVkInfo SerializationDeviceVkInfo;
+
+
+/// Serialization device attributes for Metal backend
+struct SerializationDeviceMtlInfo
+{
+    /// Additional compilation options for Metal command-line compiler for MacOS.
+    const Char* CompileOptionsMacOS DEFAULT_INITIALIZER("-sdk macosx metal");
+
+    /// Additional compilation options for Metal command-line compiler for iOS.
+    const Char* CompileOptionsiOS   DEFAULT_INITIALIZER("-sdk iphoneos metal");
+
+    /// Name of command-line application which is used to preprocess Metal shader source before compiling to bytecode.
+    const Char* MslPreprocessorCmd DEFAULT_INITIALIZER(nullptr);
+
+#if DILIGENT_CPP_INTERFACE
+    /// Tests if two structures are equivalent
+    bool operator==(const SerializationDeviceMtlInfo& RHS) const 
+    {
+        return SafeStrEqual(CompileOptionsMacOS, RHS.CompileOptionsMacOS) &&
+               SafeStrEqual(CompileOptionsiOS,   RHS.CompileOptionsiOS)   &&
+               SafeStrEqual(MslPreprocessorCmd,  RHS.MslPreprocessorCmd);
+    }
+    bool operator!=(const SerializationDeviceMtlInfo& RHS) const
+    {
+        return !(*this == RHS);
+    }
+#endif
+
+};
+typedef struct SerializationDeviceMtlInfo SerializationDeviceMtlInfo;
+
+
+/// Serialization device creation information
+struct SerializationDeviceCreateInfo
+{
+    /// Device info, contains enabled device features.
+    /// Can be used to validate shader, render pass, resource signature and pipeline state.
+    ///
+    /// \note For OpenGL that does not support separable programs, disable the SeparablePrograms feature.
+    RenderDeviceInfo    DeviceInfo;
+
+    /// Adapter info, contains device parameters.
+    /// Can be used to validate shader, render pass, resource signature and pipeline state.
+    GraphicsAdapterInfo AdapterInfo;
+
+    /// Direct3D11 attributes, see Diligent::SerializationDeviceD3D11Info.
+    SerializationDeviceD3D11Info D3D11;
+
+    /// Direct3D12 attributes, see Diligent::SerializationDeviceD3D12Info.
+    SerializationDeviceD3D12Info D3D12;
+
+    /// Vulkan attributes, see Diligent::SerializationDeviceVkInfo.
+    SerializationDeviceVkInfo Vulkan;
+
+    /// Metal attributes, see Diligent::SerializationDeviceMtlInfo.
+    SerializationDeviceMtlInfo Metal;
+
+#if DILIGENT_CPP_INTERFACE
+    SerializationDeviceCreateInfo() noexcept
+    {
+        DeviceInfo.Features  = DeviceFeatures{DEVICE_FEATURE_STATE_ENABLED};
+        AdapterInfo.Features = DeviceFeatures{DEVICE_FEATURE_STATE_ENABLED};
+    }
+#endif
+};
+typedef struct SerializationDeviceCreateInfo SerializationDeviceCreateInfo;
+
+
+/// Archiver factory interface
 DILIGENT_BEGIN_INTERFACE(IArchiverFactory, IObject)
 {
     /// Creates a serialization device.
+
+    /// \param [in]  CreateInfo - Serialization device create information, see Diligent::SerializationDeviceCreateInfo.
+    /// \param [out] ppDevice   - Address of the memory location where a pointer to the
+    ///                           device interface will be written.
     VIRTUAL void METHOD(CreateSerializationDevice)(THIS_
                                                    const SerializationDeviceCreateInfo REF CreateInfo,
                                                    ISerializationDevice**                  ppDevice) PURE;
 
     /// Creates an archiver.
+
+    /// \param [in]  pDevice    - Pointer to the serialization device.
+    /// \param [out] ppArchiver - Address of the memory location where a pointer to the
+    ///                           archiver interface will be written.
     VIRTUAL void METHOD(CreateArchiver)(THIS_
                                         ISerializationDevice* pDevice,
                                         IArchiver**           ppArchiver) PURE;
@@ -64,16 +214,17 @@ DILIGENT_BEGIN_INTERFACE(IArchiverFactory, IObject)
     /// Creates a default shader source input stream factory
 
     /// \param [in]  SearchDirectories           - Semicolon-separated list of search directories.
-    /// \param [out] ppShaderSourceStreamFactory - Memory address where the pointer to the shader source stream factory will be written.
+    /// \param [out] ppShaderSourceStreamFactory - Memory address where a pointer to the shader source
+    ///                                            stream factory will be written.
     VIRTUAL void METHOD(CreateDefaultShaderSourceStreamFactory)(
                         THIS_
                         const Char*                              SearchDirectories,
                         struct IShaderSourceInputStreamFactory** ppShaderSourceFactory) CONST PURE;
 
 
-    /// Remove device specific data from archive and write new archive to the stream.
+    /// Removes device-specific data from the archive and writes a new archive to the stream.
 
-    /// \param [in]  pSrcArchive - Source archive from which device specific data will be removed.
+    /// \param [in]  pSrcArchive - Source archive from which device specific-data will be removed.
     /// \param [in]  DeviceFlags - Combination of device types that will be removed.
     /// \param [in]  pStream     - Destination file stream.
     VIRTUAL Bool METHOD(RemoveDeviceData)(THIS_
@@ -81,11 +232,12 @@ DILIGENT_BEGIN_INTERFACE(IArchiverFactory, IObject)
                                           ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags,
                                           IFileStream*              pStream) CONST PURE;
 
-    /// Copy device specific data from source archive to destination and write new archive to the stream.
 
-    /// \param [in]  pSrcArchive    - Source archive to which new device specific data will be added.
+    /// Copies device-specific data from the source archive to the destination and writes a new archive to the stream.
+
+    /// \param [in]  pSrcArchive    - Source archive to which new device-specific data will be added.
     /// \param [in]  DeviceFlags    - Combination of device types that will be copied.
-    /// \param [in]  pDeviceArchive - Archive which contains same shared data and device specific data.
+    /// \param [in]  pDeviceArchive - Archive that contains the same common data and additional device-specific data.
     /// \param [in]  pStream        - Destination file stream.
     VIRTUAL Bool METHOD(AppendDeviceData)(THIS_
                                           IArchive*                 pSrcArchive,
@@ -93,7 +245,8 @@ DILIGENT_BEGIN_INTERFACE(IArchiverFactory, IObject)
                                           IArchive*                 pDeviceArchive,
                                           IFileStream*              pStream) CONST PURE;
 
-    /// Print archive content for debugging and validating.
+
+    /// Prints archive content for debugging and validation.
     VIRTUAL Bool METHOD(PrintArchiveContent)(THIS_
                                              IArchive* pArchive) CONST PURE;
 

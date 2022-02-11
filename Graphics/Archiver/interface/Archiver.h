@@ -49,58 +49,20 @@ static const INTERFACE_ID IID_Archiver =
 
 // clang-format off
 
-/// Flags that indicate which device data will be packed into the archive
-DILIGENT_TYPED_ENUM(ARCHIVE_DEVICE_DATA_FLAGS, Uint32)
-{
-    /// No data
-    ARCHIVE_DEVICE_DATA_FLAG_NONE        = 0u,
-
-    /// Archive will contain Direct3D11 device data.
-    ARCHIVE_DEVICE_DATA_FLAG_D3D11       = 1u << RENDER_DEVICE_TYPE_D3D11,
-
-    /// Archive will contain Direct3D12 device data
-    ARCHIVE_DEVICE_DATA_FLAG_D3D12       = 1u << RENDER_DEVICE_TYPE_D3D12,
-
-    /// Archive will contain OpenGL device data
-    ARCHIVE_DEVICE_DATA_FLAG_GL          = 1u << RENDER_DEVICE_TYPE_GL,
-
-    /// Archive will contain OpenGLES device data
-    ARCHIVE_DEVICE_DATA_FLAG_GLES        = 1u << RENDER_DEVICE_TYPE_GLES,
-
-    /// Archive will contain Vulkan device data
-    ARCHIVE_DEVICE_DATA_FLAG_VULKAN      = 1u << RENDER_DEVICE_TYPE_VULKAN,
-
-    /// Archive will contain Metal device data for MacOS
-    ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS = 1u << RENDER_DEVICE_TYPE_METAL,
-
-    /// Archive will contain Metal device data for iOS
-    ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS   = 2u << RENDER_DEVICE_TYPE_METAL,
-
-    ARCHIVE_DEVICE_DATA_FLAG_LAST        = ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS
-};
-DEFINE_FLAG_ENUM_OPERATORS(ARCHIVE_DEVICE_DATA_FLAGS)
-
-/// Pipeline state archive info
-struct PipelineStateArchiveInfo
-{
-    /// Pipeline state archive flags, see Diligent::PSO_ARCHIVE_FLAGS.
-    PSO_ARCHIVE_FLAGS PSOFlags DEFAULT_INITIALIZER(PSO_ARCHIVE_FLAG_NONE);
-
-    /// Bitset of Diligent::ARCHIVE_DEVICE_DATA_FLAGS.
-    /// Specifies for which backends the pipeline state data will be archived.
-    ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags DEFAULT_INITIALIZER(ARCHIVE_DEVICE_DATA_FLAG_NONE);
-};
-typedef struct PipelineStateArchiveInfo PipelineStateArchiveInfo;
-
-
-/// Defines the methods to manipulate an Archive object
+/// Render state object archiver interface
 DILIGENT_BEGIN_INTERFACE(IArchiver, IObject)
 {
     /// Writes an archive to a memory blob
+
+    /// \note
+    ///     The method is *not* thread-safe and must not be called from multiple threads simultaneously.
     VIRTUAL Bool METHOD(SerializeToBlob)(THIS_
                                          IDataBlob** ppBlob) PURE;
 
     /// Writes an archive to a file stream
+
+    /// \note
+    ///     The method is *not* thread-safe and must not be called from multiple threads simultaneously.
     VIRTUAL Bool METHOD(SerializeToStream)(THIS_
                                            IFileStream* pStream) PURE;
 
@@ -110,12 +72,11 @@ DILIGENT_BEGIN_INTERFACE(IArchiver, IObject)
     /// \note
     ///     Pipeline state must have been created by the serialization device.
     ///
-    ///     All dependent objects (render pass, resource signatures, shaders) will be added too.
-    ///
-    /// \remarks
-    ///     Pipeline archival requires the same information as PSO creation.
     ///     Multiple pipeline states may be packed into the same archive as long as they use unique names.
-    ///     Pipeline resource signatures used by the pipeline state will be packed into the same archive.
+    ///     All dependent objects (render pass, resource signatures, shaders) will be added to the archive
+    ///     and must also use unique names.
+    ///
+    ///     The method is thread-safe and may be called from multiple threads simultaneously.
     VIRTUAL Bool METHOD(AddPipelineState)(THIS_
                                           IPipelineState* pPSO) PURE;
 
@@ -126,6 +87,8 @@ DILIGENT_BEGIN_INTERFACE(IArchiver, IObject)
     ///     Pipeline resource signature must have been created by the serialization device.
     ///
     ///     Multiple PSOs and signatures may be packed into the same archive as long as they use distinct names.
+    ///
+    ///     The method is thread-safe and may be called from multiple threads simultaneously.
     VIRTUAL Bool METHOD(AddPipelineResourceSignature)(THIS_
                                                       IPipelineResourceSignature* pSignature) PURE;
 };

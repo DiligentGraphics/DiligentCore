@@ -668,7 +668,7 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
             pDevice->CreateShader(ShaderCI, &pVS);
             ASSERT_NE(pVS, nullptr);
 
-            pSerializationDevice->CreateShader(ShaderCI, GetDeviceBits(), &pSerializedVS);
+            pSerializationDevice->CreateShader(ShaderCI, ShaderArchiveInfo{GetDeviceBits()}, &pSerializedVS);
             ASSERT_NE(pSerializedVS, nullptr);
         }
 
@@ -683,7 +683,7 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
             pDevice->CreateShader(ShaderCI, &pPS);
             ASSERT_NE(pPS, nullptr);
 
-            pSerializationDevice->CreateShader(ShaderCI, GetDeviceBits(), &pSerializedPS);
+            pSerializationDevice->CreateShader(ShaderCI, ShaderArchiveInfo{GetDeviceBits()}, &pSerializedPS);
             ASSERT_NE(pSerializedPS, nullptr);
         }
 
@@ -1130,7 +1130,7 @@ void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
             pDevice->CreateShader(ShaderCI, &pCS);
             ASSERT_NE(pCS, nullptr);
 
-            pSerializationDevice->CreateShader(ShaderCI, GetDeviceBits(), &pSerializedCS);
+            pSerializationDevice->CreateShader(ShaderCI, ShaderArchiveInfo{GetDeviceBits()}, &pSerializedCS);
             ASSERT_NE(pSerializedCS, nullptr);
         }
         {
@@ -1292,7 +1292,7 @@ TEST(ArchiveTest, RayTracingPipeline)
             ShaderCI.Source          = HLSL::RayTracingTest1_RG.c_str();
             pDevice->CreateShader(ShaderCI, &pRG);
             ASSERT_NE(pRG, nullptr);
-            pSerializationDevice->CreateShader(ShaderCI, DeviceBits, &pSerializedRG);
+            pSerializationDevice->CreateShader(ShaderCI, ShaderArchiveInfo{DeviceBits}, &pSerializedRG);
             ASSERT_NE(pSerializedRG, nullptr);
         }
 
@@ -1305,7 +1305,7 @@ TEST(ArchiveTest, RayTracingPipeline)
             ShaderCI.Source          = HLSL::RayTracingTest1_RM.c_str();
             pDevice->CreateShader(ShaderCI, &pRMiss);
             ASSERT_NE(pRMiss, nullptr);
-            pSerializationDevice->CreateShader(ShaderCI, DeviceBits, &pSerializedRMiss);
+            pSerializationDevice->CreateShader(ShaderCI, ShaderArchiveInfo{DeviceBits}, &pSerializedRMiss);
             ASSERT_NE(pSerializedRMiss, nullptr);
         }
 
@@ -1318,7 +1318,7 @@ TEST(ArchiveTest, RayTracingPipeline)
             ShaderCI.Source          = HLSL::RayTracingTest1_RCH.c_str();
             pDevice->CreateShader(ShaderCI, &pClosestHit);
             ASSERT_NE(pClosestHit, nullptr);
-            pSerializationDevice->CreateShader(ShaderCI, DeviceBits, &pSerializedClosestHit);
+            pSerializationDevice->CreateShader(ShaderCI, ShaderArchiveInfo{DeviceBits}, &pSerializedClosestHit);
             ASSERT_NE(pSerializedClosestHit, nullptr);
         }
 
@@ -2013,7 +2013,7 @@ TEST_P(TestSamplers, GraphicsPipeline)
             ShaderCI.EntryPoint      = ShaderLang == SHADER_SOURCE_LANGUAGE_GLSL ? "main" : "VSMain";
             ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
 
-            pSerializationDevice->CreateShader(ShaderCI, PackFlags, &pSerializedVS);
+            pSerializationDevice->CreateShader(ShaderCI, ShaderArchiveInfo{PackFlags}, &pSerializedVS);
             ASSERT_NE(pSerializedVS, nullptr);
         }
 
@@ -2025,7 +2025,7 @@ TEST_P(TestSamplers, GraphicsPipeline)
             ShaderCI.EntryPoint      = ShaderLang == SHADER_SOURCE_LANGUAGE_GLSL ? "main" : "PSMain";
             ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
 
-            pSerializationDevice->CreateShader(ShaderCI, PackFlags, &pSerializedPS);
+            pSerializationDevice->CreateShader(ShaderCI, ShaderArchiveInfo{PackFlags}, &pSerializedPS);
             ASSERT_NE(pSerializedPS, nullptr);
         }
 

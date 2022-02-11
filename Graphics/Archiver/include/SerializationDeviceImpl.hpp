@@ -29,6 +29,8 @@
 #include <vector>
 #include <memory>
 
+#include "ArchiverFactory.h"
+
 #include "SerializationEngineImplTraits.hpp"
 #include "ObjectBase.hpp"
 #include "DXCompiler.hpp"
@@ -92,10 +94,12 @@ public:
         return SparseTextureFormatInfo{};
     }
 
-    virtual void DILIGENT_CALL_TYPE CreateShader(const ShaderCreateInfo&   ShaderCI,
-                                                 ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags,
-                                                 IShader**                 ppShader) override final;
+    /// Implementation of ISerializationDevice::CreateShader().
+    virtual void DILIGENT_CALL_TYPE CreateShader(const ShaderCreateInfo&  ShaderCI,
+                                                 const ShaderArchiveInfo& ArchiveInfo,
+                                                 IShader**                ppShader) override final;
 
+    /// Implementation of ISerializationDevice::CreatePipelineResourceSignature().
     virtual void DILIGENT_CALL_TYPE CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
                                                                     const ResourceSignatureArchiveInfo&  ArchiveInfo,
                                                                     IPipelineResourceSignature**         ppSignature) override final;

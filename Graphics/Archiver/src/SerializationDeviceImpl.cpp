@@ -154,11 +154,11 @@ SerializationDeviceImpl::~SerializationDeviceImpl()
 #endif
 }
 
-void SerializationDeviceImpl::CreateShader(const ShaderCreateInfo&   ShaderCI,
-                                           ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags,
-                                           IShader**                 ppShader)
+void SerializationDeviceImpl::CreateShader(const ShaderCreateInfo&  ShaderCI,
+                                           const ShaderArchiveInfo& ArchiveInfo,
+                                           IShader**                ppShader)
 {
-    CreateShaderImpl(ppShader, ShaderCI, DeviceFlags);
+    CreateShaderImpl(ppShader, ShaderCI, ArchiveInfo);
 }
 
 void SerializationDeviceImpl::CreateRenderPass(const RenderPassDesc& Desc, IRenderPass** ppRenderPass)
