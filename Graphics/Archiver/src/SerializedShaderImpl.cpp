@@ -31,6 +31,7 @@
 #include "DataBlobImpl.hpp"
 #include "PlatformMisc.hpp"
 #include "BasicMath.hpp"
+#include "ShaderToolsCommon.hpp"
 
 namespace Diligent
 {
@@ -125,48 +126,29 @@ void SerializedShaderImpl::CopyShaderCreateInfo(const ShaderCreateInfo& ShaderCI
     m_CreateInfo.FilePath                   = nullptr;
     m_CreateInfo.pShaderSourceStreamFactory = nullptr;
 
-    auto&                    RawAllocator = GetRawAllocator();
-    FixedLinearAllocator     Allocator{RawAllocator};
-    RefCntAutoPtr<IDataBlob> pSourceFileData;
+    auto&                RawAllocator = GetRawAllocator();
+    FixedLinearAllocator Allocator{RawAllocator};
 
     Allocator.AddSpaceForString(ShaderCI.EntryPoint);
     Allocator.AddSpaceForString(ShaderCI.CombinedSamplerSuffix);
     Allocator.AddSpaceForString(ShaderCI.Desc.Name);
 
-    const auto* SourceCode    = ShaderCI.Source;
-    size_t      SourceCodeLen = ShaderCI.SourceLength;
-
-    if (ShaderCI.Source == nullptr &&
-        ShaderCI.ByteCode == nullptr &&
-        ShaderCI.FilePath != nullptr &&
-        ShaderCI.pShaderSourceStreamFactory != nullptr)
-    {
-        RefCntAutoPtr<IFileStream> pSourceStream;
-        ShaderCI.pShaderSourceStreamFactory->CreateInputStream(ShaderCI.FilePath, &pSourceStream);
-
-        if (pSourceStream == nullptr)
-            LOG_ERROR_AND_THROW("Failed to open shader source file ", ShaderCI.FilePath);
-
-        pSourceFileData = MakeNewRCObj<DataBlobImpl>{}(0);
-        pSourceStream->ReadBlob(pSourceFileData);
-        SourceCode    = static_cast<char*>(pSourceFileData->GetDataPtr());
-        SourceCodeLen = pSourceFileData->GetSize();
-    }
-
-    if (SourceCode)
-    {
-        if (SourceCodeLen == 0)
-            Allocator.AddSpaceForString(SourceCode);
-        else
-            Allocator.AddSpace<decltype(*SourceCode)>(SourceCodeLen + 1);
-    }
-    else if (ShaderCI.ByteCode && ShaderCI.ByteCodeSize > 0)
+    RefCntAutoPtr<IDataBlob> pSourceFileData;
+    if (ShaderCI.ByteCode && ShaderCI.ByteCodeSize > 0)
     {
         Allocator.AddSpace(ShaderCI.ByteCodeSize, alignof(Uint32));
     }
+    else if ((ShaderCI.Source != nullptr) || (ShaderCI.FilePath != nullptr && ShaderCI.pShaderSourceStreamFactory != nullptr))
+    {
+        size_t SourceLen          = ShaderCI.SourceLength;
+        m_CreateInfo.Source       = ReadShaderSourceFile(ShaderCI.Source, ShaderCI.pShaderSourceStreamFactory, ShaderCI.FilePath, pSourceFileData, SourceLen);
+        m_CreateInfo.SourceLength = StaticCast<Uint32>(SourceLen);
+
+        Allocator.AddSpace<char>(m_CreateInfo.SourceLength + 1);
+    }
     else
     {
-        LOG_ERROR_AND_THROW("Shader create info must contains Source, Bytecode or FilePath with pShaderSourceStreamFactory");
+        LOG_ERROR_AND_THROW("Shader create info must contain Source, Bytecode or FilePath with pShaderSourceStreamFactory");
     }
 
     Uint32 MacroCount = 0;
@@ -194,35 +176,19 @@ void SerializedShaderImpl::CopyShaderCreateInfo(const ShaderCreateInfo& ShaderCI
     if (m_CreateInfo.Desc.Name == nullptr)
         m_CreateInfo.Desc.Name = "";
 
-    if (SourceCode)
-    {
-        if (SourceCodeLen == 0)
-        {
-            m_CreateInfo.Source       = Allocator.CopyString(SourceCode);
-            m_CreateInfo.SourceLength = strlen(m_CreateInfo.Source);
-        }
-        else
-        {
-            const size_t Size    = sizeof(*SourceCode) * (SourceCodeLen + 1);
-            auto*        pSource = static_cast<Char*>(Allocator.Allocate(Size, alignof(Char)));
-            std::memcpy(pSource, SourceCode, Size);
-            pSource[SourceCodeLen]    = '\0';
-            m_CreateInfo.SourceLength = SourceCodeLen;
-            m_CreateInfo.Source       = pSource;
-        }
-        VERIFY_EXPR(m_CreateInfo.SourceLength == strlen(m_CreateInfo.Source));
-    }
-
     if (ShaderCI.ByteCode && ShaderCI.ByteCodeSize > 0)
     {
-        void* pByteCode = Allocator.Allocate(ShaderCI.ByteCodeSize, alignof(Uint32));
-        std::memcpy(pByteCode, ShaderCI.ByteCode, ShaderCI.ByteCodeSize);
-        m_CreateInfo.ByteCode = pByteCode;
+        m_CreateInfo.ByteCode = Allocator.Copy(ShaderCI.ByteCode, ShaderCI.ByteCodeSize, alignof(Uint32));
+    }
+    else
+    {
+        VERIFY_EXPR(m_CreateInfo.Source != nullptr && m_CreateInfo.SourceLength > 0);
+        m_CreateInfo.Source = Allocator.CopyString(m_CreateInfo.Source, m_CreateInfo.SourceLength);
     }
 
     if (MacroCount > 0)
     {
-        auto* pMacros       = Allocator.Allocate<ShaderMacro>(MacroCount + 1);
+        auto* pMacros       = Allocator.ConstructArray<ShaderMacro>(MacroCount + 1);
         m_CreateInfo.Macros = pMacros;
         for (auto* Macro = ShaderCI.Macros; Macro->Name != nullptr && Macro->Definition != nullptr; ++Macro, ++pMacros)
         {
