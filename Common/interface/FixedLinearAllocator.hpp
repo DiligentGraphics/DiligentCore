@@ -288,7 +288,7 @@ public:
         return Construct<T>(Src);
     }
 
-    void* Copy(void* Src, size_t size, size_t alignment = 1)
+    void* Copy(const void* Src, size_t size, size_t alignment = 1)
     {
         auto* Dst = Allocate(size, alignment);
         std::memcpy(Dst, Src, size);
@@ -319,23 +319,11 @@ public:
 
         if (StrLen == 0)
             StrLen = strlen(Str);
-        else
-            VERIFY_EXPR(StrLen == strlen(Str));
 
         auto* Ptr = reinterpret_cast<Char*>(Allocate(StrLen + 1, 1));
-        Char* Dst = Ptr;
+        std::memcpy(Ptr, Str, StrLen);
+        Ptr[StrLen] = '\0';
 
-        const auto* pDataEnd = reinterpret_cast<Char*>(m_pDataStart) + m_ReservedSize;
-        while (*Str != 0 && Dst < pDataEnd)
-        {
-            *(Dst++) = *(Str++);
-        }
-        if (Dst < pDataEnd)
-            *(Dst++) = 0;
-        else
-            UNEXPECTED("Not enough space reserved for the string");
-
-        VERIFY_EXPR(reinterpret_cast<Char*>(m_pCurrPtr) == Dst);
         return Ptr;
     }
 
