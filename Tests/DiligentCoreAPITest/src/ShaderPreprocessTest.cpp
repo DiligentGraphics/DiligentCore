@@ -53,7 +53,7 @@ TEST(ShaderPreprocessTest, Include)
         ShaderCI.FilePath                   = "IncludeBasicTest.hlsl";
         ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
 
-        const auto Result = ShaderIncludePreprocessor(ShaderCI, [&](const ShaderIncludePreprocessorInfo& Info) {
+        const auto Result = ProcessShaderIncludes(ShaderCI, [&](const ProcessShaderIncludesInfo& Info) {
             EXPECT_EQ(SafeStrEqual(Info.FilePath, Includes.front()), true);
             Includes.pop_front();
         });
@@ -70,7 +70,7 @@ TEST(ShaderPreprocessTest, Include)
         ShaderCI.FilePath                   = "IncludeWhiteSpace.hlsl";
         ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
 
-        const auto Result = ShaderIncludePreprocessor(ShaderCI, [&](const ShaderIncludePreprocessorInfo& Info) {
+        const auto Result = ProcessShaderIncludes(ShaderCI, [&](const ProcessShaderIncludesInfo& Info) {
             EXPECT_EQ(SafeStrEqual(Info.FilePath, Includes.front()), true);
             Includes.pop_front();
         });
@@ -88,7 +88,7 @@ TEST(ShaderPreprocessTest, Include)
         ShaderCI.FilePath                   = "IncludeCommentsSingleLineTest.hlsl";
         ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
 
-        const auto Result = ShaderIncludePreprocessor(ShaderCI, [&](const ShaderIncludePreprocessorInfo& Info) {
+        const auto Result = ProcessShaderIncludes(ShaderCI, [&](const ProcessShaderIncludesInfo& Info) {
             EXPECT_EQ(SafeStrEqual(Info.FilePath, Includes.front()), true);
             Includes.pop_front();
         });
@@ -106,7 +106,7 @@ TEST(ShaderPreprocessTest, Include)
         ShaderCI.FilePath                   = "IncludeCommentsMultiLineTest.hlsl";
         ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
 
-        const auto Result = ShaderIncludePreprocessor(ShaderCI, [&](const ShaderIncludePreprocessorInfo& Info) {
+        const auto Result = ProcessShaderIncludes(ShaderCI, [&](const ProcessShaderIncludesInfo& Info) {
             EXPECT_EQ(SafeStrEqual(Info.FilePath, Includes.front()), true);
             Includes.pop_front();
         });
@@ -123,7 +123,7 @@ TEST(ShaderPreprocessTest, Include)
         ShaderCI.FilePath                   = "IncludeCommentsTrickyCasesTest.hlsl";
         ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
 
-        const auto Result = ShaderIncludePreprocessor(ShaderCI, [&](const ShaderIncludePreprocessorInfo& Info) {
+        const auto Result = ProcessShaderIncludes(ShaderCI, [&](const ProcessShaderIncludesInfo& Info) {
             EXPECT_EQ(SafeStrEqual(Info.FilePath, Includes.front()), true);
             Includes.pop_front();
         });

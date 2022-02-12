@@ -26,6 +26,8 @@
 
 #pragma once
 
+#include <cstring>
+
 #include "../../../Primitives/interface/BasicTypes.h"
 
 struct XXH3_state_s;
@@ -50,15 +52,32 @@ struct XXH128State final
 
     ~XXH128State();
 
-    XXH128State(XXH128State& RHS) = delete;
+    XXH128State(const XXH128State& RHS) = delete;
 
-    XXH128State& operator=(XXH128State& RHS) = delete;
+    XXH128State& operator=(const XXH128State& RHS) = delete;
 
     XXH128State(XXH128State&& RHS) noexcept;
 
     XXH128State& operator=(XXH128State&& RHS) noexcept;
 
     void Update(const void* pData, Uint64 Size);
+
+    template <typename Type>
+    void Update(const Type& Val)
+    {
+        Update(&Val, sizeof(Val));
+    }
+
+    void Update(const char* pData, size_t Len = 0)
+    {
+        if (pData == nullptr)
+            return;
+
+        if (Len == 0)
+            Len = std::strlen(pData);
+
+        Update(static_cast<const void*>(pData), Len);
+    }
 
     XXH128Hash Digest();
 

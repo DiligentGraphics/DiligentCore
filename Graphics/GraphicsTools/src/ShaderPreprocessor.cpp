@@ -155,14 +155,14 @@ void ExtractDependencies(std::function<void(const Diligent::String&)> IncludeHan
 namespace Diligent
 {
 
-bool ShaderIncludePreprocessor(const ShaderCreateInfo& ShaderCI, std::function<void(const ShaderIncludePreprocessorInfo&)> DataHandler)
+bool ProcessShaderIncludes(const ShaderCreateInfo& ShaderCI, std::function<void(const ProcessShaderIncludesInfo&)> DataHandler)
 {
     VERIFY_EXPR(ShaderCI.Desc.Name != nullptr);
 
     std::unordered_set<String> Includes;
 
-    std::function<void(const ShaderIncludePreprocessorInfo&, IShaderSourceInputStreamFactory*)> ParseShader;
-    ParseShader = [&](const ShaderIncludePreprocessorInfo& PreprocessorInfo, IShaderSourceInputStreamFactory* pStreamFactory) //
+    std::function<void(const ProcessShaderIncludesInfo&, IShaderSourceInputStreamFactory*)> ParseShader;
+    ParseShader = [&](const ProcessShaderIncludesInfo& PreprocessorInfo, IShaderSourceInputStreamFactory* pStreamFactory) //
     {
         auto IncludeHandler = [&](const String& Include) //
         {

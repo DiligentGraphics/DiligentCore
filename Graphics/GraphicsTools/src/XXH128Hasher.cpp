@@ -28,6 +28,7 @@
 
 #include "XXH128Hasher.hpp"
 #include "DebugUtilities.hpp"
+#include "Cast.hpp"
 
 namespace Diligent
 {
@@ -62,7 +63,7 @@ void XXH128State::Update(const void* pData, uint64_t Size)
 {
     VERIFY_EXPR(pData != nullptr);
     VERIFY_EXPR(Size != 0);
-    XXH3_128bits_update(m_State, pData, static_cast<size_t>(Size));
+    XXH3_128bits_update(m_State, pData, StaticCast<size_t>(Size));
 }
 
 XXH128Hash XXH128State::Digest()

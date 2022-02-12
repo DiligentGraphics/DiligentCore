@@ -28,17 +28,20 @@
 
 #include <functional>
 
+#include "../../../Primitives/interface/DataBlob.h"
+#include "../../GraphicsEngine/interface/Shader.h"
+
 namespace Diligent
 {
 
-struct ShaderIncludePreprocessorInfo
+struct ProcessShaderIncludesInfo
 {
     struct IDataBlob* DataBlob = nullptr;
     const char*       FilePath = nullptr;
 };
 
-// The function recursively finds all include files in the shader
-// When an included file is found, the function DataHandler(...) is called
-bool ShaderIncludePreprocessor(const struct ShaderCreateInfo& ShaderCI, std::function<void(const ShaderIncludePreprocessorInfo&)> DataHandler);
+// The function recursively finds all include files in the shader.
+// When an included file is found, the function DataHandler(...) is called.
+bool ProcessShaderIncludes(const struct ShaderCreateInfo& ShaderCI, std::function<void(const ProcessShaderIncludesInfo&)> DataHandler);
 
 } // namespace Diligent

@@ -193,14 +193,13 @@ struct ShaderMacro
     {}
 
     /// Comparison operator tests if two structures are equivalent
-
-    /// \param [in] RHS - reference to the structure to perform comparison with
-    /// \return
-    /// - True if all members of the two structures are equal.
-    /// - False otherwise.
     bool operator==(const ShaderMacro& RHS) const
     {
         return SafeStrEqual(Name, RHS.Name) && SafeStrEqual(Definition, RHS.Definition);
+    }
+    bool operator!=(const ShaderMacro& RHS) const
+    {
+        return !(*this == RHS);
     }
 #endif
 };

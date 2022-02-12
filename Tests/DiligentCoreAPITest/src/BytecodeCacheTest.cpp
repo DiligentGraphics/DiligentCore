@@ -60,7 +60,7 @@ TEST(BytecodeCacheTest, Basic)
             RefCntAutoPtr<IDataBlob> pShaderDataBlob;
             pCache->Store(&pShaderDataBlob);
             pCache->Clear();
-            pCache->Load(pShaderDataBlob);
+            EXPECT_TRUE(pCache->Load(pShaderDataBlob));
         }
 
         {
@@ -144,9 +144,6 @@ TEST(BytecodeCacheTest, Include)
     RefCntAutoPtr<IBytecodeCache> pCache;
     CreateBytecodeCache({RENDER_DEVICE_TYPE_VULKAN}, &pCache);
     ASSERT_NE(pCache, nullptr);
-
-    {
-    }
 }
 
 } // namespace

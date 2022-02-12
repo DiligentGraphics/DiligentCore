@@ -54,7 +54,7 @@ static const INTERFACE_ID IID_BytecodeCache = {0xD1F8295F, 0xF9D7, 0x4CD4, {0x9D
 
 DILIGENT_BEGIN_INTERFACE(IBytecodeCache, IObject)
 {
-    VIRTUAL void METHOD(Load)(THIS_ IDataBlob* pData) PURE;
+    VIRTUAL bool METHOD(Load)(THIS_ IDataBlob* pData) PURE;
 
     VIRTUAL void METHOD(GetBytecode)(THIS_ const ShaderCreateInfo REF ShaderCI,
                                      IDataBlob**                      ppByteCode) PURE;

@@ -46,13 +46,31 @@ public:
 
     struct BytecodeCacheHeader
     {
-        Version CacheVersion  = {};
-        Uint64  CountElements = 0;
+        static constexpr Uint32 HeaderMagic   = 0x7ADECACE;
+        static constexpr Uint32 HeaderVersion = 1;
+
+        Uint32 Magic   = HeaderMagic;
+        Uint32 Version = HeaderVersion;
+
+        Uint64 ElementCount = 0;
+
+        template <typename SerType>
+        void Serialize(SerType& Stream)
+        {
+            Stream(Magic, Version, ElementCount);
+        }
     };
 
     struct BytecodeCacheElementHeader
     {
-        XXH128Hash Hash = {};
+        XXH128Hash Hash     = {};
+        size_t     DataSize = 0;
+
+        template <typename SerType>
+        void Serialize(SerType& Stream)
+        {
+            Stream(Hash.LowPart, Hash.HighPart, DataSize);
+        }
     };
 
 public:
@@ -65,29 +83,41 @@ public:
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_BytecodeCache, TBase);
 
-    virtual void DILIGENT_CALL_TYPE Load(IDataBlob* pDataBlob) override final
+    virtual bool DILIGENT_CALL_TYPE Load(IDataBlob* pDataBlob) override final
     {
-        VERIFY_EXPR(pDataBlob != nullptr);
-
-        DynamicLinearAllocator Allocator{DefaultRawMemoryAllocator::GetAllocator()};
-
-        const SerializedData             Memory{pDataBlob->GetDataPtr(), pDataBlob->GetSize()};
-        Serializer<SerializerMode::Read> Stream{Memory};
-
-        BytecodeCacheHeader Header{};
-        Stream(Header.CacheVersion.Major, Header.CacheVersion.Minor, Header.CountElements);
-
-        for (Uint64 ItemID = 0; ItemID < Header.CountElements; ItemID++)
+        if (pDataBlob == nullptr)
         {
-            BytecodeCacheElementHeader ElementHeader{};
-            Stream(ElementHeader.Hash.LowPart, ElementHeader.Hash.HighPart);
+            UNEXPECTED("Data blob must not be null");
+            return false;
+        }
 
-            Uint8* pRawData     = nullptr;
-            size_t pRawDataSize = 0;
-            Stream.SerializeArrayRaw(&Allocator, pRawData, pRawDataSize);
-            auto pBytecode = DataBlobImpl::Create(static_cast<size_t>(pRawDataSize), pRawData);
+        Serializer<SerializerMode::Read> Stream{SerializedData{pDataBlob->GetDataPtr(), pDataBlob->GetSize()}};
+
+        BytecodeCacheHeader Header;
+        Header.Serialize(Stream);
+        if (Header.Magic != BytecodeCacheHeader::HeaderMagic)
+        {
+            LOG_ERROR_MESSAGE("Incorrect bytecode header magic number");
+            return false;
+        }
+
+        if (Header.Version != BytecodeCacheHeader::HeaderVersion)
+        {
+            LOG_ERROR_MESSAGE("Incorrect bytecode header version (", Header.Version, "). ", Uint32{BytecodeCacheHeader::HeaderVersion}, " is expected.");
+            return false;
+        }
+
+        for (Uint64 ItemID = 0; ItemID < Header.ElementCount; ItemID++)
+        {
+            BytecodeCacheElementHeader ElementHeader;
+            ElementHeader.Serialize(Stream);
+
+            auto pBytecode = DataBlobImpl::Create(ElementHeader.DataSize);
+            Stream.CopyBytes(pBytecode->GetDataPtr(), ElementHeader.DataSize);
             m_HashMap.emplace(ElementHeader.Hash, pBytecode);
         }
+
+        return true;
     }
 
     virtual void DILIGENT_CALL_TYPE GetBytecode(const ShaderCreateInfo& ShaderCI, IDataBlob** ppByteCode) override final
@@ -121,30 +151,33 @@ public:
     {
         VERIFY_EXPR(ppDataBlob != nullptr);
 
-        auto WriteDate = [&](auto& Stream) //
+        auto WriteData = [&](auto& Stream) //
         {
             BytecodeCacheHeader Header{};
-            Header.CountElements = m_HashMap.size();
-            Stream(Header.CacheVersion.Major, Header.CacheVersion.Minor, Header.CountElements);
+            Header.ElementCount = m_HashMap.size();
+            Header.Serialize(Stream);
 
             for (auto const& Pair : m_HashMap)
             {
-                BytecodeCacheElementHeader ElementHeader{Pair.first};
-                Stream(ElementHeader.Hash.LowPart, ElementHeader.Hash.HighPart);
+                const auto& pBytecode = Pair.second;
 
-                const Uint8* pRawData     = static_cast<const Uint8*>(Pair.second->GetConstDataPtr());
-                size_t       pRawDataSize = Pair.second->GetSize();
-                Stream.SerializeArrayRaw(nullptr, pRawData, pRawDataSize);
+                BytecodeCacheElementHeader ElementHeader;
+                ElementHeader.Hash     = Pair.first;
+                ElementHeader.DataSize = pBytecode->GetSize();
+                ElementHeader.Serialize(Stream);
+
+                Stream.CopyBytes(pBytecode->GetConstDataPtr(), ElementHeader.DataSize);
             }
         };
 
         Serializer<SerializerMode::Measure> MeasureStream{};
-        WriteDate(MeasureStream);
+        WriteData(MeasureStream);
 
         const auto Memory = MeasureStream.AllocateData(DefaultRawMemoryAllocator::GetAllocator());
 
         Serializer<SerializerMode::Write> WriteStream{Memory};
-        WriteDate(WriteStream);
+        WriteData(WriteStream);
+        VERIFY_EXPR(WriteStream.IsEnded());
 
         *ppDataBlob = DataBlobImpl::Create(Memory.Size(), Memory.Ptr()).Detach();
     }
@@ -157,41 +190,32 @@ public:
 private:
     XXH128Hash ComputeHash(const ShaderCreateInfo& ShaderCI) const
     {
-        auto UpdateHashWithString = [](XXH128State& Hasher, const char* Str) {
-            if (Str != nullptr)
-                Hasher.Update(Str, strlen(Str));
-        };
-
-        auto UpdateHashWithValue = [](XXH128State& Hasher, auto& Value) {
-            Hasher.Update(&Value, sizeof(Value));
-        };
-
-        XXH128State Hasher{};
-        UpdateHashWithString(Hasher, ShaderCI.FilePath);
-        UpdateHashWithString(Hasher, ShaderCI.EntryPoint);
-        UpdateHashWithString(Hasher, ShaderCI.CombinedSamplerSuffix);
-        UpdateHashWithString(Hasher, ShaderCI.Desc.Name);
+        XXH128State Hasher;
+        Hasher.Update(ShaderCI.FilePath);
+        Hasher.Update(ShaderCI.EntryPoint);
+        Hasher.Update(ShaderCI.CombinedSamplerSuffix);
+        Hasher.Update(ShaderCI.Desc.Name);
 
         if (ShaderCI.Macros != nullptr)
         {
-            for (auto* Macro = ShaderCI.Macros; *Macro == ShaderMacro{nullptr, nullptr}; ++Macro)
+            for (auto* Macro = ShaderCI.Macros; *Macro != ShaderMacro{nullptr, nullptr}; ++Macro)
             {
-                UpdateHashWithString(Hasher, Macro->Name);
-                UpdateHashWithString(Hasher, Macro->Definition);
+                Hasher.Update(Macro->Name);
+                Hasher.Update(Macro->Definition);
             }
         }
 
-        UpdateHashWithValue(Hasher, ShaderCI.Desc.ShaderType);
-        UpdateHashWithValue(Hasher, ShaderCI.UseCombinedTextureSamplers);
-        UpdateHashWithValue(Hasher, ShaderCI.SourceLanguage);
-        UpdateHashWithValue(Hasher, ShaderCI.ShaderCompiler);
-        UpdateHashWithValue(Hasher, ShaderCI.HLSLVersion);
-        UpdateHashWithValue(Hasher, ShaderCI.GLSLVersion);
-        UpdateHashWithValue(Hasher, ShaderCI.GLESSLVersion);
-        UpdateHashWithValue(Hasher, ShaderCI.CompileFlags);
-        UpdateHashWithValue(Hasher, m_DeviceType);
+        Hasher.Update(ShaderCI.Desc.ShaderType);
+        Hasher.Update(ShaderCI.UseCombinedTextureSamplers);
+        Hasher.Update(ShaderCI.SourceLanguage);
+        Hasher.Update(ShaderCI.ShaderCompiler);
+        Hasher.Update(ShaderCI.HLSLVersion);
+        Hasher.Update(ShaderCI.GLSLVersion);
+        Hasher.Update(ShaderCI.GLESSLVersion);
+        Hasher.Update(ShaderCI.CompileFlags);
+        Hasher.Update(m_DeviceType);
 
-        ShaderIncludePreprocessor(ShaderCI, [&](const ShaderIncludePreprocessorInfo& Info) {
+        ProcessShaderIncludes(ShaderCI, [&](const ProcessShaderIncludesInfo& Info) {
             Hasher.Update(Info.DataBlob->GetConstDataPtr(), Info.DataBlob->GetSize());
         });
 
@@ -201,9 +225,14 @@ private:
 private:
     struct XXH128HashHasher
     {
-        size_t operator()(XXH128Hash const& Hash) const
+        size_t operator()(const XXH128Hash& Hash) const
         {
-            return StaticCast<size_t>(Hash.LowPart);
+            Uint64 h = Hash.LowPart ^ Hash.HighPart;
+#if defined(DILIGENT_PLATFORM_64)
+            return StaticCast<size_t>(h);
+#elif defined(DILIGENT_PLATFORM_32)
+            return StaticCast<size_t>((h & ~Uint32{0}) ^ (h >> 32u));
+#endif
         }
     };
 
