@@ -27,6 +27,8 @@
 
 #pragma once
 
+#include <functional>
+
 #include "GraphicsTypes.h"
 #include "Shader.h"
 #include "RefCntAutoPtr.hpp"
@@ -78,5 +80,15 @@ const char* ReadShaderSourceFile(const char*                      SourceCode,
 /// Appends shader source code to the source string
 void AppendShaderSourceCode(std::string& Source, const ShaderCreateInfo& ShaderCI) noexcept(false);
 
+
+struct ProcessShaderIncludesInfo
+{
+    IDataBlob*  DataBlob = nullptr;
+    const char* FilePath = nullptr;
+};
+
+// The function recursively finds all include files in the shader.
+// When an included file is found, the function DataHandler(...) is called.
+bool ProcessShaderIncludes(const struct ShaderCreateInfo& ShaderCI, std::function<void(const ProcessShaderIncludesInfo&)> DataHandler);
 
 } // namespace Diligent

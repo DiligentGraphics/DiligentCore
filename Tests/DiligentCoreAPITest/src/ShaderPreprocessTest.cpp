@@ -26,7 +26,7 @@
 
 #include <deque>
 
-#include "ShaderPreprocessor.hpp"
+#include "ShaderToolsCommon.hpp"
 #include "TestingEnvironment.hpp"
 #include "gtest/gtest.h"
 

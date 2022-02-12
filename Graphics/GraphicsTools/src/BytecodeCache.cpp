@@ -31,7 +31,7 @@
 #include "ObjectBase.hpp"
 #include "Serializer.hpp"
 #include "BytecodeCache.h"
-#include "ShaderPreprocessor.hpp"
+#include "ShaderToolsCommon.hpp"
 #include "XXH128Hasher.hpp"
 #include "DefaultRawMemoryAllocator.hpp"
 
