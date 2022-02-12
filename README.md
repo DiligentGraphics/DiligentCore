@@ -707,6 +707,7 @@ This project has some third-party dependencies, each of which may have independe
 * [googletest](https://github.com/google/googletest): Google Testing and Mocking Framework ([BSD 3-Clause "New" or "Revised" License](https://github.com/DiligentGraphics/googletest/blob/master/LICENSE)).
 * [DirectXShaderCompiler](https://github.com/microsoft/DirectXShaderCompiler): LLVM/Clang-based DirectX Shader Compiler ([LLVM Release License](https://github.com/DiligentGraphics/DiligentCore/blob/master/ThirdParty/DirectXShaderCompiler/LICENSE.TXT)).
 * [DXBCChecksum](ThirdParty/GPUOpenShaderUtils): DXBC Checksum computation algorithm by AMD Developer Tools Team ([MIT lincesne](ThirdParty/GPUOpenShaderUtils/License.txt)).
+* [xxHash](https://github.com/Cyan4973/xxHash): Extremely fast non-cryptographic hash algorithm ([2-Clause BSD License](https://github.com/DiligentGraphics/xxHash/blob/dev/LICENSE)).
 
 <a name="contributing"></a>
 # Contributing
