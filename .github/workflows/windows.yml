@@ -35,6 +35,7 @@ jobs:
       if: success()
       shell: bash
       run: |
+        cd "${{runner.workspace}}\DiligentCore\Tests\DiligentCoreTest\assets"
         "${{runner.workspace}}\build\Tests\DiligentCoreTest\${{ matrix.config }}\DiligentCoreTest.exe"
 
     - name: DiligentCoreAPITest D3D11
@@ -101,6 +102,7 @@ jobs:
       if: success()
       shell: bash
       run: |
+        cd "${{runner.workspace}}\DiligentCore\Tests\DiligentCoreTest\assets"
         "${{runner.workspace}}\build\Tests\DiligentCoreTest\${{ matrix.config }}\DiligentCoreTest.exe"
 
     - name: Upload artifact
@@ -146,6 +148,7 @@ jobs:
       if: success()
       shell: bash
       run: |
+        cd "${{runner.workspace}}\DiligentCore\Tests\DiligentCoreTest\assets"
         "${{runner.workspace}}\build\Tests\DiligentCoreTest\${{ matrix.config }}\DiligentCoreTest.exe"
 
     - name: DiligentCoreAPITest D3D11

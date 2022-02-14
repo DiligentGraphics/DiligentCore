@@ -27,20 +27,20 @@
 #include <deque>
 
 #include "ShaderToolsCommon.hpp"
-#include "TestingEnvironment.hpp"
+#include "DefaultShaderSourceStreamFactory.h"
+#include "RenderDevice.h"
 #include "gtest/gtest.h"
 
 using namespace Diligent;
-using namespace Diligent::Testing;
 
 namespace
 {
 
 TEST(ShaderPreprocessTest, Include)
 {
-    auto*                                          pEnv = TestingEnvironment::GetInstance();
     RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
-    pEnv->GetDevice()->GetEngineFactory()->CreateDefaultShaderSourceStreamFactory("shaders/ShaderPreprocessor", &pShaderSourceFactory);
+    CreateDefaultShaderSourceStreamFactory("shaders/ShaderPreprocessor", &pShaderSourceFactory);
+    ASSERT_NE(pShaderSourceFactory, nullptr);
 
     {
         std::deque<const char*> Includes{
@@ -63,11 +63,11 @@ TEST(ShaderPreprocessTest, Include)
     {
         std::deque<const char*> Includes{
             "IncludeCommon0.hlsl",
-            "IncludeWhiteSpace.hlsl"};
+            "IncludeWhiteSpaceTest.hlsl"};
 
         ShaderCreateInfo ShaderCI{};
         ShaderCI.Desc.Name                  = "TestShader";
-        ShaderCI.FilePath                   = "IncludeWhiteSpace.hlsl";
+        ShaderCI.FilePath                   = "IncludeWhiteSpaceTest.hlsl";
         ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
 
         const auto Result = ProcessShaderIncludes(ShaderCI, [&](const ProcessShaderIncludesInfo& Info) {

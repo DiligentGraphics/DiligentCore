@@ -45,8 +45,7 @@ build:
   parallel: true
 
 test_script:
-  - 'cd %APPVEYOR_BUILD_FOLDER%\Tests\DiligentCoreAPITest\assets'
-  - '%APPVEYOR_BUILD_FOLDER%\BuildTools\Scripts\appveyor\run_tests.bat %APPVEYOR_BUILD_FOLDER%\build'
+  - '%APPVEYOR_BUILD_FOLDER%\BuildTools\Scripts\appveyor\run_tests.bat %APPVEYOR_BUILD_FOLDER%\build %APPVEYOR_BUILD_FOLDER%\Tests\DiligentCoreTest\assets %APPVEYOR_BUILD_FOLDER%\Tests\DiligentCoreAPITest\assets'
 
 after_test:
   - 'cd %APPVEYOR_BUILD_FOLDER%\install'

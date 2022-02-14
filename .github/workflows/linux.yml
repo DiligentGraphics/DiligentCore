@@ -42,7 +42,9 @@ jobs:
     - name: DiligentCoreTest
       if: success()
       shell: bash
-      run: ${{runner.workspace}}/build/Tests/DiligentCoreTest/DiligentCoreTest
+      run: |
+        cd "${{runner.workspace}}/DiligentCore/Tests/DiligentCoreTest/assets"
+        ${{runner.workspace}}/build/Tests/DiligentCoreTest/DiligentCoreTest
 
     - name: Upload artifact
       uses: actions/upload-artifact@v2
@@ -94,7 +96,9 @@ jobs:
     - name: DiligentCoreTest
       if: success()
       shell: bash
-      run: ${{runner.workspace}}/build/Tests/DiligentCoreTest/DiligentCoreTest
+      run: |
+        cd "${{runner.workspace}}/DiligentCore/Tests/DiligentCoreTest/assets"
+        ${{runner.workspace}}/build/Tests/DiligentCoreTest/DiligentCoreTest
 
     - name: Upload artifact
       uses: actions/upload-artifact@v2

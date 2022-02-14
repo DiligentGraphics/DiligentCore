@@ -26,11 +26,9 @@
 
 #include "BytecodeCache.h"
 #include "DataBlobImpl.hpp"
-#include "TestingEnvironment.hpp"
 #include "gtest/gtest.h"
 
 using namespace Diligent;
-using namespace Diligent::Testing;
 
 namespace
 {
