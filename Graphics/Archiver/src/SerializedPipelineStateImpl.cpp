@@ -320,22 +320,24 @@ void SerializedPipelineStateImpl::SerializeShaderBytecode(DeviceType            
 {
     auto SerializeShaderCI = [&](auto& Ser) //
     {
-        Ser(CI.Desc.ShaderType, CI.EntryPoint, CI.SourceLanguage, CI.ShaderCompiler);
+        constexpr auto SerMode = std::remove_reference<decltype(Ser)>::type::GetMode();
+        ShaderSerializer<SerMode>::SerializeCI(Ser, CI);
         Ser.CopyBytes(Bytecode, BytecodeSize);
     };
 
-    auto AllocateData = [&]() {
+    Data::ShaderInfo ShaderData;
+
+    {
         Serializer<SerializerMode::Measure> Ser;
         SerializeShaderCI(Ser);
-        return Ser.AllocateData(GetRawAllocator());
-    };
+        ShaderData.Data = Ser.AllocateData(GetRawAllocator());
+    }
 
-    Data::ShaderInfo ShaderData;
-    ShaderData.Data = AllocateData();
-
-    Serializer<SerializerMode::Write> Ser{ShaderData.Data};
-    SerializeShaderCI(Ser);
-    VERIFY_EXPR(Ser.IsEnded());
+    {
+        Serializer<SerializerMode::Write> Ser{ShaderData.Data};
+        SerializeShaderCI(Ser);
+        VERIFY_EXPR(Ser.IsEnded());
+    }
 
     ShaderData.Hash = ComputeHashRaw(ShaderData.Data.Ptr(), ShaderData.Data.Size());
 #ifdef DILIGENT_DEBUG
@@ -359,23 +361,24 @@ void SerializedPipelineStateImpl::SerializeShaderSource(DeviceType Type, const S
 
     auto SerializeShaderCI = [&](auto& Ser) //
     {
-        Ser(CI.Desc.ShaderType, CI.EntryPoint, CI.SourceLanguage, CI.ShaderCompiler, CI.UseCombinedTextureSamplers, CI.CombinedSamplerSuffix);
+        constexpr auto SerMode = std::remove_reference<decltype(Ser)>::type::GetMode();
+        ShaderSerializer<SerMode>::SerializeCI(Ser, CI);
         Ser.CopyBytes(Source.c_str(), (Source.size() + 1) * sizeof(Source[0]));
     };
 
-    auto AllocateData = [&]() //
+    Data::ShaderInfo ShaderData;
+
     {
         Serializer<SerializerMode::Measure> Ser;
         SerializeShaderCI(Ser);
-        return Ser.AllocateData(GetRawAllocator());
-    };
+        ShaderData.Data = Ser.AllocateData(GetRawAllocator());
+    }
 
-    Data::ShaderInfo ShaderData;
-    ShaderData.Data = AllocateData();
-
-    Serializer<SerializerMode::Write> Ser{ShaderData.Data};
-    SerializeShaderCI(Ser);
-    VERIFY_EXPR(Ser.IsEnded());
+    {
+        Serializer<SerializerMode::Write> Ser{ShaderData.Data};
+        SerializeShaderCI(Ser);
+        VERIFY_EXPR(Ser.IsEnded());
+    }
 
     ShaderData.Hash = ComputeHashRaw(ShaderData.Data.Ptr(), ShaderData.Data.Size());
 #ifdef DILIGENT_DEBUG

@@ -785,4 +785,44 @@ TEST(PSOSerializerTest, SerializeRenderPassDesc)
     } while (!RndValue.IsComplete());
 }
 
+TEST(PSOSerializerTest, SerializeShaderCreateInfo)
+{
+    ShaderCreateInfo RefCI;
+    RefCI.Desc.Name                  = "Serialized Shader";
+    RefCI.Desc.ShaderType            = SHADER_TYPE_COMPUTE;
+    RefCI.EntryPoint                 = "Entry_Point";
+    RefCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
+    RefCI.ShaderCompiler             = SHADER_COMPILER_GLSLANG;
+    RefCI.UseCombinedTextureSamplers = true;
+    RefCI.CombinedSamplerSuffix      = "suff";
+
+    SerializedData Data;
+    {
+        Serializer<SerializerMode::Measure> Ser;
+        ShaderSerializer<SerializerMode::Measure>::SerializeCI(Ser, RefCI);
+        Data = Ser.AllocateData(GetRawAllocator());
+    }
+
+    {
+        Serializer<SerializerMode::Write> Ser{Data};
+        ShaderSerializer<SerializerMode::Write>::SerializeCI(Ser, RefCI);
+    }
+
+    ShaderCreateInfo CI;
+    {
+        Serializer<SerializerMode::Read> Ser{Data};
+        ShaderSerializer<SerializerMode::Read>::SerializeCI(Ser, CI);
+    }
+
+    // clang-format off
+    EXPECT_STREQ(CI.Desc.Name,                  RefCI.Desc.Name);
+    EXPECT_EQ   (CI.Desc.ShaderType,            RefCI.Desc.ShaderType);
+    EXPECT_STREQ(CI.EntryPoint,                 RefCI.EntryPoint);
+    EXPECT_EQ   (CI.SourceLanguage,             RefCI.SourceLanguage);
+    EXPECT_EQ   (CI.ShaderCompiler,             RefCI.ShaderCompiler);
+    EXPECT_EQ   (CI.UseCombinedTextureSamplers, RefCI.UseCombinedTextureSamplers);
+    EXPECT_STREQ(CI.CombinedSamplerSuffix,      RefCI.CombinedSamplerSuffix);
+    // clang-format on
+}
+
 } // namespace

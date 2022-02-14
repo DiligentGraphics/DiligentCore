@@ -38,6 +38,7 @@ TEST(SerializerTest, SerializerTest)
 {
     const char* const RefStr      = "serialized text";
     const char* const RefEmptyStr = "";
+    const char* const RefNullStr  = nullptr;
     const Uint64      RefU64      = 0x12345678ABCDEF01ull;
     const Uint8       RefU8       = 0x72;
     const Uint32      RefU32      = 0x52830394u;
@@ -55,6 +56,7 @@ TEST(SerializerTest, SerializerTest)
         Ser(RefU16);
         Ser(RefStr);
         Ser(RefEmptyStr);
+        Ser(RefNullStr);
         Ser(RefU64, RefU8);
         Ser(RefU32);
         Ser.SerializeArrayRaw(&TmpAllocator, RefArray, RefArraySize);
@@ -89,6 +91,12 @@ TEST(SerializerTest, SerializerTest)
         const char* EmptyStr = nullptr;
         RSer(EmptyStr);
         EXPECT_STREQ(EmptyStr, RefEmptyStr);
+    }
+
+    {
+        const char* NullStr = nullptr;
+        RSer(NullStr);
+        EXPECT_STREQ(NullStr, "");
     }
 
     {

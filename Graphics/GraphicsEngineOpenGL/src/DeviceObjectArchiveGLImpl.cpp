@@ -50,8 +50,6 @@ RefCntAutoPtr<IShader> DeviceObjectArchiveGLImpl::UnpackShader(Serializer<Serial
                                                                ShaderCreateInfo&                 ShaderCI,
                                                                IRenderDevice*                    pDevice)
 {
-    Ser(ShaderCI.UseCombinedTextureSamplers, ShaderCI.CombinedSamplerSuffix);
-
     ShaderCI.Source       = static_cast<const Char*>(Ser.GetCurrentPtr());
     ShaderCI.SourceLength = Ser.GetRemainingSize() - 1;
     VERIFY_EXPR(ShaderCI.SourceLength == strlen(ShaderCI.Source));

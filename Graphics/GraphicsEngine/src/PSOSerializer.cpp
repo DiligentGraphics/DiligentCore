@@ -406,6 +406,20 @@ void PSOSerializer<Mode>::SerializeAuxData(Serializer<Mode>&                Ser,
 }
 
 
+
+template <SerializerMode Mode>
+void ShaderSerializer<Mode>::SerializeCI(Serializer<Mode>&            Ser,
+                                         ConstQual<ShaderCreateInfo>& CI)
+{
+    Ser(CI.Desc.Name,
+        CI.Desc.ShaderType,
+        CI.EntryPoint,
+        CI.SourceLanguage,
+        CI.ShaderCompiler,
+        CI.UseCombinedTextureSamplers,
+        CI.CombinedSamplerSuffix);
+}
+
 template struct PSOSerializer<SerializerMode::Read>;
 template struct PSOSerializer<SerializerMode::Write>;
 template struct PSOSerializer<SerializerMode::Measure>;
@@ -417,5 +431,9 @@ template struct PRSSerializer<SerializerMode::Measure>;
 template struct RPSerializer<SerializerMode::Read>;
 template struct RPSerializer<SerializerMode::Write>;
 template struct RPSerializer<SerializerMode::Measure>;
+
+template struct ShaderSerializer<SerializerMode::Read>;
+template struct ShaderSerializer<SerializerMode::Write>;
+template struct ShaderSerializer<SerializerMode::Measure>;
 
 } // namespace Diligent

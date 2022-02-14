@@ -651,7 +651,7 @@ bool DeviceObjectArchiveBase::UnpackPSOShaders(PSOData<CreateInfoType>& PSO,
         {
             Serializer<SerializerMode::Read> ShaderSer{SerializedData{pData, OffsetAndSize.Size}};
             ShaderCreateInfo                 ShaderCI;
-            ShaderSer(ShaderCI.Desc.ShaderType, ShaderCI.EntryPoint, ShaderCI.SourceLanguage, ShaderCI.ShaderCompiler);
+            ShaderSerializer<SerializerMode::Read>::SerializeCI(ShaderSer, ShaderCI);
 
             if ((PSO.InternalCI.Flags & PSO_CREATE_INTERNAL_FLAG_NO_SHADER_REFLECTION) != 0)
                 ShaderCI.CompileFlags |= SHADER_COMPILE_FLAG_SKIP_REFLECTION;

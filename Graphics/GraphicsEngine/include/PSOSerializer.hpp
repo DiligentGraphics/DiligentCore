@@ -112,6 +112,16 @@ struct RPSerializer
                               DynamicLinearAllocator*    Allocator);
 };
 
+template <SerializerMode Mode>
+struct ShaderSerializer
+{
+    template <typename T>
+    using ConstQual = typename Serializer<Mode>::template ConstQual<T>;
+
+    static void SerializeCI(Serializer<Mode>&            Ser,
+                            ConstQual<ShaderCreateInfo>& CI);
+};
+
 DECL_TRIVIALLY_SERIALIZABLE(BlendStateDesc);
 DECL_TRIVIALLY_SERIALIZABLE(RasterizerStateDesc);
 DECL_TRIVIALLY_SERIALIZABLE(DepthStencilStateDesc);
