@@ -318,12 +318,9 @@ void SerializedPipelineStateImpl::SerializeShaderBytecode(DeviceType            
                                                           const void*             Bytecode,
                                                           size_t                  BytecodeSize)
 {
-    constexpr SHADER_SOURCE_LANGUAGE SourceLanguage = SHADER_SOURCE_LANGUAGE_DEFAULT;
-    constexpr SHADER_COMPILER        ShaderCompiler = SHADER_COMPILER_DEFAULT;
-
     auto SerializeShaderCI = [&](auto& Ser) //
     {
-        Ser(CI.Desc.ShaderType, CI.EntryPoint, SourceLanguage, ShaderCompiler);
+        Ser(CI.Desc.ShaderType, CI.EntryPoint, CI.SourceLanguage, CI.ShaderCompiler);
         Ser.CopyBytes(Bytecode, BytecodeSize);
     };
 

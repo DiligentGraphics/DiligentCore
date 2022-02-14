@@ -579,7 +579,7 @@ bool ArchiverImpl::AddPipelineResourceSignature(IPipelineResourceSignature* pPRS
     std::lock_guard<std::mutex> Lock{m_SignaturesMtx};
 
     auto it_inserted = m_Signatures.emplace(HashMapStringKey{Name, true}, std::move(pSerializedPRS));
-    if (!it_inserted.second)
+    if (!it_inserted.second && it_inserted.first->second != pSerializedPRS)
     {
         if (*it_inserted.first->second != *pSerializedPRS)
         {
@@ -609,7 +609,7 @@ bool ArchiverImpl::AddRenderPass(IRenderPass* pRP)
     std::lock_guard<std::mutex> Lock{m_RenderPassesMtx};
 
     auto it_inserted = m_RenderPasses.emplace(HashMapStringKey{Name, true}, std::move(pSerializedRP));
-    if (!it_inserted.second)
+    if (!it_inserted.second && it_inserted.first->second != pSerializedRP)
     {
         if (*it_inserted.first->second != *pSerializedRP)
         {

@@ -487,9 +487,6 @@ RefCntAutoPtr<IShader> DeviceObjectArchiveBase::UnpackShader(Serializer<Serializ
                                                              ShaderCreateInfo&                 ShaderCI,
                                                              IRenderDevice*                    pDevice)
 {
-    VERIFY_EXPR(ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_DEFAULT);
-    VERIFY_EXPR(ShaderCI.ShaderCompiler == SHADER_COMPILER_DEFAULT);
-
     ShaderCI.ByteCode     = Ser.GetCurrentPtr();
     ShaderCI.ByteCodeSize = Ser.GetRemainingSize();
 
