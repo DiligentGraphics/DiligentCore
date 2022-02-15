@@ -26,6 +26,7 @@
 
 #include "BytecodeCache.h"
 #include "DataBlobImpl.hpp"
+#include "DefaultShaderSourceStreamFactory.h"
 #include "gtest/gtest.h"
 
 using namespace Diligent;
@@ -142,6 +143,47 @@ TEST(BytecodeCacheTest, Include)
     RefCntAutoPtr<IBytecodeCache> pCache;
     CreateBytecodeCache({RENDER_DEVICE_TYPE_VULKAN}, &pCache);
     ASSERT_NE(pCache, nullptr);
+
+    ShaderCreateInfo ShaderCI{};
+    ShaderCI.Desc.ShaderType = SHADER_TYPE_COMPUTE;
+    ShaderCI.Desc.Name       = "TestName";
+    ShaderCI.FilePath        = "IncludeBasicTest.hlsl";
+
+    const std::string        Data{"TestString"};
+    RefCntAutoPtr<IDataBlob> pReferenceBytecode = DataBlobImpl::Create(Data.length(), Data.c_str());
+
+    {
+        RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
+        CreateDefaultShaderSourceStreamFactory("shaders/BytecodeCache/IncludeTest0", &pShaderSourceFactory);
+        ASSERT_NE(pShaderSourceFactory, nullptr);
+
+        ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
+        pCache->AddBytecode(ShaderCI, pReferenceBytecode);
+    }
+
+    {
+        RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
+        CreateDefaultShaderSourceStreamFactory("shaders/BytecodeCache/IncludeTest1", &pShaderSourceFactory);
+        ASSERT_NE(pShaderSourceFactory, nullptr);
+
+        ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
+        RefCntAutoPtr<IDataBlob> pBytecode;
+        pCache->GetBytecode(ShaderCI, &pBytecode);
+
+        EXPECT_EQ(pReferenceBytecode->GetSize(), pBytecode->GetSize());
+        EXPECT_EQ(memcmp(pReferenceBytecode->GetConstDataPtr(), pBytecode->GetConstDataPtr(), pBytecode->GetSize()), 0);
+    }
+
+    {
+        RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
+        CreateDefaultShaderSourceStreamFactory("shaders/BytecodeCache/IncludeTest2", &pShaderSourceFactory);
+        ASSERT_NE(pShaderSourceFactory, nullptr);
+
+        ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
+        RefCntAutoPtr<IDataBlob> pBytecode;
+        pCache->GetBytecode(ShaderCI, &pBytecode);
+        EXPECT_EQ(pBytecode, nullptr);
+    }
 }
 
 } // namespace
