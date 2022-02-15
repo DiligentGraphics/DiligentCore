@@ -18,6 +18,7 @@ set(INTERFACE
     interface/ArchiverFactory.h
     interface/ArchiverFactoryLoader.h
     interface/SerializationDevice.h
+    interface/SerializedPipelineState.h
 )
 
 set(SOURCE

@@ -328,12 +328,35 @@ void SerializedPipelineStateImpl::SerializeShaderCreateInfo(DeviceType          
         VERIFY_EXPR(Ser.IsEnded());
     }
 
-    ShaderData.Hash = ComputeHashRaw(ShaderData.Data.Ptr(), ShaderData.Data.Size());
+    ShaderData.Stage = CI.Desc.ShaderType;
+    ShaderData.Hash  = ComputeHashRaw(ShaderData.Data.Ptr(), ShaderData.Data.Size());
 #ifdef DILIGENT_DEBUG
     for (const auto& Data : m_Data.Shaders[static_cast<size_t>(Type)])
         VERIFY(Data.Hash != ShaderData.Hash, "Shader with the same hash is already in the list.");
 #endif
     m_Data.Shaders[static_cast<size_t>(Type)].emplace_back(std::move(ShaderData));
+}
+
+ShaderCreateInfo DILIGENT_CALL_TYPE SerializedPipelineStateImpl::GetPatchedShaderCreateInfo(
+    ARCHIVE_DEVICE_DATA_FLAGS DeviceType,
+    SHADER_TYPE               ShaderStage) const
+{
+    ShaderCreateInfo ShaderCI;
+
+    const auto  Type    = ArchiveDeviceDataFlagToArchiveDeviceType(DeviceType);
+    const auto& Shaders = m_Data.Shaders[static_cast<size_t>(Type)];
+    for (const auto& ShaderData : Shaders)
+    {
+        if (ShaderData.Stage != ShaderStage)
+            continue;
+
+        Serializer<SerializerMode::Read> Ser{ShaderData.Data};
+        ShaderSerializer<SerializerMode::Read>::SerializeCI(Ser, ShaderCI);
+
+        break;
+    }
+
+    return ShaderCI;
 }
 
 } // namespace Diligent

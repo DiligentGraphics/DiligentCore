@@ -49,6 +49,38 @@ static const INTERFACE_ID IID_Archiver =
 
 // clang-format off
 
+/// Flags that indicate which device data will be serialized.
+DILIGENT_TYPED_ENUM(ARCHIVE_DEVICE_DATA_FLAGS, Uint32)
+{
+    /// No data will be serialized.
+    ARCHIVE_DEVICE_DATA_FLAG_NONE        = 0u,
+
+    /// Direct3D11 device data will be serialized.
+    ARCHIVE_DEVICE_DATA_FLAG_D3D11       = 1u << RENDER_DEVICE_TYPE_D3D11,
+
+    /// Direct3D12 device data will be serialized.
+    ARCHIVE_DEVICE_DATA_FLAG_D3D12       = 1u << RENDER_DEVICE_TYPE_D3D12,
+
+    /// OpenGL device data will be serialized.
+    ARCHIVE_DEVICE_DATA_FLAG_GL          = 1u << RENDER_DEVICE_TYPE_GL,
+
+    /// OpenGLES device data will be serialized.
+    ARCHIVE_DEVICE_DATA_FLAG_GLES        = 1u << RENDER_DEVICE_TYPE_GLES,
+
+    /// Vulkan device data will be serialized.
+    ARCHIVE_DEVICE_DATA_FLAG_VULKAN      = 1u << RENDER_DEVICE_TYPE_VULKAN,
+
+    /// Metal device data for MacOS will be serialized.
+    ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS = 1u << RENDER_DEVICE_TYPE_METAL,
+
+    /// Metal device data for iOS will be serialized.
+    ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS   = 2u << RENDER_DEVICE_TYPE_METAL,
+
+    ARCHIVE_DEVICE_DATA_FLAG_LAST        = ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS
+};
+DEFINE_FLAG_ENUM_OPERATORS(ARCHIVE_DEVICE_DATA_FLAGS)
+
+
 /// Render state object archiver interface
 DILIGENT_BEGIN_INTERFACE(IArchiver, IObject)
 {

@@ -33,6 +33,7 @@
 #include "GraphicsAccessories.hpp"
 #include "ArchiveMemoryImpl.hpp"
 #include "Dearchiver.h"
+#include "SerializedPipelineState.h"
 #include "ShaderMacroHelper.hpp"
 #include "DataBlobImpl.hpp"
 #include "MemoryFileStream.hpp"
@@ -651,39 +652,41 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
         ShaderMacroHelper Macros;
         Macros.AddShaderMacro("TEST_MACRO", 1u);
 
-        ShaderCreateInfo ShaderCI;
-        ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
-        ShaderCI.ShaderCompiler             = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
-        ShaderCI.UseCombinedTextureSamplers = true;
-        ShaderCI.Macros                     = Macros;
+        ShaderCreateInfo VertexShaderCI;
+        VertexShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
+        VertexShaderCI.ShaderCompiler             = pEnv->GetDefaultCompiler(VertexShaderCI.SourceLanguage);
+        VertexShaderCI.UseCombinedTextureSamplers = true;
+        VertexShaderCI.Macros                     = Macros;
 
         RefCntAutoPtr<IShader> pVS;
         RefCntAutoPtr<IShader> pSerializedVS;
         {
-            ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
-            ShaderCI.EntryPoint      = "main";
-            ShaderCI.Desc.Name       = "Archive test vertex shader";
-            ShaderCI.Source          = HLSL::GraphicsPSOTest_VS.c_str();
+            VertexShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
+            VertexShaderCI.EntryPoint      = "main";
+            VertexShaderCI.Desc.Name       = "Archive test vertex shader";
+            VertexShaderCI.Source          = HLSL::GraphicsPSOTest_VS.c_str();
 
-            pDevice->CreateShader(ShaderCI, &pVS);
+            pDevice->CreateShader(VertexShaderCI, &pVS);
             ASSERT_NE(pVS, nullptr);
 
-            pSerializationDevice->CreateShader(ShaderCI, ShaderArchiveInfo{GetDeviceBits()}, &pSerializedVS);
+            pSerializationDevice->CreateShader(VertexShaderCI, ShaderArchiveInfo{GetDeviceBits()}, &pSerializedVS);
             ASSERT_NE(pSerializedVS, nullptr);
         }
 
         RefCntAutoPtr<IShader> pPS;
         RefCntAutoPtr<IShader> pSerializedPS;
-        {
-            ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
-            ShaderCI.EntryPoint      = "main";
-            ShaderCI.Desc.Name       = "Archive test pixel shader";
-            ShaderCI.Source          = HLSL::GraphicsPSOTest_PS.c_str();
 
-            pDevice->CreateShader(ShaderCI, &pPS);
+        auto PixelShaderCI = VertexShaderCI;
+        {
+            PixelShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
+            PixelShaderCI.EntryPoint      = "main";
+            PixelShaderCI.Desc.Name       = "Archive test pixel shader";
+            PixelShaderCI.Source          = HLSL::GraphicsPSOTest_PS.c_str();
+
+            pDevice->CreateShader(PixelShaderCI, &pPS);
             ASSERT_NE(pPS, nullptr);
 
-            pSerializationDevice->CreateShader(ShaderCI, ShaderArchiveInfo{GetDeviceBits()}, &pSerializedPS);
+            pSerializationDevice->CreateShader(PixelShaderCI, ShaderArchiveInfo{GetDeviceBits()}, &pSerializedPS);
             ASSERT_NE(pSerializedPS, nullptr);
         }
 
@@ -749,6 +752,24 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
                 pSerializationDevice->CreateGraphicsPipelineState(PSOCreateInfo2, ArchiveInfo, &pSerializedPSO);
                 ASSERT_NE(pSerializedPSO, nullptr);
                 ASSERT_TRUE(pArchiver->AddPipelineState(pSerializedPSO));
+
+                for (auto Flags = ArchiveInfo.DeviceFlags; Flags != ARCHIVE_DEVICE_DATA_FLAG_NONE;)
+                {
+                    auto Flag = ExtractLSB(Flags);
+                    for (auto Stage : {SHADER_TYPE_VERTEX, SHADER_TYPE_PIXEL})
+                    {
+                        auto ShaderCI =
+                            pSerializedPSO.Cast<ISerializedPipelineState>(IID_SerializedPipelineState)->GetPatchedShaderCreateInfo(Flag, Stage);
+
+                        const auto& RefCI = Stage == SHADER_TYPE_VERTEX ? VertexShaderCI : PixelShaderCI;
+                        EXPECT_STREQ(ShaderCI.Desc.Name, RefCI.Desc.Name);
+                        EXPECT_STREQ(ShaderCI.EntryPoint, RefCI.EntryPoint);
+                        EXPECT_EQ(ShaderCI.UseCombinedTextureSamplers, RefCI.UseCombinedTextureSamplers);
+                        EXPECT_STREQ(ShaderCI.CombinedSamplerSuffix, RefCI.CombinedSamplerSuffix);
+                        EXPECT_EQ(ShaderCI.Desc.ShaderType, Stage);
+                        EXPECT_TRUE(ShaderCI.ByteCodeSize > 0 || ShaderCI.SourceLength > 0);
+                    }
+                }
             }
 
             {

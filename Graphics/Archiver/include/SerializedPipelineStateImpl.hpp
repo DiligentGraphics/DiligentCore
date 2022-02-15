@@ -33,7 +33,7 @@
 
 #include "SerializationEngineImplTraits.hpp"
 
-#include "PipelineState.h"
+#include "SerializedPipelineState.h"
 #include "Archiver.h"
 
 #include "ObjectBase.hpp"
@@ -45,14 +45,10 @@ namespace Diligent
 
 class SerializedResourceSignatureImpl;
 
-// {23DBAA36-B34E-438E-800C-D28C66237361}
-static const INTERFACE_ID IID_SerializedPipelineState =
-    {0x23dbaa36, 0xb34e, 0x438e, {0x80, 0xc, 0xd2, 0x8c, 0x66, 0x23, 0x73, 0x61}};
-
-class SerializedPipelineStateImpl final : public ObjectBase<IPipelineState>
+class SerializedPipelineStateImpl final : public ObjectBase<ISerializedPipelineState>
 {
 public:
-    using TBase = ObjectBase<IPipelineState>;
+    using TBase = ObjectBase<ISerializedPipelineState>;
 
     template <typename PSOCreateInfoType>
     SerializedPipelineStateImpl(IReferenceCounters*             pRefCounters,
@@ -92,6 +88,10 @@ public:
     UNSUPPORTED_CONST_METHOD(IPipelineResourceSignature*, GetResourceSignature, Uint32 Index)
     // clang-format on
 
+    virtual ShaderCreateInfo DILIGENT_CALL_TYPE GetPatchedShaderCreateInfo(
+        ARCHIVE_DEVICE_DATA_FLAGS DataFlag,
+        SHADER_TYPE               ShaderStage) const override final;
+
     using SerializedPSOAuxData = DeviceObjectArchiveBase::SerializedPSOAuxData;
     using DeviceType           = DeviceObjectArchiveBase::DeviceType;
     using TPRSNames            = DeviceObjectArchiveBase::TPRSNames;
@@ -106,7 +106,8 @@ public:
         struct ShaderInfo
         {
             SerializedData Data;
-            size_t         Hash = 0;
+            size_t         Hash  = 0;
+            SHADER_TYPE    Stage = SHADER_TYPE_UNKNOWN;
         };
         std::array<std::vector<ShaderInfo>, DeviceDataCount> Shaders;
     };
