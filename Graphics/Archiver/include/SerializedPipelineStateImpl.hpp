@@ -164,11 +164,8 @@ private:
     void PrepareDefaultSignatureGL(const CreateInfoType& CreateInfo) noexcept(false);
 
 
-    void SerializeShaderBytecode(DeviceType              Type,
-                                 const ShaderCreateInfo& CI,
-                                 const void*             Bytecode,
-                                 size_t                  BytecodeSize);
-    void SerializeShaderSource(DeviceType DeType, const ShaderCreateInfo& CI);
+    void SerializeShaderCreateInfo(DeviceType              Type,
+                                   const ShaderCreateInfo& CI);
 
 
     template <typename PipelineStateImplType, typename SignatureImplType, typename ShaderStagesArrayType, typename... ExtraArgsType>

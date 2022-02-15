@@ -162,10 +162,12 @@ void SerializedPipelineStateImpl::PatchShadersD3D11(const CreateInfoType& Create
     VERIFY_EXPR(m_Data.Shaders[static_cast<size_t>(DeviceType::Direct3D11)].empty());
     for (size_t i = 0; i < ShadersD3D11.size(); ++i)
     {
-        const auto& CI        = ShaderStages[i].pSerialized->GetCreateInfo();
         const auto& pBytecode = ShaderBytecode[i];
-
-        SerializeShaderBytecode(DeviceType::Direct3D11, CI, pBytecode->GetBufferPointer(), pBytecode->GetBufferSize());
+        auto        ShaderCI  = ShaderStages[i].pSerialized->GetCreateInfo();
+        ShaderCI.Source       = nullptr;
+        ShaderCI.ByteCode     = pBytecode->GetBufferPointer();
+        ShaderCI.ByteCodeSize = pBytecode->GetBufferSize();
+        SerializeShaderCreateInfo(DeviceType::Direct3D11, ShaderCI);
     }
     VERIFY_EXPR(m_Data.Shaders[static_cast<size_t>(DeviceType::Direct3D11)].size() == ShadersD3D11.size());
 }

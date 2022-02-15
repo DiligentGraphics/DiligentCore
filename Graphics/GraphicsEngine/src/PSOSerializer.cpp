@@ -405,7 +405,36 @@ void PSOSerializer<Mode>::SerializeAuxData(Serializer<Mode>&                Ser,
     ASSERT_SIZEOF(SerializedPSOAuxData, 1, "Did you add a new member to SerializedPSOAuxData? Please add serialization here.");
 }
 
+template <SerializerMode Mode>
+void ShaderSerializer<Mode>::SerializeBytecodeOrSource(Serializer<Mode>&            Ser,
+                                                       ConstQual<ShaderCreateInfo>& CI)
+{
+    VERIFY((CI.Source != nullptr) ^ (CI.ByteCode != nullptr), "Only one of Source or Bytecode must not be null");
+    const Uint8 UseBytecode = CI.ByteCode != nullptr ? 1 : 0;
+    Ser(UseBytecode);
+    if (UseBytecode)
+        Ser.SerializeBytes(CI.ByteCode, CI.ByteCodeSize);
+    else
+        Ser.SerializeBytes(CI.Source, CI.SourceLength);
+}
 
+template <>
+void ShaderSerializer<SerializerMode::Read>::SerializeBytecodeOrSource(Serializer<SerializerMode::Read>& Ser,
+                                                                       ConstQual<ShaderCreateInfo>&      CI)
+{
+    Uint8 UseBytecode = 0;
+    Ser(UseBytecode);
+    if (UseBytecode)
+    {
+        Ser.SerializeBytes(CI.ByteCode, CI.ByteCodeSize);
+    }
+    else
+    {
+        const void* pSource = nullptr;
+        Ser.SerializeBytes(pSource, CI.SourceLength);
+        CI.Source = reinterpret_cast<const char*>(pSource);
+    }
+}
 
 template <SerializerMode Mode>
 void ShaderSerializer<Mode>::SerializeCI(Serializer<Mode>&            Ser,
@@ -418,6 +447,8 @@ void ShaderSerializer<Mode>::SerializeCI(Serializer<Mode>&            Ser,
         CI.ShaderCompiler,
         CI.UseCombinedTextureSamplers,
         CI.CombinedSamplerSuffix);
+
+    SerializeBytecodeOrSource(Ser, CI);
 }
 
 template struct PSOSerializer<SerializerMode::Read>;

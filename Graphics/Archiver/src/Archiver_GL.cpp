@@ -34,6 +34,7 @@
 #include "ShaderGLImpl.hpp"
 #include "DeviceObjectArchiveGLImpl.hpp"
 #include "SerializedPipelineStateImpl.hpp"
+#include "ShaderToolsCommon.hpp"
 
 #if !DILIGENT_NO_GLSLANG
 #    include "GLSLUtils.hpp"
@@ -101,7 +102,19 @@ void SerializedPipelineStateImpl::PatchShadersGL(const CreateInfoType& CreateInf
     VERIFY_EXPR(m_Data.Shaders[static_cast<size_t>(DeviceType::OpenGL)].empty());
     for (size_t i = 0; i < ShaderStages.size(); ++i)
     {
-        SerializeShaderSource(DeviceType::OpenGL, ShaderStages[i].pShader->GetCreateInfo());
+        auto CI = ShaderStages[i].pShader->GetCreateInfo();
+
+        String Source;
+        if (CI.Macros != nullptr)
+        {
+            DEV_CHECK_ERR(CI.SourceLanguage != SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM, "Shader macros are ignored when compiling GLSL verbatim in OpenGL backend");
+            AppendShaderMacros(Source, CI.Macros);
+        }
+        Source.append(CI.Source, CI.SourceLength);
+        CI.Source       = Source.c_str();
+        CI.SourceLength = StaticCast<Uint32>(Source.length() + 1);
+
+        SerializeShaderCreateInfo(DeviceType::OpenGL, CI);
     }
     VERIFY_EXPR(m_Data.Shaders[static_cast<size_t>(DeviceType::OpenGL)].size() == ShaderStages.size());
 }

@@ -29,6 +29,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstring>
 
 #include "gtest/gtest.h"
 
@@ -785,7 +786,7 @@ TEST(PSOSerializerTest, SerializeRenderPassDesc)
     } while (!RndValue.IsComplete());
 }
 
-TEST(PSOSerializerTest, SerializeShaderCreateInfo)
+void SerializeShaderCreateInfo(bool UseBytecode)
 {
     ShaderCreateInfo RefCI;
     RefCI.Desc.Name                  = "Serialized Shader";
@@ -795,6 +796,23 @@ TEST(PSOSerializerTest, SerializeShaderCreateInfo)
     RefCI.ShaderCompiler             = SHADER_COMPILER_GLSLANG;
     RefCI.UseCombinedTextureSamplers = true;
     RefCI.CombinedSamplerSuffix      = "suff";
+
+    constexpr size_t RefBytecodeSize              = 7;
+    const Uint8      RefBytecode[RefBytecodeSize] = {42, 13, 179, 211, 97, 65, 71};
+
+    constexpr char   RefSource[]  = "Test shader source";
+    constexpr size_t RefSourceLen = sizeof(RefSource);
+
+    if (UseBytecode)
+    {
+        RefCI.ByteCode     = RefBytecode;
+        RefCI.ByteCodeSize = RefBytecodeSize;
+    }
+    else
+    {
+        RefCI.Source       = RefSource;
+        RefCI.SourceLength = RefSourceLen;
+    }
 
     SerializedData Data;
     {
@@ -823,6 +841,27 @@ TEST(PSOSerializerTest, SerializeShaderCreateInfo)
     EXPECT_EQ   (CI.UseCombinedTextureSamplers, RefCI.UseCombinedTextureSamplers);
     EXPECT_STREQ(CI.CombinedSamplerSuffix,      RefCI.CombinedSamplerSuffix);
     // clang-format on
+
+    if (UseBytecode)
+    {
+        EXPECT_EQ(CI.ByteCodeSize, RefBytecodeSize);
+        EXPECT_EQ(std::memcmp(CI.ByteCode, RefBytecode, RefBytecodeSize), 0);
+    }
+    else
+    {
+        EXPECT_EQ(CI.SourceLength, RefSourceLen);
+        EXPECT_STREQ(CI.Source, RefSource);
+    }
+}
+
+TEST(PSOSerializerTest, SerializeShaderCI_Bytecode)
+{
+    SerializeShaderCreateInfo(true);
+}
+
+TEST(PSOSerializerTest, SerializeShaderCI_Source)
+{
+    SerializeShaderCreateInfo(false);
 }
 
 } // namespace

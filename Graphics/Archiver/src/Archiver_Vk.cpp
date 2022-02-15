@@ -157,10 +157,12 @@ void SerializedPipelineStateImpl::PatchShadersVk(const CreateInfoType& CreateInf
         const auto& Stage = ShaderStagesVk[j];
         for (size_t i = 0; i < Stage.Count(); ++i)
         {
-            const auto& CI    = ShaderStages[j].Serialized[i]->GetCreateInfo();
-            const auto& SPIRV = Stage.SPIRVs[i];
-
-            SerializeShaderBytecode(DeviceType::Vulkan, CI, SPIRV.data(), SPIRV.size() * sizeof(SPIRV[0]));
+            const auto& SPIRV     = Stage.SPIRVs[i];
+            auto        ShaderCI  = ShaderStages[j].Serialized[i]->GetCreateInfo();
+            ShaderCI.Source       = nullptr;
+            ShaderCI.ByteCode     = SPIRV.data();
+            ShaderCI.ByteCodeSize = SPIRV.size() * sizeof(SPIRV[0]);
+            SerializeShaderCreateInfo(DeviceType::Vulkan, ShaderCI);
         }
     }
 }

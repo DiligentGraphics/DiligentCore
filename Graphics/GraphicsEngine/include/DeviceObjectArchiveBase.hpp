@@ -456,9 +456,8 @@ protected:
 
     virtual RefCntAutoPtr<IPipelineResourceSignature> UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, bool IsImplicit) = 0;
 
-    virtual RefCntAutoPtr<IShader> UnpackShader(Serializer<SerializerMode::Read>& Ser,
-                                                ShaderCreateInfo&                 ShaderCI,
-                                                IRenderDevice*                    pDevice);
+    virtual RefCntAutoPtr<IShader> UnpackShader(const ShaderCreateInfo& ShaderCI,
+                                                IRenderDevice*          pDevice);
 };
 
 template <typename RenderDeviceImplType, typename PRSSerializerType>

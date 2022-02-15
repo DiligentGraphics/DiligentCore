@@ -46,19 +46,6 @@ RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveGLImpl::UnpackResou
     return DeviceObjectArchiveBase::UnpackResourceSignatureImpl<RenderDeviceGLImpl, PRSSerializerGL<SerializerMode::Read>>(DeArchiveInfo, IsImplicit);
 }
 
-RefCntAutoPtr<IShader> DeviceObjectArchiveGLImpl::UnpackShader(Serializer<SerializerMode::Read>& Ser,
-                                                               ShaderCreateInfo&                 ShaderCI,
-                                                               IRenderDevice*                    pDevice)
-{
-    ShaderCI.Source       = static_cast<const Char*>(Ser.GetCurrentPtr());
-    ShaderCI.SourceLength = Ser.GetRemainingSize() - 1;
-    VERIFY_EXPR(ShaderCI.SourceLength == strlen(ShaderCI.Source));
-
-    RefCntAutoPtr<IShader> pShader;
-    pDevice->CreateShader(ShaderCI, &pShader);
-    return pShader;
-}
-
 template <SerializerMode Mode>
 void PRSSerializerGL<Mode>::SerializeInternalData(
     Serializer<Mode>&                                   Ser,

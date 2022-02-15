@@ -483,13 +483,9 @@ bool DeviceObjectArchiveBase::UnpackPSOSignatures(PSOData<CreateInfoType>& PSO, 
     return true;
 }
 
-RefCntAutoPtr<IShader> DeviceObjectArchiveBase::UnpackShader(Serializer<SerializerMode::Read>& Ser,
-                                                             ShaderCreateInfo&                 ShaderCI,
-                                                             IRenderDevice*                    pDevice)
+RefCntAutoPtr<IShader> DeviceObjectArchiveBase::UnpackShader(const ShaderCreateInfo& ShaderCI,
+                                                             IRenderDevice*          pDevice)
 {
-    ShaderCI.ByteCode     = Ser.GetCurrentPtr();
-    ShaderCI.ByteCodeSize = Ser.GetRemainingSize();
-
     RefCntAutoPtr<IShader> pShader;
     pDevice->CreateShader(ShaderCI, &pShader);
     return pShader;
@@ -606,8 +602,6 @@ bool DeviceObjectArchiveBase::UnpackPSOShaders(PSOData<CreateInfoType>& PSO,
     if (!ShaderData)
         return false;
 
-    Serializer<SerializerMode::Read> Ser{ShaderData};
-
     const Uint64 BaseOffset = m_BaseOffsets[static_cast<size_t>(GetBlockOffsetType())];
     if (BaseOffset > m_pArchive->GetSize())
     {
@@ -616,10 +610,12 @@ bool DeviceObjectArchiveBase::UnpackPSOShaders(PSOData<CreateInfoType>& PSO,
     }
 
     DynamicLinearAllocator Allocator{GetRawAllocator()};
-
-    ShaderIndexArray ShaderIndices;
-    PSOSerializer<SerializerMode::Read>::SerializeShaderIndices(Ser, ShaderIndices, &Allocator);
-    VERIFY_EXPR(Ser.IsEnded());
+    ShaderIndexArray       ShaderIndices;
+    {
+        Serializer<SerializerMode::Read> Ser{ShaderData};
+        PSOSerializer<SerializerMode::Read>::SerializeShaderIndices(Ser, ShaderIndices, &Allocator);
+        VERIFY_EXPR(Ser.IsEnded());
+    }
 
     PSO.Shaders.resize(ShaderIndices.Count);
     for (Uint32 i = 0; i < ShaderIndices.Count; ++i)
@@ -649,14 +645,17 @@ bool DeviceObjectArchiveBase::UnpackPSOShaders(PSOData<CreateInfoType>& PSO,
             return false;
 
         {
-            Serializer<SerializerMode::Read> ShaderSer{SerializedData{pData, OffsetAndSize.Size}};
-            ShaderCreateInfo                 ShaderCI;
-            ShaderSerializer<SerializerMode::Read>::SerializeCI(ShaderSer, ShaderCI);
+            ShaderCreateInfo ShaderCI;
+            {
+                Serializer<SerializerMode::Read> ShaderSer{SerializedData{pData, OffsetAndSize.Size}};
+                ShaderSerializer<SerializerMode::Read>::SerializeCI(ShaderSer, ShaderCI);
+                VERIFY_EXPR(ShaderSer.IsEnded());
+            }
 
             if ((PSO.InternalCI.Flags & PSO_CREATE_INTERNAL_FLAG_NO_SHADER_REFLECTION) != 0)
                 ShaderCI.CompileFlags |= SHADER_COMPILE_FLAG_SKIP_REFLECTION;
 
-            pShader = UnpackShader(ShaderSer, ShaderCI, pDevice);
+            pShader = UnpackShader(ShaderCI, pDevice);
             if (!pShader)
                 return false;
         }

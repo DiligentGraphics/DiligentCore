@@ -30,6 +30,7 @@
 #include <thread>
 #include <sstream>
 #include <filesystem>
+#include <vector>
 #include <unistd.h>
 
 #include "RenderDeviceMtlImpl.hpp"
@@ -146,8 +147,14 @@ void SerializedPipelineStateImpl::PatchShadersMtl(const CreateInfoType& CreateIn
         for (size_t j = 0; j < ShaderStages.size(); ++j)
         {
             const auto& Stage = ShaderStages[j];
-            const auto PatchedBytecode = Stage.pShader->PatchShaderMtl(Signatures.data(), BaseBindings.data(), SignaturesCount, DevType); // May throw
-            SerializeShaderBytecode(DevType, Stage.pShader->GetCreateInfo(), PatchedBytecode.Ptr(), PatchedBytecode.Size());
+            // Note that patched shader data contains some extra information
+            // besides the byte code itself.
+            const auto ShaderData = Stage.pShader->PatchShaderMtl(Signatures.data(), BaseBindings.data(), SignaturesCount, DevType); // May throw
+            auto ShaderCI         = Stage.pShader->GetCreateInfo();
+            ShaderCI.Source       = nullptr;
+            ShaderCI.ByteCode     = ShaderData.Ptr();
+            ShaderCI.ByteCodeSize = ShaderData.Size();
+            SerializeShaderCreateInfo(DevType, ShaderCI);
         }
         VERIFY_EXPR(m_Data.Shaders[static_cast<size_t>(DevType)].size() == ShaderStages.size());
     }
@@ -346,39 +353,45 @@ SerializedData SerializedShaderImpl::PatchShaderMtl(const RefCntAutoPtr<Pipeline
             LOG_ERROR_MESSAGE("Failed to close xcrun process");
     }
 
-    size_t BytecodeOffset = 0;
-    {
-        Serializer<SerializerMode::Measure> MeasureSer;
-        SerializeBufferTypeInfoMapAndComputeGroupSize(MeasureSer, BufferTypeInfoMap, GetDesc().ShaderType, pShaderMtl->SPIRVResources);
-        BytecodeOffset = MeasureSer.GetSize();
-    }
-
     // Read 'Shader.metallib'
-    SerializedData Bytecode;
-    size_t         BytecodeSize = 0;
+    std::vector<Uint8> ByteCode;
     {
         FILE* File = fopen(MetalLibFile.c_str(), "rb");
         if (File == nullptr)
             LOG_ERROR_AND_THROW("Failed to read shader library");
 
         fseek(File, 0, SEEK_END);
-        long size = ftell(File);
+        const auto BytecodeSize = static_cast<size_t>(ftell(File));
         fseek(File, 0, SEEK_SET);
-
-        Bytecode = SerializedData{BytecodeOffset + size, GetRawAllocator()};
-        BytecodeSize = fread(&static_cast<Uint8*>(Bytecode.Ptr())[BytecodeOffset], 1, size, File);
+        ByteCode.resize(BytecodeSize);
+        if (fread(ByteCode.data(), BytecodeSize, 1, File) != 1)
+            ByteCode.clear();
 
         fclose(File);
     }
 
-    if (BytecodeSize == 0)
-        LOG_ERROR_AND_THROW("Metal shader library is empty");
+    if (ByteCode.empty())
+        LOG_ERROR_AND_THROW("Failed to load Metal shader library");
 
-    Serializer<SerializerMode::Write> Ser{SerializedData{Bytecode.Ptr(), BytecodeOffset}};
-    SerializeBufferTypeInfoMapAndComputeGroupSize(Ser, BufferTypeInfoMap, GetDesc().ShaderType, pShaderMtl->SPIRVResources);
-    VERIFY_EXPR(Ser.IsEnded());
+    auto SerializeShaderData = [&](auto& Ser){
+        SerializeBufferTypeInfoMapAndComputeGroupSize(Ser, BufferTypeInfoMap, GetDesc().ShaderType, pShaderMtl->SPIRVResources);
+        Ser.CopyBytes(ByteCode.data(), ByteCode.size() * sizeof(ByteCode[0]));
+    };
 
-    return Bytecode;
+    SerializedData ShaderData;
+    {
+        Serializer<SerializerMode::Measure> Ser;
+        SerializeShaderData(Ser);
+        ShaderData = Ser.AllocateData(GetRawAllocator());
+    }
+
+    {
+        Serializer<SerializerMode::Write> Ser{ShaderData};
+        SerializeShaderData(Ser);
+        VERIFY_EXPR(Ser.IsEnded());
+    }
+
+    return ShaderData;
 }
 
 void SerializationDeviceImpl::GetPipelineResourceBindingsMtl(const PipelineResourceBindingAttribs& Info,

@@ -120,11 +120,16 @@ struct ShaderSerializer
 
     static void SerializeCI(Serializer<Mode>&            Ser,
                             ConstQual<ShaderCreateInfo>& CI);
+
+private:
+    static void SerializeBytecodeOrSource(Serializer<Mode>&            Ser,
+                                          ConstQual<ShaderCreateInfo>& CI);
 };
 
 DECL_TRIVIALLY_SERIALIZABLE(BlendStateDesc);
 DECL_TRIVIALLY_SERIALIZABLE(RasterizerStateDesc);
 DECL_TRIVIALLY_SERIALIZABLE(DepthStencilStateDesc);
 DECL_TRIVIALLY_SERIALIZABLE(SampleDesc);
+DECL_TRIVIALLY_SERIALIZABLE(ShaderCreateInfo);
 
 } // namespace Diligent

@@ -134,10 +134,12 @@ void SerializedPipelineStateImpl::PatchShadersD3D12(const CreateInfoType& Create
         const auto& Stage = ShaderStagesD3D12[j];
         for (size_t i = 0; i < Stage.Count(); ++i)
         {
-            const auto& CI        = ShaderStages[j].Serialized[i]->GetCreateInfo();
             const auto& pBytecode = Stage.ByteCodes[i];
-
-            SerializeShaderBytecode(DeviceType::Direct3D12, CI, pBytecode->GetBufferPointer(), pBytecode->GetBufferSize());
+            auto        ShaderCI  = ShaderStages[j].Serialized[i]->GetCreateInfo();
+            ShaderCI.Source       = nullptr;
+            ShaderCI.ByteCode     = pBytecode->GetBufferPointer();
+            ShaderCI.ByteCodeSize = pBytecode->GetBufferSize();
+            SerializeShaderCreateInfo(DeviceType::Direct3D12, ShaderCI);
         }
     }
 }

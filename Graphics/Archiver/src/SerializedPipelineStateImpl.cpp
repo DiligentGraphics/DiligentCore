@@ -31,7 +31,6 @@
 #include "SerializationDeviceImpl.hpp"
 #include "SerializedResourceSignatureImpl.hpp"
 #include "PSOSerializer.hpp"
-#include "ShaderToolsCommon.hpp"
 
 namespace Diligent
 {
@@ -313,70 +312,19 @@ void DILIGENT_CALL_TYPE SerializedPipelineStateImpl::QueryInterface(const INTERF
     }
 }
 
-void SerializedPipelineStateImpl::SerializeShaderBytecode(DeviceType              Type,
-                                                          const ShaderCreateInfo& CI,
-                                                          const void*             Bytecode,
-                                                          size_t                  BytecodeSize)
+void SerializedPipelineStateImpl::SerializeShaderCreateInfo(DeviceType              Type,
+                                                            const ShaderCreateInfo& CI)
 {
-    auto SerializeShaderCI = [&](auto& Ser) //
-    {
-        constexpr auto SerMode = std::remove_reference<decltype(Ser)>::type::GetMode();
-        ShaderSerializer<SerMode>::SerializeCI(Ser, CI);
-        Ser.CopyBytes(Bytecode, BytecodeSize);
-    };
-
     Data::ShaderInfo ShaderData;
-
     {
         Serializer<SerializerMode::Measure> Ser;
-        SerializeShaderCI(Ser);
+        ShaderSerializer<SerializerMode::Measure>::SerializeCI(Ser, CI);
         ShaderData.Data = Ser.AllocateData(GetRawAllocator());
     }
 
     {
         Serializer<SerializerMode::Write> Ser{ShaderData.Data};
-        SerializeShaderCI(Ser);
-        VERIFY_EXPR(Ser.IsEnded());
-    }
-
-    ShaderData.Hash = ComputeHashRaw(ShaderData.Data.Ptr(), ShaderData.Data.Size());
-#ifdef DILIGENT_DEBUG
-    for (const auto& Data : m_Data.Shaders[static_cast<size_t>(Type)])
-        VERIFY(Data.Hash != ShaderData.Hash, "Shader with the same hash is already in the list.");
-#endif
-    m_Data.Shaders[static_cast<size_t>(Type)].emplace_back(std::move(ShaderData));
-}
-
-void SerializedPipelineStateImpl::SerializeShaderSource(DeviceType Type, const ShaderCreateInfo& CI)
-{
-    VERIFY_EXPR(CI.SourceLength > 0);
-
-    String Source;
-    if (CI.Macros != nullptr)
-    {
-        DEV_CHECK_ERR(CI.SourceLanguage != SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM, "Shader macros are ignored when compiling GLSL verbatim in OpenGL backend");
-        AppendShaderMacros(Source, CI.Macros);
-    }
-    Source.append(CI.Source, CI.SourceLength);
-
-    auto SerializeShaderCI = [&](auto& Ser) //
-    {
-        constexpr auto SerMode = std::remove_reference<decltype(Ser)>::type::GetMode();
-        ShaderSerializer<SerMode>::SerializeCI(Ser, CI);
-        Ser.CopyBytes(Source.c_str(), (Source.size() + 1) * sizeof(Source[0]));
-    };
-
-    Data::ShaderInfo ShaderData;
-
-    {
-        Serializer<SerializerMode::Measure> Ser;
-        SerializeShaderCI(Ser);
-        ShaderData.Data = Ser.AllocateData(GetRawAllocator());
-    }
-
-    {
-        Serializer<SerializerMode::Write> Ser{ShaderData.Data};
-        SerializeShaderCI(Ser);
+        ShaderSerializer<SerializerMode::Write>::SerializeCI(Ser, CI);
         VERIFY_EXPR(Ser.IsEnded());
     }
 

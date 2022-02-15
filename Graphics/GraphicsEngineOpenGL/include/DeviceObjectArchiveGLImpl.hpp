@@ -46,10 +46,6 @@ public:
     ~DeviceObjectArchiveGLImpl();
 
     virtual RefCntAutoPtr<IPipelineResourceSignature> UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, bool IsImplicit) override final;
-
-    virtual RefCntAutoPtr<IShader> UnpackShader(Serializer<SerializerMode::Read>& Ser,
-                                                ShaderCreateInfo&                 ShaderCI,
-                                                IRenderDevice*                    pDevice) override final;
 };
 
 template <SerializerMode Mode>
