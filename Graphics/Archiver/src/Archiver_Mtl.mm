@@ -150,10 +150,12 @@ void SerializedPipelineStateImpl::PatchShadersMtl(const CreateInfoType& CreateIn
             // Note that patched shader data contains some extra information
             // besides the byte code itself.
             const auto ShaderData = Stage.pShader->PatchShaderMtl(Signatures.data(), BaseBindings.data(), SignaturesCount, DevType); // May throw
-            auto ShaderCI         = Stage.pShader->GetCreateInfo();
-            ShaderCI.Source       = nullptr;
-            ShaderCI.ByteCode     = ShaderData.Ptr();
-            ShaderCI.ByteCodeSize = ShaderData.Size();
+
+            auto ShaderCI           = Stage.pShader->GetCreateInfo();
+            ShaderCI.Source         = nullptr;
+            ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_MTLB;
+            ShaderCI.ByteCode       = ShaderData.Ptr();
+            ShaderCI.ByteCodeSize   = ShaderData.Size();
             SerializeShaderCreateInfo(DevType, ShaderCI);
         }
         VERIFY_EXPR(m_Data.Shaders[static_cast<size_t>(DevType)].size() == ShaderStages.size());
@@ -374,8 +376,8 @@ SerializedData SerializedShaderImpl::PatchShaderMtl(const RefCntAutoPtr<Pipeline
         LOG_ERROR_AND_THROW("Failed to load Metal shader library");
 
     auto SerializeShaderData = [&](auto& Ser){
+        Ser.SerializeBytes(ByteCode.data(), ByteCode.size() * sizeof(ByteCode[0]));
         SerializeBufferTypeInfoMapAndComputeGroupSize(Ser, BufferTypeInfoMap, GetDesc().ShaderType, pShaderMtl->SPIRVResources);
-        Ser.CopyBytes(ByteCode.data(), ByteCode.size() * sizeof(ByteCode[0]));
     };
 
     SerializedData ShaderData;
