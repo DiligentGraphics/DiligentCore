@@ -35,6 +35,7 @@
 #include "../../Primitives/interface/MemoryAllocator.h"
 #include "../../Platforms/Basic/interface/DebugUtilities.hpp"
 #include "DynamicLinearAllocator.hpp"
+#include "Align.hpp"
 
 namespace Diligent
 {
@@ -153,7 +154,8 @@ public:
 
     template <typename T>
     using TEnableStr = typename std::enable_if_t<(std::is_same<const char* const, T>::value || std::is_same<const char*, T>::value), void>;
-    using InCharPtr  = typename std::conditional_t<Mode == SerializerMode::Read, const char*&, const char*>;
+    using CharPtr    = typename std::conditional_t<Mode == SerializerMode::Read, const char*&, const char*>;
+    using VoidPtr    = typename std::conditional_t<Mode == SerializerMode::Read, const void*&, const void*>;
 
     template <typename T>
     using TReadOnly = typename std::enable_if_t<Mode == SerializerMode::Read, const T*>;
@@ -190,13 +192,33 @@ public:
         Copy(&Value, sizeof(Value));
     }
 
+    // Copies Size bytes to/from pData
     void CopyBytes(ConstQual<void>* pData, size_t Size)
     {
         Copy(pData, Size);
     }
 
     template <typename T>
-    TEnableStr<T> Serialize(InCharPtr Str);
+    TEnableStr<T> Serialize(CharPtr Str);
+
+    /// Serializes Size bytes to/from pBytes
+    ///
+    ///  * Measure
+    ///      Writes Size as Uint32 (noop)
+    ///      Aligns up current offset to Alignment bytes
+    ///      Writes Size bytes (noop)
+    ///
+    ///  * Write
+    ///      Writes Size as Uint32
+    ///      Aligns up current offset to Alignment bytes
+    ///      Writes Size bytes from pBytes
+    ///
+    ///  * Read
+    ///      Reads Size as Uint32
+    ///      Aligns up current offset to Alignment bytes
+    ///      Sets pBytes to m_Ptr
+    ///      Moves m_Ptr by Size bytes
+    void SerializeBytes(VoidPtr pBytes, ConstQual<size_t>& Size, size_t Alignment = 8);
 
     template <typename ElemPtrType, typename CountType, typename ArrayElemSerializerType>
     void SerializeArray(DynamicLinearAllocator* Allocator,
@@ -267,6 +289,14 @@ private:
     template <typename T>
     void Copy(T* pData, size_t Size);
 
+    void AlignOffset(size_t Alignment)
+    {
+        const auto Size       = GetSize();
+        const auto AlignShift = AlignUp(Size, size_t{8}) - Size;
+        VERIFY_EXPR(m_Ptr + AlignShift <= m_End);
+        m_Ptr += AlignShift;
+    }
+
 private:
     TPointer const m_Start = nullptr;
     TPointer const m_End   = nullptr;
@@ -303,32 +333,49 @@ void Serializer<SerializerMode::Measure>::Copy(T* pData, size_t Size)
 
 template <>
 template <typename T>
-typename Serializer<SerializerMode::Read>::TEnableStr<T> Serializer<SerializerMode::Read>::Serialize(InCharPtr Str)
+typename Serializer<SerializerMode::Read>::TEnableStr<T> Serializer<SerializerMode::Read>::Serialize(CharPtr Str)
 {
     Uint32 Length = 0;
-    Copy(&Length, sizeof(Length));
+    Serialize<Uint32>(Length);
 
     VERIFY(m_Ptr + Length <= m_End, "Note enough data to read ", Length, " characters.");
     Str = Length > 1 ? reinterpret_cast<const char*>(m_Ptr) : "";
     m_Ptr += Length;
 }
 
-template <>
+template <SerializerMode Mode> // Write or Measure
 template <typename T>
-typename Serializer<SerializerMode::Write>::TEnableStr<T> Serializer<SerializerMode::Write>::Serialize(InCharPtr Str)
+typename Serializer<Mode>::template TEnableStr<T> Serializer<Mode>::Serialize(CharPtr Str)
 {
+    static_assert(Mode == SerializerMode::Write || Mode == SerializerMode::Measure, "Unexpected mode");
     const Uint32 Length = static_cast<Uint32>((Str != nullptr && *Str != 0) ? strlen(Str) + 1 : 0);
-    Copy(&Length, sizeof(Length));
+    Serialize<Uint32>(Length);
     Copy(Str, Length);
 }
 
+
 template <>
-template <typename T>
-typename Serializer<SerializerMode::Measure>::TEnableStr<T> Serializer<SerializerMode::Measure>::Serialize(InCharPtr Str)
+inline void Serializer<SerializerMode::Read>::SerializeBytes(VoidPtr pBytes, ConstQual<size_t>& Size, size_t Alignment)
 {
-    const Uint32 Length = static_cast<Uint32>((Str != nullptr && *Str != 0) ? strlen(Str) + 1 : 0);
-    m_Ptr += sizeof(Length);
-    m_Ptr += Length;
+    Uint32 Size32 = 0;
+    Serialize<Uint32>(Size32);
+    Size = Size32;
+
+    AlignOffset(Alignment);
+
+    VERIFY(m_Ptr + Size <= m_End, "Note enough data to read ", Size, " bytes.");
+
+    pBytes = m_Ptr;
+    m_Ptr += Size;
+}
+
+template <SerializerMode Mode> // Write or Measure
+inline void Serializer<Mode>::SerializeBytes(VoidPtr pBytes, ConstQual<size_t>& Size, size_t Alignment)
+{
+    static_assert(Mode == SerializerMode::Write || Mode == SerializerMode::Measure, "Unexpected mode");
+    Serialize<Uint32>(static_cast<Uint32>(Size));
+    AlignOffset(Alignment);
+    Copy(pBytes, Size);
 }
 
 

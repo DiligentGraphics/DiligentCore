@@ -24,6 +24,8 @@
  *  of the possibility of such damages.
  */
 
+#include <cstring>
+
 #include "Serializer.hpp"
 #include "DefaultRawMemoryAllocator.hpp"
 
@@ -44,10 +46,14 @@ TEST(SerializerTest, SerializerTest)
     const Uint32      RefU32      = 0x52830394u;
     const Uint16      RefU16      = 0x4172;
 
-    const Uint32 RefArraySize           = 3;
-    const Uint32 RefArray[RefArraySize] = {0x1251, 0x620, 0x8816};
-    const Uint32 NumBytes               = 7;
-    const Uint8  RefBytes[NumBytes]     = {5, 124, 9, 44, 79, 40, 251};
+    const Uint32 RefArraySize            = 3;
+    const Uint32 RefArray[RefArraySize]  = {0x1251, 0x620, 0x8816};
+    const Uint32 NumBytes1               = 7;
+    const Uint8  RefBytes1[NumBytes1]    = {5, 124, 9, 44, 79, 40, 251};
+    const size_t RefNumBytes2            = 5;
+    const Uint8  RefBytes2[RefNumBytes2] = {37, 53, 13, 94, 129};
+    const size_t RefNumBytes3            = 7;
+    const Uint8  RefBytes3[RefNumBytes3] = {93, 67, 50, 145, 41, 59, 43};
 
     auto& RawAllocator{DefaultRawMemoryAllocator::GetAllocator()};
 
@@ -60,7 +66,9 @@ TEST(SerializerTest, SerializerTest)
         Ser(RefU64, RefU8);
         Ser(RefU32);
         Ser.SerializeArrayRaw(&TmpAllocator, RefArray, RefArraySize);
-        Ser.CopyBytes(RefBytes, sizeof(RefBytes));
+        Ser.CopyBytes(RefBytes1, sizeof(RefBytes1));
+        Ser.SerializeBytes(RefBytes2, RefNumBytes2);
+        Ser.SerializeBytes(RefBytes3, RefNumBytes3);
     };
 
     Serializer<SerializerMode::Measure> MSer;
@@ -127,10 +135,26 @@ TEST(SerializerTest, SerializerTest)
     }
 
     {
-        Uint8 Bytes[NumBytes] = {};
+        Uint8 Bytes[NumBytes1] = {};
         RSer.CopyBytes(Bytes, sizeof(Bytes));
-        for (Uint32 i = 0; i < NumBytes; ++i)
-            EXPECT_EQ(Bytes[i], RefBytes[i]);
+        for (Uint32 i = 0; i < NumBytes1; ++i)
+            EXPECT_EQ(Bytes[i], RefBytes1[i]);
+    }
+
+    {
+        size_t      NumBytes2 = 0;
+        const void* pBytes2   = nullptr;
+        RSer.SerializeBytes(pBytes2, NumBytes2);
+        EXPECT_EQ(NumBytes2, RefNumBytes2);
+        EXPECT_EQ(std::memcmp(pBytes2, RefBytes2, RefNumBytes2), 0);
+    }
+
+    {
+        size_t      NumBytes3 = 0;
+        const void* pBytes3   = nullptr;
+        RSer.SerializeBytes(pBytes3, NumBytes3);
+        EXPECT_EQ(NumBytes3, RefNumBytes3);
+        EXPECT_EQ(std::memcmp(pBytes3, RefBytes3, RefNumBytes3), 0);
     }
 
     EXPECT_TRUE(RSer.IsEnded());
