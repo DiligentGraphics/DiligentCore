@@ -186,7 +186,8 @@ public:
 
             It = NextIt;
         }
-        LOG_INFO_MESSAGE("Purged ", NumPurgedObjects, " deleted objects from the ", m_RegistryName, " registry");
+        if (NumPurgedObjects > 0)
+            LOG_INFO_MESSAGE("Purged ", NumPurgedObjects, " deleted objects from the ", m_RegistryName, " registry");
     }
 
     /// Increments the number of outstanding deleted objects.
