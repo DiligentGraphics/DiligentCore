@@ -103,12 +103,12 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
             }
         }
 
-        if ((Res.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) != 0 && !Features.ShaderResourceRuntimeArray)
+        if ((Res.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) != 0 && Features.ShaderResourceRuntimeArray == DEVICE_FEATURE_STATE_DISABLED)
         {
             LOG_PRS_ERROR_AND_THROW("Incorrect Desc.Resources[", i, "].Flags (RUNTIME_ARRAY). The flag can only be used if ShaderResourceRuntimeArray device feature is enabled.");
         }
 
-        if (Res.ResourceType == SHADER_RESOURCE_TYPE_ACCEL_STRUCT && !Features.RayTracing)
+        if (Res.ResourceType == SHADER_RESOURCE_TYPE_ACCEL_STRUCT && Features.RayTracing == DEVICE_FEATURE_STATE_DISABLED)
         {
             LOG_PRS_ERROR_AND_THROW("Incorrect Desc.Resources[", i, "].ResourceType (ACCEL_STRUCT): ray tracing is not supported by device.");
         }
@@ -136,7 +136,9 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
             }
         }
 
-        if ((Res.Flags & PIPELINE_RESOURCE_FLAG_GENERAL_INPUT_ATTACHMENT) != 0 && !DeviceInfo.IsVulkanDevice())
+        if ((Res.Flags & PIPELINE_RESOURCE_FLAG_GENERAL_INPUT_ATTACHMENT) != 0 &&
+            DeviceInfo.Type != RENDER_DEVICE_TYPE_UNDEFINED && // May be UNDEFINED for serialized signature
+            !DeviceInfo.IsVulkanDevice())
         {
             LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].Flags contain GENERAL_INPUT_ATTACHMENT which is only valid in Vulkan");
         }
