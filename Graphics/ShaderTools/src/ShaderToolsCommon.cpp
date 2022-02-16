@@ -29,8 +29,10 @@
 
 #include <unordered_set>
 
+#include "BasicFileSystem.hpp"
 #include "DebugUtilities.hpp"
 #include "DataBlobImpl.hpp"
+#include "StringDataBlobImpl.hpp"
 
 namespace Diligent
 {
@@ -162,8 +164,8 @@ void AppendShaderSourceCode(std::string& Source, const ShaderCreateInfo& ShaderC
     Source.append(SourceCode, SourceCodeLen);
 }
 
-// https://github.com/tomtom-international/cpp-dependencies/blob/a91f330e97c6b9e4e9ecd81f43c4a40e044d4bbc/src/Input.cpp
-static void ExtractDependencies(std::function<void(const Diligent::String&)> IncludeHandler, const char* pBuffer, size_t BufferSize)
+/// https://github.com/tomtom-international/cpp-dependencies/blob/a91f330e97c6b9e4e9ecd81f43c4a40e044d4bbc/src/Input.cpp
+static void ExtractDependencies(std::function<void(const String&, size_t, size_t)> IncludeHandler, const char* pBuffer, size_t BufferSize)
 {
     if (BufferSize == 0)
         return;
@@ -173,47 +175,48 @@ static void ExtractDependencies(std::function<void(const Diligent::String&)> Inc
         None,
         AfterHash,
         AfterInclude,
-        InsideIncludeBrackets
+        InsidePointyIncludeBrackets,
+        InsideStraightIncludeBrackets
     } PreprocessorState = None;
     size_t Offset       = 0;
 
-    // Find positions of the first hash and slash
-    const char* NextHash  = static_cast<const char*>(memchr(pBuffer + Offset, '#', BufferSize - Offset));
-    const char* NextSlash = static_cast<const char*>(memchr(pBuffer + Offset, '/', BufferSize - Offset));
+    /// Find positions of the first hash and slash
+    const Char* NextHash  = static_cast<const char*>(memchr(pBuffer + Offset, '#', BufferSize - Offset));
+    const Char* NextSlash = static_cast<const char*>(memchr(pBuffer + Offset, '/', BufferSize - Offset));
     size_t      Start     = 0;
 
-    //We iterate over the characters of the buffer
+    /// We iterate over the characters of the buffer
     while (Offset < BufferSize)
     {
         switch (PreprocessorState)
         {
             case None:
             {
-                // Find a hash character if the current position is greater NextHash
+                /// Find a hash character if the current position is greater NextHash
                 if (NextHash && NextHash < pBuffer + Offset)
-                    NextHash = static_cast<const char*>(memchr(pBuffer + Offset, '#', BufferSize - Offset));
+                    NextHash = static_cast<const Char*>(memchr(pBuffer + Offset, '#', BufferSize - Offset));
 
-                // Exit from the function if a hash is not found in the buffer
+                /// Exit from the function if a hash is not found in the buffer
                 if (NextHash == nullptr)
                     return;
 
-                // Find a slash character if the current position is greater NextSlash
+                /// Find a slash character if the current position is greater NextSlash
                 if (NextSlash && NextSlash < pBuffer + Offset)
-                    NextSlash = static_cast<const char*>(memchr(pBuffer + Offset, '/', BufferSize - Offset));
+                    NextSlash = static_cast<const Char*>(memchr(pBuffer + Offset, '/', BufferSize - Offset));
 
                 if (NextSlash && NextSlash < NextHash)
                 {
-                    // Skip all characters if the slash character is before the hash character in the buffer
+                    /// Skip all characters if the slash character is before the hash character in the buffer
                     Offset = NextSlash - pBuffer;
                     if (pBuffer[Offset + 1] == '/')
                     {
-                        Offset = static_cast<const char*>(memchr(pBuffer + Offset, '\n', BufferSize - Offset)) - pBuffer;
+                        Offset = static_cast<const Char*>(memchr(pBuffer + Offset, '\n', BufferSize - Offset)) - pBuffer;
                     }
                     else if (pBuffer[Offset + 1] == '*')
                     {
                         do
                         {
-                            const char* EndSlash = static_cast<const char*>(memchr(pBuffer + Offset + 1, '/', BufferSize - Offset));
+                            const char* EndSlash = static_cast<const Char*>(memchr(pBuffer + Offset + 1, '/', BufferSize - Offset));
                             if (!EndSlash)
                                 return;
                             Offset = EndSlash - pBuffer;
@@ -222,14 +225,14 @@ static void ExtractDependencies(std::function<void(const Diligent::String&)> Inc
                 }
                 else
                 {
-                    // Move the current position to the position after the hash
+                    /// Move the current position to the position after the hash
                     Offset            = NextHash - pBuffer;
                     PreprocessorState = AfterHash;
                 }
             }
             break;
             case AfterHash:
-                // Try to find the 'include' substring in the buffer if the current position is after the hash
+                /// Try to find the 'include' substring in the buffer if the current position is after the hash
                 if (!isspace(pBuffer[Offset]))
                 {
                     if (strncmp(pBuffer + Offset, "include", 7) == 0)
@@ -244,13 +247,18 @@ static void ExtractDependencies(std::function<void(const Diligent::String&)> Inc
                 }
                 break;
             case AfterInclude:
-                // Try to find the opening quotes character after the 'include' substring
+                /// Try to find the opening quotes character after the 'include' substring
                 if (!isspace(pBuffer[Offset]))
                 {
                     if (pBuffer[Offset] == '"')
                     {
                         Start             = Offset + 1;
-                        PreprocessorState = InsideIncludeBrackets;
+                        PreprocessorState = InsideStraightIncludeBrackets;
+                    }
+                    else if (pBuffer[Offset] == '<')
+                    {
+                        Start             = Offset + 1;
+                        PreprocessorState = InsidePointyIncludeBrackets;
                     }
                     else
                     {
@@ -258,15 +266,28 @@ static void ExtractDependencies(std::function<void(const Diligent::String&)> Inc
                     }
                 }
                 break;
-            case InsideIncludeBrackets:
-                // Try to find the closing quotes after the opening quotes and extract the substring for IncludeHandler(...)
+            case InsideStraightIncludeBrackets:
+                /// Try to find the closing quotes after the opening quotes and extract the substring for IncludeHandler(...)
                 switch (pBuffer[Offset])
                 {
                     case '\n':
                         PreprocessorState = None; // Buggy code, skip over this include.
                         break;
                     case '"':
-                        IncludeHandler(std::string(&pBuffer[Start], &pBuffer[Offset]));
+                        IncludeHandler(std::string(&pBuffer[Start], &pBuffer[Offset]), NextHash - pBuffer, Offset + 1);
+                        PreprocessorState = None;
+                        break;
+                }
+                break;
+            case InsidePointyIncludeBrackets:
+                /// Try to find the closing quotes after the opening quotes and extract the substring for IncludeHandler(...)
+                switch (pBuffer[Offset])
+                {
+                    case '\n':
+                        PreprocessorState = None; // Buggy code, skip over this include.
+                        break;
+                    case '>':
+                        IncludeHandler(std::string(&pBuffer[Start], &pBuffer[Offset]), NextHash - pBuffer, Offset + 1);
                         PreprocessorState = None;
                         break;
                 }
@@ -276,28 +297,35 @@ static void ExtractDependencies(std::function<void(const Diligent::String&)> Inc
     }
 }
 
-bool ProcessShaderIncludes(const ShaderCreateInfo& ShaderCI, std::function<void(const ProcessShaderIncludesInfo&)> DataHandler)
+bool ProcessShaderIncludes(const ShaderCreateInfo& ShaderCI, std::function<void(const ShaderIncludePreprocessInfo&)> IncludeHandler)
 {
     VERIFY_EXPR(ShaderCI.Desc.Name != nullptr);
 
     std::unordered_set<String> Includes;
 
-    std::function<void(const ProcessShaderIncludesInfo&, IShaderSourceInputStreamFactory*)> ParseShader;
-    ParseShader = [&](const ProcessShaderIncludesInfo& PreprocessorInfo, IShaderSourceInputStreamFactory* pStreamFactory) //
+    std::function<void(IDataBlob*, const char*, IShaderSourceInputStreamFactory*)> ParseShader;
+    ParseShader = [&](IDataBlob* pDataBlob, const char* FilePath, IShaderSourceInputStreamFactory* pStreamFactory) //
     {
-        auto IncludeHandler = [&](const String& Include) //
+        ShaderIncludePreprocessInfo ProcessInfo{};
+        ProcessInfo.pDataBlob = pDataBlob;
+        ProcessInfo.FilePath  = FilePath;
+
+        auto IncludeHandlerExtract = [&](const String& Include, size_t Start, size_t End) //
         {
             if (Includes.emplace(Include).second)
             {
                 RefCntAutoPtr<IDataBlob> pSourceData;
                 size_t                   SourceLen = 0;
                 ReadShaderSourceFile(nullptr, ShaderCI.pShaderSourceStreamFactory, Include.c_str(), pSourceData, SourceLen);
-                ParseShader({pSourceData, Include.c_str()}, pStreamFactory);
+                ParseShader(pSourceData, Include.c_str(), pStreamFactory);
             }
+
+            ProcessInfo.Start = Start;
+            ProcessInfo.End   = End;
         };
 
-        ExtractDependencies(IncludeHandler, static_cast<const char*>(PreprocessorInfo.DataBlob->GetConstDataPtr()), PreprocessorInfo.DataBlob->GetSize());
-        DataHandler(PreprocessorInfo);
+        ExtractDependencies(IncludeHandlerExtract, static_cast<const char*>(pDataBlob->GetConstDataPtr()), pDataBlob->GetSize());
+        IncludeHandler(ProcessInfo);
     };
 
     try
@@ -305,14 +333,14 @@ bool ProcessShaderIncludes(const ShaderCreateInfo& ShaderCI, std::function<void(
         if (ShaderCI.Source != nullptr)
         {
             auto pSourceData = DataBlobImpl::Create(ShaderCI.SourceLength > 0 ? ShaderCI.SourceLength : strlen(ShaderCI.Source), ShaderCI.Source);
-            ParseShader({pSourceData, nullptr}, ShaderCI.pShaderSourceStreamFactory);
+            ParseShader(pSourceData, nullptr, ShaderCI.pShaderSourceStreamFactory);
         }
         else if (ShaderCI.FilePath != nullptr && ShaderCI.pShaderSourceStreamFactory != nullptr)
         {
             RefCntAutoPtr<IDataBlob> pSourceData;
             size_t                   SourceLen = ShaderCI.SourceLength;
             ReadShaderSourceFile(ShaderCI.Source, ShaderCI.pShaderSourceStreamFactory, ShaderCI.FilePath, pSourceData, SourceLen);
-            ParseShader({pSourceData, ShaderCI.FilePath}, ShaderCI.pShaderSourceStreamFactory);
+            ParseShader(pSourceData, ShaderCI.FilePath, ShaderCI.pShaderSourceStreamFactory);
         }
         else
         {
@@ -325,6 +353,30 @@ bool ProcessShaderIncludes(const ShaderCreateInfo& ShaderCI, std::function<void(
         LOG_ERROR("Failed to preprocess shader: '", ShaderCI.Desc.Name, "'.");
         return false;
     }
+}
+
+void MergeShaderIncludes(const ShaderCreateInfo& ShaderCI, IDataBlob** ppData)
+{
+    VERIFY_EXPR(ShaderCI.Desc.Name != nullptr);
+    VERIFY_EXPR(ppData != nullptr);
+
+    std::stringstream Stream;
+
+    auto IncludeHandler = [&](const ShaderIncludePreprocessInfo& ProcessInfo) {
+        memset(static_cast<char*>(ProcessInfo.pDataBlob->GetDataPtr()) + ProcessInfo.Start, ' ', ProcessInfo.End - ProcessInfo.Start);
+
+        Stream.write(static_cast<const char*>(ProcessInfo.pDataBlob->GetConstDataPtr()), ProcessInfo.pDataBlob->GetSize());
+        Stream << std::endl;
+    };
+
+    if (!ProcessShaderIncludes(ShaderCI, IncludeHandler))
+    {
+        LOG_ERROR("Failed to merge includes for shader: '", ShaderCI.Desc.Name, "'.");
+        return;
+    }
+
+    RefCntAutoPtr<IDataBlob> pData(MakeNewRCObj<StringDataBlobImpl>{}(Stream.str()));
+    *ppData = pData.Detach();
 }
 
 } // namespace Diligent

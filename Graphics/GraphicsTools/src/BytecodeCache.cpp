@@ -215,8 +215,8 @@ private:
         Hasher.Update(ShaderCI.CompileFlags);
         Hasher.Update(m_DeviceType);
 
-        ProcessShaderIncludes(ShaderCI, [&](const ProcessShaderIncludesInfo& Info) {
-            Hasher.Update(Info.DataBlob->GetConstDataPtr(), Info.DataBlob->GetSize());
+        ProcessShaderIncludes(ShaderCI, [&](const ShaderIncludePreprocessInfo& ProcessInfo) {
+            Hasher.Update(ProcessInfo.pDataBlob->GetConstDataPtr(), ProcessInfo.pDataBlob->GetSize());
         });
 
         return Hasher.Digest();

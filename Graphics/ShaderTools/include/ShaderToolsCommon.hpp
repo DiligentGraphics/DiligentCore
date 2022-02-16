@@ -81,14 +81,28 @@ const char* ReadShaderSourceFile(const char*                      SourceCode,
 void AppendShaderSourceCode(std::string& Source, const ShaderCreateInfo& ShaderCI) noexcept(false);
 
 
-struct ProcessShaderIncludesInfo
+/// Shader include preprocess info.
+struct ShaderIncludePreprocessInfo
 {
-    IDataBlob*  DataBlob = nullptr;
-    const char* FilePath = nullptr;
+    /// The data of the included file.
+    IDataBlob* pDataBlob;
+    /// The path to the included file.
+    const Char* FilePath;
+
+    /// Offsets relative to the pDataBlob->GetDataPtr() pointer to modify a #include "${PATH}" substring
+    ///
+    ///      #include "SomeInclude.hlsl"
+    ///      ^                         ^
+    ///    Start                      End
+    size_t Start;
+    size_t End;
 };
 
-// The function recursively finds all include files in the shader.
-// When an included file is found, the function DataHandler(...) is called.
-bool ProcessShaderIncludes(const struct ShaderCreateInfo& ShaderCI, std::function<void(const ProcessShaderIncludesInfo&)> DataHandler);
+/// The function recursively finds all include files in the shader
+/// When an included file is found, function IncludeHandler(...) are called
+bool ProcessShaderIncludes(const ShaderCreateInfo& ShaderCI, std::function<void(const ShaderIncludePreprocessInfo&)> IncludeHandler);
+
+///  Function to merge all include files into one file
+void MergeShaderIncludes(const ShaderCreateInfo& ShaderCI, IDataBlob** pData);
 
 } // namespace Diligent

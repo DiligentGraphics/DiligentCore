@@ -53,8 +53,8 @@ TEST(ShaderPreprocessTest, Include)
         ShaderCI.FilePath                   = "IncludeBasicTest.hlsl";
         ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
 
-        const auto Result = ProcessShaderIncludes(ShaderCI, [&](const ProcessShaderIncludesInfo& Info) {
-            EXPECT_EQ(SafeStrEqual(Info.FilePath, Includes.front()), true);
+        const auto Result = ProcessShaderIncludes(ShaderCI, [&](const ShaderIncludePreprocessInfo& ProcessInfo) {
+            EXPECT_EQ(SafeStrEqual(ProcessInfo.FilePath, Includes.front()), true);
             Includes.pop_front();
         });
         EXPECT_EQ(Result, true);
@@ -70,8 +70,8 @@ TEST(ShaderPreprocessTest, Include)
         ShaderCI.FilePath                   = "IncludeWhiteSpaceTest.hlsl";
         ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
 
-        const auto Result = ProcessShaderIncludes(ShaderCI, [&](const ProcessShaderIncludesInfo& Info) {
-            EXPECT_EQ(SafeStrEqual(Info.FilePath, Includes.front()), true);
+        const auto Result = ProcessShaderIncludes(ShaderCI, [&](const ShaderIncludePreprocessInfo& ProcessInfo) {
+            EXPECT_EQ(SafeStrEqual(ProcessInfo.FilePath, Includes.front()), true);
             Includes.pop_front();
         });
 
@@ -88,8 +88,8 @@ TEST(ShaderPreprocessTest, Include)
         ShaderCI.FilePath                   = "IncludeCommentsSingleLineTest.hlsl";
         ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
 
-        const auto Result = ProcessShaderIncludes(ShaderCI, [&](const ProcessShaderIncludesInfo& Info) {
-            EXPECT_EQ(SafeStrEqual(Info.FilePath, Includes.front()), true);
+        const auto Result = ProcessShaderIncludes(ShaderCI, [&](const ShaderIncludePreprocessInfo& ProcessInfo) {
+            EXPECT_EQ(SafeStrEqual(ProcessInfo.FilePath, Includes.front()), true);
             Includes.pop_front();
         });
 
@@ -106,8 +106,8 @@ TEST(ShaderPreprocessTest, Include)
         ShaderCI.FilePath                   = "IncludeCommentsMultiLineTest.hlsl";
         ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
 
-        const auto Result = ProcessShaderIncludes(ShaderCI, [&](const ProcessShaderIncludesInfo& Info) {
-            EXPECT_EQ(SafeStrEqual(Info.FilePath, Includes.front()), true);
+        const auto Result = ProcessShaderIncludes(ShaderCI, [&](const ShaderIncludePreprocessInfo& ProcessInfo) {
+            EXPECT_EQ(SafeStrEqual(ProcessInfo.FilePath, Includes.front()), true);
             Includes.pop_front();
         });
 
@@ -123,12 +123,42 @@ TEST(ShaderPreprocessTest, Include)
         ShaderCI.FilePath                   = "IncludeCommentsTrickyCasesTest.hlsl";
         ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
 
-        const auto Result = ProcessShaderIncludes(ShaderCI, [&](const ProcessShaderIncludesInfo& Info) {
-            EXPECT_EQ(SafeStrEqual(Info.FilePath, Includes.front()), true);
+        const auto Result = ProcessShaderIncludes(ShaderCI, [&](const ShaderIncludePreprocessInfo& ProcessInfo) {
+            EXPECT_EQ(SafeStrEqual(ProcessInfo.FilePath, Includes.front()), true);
             Includes.pop_front();
         });
 
         EXPECT_EQ(Result, true);
+    }
+}
+
+TEST(ShaderPreprocessTest, MergeIncludes)
+{
+    RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
+    CreateDefaultShaderSourceStreamFactory("shaders/ShaderPreprocessor", &pShaderSourceFactory);
+    ASSERT_NE(pShaderSourceFactory, nullptr);
+
+    {
+        ShaderCreateInfo ShaderCI{};
+        ShaderCI.Desc.Name                  = "TestShader";
+        ShaderCI.FilePath                   = "InlineIncludeShaderTest.hlsl";
+        ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
+
+        const std::string Reference =
+            "// #include \"InlineIncludeShaderCommon0.hlsl\"\n\n"
+            "                                          \n"
+            "// #include \"InlineIncludeShaderCommon1.hlsl\"\n\n"
+            "                                          \n"
+            "// #include \"InlineIncludeShaderTest.hlsl\"\n\n";
+
+        RefCntAutoPtr<IDataBlob> pData;
+        MergeShaderIncludes(ShaderCI, &pData);
+        ASSERT_NE(pData, nullptr);
+
+        const std::string DataString = std::string{static_cast<const char*>(pData->GetConstDataPtr()), pData->GetSize()};
+
+        ASSERT_EQ(Reference.size(), DataString.size());
+        EXPECT_EQ(Reference, DataString);
     }
 }
 
