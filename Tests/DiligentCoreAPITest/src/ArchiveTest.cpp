@@ -755,18 +755,19 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
 
                 for (auto Flags = ArchiveInfo.DeviceFlags; Flags != ARCHIVE_DEVICE_DATA_FLAG_NONE;)
                 {
-                    auto Flag = ExtractLSB(Flags);
-                    for (auto Stage : {SHADER_TYPE_VERTEX, SHADER_TYPE_PIXEL})
+                    const auto Flag        = ExtractLSB(Flags);
+                    const auto ShaderCount = pSerializedPSO.Cast<ISerializedPipelineState>(IID_SerializedPipelineState)->GetPatchedShaderCount(Flag);
+                    EXPECT_EQ(ShaderCount, 2u);
+                    for (Uint32 ShaderId = 0; ShaderId < ShaderCount; ++ShaderId)
                     {
-                        auto ShaderCI =
-                            pSerializedPSO.Cast<ISerializedPipelineState>(IID_SerializedPipelineState)->GetPatchedShaderCreateInfo(Flag, Stage);
+                        auto ShaderCI = pSerializedPSO.Cast<ISerializedPipelineState>(IID_SerializedPipelineState)->GetPatchedShaderCreateInfo(Flag, ShaderId);
 
-                        const auto& RefCI = Stage == SHADER_TYPE_VERTEX ? VertexShaderCI : PixelShaderCI;
+                        EXPECT_TRUE(ShaderCI.Desc.ShaderType == SHADER_TYPE_VERTEX || ShaderCI.Desc.ShaderType == SHADER_TYPE_PIXEL);
+                        const auto& RefCI = ShaderCI.Desc.ShaderType == SHADER_TYPE_VERTEX ? VertexShaderCI : PixelShaderCI;
                         EXPECT_STREQ(ShaderCI.Desc.Name, RefCI.Desc.Name);
                         EXPECT_STREQ(ShaderCI.EntryPoint, RefCI.EntryPoint);
                         EXPECT_EQ(ShaderCI.UseCombinedTextureSamplers, RefCI.UseCombinedTextureSamplers);
                         EXPECT_STREQ(ShaderCI.CombinedSamplerSuffix, RefCI.CombinedSamplerSuffix);
-                        EXPECT_EQ(ShaderCI.Desc.ShaderType, Stage);
                         EXPECT_TRUE(ShaderCI.ByteCodeSize > 0 || ShaderCI.SourceLength > 0);
                     }
                 }

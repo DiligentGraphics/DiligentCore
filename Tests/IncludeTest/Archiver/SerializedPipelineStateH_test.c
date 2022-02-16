@@ -28,6 +28,8 @@
 
 void TestSerializedPipelineState_CInterface(ISerializedPipelineState* pPSO)
 {
+    Uint32 ShaderCount = ISerializedPipelineState_GetPatchedShaderCount(pPSO, ARCHIVE_DEVICE_DATA_FLAG_D3D11);
+    (void)ShaderCount;
     ShaderCreateInfo ShaderCI = ISerializedPipelineState_GetPatchedShaderCreateInfo(pPSO, ARCHIVE_DEVICE_DATA_FLAG_GL, SHADER_TYPE_PIXEL);
     (void)ShaderCI;
 }

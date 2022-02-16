@@ -50,11 +50,26 @@ static const INTERFACE_ID IID_SerializedPipelineState =
 /// Serialized pipeline state interface
 DILIGENT_BEGIN_INTERFACE(ISerializedPipelineState, IPipelineState)
 {
-    /// Returns the patched shader create information for the given device type and shader stage.
+    /// Returns the number of patched shaders for the given device type.
+
+    /// \param [in] DeviceType  - Device type for which to get the shader count.
+    /// \return     The number of patched shaders for this device type.
+    VIRTUAL Uint32 METHOD(GetPatchedShaderCount)(
+        THIS_
+        ARCHIVE_DEVICE_DATA_FLAGS DeviceType) CONST PURE;
+
+    /// Returns the patched shader create information for the given device type and shader index.
+
+    /// \param [in] DeviceType  - Device type for which to get the shader.
+    /// \param [in]             - Shader index.
+    ///                           The index must be between 0 and the shader count
+    ///                           returned by the GetPatchedShaderCount() for this
+    ///                           device type.
+    /// \return Shader create information for the requested device type and shader index.
     VIRTUAL ShaderCreateInfo METHOD(GetPatchedShaderCreateInfo)(
         THIS_
         ARCHIVE_DEVICE_DATA_FLAGS DeviceType,
-        SHADER_TYPE               ShaderStage) CONST PURE;
+        Uint32                    ShaderIndex) CONST PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -62,6 +77,7 @@ DILIGENT_END_INTERFACE
 
 #if DILIGENT_C_INTERFACE
 
+#    define ISerializedPipelineState_GetPatchedShaderCount(This, ...)      CALL_IFACE_METHOD(SerializedPipelineState, GetPatchedShaderCount,      This, __VA_ARGS__)
 #    define ISerializedPipelineState_GetPatchedShaderCreateInfo(This, ...) CALL_IFACE_METHOD(SerializedPipelineState, GetPatchedShaderCreateInfo, This, __VA_ARGS__)
 
 #endif

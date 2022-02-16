@@ -88,9 +88,11 @@ public:
     UNSUPPORTED_CONST_METHOD(IPipelineResourceSignature*, GetResourceSignature, Uint32 Index)
     // clang-format on
 
+    virtual Uint32 DILIGENT_CALL_TYPE GetPatchedShaderCount(ARCHIVE_DEVICE_DATA_FLAGS DeviceType) const override final;
+
     virtual ShaderCreateInfo DILIGENT_CALL_TYPE GetPatchedShaderCreateInfo(
-        ARCHIVE_DEVICE_DATA_FLAGS DataFlag,
-        SHADER_TYPE               ShaderStage) const override final;
+        ARCHIVE_DEVICE_DATA_FLAGS DataType,
+        Uint32                    ShaderIndex) const override final;
 
     using SerializedPSOAuxData = DeviceObjectArchiveBase::SerializedPSOAuxData;
     using DeviceType           = DeviceObjectArchiveBase::DeviceType;

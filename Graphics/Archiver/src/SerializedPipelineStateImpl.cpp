@@ -31,6 +31,7 @@
 #include "SerializationDeviceImpl.hpp"
 #include "SerializedResourceSignatureImpl.hpp"
 #include "PSOSerializer.hpp"
+#include "Align.hpp"
 
 namespace Diligent
 {
@@ -337,23 +338,32 @@ void SerializedPipelineStateImpl::SerializeShaderCreateInfo(DeviceType          
     m_Data.Shaders[static_cast<size_t>(Type)].emplace_back(std::move(ShaderData));
 }
 
+Uint32 DILIGENT_CALL_TYPE SerializedPipelineStateImpl::GetPatchedShaderCount(ARCHIVE_DEVICE_DATA_FLAGS DeviceType) const
+{
+    DEV_CHECK_ERR(IsPowerOfTwo(DeviceType), "Only single device data flag is expected");
+    const auto  Type    = ArchiveDeviceDataFlagToArchiveDeviceType(DeviceType);
+    const auto& Shaders = m_Data.Shaders[static_cast<size_t>(Type)];
+    return StaticCast<Uint32>(Shaders.size());
+}
+
 ShaderCreateInfo DILIGENT_CALL_TYPE SerializedPipelineStateImpl::GetPatchedShaderCreateInfo(
     ARCHIVE_DEVICE_DATA_FLAGS DeviceType,
-    SHADER_TYPE               ShaderStage) const
+    Uint32                    ShaderIndex) const
 {
+    DEV_CHECK_ERR(IsPowerOfTwo(DeviceType), "Only single device data flag is expected");
+
     ShaderCreateInfo ShaderCI;
 
     const auto  Type    = ArchiveDeviceDataFlagToArchiveDeviceType(DeviceType);
     const auto& Shaders = m_Data.Shaders[static_cast<size_t>(Type)];
-    for (const auto& ShaderData : Shaders)
+    if (ShaderIndex < Shaders.size())
     {
-        if (ShaderData.Stage != ShaderStage)
-            continue;
-
-        Serializer<SerializerMode::Read> Ser{ShaderData.Data};
+        Serializer<SerializerMode::Read> Ser{Shaders[ShaderIndex].Data};
         ShaderSerializer<SerializerMode::Read>::SerializeCI(Ser, ShaderCI);
-
-        break;
+    }
+    else
+    {
+        DEV_ERROR("Shader index (", ShaderIndex, ") is out of range. Call GetPatchedShaderCount() to get the shader count.");
     }
 
     return ShaderCI;
