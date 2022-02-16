@@ -82,6 +82,14 @@ struct PipelineResourceSignatureInternalDataGL;
 
 struct EngineGLImplTraits
 {
+#if PLATFORM_WIN32 || PLATFORM_LINUX || PLATFORM_MACOS
+    static constexpr auto DeviceType = RENDER_DEVICE_TYPE_GL;
+#elif PLATFORM_ANDROID || PLATFORM_IOS || PLATFORM_EMSCRIPTEN
+    static constexpr auto DeviceType = RENDER_DEVICE_TYPE_GL;
+#else
+#    error Unsupported platform
+#endif
+
     using RenderDeviceInterface              = IGLDeviceBaseInterface;
     using DeviceContextInterface             = IDeviceContextGL;
     using PipelineStateInterface             = IPipelineStateGL;

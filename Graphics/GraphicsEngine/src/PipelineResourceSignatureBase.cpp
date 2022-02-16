@@ -38,11 +38,13 @@ namespace Diligent
 #define LOG_PRS_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of a pipeline resource signature '", (Desc.Name ? Desc.Name : ""), "' is invalid: ", ##__VA_ARGS__)
 
 void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& Desc,
-                                           const IRenderDevice*                 pDevice) noexcept(false)
+                                           const IRenderDevice*                 pDevice,
+                                           RENDER_DEVICE_TYPE                   DeviceType) noexcept(false)
 {
     const auto& DeviceInfo = pDevice != nullptr ?
         pDevice->GetDeviceInfo() :
-        RenderDeviceInfo{RENDER_DEVICE_TYPE_UNDEFINED, Version{}, DeviceFeatures{DEVICE_FEATURE_STATE_ENABLED}};
+        RenderDeviceInfo{DeviceType, Version{}, DeviceFeatures{DEVICE_FEATURE_STATE_ENABLED}};
+
     const auto& Features = DeviceInfo.Features;
 
     if (Desc.BindingIndex >= MAX_RESOURCE_SIGNATURES)

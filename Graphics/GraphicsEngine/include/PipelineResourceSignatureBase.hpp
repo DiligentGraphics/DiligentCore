@@ -60,7 +60,8 @@ namespace Diligent
 /// Validates pipeline resource signature description and throws an exception in case of an error.
 /// \note  pDevice can be null if PRS is used for serialization.
 void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& Desc,
-                                           const IRenderDevice*                 pDevice) noexcept(false);
+                                           const IRenderDevice*                 pDevice,
+                                           RENDER_DEVICE_TYPE                   DeviceType) noexcept(false);
 
 static constexpr Uint32 InvalidImmutableSamplerIndex = ~0u;
 /// Finds an immutable sampler for the resource name 'ResourceName' that is defined in shader stages 'ShaderStages'.
@@ -338,7 +339,7 @@ public:
         this->m_Desc.ImmutableSamplers     = nullptr;
         this->m_Desc.CombinedSamplerSuffix = nullptr;
 
-        ValidatePipelineResourceSignatureDesc(Desc, pDevice);
+        ValidatePipelineResourceSignatureDesc(Desc, pDevice, EngineImplTraits::DeviceType);
 
         // Determine shader stages that have any resources as well as
         // shader stages that have static resources.
@@ -388,7 +389,7 @@ public:
         this->m_Desc.CombinedSamplerSuffix = nullptr;
 
 #ifdef DILIGENT_DEVELOPMENT
-        ValidatePipelineResourceSignatureDesc(Desc, pDevice);
+        ValidatePipelineResourceSignatureDesc(Desc, pDevice, EngineImplTraits::DeviceType);
 #endif
     }
 

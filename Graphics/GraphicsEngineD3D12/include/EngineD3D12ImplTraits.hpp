@@ -92,6 +92,8 @@ struct PipelineResourceSignatureInternalDataD3D12;
 
 struct EngineD3D12ImplTraits
 {
+    static constexpr auto DeviceType = RENDER_DEVICE_TYPE_D3D12;
+
     using RenderDeviceInterface              = IRenderDeviceD3D12;
     using DeviceContextInterface             = IDeviceContextD3D12;
     using PipelineStateInterface             = IPipelineStateD3D12;

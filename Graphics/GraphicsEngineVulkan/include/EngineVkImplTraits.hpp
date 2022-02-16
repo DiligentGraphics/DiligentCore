@@ -91,6 +91,8 @@ struct PipelineResourceSignatureInternalDataVk;
 
 struct EngineVkImplTraits
 {
+    static constexpr auto DeviceType = RENDER_DEVICE_TYPE_VULKAN;
+
     using RenderDeviceInterface              = IRenderDeviceVk;
     using DeviceContextInterface             = IDeviceContextVk;
     using PipelineStateInterface             = IPipelineStateVk;

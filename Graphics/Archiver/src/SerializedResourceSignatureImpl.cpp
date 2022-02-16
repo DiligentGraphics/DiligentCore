@@ -44,7 +44,7 @@ SerializedResourceSignatureImpl::SerializedResourceSignatureImpl(IReferenceCount
     TBase{pRefCounters},
     m_Name{Desc.Name}
 {
-    ValidatePipelineResourceSignatureDesc(Desc, pDevice);
+    ValidatePipelineResourceSignatureDesc(Desc, pDevice, RENDER_DEVICE_TYPE_UNDEFINED);
 
     auto DeviceFlags = ArchiveInfo.DeviceFlags;
     if ((DeviceFlags & pDevice->GetValidDeviceFlags()) != DeviceFlags)
