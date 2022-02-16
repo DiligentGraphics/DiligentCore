@@ -149,7 +149,8 @@ void SerializedPipelineStateImpl::PatchShadersMtl(const CreateInfoType& CreateIn
             const auto& Stage = ShaderStages[j];
             // Note that patched shader data contains some extra information
             // besides the byte code itself.
-            const auto ShaderData = Stage.pShader->PatchShaderMtl(Signatures.data(), BaseBindings.data(), SignaturesCount, DevType); // May throw
+            const auto ShaderData = Stage.pShader->PatchShaderMtl(
+                CreateInfo.PSODesc.Name, Signatures.data(), BaseBindings.data(), SignaturesCount, DevType); // May throw
 
             auto ShaderCI           = Stage.pShader->GetCreateInfo();
             ShaderCI.Source         = nullptr;
@@ -240,7 +241,8 @@ void SerializeBufferTypeInfoMapAndComputeGroupSize(Serializer<Mode>             
 }
 } // namespace
 
-SerializedData SerializedShaderImpl::PatchShaderMtl(const RefCntAutoPtr<PipelineResourceSignatureMtlImpl>* pSignatures,
+SerializedData SerializedShaderImpl::PatchShaderMtl(const char*                                            PSOName,
+                                                    const RefCntAutoPtr<PipelineResourceSignatureMtlImpl>* pSignatures,
                                                     const MtlResourceCounters*                             pBaseBindings,
                                                     const Uint32                                           SignatureCount,
                                                     DeviceType                                             DevType) const noexcept(false)
@@ -248,6 +250,9 @@ SerializedData SerializedShaderImpl::PatchShaderMtl(const RefCntAutoPtr<Pipeline
     VERIFY_EXPR(SignatureCount > 0);
     VERIFY_EXPR(pSignatures != nullptr);
     VERIFY_EXPR(pBaseBindings != nullptr);
+
+#define LOG_PATCH_SHADER_ERROR_AND_THROW(...)\
+    LOG_ERROR_AND_THROW("Failed to patch shader '", GetDesc().Name, "' for PSO '", PSOName, "': ", ##__VA_ARGS__)
 
     const auto TmpFolder = GetTmpFolder();
     filesystem::create_directories(TmpFolder.c_str());
@@ -308,9 +313,11 @@ SerializedData SerializedShaderImpl::PatchShaderMtl(const RefCntAutoPtr<Pipeline
     {
         FILE* File = fopen(MetalFile.c_str(), "wb");
         if (File == nullptr)
-            LOG_ERROR_AND_THROW("Failed to save Metal shader source");
+            LOG_PATCH_SHADER_ERROR_AND_THROW("failed to open temp file to save Metal shader source.");
 
-        fwrite(MslSource.c_str(), sizeof(MslSource[0]), MslSource.size(), File);
+        if (fwrite(MslSource.c_str(), sizeof(MslSource[0]) * MslSource.size(), 1, File) != 1)
+            LOG_PATCH_SHADER_ERROR_AND_THROW("failed to save Metal shader source to a temp file.");
+
         fclose(File);
     }
 
@@ -323,7 +330,7 @@ SerializedData SerializedShaderImpl::PatchShaderMtl(const RefCntAutoPtr<Pipeline
         cmd += MetalFile;
         FILE* File = popen(cmd.c_str(), "r");
         if (File == nullptr)
-            LOG_ERROR_AND_THROW("Failed to run command line Metal shader compiler");
+            LOG_PATCH_SHADER_ERROR_AND_THROW("failed to run command-line Metal shader compiler.");
 
         char Output[512];
         while (fgets(Output, _countof(Output), File) != nullptr)
@@ -331,7 +338,7 @@ SerializedData SerializedShaderImpl::PatchShaderMtl(const RefCntAutoPtr<Pipeline
 
         auto status = pclose(File);
         if (status == -1)
-            LOG_ERROR_MESSAGE("Failed to close msl preprocessor process");
+            LOG_PATCH_SHADER_ERROR_AND_THROW("failed to close msl preprocessor process.");
     }
 
     // https://developer.apple.com/documentation/metal/libraries/generating_and_loading_a_metal_library_symbol_file
@@ -344,7 +351,7 @@ SerializedData SerializedShaderImpl::PatchShaderMtl(const RefCntAutoPtr<Pipeline
 
         FILE* File = popen(cmd.c_str(), "r");
         if (File == nullptr)
-            LOG_ERROR_AND_THROW("Failed to compile MSL.");
+            LOG_PATCH_SHADER_ERROR_AND_THROW("failed to compile MSL source.");
 
         char Output[512];
         while (fgets(Output, _countof(Output), File) != nullptr)
@@ -352,7 +359,7 @@ SerializedData SerializedShaderImpl::PatchShaderMtl(const RefCntAutoPtr<Pipeline
 
         auto status = pclose(File);
         if (status == -1)
-            LOG_ERROR_MESSAGE("Failed to close xcrun process");
+            LOG_PATCH_SHADER_ERROR_AND_THROW("failed to close xcrun process");
     }
 
     // Read 'Shader.metallib'
@@ -360,7 +367,7 @@ SerializedData SerializedShaderImpl::PatchShaderMtl(const RefCntAutoPtr<Pipeline
     {
         FILE* File = fopen(MetalLibFile.c_str(), "rb");
         if (File == nullptr)
-            LOG_ERROR_AND_THROW("Failed to read shader library");
+            LOG_PATCH_SHADER_ERROR_AND_THROW("failed to read shader library");
 
         fseek(File, 0, SEEK_END);
         const auto BytecodeSize = static_cast<size_t>(ftell(File));
@@ -373,7 +380,9 @@ SerializedData SerializedShaderImpl::PatchShaderMtl(const RefCntAutoPtr<Pipeline
     }
 
     if (ByteCode.empty())
-        LOG_ERROR_AND_THROW("Failed to load Metal shader library");
+        LOG_PATCH_SHADER_ERROR_AND_THROW("failed to load Metal shader library");
+
+#undef LOG_PATCH_SHADER_ERROR_AND_THROW
 
     auto SerializeShaderData = [&](auto& Ser){
         Ser.SerializeBytes(ByteCode.data(), ByteCode.size() * sizeof(ByteCode[0]));

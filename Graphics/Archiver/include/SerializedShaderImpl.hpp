@@ -85,7 +85,8 @@ public:
     }
 
 #if METAL_SUPPORTED
-    SerializedData PatchShaderMtl(const RefCntAutoPtr<PipelineResourceSignatureMtlImpl>* pSignatures,
+    SerializedData PatchShaderMtl(const char*                                            PSOName,
+                                  const RefCntAutoPtr<PipelineResourceSignatureMtlImpl>* pSignatures,
                                   const MtlArchiverResourceCounters*                     pBaseBindings,
                                   const Uint32                                           SignatureCount,
                                   DeviceType                                             DevType) const noexcept(false);
