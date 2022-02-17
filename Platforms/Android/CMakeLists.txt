@@ -8,6 +8,7 @@ set(INTERFACE
     interface/AndroidPlatformDefinitions.h
     interface/AndroidPlatformMisc.hpp
     interface/AndroidNativeWindow.h
+    ../Linux/interface/LinuxPlatformMisc.hpp
 )
 
 set(SOURCE
@@ -34,8 +35,8 @@ PUBLIC
 )
 
 source_group("src" FILES ${SOURCE})
-source_group("include" FILES ${INCLUDE})
-source_group("interface" FILES ${PLATFORM_INTERFACE_HEADERS})
+source_group("interface\\android" FILES ${INTERFACE})
+source_group("interface\\common" FILES ${PLATFORM_INTERFACE_HEADERS})
 
 set_target_properties(Diligent-AndroidPlatform PROPERTIES
     FOLDER DiligentCore/Platforms
@@ -43,4 +44,9 @@ set_target_properties(Diligent-AndroidPlatform PROPERTIES
 
 if(DILIGENT_INSTALL_CORE)
     install_core_lib(Diligent-AndroidPlatform)
+
+    get_target_relative_dir(Diligent-AndroidPlatform RELATIVE_PATH)
+    install(DIRECTORY    ../Linux/interface
+            DESTINATION  "${CMAKE_INSTALL_INCLUDEDIR}/${RELATIVE_PATH}/../Linux"
+    )
 endif()

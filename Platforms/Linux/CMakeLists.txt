@@ -32,8 +32,8 @@ PUBLIC
 )
 
 source_group("src" FILES ${SOURCE})
-source_group("include" FILES ${INCLUDE})
-source_group("interface" FILES ${PLATFORM_INTERFACE_HEADERS})
+source_group("interface\\linux" FILES ${INTERFACE})
+source_group("interface\\common" FILES ${PLATFORM_INTERFACE_HEADERS})
 
 set_target_properties(Diligent-LinuxPlatform PROPERTIES
     FOLDER DiligentCore/Platforms

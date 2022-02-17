@@ -16,6 +16,7 @@ set(INTERFACE
     interface/AppleFileSystem.hpp
     interface/ApplePlatformDefinitions.h
     interface/ApplePlatformMisc.hpp
+    ../Linux/interface/LinuxPlatformMisc.hpp
     ${APPLE_NATIVE_WINDOW_H}
 )
 
@@ -61,8 +62,8 @@ elseif(PLATFORM_TVOS)
 endif()
 
 source_group("src" FILES ${SOURCE})
-source_group("include" FILES ${INCLUDE})
-source_group("interface" FILES ${PLATFORM_INTERFACE_HEADERS})
+source_group("interface\\apple" FILES ${INTERFACE})
+source_group("interface\\common" FILES ${PLATFORM_INTERFACE_HEADERS})
 
 set_target_properties(Diligent-ApplePlatform PROPERTIES
     FOLDER DiligentCore/Platforms
@@ -70,4 +71,9 @@ set_target_properties(Diligent-ApplePlatform PROPERTIES
 
 if(DILIGENT_INSTALL_CORE)
     install_core_lib(Diligent-ApplePlatform)
+
+    get_target_relative_dir(Diligent-ApplePlatform RELATIVE_PATH)
+    install(DIRECTORY    ../Linux/interface
+            DESTINATION  "${CMAKE_INSTALL_INCLUDEDIR}/${RELATIVE_PATH}/../Linux"
+    )
 endif()

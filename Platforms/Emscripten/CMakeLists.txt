@@ -8,6 +8,7 @@ set(INTERFACE
     interface/EmscriptenPlatformDefinitions.h
     interface/EmscriptenPlatformMisc.hpp
     interface/EmscriptenNativeWindow.h
+    ../Linux/interface/LinuxPlatformMisc.hpp
 )
 
 set(SOURCE
@@ -32,8 +33,8 @@ PUBLIC
 )
 
 source_group("src" FILES ${SOURCE})
-source_group("include" FILES ${INCLUDE})
-source_group("interface" FILES ${PLATFORM_INTERFACE_HEADERS})
+source_group("interface\\emscripten" FILES ${INTERFACE})
+source_group("interface\\common" FILES ${PLATFORM_INTERFACE_HEADERS})
 
 set_target_properties(Diligent-EmscriptenPlatform PROPERTIES
     FOLDER DiligentCore/Platforms
@@ -41,4 +42,9 @@ set_target_properties(Diligent-EmscriptenPlatform PROPERTIES
 
 if(DILIGENT_INSTALL_CORE)
     install_core_lib(Diligent-EmscriptenPlatform)
+
+    get_target_relative_dir(Diligent-EmscriptenPlatform RELATIVE_PATH)
+    install(DIRECTORY    ../Linux/interface
+            DESTINATION  "${CMAKE_INSTALL_INCLUDEDIR}/${RELATIVE_PATH}/../Linux"
+    )
 endif()
