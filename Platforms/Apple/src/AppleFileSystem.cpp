@@ -28,6 +28,8 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <cstdio>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <CoreFoundation/CoreFoundation.h>
 
 #include "CFObjectWrapper.hpp"
@@ -125,14 +127,20 @@ bool AppleFileSystem::FileExists(const Char* strFilePath)
 
 bool AppleFileSystem::PathExists(const Char* strPath)
 {
-    UNSUPPORTED("Not implemented");
-    return false;
+    std::string path(strPath);
+    CorrectSlashes(path, AppleFileSystem::GetSlashSymbol());
+
+    auto res = access(path.c_str(), R_OK);
+    return res == 0;
 }
 
 bool AppleFileSystem::CreateDirectory(const Char* strPath)
 {
-    UNSUPPORTED("Not implemented");
-    return false;
+    std::string path(strPath);
+    CorrectSlashes(path, AppleFileSystem::GetSlashSymbol());
+
+    auto res = mkdir(path.c_str(), S_IRWXU | S_IRWXG | S_IRWXO);
+    return res == 0;
 }
 
 void AppleFileSystem::ClearDirectory(const Char* strPath)
