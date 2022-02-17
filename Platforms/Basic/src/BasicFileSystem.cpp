@@ -35,12 +35,17 @@ namespace Diligent
 String BasicFileSystem::m_strWorkingDirectory;
 
 BasicFile::BasicFile(const FileOpenAttribs& OpenAttribs, Char SlashSymbol) :
-    m_OpenAttribs{OpenAttribs},
-    m_Path{BasicFileSystem::GetFullPath(OpenAttribs.strFilePath)}
+    m_Path //
+    {
+        [](const Char* strPath, Char SlashSymbol) //
+        {
+            String Path = strPath != nullptr ? strPath : "";
+            BasicFileSystem::CorrectSlashes(Path, SlashSymbol);
+            return Path;
+        }(OpenAttribs.strFilePath, SlashSymbol) //
+    },
+    m_OpenAttribs{m_Path.c_str(), OpenAttribs.AccessMode}
 {
-    BasicFileSystem::CorrectSlashes(m_Path, SlashSymbol);
-
-    m_OpenAttribs.strFilePath = m_Path.c_str();
 }
 
 BasicFile::~BasicFile()
@@ -64,18 +69,6 @@ String BasicFile::GetOpenModeStr()
     OpenModeStr += 'b';
 
     return OpenModeStr;
-}
-
-std::string BasicFileSystem::GetFullPath(const Char* strFilePath)
-{
-    std::string FullPath = m_strWorkingDirectory;
-    auto        len      = FullPath.length();
-    if (len > 0 && FullPath[len - 1] != '\\')
-    {
-        FullPath += '\\';
-    }
-    FullPath += strFilePath;
-    return FullPath;
 }
 
 BasicFile* BasicFileSystem::OpenFile(FileOpenAttribs& OpenAttribs)

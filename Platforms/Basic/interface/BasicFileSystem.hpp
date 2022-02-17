@@ -69,8 +69,8 @@ public:
 protected:
     String GetOpenModeStr();
 
-    FileOpenAttribs m_OpenAttribs;
-    String          m_Path;
+    const String          m_Path;
+    const FileOpenAttribs m_OpenAttribs;
 };
 
 struct FindFileData
@@ -86,8 +86,6 @@ struct BasicFileSystem
 public:
     static BasicFile* OpenFile(FileOpenAttribs& OpenAttribs);
     static void       ReleaseFile(BasicFile*);
-
-    static std::string GetFullPath(const Char* strFilePath);
 
     static bool FileExists(const Char* strFilePath);
 
