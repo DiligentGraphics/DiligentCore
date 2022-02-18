@@ -151,13 +151,8 @@ TEST(ShaderPreprocessTest, UnrollIncludes)
             "                                          \n"
             "// #include \"InlineIncludeShaderTest.hlsl\"\n\n";
 
-        RefCntAutoPtr<IDataBlob> pData;
-        UnrollShaderIncludes(ShaderCI, &pData);
-        ASSERT_NE(pData, nullptr);
-
-        const auto* DataString = static_cast<const char*>(pData->GetConstDataPtr());
-
-        ASSERT_STREQ(RefString, DataString);
+        auto UnrolledStr = UnrollShaderIncludes(ShaderCI);
+        ASSERT_STREQ(RefString, UnrolledStr.c_str());
     }
 }
 

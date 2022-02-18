@@ -355,10 +355,9 @@ bool ProcessShaderIncludes(const ShaderCreateInfo& ShaderCI, std::function<void(
     }
 }
 
-void UnrollShaderIncludes(const ShaderCreateInfo& ShaderCI, IDataBlob** ppData)
+std::string UnrollShaderIncludes(const ShaderCreateInfo& ShaderCI)
 {
     VERIFY_EXPR(ShaderCI.Desc.Name != nullptr);
-    VERIFY_EXPR(ppData != nullptr);
 
     std::stringstream Stream;
 
@@ -372,11 +371,10 @@ void UnrollShaderIncludes(const ShaderCreateInfo& ShaderCI, IDataBlob** ppData)
     if (!ProcessShaderIncludes(ShaderCI, IncludeHandler))
     {
         LOG_ERROR("Failed to merge includes for shader: '", ShaderCI.Desc.Name, "'.");
-        return;
+        return "";
     }
 
-    RefCntAutoPtr<IDataBlob> pData(MakeNewRCObj<StringDataBlobImpl>{}(Stream.str()));
-    *ppData = pData.Detach();
+    return Stream.str();
 }
 
 } // namespace Diligent
