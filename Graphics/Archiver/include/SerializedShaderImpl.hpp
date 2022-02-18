@@ -102,9 +102,10 @@ public:
 private:
     void CopyShaderCreateInfo(const ShaderCreateInfo& ShaderCI) noexcept(false);
 
-    SerializationDeviceImpl*                      m_pDevice;
-    ShaderCreateInfo                              m_CreateInfo;
-    std::unique_ptr<void, STDDeleterRawMem<void>> m_pRawMemory;
+    SerializationDeviceImpl*                       m_pDevice;
+    RefCntAutoPtr<IShaderSourceInputStreamFactory> m_pShaderSourceFactory;
+    ShaderCreateInfo                               m_CreateInfo;
+    std::unique_ptr<void, STDDeleterRawMem<void>>  m_pRawMemory;
 
     std::array<std::unique_ptr<CompiledShader>, static_cast<size_t>(DeviceType::Count)> m_Shaders;
 

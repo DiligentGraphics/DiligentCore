@@ -31,7 +31,6 @@
 #include "DataBlobImpl.hpp"
 #include "PlatformMisc.hpp"
 #include "BasicMath.hpp"
-#include "ShaderToolsCommon.hpp"
 
 namespace Diligent
 {
@@ -42,8 +41,14 @@ SerializedShaderImpl::SerializedShaderImpl(IReferenceCounters*      pRefCounters
                                            const ShaderArchiveInfo& ArchiveInfo) :
     TBase{pRefCounters},
     m_pDevice{pDevice},
+    m_pShaderSourceFactory{ShaderCI.pShaderSourceStreamFactory},
     m_CreateInfo{ShaderCI}
 {
+    if (ShaderCI.Desc.Name == nullptr || ShaderCI.Desc.Name[0] == '\0')
+    {
+        LOG_ERROR_AND_THROW("Serialized shader name must not be null or empty string");
+    }
+
     auto DeviceFlags = ArchiveInfo.DeviceFlags;
     if ((DeviceFlags & m_pDevice->GetValidDeviceFlags()) != DeviceFlags)
     {
@@ -122,9 +127,7 @@ SerializedShaderImpl::SerializedShaderImpl(IReferenceCounters*      pRefCounters
 
 void SerializedShaderImpl::CopyShaderCreateInfo(const ShaderCreateInfo& ShaderCI) noexcept(false)
 {
-    m_CreateInfo.ppCompilerOutput           = nullptr;
-    m_CreateInfo.FilePath                   = nullptr;
-    m_CreateInfo.pShaderSourceStreamFactory = nullptr;
+    m_CreateInfo.ppCompilerOutput = nullptr;
 
     auto&                RawAllocator = GetRawAllocator();
     FixedLinearAllocator Allocator{RawAllocator};
@@ -133,18 +136,17 @@ void SerializedShaderImpl::CopyShaderCreateInfo(const ShaderCreateInfo& ShaderCI
     Allocator.AddSpaceForString(ShaderCI.CombinedSamplerSuffix);
     Allocator.AddSpaceForString(ShaderCI.Desc.Name);
 
-    RefCntAutoPtr<IDataBlob> pSourceFileData;
     if (ShaderCI.ByteCode && ShaderCI.ByteCodeSize > 0)
     {
         Allocator.AddSpace(ShaderCI.ByteCodeSize, alignof(Uint32));
     }
-    else if ((ShaderCI.Source != nullptr) || (ShaderCI.FilePath != nullptr && ShaderCI.pShaderSourceStreamFactory != nullptr))
+    else if (ShaderCI.Source != nullptr)
     {
-        size_t SourceLen          = ShaderCI.SourceLength;
-        m_CreateInfo.Source       = ReadShaderSourceFile(ShaderCI.Source, ShaderCI.pShaderSourceStreamFactory, ShaderCI.FilePath, pSourceFileData, SourceLen);
-        m_CreateInfo.SourceLength = StaticCast<Uint32>(SourceLen);
-
-        Allocator.AddSpace<char>(m_CreateInfo.SourceLength + 1);
+        Allocator.AddSpaceForString(ShaderCI.Source, ShaderCI.SourceLength);
+    }
+    else if (ShaderCI.FilePath != nullptr && ShaderCI.pShaderSourceStreamFactory != nullptr)
+    {
+        Allocator.AddSpaceForString(ShaderCI.FilePath);
     }
     else
     {
@@ -180,10 +182,15 @@ void SerializedShaderImpl::CopyShaderCreateInfo(const ShaderCreateInfo& ShaderCI
     {
         m_CreateInfo.ByteCode = Allocator.Copy(ShaderCI.ByteCode, ShaderCI.ByteCodeSize, alignof(Uint32));
     }
+    else if (ShaderCI.Source != nullptr)
+    {
+        m_CreateInfo.Source       = Allocator.CopyString(ShaderCI.Source, ShaderCI.SourceLength);
+        m_CreateInfo.SourceLength = ShaderCI.SourceLength;
+    }
     else
     {
-        VERIFY_EXPR(m_CreateInfo.Source != nullptr && m_CreateInfo.SourceLength > 0);
-        m_CreateInfo.Source = Allocator.CopyString(m_CreateInfo.Source, m_CreateInfo.SourceLength);
+        VERIFY_EXPR(ShaderCI.FilePath != nullptr && ShaderCI.pShaderSourceStreamFactory != nullptr);
+        m_CreateInfo.FilePath = Allocator.CopyString(ShaderCI.FilePath);
     }
 
     if (MacroCount > 0)

@@ -154,6 +154,7 @@ void SerializedPipelineStateImpl::PatchShadersMtl(const CreateInfoType& CreateIn
 
             auto ShaderCI           = Stage.pShader->GetCreateInfo();
             ShaderCI.Source         = nullptr;
+            ShaderCI.FilePath       = nullptr;
             ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_MTLB;
             ShaderCI.ByteCode       = ShaderData.Ptr();
             ShaderCI.ByteCodeSize   = ShaderData.Size();

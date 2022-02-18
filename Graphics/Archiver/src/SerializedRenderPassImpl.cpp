@@ -37,6 +37,9 @@ SerializedRenderPassImpl::SerializedRenderPassImpl(IReferenceCounters*      pRef
                                                    const RenderPassDesc&    Desc) :
     TBase{pRefCounters, pDevice, Desc, true}
 {
+    if (Desc.Name == nullptr || Desc.Name[0] == '\0')
+        LOG_ERROR_AND_THROW("Serialized render pass name can't be null or empty");
+
     Serializer<SerializerMode::Measure> MeasureSer;
     RPSerializer<SerializerMode::Measure>::SerializeDesc(MeasureSer, m_Desc, nullptr);
 

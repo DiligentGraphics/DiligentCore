@@ -137,6 +137,7 @@ void SerializedPipelineStateImpl::PatchShadersD3D12(const CreateInfoType& Create
             const auto& pBytecode = Stage.ByteCodes[i];
             auto        ShaderCI  = ShaderStages[j].Serialized[i]->GetCreateInfo();
             ShaderCI.Source       = nullptr;
+            ShaderCI.FilePath     = nullptr;
             ShaderCI.ByteCode     = pBytecode->GetBufferPointer();
             ShaderCI.ByteCodeSize = pBytecode->GetBufferSize();
             SerializeShaderCreateInfo(DeviceType::Direct3D12, ShaderCI);

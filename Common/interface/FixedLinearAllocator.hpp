@@ -179,10 +179,14 @@ public:
         AddSpace(sizeof(T) * count, alignof(T));
     }
 
-    void AddSpaceForString(const Char* str) noexcept
+    void AddSpaceForString(const Char* str, size_t Len = 0) noexcept
     {
-        if (str != nullptr)
-            AddSpace<Char>(strlen(str) + 1);
+        if (str == nullptr)
+            return;
+
+        if (Len == 0)
+            Len = strlen(str);
+        AddSpace<Char>(Len + 1);
     }
 
     void AddSpaceForString(const String& str) noexcept

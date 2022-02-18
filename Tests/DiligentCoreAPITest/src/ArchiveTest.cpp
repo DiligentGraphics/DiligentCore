@@ -501,65 +501,6 @@ RefCntAutoPtr<IBuffer> CreateTestVertexBuffer(IRenderDevice* pDevice, IDeviceCon
     return pVB;
 }
 
-namespace HLSL
-{
-
-const std::string Shared{R"(
-struct PSInput
-{
-    float4 Pos   : SV_POSITION;
-    float3 Color : COLOR;
-    float2 UV    : TEXCOORD0;
-};
-
-cbuffer cbConstants
-{
-    float4 UVScale;
-    float4 ColorScale;
-    float4 NormalScale;
-    float4 DepthScale;
-}
-)"};
-
-const std::string GraphicsPSOTest_VS = Shared + R"(
-
-struct VSInput
-{
-    float4 Pos   : ATTRIB0;
-    float3 Color : ATTRIB1;
-    float2 UV    : ATTRIB2;
-};
-
-void main(in  VSInput VSIn,
-          out PSInput PSIn)
-{
-    PSIn.Pos   = VSIn.Pos;
-    PSIn.Color = VSIn.Color;
-    PSIn.UV    = VSIn.UV * UVScale.xy;
-}
-)";
-
-const std::string GraphicsPSOTest_PS = Shared + R"(
-
-Texture2D    g_GBuffer_Color;
-SamplerState g_GBuffer_Color_sampler;
-Texture2D    g_GBuffer_Normal;
-SamplerState g_GBuffer_Normal_sampler;
-Texture2D    g_GBuffer_Depth;
-SamplerState g_GBuffer_Depth_sampler;
-
-float4 main(in PSInput PSIn) : SV_Target
-{
-    float4 Color  = g_GBuffer_Color .Sample(g_GBuffer_Color_sampler,  PSIn.UV) * ColorScale;
-    float4 Normal = g_GBuffer_Normal.Sample(g_GBuffer_Normal_sampler, PSIn.UV) * NormalScale;
-    float4 Depth  = g_GBuffer_Depth .Sample(g_GBuffer_Depth_sampler,  PSIn.UV) * DepthScale;
-
-    return Color + Normal + Depth + float4(PSIn.Color.rgb, 1.0);
-}
-)";
-} // namespace HLSL
-
-
 void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
 {
     auto* pEnv             = TestingEnvironment::GetInstance();
@@ -658,13 +599,17 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
         VertexShaderCI.UseCombinedTextureSamplers = true;
         VertexShaderCI.Macros                     = Macros;
 
+        RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
+        pDevice->GetEngineFactory()->CreateDefaultShaderSourceStreamFactory("shaders/Archiver", &pShaderSourceFactory);
+        VertexShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
+
         RefCntAutoPtr<IShader> pVS;
         RefCntAutoPtr<IShader> pSerializedVS;
         {
             VertexShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
             VertexShaderCI.EntryPoint      = "main";
             VertexShaderCI.Desc.Name       = "Archive test vertex shader";
-            VertexShaderCI.Source          = HLSL::GraphicsPSOTest_VS.c_str();
+            VertexShaderCI.FilePath        = "VertexShader.vsh";
 
             pDevice->CreateShader(VertexShaderCI, &pVS);
             ASSERT_NE(pVS, nullptr);
@@ -681,7 +626,7 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
             PixelShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
             PixelShaderCI.EntryPoint      = "main";
             PixelShaderCI.Desc.Name       = "Archive test pixel shader";
-            PixelShaderCI.Source          = HLSL::GraphicsPSOTest_PS.c_str();
+            PixelShaderCI.FilePath        = "PixelShader.psh";
 
             pDevice->CreateShader(PixelShaderCI, &pPS);
             ASSERT_NE(pPS, nullptr);
@@ -1077,6 +1022,28 @@ TEST(ArchiveTest, GraphicsPipeline_NoReflection)
     TestGraphicsPipeline(PSO_ARCHIVE_FLAG_STRIP_REFLECTION);
 }
 
+namespace HLSL
+{
+
+// Test shader source as string
+const std::string ComputePSOTest_CS{R"(
+
+RWTexture2D</*format=rgba8*/ float4> g_tex2DUAV : register(u0);
+
+[numthreads(16, 16, 1)]
+void main(uint3 DTid : SV_DispatchThreadID)
+{
+    uint2 ui2Dim;
+    g_tex2DUAV.GetDimensions(ui2Dim.x, ui2Dim.y);
+    if (DTid.x >= ui2Dim.x || DTid.y >= ui2Dim.y)
+        return;
+
+    g_tex2DUAV[DTid.xy] = float4(float2(DTid.xy % 256u) / 256.0, 0.0, 1.0);
+}
+
+)"};
+
+} // namespace HLSL
 
 void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
 {
@@ -1140,14 +1107,11 @@ void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
         RefCntAutoPtr<IShader> pCS;
         RefCntAutoPtr<IShader> pSerializedCS;
         {
-            RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
-            pDevice->GetEngineFactory()->CreateDefaultShaderSourceStreamFactory("shaders", &pShaderSourceFactory);
-
-            ShaderCI.Desc.ShaderType            = SHADER_TYPE_COMPUTE;
-            ShaderCI.EntryPoint                 = "main";
-            ShaderCI.Desc.Name                  = "Compute shader test";
-            ShaderCI.FilePath                   = "ArchiveTest.csh";
-            ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
+            ShaderCI.Desc.ShaderType = SHADER_TYPE_COMPUTE;
+            ShaderCI.EntryPoint      = "main";
+            ShaderCI.Desc.Name       = "Compute shader test";
+            // Test shader source string
+            ShaderCI.Source = HLSL::ComputePSOTest_CS.c_str();
 
             pDevice->CreateShader(ShaderCI, &pCS);
             ASSERT_NE(pCS, nullptr);

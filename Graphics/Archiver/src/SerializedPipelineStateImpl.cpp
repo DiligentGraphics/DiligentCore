@@ -176,8 +176,8 @@ SerializedPipelineStateImpl::SerializedPipelineStateImpl(IReferenceCounters*    
     },
     m_pRenderPass{RenderPassFromCI(CreateInfo)}
 {
-    if (CreateInfo.PSODesc.Name == nullptr)
-        LOG_ERROR_AND_THROW("Pipeline state name can't be null");
+    if (CreateInfo.PSODesc.Name == nullptr || CreateInfo.PSODesc.Name[0] == '\0')
+        LOG_ERROR_AND_THROW("Serialized pipeline state name can't be null or empty");
 
     ValidatePipelineStateArchiveInfo(CreateInfo, ArchiveInfo, pDevice->GetValidDeviceFlags());
     ValidatePSOCreateInfo(pDevice, CreateInfo);

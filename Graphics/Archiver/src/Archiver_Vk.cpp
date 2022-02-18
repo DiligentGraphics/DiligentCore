@@ -160,6 +160,7 @@ void SerializedPipelineStateImpl::PatchShadersVk(const CreateInfoType& CreateInf
             const auto& SPIRV     = Stage.SPIRVs[i];
             auto        ShaderCI  = ShaderStages[j].Serialized[i]->GetCreateInfo();
             ShaderCI.Source       = nullptr;
+            ShaderCI.FilePath     = nullptr;
             ShaderCI.ByteCode     = SPIRV.data();
             ShaderCI.ByteCodeSize = SPIRV.size() * sizeof(SPIRV[0]);
             SerializeShaderCreateInfo(DeviceType::Vulkan, ShaderCI);

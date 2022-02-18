@@ -110,9 +110,10 @@ void SerializedPipelineStateImpl::PatchShadersGL(const CreateInfoType& CreateInf
             DEV_CHECK_ERR(CI.SourceLanguage != SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM, "Shader macros are ignored when compiling GLSL verbatim in OpenGL backend");
             AppendShaderMacros(Source, CI.Macros);
         }
-        Source.append(CI.Source, CI.SourceLength);
+        Source.append(UnrollShaderIncludes(CI));
         CI.Source       = Source.c_str();
         CI.SourceLength = StaticCast<Uint32>(Source.length() + 1);
+        CI.FilePath     = nullptr;
 
         SerializeShaderCreateInfo(DeviceType::OpenGL, CI);
     }

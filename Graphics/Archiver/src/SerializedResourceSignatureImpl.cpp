@@ -44,6 +44,9 @@ SerializedResourceSignatureImpl::SerializedResourceSignatureImpl(IReferenceCount
     TBase{pRefCounters},
     m_Name{Desc.Name}
 {
+    if (Desc.Name == nullptr || Desc.Name[0] == '\0')
+        LOG_ERROR_AND_THROW("Serialized signature name can't be null or empty");
+
     ValidatePipelineResourceSignatureDesc(Desc, pDevice, RENDER_DEVICE_TYPE_UNDEFINED);
 
     auto DeviceFlags = ArchiveInfo.DeviceFlags;
