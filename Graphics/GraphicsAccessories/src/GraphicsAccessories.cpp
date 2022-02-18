@@ -1156,21 +1156,21 @@ const char* GetSurfaceTransformString(SURFACE_TRANSFORM SrfTransform)
     // clang-format on
 }
 
-const char* GetPipelineTypeString(PIPELINE_TYPE PipelineType)
+const char* GetPipelineTypeString(PIPELINE_TYPE PipelineType, bool bGetFullName)
 {
     static_assert(PIPELINE_TYPE_LAST == 4, "Please update this function to handle the new pipeline type");
     switch (PipelineType)
     {
         // clang-format off
-        case PIPELINE_TYPE_COMPUTE:     return "compute";
-        case PIPELINE_TYPE_GRAPHICS:    return "graphics";
-        case PIPELINE_TYPE_MESH:        return "mesh";
-        case PIPELINE_TYPE_RAY_TRACING: return "ray tracing";
-        case PIPELINE_TYPE_TILE:        return "tile";
+        case PIPELINE_TYPE_COMPUTE:     return bGetFullName ? "PIPELINE_TYPE_COMPUTE"     : "Compute";
+        case PIPELINE_TYPE_GRAPHICS:    return bGetFullName ? "PIPELINE_TYPE_GRAPHICS"    : "Graphics";
+        case PIPELINE_TYPE_MESH:        return bGetFullName ? "PIPELINE_TYPE_MESH"        : "Mesh";
+        case PIPELINE_TYPE_RAY_TRACING: return bGetFullName ? "PIPELINE_TYPE_RAY_TRACING" : "RayTracing";
+        case PIPELINE_TYPE_TILE:        return bGetFullName ? "PIPELINE_TYPE_TILE"        : "Tile";
         // clang-format on
         default:
             UNEXPECTED("Unexpected pipeline type");
-            return "unknown";
+            return "UNKNOWN";
     }
 }
 
@@ -1187,6 +1187,27 @@ const char* GetShaderCompilerTypeString(SHADER_COMPILER Compiler)
         // clang-format on
         default:
             UNEXPECTED("Unexpected shader compiler");
+            return "UNKNOWN";
+    }
+}
+
+const char* GetArchiveDeviceDataFlagString(ARCHIVE_DEVICE_DATA_FLAGS Flag, bool bGetFullName)
+{
+    static_assert(ARCHIVE_DEVICE_DATA_FLAG_LAST == 2 << 6, "Please update this function to handle the new archive device data flag");
+    switch (Flag)
+    {
+        // clang-format off
+        case ARCHIVE_DEVICE_DATA_FLAG_NONE:        return bGetFullName ? "ARCHIVE_DEVICE_DATA_FLAG_NONE"        : "None";
+        case ARCHIVE_DEVICE_DATA_FLAG_D3D11:       return bGetFullName ? "ARCHIVE_DEVICE_DATA_FLAG_D3D11"       : "D3D11";
+        case ARCHIVE_DEVICE_DATA_FLAG_D3D12:       return bGetFullName ? "ARCHIVE_DEVICE_DATA_FLAG_D3D12"       : "D3D11";
+        case ARCHIVE_DEVICE_DATA_FLAG_GL:          return bGetFullName ? "ARCHIVE_DEVICE_DATA_FLAG_GL"          : "OpenGL";
+        case ARCHIVE_DEVICE_DATA_FLAG_GLES:        return bGetFullName ? "ARCHIVE_DEVICE_DATA_FLAG_GLES"        : "OpenGLES";
+        case ARCHIVE_DEVICE_DATA_FLAG_VULKAN:      return bGetFullName ? "ARCHIVE_DEVICE_DATA_FLAG_VULKAN"      : "Vulkan";
+        case ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS: return bGetFullName ? "ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS" : "Metal_MacOS";
+        case ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS:   return bGetFullName ? "ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS"   : "Metal_IOS";
+        // clang-format on
+        default:
+            UNEXPECTED("Unexpected device data flag (", Uint32{Flag}, ")");
             return "UNKNOWN";
     }
 }
