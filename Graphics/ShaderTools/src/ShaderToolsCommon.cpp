@@ -25,10 +25,9 @@
  *  of the possibility of such damages.
  */
 
-#include "ShaderToolsCommon.hpp"
-
 #include <unordered_set>
 
+#include "ShaderToolsCommon.hpp"
 #include "BasicFileSystem.hpp"
 #include "DebugUtilities.hpp"
 #include "DataBlobImpl.hpp"
@@ -164,11 +163,20 @@ void AppendShaderSourceCode(std::string& Source, const ShaderCreateInfo& ShaderC
     Source.append(SourceCode, SourceCodeLen);
 }
 
-// https://github.com/tomtom-international/cpp-dependencies/blob/a91f330e97c6b9e4e9ecd81f43c4a40e044d4bbc/src/Input.cpp
-static void ExtractDependencies(std::function<void(const String&, size_t, size_t)> IncludeHandler, const char* pBuffer, size_t BufferSize)
+struct IncludeStringInfo
 {
+    String FileName = {};
+    size_t Start    = 0;
+    size_t End      = 0;
+};
+
+// https://github.com/tomtom-international/cpp-dependencies/blob/a91f330e97c6b9e4e9ecd81f43c4a40e044d4bbc/src/Input.cpp
+static std::vector<IncludeStringInfo> ExtractDependencies(const char* pBuffer, size_t BufferSize)
+{
+    std::vector<IncludeStringInfo> IncludeList{};
+
     if (BufferSize == 0)
-        return;
+        return IncludeList;
 
     enum State
     {
@@ -198,7 +206,7 @@ static void ExtractDependencies(std::function<void(const String&, size_t, size_t
 
                 // Exit from the function if a hash is not found in the buffer
                 if (NextHash == nullptr)
-                    return;
+                    return IncludeList;
 
                 // Find a slash character if the current position is greater NextSlash
                 if (NextSlash && NextSlash < pBuffer + Offset)
@@ -218,7 +226,7 @@ static void ExtractDependencies(std::function<void(const String&, size_t, size_t
                         {
                             const char* EndSlash = static_cast<const Char*>(memchr(pBuffer + Offset + 1, '/', BufferSize - Offset));
                             if (!EndSlash)
-                                return;
+                                return IncludeList;
                             Offset = EndSlash - pBuffer;
                         } while (pBuffer[Offset - 1] != '*');
                     }
@@ -274,7 +282,8 @@ static void ExtractDependencies(std::function<void(const String&, size_t, size_t
                         PreprocessorState = None; // Buggy code, skip over this include.
                         break;
                     case '"':
-                        IncludeHandler(std::string(&pBuffer[Start], &pBuffer[Offset]), NextHash - pBuffer, Offset + 1);
+                        IncludeList.push_back({String{&pBuffer[Start], &pBuffer[Offset]}, static_cast<size_t>(NextHash - pBuffer), Offset + 1});
+
                         PreprocessorState = None;
                         break;
                 }
@@ -287,7 +296,8 @@ static void ExtractDependencies(std::function<void(const String&, size_t, size_t
                         PreprocessorState = None; // Buggy code, skip over this include.
                         break;
                     case '>':
-                        IncludeHandler(std::string(&pBuffer[Start], &pBuffer[Offset]), NextHash - pBuffer, Offset + 1);
+                        IncludeList.push_back({String{&pBuffer[Start], &pBuffer[Offset]}, static_cast<size_t>(NextHash - pBuffer), Offset + 1});
+
                         PreprocessorState = None;
                         break;
                 }
@@ -295,6 +305,8 @@ static void ExtractDependencies(std::function<void(const String&, size_t, size_t
         }
         Offset++;
     }
+
+    return IncludeList;
 }
 
 bool ProcessShaderIncludes(const ShaderCreateInfo& ShaderCI, std::function<void(const ShaderIncludePreprocessInfo&)> IncludeHandler)
@@ -306,26 +318,17 @@ bool ProcessShaderIncludes(const ShaderCreateInfo& ShaderCI, std::function<void(
     std::function<void(IDataBlob*, const char*, IShaderSourceInputStreamFactory*)> ParseShader;
     ParseShader = [&](IDataBlob* pDataBlob, const char* FilePath, IShaderSourceInputStreamFactory* pStreamFactory) //
     {
-        ShaderIncludePreprocessInfo ProcessInfo{};
-        ProcessInfo.pDataBlob = pDataBlob;
-        ProcessInfo.FilePath  = FilePath;
-
-        auto IncludeHandlerExtract = [&](const String& Include, size_t Start, size_t End) //
+        for (auto const& Include : ExtractDependencies(static_cast<const char*>(pDataBlob->GetConstDataPtr()), pDataBlob->GetSize()))
         {
-            if (Includes.emplace(Include).second)
+            if (Includes.emplace(Include.FileName).second)
             {
                 RefCntAutoPtr<IDataBlob> pSourceData;
                 size_t                   SourceLen = 0;
-                ReadShaderSourceFile(nullptr, ShaderCI.pShaderSourceStreamFactory, Include.c_str(), pSourceData, SourceLen);
-                ParseShader(pSourceData, Include.c_str(), pStreamFactory);
+                ReadShaderSourceFile(nullptr, pStreamFactory, Include.FileName.c_str(), pSourceData, SourceLen);
+                ParseShader(pSourceData, Include.FileName.c_str(), pStreamFactory);
             }
-
-            ProcessInfo.Start = Start;
-            ProcessInfo.End   = End;
-        };
-
-        ExtractDependencies(IncludeHandlerExtract, static_cast<const char*>(pDataBlob->GetConstDataPtr()), pDataBlob->GetSize());
-        IncludeHandler(ProcessInfo);
+        }
+        IncludeHandler({pDataBlob, FilePath});
     };
 
     try
@@ -359,22 +362,59 @@ std::string UnrollShaderIncludes(const ShaderCreateInfo& ShaderCI)
 {
     VERIFY_EXPR(ShaderCI.Desc.Name != nullptr);
 
-    std::stringstream Stream;
-
-    auto IncludeHandler = [&](const ShaderIncludePreprocessInfo& ProcessInfo) {
-        memset(static_cast<char*>(ProcessInfo.pDataBlob->GetDataPtr()) + ProcessInfo.Start, ' ', ProcessInfo.End - ProcessInfo.Start);
-
-        Stream.write(static_cast<const char*>(ProcessInfo.pDataBlob->GetConstDataPtr()), ProcessInfo.pDataBlob->GetSize());
-        Stream << std::endl;
+    auto GetSourceCode = [](const char* Source, size_t SourceLength, const char* FilePath, IShaderSourceInputStreamFactory* pStreamFactory) {
+        RefCntAutoPtr<IDataBlob> pDummyDataBlob;
+        const auto               pData = ReadShaderSourceFile(Source, pStreamFactory, FilePath, pDummyDataBlob, SourceLength);
+        return String{pData, SourceLength};
     };
 
-    if (!ProcessShaderIncludes(ShaderCI, IncludeHandler))
+    auto ValidateIncludes = [](const char* FileName, std::vector<IncludeStringInfo> const& IncludeList) {
+        for (size_t i = 0; i < IncludeList.size(); ++i)
+            for (size_t j = i + 1; j < IncludeList.size(); ++j)
+                if (IncludeList[i].FileName == IncludeList[j].FileName)
+                    LOG_WARNING_MESSAGE("Double definition of the include directive '", IncludeList[j].FileName, "' in the '", FileName, "' file");
+    };
+
+    std::unordered_set<String> Includes;
+
+    std::function<String(const char*, size_t, const char*, IShaderSourceInputStreamFactory*)> ParseShader;
+    ParseShader = [&](const char* Source, size_t SourceLength, const char* FilePath, IShaderSourceInputStreamFactory* pStreamFactory) -> String //
+    {
+        const auto Data = GetSourceCode(Source, SourceLength, FilePath, pStreamFactory);
+
+        const auto IncludeList = ExtractDependencies(Data.c_str(), Data.size());
+        ValidateIncludes(FilePath, IncludeList);
+
+        String Result = Data;
+        size_t Offset = 0;
+
+        for (auto const& Include : IncludeList)
+        {
+            const size_t RangeSubstring = Include.End - Include.Start;
+            if (Includes.emplace(Include.FileName).second)
+            {
+                const auto IncludedFile = ParseShader(nullptr, 0, Include.FileName.c_str(), pStreamFactory);
+                Result.replace(Offset + Include.Start, RangeSubstring, IncludedFile);
+                Offset += IncludedFile.size();
+            }
+            else
+            {
+                Result.replace(Offset + Include.Start, RangeSubstring, "");
+            }
+            Offset -= RangeSubstring;
+        }
+        return Result;
+    };
+
+    try
+    {
+        return ParseShader(ShaderCI.Source, ShaderCI.SourceLength, ShaderCI.FilePath, ShaderCI.pShaderSourceStreamFactory);
+    }
+    catch (...)
     {
         LOG_ERROR("Failed to merge includes for shader: '", ShaderCI.Desc.Name, "'.");
         return "";
     }
-
-    return Stream.str();
 }
 
 } // namespace Diligent

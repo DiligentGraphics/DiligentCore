@@ -88,15 +88,6 @@ struct ShaderIncludePreprocessInfo
     IDataBlob* pDataBlob = nullptr;
     /// The path to the included file.
     const Char* FilePath = nullptr;
-
-    /// Offsets relative to the pDataBlob->GetDataPtr() pointer to modify the #include substring:
-    ///
-    ///      #include "SomeInclude.hlsl"
-    ///      ^                          ^
-    ///    Start                       End
-    ///
-    size_t Start = 0;
-    size_t End   = 0;
 };
 
 /// The function recursively finds all include files in the shader

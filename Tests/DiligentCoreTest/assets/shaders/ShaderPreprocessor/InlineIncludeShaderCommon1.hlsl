@@ -1,2 +1,3 @@
+// Start InlineIncludeShaderCommon1.hlsl
 #include "InlineIncludeShaderCommon0.hlsl"
-// #include "InlineIncludeShaderCommon1.hlsl"
+// End InlineIncludeShaderCommon1.hlsl

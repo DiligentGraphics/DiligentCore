@@ -145,11 +145,12 @@ TEST(ShaderPreprocessTest, UnrollIncludes)
         ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
 
         constexpr char RefString[] =
+            "// Start InlineIncludeShaderTest.hlsl\n"
+            "// Start InlineIncludeShaderCommon1.hlsl\n"
             "// #include \"InlineIncludeShaderCommon0.hlsl\"\n\n"
-            "                                          \n"
-            "// #include \"InlineIncludeShaderCommon1.hlsl\"\n\n"
-            "                                          \n"
-            "// #include \"InlineIncludeShaderTest.hlsl\"\n\n";
+            "// End InlineIncludeShaderCommon1.hlsl\n\n"
+            "// #include \"InlineIncludeShaderCommon2.hlsl\"\n\n"
+            "// End InlineIncludeShaderTest.hlsl\n";
 
         auto UnrolledStr = UnrollShaderIncludes(ShaderCI);
         ASSERT_STREQ(RefString, UnrolledStr.c_str());
