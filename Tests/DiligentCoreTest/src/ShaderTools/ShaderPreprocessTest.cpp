@@ -132,7 +132,7 @@ TEST(ShaderPreprocessTest, Include)
     }
 }
 
-TEST(ShaderPreprocessTest, MergeIncludes)
+TEST(ShaderPreprocessTest, UnrollIncludes)
 {
     RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
     CreateDefaultShaderSourceStreamFactory("shaders/ShaderPreprocessor", &pShaderSourceFactory);
@@ -152,7 +152,7 @@ TEST(ShaderPreprocessTest, MergeIncludes)
             "// #include \"InlineIncludeShaderTest.hlsl\"\n\n";
 
         RefCntAutoPtr<IDataBlob> pData;
-        MergeShaderIncludes(ShaderCI, &pData);
+        UnrollShaderIncludes(ShaderCI, &pData);
         ASSERT_NE(pData, nullptr);
 
         const auto* DataString = static_cast<const char*>(pData->GetConstDataPtr());

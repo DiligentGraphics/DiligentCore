@@ -355,7 +355,7 @@ bool ProcessShaderIncludes(const ShaderCreateInfo& ShaderCI, std::function<void(
     }
 }
 
-void MergeShaderIncludes(const ShaderCreateInfo& ShaderCI, IDataBlob** ppData)
+void UnrollShaderIncludes(const ShaderCreateInfo& ShaderCI, IDataBlob** ppData)
 {
     VERIFY_EXPR(ShaderCI.Desc.Name != nullptr);
     VERIFY_EXPR(ppData != nullptr);

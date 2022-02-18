@@ -103,7 +103,7 @@ struct ShaderIncludePreprocessInfo
 /// When an included file is found, function IncludeHandler(...) is called
 bool ProcessShaderIncludes(const ShaderCreateInfo& ShaderCI, std::function<void(const ShaderIncludePreprocessInfo&)> IncludeHandler);
 
-///  Merges all include files into a single file
-void MergeShaderIncludes(const ShaderCreateInfo& ShaderCI, IDataBlob** pData);
+///  Unrolls all include files into a single file
+void UnrollShaderIncludes(const ShaderCreateInfo& ShaderCI, IDataBlob** pData);
 
 } // namespace Diligent
