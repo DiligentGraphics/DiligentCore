@@ -164,7 +164,7 @@ void AppendShaderSourceCode(std::string& Source, const ShaderCreateInfo& ShaderC
     Source.append(SourceCode, SourceCodeLen);
 }
 
-/// https://github.com/tomtom-international/cpp-dependencies/blob/a91f330e97c6b9e4e9ecd81f43c4a40e044d4bbc/src/Input.cpp
+// https://github.com/tomtom-international/cpp-dependencies/blob/a91f330e97c6b9e4e9ecd81f43c4a40e044d4bbc/src/Input.cpp
 static void ExtractDependencies(std::function<void(const String&, size_t, size_t)> IncludeHandler, const char* pBuffer, size_t BufferSize)
 {
     if (BufferSize == 0)
@@ -175,38 +175,38 @@ static void ExtractDependencies(std::function<void(const String&, size_t, size_t
         None,
         AfterHash,
         AfterInclude,
-        InsidePointyIncludeBrackets,
-        InsideStraightIncludeBrackets
+        InsideIncludeAngleBrackets,
+        InsideIncludeQuotes
     } PreprocessorState = None;
     size_t Offset       = 0;
 
-    /// Find positions of the first hash and slash
+    // Find positions of the first hash and slash
     const Char* NextHash  = static_cast<const char*>(memchr(pBuffer + Offset, '#', BufferSize - Offset));
     const Char* NextSlash = static_cast<const char*>(memchr(pBuffer + Offset, '/', BufferSize - Offset));
     size_t      Start     = 0;
 
-    /// We iterate over the characters of the buffer
+    // We iterate over the characters of the buffer
     while (Offset < BufferSize)
     {
         switch (PreprocessorState)
         {
             case None:
             {
-                /// Find a hash character if the current position is greater NextHash
+                // Find a hash character if the current position is greater NextHash
                 if (NextHash && NextHash < pBuffer + Offset)
                     NextHash = static_cast<const Char*>(memchr(pBuffer + Offset, '#', BufferSize - Offset));
 
-                /// Exit from the function if a hash is not found in the buffer
+                // Exit from the function if a hash is not found in the buffer
                 if (NextHash == nullptr)
                     return;
 
-                /// Find a slash character if the current position is greater NextSlash
+                // Find a slash character if the current position is greater NextSlash
                 if (NextSlash && NextSlash < pBuffer + Offset)
                     NextSlash = static_cast<const Char*>(memchr(pBuffer + Offset, '/', BufferSize - Offset));
 
                 if (NextSlash && NextSlash < NextHash)
                 {
-                    /// Skip all characters if the slash character is before the hash character in the buffer
+                    // Skip all characters if the slash character is before the hash character in the buffer
                     Offset = NextSlash - pBuffer;
                     if (pBuffer[Offset + 1] == '/')
                     {
@@ -225,14 +225,14 @@ static void ExtractDependencies(std::function<void(const String&, size_t, size_t
                 }
                 else
                 {
-                    /// Move the current position to the position after the hash
+                    // Move the current position to the position after the hash
                     Offset            = NextHash - pBuffer;
                     PreprocessorState = AfterHash;
                 }
             }
             break;
             case AfterHash:
-                /// Try to find the 'include' substring in the buffer if the current position is after the hash
+                // Try to find the 'include' substring in the buffer if the current position is after the hash
                 if (!isspace(pBuffer[Offset]))
                 {
                     if (strncmp(pBuffer + Offset, "include", 7) == 0)
@@ -247,18 +247,18 @@ static void ExtractDependencies(std::function<void(const String&, size_t, size_t
                 }
                 break;
             case AfterInclude:
-                /// Try to find the opening quotes character after the 'include' substring
+                // Try to find the opening quotes character after the 'include' substring
                 if (!isspace(pBuffer[Offset]))
                 {
                     if (pBuffer[Offset] == '"')
                     {
                         Start             = Offset + 1;
-                        PreprocessorState = InsideStraightIncludeBrackets;
+                        PreprocessorState = InsideIncludeQuotes;
                     }
                     else if (pBuffer[Offset] == '<')
                     {
                         Start             = Offset + 1;
-                        PreprocessorState = InsidePointyIncludeBrackets;
+                        PreprocessorState = InsideIncludeAngleBrackets;
                     }
                     else
                     {
@@ -266,8 +266,8 @@ static void ExtractDependencies(std::function<void(const String&, size_t, size_t
                     }
                 }
                 break;
-            case InsideStraightIncludeBrackets:
-                /// Try to find the closing quotes after the opening quotes and extract the substring for IncludeHandler(...)
+            case InsideIncludeQuotes:
+                // Try to find the closing quotes after the opening quotes and extract the substring for IncludeHandler(...)
                 switch (pBuffer[Offset])
                 {
                     case '\n':
@@ -279,8 +279,8 @@ static void ExtractDependencies(std::function<void(const String&, size_t, size_t
                         break;
                 }
                 break;
-            case InsidePointyIncludeBrackets:
-                /// Try to find the closing quotes after the opening quotes and extract the substring for IncludeHandler(...)
+            case InsideIncludeAngleBrackets:
+                // Try to find the closing quotes after the opening quotes and extract the substring for IncludeHandler(...)
                 switch (pBuffer[Offset])
                 {
                     case '\n':

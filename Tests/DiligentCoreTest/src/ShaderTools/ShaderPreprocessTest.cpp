@@ -144,7 +144,7 @@ TEST(ShaderPreprocessTest, MergeIncludes)
         ShaderCI.FilePath                   = "InlineIncludeShaderTest.hlsl";
         ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
 
-        const std::string Reference =
+        constexpr char RefString[] =
             "// #include \"InlineIncludeShaderCommon0.hlsl\"\n\n"
             "                                          \n"
             "// #include \"InlineIncludeShaderCommon1.hlsl\"\n\n"
@@ -155,10 +155,9 @@ TEST(ShaderPreprocessTest, MergeIncludes)
         MergeShaderIncludes(ShaderCI, &pData);
         ASSERT_NE(pData, nullptr);
 
-        const std::string DataString = std::string{static_cast<const char*>(pData->GetConstDataPtr()), pData->GetSize()};
+        const auto* DataString = static_cast<const char*>(pData->GetConstDataPtr());
 
-        ASSERT_EQ(Reference.size(), DataString.size());
-        EXPECT_EQ(Reference, DataString);
+        ASSERT_STREQ(RefString, DataString);
     }
 }
 
