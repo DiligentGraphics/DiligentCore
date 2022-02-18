@@ -35,6 +35,7 @@
 #include "../../GraphicsEngine/interface/Texture.h"
 #include "../../GraphicsEngine/interface/Buffer.h"
 #include "../../GraphicsEngine/interface/RenderDevice.h"
+#include "../../Archiver/interface/Archiver.h"
 #include "../../../Common/interface/BasicMath.hpp"
 #include "../../../Platforms/Basic/interface/DebugUtilities.hpp"
 #include "../../../Platforms/interface/PlatformMisc.hpp"
@@ -389,6 +390,8 @@ const char* GetSurfaceTransformString(SURFACE_TRANSFORM SrfTransform);
 const char* GetPipelineTypeString(PIPELINE_TYPE PipelineType);
 
 const char* GetShaderCompilerTypeString(SHADER_COMPILER Compiler);
+
+const char* GetArchiveDeviceDataFlagString(ARCHIVE_DEVICE_DATA_FLAGS Flag, bool bGetFullName = false);
 
 String GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAGS Flags, bool GetFullName = false, const char* DelimeterString = "|");
 
