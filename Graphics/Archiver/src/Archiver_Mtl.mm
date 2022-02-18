@@ -32,6 +32,8 @@
 #include <filesystem>
 #include <vector>
 #include <unistd.h>
+#include <errno.h>
+#include <string.h>
 
 #include "RenderDeviceMtlImpl.hpp"
 #include "PipelineResourceSignatureMtlImpl.hpp"
@@ -252,9 +254,6 @@ SerializedData SerializedShaderImpl::PatchShaderMtl(const char*                 
     VERIFY_EXPR(pSignatures != nullptr);
     VERIFY_EXPR(pBaseBindings != nullptr);
 
-#define LOG_PATCH_SHADER_ERROR_AND_THROW(...)\
-    LOG_ERROR_AND_THROW("Failed to patch shader '", GetDesc().Name, "' for PSO '", PSOName, "': ", ##__VA_ARGS__)
-
     const auto TmpFolder = GetTmpFolder();
     filesystem::create_directories(TmpFolder.c_str());
 
@@ -309,6 +308,14 @@ SerializedData SerializedShaderImpl::PatchShaderMtl(const char*                 
             LOG_ERROR_AND_THROW("Failed to patch Metal shader");
         }
     }
+
+#define LOG_PATCH_SHADER_ERROR_AND_THROW(...)         \
+    do                                                \
+    {                                                 \
+        char ErrorStr[512];                           \
+        strerror_r(errno, ErrorStr, sizeof(ErrorStr));\
+        LOG_ERROR_AND_THROW("Failed to patch shader '", GetDesc().Name, "' for PSO '", PSOName, "': ", ##__VA_ARGS__, " Error description: ", ErrorStr);\
+    } while (false)
 
     // Save to 'Shader.metal'
     {
