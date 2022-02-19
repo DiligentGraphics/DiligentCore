@@ -84,23 +84,19 @@ void AppendShaderSourceCode(std::string& Source, const ShaderCreateInfo& ShaderC
 /// Shader include preprocess info.
 struct ShaderIncludePreprocessInfo
 {
-    /// The data of the included file.
-    IDataBlob* pDataBlob = nullptr;
-    /// The path to the included file.
-    const Char* FilePath = nullptr;
+    /// The source code of the included file.
+    const Char* Source = nullptr;
 
-    /// Offsets relative to the pDataBlob->GetDataPtr() pointer to modify the #include substring:
-    ///
-    ///      #include "SomeInclude.hlsl"
-    ///      ^                          ^
-    ///    Start                       End
-    ///
-    size_t Start = 0;
-    size_t End   = 0;
+    /// Length of the included source code
+    size_t SourceLength = 0;
+
+    /// The path to the included file.
+    std::string FilePath;
 };
 
-/// The function recursively finds all include files in the shader
-/// When an included file is found, function IncludeHandler(...) is called
+/// The function recursively finds all include files in the shader and calls the
+/// IncludeHandler function for all source files, including the original one.
+/// Includes are processed in a depth-first order such that original source file is processed last.
 bool ProcessShaderIncludes(const ShaderCreateInfo& ShaderCI, std::function<void(const ShaderIncludePreprocessInfo&)> IncludeHandler);
 
 ///  Unrolls all include files into a single file

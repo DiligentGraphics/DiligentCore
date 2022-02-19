@@ -54,7 +54,7 @@ TEST(ShaderPreprocessTest, Include)
         ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
 
         const auto Result = ProcessShaderIncludes(ShaderCI, [&](const ShaderIncludePreprocessInfo& ProcessInfo) {
-            EXPECT_EQ(SafeStrEqual(ProcessInfo.FilePath, Includes.front()), true);
+            EXPECT_EQ(ProcessInfo.FilePath, Includes.front());
             Includes.pop_front();
         });
         EXPECT_EQ(Result, true);
@@ -71,7 +71,7 @@ TEST(ShaderPreprocessTest, Include)
         ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
 
         const auto Result = ProcessShaderIncludes(ShaderCI, [&](const ShaderIncludePreprocessInfo& ProcessInfo) {
-            EXPECT_EQ(SafeStrEqual(ProcessInfo.FilePath, Includes.front()), true);
+            EXPECT_EQ(ProcessInfo.FilePath, Includes.front());
             Includes.pop_front();
         });
 
@@ -89,7 +89,7 @@ TEST(ShaderPreprocessTest, Include)
         ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
 
         const auto Result = ProcessShaderIncludes(ShaderCI, [&](const ShaderIncludePreprocessInfo& ProcessInfo) {
-            EXPECT_EQ(SafeStrEqual(ProcessInfo.FilePath, Includes.front()), true);
+            EXPECT_EQ(ProcessInfo.FilePath, Includes.front());
             Includes.pop_front();
         });
 
@@ -107,7 +107,7 @@ TEST(ShaderPreprocessTest, Include)
         ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
 
         const auto Result = ProcessShaderIncludes(ShaderCI, [&](const ShaderIncludePreprocessInfo& ProcessInfo) {
-            EXPECT_EQ(SafeStrEqual(ProcessInfo.FilePath, Includes.front()), true);
+            EXPECT_EQ(ProcessInfo.FilePath, Includes.front());
             Includes.pop_front();
         });
 
@@ -124,7 +124,7 @@ TEST(ShaderPreprocessTest, Include)
         ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
 
         const auto Result = ProcessShaderIncludes(ShaderCI, [&](const ShaderIncludePreprocessInfo& ProcessInfo) {
-            EXPECT_EQ(SafeStrEqual(ProcessInfo.FilePath, Includes.front()), true);
+            EXPECT_EQ(ProcessInfo.FilePath, Includes.front());
             Includes.pop_front();
         });
 
@@ -145,14 +145,21 @@ TEST(ShaderPreprocessTest, UnrollIncludes)
         ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
 
         constexpr char RefString[] =
-            "// #include \"InlineIncludeShaderCommon0.hlsl\"\n\n"
-            "                                          \n"
-            "// #include \"InlineIncludeShaderCommon1.hlsl\"\n\n"
-            "                                          \n"
-            "// #include \"InlineIncludeShaderTest.hlsl\"\n\n";
+            "// Start InlineIncludeShaderTest.hlsl\n"
+            "// Start InlineIncludeShaderCommon1.hlsl\n"
+            "// #include \"InlineIncludeShaderCommon0.hlsl\"\n"
+            "\n"
+            "// End InlineIncludeShaderCommon1.hlsl\n"
+            "\n"
+            "// Start InlineIncludeShaderCommon2.hlsl\n"
+            "\n"
+            "\n"
+            "// End InlineIncludeShaderCommon2.hlsl\n"
+            "\n"
+            "// End InlineIncludeShaderTest.hlsl\n";
 
         auto UnrolledStr = UnrollShaderIncludes(ShaderCI);
-        ASSERT_STREQ(RefString, UnrolledStr.c_str());
+        ASSERT_EQ(RefString, UnrolledStr);
     }
 }
 

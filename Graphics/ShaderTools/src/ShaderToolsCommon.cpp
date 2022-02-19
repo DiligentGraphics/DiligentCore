@@ -165,7 +165,8 @@ void AppendShaderSourceCode(std::string& Source, const ShaderCreateInfo& ShaderC
 }
 
 // https://github.com/tomtom-international/cpp-dependencies/blob/a91f330e97c6b9e4e9ecd81f43c4a40e044d4bbc/src/Input.cpp
-static void ExtractDependencies(std::function<void(const String&, size_t, size_t)> IncludeHandler, const char* pBuffer, size_t BufferSize)
+template <typename HandlerType>
+void FindIncludes(const char* pBuffer, size_t BufferSize, HandlerType IncludeHandler)
 {
     if (BufferSize == 0)
         return;
@@ -178,14 +179,14 @@ static void ExtractDependencies(std::function<void(const String&, size_t, size_t
         InsideIncludeAngleBrackets,
         InsideIncludeQuotes
     } PreprocessorState = None;
-    size_t Offset       = 0;
 
     // Find positions of the first hash and slash
-    const Char* NextHash  = static_cast<const char*>(memchr(pBuffer + Offset, '#', BufferSize - Offset));
-    const Char* NextSlash = static_cast<const char*>(memchr(pBuffer + Offset, '/', BufferSize - Offset));
+    const Char* NextHash  = static_cast<const char*>(memchr(pBuffer, '#', BufferSize));
+    const Char* NextSlash = static_cast<const char*>(memchr(pBuffer, '/', BufferSize));
     size_t      Start     = 0;
 
     // We iterate over the characters of the buffer
+    size_t Offset = 0;
     while (Offset < BufferSize)
     {
         switch (PreprocessorState)
@@ -297,84 +298,89 @@ static void ExtractDependencies(std::function<void(const String&, size_t, size_t
     }
 }
 
+template <typename IncludeHandlerType>
+void ProcessShaderIncludesImpl(const ShaderCreateInfo& ShaderCI, std::unordered_set<std::string>& Includes, IncludeHandlerType IncludeHandler)
+{
+    RefCntAutoPtr<IDataBlob> pSourceData;
+
+    ShaderIncludePreprocessInfo FileInfo;
+    FileInfo.SourceLength = ShaderCI.SourceLength;
+    FileInfo.Source       = ReadShaderSourceFile(ShaderCI.Source, ShaderCI.pShaderSourceStreamFactory, ShaderCI.FilePath, pSourceData, FileInfo.SourceLength);
+    FileInfo.FilePath     = ShaderCI.FilePath != nullptr ? ShaderCI.FilePath : "";
+
+    FindIncludes(FileInfo.Source, FileInfo.SourceLength,
+                 [&](const std::string& FilePath, size_t Start, size_t End) //
+                 {
+                     if (!Includes.insert(FilePath).second)
+                         return;
+
+                     auto IncludeCI{ShaderCI};
+                     IncludeCI.FilePath     = FilePath.c_str();
+                     IncludeCI.Source       = nullptr;
+                     IncludeCI.SourceLength = 0;
+                     ProcessShaderIncludesImpl(IncludeCI, Includes, IncludeHandler);
+                 });
+
+    IncludeHandler(FileInfo);
+}
+
 bool ProcessShaderIncludes(const ShaderCreateInfo& ShaderCI, std::function<void(const ShaderIncludePreprocessInfo&)> IncludeHandler)
 {
-    VERIFY_EXPR(ShaderCI.Desc.Name != nullptr);
-
-    std::unordered_set<String> Includes;
-
-    std::function<void(IDataBlob*, const char*, IShaderSourceInputStreamFactory*)> ParseShader;
-    ParseShader = [&](IDataBlob* pDataBlob, const char* FilePath, IShaderSourceInputStreamFactory* pStreamFactory) //
-    {
-        ShaderIncludePreprocessInfo ProcessInfo{};
-        ProcessInfo.pDataBlob = pDataBlob;
-        ProcessInfo.FilePath  = FilePath;
-
-        auto IncludeHandlerExtract = [&](const String& Include, size_t Start, size_t End) //
-        {
-            if (Includes.emplace(Include).second)
-            {
-                RefCntAutoPtr<IDataBlob> pSourceData;
-                size_t                   SourceLen = 0;
-                ReadShaderSourceFile(nullptr, ShaderCI.pShaderSourceStreamFactory, Include.c_str(), pSourceData, SourceLen);
-                ParseShader(pSourceData, Include.c_str(), pStreamFactory);
-            }
-
-            ProcessInfo.Start = Start;
-            ProcessInfo.End   = End;
-        };
-
-        ExtractDependencies(IncludeHandlerExtract, static_cast<const char*>(pDataBlob->GetConstDataPtr()), pDataBlob->GetSize());
-        IncludeHandler(ProcessInfo);
-    };
-
     try
     {
-        if (ShaderCI.Source != nullptr)
-        {
-            auto pSourceData = DataBlobImpl::Create(ShaderCI.SourceLength > 0 ? ShaderCI.SourceLength : strlen(ShaderCI.Source), ShaderCI.Source);
-            ParseShader(pSourceData, nullptr, ShaderCI.pShaderSourceStreamFactory);
-        }
-        else if (ShaderCI.FilePath != nullptr && ShaderCI.pShaderSourceStreamFactory != nullptr)
-        {
-            RefCntAutoPtr<IDataBlob> pSourceData;
-            size_t                   SourceLen = ShaderCI.SourceLength;
-            ReadShaderSourceFile(ShaderCI.Source, ShaderCI.pShaderSourceStreamFactory, ShaderCI.FilePath, pSourceData, SourceLen);
-            ParseShader(pSourceData, ShaderCI.FilePath, ShaderCI.pShaderSourceStreamFactory);
-        }
-        else
-        {
-            LOG_ERROR_AND_THROW("Shader create info must contain Source or FilePath with pShaderSourceStreamFactory");
-        }
+        std::unordered_set<std::string> Includes;
+        ProcessShaderIncludesImpl(ShaderCI, Includes, IncludeHandler);
         return true;
     }
     catch (...)
     {
-        LOG_ERROR("Failed to preprocess shader: '", ShaderCI.Desc.Name, "'.");
+        LOG_ERROR("Failed to preprocess shader: '", (ShaderCI.Desc.Name != nullptr ? ShaderCI.Desc.Name : ""), "'.");
         return false;
     }
 }
 
-std::string UnrollShaderIncludes(const ShaderCreateInfo& ShaderCI)
+static std::string UnrollShaderIncludesImpl(ShaderCreateInfo ShaderCI, std::unordered_set<std::string>& AllIncludes)
 {
     VERIFY_EXPR(ShaderCI.Desc.Name != nullptr);
 
+    RefCntAutoPtr<IDataBlob> pSourceData;
+
+    size_t SourceLen      = ShaderCI.SourceLength;
+    ShaderCI.Source       = ReadShaderSourceFile(ShaderCI.Source, ShaderCI.pShaderSourceStreamFactory, ShaderCI.FilePath, pSourceData, SourceLen);
+    ShaderCI.SourceLength = StaticCast<Uint32>(SourceLen);
+    ShaderCI.FilePath     = nullptr;
+
     std::stringstream Stream;
+    size_t            PrevIncludeEnd = 0;
 
-    auto IncludeHandler = [&](const ShaderIncludePreprocessInfo& ProcessInfo) {
-        memset(static_cast<char*>(ProcessInfo.pDataBlob->GetDataPtr()) + ProcessInfo.Start, ' ', ProcessInfo.End - ProcessInfo.Start);
+    FindIncludes(ShaderCI.Source, ShaderCI.SourceLength, [&](const std::string& Path, size_t IncludeStart, size_t IncludeEnd) {
+        // Insert text before the include start
+        Stream.write(ShaderCI.Source + PrevIncludeEnd, IncludeStart - PrevIncludeEnd);
 
-        Stream.write(static_cast<const char*>(ProcessInfo.pDataBlob->GetConstDataPtr()), ProcessInfo.pDataBlob->GetSize());
-        Stream << std::endl;
-    };
+        if (AllIncludes.insert(Path).second)
+        {
+            // Process the #inlcude directive
+            ShaderCreateInfo IncludeCI{ShaderCI};
+            IncludeCI.Source       = nullptr;
+            IncludeCI.SourceLength = 0;
+            IncludeCI.FilePath     = Path.c_str();
+            auto UnrolledInclude   = UnrollShaderIncludesImpl(IncludeCI, AllIncludes);
+            Stream << UnrolledInclude;
+        }
 
-    if (!ProcessShaderIncludes(ShaderCI, IncludeHandler))
-    {
-        LOG_ERROR("Failed to merge includes for shader: '", ShaderCI.Desc.Name, "'.");
-        return "";
-    }
+        PrevIncludeEnd = IncludeEnd;
+    });
+
+    // Insert text after the last include
+    Stream.write(ShaderCI.Source + PrevIncludeEnd, ShaderCI.SourceLength - PrevIncludeEnd);
 
     return Stream.str();
+}
+
+std::string UnrollShaderIncludes(const ShaderCreateInfo& ShaderCI)
+{
+    std::unordered_set<std::string> Includes;
+    return UnrollShaderIncludesImpl(ShaderCI, Includes);
 }
 
 } // namespace Diligent
