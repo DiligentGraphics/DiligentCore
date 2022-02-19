@@ -1199,7 +1199,7 @@ const char* GetArchiveDeviceDataFlagString(ARCHIVE_DEVICE_DATA_FLAGS Flag, bool 
         // clang-format off
         case ARCHIVE_DEVICE_DATA_FLAG_NONE:        return bGetFullName ? "ARCHIVE_DEVICE_DATA_FLAG_NONE"        : "None";
         case ARCHIVE_DEVICE_DATA_FLAG_D3D11:       return bGetFullName ? "ARCHIVE_DEVICE_DATA_FLAG_D3D11"       : "D3D11";
-        case ARCHIVE_DEVICE_DATA_FLAG_D3D12:       return bGetFullName ? "ARCHIVE_DEVICE_DATA_FLAG_D3D12"       : "D3D11";
+        case ARCHIVE_DEVICE_DATA_FLAG_D3D12:       return bGetFullName ? "ARCHIVE_DEVICE_DATA_FLAG_D3D12"       : "D3D12";
         case ARCHIVE_DEVICE_DATA_FLAG_GL:          return bGetFullName ? "ARCHIVE_DEVICE_DATA_FLAG_GL"          : "OpenGL";
         case ARCHIVE_DEVICE_DATA_FLAG_GLES:        return bGetFullName ? "ARCHIVE_DEVICE_DATA_FLAG_GLES"        : "OpenGLES";
         case ARCHIVE_DEVICE_DATA_FLAG_VULKAN:      return bGetFullName ? "ARCHIVE_DEVICE_DATA_FLAG_VULKAN"      : "Vulkan";

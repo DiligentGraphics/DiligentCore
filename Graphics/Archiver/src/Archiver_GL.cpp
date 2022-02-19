@@ -167,8 +167,7 @@ void SerializationDeviceImpl::GetPipelineResourceBindingsGL(const PipelineResour
 
 void SerializedShaderImpl::CreateShaderGL(IReferenceCounters*     pRefCounters,
                                           const ShaderCreateInfo& ShaderCI,
-                                          String&                 CompilationLog,
-                                          RENDER_DEVICE_TYPE      DeviceType)
+                                          RENDER_DEVICE_TYPE      DeviceType) noexcept(false)
 {
 #if !DILIGENT_NO_GLSLANG
     GLSLangUtils::GLSLtoSPIRVAttribs Attribs;
@@ -177,47 +176,35 @@ void SerializedShaderImpl::CreateShaderGL(IReferenceCounters*     pRefCounters,
     VERIFY_EXPR(DeviceType == RENDER_DEVICE_TYPE_GL || DeviceType == RENDER_DEVICE_TYPE_GLES);
     Attribs.Version = DeviceType == RENDER_DEVICE_TYPE_GL ? GLSLangUtils::SpirvVersion::GL : GLSLangUtils::SpirvVersion::GLES;
 
-    RefCntAutoPtr<IDataBlob> pLog;
-    Attribs.ppCompilerOutput = pLog.RawDblPtr();
+    Attribs.ppCompilerOutput = ShaderCI.ppCompilerOutput;
 
-    try
+    if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL)
     {
-        if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL)
-        {
-            if (GLSLangUtils::HLSLtoSPIRV(ShaderCI, Attribs.Version, "", Attribs.ppCompilerOutput).empty())
-                LOG_ERROR_AND_THROW("Failed to compile HLSL shader source");
-        }
-        else if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_DEFAULT ||
-                 ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL)
-        {
-            const auto GLSLSourceString = BuildGLSLSourceString(ShaderCI, m_pDevice->GetDeviceInfo(), m_pDevice->GetAdapterInfo(), TargetGLSLCompiler::glslang, "");
-
-            Attribs.ShaderSource  = GLSLSourceString.c_str();
-            Attribs.SourceCodeLen = static_cast<int>(GLSLSourceString.size());
-            Attribs.Macros        = ShaderCI.Macros;
-
-            if (GLSLangUtils::GLSLtoSPIRV(Attribs).empty())
-                LOG_ERROR_AND_THROW("Failed to compile GLSL shader source");
-        }
-        else if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM)
-        {
-            if (ShaderCI.Macros != nullptr)
-                LOG_WARNING_MESSAGE("Shader macros are ignored when compiling GLSL verbatim in OpenGL backend");
-
-            Attribs.ShaderSource  = ShaderCI.Source;
-            Attribs.SourceCodeLen = static_cast<int>(ShaderCI.SourceLength);
-
-            if (GLSLangUtils::GLSLtoSPIRV(Attribs).empty())
-                LOG_ERROR_AND_THROW("Failed to compile GLSL shader source");
-        }
+        if (GLSLangUtils::HLSLtoSPIRV(ShaderCI, Attribs.Version, "", Attribs.ppCompilerOutput).empty())
+            LOG_ERROR_AND_THROW("Failed to compile HLSL shader source");
     }
-    catch (...)
+    else if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_DEFAULT ||
+             ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL)
     {
-        if (pLog && pLog->GetConstDataPtr())
-        {
-            CompilationLog += "Failed to compile OpenGL shader:\n";
-            CompilationLog += static_cast<const char*>(pLog->GetConstDataPtr());
-        }
+        const auto GLSLSourceString = BuildGLSLSourceString(ShaderCI, m_pDevice->GetDeviceInfo(), m_pDevice->GetAdapterInfo(), TargetGLSLCompiler::glslang, "");
+
+        Attribs.ShaderSource  = GLSLSourceString.c_str();
+        Attribs.SourceCodeLen = static_cast<int>(GLSLSourceString.size());
+        Attribs.Macros        = ShaderCI.Macros;
+
+        if (GLSLangUtils::GLSLtoSPIRV(Attribs).empty())
+            LOG_ERROR_AND_THROW("Failed to compile GLSL shader source");
+    }
+    else if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM)
+    {
+        if (ShaderCI.Macros != nullptr)
+            LOG_WARNING_MESSAGE("Shader macros are ignored when compiling GLSL verbatim in OpenGL backend");
+
+        Attribs.ShaderSource  = ShaderCI.Source;
+        Attribs.SourceCodeLen = static_cast<int>(ShaderCI.SourceLength);
+
+        if (GLSLangUtils::GLSLtoSPIRV(Attribs).empty())
+            LOG_ERROR_AND_THROW("Failed to compile GLSL shader source");
     }
 #endif
 }

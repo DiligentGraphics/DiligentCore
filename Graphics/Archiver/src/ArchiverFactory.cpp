@@ -153,6 +153,9 @@ void ArchiverFactoryImpl::CreateArchiver(ISerializationDevice* pDevice, IArchive
 
 void ArchiverFactoryImpl::CreateSerializationDevice(const SerializationDeviceCreateInfo& CreateInfo, ISerializationDevice** ppDevice)
 {
+    if (CreateInfo.DebugMessageCallback != nullptr)
+        SetDebugMessageCallback(CreateInfo.DebugMessageCallback);
+
     DEV_CHECK_ERR(ppDevice != nullptr, "ppDevice must not be null");
     if (!ppDevice)
         return;

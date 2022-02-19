@@ -101,30 +101,13 @@ void SerializedPipelineStateImpl::CreateDefaultResourceSignature(DeviceType     
 }
 
 template <typename ShaderType, typename... ArgTypes>
-void SerializedShaderImpl::CreateShader(DeviceType          Type,
-                                        String&             CompilationLog,
-                                        const char*         DeviceTypeName,
-                                        IReferenceCounters* pRefCounters,
-                                        ShaderCreateInfo    ShaderCI, // Need a copy
+void SerializedShaderImpl::CreateShader(DeviceType              Type,
+                                        IReferenceCounters*     pRefCounters,
+                                        const ShaderCreateInfo& ShaderCI,
                                         const ArgTypes&... Args)
 {
-    // Mem leak when used RefCntAutoPtr
-    RefCntAutoPtr<IDataBlob> pLog;
-    ShaderCI.ppCompilerOutput = pLog.RawDblPtr();
-    try
-    {
-        m_Shaders[static_cast<size_t>(Type)] = std::make_unique<ShaderType>(pRefCounters, ShaderCI, Args...);
-    }
-    catch (...)
-    {
-        if (pLog && pLog->GetConstDataPtr())
-        {
-            CompilationLog += "Failed to compile ";
-            CompilationLog += DeviceTypeName;
-            CompilationLog += " shader:\n";
-            CompilationLog += static_cast<const char*>(pLog->GetConstDataPtr());
-        }
-    }
+    VERIFY(!m_Shaders[static_cast<size_t>(Type)], "Shader has already been initialized for this device type");
+    m_Shaders[static_cast<size_t>(Type)] = std::make_unique<ShaderType>(pRefCounters, ShaderCI, Args...);
 }
 
 

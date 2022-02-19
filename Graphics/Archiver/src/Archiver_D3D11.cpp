@@ -176,14 +176,14 @@ void SerializedPipelineStateImpl::PatchShadersD3D11(const CreateInfoType& Create
 INSTANTIATE_PATCH_SHADER_METHODS(PatchShadersD3D11)
 INSTANTIATE_DEVICE_SIGNATURE_METHODS(PipelineResourceSignatureD3D11Impl)
 
-void SerializedShaderImpl::CreateShaderD3D11(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI, String& CompilationLog)
+void SerializedShaderImpl::CreateShaderD3D11(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI) noexcept(false)
 {
     const ShaderD3D11Impl::CreateInfo D3D11ShaderCI{
         m_pDevice->GetDeviceInfo(),
         m_pDevice->GetAdapterInfo(),
         static_cast<D3D_FEATURE_LEVEL>(m_pDevice->GetD3D11Properties().FeatureLevel) //
     };
-    CreateShader<CompiledShaderD3D11>(DeviceType::Direct3D11, CompilationLog, "Direct3D11", pRefCounters, ShaderCI, D3D11ShaderCI);
+    CreateShader<CompiledShaderD3D11>(DeviceType::Direct3D11, pRefCounters, ShaderCI, D3D11ShaderCI);
 }
 
 void SerializationDeviceImpl::GetPipelineResourceBindingsD3D11(const PipelineResourceBindingAttribs& Info,

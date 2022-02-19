@@ -149,7 +149,7 @@ INSTANTIATE_PATCH_SHADER_METHODS(PatchShadersD3D12)
 INSTANTIATE_DEVICE_SIGNATURE_METHODS(PipelineResourceSignatureD3D12Impl)
 
 
-void SerializedShaderImpl::CreateShaderD3D12(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI, String& CompilationLog)
+void SerializedShaderImpl::CreateShaderD3D12(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI) noexcept(false)
 {
     const auto& D3D12Props  = m_pDevice->GetD3D12Properties();
     const auto& DeviceInfo  = m_pDevice->GetDeviceInfo();
@@ -161,7 +161,7 @@ void SerializedShaderImpl::CreateShaderD3D12(IReferenceCounters* pRefCounters, c
         AdapterInfo,
         D3D12Props.ShaderVersion //
     };
-    CreateShader<CompiledShaderD3D12>(DeviceType::Direct3D12, CompilationLog, "Direct3D12", pRefCounters, ShaderCI, D3D12ShaderCI);
+    CreateShader<CompiledShaderD3D12>(DeviceType::Direct3D12, pRefCounters, ShaderCI, D3D12ShaderCI);
 }
 
 void SerializationDeviceImpl::GetPipelineResourceBindingsD3D12(const PipelineResourceBindingAttribs& Info,

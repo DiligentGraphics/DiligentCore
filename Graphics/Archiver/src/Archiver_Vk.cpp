@@ -171,7 +171,7 @@ void SerializedPipelineStateImpl::PatchShadersVk(const CreateInfoType& CreateInf
 INSTANTIATE_PATCH_SHADER_METHODS(PatchShadersVk)
 INSTANTIATE_DEVICE_SIGNATURE_METHODS(PipelineResourceSignatureVkImpl)
 
-void SerializedShaderImpl::CreateShaderVk(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI, String& CompilationLog)
+void SerializedShaderImpl::CreateShaderVk(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI)
 {
     const auto& VkProps     = m_pDevice->GetVkProperties();
     const auto& DeviceInfo  = m_pDevice->GetDeviceInfo();
@@ -184,7 +184,7 @@ void SerializedShaderImpl::CreateShaderVk(IReferenceCounters* pRefCounters, cons
         VkProps.VkVersion,
         VkProps.SupportsSpirv14 //
     };
-    CreateShader<CompiledShaderVk>(DeviceType::Vulkan, CompilationLog, "Vulkan", pRefCounters, ShaderCI, VkShaderCI);
+    CreateShader<CompiledShaderVk>(DeviceType::Vulkan, pRefCounters, ShaderCI, VkShaderCI);
 }
 
 void SerializationDeviceImpl::GetPipelineResourceBindingsVk(const PipelineResourceBindingAttribs& Info,

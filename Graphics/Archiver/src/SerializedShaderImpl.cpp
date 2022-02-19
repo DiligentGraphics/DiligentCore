@@ -62,8 +62,6 @@ SerializedShaderImpl::SerializedShaderImpl(IReferenceCounters*      pRefCounters
 
     CopyShaderCreateInfo(ShaderCI);
 
-    String CompilationLog;
-
     while (DeviceFlags != ARCHIVE_DEVICE_DATA_FLAG_NONE)
     {
         const auto Flag = ExtractLSB(DeviceFlags);
@@ -73,33 +71,33 @@ SerializedShaderImpl::SerializedShaderImpl(IReferenceCounters*      pRefCounters
         {
 #if D3D11_SUPPORTED
             case ARCHIVE_DEVICE_DATA_FLAG_D3D11:
-                CreateShaderD3D11(pRefCounters, ShaderCI, CompilationLog);
+                CreateShaderD3D11(pRefCounters, ShaderCI);
                 break;
 #endif
 
 #if D3D12_SUPPORTED
             case ARCHIVE_DEVICE_DATA_FLAG_D3D12:
-                CreateShaderD3D12(pRefCounters, ShaderCI, CompilationLog);
+                CreateShaderD3D12(pRefCounters, ShaderCI);
                 break;
 #endif
 
 #if GL_SUPPORTED || GLES_SUPPORTED
             case ARCHIVE_DEVICE_DATA_FLAG_GL:
             case ARCHIVE_DEVICE_DATA_FLAG_GLES:
-                CreateShaderGL(pRefCounters, ShaderCI, CompilationLog, Flag == ARCHIVE_DEVICE_DATA_FLAG_GL ? RENDER_DEVICE_TYPE_GL : RENDER_DEVICE_TYPE_GLES);
+                CreateShaderGL(pRefCounters, ShaderCI, Flag == ARCHIVE_DEVICE_DATA_FLAG_GL ? RENDER_DEVICE_TYPE_GL : RENDER_DEVICE_TYPE_GLES);
                 break;
 #endif
 
 #if VULKAN_SUPPORTED
             case ARCHIVE_DEVICE_DATA_FLAG_VULKAN:
-                CreateShaderVk(pRefCounters, ShaderCI, CompilationLog);
+                CreateShaderVk(pRefCounters, ShaderCI);
                 break;
 #endif
 
 #if METAL_SUPPORTED
             case ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS:
             case ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS:
-                CreateShaderMtl(ShaderCI, CompilationLog);
+                CreateShaderMtl(ShaderCI);
                 break;
 #endif
 
@@ -111,17 +109,6 @@ SerializedShaderImpl::SerializedShaderImpl(IReferenceCounters*      pRefCounters
                 LOG_ERROR_MESSAGE("Unexpected render device type");
                 break;
         }
-    }
-
-    if (!CompilationLog.empty())
-    {
-        if (ShaderCI.ppCompilerOutput)
-        {
-            auto* pLogBlob = MakeNewRCObj<DataBlobImpl>{}(CompilationLog.size() + 1);
-            std::memcpy(pLogBlob->GetDataPtr(), CompilationLog.c_str(), CompilationLog.size() + 1);
-            pLogBlob->QueryInterface(IID_DataBlob, reinterpret_cast<IObject**>(ShaderCI.ppCompilerOutput));
-        }
-        LOG_ERROR_AND_THROW("Shader '", (ShaderCI.Desc.Name ? ShaderCI.Desc.Name : ""), "' compilation failed for some backends");
     }
 }
 

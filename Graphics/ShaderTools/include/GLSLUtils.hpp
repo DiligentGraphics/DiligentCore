@@ -44,6 +44,6 @@ String BuildGLSLSourceString(const ShaderCreateInfo&    ShaderCI,
                              const RenderDeviceInfo&    DeviceInfo,
                              const GraphicsAdapterInfo& AdapterInfo,
                              TargetGLSLCompiler         TargetCompiler,
-                             const char*                ExtraDefinitions = nullptr);
+                             const char*                ExtraDefinitions = nullptr) noexcept(false);
 
 } // namespace Diligent

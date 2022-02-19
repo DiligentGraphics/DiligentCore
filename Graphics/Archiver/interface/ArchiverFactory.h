@@ -179,6 +179,9 @@ struct SerializationDeviceCreateInfo
     /// Metal attributes, see Diligent::SerializationDeviceMtlInfo.
     SerializationDeviceMtlInfo Metal;
 
+    /// Pointer to the user-specified debug message callback function
+    DebugMessageCallbackType DebugMessageCallback   DEFAULT_INITIALIZER(nullptr);
+
 #if DILIGENT_CPP_INTERFACE
     SerializationDeviceCreateInfo() noexcept
     {

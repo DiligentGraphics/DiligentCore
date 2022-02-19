@@ -368,6 +368,96 @@ TEST(ArchiveTest, AppendDeviceData)
 }
 
 
+class TestBrokenShader : public testing::TestWithParam<ARCHIVE_DEVICE_DATA_FLAGS>
+{};
+
+TEST_P(TestBrokenShader, CompileFailure)
+{
+    auto DataFlag    = GetParam();
+    auto AllowedBits = GetDeviceBits();
+    if ((DataFlag & AllowedBits) == 0)
+        GTEST_SKIP() << GetArchiveDeviceDataFlagString(DataFlag) << " is not supported by archiver";
+
+    auto* pEnv             = TestingEnvironment::GetInstance();
+    auto* pArchiverFactory = pEnv->GetArchiverFactory();
+
+    RefCntAutoPtr<ISerializationDevice> pSerializationDevice;
+    pArchiverFactory->CreateSerializationDevice(SerializationDeviceCreateInfo{}, &pSerializationDevice);
+    ASSERT_NE(pSerializationDevice, nullptr);
+
+    RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
+    pArchiverFactory->CreateDefaultShaderSourceStreamFactory("shaders/Archiver", &pShaderSourceFactory);
+
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.UseCombinedTextureSamplers = true;
+    ShaderCI.Desc.ShaderType            = SHADER_TYPE_VERTEX;
+    ShaderCI.EntryPoint                 = "main";
+    ShaderCI.Desc.Name                  = "Archive test broken shader";
+    ShaderCI.Source                     = "Not even a shader source";
+
+    RefCntAutoPtr<IDataBlob> pCompilerOutput;
+    ShaderCI.ppCompilerOutput = pCompilerOutput.RawDblPtr();
+
+    RefCntAutoPtr<IShader> pSerializedShader;
+    pSerializationDevice->CreateShader(ShaderCI, ShaderArchiveInfo{DataFlag}, &pSerializedShader);
+    EXPECT_EQ(pSerializedShader, nullptr);
+    EXPECT_NE(pCompilerOutput, nullptr);
+}
+
+TEST_P(TestBrokenShader, MissingSourceFile)
+{
+    auto DataFlag    = GetParam();
+    auto AllowedBits = GetDeviceBits();
+    if ((DataFlag & AllowedBits) == 0)
+        GTEST_SKIP() << GetArchiveDeviceDataFlagString(DataFlag) << " is not supported by archiver";
+
+    auto* pEnv             = TestingEnvironment::GetInstance();
+    auto* pArchiverFactory = pEnv->GetArchiverFactory();
+
+    SerializationDeviceCreateInfo SerDeviceCI;
+    SerDeviceCI.DebugMessageCallback = &TestingEnvironment::MessageCallback;
+
+    RefCntAutoPtr<ISerializationDevice> pSerializationDevice;
+    pArchiverFactory->CreateSerializationDevice(SerDeviceCI, &pSerializationDevice);
+    ASSERT_NE(pSerializationDevice, nullptr);
+
+    RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
+    pArchiverFactory->CreateDefaultShaderSourceStreamFactory("shaders/Archiver", &pShaderSourceFactory);
+
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.UseCombinedTextureSamplers = true;
+    ShaderCI.Desc.ShaderType            = SHADER_TYPE_VERTEX;
+    ShaderCI.EntryPoint                 = "main";
+    ShaderCI.Desc.Name                  = "Archive test broken shader";
+    ShaderCI.FilePath                   = "non_existing.shader";
+    ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
+
+    pEnv->SetErrorAllowance(3, "No worries, errors are expected: testing broken shaders\n");
+    pEnv->PushExpectedErrorSubstring("Failed to create Shader object 'Archive test broken shader'");
+    pEnv->PushExpectedErrorSubstring("Failed to load shader source file 'non_existing.shader'", false);
+    pEnv->PushExpectedErrorSubstring("Failed to create input stream for source file non_existing.shader", false);
+
+    RefCntAutoPtr<IShader> pSerializedShader;
+    pSerializationDevice->CreateShader(ShaderCI, ShaderArchiveInfo{DataFlag}, &pSerializedShader);
+    EXPECT_EQ(pSerializedShader, nullptr);
+}
+
+static_assert(ARCHIVE_DEVICE_DATA_FLAG_LAST == 128, "Please add new device flag to the map");
+INSTANTIATE_TEST_SUITE_P(ArchiveTest,
+                         TestBrokenShader,
+                         testing::Values<ARCHIVE_DEVICE_DATA_FLAGS>(
+                             ARCHIVE_DEVICE_DATA_FLAG_D3D11,
+                             ARCHIVE_DEVICE_DATA_FLAG_D3D12,
+                             ARCHIVE_DEVICE_DATA_FLAG_GL,
+                             ARCHIVE_DEVICE_DATA_FLAG_GLES,
+                             ARCHIVE_DEVICE_DATA_FLAG_VULKAN,
+                             ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS,
+                             ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS),
+                         [](const testing::TestParamInfo<ARCHIVE_DEVICE_DATA_FLAGS>& info) //
+                         {
+                             return GetArchiveDeviceDataFlagString(info.param);
+                         });
+
 void CreateTestRenderPass1(IRenderDevice*        pDevice,
                            ISerializationDevice* pSerializationDevice,
                            ISwapChain*           pSwapChain,

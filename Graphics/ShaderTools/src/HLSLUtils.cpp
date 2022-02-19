@@ -44,7 +44,7 @@ static constexpr char g_HLSLDefinitions[] =
 
 
 String BuildHLSLSourceString(const ShaderCreateInfo& ShaderCI,
-                             const char*             ExtraDefinitions)
+                             const char*             ExtraDefinitions) noexcept(false)
 {
     String HLSLSource;
 

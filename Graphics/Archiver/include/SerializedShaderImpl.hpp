@@ -110,29 +110,32 @@ private:
     std::array<std::unique_ptr<CompiledShader>, static_cast<size_t>(DeviceType::Count)> m_Shaders;
 
     template <typename ShaderType, typename... ArgTypes>
-    void CreateShader(DeviceType Type, String& CompilationLog, const char* DeviceTypeName, IReferenceCounters* pRefCounters, ShaderCreateInfo ShaderCI, const ArgTypes&... Args);
+    void CreateShader(DeviceType              Type,
+                      IReferenceCounters*     pRefCounters,
+                      const ShaderCreateInfo& ShaderCI,
+                      const ArgTypes&... Args) noexcept(false);
 
 #if D3D11_SUPPORTED
-    void CreateShaderD3D11(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI, String& CompilationLog);
+    void CreateShaderD3D11(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI) noexcept(false);
 #endif
 
 #if D3D12_SUPPORTED
-    void CreateShaderD3D12(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI, String& CompilationLog);
+    void CreateShaderD3D12(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI) noexcept(false);
 #endif
 
 #if GL_SUPPORTED || GLES_SUPPORTED
-    void CreateShaderGL(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI, String& CompilationLog, RENDER_DEVICE_TYPE DeviceType);
+    void CreateShaderGL(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI, RENDER_DEVICE_TYPE DeviceType) noexcept(false);
 #endif
 
 #if VULKAN_SUPPORTED
-    void CreateShaderVk(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI, String& CompilationLog);
+    void CreateShaderVk(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI) noexcept(false);
 #endif
 
 #if METAL_SUPPORTED
     struct CompiledShaderMtlImpl;
     std::unique_ptr<CompiledShader> m_pShaderMtl;
 
-    void CreateShaderMtl(ShaderCreateInfo ShaderCI, String& CompilationLog);
+    void CreateShaderMtl(ShaderCreateInfo ShaderCI) noexcept(false);
 #endif
 };
 

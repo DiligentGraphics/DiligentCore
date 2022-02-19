@@ -44,7 +44,7 @@ String BuildGLSLSourceString(const ShaderCreateInfo&    ShaderCI,
                              const RenderDeviceInfo&    DeviceInfo,
                              const GraphicsAdapterInfo& AdapterInfo,
                              TargetGLSLCompiler         TargetCompiler,
-                             const char*                ExtraDefinitions)
+                             const char*                ExtraDefinitions) noexcept(false)
 {
     // clang-format off
     VERIFY(ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_DEFAULT ||

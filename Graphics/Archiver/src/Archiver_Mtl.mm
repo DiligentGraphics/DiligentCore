@@ -181,33 +181,17 @@ struct SerializedShaderImpl::CompiledShaderMtlImpl final : CompiledShader
     MtlFunctionArguments::BufferTypeInfoMapType BufferTypeInfoMap;
 };
 
-void SerializedShaderImpl::CreateShaderMtl(ShaderCreateInfo ShaderCI, String& CompilationLog)
+void SerializedShaderImpl::CreateShaderMtl(ShaderCreateInfo ShaderCI) noexcept(false)
 {
-    auto* pShaderMtl = new CompiledShaderMtlImpl{};
-    m_pShaderMtl.reset(pShaderMtl);
-
-    RefCntAutoPtr<IDataBlob> pLog;
-    ShaderCI.ppCompilerOutput = pLog.RawDblPtr();
-
+    m_pShaderMtl = std::make_unique<CompiledShaderMtlImpl>();
     // Convert HLSL/GLSL/SPIRV to MSL
-    try
-    {
-        ShaderMtlImpl::ConvertToMSL(ShaderCI,
-                                    m_pDevice->GetDeviceInfo(),
-                                    m_pDevice->GetAdapterInfo(),
-                                    pShaderMtl->MslSource,
-                                    pShaderMtl->SPIRV,
-                                    pShaderMtl->SPIRVResources,
-                                    pShaderMtl->BufferTypeInfoMap); // may throw exception
-    }
-    catch (...)
-    {
-        if (pLog && pLog->GetConstDataPtr())
-        {
-            CompilationLog += "Failed to compile Metal shader:\n";
-            CompilationLog += static_cast<const char*>(pLog->GetConstDataPtr());
-        }
-    }
+    ShaderMtlImpl::ConvertToMSL(ShaderCI,
+                                m_pDevice->GetDeviceInfo(),
+                                m_pDevice->GetAdapterInfo(),
+                                m_pShaderMtl->MslSource,
+                                m_pShaderMtl->SPIRV,
+                                m_pShaderMtl->SPIRVResources,
+                                m_pShaderMtl->BufferTypeInfoMap); // may throw exception
 }
 
 const SPIRVShaderResources* SerializedShaderImpl::GetMtlShaderSPIRVResources() const
