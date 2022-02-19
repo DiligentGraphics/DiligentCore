@@ -271,10 +271,7 @@ String BuildGLSLSourceString(const ShaderCreateInfo&    ShaderCI,
 
     AppendShaderMacros(GLSLSource, ShaderCI.Macros);
 
-    RefCntAutoPtr<IDataBlob> pFileData;
-    size_t                   SourceLen = ShaderCI.SourceLength;
-
-    const auto* ShaderSource = ReadShaderSourceFile(ShaderCI.Source, ShaderCI.pShaderSourceStreamFactory, ShaderCI.FilePath, pFileData, SourceLen);
+    const auto SourceData = ReadShaderSourceFile(ShaderCI);
 
     if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL)
     {
@@ -291,8 +288,8 @@ String BuildGLSLSourceString(const ShaderCreateInfo&    ShaderCI,
         HLSL2GLSLConverterImpl::ConversionAttribs Attribs;
         Attribs.pSourceStreamFactory = ShaderCI.pShaderSourceStreamFactory;
         Attribs.ppConversionStream   = ShaderCI.ppConversionStream;
-        Attribs.HLSLSource           = ShaderSource;
-        Attribs.NumSymbols           = SourceLen;
+        Attribs.HLSLSource           = SourceData.Source;
+        Attribs.NumSymbols           = SourceData.SourceLength;
         Attribs.EntryPoint           = ShaderCI.EntryPoint;
         Attribs.ShaderType           = ShaderCI.Desc.ShaderType;
         Attribs.IncludeDefinitions   = true;
@@ -310,7 +307,7 @@ String BuildGLSLSourceString(const ShaderCreateInfo&    ShaderCI,
     }
     else
     {
-        GLSLSource.append(ShaderSource, SourceLen);
+        GLSLSource.append(SourceData.Source, SourceData.SourceLength);
     }
 
     return GLSLSource;

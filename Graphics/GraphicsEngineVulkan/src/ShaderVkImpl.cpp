@@ -110,16 +110,14 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
                 }
                 else
                 {
-                    std::string              GLSLSourceString;
-                    RefCntAutoPtr<IDataBlob> pSourceFileData;
+                    std::string          GLSLSourceString;
+                    ShaderSourceFileData SourceData;
 
-                    const char*        ShaderSource = nullptr;
-                    size_t             SourceLength = ShaderCI.SourceLength;
-                    const ShaderMacro* Macros       = nullptr;
+                    const ShaderMacro* Macros = nullptr;
                     if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM)
                     {
                         // Read the source file directly and use it as is
-                        ShaderSource = ReadShaderSourceFile(ShaderCI.Source, ShaderCI.pShaderSourceStreamFactory, ShaderCI.FilePath, pSourceFileData, SourceLength);
+                        SourceData = ReadShaderSourceFile(ShaderCI);
 
                         // Add user macros.
                         // BuildGLSLSourceString adds the macros to the source string, so we don't need to do this for SHADER_SOURCE_LANGUAGE_GLSL
@@ -129,15 +127,15 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
                     {
                         // Build the full source code string that will contain GLSL version declaration,
                         // platform definitions, user-provided shader macros, etc.
-                        GLSLSourceString = BuildGLSLSourceString(ShaderCI, VkShaderCI.DeviceInfo, VkShaderCI.AdapterInfo, TargetGLSLCompiler::glslang, VulkanDefine);
-                        ShaderSource     = GLSLSourceString.c_str();
-                        SourceLength     = GLSLSourceString.length();
+                        GLSLSourceString        = BuildGLSLSourceString(ShaderCI, VkShaderCI.DeviceInfo, VkShaderCI.AdapterInfo, TargetGLSLCompiler::glslang, VulkanDefine);
+                        SourceData.Source       = GLSLSourceString.c_str();
+                        SourceData.SourceLength = StaticCast<Uint32>(GLSLSourceString.length());
                     }
 
                     GLSLangUtils::GLSLtoSPIRVAttribs Attribs;
                     Attribs.ShaderType                 = m_Desc.ShaderType;
-                    Attribs.ShaderSource               = ShaderSource;
-                    Attribs.SourceCodeLen              = static_cast<int>(SourceLength);
+                    Attribs.ShaderSource               = SourceData.Source;
+                    Attribs.SourceCodeLen              = static_cast<int>(SourceData.SourceLength);
                     Attribs.Version                    = GLSLangUtils::SpirvVersion::Vk100;
                     Attribs.Macros                     = Macros;
                     Attribs.AssignBindings             = true;

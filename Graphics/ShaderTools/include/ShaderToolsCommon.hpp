@@ -70,12 +70,23 @@ void AppendShaderMacros(std::string& Source, const ShaderMacro* Macros);
 void AppendShaderTypeDefinitions(std::string& Source, SHADER_TYPE Type);
 
 
+struct ShaderSourceFileData
+{
+    RefCntAutoPtr<IDataBlob> pFileData;
+    const char*              Source       = nullptr;
+    Uint32                   SourceLength = 0;
+};
+
 /// Reads shader source code from a file or uses the one from the shader create info
-const char* ReadShaderSourceFile(const char*                      SourceCode,
-                                 IShaderSourceInputStreamFactory* pShaderSourceStreamFactory,
-                                 const char*                      FilePath,
-                                 RefCntAutoPtr<IDataBlob>&        pFileData,
-                                 size_t&                          SourceCodeLen) noexcept(false);
+ShaderSourceFileData ReadShaderSourceFile(const char*                      SourceCode,
+                                          size_t                           SourceLength,
+                                          IShaderSourceInputStreamFactory* pShaderSourceStreamFactory,
+                                          const char*                      FilePath) noexcept(false);
+
+inline ShaderSourceFileData ReadShaderSourceFile(const ShaderCreateInfo& ShaderCI) noexcept(false)
+{
+    return ReadShaderSourceFile(ShaderCI.Source, ShaderCI.SourceLength, ShaderCI.pShaderSourceStreamFactory, ShaderCI.FilePath);
+}
 
 /// Appends shader source code to the source string
 void AppendShaderSourceCode(std::string& Source, const ShaderCreateInfo& ShaderCI) noexcept(false);

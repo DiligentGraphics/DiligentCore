@@ -419,10 +419,7 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& ShaderCI,
     Shader.setEntryPoint(ShaderCI.EntryPoint);
     Shader.setEnvTargetHlslFunctionality1();
 
-    RefCntAutoPtr<IDataBlob> pFileData;
-    size_t                   SourceCodeLen = ShaderCI.SourceLength;
-
-    const char* SourceCode = ReadShaderSourceFile(ShaderCI.Source, ShaderCI.pShaderSourceStreamFactory, ShaderCI.FilePath, pFileData, SourceCodeLen);
+    const auto SourceData = ReadShaderSourceFile(ShaderCI);
 
     std::string Defines{"#define GLSLANG\n\n"};
     Defines.append(g_HLSLDefinitions);
@@ -438,8 +435,8 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& ShaderCI,
     }
     Shader.setPreamble(Defines.c_str());
 
-    const char* ShaderStrings[]       = {SourceCode};
-    const int   ShaderStringLengths[] = {static_cast<int>(SourceCodeLen)};
+    const char* ShaderStrings[]       = {SourceData.Source};
+    const int   ShaderStringLengths[] = {static_cast<int>(SourceData.SourceLength)};
     const char* Names[]               = {ShaderCI.FilePath != nullptr ? ShaderCI.FilePath : ""};
     Shader.setStringsWithLengthsAndNames(ShaderStrings, ShaderStringLengths, Names, 1);
 
@@ -449,7 +446,7 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& ShaderCI,
 
     IncluderImpl Includer{ShaderCI.pShaderSourceStreamFactory};
 
-    auto SPIRV = CompileShaderInternal(Shader, messages, &Includer, SourceCode, SourceCodeLen, true, shProfile, ppCompilerOutput);
+    auto SPIRV = CompileShaderInternal(Shader, messages, &Includer, SourceData.Source, SourceData.SourceLength, true, shProfile, ppCompilerOutput);
     if (SPIRV.empty())
         return SPIRV;
 

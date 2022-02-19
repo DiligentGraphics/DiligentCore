@@ -108,17 +108,17 @@ void AppendShaderTypeDefinitions(std::string& Source, SHADER_TYPE Type)
 }
 
 
-const char* ReadShaderSourceFile(const char*                      SourceCode,
-                                 IShaderSourceInputStreamFactory* pShaderSourceStreamFactory,
-                                 const char*                      FilePath,
-                                 RefCntAutoPtr<IDataBlob>&        pFileData,
-                                 size_t&                          SourceCodeLen) noexcept(false)
+ShaderSourceFileData ReadShaderSourceFile(const char*                      SourceCode,
+                                          size_t                           SourceLength,
+                                          IShaderSourceInputStreamFactory* pShaderSourceStreamFactory,
+                                          const char*                      FilePath) noexcept(false)
 {
+    ShaderSourceFileData SourceData;
     if (SourceCode != nullptr)
     {
         VERIFY(FilePath == nullptr, "FilePath must be null when SourceCode is not null");
-        if (SourceCodeLen == 0)
-            SourceCodeLen = strlen(SourceCode);
+        SourceData.Source       = SourceCode;
+        SourceData.SourceLength = StaticCast<Uint32>(SourceLength != 0 ? SourceLength : strlen(SourceCode));
     }
     else
     {
@@ -131,10 +131,10 @@ const char* ReadShaderSourceFile(const char*                      SourceCode,
                 if (pSourceStream == nullptr)
                     LOG_ERROR_AND_THROW("Failed to load shader source file '", FilePath, '\'');
 
-                pFileData = MakeNewRCObj<DataBlobImpl>{}(0);
-                pSourceStream->ReadBlob(pFileData);
-                SourceCode    = reinterpret_cast<char*>(pFileData->GetDataPtr());
-                SourceCodeLen = pFileData->GetSize();
+                SourceData.pFileData = MakeNewRCObj<DataBlobImpl>{}(0);
+                pSourceStream->ReadBlob(SourceData.pFileData);
+                SourceData.Source       = reinterpret_cast<char*>(SourceData.pFileData->GetDataPtr());
+                SourceData.SourceLength = StaticCast<Uint32>(SourceData.pFileData->GetSize());
             }
             else
             {
@@ -147,21 +147,14 @@ const char* ReadShaderSourceFile(const char*                      SourceCode,
         }
     }
 
-    return SourceCode;
+    return SourceData;
 }
 
 void AppendShaderSourceCode(std::string& Source, const ShaderCreateInfo& ShaderCI) noexcept(false)
 {
     VERIFY_EXPR(ShaderCI.ByteCode == nullptr);
-
-    RefCntAutoPtr<IDataBlob> pFileData;
-
-    size_t SourceCodeLen = ShaderCI.SourceLength;
-
-    const auto* SourceCode =
-        ReadShaderSourceFile(ShaderCI.Source, ShaderCI.pShaderSourceStreamFactory,
-                             ShaderCI.FilePath, pFileData, SourceCodeLen);
-    Source.append(SourceCode, SourceCodeLen);
+    const auto SourceData = ReadShaderSourceFile(ShaderCI);
+    Source.append(SourceData.Source, SourceData.SourceLength);
 }
 
 // https://github.com/tomtom-international/cpp-dependencies/blob/a91f330e97c6b9e4e9ecd81f43c4a40e044d4bbc/src/Input.cpp
@@ -301,11 +294,11 @@ void FindIncludes(const char* pBuffer, size_t BufferSize, HandlerType IncludeHan
 template <typename IncludeHandlerType>
 void ProcessShaderIncludesImpl(const ShaderCreateInfo& ShaderCI, std::unordered_set<std::string>& Includes, IncludeHandlerType IncludeHandler)
 {
-    RefCntAutoPtr<IDataBlob> pSourceData;
+    const auto SourceData = ReadShaderSourceFile(ShaderCI);
 
     ShaderIncludePreprocessInfo FileInfo;
-    FileInfo.SourceLength = ShaderCI.SourceLength;
-    FileInfo.Source       = ReadShaderSourceFile(ShaderCI.Source, ShaderCI.pShaderSourceStreamFactory, ShaderCI.FilePath, pSourceData, FileInfo.SourceLength);
+    FileInfo.Source       = SourceData.Source;
+    FileInfo.SourceLength = SourceData.SourceLength;
     FileInfo.FilePath     = ShaderCI.FilePath != nullptr ? ShaderCI.FilePath : "";
 
     FindIncludes(FileInfo.Source, FileInfo.SourceLength,
@@ -341,13 +334,10 @@ bool ProcessShaderIncludes(const ShaderCreateInfo& ShaderCI, std::function<void(
 
 static std::string UnrollShaderIncludesImpl(ShaderCreateInfo ShaderCI, std::unordered_set<std::string>& AllIncludes)
 {
-    VERIFY_EXPR(ShaderCI.Desc.Name != nullptr);
+    const auto SourceData = ReadShaderSourceFile(ShaderCI);
 
-    RefCntAutoPtr<IDataBlob> pSourceData;
-
-    size_t SourceLen      = ShaderCI.SourceLength;
-    ShaderCI.Source       = ReadShaderSourceFile(ShaderCI.Source, ShaderCI.pShaderSourceStreamFactory, ShaderCI.FilePath, pSourceData, SourceLen);
-    ShaderCI.SourceLength = StaticCast<Uint32>(SourceLen);
+    ShaderCI.Source       = SourceData.Source;
+    ShaderCI.SourceLength = SourceData.SourceLength;
     ShaderCI.FilePath     = nullptr;
 
     std::stringstream Stream;

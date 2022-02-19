@@ -84,8 +84,8 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
     std::array<const char*, 1> ShaderStrings = {};
     std::array<GLint, 1>       Lengths       = {};
 
-    std::string              GLSLSourceString;
-    RefCntAutoPtr<IDataBlob> pSourceFileData;
+    ShaderSourceFileData SourceData;
+    std::string          GLSLSourceString;
     if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM)
     {
         if (ShaderCI.Macros != nullptr)
@@ -94,9 +94,9 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
         }
 
         // Read the source file directly and use it as is
-        size_t SourceLen = ShaderCI.SourceLength;
-        ShaderStrings[0] = ReadShaderSourceFile(ShaderCI.Source, ShaderCI.pShaderSourceStreamFactory, ShaderCI.FilePath, pSourceFileData, SourceLen);
-        Lengths[0]       = StaticCast<GLint>(SourceLen);
+        SourceData       = ReadShaderSourceFile(ShaderCI);
+        ShaderStrings[0] = SourceData.Source;
+        Lengths[0]       = StaticCast<GLint>(SourceData.SourceLength);
     }
     else
     {
