@@ -110,6 +110,11 @@ public:
         return m_pDearchiver.RawPtr<IDearchiver>();
     }
 
+    virtual void DILIGENT_CALL_TYPE SetMessageCallback(DebugMessageCallbackType MessageCallback) const override final
+    {
+        SetDebugMessageCallback(MessageCallback);
+    }
+
 private:
     const INTERFACE_ID                        m_FactoryIID;
     DummyReferenceCounters<EngineFactoryBase> m_RefCounters;

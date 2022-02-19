@@ -34,4 +34,5 @@ void TestArchiverFactory_CInterface(IArchiverFactory* pArchiverFactory)
     IArchiverFactory_RemoveDeviceData(pArchiverFactory, (IArchive*)NULL, ARCHIVE_DEVICE_DATA_FLAG_NONE, (IFileStream*)NULL);
     IArchiverFactory_AppendDeviceData(pArchiverFactory, (IArchive*)NULL, ARCHIVE_DEVICE_DATA_FLAG_NONE, (IArchive*)NULL, (IFileStream*)NULL);
     IArchiverFactory_PrintArchiveContent(pArchiverFactory, (IArchive*)NULL);
+    IArchiverFactory_SetMessageCallback(pArchiverFactory, (DebugMessageCallbackType)NULL);
 }

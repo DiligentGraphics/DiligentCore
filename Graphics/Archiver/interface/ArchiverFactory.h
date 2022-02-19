@@ -30,6 +30,7 @@
 /// Defines Diligent::IArchiverFactory interface and related structures.
 
 #include "../../../Primitives/interface/Object.h"
+#include "../../../Primitives/interface/DebugOutput.h"
 #include "SerializationDevice.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
@@ -179,9 +180,6 @@ struct SerializationDeviceCreateInfo
     /// Metal attributes, see Diligent::SerializationDeviceMtlInfo.
     SerializationDeviceMtlInfo Metal;
 
-    /// Pointer to the user-specified debug message callback function
-    DebugMessageCallbackType DebugMessageCallback   DEFAULT_INITIALIZER(nullptr);
-
 #if DILIGENT_CPP_INTERFACE
     SerializationDeviceCreateInfo() noexcept
     {
@@ -253,6 +251,11 @@ DILIGENT_BEGIN_INTERFACE(IArchiverFactory, IObject)
     VIRTUAL Bool METHOD(PrintArchiveContent)(THIS_
                                              IArchive* pArchive) CONST PURE;
 
+    /// Sets a user-provided debug message callback.
+
+    /// \param [in]     MessageCallback - Debug message callback function to use instead of the default one.
+    VIRTUAL void METHOD(SetMessageCallback)(THIS_
+                                            DebugMessageCallbackType MessageCallback) CONST PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -266,6 +269,7 @@ DILIGENT_END_INTERFACE
 #    define IArchiverFactory_RemoveDeviceData(This, ...)                        CALL_IFACE_METHOD(ArchiverFactory, RemoveDeviceData,                       This, __VA_ARGS__)
 #    define IArchiverFactory_AppendDeviceData(This, ...)                        CALL_IFACE_METHOD(ArchiverFactory, AppendDeviceData,                       This, __VA_ARGS__)
 #    define IArchiverFactory_PrintArchiveContent(This, ...)                     CALL_IFACE_METHOD(ArchiverFactory, PrintArchiveContent,                    This, __VA_ARGS__)
+#    define IArchiverFactory_SetMessageCallback(This, ...)                      CALL_IFACE_METHOD(ArchiverFactory, SetMessageCallback,                     This, __VA_ARGS__)
 
 #endif
 

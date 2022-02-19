@@ -31,6 +31,7 @@
 /// Defines Diligent::IEngineFactory interface
 
 #include "../../../Primitives/interface/Object.h"
+#include "../../../Primitives/interface/DebugOutput.h"
 #include "GraphicsTypes.h"
 
 
@@ -95,6 +96,13 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactory, IObject)
     /// Returns a pointer to the dearchiver object (see Diligent::IDearchiver).
     VIRTUAL struct IDearchiver* METHOD(GetDearchiver)(THIS) CONST PURE;
 
+
+    /// Sets a user-provided debug message callback.
+
+    /// \param [in]     MessageCallback - Debug message callback function to use instead of the default one.
+    VIRTUAL void METHOD(SetMessageCallback)(THIS_
+                                            DebugMessageCallbackType MessageCallback) CONST PURE;
+
 #if PLATFORM_ANDROID
     /// On Android platform, it is necessary to initialize the file system before
     /// CreateDefaultShaderSourceStreamFactory() method can be called.
@@ -125,6 +133,7 @@ DILIGENT_END_INTERFACE
 #    define IEngineFactory_EnumerateAdapters(This, ...)                      CALL_IFACE_METHOD(EngineFactory, EnumerateAdapters,                      This, __VA_ARGS__)
 #    define IEngineFactory_InitAndroidFileSystem(This, ...)                  CALL_IFACE_METHOD(EngineFactory, InitAndroidFileSystem,                  This, __VA_ARGS__)
 #    define IEngineFactory_GetDearchiver(This)                               CALL_IFACE_METHOD(EngineFactory, GetDearchiver,                          This)
+#    define IEngineFactory_SetMessageCallback(This, ...)                     CALL_IFACE_METHOD(EngineFactory, SetMessageCallback,                     This, __VA_ARGS__)
 
 // clang-format on
 

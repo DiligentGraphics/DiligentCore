@@ -398,6 +398,8 @@ TEST_P(TestBrokenShader, CompileFailure)
     RefCntAutoPtr<IDataBlob> pCompilerOutput;
     ShaderCI.ppCompilerOutput = pCompilerOutput.RawDblPtr();
 
+    pEnv->SetErrorAllowance(3, "No worries, errors are expected: testing broken shaders\n");
+
     RefCntAutoPtr<IShader> pSerializedShader;
     pSerializationDevice->CreateShader(ShaderCI, ShaderArchiveInfo{DataFlag}, &pSerializedShader);
     EXPECT_EQ(pSerializedShader, nullptr);
@@ -414,11 +416,8 @@ TEST_P(TestBrokenShader, MissingSourceFile)
     auto* pEnv             = TestingEnvironment::GetInstance();
     auto* pArchiverFactory = pEnv->GetArchiverFactory();
 
-    SerializationDeviceCreateInfo SerDeviceCI;
-    SerDeviceCI.DebugMessageCallback = &TestingEnvironment::MessageCallback;
-
     RefCntAutoPtr<ISerializationDevice> pSerializationDevice;
-    pArchiverFactory->CreateSerializationDevice(SerDeviceCI, &pSerializationDevice);
+    pArchiverFactory->CreateSerializationDevice(SerializationDeviceCreateInfo{}, &pSerializationDevice);
     ASSERT_NE(pSerializationDevice, nullptr);
 
     RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;

@@ -153,13 +153,13 @@ public:
 
     static void PushExpectedErrorSubstring(const char* Str, bool ClearStack = true);
 
+protected:
     static void MessageCallback(DEBUG_MESSAGE_SEVERITY Severity,
                                 const Char*            Message,
                                 const char*            Function,
                                 const char*            File,
                                 int                    Line);
 
-protected:
     NativeWindow CreateNativeWindow();
 
     Uint32 FindAdapter(const std::vector<GraphicsAdapterInfo>& Adapters,

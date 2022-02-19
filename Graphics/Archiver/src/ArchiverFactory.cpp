@@ -113,6 +113,7 @@ public:
     virtual Bool DILIGENT_CALL_TYPE RemoveDeviceData(IArchive* pSrcArchive, ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags, IFileStream* pStream) const override final;
     virtual Bool DILIGENT_CALL_TYPE AppendDeviceData(IArchive* pSrcArchive, ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags, IArchive* pDeviceArchive, IFileStream* pStream) const override final;
     virtual Bool DILIGENT_CALL_TYPE PrintArchiveContent(IArchive* pArchive) const override final;
+    virtual void DILIGENT_CALL_TYPE SetMessageCallback(DebugMessageCallbackType MessageCallback) const override final;
 
 private:
     DummyReferenceCounters<ArchiverFactoryImpl> m_RefCounters;
@@ -153,9 +154,6 @@ void ArchiverFactoryImpl::CreateArchiver(ISerializationDevice* pDevice, IArchive
 
 void ArchiverFactoryImpl::CreateSerializationDevice(const SerializationDeviceCreateInfo& CreateInfo, ISerializationDevice** ppDevice)
 {
-    if (CreateInfo.DebugMessageCallback != nullptr)
-        SetDebugMessageCallback(CreateInfo.DebugMessageCallback);
-
     DEV_CHECK_ERR(ppDevice != nullptr, "ppDevice must not be null");
     if (!ppDevice)
         return;
@@ -253,6 +251,11 @@ Bool ArchiverFactoryImpl::PrintArchiveContent(IArchive* pArchive) const
     {
         return false;
     }
+}
+
+void ArchiverFactoryImpl::SetMessageCallback(DebugMessageCallbackType MessageCallback) const
+{
+    SetDebugMessageCallback(MessageCallback);
 }
 
 } // namespace

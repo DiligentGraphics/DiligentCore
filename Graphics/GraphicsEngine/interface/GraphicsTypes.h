@@ -35,7 +35,6 @@
 #include <string.h>
 
 #include "../../../Primitives/interface/BasicTypes.h"
-#include "../../../Primitives/interface/DebugOutput.h"
 #include "../../../Primitives/interface/FlagEnum.h"
 #include "../../../Platforms/interface/NativeWindow.h"
 #include "../../../Common/interface/StringTools.h"
@@ -3280,9 +3279,6 @@ struct EngineCreateInfo
     /// Pointer to the raw memory allocator that will be used for all memory allocation/deallocation
     /// operations in the engine
     struct IMemoryAllocator* pRawMemAllocator       DEFAULT_INITIALIZER(nullptr);
-
-    /// Pointer to the user-specified debug message callback function
-    DebugMessageCallbackType DebugMessageCallback   DEFAULT_INITIALIZER(nullptr);
 
 #if DILIGENT_CPP_INTERFACE
     EngineCreateInfo() noexcept

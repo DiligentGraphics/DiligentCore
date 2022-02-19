@@ -261,14 +261,15 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
             }
 #    endif
 
+            auto* pFactoryD3D11 = GetEngineFactoryD3D11();
+            pFactoryD3D11->SetMessageCallback(MessageCallback);
+
             EngineD3D11CreateInfo CreateInfo;
-            CreateInfo.GraphicsAPIVersion   = Version{11, 0};
-            CreateInfo.DebugMessageCallback = MessageCallback;
-            CreateInfo.Features             = DeviceFeatures{DEVICE_FEATURE_STATE_OPTIONAL};
+            CreateInfo.GraphicsAPIVersion = Version{11, 0};
+            CreateInfo.Features           = DeviceFeatures{DEVICE_FEATURE_STATE_OPTIONAL};
 #    ifdef DILIGENT_DEVELOPMENT
             CreateInfo.SetValidationLevel(VALIDATION_LEVEL_2);
 #    endif
-            auto* pFactoryD3D11 = GetEngineFactoryD3D11();
             EnumerateAdapters(pFactoryD3D11, CreateInfo.GraphicsAPIVersion);
 
             LOG_INFO_MESSAGE("Found ", Adapters.size(), " compatible adapters");
@@ -309,6 +310,8 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
             }
 #    endif
             auto* pFactoryD3D12 = GetEngineFactoryD3D12();
+            pFactoryD3D12->SetMessageCallback(MessageCallback);
+
             if (!pFactoryD3D12->LoadD3D12())
             {
                 LOG_ERROR_AND_THROW("Failed to load d3d12 dll");
@@ -321,9 +324,7 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
 
             // Always enable validation
             CreateInfo.SetValidationLevel(VALIDATION_LEVEL_1);
-
-            CreateInfo.DebugMessageCallback = MessageCallback;
-            CreateInfo.Features             = DeviceFeatures{DEVICE_FEATURE_STATE_OPTIONAL};
+            CreateInfo.Features = DeviceFeatures{DEVICE_FEATURE_STATE_OPTIONAL};
 
             LOG_INFO_MESSAGE("Found ", Adapters.size(), " compatible adapters");
             for (Uint32 i = 0; i < Adapters.size(); ++i)
@@ -380,6 +381,7 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
             }
 #    endif
             auto* pFactoryOpenGL = GetEngineFactoryOpenGL();
+            pFactoryOpenGL->SetMessageCallback(MessageCallback);
             EnumerateAdapters(pFactoryOpenGL, Version{});
 
             auto Window = CreateNativeWindow();
@@ -389,9 +391,8 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
             // Always enable validation
             CreateInfo.SetValidationLevel(VALIDATION_LEVEL_1);
 
-            CreateInfo.DebugMessageCallback = MessageCallback;
-            CreateInfo.Window               = Window;
-            CreateInfo.Features             = DeviceFeatures{DEVICE_FEATURE_STATE_OPTIONAL};
+            CreateInfo.Window   = Window;
+            CreateInfo.Features = DeviceFeatures{DEVICE_FEATURE_STATE_OPTIONAL};
             if (CI.ForceNonSeparablePrograms)
                 CreateInfo.Features.SeparablePrograms = DEVICE_FEATURE_STATE_DISABLED;
             NumDeferredCtx = 0;
@@ -416,6 +417,7 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
 #    endif
 
             auto* pFactoryVk = GetEngineFactoryVk();
+            pFactoryVk->SetMessageCallback(MessageCallback);
 
             if (CI.EnableDeviceSimulation)
                 pFactoryVk->EnableDeviceSimulation();
@@ -434,7 +436,6 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
             CreateInfo.AdapterId                 = CI.AdapterId;
             CreateInfo.NumImmediateContexts      = static_cast<Uint32>(ContextCI.size());
             CreateInfo.pImmediateContextInfo     = CreateInfo.NumImmediateContexts > 0 ? ContextCI.data() : nullptr;
-            CreateInfo.DebugMessageCallback      = MessageCallback;
             CreateInfo.MainDescriptorPoolSize    = VulkanDescriptorPoolSize{64, 64, 256, 256, 64, 32, 32, 32, 32, 16, 16};
             CreateInfo.DynamicDescriptorPoolSize = VulkanDescriptorPoolSize{64, 64, 256, 256, 64, 32, 32, 32, 32, 16, 16};
             CreateInfo.UploadHeapPageSize        = 32 * 1024;
@@ -453,15 +454,16 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
 #if METAL_SUPPORTED
         case RENDER_DEVICE_TYPE_METAL:
         {
-            EngineMtlCreateInfo CreateInfo;
-
             auto* pFactoryMtl = GetEngineFactoryMtl();
+            pFactoryMtl->SetMessageCallback(MessageCallback);
+
             EnumerateAdapters(pFactoryMtl, Version{});
             AddContext(COMMAND_QUEUE_TYPE_GRAPHICS, "Graphics", CI.AdapterId);
             AddContext(COMMAND_QUEUE_TYPE_COMPUTE, "Compute", CI.AdapterId);
             AddContext(COMMAND_QUEUE_TYPE_TRANSFER, "Transfer", CI.AdapterId);
             AddContext(COMMAND_QUEUE_TYPE_GRAPHICS, "Graphics 2", CI.AdapterId);
 
+            EngineMtlCreateInfo CreateInfo;
             CreateInfo.AdapterId             = CI.AdapterId;
             CreateInfo.NumImmediateContexts  = static_cast<Uint32>(ContextCI.size());
             CreateInfo.pImmediateContextInfo = CreateInfo.NumImmediateContexts ? ContextCI.data() : nullptr;
@@ -470,9 +472,8 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
             // Always enable validation
             CreateInfo.SetValidationLevel(VALIDATION_LEVEL_1);
 
-            CreateInfo.DebugMessageCallback = MessageCallback;
-            NumDeferredCtx                  = CI.NumDeferredContexts;
-            CreateInfo.NumDeferredContexts  = NumDeferredCtx;
+            NumDeferredCtx                 = CI.NumDeferredContexts;
+            CreateInfo.NumDeferredContexts = NumDeferredCtx;
             ppContexts.resize(std::max(size_t{1}, ContextCI.size()) + NumDeferredCtx);
             pFactoryMtl->CreateDeviceAndContextsMtl(CreateInfo, &m_pDevice, ppContexts.data());
         }
@@ -578,6 +579,7 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
 #    else
         m_ArchiverFactory = Diligent::GetArchiverFactory();
 #    endif
+        m_ArchiverFactory->SetMessageCallback(MessageCallback);
     }
 #endif
 }
