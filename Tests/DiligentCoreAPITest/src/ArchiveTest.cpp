@@ -378,6 +378,9 @@ TEST_P(TestBrokenShader, CompileFailure)
     if ((DataFlag & AllowedBits) == 0)
         GTEST_SKIP() << GetArchiveDeviceDataFlagString(DataFlag) << " is not supported by archiver";
 
+    if ((DataFlag & (ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS | ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS)) != 0)
+        GTEST_SKIP() << "In Metal shaders are compiled when PSO is created";
+
     auto* pEnv             = TestingEnvironment::GetInstance();
     auto* pArchiverFactory = pEnv->GetArchiverFactory();
 

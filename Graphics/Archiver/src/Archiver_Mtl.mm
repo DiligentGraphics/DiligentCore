@@ -183,15 +183,16 @@ struct SerializedShaderImpl::CompiledShaderMtlImpl final : CompiledShader
 
 void SerializedShaderImpl::CreateShaderMtl(ShaderCreateInfo ShaderCI) noexcept(false)
 {
-    m_pShaderMtl = std::make_unique<CompiledShaderMtlImpl>();
+    auto pShaderMtl = std::make_unique<CompiledShaderMtlImpl>();
     // Convert HLSL/GLSL/SPIRV to MSL
     ShaderMtlImpl::ConvertToMSL(ShaderCI,
                                 m_pDevice->GetDeviceInfo(),
                                 m_pDevice->GetAdapterInfo(),
-                                m_pShaderMtl->MslSource,
-                                m_pShaderMtl->SPIRV,
-                                m_pShaderMtl->SPIRVResources,
-                                m_pShaderMtl->BufferTypeInfoMap); // may throw exception
+                                pShaderMtl->MslSource,
+                                pShaderMtl->SPIRV,
+                                pShaderMtl->SPIRVResources,
+                                pShaderMtl->BufferTypeInfoMap); // may throw exception
+    m_pShaderMtl = std::move(pShaderMtl);
 }
 
 const SPIRVShaderResources* SerializedShaderImpl::GetMtlShaderSPIRVResources() const
