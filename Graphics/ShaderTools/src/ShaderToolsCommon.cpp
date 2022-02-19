@@ -370,6 +370,9 @@ static std::string UnrollShaderIncludesImpl(ShaderCreateInfo ShaderCI, std::unor
 std::string UnrollShaderIncludes(const ShaderCreateInfo& ShaderCI)
 {
     std::unordered_set<std::string> Includes;
+    if (ShaderCI.FilePath != nullptr)
+        Includes.emplace(ShaderCI.FilePath);
+
     return UnrollShaderIncludesImpl(ShaderCI, Includes);
 }
 

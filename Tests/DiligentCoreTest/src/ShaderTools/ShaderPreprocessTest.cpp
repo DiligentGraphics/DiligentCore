@@ -154,7 +154,11 @@ TEST(ShaderPreprocessTest, UnrollIncludes)
             "// Start InlineIncludeShaderCommon2.hlsl\n"
             "\n"
             "\n"
+            "\n"
             "// End InlineIncludeShaderCommon2.hlsl\n"
+            "\n"
+            "\n"
+            "\n"
             "\n"
             "// End InlineIncludeShaderTest.hlsl\n";
 
