@@ -358,8 +358,16 @@ ShaderCreateInfo DILIGENT_CALL_TYPE SerializedPipelineStateImpl::GetPatchedShade
     const auto& Shaders = m_Data.Shaders[static_cast<size_t>(Type)];
     if (ShaderIndex < Shaders.size())
     {
-        Serializer<SerializerMode::Read> Ser{Shaders[ShaderIndex].Data};
-        ShaderSerializer<SerializerMode::Read>::SerializeCI(Ser, ShaderCI);
+        {
+            Serializer<SerializerMode::Read> Ser{Shaders[ShaderIndex].Data};
+            ShaderSerializer<SerializerMode::Read>::SerializeCI(Ser, ShaderCI);
+        }
+        if (Type == DeviceType::Metal_MacOS || Type == DeviceType::Metal_iOS)
+        {
+            // See DeviceObjectArchiveMtlImpl::UnpackShader
+            Serializer<SerializerMode::Read> Ser{SerializedData{const_cast<void*>(ShaderCI.ByteCode), ShaderCI.ByteCodeSize}};
+            Ser.SerializeBytes(ShaderCI.ByteCode, ShaderCI.ByteCodeSize);
+        }
     }
     else
     {
