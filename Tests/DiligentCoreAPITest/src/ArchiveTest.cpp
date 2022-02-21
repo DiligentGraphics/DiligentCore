@@ -494,11 +494,17 @@ void CreateTestRenderPass1(IRenderDevice*        pDevice,
     RPDesc.SubpassCount    = _countof(Subpasses);
     RPDesc.pSubpasses      = Subpasses;
 
-    pDevice->CreateRenderPass(RPDesc, ppRenderPass);
-    ASSERT_NE(*ppRenderPass, nullptr);
+    if (ppRenderPass != nullptr)
+    {
+        pDevice->CreateRenderPass(RPDesc, ppRenderPass);
+        ASSERT_NE(*ppRenderPass, nullptr);
+    }
 
-    pSerializationDevice->CreateRenderPass(RPDesc, ppSerializedRP);
-    ASSERT_NE(*ppSerializedRP, nullptr);
+    if (ppSerializedRP != nullptr)
+    {
+        pSerializationDevice->CreateRenderPass(RPDesc, ppSerializedRP);
+        ASSERT_NE(*ppSerializedRP, nullptr);
+    }
 }
 
 void CreateTestRenderPass2(IRenderDevice*        pDevice,
@@ -595,12 +601,67 @@ RefCntAutoPtr<IBuffer> CreateTestVertexBuffer(IRenderDevice* pDevice, IDeviceCon
     return pVB;
 }
 
+std::array<RefCntAutoPtr<ITexture>, 3> CreateTestGBuffer(TestingEnvironment* pEnv, IDeviceContext* pContext)
+{
+    constexpr Uint32 Width  = 64;
+    constexpr Uint32 Height = 64;
+
+    std::array<RefCntAutoPtr<ITexture>, 3> GBuffer;
+    {
+        Uint32 InitData[Width * Height] = {};
+
+        for (Uint32 y = 0; y < Height; ++y)
+            for (Uint32 x = 0; x < Width; ++x)
+                InitData[x + y * Width] = (x & 1 ? 0xFF000000 : 0) | (y & 1 ? 0x00FF0000 : 0) | 0x000000FF;
+
+        for (size_t i = 0; i < GBuffer.size(); ++i)
+        {
+            GBuffer[i] = pEnv->CreateTexture("", TEX_FORMAT_RGBA8_UNORM, BIND_SHADER_RESOURCE, Width, Height, InitData);
+
+            StateTransitionDesc Barrier{GBuffer[i], RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_SHADER_RESOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE};
+            pContext->TransitionResourceStates(1, &Barrier);
+        }
+    }
+
+    return GBuffer;
+}
+
+
+void RenderGraphicsPSOTestImage(IDeviceContext*         pContext,
+                                IPipelineState*         pPSO,
+                                IRenderPass*            pRenderPass,
+                                IShaderResourceBinding* pSRB,
+                                IFramebuffer*           pFramebuffer,
+                                IBuffer*                pVB)
+{
+    OptimizedClearValue ClearColor;
+    ClearColor.SetColor(TEX_FORMAT_RGBA8_UNORM, 0.25f, 0.5f, 0.75f, 1.0f);
+
+    BeginRenderPassAttribs BeginRPInfo;
+    BeginRPInfo.pRenderPass         = pRenderPass;
+    BeginRPInfo.pFramebuffer        = pFramebuffer;
+    BeginRPInfo.ClearValueCount     = 1;
+    BeginRPInfo.pClearValues        = &ClearColor;
+    BeginRPInfo.StateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+    pContext->BeginRenderPass(BeginRPInfo);
+
+    pContext->SetPipelineState(pPSO);
+    pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+    pContext->SetVertexBuffers(0, 1, &pVB, nullptr, RESOURCE_STATE_TRANSITION_MODE_VERIFY, SET_VERTEX_BUFFERS_FLAG_RESET);
+    pContext->Draw(DrawAttribs{6, DRAW_FLAG_VERIFY_ALL});
+
+    pContext->EndRenderPass();
+}
+
 void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
 {
     auto* pEnv             = TestingEnvironment::GetInstance();
     auto* pDevice          = pEnv->GetDevice();
     auto* pArchiverFactory = pEnv->GetArchiverFactory();
     auto* pDearchiver      = pDevice->GetEngineFactory()->GetDearchiver();
+    auto* pSwapChain       = pEnv->GetSwapChain();
+
+    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     if (pDevice->GetDeviceInfo().Features.SeparablePrograms != DEVICE_FEATURE_STATE_ENABLED)
         GTEST_SKIP() << "Non separable programs are not supported";
@@ -609,32 +670,33 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
         GTEST_SKIP() << "Archiver library is not loaded";
 
     RefCntAutoPtr<IPipelineStateCache> pPSOCache;
-    PipelineStateCacheCreateInfo       PSOCacheCI;
-    PSOCacheCI.Desc.Mode = /*PSO_CACHE_MODE_LOAD |*/ PSO_CACHE_MODE_STORE;
-    pDevice->CreatePipelineStateCache(PSOCacheCI, &pPSOCache);
+    {
+        PipelineStateCacheCreateInfo PSOCacheCI;
+        PSOCacheCI.Desc.Mode = /*PSO_CACHE_MODE_LOAD |*/ PSO_CACHE_MODE_STORE;
+        pDevice->CreatePipelineStateCache(PSOCacheCI, &pPSOCache);
+    }
 
-    constexpr char PSO1Name[] = "ArchiveTest.GraphicsPipeline - PSO 1";
-    constexpr char PSO2Name[] = "ArchiveTest.GraphicsPipeline - PSO 2";
-    constexpr char PSO3Name[] = "ArchiveTest.GraphicsPipeline - PSO 3";
-    constexpr char PRS1Name[] = "ArchiveTest.GraphicsPipeline - PRS 1";
-    constexpr char RP1Name[]  = "ArchiveTest.GraphicsPipeline - RP 1";
-    constexpr char RP2Name[]  = "ArchiveTest.GraphicsPipeline - RP 2";
-
-    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
-
-    auto* pSwapChain = pEnv->GetSwapChain();
-
-    SerializationDeviceCreateInfo DeviceCI;
-    DeviceCI.Metal.CompileOptionsMacOS = "-sdk macosx metal -std=macos-metal2.0 -mmacos-version-min=10.0";
-    DeviceCI.Metal.CompileOptionsiOS   = "-sdk iphoneos metal -std=ios-metal2.0 -mios-version-min=10.0";
+    constexpr char PSOWithResLayoutName[]  = "ArchiveTest.GraphicsPipeline - PSO with Layout";
+    constexpr char PSOWithResLayoutName2[] = "ArchiveTest.GraphicsPipeline - PSO with Layout and Render Pass";
+    constexpr char PSOWithSignName[]       = "ArchiveTest.GraphicsPipeline - PSO with Signatures";
+    constexpr char PRSName[]               = "ArchiveTest.GraphicsPipeline - PRS";
+    constexpr char RPName[]                = "ArchiveTest.GraphicsPipeline - RP";
+    constexpr char RP2Name[]               = "ArchiveTest.GraphicsPipeline - RP 2";
 
     RefCntAutoPtr<ISerializationDevice> pSerializationDevice;
-    pArchiverFactory->CreateSerializationDevice(DeviceCI, &pSerializationDevice);
-    ASSERT_NE(pSerializationDevice, nullptr);
+    {
+        SerializationDeviceCreateInfo DeviceCI;
+        DeviceCI.Metal.CompileOptionsMacOS = "-sdk macosx metal -std=macos-metal2.0 -mmacos-version-min=10.0";
+        DeviceCI.Metal.CompileOptionsiOS   = "-sdk iphoneos metal -std=ios-metal2.0 -mios-version-min=10.0";
 
-    RefCntAutoPtr<IRenderPass> pRenderPass1;
-    RefCntAutoPtr<IRenderPass> pSerializedRenderPass1;
-    CreateTestRenderPass1(pDevice, pSerializationDevice, pSwapChain, RP1Name, &pRenderPass1, &pSerializedRenderPass1);
+        pArchiverFactory->CreateSerializationDevice(DeviceCI, &pSerializationDevice);
+        ASSERT_NE(pSerializationDevice, nullptr);
+    }
+
+    RefCntAutoPtr<IRenderPass> pRenderPass;
+    RefCntAutoPtr<IRenderPass> pSerializedRenderPass, pSerializedRenderPassClone;
+    CreateTestRenderPass1(pDevice, pSerializationDevice, pSwapChain, RPName, &pRenderPass, &pSerializedRenderPass);
+    CreateTestRenderPass1(pDevice, pSerializationDevice, pSwapChain, RPName, nullptr, &pSerializedRenderPassClone);
 
     {
         RefCntAutoPtr<IRenderPass> pRenderPass2;
@@ -642,10 +704,10 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
         CreateTestRenderPass2(pDevice, pSerializationDevice, pSwapChain, RP2Name, &pRenderPass2, &pSerializedRenderPass2);
     }
 
+    constexpr auto VarType = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE;
+
     RefCntAutoPtr<IPipelineResourceSignature> pRefPRS;
     RefCntAutoPtr<IPipelineResourceSignature> pSerializedPRS;
-
-    constexpr auto VarType = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE;
     {
         constexpr PipelineResourceDesc Resources[] = //
             {
@@ -654,18 +716,16 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
                 {SHADER_TYPE_PIXEL, "g_GBuffer_Depth", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, VarType},
                 {SHADER_TYPE_ALL_GRAPHICS, "cbConstants", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, VarType} //
             };
-
-        PipelineResourceSignatureDesc PRSDesc;
-        PRSDesc.Name         = PRS1Name;
-        PRSDesc.Resources    = Resources;
-        PRSDesc.NumResources = _countof(Resources);
-
         constexpr ImmutableSamplerDesc ImmutableSamplers[] = //
             {
                 {SHADER_TYPE_PIXEL, "g_GBuffer_Color_sampler", SamplerDesc{}},
                 {SHADER_TYPE_PIXEL, "g_GBuffer_Normal_sampler", SamplerDesc{}},
                 {SHADER_TYPE_PIXEL, "g_GBuffer_Depth_sampler", SamplerDesc{}} //
             };
+        PipelineResourceSignatureDesc PRSDesc;
+        PRSDesc.Name                 = PRSName;
+        PRSDesc.Resources            = Resources;
+        PRSDesc.NumResources         = _countof(Resources);
         PRSDesc.ImmutableSamplers    = ImmutableSamplers;
         PRSDesc.NumImmutableSamplers = _countof(ImmutableSamplers);
 
@@ -676,8 +736,8 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
         ASSERT_NE(pRefPRS, nullptr);
     }
 
-    RefCntAutoPtr<IPipelineState>       pRefPSO_1;
-    RefCntAutoPtr<IPipelineState>       pRefPSO_2;
+    RefCntAutoPtr<IPipelineState>       pRefPSOWithLayout;
+    RefCntAutoPtr<IPipelineState>       pRefPSOWithSign;
     RefCntAutoPtr<IDeviceObjectArchive> pArchive;
     {
         RefCntAutoPtr<IArchiver> pArchiver;
@@ -747,17 +807,15 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
         GraphicsPipeline.InputLayout.LayoutElements = InstancedElems;
         GraphicsPipeline.InputLayout.NumElements    = _countof(InstancedElems);
 
+        PSOCreateInfo.pPSOCache = pPSOCache;
 
-        GraphicsPipelineStateCreateInfo PSOCreateInfo2 = PSOCreateInfo;
+        PipelineStateArchiveInfo ArchiveInfo;
+        ArchiveInfo.DeviceFlags = GetDeviceBits();
+        ArchiveInfo.PSOFlags    = ArchiveFlags;
 
-        PSOCreateInfo.pVS  = pVS;
-        PSOCreateInfo.pPS  = pPS;
-        PSOCreateInfo2.pVS = pSerializedVS;
-        PSOCreateInfo2.pPS = pSerializedPS;
-
-        // PSO 1
+        // PSO 1 - with resource layout
         {
-            PipelineResourceLayoutDesc LayoutDesc{};
+            PSOCreateInfo.PSODesc.Name = PSOWithResLayoutName;
 
             constexpr ImmutableSamplerDesc ImmutableSamplers[] = //
                 {
@@ -765,9 +823,6 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
                     {SHADER_TYPE_PIXEL, "g_GBuffer_Normal", SamplerDesc{}},
                     {SHADER_TYPE_PIXEL, "g_GBuffer_Depth", SamplerDesc{}} //
                 };
-            LayoutDesc.ImmutableSamplers    = ImmutableSamplers;
-            LayoutDesc.NumImmutableSamplers = _countof(ImmutableSamplers);
-
             constexpr ShaderResourceVariableDesc Variables[] = //
                 {
                     {SHADER_TYPE_ALL_GRAPHICS, "cbConstants", SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
@@ -776,19 +831,23 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
                     {SHADER_TYPE_PIXEL, "g_GBuffer_Depth", SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
                     {SHADER_TYPE_PIXEL, "g_Dummy", SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC} //
                 };
-            LayoutDesc.Variables           = Variables;
-            LayoutDesc.NumVariables        = _countof(Variables);
-            LayoutDesc.DefaultVariableType = VarType;
+            auto& LayoutDesc{PSOCreateInfo.PSODesc.ResourceLayout};
+            LayoutDesc.ImmutableSamplers    = ImmutableSamplers;
+            LayoutDesc.NumImmutableSamplers = _countof(ImmutableSamplers);
+            LayoutDesc.Variables            = Variables;
+            LayoutDesc.NumVariables         = _countof(Variables);
+            LayoutDesc.DefaultVariableType  = VarType;
 
-            PSOCreateInfo2.PSODesc.Name           = PSO1Name;
-            PSOCreateInfo2.PSODesc.ResourceLayout = LayoutDesc;
+            PSOCreateInfo.pVS = pVS;
+            PSOCreateInfo.pPS = pPS;
+            pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pRefPSOWithLayout);
+            ASSERT_NE(pRefPSOWithLayout, nullptr);
 
-            PipelineStateArchiveInfo ArchiveInfo;
-            ArchiveInfo.DeviceFlags = GetDeviceBits();
-            ArchiveInfo.PSOFlags    = ArchiveFlags;
+            PSOCreateInfo.pVS = pSerializedVS;
+            PSOCreateInfo.pPS = pSerializedPS;
             {
                 RefCntAutoPtr<IPipelineState> pSerializedPSO;
-                pSerializationDevice->CreateGraphicsPipelineState(PSOCreateInfo2, ArchiveInfo, &pSerializedPSO);
+                pSerializationDevice->CreateGraphicsPipelineState(PSOCreateInfo, ArchiveInfo, &pSerializedPSO);
                 ASSERT_NE(pSerializedPSO, nullptr);
                 ASSERT_TRUE(pArchiver->AddPipelineState(pSerializedPSO));
 
@@ -813,59 +872,56 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
             }
 
             {
-                PSOCreateInfo2.PSODesc.Name = PSO3Name;
+                PSOCreateInfo.PSODesc.Name        = PSOWithResLayoutName2;
+                GraphicsPipeline.NumRenderTargets = 0;
+                GraphicsPipeline.RTVFormats[0]    = TEX_FORMAT_UNKNOWN;
+                // Use render pass clone to test render pass deduplication later
+                GraphicsPipeline.pRenderPass = pSerializedRenderPassClone;
                 RefCntAutoPtr<IPipelineState> pSerializedPSO;
-                pSerializationDevice->CreateGraphicsPipelineState(PSOCreateInfo2, ArchiveInfo, &pSerializedPSO);
+                pSerializationDevice->CreateGraphicsPipelineState(PSOCreateInfo, ArchiveInfo, &pSerializedPSO);
                 ASSERT_NE(pSerializedPSO, nullptr);
                 ASSERT_TRUE(pArchiver->AddPipelineState(pSerializedPSO));
             }
 
-            PSOCreateInfo.pPSOCache              = pPSOCache;
-            PSOCreateInfo.PSODesc.Name           = PSO1Name;
-            PSOCreateInfo.PSODesc.ResourceLayout = LayoutDesc;
-
-            pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pRefPSO_1);
-            ASSERT_NE(pRefPSO_1, nullptr);
-
-            PSOCreateInfo2.PSODesc.ResourceLayout = {};
-            PSOCreateInfo.PSODesc.ResourceLayout  = {};
+            PSOCreateInfo.PSODesc.ResourceLayout = {};
         }
 
-        // PSO 2
+        // PSO 2 - with explicit resource signatures and render pass
         {
-            IPipelineResourceSignature* SerializedSignatures[] = {pSerializedPRS};
-            PSOCreateInfo2.ResourceSignaturesCount             = _countof(SerializedSignatures);
-            PSOCreateInfo2.ppResourceSignatures                = SerializedSignatures;
-
-            PSOCreateInfo2.PSODesc.Name = PSO2Name;
-
-            auto& GraphicsPipeline2{PSOCreateInfo2.GraphicsPipeline};
-            GraphicsPipeline2.pRenderPass      = pSerializedRenderPass1;
-            GraphicsPipeline2.NumRenderTargets = 0;
-            GraphicsPipeline2.RTVFormats[0]    = TEX_FORMAT_UNKNOWN;
-
-            {
-                PipelineStateArchiveInfo ArchiveInfo;
-                ArchiveInfo.DeviceFlags = GetDeviceBits();
-                ArchiveInfo.PSOFlags    = ArchiveFlags;
-                RefCntAutoPtr<IPipelineState> pSerializedPSO;
-                pSerializationDevice->CreateGraphicsPipelineState(PSOCreateInfo2, ArchiveInfo, &pSerializedPSO);
-                ASSERT_NE(pSerializedPSO, nullptr);
-                ASSERT_TRUE(pArchiver->AddPipelineState(pSerializedPSO));
-            }
-
-            IPipelineResourceSignature* Signatures[] = {pRefPRS};
-            PSOCreateInfo.ResourceSignaturesCount    = _countof(Signatures);
-            PSOCreateInfo.ppResourceSignatures       = Signatures;
-
-            PSOCreateInfo.pPSOCache           = pPSOCache;
-            PSOCreateInfo.PSODesc.Name        = PSO2Name;
-            GraphicsPipeline.pRenderPass      = pRenderPass1;
+            PSOCreateInfo.PSODesc.Name        = PSOWithSignName;
             GraphicsPipeline.NumRenderTargets = 0;
             GraphicsPipeline.RTVFormats[0]    = TEX_FORMAT_UNKNOWN;
 
-            pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pRefPSO_2);
-            ASSERT_NE(pRefPSO_2, nullptr);
+            {
+                PSOCreateInfo.pVS = pSerializedVS;
+                PSOCreateInfo.pPS = pSerializedPS;
+
+                GraphicsPipeline.pRenderPass = pSerializedRenderPass;
+
+                IPipelineResourceSignature* SerializedSignatures[]{pSerializedPRS};
+                PSOCreateInfo.ResourceSignaturesCount = _countof(SerializedSignatures);
+                PSOCreateInfo.ppResourceSignatures    = SerializedSignatures;
+
+                RefCntAutoPtr<IPipelineState> pSerializedPSO;
+                // Note that render should be deduplicated by the archiver
+                pSerializationDevice->CreateGraphicsPipelineState(PSOCreateInfo, ArchiveInfo, &pSerializedPSO);
+                ASSERT_NE(pSerializedPSO, nullptr);
+                ASSERT_TRUE(pArchiver->AddPipelineState(pSerializedPSO));
+            }
+
+            {
+                PSOCreateInfo.pVS = pVS;
+                PSOCreateInfo.pPS = pPS;
+
+                GraphicsPipeline.pRenderPass = pRenderPass;
+
+                IPipelineResourceSignature* Signatures[] = {pRefPRS};
+                PSOCreateInfo.ResourceSignaturesCount    = _countof(Signatures);
+                PSOCreateInfo.ppResourceSignatures       = Signatures;
+
+                pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pRefPSOWithSign);
+                ASSERT_NE(pRefPSOWithSign, nullptr);
+            }
         }
 
         RefCntAutoPtr<IDataBlob> pBlob;
@@ -881,40 +937,39 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
     RefCntAutoPtr<IRenderPass> pUnpackedRenderPass;
     {
         RenderPassUnpackInfo UnpackInfo;
-        UnpackInfo.Name     = RP1Name;
+        UnpackInfo.Name     = RPName;
         UnpackInfo.pArchive = pArchive;
         UnpackInfo.pDevice  = pDevice;
 
         pDearchiver->UnpackRenderPass(UnpackInfo, &pUnpackedRenderPass);
         ASSERT_NE(pUnpackedRenderPass, nullptr);
-
-        EXPECT_EQ(pUnpackedRenderPass->GetDesc(), pRenderPass1->GetDesc());
+        EXPECT_EQ(pUnpackedRenderPass->GetDesc(), pRenderPass->GetDesc());
     }
 
     // Unpack PSO 1
     {
         PipelineStateUnpackInfo UnpackInfo;
-        UnpackInfo.Name         = PSO1Name;
+        UnpackInfo.Name         = PSOWithResLayoutName;
         UnpackInfo.pArchive     = pArchive;
         UnpackInfo.pDevice      = pDevice;
         UnpackInfo.PipelineType = PIPELINE_TYPE_GRAPHICS;
         UnpackInfo.pCache       = pPSOCache;
 
-        RefCntAutoPtr<IPipelineState> pUnpackedPSO_1;
-        pDearchiver->UnpackPipelineState(UnpackInfo, &pUnpackedPSO_1);
-        ASSERT_NE(pUnpackedPSO_1, nullptr);
+        RefCntAutoPtr<IPipelineState> pUnpackedPSOWithLayout;
+        pDearchiver->UnpackPipelineState(UnpackInfo, &pUnpackedPSOWithLayout);
+        ASSERT_NE(pUnpackedPSOWithLayout, nullptr);
 
-        EXPECT_EQ(pUnpackedPSO_1->GetGraphicsPipelineDesc(), pRefPSO_1->GetGraphicsPipelineDesc());
-        EXPECT_EQ(pUnpackedPSO_1->GetResourceSignatureCount(), pRefPSO_1->GetResourceSignatureCount());
+        EXPECT_EQ(pUnpackedPSOWithLayout->GetGraphicsPipelineDesc(), pRefPSOWithLayout->GetGraphicsPipelineDesc());
+        EXPECT_EQ(pUnpackedPSOWithLayout->GetResourceSignatureCount(), pRefPSOWithLayout->GetResourceSignatureCount());
 
         // OpenGL PRS has immutable samplers as resources, which is not supported in comparator.
         // Metal PRS in the Archiver is generated from SPIRV, in the Engine - from the reflection, and they thus may have different resource order.
         if (!pDevice->GetDeviceInfo().IsGLDevice() && !pDevice->GetDeviceInfo().IsMetalDevice())
         {
-            for (Uint32 s = 0, SCnt = std::min(pUnpackedPSO_1->GetResourceSignatureCount(), pRefPSO_1->GetResourceSignatureCount()); s < SCnt; ++s)
+            for (Uint32 s = 0, SCnt = std::min(pUnpackedPSOWithLayout->GetResourceSignatureCount(), pRefPSOWithLayout->GetResourceSignatureCount()); s < SCnt; ++s)
             {
-                auto* pLhsSign = pUnpackedPSO_1->GetResourceSignature(s);
-                auto* pRhsSign = pRefPSO_1->GetResourceSignature(s);
+                auto* pLhsSign = pUnpackedPSOWithLayout->GetResourceSignature(s);
+                auto* pRhsSign = pRefPSOWithLayout->GetResourceSignature(s);
                 EXPECT_EQ((pLhsSign != nullptr), (pRhsSign != nullptr));
                 if ((pLhsSign != nullptr) != (pRhsSign != nullptr))
                     continue;
@@ -925,36 +980,36 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
         }
 
         // Check default PRS cache
-        RefCntAutoPtr<IPipelineState> pUnpackedPSO_3;
-        UnpackInfo.Name = PSO3Name;
-        pDearchiver->UnpackPipelineState(UnpackInfo, &pUnpackedPSO_3);
-        ASSERT_NE(pUnpackedPSO_3, nullptr);
+        RefCntAutoPtr<IPipelineState> pUnpackedPSOWithLayout2;
+        UnpackInfo.Name = PSOWithResLayoutName2;
+        pDearchiver->UnpackPipelineState(UnpackInfo, &pUnpackedPSOWithLayout2);
+        ASSERT_NE(pUnpackedPSOWithLayout2, nullptr);
 
-        EXPECT_EQ(pUnpackedPSO_3->GetResourceSignatureCount(), 1u);
-        EXPECT_TRUE(pUnpackedPSO_3->GetResourceSignature(0)->IsCompatibleWith(pUnpackedPSO_1->GetResourceSignature(0)));
+        EXPECT_EQ(pUnpackedPSOWithLayout2->GetResourceSignatureCount(), 1u);
+        EXPECT_TRUE(pUnpackedPSOWithLayout2->GetResourceSignature(0)->IsCompatibleWith(pUnpackedPSOWithLayout->GetResourceSignature(0)));
     }
 
     // Unpack PSO 2
-    RefCntAutoPtr<IPipelineState> pUnpackedPSO_2;
+    RefCntAutoPtr<IPipelineState> pUnpackedPSOWithSign;
     {
         PipelineStateUnpackInfo UnpackInfo;
-        UnpackInfo.Name         = PSO2Name;
+        UnpackInfo.Name         = PSOWithSignName;
         UnpackInfo.pArchive     = pArchive;
         UnpackInfo.pDevice      = pDevice;
         UnpackInfo.PipelineType = PIPELINE_TYPE_GRAPHICS;
         UnpackInfo.pCache       = pPSOCache;
 
-        pDearchiver->UnpackPipelineState(UnpackInfo, &pUnpackedPSO_2);
-        ASSERT_NE(pUnpackedPSO_2, nullptr);
+        pDearchiver->UnpackPipelineState(UnpackInfo, &pUnpackedPSOWithSign);
+        ASSERT_NE(pUnpackedPSOWithSign, nullptr);
 
-        EXPECT_EQ(pUnpackedPSO_2->GetGraphicsPipelineDesc(), pRefPSO_2->GetGraphicsPipelineDesc());
-        EXPECT_EQ(pUnpackedPSO_2->GetGraphicsPipelineDesc().pRenderPass, pUnpackedRenderPass);
-        EXPECT_EQ(pUnpackedPSO_2->GetResourceSignatureCount(), pRefPSO_2->GetResourceSignatureCount());
+        EXPECT_EQ(pUnpackedPSOWithSign->GetGraphicsPipelineDesc(), pRefPSOWithSign->GetGraphicsPipelineDesc());
+        EXPECT_EQ(pUnpackedPSOWithSign->GetGraphicsPipelineDesc().pRenderPass, pUnpackedRenderPass);
+        EXPECT_EQ(pUnpackedPSOWithSign->GetResourceSignatureCount(), pRefPSOWithSign->GetResourceSignatureCount());
 
-        for (Uint32 s = 0, SCnt = std::min(pUnpackedPSO_2->GetResourceSignatureCount(), pRefPSO_2->GetResourceSignatureCount()); s < SCnt; ++s)
+        for (Uint32 s = 0, SCnt = std::min(pUnpackedPSOWithSign->GetResourceSignatureCount(), pRefPSOWithSign->GetResourceSignatureCount()); s < SCnt; ++s)
         {
-            auto* pLhsSign = pUnpackedPSO_2->GetResourceSignature(s);
-            auto* pRhsSign = pRefPSO_2->GetResourceSignature(s);
+            auto* pLhsSign = pUnpackedPSOWithSign->GetResourceSignature(s);
+            auto* pRhsSign = pRefPSOWithSign->GetResourceSignature(s);
             EXPECT_EQ((pLhsSign != nullptr), (pRhsSign != nullptr));
             if ((pLhsSign != nullptr) != (pRhsSign != nullptr))
                 continue;
@@ -966,40 +1021,22 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
 
     auto* pContext = pEnv->GetDeviceContext();
 
-    RefCntAutoPtr<IBuffer> pVB = CreateTestVertexBuffer(pDevice, pContext);
+    auto pVB = CreateTestVertexBuffer(pDevice, pContext);
     ASSERT_NE(pVB, nullptr);
-    IBuffer* pVBs[] = {pVB};
 
-    std::array<RefCntAutoPtr<ITexture>, 3> GBuffer;
-    {
-        const Uint32 Width                    = 16;
-        const Uint32 Height                   = 16;
-        Uint32       InitData[Width * Height] = {};
+    auto GBuffer = CreateTestGBuffer(pEnv, pContext);
+    for (const auto& Buff : GBuffer)
+        ASSERT_NE(Buff, nullptr);
 
-        for (Uint32 y = 0; y < Height; ++y)
-            for (Uint32 x = 0; x < Width; ++x)
-                InitData[x + y * Width] = (x & 1 ? 0xFF000000 : 0) | (y & 1 ? 0x00FF0000 : 0) | 0x000000FF;
-
-        for (size_t i = 0; i < GBuffer.size(); ++i)
-        {
-            GBuffer[i] = pEnv->CreateTexture("", TEX_FORMAT_RGBA8_UNORM, BIND_SHADER_RESOURCE, Width, Height, InitData);
-            ASSERT_NE(GBuffer[i], nullptr);
-
-            StateTransitionDesc Barrier{GBuffer[i], RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_SHADER_RESOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE};
-            pContext->TransitionResourceStates(1, &Barrier);
-        }
-    }
-
-    struct Constants
-    {
-        float4 UVScale;
-        float4 ColorScale;
-        float4 NormalScale;
-        float4 DepthScale;
-    };
     RefCntAutoPtr<IBuffer> pConstants;
     {
-        Constants Const;
+        struct Constants
+        {
+            float4 UVScale;
+            float4 ColorScale;
+            float4 NormalScale;
+            float4 DepthScale;
+        } Const;
         Const.UVScale     = float4{0.9f, 0.8f, 0.0f, 0.0f};
         Const.ColorScale  = float4{0.15f};
         Const.NormalScale = float4{0.2f};
@@ -1032,39 +1069,21 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
 
     RefCntAutoPtr<IFramebuffer> pFramebuffer;
     {
-        auto*         pRTV        = pSwapChain->GetCurrentBackBufferRTV();
-        ITextureView* pTexViews[] = {pRTV};
+        ITextureView* pTexViews[] = {pSwapChain->GetCurrentBackBufferRTV()};
 
         FramebufferDesc FBDesc;
         FBDesc.Name            = "Framebuffer 1";
-        FBDesc.pRenderPass     = pRenderPass1;
+        FBDesc.pRenderPass     = pRenderPass;
         FBDesc.AttachmentCount = _countof(pTexViews);
         FBDesc.ppAttachments   = pTexViews;
         pDevice->CreateFramebuffer(FBDesc, &pFramebuffer);
         ASSERT_NE(pFramebuffer, nullptr);
     }
 
-    OptimizedClearValue ClearColor;
-    ClearColor.SetColor(TEX_FORMAT_RGBA8_UNORM, 0.25f, 0.5f, 0.75f, 1.0f);
-
     // Draw reference
-    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_TestingSwapChain};
-    if (pTestingSwapChain)
+    if (RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_TestingSwapChain})
     {
-        BeginRenderPassAttribs BeginRPInfo;
-        BeginRPInfo.pRenderPass         = pRenderPass1;
-        BeginRPInfo.pFramebuffer        = pFramebuffer;
-        BeginRPInfo.ClearValueCount     = 1;
-        BeginRPInfo.pClearValues        = &ClearColor;
-        BeginRPInfo.StateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
-        pContext->BeginRenderPass(BeginRPInfo);
-
-        pContext->SetPipelineState(pRefPSO_2);
-        pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
-        pContext->SetVertexBuffers(0, 1, pVBs, nullptr, RESOURCE_STATE_TRANSITION_MODE_VERIFY, SET_VERTEX_BUFFERS_FLAG_RESET);
-        pContext->Draw(DrawAttribs{6, DRAW_FLAG_VERIFY_ALL});
-
-        pContext->EndRenderPass();
+        RenderGraphicsPSOTestImage(pContext, pRefPSOWithSign, pRenderPass, pSRB, pFramebuffer, pVB);
 
         // Transition to CopySrc state to use in TakeSnapshot()
         auto                pRT = pSwapChain->GetCurrentBackBufferRTV()->GetTexture();
@@ -1078,23 +1097,7 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
     }
 
     // Draw
-    {
-        BeginRenderPassAttribs BeginRPInfo;
-        BeginRPInfo.pRenderPass         = pUnpackedRenderPass;
-        BeginRPInfo.pFramebuffer        = pFramebuffer;
-        BeginRPInfo.ClearValueCount     = 1;
-        BeginRPInfo.pClearValues        = &ClearColor;
-        BeginRPInfo.StateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
-        pContext->BeginRenderPass(BeginRPInfo);
-
-        pContext->SetPipelineState(pUnpackedPSO_2);
-        pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
-        pContext->SetVertexBuffers(0, 1, pVBs, nullptr, RESOURCE_STATE_TRANSITION_MODE_VERIFY, SET_VERTEX_BUFFERS_FLAG_RESET);
-        pContext->Draw(DrawAttribs{6, DRAW_FLAG_VERIFY_ALL});
-
-        pContext->EndRenderPass();
-    }
-
+    RenderGraphicsPSOTestImage(pContext, pUnpackedPSOWithSign, pUnpackedRenderPass, pSRB, pFramebuffer, pVB);
     pSwapChain->Present();
 
     if (pPSOCache)
