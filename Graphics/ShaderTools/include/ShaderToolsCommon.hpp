@@ -111,6 +111,6 @@ struct ShaderIncludePreprocessInfo
 bool ProcessShaderIncludes(const ShaderCreateInfo& ShaderCI, std::function<void(const ShaderIncludePreprocessInfo&)> IncludeHandler);
 
 ///  Unrolls all include files into a single file
-std::string UnrollShaderIncludes(const ShaderCreateInfo& ShaderCI);
+std::string UnrollShaderIncludes(const ShaderCreateInfo& ShaderCI) noexcept(false);
 
 } // namespace Diligent

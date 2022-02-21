@@ -132,6 +132,26 @@ TEST(ShaderPreprocessTest, Include)
     }
 }
 
+TEST(ShaderPreprocessTest, InvalidInclude)
+{
+    RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
+    CreateDefaultShaderSourceStreamFactory("shaders/ShaderPreprocessor", &pShaderSourceFactory);
+    ASSERT_NE(pShaderSourceFactory, nullptr);
+
+    for (size_t TestId = 0; TestId < 8; TestId++)
+    {
+        String FilePath = "IncludeInvalidCase" + std::to_string(TestId) + ".hlsl";
+
+        ShaderCreateInfo ShaderCI{};
+        ShaderCI.Desc.Name                  = "TestShader";
+        ShaderCI.FilePath                   = FilePath.c_str();
+        ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
+
+        const auto Result = ProcessShaderIncludes(ShaderCI, {});
+        EXPECT_EQ(Result, false);
+    }
+}
+
 TEST(ShaderPreprocessTest, UnrollIncludes)
 {
     RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;

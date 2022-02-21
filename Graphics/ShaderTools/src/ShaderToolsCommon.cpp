@@ -157,12 +157,38 @@ void AppendShaderSourceCode(std::string& Source, const ShaderCreateInfo& ShaderC
     Source.append(SourceData.Source, SourceData.SourceLength);
 }
 
+static void GePositionInfo(const Char* pBuffer, size_t BufferSize, size_t Offset, size_t& Line, size_t& LineOffset)
+{
+    VERIFY_EXPR(Offset < BufferSize);
+
+    LineOffset = Offset;
+    for (size_t i = 0; i < Offset; ++i)
+    {
+        if (pBuffer[i] == '\n')
+        {
+            ++Line;
+            LineOffset = Offset - i;
+        }
+    }
+}
+
+static String ParserErrorMessage(const char* Message, const Char* pBuffer, size_t BufferSize, size_t Offset)
+{
+    size_t Line       = 0;
+    size_t LineOffset = 0;
+    GePositionInfo(pBuffer, BufferSize, Offset, Line, LineOffset);
+
+    std::stringstream Stream;
+    Stream << Message << "[" << Line << ":" << LineOffset << "]";
+    return Stream.str();
+}
+
 // https://github.com/tomtom-international/cpp-dependencies/blob/a91f330e97c6b9e4e9ecd81f43c4a40e044d4bbc/src/Input.cpp
-template <typename HandlerType>
-void FindIncludes(const char* pBuffer, size_t BufferSize, HandlerType IncludeHandler)
+template <typename HandlerType, typename ErrorHandlerType>
+bool FindIncludes(const char* pBuffer, size_t BufferSize, HandlerType IncludeHandler, ErrorHandlerType ErrorHandler)
 {
     if (BufferSize == 0)
-        return;
+        return true;
 
     enum State
     {
@@ -192,7 +218,7 @@ void FindIncludes(const char* pBuffer, size_t BufferSize, HandlerType IncludeHan
 
                 // Exit from the function if a hash is not found in the buffer
                 if (NextHash == nullptr)
-                    return;
+                    return true;
 
                 // Find a slash character if the current position is greater NextSlash
                 if (NextSlash && NextSlash < pBuffer + Offset)
@@ -212,7 +238,11 @@ void FindIncludes(const char* pBuffer, size_t BufferSize, HandlerType IncludeHan
                         {
                             const char* EndSlash = static_cast<const Char*>(memchr(pBuffer + Offset + 1, '/', BufferSize - Offset));
                             if (!EndSlash)
-                                return;
+                            {
+                                ErrorHandler(ParserErrorMessage("missing closing slash: ", pBuffer, BufferSize, Offset));
+                                return false;
+                            }
+
                             Offset = EndSlash - pBuffer;
                         } while (pBuffer[Offset - 1] != '*');
                     }
@@ -256,7 +286,8 @@ void FindIncludes(const char* pBuffer, size_t BufferSize, HandlerType IncludeHan
                     }
                     else
                     {
-                        PreprocessorState = None;
+                        ErrorHandler(ParserErrorMessage("missing opening quote or angle bracket after include: ", pBuffer, BufferSize, Offset));
+                        return false;
                     }
                 }
                 break;
@@ -265,8 +296,8 @@ void FindIncludes(const char* pBuffer, size_t BufferSize, HandlerType IncludeHan
                 switch (pBuffer[Offset])
                 {
                     case '\n':
-                        PreprocessorState = None; // Buggy code, skip over this include.
-                        break;
+                        ErrorHandler(ParserErrorMessage("missing closing quote: ", pBuffer, BufferSize, Offset));
+                        return false;
                     case '"':
                         IncludeHandler(std::string(&pBuffer[Start], &pBuffer[Offset]), NextHash - pBuffer, Offset + 1);
                         PreprocessorState = None;
@@ -278,8 +309,8 @@ void FindIncludes(const char* pBuffer, size_t BufferSize, HandlerType IncludeHan
                 switch (pBuffer[Offset])
                 {
                     case '\n':
-                        PreprocessorState = None; // Buggy code, skip over this include.
-                        break;
+                        ErrorHandler(ParserErrorMessage("missing closing angle bracket: ", pBuffer, BufferSize, Offset));
+                        return false;
                     case '>':
                         IncludeHandler(std::string(&pBuffer[Start], &pBuffer[Offset]), NextHash - pBuffer, Offset + 1);
                         PreprocessorState = None;
@@ -289,10 +320,11 @@ void FindIncludes(const char* pBuffer, size_t BufferSize, HandlerType IncludeHan
         }
         Offset++;
     }
+    return true;
 }
 
 template <typename IncludeHandlerType>
-void ProcessShaderIncludesImpl(const ShaderCreateInfo& ShaderCI, std::unordered_set<std::string>& Includes, IncludeHandlerType IncludeHandler)
+void ProcessShaderIncludesImpl(const ShaderCreateInfo& ShaderCI, std::unordered_set<std::string>& Includes, IncludeHandlerType IncludeHandler) noexcept(false)
 {
     const auto SourceData = ReadShaderSourceFile(ShaderCI);
 
@@ -301,18 +333,26 @@ void ProcessShaderIncludesImpl(const ShaderCreateInfo& ShaderCI, std::unordered_
     FileInfo.SourceLength = SourceData.SourceLength;
     FileInfo.FilePath     = ShaderCI.FilePath != nullptr ? ShaderCI.FilePath : "";
 
-    FindIncludes(FileInfo.Source, FileInfo.SourceLength,
-                 [&](const std::string& FilePath, size_t Start, size_t End) //
-                 {
-                     if (!Includes.insert(FilePath).second)
-                         return;
+    auto IncludeCallback = [&](const std::string& FilePath, size_t Start, size_t End) //
+    {
+        if (!Includes.insert(FilePath).second)
+            return;
 
-                     auto IncludeCI{ShaderCI};
-                     IncludeCI.FilePath     = FilePath.c_str();
-                     IncludeCI.Source       = nullptr;
-                     IncludeCI.SourceLength = 0;
-                     ProcessShaderIncludesImpl(IncludeCI, Includes, IncludeHandler);
-                 });
+        auto IncludeCI{ShaderCI};
+        IncludeCI.FilePath     = FilePath.c_str();
+        IncludeCI.Source       = nullptr;
+        IncludeCI.SourceLength = 0;
+        ProcessShaderIncludesImpl(IncludeCI, Includes, IncludeHandler);
+    };
+
+    auto ErrorCallback = [&](const std::string& Error) //
+    {
+        LOG_ERROR("Failed to parse file '", ShaderCI.FilePath, "' ", Error);
+    };
+
+    const auto Result = FindIncludes(FileInfo.Source, FileInfo.SourceLength, IncludeCallback, ErrorCallback);
+    if (!Result)
+        LOG_ERROR_AND_THROW("Failed to preprocess shader: '", (ShaderCI.Desc.Name != nullptr ? ShaderCI.Desc.Name : ""), "'.");
 
     IncludeHandler(FileInfo);
 }
@@ -327,12 +367,11 @@ bool ProcessShaderIncludes(const ShaderCreateInfo& ShaderCI, std::function<void(
     }
     catch (...)
     {
-        LOG_ERROR("Failed to preprocess shader: '", (ShaderCI.Desc.Name != nullptr ? ShaderCI.Desc.Name : ""), "'.");
         return false;
     }
 }
 
-static std::string UnrollShaderIncludesImpl(ShaderCreateInfo ShaderCI, std::unordered_set<std::string>& AllIncludes)
+static std::string UnrollShaderIncludesImpl(ShaderCreateInfo ShaderCI, std::unordered_set<std::string>& AllIncludes) noexcept(false)
 {
     const auto SourceData = ReadShaderSourceFile(ShaderCI);
 
@@ -343,7 +382,8 @@ static std::string UnrollShaderIncludesImpl(ShaderCreateInfo ShaderCI, std::unor
     std::stringstream Stream;
     size_t            PrevIncludeEnd = 0;
 
-    FindIncludes(ShaderCI.Source, ShaderCI.SourceLength, [&](const std::string& Path, size_t IncludeStart, size_t IncludeEnd) {
+    auto IncludeCallback = [&](const std::string& Path, size_t IncludeStart, size_t IncludeEnd) //
+    {
         // Insert text before the include start
         Stream.write(ShaderCI.Source + PrevIncludeEnd, IncludeStart - PrevIncludeEnd);
 
@@ -359,7 +399,16 @@ static std::string UnrollShaderIncludesImpl(ShaderCreateInfo ShaderCI, std::unor
         }
 
         PrevIncludeEnd = IncludeEnd;
-    });
+    };
+
+    auto ErrorCallback = [&](const std::string& Error) //
+    {
+        LOG_ERROR("Failed to parse file '", ShaderCI.FilePath, "' ", Error);
+    };
+
+    const auto Result = FindIncludes(ShaderCI.Source, ShaderCI.SourceLength, IncludeCallback, ErrorCallback);
+    if (!Result)
+        LOG_ERROR("Failed to unroll shader includes: '", (ShaderCI.Desc.Name != nullptr ? ShaderCI.Desc.Name : ""), "'.");
 
     // Insert text after the last include
     Stream.write(ShaderCI.Source + PrevIncludeEnd, ShaderCI.SourceLength - PrevIncludeEnd);
@@ -367,7 +416,7 @@ static std::string UnrollShaderIncludesImpl(ShaderCreateInfo ShaderCI, std::unor
     return Stream.str();
 }
 
-std::string UnrollShaderIncludes(const ShaderCreateInfo& ShaderCI)
+std::string UnrollShaderIncludes(const ShaderCreateInfo& ShaderCI) noexcept(false)
 {
     std::unordered_set<std::string> Includes;
     if (ShaderCI.FilePath != nullptr)
