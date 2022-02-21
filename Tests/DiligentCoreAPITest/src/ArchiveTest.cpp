@@ -125,6 +125,7 @@ void ArchivePRS(RefCntAutoPtr<IArchive>&                   pSource,
         PRSDesc.ImmutableSamplers    = ImmutableSamplers;
         PRSDesc.NumImmutableSamplers = _countof(ImmutableSamplers);
 
+        for (Uint32 i = 0; i < 3; ++i)
         {
             ResourceSignatureArchiveInfo ArchiveInfo;
             ArchiveInfo.DeviceFlags = DeviceBits;
@@ -154,6 +155,7 @@ void ArchivePRS(RefCntAutoPtr<IArchive>&                   pSource,
         PRSDesc.Resources    = Resources;
         PRSDesc.NumResources = _countof(Resources);
 
+        for (Uint32 i = 0; i < 3; ++i)
         {
             ResourceSignatureArchiveInfo ArchiveInfo;
             ArchiveInfo.DeviceFlags = DeviceBits;
