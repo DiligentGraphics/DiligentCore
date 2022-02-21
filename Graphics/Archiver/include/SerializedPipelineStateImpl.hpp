@@ -160,7 +160,7 @@ private:
     void PatchShadersGL(const CreateInfoType& CreateInfo) noexcept(false);
 
     template <typename CreateInfoType>
-    void PatchShadersMtl(const CreateInfoType& CreateInfo, DeviceType DevType) noexcept(false);
+    void PatchShadersMtl(const CreateInfoType& CreateInfo, DeviceType DevType, const std::string& DumpDir) noexcept(false);
 
     // Default signatures in OpenGL are not serialized and require special handling.
     template <typename CreateInfoType>
@@ -246,7 +246,7 @@ DECLARE_PATCH_METHODS(PatchShadersVk)
 #endif
 
 #if METAL_SUPPORTED
-DECLARE_PATCH_METHODS(PatchShadersMtl, DeviceType DevType)
+DECLARE_PATCH_METHODS(PatchShadersMtl, DeviceType DevType, const std::string& DumpPath)
 #endif
 
 } // namespace Diligent

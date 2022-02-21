@@ -28,6 +28,7 @@
 
 #include <vector>
 #include <memory>
+#include <string>
 
 #include "ArchiverFactory.h"
 
@@ -141,9 +142,10 @@ public:
 
     struct MtlProperties
     {
-        const char* CompileOptionsMacOS = nullptr;
-        const char* CompileOptionsIOS   = nullptr;
-        const char* MslPreprocessorCmd  = nullptr;
+        std::string CompileOptionsMacOS;
+        std::string CompileOptionsIOS;
+        std::string MslPreprocessorCmd;
+        std::string DumpFolder;
 
         const Uint32 MaxBufferFunctionArgumets = 31;
     };
@@ -188,11 +190,6 @@ private:
     D3D12Properties m_D3D12Props;
     VkProperties    m_VkProps;
     MtlProperties   m_MtlProps;
-
-    // Metal
-    String m_MtlCompileOptionsMacOS;
-    String m_MtlCompileOptionsiOS;
-    String m_MslPreprocessorCmd;
 
     std::vector<PipelineResourceBinding> m_ResourceBindings;
 };

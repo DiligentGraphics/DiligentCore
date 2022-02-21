@@ -96,8 +96,7 @@ SerializationDeviceImpl::SerializationDeviceImpl(IReferenceCounters* pRefCounter
         const auto* CompileOptionsMacOS = CreateInfo.Metal.CompileOptionsMacOS;
         if (CompileOptionsMacOS != nullptr && CompileOptionsMacOS[0] != '\0')
         {
-            m_MtlCompileOptionsMacOS       = CompileOptionsMacOS;
-            m_MtlProps.CompileOptionsMacOS = m_MtlCompileOptionsMacOS.c_str();
+            m_MtlProps.CompileOptionsMacOS = CompileOptionsMacOS;
         }
         else
         {
@@ -111,8 +110,7 @@ SerializationDeviceImpl::SerializationDeviceImpl(IReferenceCounters* pRefCounter
         const auto* CompileOptionsiOS = CreateInfo.Metal.CompileOptionsiOS;
         if (CompileOptionsiOS != nullptr && CompileOptionsiOS[0] != '\0')
         {
-            m_MtlCompileOptionsiOS       = CompileOptionsiOS;
-            m_MtlProps.CompileOptionsIOS = m_MtlCompileOptionsiOS.c_str();
+            m_MtlProps.CompileOptionsIOS = CompileOptionsiOS;
         }
         else
         {
@@ -126,8 +124,13 @@ SerializationDeviceImpl::SerializationDeviceImpl(IReferenceCounters* pRefCounter
         const auto* MslPreprocessorCmd = CreateInfo.Metal.MslPreprocessorCmd;
         if (MslPreprocessorCmd != nullptr && MslPreprocessorCmd[0] != '\0')
         {
-            m_MslPreprocessorCmd          = CreateInfo.Metal.MslPreprocessorCmd;
-            m_MtlProps.MslPreprocessorCmd = m_MslPreprocessorCmd.c_str();
+            m_MtlProps.MslPreprocessorCmd = MslPreprocessorCmd;
+        }
+
+        const auto* DumpFolder = CreateInfo.Metal.DumpDirectory;
+        if (DumpFolder != nullptr && DumpFolder[0] != '\0')
+        {
+            m_MtlProps.DumpFolder = DumpFolder;
         }
     }
 }

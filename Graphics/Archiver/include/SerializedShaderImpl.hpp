@@ -86,6 +86,7 @@ public:
 
 #if METAL_SUPPORTED
     SerializedData PatchShaderMtl(const char*                                            PSOName,
+                                  const std::string&                                     DumpFolder,
                                   const RefCntAutoPtr<PipelineResourceSignatureMtlImpl>* pSignatures,
                                   const MtlArchiverResourceCounters*                     pBaseBindings,
                                   const Uint32                                           SignatureCount,

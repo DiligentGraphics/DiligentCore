@@ -134,8 +134,11 @@ struct SerializationDeviceMtlInfo
     /// Additional compilation options for Metal command-line compiler for iOS.
     const Char* CompileOptionsiOS   DEFAULT_INITIALIZER("-sdk iphoneos metal");
 
-    /// Name of command-line application which is used to preprocess Metal shader source before compiling to bytecode.
+    /// Name of the command-line application that is used to preprocess Metal shader source before compiling to bytecode.
     const Char* MslPreprocessorCmd DEFAULT_INITIALIZER(nullptr);
+
+    /// Optional directory to dump converted MSL source code and temporary files produced by the Metal toolchain.
+    const Char* DumpDirectory      DEFAULT_INITIALIZER(nullptr);
 
 #if DILIGENT_CPP_INTERFACE
     /// Tests if two structures are equivalent
@@ -150,7 +153,6 @@ struct SerializationDeviceMtlInfo
         return !(*this == RHS);
     }
 #endif
-
 };
 typedef struct SerializationDeviceMtlInfo SerializationDeviceMtlInfo;
 

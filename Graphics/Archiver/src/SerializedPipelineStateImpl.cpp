@@ -32,6 +32,7 @@
 #include "SerializedResourceSignatureImpl.hpp"
 #include "PSOSerializer.hpp"
 #include "Align.hpp"
+#include "FileSystem.hpp"
 
 namespace Diligent
 {
@@ -154,6 +155,27 @@ IRenderPass* RenderPassFromCI(const GraphicsPipelineStateCreateInfo& CreateInfo)
     return CreateInfo.GraphicsPipeline.pRenderPass;
 }
 
+#if METAL_SUPPORTED
+std::string GetPSODumpFolder(const std::string& Root, const PipelineStateDesc& PSODesc, ARCHIVE_DEVICE_DATA_FLAGS DeviceFlag)
+{
+    std::string DumpDir{Root};
+    if (DumpDir.empty())
+        return DumpDir;
+
+    if (DumpDir.back() != FileSystem::GetSlashSymbol())
+        DumpDir += FileSystem::GetSlashSymbol();
+
+    // Note: the same directory structure is used by the render state packager
+    DumpDir += GetArchiveDeviceDataFlagString(DeviceFlag);
+    DumpDir += FileSystem::GetSlashSymbol();
+    DumpDir += GetPipelineTypeString(PSODesc.PipelineType);
+    DumpDir += FileSystem::GetSlashSymbol();
+    DumpDir += PSODesc.Name;
+
+    return DumpDir;
+}
+#endif
+
 } // namespace
 
 template <typename PSOCreateInfoType>
@@ -221,7 +243,8 @@ SerializedPipelineStateImpl::SerializedPipelineStateImpl(IReferenceCounters*    
 #if METAL_SUPPORTED
             case ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS:
             case ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS:
-                PatchShadersMtl(CreateInfo, ArchiveDeviceDataFlagToArchiveDeviceType(Flag));
+                PatchShadersMtl(CreateInfo, ArchiveDeviceDataFlagToArchiveDeviceType(Flag),
+                                GetPSODumpFolder(pDevice->GetMtlProperties().DumpFolder, GetDesc(), Flag));
                 break;
 #endif
             case ARCHIVE_DEVICE_DATA_FLAG_NONE:

@@ -41,6 +41,7 @@
 #include "ShaderMtlImpl.hpp"
 #include "DeviceObjectArchiveMtlImpl.hpp"
 #include "SerializedPipelineStateImpl.hpp"
+#include "FileSystem.hpp"
 
 #include "spirv_msl.hpp"
 
@@ -102,7 +103,7 @@ inline SHADER_TYPE GetShaderStageType(const ShaderStageInfoMtl& Stage)
 
 
 template <typename CreateInfoType>
-void SerializedPipelineStateImpl::PatchShadersMtl(const CreateInfoType& CreateInfo, DeviceType DevType) noexcept(false)
+void SerializedPipelineStateImpl::PatchShadersMtl(const CreateInfoType& CreateInfo, DeviceType DevType, const std::string& DumpDir) noexcept(false)
 {
     VERIFY_EXPR(DevType == DeviceType::Metal_MacOS || DevType == DeviceType::Metal_iOS);
 
@@ -152,7 +153,8 @@ void SerializedPipelineStateImpl::PatchShadersMtl(const CreateInfoType& CreateIn
             // Note that patched shader data contains some extra information
             // besides the byte code itself.
             const auto ShaderData = Stage.pShader->PatchShaderMtl(
-                CreateInfo.PSODesc.Name, Signatures.data(), BaseBindings.data(), SignaturesCount, DevType); // May throw
+                CreateInfo.PSODesc.Name, DumpDir, Signatures.data(),
+                BaseBindings.data(), SignaturesCount, DevType); // May throw
 
             auto ShaderCI           = Stage.pShader->GetCreateInfo();
             ShaderCI.Source         = nullptr;
@@ -166,7 +168,7 @@ void SerializedPipelineStateImpl::PatchShadersMtl(const CreateInfoType& CreateIn
     }
 }
 
-INSTANTIATE_PATCH_SHADER_METHODS(PatchShadersMtl, DeviceType DevType)
+INSTANTIATE_PATCH_SHADER_METHODS(PatchShadersMtl, DeviceType DevType, const std::string& DumpDir)
 INSTANTIATE_DEVICE_SIGNATURE_METHODS(PipelineResourceSignatureMtlImpl)
 
 
@@ -230,6 +232,7 @@ void SerializeBufferTypeInfoMapAndComputeGroupSize(Serializer<Mode>             
 } // namespace
 
 SerializedData SerializedShaderImpl::PatchShaderMtl(const char*                                            PSOName,
+                                                    const std::string&                                     DumpFolder,
                                                     const RefCntAutoPtr<PipelineResourceSignatureMtlImpl>* pSignatures,
                                                     const MtlResourceCounters*                             pBaseBindings,
                                                     const Uint32                                           SignatureCount,
@@ -238,9 +241,23 @@ SerializedData SerializedShaderImpl::PatchShaderMtl(const char*                 
     VERIFY_EXPR(SignatureCount > 0);
     VERIFY_EXPR(pSignatures != nullptr);
     VERIFY_EXPR(pBaseBindings != nullptr);
+    VERIFY_EXPR(PSOName != nullptr && PSOName[0] != '\0');
 
-    const auto TmpFolder = GetTmpFolder();
-    filesystem::create_directories(TmpFolder.c_str());
+    const auto* ShaderName = GetDesc().Name;
+    VERIFY_EXPR(ShaderName != nullptr);
+
+    const std::string WorkingFolder =
+        [&](){
+            if (DumpFolder.empty())
+                return GetTmpFolder();
+
+            auto Folder = DumpFolder;
+            if (Folder.back() != FileSystem::GetSlashSymbol())
+                Folder += FileSystem::GetSlashSymbol();
+
+            return Folder;
+        }();
+    filesystem::create_directories(WorkingFolder);
 
     struct TmpDirRemover
     {
@@ -250,15 +267,18 @@ SerializedData SerializedShaderImpl::PatchShaderMtl(const char*                 
 
         ~TmpDirRemover()
         {
-            filesystem::remove_all(Path.c_str());
+            if (!Path.empty())
+            {
+                filesystem::remove_all(Path.c_str());
+            }
         }
     private:
         const std::string Path;
     };
-    TmpDirRemover DirRemover{TmpFolder};
+    TmpDirRemover DirRemover{DumpFolder.empty() ? WorkingFolder : ""};
 
-    const auto MetalFile    = TmpFolder + "Shader.metal";
-    const auto MetalLibFile = TmpFolder + "Shader.metallib";
+    const auto MetalFile    = WorkingFolder + ShaderName + ".metal";
+    const auto MetalLibFile = WorkingFolder + ShaderName + ".metallib";
 
     auto*  pShaderMtl = static_cast<const CompiledShaderMtlImpl*>(m_pShaderMtl.get());
     String MslSource  = pShaderMtl->MslSource;
@@ -299,7 +319,7 @@ SerializedData SerializedShaderImpl::PatchShaderMtl(const char*                 
     {                                                 \
         char ErrorStr[512];                           \
         strerror_r(errno, ErrorStr, sizeof(ErrorStr));\
-        LOG_ERROR_AND_THROW("Failed to patch shader '", GetDesc().Name, "' for PSO '", PSOName, "': ", ##__VA_ARGS__, " Error description: ", ErrorStr);\
+        LOG_ERROR_AND_THROW("Failed to patch shader '", ShaderName, "' for PSO '", PSOName, "': ", ##__VA_ARGS__, " Error description: ", ErrorStr);\
     } while (false)
 
     // Save to 'Shader.metal'
@@ -316,11 +336,12 @@ SerializedData SerializedShaderImpl::PatchShaderMtl(const char*                 
 
     const auto& MtlProps = m_pDevice->GetMtlProperties();
     // Run user-defined MSL preprocessor
-    if (MtlProps.MslPreprocessorCmd != nullptr)
+    if (!MtlProps.MslPreprocessorCmd.empty())
     {
-        String cmd{MtlProps.MslPreprocessorCmd};
-        cmd += ' ';
+        auto cmd{MtlProps.MslPreprocessorCmd};
+        cmd += " \"";
         cmd += MetalFile;
+        cmd += '\"';
         FILE* File = popen(cmd.c_str(), "r");
         if (File == nullptr)
             LOG_PATCH_SHADER_ERROR_AND_THROW("failed to run command-line Metal shader compiler.");
@@ -340,7 +361,7 @@ SerializedData SerializedShaderImpl::PatchShaderMtl(const char*                 
     {
         String cmd{"xcrun "};
         cmd += (DevType == DeviceType::Metal_MacOS ? MtlProps.CompileOptionsMacOS : MtlProps.CompileOptionsIOS);
-        cmd += " " + MetalFile + " -o " + MetalLibFile;
+        cmd += " \"" + MetalFile + "\" -o \"" + MetalLibFile + '\"';
 
         FILE* File = popen(cmd.c_str(), "r");
         if (File == nullptr)
@@ -360,7 +381,7 @@ SerializedData SerializedShaderImpl::PatchShaderMtl(const char*                 
     {
         FILE* File = fopen(MetalLibFile.c_str(), "rb");
         if (File == nullptr)
-            LOG_PATCH_SHADER_ERROR_AND_THROW("failed to read shader library");
+            LOG_PATCH_SHADER_ERROR_AND_THROW("failed to read shader library.");
 
         fseek(File, 0, SEEK_END);
         const auto BytecodeSize = static_cast<size_t>(ftell(File));
@@ -373,7 +394,7 @@ SerializedData SerializedShaderImpl::PatchShaderMtl(const char*                 
     }
 
     if (ByteCode.empty())
-        LOG_PATCH_SHADER_ERROR_AND_THROW("failed to load Metal shader library");
+        LOG_PATCH_SHADER_ERROR_AND_THROW("failed to load Metal shader library.");
 
 #undef LOG_PATCH_SHADER_ERROR_AND_THROW
 
