@@ -180,8 +180,8 @@ void SerializedShaderImpl::CreateShaderGL(IReferenceCounters*     pRefCounters,
 
     if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL)
     {
-        if (GLSLangUtils::HLSLtoSPIRV(ShaderCI, Attribs.Version, "", Attribs.ppCompilerOutput).empty())
-            LOG_ERROR_AND_THROW("Failed to compile HLSL shader source");
+        if (GLSLangUtils::HLSLtoSPIRV(ShaderCI, Attribs.Version, nullptr, Attribs.ppCompilerOutput).empty())
+            LOG_ERROR_AND_THROW("Failed to compile shader '", ShaderCI.Desc.Name, "'");
     }
     else if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_DEFAULT ||
              ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL)
@@ -193,7 +193,7 @@ void SerializedShaderImpl::CreateShaderGL(IReferenceCounters*     pRefCounters,
         Attribs.Macros        = ShaderCI.Macros;
 
         if (GLSLangUtils::GLSLtoSPIRV(Attribs).empty())
-            LOG_ERROR_AND_THROW("Failed to compile GLSL shader source");
+            LOG_ERROR_AND_THROW("Failed to compile shader '", ShaderCI.Desc.Name, "'");
     }
     else if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM)
     {
@@ -204,7 +204,7 @@ void SerializedShaderImpl::CreateShaderGL(IReferenceCounters*     pRefCounters,
         Attribs.SourceCodeLen = static_cast<int>(ShaderCI.SourceLength);
 
         if (GLSLangUtils::GLSLtoSPIRV(Attribs).empty())
-            LOG_ERROR_AND_THROW("Failed to compile GLSL shader source");
+            LOG_ERROR_AND_THROW("Failed to compile shader '", ShaderCI.Desc.Name, "'");
     }
 #endif
 }

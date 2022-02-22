@@ -403,7 +403,12 @@ TEST_P(TestBrokenShader, CompileFailure)
     RefCntAutoPtr<IDataBlob> pCompilerOutput;
     ShaderCI.ppCompilerOutput = pCompilerOutput.RawDblPtr();
 
-    pEnv->SetErrorAllowance(3, "No worries, errors are expected: testing broken shaders\n");
+    const auto IsD3D = DataFlag == ARCHIVE_DEVICE_DATA_FLAG_D3D11 || DataFlag == ARCHIVE_DEVICE_DATA_FLAG_D3D12;
+    pEnv->SetErrorAllowance(IsD3D ? 2 : 3, "No worries, errors are expected: testing broken shader\n");
+    pEnv->PushExpectedErrorSubstring("Failed to create Shader object 'Archive test broken shader'");
+    pEnv->PushExpectedErrorSubstring("Failed to compile shader 'Archive test broken shader'", false);
+    if (!IsD3D)
+        pEnv->PushExpectedErrorSubstring("Failed to parse shader source", false);
 
     RefCntAutoPtr<IShader> pSerializedShader;
     pSerializationDevice->CreateShader(ShaderCI, ShaderArchiveInfo{DataFlag}, &pSerializedShader);
@@ -436,7 +441,7 @@ TEST_P(TestBrokenShader, MissingSourceFile)
     ShaderCI.FilePath                   = "non_existing.shader";
     ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
 
-    pEnv->SetErrorAllowance(3, "No worries, errors are expected: testing broken shaders\n");
+    pEnv->SetErrorAllowance(3, "No worries, errors are expected: testing broken shader\n");
     pEnv->PushExpectedErrorSubstring("Failed to create Shader object 'Archive test broken shader'");
     pEnv->PushExpectedErrorSubstring("Failed to load shader source file 'non_existing.shader'", false);
     pEnv->PushExpectedErrorSubstring("Failed to create input stream for source file non_existing.shader", false);
