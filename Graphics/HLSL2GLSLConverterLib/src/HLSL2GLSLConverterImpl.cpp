@@ -944,258 +944,18 @@ void HLSL2GLSLConverterImpl::ConversionStream::InsertIncludes(String& GLSLSource
 // The function converts source code into a token list
 void HLSL2GLSLConverterImpl::ConversionStream::Tokenize(const String& Source)
 {
-#define CHECK_END(...)                      \
-    do                                      \
-    {                                       \
-        if (SrcPos == Source.end())         \
-        {                                   \
-            LOG_ERROR_MESSAGE(__VA_ARGS__); \
-            break;                          \
-        }                                   \
-    } while (false)
-
-    int OpenBracketCount = 0;
-    int OpenBraceCount   = 0;
-    int OpenStapleCount  = 0;
-
-    // Push empty node in the beginning of the list to facilitate
-    // backwards searching
-    m_Tokens.push_back(TokenInfo());
-
-    // https://msdn.microsoft.com/en-us/library/windows/desktop/bb509638(v=vs.85).aspx
-
-    // Notes:
-    // * Operators +, - are not detected
-    //   * This might be a + b, -a or -10
-    // * Operator ?: is not detected
-    Parsing::SplitString(Source.begin(), Source.end(), [&](const std::string::const_iterator& DelimStart, std::string::const_iterator& SrcPos) {
-        TokenInfo NewToken;
-        if (DelimStart != SrcPos)
+    m_Tokens = Parsing::Tokenize<TokenInfo, decltype(m_Tokens)>(
+        Source.begin(), Source.end(), TokenInfo::Create,
+        [&](const std::string::const_iterator& Start, const std::string::const_iterator& End) //
         {
-            auto DelimSize = SrcPos - DelimStart;
-            NewToken.Delimiter.reserve(DelimSize);
-            NewToken.Delimiter.append(DelimStart, SrcPos);
-        }
-        if (SrcPos == Source.end())
-            return false;
-
-        switch (*SrcPos)
-        {
-            case '#':
+            auto KeywordIt = m_Converter.m_HLSLKeywords.find(HashMapStringKey{std::string{Start, End}});
+            if (KeywordIt != m_Converter.m_HLSLKeywords.end())
             {
-                NewToken.Type       = TokenType::PreprocessorDirective;
-                auto DirectiveStart = SrcPos;
-                ++SrcPos;
-                SkipDelimetersAndComments(SrcPos, Source.end());
-                CHECK_END("Missing preprocessor directive");
-                SkipIdentifier(SrcPos, Source.end());
-                auto DirectiveSize = SrcPos - DirectiveStart;
-                NewToken.Literal.reserve(DirectiveSize);
-                NewToken.Literal.append(DirectiveStart, SrcPos);
+                VERIFY(std::string(Start, End) == KeywordIt->second.Literal, "Inconsistent literal");
+                return KeywordIt->second.Type;
             }
-            break;
-
-            case ';':
-                NewToken.Type = TokenType::Semicolon;
-                NewToken.Literal.push_back(*(SrcPos++));
-                break;
-
-            case '=':
-                if (m_Tokens.size() > 0 && NewToken.Delimiter == "")
-                {
-                    auto& LastToken = m_Tokens.back();
-                    // +=, -=, *=, /=, %=, <<=, >>=, &=, |=, ^=
-                    if (LastToken.Literal == "+" ||
-                        LastToken.Literal == "-" ||
-                        LastToken.Literal == "*" ||
-                        LastToken.Literal == "/" ||
-                        LastToken.Literal == "%" ||
-                        LastToken.Literal == "<<" ||
-                        LastToken.Literal == ">>" ||
-                        LastToken.Literal == "&" ||
-                        LastToken.Literal == "|" ||
-                        LastToken.Literal == "^")
-                    {
-                        LastToken.Type = TokenType::Assignment;
-                        LastToken.Literal.push_back(*(SrcPos++));
-                        return true;
-                    }
-                    else if (LastToken.Literal == "<" ||
-                             LastToken.Literal == ">" ||
-                             LastToken.Literal == "=" ||
-                             LastToken.Literal == "!")
-                    {
-                        LastToken.Type = TokenType::ComparisonOp;
-                        LastToken.Literal.push_back(*(SrcPos++));
-                        return true;
-                    }
-                }
-
-                NewToken.Type = TokenType::Assignment;
-                NewToken.Literal.push_back(*(SrcPos++));
-                break;
-
-            case '|':
-            case '&':
-                if (m_Tokens.size() > 0 && NewToken.Delimiter == "" &&
-                    m_Tokens.back().Literal.length() == 1 && m_Tokens.back().Literal[0] == *SrcPos)
-                {
-                    m_Tokens.back().Type = TokenType::BooleanOp;
-                    m_Tokens.back().Literal.push_back(*(SrcPos++));
-                    return true;
-                }
-                else
-                {
-                    NewToken.Type = TokenType::BitwiseOp;
-                    NewToken.Literal.push_back(*(SrcPos++));
-                }
-                break;
-
-            case '<':
-            case '>':
-                if (m_Tokens.size() > 0 && NewToken.Delimiter == "" &&
-                    m_Tokens.back().Literal.length() == 1 && m_Tokens.back().Literal[0] == *SrcPos)
-                {
-                    m_Tokens.back().Type = TokenType::BitwiseOp;
-                    m_Tokens.back().Literal.push_back(*(SrcPos++));
-                    return true;
-                }
-                else
-                {
-                    // Note: we do not distinguish between comparison operators
-                    // and template arguments like in Texture2D<float> at this
-                    // point. This will be clarified when textures are processed.
-                    NewToken.Type = TokenType::ComparisonOp;
-                    NewToken.Literal.push_back(*(SrcPos++));
-                }
-                break;
-
-            case '+':
-            case '-':
-                if (m_Tokens.size() > 0 && NewToken.Delimiter == "" &&
-                    m_Tokens.back().Literal.length() == 1 && m_Tokens.back().Literal[0] == *SrcPos)
-                {
-                    m_Tokens.back().Type = TokenType::IncDecOp;
-                    m_Tokens.back().Literal.push_back(*(SrcPos++));
-                    return true;
-                }
-                else
-                {
-                    // We do not currently distinguish between math operator a + b,
-                    // unary operator -a and numerical constant -1:
-                    NewToken.Literal.push_back(*(SrcPos++));
-                }
-                break;
-
-            case '~':
-            case '^':
-                NewToken.Type = TokenType::BitwiseOp;
-                NewToken.Literal.push_back(*(SrcPos++));
-                break;
-
-            case '*':
-            case '/':
-            case '%':
-                NewToken.Type = TokenType::MathOp;
-                NewToken.Literal.push_back(*(SrcPos++));
-                break;
-
-            case '!':
-                NewToken.Type = TokenType::BooleanOp;
-                NewToken.Literal.push_back(*(SrcPos++));
-                break;
-
-            case ',':
-                NewToken.Type = TokenType::Comma;
-                NewToken.Literal.push_back(*(SrcPos++));
-                break;
-
-            case '"':
-                //[domain("quad")]
-                //        ^
-                NewToken.Type = TokenType::StringConstant;
-                ++SrcPos;
-                //[domain("quad")]
-                //         ^
-                while (SrcPos != Source.end() && *SrcPos != '"')
-                    NewToken.Literal.push_back(*(SrcPos++));
-                //[domain("quad")]
-                //             ^
-                if (SrcPos != Source.end())
-                    ++SrcPos;
-                //[domain("quad")]
-                //              ^
-                break;
-
-#define BRACKET_CASE(Symbol, TokenType, Action)  \
-    case Symbol:                                 \
-        NewToken.Type = TokenType;               \
-        NewToken.Literal.push_back(*(SrcPos++)); \
-        Action;                                  \
-        break;
-
-                BRACKET_CASE('(', TokenType::OpenBracket, ++OpenBracketCount);
-                BRACKET_CASE(')', TokenType::ClosingBracket, --OpenBracketCount);
-                BRACKET_CASE('{', TokenType::OpenBrace, ++OpenBraceCount);
-                BRACKET_CASE('}', TokenType::ClosingBrace, --OpenBraceCount);
-                BRACKET_CASE('[', TokenType::OpenStaple, ++OpenStapleCount);
-                BRACKET_CASE(']', TokenType::ClosingStaple, --OpenStapleCount);
-
-#undef BRACKET_CASE
-
-
-            default:
-            {
-                auto IdentifierStartPos = SrcPos;
-                SkipIdentifier(SrcPos, Source.end());
-                if (IdentifierStartPos != SrcPos)
-                {
-                    auto IDSize = SrcPos - IdentifierStartPos;
-                    NewToken.Literal.reserve(IDSize);
-                    NewToken.Literal.append(IdentifierStartPos, SrcPos);
-                    auto KeywordIt = m_Converter.m_HLSLKeywords.find(NewToken.Literal.c_str());
-                    if (KeywordIt != m_Converter.m_HLSLKeywords.end())
-                    {
-                        NewToken.Type = KeywordIt->second.Type;
-                        VERIFY(NewToken.Literal == KeywordIt->second.Literal, "Inconsistent literal");
-                    }
-                    else
-                    {
-                        NewToken.Type = TokenType::Identifier;
-                    }
-                }
-
-                if (NewToken.Type == TokenType::Undefined)
-                {
-                    bool bIsNumericalCostant = *SrcPos >= '0' && *SrcPos <= '9';
-                    if (!bIsNumericalCostant && *SrcPos == '.')
-                    {
-                        auto NextPos        = SrcPos + 1;
-                        bIsNumericalCostant = NextPos != Source.end() && *NextPos >= '0' && *NextPos <= '9';
-                    }
-                    if (bIsNumericalCostant)
-                    {
-                        const auto NumStartPos = SrcPos;
-                        Parsing::SkipFloatNumber(SrcPos, Source.end());
-                        NewToken.Literal = String{NumStartPos, SrcPos};
-                        NewToken.Type    = TokenType::NumericConstant;
-                    }
-                }
-
-                if (NewToken.Type == TokenType::Undefined)
-                {
-                    NewToken.Literal.push_back(*(SrcPos++));
-                }
-                // Operators
-                // https://msdn.microsoft.com/en-us/library/windows/desktop/bb509631(v=vs.85).aspx
-            }
-        }
-
-        m_Tokens.push_back(NewToken);
-        return true;
-    } //
-    );
-#undef CHECK_END
+            return TokenType::Identifier;
+        });
 }
 
 
@@ -1216,13 +976,13 @@ void HLSL2GLSLConverterImpl::ConversionStream::FindMatchingBracket(TokenListType
             Direction          = +1;
             break;
 
-        case TokenType::OpenBracket:
-            ClosingBracketType = TokenType::ClosingBracket;
+        case TokenType::OpenParen:
+            ClosingBracketType = TokenType::ClosingParen;
             Direction          = +1;
             break;
 
-        case TokenType::OpenStaple:
-            ClosingBracketType = TokenType::ClosingStaple;
+        case TokenType::OpenSquareBracket:
+            ClosingBracketType = TokenType::ClosingSquareBracket;
             Direction          = +1;
             break;
 
@@ -1236,13 +996,13 @@ void HLSL2GLSLConverterImpl::ConversionStream::FindMatchingBracket(TokenListType
             Direction          = -1;
             break;
 
-        case TokenType::ClosingBracket:
-            ClosingBracketType = TokenType::OpenBracket;
+        case TokenType::ClosingParen:
+            ClosingBracketType = TokenType::OpenParen;
             Direction          = -1;
             break;
 
-        case TokenType::ClosingStaple:
-            ClosingBracketType = TokenType::OpenStaple;
+        case TokenType::ClosingSquareBracket:
+            ClosingBracketType = TokenType::OpenSquareBracket;
             Direction          = -1;
             break;
 
@@ -1424,8 +1184,8 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessStructuredBuffer(TokenList
     VERIFY_PARSER_STATE(Token, Token != m_Tokens.end(), "Unexpected EOF after");
     VERIFY_PARSER_STATE(Token, Token->Type == TokenType::Semicolon, "\';\' expected");
 
-    m_Tokens.insert(Token, TokenInfo(TokenType::OpenStaple, "["));
-    m_Tokens.insert(Token, TokenInfo(TokenType::ClosingStaple, "]"));
+    m_Tokens.insert(Token, TokenInfo(TokenType::OpenSquareBracket, "["));
+    m_Tokens.insert(Token, TokenInfo(TokenType::ClosingSquareBracket, "]"));
     m_Tokens.insert(Token, TokenInfo(TokenType::Semicolon, ";"));
     m_Tokens.insert(Token, TokenInfo(TokenType::ClosingBrace, "}"));
     // buffer g_Data{DataType g_Data[]};
@@ -1507,22 +1267,22 @@ void HLSL2GLSLConverterImpl::ConversionStream::RegisterStruct(TokenListType::ite
 //
 void HLSL2GLSLConverterImpl::ConversionStream::ParseSamplers(TokenListType::iterator& Token, SamplerHashType& SamplersHash)
 {
-    VERIFY_EXPR(Token->Type == TokenType::OpenBracket || Token->Type == TokenType::OpenBrace || Token == m_Tokens.begin());
+    VERIFY_EXPR(Token->Type == TokenType::OpenParen || Token->Type == TokenType::OpenBrace || Token == m_Tokens.begin());
     Uint32 ScopeDepth             = 1;
-    bool   IsFunctionArgumentList = Token->Type == TokenType::OpenBracket;
+    bool   IsFunctionArgumentList = Token->Type == TokenType::OpenParen;
 
     // Skip scope start symbol, which is either open bracket or m_Tokens.begin()
     ++Token;
     while (Token != m_Tokens.end() && ScopeDepth > 0)
     {
-        if (Token->Type == TokenType::OpenBracket ||
+        if (Token->Type == TokenType::OpenParen ||
             Token->Type == TokenType::OpenBrace)
         {
             // Increase scope depth
             ++ScopeDepth;
             ++Token;
         }
-        else if (Token->Type == TokenType::ClosingBracket ||
+        else if (Token->Type == TokenType::ClosingParen ||
                  Token->Type == TokenType::ClosingBrace)
         {
             // Decrease scope depth
@@ -1885,11 +1645,11 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessTextureDeclaration(TokenLi
         {
             auto TmpToken = Token;
             ++TmpToken;
-            while (TmpToken != m_Tokens.end() && TmpToken->Type == TokenType::OpenStaple)
+            while (TmpToken != m_Tokens.end() && TmpToken->Type == TokenType::OpenSquareBracket)
             {
                 // Texture2D TexName[...][...]
                 //                  ^
-                FindMatchingBracket(TmpToken, m_Tokens.end(), TokenType::OpenStaple);
+                FindMatchingBracket(TmpToken, m_Tokens.end(), TokenType::OpenSquareBracket);
                 // Texture2D TexName[...][...]
                 //                      ^
 
@@ -2027,10 +1787,10 @@ Uint32 HLSL2GLSLConverterImpl::ConversionStream::CountFunctionArguments(TokenLis
 {
     // TestText.Sample( TestText_sampler, float2(0.0, 1.0)  );
     //                ^
-    VERIFY_EXPR(Token->Type == TokenType::OpenBracket);
+    VERIFY_EXPR(Token->Type == TokenType::OpenParen);
     Uint32 NumArguments = 0;
     ProcessScope(
-        Token, ScopeEnd, TokenType::OpenBracket, TokenType::ClosingBracket,
+        Token, ScopeEnd, TokenType::OpenParen, TokenType::ClosingParen,
         [&](TokenListType::iterator& tkn, int ScopeDepth) {
             // Argument list is not empty, so there is at least one argument.
             if (NumArguments == 0)
@@ -2050,7 +1810,7 @@ Uint32 HLSL2GLSLConverterImpl::ConversionStream::CountFunctionArguments(TokenLis
     // TestText.Sample( TestText_sampler, float2(0.0, 1.0)  );
     //                                                      ^
     VERIFY_PARSER_STATE(Token, Token != m_Tokens.end(), "Unexpected EOF while processing argument list");
-    VERIFY_EXPR(Token->Type == TokenType::ClosingBracket);
+    VERIFY_EXPR(Token->Type == TokenType::ClosingParen);
     ++Token;
     // TestText.Sample( TestText_sampler, float2(0.0, 1.0)  );
     //                                                       ^
@@ -2085,8 +1845,8 @@ bool HLSL2GLSLConverterImpl::ConversionStream::ProcessObjectMethod(TokenListType
     {
         --IdentifierToken;
         if (IdentifierToken->Type == TokenType::ClosingAngleBracket ||
-            IdentifierToken->Type == TokenType::ClosingStaple ||
-            IdentifierToken->Type == TokenType::ClosingBracket)
+            IdentifierToken->Type == TokenType::ClosingSquareBracket ||
+            IdentifierToken->Type == TokenType::ClosingParen)
         {
             // TestText[idx[0]].Sample( ...
             //                ^
@@ -2116,7 +1876,7 @@ bool HLSL2GLSLConverterImpl::ConversionStream::ProcessObjectMethod(TokenListType
     //                ^
     //     ArgsListStartToken
 
-    if (ArgsListStartToken == ScopeEnd || ArgsListStartToken->Type != TokenType::OpenBracket)
+    if (ArgsListStartToken == ScopeEnd || ArgsListStartToken->Type != TokenType::OpenParen)
         return false;
     auto   ArgsListEndToken = ArgsListStartToken;
     Uint32 NumArguments     = CountFunctionArguments(ArgsListEndToken, ScopeEnd);
@@ -2156,7 +1916,7 @@ bool HLSL2GLSLConverterImpl::ConversionStream::ProcessObjectMethod(TokenListType
     //              IdentifierToken
 
 
-    m_Tokens.insert(IdentifierToken, TokenInfo(TokenType::OpenBracket, "("));
+    m_Tokens.insert(IdentifierToken, TokenInfo(TokenType::OpenParen, "("));
     // FunctionStub( TestTextArr[2], TestTextArr_sampler, ...
     //               ^
     //               IdentifierToken
@@ -2198,7 +1958,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::RemoveFlowControlAttribute(TokenL
     // [ branch ] if ( ...
     //          ^
     // Note that dummy empty token is inserted into the beginning of the list
-    if (PrevToken == m_Tokens.begin() || PrevToken->Type != TokenType::ClosingStaple)
+    if (PrevToken == m_Tokens.begin() || PrevToken->Type != TokenType::ClosingSquareBracket)
         return;
 
     --PrevToken;
@@ -2210,7 +1970,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::RemoveFlowControlAttribute(TokenL
     --PrevToken;
     // [ branch ] if ( ...
     // ^
-    if (PrevToken == m_Tokens.begin() || PrevToken->Type != TokenType::OpenStaple)
+    if (PrevToken == m_Tokens.begin() || PrevToken->Type != TokenType::OpenSquareBracket)
         return;
 
     //  [ branch ] if ( ...
@@ -2328,15 +2088,15 @@ bool HLSL2GLSLConverterImpl::ConversionStream::ProcessRWTextureStore(TokenListTy
     for (Uint32 ArrayIdx = 0; ArrayIdx < ArrayDim + 1; ++ArrayIdx)
     {
         ++OpenStapleToken;
-        if (OpenStapleToken == ScopeEnd || OpenStapleToken->Type != TokenType::OpenStaple)
+        if (OpenStapleToken == ScopeEnd || OpenStapleToken->Type != TokenType::OpenSquareBracket)
             return false;
 
         ClosingStapleToken = OpenStapleToken;
-        FindMatchingBracket(ClosingStapleToken, ScopeEnd, TokenType::OpenStaple);
+        FindMatchingBracket(ClosingStapleToken, ScopeEnd, TokenType::OpenSquareBracket);
         // RWTex[Location[idx].xy]
         //                       ^
         //              ClosingStapleToken
-        VERIFY_EXPR(ClosingStapleToken->Type == TokenType::ClosingStaple);
+        VERIFY_EXPR(ClosingStapleToken->Type == TokenType::ClosingSquareBracket);
 
         if (ArrayIdx < ArrayDim)
         {
@@ -2375,7 +2135,7 @@ bool HLSL2GLSLConverterImpl::ConversionStream::ProcessRWTextureStore(TokenListTy
     // Token                                    SemicolonToken
 
     m_Tokens.insert(Token, TokenInfo(TokenType::Identifier, "imageStore", Token->Delimiter.c_str()));
-    m_Tokens.insert(Token, TokenInfo(TokenType::OpenBracket, "(", ""));
+    m_Tokens.insert(Token, TokenInfo(TokenType::OpenParen, "(", ""));
     Token->Delimiter = " ";
     // imageStore( RWTex[Location.xy] = float4(0.0, 0.0, 0.0, 1.0);
     //             ^    ^
@@ -2391,12 +2151,12 @@ bool HLSL2GLSLConverterImpl::ConversionStream::ProcessRWTextureStore(TokenListTy
     auto LocationToken = OpenStapleToken;
     ++LocationToken;
     m_Tokens.insert(LocationToken, TokenInfo(TokenType::Identifier, "_ToIvec", " "));
-    m_Tokens.insert(LocationToken, TokenInfo(TokenType::OpenBracket, "(", ""));
+    m_Tokens.insert(LocationToken, TokenInfo(TokenType::OpenParen, "(", ""));
     // imageStore( RWTex, _ToIvec(Location.xy] = float4(0.0, 0.0, 0.0, 1.0);
     //                            ^          ^
     //                  LocationToken     ClosingStapleToken
 
-    m_Tokens.insert(ClosingStapleToken, TokenInfo(TokenType::ClosingBracket, ")", ""));
+    m_Tokens.insert(ClosingStapleToken, TokenInfo(TokenType::ClosingParen, ")", ""));
     // imageStore( RWTex, _ToIvec(Location.xy)] = float4(0.0, 0.0, 0.0, 1.0);
     //                                        ^
     //                                ClosingStapleToken
@@ -2409,7 +2169,7 @@ bool HLSL2GLSLConverterImpl::ConversionStream::ProcessRWTextureStore(TokenListTy
     //                                   AssignmentToken
 
     AssignmentToken->Delimiter = "";
-    AssignmentToken->Type      = TokenType::OpenBracket;
+    AssignmentToken->Type      = TokenType::OpenParen;
     AssignmentToken->Literal   = "(";
     // imageStore( RWTex, _ToIvec(Location.xy),( float4(0.0, 0.0, 0.0, 1.0);
     //                                         ^
@@ -2421,13 +2181,13 @@ bool HLSL2GLSLConverterImpl::ConversionStream::ProcessRWTextureStore(TokenListTy
     //                                                AssignmentToken               SemicolonToken
 
     // Insert closing bracket for _ExpandVector
-    m_Tokens.insert(SemicolonToken, TokenInfo(TokenType::ClosingBracket, ")", ""));
+    m_Tokens.insert(SemicolonToken, TokenInfo(TokenType::ClosingParen, ")", ""));
     // imageStore( RWTex,  _ToIvec(Location.xy), _ExpandVector( float4(0.0, 0.0, 0.0, 1.0));
     //                                                                                     ^
     //                                                                              SemicolonToken
 
     // Insert closing bracket for imageStore
-    m_Tokens.insert(SemicolonToken, TokenInfo(TokenType::ClosingBracket, ")", ""));
+    m_Tokens.insert(SemicolonToken, TokenInfo(TokenType::ClosingParen, ")", ""));
     // imageStore( RWTex,  _ToIvec(Location.xy), _ExpandVector( float4(0.0, 0.0, 0.0, 1.0)));
     //                                                                                      ^
     //                                                                               SemicolonToken
@@ -2458,15 +2218,15 @@ bool HLSL2GLSLConverterImpl::ConversionStream::ProcessRWTextureLoad(TokenListTyp
     for (Uint32 ArrayIdx = 0; ArrayIdx < ArrayDim + 1; ++ArrayIdx)
     {
         ++OpenStapleToken;
-        if (OpenStapleToken == ScopeEnd || OpenStapleToken->Type != TokenType::OpenStaple)
+        if (OpenStapleToken == ScopeEnd || OpenStapleToken->Type != TokenType::OpenSquareBracket)
             return false;
 
         ClosingStapleToken = OpenStapleToken;
-        FindMatchingBracket(ClosingStapleToken, ScopeEnd, TokenType::OpenStaple);
+        FindMatchingBracket(ClosingStapleToken, ScopeEnd, TokenType::OpenSquareBracket);
         // RWTex[Location[idx].xy]
         //                       ^
         //              ClosingStapleToken
-        VERIFY_EXPR(ClosingStapleToken->Type == TokenType::ClosingStaple);
+        VERIFY_EXPR(ClosingStapleToken->Type == TokenType::ClosingSquareBracket);
 
         if (ArrayIdx < ArrayDim)
         {
@@ -2481,7 +2241,7 @@ bool HLSL2GLSLConverterImpl::ConversionStream::ProcessRWTextureLoad(TokenListTyp
     //  OpenStaplePos     ClosingStaplePos
 
     m_Tokens.insert(Token, TokenInfo(TokenType::Identifier, "imageLoad", Token->Delimiter.c_str()));
-    m_Tokens.insert(Token, TokenInfo(TokenType::OpenBracket, "(", ""));
+    m_Tokens.insert(Token, TokenInfo(TokenType::OpenParen, "(", ""));
     Token->Delimiter = " ";
     // imageLoad( RWTex[Location.xy]
     //            ^    ^
@@ -2493,19 +2253,19 @@ bool HLSL2GLSLConverterImpl::ConversionStream::ProcessRWTextureLoad(TokenListTyp
     //                          ^
     //                       OpenStapleToken
 
-    OpenStapleToken->Type    = TokenType::OpenBracket;
+    OpenStapleToken->Type    = TokenType::OpenParen;
     OpenStapleToken->Literal = "(";
     // imageLoad( RWTex, _ToIvec(Location.xy]
     //                          ^           ^
     //                 OpenStapleToken    ClosingStapleToken
 
-    m_Tokens.insert(ClosingStapleToken, TokenInfo(TokenType::ClosingBracket, ")", ""));
+    m_Tokens.insert(ClosingStapleToken, TokenInfo(TokenType::ClosingParen, ")", ""));
     // imageLoad( RWTex, _ToIvec(Location.xy)]
     //                                       ^
     //                                   ClosingStapleToken
 
 
-    ClosingStapleToken->Type    = TokenType::ClosingBracket;
+    ClosingStapleToken->Type    = TokenType::ClosingParen;
     ClosingStapleToken->Literal = ")";
     // imageLoad( RWTex, _ToIvec(Location.xy))
     //                          ^
@@ -2595,7 +2355,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessAtomics(const TokenListTyp
             // InterlockedAdd(g_i4SharedArray[GTid.x].x, 1, iOldVal);
             //               ^
             VERIFY_PARSER_STATE(Token, Token != ScopeEnd, "Unexpected EOF");
-            VERIFY_PARSER_STATE(Token, Token->Type == TokenType::OpenBracket, "Open bracket is expected");
+            VERIFY_PARSER_STATE(Token, Token->Type == TokenType::OpenParen, "Open bracket is expected");
 
             auto ArgsListEndToken = Token;
             auto NumArguments     = CountFunctionArguments(ArgsListEndToken, ScopeEnd);
@@ -2620,12 +2380,12 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessAtomics(const TokenListTyp
                 while (Token != ScopeEnd && NumOpenBrackets != 0)
                 {
                     // Do not count arguments of nested functions:
-                    if (NumOpenBrackets == 1 && (Token->Type == TokenType::Comma || Token->Type == TokenType::ClosingBracket))
+                    if (NumOpenBrackets == 1 && (Token->Type == TokenType::Comma || Token->Type == TokenType::ClosingParen))
                         break;
 
-                    if (Token->Type == TokenType::OpenBracket)
+                    if (Token->Type == TokenType::OpenParen)
                         ++NumOpenBrackets;
-                    else if (Token->Type == TokenType::ClosingBracket)
+                    else if (Token->Type == TokenType::ClosingParen)
                         --NumOpenBrackets;
 
                     ++Token;
@@ -2638,13 +2398,13 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessAtomics(const TokenListTyp
                 --Token;
                 // InterlockedAdd(Tex2D[GTid.xy], 1, iOldVal);
                 //                             ^
-                VERIFY_PARSER_STATE(Token, Token->Type == TokenType::ClosingStaple, "Expected \']\'");
+                VERIFY_PARSER_STATE(Token, Token->Type == TokenType::ClosingSquareBracket, "Expected \']\'");
                 auto ClosingBracketToken = Token;
                 --Token;
                 m_Tokens.erase(ClosingBracketToken);
                 // InterlockedAdd(Tex2D[GTid.xy, 1, iOldVal);
                 //                           ^
-                while (Token != ScopeStart && Token->Type != TokenType::OpenStaple)
+                while (Token != ScopeStart && Token->Type != TokenType::OpenSquareBracket)
                     --Token;
                 // InterlockedAdd(Tex2D[GTid.xy, 1, iOldVal);
                 //                     ^
@@ -2693,12 +2453,12 @@ void HLSL2GLSLConverterImpl::ConversionStream::ParseShaderParameter(TokenListTyp
     ++Token;
     VERIFY_PARSER_STATE(Token, Token != m_Tokens.end(), "Unexpected EOF");
 
-    if (Token->Type == TokenType::OpenStaple)
+    if (Token->Type == TokenType::OpenSquareBracket)
     {
         // triangle VSOut In[3]
         //                  ^
         ProcessScope(
-            Token, m_Tokens.end(), TokenType::OpenStaple, TokenType::ClosingStaple,
+            Token, m_Tokens.end(), TokenType::OpenSquareBracket, TokenType::ClosingSquareBracket,
             [&](TokenListType::iterator& tkn, int) {
                 ParamInfo.ArraySize.append(tkn->Delimiter);
                 ParamInfo.ArraySize.append(tkn->Literal);
@@ -2708,11 +2468,11 @@ void HLSL2GLSLConverterImpl::ConversionStream::ParseShaderParameter(TokenListTyp
         VERIFY_PARSER_STATE(Token, Token != m_Tokens.end(), "Unexpected EOF");
         // triangle VSOut In[3],
         //                    ^
-        VERIFY_PARSER_STATE(Token, Token->Type == TokenType::ClosingStaple, "Closing staple expected");
+        VERIFY_PARSER_STATE(Token, Token->Type == TokenType::ClosingSquareBracket, "Closing staple expected");
 
         ++Token;
         VERIFY_PARSER_STATE(Token, Token != m_Tokens.end(), "Unexpected EOF");
-        VERIFY_PARSER_STATE(Token, Token->Type != TokenType::OpenStaple, "Multi-dimensional arrays are not supported");
+        VERIFY_PARSER_STATE(Token, Token->Type != TokenType::OpenSquareBracket, "Multi-dimensional arrays are not supported");
     }
 
 
@@ -2802,7 +2562,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessFunctionParameters(TokenLi
     ++Token;
     // void TestPS  ( in VSOutput In,
     //              ^
-    VERIFY_PARSER_STATE(Token, Token->Type == TokenType::OpenBracket, "Function \"", FuncNameToken->Literal, "\" misses argument list");
+    VERIFY_PARSER_STATE(Token, Token->Type == TokenType::OpenParen, "Function \"", FuncNameToken->Literal, "\" misses argument list");
 
     ++Token;
     // void TestPS  ( in VSOutput In,
@@ -2811,7 +2571,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessFunctionParameters(TokenLi
     // Handle empty argument list properly
     // void TestPS  ( )
     //                ^
-    if (Token != m_Tokens.end() && Token->Type != TokenType::ClosingBracket)
+    if (Token != m_Tokens.end() && Token->Type != TokenType::ClosingParen)
     {
         while (Token != m_Tokens.end())
         {
@@ -2988,9 +2748,9 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessFunctionParameters(TokenLi
 
             ParseShaderParameter(Token, ParamInfo);
 
-            VERIFY_PARSER_STATE(Token, Token->Literal == "," || Token->Type == TokenType::ClosingBracket, "\',\' or \')\' is expected after argument \"", ParamInfo.Name, '\"');
+            VERIFY_PARSER_STATE(Token, Token->Literal == "," || Token->Type == TokenType::ClosingParen, "\',\' or \')\' is expected after argument \"", ParamInfo.Name, '\"');
             Params.push_back(ParamInfo);
-            if (Token->Type == TokenType::ClosingBracket)
+            if (Token->Type == TokenType::ClosingParen)
                 break;
             ++Token;
         }
@@ -3481,9 +3241,9 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessComputeShaderArguments(Tok
     //[numthreads(16,16,1)]
     //                    ^
     //void TestCS(uint3 DTid : SV_DispatchThreadID)
-    VERIFY_PARSER_STATE(Token, Token != m_Tokens.begin() && Token->Type == TokenType::ClosingStaple, "Missing numthreads declaration");
+    VERIFY_PARSER_STATE(Token, Token != m_Tokens.begin() && Token->Type == TokenType::ClosingSquareBracket, "Missing numthreads declaration");
 
-    while (Token != m_Tokens.begin() && Token->Type != TokenType::OpenStaple)
+    while (Token != m_Tokens.begin() && Token->Type != TokenType::OpenSquareBracket)
         --Token;
     //[numthreads(16,16,1)]
     //^
@@ -3499,7 +3259,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessComputeShaderArguments(Tok
     ++Token;
     //[numthreads(16,16,1)]
     //           ^
-    VERIFY_PARSER_STATE(Token, Token != m_Tokens.end() && Token->Type == TokenType::OpenBracket,
+    VERIFY_PARSER_STATE(Token, Token != m_Tokens.end() && Token->Type == TokenType::OpenParen,
                         "Missing \'(\' after numthreads");
 
     String             CSGroupSize[3] = {};
@@ -3735,12 +3495,12 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessShaderAttributes(TokenList
     // ^
     auto TypeToken = Token;
     --Token;
-    while (Token->Type == TokenType::ClosingStaple)
+    while (Token->Type == TokenType::ClosingSquareBracket)
     {
         // [...]
         //     ^
 
-        while (Token != m_Tokens.begin() && Token->Type != TokenType::OpenStaple)
+        while (Token != m_Tokens.begin() && Token->Type != TokenType::OpenSquareBracket)
             --Token;
         // [...]
         // ^
@@ -3756,10 +3516,10 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessShaderAttributes(TokenList
         StrToLowerInPlace(Attrib);
 
         ++TmpToken;
-        VERIFY_PARSER_STATE(TmpToken, TmpToken != m_Tokens.end() && TmpToken->Type == TokenType::OpenBracket, "\'(\' expected");
+        VERIFY_PARSER_STATE(TmpToken, TmpToken != m_Tokens.end() && TmpToken->Type == TokenType::OpenParen, "\'(\' expected");
         String AttribValue;
         ProcessScope(
-            TmpToken, m_Tokens.end(), TokenType::OpenBracket, TokenType::ClosingBracket,
+            TmpToken, m_Tokens.end(), TokenType::OpenParen, TokenType::ClosingParen,
             [&](TokenListType::iterator& tkn, int) //
             {
                 AttribValue.append(tkn->Delimiter);
@@ -3767,7 +3527,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessShaderAttributes(TokenList
                 ++tkn;
             } //
         );
-        VERIFY_PARSER_STATE(TmpToken, TmpToken != m_Tokens.end() && TmpToken->Type == TokenType::ClosingBracket, "\']\' expected");
+        VERIFY_PARSER_STATE(TmpToken, TmpToken != m_Tokens.end() && TmpToken->Type == TokenType::ClosingParen, "\']\' expected");
         Attributes.emplace(make_pair(HashMapStringKey(move(Attrib)), AttribValue));
 
         --Token;
@@ -4242,7 +4002,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessReturnStatements(TokenList
 
                 if (Token->Type != TokenType::Semicolon)
                 {
-                    m_Tokens.insert(Token, TokenInfo(TokenType::OpenBracket, "("));
+                    m_Tokens.insert(Token, TokenInfo(TokenType::OpenParen, "("));
                     //if( x < 0.5 ) _RETURN_( float4(0.0, 0.0, 0.0, 1.0);
                     //                        ^
 
@@ -4253,7 +4013,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessReturnStatements(TokenList
                     //                                                  ^
 
                     // Replace semicolon with ')'
-                    Token->Type    = TokenType::ClosingBracket;
+                    Token->Type    = TokenType::ClosingParen;
                     Token->Literal = ")";
                     //if( x < 0.5 ) _RETURN_( float4(0.0, 0.0, 0.0, 1.0))
                     //                                                  ^
@@ -4473,7 +4233,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::RemoveSemanticsFromBlock(TokenLis
 
                     // float4 Pos : POSITION)
                     //                      ^
-                    if (tkn->Type == TokenType::Semicolon || tkn->Literal == "," || tkn->Type == TokenType::ClosingBracket)
+                    if (tkn->Type == TokenType::Semicolon || tkn->Literal == "," || tkn->Type == TokenType::ClosingParen)
                     {
                         m_Tokens.erase(ColonToken, tkn);
                         // float4 Pos ;
@@ -4530,9 +4290,9 @@ void HLSL2GLSLConverterImpl::ConversionStream::RemoveSemantics()
                     ++Token;
                     if (Token == m_Tokens.end())
                         return;
-                    if (Token->Type == TokenType::OpenBracket)
+                    if (Token->Type == TokenType::OpenParen)
                     {
-                        RemoveSemanticsFromBlock(Token, TokenType::OpenBracket, TokenType::ClosingBracket);
+                        RemoveSemanticsFromBlock(Token, TokenType::OpenParen, TokenType::ClosingParen);
                         // void TestVS( ... )
                         // {
                         // ^
@@ -4580,7 +4340,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::RemoveSpecialShaderAttributes()
         [&](TokenListType::iterator& Token, int ScopeDepth) //
         {
             // Search global scope only
-            if (ScopeDepth != 0 || Token->Type != TokenType::OpenStaple)
+            if (ScopeDepth != 0 || Token->Type != TokenType::OpenSquareBracket)
             {
                 ++Token;
                 return;
@@ -4599,9 +4359,9 @@ void HLSL2GLSLConverterImpl::ConversionStream::RemoveSpecialShaderAttributes()
                 ++Token;
                 // [numthreads(16, 16, 1)]
                 //            ^
-                if (Token->Type != TokenType::OpenBracket)
+                if (Token->Type != TokenType::OpenParen)
                     return;
-                while (Token != m_Tokens.end() && Token->Type != TokenType::ClosingStaple)
+                while (Token != m_Tokens.end() && Token->Type != TokenType::ClosingSquareBracket)
                     ++Token;
                 // [numthreads(16, 16, 1)]
                 //                       ^
@@ -4853,7 +4613,7 @@ String HLSL2GLSLConverterImpl::ConversionStream::Convert(const Char* EntryPoint,
                 //             ^
                 //       OpenParenToken
                 if ((ReturnTypeToken->IsBuiltInType() || ReturnTypeToken->Type == TokenType::Identifier) &&
-                    OpenParenToken->Type == TokenType::OpenBracket)
+                    OpenParenToken->Type == TokenType::OpenParen)
                 {
                     if (Token->Literal == EntryPoint)
                         ShaderEntryPointToken = Token;

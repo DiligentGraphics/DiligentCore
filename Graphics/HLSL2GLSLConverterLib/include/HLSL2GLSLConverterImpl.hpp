@@ -227,10 +227,10 @@ private:
         Operator,
         OpenBrace,
         ClosingBrace,
-        OpenBracket,
-        ClosingBracket,
-        OpenStaple,
-        ClosingStaple,
+        OpenParen,
+        ClosingParen,
+        OpenSquareBracket,
+        ClosingSquareBracket,
         OpenAngleBracket,
         ClosingAngleBracket,
         Identifier,
@@ -241,7 +241,7 @@ private:
         TextBlock,
         Assignment,
         ComparisonOp,
-        BooleanOp,
+        LogicOp,
         BitwiseOp,
         IncDecOp,
         MathOp
@@ -250,9 +250,36 @@ private:
 
     struct TokenInfo
     {
-        TokenType Type;
+        using TokenType = HLSL2GLSLConverterImpl::TokenType;
+
+        TokenType Type = TokenType::Undefined;
         String    Literal;
         String    Delimiter;
+
+        void SetType(TokenType _Type)
+        {
+            Type = _Type;
+        }
+
+        bool CompareLiteral(const char* Str)
+        {
+            return Literal == Str;
+        }
+
+        bool CompareLiteral(const std::string::const_iterator& Start,
+                            const std::string::const_iterator& End)
+        {
+            const size_t Len = End - Start;
+            if (strncmp(Literal.c_str(), &*Start, Len) != 0)
+                return false;
+            return Literal.length() == Len;
+        }
+
+        void ExtendLiteral(const std::string::const_iterator& Start,
+                           const std::string::const_iterator& End)
+        {
+            Literal.append(Start, End);
+        }
 
         bool IsBuiltInType() const
         {
@@ -268,12 +295,23 @@ private:
             return Type >= TokenType::kw_break && Type <= TokenType::kw_while;
         }
 
-        TokenInfo(TokenType   _Type      = TokenType::Undefined,
-                  const Char* _Literal   = "",
-                  const Char* _Delimiter = "") :
+        static TokenInfo Create(TokenType                          _Type,
+                                const std::string::const_iterator& DelimStart,
+                                const std::string::const_iterator& DelimEnd,
+                                const std::string::const_iterator& LiteralStart,
+                                const std::string::const_iterator& LiteralEnd)
+        {
+            return TokenInfo{_Type, std::string{LiteralStart, LiteralEnd}, std::string{DelimStart, DelimEnd}};
+        }
+
+        TokenInfo() {}
+
+        TokenInfo(TokenType   _Type,
+                  std::string _Literal,
+                  std::string _Delimiter = "") :
             Type{_Type},
-            Literal{_Literal},
-            Delimiter{_Delimiter}
+            Literal{std::move(_Literal)},
+            Delimiter{std::move(_Delimiter)}
         {}
     };
     typedef std::list<TokenInfo> TokenListType;

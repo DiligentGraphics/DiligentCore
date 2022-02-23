@@ -33,6 +33,7 @@
 
 #include "../../Primitives/interface/BasicTypes.h"
 #include "../../Platforms/Basic/interface/DebugUtilities.hpp"
+#include "StringTools.h"
 
 namespace Diligent
 {
@@ -372,6 +373,211 @@ void SkipFloatNumber(IteratorType& Pos, const IteratorType& End)
         Pos = ++c;
     }
 #undef CHECK_END
+}
+
+/// Tokenizes the given string using the C-language syntax
+
+/// \param [in] SourceStart  - start of the source string.
+/// \param [in] SourceEnd    - end of the source string.
+/// \param [in] CreateToken  - a handler called every time a new token should
+///                            be created.
+/// \param [in] GetTokenType - a function that should return the token type
+///                            for the given literal.
+/// \return     Tokenized representation of the source string
+template <typename TokenClass,
+          typename ContainerType,
+          typename IteratorType,
+          typename CreateTokenFuncType,
+          typename GetTokenTypeFunctType>
+ContainerType Tokenize(const IteratorType&   SourceStart,
+                       const IteratorType&   SourceEnd,
+                       CreateTokenFuncType   CreateToken,
+                       GetTokenTypeFunctType GetTokenType) noexcept(false)
+{
+    using TokenType = typename TokenClass::TokenType;
+
+    ContainerType Tokens;
+    // Push empty node in the beginning of the list to facilitate
+    // backwards searching
+    Tokens.emplace_back(TokenClass{});
+
+    Parsing::SplitString(SourceStart, SourceEnd, [&](const auto& DelimStart, auto& Pos) {
+        const auto DelimEnd = Pos;
+
+        auto LiteralStart = Pos;
+        auto LiteralEnd   = DelimStart;
+
+        auto Type = TokenType::Undefined;
+
+        if (Pos == SourceEnd)
+        {
+            Tokens.push_back(CreateToken(Type, DelimStart, DelimEnd, LiteralStart, Pos));
+            return false;
+        }
+
+        auto AddDoubleCharToken = [&](TokenType DoubleCharType) {
+            if (!Tokens.empty() && DelimStart == DelimEnd)
+            {
+                auto& LastToken = Tokens.back();
+                if (LastToken.CompareLiteral(Pos, Pos + 1))
+                {
+                    LastToken.SetType(DoubleCharType);
+                    LastToken.ExtendLiteral(Pos, Pos + 1);
+                    ++Pos;
+                    return true;
+                }
+            }
+
+            return false;
+        };
+
+#define SINGLE_CHAR_TOKEN(TYPE) \
+    Type = TokenType::TYPE;     \
+    ++Pos;                      \
+    break
+
+        switch (*Pos)
+        {
+            case '#':
+                Type = TokenType::PreprocessorDirective;
+                Parsing::SkipLine(Pos, SourceEnd);
+                break;
+
+            case '=':
+            {
+                if (!Tokens.empty() && DelimStart == DelimEnd)
+                {
+                    auto& LastToken = Tokens.back();
+                    // +=, -=, *=, /=, %=, <<=, >>=, &=, |=, ^=
+                    for (const char* op : {"+", "-", "*", "/", "%", "<<", ">>", "&", "|", "^"})
+                    {
+                        if (LastToken.CompareLiteral(op))
+                        {
+                            LastToken.SetType(TokenType::Assignment);
+                            LastToken.ExtendLiteral(Pos, Pos + 1);
+                            ++Pos;
+                            return Pos != SourceEnd;
+                        }
+                    }
+
+                    // <=, >=, ==, !=
+                    for (const char* op : {"<", ">", "=", "!"})
+                    {
+                        if (LastToken.CompareLiteral(op))
+                        {
+                            LastToken.SetType(TokenType::ComparisonOp);
+                            LastToken.ExtendLiteral(Pos, Pos + 1);
+                            ++Pos;
+                            return Pos != SourceEnd;
+                        }
+                    }
+                }
+
+                SINGLE_CHAR_TOKEN(Assignment);
+            }
+
+            case '|':
+            case '&':
+                if (AddDoubleCharToken(TokenType::LogicOp))
+                    return Pos != SourceEnd;
+                SINGLE_CHAR_TOKEN(BitwiseOp);
+
+            case '<':
+            case '>':
+                // Note: we do not distinguish between comparison operators
+                // and template arguments like in Texture2D<float> at this
+                // point.
+                if (AddDoubleCharToken(TokenType::BitwiseOp))
+                    return Pos != SourceEnd;
+                SINGLE_CHAR_TOKEN(ComparisonOp);
+
+            case '+':
+            case '-':
+                // We do not currently distinguish between math operator a + b,
+                // unary operator -a and numerical constant -1:
+                if (AddDoubleCharToken(TokenType::IncDecOp))
+                    return Pos != SourceEnd;
+                SINGLE_CHAR_TOKEN(MathOp);
+
+            case '~':
+            case '^':
+                SINGLE_CHAR_TOKEN(BitwiseOp);
+
+            case '*':
+            case '/':
+            case '%':
+                SINGLE_CHAR_TOKEN(MathOp);
+
+            case '!':
+                SINGLE_CHAR_TOKEN(LogicOp);
+
+            case ',':
+                SINGLE_CHAR_TOKEN(Comma);
+
+            case ';':
+                SINGLE_CHAR_TOKEN(Semicolon);
+
+            // clang-format off
+            case '(': SINGLE_CHAR_TOKEN(OpenParen);
+            case ')': SINGLE_CHAR_TOKEN(ClosingParen);
+            case '{': SINGLE_CHAR_TOKEN(OpenBrace);
+            case '}': SINGLE_CHAR_TOKEN(ClosingBrace);
+            case '[': SINGLE_CHAR_TOKEN(OpenSquareBracket);
+            case ']': SINGLE_CHAR_TOKEN(ClosingSquareBracket);
+          //case '<': SINGLE_CHAR_TOKEN(OpenAngleBracket);
+          //case '>': SINGLE_CHAR_TOKEN(ClosingAngleBracket);
+                // clang-format on
+
+            case '"':
+            {
+                // Skip quotes
+                Type = TokenType::StringConstant;
+                ++LiteralStart;
+                ++Pos;
+                while (Pos != SourceEnd && *Pos != '\0' && *Pos != '"')
+                    ++Pos;
+                LiteralEnd = Pos;
+                if (Pos != SourceEnd && *Pos == '"')
+                    ++Pos;
+
+                break;
+            }
+
+            default:
+            {
+                Parsing::SkipIdentifier(Pos, SourceEnd);
+                if (LiteralStart != Pos)
+                {
+                    Type = GetTokenType(LiteralStart, Pos);
+                    if (Type == TokenType::Undefined)
+                        Type = TokenType::Identifier;
+                }
+                else
+                {
+                    Parsing::SkipFloatNumber(Pos, SourceEnd);
+                    if (LiteralStart != Pos)
+                    {
+                        Type = TokenType::NumericConstant;
+                    }
+                }
+
+                if (Type == TokenType::Undefined)
+                {
+                    ++Pos; // Add single character
+                }
+            }
+        }
+
+        if (LiteralEnd == DelimStart)
+            LiteralEnd = Pos;
+
+        Tokens.push_back(CreateToken(Type, DelimStart, DelimEnd, LiteralStart, LiteralEnd));
+        return Pos != SourceEnd;
+    } //
+    );
+#undef SINGLE_CHAR_TOKEN
+
+    return Tokens;
 }
 
 } // namespace Parsing

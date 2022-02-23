@@ -270,4 +270,306 @@ sint occaecat //cupidatat non proident.
     EXPECT_EQ(ref_it, Chunks.end());
 }
 
+
+enum class TestTokenType
+{
+    Undefined,
+    PreprocessorDirective,
+    Operator,
+    OpenBrace,
+    ClosingBrace,
+    OpenParen,
+    ClosingParen,
+    OpenSquareBracket,
+    ClosingSquareBracket,
+    OpenAngleBracket,
+    ClosingAngleBracket,
+    Identifier,
+    NumericConstant,
+    StringConstant,
+    Semicolon,
+    Comma,
+    TextBlock,
+    Assignment,
+    ComparisonOp,
+    LogicOp,
+    BitwiseOp,
+    IncDecOp,
+    MathOp,
+    Keyword1,
+    Keyword2,
+    Keyword3
+};
+
+struct TestToken
+{
+    using TokenType = TestTokenType;
+
+    TokenType   Type = TestTokenType::Undefined;
+    std::string Literal;
+    std::string Delimiter;
+
+    TestToken() {}
+    TestToken(TokenType   _Type,
+              std::string _Literal,
+              std::string _Delimiter = "") :
+        Type{_Type},
+        Literal{std::move(_Literal)},
+        Delimiter{std::move(_Delimiter)}
+    {}
+
+    void SetType(TokenType _Type)
+    {
+        Type = _Type;
+    }
+
+    bool CompareLiteral(const char* Str)
+    {
+        return Literal == Str;
+    }
+
+    bool CompareLiteral(const char* Start, const char* End)
+    {
+        return Literal == std::string{Start, End};
+    }
+
+    void ExtendLiteral(const char* Start, const char* End)
+    {
+        Literal.append(Start, End);
+    }
+
+    static TestToken Create(TokenType _Type, const char* DelimStart, const char* DelimEnd, const char* LiteralStart, const char* LiteralEnd)
+    {
+        return TestToken{_Type, std::string{LiteralStart, LiteralEnd}, std::string{DelimStart, DelimEnd}};
+    }
+
+    static TokenType FindType(const char* IdentifierStart, const char* IdentifierEnd)
+    {
+        if (strncmp(IdentifierStart, "Keyword1", IdentifierEnd - IdentifierStart) == 0)
+            return TokenType::Keyword1;
+
+        if (strncmp(IdentifierStart, "Keyword2", IdentifierEnd - IdentifierStart) == 0)
+            return TokenType::Keyword2;
+
+        if (strncmp(IdentifierStart, "Keyword3", IdentifierEnd - IdentifierStart) == 0)
+            return TokenType::Keyword3;
+
+        return TokenType::Identifier;
+    }
+};
+
+bool FindTokenSequence(const std::vector<TestToken>& Tokens, const std::vector<TestToken>& Sequence)
+{
+    for (auto start_it = Tokens.begin(); start_it != Tokens.end(); ++start_it)
+    {
+        auto token_it = start_it;
+        auto ref_it   = Sequence.begin();
+        while (ref_it != Sequence.end() && token_it != Tokens.end())
+        {
+            if (ref_it->Type != token_it->Type || ref_it->Literal != token_it->Literal)
+                break;
+            ++ref_it;
+            ++token_it;
+        }
+        if (ref_it == Sequence.end())
+            return true;
+    }
+    return false;
+}
+
+TEST(Common_ParsingTools, Tokenizer_Preprocessor)
+{
+    static const char* TestStr = R"(
+// Comment
+#include <Include1.h>
+
+/* Comment */
+#define MACRO
+
+void main()
+{
+}
+// Comment
+/* Comment */
+)";
+
+    const auto Tokens = Tokenize<TestToken, std::vector<TestToken>>(TestStr, TestStr + strlen(TestStr), TestToken::Create, TestToken::FindType);
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::PreprocessorDirective, "#include <Include1.h>"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::PreprocessorDirective, "#define MACRO"}}));
+}
+
+TEST(Common_ParsingTools, Tokenizer_Operators)
+{
+    static const char* TestStr = R"(
+
+/* Comment */
+void main()
+{
+    // Binary operators
+    a0 + a1; // Comment 2
+    b0 - b1; /* Comment 3*/
+/**/c0 * c1;
+    d0 / d1;
+    e0 % e1;
+    f0 << f1;
+    g0 >> g1;
+    h0 & h1;
+    i0 | i1;
+    j0 ^ j1;
+
+    k0 < k1;
+    l0 > l1;
+    m0 = m1;
+
+    // Unary operators
+    !n0;
+    ~o0;
+
+    // Assignment operators
+    A0 += A1;
+    B0 -= B1;
+    C0 *= C1;
+    D0 /= D1;
+    E0 %= E1;
+    F0 <<= F1;
+    G0 >>= G1;
+    H0 &= H1;
+    I0 |= I1;
+    J0 ^= J1;
+
+    K0 <= K1;
+    L0 >= L1;
+    M0 == M1;
+    N0 != N1;
+
+    P0++; ++P1;
+    Q0--; --Q1;
+}
+)";
+
+    const auto Tokens = Tokenize<TestToken, std::vector<TestToken>>(TestStr, TestStr + strlen(TestStr), TestToken::Create, TestToken::FindType);
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "a0"}, {TestTokenType::MathOp, "+"}, {TestTokenType::Identifier, "a1"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "b0"}, {TestTokenType::MathOp, "-"}, {TestTokenType::Identifier, "b1"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "c0"}, {TestTokenType::MathOp, "*"}, {TestTokenType::Identifier, "c1"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "d0"}, {TestTokenType::MathOp, "/"}, {TestTokenType::Identifier, "d1"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "e0"}, {TestTokenType::MathOp, "%"}, {TestTokenType::Identifier, "e1"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "f0"}, {TestTokenType::BitwiseOp, "<<"}, {TestTokenType::Identifier, "f1"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "g0"}, {TestTokenType::BitwiseOp, ">>"}, {TestTokenType::Identifier, "g1"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "h0"}, {TestTokenType::BitwiseOp, "&"}, {TestTokenType::Identifier, "h1"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "i0"}, {TestTokenType::BitwiseOp, "|"}, {TestTokenType::Identifier, "i1"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "j0"}, {TestTokenType::BitwiseOp, "^"}, {TestTokenType::Identifier, "j1"}}));
+
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "k0"}, {TestTokenType::ComparisonOp, "<"}, {TestTokenType::Identifier, "k1"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "l0"}, {TestTokenType::ComparisonOp, ">"}, {TestTokenType::Identifier, "l1"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "m0"}, {TestTokenType::Assignment, "="}, {TestTokenType::Identifier, "m1"}}));
+
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::LogicOp, "!"}, {TestTokenType::Identifier, "n0"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::BitwiseOp, "~"}, {TestTokenType::Identifier, "o0"}}));
+
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "A0"}, {TestTokenType::Assignment, "+="}, {TestTokenType::Identifier, "A1"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "B0"}, {TestTokenType::Assignment, "-="}, {TestTokenType::Identifier, "B1"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "C0"}, {TestTokenType::Assignment, "*="}, {TestTokenType::Identifier, "C1"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "D0"}, {TestTokenType::Assignment, "/="}, {TestTokenType::Identifier, "D1"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "E0"}, {TestTokenType::Assignment, "%="}, {TestTokenType::Identifier, "E1"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "F0"}, {TestTokenType::Assignment, "<<="}, {TestTokenType::Identifier, "F1"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "G0"}, {TestTokenType::Assignment, ">>="}, {TestTokenType::Identifier, "G1"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "H0"}, {TestTokenType::Assignment, "&="}, {TestTokenType::Identifier, "H1"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "I0"}, {TestTokenType::Assignment, "|="}, {TestTokenType::Identifier, "I1"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "J0"}, {TestTokenType::Assignment, "^="}, {TestTokenType::Identifier, "J1"}}));
+
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "K0"}, {TestTokenType::ComparisonOp, "<="}, {TestTokenType::Identifier, "K1"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "L0"}, {TestTokenType::ComparisonOp, ">="}, {TestTokenType::Identifier, "L1"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "M0"}, {TestTokenType::ComparisonOp, "=="}, {TestTokenType::Identifier, "M1"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "N0"}, {TestTokenType::ComparisonOp, "!="}, {TestTokenType::Identifier, "N1"}}));
+
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "P0"}, {TestTokenType::IncDecOp, "++"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::IncDecOp, "++"}, {TestTokenType::Identifier, "P1"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "Q0"}, {TestTokenType::IncDecOp, "--"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::IncDecOp, "--"}, {TestTokenType::Identifier, "Q1"}}));
+}
+
+TEST(Common_ParsingTools, Tokenizer_Brackets)
+{
+    static const char* TestStr = R"(
+// Comment
+struct MyStruct
+{
+    int a;
+};
+
+void main()
+{
+    function(argument1, argument2);
+    array[size];
+}
+)";
+
+    const auto Tokens = Tokenize<TestToken, std::vector<TestToken>>(TestStr, TestStr + strlen(TestStr), TestToken::Create, TestToken::FindType);
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::OpenBrace, "{"}, {TestTokenType::Identifier, "int"}, {TestTokenType::Identifier, "a"}, {TestTokenType::Semicolon, ";"}, {TestTokenType::ClosingBrace, "}"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "function"}, {TestTokenType::OpenParen, "("}, {TestTokenType::Identifier, "argument1"}, {TestTokenType::Comma, ","}, {TestTokenType::Identifier, "argument2"}, {TestTokenType::ClosingParen, ")"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "array"}, {TestTokenType::OpenSquareBracket, "["}, {TestTokenType::Identifier, "size"}, {TestTokenType::ClosingSquareBracket, "]"}}));
+}
+
+TEST(Common_ParsingTools, Tokenizer_StringConstant)
+{
+    static const char* TestStr = R"(
+void main()
+{
+    const char* String = "string constant";
+}
+)";
+
+    const auto Tokens = Tokenize<TestToken, std::vector<TestToken>>(TestStr, TestStr + strlen(TestStr), TestToken::Create, TestToken::FindType);
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "String"}, {TestTokenType::Assignment, "="}, {TestTokenType::StringConstant, "string constant"}, {TestTokenType::Semicolon, ";"}}));
+}
+
+TEST(Common_ParsingTools, Tokenizer_FloatNumber)
+{
+    static const char* TestStr = R"(
+void main()
+{
+    float Number1 = 10;
+    float Number2 = 20.0;
+    float Number3 = 30.0e+1;
+    float Number4 = 40.0e+2f;
+    float Number5 = 50.f;
+    float Number6 = .123f;
+}
+)";
+
+    const auto Tokens = Tokenize<TestToken, std::vector<TestToken>>(TestStr, TestStr + strlen(TestStr), TestToken::Create, TestToken::FindType);
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "Number1"}, {TestTokenType::Assignment, "="}, {TestTokenType::NumericConstant, "10"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "Number2"}, {TestTokenType::Assignment, "="}, {TestTokenType::NumericConstant, "20.0"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "Number3"}, {TestTokenType::Assignment, "="}, {TestTokenType::NumericConstant, "30.0e+1"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "Number4"}, {TestTokenType::Assignment, "="}, {TestTokenType::NumericConstant, "40.0e+2f"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "Number5"}, {TestTokenType::Assignment, "="}, {TestTokenType::NumericConstant, "50.f"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "Number6"}, {TestTokenType::Assignment, "="}, {TestTokenType::NumericConstant, ".123f"}}));
+}
+
+TEST(Common_ParsingTools, Tokenizer_UnknownIdentifier)
+{
+    static const char* TestStr = R"(
+void main()
+{
+    @ Unknown;
+}
+)";
+
+    const auto Tokens = Tokenize<TestToken, std::vector<TestToken>>(TestStr, TestStr + strlen(TestStr), TestToken::Create, TestToken::FindType);
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Undefined, "@"}, {TestTokenType::Identifier, "Unknown"}}));
+}
+
+TEST(Common_ParsingTools, Tokenizer_Keywords)
+{
+    static const char* TestStr = R"(
+void main()
+{
+    Keyword1 Id Keyword2(Keyword3);
+}
+)";
+
+    const auto Tokens = Tokenize<TestToken, std::vector<TestToken>>(TestStr, TestStr + strlen(TestStr), TestToken::Create, TestToken::FindType);
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Keyword1, "Keyword1"}, {TestTokenType::Identifier, "Id"}, {TestTokenType::Keyword2, "Keyword2"}, {TestTokenType::OpenParen, "("}, {TestTokenType::Keyword3, "Keyword3"}, {TestTokenType::ClosingParen, ")"}}));
+}
+
 } // namespace
