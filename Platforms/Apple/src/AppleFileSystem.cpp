@@ -125,38 +125,4 @@ bool AppleFileSystem::FileExists(const Char* strFilePath)
     return res == 0;
 }
 
-bool AppleFileSystem::PathExists(const Char* strPath)
-{
-    std::string path(strPath);
-    CorrectSlashes(path, AppleFileSystem::GetSlashSymbol());
-
-    auto res = access(path.c_str(), R_OK);
-    return res == 0;
-}
-
-bool AppleFileSystem::CreateDirectory(const Char* strPath)
-{
-    std::string path(strPath);
-    CorrectSlashes(path, AppleFileSystem::GetSlashSymbol());
-
-    auto res = mkdir(path.c_str(), S_IRWXU | S_IRWXG | S_IRWXO);
-    return res == 0;
-}
-
-void AppleFileSystem::ClearDirectory(const Char* strPath)
-{
-    UNSUPPORTED("Not implemented");
-}
-
-void AppleFileSystem::DeleteFile(const Char* strPath)
-{
-    remove(strPath);
-}
-
-std::vector<std::unique_ptr<FindFileData>> AppleFileSystem::Search(const Char* SearchPattern)
-{
-    UNSUPPORTED("Not implemented");
-    return std::vector<std::unique_ptr<FindFileData>>();
-}
-
 } // namespace Diligent

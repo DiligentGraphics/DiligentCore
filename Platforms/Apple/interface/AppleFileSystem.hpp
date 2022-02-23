@@ -32,27 +32,19 @@
 
 #include "../../Basic/interface/BasicFileSystem.hpp"
 #include "../../Basic/interface/StandardFile.hpp"
+#include "../../Linux/interface/LinuxFileSystem.hpp"
 
 namespace Diligent
 {
 
 using AppleFile = StandardFile;
 
-struct AppleFileSystem : public BasicFileSystem
+struct AppleFileSystem : public LinuxFileSystem
 {
 public:
     static AppleFile* OpenFile(const FileOpenAttribs& OpenAttribs);
 
-    static inline Char GetSlashSymbol() { return '/'; }
-
     static bool FileExists(const Char* strFilePath);
-    static bool PathExists(const Char* strPath);
-
-    static bool CreateDirectory(const Char* strPath);
-    static void ClearDirectory(const Char* strPath);
-    static void DeleteFile(const Char* strPath);
-
-    static std::vector<std::unique_ptr<FindFileData>> Search(const Char* SearchPattern);
 };
 
 } // namespace Diligent

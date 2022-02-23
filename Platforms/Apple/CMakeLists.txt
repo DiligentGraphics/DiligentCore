@@ -16,20 +16,21 @@ set(INTERFACE
     interface/AppleFileSystem.hpp
     interface/ApplePlatformDefinitions.h
     interface/ApplePlatformMisc.hpp
-    ../Linux/interface/LinuxPlatformMisc.hpp
     ${APPLE_NATIVE_WINDOW_H}
 )
 
 set(SOURCE
     src/AppleDebug.mm
     src/AppleFileSystem.cpp
+    ../Linux/src/LinuxFileSystem.cpp
 )
-
 
 add_library(Diligent-ApplePlatform ${SOURCE} ${INTERFACE} ${PLATFORM_INTERFACE_HEADERS})
 set_common_target_properties(Diligent-ApplePlatform)
 
 target_include_directories(Diligent-ApplePlatform
+PRIVATE
+   ../Linux/interface/
 PUBLIC
     interface
 )
