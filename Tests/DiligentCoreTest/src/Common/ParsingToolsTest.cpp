@@ -72,12 +72,15 @@ TEST(Common_ParsingTools, SkipLine_GoToNext)
 
     Test("", true);
     Test("\n", true);
+    Test("\r\n", true);
     Test("abc def ", true);
     Test("abc def ", true);
 
     Test("\n"
          "Correct");
     Test("\r"
+         "Correct");
+    Test("\r\n"
          "Correct");
 }
 
@@ -122,8 +125,8 @@ TEST(Common_ParsingTools, SkipComment)
     Test("/*/* abc ** /* **/Correct");
 
     Test("/*\n"
-         "/* abc **\n"
-         "/****** ***** ***\n"
+         "/* abc **\r\n"
+         "/****** ***** ***\r"
          " /* **/Correct");
 }
 
@@ -170,16 +173,16 @@ TEST(Common_ParsingTools, SkipDelimetersAndComments)
     Test("// Comment", true);
 
     Test("// Comment line 1\n"
-         "/// Comment line 2\n"
-         "//// Comment line 3\n",
+         "/// Comment line 2\r"
+         "//// Comment line 3\r\n",
          true);
 
     Test("/* Comment */\n",
          true);
 
     Test("/* Comment line 1\n"
-         "Comment line 2\n"
-         "Comment line 3\n*/",
+         "Comment line 2\r"
+         "Comment line 3\r\n*/",
          true);
 
     Test(" \t \r \n // Comment\n"
@@ -195,8 +198,8 @@ TEST(Common_ParsingTools, SkipDelimetersAndComments)
          " /* Comment 2 \n"
          "Comment 3 /* /* **** \r"
          "Comment 4*/ // Comment 5"
-         " \n //\n"
-         " \t \r \n "
+         " \n //\r\n"
+         " \t \r \n"
          "Correct");
 }
 
@@ -243,7 +246,7 @@ sint occaecat //cupidatat non proident.
     std::vector<std::string> Chunks = {"Lorem", "ipsum", "adipiscing", "elit", ",", "aliqua.", "Ut", "Duis", "aute", "irure", "sint", "occaecat", ""};
     auto                     ref_it = Chunks.begin();
 
-    const auto StrEnd = TestStr + strlen(TestStr);
+    const auto* StrEnd = TestStr + strlen(TestStr);
     SplitString(TestStr, StrEnd,
                 [&](const char* DelimStart, const char*& Pos) //
                 {

@@ -83,7 +83,14 @@ inline bool SkipLine(InteratorType& Pos, const InteratorType& End, bool GoToNext
     while (Pos != End && !IsNewLine(*Pos))
         ++Pos;
     if (GoToNextLine && Pos != End && IsNewLine(*Pos))
+    {
         ++Pos;
+        if (Pos[-1] == '\r' && Pos != End && Pos[0] == '\n')
+        {
+            ++Pos;
+            // treat \r\n as a single ending
+        }
+    }
     return Pos == End;
 }
 
