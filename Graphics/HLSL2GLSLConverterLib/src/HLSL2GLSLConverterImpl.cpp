@@ -362,6 +362,7 @@
 #include "DataBlobImpl.hpp"
 #include "StringDataBlobImpl.hpp"
 #include "StringTools.hpp"
+#include "ParsingTools.hpp"
 #include "EngineMemory.h"
 
 using namespace std;
@@ -369,146 +370,12 @@ using namespace std;
 namespace Diligent
 {
 
+using namespace Parsing;
+
 static const Char* g_GLSLDefinitions =
     {
 #include "GLSLDefinitions_inc.h"
 };
-
-inline bool IsWhitespace(Char Symbol)
-{
-    return Symbol == ' ' || Symbol == '\t';
-}
-
-inline bool IsNewLine(Char Symbol)
-{
-    return Symbol == '\r' || Symbol == '\n';
-}
-
-inline bool IsDelimiter(Char Symbol)
-{
-    static const Char* Delimeters = " \t\r\n";
-    return strchr(Delimeters, Symbol) != nullptr;
-}
-
-inline bool IsStatementSeparator(Char Symbol)
-{
-    static const Char* StatementSeparator = ";}";
-    return strchr(StatementSeparator, Symbol) != nullptr;
-}
-
-
-// IteratorType may be String::iterator or String::const_iterator.
-// While iterator is convertible to const_iterator,
-// iterator& cannot be converted to const_iterator& (Microsoft compiler allows
-// such conversion, while gcc does not)
-template <typename InteratorType>
-static bool SkipComment(const String& Input, InteratorType& Pos)
-{
-    // // Comment     /* Comment
-    // ^              ^
-    if (Pos == Input.end() || *Pos != '/')
-        return false;
-
-    auto NextPos = Pos + 1;
-    // // Comment     /* Comment
-    //  ^              ^
-    if (NextPos == Input.end())
-        return false;
-
-    if (*NextPos == '/')
-    {
-        // Skip // comment
-        Pos = NextPos + 1;
-        // // Comment
-        //   ^
-        for (; Pos != Input.end() && !IsNewLine(*Pos); ++Pos)
-            ;
-        return true;
-    }
-    else if (*NextPos == '*')
-    {
-        // Skip /* comment */
-        Pos = NextPos + 1;
-        // /* Comment
-        //   ^
-        while (Pos != Input.end())
-        {
-            if (*Pos == '*')
-            {
-                // /* Comment */
-                //            ^
-                ++Pos;
-                // /* Comment */
-                //             ^
-                if (Pos == Input.end())
-                    break;
-                if (*Pos == '/')
-                {
-                    ++Pos;
-                    // /* Comment */
-                    //              ^
-                    break;
-                }
-            }
-            else
-            {
-                // Must handle /* **/ properly
-                ++Pos;
-            }
-        }
-        return true;
-    }
-
-    return false;
-}
-
-inline bool SkipDelimeters(const String& Input, String::const_iterator& SrcChar)
-{
-    for (; SrcChar != Input.end() && IsDelimiter(*SrcChar); ++SrcChar)
-        ;
-    return SrcChar == Input.end();
-}
-
-// IteratorType may be String::iterator or String::const_iterator.
-// While iterator is convertible to const_iterator,
-// iterator& cannot be converted to const_iterator& (Microsoft compiler allows
-// such conversion, while gcc does not)
-template <typename IteratorType>
-inline bool SkipDelimetersAndComments(const String& Input, IteratorType& SrcChar)
-{
-    bool DelimiterFound = false;
-    bool CommentFound   = false;
-    do
-    {
-        DelimiterFound = false;
-        for (; SrcChar != Input.end() && IsDelimiter(*SrcChar); ++SrcChar)
-            DelimiterFound = true;
-
-        CommentFound = SkipComment(Input, SrcChar);
-    } while (SrcChar != Input.end() && (DelimiterFound || CommentFound));
-
-    return SrcChar == Input.end();
-}
-
-inline bool SkipIdentifier(const String& Input, String::const_iterator& SrcChar)
-{
-    if (SrcChar == Input.end())
-        return true;
-
-    if (isalpha(*SrcChar) || *SrcChar == '_')
-    {
-        ++SrcChar;
-        if (SrcChar == Input.end())
-            return true;
-    }
-    else
-        return false;
-
-    for (; SrcChar != Input.end() && (isalnum(*SrcChar) || *SrcChar == '_'); ++SrcChar)
-        ;
-
-    return SrcChar == Input.end();
-}
 
 
 const HLSL2GLSLConverterImpl& HLSL2GLSLConverterImpl::GetInstance()
@@ -985,7 +852,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::InsertIncludes(String& GLSLSource
         while (Pos != GLSLSource.end())
         {
             // #   include "TestFile.fxh"
-            if (SkipDelimetersAndComments(GLSLSource, Pos))
+            if (SkipDelimetersAndComments(Pos, GLSLSource.end()))
                 break;
             if (*Pos == '#')
             {
@@ -995,7 +862,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::InsertIncludes(String& GLSLSource
                 ++Pos;
                 // #   include "TestFile.fxh"
                 //  ^
-                if (SkipDelimetersAndComments(GLSLSource, Pos))
+                if (SkipDelimetersAndComments(Pos, GLSLSource.end()))
                 {
                     // End of the file reached - break
                     break;
@@ -1024,7 +891,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::InsertIncludes(String& GLSLSource
             break;
 
         // Find open quotes
-        if (SkipDelimetersAndComments(GLSLSource, Pos))
+        if (SkipDelimetersAndComments(Pos, GLSLSource.end()))
             LOG_ERROR_AND_THROW("Unexpected EOF after #include directive");
         // #   include "TestFile.fxh"
         //             ^
@@ -1146,7 +1013,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::Tokenize(const String& Source)
     {
         TokenInfo NewToken;
         auto      DelimStart = SrcPos;
-        SkipDelimetersAndComments(Source, SrcPos);
+        SkipDelimetersAndComments(SrcPos, Source.end());
         if (DelimStart != SrcPos)
         {
             auto DelimSize = SrcPos - DelimStart;
@@ -1163,9 +1030,9 @@ void HLSL2GLSLConverterImpl::ConversionStream::Tokenize(const String& Source)
                 NewToken.Type       = TokenType::PreprocessorDirective;
                 auto DirectiveStart = SrcPos;
                 ++SrcPos;
-                SkipDelimetersAndComments(Source, SrcPos);
+                SkipDelimetersAndComments(SrcPos, Source.end());
                 CHECK_END("Missing preprocessor directive");
-                SkipIdentifier(Source, SrcPos);
+                SkipIdentifier(SrcPos, Source.end());
                 auto DirectiveSize = SrcPos - DirectiveStart;
                 NewToken.Literal.reserve(DirectiveSize);
                 NewToken.Literal.append(DirectiveStart, SrcPos);
@@ -1324,7 +1191,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::Tokenize(const String& Source)
             default:
             {
                 auto IdentifierStartPos = SrcPos;
-                SkipIdentifier(Source, SrcPos);
+                SkipIdentifier(SrcPos, Source.end());
                 if (IdentifierStartPos != SrcPos)
                 {
                     auto IDSize = SrcPos - IdentifierStartPos;
@@ -1779,7 +1646,7 @@ void ParseImageFormat(const String& Comment, String& ImageFormat)
     //    /* format = r32f */
     // ^
     auto Pos = Comment.begin();
-    if (SkipDelimeters(Comment, Pos))
+    if (SkipDelimeters(Pos, Comment.end()))
         return;
     //    /* format = r32f */
     //    ^
@@ -1795,7 +1662,7 @@ void ParseImageFormat(const String& Comment, String& ImageFormat)
     ++Pos;
     //    /* format = r32f */
     //      ^
-    if (SkipDelimeters(Comment, Pos))
+    if (SkipDelimeters(Pos, Comment.end()))
         return;
     //    /* format = r32f */
     //       ^
@@ -1803,7 +1670,7 @@ void ParseImageFormat(const String& Comment, String& ImageFormat)
         return;
     //    /* format = r32f */
     //             ^
-    if (SkipDelimeters(Comment, Pos))
+    if (SkipDelimeters(Pos, Comment.end()))
         return;
     //    /* format = r32f */
     //              ^
@@ -1812,13 +1679,13 @@ void ParseImageFormat(const String& Comment, String& ImageFormat)
     ++Pos;
     //    /* format = r32f */
     //               ^
-    if (SkipDelimeters(Comment, Pos))
+    if (SkipDelimeters(Pos, Comment.end()))
         return;
     //    /* format = r32f */
     //                ^
 
     auto ImgFmtStartPos = Pos;
-    SkipIdentifier(Comment, Pos);
+    SkipIdentifier(Pos, Comment.end());
 
     ImageFormat = String(ImgFmtStartPos, Pos);
 }
@@ -4174,7 +4041,7 @@ void ParseAttributesInComment(const String& Comment, std::unordered_map<HashMapS
     auto Pos = Comment.begin();
     //    /* partitioning = fractional_even, outputtopology = triangle_cw */
     // ^
-    if (SkipDelimeters(Comment, Pos))
+    if (SkipDelimeters(Pos, Comment.end()))
         return;
     //    /* partitioning = fractional_even, outputtopology = triangle_cw */
     //    ^
@@ -4192,16 +4059,16 @@ void ParseAttributesInComment(const String& Comment, std::unordered_map<HashMapS
     {
         //    /* partitioning = fractional_even, outputtopology = triangle_cw */
         //      ^
-        if (SkipDelimeters(Comment, Pos))
+        if (SkipDelimeters(Pos, Comment.end()))
             return;
         //    /* partitioning = fractional_even, outputtopology = triangle_cw */
         //       ^
         auto AttribStart = Pos;
-        SkipIdentifier(Comment, Pos);
+        SkipIdentifier(Pos, Comment.end());
         String Attrib(AttribStart, Pos);
         //    /* partitioning = fractional_even, outputtopology = triangle_cw */
         //                   ^
-        if (SkipDelimeters(Comment, Pos))
+        if (SkipDelimeters(Pos, Comment.end()))
             return;
         //    /* partitioning = fractional_even, outputtopology = triangle_cw */
         //                    ^
@@ -4210,18 +4077,18 @@ void ParseAttributesInComment(const String& Comment, std::unordered_map<HashMapS
         ++Pos;
         //    /* partitioning = fractional_even, outputtopology = triangle_cw */
         //                     ^
-        if (SkipDelimeters(Comment, Pos))
+        if (SkipDelimeters(Pos, Comment.end()))
             return;
         //    /* partitioning = fractional_even, outputtopology = triangle_cw */
         //                     ^
         auto ValueStartPos = Pos;
-        SkipIdentifier(Comment, Pos);
+        SkipIdentifier(Pos, Comment.end());
         //    /* partitioning = fractional_even , outputtopology = triangle_cw */
         //                                     ^
         String Value(ValueStartPos, Pos);
         Attributes.emplace(make_pair(HashMapStringKey(move(Attrib)), Value));
 
-        if (SkipDelimeters(Comment, Pos))
+        if (SkipDelimeters(Pos, Comment.end()))
             return;
         //    /* partitioning = fractional_even , outputtopology = triangle_cw */
         //                                      ^
