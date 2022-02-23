@@ -141,9 +141,6 @@ TEST(ShaderPreprocessTest, InvalidInclude)
     constexpr size_t TestCount = 8;
     for (size_t TestId = 0; TestId < TestCount; ++TestId)
     {
-        if (TestId == 3)
-            continue; // TODO(MG): FIX
-
         String FilePath = "IncludeInvalidCase" + std::to_string(TestId) + ".hlsl";
 
         ShaderCreateInfo ShaderCI{};

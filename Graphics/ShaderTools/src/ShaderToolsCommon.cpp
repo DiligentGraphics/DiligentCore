@@ -176,6 +176,7 @@ static String ParserErrorMessage(const char* Message, const Char* pBuffer, const
     return Stream.str();
 }
 
+
 // https://github.com/tomtom-international/cpp-dependencies/blob/a91f330e97c6b9e4e9ecd81f43c4a40e044d4bbc/src/Input.cpp
 template <typename HandlerType, typename ErrorHandlerType>
 bool FindIncludes(const char* pBuffer, size_t BufferSize, HandlerType IncludeHandler, ErrorHandlerType ErrorHandler)
@@ -191,6 +192,11 @@ bool FindIncludes(const char* pBuffer, size_t BufferSize, HandlerType IncludeHan
         InsideIncludeAngleBrackets,
         InsideIncludeQuotes
     } PreprocessorState = None;
+
+    constexpr const Char* MissingEndComment     = "missing end comment.";
+    constexpr const Char* MissingOpeningSymbol  = "missing opening quote or angle bracket after the include directive.";
+    constexpr const Char* MissingClosingQuote   = "missing closing quote in the include directive.";
+    constexpr const Char* MissingClosingBracket = "missing closing angle bracket in the include directive.";
 
     // Find positions of the first hash and slash
     const Char* NextHash  = static_cast<const char*>(memchr(pBuffer, '#', BufferSize));
@@ -233,7 +239,7 @@ bool FindIncludes(const char* pBuffer, size_t BufferSize, HandlerType IncludeHan
                             const char* EndSlash = static_cast<const Char*>(memchr(pCurrPos + 1, '/', pBufferEnd - pCurrPos - 1));
                             if (!EndSlash)
                             {
-                                ErrorHandler(ParserErrorMessage("unable to find the end of the comment.", pBuffer, pCurrPos));
+                                ErrorHandler(ParserErrorMessage(MissingEndComment, pBuffer, pCurrPos));
                                 return false;
                             }
 
@@ -281,7 +287,7 @@ bool FindIncludes(const char* pBuffer, size_t BufferSize, HandlerType IncludeHan
                     }
                     else
                     {
-                        ErrorHandler(ParserErrorMessage("missing opening quote or angle bracket after the include directive.", pBuffer, pCurrPos));
+                        ErrorHandler(ParserErrorMessage(MissingOpeningSymbol, pBuffer, pCurrPos));
                         return false;
                     }
                 }
@@ -291,7 +297,7 @@ bool FindIncludes(const char* pBuffer, size_t BufferSize, HandlerType IncludeHan
                 switch (*pCurrPos)
                 {
                     case '\n':
-                        ErrorHandler(ParserErrorMessage("missing closing quote in the include directive.", pBuffer, pCurrPos));
+                        ErrorHandler(ParserErrorMessage(MissingClosingQuote, pBuffer, pCurrPos));
                         return false;
                     case '"':
                         IncludeHandler(std::string{pBuffer + Start, pCurrPos}, NextHash - pBuffer, pCurrPos - pBuffer + 1);
@@ -304,7 +310,7 @@ bool FindIncludes(const char* pBuffer, size_t BufferSize, HandlerType IncludeHan
                 switch (*pCurrPos)
                 {
                     case '\n':
-                        ErrorHandler(ParserErrorMessage("missing closing angle bracket in the include directive.", pBuffer, pCurrPos));
+                        ErrorHandler(ParserErrorMessage(MissingClosingBracket, pBuffer, pCurrPos));
                         return false;
                     case '>':
                         IncludeHandler(std::string{pBuffer + Start, pCurrPos}, NextHash - pBuffer, pCurrPos - pBuffer + 1);
@@ -315,7 +321,25 @@ bool FindIncludes(const char* pBuffer, size_t BufferSize, HandlerType IncludeHan
         }
         ++pCurrPos;
     }
-    return true;
+
+    switch (PreprocessorState)
+    {
+        case None:
+        case AfterHash:
+            return true;
+        case AfterInclude:
+            ErrorHandler(ParserErrorMessage(MissingOpeningSymbol, pBuffer, pCurrPos));
+            return false;
+        case InsideIncludeQuotes:
+            ErrorHandler(ParserErrorMessage(MissingClosingQuote, pBuffer, pCurrPos));
+            return false;
+        case InsideIncludeAngleBrackets:
+            ErrorHandler(ParserErrorMessage(MissingClosingBracket, pBuffer, pCurrPos));
+            return false;
+        default:
+            UNEXPECTED("Unknown preprocessor state");
+            return false;
+    }
 }
 
 static void ProcessIncludeErrorHandler(const ShaderCreateInfo& ShaderCI, const std::string& Error) noexcept(false)
