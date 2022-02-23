@@ -30,6 +30,7 @@
 #include <cstdio>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <ftw.h>
 
 #include "LinuxFileSystem.hpp"
 #include "Errors.hpp"
@@ -78,8 +79,16 @@ bool LinuxFileSystem::CreateDirectory(const Char* strPath)
     std::string path(strPath);
     CorrectSlashes(path, LinuxFileSystem::GetSlashSymbol());
 
-    auto res = mkdir(path.c_str(), S_IRWXU | S_IRWXG | S_IRWXO);
-    return res == 0;
+    bool   result   = true;
+    size_t position = 0;
+    while (result != false && position != std::string::npos)
+    {
+        position     = path.find(GetSlashSymbol(), position + 1);
+        auto subPath = path.substr(0, position);
+        if (!PathExists(subPath.c_str()))
+            result = mkdir(subPath.c_str(), S_IRWXU | S_IRWXG | S_IRWXO) == 0;
+    }
+    return result;
 }
 
 void LinuxFileSystem::ClearDirectory(const Char* strPath)
@@ -90,6 +99,23 @@ void LinuxFileSystem::ClearDirectory(const Char* strPath)
 void LinuxFileSystem::DeleteFile(const Char* strPath)
 {
     remove(strPath);
+}
+
+bool LinuxFileSystem::DeleteDirectory(const Char* strPath)
+{
+    std::string path(strPath);
+    CorrectSlashes(path, LinuxFileSystem::GetSlashSymbol());
+
+    auto Callaback = [](const char* Path, const struct stat* pStat, int Type, FTW* pFTWB) -> int {
+        if (remove(Path) < 0)
+            return -1;
+        return 0;
+    };
+
+    constexpr Int32 MaxOpenDirectory = 16;
+
+    const auto res = nftw(path.c_str(), Callaback, MaxOpenDirectory, FTW_DEPTH | FTW_MOUNT | FTW_PHYS);
+    return res == 0;
 }
 
 std::vector<std::unique_ptr<FindFileData>> LinuxFileSystem::Search(const Char* SearchPattern)
