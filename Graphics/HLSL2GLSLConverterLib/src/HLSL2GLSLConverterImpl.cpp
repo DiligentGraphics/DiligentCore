@@ -941,46 +941,6 @@ void HLSL2GLSLConverterImpl::ConversionStream::InsertIncludes(String& GLSLSource
     } while (true);
 }
 
-
-void ReadNumericConstant(const String& Source, String::const_iterator& Pos, String& Output)
-{
-#define COPY_SYMBOL()                    \
-    {                                    \
-        Output.push_back(*(Pos++));      \
-        if (Pos == Source.end()) return; \
-    }
-
-    while (Pos != Source.end() && *Pos >= '0' && *Pos <= '9')
-        COPY_SYMBOL()
-
-    if (*Pos == '.')
-    {
-        COPY_SYMBOL()
-        // Copy all numbers
-        while (Pos != Source.end() && *Pos >= '0' && *Pos <= '9')
-            COPY_SYMBOL()
-    }
-
-    // Scientific notation
-    // e+1242, E-234
-    if (*Pos == 'e' || *Pos == 'E')
-    {
-        COPY_SYMBOL()
-
-        if (*Pos == '+' || *Pos == '-')
-            COPY_SYMBOL()
-
-        // Skip all numbers
-        while (Pos != Source.end() && *Pos >= '0' && *Pos <= '9')
-            COPY_SYMBOL()
-    }
-
-    if (*Pos == 'f' || *Pos == 'F')
-        COPY_SYMBOL()
-#undef COPY_SYMBOL
-}
-
-
 // The function converts source code into a token list
 void HLSL2GLSLConverterImpl::ConversionStream::Tokenize(const String& Source)
 {
@@ -1215,8 +1175,10 @@ void HLSL2GLSLConverterImpl::ConversionStream::Tokenize(const String& Source)
                     }
                     if (bIsNumericalCostant)
                     {
-                        ReadNumericConstant(Source, SrcPos, NewToken.Literal);
-                        NewToken.Type = TokenType::NumericConstant;
+                        const auto NumStartPos = SrcPos;
+                        Parsing::SkipFloatNumber(SrcPos, Source.end());
+                        NewToken.Literal = String{NumStartPos, SrcPos};
+                        NewToken.Type    = TokenType::NumericConstant;
                     }
                 }
 

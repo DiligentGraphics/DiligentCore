@@ -80,7 +80,7 @@ inline bool IsStatementSeparator(Char Symbol)
 template <typename InteratorType>
 inline bool SkipLine(InteratorType& Pos, const InteratorType& End, bool GoToNextLine = false)
 {
-    while (Pos != End && !IsNewLine(*Pos))
+    while (Pos != End && *Pos != '\0' && !IsNewLine(*Pos))
         ++Pos;
     if (GoToNextLine && Pos != End && IsNewLine(*Pos))
     {
@@ -108,7 +108,7 @@ inline bool SkipLine(InteratorType& Pos, const InteratorType& End, bool GoToNext
 template <typename InteratorType>
 bool SkipComment(InteratorType& Pos, const InteratorType& End)
 {
-    if (Pos == End)
+    if (Pos == End || *Pos == '\0')
         return true;
 
     //  // Comment       /* Comment
@@ -121,7 +121,7 @@ bool SkipComment(InteratorType& Pos, const InteratorType& End)
     //  // Comment       /* Comment
     //   ^                ^
     //  NextPos           NextPos
-    if (NextPos == End)
+    if (NextPos == End || *NextPos == '\0')
         return false;
 
     if (*NextPos == '/')
@@ -138,7 +138,7 @@ bool SkipComment(InteratorType& Pos, const InteratorType& End)
         //  ^
         //  Pos
 
-        return Pos == End;
+        return Pos == End || *Pos == '\0';
     }
     else if (*NextPos == '*')
     {
@@ -146,7 +146,7 @@ bool SkipComment(InteratorType& Pos, const InteratorType& End)
         ++NextPos;
         //  /* Comment
         //    ^
-        while (NextPos != End)
+        while (NextPos != End && *NextPos != '\0')
         {
             if (*NextPos == '*')
             {
@@ -154,7 +154,7 @@ bool SkipComment(InteratorType& Pos, const InteratorType& End)
                 //             ^
                 //           NextPos
                 ++NextPos;
-                if (NextPos == End)
+                if (NextPos == End || *NextPos == '\0')
                     return false;
 
                 //  /* Comment */
@@ -166,7 +166,7 @@ bool SkipComment(InteratorType& Pos, const InteratorType& End)
                     //  /* Comment */
                     //               ^
                     //              Pos
-                    return Pos == End;
+                    return Pos == End || *Pos == '\0';
                 }
             }
             else
@@ -176,7 +176,7 @@ bool SkipComment(InteratorType& Pos, const InteratorType& End)
         }
     }
 
-    return Pos == End;
+    return Pos == End || *Pos == '\0';
 }
 
 
@@ -282,6 +282,96 @@ void SplitString(const IteratorType& Start, const IteratorType& End, HandlerType
             break;
         VERIFY(Pos == End || OrigPos != Pos, "Position has not been updated by the handler.");
     }
+}
+
+
+
+/// Skips a floating point number starting from the given position.
+
+/// \param[inout] Pos - starting position.
+/// \param[in]    End - end of the input string.
+template <typename IteratorType>
+void SkipFloatNumber(IteratorType& Pos, const IteratorType& End)
+{
+    const auto Start = Pos;
+
+#define CHECK_END()                 \
+    do                              \
+    {                               \
+        if (c == End || *c == '\0') \
+            return;                 \
+    } while (false)
+
+    auto c = Pos;
+    CHECK_END();
+
+    if (*c == '+' || *c == '-')
+        ++c;
+    CHECK_END();
+
+    if (*c == '0' && IsNum(c[1]))
+    {
+        // 01 is invalid
+        Pos = c + 1;
+        return;
+    }
+
+    const auto HasIntegerPart = IsNum(*c);
+    if (HasIntegerPart)
+    {
+        while (c != End && IsNum(*c))
+            Pos = ++c;
+        CHECK_END();
+    }
+
+    const auto HasDecimalPart = (*c == '.');
+    if (HasDecimalPart)
+    {
+        ++c;
+        if (HasIntegerPart)
+        {
+            // . as well as +. or -. are not valid numbers, however 0., +0., and -0. are.
+            Pos = c;
+        }
+
+        while (c != End && IsNum(*c))
+            Pos = ++c;
+        CHECK_END();
+    }
+
+    const auto HasExponent = (*c == 'e' || *c == 'E');
+    if (HasExponent)
+    {
+        if (!HasIntegerPart)
+        {
+            // .e, e, e+1, +.e are invalid
+            return;
+        }
+
+        ++c;
+        if (c == End || (*c != '+' && *c != '-'))
+        {
+            // 10e&
+            return;
+        }
+
+        ++c;
+        if (c == End || !IsNum(*c))
+        {
+            // 10e+x
+            return;
+        }
+
+        while (c != End && IsNum(*c))
+            Pos = ++c;
+    }
+
+    if ((HasDecimalPart || HasExponent) && c != End && Pos > Start && (*c == 'f' || *c == 'F'))
+    {
+        // 10.f, 10e+3f, 10.e+3f, 10.4e+3f
+        Pos = ++c;
+    }
+#undef CHECK_END
 }
 
 } // namespace Parsing

@@ -33,8 +33,9 @@
 #include <algorithm>
 #include <cctype>
 
-#include "StringTools.h"
 #include "../../Platforms/Basic/interface/DebugUtilities.hpp"
+#include "StringTools.h"
+#include "ParsingTools.hpp"
 
 namespace Diligent
 {
@@ -179,6 +180,20 @@ inline std::string StrToLower(std::string str)
 {
     StrToLowerInPlace(str);
     return str;
+}
+
+
+/// Returns the number of characters at the beginning of the string that form a
+/// floating point number.
+inline size_t CountFloatNumberChars(const char* Str)
+{
+    if (Str == nullptr)
+        return 0;
+
+    const auto* NumEnd    = Str;
+    const auto* MemoryEnd = reinterpret_cast<const char*>(~uintptr_t{0});
+    Parsing::SkipFloatNumber(NumEnd, MemoryEnd);
+    return NumEnd - Str;
 }
 
 } // namespace Diligent
