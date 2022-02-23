@@ -34,6 +34,53 @@ using namespace Diligent::Parsing;
 namespace
 {
 
+TEST(Common_ParsingTools, SkipLine)
+{
+    auto Test = [](const char* Str, bool EndReached = false, const char* Expected = nullptr) {
+        auto* Pos = Str;
+        EXPECT_EQ(SkipLine(Pos, Str + strlen(Str)), EndReached);
+        if (Expected == nullptr)
+            Expected = EndReached ? "" : "Correct";
+        EXPECT_STREQ(Pos, Expected);
+    };
+
+    Test("", true);
+    Test("abc def ", true);
+
+    Test("abc def \n"
+         "Correct",
+         false,
+         "\n"
+         "Correct");
+
+    Test("abc def \r"
+         "Correct",
+         false,
+         "\r"
+         "Correct");
+}
+
+TEST(Common_ParsingTools, SkipLine_GoToNext)
+{
+    auto Test = [](const char* Str, bool EndReached = false, const char* Expected = nullptr) {
+        auto* Pos = Str;
+        EXPECT_EQ(SkipLine(Pos, Str + strlen(Str), true), EndReached);
+        if (Expected == nullptr)
+            Expected = EndReached ? "" : "Correct";
+        EXPECT_STREQ(Pos, Expected);
+    };
+
+    Test("", true);
+    Test("\n", true);
+    Test("abc def ", true);
+    Test("abc def ", true);
+
+    Test("\n"
+         "Correct");
+    Test("\r"
+         "Correct");
+}
+
 TEST(Common_ParsingTools, SkipComment)
 {
     auto Test = [](const char* Str, bool CommentFound = true, bool EndReached = false) {
@@ -76,6 +123,7 @@ TEST(Common_ParsingTools, SkipComment)
 
     Test("/*\n"
          "/* abc **\n"
+         "/****** ***** ***\n"
          " /* **/Correct");
 }
 
@@ -122,8 +170,8 @@ TEST(Common_ParsingTools, SkipDelimetersAndComments)
     Test("// Comment", true);
 
     Test("// Comment line 1\n"
-         "// Comment line 2\n"
-         "// Comment line 3\n",
+         "/// Comment line 2\n"
+         "//// Comment line 3\n",
          true);
 
     Test("/* Comment */\n",
@@ -174,6 +222,49 @@ TEST(Common_ParsingTools, SkipIdentifier)
     Test("_3+1", "+1");
     Test("_a = 10", " = 10");
     Test("_a1b2c3[5]", "[5]");
+}
+
+TEST(Common_ParsingTools, SplitString)
+{
+    static const char* TestStr = R"(
+Lorem ipsum //dolor sit amet, consectetur
+adipiscing elit, /* sed do eiusmod tempor incididunt 
+ut labore et dolore magna*/ aliqua.   Ut 
+// enim ad minim veniam, quis nostrud exercitation 
+/// ullamco laboris nisi /* ut aliquip ex ea commodo consequat*/.
+   Duis aute  irure //dolor in //reprehenderit in voluptate   velit esse 
+/* cillum dolore eu fugiat 
+/* nulla /* pariatur. 
+*/ /*Excepteur 
+*/ 
+sint occaecat //cupidatat non proident.
+)";
+
+    std::vector<std::string> Chunks = {"Lorem", "ipsum", "adipiscing", "elit", ",", "aliqua.", "Ut", "Duis", "aute", "irure", "sint", "occaecat", ""};
+    auto                     ref_it = Chunks.begin();
+
+    const auto StrEnd = TestStr + strlen(TestStr);
+    SplitString(TestStr, StrEnd,
+                [&](const char* DelimStart, const char*& Pos) //
+                {
+                    if (ref_it == Chunks.end())
+                    {
+                        ADD_FAILURE() << "Unexpected string " << Pos;
+                        return false;
+                    }
+
+                    if (strncmp(Pos, ref_it->c_str(), ref_it->length()) != 0)
+                    {
+                        ADD_FAILURE() << Pos << " != " << *ref_it;
+                        return false;
+                    }
+
+                    Pos += ref_it->length();
+                    ++ref_it;
+                    return true;
+                });
+
+    EXPECT_EQ(ref_it, Chunks.end());
 }
 
 } // namespace

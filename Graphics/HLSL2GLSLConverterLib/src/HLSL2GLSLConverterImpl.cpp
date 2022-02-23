@@ -1008,12 +1008,8 @@ void HLSL2GLSLConverterImpl::ConversionStream::Tokenize(const String& Source)
     // * Operators +, - are not detected
     //   * This might be a + b, -a or -10
     // * Operator ?: is not detected
-    auto SrcPos = Source.begin();
-    while (SrcPos != Source.end())
-    {
+    Parsing::SplitString(Source.begin(), Source.end(), [&](const std::string::const_iterator& DelimStart, std::string::const_iterator& SrcPos) {
         TokenInfo NewToken;
-        auto      DelimStart = SrcPos;
-        SkipDelimetersAndComments(SrcPos, Source.end());
         if (DelimStart != SrcPos)
         {
             auto DelimSize = SrcPos - DelimStart;
@@ -1021,7 +1017,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::Tokenize(const String& Source)
             NewToken.Delimiter.append(DelimStart, SrcPos);
         }
         if (SrcPos == Source.end())
-            break;
+            return false;
 
         switch (*SrcPos)
         {
@@ -1062,7 +1058,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::Tokenize(const String& Source)
                     {
                         LastToken.Type = TokenType::Assignment;
                         LastToken.Literal.push_back(*(SrcPos++));
-                        continue;
+                        return true;
                     }
                     else if (LastToken.Literal == "<" ||
                              LastToken.Literal == ">" ||
@@ -1071,7 +1067,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::Tokenize(const String& Source)
                     {
                         LastToken.Type = TokenType::ComparisonOp;
                         LastToken.Literal.push_back(*(SrcPos++));
-                        continue;
+                        return true;
                     }
                 }
 
@@ -1086,7 +1082,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::Tokenize(const String& Source)
                 {
                     m_Tokens.back().Type = TokenType::BooleanOp;
                     m_Tokens.back().Literal.push_back(*(SrcPos++));
-                    continue;
+                    return true;
                 }
                 else
                 {
@@ -1102,7 +1098,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::Tokenize(const String& Source)
                 {
                     m_Tokens.back().Type = TokenType::BitwiseOp;
                     m_Tokens.back().Literal.push_back(*(SrcPos++));
-                    continue;
+                    return true;
                 }
                 else
                 {
@@ -1121,7 +1117,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::Tokenize(const String& Source)
                 {
                     m_Tokens.back().Type = TokenType::IncDecOp;
                     m_Tokens.back().Literal.push_back(*(SrcPos++));
-                    continue;
+                    return true;
                 }
                 else
                 {
@@ -1234,7 +1230,9 @@ void HLSL2GLSLConverterImpl::ConversionStream::Tokenize(const String& Source)
         }
 
         m_Tokens.push_back(NewToken);
-    }
+        return true;
+    } //
+    );
 #undef CHECK_END
 }
 

@@ -31,7 +31,8 @@
 
 #include <cstring>
 
-#include "BasicTypes.h"
+#include "../../Primitives/interface/BasicTypes.h"
+#include "../../Platforms/Basic/interface/DebugUtilities.hpp"
 
 namespace Diligent
 {
@@ -63,6 +64,27 @@ inline bool IsStatementSeparator(Char Symbol)
 {
     static const Char* StatementSeparator = ";}";
     return strchr(StatementSeparator, Symbol) != nullptr;
+}
+
+
+/// Skips all symbols until the end of the line.
+
+/// \param[inout] Pos          - starting position.
+/// \param[in]    End          - end of the input string.
+/// \param[in]    GoToNextLine - whether to go to the next line.
+///                              If true, the Pos will point to the symbol following
+///                              the new line character at the end of the string.
+///                              If false, the Pos will point to the new line
+///                              character at the end of the string.
+/// \return         true if the end of the string has been reached, and false otherwise.
+template <typename InteratorType>
+inline bool SkipLine(InteratorType& Pos, const InteratorType& End, bool GoToNextLine = false)
+{
+    while (Pos != End && !IsNewLine(*Pos))
+        ++Pos;
+    if (GoToNextLine && Pos != End && IsNewLine(*Pos))
+        ++Pos;
+    return Pos == End;
 }
 
 
@@ -102,19 +124,13 @@ bool SkipComment(InteratorType& Pos, const InteratorType& End)
         //  // Comment
         //    ^
         //    Pos
-        for (; Pos != End && !IsNewLine(*Pos); ++Pos)
-            ;
+
+        SkipLine(Pos, End, true);
         //  // Comment
-        //            ^
-        //           Pos
-        if (Pos != End && IsNewLine(*Pos))
-        {
-            ++Pos;
-            //  // Comment
-            //
-            //  ^
-            //  Pos
-        }
+        //
+        //  ^
+        //  Pos
+
         return Pos == End;
     }
     else if (*NextPos == '*')
@@ -231,6 +247,34 @@ inline bool SkipIdentifier(IteratorType& Pos, const IteratorType& End)
         ;
 
     return Pos == End;
+}
+
+
+/// Splits string into chunks separated by comments and delimiters.
+///
+/// \param [in] Start   - start of the string to split.
+/// \param [in] End     - end of the string to split.
+/// \param [in] Handler - user-provided handler to call for each chunk.
+///
+/// \remarks    The function starts from the beginning of the strings
+///             and splits it into chunks seprated by comments and delimiters.
+///             For each chunk, it calls the user-provided handler and passes
+///             the start of the preceding comments/delimiters part. The handler
+///             must then process the text at the current position and move the pointer.
+///             It should return true to continue processing, and false to stop it.
+template <typename IteratorType, typename HandlerType>
+void SplitString(const IteratorType& Start, const IteratorType& End, HandlerType Handler)
+{
+    auto Pos = Start;
+    while (Pos != End)
+    {
+        auto DelimStart = Pos;
+        SkipDelimetersAndComments(Pos, End);
+        auto OrigPos = Pos;
+        if (!Handler(DelimStart, Pos))
+            break;
+        VERIFY(Pos == End || OrigPos != Pos, "Position has not been updated by the handler.");
+    }
 }
 
 } // namespace Parsing
