@@ -531,7 +531,14 @@ ContainerType Tokenize(const IteratorType&   SourceStart,
             {
                 case '#':
                     Type = TokenType::PreprocessorDirective;
-                    Parsing::SkipLine(Pos, SourceEnd);
+                    ++Pos;
+                    while (Pos != SourceEnd && (*Pos == ' ' || *Pos == '\t'))
+                        ++Pos;
+                    if (Pos == SourceEnd || *Pos == '\0' || *Pos == '\n')
+                        throw std::pair<IteratorType, const char*>{LiteralStart, "Missing preprocessor directive."};
+                    if (*Pos == '/')
+                        throw std::pair<IteratorType, const char*>{LiteralStart, "Comments between # and preprocessor directive are currently not supported."};
+                    SkipIdentifier(Pos, SourceEnd);
                     break;
 
                 case '=':

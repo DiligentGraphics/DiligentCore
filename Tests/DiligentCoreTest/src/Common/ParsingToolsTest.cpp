@@ -635,8 +635,8 @@ void main()
 )";
 
     const auto Tokens = Tokenize<TestToken, std::vector<TestToken>>(TestStr, TestStr + strlen(TestStr), TestToken::Create, TestToken::FindType);
-    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::PreprocessorDirective, "#include <Include1.h>"}}));
-    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::PreprocessorDirective, "#define MACRO"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::PreprocessorDirective, "#include"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::PreprocessorDirective, "#define"}}));
 
     EXPECT_STREQ(BuildSource(Tokens).c_str(), TestStr);
 }
@@ -886,6 +886,27 @@ void main()
     char* String = "Missing quotes
 }
 )");
+
+    TestError(R"(
+#
+void main()
+{
+}
+)");
+
+
+    TestError(R"(
+#/*comment*/ define Macro
+void main()
+{
+}
+)");
+
+    TestError(R"(
+void main()
+{
+}
+#)");
 }
 
 

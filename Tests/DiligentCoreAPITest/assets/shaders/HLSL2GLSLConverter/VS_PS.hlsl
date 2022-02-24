@@ -738,6 +738,10 @@ void TestSampleCmpLevelZero()
     TexCAS1.SampleCmpLevelZero( TexCAS1_sampler, float4(0.5, (0.2+(0.01+0.02)), 0.4, 7.0), 0.5 );
     // Offset not supported
 #endif
+
+#define SAMPLE_SHADOW_MAP(POS) TexCAS1.SampleCmpLevelZero( TexCAS1_sampler, POS.xyzw, CompareVal )
+    SAMPLE_SHADOW_MAP(f4UVWQ);
+#undef SAMPLE_SHADOW_MAP
 }
 
 
