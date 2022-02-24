@@ -30,6 +30,7 @@
 /// Parsing tools
 
 #include <cstring>
+#include <sstream>
 
 #include "../../Primitives/interface/BasicTypes.h"
 #include "../../Platforms/Basic/interface/DebugUtilities.hpp"
@@ -374,6 +375,76 @@ void SkipFloatNumber(IteratorType& Pos, const IteratorType& End)
     }
 #undef CHECK_END
 }
+
+
+/// Prints a parsing context around the given position in the string.
+
+/// \param[in]  Start    - start of the string.
+/// \param[in]  End      - end of the string.
+/// \param[in]  Pos      - position around which to print the context and
+///                        which will be highlighted by ^.
+/// \param[in]  NumLines - the number of lines above and below.
+///
+/// \remarks    The context looks like shown below:
+///
+///                 Lorem ipsum dolor sit amet, consectetur
+///                 adipiscing elit, sed do eiusmod tempor
+///                 incididunt ut labore et dolore magna aliqua.
+///                                      ^
+///                 Ut enim ad minim veniam, quis nostrud
+///                 exercitation ullamco lab
+///
+template <typename IteratorType>
+std::string GetContext(const IteratorType& Start, const IteratorType& End, IteratorType Pos, size_t NumLines)
+{
+    auto CtxStart = Pos;
+    while (CtxStart > Start && !IsNewLine(CtxStart[-1]))
+        --CtxStart;
+    const size_t CharPos = Pos - CtxStart; // Position of the character in the line
+
+    SkipLine(Pos, End);
+
+    std::stringstream Ctx;
+    {
+        size_t LineAbove = 0;
+        while (LineAbove < NumLines && CtxStart > Start)
+        {
+            VERIFY_EXPR(IsNewLine(CtxStart[-1]));
+            if (CtxStart[-1] == '\n' && CtxStart > Start + 1 && CtxStart[-2] == '\r')
+                --CtxStart;
+            if (CtxStart > Start)
+                --CtxStart;
+            while (CtxStart > Start && !IsNewLine(CtxStart[-1]))
+                --CtxStart;
+            ++LineAbove;
+        }
+        VERIFY_EXPR(CtxStart == Start || IsNewLine(CtxStart[-1]));
+        Ctx.write(CtxStart, Pos - CtxStart);
+    }
+
+    Ctx << std::endl;
+    for (size_t i = 0; i < CharPos; ++i)
+        Ctx << ' ';
+    Ctx << '^';
+
+    {
+        auto   CtxEnd    = Pos;
+        size_t LineBelow = 0;
+        while (LineBelow < NumLines && CtxEnd != End && *CtxEnd != '\0')
+        {
+            if (*CtxEnd == '\r' && CtxEnd + 1 != End && CtxEnd[+1] == '\n')
+                ++CtxEnd;
+            if (CtxEnd != End)
+                ++CtxEnd;
+            SkipLine(CtxEnd, End);
+            ++LineBelow;
+        }
+        Ctx.write(Pos, CtxEnd - Pos);
+    }
+
+    return Ctx.str();
+}
+
 
 /// Tokenizes the given string using the C-language syntax
 
