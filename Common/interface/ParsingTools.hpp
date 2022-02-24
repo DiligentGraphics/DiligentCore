@@ -43,26 +43,26 @@ namespace Parsing
 {
 
 /// Returns true if the symbol is a white space or tab
-inline bool IsWhitespace(Char Symbol)
+inline bool IsWhitespace(Char Symbol) noexcept
 {
     return Symbol == ' ' || Symbol == '\t';
 }
 
 /// Returns true if the symbol is a new line symbol
-inline bool IsNewLine(Char Symbol)
+inline bool IsNewLine(Char Symbol) noexcept
 {
     return Symbol == '\r' || Symbol == '\n';
 }
 
 /// Returns true if the symbol is a delimiter symbol (white space or new line)
-inline bool IsDelimiter(Char Symbol)
+inline bool IsDelimiter(Char Symbol) noexcept
 {
     static const Char* Delimiters = " \t\r\n";
     return strchr(Delimiters, Symbol) != nullptr;
 }
 
 /// Returns true if the symbol is a statement separator symbol
-inline bool IsStatementSeparator(Char Symbol)
+inline bool IsStatementSeparator(Char Symbol) noexcept
 {
     static const Char* StatementSeparator = ";}";
     return strchr(StatementSeparator, Symbol) != nullptr;
@@ -80,7 +80,7 @@ inline bool IsStatementSeparator(Char Symbol)
 ///                              character at the end of the string.
 /// \return         true if the end of the string has been reached, and false otherwise.
 template <typename InteratorType>
-inline bool SkipLine(InteratorType& Pos, const InteratorType& End, bool GoToNextLine = false)
+inline bool SkipLine(InteratorType& Pos, const InteratorType& End, bool GoToNextLine = false) noexcept
 {
     while (Pos != End && *Pos != '\0' && !IsNewLine(*Pos))
         ++Pos;
@@ -108,8 +108,10 @@ inline bool SkipLine(InteratorType& Pos, const InteratorType& End, bool GoToNext
 ///             immediately after the end of the comment.
 ///             If the comment is not found, Pos is left unchanged.
 ///
-///             In case there is an error parsing the comment (e.g. /* is not
-///             closed), the function throws an exception
+///             In case of an error while parsing the comment (e.g. /* is not
+///             closed), the function throws an exception of type
+///             std::pair<InteratorType, const char*>, where first is the position
+///             of the error, and second is the error description.
 template <typename InteratorType>
 bool SkipComment(InteratorType& Pos, const InteratorType& End) noexcept(false)
 {
@@ -180,7 +182,7 @@ bool SkipComment(InteratorType& Pos, const InteratorType& End) noexcept(false)
             }
         }
 
-        throw std::pair<InteratorType, const char*>{Pos, "Unable to find the end of the multiline comment"};
+        throw std::pair<InteratorType, const char*>{Pos, "Unable to find the end of the multiline comment."};
     }
 
     return Pos == End || *Pos == '\0';
@@ -196,7 +198,7 @@ bool SkipComment(InteratorType& Pos, const InteratorType& End) noexcept(false)
 ///
 /// \remarks    Pos is updated to the position of the first non-delimiter symbol.
 template <typename InteratorType>
-bool SkipDelimiters(InteratorType& Pos, const InteratorType& End)
+bool SkipDelimiters(InteratorType& Pos, const InteratorType& End) noexcept
 {
     for (; Pos != End && IsDelimiter(*Pos); ++Pos)
         ;
@@ -214,8 +216,10 @@ bool SkipDelimiters(InteratorType& Pos, const InteratorType& End)
 /// \remarks    Pos is updated to the position of the first non-comment
 ///             non-delimiter symbol.
 ///
-///             In case there is a parsing error (which means there is an
-///             open multi-line comment /*... ), the function throws an exception.
+///             In case of a parsing error (which means there is an
+///             open multi-line comment /*... ), the function throws an exception
+///             of type std::pair<InteratorType, const char*>, where first is the position
+///             of the error, and second is the error description.
 template <typename IteratorType>
 bool SkipDelimitersAndComments(IteratorType& Pos, const IteratorType& End) noexcept(false)
 {
@@ -246,7 +250,7 @@ bool SkipDelimitersAndComments(IteratorType& Pos, const IteratorType& End) noexc
 /// \remarks    Pos is updated to the position of the first symbol
 ///             after the identifier.
 template <typename IteratorType>
-inline bool SkipIdentifier(IteratorType& Pos, const IteratorType& End)
+inline bool SkipIdentifier(IteratorType& Pos, const IteratorType& End) noexcept
 {
     if (Pos == End)
         return true;
@@ -279,6 +283,10 @@ inline bool SkipIdentifier(IteratorType& Pos, const IteratorType& End)
 ///             the start of the preceding comments/delimiters part. The handler
 ///             must then process the text at the current position and move the pointer.
 ///             It should return true to continue processing, and false to stop it.
+///
+///             In case of a parsing error, the function throws an exception
+///             of type std::pair<InteratorType, const char*>, where first is the position
+///             of the error, and second is the error description.
 template <typename IteratorType, typename HandlerType>
 void SplitString(const IteratorType& Start, const IteratorType& End, HandlerType Handler) noexcept(false)
 {
@@ -286,7 +294,7 @@ void SplitString(const IteratorType& Start, const IteratorType& End, HandlerType
     while (Pos != End)
     {
         auto DelimStart = Pos;
-        SkipDelimitersAndComments(Pos, End);
+        SkipDelimitersAndComments(Pos, End); // May throw
         auto OrigPos = Pos;
         if (!Handler(DelimStart, Pos))
             break;
@@ -301,7 +309,7 @@ void SplitString(const IteratorType& Start, const IteratorType& End, HandlerType
 /// \param[inout] Pos - starting position.
 /// \param[in]    End - end of the input string.
 template <typename IteratorType>
-void SkipFloatNumber(IteratorType& Pos, const IteratorType& End)
+void SkipFloatNumber(IteratorType& Pos, const IteratorType& End) noexcept
 {
     const auto Start = Pos;
 
@@ -403,7 +411,7 @@ void SkipFloatNumber(IteratorType& Pos, const IteratorType& End)
 ///                 exercitation ullamco lab
 ///
 template <typename IteratorType>
-std::string GetContext(const IteratorType& Start, const IteratorType& End, IteratorType Pos, size_t NumLines)
+std::string GetContext(const IteratorType& Start, const IteratorType& End, IteratorType Pos, size_t NumLines) noexcept
 {
     auto CtxStart = Pos;
     while (CtxStart > Start && !IsNewLine(CtxStart[-1]))
@@ -427,7 +435,7 @@ std::string GetContext(const IteratorType& Start, const IteratorType& End, Itera
             ++LineAbove;
         }
         VERIFY_EXPR(CtxStart == Start || IsNewLine(CtxStart[-1]));
-        Ctx.write(CtxStart, Pos - CtxStart);
+        Ctx.write(&*CtxStart, Pos - CtxStart);
     }
 
     Ctx << std::endl;
@@ -447,7 +455,7 @@ std::string GetContext(const IteratorType& Start, const IteratorType& End, Itera
             SkipLine(CtxEnd, End);
             ++LineBelow;
         }
-        Ctx.write(Pos, CtxEnd - Pos);
+        Ctx.write(&*Pos, CtxEnd - Pos);
     }
 
     return Ctx.str();
@@ -463,6 +471,8 @@ std::string GetContext(const IteratorType& Start, const IteratorType& End, Itera
 /// \param [in] GetTokenType - a function that should return the token type
 ///                            for the given literal.
 /// \return     Tokenized representation of the source string
+///
+/// \remarks    In case of a parsing error, the function throws std::runtime_error.
 template <typename TokenClass,
           typename ContainerType,
           typename IteratorType,
@@ -480,123 +490,125 @@ ContainerType Tokenize(const IteratorType&   SourceStart,
     // backwards searching
     Tokens.emplace_back(TokenClass{});
 
-    Parsing::SplitString(SourceStart, SourceEnd, [&](const auto& DelimStart, auto& Pos) {
-        const auto DelimEnd = Pos;
+    try
+    {
+        Parsing::SplitString(SourceStart, SourceEnd, [&](const auto& DelimStart, auto& Pos) {
+            const auto DelimEnd = Pos;
 
-        auto LiteralStart = Pos;
-        auto LiteralEnd   = DelimStart;
+            auto LiteralStart = Pos;
+            auto LiteralEnd   = DelimStart;
 
-        auto Type = TokenType::Undefined;
+            auto Type = TokenType::Undefined;
 
-        if (Pos == SourceEnd)
-        {
-            Tokens.push_back(CreateToken(Type, DelimStart, DelimEnd, LiteralStart, Pos));
-            return false;
-        }
-
-        auto AddDoubleCharToken = [&](TokenType DoubleCharType) {
-            if (!Tokens.empty() && DelimStart == DelimEnd)
+            if (Pos == SourceEnd)
             {
-                auto& LastToken = Tokens.back();
-                if (LastToken.CompareLiteral(Pos, Pos + 1))
-                {
-                    LastToken.SetType(DoubleCharType);
-                    LastToken.ExtendLiteral(Pos, Pos + 1);
-                    ++Pos;
-                    return true;
-                }
+                Tokens.push_back(CreateToken(Type, DelimStart, DelimEnd, LiteralStart, Pos));
+                return false;
             }
 
-            return false;
-        };
+            auto AddDoubleCharToken = [&](TokenType DoubleCharType) {
+                if (!Tokens.empty() && DelimStart == DelimEnd)
+                {
+                    auto& LastToken = Tokens.back();
+                    if (LastToken.CompareLiteral(Pos, Pos + 1))
+                    {
+                        LastToken.SetType(DoubleCharType);
+                        LastToken.ExtendLiteral(Pos, Pos + 1);
+                        ++Pos;
+                        return true;
+                    }
+                }
+
+                return false;
+            };
 
 #define SINGLE_CHAR_TOKEN(TYPE) \
     Type = TokenType::TYPE;     \
     ++Pos;                      \
     break
 
-        switch (*Pos)
-        {
-            case '#':
-                Type = TokenType::PreprocessorDirective;
-                Parsing::SkipLine(Pos, SourceEnd);
-                break;
-
-            case '=':
+            switch (*Pos)
             {
-                if (!Tokens.empty() && DelimStart == DelimEnd)
+                case '#':
+                    Type = TokenType::PreprocessorDirective;
+                    Parsing::SkipLine(Pos, SourceEnd);
+                    break;
+
+                case '=':
                 {
-                    auto& LastToken = Tokens.back();
-                    // +=, -=, *=, /=, %=, <<=, >>=, &=, |=, ^=
-                    for (const char* op : {"+", "-", "*", "/", "%", "<<", ">>", "&", "|", "^"})
+                    if (!Tokens.empty() && DelimStart == DelimEnd)
                     {
-                        if (LastToken.CompareLiteral(op))
+                        auto& LastToken = Tokens.back();
+                        // +=, -=, *=, /=, %=, <<=, >>=, &=, |=, ^=
+                        for (const char* op : {"+", "-", "*", "/", "%", "<<", ">>", "&", "|", "^"})
                         {
-                            LastToken.SetType(TokenType::Assignment);
-                            LastToken.ExtendLiteral(Pos, Pos + 1);
-                            ++Pos;
-                            return Pos != SourceEnd;
+                            if (LastToken.CompareLiteral(op))
+                            {
+                                LastToken.SetType(TokenType::Assignment);
+                                LastToken.ExtendLiteral(Pos, Pos + 1);
+                                ++Pos;
+                                return Pos != SourceEnd;
+                            }
+                        }
+
+                        // <=, >=, ==, !=
+                        for (const char* op : {"<", ">", "=", "!"})
+                        {
+                            if (LastToken.CompareLiteral(op))
+                            {
+                                LastToken.SetType(TokenType::ComparisonOp);
+                                LastToken.ExtendLiteral(Pos, Pos + 1);
+                                ++Pos;
+                                return Pos != SourceEnd;
+                            }
                         }
                     }
 
-                    // <=, >=, ==, !=
-                    for (const char* op : {"<", ">", "=", "!"})
-                    {
-                        if (LastToken.CompareLiteral(op))
-                        {
-                            LastToken.SetType(TokenType::ComparisonOp);
-                            LastToken.ExtendLiteral(Pos, Pos + 1);
-                            ++Pos;
-                            return Pos != SourceEnd;
-                        }
-                    }
+                    SINGLE_CHAR_TOKEN(Assignment);
                 }
 
-                SINGLE_CHAR_TOKEN(Assignment);
-            }
+                case '|':
+                case '&':
+                    if (AddDoubleCharToken(TokenType::LogicOp))
+                        return Pos != SourceEnd;
+                    SINGLE_CHAR_TOKEN(BitwiseOp);
 
-            case '|':
-            case '&':
-                if (AddDoubleCharToken(TokenType::LogicOp))
-                    return Pos != SourceEnd;
-                SINGLE_CHAR_TOKEN(BitwiseOp);
+                case '<':
+                case '>':
+                    // Note: we do not distinguish between comparison operators
+                    // and template arguments like in Texture2D<float> at this
+                    // point.
+                    if (AddDoubleCharToken(TokenType::BitwiseOp))
+                        return Pos != SourceEnd;
+                    SINGLE_CHAR_TOKEN(ComparisonOp);
 
-            case '<':
-            case '>':
-                // Note: we do not distinguish between comparison operators
-                // and template arguments like in Texture2D<float> at this
-                // point.
-                if (AddDoubleCharToken(TokenType::BitwiseOp))
-                    return Pos != SourceEnd;
-                SINGLE_CHAR_TOKEN(ComparisonOp);
+                case '+':
+                case '-':
+                    // We do not currently distinguish between math operator a + b,
+                    // unary operator -a and numerical constant -1:
+                    if (AddDoubleCharToken(TokenType::IncDecOp))
+                        return Pos != SourceEnd;
+                    SINGLE_CHAR_TOKEN(MathOp);
 
-            case '+':
-            case '-':
-                // We do not currently distinguish between math operator a + b,
-                // unary operator -a and numerical constant -1:
-                if (AddDoubleCharToken(TokenType::IncDecOp))
-                    return Pos != SourceEnd;
-                SINGLE_CHAR_TOKEN(MathOp);
+                case '~':
+                case '^':
+                    SINGLE_CHAR_TOKEN(BitwiseOp);
 
-            case '~':
-            case '^':
-                SINGLE_CHAR_TOKEN(BitwiseOp);
+                case '*':
+                case '/':
+                case '%':
+                    SINGLE_CHAR_TOKEN(MathOp);
 
-            case '*':
-            case '/':
-            case '%':
-                SINGLE_CHAR_TOKEN(MathOp);
+                case '!':
+                    SINGLE_CHAR_TOKEN(LogicOp);
 
-            case '!':
-                SINGLE_CHAR_TOKEN(LogicOp);
+                case ',':
+                    SINGLE_CHAR_TOKEN(Comma);
 
-            case ',':
-                SINGLE_CHAR_TOKEN(Comma);
+                case ';':
+                    SINGLE_CHAR_TOKEN(Semicolon);
 
-            case ';':
-                SINGLE_CHAR_TOKEN(Semicolon);
-
-            // clang-format off
+                    // clang-format off
             case '(': SINGLE_CHAR_TOKEN(OpenParen);
             case ')': SINGLE_CHAR_TOKEN(ClosingParen);
             case '{': SINGLE_CHAR_TOKEN(OpenBrace);
@@ -605,56 +617,63 @@ ContainerType Tokenize(const IteratorType&   SourceStart,
             case ']': SINGLE_CHAR_TOKEN(ClosingSquareBracket);
           //case '<': SINGLE_CHAR_TOKEN(OpenAngleBracket);
           //case '>': SINGLE_CHAR_TOKEN(ClosingAngleBracket);
-                // clang-format on
+                    // clang-format on
 
-            case '"':
-            {
-                // Skip quotes
-                Type = TokenType::StringConstant;
-                ++LiteralStart;
-                ++Pos;
-                while (Pos != SourceEnd && *Pos != '\0' && *Pos != '"')
-                    ++Pos;
-                LiteralEnd = Pos;
-                if (Pos != SourceEnd && *Pos == '"')
-                    ++Pos;
-
-                break;
-            }
-
-            default:
-            {
-                Parsing::SkipIdentifier(Pos, SourceEnd);
-                if (LiteralStart != Pos)
+                case '"':
                 {
-                    Type = GetTokenType(LiteralStart, Pos);
-                    if (Type == TokenType::Undefined)
-                        Type = TokenType::Identifier;
+                    // Skip quotes
+                    Type = TokenType::StringConstant;
+                    ++LiteralStart;
+                    ++Pos;
+                    while (Pos != SourceEnd && *Pos != '\0' && *Pos != '"')
+                        ++Pos;
+                    if (Pos == SourceEnd || *Pos != '"')
+                        throw std::pair<IteratorType, const char*>{LiteralStart - 1, "Unable to find matching closing quotes."};
+
+                    LiteralEnd = Pos++;
+                    break;
                 }
-                else
+
+                default:
                 {
-                    Parsing::SkipFloatNumber(Pos, SourceEnd);
+                    Parsing::SkipIdentifier(Pos, SourceEnd);
                     if (LiteralStart != Pos)
                     {
-                        Type = TokenType::NumericConstant;
+                        Type = GetTokenType(LiteralStart, Pos);
+                        if (Type == TokenType::Undefined)
+                            Type = TokenType::Identifier;
+                    }
+                    else
+                    {
+                        Parsing::SkipFloatNumber(Pos, SourceEnd);
+                        if (LiteralStart != Pos)
+                        {
+                            Type = TokenType::NumericConstant;
+                        }
+                    }
+
+                    if (Type == TokenType::Undefined)
+                    {
+                        ++Pos; // Add single character
                     }
                 }
-
-                if (Type == TokenType::Undefined)
-                {
-                    ++Pos; // Add single character
-                }
             }
-        }
 
-        if (LiteralEnd == DelimStart)
-            LiteralEnd = Pos;
+            if (LiteralEnd == DelimStart)
+                LiteralEnd = Pos;
 
-        Tokens.push_back(CreateToken(Type, DelimStart, DelimEnd, LiteralStart, LiteralEnd));
-        return Pos != SourceEnd;
-    } //
-    );
+            Tokens.push_back(CreateToken(Type, DelimStart, DelimEnd, LiteralStart, LiteralEnd));
+            return Pos != SourceEnd;
+        } //
+        );
 #undef SINGLE_CHAR_TOKEN
+    }
+    catch (const std::pair<IteratorType, const char*>& ErrInfo)
+    {
+        constexpr size_t NumContextLines = 2;
+        LOG_ERROR_MESSAGE(ErrInfo.second, "\n", GetContext(SourceStart, SourceEnd, ErrInfo.first, NumContextLines));
+        LOG_ERROR_AND_THROW("Unable to tokenize string.");
+    }
 
     return Tokens;
 }

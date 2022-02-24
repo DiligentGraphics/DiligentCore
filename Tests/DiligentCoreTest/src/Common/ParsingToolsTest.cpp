@@ -788,4 +788,34 @@ void main()
     EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Keyword1, "Keyword1"}, {TestTokenType::Identifier, "Id"}, {TestTokenType::Keyword2, "Keyword2"}, {TestTokenType::OpenParen, "("}, {TestTokenType::Keyword3, "Keyword3"}, {TestTokenType::ClosingParen, ")"}}));
 }
 
+TEST(Common_ParsingTools, Tokenizer_Errors)
+{
+    auto TestError = [](const char* Str) {
+        try
+        {
+            const auto Tokens = Tokenize<TestToken, std::vector<TestToken>>(Str, Str + strlen(Str), TestToken::Create, TestToken::FindType);
+            (void)Tokens;
+        }
+        catch (const std::runtime_error&)
+        {
+            return;
+        }
+        ADD_FAILURE() << "Tokenize must throw an exception";
+    };
+
+    TestError(R"(
+void main()
+{
+    /* Open comment
+}
+)");
+
+    TestError(R"(
+void main()
+{
+    char* String = "Missing quotes
+}
+)");
+}
+
 } // namespace
