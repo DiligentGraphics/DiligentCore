@@ -539,6 +539,8 @@ struct TestToken
         Type = _Type;
     }
 
+    TokenType GetType() const { return Type; }
+
     bool CompareLiteral(const char* Str)
     {
         return Literal == Str;
@@ -571,6 +573,18 @@ struct TestToken
             return TokenType::Keyword3;
 
         return TokenType::Identifier;
+    }
+
+    std::ostream& OutputDelimiter(std::ostream& os) const
+    {
+        os << Delimiter;
+        return os;
+    }
+
+    std::ostream& OutputLiteral(std::ostream& os) const
+    {
+        os << Literal;
+        return os;
     }
 };
 
@@ -612,6 +626,8 @@ void main()
     const auto Tokens = Tokenize<TestToken, std::vector<TestToken>>(TestStr, TestStr + strlen(TestStr), TestToken::Create, TestToken::FindType);
     EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::PreprocessorDirective, "#include <Include1.h>"}}));
     EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::PreprocessorDirective, "#define MACRO"}}));
+
+    EXPECT_STREQ(BuildSource(Tokens).c_str(), TestStr);
 }
 
 TEST(Common_ParsingTools, Tokenizer_Operators)
@@ -702,6 +718,8 @@ void main()
     EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::IncDecOp, "++"}, {TestTokenType::Identifier, "P1"}}));
     EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "Q0"}, {TestTokenType::IncDecOp, "--"}}));
     EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::IncDecOp, "--"}, {TestTokenType::Identifier, "Q1"}}));
+
+    EXPECT_STREQ(BuildSource(Tokens).c_str(), TestStr);
 }
 
 TEST(Common_ParsingTools, Tokenizer_Brackets)
@@ -724,6 +742,8 @@ void main()
     EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::OpenBrace, "{"}, {TestTokenType::Identifier, "int"}, {TestTokenType::Identifier, "a"}, {TestTokenType::Semicolon, ";"}, {TestTokenType::ClosingBrace, "}"}}));
     EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "function"}, {TestTokenType::OpenParen, "("}, {TestTokenType::Identifier, "argument1"}, {TestTokenType::Comma, ","}, {TestTokenType::Identifier, "argument2"}, {TestTokenType::ClosingParen, ")"}}));
     EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "array"}, {TestTokenType::OpenSquareBracket, "["}, {TestTokenType::Identifier, "size"}, {TestTokenType::ClosingSquareBracket, "]"}}));
+
+    EXPECT_STREQ(BuildSource(Tokens).c_str(), TestStr);
 }
 
 TEST(Common_ParsingTools, Tokenizer_StringConstant)
@@ -737,6 +757,8 @@ void main()
 
     const auto Tokens = Tokenize<TestToken, std::vector<TestToken>>(TestStr, TestStr + strlen(TestStr), TestToken::Create, TestToken::FindType);
     EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "String"}, {TestTokenType::Assignment, "="}, {TestTokenType::StringConstant, "string constant"}, {TestTokenType::Semicolon, ";"}}));
+
+    EXPECT_STREQ(BuildSource(Tokens).c_str(), TestStr);
 }
 
 TEST(Common_ParsingTools, Tokenizer_FloatNumber)
@@ -760,6 +782,8 @@ void main()
     EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "Number4"}, {TestTokenType::Assignment, "="}, {TestTokenType::NumericConstant, "40.0e+2f"}}));
     EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "Number5"}, {TestTokenType::Assignment, "="}, {TestTokenType::NumericConstant, "50.f"}}));
     EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "Number6"}, {TestTokenType::Assignment, "="}, {TestTokenType::NumericConstant, ".123f"}}));
+
+    EXPECT_STREQ(BuildSource(Tokens).c_str(), TestStr);
 }
 
 TEST(Common_ParsingTools, Tokenizer_UnknownIdentifier)
@@ -773,6 +797,8 @@ void main()
 
     const auto Tokens = Tokenize<TestToken, std::vector<TestToken>>(TestStr, TestStr + strlen(TestStr), TestToken::Create, TestToken::FindType);
     EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Undefined, "@"}, {TestTokenType::Identifier, "Unknown"}}));
+
+    EXPECT_STREQ(BuildSource(Tokens).c_str(), TestStr);
 }
 
 TEST(Common_ParsingTools, Tokenizer_Keywords)
@@ -786,6 +812,8 @@ void main()
 
     const auto Tokens = Tokenize<TestToken, std::vector<TestToken>>(TestStr, TestStr + strlen(TestStr), TestToken::Create, TestToken::FindType);
     EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Keyword1, "Keyword1"}, {TestTokenType::Identifier, "Id"}, {TestTokenType::Keyword2, "Keyword2"}, {TestTokenType::OpenParen, "("}, {TestTokenType::Keyword3, "Keyword3"}, {TestTokenType::ClosingParen, ")"}}));
+
+    EXPECT_STREQ(BuildSource(Tokens).c_str(), TestStr);
 }
 
 TEST(Common_ParsingTools, Tokenizer_Errors)

@@ -678,6 +678,27 @@ ContainerType Tokenize(const IteratorType&   SourceStart,
     return Tokens;
 }
 
+/// Builds source string from tokens
+template <typename ContainerType>
+std::string BuildSource(const ContainerType& Tokens) noexcept
+{
+    std::stringstream stream;
+    for (const auto& Token : Tokens)
+    {
+        Token.OutputDelimiter(stream);
+
+        const auto Type = Token.GetType();
+        using TokenType = decltype(Type);
+        if (Type == TokenType::StringConstant)
+            stream << "\"";
+        Token.OutputLiteral(stream);
+        if (Type == TokenType::StringConstant)
+            stream << "\"";
+    }
+    return stream.str();
+}
+
+
 } // namespace Parsing
 
 } // namespace Diligent
