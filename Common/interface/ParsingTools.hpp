@@ -590,6 +590,11 @@ ContainerType Tokenize(const IteratorType&   SourceStart,
                         return Pos != SourceEnd;
                     SINGLE_CHAR_TOKEN(MathOp);
 
+                case ':':
+                    if (AddDoubleCharToken(TokenType::DoubleColon))
+                        return Pos != SourceEnd;
+                    SINGLE_CHAR_TOKEN(Colon);
+
                 case '~':
                 case '^':
                     SINGLE_CHAR_TOKEN(BitwiseOp);
@@ -608,16 +613,18 @@ ContainerType Tokenize(const IteratorType&   SourceStart,
                 case ';':
                     SINGLE_CHAR_TOKEN(Semicolon);
 
-                    // clang-format off
-            case '(': SINGLE_CHAR_TOKEN(OpenParen);
-            case ')': SINGLE_CHAR_TOKEN(ClosingParen);
-            case '{': SINGLE_CHAR_TOKEN(OpenBrace);
-            case '}': SINGLE_CHAR_TOKEN(ClosingBrace);
-            case '[': SINGLE_CHAR_TOKEN(OpenSquareBracket);
-            case ']': SINGLE_CHAR_TOKEN(ClosingSquareBracket);
-          //case '<': SINGLE_CHAR_TOKEN(OpenAngleBracket);
-          //case '>': SINGLE_CHAR_TOKEN(ClosingAngleBracket);
-                    // clang-format on
+                case '?':
+                    SINGLE_CHAR_TOKEN(QuestionMark);
+
+                    //case '<': SINGLE_CHAR_TOKEN(OpenAngleBracket);
+                    //case '>': SINGLE_CHAR_TOKEN(ClosingAngleBracket);
+
+                case '(': SINGLE_CHAR_TOKEN(OpenParen);
+                case ')': SINGLE_CHAR_TOKEN(ClosingParen);
+                case '{': SINGLE_CHAR_TOKEN(OpenBrace);
+                case '}': SINGLE_CHAR_TOKEN(ClosingBrace);
+                case '[': SINGLE_CHAR_TOKEN(OpenSquareBracket);
+                case ']': SINGLE_CHAR_TOKEN(ClosingSquareBracket);
 
                 case '"':
                 {

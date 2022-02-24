@@ -505,6 +505,9 @@ enum class TestTokenType
     StringConstant,
     Semicolon,
     Comma,
+    Colon,
+    DoubleColon,
+    QuestionMark,
     TextBlock,
     Assignment,
     ComparisonOp,
@@ -613,8 +616,16 @@ TEST(Common_ParsingTools, Tokenizer_Preprocessor)
 // Comment
 #include <Include1.h>
 
+// # not a definiton
+
 /* Comment */
 #define MACRO
+
+/*
+#not 
+#a
+#definition
+*/
 
 void main()
 {
@@ -731,7 +742,7 @@ struct MyStruct
     int a;
 };
 
-void main()
+void main(int argument [[annotation]])
 {
     function(argument1, argument2);
     array[size];
@@ -739,6 +750,7 @@ void main()
 )";
 
     const auto Tokens = Tokenize<TestToken, std::vector<TestToken>>(TestStr, TestStr + strlen(TestStr), TestToken::Create, TestToken::FindType);
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::OpenSquareBracket, "["}, {TestTokenType::Identifier, "annotation"}, {TestTokenType::ClosingSquareBracket, "]"}}));
     EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::OpenBrace, "{"}, {TestTokenType::Identifier, "int"}, {TestTokenType::Identifier, "a"}, {TestTokenType::Semicolon, ";"}, {TestTokenType::ClosingBrace, "}"}}));
     EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "function"}, {TestTokenType::OpenParen, "("}, {TestTokenType::Identifier, "argument1"}, {TestTokenType::Comma, ","}, {TestTokenType::Identifier, "argument2"}, {TestTokenType::ClosingParen, ")"}}));
     EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "array"}, {TestTokenType::OpenSquareBracket, "["}, {TestTokenType::Identifier, "size"}, {TestTokenType::ClosingSquareBracket, "]"}}));
@@ -800,6 +812,36 @@ void main()
 
     EXPECT_STREQ(BuildSource(Tokens).c_str(), TestStr);
 }
+
+
+TEST(Common_ParsingTools, Tokenizer_Colon)
+{
+    static const char* TestStr = R"(
+// Comment
+
+/* Comment */
+
+void main()
+{
+    a : b;
+    // /*
+    /* " */
+    C /* abc */ :: /* def */ D; // test
+    /////****
+    e ? F;
+}
+// Comment
+/* Comment */
+)";
+
+    const auto Tokens = Tokenize<TestToken, std::vector<TestToken>>(TestStr, TestStr + strlen(TestStr), TestToken::Create, TestToken::FindType);
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "a"}, {TestTokenType::Colon, ":"}, {TestTokenType::Identifier, "b"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "C"}, {TestTokenType::DoubleColon, "::"}, {TestTokenType::Identifier, "D"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "e"}, {TestTokenType::QuestionMark, "?"}, {TestTokenType::Identifier, "F"}}));
+
+    EXPECT_STREQ(BuildSource(Tokens).c_str(), TestStr);
+}
+
 
 TEST(Common_ParsingTools, Tokenizer_Keywords)
 {
