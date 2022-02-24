@@ -706,6 +706,72 @@ std::string BuildSource(const ContainerType& Tokens) noexcept
 }
 
 
+/// Finds a function with the given name in the token scope
+template <typename TokenIterType>
+TokenIterType FindFunction(const TokenIterType& Start, const TokenIterType& End, const char* Name) noexcept
+{
+    if (Name == nullptr || *Name == '\0')
+    {
+        UNEXPECTED("Name must not be null");
+        return End;
+    }
+
+    int BracketCount = 0;
+    for (auto Token = Start; Token != End; ++Token)
+    {
+        const auto Type = Token->GetType();
+        using TokenType = decltype(Type);
+        switch (Type)
+        {
+            case TokenType::OpenBrace:
+            case TokenType::OpenParen:
+            case TokenType::OpenSquareBracket:
+            case TokenType::OpenAngleBracket:
+                ++BracketCount;
+                break;
+
+            case TokenType::ClosingBrace:
+            case TokenType::ClosingParen:
+            case TokenType::ClosingSquareBracket:
+            case TokenType::ClosingAngleBracket:
+                --BracketCount;
+                if (BracketCount < 0)
+                {
+                    LOG_ERROR_MESSAGE("Brackets are not correctly balanced");
+                    return End;
+                }
+                break;
+
+            case TokenType::Identifier:
+                if (BracketCount == 0)
+                {
+                    if (Token->CompareLiteral(Name))
+                    {
+                        auto NextToken = Token;
+                        ++NextToken;
+                        if (NextToken != End && NextToken->GetType() == TokenType::OpenParen)
+                        {
+                            auto PrevToken = Token;
+                            if (PrevToken != Start)
+                            {
+                                --PrevToken;
+                                if (PrevToken->GetType() == TokenType::Identifier)
+                                    return Token;
+                            }
+                        }
+                    }
+                }
+                break;
+
+            default:
+                // Go to next token
+                break;
+        }
+    }
+
+    return End;
+}
+
 } // namespace Parsing
 
 } // namespace Diligent

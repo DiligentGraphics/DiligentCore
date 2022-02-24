@@ -544,12 +544,12 @@ struct TestToken
 
     TokenType GetType() const { return Type; }
 
-    bool CompareLiteral(const char* Str)
+    bool CompareLiteral(const char* Str) const
     {
         return Literal == Str;
     }
 
-    bool CompareLiteral(const char* Start, const char* End)
+    bool CompareLiteral(const char* Start, const char* End) const
     {
         return Literal == std::string{Start, End};
     }
@@ -886,6 +886,44 @@ void main()
     char* String = "Missing quotes
 }
 )");
+}
+
+
+TEST(Common_ParsingTools, Tokenizer_FindFunction)
+{
+    static const char* TestStr = R"(
+NotAFunction0();
+
+struct Test
+{
+    void NotAFunction1();
+};
+
+MACRO(NotAFunction2())
+
+int array[NotAFunction3(10)];
+
+array<NotAFunction4()>
+
+void main()
+{
+    Keyword1 Id Keyword2(Keyword3);
+}
+
+void NotAFunction5
+)";
+
+    const auto Tokens = Tokenize<TestToken, std::vector<TestToken>>(TestStr, TestStr + strlen(TestStr), TestToken::Create, TestToken::FindType);
+    EXPECT_EQ(FindFunction(Tokens.begin(), Tokens.end(), "NotAFunction0"), Tokens.end());
+    EXPECT_EQ(FindFunction(Tokens.begin(), Tokens.end(), "NotAFunction1"), Tokens.end());
+    EXPECT_EQ(FindFunction(Tokens.begin(), Tokens.end(), "NotAFunction2"), Tokens.end());
+    EXPECT_EQ(FindFunction(Tokens.begin(), Tokens.end(), "NotAFunction3"), Tokens.end());
+    EXPECT_EQ(FindFunction(Tokens.begin(), Tokens.end(), "NotAFunction4"), Tokens.end());
+    EXPECT_EQ(FindFunction(Tokens.begin(), Tokens.end(), "NotAFunction5"), Tokens.end());
+    auto main_it = FindFunction(Tokens.begin(), Tokens.end(), "main");
+    ASSERT_NE(main_it, Tokens.end());
+
+    EXPECT_STREQ(BuildSource(Tokens).c_str(), TestStr);
 }
 
 } // namespace
