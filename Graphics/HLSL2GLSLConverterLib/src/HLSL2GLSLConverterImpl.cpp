@@ -852,7 +852,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::InsertIncludes(String& GLSLSource
         while (Pos != GLSLSource.end())
         {
             // #   include "TestFile.fxh"
-            if (SkipDelimetersAndComments(Pos, GLSLSource.end()))
+            if (SkipDelimitersAndComments(Pos, GLSLSource.end()))
                 break;
             if (*Pos == '#')
             {
@@ -862,7 +862,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::InsertIncludes(String& GLSLSource
                 ++Pos;
                 // #   include "TestFile.fxh"
                 //  ^
-                if (SkipDelimetersAndComments(Pos, GLSLSource.end()))
+                if (SkipDelimitersAndComments(Pos, GLSLSource.end()))
                 {
                     // End of the file reached - break
                     break;
@@ -891,7 +891,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::InsertIncludes(String& GLSLSource
             break;
 
         // Find open quotes
-        if (SkipDelimetersAndComments(Pos, GLSLSource.end()))
+        if (SkipDelimitersAndComments(Pos, GLSLSource.end()))
             LOG_ERROR_AND_THROW("Unexpected EOF after #include directive");
         // #   include "TestFile.fxh"
         //             ^
@@ -1366,7 +1366,7 @@ void ParseImageFormat(const String& Comment, String& ImageFormat)
     //    /* format = r32f */
     // ^
     auto Pos = Comment.begin();
-    if (SkipDelimeters(Pos, Comment.end()))
+    if (SkipDelimiters(Pos, Comment.end()))
         return;
     //    /* format = r32f */
     //    ^
@@ -1382,7 +1382,7 @@ void ParseImageFormat(const String& Comment, String& ImageFormat)
     ++Pos;
     //    /* format = r32f */
     //      ^
-    if (SkipDelimeters(Pos, Comment.end()))
+    if (SkipDelimiters(Pos, Comment.end()))
         return;
     //    /* format = r32f */
     //       ^
@@ -1390,7 +1390,7 @@ void ParseImageFormat(const String& Comment, String& ImageFormat)
         return;
     //    /* format = r32f */
     //             ^
-    if (SkipDelimeters(Pos, Comment.end()))
+    if (SkipDelimiters(Pos, Comment.end()))
         return;
     //    /* format = r32f */
     //              ^
@@ -1399,7 +1399,7 @@ void ParseImageFormat(const String& Comment, String& ImageFormat)
     ++Pos;
     //    /* format = r32f */
     //               ^
-    if (SkipDelimeters(Pos, Comment.end()))
+    if (SkipDelimiters(Pos, Comment.end()))
         return;
     //    /* format = r32f */
     //                ^
@@ -3761,7 +3761,7 @@ void ParseAttributesInComment(const String& Comment, std::unordered_map<HashMapS
     auto Pos = Comment.begin();
     //    /* partitioning = fractional_even, outputtopology = triangle_cw */
     // ^
-    if (SkipDelimeters(Pos, Comment.end()))
+    if (SkipDelimiters(Pos, Comment.end()))
         return;
     //    /* partitioning = fractional_even, outputtopology = triangle_cw */
     //    ^
@@ -3779,7 +3779,7 @@ void ParseAttributesInComment(const String& Comment, std::unordered_map<HashMapS
     {
         //    /* partitioning = fractional_even, outputtopology = triangle_cw */
         //      ^
-        if (SkipDelimeters(Pos, Comment.end()))
+        if (SkipDelimiters(Pos, Comment.end()))
             return;
         //    /* partitioning = fractional_even, outputtopology = triangle_cw */
         //       ^
@@ -3788,7 +3788,7 @@ void ParseAttributesInComment(const String& Comment, std::unordered_map<HashMapS
         String Attrib(AttribStart, Pos);
         //    /* partitioning = fractional_even, outputtopology = triangle_cw */
         //                   ^
-        if (SkipDelimeters(Pos, Comment.end()))
+        if (SkipDelimiters(Pos, Comment.end()))
             return;
         //    /* partitioning = fractional_even, outputtopology = triangle_cw */
         //                    ^
@@ -3797,7 +3797,7 @@ void ParseAttributesInComment(const String& Comment, std::unordered_map<HashMapS
         ++Pos;
         //    /* partitioning = fractional_even, outputtopology = triangle_cw */
         //                     ^
-        if (SkipDelimeters(Pos, Comment.end()))
+        if (SkipDelimiters(Pos, Comment.end()))
             return;
         //    /* partitioning = fractional_even, outputtopology = triangle_cw */
         //                     ^
@@ -3808,7 +3808,7 @@ void ParseAttributesInComment(const String& Comment, std::unordered_map<HashMapS
         String Value(ValueStartPos, Pos);
         Attributes.emplace(make_pair(HashMapStringKey(move(Attrib)), Value));
 
-        if (SkipDelimeters(Pos, Comment.end()))
+        if (SkipDelimiters(Pos, Comment.end()))
             return;
         //    /* partitioning = fractional_even , outputtopology = triangle_cw */
         //                                      ^

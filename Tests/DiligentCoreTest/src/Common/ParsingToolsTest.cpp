@@ -130,11 +130,11 @@ TEST(Common_ParsingTools, SkipComment)
          " /* **/Correct");
 }
 
-TEST(Common_ParsingTools, SkipDelimeters)
+TEST(Common_ParsingTools, SkipDelimiters)
 {
     auto Test = [](const char* Str, bool EndReached = false, const char* Expected = nullptr) {
         auto* Pos = Str;
-        EXPECT_EQ(SkipDelimeters(Pos, Str + strlen(Str)), EndReached);
+        EXPECT_EQ(SkipDelimiters(Pos, Str + strlen(Str)), EndReached);
         if (Expected == nullptr)
             Expected = EndReached ? "" : "Correct";
         EXPECT_STREQ(Pos, Expected);
@@ -155,11 +155,11 @@ TEST(Common_ParsingTools, SkipDelimeters)
     Test("\t \r \n Correct");
 }
 
-TEST(Common_ParsingTools, SkipDelimetersAndComments)
+TEST(Common_ParsingTools, SkipDelimitersAndComments)
 {
     auto Test = [](const char* Str, bool EndReached = false) {
         auto* Pos = Str;
-        EXPECT_EQ(SkipDelimetersAndComments(Pos, Str + strlen(Str)), EndReached);
+        EXPECT_EQ(SkipDelimitersAndComments(Pos, Str + strlen(Str)), EndReached);
         const auto* Expected = EndReached ? "" : "Correct";
         EXPECT_STREQ(Pos, Expected);
     };

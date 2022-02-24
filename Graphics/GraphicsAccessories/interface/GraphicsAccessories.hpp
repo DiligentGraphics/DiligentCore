@@ -331,7 +331,7 @@ const Char* GetResourceDimString(RESOURCE_DIMENSION TexType);
 const Char* GetBindFlagString(Uint32 BindFlag);
 
 /// Returns the string containing the bind flags
-String GetBindFlagsString(Uint32 BindFlags, const char* Delimeter = "|");
+String GetBindFlagsString(Uint32 BindFlags, const char* Delimiter = "|");
 
 /// Returns the string containing the CPU access flags
 String GetCPUAccessFlagsString(Uint32 CpuAccessFlags);
@@ -393,7 +393,7 @@ const char* GetShaderCompilerTypeString(SHADER_COMPILER Compiler);
 
 const char* GetArchiveDeviceDataFlagString(ARCHIVE_DEVICE_DATA_FLAGS Flag, bool bGetFullName = false);
 
-String GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAGS Flags, bool GetFullName = false, const char* DelimeterString = "|");
+String GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAGS Flags, bool GetFullName = false, const char* DelimiterString = "|");
 
 PIPELINE_RESOURCE_FLAGS GetValidPipelineResourceFlags(SHADER_RESOURCE_TYPE ResourceType);
 

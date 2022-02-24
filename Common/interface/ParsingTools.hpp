@@ -56,8 +56,8 @@ inline bool IsNewLine(Char Symbol)
 /// Returns true if the symbol is a delimiter symbol (white space or new line)
 inline bool IsDelimiter(Char Symbol)
 {
-    static const Char* Delimeters = " \t\r\n";
-    return strchr(Delimeters, Symbol) != nullptr;
+    static const Char* Delimiters = " \t\r\n";
+    return strchr(Delimiters, Symbol) != nullptr;
 }
 
 /// Returns true if the symbol is a statement separator symbol
@@ -190,7 +190,7 @@ bool SkipComment(InteratorType& Pos, const InteratorType& End)
 ///
 /// \remarks    Pos is updated to the position of the first non-delimiter symbol.
 template <typename InteratorType>
-bool SkipDelimeters(InteratorType& Pos, const InteratorType& End)
+bool SkipDelimiters(InteratorType& Pos, const InteratorType& End)
 {
     for (; Pos != End && IsDelimiter(*Pos); ++Pos)
         ;
@@ -208,7 +208,7 @@ bool SkipDelimeters(InteratorType& Pos, const InteratorType& End)
 /// \remarks    Pos is updated to the position of the first non-comment
 ///             non-delimiter symbol.
 template <typename IteratorType>
-bool SkipDelimetersAndComments(IteratorType& Pos, const IteratorType& End)
+bool SkipDelimitersAndComments(IteratorType& Pos, const IteratorType& End)
 {
     bool DelimiterSkipped = false;
     bool CommentSkipped   = false;
@@ -277,7 +277,7 @@ void SplitString(const IteratorType& Start, const IteratorType& End, HandlerType
     while (Pos != End)
     {
         auto DelimStart = Pos;
-        SkipDelimetersAndComments(Pos, End);
+        SkipDelimitersAndComments(Pos, End);
         auto OrigPos = Pos;
         if (!Handler(DelimStart, Pos))
             break;

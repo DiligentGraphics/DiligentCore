@@ -863,7 +863,7 @@ const Char* GetBindFlagString(Uint32 BindFlag)
     }
 }
 
-String GetBindFlagsString(Uint32 BindFlags, const char* Delimeter)
+String GetBindFlagsString(Uint32 BindFlags, const char* Delimiter)
 {
     if (BindFlags == 0)
         return "0";
@@ -873,7 +873,7 @@ String GetBindFlagsString(Uint32 BindFlags, const char* Delimeter)
         if (BindFlags & Flag)
         {
             if (!Str.empty())
-                Str += Delimeter;
+                Str += Delimiter;
             Str += GetBindFlagString(Flag);
             BindFlags &= ~Flag;
         }
@@ -1212,7 +1212,7 @@ const char* GetArchiveDeviceDataFlagString(ARCHIVE_DEVICE_DATA_FLAGS Flag, bool 
     }
 }
 
-String GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAGS Flags, bool GetFullName /*= false*/, const char* DelimeterString /*= "|"*/)
+String GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAGS Flags, bool GetFullName /*= false*/, const char* DelimiterString /*= "|"*/)
 {
     if (Flags == PIPELINE_RESOURCE_FLAG_NONE)
         return GetFullName ? "PIPELINE_RESOURCE_FLAG_NONE" : "UNKNOWN";
@@ -1220,7 +1220,7 @@ String GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAGS Flags, bool GetFul
     while (Flags != PIPELINE_RESOURCE_FLAG_NONE)
     {
         if (!Str.empty())
-            Str += DelimeterString;
+            Str += DelimiterString;
 
         auto Flag = ExtractLSB(Flags);
 
