@@ -844,101 +844,108 @@ void HLSL2GLSLConverterImpl::ConversionStream::InsertIncludes(String& GLSLSource
     // Put all the includes into the set to avoid multiple inclusion
     std::unordered_set<String> ProcessedIncludes;
 
-    do
+    try
     {
-        // Find the first #include statement
-        auto Pos             = GLSLSource.begin();
-        auto IncludeStartPos = GLSLSource.end();
-        while (Pos != GLSLSource.end())
+        do
         {
-            // #   include "TestFile.fxh"
-            if (SkipDelimitersAndComments(Pos, GLSLSource.end()))
-                break;
-            if (*Pos == '#')
+            // Find the first #include statement
+            auto Pos             = GLSLSource.begin();
+            auto IncludeStartPos = GLSLSource.end();
+            while (Pos != GLSLSource.end())
             {
-                IncludeStartPos = Pos;
                 // #   include "TestFile.fxh"
-                // ^
-                ++Pos;
-                // #   include "TestFile.fxh"
-                //  ^
                 if (SkipDelimitersAndComments(Pos, GLSLSource.end()))
-                {
-                    // End of the file reached - break
                     break;
-                }
-                // #   include "TestFile.fxh"
-                //     ^
-                if (SkipPrefix("include", Pos, GLSLSource.end()))
+                if (*Pos == '#')
                 {
+                    IncludeStartPos = Pos;
                     // #   include "TestFile.fxh"
-                    //            ^
-                    break;
+                    // ^
+                    ++Pos;
+                    // #   include "TestFile.fxh"
+                    //  ^
+                    if (SkipDelimitersAndComments(Pos, GLSLSource.end()))
+                    {
+                        // End of the file reached - break
+                        break;
+                    }
+                    // #   include "TestFile.fxh"
+                    //     ^
+                    if (SkipPrefix("include", Pos, GLSLSource.end()))
+                    {
+                        // #   include "TestFile.fxh"
+                        //            ^
+                        break;
+                    }
+                    else
+                    {
+                        // This is not an #include directive:
+                        // #define MACRO
+                        // Continue search through the file
+                    }
                 }
                 else
-                {
-                    // This is not an #include directive:
-                    // #define MACRO
-                    // Continue search through the file
-                }
+                    ++Pos;
             }
-            else
-                ++Pos;
-        }
 
-        // No more #include found
-        if (Pos == GLSLSource.end())
-            break;
+            // No more #include found
+            if (Pos == GLSLSource.end())
+                break;
 
-        // Find open quotes
-        if (SkipDelimitersAndComments(Pos, GLSLSource.end()))
-            LOG_ERROR_AND_THROW("Unexpected EOF after #include directive");
-        // #   include "TestFile.fxh"
-        //             ^
-        if (*Pos != '\"' && *Pos != '<')
-            LOG_ERROR_AND_THROW("Missing open quotes or \'<\' after #include directive");
-        ++Pos;
-        // #   include "TestFile.fxh"
-        //              ^
-        auto IncludeNameStartPos = Pos;
-        // Find closing quotes
-        while (Pos != GLSLSource.end() && *Pos != '\"' && *Pos != '>') ++Pos;
-        // #   include "TestFile.fxh"
-        //                          ^
-        if (Pos == GLSLSource.end())
-            LOG_ERROR_AND_THROW("Missing closing quotes or \'>\' after #include directive");
+            // Find open quotes
+            if (SkipDelimitersAndComments(Pos, GLSLSource.end()))
+                LOG_ERROR_AND_THROW("Unexpected EOF after #include directive");
+            // #   include "TestFile.fxh"
+            //             ^
+            if (*Pos != '\"' && *Pos != '<')
+                LOG_ERROR_AND_THROW("Missing open quotes or \'<\' after #include directive");
+            ++Pos;
+            // #   include "TestFile.fxh"
+            //              ^
+            auto IncludeNameStartPos = Pos;
+            // Find closing quotes
+            while (Pos != GLSLSource.end() && *Pos != '\"' && *Pos != '>') ++Pos;
+            // #   include "TestFile.fxh"
+            //                          ^
+            if (Pos == GLSLSource.end())
+                LOG_ERROR_AND_THROW("Missing closing quotes or \'>\' after #include directive");
 
-        // Get the name of the include file
-        auto IncludeName = String(IncludeNameStartPos, Pos);
-        ++Pos;
-        // #   include "TestFile.fxh"
-        // ^                         ^
-        // IncludeStartPos           Pos
-        GLSLSource.erase(IncludeStartPos, Pos);
+            // Get the name of the include file
+            auto IncludeName = String(IncludeNameStartPos, Pos);
+            ++Pos;
+            // #   include "TestFile.fxh"
+            // ^                         ^
+            // IncludeStartPos           Pos
+            GLSLSource.erase(IncludeStartPos, Pos);
 
-        // Convert the name to lower case
-        String IncludeFileLowercase = StrToLower(IncludeName);
-        // Insert the lower-case name into the set
-        auto It = ProcessedIncludes.insert(IncludeFileLowercase);
-        // If the name was actually inserted, which means the include encountered for the first time,
-        // replace the text with the file content
-        if (It.second)
-        {
-            RefCntAutoPtr<IFileStream> pIncludeDataStream;
-            pSourceStreamFactory->CreateInputStream(IncludeName.c_str(), &pIncludeDataStream);
-            if (!pIncludeDataStream)
-                LOG_ERROR_AND_THROW("Failed to open include file ", IncludeName);
-            RefCntAutoPtr<IDataBlob> pIncludeData(MakeNewRCObj<DataBlobImpl>()(0));
-            pIncludeDataStream->ReadBlob(pIncludeData);
+            // Convert the name to lower case
+            String IncludeFileLowercase = StrToLower(IncludeName);
+            // Insert the lower-case name into the set
+            auto It = ProcessedIncludes.insert(IncludeFileLowercase);
+            // If the name was actually inserted, which means the include encountered for the first time,
+            // replace the text with the file content
+            if (It.second)
+            {
+                RefCntAutoPtr<IFileStream> pIncludeDataStream;
+                pSourceStreamFactory->CreateInputStream(IncludeName.c_str(), &pIncludeDataStream);
+                if (!pIncludeDataStream)
+                    LOG_ERROR_AND_THROW("Failed to open include file ", IncludeName);
+                RefCntAutoPtr<IDataBlob> pIncludeData(MakeNewRCObj<DataBlobImpl>()(0));
+                pIncludeDataStream->ReadBlob(pIncludeData);
 
-            // Get include text
-            auto   IncludeText = reinterpret_cast<const Char*>(pIncludeData->GetDataPtr());
-            size_t NumSymbols  = pIncludeData->GetSize();
+                // Get include text
+                auto   IncludeText = reinterpret_cast<const Char*>(pIncludeData->GetDataPtr());
+                size_t NumSymbols  = pIncludeData->GetSize();
 
-            // Insert the text into source
-            GLSLSource.insert(IncludeStartPos - GLSLSource.begin(), IncludeText, NumSymbols);
-        }
-    } while (true);
+                // Insert the text into source
+                GLSLSource.insert(IncludeStartPos - GLSLSource.begin(), IncludeText, NumSymbols);
+            }
+        } while (true);
+    }
+    catch (const std::pair<std::string::iterator, const char*> ErrInfo)
+    {
+        LOG_ERROR_AND_THROW("Unable to process includes: ", ErrInfo.second);
+    }
 }
 
 // The function converts source code into a token list

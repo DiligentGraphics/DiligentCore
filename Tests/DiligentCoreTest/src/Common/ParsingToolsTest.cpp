@@ -110,15 +110,6 @@ TEST(Common_ParsingTools, SkipComment)
     Test("// Single-line comment /* */ \n"
          "Correct");
 
-
-    Test("/*", false);
-    Test("/* abc ", false);
-    Test("/* abc *", false);
-
-    Test("/* abc *\n"
-         "***\n",
-         false);
-
     Test("/* abc */Correct");
     Test("/** abc */Correct");
     Test("/* abc **/Correct");
@@ -128,6 +119,41 @@ TEST(Common_ParsingTools, SkipComment)
          "/* abc **\r\n"
          "/****** ***** ***\r"
          " /* **/Correct");
+}
+
+
+TEST(Common_ParsingTools, SkipCommentErrors)
+{
+    auto Test = [](const char* Str) {
+        try
+        {
+            auto* Pos = Str;
+            SkipComment(Pos, Str + strlen(Str));
+        }
+        catch (const std::pair<const char*, const char*>& err_info)
+        {
+            EXPECT_STREQ(err_info.first, Str);
+            return;
+        }
+        ADD_FAILURE() << "SkipComment must throw an exception";
+    };
+
+    Test("/*");
+    Test("/* abc ");
+    Test("/* abc *");
+
+    Test("/* abc *\n"
+         "***\n");
+
+    Test("/*   *");
+    Test("/*   /");
+
+    Test("/*   \n"
+         "   ");
+    Test("/*   \n"
+         "   ***");
+    Test("/*   \n"
+         "   /***");
 }
 
 TEST(Common_ParsingTools, SkipDelimiters)

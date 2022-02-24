@@ -107,8 +107,11 @@ inline bool SkipLine(InteratorType& Pos, const InteratorType& End, bool GoToNext
 /// \remarks    If the comment is found, Pos is updated to the position
 ///             immediately after the end of the comment.
 ///             If the comment is not found, Pos is left unchanged.
+///
+///             In case there is an error parsing the comment (e.g. /* is not
+///             closed), the function throws an exception
 template <typename InteratorType>
-bool SkipComment(InteratorType& Pos, const InteratorType& End)
+bool SkipComment(InteratorType& Pos, const InteratorType& End) noexcept(false)
 {
     if (Pos == End || *Pos == '\0')
         return true;
@@ -157,7 +160,7 @@ bool SkipComment(InteratorType& Pos, const InteratorType& End)
                 //           NextPos
                 ++NextPos;
                 if (NextPos == End || *NextPos == '\0')
-                    return false;
+                    break;
 
                 //  /* Comment */
                 //              ^
@@ -176,6 +179,8 @@ bool SkipComment(InteratorType& Pos, const InteratorType& End)
                 ++NextPos;
             }
         }
+
+        throw std::pair<InteratorType, const char*>{Pos, "Unable to find the end of the multiline comment"};
     }
 
     return Pos == End || *Pos == '\0';
@@ -208,8 +213,11 @@ bool SkipDelimiters(InteratorType& Pos, const InteratorType& End)
 ///
 /// \remarks    Pos is updated to the position of the first non-comment
 ///             non-delimiter symbol.
+///
+///             In case there is a parsing error (which means there is an
+///             open multi-line comment /*... ), the function throws an exception.
 template <typename IteratorType>
-bool SkipDelimitersAndComments(IteratorType& Pos, const IteratorType& End)
+bool SkipDelimitersAndComments(IteratorType& Pos, const IteratorType& End) noexcept(false)
 {
     bool DelimiterSkipped = false;
     bool CommentSkipped   = false;
@@ -220,7 +228,7 @@ bool SkipDelimitersAndComments(IteratorType& Pos, const IteratorType& End)
             DelimiterSkipped = true;
 
         const auto StartPos = Pos;
-        SkipComment(Pos, End);
+        SkipComment(Pos, End); // May throw
         CommentSkipped = (StartPos != Pos);
     } while ((Pos != End) && (DelimiterSkipped || CommentSkipped));
 
@@ -272,7 +280,7 @@ inline bool SkipIdentifier(IteratorType& Pos, const IteratorType& End)
 ///             must then process the text at the current position and move the pointer.
 ///             It should return true to continue processing, and false to stop it.
 template <typename IteratorType, typename HandlerType>
-void SplitString(const IteratorType& Start, const IteratorType& End, HandlerType Handler)
+void SplitString(const IteratorType& Start, const IteratorType& End, HandlerType Handler) noexcept(false)
 {
     auto Pos = Start;
     while (Pos != End)
