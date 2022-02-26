@@ -386,6 +386,8 @@ void SplitString(const IteratorType& Start, const IteratorType& End, HandlerType
 ///                        which will be highlighted by ^.
 /// \param[in]  NumLines - the number of lines above and below.
 ///
+/// \return     string representing the context around the given position.
+///
 /// \remarks    The context looks like shown below:
 ///
 ///                 Lorem ipsum dolor sit amet, consectetur
@@ -398,6 +400,9 @@ void SplitString(const IteratorType& Start, const IteratorType& End, HandlerType
 template <typename IteratorType>
 std::string GetContext(const IteratorType& Start, const IteratorType& End, IteratorType Pos, size_t NumLines) noexcept
 {
+    if (Start == End)
+        return "";
+
     auto CtxStart = Pos;
     while (CtxStart > Start && !IsNewLine(CtxStart[-1]))
         --CtxStart;
@@ -677,6 +682,22 @@ ContainerType Tokenize(const IteratorType&   SourceStart,
     return Tokens;
 }
 
+template <typename TokenClass>
+std::ostream& WriteToken(std::ostream& stream, const TokenClass& Token)
+{
+    Token.OutputDelimiter(stream);
+
+    const auto Type = Token.GetType();
+    using TokenType = decltype(Type);
+    if (Type == TokenType::StringConstant)
+        stream << "\"";
+    Token.OutputLiteral(stream);
+    if (Type == TokenType::StringConstant)
+        stream << "\"";
+
+    return stream;
+}
+
 /// Builds source string from tokens
 template <typename ContainerType>
 std::string BuildSource(const ContainerType& Tokens) noexcept
@@ -684,15 +705,7 @@ std::string BuildSource(const ContainerType& Tokens) noexcept
     std::stringstream stream;
     for (const auto& Token : Tokens)
     {
-        Token.OutputDelimiter(stream);
-
-        const auto Type = Token.GetType();
-        using TokenType = decltype(Type);
-        if (Type == TokenType::StringConstant)
-            stream << "\"";
-        Token.OutputLiteral(stream);
-        if (Type == TokenType::StringConstant)
-            stream << "\"";
+        WriteToken(stream, Token);
     }
     return stream.str();
 }
@@ -864,6 +877,163 @@ TokenIterType FindMatchingBracket(const TokenIterType& Start,
         }
     }
     return End;
+}
+
+
+/// Prints a parsing context around the given token.
+
+/// \param[in]  Start            - start of the token range.
+/// \param[in]  End              - end of the token range.
+/// \param[in]  Pos              - position around which to print the context and
+///                                which will be highlighted by ^.
+/// \param[in]  NumAdjacentLines - the number of adjacent lines above and
+///                                below to print.
+///
+/// \remarks    The context looks like shown below:
+///
+///                 Lorem ipsum dolor sit amet, consectetur
+///                 adipiscing elit, sed do eiusmod tempor
+///                 incididunt ut labore et dolore magna aliqua.
+///                                      ^
+///                 Ut enim ad minim veniam, quis nostrud
+///                 exercitation ullamco lab
+///
+template <typename TokenIterType>
+std::string GetTokenContext(const TokenIterType& Start,
+                            const TokenIterType& End,
+                            TokenIterType        Pos,
+                            size_t               NumAdjacentLines)
+{
+    if (Start == End)
+        return "";
+
+    if (Pos == End)
+        --Pos;
+
+    //\n  ++ x ;
+    //\n  ++ y ;
+    //\n  if ( x != 0 )
+    //         ^
+    //\n      x += y ;
+    //\n
+    //\n  if ( y != 0 )
+    //\n      x += 2 ;
+
+    auto CountNewLines = [](const auto& Start, const auto& End) //
+    {
+        size_t NumNewLines = 0;
+
+        auto it = Start;
+        while (it != End)
+        {
+            if (IsNewLine(*it))
+            {
+                ++NumNewLines;
+                auto next_it = it;
+                ++next_it;
+                if (next_it != End && *next_it == '\r')
+                {
+                    // Treat \r\n as a single ending
+                    it = next_it;
+                }
+            }
+            ++it;
+        }
+        return NumNewLines;
+    };
+
+    std::stringstream Ctx;
+
+    // Find the first token in the current line
+    auto   CurrLineStart = Pos;
+    size_t NumLinesAbove = 0;
+    while (CurrLineStart != Start)
+    {
+        const auto DelimRange = CurrLineStart->GetDelimiter();
+        NumLinesAbove += CountNewLines(DelimRange.first, DelimRange.second);
+        if (NumLinesAbove > 0)
+            break;
+        --CurrLineStart;
+    }
+    //\n  if( x != 0 )
+    //    ^
+
+    // Find the first token in the line NumAdjacentLines above
+    auto CtxStart = CurrLineStart;
+    while (CtxStart != Start && NumLinesAbove <= NumAdjacentLines)
+    {
+        --CtxStart;
+        const auto DelimRange = CtxStart->GetDelimiter();
+        NumLinesAbove += CountNewLines(DelimRange.first, DelimRange.second);
+    }
+    //\n  ++ x ;
+    //    ^
+    //\n  ++ y ;
+    //\n  if ( x != 0 )
+
+    // Write everything from the top line up to the current line start
+    auto Token = CtxStart;
+    for (; Token != CurrLineStart; ++Token)
+    {
+        WriteToken(Ctx, *Token);
+    }
+
+    //\n  if ( x != 0 )
+    //    ^
+
+    // Accumulate whitespaces preceding current token
+    std::string Spaces;
+    bool        AccumWhiteSpaces = true;
+    while (Token != End)
+    {
+        const auto DelimRange = Token->GetDelimiter();
+        if (Token != CurrLineStart && CountNewLines(DelimRange.first, DelimRange.second) > 0)
+            break;
+
+        if (AccumWhiteSpaces)
+        {
+            for (auto it = DelimRange.first; it != DelimRange.second; ++it)
+            {
+                if (IsNewLine(*it))
+                    Spaces.clear();
+                else if (*it == '\t')
+                    Spaces.push_back(*it);
+                else
+                    Spaces.push_back(' ');
+            }
+        }
+
+        // Accumulate spaces until we encounter current token
+        if (Token == Pos)
+            AccumWhiteSpaces = false;
+
+        if (AccumWhiteSpaces)
+        {
+            Spaces.append(Token->GetLiteralLen(), ' ');
+        }
+
+        WriteToken(Ctx, *Token);
+        ++Token;
+    }
+
+    // Write ^ on the line below
+    Ctx << std::endl
+        << Spaces << '^';
+
+    // Write NumAdjacentLines lines below current line
+    size_t NumLinesBelow = 0;
+    while (Token != End)
+    {
+        const auto DelimRange = Token->GetDelimiter();
+        NumLinesBelow += CountNewLines(DelimRange.first, DelimRange.second);
+        if (NumLinesBelow > NumAdjacentLines)
+            break;
+
+        WriteToken(Ctx, *Token);
+        ++Token;
+    }
+
+    return Ctx.str();
 }
 
 } // namespace Parsing

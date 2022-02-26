@@ -318,6 +318,34 @@ private:
             Literal{std::move(_Literal)},
             Delimiter{std::move(_Delimiter)}
         {}
+
+        size_t GetDelimiterLen() const
+        {
+            return Delimiter.length();
+        }
+        size_t GetLiteralLen() const
+        {
+            return Literal.length();
+        }
+        const std::pair<const char*, const char*> GetDelimiter() const
+        {
+            return {Delimiter.c_str(), Delimiter.c_str() + GetDelimiterLen()};
+        }
+        const std::pair<const char*, const char*> GetLiteral() const
+        {
+            return {Literal.c_str(), Literal.c_str() + GetLiteralLen()};
+        }
+
+        std::ostream& OutputDelimiter(std::ostream& os) const
+        {
+            os << Delimiter;
+            return os;
+        }
+        std::ostream& OutputLiteral(std::ostream& os) const
+        {
+            os << Literal;
+            return os;
+        }
     };
     typedef std::list<TokenInfo> TokenListType;
 

@@ -425,6 +425,12 @@ TEST(Common_ParsingTools, GetContext)
             "         ^\n";
         EXPECT_STREQ(GetContext(TestStr, StrEnd, TestStr + 59, 1).c_str(), RefStr);
     }
+
+    {
+        static const char* EmptyStr = "";
+        EXPECT_STREQ(GetContext(EmptyStr, EmptyStr, EmptyStr, 0).c_str(), EmptyStr);
+        EXPECT_STREQ(GetContext(EmptyStr, EmptyStr, EmptyStr, 1).c_str(), EmptyStr);
+    }
 }
 
 
@@ -584,6 +590,23 @@ struct TestToken
             return TokenType::Keyword3;
 
         return TokenType::Identifier;
+    }
+
+    size_t GetDelimiterLen() const
+    {
+        return Delimiter.length();
+    }
+    size_t GetLiteralLen() const
+    {
+        return Literal.length();
+    }
+    const std::pair<const char*, const char*> GetDelimiter() const
+    {
+        return {Delimiter.c_str(), Delimiter.c_str() + GetDelimiterLen()};
+    }
+    const std::pair<const char*, const char*> GetLiteral() const
+    {
+        return {Literal.c_str(), Literal.c_str() + GetLiteralLen()};
     }
 
     std::ostream& OutputDelimiter(std::ostream& os) const
@@ -1005,6 +1028,157 @@ TEST(Common_ParsingTools, FindMatchingBracket)
         TestNoBracket(46, TestTokenType::OpenBrace);
         TestNoBracket(47, TestTokenType::OpenSquareBracket);
         TestNoBracket(48, TestTokenType::OpenParen);
+    }
+}
+
+
+TEST(Common_ParsingTools, GetTokenContext)
+{
+    static const char* TestStr =
+        "A1 A2 A3 A4 A5\n"  // 1
+        "B1 B2 B3 B4 B5\n"  // 6
+        "C1 C2 C3 C4 C5\n"  // 11
+        "D1 D2 D3 D4 D5\n"  // 16
+        "E1 E2 E3 E4 E5\n"  // 21
+        "F1 F2 F3 F4 F5\n"; // 26
+
+    const auto* StrEnd = TestStr + strlen(TestStr);
+    const auto  Tokens = Tokenize<TestToken, std::vector<TestToken>>(TestStr, StrEnd, TestToken::Create, TestToken::FindType);
+    EXPECT_STREQ(BuildSource(Tokens).c_str(), TestStr);
+
+    {
+        static const char* RefStr =
+            "A1 A2 A3 A4 A5\n"
+            "^";
+        EXPECT_STREQ(GetTokenContext(Tokens.begin(), Tokens.end(), Tokens.begin() + 1, 0).c_str(), RefStr);
+    }
+
+    {
+        static const char* RefStr =
+            "A1 A2 A3 A4 A5\n"
+            "            ^";
+        EXPECT_STREQ(GetTokenContext(Tokens.begin(), Tokens.end(), Tokens.begin() + 5, 0).c_str(), RefStr);
+    }
+
+    {
+        static const char* RefStr =
+            "\n"
+            "C1 C2 C3 C4 C5\n"
+            "^";
+        EXPECT_STREQ(GetTokenContext(Tokens.begin(), Tokens.end(), Tokens.begin() + 11, 0).c_str(), RefStr);
+    }
+
+    {
+        static const char* RefStr =
+            "\n"
+            "C1 C2 C3 C4 C5\n"
+            "      ^";
+        EXPECT_STREQ(GetTokenContext(Tokens.begin(), Tokens.end(), Tokens.begin() + 13, 0).c_str(), RefStr);
+    }
+
+    {
+        static const char* RefStr =
+            "\n"
+            "C1 C2 C3 C4 C5\n"
+            "            ^";
+        EXPECT_STREQ(GetTokenContext(Tokens.begin(), Tokens.end(), Tokens.begin() + 15, 0).c_str(), RefStr);
+    }
+
+    {
+        static const char* RefStr =
+            "\n"
+            "F1 F2 F3 F4 F5\n"
+            "^";
+        EXPECT_STREQ(GetTokenContext(Tokens.begin(), Tokens.end(), Tokens.begin() + 26, 0).c_str(), RefStr);
+    }
+
+    {
+        static const char* RefStr =
+            "\n"
+            "F1 F2 F3 F4 F5\n"
+            "            ^";
+        EXPECT_STREQ(GetTokenContext(Tokens.begin(), Tokens.end(), Tokens.begin() + 30, 0).c_str(), RefStr);
+    }
+
+
+
+    {
+        static const char* RefStr =
+            "A1 A2 A3 A4 A5\n"
+            "^\n"
+            "B1 B2 B3 B4 B5";
+        EXPECT_STREQ(GetTokenContext(Tokens.begin(), Tokens.end(), Tokens.begin() + 1, 1).c_str(), RefStr);
+    }
+
+    {
+        static const char* RefStr =
+            "A1 A2 A3 A4 A5\n"
+            "            ^\n"
+            "B1 B2 B3 B4 B5";
+        EXPECT_STREQ(GetTokenContext(Tokens.begin(), Tokens.end(), Tokens.begin() + 5, 1).c_str(), RefStr);
+    }
+
+    {
+        static const char* RefStr =
+            "\n"
+            "B1 B2 B3 B4 B5\n"
+            "C1 C2 C3 C4 C5\n"
+            "^\n"
+            "D1 D2 D3 D4 D5";
+        EXPECT_STREQ(GetTokenContext(Tokens.begin(), Tokens.end(), Tokens.begin() + 11, 1).c_str(), RefStr);
+    }
+
+    {
+        static const char* RefStr =
+            "\n"
+            "B1 B2 B3 B4 B5\n"
+            "C1 C2 C3 C4 C5\n"
+            "      ^\n"
+            "D1 D2 D3 D4 D5";
+        EXPECT_STREQ(GetTokenContext(Tokens.begin(), Tokens.end(), Tokens.begin() + 13, 1).c_str(), RefStr);
+    }
+
+    {
+        static const char* RefStr =
+            "\n"
+            "B1 B2 B3 B4 B5\n"
+            "C1 C2 C3 C4 C5\n"
+            "            ^\n"
+            "D1 D2 D3 D4 D5";
+        EXPECT_STREQ(GetTokenContext(Tokens.begin(), Tokens.end(), Tokens.begin() + 15, 1).c_str(), RefStr);
+    }
+
+    {
+        static const char* RefStr =
+            "\n"
+            "E1 E2 E3 E4 E5\n"
+            "F1 F2 F3 F4 F5\n"
+            "^\n";
+        EXPECT_STREQ(GetTokenContext(Tokens.begin(), Tokens.end(), Tokens.begin() + 26, 1).c_str(), RefStr);
+    }
+
+    {
+        static const char* RefStr =
+            "\n"
+            "E1 E2 E3 E4 E5\n"
+            "F1 F2 F3 F4 F5\n"
+            "            ^\n";
+        EXPECT_STREQ(GetTokenContext(Tokens.begin(), Tokens.end(), Tokens.begin() + 30, 1).c_str(), RefStr);
+    }
+
+    {
+        static const char* RefStr =
+            "\n"
+            "E1 E2 E3 E4 E5\n"
+            "F1 F2 F3 F4 F5\n"
+            "\n"
+            "^";
+        EXPECT_STREQ(GetTokenContext(Tokens.begin(), Tokens.end(), Tokens.end(), 2).c_str(), RefStr);
+    }
+
+    {
+        std::vector<TestToken> Empty;
+        EXPECT_STREQ(GetTokenContext(Empty.begin(), Empty.end(), Empty.begin(), 2).c_str(), "");
     }
 }
 

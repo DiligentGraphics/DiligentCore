@@ -635,57 +635,6 @@ HLSL2GLSLConverterImpl::HLSL2GLSLConverterImpl()
 #undef DEFINE_VARIABLE
 }
 
-String CompressNewLines(const String& Str)
-{
-    String Out;
-    auto   Char = Str.begin();
-    while (Char != Str.end())
-    {
-        if (*Char == '\r')
-        {
-            ++Char;
-            // Replace \r\n with \n
-            if (Char != Str.end() && *Char == '\n')
-            {
-                Out.push_back('\n');
-                ++Char;
-            }
-            else
-                Out.push_back('\r');
-        }
-        else
-        {
-            Out.push_back(*(Char++));
-        }
-    }
-    return Out;
-}
-
-static Int32 CountNewLines(const String& Str)
-{
-    Int32 NumNewLines = 0;
-    auto  Char        = Str.begin();
-    while (Char != Str.end())
-    {
-        if (*Char == '\r')
-        {
-            ++NumNewLines;
-            ++Char;
-            // \r\n should be counted as one newline
-            if (Char != Str.end() && *Char == '\n')
-                ++Char;
-        }
-        else
-        {
-            if (*Char == '\n')
-                ++NumNewLines;
-            ++Char;
-        }
-    }
-    return NumNewLines;
-}
-
-
 // IteratorType may be String::iterator or String::const_iterator.
 // While iterator is convertible to const_iterator,
 // iterator& cannot be converted to const_iterator& (Microsoft compiler allows
@@ -693,111 +642,12 @@ static Int32 CountNewLines(const String& Str)
 template <typename IteratorType>
 String HLSL2GLSLConverterImpl::ConversionStream::PrintTokenContext(IteratorType& TargetToken, Int32 NumAdjacentLines)
 {
-    if (TargetToken == m_Tokens.end())
-        --TargetToken;
-
-    //\n  ++ x ;
-    //\n  ++ y ;
-    //\n  if ( x != 0 )
-    //         ^
-    //\n      x += y ;
-    //\n
-    //\n  if ( y != 0 )
-    //\n      x += 2 ;
-
     const int NumSepChars = 20;
     String    Ctx(">");
     for (int i = 0; i < NumSepChars; ++i) Ctx.append("  >");
     Ctx.push_back('\n');
 
-    // Find first token in the current line
-    auto  CurrLineStartToken = TargetToken;
-    Int32 NumLinesAbove      = 0;
-    while (CurrLineStartToken != m_Tokens.begin())
-    {
-        NumLinesAbove += CountNewLines(CurrLineStartToken->Delimiter);
-        if (NumLinesAbove > 0)
-            break;
-        --CurrLineStartToken;
-    }
-    //\n  if( x != 0 )
-    //    ^
-
-    // Find first token in the line NumAdjacentLines above
-    auto TopLineStart = CurrLineStartToken;
-    while (TopLineStart != m_Tokens.begin() && NumLinesAbove <= NumAdjacentLines)
-    {
-        --TopLineStart;
-        NumLinesAbove += CountNewLines(TopLineStart->Delimiter);
-    }
-    //\n  ++ x ;
-    //    ^
-    //\n  ++ y ;
-    //\n  if ( x != 0 )
-
-    // Write everything from the top line up to the current line start
-    auto Token = TopLineStart;
-    for (; Token != CurrLineStartToken; ++Token)
-    {
-        Ctx.append(CompressNewLines(Token->Delimiter));
-        Ctx.append(Token->Literal);
-    }
-
-    //\n  if ( x != 0 )
-    //    ^
-
-    Int32  NumLinesBelow = 0;
-    String Spaces; // Accumulate whitespaces preceding current token
-    bool   AccumWhiteSpaces = true;
-    while (Token != m_Tokens.end() && NumLinesBelow == 0)
-    {
-        if (AccumWhiteSpaces)
-        {
-            for (const auto& Char : Token->Delimiter)
-            {
-                if (IsNewLine(Char))
-                    Spaces.clear();
-                else if (Char == '\t')
-                    Spaces.push_back(Char);
-                else
-                    Spaces.push_back(' ');
-            }
-        }
-
-        // Accumulate spaces until we encounter current token
-        if (Token == TargetToken)
-            AccumWhiteSpaces = false;
-
-        if (AccumWhiteSpaces)
-            Spaces.append(Token->Literal.length(), ' ');
-
-        Ctx.append(CompressNewLines(Token->Delimiter));
-        Ctx.append(Token->Literal);
-        ++Token;
-
-        if (Token == m_Tokens.end())
-            break;
-
-        NumLinesBelow += CountNewLines(Token->Delimiter);
-    }
-
-    // Write ^ on the line below
-    Ctx.push_back('\n');
-    Ctx.append(Spaces);
-    Ctx.push_back('^');
-
-    // Write NumAdjacentLines lines below current line
-    while (Token != m_Tokens.end() && NumLinesBelow <= NumAdjacentLines)
-    {
-        Ctx.append(CompressNewLines(Token->Delimiter));
-        Ctx.append(Token->Literal);
-        ++Token;
-
-        if (Token == m_Tokens.end())
-            break;
-
-        NumLinesBelow += CountNewLines(Token->Delimiter);
-    }
+    Ctx.append(Parsing::GetTokenContext(m_Tokens.begin(), m_Tokens.end(), TargetToken, NumAdjacentLines));
 
     Ctx.append("\n<");
     for (int i = 0; i < NumSepChars; ++i) Ctx.append("  <");
