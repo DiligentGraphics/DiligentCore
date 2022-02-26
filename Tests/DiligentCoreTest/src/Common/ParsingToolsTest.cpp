@@ -643,10 +643,10 @@ void main()
 )";
 
     const auto Tokens = Tokenize<TestToken, std::vector<TestToken>>(TestStr, TestStr + strlen(TestStr), TestToken::Create, TestToken::FindType);
+    EXPECT_STREQ(BuildSource(Tokens).c_str(), TestStr);
+
     EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::PreprocessorDirective, "#include"}}));
     EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::PreprocessorDirective, "#define"}}));
-
-    EXPECT_STREQ(BuildSource(Tokens).c_str(), TestStr);
 }
 
 TEST(Common_ParsingTools, Tokenizer_Operators)
@@ -699,6 +699,8 @@ void main()
 )";
 
     const auto Tokens = Tokenize<TestToken, std::vector<TestToken>>(TestStr, TestStr + strlen(TestStr), TestToken::Create, TestToken::FindType);
+    EXPECT_STREQ(BuildSource(Tokens).c_str(), TestStr);
+
     EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "a0"}, {TestTokenType::MathOp, "+"}, {TestTokenType::Identifier, "a1"}}));
     EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "b0"}, {TestTokenType::MathOp, "-"}, {TestTokenType::Identifier, "b1"}}));
     EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "c0"}, {TestTokenType::MathOp, "*"}, {TestTokenType::Identifier, "c1"}}));
@@ -737,8 +739,6 @@ void main()
     EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::IncDecOp, "++"}, {TestTokenType::Identifier, "P1"}}));
     EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "Q0"}, {TestTokenType::IncDecOp, "--"}}));
     EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::IncDecOp, "--"}, {TestTokenType::Identifier, "Q1"}}));
-
-    EXPECT_STREQ(BuildSource(Tokens).c_str(), TestStr);
 }
 
 TEST(Common_ParsingTools, Tokenizer_Brackets)
@@ -758,12 +758,12 @@ void main(int argument [[annotation]])
 )";
 
     const auto Tokens = Tokenize<TestToken, std::vector<TestToken>>(TestStr, TestStr + strlen(TestStr), TestToken::Create, TestToken::FindType);
+    EXPECT_STREQ(BuildSource(Tokens).c_str(), TestStr);
+
     EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::OpenSquareBracket, "["}, {TestTokenType::Identifier, "annotation"}, {TestTokenType::ClosingSquareBracket, "]"}}));
     EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::OpenBrace, "{"}, {TestTokenType::Identifier, "int"}, {TestTokenType::Identifier, "a"}, {TestTokenType::Semicolon, ";"}, {TestTokenType::ClosingBrace, "}"}}));
     EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "function"}, {TestTokenType::OpenParen, "("}, {TestTokenType::Identifier, "argument1"}, {TestTokenType::Comma, ","}, {TestTokenType::Identifier, "argument2"}, {TestTokenType::ClosingParen, ")"}}));
     EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "array"}, {TestTokenType::OpenSquareBracket, "["}, {TestTokenType::Identifier, "size"}, {TestTokenType::ClosingSquareBracket, "]"}}));
-
-    EXPECT_STREQ(BuildSource(Tokens).c_str(), TestStr);
 }
 
 TEST(Common_ParsingTools, Tokenizer_StringConstant)
@@ -776,9 +776,9 @@ void main()
 )";
 
     const auto Tokens = Tokenize<TestToken, std::vector<TestToken>>(TestStr, TestStr + strlen(TestStr), TestToken::Create, TestToken::FindType);
-    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "String"}, {TestTokenType::Assignment, "="}, {TestTokenType::StringConstant, "string constant"}, {TestTokenType::Semicolon, ";"}}));
-
     EXPECT_STREQ(BuildSource(Tokens).c_str(), TestStr);
+
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "String"}, {TestTokenType::Assignment, "="}, {TestTokenType::StringConstant, "string constant"}, {TestTokenType::Semicolon, ";"}}));
 }
 
 TEST(Common_ParsingTools, Tokenizer_FloatNumber)
@@ -796,14 +796,14 @@ void main()
 )";
 
     const auto Tokens = Tokenize<TestToken, std::vector<TestToken>>(TestStr, TestStr + strlen(TestStr), TestToken::Create, TestToken::FindType);
+    EXPECT_STREQ(BuildSource(Tokens).c_str(), TestStr);
+
     EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "Number1"}, {TestTokenType::Assignment, "="}, {TestTokenType::NumericConstant, "10"}}));
     EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "Number2"}, {TestTokenType::Assignment, "="}, {TestTokenType::NumericConstant, "20.0"}}));
     EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "Number3"}, {TestTokenType::Assignment, "="}, {TestTokenType::NumericConstant, "30.0e+1"}}));
     EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "Number4"}, {TestTokenType::Assignment, "="}, {TestTokenType::NumericConstant, "40.0e+2f"}}));
     EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "Number5"}, {TestTokenType::Assignment, "="}, {TestTokenType::NumericConstant, "50.f"}}));
     EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "Number6"}, {TestTokenType::Assignment, "="}, {TestTokenType::NumericConstant, ".123f"}}));
-
-    EXPECT_STREQ(BuildSource(Tokens).c_str(), TestStr);
 }
 
 TEST(Common_ParsingTools, Tokenizer_UnknownIdentifier)
@@ -816,9 +816,9 @@ void main()
 )";
 
     const auto Tokens = Tokenize<TestToken, std::vector<TestToken>>(TestStr, TestStr + strlen(TestStr), TestToken::Create, TestToken::FindType);
-    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Undefined, "@"}, {TestTokenType::Identifier, "Unknown"}}));
-
     EXPECT_STREQ(BuildSource(Tokens).c_str(), TestStr);
+
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Undefined, "@"}, {TestTokenType::Identifier, "Unknown"}}));
 }
 
 
@@ -843,11 +843,11 @@ void main()
 )";
 
     const auto Tokens = Tokenize<TestToken, std::vector<TestToken>>(TestStr, TestStr + strlen(TestStr), TestToken::Create, TestToken::FindType);
+    EXPECT_STREQ(BuildSource(Tokens).c_str(), TestStr);
+
     EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "a"}, {TestTokenType::Colon, ":"}, {TestTokenType::Identifier, "b"}}));
     EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "C"}, {TestTokenType::DoubleColon, "::"}, {TestTokenType::Identifier, "D"}}));
     EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "e"}, {TestTokenType::QuestionMark, "?"}, {TestTokenType::Identifier, "F"}}));
-
-    EXPECT_STREQ(BuildSource(Tokens).c_str(), TestStr);
 }
 
 
@@ -861,9 +861,9 @@ void main()
 )";
 
     const auto Tokens = Tokenize<TestToken, std::vector<TestToken>>(TestStr, TestStr + strlen(TestStr), TestToken::Create, TestToken::FindType);
-    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Keyword1, "Keyword1"}, {TestTokenType::Identifier, "Id"}, {TestTokenType::Keyword2, "Keyword2"}, {TestTokenType::OpenParen, "("}, {TestTokenType::Keyword3, "Keyword3"}, {TestTokenType::ClosingParen, ")"}}));
-
     EXPECT_STREQ(BuildSource(Tokens).c_str(), TestStr);
+
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Keyword1, "Keyword1"}, {TestTokenType::Identifier, "Id"}, {TestTokenType::Keyword2, "Keyword2"}, {TestTokenType::OpenParen, "("}, {TestTokenType::Keyword3, "Keyword3"}, {TestTokenType::ClosingParen, ")"}}));
 }
 
 TEST(Common_ParsingTools, Tokenizer_Errors)
@@ -943,6 +943,8 @@ void NotAFunction5
 )";
 
     const auto Tokens = Tokenize<TestToken, std::vector<TestToken>>(TestStr, TestStr + strlen(TestStr), TestToken::Create, TestToken::FindType);
+    EXPECT_STREQ(BuildSource(Tokens).c_str(), TestStr);
+
     EXPECT_EQ(FindFunction(Tokens.begin(), Tokens.end(), "NotAFunction0"), Tokens.end());
     EXPECT_EQ(FindFunction(Tokens.begin(), Tokens.end(), "NotAFunction1"), Tokens.end());
     EXPECT_EQ(FindFunction(Tokens.begin(), Tokens.end(), "NotAFunction2"), Tokens.end());
@@ -951,8 +953,59 @@ void NotAFunction5
     EXPECT_EQ(FindFunction(Tokens.begin(), Tokens.end(), "NotAFunction5"), Tokens.end());
     auto main_it = FindFunction(Tokens.begin(), Tokens.end(), "main");
     ASSERT_NE(main_it, Tokens.end());
+}
 
+TEST(Common_ParsingTools, FindMatchingBracket)
+{
+    static const char* TestStr = R"(
+([(<{}>)])
+{[(<{}>)]}
+<[(<{}>)]>
+[[(<{}>)]]
+)]}><{[(
+)";
+
+    const auto* StrEnd = TestStr + strlen(TestStr);
+    const auto  Tokens = Tokenize<TestToken, std::vector<TestToken>>(TestStr, StrEnd, TestToken::Create, TestToken::FindType);
     EXPECT_STREQ(BuildSource(Tokens).c_str(), TestStr);
+
+    {
+        auto TestMatchingBracket = [&](size_t StartIdx, size_t EndIdx, TestTokenType OpenBracketType, TestTokenType ClosingBracketType) //
+        {
+            ASSERT_EQ(Tokens[StartIdx].GetType(), OpenBracketType);
+            ASSERT_EQ(Tokens[EndIdx].GetType(), ClosingBracketType);
+
+            auto it = FindMatchingBracket(Tokens.begin(), Tokens.end(), Tokens.begin() + StartIdx);
+            ASSERT_NE(it, Tokens.end());
+            EXPECT_EQ(static_cast<size_t>(it - Tokens.begin()), EndIdx);
+            it = FindMatchingBracket(Tokens.begin(), Tokens.end(), it);
+            ASSERT_NE(it, Tokens.end());
+            EXPECT_EQ(static_cast<size_t>(it - Tokens.begin()), StartIdx);
+        };
+
+        TestMatchingBracket(1, 10, TestTokenType::OpenParen, TestTokenType::ClosingParen);
+        TestMatchingBracket(11, 20, TestTokenType::OpenBrace, TestTokenType::ClosingBrace);
+        // Angle brackets are not currently detected
+        //TestMatchingBracket(21, 30, TestTokenType::OpenAngleBracket, TestTokenType::ClosingAngleBracket);
+        TestMatchingBracket(31, 40, TestTokenType::OpenSquareBracket, TestTokenType::ClosingSquareBracket);
+    }
+
+    {
+        auto TestNoBracket = [&](size_t StartIdx, TestTokenType BracketType) //
+        {
+            ASSERT_EQ(Tokens[StartIdx].GetType(), BracketType);
+            auto it = FindMatchingBracket(Tokens.begin(), Tokens.end(), Tokens.begin() + StartIdx);
+            EXPECT_EQ(it, Tokens.end());
+        };
+        TestNoBracket(41, TestTokenType::ClosingParen);
+        TestNoBracket(42, TestTokenType::ClosingSquareBracket);
+        TestNoBracket(43, TestTokenType::ClosingBrace);
+        //TestNoBracket(44, TestTokenType::ClosingAngleBracket);
+        //TestNoBracket(45, TestTokenType::OpenAngleBracket);
+        TestNoBracket(46, TestTokenType::OpenBrace);
+        TestNoBracket(47, TestTokenType::OpenSquareBracket);
+        TestNoBracket(48, TestTokenType::OpenParen);
+    }
 }
 
 } // namespace

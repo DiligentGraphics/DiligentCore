@@ -969,82 +969,6 @@ void HLSL2GLSLConverterImpl::ConversionStream::Tokenize(const String& Source)
 }
 
 
-// Searches for the matching bracket.
-// For open brackets, searches in the forward direction.
-// For closing brackets, searches backwards.
-void HLSL2GLSLConverterImpl::ConversionStream::FindMatchingBracket(TokenListType::iterator&       Token,
-                                                                   const TokenListType::iterator& ScopeEnd,
-                                                                   TokenType                      OpenBracketType)
-{
-    VERIFY_EXPR(OpenBracketType == Token->Type);
-    auto ClosingBracketType = TokenType::Undefined;
-    int  Direction          = 0;
-    switch (OpenBracketType)
-    {
-        case TokenType::OpenBrace:
-            ClosingBracketType = TokenType::ClosingBrace;
-            Direction          = +1;
-            break;
-
-        case TokenType::OpenParen:
-            ClosingBracketType = TokenType::ClosingParen;
-            Direction          = +1;
-            break;
-
-        case TokenType::OpenSquareBracket:
-            ClosingBracketType = TokenType::ClosingSquareBracket;
-            Direction          = +1;
-            break;
-
-        case TokenType::OpenAngleBracket:
-            ClosingBracketType = TokenType::ClosingAngleBracket;
-            Direction          = +1;
-            break;
-
-        case TokenType::ClosingBrace:
-            ClosingBracketType = TokenType::OpenBrace;
-            Direction          = -1;
-            break;
-
-        case TokenType::ClosingParen:
-            ClosingBracketType = TokenType::OpenParen;
-            Direction          = -1;
-            break;
-
-        case TokenType::ClosingSquareBracket:
-            ClosingBracketType = TokenType::OpenSquareBracket;
-            Direction          = -1;
-            break;
-
-        case TokenType::ClosingAngleBracket:
-            ClosingBracketType = TokenType::OpenAngleBracket;
-            Direction          = -1;
-            break;
-
-        default:
-            UNEXPECTED("One of the bracket types is expected");
-            return;
-    }
-    VERIFY_EXPR(Direction != 0);
-
-    (Direction > 0 ? ++Token : --Token); // Skip open bracket
-    int BracketCount = 1;
-    // Find the matching bracket
-    while (Token != ScopeEnd)
-    {
-        if (Token->Type == OpenBracketType)
-            ++BracketCount;
-        else if (Token->Type == ClosingBracketType)
-        {
-            --BracketCount;
-            if (BracketCount == 0)
-                break;
-        }
-        (Direction > 0 ? ++Token : --Token);
-    }
-    VERIFY_PARSER_STATE(Token, BracketCount == 0, "No matching closing bracket found in the scope");
-}
-
 // The function replaces cbuffer with uniform and adds semicolon if it is missing after the closing brace:
 // cbuffer
 // {
@@ -1092,9 +1016,9 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessConstantBuffer(TokenListTy
     VERIFY_PARSER_STATE(Token, Token != m_Tokens.end(), "Missing open brace in the definition of cbuffer ", CBufferName);
 
     // Find closing brace
-    FindMatchingBracket(Token, m_Tokens.end(), TokenType::OpenBrace);
-
+    Token = Parsing::FindMatchingBracket(m_Tokens.begin(), m_Tokens.end(), Token);
     VERIFY_PARSER_STATE(Token, Token != m_Tokens.end(), "No matching closing brace found in the definition of cbuffer ", CBufferName);
+
     ++Token; // Skip closing brace
     // cbuffer CBufferName
     // {
@@ -1230,7 +1154,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::RegisterStruct(TokenListType::ite
     VERIFY_PARSER_STATE(Token, Token != m_Tokens.end() && Token->Type == TokenType::OpenBrace, "Open brace expected");
 
     // Find closing brace
-    FindMatchingBracket(Token, m_Tokens.end(), TokenType::OpenBrace);
+    Token = Parsing::FindMatchingBracket(m_Tokens.begin(), m_Tokens.end(), Token);
     VERIFY_PARSER_STATE(Token, Token != m_Tokens.end(), "Missing closing brace for structure \"", StructName, "\"");
     // }
     // ^
@@ -1662,7 +1586,9 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessTextureDeclaration(TokenLi
             {
                 // Texture2D TexName[...][...]
                 //                  ^
-                FindMatchingBracket(TmpToken, m_Tokens.end(), TokenType::OpenSquareBracket);
+                TmpToken = Parsing::FindMatchingBracket(m_Tokens.begin(), m_Tokens.end(), TmpToken);
+                VERIFY_PARSER_STATE(TmpToken, TmpToken != m_Tokens.end(), "Unable to find matching closing square bracket.");
+
                 // Texture2D TexName[...][...]
                 //                      ^
 
@@ -1863,7 +1789,8 @@ bool HLSL2GLSLConverterImpl::ConversionStream::ProcessObjectMethod(TokenListType
         {
             // TestText[idx[0]].Sample( ...
             //                ^
-            FindMatchingBracket(IdentifierToken, ScopeStart, IdentifierToken->Type);
+            IdentifierToken = Parsing::FindMatchingBracket(ScopeStart, ScopeEnd, IdentifierToken);
+            VERIFY_PARSER_STATE(Token, Token != ScopeEnd, "Unable to find matching open square bracket.");
             // TestText[idx[0]].Sample( ...
             //         ^
         }
@@ -2104,8 +2031,9 @@ bool HLSL2GLSLConverterImpl::ConversionStream::ProcessRWTextureStore(TokenListTy
         if (OpenStapleToken == ScopeEnd || OpenStapleToken->Type != TokenType::OpenSquareBracket)
             return false;
 
-        ClosingStapleToken = OpenStapleToken;
-        FindMatchingBracket(ClosingStapleToken, ScopeEnd, TokenType::OpenSquareBracket);
+        ClosingStapleToken = Parsing::FindMatchingBracket(m_Tokens.begin(), ScopeEnd, OpenStapleToken);
+        VERIFY_PARSER_STATE(Token, Token != ScopeEnd, "Unable to find matching closing square bracket.");
+
         // RWTex[Location[idx].xy]
         //                       ^
         //              ClosingStapleToken
@@ -2234,8 +2162,9 @@ bool HLSL2GLSLConverterImpl::ConversionStream::ProcessRWTextureLoad(TokenListTyp
         if (OpenStapleToken == ScopeEnd || OpenStapleToken->Type != TokenType::OpenSquareBracket)
             return false;
 
-        ClosingStapleToken = OpenStapleToken;
-        FindMatchingBracket(ClosingStapleToken, ScopeEnd, TokenType::OpenSquareBracket);
+        ClosingStapleToken = Parsing::FindMatchingBracket(m_Tokens.begin(), ScopeEnd, OpenStapleToken);
+        VERIFY_PARSER_STATE(Token, Token != ScopeEnd, "Unable to find matching closing square bracket");
+
         // RWTex[Location[idx].xy]
         //                       ^
         //              ClosingStapleToken

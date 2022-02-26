@@ -264,6 +264,8 @@ private:
             Type = _Type;
         }
 
+        TokenType GetType() const { return Type; }
+
         bool CompareLiteral(const char* Str)
         {
             return Literal == Str;
@@ -535,10 +537,6 @@ private:
                                            std::vector<ShaderParameterInfo>& Params,
                                            String&                           Globals,
                                            String&                           Prologue);
-
-        void FindMatchingBracket(TokenListType::iterator&       Token,
-                                 const TokenListType::iterator& ScopeEnd,
-                                 TokenType                      OpenBracketType);
 
         void ProcessReturnStatements(TokenListType::iterator& Token,
                                      bool                     IsVoid,

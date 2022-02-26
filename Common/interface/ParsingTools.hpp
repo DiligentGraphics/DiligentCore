@@ -764,6 +764,108 @@ TokenIterType FindFunction(const TokenIterType& Start, const TokenIterType& End,
     return End;
 }
 
+
+
+/// Searches for the matching bracket.
+/// For open brackets, searches in the forward direction.
+/// For closing brackets, searches backwards.
+///
+/// \param [in] Start - start of the string.
+/// \param [in] End   - end of the string.
+/// \param [in] Pos   - search starting position.
+///
+/// \return     position of the matching bracket, or End
+///             if none is found.
+template <typename TokenIterType>
+TokenIterType FindMatchingBracket(const TokenIterType& Start,
+                                  const TokenIterType& End,
+                                  TokenIterType        Pos)
+{
+    if (Pos == End)
+        return Pos;
+
+    const auto OpenBracketType = Pos->GetType();
+    using TokenType            = decltype(OpenBracketType);
+
+    auto ClosingBracketType = TokenType::Undefined;
+    bool SearchForward      = true;
+    switch (OpenBracketType)
+    {
+        case TokenType::OpenBrace:
+            ClosingBracketType = TokenType::ClosingBrace;
+            break;
+
+        case TokenType::OpenParen:
+            ClosingBracketType = TokenType::ClosingParen;
+            break;
+
+        case TokenType::OpenSquareBracket:
+            ClosingBracketType = TokenType::ClosingSquareBracket;
+            break;
+
+        case TokenType::OpenAngleBracket:
+            ClosingBracketType = TokenType::ClosingAngleBracket;
+            break;
+
+        case TokenType::ClosingBrace:
+            ClosingBracketType = TokenType::OpenBrace;
+            SearchForward      = false;
+            break;
+
+        case TokenType::ClosingParen:
+            ClosingBracketType = TokenType::OpenParen;
+            SearchForward      = false;
+            break;
+
+        case TokenType::ClosingSquareBracket:
+            ClosingBracketType = TokenType::OpenSquareBracket;
+            SearchForward      = false;
+            break;
+
+        case TokenType::ClosingAngleBracket:
+            ClosingBracketType = TokenType::OpenAngleBracket;
+            SearchForward      = false;
+            break;
+
+        default:
+            UNEXPECTED("One of the bracket types is expected");
+            return Pos;
+    }
+
+    (SearchForward ? ++Pos : --Pos); // Skip open bracket
+    int BracketCount = 1;
+
+    auto UpdateBracketCount = [&](TokenType Type) //
+    {
+        if (Type == OpenBracketType)
+            ++BracketCount;
+        else if (Type == ClosingBracketType)
+        {
+            --BracketCount;
+        }
+        return BracketCount;
+    };
+    if (SearchForward)
+    {
+        while (Pos != End)
+        {
+            if (UpdateBracketCount(Pos->GetType()) == 0)
+                return Pos;
+            ++Pos;
+        }
+    }
+    else
+    {
+        while (Pos != Start)
+        {
+            if (UpdateBracketCount(Pos->GetType()) == 0)
+                return Pos;
+            --Pos;
+        }
+    }
+    return End;
+}
+
 } // namespace Parsing
 
 } // namespace Diligent
