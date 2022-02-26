@@ -42,46 +42,47 @@ namespace Diligent
 namespace Parsing
 {
 
-/// Returns true if the symbol is a white space or tab
+/// Returns true if the character is a white space or tab
 inline bool IsWhitespace(Char Symbol) noexcept
 {
     return Symbol == ' ' || Symbol == '\t';
 }
 
-/// Returns true if the symbol is a new line symbol
+/// Returns true if the character is a new line character
 inline bool IsNewLine(Char Symbol) noexcept
 {
     return Symbol == '\r' || Symbol == '\n';
 }
 
-/// Returns true if the symbol is a delimiter symbol (white space or new line)
+/// Returns true if the character is a delimiter symbol (white space or new line)
 inline bool IsDelimiter(Char Symbol) noexcept
 {
-    static const Char* Delimiters = " \t\r\n";
-    return strchr(Delimiters, Symbol) != nullptr;
+    return Symbol == ' ' || Symbol == '\t' || Symbol == '\r' || Symbol == '\n';
 }
 
-/// Returns true if the symbol is a statement separator symbol
+/// Returns true if the character is a statement separator symbol
 inline bool IsStatementSeparator(Char Symbol) noexcept
 {
-    static const Char* StatementSeparator = ";}";
-    return strchr(StatementSeparator, Symbol) != nullptr;
+    return Symbol == ';' || Symbol == '}';
 }
 
 
-/// Skips all symbols until the end of the line.
+/// Skips all characters until the end of the line.
 
 /// \param[inout] Pos          - starting position.
 /// \param[in]    End          - end of the input string.
 /// \param[in]    GoToNextLine - whether to go to the next line.
-///                              If true, the Pos will point to the symbol following
-///                              the new line character at the end of the string.
-///                              If false, the Pos will point to the new line
-///                              character at the end of the string.
-/// \return         true if the end of the string has been reached, and false otherwise.
+///
+/// \return       If GoToNextLine is true, the position following the
+///               new line character at the end of the string.
+///               If GoToNextLine is false, the position of the new line
+///               character at the end of the string.
+///
+/// \remarks      CRLF ending (\r\n) is treated as a single new line separator.
 template <typename InteratorType>
-inline bool SkipLine(InteratorType& Pos, const InteratorType& End, bool GoToNextLine = false) noexcept
+InteratorType SkipLine(const InteratorType& Start, const InteratorType& End, bool GoToNextLine = false) noexcept
 {
+    auto Pos = Start;
     while (Pos != End && *Pos != '\0' && !IsNewLine(*Pos))
         ++Pos;
     if (GoToNextLine && Pos != End && IsNewLine(*Pos))
@@ -93,99 +94,92 @@ inline bool SkipLine(InteratorType& Pos, const InteratorType& End, bool GoToNext
             // treat \r\n as a single ending
         }
     }
-    return Pos == End;
+    return Pos;
 }
 
 
 /// Skips single-line and multi-line comments starting from the given position.
 
-/// \param[inout] Pos - starting position.
-/// \param[in]    End - end of the input string.
+/// \param[inout] Start - starting position.
+/// \param[in]    End   - end of the input string.
 ///
-/// \return     true if the end of the string has been reached, and false otherwise.
+/// \return     if the comment is found, the position immediately following
+///             the end of the comment; starting position otherwise.
 ///
-/// \remarks    If the comment is found, Pos is updated to the position
-///             immediately after the end of the comment.
-///             If the comment is not found, Pos is left unchanged.
-///
-///             In case of an error while parsing the comment (e.g. /* is not
+/// \remarks    In case of an error while parsing the comment (e.g. /* is not
 ///             closed), the function throws an exception of type
 ///             std::pair<InteratorType, const char*>, where first is the position
 ///             of the error, and second is the error description.
 template <typename InteratorType>
-bool SkipComment(InteratorType& Pos, const InteratorType& End) noexcept(false)
+InteratorType SkipComment(const InteratorType& Start, const InteratorType& End) noexcept(false)
 {
+    auto Pos = Start;
     if (Pos == End || *Pos == '\0')
-        return true;
+        return Pos;
 
     //  // Comment       /* Comment
     //  ^                ^
     //  Pos              Pos
     if (*Pos != '/')
-        return false;
+        return Pos;
 
-    auto NextPos = Pos + 1;
+    ++Pos;
     //  // Comment       /* Comment
     //   ^                ^
-    //  NextPos           NextPos
-    if (NextPos == End || *NextPos == '\0')
-        return false;
+    //   Pos              Pos
+    if (Pos == End || !(*Pos == '/' || *Pos == '*'))
+        return Start;
 
-    if (*NextPos == '/')
+    if (*Pos == '/')
     {
-        // Single-line comment (// Comment)
-        Pos = NextPos + 1;
+        ++Pos;
         //  // Comment
         //    ^
         //    Pos
 
-        SkipLine(Pos, End, true);
+        return SkipLine(Pos, End, true);
         //  // Comment
         //
         //  ^
         //  Pos
-
-        return Pos == End || *Pos == '\0';
     }
-    else if (*NextPos == '*')
+    else
     {
-        // Mulit-line comment (/* comment */)
-        ++NextPos;
+        VERIFY_EXPR(*Pos == '*');
+        ++Pos;
         //  /* Comment
         //    ^
-        while (NextPos != End && *NextPos != '\0')
+        while (Pos != End && *Pos != '\0')
         {
-            if (*NextPos == '*')
+            if (*Pos == '*')
             {
                 //  /* Comment */
                 //             ^
-                //           NextPos
-                ++NextPos;
-                if (NextPos == End || *NextPos == '\0')
-                    break;
+                //             Pos
+                ++Pos;
 
-                //  /* Comment */
-                //              ^
-                //            NextPos
-                if (*NextPos == '/')
+                if (Pos != End && *Pos == '/')
                 {
-                    Pos = NextPos + 1;
+                    //  /* Comment */
+                    //              ^
+                    //              Pos
+
+                    ++Pos;
                     //  /* Comment */
                     //               ^
                     //              Pos
-                    return Pos == End || *Pos == '\0';
+                    return Pos;
                 }
             }
             else
             {
-                ++NextPos;
+                ++Pos;
             }
         }
 
-        throw std::pair<InteratorType, const char*>{Pos, "Unable to find the end of the multiline comment."};
+        throw std::pair<InteratorType, const char*>{Start, "Unable to find the end of the multiline comment."};
     }
-
-    return Pos == End || *Pos == '\0';
+    // Unreachable
 }
 
 
@@ -194,15 +188,14 @@ bool SkipComment(InteratorType& Pos, const InteratorType& End) noexcept(false)
 /// \param[inout] Pos - starting position.
 /// \param[in]    End - end of the input string.
 ///
-/// \return true if the end of the string has been reached, and false otherwise.
-///
-/// \remarks    Pos is updated to the position of the first non-delimiter symbol.
+/// \return       position of the first non-delimiter character.
 template <typename InteratorType>
-bool SkipDelimiters(InteratorType& Pos, const InteratorType& End) noexcept
+InteratorType SkipDelimiters(const InteratorType& Start, const InteratorType& End) noexcept
 {
-    for (; Pos != End && IsDelimiter(*Pos); ++Pos)
-        ;
-    return Pos == End;
+    auto Pos = Start;
+    while (Pos != End && IsDelimiter(*Pos))
+        ++Pos;
+    return Pos;
 }
 
 
@@ -211,32 +204,27 @@ bool SkipDelimiters(InteratorType& Pos, const InteratorType& End) noexcept
 /// \param[inout] Pos - starting position.
 /// \param[in]    End - end of the input string.
 ///
-/// \return true if the end of the string has been reached, and false otherwise.
+/// \return true  position of the first non-comment non-delimiter character.
 ///
-/// \remarks    Pos is updated to the position of the first non-comment
-///             non-delimiter symbol.
-///
-///             In case of a parsing error (which means there is an
+/// \remarks    In case of a parsing error (which means there is an
 ///             open multi-line comment /*... ), the function throws an exception
 ///             of type std::pair<InteratorType, const char*>, where first is the position
 ///             of the error, and second is the error description.
 template <typename IteratorType>
-bool SkipDelimitersAndComments(IteratorType& Pos, const IteratorType& End) noexcept(false)
+IteratorType SkipDelimitersAndComments(const IteratorType& Start, const IteratorType& End) noexcept(false)
 {
-    bool DelimiterSkipped = false;
-    bool CommentSkipped   = false;
-    do
+    auto Pos = Start;
+    while (Pos != End && *Pos != '\0')
     {
-        DelimiterSkipped = false;
-        for (; Pos != End && IsDelimiter(*Pos); ++Pos)
-            DelimiterSkipped = true;
+        const auto BlockStart = Pos;
 
-        const auto StartPos = Pos;
-        SkipComment(Pos, End); // May throw
-        CommentSkipped = (StartPos != Pos);
-    } while ((Pos != End) && (DelimiterSkipped || CommentSkipped));
+        Pos = SkipDelimiters(Pos, End);
+        Pos = SkipComment(Pos, End); // May throw
+        if (Pos == BlockStart)
+            break;
+    };
 
-    return Pos == End;
+    return Pos;
 }
 
 
@@ -245,79 +233,42 @@ bool SkipDelimitersAndComments(IteratorType& Pos, const IteratorType& End) noexc
 /// \param[inout] Pos - starting position.
 /// \param[in]    End - end of the input string.
 ///
-/// \return     true if the end of the string has been reached, and false otherwise.
-///
-/// \remarks    Pos is updated to the position of the first symbol
-///             after the identifier.
+/// \return     position immediatelly following the last character of identifier.
 template <typename IteratorType>
-inline bool SkipIdentifier(IteratorType& Pos, const IteratorType& End) noexcept
+IteratorType SkipIdentifier(const IteratorType& Start, const IteratorType& End) noexcept
 {
-    if (Pos == End)
-        return true;
+    if (Start == End)
+        return Start;
 
-    if (isalpha(*Pos) || *Pos == '_')
-    {
-        ++Pos;
-        if (Pos == End)
-            return true;
-    }
-    else
-        return false;
-
-    for (; Pos != End && (isalnum(*Pos) || *Pos == '_'); ++Pos)
-        ;
-
-    return Pos == End;
-}
-
-
-/// Splits string into chunks separated by comments and delimiters.
-///
-/// \param [in] Start   - start of the string to split.
-/// \param [in] End     - end of the string to split.
-/// \param [in] Handler - user-provided handler to call for each chunk.
-///
-/// \remarks    The function starts from the beginning of the strings
-///             and splits it into chunks seprated by comments and delimiters.
-///             For each chunk, it calls the user-provided handler and passes
-///             the start of the preceding comments/delimiters part. The handler
-///             must then process the text at the current position and move the pointer.
-///             It should return true to continue processing, and false to stop it.
-///
-///             In case of a parsing error, the function throws an exception
-///             of type std::pair<InteratorType, const char*>, where first is the position
-///             of the error, and second is the error description.
-template <typename IteratorType, typename HandlerType>
-void SplitString(const IteratorType& Start, const IteratorType& End, HandlerType Handler) noexcept(false)
-{
     auto Pos = Start;
-    while (Pos != End)
-    {
-        auto DelimStart = Pos;
-        SkipDelimitersAndComments(Pos, End); // May throw
-        auto OrigPos = Pos;
-        if (!Handler(DelimStart, Pos))
-            break;
-        VERIFY(Pos == End || OrigPos != Pos, "Position has not been updated by the handler.");
-    }
-}
+    if (isalpha(*Pos) || *Pos == '_')
+        ++Pos;
+    else
+        return Pos;
 
+    while (Pos != End && (isalnum(*Pos) || *Pos == '_'))
+        ++Pos;
+
+    return Pos;
+}
 
 
 /// Skips a floating point number starting from the given position.
 
 /// \param[inout] Pos - starting position.
 /// \param[in]    End - end of the input string.
+///
+/// \return     position immediatelly following the last character of the number.
 template <typename IteratorType>
-void SkipFloatNumber(IteratorType& Pos, const IteratorType& End) noexcept
+IteratorType SkipFloatNumber(const IteratorType& Start, const IteratorType& End) noexcept
 {
-    const auto Start = Pos;
+    auto Pos = Start;
 
 #define CHECK_END()                 \
     do                              \
     {                               \
         if (c == End || *c == '\0') \
-            return;                 \
+            return Pos;             \
     } while (false)
 
     auto c = Pos;
@@ -331,7 +282,7 @@ void SkipFloatNumber(IteratorType& Pos, const IteratorType& End) noexcept
     {
         // 01 is invalid
         Pos = c + 1;
-        return;
+        return Pos;
     }
 
     const auto HasIntegerPart = IsNum(*c);
@@ -363,21 +314,21 @@ void SkipFloatNumber(IteratorType& Pos, const IteratorType& End) noexcept
         if (!HasIntegerPart)
         {
             // .e, e, e+1, +.e are invalid
-            return;
+            return Pos;
         }
 
         ++c;
         if (c == End || (*c != '+' && *c != '-'))
         {
             // 10e&
-            return;
+            return Pos;
         }
 
         ++c;
         if (c == End || !IsNum(*c))
         {
             // 10e+x
-            return;
+            return Pos;
         }
 
         while (c != End && IsNum(*c))
@@ -390,6 +341,40 @@ void SkipFloatNumber(IteratorType& Pos, const IteratorType& End) noexcept
         Pos = ++c;
     }
 #undef CHECK_END
+
+    return Pos;
+}
+
+
+/// Splits string into chunks separated by comments and delimiters.
+///
+/// \param [in] Start   - start of the string to split.
+/// \param [in] End     - end of the string to split.
+/// \param [in] Handler - user-provided handler to call for each chunk.
+///
+/// \remarks    The function starts from the beginning of the strings
+///             and splits it into chunks seprated by comments and delimiters.
+///             For each chunk, it calls the user-provided handler and passes
+///             the start of the preceding comments/delimiters part. The handler
+///             must then process the text at the current position and move the pointer.
+///             It should return true to continue processing, and false to stop it.
+///
+///             In case of a parsing error, the function throws an exception
+///             of type std::pair<InteratorType, const char*>, where first is the position
+///             of the error, and second is the error description.
+template <typename IteratorType, typename HandlerType>
+void SplitString(const IteratorType& Start, const IteratorType& End, HandlerType Handler) noexcept(false)
+{
+    auto Pos = Start;
+    while (Pos != End)
+    {
+        auto DelimStart = Pos;
+        Pos             = SkipDelimitersAndComments(Pos, End); // May throw
+        auto OrigPos    = Pos;
+        if (!Handler(DelimStart, Pos))
+            break;
+        VERIFY(Pos == End || OrigPos != Pos, "Position has not been updated by the handler.");
+    }
 }
 
 
@@ -418,7 +403,7 @@ std::string GetContext(const IteratorType& Start, const IteratorType& End, Itera
         --CtxStart;
     const size_t CharPos = Pos - CtxStart; // Position of the character in the line
 
-    SkipLine(Pos, End);
+    Pos = SkipLine(Pos, End);
 
     std::stringstream Ctx;
     {
@@ -452,7 +437,7 @@ std::string GetContext(const IteratorType& Start, const IteratorType& End, Itera
                 ++CtxEnd;
             if (CtxEnd != End)
                 ++CtxEnd;
-            SkipLine(CtxEnd, End);
+            CtxEnd = SkipLine(CtxEnd, End);
             ++LineBelow;
         }
         Ctx.write(&*Pos, CtxEnd - Pos);
@@ -492,7 +477,7 @@ ContainerType Tokenize(const IteratorType&   SourceStart,
 
     try
     {
-        Parsing::SplitString(SourceStart, SourceEnd, [&](const auto& DelimStart, auto& Pos) {
+        SplitString(SourceStart, SourceEnd, [&](const auto& DelimStart, auto& Pos) {
             const auto DelimEnd = Pos;
 
             auto LiteralStart = Pos;
@@ -538,7 +523,7 @@ ContainerType Tokenize(const IteratorType&   SourceStart,
                         throw std::pair<IteratorType, const char*>{LiteralStart, "Missing preprocessor directive."};
                     if (*Pos == '/')
                         throw std::pair<IteratorType, const char*>{LiteralStart, "Comments between # and preprocessor directive are currently not supported."};
-                    SkipIdentifier(Pos, SourceEnd);
+                    Pos = SkipIdentifier(Pos, SourceEnd);
                     break;
 
                 case '=':
@@ -650,7 +635,7 @@ ContainerType Tokenize(const IteratorType&   SourceStart,
 
                 default:
                 {
-                    Parsing::SkipIdentifier(Pos, SourceEnd);
+                    Pos = SkipIdentifier(Pos, SourceEnd);
                     if (LiteralStart != Pos)
                     {
                         Type = GetTokenType(LiteralStart, Pos);
@@ -659,7 +644,7 @@ ContainerType Tokenize(const IteratorType&   SourceStart,
                     }
                     else
                     {
-                        Parsing::SkipFloatNumber(Pos, SourceEnd);
+                        Pos = SkipFloatNumber(Pos, SourceEnd);
                         if (LiteralStart != Pos)
                         {
                             Type = TokenType::NumericConstant;

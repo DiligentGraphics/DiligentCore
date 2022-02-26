@@ -37,8 +37,9 @@ namespace
 TEST(Common_ParsingTools, SkipLine)
 {
     auto Test = [](const char* Str, bool EndReached = false, const char* Expected = nullptr) {
-        auto* Pos = Str;
-        EXPECT_EQ(SkipLine(Pos, Str + strlen(Str)), EndReached);
+        const auto* StrEnd = Str + strlen(Str);
+        const auto* Pos    = SkipLine(Str, StrEnd);
+        EXPECT_EQ(Pos == StrEnd, EndReached);
         if (Expected == nullptr)
             Expected = EndReached ? "" : "Correct";
         EXPECT_STREQ(Pos, Expected);
@@ -63,8 +64,9 @@ TEST(Common_ParsingTools, SkipLine)
 TEST(Common_ParsingTools, SkipLine_GoToNext)
 {
     auto Test = [](const char* Str, bool EndReached = false, const char* Expected = nullptr) {
-        auto* Pos = Str;
-        EXPECT_EQ(SkipLine(Pos, Str + strlen(Str), true), EndReached);
+        const auto* StrEnd = Str + strlen(Str);
+        const auto* Pos    = SkipLine(Str, StrEnd, true);
+        EXPECT_EQ(Pos == StrEnd, EndReached);
         if (Expected == nullptr)
             Expected = EndReached ? "" : "Correct";
         EXPECT_STREQ(Pos, Expected);
@@ -87,8 +89,9 @@ TEST(Common_ParsingTools, SkipLine_GoToNext)
 TEST(Common_ParsingTools, SkipComment)
 {
     auto Test = [](const char* Str, bool CommentFound = true, bool EndReached = false) {
-        auto* Pos = Str;
-        EXPECT_EQ(SkipComment(Pos, Str + strlen(Str)), EndReached);
+        const auto* StrEnd = Str + strlen(Str);
+        const auto* Pos    = SkipComment(Str, StrEnd);
+        EXPECT_EQ(Pos == StrEnd, EndReached);
         const auto Expected = EndReached ? "" : (CommentFound ? "Correct" : Str);
         EXPECT_STREQ(Pos, Expected);
     };
@@ -98,6 +101,7 @@ TEST(Common_ParsingTools, SkipComment)
     Test("/", false);
     Test("/Correct", false);
 
+    Test("//", true, true);
     Test("// Single-line comment", true, true);
     Test("// Single-line comment\n", true, true);
 
@@ -110,6 +114,7 @@ TEST(Common_ParsingTools, SkipComment)
     Test("// Single-line comment /* */ \n"
          "Correct");
 
+    Test("/**/Correct");
     Test("/* abc */Correct");
     Test("/** abc */Correct");
     Test("/* abc **/Correct");
@@ -127,8 +132,7 @@ TEST(Common_ParsingTools, SkipCommentErrors)
     auto Test = [](const char* Str) {
         try
         {
-            auto* Pos = Str;
-            SkipComment(Pos, Str + strlen(Str));
+            SkipComment(Str, Str + strlen(Str));
         }
         catch (const std::pair<const char*, const char*>& err_info)
         {
@@ -139,6 +143,7 @@ TEST(Common_ParsingTools, SkipCommentErrors)
     };
 
     Test("/*");
+    Test("/*/");
     Test("/* abc ");
     Test("/* abc *");
 
@@ -159,8 +164,9 @@ TEST(Common_ParsingTools, SkipCommentErrors)
 TEST(Common_ParsingTools, SkipDelimiters)
 {
     auto Test = [](const char* Str, bool EndReached = false, const char* Expected = nullptr) {
-        auto* Pos = Str;
-        EXPECT_EQ(SkipDelimiters(Pos, Str + strlen(Str)), EndReached);
+        const auto* StrEnd = Str + strlen(Str);
+        const auto* Pos    = SkipDelimiters(Str, StrEnd);
+        EXPECT_EQ(Pos == StrEnd, EndReached);
         if (Expected == nullptr)
             Expected = EndReached ? "" : "Correct";
         EXPECT_STREQ(Pos, Expected);
@@ -184,8 +190,9 @@ TEST(Common_ParsingTools, SkipDelimiters)
 TEST(Common_ParsingTools, SkipDelimitersAndComments)
 {
     auto Test = [](const char* Str, bool EndReached = false) {
-        auto* Pos = Str;
-        EXPECT_EQ(SkipDelimitersAndComments(Pos, Str + strlen(Str)), EndReached);
+        const auto* StrEnd = Str + strlen(Str);
+        const auto* Pos    = SkipDelimitersAndComments(Str, StrEnd);
+        EXPECT_EQ(Pos == StrEnd, EndReached);
         const auto* Expected = EndReached ? "" : "Correct";
         EXPECT_STREQ(Pos, Expected);
     };
@@ -232,8 +239,9 @@ TEST(Common_ParsingTools, SkipDelimitersAndComments)
 TEST(Common_ParsingTools, SkipIdentifier)
 {
     auto Test = [](const char* Str, const char* Expected, bool EndReached = false) {
-        auto* Pos = Str;
-        EXPECT_EQ(SkipIdentifier(Pos, Str + strlen(Str)), EndReached);
+        const auto* StrEnd = Str + strlen(Str);
+        const auto* Pos    = SkipIdentifier(Str, StrEnd);
+        EXPECT_EQ(Pos == StrEnd, EndReached);
         if (Expected == nullptr)
             Expected = Str;
         EXPECT_STREQ(Pos, Expected);

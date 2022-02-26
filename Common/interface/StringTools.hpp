@@ -190,9 +190,8 @@ inline size_t CountFloatNumberChars(const char* Str)
     if (Str == nullptr)
         return 0;
 
-    const auto* NumEnd    = Str;
     const auto* MemoryEnd = reinterpret_cast<const char*>(~uintptr_t{0});
-    Parsing::SkipFloatNumber(NumEnd, MemoryEnd);
+    const auto* NumEnd    = Parsing::SkipFloatNumber(Str, MemoryEnd);
     return NumEnd - Str;
 }
 
