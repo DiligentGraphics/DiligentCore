@@ -755,15 +755,7 @@ TokenIterType FindFunction(const TokenIterType& Start, const TokenIterType& End,
                         auto NextToken = Token;
                         ++NextToken;
                         if (NextToken != End && NextToken->GetType() == TokenType::OpenParen)
-                        {
-                            auto PrevToken = Token;
-                            if (PrevToken != Start)
-                            {
-                                --PrevToken;
-                                if (PrevToken->GetType() == TokenType::Identifier)
-                                    return Token;
-                            }
-                        }
+                            return Token;
                     }
                 }
                 break;

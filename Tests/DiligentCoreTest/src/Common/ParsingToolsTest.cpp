@@ -531,7 +531,8 @@ enum class TestTokenType
     MathOp,
     Keyword1,
     Keyword2,
-    Keyword3
+    Keyword3,
+    kw_void
 };
 
 struct TestToken
@@ -588,6 +589,9 @@ struct TestToken
 
         if (strncmp(IdentifierStart, "Keyword3", IdentifierEnd - IdentifierStart) == 0)
             return TokenType::Keyword3;
+
+        if (strncmp(IdentifierStart, "void", IdentifierEnd - IdentifierStart) == 0)
+            return TokenType::kw_void;
 
         return TokenType::Identifier;
     }
@@ -944,7 +948,7 @@ void main()
 TEST(Common_ParsingTools, Tokenizer_FindFunction)
 {
     static const char* TestStr = R"(
-NotAFunction0();
+//NotAFunction0();
 
 struct Test
 {
@@ -955,7 +959,7 @@ MACRO(NotAFunction2())
 
 int array[NotAFunction3(10)];
 
-array<NotAFunction4()>
+//array<NotAFunction4()>
 
 void main()
 {
