@@ -159,12 +159,21 @@ DILIGENT_TYPED_ENUM(DRAW_FLAGS, Uint8)
     DRAW_FLAG_VERIFY_STATES                   = 0x01,
 
     /// Verify correctness of parameters passed to the draw command.
+    ///
+    /// \remarks This flag only has effect in debug and development builds.
+    ///          Verification is always disabled in release configuration.
     DRAW_FLAG_VERIFY_DRAW_ATTRIBS             = 0x02,
 
     /// Verify that render targets bound to the context are consistent with the pipeline state.
+    ///
+    /// \remarks This flag only has effect in debug and development builds.
+    ///          Verification is always disabled in release configuration.
     DRAW_FLAG_VERIFY_RENDER_TARGETS           = 0x04,
 
     /// Perform all state validation checks
+    ///
+    /// \remarks This flag only has effect in debug and development builds.
+    ///          Verification is always disabled in release configuration.
     DRAW_FLAG_VERIFY_ALL                      = DRAW_FLAG_VERIFY_STATES | DRAW_FLAG_VERIFY_DRAW_ATTRIBS | DRAW_FLAG_VERIFY_RENDER_TARGETS,
 
     /// Indicates that none of the dynamic resource buffers used by the draw command
