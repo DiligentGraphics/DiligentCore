@@ -25,7 +25,7 @@
  *  of the possibility of such damages.
  */
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 #include "TestingSwapChainBase.hpp"
 
 #include "gtest/gtest.h"
@@ -60,7 +60,7 @@ void ComputeShaderReferenceMtl(ISwapChain* pSwapChain);
 
 void ComputeShaderReference(ISwapChain* pSwapChain)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
     auto deviceType = pDevice->GetDeviceInfo().Type;
@@ -120,7 +120,7 @@ namespace
 
 TEST(ComputeShaderTest, FillTexture)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
     if (!pDevice->GetDeviceInfo().Features.ComputeShaders)
     {
@@ -130,7 +130,7 @@ TEST(ComputeShaderTest, FillTexture)
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_TestingSwapChain};
     if (!pTestingSwapChain)
@@ -187,7 +187,7 @@ TEST(ComputeShaderTest, FillTexture)
 // Test that GenerateMips does not mess up compute pipeline in D3D12
 TEST(ComputeShaderTest, GenerateMips_CSInterference)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
     if (!pDevice->GetDeviceInfo().Features.ComputeShaders)
     {
@@ -197,7 +197,7 @@ TEST(ComputeShaderTest, GenerateMips_CSInterference)
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_TestingSwapChain};
     if (!pTestingSwapChain)

@@ -25,7 +25,7 @@
  *  of the possibility of such damages.
  */
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 
 #include "gtest/gtest.h"
 
@@ -70,10 +70,10 @@ vertex VSOut VSMain()
 
 void TestBrokenShader(const char* Source, const char* Name, SHADER_SOURCE_LANGUAGE SourceLanguage, int ErrorAllowance)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     ShaderCreateInfo ShaderCI;
     ShaderCI.Source                     = Source;
@@ -102,7 +102,7 @@ void TestBrokenShader(const char* Source, const char* Name, SHADER_SOURCE_LANGUA
 
 TEST(Shader, BrokenHLSL)
 {
-    const auto& DeviceInfo = TestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
+    const auto& DeviceInfo = GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
     // HLSL is supported in all backends
     TestBrokenShader(g_BrokenHLSL, "Broken HLSL test", SHADER_SOURCE_LANGUAGE_HLSL,
                      DeviceInfo.IsGLDevice() || DeviceInfo.IsD3DDevice() ? 2 : 3);
@@ -110,7 +110,7 @@ TEST(Shader, BrokenHLSL)
 
 TEST(Shader, BrokenGLSL)
 {
-    const auto& DeviceInfo = TestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
+    const auto& DeviceInfo = GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
     if (DeviceInfo.IsD3DDevice())
     {
         GTEST_SKIP() << "GLSL is not supported in Direct3D";
@@ -122,7 +122,7 @@ TEST(Shader, BrokenGLSL)
 
 TEST(Shader, BrokenMSL)
 {
-    const auto& DeviceInfo = TestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
+    const auto& DeviceInfo = GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
     if (!DeviceInfo.IsMetalDevice())
     {
         GTEST_SKIP() << "MSL is only supported in Metal";

@@ -25,7 +25,7 @@
  *  of the possibility of such damages.
  */
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 #include "PSOTestBase.hpp"
 #include "GraphicsAccessories.hpp"
 
@@ -53,7 +53,7 @@ protected:
     static void TearDownTestSuite()
     {
         ReleaseResources();
-        TestingEnvironment::GetInstance()->ReleaseResources();
+        GPUTestingEnvironment::GetInstance()->ReleaseResources();
     }
 };
 
@@ -74,7 +74,7 @@ TEST_F(DepthStencilStateTest, CreatePSO)
         EXPECT_EQ(TestDSSDesc.DepthWriteEnable, DSSDesc.DepthWriteEnable);
     }
 
-    auto* pDevice = TestingEnvironment::GetInstance()->GetDevice();
+    auto* pDevice = GPUTestingEnvironment::GetInstance()->GetDevice();
     EXPECT_EQ(TestRenderDeviceCInterface_CreateGraphicsPipelineState(pDevice, &PSOCreateInfo), 0);
 
     {

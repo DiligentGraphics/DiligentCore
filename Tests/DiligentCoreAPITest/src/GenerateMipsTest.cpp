@@ -25,7 +25,7 @@
  *  of the possibility of such damages.
  */
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 
 #include "gtest/gtest.h"
 
@@ -37,9 +37,9 @@ namespace
 
 TEST(GenerateMipsTest, GenerateMips)
 {
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pDevice  = pEnv->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();
 

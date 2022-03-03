@@ -36,12 +36,12 @@ namespace Testing
 {
 
 void CreateTestingSwapChainMtl(TestingEnvironmentMtl* pEnv,
-                               const SwapChainDesc&  SCDesc,
-                               ISwapChain**          ppSwapChain);
+                               const SwapChainDesc&   SCDesc,
+                               ISwapChain**           ppSwapChain);
 
 TestingEnvironmentMtl::TestingEnvironmentMtl(const CreateInfo&    CI,
                                              const SwapChainDesc& SCDesc) :
-    TestingEnvironment{CI, SCDesc}
+    GPUTestingEnvironment{CI, SCDesc}
 {
     m_MtlDevice = m_pDevice.Cast<IRenderDeviceMtl>(IID_RenderDeviceMtl)->GetMtlDevice();
     auto* Ctx   = ClassPtrCast<IDeviceContextMtl>(GetDeviceContext());
@@ -63,8 +63,8 @@ void TestingEnvironmentMtl::Reset()
 {
 }
 
-TestingEnvironment* CreateTestingEnvironmentMtl(const TestingEnvironment::CreateInfo& CI,
-                                                const SwapChainDesc&                  SCDesc)
+GPUTestingEnvironment* CreateTestingEnvironmentMtl(const GPUTestingEnvironment::CreateInfo& CI,
+                                                   const SwapChainDesc&                     SCDesc)
 {
     return new TestingEnvironmentMtl{CI, SCDesc};
 }

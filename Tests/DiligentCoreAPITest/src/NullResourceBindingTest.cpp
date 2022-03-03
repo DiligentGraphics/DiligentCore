@@ -24,7 +24,7 @@
  *  of the possibility of such damages.
  */
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 #include "GraphicsAccessories.hpp"
 
 #include <utility>
@@ -55,16 +55,16 @@ RefCntAutoPtr<IShader> CreateShader(const char*            Name,
     ShaderCI.Desc.ShaderType = ShaderType;
 
     RefCntAutoPtr<IShader> pShader;
-    TestingEnvironment::GetInstance()->GetDevice()->CreateShader(ShaderCI, &pShader);
+    GPUTestingEnvironment::GetInstance()->GetDevice()->CreateShader(ShaderCI, &pShader);
     return pShader;
 }
 
 
 void DrawWithNullResources(IShader* pVS, IShader* pPS, SHADER_RESOURCE_VARIABLE_TYPE VarType)
 {
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    auto* const pEnv       = TestingEnvironment::GetInstance();
+    auto* const pEnv       = GPUTestingEnvironment::GetInstance();
     auto* const pDevice    = pEnv->GetDevice();
     auto* const pContext   = pEnv->GetDeviceContext();
     auto* const pSwapChain = pEnv->GetSwapChain();
@@ -102,9 +102,9 @@ void DrawWithNullResources(IShader* pVS, IShader* pPS, SHADER_RESOURCE_VARIABLE_
 
 void DispatchWithNullResources(IShader* pCS, SHADER_RESOURCE_VARIABLE_TYPE VarType)
 {
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    auto* const pEnv     = TestingEnvironment::GetInstance();
+    auto* const pEnv     = GPUTestingEnvironment::GetInstance();
     auto* const pDevice  = pEnv->GetDevice();
     auto* const pContext = pEnv->GetDeviceContext();
 
@@ -172,7 +172,7 @@ RefCntAutoPtr<IShader> NullConstantBuffer::pPS;
 
 TEST_P(NullConstantBuffer, Test)
 {
-    auto* const pEnv       = TestingEnvironment::GetInstance();
+    auto* const pEnv       = GPUTestingEnvironment::GetInstance();
     const auto& DeviceInfo = pEnv->GetDevice()->GetDeviceInfo();
     const auto  VarType    = GetParam();
 
@@ -243,7 +243,7 @@ RefCntAutoPtr<IShader> NullStructBuffer::pPS;
 
 TEST_P(NullStructBuffer, Test)
 {
-    auto* const pEnv       = TestingEnvironment::GetInstance();
+    auto* const pEnv       = GPUTestingEnvironment::GetInstance();
     const auto& DeviceInfo = pEnv->GetDevice()->GetDeviceInfo();
     const auto  VarType    = GetParam();
 
@@ -305,7 +305,7 @@ RefCntAutoPtr<IShader> NullFormattedBuffer::pPS;
 
 TEST_P(NullFormattedBuffer, Test)
 {
-    auto* const pEnv       = TestingEnvironment::GetInstance();
+    auto* const pEnv       = GPUTestingEnvironment::GetInstance();
     const auto& DeviceInfo = pEnv->GetDevice()->GetDeviceInfo();
     const auto  VarType    = GetParam();
 
@@ -370,7 +370,7 @@ RefCntAutoPtr<IShader> NullTexture::pPS;
 
 TEST_P(NullTexture, Test)
 {
-    auto* const pEnv       = TestingEnvironment::GetInstance();
+    auto* const pEnv       = GPUTestingEnvironment::GetInstance();
     const auto& DeviceInfo = pEnv->GetDevice()->GetDeviceInfo();
     const auto  VarType    = GetParam();
 
@@ -418,7 +418,7 @@ float4 main() : SV_Target
 }
 )";
 
-        auto* const pEnv       = TestingEnvironment::GetInstance();
+        auto* const pEnv       = GPUTestingEnvironment::GetInstance();
         const auto& DeviceInfo = pEnv->GetDevice()->GetDeviceInfo();
         if (!DeviceInfo.IsGLDevice())
         {
@@ -442,7 +442,7 @@ RefCntAutoPtr<IShader> NullSampler::pPS;
 
 TEST_P(NullSampler, Test)
 {
-    auto* const pEnv       = TestingEnvironment::GetInstance();
+    auto* const pEnv       = GPUTestingEnvironment::GetInstance();
     const auto& DeviceInfo = pEnv->GetDevice()->GetDeviceInfo();
     const auto  VarType    = GetParam();
 
@@ -506,7 +506,7 @@ RefCntAutoPtr<IShader> NullRWTexture::pCS;
 
 TEST_P(NullRWTexture, Test)
 {
-    auto* const pEnv    = TestingEnvironment::GetInstance();
+    auto* const pEnv    = GPUTestingEnvironment::GetInstance();
     const auto  VarType = GetParam();
 
     pEnv->SetErrorAllowance(1, "No worries, errors are expected: testing null resource bindings\n");
@@ -552,7 +552,7 @@ RefCntAutoPtr<IShader> NullRWFmtBuffer::pCS;
 
 TEST_P(NullRWFmtBuffer, Test)
 {
-    auto* const pEnv    = TestingEnvironment::GetInstance();
+    auto* const pEnv    = GPUTestingEnvironment::GetInstance();
     const auto  VarType = GetParam();
 
     pEnv->SetErrorAllowance(1, "No worries, errors are expected: testing null resource bindings\n");
@@ -602,7 +602,7 @@ void main()
 }
 )";
 
-        auto* const pEnv       = TestingEnvironment::GetInstance();
+        auto* const pEnv       = GPUTestingEnvironment::GetInstance();
         const auto& DeviceInfo = pEnv->GetDevice()->GetDeviceInfo();
 
         pCS = CreateShader("Null RW struct buffer binding CS",
@@ -622,7 +622,7 @@ RefCntAutoPtr<IShader> NullRWStructBuffer::pCS;
 
 TEST_P(NullRWStructBuffer, Test)
 {
-    auto* const pEnv    = TestingEnvironment::GetInstance();
+    auto* const pEnv    = GPUTestingEnvironment::GetInstance();
     const auto  VarType = GetParam();
 
     pEnv->SetErrorAllowance(1, "No worries, errors are expected: testing null resource bindings\n");

@@ -25,7 +25,7 @@
  *  of the possibility of such damages.
  */
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 
 #include "gtest/gtest.h"
 
@@ -75,15 +75,15 @@ TEXTURE_FORMAT TestFormats[] =
 
 TEST(CopyTexture, Texture2D)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pDevice  = pEnv->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     for (size_t f = 0; f < _countof(TestFormats); ++f)
     {
-        TestingEnvironment::ScopedReleaseResources AutoReleaseResources;
+        GPUTestingEnvironment::ScopedReleaseResources AutoReleaseResources;
 
         auto Format = TestFormats[f];
 
@@ -139,15 +139,15 @@ TEST(CopyTexture, Texture2D)
 
 TEST(CopyTexture, Texture2DArray)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pDevice  = pEnv->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     for (size_t f = 0; f < _countof(TestFormats); ++f)
     {
-        TestingEnvironment::ScopedReleaseResources AutoReleaseResources;
+        GPUTestingEnvironment::ScopedReleaseResources AutoReleaseResources;
 
         auto Format = TestFormats[f];
 
@@ -212,15 +212,15 @@ TEST(CopyTexture, Texture2DArray)
 
 TEST(CopyTexture, Texture3D)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pDevice  = pEnv->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     for (size_t f = 0; f < _countof(TestFormats); ++f)
     {
-        TestingEnvironment::ScopedReleaseResources AutoReleaseResources;
+        GPUTestingEnvironment::ScopedReleaseResources AutoReleaseResources;
 
         auto Format = TestFormats[f];
 

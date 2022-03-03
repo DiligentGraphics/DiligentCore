@@ -25,7 +25,7 @@
  *  of the possibility of such damages.
  */
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 #include "TestingSwapChainBase.hpp"
 
 #include "gtest/gtest.h"
@@ -62,14 +62,14 @@ namespace
 
 TEST(MeshShaderTest, DrawTriangle)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
     if (!pDevice->GetDeviceInfo().Features.MeshShaders)
     {
         GTEST_SKIP() << "Mesh shader is not supported by this device";
     }
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
@@ -172,14 +172,14 @@ TEST(MeshShaderTest, DrawTriangle)
 
 TEST(MeshShaderTest, DrawTriangleIndirect)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
     if (!pDevice->GetDeviceInfo().Features.MeshShaders)
     {
         GTEST_SKIP() << "Mesh shader is not supported by this device";
     }
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
@@ -320,14 +320,14 @@ TEST(MeshShaderTest, DrawTriangleIndirect)
 
 TEST(MeshShaderTest, DrawTriangleIndirectCount)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
     if (!pDevice->GetDeviceInfo().Features.MeshShaders)
     {
         GTEST_SKIP() << "Mesh shader is not supported by this device";
     }
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
@@ -473,14 +473,14 @@ TEST(MeshShaderTest, DrawTriangleIndirectCount)
 
 TEST(MeshShaderTest, DrawTrisWithAmplificationShader)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
     if (!pDevice->GetDeviceInfo().Features.MeshShaders)
     {
         GTEST_SKIP() << "Mesh shader is not supported by this device";
     }
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();

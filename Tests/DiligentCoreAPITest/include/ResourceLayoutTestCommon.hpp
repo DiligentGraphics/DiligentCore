@@ -35,7 +35,7 @@
 #include "RefCntAutoPtr.hpp"
 #include "BasicMath.hpp"
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 
 namespace Diligent
 {
@@ -58,7 +58,7 @@ public:
         UsedValues(NumBuffers),
         Values(NumBuffers)
     {
-        auto* pEnv    = TestingEnvironment::GetInstance();
+        auto* pEnv    = GPUTestingEnvironment::GetInstance();
         auto* pDevice = pEnv->GetDevice();
 
         for (Uint32 i = 0; i < NumBuffers; ++i)
@@ -166,7 +166,7 @@ public:
         UsedValues(NumTextures),
         Values(NumTextures)
     {
-        auto* pEnv = TestingEnvironment::GetInstance();
+        auto* pEnv = GPUTestingEnvironment::GetInstance();
 
         for (Uint32 i = 0; i < NumTextures; ++i)
         {

@@ -27,7 +27,7 @@
 #include <vector>
 
 #include "DynamicTextureArray.hpp"
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 #include "GraphicsAccessories.hpp"
 #include "FastRand.hpp"
 
@@ -45,7 +45,7 @@ class DynamicTextureArrayCreateTest : public testing::TestWithParam<std::tuple<U
 
 TEST_P(DynamicTextureArrayCreateTest, Run)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pDevice  = pEnv->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();
 
@@ -54,7 +54,7 @@ TEST_P(DynamicTextureArrayCreateTest, Run)
 
     const auto& TestInfo = GetParam();
 
-    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     DynamicTextureArrayCreateInfo DynTexArrCI;
     DynTexArrCI.NumSlicesInMemoryPage = 2;
@@ -133,7 +133,7 @@ class DynamicTextureArrayResizeTest : public testing::TestWithParam<std::tuple<U
 
 TEST_P(DynamicTextureArrayResizeTest, Run)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pDevice  = pEnv->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();
 
@@ -155,7 +155,7 @@ TEST_P(DynamicTextureArrayResizeTest, Run)
     if (DeviceInfo.IsMetalDevice())
         GTEST_SKIP() << "This test is currently disabled on Metal";
 
-    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     DynamicTextureArrayCreateInfo DynTexArrCI;
     DynTexArrCI.NumSlicesInMemoryPage = 2;

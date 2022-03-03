@@ -29,7 +29,7 @@
 #include <atomic>
 #include <algorithm>
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 #include "ThreadSignal.hpp"
 #if D3D12_SUPPORTED
 #    include "D3D12/D3D12DebugLayerSetNameBugWorkaround.hpp"
@@ -117,7 +117,7 @@ void MultithreadedResourceCreationTest::StartWorkerThreadsAndWait(int SignalIdx)
 
 void MultithreadedResourceCreationTest::WorkerThreadFunc(MultithreadedResourceCreationTest* This, size_t ThreadNum)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
     const int NumThreads = static_cast<int>(This->m_Threads.size());
@@ -284,7 +284,7 @@ void MultithreadedResourceCreationTest::WorkerThreadFunc(MultithreadedResourceCr
 
 TEST_F(MultithreadedResourceCreationTest, CreateResources)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
     if (pDevice->GetDeviceInfo().IsGLDevice())
     {
@@ -302,7 +302,7 @@ TEST_F(MultithreadedResourceCreationTest, CreateResources)
     D3D12DebugLayerSetNameBugWorkaround D3D12DebugLayerBugWorkaround(pDevice);
 #endif
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto numCores = std::thread::hardware_concurrency();
     m_Threads.resize(std::max(numCores, 4u));

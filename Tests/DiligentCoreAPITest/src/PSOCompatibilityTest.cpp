@@ -25,7 +25,7 @@
  *  of the possibility of such damages.
  */
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 
 #include "gtest/gtest.h"
 
@@ -201,7 +201,7 @@ void main()
 )";
 
 
-RefCntAutoPtr<IPipelineState> CreateGraphicsPSO(TestingEnvironment* pEnv, const char* VSSource, const char* PSSource)
+RefCntAutoPtr<IPipelineState> CreateGraphicsPSO(GPUTestingEnvironment* pEnv, const char* VSSource, const char* PSSource)
 {
     auto* pDevice = pEnv->GetDevice();
 
@@ -249,7 +249,7 @@ RefCntAutoPtr<IPipelineState> CreateGraphicsPSO(TestingEnvironment* pEnv, const 
     return pPSO;
 }
 
-RefCntAutoPtr<IPipelineState> CreateComputePSO(TestingEnvironment* pEnv, const char* CSSource)
+RefCntAutoPtr<IPipelineState> CreateComputePSO(GPUTestingEnvironment* pEnv, const char* CSSource)
 {
     auto*                          pDevice = pEnv->GetDevice();
     ComputePipelineStateCreateInfo PSOCreateInfo;
@@ -279,12 +279,12 @@ RefCntAutoPtr<IPipelineState> CreateComputePSO(TestingEnvironment* pEnv, const c
 
 TEST(PSOCompatibility, IsCompatibleWith)
 {
-    auto* const pEnv       = TestingEnvironment::GetInstance();
+    auto* const pEnv       = GPUTestingEnvironment::GetInstance();
     auto* const pDevice    = pEnv->GetDevice();
     auto* const pContext   = pEnv->GetDeviceContext();
     auto* const pSwapChain = pEnv->GetSwapChain();
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto PSO0 = CreateGraphicsPSO(pEnv, VS0, PS0);
     ASSERT_TRUE(PSO0);

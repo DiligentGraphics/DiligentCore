@@ -26,7 +26,7 @@
  */
 
 #include "gtest/gtest.h"
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 
 #if PLATFORM_WIN32
 #    include <crtdbg.h>
@@ -40,7 +40,7 @@ int main(int argc, char** argv)
 
     ::testing::InitGoogleTest(&argc, argv);
 
-    auto* pEnv = Diligent::Testing::TestingEnvironment::Initialize(argc, argv);
+    auto* pEnv = Diligent::Testing::GPUTestingEnvironment::Initialize(argc, argv);
     if (pEnv == nullptr)
         return -1;
 

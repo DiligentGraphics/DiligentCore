@@ -43,7 +43,7 @@
 #    include "GL/glew.h"
 #endif
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 
 namespace Diligent
 {
@@ -51,15 +51,15 @@ namespace Diligent
 namespace Testing
 {
 
-class TestingEnvironmentGL final : public TestingEnvironment
+class TestingEnvironmentGL final : public GPUTestingEnvironment
 {
 public:
-    using CreateInfo = TestingEnvironment::CreateInfo;
+    using CreateInfo = GPUTestingEnvironment::CreateInfo;
     TestingEnvironmentGL(const CreateInfo&    CI,
                          const SwapChainDesc& SCDesc);
     ~TestingEnvironmentGL();
 
-    static TestingEnvironmentGL* GetInstance() { return ClassPtrCast<TestingEnvironmentGL>(TestingEnvironment::GetInstance()); }
+    static TestingEnvironmentGL* GetInstance() { return ClassPtrCast<TestingEnvironmentGL>(GPUTestingEnvironment::GetInstance()); }
 
     GLuint CompileGLShader(const std::string& Source, GLenum ShaderType);
     GLuint LinkProgram(GLuint Shaders[], GLuint NumShaders);

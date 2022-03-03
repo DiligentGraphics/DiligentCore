@@ -25,7 +25,7 @@
  *  of the possibility of such damages.
  */
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 #include "TestingSwapChainBase.hpp"
 
 #include "gtest/gtest.h"
@@ -118,12 +118,12 @@ void ClearRenderTargetReference(IRenderDevice* pDevice,
 
 TEST(ClearRenderTargetTest, AsRenderTarget)
 {
-    auto* pEnv       = TestingEnvironment::GetInstance();
+    auto* pEnv       = GPUTestingEnvironment::GetInstance();
     auto* pDevice    = pEnv->GetDevice();
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
 
@@ -150,14 +150,14 @@ TEST(ClearRenderTargetTest, AsRenderTarget)
 
 TEST(ClearRenderTargetTest, AsAttachment)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
     if (pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_D3D12)
     {
         GTEST_SKIP() << "D3D12 does not allow render target clears within render pass";
     }
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
@@ -229,12 +229,12 @@ TEST(ClearRenderTargetTest, AsAttachment)
 
 TEST(ClearRenderTargetTest, LoadOpClear)
 {
-    auto* pEnv       = TestingEnvironment::GetInstance();
+    auto* pEnv       = GPUTestingEnvironment::GetInstance();
     auto* pDevice    = pEnv->GetDevice();
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     constexpr float ClearColor[] = {0.875f, 0.3125, 0.4375, 1.0f};
 

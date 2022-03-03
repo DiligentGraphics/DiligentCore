@@ -26,7 +26,7 @@
  */
 
 #include "StreamingBuffer.hpp"
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 
 #include "gtest/gtest.h"
 
@@ -38,11 +38,11 @@ namespace
 
 TEST(StreamingBufferTest, MapUnmap)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pDevice  = pEnv->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     StreamingBufferCreateInfo CI;
     CI.pDevice = pDevice;

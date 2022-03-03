@@ -26,7 +26,7 @@
  */
 
 #include "PSOTestBase.hpp"
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 
 namespace Diligent
 {
@@ -50,7 +50,7 @@ void PSMain(out float4 col : SV_TARGET)
 
 void PSOTestBase::InitResources()
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
     ShaderCreateInfo Attrs;
@@ -81,12 +81,12 @@ void PSOTestBase::InitResources()
 void PSOTestBase::ReleaseResources()
 {
     sm_Resources = Resources{};
-    TestingEnvironment::GetInstance()->Reset();
+    GPUTestingEnvironment::GetInstance()->Reset();
 }
 
 RefCntAutoPtr<IPipelineState> PSOTestBase::CreateTestPSO(const GraphicsPipelineStateCreateInfo& PSOCreateInfo, bool BindPSO)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pDevice  = pEnv->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();
 

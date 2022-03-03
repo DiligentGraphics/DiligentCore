@@ -40,7 +40,7 @@ void CreateTestingSwapChainGL(IRenderDevice*       pDevice,
 
 TestingEnvironmentGL::TestingEnvironmentGL(const CreateInfo&    CI,
                                            const SwapChainDesc& SCDesc) :
-    TestingEnvironment{CI, SCDesc}
+    GPUTestingEnvironment{CI, SCDesc}
 {
 
 #ifndef PLATFORM_EMSCRIPTEN
@@ -137,7 +137,7 @@ GLuint TestingEnvironmentGL::LinkProgram(GLuint Shaders[], GLuint NumShaders)
 
 void TestingEnvironmentGL::Reset()
 {
-    TestingEnvironment::Reset();
+    GPUTestingEnvironment::Reset();
 
     glUseProgram(0);
     glBindProgramPipeline(0);
@@ -187,8 +187,8 @@ void TestingEnvironmentGL::Reset()
     }
 }
 
-TestingEnvironment* CreateTestingEnvironmentGL(const TestingEnvironment::CreateInfo& CI,
-                                               const SwapChainDesc&                  SCDesc)
+GPUTestingEnvironment* CreateTestingEnvironmentGL(const GPUTestingEnvironment::CreateInfo& CI,
+                                                  const SwapChainDesc&                     SCDesc)
 {
     try
     {

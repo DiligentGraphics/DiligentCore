@@ -25,7 +25,7 @@
  *  of the possibility of such damages.
  */
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 
 #include "gtest/gtest.h"
 
@@ -63,7 +63,7 @@ void PSMain(out float4 col : SV_TARGET)
 
 TEST(SeparateTextureSampler, CreateSampler)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pDevice  = pEnv->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();
 
@@ -72,7 +72,7 @@ TEST(SeparateTextureSampler, CreateSampler)
         GTEST_SKIP() << "Separate texture samplers are not supported in OpenGL";
     }
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     ShaderCreateInfo Attrs;
     Attrs.Source          = g_VSShaderSource;

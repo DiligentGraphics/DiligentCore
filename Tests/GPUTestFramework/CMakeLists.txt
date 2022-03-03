@@ -1,9 +1,9 @@
 cmake_minimum_required (VERSION 3.17)
 
-project(DiligentGPUTestFramework)
+project(Diligent-GPUTestFramework)
 
-set(SOURCE src/TestingEnvironment.cpp src/TestingSwapChainBase.cpp)
-set(INCLUDE include/TestingEnvironment.hpp include/TestingSwapChainBase.hpp)
+set(SOURCE src/GPUTestingEnvironment.cpp src/TestingSwapChainBase.cpp)
+set(INCLUDE include/GPUTestingEnvironment.hpp include/TestingSwapChainBase.hpp)
 
 if(PLATFORM_WIN32)
     file(GLOB SOURCE_WIN32 LIST_DIRECTORIES false src/Win32/*)
@@ -66,8 +66,8 @@ PRIVATE
     Diligent-Common
     Diligent-ShaderTools
 PUBLIC
-    gtest
     ${ENGINE_LIBRARIES}
+    Diligent-TestFramework
     Diligent-GraphicsAccessories
 )
 
@@ -119,7 +119,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     )
     if (PLATFORM_EMSCRIPTEN)
         set_property(SOURCE
-            src/TestingEnvironment.cpp
+            src/GPUTestingEnvironment.cpp
         APPEND_STRING PROPERTY
             COMPILE_FLAGS "-Wno-unused-variable"
         )

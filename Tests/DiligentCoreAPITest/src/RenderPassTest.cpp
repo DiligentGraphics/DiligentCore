@@ -27,7 +27,7 @@
 
 #include <algorithm>
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 #include "TestingSwapChainBase.hpp"
 
 #include "gtest/gtest.h"
@@ -85,7 +85,7 @@ class RenderPassTest : public ::testing::Test
 protected:
     static void SetUpTestSuite()
     {
-        auto* pEnv    = TestingEnvironment::GetInstance();
+        auto* pEnv    = GPUTestingEnvironment::GetInstance();
         auto* pDevice = pEnv->GetDevice();
 
         ShaderCreateInfo ShaderCI;
@@ -117,7 +117,7 @@ protected:
         sm_pVS.Release();
         sm_pPS.Release();
 
-        auto* pEnv = TestingEnvironment::GetInstance();
+        auto* pEnv = GPUTestingEnvironment::GetInstance();
         pEnv->Reset();
     }
 
@@ -125,7 +125,7 @@ protected:
                                   Uint8                          SampleCount,
                                   RefCntAutoPtr<IPipelineState>& pPSO)
     {
-        auto* pEnv    = TestingEnvironment::GetInstance();
+        auto* pEnv    = GPUTestingEnvironment::GetInstance();
         auto* pDevice = pEnv->GetDevice();
 
         GraphicsPipelineStateCreateInfo PSOCreateInfo;
@@ -154,7 +154,7 @@ protected:
                          IPipelineState* pPSO,
                          const float     ClearColor[])
     {
-        auto* pEnv     = TestingEnvironment::GetInstance();
+        auto* pEnv     = GPUTestingEnvironment::GetInstance();
         auto* pContext = pEnv->GetDeviceContext();
 
         pContext->SetPipelineState(pPSO);
@@ -186,7 +186,7 @@ protected:
 
     static void Present()
     {
-        auto* pEnv       = TestingEnvironment::GetInstance();
+        auto* pEnv       = GPUTestingEnvironment::GetInstance();
         auto* pSwapChain = pEnv->GetSwapChain();
         auto* pContext   = pEnv->GetDeviceContext();
 
@@ -205,11 +205,11 @@ RefCntAutoPtr<IShader> RenderPassTest::sm_pPS;
 
 TEST_F(RenderPassTest, CreateRenderPassAndFramebuffer)
 {
-    auto*      pDevice    = TestingEnvironment::GetInstance()->GetDevice();
-    auto*      pContext   = TestingEnvironment::GetInstance()->GetDeviceContext();
+    auto*      pDevice    = GPUTestingEnvironment::GetInstance()->GetDevice();
+    auto*      pContext   = GPUTestingEnvironment::GetInstance()->GetDeviceContext();
     const auto DeviceType = pDevice->GetDeviceInfo().Type;
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     RenderPassAttachmentDesc Attachments[6];
     Attachments[0].Format       = TEX_FORMAT_RGBA8_UNORM;
@@ -494,11 +494,11 @@ TEST_F(RenderPassTest, CreateRenderPassAndFramebuffer)
 
 TEST_F(RenderPassTest, Draw)
 {
-    auto* pEnv       = TestingEnvironment::GetInstance();
+    auto* pEnv       = GPUTestingEnvironment::GetInstance();
     auto* pDevice    = pEnv->GetDevice();
     auto* pSwapChain = pEnv->GetSwapChain();
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     constexpr float ClearColor[] = {0.2f, 0.375f, 0.5f, 0.75f};
     RenderDrawCommandReference(pSwapChain, ClearColor);
@@ -555,12 +555,12 @@ TEST_F(RenderPassTest, Draw)
 
 void RenderPassTest::TestMSResolve(bool UseMemoryless)
 {
-    auto* pEnv       = TestingEnvironment::GetInstance();
+    auto* pEnv       = GPUTestingEnvironment::GetInstance();
     auto* pDevice    = pEnv->GetDevice();
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     constexpr float ClearColor[] = {0.25f, 0.5f, 0.375f, 0.5f};
 
@@ -705,7 +705,7 @@ TEST_F(RenderPassTest, MSResolve)
 TEST_F(RenderPassTest, MemorylessMSResolve)
 {
     const auto  RequiredBindFlags = BIND_RENDER_TARGET;
-    const auto& MemoryInfo        = TestingEnvironment::GetInstance()->GetDevice()->GetAdapterInfo().Memory;
+    const auto& MemoryInfo        = GPUTestingEnvironment::GetInstance()->GetDevice()->GetAdapterInfo().Memory;
 
     if ((MemoryInfo.MemorylessTextureBindFlags & RequiredBindFlags) != RequiredBindFlags)
     {
@@ -716,12 +716,12 @@ TEST_F(RenderPassTest, MemorylessMSResolve)
 
 void RenderPassTest::TestInputAttachment(bool UseSignature, bool UseMemoryless)
 {
-    auto* pEnv       = TestingEnvironment::GetInstance();
+    auto* pEnv       = GPUTestingEnvironment::GetInstance();
     auto* pDevice    = pEnv->GetDevice();
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     constexpr float ClearColor[] = {0.5f, 0.125f, 0.25f, 0.25f};
 
@@ -1011,7 +1011,7 @@ TEST_F(RenderPassTest, InputAttachmentWithSignature)
 TEST_F(RenderPassTest, MemorylessInputAttachment)
 {
     const auto  RequiredBindFlags = BIND_RENDER_TARGET | BIND_INPUT_ATTACHMENT;
-    const auto& MemoryInfo        = TestingEnvironment::GetInstance()->GetDevice()->GetAdapterInfo().Memory;
+    const auto& MemoryInfo        = GPUTestingEnvironment::GetInstance()->GetDevice()->GetAdapterInfo().Memory;
 
     if ((MemoryInfo.MemorylessTextureBindFlags & RequiredBindFlags) != RequiredBindFlags)
     {
@@ -1023,7 +1023,7 @@ TEST_F(RenderPassTest, MemorylessInputAttachment)
 
 void RenderPassTest::TestInputAttachmentGeneralLayout(bool UseSignature)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
     if (!pDevice->GetDeviceInfo().IsVulkanDevice())
@@ -1034,7 +1034,7 @@ void RenderPassTest::TestInputAttachmentGeneralLayout(bool UseSignature)
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     constexpr float ClearColor[] = {0.5f, 0.125f, 0.25f, 0.25f};
 

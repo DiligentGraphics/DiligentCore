@@ -28,7 +28,7 @@
 #include <algorithm>
 #include <cctype>
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 #include "Sampler.h"
 #include "GraphicsAccessories.hpp"
 
@@ -53,16 +53,16 @@ class FilterTypeTest : public testing::TestWithParam<std::tuple<FILTER_TYPE, FIL
 protected:
     static void TearDownTestSuite()
     {
-        TestingEnvironment::GetInstance()->ReleaseResources();
+        GPUTestingEnvironment::GetInstance()->ReleaseResources();
     }
 };
 
 TEST_P(FilterTypeTest, CreateSampler)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
-    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     SamplerDesc SamplerDesc;
     const auto& Param     = GetParam();
@@ -110,10 +110,10 @@ INSTANTIATE_TEST_SUITE_P(ComparisonFilters,
 
 TEST(FilterTypeTest, AnisotropicFilter)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
-    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     {
         SamplerDesc SamplerDesc;
@@ -150,16 +150,16 @@ class AddressModeTest : public testing::TestWithParam<TEXTURE_ADDRESS_MODE>
 protected:
     static void TearDownTestSuite()
     {
-        TestingEnvironment::GetInstance()->ReleaseResources();
+        GPUTestingEnvironment::GetInstance()->ReleaseResources();
     }
 };
 
 TEST_P(AddressModeTest, CreateSampler)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
-    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     SamplerDesc SamplerDesc;
     SamplerDesc.MinFilter = FILTER_TYPE_LINEAR;
@@ -191,16 +191,16 @@ class ComparisonFuncTest : public testing::TestWithParam<COMPARISON_FUNCTION>
 protected:
     static void TearDownTestSuite()
     {
-        TestingEnvironment::GetInstance()->ReleaseResources();
+        GPUTestingEnvironment::GetInstance()->ReleaseResources();
     }
 };
 
 TEST_P(ComparisonFuncTest, CreateSampler)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
-    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     SamplerDesc SamplerDesc;
     SamplerDesc.MinFilter      = FILTER_TYPE_LINEAR;
@@ -245,7 +245,7 @@ void TestSamplerCorrectness(IShader*                      pVS,
                             SHADER_RESOURCE_VARIABLE_TYPE VarType,
                             bool                          IsImmutable)
 {
-    auto* pEnv       = TestingEnvironment::GetInstance();
+    auto* pEnv       = GPUTestingEnvironment::GetInstance();
     auto* pContext   = pEnv->GetDeviceContext();
     auto* pDevice    = pEnv->GetDevice();
     auto* pSwapChain = pEnv->GetSwapChain();
@@ -347,7 +347,7 @@ void TestSamplerCorrectness(IShader*                      pVS,
 
 TEST(SamplerTest, Correctness)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
     RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;

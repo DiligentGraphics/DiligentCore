@@ -25,7 +25,7 @@
  *  of the possibility of such damages.
  */
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 #include "PSOTestBase.hpp"
 #include "GraphicsAccessories.hpp"
 
@@ -48,7 +48,7 @@ protected:
     static void TearDownTestSuite()
     {
         ReleaseResources();
-        TestingEnvironment::GetInstance()->ReleaseResources();
+        GPUTestingEnvironment::GetInstance()->ReleaseResources();
     }
 };
 

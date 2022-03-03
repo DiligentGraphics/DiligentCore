@@ -90,7 +90,7 @@
 #include "RenderDeviceGL.h"
 #include "TextureGL.h"
 #include "BufferGL.h"
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 
 #include "GL/CreateObjFromNativeResGL.hpp"
 

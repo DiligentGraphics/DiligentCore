@@ -27,7 +27,7 @@
 #include <array>
 #include <unordered_set>
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 #include "TestingSwapChainBase.hpp"
 
 #include "GraphicsAccessories.hpp"
@@ -80,7 +80,7 @@ void ArchivePRS(RefCntAutoPtr<IArchive>&                   pSource,
                 RefCntAutoPtr<IPipelineResourceSignature>& pRefPRS_2,
                 ARCHIVE_DEVICE_DATA_FLAGS                  DeviceBits)
 {
-    auto* pEnv             = TestingEnvironment::GetInstance();
+    auto* pEnv             = GPUTestingEnvironment::GetInstance();
     auto* pDevice          = pEnv->GetDevice();
     auto* pArchiverFactory = pEnv->GetArchiverFactory();
     auto* pDearchiver      = pDevice->GetEngineFactory()->GetDearchiver();
@@ -88,7 +88,7 @@ void ArchivePRS(RefCntAutoPtr<IArchive>&                   pSource,
     if (!pDearchiver || !pArchiverFactory)
         GTEST_SKIP() << "Archiver library is not loaded";
 
-    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     RefCntAutoPtr<ISerializationDevice> pSerializationDevice;
     SerializationDeviceCreateInfo       DeviceCI;
@@ -182,7 +182,7 @@ void UnpackPRS(IArchive*                   pSource,
                IPipelineResourceSignature* pRefPRS_1,
                IPipelineResourceSignature* pRefPRS_2)
 {
-    auto* pEnv        = TestingEnvironment::GetInstance();
+    auto* pEnv        = GPUTestingEnvironment::GetInstance();
     auto* pDevice     = pEnv->GetDevice();
     auto* pDearchiver = pDevice->GetEngineFactory()->GetDearchiver();
 
@@ -199,7 +199,7 @@ void UnpackPRS(IArchive*                   pSource,
         UnpackInfo.SRBAllocationGranularity = 10;
 
         if (pRefPRS_1 == nullptr)
-            TestingEnvironment::SetErrorAllowance(1);
+            GPUTestingEnvironment::SetErrorAllowance(1);
 
         RefCntAutoPtr<IPipelineResourceSignature> pUnpackedPRS;
         pDearchiver->UnpackResourceSignature(UnpackInfo, &pUnpackedPRS);
@@ -257,7 +257,7 @@ TEST(ArchiveTest, ResourceSignature)
 
 TEST(ArchiveTest, RemoveDeviceData)
 {
-    auto* pEnv             = TestingEnvironment::GetInstance();
+    auto* pEnv             = GPUTestingEnvironment::GetInstance();
     auto* pDevice          = pEnv->GetDevice();
     auto* pArchiverFactory = pEnv->GetArchiverFactory();
     auto* pDearchiver      = pDevice->GetEngineFactory()->GetDearchiver();
@@ -298,7 +298,7 @@ TEST(ArchiveTest, RemoveDeviceData)
 
 TEST(ArchiveTest, AppendDeviceData)
 {
-    auto* pEnv             = TestingEnvironment::GetInstance();
+    auto* pEnv             = GPUTestingEnvironment::GetInstance();
     auto* pDevice          = pEnv->GetDevice();
     auto* pArchiverFactory = pEnv->GetArchiverFactory();
     auto* pDearchiver      = pDevice->GetEngineFactory()->GetDearchiver();
@@ -383,7 +383,7 @@ TEST_P(TestBrokenShader, CompileFailure)
     if ((DataFlag & (ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS | ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS)) != 0)
         GTEST_SKIP() << "In Metal shaders are compiled when PSO is created";
 
-    auto* pEnv             = TestingEnvironment::GetInstance();
+    auto* pEnv             = GPUTestingEnvironment::GetInstance();
     auto* pArchiverFactory = pEnv->GetArchiverFactory();
 
     RefCntAutoPtr<ISerializationDevice> pSerializationDevice;
@@ -423,7 +423,7 @@ TEST_P(TestBrokenShader, MissingSourceFile)
     if ((DataFlag & AllowedBits) == 0)
         GTEST_SKIP() << GetArchiveDeviceDataFlagString(DataFlag) << " is not supported by archiver";
 
-    auto* pEnv             = TestingEnvironment::GetInstance();
+    auto* pEnv             = GPUTestingEnvironment::GetInstance();
     auto* pArchiverFactory = pEnv->GetArchiverFactory();
 
     RefCntAutoPtr<ISerializationDevice> pSerializationDevice;
@@ -606,7 +606,7 @@ RefCntAutoPtr<IBuffer> CreateTestVertexBuffer(IRenderDevice* pDevice, IDeviceCon
     return pVB;
 }
 
-std::array<RefCntAutoPtr<ITexture>, 3> CreateTestGBuffer(TestingEnvironment* pEnv, IDeviceContext* pContext)
+std::array<RefCntAutoPtr<ITexture>, 3> CreateTestGBuffer(GPUTestingEnvironment* pEnv, IDeviceContext* pContext)
 {
     constexpr Uint32 Width  = 64;
     constexpr Uint32 Height = 64;
@@ -660,13 +660,13 @@ void RenderGraphicsPSOTestImage(IDeviceContext*         pContext,
 
 void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
 {
-    auto* pEnv             = TestingEnvironment::GetInstance();
+    auto* pEnv             = GPUTestingEnvironment::GetInstance();
     auto* pDevice          = pEnv->GetDevice();
     auto* pArchiverFactory = pEnv->GetArchiverFactory();
     auto* pDearchiver      = pDevice->GetEngineFactory()->GetDearchiver();
     auto* pSwapChain       = pEnv->GetSwapChain();
 
-    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     if (pDevice->GetDeviceInfo().Features.SeparablePrograms != DEVICE_FEATURE_STATE_ENABLED)
         GTEST_SKIP() << "Non separable programs are not supported";
@@ -1149,7 +1149,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
 {
-    auto* pEnv             = TestingEnvironment::GetInstance();
+    auto* pEnv             = GPUTestingEnvironment::GetInstance();
     auto* pDevice          = pEnv->GetDevice();
     auto* pArchiverFactory = pEnv->GetArchiverFactory();
     auto* pDearchiver      = pDevice->GetEngineFactory()->GetDearchiver();
@@ -1162,7 +1162,7 @@ void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
 
     constexpr char PSO1Name[] = "ArchiveTest.ComputePipeline - PSO";
 
-    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     auto*       pSwapChain = pEnv->GetSwapChain();
     const auto& SCDesc     = pSwapChain->GetDesc();
@@ -1322,7 +1322,7 @@ TEST(ArchiveTest, ComputePipeline_NoReflection)
 
 TEST(ArchiveTest, RayTracingPipeline)
 {
-    auto* pEnv             = TestingEnvironment::GetInstance();
+    auto* pEnv             = GPUTestingEnvironment::GetInstance();
     auto* pDevice          = pEnv->GetDevice();
     auto* pArchiverFactory = pEnv->GetArchiverFactory();
     auto* pDearchiver      = pDevice->GetEngineFactory()->GetDearchiver();
@@ -1335,7 +1335,7 @@ TEST(ArchiveTest, RayTracingPipeline)
 
     constexpr char PSO1Name[] = "ArchiveTest.RayTracingPipeline - PSO";
 
-    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     auto* pSwapChain = pEnv->GetSwapChain();
 
@@ -1662,7 +1662,7 @@ TEST(ArchiveTest, RayTracingPipeline)
 
 TEST(ArchiveTest, ResourceSignatureBindings)
 {
-    auto* pEnv             = TestingEnvironment::GetInstance();
+    auto* pEnv             = GPUTestingEnvironment::GetInstance();
     auto* pArchiverFactory = pEnv->GetArchiverFactory();
 
     if (!pArchiverFactory)
@@ -1931,9 +1931,9 @@ class TestSamplers : public testing::TestWithParam<TestSamplersParamType>
 
 TEST_P(TestSamplers, GraphicsPipeline)
 {
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    auto* const pEnv             = TestingEnvironment::GetInstance();
+    auto* const pEnv             = GPUTestingEnvironment::GetInstance();
     auto* const pDevice          = pEnv->GetDevice();
     auto* const pSwapChain       = pEnv->GetSwapChain();
     const auto& deviceCaps       = pDevice->GetDeviceInfo();

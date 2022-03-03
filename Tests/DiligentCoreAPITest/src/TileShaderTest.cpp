@@ -24,7 +24,7 @@
  *  of the possibility of such damages.
  */
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 #include "TestingSwapChainBase.hpp"
 
 #include "gtest/gtest.h"
@@ -53,14 +53,14 @@ namespace
 
 TEST(TileShaderTest, DrawQuad)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
     if (!pDevice->GetDeviceInfo().Features.TileShaders)
     {
         GTEST_SKIP() << "Tile shader is not supported by this device";
     }
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto*       pSwapChain = pEnv->GetSwapChain();
     auto*       pContext   = pEnv->GetDeviceContext();

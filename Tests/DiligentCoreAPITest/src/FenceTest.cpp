@@ -24,7 +24,7 @@
  *  of the possibility of such damages.
  */
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 #include "TestingSwapChainBase.hpp"
 #include "BasicMath.hpp"
 
@@ -67,7 +67,7 @@ class FenceTest : public ::testing::Test
 protected:
     static void SetUpTestSuite()
     {
-        auto* pEnv    = TestingEnvironment::GetInstance();
+        auto* pEnv    = GPUTestingEnvironment::GetInstance();
         auto* pDevice = pEnv->GetDevice();
 
         ComputePipelineStateCreateInfo PSOCreateInfo;
@@ -109,7 +109,7 @@ protected:
         sm_pCompPSO.Release();
         sm_pCompSRB.Release();
 
-        auto* pEnv = TestingEnvironment::GetInstance();
+        auto* pEnv = GPUTestingEnvironment::GetInstance();
         pEnv->Reset();
     }
 
@@ -124,7 +124,7 @@ uint2                                 FenceTest::sm_dispatchSize;
 
 TEST_F(FenceTest, GPUWaitForCPU)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
     if (!pDevice->GetDeviceInfo().Features.NativeFence)
     {
@@ -214,7 +214,7 @@ TEST_F(FenceTest, GPUWaitForCPU)
 
 TEST_F(FenceTest, ContextWaitForAnotherContext)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
     if (!pDevice->GetDeviceInfo().Features.NativeFence)
     {

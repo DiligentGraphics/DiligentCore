@@ -24,7 +24,7 @@
  *  of the possibility of such damages.
  */
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 #include "TestingSwapChainBase.hpp"
 
 #include "gtest/gtest.h"
@@ -132,7 +132,7 @@ namespace
 
 TEST(VariableShadingRateTest, ValidateSupportedShadingRates)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
     if (!pDevice->GetDeviceInfo().Features.VariableRateShading)
     {
@@ -153,7 +153,7 @@ TEST(VariableShadingRateTest, ValidateSupportedShadingRates)
 
 TEST(VariableShadingRateTest, PerDraw)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
     if (!pDevice->GetDeviceInfo().Features.VariableRateShading)
     {
@@ -201,7 +201,7 @@ TEST(VariableShadingRateTest, PerDraw)
 
         pTestingSwapChain->TakeSnapshot();
     }
-    TestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
 
     GraphicsPipelineStateCreateInfo PSOCreateInfo;
 
@@ -271,7 +271,7 @@ TEST(VariableShadingRateTest, PerDraw)
 
 TEST(VariableShadingRateTest, PerPrimitive)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
     if (!pDevice->GetDeviceInfo().Features.VariableRateShading)
     {
@@ -319,7 +319,7 @@ TEST(VariableShadingRateTest, PerPrimitive)
 
         pTestingSwapChain->TakeSnapshot();
     }
-    TestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
 
     GraphicsPipelineStateCreateInfo PSOCreateInfo;
 
@@ -413,7 +413,7 @@ TEST(VariableShadingRateTest, PerPrimitive)
 
 TEST(VariableShadingRateTest, TextureBased)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
     if (!pDevice->GetDeviceInfo().Features.VariableRateShading)
     {
@@ -465,7 +465,7 @@ TEST(VariableShadingRateTest, TextureBased)
 
         pTestingSwapChain->TakeSnapshot();
     }
-    TestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
 
     const auto& SCDesc = pSwapChain->GetDesc();
 
@@ -545,7 +545,7 @@ TEST(VariableShadingRateTest, TextureBased)
 
 TEST(VariableShadingRateTest, TextureBasedWithTextureArray)
 {
-    auto*       pEnv     = TestingEnvironment::GetInstance();
+    auto*       pEnv     = GPUTestingEnvironment::GetInstance();
     auto*       pDevice  = pEnv->GetDevice();
     const auto& Features = pDevice->GetDeviceInfo().Features;
     if (!Features.VariableRateShading)
@@ -598,7 +598,7 @@ TEST(VariableShadingRateTest, TextureBasedWithTextureArray)
 
         pTestingSwapChain->TakeSnapshot();
     }
-    TestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
 
     const auto&  SCDesc    = pSwapChain->GetDesc();
     const Uint32 ArraySize = 2;
@@ -726,7 +726,7 @@ TEST(VariableShadingRateTest, TextureBasedWithTextureArray)
 
 TEST(VariableShadingRateTest, TextureBasedWithRenderPass)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
     if (!pDevice->GetDeviceInfo().Features.VariableRateShading)
     {
@@ -778,7 +778,7 @@ TEST(VariableShadingRateTest, TextureBasedWithRenderPass)
 
         pTestingSwapChain->TakeSnapshot();
     }
-    TestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
 
     auto pSRView = CreateShadingRateTexture(pDevice, pSwapChain);
     ASSERT_NE(pSRView, nullptr);

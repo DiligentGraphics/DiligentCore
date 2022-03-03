@@ -47,7 +47,7 @@ void CreateTestingSwapChainVk(TestingEnvironmentVk* pEnv,
 
 TestingEnvironmentVk::TestingEnvironmentVk(const CreateInfo&    CI,
                                            const SwapChainDesc& SCDesc) :
-    TestingEnvironment{CI, SCDesc}
+    GPUTestingEnvironment{CI, SCDesc}
 {
 #if !DILIGENT_NO_GLSLANG
     GLSLangUtils::InitializeGlslang();
@@ -760,8 +760,8 @@ bool TestingEnvironmentVk::SupportsRayTracing() const
         HasDXCompiler();
 }
 
-TestingEnvironment* CreateTestingEnvironmentVk(const TestingEnvironment::CreateInfo& CI,
-                                               const SwapChainDesc&                  SCDesc)
+GPUTestingEnvironment* CreateTestingEnvironmentVk(const GPUTestingEnvironment::CreateInfo& CI,
+                                                  const SwapChainDesc&                     SCDesc)
 {
     return new TestingEnvironmentVk{CI, SCDesc};
 }

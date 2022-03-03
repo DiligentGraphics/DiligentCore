@@ -25,7 +25,7 @@
  *  of the possibility of such damages.
  */
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 #include "HLSL2GLSLConverter.h"
 
 #include "gtest/gtest.h"
@@ -41,7 +41,7 @@ RefCntAutoPtr<IShader> CreateTestShader(const char*                  FileName,
                                         SHADER_TYPE                  ShaderType,
                                         IHLSL2GLSLConversionStream** ppConversionStream = nullptr)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
     ShaderCreateInfo ShaderCI;
@@ -66,7 +66,7 @@ RefCntAutoPtr<IShader> CreateTestShader(const char*                  FileName,
 
 TEST(HLSL2GLSLConverterTest, VS_PS)
 {
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     RefCntAutoPtr<IHLSL2GLSLConversionStream> pStream;
 
@@ -78,13 +78,13 @@ TEST(HLSL2GLSLConverterTest, VS_PS)
 
 TEST(HLSL2GLSLConverterTest, CS_RWTex1D)
 {
-    auto* pEnv = TestingEnvironment::GetInstance();
+    auto* pEnv = GPUTestingEnvironment::GetInstance();
     if (!pEnv->GetDevice()->GetDeviceInfo().Features.ComputeShaders)
     {
         GTEST_SKIP() << "This device does not support compute shaders";
     }
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto pCS = CreateTestShader("CS_RWTex1D.hlsl", "TestCS", SHADER_TYPE_COMPUTE);
     EXPECT_NE(pCS, nullptr);
@@ -92,13 +92,13 @@ TEST(HLSL2GLSLConverterTest, CS_RWTex1D)
 
 TEST(HLSL2GLSLConverterTest, CS_RWTex2D_1)
 {
-    auto* pEnv = TestingEnvironment::GetInstance();
+    auto* pEnv = GPUTestingEnvironment::GetInstance();
     if (!pEnv->GetDevice()->GetDeviceInfo().Features.ComputeShaders)
     {
         GTEST_SKIP() << "This device does not support compute shaders";
     }
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto pCS = CreateTestShader("CS_RWTex2D_1.hlsl", "TestCS", SHADER_TYPE_COMPUTE);
     EXPECT_NE(pCS, nullptr);
@@ -106,13 +106,13 @@ TEST(HLSL2GLSLConverterTest, CS_RWTex2D_1)
 
 TEST(HLSL2GLSLConverterTest, CS_RWTex2D_2)
 {
-    auto* pEnv = TestingEnvironment::GetInstance();
+    auto* pEnv = GPUTestingEnvironment::GetInstance();
     if (!pEnv->GetDevice()->GetDeviceInfo().Features.ComputeShaders)
     {
         GTEST_SKIP() << "This device does not support compute shaders";
     }
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto pCS = CreateTestShader("CS_RWTex2D_2.hlsl", "TestCS", SHADER_TYPE_COMPUTE);
     EXPECT_NE(pCS, nullptr);
@@ -120,13 +120,13 @@ TEST(HLSL2GLSLConverterTest, CS_RWTex2D_2)
 
 TEST(HLSL2GLSLConverterTest, CS_RWBuff)
 {
-    auto* pEnv = TestingEnvironment::GetInstance();
+    auto* pEnv = GPUTestingEnvironment::GetInstance();
     if (!pEnv->GetDevice()->GetDeviceInfo().Features.ComputeShaders)
     {
         GTEST_SKIP() << "This device does not support compute shaders";
     }
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto pCS = CreateTestShader("CS_RWBuff.hlsl", "TestCS", SHADER_TYPE_COMPUTE);
     EXPECT_NE(pCS, nullptr);
@@ -134,13 +134,13 @@ TEST(HLSL2GLSLConverterTest, CS_RWBuff)
 
 TEST(HLSL2GLSLConverterTest, GS)
 {
-    auto* pEnv = TestingEnvironment::GetInstance();
+    auto* pEnv = GPUTestingEnvironment::GetInstance();
     if (!pEnv->GetDevice()->GetDeviceInfo().Features.GeometryShaders)
     {
         GTEST_SKIP() << "This device does not support geometry shaders";
     }
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto pGS = CreateTestShader("GS.hlsl", "main", SHADER_TYPE_GEOMETRY);
     EXPECT_NE(pGS, nullptr);

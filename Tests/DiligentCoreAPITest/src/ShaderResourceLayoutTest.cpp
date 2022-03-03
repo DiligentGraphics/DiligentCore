@@ -33,7 +33,7 @@
 #include "GraphicsAccessories.hpp"
 #include "BasicMath.hpp"
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 #include "ResourceLayoutTestCommon.hpp"
 #include "TestingSwapChainBase.hpp"
 
@@ -58,7 +58,7 @@ protected:
 
     static void TearDownTestSuite()
     {
-        TestingEnvironment::GetInstance()->Reset();
+        GPUTestingEnvironment::GetInstance()->Reset();
     }
 
     static void VerifyShaderResources(IShader*                 pShader,
@@ -110,7 +110,7 @@ protected:
                                                Uint32                    NumExpectedResources,
                                                TModifyShaderCI           ModifyShaderCI)
     {
-        auto* const pEnv       = TestingEnvironment::GetInstance();
+        auto* const pEnv       = GPUTestingEnvironment::GetInstance();
         auto* const pDevice    = pEnv->GetDevice();
         const auto& deviceCaps = pDevice->GetDeviceInfo();
 
@@ -175,7 +175,7 @@ protected:
         auto& PSODesc          = PSOCreateInfo.PSODesc;
         auto& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
 
-        auto* pEnv    = TestingEnvironment::GetInstance();
+        auto* pEnv    = GPUTestingEnvironment::GetInstance();
         auto* pDevice = pEnv->GetDevice();
 
         PSODesc.Name                     = "Shader resource layout test";
@@ -205,7 +205,7 @@ protected:
     {
         ComputePipelineStateCreateInfo PSOCreateInfo;
 
-        auto* pEnv    = TestingEnvironment::GetInstance();
+        auto* pEnv    = GPUTestingEnvironment::GetInstance();
         auto* pDevice = pEnv->GetDevice();
 
         auto& PSODesc          = PSOCreateInfo.PSODesc;
@@ -246,9 +246,9 @@ protected:
 
 void ShaderResourceLayoutTest::TestTexturesAndImtblSamplers(bool TestImtblSamplers, SHADER_SOURCE_LANGUAGE ShaderLang)
 {
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    auto* const pEnv       = TestingEnvironment::GetInstance();
+    auto* const pEnv       = GPUTestingEnvironment::GetInstance();
     auto* const pDevice    = pEnv->GetDevice();
     auto* const pSwapChain = pEnv->GetSwapChain();
     const auto& deviceCaps = pDevice->GetDeviceInfo();
@@ -546,9 +546,9 @@ TEST_F(ShaderResourceLayoutTest, CombinedImmutableSamplers_GLSL)
 
 void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
 {
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    auto* const pEnv       = TestingEnvironment::GetInstance();
+    auto* const pEnv       = GPUTestingEnvironment::GetInstance();
     auto* const pDevice    = pEnv->GetDevice();
     auto* const pSwapChain = pEnv->GetSwapChain();
     const auto& DeviceInfo = pDevice->GetDeviceInfo();
@@ -788,7 +788,7 @@ TEST_F(ShaderResourceLayoutTest, FormattedBuffers)
 
 TEST_F(ShaderResourceLayoutTest, StructuredBuffers)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
     if (pDevice->GetDeviceInfo().IsGLDevice())
     {
@@ -803,9 +803,9 @@ TEST_F(ShaderResourceLayoutTest, StructuredBuffers)
 
 void ShaderResourceLayoutTest::TestRWStructuredOrFormattedBuffer(bool IsFormatted)
 {
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    auto* const pEnv       = TestingEnvironment::GetInstance();
+    auto* const pEnv       = GPUTestingEnvironment::GetInstance();
     auto* const pDevice    = pEnv->GetDevice();
     auto* const pSwapChain = pEnv->GetSwapChain();
 
@@ -1014,9 +1014,9 @@ TEST_F(ShaderResourceLayoutTest, StructuredRWBuffers)
 
 TEST_F(ShaderResourceLayoutTest, RWTextures)
 {
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    auto* pEnv       = TestingEnvironment::GetInstance();
+    auto* pEnv       = GPUTestingEnvironment::GetInstance();
     auto* pDevice    = pEnv->GetDevice();
     auto* pSwapChain = pEnv->GetSwapChain();
 
@@ -1193,9 +1193,9 @@ TEST_F(ShaderResourceLayoutTest, RWTextures)
 
 TEST_F(ShaderResourceLayoutTest, ConstantBuffers)
 {
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    auto* pEnv       = TestingEnvironment::GetInstance();
+    auto* pEnv       = GPUTestingEnvironment::GetInstance();
     auto* pDevice    = pEnv->GetDevice();
     auto* pSwapChain = pEnv->GetSwapChain();
 
@@ -1388,14 +1388,14 @@ TEST_F(ShaderResourceLayoutTest, ConstantBuffers)
 
 TEST_F(ShaderResourceLayoutTest, Samplers)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
     if (pDevice->GetDeviceInfo().IsGLDevice())
     {
         GTEST_SKIP() << "OpenGL does not support separate samplers";
     }
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto* pSwapChain = pEnv->GetSwapChain();
 
@@ -1534,9 +1534,9 @@ TEST_F(ShaderResourceLayoutTest, Samplers)
 
 TEST_F(ShaderResourceLayoutTest, MergedVarStages)
 {
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    auto* pEnv       = TestingEnvironment::GetInstance();
+    auto* pEnv       = GPUTestingEnvironment::GetInstance();
     auto* pDevice    = pEnv->GetDevice();
     auto* pSwapChain = pEnv->GetSwapChain();
 

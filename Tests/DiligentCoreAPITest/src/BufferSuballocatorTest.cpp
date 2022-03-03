@@ -31,7 +31,7 @@
 #include <algorithm>
 #include <thread>
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 #include "FastRand.hpp"
 
 #include "gtest/gtest.h"
@@ -44,11 +44,11 @@ namespace
 
 TEST(BufferSuballocatorTest, Create)
 {
-    auto* const pEnv     = TestingEnvironment::GetInstance();
+    auto* const pEnv     = GPUTestingEnvironment::GetInstance();
     auto* const pDevice  = pEnv->GetDevice();
     auto* const pContext = pEnv->GetDeviceContext();
 
-    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     BufferSuballocatorCreateInfo CI;
     CI.Desc.Name      = "Buffer Suballocator Test";
@@ -70,11 +70,11 @@ TEST(BufferSuballocatorTest, Create)
 
 TEST(BufferSuballocatorTest, Allocate)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pDevice  = pEnv->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();
 
-    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     BufferSuballocatorCreateInfo CI;
     CI.Desc.Name      = "Buffer Suballocator Test";

@@ -43,7 +43,7 @@ void CreateTestingSwapChainD3D12(IRenderDevice*       pDevice,
 
 TestingEnvironmentD3D12::TestingEnvironmentD3D12(const CreateInfo&    CI,
                                                  const SwapChainDesc& SCDesc) :
-    TestingEnvironment{CI, SCDesc},
+    GPUTestingEnvironment{CI, SCDesc},
     m_WaitForGPUEventHandle{CreateEvent(nullptr, false, false, nullptr)},
     m_pDxCompiler{CreateDXCompiler(DXCompilerTarget::Direct3D12, 0, nullptr)}
 {
@@ -115,8 +115,8 @@ void TestingEnvironmentD3D12::ExecuteCommandList(ID3D12CommandList* pCmdList, bo
     GetDeviceContext()->UnlockCommandQueue();
 }
 
-TestingEnvironment* CreateTestingEnvironmentD3D12(const TestingEnvironment::CreateInfo& CI,
-                                                  const SwapChainDesc&                  SCDesc)
+GPUTestingEnvironment* CreateTestingEnvironmentD3D12(const GPUTestingEnvironment::CreateInfo& CI,
+                                                     const SwapChainDesc&                     SCDesc)
 {
     return new TestingEnvironmentD3D12{CI, SCDesc};
 }

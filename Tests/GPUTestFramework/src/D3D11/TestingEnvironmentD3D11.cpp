@@ -46,7 +46,7 @@ void CreateTestingSwapChainD3D11(IRenderDevice*       pDevice,
 
 TestingEnvironmentD3D11::TestingEnvironmentD3D11(const CreateInfo&    CI,
                                                  const SwapChainDesc& SCDesc) :
-    TestingEnvironment{CI, SCDesc}
+    GPUTestingEnvironment{CI, SCDesc}
 {
     RefCntAutoPtr<IRenderDeviceD3D11>  pRenderDeviceD3D11{m_pDevice, IID_RenderDeviceD3D11};
     RefCntAutoPtr<IDeviceContextD3D11> pContextD3D11{GetDeviceContext(), IID_DeviceContextD3D11};
@@ -263,12 +263,12 @@ CComPtr<ID3D11ComputeShader> TestingEnvironmentD3D11::CreateComputeShader(const 
 
 void TestingEnvironmentD3D11::Reset()
 {
-    TestingEnvironment::Reset();
+    GPUTestingEnvironment::Reset();
     m_pd3d11Context->ClearState();
 }
 
-TestingEnvironment* CreateTestingEnvironmentD3D11(const TestingEnvironment::CreateInfo& CI,
-                                                  const SwapChainDesc&                  SCDesc)
+GPUTestingEnvironment* CreateTestingEnvironmentD3D11(const GPUTestingEnvironment::CreateInfo& CI,
+                                                     const SwapChainDesc&                     SCDesc)
 {
     return new TestingEnvironmentD3D11{CI, SCDesc};
 }

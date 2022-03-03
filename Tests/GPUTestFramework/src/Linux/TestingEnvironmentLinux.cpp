@@ -25,7 +25,7 @@
  *  of the possibility of such damages.
  */
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 
 #include <GL/glx.h>
 
@@ -37,7 +37,7 @@ namespace Diligent
 namespace Testing
 {
 
-NativeWindow TestingEnvironment::CreateNativeWindow()
+NativeWindow GPUTestingEnvironment::CreateNativeWindow()
 {
     auto* display = XOpenDisplay(0);
 

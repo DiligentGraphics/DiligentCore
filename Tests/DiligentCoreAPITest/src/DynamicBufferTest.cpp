@@ -26,7 +26,7 @@
  */
 
 #include "DynamicBuffer.hpp"
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 #include "GraphicsAccessories.hpp"
 #include "FastRand.hpp"
 #include "MapHelper.hpp"
@@ -57,7 +57,7 @@ class DynamicBufferCreateTest : public testing::TestWithParam<USAGE>
 
 TEST_P(DynamicBufferCreateTest, Run)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pDevice  = pEnv->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();
 
@@ -75,7 +75,7 @@ TEST_P(DynamicBufferCreateTest, Run)
     }
 
 
-    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     {
         DynamicBufferCreateInfo CI;
@@ -151,7 +151,7 @@ class DynamicBufferResizeTest : public testing::TestWithParam<USAGE>
 
 TEST_P(DynamicBufferResizeTest, Run)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pDevice  = pEnv->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();
 
@@ -168,7 +168,7 @@ TEST_P(DynamicBufferResizeTest, Run)
             GTEST_SKIP() << "This device does not support sparse buffers";
     }
 
-    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     FastRandInt rnd{0, 0, 255};
 

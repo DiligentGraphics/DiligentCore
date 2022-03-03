@@ -27,10 +27,9 @@
 
 #pragma once
 
-#include <atomic>
 #include <memory>
-#include <vector>
 
+#include "TestingEnvironment.hpp"
 #include "RenderDevice.h"
 #include "DeviceContext.h"
 #include "RefCntAutoPtr.hpp"
@@ -48,10 +47,10 @@ namespace Diligent
 namespace Testing
 {
 
-class TestingEnvironment : public ::testing::Environment
+class GPUTestingEnvironment : public TestingEnvironment
 {
 public:
-    static TestingEnvironment* Initialize(int argc, char** argv);
+    static GPUTestingEnvironment* Initialize(int argc, char** argv);
 
     struct CreateInfo
     {
@@ -62,9 +61,9 @@ public:
         bool               ForceNonSeparablePrograms = false;
         bool               EnableDeviceSimulation    = false;
     };
-    TestingEnvironment(const CreateInfo& CI, const SwapChainDesc& SCDesc);
+    GPUTestingEnvironment(const CreateInfo& CI, const SwapChainDesc& SCDesc);
 
-    ~TestingEnvironment() override;
+    ~GPUTestingEnvironment() override;
 
     // Override this to define how to set up the environment.
     void SetUp() override final;
@@ -93,8 +92,8 @@ public:
         ScopedReset() = default;
         ~ScopedReset()
         {
-            if (m_pTheEnvironment)
-                m_pTheEnvironment->Reset();
+            if (auto* pTheEnvironment = GetInstance())
+                pTheEnvironment->Reset();
         }
     };
 
@@ -104,8 +103,8 @@ public:
         ScopedReleaseResources() = default;
         ~ScopedReleaseResources()
         {
-            if (m_pTheEnvironment)
-                m_pTheEnvironment->ReleaseResources();
+            if (auto* pTheEnvironment = GetInstance())
+                pTheEnvironment->ReleaseResources();
         }
     };
 
@@ -130,36 +129,23 @@ public:
     size_t          GetNumDeferredContexts() const { return m_pDeviceContexts.size() - m_NumImmediateContexts; }
     size_t          GetNumImmediateContexts() const { return m_NumImmediateContexts; }
 
-    static TestingEnvironment* GetInstance() { return m_pTheEnvironment; }
+    static GPUTestingEnvironment* GetInstance() { return ClassPtrCast<GPUTestingEnvironment>(m_pTheEnvironment); }
 
     RefCntAutoPtr<ITexture> CreateTexture(const char* Name, TEXTURE_FORMAT Fmt, BIND_FLAGS BindFlags, Uint32 Width, Uint32 Height, void* pInitData = nullptr);
 
     RefCntAutoPtr<ISampler> CreateSampler(const SamplerDesc& Desc);
-
-    static void SetErrorAllowance(int NumErrorsToAllow, const char* InfoMessage = nullptr);
 
     void            SetDefaultCompiler(SHADER_COMPILER compiler);
     SHADER_COMPILER GetDefaultCompiler(SHADER_SOURCE_LANGUAGE lang) const;
 
     ADAPTER_TYPE GetAdapterType() const { return m_AdapterType; }
 
-    static const char* GetCurrentTestStatusString();
-    static const char* GetTestSkippedString();
-
     bool NeedWARPResourceArrayIndexingBugWorkaround() const
     {
         return m_NeedWARPResourceArrayIndexingBugWorkaround;
     }
 
-    static void PushExpectedErrorSubstring(const char* Str, bool ClearStack = true);
-
 protected:
-    static void MessageCallback(DEBUG_MESSAGE_SEVERITY Severity,
-                                const Char*            Message,
-                                const char*            Function,
-                                const char*            File,
-                                int                    Line);
-
     NativeWindow CreateNativeWindow();
 
     Uint32 FindAdapter(const std::vector<GraphicsAdapterInfo>& Adapters,
@@ -178,17 +164,11 @@ protected:
     };
     std::unique_ptr<PlatformData> m_pPlatformData;
 
-    static TestingEnvironment* m_pTheEnvironment;
-
     RefCntAutoPtr<IRenderDevice>               m_pDevice;
     std::vector<RefCntAutoPtr<IDeviceContext>> m_pDeviceContexts;
     Uint32                                     m_NumImmediateContexts = 1;
     RefCntAutoPtr<ISwapChain>                  m_pSwapChain;
     SHADER_COMPILER                            m_ShaderCompiler = SHADER_COMPILER_DEFAULT;
-
-    static std::atomic_int m_NumAllowedErrors;
-
-    static std::vector<std::string> m_ExpectedErrorSubstrings;
 
     // As of Windows version 2004 (build 19041), there is a bug in D3D12 WARP rasterizer:
     // Shader resource array indexing always references array element 0 when shaders are compiled.

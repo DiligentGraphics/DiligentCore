@@ -24,7 +24,7 @@
  *  of the possibility of such damages.
  */
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 
 #include <emscripten.h>
 #include <emscripten/html5.h>
@@ -35,7 +35,7 @@ namespace Diligent
 namespace Testing
 {
 
-EmscriptenNativeWindow TestingEnvironment::CreateNativeWindow()
+EmscriptenNativeWindow GPUTestingEnvironment::CreateNativeWindow()
 {
     int32_t WindowWidth  = 512;
     int32_t WindowHeight = 512;

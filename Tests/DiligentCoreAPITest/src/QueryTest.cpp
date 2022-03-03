@@ -29,7 +29,7 @@
 #include <vector>
 #include <thread>
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 #include "ThreadSignal.hpp"
 
 #include "gtest/gtest.h"
@@ -91,7 +91,7 @@ class QueryTest : public ::testing::Test
 protected:
     static void SetUpTestSuite()
     {
-        auto* pEnv    = TestingEnvironment::GetInstance();
+        auto* pEnv    = GPUTestingEnvironment::GetInstance();
         auto* pDevice = pEnv->GetDevice();
 
         TextureDesc TexDesc;
@@ -160,7 +160,7 @@ protected:
         sm_pPSO.Release();
         sm_pRTV.Release();
 
-        auto* pEnv = TestingEnvironment::GetInstance();
+        auto* pEnv = GPUTestingEnvironment::GetInstance();
         pEnv->Reset();
     }
 
@@ -183,7 +183,7 @@ protected:
 
     void InitTestQueries(IDeviceContext* pContext, std::vector<RefCntAutoPtr<IQuery>>& Queries, const QueryDesc& queryDesc)
     {
-        auto* pEnv       = TestingEnvironment::GetInstance();
+        auto* pEnv       = GPUTestingEnvironment::GetInstance();
         auto* pDevice    = pEnv->GetDevice();
         auto  deviceInfo = pDevice->GetDeviceInfo();
 
@@ -249,7 +249,7 @@ RefCntAutoPtr<IPipelineState> QueryTest::sm_pPSO;
 
 TEST_F(QueryTest, PipelineStats)
 {
-    const auto& DeviceInfo = TestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
+    const auto& DeviceInfo = GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
     if (!DeviceInfo.Features.PipelineStatisticsQueries)
     {
         GTEST_SKIP() << "Pipeline statistics queries are not supported by this device";
@@ -257,9 +257,9 @@ TEST_F(QueryTest, PipelineStats)
 
     const auto IsGL = DeviceInfo.IsGLDevice();
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    auto* pEnv = TestingEnvironment::GetInstance();
+    auto* pEnv = GPUTestingEnvironment::GetInstance();
     for (Uint32 q = 0; q < pEnv->GetNumImmediateContexts(); ++q)
     {
         auto* pContext = pEnv->GetDeviceContext(q);
@@ -303,15 +303,15 @@ TEST_F(QueryTest, PipelineStats)
 
 TEST_F(QueryTest, Occlusion)
 {
-    const auto& DeviceInfo = TestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
+    const auto& DeviceInfo = GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
     if (!DeviceInfo.Features.OcclusionQueries)
     {
         GTEST_SKIP() << "Occlusion queries are not supported by this device";
     }
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    auto* pEnv = TestingEnvironment::GetInstance();
+    auto* pEnv = GPUTestingEnvironment::GetInstance();
     for (Uint32 q = 0; q < pEnv->GetNumImmediateContexts(); ++q)
     {
         auto* pContext = pEnv->GetDeviceContext(q);
@@ -347,15 +347,15 @@ TEST_F(QueryTest, Occlusion)
 
 TEST_F(QueryTest, BinaryOcclusion)
 {
-    const auto& DeviceInfo = TestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
+    const auto& DeviceInfo = GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
     if (!DeviceInfo.Features.BinaryOcclusionQueries)
     {
         GTEST_SKIP() << "Binary occlusion queries are not supported by this device";
     }
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    auto* pEnv = TestingEnvironment::GetInstance();
+    auto* pEnv = GPUTestingEnvironment::GetInstance();
     for (Uint32 q = 0; q < pEnv->GetNumImmediateContexts(); ++q)
     {
         auto* pContext = pEnv->GetDeviceContext(q);
@@ -388,7 +388,7 @@ TEST_F(QueryTest, BinaryOcclusion)
 
 TEST_F(QueryTest, Timestamp)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
     const auto& DeviceInfo = pDevice->GetDeviceInfo();
@@ -397,7 +397,7 @@ TEST_F(QueryTest, Timestamp)
         GTEST_SKIP() << "Timestamp queries are not supported by this device";
     }
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     for (Uint32 q = 0; q < pEnv->GetNumImmediateContexts(); ++q)
     {
@@ -457,15 +457,15 @@ TEST_F(QueryTest, Timestamp)
 
 TEST_F(QueryTest, Duration)
 {
-    const auto& DeviceInfo = TestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
+    const auto& DeviceInfo = GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
     if (!DeviceInfo.Features.DurationQueries)
     {
         GTEST_SKIP() << "Duration queries are not supported by this device";
     }
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    auto* pEnv = TestingEnvironment::GetInstance();
+    auto* pEnv = GPUTestingEnvironment::GetInstance();
     for (Uint32 q = 0; q < pEnv->GetNumImmediateContexts(); ++q)
     {
         auto* pContext = pEnv->GetDeviceContext(q);
@@ -498,7 +498,7 @@ TEST_F(QueryTest, Duration)
 
 TEST_F(QueryTest, DeferredContexts)
 {
-    auto* const pEnv       = TestingEnvironment::GetInstance();
+    auto* const pEnv       = GPUTestingEnvironment::GetInstance();
     auto* const pDevice    = pEnv->GetDevice();
     const auto& DeviceInfo = pDevice->GetDeviceInfo();
     if (!DeviceInfo.Features.DurationQueries && !DeviceInfo.Features.TimestampQueries)
@@ -512,7 +512,7 @@ TEST_F(QueryTest, DeferredContexts)
         GTEST_SKIP() << "Deferred contexts are not supported by this device";
     }
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     std::vector<RefCntAutoPtr<IQuery>> pDurations;
     if (DeviceInfo.Features.DurationQueries)

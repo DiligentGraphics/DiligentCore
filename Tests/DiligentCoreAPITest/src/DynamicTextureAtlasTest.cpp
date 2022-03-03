@@ -29,7 +29,7 @@
 
 #include <thread>
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 #include "gtest/gtest.h"
 #include "FastRand.hpp"
 #include "ThreadSignal.hpp"
@@ -42,10 +42,10 @@ namespace
 
 TEST(DynamicTextureAtlas, Create)
 {
-    auto* const pEnv    = TestingEnvironment::GetInstance();
+    auto* const pEnv    = GPUTestingEnvironment::GetInstance();
     auto* const pDevice = pEnv->GetDevice();
 
-    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     DynamicTextureAtlasCreateInfo CI;
     CI.MinAlignment   = 16;
@@ -77,11 +77,11 @@ TEST(DynamicTextureAtlas, Create)
 
 TEST(DynamicTextureAtlas, CreateArray)
 {
-    auto* const pEnv     = TestingEnvironment::GetInstance();
+    auto* const pEnv     = GPUTestingEnvironment::GetInstance();
     auto* const pDevice  = pEnv->GetDevice();
     auto* const pContext = pEnv->GetDeviceContext();
 
-    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     DynamicTextureAtlasCreateInfo CI;
     CI.ExtraSliceCount = 2;
@@ -145,11 +145,11 @@ TEST(DynamicTextureAtlas, CreateArray)
 
 TEST(DynamicTextureAtlas, Allocate)
 {
-    auto* const pEnv     = TestingEnvironment::GetInstance();
+    auto* const pEnv     = GPUTestingEnvironment::GetInstance();
     auto* const pDevice  = pEnv->GetDevice();
     auto* const pContext = pEnv->GetDeviceContext();
 
-    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     DynamicTextureAtlasCreateInfo CI;
     CI.ExtraSliceCount = 2;
@@ -236,11 +236,11 @@ TEST(DynamicTextureAtlas, Allocate)
 // Allocate more regions than the atlas can hold
 TEST(DynamicTextureAtlas, Overflow)
 {
-    auto* const pEnv     = TestingEnvironment::GetInstance();
+    auto* const pEnv     = GPUTestingEnvironment::GetInstance();
     auto* const pDevice  = pEnv->GetDevice();
     auto* const pContext = pEnv->GetDeviceContext();
 
-    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     constexpr Uint32 AtlasDim            = 512;
     constexpr Uint32 AllocDim            = 128;
@@ -299,11 +299,11 @@ TEST(DynamicTextureAtlas, Overflow)
 // Test allocation race
 TEST(DynamicTextureAtlas, AllocRace)
 {
-    auto* const pEnv     = TestingEnvironment::GetInstance();
+    auto* const pEnv     = GPUTestingEnvironment::GetInstance();
     auto* const pDevice  = pEnv->GetDevice();
     auto* const pContext = pEnv->GetDeviceContext();
 
-    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     const Uint32 NumThreads = std::max(4u, std::thread::hardware_concurrency() * 4);
 
@@ -400,11 +400,11 @@ TEST(DynamicTextureAtlas, AllocRace)
 // Make half of the threads release allocations, while another half create them
 TEST(DynamicTextureAtlas, AllocFreeRace)
 {
-    auto* const pEnv     = TestingEnvironment::GetInstance();
+    auto* const pEnv     = GPUTestingEnvironment::GetInstance();
     auto* const pDevice  = pEnv->GetDevice();
     auto* const pContext = pEnv->GetDeviceContext();
 
-    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     const Uint32 NumThreads = std::max(4u, std::thread::hardware_concurrency() * 4);
 

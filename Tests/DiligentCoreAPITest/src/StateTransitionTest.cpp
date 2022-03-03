@@ -24,7 +24,7 @@
  *  of the possibility of such damages.
  */
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 #include "TestingSwapChainBase.hpp"
 
 #include "gtest/gtest.h"
@@ -37,11 +37,11 @@ namespace
 
 TEST(ResourceStateTest, DiscardResource)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pDevice  = pEnv->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     TextureDesc TexDesc;
     TexDesc.Name      = "DiscardResource test texture";
@@ -78,14 +78,14 @@ TEST(ResourceStateTest, DiscardResource)
 
 TEST(ResourceStateTest, DiscardSubresource)
 {
-    auto*       pEnv       = TestingEnvironment::GetInstance();
+    auto*       pEnv       = GPUTestingEnvironment::GetInstance();
     auto*       pDevice    = pEnv->GetDevice();
     auto*       pContext   = pEnv->GetDeviceContext();
     const auto& DeviceInfo = pDevice->GetDeviceInfo();
     if (DeviceInfo.Type != RENDER_DEVICE_TYPE_D3D12 && DeviceInfo.Type != RENDER_DEVICE_TYPE_VULKAN)
         GTEST_SKIP() << "Subresource state transitions are only supported in D3D12 and Vulkan backends";
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     TextureDesc TexDesc;
     TexDesc.Name      = "DiscardSubresource test texture";

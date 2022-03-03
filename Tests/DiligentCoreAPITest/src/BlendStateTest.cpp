@@ -27,7 +27,7 @@
 
 #include <sstream>
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 #include "GraphicsAccessories.hpp"
 
 #include "gtest/gtest.h"
@@ -50,7 +50,7 @@ class BlendStateTestBase
 protected:
     static void InitResources()
     {
-        auto* pEnv    = TestingEnvironment::GetInstance();
+        auto* pEnv    = GPUTestingEnvironment::GetInstance();
         auto* pDevice = pEnv->GetDevice();
 
         ShaderCreateInfo Attrs;
@@ -105,12 +105,12 @@ protected:
     static void ReleaseResources()
     {
         sm_Resources = Resources{};
-        TestingEnvironment::GetInstance()->Reset();
+        GPUTestingEnvironment::GetInstance()->Reset();
     }
 
     static RefCntAutoPtr<IPipelineState> CreateTestPSO(const GraphicsPipelineStateCreateInfo& PSOCreateInfo, bool BindPSO)
     {
-        auto* pEnv           = TestingEnvironment::GetInstance();
+        auto* pEnv           = GPUTestingEnvironment::GetInstance();
         auto* pDevice        = pEnv->GetDevice();
         auto* pDeviceContext = pEnv->GetDeviceContext();
 
@@ -165,7 +165,7 @@ protected:
     static void TearDownTestSuite()
     {
         ReleaseResources();
-        TestingEnvironment::GetInstance()->ReleaseResources();
+        GPUTestingEnvironment::GetInstance()->ReleaseResources();
     }
 };
 
@@ -173,7 +173,7 @@ TEST_F(BlendStateBasicTest, CreatePSO)
 {
     GraphicsPipelineStateCreateInfo PSOCreateInfo = GetPSOCreateInfo(1);
 
-    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     PSOCreateInfo.PSODesc.Name = "BlendStateBasicTest";
 
@@ -259,16 +259,16 @@ protected:
     static void TearDownTestSuite()
     {
         ReleaseResources();
-        TestingEnvironment::GetInstance()->ReleaseResources();
+        GPUTestingEnvironment::GetInstance()->ReleaseResources();
     }
 };
 
 TEST_P(BlendFactorTest, CreatePSO)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
-    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     const auto& Param = GetParam();
 
@@ -417,17 +417,17 @@ protected:
     static void TearDownTestSuite()
     {
         ReleaseResources();
-        TestingEnvironment::GetInstance()->ReleaseResources();
+        GPUTestingEnvironment::GetInstance()->ReleaseResources();
     }
 };
 
 
 TEST_P(BlendOperationTest, CreatePSO)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
-    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     const auto& Param = GetParam();
 

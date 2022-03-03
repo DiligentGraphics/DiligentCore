@@ -31,7 +31,7 @@
 #include <vector>
 #include <atomic>
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 #include "PlatformDebug.hpp"
 #include "TestingSwapChainBase.hpp"
 
@@ -67,85 +67,28 @@ namespace Testing
 {
 
 #if D3D11_SUPPORTED
-TestingEnvironment* CreateTestingEnvironmentD3D11(const TestingEnvironment::CreateInfo& CI, const SwapChainDesc& SCDesc);
+GPUTestingEnvironment* CreateTestingEnvironmentD3D11(const GPUTestingEnvironment::CreateInfo& CI, const SwapChainDesc& SCDesc);
 #endif
 
 #if D3D12_SUPPORTED
-TestingEnvironment* CreateTestingEnvironmentD3D12(const TestingEnvironment::CreateInfo& CI, const SwapChainDesc& SCDesc);
+GPUTestingEnvironment* CreateTestingEnvironmentD3D12(const GPUTestingEnvironment::CreateInfo& CI, const SwapChainDesc& SCDesc);
 #endif
 
 #if GL_SUPPORTED || GLES_SUPPORTED
-TestingEnvironment* CreateTestingEnvironmentGL(const TestingEnvironment::CreateInfo& CI, const SwapChainDesc& SCDesc);
+GPUTestingEnvironment* CreateTestingEnvironmentGL(const GPUTestingEnvironment::CreateInfo& CI, const SwapChainDesc& SCDesc);
 #endif
 
 #if VULKAN_SUPPORTED
-TestingEnvironment* CreateTestingEnvironmentVk(const TestingEnvironment::CreateInfo& CI, const SwapChainDesc& SCDesc);
+GPUTestingEnvironment* CreateTestingEnvironmentVk(const GPUTestingEnvironment::CreateInfo& CI, const SwapChainDesc& SCDesc);
 #endif
 
 #if METAL_SUPPORTED
-TestingEnvironment* CreateTestingEnvironmentMtl(const TestingEnvironment::CreateInfo& CI, const SwapChainDesc& SCDesc);
+GPUTestingEnvironment* CreateTestingEnvironmentMtl(const GPUTestingEnvironment::CreateInfo& CI, const SwapChainDesc& SCDesc);
 #endif
 
-
-TestingEnvironment* TestingEnvironment::m_pTheEnvironment = nullptr;
-std::atomic_int     TestingEnvironment::m_NumAllowedErrors;
-
-std::vector<std::string> TestingEnvironment::m_ExpectedErrorSubstrings;
-
-void TestingEnvironment::MessageCallback(DEBUG_MESSAGE_SEVERITY Severity,
-                                         const Char*            Message,
-                                         const char*            Function,
-                                         const char*            File,
-                                         int                    Line)
-{
-    if (Severity == DEBUG_MESSAGE_SEVERITY_ERROR || Severity == DEBUG_MESSAGE_SEVERITY_FATAL_ERROR)
-    {
-        if (m_NumAllowedErrors == 0)
-        {
-            ADD_FAILURE() << "Unexpected error";
-        }
-        else
-        {
-            m_NumAllowedErrors--;
-            if (!m_ExpectedErrorSubstrings.empty())
-            {
-                const auto& ErrorSubstring = m_ExpectedErrorSubstrings.back();
-                if (strstr(Message, ErrorSubstring.c_str()) == nullptr)
-                {
-                    ADD_FAILURE() << "Expected error substring '" << ErrorSubstring << "' was not found in the error message";
-                }
-                m_ExpectedErrorSubstrings.pop_back();
-            }
-        }
-    }
-
-    PlatformDebug::OutputDebugMessage(Severity, Message, Function, File, Line);
-}
-
-void TestingEnvironment::SetErrorAllowance(int NumErrorsToAllow, const char* InfoMessage)
-{
-    m_NumAllowedErrors = NumErrorsToAllow;
-    if (InfoMessage != nullptr)
-    {
-        std::cout << InfoMessage;
-    }
-    if (m_NumAllowedErrors == 0)
-    {
-        m_ExpectedErrorSubstrings.clear();
-    }
-}
-
-void TestingEnvironment::PushExpectedErrorSubstring(const char* Str, bool ClearStack)
-{
-    if (ClearStack)
-        m_ExpectedErrorSubstrings.clear();
-    VERIFY_EXPR(Str != nullptr && Str[0] != '\0');
-    m_ExpectedErrorSubstrings.push_back(Str);
-}
-
-Uint32 TestingEnvironment::FindAdapter(const std::vector<GraphicsAdapterInfo>& Adapters,
-                                       ADAPTER_TYPE                            AdapterType,
-                                       Uint32                                  AdapterId)
+Uint32 GPUTestingEnvironment::FindAdapter(const std::vector<GraphicsAdapterInfo>& Adapters,
+                                          ADAPTER_TYPE                            AdapterType,
+                                          Uint32                                  AdapterId)
 {
     if (AdapterId != DEFAULT_ADAPTER_ID && AdapterId >= Adapters.size())
     {
@@ -174,12 +117,9 @@ Uint32 TestingEnvironment::FindAdapter(const std::vector<GraphicsAdapterInfo>& A
     return AdapterId;
 }
 
-TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc& SCDesc) :
+GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& CI, const SwapChainDesc& SCDesc) :
     m_DeviceType{CI.deviceType}
 {
-    VERIFY(m_pTheEnvironment == nullptr, "Testing environment object has already been initialized!");
-    m_pTheEnvironment = this;
-
     Uint32 NumDeferredCtx = 0;
 
     std::vector<IDeviceContext*>            ppContexts;
@@ -584,7 +524,7 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
 #endif
 }
 
-TestingEnvironment::~TestingEnvironment()
+GPUTestingEnvironment::~GPUTestingEnvironment()
 {
     for (Uint32 i = 0; i < GetNumImmediateContexts(); ++i)
     {
@@ -595,16 +535,16 @@ TestingEnvironment::~TestingEnvironment()
 }
 
 // Override this to define how to set up the environment.
-void TestingEnvironment::SetUp()
+void GPUTestingEnvironment::SetUp()
 {
 }
 
 // Override this to define how to tear down the environment.
-void TestingEnvironment::TearDown()
+void GPUTestingEnvironment::TearDown()
 {
 }
 
-void TestingEnvironment::ReleaseResources()
+void GPUTestingEnvironment::ReleaseResources()
 {
     // It is necessary to call Flush() to force the driver to release resources.
     // Without flushing the command buffer, the memory may not be released until sometimes
@@ -619,7 +559,7 @@ void TestingEnvironment::ReleaseResources()
     m_pDevice->ReleaseStaleResources();
 }
 
-void TestingEnvironment::Reset()
+void GPUTestingEnvironment::Reset()
 {
     for (Uint32 i = 0; i < GetNumImmediateContexts(); ++i)
     {
@@ -633,7 +573,7 @@ void TestingEnvironment::Reset()
     m_NumAllowedErrors = 0;
 }
 
-RefCntAutoPtr<ITexture> TestingEnvironment::CreateTexture(const char* Name, TEXTURE_FORMAT Fmt, BIND_FLAGS BindFlags, Uint32 Width, Uint32 Height, void* pInitData)
+RefCntAutoPtr<ITexture> GPUTestingEnvironment::CreateTexture(const char* Name, TEXTURE_FORMAT Fmt, BIND_FLAGS BindFlags, Uint32 Width, Uint32 Height, void* pInitData)
 {
     TextureDesc TexDesc;
 
@@ -655,14 +595,14 @@ RefCntAutoPtr<ITexture> TestingEnvironment::CreateTexture(const char* Name, TEXT
     return pTexture;
 }
 
-RefCntAutoPtr<ISampler> TestingEnvironment::CreateSampler(const SamplerDesc& Desc)
+RefCntAutoPtr<ISampler> GPUTestingEnvironment::CreateSampler(const SamplerDesc& Desc)
 {
     RefCntAutoPtr<ISampler> pSampler;
     m_pDevice->CreateSampler(Desc, &pSampler);
     return pSampler;
 }
 
-void TestingEnvironment::SetDefaultCompiler(SHADER_COMPILER compiler)
+void GPUTestingEnvironment::SetDefaultCompiler(SHADER_COMPILER compiler)
 {
     switch (m_pDevice->GetDeviceInfo().Type)
     {
@@ -748,7 +688,7 @@ void TestingEnvironment::SetDefaultCompiler(SHADER_COMPILER compiler)
     LOG_INFO_MESSAGE("Selected shader compiler: ", GetShaderCompilerTypeString(m_ShaderCompiler));
 }
 
-SHADER_COMPILER TestingEnvironment::GetDefaultCompiler(SHADER_SOURCE_LANGUAGE lang) const
+SHADER_COMPILER GPUTestingEnvironment::GetDefaultCompiler(SHADER_SOURCE_LANGUAGE lang) const
 {
     if (m_pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_VULKAN &&
         lang != SHADER_SOURCE_LANGUAGE_HLSL)
@@ -757,29 +697,11 @@ SHADER_COMPILER TestingEnvironment::GetDefaultCompiler(SHADER_SOURCE_LANGUAGE la
         return m_ShaderCompiler;
 }
 
-const char* TestingEnvironment::GetCurrentTestStatusString()
-{
-    static constexpr char TestFailedString[] = "\033[0;91m"
-                                               "[  FAILED  ]"
-                                               "\033[0;0m";
-    static constexpr char TestPassedString[] = "\033[0;92m"
-                                               "[  PASSED  ]"
-                                               "\033[0;0m";
-    return testing::Test::HasFailure() ? TestFailedString : TestPassedString;
-}
-
-const char* TestingEnvironment::GetTestSkippedString()
-{
-    return "\033[0;32m"
-           "[  SKIPPED ]"
-           "\033[0;0m";
-}
-
-TestingEnvironment* TestingEnvironment::Initialize(int argc, char** argv)
+GPUTestingEnvironment* GPUTestingEnvironment::Initialize(int argc, char** argv)
 {
 
-    TestingEnvironment::CreateInfo TestEnvCI;
-    SHADER_COMPILER                ShCompiler = SHADER_COMPILER_DEFAULT;
+    GPUTestingEnvironment::CreateInfo TestEnvCI;
+    SHADER_COMPILER                   ShCompiler = SHADER_COMPILER_DEFAULT;
     for (int i = 1; i < argc; ++i)
     {
         const std::string AdapterArgName = "--adapter=";
@@ -850,7 +772,7 @@ TestingEnvironment* TestingEnvironment::Initialize(int argc, char** argv)
     SCDesc.ColorBufferFormat = TEX_FORMAT_RGBA8_UNORM;
     SCDesc.DepthBufferFormat = TEX_FORMAT_D32_FLOAT;
 
-    Diligent::Testing::TestingEnvironment* pEnv = nullptr;
+    Diligent::Testing::GPUTestingEnvironment* pEnv = nullptr;
     try
     {
         switch (TestEnvCI.deviceType)

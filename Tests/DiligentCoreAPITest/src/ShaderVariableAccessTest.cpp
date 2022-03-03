@@ -28,7 +28,7 @@
 #include "GraphicsAccessories.hpp"
 #include "../../../Graphics/GraphicsEngineD3DBase/interface/ShaderD3D.h"
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 
 #include "gtest/gtest.h"
 
@@ -84,7 +84,7 @@ namespace
 
 TEST(ShaderResourceLayout, VariableAccess)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pDevice  = pEnv->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();
 
@@ -94,7 +94,7 @@ TEST(ShaderResourceLayout, VariableAccess)
         GTEST_SKIP() << "Shader variable access test requires separate programs";
     }
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     ShaderCreateInfo ShaderCI;
 
@@ -1123,9 +1123,9 @@ TEST(ShaderResourceLayout, VariableAccess)
 
 TEST(ShaderResourceLayout, NoResourcesPSO)
 {
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    auto* const pEnv       = TestingEnvironment::GetInstance();
+    auto* const pEnv       = GPUTestingEnvironment::GetInstance();
     auto* const pDevice    = pEnv->GetDevice();
     auto* const pContext   = pEnv->GetDeviceContext();
     auto* const pSwapChain = pEnv->GetSwapChain();

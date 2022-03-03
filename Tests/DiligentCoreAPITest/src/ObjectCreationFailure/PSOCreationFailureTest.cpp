@@ -28,7 +28,7 @@
 #include <array>
 #include <limits>
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 #include "GraphicsAccessories.hpp"
 
 #include "gtest/gtest.h"
@@ -134,7 +134,7 @@ class PSOCreationFailureTest : public ::testing::Test
 protected:
     static void SetUpTestSuite()
     {
-        auto* const pEnv       = TestingEnvironment::GetInstance();
+        auto* const pEnv       = GPUTestingEnvironment::GetInstance();
         auto* const pDevice    = pEnv->GetDevice();
         const auto& DeviceInfo = pDevice->GetDeviceInfo();
 
@@ -464,7 +464,7 @@ protected:
 
     static void TestCreatePSOFailure(GraphicsPipelineStateCreateInfo CI, const char* ExpectedErrorSubstring)
     {
-        auto* const pEnv    = TestingEnvironment::GetInstance();
+        auto* const pEnv    = GPUTestingEnvironment::GetInstance();
         auto* const pDevice = pEnv->GetDevice();
 
         RefCntAutoPtr<IPipelineState> pPSO;
@@ -484,7 +484,7 @@ protected:
 
     static void TestCreatePSOFailure(ComputePipelineStateCreateInfo CI, const char* ExpectedErrorSubstring)
     {
-        auto* const pEnv    = TestingEnvironment::GetInstance();
+        auto* const pEnv    = GPUTestingEnvironment::GetInstance();
         auto* const pDevice = pEnv->GetDevice();
 
         RefCntAutoPtr<IPipelineState> pPSO;
@@ -505,7 +505,7 @@ protected:
 
     static void TestCreatePSOFailure(RayTracingPipelineStateCreateInfo CI, const char* ExpectedErrorSubstring)
     {
-        auto* const pEnv    = TestingEnvironment::GetInstance();
+        auto* const pEnv    = GPUTestingEnvironment::GetInstance();
         auto* const pDevice = pEnv->GetDevice();
 
         RefCntAutoPtr<IPipelineState> pPSO;
@@ -1001,7 +1001,7 @@ TEST_F(PSOCreationFailureTest, ConflictingImmutableSamplerStages)
     PsoCI.ResourceSignaturesCount             = _countof(pSignatures);
 
     // In case of non-separable programs, there is another error - a resource ("g_Texture") is found in different signatures
-    const auto* ExpectedError = TestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Features.SeparablePrograms ?
+    const auto* ExpectedError = GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Features.SeparablePrograms ?
         "Immutable sampler 'g_Texture_sampler' is found in more than one resource signature ('PRS1A' and 'PRS0')" :
         "shader resource 'g_Texture' is found in more than one resource signature ('PRS1A' and 'PRS0')";
     TestCreatePSOFailure(PsoCI, ExpectedError);
@@ -1071,7 +1071,7 @@ TEST_F(PSOCreationFailureTest, InvalidRTPipelineType)
 
 TEST_F(PSOCreationFailureTest, InvalidShaderRecord)
 {
-    if (!HasRayTracing() || !TestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().IsD3DDevice())
+    if (!HasRayTracing() || !GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().IsD3DDevice())
         GTEST_SKIP();
 
     auto PsoCI{GetRayTracingPSOCreateInfo("PSO Create Failure - Invalid shader record")};
@@ -1279,7 +1279,7 @@ TEST_F(PSOCreationFailureTest, MissingResource)
     PRSDesc.Resources                  = Resources;
     PRSDesc.NumResources               = _countof(Resources);
 
-    auto* pDevice = TestingEnvironment::GetInstance()->GetDevice();
+    auto* pDevice = GPUTestingEnvironment::GetInstance()->GetDevice();
 
     RefCntAutoPtr<IPipelineResourceSignature> pPRS;
     pDevice->CreatePipelineResourceSignature(PRSDesc, &pPRS);
@@ -1311,7 +1311,7 @@ TEST_F(PSOCreationFailureTest, InvalidResourceType)
     PRSDesc.Resources                  = Resources;
     PRSDesc.NumResources               = _countof(Resources);
 
-    auto* pDevice = TestingEnvironment::GetInstance()->GetDevice();
+    auto* pDevice = GPUTestingEnvironment::GetInstance()->GetDevice();
 
     RefCntAutoPtr<IPipelineResourceSignature> pPRS;
     pDevice->CreatePipelineResourceSignature(PRSDesc, &pPRS);
@@ -1343,7 +1343,7 @@ TEST_F(PSOCreationFailureTest, InvalidArraySize)
     }
     )";
 
-    auto* const pEnv    = TestingEnvironment::GetInstance();
+    auto* const pEnv    = GPUTestingEnvironment::GetInstance();
     auto* const pDevice = pEnv->GetDevice();
 
     ShaderCreateInfo ShaderCI;
@@ -1388,7 +1388,7 @@ TEST_F(PSOCreationFailureTest, InvalidArraySize)
 
 TEST_F(PSOCreationFailureTest, InvalidRunTimeArray)
 {
-    auto* const pEnv       = TestingEnvironment::GetInstance();
+    auto* const pEnv       = GPUTestingEnvironment::GetInstance();
     auto* const pDevice    = pEnv->GetDevice();
     const auto& DeviceInfo = pDevice->GetDeviceInfo();
 
@@ -1474,7 +1474,7 @@ TEST_F(PSOCreationFailureTest, InvalidRunTimeArray)
 
 TEST_F(PSOCreationFailureTest, NonSeparablePrograms_SeparateResources)
 {
-    if (TestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Features.SeparablePrograms)
+    if (GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Features.SeparablePrograms)
     {
         GTEST_SKIP();
     }
@@ -1493,7 +1493,7 @@ TEST_F(PSOCreationFailureTest, NonSeparablePrograms_SeparateResources)
 
 TEST_F(PSOCreationFailureTest, NonSeparablePrograms_SeparateImmutableSamplers)
 {
-    if (TestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Features.SeparablePrograms)
+    if (GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Features.SeparablePrograms)
     {
         GTEST_SKIP();
     }
@@ -1514,7 +1514,7 @@ TEST_F(PSOCreationFailureTest, NonSeparablePrograms_SeparateImmutableSamplers)
 
 TEST_F(PSOCreationFailureTest, MissingCombinedImageSampler)
 {
-    auto* const pEnv       = TestingEnvironment::GetInstance();
+    auto* const pEnv       = GPUTestingEnvironment::GetInstance();
     auto* const pDevice    = pEnv->GetDevice();
     const auto& DeviceInfo = pDevice->GetDeviceInfo();
 

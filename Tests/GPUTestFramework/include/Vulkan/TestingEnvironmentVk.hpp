@@ -29,7 +29,7 @@
 
 #include <array>
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 #include "DXCompiler.hpp"
 
 #define VK_NO_PROTOTYPES
@@ -41,15 +41,15 @@ namespace Diligent
 namespace Testing
 {
 
-class TestingEnvironmentVk final : public TestingEnvironment
+class TestingEnvironmentVk final : public GPUTestingEnvironment
 {
 public:
-    using CreateInfo = TestingEnvironment::CreateInfo;
+    using CreateInfo = GPUTestingEnvironment::CreateInfo;
     TestingEnvironmentVk(const CreateInfo&    CI,
                          const SwapChainDesc& SCDesc);
     ~TestingEnvironmentVk();
 
-    static TestingEnvironmentVk* GetInstance() { return ClassPtrCast<TestingEnvironmentVk>(TestingEnvironment::GetInstance()); }
+    static TestingEnvironmentVk* GetInstance() { return ClassPtrCast<TestingEnvironmentVk>(GPUTestingEnvironment::GetInstance()); }
 
     void CreateImage2D(uint32_t          Width,
                        uint32_t          Height,

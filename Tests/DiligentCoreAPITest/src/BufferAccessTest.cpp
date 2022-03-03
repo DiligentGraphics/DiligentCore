@@ -27,7 +27,7 @@
 
 #include <sstream>
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 
 #include "gtest/gtest.h"
 
@@ -49,7 +49,7 @@ static constexpr float TestBufferData[] =
 
 void VerifyBufferData(IBuffer* pBuffer)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pDevice  = pEnv->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();
 
@@ -81,10 +81,10 @@ void VerifyBufferData(IBuffer* pBuffer)
 
 TEST(BufferAccessTest, Initialization)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     BufferDesc BuffDesc;
     BuffDesc.Name      = "Test immutable buffer";
@@ -105,11 +105,11 @@ TEST(BufferAccessTest, Initialization)
 
 TEST(BufferAccessTest, UpdateBufferData)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pDevice  = pEnv->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     BufferDesc BuffDesc;
     BuffDesc.Name      = "Test default buffer";
@@ -128,11 +128,11 @@ TEST(BufferAccessTest, UpdateBufferData)
 
 TEST(BufferAccessTest, MapWriteDiscard)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pDevice  = pEnv->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     BufferDesc BuffDesc;
     BuffDesc.Name           = "Test dynamic buffer";
@@ -156,11 +156,11 @@ TEST(BufferAccessTest, MapWriteDiscard)
 
 TEST(BufferAccessTest, CopyFromStaging)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pDevice  = pEnv->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     BufferDesc BuffDesc;
     BuffDesc.Name      = "Test default buffer";

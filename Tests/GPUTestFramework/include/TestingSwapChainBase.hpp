@@ -36,7 +36,7 @@
 #include "SwapChain.h"
 #include "Texture.h"
 #include "TextureView.h"
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 
 namespace Diligent
 {

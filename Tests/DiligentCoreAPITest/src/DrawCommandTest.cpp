@@ -29,7 +29,7 @@
 #include <array>
 #include <atomic>
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 #include "TestingSwapChainBase.hpp"
 #include "BasicMath.hpp"
 #include "MapHelper.hpp"
@@ -66,7 +66,7 @@ void RenderDrawCommandReferenceMtl(ISwapChain* pSwapChain, const float* pClearCo
 
 void RenderDrawCommandReference(ISwapChain* pSwapChain, const float* pClearColor = nullptr)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pDevice  = pEnv->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();
 
@@ -475,11 +475,11 @@ class DrawCommandTest : public ::testing::Test
 protected:
     static void SetUpTestSuite()
     {
-        auto* pEnv       = TestingEnvironment::GetInstance();
+        auto* pEnv       = GPUTestingEnvironment::GetInstance();
         auto* pDevice    = pEnv->GetDevice();
         auto* pSwapChain = pEnv->GetSwapChain();
 
-        TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+        GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
         GraphicsPipelineStateCreateInfo PSOCreateInfo;
 
@@ -598,13 +598,13 @@ protected:
         sm_pDraw_2xStride_PSO.Release();
         sm_pDrawInstancedPSO.Release();
 
-        auto* pEnv = TestingEnvironment::GetInstance();
+        auto* pEnv = GPUTestingEnvironment::GetInstance();
         pEnv->Reset();
     }
 
     static void SetRenderTargets(IPipelineState* pPSO)
     {
-        auto* pEnv       = TestingEnvironment::GetInstance();
+        auto* pEnv       = GPUTestingEnvironment::GetInstance();
         auto* pContext   = pEnv->GetDeviceContext();
         auto* pSwapChain = pEnv->GetSwapChain();
 
@@ -622,7 +622,7 @@ protected:
 
     static void Present()
     {
-        auto* pEnv       = TestingEnvironment::GetInstance();
+        auto* pEnv       = GPUTestingEnvironment::GetInstance();
         auto* pSwapChain = pEnv->GetSwapChain();
         auto* pContext   = pEnv->GetDeviceContext();
 
@@ -643,7 +643,7 @@ protected:
         InitialData.pData    = VertexData;
         InitialData.DataSize = DataSize;
 
-        auto* pDevice = TestingEnvironment::GetInstance()->GetDevice();
+        auto* pDevice = GPUTestingEnvironment::GetInstance()->GetDevice();
 
         RefCntAutoPtr<IBuffer> pBuffer;
         pDevice->CreateBuffer(BuffDesc, &InitialData, &pBuffer);
@@ -662,7 +662,7 @@ protected:
         InitialData.pData    = Indices;
         InitialData.DataSize = BuffDesc.Size;
 
-        auto* pDevice = TestingEnvironment::GetInstance()->GetDevice();
+        auto* pDevice = GPUTestingEnvironment::GetInstance()->GetDevice();
 
         RefCntAutoPtr<IBuffer> pBuffer;
         pDevice->CreateBuffer(BuffDesc, &InitialData, &pBuffer);
@@ -681,7 +681,7 @@ protected:
         InitialData.pData    = Data;
         InitialData.DataSize = BuffDesc.Size;
 
-        auto* pDevice = TestingEnvironment::GetInstance()->GetDevice();
+        auto* pDevice = GPUTestingEnvironment::GetInstance()->GetDevice();
 
         RefCntAutoPtr<IBuffer> pBuffer;
         pDevice->CreateBuffer(BuffDesc, &InitialData, &pBuffer);
@@ -733,7 +733,7 @@ FastRandFloat                 DrawCommandTest::sm_Rnd{0, 0.f, 1.f};
 
 TEST_F(DrawCommandTest, DrawProcedural)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawProceduralPSO);
@@ -750,7 +750,7 @@ TEST_F(DrawCommandTest, DrawProcedural)
 
 TEST_F(DrawCommandTest, Draw)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawPSO);
@@ -775,7 +775,7 @@ TEST_F(DrawCommandTest, Draw)
 
 TEST_F(DrawCommandTest, Draw_StartVertex)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawPSO);
@@ -803,7 +803,7 @@ TEST_F(DrawCommandTest, Draw_StartVertex)
 
 TEST_F(DrawCommandTest, Draw_VBOffset)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawPSO);
@@ -830,7 +830,7 @@ TEST_F(DrawCommandTest, Draw_VBOffset)
 
 TEST_F(DrawCommandTest, Draw_StartVertex_VBOffset)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawPSO);
@@ -859,7 +859,7 @@ TEST_F(DrawCommandTest, Draw_StartVertex_VBOffset)
 
 TEST_F(DrawCommandTest, Draw_StartVertex_VBOffset_2xStride)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDraw_2xStride_PSO);
@@ -892,7 +892,7 @@ TEST_F(DrawCommandTest, Draw_StartVertex_VBOffset_2xStride)
 
 TEST_F(DrawCommandTest, DrawIndexed)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawPSO);
@@ -923,7 +923,7 @@ TEST_F(DrawCommandTest, DrawIndexed)
 
 TEST_F(DrawCommandTest, DrawIndexed_IBOffset)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawPSO);
@@ -954,7 +954,7 @@ TEST_F(DrawCommandTest, DrawIndexed_IBOffset)
 
 TEST_F(DrawCommandTest, DrawIndexed_IBOffset_BaseVertex)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawPSO);
@@ -990,7 +990,7 @@ TEST_F(DrawCommandTest, DrawIndexed_IBOffset_BaseVertex)
 
 TEST_F(DrawCommandTest, DrawInstanced)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawInstancedPSO);
@@ -1022,7 +1022,7 @@ TEST_F(DrawCommandTest, DrawInstanced)
 
 TEST_F(DrawCommandTest, DrawInstanced_VBOffset)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawInstancedPSO);
@@ -1057,7 +1057,7 @@ TEST_F(DrawCommandTest, DrawInstanced_VBOffset)
 
 TEST_F(DrawCommandTest, DrawInstanced_StartVertex)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawInstancedPSO);
@@ -1095,7 +1095,7 @@ TEST_F(DrawCommandTest, DrawInstanced_StartVertex)
 
 TEST_F(DrawCommandTest, DrawInstanced_FirstInstance)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawInstancedPSO);
@@ -1130,7 +1130,7 @@ TEST_F(DrawCommandTest, DrawInstanced_FirstInstance)
 
 TEST_F(DrawCommandTest, DrawInstanced_FirstInstance_VBOffset)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawInstancedPSO);
@@ -1168,7 +1168,7 @@ TEST_F(DrawCommandTest, DrawInstanced_FirstInstance_VBOffset)
 
 TEST_F(DrawCommandTest, DrawInstanced_FirstInstance_BaseVertex_FirstIndex_VBOffset_IBOffset)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawInstancedPSO);
@@ -1209,7 +1209,7 @@ TEST_F(DrawCommandTest, DrawInstanced_FirstInstance_BaseVertex_FirstIndex_VBOffs
 
 TEST_F(DrawCommandTest, DrawIndexedInstanced)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawInstancedPSO);
@@ -1247,7 +1247,7 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced)
 
 TEST_F(DrawCommandTest, DrawIndexedInstanced_IBOffset)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawInstancedPSO);
@@ -1285,7 +1285,7 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_IBOffset)
 
 TEST_F(DrawCommandTest, DrawIndexedInstanced_VBOffset)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawInstancedPSO);
@@ -1325,7 +1325,7 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_VBOffset)
 
 TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstIndex)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawInstancedPSO);
@@ -1367,7 +1367,7 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstIndex)
 
 TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawInstancedPSO);
@@ -1406,7 +1406,7 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance)
 
 TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_IBOffset)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawInstancedPSO);
@@ -1445,7 +1445,7 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_IBOffset)
 
 TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_VBOffset)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawInstancedPSO);
@@ -1487,7 +1487,7 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_VBOffset)
 
 TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_IBOffset_FirstIndex)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawInstancedPSO);
@@ -1531,7 +1531,7 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_IBOffset_FirstIndex)
 
 TEST_F(DrawCommandTest, DrawIndexedInstanced_BaseVertex)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawInstancedPSO);
@@ -1570,7 +1570,7 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_BaseVertex)
 
 TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_BaseVertex_VBOffset)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawInstancedPSO);
@@ -1614,7 +1614,7 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_BaseVertex_VBOffset)
 
 TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_BaseVertex_FirstIndex_VBOffset_IBOffset)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawInstancedPSO);
@@ -1661,7 +1661,7 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_BaseVertex_FirstIndex
 
 TEST_F(DrawCommandTest, DrawInstancedIndirect_FirstInstance_BaseVertex_FirstIndex_VBOffset_InstOffset)
 {
-    auto* const pEnv     = TestingEnvironment::GetInstance();
+    auto* const pEnv     = GPUTestingEnvironment::GetInstance();
     auto* const pDevice  = pEnv->GetDevice();
     const auto  DrawCaps = pDevice->GetAdapterInfo().DrawCommand.CapFlags;
     ASSERT_TRUE((DrawCaps & DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT) != 0) << "Indirect rendering must be supported on all desktop platforms";
@@ -1714,7 +1714,7 @@ TEST_F(DrawCommandTest, DrawInstancedIndirect_FirstInstance_BaseVertex_FirstInde
 
 TEST_F(DrawCommandTest, DrawIndexedInstancedIndirect_FirstInstance_BaseVertex_FirstIndex_VBOffset_IBOffset_InstOffset)
 {
-    auto* const pEnv     = TestingEnvironment::GetInstance();
+    auto* const pEnv     = GPUTestingEnvironment::GetInstance();
     auto* const pDevice  = pEnv->GetDevice();
     const auto  DrawCaps = pDevice->GetAdapterInfo().DrawCommand.CapFlags;
     ASSERT_TRUE((DrawCaps & DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT) != 0) << "Indirect rendering must be supported on all desktop platforms";
@@ -1773,7 +1773,7 @@ TEST_F(DrawCommandTest, DrawIndexedInstancedIndirect_FirstInstance_BaseVertex_Fi
 
 TEST_F(DrawCommandTest, MultiDrawIndirect)
 {
-    auto* const pEnv     = TestingEnvironment::GetInstance();
+    auto* const pEnv     = GPUTestingEnvironment::GetInstance();
     auto* const pDevice  = pEnv->GetDevice();
     const auto  DrawCaps = pDevice->GetAdapterInfo().DrawCommand.CapFlags;
     ASSERT_TRUE((DrawCaps & DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT) != 0) << "Indirect rendering must be supported on all desktop platforms";
@@ -1838,7 +1838,7 @@ TEST_F(DrawCommandTest, MultiDrawIndirect)
 
 TEST_F(DrawCommandTest, MultiDrawIndexedIndirect)
 {
-    auto* const pEnv     = TestingEnvironment::GetInstance();
+    auto* const pEnv     = GPUTestingEnvironment::GetInstance();
     auto* const pDevice  = pEnv->GetDevice();
     const auto  DrawCaps = pDevice->GetAdapterInfo().DrawCommand.CapFlags;
     ASSERT_TRUE((DrawCaps & DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT) != 0) << "Indirect rendering must be supported on all desktop platforms";
@@ -1910,7 +1910,7 @@ TEST_F(DrawCommandTest, MultiDrawIndexedIndirect)
 
 TEST_F(DrawCommandTest, MultiDrawIndirectCount)
 {
-    auto* const pEnv     = TestingEnvironment::GetInstance();
+    auto* const pEnv     = GPUTestingEnvironment::GetInstance();
     auto* const pDevice  = pEnv->GetDevice();
     const auto  DrawCaps = pDevice->GetAdapterInfo().DrawCommand.CapFlags;
     ASSERT_TRUE((DrawCaps & DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT) != 0) << "Indirect rendering must be supported on all desktop platforms";
@@ -1987,7 +1987,7 @@ TEST_F(DrawCommandTest, MultiDrawIndirectCount)
 
 TEST_F(DrawCommandTest, MultiDrawIndexedIndirectCount)
 {
-    auto* const pEnv     = TestingEnvironment::GetInstance();
+    auto* const pEnv     = GPUTestingEnvironment::GetInstance();
     auto* const pDevice  = pEnv->GetDevice();
     const auto  DrawCaps = pDevice->GetAdapterInfo().DrawCommand.CapFlags;
     ASSERT_TRUE((DrawCaps & DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT) != 0) << "Indirect rendering must be supported on all desktop platforms";
@@ -2071,7 +2071,7 @@ TEST_F(DrawCommandTest, MultiDrawIndexedIndirectCount)
 
 TEST_F(DrawCommandTest, Draw_InstanceDataStepRate)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
     if (!pDevice->GetDeviceInfo().Features.InstanceDataStepRate)
         GTEST_SKIP() << "InstanceDataStepRate is not supported";
@@ -2168,7 +2168,7 @@ TEST_F(DrawCommandTest, Draw_InstanceDataStepRate)
 
 TEST_F(DrawCommandTest, DeferredContexts)
 {
-    auto* pEnv = TestingEnvironment::GetInstance();
+    auto* pEnv = GPUTestingEnvironment::GetInstance();
     if (pEnv->GetNumDeferredContexts() == 0)
     {
         GTEST_SKIP() << "Deferred contexts are not supported by this device";
@@ -2264,7 +2264,7 @@ void DrawCommandTest::TestDynamicBufferUpdates(IShader*                      pVS
                                                SHADER_RESOURCE_VARIABLE_TYPE DynamicCB1Type,
                                                SHADER_RESOURCE_VARIABLE_TYPE ImmutableCBType)
 {
-    auto* pEnv       = TestingEnvironment::GetInstance();
+    auto* pEnv       = GPUTestingEnvironment::GetInstance();
     auto* pContext   = pEnv->GetDeviceContext();
     auto* pDevice    = pEnv->GetDevice();
     auto* pSwapChain = pEnv->GetSwapChain();
@@ -2352,7 +2352,7 @@ void DrawCommandTest::TestDynamicBufferUpdates(IShader*                      pVS
 // Test dynamic buffer update between two draw calls without committing and SRB
 TEST_F(DrawCommandTest, DynamicUniformBufferUpdates)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
     ShaderCreateInfo ShaderCI;
@@ -2434,8 +2434,8 @@ TEST_F(DrawCommandTest, DynamicUniformBufferUpdates)
 
 TEST_F(DrawCommandTest, DynamicVertexBufferUpdate)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
-    auto* pDevice  = TestingEnvironment::GetInstance()->GetDevice();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
+    auto* pDevice  = GPUTestingEnvironment::GetInstance()->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawPSO);
@@ -2478,8 +2478,8 @@ TEST_F(DrawCommandTest, DynamicVertexBufferUpdate)
 
 TEST_F(DrawCommandTest, DynamicIndexBufferUpdate)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
-    auto* pDevice  = TestingEnvironment::GetInstance()->GetDevice();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
+    auto* pDevice  = GPUTestingEnvironment::GetInstance()->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawPSO);
@@ -2545,7 +2545,7 @@ void DrawCommandTest::DrawWithStructuredOrFormattedBuffers(bool                 
     if (UseArray)
         VERIFY(ColBuffType == 0, "Color buffer type is ignored when arrays are used");
 
-    auto* pEnv       = TestingEnvironment::GetInstance();
+    auto* pEnv       = GPUTestingEnvironment::GetInstance();
     auto* pContext   = pEnv->GetDeviceContext();
     auto* pDevice    = pEnv->GetDevice();
     auto* pSwapChain = pEnv->GetSwapChain();
@@ -2661,7 +2661,7 @@ void DrawCommandTest::TestStructuredOrFormattedBuffers(BUFFER_MODE BuffMode,
 {
     VERIFY_EXPR(BuffMode == BUFFER_MODE_STRUCTURED || BuffMode == BUFFER_MODE_FORMATTED);
 
-    auto* const pEnv       = TestingEnvironment::GetInstance();
+    auto* const pEnv       = GPUTestingEnvironment::GetInstance();
     auto* const pDevice    = pEnv->GetDevice();
     const auto& DeviceInfo = pDevice->GetDeviceInfo();
 
@@ -2827,7 +2827,7 @@ void DrawCommandTest::DrawWithUniOrStructBufferOffsets(IShader*                 
                                                        USAGE                         BufferUsage,
                                                        SHADER_VARIABLE_FLAGS         VarFlags)
 {
-    auto* pEnv       = TestingEnvironment::GetInstance();
+    auto* pEnv       = GPUTestingEnvironment::GetInstance();
     auto* pContext   = pEnv->GetDeviceContext();
     auto* pDevice    = pEnv->GetDevice();
     auto* pSwapChain = pEnv->GetSwapChain();
@@ -3041,7 +3041,7 @@ void DrawCommandTest::DrawWithUniOrStructBufferOffsets(IShader*                 
 
 void DrawCommandTest::TestUniOrStructBufferOffsets(BUFFER_MODE BuffMode)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
     ShaderCreateInfo ShaderCI;
@@ -3109,7 +3109,7 @@ TEST_F(DrawCommandTest, StructBufferOffsets)
 // Test uniform buffer offsets with MSL shaders
 TEST_F(DrawCommandTest, UniformBufferOffsets_MSL)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
     if (!pDevice->GetDeviceInfo().IsMetalDevice())
         GTEST_SKIP() << "This is a Metal-specific test";

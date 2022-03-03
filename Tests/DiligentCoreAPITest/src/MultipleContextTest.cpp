@@ -24,7 +24,7 @@
  *  of the possibility of such damages.
  */
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 #include "TestingSwapChainBase.hpp"
 #include "BasicMath.hpp"
 #include "Align.hpp"
@@ -133,14 +133,14 @@ class MultipleContextTest : public ::testing::Test
 protected:
     static void SetUpTestSuite()
     {
-        auto* pEnv       = TestingEnvironment::GetInstance();
+        auto* pEnv       = GPUTestingEnvironment::GetInstance();
         auto* pDevice    = pEnv->GetDevice();
         auto* pSwapChain = pEnv->GetSwapChain();
 
         if (pEnv->GetNumImmediateContexts() <= 1)
             return;
 
-        TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+        GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
         ShaderCreateInfo ShaderCI;
         ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
@@ -268,13 +268,13 @@ protected:
         sm_pDrawProceduralSRB.Release();
         sm_pCompProceduralSRB.Release();
 
-        auto* pEnv = TestingEnvironment::GetInstance();
+        auto* pEnv = GPUTestingEnvironment::GetInstance();
         pEnv->Reset();
     }
 
     static RefCntAutoPtr<ITexture> CreateTexture(BIND_FLAGS Flags, Uint64 QueueMask, const char* Name, IDeviceContext* pInitialCtx)
     {
-        auto*       pEnv       = TestingEnvironment::GetInstance();
+        auto*       pEnv       = GPUTestingEnvironment::GetInstance();
         auto*       pDevice    = pEnv->GetDevice();
         auto*       pSwapChain = pEnv->GetSwapChain();
         const auto& SCDesc     = pSwapChain->GetDesc();
@@ -318,7 +318,7 @@ uint2 MultipleContextTest::sm_DispatchSize;
 
 TEST_F(MultipleContextTest, GraphicsAndComputeQueue)
 {
-    auto*           pEnv         = TestingEnvironment::GetInstance();
+    auto*           pEnv         = GPUTestingEnvironment::GetInstance();
     auto*           pDevice      = pEnv->GetDevice();
     auto*           pSwapChain   = pEnv->GetSwapChain();
     IDeviceContext* pGraphicsCtx = nullptr;
@@ -537,7 +537,7 @@ TEST_F(MultipleContextTest, GraphicsAndComputeQueue)
 
 TEST_F(MultipleContextTest, GraphicsAndTransferQueue)
 {
-    auto*           pEnv         = TestingEnvironment::GetInstance();
+    auto*           pEnv         = GPUTestingEnvironment::GetInstance();
     auto*           pDevice      = pEnv->GetDevice();
     auto*           pSwapChain   = pEnv->GetSwapChain();
     const auto&     SCDesc       = pSwapChain->GetDesc();

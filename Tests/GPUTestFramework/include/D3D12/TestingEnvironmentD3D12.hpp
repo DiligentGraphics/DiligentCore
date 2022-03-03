@@ -29,7 +29,7 @@
 
 #include <string>
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 
 #include "WinHPreface.h"
 #include <d3d12.h>
@@ -52,15 +52,15 @@ HRESULT CompileD3DShader(const std::string&      Source,
                          LPCSTR                  profile,
                          ID3DBlob**              ppBlobOut);
 
-class TestingEnvironmentD3D12 final : public TestingEnvironment
+class TestingEnvironmentD3D12 final : public GPUTestingEnvironment
 {
 public:
-    using CreateInfo = TestingEnvironment::CreateInfo;
+    using CreateInfo = GPUTestingEnvironment::CreateInfo;
     TestingEnvironmentD3D12(const CreateInfo&    CI,
                             const SwapChainDesc& SCDesc);
     ~TestingEnvironmentD3D12();
 
-    static TestingEnvironmentD3D12* GetInstance() { return ClassPtrCast<TestingEnvironmentD3D12>(TestingEnvironment::GetInstance()); }
+    static TestingEnvironmentD3D12* GetInstance() { return ClassPtrCast<TestingEnvironmentD3D12>(GPUTestingEnvironment::GetInstance()); }
 
     ID3D12Device* GetD3D12Device()
     {

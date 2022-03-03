@@ -29,7 +29,7 @@
 
 #include <string>
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 
 #include "WinHPreface.h"
 #include <d3d11.h>
@@ -48,10 +48,10 @@ HRESULT CompileD3DShader(const std::string&      Source,
                          LPCSTR                  profile,
                          ID3DBlob**              ppBlobOut);
 
-class TestingEnvironmentD3D11 final : public TestingEnvironment
+class TestingEnvironmentD3D11 final : public GPUTestingEnvironment
 {
 public:
-    using CreateInfo = TestingEnvironment::CreateInfo;
+    using CreateInfo = GPUTestingEnvironment::CreateInfo;
     TestingEnvironmentD3D11(const CreateInfo&    CI,
                             const SwapChainDesc& SCDesc);
 
@@ -110,7 +110,7 @@ public:
                                                      const D3D_SHADER_MACRO* pDefines        = nullptr,
                                                      LPCSTR                  profile         = "cs_5_0");
 
-    static TestingEnvironmentD3D11* GetInstance() { return ClassPtrCast<TestingEnvironmentD3D11>(TestingEnvironment::GetInstance()); }
+    static TestingEnvironmentD3D11* GetInstance() { return ClassPtrCast<TestingEnvironmentD3D11>(GPUTestingEnvironment::GetInstance()); }
 
     virtual void Reset() override final;
 

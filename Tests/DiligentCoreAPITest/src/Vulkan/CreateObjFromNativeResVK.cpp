@@ -33,7 +33,7 @@
 #include "RenderDeviceVk.h"
 #include "TextureVk.h"
 #include "BufferVk.h"
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 
 #include "Vulkan/CreateObjFromNativeResVK.hpp"
 

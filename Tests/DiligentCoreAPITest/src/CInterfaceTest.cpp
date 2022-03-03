@@ -25,7 +25,7 @@
  *  of the possibility of such damages.
  */
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 
 #include "gtest/gtest.h"
 
@@ -49,50 +49,50 @@ namespace
 
 TEST(RenderDevice_CInterface, Misc)
 {
-    auto* pDevice = TestingEnvironment::GetInstance()->GetDevice();
+    auto* pDevice = GPUTestingEnvironment::GetInstance()->GetDevice();
     EXPECT_EQ(TestRenderDeviceCInterface_Misc(pDevice), 0);
 }
 
 
 TEST(RenderDevice_CInterface, CreateBuffer)
 {
-    auto* pDevice = TestingEnvironment::GetInstance()->GetDevice();
+    auto* pDevice = GPUTestingEnvironment::GetInstance()->GetDevice();
     EXPECT_EQ(TestRenderDeviceCInterface_CreateBuffer(pDevice), 0);
 }
 
 TEST(RenderDevice_CInterface, CreateShader)
 {
-    auto* pDevice = TestingEnvironment::GetInstance()->GetDevice();
+    auto* pDevice = GPUTestingEnvironment::GetInstance()->GetDevice();
     EXPECT_EQ(TestRenderDeviceCInterface_CreateShader(pDevice), 0);
 }
 
 TEST(RenderDevice_CInterface, CreateTexture)
 {
-    auto* pDevice = TestingEnvironment::GetInstance()->GetDevice();
+    auto* pDevice = GPUTestingEnvironment::GetInstance()->GetDevice();
     EXPECT_EQ(TestRenderDeviceCInterface_CreateTexture(pDevice), 0);
 }
 
 TEST(RenderDevice_CInterface, CreateSampler)
 {
-    auto* pDevice = TestingEnvironment::GetInstance()->GetDevice();
+    auto* pDevice = GPUTestingEnvironment::GetInstance()->GetDevice();
     EXPECT_EQ(TestRenderDeviceCInterface_CreateSampler(pDevice), 0);
 }
 
 TEST(RenderDevice_CInterface, CreateResourceMapping)
 {
-    auto* pDevice = TestingEnvironment::GetInstance()->GetDevice();
+    auto* pDevice = GPUTestingEnvironment::GetInstance()->GetDevice();
     EXPECT_EQ(TestRenderDeviceCInterface_CreateResourceMapping(pDevice), 0);
 }
 
 TEST(RenderDevice_CInterface, CreateFence)
 {
-    auto* pDevice = TestingEnvironment::GetInstance()->GetDevice();
+    auto* pDevice = GPUTestingEnvironment::GetInstance()->GetDevice();
     EXPECT_EQ(TestRenderDeviceCInterface_CreateFence(pDevice), 0);
 }
 
 TEST(RenderDevice_CInterface, CreateQuery)
 {
-    auto* pDevice = TestingEnvironment::GetInstance()->GetDevice();
+    auto* pDevice = GPUTestingEnvironment::GetInstance()->GetDevice();
     EXPECT_EQ(TestRenderDeviceCInterface_CreateQuery(pDevice), 0);
 }
 

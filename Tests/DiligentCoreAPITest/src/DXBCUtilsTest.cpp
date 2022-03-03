@@ -34,7 +34,7 @@
 #include "WinHPostface.h"
 
 #include "DXBCUtils.hpp"
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 
 #include "gtest/gtest.h"
 

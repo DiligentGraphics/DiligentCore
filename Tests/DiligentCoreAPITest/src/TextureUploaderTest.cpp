@@ -26,7 +26,7 @@
  */
 
 #include "TextureUploader.hpp"
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 
 #include "gtest/gtest.h"
 
@@ -91,7 +91,7 @@ Uint32 WriteOrVerifyRGBAData(MappedTextureSubresource& MappedData,
 
 void TextureUploaderTest(bool IsRenderThread)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pDevice  = pEnv->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();
 
@@ -100,7 +100,7 @@ void TextureUploaderTest(bool IsRenderThread)
         GTEST_SKIP() << "Texture uploader is not currently implemented in Metal";
     }
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     TextureUploaderDesc             UploaderDesc;
     RefCntAutoPtr<ITextureUploader> pTexUploader;

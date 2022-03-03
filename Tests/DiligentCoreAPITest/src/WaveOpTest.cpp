@@ -25,7 +25,7 @@
  *  of the possibility of such damages.
  */
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 #include "ShaderMacroHelper.hpp"
 
 #include "gtest/gtest.h"
@@ -38,7 +38,7 @@ namespace Diligent
 
 TEST(WaveOpTest, CompileShader_HLSL)
 {
-    auto* const pEnv    = TestingEnvironment::GetInstance();
+    auto* const pEnv    = GPUTestingEnvironment::GetInstance();
     auto* const pDevice = pEnv->GetDevice();
 
     if (!pDevice->GetDeviceInfo().Features.WaveOp)
@@ -50,7 +50,7 @@ TEST(WaveOpTest, CompileShader_HLSL)
         GTEST_SKIP() << "HLSL source code with wave operations can be compiled only by DXC";
     }
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     const auto& WaveOpProps = pDevice->GetAdapterInfo().WaveOp;
 
@@ -156,7 +156,7 @@ void main(uint DTid : SV_DispatchThreadID)
 
 TEST(WaveOpTest, CompileShader_GLSL)
 {
-    auto* const pEnv       = TestingEnvironment::GetInstance();
+    auto* const pEnv       = GPUTestingEnvironment::GetInstance();
     auto* const pDevice    = pEnv->GetDevice();
     const auto& DeviceInfo = pDevice->GetDeviceInfo();
 
@@ -169,7 +169,7 @@ TEST(WaveOpTest, CompileShader_GLSL)
         GTEST_SKIP() << "Wave operations are not supported by this device";
     }
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     const auto& WaveOpProps = pDevice->GetAdapterInfo().WaveOp;
 
@@ -323,7 +323,7 @@ void main()
 
 TEST(WaveOpTest, CompileShader_MSL)
 {
-    auto* const pEnv       = TestingEnvironment::GetInstance();
+    auto* const pEnv       = GPUTestingEnvironment::GetInstance();
     auto* const pDevice    = pEnv->GetDevice();
     const auto& DeviceInfo = pDevice->GetDeviceInfo();
 
@@ -336,7 +336,7 @@ TEST(WaveOpTest, CompileShader_MSL)
         GTEST_SKIP() << "Wave operations are not supported by this device";
     }
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     const auto& WaveOpProps = pDevice->GetAdapterInfo().WaveOp;
 

@@ -25,7 +25,7 @@
  *  of the possibility of such damages.
  */
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 
 #include "WinHPreface.h"
 #include <Windows.h>
@@ -37,7 +37,7 @@ namespace Diligent
 namespace Testing
 {
 
-Win32NativeWindow TestingEnvironment::CreateNativeWindow()
+Win32NativeWindow GPUTestingEnvironment::CreateNativeWindow()
 {
 #ifdef UNICODE
     const auto* const WindowClassName = L"SampleApp";

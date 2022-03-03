@@ -47,7 +47,7 @@
 
 #include "GraphicsAccessories.hpp"
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 
 #include "gtest/gtest.h"
 
@@ -68,7 +68,7 @@ class BufferCreationTest : public ::testing::Test
 protected:
     static void SetUpTestSuite()
     {
-        auto* pEnv    = TestingEnvironment::GetInstance();
+        auto* pEnv    = GPUTestingEnvironment::GetInstance();
         auto* pDevice = pEnv->GetDevice();
 
         const auto& DevInfo = pDevice->GetDeviceInfo();
@@ -112,7 +112,7 @@ protected:
     static void TearDownTestSuite()
     {
         pCreateObjFromNativeRes.reset();
-        TestingEnvironment::GetInstance()->Reset();
+        GPUTestingEnvironment::GetInstance()->Reset();
     }
 
     static std::unique_ptr<CreateObjFromNativeResTestBase> pCreateObjFromNativeRes;
@@ -122,10 +122,10 @@ std::unique_ptr<CreateObjFromNativeResTestBase> BufferCreationTest::pCreateObjFr
 
 TEST_F(BufferCreationTest, CreateVertexBuffer)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
-    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     BufferDesc BuffDesc;
     BuffDesc.Name      = "Vertex buffer";
@@ -145,10 +145,10 @@ TEST_F(BufferCreationTest, CreateVertexBuffer)
 
 TEST_F(BufferCreationTest, CreateIndexBuffer)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
-    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     BufferDesc BuffDesc;
     BuffDesc.Name      = "Index";
@@ -166,10 +166,10 @@ TEST_F(BufferCreationTest, CreateIndexBuffer)
 
 TEST_F(BufferCreationTest, CreateFormattedBuffer)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
-    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     const auto& DevInfo = pDevice->GetDeviceInfo();
     if (!DevInfo.Features.ComputeShaders)
@@ -214,10 +214,10 @@ TEST_F(BufferCreationTest, CreateFormattedBuffer)
 
 TEST_F(BufferCreationTest, CreateStructuredBuffer)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
-    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     const auto& DevInfo = pDevice->GetDeviceInfo();
     if (!DevInfo.Features.ComputeShaders)
@@ -240,10 +240,10 @@ TEST_F(BufferCreationTest, CreateStructuredBuffer)
 
 TEST_F(BufferCreationTest, CreateUniformBuffer)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
-    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     BufferDesc BuffDesc;
     BuffDesc.Name      = "Uniform buffer";
@@ -258,10 +258,10 @@ TEST_F(BufferCreationTest, CreateUniformBuffer)
 
 TEST_F(BufferCreationTest, CreateRawBuffer)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
-    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     BufferDesc BuffDesc;
     BuffDesc.Name              = "Raw buffer";
@@ -292,11 +292,11 @@ TEST_F(BufferCreationTest, CreateRawBuffer)
 
 TEST_F(BufferCreationTest, CreateStagingBuffer)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
     auto* pCtx    = pEnv->GetDeviceContext();
 
-    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     BufferDesc BuffDesc;
     BuffDesc.Name           = "Staging buffer";
@@ -332,11 +332,11 @@ TEST_F(BufferCreationTest, CreateStagingBuffer)
 
 TEST_F(BufferCreationTest, CreateDynamicBuffer)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
     auto* pCtx    = pEnv->GetDeviceContext();
 
-    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     BufferDesc BuffDesc;
     BuffDesc.Name           = "Dynamic vertex buffer";
@@ -375,7 +375,7 @@ TEST_F(BufferCreationTest, CreateDynamicBuffer)
 
 TEST_F(BufferCreationTest, CreateUnifiedBuffer)
 {
-    auto*       pEnv       = TestingEnvironment::GetInstance();
+    auto*       pEnv       = GPUTestingEnvironment::GetInstance();
     auto*       pDevice    = pEnv->GetDevice();
     auto*       pCtx       = pEnv->GetDeviceContext();
     const auto& MemoryInfo = pDevice->GetAdapterInfo().Memory;
@@ -384,7 +384,7 @@ TEST_F(BufferCreationTest, CreateUnifiedBuffer)
         GTEST_SKIP() << "Unified memory is not available on this device";
     }
 
-    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     BufferDesc BuffDesc;
     BuffDesc.Name           = "Unified vertex buffer";

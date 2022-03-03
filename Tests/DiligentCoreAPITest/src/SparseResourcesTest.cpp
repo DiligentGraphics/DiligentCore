@@ -24,7 +24,7 @@
  *  of the possibility of such damages.
  */
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 #include "TestingSwapChainBase.hpp"
 
 #include "gtest/gtest.h"
@@ -62,7 +62,7 @@ class SparseResourceTest : public testing::TestWithParam<int>
 protected:
     static void SetUpTestSuite()
     {
-        auto* pEnv    = TestingEnvironment::GetInstance();
+        auto* pEnv    = GPUTestingEnvironment::GetInstance();
         auto* pDevice = pEnv->GetDevice();
 
         if (!pDevice->GetDeviceInfo().Features.SparseResources)
@@ -274,7 +274,7 @@ protected:
 
     static RefCntAutoPtr<IBuffer> CreateSparseBuffer(Uint64 Size, BIND_FLAGS BindFlags, bool Aliasing = false, const Uint32 Stride = 4u)
     {
-        auto* pDevice = TestingEnvironment::GetInstance()->GetDevice();
+        auto* pDevice = GPUTestingEnvironment::GetInstance()->GetDevice();
 
         BufferDesc Desc;
         Desc.Name              = "Sparse buffer";
@@ -292,7 +292,7 @@ protected:
 
     static RefCntAutoPtr<IBuffer> CreateBuffer(Uint64 Size, BIND_FLAGS BindFlags, const Uint32 Stride = 4u)
     {
-        auto* pDevice = TestingEnvironment::GetInstance()->GetDevice();
+        auto* pDevice = GPUTestingEnvironment::GetInstance()->GetDevice();
 
         BufferDesc Desc;
         Desc.Name              = "Reference buffer";
@@ -309,7 +309,7 @@ protected:
 
     static RefCntAutoPtr<IDeviceMemory> CreateMemory(Uint32 PageSize, Uint32 NumPages, IDeviceObject* pCompatibleResource)
     {
-        auto* pDevice = TestingEnvironment::GetInstance()->GetDevice();
+        auto* pDevice = GPUTestingEnvironment::GetInstance()->GetDevice();
 
         DeviceMemoryCreateInfo MemCI;
         MemCI.Desc.Name             = "Memory for sparse resources";
@@ -340,7 +340,7 @@ protected:
     };
     static TextureAndMemory CreateSparseTextureAndMemory(const uint4& Dim, BIND_FLAGS BindFlags, Uint32 NumMemoryPages, bool Aliasing = false)
     {
-        auto*      pDevice   = TestingEnvironment::GetInstance()->GetDevice();
+        auto*      pDevice   = GPUTestingEnvironment::GetInstance()->GetDevice();
         const auto BlockSize = pDevice->GetAdapterInfo().SparseResources.StandardBlockSize;
 
         TextureDesc Desc;
@@ -390,7 +390,7 @@ protected:
 
     static RefCntAutoPtr<ITexture> CreateTexture(const uint4& Dim, BIND_FLAGS BindFlags)
     {
-        auto* pDevice = TestingEnvironment::GetInstance()->GetDevice();
+        auto* pDevice = GPUTestingEnvironment::GetInstance()->GetDevice();
 
         TextureDesc Desc;
         Desc.BindFlags = BindFlags | BIND_SHADER_RESOURCE; // SRV to read in PS
@@ -421,7 +421,7 @@ protected:
 
     static RefCntAutoPtr<IFence> CreateFence()
     {
-        auto* pDevice = TestingEnvironment::GetInstance()->GetDevice();
+        auto* pDevice = GPUTestingEnvironment::GetInstance()->GetDevice();
 
         if (pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_D3D11)
             return {};
@@ -602,7 +602,7 @@ protected:
 
     static void DrawFSQuad(IDeviceContext* pContext, IPipelineState* pPSO, IShaderResourceBinding* pSRB)
     {
-        auto* pEnv       = TestingEnvironment::GetInstance();
+        auto* pEnv       = GPUTestingEnvironment::GetInstance();
         auto* pSwapChain = pEnv->GetSwapChain();
 
         pContext->SetPipelineState(pPSO);
@@ -670,7 +670,7 @@ protected:
 
     static void CreateGraphicsPSO(const char* Name, const String& PSSource, bool Is2DArray, bool IsMSL, Uint32 BufferElementCount, RefCntAutoPtr<IPipelineState>& pPSO)
     {
-        auto*       pEnv       = TestingEnvironment::GetInstance();
+        auto*       pEnv       = GPUTestingEnvironment::GetInstance();
         auto*       pDevice    = pEnv->GetDevice();
         auto*       pSwapChain = pEnv->GetSwapChain();
         const auto& SCDesc     = pSwapChain->GetDesc();
@@ -847,7 +847,7 @@ void CheckSparseTextureProperties(ITexture* pTexture)
     const auto& Desc       = pTexture->GetDesc();
     const auto& Props      = pTexture->GetSparseProperties();
     const bool  IsStdBlock = (Props.Flags & SPARSE_TEXTURE_FLAG_NONSTANDARD_BLOCK_SIZE) == 0;
-    const auto& SparseRes  = TestingEnvironment::GetInstance()->GetDevice()->GetAdapterInfo().SparseResources;
+    const auto& SparseRes  = GPUTestingEnvironment::GetInstance()->GetDevice()->GetAdapterInfo().SparseResources;
 
     EXPECT_GT(Props.AddressSpaceSize, 0u);
     EXPECT_GT(Props.BlockSize, 0u);
@@ -906,7 +906,7 @@ void CheckSparseTextureProperties(ITexture* pTexture)
 
 TEST_F(SparseResourceTest, SparseBuffer)
 {
-    auto*       pEnv      = TestingEnvironment::GetInstance();
+    auto*       pEnv      = GPUTestingEnvironment::GetInstance();
     auto*       pDevice   = pEnv->GetDevice();
     const auto& SparseRes = pDevice->GetAdapterInfo().SparseResources;
 
@@ -919,7 +919,7 @@ TEST_F(SparseResourceTest, SparseBuffer)
         GTEST_SKIP() << "Sparse buffer is not supported by this device";
     }
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
@@ -1026,7 +1026,7 @@ TEST_F(SparseResourceTest, SparseBuffer)
 
 TEST_F(SparseResourceTest, SparseResidentBuffer)
 {
-    auto*       pEnv      = TestingEnvironment::GetInstance();
+    auto*       pEnv      = GPUTestingEnvironment::GetInstance();
     auto*       pDevice   = pEnv->GetDevice();
     const auto& SparseRes = pDevice->GetAdapterInfo().SparseResources;
 
@@ -1039,7 +1039,7 @@ TEST_F(SparseResourceTest, SparseResidentBuffer)
         GTEST_SKIP() << "Sparse buffer is not supported by this device";
     }
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
@@ -1156,7 +1156,7 @@ TEST_F(SparseResourceTest, SparseResidentBuffer)
 
 TEST_F(SparseResourceTest, SparseResidentAliasedBuffer)
 {
-    auto*       pEnv      = TestingEnvironment::GetInstance();
+    auto*       pEnv      = GPUTestingEnvironment::GetInstance();
     auto*       pDevice   = pEnv->GetDevice();
     const auto& SparseRes = pDevice->GetAdapterInfo().SparseResources;
 
@@ -1173,7 +1173,7 @@ TEST_F(SparseResourceTest, SparseResidentAliasedBuffer)
         GTEST_SKIP() << "Sparse aliased resources is not supported by this device";
     }
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
@@ -1300,7 +1300,7 @@ TEST_F(SparseResourceTest, SparseResidentAliasedBuffer)
 TEST_P(SparseResourceTest, SparseTexture)
 {
     Uint32      TestId    = GetParam();
-    auto*       pEnv      = TestingEnvironment::GetInstance();
+    auto*       pEnv      = GPUTestingEnvironment::GetInstance();
     auto*       pDevice   = pEnv->GetDevice();
     const auto& SparseRes = pDevice->GetAdapterInfo().SparseResources;
 
@@ -1321,7 +1321,7 @@ TEST_P(SparseResourceTest, SparseTexture)
         GTEST_SKIP() << "Sparse texture 2D array with mipmap tail is not supported by this device";
     }
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
@@ -1477,7 +1477,7 @@ TEST_P(SparseResourceTest, SparseTexture)
 TEST_P(SparseResourceTest, SparseResidencyTexture)
 {
     Uint32      TestId    = GetParam();
-    auto*       pEnv      = TestingEnvironment::GetInstance();
+    auto*       pEnv      = GPUTestingEnvironment::GetInstance();
     auto*       pDevice   = pEnv->GetDevice();
     const auto& SparseRes = pDevice->GetAdapterInfo().SparseResources;
 
@@ -1502,7 +1502,7 @@ TEST_P(SparseResourceTest, SparseResidencyTexture)
         GTEST_SKIP() << "Sparse texture 2D array with mipmap tail is not supported by this device";
     }
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
@@ -1678,7 +1678,7 @@ TEST_P(SparseResourceTest, SparseResidencyTexture)
 TEST_P(SparseResourceTest, SparseResidencyAliasedTexture)
 {
     Uint32      TestId    = GetParam();
-    auto*       pEnv      = TestingEnvironment::GetInstance();
+    auto*       pEnv      = GPUTestingEnvironment::GetInstance();
     auto*       pDevice   = pEnv->GetDevice();
     const auto& SparseRes = pDevice->GetAdapterInfo().SparseResources;
 
@@ -1703,7 +1703,7 @@ TEST_P(SparseResourceTest, SparseResidencyAliasedTexture)
         GTEST_SKIP() << "Sparse texture 2D array with mipmap tail is not supported by this device";
     }
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
@@ -1894,7 +1894,7 @@ INSTANTIATE_TEST_SUITE_P(Sparse, SparseResourceTest, TestParamRange, TestIdToStr
 
 TEST_F(SparseResourceTest, SparseTexture3D)
 {
-    auto*       pEnv      = TestingEnvironment::GetInstance();
+    auto*       pEnv      = GPUTestingEnvironment::GetInstance();
     auto*       pDevice   = pEnv->GetDevice();
     const auto& SparseRes = pDevice->GetAdapterInfo().SparseResources;
 
@@ -1911,7 +1911,7 @@ TEST_F(SparseResourceTest, SparseTexture3D)
         GTEST_SKIP() << "Sparse texture UAV is not supported by this device";
     }
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
@@ -2062,7 +2062,7 @@ constexpr auto MaxResourceSpaceSize = Uint64{1} << 40;
 
 TEST_F(SparseResourceTest, LargeBuffer)
 {
-    auto*       pEnv      = TestingEnvironment::GetInstance();
+    auto*       pEnv      = GPUTestingEnvironment::GetInstance();
     auto*       pDevice   = pEnv->GetDevice();
     const auto& SparseRes = pDevice->GetAdapterInfo().SparseResources;
 
@@ -2095,7 +2095,7 @@ TEST_F(SparseResourceTest, LargeBuffer)
 
 TEST_F(SparseResourceTest, LargeTexture2D)
 {
-    auto*       pEnv      = TestingEnvironment::GetInstance();
+    auto*       pEnv      = GPUTestingEnvironment::GetInstance();
     auto*       pDevice   = pEnv->GetDevice();
     const auto& SparseRes = pDevice->GetAdapterInfo().SparseResources;
     const auto& TexProps  = pDevice->GetAdapterInfo().Texture;
@@ -2129,7 +2129,7 @@ TEST_F(SparseResourceTest, LargeTexture2D)
 
 TEST_F(SparseResourceTest, LargeTexture2DArray)
 {
-    auto*       pEnv      = TestingEnvironment::GetInstance();
+    auto*       pEnv      = GPUTestingEnvironment::GetInstance();
     auto*       pDevice   = pEnv->GetDevice();
     const auto& SparseRes = pDevice->GetAdapterInfo().SparseResources;
     const auto& TexProps  = pDevice->GetAdapterInfo().Texture;
@@ -2163,7 +2163,7 @@ TEST_F(SparseResourceTest, LargeTexture2DArray)
 
 TEST_F(SparseResourceTest, LargeTexture3D)
 {
-    auto*       pEnv      = TestingEnvironment::GetInstance();
+    auto*       pEnv      = GPUTestingEnvironment::GetInstance();
     auto*       pDevice   = pEnv->GetDevice();
     const auto& SparseRes = pDevice->GetAdapterInfo().SparseResources;
     const auto& TexProps  = pDevice->GetAdapterInfo().Texture;
@@ -2199,7 +2199,7 @@ TEST_F(SparseResourceTest, LargeTexture3D)
 
 TEST_F(SparseResourceTest, GetSparseTextureFormatInfo)
 {
-    auto*       pEnv      = TestingEnvironment::GetInstance();
+    auto*       pEnv      = GPUTestingEnvironment::GetInstance();
     auto*       pDevice   = pEnv->GetDevice();
     const auto& SparseRes = pDevice->GetAdapterInfo().SparseResources;
 

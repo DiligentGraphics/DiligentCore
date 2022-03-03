@@ -29,7 +29,7 @@
 #include <random>
 #include <unordered_map>
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 #include "TestingSwapChainBase.hpp"
 #include "BasicMath.hpp"
 #include "Align.hpp"
@@ -620,7 +620,7 @@ class RT1 : public testing::TestWithParam<int>
 TEST_P(RT1, TriangleClosestHitShader)
 {
     Uint32 TestId = GetParam();
-    auto*  pEnv   = TestingEnvironment::GetInstance();
+    auto*  pEnv   = GPUTestingEnvironment::GetInstance();
     if (!pEnv->SupportsRayTracing())
     {
         GTEST_SKIP() << "Ray tracing is not supported by this device";
@@ -658,7 +658,7 @@ TEST_P(RT1, TriangleClosestHitShader)
 
         pTestingSwapChain->TakeSnapshot();
     }
-    TestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
 
     RayTracingPipelineStateCreateInfo PSOCreateInfo;
 
@@ -803,7 +803,7 @@ class RT2 : public testing::TestWithParam<int>
 TEST_P(RT2, TriangleAnyHitShader)
 {
     Uint32 TestId = GetParam();
-    auto*  pEnv   = TestingEnvironment::GetInstance();
+    auto*  pEnv   = GPUTestingEnvironment::GetInstance();
     if (!pEnv->SupportsRayTracing())
     {
         GTEST_SKIP() << "Ray tracing is not supported by this device";
@@ -841,7 +841,7 @@ TEST_P(RT2, TriangleAnyHitShader)
 
         pTestingSwapChain->TakeSnapshot();
     }
-    TestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
 
     RayTracingPipelineStateCreateInfo PSOCreateInfo;
 
@@ -996,7 +996,7 @@ class RT3 : public testing::TestWithParam<int>
 TEST_P(RT3, ProceduralIntersection)
 {
     Uint32 TestId = GetParam();
-    auto*  pEnv   = TestingEnvironment::GetInstance();
+    auto*  pEnv   = GPUTestingEnvironment::GetInstance();
     if (!pEnv->SupportsRayTracing())
     {
         GTEST_SKIP() << "Ray tracing is not supported by this device";
@@ -1034,7 +1034,7 @@ TEST_P(RT3, ProceduralIntersection)
 
         pTestingSwapChain->TakeSnapshot();
     }
-    TestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
 
     RayTracingPipelineStateCreateInfo PSOCreateInfo;
 
@@ -1189,7 +1189,7 @@ class RT4 : public testing::TestWithParam<int>
 TEST_P(RT4, MultiGeometry)
 {
     Uint32 TestId = GetParam();
-    auto*  pEnv   = TestingEnvironment::GetInstance();
+    auto*  pEnv   = GPUTestingEnvironment::GetInstance();
     if (!pEnv->SupportsRayTracing())
     {
         GTEST_SKIP() << "Ray tracing is not supported by this device";
@@ -1227,7 +1227,7 @@ TEST_P(RT4, MultiGeometry)
 
         pTestingSwapChain->TakeSnapshot();
     }
-    TestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
 
     RayTracingPipelineStateCreateInfo PSOCreateInfo;
 
@@ -1467,14 +1467,14 @@ TEST(RayTracingTest, ResourceBinding)
 {
     constexpr auto RayTracingDepth = 2;
 
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
     if (!pEnv->SupportsRayTracing() || pDevice->GetAdapterInfo().RayTracing.MaxRecursionDepth < RayTracingDepth)
     {
         GTEST_SKIP() << "Ray tracing is not supported by this device";
     }
 
-    TestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
 
     RayTracingPipelineStateCreateInfo PSOCreateInfo;
 
@@ -1569,7 +1569,7 @@ class RT5 : public testing::TestWithParam<int>
 TEST_P(RT5, InlineRayTracing_RayTracingPSO)
 {
     Uint32 TestId  = GetParam();
-    auto*  pEnv    = TestingEnvironment::GetInstance();
+    auto*  pEnv    = GPUTestingEnvironment::GetInstance();
     auto*  pDevice = pEnv->GetDevice();
     if (!pEnv->SupportsRayTracing() || (pDevice->GetAdapterInfo().RayTracing.CapFlags & RAY_TRACING_CAP_FLAG_INLINE_RAY_TRACING) == 0)
     {
@@ -1607,7 +1607,7 @@ TEST_P(RT5, InlineRayTracing_RayTracingPSO)
 
         pTestingSwapChain->TakeSnapshot();
     }
-    TestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
 
     RayTracingPipelineStateCreateInfo PSOCreateInfo;
 
@@ -1726,7 +1726,7 @@ class RT6 : public testing::TestWithParam<int>
 TEST_P(RT6, InlineRayTracing_GraphicsPSO)
 {
     Uint32 TestId  = GetParam();
-    auto*  pEnv    = TestingEnvironment::GetInstance();
+    auto*  pEnv    = GPUTestingEnvironment::GetInstance();
     auto*  pDevice = pEnv->GetDevice();
     if (!pEnv->SupportsRayTracing() || (pDevice->GetAdapterInfo().RayTracing.CapFlags & RAY_TRACING_CAP_FLAG_INLINE_RAY_TRACING) == 0)
     {
@@ -1764,7 +1764,7 @@ TEST_P(RT6, InlineRayTracing_GraphicsPSO)
 
         pTestingSwapChain->TakeSnapshot();
     }
-    TestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
 
     GraphicsPipelineStateCreateInfo PSOCreateInfo;
     auto&                           PSODesc          = PSOCreateInfo.PSODesc;
@@ -1879,7 +1879,7 @@ class RT7 : public testing::TestWithParam<int>
 TEST_P(RT7, TraceRaysIndirect)
 {
     Uint32 TestId  = GetParam();
-    auto*  pEnv    = TestingEnvironment::GetInstance();
+    auto*  pEnv    = GPUTestingEnvironment::GetInstance();
     auto*  pDevice = pEnv->GetDevice();
     if (!pEnv->SupportsRayTracing() || (pDevice->GetAdapterInfo().RayTracing.CapFlags & RAY_TRACING_CAP_FLAG_INDIRECT_RAY_TRACING) == 0)
     {
@@ -1917,7 +1917,7 @@ TEST_P(RT7, TraceRaysIndirect)
 
         pTestingSwapChain->TakeSnapshot();
     }
-    TestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
 
     RayTracingPipelineStateCreateInfo PSOCreateInfo;
 
@@ -2090,7 +2090,7 @@ class RT8 : public testing::TestWithParam<int>
 TEST_P(RT8, InlineRayTracing_ComputePSO)
 {
     Uint32      TestId     = GetParam();
-    auto*       pEnv       = TestingEnvironment::GetInstance();
+    auto*       pEnv       = GPUTestingEnvironment::GetInstance();
     auto*       pDevice    = pEnv->GetDevice();
     const auto& DeviceInfo = pDevice->GetDeviceInfo();
     const auto& RTProps    = pDevice->GetAdapterInfo().RayTracing;
@@ -2141,7 +2141,7 @@ TEST_P(RT8, InlineRayTracing_ComputePSO)
 
         pTestingSwapChain->TakeSnapshot();
     }
-    TestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
 
     ComputePipelineStateCreateInfo PSOCreateInfo;
     auto&                          PSODesc = PSOCreateInfo.PSODesc;
@@ -2261,7 +2261,7 @@ INSTANTIATE_TEST_SUITE_P(RayTracingTest, RT8, TestParamRange, TestIdToString);
 
 static void RayTracingPRSTest(const int Mode)
 {
-    auto*       pEnv       = TestingEnvironment::GetInstance();
+    auto*       pEnv       = GPUTestingEnvironment::GetInstance();
     auto*       pDevice    = pEnv->GetDevice();
     const auto& deviceInfo = pDevice->GetDeviceInfo();
 
@@ -2287,7 +2287,7 @@ static void RayTracingPRSTest(const int Mode)
         pTestingSwapChain->TakeSnapshot();
     }
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     const auto& Vertices = TestingConstants::TriangleClosestHit::Vertices;
 

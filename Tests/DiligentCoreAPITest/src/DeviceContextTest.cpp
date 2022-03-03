@@ -25,7 +25,7 @@
  */
 
 #include "DynamicBuffer.hpp"
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 
 #include "gtest/gtest.h"
 
@@ -37,7 +37,7 @@ namespace
 
 TEST(DeviceContextTest, DebugGroups)
 {
-    auto* pEnv = TestingEnvironment::GetInstance();
+    auto* pEnv = GPUTestingEnvironment::GetInstance();
     auto* pCtx = pEnv->GetDeviceContext();
 
     pCtx->BeginDebugGroup("Test group");

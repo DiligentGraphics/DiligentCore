@@ -50,7 +50,7 @@
 #    include "Metal/CreateObjFromNativeResMtl.hpp"
 #endif
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 
 #include "gtest/gtest.h"
 
@@ -86,7 +86,7 @@ class TextureCreationTest : public testing::TestWithParam<TextureTestAttribs>
 protected:
     static void SetUpTestSuite()
     {
-        auto* pEnv    = TestingEnvironment::GetInstance();
+        auto* pEnv    = GPUTestingEnvironment::GetInstance();
         auto* pDevice = pEnv->GetDevice();
 
         const auto& DeviceInfo = pDevice->GetDeviceInfo();
@@ -134,7 +134,7 @@ protected:
     {
         pCreateObjFromNativeRes.reset();
         pSampler.Release();
-        TestingEnvironment::GetInstance()->Reset();
+        GPUTestingEnvironment::GetInstance()->Reset();
     }
 
     static void PrepareSubresourceData(const TextureDesc&               TexDesc,
@@ -185,9 +185,9 @@ protected:
                                   Uint32             SampleCount,
                                   bool               UploadData)
     {
-        TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+        GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
-        auto* pEnv = TestingEnvironment::GetInstance();
+        auto* pEnv = GPUTestingEnvironment::GetInstance();
 
         auto*       pDevice        = pEnv->GetDevice();
         auto*       pDeviceContext = pEnv->GetDeviceContext();
@@ -369,9 +369,9 @@ protected:
                            BIND_FLAGS     BindFlags,
                            bool           UploadData)
     {
-        TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+        GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
-        auto* pEnv = TestingEnvironment::GetInstance();
+        auto* pEnv = GPUTestingEnvironment::GetInstance();
 
         auto*       pDevice    = pEnv->GetDevice();
         const auto& DeviceInfo = pDevice->GetDeviceInfo();
@@ -560,7 +560,7 @@ RefCntAutoPtr<ISampler>                         TextureCreationTest::pSampler;
 
 TEST_P(TextureCreationTest, CreateTexture)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
     const auto& TestInfo = GetParam();

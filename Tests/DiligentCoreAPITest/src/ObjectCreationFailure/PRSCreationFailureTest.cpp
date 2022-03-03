@@ -28,7 +28,7 @@
 #include <array>
 #include <limits>
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 
 #include "gtest/gtest.h"
 
@@ -40,7 +40,7 @@ namespace
 
 static void TestCreatePRSFailure(PipelineResourceSignatureDesc CI, const char* ExpectedErrorSubstring)
 {
-    auto* const pEnv    = TestingEnvironment::GetInstance();
+    auto* const pEnv    = GPUTestingEnvironment::GetInstance();
     auto* const pDevice = pEnv->GetDevice();
 
     RefCntAutoPtr<IPipelineResourceSignature> pSignature;
@@ -239,7 +239,7 @@ TEST(PRSCreationFailureTest, InvalidInputAttachmentFlag)
     PRSDesc.Resources    = Resources;
     PRSDesc.NumResources = _countof(Resources);
     const char* ExpectedErrorSubstring;
-    if (TestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Features.ShaderResourceRuntimeArray)
+    if (GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Features.ShaderResourceRuntimeArray)
         ExpectedErrorSubstring = "Incorrect Desc.Resources[1].Flags (RUNTIME_ARRAY). Only the following flags are valid for a input attachment: GENERAL_INPUT_ATTACHMENT";
     else
         ExpectedErrorSubstring = "Incorrect Desc.Resources[1].Flags (RUNTIME_ARRAY). The flag can only be used if ShaderResourceRuntimeArray device feature is enabled";
@@ -257,7 +257,7 @@ TEST(PRSCreationFailureTest, InvalidAccelStructFlag)
     PRSDesc.Resources    = Resources;
     PRSDesc.NumResources = _countof(Resources);
     const char* ExpectedErrorSubstring;
-    if (TestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Features.RayTracing)
+    if (GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Features.RayTracing)
         ExpectedErrorSubstring = "Incorrect Desc.Resources[1].Flags (NO_DYNAMIC_BUFFERS). Only the following flags are valid for a acceleration structure: RUNTIME_ARRAY";
     else
         ExpectedErrorSubstring = "Incorrect Desc.Resources[1].ResourceType (ACCEL_STRUCT): ray tracing is not supported by device";
@@ -267,7 +267,7 @@ TEST(PRSCreationFailureTest, InvalidAccelStructFlag)
 
 TEST(PRSCreationFailureTest, InvalidCombinedSamplerFlag)
 {
-    const auto& DeviceInfo = TestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
+    const auto& DeviceInfo = GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
     if (!(DeviceInfo.IsD3DDevice() || DeviceInfo.IsMetalDevice()))
     {
         GTEST_SKIP() << "Direct3D11, Direct3D12 and Metal only";
@@ -382,7 +382,7 @@ TEST(PRSCreationFailureTest, UnknownImmutableSamplerShareStages)
 
 TEST(PRSCreationFailureTest, NonSeparableProgs_ResourceStages)
 {
-    if (TestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Features.SeparablePrograms)
+    if (GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Features.SeparablePrograms)
     {
         GTEST_SKIP() << "This test is specific for non-separable programs";
     }
@@ -399,7 +399,7 @@ TEST(PRSCreationFailureTest, NonSeparableProgs_ResourceStages)
 
 TEST(PRSCreationFailureTest, NonSeparableProgs_ImtblSamplerStages)
 {
-    if (TestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Features.SeparablePrograms)
+    if (GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Features.SeparablePrograms)
     {
         GTEST_SKIP() << "This test is specific for non-separable programs";
     }
@@ -422,7 +422,7 @@ TEST(PRSCreationFailureTest, NonSeparableProgs_ImtblSamplerStages)
 
 TEST(PRSCreationFailureTest, D3D12_MultiStageResources)
 {
-    if (TestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Type != RENDER_DEVICE_TYPE_D3D12)
+    if (GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Type != RENDER_DEVICE_TYPE_D3D12)
     {
         GTEST_SKIP() << "This test is specific for Direct3D12";
     }
@@ -439,7 +439,7 @@ TEST(PRSCreationFailureTest, D3D12_MultiStageResources)
 
 TEST(PRSCreationFailureTest, D3D12_MultiStageImtblSamplers)
 {
-    if (TestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Type != RENDER_DEVICE_TYPE_D3D12)
+    if (GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Type != RENDER_DEVICE_TYPE_D3D12)
     {
         GTEST_SKIP() << "This test is specific for Direct3D12";
     }

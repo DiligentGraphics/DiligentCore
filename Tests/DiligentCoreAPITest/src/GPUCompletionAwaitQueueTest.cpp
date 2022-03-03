@@ -25,7 +25,7 @@
  */
 
 #include "GPUCompletionAwaitQueue.hpp"
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 #include "MapHelper.hpp"
 
 #include "gtest/gtest.h"
@@ -38,7 +38,7 @@ namespace
 
 TEST(GPUCompletionAwaitQueueTest, ReadBack)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pDevice  = pEnv->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();
 

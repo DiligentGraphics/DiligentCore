@@ -29,7 +29,7 @@
 
 #include <Metal/Metal.h>
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 
 namespace Diligent
 {
@@ -40,12 +40,12 @@ namespace Testing
 class TestingEnvironmentMtl final : public TestingEnvironment
 {
 public:
-    using CreateInfo = TestingEnvironment::CreateInfo;
+    using CreateInfo = GPUTestingEnvironment::CreateInfo;
     TestingEnvironmentMtl(const CreateInfo&    CI,
                           const SwapChainDesc& SCDesc);
     ~TestingEnvironmentMtl();
 
-    static TestingEnvironmentMtl* GetInstance() { return ClassPtrCast<TestingEnvironmentMtl>(TestingEnvironment::GetInstance()); }
+    static TestingEnvironmentMtl* GetInstance() { return ClassPtrCast<TestingEnvironmentMtl>(GPUTestingEnvironment::GetInstance()); }
 
     virtual void Reset() override final;
 

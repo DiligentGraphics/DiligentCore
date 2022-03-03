@@ -28,7 +28,7 @@
 #include <array>
 #include <vector>
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 #include "TestingSwapChainBase.hpp"
 #include "ShaderMacroHelper.hpp"
 #include "GraphicsAccessories.hpp"
@@ -53,7 +53,7 @@ class PipelineResourceSignatureTest : public ::testing::Test
 protected:
     static void SetUpTestSuite()
     {
-        auto* pEnv    = TestingEnvironment::GetInstance();
+        auto* pEnv    = GPUTestingEnvironment::GetInstance();
         auto* pDevice = pEnv->GetDevice();
 
         pDevice->GetEngineFactory()->CreateDefaultShaderSourceStreamFactory("shaders/PipelineResourceSignature", &pShaderSourceFactory);
@@ -62,7 +62,7 @@ protected:
     static void TearDownTestSuite()
     {
         pShaderSourceFactory.Release();
-        TestingEnvironment::GetInstance()->Reset();
+        GPUTestingEnvironment::GetInstance()->Reset();
     }
 
     static RefCntAutoPtr<IPipelineState> CreateGraphicsPSO(IShader*                                                         pVS,
@@ -80,7 +80,7 @@ protected:
         PSOCreateInfo.ppResourceSignatures    = Signatures.data();
         PSOCreateInfo.ResourceSignaturesCount = static_cast<Uint32>(Signatures.size());
 
-        auto* pEnv    = TestingEnvironment::GetInstance();
+        auto* pEnv    = GPUTestingEnvironment::GetInstance();
         auto* pDevice = pEnv->GetDevice();
 
         PSOCreateInfo.pVS = pVS;
@@ -109,7 +109,7 @@ protected:
                                                        const ShaderMacro*  Macros,
                                                        ModifyCIHandlerType ModifyCIHandler)
     {
-        auto* pEnv    = TestingEnvironment::GetInstance();
+        auto* pEnv    = GPUTestingEnvironment::GetInstance();
         auto* pDevice = pEnv->GetDevice();
 
         ShaderCreateInfo ShaderCI;
@@ -187,11 +187,11 @@ RefCntAutoPtr<IShaderSourceInputStreamFactory> PipelineResourceSignatureTest::pS
 
 TEST_F(PipelineResourceSignatureTest, VariableTypes)
 {
-    auto* const pEnv     = TestingEnvironment::GetInstance();
+    auto* const pEnv     = GPUTestingEnvironment::GetInstance();
     auto* const pDevice  = pEnv->GetDevice();
     auto*       pContext = pEnv->GetDeviceContext();
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto* pSwapChain = pEnv->GetSwapChain();
 
@@ -318,7 +318,7 @@ TEST_F(PipelineResourceSignatureTest, VariableTypes)
 
 TEST_F(PipelineResourceSignatureTest, MultiSignatures)
 {
-    auto* const pEnv     = TestingEnvironment::GetInstance();
+    auto* const pEnv     = GPUTestingEnvironment::GetInstance();
     auto* const pDevice  = pEnv->GetDevice();
     auto*       pContext = pEnv->GetDeviceContext();
 
@@ -327,7 +327,7 @@ TEST_F(PipelineResourceSignatureTest, MultiSignatures)
         GTEST_SKIP();
     }
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto* pSwapChain = pEnv->GetSwapChain();
 
@@ -435,7 +435,7 @@ TEST_F(PipelineResourceSignatureTest, MultiSignatures)
 
 TEST_F(PipelineResourceSignatureTest, SingleVarType)
 {
-    auto* const pEnv     = TestingEnvironment::GetInstance();
+    auto* const pEnv     = GPUTestingEnvironment::GetInstance();
     auto* const pDevice  = pEnv->GetDevice();
     auto*       pContext = pEnv->GetDeviceContext();
 
@@ -444,7 +444,7 @@ TEST_F(PipelineResourceSignatureTest, SingleVarType)
         GTEST_SKIP();
     }
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto* pSwapChain = pEnv->GetSwapChain();
 
@@ -555,7 +555,7 @@ TEST_F(PipelineResourceSignatureTest, SingleVarType)
 
 TEST_F(PipelineResourceSignatureTest, ImmutableSamplers)
 {
-    auto* const pEnv     = TestingEnvironment::GetInstance();
+    auto* const pEnv     = GPUTestingEnvironment::GetInstance();
     auto* const pDevice  = pEnv->GetDevice();
     auto*       pContext = pEnv->GetDeviceContext();
 
@@ -564,7 +564,7 @@ TEST_F(PipelineResourceSignatureTest, ImmutableSamplers)
         GTEST_SKIP();
     }
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto* pSwapChain = pEnv->GetSwapChain();
 
@@ -650,11 +650,11 @@ TEST_F(PipelineResourceSignatureTest, ImmutableSamplers)
 
 TEST_F(PipelineResourceSignatureTest, ImmutableSamplers2)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pDevice  = pEnv->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto* pSwapChain = pEnv->GetSwapChain();
 
@@ -809,11 +809,11 @@ TEST_F(PipelineResourceSignatureTest, ImmutableSamplers2)
 
 void PipelineResourceSignatureTest::TestSRBCompatibility(const SRB_COMPAT_MODE Mode)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pDevice  = pEnv->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto* pSwapChain = pEnv->GetSwapChain();
 
@@ -1072,7 +1072,7 @@ TEST_F(PipelineResourceSignatureTest, SRBCompatibility2)
 
 TEST_F(PipelineResourceSignatureTest, GraphicsAndMeshShader)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pDevice  = pEnv->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();
 
@@ -1081,7 +1081,7 @@ TEST_F(PipelineResourceSignatureTest, GraphicsAndMeshShader)
         GTEST_SKIP() << "Mesh shader is not supported by this device";
     }
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto* pSwapChain = pEnv->GetSwapChain();
 
@@ -1274,7 +1274,7 @@ TEST_F(PipelineResourceSignatureTest, GraphicsAndMeshShader)
 
 void PipelineResourceSignatureTest::TestCombinedImageSamplers(SHADER_SOURCE_LANGUAGE ShaderLang, bool UseEmulatedSamplers)
 {
-    auto* const pEnv       = TestingEnvironment::GetInstance();
+    auto* const pEnv       = GPUTestingEnvironment::GetInstance();
     auto* const pDevice    = pEnv->GetDevice();
     const auto& DeviceInfo = pDevice->GetDeviceInfo();
     auto*       pContext   = pEnv->GetDeviceContext();
@@ -1286,7 +1286,7 @@ void PipelineResourceSignatureTest::TestCombinedImageSamplers(SHADER_SOURCE_LANG
     float ClearColor[] = {0.625, 0.25, 0.375, 1.0};
     RenderDrawCommandReference(pSwapChain, ClearColor);
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     ReferenceTextures RefTextures{
         9,
@@ -1462,13 +1462,13 @@ void PipelineResourceSignatureTest::TestFormattedOrStructuredBuffer(BUFFER_MODE 
 {
     VERIFY_EXPR(BufferMode == BUFFER_MODE_FORMATTED || BufferMode == BUFFER_MODE_STRUCTURED);
 
-    auto* const pEnv       = TestingEnvironment::GetInstance();
+    auto* const pEnv       = GPUTestingEnvironment::GetInstance();
     auto* const pDevice    = pEnv->GetDevice();
     auto* const pContext   = pEnv->GetDeviceContext();
     auto* const pSwapChain = pEnv->GetSwapChain();
     const auto& deviceCaps = pDevice->GetDeviceInfo();
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     float ClearColor[] = {0.875, 0.125, 0.75, 0.75};
     RenderDrawCommandReference(pSwapChain, ClearColor);
@@ -1609,7 +1609,7 @@ TEST_F(PipelineResourceSignatureTest, StructuredBuffers)
 
 static void TestRunTimeResourceArray(bool IsGLSL, IShaderSourceInputStreamFactory* pShaderSourceFactory)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
     const auto& deviceCaps = pDevice->GetDeviceInfo();
@@ -1646,7 +1646,7 @@ static void TestRunTimeResourceArray(bool IsGLSL, IShaderSourceInputStreamFactor
     }
 #endif
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto* pContext   = pEnv->GetDeviceContext();
     auto* pSwapChain = pEnv->GetSwapChain();
@@ -1876,12 +1876,12 @@ TEST_F(PipelineResourceSignatureTest, RunTimeResourceArray_HLSL)
 
 TEST_F(PipelineResourceSignatureTest, UnusedNullResources)
 {
-    auto* pEnv       = TestingEnvironment::GetInstance();
+    auto* pEnv       = GPUTestingEnvironment::GetInstance();
     auto* pDevice    = pEnv->GetDevice();
     auto* pContext   = pEnv->GetDeviceContext();
     auto* pSwapChain = pEnv->GetSwapChain();
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     float ClearColor[] = {0.875, 0.375, 0.125, 0.25};
     RenderDrawCommandReference(pSwapChain, ClearColor);
