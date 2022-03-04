@@ -314,22 +314,25 @@ SerializedData SerializedShaderImpl::PatchShaderMtl(const char*                 
         }
     }
 
-#define LOG_PATCH_SHADER_ERROR_AND_THROW(...)         \
+#define LOG_PATCH_SHADER_ERROR_AND_THROW(...)\
+    LOG_ERROR_AND_THROW("Failed to patch shader '", ShaderName, "' for PSO '", PSOName, "': ", ##__VA_ARGS__)
+
+#define LOG_ERRNO_AND_THROW(...)                      \
     do                                                \
     {                                                 \
         char ErrorStr[512];                           \
         strerror_r(errno, ErrorStr, sizeof(ErrorStr));\
-        LOG_ERROR_AND_THROW("Failed to patch shader '", ShaderName, "' for PSO '", PSOName, "': ", ##__VA_ARGS__, " Error description: ", ErrorStr);\
+        LOG_PATCH_SHADER_ERROR_AND_THROW(" Error description: ", ErrorStr);\
     } while (false)
 
     // Save to 'Shader.metal'
     {
         FILE* File = fopen(MetalFile.c_str(), "wb");
         if (File == nullptr)
-            LOG_PATCH_SHADER_ERROR_AND_THROW("failed to open temp file to save Metal shader source.");
+            LOG_ERRNO_AND_THROW("failed to open temp file to save Metal shader source.");
 
         if (fwrite(MslSource.c_str(), sizeof(MslSource[0]) * MslSource.size(), 1, File) != 1)
-            LOG_PATCH_SHADER_ERROR_AND_THROW("failed to save Metal shader source to a temp file.");
+            LOG_ERRNO_AND_THROW("failed to save Metal shader source to a temp file.");
 
         fclose(File);
     }
@@ -342,17 +345,17 @@ SerializedData SerializedShaderImpl::PatchShaderMtl(const char*                 
         cmd += " \"";
         cmd += MetalFile;
         cmd += '\"';
-        FILE* File = popen(cmd.c_str(), "r");
-        if (File == nullptr)
-            LOG_PATCH_SHADER_ERROR_AND_THROW("failed to run command-line Metal shader compiler.");
+        FILE* Pipe = popen(cmd.c_str(), "r");
+        if (Pipe == nullptr)
+            LOG_ERRNO_AND_THROW("failed to run command-line Metal shader compiler.");
 
         char Output[512];
-        while (fgets(Output, _countof(Output), File) != nullptr)
+        while (fgets(Output, _countof(Output), Pipe) != nullptr)
             printf("%s", Output);
 
-        auto status = pclose(File);
-        if (status == -1)
-            LOG_PATCH_SHADER_ERROR_AND_THROW("failed to close msl preprocessor process.");
+        auto status = pclose(Pipe);
+        if (status != 0)
+            LOG_PATCH_SHADER_ERROR_AND_THROW("failed to close msl preprocessor process (error code: ", status, ").");
     }
 
     // https://developer.apple.com/documentation/metal/libraries/generating_and_loading_a_metal_library_symbol_file
@@ -363,17 +366,17 @@ SerializedData SerializedShaderImpl::PatchShaderMtl(const char*                 
         cmd += (DevType == DeviceType::Metal_MacOS ? MtlProps.CompileOptionsMacOS : MtlProps.CompileOptionsIOS);
         cmd += " \"" + MetalFile + "\" -o \"" + MetalLibFile + '\"';
 
-        FILE* File = popen(cmd.c_str(), "r");
-        if (File == nullptr)
-            LOG_PATCH_SHADER_ERROR_AND_THROW("failed to compile MSL source.");
+        FILE* Pipe = popen(cmd.c_str(), "r");
+        if (Pipe == nullptr)
+            LOG_ERRNO_AND_THROW("failed to compile MSL source.");
 
         char Output[512];
-        while (fgets(Output, _countof(Output), File) != nullptr)
+        while (fgets(Output, _countof(Output), Pipe) != nullptr)
             printf("%s", Output);
 
-        auto status = pclose(File);
-        if (status == -1)
-            LOG_PATCH_SHADER_ERROR_AND_THROW("failed to close xcrun process");
+        auto status = pclose(Pipe);
+        if (status != 0)
+            LOG_PATCH_SHADER_ERROR_AND_THROW("failed to close xcrun process (error code: ", status, ").");
     }
 
     // Read 'Shader.metallib'
@@ -381,7 +384,7 @@ SerializedData SerializedShaderImpl::PatchShaderMtl(const char*                 
     {
         FILE* File = fopen(MetalLibFile.c_str(), "rb");
         if (File == nullptr)
-            LOG_PATCH_SHADER_ERROR_AND_THROW("failed to read shader library.");
+            LOG_ERRNO_AND_THROW("failed to read shader library.");
 
         fseek(File, 0, SEEK_END);
         const auto BytecodeSize = static_cast<size_t>(ftell(File));
@@ -394,9 +397,10 @@ SerializedData SerializedShaderImpl::PatchShaderMtl(const char*                 
     }
 
     if (ByteCode.empty())
-        LOG_PATCH_SHADER_ERROR_AND_THROW("failed to load Metal shader library.");
+        LOG_PATCH_SHADER_ERROR_AND_THROW("Metal shader library is empty.");
 
 #undef LOG_PATCH_SHADER_ERROR_AND_THROW
+#undef LOG_ERRNO_AND_THROW
 
     auto SerializeShaderData = [&](auto& Ser){
         Ser.SerializeBytes(ByteCode.data(), ByteCode.size() * sizeof(ByteCode[0]));
