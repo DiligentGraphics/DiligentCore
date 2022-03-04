@@ -60,8 +60,8 @@ void CreateRasterizationRateMap(RefCntAutoPtr<ITextureView>& pShadingRateMap,
                                 RefCntAutoPtr<IBuffer>&      pShadingRateParamBuffer,
                                 RefCntAutoPtr<ITexture>&     pIntermediateRT) API_AVAILABLE(ios(13), macosx(10.15.4))
 {
-    auto*       pEnv    = TestingEnvironment::GetInstance();
-    auto*       pDevice = TestingEnvironment::GetInstance()->GetDevice();
+    auto*       pEnv    = GPUTestingEnvironment::GetInstance();
+    auto*       pDevice = pEnv->GetDevice();
     const auto& SCDesc  = pEnv->GetSwapChain()->GetDesc();
 
     RasterizationRateMapCreateInfo RasterRateMapCI;
@@ -125,8 +125,8 @@ void CreateRasterizationRateMap(RefCntAutoPtr<ITextureView>& pShadingRateMap,
 void CreatePass1PSO(RefCntAutoPtr<IPipelineState>& pPSO,
                     IRenderPass*                   pRenderPass = nullptr) API_AVAILABLE(ios(13), macosx(10.15.4))
 {
-    auto*       pEnv    = TestingEnvironment::GetInstance();
-    auto*       pDevice = TestingEnvironment::GetInstance()->GetDevice();
+    auto*       pEnv    = GPUTestingEnvironment::GetInstance();
+    auto*       pDevice = pEnv->GetDevice();
     const auto& SCDesc  = pEnv->GetSwapChain()->GetDesc();
 
     GraphicsPipelineStateCreateInfo PSOCreateInfo;
@@ -196,8 +196,8 @@ void CreatePass1PSO(RefCntAutoPtr<IPipelineState>& pPSO,
 void CreatePass2PSO(RefCntAutoPtr<IPipelineState>&         pPSO,
                     RefCntAutoPtr<IShaderResourceBinding>& pSRB) API_AVAILABLE(ios(13), macosx(10.15.4))
 {
-    auto*       pEnv    = TestingEnvironment::GetInstance();
-    auto*       pDevice = TestingEnvironment::GetInstance()->GetDevice();
+    auto*       pEnv    = GPUTestingEnvironment::GetInstance();
+    auto*       pDevice = pEnv->GetDevice();
     const auto& SCDesc  = pEnv->GetSwapChain()->GetDesc();
 
     GraphicsPipelineStateCreateInfo PSOCreateInfo;
@@ -253,7 +253,7 @@ void CreatePass2PSO(RefCntAutoPtr<IPipelineState>&         pPSO,
 
 void CreateVertexBuffer(RefCntAutoPtr<IBuffer>& pVB, Uint32& VertCount)
 {
-    auto*       pDevice = TestingEnvironment::GetInstance()->GetDevice();
+    auto*       pDevice = GPUTestingEnvironment::GetInstance()->GetDevice();
     const auto& Verts   = VRSTestingConstants::PerPrimitive::Vertices;
 
     BufferData BuffData{Verts, sizeof(Verts)};
@@ -274,7 +274,7 @@ TEST(VariableShadingRateTest, RasterRateMap)
 {
     if (@available(macos 10.15.4, ios 13.0, *))
     {
-        auto*       pEnv       = TestingEnvironment::GetInstance();
+        auto*       pEnv       = GPUTestingEnvironment::GetInstance();
         auto*       pDevice    = pEnv->GetDevice();
         const auto& deviceInfo = pDevice->GetDeviceInfo();
 
@@ -297,7 +297,7 @@ TEST(VariableShadingRateTest, RasterRateMap)
             pTestingSwapChain->TakeSnapshot();
         }
 
-        TestingEnvironment::ScopedReset EnvironmentAutoReset;
+        GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
         RefCntAutoPtr<IPipelineState> pPSOPass1;
         CreatePass1PSO(pPSOPass1);
@@ -363,7 +363,7 @@ TEST(VariableShadingRateTest, RasterRateMapWithRenderPass)
 {
     if (@available(macos 10.15.4, ios 13.0, *))
     {
-        auto*       pEnv       = TestingEnvironment::GetInstance();
+        auto*       pEnv       = GPUTestingEnvironment::GetInstance();
         auto*       pDevice    = pEnv->GetDevice();
         const auto& deviceInfo = pDevice->GetDeviceInfo();
 
@@ -386,13 +386,13 @@ TEST(VariableShadingRateTest, RasterRateMapWithRenderPass)
             pTestingSwapChain->TakeSnapshot();
         }
 
-        TestingEnvironment::ScopedReset EnvironmentAutoReset;
+        GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
         RefCntAutoPtr<ITextureView> pShadingRateMap;
         RefCntAutoPtr<IBuffer>      pShadingRateParamBuffer;
         RefCntAutoPtr<ITexture>     pIntermediateRT;
         CreateRasterizationRateMap(pShadingRateMap, pShadingRateParamBuffer, pIntermediateRT);
-        
+
         RefCntAutoPtr<IRenderPass> pRenderPass;
         {
             RenderPassAttachmentDesc Attachments[2];

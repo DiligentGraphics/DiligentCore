@@ -24,7 +24,7 @@
  *  of the possibility of such damages.
  */
 
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 #include "TestingSwapChainBase.hpp"
 #include "ShaderMacroHelper.hpp"
 
@@ -54,7 +54,7 @@ namespace
 
 TEST(ThreadgroupMemoryTest, SetComputeThreadgroupMemoryLength)
 {
-    auto*       pEnv       = TestingEnvironment::GetInstance();
+    auto*       pEnv       = GPUTestingEnvironment::GetInstance();
     auto*       pDevice    = pEnv->GetDevice();
     const auto& deviceInfo = pDevice->GetDeviceInfo();
     if (!deviceInfo.IsMetalDevice())
@@ -74,7 +74,7 @@ TEST(ThreadgroupMemoryTest, SetComputeThreadgroupMemoryLength)
         pTestingSwapChain->TakeSnapshot();
     }
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     RefCntAutoPtr<IShader> pCS;
     {

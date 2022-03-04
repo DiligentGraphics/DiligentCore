@@ -29,7 +29,7 @@
 #include "RenderDeviceMtl.h"
 #include "TextureMtl.h"
 #include "BufferMtl.h"
-#include "TestingEnvironment.hpp"
+#include "GPUTestingEnvironment.hpp"
 
 #include "Metal/CreateObjFromNativeResMtl.hpp"
 

@@ -37,7 +37,7 @@ namespace Diligent
 namespace Testing
 {
 
-class TestingEnvironmentMtl final : public TestingEnvironment
+class TestingEnvironmentMtl final : public GPUTestingEnvironment
 {
 public:
     using CreateInfo = GPUTestingEnvironment::CreateInfo;
