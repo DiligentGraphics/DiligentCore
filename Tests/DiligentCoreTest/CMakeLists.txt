@@ -24,6 +24,7 @@ PRIVATE
     gtest_main
     Diligent-BuildSettings
     Diligent-TargetPlatform
+    Diligent-TestFramework
     Diligent-GraphicsAccessories
     Diligent-Common
     Diligent-GraphicsTools

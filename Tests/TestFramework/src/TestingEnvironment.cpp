@@ -44,6 +44,7 @@ TestingEnvironment::TestingEnvironment()
 {
     VERIFY(m_pTheEnvironment == nullptr, "Testing environment object has already been initialized!");
     m_pTheEnvironment = this;
+    SetDebugMessageCallback(MessageCallback);
 }
 
 void TestingEnvironment::MessageCallback(DEBUG_MESSAGE_SEVERITY Severity,

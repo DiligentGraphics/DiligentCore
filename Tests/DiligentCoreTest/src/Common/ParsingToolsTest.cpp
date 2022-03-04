@@ -28,8 +28,11 @@
 
 #include "gtest/gtest.h"
 
+#include "TestingEnvironment.hpp"
+
 using namespace Diligent;
 using namespace Diligent::Parsing;
+using namespace Diligent::Testing;
 
 namespace
 {
@@ -895,7 +898,8 @@ void main()
 
 TEST(Common_ParsingTools, Tokenizer_Errors)
 {
-    auto TestError = [](const char* Str) {
+    auto TestError = [](const char* Str, const char* Error) {
+        TestingEnvironment::ErrorScope ExpectedErrors{"Unable to tokenize string", Error};
         try
         {
             const auto Tokens = Tokenize<TestToken, std::vector<TestToken>>(Str, Str + strlen(Str), TestToken::Create, TestToken::FindType);
@@ -908,26 +912,47 @@ TEST(Common_ParsingTools, Tokenizer_Errors)
         ADD_FAILURE() << "Tokenize must throw an exception";
     };
 
+
     TestError(R"(
 void main()
 {
     /* Open comment
 }
-)");
+)",
+              R"(Unable to find the end of the multiline comment.
+void main()
+{
+    /* Open comment
+    ^
+})");
+
 
     TestError(R"(
 void main()
 {
     char* String = "Missing quotes
 }
-)");
+)",
+              R"(Unable to find matching closing quotes.
+void main()
+{
+    char* String = "Missing quotes
+                   ^
+})");
+
 
     TestError(R"(
 #
 void main()
 {
 }
-)");
+)",
+              R"(Missing preprocessor directive.
+
+#
+^
+void main()
+{)");
 
 
     TestError(R"(
@@ -935,13 +960,25 @@ void main()
 void main()
 {
 }
-)");
+)",
+              R"(Comments between # and preprocessor directive are currently not supported.
+
+#/*comment*/ define Macro
+^
+void main()
+{)");
+
 
     TestError(R"(
 void main()
 {
 }
-#)");
+#)",
+              R"(Missing preprocessor directive.
+{
+}
+#
+^)");
 }
 
 

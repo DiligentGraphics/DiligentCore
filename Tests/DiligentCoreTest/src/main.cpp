@@ -1,6 +1,5 @@
 /*
  *  Copyright 2019-2022 Diligent Graphics LLC
- *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -28,7 +27,8 @@
 #include "gtest/gtest.h"
 #include "gtest/gtest-spi.h"
 
-#include "GPUTestingEnvironment.hpp"
+#include "TestingEnvironment.hpp"
+#include "Errors.hpp"
 
 #if PLATFORM_WIN32
 #    include <crtdbg.h>
@@ -58,7 +58,7 @@ int main(int argc, char** argv)
 
     ::testing::InitGoogleTest(&argc, argv);
 
-    auto* pEnv = Diligent::Testing::GPUTestingEnvironment::Initialize(argc, argv);
+    auto* pEnv = new Diligent::Testing::TestingEnvironment{};
     if (pEnv == nullptr)
         return -1;
 

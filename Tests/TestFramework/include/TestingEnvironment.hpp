@@ -58,11 +58,19 @@ public:
     {
         ErrorScope(const std::initializer_list<const char*>& Messages)
         {
-            auto* pTestEnvironment = TestingEnvironment::GetInstance();
-            pTestEnvironment->SetErrorAllowance(static_cast<Int32>(Messages.size()));
+            auto* pEnv = TestingEnvironment::GetInstance();
+            pEnv->SetErrorAllowance(static_cast<Int32>(Messages.size()));
 
             for (auto const& Message : Messages)
-                pTestEnvironment->PushExpectedErrorSubstring(Message, false);
+                pEnv->PushExpectedErrorSubstring(Message, false);
+        }
+        ErrorScope(const std::initializer_list<std::string>& Messages)
+        {
+            auto* pEnv = TestingEnvironment::GetInstance();
+            pEnv->SetErrorAllowance(static_cast<Int32>(Messages.size()));
+
+            for (auto const& Message : Messages)
+                pEnv->PushExpectedErrorSubstring(Message.c_str(), false);
         }
 
         ~ErrorScope()

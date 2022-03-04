@@ -29,9 +29,12 @@
 #include "ShaderToolsCommon.hpp"
 #include "DefaultShaderSourceStreamFactory.h"
 #include "RenderDevice.h"
+#include "TestingEnvironment.hpp"
+
 #include "gtest/gtest.h"
 
 using namespace Diligent;
+using namespace Diligent::Testing;
 
 namespace
 {
@@ -147,6 +150,8 @@ TEST(ShaderPreprocessTest, InvalidInclude)
         ShaderCI.Desc.Name                  = "TestShader";
         ShaderCI.FilePath                   = FilePath.c_str();
         ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
+
+        TestingEnvironment::ErrorScope ExpectedErrors{String{"Failed to process includes in file '"} + FilePath + "'"};
 
         const auto Result = ProcessShaderIncludes(ShaderCI, {});
         EXPECT_EQ(Result, false);
