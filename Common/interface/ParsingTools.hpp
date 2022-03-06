@@ -581,10 +581,26 @@ ContainerType Tokenize(const IteratorType&   SourceStart,
 
                 case '+':
                 case '-':
-                    // We do not currently distinguish between math operator a + b,
-                    // unary operator -a and numerical constant -1:
                     if (AddDoubleCharToken(TokenType::IncDecOp))
                         return Pos != SourceEnd;
+                    else
+                    {
+                        const auto& LastTokenType = !Tokens.empty() ? Tokens.back().GetType() : TokenType::Undefined;
+                        if (!(LastTokenType == TokenType::Identifier ||        // a + 1
+                              LastTokenType == TokenType::NumericConstant ||   // 1 + 2
+                              LastTokenType == TokenType::ClosingParen ||      // ) + 3
+                              LastTokenType == TokenType::ClosingSquareBracket // ] + 4
+                              ))
+                        {
+                            auto NumEnd = SkipFloatNumber(Pos, SourceEnd);
+                            if (Pos != NumEnd)
+                            {
+                                Type = TokenType::NumericConstant;
+                                Pos  = NumEnd;
+                                break;
+                            }
+                        }
+                    }
                     SINGLE_CHAR_TOKEN(MathOp);
 
                 case ':':

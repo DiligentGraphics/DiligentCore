@@ -896,6 +896,71 @@ void main()
     EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Keyword1, "Keyword1"}, {TestTokenType::Identifier, "Id"}, {TestTokenType::Keyword2, "Keyword2"}, {TestTokenType::OpenParen, "("}, {TestTokenType::Keyword3, "Keyword3"}, {TestTokenType::ClosingParen, ")"}}));
 }
 
+
+TEST(Common_ParsingTools, Tokenizer_PlusMinus)
+{
+    static const char* TestStr = R"(
++1.0;
+-2.0;
+a1 + a2;
+b1 - b2;
+c1+3;
+3.5+c2;
+d1-10.0;
+-20.0+d2;
+
+e1 + +4.1;
+e2 + -4.2;
+e3 - +4.3;
+e4 - -4.4;
+
+d1 + + 5.1;
+d2 + - 5.2;
+d3 - + 5.3;
+d4 - - 5.4;
+11+12;
+13-14;
+15 + 16;
+17 - 18;
+e1[+19]+20;
+e2[-21]-22;
+func1(+23)+24;
+func2(-25)-26;
+)";
+
+    const auto Tokens = Tokenize<TestToken, std::vector<TestToken>>(TestStr, TestStr + strlen(TestStr), TestToken::Create, TestToken::FindType);
+    EXPECT_STREQ(BuildSource(Tokens).c_str(), TestStr);
+
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::NumericConstant, "+1.0"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::NumericConstant, "-2.0"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "a1"}, {TestTokenType::MathOp, "+"}, {TestTokenType::Identifier, "a2"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "b1"}, {TestTokenType::MathOp, "-"}, {TestTokenType::Identifier, "b2"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "c1"}, {TestTokenType::MathOp, "+"}, {TestTokenType::NumericConstant, "3"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::NumericConstant, "3.5"}, {TestTokenType::MathOp, "+"}, {TestTokenType::Identifier, "c2"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "d1"}, {TestTokenType::MathOp, "-"}, {TestTokenType::NumericConstant, "10.0"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::NumericConstant, "-20.0"}, {TestTokenType::MathOp, "+"}, {TestTokenType::Identifier, "d2"}}));
+
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "e1"}, {TestTokenType::MathOp, "+"}, {TestTokenType::NumericConstant, "+4.1"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "e2"}, {TestTokenType::MathOp, "+"}, {TestTokenType::NumericConstant, "-4.2"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "e3"}, {TestTokenType::MathOp, "-"}, {TestTokenType::NumericConstant, "+4.3"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "e4"}, {TestTokenType::MathOp, "-"}, {TestTokenType::NumericConstant, "-4.4"}}));
+
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "d1"}, {TestTokenType::MathOp, "+"}, {TestTokenType::MathOp, "+"}, {TestTokenType::NumericConstant, "5.1"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "d2"}, {TestTokenType::MathOp, "+"}, {TestTokenType::MathOp, "-"}, {TestTokenType::NumericConstant, "5.2"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "d3"}, {TestTokenType::MathOp, "-"}, {TestTokenType::MathOp, "+"}, {TestTokenType::NumericConstant, "5.3"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "d4"}, {TestTokenType::MathOp, "-"}, {TestTokenType::MathOp, "-"}, {TestTokenType::NumericConstant, "5.4"}}));
+
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::NumericConstant, "11"}, {TestTokenType::MathOp, "+"}, {TestTokenType::NumericConstant, "12"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::NumericConstant, "13"}, {TestTokenType::MathOp, "-"}, {TestTokenType::NumericConstant, "14"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::NumericConstant, "15"}, {TestTokenType::MathOp, "+"}, {TestTokenType::NumericConstant, "16"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::NumericConstant, "17"}, {TestTokenType::MathOp, "-"}, {TestTokenType::NumericConstant, "18"}}));
+
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::NumericConstant, "+19"}, {TestTokenType::ClosingSquareBracket, "]"}, {TestTokenType::MathOp, "+"}, {TestTokenType::NumericConstant, "20"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::NumericConstant, "-21"}, {TestTokenType::ClosingSquareBracket, "]"}, {TestTokenType::MathOp, "-"}, {TestTokenType::NumericConstant, "22"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::NumericConstant, "+23"}, {TestTokenType::ClosingParen, ")"}, {TestTokenType::MathOp, "+"}, {TestTokenType::NumericConstant, "24"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::NumericConstant, "-25"}, {TestTokenType::ClosingParen, ")"}, {TestTokenType::MathOp, "-"}, {TestTokenType::NumericConstant, "26"}}));
+}
+
 TEST(Common_ParsingTools, Tokenizer_Errors)
 {
     auto TestError = [](const char* Str, const char* Error) {
