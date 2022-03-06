@@ -31,6 +31,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <ftw.h>
+#include <mutex>
 
 #include "LinuxFileSystem.hpp"
 #include "Errors.hpp"
@@ -122,6 +123,21 @@ std::vector<std::unique_ptr<FindFileData>> LinuxFileSystem::Search(const Char* S
 {
     UNSUPPORTED("Not implemented");
     return std::vector<std::unique_ptr<FindFileData>>();
+}
+
+// popen/pclose are not thread-safe
+static std::mutex g_popen_mtx{};
+
+FILE* LinuxFileSystem::popen(const char* command, const char* type)
+{
+    std::lock_guard<std::mutex> Lock{g_popen_mtx};
+    return ::popen(command, type);
+}
+
+int LinuxFileSystem::pclose(FILE* stream)
+{
+    std::lock_guard<std::mutex> Lock{g_popen_mtx};
+    return ::pclose(stream);
 }
 
 } // namespace Diligent

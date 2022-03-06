@@ -29,6 +29,7 @@
 
 #include <memory>
 #include <vector>
+#include <stdio.h>
 
 #include "../../Basic/interface/BasicFileSystem.hpp"
 #include "../../Basic/interface/StandardFile.hpp"
@@ -55,6 +56,10 @@ public:
     static void DeleteFile(const Char* strPath);
 
     static std::vector<std::unique_ptr<FindFileData>> Search(const Char* SearchPattern);
+
+    // Thread-safe popen/pclose
+    static FILE* popen(const char* command, const char* type);
+    static int   pclose(FILE* stream);
 };
 
 } // namespace Diligent

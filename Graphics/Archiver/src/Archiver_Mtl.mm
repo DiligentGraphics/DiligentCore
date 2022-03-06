@@ -345,7 +345,7 @@ SerializedData SerializedShaderImpl::PatchShaderMtl(const char*                 
         cmd += " \"";
         cmd += MetalFile;
         cmd += '\"';
-        FILE* Pipe = popen(cmd.c_str(), "r");
+        FILE* Pipe = FileSystem::popen(cmd.c_str(), "r");
         if (Pipe == nullptr)
             LOG_ERRNO_AND_THROW("failed to run command-line Metal shader compiler.");
 
@@ -353,7 +353,7 @@ SerializedData SerializedShaderImpl::PatchShaderMtl(const char*                 
         while (fgets(Output, _countof(Output), Pipe) != nullptr)
             printf("%s", Output);
 
-        auto status = pclose(Pipe);
+        auto status = FileSystem::pclose(Pipe);
         if (status != 0)
             LOG_PATCH_SHADER_ERROR_AND_THROW("failed to close msl preprocessor process (error code: ", status, ").");
     }
@@ -366,7 +366,7 @@ SerializedData SerializedShaderImpl::PatchShaderMtl(const char*                 
         cmd += (DevType == DeviceType::Metal_MacOS ? MtlProps.CompileOptionsMacOS : MtlProps.CompileOptionsIOS);
         cmd += " \"" + MetalFile + "\" -o \"" + MetalLibFile + '\"';
 
-        FILE* Pipe = popen(cmd.c_str(), "r");
+        FILE* Pipe = FileSystem::popen(cmd.c_str(), "r");
         if (Pipe == nullptr)
             LOG_ERRNO_AND_THROW("failed to compile MSL source.");
 
@@ -374,7 +374,7 @@ SerializedData SerializedShaderImpl::PatchShaderMtl(const char*                 
         while (fgets(Output, _countof(Output), Pipe) != nullptr)
             printf("%s", Output);
 
-        auto status = pclose(Pipe);
+        auto status = FileSystem::pclose(Pipe);
         if (status != 0)
             LOG_PATCH_SHADER_ERROR_AND_THROW("failed to close xcrun process (error code: ", status, ").");
     }
