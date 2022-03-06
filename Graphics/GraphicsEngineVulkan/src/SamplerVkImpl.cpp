@@ -72,10 +72,10 @@ SamplerVkImpl::SamplerVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImp
                   "Min and mag filters must both be either comparison filters or non-comparison ones");
 
     SamplerCI.compareOp               = ComparisonFuncToVkCompareOp(m_Desc.ComparisonFunc);
-    SamplerCI.minLod                  = m_Desc.MinLOD;
-    SamplerCI.maxLod                  = m_Desc.MaxLOD;
+    SamplerCI.minLod                  = m_Desc.UnnormalizedCoords ? 0 : m_Desc.MinLOD;
+    SamplerCI.maxLod                  = m_Desc.UnnormalizedCoords ? 0 : m_Desc.MaxLOD;
     SamplerCI.borderColor             = BorderColorToVkBorderColor(m_Desc.BorderColor);
-    SamplerCI.unnormalizedCoordinates = VK_FALSE;
+    SamplerCI.unnormalizedCoordinates = m_Desc.UnnormalizedCoords ? VK_TRUE : VK_FALSE;
 
     if (m_Desc.Flags & SAMPLER_FLAG_SUBSAMPLED)
     {

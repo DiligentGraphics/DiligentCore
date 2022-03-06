@@ -1,5 +1,6 @@
 ## Current progress
 
+* Added `SamplerDesc::UnnormalizedCoords` parameter (API Version 250014)
 * Added device object serialization/deserialization (API Version 250013)
 * Added pipeline state cache (API Version 250012)
 

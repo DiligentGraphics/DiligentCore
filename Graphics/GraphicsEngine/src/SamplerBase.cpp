@@ -44,7 +44,19 @@ void ValidateSamplerDesc(const SamplerDesc& Desc, const IRenderDevice* pDevice)
     if (Desc.Flags & (SAMPLER_FLAG_SUBSAMPLED | SAMPLER_FLAG_SUBSAMPLED_COARSE_RECONSTRUCTION))
     {
         VERIFY_SAMPLER(pDevice->GetAdapterInfo().ShadingRate.CapFlags & SHADING_RATE_CAP_FLAG_SUBSAMPLED_RENDER_TARGET,
-                       "Subsampled sampler requires SHADING_RATE_CAP_FLAG_SUBSAMPLED_RENDER_TARGET capability");
+                       "Subsampled sampler requires SHADING_RATE_CAP_FLAG_SUBSAMPLED_RENDER_TARGET capability.");
+    }
+    if (Desc.UnnormalizedCoords)
+    {
+        VERIFY_SAMPLER(pDevice->GetDeviceInfo().IsVulkanDevice() || pDevice->GetDeviceInfo().IsMetalDevice(),
+                       "Unnormalized coordinates are only supported in Vulkan and Metal.");
+
+        VERIFY_SAMPLER(Desc.MinFilter == Desc.MagFilter, "When UnnormalizedCoords is true, MinFilter and MagFilter must be equal.");
+        VERIFY_SAMPLER(Desc.MipFilter == FILTER_TYPE_POINT, "When UnnormalizedCoords is true, MipFilter must be FILTER_TYPE_POINT.");
+        VERIFY_SAMPLER(Desc.AddressU == TEXTURE_ADDRESS_CLAMP || Desc.AddressU == TEXTURE_ADDRESS_BORDER, "When UnnormalizedCoords is true, AddressU must be CLAMP or BORDER.");
+        VERIFY_SAMPLER(Desc.AddressV == TEXTURE_ADDRESS_CLAMP || Desc.AddressV == TEXTURE_ADDRESS_BORDER, "When UnnormalizedCoords is true, AddressV must be CLAMP or BORDER.");
+        VERIFY_SAMPLER(!IsComparisonFilter(Desc.MinFilter), "When UnnormalizedCoords is true, MinFilter and MagFilter must not be comparison.");
+        VERIFY_SAMPLER(!IsAnisotropicFilter(Desc.MinFilter), "When UnnormalizedCoords is true, MinFilter and MagFilter must not be anisotropic.");
     }
 }
 

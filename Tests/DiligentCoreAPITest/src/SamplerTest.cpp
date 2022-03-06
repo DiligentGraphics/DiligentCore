@@ -65,6 +65,7 @@ TEST_P(FilterTypeTest, CreateSampler)
     GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     SamplerDesc SamplerDesc;
+    SamplerDesc.Name      = "FilterTypeTest.CreateSampler";
     const auto& Param     = GetParam();
     SamplerDesc.MinFilter = std::get<0>(Param);
     SamplerDesc.MagFilter = std::get<1>(Param);
@@ -117,6 +118,7 @@ TEST(FilterTypeTest, AnisotropicFilter)
 
     {
         SamplerDesc SamplerDesc;
+        SamplerDesc.Name      = "FilterTypeTest.AnisotropicFilter";
         SamplerDesc.MinFilter = FILTER_TYPE_ANISOTROPIC;
         SamplerDesc.MagFilter = FILTER_TYPE_ANISOTROPIC;
         SamplerDesc.MipFilter = FILTER_TYPE_ANISOTROPIC;
@@ -125,12 +127,12 @@ TEST(FilterTypeTest, AnisotropicFilter)
         RefCntAutoPtr<ISampler> pSampler;
         pDevice->CreateSampler(SamplerDesc, &pSampler);
         ASSERT_TRUE(pSampler);
-        ASSERT_TRUE(pSampler);
         EXPECT_EQ(pSampler->GetDesc(), SamplerDesc);
     }
 
     {
         SamplerDesc SamplerDesc;
+        SamplerDesc.Name      = "FilterTypeTest.AnisotropicFilter2";
         SamplerDesc.MinFilter = FILTER_TYPE_COMPARISON_ANISOTROPIC;
         SamplerDesc.MagFilter = FILTER_TYPE_COMPARISON_ANISOTROPIC;
         SamplerDesc.MipFilter = FILTER_TYPE_COMPARISON_ANISOTROPIC;
@@ -139,6 +141,29 @@ TEST(FilterTypeTest, AnisotropicFilter)
         RefCntAutoPtr<ISampler> pSampler;
         pDevice->CreateSampler(SamplerDesc, &pSampler);
         ASSERT_TRUE(pSampler);
+        EXPECT_EQ(pSampler->GetDesc(), SamplerDesc);
+    }
+}
+
+TEST(FilterTypeTest, UnnormalizedCoords)
+{
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+    if (!pDevice->GetDeviceInfo().IsVulkanDevice() && !pDevice->GetDeviceInfo().IsMetalDevice())
+        GTEST_SKIP() << "Unnormalized coordinates are only supported by Vulkan and Metal";
+
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+
+    {
+        SamplerDesc SamplerDesc;
+        SamplerDesc.Name               = "FilterTypeTest.UnnormalizedCoords";
+        SamplerDesc.MinFilter          = FILTER_TYPE_LINEAR;
+        SamplerDesc.MagFilter          = FILTER_TYPE_LINEAR;
+        SamplerDesc.MipFilter          = FILTER_TYPE_POINT;
+        SamplerDesc.UnnormalizedCoords = true;
+
+        RefCntAutoPtr<ISampler> pSampler;
+        pDevice->CreateSampler(SamplerDesc, &pSampler);
         ASSERT_TRUE(pSampler);
         EXPECT_EQ(pSampler->GetDesc(), SamplerDesc);
     }

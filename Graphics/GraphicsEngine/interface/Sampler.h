@@ -105,6 +105,15 @@ struct SamplerDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// Sampler flags, see Diligent::SAMPLER_FLAGS for details.
     SAMPLER_FLAGS        Flags      DEFAULT_INITIALIZER(SAMPLER_FLAG_NONE);
 
+    /// Indicates whether to use unnormalized texture coordinates.
+    ///
+    /// \remarks    When set to True, the range of the image coordinates used to lookup
+    ///             the texel is in the range of 0 to the image size in each dimension.
+    ///             When set to False, the range of image coordinates is 0.0 to 1.0.
+    ///
+    ///             Unnormalized coordinates are only supported in Vulkan and Metal.
+    Bool    UnnormalizedCoords          DEFAULT_INITIALIZER(False);
+
     /// Offset from the calculated mipmap level. For example, if a sampler calculates that a texture
     /// should be sampled at mipmap level 1.2 and MipLODBias is 2.3, then the texture will be sampled at
     /// mipmap level 3.5. Default value: 0.
@@ -138,27 +147,29 @@ struct SamplerDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     constexpr SamplerDesc(FILTER_TYPE          _MinFilter,
                           FILTER_TYPE          _MagFilter,
                           FILTER_TYPE          _MipFilter,
-                          TEXTURE_ADDRESS_MODE _AddressU       = SamplerDesc{}.AddressU,
-                          TEXTURE_ADDRESS_MODE _AddressV       = SamplerDesc{}.AddressV,
-                          TEXTURE_ADDRESS_MODE _AddressW       = SamplerDesc{}.AddressW,
-                          Float32              _MipLODBias     = SamplerDesc{}.MipLODBias,
-                          Uint32               _MaxAnisotropy  = SamplerDesc{}.MaxAnisotropy,
-                          COMPARISON_FUNCTION  _ComparisonFunc = SamplerDesc{}.ComparisonFunc,
-                          float                _MinLOD         = SamplerDesc{}.MinLOD,
-                          float                _MaxLOD         = SamplerDesc{}.MaxLOD,
-                          SAMPLER_FLAGS        _Flags          = SamplerDesc{}.Flags) :
-        MinFilter      {_MinFilter     },
-        MagFilter      {_MagFilter     },
-        MipFilter      {_MipFilter     },
-        AddressU       {_AddressU      },
-        AddressV       {_AddressV      },
-        AddressW       {_AddressW      },
-        Flags          {_Flags         },
-        MipLODBias     {_MipLODBias    },
-        MaxAnisotropy  {_MaxAnisotropy },
-        ComparisonFunc {_ComparisonFunc},
-        MinLOD         {_MinLOD        },
-        MaxLOD         {_MaxLOD        }
+                          TEXTURE_ADDRESS_MODE _AddressU           = SamplerDesc{}.AddressU,
+                          TEXTURE_ADDRESS_MODE _AddressV           = SamplerDesc{}.AddressV,
+                          TEXTURE_ADDRESS_MODE _AddressW           = SamplerDesc{}.AddressW,
+                          Float32              _MipLODBias         = SamplerDesc{}.MipLODBias,
+                          Uint32               _MaxAnisotropy      = SamplerDesc{}.MaxAnisotropy,
+                          COMPARISON_FUNCTION  _ComparisonFunc     = SamplerDesc{}.ComparisonFunc,
+                          float                _MinLOD             = SamplerDesc{}.MinLOD,
+                          float                _MaxLOD             = SamplerDesc{}.MaxLOD,
+                          SAMPLER_FLAGS        _Flags              = SamplerDesc{}.Flags,
+                          Bool                 _UnnormalizedCoords = SamplerDesc{}.UnnormalizedCoords) :
+        MinFilter         {_MinFilter         },
+        MagFilter         {_MagFilter         },
+        MipFilter         {_MipFilter         },
+        AddressU          {_AddressU          },
+        AddressV          {_AddressV          },
+        AddressW          {_AddressW          },
+        Flags             {_Flags             },
+        UnnormalizedCoords{_UnnormalizedCoords},
+        MipLODBias        {_MipLODBias        },
+        MaxAnisotropy     {_MaxAnisotropy     },
+        ComparisonFunc    {_ComparisonFunc    },
+        MinLOD            {_MinLOD            },
+        MaxLOD            {_MaxLOD            }
     {
         BorderColor[0] = BorderColor[1] = BorderColor[2] = BorderColor[3] = 0;
     }
@@ -175,22 +186,23 @@ struct SamplerDesc DILIGENT_DERIVE(DeviceObjectAttribs)
                 // Name is primarily used for debug purposes and does not affect the state.
                 // It is ignored in comparison operation.
         return  // strcmp(Name, RHS.Name) == 0          &&
-                MinFilter       == RHS.MinFilter      &&
-                MagFilter       == RHS.MagFilter      &&
-                MipFilter       == RHS.MipFilter      &&
-                AddressU        == RHS.AddressU       &&
-                AddressV        == RHS.AddressV       &&
-                AddressW        == RHS.AddressW       &&
-                Flags           == RHS.Flags          &&
-                MipLODBias      == RHS.MipLODBias     &&
-                MaxAnisotropy   == RHS.MaxAnisotropy  &&
-                ComparisonFunc  == RHS.ComparisonFunc &&
-                BorderColor[0]  == RHS.BorderColor[0] &&
-                BorderColor[1]  == RHS.BorderColor[1] &&
-                BorderColor[2]  == RHS.BorderColor[2] &&
-                BorderColor[3]  == RHS.BorderColor[3] &&
-                MinLOD          == RHS.MinLOD         &&
-                MaxLOD          == RHS.MaxLOD;
+                MinFilter          == RHS.MinFilter          &&
+                MagFilter          == RHS.MagFilter          &&
+                MipFilter          == RHS.MipFilter          &&
+                AddressU           == RHS.AddressU           &&
+                AddressV           == RHS.AddressV           &&
+                AddressW           == RHS.AddressW           &&
+                Flags              == RHS.Flags              &&
+                UnnormalizedCoords == RHS.UnnormalizedCoords &&
+                MipLODBias         == RHS.MipLODBias         &&
+                MaxAnisotropy      == RHS.MaxAnisotropy      &&
+                ComparisonFunc     == RHS.ComparisonFunc     &&
+                BorderColor[0]     == RHS.BorderColor[0]     &&
+                BorderColor[1]     == RHS.BorderColor[1]     &&
+                BorderColor[2]     == RHS.BorderColor[2]     &&
+                BorderColor[3]     == RHS.BorderColor[3]     &&
+                MinLOD             == RHS.MinLOD             &&
+                MaxLOD             == RHS.MaxLOD;
     }
 #endif
 };
