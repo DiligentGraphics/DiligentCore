@@ -166,8 +166,8 @@ public:
     }
 
     // Make this constructor explicit to avoid unintentional string copies
-    explicit HashMapStringKey(const String& Str) :
-        HashMapStringKey{Str.c_str(), true}
+    explicit HashMapStringKey(const String& Str, bool bMakeCopy = true) :
+        HashMapStringKey{Str.c_str(), bMakeCopy}
     {
     }
 
