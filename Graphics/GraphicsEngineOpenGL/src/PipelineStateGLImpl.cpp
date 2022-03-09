@@ -114,7 +114,7 @@ PipelineResourceSignatureDescWrapper PipelineStateGLImpl::GetDefaultSignatureDes
     const auto HandleResource = [&](const ShaderResourcesGL::GLResourceAttribs& Attribs) //
     {
         const auto VarDesc     = FindPipelineResourceLayoutVariable(ResourceLayout, Attribs.Name, Attribs.ShaderStages, nullptr);
-        const auto it_assigned = UniqueResources.emplace(ShaderResourceHashKey{Attribs.Name, VarDesc.ShaderStages}, Attribs);
+        const auto it_assigned = UniqueResources.emplace(ShaderResourceHashKey{VarDesc.ShaderStages, Attribs.Name}, Attribs);
         if (it_assigned.second)
         {
             const auto Flags = Attribs.ResourceFlags | ShaderVariableFlagsToPipelineResourceFlags(VarDesc.Flags);

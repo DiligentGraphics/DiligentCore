@@ -130,37 +130,44 @@ ShaderResourceVariableDesc FindPipelineResourceLayoutVariable(
 
 
 /// Hash map key that identifies shader resource by its name and shader stages
-struct ShaderResourceHashKey
+struct ShaderResourceHashKey : public HashMapStringKey
 {
-    const char*       Name;
-    const SHADER_TYPE ShaderStages;
-    const size_t      Hash;
+    template <typename... ArgsType>
+    ShaderResourceHashKey(const SHADER_TYPE _ShaderStages,
+                          ArgsType&&... Args) noexcept :
+        // clang-format off
+        HashMapStringKey{std::forward<ArgsType>(Args)...},
+        ShaderStages    {_ShaderStages}
+    // clang-format on
+    {
+        Ownership_Hash = ComputeHash(GetHash(), Uint32{ShaderStages}) & HashMask;
+    }
 
-    ShaderResourceHashKey(const char*       _Name,
-                          const SHADER_TYPE _ShaderStages) noexcept :
-        Name{_Name},
-        ShaderStages{_ShaderStages},
-        Hash{ComputeHash(CStringHash<char>{}(_Name), Uint32{_ShaderStages})}
-    {}
+    ShaderResourceHashKey(ShaderResourceHashKey&& Key) noexcept :
+        // clang-format off
+        HashMapStringKey{std::move(Key)},
+        ShaderStages    {Key.ShaderStages}
+    // clang-format on
+    {
+        Key.ShaderStages = SHADER_TYPE_UNKNOWN;
+    }
 
     bool operator==(const ShaderResourceHashKey& rhs) const
     {
-        if (Hash != rhs.Hash)
-        {
-            VERIFY_EXPR(ShaderStages != rhs.ShaderStages || strcmp(Name, rhs.Name) != 0);
-            return false;
-        }
-
-        return ShaderStages == rhs.ShaderStages && strcmp(Name, rhs.Name) == 0;
+        return ShaderStages == rhs.ShaderStages &&
+            static_cast<const HashMapStringKey&>(*this) == static_cast<const HashMapStringKey&>(rhs);
     }
 
     struct Hasher
     {
         size_t operator()(const ShaderResourceHashKey& Key) const
         {
-            return Key.Hash;
+            return Key.GetHash();
         }
     };
+
+protected:
+    SHADER_TYPE ShaderStages = SHADER_TYPE_UNKNOWN;
 };
 
 /// Template class implementing base functionality of the pipeline state object.

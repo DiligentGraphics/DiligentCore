@@ -75,7 +75,7 @@ PipelineResourceSignatureDescWrapper PipelineStateD3D11Impl::GetDefaultResourceS
 
                 const auto VarDesc = FindPipelineResourceLayoutVariable(ResourceLayout, Attribs.Name, ShaderType, SamplerSuffix);
                 // Note that Attribs.Name != VarDesc.Name for combined samplers
-                const auto it_assigned = UniqueResources.emplace(ShaderResourceHashKey{Attribs.Name, VarDesc.ShaderStages}, Attribs);
+                const auto it_assigned = UniqueResources.emplace(ShaderResourceHashKey{VarDesc.ShaderStages, Attribs.Name}, Attribs);
                 if (it_assigned.second)
                 {
                     if (Attribs.BindCount == 0)
