@@ -41,6 +41,10 @@ SerializedData::SerializedData(size_t Size, IMemoryAllocator& Allocator) noexcep
     m_Ptr{Allocator.Allocate(Size, "Serialized data memory", __FILE__, __LINE__)},
     m_Size{Size}
 {
+    // We need to zero out memory as due to element alignment, there may be gaps
+    // in the data that will be filled with garbage, which will result in
+    // operator==() and GetHash() returning invalid values.
+    std::memset(m_Ptr, 0, m_Size);
 }
 
 SerializedData::~SerializedData()

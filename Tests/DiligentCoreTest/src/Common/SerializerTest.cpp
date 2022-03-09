@@ -76,10 +76,12 @@ TEST(SerializerTest, SerializerTest)
 
     auto Data = MSer.AllocateData(RawAllocator);
 
-    Serializer<SerializerMode::Write> WSer{Data};
-    WriteData(WSer);
+    {
+        Serializer<SerializerMode::Write> WSer{Data};
+        WriteData(WSer);
 
-    EXPECT_TRUE(WSer.IsEnded());
+        EXPECT_TRUE(WSer.IsEnded());
+    }
 
     Serializer<SerializerMode::Read> RSer{Data};
 
@@ -158,6 +160,16 @@ TEST(SerializerTest, SerializerTest)
     }
 
     EXPECT_TRUE(RSer.IsEnded());
+
+    {
+        auto Data2 = MSer.AllocateData(RawAllocator);
+
+        Serializer<SerializerMode::Write> WSer{Data2};
+        WriteData(WSer);
+
+        EXPECT_TRUE(WSer.IsEnded());
+        EXPECT_TRUE(Data == Data2);
+    }
 }
 
 } // namespace
