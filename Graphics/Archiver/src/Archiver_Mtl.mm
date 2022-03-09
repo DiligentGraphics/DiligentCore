@@ -111,10 +111,10 @@ void SerializedPipelineStateImpl::PatchShadersMtl(const CreateInfoType& CreateIn
     SHADER_TYPE                     ActiveShaderStages = SHADER_TYPE_UNKNOWN;
     PipelineStateMtlImpl::ExtractShaders<SerializedShaderImpl>(CreateInfo, ShaderStages, ActiveShaderStages);
 
-    std::vector<const SPIRVShaderResources*> StageResources{ShaderStages.size()};
+    std::vector<const MSLParseData*> StageResources{ShaderStages.size()};
     for (size_t i = 0; i < StageResources.size(); ++i)
     {
-        StageResources[i] = ShaderStages[i].pShader->GetMtlShaderSPIRVResources();
+        StageResources[i] = ShaderStages[i].pShader->GetMSLData();
     }
 
     auto** ppSignatures    = CreateInfo.ppResourceSignatures;
@@ -177,58 +177,53 @@ static_assert(std::is_same<MtlArchiverResourceCounters, MtlResourceCounters>::va
 
 struct SerializedShaderImpl::CompiledShaderMtlImpl final : CompiledShader
 {
-    String                                      MslSource;
-    std::vector<uint32_t>                       SPIRV;
-    std::unique_ptr<SPIRVShaderResources>       SPIRVResources;
-    MtlFunctionArguments::BufferTypeInfoMapType BufferTypeInfoMap;
+    MSLParseData MSLData;
 };
 
 void SerializedShaderImpl::CreateShaderMtl(ShaderCreateInfo ShaderCI) noexcept(false)
 {
     auto pShaderMtl = std::make_unique<CompiledShaderMtlImpl>();
     // Convert HLSL/GLSL/SPIRV to MSL
-    ShaderMtlImpl::ConvertToMSL(ShaderCI,
-                                m_pDevice->GetDeviceInfo(),
-                                m_pDevice->GetAdapterInfo(),
-                                pShaderMtl->MslSource,
-                                pShaderMtl->SPIRV,
-                                pShaderMtl->SPIRVResources,
-                                pShaderMtl->BufferTypeInfoMap); // may throw exception
+    pShaderMtl->MSLData = ShaderMtlImpl::PrepareMSLData(
+        ShaderCI,
+        m_pDevice->GetDeviceInfo(),
+        m_pDevice->GetAdapterInfo()); // may throw exception
     m_pShaderMtl = std::move(pShaderMtl);
 }
 
-const SPIRVShaderResources* SerializedShaderImpl::GetMtlShaderSPIRVResources() const
+const MSLParseData* SerializedShaderImpl::GetMSLData() const
 {
     auto* pShaderMtl = static_cast<const CompiledShaderMtlImpl*>(m_pShaderMtl.get());
-    return pShaderMtl && pShaderMtl->SPIRVResources ? pShaderMtl->SPIRVResources.get() : nullptr;
+    return pShaderMtl != nullptr ? &pShaderMtl->MSLData : nullptr;
 }
 
 namespace
 {
-template <SerializerMode Mode>
-void SerializeBufferTypeInfoMapAndComputeGroupSize(Serializer<Mode>                                  &Ser,
-                                                   const MtlFunctionArguments::BufferTypeInfoMapType &BufferTypeInfoMap,
-                                                   const SHADER_TYPE                                  ShaderType,
-                                                   const std::unique_ptr<SPIRVShaderResources>       &SPIRVResources)
-{
-    const auto Count = static_cast<Uint32>(BufferTypeInfoMap.size());
-    Ser(Count);
 
-    for (auto& BuffInfo : BufferTypeInfoMap)
+template <SerializerMode Mode>
+void SerializeMSLData(Serializer<Mode>&   Ser,
+                      const SHADER_TYPE   ShaderType,
+                      const MSLParseData& MSLData)
+{
+    // Same as DeviceObjectArchiveMtlImpl::UnpackShader
+    
+    const auto& BufferInfoMap{MSLData.BufferInfoMap};
+    const auto Count = static_cast<Uint32>(BufferInfoMap.size());
+    Ser(Count);
+    for (auto& it : BufferInfoMap)
     {
-        const char* Name = BuffInfo.second.Name.c_str();
-        Ser(BuffInfo.first, Name, BuffInfo.second.ArraySize, BuffInfo.second.ResourceType);
+        const auto* Name    = it.first.c_str();
+        const auto* AltName = it.second.AltName.c_str();
+        const auto  Space   = it.second.Space;
+        Ser(Name, AltName, Space);
     }
 
     if (ShaderType == SHADER_TYPE_COMPUTE)
     {
-        const auto GroupSize = SPIRVResources ?
-            SPIRVResources->GetComputeGroupSize() :
-            std::array<Uint32,3>{};
-
-        Ser(GroupSize);
+        Ser(MSLData.ComputeGroupSize);
     }
 }
+
 } // namespace
 
 SerializedData SerializedShaderImpl::PatchShaderMtl(const char*                                            PSOName,
@@ -281,37 +276,20 @@ SerializedData SerializedShaderImpl::PatchShaderMtl(const char*                 
     const auto MetalLibFile = WorkingFolder + ShaderName + ".metallib";
 
     auto*  pShaderMtl = static_cast<const CompiledShaderMtlImpl*>(m_pShaderMtl.get());
-    String MslSource  = pShaderMtl->MslSource;
-    MtlFunctionArguments::BufferTypeInfoMapType BufferTypeInfoMap;
-
-    if (!pShaderMtl->SPIRV.empty())
+    String MslSource = pShaderMtl->MSLData.Source;
+    if (pShaderMtl->MSLData.pParser)
     {
-        try
-        {
-            // Shader can be patched as SPIRV
-            VERIFY_EXPR(pShaderMtl->SPIRVResources != nullptr);
-            ShaderMtlImpl::MtlResourceRemappingVectorType ResRemapping;
+        const auto ResRemapping = PipelineStateMtlImpl::GetResourceMap(
+            pShaderMtl->MSLData,
+            pSignatures,
+            SignatureCount,
+            pBaseBindings,
+            GetDesc(),
+            ""); // may throw exception
 
-            PipelineStateMtlImpl::RemapShaderResources(pShaderMtl->SPIRV,
-                                                       *pShaderMtl->SPIRVResources,
-                                                       ResRemapping,
-                                                       pSignatures,
-                                                       SignatureCount,
-                                                       pBaseBindings,
-                                                       GetDesc(),
-                                                       ""); // may throw exception
-
-            MslSource = ShaderMtlImpl::SPIRVtoMSL(pShaderMtl->SPIRV,
-                                                  GetCreateInfo(),
-                                                  &ResRemapping,
-                                                  BufferTypeInfoMap); // may throw exception
-
-            VERIFY_EXPR(BufferTypeInfoMap.size() == pShaderMtl->BufferTypeInfoMap.size());
-        }
-        catch (...)
-        {
-            LOG_ERROR_AND_THROW("Failed to patch Metal shader");
-        }
+        MslSource = pShaderMtl->MSLData.pParser->RemapResources(ResRemapping);
+        if (MslSource.empty())
+            LOG_ERROR_AND_THROW("Failed to remap MSL resources");
     }
 
 #define LOG_PATCH_SHADER_ERROR_AND_THROW(...)\
@@ -404,7 +382,7 @@ SerializedData SerializedShaderImpl::PatchShaderMtl(const char*                 
 
     auto SerializeShaderData = [&](auto& Ser){
         Ser.SerializeBytes(ByteCode.data(), ByteCode.size() * sizeof(ByteCode[0]));
-        SerializeBufferTypeInfoMapAndComputeGroupSize(Ser, BufferTypeInfoMap, GetDesc().ShaderType, pShaderMtl->SPIRVResources);
+        SerializeMSLData(Ser, GetDesc().ShaderType, pShaderMtl->MSLData);
     };
 
     SerializedData ShaderData;
