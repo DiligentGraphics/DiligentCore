@@ -107,6 +107,8 @@ struct PipelineResourceSignatureInternalData
     PIPELINE_TYPE                             PipelineType          = PIPELINE_TYPE_INVALID;
     std::array<Int8, MAX_SHADERS_IN_PIPELINE> StaticResStageIndex   = {};
 
+    Uint8 _Padding = 0;
+
     bool operator==(const PipelineResourceSignatureInternalData& Rhs) const
     {
         // clang-format off
@@ -117,6 +119,7 @@ struct PipelineResourceSignatureInternalData
         // clang-format on
     }
 };
+ASSERT_SIZEOF(PipelineResourceSignatureInternalData, 16, "The struct is used in serialization and must be tightly packed");
 
 
 /// Helper class that wraps the pipeline resource signature description.

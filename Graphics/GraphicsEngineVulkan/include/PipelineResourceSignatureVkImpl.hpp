@@ -56,6 +56,7 @@ struct PipelineResourceImmutableSamplerAttribsVk
     Uint32 DescrSet     = ~0u;
     Uint32 BindingIndex = ~0u;
 };
+ASSERT_SIZEOF(PipelineResourceImmutableSamplerAttribsVk, 8, "The struct is used in serialization and must be tightly packed");
 
 struct PipelineResourceSignatureInternalDataVk : PipelineResourceSignatureInternalData
 {

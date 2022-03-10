@@ -173,6 +173,7 @@ private:
 
     Uint16 ActiveStages = 0;
 };
+ASSERT_SIZEOF(D3D11ResourceBindPoints, 8, "The struct is used in serialization and must be tightly packed");
 
 
 /// Shader resource counters for one specific resource range
@@ -333,5 +334,6 @@ public:
         return ComputeHash(IsImmutableSamplerAssigned(), BindPoints.GetHash());
     }
 };
+ASSERT_SIZEOF(PipelineResourceAttribsD3D11, 12, "The struct is used in serialization and must be tightly packed");
 
 } // namespace Diligent

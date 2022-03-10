@@ -168,6 +168,7 @@ public:
         return ComputeHash(BindingIndex, ArraySize, DescrType, DescrSet, ImtblSamplerAssigned);
     }
 };
+ASSERT_SIZEOF(PipelineResourceAttribsVk, 16, "The struct is used in serialization and must be tightly packed");
 
 inline VkDescriptorType DescriptorTypeToVkDescriptorType(DescriptorType Type)
 {

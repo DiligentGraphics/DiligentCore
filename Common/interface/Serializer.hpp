@@ -33,6 +33,7 @@
 
 #include "../../Primitives/interface/BasicTypes.h"
 #include "../../Primitives/interface/MemoryAllocator.h"
+#include "../../Primitives/interface/CheckBaseStructAlignment.hpp"
 #include "../../Platforms/Basic/interface/DebugUtilities.hpp"
 #include "DynamicLinearAllocator.hpp"
 #include "Align.hpp"
@@ -309,6 +310,7 @@ template <>
 template <typename T>
 void Serializer<SerializerMode::Read>::Copy(T* pData, size_t Size)
 {
+    static_assert(IsAlignedBaseClass<T>::Value, "There is unused space at the end of the structure that may be filled with garbage. Use padding to zero-initialize this space and avoid nasty issues.");
     VERIFY(m_Ptr + Size <= m_End, "Note enough data to read ", Size, " bytes");
     std::memcpy(pData, m_Ptr, Size);
     m_Ptr += Size;
@@ -318,6 +320,7 @@ template <>
 template <typename T>
 void Serializer<SerializerMode::Write>::Copy(T* pData, size_t Size)
 {
+    static_assert(IsAlignedBaseClass<T>::Value, "There is unused space at the end of the structure that may be filled with garbage. Use padding to zero-initialize this space and avoid nasty issues.");
     VERIFY(m_Ptr + Size <= m_End, "Note enough data to write ", Size, " bytes");
     std::memcpy(m_Ptr, pData, Size);
     m_Ptr += Size;

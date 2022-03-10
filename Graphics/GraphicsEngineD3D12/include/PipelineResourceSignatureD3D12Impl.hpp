@@ -88,6 +88,8 @@ public:
                 RegisterSpace != _InvalidRegisterSpace);
     }
 };
+ASSERT_SIZEOF(PipelineResourceImmutableSamplerAttribsD3D12, 8, "The struct is used in serialization and must be tightly packed");
+
 
 struct PipelineResourceSignatureInternalDataD3D12 : PipelineResourceSignatureInternalData
 {
