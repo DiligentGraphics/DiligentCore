@@ -45,7 +45,14 @@ static const INTERFACE_ID IID_ShaderMtl =
 /// Exposes Metal-specific functionality of a shader object.
 DILIGENT_BEGIN_INTERFACE(IShaderMtl, IShader)
 {
-    /// Returns the point to Metal shader function (MTLFunction)
+    /// Returns a point to the Metal shader function (MTLFunction)
+    /// compiled without resource remapping.
+    ///
+    /// \remarks Pipeline state objects that use explicit resource signatures
+    ///          remap resources in each shader function to make them
+    ///          match the signatures.
+    ///          This method returns a pointer the shader function compiled before
+    ///          any remapping has been applied.
     VIRTUAL id<MTLFunction> METHOD(GetMtlShaderFunction)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE
