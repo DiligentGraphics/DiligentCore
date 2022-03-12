@@ -195,4 +195,36 @@ inline size_t CountFloatNumberChars(const char* Str)
     return NumEnd - Str;
 }
 
+/// Splits string [Start, End) into chunks of length no more than MaxChunkLen.
+/// For each chunk, searches back for the new line for no more than NewLineSearchLen symbols.
+/// For each chunk, calls the Handler.
+///
+/// \note   This function is used to split long messages on Android to avoid
+///         trunction in logcat.
+template <typename IterType, typename HandlerType>
+void SplitString(IterType Start, IterType End, size_t MaxChunkLen, size_t NewLineSearchLen, HandlerType Handler)
+{
+    VERIFY_EXPR(MaxChunkLen > 0);
+    VERIFY_EXPR(NewLineSearchLen <= MaxChunkLen);
+    while (Start < End)
+    {
+        auto ChunkEnd = End;
+        if (static_cast<size_t>(ChunkEnd - Start) > MaxChunkLen)
+        {
+            ChunkEnd = Start + MaxChunkLen;
+            // Try to find new line
+            auto NewLine = ChunkEnd - 1;
+            while (NewLine > Start + 1 && static_cast<size_t>(ChunkEnd - NewLine) < NewLineSearchLen && *NewLine != '\n')
+                --NewLine;
+            if (*NewLine == '\n')
+            {
+                // Found new line - use it as the end of the string
+                ChunkEnd = NewLine + 1;
+            }
+        }
+        Handler(Start, ChunkEnd);
+        Start = ChunkEnd;
+    }
+}
+
 } // namespace Diligent
