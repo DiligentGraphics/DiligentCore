@@ -204,8 +204,10 @@ inline size_t CountFloatNumberChars(const char* Str)
 template <typename IterType, typename HandlerType>
 void SplitString(IterType Start, IterType End, size_t MaxChunkLen, size_t NewLineSearchLen, HandlerType Handler)
 {
-    VERIFY_EXPR(MaxChunkLen > 0);
-    VERIFY_EXPR(NewLineSearchLen <= MaxChunkLen);
+    // NB: do not use debug macros to avoid infinite recursion!
+
+    if (MaxChunkLen == 0)
+        MaxChunkLen = 32;
     while (Start < End)
     {
         auto ChunkEnd = End;

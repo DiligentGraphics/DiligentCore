@@ -27,6 +27,7 @@
 
 #include "AndroidDebug.hpp"
 #include "FormatString.hpp"
+#include "../../../Common/interface/StringTools.hpp"
 #include <android/log.h>
 #include <csignal>
 
@@ -43,10 +44,27 @@ void AndroidDebug::AssertionFailed(const Char* Message, const char* Function, co
 
 void AndroidDebug::OutputDebugMessage(DEBUG_MESSAGE_SEVERITY Severity, const Char* Message, const char* Function, const char* File, int Line)
 {
-    auto msg = FormatDebugMessage(Severity, Message, Function, File, Line);
+    auto Msg = FormatDebugMessage(Severity, Message, Function, File, Line);
 
-    static const android_LogPriority Priorities[] = {ANDROID_LOG_INFO, ANDROID_LOG_WARN, ANDROID_LOG_ERROR, ANDROID_LOG_FATAL};
-    __android_log_print(Priorities[static_cast<int>(Severity)], "Diligent Engine", "%s", msg.c_str());
+    static constexpr android_LogPriority Priorities[]    = {ANDROID_LOG_INFO, ANDROID_LOG_WARN, ANDROID_LOG_ERROR, ANDROID_LOG_FATAL};
+    static constexpr size_t              LogcatMsgMaxLen = 1024;
+    const auto                           Priority        = Priorities[static_cast<int>(Severity)];
+
+    SplitString(Msg.begin(), Msg.end(), LogcatMsgMaxLen, 80,
+                [&](std::string::iterator Start, std::string::iterator End) {
+                    char tmp = '\0';
+                    if (End != Msg.end())
+                    {
+                        // Temporarily break the string
+                        tmp  = *End;
+                        *End = '\0';
+                    }
+
+                    __android_log_print(Priority, "Diligent Engine", "%s", &*Start);
+
+                    if (tmp != '\0')
+                        *End = tmp;
+                });
 }
 
 void DebugAssertionFailed(const Char* Message, const char* Function, const char* File, int Line)
