@@ -9,7 +9,7 @@ jobs:
         config: [Debug, Release]
 
     runs-on: ubuntu-latest
-    name: Linux -> x64, GCC 9, ${{ matrix.config }}
+    name: Linux -> x64, GCC, ${{ matrix.config }}
 
     steps:
     - name: Clone repository
@@ -57,13 +57,13 @@ jobs:
         retention-days: 90
 
 
-  build-clang-10:
+  build-clang-12:
     strategy:
       matrix:
         config: [Debug, Release]
 
     runs-on: ubuntu-latest
-    name: Linux -> x64, Clang 10, ${{ matrix.config }}
+    name: Linux -> x64, Clang, ${{ matrix.config }}
 
     steps:
     - name: Clone repository
@@ -79,8 +79,8 @@ jobs:
     - name: Configure CMake
       if: success()
       env:
-        CC: clang-10
-        CXX: clang++-10
+        CC: clang-12
+        CXX: clang++-12
       shell: bash
       run: |
         cd $GITHUB_WORKSPACE/BuildTools/Scripts/github_actions
@@ -104,20 +104,20 @@ jobs:
       uses: actions/upload-artifact@v2
       if: ${{ success() && matrix.config == 'Release' }}
       with:
-        name: DiligentCore-Linux-x64-Clang10-${{ matrix.config }}
+        name: DiligentCore-Linux-x64-Clang12-${{ matrix.config }}
         path: |
           ${{runner.workspace}}/build/install/
           !${{runner.workspace}}/build/install/**/*.a
         retention-days: 90
 
 
-  build-clang-10-no-glslang:
+  build-clang-12-no-glslang:
     strategy:
       matrix:
         config: [Debug]
 
     runs-on: ubuntu-latest
-    name: Linux -> x64, Clang 10, NO_GLSLANG, ${{ matrix.config }}
+    name: Linux -> x64, Clang, NO_GLSLANG, ${{ matrix.config }}
 
     steps:
     - name: Clone repository
@@ -133,8 +133,8 @@ jobs:
     - name: Configure CMake
       if: success()
       env:
-        CC: clang-10
-        CXX: clang++-10
+        CC: clang-12
+        CXX: clang++-12
       shell: bash
       run: |
         cd $GITHUB_WORKSPACE/BuildTools/Scripts/github_actions
@@ -148,13 +148,13 @@ jobs:
       run: cmake --build . --config ${{ matrix.config }} --target install -j2
 
 
-  build-clang-10-no-glslang-no-hlsl:
+  build-clang-12-no-glslang-no-hlsl:
     strategy:
       matrix:
         config: [Release]
 
     runs-on: ubuntu-latest
-    name: Linux -> x64, Clang 10, NO_GLSLANG NO_HLSL, ${{ matrix.config }}
+    name: Linux -> x64, Clang, NO_GLSLANG NO_HLSL, ${{ matrix.config }}
 
     steps:
     - name: Clone repository
@@ -170,8 +170,8 @@ jobs:
     - name: Configure CMake
       if: success()
       env:
-        CC: clang-10
-        CXX: clang++-10
+        CC: clang-12
+        CXX: clang++-12
       shell: bash
       run: |
         cd $GITHUB_WORKSPACE/BuildTools/Scripts/github_actions
