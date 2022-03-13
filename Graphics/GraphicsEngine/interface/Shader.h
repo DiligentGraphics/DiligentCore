@@ -345,6 +345,11 @@ struct ShaderCreateInfo
     /// supported by the device.
     ShaderVersion GLESSLVersion DEFAULT_INITIALIZER({});
 
+    /// Metal shading language version to use when creating the shader. When default value
+    /// is given (0, 0), the engine will attempt to use the highest MSL version
+    /// supported by the device.
+    ShaderVersion MSLVersion DEFAULT_INITIALIZER({});
+
     /// Shader compile flags (see Diligent::SHADER_COMPILE_FLAGS).
     SHADER_COMPILE_FLAGS CompileFlags DEFAULT_INITIALIZER(SHADER_COMPILE_FLAG_NONE);
 
