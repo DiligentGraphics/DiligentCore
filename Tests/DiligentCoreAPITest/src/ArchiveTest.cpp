@@ -693,6 +693,7 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
         SerializationDeviceCreateInfo DeviceCI;
         DeviceCI.Metal.CompileOptionsMacOS = "-sdk macosx metal -std=macos-metal2.0 -mmacos-version-min=10.0";
         DeviceCI.Metal.CompileOptionsiOS   = "-sdk iphoneos metal -std=ios-metal2.0 -mios-version-min=10.0";
+        DeviceCI.Metal.MslPreprocessorCmd  = "ls";
 
         pArchiverFactory->CreateSerializationDevice(DeviceCI, &pSerializationDevice);
         ASSERT_NE(pSerializationDevice, nullptr);

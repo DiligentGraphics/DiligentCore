@@ -65,6 +65,18 @@ public:
 
     static RefCntAutoPtr<DataBlobImpl> Create(size_t InitialSize = 0, const void* pData = nullptr);
 
+    template <typename T>
+    T* GetDataPtr()
+    {
+        return reinterpret_cast<T*>(GetDataPtr());
+    }
+
+    template <typename T>
+    const T* GetConstDataPtr() const
+    {
+        return reinterpret_cast<const T*>(GetConstDataPtr());
+    }
+
 private:
     std::vector<Uint8> m_DataBuff;
 };

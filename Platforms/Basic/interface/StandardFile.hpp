@@ -41,7 +41,7 @@ public:
     StandardFile(const FileOpenAttribs& OpenAttribs, Char SlashSymbol);
     virtual ~StandardFile() override;
 
-    void Read(IDataBlob* pData);
+    bool Read(IDataBlob* pData);
 
     bool Read(void* Data, size_t Size);
 

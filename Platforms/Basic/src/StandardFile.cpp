@@ -56,14 +56,12 @@ StandardFile::~StandardFile()
     }
 }
 
-void StandardFile::Read(IDataBlob* pData)
+bool StandardFile::Read(IDataBlob* pData)
 {
     VERIFY_EXPR(pData != nullptr);
     auto FileSize = GetSize();
     pData->Resize(FileSize);
-    auto Res = Read(pData->GetDataPtr(), pData->GetSize());
-    VERIFY(Res, "Failed to read ", FileSize, " bytes from file");
-    (void)Res;
+    return Read(pData->GetDataPtr(), pData->GetSize());
 }
 
 bool StandardFile::Read(void* Data, size_t Size)
