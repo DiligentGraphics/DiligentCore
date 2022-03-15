@@ -129,7 +129,8 @@ bool BasicFileSystem::IsPathAbsolute(const Char* strPath)
         return false;
 
 #if PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS
-    return strPath[1] == ':' && (strPath[2] == '\\' || strPath[2] == '/');
+    return ((strPath[1] == ':' && (strPath[2] == '\\' || strPath[2] == '/')) || // c:\Path or c:/Path
+            (strPath[0] == '\\' && strPath[1] == '\\'));                        // \\?\Path
 #elif PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS || PLATFORM_TVOS || PLATFORM_ANDROID || PLATFORM_EMSCRIPTEN
     return strPath[0] == '/';
 #else

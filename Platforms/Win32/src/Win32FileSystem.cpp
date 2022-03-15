@@ -71,32 +71,36 @@ namespace Diligent
 class WindowsPathHelper
 {
 public:
-    explicit WindowsPathHelper(const char* Path) :
-        m_SrcPath{Path != nullptr ? Path : ""},
-        m_PathLen{strlen(m_SrcPath)}
+    explicit WindowsPathHelper(const char* Path)
     {
-        if (IsLong())
-        {
-            const auto WndSlash = WindowsFileSystem::GetSlashSymbol();
+        // NOTE: the MAX_PATH limitation apparently applies to the total path length.
+        //       For a relative path, it also counts the implicit current directory part.
+        //       As there is no reliable way to check if we will exceed the limit,
+        //       always use the long path method.
 
-            auto SimplifiedPath = WindowsFileSystem::SimplifyPath(Path, WndSlash);
-            if (!WindowsFileSystem::IsPathAbsolute(SimplifiedPath.c_str()))
-            {
-                auto CurrDir = GetCurrentDirectory_();
-                if (CurrDir.back() != WndSlash && SimplifiedPath.front() != WndSlash)
-                    CurrDir.push_back(WndSlash);
-                SimplifiedPath.insert(0, CurrDir);
-            }
-            SimplifiedPath.insert(0, R"(\\?\)");
-            m_LongPathW = WidenString(SimplifiedPath);
+        const auto WndSlash = WindowsFileSystem::GetSlashSymbol();
+
+        m_Path = WindowsFileSystem::SimplifyPath(Path, WndSlash);
+        if (!WindowsFileSystem::IsPathAbsolute(m_Path.c_str()))
+        {
+            auto CurrDir = GetCurrentDirectory_();
+            if (CurrDir.back() != WndSlash && !m_Path.empty() && m_Path.front() != WndSlash)
+                CurrDir.push_back(WndSlash);
+            m_Path.insert(0, CurrDir);
         }
+
+        m_LongPathW = WidenString(m_Path);
+
+        constexpr auto* LongPathPrefix = LR"(\\?\)";
+        if (m_LongPathW.compare(0, 4, LongPathPrefix) != 0)
+            m_LongPathW.insert(0, LongPathPrefix);
     }
 
     explicit WindowsPathHelper(const std::string& Path) :
         WindowsPathHelper{Path.c_str()}
     {}
 
-#define CALL_WIN_FUNC(WinFunc, ...) (IsLong() ? WinFunc##W(GetLong(), ##__VA_ARGS__) : WinFunc##A(GetShort(), ##__VA_ARGS__))
+#define CALL_WIN_FUNC(WinFunc, ...) (WinFunc##W(m_LongPathW.c_str(), ##__VA_ARGS__))
 
     bool PathFileExists_() const
     {
@@ -169,39 +173,42 @@ public:
 
     errno_t fopen(FILE** ppFile, const char* Mode) const
     {
-        if (IsLong())
-        {
-            return _wfopen_s(ppFile, GetLong(), WidenString(Mode).c_str());
-        }
-        else
-        {
-            return fopen_s(ppFile, GetShort(), Mode);
-        }
+        return _wfopen_s(ppFile, m_LongPathW.c_str(), WidenString(Mode).c_str());
+    }
+
+    std::string operator+(const char* Path) const
+    {
+        const auto WndSlash = WindowsFileSystem::GetSlashSymbol();
+
+        auto Res = m_Path;
+        if (Res.back() != WndSlash)
+            Res.push_back(WndSlash);
+        Res.append(Path);
+
+        return Res;
+    }
+
+    std::wstring operator+(const wchar_t* Path) const
+    {
+        auto Res = m_LongPathW;
+        if (Res.back() != L'\\')
+            Res.push_back(L'\\');
+        Res.append(Path);
+
+        return Res;
+    }
+
+    std::string operator+(const std::string& Path) const
+    {
+        return *this + Path.c_str();
+    }
+    std::wstring operator+(const std::wstring& Path) const
+    {
+        return *this + Path.c_str();
     }
 
 private:
-    bool IsLong() const
-    {
-        // Null terminator counts towards the MAX_PATH limit
-        return m_PathLen >= MAX_PATH - 1;
-    }
-
-    const char* GetShort() const
-    {
-        VERIFY_EXPR(!IsLong());
-        return m_SrcPath;
-    }
-
-    const wchar_t* GetLong() const
-    {
-        VERIFY_EXPR(IsLong());
-        return m_LongPathW.c_str();
-    }
-
-private:
-    const char* const m_SrcPath;
-    const size_t      m_PathLen;
-
+    std::string  m_Path;
     std::wstring m_LongPathW;
 };
 
@@ -297,16 +304,13 @@ static bool CreateDirectoryImpl(const Char* strPath)
 
 void WindowsFileSystem::ClearDirectory(const Char* strPath, bool Recursive)
 {
-    WIN32_FIND_DATAA ffd;
-    HANDLE           hFind = INVALID_HANDLE_VALUE;
-
     // Find the first file in the directory.
-    std::string Directory(strPath);
-    if (Directory.length() > 0 && Directory.back() != GetSlashSymbol())
-        Directory.push_back(GetSlashSymbol());
+    WindowsPathHelper Directory{strPath};
 
-    auto SearchPattern = Directory + "*";
-    hFind              = FindFirstFileA(SearchPattern.c_str(), &ffd);
+    const auto SearchPattern = Directory + L"*";
+
+    WIN32_FIND_DATAW ffd   = {};
+    const auto       hFind = FindFirstFileW(SearchPattern.c_str(), &ffd);
 
     if (INVALID_HANDLE_VALUE == hFind)
     {
@@ -322,9 +326,9 @@ void WindowsFileSystem::ClearDirectory(const Char* strPath, bool Recursive)
             if (Recursive)
             {
                 // Skip '.' and anything that begins with '..'
-                if (!((ffd.cFileName[0] == '.' && ffd.cFileName[1] == 0) || (ffd.cFileName[0] == '.' && ffd.cFileName[1] == '.')))
+                if (!((ffd.cFileName[0] == L'.' && ffd.cFileName[1] == 0) || (ffd.cFileName[0] == L'.' && ffd.cFileName[1] == L'.')))
                 {
-                    auto SubDirName = Directory + ffd.cFileName;
+                    auto SubDirName = Directory + NarrowString(ffd.cFileName);
                     ClearDirectory(SubDirName.c_str(), Recursive);
 
                     if (!WindowsPathHelper{SubDirName}.RemoveDirectory_())
@@ -336,10 +340,10 @@ void WindowsFileSystem::ClearDirectory(const Char* strPath, bool Recursive)
         }
         else
         {
-            auto FileName = Directory + ffd.cFileName;
+            auto FileName = Directory + NarrowString(ffd.cFileName);
             DeleteFileImpl(FileName.c_str());
         }
-    } while (FindNextFileA(hFind, &ffd) != 0);
+    } while (FindNextFileW(hFind, &ffd) != 0);
 
     FindClose(hFind);
 }
@@ -410,7 +414,7 @@ std::vector<std::unique_ptr<FindFileData>> WindowsFileSystem::Search(const Char*
     // List all the files in the directory
     do
     {
-        SearchRes.emplace_back(new WndFindFileData(ffd));
+        SearchRes.emplace_back(std::make_unique<WndFindFileData>(ffd));
     } while (FindNextFileA(hFind, &ffd) != 0);
 
     auto dwError = GetLastError();
