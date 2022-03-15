@@ -960,6 +960,7 @@ protected:
                                                       const PipelineResourceSignatureImplPtrType pSignatures[],
                                                       Uint32                                     SignCount)
     {
+        VERIFY_EXPR(Name != nullptr && Name[0] != '\0');
         for (Uint32 sign = 0; sign < SignCount; ++sign)
         {
             const PipelineResourceSignatureImplType* const pSignature = pSignatures[sign];

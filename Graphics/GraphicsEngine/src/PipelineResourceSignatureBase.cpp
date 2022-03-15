@@ -326,6 +326,7 @@ Uint32 FindImmutableSampler(const ImmutableSamplerDesc ImtblSamplers[],
                             const char*                ResourceName,
                             const char*                SamplerSuffix)
 {
+    VERIFY_EXPR(ResourceName != nullptr && ResourceName[0] != '\0');
     for (Uint32 s = 0; s < NumImtblSamplers; ++s)
     {
         const auto& Sam = ImtblSamplers[s];
@@ -346,6 +347,7 @@ Uint32 FindResource(const PipelineResourceDesc Resources[],
                     SHADER_TYPE                ShaderStage,
                     const char*                ResourceName)
 {
+    VERIFY_EXPR(ResourceName != nullptr && ResourceName[0] != '\0');
     for (Uint32 r = 0; r < NumResources; ++r)
     {
         const auto& ResDesc{Resources[r]};
