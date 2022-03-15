@@ -44,12 +44,6 @@ namespace Diligent
 static const INTERFACE_ID IID_SerializedShader =
     {0x53a9a017, 0x6a34, 0x4ae9, {0xaa, 0x23, 0xc8, 0xe5, 0x87, 0x2, 0x3f, 0x9e}};
 
-
-#if METAL_SUPPORTED
-class PipelineResourceSignatureMtlImpl;
-using MtlArchiverResourceCounters = std::array<std::array<Uint16, 4>, 2>; // same as MtlResourceCounters
-#endif
-
 class SerializedShaderImpl final : public ObjectBase<IShader>
 {
 public:
@@ -82,15 +76,6 @@ public:
     {
         return static_cast<CompiledShaderType*>(m_Shaders[static_cast<size_t>(Type)].get());
     }
-
-#if METAL_SUPPORTED
-    SerializedData PatchShaderMtl(const char*                                            PSOName,
-                                  const std::string&                                     DumpFolder,
-                                  const RefCntAutoPtr<PipelineResourceSignatureMtlImpl>* pSignatures,
-                                  const MtlArchiverResourceCounters*                     pBaseBindings,
-                                  const Uint32                                           SignatureCount,
-                                  DeviceType                                             DevType) const noexcept(false);
-#endif
 
     const ShaderCreateInfo& GetCreateInfo() const
     {
