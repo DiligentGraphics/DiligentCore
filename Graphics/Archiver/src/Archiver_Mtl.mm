@@ -42,6 +42,8 @@
 #include "DeviceObjectArchiveMtlImpl.hpp"
 #include "SerializedPipelineStateImpl.hpp"
 #include "FileSystem.hpp"
+#include "FileWrapper.hpp"
+#include "DataBlobImpl.hpp"
 
 #include "spirv_msl.hpp"
 
@@ -99,6 +101,27 @@ inline SHADER_TYPE GetShaderStageType(const ShaderStageInfoMtl& Stage)
 }
 #endif
 
+
+struct CompiledShaderMtl final : SerializedShaderImpl::CompiledShader
+{
+    CompiledShaderMtl(
+        IReferenceCounters*        pRefCounters,
+        const ShaderCreateInfo&    ShaderCI,
+        const RenderDeviceInfo&    DeviceInfo,
+        const GraphicsAdapterInfo& AdapterInfo)
+    {
+        MSLData = ShaderMtlImpl::PrepareMSLData(ShaderCI, DeviceInfo, AdapterInfo); // may throw exception
+    }
+    
+    MSLParseData MSLData;
+};
+
+inline const MSLParseData* GetMSLData(const SerializedShaderImpl* pShader, SerializedShaderImpl::DeviceType Type)
+{
+    const auto* pCompiledShaderMtl = pShader->GetShader<const CompiledShaderMtl>(Type);
+    return pCompiledShaderMtl != nullptr ? &pCompiledShaderMtl->MSLData : nullptr;
+}
+
 } // namespace
 
 
@@ -114,7 +137,7 @@ void SerializedPipelineStateImpl::PatchShadersMtl(const CreateInfoType& CreateIn
     std::vector<const MSLParseData*> StageResources{ShaderStages.size()};
     for (size_t i = 0; i < StageResources.size(); ++i)
     {
-        StageResources[i] = ShaderStages[i].pShader->GetMSLData();
+        StageResources[i] = GetMSLData(ShaderStages[i].pShader, DevType);
     }
 
     auto** ppSignatures    = CreateInfo.ppResourceSignatures;
@@ -175,27 +198,11 @@ INSTANTIATE_DEVICE_SIGNATURE_METHODS(PipelineResourceSignatureMtlImpl)
 static_assert(std::is_same<MtlArchiverResourceCounters, MtlResourceCounters>::value,
               "MtlArchiverResourceCounters and MtlResourceCounters must be same types");
 
-struct SerializedShaderImpl::CompiledShaderMtlImpl final : CompiledShader
+void SerializedShaderImpl::CreateShaderMtl(const ShaderCreateInfo& ShaderCI, DeviceType Type) noexcept(false)
 {
-    MSLParseData MSLData;
-};
-
-void SerializedShaderImpl::CreateShaderMtl(ShaderCreateInfo ShaderCI) noexcept(false)
-{
-    auto pShaderMtl = std::make_unique<CompiledShaderMtlImpl>();
-    // Convert HLSL/GLSL/SPIRV to MSL
-    pShaderMtl->MSLData = ShaderMtlImpl::PrepareMSLData(
-        ShaderCI,
-        m_pDevice->GetDeviceInfo(),
-        m_pDevice->GetAdapterInfo()); // may throw exception
-    m_pShaderMtl = std::move(pShaderMtl);
+    CreateShader<CompiledShaderMtl>(Type, nullptr, ShaderCI, m_pDevice->GetDeviceInfo(), m_pDevice->GetAdapterInfo());
 }
 
-const MSLParseData* SerializedShaderImpl::GetMSLData() const
-{
-    auto* pShaderMtl = static_cast<const CompiledShaderMtlImpl*>(m_pShaderMtl.get());
-    return pShaderMtl != nullptr ? &pShaderMtl->MSLData : nullptr;
-}
 
 namespace
 {
@@ -223,6 +230,133 @@ void SerializeMSLData(Serializer<Mode>&   Ser,
         Ser(MSLData.ComputeGroupSize);
     }
 }
+
+struct TmpDirRemover
+{
+    explicit TmpDirRemover(const std::string& _Path) noexcept :
+        Path{_Path}
+    {}
+
+    ~TmpDirRemover()
+    {
+        if (!Path.empty())
+        {
+            filesystem::remove_all(Path.c_str());
+        }
+    }
+private:
+    const std::string Path;
+};
+
+#define LOG_ERRNO_MESSAGE(...)                                           \
+    do                                                                   \
+    {                                                                    \
+        char ErrorStr[512];                                              \
+        strerror_r(errno, ErrorStr, sizeof(ErrorStr));                   \
+        LOG_ERROR_MESSAGE(__VA_ARGS__, " Error description: ", ErrorStr);\
+    } while (false)
+
+bool SaveMslToFile(const std::string& MslSource, const std::string& MetalFile)
+{
+    auto* File = fopen(MetalFile.c_str(), "wb");
+    if (File == nullptr)
+    {
+        LOG_ERRNO_MESSAGE("failed to open file '", MetalFile,"' to save Metal shader source.");
+        return false;
+    }
+    
+    if (fwrite(MslSource.c_str(), sizeof(MslSource[0]) * MslSource.size(), 1, File) != 1)
+    {
+        LOG_ERRNO_MESSAGE("failed to save Metal shader source to file '", MetalFile, '\'');
+        return false;
+    }
+    
+    fclose(File);
+    
+    return true;
+}
+
+// Runs a custom MSL processing command
+bool PreprocessMsl(const std::string& MslPreprocessorCmd, const std::string& MetalFile)
+{
+    auto cmd{MslPreprocessorCmd};
+    cmd += " \"";
+    cmd += MetalFile;
+    cmd += '\"';
+    FILE* Pipe = FileSystem::popen(cmd.c_str(), "r");
+    if (Pipe == nullptr)
+    {
+        LOG_ERRNO_MESSAGE("failed to run command-line Metal shader compiler with command line \"", cmd, '\"');
+        return false;
+    }
+    
+    char Output[512];
+    while (fgets(Output, _countof(Output), Pipe) != nullptr)
+        printf("%s", Output);
+
+    auto status = FileSystem::pclose(Pipe);
+    if (status != 0)
+    {
+        // errno is not useful
+        LOG_ERROR_MESSAGE("failed to close msl preprocessor process (error code: ", status, ").");
+        return false;
+    }
+    
+    return true;
+}
+
+// Compiles MSL into a metal library using xcrun
+// https://developer.apple.com/documentation/metal/libraries/generating_and_loading_a_metal_library_symbol_file
+bool CompileMsl(const std::string& CompileOptions,
+                const std::string& MetalFile,
+                const std::string& MetalLibFile) noexcept(false)
+{
+    String cmd{"xcrun "};
+    cmd += CompileOptions;
+    cmd += " \"" + MetalFile + "\" -o \"" + MetalLibFile + '\"';
+
+    FILE* Pipe = FileSystem::popen(cmd.c_str(), "r");
+    if (Pipe == nullptr)
+    {
+        LOG_ERRNO_MESSAGE("failed to compile MSL source with command line \"", cmd, '\"');
+        return false;
+    }
+    
+    char Output[512];
+    while (fgets(Output, _countof(Output), Pipe) != nullptr)
+        printf("%s", Output);
+
+    auto status = FileSystem::pclose(Pipe);
+    if (status != 0)
+    {
+        // errno is not useful
+        LOG_ERROR_MESSAGE("failed to close xcrun process (error code: ", status, ").");
+        return false;
+    }
+    
+    return true;
+}
+
+RefCntAutoPtr<DataBlobImpl> ReadFile(const char* FilePath)
+{
+    FileWrapper File{FilePath, EFileAccessMode::Read};
+    if (!File)
+    {
+        LOG_ERRNO_MESSAGE("Failed to open file '", FilePath, "'.");
+        return {};
+    }
+    
+    auto pFileData = DataBlobImpl::Create();
+    if (!File->Read(pFileData))
+    {
+        LOG_ERRNO_MESSAGE("Failed to read '", FilePath, "'.");
+        return {};
+    }
+    
+    return pFileData;
+}
+
+#undef LOG_ERRNO_MESSAGE
 
 } // namespace
 
@@ -254,135 +388,72 @@ SerializedData SerializedShaderImpl::PatchShaderMtl(const char*                 
         }();
     filesystem::create_directories(WorkingFolder);
 
-    struct TmpDirRemover
-    {
-        explicit TmpDirRemover(const std::string& _Path) noexcept :
-            Path{_Path}
-        {}
-
-        ~TmpDirRemover()
-        {
-            if (!Path.empty())
-            {
-                filesystem::remove_all(Path.c_str());
-            }
-        }
-    private:
-        const std::string Path;
-    };
     TmpDirRemover DirRemover{DumpFolder.empty() ? WorkingFolder : ""};
 
     const auto MetalFile    = WorkingFolder + ShaderName + ".metal";
     const auto MetalLibFile = WorkingFolder + ShaderName + ".metallib";
 
-    auto*  pShaderMtl = static_cast<const CompiledShaderMtlImpl*>(m_pShaderMtl.get());
-    String MslSource = pShaderMtl->MSLData.Source;
-    if (pShaderMtl->MSLData.pParser)
+    const auto& MslData    = *GetMSLData(this, DevType);
+    auto        MslSource  = MslData.Source;
+
+#define LOG_PATCH_SHADER_ERROR_AND_THROW(...)\
+    LOG_ERROR_AND_THROW("Failed to patch shader '", ShaderName, "' for PSO '", PSOName, "': ", ##__VA_ARGS__)
+
+    const auto& MtlProps = m_pDevice->GetMtlProperties();
+    
+    // Run user-defined MSL preprocessor
+    if (!MtlProps.MslPreprocessorCmd.empty())
+    {
+        // Save MSL source to a file
+        if (!SaveMslToFile(MslSource, MetalFile))
+            LOG_PATCH_SHADER_ERROR_AND_THROW("Failed to save MSL source to a temp file.");
+
+        // Run the preprocessor
+        if (!PreprocessMsl(MtlProps.MslPreprocessorCmd, MetalFile))
+            LOG_PATCH_SHADER_ERROR_AND_THROW("Failed to preprocess MSL.");
+        
+        // Read processed MSL source back
+        auto pProcessedMsl = ReadFile(MetalFile.c_str());
+        if (!pProcessedMsl)
+            LOG_PATCH_SHADER_ERROR_AND_THROW("Failed to read preprocessed MSL.");
+
+        const auto* pMslStr = pProcessedMsl->GetConstDataPtr<char>();
+        MslSource = {pMslStr, pMslStr + pProcessedMsl->GetSize()};
+    }
+        
+    if (MslData.pParser != nullptr)
     {
         const auto ResRemapping = PipelineStateMtlImpl::GetResourceMap(
-            pShaderMtl->MSLData,
+            MslData,
             pSignatures,
             SignatureCount,
             pBaseBindings,
             GetDesc(),
             ""); // may throw exception
 
-        MslSource = pShaderMtl->MSLData.pParser->RemapResources(ResRemapping);
+        MslSource = MslData.pParser->RemapResources(ResRemapping);
         if (MslSource.empty())
             LOG_ERROR_AND_THROW("Failed to remap MSL resources");
     }
-
-#define LOG_PATCH_SHADER_ERROR_AND_THROW(...)\
-    LOG_ERROR_AND_THROW("Failed to patch shader '", ShaderName, "' for PSO '", PSOName, "': ", ##__VA_ARGS__)
-
-#define LOG_ERRNO_AND_THROW(...)                      \
-    do                                                \
-    {                                                 \
-        char ErrorStr[512];                           \
-        strerror_r(errno, ErrorStr, sizeof(ErrorStr));\
-        LOG_PATCH_SHADER_ERROR_AND_THROW(" Error description: ", ErrorStr);\
-    } while (false)
-
-    // Save to 'Shader.metal'
-    {
-        FILE* File = fopen(MetalFile.c_str(), "wb");
-        if (File == nullptr)
-            LOG_ERRNO_AND_THROW("failed to open temp file to save Metal shader source.");
-
-        if (fwrite(MslSource.c_str(), sizeof(MslSource[0]) * MslSource.size(), 1, File) != 1)
-            LOG_ERRNO_AND_THROW("failed to save Metal shader source to a temp file.");
-
-        fclose(File);
-    }
-
-    const auto& MtlProps = m_pDevice->GetMtlProperties();
-    // Run user-defined MSL preprocessor
-    if (!MtlProps.MslPreprocessorCmd.empty())
-    {
-        auto cmd{MtlProps.MslPreprocessorCmd};
-        cmd += " \"";
-        cmd += MetalFile;
-        cmd += '\"';
-        FILE* Pipe = FileSystem::popen(cmd.c_str(), "r");
-        if (Pipe == nullptr)
-            LOG_ERRNO_AND_THROW("failed to run command-line Metal shader compiler.");
-
-        char Output[512];
-        while (fgets(Output, _countof(Output), Pipe) != nullptr)
-            printf("%s", Output);
-
-        auto status = FileSystem::pclose(Pipe);
-        if (status != 0)
-            LOG_PATCH_SHADER_ERROR_AND_THROW("failed to close msl preprocessor process (error code: ", status, ").");
-    }
-
-    // https://developer.apple.com/documentation/metal/libraries/generating_and_loading_a_metal_library_symbol_file
+    
+    if (!SaveMslToFile(MslSource, MetalFile))
+        LOG_PATCH_SHADER_ERROR_AND_THROW("Failed to save MSL source to a temp file.");
 
     // Compile MSL to Metal library
-    {
-        String cmd{"xcrun "};
-        cmd += (DevType == DeviceType::Metal_MacOS ? MtlProps.CompileOptionsMacOS : MtlProps.CompileOptionsIOS);
-        cmd += " \"" + MetalFile + "\" -o \"" + MetalLibFile + '\"';
+    const auto& CompileOptions = DevType == DeviceType::Metal_MacOS ? MtlProps.CompileOptionsMacOS : MtlProps.CompileOptionsIOS;
+    if (!CompileMsl(CompileOptions, MetalFile, MetalLibFile))
+        LOG_PATCH_SHADER_ERROR_AND_THROW("Failed to create metal library.");
 
-        FILE* Pipe = FileSystem::popen(cmd.c_str(), "r");
-        if (Pipe == nullptr)
-            LOG_ERRNO_AND_THROW("failed to compile MSL source.");
-
-        char Output[512];
-        while (fgets(Output, _countof(Output), Pipe) != nullptr)
-            printf("%s", Output);
-
-        auto status = FileSystem::pclose(Pipe);
-        if (status != 0)
-            LOG_PATCH_SHADER_ERROR_AND_THROW("failed to close xcrun process (error code: ", status, ").");
-    }
-
-    // Read 'Shader.metallib'
-    std::vector<Uint8> ByteCode;
-    {
-        FILE* File = fopen(MetalLibFile.c_str(), "rb");
-        if (File == nullptr)
-            LOG_ERRNO_AND_THROW("failed to read shader library.");
-
-        fseek(File, 0, SEEK_END);
-        const auto BytecodeSize = static_cast<size_t>(ftell(File));
-        fseek(File, 0, SEEK_SET);
-        ByteCode.resize(BytecodeSize);
-        if (fread(ByteCode.data(), BytecodeSize, 1, File) != 1)
-            ByteCode.clear();
-
-        fclose(File);
-    }
-
-    if (ByteCode.empty())
-        LOG_PATCH_SHADER_ERROR_AND_THROW("Metal shader library is empty.");
+    // Read the bytecode from metal library
+    auto pByteCode = ReadFile(MetalLibFile.c_str());
+    if (!pByteCode)
+        LOG_PATCH_SHADER_ERROR_AND_THROW("Failed to read Metal shader library.");
 
 #undef LOG_PATCH_SHADER_ERROR_AND_THROW
-#undef LOG_ERRNO_AND_THROW
 
     auto SerializeShaderData = [&](auto& Ser){
-        Ser.SerializeBytes(ByteCode.data(), ByteCode.size() * sizeof(ByteCode[0]));
-        SerializeMSLData(Ser, GetDesc().ShaderType, pShaderMtl->MSLData);
+        Ser.SerializeBytes(pByteCode->GetConstDataPtr(), pByteCode->GetSize());
+        SerializeMSLData(Ser, GetDesc().ShaderType, MslData);
     };
 
     SerializedData ShaderData;

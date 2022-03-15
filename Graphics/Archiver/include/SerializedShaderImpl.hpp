@@ -47,7 +47,6 @@ static const INTERFACE_ID IID_SerializedShader =
 
 #if METAL_SUPPORTED
 class PipelineResourceSignatureMtlImpl;
-struct MSLParseData;
 using MtlArchiverResourceCounters = std::array<std::array<Uint16, 4>, 2>; // same as MtlResourceCounters
 #endif
 
@@ -91,8 +90,6 @@ public:
                                   const MtlArchiverResourceCounters*                     pBaseBindings,
                                   const Uint32                                           SignatureCount,
                                   DeviceType                                             DevType) const noexcept(false);
-
-    const MSLParseData* GetMSLData() const;
 #endif
 
     const ShaderCreateInfo& GetCreateInfo() const
@@ -133,10 +130,7 @@ private:
 #endif
 
 #if METAL_SUPPORTED
-    struct CompiledShaderMtlImpl;
-    std::unique_ptr<CompiledShader> m_pShaderMtl;
-
-    void CreateShaderMtl(ShaderCreateInfo ShaderCI) noexcept(false);
+    void CreateShaderMtl(const ShaderCreateInfo& ShaderCI, DeviceType Type) noexcept(false);
 #endif
 };
 

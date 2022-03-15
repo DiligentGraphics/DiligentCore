@@ -44,7 +44,9 @@ struct CompiledShaderVk : SerializedShaderImpl::CompiledShader
 {
     ShaderVkImpl ShaderVk;
 
-    CompiledShaderVk(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI, const ShaderVkImpl::CreateInfo& VkShaderCI) :
+    CompiledShaderVk(IReferenceCounters*             pRefCounters,
+                     const ShaderCreateInfo&         ShaderCI,
+                     const ShaderVkImpl::CreateInfo& VkShaderCI) :
         ShaderVk{pRefCounters, nullptr, ShaderCI, VkShaderCI, true}
     {}
 };
