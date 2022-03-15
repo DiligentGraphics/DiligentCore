@@ -366,7 +366,7 @@ SerializedData CompileMtlShader(const CompileMtlShaderAttribs& Attribs) noexcept
             Attribs.SignatureCount,
             Attribs.BaseBindings.data(),
             ShDesc,
-            ""); // may throw exception
+            PSOName); // may throw exception
 
         MslSource = ParsedMsl.pParser->RemapResources(ResRemapping);
         if (MslSource.empty())
