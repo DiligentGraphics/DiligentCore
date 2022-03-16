@@ -45,8 +45,6 @@
 #include "FileWrapper.hpp"
 #include "DataBlobImpl.hpp"
 
-#include "spirv_msl.hpp"
-
 namespace filesystem = std::__fs::filesystem;
 
 namespace Diligent
@@ -68,11 +66,17 @@ std::string GetTmpFolder()
 {
     const auto ProcId   = getpid();
     const auto ThreadId = std::this_thread::get_id();
+    const auto Slash    = FileSystem::GetSlashSymbol();
+
+    std::string TmpDir{filesystem::temp_directory_path().c_str()};
+    if (TmpDir.back() != Slash)
+        TmpDir.push_back(Slash);
+
     std::stringstream FolderPath;
-    FolderPath << filesystem::temp_directory_path().c_str()
-               << "/DiligentArchiver-"
+    FolderPath << TmpDir
+               << "DiligentArchiver-"
                << ProcId << '-'
-               << ThreadId << '/';
+               << ThreadId << Slash;
     return FolderPath.str();
 }
 
@@ -110,7 +114,7 @@ void SerializeMSLData(Serializer<Mode>&                       Ser,
 {
     // Same as DeviceObjectArchiveMtlImpl::UnpackShader
     
-    const auto Count = static_cast<Uint32>(BufferInfoMap.size());
+    const Uint32 Count = static_cast<Uint32>(BufferInfoMap.size());
     Ser(Count);
     for (auto& it : BufferInfoMap)
     {
@@ -162,7 +166,7 @@ bool SaveMslToFile(const std::string& MslSource, const std::string& MetalFile)
     
     if (fwrite(MslSource.c_str(), sizeof(MslSource[0]) * MslSource.size(), 1, File) != 1)
     {
-        LOG_ERRNO_MESSAGE("failed to save Metal shader source to file '", MetalFile, '\'');
+        LOG_ERRNO_MESSAGE("failed to save Metal shader source to file '", MetalFile, "'.");
         return false;
     }
     
@@ -181,7 +185,7 @@ bool PreprocessMsl(const std::string& MslPreprocessorCmd, const std::string& Met
     FILE* Pipe = FileSystem::popen(cmd.c_str(), "r");
     if (Pipe == nullptr)
     {
-        LOG_ERRNO_MESSAGE("failed to run command-line Metal shader compiler with command line \"", cmd, '\"');
+        LOG_ERRNO_MESSAGE("failed to run command-line Metal shader compiler with command line \"", cmd, "'.");
         return false;
     }
     
@@ -370,7 +374,7 @@ SerializedData CompileMtlShader(const CompileMtlShaderAttribs& Attribs) noexcept
 
         MslSource = ParsedMsl.pParser->RemapResources(ResRemapping);
         if (MslSource.empty())
-            LOG_ERROR_AND_THROW("Failed to remap MSL resources");
+            LOG_PATCH_SHADER_ERROR_AND_THROW("Failed to remap MSL resources");
     }
     else
     {
