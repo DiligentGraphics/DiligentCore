@@ -80,14 +80,13 @@ public:
 
         const auto WndSlash = WindowsFileSystem::GetSlashSymbol();
 
-        m_Path = WindowsFileSystem::SimplifyPath(Path, WndSlash);
-        if (!WindowsFileSystem::IsPathAbsolute(m_Path.c_str()))
+        if (!WindowsFileSystem::IsPathAbsolute(Path))
         {
-            auto CurrDir = GetCurrentDirectory_();
-            if (CurrDir.back() != WndSlash && !m_Path.empty() && m_Path.front() != WndSlash)
-                CurrDir.push_back(WndSlash);
-            m_Path.insert(0, CurrDir);
+            m_Path = GetCurrentDirectory_();
+            m_Path.push_back(WndSlash);
         }
+        m_Path += Path;
+        m_Path = WindowsFileSystem::SimplifyPath(m_Path.c_str(), WndSlash);
 
         m_LongPathW = WidenString(m_Path);
 
@@ -176,7 +175,7 @@ public:
         return _wfopen_s(ppFile, m_LongPathW.c_str(), WidenString(Mode).c_str());
     }
 
-    std::string operator+(const char* Path) const
+    std::string operator/(const char* Path) const
     {
         const auto WndSlash = WindowsFileSystem::GetSlashSymbol();
 
@@ -188,7 +187,7 @@ public:
         return Res;
     }
 
-    std::wstring operator+(const wchar_t* Path) const
+    std::wstring operator/(const wchar_t* Path) const
     {
         auto Res = m_LongPathW;
         if (Res.back() != L'\\')
@@ -198,13 +197,13 @@ public:
         return Res;
     }
 
-    std::string operator+(const std::string& Path) const
+    std::string operator/(const std::string& Path) const
     {
-        return *this + Path.c_str();
+        return *this / Path.c_str();
     }
-    std::wstring operator+(const std::wstring& Path) const
+    std::wstring operator/(const std::wstring& Path) const
     {
-        return *this + Path.c_str();
+        return *this / Path.c_str();
     }
 
 private:
@@ -307,7 +306,7 @@ void WindowsFileSystem::ClearDirectory(const Char* strPath, bool Recursive)
     // Find the first file in the directory.
     WindowsPathHelper Directory{strPath};
 
-    const auto SearchPattern = Directory + L"*";
+    const auto SearchPattern = Directory / L"*";
 
     WIN32_FIND_DATAW ffd   = {};
     const auto       hFind = FindFirstFileW(SearchPattern.c_str(), &ffd);
@@ -328,7 +327,7 @@ void WindowsFileSystem::ClearDirectory(const Char* strPath, bool Recursive)
                 // Skip '.' and anything that begins with '..'
                 if (!((ffd.cFileName[0] == L'.' && ffd.cFileName[1] == 0) || (ffd.cFileName[0] == L'.' && ffd.cFileName[1] == L'.')))
                 {
-                    auto SubDirName = Directory + NarrowString(ffd.cFileName);
+                    auto SubDirName = Directory / NarrowString(ffd.cFileName);
                     ClearDirectory(SubDirName.c_str(), Recursive);
 
                     if (!WindowsPathHelper{SubDirName}.RemoveDirectory_())
@@ -340,7 +339,7 @@ void WindowsFileSystem::ClearDirectory(const Char* strPath, bool Recursive)
         }
         else
         {
-            auto FileName = Directory + NarrowString(ffd.cFileName);
+            auto FileName = Directory / NarrowString(ffd.cFileName);
             DeleteFileImpl(FileName.c_str());
         }
     } while (FindNextFileW(hFind, &ffd) != 0);
