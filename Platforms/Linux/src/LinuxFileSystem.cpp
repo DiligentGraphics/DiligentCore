@@ -77,7 +77,13 @@ bool LinuxFileSystem::PathExists(const Char* strPath)
 
 bool LinuxFileSystem::CreateDirectory(const Char* strPath)
 {
-    std::string path(strPath);
+    if (strPath == nullptr || strPath[0] == '\0')
+    {
+        UNEXPECTED("Path must not be null or empty");
+        return false;
+    }
+
+    std::string path = strPath;
     CorrectSlashes(path, LinuxFileSystem::GetSlashSymbol());
 
     bool   result   = true;

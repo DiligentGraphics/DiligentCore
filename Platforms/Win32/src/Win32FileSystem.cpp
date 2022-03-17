@@ -277,6 +277,12 @@ bool WindowsFileSystem::FileExists(const Char* strFilePath)
 
 static bool CreateDirectoryImpl(const Char* strPath)
 {
+    if (strPath == nullptr || strPath[0] == '\0')
+    {
+        UNEXPECTED("Path must not be null or empty");
+        return false;
+    }
+
     // Test all parent directories
     std::string            DirectoryPath = strPath;
     std::string::size_type SlashPos      = std::wstring::npos;
@@ -288,6 +294,8 @@ static bool CreateDirectoryImpl(const Char* strPath)
         SlashPos = DirectoryPath.find(SlashSym, (SlashPos != std::string::npos) ? SlashPos + 1 : 0);
 
         std::string ParentDirPath = (SlashPos != std::wstring::npos) ? DirectoryPath.substr(0, SlashPos) : DirectoryPath;
+        if (ParentDirPath.back() == ':')
+            continue; // Skip drive letters such as "C:"
 
         const WindowsPathHelper ParentDir{ParentDirPath};
         if (!ParentDir.PathFileExists_())
