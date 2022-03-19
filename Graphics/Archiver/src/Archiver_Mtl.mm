@@ -267,7 +267,7 @@ struct CompiledShaderMtl final : SerializedShaderImpl::CompiledShader
         const GraphicsAdapterInfo&                    AdapterInfo,
         const SerializationDeviceImpl::MtlProperties& MtlProps)
     {
-        MSLData = ShaderMtlImpl::PrepareMSLData(ShaderCI, DeviceInfo, AdapterInfo); // may throw exception
+        MSLData = ShaderMtlImpl::PrepareMSLData(ShaderCI, DeviceInfo, AdapterInfo, MtlProps.FeaturesMtl); // may throw exception
 
         if (!MtlProps.MslPreprocessorCmd.empty())
         {
