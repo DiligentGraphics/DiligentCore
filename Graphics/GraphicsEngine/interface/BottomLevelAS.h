@@ -82,6 +82,23 @@ struct BLASTriangleDesc
 
     /// Vulkan only, allows to use transformations in BLASBuildTriangleData.
     Bool                      AllowsTransforms      DEFAULT_INITIALIZER(False);
+
+#if DILIGENT_CPP_INTERFACE
+    bool operator == (const BLASTriangleDesc& rhs) const
+    {
+        return MaxVertexCount       == rhs.MaxVertexCount       &&
+               VertexValueType      == rhs.VertexValueType      &&
+               VertexComponentCount == rhs.VertexComponentCount &&
+               MaxPrimitiveCount    == rhs.MaxPrimitiveCount    &&
+               IndexType            == rhs.IndexType            &&
+               AllowsTransforms     == rhs.AllowsTransforms     &&
+               SafeStrEqual(GeometryName, rhs.GeometryName);
+    }
+    bool operator != (const BLASTriangleDesc& rhs) const
+    {
+        return !(*this == rhs);
+    }
+#endif
 };
 typedef struct BLASTriangleDesc BLASTriangleDesc;
 
@@ -107,6 +124,15 @@ struct BLASBoundingBoxDesc
         GeometryName{_GeometryName},
         MaxBoxCount {_MaxBoxCount }
     {}
+
+    bool operator == (const BLASBoundingBoxDesc& rhs) const
+    {
+        return MaxBoxCount == rhs.MaxBoxCount && SafeStrEqual(GeometryName, rhs.GeometryName);
+    }
+    bool operator != (const BLASBoundingBoxDesc& rhs) const
+    {
+        return !(*this == rhs);
+    }
 #endif
 };
 typedef struct BLASBoundingBoxDesc BLASBoundingBoxDesc;
@@ -175,6 +201,32 @@ struct BottomLevelASDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// \remarks    Only specify these bits that will indicate those immediate contexts where the BLAS
     ///             will actually be used. Do not set unnecessary bits as this will result in extra overhead.
     Uint64                     ImmediateContextMask    DEFAULT_INITIALIZER(1);
+
+#if DILIGENT_CPP_INTERFACE
+    bool operator == (const BottomLevelASDesc& rhs) const
+    {
+        if (TriangleCount        != rhs.TriangleCount ||
+            BoxCount             != rhs.BoxCount      ||
+            Flags                != rhs.Flags         ||
+            CompactedSize        != rhs.CompactedSize ||
+            ImmediateContextMask != rhs.ImmediateContextMask)
+            return false;
+
+        for (Uint32 i = 0; i < TriangleCount; ++i)
+            if (pTriangles[i] != rhs.pTriangles[i])
+                return false;
+
+        for (Uint32 i = 0; i < BoxCount; ++i)
+            if (pBoxes[i] != rhs.pBoxes[i])
+                return false;
+
+        return true;
+    }
+    bool operator != (const BottomLevelASDesc& rhs) const
+    {
+        return !(*this == rhs);
+    }
+#endif
 };
 typedef struct BottomLevelASDesc BottomLevelASDesc;
 

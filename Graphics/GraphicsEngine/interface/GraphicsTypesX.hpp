@@ -39,6 +39,7 @@
 #include "Framebuffer.h"
 #include "PipelineResourceSignature.h"
 #include "PipelineState.h"
+#include "BottomLevelAS.h"
 #include "../../../Platforms/Basic/interface/DebugUtilities.hpp"
 
 namespace Diligent
@@ -232,7 +233,6 @@ private:
     ShadingRateAttachment ShadingRate;
 };
 
-
 /// C++ wrapper over Diligent::RenderPassDesc.
 struct RenderPassDescX
 {
@@ -379,6 +379,7 @@ struct InputLayoutDescX
             Elements.assign(Desc.LayoutElements, Desc.LayoutElements + Desc.NumElements);
             Desc.LayoutElements = Elements.data();
         }
+        CopyStrings();
     }
 
     InputLayoutDescX(const std::initializer_list<LayoutElement>& _Elements) :
@@ -386,6 +387,7 @@ struct InputLayoutDescX
     {
         Desc.NumElements    = static_cast<Uint32>(Elements.size());
         Desc.LayoutElements = !Elements.empty() ? Elements.data() : nullptr;
+        CopyStrings();
     }
 
     InputLayoutDescX(const InputLayoutDescX& _DescX) :
@@ -405,8 +407,10 @@ struct InputLayoutDescX
     InputLayoutDescX& Add(const LayoutElement& Elem)
     {
         Elements.push_back(Elem);
-        Desc.NumElements    = static_cast<Uint32>(Elements.size());
-        Desc.LayoutElements = Elements.data();
+        auto& HLSLSemantic = Elements.back().HLSLSemantic;
+        HLSLSemantic       = StringPool.emplace(HLSLSemantic).first->c_str();
+
+        Desc = {Elements.data(), static_cast<Uint32>(Elements.size())};
         return *this;
     }
 
@@ -414,16 +418,17 @@ struct InputLayoutDescX
     InputLayoutDescX& Add(ArgsType&&... args)
     {
         Elements.emplace_back(std::forward<ArgsType>(args)...);
-        Desc.NumElements    = static_cast<Uint32>(Elements.size());
-        Desc.LayoutElements = Elements.data();
+        auto& HLSLSemantic = Elements.back().HLSLSemantic;
+        HLSLSemantic       = StringPool.emplace(HLSLSemantic).first->c_str();
+
+        Desc = {Elements.data(), static_cast<Uint32>(Elements.size())};
         return *this;
     }
 
     void Clear()
     {
-        Elements.clear();
-        Desc.NumElements    = 0;
-        Desc.LayoutElements = nullptr;
+        InputLayoutDescX EmptyDesc;
+        std::swap(*this, EmptyDesc);
     }
 
     const InputLayoutDesc& Get() const
@@ -455,8 +460,14 @@ struct InputLayoutDescX
     }
 
 private:
-    InputLayoutDesc            Desc;
-    std::vector<LayoutElement> Elements;
+    void CopyStrings()
+    {
+        for (auto& Elem : Elements)
+            Elem.HLSLSemantic = StringPool.emplace(Elem.HLSLSemantic).first->c_str();
+    }
+    InputLayoutDesc                 Desc;
+    std::vector<LayoutElement>      Elements;
+    std::unordered_set<std::string> StringPool;
 };
 
 
@@ -547,7 +558,7 @@ struct FramebufferDescX : DeviceObjectAttribsX<FramebufferDesc>
         return *this;
     }
 
-    FramebufferDescX(FramebufferDescX&& RHS) = default;
+    FramebufferDescX(FramebufferDescX&&) = default;
     FramebufferDescX& operator=(FramebufferDescX&&) = default;
 
     FramebufferDescX& AddAttachment(ITextureView* pView)
@@ -587,22 +598,35 @@ struct PipelineResourceSignatureDescX : DeviceObjectAttribsX<PipelineResourceSig
     PipelineResourceSignatureDescX(const PipelineResourceSignatureDesc& _Desc) :
         TBase{_Desc}
     {
-        SetCombinedSamplerSuffix(CombinedSamplerSuffix);
         if (NumResources != 0)
         {
             ResCopy.assign(Resources, Resources + NumResources);
             Resources = ResCopy.data();
-            for (auto& Res : ResCopy)
-                Res.Name = StringPool.emplace(Res.Name).first->c_str();
         }
 
         if (NumImmutableSamplers != 0)
         {
             ImtblSamCopy.assign(ImmutableSamplers, ImmutableSamplers + NumImmutableSamplers);
             ImmutableSamplers = ImtblSamCopy.data();
-            for (auto& Sam : ImtblSamCopy)
-                Sam.SamplerOrTextureName = StringPool.emplace(Sam.SamplerOrTextureName).first->c_str();
         }
+
+        CopyStrings();
+    }
+
+    PipelineResourceSignatureDescX(const std::initializer_list<PipelineResourceDesc>& _Resources,
+                                   const std::initializer_list<ImmutableSamplerDesc>& _ImtblSamplers) :
+        ResCopy{_Resources},
+        ImtblSamCopy{_ImtblSamplers}
+    {
+        NumResources = static_cast<Uint32>(ResCopy.size());
+        if (NumResources > 0)
+            Resources = ResCopy.data();
+
+        NumImmutableSamplers = static_cast<Uint32>(ImtblSamCopy.size());
+        if (NumImmutableSamplers > 0)
+            ImmutableSamplers = ImtblSamCopy.data();
+
+        CopyStrings();
     }
 
     PipelineResourceSignatureDescX(const PipelineResourceSignatureDescX& _DescX) :
@@ -616,14 +640,13 @@ struct PipelineResourceSignatureDescX : DeviceObjectAttribsX<PipelineResourceSig
         return *this;
     }
 
-    PipelineResourceSignatureDescX(PipelineResourceSignatureDescX&& RHS) = default;
+    PipelineResourceSignatureDescX(PipelineResourceSignatureDescX&&) = default;
     PipelineResourceSignatureDescX& operator=(PipelineResourceSignatureDescX&&) = default;
 
     PipelineResourceSignatureDescX& AddResource(const PipelineResourceDesc& Res)
     {
         ResCopy.push_back(Res);
-        auto& ResName = ResCopy.back().Name;
-        ResName       = StringPool.emplace(ResName).first->c_str();
+        ResCopy.back().Name = StringPool.emplace(Res.Name).first->c_str();
 
         NumResources = static_cast<Uint32>(ResCopy.size());
         Resources    = ResCopy.data();
@@ -633,8 +656,7 @@ struct PipelineResourceSignatureDescX : DeviceObjectAttribsX<PipelineResourceSig
     PipelineResourceSignatureDescX& AddImmutableSampler(const ImmutableSamplerDesc& Sam)
     {
         ImtblSamCopy.push_back(Sam);
-        auto& SamOrTexName = ImtblSamCopy.back().SamplerOrTextureName;
-        SamOrTexName       = StringPool.emplace(SamOrTexName).first->c_str();
+        ImtblSamCopy.back().SamplerOrTextureName = StringPool.emplace(Sam.SamplerOrTextureName).first->c_str();
 
         NumImmutableSamplers = static_cast<Uint32>(ImtblSamCopy.size());
         ImmutableSamplers    = ImtblSamCopy.data();
@@ -659,7 +681,7 @@ struct PipelineResourceSignatureDescX : DeviceObjectAttribsX<PipelineResourceSig
     {
         CombinedSamplerSuffix = Suffix != nullptr ?
             StringPool.emplace(Suffix).first->c_str() :
-            "";
+            PipelineResourceSignatureDesc{}.CombinedSamplerSuffix;
     }
 
     void Clear()
@@ -669,6 +691,18 @@ struct PipelineResourceSignatureDescX : DeviceObjectAttribsX<PipelineResourceSig
     }
 
 private:
+    void CopyStrings()
+    {
+        for (auto& Res : ResCopy)
+            Res.Name = StringPool.emplace(Res.Name).first->c_str();
+
+        for (auto& Sam : ImtblSamCopy)
+            Sam.SamplerOrTextureName = StringPool.emplace(Sam.SamplerOrTextureName).first->c_str();
+
+        if (CombinedSamplerSuffix != nullptr)
+            CombinedSamplerSuffix = StringPool.emplace(CombinedSamplerSuffix).first->c_str();
+    }
+
     std::vector<PipelineResourceDesc> ResCopy;
     std::vector<ImmutableSamplerDesc> ImtblSamCopy;
     std::unordered_set<std::string>   StringPool;
@@ -688,17 +722,31 @@ struct PipelineResourceLayoutDescX : PipelineResourceLayoutDesc
         {
             VarCopy.assign(Variables, Variables + NumVariables);
             Variables = VarCopy.data();
-            for (auto& Var : VarCopy)
-                Var.Name = StringPool.emplace(Var.Name).first->c_str();
         }
 
         if (NumImmutableSamplers != 0)
         {
             ImtblSamCopy.assign(ImmutableSamplers, ImmutableSamplers + NumImmutableSamplers);
             ImmutableSamplers = ImtblSamCopy.data();
-            for (auto& Sam : ImtblSamCopy)
-                Sam.SamplerOrTextureName = StringPool.emplace(Sam.SamplerOrTextureName).first->c_str();
         }
+
+        CopyStrings();
+    }
+
+    PipelineResourceLayoutDescX(const std::initializer_list<ShaderResourceVariableDesc>& _Vars,
+                                const std::initializer_list<ImmutableSamplerDesc>&       _ImtblSamplers) :
+        VarCopy{_Vars},
+        ImtblSamCopy{_ImtblSamplers}
+    {
+        NumVariables = static_cast<Uint32>(VarCopy.size());
+        if (NumVariables > 0)
+            Variables = VarCopy.data();
+
+        NumImmutableSamplers = static_cast<Uint32>(ImtblSamCopy.size());
+        if (NumImmutableSamplers > 0)
+            ImmutableSamplers = ImtblSamCopy.data();
+
+        CopyStrings();
     }
 
     PipelineResourceLayoutDescX(const PipelineResourceLayoutDescX& _DescX) :
@@ -718,8 +766,7 @@ struct PipelineResourceLayoutDescX : PipelineResourceLayoutDesc
     PipelineResourceLayoutDescX& AddVariable(const ShaderResourceVariableDesc& Var)
     {
         VarCopy.push_back(Var);
-        auto& VarName = VarCopy.back().Name;
-        VarName       = StringPool.emplace(VarName).first->c_str();
+        VarCopy.back().Name = StringPool.emplace(Var.Name).first->c_str();
 
         NumVariables = static_cast<Uint32>(VarCopy.size());
         Variables    = VarCopy.data();
@@ -729,8 +776,7 @@ struct PipelineResourceLayoutDescX : PipelineResourceLayoutDesc
     PipelineResourceLayoutDescX& AddImmutableSampler(const ImmutableSamplerDesc& Sam)
     {
         ImtblSamCopy.push_back(Sam);
-        auto& SamOrTexName = ImtblSamCopy.back().SamplerOrTextureName;
-        SamOrTexName       = StringPool.emplace(SamOrTexName).first->c_str();
+        ImtblSamCopy.back().SamplerOrTextureName = StringPool.emplace(Sam.SamplerOrTextureName).first->c_str();
 
         NumImmutableSamplers = static_cast<Uint32>(ImtblSamCopy.size());
         ImmutableSamplers    = ImtblSamCopy.data();
@@ -758,9 +804,136 @@ struct PipelineResourceLayoutDescX : PipelineResourceLayoutDesc
     }
 
 private:
+    void CopyStrings()
+    {
+        for (auto& Var : VarCopy)
+            Var.Name = StringPool.emplace(Var.Name).first->c_str();
+
+        for (auto& Sam : ImtblSamCopy)
+            Sam.SamplerOrTextureName = StringPool.emplace(Sam.SamplerOrTextureName).first->c_str();
+    }
+
     std::vector<ShaderResourceVariableDesc> VarCopy;
     std::vector<ImmutableSamplerDesc>       ImtblSamCopy;
     std::unordered_set<std::string>         StringPool;
+};
+
+
+/// C++ wrapper over BottomLevelASDesc.
+struct BottomLevelASDescX : DeviceObjectAttribsX<BottomLevelASDesc>
+{
+    using TBase = DeviceObjectAttribsX<BottomLevelASDesc>;
+
+    BottomLevelASDescX() noexcept
+    {}
+
+    BottomLevelASDescX(const BottomLevelASDesc& _Desc) :
+        TBase{_Desc}
+    {
+        if (TriangleCount != 0)
+        {
+            Triangles.assign(pTriangles, pTriangles + TriangleCount);
+            pTriangles = Triangles.data();
+        }
+
+        if (BoxCount != 0)
+        {
+            Boxes.assign(pBoxes, pBoxes + BoxCount);
+            pBoxes = Boxes.data();
+        }
+
+        CopyStrings();
+    }
+
+    BottomLevelASDescX(const std::initializer_list<BLASTriangleDesc>&    _Triangles,
+                       const std::initializer_list<BLASBoundingBoxDesc>& _Boxes) :
+        Triangles{_Triangles},
+        Boxes{_Boxes}
+    {
+        TriangleCount = static_cast<Uint32>(Triangles.size());
+        if (TriangleCount > 0)
+            pTriangles = Triangles.data();
+
+        BoxCount = static_cast<Uint32>(Boxes.size());
+        if (BoxCount > 0)
+            pBoxes = Boxes.data();
+
+        CopyStrings();
+    }
+
+    BottomLevelASDescX(const BottomLevelASDescX& _DescX) :
+        BottomLevelASDescX{static_cast<const BottomLevelASDesc&>(_DescX)}
+    {}
+
+    BottomLevelASDescX& operator=(const BottomLevelASDescX& _DescX)
+    {
+        BottomLevelASDescX Copy{_DescX};
+        std::swap(*this, Copy);
+        return *this;
+    }
+
+    BottomLevelASDescX(BottomLevelASDescX&&) = default;
+    BottomLevelASDescX& operator=(BottomLevelASDescX&&) = default;
+
+    BottomLevelASDescX& AddTriangleGeomerty(const BLASTriangleDesc& Geo)
+    {
+        Triangles.push_back(Geo);
+        Triangles.back().GeometryName = StringPool.emplace(Geo.GeometryName).first->c_str();
+
+        TriangleCount = static_cast<Uint32>(Triangles.size());
+        pTriangles    = Triangles.data();
+        return *this;
+    }
+
+    BottomLevelASDescX& AddBoxGeomerty(const BLASBoundingBoxDesc& Geo)
+    {
+        Boxes.push_back(Geo);
+        Boxes.back().GeometryName = StringPool.emplace(Geo.GeometryName).first->c_str();
+
+        BoxCount = static_cast<Uint32>(Boxes.size());
+        pBoxes   = Boxes.data();
+        return *this;
+    }
+
+    void ClearTriangles()
+    {
+        Triangles.clear();
+        TriangleCount = 0;
+        pTriangles    = nullptr;
+    }
+
+    void ClearBoxes()
+    {
+        Boxes.clear();
+        BoxCount = 0;
+        pBoxes   = nullptr;
+    }
+
+    void Clear()
+    {
+        BottomLevelASDescX CleanDesc;
+        std::swap(*this, CleanDesc);
+    }
+
+private:
+    void CopyStrings()
+    {
+        for (auto& Tri : Triangles)
+        {
+            if (Tri.GeometryName != nullptr)
+                Tri.GeometryName = StringPool.emplace(Tri.GeometryName).first->c_str();
+        }
+
+        for (auto& Box : Boxes)
+        {
+            if (Box.GeometryName != nullptr)
+                Box.GeometryName = StringPool.emplace(Box.GeometryName).first->c_str();
+        }
+    }
+
+    std::vector<BLASTriangleDesc>    Triangles;
+    std::vector<BLASBoundingBoxDesc> Boxes;
+    std::unordered_set<std::string>  StringPool;
 };
 
 } // namespace Diligent

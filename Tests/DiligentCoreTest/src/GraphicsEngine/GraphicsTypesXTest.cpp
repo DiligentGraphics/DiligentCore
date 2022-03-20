@@ -68,6 +68,23 @@ void TestCtorsAndAssignments(const Type& Ref)
     EXPECT_TRUE(DescX5 == Type{});
 }
 
+struct StringPool
+{
+    const char* operator()(const char* str)
+    {
+        return Strings.emplace(str).first->c_str();
+    }
+
+    void Clear()
+    {
+        std::unordered_set<std::string> Empty;
+        std::swap(Strings, Empty);
+    }
+
+private:
+    std::unordered_set<std::string> Strings;
+};
+
 TEST(GraphicsTypesXTest, SubpassDescX)
 {
     constexpr AttachmentReference   Inputs[]        = {{2, RESOURCE_STATE_SHADER_RESOURCE}, {4, RESOURCE_STATE_SHADER_RESOURCE}};
@@ -230,9 +247,9 @@ TEST(GraphicsTypesXTest, InputLayoutDescX)
 {
     constexpr LayoutElement Elements[] =
         {
-            {0, 0, 2, VT_FLOAT32},
-            {1, 0, 2, VT_FLOAT32},
-            {2, 0, 4, VT_UINT8, True},
+            {"ATTRIB1", 0, 0, 2, VT_FLOAT32},
+            {"ATTRIB2", 1, 0, 2, VT_FLOAT32},
+            {"ATTRIB2", 2, 0, 4, VT_UINT8, True},
         };
 
     InputLayoutDesc Ref;
@@ -241,11 +258,13 @@ TEST(GraphicsTypesXTest, InputLayoutDescX)
     TestCtorsAndAssignments<InputLayoutDescX>(Ref);
 
     {
+        StringPool       Pool;
         InputLayoutDescX DescX;
         DescX
-            .Add({0, 0, 2, VT_FLOAT32})
-            .Add(1, 0, 2, VT_FLOAT32)
-            .Add(2, 0, 4, VT_UINT8, True);
+            .Add({Pool("ATTRIB1"), 0, 0, 2, VT_FLOAT32})
+            .Add(Pool("ATTRIB2"), 1, 0, 2, VT_FLOAT32)
+            .Add(Pool("ATTRIB2"), 2, 0, 4, VT_UINT8, True);
+        Pool.Clear();
         EXPECT_EQ(DescX, Ref);
 
         DescX.Clear();
@@ -253,13 +272,15 @@ TEST(GraphicsTypesXTest, InputLayoutDescX)
     }
 
     {
+        StringPool       Pool;
         InputLayoutDescX DescX{
             {
-                {0, 0, 2, VT_FLOAT32},
-                {1, 0, 2, VT_FLOAT32},
-                {2, 0, 4, VT_UINT8, True},
+                {Pool("ATTRIB1"), 0, 0, 2, VT_FLOAT32},
+                {Pool("ATTRIB2"), 1, 0, 2, VT_FLOAT32},
+                {Pool("ATTRIB2"), 2, 0, 4, VT_UINT8, True},
             } //
         };
+        Pool.Clear();
         EXPECT_EQ(DescX, Ref);
     }
 }
@@ -284,7 +305,11 @@ TEST(GraphicsTypesXTest, FramebufferDescX)
 
     {
         FramebufferDescX DescX;
-        DescX.SetName("Test");
+
+        StringPool Pool;
+        DescX.SetName(Pool("Test"));
+        Pool.Clear();
+
         DescX.pRenderPass    = reinterpret_cast<IRenderPass*>(uintptr_t{0xA});
         DescX.Width          = 256;
         DescX.Height         = 128;
@@ -311,7 +336,6 @@ TEST(GraphicsTypesXTest, PipelineResourceSignatureDescX)
             {SHADER_TYPE_VERTEX, "g_Tex2D_1", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC},
             {SHADER_TYPE_PIXEL, "g_Tex2D_2", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
             {SHADER_TYPE_COMPUTE, "ConstBuff_1", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
-            {SHADER_TYPE_HULL, "ConstBuff_2", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE}, //
         };
 
     PipelineResourceSignatureDesc Ref;
@@ -333,26 +357,52 @@ TEST(GraphicsTypesXTest, PipelineResourceSignatureDescX)
     TestCtorsAndAssignments<PipelineResourceSignatureDescX>(Ref);
 
     {
+        StringPool                     Pool;
+        PipelineResourceSignatureDescX DescX{
+            {
+                {SHADER_TYPE_VERTEX, Pool("g_Tex2D_1"), 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC},
+                {SHADER_TYPE_PIXEL, Pool("g_Tex2D_2"), 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+                {SHADER_TYPE_COMPUTE, Pool("ConstBuff_1"), 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
+            },
+            {
+                {SHADER_TYPE_ALL_GRAPHICS, Pool("g_Sampler"), SamplerDesc{FILTER_TYPE_POINT, FILTER_TYPE_POINT, FILTER_TYPE_POINT}},
+                {SHADER_TYPE_ALL_GRAPHICS, Pool("g_Sampler2"), SamplerDesc{FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR}},
+            } //
+        };
+        Pool.Clear();
+        DescX.SetName(Pool("Test"));
+        DescX.SetCombinedSamplerSuffix(Pool("Suffix"));
+        DescX.BindingIndex               = 4;
+        DescX.UseCombinedTextureSamplers = true;
+        Pool.Clear();
+        EXPECT_EQ(DescX, Ref);
+    }
+
+    {
         Ref.NumImmutableSamplers = 0;
         Ref.ImmutableSamplers    = nullptr;
 
+        StringPool Pool;
+
         PipelineResourceSignatureDescX DescX;
-        DescX.SetName("Test");
-        DescX.BindingIndex = 4;
-        DescX.SetCombinedSamplerSuffix("Suffix");
+        DescX.SetName(Pool("Test"));
+        DescX.SetCombinedSamplerSuffix(Pool("Suffix"));
+        Pool.Clear();
+        DescX.BindingIndex               = 4;
         DescX.UseCombinedTextureSamplers = true;
         DescX
-            .AddResource({SHADER_TYPE_VERTEX, "g_Tex2D_1", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC})
-            .AddResource({SHADER_TYPE_PIXEL, "g_Tex2D_2", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE})
-            .AddResource({SHADER_TYPE_COMPUTE, "ConstBuff_1", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_STATIC})
-            .AddResource({SHADER_TYPE_HULL, "ConstBuff_2", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE});
+            .AddResource({SHADER_TYPE_VERTEX, Pool("g_Tex2D_1"), 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC})
+            .AddResource({SHADER_TYPE_PIXEL, Pool("g_Tex2D_2"), 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE})
+            .AddResource({SHADER_TYPE_COMPUTE, Pool("ConstBuff_1"), 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_STATIC});
+        Pool.Clear();
         EXPECT_EQ(DescX, Ref);
 
         Ref.NumImmutableSamplers = _countof(ImtblSamplers);
         Ref.ImmutableSamplers    = ImtblSamplers;
         DescX
-            .AddImmutableSampler({SHADER_TYPE_ALL_GRAPHICS, "g_Sampler", SamplerDesc{FILTER_TYPE_POINT, FILTER_TYPE_POINT, FILTER_TYPE_POINT}})
-            .AddImmutableSampler({SHADER_TYPE_ALL_GRAPHICS, "g_Sampler2", SamplerDesc{FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR}});
+            .AddImmutableSampler({SHADER_TYPE_ALL_GRAPHICS, Pool("g_Sampler"), SamplerDesc{FILTER_TYPE_POINT, FILTER_TYPE_POINT, FILTER_TYPE_POINT}})
+            .AddImmutableSampler({SHADER_TYPE_ALL_GRAPHICS, Pool("g_Sampler2"), SamplerDesc{FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR}});
+        Pool.Clear();
         EXPECT_EQ(DescX, Ref);
 
         DescX.ClearImmutableSamplers();
@@ -374,7 +424,6 @@ TEST(GraphicsTypesXTest, PipelineResourceLayoutDescX)
             {SHADER_TYPE_VERTEX, "g_Tex2D_1", SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC},
             {SHADER_TYPE_PIXEL, "g_Tex2D_2", SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
             {SHADER_TYPE_COMPUTE, "ConstBuff_1", SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
-            {SHADER_TYPE_HULL, "ConstBuff_2", SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE}, //
         };
 
     PipelineResourceLayoutDesc Ref;
@@ -392,22 +441,41 @@ TEST(GraphicsTypesXTest, PipelineResourceLayoutDescX)
     TestCtorsAndAssignments<PipelineResourceLayoutDescX>(Ref);
 
     {
+        StringPool                  Pool;
+        PipelineResourceLayoutDescX DescX{
+            {
+                {SHADER_TYPE_VERTEX, Pool("g_Tex2D_1"), SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC},
+                {SHADER_TYPE_PIXEL, Pool("g_Tex2D_2"), SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+                {SHADER_TYPE_COMPUTE, Pool("ConstBuff_1"), SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
+            },
+            {
+                {SHADER_TYPE_ALL_GRAPHICS, Pool("g_Sampler"), SamplerDesc{FILTER_TYPE_POINT, FILTER_TYPE_POINT, FILTER_TYPE_POINT}},
+                {SHADER_TYPE_ALL_GRAPHICS, Pool("g_Sampler2"), SamplerDesc{FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR}},
+            } //
+        };
+        Pool.Clear();
+        EXPECT_EQ(DescX, Ref);
+    }
+
+    {
         Ref.NumImmutableSamplers = 0;
         Ref.ImmutableSamplers    = nullptr;
 
+        StringPool                  Pool;
         PipelineResourceLayoutDescX DescX;
         DescX
-            .AddVariable({SHADER_TYPE_VERTEX, "g_Tex2D_1", SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC})
-            .AddVariable({SHADER_TYPE_PIXEL, "g_Tex2D_2", SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE})
-            .AddVariable({SHADER_TYPE_COMPUTE, "ConstBuff_1", SHADER_RESOURCE_VARIABLE_TYPE_STATIC})
-            .AddVariable({SHADER_TYPE_HULL, "ConstBuff_2", SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE});
+            .AddVariable({SHADER_TYPE_VERTEX, Pool("g_Tex2D_1"), SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC})
+            .AddVariable({SHADER_TYPE_PIXEL, Pool("g_Tex2D_2"), SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE})
+            .AddVariable({SHADER_TYPE_COMPUTE, Pool("ConstBuff_1"), SHADER_RESOURCE_VARIABLE_TYPE_STATIC});
+        Pool.Clear();
         EXPECT_EQ(DescX, Ref);
 
         Ref.NumImmutableSamplers = _countof(ImtblSamplers);
         Ref.ImmutableSamplers    = ImtblSamplers;
         DescX
-            .AddImmutableSampler({SHADER_TYPE_ALL_GRAPHICS, "g_Sampler", SamplerDesc{FILTER_TYPE_POINT, FILTER_TYPE_POINT, FILTER_TYPE_POINT}})
-            .AddImmutableSampler({SHADER_TYPE_ALL_GRAPHICS, "g_Sampler2", SamplerDesc{FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR}});
+            .AddImmutableSampler({SHADER_TYPE_ALL_GRAPHICS, Pool("g_Sampler"), SamplerDesc{FILTER_TYPE_POINT, FILTER_TYPE_POINT, FILTER_TYPE_POINT}})
+            .AddImmutableSampler({SHADER_TYPE_ALL_GRAPHICS, Pool("g_Sampler2"), SamplerDesc{FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR}});
+        Pool.Clear();
         EXPECT_EQ(DescX, Ref);
 
         DescX.ClearImmutableSamplers();
@@ -418,6 +486,69 @@ TEST(GraphicsTypesXTest, PipelineResourceLayoutDescX)
         DescX.ClearVariables();
         Ref.NumVariables = 0;
         Ref.Variables    = nullptr;
+        EXPECT_EQ(DescX, Ref);
+    }
+}
+
+TEST(GraphicsTypesXTest, BottomLevelASDescX)
+{
+    constexpr BLASTriangleDesc Triangles[] = {
+        {"Tri1", 10, VT_FLOAT32, 3, 100, VT_UINT16},
+        {"Tri2", 20, VT_FLOAT16, 2, 200, VT_UINT32},
+        {"Tri3", 30, VT_INT16, 4, 300, VT_UINT32},
+    };
+
+    BottomLevelASDesc Ref;
+    Ref.Name          = "BLAS test";
+    Ref.TriangleCount = _countof(Triangles);
+    Ref.pTriangles    = Triangles;
+    TestCtorsAndAssignments<BottomLevelASDescX>(Ref);
+
+    constexpr BLASBoundingBoxDesc Boxes[] = {
+        {"Box1", 16},
+        {"Box2", 32},
+    };
+    Ref.BoxCount = _countof(Boxes);
+    Ref.pBoxes   = Boxes;
+    TestCtorsAndAssignments<BottomLevelASDescX>(Ref);
+
+    {
+        StringPool         Pool;
+        BottomLevelASDescX DescX{
+            {
+                {Pool("Tri1"), 10, VT_FLOAT32, 3, 100, VT_UINT16},
+                {Pool("Tri2"), 20, VT_FLOAT16, 2, 200, VT_UINT32},
+                {Pool("Tri3"), 30, VT_INT16, 4, 300, VT_UINT32},
+            },
+            {
+                {Pool("Box1"), 16},
+                {Pool("Box2"), 32},
+            } //
+        };
+        Pool.Clear();
+        EXPECT_EQ(DescX, Ref);
+    }
+
+    {
+        StringPool         Pool;
+        BottomLevelASDescX DescX;
+        DescX
+            .AddTriangleGeomerty({Pool("Tri1"), 10, VT_FLOAT32, 3, 100, VT_UINT16})
+            .AddTriangleGeomerty({Pool("Tri2"), 20, VT_FLOAT16, 2, 200, VT_UINT32})
+            .AddTriangleGeomerty({Pool("Tri3"), 30, VT_INT16, 4, 300, VT_UINT32})
+            .AddBoxGeomerty({Pool("Box1"), 16})
+            .AddBoxGeomerty({Pool("Box2"), 32});
+        Pool.Clear();
+        EXPECT_EQ(DescX, Ref);
+
+        DescX.ClearTriangles();
+        Ref.TriangleCount = 0;
+        Ref.pTriangles    = nullptr;
+        EXPECT_EQ(DescX, Ref);
+
+        DescX.ClearBoxes();
+        Ref.BoxCount = 0;
+        Ref.pBoxes   = nullptr;
         EXPECT_EQ(DescX, Ref);
     }
 }
