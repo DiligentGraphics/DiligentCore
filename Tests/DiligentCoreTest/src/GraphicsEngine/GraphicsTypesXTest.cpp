@@ -405,9 +405,17 @@ TEST(GraphicsTypesXTest, PipelineResourceSignatureDescX)
         Pool.Clear();
         EXPECT_EQ(DescX, Ref);
 
+        DescX.RemoveImmutableSampler("g_Sampler2");
+        --Ref.NumImmutableSamplers;
+        EXPECT_EQ(DescX, Ref);
+
         DescX.ClearImmutableSamplers();
         Ref.NumImmutableSamplers = 0;
         Ref.ImmutableSamplers    = nullptr;
+        EXPECT_EQ(DescX, Ref);
+
+        DescX.RemoveResource("ConstBuff_1");
+        --Ref.NumResources;
         EXPECT_EQ(DescX, Ref);
 
         DescX.ClearResources();
@@ -478,9 +486,17 @@ TEST(GraphicsTypesXTest, PipelineResourceLayoutDescX)
         Pool.Clear();
         EXPECT_EQ(DescX, Ref);
 
+        DescX.RemoveImmutableSampler("g_Sampler2");
+        --Ref.NumImmutableSamplers;
+        EXPECT_EQ(DescX, Ref);
+
         DescX.ClearImmutableSamplers();
         Ref.NumImmutableSamplers = 0;
         Ref.ImmutableSamplers    = nullptr;
+        EXPECT_EQ(DescX, Ref);
+
+        DescX.RemoveVariable("ConstBuff_1");
+        --Ref.NumVariables;
         EXPECT_EQ(DescX, Ref);
 
         DescX.ClearVariables();
@@ -541,9 +557,17 @@ TEST(GraphicsTypesXTest, BottomLevelASDescX)
         Pool.Clear();
         EXPECT_EQ(DescX, Ref);
 
+        DescX.RemoveTriangleGeomerty("Tri3");
+        --Ref.TriangleCount;
+        EXPECT_EQ(DescX, Ref);
+
         DescX.ClearTriangles();
         Ref.TriangleCount = 0;
         Ref.pTriangles    = nullptr;
+        EXPECT_EQ(DescX, Ref);
+
+        DescX.RemoveBoxGeomerty("Box2");
+        --Ref.BoxCount;
         EXPECT_EQ(DescX, Ref);
 
         DescX.ClearBoxes();

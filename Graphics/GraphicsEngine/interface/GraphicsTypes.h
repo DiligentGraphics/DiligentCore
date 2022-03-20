@@ -98,12 +98,15 @@ DILIGENT_TYPED_ENUM(SHADER_TYPE, Uint32)
                                   SHADER_TYPE_PIXEL,
 
     /// All ray-tracing pipeline shader stages
-    SHADER_TYPE_ALL_RAY_TRACING    = SHADER_TYPE_RAY_GEN          |
-                                     SHADER_TYPE_RAY_MISS         |
-                                     SHADER_TYPE_RAY_CLOSEST_HIT  |
-                                     SHADER_TYPE_RAY_ANY_HIT      |
-                                     SHADER_TYPE_RAY_INTERSECTION |
-                                     SHADER_TYPE_CALLABLE
+    SHADER_TYPE_ALL_RAY_TRACING = SHADER_TYPE_RAY_GEN          |
+                                  SHADER_TYPE_RAY_MISS         |
+                                  SHADER_TYPE_RAY_CLOSEST_HIT  |
+                                  SHADER_TYPE_RAY_ANY_HIT      |
+                                  SHADER_TYPE_RAY_INTERSECTION |
+                                  SHADER_TYPE_CALLABLE,
+
+    /// All shader stages
+    SHADER_TYPE_ALL             = SHADER_TYPE_LAST * 2 - 1
 };
 DEFINE_FLAG_ENUM_OPERATORS(SHADER_TYPE);
 

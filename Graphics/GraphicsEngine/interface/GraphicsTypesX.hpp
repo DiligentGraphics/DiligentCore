@@ -599,18 +599,12 @@ struct PipelineResourceSignatureDescX : DeviceObjectAttribsX<PipelineResourceSig
         TBase{_Desc}
     {
         if (NumResources != 0)
-        {
             ResCopy.assign(Resources, Resources + NumResources);
-            Resources = ResCopy.data();
-        }
 
         if (NumImmutableSamplers != 0)
-        {
             ImtblSamCopy.assign(ImmutableSamplers, ImmutableSamplers + NumImmutableSamplers);
-            ImmutableSamplers = ImtblSamCopy.data();
-        }
 
-        CopyStrings();
+        SyncDesc(true);
     }
 
     PipelineResourceSignatureDescX(const std::initializer_list<PipelineResourceDesc>& _Resources,
@@ -618,15 +612,7 @@ struct PipelineResourceSignatureDescX : DeviceObjectAttribsX<PipelineResourceSig
         ResCopy{_Resources},
         ImtblSamCopy{_ImtblSamplers}
     {
-        NumResources = static_cast<Uint32>(ResCopy.size());
-        if (NumResources > 0)
-            Resources = ResCopy.data();
-
-        NumImmutableSamplers = static_cast<Uint32>(ImtblSamCopy.size());
-        if (NumImmutableSamplers > 0)
-            ImmutableSamplers = ImtblSamCopy.data();
-
-        CopyStrings();
+        SyncDesc(true);
     }
 
     PipelineResourceSignatureDescX(const PipelineResourceSignatureDescX& _DescX) :
@@ -647,9 +633,7 @@ struct PipelineResourceSignatureDescX : DeviceObjectAttribsX<PipelineResourceSig
     {
         ResCopy.push_back(Res);
         ResCopy.back().Name = StringPool.emplace(Res.Name).first->c_str();
-
-        NumResources = static_cast<Uint32>(ResCopy.size());
-        Resources    = ResCopy.data();
+        SyncDesc();
         return *this;
     }
 
@@ -657,24 +641,46 @@ struct PipelineResourceSignatureDescX : DeviceObjectAttribsX<PipelineResourceSig
     {
         ImtblSamCopy.push_back(Sam);
         ImtblSamCopy.back().SamplerOrTextureName = StringPool.emplace(Sam.SamplerOrTextureName).first->c_str();
-
-        NumImmutableSamplers = static_cast<Uint32>(ImtblSamCopy.size());
-        ImmutableSamplers    = ImtblSamCopy.data();
+        SyncDesc();
         return *this;
+    }
+
+    void RemoveResource(const char* ResName, SHADER_TYPE Stages = SHADER_TYPE_ALL)
+    {
+        VERIFY_EXPR(ResName != nullptr && ResName[0] != '\0');
+        for (auto it = ResCopy.begin(); it != ResCopy.end();)
+        {
+            if (SafeStrEqual(it->Name, ResName) && (it->ShaderStages & Stages) != 0)
+                it = ResCopy.erase(it);
+            else
+                ++it;
+        }
+        SyncDesc();
+    }
+
+    void RemoveImmutableSampler(const char* SamName, SHADER_TYPE Stages = SHADER_TYPE_ALL)
+    {
+        VERIFY_EXPR(SamName != nullptr && SamName[0] != '\0');
+        for (auto it = ImtblSamCopy.begin(); it != ImtblSamCopy.end();)
+        {
+            if (SafeStrEqual(it->SamplerOrTextureName, SamName) && (it->ShaderStages & Stages) != 0)
+                it = ImtblSamCopy.erase(it);
+            else
+                ++it;
+        }
+        SyncDesc();
     }
 
     void ClearResources()
     {
         ResCopy.clear();
-        NumResources = 0;
-        Resources    = nullptr;
+        SyncDesc();
     }
 
     void ClearImmutableSamplers()
     {
         ImtblSamCopy.clear();
-        NumImmutableSamplers = 0;
-        ImmutableSamplers    = nullptr;
+        SyncDesc();
     }
 
     void SetCombinedSamplerSuffix(const char* Suffix)
@@ -691,16 +697,25 @@ struct PipelineResourceSignatureDescX : DeviceObjectAttribsX<PipelineResourceSig
     }
 
 private:
-    void CopyStrings()
+    void SyncDesc(bool UpdateStrings = false)
     {
-        for (auto& Res : ResCopy)
-            Res.Name = StringPool.emplace(Res.Name).first->c_str();
+        NumResources = static_cast<Uint32>(ResCopy.size());
+        Resources    = NumResources > 0 ? ResCopy.data() : nullptr;
 
-        for (auto& Sam : ImtblSamCopy)
-            Sam.SamplerOrTextureName = StringPool.emplace(Sam.SamplerOrTextureName).first->c_str();
+        NumImmutableSamplers = static_cast<Uint32>(ImtblSamCopy.size());
+        ImmutableSamplers    = NumImmutableSamplers > 0 ? ImtblSamCopy.data() : nullptr;
 
-        if (CombinedSamplerSuffix != nullptr)
-            CombinedSamplerSuffix = StringPool.emplace(CombinedSamplerSuffix).first->c_str();
+        if (UpdateStrings)
+        {
+            for (auto& Res : ResCopy)
+                Res.Name = StringPool.emplace(Res.Name).first->c_str();
+
+            for (auto& Sam : ImtblSamCopy)
+                Sam.SamplerOrTextureName = StringPool.emplace(Sam.SamplerOrTextureName).first->c_str();
+
+            if (CombinedSamplerSuffix != nullptr)
+                CombinedSamplerSuffix = StringPool.emplace(CombinedSamplerSuffix).first->c_str();
+        }
     }
 
     std::vector<PipelineResourceDesc> ResCopy;
@@ -719,18 +734,12 @@ struct PipelineResourceLayoutDescX : PipelineResourceLayoutDesc
         PipelineResourceLayoutDesc{_Desc}
     {
         if (NumVariables != 0)
-        {
             VarCopy.assign(Variables, Variables + NumVariables);
-            Variables = VarCopy.data();
-        }
 
         if (NumImmutableSamplers != 0)
-        {
             ImtblSamCopy.assign(ImmutableSamplers, ImmutableSamplers + NumImmutableSamplers);
-            ImmutableSamplers = ImtblSamCopy.data();
-        }
 
-        CopyStrings();
+        SyncDesc(true);
     }
 
     PipelineResourceLayoutDescX(const std::initializer_list<ShaderResourceVariableDesc>& _Vars,
@@ -738,15 +747,7 @@ struct PipelineResourceLayoutDescX : PipelineResourceLayoutDesc
         VarCopy{_Vars},
         ImtblSamCopy{_ImtblSamplers}
     {
-        NumVariables = static_cast<Uint32>(VarCopy.size());
-        if (NumVariables > 0)
-            Variables = VarCopy.data();
-
-        NumImmutableSamplers = static_cast<Uint32>(ImtblSamCopy.size());
-        if (NumImmutableSamplers > 0)
-            ImmutableSamplers = ImtblSamCopy.data();
-
-        CopyStrings();
+        SyncDesc(true);
     }
 
     PipelineResourceLayoutDescX(const PipelineResourceLayoutDescX& _DescX) :
@@ -767,9 +768,7 @@ struct PipelineResourceLayoutDescX : PipelineResourceLayoutDesc
     {
         VarCopy.push_back(Var);
         VarCopy.back().Name = StringPool.emplace(Var.Name).first->c_str();
-
-        NumVariables = static_cast<Uint32>(VarCopy.size());
-        Variables    = VarCopy.data();
+        SyncDesc();
         return *this;
     }
 
@@ -777,24 +776,46 @@ struct PipelineResourceLayoutDescX : PipelineResourceLayoutDesc
     {
         ImtblSamCopy.push_back(Sam);
         ImtblSamCopy.back().SamplerOrTextureName = StringPool.emplace(Sam.SamplerOrTextureName).first->c_str();
-
-        NumImmutableSamplers = static_cast<Uint32>(ImtblSamCopy.size());
-        ImmutableSamplers    = ImtblSamCopy.data();
+        SyncDesc();
         return *this;
+    }
+
+    void RemoveVariable(const char* VarName, SHADER_TYPE Stages = SHADER_TYPE_ALL)
+    {
+        VERIFY_EXPR(VarName != nullptr && VarName[0] != '\0');
+        for (auto it = VarCopy.begin(); it != VarCopy.end();)
+        {
+            if (SafeStrEqual(it->Name, VarName) && (it->ShaderStages & Stages) != 0)
+                it = VarCopy.erase(it);
+            else
+                ++it;
+        }
+        SyncDesc();
+    }
+
+    void RemoveImmutableSampler(const char* SamName, SHADER_TYPE Stages = SHADER_TYPE_ALL)
+    {
+        VERIFY_EXPR(SamName != nullptr && SamName[0] != '\0');
+        for (auto it = ImtblSamCopy.begin(); it != ImtblSamCopy.end();)
+        {
+            if (SafeStrEqual(it->SamplerOrTextureName, SamName) && (it->ShaderStages & Stages) != 0)
+                it = ImtblSamCopy.erase(it);
+            else
+                ++it;
+        }
+        SyncDesc();
     }
 
     void ClearVariables()
     {
         VarCopy.clear();
-        NumVariables = 0;
-        Variables    = nullptr;
+        SyncDesc();
     }
 
     void ClearImmutableSamplers()
     {
         ImtblSamCopy.clear();
-        NumImmutableSamplers = 0;
-        ImmutableSamplers    = nullptr;
+        SyncDesc();
     }
 
     void Clear()
@@ -804,13 +825,22 @@ struct PipelineResourceLayoutDescX : PipelineResourceLayoutDesc
     }
 
 private:
-    void CopyStrings()
+    void SyncDesc(bool UpdateStrings = false)
     {
-        for (auto& Var : VarCopy)
-            Var.Name = StringPool.emplace(Var.Name).first->c_str();
+        NumVariables = static_cast<Uint32>(VarCopy.size());
+        Variables    = NumVariables > 0 ? VarCopy.data() : nullptr;
 
-        for (auto& Sam : ImtblSamCopy)
-            Sam.SamplerOrTextureName = StringPool.emplace(Sam.SamplerOrTextureName).first->c_str();
+        NumImmutableSamplers = static_cast<Uint32>(ImtblSamCopy.size());
+        ImmutableSamplers    = NumImmutableSamplers > 0 ? ImtblSamCopy.data() : nullptr;
+
+        if (UpdateStrings)
+        {
+            for (auto& Var : VarCopy)
+                Var.Name = StringPool.emplace(Var.Name).first->c_str();
+
+            for (auto& Sam : ImtblSamCopy)
+                Sam.SamplerOrTextureName = StringPool.emplace(Sam.SamplerOrTextureName).first->c_str();
+        }
     }
 
     std::vector<ShaderResourceVariableDesc> VarCopy;
@@ -831,18 +861,12 @@ struct BottomLevelASDescX : DeviceObjectAttribsX<BottomLevelASDesc>
         TBase{_Desc}
     {
         if (TriangleCount != 0)
-        {
             Triangles.assign(pTriangles, pTriangles + TriangleCount);
-            pTriangles = Triangles.data();
-        }
 
         if (BoxCount != 0)
-        {
             Boxes.assign(pBoxes, pBoxes + BoxCount);
-            pBoxes = Boxes.data();
-        }
 
-        CopyStrings();
+        SyncDesc(true);
     }
 
     BottomLevelASDescX(const std::initializer_list<BLASTriangleDesc>&    _Triangles,
@@ -850,15 +874,7 @@ struct BottomLevelASDescX : DeviceObjectAttribsX<BottomLevelASDesc>
         Triangles{_Triangles},
         Boxes{_Boxes}
     {
-        TriangleCount = static_cast<Uint32>(Triangles.size());
-        if (TriangleCount > 0)
-            pTriangles = Triangles.data();
-
-        BoxCount = static_cast<Uint32>(Boxes.size());
-        if (BoxCount > 0)
-            pBoxes = Boxes.data();
-
-        CopyStrings();
+        SyncDesc(true);
     }
 
     BottomLevelASDescX(const BottomLevelASDescX& _DescX) :
@@ -879,9 +895,7 @@ struct BottomLevelASDescX : DeviceObjectAttribsX<BottomLevelASDesc>
     {
         Triangles.push_back(Geo);
         Triangles.back().GeometryName = StringPool.emplace(Geo.GeometryName).first->c_str();
-
-        TriangleCount = static_cast<Uint32>(Triangles.size());
-        pTriangles    = Triangles.data();
+        SyncDesc();
         return *this;
     }
 
@@ -889,24 +903,46 @@ struct BottomLevelASDescX : DeviceObjectAttribsX<BottomLevelASDesc>
     {
         Boxes.push_back(Geo);
         Boxes.back().GeometryName = StringPool.emplace(Geo.GeometryName).first->c_str();
-
-        BoxCount = static_cast<Uint32>(Boxes.size());
-        pBoxes   = Boxes.data();
+        SyncDesc();
         return *this;
+    }
+
+    void RemoveTriangleGeomerty(const char* GeoName)
+    {
+        VERIFY_EXPR(GeoName != nullptr && GeoName[0] != '\0');
+        for (auto it = Triangles.begin(); it != Triangles.end();)
+        {
+            if (SafeStrEqual(it->GeometryName, GeoName))
+                it = Triangles.erase(it);
+            else
+                ++it;
+        }
+        SyncDesc();
+    }
+
+    void RemoveBoxGeomerty(const char* GeoName)
+    {
+        VERIFY_EXPR(GeoName != nullptr && GeoName[0] != '\0');
+        for (auto it = Boxes.begin(); it != Boxes.end();)
+        {
+            if (SafeStrEqual(it->GeometryName, GeoName))
+                it = Boxes.erase(it);
+            else
+                ++it;
+        }
+        SyncDesc();
     }
 
     void ClearTriangles()
     {
         Triangles.clear();
-        TriangleCount = 0;
-        pTriangles    = nullptr;
+        SyncDesc();
     }
 
     void ClearBoxes()
     {
         Boxes.clear();
-        BoxCount = 0;
-        pBoxes   = nullptr;
+        SyncDesc();
     }
 
     void Clear()
@@ -916,18 +952,27 @@ struct BottomLevelASDescX : DeviceObjectAttribsX<BottomLevelASDesc>
     }
 
 private:
-    void CopyStrings()
+    void SyncDesc(bool UpdateStrings = false)
     {
-        for (auto& Tri : Triangles)
-        {
-            if (Tri.GeometryName != nullptr)
-                Tri.GeometryName = StringPool.emplace(Tri.GeometryName).first->c_str();
-        }
+        TriangleCount = static_cast<Uint32>(Triangles.size());
+        pTriangles    = TriangleCount > 0 ? Triangles.data() : nullptr;
 
-        for (auto& Box : Boxes)
+        BoxCount = static_cast<Uint32>(Boxes.size());
+        pBoxes   = BoxCount > 0 ? Boxes.data() : nullptr;
+
+        if (UpdateStrings)
         {
-            if (Box.GeometryName != nullptr)
-                Box.GeometryName = StringPool.emplace(Box.GeometryName).first->c_str();
+            for (auto& Tri : Triangles)
+            {
+                if (Tri.GeometryName != nullptr)
+                    Tri.GeometryName = StringPool.emplace(Tri.GeometryName).first->c_str();
+            }
+
+            for (auto& Box : Boxes)
+            {
+                if (Box.GeometryName != nullptr)
+                    Box.GeometryName = StringPool.emplace(Box.GeometryName).first->c_str();
+            }
         }
     }
 
