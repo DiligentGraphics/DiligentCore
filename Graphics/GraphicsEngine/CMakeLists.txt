@@ -60,6 +60,7 @@ set(INTERFACE
     interface/Fence.h
     interface/Framebuffer.h
     interface/GraphicsTypes.h
+    interface/GraphicsTypesX.hpp
     interface/InputLayout.h
     interface/PipelineState.h
     interface/PipelineResourceSignature.h
