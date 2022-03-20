@@ -243,22 +243,15 @@ struct RenderPassDescX
         Desc{_Desc}
     {
         if (Desc.AttachmentCount != 0)
-        {
             Attachments.assign(Desc.pAttachments, Desc.pAttachments + Desc.AttachmentCount);
-            Desc.pAttachments = Attachments.data();
-        }
 
         if (Desc.SubpassCount != 0)
-        {
             Subpasses.assign(Desc.pSubpasses, Desc.pSubpasses + Desc.SubpassCount);
-            Desc.pSubpasses = Subpasses.data();
-        }
 
         if (Desc.DependencyCount != 0)
-        {
             Dependencies.assign(Desc.pDependencies, Desc.pDependencies + Desc.DependencyCount);
-            Desc.pDependencies = Dependencies.data();
-        }
+
+        SyncDesc();
     }
 
     RenderPassDescX(const RenderPassDescX& _DescX) :
@@ -275,28 +268,24 @@ struct RenderPassDescX
     RenderPassDescX(RenderPassDescX&&) = default;
     RenderPassDescX& operator=(RenderPassDescX&&) = default;
 
-
     RenderPassDescX& AddAttachment(const RenderPassAttachmentDesc& Attachment)
     {
         Attachments.push_back(Attachment);
-        Desc.AttachmentCount = static_cast<Uint32>(Attachments.size());
-        Desc.pAttachments    = Attachments.data();
+        SyncDesc();
         return *this;
     }
 
     RenderPassDescX& AddSubpass(const SubpassDesc& Subpass)
     {
         Subpasses.push_back(Subpass);
-        Desc.SubpassCount = static_cast<Uint32>(Subpasses.size());
-        Desc.pSubpasses   = Subpasses.data();
+        SyncDesc();
         return *this;
     }
 
     RenderPassDescX& AddDependency(const SubpassDependencyDesc& Dependency)
     {
         Dependencies.push_back(Dependency);
-        Desc.DependencyCount = static_cast<Uint32>(Dependencies.size());
-        Desc.pDependencies   = Dependencies.data();
+        SyncDesc();
         return *this;
     }
 
@@ -304,22 +293,19 @@ struct RenderPassDescX
     void ClearAttachments()
     {
         Attachments.clear();
-        Desc.AttachmentCount = 0;
-        Desc.pAttachments    = nullptr;
+        SyncDesc();
     }
 
     void ClearSubpasses()
     {
         Subpasses.clear();
-        Desc.SubpassCount = 0;
-        Desc.pSubpasses   = nullptr;
+        SyncDesc();
     }
 
     void ClearDependencies()
     {
         Dependencies.clear();
-        Desc.DependencyCount = 0;
-        Desc.pDependencies   = nullptr;
+        SyncDesc();
     }
 
     const RenderPassDesc& Get() const
@@ -357,6 +343,18 @@ struct RenderPassDescX
     }
 
 private:
+    void SyncDesc()
+    {
+        Desc.AttachmentCount = static_cast<Uint32>(Attachments.size());
+        Desc.pAttachments    = Desc.AttachmentCount > 0 ? Attachments.data() : nullptr;
+
+        Desc.SubpassCount = static_cast<Uint32>(Subpasses.size());
+        Desc.pSubpasses   = Desc.SubpassCount > 0 ? Subpasses.data() : nullptr;
+
+        Desc.DependencyCount = static_cast<Uint32>(Dependencies.size());
+        Desc.pDependencies   = Desc.DependencyCount > 0 ? Dependencies.data() : nullptr;
+    }
+
     RenderPassDesc Desc;
 
     std::vector<RenderPassAttachmentDesc> Attachments;
@@ -375,19 +373,15 @@ struct InputLayoutDescX
         Desc{_Desc}
     {
         if (Desc.NumElements != 0)
-        {
             Elements.assign(Desc.LayoutElements, Desc.LayoutElements + Desc.NumElements);
-            Desc.LayoutElements = Elements.data();
-        }
-        CopyStrings();
+
+        SyncDesc(true);
     }
 
     InputLayoutDescX(const std::initializer_list<LayoutElement>& _Elements) :
         Elements{_Elements}
     {
-        Desc.NumElements    = static_cast<Uint32>(Elements.size());
-        Desc.LayoutElements = !Elements.empty() ? Elements.data() : nullptr;
-        CopyStrings();
+        SyncDesc(true);
     }
 
     InputLayoutDescX(const InputLayoutDescX& _DescX) :
@@ -409,8 +403,7 @@ struct InputLayoutDescX
         Elements.push_back(Elem);
         auto& HLSLSemantic = Elements.back().HLSLSemantic;
         HLSLSemantic       = StringPool.emplace(HLSLSemantic).first->c_str();
-
-        Desc = {Elements.data(), static_cast<Uint32>(Elements.size())};
+        SyncDesc();
         return *this;
     }
 
@@ -420,8 +413,7 @@ struct InputLayoutDescX
         Elements.emplace_back(std::forward<ArgsType>(args)...);
         auto& HLSLSemantic = Elements.back().HLSLSemantic;
         HLSLSemantic       = StringPool.emplace(HLSLSemantic).first->c_str();
-
-        Desc = {Elements.data(), static_cast<Uint32>(Elements.size())};
+        SyncDesc();
         return *this;
     }
 
@@ -460,10 +452,16 @@ struct InputLayoutDescX
     }
 
 private:
-    void CopyStrings()
+    void SyncDesc(bool CopyStrings = false)
     {
-        for (auto& Elem : Elements)
-            Elem.HLSLSemantic = StringPool.emplace(Elem.HLSLSemantic).first->c_str();
+        Desc.NumElements    = static_cast<Uint32>(Elements.size());
+        Desc.LayoutElements = Desc.NumElements > 0 ? Elements.data() : nullptr;
+
+        if (CopyStrings)
+        {
+            for (auto& Elem : Elements)
+                Elem.HLSLSemantic = StringPool.emplace(Elem.HLSLSemantic).first->c_str();
+        }
     }
     InputLayoutDesc                 Desc;
     std::vector<LayoutElement>      Elements;
