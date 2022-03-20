@@ -38,6 +38,7 @@
 #include "InputLayout.h"
 #include "Framebuffer.h"
 #include "PipelineResourceSignature.h"
+#include "PipelineState.h"
 #include "../../../Platforms/Basic/interface/DebugUtilities.hpp"
 
 namespace Diligent
@@ -363,6 +364,7 @@ private:
     std::vector<SubpassDependencyDesc>    Dependencies;
 };
 
+
 /// C++ wrapper over InputLayoutDesc.
 struct InputLayoutDescX
 {
@@ -515,6 +517,7 @@ private:
     std::string NameCopy;
 };
 
+
 /// C++ wrapper over FramebufferDesc.
 struct FramebufferDescX : DeviceObjectAttribsX<FramebufferDesc>
 {
@@ -572,6 +575,7 @@ private:
     std::vector<ITextureView*> Attachments;
 };
 
+
 /// C++ wrapper over PipelineResourceSignatureDesc.
 struct PipelineResourceSignatureDescX : DeviceObjectAttribsX<PipelineResourceSignatureDesc>
 {
@@ -626,9 +630,9 @@ struct PipelineResourceSignatureDescX : DeviceObjectAttribsX<PipelineResourceSig
         return *this;
     }
 
-    PipelineResourceSignatureDescX& AddImmutableSampler(const ImmutableSamplerDesc& Res)
+    PipelineResourceSignatureDescX& AddImmutableSampler(const ImmutableSamplerDesc& Sam)
     {
-        ImtblSamCopy.push_back(Res);
+        ImtblSamCopy.push_back(Sam);
         auto& SamOrTexName = ImtblSamCopy.back().SamplerOrTextureName;
         SamOrTexName       = StringPool.emplace(SamOrTexName).first->c_str();
 
@@ -668,6 +672,95 @@ private:
     std::vector<PipelineResourceDesc> ResCopy;
     std::vector<ImmutableSamplerDesc> ImtblSamCopy;
     std::unordered_set<std::string>   StringPool;
+};
+
+
+/// C++ wrapper over PipelineResourceSignatureDesc.
+struct PipelineResourceLayoutDescX : PipelineResourceLayoutDesc
+{
+    PipelineResourceLayoutDescX() noexcept
+    {}
+
+    PipelineResourceLayoutDescX(const PipelineResourceLayoutDesc& _Desc) :
+        PipelineResourceLayoutDesc{_Desc}
+    {
+        if (NumVariables != 0)
+        {
+            VarCopy.assign(Variables, Variables + NumVariables);
+            Variables = VarCopy.data();
+            for (auto& Var : VarCopy)
+                Var.Name = StringPool.emplace(Var.Name).first->c_str();
+        }
+
+        if (NumImmutableSamplers != 0)
+        {
+            ImtblSamCopy.assign(ImmutableSamplers, ImmutableSamplers + NumImmutableSamplers);
+            ImmutableSamplers = ImtblSamCopy.data();
+            for (auto& Sam : ImtblSamCopy)
+                Sam.SamplerOrTextureName = StringPool.emplace(Sam.SamplerOrTextureName).first->c_str();
+        }
+    }
+
+    PipelineResourceLayoutDescX(const PipelineResourceLayoutDescX& _DescX) :
+        PipelineResourceLayoutDescX{static_cast<const PipelineResourceLayoutDesc&>(_DescX)}
+    {}
+
+    PipelineResourceLayoutDescX& operator=(const PipelineResourceLayoutDescX& _DescX)
+    {
+        PipelineResourceLayoutDescX Copy{_DescX};
+        std::swap(*this, Copy);
+        return *this;
+    }
+
+    PipelineResourceLayoutDescX(PipelineResourceLayoutDescX&&) = default;
+    PipelineResourceLayoutDescX& operator=(PipelineResourceLayoutDescX&&) = default;
+
+    PipelineResourceLayoutDescX& AddVariable(const ShaderResourceVariableDesc& Var)
+    {
+        VarCopy.push_back(Var);
+        auto& VarName = VarCopy.back().Name;
+        VarName       = StringPool.emplace(VarName).first->c_str();
+
+        NumVariables = static_cast<Uint32>(VarCopy.size());
+        Variables    = VarCopy.data();
+        return *this;
+    }
+
+    PipelineResourceLayoutDescX& AddImmutableSampler(const ImmutableSamplerDesc& Sam)
+    {
+        ImtblSamCopy.push_back(Sam);
+        auto& SamOrTexName = ImtblSamCopy.back().SamplerOrTextureName;
+        SamOrTexName       = StringPool.emplace(SamOrTexName).first->c_str();
+
+        NumImmutableSamplers = static_cast<Uint32>(ImtblSamCopy.size());
+        ImmutableSamplers    = ImtblSamCopy.data();
+        return *this;
+    }
+
+    void ClearVariables()
+    {
+        VarCopy.clear();
+        NumVariables = 0;
+        Variables    = nullptr;
+    }
+
+    void ClearImmutableSamplers()
+    {
+        ImtblSamCopy.clear();
+        NumImmutableSamplers = 0;
+        ImmutableSamplers    = nullptr;
+    }
+
+    void Clear()
+    {
+        PipelineResourceLayoutDescX CleanDesc;
+        std::swap(*this, CleanDesc);
+    }
+
+private:
+    std::vector<ShaderResourceVariableDesc> VarCopy;
+    std::vector<ImmutableSamplerDesc>       ImtblSamCopy;
+    std::unordered_set<std::string>         StringPool;
 };
 
 } // namespace Diligent

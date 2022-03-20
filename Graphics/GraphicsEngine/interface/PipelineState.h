@@ -214,11 +214,6 @@ struct PipelineResourceLayoutDesc
 
 #if DILIGENT_CPP_INTERFACE
     /// Comparison operator tests if two structures are equivalent
-
-    /// \param [in] RHS - reference to the structure to perform comparison with
-    /// \return
-    /// - True if all members of the two structures are equal.
-    /// - False otherwise.
     bool operator==(const PipelineResourceLayoutDesc& RHS) const
     {
         if (!(DefaultVariableType        == RHS.DefaultVariableType &&
@@ -236,6 +231,10 @@ struct PipelineResourceLayoutDesc
                 return false;
 
         return true;
+    }
+    bool operator!=(const PipelineResourceLayoutDesc& RHS) const
+    {
+        return !(*this == RHS);
     }
 #endif
 
