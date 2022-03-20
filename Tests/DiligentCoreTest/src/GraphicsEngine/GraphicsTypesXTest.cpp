@@ -264,4 +264,44 @@ TEST(GraphicsTypesXTest, InputLayoutDescX)
     }
 }
 
+
+TEST(GraphicsTypesXTest, FramebufferDescX)
+{
+    ITextureView* ppAttachments[] = {
+        reinterpret_cast<ITextureView*>(uintptr_t{0x1}),
+        reinterpret_cast<ITextureView*>(uintptr_t{0x2}),
+        reinterpret_cast<ITextureView*>(uintptr_t{0x3}),
+    };
+    FramebufferDesc Ref;
+    Ref.Name            = "Test";
+    Ref.pRenderPass     = reinterpret_cast<IRenderPass*>(uintptr_t{0xA});
+    Ref.AttachmentCount = _countof(ppAttachments);
+    Ref.ppAttachments   = ppAttachments;
+    Ref.Width           = 256;
+    Ref.Height          = 128;
+    Ref.NumArraySlices  = 6;
+    TestCtorsAndAssignments<FramebufferDescX>(Ref);
+
+    {
+        FramebufferDescX DescX;
+        DescX.SetName("Test");
+        DescX.pRenderPass    = reinterpret_cast<IRenderPass*>(uintptr_t{0xA});
+        DescX.Width          = 256;
+        DescX.Height         = 128;
+        DescX.NumArraySlices = 6;
+        DescX.AddAttachment(ppAttachments[0]);
+        DescX.AddAttachment(ppAttachments[1]);
+        DescX.AddAttachment(ppAttachments[2]);
+        EXPECT_EQ(DescX, Ref);
+
+        DescX.ClearAttachments();
+        Ref.AttachmentCount = 0;
+        Ref.ppAttachments   = nullptr;
+        EXPECT_EQ(DescX, Ref);
+
+        DescX.Clear();
+        EXPECT_EQ(DescX, FramebufferDesc{});
+    }
+}
+
 } // namespace

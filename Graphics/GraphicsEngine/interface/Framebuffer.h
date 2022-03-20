@@ -32,6 +32,8 @@
 /// \file
 /// Definition of the Diligent::IFramebuffer interface and related data structures
 
+#include <string.h>
+
 #include "DeviceObject.h"
 #include "RenderPass.h"
 #include "TextureView.h"
@@ -62,6 +64,23 @@ struct FramebufferDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
     /// The number of array slices in the framebuffer.
     Uint32               NumArraySlices  DEFAULT_INITIALIZER(0);
+
+#if DILIGENT_CPP_INTERFACE
+    constexpr bool operator == (const FramebufferDesc& RHS) const
+    {
+        if (pRenderPass     != RHS.pRenderPass     ||
+            AttachmentCount != RHS.AttachmentCount ||
+            Width           != RHS.Width           ||
+            Height          != RHS.Height          ||
+            NumArraySlices  != RHS.NumArraySlices)
+            return false;
+        return AttachmentCount == 0 || memcmp(ppAttachments, RHS.ppAttachments, sizeof(ppAttachments[0]) * AttachmentCount) == 0;
+    }
+    constexpr bool operator != (const FramebufferDesc& RHS) const
+    {
+        return !(*this == RHS);
+    }
+#endif
 };
 typedef struct FramebufferDesc FramebufferDesc;
 

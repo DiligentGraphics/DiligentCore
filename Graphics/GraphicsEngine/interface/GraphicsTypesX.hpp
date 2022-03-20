@@ -34,6 +34,7 @@
 
 #include "RenderPass.h"
 #include "InputLayout.h"
+#include "Framebuffer.h"
 #include "../../../Platforms/Basic/interface/DebugUtilities.hpp"
 
 namespace Diligent
@@ -202,14 +203,7 @@ struct SubpassDescX
 
     void Swap(SubpassDescX& Other)
     {
-        std::swap(Desc, Other.Desc);
-        Inputs.swap(Other.Inputs);
-        RenderTargets.swap(Other.RenderTargets);
-        Resolves.swap(Other.Resolves);
-        Preserves.swap(Other.Preserves);
-
-        std::swap(DepthStencil, Other.DepthStencil);
-        std::swap(ShadingRate, Other.ShadingRate);
+        std::swap(*this, Other);
 
         if (Desc.pDepthStencilAttachment != nullptr)
             Desc.pDepthStencilAttachment = &DepthStencil;
@@ -270,7 +264,7 @@ struct RenderPassDescX
     RenderPassDescX& operator=(const RenderPassDescX& _DescX)
     {
         RenderPassDescX Copy{_DescX};
-        Swap(Copy);
+        std::swap(*this, Copy);
         return *this;
     }
 
@@ -355,15 +349,7 @@ struct RenderPassDescX
     void Clear()
     {
         RenderPassDescX CleanDesc;
-        Swap(CleanDesc);
-    }
-
-    void Swap(RenderPassDescX& Other)
-    {
-        std::swap(Desc, Other.Desc);
-        Attachments.swap(Other.Attachments);
-        Subpasses.swap(Other.Subpasses);
-        Dependencies.swap(Other.Dependencies);
+        std::swap(*this, CleanDesc);
     }
 
 private:
@@ -404,7 +390,7 @@ struct InputLayoutDescX
     InputLayoutDescX& operator=(const InputLayoutDescX& _DescX)
     {
         InputLayoutDescX Copy{_DescX};
-        Swap(Copy);
+        std::swap(*this, Copy);
         return *this;
     }
 
@@ -434,13 +420,6 @@ struct InputLayoutDescX
         Desc.NumElements    = 0;
         Desc.LayoutElements = nullptr;
     }
-
-    void Swap(InputLayoutDescX& Other)
-    {
-        std::swap(Desc, Other.Desc);
-        Elements.swap(Other.Elements);
-    }
-
 
     const InputLayoutDesc& Get() const
     {
@@ -473,6 +452,121 @@ struct InputLayoutDescX
 private:
     InputLayoutDesc            Desc;
     std::vector<LayoutElement> Elements;
+};
+
+
+template <typename BaseType>
+struct DeviceObjectAttribsX : BaseType
+{
+    DeviceObjectAttribsX() noexcept
+    {}
+
+    DeviceObjectAttribsX(const BaseType& Base) :
+        BaseType{Base},
+        NameCopy{Base.Name != nullptr ? Base.Name : ""}
+    {
+        this->Name = NameCopy.c_str();
+    }
+
+    DeviceObjectAttribsX(const DeviceObjectAttribsX& Other) noexcept :
+        BaseType{Other},
+        NameCopy{Other.NameCopy}
+    {
+        this->Name = NameCopy.c_str();
+    }
+
+    DeviceObjectAttribsX(DeviceObjectAttribsX&& Other) noexcept :
+        BaseType{std::move(Other)},
+        NameCopy{std::move(Other.NameCopy)}
+    {
+        this->Name = NameCopy.c_str();
+    }
+
+    DeviceObjectAttribsX& operator=(const DeviceObjectAttribsX& Other) noexcept
+    {
+        static_cast<BaseType&>(*this) = Other;
+
+        NameCopy   = Other.NameCopy;
+        this->Name = NameCopy.c_str();
+
+        return *this;
+    }
+
+    DeviceObjectAttribsX& operator=(const DeviceObjectAttribsX&& Other) noexcept
+    {
+        static_cast<BaseType&>(*this) = std::move(Other);
+
+        NameCopy   = std::move(Other.NameCopy);
+        this->Name = NameCopy.c_str();
+
+        return *this;
+    }
+
+    void SetName(const char* NewName)
+    {
+        NameCopy   = NewName != nullptr ? NewName : "";
+        this->Name = NameCopy.c_str();
+    }
+
+private:
+    std::string NameCopy;
+};
+
+/// C++ wrapper over FramebufferDesc.
+struct FramebufferDescX : DeviceObjectAttribsX<FramebufferDesc>
+{
+    using TBase = DeviceObjectAttribsX<FramebufferDesc>;
+
+    FramebufferDescX() noexcept
+    {}
+
+    FramebufferDescX(const FramebufferDesc& _Desc) :
+        TBase{_Desc}
+    {
+        if (AttachmentCount != 0)
+        {
+            Attachments.assign(ppAttachments, ppAttachments + AttachmentCount);
+            ppAttachments = Attachments.data();
+        }
+    }
+
+    FramebufferDescX(const FramebufferDescX& _DescX) :
+        FramebufferDescX{static_cast<const FramebufferDesc&>(_DescX)}
+    {}
+
+    FramebufferDescX& operator=(const FramebufferDescX& _DescX)
+    {
+        FramebufferDescX Copy{_DescX};
+        std::swap(*this, Copy);
+        return *this;
+    }
+
+    FramebufferDescX(FramebufferDescX&& RHS) = default;
+    FramebufferDescX& operator=(FramebufferDescX&&) = default;
+
+    FramebufferDescX& AddAttachment(ITextureView* pView)
+    {
+        Attachments.push_back(pView);
+        AttachmentCount = static_cast<Uint32>(Attachments.size());
+        ppAttachments   = Attachments.data();
+        return *this;
+    }
+
+    void ClearAttachments()
+    {
+        Attachments.clear();
+        AttachmentCount = 0;
+        ppAttachments   = nullptr;
+    }
+
+    void Clear()
+    {
+        FramebufferDescX CleanDesc;
+        std::swap(*this, CleanDesc);
+    }
+
+private:
+    std::vector<ITextureView*> Attachments;
 };
 
 } // namespace Diligent
