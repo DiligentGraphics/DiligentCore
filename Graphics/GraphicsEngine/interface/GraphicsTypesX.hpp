@@ -44,7 +44,7 @@ struct SubpassDescX
     SubpassDescX() noexcept
     {}
 
-    SubpassDescX(const SubpassDesc _Desc) :
+    SubpassDescX(const SubpassDesc& _Desc) :
         Desc{_Desc}
     {
         auto CopyAttachments = [](auto*& pAttachments, Uint32 Count, auto& Attachments) {
@@ -125,11 +125,21 @@ struct SubpassDescX
         return *this;
     }
 
+    SubpassDescX& SetDepthStencil(const AttachmentReference& DepthStencilAttachment)
+    {
+        return SetDepthStencil(&DepthStencilAttachment);
+    }
+
     SubpassDescX& SetShadingRate(const ShadingRateAttachment* pShadingRateAttachment)
     {
         ShadingRate                 = (pShadingRateAttachment != nullptr) ? *pShadingRateAttachment : ShadingRateAttachment{};
         Desc.pShadingRateAttachment = (pShadingRateAttachment != nullptr) ? &ShadingRate : nullptr;
         return *this;
+    }
+
+    SubpassDescX& SetShadingRate(const ShadingRateAttachment& ShadingRateAttachment)
+    {
+        return SetShadingRate(&ShadingRateAttachment);
     }
 
     void ClearInputs()
@@ -183,7 +193,7 @@ struct SubpassDescX
         return *this != static_cast<const SubpassDesc&>(RHS);
     }
 
-    void Reset()
+    void Clear()
     {
         SubpassDescX CleanDesc;
         Swap(CleanDesc);
@@ -221,6 +231,146 @@ private:
 
     AttachmentReference   DepthStencil;
     ShadingRateAttachment ShadingRate;
+};
+
+
+/// C++ wrapper over Diligent::RenderPassDesc.
+struct RenderPassDescX
+{
+    RenderPassDescX() noexcept
+    {}
+
+    RenderPassDescX(const RenderPassDesc& _Desc) :
+        Desc{_Desc}
+    {
+        if (Desc.AttachmentCount != 0)
+        {
+            Attachments.assign(Desc.pAttachments, Desc.pAttachments + Desc.AttachmentCount);
+            Desc.pAttachments = Attachments.data();
+        }
+
+        if (Desc.SubpassCount != 0)
+        {
+            Subpasses.assign(Desc.pSubpasses, Desc.pSubpasses + Desc.SubpassCount);
+            Desc.pSubpasses = Subpasses.data();
+        }
+
+        if (Desc.DependencyCount != 0)
+        {
+            Dependencies.assign(Desc.pDependencies, Desc.pDependencies + Desc.DependencyCount);
+            Desc.pDependencies = Dependencies.data();
+        }
+    }
+
+    RenderPassDescX(const RenderPassDescX& _DescX) :
+        RenderPassDescX{static_cast<const RenderPassDesc&>(_DescX)}
+    {}
+
+    RenderPassDescX& operator=(const RenderPassDescX& _DescX)
+    {
+        RenderPassDescX Copy{_DescX};
+        Swap(Copy);
+        return *this;
+    }
+
+    RenderPassDescX(RenderPassDescX&&) = default;
+    RenderPassDescX& operator=(RenderPassDescX&&) = default;
+
+
+    RenderPassDescX& AddAttachment(const RenderPassAttachmentDesc& Attachment)
+    {
+        Attachments.push_back(Attachment);
+        Desc.AttachmentCount = static_cast<Uint32>(Attachments.size());
+        Desc.pAttachments    = Attachments.data();
+        return *this;
+    }
+
+    RenderPassDescX& AddSubpass(const SubpassDesc& Subpass)
+    {
+        Subpasses.push_back(Subpass);
+        Desc.SubpassCount = static_cast<Uint32>(Subpasses.size());
+        Desc.pSubpasses   = Subpasses.data();
+        return *this;
+    }
+
+    RenderPassDescX& AddDependency(const SubpassDependencyDesc& Dependency)
+    {
+        Dependencies.push_back(Dependency);
+        Desc.DependencyCount = static_cast<Uint32>(Dependencies.size());
+        Desc.pDependencies   = Dependencies.data();
+        return *this;
+    }
+
+
+    void ClearAttachments()
+    {
+        Attachments.clear();
+        Desc.AttachmentCount = 0;
+        Desc.pAttachments    = nullptr;
+    }
+
+    void ClearSubpasses()
+    {
+        Subpasses.clear();
+        Desc.SubpassCount = 0;
+        Desc.pSubpasses   = nullptr;
+    }
+
+    void ClearDependencies()
+    {
+        Dependencies.clear();
+        Desc.DependencyCount = 0;
+        Desc.pDependencies   = nullptr;
+    }
+
+    const RenderPassDesc& Get() const
+    {
+        return Desc;
+    }
+
+    operator const RenderPassDesc&() const
+    {
+        return Desc;
+    }
+
+    bool operator==(const RenderPassDesc& RHS) const
+    {
+        return static_cast<const RenderPassDesc&>(*this) == RHS;
+    }
+    bool operator!=(const RenderPassDesc& RHS) const
+    {
+        return !(static_cast<const RenderPassDesc&>(*this) == RHS);
+    }
+
+    bool operator==(const RenderPassDescX& RHS) const
+    {
+        return *this == static_cast<const RenderPassDesc&>(RHS);
+    }
+    bool operator!=(const RenderPassDescX& RHS) const
+    {
+        return *this != static_cast<const RenderPassDesc&>(RHS);
+    }
+
+    void Clear()
+    {
+        RenderPassDescX CleanDesc;
+        Swap(CleanDesc);
+    }
+
+    void Swap(RenderPassDescX& Other)
+    {
+        std::swap(Desc, Other.Desc);
+        Attachments.swap(Other.Attachments);
+        Subpasses.swap(Other.Subpasses);
+        Dependencies.swap(Other.Dependencies);
+    }
+
+private:
+    RenderPassDesc Desc;
+
+    std::vector<RenderPassAttachmentDesc> Attachments;
+    std::vector<SubpassDesc>              Subpasses;
+    std::vector<SubpassDependencyDesc>    Dependencies;
 };
 
 } // namespace Diligent

@@ -33,6 +33,41 @@ using namespace Diligent;
 namespace
 {
 
+template <typename TypeX, typename Type>
+void TestCtorsAndAssignments(const Type& Ref)
+{
+    TypeX DescX{Ref};
+    EXPECT_TRUE(DescX == Ref);
+
+    TypeX DescX2{DescX};
+    EXPECT_TRUE(DescX2 == Ref);
+    EXPECT_TRUE(DescX2 == DescX);
+
+    TypeX DescX3;
+    EXPECT_TRUE(DescX3 != Ref);
+    EXPECT_TRUE(DescX3 != DescX);
+
+    DescX3 = DescX;
+    EXPECT_TRUE(DescX3 == Ref);
+    EXPECT_TRUE(DescX3 == DescX);
+
+    TypeX DescX4{std::move(DescX3)};
+    EXPECT_TRUE(DescX4 == Ref);
+    EXPECT_TRUE(DescX4 == DescX);
+
+    DescX3 = std::move(DescX4);
+    EXPECT_TRUE(DescX3 == Ref);
+    EXPECT_TRUE(DescX3 == DescX);
+
+    TypeX DescX5;
+    DescX5 = DescX;
+    EXPECT_TRUE(DescX5 == Ref);
+    EXPECT_TRUE(DescX5 == DescX);
+
+    DescX5.Clear();
+    EXPECT_TRUE(DescX5 == Type{});
+}
+
 TEST(GraphicsTypesXTest, SubpassDescX)
 {
     constexpr AttachmentReference   Inputs[]        = {{2, RESOURCE_STATE_SHADER_RESOURCE}, {4, RESOURCE_STATE_SHADER_RESOURCE}};
@@ -43,48 +78,24 @@ TEST(GraphicsTypesXTest, SubpassDescX)
     constexpr ShadingRateAttachment ShadingRate     = {{6, RESOURCE_STATE_SHADING_RATE}, 128, 256};
 
     SubpassDesc Ref;
-    Ref.InputAttachmentCount        = _countof(Inputs);
-    Ref.pInputAttachments           = Inputs;
+    Ref.InputAttachmentCount = _countof(Inputs);
+    Ref.pInputAttachments    = Inputs;
+    TestCtorsAndAssignments<SubpassDescX>(Ref);
+
     Ref.RenderTargetAttachmentCount = _countof(RenderTargets);
     Ref.pRenderTargetAttachments    = RenderTargets;
-    Ref.pResolveAttachments         = Resovles;
-    Ref.PreserveAttachmentCount     = _countof(Preserves);
-    Ref.pPreserveAttachments        = Preserves;
-    Ref.pDepthStencilAttachment     = &DepthStencil;
-    Ref.pShadingRateAttachment      = &ShadingRate;
+    TestCtorsAndAssignments<SubpassDescX>(Ref);
 
-    {
-        SubpassDescX DescX{Ref};
-        EXPECT_TRUE(DescX == Ref);
+    Ref.pResolveAttachments = Resovles;
+    TestCtorsAndAssignments<SubpassDescX>(Ref);
 
-        SubpassDescX DescX2{DescX};
-        EXPECT_TRUE(DescX2 == Ref);
-        EXPECT_TRUE(DescX2 == DescX);
+    Ref.PreserveAttachmentCount = _countof(Preserves);
+    Ref.pPreserveAttachments    = Preserves;
+    TestCtorsAndAssignments<SubpassDescX>(Ref);
 
-        SubpassDescX DescX3;
-        EXPECT_TRUE(DescX3 != Ref);
-        EXPECT_TRUE(DescX3 != DescX);
-
-        DescX3 = DescX;
-        EXPECT_TRUE(DescX3 == Ref);
-        EXPECT_TRUE(DescX3 == DescX);
-
-        SubpassDescX DescX4{std::move(DescX3)};
-        EXPECT_TRUE(DescX4 == Ref);
-        EXPECT_TRUE(DescX4 == DescX);
-
-        DescX3 = std::move(DescX4);
-        EXPECT_TRUE(DescX3 == Ref);
-        EXPECT_TRUE(DescX3 == DescX);
-
-        SubpassDescX DescX5;
-        DescX5 = DescX;
-        EXPECT_TRUE(DescX5 == Ref);
-        EXPECT_TRUE(DescX5 == DescX);
-
-        DescX5.Reset();
-        EXPECT_TRUE(DescX5 == SubpassDesc{});
-    }
+    Ref.pDepthStencilAttachment = &DepthStencil;
+    Ref.pShadingRateAttachment  = &ShadingRate;
+    TestCtorsAndAssignments<SubpassDescX>(Ref);
 
     {
         SubpassDescX DescX;
@@ -138,6 +149,79 @@ TEST(GraphicsTypesXTest, SubpassDescX)
         DescX.SetShadingRate(nullptr);
         Ref.pShadingRateAttachment = nullptr;
         EXPECT_TRUE(DescX == Ref);
+    }
+}
+
+TEST(GraphicsTypesXTest, RenderPassDescX)
+{
+    constexpr RenderPassAttachmentDesc Attachments[] =
+        {
+            {TEX_FORMAT_RGBA8_UNORM_SRGB, 2},
+            {TEX_FORMAT_RGBA32_FLOAT},
+            {TEX_FORMAT_R16_UINT},
+            {TEX_FORMAT_D32_FLOAT},
+        };
+
+    RenderPassDesc Ref;
+    Ref.AttachmentCount = _countof(Attachments);
+    Ref.pAttachments    = Attachments;
+    TestCtorsAndAssignments<RenderPassDescX>(Ref);
+
+    SubpassDescX Subpass0, Subpass1;
+    Subpass0
+        .AddInput({1, RESOURCE_STATE_SHADER_RESOURCE})
+        .AddRenderTarget({2, RESOURCE_STATE_RENDER_TARGET})
+        .AddRenderTarget({3, RESOURCE_STATE_RENDER_TARGET})
+        .SetDepthStencil({4, RESOURCE_STATE_DEPTH_WRITE});
+    Subpass1
+        .AddPreserve(5)
+        .AddPreserve(6)
+        .AddRenderTarget({7, RESOURCE_STATE_RENDER_TARGET})
+        .SetShadingRate({{6, RESOURCE_STATE_SHADING_RATE}, 128, 256});
+
+    SubpassDesc Subpasses[] = {Subpass0, Subpass1};
+    Ref.SubpassCount        = _countof(Subpasses);
+    Ref.pSubpasses          = Subpasses;
+    TestCtorsAndAssignments<RenderPassDescX>(Ref);
+
+    constexpr SubpassDependencyDesc Dependecies[] =
+        {
+            {0, 1, PIPELINE_STAGE_FLAG_DRAW_INDIRECT, PIPELINE_STAGE_FLAG_VERTEX_INPUT, ACCESS_FLAG_INDIRECT_COMMAND_READ, ACCESS_FLAG_INDEX_READ},
+            {2, 3, PIPELINE_STAGE_FLAG_VERTEX_SHADER, PIPELINE_STAGE_FLAG_HULL_SHADER, ACCESS_FLAG_VERTEX_READ, ACCESS_FLAG_UNIFORM_READ},
+            {4, 5, PIPELINE_STAGE_FLAG_DOMAIN_SHADER, PIPELINE_STAGE_FLAG_GEOMETRY_SHADER, ACCESS_FLAG_SHADER_READ, ACCESS_FLAG_SHADER_WRITE},
+        };
+    Ref.DependencyCount = _countof(Dependecies);
+    Ref.pDependencies   = Dependecies;
+    TestCtorsAndAssignments<RenderPassDescX>(Ref);
+
+    {
+        RenderPassDescX DescX;
+        DescX
+            .AddAttachment(Attachments[0])
+            .AddAttachment(Attachments[1])
+            .AddAttachment(Attachments[2])
+            .AddAttachment(Attachments[3])
+            .AddSubpass(Subpass0)
+            .AddSubpass(Subpass1)
+            .AddDependency(Dependecies[0])
+            .AddDependency(Dependecies[1])
+            .AddDependency(Dependecies[2]);
+        EXPECT_EQ(DescX, Ref);
+
+        DescX.ClearAttachments();
+        Ref.AttachmentCount = 0;
+        Ref.pAttachments    = nullptr;
+        EXPECT_EQ(DescX, Ref);
+
+        DescX.ClearSubpasses();
+        Ref.SubpassCount = 0;
+        Ref.pSubpasses   = nullptr;
+        EXPECT_EQ(DescX, Ref);
+
+        DescX.ClearDependencies();
+        Ref.DependencyCount = 0;
+        Ref.pDependencies   = nullptr;
+        EXPECT_EQ(DescX, Ref);
     }
 }
 
