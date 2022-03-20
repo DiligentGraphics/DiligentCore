@@ -109,20 +109,20 @@ TEST(GraphicsTypesXTest, SubpassDescX)
             .AddPreserve(Preserves[0])
             .AddPreserve(Preserves[1])
             .AddPreserve(Preserves[2]);
-        EXPECT_TRUE(DescX == Ref);
+        EXPECT_EQ(DescX, Ref);
 
         DescX.ClearRenderTargets();
         Ref.RenderTargetAttachmentCount = 0;
         Ref.pRenderTargetAttachments    = nullptr;
         Ref.pResolveAttachments         = nullptr;
-        EXPECT_TRUE(DescX == Ref);
+        EXPECT_EQ(DescX, Ref);
 
         Ref.RenderTargetAttachmentCount = _countof(RenderTargets);
         Ref.pRenderTargetAttachments    = RenderTargets;
         DescX
             .AddRenderTarget(RenderTargets[0])
             .AddRenderTarget(RenderTargets[1]);
-        EXPECT_TRUE(DescX == Ref);
+        EXPECT_EQ(DescX, Ref);
 
         constexpr AttachmentReference Resovles2[] = {{ATTACHMENT_UNUSED, RESOURCE_STATE_UNKNOWN}, {4, RESOURCE_STATE_RESOLVE_DEST}};
         Ref.pResolveAttachments                   = Resovles2;
@@ -130,25 +130,25 @@ TEST(GraphicsTypesXTest, SubpassDescX)
         DescX
             .AddRenderTarget(RenderTargets[0])
             .AddRenderTarget(RenderTargets[1], &Resovles2[1]);
-        EXPECT_TRUE(DescX == Ref);
+        EXPECT_EQ(DescX, Ref);
 
         DescX.ClearInputs();
         Ref.InputAttachmentCount = 0;
         Ref.pInputAttachments    = nullptr;
-        EXPECT_TRUE(DescX == Ref);
+        EXPECT_EQ(DescX, Ref);
 
         DescX.ClearPreserves();
         Ref.PreserveAttachmentCount = 0;
         Ref.pPreserveAttachments    = nullptr;
-        EXPECT_TRUE(DescX == Ref);
+        EXPECT_EQ(DescX, Ref);
 
         DescX.SetDepthStencil(nullptr);
         Ref.pDepthStencilAttachment = nullptr;
-        EXPECT_TRUE(DescX == Ref);
+        EXPECT_EQ(DescX, Ref);
 
         DescX.SetShadingRate(nullptr);
         Ref.pShadingRateAttachment = nullptr;
-        EXPECT_TRUE(DescX == Ref);
+        EXPECT_EQ(DescX, Ref);
     }
 }
 
@@ -221,6 +221,45 @@ TEST(GraphicsTypesXTest, RenderPassDescX)
         DescX.ClearDependencies();
         Ref.DependencyCount = 0;
         Ref.pDependencies   = nullptr;
+        EXPECT_EQ(DescX, Ref);
+    }
+}
+
+
+TEST(GraphicsTypesXTest, InputLayoutDescX)
+{
+    constexpr LayoutElement Elements[] =
+        {
+            {0, 0, 2, VT_FLOAT32},
+            {1, 0, 2, VT_FLOAT32},
+            {2, 0, 4, VT_UINT8, True},
+        };
+
+    InputLayoutDesc Ref;
+    Ref.NumElements    = _countof(Elements);
+    Ref.LayoutElements = Elements;
+    TestCtorsAndAssignments<InputLayoutDescX>(Ref);
+
+    {
+        InputLayoutDescX DescX;
+        DescX
+            .Add({0, 0, 2, VT_FLOAT32})
+            .Add(1, 0, 2, VT_FLOAT32)
+            .Add(2, 0, 4, VT_UINT8, True);
+        EXPECT_EQ(DescX, Ref);
+
+        DescX.Clear();
+        EXPECT_EQ(DescX, InputLayoutDesc{});
+    }
+
+    {
+        InputLayoutDescX DescX{
+            {
+                {0, 0, 2, VT_FLOAT32},
+                {1, 0, 2, VT_FLOAT32},
+                {2, 0, 4, VT_UINT8, True},
+            } //
+        };
         EXPECT_EQ(DescX, Ref);
     }
 }

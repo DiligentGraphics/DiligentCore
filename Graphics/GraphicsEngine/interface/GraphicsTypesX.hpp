@@ -33,6 +33,7 @@
 #include <utility>
 
 #include "RenderPass.h"
+#include "InputLayout.h"
 #include "../../../Platforms/Basic/interface/DebugUtilities.hpp"
 
 namespace Diligent
@@ -371,6 +372,107 @@ private:
     std::vector<RenderPassAttachmentDesc> Attachments;
     std::vector<SubpassDesc>              Subpasses;
     std::vector<SubpassDependencyDesc>    Dependencies;
+};
+
+/// C++ wrapper over InputLayoutDesc.
+struct InputLayoutDescX
+{
+    InputLayoutDescX() noexcept
+    {}
+
+    InputLayoutDescX(const InputLayoutDesc& _Desc) :
+        Desc{_Desc}
+    {
+        if (Desc.NumElements != 0)
+        {
+            Elements.assign(Desc.LayoutElements, Desc.LayoutElements + Desc.NumElements);
+            Desc.LayoutElements = Elements.data();
+        }
+    }
+
+    InputLayoutDescX(const std::initializer_list<LayoutElement>& _Elements) :
+        Elements{_Elements}
+    {
+        Desc.NumElements    = static_cast<Uint32>(Elements.size());
+        Desc.LayoutElements = !Elements.empty() ? Elements.data() : nullptr;
+    }
+
+    InputLayoutDescX(const InputLayoutDescX& _DescX) :
+        InputLayoutDescX{static_cast<const InputLayoutDesc&>(_DescX)}
+    {}
+
+    InputLayoutDescX& operator=(const InputLayoutDescX& _DescX)
+    {
+        InputLayoutDescX Copy{_DescX};
+        Swap(Copy);
+        return *this;
+    }
+
+    InputLayoutDescX(InputLayoutDescX&&) = default;
+    InputLayoutDescX& operator=(InputLayoutDescX&&) = default;
+
+    InputLayoutDescX& Add(const LayoutElement& Elem)
+    {
+        Elements.push_back(Elem);
+        Desc.NumElements    = static_cast<Uint32>(Elements.size());
+        Desc.LayoutElements = Elements.data();
+        return *this;
+    }
+
+    template <typename... ArgsType>
+    InputLayoutDescX& Add(ArgsType&&... args)
+    {
+        Elements.emplace_back(std::forward<ArgsType>(args)...);
+        Desc.NumElements    = static_cast<Uint32>(Elements.size());
+        Desc.LayoutElements = Elements.data();
+        return *this;
+    }
+
+    void Clear()
+    {
+        Elements.clear();
+        Desc.NumElements    = 0;
+        Desc.LayoutElements = nullptr;
+    }
+
+    void Swap(InputLayoutDescX& Other)
+    {
+        std::swap(Desc, Other.Desc);
+        Elements.swap(Other.Elements);
+    }
+
+
+    const InputLayoutDesc& Get() const
+    {
+        return Desc;
+    }
+
+    operator const InputLayoutDesc&() const
+    {
+        return Desc;
+    }
+
+    bool operator==(const InputLayoutDesc& RHS) const
+    {
+        return static_cast<const InputLayoutDesc&>(*this) == RHS;
+    }
+    bool operator!=(const InputLayoutDesc& RHS) const
+    {
+        return !(static_cast<const InputLayoutDesc&>(*this) == RHS);
+    }
+
+    bool operator==(const InputLayoutDescX& RHS) const
+    {
+        return *this == static_cast<const InputLayoutDesc&>(RHS);
+    }
+    bool operator!=(const InputLayoutDescX& RHS) const
+    {
+        return *this != static_cast<const InputLayoutDesc&>(RHS);
+    }
+
+private:
+    InputLayoutDesc            Desc;
+    std::vector<LayoutElement> Elements;
 };
 
 } // namespace Diligent
