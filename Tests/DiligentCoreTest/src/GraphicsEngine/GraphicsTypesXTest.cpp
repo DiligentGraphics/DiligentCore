@@ -304,4 +304,67 @@ TEST(GraphicsTypesXTest, FramebufferDescX)
     }
 }
 
+TEST(GraphicsTypesXTest, PipelineResourceSignatureDescX)
+{
+    constexpr PipelineResourceDesc Resources[] =
+        {
+            {SHADER_TYPE_VERTEX, "g_Tex2D_1", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC},
+            {SHADER_TYPE_PIXEL, "g_Tex2D_2", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+            {SHADER_TYPE_COMPUTE, "ConstBuff_1", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
+            {SHADER_TYPE_HULL, "ConstBuff_2", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE}, //
+        };
+
+    PipelineResourceSignatureDesc Ref;
+    Ref.Name                       = "Test";
+    Ref.BindingIndex               = 4;
+    Ref.CombinedSamplerSuffix      = "Suffix";
+    Ref.UseCombinedTextureSamplers = true;
+    Ref.NumResources               = _countof(Resources);
+    Ref.Resources                  = Resources;
+    TestCtorsAndAssignments<PipelineResourceSignatureDescX>(Ref);
+
+    constexpr ImmutableSamplerDesc ImtblSamplers[] =
+        {
+            {SHADER_TYPE_ALL_GRAPHICS, "g_Sampler", SamplerDesc{FILTER_TYPE_POINT, FILTER_TYPE_POINT, FILTER_TYPE_POINT}},
+            {SHADER_TYPE_ALL_GRAPHICS, "g_Sampler2", SamplerDesc{FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR}},
+        };
+    Ref.NumImmutableSamplers = _countof(ImtblSamplers);
+    Ref.ImmutableSamplers    = ImtblSamplers;
+    TestCtorsAndAssignments<PipelineResourceSignatureDescX>(Ref);
+
+    {
+        Ref.NumImmutableSamplers = 0;
+        Ref.ImmutableSamplers    = nullptr;
+
+        PipelineResourceSignatureDescX DescX;
+        DescX.SetName("Test");
+        DescX.BindingIndex = 4;
+        DescX.SetCombinedSamplerSuffix("Suffix");
+        DescX.UseCombinedTextureSamplers = true;
+        DescX
+            .AddResource({SHADER_TYPE_VERTEX, "g_Tex2D_1", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC})
+            .AddResource({SHADER_TYPE_PIXEL, "g_Tex2D_2", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE})
+            .AddResource({SHADER_TYPE_COMPUTE, "ConstBuff_1", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_STATIC})
+            .AddResource({SHADER_TYPE_HULL, "ConstBuff_2", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE});
+        EXPECT_EQ(DescX, Ref);
+
+        Ref.NumImmutableSamplers = _countof(ImtblSamplers);
+        Ref.ImmutableSamplers    = ImtblSamplers;
+        DescX
+            .AddImmutableSampler({SHADER_TYPE_ALL_GRAPHICS, "g_Sampler", SamplerDesc{FILTER_TYPE_POINT, FILTER_TYPE_POINT, FILTER_TYPE_POINT}})
+            .AddImmutableSampler({SHADER_TYPE_ALL_GRAPHICS, "g_Sampler2", SamplerDesc{FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR}});
+        EXPECT_EQ(DescX, Ref);
+
+        DescX.ClearImmutableSamplers();
+        Ref.NumImmutableSamplers = 0;
+        Ref.ImmutableSamplers    = nullptr;
+        EXPECT_EQ(DescX, Ref);
+
+        DescX.ClearResources();
+        Ref.NumResources = 0;
+        Ref.Resources    = nullptr;
+        EXPECT_EQ(DescX, Ref);
+    }
+}
+
 } // namespace

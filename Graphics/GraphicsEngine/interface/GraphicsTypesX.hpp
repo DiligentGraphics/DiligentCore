@@ -31,10 +31,13 @@
 
 #include <vector>
 #include <utility>
+#include <string>
+#include <unordered_set>
 
 #include "RenderPass.h"
 #include "InputLayout.h"
 #include "Framebuffer.h"
+#include "PipelineResourceSignature.h"
 #include "../../../Platforms/Basic/interface/DebugUtilities.hpp"
 
 namespace Diligent
@@ -567,6 +570,104 @@ struct FramebufferDescX : DeviceObjectAttribsX<FramebufferDesc>
 
 private:
     std::vector<ITextureView*> Attachments;
+};
+
+/// C++ wrapper over PipelineResourceSignatureDesc.
+struct PipelineResourceSignatureDescX : DeviceObjectAttribsX<PipelineResourceSignatureDesc>
+{
+    using TBase = DeviceObjectAttribsX<PipelineResourceSignatureDesc>;
+
+    PipelineResourceSignatureDescX() noexcept
+    {}
+
+    PipelineResourceSignatureDescX(const PipelineResourceSignatureDesc& _Desc) :
+        TBase{_Desc}
+    {
+        SetCombinedSamplerSuffix(CombinedSamplerSuffix);
+        if (NumResources != 0)
+        {
+            ResCopy.assign(Resources, Resources + NumResources);
+            Resources = ResCopy.data();
+            for (auto& Res : ResCopy)
+                Res.Name = StringPool.emplace(Res.Name).first->c_str();
+        }
+
+        if (NumImmutableSamplers != 0)
+        {
+            ImtblSamCopy.assign(ImmutableSamplers, ImmutableSamplers + NumImmutableSamplers);
+            ImmutableSamplers = ImtblSamCopy.data();
+            for (auto& Sam : ImtblSamCopy)
+                Sam.SamplerOrTextureName = StringPool.emplace(Sam.SamplerOrTextureName).first->c_str();
+        }
+    }
+
+    PipelineResourceSignatureDescX(const PipelineResourceSignatureDescX& _DescX) :
+        PipelineResourceSignatureDescX{static_cast<const PipelineResourceSignatureDesc&>(_DescX)}
+    {}
+
+    PipelineResourceSignatureDescX& operator=(const PipelineResourceSignatureDescX& _DescX)
+    {
+        PipelineResourceSignatureDescX Copy{_DescX};
+        std::swap(*this, Copy);
+        return *this;
+    }
+
+    PipelineResourceSignatureDescX(PipelineResourceSignatureDescX&& RHS) = default;
+    PipelineResourceSignatureDescX& operator=(PipelineResourceSignatureDescX&&) = default;
+
+    PipelineResourceSignatureDescX& AddResource(const PipelineResourceDesc& Res)
+    {
+        ResCopy.push_back(Res);
+        auto& ResName = ResCopy.back().Name;
+        ResName       = StringPool.emplace(ResName).first->c_str();
+
+        NumResources = static_cast<Uint32>(ResCopy.size());
+        Resources    = ResCopy.data();
+        return *this;
+    }
+
+    PipelineResourceSignatureDescX& AddImmutableSampler(const ImmutableSamplerDesc& Res)
+    {
+        ImtblSamCopy.push_back(Res);
+        auto& SamOrTexName = ImtblSamCopy.back().SamplerOrTextureName;
+        SamOrTexName       = StringPool.emplace(SamOrTexName).first->c_str();
+
+        NumImmutableSamplers = static_cast<Uint32>(ImtblSamCopy.size());
+        ImmutableSamplers    = ImtblSamCopy.data();
+        return *this;
+    }
+
+    void ClearResources()
+    {
+        ResCopy.clear();
+        NumResources = 0;
+        Resources    = nullptr;
+    }
+
+    void ClearImmutableSamplers()
+    {
+        ImtblSamCopy.clear();
+        NumImmutableSamplers = 0;
+        ImmutableSamplers    = nullptr;
+    }
+
+    void SetCombinedSamplerSuffix(const char* Suffix)
+    {
+        CombinedSamplerSuffix = Suffix != nullptr ?
+            StringPool.emplace(Suffix).first->c_str() :
+            "";
+    }
+
+    void Clear()
+    {
+        PipelineResourceSignatureDescX CleanDesc;
+        std::swap(*this, CleanDesc);
+    }
+
+private:
+    std::vector<PipelineResourceDesc> ResCopy;
+    std::vector<ImmutableSamplerDesc> ImtblSamCopy;
+    std::unordered_set<std::string>   StringPool;
 };
 
 } // namespace Diligent

@@ -257,6 +257,10 @@ struct PipelineResourceSignatureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
         }
         return true;
     }
+    bool operator!=(const PipelineResourceSignatureDesc& Rhs) const
+    {
+        return !(*this == Rhs);
+    }
 #endif
 };
 typedef struct PipelineResourceSignatureDesc PipelineResourceSignatureDesc;
