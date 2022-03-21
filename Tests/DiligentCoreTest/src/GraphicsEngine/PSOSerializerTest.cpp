@@ -35,121 +35,6 @@
 
 #include "PipelineState.h"
 
-namespace Diligent
-{
-bool operator==(const PipelineStateCreateInfo& Lhs, const PipelineStateCreateInfo& Rhs)
-{
-    // ignore PSODesc.SRBAllocationGranularity
-    // ignore PSODesc.ImmediateContextMask
-    // ignore PSODesc.ResourceLayout
-    if (Lhs.PSODesc.PipelineType != Rhs.PSODesc.PipelineType ||
-        Lhs.Flags != Rhs.Flags ||
-        Lhs.ResourceSignaturesCount != Rhs.ResourceSignaturesCount ||
-        Lhs.pPSOCache != Rhs.pPSOCache)
-        return false;
-
-    // ignore ppResourceSignatures
-    return true;
-}
-
-bool operator==(const GraphicsPipelineStateCreateInfo& Lhs, const GraphicsPipelineStateCreateInfo& Rhs)
-{
-    if (!(static_cast<const PipelineStateCreateInfo&>(Lhs) == static_cast<const PipelineStateCreateInfo&>(Rhs)))
-        return false;
-
-    if (!(Lhs.GraphicsPipeline == Rhs.GraphicsPipeline))
-        return false;
-
-    return Lhs.pVS == Rhs.pVS &&
-        Lhs.pPS == Rhs.pPS &&
-        Lhs.pDS == Rhs.pDS &&
-        Lhs.pHS == Rhs.pHS &&
-        Lhs.pGS == Rhs.pGS &&
-        Lhs.pAS == Rhs.pAS &&
-        Lhs.pMS == Rhs.pMS;
-}
-
-bool operator==(const ComputePipelineStateCreateInfo& Lhs, const ComputePipelineStateCreateInfo& Rhs)
-{
-    if (!(static_cast<const PipelineStateCreateInfo&>(Lhs) == static_cast<const PipelineStateCreateInfo&>(Rhs)))
-        return false;
-
-    return Lhs.pCS == Rhs.pCS;
-}
-
-bool operator==(const TilePipelineStateCreateInfo& Lhs, const TilePipelineStateCreateInfo& Rhs)
-{
-    if (!(static_cast<const PipelineStateCreateInfo&>(Lhs) == static_cast<const PipelineStateCreateInfo&>(Rhs)))
-        return false;
-
-    if (!(Lhs.TilePipeline == Rhs.TilePipeline))
-        return false;
-
-    return Lhs.pTS == Rhs.pTS;
-}
-
-bool operator==(const RayTracingGeneralShaderGroup& Lhs, const RayTracingGeneralShaderGroup& Rhs)
-{
-    return (Lhs.Name != nullptr && *Lhs.Name != 0) == (Rhs.Name != nullptr && *Rhs.Name != 0) &&
-        (Lhs.Name != nullptr && std::strcmp(Lhs.Name, Rhs.Name) == 0) &&
-        Lhs.pShader == Rhs.pShader;
-}
-
-bool operator==(const RayTracingTriangleHitShaderGroup& Lhs, const RayTracingTriangleHitShaderGroup& Rhs)
-{
-    return (Lhs.Name != nullptr && *Lhs.Name != 0) == (Rhs.Name != nullptr && *Rhs.Name != 0) &&
-        (Lhs.Name != nullptr && std::strcmp(Lhs.Name, Rhs.Name) == 0) &&
-        Lhs.pClosestHitShader == Rhs.pClosestHitShader &&
-        Lhs.pAnyHitShader == Rhs.pAnyHitShader;
-}
-
-bool operator==(const RayTracingProceduralHitShaderGroup& Lhs, const RayTracingProceduralHitShaderGroup& Rhs)
-{
-    return (Lhs.Name != nullptr && *Lhs.Name != 0) == (Rhs.Name != nullptr && *Rhs.Name != 0) &&
-        (Lhs.Name != nullptr && std::strcmp(Lhs.Name, Rhs.Name) == 0) &&
-        Lhs.pIntersectionShader == Rhs.pIntersectionShader &&
-        Lhs.pClosestHitShader == Rhs.pClosestHitShader &&
-        Lhs.pAnyHitShader == Rhs.pAnyHitShader;
-}
-
-bool operator==(const RayTracingPipelineStateCreateInfo& Lhs, const RayTracingPipelineStateCreateInfo& Rhs)
-{
-    if (!(static_cast<const PipelineStateCreateInfo&>(Lhs) == static_cast<const PipelineStateCreateInfo&>(Rhs)))
-        return false;
-
-    if (!(Lhs.RayTracingPipeline == Rhs.RayTracingPipeline))
-        return false;
-
-    if (Lhs.GeneralShaderCount != Rhs.GeneralShaderCount ||
-        Lhs.TriangleHitShaderCount != Rhs.TriangleHitShaderCount ||
-        Lhs.ProceduralHitShaderCount != Rhs.ProceduralHitShaderCount ||
-        Lhs.MaxAttributeSize != Rhs.MaxAttributeSize ||
-        Lhs.MaxPayloadSize != Rhs.MaxPayloadSize)
-        return false;
-
-    if ((Lhs.pShaderRecordName != nullptr && *Lhs.pShaderRecordName != 0) != (Rhs.pShaderRecordName != nullptr && *Rhs.pShaderRecordName != 0) ||
-        (Lhs.pShaderRecordName != nullptr && std::strcmp(Lhs.pShaderRecordName, Rhs.pShaderRecordName) != 0))
-        return false;
-
-    for (Uint32 i = 0; i < Lhs.GeneralShaderCount; ++i)
-    {
-        if (!(Lhs.pGeneralShaders[i] == Rhs.pGeneralShaders[i]))
-            return false;
-    }
-    for (Uint32 i = 0; i < Lhs.TriangleHitShaderCount; ++i)
-    {
-        if (!(Lhs.pTriangleHitShaders[i] == Rhs.pTriangleHitShaders[i]))
-            return false;
-    }
-    for (Uint32 i = 0; i < Lhs.ProceduralHitShaderCount; ++i)
-    {
-        if (!(Lhs.pProceduralHitShaders[i] == Rhs.pProceduralHitShaders[i]))
-            return false;
-    }
-    return true;
-}
-} // namespace Diligent
-
 using namespace Diligent;
 
 namespace
@@ -310,8 +195,6 @@ static void TestSerializePSOCreateInfo(HelperType&& Helper)
         TPRSNames SrcPRSNames = {};
         PSOCIType SrcPSO;
 
-        SrcPSO.PSODesc.SRBAllocationGranularity = 11;
-
         RndValue(SrcPSO.PSODesc.PipelineType, PIPELINE_TYPE_GRAPHICS, PIPELINE_TYPE_LAST);
         RndValue(SrcPSO.Flags, PSO_CREATE_FLAG_NONE, (PSO_CREATE_FLAG_LAST << 1) - 1);
         RndValue(SrcPSO.ResourceSignaturesCount, 1u, std::min<Uint32>(MAX_RESOURCE_SIGNATURES, _countof(PRSNames)) - 1);
@@ -339,7 +222,6 @@ static void TestSerializePSOCreateInfo(HelperType&& Helper)
 
         EXPECT_TRUE(RSer.IsEnded());
         EXPECT_EQ(SrcPSO, DstPSO);
-        EXPECT_NE(SrcPSO.PSODesc.SRBAllocationGranularity, DstPSO.PSODesc.SRBAllocationGranularity);
 
         for (size_t i = 0; i < DstPRSNames.size(); ++i)
         {

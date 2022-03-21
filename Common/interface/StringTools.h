@@ -49,4 +49,9 @@ inline bool SafeStrEqual(const char* Str0, const char* Str1)
     return true;
 }
 
+inline bool IsNullOrEmptyStr(const char* Str)
+{
+    return Str == NULL || Str[0] == '\0';
+}
+
 DILIGENT_END_NAMESPACE // namespace Diligent
