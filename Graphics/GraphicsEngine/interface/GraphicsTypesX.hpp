@@ -660,7 +660,7 @@ struct PipelineResourceSignatureDescX : DeviceObjectAttribsX<PipelineResourceSig
 
     void RemoveResource(const char* ResName, SHADER_TYPE Stages = SHADER_TYPE_ALL)
     {
-        VERIFY_EXPR(ResName != nullptr && ResName[0] != '\0');
+        VERIFY_EXPR(!IsNullOrEmptyStr(ResName));
         for (auto it = ResCopy.begin(); it != ResCopy.end();)
         {
             if (SafeStrEqual(it->Name, ResName) && (it->ShaderStages & Stages) != 0)
@@ -673,7 +673,7 @@ struct PipelineResourceSignatureDescX : DeviceObjectAttribsX<PipelineResourceSig
 
     void RemoveImmutableSampler(const char* SamName, SHADER_TYPE Stages = SHADER_TYPE_ALL)
     {
-        VERIFY_EXPR(SamName != nullptr && SamName[0] != '\0');
+        VERIFY_EXPR(!IsNullOrEmptyStr(SamName));
         for (auto it = ImtblSamCopy.begin(); it != ImtblSamCopy.end();)
         {
             if (SafeStrEqual(it->SamplerOrTextureName, SamName) && (it->ShaderStages & Stages) != 0)
@@ -795,7 +795,7 @@ struct PipelineResourceLayoutDescX : PipelineResourceLayoutDesc
 
     void RemoveVariable(const char* VarName, SHADER_TYPE Stages = SHADER_TYPE_ALL)
     {
-        VERIFY_EXPR(VarName != nullptr && VarName[0] != '\0');
+        VERIFY_EXPR(!IsNullOrEmptyStr(VarName));
         for (auto it = VarCopy.begin(); it != VarCopy.end();)
         {
             if (SafeStrEqual(it->Name, VarName) && (it->ShaderStages & Stages) != 0)
@@ -808,7 +808,7 @@ struct PipelineResourceLayoutDescX : PipelineResourceLayoutDesc
 
     void RemoveImmutableSampler(const char* SamName, SHADER_TYPE Stages = SHADER_TYPE_ALL)
     {
-        VERIFY_EXPR(SamName != nullptr && SamName[0] != '\0');
+        VERIFY_EXPR(!IsNullOrEmptyStr(SamName));
         for (auto it = ImtblSamCopy.begin(); it != ImtblSamCopy.end();)
         {
             if (SafeStrEqual(it->SamplerOrTextureName, SamName) && (it->ShaderStages & Stages) != 0)
@@ -922,28 +922,12 @@ struct BottomLevelASDescX : DeviceObjectAttribsX<BottomLevelASDesc>
 
     void RemoveTriangleGeomerty(const char* GeoName)
     {
-        VERIFY_EXPR(GeoName != nullptr && GeoName[0] != '\0');
-        for (auto it = Triangles.begin(); it != Triangles.end();)
-        {
-            if (SafeStrEqual(it->GeometryName, GeoName))
-                it = Triangles.erase(it);
-            else
-                ++it;
-        }
-        SyncDesc();
+        RemoveGeometry(GeoName, Triangles);
     }
 
     void RemoveBoxGeomerty(const char* GeoName)
     {
-        VERIFY_EXPR(GeoName != nullptr && GeoName[0] != '\0');
-        for (auto it = Boxes.begin(); it != Boxes.end();)
-        {
-            if (SafeStrEqual(it->GeometryName, GeoName))
-                it = Boxes.erase(it);
-            else
-                ++it;
-        }
-        SyncDesc();
+        RemoveGeometry(GeoName, Boxes);
     }
 
     void ClearTriangles()
@@ -989,9 +973,187 @@ private:
         }
     }
 
+    template <typename BLASType>
+    void RemoveGeometry(const char* GeoName, std::vector<BLASType>& Geometries)
+    {
+        VERIFY_EXPR(!IsNullOrEmptyStr(GeoName));
+        for (auto it = Geometries.begin(); it != Geometries.end();)
+        {
+            if (SafeStrEqual(it->GeometryName, GeoName))
+                it = Geometries.erase(it);
+            else
+                ++it;
+        }
+        SyncDesc();
+    }
+
     std::vector<BLASTriangleDesc>    Triangles;
     std::vector<BLASBoundingBoxDesc> Boxes;
     std::unordered_set<std::string>  StringPool;
+};
+
+
+/// C++ wrapper over RayTracingPipelineStateCreateInfo
+struct RayTracingPipelineStateCreateInfoX : RayTracingPipelineStateCreateInfo
+{
+    RayTracingPipelineStateCreateInfoX() noexcept
+    {}
+
+    RayTracingPipelineStateCreateInfoX(const RayTracingPipelineStateCreateInfo& _Desc) :
+        RayTracingPipelineStateCreateInfo{_Desc}
+    {
+        if (GeneralShaderCount != 0)
+            GeneralShaders.assign(pGeneralShaders, pGeneralShaders + GeneralShaderCount);
+
+        if (TriangleHitShaderCount != 0)
+            TriangleHitShaders.assign(pTriangleHitShaders, pTriangleHitShaders + TriangleHitShaderCount);
+
+        if (ProceduralHitShaderCount != 0)
+            ProceduralHitShaders.assign(pProceduralHitShaders, pProceduralHitShaders + ProceduralHitShaderCount);
+
+        SyncDesc(true);
+    }
+
+    RayTracingPipelineStateCreateInfoX(const std::initializer_list<RayTracingGeneralShaderGroup>&       _GeneralShaders,
+                                       const std::initializer_list<RayTracingTriangleHitShaderGroup>&   _TriangleHitShaders,
+                                       const std::initializer_list<RayTracingProceduralHitShaderGroup>& _ProceduralHitShaders) :
+        GeneralShaders{_GeneralShaders},
+        TriangleHitShaders{_TriangleHitShaders},
+        ProceduralHitShaders{_ProceduralHitShaders}
+    {
+        SyncDesc(true);
+    }
+
+    RayTracingPipelineStateCreateInfoX(const RayTracingPipelineStateCreateInfoX& _DescX) :
+        RayTracingPipelineStateCreateInfoX{static_cast<const RayTracingPipelineStateCreateInfo&>(_DescX)}
+    {}
+
+    RayTracingPipelineStateCreateInfoX& operator=(const RayTracingPipelineStateCreateInfoX& _DescX)
+    {
+        RayTracingPipelineStateCreateInfoX Copy{_DescX};
+        std::swap(*this, Copy);
+        return *this;
+    }
+
+    RayTracingPipelineStateCreateInfoX(RayTracingPipelineStateCreateInfoX&&) noexcept = default;
+    RayTracingPipelineStateCreateInfoX& operator=(RayTracingPipelineStateCreateInfoX&&) noexcept = default;
+
+    RayTracingPipelineStateCreateInfoX& AddGeneralShader(const RayTracingGeneralShaderGroup& GenShader)
+    {
+        GeneralShaders.push_back(GenShader);
+        GeneralShaders.back().Name = StringPool.emplace(GenShader.Name).first->c_str();
+        SyncDesc();
+        return *this;
+    }
+
+    RayTracingPipelineStateCreateInfoX& AddTriangleHitShader(const RayTracingTriangleHitShaderGroup& TriHitShader)
+    {
+        TriangleHitShaders.push_back(TriHitShader);
+        TriangleHitShaders.back().Name = StringPool.emplace(TriHitShader.Name).first->c_str();
+        SyncDesc();
+        return *this;
+    }
+
+    RayTracingPipelineStateCreateInfoX& AddProceduralHitShader(const RayTracingProceduralHitShaderGroup& ProcHitShader)
+    {
+        ProceduralHitShaders.push_back(ProcHitShader);
+        ProceduralHitShaders.back().Name = StringPool.emplace(ProcHitShader.Name).first->c_str();
+        SyncDesc();
+        return *this;
+    }
+
+    void RemoveGeneralShader(const char* ShaderName)
+    {
+        RemoveShader(ShaderName, GeneralShaders);
+    }
+
+    void RemoveTriangleHitShader(const char* ShaderName)
+    {
+        RemoveShader(ShaderName, TriangleHitShaders);
+    }
+
+    void RemoveProceduralHitShader(const char* ShaderName)
+    {
+        RemoveShader(ShaderName, ProceduralHitShaders);
+    }
+
+    void SetShaderRecordName(const char* RecordName)
+    {
+        pShaderRecordName = RecordName != nullptr ?
+            StringPool.emplace(RecordName).first->c_str() :
+            nullptr;
+    }
+
+    void ClearGeneralShaders()
+    {
+        GeneralShaders.clear();
+        SyncDesc();
+    }
+
+    void ClearTriangleHitShaders()
+    {
+        TriangleHitShaders.clear();
+        SyncDesc();
+    }
+
+    void ClearProceduralHitShaders()
+    {
+        ProceduralHitShaders.clear();
+        SyncDesc();
+    }
+
+    void Clear()
+    {
+        RayTracingPipelineStateCreateInfoX CleanDesc;
+        std::swap(*this, CleanDesc);
+    }
+
+private:
+    void SyncDesc(bool UpdateStrings = false)
+    {
+        GeneralShaderCount = static_cast<Uint32>(GeneralShaders.size());
+        pGeneralShaders    = GeneralShaderCount > 0 ? GeneralShaders.data() : nullptr;
+
+        TriangleHitShaderCount = static_cast<Uint32>(TriangleHitShaders.size());
+        pTriangleHitShaders    = TriangleHitShaderCount > 0 ? TriangleHitShaders.data() : nullptr;
+
+        ProceduralHitShaderCount = static_cast<Uint32>(ProceduralHitShaders.size());
+        pProceduralHitShaders    = ProceduralHitShaderCount > 0 ? ProceduralHitShaders.data() : nullptr;
+
+        if (UpdateStrings)
+        {
+            for (auto& Shader : GeneralShaders)
+                Shader.Name = StringPool.emplace(Shader.Name).first->c_str();
+
+            for (auto& Shader : TriangleHitShaders)
+                Shader.Name = StringPool.emplace(Shader.Name).first->c_str();
+
+            for (auto& Shader : ProceduralHitShaders)
+                Shader.Name = StringPool.emplace(Shader.Name).first->c_str();
+
+            if (pShaderRecordName != nullptr)
+                pShaderRecordName = StringPool.emplace(pShaderRecordName).first->c_str();
+        }
+    }
+
+    template <typename ShaderGroupType>
+    void RemoveShader(const char* ShaderName, std::vector<ShaderGroupType>& Shaders)
+    {
+        VERIFY_EXPR(!IsNullOrEmptyStr(ShaderName));
+        for (auto it = Shaders.begin(); it != Shaders.end();)
+        {
+            if (SafeStrEqual(it->Name, ShaderName))
+                it = Shaders.erase(it);
+            else
+                ++it;
+        }
+        SyncDesc();
+    }
+
+    std::vector<RayTracingGeneralShaderGroup>       GeneralShaders;
+    std::vector<RayTracingTriangleHitShaderGroup>   TriangleHitShaders;
+    std::vector<RayTracingProceduralHitShaderGroup> ProceduralHitShaders;
+    std::unordered_set<std::string>                 StringPool;
 };
 
 } // namespace Diligent

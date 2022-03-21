@@ -577,4 +577,102 @@ TEST(GraphicsTypesXTest, BottomLevelASDescX)
     }
 }
 
+TEST(GraphicsTypesXTest, RayTracingPipelineStateCreateInfoX)
+{
+    const RayTracingGeneralShaderGroup GeneralShaders[] = {
+        {"General Shader 1", reinterpret_cast<IShader*>(uintptr_t{0x01})},
+        {"General Shader 2", reinterpret_cast<IShader*>(uintptr_t{0x02})},
+    };
+
+    const RayTracingTriangleHitShaderGroup TriHitShaders[] = {
+        {"Tri Hit Shader 1", reinterpret_cast<IShader*>(uintptr_t{0x04}), reinterpret_cast<IShader*>(uintptr_t{0x05})},
+        {"Tri Hit Shader 2", reinterpret_cast<IShader*>(uintptr_t{0x06}), reinterpret_cast<IShader*>(uintptr_t{0x07})},
+        {"Tri Hit Shader 3", reinterpret_cast<IShader*>(uintptr_t{0x08}), reinterpret_cast<IShader*>(uintptr_t{0x09})},
+    };
+
+    const RayTracingProceduralHitShaderGroup ProcHitShaders[] = {
+        {"Proc Hit Shader 1", reinterpret_cast<IShader*>(uintptr_t{0x10}), reinterpret_cast<IShader*>(uintptr_t{0x11}), reinterpret_cast<IShader*>(uintptr_t{0x12})},
+        {"Proc Hit Shader 2", reinterpret_cast<IShader*>(uintptr_t{0x13}), reinterpret_cast<IShader*>(uintptr_t{0x14}), reinterpret_cast<IShader*>(uintptr_t{0x15})},
+        {"Proc Hit Shader 3", reinterpret_cast<IShader*>(uintptr_t{0x16}), reinterpret_cast<IShader*>(uintptr_t{0x17}), reinterpret_cast<IShader*>(uintptr_t{0x18})},
+    };
+
+    RayTracingPipelineStateCreateInfo Ref;
+    Ref.GeneralShaderCount = _countof(GeneralShaders);
+    Ref.pGeneralShaders    = GeneralShaders;
+    TestCtorsAndAssignments<RayTracingPipelineStateCreateInfoX>(Ref);
+
+    Ref.TriangleHitShaderCount = _countof(TriHitShaders);
+    Ref.pTriangleHitShaders    = TriHitShaders;
+    TestCtorsAndAssignments<RayTracingPipelineStateCreateInfoX>(Ref);
+
+    Ref.ProceduralHitShaderCount = _countof(ProcHitShaders);
+    Ref.pProceduralHitShaders    = ProcHitShaders;
+    TestCtorsAndAssignments<RayTracingPipelineStateCreateInfoX>(Ref);
+
+    {
+        StringPool                         Pool;
+        RayTracingPipelineStateCreateInfoX DescX{
+            {
+                {Pool("General Shader 1"), reinterpret_cast<IShader*>(uintptr_t{0x01})},
+                {Pool("General Shader 2"), reinterpret_cast<IShader*>(uintptr_t{0x02})},
+            },
+            {
+                {Pool("Tri Hit Shader 1"), reinterpret_cast<IShader*>(uintptr_t{0x04}), reinterpret_cast<IShader*>(uintptr_t{0x05})},
+                {Pool("Tri Hit Shader 2"), reinterpret_cast<IShader*>(uintptr_t{0x06}), reinterpret_cast<IShader*>(uintptr_t{0x07})},
+                {Pool("Tri Hit Shader 3"), reinterpret_cast<IShader*>(uintptr_t{0x08}), reinterpret_cast<IShader*>(uintptr_t{0x09})},
+            },
+            {
+                {Pool("Proc Hit Shader 1"), reinterpret_cast<IShader*>(uintptr_t{0x10}), reinterpret_cast<IShader*>(uintptr_t{0x11}), reinterpret_cast<IShader*>(uintptr_t{0x12})},
+                {Pool("Proc Hit Shader 2"), reinterpret_cast<IShader*>(uintptr_t{0x13}), reinterpret_cast<IShader*>(uintptr_t{0x14}), reinterpret_cast<IShader*>(uintptr_t{0x15})},
+                {Pool("Proc Hit Shader 3"), reinterpret_cast<IShader*>(uintptr_t{0x16}), reinterpret_cast<IShader*>(uintptr_t{0x17}), reinterpret_cast<IShader*>(uintptr_t{0x18})},
+            } //
+        };
+        Pool.Clear();
+        EXPECT_EQ(DescX, Ref);
+    }
+
+    {
+        StringPool                         Pool;
+        RayTracingPipelineStateCreateInfoX DescX;
+        DescX
+            .AddGeneralShader({Pool("General Shader 1"), reinterpret_cast<IShader*>(uintptr_t{0x01})})
+            .AddGeneralShader({Pool("General Shader 2"), reinterpret_cast<IShader*>(uintptr_t{0x02})})
+            .AddTriangleHitShader({Pool("Tri Hit Shader 1"), reinterpret_cast<IShader*>(uintptr_t{0x04}), reinterpret_cast<IShader*>(uintptr_t{0x05})})
+            .AddTriangleHitShader({Pool("Tri Hit Shader 2"), reinterpret_cast<IShader*>(uintptr_t{0x06}), reinterpret_cast<IShader*>(uintptr_t{0x07})})
+            .AddTriangleHitShader({Pool("Tri Hit Shader 3"), reinterpret_cast<IShader*>(uintptr_t{0x08}), reinterpret_cast<IShader*>(uintptr_t{0x09})})
+            .AddProceduralHitShader({Pool("Proc Hit Shader 1"), reinterpret_cast<IShader*>(uintptr_t{0x10}), reinterpret_cast<IShader*>(uintptr_t{0x11}), reinterpret_cast<IShader*>(uintptr_t{0x12})})
+            .AddProceduralHitShader({Pool("Proc Hit Shader 2"), reinterpret_cast<IShader*>(uintptr_t{0x13}), reinterpret_cast<IShader*>(uintptr_t{0x14}), reinterpret_cast<IShader*>(uintptr_t{0x15})})
+            .AddProceduralHitShader({Pool("Proc Hit Shader 3"), reinterpret_cast<IShader*>(uintptr_t{0x16}), reinterpret_cast<IShader*>(uintptr_t{0x17}), reinterpret_cast<IShader*>(uintptr_t{0x18})});
+        Pool.Clear();
+        EXPECT_EQ(DescX, Ref);
+
+        DescX.RemoveGeneralShader("General Shader 2");
+        --Ref.GeneralShaderCount;
+        EXPECT_EQ(DescX, Ref);
+
+        DescX.ClearGeneralShaders();
+        Ref.GeneralShaderCount = 0;
+        Ref.pGeneralShaders    = nullptr;
+        EXPECT_EQ(DescX, Ref);
+
+        DescX.RemoveTriangleHitShader("Tri Hit Shader 3");
+        --Ref.TriangleHitShaderCount;
+        EXPECT_EQ(DescX, Ref);
+
+        DescX.ClearTriangleHitShaders();
+        Ref.TriangleHitShaderCount = 0;
+        Ref.pTriangleHitShaders    = nullptr;
+        EXPECT_EQ(DescX, Ref);
+
+        DescX.RemoveProceduralHitShader("Proc Hit Shader 3");
+        --Ref.ProceduralHitShaderCount;
+        EXPECT_EQ(DescX, Ref);
+
+        DescX.ClearProceduralHitShaders();
+        Ref.ProceduralHitShaderCount = 0;
+        Ref.pProceduralHitShaders    = nullptr;
+        EXPECT_EQ(DescX, Ref);
+    }
+}
+
 } // namespace
