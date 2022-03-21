@@ -87,8 +87,16 @@ struct SubpassDescX
         return *this;
     }
 
-    SubpassDescX(SubpassDescX&&) = default;
-    SubpassDescX& operator=(SubpassDescX&&) = default;
+    SubpassDescX(SubpassDescX&& RHS) noexcept
+    {
+        Swap(RHS);
+    }
+
+    SubpassDescX& operator=(SubpassDescX&& RHS) noexcept
+    {
+        Swap(RHS);
+        return *this;
+    }
 
     SubpassDescX& AddRenderTarget(const AttachmentReference& RenderTarget, const AttachmentReference* pResolve = nullptr)
     {
@@ -125,26 +133,26 @@ struct SubpassDescX
         return *this;
     }
 
-    SubpassDescX& SetDepthStencil(const AttachmentReference* pDepthStencilAttachment)
+    SubpassDescX& SetDepthStencil(const AttachmentReference* pDepthStencilAttachment) noexcept
     {
         DepthStencil                 = (pDepthStencilAttachment != nullptr) ? *pDepthStencilAttachment : AttachmentReference{};
         Desc.pDepthStencilAttachment = (pDepthStencilAttachment != nullptr) ? &DepthStencil : nullptr;
         return *this;
     }
 
-    SubpassDescX& SetDepthStencil(const AttachmentReference& DepthStencilAttachment)
+    SubpassDescX& SetDepthStencil(const AttachmentReference& DepthStencilAttachment) noexcept
     {
         return SetDepthStencil(&DepthStencilAttachment);
     }
 
-    SubpassDescX& SetShadingRate(const ShadingRateAttachment* pShadingRateAttachment)
+    SubpassDescX& SetShadingRate(const ShadingRateAttachment* pShadingRateAttachment) noexcept
     {
         ShadingRate                 = (pShadingRateAttachment != nullptr) ? *pShadingRateAttachment : ShadingRateAttachment{};
         Desc.pShadingRateAttachment = (pShadingRateAttachment != nullptr) ? &ShadingRate : nullptr;
         return *this;
     }
 
-    SubpassDescX& SetShadingRate(const ShadingRateAttachment& ShadingRateAttachment)
+    SubpassDescX& SetShadingRate(const ShadingRateAttachment& ShadingRateAttachment) noexcept
     {
         return SetShadingRate(&ShadingRateAttachment);
     }
@@ -206,9 +214,16 @@ struct SubpassDescX
         Swap(CleanDesc);
     }
 
-    void Swap(SubpassDescX& Other)
+    void Swap(SubpassDescX& Other) noexcept
     {
-        std::swap(*this, Other);
+        // Using std::swap(*this, Other) will result in infinite recusrion
+        std::swap(Desc, Other.Desc);
+        Inputs.swap(Other.Inputs);
+        RenderTargets.swap(Other.RenderTargets);
+        Resolves.swap(Other.Resolves);
+        Preserves.swap(Other.Preserves);
+        std::swap(DepthStencil, Other.DepthStencil);
+        std::swap(ShadingRate, Other.ShadingRate);
 
         if (Desc.pDepthStencilAttachment != nullptr)
             Desc.pDepthStencilAttachment = &DepthStencil;
@@ -265,8 +280,8 @@ struct RenderPassDescX
         return *this;
     }
 
-    RenderPassDescX(RenderPassDescX&&) = default;
-    RenderPassDescX& operator=(RenderPassDescX&&) = default;
+    RenderPassDescX(RenderPassDescX&&) noexcept = default;
+    RenderPassDescX& operator=(RenderPassDescX&&) noexcept = default;
 
     RenderPassDescX& AddAttachment(const RenderPassAttachmentDesc& Attachment)
     {
@@ -395,8 +410,8 @@ struct InputLayoutDescX
         return *this;
     }
 
-    InputLayoutDescX(InputLayoutDescX&&) = default;
-    InputLayoutDescX& operator=(InputLayoutDescX&&) = default;
+    InputLayoutDescX(InputLayoutDescX&&) noexcept = default;
+    InputLayoutDescX& operator=(InputLayoutDescX&&) noexcept = default;
 
     InputLayoutDescX& Add(const LayoutElement& Elem)
     {
@@ -482,7 +497,7 @@ struct DeviceObjectAttribsX : BaseType
         this->Name = NameCopy.c_str();
     }
 
-    DeviceObjectAttribsX(const DeviceObjectAttribsX& Other) noexcept :
+    DeviceObjectAttribsX(const DeviceObjectAttribsX& Other) :
         BaseType{Other},
         NameCopy{Other.NameCopy}
     {
@@ -496,7 +511,7 @@ struct DeviceObjectAttribsX : BaseType
         this->Name = NameCopy.c_str();
     }
 
-    DeviceObjectAttribsX& operator=(const DeviceObjectAttribsX& Other) noexcept
+    DeviceObjectAttribsX& operator=(const DeviceObjectAttribsX& Other)
     {
         static_cast<BaseType&>(*this) = Other;
 
@@ -556,8 +571,8 @@ struct FramebufferDescX : DeviceObjectAttribsX<FramebufferDesc>
         return *this;
     }
 
-    FramebufferDescX(FramebufferDescX&&) = default;
-    FramebufferDescX& operator=(FramebufferDescX&&) = default;
+    FramebufferDescX(FramebufferDescX&&) noexcept = default;
+    FramebufferDescX& operator=(FramebufferDescX&&) noexcept = default;
 
     FramebufferDescX& AddAttachment(ITextureView* pView)
     {
@@ -624,8 +639,8 @@ struct PipelineResourceSignatureDescX : DeviceObjectAttribsX<PipelineResourceSig
         return *this;
     }
 
-    PipelineResourceSignatureDescX(PipelineResourceSignatureDescX&&) = default;
-    PipelineResourceSignatureDescX& operator=(PipelineResourceSignatureDescX&&) = default;
+    PipelineResourceSignatureDescX(PipelineResourceSignatureDescX&&) noexcept = default;
+    PipelineResourceSignatureDescX& operator=(PipelineResourceSignatureDescX&&) noexcept = default;
 
     PipelineResourceSignatureDescX& AddResource(const PipelineResourceDesc& Res)
     {
@@ -759,8 +774,8 @@ struct PipelineResourceLayoutDescX : PipelineResourceLayoutDesc
         return *this;
     }
 
-    PipelineResourceLayoutDescX(PipelineResourceLayoutDescX&&) = default;
-    PipelineResourceLayoutDescX& operator=(PipelineResourceLayoutDescX&&) = default;
+    PipelineResourceLayoutDescX(PipelineResourceLayoutDescX&&) noexcept = default;
+    PipelineResourceLayoutDescX& operator=(PipelineResourceLayoutDescX&&) noexcept = default;
 
     PipelineResourceLayoutDescX& AddVariable(const ShaderResourceVariableDesc& Var)
     {
@@ -886,8 +901,8 @@ struct BottomLevelASDescX : DeviceObjectAttribsX<BottomLevelASDesc>
         return *this;
     }
 
-    BottomLevelASDescX(BottomLevelASDescX&&) = default;
-    BottomLevelASDescX& operator=(BottomLevelASDescX&&) = default;
+    BottomLevelASDescX(BottomLevelASDescX&&) noexcept = default;
+    BottomLevelASDescX& operator=(BottomLevelASDescX&&) noexcept = default;
 
     BottomLevelASDescX& AddTriangleGeomerty(const BLASTriangleDesc& Geo)
     {
