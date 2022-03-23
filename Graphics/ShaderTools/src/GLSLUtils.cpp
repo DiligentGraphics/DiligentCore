@@ -84,7 +84,7 @@ String BuildGLSLSourceString(const ShaderCreateInfo&    ShaderCI,
     bool IsES30        = false;
     bool IsES31OrAbove = false;
     bool IsES32OrAbove = false;
-    if (DeviceInfo.Type == RENDER_DEVICE_TYPE_VULKAN)
+    if (DeviceInfo.Type == RENDER_DEVICE_TYPE_VULKAN || DeviceInfo.Type == RENDER_DEVICE_TYPE_METAL)
     {
         IsES30        = false;
         IsES31OrAbove = true;

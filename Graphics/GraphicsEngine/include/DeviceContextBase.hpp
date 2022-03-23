@@ -1142,10 +1142,9 @@ inline bool DeviceContextBase<ImplementationTraits>::SetSubpassRenderTargets()
     VERIFY_EXPR(m_pBoundFramebuffer);
     VERIFY_EXPR(m_pActiveRenderPass);
 
-    const auto& RPDesc = m_pActiveRenderPass->GetDesc();
-    const auto& FBDesc = m_pBoundFramebuffer->GetDesc();
-    VERIFY_EXPR(m_SubpassIndex < RPDesc.SubpassCount);
-    const auto& Subpass = RPDesc.pSubpasses[m_SubpassIndex];
+    const auto& RPDesc  = m_pActiveRenderPass->GetDesc();
+    const auto& FBDesc  = m_pBoundFramebuffer->GetDesc();
+    const auto& Subpass = m_pActiveRenderPass->GetSubpass(m_SubpassIndex);
 
     m_FramebufferSamples = 0;
 

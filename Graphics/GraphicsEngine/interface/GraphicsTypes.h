@@ -3720,7 +3720,7 @@ struct DeviceFeaturesMtl
     ///             translate into MSL framebuffer fetch operations that
     ///             allow implementing subpasses within a single render command
     ///             encoder.
-    DEVICE_FEATURE_STATE SubpassFramebufferFetch DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_OPTIONAL);
+    DEVICE_FEATURE_STATE SubpassFramebufferFetch DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
 
 #if DILIGENT_CPP_INTERFACE

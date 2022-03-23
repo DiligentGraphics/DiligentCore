@@ -408,6 +408,7 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& CI, const SwapCha
             CreateInfo.NumImmediateContexts  = static_cast<Uint32>(ContextCI.size());
             CreateInfo.pImmediateContextInfo = CreateInfo.NumImmediateContexts ? ContextCI.data() : nullptr;
             CreateInfo.Features              = DeviceFeatures{DEVICE_FEATURE_STATE_OPTIONAL};
+            CreateInfo.FeaturesMtl           = DeviceFeaturesMtl{DEVICE_FEATURE_STATE_OPTIONAL};
 
             // Always enable validation
             CreateInfo.SetValidationLevel(VALIDATION_LEVEL_1);

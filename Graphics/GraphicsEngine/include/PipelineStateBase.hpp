@@ -189,6 +189,9 @@ private:
     // Pipeline resource signature implementation type (PipelineResourceSignatureD3D12Impl, PipelineResourceSignatureVkImpl, etc.).
     using PipelineResourceSignatureImplType = typename EngineImplTraits::PipelineResourceSignatureImplType;
 
+    // Render pass implementation type (RenderPassD3D12Impl, RenderPassVkImpl, etc.).
+    using RenderPassImplType = typename EngineImplTraits::RenderPassImplType;
+
     using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, PipelineStateDesc>;
 
 public:
@@ -752,7 +755,7 @@ protected:
         {
             const auto& RPDesc = pRenderPass->GetDesc();
             VERIFY_EXPR(GraphicsPipeline.SubpassIndex < RPDesc.SubpassCount);
-            const auto& Subpass = RPDesc.pSubpasses[GraphicsPipeline.SubpassIndex];
+            const auto& Subpass = pRenderPass.template RawPtr<RenderPassImplType>()->GetSubpass(GraphicsPipeline.SubpassIndex);
 
             GraphicsPipeline.NumRenderTargets = static_cast<Uint8>(Subpass.RenderTargetAttachmentCount);
             for (Uint32 rt = 0; rt < Subpass.RenderTargetAttachmentCount; ++rt)

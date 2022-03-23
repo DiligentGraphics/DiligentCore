@@ -38,6 +38,8 @@
 
 #include "RenderDeviceD3D11Impl.hpp"
 #include "ShaderResourceBindingD3D11Impl.hpp"
+#include "RenderPassD3D11Impl.hpp"
+
 #include "EngineMemory.h"
 #include "DXBCUtils.hpp"
 #include "D3DShaderResourceValidation.hpp"

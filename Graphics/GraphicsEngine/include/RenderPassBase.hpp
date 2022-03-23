@@ -138,6 +138,12 @@ public:
         return m_AttachmentFirstLastUse[Attachment];
     }
 
+    const SubpassDesc& GetSubpass(Uint32 SubpassIndex) const
+    {
+        VERIFY_EXPR(SubpassIndex < this->m_Desc.SubpassCount);
+        return this->m_Desc.pSubpasses[SubpassIndex];
+    }
+
 private:
     void ReserveSpace(const RenderPassDesc& Desc, FixedLinearAllocator& MemPool) const
     {

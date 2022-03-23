@@ -364,13 +364,15 @@ SerializedData CompileMtlShader(const CompileMtlShaderAttribs& Attribs) noexcept
     std::string MslSource;
     if (ParsedMsl.pParser != nullptr)
     {
-        const auto ResRemapping = PipelineStateMtlImpl::GetResourceMap(
+        MSLParser::ResourceMapType ResRemapping;
+        PipelineStateMtlImpl::GetResourceMap({
             ParsedMsl,
             Attribs.Signatures.data(),
             Attribs.SignatureCount,
             Attribs.BaseBindings.data(),
             ShDesc,
-            PSOName); // may throw exception
+            PSOName},
+            ResRemapping); // may throw exception
 
         MslSource = ParsedMsl.pParser->RemapResources(ResRemapping);
         if (MslSource.empty())

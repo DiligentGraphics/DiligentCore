@@ -41,6 +41,7 @@
 #include "RenderDeviceD3D12Impl.hpp"
 #include "ShaderD3D12Impl.hpp"
 #include "ShaderResourceBindingD3D12Impl.hpp"
+#include "RenderPassD3D12Impl.hpp"
 
 #include "D3D12TypeConversions.hpp"
 #include "DXGITypeConversions.hpp"
