@@ -873,10 +873,12 @@ void RenderPassTest::TestInputAttachment(bool UseSignature, bool UseMemoryless)
         GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
         GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
 
-        auto IsVulkan = pEnv->GetDevice()->GetDeviceInfo().IsVulkanDevice();
+        auto UseGLSL =
+            pEnv->GetDevice()->GetDeviceInfo().IsVulkanDevice() ||
+            pEnv->GetDevice()->GetDeviceInfo().IsMetalDevice();
 
         ShaderCreateInfo ShaderCI;
-        ShaderCI.SourceLanguage = IsVulkan ?
+        ShaderCI.SourceLanguage = UseGLSL ?
             SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM :
             SHADER_SOURCE_LANGUAGE_HLSL;
         ShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
@@ -888,7 +890,7 @@ void RenderPassTest::TestInputAttachment(bool UseSignature, bool UseMemoryless)
             ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
             ShaderCI.EntryPoint      = "main";
             ShaderCI.Desc.Name       = "Input attachment test VS";
-            ShaderCI.Source          = IsVulkan ?
+            ShaderCI.Source          = UseGLSL ?
                 GLSL::DrawTest_ProceduralTriangleVS.c_str() :
                 HLSL::DrawTest_ProceduralTriangleVS.c_str();
             pDevice->CreateShader(ShaderCI, &pVS);
@@ -900,7 +902,7 @@ void RenderPassTest::TestInputAttachment(bool UseSignature, bool UseMemoryless)
             ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
             ShaderCI.EntryPoint      = "main";
             ShaderCI.Desc.Name       = "Input attachment test PS";
-            ShaderCI.Source          = IsVulkan ?
+            ShaderCI.Source          = UseGLSL ?
                 GLSL::InputAttachmentTest_FS.c_str() :
                 HLSL::InputAttachmentTest_PS.c_str();
             pDevice->CreateShader(ShaderCI, &pPS);
@@ -935,12 +937,14 @@ void RenderPassTest::TestInputAttachment(bool UseSignature, bool UseMemoryless)
         ASSERT_NE(pInputAttachmentPSO, nullptr);
         if (pSignature)
         {
-            pSignature->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_SubpassInput")->Set(pTex->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE));
+            if (auto* pSubpassInput = pSignature->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_SubpassInput"))
+                pSubpassInput->Set(pTex->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE));
             pSignature->CreateShaderResourceBinding(&pInputAttachmentSRB, true);
         }
         else
         {
-            pInputAttachmentPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_SubpassInput")->Set(pTex->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE));
+            if (auto* pSubpassInput = pInputAttachmentPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_SubpassInput"))
+                pSubpassInput->Set(pTex->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE));
             pInputAttachmentPSO->CreateShaderResourceBinding(&pInputAttachmentSRB, true);
         }
         ASSERT_NE(pInputAttachmentSRB, nullptr);
