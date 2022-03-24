@@ -140,18 +140,13 @@ struct SerializationDeviceMtlInfo
     /// Optional directory to dump converted MSL source code and temporary files produced by the Metal toolchain.
     const Char* DumpDirectory      DEFAULT_INITIALIZER(nullptr);
 
-
-    /// Metal-specific device features, see Diligent::DeviceFeaturesMtl.
-    DeviceFeaturesMtl FeaturesMtl;
-
 #if DILIGENT_CPP_INTERFACE
     /// Tests if two structures are equivalent
     bool operator==(const SerializationDeviceMtlInfo& RHS) const 
     {
         return SafeStrEqual(CompileOptionsMacOS, RHS.CompileOptionsMacOS) &&
                SafeStrEqual(CompileOptionsiOS,   RHS.CompileOptionsiOS)   &&
-               SafeStrEqual(MslPreprocessorCmd,  RHS.MslPreprocessorCmd) &&
-               FeaturesMtl == RHS.FeaturesMtl;
+               SafeStrEqual(MslPreprocessorCmd,  RHS.MslPreprocessorCmd);
     }
     bool operator!=(const SerializationDeviceMtlInfo& RHS) const
     {
@@ -192,6 +187,8 @@ struct SerializationDeviceCreateInfo
     {
         DeviceInfo.Features  = DeviceFeatures{DEVICE_FEATURE_STATE_ENABLED};
         AdapterInfo.Features = DeviceFeatures{DEVICE_FEATURE_STATE_ENABLED};
+        // Disable subpass framebuffer fetch by default to allow backwards compatibility on Metal.
+        DeviceInfo.Features.SubpassFramebufferFetch = DEVICE_FEATURE_STATE_DISABLED;
     }
 #endif
 };

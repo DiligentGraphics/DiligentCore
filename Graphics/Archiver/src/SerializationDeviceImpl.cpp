@@ -121,8 +121,6 @@ SerializationDeviceImpl::SerializationDeviceImpl(IReferenceCounters* pRefCounter
 
     if (m_ValidDeviceFlags & (ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS | ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS))
     {
-        m_MtlProps.FeaturesMtl = CreateInfo.Metal.FeaturesMtl;
-
         const auto* MslPreprocessorCmd = CreateInfo.Metal.MslPreprocessorCmd;
         if (MslPreprocessorCmd != nullptr && MslPreprocessorCmd[0] != '\0')
         {

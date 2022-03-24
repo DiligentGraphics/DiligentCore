@@ -1922,6 +1922,7 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
     Features.ComputeShaders                = DEVICE_FEATURE_STATE_ENABLED;
     Features.BindlessResources             = DEVICE_FEATURE_STATE_ENABLED;
     Features.BinaryOcclusionQueries        = DEVICE_FEATURE_STATE_ENABLED;
+    Features.SubpassFramebufferFetch       = DEVICE_FEATURE_STATE_ENABLED;
 
     // Timestamps are not a feature and can't be disabled. They are either supported by the device, or not.
     Features.TimestampQueries = vkDeviceProps.limits.timestampComputeAndGraphics ? DEVICE_FEATURE_STATE_ENABLED : DEVICE_FEATURE_STATE_DISABLED;
@@ -2018,7 +2019,7 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
     Features.DurationQueries        = DEVICE_FEATURE_STATE_DISABLED;
 #endif
 
-    ASSERT_SIZEOF(DeviceFeatures, 39, "Did you add a new feature to DeviceFeatures? Please handle its status here (if necessary).");
+    ASSERT_SIZEOF(DeviceFeatures, 40, "Did you add a new feature to DeviceFeatures? Please handle its status here (if necessary).");
 
     return Features;
 }

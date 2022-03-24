@@ -148,8 +148,6 @@ public:
         std::string DumpFolder;
 
         const Uint32 MaxBufferFunctionArgumets = 31;
-
-        DeviceFeaturesMtl FeaturesMtl{DEVICE_FEATURE_STATE_DISABLED};
     };
 
     const D3D11Properties& GetD3D11Properties() const { return m_D3D11Props; }

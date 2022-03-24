@@ -695,6 +695,7 @@ void RenderDeviceGLImpl::InitAdapterInfo()
         Features.InstanceDataStepRate       = DEVICE_FEATURE_STATE_ENABLED;
         Features.NativeFence                = DEVICE_FEATURE_STATE_DISABLED;
         Features.TileShaders                = DEVICE_FEATURE_STATE_DISABLED;
+        Features.SubpassFramebufferFetch    = DEVICE_FEATURE_STATE_DISABLED;
 
         {
             bool WireframeFillSupported = (glPolygonMode != nullptr);
@@ -992,7 +993,7 @@ void RenderDeviceGLImpl::InitAdapterInfo()
         m_AdapterInfo.Queues[0].TextureCopyGranularity[2] = 1;
     }
 
-    ASSERT_SIZEOF(DeviceFeatures, 39, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
+    ASSERT_SIZEOF(DeviceFeatures, 40, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
 }
 
 void RenderDeviceGLImpl::FlagSupportedTexFormats()

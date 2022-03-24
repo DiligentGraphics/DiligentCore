@@ -1733,6 +1733,21 @@ struct DeviceFeatures
     /// Indicates if device supports sparse (aka tiled or partially resident) resources.
     DEVICE_FEATURE_STATE SparseResources                  DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
+    /// Indicates if device supports framebuffer fetch for input attachments.
+
+    /// \remarks    Vulkan: this feature is always supported through
+    ///             input attachments.
+    ///
+    ///             Metal: this feature requires Apple GPU and MSL 2.3 (which
+    ///             is supported in MacOS 11.0+ and iOS 14.0+).
+    ///             When the feature is disabled, every new subpass
+    ///             of a render pass starts a new render command encoder.
+    ///             With this feature enabled, input attachment loads
+    ///             translate into MSL framebuffer fetch operations that
+    ///             allow implementing subpasses within a single render command
+    ///             encoder.
+    DEVICE_FEATURE_STATE SubpassFramebufferFetch DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
 #if DILIGENT_CPP_INTERFACE
     constexpr DeviceFeatures() noexcept {}
 
@@ -1775,9 +1790,10 @@ struct DeviceFeatures
         TileShaders                       {State},
         TransferQueueTimestampQueries     {State},
         VariableRateShading               {State},
-        SparseResources                   {State}
+        SparseResources                   {State},
+        SubpassFramebufferFetch           {State}
     {
-        static_assert(sizeof(*this) == 39, "Did you add a new feature to DeviceFeatures? Please handle its status above.");
+        static_assert(sizeof(*this) == 40, "Did you add a new feature to DeviceFeatures? Please handle its status above.");
     }
 
 
@@ -3705,47 +3721,8 @@ struct EngineVkCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
 };
 typedef struct EngineVkCreateInfo EngineVkCreateInfo;
 
-
-/// Metal-specific render device features
-struct DeviceFeaturesMtl
-{
-    /// Whether to use framebuffer fetch for input attachments.
-
-    /// \remarks    This feature requires MSL 2.3, which is supported
-    ///             in MacOS 11.0+ and iOS 14.0+.
-    ///
-    ///             When the feature is disabled, every new subpass
-    ///             of a render pass starts a new render command encoder.
-    ///             With this feature enabled, input attachment loads
-    ///             translate into MSL framebuffer fetch operations that
-    ///             allow implementing subpasses within a single render command
-    ///             encoder.
-    DEVICE_FEATURE_STATE SubpassFramebufferFetch DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
-
-
-#if DILIGENT_CPP_INTERFACE
-    constexpr DeviceFeaturesMtl() noexcept {}
-
-    explicit constexpr DeviceFeaturesMtl(DEVICE_FEATURE_STATE State) noexcept :
-        SubpassFramebufferFetch{State}
-    {
-        static_assert(sizeof(*this) == 1, "Did you add a new feature to DeviceFeaturesMtl? Please handle its status above.");
-    }
-
-    /// Comparison operator tests if two structures are equivalent
-    bool operator == (const DeviceFeaturesMtl& RHS) const
-    {
-        return memcmp(this, &RHS, sizeof(*this)) == 0;
-    }
-#endif
-};
-typedef struct DeviceFeaturesMtl DeviceFeaturesMtl;
-
 /// Attributes of the Metal-based engine implementation
 struct EngineMtlCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
-
-    /// Metal-specific device features, see Diligent::DeviceFeaturesMtl.
-    DeviceFeaturesMtl FeaturesMtl;
 
     /// A device context uses dynamic heap when it needs to allocate temporary
     /// CPU-accessible memory to update a resource via IDeviceContext::UpdateBuffer() or

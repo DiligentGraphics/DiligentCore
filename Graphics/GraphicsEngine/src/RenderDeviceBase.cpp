@@ -111,10 +111,11 @@ DeviceFeatures EnableDeviceFeatures(const DeviceFeatures& SupportedFeatures,
     ENABLE_FEATURE(TransferQueueTimestampQueries,     "Timestamp queries in transfer queues are");
     ENABLE_FEATURE(VariableRateShading,               "Variable shading rate is");
     ENABLE_FEATURE(SparseResources,                   "Sparse resources are");
+    ENABLE_FEATURE(SubpassFramebufferFetch,           "Subpass framebuffer fetch is");
     // clang-format on
 #undef ENABLE_FEATURE
 
-    ASSERT_SIZEOF(Diligent::DeviceFeatures, 39, "Did you add a new feature to DeviceFeatures? Please handle its status here (if necessary).");
+    ASSERT_SIZEOF(Diligent::DeviceFeatures, 40, "Did you add a new feature to DeviceFeatures? Please handle its status here (if necessary).");
 
     return EnabledFeatures;
 }
