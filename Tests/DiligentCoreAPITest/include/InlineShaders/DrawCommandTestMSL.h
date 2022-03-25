@@ -87,17 +87,38 @@ fragment FSOut TrisFS(VSOut in [[stage_in]])
     return out;
 }
 
+float4 ComputeColor(float3 Color, float4 Input)
+{
+    Color.rgb *= 0.125;
+    Color.rgb += (float3(1.0, 1.0, 1.0) - Input.brg) * 0.875;
+    return float4(Color.rgb, 1.0);
+}
+
 fragment FSOut InptAttFS(VSOut            in           [[stage_in]],
                          texture2d<float> SubpassInput [[texture(0)]])
 {
     FSOut out;
-
-    out.Color.rgb = in.Color.rgb * 0.125;
-    out.Color.rgb += (float3(1.0, 1.0, 1.0) - SubpassInput.read(uint2(in.Position.xy)).brg) * 0.875;
-    out.Color.a = 1.0;
-
+    out.Color = ComputeColor(in.Color, SubpassInput.read(uint2(in.Position.xy)));
     return out;
 }
+
+
+#if __METAL_VERSION__ >= 230
+
+struct FSOut1
+{
+    float4 Color [[color(1)]];
+};
+
+fragment FSOut1 InptAttFetchFS(VSOut  in           [[stage_in]],
+                               float4 SubpassInput [[color(0)]])
+{
+    FSOut1 out;
+    out.Color = ComputeColor(in.Color, SubpassInput);
+    return out;
+}
+
+#endif
 
 )"
 };

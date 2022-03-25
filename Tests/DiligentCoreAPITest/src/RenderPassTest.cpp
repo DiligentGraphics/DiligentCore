@@ -62,7 +62,7 @@ void RenderPassInputAttachmentReferenceVk(ISwapChain* pSwapChain, const float* p
 
 #if METAL_SUPPORTED
 void RenderPassMSResolveReferenceMtl(ISwapChain* pSwapChain, const float* pClearColor);
-void RenderPassInputAttachmentReferenceMtl(ISwapChain* pSwapChain, const float* pClearColor);
+void RenderPassInputAttachmentReferenceMtl(ISwapChain* pSwapChain, const float* pClearColor, bool UseFramebufferFetch);
 #endif
 
 void RenderDrawCommandReference(ISwapChain* pSwapChain, const float* pClearColor);
@@ -762,7 +762,8 @@ void RenderPassTest::TestInputAttachment(bool UseSignature, bool UseMemoryless)
 
 #if METAL_SUPPORTED
             case RENDER_DEVICE_TYPE_METAL:
-                RenderPassInputAttachmentReferenceMtl(pSwapChain, ClearColor);
+                RenderPassInputAttachmentReferenceMtl(
+                    pSwapChain, ClearColor, pDevice->GetDeviceInfo().Features.SubpassFramebufferFetch);
                 break;
 #endif
 
