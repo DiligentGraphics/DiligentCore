@@ -725,6 +725,12 @@ protected:
             ShaderCI.EntryPoint      = "PSmain";
             ShaderCI.Desc.Name       = "Sparse resource test - PS";
             ShaderCI.Source          = PSSource.c_str();
+            if (IsMSL)
+            {
+                // We need to disable reflection as defines in the shader function
+                // declaration are not handled by MSL parser.
+                ShaderCI.CompileFlags = SHADER_COMPILE_FLAG_SKIP_REFLECTION;
+            }
 
             pDevice->CreateShader(ShaderCI, &pPS);
             if (pPS == nullptr)

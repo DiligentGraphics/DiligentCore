@@ -2452,6 +2452,10 @@ static void RayTracingPRSTest(const int Mode)
         ShaderCI.EntryPoint      = "CSMain";
         ShaderCI.Source          = MSL::RayTracingTest9_CS.c_str();
         ShaderCI.Macros          = Macros;
+        // We need to disable reflection as defines in the shader function
+        // declaration are not handled by MSL parser.
+        ShaderCI.CompileFlags = SHADER_COMPILE_FLAG_SKIP_REFLECTION;
+
 
         pDevice->CreateShader(ShaderCI, &pCS);
         ASSERT_NE(pCS, nullptr);
