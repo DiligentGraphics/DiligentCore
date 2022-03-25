@@ -39,6 +39,7 @@
 #include "PipelineResourceSignatureMtlImpl.hpp"
 #include "PipelineStateMtlImpl.hpp"
 #include "ShaderMtlImpl.hpp"
+#include "RenderPassMtlImpl.hpp"
 #include "DeviceObjectArchiveMtlImpl.hpp"
 #include "SerializedPipelineStateImpl.hpp"
 #include "FileSystem.hpp"
@@ -310,10 +311,12 @@ inline const ParsedMSLInfo* GetParsedMsl(const SerializedShaderImpl* pShader, Se
 
 struct CompileMtlShaderAttribs
 {
-    const SerializedShaderImpl::DeviceType        DevType;
-    const SerializationDeviceImpl::MtlProperties& MtlProps;
+    const SerializedShaderImpl::DeviceType DevType;
+    const SerializationDeviceImpl*         pSerializationDevice;
 
     const SerializedShaderImpl* pSerializedShader;
+    const IRenderPass*          pRenderPass;
+    const Uint32                SubpassIndex;
 
     const char*         PSOName;
     const std::string&  DumpFolder;
@@ -364,6 +367,8 @@ SerializedData CompileMtlShader(const CompileMtlShaderAttribs& Attribs) noexcept
     std::string MslSource;
     if (ParsedMsl.pParser != nullptr)
     {
+        // Same logic as in PipelineStateMtlImpl::GetPatchedMtlFunction
+        
         MSLParser::ResourceMapType ResRemapping;
         PipelineStateMtlImpl::GetResourceMap({
             ParsedMsl,
@@ -373,6 +378,21 @@ SerializedData CompileMtlShader(const CompileMtlShaderAttribs& Attribs) noexcept
             ShDesc,
             PSOName},
             ResRemapping); // may throw exception
+
+        if (ShDesc.ShaderType == SHADER_TYPE_PIXEL && Attribs.pRenderPass != nullptr)
+        {
+            const auto& RPDesc   = Attribs.pRenderPass->GetDesc();
+            const auto& Features = Attribs.pSerializationDevice->GetDeviceInfo().Features;
+
+            RenderPassMtlImpl RenderPassMtl{RPDesc, Features};
+            PipelineStateMtlImpl::GetInputOutputMap({
+                    ParsedMsl,
+                    RenderPassMtl,
+                    ShDesc,
+                    Attribs.SubpassIndex
+                },
+                ResRemapping);
+        }
 
         MslSource = ParsedMsl.pParser->RemapResources(ResRemapping);
         if (MslSource.empty())
@@ -386,10 +406,11 @@ SerializedData CompileMtlShader(const CompileMtlShaderAttribs& Attribs) noexcept
     if (!SaveMslToFile(MslSource, MetalFile))
         LOG_PATCH_SHADER_ERROR_AND_THROW("Failed to save MSL source to a temp file.");
 
+    const auto& MtlProps = Attribs.pSerializationDevice->GetMtlProperties();
     // Compile MSL to Metal library
     const auto& CompileOptions = Attribs.DevType == DeviceType::Metal_MacOS ?
-        Attribs.MtlProps.CompileOptionsMacOS :
-        Attribs.MtlProps.CompileOptionsIOS;
+        MtlProps.CompileOptionsMacOS :
+        MtlProps.CompileOptionsIOS;
     if (!CompileMsl(CompileOptions, MetalFile, MetalLibFile))
         LOG_PATCH_SHADER_ERROR_AND_THROW("Failed to create metal library.");
 
@@ -422,6 +443,17 @@ SerializedData CompileMtlShader(const CompileMtlShaderAttribs& Attribs) noexcept
 }
 
 } // namespace
+
+template <typename CreateInfoType>
+Uint32 GetSubpassIndex(const CreateInfoType&)
+{
+    return ~0u;
+}
+template <>
+Uint32 GetSubpassIndex(const GraphicsPipelineStateCreateInfo& CI)
+{
+    return CI.GraphicsPipeline.SubpassIndex;
+}
 
 template <typename CreateInfoType>
 void SerializedPipelineStateImpl::PatchShadersMtl(const CreateInfoType& CreateInfo, DeviceType DevType, const std::string& DumpDir) noexcept(false)
@@ -475,14 +507,16 @@ void SerializedPipelineStateImpl::PatchShadersMtl(const CreateInfoType& CreateIn
             // besides the byte code itself.
             const auto ShaderData = CompileMtlShader({
                 DevType,
-                m_pSerializationDevice->GetMtlProperties(),
+                m_pSerializationDevice,
                 Stage.pShader,
+                m_pRenderPass,
+                GetSubpassIndex(CreateInfo),
                 CreateInfo.PSODesc.Name,
                 DumpDir,
                 Signatures,
                 SignaturesCount,
                 BaseBindings,
-                }); // May throw
+            }); // May throw
 
             auto ShaderCI           = Stage.pShader->GetCreateInfo();
             ShaderCI.Source         = nullptr;

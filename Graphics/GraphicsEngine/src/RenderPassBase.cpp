@@ -33,13 +33,15 @@
 namespace Diligent
 {
 
-void ValidateRenderPassDesc(const RenderPassDesc& Desc, IRenderDevice* pDevice) noexcept(false)
+void ValidateRenderPassDesc(const RenderPassDesc&      Desc,
+                            const RenderDeviceInfo&    DeviceInfo,
+                            const GraphicsAdapterInfo& AdapterInfo) noexcept(false)
 {
 #define LOG_RENDER_PASS_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of render pass '", (Desc.Name ? Desc.Name : ""), "' is invalid: ", ##__VA_ARGS__)
 
-    const auto& Features = pDevice->GetDeviceInfo().Features;
-    const auto& SRProps  = pDevice->GetAdapterInfo().ShadingRate;
-    const bool  IsVulkan = pDevice->GetDeviceInfo().IsVulkanDevice();
+    const auto& Features = DeviceInfo.Features;
+    const auto& SRProps  = AdapterInfo.ShadingRate;
+    const bool  IsVulkan = DeviceInfo.IsVulkanDevice();
 
     if (Desc.AttachmentCount != 0 && Desc.pAttachments == nullptr)
     {
