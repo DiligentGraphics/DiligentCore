@@ -43,4 +43,5 @@ void TestReferenceCounters_CInterface(IReferenceCounters* pRefCounters)
 
     rc = IReferenceCounters_GetNumStrongRefs(pRefCounters);
     rc = IReferenceCounters_GetNumWeakRefs(pRefCounters);
+    (void)rc;
 }

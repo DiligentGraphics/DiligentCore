@@ -521,6 +521,7 @@ void CreateRTBuffers(RTContext& Ctx, Uint32 VBSize, Uint32 IBSize, Uint32 Instan
     VkBufferMemoryRequirementsInfo2 MemInfo     = {};
     Uint32                          MemTypeBits = 0;
     VkBufferDeviceAddressInfoKHR    BufferInfo  = {};
+    (void)MemTypeBits;
 
     BufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO_KHR;
 

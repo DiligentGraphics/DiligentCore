@@ -78,4 +78,5 @@ void TestSwapChainC_API(struct ISwapChain* pSwapChain)
     ISwapChain_SetMaximumFrameLatency(pSwapChain, 1);
     ISwapChain_SetWindowedMode(pSwapChain);
     pDSV = ISwapChain_GetDepthBufferDSV(pSwapChain);
+    (void)pDSV;
 }

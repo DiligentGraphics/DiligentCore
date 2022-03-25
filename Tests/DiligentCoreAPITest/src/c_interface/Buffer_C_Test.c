@@ -89,6 +89,7 @@ int TestBufferCInterface(struct IBuffer* pBuffer)
         ++num_errors;
 
     pView1 = IBuffer_GetDefaultView(pBuffer, BUFFER_VIEW_SHADER_RESOURCE);
+    (void)pView1;
 
     NativeHandle = IBuffer_GetNativeHandle(pBuffer);
     if (NativeHandle == 0)

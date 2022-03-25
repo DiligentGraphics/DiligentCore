@@ -66,6 +66,7 @@ int TestShaderResourceVariableCInterface(struct IShaderResourceVariable* pVar, s
         ++num_errors;
 
     Index = IShaderResourceVariable_GetIndex(pVar);
+    (void)Index;
 
     if (IShaderResourceVariable_Get(pVar, 0) != pObjectToSet)
         ++num_errors;
