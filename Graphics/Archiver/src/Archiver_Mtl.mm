@@ -42,6 +42,8 @@
 #include "RenderPassMtlImpl.hpp"
 #include "DeviceObjectArchiveMtlImpl.hpp"
 #include "SerializedPipelineStateImpl.hpp"
+#include "DeviceObjectArchiveMtlImpl.hpp"
+
 #include "FileSystem.hpp"
 #include "FileWrapper.hpp"
 #include "DataBlobImpl.hpp"
@@ -106,30 +108,6 @@ inline SHADER_TYPE GetShaderStageType(const ShaderStageInfoMtl& Stage)
 }
 #endif
 
-
-template <SerializerMode Mode>
-void SerializeMSLData(Serializer<Mode>&                       Ser,
-                      const SHADER_TYPE                       ShaderType,
-                      const ParsedMSLInfo::BufferInfoMapType& BufferInfoMap,
-                      const ComputeGroupSizeType&             ComputeGroupSize)
-{
-    // Same as DeviceObjectArchiveMtlImpl::UnpackShader
-
-    const Uint32 Count = static_cast<Uint32>(BufferInfoMap.size());
-    Ser(Count);
-    for (auto& it : BufferInfoMap)
-    {
-        const auto* Name    = it.first.c_str();
-        const auto* AltName = it.second.AltName.c_str();
-        const auto  Space   = it.second.Space;
-        Ser(Name, AltName, Space);
-    }
-
-    if (ShaderType == SHADER_TYPE_COMPUTE)
-    {
-        Ser(ComputeGroupSize);
-    }
-}
 
 struct TmpDirRemover
 {
@@ -420,10 +398,17 @@ SerializedData CompileMtlShader(const CompileMtlShaderAttribs& Attribs) noexcept
         LOG_PATCH_SHADER_ERROR_AND_THROW("Failed to read Metal shader library.");
 
 #undef LOG_PATCH_SHADER_ERROR_AND_THROW
-
+    
+    ShaderMtlImpl::ArchiveData ShaderMtlArchiveData{
+        std::move(ParsedMsl.BufferInfoMap),
+        MslData.ComputeGroupSize
+    };
+    
     auto SerializeShaderData = [&](auto& Ser){
         Ser.SerializeBytes(pByteCode->GetConstDataPtr(), pByteCode->GetSize());
-        SerializeMSLData(Ser, ShDesc.ShaderType, ParsedMsl.BufferInfoMap, MslData.ComputeGroupSize);
+        ShaderMtlImpl::ArchiveData ArchiveData;
+        constexpr auto SerMode = std::remove_reference<decltype(Ser)>::type::GetMode();
+        ShaderMtlSerializer<SerMode>::SerializeArchiveData(Ser, ShaderMtlArchiveData);
     };
 
     SerializedData ShaderData;
