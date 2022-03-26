@@ -342,6 +342,9 @@ SerializedData CompileMtlShader(const CompileMtlShaderAttribs& Attribs) noexcept
 #define LOG_PATCH_SHADER_ERROR_AND_THROW(...)\
     LOG_ERROR_AND_THROW("Failed to patch shader '", ShaderName, "' for PSO '", PSOName, "': ", ##__VA_ARGS__)
 
+    using IORemappingMode = ShaderMtlImpl::ArchiveData::IORemappingMode;
+    auto  IORemapping     = IORemappingMode::Undefined;
+
     std::string MslSource;
     if (ParsedMsl.pParser != nullptr)
     {
@@ -370,6 +373,13 @@ SerializedData CompileMtlShader(const CompileMtlShaderAttribs& Attribs) noexcept
                     Attribs.SubpassIndex
                 },
                 ResRemapping);
+
+            if (RPDesc.SubpassCount > 1)
+            {
+                IORemapping = Features.SubpassFramebufferFetch ?
+                    IORemappingMode::RemappedFetch :
+                    IORemappingMode::Original;
+            }
         }
 
         MslSource = ParsedMsl.pParser->RemapResources(ResRemapping);
@@ -401,7 +411,8 @@ SerializedData CompileMtlShader(const CompileMtlShaderAttribs& Attribs) noexcept
     
     ShaderMtlImpl::ArchiveData ShaderMtlArchiveData{
         std::move(ParsedMsl.BufferInfoMap),
-        MslData.ComputeGroupSize
+        MslData.ComputeGroupSize,
+        IORemapping
     };
     
     auto SerializeShaderData = [&](auto& Ser){
