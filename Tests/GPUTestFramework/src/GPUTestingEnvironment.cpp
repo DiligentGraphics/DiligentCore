@@ -780,9 +780,9 @@ GPUTestingEnvironment* GPUTestingEnvironment::Initialize(int argc, char** argv)
 #if D3D11_SUPPORTED
             case RENDER_DEVICE_TYPE_D3D11:
                 if (TestEnvCI.AdapterType == ADAPTER_TYPE_SOFTWARE)
-                    std::cout << "\n\n\n================ Testing Diligent Core API in Direct3D11-SW mode =================\n\n";
+                    std::cout << "\n\n\n================ Running tests in Direct3D11-SW mode =================\n\n";
                 else
-                    std::cout << "\n\n\n================== Testing Diligent Core API in Direct3D11 mode ==================\n\n";
+                    std::cout << "\n\n\n================== Running tests in Direct3D11 mode ==================\n\n";
                 pEnv = CreateTestingEnvironmentD3D11(TestEnvCI, SCDesc);
                 break;
 #endif
@@ -790,9 +790,9 @@ GPUTestingEnvironment* GPUTestingEnvironment::Initialize(int argc, char** argv)
 #if D3D12_SUPPORTED
             case RENDER_DEVICE_TYPE_D3D12:
                 if (TestEnvCI.AdapterType == ADAPTER_TYPE_SOFTWARE)
-                    std::cout << "\n\n\n================ Testing Diligent Core API in Direct3D12-SW mode =================\n\n";
+                    std::cout << "\n\n\n================ Running tests in Direct3D12-SW mode =================\n\n";
                 else
-                    std::cout << "\n\n\n================== Testing Diligent Core API in Direct3D12 mode ==================\n\n";
+                    std::cout << "\n\n\n================== Running tests in Direct3D12 mode ==================\n\n";
                 pEnv = CreateTestingEnvironmentD3D12(TestEnvCI, SCDesc);
                 break;
 #endif
@@ -800,7 +800,7 @@ GPUTestingEnvironment* GPUTestingEnvironment::Initialize(int argc, char** argv)
 #if GL_SUPPORTED || GLES_SUPPORTED
             case RENDER_DEVICE_TYPE_GL:
             case RENDER_DEVICE_TYPE_GLES:
-                std::cout << "\n\n\n==================== Testing Diligent Core API in OpenGL mode ====================\n\n";
+                std::cout << "\n\n\n==================== Running tests in OpenGL mode ====================\n\n";
                 if (TestEnvCI.ForceNonSeparablePrograms)
                     std::cout << "Forcing non-separable shader programs\n";
                 pEnv = CreateTestingEnvironmentGL(TestEnvCI, SCDesc);
@@ -810,14 +810,14 @@ GPUTestingEnvironment* GPUTestingEnvironment::Initialize(int argc, char** argv)
 
 #if VULKAN_SUPPORTED
             case RENDER_DEVICE_TYPE_VULKAN:
-                std::cout << "\n\n\n==================== Testing Diligent Core API in Vulkan mode ====================\n\n";
+                std::cout << "\n\n\n==================== Running tests in Vulkan mode ====================\n\n";
                 pEnv = CreateTestingEnvironmentVk(TestEnvCI, SCDesc);
                 break;
 #endif
 
 #if METAL_SUPPORTED
             case RENDER_DEVICE_TYPE_METAL:
-                std::cout << "\n\n\n==================== Testing Diligent Core API in Metal mode ====================\n\n";
+                std::cout << "\n\n\n==================== Running tests in Metal mode ====================\n\n";
                 pEnv = CreateTestingEnvironmentMtl(TestEnvCI, SCDesc);
                 break;
 #endif

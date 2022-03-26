@@ -39,12 +39,13 @@ namespace
 
 TEST(TestingEnvironment, MessageCallback)
 {
-    Diligent::Testing::TestingEnvironment::ErrorScope Errors{"Expected error"};
+    // This error will not occur
+    Diligent::Testing::TestingEnvironment::ErrorScope Errors{"Different error"};
 
     auto LogError = []() {
-        LOG_ERROR_MESSAGE("Unexpected error");
+        LOG_ERROR_MESSAGE("Testing environment error handling self-test error");
     };
-    EXPECT_NONFATAL_FAILURE(LogError(), "Expected error substring 'Expected error' was not found in the error message");
+    EXPECT_NONFATAL_FAILURE(LogError(), "Expected error substring 'Different error' was not found in the error message");
 }
 
 } // namespace
