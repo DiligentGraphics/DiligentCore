@@ -512,6 +512,11 @@ TEST_F(QueryTest, DeferredContexts)
         GTEST_SKIP() << "Deferred contexts are not supported by this device";
     }
 
+    if (DeviceInfo.IsMetalDevice())
+    {
+        GTEST_SKIP() << "Queries are not supported in deferred contexts on Metal";
+    }
+
     GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     std::vector<RefCntAutoPtr<IQuery>> pDurations;

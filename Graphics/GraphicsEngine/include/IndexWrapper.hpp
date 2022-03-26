@@ -28,6 +28,7 @@
 
 #include "BasicTypes.h"
 #include "DebugUtilities.hpp"
+#include "Cast.hpp"
 
 namespace Diligent
 {
@@ -40,9 +41,8 @@ public:
 
     template <typename T, typename = typename std::enable_if<std::is_integral<T>::value, T>::type>
     explicit IndexWrapper(T Value) noexcept :
-        m_Value{static_cast<IndexType>(Value)}
+        m_Value{StaticCast<IndexType>(Value)}
     {
-        VERIFY(static_cast<T>(m_Value) == Value, "Not enough bits to store value ", Value);
     }
 
     template <typename OtherType, typename OtherTag>
