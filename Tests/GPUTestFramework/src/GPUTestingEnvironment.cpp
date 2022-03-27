@@ -443,11 +443,12 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& CI, const SwapCha
 
     {
         const auto& ActualFeats = m_pDevice->GetDeviceInfo().Features;
-#define CHECK_FEATURE_STATE(Feature)                                                                                                        \
-    if (CI.Features.Feature != DEVICE_FEATURE_STATE_OPTIONAL && CI.Features.Feature != ActualFeats.Feature)                                 \
-    {                                                                                                                                       \
-        LOG_WARNING_MESSAGE("requested state (", GetDeviceFeatureStateString(CI.Features.Feature), ") of the '", #Feature,                  \
-                            "' feature does not match the actual feature state (", GetDeviceFeatureStateString(ActualFeats.Feature), ")."); \
+#define CHECK_FEATURE_STATE(Feature)                                                                                                      \
+    if (CI.Features.Feature != DEVICE_FEATURE_STATE_OPTIONAL && CI.Features.Feature != ActualFeats.Feature)                               \
+    {                                                                                                                                     \
+        LOG_ERROR_MESSAGE("requested state (", GetDeviceFeatureStateString(CI.Features.Feature), ") of the '", #Feature,                  \
+                          "' feature does not match the actual feature state (", GetDeviceFeatureStateString(ActualFeats.Feature), ")."); \
+        UNEXPECTED("Requested feature state does not match the actual state.");                                                           \
     }
 
         ENUMERATE_DEVICE_FEATURES(CHECK_FEATURE_STATE)
