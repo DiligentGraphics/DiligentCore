@@ -330,7 +330,7 @@ public:
         return *m_pSparseProps;
     }
 
-private:
+protected:
     void DestroyDefaultViews()
     {
         if (m_pDefaultViews == nullptr)
@@ -359,7 +359,6 @@ private:
         m_pDefaultViews = nullptr;
     }
 
-protected:
     /// Pure virtual function that is implemented in every backend.
     virtual void CreateViewInternal(const struct TextureViewDesc& ViewDesc, ITextureView** ppView, bool bIsDefaultView) = 0;
 
