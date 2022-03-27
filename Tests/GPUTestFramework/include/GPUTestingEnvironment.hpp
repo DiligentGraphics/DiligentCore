@@ -54,12 +54,13 @@ public:
 
     struct CreateInfo
     {
-        RENDER_DEVICE_TYPE deviceType                = RENDER_DEVICE_TYPE_UNDEFINED;
-        ADAPTER_TYPE       AdapterType               = ADAPTER_TYPE_UNKNOWN;
-        Uint32             AdapterId                 = DEFAULT_ADAPTER_ID;
-        Uint32             NumDeferredContexts       = 4;
-        bool               ForceNonSeparablePrograms = false;
-        bool               EnableDeviceSimulation    = false;
+        RENDER_DEVICE_TYPE deviceType             = RENDER_DEVICE_TYPE_UNDEFINED;
+        ADAPTER_TYPE       AdapterType            = ADAPTER_TYPE_UNKNOWN;
+        Uint32             AdapterId              = DEFAULT_ADAPTER_ID;
+        Uint32             NumDeferredContexts    = 4;
+        bool               EnableDeviceSimulation = false;
+
+        DeviceFeatures Features{DEVICE_FEATURE_STATE_OPTIONAL};
     };
     GPUTestingEnvironment(const CreateInfo& CI, const SwapChainDesc& SCDesc);
 
