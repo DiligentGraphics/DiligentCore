@@ -1751,63 +1751,73 @@ struct DeviceFeatures
 #if DILIGENT_CPP_INTERFACE
     constexpr DeviceFeatures() noexcept {}
 
-    explicit constexpr DeviceFeatures(DEVICE_FEATURE_STATE State) noexcept :
-        SeparablePrograms                 {State},
-        ShaderResourceQueries             {State},
-        WireframeFill                     {State},
-        MultithreadedResourceCreation     {State},
-        ComputeShaders                    {State},
-        GeometryShaders                   {State},
-        Tessellation                      {State},
-        MeshShaders                       {State},
-        RayTracing                        {State},
-        BindlessResources                 {State},
-        OcclusionQueries                  {State},
-        BinaryOcclusionQueries            {State},
-        TimestampQueries                  {State},
-        PipelineStatisticsQueries         {State},
-        DurationQueries                   {State},
-        DepthBiasClamp                    {State},
-        DepthClamp                        {State},
-        IndependentBlend                  {State},
-        DualSourceBlend                   {State},
-        MultiViewport                     {State},
-        TextureCompressionBC              {State},
-        VertexPipelineUAVWritesAndAtomics {State},
-        PixelUAVWritesAndAtomics          {State},
-        TextureUAVExtendedFormats         {State},
-        ShaderFloat16                     {State},
-        ResourceBuffer16BitAccess         {State},
-        UniformBuffer16BitAccess          {State},
-        ShaderInputOutput16               {State},
-        ShaderInt8                        {State},
-        ResourceBuffer8BitAccess          {State},
-        UniformBuffer8BitAccess           {State},
-        ShaderResourceRuntimeArray        {State},
-        WaveOp                            {State},
-        InstanceDataStepRate              {State},
-        NativeFence                       {State},
-        TileShaders                       {State},
-        TransferQueueTimestampQueries     {State},
-        VariableRateShading               {State},
-        SparseResources                   {State},
-        SubpassFramebufferFetch           {State}
+#define ENUMERATE_DEVICE_FEATURES(Handler)     \
+    Handler(SeparablePrograms)                 \
+    Handler(ShaderResourceQueries)             \
+    Handler(WireframeFill)                     \
+    Handler(MultithreadedResourceCreation)     \
+    Handler(ComputeShaders)                    \
+    Handler(GeometryShaders)                   \
+    Handler(Tessellation)                      \
+    Handler(MeshShaders)                       \
+    Handler(RayTracing)                        \
+    Handler(BindlessResources)                 \
+    Handler(OcclusionQueries)                  \
+    Handler(BinaryOcclusionQueries)            \
+    Handler(TimestampQueries)                  \
+    Handler(PipelineStatisticsQueries)         \
+    Handler(DurationQueries)                   \
+    Handler(DepthBiasClamp)                    \
+    Handler(DepthClamp)                        \
+    Handler(IndependentBlend)                  \
+    Handler(DualSourceBlend)                   \
+    Handler(MultiViewport)                     \
+    Handler(TextureCompressionBC)              \
+    Handler(VertexPipelineUAVWritesAndAtomics) \
+    Handler(PixelUAVWritesAndAtomics)          \
+    Handler(TextureUAVExtendedFormats)         \
+    Handler(ShaderFloat16)                     \
+    Handler(ResourceBuffer16BitAccess)         \
+    Handler(UniformBuffer16BitAccess)          \
+    Handler(ShaderInputOutput16)               \
+    Handler(ShaderInt8)                        \
+    Handler(ResourceBuffer8BitAccess)          \
+    Handler(UniformBuffer8BitAccess)           \
+    Handler(ShaderResourceRuntimeArray)        \
+    Handler(WaveOp)                            \
+    Handler(InstanceDataStepRate)              \
+    Handler(NativeFence)                       \
+    Handler(TileShaders)                       \
+    Handler(TransferQueueTimestampQueries)     \
+    Handler(VariableRateShading)               \
+    Handler(SparseResources)                   \
+    Handler(SubpassFramebufferFetch)
+
+    explicit constexpr DeviceFeatures(DEVICE_FEATURE_STATE State) noexcept
     {
-        static_assert(sizeof(*this) == 40, "Did you add a new feature to DeviceFeatures? Please handle its status above.");
+        static_assert(sizeof(*this) == 40, "Did you add a new feature to DeviceFeatures? Please add it to ENUMERATE_DEVICE_FEATURES.");
+    #define INIT_FEATURE(Feature) Feature = State;
+        ENUMERATE_DEVICE_FEATURES(INIT_FEATURE)
+    #undef INIT_FEATURE
     }
 
+    template <typename FeatType, typename HandlerType>
+    static void Enumerate(FeatType& Features, HandlerType Handler)
+    {
+    #define HandleFeature(Feature)                \
+        if (!Handler(#Feature, Features.Feature)) \
+            return;
+
+        ENUMERATE_DEVICE_FEATURES(HandleFeature)
+
+    #undef HandleFeature
+    }
 
     /// Comparison operator tests if two structures are equivalent
-
-    /// \param [in] RHS - reference to the structure to perform comparison with
-    /// \return
-    /// - True if all members of the two structures are equal.
-    /// - False otherwise.
     bool operator == (const DeviceFeatures& RHS) const 
     {
         return memcmp(this, &RHS, sizeof(DeviceFeatures)) == 0;
     }
-
 #endif
 };
 typedef struct DeviceFeatures DeviceFeatures;

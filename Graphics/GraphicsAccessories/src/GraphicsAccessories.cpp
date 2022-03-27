@@ -1212,6 +1212,21 @@ const char* GetArchiveDeviceDataFlagString(ARCHIVE_DEVICE_DATA_FLAGS Flag, bool 
     }
 }
 
+const char* GetDeviceFeatureStateString(DEVICE_FEATURE_STATE State, bool bGetFullName)
+{
+    switch (State)
+    {
+        // clang-format off
+        case DEVICE_FEATURE_STATE_DISABLED: return bGetFullName ? "DEVICE_FEATURE_STATE_DISABLED" : "Disabled";
+        case DEVICE_FEATURE_STATE_OPTIONAL: return bGetFullName ? "DEVICE_FEATURE_STATE_OPTIONAL" : "Optional";
+        case DEVICE_FEATURE_STATE_ENABLED:  return bGetFullName ? "DEVICE_FEATURE_STATE_ENABLED"  : "Enabled";
+        // clang-format on
+        default:
+            UNEXPECTED("Unexpected device feature state (", Uint32{State}, ")");
+            return "UNKNOWN";
+    }
+}
+
 String GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAGS Flags, bool GetFullName /*= false*/, const char* DelimiterString /*= "|"*/)
 {
     if (Flags == PIPELINE_RESOURCE_FLAG_NONE)

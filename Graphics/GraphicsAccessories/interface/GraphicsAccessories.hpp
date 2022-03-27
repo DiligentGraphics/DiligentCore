@@ -393,6 +393,8 @@ const char* GetShaderCompilerTypeString(SHADER_COMPILER Compiler);
 
 const char* GetArchiveDeviceDataFlagString(ARCHIVE_DEVICE_DATA_FLAGS Flag, bool bGetFullName = false);
 
+const char* GetDeviceFeatureStateString(DEVICE_FEATURE_STATE State, bool bGetFullName = false);
+
 String GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAGS Flags, bool GetFullName = false, const char* DelimiterString = "|");
 
 PIPELINE_RESOURCE_FLAGS GetValidPipelineResourceFlags(SHADER_RESOURCE_TYPE ResourceType);

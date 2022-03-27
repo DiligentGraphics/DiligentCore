@@ -35,6 +35,7 @@
 #include "PlatformDebug.hpp"
 #include "TestingSwapChainBase.hpp"
 #include "StringTools.hpp"
+#include "GraphicsAccessories.hpp"
 
 #if D3D11_SUPPORTED
 #    include "EngineFactoryD3D11.h"
@@ -187,6 +188,22 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& CI, const SwapCha
                          DisplayModes.size(), (DisplayModes.size() == 1 ? " display mode" : " display modes"));
     };
 #endif
+
+    {
+        bool FeaturesPrinted = false;
+        DeviceFeatures::Enumerate(CI.Features,
+                                  [&FeaturesPrinted](const char* FeatName, DEVICE_FEATURE_STATE State) //
+                                  {
+                                      if (State != DEVICE_FEATURE_STATE_OPTIONAL)
+                                      {
+                                          std::cout << "Features." << FeatName << " = " << (State == DEVICE_FEATURE_STATE_ENABLED ? "On" : "Off") << '\n';
+                                          FeaturesPrinted = true;
+                                      }
+                                      return true;
+                                  });
+        if (FeaturesPrinted)
+            std::cout << '\n';
+    }
 
     switch (m_DeviceType)
     {
@@ -422,6 +439,20 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& CI, const SwapCha
         default:
             LOG_ERROR_AND_THROW("Unknown device type");
             break;
+    }
+
+    {
+        const auto& ActualFeats = m_pDevice->GetDeviceInfo().Features;
+#define CHECK_FEATURE_STATE(Feature)                                                                                                        \
+    if (CI.Features.Feature != DEVICE_FEATURE_STATE_OPTIONAL && CI.Features.Feature != ActualFeats.Feature)                                 \
+    {                                                                                                                                       \
+        LOG_WARNING_MESSAGE("requested state (", GetDeviceFeatureStateString(CI.Features.Feature), ") of the '", #Feature,                  \
+                            "' feature does not match the actual feature state (", GetDeviceFeatureStateString(ActualFeats.Feature), ")."); \
+    }
+
+        ENUMERATE_DEVICE_FEATURES(CHECK_FEATURE_STATE)
+
+#undef CHECK_FEATURE_STATE
     }
 
     constexpr Uint8 InvalidQueueId = 64; // MAX_COMMAND_QUEUES
@@ -696,60 +727,6 @@ SHADER_COMPILER GPUTestingEnvironment::GetDefaultCompiler(SHADER_SOURCE_LANGUAGE
         return m_ShaderCompiler;
 }
 
-template <typename FeatType, typename HandlerType>
-void IterateFeatures(FeatType& Features, HandlerType Handler)
-{
-#define HandleFeature(Feature)                    \
-    do                                            \
-    {                                             \
-        if (!Handler(#Feature, Features.Feature)) \
-            return;                               \
-    } while (false)
-
-    HandleFeature(SeparablePrograms);
-    HandleFeature(ShaderResourceQueries);
-    HandleFeature(WireframeFill);
-    HandleFeature(MultithreadedResourceCreation);
-    HandleFeature(ComputeShaders);
-    HandleFeature(GeometryShaders);
-    HandleFeature(Tessellation);
-    HandleFeature(MeshShaders);
-    HandleFeature(RayTracing);
-    HandleFeature(BindlessResources);
-    HandleFeature(OcclusionQueries);
-    HandleFeature(BinaryOcclusionQueries);
-    HandleFeature(TimestampQueries);
-    HandleFeature(PipelineStatisticsQueries);
-    HandleFeature(DurationQueries);
-    HandleFeature(DepthBiasClamp);
-    HandleFeature(DepthClamp);
-    HandleFeature(IndependentBlend);
-    HandleFeature(DualSourceBlend);
-    HandleFeature(MultiViewport);
-    HandleFeature(TextureCompressionBC);
-    HandleFeature(VertexPipelineUAVWritesAndAtomics);
-    HandleFeature(PixelUAVWritesAndAtomics);
-    HandleFeature(TextureUAVExtendedFormats);
-    HandleFeature(ShaderFloat16);
-    HandleFeature(ResourceBuffer16BitAccess);
-    HandleFeature(UniformBuffer16BitAccess);
-    HandleFeature(ShaderInputOutput16);
-    HandleFeature(ShaderInt8);
-    HandleFeature(ResourceBuffer8BitAccess);
-    HandleFeature(UniformBuffer8BitAccess);
-    HandleFeature(ShaderResourceRuntimeArray);
-    HandleFeature(WaveOp);
-    HandleFeature(InstanceDataStepRate);
-    HandleFeature(NativeFence);
-    HandleFeature(TileShaders);
-    HandleFeature(TransferQueueTimestampQueries);
-    HandleFeature(VariableRateShading);
-    HandleFeature(SparseResources);
-    HandleFeature(SubpassFramebufferFetch);
-#undef HandleFeature
-    static_assert(sizeof(Features) == 40, "Did you add a new feature to DeviceFeatures? Please handle its status above.");
-}
-
 static bool ParseFeatureState(const char* Arg, DeviceFeatures& Features)
 {
     static const std::string ArgStart = "--Features.";
@@ -757,54 +734,37 @@ static bool ParseFeatureState(const char* Arg, DeviceFeatures& Features)
         return false;
 
     Arg += ArgStart.length();
-    IterateFeatures(Features,
-                    [Arg](const char* FeatName, DEVICE_FEATURE_STATE& State) //
-                    {
-                        const auto NameLen = strlen(FeatName);
-                        if (strncmp(FeatName, Arg, NameLen) != 0)
-                            return true;
+    DeviceFeatures::Enumerate(Features,
+                              [Arg](const char* FeatName, DEVICE_FEATURE_STATE& State) //
+                              {
+                                  const auto NameLen = strlen(FeatName);
+                                  if (strncmp(FeatName, Arg, NameLen) != 0)
+                                      return true;
 
-                        if (Arg[NameLen] != '=')
-                            return true; // Continue processing
+                                  if (Arg[NameLen] != '=')
+                                      return true; // Continue processing
 
-                        const auto Value = Arg + NameLen + 1;
+                                  const auto Value = Arg + NameLen + 1;
 
-                        static const std::string Off      = "Off";
-                        static const std::string On       = "On";
-                        static const std::string Disabled = "Disabled";
-                        static const std::string Enabled  = "Enabled";
+                                  static const std::string Off      = "Off";
+                                  static const std::string On       = "On";
+                                  static const std::string Disabled = "Disabled";
+                                  static const std::string Enabled  = "Enabled";
 
-                        if (StrCmpNoCase(Value, On.c_str()) == 0 || StrCmpNoCase(Value, Enabled.c_str()) == 0)
-                            State = DEVICE_FEATURE_STATE_ENABLED;
-                        else if (StrCmpNoCase(Value, Off.c_str()) == 0 || StrCmpNoCase(Value, Disabled.c_str()) == 0)
-                            State = DEVICE_FEATURE_STATE_DISABLED;
-                        else
-                        {
-                            LOG_ERROR_MESSAGE('\'', Value, "' is not a valid value for feature '", FeatName, "'. The following values are allowed: '",
-                                              Off, "', '", Disabled, "', '", On, "', '", Enabled, "'.");
-                        }
+                                  if (StrCmpNoCase(Value, On.c_str()) == 0 || StrCmpNoCase(Value, Enabled.c_str()) == 0)
+                                      State = DEVICE_FEATURE_STATE_ENABLED;
+                                  else if (StrCmpNoCase(Value, Off.c_str()) == 0 || StrCmpNoCase(Value, Disabled.c_str()) == 0)
+                                      State = DEVICE_FEATURE_STATE_DISABLED;
+                                  else
+                                  {
+                                      LOG_ERROR_MESSAGE('\'', Value, "' is not a valid value for feature '", FeatName, "'. The following values are allowed: '",
+                                                        Off, "', '", Disabled, "', '", On, "', '", Enabled, "'.");
+                                  }
 
-                        return false;
-                    });
+                                  return false;
+                              });
 
     return false;
-}
-
-static void PrintFeatureStates(const DeviceFeatures& Features)
-{
-    bool FeaturesPrinted = false;
-    IterateFeatures(Features,
-                    [&](const char* FeatName, DEVICE_FEATURE_STATE State) //
-                    {
-                        if (State != DEVICE_FEATURE_STATE_OPTIONAL)
-                        {
-                            std::cout << FeatName << " = " << (State == DEVICE_FEATURE_STATE_ENABLED ? "On" : "Off") << '\n';
-                            FeaturesPrinted = true;
-                        }
-                        return true;
-                    });
-    if (FeaturesPrinted)
-        std::cout << '\n';
 }
 
 GPUTestingEnvironment* GPUTestingEnvironment::Initialize(int argc, char** argv)
@@ -892,7 +852,6 @@ GPUTestingEnvironment* GPUTestingEnvironment::Initialize(int argc, char** argv)
                     std::cout << "\n\n\n================ Running tests in Direct3D11-SW mode =================\n\n";
                 else
                     std::cout << "\n\n\n================== Running tests in Direct3D11 mode ==================\n\n";
-                PrintFeatureStates(TestEnvCI.Features);
                 pEnv = CreateTestingEnvironmentD3D11(TestEnvCI, SCDesc);
                 break;
 #endif
@@ -903,7 +862,6 @@ GPUTestingEnvironment* GPUTestingEnvironment::Initialize(int argc, char** argv)
                     std::cout << "\n\n\n================ Running tests in Direct3D12-SW mode =================\n\n";
                 else
                     std::cout << "\n\n\n================== Running tests in Direct3D12 mode ==================\n\n";
-                PrintFeatureStates(TestEnvCI.Features);
                 pEnv = CreateTestingEnvironmentD3D12(TestEnvCI, SCDesc);
                 break;
 #endif
@@ -912,7 +870,6 @@ GPUTestingEnvironment* GPUTestingEnvironment::Initialize(int argc, char** argv)
             case RENDER_DEVICE_TYPE_GL:
             case RENDER_DEVICE_TYPE_GLES:
                 std::cout << "\n\n\n==================== Running tests in OpenGL mode ====================\n\n";
-                PrintFeatureStates(TestEnvCI.Features);
                 pEnv = CreateTestingEnvironmentGL(TestEnvCI, SCDesc);
                 break;
 
@@ -921,7 +878,6 @@ GPUTestingEnvironment* GPUTestingEnvironment::Initialize(int argc, char** argv)
 #if VULKAN_SUPPORTED
             case RENDER_DEVICE_TYPE_VULKAN:
                 std::cout << "\n\n\n==================== Running tests in Vulkan mode ====================\n\n";
-                PrintFeatureStates(TestEnvCI.Features);
                 pEnv = CreateTestingEnvironmentVk(TestEnvCI, SCDesc);
                 break;
 #endif
@@ -929,7 +885,6 @@ GPUTestingEnvironment* GPUTestingEnvironment::Initialize(int argc, char** argv)
 #if METAL_SUPPORTED
             case RENDER_DEVICE_TYPE_METAL:
                 std::cout << "\n\n\n==================== Running tests in Metal mode ====================\n\n";
-                PrintFeatureStates(TestEnvCI.Features);
                 pEnv = CreateTestingEnvironmentMtl(TestEnvCI, SCDesc);
                 break;
 #endif
