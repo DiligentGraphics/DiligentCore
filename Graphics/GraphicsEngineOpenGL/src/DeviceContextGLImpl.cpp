@@ -1639,6 +1639,7 @@ void DeviceContextGLImpl::ResolveTextureSubresource(ITexture*                   
     auto  CurrentNativeGLContext = m_ContextState.GetCurrentGLContext();
     auto& FBOCache               = m_pDevice->GetFBOCache(CurrentNativeGLContext);
 
+    GLuint SrcFBOHandle = 0;
     {
         TextureViewDesc SrcTexViewDesc;
         SrcTexViewDesc.ViewType        = TEXTURE_VIEW_RENDER_TARGET;
@@ -1656,8 +1657,8 @@ void DeviceContextGLImpl::ResolveTextureSubresource(ITexture*                   
 
         TextureViewGLImpl* pSrcViews[] = {&SrcTexView};
         const auto&        SrcFBO      = FBOCache.GetFBO(1, pSrcViews, nullptr, m_ContextState);
-        glBindFramebuffer(GL_READ_FRAMEBUFFER, SrcFBO);
-        DEV_CHECK_GL_ERROR("Failed to bind FBO as read framebuffer");
+
+        SrcFBOHandle = SrcFBO;
     }
 
     if (pDstTexGl->GetGLHandle())
@@ -1688,6 +1689,10 @@ void DeviceContextGLImpl::ResolveTextureSubresource(ITexture*                   
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, DefaultFBOHandle);
         DEV_CHECK_GL_ERROR("Failed to bind default FBO as draw framebuffer");
     }
+
+    // NB: FBOCache.GetFBO() overwrites framebuffer bindings if it needs to create a new one
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, SrcFBOHandle);
+    DEV_CHECK_GL_ERROR("Failed to bind FBO as read framebuffer");
 
     const auto& MipAttribs = GetMipLevelProperties(SrcTexDesc, ResolveAttribs.SrcMipLevel);
     glBlitFramebuffer(0, 0, static_cast<GLint>(MipAttribs.LogicalWidth), static_cast<GLint>(MipAttribs.LogicalHeight),
