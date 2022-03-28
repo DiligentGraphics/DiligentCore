@@ -131,6 +131,7 @@ TestingSwapChainVk::TestingSwapChainVk(IReferenceCounters*   pRefCounters,
                                                       Attachments, AttachmentReferences, Subpass);
     res = vkCreateRenderPass(m_vkDevice, &RenderPassCI, nullptr, &m_vkRenderPass);
     VERIFY_EXPR(res >= 0);
+    (void)res;
 
     CreateFramebuffer();
 }

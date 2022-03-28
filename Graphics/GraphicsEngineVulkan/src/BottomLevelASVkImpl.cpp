@@ -96,6 +96,7 @@ BottomLevelASVkImpl::BottomLevelASVkImpl(IReferenceCounters*      pRefCounters,
             }
             DEV_CHECK_ERR(MaxPrimitiveCount <= RTProps.MaxPrimitivesPerBLAS,
                           "Max primitives count (", MaxPrimitiveCount, ") exceeds device limit (", RTProps.MaxPrimitivesPerBLAS, ")");
+            (void)MaxPrimitiveCount;
         }
         else if (m_Desc.pBoxes != nullptr)
         {
@@ -118,6 +119,7 @@ BottomLevelASVkImpl::BottomLevelASVkImpl(IReferenceCounters*      pRefCounters,
             }
             DEV_CHECK_ERR(MaxBoxCount <= RTProps.MaxPrimitivesPerBLAS,
                           "Max box count (", MaxBoxCount, ") exceeds device limit (", RTProps.MaxPrimitivesPerBLAS, ")");
+            (void)MaxBoxCount;
         }
         else
         {
