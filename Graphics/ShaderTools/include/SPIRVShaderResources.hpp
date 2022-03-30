@@ -47,6 +47,12 @@
 #include "RefCntAutoPtr.hpp"
 #include "StringPool.hpp"
 
+#ifdef DILIGENT_SPIRV_CROSS_NAMESPACE
+#    define diligent_spirv_cross DILIGENT_SPIRV_CROSS_NAMESPACE
+#else
+#    define diligent_spirv_cross spirv_cross
+#endif
+
 namespace diligent_spirv_cross
 {
 class Compiler;

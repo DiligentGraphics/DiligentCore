@@ -32,7 +32,7 @@
 #include "DeviceContextVk.h"
 #include "TextureVk.h"
 
-#include "volk/volk.h"
+#include "volk.h"
 
 namespace Diligent
 {

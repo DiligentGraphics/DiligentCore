@@ -32,7 +32,7 @@
 #include "TextureViewVk.h"
 #include "TextureVk.h"
 
-#include "volk/volk.h"
+#include "volk.h"
 
 #include "InlineShaders/DrawCommandTestGLSL.h"
 

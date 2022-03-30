@@ -34,7 +34,7 @@
 
 #if DILIGENT_USE_VOLK
 #    define VOLK_IMPLEMENTATION
-#    include "volk/volk.h"
+#    include "volk.h"
 #endif
 
 #include "VulkanErrors.hpp"

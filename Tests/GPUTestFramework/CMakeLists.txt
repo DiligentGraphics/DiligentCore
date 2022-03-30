@@ -99,7 +99,12 @@ if(PLATFORM_LINUX)
 endif()
 
 if(VULKAN_SUPPORTED)
-    target_include_directories(Diligent-GPUTestFramework PUBLIC ../../ThirdParty ../../ThirdParty/Vulkan-Headers/include)
+    target_include_directories(Diligent-GPUTestFramework
+    PUBLIC
+        ${DILIGENT_VOLK_DIR}
+        ${DILIGENT_VULKAN_HEADERS_DIR}/include
+    )
+
     if(PLATFORM_LINUX)
         target_link_libraries(Diligent-GPUTestFramework
         PUBLIC

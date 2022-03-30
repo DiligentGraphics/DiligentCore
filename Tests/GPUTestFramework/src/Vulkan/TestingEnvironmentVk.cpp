@@ -33,7 +33,7 @@
 #include "GLSLangUtils.hpp"
 
 #define VOLK_IMPLEMENTATION
-#include "volk/volk.h"
+#include "volk.h"
 
 namespace Diligent
 {

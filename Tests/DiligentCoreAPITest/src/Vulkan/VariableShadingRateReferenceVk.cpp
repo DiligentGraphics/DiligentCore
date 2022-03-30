@@ -27,7 +27,7 @@
 #include "Vulkan/TestingEnvironmentVk.hpp"
 #include "Vulkan/TestingSwapChainVk.hpp"
 
-#include "volk/volk.h"
+#include "volk.h"
 
 #include "InlineShaders/VariableShadingRateTestGLSL.h"
 #include "VariableShadingRateTestConstants.hpp"

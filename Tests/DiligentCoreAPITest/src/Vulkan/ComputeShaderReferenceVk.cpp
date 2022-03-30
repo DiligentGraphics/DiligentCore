@@ -30,7 +30,7 @@
 
 #include "DeviceContextVk.h"
 
-#include "volk/volk.h"
+#include "volk.h"
 
 #include "InlineShaders/ComputeShaderTestGLSL.h"
 

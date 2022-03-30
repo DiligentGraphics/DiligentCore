@@ -34,7 +34,7 @@
 
 #include "DeviceContextVk.h"
 
-#include "volk/volk.h"
+#include "volk.h"
 
 #include "InlineShaders/RayTracingTestGLSL.h"
 #include "RayTracingTestConstants.hpp"

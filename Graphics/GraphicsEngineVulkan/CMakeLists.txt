@@ -164,8 +164,8 @@ endif()
 target_include_directories(Diligent-GraphicsEngineVk-static
 PRIVATE
     include
-    ../../ThirdParty
-    ../../ThirdParty/Vulkan-Headers/include
+    ${DILIGENT_VOLK_DIR}
+    ${DILIGENT_VULKAN_HEADERS_DIR}/include
 )
 
 set(PRIVATE_DEPENDENCIES

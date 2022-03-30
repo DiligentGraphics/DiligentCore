@@ -116,14 +116,14 @@ if(VULKAN_SUPPORTED)
     target_include_directories(Diligent-Archiver-static
     PRIVATE
         ../GraphicsEngineVulkan/include
-        ../../ThirdParty/Vulkan-Headers/include
+        ${DILIGENT_VULKAN_HEADERS_DIR}/include
     )
 endif()
 
 if(GL_SUPPORTED OR GLES_SUPPORTED)
     target_link_libraries(Diligent-Archiver-static PRIVATE Diligent-GraphicsEngineOpenGL-static)
     target_include_directories(Diligent-Archiver-static PRIVATE ../GraphicsEngineOpenGL/include)
-    
+
     if(PLATFORM_WIN32)
         target_link_libraries(Diligent-Archiver-static PRIVATE glew-static opengl32.lib)
     elseif(PLATFORM_LINUX)
