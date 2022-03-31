@@ -6,16 +6,18 @@ cmake_minimum_required (VERSION 3.6)
 # instead:
 set(CMAKE_POLICY_DEFAULT_CMP0063 NEW)
 
-if (PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_MACOS)
-    add_subdirectory(glew)
-    if (DILIGENT_INSTALL_CORE)
-        install(TARGETS glew-static
-                ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}/${DILIGENT_CORE_DIR}/$<CONFIG>"
-                LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}/${DILIGENT_CORE_DIR}/$<CONFIG>"
-                RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}/${DILIGENT_CORE_DIR}/$<CONFIG>"
-        )
+if (GL_SUPPORTED AND (PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_MACOS))
+    if (NOT TARGET GLEW::glew)
+        add_subdirectory(glew)
+        if (DILIGENT_INSTALL_CORE)
+            install(TARGETS glew-static
+                    ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}/${DILIGENT_CORE_DIR}/$<CONFIG>"
+                    LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}/${DILIGENT_CORE_DIR}/$<CONFIG>"
+                    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}/${DILIGENT_CORE_DIR}/$<CONFIG>"
+            )
+        endif()
+        install(FILES glew/LICENSE.txt DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME GLEW-License.txt)
     endif()
-    install(FILES glew/LICENSE.txt DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME GLEW-License.txt)
 endif()
 
 if (VULKAN_SUPPORTED OR METAL_SUPPORTED)

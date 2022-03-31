@@ -26,6 +26,7 @@ PUBLIC
 )
 
 target_link_libraries(glew-static PRIVATE Diligent-BuildSettings)
+add_library(GLEW::glew ALIAS glew-static)
 
 if(MSVC)
     target_compile_options(glew-static PRIVATE /wd4456)
