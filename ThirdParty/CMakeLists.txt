@@ -19,17 +19,15 @@ if (PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_MACOS)
 endif()
 
 if (VULKAN_SUPPORTED OR METAL_SUPPORTED)
-    if (NOT DILIGENT_SPIRV_HEADERS_DIR)
-        # We only need to have SPIRV-Headers folder, but we
-        # do not really need any target from the project.
-        set(DILIGENT_SPIRV_HEADERS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/SPIRV-Headers" CACHE PATH "SPIRV-Headers source directory")
-        #add_subdirectory(SPIRV-Headers)
-        #set_directory_root_folder("SPIRV-Headers" "ThirdParty/DiligentCore/SPIRV-Headers")
+    if (NOT TARGET SPIRV-Headers)
+        # Manually add the SPIRV-Headers target as this is all we need and the
+        # project's CMake creates unnecessary install targets
+        add_library(SPIRV-Headers INTERFACE)
+        # Note that SPIRV-Headers_SOURCE_DIR variable is normally created by project(SPIRV-Headers)
+        set(SPIRV-Headers_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/SPIRV-Headers")
+        target_include_directories(SPIRV-Headers INTERFACE "${SPIRV-Headers_SOURCE_DIR}/include")
     endif()
-    if (NOT EXISTS "${DILIGENT_SPIRV_HEADERS_DIR}/LICENSE")
-        message(FATAL_ERROR "${DILIGENT_SPIRV_HEADERS_DIR}/LICENSE does not exist. This indicates that SPIRV-Headers submodule is not checked out or DILIGENT_SPIRV_HEADERS_DIR variable contains invalid path.")
-    endif()
-    install(FILES "${DILIGENT_SPIRV_HEADERS_DIR}/LICENSE" DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME SPIRV-Headers-License.txt)
+    install(FILES "${SPIRV-Headers_SOURCE_DIR}/LICENSE" DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME SPIRV-Headers-License.txt)
 
     if (NOT DILIGENT_VULKAN_HEADERS_DIR)
         set(DILIGENT_VULKAN_HEADERS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vulkan-Headers" CACHE PATH "Vulkan-Headers source directory")
@@ -44,7 +42,6 @@ if (VULKAN_SUPPORTED OR METAL_SUPPORTED)
 
     if (NOT (${DILIGENT_NO_GLSLANG} AND ${DILIGENT_NO_HLSL}))
         if (NOT TARGET SPIRV-Tools-static)
-            set(SPIRV-Headers_SOURCE_DIR "${DILIGENT_SPIRV_HEADERS_DIR}")
             set(SPIRV_SKIP_TESTS ON CACHE BOOL "Skip SPIRV tests")
             set(SPIRV_BUILD_COMPRESSION OFF CACHE BOOL "Do not build SPIRV compressing codec")
             set(SPIRV_SKIP_EXECUTABLES ON CACHE BOOL "Skip building SPIRV executable and tests along with the library")
