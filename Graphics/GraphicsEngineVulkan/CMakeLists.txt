@@ -165,7 +165,6 @@ target_include_directories(Diligent-GraphicsEngineVk-static
 PRIVATE
     include
     ${DILIGENT_VOLK_DIR}
-    ${DILIGENT_VULKAN_HEADERS_DIR}/include
 )
 
 set(PRIVATE_DEPENDENCIES
@@ -174,6 +173,7 @@ set(PRIVATE_DEPENDENCIES
     Diligent-TargetPlatform
     Diligent-GraphicsEngineNextGenBase
     Diligent-ShaderTools
+    Vulkan-Headers
 )
 
 if (${DILIGENT_NO_HLSL})

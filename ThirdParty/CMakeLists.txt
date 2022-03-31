@@ -29,13 +29,15 @@ if (VULKAN_SUPPORTED OR METAL_SUPPORTED)
     endif()
     install(FILES "${SPIRV-Headers_SOURCE_DIR}/LICENSE" DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME SPIRV-Headers-License.txt)
 
-    if (NOT DILIGENT_VULKAN_HEADERS_DIR)
-        set(DILIGENT_VULKAN_HEADERS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vulkan-Headers" CACHE PATH "Vulkan-Headers source directory")
+    if (NOT TARGET Vulkan-Headers)
+        # Manually add the Vulkan-Headers target as this is all we need and the
+        # project's CMake creates unnecessary targets
+        add_library(Vulkan-Headers INTERFACE)
+        # Vulkan-Headers_SOURCE_DIR variable is normally created by project(Vulkan-Headers)
+        set(Vulkan-Headers_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vulkan-Headers")
+        target_include_directories(Vulkan-Headers INTERFACE "${Vulkan-Headers_SOURCE_DIR}/include")
     endif()
-    if (NOT EXISTS "${DILIGENT_VULKAN_HEADERS_DIR}/include/vulkan/vulkan.h")
-        message(FATAL_ERROR "${DILIGENT_VULKAN_HEADERS_DIR}/include/vulkan/vulkan.h does not exist. This indicates that Vulkan-Headers submodule is not checked out or DILIGENT_VULKAN_HEADERS_DIR variable contains invalid path.")
-    endif()
-    install(FILES "${DILIGENT_VULKAN_HEADERS_DIR}/LICENSE.txt" DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME Vulkan-Headers-License.txt)
+    install(FILES "${Vulkan-Headers_SOURCE_DIR}/LICENSE.txt" DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME Vulkan-Headers-License.txt)
 
     option(DILIGENT_NO_GLSLANG "Do NOT build glslang compiler" OFF)
     option(DILIGENT_IMPROVE_SPIRV_TOOLS_DEBUG_PERF "Enable some optimizations for SPIRV-Tools, glslang, SPIRV-Cross and related projects in debug build to improve performance" ON)
