@@ -130,6 +130,21 @@ if (VULKAN_SUPPORTED OR METAL_SUPPORTED)
      )
 endif()
 
+if (VULKAN_SUPPORTED AND (PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_MACOS OR PLATFORM_ANDROID))
+    if (NOT TARGET volk)
+        set(VOLK_PULL_IN_VULKAN OFF)
+        set(VOLK_INSTALL OFF)
+        add_subdirectory(volk)
+        set_target_properties(volk
+        PROPERTIES
+            EXCLUDE_FROM_ALL 1
+            EXCLUDE_FROM_DEFAULT_BUILD 1
+            FOLDER "DiligentCore/ThirdParty/volk"
+        )
+    endif()
+    install(FILES "${volk_SOURCE_DIR}/LICENSE.md" DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME Volk-License.md)
+endif()
+
 if (${DILIGENT_BUILD_GOOGLE_TEST})
     if (NOT TARGET gtest)
         set(INSTALL_GTEST OFF CACHE BOOL "Do not install googletest")
@@ -155,14 +170,6 @@ if (NOT TARGET xxHash::xxhash)
     set_directory_root_folder("xxHash/cmake_unofficial" "DiligentCore/ThirdParty/xxHash")
 endif()
 install(FILES "${xxHash_SOURCE_DIR}/../LICENSE" DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME xxHash-License.txt)
-
-if (NOT DILIGENT_VOLK_DIR)
-    set(DILIGENT_VOLK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/volk" CACHE PATH "volk source directory")
-endif()
-if (NOT EXISTS "${DILIGENT_VOLK_DIR}/volk.h")
-    message(FATAL_ERROR "${DILIGENT_VOLK_DIR}/volk.h does not exist. This indicates that volk submodule is not checked out or DILIGENT_VOLK_DIR variable contains invalid path.")
-endif()
-install(FILES "${DILIGENT_VOLK_DIR}/LICENSE.md" DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME Volk-License.md)
 
 install(FILES stb/stb_image_write_license.txt DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}")
 install(FILES DirectXShaderCompiler/LICENSE.TXT DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME DXC-License.txt)

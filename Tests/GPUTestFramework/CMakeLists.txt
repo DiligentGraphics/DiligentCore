@@ -99,13 +99,11 @@ if(PLATFORM_LINUX)
 endif()
 
 if(VULKAN_SUPPORTED)
-    target_include_directories(Diligent-GPUTestFramework PUBLIC ${DILIGENT_VOLK_DIR})
-    target_link_libraries(Diligent-GPUTestFramework PUBLIC Vulkan-Headers)
+    target_link_libraries(Diligent-GPUTestFramework PUBLIC Vulkan-Headers volk_headers)
     
     if(PLATFORM_LINUX)
         target_link_libraries(Diligent-GPUTestFramework
         PUBLIC
-            dl # Required by Volk
             xcb
         )
     endif()

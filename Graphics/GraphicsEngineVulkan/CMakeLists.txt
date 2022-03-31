@@ -164,7 +164,6 @@ endif()
 target_include_directories(Diligent-GraphicsEngineVk-static
 PRIVATE
     include
-    ${DILIGENT_VOLK_DIR}
 )
 
 set(PRIVATE_DEPENDENCIES
@@ -247,9 +246,9 @@ else()
 endif()
 
 if(PLATFORM_WIN32)
-    # Use Volk
+    list(APPEND PRIVATE_DEPENDENCIES volk_headers)
 elseif(PLATFORM_MACOS)
-    # Use Volk
+    list(APPEND PRIVATE_DEPENDENCIES volk_headers)
 elseif(PLATFORM_IOS OR PLATFORM_TVOS)
     find_library(CORE_GRAPHICS CoreGraphics)
     find_library(METAL_LIBRARY Metal)
@@ -257,10 +256,9 @@ elseif(PLATFORM_IOS OR PLATFORM_TVOS)
     find_library(UI_KIT UIKit)
     list(APPEND PRIVATE_DEPENDENCIES ${MOLTENVK_LIBRARY} ${CORE_GRAPHICS} ${METAL_LIBRARY} ${QUARTZ_CORE} ${UI_KIT})
 elseif(PLATFORM_LINUX)
-    # Use Volk
-    list(APPEND PRIVATE_DEPENDENCIES dl)
+    list(APPEND PRIVATE_DEPENDENCIES volk_headers)
 elseif(PLATFORM_ANDROID)
-    # Use Volk
+    list(APPEND PRIVATE_DEPENDENCIES volk_headers)
 else()
     find_library(Vulkan_LIBRARY NAMES vulkan)
     list(APPEND PRIVATE_DEPENDENCIES ${Vulkan_LIBRARY})
