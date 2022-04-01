@@ -254,6 +254,7 @@ elseif(PLATFORM_IOS OR PLATFORM_TVOS)
     find_library(METAL_LIBRARY Metal)
     find_library(QUARTZ_CORE QuartzCore)
     find_library(UI_KIT UIKit)
+    # Note that volk may be defined by external CMake, but we don't use it on iOS/tvOS
     list(APPEND PRIVATE_DEPENDENCIES ${MOLTENVK_LIBRARY} ${CORE_GRAPHICS} ${METAL_LIBRARY} ${QUARTZ_CORE} ${UI_KIT})
 elseif(PLATFORM_LINUX)
     list(APPEND PRIVATE_DEPENDENCIES volk::volk_headers)
