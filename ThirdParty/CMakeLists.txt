@@ -31,12 +31,13 @@ if (VULKAN_SUPPORTED OR METAL_SUPPORTED)
     endif()
     install(FILES "${SPIRV-Headers_SOURCE_DIR}/LICENSE" DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME SPIRV-Headers-License.txt)
 
-    if (NOT TARGET Vulkan-Headers)
+    if (NOT TARGET Vulkan::Headers)
         # Manually add the Vulkan-Headers target as this is all we need and the
         # project's CMake creates unnecessary targets
         add_library(Vulkan-Headers INTERFACE)
         # Vulkan-Headers_SOURCE_DIR variable is normally created by project(Vulkan-Headers)
         set(Vulkan-Headers_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vulkan-Headers")
+        add_library(Vulkan::Headers ALIAS Vulkan-Headers)
         target_include_directories(Vulkan-Headers INTERFACE "${Vulkan-Headers_SOURCE_DIR}/include")
     endif()
     install(FILES "${Vulkan-Headers_SOURCE_DIR}/LICENSE.txt" DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME Vulkan-Headers-License.txt)
@@ -133,7 +134,7 @@ if (VULKAN_SUPPORTED OR METAL_SUPPORTED)
 endif()
 
 if (VULKAN_SUPPORTED AND (PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_MACOS OR PLATFORM_ANDROID))
-    if (NOT TARGET volk)
+    if (NOT TARGET volk::volk)
         set(VOLK_PULL_IN_VULKAN OFF)
         set(VOLK_INSTALL OFF)
         add_subdirectory(volk)

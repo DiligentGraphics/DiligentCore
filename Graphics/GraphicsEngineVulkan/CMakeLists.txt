@@ -172,7 +172,7 @@ set(PRIVATE_DEPENDENCIES
     Diligent-TargetPlatform
     Diligent-GraphicsEngineNextGenBase
     Diligent-ShaderTools
-    Vulkan-Headers
+    Vulkan::Headers
 )
 
 if (${DILIGENT_NO_HLSL})
@@ -246,9 +246,9 @@ else()
 endif()
 
 if(PLATFORM_WIN32)
-    list(APPEND PRIVATE_DEPENDENCIES volk_headers)
+    list(APPEND PRIVATE_DEPENDENCIES volk::volk_headers)
 elseif(PLATFORM_MACOS)
-    list(APPEND PRIVATE_DEPENDENCIES volk_headers)
+    list(APPEND PRIVATE_DEPENDENCIES volk::volk_headers)
 elseif(PLATFORM_IOS OR PLATFORM_TVOS)
     find_library(CORE_GRAPHICS CoreGraphics)
     find_library(METAL_LIBRARY Metal)
@@ -256,9 +256,9 @@ elseif(PLATFORM_IOS OR PLATFORM_TVOS)
     find_library(UI_KIT UIKit)
     list(APPEND PRIVATE_DEPENDENCIES ${MOLTENVK_LIBRARY} ${CORE_GRAPHICS} ${METAL_LIBRARY} ${QUARTZ_CORE} ${UI_KIT})
 elseif(PLATFORM_LINUX)
-    list(APPEND PRIVATE_DEPENDENCIES volk_headers)
+    list(APPEND PRIVATE_DEPENDENCIES volk::volk_headers)
 elseif(PLATFORM_ANDROID)
-    list(APPEND PRIVATE_DEPENDENCIES volk_headers)
+    list(APPEND PRIVATE_DEPENDENCIES volk::volk_headers)
 else()
     find_library(Vulkan_LIBRARY NAMES vulkan)
     list(APPEND PRIVATE_DEPENDENCIES ${Vulkan_LIBRARY})

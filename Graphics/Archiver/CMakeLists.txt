@@ -112,7 +112,7 @@ if(D3D12_SUPPORTED)
 endif()
 
 if(VULKAN_SUPPORTED)
-    target_link_libraries(Diligent-Archiver-static PRIVATE Diligent-GraphicsEngineVk-static Vulkan-Headers)
+    target_link_libraries(Diligent-Archiver-static PRIVATE Diligent-GraphicsEngineVk-static Vulkan::Headers)
     target_include_directories(Diligent-Archiver-static
     PRIVATE
         ../GraphicsEngineVulkan/include
