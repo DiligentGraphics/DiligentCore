@@ -340,8 +340,8 @@ An important member is `ShaderCreateInfo::SourceLanguage`. The following are val
 * `SHADER_SOURCE_LANGUAGE_HLSL`    - The shader source is in HLSL. For OpenGL and OpenGLES modes, the source code will be 
                                      converted to GLSL. In Vulkan back-end, the code will be compiled to SPIRV directly.
 * `SHADER_SOURCE_LANGUAGE_GLSL`    - The shader source is in GLSL.
-* `SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM` - The shader source language is GLSL and should be compiled verbatim
-* `SHADER_SOURCE_LANGUAGE_MSL`     - The source language is Metal Shading Language
+* `SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM` - The shader source language is GLSL and should be compiled verbatim.
+* `SHADER_SOURCE_LANGUAGE_MSL`     - The source language is Metal Shading Language.
 
 Other members of the `ShaderCreateInfo` structure define the shader include search directories, shader macro definitions,
 shader entry point and other parameters.
