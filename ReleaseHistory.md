@@ -1,4 +1,4 @@
-## Current progress
+## v2.5.2
 
 * Added `SamplerDesc::UnnormalizedCoords` parameter (API Version 250014)
 * Added device object serialization/deserialization (API Version 250013)

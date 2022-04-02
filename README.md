@@ -83,7 +83,7 @@ void InitializeDiligentEngine(HWND NativeWindowHandle)
     // RefCntAutoPtr<ISwapChain>     m_pSwapChain;
     switch (m_DeviceType)
     {
-        case DeviceType::D3D11:
+        case RENDER_DEVICE_TYPE_D3D11:
         {
             EngineD3D11CreateInfo EngineCI;
 #    if ENGINE_DLL
@@ -98,7 +98,7 @@ void InitializeDiligentEngine(HWND NativeWindowHandle)
         }
         break;
 
-        case DeviceType::D3D12:
+        case RENDER_DEVICE_TYPE_D3D12:
         {
 #    if ENGINE_DLL
             // Load the dll and import GetEngineFactoryD3D12() function
@@ -114,7 +114,7 @@ void InitializeDiligentEngine(HWND NativeWindowHandle)
         }
         break;
 
-    case DeviceType::OpenGL:
+    case RENDER_DEVICE_TYPE_GL:
     {
 #    if EXPLICITLY_LOAD_ENGINE_GL_DLL
         // Load the dll and import GetEngineFactoryOpenGL() function
@@ -130,7 +130,7 @@ void InitializeDiligentEngine(HWND NativeWindowHandle)
     }
     break;
 
-    case DeviceType::Vulkan:
+    case RENDER_DEVICE_TYPE_VULKAN:
     {
 #    if EXPLICITLY_LOAD_ENGINE_VK_DLL
         // Load the dll and import GetEngineFactoryVk() function
@@ -151,9 +151,9 @@ void InitializeDiligentEngine(HWND NativeWindowHandle)
 }
 ```
 
-On Windows, the engine can be statically linked to the application or built as a separate DLL. In the former case,
+On Windows, the engine can be statically linked to the application or built as a separate DLL. In the first case,
 factory functions `GetEngineFactoryOpenGL()`, `GetEngineFactoryD3D11()`, `GetEngineFactoryD3D12()`, and `GetEngineFactoryVk()`
-can be called directly. In the latter case, you need to load the DLL into the process's address space using `LoadGraphicsEngineOpenGL()`,
+can be called directly. In the second case, you need to load the DLL into the process's address space using `LoadGraphicsEngineOpenGL()`,
 `LoadGraphicsEngineD3D11()`, `LoadGraphicsEngineD3D12()`, or `LoadGraphicsEngineVk()` function. Each function loads appropriate
 dynamic library and imports the functions required to initialize the engine. You need to include the following headers:
 
@@ -232,7 +232,7 @@ pFactoryOpenGL->CreateDeviceAndSwapChainGL(
     EngineCI, &m_pDevice, &m_pContext, SCDesc, &m_pSwapChain);
 ```
 
-If engine is built as dynamic library, the library needs to be loaded by the native activity. The following code shows one possible way:
+If the engine is built as dynamic library, the library needs to be loaded by the native activity. The following code shows one possible way:
 
 ```java
 static
@@ -301,7 +301,7 @@ TexDesc.Height    = 1024;
 TexDesc.Format    = TEX_FORMAT_RGBA8_UNORM;
 TexDesc.Usage     = USAGE_DEFAULT;
 TexDesc.BindFlags = BIND_SHADER_RESOURCE | BIND_RENDER_TARGET | BIND_UNORDERED_ACCESS;
-TexDesc.Name = "Sample 2D Texture";
+TexDesc.Name      = "Sample 2D Texture";
 m_pRenderDevice->CreateTexture(TexDesc, nullptr, &m_pTestTex);
 ```
 
@@ -312,7 +312,7 @@ For every bind flag specified during the texture creation time, the texture obje
 Default shader resource view addresses the entire texture, default render target and depth stencil views reference
 all array slices in the most detailed mip level, and unordered access view references the entire texture. To get a
 default view from the texture, use `ITexture::GetDefaultView()` function. Note that this function does not increment
-the reference counter on the returned interface. You can create additional texture views using `ITexture::CreateView()`.
+the reference counter of the returned interface. You can create additional texture views using `ITexture::CreateView()`.
 Use `IBuffer::CreateView()` to create additional views of a buffer.
 
 <a name="creating_shaders"></a>
@@ -324,8 +324,9 @@ To create a shader, populate `ShaderCreateInfo` structure:
 ShaderCreateInfo ShaderCI;
 ```
 
-There are two ways to create a shader. The first way is to provide a pointer to the shader source code through 
-`ShaderCreateInfo::Source` member. The second way is to provide a file name. Graphics Engine is entirely decoupled
+There are three ways to create a shader. The first way is to provide a pointer to the shader source code through 
+`ShaderCreateInfo::Source` member. The second way is to provide a file name. The third way is to provide a pointer
+to the compiled byte code through `ShaderCreateInfo::ByteCode` member. Graphics Engine is entirely decoupled
 from the platform. Since the host file system is platform-dependent, the structure exposes
 `ShaderCreateInfo::pShaderSourceStreamFactory` member that is intended to give the engine access to the file system.
 If you provided the source file name, you must also provide a non-null pointer to the shader source stream factory.
@@ -339,8 +340,10 @@ An important member is `ShaderCreateInfo::SourceLanguage`. The following are val
 * `SHADER_SOURCE_LANGUAGE_HLSL`    - The shader source is in HLSL. For OpenGL and OpenGLES modes, the source code will be 
                                      converted to GLSL. In Vulkan back-end, the code will be compiled to SPIRV directly.
 * `SHADER_SOURCE_LANGUAGE_GLSL`    - The shader source is in GLSL.
+* `SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM` - The shader source language is GLSL and should be compiled verbatim
+* `SHADER_SOURCE_LANGUAGE_MSL`     - The source language is Metal Shading Language
 
-Other members of the `ShaderCreateInfo` structure define shader include search directories, shader macro definitions,
+Other members of the `ShaderCreateInfo` structure define the shader include search directories, shader macro definitions,
 shader entry point and other parameters.
 
 ```cpp
@@ -504,6 +507,9 @@ ImtblSampler.TextureName    = "g_MutableTexture";
 PSODesc.ResourceLayout.NumImmutableSamplers = 1;
 PSODesc.ResourceLayout.ImmutableSamplers    = &ImtblSampler;
 ```
+
+[This document](https://github.com/DiligentGraphics/DiligentCore/blob/master/doc/TextureSamplers.md) provides a detailed
+information about working with texture samplers.
 
 When all required fields of PSO description structure are set, call `IRenderDevice::CreateGraphicsPipelineState()`
 to create the PSO object:
@@ -720,7 +726,7 @@ In submitting any content to this repository,
 and you agree that the content is free of any Intellectual Property claims and you have the right to license it under those terms. 
 
 Diligent Engine uses [clang-format](https://clang.llvm.org/docs/ClangFormat.html) to ensure
-consistent source code style throughout the code base. The format is validated by appveyor and travis
+consistent source code style throughout the code base. The format is validated by CI
 for each commit and pull request, and the build will fail if any code formatting issue is found. Please refer
 to [this page](https://github.com/DiligentGraphics/DiligentCore/blob/master/doc/code_formatting.md) for instructions
 on how to set up clang-format and automatic code formatting.
