@@ -30,6 +30,8 @@
 /// \file
 /// Implementation of the template base class for reference counting objects
 
+#include <atomic>
+
 #include "../../Primitives/interface/Object.h"
 #include "../../Primitives/interface/MemoryAllocator.h"
 #include "../../Platforms/interface/Atomics.hpp"
@@ -58,7 +60,7 @@ public:
         VERIFY(m_ObjectWrapperBuffer[0] != 0 && m_ObjectWrapperBuffer[1] != 0, "Object wrapper is not initialized");
 
         // Decrement strong reference counter without acquiring the lock.
-        auto RefCount = Atomics::AtomicDecrement(m_lNumStrongReferences);
+        const auto RefCount = Atomics::AtomicDecrement(m_lNumStrongReferences);
         VERIFY(RefCount >= 0, "Inconsistent call to ReleaseStrongRef()");
         if (RefCount == 0)
         {
@@ -82,12 +84,12 @@ public:
     inline virtual ReferenceCounterValueType ReleaseWeakRef() override final
     {
         // The method must be serialized!
-        ThreadingTools::LockHelper Lock(m_LockFlag);
+        ThreadingTools::LockHelper Lock{m_LockFlag};
         // It is essentially important to check the number of weak references
         // while holding the lock. Otherwise reference counters object
         // may be destroyed twice if ReleaseStrongRef() is executed by other
         // thread.
-        auto NumWeakReferences = Atomics::AtomicDecrement(m_lNumWeakReferences);
+        const auto NumWeakReferences = Atomics::AtomicDecrement(m_lNumWeakReferences);
         VERIFY(NumWeakReferences >= 0, "Inconsistent call to ReleaseWeakRef()");
 
         // There are two special case when we must not destroy the ref counters object even
@@ -172,9 +174,9 @@ public:
         //    Destroy the object               |                                   | -Return reference to the soon
         //                                     |                                   |  to expire object
         //
-        ThreadingTools::LockHelper Lock(m_LockFlag);
+        ThreadingTools::LockHelper Lock{m_LockFlag};
 
-        auto StrongRefCnt = Atomics::AtomicIncrement(m_lNumStrongReferences);
+        const auto StrongRefCnt = Atomics::AtomicIncrement(m_lNumStrongReferences);
 
         // Checking if m_ObjectState == ObjectState::Alive only is not reliable:
         //
@@ -265,8 +267,8 @@ private:
     {
         VERIFY(m_ObjectState == ObjectState::NotInitialized, "Object has already been attached");
         static_assert(sizeof(ObjectWrapper<ObjectType, AllocatorType>) == sizeof(m_ObjectWrapperBuffer), "Unexpected object wrapper size");
-        new (m_ObjectWrapperBuffer) ObjectWrapper<ObjectType, AllocatorType>(pObject, pAllocator);
-        m_ObjectState = ObjectState::Alive;
+        new (m_ObjectWrapperBuffer) ObjectWrapper<ObjectType, AllocatorType>{pObject, pAllocator};
+        m_ObjectState.store(ObjectState::Alive);
     }
 
     void TryDestroyObject()
@@ -359,7 +361,7 @@ private:
 #endif
 
         // Acquire the lock.
-        ThreadingTools::LockHelper Lock(m_LockFlag);
+        ThreadingTools::LockHelper Lock{m_LockFlag};
 
         // QueryObject() first acquires the lock, and only then increments and
         // decrements the ref counter. If it reads 1 after incrementing the counter,
@@ -400,7 +402,7 @@ private:
 
             // Note that this is the only place where m_ObjectState is
             // modified after the ref counters object has been created
-            m_ObjectState = ObjectState::Destroyed;
+            m_ObjectState.store(ObjectState::Destroyed);
             // The object is now detached from the reference counters, and it is if
             // it was destroyed since no one can obtain access to it.
 
@@ -424,7 +426,7 @@ private:
             // 2. Read m_lNumWeakReferences == 0   |
             // 3. Destroy the ref counters obj     |   2. Destroy the ref counters obj
             //
-            bool bDestroyThis = m_lNumWeakReferences == 0;
+            const auto bDestroyThis = m_lNumWeakReferences == 0;
             // ReleaseWeakRef() decrements m_lNumWeakReferences, and checks it for
             // zero only after acquiring the lock. So if m_lNumWeakReferences==0, no
             // weak reference-related code may be running
@@ -486,7 +488,7 @@ private:
         Alive,
         Destroyed
     };
-    volatile ObjectState m_ObjectState = ObjectState::NotInitialized;
+    std::atomic<ObjectState> m_ObjectState{ObjectState::NotInitialized};
 };
 
 
