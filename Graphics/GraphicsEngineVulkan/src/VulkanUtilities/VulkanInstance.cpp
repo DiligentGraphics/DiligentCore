@@ -234,9 +234,9 @@ VulkanInstance::VulkanInstance(const CreateInfo& CI) :
             // New enums are not supported and may cause validation error.
             if (LayerVer < VK_HEADER_VERSION_COMPLETE)
             {
-                LOG_WARNING_MESSAGE("Layer '", pLayerName, "' version (", VK_VERSION_MAJOR(LayerVer), ".", VK_VERSION_MINOR(LayerVer), ".", VK_VERSION_PATCH(LayerVer),
+                LOG_WARNING_MESSAGE("Layer '", pLayerName, "' version (", VK_API_VERSION_MAJOR(LayerVer), ".", VK_API_VERSION_MINOR(LayerVer), ".", VK_API_VERSION_PATCH(LayerVer),
                                     ") is less than header version (",
-                                    VK_VERSION_MAJOR(VK_HEADER_VERSION_COMPLETE), ".", VK_VERSION_MINOR(VK_HEADER_VERSION_COMPLETE), ".", VK_VERSION_PATCH(VK_HEADER_VERSION_COMPLETE),
+                                    VK_API_VERSION_MAJOR(VK_HEADER_VERSION_COMPLETE), ".", VK_API_VERSION_MINOR(VK_HEADER_VERSION_COMPLETE), ".", VK_API_VERSION_PATCH(VK_HEADER_VERSION_COMPLETE),
                                     ").");
             }
         }
@@ -374,13 +374,13 @@ VkPhysicalDevice VulkanInstance::SelectPhysicalDevice(uint32_t AdapterId) const
         vkGetPhysicalDeviceProperties(SelectedPhysicalDevice, &SelectedDeviceProps);
         LOG_INFO_MESSAGE("Using physical device '", SelectedDeviceProps.deviceName,
                          "', API version ",
-                         VK_VERSION_MAJOR(SelectedDeviceProps.apiVersion), '.',
-                         VK_VERSION_MINOR(SelectedDeviceProps.apiVersion), '.',
-                         VK_VERSION_PATCH(SelectedDeviceProps.apiVersion),
+                         VK_API_VERSION_MAJOR(SelectedDeviceProps.apiVersion), '.',
+                         VK_API_VERSION_MINOR(SelectedDeviceProps.apiVersion), '.',
+                         VK_API_VERSION_PATCH(SelectedDeviceProps.apiVersion),
                          ", Driver version ",
-                         VK_VERSION_MAJOR(SelectedDeviceProps.driverVersion), '.',
-                         VK_VERSION_MINOR(SelectedDeviceProps.driverVersion), '.',
-                         VK_VERSION_PATCH(SelectedDeviceProps.driverVersion), '.');
+                         VK_API_VERSION_MAJOR(SelectedDeviceProps.driverVersion), '.',
+                         VK_API_VERSION_MINOR(SelectedDeviceProps.driverVersion), '.',
+                         VK_API_VERSION_PATCH(SelectedDeviceProps.driverVersion), '.');
     }
     else
     {

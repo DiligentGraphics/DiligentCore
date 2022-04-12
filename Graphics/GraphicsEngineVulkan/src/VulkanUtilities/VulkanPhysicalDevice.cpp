@@ -73,7 +73,7 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice      vkDevice,
     m_VkVersion = std::min(Instance.GetVersion(), m_Properties.apiVersion);
 
     // remove patch version
-    m_VkVersion &= ~VK_MAKE_VERSION(0, 0, VK_VERSION_PATCH(~0u));
+    m_VkVersion &= ~VK_MAKE_VERSION(0, 0, VK_API_VERSION_PATCH(~0u));
 
 #if DILIGENT_USE_VOLK
     if (Instance.IsExtensionEnabled(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME))
