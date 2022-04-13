@@ -527,11 +527,15 @@ bool VerifyStateTransitionDesc(const IRenderDevice*       pDevice,
     CHECK_STATE_TRANSITION_DESC((ImmediateContextMask & (Uint64{1} << Uint64{ExecutionCtxId})) != 0,
                                 "resource was created with ImmediateContextMask 0x", std::hex, ImmediateContextMask, " and can not be used in device context '", CtxDesc.Name, "'.");
 
+    if (OldState == RESOURCE_STATE_UNORDERED_ACCESS && Barrier.NewState == RESOURCE_STATE_UNORDERED_ACCESS)
+    {
+        CHECK_STATE_TRANSITION_DESC(Barrier.TransitionType == STATE_TRANSITION_TYPE_IMMEDIATE,
+                                    "for UAV barriers, transition type must be STATE_TRANSITION_TYPE_IMMEDIATE.");
+    }
+
     switch (Barrier.TransitionType)
     {
         case STATE_TRANSITION_TYPE_IMMEDIATE:
-            CHECK_STATE_TRANSITION_DESC(!(OldState == RESOURCE_STATE_UNORDERED_ACCESS && Barrier.NewState == RESOURCE_STATE_UNORDERED_ACCESS),
-                                        "for UAV barriers, transition type must be STATE_TRANSITION_TYPE_IMMEDIATE.");
             break;
 
         case STATE_TRANSITION_TYPE_BEGIN:
