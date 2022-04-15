@@ -1040,6 +1040,22 @@ DILIGENT_TYPED_ENUM(PRIMITIVE_TOPOLOGY, Uint8)
     /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_LINESTRIP. OpenGL counterpart: GL_LINE_STRIP.
     PRIMITIVE_TOPOLOGY_LINE_STRIP,
 
+    /// Interpret the vertex data as a list of triangles with adjacency data.\n
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST_ADJ. OpenGL counterpart: GL_TRIANGLES_ADJACENCY.
+    PRIMITIVE_TOPOLOGY_TRIANGLE_LIST_ADJ,
+
+    /// Interpret the vertex data as a triangle strip with adjacency data.\n
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP_ADJ. OpenGL counterpart: GL_TRIANGLE_STRIP_ADJACENCY.
+    PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP_ADJ,
+
+    /// Interpret the vertex data as a list of lines with adjacency data.\n
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_LINELIST_ADJ. OpenGL counterpart: GL_LINES_ADJACENCY.
+    PRIMITIVE_TOPOLOGY_LINE_LIST_ADJ,
+
+    /// Interpret the vertex data as a line strip with adjacency data.\n
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_LINESTRIP_ADJ. OpenGL counterpart: GL_LINE_STRIP_ADJACENCY.
+    PRIMITIVE_TOPOLOGY_LINE_STRIP_ADJ,
+
     /// Interpret the vertex data as a list of one control point patches.\n
     /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
     PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST,
