@@ -33,6 +33,120 @@ using namespace Diligent;
 namespace
 {
 
+TEST(Platforms_FileSystem, SplitPath)
+{
+    auto TestSplitPath = [](const char* Path, bool Simplify, std::vector<std::string> RefComponents) {
+        const auto Components = FileSystem::SplitPath(Path, Simplify);
+        EXPECT_EQ(Components.size(), RefComponents.size());
+        if (Components.size() != RefComponents.size())
+            return;
+        for (size_t i = 0; i < RefComponents.size(); ++i)
+        {
+            EXPECT_EQ(Components[i], RefComponents[i]);
+        }
+    };
+
+    TestSplitPath("", true, {});
+    TestSplitPath("", false, {});
+
+    TestSplitPath("/", true, {});
+    TestSplitPath("\\", true, {});
+    TestSplitPath("/", false, {});
+    TestSplitPath("\\", false, {});
+
+    TestSplitPath("a/", true, {"a"});
+    TestSplitPath("a\\", true, {"a"});
+    TestSplitPath("a/", false, {"a"});
+    TestSplitPath("a\\", false, {"a"});
+
+    TestSplitPath("/a", true, {"a"});
+    TestSplitPath("\\a", true, {"a"});
+    TestSplitPath("/a", false, {"a"});
+    TestSplitPath("\\a", false, {"a"});
+
+    TestSplitPath("/a/", true, {"a"});
+    TestSplitPath("\\a/", true, {"a"});
+    TestSplitPath("/a/", false, {"a"});
+    TestSplitPath("\\a/", false, {"a"});
+
+    TestSplitPath("a/b", true, {"a", "b"});
+    TestSplitPath("a\\b", true, {"a", "b"});
+    TestSplitPath("a//b", true, {"a", "b"});
+    TestSplitPath("a\\\\b", true, {"a", "b"});
+    TestSplitPath("a/b", false, {"a", "b"});
+    TestSplitPath("a\\b", false, {"a", "b"});
+    TestSplitPath("a//b", false, {"a", "b"});
+    TestSplitPath("a\\\\b", false, {"a", "b"});
+
+    TestSplitPath("a/./b", true, {"a", "b"});
+    TestSplitPath("a\\.\\b", true, {"a", "b"});
+    TestSplitPath("a/./b", false, {"a", ".", "b"});
+    TestSplitPath("a\\.\\b", false, {"a", ".", "b"});
+
+    TestSplitPath("./a", true, {"a"});
+    TestSplitPath(".\\a", true, {"a"});
+    TestSplitPath("./a", false, {".", "a"});
+    TestSplitPath(".\\a", false, {".", "a"});
+
+    TestSplitPath("a/.", true, {"a"});
+    TestSplitPath("a\\.", true, {"a"});
+    TestSplitPath("a/.", false, {"a", "."});
+    TestSplitPath("a\\.", false, {"a", "."});
+
+    TestSplitPath("a./b", true, {"a.", "b"});
+    TestSplitPath("a.\\b", true, {"a.", "b"});
+    TestSplitPath("a./b", false, {"a.", "b"});
+    TestSplitPath("a.\\b", false, {"a.", "b"});
+
+    TestSplitPath("a/.b", true, {"a", ".b"});
+    TestSplitPath("a\\.b", true, {"a", ".b"});
+    TestSplitPath("a/.b", false, {"a", ".b"});
+    TestSplitPath("a\\.b", false, {"a", ".b"});
+
+    TestSplitPath("a.b/c", true, {"a.b", "c"});
+    TestSplitPath("a.b\\c", true, {"a.b", "c"});
+    TestSplitPath("a.b/c", false, {"a.b", "c"});
+    TestSplitPath("a.b\\c", false, {"a.b", "c"});
+
+    TestSplitPath("..", true, {".."});
+    TestSplitPath("../a", true, {"..", "a"});
+    TestSplitPath("..\\a", true, {"..", "a"});
+    TestSplitPath("..", false, {".."});
+    TestSplitPath("../a", false, {"..", "a"});
+    TestSplitPath("..\\a", false, {"..", "a"});
+
+    TestSplitPath("a/..", true, {});
+    TestSplitPath("a\\..", true, {});
+    TestSplitPath("a/..", false, {"a", ".."});
+    TestSplitPath("a\\..", false, {"a", ".."});
+
+    TestSplitPath("a/b/../c", true, {"a", "c"});
+    TestSplitPath("a\\b\\..\\c", true, {"a", "c"});
+    TestSplitPath("a/b/../c", false, {"a", "b", "..", "c"});
+    TestSplitPath("a\\b\\..\\c", false, {"a", "b", "..", "c"});
+
+    TestSplitPath("a../b", true, {"a..", "b"});
+    TestSplitPath("a..\\b", true, {"a..", "b"});
+    TestSplitPath("a../b", false, {"a..", "b"});
+    TestSplitPath("a..\\b", false, {"a..", "b"});
+
+    TestSplitPath("a/..b", true, {"a", "..b"});
+    TestSplitPath("a\\..b", true, {"a", "..b"});
+    TestSplitPath("a/..b", false, {"a", "..b"});
+    TestSplitPath("a\\..b", false, {"a", "..b"});
+
+    TestSplitPath("a..b/c", true, {"a..b", "c"});
+    TestSplitPath("a..b\\c", true, {"a..b", "c"});
+    TestSplitPath("a..b/c", false, {"a..b", "c"});
+    TestSplitPath("a..b\\c", false, {"a..b", "c"});
+
+    TestSplitPath("../..", true, {"..", ".."});
+    TestSplitPath("..\\..", true, {"..", ".."});
+    TestSplitPath("../..", false, {"..", ".."});
+    TestSplitPath("..\\..", false, {"..", ".."});
+}
+
+
 TEST(Platforms_FileSystem, SimplifyPath)
 {
     EXPECT_STREQ(FileSystem::SimplifyPath("", '/').c_str(), "");

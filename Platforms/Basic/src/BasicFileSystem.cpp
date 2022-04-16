@@ -138,16 +138,13 @@ bool BasicFileSystem::IsPathAbsolute(const Char* strPath)
 #endif
 }
 
-std::string BasicFileSystem::SimplifyPath(const Char* Path, Char SlashSymbol)
+std::vector<String> BasicFileSystem::SplitPath(const Char* Path, bool Simplify)
 {
-    if (Path == nullptr)
-        return "";
-
     auto IsSlash = [](const Char c) {
         return c == '/' || c == '\\';
     };
 
-    std::vector<std::string> PathComponents;
+    std::vector<std::string> Components;
 
     const auto* c = Path;
     while (*c != '\0')
@@ -165,21 +162,33 @@ std::string BasicFileSystem::SimplifyPath(const Char* Path, Char SlashSymbol)
         while (*c != '\0' && !IsSlash(*c))
             PathCmp.push_back(*(c++));
 
-        if (PathCmp == ".")
+        if (Simplify)
         {
-            // Skip /.
-            continue;
+            if (PathCmp == ".")
+            {
+                // Skip /.
+                continue;
+            }
+            else if (PathCmp == ".." && !Components.empty() && Components.back() != "..")
+            {
+                // Pop previous subdirectory if /.. is found, but only if there is no .. already
+                Components.pop_back();
+                continue;
+            }
         }
-        else if (PathCmp == ".." && !PathComponents.empty() && PathComponents.back() != "..")
-        {
-            // Pop previous subdirectory if /.. is found, but only if there is no .. already
-            PathComponents.pop_back();
-        }
-        else
-        {
-            PathComponents.emplace_back(std::move(PathCmp));
-        }
+
+        Components.emplace_back(std::move(PathCmp));
     }
+
+    return Components;
+}
+
+std::string BasicFileSystem::SimplifyPath(const Char* Path, Char SlashSymbol)
+{
+    if (Path == nullptr)
+        return "";
+
+    const auto PathComponents = SplitPath(Path, true);
 
     std::string SimplifiedPath;
     for (const auto& Cmp : PathComponents)

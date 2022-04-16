@@ -101,8 +101,15 @@ public:
                                   String*       Directory,
                                   String*       FileName);
 
-    static bool IsPathAbsolute(const Char* strPath);
+    static bool IsPathAbsolute(const Char* Path);
 
+    /// Splits path into individual components optionally simplifying it.
+    ///
+    /// If Simplify is true:
+    ///     - Removes redundant slashes (a///b -> a/b)
+    ///     - Removes redundant . (a/./b -> a/b)
+    ///     - Collapses .. (a/b/../c -> a/c)
+    static std::vector<String> SplitPath(const Char* Path, bool Simplify);
 
     /// Simplifies the path.
 
