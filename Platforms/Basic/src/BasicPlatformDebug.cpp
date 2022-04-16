@@ -39,7 +39,7 @@ String BasicPlatformDebug::FormatAssertionFailedMessage(const char* Message,
                                                         int         Line)
 {
     String FileName;
-    BasicFileSystem::SplitFilePath(File, nullptr, &FileName);
+    BasicFileSystem::GetPathComponents(File, nullptr, &FileName);
     return FormatString("Debug assertion failed in ", Function, "(), file ", FileName, ", line ", Line, ":\n", Message);
 }
 

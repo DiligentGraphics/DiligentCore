@@ -97,9 +97,9 @@ public:
 
     static void CorrectSlashes(String& Path, Char SlashSymbol);
 
-    static void SplitFilePath(const String& FullName,
-                              String*       Path,
-                              String*       Name);
+    static void GetPathComponents(const String& Path,
+                                  String*       Directory,
+                                  String*       FileName);
 
     static bool IsPathAbsolute(const Char* strPath);
 

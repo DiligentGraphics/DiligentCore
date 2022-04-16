@@ -101,25 +101,25 @@ void BasicFileSystem::CorrectSlashes(String& Path, Char SlashSymbol)
     std::replace(Path.begin(), Path.end(), RevSlashSym, SlashSymbol);
 }
 
-void BasicFileSystem::SplitFilePath(const String& FullName,
-                                    String*       Path,
-                                    String*       Name)
+void BasicFileSystem::GetPathComponents(const String& Path,
+                                        String*       Directory,
+                                        String*       FileName)
 {
-    auto LastSlashPos = FullName.find_last_of("/\\");
-    if (Path)
+    auto LastSlashPos = Path.find_last_of("/\\");
+    if (Directory)
     {
         if (LastSlashPos != String::npos)
-            *Path = FullName.substr(0, LastSlashPos);
+            *Directory = Path.substr(0, LastSlashPos);
         else
-            *Path = "";
+            *Directory = "";
     }
 
-    if (Name)
+    if (FileName)
     {
         if (LastSlashPos != String::npos)
-            *Name = FullName.substr(LastSlashPos + 1);
+            *FileName = Path.substr(LastSlashPos + 1);
         else
-            *Name = FullName;
+            *FileName = Path;
     }
 }
 

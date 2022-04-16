@@ -44,7 +44,7 @@ namespace
 std::string FindResource(const std::string& FilePath)
 {
     std::string dir, name;
-    Diligent::BasicFileSystem::SplitFilePath(FilePath, &dir, &name);
+    Diligent::BasicFileSystem::GetPathComponents(FilePath, &dir, &name);
     auto        dotPos = name.find(".");
     std::string type   = (dotPos != std::string::npos) ? name.substr(dotPos + 1) : "";
     if (dotPos != std::string::npos)

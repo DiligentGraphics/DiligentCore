@@ -173,4 +173,31 @@ TEST(Platforms_FileSystem, SplitPathList)
     TestPaths("/unix/path1;/unix/path2", {{"/unix/path1"}, {"/unix/path2"}});
 }
 
+TEST(Platforms_FileSystem, GetPathComponents)
+{
+    auto TestComponents = [](const char* Path, const char* RefDir, const char* RefFileName) {
+        std::string Dir;
+        std::string FileName;
+        FileSystem::GetPathComponents(Path, &Dir, nullptr);
+        EXPECT_STREQ(Dir.c_str(), RefDir);
+
+        FileSystem::GetPathComponents(Path, nullptr, &FileName);
+        EXPECT_STREQ(FileName.c_str(), RefFileName);
+
+        FileSystem::GetPathComponents(Path, &Dir, &FileName);
+        EXPECT_STREQ(Dir.c_str(), RefDir);
+        EXPECT_STREQ(FileName.c_str(), RefFileName);
+    };
+    TestComponents("", "", "");
+    TestComponents("file", "", "file");
+    TestComponents("/file", "", "file");
+    TestComponents("\\file", "", "file");
+    TestComponents("path/file", "path", "file");
+    TestComponents("path\\file", "path", "file");
+    TestComponents("/path/file", "/path", "file");
+    TestComponents("\\path\\file", "\\path", "file");
+    TestComponents("/a/b/c/file", "/a/b/c", "file");
+    TestComponents("\\a\\b\\c\\file", "\\a\\b\\c", "file");
+}
+
 } // namespace
