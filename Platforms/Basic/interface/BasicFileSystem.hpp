@@ -158,6 +158,22 @@ public:
         }
     }
 
+    /// Returns a relative path from one file or folder to another.
+
+    /// \param [in]  PathFrom        - Path that defines the start of the relative path.
+    ///                                Must not be null.
+    /// \param [in]  IsFromDirectory - Indicates if PathFrom is a directory.
+    /// \param [in]  PathTo          - Path that defines the endpoint of the relative path.
+    ///                                Must not be null.
+    /// \param [in]  IsToDirectory   - Indicates if PathTo is a directory.
+    ///
+    /// \return                        Relative path from PathFrom to PathTo.
+    ///                                If no relative path exists, PathFrom is returned.
+    static std::string GetRelativePath(const Char* PathFrom,
+                                       bool        IsFromDirectory,
+                                       const Char* PathTo,
+                                       bool        IsToDirectory);
+
 protected:
     static String m_strWorkingDirectory;
 };

@@ -197,4 +197,55 @@ std::string BasicFileSystem::SimplifyPath(const Char* Path, Char Slash)
     return SimplifiedPath;
 }
 
+
+std::string BasicFileSystem::GetRelativePath(const Char* PathFrom,
+                                             bool        IsFromDirectory,
+                                             const Char* PathTo,
+                                             bool /*IsToDirectory*/)
+{
+    DEV_CHECK_ERR(PathFrom != nullptr, "Source path must not be null");
+    DEV_CHECK_ERR(PathTo != nullptr, "Destination path must not be null");
+
+    const auto FromPathComps = SplitPath(PathFrom, true);
+    const auto ToPathComps   = SplitPath(PathTo, true);
+
+    auto from_it = FromPathComps.begin();
+    auto to_it   = ToPathComps.begin();
+    while (from_it != FromPathComps.end() && to_it != ToPathComps.end() && *from_it == *to_it)
+    {
+        ++from_it;
+        ++to_it;
+    }
+    if (from_it == FromPathComps.begin())
+        return PathFrom; // No commmon prefix
+
+    String RelPath;
+    for (; from_it != FromPathComps.end(); ++from_it)
+    {
+        if (!IsFromDirectory && from_it + 1 == FromPathComps.end())
+        {
+            //                    from_it
+            //                       V
+            // from:    "common/from/file"
+            // to:      "common/to"
+            // RelPath: ".."
+            break;
+        }
+
+        if (!RelPath.empty())
+            RelPath.push_back(SlashSymbol);
+        RelPath.append("..");
+    }
+
+    for (; to_it != ToPathComps.end(); ++to_it)
+    {
+        // IsToDirectory is in fact irrelevant
+        if (!RelPath.empty())
+            RelPath.push_back(SlashSymbol);
+        RelPath.append(*to_it);
+    }
+
+    return RelPath;
+}
+
 } // namespace Diligent

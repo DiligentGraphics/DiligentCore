@@ -502,48 +502,4 @@ std::string GetCurrentDirectoryImpl()
     return WindowsPathHelper::GetCurrentDirectory_();
 }
 
-bool WindowsFileSystem::GetRelativePath(const Char*  _strPathFrom,
-                                        bool         IsFromDirectory,
-                                        const Char*  _strPathTo,
-                                        bool         IsToDirectory,
-                                        std::string& RelativePath)
-{
-    VERIFY(_strPathTo != nullptr, "Destination path must not be null");
-
-    std::string PathFrom;
-    if (_strPathFrom != nullptr)
-    {
-        PathFrom = _strPathFrom;
-        WindowsFileSystem::CorrectSlashes(PathFrom);
-    }
-    else
-    {
-        PathFrom        = GetCurrentDirectoryImpl();
-        IsFromDirectory = true;
-    }
-
-    std::string PathTo{_strPathTo};
-    WindowsFileSystem::CorrectSlashes(PathTo);
-
-    // https://docs.microsoft.com/en-us/windows/win32/api/shlwapi/nf-shlwapi-pathrelativepathtoa
-    char strRelativePath[MAX_PATH];
-
-    auto Res = PathRelativePathToA(strRelativePath,
-                                   PathFrom.c_str(),
-                                   IsFromDirectory ? FILE_ATTRIBUTE_DIRECTORY : FILE_ATTRIBUTE_NORMAL,
-                                   PathTo.c_str(),
-                                   IsToDirectory ? FILE_ATTRIBUTE_DIRECTORY : FILE_ATTRIBUTE_NORMAL);
-
-    if (Res != FALSE)
-    {
-        RelativePath = strRelativePath;
-    }
-    else
-    {
-        RelativePath = std::move(PathTo);
-    }
-
-    return Res != FALSE;
-}
-
 } // namespace Diligent

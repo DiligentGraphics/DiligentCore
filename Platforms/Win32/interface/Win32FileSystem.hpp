@@ -98,8 +98,6 @@ struct WindowsFileSystem : public BasicFileSystem
 public:
     static WindowsFile* OpenFile(const FileOpenAttribs& OpenAttribs);
 
-    static inline Diligent::Char GetSlashSymbol() { return '\\'; }
-
     static bool FileExists(const Diligent::Char* strFilePath);
     static bool PathExists(const Diligent::Char* strPath);
 
@@ -116,28 +114,6 @@ public:
     static std::string FileDialog(const FileDialogAttribs& DialogAttribs);
 
     static std::string GetCurrentDirectory();
-
-
-    /// Returns a relative path from one file or folder to another.
-
-    /// \param [in]  strPathFrom     - Path that defines the start of the relative path.
-    ///                                If this parameter is null, current directory will be used.
-    /// \param [in]  IsFromDirectory - Indicates if strPathFrom is a directory.
-    ///                                Ignored if strPathFrom is null (in which case current directory
-    ///                                is used).
-    /// \param [in]  strPathTo       - Path that defines the endpoint of the relative path.
-    ///                                This parameter must not be null.
-    /// \param [in]  IsToDirectory   - Indicates if strPathTo is a directory.
-    /// \param [out] RelativePath    - Relative path from strPathFrom to strPathTo.
-    ///                                If no relative path exists, strPathFrom will be returned.
-    ///
-    /// \return                        true if the relative path exists (i.e. strPathFrom and strPathTo
-    ///                                have a common prefix), and false otherwise.
-    static bool GetRelativePath(const Diligent::Char* strPathFrom,
-                                bool                  IsFromDirectory,
-                                const Diligent::Char* strPathTo,
-                                bool                  IsToDirectory,
-                                std::string&          RelativePath);
 };
 
 } // namespace Diligent
