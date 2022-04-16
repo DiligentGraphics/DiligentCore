@@ -1381,16 +1381,19 @@ typedef struct DisplayModeAttribs DisplayModeAttribs;
 DILIGENT_TYPED_ENUM(SWAP_CHAIN_USAGE_FLAGS, Uint32)
 {
     /// No allowed usage
-    SWAP_CHAIN_USAGE_NONE             = 0x00L,
+    SWAP_CHAIN_USAGE_NONE             = 0u,
 
-    /// Swap chain can be used as render target output
-    SWAP_CHAIN_USAGE_RENDER_TARGET    = 0x01L,
+    /// Swap chain images can be used as render target outputs
+    SWAP_CHAIN_USAGE_RENDER_TARGET    = 1u << 0,
 
-    /// Swap chain images can be used as shader inputs
-    SWAP_CHAIN_USAGE_SHADER_INPUT     = 0x02L,
+    /// Swap chain images can be used as shader resources
+    SWAP_CHAIN_USAGE_SHADER_RESOURCE  = 1u << 1,
 
-    /// Swap chain images can be used as source of copy operation
-    SWAP_CHAIN_USAGE_COPY_SOURCE      = 0x04L,
+    /// Swap chain images can be used as input attachments
+    SWAP_CHAIN_USAGE_INPUT_ATTACHMENT = 1u << 2,
+
+    /// Swap chain images can be used as a source of copy operation
+    SWAP_CHAIN_USAGE_COPY_SOURCE      = 1u << 3,
 
     SWAP_CHAIN_USAGE_LAST             = SWAP_CHAIN_USAGE_COPY_SOURCE,
 };
