@@ -82,7 +82,7 @@ AppleFile* AppleFileSystem::OpenFile(const FileOpenAttribs& OpenAttribs)
 {
     // Try to find the file in the bundle first
     std::string path(OpenAttribs.strFilePath);
-    CorrectSlashes(path, AppleFileSystem::GetSlashSymbol());
+    CorrectSlashes(path);
     auto resource_path = FindResource(path);
 
     AppleFile* pFile = nullptr;
@@ -92,7 +92,7 @@ AppleFile* AppleFileSystem::OpenFile(const FileOpenAttribs& OpenAttribs)
         {
             FileOpenAttribs BundleResourceOpenAttribs = OpenAttribs;
             BundleResourceOpenAttribs.strFilePath     = resource_path.c_str();
-            pFile                                     = new AppleFile(BundleResourceOpenAttribs, AppleFileSystem::GetSlashSymbol());
+            pFile                                     = new AppleFile{BundleResourceOpenAttribs};
         }
         catch (const std::runtime_error& err)
         {
@@ -103,7 +103,7 @@ AppleFile* AppleFileSystem::OpenFile(const FileOpenAttribs& OpenAttribs)
     {
         try
         {
-            pFile = new AppleFile(OpenAttribs, AppleFileSystem::GetSlashSymbol());
+            pFile = new AppleFile{OpenAttribs};
         }
         catch (const std::runtime_error& err)
         {
@@ -115,7 +115,7 @@ AppleFile* AppleFileSystem::OpenFile(const FileOpenAttribs& OpenAttribs)
 bool AppleFileSystem::FileExists(const Char* strFilePath)
 {
     std::string path(strFilePath);
-    CorrectSlashes(path, AppleFileSystem::GetSlashSymbol());
+    CorrectSlashes(path);
     auto resource_path = FindResource(path);
 
     if (!FindResource(path).empty())

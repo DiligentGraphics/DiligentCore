@@ -34,15 +34,15 @@ namespace Diligent
 
 String BasicFileSystem::m_strWorkingDirectory;
 
-BasicFile::BasicFile(const FileOpenAttribs& OpenAttribs, Char SlashSymbol) :
+BasicFile::BasicFile(const FileOpenAttribs& OpenAttribs) :
     m_Path //
     {
-        [](const Char* strPath, Char SlashSymbol) //
+        [](const Char* strPath) //
         {
             String Path = strPath != nullptr ? strPath : "";
-            BasicFileSystem::CorrectSlashes(Path, SlashSymbol);
+            BasicFileSystem::CorrectSlashes(Path);
             return Path;
-        }(OpenAttribs.strFilePath, SlashSymbol) //
+        }(OpenAttribs.strFilePath) //
     },
     m_OpenAttribs{m_Path.c_str(), OpenAttribs.AccessMode}
 {
@@ -87,18 +87,14 @@ bool BasicFileSystem::FileExists(const Char* strFilePath)
     return false;
 }
 
-Char BasicFileSystem::GetSlashSymbol()
+void BasicFileSystem::CorrectSlashes(String& Path, Char Slash)
 {
-    UNSUPPORTED("Unsupported");
-    return 0;
-}
-
-void BasicFileSystem::CorrectSlashes(String& Path, Char SlashSymbol)
-{
-    VERIFY(SlashSymbol == '\\' || SlashSymbol == '/',
-           "Incorrect slash symbol");
-    Char RevSlashSym = (SlashSymbol == '\\') ? '/' : '\\';
-    std::replace(Path.begin(), Path.end(), RevSlashSym, SlashSymbol);
+    if (Slash != 0)
+        DEV_CHECK_ERR(IsSlash(Slash), "Incorrect slash symbol");
+    else
+        Slash = SlashSymbol;
+    Char RevSlashSym = (Slash == '\\') ? '/' : '\\';
+    std::replace(Path.begin(), Path.end(), RevSlashSym, Slash);
 }
 
 void BasicFileSystem::GetPathComponents(const String& Path,
@@ -140,10 +136,6 @@ bool BasicFileSystem::IsPathAbsolute(const Char* strPath)
 
 std::vector<String> BasicFileSystem::SplitPath(const Char* Path, bool Simplify)
 {
-    auto IsSlash = [](const Char c) {
-        return c == '/' || c == '\\';
-    };
-
     std::vector<std::string> Components;
 
     const auto* c = Path;
@@ -183,10 +175,15 @@ std::vector<String> BasicFileSystem::SplitPath(const Char* Path, bool Simplify)
     return Components;
 }
 
-std::string BasicFileSystem::SimplifyPath(const Char* Path, Char SlashSymbol)
+std::string BasicFileSystem::SimplifyPath(const Char* Path, Char Slash)
 {
     if (Path == nullptr)
         return "";
+
+    if (Slash != 0)
+        DEV_CHECK_ERR(IsSlash(Slash), "Incorrect slash symbol");
+    else
+        Slash = SlashSymbol;
 
     const auto PathComponents = SplitPath(Path, true);
 
@@ -194,7 +191,7 @@ std::string BasicFileSystem::SimplifyPath(const Char* Path, Char SlashSymbol)
     for (const auto& Cmp : PathComponents)
     {
         if (!SimplifiedPath.empty())
-            SimplifiedPath.push_back(SlashSymbol);
+            SimplifiedPath.push_back(Slash);
         SimplifiedPath.append(Cmp);
     }
     return SimplifiedPath;

@@ -45,7 +45,7 @@ LinuxFile* LinuxFileSystem::OpenFile(const FileOpenAttribs& OpenAttribs)
     LinuxFile* pFile = nullptr;
     try
     {
-        pFile = new LinuxFile(OpenAttribs, LinuxFileSystem::GetSlashSymbol());
+        pFile = new LinuxFile{OpenAttribs};
     }
     catch (const std::runtime_error& err)
     {
@@ -57,7 +57,7 @@ bool LinuxFileSystem::FileExists(const Char* strFilePath)
 {
     FileOpenAttribs OpenAttribs;
     OpenAttribs.strFilePath = strFilePath;
-    BasicFile   DummyFile(OpenAttribs, LinuxFileSystem::GetSlashSymbol());
+    BasicFile   DummyFile{OpenAttribs};
     const auto& Path   = DummyFile.GetPath(); // This is necessary to correct slashes
     FILE*       pFile  = fopen(Path.c_str(), "r");
     bool        Exists = (pFile != nullptr);
@@ -69,7 +69,7 @@ bool LinuxFileSystem::FileExists(const Char* strFilePath)
 bool LinuxFileSystem::PathExists(const Char* strPath)
 {
     std::string path(strPath);
-    CorrectSlashes(path, LinuxFileSystem::GetSlashSymbol());
+    CorrectSlashes(path);
 
     auto res = access(path.c_str(), R_OK);
     return res == 0;
@@ -84,13 +84,13 @@ bool LinuxFileSystem::CreateDirectory(const Char* strPath)
     }
 
     std::string path = strPath;
-    CorrectSlashes(path, LinuxFileSystem::GetSlashSymbol());
+    CorrectSlashes(path);
 
     bool   result   = true;
     size_t position = 0;
     while (result != false && position != std::string::npos)
     {
-        position     = path.find(GetSlashSymbol(), position + 1);
+        position     = path.find(SlashSymbol, position + 1);
         auto subPath = path.substr(0, position);
         if (!PathExists(subPath.c_str()))
             result = mkdir(subPath.c_str(), S_IRWXU | S_IRWXG | S_IRWXO) == 0;
@@ -111,7 +111,7 @@ void LinuxFileSystem::DeleteFile(const Char* strPath)
 bool LinuxFileSystem::DeleteDirectory(const Char* strPath)
 {
     std::string path(strPath);
-    CorrectSlashes(path, LinuxFileSystem::GetSlashSymbol());
+    CorrectSlashes(path);
 
     auto Callaback = [](const char* Path, const struct stat* pStat, int Type, FTW* pFTWB) -> int {
         if (remove(Path) < 0)

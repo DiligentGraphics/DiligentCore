@@ -78,15 +78,13 @@ public:
         //       As there is no reliable way to check if we will exceed the limit,
         //       always use the long path method.
 
-        const auto WndSlash = WindowsFileSystem::GetSlashSymbol();
-
         if (!WindowsFileSystem::IsPathAbsolute(Path))
         {
             m_Path = GetCurrentDirectory_();
-            m_Path.push_back(WndSlash);
+            m_Path.push_back(WindowsFileSystem::SlashSymbol);
         }
         m_Path += Path;
-        m_Path = WindowsFileSystem::SimplifyPath(m_Path.c_str(), WndSlash);
+        m_Path = WindowsFileSystem::SimplifyPath(m_Path.c_str());
 
         m_LongPathW = WidenString(m_Path);
 
@@ -177,7 +175,7 @@ public:
 
     std::string operator/(const char* Path) const
     {
-        const auto WndSlash = WindowsFileSystem::GetSlashSymbol();
+        const auto WndSlash = WindowsFileSystem::SlashSymbol;
 
         auto Res = m_Path;
         if (Res.back() != WndSlash)
@@ -215,7 +213,7 @@ private:
 
 
 WindowsFile::WindowsFile(const FileOpenAttribs& OpenAttribs) :
-    StandardFile{OpenAttribs, WindowsFileSystem::GetSlashSymbol()}
+    StandardFile{OpenAttribs}
 {
     VERIFY_EXPR(m_pFile == nullptr);
     const auto ModeStr = GetOpenModeStr();
@@ -286,8 +284,8 @@ static bool CreateDirectoryImpl(const Char* strPath)
     // Test all parent directories
     std::string            DirectoryPath = strPath;
     std::string::size_type SlashPos      = std::wstring::npos;
-    const auto             SlashSym      = WindowsFileSystem::GetSlashSymbol();
-    WindowsFileSystem::CorrectSlashes(DirectoryPath, SlashSym);
+    const auto             SlashSym      = WindowsFileSystem::SlashSymbol;
+    WindowsFileSystem::CorrectSlashes(DirectoryPath);
 
     do
     {
@@ -512,13 +510,11 @@ bool WindowsFileSystem::GetRelativePath(const Char*  _strPathFrom,
 {
     VERIFY(_strPathTo != nullptr, "Destination path must not be null");
 
-    const auto SlashSym = WindowsFileSystem::GetSlashSymbol();
-
     std::string PathFrom;
     if (_strPathFrom != nullptr)
     {
         PathFrom = _strPathFrom;
-        WindowsFileSystem::CorrectSlashes(PathFrom, SlashSym);
+        WindowsFileSystem::CorrectSlashes(PathFrom);
     }
     else
     {
@@ -527,7 +523,7 @@ bool WindowsFileSystem::GetRelativePath(const Char*  _strPathFrom,
     }
 
     std::string PathTo{_strPathTo};
-    WindowsFileSystem::CorrectSlashes(PathTo, SlashSym);
+    WindowsFileSystem::CorrectSlashes(PathTo);
 
     // https://docs.microsoft.com/en-us/windows/win32/api/shlwapi/nf-shlwapi-pathrelativepathtoa
     char strRelativePath[MAX_PATH];

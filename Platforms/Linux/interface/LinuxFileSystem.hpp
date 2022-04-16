@@ -44,8 +44,6 @@ struct LinuxFileSystem : public BasicFileSystem
 public:
     static LinuxFile* OpenFile(const FileOpenAttribs& OpenAttribs);
 
-    static inline Char GetSlashSymbol() { return '/'; }
-
     static bool FileExists(const Char* strFilePath);
     static bool PathExists(const Char* strPath);
 

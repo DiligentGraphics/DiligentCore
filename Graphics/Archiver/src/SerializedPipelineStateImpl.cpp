@@ -162,14 +162,14 @@ std::string GetPSODumpFolder(const std::string& Root, const PipelineStateDesc& P
     if (DumpDir.empty())
         return DumpDir;
 
-    if (DumpDir.back() != FileSystem::GetSlashSymbol())
-        DumpDir += FileSystem::GetSlashSymbol();
+    if (DumpDir.back() != FileSystem::SlashSymbol)
+        DumpDir += FileSystem::SlashSymbol;
 
     // Note: the same directory structure is used by the render state packager
     DumpDir += GetArchiveDeviceDataFlagString(DeviceFlag);
-    DumpDir += FileSystem::GetSlashSymbol();
+    DumpDir += FileSystem::SlashSymbol;
     DumpDir += GetPipelineTypeString(PSODesc.PipelineType);
-    DumpDir += FileSystem::GetSlashSymbol();
+    DumpDir += FileSystem::SlashSymbol;
     DumpDir += PSODesc.Name;
 
     return DumpDir;

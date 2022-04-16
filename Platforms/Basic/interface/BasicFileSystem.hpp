@@ -61,7 +61,7 @@ struct FileOpenAttribs
 class BasicFile
 {
 public:
-    BasicFile(const FileOpenAttribs& OpenAttribs, Char SlashSymbol);
+    BasicFile(const FileOpenAttribs& OpenAttribs);
     virtual ~BasicFile();
 
     const String& GetPath() { return m_Path; }
@@ -84,6 +84,12 @@ struct FindFileData
 struct BasicFileSystem
 {
 public:
+#if PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS
+    static constexpr Char SlashSymbol = '\\';
+#else
+    static constexpr Char SlashSymbol = '/';
+#endif
+
     static BasicFile* OpenFile(FileOpenAttribs& OpenAttribs);
     static void       ReleaseFile(BasicFile*);
 
@@ -93,9 +99,12 @@ public:
 
     static const String& GetWorkingDirectory() { return m_strWorkingDirectory; }
 
-    static Char GetSlashSymbol();
+    static bool IsSlash(Char c)
+    {
+        return c == '/' || c == '\\';
+    }
 
-    static void CorrectSlashes(String& Path, Char SlashSymbol);
+    static void CorrectSlashes(String& Path, Char Slash = 0);
 
     static void GetPathComponents(const String& Path,
                                   String*       Directory,
@@ -119,7 +128,7 @@ public:
     /// - Removes redundant . (a/./b -> a/b)
     /// - Collapses .. (a/b/../c -> a/c)
     /// - Removes leading and trailing slashes (/a/b/c/ -> a/b/c)
-    static std::string SimplifyPath(const Char* Path, Char SlashSymbol);
+    static std::string SimplifyPath(const Char* Path, Char Slash = 0);
 
 
     /// Splits a list of paths separated by a given separator and calls a user callback for every individual path.
@@ -127,6 +136,9 @@ public:
     template <typename CallbackType>
     static void SplitPathList(const Char* PathList, CallbackType Callback, const char Separator = ';')
     {
+        if (PathList == nullptr)
+            return;
+
         const auto* Pos = PathList;
         while (*Pos != '\0')
         {
