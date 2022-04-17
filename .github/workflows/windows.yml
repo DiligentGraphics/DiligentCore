@@ -3,7 +3,7 @@ name: Windows
 on: [push, pull_request]
 
 jobs:
-  build-win10:
+  vs-win10:
     strategy:
       matrix:
         toolset: [Win32, x64]
@@ -29,7 +29,7 @@ jobs:
       if: success()
       working-directory: ${{runner.workspace}}/build
       shell: bash
-      run: cmake --build . --config ${{ matrix.config }} --target install -j2
+      run: cmake --build . --config ${{ matrix.config }} --target install
 
     - name: DiligentCoreTest
       if: success()
@@ -70,7 +70,7 @@ jobs:
         retention-days: 90
 
 
-  build-win10-dev:
+  vs-win10-dev:
     strategy:
       matrix:
         toolset: [x64]
@@ -96,7 +96,7 @@ jobs:
       if: success()
       working-directory: ${{runner.workspace}}/build
       shell: bash
-      run: cmake --build . --config ${{ matrix.config }} --target install -j2
+      run: cmake --build . --config ${{ matrix.config }} --target install
 
     - name: DiligentCoreTest
       if: success()
@@ -107,7 +107,7 @@ jobs:
 
     - name: Upload artifact
       uses: actions/upload-artifact@v2
-      if: ${{ success() && matrix.config == 'Release' }}
+      if: ${{ success() && matrix.config != 'Debug' }}
       with:
         name: DiligentCore-Windows10-${{ matrix.toolset }}-VS2019-${{ matrix.config }}Dev
         path: |
@@ -116,7 +116,46 @@ jobs:
         retention-days: 90
 
 
-  build-win8:
+  ninja-win10-dev:
+    strategy:
+      matrix:
+        toolset: [x64]
+        config: [Debug]
+
+    runs-on: windows-2019
+    name: Win10-Ninja -> ${{ matrix.toolset }}, ${{ matrix.config }}
+
+    steps:
+    - name: Clone repository
+      uses: actions/checkout@v2
+      with:
+        submodules: recursive
+
+    - name: Setup Ninja
+      uses: seanmiddleditch/gha-setup-ninja@master
+
+    - name: Setup VS Development Environment
+      uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: ${{ matrix.toolset }}
+
+    - name: Configure CMake
+      if: success()
+      env:
+        CMAKE_GENERATOR: Ninja
+      shell: bash
+      run: |
+        cd $GITHUB_WORKSPACE/BuildTools/Scripts/github_actions
+        ./configure_cmake.sh "win" "${{runner.workspace}}" ${{ matrix.toolset }} ${{ matrix.config }}
+
+    - name: Build
+      if: success()
+      working-directory: ${{runner.workspace}}/build
+      shell: bash
+      run: cmake --build . --config ${{ matrix.config }}
+
+
+  vs-win8:
     strategy:
       matrix:
         toolset: [x64]
@@ -142,7 +181,7 @@ jobs:
       if: success()
       working-directory: ${{runner.workspace}}/build
       shell: bash
-      run: cmake --build . --config ${{ matrix.config }} --target install -j2
+      run: cmake --build . --config ${{ matrix.config }} --target install
 
     - name: DiligentCoreTest
       if: success()

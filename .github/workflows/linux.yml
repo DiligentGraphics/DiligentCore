@@ -3,7 +3,7 @@ name: Linux
 on: [push, pull_request]
 
 jobs:
-  build-gcc-9:
+  make-gcc-9:
     strategy:
       matrix:
         config: [Debug, Release]
@@ -57,7 +57,7 @@ jobs:
         retention-days: 90
 
 
-  build-clang-12:
+  ninja-clang-12:
     strategy:
       matrix:
         config: [Debug, Release]
@@ -115,7 +115,7 @@ jobs:
         retention-days: 90
 
 
-  build-clang-12-no-glslang:
+  make-clang-12-no-glslang:
     strategy:
       matrix:
         config: [Debug]
@@ -152,7 +152,7 @@ jobs:
       run: cmake --build . --config ${{ matrix.config }} --target install -j2
 
 
-  build-clang-12-no-glslang-no-hlsl:
+  ninja-clang-12-no-glslang-no-hlsl:
     strategy:
       matrix:
         config: [Release]
@@ -171,11 +171,15 @@ jobs:
       run: |
         sudo apt-get update && sudo apt-get install build-essential libx11-dev libgl1-mesa-dev
 
+    - name: Setup Ninja
+      uses: seanmiddleditch/gha-setup-ninja@master
+
     - name: Configure CMake
       if: success()
       env:
         CC: clang-12
         CXX: clang++-12
+        CMAKE_GENERATOR: Ninja
       shell: bash
       run: |
         cd $GITHUB_WORKSPACE/BuildTools/Scripts/github_actions
