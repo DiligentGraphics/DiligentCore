@@ -9,7 +9,7 @@ jobs:
         toolset: [Win32, x64]
         config: [Debug, Release]
 
-    runs-on: windows-2019
+    runs-on: windows-2022
     name: Win10 -> ${{ matrix.toolset }}, ${{ matrix.config }}
 
     steps:
@@ -63,7 +63,7 @@ jobs:
       uses: actions/upload-artifact@v2
       if: ${{ success() && matrix.config == 'Release' }}
       with:
-        name: DiligentCore-Windows10-${{ matrix.toolset }}-VS2019-${{ matrix.config }}
+        name: DiligentCore-Windows10-${{ matrix.toolset }}-VS2022-${{ matrix.config }}
         path: |
           ${{runner.workspace}}/build/install/
           !${{runner.workspace}}/build/install/**/*.lib
@@ -76,7 +76,7 @@ jobs:
         toolset: [x64]
         config: [RelWithDebInfo]
 
-    runs-on: windows-2019
+    runs-on: windows-2022
     name: Win10 -> ${{ matrix.toolset }}, ${{ matrix.config }}, DEVELOPMENT
 
     steps:
@@ -109,7 +109,7 @@ jobs:
       uses: actions/upload-artifact@v2
       if: ${{ success() && matrix.config != 'Debug' }}
       with:
-        name: DiligentCore-Windows10-${{ matrix.toolset }}-VS2019-${{ matrix.config }}Dev
+        name: DiligentCore-Windows10-${{ matrix.toolset }}-VS2022-${{ matrix.config }}Dev
         path: |
           ${{runner.workspace}}/build/install/
           !${{runner.workspace}}/build/install/**/*.lib
@@ -122,7 +122,7 @@ jobs:
         toolset: [x64]
         config: [Debug]
 
-    runs-on: windows-2019
+    runs-on: windows-2022
     name: Win10-Ninja -> ${{ matrix.toolset }}, ${{ matrix.config }}
 
     steps:
@@ -161,7 +161,7 @@ jobs:
         toolset: [x64]
         config: [Release]
 
-    runs-on: windows-2019
+    runs-on: windows-2022
     name: Win10 -> Win8.1-${{ matrix.toolset }}, ${{ matrix.config }}
 
     steps:
@@ -201,7 +201,7 @@ jobs:
       uses: actions/upload-artifact@v2
       if: ${{ success() && matrix.config == 'Release' }}
       with:
-        name: DiligentCore-Windows8-${{ matrix.toolset }}-VS2019-${{ matrix.config }}
+        name: DiligentCore-Windows8-${{ matrix.toolset }}-VS2022-${{ matrix.config }}
         path: |
           ${{runner.workspace}}/build/install/
           !${{runner.workspace}}/build/install/**/*.lib
