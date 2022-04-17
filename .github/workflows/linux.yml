@@ -65,6 +65,9 @@ jobs:
     runs-on: ubuntu-latest
     name: Linux -> x64, Clang, ${{ matrix.config }}
 
+    env:
+      CMAKE_GENERATOR: "Ninja"
+
     steps:
     - name: Clone repository
       uses: actions/checkout@v2
@@ -75,6 +78,9 @@ jobs:
       if: success()
       run: |
         sudo apt-get update && sudo apt-get install build-essential libx11-dev libgl1-mesa-dev
+
+    - name: Setup Ninja
+      uses: seanmiddleditch/gha-setup-ninja@master
 
     - name: Configure CMake
       if: success()
