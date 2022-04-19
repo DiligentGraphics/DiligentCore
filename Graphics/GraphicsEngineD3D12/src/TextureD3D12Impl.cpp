@@ -110,7 +110,7 @@ D3D12_RESOURCE_DESC TextureD3D12Impl::GetD3D12TextureDesc() const
         Desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
     if ((m_Desc.BindFlags & BIND_UNORDERED_ACCESS) || (m_Desc.MiscFlags & MISC_TEXTURE_FLAG_GENERATE_MIPS))
         Desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-    if ((m_Desc.BindFlags & BIND_SHADER_RESOURCE) == 0 && (m_Desc.BindFlags & BIND_DEPTH_STENCIL) != 0)
+    if ((m_Desc.BindFlags & (BIND_SHADER_RESOURCE | BIND_INPUT_ATTACHMENT)) == 0 && (m_Desc.BindFlags & BIND_DEPTH_STENCIL) != 0)
         Desc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 
     auto Format = TexFormatToDXGI_Format(m_Desc.Format, m_Desc.BindFlags);
@@ -422,42 +422,42 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
 
 static TextureDesc InitTexDescFromD3D12Resource(ID3D12Resource* pTexture, const TextureDesc& SrcTexDesc)
 {
-    auto ResourceDesc = pTexture->GetDesc();
+    const auto d3d12Desc = pTexture->GetDesc();
 
     TextureDesc TexDesc = SrcTexDesc;
     if (TexDesc.Format == TEX_FORMAT_UNKNOWN)
-        TexDesc.Format = DXGI_FormatToTexFormat(ResourceDesc.Format);
+        TexDesc.Format = DXGI_FormatToTexFormat(d3d12Desc.Format);
     else
     {
-        auto RefFormat = DXGI_FormatToTexFormat(ResourceDesc.Format);
+        auto RefFormat = DXGI_FormatToTexFormat(d3d12Desc.Format);
         DEV_CHECK_ERR(RefFormat == TexDesc.Format, "The format specified by texture description (", GetTextureFormatAttribs(TexDesc.Format).Name,
                       ") does not match the D3D12 resource format (",
                       GetTextureFormatAttribs(RefFormat).Name, ")");
         (void)RefFormat;
     }
 
-    TexDesc.Width     = StaticCast<Uint32>(ResourceDesc.Width);
-    TexDesc.Height    = Uint32{ResourceDesc.Height};
-    TexDesc.ArraySize = Uint32{ResourceDesc.DepthOrArraySize};
-    TexDesc.MipLevels = Uint32{ResourceDesc.MipLevels};
-    switch (ResourceDesc.Dimension)
+    TexDesc.Width     = StaticCast<Uint32>(d3d12Desc.Width);
+    TexDesc.Height    = Uint32{d3d12Desc.Height};
+    TexDesc.ArraySize = Uint32{d3d12Desc.DepthOrArraySize};
+    TexDesc.MipLevels = Uint32{d3d12Desc.MipLevels};
+    switch (d3d12Desc.Dimension)
     {
         case D3D12_RESOURCE_DIMENSION_TEXTURE1D: TexDesc.Type = TexDesc.ArraySize == 1 ? RESOURCE_DIM_TEX_1D : RESOURCE_DIM_TEX_1D_ARRAY; break;
         case D3D12_RESOURCE_DIMENSION_TEXTURE2D: TexDesc.Type = TexDesc.ArraySize == 1 ? RESOURCE_DIM_TEX_2D : RESOURCE_DIM_TEX_2D_ARRAY; break;
         case D3D12_RESOURCE_DIMENSION_TEXTURE3D: TexDesc.Type = RESOURCE_DIM_TEX_3D; break;
     }
 
-    TexDesc.SampleCount = ResourceDesc.SampleDesc.Count;
+    TexDesc.SampleCount = d3d12Desc.SampleDesc.Count;
 
     TexDesc.Usage     = USAGE_DEFAULT;
     TexDesc.BindFlags = BIND_NONE;
-    if ((ResourceDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET) != 0)
+    if ((d3d12Desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET) != 0)
         TexDesc.BindFlags |= BIND_RENDER_TARGET;
-    if ((ResourceDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL) != 0)
+    if ((d3d12Desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL) != 0)
         TexDesc.BindFlags |= BIND_DEPTH_STENCIL;
-    if ((ResourceDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS) != 0)
+    if ((d3d12Desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS) != 0)
         TexDesc.BindFlags |= BIND_UNORDERED_ACCESS;
-    if ((ResourceDesc.Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE) == 0)
+    if ((d3d12Desc.Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE) == 0)
     {
         const auto& FormatAttribs = GetTextureFormatAttribs(TexDesc.Format);
         if (FormatAttribs.IsTypeless ||
@@ -466,9 +466,11 @@ static TextureDesc InitTexDescFromD3D12Resource(ID3D12Resource* pTexture, const 
         {
             TexDesc.BindFlags |= BIND_SHADER_RESOURCE;
         }
+        if ((d3d12Desc.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)) != 0)
+            TexDesc.BindFlags |= BIND_INPUT_ATTACHMENT;
     }
 
-    if (ResourceDesc.Layout == D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE)
+    if (d3d12Desc.Layout == D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE)
     {
         TexDesc.Usage = USAGE_SPARSE;
         TexDesc.MiscFlags |= MISC_TEXTURE_FLAG_SPARSE_ALIASING;
