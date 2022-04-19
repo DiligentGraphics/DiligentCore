@@ -427,7 +427,7 @@ static std::string UnrollShaderIncludesImpl(ShaderCreateInfo ShaderCI, std::unor
 
             if (AllIncludes.insert(Path).second)
             {
-                // Process the #inlcude directive
+                // Process the #include directive
                 ShaderCreateInfo IncludeCI{ShaderCI};
                 IncludeCI.Source       = nullptr;
                 IncludeCI.SourceLength = 0;

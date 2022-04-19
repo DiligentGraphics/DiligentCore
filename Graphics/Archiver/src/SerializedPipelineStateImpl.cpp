@@ -191,7 +191,7 @@ SerializedPipelineStateImpl::SerializedPipelineStateImpl(IReferenceCounters*    
         [this](PipelineStateDesc Desc) //
         {
             Desc.Name = m_Name.c_str();
-            // We don't need resource layout and we dont' copy variables and immutable samplers
+            // We don't need resource layout and we don't copy variables and immutable samplers
             Desc.ResourceLayout = {};
             return Desc;
         }(CreateInfo.PSODesc) //

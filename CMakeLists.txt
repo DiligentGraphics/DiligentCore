@@ -339,7 +339,7 @@ endif(MSVC)
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR
     CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     if(PLATFORM_APPLE)
-        # Looks like force_load is preferrable over all_load
+        # Looks like force_load is preferable over all_load
         set(WHOLE_ARCHIVE_FLAG "-Wl,-force_load" CACHE INTERNAL "all_load flag")
         # Option -noall_load is obsolete and there is no -noforce_load
         set(NO_WHOLE_ARCHIVE_FLAG "" CACHE INTERNAL "noall_load flag")

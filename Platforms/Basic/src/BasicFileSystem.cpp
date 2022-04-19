@@ -217,7 +217,7 @@ std::string BasicFileSystem::GetRelativePath(const Char* PathFrom,
         ++to_it;
     }
     if (from_it == FromPathComps.begin())
-        return PathFrom; // No commmon prefix
+        return PathFrom; // No common prefix
 
     String RelPath;
     for (; from_it != FromPathComps.end(); ++from_it)

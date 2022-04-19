@@ -203,14 +203,14 @@ TEST(GraphicsTypesXTest, RenderPassDescX)
     Ref.pSubpasses          = Subpasses;
     TestCtorsAndAssignments<RenderPassDescX>(Ref);
 
-    constexpr SubpassDependencyDesc Dependecies[] =
+    constexpr SubpassDependencyDesc Dependencies[] =
         {
             {0, 1, PIPELINE_STAGE_FLAG_DRAW_INDIRECT, PIPELINE_STAGE_FLAG_VERTEX_INPUT, ACCESS_FLAG_INDIRECT_COMMAND_READ, ACCESS_FLAG_INDEX_READ},
             {2, 3, PIPELINE_STAGE_FLAG_VERTEX_SHADER, PIPELINE_STAGE_FLAG_HULL_SHADER, ACCESS_FLAG_VERTEX_READ, ACCESS_FLAG_UNIFORM_READ},
             {4, 5, PIPELINE_STAGE_FLAG_DOMAIN_SHADER, PIPELINE_STAGE_FLAG_GEOMETRY_SHADER, ACCESS_FLAG_SHADER_READ, ACCESS_FLAG_SHADER_WRITE},
         };
-    Ref.DependencyCount = _countof(Dependecies);
-    Ref.pDependencies   = Dependecies;
+    Ref.DependencyCount = _countof(Dependencies);
+    Ref.pDependencies   = Dependencies;
     TestCtorsAndAssignments<RenderPassDescX>(Ref);
 
     {
@@ -222,9 +222,9 @@ TEST(GraphicsTypesXTest, RenderPassDescX)
             .AddAttachment(Attachments[3])
             .AddSubpass(Subpass0)
             .AddSubpass(Subpass1)
-            .AddDependency(Dependecies[0])
-            .AddDependency(Dependecies[1])
-            .AddDependency(Dependecies[2]);
+            .AddDependency(Dependencies[0])
+            .AddDependency(Dependencies[1])
+            .AddDependency(Dependencies[2]);
         EXPECT_EQ(DescX, Ref);
 
         DescX.ClearAttachments();
