@@ -1324,6 +1324,38 @@ PIPELINE_RESOURCE_FLAGS ShaderVariableFlagsToPipelineResourceFlags(SHADER_VARIAB
     }
 }
 
+BIND_FLAGS SwapChainUsageFlagsToBindFlags(SWAP_CHAIN_USAGE_FLAGS SwapChainUsage)
+{
+    BIND_FLAGS BindFlags = BIND_NONE;
+    static_assert(SWAP_CHAIN_USAGE_LAST == 8, "Did you add a new swap chain usage flag? Please handle it here.");
+    while (SwapChainUsage != SWAP_CHAIN_USAGE_NONE)
+    {
+        auto SCUsageBit = ExtractLSB(SwapChainUsage);
+        switch (SCUsageBit)
+        {
+            case SWAP_CHAIN_USAGE_RENDER_TARGET:
+                BindFlags |= BIND_RENDER_TARGET;
+                break;
+
+            case SWAP_CHAIN_USAGE_SHADER_RESOURCE:
+                BindFlags |= BIND_SHADER_RESOURCE;
+                break;
+
+            case SWAP_CHAIN_USAGE_INPUT_ATTACHMENT:
+                BindFlags |= BIND_INPUT_ATTACHMENT;
+                break;
+
+            case SWAP_CHAIN_USAGE_COPY_SOURCE:
+                // No special bind flag needed
+                break;
+
+            default:
+                UNEXPECTED("Unexpeced swap chain usage flag");
+        }
+    }
+    return BindFlags;
+}
+
 Uint32 ComputeMipLevelsCount(Uint32 Width)
 {
     if (Width == 0)

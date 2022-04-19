@@ -401,6 +401,8 @@ PIPELINE_RESOURCE_FLAGS GetValidPipelineResourceFlags(SHADER_RESOURCE_TYPE Resou
 
 PIPELINE_RESOURCE_FLAGS ShaderVariableFlagsToPipelineResourceFlags(SHADER_VARIABLE_FLAGS Flags);
 
+BIND_FLAGS SwapChainUsageFlagsToBindFlags(SWAP_CHAIN_USAGE_FLAGS SwapChainUsage);
+
 Uint32 ComputeMipLevelsCount(Uint32 Width);
 Uint32 ComputeMipLevelsCount(Uint32 Width, Uint32 Height);
 Uint32 ComputeMipLevelsCount(Uint32 Width, Uint32 Height, Uint32 Depth);

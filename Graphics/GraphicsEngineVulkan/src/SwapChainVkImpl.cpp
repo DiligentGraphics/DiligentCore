@@ -32,6 +32,7 @@
 #include "TextureVkImpl.hpp"
 #include "VulkanTypeConversions.hpp"
 #include "EngineMemory.h"
+#include "GraphicsAccessories.hpp"
 
 namespace Diligent
 {
@@ -576,7 +577,7 @@ void SwapChainVkImpl::InitBuffersAndViews()
         BackBufferDesc.Width     = m_SwapChainDesc.Width;
         BackBufferDesc.Height    = m_SwapChainDesc.Height;
         BackBufferDesc.Format    = m_SwapChainDesc.ColorBufferFormat;
-        BackBufferDesc.BindFlags = BIND_RENDER_TARGET;
+        BackBufferDesc.BindFlags = SwapChainUsageFlagsToBindFlags(m_SwapChainDesc.Usage);
         BackBufferDesc.MipLevels = 1;
 
         RefCntAutoPtr<TextureVkImpl> pBackBufferTex;
