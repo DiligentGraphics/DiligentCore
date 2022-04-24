@@ -81,7 +81,7 @@ jobs:
             toolset: x64
             build_type: Release
             cmake_generator: "Visual Studio 17 2022"
-            cmake_args: "-DDILIGENT_BUILD_TESTS=ON -DDILIGENT_BUILD_CORE_INCLUDE_TEST=OFF -DCMAKE_SYSTEM_VERSION=8.1 -DDILIGENT_LOAD_PIX_EVENT_RUNTIME=ON"
+            cmake_args: "-DDILIGENT_BUILD_TESTS=ON -DDILIGENT_BUILD_CORE_INCLUDE_TEST=OFF -DCMAKE_SYSTEM_VERSION=8.1"
 
           - name: "Win10-Ninja"
             toolset: x64
@@ -360,7 +360,6 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
-      fail-fast: false
       matrix:
         include:
           - name: "ARM32"
@@ -398,7 +397,6 @@ jobs:
     needs: [win-precheks, linux-precheks]
 
     strategy:
-      fail-fast: false
       matrix:
         os: [windows-latest, ubuntu-latest, macos-latest]
         build_type: [Debug, Release]
