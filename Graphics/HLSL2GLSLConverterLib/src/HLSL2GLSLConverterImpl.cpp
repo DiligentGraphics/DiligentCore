@@ -2675,7 +2675,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessShaderArgument(const Shade
                     GLSLVariable = VarIt->second;
             }
 
-            ArgHandler(MemberStack, CurrParam, move(GLSLVariable));
+            ArgHandler(MemberStack, CurrParam, std::move(GLSLVariable));
             MemberStack.pop_back();
             MemberItStack.pop_back();
         }
@@ -3320,7 +3320,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessShaderAttributes(TokenList
             } //
         );
         VERIFY_PARSER_STATE(TmpToken, TmpToken != m_Tokens.end() && TmpToken->Type == TokenType::ClosingParen, "\']\' expected");
-        Attributes.emplace(make_pair(HashMapStringKey(move(Attrib)), AttribValue));
+        Attributes.emplace(make_pair(HashMapStringKey(std::move(Attrib)), AttribValue));
 
         --Token;
         // [patchconstantfunc("ConstantHS")]
@@ -3602,7 +3602,7 @@ void ParseAttributesInComment(const String& Comment, std::unordered_map<HashMapS
         //    /* partitioning = fractional_even , outputtopology = triangle_cw */
         //                                     ^
         String Value(ValueStartPos, Pos);
-        Attributes.emplace(make_pair(HashMapStringKey(move(Attrib)), Value));
+        Attributes.emplace(make_pair(HashMapStringKey(std::move(Attrib)), Value));
 
         Pos = SkipDelimiters(Pos, Comment.end());
         if (Pos == Comment.end())

@@ -394,7 +394,7 @@ jobs:
 
   #########  Emscripten  #########
   emscripten-build:
-    needs: [win-precheks, linux-precheks]
+    needs: linux-precheks
 
     strategy:
       matrix:
@@ -424,15 +424,10 @@ jobs:
     - name: Configure Ninja
       uses: seanmiddleditch/gha-setup-ninja@master
 
-    - name: Download and Configure Emscripten SDK
-      if: success()
-      shell: bash
-      run: |
-        cd $GITHUB_WORKSPACE/BuildTools/Scripts/github_actions
-        if [[ "${{ matrix.host_name }}" != "Win"* ]]; then
-          chmod +x emscripten_sdk.sh
-        fi
-        ./emscripten_sdk.sh "${{runner.workspace}}" 
+    - name: Setup Emscripten SDK
+      uses: mymindstorm/setup-emsdk@master
+      with:
+        version: "3.1.9"
 
     - name: Configure CMake
       if: success()
