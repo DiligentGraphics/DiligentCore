@@ -3,9 +3,20 @@ name: Android
 on: [push, pull_request]
 
 jobs:
-  build-armeabi-v7a:
+  android-build:
     runs-on: ubuntu-latest
-    name: Linux -> Android-ARM32
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: "ARM32"
+            arch: "armeabi-v7a"
+
+          - name: "ARM64"
+            arch: "arm64-v8a"
+
+    name: Linux -> Android-${{ matrix.name }}
 
     steps:
     - name: Clone repository
@@ -21,31 +32,7 @@ jobs:
 
     - name: Build with Gradle
       env:
-        ANDROID_ARCH: armeabi-v7a
-      run: |
-        cd ./BuildTools/Android
-        chmod +x gradlew
-        ./gradlew buildCMakeDebug
-
-  build-arm64-v8a:
-    runs-on: ubuntu-latest
-    name: Linux -> Android-ARM64
-
-    steps:
-    - name: Clone repository
-      uses: actions/checkout@v2
-      with:
-        submodules: recursive
-
-    - name: Set up Java
-      uses: actions/setup-java@v2
-      with:
-        distribution: 'temurin'
-        java-version: '17'
-
-    - name: Build with Gradle
-      env:
-        ANDROID_ARCH: arm64-v8a
+        ANDROID_ARCH: ${{ matrix.arch }}
       run: |
         cd ./BuildTools/Android
         chmod +x gradlew

@@ -14,27 +14,32 @@ jobs:
         build_type: [Debug, Release]
         cmake_generator: ["Visual Studio 17 2022"]
         cmake_args: ["-DDILIGENT_BUILD_TESTS=ON"]
+
         include:
           - name: "Win10-Dev"
             toolset: x64
             build_type: RelWithDebInfo
             cmake_generator: "Visual Studio 17 2022"
             cmake_args: "-DDILIGENT_BUILD_TESTS=ON -DDILIGENT_BUILD_CORE_INCLUDE_TEST=OFF -DDILIGENT_DEVELOPMENT=ON -DDILIGENT_LOAD_PIX_EVENT_RUNTIME=ON"
+
           - name: "Win8.1"
             toolset: x64
             build_type: Release
             cmake_generator: "Visual Studio 17 2022"
             cmake_args: "-DDILIGENT_BUILD_TESTS=ON -DDILIGENT_BUILD_CORE_INCLUDE_TEST=OFF -DCMAKE_SYSTEM_VERSION=8.1 -DDILIGENT_LOAD_PIX_EVENT_RUNTIME=ON"
+
           - name: "Win10-Ninja"
             toolset: x64
             build_type: Debug
             cmake_generator: "Ninja"
             cmake_args: "-DDILIGENT_BUILD_TESTS=ON -DDILIGENT_BUILD_CORE_INCLUDE_TEST=OFF"
+
           - name: "UWP"
             toolset: x64
             build_type: Debug
             cmake_generator: "Visual Studio 17 2022"
             cmake_args: "-DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION=10.0 -DDILIGENT_LOAD_PIX_EVENT_RUNTIME=ON"
+
           - name: "UWP"
             toolset: x64
             build_type: Release
