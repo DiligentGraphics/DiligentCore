@@ -3,127 +3,34 @@ name: Windows
 on: [push, pull_request]
 
 jobs:
-  vs-win10:
+  win10-build:
     strategy:
+      fail-fast: false
       matrix:
+        name: ["Win10"]
         toolset: [Win32, x64]
-        config: [Debug, Release]
+        build_type: [Debug, Release]
+        cmake_generator: ["Visual Studio 17 2022"]
+        cmake_args: ["-DDILIGENT_BUILD_TESTS=ON"]
+        include:
+          - name: "Win10-Dev"
+            toolset: x64
+            build_type: RelWithDebInfo
+            cmake_generator: "Visual Studio 17 2022"
+            cmake_args: "-DDILIGENT_BUILD_TESTS=ON -DDILIGENT_BUILD_CORE_INCLUDE_TEST=OFF -DDILIGENT_DEVELOPMENT=ON -DDILIGENT_LOAD_PIX_EVENT_RUNTIME=ON"
+          - name: "Win8.1"
+            toolset: x64
+            build_type: Release
+            cmake_generator: "Visual Studio 17 2022"
+            cmake_args: "-DDILIGENT_BUILD_TESTS=ON -DDILIGENT_BUILD_CORE_INCLUDE_TEST=OFF -DCMAKE_SYSTEM_VERSION=8.1 -DDILIGENT_LOAD_PIX_EVENT_RUNTIME=ON"
+          - name: "Win10-Ninja"
+            toolset: x64
+            build_type: Debug
+            cmake_generator: "Ninja"
+            cmake_args: "-DDILIGENT_BUILD_TESTS=ON -DDILIGENT_BUILD_CORE_INCLUDE_TEST=OFF"
 
     runs-on: windows-2022
-    name: Win10 -> ${{ matrix.toolset }}, ${{ matrix.config }}
-
-    steps:
-    - name: Clone repository
-      uses: actions/checkout@v2
-      with:
-        submodules: recursive
-
-    - name: Configure CMake
-      if: success()
-      shell: bash
-      run: |
-        cd $GITHUB_WORKSPACE/BuildTools/Scripts/github_actions
-        ./configure_cmake.sh "win" "${{runner.workspace}}" ${{ matrix.toolset }} ${{ matrix.config }} "-DDILIGENT_BUILD_TESTS=ON"
-
-    - name: Build
-      if: success()
-      working-directory: ${{runner.workspace}}/build
-      shell: bash
-      run: cmake --build . --config ${{ matrix.config }} --target install -j2
-
-    - name: DiligentCoreTest
-      if: success()
-      shell: bash
-      run: |
-        cd "${{runner.workspace}}\DiligentCore\Tests\DiligentCoreTest\assets"
-        "${{runner.workspace}}\build\Tests\DiligentCoreTest\${{ matrix.config }}\DiligentCoreTest.exe"
-
-    - name: DiligentCoreAPITest D3D11
-      if: success()
-      shell: bash
-      run: |
-        cd "${{runner.workspace}}\DiligentCore\Tests\DiligentCoreAPITest\assets"
-        "${{runner.workspace}}\build\Tests\DiligentCoreAPITest\${{ matrix.config }}\DiligentCoreAPITest.exe" --mode=d3d11_sw
-
-    - name: DiligentCoreAPITest D3D12
-      if: success()
-      shell: bash
-      run: |
-        cd "${{runner.workspace}}\DiligentCore\Tests\DiligentCoreAPITest\assets"
-        "${{runner.workspace}}\build\Tests\DiligentCoreAPITest\${{ matrix.config }}\DiligentCoreAPITest.exe" --mode=d3d12_sw
-
-    - name: DiligentCoreAPITest D3D12 DXC
-      if: success()
-      shell: bash
-      run: |
-        cd "${{runner.workspace}}\DiligentCore\Tests\DiligentCoreAPITest\assets"
-        "${{runner.workspace}}\build\Tests\DiligentCoreAPITest\${{ matrix.config }}\DiligentCoreAPITest.exe" --mode=d3d12_sw --shader_compiler=dxc
-
-    - name: Upload artifact
-      uses: actions/upload-artifact@v2
-      if: ${{ success() && matrix.config == 'Release' }}
-      with:
-        name: DiligentCore-Windows10-${{ matrix.toolset }}-VS2022-${{ matrix.config }}
-        path: |
-          ${{runner.workspace}}/build/install/
-          !${{runner.workspace}}/build/install/**/*.lib
-        retention-days: 90
-
-
-  vs-win10-dev:
-    strategy:
-      matrix:
-        toolset: [x64]
-        config: [RelWithDebInfo]
-
-    runs-on: windows-2022
-    name: Win10 -> ${{ matrix.toolset }}, ${{ matrix.config }}, DEVELOPMENT
-
-    steps:
-    - name: Clone repository
-      uses: actions/checkout@v2
-      with:
-        submodules: recursive
-
-    - name: Configure CMake
-      if: success()
-      shell: bash
-      run: |
-        cd $GITHUB_WORKSPACE/BuildTools/Scripts/github_actions
-        ./configure_cmake.sh "win" "${{runner.workspace}}" ${{ matrix.toolset }} ${{ matrix.config }} "-DDILIGENT_BUILD_TESTS=ON -DDILIGENT_DEVELOPMENT=ON -DDILIGENT_LOAD_PIX_EVENT_RUNTIME=ON"
-
-    - name: Build
-      if: success()
-      working-directory: ${{runner.workspace}}/build
-      shell: bash
-      run: cmake --build . --config ${{ matrix.config }} --target install -j2
-
-    - name: DiligentCoreTest
-      if: success()
-      shell: bash
-      run: |
-        cd "${{runner.workspace}}\DiligentCore\Tests\DiligentCoreTest\assets"
-        "${{runner.workspace}}\build\Tests\DiligentCoreTest\${{ matrix.config }}\DiligentCoreTest.exe"
-
-    - name: Upload artifact
-      uses: actions/upload-artifact@v2
-      if: ${{ success() && matrix.config != 'Debug' }}
-      with:
-        name: DiligentCore-Windows10-${{ matrix.toolset }}-VS2022-${{ matrix.config }}Dev
-        path: |
-          ${{runner.workspace}}/build/install/
-          !${{runner.workspace}}/build/install/**/*.lib
-        retention-days: 90
-
-
-  ninja-win10:
-    strategy:
-      matrix:
-        toolset: [x64]
-        config: [Debug]
-
-    runs-on: windows-2022
-    name: Win10-Ninja -> ${{ matrix.toolset }}, ${{ matrix.config }}
+    name: Win10 -> ${{ matrix.name }}-${{ matrix.toolset }}, ${{ matrix.build_type }}
 
     steps:
     - name: Clone repository
@@ -132,9 +39,11 @@ jobs:
         submodules: recursive
 
     - name: Setup Ninja
+      if: ${{ success() && matrix.cmake_generator == 'Ninja' }}
       uses: seanmiddleditch/gha-setup-ninja@master
 
     - name: Setup VS Development Environment
+      if: ${{ success() && matrix.cmake_generator == 'Ninja' }}
       uses: ilammy/msvc-dev-cmd@v1
       with:
         arch: ${{ matrix.toolset }}
@@ -142,66 +51,53 @@ jobs:
     - name: Configure CMake
       if: success()
       env:
-        CMAKE_GENERATOR: Ninja
+        CMAKE_GENERATOR: ${{ matrix.cmake_generator }}
       shell: bash
       run: |
         cd $GITHUB_WORKSPACE/BuildTools/Scripts/github_actions
-        ./configure_cmake.sh "win" "${{runner.workspace}}" ${{ matrix.toolset }} ${{ matrix.config }}
+        ./configure_cmake.sh "win" "${{runner.workspace}}" ${{ matrix.toolset }} ${{ matrix.build_type }} "${{ matrix.cmake_args }}"
 
     - name: Build
       if: success()
       working-directory: ${{runner.workspace}}/build
       shell: bash
-      run: cmake --build . --config ${{ matrix.config }} -j2
-
-
-  vs-win8:
-    strategy:
-      matrix:
-        toolset: [x64]
-        config: [Release]
-
-    runs-on: windows-2022
-    name: Win10 -> Win8.1-${{ matrix.toolset }}, ${{ matrix.config }}
-
-    steps:
-    - name: Clone repository
-      uses: actions/checkout@v2
-      with:
-        submodules: recursive
-
-    - name: Configure CMake
-      if: success()
-      shell: bash
-      run: |
-        cd $GITHUB_WORKSPACE/BuildTools/Scripts/github_actions
-        ./configure_cmake.sh "win" "${{runner.workspace}}" ${{ matrix.toolset }} ${{ matrix.config }} "-DDILIGENT_BUILD_TESTS=ON -DCMAKE_SYSTEM_VERSION=8.1 -DDILIGENT_LOAD_PIX_EVENT_RUNTIME=ON"
-
-    - name: Build
-      if: success()
-      working-directory: ${{runner.workspace}}/build
-      shell: bash
-      run: cmake --build . --config ${{ matrix.config }} --target install -j2
+      run: cmake --build . --config ${{ matrix.build_type }} --target install -j2
 
     - name: DiligentCoreTest
       if: success()
       shell: bash
       run: |
         cd "${{runner.workspace}}\DiligentCore\Tests\DiligentCoreTest\assets"
-        "${{runner.workspace}}\build\Tests\DiligentCoreTest\${{ matrix.config }}\DiligentCoreTest.exe"
+        export BIN_DIR="${{runner.workspace}}\build\Tests\DiligentCoreTest"
+        if [ "${{ matrix.cmake_generator }}" != "Ninja" ]; then BIN_DIR="$BIN_DIR\${{ matrix.build_type }}"; fi
+        "$BIN_DIR\DiligentCoreTest.exe"
 
     - name: DiligentCoreAPITest D3D11
-      if: success()
+      if: ${{ success() && (matrix.name == 'Win10' || matrix.name == 'Win8.1') }}
       shell: bash
       run: |
         cd "${{runner.workspace}}\DiligentCore\Tests\DiligentCoreAPITest\assets"
-        "${{runner.workspace}}\build\Tests\DiligentCoreAPITest\${{ matrix.config }}\DiligentCoreAPITest.exe" --mode=d3d11_sw
+        "${{runner.workspace}}\build\Tests\DiligentCoreAPITest\${{ matrix.build_type }}\DiligentCoreAPITest.exe" --mode=d3d11_sw
+
+    - name: DiligentCoreAPITest D3D12
+      if: ${{ success() && matrix.name == 'Win10' }}
+      shell: bash
+      run: |
+        cd "${{runner.workspace}}\DiligentCore\Tests\DiligentCoreAPITest\assets"
+        "${{runner.workspace}}\build\Tests\DiligentCoreAPITest\${{ matrix.build_type }}\DiligentCoreAPITest.exe" --mode=d3d12_sw
+
+    - name: DiligentCoreAPITest D3D12 DXC
+      if: ${{ success() && matrix.name == 'Win10' }}
+      shell: bash
+      run: |
+        cd "${{runner.workspace}}\DiligentCore\Tests\DiligentCoreAPITest\assets"
+        "${{runner.workspace}}\build\Tests\DiligentCoreAPITest\${{ matrix.build_type }}\DiligentCoreAPITest.exe" --mode=d3d12_sw --shader_compiler=dxc
 
     - name: Upload artifact
       uses: actions/upload-artifact@v2
-      if: ${{ success() && matrix.config == 'Release' }}
+      if: ${{ success() && matrix.build_type != 'Debug' && matrix.cmake_generator != 'Ninja' }}
       with:
-        name: DiligentCore-Windows8-${{ matrix.toolset }}-VS2022-${{ matrix.config }}
+        name: DiligentCore-${{ matrix.name }}-${{ matrix.toolset }}-${{ matrix.build_type }}
         path: |
           ${{runner.workspace}}/build/install/
           !${{runner.workspace}}/build/install/**/*.lib
