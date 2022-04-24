@@ -6,10 +6,26 @@ jobs:
   build-macos-clang:
     strategy:
       matrix:
-        config: [Debug, Release]
+        platform: [MacOS, iOS, tvOS]
+        build_type: [Debug, Release]
+        exclude:
+          # Exclude tvOS-Debug
+          - platform: tvOS
+            build_type: Debug
+        include:
+          - platform: "MacOS"
+            build_type: "Debug"
+            cmake_args: "-DDILIGENT_BUILD_TESTS=ON"
+          - platform: "MacOS"
+            build_type: "Release"
+            cmake_args: "-DDILIGENT_BUILD_TESTS=ON -DDILIGENT_BUILD_CORE_INCLUDE_TEST=OFF"
+          - platform: "iOS"
+            cmake_args: ""
+          - platform: "tvOS"
+            cmake_args: ""
 
     runs-on: macos-latest
-    name: MacOS -> ${{ matrix.config }}
+    name: MacOS -> ${{ matrix.platform }}-${{ matrix.build_type }}
 
     steps:
     - name: Clone repository
@@ -31,16 +47,16 @@ jobs:
       run: |
         cd $GITHUB_WORKSPACE/BuildTools/Scripts/github_actions
         chmod +x configure_cmake.sh
-        ./configure_cmake.sh "macos" "${{runner.workspace}}" ${{ matrix.config }} "-DDILIGENT_BUILD_TESTS=ON"
+        ./configure_cmake.sh "${{ matrix.platform }}" "${{runner.workspace}}" ${{ matrix.build_type }} "${{ matrix.cmake_args }}"
 
     - name: Build
       if: success()
       working-directory: ${{runner.workspace}}/build
       shell: bash
-      run: cmake --build . --config ${{ matrix.config }} --target install -j2
+      run: cmake --build . --config ${{ matrix.build_type }} --target install -j2
 
     - name: DiligentCoreTest
-      if: success()
+      if: ${{ success() && matrix.platform == 'MacOS' }}
       shell: bash
       run: |
         cd "${{runner.workspace}}/DiligentCore/Tests/DiligentCoreTest/assets"
@@ -48,9 +64,9 @@ jobs:
 
     - name: Upload artifact
       uses: actions/upload-artifact@v2
-      if: ${{ success() && matrix.config == 'Release' }}
+      if: ${{ success() && matrix.build_type == 'Release' }}
       with:
-        name: DiligentCore-MacOS-x64-${{ matrix.config }}
+        name: DiligentCore-${{ matrix.platform }}-${{ matrix.build_type }}
         path: |
           ${{runner.workspace}}/build/install/
           !${{runner.workspace}}/build/install/**/*.a
