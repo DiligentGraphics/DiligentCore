@@ -3,7 +3,9 @@ name: Windows
 on: [push, pull_request]
 
 jobs:
-  win10-build:
+  win-build:
+    runs-on: windows-2022
+
     strategy:
       fail-fast: false
       matrix:
@@ -28,8 +30,17 @@ jobs:
             build_type: Debug
             cmake_generator: "Ninja"
             cmake_args: "-DDILIGENT_BUILD_TESTS=ON -DDILIGENT_BUILD_CORE_INCLUDE_TEST=OFF"
+          - name: "UWP"
+            toolset: x64
+            build_type: Debug
+            cmake_generator: "Visual Studio 17 2022"
+            cmake_args: "-DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION=10.0 -DDILIGENT_LOAD_PIX_EVENT_RUNTIME=ON"
+          - name: "UWP"
+            toolset: x64
+            build_type: Release
+            cmake_generator: "Visual Studio 17 2022"
+            cmake_args: "-DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION=10.0 -DDILIGENT_LOAD_PIX_EVENT_RUNTIME=ON"
 
-    runs-on: windows-2022
     name: Win10 -> ${{ matrix.name }}-${{ matrix.toolset }}, ${{ matrix.build_type }}
 
     steps:
@@ -64,7 +75,7 @@ jobs:
       run: cmake --build . --config ${{ matrix.build_type }} --target install -j2
 
     - name: DiligentCoreTest
-      if: success()
+      if: ${{ success() && matrix.name != 'UWP'}}
       shell: bash
       run: |
         cd "${{runner.workspace}}\DiligentCore\Tests\DiligentCoreTest\assets"
