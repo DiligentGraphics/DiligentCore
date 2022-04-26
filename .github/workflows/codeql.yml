@@ -12,18 +12,20 @@ jobs:
         cmake_args: ["-DDILIGENT_NO_GLSLANG=ON -DDILIGENT_NO_HLSL=ON"]
         include:
           - host_name: "Win10"
+            platform: "Win32"
             os: windows-2022
             cmake_generator: "Visual Studio 17 2022"
 
           - host_name: "Linux"
+            platform: "Linux"
             os: ubuntu-latest
             cmake_generator: "Ninja"
             cc: clang-12
             cxx: clang++-12
-    
+
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.host_name }} -> Code QL, ${{ matrix.toolset }}, ${{ matrix.build_type }}
-    
+
     permissions:
       # required for all workflows
       security-events: write
@@ -37,14 +39,12 @@ jobs:
       with:
         submodules: recursive
 
-    - name: Configure dependencies
-      if: ${{ success() && matrix.host_name == 'Linux' }}
-      run: |
-        sudo apt-get update && sudo apt-get install build-essential libx11-dev libgl1-mesa-dev
-
-    - name: Setup Ninja
-      if: ${{ success() && matrix.host_name == 'Linux' }}
-      uses: seanmiddleditch/gha-setup-ninja@master
+    - name: Set up build environment
+      if: success()
+      uses: DiligentGraphics/github-action/setup-build-env@v1
+      with:
+        platform:    ${{ matrix.platform }}
+        setup-ninja: ${{ matrix.cmake_generator == 'Ninja' }}
 
     - name: Configure CMake
       if: success()
@@ -66,6 +66,7 @@ jobs:
       uses: github/codeql-action/init@v2
       with:
         languages: cpp
+        queries: security-and-quality
 
     - name: Build
       if: success()
