@@ -174,8 +174,8 @@ jobs:
       with:
         name: DiligentCore-${{ matrix.name }}-${{ matrix.toolset }}-${{ matrix.build_type }}
         path: |
-          ${{runner.workspace}}/build/install/
-          !${{runner.workspace}}/build/install/**/*.lib
+          ${{env.DILIGENT_INSTALL_DIR}}
+          !${{env.DILIGENT_INSTALL_DIR}}/**/*.lib
         retention-days: 90
 
 
@@ -275,8 +275,8 @@ jobs:
       with:
         name: DiligentCore-Linux-${{ matrix.name }}-x64-${{ matrix.build_type }}
         path: |
-          ${{runner.workspace}}/build/install/
-          !${{runner.workspace}}/build/install/**/*.a
+          ${{env.DILIGENT_INSTALL_DIR}}
+          !${{env.DILIGENT_INSTALL_DIR}}/**/*.a
         retention-days: 90
 
 
@@ -346,8 +346,8 @@ jobs:
       with:
         name: DiligentCore-${{ matrix.platform }}-${{ matrix.build_type }}
         path: |
-          ${{runner.workspace}}/build/install/
-          !${{runner.workspace}}/build/install/**/*.a
+          ${{env.DILIGENT_INSTALL_DIR}}
+          !${{env.DILIGENT_INSTALL_DIR}}/**/*.a
         retention-days: 90
 
 
