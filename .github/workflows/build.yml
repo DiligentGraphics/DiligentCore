@@ -137,12 +137,7 @@ jobs:
 
     - name: DiligentCoreTest
       if: ${{ success() && matrix.name != 'UWP'}}
-      shell: bash
-      run: |
-        cd "${{runner.workspace}}\DiligentCore\Tests\DiligentCoreTest\assets"
-        export BIN_DIR="${{runner.workspace}}\build\Tests\DiligentCoreTest"
-        if [ "${{ matrix.cmake_generator }}" != "Ninja" ]; then BIN_DIR="$BIN_DIR\${{ matrix.build_type }}"; fi
-        "$BIN_DIR\DiligentCoreTest.exe"
+      uses: DiligentGraphics/github-action/run-core-tests@master
 
     - name: DiligentCoreAPITest D3D11
       if: ${{ success() && (matrix.name == 'Win10' || matrix.name == 'Win8.1') }}
@@ -260,11 +255,8 @@ jobs:
         target: install
 
     - name: DiligentCoreTest
-      if: success()
-      shell: bash
-      run: |
-        cd "${{runner.workspace}}/DiligentCore/Tests/DiligentCoreTest/assets"
-        ${{runner.workspace}}/build/Tests/DiligentCoreTest/DiligentCoreTest
+      if:   success()
+      uses: DiligentGraphics/github-action/run-core-tests@master
 
     - name: Upload artifact
       uses: actions/upload-artifact@v2
@@ -336,11 +328,8 @@ jobs:
         target: install
 
     - name: DiligentCoreTest
-      if: ${{ success() && matrix.platform == 'MacOS' }}
-      shell: bash
-      run: |
-        cd "${{runner.workspace}}/DiligentCore/Tests/DiligentCoreTest/assets"
-        ${{runner.workspace}}/build/Tests/DiligentCoreTest/DiligentCoreTest
+      if:   ${{ success() && matrix.platform == 'MacOS' }}
+      uses: DiligentGraphics/github-action/run-core-tests@master
 
     - name: Upload artifact
       uses: actions/upload-artifact@v2
