@@ -14,9 +14,8 @@ jobs:
 
     - name: Format validation
       shell: cmd
-      run: |
-        cd BuildTools\FormatValidation
-        validate_format_win.bat
+      working-directory: ${{github.workspace}}/BuildTools/FormatValidation
+      run: validate_format_win.bat
 
   linux-precheks:
     runs-on: ubuntu-latest
@@ -28,15 +27,14 @@ jobs:
 
       - name: Format validation
         shell: bash
-        run: |
-          cd $GITHUB_WORKSPACE/BuildTools/FormatValidation
-          ./validate_format_linux.sh
+        working-directory: ${{github.workspace}}/BuildTools/FormatValidation
+        run: ./validate_format_linux.sh
 
       - name: Codespell
         uses: codespell-project/actions-codespell@master
         with:
           check_filenames: true
-          ignore_words_list: ser,inout,lod,pres,boundimg,ot,unknwn
+          ignore_words_file: .github/.codespellignore
           skip: ./ThirdParty
           path: .
 
@@ -50,9 +48,8 @@ jobs:
 
     - name: Format validation
       shell: bash
-      run: |
-        cd $GITHUB_WORKSPACE/BuildTools/FormatValidation
-        ./validate_format_mac.sh
+      working-directory: ${{github.workspace}}/BuildTools/FormatValidation
+      run: ./validate_format_mac.sh
 
 
 
@@ -64,48 +61,48 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        name: ["Win10"]
-        toolset: [Win32, x64]
-        build_type: [Debug, Release]
+        name:            ["Win10"]
+        toolset:         ["Win32", "x64"]
+        build_type:      ["Debug", "Release"]
         cmake_generator: ["Visual Studio 17 2022"]
-        cmake_args: ["-DDILIGENT_BUILD_TESTS=ON"]
-        platform: ["Win32"]
+        cmake_args:      ["-DDILIGENT_BUILD_TESTS=ON"]
+        platform:        ["Win32"]
 
         include:
-          - name: "Win10-Dev"
-            platform: "Win32"
-            toolset: x64
-            build_type: RelWithDebInfo
+          - name:            "Win10-Dev"
+            platform:        "Win32"
+            toolset:         "x64"
+            build_type:      "RelWithDebInfo"
             cmake_generator: "Visual Studio 17 2022"
-            cmake_args: "-DDILIGENT_BUILD_CORE_TESTS=ON -DDILIGENT_DEVELOPMENT=ON -DDILIGENT_LOAD_PIX_EVENT_RUNTIME=ON"
+            cmake_args:      "-DDILIGENT_BUILD_CORE_TESTS=ON -DDILIGENT_DEVELOPMENT=ON -DDILIGENT_LOAD_PIX_EVENT_RUNTIME=ON"
 
-          - name: "Win8.1"
-            platform: "Win32"
-            toolset: x64
-            build_type: Release
+          - name:            "Win8.1"
+            platform:        "Win32"
+            toolset:         "x64"
+            build_type:      "Release"
             cmake_generator: "Visual Studio 17 2022"
-            cmake_args: "-DDILIGENT_BUILD_CORE_TESTS=ON -DCMAKE_SYSTEM_VERSION=8.1"
+            cmake_args:      "-DDILIGENT_BUILD_CORE_TESTS=ON -DCMAKE_SYSTEM_VERSION=8.1"
 
-          - name: "Win10-Ninja"
-            platform: "Win32"
-            toolset: x64
-            build_type: Debug
+          - name:            "Win10-Ninja"
+            platform:        "Win32"
+            toolset:         "x64"
+            build_type:      "Debug"
             cmake_generator: "Ninja"
-            cmake_args: "-DDILIGENT_BUILD_CORE_TESTS=ON"
+            cmake_args:      "-DDILIGENT_BUILD_CORE_TESTS=ON"
 
-          - name: "UWP"
-            platform: "UWP"
-            toolset: x64
-            build_type: Debug
+          - name:            "UWP"
+            platform:        "UWP"
+            toolset:         "x64"
+            build_type:      "Debug"
             cmake_generator: "Visual Studio 17 2022"
-            cmake_args: "-DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION=10.0 -DDILIGENT_LOAD_PIX_EVENT_RUNTIME=ON"
+            cmake_args:      "-DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION=10.0 -DDILIGENT_LOAD_PIX_EVENT_RUNTIME=ON"
 
-          - name: "UWP"
-            platform: "UWP"
-            toolset: x64
-            build_type: Release
+          - name:            "UWP"
+            platform:        "UWP"
+            toolset:         "x64"
+            build_type:      "Release"
             cmake_generator: "Visual Studio 17 2022"
-            cmake_args: "-DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION=10.0 -DDILIGENT_LOAD_PIX_EVENT_RUNTIME=ON"
+            cmake_args:      "-DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION=10.0 -DDILIGENT_LOAD_PIX_EVENT_RUNTIME=ON"
 
     name: Win10 -> ${{ matrix.name }}-${{ matrix.toolset }}, ${{ matrix.build_type }}
 
@@ -188,47 +185,47 @@ jobs:
     strategy:
       matrix:
         include:
-          - name: "GCC"
-            build_type: "Debug"
+          - name:            "GCC"
+            build_type:      "Debug"
             cmake_generator: "Unix Makefiles"
-            cmake_args: "-DDILIGENT_BUILD_TESTS=ON"
-            cc: gcc-9
-            cxx: g++-9
+            cmake_args:      "-DDILIGENT_BUILD_TESTS=ON"
+            cc:              "gcc-9"
+            cxx:             "g++-9"
 
-          - name: "GCC"
-            build_type: "Release"
+          - name:            "GCC"
+            build_type:      "Release"
             cmake_generator: "Unix Makefiles"
-            cmake_args: "-DDILIGENT_BUILD_TESTS=ON"
-            cc: gcc-9
-            cxx: g++-9
+            cmake_args:      "-DDILIGENT_BUILD_TESTS=ON"
+            cc:              "gcc-9"
+            cxx:             "g++-9"
 
-          - name: "Clang"
-            build_type: "Debug"
+          - name:            "Clang"
+            build_type:      "Debug"
             cmake_generator: "Ninja"
-            cmake_args: "-DDILIGENT_BUILD_TESTS=ON"
-            cc: clang-12
-            cxx: clang++-12
+            cmake_args:      "-DDILIGENT_BUILD_TESTS=ON"
+            cc:              "clang-12"
+            cxx:             "clang++-12"
 
-          - name: "Clang"
-            build_type: "Release"
+          - name:            "Clang"
+            build_type:      "Release"
             cmake_generator: "Ninja"
-            cmake_args: "-DDILIGENT_BUILD_TESTS=ON"
-            cc: clang-12
-            cxx: clang++-12
+            cmake_args:      "-DDILIGENT_BUILD_TESTS=ON"
+            cc:              "clang-12"
+            cxx:             "clang++-12"
 
-          - name: "Clang-NO_GLSLANG"
-            build_type: "Debug"
+          - name:            "Clang-NO_GLSLANG"
+            build_type:      "Debug"
             cmake_generator: "Ninja"
-            cmake_args: "-DDILIGENT_BUILD_TESTS=ON -DDILIGENT_BUILD_CORE_INCLUDE_TEST=OFF -DDILIGENT_NO_OPENGL=ON -DDILIGENT_NO_GLSLANG=ON"
-            cc: clang-12
-            cxx: clang++-12
+            cmake_args:      "-DDILIGENT_BUILD_TESTS=ON -DDILIGENT_BUILD_CORE_INCLUDE_TEST=OFF -DDILIGENT_NO_OPENGL=ON -DDILIGENT_NO_GLSLANG=ON"
+            cc:              "clang-12"
+            cxx:             "clang++-12"
 
-          - name: "Clang-NO_GLSLANG-NO_HLSL"
-            build_type: "Release"
+          - name:            "Clang-NO_GLSLANG-NO_HLSL"
+            build_type:      "Release"
             cmake_generator: "Ninja"
-            cmake_args: "-DDILIGENT_BUILD_TESTS=ON -DDILIGENT_BUILD_CORE_INCLUDE_TEST=OFF -DDILIGENT_NO_GLSLANG=ON -DDILIGENT_NO_HLSL=ON"
-            cc: clang-12
-            cxx: clang++-12
+            cmake_args:      "-DDILIGENT_BUILD_TESTS=ON -DDILIGENT_BUILD_CORE_INCLUDE_TEST=OFF -DDILIGENT_NO_GLSLANG=ON -DDILIGENT_NO_HLSL=ON"
+            cc:              "clang-12"
+            cxx:             "clang++-12"
 
     name: Linux -> ${{ matrix.name }}-x64, ${{ matrix.build_type }}
 
@@ -239,7 +236,7 @@ jobs:
         submodules: recursive
 
     - name: Set up build environment
-      if: success()
+      if:   success()
       uses: DiligentGraphics/github-action/setup-build-env@v1
       with:
         platform:    Linux
@@ -257,7 +254,7 @@ jobs:
 
 
     - name: Build
-      if: success()
+      if:   success()
       uses: DiligentGraphics/github-action/build@master
       with:
         target: install
@@ -288,22 +285,27 @@ jobs:
 
     strategy:
       matrix:
-        platform: [MacOS, iOS, tvOS]
-        build_type: [Debug, Release]
+        platform:   ["MacOS", "iOS", "tvOS"]
+        build_type: ["Debug", "Release"]
+
         exclude:
           # Exclude tvOS-Debug
-          - platform: tvOS
-            build_type: Debug
+          - platform:   "tvOS"
+            build_type: "Debug"
+
         include:
-          - platform: "MacOS"
+          - platform:   "MacOS"
             build_type: "Debug"
             cmake_args: "-DDILIGENT_BUILD_TESTS=ON"
-          - platform: "MacOS"
+
+          - platform:   "MacOS"
             build_type: "Release"
             cmake_args: "-DDILIGENT_BUILD_TESTS=ON -DDILIGENT_BUILD_CORE_INCLUDE_TEST=OFF"
-          - platform: "iOS"
+
+          - platform:   "iOS"
             cmake_args: ""
-          - platform: "tvOS"
+
+          - platform:   "tvOS"
             cmake_args: ""
 
     name: MacOS -> ${{ matrix.platform }}-${{ matrix.build_type }}
@@ -396,19 +398,23 @@ jobs:
 
     strategy:
       matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest]
-        build_type: [Debug, Release]
+        os:         ["windows-latest", "ubuntu-latest", "macos-latest"]
+        build_type: ["Debug", "Release"]
+
         exclude:
           # Exclude MacOS-Release
-          - os: macos-latest
-            build_type: Release
+          - os:         "macos-latest"
+            build_type: "Release"
+
         include:
-          - os: windows-latest
-            host_name: Win10
-          - os: ubuntu-latest
-            host_name: Linux
-          - os: macos-latest
-            host_name: MacOS
+          - os:        "windows-latest"
+            host_name: "Win10"
+
+          - os:        "ubuntu-latest"
+            host_name: "Linux"
+
+          - os:        "macos-latest"
+            host_name: "MacOS"
 
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.host_name }} -> Emscripten, ${{ matrix.build_type }}
@@ -420,18 +426,18 @@ jobs:
         submodules: recursive
 
     - name: Set up build environment
-      if: success()
+      if:   success()
       uses: DiligentGraphics/github-action/setup-build-env@v1
       with:
         platform: Emscripten
 
     - name: Configure CMake
-      if: success()
+      if:   success()
       uses: DiligentGraphics/github-action/configure-cmake@v1
       with:
         build-type: ${{ matrix.build_type }}
         cmake-args: "-DDILIGENT_BUILD_CORE_INCLUDE_TEST=ON"
 
     - name: Build
-      if: success()
+      if:   success()
       uses: DiligentGraphics/github-action/build@master
