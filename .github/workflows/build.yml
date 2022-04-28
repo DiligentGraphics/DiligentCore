@@ -35,7 +35,7 @@ jobs:
         with:
           check_filenames: true
           ignore_words_file: .github/.codespellignore
-          skip: ./ThirdParty
+          skip: ./.git,./ThirdParty
           path: .
 
   macos-precheks:
