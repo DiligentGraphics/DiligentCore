@@ -136,29 +136,27 @@ jobs:
         target: install
 
     - name: DiligentCoreTest
-      if: ${{ success() && matrix.name != 'UWP'}}
+      if:   ${{ success() && matrix.name != 'UWP'}}
       uses: DiligentGraphics/github-action/run-core-tests@master
 
     - name: DiligentCoreAPITest D3D11
-      if: ${{ success() && (matrix.name == 'Win10' || matrix.name == 'Win8.1') }}
-      shell: bash
-      run: |
-        cd "${{runner.workspace}}\DiligentCore\Tests\DiligentCoreAPITest\assets"
-        "${{runner.workspace}}\build\Tests\DiligentCoreAPITest\${{ matrix.build_type }}\DiligentCoreAPITest.exe" --mode=d3d11_sw
+      if:   ${{ success() && (matrix.name == 'Win10' || matrix.name == 'Win8.1') }}
+      uses: DiligentGraphics/github-action/run-core-gpu-tests@master
+      with:
+        mode: d3d11_sw
 
     - name: DiligentCoreAPITest D3D12
-      if: ${{ success() && matrix.name == 'Win10' }}
-      shell: bash
-      run: |
-        cd "${{runner.workspace}}\DiligentCore\Tests\DiligentCoreAPITest\assets"
-        "${{runner.workspace}}\build\Tests\DiligentCoreAPITest\${{ matrix.build_type }}\DiligentCoreAPITest.exe" --mode=d3d12_sw
+      if:   ${{ success() && matrix.name == 'Win10' }}
+      uses: DiligentGraphics/github-action/run-core-gpu-tests@master
+      with:
+        mode: d3d12_sw
 
     - name: DiligentCoreAPITest D3D12 DXC
-      if: ${{ success() && matrix.name == 'Win10' }}
-      shell: bash
-      run: |
-        cd "${{runner.workspace}}\DiligentCore\Tests\DiligentCoreAPITest\assets"
-        "${{runner.workspace}}\build\Tests\DiligentCoreAPITest\${{ matrix.build_type }}\DiligentCoreAPITest.exe" --mode=d3d12_sw --shader_compiler=dxc
+      if:   ${{ success() && matrix.name == 'Win10' }}
+      uses: DiligentGraphics/github-action/run-core-gpu-tests@master
+      with:
+        mode:    d3d12_sw
+        use_dxc: true
 
     - name: Upload artifact
       uses: actions/upload-artifact@v2
