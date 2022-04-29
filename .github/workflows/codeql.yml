@@ -6,22 +6,22 @@ jobs:
   run-analysis:
     strategy:
       matrix:
-        toolset: [x64]
-        build_type: [Debug]
-        host_name: [Win10, Linux]
+        toolset:    ["x64"]
+        build_type: ["Debug"]
+        host_name:  ["Win10", "Linux"]
         cmake_args: ["-DDILIGENT_NO_GLSLANG=ON -DDILIGENT_NO_HLSL=ON"]
         include:
-          - host_name: "Win10"
-            platform: "Win32"
-            os: windows-2022
+          - host_name:       "Win10"
+            platform:        "Win32"
+            os:              "windows-2022"
             cmake_generator: "Visual Studio 17 2022"
 
-          - host_name: "Linux"
-            platform: "Linux"
-            os: ubuntu-latest
+          - host_name:       "Linux"
+            platform:        "Linux"
+            os:              "ubuntu-latest"
             cmake_generator: "Ninja"
-            cc: clang-12
-            cxx: clang++-12
+            cc:              "clang-12"
+            cxx:             "clang++-12"
 
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.host_name }} -> Code QL, ${{ matrix.toolset }}, ${{ matrix.build_type }}
@@ -65,9 +65,7 @@ jobs:
 
     - name: Build
       if: success()
-      working-directory: ${{runner.workspace}}/build
-      shell: bash
-      run: cmake --build . --config ${{ matrix.build_type }} -j2
+      uses: DiligentGraphics/github-action/build@master
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v2
