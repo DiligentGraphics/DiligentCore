@@ -1,4 +1,4 @@
-name: Code Scanning
+name: CodeQL Code Scanning
 
 on: [push, pull_request]
 
