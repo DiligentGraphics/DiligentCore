@@ -1797,7 +1797,7 @@ Uint64 GetStagingTextureLocationOffset(const TextureDesc& TexDesc,
         Offset += (LocationZ * MipLevelAttribs.StorageHeight + LocationY) / FmtAttribs.BlockHeight * MipLevelAttribs.RowSize;
 
         // For non-compressed formats, BlockWidth is 1.
-        Offset += (LocationX / FmtAttribs.BlockWidth) * FmtAttribs.GetElementSize();
+        Offset += Uint64{LocationX / FmtAttribs.BlockWidth} * FmtAttribs.GetElementSize();
 
         // Note: this addressing complies with how Vulkan (as well as OpenGL/GLES and Metal) address
         // textures when copying data to/from buffers:

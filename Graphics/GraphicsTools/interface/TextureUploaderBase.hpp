@@ -57,7 +57,7 @@ public:
         // clang-format off
         ObjectBase<IUploadBuffer>{pRefCounters},
         m_Desc                   {Desc},
-        m_MappedData             (m_Desc.ArraySize * m_Desc.MipLevels)
+        m_MappedData             (size_t{m_Desc.ArraySize} * size_t{m_Desc.MipLevels})
     // clang-format on
     {
     }

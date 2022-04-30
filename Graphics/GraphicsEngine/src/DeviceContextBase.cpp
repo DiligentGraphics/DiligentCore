@@ -180,7 +180,7 @@ bool VerifyDrawMeshIndirectAttribs(const DrawMeshIndirectAttribs& Attribs, Uint3
     CHECK_DRAW_MESH_INDIRECT_ATTRIBS((ArgsBuffDesc.BindFlags & BIND_INDIRECT_DRAW_ARGS) != 0,
                                      "indirect draw arguments buffer '", ArgsBuffDesc.Name,
                                      "' was not created with BIND_INDIRECT_DRAW_ARGS flag.");
-    const auto ReqAttrBufSize = Attribs.DrawArgsOffset + IndirectCmdStride * Attribs.CommandCount;
+    const auto ReqAttrBufSize = Attribs.DrawArgsOffset + Uint64{IndirectCmdStride} * Uint64{Attribs.CommandCount};
     CHECK_DRAW_MESH_INDIRECT_ATTRIBS(ReqAttrBufSize <= ArgsBuffDesc.Size, "invalid DrawArgsOffset (", Attribs.DrawArgsOffset,
                                      ") or indirect draw arguments buffer '", ArgsBuffDesc.Name, "' size must be at least ", ReqAttrBufSize, " bytes");
 
@@ -1264,7 +1264,7 @@ bool VerifyBindSparseResourceMemoryAttribs(const IRenderDevice* pDevice, const B
                 {
                     const uint3 TilesInBox = GetNumSparseTilesInBox(Region, TexSparseProps.TileSize);
                     const auto  NumBlocks  = TilesInBox.x * TilesInBox.y * TilesInBox.z;
-                    CHECK_BIND_SPARSE_ATTRIBS(NumBlocks * TexSparseProps.BlockSize == Range.MemorySize,
+                    CHECK_BIND_SPARSE_ATTRIBS(Uint64{NumBlocks} * Uint64{TexSparseProps.BlockSize} == Range.MemorySize,
                                               "pTextureBinds[", i, "].pRanges[", r, "].MemorySize (", Range.MemorySize, ") does not match the sparse memory blocks count (",
                                               NumBlocks, ") in the specified region");
                 }

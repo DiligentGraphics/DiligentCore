@@ -339,7 +339,7 @@ public:
         VERIFY_EXPR((pData == nullptr) || (DataSize == this->m_ShaderRecordSize));
 
         const Uint32 GroupSize = this->GetDevice()->GetAdapterInfo().RayTracing.ShaderGroupHandleSize;
-        const size_t Offset    = CallableIndex * this->m_ShaderRecordStride;
+        const size_t Offset    = size_t{CallableIndex} * size_t{this->m_ShaderRecordStride};
         this->m_CallableShadersRecord.resize(std::max(this->m_CallableShadersRecord.size(), Offset + this->m_ShaderRecordStride), Uint8{EmptyElem});
 
         this->m_pPSO->CopyShaderHandle(pShaderGroupName, this->m_CallableShadersRecord.data() + Offset, this->m_ShaderRecordStride);

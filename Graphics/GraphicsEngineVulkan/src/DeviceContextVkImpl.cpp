@@ -2437,7 +2437,7 @@ void DeviceContextVkImpl::MapTextureSubresource(ITexture*                 pTextu
             // For non-compressed formats, BlockHeight is 1.
             (pMapRegion->MinZ * MipLevelAttribs.StorageHeight + pMapRegion->MinY) / FmtAttribs.BlockHeight * MipLevelAttribs.RowSize +
             // For non-compressed formats, BlockWidth is 1.
-            pMapRegion->MinX / FmtAttribs.BlockWidth * FmtAttribs.GetElementSize();
+            pMapRegion->MinX / FmtAttribs.BlockWidth * Uint64{FmtAttribs.GetElementSize()};
 
         MappedData.pData       = TextureVk.GetStagingDataCPUAddress() + MapStartOffset;
         MappedData.Stride      = MipLevelAttribs.RowSize;
@@ -2460,7 +2460,7 @@ void DeviceContextVkImpl::MapTextureSubresource(ITexture*                 pTextu
             auto BlockAlignedMaxY = AlignUp(pMapRegion->MaxY, Uint32{FmtAttribs.BlockHeight});
             auto MapEndOffset     = SubresourceOffset +
                 ((pMapRegion->MaxZ - 1) * MipLevelAttribs.StorageHeight + (BlockAlignedMaxY - FmtAttribs.BlockHeight)) / FmtAttribs.BlockHeight * MipLevelAttribs.RowSize +
-                (BlockAlignedMaxX / FmtAttribs.BlockWidth) * FmtAttribs.GetElementSize();
+                (BlockAlignedMaxX / FmtAttribs.BlockWidth) * Uint64{FmtAttribs.GetElementSize()};
             TextureVk.InvalidateStagingRange(MapStartOffset, MapEndOffset - MapStartOffset);
         }
         else if (MapType == MAP_WRITE)

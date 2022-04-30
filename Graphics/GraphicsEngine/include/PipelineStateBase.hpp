@@ -542,7 +542,7 @@ protected:
         size_t RTDataSize = sizeof(RayTracingPipelineData);
         // Reserve space for shader handles
         const auto ShaderHandleSize = this->GetDevice()->GetAdapterInfo().RayTracing.ShaderGroupHandleSize;
-        RTDataSize += ShaderHandleSize * (CreateInfo.GeneralShaderCount + CreateInfo.TriangleHitShaderCount + CreateInfo.ProceduralHitShaderCount);
+        RTDataSize += size_t{ShaderHandleSize} * size_t{CreateInfo.GeneralShaderCount + CreateInfo.TriangleHitShaderCount + CreateInfo.ProceduralHitShaderCount};
         // Extra bytes were reserved to avoid compiler errors on zero-sized arrays
         RTDataSize -= sizeof(RayTracingPipelineData::ShaderHandles);
         MemPool.AddSpace(RTDataSize, alignof(RayTracingPipelineData));
