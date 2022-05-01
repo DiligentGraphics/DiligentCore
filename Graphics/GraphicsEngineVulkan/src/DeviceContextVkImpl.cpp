@@ -1302,8 +1302,8 @@ void DeviceContextVkImpl::Flush(Uint32               NumCommandLists,
     // TODO: replace with small_vector
     std::vector<VkCommandBuffer>               vkCmdBuffs;
     std::vector<RefCntAutoPtr<IDeviceContext>> DeferredCtxs;
-    vkCmdBuffs.reserve(NumCommandLists + 1);
-    DeferredCtxs.reserve(NumCommandLists + 1);
+    vkCmdBuffs.reserve(size_t{NumCommandLists} + 1);
+    DeferredCtxs.reserve(size_t{NumCommandLists} + 1);
 
     auto vkCmdBuff = m_CommandBuffer.GetVkCmdBuffer();
     if (vkCmdBuff != VK_NULL_HANDLE)
@@ -3854,7 +3854,7 @@ void DeviceContextVkImpl::BindSparseResourceMemory(const BindSparseResourceMemor
                 const auto TexHeight = std::max(1u, TexDesc.Height >> SrcRange.MipLevel);
                 const auto TexDepth  = std::max(1u, TexDesc.GetDepth() >> SrcRange.MipLevel);
 
-                auto& vkImgMemBind{vkImageMemoryBinds[ImageMemoryBindCount + NumImageBindsInRange]};
+                auto& vkImgMemBind{vkImageMemoryBinds[size_t{ImageMemoryBindCount} + size_t{NumImageBindsInRange}]};
                 vkImgMemBind.subresource.arrayLayer = SrcRange.ArraySlice;
                 vkImgMemBind.subresource.aspectMask = aspectMask;
                 vkImgMemBind.subresource.mipLevel   = SrcRange.MipLevel;

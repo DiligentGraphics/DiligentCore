@@ -572,7 +572,7 @@ public:
     void Free(Uint32 Slice, Uint32 Alignment, DynamicAtlasManager::Region&& Subregion, Uint32 Width, Uint32 Height)
     {
         m_AllocatedArea.fetch_add(-Int64{Width} * Int64{Height});
-        m_UsedArea.fetch_add(-Int64{Subregion.width * Alignment} * Int64{Subregion.height * Alignment});
+        m_UsedArea.fetch_add(-(Int64{Subregion.width} * Int64{Alignment}) * (Int64{Subregion.height} * Int64{Alignment}));
         m_AllocationCount.fetch_add(-1);
 
         auto* pBatch = GetSliceBatch(Alignment);

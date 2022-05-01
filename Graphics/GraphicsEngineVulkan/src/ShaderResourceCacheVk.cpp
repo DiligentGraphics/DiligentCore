@@ -107,7 +107,7 @@ void ShaderResourceCacheVk::InitializeResources(Uint32 Set, Uint32 Offset, Uint3
     {
         new (&DescrSet.GetResource(Offset + res)) Resource{Type, HasImmutableSampler};
 #ifdef DILIGENT_DEBUG
-        m_DbgInitializedResources[Set][Offset + res] = true;
+        m_DbgInitializedResources[Set][size_t{Offset} + res] = true;
 #endif
     }
 }

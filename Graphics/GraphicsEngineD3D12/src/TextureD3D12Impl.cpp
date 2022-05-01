@@ -350,7 +350,7 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
 
         UINT64 stagingBufferSize = 0;
         Uint32 NumSubresources   = Uint32{d3d12TexDesc.MipLevels} * (d3d12TexDesc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D ? 1 : Uint32{d3d12TexDesc.DepthOrArraySize});
-        m_StagingFootprints      = ALLOCATE(GetRawAllocator(), "Memory for staging footprints", D3D12_PLACED_SUBRESOURCE_FOOTPRINT, NumSubresources + 1);
+        m_StagingFootprints      = ALLOCATE(GetRawAllocator(), "Memory for staging footprints", D3D12_PLACED_SUBRESOURCE_FOOTPRINT, size_t{NumSubresources} + 1);
         pd3d12Device->GetCopyableFootprints(&d3d12TexDesc, 0, NumSubresources, 0, m_StagingFootprints, nullptr, nullptr, &stagingBufferSize);
         m_StagingFootprints[NumSubresources] = D3D12_PLACED_SUBRESOURCE_FOOTPRINT{stagingBufferSize};
 

@@ -470,7 +470,7 @@ void CopyPipelineResourceSignatureDesc(FixedLinearAllocator&                    
         VERIFY_EXPR(SrcRes.Name != nullptr && SrcRes.Name[0] != '\0');
         DstRes.Name = Allocator.CopyString(SrcRes.Name);
 
-        ++ResourceOffsets[DstRes.VarType + 1];
+        ++ResourceOffsets[size_t{DstRes.VarType} + 1];
     }
 
     // Sort resources by variable type (all static -> all mutable -> all dynamic)

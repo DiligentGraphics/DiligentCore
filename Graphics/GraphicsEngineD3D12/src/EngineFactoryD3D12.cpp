@@ -252,7 +252,7 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
         return;
 
     *ppDevice = nullptr;
-    memset(ppContexts, 0, sizeof(*ppContexts) * (std::max(1u, EngineCI.NumImmediateContexts) + EngineCI.NumDeferredContexts));
+    memset(ppContexts, 0, sizeof(*ppContexts) * (size_t{std::max(1u, EngineCI.NumImmediateContexts)} + size_t{EngineCI.NumDeferredContexts}));
 
     std::vector<RefCntAutoPtr<CommandQueueD3D12Impl>> CmdQueueD3D12Refs;
     CComPtr<ID3D12Device>                             d3d12Device;
@@ -512,7 +512,7 @@ void EngineFactoryD3D12Impl::AttachToD3D12Device(void*                        pd
     VERIFY_EXPR(NumImmediateContexts == CommandQueueCount);
 
     *ppDevice = nullptr;
-    memset(ppContexts, 0, sizeof(*ppContexts) * (CommandQueueCount + EngineCI.NumDeferredContexts));
+    memset(ppContexts, 0, sizeof(*ppContexts) * (size_t{CommandQueueCount} + size_t{EngineCI.NumDeferredContexts}));
 
     if (EngineCI.NumImmediateContexts > 0)
     {

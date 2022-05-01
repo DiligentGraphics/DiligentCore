@@ -70,8 +70,8 @@ public:
                 auto RowStride               = AlignUp(StaticCast<Uint32>(MipProps.RowSize), Uint32{4});
                 m_SubresourceStrides[SubRes] = RowStride;
 
-                auto MipSize                     = MipProps.StorageHeight * RowStride;
-                m_SubresourceOffsets[SubRes + 1] = m_SubresourceOffsets[SubRes] + MipSize;
+                auto MipSize                             = MipProps.StorageHeight * RowStride;
+                m_SubresourceOffsets[size_t{SubRes} + 1] = m_SubresourceOffsets[SubRes] + MipSize;
                 ++SubRes;
             }
         }
@@ -114,7 +114,7 @@ public:
     Uint32 GetOffset(Uint32 Mip, Uint32 Slice)
     {
         VERIFY_EXPR(Mip < m_Desc.MipLevels && Slice < m_Desc.ArraySize);
-        return m_SubresourceOffsets[m_Desc.MipLevels * Slice + Mip];
+        return m_SubresourceOffsets[size_t{m_Desc.MipLevels} * size_t{Slice} + size_t{Mip}];
     }
 
     void Reset()
@@ -133,7 +133,7 @@ private:
     Uint32 GetStride(Uint32 Mip, Uint32 Slice)
     {
         VERIFY_EXPR(Mip < m_Desc.MipLevels && Slice < m_Desc.ArraySize);
-        return m_SubresourceStrides[m_Desc.MipLevels * Slice + Mip];
+        return m_SubresourceStrides[size_t{m_Desc.MipLevels} * size_t{Slice} + size_t{Mip}];
     }
 
     friend TextureUploaderGL;

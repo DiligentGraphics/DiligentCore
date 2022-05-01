@@ -270,7 +270,7 @@ public:
         }
 
         const Uint32 BeginIndex = InstanceOffset;
-        const size_t EndIndex   = InstanceOffset + GeometryCount * Info.HitGroupStride;
+        const size_t EndIndex   = InstanceOffset + size_t{GeometryCount} * size_t{Info.HitGroupStride};
         const Uint32 GroupSize  = this->GetDevice()->GetAdapterInfo().RayTracing.ShaderGroupHandleSize;
         const size_t Stride     = this->m_ShaderRecordStride;
 
@@ -312,7 +312,7 @@ public:
 
         const Uint32 GroupSize = this->GetDevice()->GetAdapterInfo().RayTracing.ShaderGroupHandleSize;
         const size_t Stride    = this->m_ShaderRecordStride;
-        this->m_HitGroupsRecord.resize(std::max(this->m_HitGroupsRecord.size(), (Info.LastContributionToHitGroupIndex + 1) * Stride), Uint8{EmptyElem});
+        this->m_HitGroupsRecord.resize(std::max(this->m_HitGroupsRecord.size(), (size_t{Info.LastContributionToHitGroupIndex} + 1) * Stride), Uint8{EmptyElem});
         this->m_Changed = true;
 
         for (Uint32 Index = RayOffsetInHitGroupIndex + Info.FirstContributionToHitGroupIndex;

@@ -142,7 +142,7 @@ public:
         if (FAILED(CreateDXGIFactory1(__uuidof(IDXGIFactory2), (void**)&pFactory)))
         {
             LOG_ERROR_MESSAGE("Failed to create DXGI Factory");
-            return std::move(DXGIAdapters);
+            return DXGIAdapters;
         }
 
         CComPtr<IDXGIAdapter1> pDXIAdapter;
@@ -159,7 +159,7 @@ public:
             }
         }
 
-        return std::move(DXGIAdapters);
+        return DXGIAdapters;
     }
 
 

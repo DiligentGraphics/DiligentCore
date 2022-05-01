@@ -336,7 +336,7 @@ void RenderDeviceVkImpl::ExecuteAndDisposeTransientCmdBuff(SoftwareQueueIndex   
         TransientCmdPoolRecycler& operator = (const TransientCmdPoolRecycler&)  = delete;
         TransientCmdPoolRecycler& operator = (      TransientCmdPoolRecycler&&) = delete;
 
-        TransientCmdPoolRecycler(TransientCmdPoolRecycler&& rhs) :
+        TransientCmdPoolRecycler(TransientCmdPoolRecycler&& rhs) noexcept :
             LogicalDevice{rhs.LogicalDevice         },
             CmdPoolMgr   {rhs.CmdPoolMgr            },
             Pool         {std::move(rhs.Pool)       },

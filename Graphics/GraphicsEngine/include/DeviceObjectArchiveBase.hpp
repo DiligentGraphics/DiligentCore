@@ -538,7 +538,7 @@ void DeviceObjectArchiveBase::ReadNamedResources(IArchive*           pArchive,
         {
             LOG_ERROR_AND_THROW("Failed to read archive data");
         }
-        if (DataOffsetArray[i] + DataSizeArray[i] > pArchive->GetSize())
+        if (size_t{DataOffsetArray[i]} + size_t{DataSizeArray[i]} > pArchive->GetSize())
         {
             LOG_ERROR_AND_THROW("Failed to read archive data");
         }

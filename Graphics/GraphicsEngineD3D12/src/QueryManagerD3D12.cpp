@@ -271,7 +271,7 @@ void QueryManagerD3D12::ReadQueryData(QUERY_TYPE Type, Uint32 Index, void* pData
     const auto  Offset = HeapInfo.GetResolveBufferOffset(Index);
     D3D12_RANGE ReadRange;
     ReadRange.Begin = Offset;
-    ReadRange.End   = Offset + QueryDataSize;
+    ReadRange.End   = SIZE_T{Offset} + SIZE_T{QueryDataSize};
 
     void* pBufferData = nullptr;
     // The pointer returned by Map is never offset by any values in pReadRange.

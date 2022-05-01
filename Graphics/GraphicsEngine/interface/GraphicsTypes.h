@@ -3053,7 +3053,7 @@ struct SparseResourceProperties
     /// Allowed bind flags for sparse buffer.
     BIND_FLAGS BufferBindFlags  DEFAULT_INITIALIZER(BIND_NONE);
 
-    Uint32 _Padding;
+    Uint32 _Padding DEFAULT_INITIALIZER(0);
 
 #if DILIGENT_CPP_INTERFACE
     /// Comparison operator tests if two structures are equivalent
@@ -3949,7 +3949,7 @@ struct TextureFormatInfo DILIGENT_DERIVE(TextureFormatAttribs)
     bool Supported  DEFAULT_INITIALIZER(false);
 
     // Explicitly pad the structure to 8-byte boundary
-    bool Padding[7];
+    bool Padding[7] DEFAULT_INITIALIZER({});
 };
 typedef struct TextureFormatInfo TextureFormatInfo;
 

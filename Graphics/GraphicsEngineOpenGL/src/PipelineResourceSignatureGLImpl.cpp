@@ -179,14 +179,14 @@ void PipelineResourceSignatureGLImpl::CreateLayout(const bool IsSerialized)
             if (Range == BINDING_RANGE_UNIFORM_BUFFER && (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0)
             {
                 DEV_CHECK_ERR(size_t{CacheOffset} + ResDesc.ArraySize < sizeof(m_DynamicUBOMask) * 8, "Dynamic UBO index exceeds maximum representable bit position in the mask");
-                for (Uint32 elem = 0; elem < ResDesc.ArraySize; ++elem)
-                    m_DynamicUBOMask |= Uint64{1} << Uint64{CacheOffset + elem};
+                for (Uint64 elem = 0; elem < ResDesc.ArraySize; ++elem)
+                    m_DynamicUBOMask |= Uint64{1} << (Uint64{CacheOffset} + elem);
             }
             else if (Range == BINDING_RANGE_STORAGE_BUFFER && (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0)
             {
                 DEV_CHECK_ERR(size_t{CacheOffset} + ResDesc.ArraySize < sizeof(m_DynamicSSBOMask) * 8, "Dynamic SSBO index exceeds maximum representable bit position in the mask");
-                for (Uint32 elem = 0; elem < ResDesc.ArraySize; ++elem)
-                    m_DynamicSSBOMask |= Uint64{1} << Uint64{CacheOffset + elem};
+                for (Uint64 elem = 0; elem < ResDesc.ArraySize; ++elem)
+                    m_DynamicSSBOMask |= Uint64{1} << (Uint64{CacheOffset} + elem);
             }
 
             VERIFY(CacheOffset + ResDesc.ArraySize <= std::numeric_limits<TBindings::value_type>::max(), "Cache offset exceeds representable range");

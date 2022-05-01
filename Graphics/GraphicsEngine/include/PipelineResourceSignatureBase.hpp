@@ -572,7 +572,7 @@ public:
 
     std::pair<Uint32, Uint32> GetResourceIndexRange(SHADER_RESOURCE_VARIABLE_TYPE VarType) const
     {
-        return std::pair<Uint32, Uint32>{m_ResourceOffsets[VarType], m_ResourceOffsets[VarType + 1]};
+        return std::pair<Uint32, Uint32>{m_ResourceOffsets[VarType], m_ResourceOffsets[size_t{VarType} + 1]};
     }
 
     // Returns the number of shader stages that have resources.

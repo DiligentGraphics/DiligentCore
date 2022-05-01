@@ -61,7 +61,7 @@ struct FunctionStubHashKey
     {
     }
 
-    FunctionStubHashKey(FunctionStubHashKey&& Key) :
+    FunctionStubHashKey(FunctionStubHashKey&& Key) noexcept :
         Object      {std::move(Key.Object)  },
         Function    {std::move(Key.Function)},
         NumArguments{Key.NumArguments       }

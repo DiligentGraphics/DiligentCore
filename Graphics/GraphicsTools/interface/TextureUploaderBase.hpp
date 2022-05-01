@@ -65,20 +65,20 @@ public:
     virtual MappedTextureSubresource GetMappedData(Uint32 Mip, Uint32 Slice) override final
     {
         VERIFY_EXPR(Mip < m_Desc.MipLevels && Slice < m_Desc.ArraySize);
-        return m_MappedData[m_Desc.MipLevels * Slice + Mip];
+        return m_MappedData[size_t{m_Desc.MipLevels} * size_t{Slice} + size_t{Mip}];
     }
     virtual const UploadBufferDesc& GetDesc() const override final { return m_Desc; }
 
     void SetMappedData(Uint32 Mip, Uint32 Slice, const MappedTextureSubresource& MappedData)
     {
         VERIFY_EXPR(Mip < m_Desc.MipLevels && Slice < m_Desc.ArraySize);
-        m_MappedData[m_Desc.MipLevels * Slice + Mip] = MappedData;
+        m_MappedData[size_t{m_Desc.MipLevels} * size_t{Slice} + size_t{Mip}] = MappedData;
     }
 
     bool IsMapped(Uint32 Mip, Uint32 Slice) const
     {
         VERIFY_EXPR(Mip < m_Desc.MipLevels && Slice < m_Desc.ArraySize);
-        return m_MappedData[m_Desc.MipLevels * Slice + Mip].pData != nullptr;
+        return m_MappedData[size_t{m_Desc.MipLevels} * size_t{Slice} + size_t{Mip}].pData != nullptr;
     }
 
     void Reset()

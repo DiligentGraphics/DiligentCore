@@ -627,7 +627,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
         return;
 
     *ppDevice = nullptr;
-    memset(ppContexts, 0, sizeof(*ppContexts) * (std::max(1u, EngineCI.NumImmediateContexts) + EngineCI.NumDeferredContexts));
+    memset(ppContexts, 0, sizeof(*ppContexts) * (size_t{std::max(1u, EngineCI.NumImmediateContexts)} + size_t{EngineCI.NumDeferredContexts}));
 
     if (m_wpDevice.IsValid())
     {
@@ -1250,7 +1250,7 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
     VERIFY_EXPR(NumImmediateContexts == CommandQueueCount);
 
     *ppDevice = nullptr;
-    memset(ppContexts, 0, sizeof(*ppContexts) * (NumImmediateContexts + EngineCI.NumDeferredContexts));
+    memset(ppContexts, 0, sizeof(*ppContexts) * (size_t{NumImmediateContexts} + size_t{EngineCI.NumDeferredContexts}));
 
     try
     {

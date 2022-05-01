@@ -424,7 +424,7 @@ std::vector<VkRayTracingShaderGroupCreateInfoKHR> BuildRTShaderGroupDescription(
     };
 
     std::vector<VkRayTracingShaderGroupCreateInfoKHR> ShaderGroups;
-    ShaderGroups.reserve(CreateInfo.GeneralShaderCount + CreateInfo.TriangleHitShaderCount + CreateInfo.ProceduralHitShaderCount);
+    ShaderGroups.reserve(size_t{CreateInfo.GeneralShaderCount} + size_t{CreateInfo.TriangleHitShaderCount} + size_t{CreateInfo.ProceduralHitShaderCount});
 
     for (Uint32 i = 0; i < CreateInfo.GeneralShaderCount; ++i)
     {
