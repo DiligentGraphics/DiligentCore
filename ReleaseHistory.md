@@ -1,3 +1,9 @@
+# Current progress
+
+* Added `SET_SHADER_RESOURCES_FLAGS` enum and `Flags` parameter to `IShaderResourceVariable::Set`
+  and `IShaderResourceVariable::SetArray` methods (API252002)
+* Added primitive topologies with adjacency (API252001)
+
 ## v2.5.2
 
 * Added `SamplerDesc::UnnormalizedCoords` parameter (API Version 250014)

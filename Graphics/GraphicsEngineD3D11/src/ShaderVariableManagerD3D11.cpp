@@ -341,7 +341,7 @@ void ShaderVariableManagerD3D11::TexSRVBindInfo::BindResource(const BindResource
 #ifdef DILIGENT_DEVELOPMENT
                 {
                     const auto& CachedSampler = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_SAMPLER>(SampAttr.BindPoints + SampArrayIndex);
-                    VerifySamplerBinding(SampDesc, BindResourceInfo{SampArrayIndex, pSamplerD3D11Impl}, pSamplerD3D11Impl, CachedSampler.pSampler,
+                    VerifySamplerBinding(SampDesc, BindResourceInfo{SampArrayIndex, pSamplerD3D11Impl, BindInfo.Flags}, pSamplerD3D11Impl, CachedSampler.pSampler,
                                          m_ParentManager.m_pSignature->GetDesc().Name);
                 }
 #endif
