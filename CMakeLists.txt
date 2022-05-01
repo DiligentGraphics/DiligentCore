@@ -441,6 +441,7 @@ elseif (NOT IS_ABSOLUTE ${CMAKE_INSTALL_PREFIX})
 endif()
 
 include(BuildUtils.cmake)
+include(FindGLSLang.cmake)
 
 add_subdirectory(ThirdParty)
 add_subdirectory(BuildTools)
