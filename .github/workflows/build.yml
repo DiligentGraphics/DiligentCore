@@ -131,29 +131,29 @@ jobs:
 
     - name: Build
       if: success()
-      uses: DiligentGraphics/github-action/build@master
+      uses: DiligentGraphics/github-action/build@v1
       with:
         target: install
 
     - name: DiligentCoreTest
       if:   ${{ success() && matrix.name != 'UWP'}}
-      uses: DiligentGraphics/github-action/run-core-tests@master
+      uses: DiligentGraphics/github-action/run-core-tests@v1
 
     - name: DiligentCoreAPITest D3D11
       if:   ${{ success() && (matrix.name == 'Win10' || matrix.name == 'Win8.1') }}
-      uses: DiligentGraphics/github-action/run-core-gpu-tests@master
+      uses: DiligentGraphics/github-action/run-core-gpu-tests@v1
       with:
         mode: d3d11_sw
 
     - name: DiligentCoreAPITest D3D12
       if:   ${{ success() && matrix.name == 'Win10' }}
-      uses: DiligentGraphics/github-action/run-core-gpu-tests@master
+      uses: DiligentGraphics/github-action/run-core-gpu-tests@v1
       with:
         mode: d3d12_sw
 
     - name: DiligentCoreAPITest D3D12 DXC
       if:   ${{ success() && matrix.name == 'Win10' }}
-      uses: DiligentGraphics/github-action/run-core-gpu-tests@master
+      uses: DiligentGraphics/github-action/run-core-gpu-tests@v1
       with:
         mode:    d3d12_sw
         use_dxc: true
@@ -248,13 +248,13 @@ jobs:
 
     - name: Build
       if:   success()
-      uses: DiligentGraphics/github-action/build@master
+      uses: DiligentGraphics/github-action/build@v1
       with:
         target: install
 
     - name: DiligentCoreTest
       if:   success()
-      uses: DiligentGraphics/github-action/run-core-tests@master
+      uses: DiligentGraphics/github-action/run-core-tests@v1
 
     - name: Upload artifact
       uses: actions/upload-artifact@v2
@@ -321,13 +321,13 @@ jobs:
 
     - name: Build
       if:   success()
-      uses: DiligentGraphics/github-action/build@master
+      uses: DiligentGraphics/github-action/build@v1
       with:
         target: install
 
     - name: DiligentCoreTest
       if:   ${{ success() && matrix.platform == 'MacOS' }}
-      uses: DiligentGraphics/github-action/run-core-tests@master
+      uses: DiligentGraphics/github-action/run-core-tests@v1
 
     - name: Upload artifact
       uses: actions/upload-artifact@v2
@@ -427,4 +427,4 @@ jobs:
 
     - name: Build
       if:   success()
-      uses: DiligentGraphics/github-action/build@master
+      uses: DiligentGraphics/github-action/build@v1
