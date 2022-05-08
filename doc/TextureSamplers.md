@@ -313,6 +313,55 @@ work across all backends:
 
 Follow the same rules as for HLSL.
 
+## Immutable Samplers and Pipeline State / Resource Signature Compatibility
+
+Two pipeline states / resource signatures are compatible when a shader resource binding object (SRB) created
+by one PSO/PRS can be used with another.
+
+Two signatures are compatible if they contain identical resources, defined in the same order
+disregarding their names. Compatible signatures must also use the same number of immutable samplers
+defined at identical shader stages, but sampler descriptions do not need to match.
+Two pipeline states are compatible if all their signatures are compatible.
+
+:warning: In all backends except for Direct3D12, immutable samplers are set when an
+          SRB is committed to the device context. Immutable samplers are defined by
+          the PSO/PRS that created the SRB.
+          In Direct3D12, immutable samplers are bound when the PSO is set and are
+          defined by the PSO resource layout or its signatures. Committing an SRB does
+          not affect immutable samplers.
+
+For example, suppose `PsoA` defines immutable `SamplerA` for some texture sampler, and
+`PsoB` defines immutable `SamplerB` for the same texture. Suppose also there is `SrbA`
+created from `PsoA` and `SrbB` created from `PsoB`. Consider the following sequence of
+commands:
+
+```cpp
+pDeviceContext->SetPipelineState(PsoA);
+pDeviceContext->CommitShaderResources(PsoB);
+pDeviceContext->Draw();
+```
+
+In all backends except for Direct3D12, `SamplerB` will be used to sample the texture
+when the draw command is executed.
+In Direct3D12, `SamplerA` will be used.
+
+
+#### Technical Details
+
+In Vulkan, immutable samplers are incorporated into the descriptor set layouts, which
+are managed by the pipeline resource signatures in Diligent. When an SRB is created, its
+descriptor sets contain immutable samplers defined by the corresponding set layouts.
+When the SRB is bound to the device context, its descriptor sets define immutable samplers
+to be used for texture sampling.
+
+In Direct3D12, immutable samplers are encoded into the D3D12 root signature that is defined
+by all resource signatures that were used to create the PSO. When a PSO is set, its root signature
+is bound, which defines the immutable samplers. When an SRB is committed, immutable samplers are
+not affected.
+
+In other backends, immutable samplers are emulated and work similar to Vulkan:
+they are defined by the SRB.
+
 
 ## Shader Cross-Compilation Considerations
 

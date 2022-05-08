@@ -341,8 +341,14 @@ RefCntAutoPtr<RootSignatureD3D12> RootSignatureCacheD3D12::GetRootSig(const RefC
         {
             if (ppSignatures[i] != nullptr)
             {
-                VERIFY(ppSignatures[i]->GetDesc().BindingIndex == i, "Signature placed at another binding index");
+                const auto& SignDesc = ppSignatures[i]->GetDesc();
+                VERIFY(SignDesc.BindingIndex == i, "Signature placed at another binding index");
                 HashCombine(Hash, ppSignatures[i]->GetHash());
+                // PRS hash does not incorporate the hashes of immutable sampler descriptions.
+                // In Direct3D12, immutable samplers are encoded in the root signature, so
+                // we also need to hash the sampler descriptions.
+                for (Uint32 s = 0; s < SignDesc.NumImmutableSamplers; ++s)
+                    HashCombine(Hash, SignDesc.ImmutableSamplers[s].Desc);
             }
             else
                 HashCombine(Hash, 0);

@@ -394,8 +394,8 @@ bool PipelineResourceSignaturesCompatible(const PipelineResourceSignatureDesc& D
         const auto& Samp0 = Desc0.ImmutableSamplers[s];
         const auto& Samp1 = Desc1.ImmutableSamplers[s];
 
-        if (Samp0.ShaderStages != Samp1.ShaderStages ||
-            !(Samp0.Desc == Samp1.Desc))
+        // Sampler descriptions do not need to match, but the shader stages must be the same.
+        if (Samp0.ShaderStages != Samp1.ShaderStages)
             return false;
     }
 
@@ -417,7 +417,9 @@ size_t CalculatePipelineResourceSignatureDescHash(const PipelineResourceSignatur
 
     for (Uint32 i = 0; i < Desc.NumImmutableSamplers; ++i)
     {
-        HashCombine(Hash, Uint32{Desc.ImmutableSamplers[i].ShaderStages}, Desc.ImmutableSamplers[i].Desc);
+        // Only hash the shader stages as sampler descriptions do not
+        // have to match for two signatures to be compatible.
+        HashCombine(Hash, Uint32{Desc.ImmutableSamplers[i].ShaderStages});
     }
 
     return Hash;

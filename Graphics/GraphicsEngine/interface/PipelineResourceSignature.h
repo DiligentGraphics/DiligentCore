@@ -77,6 +77,10 @@ struct ImmutableSamplerDesc
                Desc         == Rhs.Desc &&
                SafeStrEqual(SamplerOrTextureName, Rhs.SamplerOrTextureName);
     }
+    bool operator!=(const ImmutableSamplerDesc& Rhs) const
+    {
+        return !(*this == Rhs);
+    }
 #endif
 };
 typedef struct ImmutableSamplerDesc ImmutableSamplerDesc;
@@ -393,7 +397,8 @@ DILIGENT_BEGIN_INTERFACE(IPipelineResourceSignature, IDeviceObject)
     /// Returns true if the signature is compatible with another one.
 
     /// \remarks    Two signatures are compatible if they contain identical resources, defined in the same order
-    ///             disregarding their names.
+    ///             disregarding their names. Compatible signatures must also use the same number of immutable samplers
+    ///             defined at identical shader stages (sampler descriptions do not need to match).
     VIRTUAL bool METHOD(IsCompatibleWith)(THIS_
                                           const struct IPipelineResourceSignature* pPRS) CONST PURE;
 };
