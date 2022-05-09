@@ -126,7 +126,8 @@ void CopyBLASGeometryDesc(const BottomLevelASDesc& SrcDesc,
         for (Uint32 i = 0; i < SrcDesc.TriangleCount; ++i)
         {
             const auto* SrcGeoName     = SrcDesc.pTriangles[i].GeometryName;
-            pTriangles[i].GeometryName = MemPool.CopyString(SrcGeoName);
+            const auto* GeoName        = MemPool.CopyString(SrcGeoName);
+            pTriangles[i].GeometryName = GeoName;
 
             Uint32 ActualIndex = INVALID_INDEX;
             if (pSrcNameToIndex)
@@ -136,7 +137,7 @@ void CopyBLASGeometryDesc(const BottomLevelASDesc& SrcDesc,
                 ActualIndex = iter->second.ActualIndex;
             }
 
-            bool IsUniqueName = DstNameToIndex.emplace(pTriangles[i].GeometryName, BLASGeomIndex{i, ActualIndex}).second;
+            bool IsUniqueName = DstNameToIndex.emplace(GeoName, BLASGeomIndex{i, ActualIndex}).second;
             if (!IsUniqueName)
                 LOG_ERROR_AND_THROW("Geometry name '", SrcGeoName, "' is not unique");
         }
@@ -161,7 +162,8 @@ void CopyBLASGeometryDesc(const BottomLevelASDesc& SrcDesc,
         for (Uint32 i = 0; i < SrcDesc.BoxCount; ++i)
         {
             const auto* SrcGeoName = SrcDesc.pBoxes[i].GeometryName;
-            pBoxes[i].GeometryName = MemPool.CopyString(SrcGeoName);
+            const auto* GeoName    = MemPool.CopyString(SrcGeoName);
+            pBoxes[i].GeometryName = GeoName;
 
             Uint32 ActualIndex = INVALID_INDEX;
             if (pSrcNameToIndex)
@@ -171,7 +173,7 @@ void CopyBLASGeometryDesc(const BottomLevelASDesc& SrcDesc,
                 ActualIndex = iter->second.ActualIndex;
             }
 
-            bool IsUniqueName = DstNameToIndex.emplace(pBoxes[i].GeometryName, BLASGeomIndex{i, ActualIndex}).second;
+            bool IsUniqueName = DstNameToIndex.emplace(GeoName, BLASGeomIndex{i, ActualIndex}).second;
             if (!IsUniqueName)
                 LOG_ERROR_AND_THROW("Geometry name '", SrcGeoName, "' is not unique");
         }
