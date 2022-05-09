@@ -185,6 +185,10 @@ struct PipelineResourceDesc
                Flags        == Rhs.Flags        &&
                SafeStrEqual(Name, Rhs.Name);
     }
+    bool operator!=(const PipelineResourceDesc& Rhs) const
+    {
+        return !(*this == Rhs);
+    }
 #endif
 };
 typedef struct PipelineResourceDesc PipelineResourceDesc;

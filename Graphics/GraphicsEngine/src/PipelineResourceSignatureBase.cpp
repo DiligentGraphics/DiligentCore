@@ -404,10 +404,7 @@ bool PipelineResourceSignaturesCompatible(const PipelineResourceSignatureDesc& D
 
 size_t CalculatePipelineResourceSignatureDescHash(const PipelineResourceSignatureDesc& Desc) noexcept
 {
-    if (Desc.NumResources == 0 && Desc.NumImmutableSamplers == 0)
-        return 0;
-
-    size_t Hash = ComputeHash(Desc.NumResources, Desc.NumImmutableSamplers, Desc.BindingIndex);
+    auto Hash = ComputeHash(Desc.NumResources, Desc.NumImmutableSamplers, Desc.BindingIndex);
 
     for (Uint32 i = 0; i < Desc.NumResources; ++i)
     {
