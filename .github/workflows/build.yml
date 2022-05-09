@@ -116,9 +116,9 @@ jobs:
       if: success()
       uses: DiligentGraphics/github-action/setup-build-env@v1
       with:
-        platform:      ${{ matrix.platform }}
-        setup-ninja:   ${{ matrix.cmake_generator == 'Ninja' }}
-        ninja-vs-arch: ${{ matrix.toolset }}
+        platform:        ${{ matrix.platform }}
+        cmake-generator: ${{ matrix.cmake_generator }}
+        ninja-vs-arch:   ${{ matrix.toolset }}
 
     - name: Configure CMake
       if: success()
@@ -232,8 +232,8 @@ jobs:
       if:   success()
       uses: DiligentGraphics/github-action/setup-build-env@v1
       with:
-        platform:    Linux
-        setup-ninja: ${{ matrix.cmake_generator == 'Ninja' }}
+        platform:        Linux
+        cmake-generator: ${{ matrix.cmake_generator }}
 
     - name: Configure CMake
       if:   success()

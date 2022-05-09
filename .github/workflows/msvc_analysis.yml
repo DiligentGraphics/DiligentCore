@@ -34,8 +34,8 @@ jobs:
       if: success()
       uses: DiligentGraphics/github-action/setup-build-env@v1
       with:
-        platform:    ${{ matrix.platform }}
-        setup-ninja: ${{ matrix.cmake_generator == 'Ninja' }}
+        platform:        ${{ matrix.platform }}
+        cmake-generator: ${{ matrix.cmake_generator }}
 
     - name: Configure CMake
       if: success()
