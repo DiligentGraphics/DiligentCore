@@ -24,10 +24,11 @@
  *  of the possibility of such damages.
  */
 
+#include "../../GraphicsEngineOpenGL/include/pch.h"
+
 #include "ArchiverImpl.hpp"
 #include "Archiver_Inc.hpp"
 
-#include "../../GraphicsEngineOpenGL/include/pch.h"
 #include "RenderDeviceGLImpl.hpp"
 #include "PipelineResourceSignatureGLImpl.hpp"
 #include "PipelineStateGLImpl.hpp"

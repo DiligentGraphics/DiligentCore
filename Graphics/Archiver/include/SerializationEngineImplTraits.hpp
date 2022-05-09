@@ -100,7 +100,7 @@ struct _DummyReturn
 {
     const ReturnType& operator()()
     {
-        static constexpr typename std::remove_reference<ReturnType>::type NullRet = {};
+        static const typename std::remove_reference<ReturnType>::type NullRet = {};
         return NullRet;
     }
 };
