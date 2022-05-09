@@ -173,7 +173,7 @@ TEST(GraphicsTypesXTest, SubpassDescX)
 
 TEST(GraphicsTypesXTest, RenderPassDescX)
 {
-    constexpr RenderPassAttachmentDesc Attachments[] =
+    const RenderPassAttachmentDesc Attachments[] =
         {
             {TEX_FORMAT_RGBA8_UNORM_SRGB, 2},
             {TEX_FORMAT_RGBA32_FLOAT},
@@ -568,7 +568,7 @@ TEST(GraphicsTypesXTest, BottomLevelASDescX)
 
     // clang-format on
 
-    constexpr BLASTriangleDesc Triangles[] = {
+    const BLASTriangleDesc Triangles[] = {
         {TRI1(RawStr)},
         {TRI2(RawStr)},
         {TRI3(RawStr)},
@@ -580,7 +580,7 @@ TEST(GraphicsTypesXTest, BottomLevelASDescX)
     Ref.pTriangles    = Triangles;
     TestCtorsAndAssignments<BottomLevelASDescX>(Ref);
 
-    constexpr BLASBoundingBoxDesc Boxes[] = {
+    const BLASBoundingBoxDesc Boxes[] = {
         {BOX1(RawStr)},
         {BOX2(RawStr)},
     };
