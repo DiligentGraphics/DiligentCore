@@ -136,4 +136,5 @@ jobs:
         path: |
           ${{env.DILIGENT_INSTALL_DIR}}
           !${{env.DILIGENT_INSTALL_DIR}}/**/*.lib
+          !${{env.DILIGENT_INSTALL_DIR}}/**/*.a
         retention-days: 90
