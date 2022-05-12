@@ -100,7 +100,6 @@ public:
 
 protected:
     void CreateViewInternal(const struct TextureViewDesc& ViewDesc, ITextureView** ppView, bool bIsDefaultView) override;
-    //void PrepareVkInitData(const TextureData &InitData, Uint32 NumSubresources, std::vector<Vk_SUBRESOURCE_DATA> &VkInitData);
 
     void InitializeTextureContent(const TextureData&          InitData,
                                   const TextureFormatAttribs& FmtAttribs,

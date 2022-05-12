@@ -783,7 +783,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::InsertIncludes(String& GLSLSource
                 pSourceStreamFactory->CreateInputStream(IncludeName.c_str(), &pIncludeDataStream);
                 if (!pIncludeDataStream)
                     LOG_ERROR_AND_THROW("Failed to open include file ", IncludeName);
-                RefCntAutoPtr<IDataBlob> pIncludeData(MakeNewRCObj<DataBlobImpl>()(0));
+                auto pIncludeData = DataBlobImpl::Create();
                 pIncludeDataStream->ReadBlob(pIncludeData);
 
                 // Get include text
@@ -795,7 +795,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::InsertIncludes(String& GLSLSource
             }
         } while (true);
     }
-    catch (const std::pair<std::string::iterator, const char*> ErrInfo)
+    catch (const std::pair<std::string::iterator, const char*>& ErrInfo)
     {
         LOG_ERROR_AND_THROW("Unable to process includes: ", ErrInfo.second);
     }
@@ -3116,7 +3116,11 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessComputeShaderArguments(Tok
 }
 
 template <typename THandler>
-void HLSL2GLSLConverterImpl::ConversionStream::ProcessScope(TokenListType::iterator& Token, TokenListType::iterator ScopeEnd, TokenType OpenParenType, TokenType ClosingParenType, THandler Handler)
+void HLSL2GLSLConverterImpl::ConversionStream::ProcessScope(TokenListType::iterator& Token,
+                                                            TokenListType::iterator  ScopeEnd,
+                                                            TokenType                OpenParenType,
+                                                            TokenType                ClosingParenType,
+                                                            THandler&&               Handler)
 {
     // The function can handle both global scope as well as local scope
     int StartScopeDepth = 0;
@@ -4217,7 +4221,7 @@ HLSL2GLSLConverterImpl::ConversionStream::ConversionStream(IReferenceCounters*  
         if (pSourceStream == nullptr)
             LOG_ERROR_AND_THROW("Failed to open shader source file ", InputFileName);
 
-        pFileData = MakeNewRCObj<DataBlobImpl>()(0);
+        pFileData = DataBlobImpl::Create();
         pSourceStream->ReadBlob(pFileData);
         HLSLSource = reinterpret_cast<char*>(pFileData->GetDataPtr());
         NumSymbols = pFileData->GetSize();

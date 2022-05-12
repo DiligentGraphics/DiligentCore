@@ -527,7 +527,7 @@ private:
                           TokenListType::iterator  ScopeEnd,
                           TokenType                OpenParenType,
                           TokenType                ClosingParenType,
-                          THandler                 Handler);
+                          THandler&&               Handler);
 
         template <typename TArgHandler>
         void ProcessShaderArgument(const ShaderParameterInfo& Param,

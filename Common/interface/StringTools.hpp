@@ -202,7 +202,7 @@ inline size_t CountFloatNumberChars(const char* Str)
 /// \note   This function is used to split long messages on Android to avoid
 ///         trunction in logcat.
 template <typename IterType, typename HandlerType>
-void SplitString(IterType Start, IterType End, size_t MaxChunkLen, size_t NewLineSearchLen, HandlerType Handler)
+void SplitString(IterType Start, IterType End, size_t MaxChunkLen, size_t NewLineSearchLen, HandlerType&& Handler)
 {
     // NB: do not use debug macros to avoid infinite recursion!
 

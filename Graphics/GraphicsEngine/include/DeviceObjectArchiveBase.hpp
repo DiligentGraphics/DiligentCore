@@ -345,9 +345,9 @@ private:
     TBlockBaseOffsets       m_BaseOffsets = {};
 
     template <typename ResourceHandlerType>
-    static void ReadNamedResources(IArchive*           pArchive,
-                                   const ChunkHeader&  Chunk,
-                                   ResourceHandlerType Handler) noexcept(false);
+    static void ReadNamedResources(IArchive*             pArchive,
+                                   const ChunkHeader&    Chunk,
+                                   ResourceHandlerType&& Handler) noexcept(false);
 
     template <typename ResType>
     void ReadNamedResources(const ChunkHeader& Chunk, OffsetSizeAndResourceMap<ResType>& ResourceMap) noexcept(false);
@@ -507,9 +507,9 @@ RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveBase::UnpackResourc
 
 
 template <typename ResourceHandlerType>
-void DeviceObjectArchiveBase::ReadNamedResources(IArchive*           pArchive,
-                                                 const ChunkHeader&  Chunk,
-                                                 ResourceHandlerType Handler) noexcept(false)
+void DeviceObjectArchiveBase::ReadNamedResources(IArchive*             pArchive,
+                                                 const ChunkHeader&    Chunk,
+                                                 ResourceHandlerType&& Handler) noexcept(false)
 {
     VERIFY_EXPR(Chunk.Type == ChunkType::ResourceSignature ||
                 Chunk.Type == ChunkType::GraphicsPipelineStates ||

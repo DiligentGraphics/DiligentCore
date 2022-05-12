@@ -1194,7 +1194,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
             DefaultContextInfo.Name    = "Graphics context";
             DefaultContextInfo.QueueId = static_cast<Uint8>(QueueInfos[0].queueFamilyIndex);
 
-            CommandQueuesVk[0] = NEW_RC_OBJ(RawMemAllocator, "CommandQueueVk instance", CommandQueueVkImpl)(LogicalDevice, SoftwareQueueIndex{0}, 1, 1, DefaultContextInfo);
+            CommandQueuesVk[0] = NEW_RC_OBJ(RawMemAllocator, "CommandQueueVk instance", CommandQueueVkImpl)(LogicalDevice, SoftwareQueueIndex{0}, 1u, 1u, DefaultContextInfo);
             CommandQueues[0]   = CommandQueuesVk[0];
         }
 

@@ -102,12 +102,12 @@ protected:
     }
 
     template <typename ModifyCIHandlerType>
-    static RefCntAutoPtr<IShader> CreateShaderFromFile(SHADER_TYPE         ShaderType,
-                                                       const char*         File,
-                                                       const char*         EntryPoint,
-                                                       const char*         Name,
-                                                       const ShaderMacro*  Macros,
-                                                       ModifyCIHandlerType ModifyCIHandler)
+    static RefCntAutoPtr<IShader> CreateShaderFromFile(SHADER_TYPE           ShaderType,
+                                                       const char*           File,
+                                                       const char*           EntryPoint,
+                                                       const char*           Name,
+                                                       const ShaderMacro*    Macros,
+                                                       ModifyCIHandlerType&& ModifyCIHandler)
     {
         auto* pEnv    = GPUTestingEnvironment::GetInstance();
         auto* pDevice = pEnv->GetDevice();

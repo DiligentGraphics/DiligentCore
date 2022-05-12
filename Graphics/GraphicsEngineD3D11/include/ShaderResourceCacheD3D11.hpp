@@ -366,7 +366,7 @@ public:
                                UINT                               FirstConstants[],
                                UINT                               NumConstants[],
                                const D3D11ShaderResourceCounters& BaseBindings,
-                               BindHandlerType                    BindHandler) const;
+                               BindHandlerType&&                  BindHandler) const;
 
     enum class StateTransitionMode
     {
@@ -673,7 +673,7 @@ inline void ShaderResourceCacheD3D11::BindDynamicCBs(Uint32                     
                                                      UINT                               FirstConstants[],
                                                      UINT                               NumConstants[],
                                                      const D3D11ShaderResourceCounters& BaseBindings,
-                                                     BindHandlerType                    BindHandler) const
+                                                     BindHandlerType&&                  BindHandler) const
 {
     constexpr auto Range = D3D11_RESOURCE_RANGE_CBV;
 

@@ -242,7 +242,7 @@ public:
             return E_FAIL;
         }
 
-        RefCntAutoPtr<IDataBlob> pFileData{MakeNewRCObj<DataBlobImpl>()(0)};
+        auto pFileData = DataBlobImpl::Create();
         pSourceStream->ReadBlob(pFileData);
 
         CComPtr<IDxcBlobEncoding> sourceBlob;

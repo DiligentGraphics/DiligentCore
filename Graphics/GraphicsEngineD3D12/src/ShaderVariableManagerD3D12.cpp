@@ -49,7 +49,7 @@ void ProcessSignatureResources(const PipelineResourceSignatureD3D12Impl& Signatu
                                const SHADER_RESOURCE_VARIABLE_TYPE*      AllowedVarTypes,
                                Uint32                                    NumAllowedTypes,
                                SHADER_TYPE                               ShaderStages,
-                               HandlerType                               Handler)
+                               HandlerType&&                             Handler)
 {
     const bool UsingCombinedSamplers = Signature.IsUsingCombinedSamplers();
     Signature.ProcessResources(AllowedVarTypes, NumAllowedTypes, ShaderStages,

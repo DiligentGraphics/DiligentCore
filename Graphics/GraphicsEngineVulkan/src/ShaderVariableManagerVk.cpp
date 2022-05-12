@@ -42,7 +42,7 @@ void ProcessSignatureResources(const PipelineResourceSignatureVkImpl& Signature,
                                const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes,
                                Uint32                                 NumAllowedTypes,
                                SHADER_TYPE                            ShaderStages,
-                               HandlerType                            Handler)
+                               HandlerType&&                          Handler)
 {
     const bool UsingSeparateSamplers = Signature.IsUsingSeparateSamplers();
     Signature.ProcessResources(AllowedVarTypes, NumAllowedTypes, ShaderStages,

@@ -208,7 +208,7 @@ public:
     }
 
     template <class HandlerType>
-    void ProcessImmutableSamplers(HandlerType Handler)
+    void ProcessImmutableSamplers(HandlerType&& Handler)
     {
         for (auto& ImtblSam : m_ImmutableSamplers)
         {
@@ -220,7 +220,7 @@ public:
     }
 
     template <class HandlerType>
-    void ProcessResources(HandlerType Handler)
+    void ProcessResources(HandlerType&& Handler)
     {
         for (auto& Res : m_Resources)
         {
@@ -667,7 +667,7 @@ public:
     void ProcessResources(const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes,
                           Uint32                               NumAllowedTypes,
                           SHADER_TYPE                          AllowedStages,
-                          HandlerType                          Handler) const
+                          HandlerType&&                        Handler) const
     {
         if (AllowedVarTypes == nullptr)
             NumAllowedTypes = 1;

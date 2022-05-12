@@ -363,7 +363,7 @@ IteratorType SkipFloatNumber(const IteratorType& Start, const IteratorType& End)
 ///             of type std::pair<InteratorType, const char*>, where first is the position
 ///             of the error, and second is the error description.
 template <typename IteratorType, typename HandlerType>
-void SplitString(const IteratorType& Start, const IteratorType& End, HandlerType Handler) noexcept(false)
+void SplitString(const IteratorType& Start, const IteratorType& End, HandlerType&& Handler) noexcept(false)
 {
     auto Pos = Start;
     while (Pos != End)

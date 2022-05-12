@@ -232,7 +232,7 @@ void LogCompilerError(const char* DebugOutputMessage,
 
     if (ppCompilerOutput != nullptr)
     {
-        auto* pOutputDataBlob = MakeNewRCObj<DataBlobImpl>()(SourceCodeLen + 1 + ErrorLog.length() + 1);
+        auto  pOutputDataBlob = DataBlobImpl::Create(SourceCodeLen + 1 + ErrorLog.length() + 1);
         char* DataPtr         = reinterpret_cast<char*>(pOutputDataBlob->GetDataPtr());
         memcpy(DataPtr, ErrorLog.data(), ErrorLog.length() + 1);
         memcpy(DataPtr + ErrorLog.length() + 1, ShaderSource, SourceCodeLen + 1);
@@ -301,7 +301,7 @@ public:
             return nullptr;
         }
 
-        RefCntAutoPtr<IDataBlob> pFileData(MakeNewRCObj<DataBlobImpl>()(0));
+        auto pFileData = DataBlobImpl::Create();
         pSourceStream->ReadBlob(pFileData);
         auto* pNewInclude =
             new IncludeResult{

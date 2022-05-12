@@ -1821,7 +1821,7 @@ struct DeviceFeatures
     }
 
     template <typename FeatType, typename HandlerType>
-    static void Enumerate(FeatType& Features, HandlerType Handler)
+    static void Enumerate(FeatType& Features, HandlerType&& Handler)
     {
     #define HandleFeature(Feature)                \
         if (!Handler(#Feature, Features.Feature)) \

@@ -653,7 +653,7 @@ public:
         {
             // Constructor of RefCountersImpl class is private and only accessible
             // by methods of MakeNewRCObj
-            pNewRefCounters = new RefCountersImpl();
+            pNewRefCounters = new RefCountersImpl{};
             pRefCounters    = pNewRefCounters;
         }
         ObjectType* pObj = nullptr;
@@ -667,9 +667,9 @@ public:
             // Operators new and delete of RefCountedObject are private and only accessible
             // by methods of MakeNewRCObj
             if (m_pAllocator)
-                pObj = new (*m_pAllocator, m_dvpDescription, m_dvpFileName, m_dvpLineNumber) ObjectType(pRefCounters, std::forward<CtorArgTypes>(CtorArgs)...);
+                pObj = new (*m_pAllocator, m_dvpDescription, m_dvpFileName, m_dvpLineNumber) ObjectType{pRefCounters, std::forward<CtorArgTypes>(CtorArgs)...};
             else
-                pObj = new ObjectType(pRefCounters, std::forward<CtorArgTypes>(CtorArgs)...);
+                pObj = new ObjectType{pRefCounters, std::forward<CtorArgTypes>(CtorArgs)...};
             if (pNewRefCounters != nullptr)
                 pNewRefCounters->Attach<ObjectType, AllocatorType>(pObj, m_pAllocator);
         }
