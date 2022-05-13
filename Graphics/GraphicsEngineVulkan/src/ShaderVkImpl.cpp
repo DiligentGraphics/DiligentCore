@@ -45,6 +45,90 @@
 namespace Diligent
 {
 
+namespace
+{
+
+static constexpr char VulkanDefine[] =
+    "#ifndef VULKAN\n"
+    "#   define VULKAN 1\n"
+    "#endif\n"
+#if PLATFORM_MACOS || PLATFORM_IOS || PLATFORM_TVOS
+    "#ifndef METAL\n"
+    "#   define METAL 1\n"
+    "#endif\n"
+#endif
+    ;
+
+std::vector<uint32_t> CompileShaderDXC(const ShaderCreateInfo&         ShaderCI,
+                                       const ShaderVkImpl::CreateInfo& VkShaderCI)
+{
+    auto* pDXCompiler = VkShaderCI.pDXCompiler;
+    VERIFY_EXPR(pDXCompiler != nullptr && pDXCompiler->IsLoaded());
+    std::vector<uint32_t> SPIRV;
+    pDXCompiler->Compile(ShaderCI, ShaderVersion{}, VulkanDefine, nullptr, &SPIRV, ShaderCI.ppCompilerOutput);
+    return SPIRV;
+}
+
+std::vector<uint32_t> CompileShaderGLSLang(const ShaderCreateInfo&         ShaderCI,
+                                           const ShaderVkImpl::CreateInfo& VkShaderCI)
+{
+    std::vector<uint32_t> SPIRV;
+
+#if DILIGENT_NO_GLSLANG
+    LOG_ERROR_AND_THROW("Diligent engine was not linked with glslang, use DXC or precompiled SPIRV bytecode.");
+#else
+    if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL)
+    {
+        SPIRV = GLSLangUtils::HLSLtoSPIRV(ShaderCI, GLSLangUtils::SpirvVersion::Vk100, VulkanDefine, ShaderCI.ppCompilerOutput);
+    }
+    else
+    {
+        std::string          GLSLSourceString;
+        ShaderSourceFileData SourceData;
+
+        const ShaderMacro* Macros = nullptr;
+        if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM)
+        {
+            // Read the source file directly and use it as is
+            SourceData = ReadShaderSourceFile(ShaderCI);
+
+            // Add user macros.
+            // BuildGLSLSourceString adds the macros to the source string, so we don't need to do this for SHADER_SOURCE_LANGUAGE_GLSL
+            Macros = ShaderCI.Macros;
+        }
+        else
+        {
+            // Build the full source code string that will contain GLSL version declaration,
+            // platform definitions, user-provided shader macros, etc.
+            GLSLSourceString        = BuildGLSLSourceString(ShaderCI, VkShaderCI.DeviceInfo, VkShaderCI.AdapterInfo, TargetGLSLCompiler::glslang, VulkanDefine);
+            SourceData.Source       = GLSLSourceString.c_str();
+            SourceData.SourceLength = StaticCast<Uint32>(GLSLSourceString.length());
+        }
+
+        GLSLangUtils::GLSLtoSPIRVAttribs Attribs;
+        Attribs.ShaderType                 = ShaderCI.Desc.ShaderType;
+        Attribs.ShaderSource               = SourceData.Source;
+        Attribs.SourceCodeLen              = static_cast<int>(SourceData.SourceLength);
+        Attribs.Version                    = GLSLangUtils::SpirvVersion::Vk100;
+        Attribs.Macros                     = Macros;
+        Attribs.AssignBindings             = true;
+        Attribs.pShaderSourceStreamFactory = ShaderCI.pShaderSourceStreamFactory;
+        Attribs.ppCompilerOutput           = ShaderCI.ppCompilerOutput;
+
+        if (VkShaderCI.VkVersion >= VK_API_VERSION_1_2)
+            Attribs.Version = GLSLangUtils::SpirvVersion::Vk120;
+        else if (VkShaderCI.VkVersion >= VK_API_VERSION_1_1)
+            Attribs.Version = VkShaderCI.HasSpirv14 ? GLSLangUtils::SpirvVersion::Vk110_Spirv14 : GLSLangUtils::SpirvVersion::Vk110;
+
+        SPIRV = GLSLangUtils::GLSLtoSPIRV(Attribs);
+    }
+#endif
+
+    return SPIRV;
+}
+
+} // namespace
+
 ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
                            RenderDeviceVkImpl*     pRenderDeviceVk,
                            const ShaderCreateInfo& ShaderCI,
@@ -66,17 +150,6 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
     {
         DEV_CHECK_ERR(ShaderCI.ByteCode == nullptr, "'ByteCode' must be null when shader is created from source code or a file");
 
-        static constexpr char VulkanDefine[] =
-            "#ifndef VULKAN\n"
-            "#   define VULKAN 1\n"
-            "#endif\n"
-#if PLATFORM_MACOS || PLATFORM_IOS || PLATFORM_TVOS
-            "#ifndef METAL\n"
-            "#   define METAL 1\n"
-            "#endif\n"
-#endif
-            ;
-
         auto ShaderCompiler = ShaderCI.ShaderCompiler;
         if (ShaderCompiler == SHADER_COMPILER_DXC)
         {
@@ -91,67 +164,13 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
         switch (ShaderCompiler)
         {
             case SHADER_COMPILER_DXC:
-            {
-                auto* pDXCompiler = VkShaderCI.pDXCompiler;
-                VERIFY_EXPR(pDXCompiler != nullptr && pDXCompiler->IsLoaded());
-                pDXCompiler->Compile(ShaderCI, ShaderVersion{}, VulkanDefine, nullptr, &m_SPIRV, ShaderCI.ppCompilerOutput);
-            }
-            break;
+                m_SPIRV = CompileShaderDXC(ShaderCI, VkShaderCI);
+                break;
 
             case SHADER_COMPILER_DEFAULT:
             case SHADER_COMPILER_GLSLANG:
-            {
-#if DILIGENT_NO_GLSLANG
-                LOG_ERROR_AND_THROW("Diligent engine was not linked with glslang, use DXC or precompiled SPIRV bytecode.");
-#else
-                if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL)
-                {
-                    m_SPIRV = GLSLangUtils::HLSLtoSPIRV(ShaderCI, GLSLangUtils::SpirvVersion::Vk100, VulkanDefine, ShaderCI.ppCompilerOutput);
-                }
-                else
-                {
-                    std::string          GLSLSourceString;
-                    ShaderSourceFileData SourceData;
-
-                    const ShaderMacro* Macros = nullptr;
-                    if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM)
-                    {
-                        // Read the source file directly and use it as is
-                        SourceData = ReadShaderSourceFile(ShaderCI);
-
-                        // Add user macros.
-                        // BuildGLSLSourceString adds the macros to the source string, so we don't need to do this for SHADER_SOURCE_LANGUAGE_GLSL
-                        Macros = ShaderCI.Macros;
-                    }
-                    else
-                    {
-                        // Build the full source code string that will contain GLSL version declaration,
-                        // platform definitions, user-provided shader macros, etc.
-                        GLSLSourceString        = BuildGLSLSourceString(ShaderCI, VkShaderCI.DeviceInfo, VkShaderCI.AdapterInfo, TargetGLSLCompiler::glslang, VulkanDefine);
-                        SourceData.Source       = GLSLSourceString.c_str();
-                        SourceData.SourceLength = StaticCast<Uint32>(GLSLSourceString.length());
-                    }
-
-                    GLSLangUtils::GLSLtoSPIRVAttribs Attribs;
-                    Attribs.ShaderType                 = m_Desc.ShaderType;
-                    Attribs.ShaderSource               = SourceData.Source;
-                    Attribs.SourceCodeLen              = static_cast<int>(SourceData.SourceLength);
-                    Attribs.Version                    = GLSLangUtils::SpirvVersion::Vk100;
-                    Attribs.Macros                     = Macros;
-                    Attribs.AssignBindings             = true;
-                    Attribs.pShaderSourceStreamFactory = ShaderCI.pShaderSourceStreamFactory;
-                    Attribs.ppCompilerOutput           = ShaderCI.ppCompilerOutput;
-
-                    if (VkShaderCI.VkVersion >= VK_API_VERSION_1_2)
-                        Attribs.Version = GLSLangUtils::SpirvVersion::Vk120;
-                    else if (VkShaderCI.VkVersion >= VK_API_VERSION_1_1)
-                        Attribs.Version = VkShaderCI.HasSpirv14 ? GLSLangUtils::SpirvVersion::Vk110_Spirv14 : GLSLangUtils::SpirvVersion::Vk110;
-
-                    m_SPIRV = GLSLangUtils::GLSLtoSPIRV(Attribs);
-                }
-#endif
+                m_SPIRV = CompileShaderGLSLang(ShaderCI, VkShaderCI);
                 break;
-            }
 
             default:
                 LOG_ERROR_AND_THROW("Unsupported shader compiler");
