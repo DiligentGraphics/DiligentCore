@@ -152,7 +152,7 @@ std::vector<StringType> SplitPath(const Char* Path, bool Simplify)
         size_t CompnentCount = 1;
         for (const auto* c = Path; *c != '\0'; ++c)
         {
-            if (IsSlash(c[0]) && (c == Path || !IsSlash(c[-1])))
+            if (IsSlash(c[0]) && !IsSlash(c[1]))
                 ++CompnentCount;
         }
         Components.reserve(CompnentCount);
@@ -161,7 +161,7 @@ std::vector<StringType> SplitPath(const Char* Path, bool Simplify)
     const auto* c = Path;
     while (*c != '\0')
     {
-        while (*c != '\0' && IsSlash(*c))
+        while (IsSlash(*c))
             ++c;
 
         if (*c == '\0')
@@ -173,24 +173,27 @@ std::vector<StringType> SplitPath(const Char* Path, bool Simplify)
         const auto* const CmpStart = c;
         while (*c != '\0' && !IsSlash(*c))
             ++c;
-        StringType PathCmp{CmpStart, c};
 
         if (Simplify)
         {
-            if (PathCmp == ".")
+            if ((c - CmpStart) == 1 && CmpStart[0] == '.') // "."
             {
                 // Skip /.
                 continue;
             }
-            else if (PathCmp == ".." && !Components.empty() && Components.back() != "..")
+            else if ((c - CmpStart) == 2 && CmpStart[0] == '.' && CmpStart[1] == '.') // ".."
             {
-                // Pop previous subdirectory if /.. is found, but only if there is no .. already
-                Components.pop_back();
-                continue;
+                // Pop previous subdirectory if "/.." is found, but only if there is
+                // no ".." already (e.g "../..")
+                if (!Components.empty() && Components.back() != "..")
+                {
+                    Components.pop_back();
+                    continue;
+                }
             }
         }
 
-        Components.emplace_back(std::move(PathCmp));
+        Components.emplace_back(CmpStart, c);
     }
 
     return Components;
