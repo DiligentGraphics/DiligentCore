@@ -26,8 +26,11 @@
  */
 
 #include "BasicFileSystem.hpp"
-#include "DebugUtilities.hpp"
+
 #include <algorithm>
+#include <cstring>
+
+#include "DebugUtilities.hpp"
 
 namespace Diligent
 {
@@ -134,16 +137,17 @@ bool BasicFileSystem::IsPathAbsolute(const Char* strPath)
 #endif
 }
 
-std::vector<String> BasicFileSystem::SplitPath(const Char* Path, bool Simplify)
+template <typename StringType>
+std::vector<StringType> SplitPath(const Char* Path, bool Simplify)
 {
-    std::vector<std::string> Components;
+    std::vector<StringType> Components;
 
     // Estimate the number of components and reserve space in the vector
     {
         size_t CompnentCount = 1;
         for (const auto* c = Path; *c != '\0'; ++c)
         {
-            if (IsSlash(c[0]) && (c == Path || !IsSlash(c[-1])))
+            if (BasicFileSystem::IsSlash(c[0]) && (c == Path || !BasicFileSystem::IsSlash(c[-1])))
                 ++CompnentCount;
         }
         Components.reserve(CompnentCount);
@@ -152,7 +156,7 @@ std::vector<String> BasicFileSystem::SplitPath(const Char* Path, bool Simplify)
     const auto* c = Path;
     while (*c != '\0')
     {
-        while (*c != '\0' && IsSlash(*c))
+        while (*c != '\0' && BasicFileSystem::IsSlash(*c))
             ++c;
 
         if (*c == '\0')
@@ -162,9 +166,9 @@ std::vector<String> BasicFileSystem::SplitPath(const Char* Path, bool Simplify)
         }
 
         const auto* const CmpStart = c;
-        while (*c != '\0' && !IsSlash(*c))
+        while (*c != '\0' && !BasicFileSystem::IsSlash(*c))
             ++c;
-        std::string PathCmp{CmpStart, c};
+        StringType PathCmp{CmpStart, c};
 
         if (Simplify)
         {
@@ -187,6 +191,11 @@ std::vector<String> BasicFileSystem::SplitPath(const Char* Path, bool Simplify)
     return Components;
 }
 
+std::vector<String> BasicFileSystem::SplitPath(const Char* Path, bool Simplify)
+{
+    return Diligent::SplitPath<String>(Path, Simplify);
+}
+
 std::string BasicFileSystem::SimplifyPath(const Char* Path, Char Slash)
 {
     if (Path == nullptr)
@@ -197,15 +206,48 @@ std::string BasicFileSystem::SimplifyPath(const Char* Path, Char Slash)
     else
         Slash = SlashSymbol;
 
-    const auto PathComponents = SplitPath(Path, true);
+    struct MiniStringView
+    {
+        MiniStringView(const char* _Start,
+                       const char* _End) :
+            Start{_Start},
+            End{_End}
+        {}
+
+        bool operator==(const char* Str) const
+        {
+            const auto Len = End - Start;
+            return strncmp(Str, Start, Len) == 0 && Str[Len] == '\0';
+        }
+
+        bool operator!=(const char* str) const
+        {
+            return !(*this == str);
+        }
+
+        const char* const Start;
+        const char* const End;
+    };
+
+    const auto PathComponents = Diligent::SplitPath<MiniStringView>(Path, true);
+
+    size_t Len = 0;
+    for (const auto& Cmp : PathComponents)
+        Len += Cmp.End - Cmp.Start;
+    if (!PathComponents.empty())
+        Len += PathComponents.size() - 1;
 
     std::string SimplifiedPath;
+    SimplifiedPath.reserve(Len);
+
     for (const auto& Cmp : PathComponents)
     {
         if (!SimplifiedPath.empty())
             SimplifiedPath.push_back(Slash);
-        SimplifiedPath.append(Cmp);
+        SimplifiedPath.append(Cmp.Start, Cmp.End);
     }
+    VERIFY_EXPR(SimplifiedPath.length() == Len);
+
     return SimplifiedPath;
 }
 
