@@ -142,12 +142,17 @@ std::vector<StringType> SplitPath(const Char* Path, bool Simplify)
 {
     std::vector<StringType> Components;
 
+    // BasicFileSystem::IsSlash() does not get inlined by at least MSVC
+    auto IsSlash = [](Char c) {
+        return c == '/' || c == '\\';
+    };
+
     // Estimate the number of components and reserve space in the vector
     {
         size_t CompnentCount = 1;
         for (const auto* c = Path; *c != '\0'; ++c)
         {
-            if (BasicFileSystem::IsSlash(c[0]) && (c == Path || !BasicFileSystem::IsSlash(c[-1])))
+            if (IsSlash(c[0]) && (c == Path || !IsSlash(c[-1])))
                 ++CompnentCount;
         }
         Components.reserve(CompnentCount);
@@ -156,7 +161,7 @@ std::vector<StringType> SplitPath(const Char* Path, bool Simplify)
     const auto* c = Path;
     while (*c != '\0')
     {
-        while (*c != '\0' && BasicFileSystem::IsSlash(*c))
+        while (*c != '\0' && IsSlash(*c))
             ++c;
 
         if (*c == '\0')
@@ -166,7 +171,7 @@ std::vector<StringType> SplitPath(const Char* Path, bool Simplify)
         }
 
         const auto* const CmpStart = c;
-        while (*c != '\0' && !BasicFileSystem::IsSlash(*c))
+        while (*c != '\0' && !IsSlash(*c))
             ++c;
         StringType PathCmp{CmpStart, c};
 
