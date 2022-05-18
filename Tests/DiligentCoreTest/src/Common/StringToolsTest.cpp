@@ -208,4 +208,24 @@ TEST(Common_StringTools, SplitString)
          14, 5, {"123456789\n", "abcdefghi\n", "ABCD\n"});
 }
 
+TEST(Common_StringTools, WidenString)
+{
+    EXPECT_STREQ(WidenString("").c_str(), L"");
+    EXPECT_STREQ(WidenString("abc").c_str(), L"abc");
+    EXPECT_STREQ(WidenString("abc", 2).c_str(), L"ab");
+
+    EXPECT_EQ(WidenString(std::string{""}), std::wstring{L""});
+    EXPECT_EQ(WidenString(std::string{"abc"}), std::wstring{L"abc"});
+}
+
+TEST(Common_StringTools, NarrowString)
+{
+    EXPECT_STREQ(NarrowString(L"").c_str(), "");
+    EXPECT_STREQ(NarrowString(L"abc").c_str(), "abc");
+    EXPECT_STREQ(NarrowString(L"abc", 2).c_str(), "ab");
+
+    EXPECT_EQ(NarrowString(std::wstring{L""}), std::string{""});
+    EXPECT_EQ(NarrowString(std::wstring{L"abc"}), std::string{"abc"});
+}
+
 } // namespace

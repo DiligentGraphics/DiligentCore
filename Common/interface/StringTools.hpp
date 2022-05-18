@@ -40,52 +40,46 @@
 namespace Diligent
 {
 
+inline std::string NarrowString(const wchar_t* WideStr, size_t Len = 0)
+{
+    if (Len == 0)
+        Len = wcslen(WideStr);
+    else
+        VERIFY_EXPR(Len <= wcslen(WideStr));
+
+    std::string NarrowStr(Len, '\0');
+
+    const std::ctype<wchar_t>& ctfacet = std::use_facet<std::ctype<wchar_t>>(std::wstringstream().getloc());
+    for (size_t i = 0; i < Len; ++i)
+        NarrowStr[i] = ctfacet.narrow(WideStr[i], 0);
+
+    return NarrowStr;
+}
+
 inline std::string NarrowString(const std::wstring& WideStr)
 {
-    std::string NarrowStr;
-
-    const std::ctype<wchar_t>& ctfacet = std::use_facet<std::ctype<wchar_t>>(std::wstringstream().getloc());
-    for (std::wstring::const_iterator CurrWChar = WideStr.begin();
-         CurrWChar != WideStr.end();
-         CurrWChar++)
-        NarrowStr.push_back(ctfacet.narrow(*CurrWChar, 0));
-
-    return NarrowStr;
+    return NarrowString(WideStr.c_str(), WideStr.length());
 }
 
-inline std::string NarrowString(const wchar_t* WideStr)
+inline std::wstring WidenString(const char* Str, size_t Len = 0)
 {
-    std::string NarrowStr;
+    if (Len == 0)
+        Len = strlen(Str);
+    else
+        VERIFY_EXPR(Len <= strlen(Str));
+
+    std::wstring WideStr(Len, L'\0');
 
     const std::ctype<wchar_t>& ctfacet = std::use_facet<std::ctype<wchar_t>>(std::wstringstream().getloc());
-    for (auto CurrWChar = WideStr; *CurrWChar != 0; ++CurrWChar)
-        NarrowStr.push_back(ctfacet.narrow(*CurrWChar, 0));
-
-    return NarrowStr;
-}
-
-inline std::wstring WidenString(const char* Str)
-{
-    std::wstring WideStr;
-
-    const std::ctype<wchar_t>& ctfacet = std::use_facet<std::ctype<wchar_t>>(std::wstringstream().getloc());
-    for (auto CurrChar = Str; *CurrChar != 0; ++CurrChar)
-        WideStr.push_back(ctfacet.widen(*CurrChar));
+    for (size_t i = 0; i < Len; ++i)
+        WideStr[i] = ctfacet.widen(Str[i]);
 
     return WideStr;
 }
 
 inline std::wstring WidenString(const std::string& Str)
 {
-    std::wstring WideStr;
-
-    const std::ctype<wchar_t>& ctfacet = std::use_facet<std::ctype<wchar_t>>(std::wstringstream().getloc());
-    for (std::string::const_iterator CurrChar = Str.begin();
-         CurrChar != Str.end();
-         CurrChar++)
-        WideStr.push_back(ctfacet.widen(*CurrChar));
-
-    return WideStr;
+    return WidenString(Str.c_str(), Str.length());
 }
 
 inline int StrCmpNoCase(const char* Str1, const char* Str2, size_t NumChars)
