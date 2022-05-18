@@ -138,6 +138,17 @@ std::vector<String> BasicFileSystem::SplitPath(const Char* Path, bool Simplify)
 {
     std::vector<std::string> Components;
 
+    // Estimate the number of components and reserve space in the vector
+    {
+        size_t CompnentCount = 1;
+        for (const auto* c = Path; *c != '\0'; ++c)
+        {
+            if (IsSlash(c[0]) && (c == Path || !IsSlash(c[-1])))
+                ++CompnentCount;
+        }
+        Components.reserve(CompnentCount);
+    }
+
     const auto* c = Path;
     while (*c != '\0')
     {
@@ -150,9 +161,10 @@ std::vector<String> BasicFileSystem::SplitPath(const Char* Path, bool Simplify)
             break;
         }
 
-        std::string PathCmp;
+        const auto* const CmpStart = c;
         while (*c != '\0' && !IsSlash(*c))
-            PathCmp.push_back(*(c++));
+            ++c;
+        std::string PathCmp{CmpStart, c};
 
         if (Simplify)
         {
