@@ -73,6 +73,11 @@ struct RandomValue
         Value      = static_cast<T>(static_cast<Uint64>(minValue) + (m_CurValue % Count) * static_cast<Uint64>(Step));
     }
 
+    void operator()(bool& Value)
+    {
+        Value = (m_CurValue & 0x01) != 0;
+    }
+
     bool IsComplete()
     {
         return ++m_CurValue > m_MaxValue;
@@ -100,11 +105,11 @@ TEST(PSOSerializerTest, SerializePRSDesc)
                 {SHADER_TYPE_UNKNOWN, "Resource5", 1, SHADER_RESOURCE_TYPE_UNKNOWN} //
             };
 
-        RndValue(Resources[0].ShaderStages, SHADER_TYPE_VERTEX, (SHADER_TYPE_LAST << 1) - 1);
+        RndValue(Resources[0].ShaderStages, SHADER_TYPE_VERTEX, (SHADER_TYPE_LAST << 1));
         RndValue(Resources[1].ArraySize, 0u, 100u);
-        RndValue(Resources[2].ResourceType, static_cast<SHADER_RESOURCE_TYPE>(1), SHADER_RESOURCE_TYPE_LAST);
-        RndValue(Resources[3].VarType, SHADER_RESOURCE_VARIABLE_TYPE_STATIC, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
-        RndValue(Resources[4].Flags, PIPELINE_RESOURCE_FLAG_NONE, (PIPELINE_RESOURCE_FLAG_LAST << 1) - 1);
+        RndValue(Resources[2].ResourceType, static_cast<SHADER_RESOURCE_TYPE>(1), SHADER_RESOURCE_TYPE_LAST + 1);
+        RndValue(Resources[3].VarType, SHADER_RESOURCE_VARIABLE_TYPE_STATIC, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES);
+        RndValue(Resources[4].Flags, PIPELINE_RESOURCE_FLAG_NONE, (PIPELINE_RESOURCE_FLAG_LAST << 1));
 
         ImmutableSamplerDesc ImmutableSamplers[] = //
             {
@@ -112,14 +117,15 @@ TEST(PSOSerializerTest, SerializePRSDesc)
                 {SHADER_TYPE_UNKNOWN, "Sampler2", SamplerDesc{}} //
             };
 
-        RndValue(ImmutableSamplers[0].ShaderStages, SHADER_TYPE_VERTEX, (SHADER_TYPE_LAST << 1) - 1);
+        RndValue(ImmutableSamplers[0].ShaderStages, SHADER_TYPE_VERTEX, (SHADER_TYPE_LAST << 1));
         RndValue(ImmutableSamplers[0].Desc.MinFilter, FILTER_TYPE_UNKNOWN, FILTER_TYPE_NUM_FILTERS);
         RndValue(ImmutableSamplers[1].Desc.MagFilter, FILTER_TYPE_UNKNOWN, FILTER_TYPE_NUM_FILTERS);
         RndValue(ImmutableSamplers[0].Desc.MipFilter, FILTER_TYPE_UNKNOWN, FILTER_TYPE_NUM_FILTERS);
         RndValue(ImmutableSamplers[1].Desc.AddressU, TEXTURE_ADDRESS_UNKNOWN, TEXTURE_ADDRESS_NUM_MODES);
         RndValue(ImmutableSamplers[0].Desc.AddressV, TEXTURE_ADDRESS_UNKNOWN, TEXTURE_ADDRESS_NUM_MODES);
         RndValue(ImmutableSamplers[1].Desc.AddressW, TEXTURE_ADDRESS_UNKNOWN, TEXTURE_ADDRESS_NUM_MODES);
-        RndValue(ImmutableSamplers[1].Desc.Flags, SAMPLER_FLAG_NONE, SAMPLER_FLAG_SUBSAMPLED_COARSE_RECONSTRUCTION);
+        RndValue(ImmutableSamplers[1].Desc.Flags, SAMPLER_FLAG_NONE, SAMPLER_FLAG_LAST);
+        RndValue(ImmutableSamplers[1].Desc.UnnormalizedCoords);
         RndValue(ImmutableSamplers[1].Desc.MipLODBias, -2.0f, 2.0f);
         RndValue(ImmutableSamplers[0].Desc.MaxAnisotropy, 0u, 16u);
         RndValue(ImmutableSamplers[0].Desc.ComparisonFunc, COMPARISON_FUNC_UNKNOWN, COMPARISON_FUNC_NUM_FUNCTIONS);
@@ -136,12 +142,12 @@ TEST(PSOSerializerTest, SerializePRSDesc)
         SrcPRSDesc.ImmutableSamplers    = ImmutableSamplers;
         SrcPRSDesc.NumImmutableSamplers = _countof(ImmutableSamplers);
 
-        RndValue(SrcPRSDesc.BindingIndex, Uint8{0}, Uint8{DILIGENT_MAX_RESOURCE_SIGNATURES - 1});
+        RndValue(SrcPRSDesc.BindingIndex, Uint8{0}, Uint8{DILIGENT_MAX_RESOURCE_SIGNATURES});
 
         PipelineResourceSignatureInternalData SrcInternalData;
 
-        RndValue(SrcInternalData.ShaderStages, SHADER_TYPE_VERTEX, (SHADER_TYPE_LAST << 1) - 1);
-        RndValue(SrcInternalData.StaticResShaderStages, SHADER_TYPE_VERTEX, (SHADER_TYPE_LAST << 1) - 1);
+        RndValue(SrcInternalData.ShaderStages, SHADER_TYPE_VERTEX, (SHADER_TYPE_LAST << 1));
+        RndValue(SrcInternalData.StaticResShaderStages, SHADER_TYPE_VERTEX, (SHADER_TYPE_LAST << 1));
         RndValue(SrcInternalData.PipelineType, PIPELINE_TYPE_GRAPHICS, PIPELINE_TYPE_LAST);
 
         for (size_t i = 0; i < SrcInternalData.StaticResStageIndex.size(); ++i)

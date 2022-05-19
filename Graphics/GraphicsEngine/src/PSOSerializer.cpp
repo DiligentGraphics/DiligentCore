@@ -44,6 +44,7 @@ void SerializeImmutableSampler(
         SampDesc.Desc.AddressV,
         SampDesc.Desc.AddressW,
         SampDesc.Desc.Flags,
+        SampDesc.Desc.UnnormalizedCoords,
         SampDesc.Desc.MipLODBias,
         SampDesc.Desc.MaxAnisotropy,
         SampDesc.Desc.ComparisonFunc,
