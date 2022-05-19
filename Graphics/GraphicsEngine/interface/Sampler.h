@@ -140,6 +140,9 @@ struct SamplerDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// Default value: +FLT_MAX.
     float MaxLOD                        DEFAULT_INITIALIZER(+3.402823466e+38F);
 
+    // 
+    // NB: when adding new members, don't forget to update std::hash<Diligent::SamplerDesc>
+    //
 
 #if DILIGENT_CPP_INTERFACE
     constexpr SamplerDesc() noexcept {}
