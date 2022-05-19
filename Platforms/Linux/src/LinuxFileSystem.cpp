@@ -86,16 +86,23 @@ bool LinuxFileSystem::CreateDirectory(const Char* strPath)
     std::string path = strPath;
     CorrectSlashes(path);
 
-    bool   result   = true;
     size_t position = 0;
-    while (result != false && position != std::string::npos)
+    while (position != std::string::npos)
     {
         position     = path.find(SlashSymbol, position + 1);
         auto subPath = path.substr(0, position);
         if (!PathExists(subPath.c_str()))
-            result = mkdir(subPath.c_str(), S_IRWXU | S_IRWXG | S_IRWXO) == 0;
+        {
+            if (mkdir(subPath.c_str(), S_IRWXU | S_IRWXG | S_IRWXO) != 0)
+            {
+                // If multiple threads are trying to create the same directory, it is possible
+                // that the directory has been created by another thread, which is OK.
+                if (errno != EEXIST)
+                    return false;
+            }
+        }
     }
-    return result;
+    return true;
 }
 
 void LinuxFileSystem::ClearDirectory(const Char* strPath)

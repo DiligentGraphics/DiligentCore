@@ -300,7 +300,15 @@ static bool CreateDirectoryImpl(const Char* strPath)
         {
             // If there is no directory, create it
             if (!ParentDir.CreateDirectory_())
-                return false;
+            {
+                // If multiple threads are trying to create the same directory, it is possible
+                // that the directory has been created by another thread, which is OK.
+                if (GetLastError() != ERROR_ALREADY_EXISTS)
+                    return false;
+
+                if ((ParentDir.GetFileAttributes_() & FILE_ATTRIBUTE_DIRECTORY) == 0)
+                    return false;
+            }
         }
     } while (SlashPos != std::string::npos);
 
