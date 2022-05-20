@@ -82,7 +82,7 @@ TEST(Common_HashUtils, HashMapStringKey)
     }
 
     {
-        std::unordered_map<HashMapStringKey, int, HashMapStringKey::Hasher> TestMap;
+        std::unordered_map<HashMapStringKey, int> TestMap;
 
         const char* Str1 = "String1";
         const char* Str2 = "String2";

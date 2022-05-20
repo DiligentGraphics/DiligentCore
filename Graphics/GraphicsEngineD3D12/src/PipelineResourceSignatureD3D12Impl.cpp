@@ -49,7 +49,7 @@ namespace
 void ValidatePipelineResourceSignatureDescD3D12(const PipelineResourceSignatureDesc& Desc) noexcept(false)
 {
     {
-        std::unordered_multimap<HashMapStringKey, SHADER_TYPE, HashMapStringKey::Hasher> ResNameToShaderStages;
+        std::unordered_multimap<HashMapStringKey, SHADER_TYPE> ResNameToShaderStages;
         for (Uint32 i = 0; i < Desc.NumResources; ++i)
         {
             const auto& Res = Desc.Resources[i];
@@ -78,7 +78,7 @@ void ValidatePipelineResourceSignatureDescD3D12(const PipelineResourceSignatureD
     }
 
     {
-        std::unordered_multimap<HashMapStringKey, SHADER_TYPE, HashMapStringKey::Hasher> SamNameToShaderStages;
+        std::unordered_multimap<HashMapStringKey, SHADER_TYPE> SamNameToShaderStages;
         for (Uint32 i = 0; i < Desc.NumImmutableSamplers; ++i)
         {
             const auto& Sam = Desc.ImmutableSamplers[i];

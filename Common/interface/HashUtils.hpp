@@ -266,3 +266,18 @@ protected:
 };
 
 } // namespace Diligent
+
+
+namespace std
+{
+
+template <>
+struct hash<Diligent::HashMapStringKey>
+{
+    size_t operator()(const Diligent::HashMapStringKey& Key) const
+    {
+        return Key.GetHash();
+    }
+};
+
+} // namespace std

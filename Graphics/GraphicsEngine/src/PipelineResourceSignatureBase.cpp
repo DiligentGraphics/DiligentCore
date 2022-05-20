@@ -64,7 +64,7 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
 
 
     // Hash map of all resources by name
-    std::unordered_multimap<HashMapStringKey, const PipelineResourceDesc&, HashMapStringKey::Hasher> Resources;
+    std::unordered_multimap<HashMapStringKey, const PipelineResourceDesc&> Resources;
     for (Uint32 i = 0; i < Desc.NumResources; ++i)
     {
         const auto& Res = Desc.Resources[i];
@@ -158,7 +158,7 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
     }
 
     // Hash map of all immutable samplers by name
-    std::unordered_multimap<HashMapStringKey, const ImmutableSamplerDesc&, HashMapStringKey::Hasher> ImtblSamplers;
+    std::unordered_multimap<HashMapStringKey, const ImmutableSamplerDesc&> ImtblSamplers;
     for (Uint32 i = 0; i < Desc.NumImmutableSamplers; ++i)
     {
         const auto& SamDesc = Desc.ImmutableSamplers[i];
@@ -200,9 +200,9 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
         VERIFY_EXPR(Desc.CombinedSamplerSuffix != nullptr);
 
         // List of samplers assigned to some texture
-        std::unordered_multimap<HashMapStringKey, SHADER_TYPE, HashMapStringKey::Hasher> AssignedSamplers;
+        std::unordered_multimap<HashMapStringKey, SHADER_TYPE> AssignedSamplers;
         // List of immutable samplers assigned to some texture
-        std::unordered_multimap<HashMapStringKey, SHADER_TYPE, HashMapStringKey::Hasher> AssignedImtblSamplers;
+        std::unordered_multimap<HashMapStringKey, SHADER_TYPE> AssignedImtblSamplers;
         for (Uint32 i = 0; i < Desc.NumResources; ++i)
         {
             const auto& Res = Desc.Resources[i];

@@ -318,7 +318,7 @@ private:
     private:
         std::mutex m_Mtx;
         // Keep weak resource references in the cache
-        std::unordered_map<HashMapStringKey, FileOffsetSizeAndRes<RefCntWeakPtr<ResType>>, HashMapStringKey::Hasher> m_Map;
+        std::unordered_map<HashMapStringKey, FileOffsetSizeAndRes<RefCntWeakPtr<ResType>>> m_Map;
     };
 
     OffsetSizeAndResourceMap<IPipelineResourceSignature> m_PRSMap;

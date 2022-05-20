@@ -199,7 +199,7 @@ private:
         ObjectsTypeHashType& operator = (ObjectsTypeHashType&)  = delete;
         // clang-format on
 
-        std::unordered_map<HashMapStringKey, HLSLObjectInfo, HashMapStringKey::Hasher> m;
+        std::unordered_map<HashMapStringKey, HLSLObjectInfo> m;
     };
 
     struct GLSLStubInfo
@@ -548,8 +548,8 @@ private:
 
         void ProcessHullShaderConstantFunction(const Char* FuncName, bool& bTakesInputPatch);
 
-        void ProcessShaderAttributes(TokenListType::iterator&                                                TypeToken,
-                                     std::unordered_map<HashMapStringKey, String, HashMapStringKey::Hasher>& Attributes);
+        void ProcessShaderAttributes(TokenListType::iterator&                      TypeToken,
+                                     std::unordered_map<HashMapStringKey, String>& Attributes);
 
         void ProcessHullShaderArguments(TokenListType::iterator&          TypeToken,
                                         std::vector<ShaderParameterInfo>& Params,
@@ -581,7 +581,7 @@ private:
         TokenListType m_Tokens;
 
         // List of tokens defining structs
-        std::unordered_map<HashMapStringKey, TokenListType::iterator, HashMapStringKey::Hasher> m_StructDefinitions;
+        std::unordered_map<HashMapStringKey, TokenListType::iterator> m_StructDefinitions;
 
         // Stack of parsed objects, for every scope level.
         // There are currently only two levels:
@@ -603,13 +603,13 @@ private:
 
     // HLSL keyword->token info hash map
     // Example: "Texture2D" -> TokenInfo(TokenType::Texture2D, "Texture2D")
-    std::unordered_map<HashMapStringKey, TokenInfo, HashMapStringKey::Hasher> m_HLSLKeywords;
+    std::unordered_map<HashMapStringKey, TokenInfo> m_HLSLKeywords;
 
     // Set of all GLSL image types (image1D, uimage1D, iimage1D, image2D, ... )
-    std::unordered_set<HashMapStringKey, HashMapStringKey::Hasher> m_ImageTypes;
+    std::unordered_set<HashMapStringKey> m_ImageTypes;
 
     // Set of all HLSL atomic operations (InterlockedAdd, InterlockedOr, ...)
-    std::unordered_set<HashMapStringKey, HashMapStringKey::Hasher> m_AtomicOperations;
+    std::unordered_set<HashMapStringKey> m_AtomicOperations;
 
     // HLSL semantic -> glsl variable, for every shader stage and input/output type (in == 0, out == 1)
     // Example: [vertex, output] SV_Position -> gl_Position
@@ -618,7 +618,7 @@ private:
     static constexpr int OutVar          = 1;
     static constexpr int MaxShaderStages = 6; // Maximum supported shader stages: VS, GS, PS, DS, HS, CS
 
-    std::array<std::array<std::unordered_map<HashMapStringKey, String, HashMapStringKey::Hasher>, 2>, MaxShaderStages> m_HLSLSemanticToGLSLVar;
+    std::array<std::array<std::unordered_map<HashMapStringKey, String>, 2>, MaxShaderStages> m_HLSLSemanticToGLSLVar;
 };
 
 } // namespace Diligent

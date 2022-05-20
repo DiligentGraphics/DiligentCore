@@ -390,9 +390,9 @@ void CreateRayTracingPipeline(RenderDeviceVkImpl*                               
 
 
 std::vector<VkRayTracingShaderGroupCreateInfoKHR> BuildRTShaderGroupDescription(
-    const RayTracingPipelineStateCreateInfo&                                      CreateInfo,
-    const std::unordered_map<HashMapStringKey, Uint32, HashMapStringKey::Hasher>& NameToGroupIndex,
-    const PipelineStateVkImpl::TShaderStages&                                     ShaderStages)
+    const RayTracingPipelineStateCreateInfo&            CreateInfo,
+    const std::unordered_map<HashMapStringKey, Uint32>& NameToGroupIndex,
+    const PipelineStateVkImpl::TShaderStages&           ShaderStages)
 {
     // Returns the shader module index in the PSO create info
     auto GetShaderModuleIndex = [&ShaderStages](const IShader* pShader) {

@@ -105,7 +105,7 @@ private:
 
 
     template <typename Type>
-    using NamedObjectHashMap = std::unordered_map<HashMapStringKey, Type, HashMapStringKey::Hasher>;
+    using NamedObjectHashMap = std::unordered_map<HashMapStringKey, Type>;
 
     std::mutex                                                         m_SignaturesMtx;
     NamedObjectHashMap<RefCntAutoPtr<SerializedResourceSignatureImpl>> m_Signatures;

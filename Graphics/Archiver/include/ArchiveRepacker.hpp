@@ -54,7 +54,7 @@ private:
     using RPDataHeader      = DeviceObjectArchiveBase::RPDataHeader;
     using ShadersDataHeader = DeviceObjectArchiveBase::ShadersDataHeader;
 
-    using NameOffsetMap = std::unordered_map<HashMapStringKey, FileOffsetAndSize, HashMapStringKey::Hasher>;
+    using NameOffsetMap = std::unordered_map<HashMapStringKey, FileOffsetAndSize>;
 
     static constexpr auto HeaderMagicNumber = DeviceObjectArchiveBase::HeaderMagicNumber;
     static constexpr auto HeaderVersion     = DeviceObjectArchiveBase::HeaderVersion;
