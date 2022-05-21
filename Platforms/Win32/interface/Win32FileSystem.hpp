@@ -41,7 +41,7 @@ public:
     WindowsFile(const FileOpenAttribs& OpenAttribs);
 };
 
-enum FILE_DIALOG_FLAGS : Diligent::Uint32
+enum FILE_DIALOG_FLAGS : Uint32
 {
     FILE_DIALOG_FLAG_NONE = 0x000,
 
@@ -61,7 +61,7 @@ enum FILE_DIALOG_FLAGS : Diligent::Uint32
 };
 DEFINE_FLAG_ENUM_OPERATORS(FILE_DIALOG_FLAGS);
 
-enum FILE_DIALOG_TYPE : Diligent::Uint32
+enum FILE_DIALOG_TYPE : Uint32
 {
     FILE_DIALOG_TYPE_OPEN,
     FILE_DIALOG_TYPE_SAVE
@@ -98,18 +98,18 @@ struct WindowsFileSystem : public BasicFileSystem
 public:
     static WindowsFile* OpenFile(const FileOpenAttribs& OpenAttribs);
 
-    static bool FileExists(const Diligent::Char* strFilePath);
-    static bool PathExists(const Diligent::Char* strPath);
+    static bool FileExists(const Char* strFilePath);
+    static bool PathExists(const Char* strPath);
 
-    static void SetWorkingDirectory(const Diligent::Char* strWorkingDir);
+    static void SetWorkingDirectory(const Char* strWorkingDir);
 
-    static bool CreateDirectory(const Diligent::Char* strPath);
-    static void ClearDirectory(const Diligent::Char* strPath, bool Recursive = false);
-    static void DeleteFile(const Diligent::Char* strPath);
-    static void DeleteDirectory(const Diligent::Char* strPath);
-    static bool IsDirectory(const Diligent::Char* strPath);
+    static bool CreateDirectory(const Char* strPath);
+    static void ClearDirectory(const Char* strPath, bool Recursive = false);
+    static void DeleteFile(const Char* strPath);
+    static void DeleteDirectory(const Char* strPath);
+    static bool IsDirectory(const Char* strPath);
 
-    static std::vector<std::unique_ptr<FindFileData>> Search(const Diligent::Char* SearchPattern);
+    static std::vector<std::unique_ptr<FindFileData>> Search(const Char* SearchPattern);
 
     static std::string FileDialog(const FileDialogAttribs& DialogAttribs);
 
