@@ -95,7 +95,7 @@ public:
     /// cost to it.
     void Add(const ResourceDescType& ObjectDesc, IDeviceObject* pObject)
     {
-        ThreadingTools::LockHelper Lock(m_LockFlag);
+        ThreadingTools::LockHelper Lock{m_LockFlag};
 
         // If the number of outstanding deleted objects reached the threshold value,
         // purge the registry. Since we have exclusive access now, it is safe
@@ -107,7 +107,7 @@ public:
         }
 
         // Try to construct the new element in place
-        auto Elems = m_DescToObjHashMap.emplace(std::make_pair(ObjectDesc, Diligent::RefCntWeakPtr<IDeviceObject>(pObject)));
+        auto it_inserted = m_DescToObjHashMap.emplace(std::make_pair(ObjectDesc, Diligent::RefCntWeakPtr<IDeviceObject>(pObject)));
         // It is theoretically possible that the same object can be found
         // in the registry. This might happen if two threads try to create
         // the same object at the same time. They both will not find the
@@ -121,14 +121,16 @@ public:
         // the second thread creates the same object and tries to add it to
         // the registry. It will find an existing expired reference to the
         // object.
-        if (!Elems.second)
+        if (!it_inserted.second)
         {
-            VERIFY(Elems.first->first == ObjectDesc, "Incorrect object description");
-            LOG_WARNING_MESSAGE("Object named '", Elems.first->first.Name,
-                                "' with the same description already exists in the registry."
-                                "Replacing with the new object named '",
-                                ObjectDesc.Name ? ObjectDesc.Name : "", "'.");
-            Elems.first->second = pObject;
+            auto& it = it_inserted.first;
+            VERIFY(it->first == ObjectDesc, "Incorrect object description");
+            // This message likely adds no value
+            //LOG_INFO_MESSAGE("Object '", (it->first.Name ? it->first.Name : "<unnamed>"),
+            //                 "' with the same description already exists in the ",
+            //                 m_RegistryName, " registry. Replacing with the new object '",
+            //                 (ObjectDesc.Name ? ObjectDesc.Name : "<unnamed>"), "'.");
+            it->second = pObject;
         }
     }
 
@@ -137,7 +139,7 @@ public:
     {
         VERIFY(*ppObject == nullptr, "Overwriting reference to existing object may cause memory leaks");
         *ppObject = nullptr;
-        ThreadingTools::LockHelper Lock(m_LockFlag);
+        ThreadingTools::LockHelper Lock{m_LockFlag};
 
         auto It = m_DescToObjHashMap.find(Desc);
         if (It != m_DescToObjHashMap.end())
@@ -146,8 +148,7 @@ public:
             // This is an atomic operation and we either get
             // a new strong reference or object has been destroyed
             // and we get null.
-            auto pObject = It->second.Lock();
-            if (pObject)
+            if (auto pObject = It->second.Lock())
             {
                 *ppObject = pObject.Detach();
                 //LOG_INFO_MESSAGE( "Equivalent of the requested state object named \"", Desc.Name ? Desc.Name : "", "\" found in the ", m_RegistryName, " registry. Reusing existing object.");
