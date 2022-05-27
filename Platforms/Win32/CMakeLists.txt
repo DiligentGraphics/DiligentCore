@@ -15,6 +15,7 @@ set(SOURCE
     src/Win32Atomics.cpp
     src/Win32Debug.cpp
     src/Win32FileSystem.cpp
+    src/Win32PlatformMisc.cpp
 )
 
 add_library(Diligent-Win32Platform ${SOURCE} ${INTERFACE} ${PLATFORM_INTERFACE_HEADERS})

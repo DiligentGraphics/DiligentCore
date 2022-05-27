@@ -35,9 +35,19 @@
 namespace Diligent
 {
 
+enum class ThreadPriority
+{
+    Unknown,
+    Lowest,
+    BelowNormal,
+    Normal,
+    AboveNormal,
+    Highest
+};
+
 struct WindowsMisc : public BasicPlatformMisc
 {
-    inline static Diligent::Uint32 GetMSB(Diligent::Uint32 Val)
+    inline static Uint32 GetMSB(Uint32 Val)
     {
         if (Val == 0) return 32;
 
@@ -48,7 +58,7 @@ struct WindowsMisc : public BasicPlatformMisc
         return MSB;
     }
 
-    inline static Diligent::Uint32 GetMSB(Diligent::Uint64 Val)
+    inline static Uint32 GetMSB(Uint64 Val)
     {
         if (Val == 0) return 64;
 
@@ -56,14 +66,14 @@ struct WindowsMisc : public BasicPlatformMisc
 #if _WIN64
         _BitScanReverse64(&MSB, Val);
 #else
-        Diligent::Uint32 high = static_cast<Diligent::Uint32>((Val >> 32) & 0xFFFFFFFF);
+        Uint32 high = static_cast<Uint32>((Val >> 32) & 0xFFFFFFFF);
         if (high != 0)
         {
             MSB = 32 + GetMSB(high);
         }
         else
         {
-            Diligent::Uint32 low = static_cast<Diligent::Uint32>(Val & 0xFFFFFFFF);
+            Uint32 low = static_cast<Uint32>(Val & 0xFFFFFFFF);
             VERIFY_EXPR(low != 0);
             MSB = GetMSB(low);
         }
@@ -73,7 +83,7 @@ struct WindowsMisc : public BasicPlatformMisc
         return MSB;
     }
 
-    inline static Diligent::Uint32 GetLSB(Diligent::Uint32 Val)
+    inline static Uint32 GetLSB(Uint32 Val)
     {
         if (Val == 0) return 32;
 
@@ -84,7 +94,7 @@ struct WindowsMisc : public BasicPlatformMisc
         return LSB;
     }
 
-    inline static Diligent::Uint32 GetLSB(Diligent::Uint64 Val)
+    inline static Uint32 GetLSB(Uint64 Val)
     {
         if (Val == 0) return 64;
 
@@ -92,14 +102,14 @@ struct WindowsMisc : public BasicPlatformMisc
 #if _WIN64
         _BitScanForward64(&LSB, Val);
 #else
-        Diligent::Uint32 low = static_cast<Diligent::Uint32>(Val & 0xFFFFFFFF);
+        Uint32 low = static_cast<Uint32>(Val & 0xFFFFFFFF);
         if (low != 0)
         {
             LSB = GetLSB(low);
         }
         else
         {
-            Diligent::Uint32 high = static_cast<Diligent::Uint32>((Val >> 32) & 0xFFFFFFFF);
+            Uint32 high = static_cast<Uint32>((Val >> 32) & 0xFFFFFFFF);
             VERIFY_EXPR(high != 0);
             LSB = 32 + GetLSB(high);
         }
@@ -109,14 +119,14 @@ struct WindowsMisc : public BasicPlatformMisc
         return LSB;
     }
 
-    inline static Diligent::Uint32 CountOneBits(Diligent::Uint32 Val)
+    inline static Uint32 CountOneBits(Uint32 Val)
     {
 #if defined _M_ARM || defined _M_ARM64
         // MSVC _CountOneBits intrinsics undefined for ARM64
         // Cast bits to 8x8 datatype and use VCNT on result
         const uint8x8_t Vsum = vcnt_u8(vcreate_u8(static_cast<uint64_t>(Val)));
         // Pairwise sums: 8x8 -> 16x4 -> 32x2
-        auto Bits = static_cast<Diligent::Uint32>(vget_lane_u32(vpaddl_u16(vpaddl_u8(Vsum)), 0));
+        auto Bits = static_cast<Uint32>(vget_lane_u32(vpaddl_u16(vpaddl_u8(Vsum)), 0));
 #else
         auto Bits = __popcnt(Val);
 #endif
@@ -124,22 +134,22 @@ struct WindowsMisc : public BasicPlatformMisc
         return Bits;
     }
 
-    inline static Diligent::Uint32 CountOneBits(Diligent::Uint64 Val)
+    inline static Uint32 CountOneBits(Uint64 Val)
     {
 #if defined _M_ARM || defined _M_ARM64
         // Cast bits to 8x8 datatype and use VCNT on result
         const uint8x8_t Vsum = vcnt_u8(vcreate_u8(Val));
         // Pairwise sums: 8x8 -> 16x4 -> 32x2 -> 64x1
-        auto Bits = static_cast<Diligent::Uint32>(vget_lane_u64(vpaddl_u32(vpaddl_u16(vpaddl_u8(Vsum))), 0));
+        auto Bits = static_cast<Uint32>(vget_lane_u64(vpaddl_u32(vpaddl_u16(vpaddl_u8(Vsum))), 0));
 #elif _WIN64
         auto Bits = __popcnt64(Val);
 #else
         auto Bits =
-            CountOneBits(static_cast<Diligent::Uint32>((Val >> 0) & 0xFFFFFFFF)) +
-            CountOneBits(static_cast<Diligent::Uint32>((Val >> 32) & 0xFFFFFFFF));
+            CountOneBits(static_cast<Uint32>((Val >> 0) & 0xFFFFFFFF)) +
+            CountOneBits(static_cast<Uint32>((Val >> 32) & 0xFFFFFFFF));
 #endif
         VERIFY_EXPR(Bits == BasicPlatformMisc::CountOneBits(Val));
-        return static_cast<Diligent::Uint32>(Bits);
+        return static_cast<Uint32>(Bits);
     }
 
     template <typename Type>
@@ -164,6 +174,16 @@ struct WindowsMisc : public BasicPlatformMisc
         return reinterpret_cast<const Type&>(SwappedBytes);
     }
 #endif
+
+    /// Sets the current thread affinity mask and on success returns the previous mask.
+    /// On failure, returns 0.
+    static Uint64 SetCurrentThreadAffinity(Uint64 Mask);
+
+    static ThreadPriority GetCurrentThreadPriority();
+
+    /// Sets the current thread priority and on success returns the previous priority.
+    /// On failure, returns ThreadPriority::Unknown.
+    static ThreadPriority SetCurrentThreadPriority(ThreadPriority Priority);
 };
 
 } // namespace Diligent
