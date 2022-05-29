@@ -112,10 +112,16 @@ if (VULKAN_SUPPORTED OR METAL_SUPPORTED)
         )
     endif()
 
-    if (${DILIGENT_IMPROVE_SPIRV_TOOLS_DEBUG_PERF} AND MSVC)
-        # Enable function inlining (/Ob1) in Debug build to improve shader compilation performance
+    if (MSVC)
         foreach(TARGET ${THIRD_PARTY_LIBS}) 
-            target_compile_options(${TARGET} PRIVATE "$<$<CONFIG:DEBUG>:/Ob1>")
+            if (${DILIGENT_IMPROVE_SPIRV_TOOLS_DEBUG_PERF})
+                # Enable function inlining (/Ob1) in Debug build to improve shader compilation performance
+                target_compile_options(${TARGET} PRIVATE "$<$<CONFIG:DEBUG>:/Ob1>")
+            endif()
+            target_compile_options(${TARGET} PRIVATE "$<$<CONFIG:DEBUG>:${DILIGENT_MSVC_DEBUG_COMPILE_OPTIONS}>")
+            target_compile_options(${TARGET} PRIVATE "$<$<CONFIG:RELEASE>:${DILIGENT_MSVC_RELEASE_COMPILE_OPTIONS}>")
+            target_compile_options(${TARGET} PRIVATE "$<$<CONFIG:MINSIZEREL>:${DILIGENT_MSVC_RELEASE_COMPILE_OPTIONS}>")
+            target_compile_options(${TARGET} PRIVATE "$<$<CONFIG:RELWITHDEBINFO>:${DILIGENT_MSVC_RELEASE_COMPILE_OPTIONS}>")
         endforeach()
     endif()
 
