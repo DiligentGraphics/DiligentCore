@@ -1,0 +1,155 @@
+/*
+ *  Copyright 2019-2022 Diligent Graphics LLC
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ *  In no event and under no legal theory, whether in tort (including negligence), 
+ *  contract, or otherwise, unless required by applicable law (such as deliberate 
+ *  and grossly negligent acts) or agreed to in writing, shall any Contributor be
+ *  liable for any damages, including any direct, indirect, special, incidental, 
+ *  or consequential damages of any character arising as a result of this License or 
+ *  out of the use or inability to use the software (including but not limited to damages 
+ *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and 
+ *  all other commercial damages or losses), even if such Contributor has been advised 
+ *  of the possibility of such damages.
+ */
+
+#include "Array2DTools.hpp"
+
+#include <algorithm>
+
+#ifdef __AVX2__
+#    include <immintrin.h>
+#    define USE_AVX2 1
+#endif
+
+#include "DebugUtilities.hpp"
+#include "Align.hpp"
+
+namespace Diligent
+{
+
+namespace
+{
+
+void GetArray2DMinMaxValueGeneric(const float* pData,
+                                  size_t       StrideInFloats,
+                                  Uint32       Width,
+                                  Uint32       Height,
+                                  float&       MinValue,
+                                  float&       MaxValue)
+{
+    for (size_t row = 0; row < Height; ++row)
+    {
+        const auto* pRowStart = pData + row * StrideInFloats;
+        const auto* pRowEnd   = pRowStart + Width;
+        for (const auto* ptr = pRowStart; ptr < pRowEnd; ++ptr)
+        {
+            MinValue = std::min(MinValue, *ptr);
+            MaxValue = std::max(MaxValue, *ptr);
+        }
+    }
+}
+
+#if USE_AVX2
+bool GetArray2DMinMaxValueAVX2(const float* pData,
+                               size_t       StrideInFloats,
+                               Uint32       Width,
+                               Uint32       Height,
+                               float&       MinValue,
+                               float&       MaxValue)
+{
+    MinValue = MaxValue = pData[0];
+    for (size_t row = 0; row < Height; ++row)
+    {
+        const auto* pRowStart = pData + row * StrideInFloats;
+        const auto* pRowEnd   = pRowStart + Width;
+        // _mm256_load_ps requires 32-byte alignment
+        const auto* pAlignStart = std::min(AlignUp(pRowStart, 32u), pRowEnd);
+        const auto* pAlignEnd   = AlignDown(pRowEnd, 32u);
+
+        const auto* Ptr = pRowStart;
+        for (; Ptr < pAlignStart; ++Ptr)
+        {
+            MinValue = std::min(MinValue, *Ptr);
+            MaxValue = std::max(MaxValue, *Ptr);
+        }
+
+        if (Ptr < pAlignEnd)
+        {
+            auto mmMin = _mm256_load_ps(Ptr);
+            auto mmMax = mmMin;
+            Ptr += 8;
+            for (; Ptr < pAlignEnd; Ptr += 8)
+            {
+                auto mmVal = _mm256_load_ps(Ptr);
+
+                mmMin = _mm256_min_ps(mmMin, mmVal);
+                mmMax = _mm256_max_ps(mmMax, mmVal);
+            }
+
+// Shuffle only works within 128-bit halves
+#    define MAKE_SHUFFLE(i0, i1, i2, i3) ((i0 << 0) | (i1 << 2) | (i2 << 4) | (i3 << 6))
+            constexpr int Shuffle1032 = MAKE_SHUFFLE(1, 0, 3, 2);
+            // |  0  |  1  |  2  |  3  |       |  1  |  0  |  3  |  2  |
+            // |  A  |  B  |  C  |  D  |   =>  |  B  |  A  |  D  |  C  |
+            mmMin = _mm256_min_ps(mmMin, _mm256_permute_ps(mmMin, Shuffle1032));
+            mmMax = _mm256_max_ps(mmMax, _mm256_permute_ps(mmMax, Shuffle1032));
+
+            constexpr int Shuffle2301 = MAKE_SHUFFLE(2, 3, 0, 1);
+            //       0           1           2          3                    2           3           0           1
+            // | max(A, B) | max(A, B) | max(C, D) | max(C, D) |  =>  | max(C, D) | max(C, D) | max(A, B) | max(A, B) |
+            mmMin = _mm256_min_ps(mmMin, _mm256_permute_ps(mmMin, Shuffle2301));
+            mmMax = _mm256_max_ps(mmMax, _mm256_permute_ps(mmMax, Shuffle2301));
+
+            MinValue = std::min(std::min(mmMin.m256_f32[0], mmMin.m256_f32[4]), MinValue);
+            MaxValue = std::max(std::max(mmMax.m256_f32[0], mmMax.m256_f32[4]), MaxValue);
+        }
+
+        for (; Ptr < pRowEnd; ++Ptr)
+        {
+            MinValue = std::min(MinValue, *Ptr);
+            MaxValue = std::max(MaxValue, *Ptr);
+        }
+    }
+
+    return true;
+}
+#endif
+
+} // namespace
+
+void GetArray2DMinMaxValue(const float* pData,
+                           size_t       StrideInFloats,
+                           Uint32       Width,
+                           Uint32       Height,
+                           float&       MinValue,
+                           float&       MaxValue)
+{
+    if (Width == 0 || Height == 0)
+        return;
+
+    DEV_CHECK_ERR(pData != nullptr, "Data pointer must not be null");
+    DEV_CHECK_ERR(Height == 1 || StrideInFloats >= Width, "Row stride (", StrideInFloats, ") must be at least ", Width);
+    DEV_CHECK_ERR(AlignDown(pData, alignof(float)) == pData, "Data pointer is not naturally aligned");
+
+    MinValue = MaxValue = pData[0];
+#if USE_AVX2
+    if (GetArray2DMinMaxValueAVX2(pData, StrideInFloats, Width, Height, MinValue, MaxValue))
+        return;
+#endif
+
+    GetArray2DMinMaxValueGeneric(pData, StrideInFloats, Width, Height, MinValue, MaxValue);
+}
+
+} // namespace Diligent
