@@ -60,10 +60,9 @@ TEST(Common_Array2DTools, GetArray2DMinMaxValue)
 
 
     // Test min/max at different positions
-    unsigned int Seed = 0;
+    FastRandFloat Rnd{0, -100, +100};
+    for (Uint32 Width = 1; Width <= 32; ++Width)
     {
-        FastRandFloat      Rnd{Seed++, -100, +100};
-        constexpr Uint32   Width  = 16;
         constexpr Uint32   Height = 1;
         std::vector<float> Data(Width);
         for (Uint32 test_max = 0; test_max < 2; ++test_max)
@@ -86,7 +85,6 @@ TEST(Common_Array2DTools, GetArray2DMinMaxValue)
     // Test misalignment
     for (size_t misalign_offset = 0; misalign_offset < 8; ++misalign_offset)
     {
-        FastRandFloat Rnd{Seed++, -100, +100};
         for (Uint32 Width = 1; Width < 32; ++Width)
         {
             constexpr Uint32   Height = 1;
@@ -99,8 +97,6 @@ TEST(Common_Array2DTools, GetArray2DMinMaxValue)
 
 
     {
-        FastRandFloat Rnd{Seed++, -100, +100};
-
         for (Uint32 test = 0; test < 128; ++test)
         {
             const Uint32 Width  = 32 + (test % 8);

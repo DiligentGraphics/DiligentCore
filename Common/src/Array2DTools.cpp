@@ -69,51 +69,25 @@ bool GetArray2DMinMaxValueAVX2(const float* pData,
                                float&       MinValue,
                                float&       MaxValue)
 {
-    MinValue = MaxValue = pData[0];
+    MinValue   = pData[0];
+    MaxValue   = pData[0];
+    auto mmMin = _mm256_set1_ps(MinValue);
+    auto mmMax = _mm256_set1_ps(MaxValue);
     for (size_t row = 0; row < Height; ++row)
     {
-        const auto* pRowStart = pData + row * StrideInFloats;
-        const auto* pRowEnd   = pRowStart + Width;
-        // _mm256_load_ps requires 32-byte alignment
-        const auto* pAlignStart = std::min(AlignUp(pRowStart, 32u), pRowEnd);
-        const auto* pAlignEnd   = AlignDown(pRowEnd, 32u);
+        const float* pRowStart = pData + row * StrideInFloats;
+        const float* pRowEnd   = pRowStart + Width;
+        const float* pAVXEnd   = pRowEnd - 8;
 
-        const auto* Ptr = pRowStart;
-        for (; Ptr < pAlignStart; ++Ptr)
+        const float* Ptr = pRowStart;
+        for (; Ptr < pAVXEnd; Ptr += 8)
         {
-            MinValue = std::min(MinValue, *Ptr);
-            MaxValue = std::max(MaxValue, *Ptr);
-        }
+            // NOTE: MSVC generates vmovups when using _mm256_load_ps regardless,
+            //       so no reason to bother with aligning the pointer.
+            auto mmVal = _mm256_loadu_ps(Ptr);
 
-        if (Ptr < pAlignEnd)
-        {
-            auto mmMin = _mm256_load_ps(Ptr);
-            auto mmMax = mmMin;
-            Ptr += 8;
-            for (; Ptr < pAlignEnd; Ptr += 8)
-            {
-                auto mmVal = _mm256_load_ps(Ptr);
-
-                mmMin = _mm256_min_ps(mmMin, mmVal);
-                mmMax = _mm256_max_ps(mmMax, mmVal);
-            }
-
-// Shuffle only works within 128-bit halves
-#    define MAKE_SHUFFLE(i0, i1, i2, i3) ((i0 << 0) | (i1 << 2) | (i2 << 4) | (i3 << 6))
-            constexpr int Shuffle1032 = MAKE_SHUFFLE(1, 0, 3, 2);
-            // |  0  |  1  |  2  |  3  |       |  1  |  0  |  3  |  2  |
-            // |  A  |  B  |  C  |  D  |   =>  |  B  |  A  |  D  |  C  |
-            mmMin = _mm256_min_ps(mmMin, _mm256_permute_ps(mmMin, Shuffle1032));
-            mmMax = _mm256_max_ps(mmMax, _mm256_permute_ps(mmMax, Shuffle1032));
-
-            constexpr int Shuffle2301 = MAKE_SHUFFLE(2, 3, 0, 1);
-            //       0           1           2          3                    2           3           0           1
-            // | max(A, B) | max(A, B) | max(C, D) | max(C, D) |  =>  | max(C, D) | max(C, D) | max(A, B) | max(A, B) |
-            mmMin = _mm256_min_ps(mmMin, _mm256_permute_ps(mmMin, Shuffle2301));
-            mmMax = _mm256_max_ps(mmMax, _mm256_permute_ps(mmMax, Shuffle2301));
-
-            MinValue = std::min(std::min(mmMin.m256_f32[0], mmMin.m256_f32[4]), MinValue);
-            MaxValue = std::max(std::max(mmMax.m256_f32[0], mmMax.m256_f32[4]), MaxValue);
+            mmMin = _mm256_min_ps(mmMin, mmVal);
+            mmMax = _mm256_max_ps(mmMax, mmVal);
         }
 
         for (; Ptr < pRowEnd; ++Ptr)
@@ -122,6 +96,26 @@ bool GetArray2DMinMaxValueAVX2(const float* pData,
             MaxValue = std::max(MaxValue, *Ptr);
         }
     }
+
+// Shuffle only works within 128-bit halves
+#    define MAKE_SHUFFLE(i0, i1, i2, i3) ((i0 << 0) | (i1 << 2) | (i2 << 4) | (i3 << 6))
+    constexpr int Shuffle1032 = MAKE_SHUFFLE(1, 0, 3, 2);
+    // |  0  |  1  |  2  |  3  |       |  1  |  0  |  3  |  2  |
+    // |  A  |  B  |  C  |  D  |   =>  |  B  |  A  |  D  |  C  |
+    mmMin = _mm256_min_ps(mmMin, _mm256_permute_ps(mmMin, Shuffle1032));
+    mmMax = _mm256_max_ps(mmMax, _mm256_permute_ps(mmMax, Shuffle1032));
+
+    constexpr int Shuffle2301 = MAKE_SHUFFLE(2, 3, 0, 1);
+    //       0           1           2          3                    2           3           0           1
+    // | max(A, B) | max(A, B) | max(C, D) | max(C, D) |  =>  | max(C, D) | max(C, D) | max(A, B) | max(A, B) |
+    mmMin = _mm256_min_ps(mmMin, _mm256_permute_ps(mmMin, Shuffle2301));
+    mmMax = _mm256_max_ps(mmMax, _mm256_permute_ps(mmMax, Shuffle2301));
+
+    MinValue = std::min(mmMin.m256_f32[0], MinValue);
+    MinValue = std::min(mmMin.m256_f32[4], MinValue);
+
+    MaxValue = std::max(mmMax.m256_f32[0], MaxValue);
+    MaxValue = std::max(mmMax.m256_f32[4], MaxValue);
 
     return true;
 }
