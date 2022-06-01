@@ -1007,4 +1007,16 @@ void PipelineStateD3D12Impl::Destruct()
     TPipelineStateBase::Destruct();
 }
 
+bool PipelineStateD3D12Impl::IsCompatibleWith(const IPipelineState* pPSO) const
+{
+    DEV_CHECK_ERR(pPSO != nullptr, "pPSO must not be null");
+
+    if (pPSO == this)
+        return true;
+
+    bool IsCompatible = (m_RootSig == ClassPtrCast<const PipelineStateD3D12Impl>(pPSO)->m_RootSig);
+    VERIFY_EXPR(IsCompatible == TPipelineStateBase::IsCompatibleWith(pPSO));
+    return IsCompatible;
+}
+
 } // namespace Diligent

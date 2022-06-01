@@ -602,8 +602,7 @@ bool PipelineResourceSignatureGLImpl::DvpValidateCommittedResource(const ShaderR
                 if (ImmutableSamplerIdx != InvalidImmutableSamplerIndex)
                 {
                     VERIFY(Tex.pSampler != nullptr, "Immutable sampler is not initialized in the cache - this is a bug");
-                    // Two signatures do not have to use the same samplers to be compatible
-                    //VERIFY(Tex.pSampler == m_ImmutableSamplers[ImmutableSamplerIdx], "Immutable sampler initialized in the cache is not valid");
+                    VERIFY(Tex.pSampler == m_ImmutableSamplers[ImmutableSamplerIdx], "Immutable sampler initialized in the cache is not valid");
                 }
             }
             break;

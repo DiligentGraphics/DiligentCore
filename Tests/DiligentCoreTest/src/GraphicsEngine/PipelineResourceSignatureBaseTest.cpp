@@ -87,10 +87,12 @@ TEST(PipelineResourceSignatureBaseTest, Compatibility)
         VERIFY_EXPR(TestRes[0] != RefRes[0]);
         VERIFY_EXPR(TestRes[1] != RefRes[1]);
 
-        TestSam[0] = {RefSam[0].ShaderStages, "OtherSamA", Sam_PointClamp};
-        TestSam[1] = {RefSam[1].ShaderStages, "OtherSamB", Sam_PointWrap};
-        VERIFY_EXPR(TestSam[0].Desc != RefSam[0].Desc);
-        VERIFY_EXPR(TestSam[1].Desc != RefSam[1].Desc);
+        TestSam[0]                      = RefSam[0];
+        TestSam[1]                      = RefSam[1];
+        TestSam[0].SamplerOrTextureName = "OtherSamA";
+        TestSam[1].SamplerOrTextureName = "OtherSamB";
+        VERIFY_EXPR(TestSam[0] != RefSam[0]);
+        VERIFY_EXPR(TestSam[1] != RefSam[1]);
 
         TestDesc.NumResources         = StaticCast<Uint32>(TestRes.size());
         TestDesc.Resources            = TestRes.data();
