@@ -83,7 +83,8 @@ Uint32 FindResource(const PipelineResourceDesc Resources[],
 
 /// Returns true if two pipeline resource signature descriptions are compatible, and false otherwise
 bool PipelineResourceSignaturesCompatible(const PipelineResourceSignatureDesc& Desc0,
-                                          const PipelineResourceSignatureDesc& Desc1) noexcept;
+                                          const PipelineResourceSignatureDesc& Desc1,
+                                          bool                                 IgnoreSamplerDescriptions = false) noexcept;
 
 /// Calculates hash of the pipeline resource signature description.
 size_t CalculatePipelineResourceSignatureDescHash(const PipelineResourceSignatureDesc& Desc) noexcept;

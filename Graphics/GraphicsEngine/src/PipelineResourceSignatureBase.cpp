@@ -372,7 +372,8 @@ inline bool PipelineResourcesCompatible(const PipelineResourceDesc& lhs, const P
 }
 
 bool PipelineResourceSignaturesCompatible(const PipelineResourceSignatureDesc& Desc0,
-                                          const PipelineResourceSignatureDesc& Desc1) noexcept
+                                          const PipelineResourceSignatureDesc& Desc1,
+                                          bool                                 IgnoreSamplerDescriptions) noexcept
 {
     if (Desc0.BindingIndex != Desc1.BindingIndex)
         return false;
@@ -397,6 +398,7 @@ bool PipelineResourceSignaturesCompatible(const PipelineResourceSignatureDesc& D
         // Sampler descriptions do not need to match, but the shader stages must be the same.
         if (Samp0.ShaderStages != Samp1.ShaderStages)
             return false;
+        // TODO: use IgnoreSamplerDescriptions
     }
 
     return true;

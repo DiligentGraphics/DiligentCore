@@ -704,16 +704,52 @@ bool DeviceObjectArchiveBase::ModifyPipelineStateCreateInfo(PSOCreateInfoType&  
         return false;
     }
 
-    if (!(ResourceLayout == CreateInfo.PSODesc.ResourceLayout))
+    if (!PipelineResourceLayoutDesc::IsEqual(ResourceLayout, CreateInfo.PSODesc.ResourceLayout, /*IgnoreVariables = */ false, /*IgnoreSamplers = */ true))
     {
-        LOG_ERROR_MESSAGE("Modifying resource layout is not allowed");
+        LOG_ERROR_MESSAGE("Only immutable sampler descriptions in the pipeline resource layout can be modified");
         return false;
     }
 
-    if (!std::equal(pSignatures.begin(), pSignatures.end(), CreateInfo.ppResourceSignatures, CreateInfo.ppResourceSignatures + CreateInfo.ResourceSignaturesCount))
+    for (size_t i = 0; i < ResourceLayout.NumImmutableSamplers; ++i)
     {
-        LOG_ERROR_MESSAGE("Modifying resource signatures is not allowed");
+        // Immutable sampler descriptions can be modified, but shader stages must be the same
+        if (ResourceLayout.ImmutableSamplers[i].ShaderStages != CreateInfo.PSODesc.ResourceLayout.ImmutableSamplers[i].ShaderStages)
+        {
+            LOG_ERROR_MESSAGE("Modifiying immutable sampler shader stages in the resource layout is not allowed");
+            return false;
+        }
+    }
+
+    if (pSignatures.size() != CreateInfo.ResourceSignaturesCount)
+    {
+        LOG_ERROR_MESSAGE("Changing the number of resource signatures is not allowed");
         return false;
+    }
+
+    for (size_t sign = 0; sign < CreateInfo.ResourceSignaturesCount; ++sign)
+    {
+        const auto* pOrigSign = pSignatures[sign];
+        const auto* pNewSign  = CreateInfo.ppResourceSignatures[sign];
+        if (pOrigSign == pNewSign)
+            continue;
+        if ((pOrigSign == nullptr) != (pNewSign == nullptr))
+        {
+            LOG_ERROR_MESSAGE("Changing non-null resource signature to null and vice versa is not allowed");
+            return false;
+        }
+        if ((pOrigSign == nullptr) || (pNewSign == nullptr))
+        {
+            // This may never happen, but let's make static analyzers happy
+            continue;
+        }
+
+        const auto& OrigDesc = pOrigSign->GetDesc();
+        const auto& NewDesc  = pNewSign->GetDesc();
+        if (!PipelineResourceSignaturesCompatible(OrigDesc, NewDesc, /*IgnoreSamplerDescriptions =*/true))
+        {
+            LOG_ERROR_MESSAGE("When changing pipeline resource singatures, only immutable sampler descriptions in new signatures are allowed to differ from original");
+            return false;
+        }
     }
 
     return true;
