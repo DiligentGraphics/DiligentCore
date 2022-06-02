@@ -67,11 +67,7 @@ public:
     using TBase = EngineFactoryD3DBase<IEngineFactoryD3D12, RENDER_DEVICE_TYPE_D3D12>;
 
     EngineFactoryD3D12Impl() :
-        TBase //
-        {
-            IID_EngineFactoryD3D12,
-            NEW_RC_OBJ(GetRawAllocator(), "DearchiverD3D12Impl instance", DearchiverD3D12Impl)() //
-        }
+        TBase{IID_EngineFactoryD3D12}
     {}
 
     bool DILIGENT_CALL_TYPE LoadD3D12(const char* DllName) override final;
@@ -113,6 +109,12 @@ public:
     virtual GraphicsAdapterInfo GetGraphicsAdapterInfo(void*          pd3dDevice,
                                                        IDXGIAdapter1* pDXIAdapter) const override final;
 
+
+    virtual void DILIGENT_CALL_TYPE CreateDearchiver(const DearchiverCreateInfo& CreateInfo,
+                                                     IDearchiver**               ppDearchiver) const override final
+    {
+        TBase::CreateDearchiver<DearchiverD3D12Impl>(CreateInfo, ppDearchiver);
+    }
 
 private:
 #if USE_D3D12_LOADER

@@ -83,8 +83,10 @@ void ArchivePRS(RefCntAutoPtr<IArchive>&                   pSource,
     auto* pEnv             = GPUTestingEnvironment::GetInstance();
     auto* pDevice          = pEnv->GetDevice();
     auto* pArchiverFactory = pEnv->GetArchiverFactory();
-    auto* pDearchiver      = pDevice->GetEngineFactory()->GetDearchiver();
 
+    RefCntAutoPtr<IDearchiver> pDearchiver;
+    DearchiverCreateInfo       DearchiverCI{pDevice};
+    pDevice->GetEngineFactory()->CreateDearchiver(DearchiverCI, &pDearchiver);
     if (!pDearchiver || !pArchiverFactory)
         GTEST_SKIP() << "Archiver library is not loaded";
 
@@ -182,9 +184,13 @@ void UnpackPRS(IArchive*                   pSource,
                IPipelineResourceSignature* pRefPRS_1,
                IPipelineResourceSignature* pRefPRS_2)
 {
-    auto* pEnv        = GPUTestingEnvironment::GetInstance();
-    auto* pDevice     = pEnv->GetDevice();
-    auto* pDearchiver = pDevice->GetEngineFactory()->GetDearchiver();
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+
+    RefCntAutoPtr<IDearchiver> pDearchiver;
+    DearchiverCreateInfo       DearchiverCI{pDevice};
+    pDevice->GetEngineFactory()->CreateDearchiver(DearchiverCI, &pDearchiver);
+    ASSERT_TRUE(pDearchiver);
 
     RefCntAutoPtr<IDeviceObjectArchive> pArchive;
     pDearchiver->CreateDeviceObjectArchive(pSource, &pArchive);
@@ -260,8 +266,10 @@ TEST(ArchiveTest, RemoveDeviceData)
     auto* pEnv             = GPUTestingEnvironment::GetInstance();
     auto* pDevice          = pEnv->GetDevice();
     auto* pArchiverFactory = pEnv->GetArchiverFactory();
-    auto* pDearchiver      = pDevice->GetEngineFactory()->GetDearchiver();
 
+    RefCntAutoPtr<IDearchiver> pDearchiver;
+    DearchiverCreateInfo       DearchiverCI{pDevice};
+    pDevice->GetEngineFactory()->CreateDearchiver(DearchiverCI, &pDearchiver);
     if (!pDearchiver || !pArchiverFactory)
         GTEST_SKIP() << "Archiver library is not loaded";
 
@@ -301,8 +309,10 @@ TEST(ArchiveTest, AppendDeviceData)
     auto* pEnv             = GPUTestingEnvironment::GetInstance();
     auto* pDevice          = pEnv->GetDevice();
     auto* pArchiverFactory = pEnv->GetArchiverFactory();
-    auto* pDearchiver      = pDevice->GetEngineFactory()->GetDearchiver();
 
+    RefCntAutoPtr<IDearchiver> pDearchiver;
+    DearchiverCreateInfo       DearchiverCI{pDevice};
+    pDevice->GetEngineFactory()->CreateDearchiver(DearchiverCI, &pDearchiver);
     if (!pDearchiver || !pArchiverFactory)
         GTEST_SKIP() << "Archiver library is not loaded";
 
@@ -663,7 +673,6 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
     auto* pEnv             = GPUTestingEnvironment::GetInstance();
     auto* pDevice          = pEnv->GetDevice();
     auto* pArchiverFactory = pEnv->GetArchiverFactory();
-    auto* pDearchiver      = pDevice->GetEngineFactory()->GetDearchiver();
     auto* pSwapChain       = pEnv->GetSwapChain();
 
     GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
@@ -671,6 +680,9 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
     if (pDevice->GetDeviceInfo().Features.SeparablePrograms != DEVICE_FEATURE_STATE_ENABLED)
         GTEST_SKIP() << "Non separable programs are not supported";
 
+    RefCntAutoPtr<IDearchiver> pDearchiver;
+    DearchiverCreateInfo       DearchiverCI{pDevice};
+    pDevice->GetEngineFactory()->CreateDearchiver(DearchiverCI, &pDearchiver);
     if (!pDearchiver || !pArchiverFactory)
         GTEST_SKIP() << "Archiver library is not loaded";
 
@@ -1153,8 +1165,10 @@ void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
     auto* pEnv             = GPUTestingEnvironment::GetInstance();
     auto* pDevice          = pEnv->GetDevice();
     auto* pArchiverFactory = pEnv->GetArchiverFactory();
-    auto* pDearchiver      = pDevice->GetEngineFactory()->GetDearchiver();
 
+    RefCntAutoPtr<IDearchiver> pDearchiver;
+    DearchiverCreateInfo       DearchiverCI{pDevice};
+    pDevice->GetEngineFactory()->CreateDearchiver(DearchiverCI, &pDearchiver);
     if (!pDearchiver || !pArchiverFactory)
         GTEST_SKIP() << "Archiver library is not loaded";
 
@@ -1326,8 +1340,10 @@ TEST(ArchiveTest, RayTracingPipeline)
     auto* pEnv             = GPUTestingEnvironment::GetInstance();
     auto* pDevice          = pEnv->GetDevice();
     auto* pArchiverFactory = pEnv->GetArchiverFactory();
-    auto* pDearchiver      = pDevice->GetEngineFactory()->GetDearchiver();
 
+    RefCntAutoPtr<IDearchiver> pDearchiver;
+    DearchiverCreateInfo       DearchiverCI{pDevice};
+    pDevice->GetEngineFactory()->CreateDearchiver(DearchiverCI, &pDearchiver);
     if (!pDearchiver || !pArchiverFactory)
         GTEST_SKIP() << "Archiver library is not loaded";
 
@@ -1939,7 +1955,6 @@ TEST_P(TestSamplers, GraphicsPipeline)
     auto* const pSwapChain       = pEnv->GetSwapChain();
     const auto& deviceCaps       = pDevice->GetDeviceInfo();
     auto* const pArchiverFactory = pEnv->GetArchiverFactory();
-    auto* const pDearchiver      = pDevice->GetEngineFactory()->GetDearchiver();
 
     const auto& Param = GetParam();
 
@@ -1950,6 +1965,9 @@ TEST_P(TestSamplers, GraphicsPipeline)
     if (ShaderLang != SHADER_SOURCE_LANGUAGE_HLSL && deviceCaps.IsD3DDevice())
         GTEST_SKIP() << "Direct3D backends support HLSL only";
 
+    RefCntAutoPtr<IDearchiver> pDearchiver;
+    DearchiverCreateInfo       DearchiverCI{pDevice};
+    pDevice->GetEngineFactory()->CreateDearchiver(DearchiverCI, &pDearchiver);
     if (!pDearchiver || !pArchiverFactory)
         GTEST_SKIP() << "Archiver library is not loaded";
 

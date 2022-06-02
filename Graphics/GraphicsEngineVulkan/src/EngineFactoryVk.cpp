@@ -63,11 +63,7 @@ public:
 
     using TBase = EngineFactoryBase<IEngineFactoryVk>;
     EngineFactoryVkImpl() :
-        TBase //
-        {
-            IID_EngineFactoryVk,
-            NEW_RC_OBJ(GetRawAllocator(), "DearchiverVkImpl instance", DearchiverVkImpl)() //
-        }
+        TBase{IID_EngineFactoryVk}
     {
     }
 
@@ -113,6 +109,12 @@ public:
     virtual void DILIGENT_CALL_TYPE EnableDeviceSimulation() override final
     {
         m_EnableDeviceSimulation = true;
+    }
+
+    virtual void DILIGENT_CALL_TYPE CreateDearchiver(const DearchiverCreateInfo& CreateInfo,
+                                                     IDearchiver**               ppDearchiver) const override final
+    {
+        TBase::CreateDearchiver<DearchiverVkImpl>(CreateInfo, ppDearchiver);
     }
 
 #if PLATFORM_ANDROID

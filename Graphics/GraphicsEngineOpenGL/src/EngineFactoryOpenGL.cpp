@@ -86,11 +86,7 @@ public:
 
     using TBase = EngineFactoryBase<IEngineFactoryOpenGL>;
     EngineFactoryOpenGLImpl() :
-        TBase //
-        {
-            IID_EngineFactoryOpenGL,
-            NEW_RC_OBJ(GetRawAllocator(), "DearchiverGLImpl instance", DearchiverGLImpl)() //
-        }
+        TBase{IID_EngineFactoryOpenGL}
     {}
 
     virtual void DILIGENT_CALL_TYPE CreateDeviceAndSwapChainGL(const EngineGLCreateInfo& EngineCI,
@@ -108,6 +104,12 @@ public:
     virtual void DILIGENT_CALL_TYPE EnumerateAdapters(Version              MinVersion,
                                                       Uint32&              NumAdapters,
                                                       GraphicsAdapterInfo* Adapters) const override final;
+
+    virtual void DILIGENT_CALL_TYPE CreateDearchiver(const DearchiverCreateInfo& CreateInfo,
+                                                     IDearchiver**               ppDearchiver) const override final
+    {
+        TBase::CreateDearchiver<DearchiverGLImpl>(CreateInfo, ppDearchiver);
+    }
 
 #if PLATFORM_ANDROID
     virtual void InitAndroidFileSystem(struct ANativeActivity* NativeActivity,
