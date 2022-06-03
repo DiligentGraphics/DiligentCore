@@ -115,10 +115,9 @@ void DeviceObjectArchiveBase::OffsetSizeAndResourceMap<ResType>::ReleaseResource
 // Instantiation is required by UnpackResourceSignatureImpl
 template class DeviceObjectArchiveBase::OffsetSizeAndResourceMap<IPipelineResourceSignature>;
 
-DeviceObjectArchiveBase::DeviceObjectArchiveBase(IReferenceCounters* pRefCounters, IArchive* pArchive, DeviceType DevType) :
+DeviceObjectArchiveBase::DeviceObjectArchiveBase(IReferenceCounters* pRefCounters, IArchive* pArchive) :
     TObjectBase{pRefCounters},
-    m_pArchive{pArchive},
-    m_DevType{DevType}
+    m_pArchive{pArchive}
 {
     if (m_pArchive == nullptr)
         LOG_ERROR_AND_THROW("pSource must not be null");
@@ -169,7 +168,7 @@ DeviceObjectArchiveBase::DeviceObjectArchiveBase(IReferenceCounters* pRefCounter
             case ChunkType::RayTracingPipelineStates: ReadNamedResources  (Chunk, m_RayTracingPSOMap); break;
             case ChunkType::TilePipelineStates:       ReadNamedResources  (Chunk, m_TilePSOMap);       break;
             case ChunkType::RenderPass:               ReadNamedResources  (Chunk, m_RenderPassMap);    break;
-            case ChunkType::Shaders:                  ReadShaders         (Chunk);                     break;
+            case ChunkType::Shaders:                  ReadShadersHeader   (Chunk);                     break;
             // clang-format on
             default:
                 LOG_ERROR_AND_THROW("Unknown chunk type (", static_cast<Uint32>(Chunk.Type), ")");
@@ -177,10 +176,40 @@ DeviceObjectArchiveBase::DeviceObjectArchiveBase(IReferenceCounters* pRefCounter
     }
 }
 
-DeviceObjectArchiveBase::BlockOffsetType DeviceObjectArchiveBase::GetBlockOffsetType() const
+DeviceObjectArchiveBase::DeviceType DeviceObjectArchiveBase::RenderDeviceTypeToArchiveDeviceType(RENDER_DEVICE_TYPE Type)
+{
+    static_assert(RENDER_DEVICE_TYPE_COUNT == 7, "Did you add a new render device type? Please handle it here.");
+    switch (Type)
+    {
+        // clang-format off
+        case RENDER_DEVICE_TYPE_D3D11:  return DeviceObjectArchiveBase::DeviceType::Direct3D11;
+        case RENDER_DEVICE_TYPE_D3D12:  return DeviceObjectArchiveBase::DeviceType::Direct3D12;
+        case RENDER_DEVICE_TYPE_GL:     return DeviceObjectArchiveBase::DeviceType::OpenGL;
+        case RENDER_DEVICE_TYPE_GLES:   return DeviceObjectArchiveBase::DeviceType::OpenGL;
+        case RENDER_DEVICE_TYPE_VULKAN: return DeviceObjectArchiveBase::DeviceType::Vulkan;
+#if PLATFORM_MACOS
+        case RENDER_DEVICE_TYPE_METAL:  return DeviceObjectArchiveBase::DeviceType::Metal_MacOS;
+#elif PLATFORM_IOS || PLATFORM_TVOS
+        case RENDER_DEVICE_TYPE_METAL:  return DeviceObjectArchiveBase::DeviceType::Metal_iOS;
+#endif
+        // clang-format on
+        default:
+            UNEXPECTED("Unexpected device type");
+            return DeviceObjectArchiveBase::DeviceType::Count;
+    }
+}
+
+DeviceObjectArchiveBase::DeviceType DeviceObjectArchiveBase::GetArchiveDeviceType(const IRenderDevice* pDevice)
+{
+    VERIFY_EXPR(pDevice != nullptr);
+    const auto Type = pDevice->GetDeviceInfo().Type;
+    return RenderDeviceTypeToArchiveDeviceType(Type);
+}
+
+DeviceObjectArchiveBase::BlockOffsetType DeviceObjectArchiveBase::GetBlockOffsetType(DeviceType DevType)
 {
     static_assert(static_cast<size_t>(DeviceType::Count) == 6, "Please handle the new device type below");
-    switch (m_DevType)
+    switch (DevType)
     {
         // clang-format off
         case DeviceType::OpenGL:      return BlockOffsetType::OpenGL;
@@ -255,32 +284,41 @@ void DeviceObjectArchiveBase::ReadNamedResources(const ChunkHeader& Chunk, Offse
                        });
 }
 
-void DeviceObjectArchiveBase::ReadShaders(const ChunkHeader& Chunk) noexcept(false)
+void DeviceObjectArchiveBase::ReadShadersHeader(const ChunkHeader& Chunk) noexcept(false)
 {
     VERIFY_EXPR(Chunk.Type == ChunkType::Shaders);
-    VERIFY_EXPR(Chunk.Size == sizeof(ShadersDataHeader));
+    VERIFY_EXPR(Chunk.Size == sizeof(m_ShadersHeader));
 
-    ShadersDataHeader Header;
-    if (!m_pArchive->Read(Chunk.Offset, sizeof(Header), &Header))
+    if (!m_pArchive->Read(Chunk.Offset, sizeof(m_ShadersHeader), &m_ShadersHeader))
     {
         LOG_ERROR_AND_THROW("Failed to read indexed resources info from the archive");
     }
+}
 
-    DynamicLinearAllocator Allocator{GetRawAllocator()};
+DeviceObjectArchiveBase::ShaderDeviceInfo& DeviceObjectArchiveBase::GetShaderDeviceInfo(DeviceType DevType, DynamicLinearAllocator& Allocator) noexcept(false)
+{
+    auto& ShaderInfo = m_ShaderInfo[static_cast<size_t>(DevType)];
 
-    const auto ShaderData = GetDeviceSpecificData(Header, Allocator, "Shader list", GetBlockOffsetType());
-    if (!ShaderData)
-        return;
+    {
+        std::unique_lock<std::mutex> Lock{ShaderInfo.Mtx};
+        if (!ShaderInfo.OffsetsAndCache.empty())
+            return ShaderInfo;
+    }
 
-    VERIFY_EXPR(ShaderData.Size() % sizeof(FileOffsetAndSize) == 0);
-    const size_t Count = ShaderData.Size() / sizeof(FileOffsetAndSize);
+    if (const auto ShaderData = GetDeviceSpecificData(DevType, m_ShadersHeader, Allocator, "Shader list"))
+    {
+        VERIFY_EXPR(ShaderData.Size() % sizeof(FileOffsetAndSize) == 0);
+        const size_t Count = ShaderData.Size() / sizeof(FileOffsetAndSize);
 
-    const auto* pFileOffsetAndSize = ShaderData.Ptr<const FileOffsetAndSize>();
+        const auto* pFileOffsetAndSize = ShaderData.Ptr<const FileOffsetAndSize>();
 
-    std::unique_lock<std::mutex> WriteLock{m_ShadersGuard};
-    m_Shaders.reserve(Count);
-    for (Uint32 i = 0; i < Count; ++i)
-        m_Shaders.emplace_back(pFileOffsetAndSize[i]);
+        std::unique_lock<std::mutex> WriteLock{ShaderInfo.Mtx};
+        ShaderInfo.OffsetsAndCache.reserve(Count);
+        for (Uint32 i = 0; i < Count; ++i)
+            ShaderInfo.OffsetsAndCache.emplace_back(pFileOffsetAndSize[i]);
+    }
+
+    return ShaderInfo;
 }
 
 template <typename ResType, typename ReourceDataType>
@@ -329,11 +367,12 @@ template bool DeviceObjectArchiveBase::LoadResourceData<IPipelineResourceSignatu
     PRSData&                                              ResData);
 
 template <typename HeaderType>
-SerializedData DeviceObjectArchiveBase::GetDeviceSpecificData(const HeaderType&       Header,
+SerializedData DeviceObjectArchiveBase::GetDeviceSpecificData(DeviceType              DevType,
+                                                              const HeaderType&       Header,
                                                               DynamicLinearAllocator& Allocator,
-                                                              const char*             ResTypeName,
-                                                              BlockOffsetType         BlockType)
+                                                              const char*             ResTypeName)
 {
+    const auto   BlockType   = GetBlockOffsetType(DevType);
     const Uint64 BaseOffset  = m_BaseOffsets[static_cast<size_t>(BlockType)];
     const auto   ArchiveSize = m_pArchive->GetSize();
     if (BaseOffset > ArchiveSize)
@@ -341,20 +380,20 @@ SerializedData DeviceObjectArchiveBase::GetDeviceSpecificData(const HeaderType& 
         LOG_ERROR_MESSAGE("Required block does not exist in archive");
         return {};
     }
-    if (Header.GetSize(m_DevType) == 0)
+    if (Header.GetSize(DevType) == 0)
     {
         LOG_ERROR_MESSAGE("Device specific data is not specified for ", ResTypeName);
         return {};
     }
-    if (BaseOffset + Header.GetEndOffset(m_DevType) > ArchiveSize)
+    if (BaseOffset + Header.GetEndOffset(DevType) > ArchiveSize)
     {
         LOG_ERROR_MESSAGE("Invalid offset in the archive");
         return {};
     }
 
-    auto const  Size  = Header.GetSize(m_DevType);
+    auto const  Size  = Header.GetSize(DevType);
     auto* const pData = Allocator.Allocate(Size, DataPtrAlign);
-    if (!m_pArchive->Read(BaseOffset + Header.GetOffset(m_DevType), Size, pData))
+    if (!m_pArchive->Read(BaseOffset + Header.GetOffset(DevType), Size, pData))
     {
         LOG_ERROR_MESSAGE("Failed to read resource-specific data");
         return {};
@@ -365,10 +404,10 @@ SerializedData DeviceObjectArchiveBase::GetDeviceSpecificData(const HeaderType& 
 
 // Instantiation is required by UnpackResourceSignatureImpl
 template SerializedData DeviceObjectArchiveBase::GetDeviceSpecificData<DeviceObjectArchiveBase::PRSDataHeader>(
+    DeviceType              DevType,
     const PRSDataHeader&    Header,
     DynamicLinearAllocator& Allocator,
-    const char*             ResTypeName,
-    BlockOffsetType         BlockType);
+    const char*             ResTypeName);
 
 bool DeviceObjectArchiveBase::PRSData::Deserialize(const char* Name, Serializer<SerializerMode::Read>& Ser)
 {
@@ -598,11 +637,12 @@ template <typename CreateInfoType>
 bool DeviceObjectArchiveBase::UnpackPSOShaders(PSOData<CreateInfoType>& PSO,
                                                IRenderDevice*           pDevice)
 {
-    const auto ShaderData = GetDeviceSpecificData(*PSO.pHeader, PSO.Allocator, ChunkTypeToResName(PSO.ExpectedChunkType), GetBlockOffsetType());
+    const auto DevType    = GetArchiveDeviceType(pDevice);
+    const auto ShaderData = GetDeviceSpecificData(DevType, *PSO.pHeader, PSO.Allocator, ChunkTypeToResName(PSO.ExpectedChunkType));
     if (!ShaderData)
         return false;
 
-    const Uint64 BaseOffset = m_BaseOffsets[static_cast<size_t>(GetBlockOffsetType())];
+    const Uint64 BaseOffset = m_BaseOffsets[static_cast<size_t>(GetBlockOffsetType(DevType))];
     if (BaseOffset > m_pArchive->GetSize())
     {
         LOG_ERROR_MESSAGE("Required block does not exist in archive");
@@ -617,6 +657,8 @@ bool DeviceObjectArchiveBase::UnpackPSOShaders(PSOData<CreateInfoType>& PSO,
         VERIFY_EXPR(Ser.IsEnded());
     }
 
+    auto& ShaderInfo = GetShaderDeviceInfo(DevType, Allocator);
+
     PSO.Shaders.resize(ShaderIndices.Count);
     for (Uint32 i = 0; i < ShaderIndices.Count; ++i)
     {
@@ -626,17 +668,17 @@ bool DeviceObjectArchiveBase::UnpackPSOShaders(PSOData<CreateInfoType>& PSO,
 
         FileOffsetAndSize OffsetAndSize;
         {
-            std::unique_lock<std::mutex> ReadLock{m_ShadersGuard};
+            std::unique_lock<std::mutex> ReadLock{ShaderInfo.Mtx};
 
-            if (Idx >= m_Shaders.size())
+            if (Idx >= ShaderInfo.OffsetsAndCache.size())
                 return false;
 
             // Try to get cached shader
-            pShader = m_Shaders[Idx].pRes;
+            pShader = ShaderInfo.OffsetsAndCache[Idx].pRes;
             if (pShader)
                 continue;
 
-            OffsetAndSize = m_Shaders[Idx];
+            OffsetAndSize = ShaderInfo.OffsetsAndCache[Idx];
         }
 
         void* pData = Allocator.Allocate(OffsetAndSize.Size, DataPtrAlign);
@@ -662,8 +704,8 @@ bool DeviceObjectArchiveBase::UnpackPSOShaders(PSOData<CreateInfoType>& PSO,
 
         // Add to the cache
         {
-            std::unique_lock<std::mutex> WriteLock{m_ShadersGuard};
-            m_Shaders[Idx].pRes = pShader;
+            std::unique_lock<std::mutex> WriteLock{ShaderInfo.Mtx};
+            ShaderInfo.OffsetsAndCache[Idx].pRes = pShader;
         }
     }
 
@@ -852,9 +894,8 @@ void DeviceObjectArchiveBase::ClearResourceCache()
     m_RenderPassMap.ReleaseResources();
 
     {
-        std::unique_lock<std::mutex> WriteLock{m_ShadersGuard};
-        for (auto& Shader : m_Shaders)
-            Shader.pRes.Release();
+        for (auto& ShaderInfo : m_ShaderInfo)
+            ShaderInfo.OffsetsAndCache.clear();
     }
 }
 

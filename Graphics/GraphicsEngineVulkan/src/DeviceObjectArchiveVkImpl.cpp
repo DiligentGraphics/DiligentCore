@@ -33,7 +33,7 @@ namespace Diligent
 {
 
 DeviceObjectArchiveVkImpl::DeviceObjectArchiveVkImpl(IReferenceCounters* pRefCounters, IArchive* pSource) :
-    DeviceObjectArchiveBase{pRefCounters, pSource, DeviceType::Vulkan}
+    DeviceObjectArchiveBase{pRefCounters, pSource}
 {
 }
 

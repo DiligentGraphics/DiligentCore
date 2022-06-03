@@ -33,7 +33,7 @@ namespace Diligent
 {
 
 DeviceObjectArchiveGLImpl::DeviceObjectArchiveGLImpl(IReferenceCounters* pRefCounters, IArchive* pSource) :
-    DeviceObjectArchiveBase{pRefCounters, pSource, DeviceType::OpenGL}
+    DeviceObjectArchiveBase{pRefCounters, pSource}
 {
 }
 

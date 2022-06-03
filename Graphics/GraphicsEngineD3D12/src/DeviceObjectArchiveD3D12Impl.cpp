@@ -33,7 +33,7 @@ namespace Diligent
 {
 
 DeviceObjectArchiveD3D12Impl::DeviceObjectArchiveD3D12Impl(IReferenceCounters* pRefCounters, IArchive* pSource) :
-    DeviceObjectArchiveBase{pRefCounters, pSource, DeviceType::Direct3D12}
+    DeviceObjectArchiveBase{pRefCounters, pSource}
 {
 }
 

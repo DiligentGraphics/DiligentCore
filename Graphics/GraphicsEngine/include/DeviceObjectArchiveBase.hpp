@@ -92,10 +92,8 @@ public:
 
     /// \param pRefCounters - Reference counters object that controls the lifetime of this device object archive.
     /// \param pArchive     - Source data that this archive will be created from.
-    /// \param DevType      - Device type.
     DeviceObjectArchiveBase(IReferenceCounters* pRefCounters,
-                            IArchive*           pArchive,
-                            DeviceType          DevType);
+                            IArchive*           pArchive);
 
     virtual void ClearResourceCache();
 
@@ -325,11 +323,15 @@ private:
     OffsetSizeAndResourceMap<IPipelineState>             m_RayTracingPSOMap;
     OffsetSizeAndResourceMap<IRenderPass>                m_RenderPassMap;
 
-    // Use strong references for shaders
-    using TShaderOffsetAndCache = std::vector<FileOffsetSizeAndRes<RefCntAutoPtr<IShader>>>;
+    ShadersDataHeader m_ShadersHeader;
 
-    std::mutex            m_ShadersGuard;
-    TShaderOffsetAndCache m_Shaders;
+    struct ShaderDeviceInfo
+    {
+        std::mutex Mtx;
+        // Use strong references for shaders
+        std::vector<FileOffsetSizeAndRes<RefCntAutoPtr<IShader>>> OffsetsAndCache;
+    };
+    std::array<ShaderDeviceInfo, static_cast<size_t>(DeviceType::Count)> m_ShaderInfo;
 
     struct
     {
@@ -338,7 +340,6 @@ private:
     } m_DebugInfo;
 
     RefCntAutoPtr<IArchive> m_pArchive; // archive is thread-safe
-    const DeviceType        m_DevType;
     TBlockBaseOffsets       m_BaseOffsets = {};
 
     template <typename ResourceHandlerType>
@@ -348,10 +349,14 @@ private:
 
     template <typename ResType>
     void ReadNamedResources(const ChunkHeader& Chunk, OffsetSizeAndResourceMap<ResType>& ResourceMap) noexcept(false);
-    void ReadShaders(const ChunkHeader& Chunk) noexcept(false);
+    void ReadShadersHeader(const ChunkHeader& Chunk) noexcept(false);
     void ReadArchiveDebugInfo(const ChunkHeader& Chunk) noexcept(false);
 
-    BlockOffsetType GetBlockOffsetType() const;
+    ShaderDeviceInfo& GetShaderDeviceInfo(DeviceType DevType, DynamicLinearAllocator& Allocator) noexcept(false);
+
+    static BlockOffsetType GetBlockOffsetType(DeviceType DevType);
+    static DeviceType      GetArchiveDeviceType(const IRenderDevice* pDevice);
+    static DeviceType      RenderDeviceTypeToArchiveDeviceType(RENDER_DEVICE_TYPE Type);
 
     static const char* ChunkTypeToResName(ChunkType Type);
 
@@ -422,10 +427,10 @@ private:
                           ReourceDataType&                   ResData);
 
     template <typename HeaderType>
-    SerializedData GetDeviceSpecificData(const HeaderType&       Header,
+    SerializedData GetDeviceSpecificData(DeviceType              DevType,
+                                         const HeaderType&       Header,
                                          DynamicLinearAllocator& Allocator,
-                                         const char*             ResTypeName,
-                                         BlockOffsetType         BlockType);
+                                         const char*             ResTypeName);
 
     template <typename CreateInfoType>
     bool UnpackPSOSignatures(PSOData<CreateInfoType>& PSO, IRenderDevice* pDevice);
@@ -474,7 +479,8 @@ RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveBase::UnpackResourc
 
     PRS.Desc.SRBAllocationGranularity = DeArchiveInfo.SRBAllocationGranularity;
 
-    const auto Data = GetDeviceSpecificData(*PRS.pHeader, PRS.Allocator, "Resource signature", GetBlockOffsetType());
+    const auto DevType = GetArchiveDeviceType(DeArchiveInfo.pDevice);
+    const auto Data    = GetDeviceSpecificData(DevType, *PRS.pHeader, PRS.Allocator, "Resource signature");
     if (!Data)
         return {};
 
