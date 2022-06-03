@@ -33,6 +33,7 @@
 #include "ObjectBase.hpp"
 #include "EngineMemory.h"
 #include "RefCntAutoPtr.hpp"
+#include "DeviceObjectArchiveBase.hpp"
 
 namespace Diligent
 {
@@ -51,6 +52,12 @@ public:
     }
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_Dearchiver, TObjectBase)
+
+    virtual void DILIGENT_CALL_TYPE Reset() override final
+    {
+        m_pArchive.Release();
+        //m_pArchive->ClearResourceCache();
+    }
 
 protected:
     template <typename DeviceObjectArchiveImplType>
@@ -138,7 +145,7 @@ protected:
     bool VerifyRenderPassUnpackInfo(const RenderPassUnpackInfo& DeArchiveInfo, IRenderPass** ppRP) const;
 
 protected:
-    RefCntAutoPtr<IDeviceObjectArchive> m_pArchive;
+    RefCntAutoPtr<DeviceObjectArchiveBase> m_pArchive;
 };
 
 } // namespace Diligent

@@ -55,7 +55,6 @@ set(INTERFACE
     interface/DeviceContext.h
     interface/DeviceMemory.h
     interface/DeviceObject.h
-    interface/DeviceObjectArchive.h
     interface/EngineFactory.h
     interface/Fence.h
     interface/Framebuffer.h

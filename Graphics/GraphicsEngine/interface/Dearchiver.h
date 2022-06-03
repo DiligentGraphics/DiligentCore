@@ -30,9 +30,9 @@
 /// Definition of the Diligent::IDearchiver interface and related data structures
 
 #include "../../../Primitives/interface/DataBlob.h"
+#include "../../../Primitives/interface/Archive.h"
 #include "PipelineResourceSignature.h"
 #include "PipelineState.h"
-#include "DeviceObjectArchive.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
@@ -235,6 +235,9 @@ DILIGENT_BEGIN_INTERFACE(IDearchiver, IObject)
     VIRTUAL void METHOD(UnpackRenderPass)(THIS_
                                           const RenderPassUnpackInfo REF UnpackInfo,
                                           IRenderPass**                  ppRP) CONST PURE;
+
+    /// Resets the dearchiver state and releases all loaded objects.
+    VIRTUAL void METHOD(Reset)(THIS) PURE;
 };
 DILIGENT_END_INTERFACE
 

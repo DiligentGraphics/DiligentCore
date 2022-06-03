@@ -69,7 +69,6 @@ struct SerializationEngineImplTraits
     using CommandQueueInterface              = ICommandQueue;
     using DeviceMemoryInterface              = IDeviceMemory;
     using PipelineStateCacheInterface        = IPipelineStateCache;
-    using DeviceObjectArchiveInterface       = IDeviceObjectArchive;
 
     using RenderDeviceImplType              = SerializationDeviceImpl;
     using DeviceContextImplType             = IDeviceContext;

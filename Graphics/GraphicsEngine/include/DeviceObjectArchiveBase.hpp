@@ -44,7 +44,6 @@
 #include <vector>
 
 #include "Dearchiver.h"
-#include "DeviceObjectArchive.h"
 #include "PipelineState.h"
 
 #include "ObjectBase.hpp"
@@ -60,10 +59,10 @@ namespace Diligent
 {
 
 /// Class implementing base functionality of the device object archive object
-class DeviceObjectArchiveBase : public ObjectBase<IDeviceObjectArchive>
+class DeviceObjectArchiveBase : public ObjectBase<IObject>
 {
 public:
-    using TObjectBase = ObjectBase<IDeviceObjectArchive>;
+    using TObjectBase = ObjectBase<IObject>;
 
     enum class DeviceType : Uint32
     {
@@ -98,9 +97,7 @@ public:
                             IArchive*           pArchive,
                             DeviceType          DevType);
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_DeviceObjectArchive, TObjectBase)
-
-    virtual void DILIGENT_CALL_TYPE ClearResourceCache() override final;
+    virtual void ClearResourceCache();
 
     void UnpackGraphicsPSO(const PipelineStateUnpackInfo& UnpackInfo, IPipelineState** ppPSO);
     void UnpackComputePSO(const PipelineStateUnpackInfo& UnpackInfo, IPipelineState** ppPSO);

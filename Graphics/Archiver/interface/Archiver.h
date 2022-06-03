@@ -32,7 +32,6 @@
 #include "../../GraphicsEngine/interface/Dearchiver.h"
 #include "../../GraphicsEngine/interface/PipelineResourceSignature.h"
 #include "../../GraphicsEngine/interface/PipelineState.h"
-#include "../../GraphicsEngine/interface/DeviceObjectArchive.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 

@@ -50,7 +50,6 @@
 #include "PipelineResourceSignature.h"
 #include "DeviceMemoryD3D12.h"
 #include "PipelineStateCacheD3D12.h"
-#include "DeviceObjectArchive.h"
 #include "CommandQueueD3D12.h"
 #include "DeviceContextD3D12.h"
 
@@ -116,7 +115,6 @@ struct EngineD3D12ImplTraits
     using CommandQueueInterface              = ICommandQueueD3D12;
     using DeviceMemoryInterface              = IDeviceMemoryD3D12;
     using PipelineStateCacheInterface        = IPipelineStateCacheD3D12;
-    using DeviceObjectArchiveInterface       = IDeviceObjectArchive;
 
     using RenderDeviceImplType              = RenderDeviceD3D12Impl;
     using DeviceContextImplType             = DeviceContextD3D12Impl;

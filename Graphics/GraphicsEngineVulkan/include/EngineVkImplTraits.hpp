@@ -50,7 +50,6 @@
 #include "PipelineResourceSignature.h"
 #include "DeviceMemoryVk.h"
 #include "PipelineStateCacheVk.h"
-#include "DeviceObjectArchive.h"
 #include "CommandQueueVk.h"
 #include "DeviceContextVk.h"
 
@@ -115,7 +114,6 @@ struct EngineVkImplTraits
     using CommandQueueInterface              = ICommandQueueVk;
     using DeviceMemoryInterface              = IDeviceMemoryVk;
     using PipelineStateCacheInterface        = IPipelineStateCacheVk;
-    using DeviceObjectArchiveInterface       = IDeviceObjectArchive;
 
     using RenderDeviceImplType              = RenderDeviceVkImpl;
     using DeviceContextImplType             = DeviceContextVkImpl;
