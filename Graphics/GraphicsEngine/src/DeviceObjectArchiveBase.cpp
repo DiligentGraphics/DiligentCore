@@ -447,7 +447,7 @@ bool DeviceObjectArchiveBase::UnpackPSORenderPass<GraphicsPipelineStateCreateInf
         return true;
 
     RefCntAutoPtr<IRenderPass> pRenderPass;
-    UnpackRenderPass(RenderPassUnpackInfo{pRenderDevice, this, PSO.RenderPassName}, &pRenderPass);
+    UnpackRenderPass(RenderPassUnpackInfo{pRenderDevice, PSO.RenderPassName}, &pRenderPass);
     if (!pRenderPass)
         return false;
 
@@ -470,7 +470,7 @@ bool DeviceObjectArchiveBase::UnpackPSOSignatures(PSOData<CreateInfoType>& PSO, 
     PSO.CreateInfo.ppResourceSignatures = ppResourceSignatures;
     for (Uint32 i = 0; i < ResourceSignaturesCount; ++i)
     {
-        ResourceSignatureUnpackInfo UnpackInfo{pRenderDevice, this, PSO.PRSNames[i]};
+        ResourceSignatureUnpackInfo UnpackInfo{pRenderDevice, PSO.PRSNames[i]};
         UnpackInfo.SRBAllocationGranularity = PSO.CreateInfo.PSODesc.SRBAllocationGranularity;
 
         auto pSignature = UnpackResourceSignature(UnpackInfo, (PSO.InternalCI.Flags & PSO_CREATE_INTERNAL_FLAG_IMPLICIT_SIGNATURE0) != 0);
@@ -760,7 +760,6 @@ void DeviceObjectArchiveBase::UnpackPipelineStateImpl(const PipelineStateUnpackI
                                                       IPipelineState**                          ppPSO,
                                                       OffsetSizeAndResourceMap<IPipelineState>& PSOMap)
 {
-    VERIFY_EXPR(UnpackInfo.pArchive == nullptr || UnpackInfo.pArchive == this);
     VERIFY_EXPR(UnpackInfo.pDevice != nullptr);
 
     if (UnpackInfo.ModifyPipelineStateCreateInfo == nullptr && PSOMap.GetResource(UnpackInfo.Name, ppPSO))
@@ -825,7 +824,6 @@ void DeviceObjectArchiveBase::UnpackRayTracingPSO(const PipelineStateUnpackInfo&
 
 void DeviceObjectArchiveBase::UnpackRenderPass(const RenderPassUnpackInfo& UnpackInfo, IRenderPass** ppRP)
 {
-    VERIFY_EXPR(UnpackInfo.pArchive == nullptr || UnpackInfo.pArchive == this);
     VERIFY_EXPR(UnpackInfo.pDevice != nullptr);
 
     if (UnpackInfo.ModifyRenderPassDesc == nullptr && m_RenderPassMap.GetResource(UnpackInfo.Name, ppRP))

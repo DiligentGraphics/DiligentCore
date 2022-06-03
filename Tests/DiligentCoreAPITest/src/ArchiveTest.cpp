@@ -178,7 +178,7 @@ void ArchivePRS(RefCntAutoPtr<IArchive>&                   pSource,
     pSource = RefCntAutoPtr<IArchive>{MakeNewRCObj<ArchiveMemoryImpl>{}(pBlob)};
 }
 
-void UnpackPRS(IArchive*                   pSource,
+void UnpackPRS(IArchive*                   pArchive,
                const char*                 PRS1Name,
                const char*                 PRS2Name,
                IPipelineResourceSignature* pRefPRS_1,
@@ -192,15 +192,13 @@ void UnpackPRS(IArchive*                   pSource,
     pDevice->GetEngineFactory()->CreateDearchiver(DearchiverCI, &pDearchiver);
     ASSERT_TRUE(pDearchiver);
 
-    RefCntAutoPtr<IDeviceObjectArchive> pArchive;
-    pDearchiver->CreateDeviceObjectArchive(pSource, &pArchive);
     ASSERT_NE(pArchive, nullptr);
+    pDearchiver->LoadArchive(pArchive);
 
     // Unpack PRS 1
     {
         ResourceSignatureUnpackInfo UnpackInfo;
         UnpackInfo.Name                     = PRS1Name;
-        UnpackInfo.pArchive                 = pArchive;
         UnpackInfo.pDevice                  = pDevice;
         UnpackInfo.SRBAllocationGranularity = 10;
 
@@ -225,7 +223,6 @@ void UnpackPRS(IArchive*                   pSource,
     {
         ResourceSignatureUnpackInfo UnpackInfo;
         UnpackInfo.Name                     = PRS2Name;
-        UnpackInfo.pArchive                 = pArchive;
         UnpackInfo.pDevice                  = pDevice;
         UnpackInfo.SRBAllocationGranularity = 10;
 
@@ -754,9 +751,8 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
         ASSERT_NE(pRefPRS, nullptr);
     }
 
-    RefCntAutoPtr<IPipelineState>       pRefPSOWithLayout;
-    RefCntAutoPtr<IPipelineState>       pRefPSOWithSign;
-    RefCntAutoPtr<IDeviceObjectArchive> pArchive;
+    RefCntAutoPtr<IPipelineState> pRefPSOWithLayout;
+    RefCntAutoPtr<IPipelineState> pRefPSOWithSign;
     {
         RefCntAutoPtr<IArchiver> pArchiver;
         pArchiverFactory->CreateArchiver(pSerializationDevice, &pArchiver);
@@ -946,18 +942,16 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
         pArchiver->SerializeToBlob(&pBlob);
         ASSERT_NE(pBlob, nullptr);
 
-        RefCntAutoPtr<IArchive> pSource{MakeNewRCObj<ArchiveMemoryImpl>{}(pBlob)};
-        pDearchiver->CreateDeviceObjectArchive(pSource, &pArchive);
-        ASSERT_NE(pArchive, nullptr);
+        RefCntAutoPtr<IArchive> pArchive{MakeNewRCObj<ArchiveMemoryImpl>{}(pBlob)};
+        pDearchiver->LoadArchive(pArchive);
     }
 
     // Unpack Render pass
     RefCntAutoPtr<IRenderPass> pUnpackedRenderPass;
     {
         RenderPassUnpackInfo UnpackInfo;
-        UnpackInfo.Name     = RPName;
-        UnpackInfo.pArchive = pArchive;
-        UnpackInfo.pDevice  = pDevice;
+        UnpackInfo.Name    = RPName;
+        UnpackInfo.pDevice = pDevice;
 
         pDearchiver->UnpackRenderPass(UnpackInfo, &pUnpackedRenderPass);
         ASSERT_NE(pUnpackedRenderPass, nullptr);
@@ -968,7 +962,6 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
     {
         PipelineStateUnpackInfo UnpackInfo;
         UnpackInfo.Name         = PSOWithResLayoutName;
-        UnpackInfo.pArchive     = pArchive;
         UnpackInfo.pDevice      = pDevice;
         UnpackInfo.PipelineType = PIPELINE_TYPE_GRAPHICS;
         UnpackInfo.pCache       = pPSOCache;
@@ -1012,7 +1005,6 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
     {
         PipelineStateUnpackInfo UnpackInfo;
         UnpackInfo.Name         = PSOWithSignName;
-        UnpackInfo.pArchive     = pArchive;
         UnpackInfo.pDevice      = pDevice;
         UnpackInfo.PipelineType = PIPELINE_TYPE_GRAPHICS;
         UnpackInfo.pCache       = pPSOCache;
@@ -1209,8 +1201,7 @@ void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
         ASSERT_NE(pRefPRS, nullptr);
     }
 
-    RefCntAutoPtr<IPipelineState>       pRefPSO;
-    RefCntAutoPtr<IDeviceObjectArchive> pArchive;
+    RefCntAutoPtr<IPipelineState> pRefPSO;
     {
         RefCntAutoPtr<IArchiver> pArchiver;
         pArchiverFactory->CreateArchiver(pSerializationDevice, &pArchiver);
@@ -1271,9 +1262,8 @@ void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
         pArchiver->SerializeToBlob(&pBlob);
         ASSERT_NE(pBlob, nullptr);
 
-        RefCntAutoPtr<IArchive> pSource{MakeNewRCObj<ArchiveMemoryImpl>{}(pBlob)};
-        pDearchiver->CreateDeviceObjectArchive(pSource, &pArchive);
-        ASSERT_NE(pArchive, nullptr);
+        RefCntAutoPtr<IArchive> pArchive{MakeNewRCObj<ArchiveMemoryImpl>{}(pBlob)};
+        pDearchiver->LoadArchive(pArchive);
     }
 
     // Unpack PSO
@@ -1281,7 +1271,6 @@ void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
     {
         PipelineStateUnpackInfo UnpackInfo;
         UnpackInfo.Name         = PSO1Name;
-        UnpackInfo.pArchive     = pArchive;
         UnpackInfo.pDevice      = pDevice;
         UnpackInfo.PipelineType = PIPELINE_TYPE_COMPUTE;
 
@@ -1375,8 +1364,7 @@ TEST(ArchiveTest, RayTracingPipeline)
 
     const auto DeviceBits = GetDeviceBits() & (ARCHIVE_DEVICE_DATA_FLAG_D3D12 | ARCHIVE_DEVICE_DATA_FLAG_VULKAN);
 
-    RefCntAutoPtr<IPipelineState>       pRefPSO;
-    RefCntAutoPtr<IDeviceObjectArchive> pArchive;
+    RefCntAutoPtr<IPipelineState> pRefPSO;
     {
         RefCntAutoPtr<IArchiver> pArchiver;
         pArchiverFactory->CreateArchiver(pSerializationDevice, &pArchiver);
@@ -1468,9 +1456,8 @@ TEST(ArchiveTest, RayTracingPipeline)
         pArchiver->SerializeToBlob(&pBlob);
         ASSERT_NE(pBlob, nullptr);
 
-        RefCntAutoPtr<IArchive> pSource{MakeNewRCObj<ArchiveMemoryImpl>{}(pBlob)};
-        pDearchiver->CreateDeviceObjectArchive(pSource, &pArchive);
-        ASSERT_NE(pArchive, nullptr);
+        RefCntAutoPtr<IArchive> pArchive{MakeNewRCObj<ArchiveMemoryImpl>{}(pBlob)};
+        pDearchiver->LoadArchive(pArchive);
     }
 
     // Unpack PSO
@@ -1478,7 +1465,6 @@ TEST(ArchiveTest, RayTracingPipeline)
     {
         PipelineStateUnpackInfo UnpackInfo;
         UnpackInfo.Name         = PSO1Name;
-        UnpackInfo.pArchive     = pArchive;
         UnpackInfo.pDevice      = pDevice;
         UnpackInfo.PipelineType = PIPELINE_TYPE_RAY_TRACING;
 
@@ -2028,7 +2014,6 @@ TEST_P(TestSamplers, GraphicsPipeline)
     pArchiverFactory->CreateSerializationDevice(SerializationDeviceCreateInfo{}, &pSerializationDevice);
     ASSERT_NE(pSerializationDevice, nullptr);
 
-    RefCntAutoPtr<IDeviceObjectArchive> pArchive;
     {
         RefCntAutoPtr<IArchiver> pArchiver;
         pArchiverFactory->CreateArchiver(pSerializationDevice, &pArchiver);
@@ -2255,16 +2240,14 @@ TEST_P(TestSamplers, GraphicsPipeline)
         pArchiver->SerializeToBlob(&pBlob);
         ASSERT_NE(pBlob, nullptr);
 
-        RefCntAutoPtr<IArchive> pSource{MakeNewRCObj<ArchiveMemoryImpl>{}(pBlob)};
-        pDearchiver->CreateDeviceObjectArchive(pSource, &pArchive);
-        ASSERT_NE(pArchive, nullptr);
+        RefCntAutoPtr<IArchive> pArchive{MakeNewRCObj<ArchiveMemoryImpl>{}(pBlob)};
+        pDearchiver->LoadArchive(pArchive);
     }
 
     RefCntAutoPtr<IPipelineState> pPSO;
     {
         PipelineStateUnpackInfo UnpackInfo;
         UnpackInfo.Name         = PSOName;
-        UnpackInfo.pArchive     = pArchive;
         UnpackInfo.pDevice      = pDevice;
         UnpackInfo.PipelineType = PIPELINE_TYPE_GRAPHICS;
 
@@ -2276,9 +2259,8 @@ TEST_P(TestSamplers, GraphicsPipeline)
     if (UseSignature)
     {
         ResourceSignatureUnpackInfo UnpackInfo;
-        UnpackInfo.Name     = PRSName;
-        UnpackInfo.pArchive = pArchive;
-        UnpackInfo.pDevice  = pDevice;
+        UnpackInfo.Name    = PRSName;
+        UnpackInfo.pDevice = pDevice;
 
         pDearchiver->UnpackResourceSignature(UnpackInfo, &pSignature);
         ASSERT_NE(pSignature, nullptr);

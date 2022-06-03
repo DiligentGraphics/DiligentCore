@@ -454,7 +454,8 @@ protected:
         const ResourceSignatureUnpackInfo& DeArchiveInfo,
         bool                               IsImplicit);
 
-    virtual RefCntAutoPtr<IPipelineResourceSignature> UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, bool IsImplicit) = 0;
+    virtual RefCntAutoPtr<IPipelineResourceSignature> UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo,
+                                                                              bool                               IsImplicit) = 0;
 
     virtual RefCntAutoPtr<IShader> UnpackShader(const ShaderCreateInfo& ShaderCI,
                                                 IRenderDevice*          pDevice);

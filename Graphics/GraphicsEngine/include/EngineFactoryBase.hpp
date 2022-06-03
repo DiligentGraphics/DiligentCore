@@ -119,7 +119,7 @@ protected:
             return;
 
         *ppDearchiver = nullptr;
-        RefCntAutoPtr<DearchiverImplType> pDearchiver{NEW_RC_OBJ(GetRawAllocator(), "Dearchiver instance", DearchiverImplType)()};
+        RefCntAutoPtr<DearchiverImplType> pDearchiver{NEW_RC_OBJ(GetRawAllocator(), "Dearchiver instance", DearchiverImplType)(CreateInfo)};
 
         if (pDearchiver)
             pDearchiver->QueryInterface(IID_Dearchiver, reinterpret_cast<IObject**>(ppDearchiver));

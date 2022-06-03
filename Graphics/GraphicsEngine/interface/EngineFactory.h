@@ -44,7 +44,6 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 struct IShaderSourceInputStreamFactory;
 struct IDearchiver;
-struct IRenderDevice;
 
 // {D932B052-4ED6-4729-A532-F31DEEC100F3}
 static const INTERFACE_ID IID_EngineFactory =
@@ -63,7 +62,7 @@ static const INTERFACE_ID IID_EngineFactory =
 /// Dearchiver create information
 struct DearchiverCreateInfo
 {
-    struct IRenderDevice* pDevice DEFAULT_INITIALIZER(nullptr);
+    void* pDummy DEFAULT_INITIALIZER(nullptr);
 };
 typedef struct DearchiverCreateInfo DearchiverCreateInfo;
 

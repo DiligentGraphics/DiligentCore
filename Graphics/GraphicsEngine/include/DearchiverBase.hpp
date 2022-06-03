@@ -32,9 +32,12 @@
 #include "Dearchiver.h"
 #include "ObjectBase.hpp"
 #include "EngineMemory.h"
+#include "RefCntAutoPtr.hpp"
 
 namespace Diligent
 {
+
+struct DearchiverCreateInfo;
 
 /// Class implementing base functionality of the dearchiver
 class DearchiverBase : public ObjectBase<IDearchiver>
@@ -42,7 +45,7 @@ class DearchiverBase : public ObjectBase<IDearchiver>
 public:
     using TObjectBase = ObjectBase<IDearchiver>;
 
-    explicit DearchiverBase(IReferenceCounters* pRefCounters) noexcept :
+    explicit DearchiverBase(IReferenceCounters* pRefCounters, const DearchiverCreateInfo& CI) noexcept :
         TObjectBase{pRefCounters}
     {
     }
@@ -51,23 +54,20 @@ public:
 
 protected:
     template <typename DeviceObjectArchiveImplType>
-    void CreateDeviceObjectArchiveImpl(IArchive*              pSource,
-                                       IDeviceObjectArchive** ppArchive) const
+    bool LoadArchiveImpl(IArchive* pArchive)
     {
-        DEV_CHECK_ERR(ppArchive != nullptr, "ppArchive must not be null");
-        if (!ppArchive)
-            return;
+        if (pArchive == nullptr)
+            return false;
 
-        *ppArchive = nullptr;
         try
         {
-            auto& RawMemAllocator = GetRawAllocator();
-            auto* pArchiveImpl    = NEW_RC_OBJ(RawMemAllocator, "Device object archive instance", DeviceObjectArchiveImplType)(pSource);
-            pArchiveImpl->QueryInterface(IID_DeviceObjectArchive, reinterpret_cast<IObject**>(ppArchive));
+            m_pArchive = NEW_RC_OBJ(GetRawAllocator(), "Device object archive instance", DeviceObjectArchiveImplType)(pArchive);
+            return true;
         }
         catch (...)
         {
             LOG_ERROR("Failed to create the device object archive");
+            return false;
         }
     }
 
@@ -79,7 +79,7 @@ protected:
 
         *ppPSO = nullptr;
 
-        auto* pArchiveImpl = ClassPtrCast<DeviceObjectArchiveImplType>(DeArchiveInfo.pArchive);
+        auto* pArchiveImpl = m_pArchive.RawPtr<DeviceObjectArchiveImplType>();
         switch (DeArchiveInfo.PipelineType)
         {
             case PIPELINE_TYPE_GRAPHICS:
@@ -115,7 +115,7 @@ protected:
 
         *ppSignature = nullptr;
 
-        auto* pArchiveImpl = ClassPtrCast<DeviceObjectArchiveImplType>(DeArchiveInfo.pArchive);
+        auto* pArchiveImpl = m_pArchive.RawPtr<DeviceObjectArchiveImplType>();
         auto  pSignature   = pArchiveImpl->UnpackResourceSignature(DeArchiveInfo, false /*IsImplicit*/);
         *ppSignature       = pSignature.Detach();
     }
@@ -128,7 +128,7 @@ protected:
 
         *ppRP = nullptr;
 
-        auto* pArchiveImpl = ClassPtrCast<DeviceObjectArchiveImplType>(DeArchiveInfo.pArchive);
+        auto* pArchiveImpl = m_pArchive.RawPtr<DeviceObjectArchiveImplType>();
         pArchiveImpl->UnpackRenderPass(DeArchiveInfo, ppRP);
     }
 
@@ -136,6 +136,9 @@ protected:
     bool VerifyPipelineStateUnpackInfo(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState** ppPSO) const;
     bool VerifyResourceSignatureUnpackInfo(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature** ppSignature) const;
     bool VerifyRenderPassUnpackInfo(const RenderPassUnpackInfo& DeArchiveInfo, IRenderPass** ppRP) const;
+
+protected:
+    RefCntAutoPtr<IDeviceObjectArchive> m_pArchive;
 };
 
 } // namespace Diligent

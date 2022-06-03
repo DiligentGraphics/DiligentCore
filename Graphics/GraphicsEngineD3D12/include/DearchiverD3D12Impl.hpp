@@ -40,11 +40,10 @@ class DearchiverD3D12Impl : public DearchiverBase
 public:
     using TDearchiverBase = DearchiverBase;
 
-    explicit DearchiverD3D12Impl(IReferenceCounters* pRefCounters) noexcept;
+    explicit DearchiverD3D12Impl(IReferenceCounters* pRefCounters, const DearchiverCreateInfo& CI) noexcept;
 
-    /// Implementation of IDearchiver::CreateDeviceObjectArchive() in Direct3D12 backend.
-    virtual void DILIGENT_CALL_TYPE CreateDeviceObjectArchive(IArchive*              pSource,
-                                                              IDeviceObjectArchive** ppArchive) const override final;
+    /// Implementation of IDearchiver::LoadArchive() in Direct3D12 backend.
+    virtual bool DILIGENT_CALL_TYPE LoadArchive(IArchive* pArchive) override final;
 
     /// Implementation of IDearchiver::UnpackPipelineState() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE UnpackPipelineState(const PipelineStateUnpackInfo& DeArchiveInfo,

@@ -32,15 +32,14 @@
 namespace Diligent
 {
 
-DearchiverD3D12Impl::DearchiverD3D12Impl(IReferenceCounters* pRefCounters) noexcept :
-    TDearchiverBase{pRefCounters}
+DearchiverD3D12Impl::DearchiverD3D12Impl(IReferenceCounters* pRefCounters, const DearchiverCreateInfo& CI) noexcept :
+    TDearchiverBase{pRefCounters, CI}
 {
 }
 
-void DearchiverD3D12Impl::CreateDeviceObjectArchive(IArchive*              pSource,
-                                                    IDeviceObjectArchive** ppArchive) const
+bool DearchiverD3D12Impl::LoadArchive(IArchive* pArchive)
 {
-    CreateDeviceObjectArchiveImpl<DeviceObjectArchiveD3D12Impl>(pSource, ppArchive);
+    return LoadArchiveImpl<DeviceObjectArchiveD3D12Impl>(pArchive);
 }
 
 void DearchiverD3D12Impl::UnpackPipelineState(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState** ppPSO) const

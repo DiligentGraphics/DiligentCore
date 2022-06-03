@@ -49,9 +49,6 @@ struct ResourceSignatureUnpackInfo
 {
     struct IRenderDevice* pDevice DEFAULT_INITIALIZER(nullptr);
 
-    /// A pointer to the device object archive
-    IDeviceObjectArchive* pArchive DEFAULT_INITIALIZER(nullptr);
-
     /// Name of the signature to unpack. If there is only
     /// one signature in the archive, the name may be null.
     const char* Name DEFAULT_INITIALIZER(nullptr);
@@ -101,9 +98,6 @@ DILIGENT_TYPED_ENUM(PSO_UNPACK_FLAGS, Uint32)
 struct PipelineStateUnpackInfo
 {
     struct IRenderDevice* pDevice DEFAULT_INITIALIZER(nullptr);
-
-    /// A pointer to the device object archive
-    IDeviceObjectArchive* pArchive DEFAULT_INITIALIZER(nullptr);
 
     /// Name of the PSO to unpack. If there is only
     /// one PSO in the archive, the name may be null.
@@ -164,10 +158,7 @@ typedef struct PipelineStateUnpackInfo PipelineStateUnpackInfo;
 /// Render pass unpack parameters
 struct RenderPassUnpackInfo
 {
-    struct IRenderDevice* pDevice  DEFAULT_INITIALIZER(nullptr);
-
-    /// A pointer to the device object archive
-    IDeviceObjectArchive* pArchive DEFAULT_INITIALIZER(nullptr);
+    struct IRenderDevice* pDevice DEFAULT_INITIALIZER(nullptr);
 
     /// Name of the render pass to unpack.
     const char* Name DEFAULT_INITIALIZER(nullptr);
@@ -203,16 +194,12 @@ static const INTERFACE_ID IID_Dearchiver =
 /// Dearchiver interface
 DILIGENT_BEGIN_INTERFACE(IDearchiver, IObject)
 {
-    /// Creates a device object archive.
+    /// Lodas a device object archive.
 
-    /// \param [in]  pSource   - A pointer to the source raw data to create the object archive from.
-    /// \param [out] ppArchive - Address of the memory location where a pointer to the
-    ///                          device object archive will be stored.
-    ///                          The function calls AddRef(), so that the archive object will have
-    ///                          one reference.
-    VIRTUAL void METHOD(CreateDeviceObjectArchive)(THIS_
-                                                   IArchive*              pSource,
-                                                   IDeviceObjectArchive** ppArchive) CONST PURE;
+    /// \param [in] pArchive - A pointer to the source raw data to load objects from.
+    /// \return     true if the archive has been loaded successfully, and false otherwise.
+    VIRTUAL bool METHOD(LoadArchive)(THIS_
+                                     IArchive* pArchive) PURE;
 
     /// Unpacks a pipeline state object from the device object archive.
 
@@ -255,10 +242,10 @@ DILIGENT_END_INTERFACE
 
 #if DILIGENT_C_INTERFACE
 
-#    define IDearchiver_CreateDeviceObjectArchive(This, ...)    CALL_IFACE_METHOD(Dearchiver, CreateDeviceObjectArchive,   This, __VA_ARGS__)
-#    define IDearchiver_UnpackPipelineState(This, ...)          CALL_IFACE_METHOD(Dearchiver, UnpackPipelineState,         This, __VA_ARGS__)
-#    define IDearchiver_UnpackResourceSignature(This, ...)      CALL_IFACE_METHOD(Dearchiver, UnpackResourceSignature,     This, __VA_ARGS__)
-#    define IDearchiver_UnpackRenderPass(This, ...)             CALL_IFACE_METHOD(Dearchiver, UnpackRenderPass,            This, __VA_ARGS__)
+#    define IDearchiver_LoadArchive(This, ...)             CALL_IFACE_METHOD(Dearchiver, LoadArchive,             This, __VA_ARGS__)
+#    define IDearchiver_UnpackPipelineState(This, ...)     CALL_IFACE_METHOD(Dearchiver, UnpackPipelineState,     This, __VA_ARGS__)
+#    define IDearchiver_UnpackResourceSignature(This, ...) CALL_IFACE_METHOD(Dearchiver, UnpackResourceSignature, This, __VA_ARGS__)
+#    define IDearchiver_UnpackRenderPass(This, ...)        CALL_IFACE_METHOD(Dearchiver, UnpackRenderPass,        This, __VA_ARGS__)
 
 #endif
 

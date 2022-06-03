@@ -32,15 +32,15 @@
 namespace Diligent
 {
 
-DearchiverVkImpl::DearchiverVkImpl(IReferenceCounters* pRefCounters) noexcept :
-    TDearchiverBase{pRefCounters}
+DearchiverVkImpl::DearchiverVkImpl(IReferenceCounters*         pRefCounters,
+                                   const DearchiverCreateInfo& CI) noexcept :
+    TDearchiverBase{pRefCounters, CI}
 {
 }
 
-void DearchiverVkImpl::CreateDeviceObjectArchive(IArchive*              pSource,
-                                                 IDeviceObjectArchive** ppArchive) const
+bool DearchiverVkImpl::LoadArchive(IArchive* pArchive)
 {
-    CreateDeviceObjectArchiveImpl<DeviceObjectArchiveVkImpl>(pSource, ppArchive);
+    return LoadArchiveImpl<DeviceObjectArchiveVkImpl>(pArchive);
 }
 
 void DearchiverVkImpl::UnpackPipelineState(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState** ppPSO) const
