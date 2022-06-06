@@ -35,7 +35,7 @@
 #include "ObjectBase.hpp"
 #include "EngineMemory.h"
 #include "RefCntAutoPtr.hpp"
-#include "DeviceObjectArchiveBase.hpp"
+#include "DeviceObjectArchive.hpp"
 
 namespace Diligent
 {
@@ -86,15 +86,15 @@ protected:
                                                 IRenderDevice*          pDevice);
 
 protected:
-    using PSODataHeader          = DeviceObjectArchiveBase::PSODataHeader;
-    using PRSDataHeader          = DeviceObjectArchiveBase::PRSDataHeader;
-    using ChunkType              = DeviceObjectArchiveBase::ChunkType;
-    using NameToArchiveRegionMap = DeviceObjectArchiveBase::NameToArchiveRegionMap;
-    using DeviceType             = DeviceObjectArchiveBase::DeviceType;
-    using SerializedPSOAuxData   = DeviceObjectArchiveBase::SerializedPSOAuxData;
-    using TPRSNames              = DeviceObjectArchiveBase::TPRSNames;
-    using RPDataHeader           = DeviceObjectArchiveBase::RPDataHeader;
-    using ArchiveRegion          = DeviceObjectArchiveBase::ArchiveRegion;
+    using PSODataHeader          = DeviceObjectArchive::PSODataHeader;
+    using PRSDataHeader          = DeviceObjectArchive::PRSDataHeader;
+    using ChunkType              = DeviceObjectArchive::ChunkType;
+    using NameToArchiveRegionMap = DeviceObjectArchive::NameToArchiveRegionMap;
+    using DeviceType             = DeviceObjectArchive::DeviceType;
+    using SerializedPSOAuxData   = DeviceObjectArchive::SerializedPSOAuxData;
+    using TPRSNames              = DeviceObjectArchive::TPRSNames;
+    using RPDataHeader           = DeviceObjectArchive::RPDataHeader;
+    using ArchiveRegion          = DeviceObjectArchive::ArchiveRegion;
 
     template <typename ResType>
     class NamedResourceCache
@@ -167,7 +167,7 @@ private:
                                  const NameToArchiveRegionMap&       PSONameToRegion,
                                  NamedResourceCache<IPipelineState>& PSOCache);
 
-    RefCntAutoPtr<DeviceObjectArchiveBase> m_pArchive;
+    RefCntAutoPtr<DeviceObjectArchive> m_pArchive;
 };
 
 

@@ -27,28 +27,27 @@
 #pragma once
 
 /// \file
-/// Declaration of Diligent::DeviceObjectArchiveVkImpl class
+/// OpenGL-specific serialization routines for device object archive.
 
-#include "EngineVkImplTraits.hpp"
+#include "EngineGLImplTraits.hpp"
 #include "PSOSerializer.hpp"
 
 namespace Diligent
 {
 
 template <SerializerMode Mode>
-struct PRSSerializerVk : PRSSerializer<Mode>
+struct PRSSerializerGL : PRSSerializer<Mode>
 {
     template <typename T>
     using ConstQual = typename Serializer<Mode>::template ConstQual<T>;
 
-    using InternalDataType = PipelineResourceSignatureInternalDataVk;
+    using InternalDataType = PipelineResourceSignatureInternalDataGL;
 
     static void SerializeInternalData(Serializer<Mode>&            Ser,
                                       ConstQual<InternalDataType>& InternalData,
                                       DynamicLinearAllocator*      Allocator);
 };
 
-DECL_TRIVIALLY_SERIALIZABLE(PipelineResourceAttribsVk);
-DECL_TRIVIALLY_SERIALIZABLE(PipelineResourceImmutableSamplerAttribsVk);
+DECL_TRIVIALLY_SERIALIZABLE(PipelineResourceAttribsGL);
 
 } // namespace Diligent

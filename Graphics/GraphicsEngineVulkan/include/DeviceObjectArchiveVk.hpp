@@ -27,28 +27,28 @@
 #pragma once
 
 /// \file
-/// Declaration of Diligent::DeviceObjectArchiveD3D11Impl class
+/// Vulkan-specific serialization routines for device object archive.
 
-#include "EngineD3D11ImplTraits.hpp"
+#include "EngineVkImplTraits.hpp"
 #include "PSOSerializer.hpp"
 
 namespace Diligent
 {
 
 template <SerializerMode Mode>
-struct PRSSerializerD3D11 : PRSSerializer<Mode>
+struct PRSSerializerVk : PRSSerializer<Mode>
 {
     template <typename T>
     using ConstQual = typename Serializer<Mode>::template ConstQual<T>;
 
-    using InternalDataType = PipelineResourceSignatureInternalDataD3D11;
+    using InternalDataType = PipelineResourceSignatureInternalDataVk;
 
     static void SerializeInternalData(Serializer<Mode>&            Ser,
                                       ConstQual<InternalDataType>& InternalData,
                                       DynamicLinearAllocator*      Allocator);
 };
 
-DECL_TRIVIALLY_SERIALIZABLE(PipelineResourceAttribsD3D11);
-DECL_TRIVIALLY_SERIALIZABLE(PipelineResourceImmutableSamplerAttribsD3D11);
+DECL_TRIVIALLY_SERIALIZABLE(PipelineResourceAttribsVk);
+DECL_TRIVIALLY_SERIALIZABLE(PipelineResourceImmutableSamplerAttribsVk);
 
 } // namespace Diligent

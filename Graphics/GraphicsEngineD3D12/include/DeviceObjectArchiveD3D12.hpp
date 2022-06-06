@@ -27,7 +27,7 @@
 #pragma once
 
 /// \file
-/// Declaration of Diligent::DeviceObjectArchiveD3D12Impl class
+/// Direct3D12-specific serialization routines for device object archive.
 
 #include "EngineD3D12ImplTraits.hpp"
 #include "PSOSerializer.hpp"

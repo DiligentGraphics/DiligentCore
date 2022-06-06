@@ -34,7 +34,7 @@
 namespace Diligent
 {
 
-DeviceObjectArchiveBase::DeviceType ArchiveDeviceDataFlagToArchiveDeviceType(ARCHIVE_DEVICE_DATA_FLAGS DataTypeFlag);
+DeviceObjectArchive::DeviceType ArchiveDeviceDataFlagToArchiveDeviceType(ARCHIVE_DEVICE_DATA_FLAGS DataTypeFlag);
 
 SerializedResourceSignatureImpl::SerializedResourceSignatureImpl(IReferenceCounters*                  pRefCounters,
                                                                  SerializationDeviceImpl*             pDevice,

@@ -12,7 +12,7 @@ set(INCLUDE
     include/DescriptorPoolManager.hpp
     include/DeviceContextVkImpl.hpp
     include/DeviceMemoryVkImpl.hpp
-    include/DeviceObjectArchiveVkImpl.hpp
+    include/DeviceObjectArchiveVk.hpp
     include/EngineVkImplTraits.hpp
     include/FenceVkImpl.hpp
     include/FramebufferVkImpl.hpp
@@ -96,7 +96,7 @@ set(SRC
     src/DescriptorPoolManager.cpp
     src/DeviceContextVkImpl.cpp
     src/DeviceMemoryVkImpl.cpp
-    src/DeviceObjectArchiveVkImpl.cpp
+    src/DeviceObjectArchiveVk.cpp
     src/EngineFactoryVk.cpp
     src/FenceVkImpl.cpp
     src/FramebufferVkImpl.cpp

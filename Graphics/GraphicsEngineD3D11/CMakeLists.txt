@@ -11,7 +11,7 @@ set(INCLUDE
     include/D3D11TypeDefinitions.h
     include/DeviceContextD3D11Impl.hpp
     include/DeviceMemoryD3D11Impl.hpp
-    include/DeviceObjectArchiveD3D11Impl.hpp
+    include/DeviceObjectArchiveD3D11.hpp
     include/DearchiverD3D11Impl.hpp
     include/DisjointQueryPool.hpp
     include/EngineD3D11ImplTraits.hpp
@@ -66,7 +66,7 @@ set(SRC
     src/D3D11TypeConversions.cpp
     src/DeviceContextD3D11Impl.cpp
     src/DeviceMemoryD3D11Impl.cpp
-    src/DeviceObjectArchiveD3D11Impl.cpp
+    src/DeviceObjectArchiveD3D11.cpp
     src/DearchiverD3D11Impl.cpp
     src/EngineFactoryD3D11.cpp
     src/FenceD3D11Impl.cpp

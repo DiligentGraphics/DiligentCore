@@ -27,7 +27,7 @@
 #pragma once
 
 /// \file
-/// Implementation of the Diligent::DeviceObjectArchiveBase class
+/// Implementation of the Diligent::DeviceObjectArchive class
 
 // Archive file format
 //
@@ -59,7 +59,7 @@ namespace Diligent
 {
 
 /// Class implementing base functionality of the device object archive object
-class DeviceObjectArchiveBase : public ObjectBase<IObject>
+class DeviceObjectArchive : public ObjectBase<IObject>
 {
 public:
     using TObjectBase = ObjectBase<IObject>;
@@ -92,8 +92,8 @@ public:
 
     /// \param pRefCounters - Reference counters object that controls the lifetime of this device object archive.
     /// \param pArchive     - Source data that this archive will be created from.
-    DeviceObjectArchiveBase(IReferenceCounters* pRefCounters,
-                            IArchive*           pArchive) noexcept(false);
+    DeviceObjectArchive(IReferenceCounters* pRefCounters,
+                        IArchive*           pArchive) noexcept(false);
 
 
     static constexpr Uint32 HeaderMagicNumber = 0xDE00000A;
@@ -329,9 +329,9 @@ public:
 
 
 template <typename ReourceDataType>
-bool DeviceObjectArchiveBase::LoadResourceData(const NameToArchiveRegionMap& NameToRegion,
-                                               const char*                   ResourceName,
-                                               ReourceDataType&              ResData) const
+bool DeviceObjectArchive::LoadResourceData(const NameToArchiveRegionMap& NameToRegion,
+                                           const char*                   ResourceName,
+                                           ReourceDataType&              ResData) const
 {
     auto it = NameToRegion.find(ResourceName);
     if (it == NameToRegion.end())

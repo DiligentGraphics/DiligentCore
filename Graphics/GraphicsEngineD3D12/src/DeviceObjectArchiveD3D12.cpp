@@ -24,30 +24,30 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
-
-/// \file
-/// Declaration of Diligent::DeviceObjectArchiveGLImpl class
-
-#include "EngineGLImplTraits.hpp"
-#include "PSOSerializer.hpp"
+#include "pch.h"
+#include "RenderDeviceD3D12Impl.hpp"
+#include "DeviceObjectArchiveD3D12.hpp"
+#include "PipelineResourceSignatureD3D12Impl.hpp"
 
 namespace Diligent
 {
 
 template <SerializerMode Mode>
-struct PRSSerializerGL : PRSSerializer<Mode>
+void PRSSerializerD3D12<Mode>::SerializeInternalData(
+    Serializer<Mode>&                                      Ser,
+    ConstQual<PipelineResourceSignatureInternalDataD3D12>& InternalData,
+    DynamicLinearAllocator*                                Allocator)
 {
-    template <typename T>
-    using ConstQual = typename Serializer<Mode>::template ConstQual<T>;
+    PRSSerializer<Mode>::SerializeInternalData(Ser, InternalData, Allocator);
 
-    using InternalDataType = PipelineResourceSignatureInternalDataGL;
+    Ser.SerializeArrayRaw(Allocator, InternalData.pResourceAttribs, InternalData.NumResources);
+    Ser.SerializeArrayRaw(Allocator, InternalData.pImmutableSamplers, InternalData.NumImmutableSamplers);
 
-    static void SerializeInternalData(Serializer<Mode>&            Ser,
-                                      ConstQual<InternalDataType>& InternalData,
-                                      DynamicLinearAllocator*      Allocator);
-};
+    ASSERT_SIZEOF64(InternalData, 48, "Did you add a new member to PipelineResourceSignatureInternalDataD3D12? Please add serialization here.");
+}
 
-DECL_TRIVIALLY_SERIALIZABLE(PipelineResourceAttribsGL);
+template struct PRSSerializerD3D12<SerializerMode::Read>;
+template struct PRSSerializerD3D12<SerializerMode::Write>;
+template struct PRSSerializerD3D12<SerializerMode::Measure>;
 
 } // namespace Diligent

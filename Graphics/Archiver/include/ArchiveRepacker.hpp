@@ -26,7 +26,7 @@
 
 #pragma once
 
-#include "DeviceObjectArchiveBase.hpp"
+#include "DeviceObjectArchive.hpp"
 
 namespace Diligent
 {
@@ -34,7 +34,7 @@ namespace Diligent
 class ArchiveRepacker
 {
 public:
-    using DeviceType = DeviceObjectArchiveBase::DeviceType;
+    using DeviceType = DeviceObjectArchive::DeviceType;
 
     explicit ArchiveRepacker(IArchive* pArchive);
 
@@ -45,21 +45,21 @@ public:
     void Print() const;
 
 private:
-    using ArchiveHeader          = DeviceObjectArchiveBase::ArchiveHeader;
-    using BlockOffsetType        = DeviceObjectArchiveBase::BlockOffsetType;
-    using ChunkHeader            = DeviceObjectArchiveBase::ChunkHeader;
-    using ChunkType              = DeviceObjectArchiveBase::ChunkType;
-    using FileOffsetAndSize      = DeviceObjectArchiveBase::ArchiveRegion;
-    using DataHeaderBase         = DeviceObjectArchiveBase::DataHeaderBase;
-    using RPDataHeader           = DeviceObjectArchiveBase::RPDataHeader;
-    using ShadersDataHeader      = DeviceObjectArchiveBase::ShadersDataHeader;
-    using NameToArchiveRegionMap = DeviceObjectArchiveBase::NameToArchiveRegionMap;
+    using ArchiveHeader          = DeviceObjectArchive::ArchiveHeader;
+    using BlockOffsetType        = DeviceObjectArchive::BlockOffsetType;
+    using ChunkHeader            = DeviceObjectArchive::ChunkHeader;
+    using ChunkType              = DeviceObjectArchive::ChunkType;
+    using FileOffsetAndSize      = DeviceObjectArchive::ArchiveRegion;
+    using DataHeaderBase         = DeviceObjectArchive::DataHeaderBase;
+    using RPDataHeader           = DeviceObjectArchive::RPDataHeader;
+    using ShadersDataHeader      = DeviceObjectArchive::ShadersDataHeader;
+    using NameToArchiveRegionMap = DeviceObjectArchive::NameToArchiveRegionMap;
 
-    static constexpr auto HeaderMagicNumber = DeviceObjectArchiveBase::HeaderMagicNumber;
-    static constexpr auto HeaderVersion     = DeviceObjectArchiveBase::HeaderVersion;
-    static constexpr auto InvalidOffset     = DeviceObjectArchiveBase::DataHeaderBase::InvalidOffset;
+    static constexpr auto HeaderMagicNumber = DeviceObjectArchive::HeaderMagicNumber;
+    static constexpr auto HeaderVersion     = DeviceObjectArchive::HeaderVersion;
+    static constexpr auto InvalidOffset     = DeviceObjectArchive::DataHeaderBase::InvalidOffset;
 
-    DeviceObjectArchiveBase::ArchiveIndex m_Index;
+    DeviceObjectArchive::ArchiveIndex m_Index;
 
     struct ArchiveBlock
     {

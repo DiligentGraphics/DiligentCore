@@ -20,7 +20,7 @@ set(INCLUDE
     include/DescriptorHeap.hpp
     include/DeviceContextD3D12Impl.hpp
     include/DeviceMemoryD3D12Impl.hpp
-    include/DeviceObjectArchiveD3D12Impl.hpp
+    include/DeviceObjectArchiveD3D12.hpp
     include/EngineD3D12ImplTraits.hpp
     include/FenceD3D12Impl.hpp
     include/FramebufferD3D12Impl.hpp
@@ -86,7 +86,7 @@ set(SRC
     src/DescriptorHeap.cpp
     src/DeviceContextD3D12Impl.cpp
     src/DeviceMemoryD3D12Impl.cpp
-    src/DeviceObjectArchiveD3D12Impl.cpp
+    src/DeviceObjectArchiveD3D12.cpp
     src/EngineFactoryD3D12.cpp
     src/FenceD3D12Impl.cpp
     src/FramebufferD3D12Impl.cpp

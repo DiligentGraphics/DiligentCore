@@ -13,7 +13,7 @@ set(INCLUDE
     include/DeviceContextBase.hpp
     include/DeviceMemoryBase.hpp
     include/DeviceObjectBase.hpp
-    include/DeviceObjectArchiveBase.hpp
+    include/DeviceObjectArchive.hpp
     include/EngineFactoryBase.hpp
     include/EngineMemory.h
     include/FenceBase.hpp
@@ -92,7 +92,7 @@ set(SOURCE
     src/DefaultShaderSourceStreamFactory.cpp
     src/DeviceContextBase.cpp
     src/DeviceMemoryBase.cpp
-    src/DeviceObjectArchiveBase.cpp
+    src/DeviceObjectArchive.cpp
     src/EngineMemory.cpp
     src/EngineFactoryBase.cpp
     src/FramebufferBase.cpp

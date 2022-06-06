@@ -26,7 +26,7 @@
 
 #include "pch.h"
 #include "RenderDeviceD3D11Impl.hpp"
-#include "DeviceObjectArchiveD3D11Impl.hpp"
+#include "DeviceObjectArchiveD3D11.hpp"
 #include "PipelineResourceSignatureD3D11Impl.hpp"
 
 namespace Diligent

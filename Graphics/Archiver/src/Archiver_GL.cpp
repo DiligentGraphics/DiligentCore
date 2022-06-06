@@ -33,7 +33,7 @@
 #include "PipelineResourceSignatureGLImpl.hpp"
 #include "PipelineStateGLImpl.hpp"
 #include "ShaderGLImpl.hpp"
-#include "DeviceObjectArchiveGLImpl.hpp"
+#include "DeviceObjectArchiveGL.hpp"
 #include "SerializedPipelineStateImpl.hpp"
 #include "ShaderToolsCommon.hpp"
 

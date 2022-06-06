@@ -88,7 +88,7 @@ DearchiverBase::DeviceType DearchiverBase::GetArchiveDeviceType(const IRenderDev
 {
     VERIFY_EXPR(pDevice != nullptr);
     const auto Type = pDevice->GetDeviceInfo().Type;
-    return DeviceObjectArchiveBase::RenderDeviceTypeToArchiveDeviceType(Type);
+    return DeviceObjectArchive::RenderDeviceTypeToArchiveDeviceType(Type);
 }
 
 template <typename CreateInfoType>
@@ -173,7 +173,7 @@ template class DearchiverBase::NamedResourceCache<IPipelineResourceSignature>;
 
 
 // Instantiation is required by UnpackResourceSignatureImpl
-template bool DeviceObjectArchiveBase::LoadResourceData<DearchiverBase::PRSData>(
+template bool DeviceObjectArchive::LoadResourceData<DearchiverBase::PRSData>(
     const NameToArchiveRegionMap& NameToRegion,
     const char*                   ResourceName,
     DearchiverBase::PRSData&      ResData) const;
@@ -411,7 +411,7 @@ bool DearchiverBase::UnpackPSOShaders(PSOData<CreateInfoType>& PSO,
     if (!ShaderData)
         return false;
 
-    const Uint64 BaseOffset = m_pArchive->m_ArchiveIndex.BaseOffsets[static_cast<size_t>(DeviceObjectArchiveBase::GetBlockOffsetType(DevType))];
+    const Uint64 BaseOffset = m_pArchive->m_ArchiveIndex.BaseOffsets[static_cast<size_t>(DeviceObjectArchive::GetBlockOffsetType(DevType))];
     if (BaseOffset > m_pArchive->m_pArchive->GetSize())
     {
         LOG_ERROR_MESSAGE("Required block does not exist in archive");
@@ -420,7 +420,7 @@ bool DearchiverBase::UnpackPSOShaders(PSOData<CreateInfoType>& PSO,
 
     DynamicLinearAllocator Allocator{GetRawAllocator()};
 
-    DeviceObjectArchiveBase::ShaderIndexArray ShaderIndices;
+    DeviceObjectArchive::ShaderIndexArray ShaderIndices;
     {
         Serializer<SerializerMode::Read> Ser{ShaderData};
         PSOSerializer<SerializerMode::Read>::SerializeShaderIndices(Ser, ShaderIndices, &Allocator);
@@ -455,7 +455,7 @@ bool DearchiverBase::UnpackPSOShaders(PSOData<CreateInfoType>& PSO,
             OffsetAndSize = ShaderInfo.Regions[Idx];
         }
 
-        void* pData = Allocator.Allocate(OffsetAndSize.Size, DeviceObjectArchiveBase::DataPtrAlign);
+        void* pData = Allocator.Allocate(OffsetAndSize.Size, DeviceObjectArchive::DataPtrAlign);
 
         if (!m_pArchive->m_pArchive->Read(BaseOffset + OffsetAndSize.Offset, OffsetAndSize.Size, pData))
             return false;
@@ -626,7 +626,7 @@ bool DearchiverBase::LoadArchive(IArchive* pArchive)
 
     try
     {
-        m_pArchive = NEW_RC_OBJ(GetRawAllocator(), "Device object archive instance", DeviceObjectArchiveBase)(pArchive);
+        m_pArchive = NEW_RC_OBJ(GetRawAllocator(), "Device object archive instance", DeviceObjectArchive)(pArchive);
         return true;
     }
     catch (...)

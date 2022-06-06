@@ -196,7 +196,7 @@ TEST(PSOSerializerTest, SerializePRSDesc)
     } while (!Val.IsComplete());
 }
 
-using TPRSNames = DeviceObjectArchiveBase::TPRSNames;
+using TPRSNames = DeviceObjectArchive::TPRSNames;
 
 template <typename PSOCIType, typename HelperType>
 static void TestSerializePSOCreateInfo(HelperType&& Helper)

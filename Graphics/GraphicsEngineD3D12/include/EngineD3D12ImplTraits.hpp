@@ -77,8 +77,6 @@ class ShaderBindingTableD3D12Impl;
 class PipelineResourceSignatureD3D12Impl;
 class DeviceMemoryD3D12Impl;
 class PipelineStateCacheD3D12Impl;
-class DeviceObjectArchiveD3D12Impl;
-
 
 class FixedBlockMemoryAllocator;
 
@@ -137,7 +135,6 @@ struct EngineD3D12ImplTraits
     using PipelineResourceSignatureImplType = PipelineResourceSignatureD3D12Impl;
     using DeviceMemoryImplType              = DeviceMemoryD3D12Impl;
     using PipelineStateCacheImplType        = PipelineStateCacheD3D12Impl;
-    using DeviceObjectArchiveImplType       = DeviceObjectArchiveD3D12Impl;
 
     using BuffViewObjAllocatorType = FixedBlockMemoryAllocator;
     using TexViewObjAllocatorType  = FixedBlockMemoryAllocator;

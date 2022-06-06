@@ -24,7 +24,7 @@
  *  of the possibility of such damages.
  */
 
-#include "DeviceObjectArchiveBase.hpp"
+#include "DeviceObjectArchive.hpp"
 
 #include <bitset>
 #include <unordered_set>
@@ -37,9 +37,9 @@ namespace Diligent
 {
 
 
-void DeviceObjectArchiveBase::ReadNamedResourceRegions(IArchive*               pArchive,
-                                                       const ChunkHeader&      Chunk,
-                                                       NameToArchiveRegionMap& NameToRegion) noexcept(false)
+void DeviceObjectArchive::ReadNamedResourceRegions(IArchive*               pArchive,
+                                                   const ChunkHeader&      Chunk,
+                                                   NameToArchiveRegionMap& NameToRegion) noexcept(false)
 {
     VERIFY_EXPR(Chunk.Type == ChunkType::ResourceSignature ||
                 Chunk.Type == ChunkType::GraphicsPipelineStates ||
@@ -81,7 +81,7 @@ void DeviceObjectArchiveBase::ReadNamedResourceRegions(IArchive*               p
     }
 }
 
-void DeviceObjectArchiveBase::ReadArchiveDebugInfo(IArchive* pArchive, const ChunkHeader& Chunk, ArchiveDebugInfo& DebugInfo) noexcept(false)
+void DeviceObjectArchive::ReadArchiveDebugInfo(IArchive* pArchive, const ChunkHeader& Chunk, ArchiveDebugInfo& DebugInfo) noexcept(false)
 {
     VERIFY_EXPR(Chunk.Type == ChunkType::ArchiveDebugInfo);
 
@@ -109,7 +109,7 @@ void DeviceObjectArchiveBase::ReadArchiveDebugInfo(IArchive* pArchive, const Chu
 #endif
 }
 
-void DeviceObjectArchiveBase::ReadShadersHeader(IArchive* pArchive, const ChunkHeader& Chunk, ShadersDataHeader& ShadersHeader) noexcept(false)
+void DeviceObjectArchive::ReadShadersHeader(IArchive* pArchive, const ChunkHeader& Chunk, ShadersDataHeader& ShadersHeader) noexcept(false)
 {
     VERIFY_EXPR(Chunk.Type == ChunkType::Shaders);
     VERIFY_EXPR(Chunk.Size == sizeof(ShadersHeader));
@@ -120,7 +120,7 @@ void DeviceObjectArchiveBase::ReadShadersHeader(IArchive* pArchive, const ChunkH
     }
 }
 
-void DeviceObjectArchiveBase::ReadArchiveIndex(IArchive* pArchive, ArchiveIndex& Index) noexcept(false)
+void DeviceObjectArchive::ReadArchiveIndex(IArchive* pArchive, ArchiveIndex& Index) noexcept(false)
 {
     if (pArchive == nullptr)
         LOG_ERROR_AND_THROW("pArchive must not be null");
@@ -179,37 +179,37 @@ void DeviceObjectArchiveBase::ReadArchiveIndex(IArchive* pArchive, ArchiveIndex&
     }
 }
 
-DeviceObjectArchiveBase::DeviceObjectArchiveBase(IReferenceCounters* pRefCounters, IArchive* pArchive) noexcept(false) :
+DeviceObjectArchive::DeviceObjectArchive(IReferenceCounters* pRefCounters, IArchive* pArchive) noexcept(false) :
     TObjectBase{pRefCounters},
     m_pArchive{pArchive}
 {
     ReadArchiveIndex(pArchive, m_ArchiveIndex);
 }
 
-DeviceObjectArchiveBase::DeviceType DeviceObjectArchiveBase::RenderDeviceTypeToArchiveDeviceType(RENDER_DEVICE_TYPE Type)
+DeviceObjectArchive::DeviceType DeviceObjectArchive::RenderDeviceTypeToArchiveDeviceType(RENDER_DEVICE_TYPE Type)
 {
     static_assert(RENDER_DEVICE_TYPE_COUNT == 7, "Did you add a new render device type? Please handle it here.");
     switch (Type)
     {
         // clang-format off
-        case RENDER_DEVICE_TYPE_D3D11:  return DeviceObjectArchiveBase::DeviceType::Direct3D11;
-        case RENDER_DEVICE_TYPE_D3D12:  return DeviceObjectArchiveBase::DeviceType::Direct3D12;
-        case RENDER_DEVICE_TYPE_GL:     return DeviceObjectArchiveBase::DeviceType::OpenGL;
-        case RENDER_DEVICE_TYPE_GLES:   return DeviceObjectArchiveBase::DeviceType::OpenGL;
-        case RENDER_DEVICE_TYPE_VULKAN: return DeviceObjectArchiveBase::DeviceType::Vulkan;
+        case RENDER_DEVICE_TYPE_D3D11:  return DeviceObjectArchive::DeviceType::Direct3D11;
+        case RENDER_DEVICE_TYPE_D3D12:  return DeviceObjectArchive::DeviceType::Direct3D12;
+        case RENDER_DEVICE_TYPE_GL:     return DeviceObjectArchive::DeviceType::OpenGL;
+        case RENDER_DEVICE_TYPE_GLES:   return DeviceObjectArchive::DeviceType::OpenGL;
+        case RENDER_DEVICE_TYPE_VULKAN: return DeviceObjectArchive::DeviceType::Vulkan;
 #if PLATFORM_MACOS
-        case RENDER_DEVICE_TYPE_METAL:  return DeviceObjectArchiveBase::DeviceType::Metal_MacOS;
+        case RENDER_DEVICE_TYPE_METAL:  return DeviceObjectArchive::DeviceType::Metal_MacOS;
 #elif PLATFORM_IOS || PLATFORM_TVOS
-        case RENDER_DEVICE_TYPE_METAL:  return DeviceObjectArchiveBase::DeviceType::Metal_iOS;
+        case RENDER_DEVICE_TYPE_METAL:  return DeviceObjectArchive::DeviceType::Metal_iOS;
 #endif
         // clang-format on
         default:
             UNEXPECTED("Unexpected device type");
-            return DeviceObjectArchiveBase::DeviceType::Count;
+            return DeviceObjectArchive::DeviceType::Count;
     }
 }
 
-DeviceObjectArchiveBase::BlockOffsetType DeviceObjectArchiveBase::GetBlockOffsetType(DeviceType DevType)
+DeviceObjectArchive::BlockOffsetType DeviceObjectArchive::GetBlockOffsetType(DeviceType DevType)
 {
     static_assert(static_cast<size_t>(DeviceType::Count) == 6, "Please handle the new device type below");
     switch (DevType)
@@ -228,7 +228,7 @@ DeviceObjectArchiveBase::BlockOffsetType DeviceObjectArchiveBase::GetBlockOffset
     }
 }
 
-const char* DeviceObjectArchiveBase::ChunkTypeToResName(ChunkType Type)
+const char* DeviceObjectArchive::ChunkTypeToResName(ChunkType Type)
 {
     static_assert(static_cast<size_t>(ChunkType::Count) == 9, "Please handle the new chunk type below");
     switch (Type)
@@ -251,7 +251,7 @@ const char* DeviceObjectArchiveBase::ChunkTypeToResName(ChunkType Type)
 }
 
 
-DeviceObjectArchiveBase::ShaderDeviceInfo& DeviceObjectArchiveBase::GetShaderDeviceInfo(DeviceType DevType, DynamicLinearAllocator& Allocator) noexcept(false)
+DeviceObjectArchive::ShaderDeviceInfo& DeviceObjectArchive::GetShaderDeviceInfo(DeviceType DevType, DynamicLinearAllocator& Allocator) noexcept(false)
 {
     auto& ShaderInfo = m_ShaderInfo[static_cast<size_t>(DevType)];
 
@@ -278,10 +278,10 @@ DeviceObjectArchiveBase::ShaderDeviceInfo& DeviceObjectArchiveBase::GetShaderDev
     return ShaderInfo;
 }
 
-SerializedData DeviceObjectArchiveBase::GetDeviceSpecificData(DeviceType              DevType,
-                                                              const DataHeaderBase&   Header,
-                                                              DynamicLinearAllocator& Allocator,
-                                                              ChunkType               ExpectedChunkType)
+SerializedData DeviceObjectArchive::GetDeviceSpecificData(DeviceType              DevType,
+                                                          const DataHeaderBase&   Header,
+                                                          DynamicLinearAllocator& Allocator,
+                                                          ChunkType               ExpectedChunkType)
 {
     const char*  ChunkName   = ChunkTypeToResName(ExpectedChunkType);
     const auto   BlockType   = GetBlockOffsetType(DevType);

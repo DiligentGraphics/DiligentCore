@@ -7,7 +7,7 @@ set(INCLUDE
     include/BufferGLImpl.hpp
     include/BufferViewGLImpl.hpp
     include/DeviceContextGLImpl.hpp
-    include/DeviceObjectArchiveGLImpl.hpp
+    include/DeviceObjectArchiveGL.hpp
     include/DearchiverGLImpl.hpp
     include/EngineGLImplTraits.hpp
     include/FBOCache.hpp
@@ -67,7 +67,7 @@ set(SOURCE
     src/BufferGLImpl.cpp
     src/BufferViewGLImpl.cpp
     src/DeviceContextGLImpl.cpp
-    src/DeviceObjectArchiveGLImpl.cpp
+    src/DeviceObjectArchiveGL.cpp
     src/DearchiverGLImpl.cpp
     src/EngineFactoryOpenGL.cpp
     src/FBOCache.cpp

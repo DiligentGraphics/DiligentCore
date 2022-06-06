@@ -38,9 +38,9 @@
 namespace Diligent
 {
 
-DeviceObjectArchiveBase::DeviceType ArchiveDeviceDataFlagToArchiveDeviceType(ARCHIVE_DEVICE_DATA_FLAGS DeviceFlag)
+DeviceObjectArchive::DeviceType ArchiveDeviceDataFlagToArchiveDeviceType(ARCHIVE_DEVICE_DATA_FLAGS DeviceFlag)
 {
-    using DeviceType = DeviceObjectArchiveBase::DeviceType;
+    using DeviceType = DeviceObjectArchive::DeviceType;
     VERIFY(IsPowerOfTwo(DeviceFlag), "Only single flag is expected");
     static_assert(ARCHIVE_DEVICE_DATA_FLAG_LAST == ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS, "Please handle the new data type below");
     switch (DeviceFlag)

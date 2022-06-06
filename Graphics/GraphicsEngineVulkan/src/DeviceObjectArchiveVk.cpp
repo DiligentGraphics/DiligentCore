@@ -26,7 +26,7 @@
 
 #include "pch.h"
 #include "RenderDeviceVkImpl.hpp"
-#include "DeviceObjectArchiveVkImpl.hpp"
+#include "DeviceObjectArchiveVk.hpp"
 #include "PipelineResourceSignatureVkImpl.hpp"
 
 namespace Diligent

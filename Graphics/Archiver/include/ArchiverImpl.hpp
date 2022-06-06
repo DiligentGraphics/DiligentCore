@@ -38,7 +38,7 @@
 #include "DataBlob.h"
 #include "FileStream.h"
 
-#include "DeviceObjectArchiveBase.hpp"
+#include "DeviceObjectArchive.hpp"
 #include "RefCntAutoPtr.hpp"
 #include "ObjectBase.hpp"
 
@@ -80,24 +80,24 @@ public:
     virtual Bool DILIGENT_CALL_TYPE AddPipelineResourceSignature(IPipelineResourceSignature* pSignature) override final;
 
 public:
-    using DeviceType   = DeviceObjectArchiveBase::DeviceType;
-    using ChunkType    = DeviceObjectArchiveBase::ChunkType;
+    using DeviceType   = DeviceObjectArchive::DeviceType;
+    using ChunkType    = DeviceObjectArchive::ChunkType;
     using TDataElement = FixedLinearAllocator;
 
 private:
-    using ArchiveHeader            = DeviceObjectArchiveBase::ArchiveHeader;
-    using ChunkHeader              = DeviceObjectArchiveBase::ChunkHeader;
-    using NamedResourceArrayHeader = DeviceObjectArchiveBase::NamedResourceArrayHeader;
-    using FileOffsetAndSize        = DeviceObjectArchiveBase::ArchiveRegion;
-    using PRSDataHeader            = DeviceObjectArchiveBase::PRSDataHeader;
-    using PSODataHeader            = DeviceObjectArchiveBase::PSODataHeader;
-    using RPDataHeader             = DeviceObjectArchiveBase::RPDataHeader;
-    using ShadersDataHeader        = DeviceObjectArchiveBase::ShadersDataHeader;
-    using TPRSNames                = DeviceObjectArchiveBase::TPRSNames;
-    using ShaderIndexArray         = DeviceObjectArchiveBase::ShaderIndexArray;
-    using SerializedPSOAuxData     = DeviceObjectArchiveBase::SerializedPSOAuxData;
+    using ArchiveHeader            = DeviceObjectArchive::ArchiveHeader;
+    using ChunkHeader              = DeviceObjectArchive::ChunkHeader;
+    using NamedResourceArrayHeader = DeviceObjectArchive::NamedResourceArrayHeader;
+    using FileOffsetAndSize        = DeviceObjectArchive::ArchiveRegion;
+    using PRSDataHeader            = DeviceObjectArchive::PRSDataHeader;
+    using PSODataHeader            = DeviceObjectArchive::PSODataHeader;
+    using RPDataHeader             = DeviceObjectArchive::RPDataHeader;
+    using ShadersDataHeader        = DeviceObjectArchive::ShadersDataHeader;
+    using TPRSNames                = DeviceObjectArchive::TPRSNames;
+    using ShaderIndexArray         = DeviceObjectArchive::ShaderIndexArray;
+    using SerializedPSOAuxData     = DeviceObjectArchive::SerializedPSOAuxData;
 
-    static constexpr auto InvalidOffset   = DeviceObjectArchiveBase::DataHeaderBase::InvalidOffset;
+    static constexpr auto InvalidOffset   = DeviceObjectArchive::DataHeaderBase::InvalidOffset;
     static constexpr auto DeviceDataCount = static_cast<size_t>(DeviceType::Count);
     static constexpr auto ChunkCount      = static_cast<size_t>(ChunkType::Count);
 

@@ -35,7 +35,7 @@
 #include "DynamicLinearAllocator.hpp"
 
 #include "PipelineResourceSignatureBase.hpp"
-#include "DeviceObjectArchiveBase.hpp"
+#include "DeviceObjectArchive.hpp"
 
 namespace Diligent
 {
@@ -46,9 +46,9 @@ struct PSOSerializer
     template <typename T>
     using ConstQual = typename Serializer<Mode>::template ConstQual<T>;
 
-    using TPRSNames            = DeviceObjectArchiveBase::TPRSNames;
-    using ShaderIndexArray     = DeviceObjectArchiveBase::ShaderIndexArray;
-    using SerializedPSOAuxData = DeviceObjectArchiveBase::SerializedPSOAuxData;
+    using TPRSNames            = DeviceObjectArchive::TPRSNames;
+    using ShaderIndexArray     = DeviceObjectArchive::ShaderIndexArray;
+    using SerializedPSOAuxData = DeviceObjectArchive::SerializedPSOAuxData;
 
     static void SerializeCreateInfo(Serializer<Mode>&                   Ser,
                                     ConstQual<PipelineStateCreateInfo>& CreateInfo,

@@ -24,30 +24,31 @@
  *  of the possibility of such damages.
  */
 
-#include "pch.h"
-#include "RenderDeviceD3D12Impl.hpp"
-#include "DeviceObjectArchiveD3D12Impl.hpp"
-#include "PipelineResourceSignatureD3D12Impl.hpp"
+#pragma once
+
+/// \file
+/// Direct3D11-specific serialization routines for device object archive.
+
+#include "EngineD3D11ImplTraits.hpp"
+#include "PSOSerializer.hpp"
 
 namespace Diligent
 {
 
 template <SerializerMode Mode>
-void PRSSerializerD3D12<Mode>::SerializeInternalData(
-    Serializer<Mode>&                                      Ser,
-    ConstQual<PipelineResourceSignatureInternalDataD3D12>& InternalData,
-    DynamicLinearAllocator*                                Allocator)
+struct PRSSerializerD3D11 : PRSSerializer<Mode>
 {
-    PRSSerializer<Mode>::SerializeInternalData(Ser, InternalData, Allocator);
+    template <typename T>
+    using ConstQual = typename Serializer<Mode>::template ConstQual<T>;
 
-    Ser.SerializeArrayRaw(Allocator, InternalData.pResourceAttribs, InternalData.NumResources);
-    Ser.SerializeArrayRaw(Allocator, InternalData.pImmutableSamplers, InternalData.NumImmutableSamplers);
+    using InternalDataType = PipelineResourceSignatureInternalDataD3D11;
 
-    ASSERT_SIZEOF64(InternalData, 48, "Did you add a new member to PipelineResourceSignatureInternalDataD3D12? Please add serialization here.");
-}
+    static void SerializeInternalData(Serializer<Mode>&            Ser,
+                                      ConstQual<InternalDataType>& InternalData,
+                                      DynamicLinearAllocator*      Allocator);
+};
 
-template struct PRSSerializerD3D12<SerializerMode::Read>;
-template struct PRSSerializerD3D12<SerializerMode::Write>;
-template struct PRSSerializerD3D12<SerializerMode::Measure>;
+DECL_TRIVIALLY_SERIALIZABLE(PipelineResourceAttribsD3D11);
+DECL_TRIVIALLY_SERIALIZABLE(PipelineResourceImmutableSamplerAttribsD3D11);
 
 } // namespace Diligent

@@ -27,7 +27,7 @@
 #include "pch.h"
 #include "RenderDeviceGLImpl.hpp"
 #include "DearchiverGLImpl.hpp"
-#include "DeviceObjectArchiveGLImpl.hpp"
+#include "DeviceObjectArchiveGL.hpp"
 #include "PipelineResourceSignatureGLImpl.hpp"
 
 namespace Diligent

@@ -33,7 +33,7 @@ namespace Diligent
 
 ArchiveRepacker::ArchiveRepacker(IArchive* pArchive)
 {
-    DeviceObjectArchiveBase::ReadArchiveIndex(pArchive, m_Index);
+    DeviceObjectArchive::ReadArchiveIndex(pArchive, m_Index);
 
     // Calculate device-specific block sizes
     {

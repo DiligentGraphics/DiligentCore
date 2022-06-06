@@ -392,8 +392,8 @@ void ArchiverImpl::UpdateOffsetsInArchive(PendingData& Pending) const
     auto&       FileHeader   = *HeaderData.Construct<ArchiveHeader>();
     auto* const ChunkHeaders = HeaderData.ConstructArray<ChunkHeader>(NumChunks);
 
-    FileHeader.MagicNumber = DeviceObjectArchiveBase::HeaderMagicNumber;
-    FileHeader.Version     = DeviceObjectArchiveBase::HeaderVersion;
+    FileHeader.MagicNumber = DeviceObjectArchive::HeaderMagicNumber;
+    FileHeader.Version     = DeviceObjectArchive::HeaderVersion;
     FileHeader.NumChunks   = NumChunks;
 
     // Update offsets to the NamedResourceArrayHeader

@@ -91,7 +91,6 @@ struct SerializationEngineImplTraits
     using PipelineResourceSignatureImplType = SerializedResourceSignatureImpl;
     using DeviceMemoryImplType              = SerializedObjectStub;
     using PipelineStateCacheImplType        = SerializedObjectStub;
-    using DeviceObjectArchiveImplType       = SerializedObjectStub;
 };
 
 template <typename ReturnType>
