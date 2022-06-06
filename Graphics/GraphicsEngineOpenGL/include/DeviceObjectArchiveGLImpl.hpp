@@ -29,24 +29,11 @@
 /// \file
 /// Declaration of Diligent::DeviceObjectArchiveGLImpl class
 
-#include "Dearchiver.h"
-
 #include "EngineGLImplTraits.hpp"
-#include "DeviceObjectArchiveBase.hpp"
 #include "PSOSerializer.hpp"
 
 namespace Diligent
 {
-
-/// Device object archive object implementation in OpenGL backend.
-class DeviceObjectArchiveGLImpl final : public DeviceObjectArchiveBase
-{
-public:
-    DeviceObjectArchiveGLImpl(IReferenceCounters* pRefCounters, IArchive* pSource);
-    ~DeviceObjectArchiveGLImpl();
-
-    virtual RefCntAutoPtr<IPipelineResourceSignature> UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, bool IsImplicit) override final;
-};
 
 template <SerializerMode Mode>
 struct PRSSerializerGL : PRSSerializer<Mode>

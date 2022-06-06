@@ -28,6 +28,7 @@
 #include "RenderDeviceVkImpl.hpp"
 #include "DearchiverVkImpl.hpp"
 #include "DeviceObjectArchiveVkImpl.hpp"
+#include "PipelineResourceSignatureVkImpl.hpp"
 
 namespace Diligent
 {
@@ -38,24 +39,9 @@ DearchiverVkImpl::DearchiverVkImpl(IReferenceCounters*         pRefCounters,
 {
 }
 
-bool DearchiverVkImpl::LoadArchive(IArchive* pArchive)
+RefCntAutoPtr<IPipelineResourceSignature> DearchiverVkImpl::UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, bool IsImplicit)
 {
-    return LoadArchiveImpl<DeviceObjectArchiveVkImpl>(pArchive);
-}
-
-void DearchiverVkImpl::UnpackPipelineState(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState** ppPSO) const
-{
-    UnpackPipelineStateImpl<DeviceObjectArchiveVkImpl>(DeArchiveInfo, ppPSO);
-}
-
-void DearchiverVkImpl::UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature** ppSignature) const
-{
-    UnpackResourceSignatureImpl<DeviceObjectArchiveVkImpl>(DeArchiveInfo, ppSignature);
-}
-
-void DearchiverVkImpl::UnpackRenderPass(const RenderPassUnpackInfo& DeArchiveInfo, IRenderPass** ppRP) const
-{
-    UnpackRenderPassImpl<DeviceObjectArchiveVkImpl>(DeArchiveInfo, ppRP);
+    return DearchiverBase::UnpackResourceSignatureImpl<RenderDeviceVkImpl, PRSSerializerVk<SerializerMode::Read>>(DeArchiveInfo, IsImplicit);
 }
 
 } // namespace Diligent

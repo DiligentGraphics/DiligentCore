@@ -42,13 +42,13 @@
 #include <array>
 #include <mutex>
 #include <vector>
+#include <unordered_map>
 
-#include "Dearchiver.h"
-#include "PipelineState.h"
+#include "GraphicsTypes.h"
+#include "Archive.h"
+#include "Shader.h"
 
 #include "ObjectBase.hpp"
-#include "PipelineResourceSignatureBase.hpp"
-#include "PipelineStateBase.hpp"
 
 #include "HashUtils.hpp"
 #include "RefCntAutoPtr.hpp"
@@ -95,19 +95,10 @@ public:
     DeviceObjectArchiveBase(IReferenceCounters* pRefCounters,
                             IArchive*           pArchive) noexcept(false);
 
-    void UnpackGraphicsPSO(const PipelineStateUnpackInfo& UnpackInfo, IPipelineState** ppPSO);
-    void UnpackComputePSO(const PipelineStateUnpackInfo& UnpackInfo, IPipelineState** ppPSO);
-    void UnpackRayTracingPSO(const PipelineStateUnpackInfo& UnpackInfo, IPipelineState** ppPSO);
-    void UnpackTilePSO(const PipelineStateUnpackInfo& UnpackInfo, IPipelineState** ppPSO);
-    void UnpackRenderPass(const RenderPassUnpackInfo& UnpackInfo, IRenderPass** ppRP);
 
-protected:
     static constexpr Uint32 HeaderMagicNumber = 0xDE00000A;
     static constexpr Uint32 HeaderVersion     = 2;
     static constexpr Uint32 DataPtrAlign      = sizeof(Uint64);
-
-    friend class ArchiverImpl;
-    friend class ArchiveRepacker;
 
     // Archive header contains the block offsets.
     // Any block can be added or removed without patching all offsets in the archive,
@@ -125,6 +116,20 @@ protected:
     };
     using TBlockBaseOffsets = std::array<Uint32, static_cast<size_t>(BlockOffsetType::Count)>;
 
+    enum class ChunkType : Uint32
+    {
+        Undefined = 0,
+        ArchiveDebugInfo,
+        ResourceSignature,
+        GraphicsPipelineStates,
+        ComputePipelineStates,
+        RayTracingPipelineStates,
+        TilePipelineStates,
+        RenderPass,
+        Shaders,
+        Count
+    };
+
 #define CHECK_HEADER_SIZE(Header, Size)                                                                                                           \
     static_assert(sizeof(Header) % 8 == 0, "sizeof(" #Header ") must be a multiple of 8. Use padding to align it.");                              \
     static_assert(sizeof(Header) == Size, "sizeof(" #Header ") must be " #Size ". Reading binary archive will result in invalid memory access."); \
@@ -141,20 +146,6 @@ protected:
         //ChunkHeader     Chunks  [NumChunks]
     };
     CHECK_HEADER_SIZE(ArchiveHeader, 40)
-
-    enum class ChunkType : Uint32
-    {
-        Undefined = 0,
-        ArchiveDebugInfo,
-        ResourceSignature,
-        GraphicsPipelineStates,
-        ComputePipelineStates,
-        RayTracingPipelineStates,
-        TilePipelineStates,
-        RenderPass,
-        Shaders,
-        Count
-    };
 
     struct ChunkHeader
     {
@@ -266,7 +257,7 @@ protected:
 
 #undef CHECK_HEADER_SIZE
 
-private:
+
     struct ArchiveRegion
     {
         Uint32 Offset = 0;
@@ -302,37 +293,6 @@ private:
 
     static void ReadArchiveIndex(IArchive* pArchive, ArchiveIndex& Index) noexcept(false);
 
-    template <typename ResType>
-    class NamedResourceCache
-    {
-    public:
-        NamedResourceCache() noexcept {};
-
-        NamedResourceCache(const NamedResourceCache&) = delete;
-        NamedResourceCache(NamedResourceCache&&)      = delete;
-        NamedResourceCache& operator=(const NamedResourceCache&) = delete;
-        NamedResourceCache& operator=(NamedResourceCache&&) = delete;
-
-        bool Get(const char* Name, ResType** ppResource);
-        void Set(const char* Name, ResType* pResource);
-
-    private:
-        std::mutex m_Mtx;
-        // Keep weak resource references in the cache
-        std::unordered_map<HashMapStringKey, RefCntWeakPtr<ResType>> m_Map;
-    };
-
-    struct ResourceCache
-    {
-        NamedResourceCache<IPipelineResourceSignature> Sign;
-        NamedResourceCache<IRenderPass>                RenderPass;
-
-        NamedResourceCache<IPipelineState> GraphPSO;
-        NamedResourceCache<IPipelineState> CompPSO;
-        NamedResourceCache<IPipelineState> TilePSO;
-        NamedResourceCache<IPipelineState> RayTrPSO;
-    } m_Cache;
-
     struct ShaderDeviceInfo
     {
         std::mutex Mtx;
@@ -352,116 +312,59 @@ private:
     ShaderDeviceInfo& GetShaderDeviceInfo(DeviceType DevType, DynamicLinearAllocator& Allocator) noexcept(false);
 
     static BlockOffsetType GetBlockOffsetType(DeviceType DevType);
-    static DeviceType      GetArchiveDeviceType(const IRenderDevice* pDevice);
     static DeviceType      RenderDeviceTypeToArchiveDeviceType(RENDER_DEVICE_TYPE Type);
 
     static const char* ChunkTypeToResName(ChunkType Type);
-
-protected:
-    struct PRSData
-    {
-        DynamicLinearAllocator        Allocator;
-        const PRSDataHeader*          pHeader = nullptr;
-        PipelineResourceSignatureDesc Desc{};
-
-        static constexpr ChunkType ExpectedChunkType = ChunkType::ResourceSignature;
-
-        explicit PRSData(IMemoryAllocator& Allocator, Uint32 BlockSize = 1 << 10) :
-            Allocator{Allocator, BlockSize}
-        {}
-
-        bool Deserialize(const char* Name, Serializer<SerializerMode::Read>& Ser);
-    };
-
-private:
-    template <typename CreateInfoType>
-    struct PSOData;
-
-    struct RPData;
 
     template <typename ReourceDataType>
     bool LoadResourceData(const NameToArchiveRegionMap& NameToRegion,
                           const char*                   ResourceName,
                           ReourceDataType&              ResData) const;
 
-    template <typename HeaderType>
     SerializedData GetDeviceSpecificData(DeviceType              DevType,
-                                         const HeaderType&       Header,
+                                         const DataHeaderBase&   Header,
                                          DynamicLinearAllocator& Allocator,
-                                         const char*             ResTypeName);
-
-    template <typename CreateInfoType>
-    bool UnpackPSOSignatures(PSOData<CreateInfoType>& PSO, IRenderDevice* pDevice);
-
-    template <typename CreateInfoType>
-    bool UnpackPSORenderPass(PSOData<CreateInfoType>& PSO, IRenderDevice* pDevice) { return true; }
-
-    template <typename CreateInfoType>
-    bool UnpackPSOShaders(PSOData<CreateInfoType>& PSO, IRenderDevice* pDevice);
-
-    template <typename CreateInfoType>
-    void UnpackPipelineStateImpl(const PipelineStateUnpackInfo&      UnpackInfo,
-                                 IPipelineState**                    ppPSO,
-                                 const NameToArchiveRegionMap&       PSONameToRegion,
-                                 NamedResourceCache<IPipelineState>& PSOCache);
-
-protected:
-    template <typename RenderDeviceImplType, typename PRSSerializerType>
-    RefCntAutoPtr<IPipelineResourceSignature> UnpackResourceSignatureImpl(
-        const ResourceSignatureUnpackInfo& DeArchiveInfo,
-        bool                               IsImplicit);
-
-    virtual RefCntAutoPtr<IPipelineResourceSignature> UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo,
-                                                                              bool                               IsImplicit) = 0;
-
-    virtual RefCntAutoPtr<IShader> UnpackShader(const ShaderCreateInfo& ShaderCI,
-                                                IRenderDevice*          pDevice);
+                                         ChunkType               ExpectedChunkType);
 };
 
-template <typename RenderDeviceImplType, typename PRSSerializerType>
-RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveBase::UnpackResourceSignatureImpl(
-    const ResourceSignatureUnpackInfo& DeArchiveInfo,
-    bool                               IsImplicit)
+
+template <typename ReourceDataType>
+bool DeviceObjectArchiveBase::LoadResourceData(const NameToArchiveRegionMap& NameToRegion,
+                                               const char*                   ResourceName,
+                                               ReourceDataType&              ResData) const
 {
-    RefCntAutoPtr<IPipelineResourceSignature> pSignature;
-    // Do not reuse implicit signatures
-    if (!IsImplicit && m_Cache.Sign.Get(DeArchiveInfo.Name, pSignature.RawDblPtr()))
-        return pSignature;
-
-    PRSData PRS{GetRawAllocator()};
-    if (!LoadResourceData(m_ArchiveIndex.Sign, DeArchiveInfo.Name, PRS))
-        return {};
-
-    PRS.Desc.SRBAllocationGranularity = DeArchiveInfo.SRBAllocationGranularity;
-
-    const auto DevType = GetArchiveDeviceType(DeArchiveInfo.pDevice);
-    const auto Data    = GetDeviceSpecificData(DevType, *PRS.pHeader, PRS.Allocator, "Resource signature");
-    if (!Data)
-        return {};
-
-    Serializer<SerializerMode::Read> Ser{Data};
-
-    bool SpecialDesc = false;
-    Ser(SpecialDesc);
-    if (SpecialDesc)
+    auto it = NameToRegion.find(ResourceName);
+    if (it == NameToRegion.end())
     {
-        // The signature uses special description that differs from the common
-        const auto* Name = PRS.Desc.Name;
-        PRS.Desc         = {};
-        PRS.Deserialize(Name, Ser);
+        LOG_ERROR_MESSAGE(ChunkTypeToResName(ResData.ExpectedChunkType), " with name '", ResourceName, "' is not present in the archive");
+        return false;
+    }
+    VERIFY_EXPR(SafeStrEqual(ResourceName, it->first.GetStr()));
+    // Use string copy from the map
+    ResourceName = it->first.GetStr();
+
+    const auto& Region = it->second;
+    void*       pData  = ResData.Allocator.Allocate(Region.Size, DataPtrAlign);
+    if (!m_pArchive.RawPtr<IArchive>()->Read(Region.Offset, Region.Size, pData))
+    {
+        LOG_ERROR_MESSAGE("Failed to read ", ChunkTypeToResName(ResData.ExpectedChunkType), " with name '", ResourceName, "' data from the archive");
+        return false;
     }
 
-    typename PRSSerializerType::InternalDataType InternalData;
-    PRSSerializerType::SerializeInternalData(Ser, InternalData, &PRS.Allocator);
+    Serializer<SerializerMode::Read> Ser{SerializedData{pData, Region.Size}};
+
+    using HeaderType = typename std::remove_reference<decltype(*ResData.pHeader)>::type;
+    ResData.pHeader  = Ser.Cast<HeaderType>();
+    if (ResData.pHeader->Type != ResData.ExpectedChunkType)
+    {
+        LOG_ERROR_MESSAGE("Invalid chunk header: ", ChunkTypeToResName(ResData.pHeader->Type),
+                          "; expected: ", ChunkTypeToResName(ResData.ExpectedChunkType), ".");
+        return false;
+    }
+
+    auto Res = ResData.Deserialize(ResourceName, Ser);
     VERIFY_EXPR(Ser.IsEnded());
-
-    auto* pRenderDevice = ClassPtrCast<RenderDeviceImplType>(DeArchiveInfo.pDevice);
-    pRenderDevice->CreatePipelineResourceSignature(PRS.Desc, InternalData, &pSignature);
-
-    if (!IsImplicit)
-        m_Cache.Sign.Set(DeArchiveInfo.Name, pSignature.RawPtr());
-
-    return pSignature;
+    return Res;
 }
 
 } // namespace Diligent

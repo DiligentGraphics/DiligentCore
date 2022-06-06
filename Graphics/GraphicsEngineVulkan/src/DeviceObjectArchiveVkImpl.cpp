@@ -32,20 +32,6 @@
 namespace Diligent
 {
 
-DeviceObjectArchiveVkImpl::DeviceObjectArchiveVkImpl(IReferenceCounters* pRefCounters, IArchive* pSource) :
-    DeviceObjectArchiveBase{pRefCounters, pSource}
-{
-}
-
-DeviceObjectArchiveVkImpl::~DeviceObjectArchiveVkImpl()
-{
-}
-
-RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveVkImpl::UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, bool IsImplicit)
-{
-    return DeviceObjectArchiveBase::UnpackResourceSignatureImpl<RenderDeviceVkImpl, PRSSerializerVk<SerializerMode::Read>>(DeArchiveInfo, IsImplicit);
-}
-
 template <SerializerMode Mode>
 void PRSSerializerVk<Mode>::SerializeInternalData(
     Serializer<Mode>&                                   Ser,

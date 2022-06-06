@@ -28,6 +28,7 @@
 #include "RenderDeviceGLImpl.hpp"
 #include "DearchiverGLImpl.hpp"
 #include "DeviceObjectArchiveGLImpl.hpp"
+#include "PipelineResourceSignatureGLImpl.hpp"
 
 namespace Diligent
 {
@@ -37,24 +38,9 @@ DearchiverGLImpl::DearchiverGLImpl(IReferenceCounters* pRefCounters, const Dearc
 {
 }
 
-bool DearchiverGLImpl::LoadArchive(IArchive* pArchive)
+RefCntAutoPtr<IPipelineResourceSignature> DearchiverGLImpl::UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, bool IsImplicit)
 {
-    return LoadArchiveImpl<DeviceObjectArchiveGLImpl>(pArchive);
-}
-
-void DearchiverGLImpl::UnpackPipelineState(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState** ppPSO) const
-{
-    UnpackPipelineStateImpl<DeviceObjectArchiveGLImpl>(DeArchiveInfo, ppPSO);
-}
-
-void DearchiverGLImpl::UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature** ppSignature) const
-{
-    UnpackResourceSignatureImpl<DeviceObjectArchiveGLImpl>(DeArchiveInfo, ppSignature);
-}
-
-void DearchiverGLImpl::UnpackRenderPass(const RenderPassUnpackInfo& DeArchiveInfo, IRenderPass** ppRP) const
-{
-    UnpackRenderPassImpl<DeviceObjectArchiveGLImpl>(DeArchiveInfo, ppRP);
+    return DearchiverBase::UnpackResourceSignatureImpl<RenderDeviceGLImpl, PRSSerializerGL<SerializerMode::Read>>(DeArchiveInfo, IsImplicit);
 }
 
 } // namespace Diligent

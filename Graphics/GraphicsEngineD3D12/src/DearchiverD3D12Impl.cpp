@@ -28,6 +28,7 @@
 #include "RenderDeviceD3D12Impl.hpp"
 #include "DearchiverD3D12Impl.hpp"
 #include "DeviceObjectArchiveD3D12Impl.hpp"
+#include "PipelineResourceSignatureD3D12Impl.hpp"
 
 namespace Diligent
 {
@@ -37,24 +38,9 @@ DearchiverD3D12Impl::DearchiverD3D12Impl(IReferenceCounters* pRefCounters, const
 {
 }
 
-bool DearchiverD3D12Impl::LoadArchive(IArchive* pArchive)
+RefCntAutoPtr<IPipelineResourceSignature> DearchiverD3D12Impl::UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, bool IsImplicit)
 {
-    return LoadArchiveImpl<DeviceObjectArchiveD3D12Impl>(pArchive);
-}
-
-void DearchiverD3D12Impl::UnpackPipelineState(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState** ppPSO) const
-{
-    UnpackPipelineStateImpl<DeviceObjectArchiveD3D12Impl>(DeArchiveInfo, ppPSO);
-}
-
-void DearchiverD3D12Impl::UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature** ppSignature) const
-{
-    UnpackResourceSignatureImpl<DeviceObjectArchiveD3D12Impl>(DeArchiveInfo, ppSignature);
-}
-
-void DearchiverD3D12Impl::UnpackRenderPass(const RenderPassUnpackInfo& DeArchiveInfo, IRenderPass** ppRP) const
-{
-    UnpackRenderPassImpl<DeviceObjectArchiveD3D12Impl>(DeArchiveInfo, ppRP);
+    return DearchiverBase::UnpackResourceSignatureImpl<RenderDeviceD3D12Impl, PRSSerializerD3D12<SerializerMode::Read>>(DeArchiveInfo, IsImplicit);
 }
 
 } // namespace Diligent

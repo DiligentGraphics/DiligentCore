@@ -30,6 +30,8 @@
 /// Implementation of the Diligent::DearchiverBase class
 
 #include "Dearchiver.h"
+#include "RenderDevice.h"
+
 #include "ObjectBase.hpp"
 #include "EngineMemory.h"
 #include "RefCntAutoPtr.hpp"
@@ -53,98 +55,166 @@ public:
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_Dearchiver, TObjectBase)
 
-    virtual void DILIGENT_CALL_TYPE Reset() override final
-    {
-        m_pArchive.Release();
-    }
+    /// Implementation of IDearchiver::LoadArchive().
+    virtual bool DILIGENT_CALL_TYPE LoadArchive(IArchive* pArchive) override final;
+
+    /// Implementation of IDearchiver::UnpackPipelineState().
+    virtual void DILIGENT_CALL_TYPE UnpackPipelineState(const PipelineStateUnpackInfo& DeArchiveInfo,
+                                                        IPipelineState**               ppPSO) override final;
+
+    /// Implementation of IDearchiver::UnpackResourceSignature().
+    virtual void DILIGENT_CALL_TYPE UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo,
+                                                            IPipelineResourceSignature**       ppSignature) override final;
+
+    /// Implementation of IDearchiver::UnpackRenderPass().
+    virtual void DILIGENT_CALL_TYPE UnpackRenderPass(const RenderPassUnpackInfo& DeArchiveInfo,
+                                                     IRenderPass**               ppRP) override final;
+
+    /// Implementation of IDearchiver::Reset().
+    virtual void DILIGENT_CALL_TYPE Reset() override final;
 
 protected:
-    template <typename DeviceObjectArchiveImplType>
-    bool LoadArchiveImpl(IArchive* pArchive)
-    {
-        if (pArchive == nullptr)
-            return false;
+    template <typename RenderDeviceImplType, typename PRSSerializerType>
+    RefCntAutoPtr<IPipelineResourceSignature> UnpackResourceSignatureImpl(
+        const ResourceSignatureUnpackInfo& DeArchiveInfo,
+        bool                               IsImplicit);
 
-        try
-        {
-            m_pArchive = NEW_RC_OBJ(GetRawAllocator(), "Device object archive instance", DeviceObjectArchiveImplType)(pArchive);
-            return true;
-        }
-        catch (...)
-        {
-            LOG_ERROR("Failed to create the device object archive");
-            return false;
-        }
-    }
+    virtual RefCntAutoPtr<IPipelineResourceSignature> UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo,
+                                                                              bool                               IsImplicit) = 0;
 
-    template <typename DeviceObjectArchiveImplType>
-    void UnpackPipelineStateImpl(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState** ppPSO) const
-    {
-        if (!VerifyPipelineStateUnpackInfo(DeArchiveInfo, ppPSO))
-            return;
-
-        *ppPSO = nullptr;
-
-        auto* pArchiveImpl = m_pArchive.RawPtr<DeviceObjectArchiveImplType>();
-        switch (DeArchiveInfo.PipelineType)
-        {
-            case PIPELINE_TYPE_GRAPHICS:
-            case PIPELINE_TYPE_MESH:
-                pArchiveImpl->UnpackGraphicsPSO(DeArchiveInfo, ppPSO);
-                break;
-
-            case PIPELINE_TYPE_COMPUTE:
-                pArchiveImpl->UnpackComputePSO(DeArchiveInfo, ppPSO);
-                break;
-
-            case PIPELINE_TYPE_RAY_TRACING:
-                pArchiveImpl->UnpackRayTracingPSO(DeArchiveInfo, ppPSO);
-                break;
-
-            case PIPELINE_TYPE_TILE:
-                pArchiveImpl->UnpackTilePSO(DeArchiveInfo, ppPSO);
-                break;
-
-            case PIPELINE_TYPE_INVALID:
-            default:
-                LOG_ERROR_MESSAGE("Unsupported pipeline type");
-                return;
-        }
-    }
-
-    template <typename DeviceObjectArchiveImplType>
-    void UnpackResourceSignatureImpl(const ResourceSignatureUnpackInfo& DeArchiveInfo,
-                                     IPipelineResourceSignature**       ppSignature) const
-    {
-        if (!VerifyResourceSignatureUnpackInfo(DeArchiveInfo, ppSignature))
-            return;
-
-        *ppSignature = nullptr;
-
-        auto* pArchiveImpl = m_pArchive.RawPtr<DeviceObjectArchiveImplType>();
-        auto  pSignature   = pArchiveImpl->UnpackResourceSignature(DeArchiveInfo, false /*IsImplicit*/);
-        *ppSignature       = pSignature.Detach();
-    }
-
-    template <typename DeviceObjectArchiveImplType>
-    void UnpackRenderPassImpl(const RenderPassUnpackInfo& DeArchiveInfo, IRenderPass** ppRP) const
-    {
-        if (!VerifyRenderPassUnpackInfo(DeArchiveInfo, ppRP))
-            return;
-
-        *ppRP = nullptr;
-
-        auto* pArchiveImpl = m_pArchive.RawPtr<DeviceObjectArchiveImplType>();
-        pArchiveImpl->UnpackRenderPass(DeArchiveInfo, ppRP);
-    }
-
-
-    bool VerifyPipelineStateUnpackInfo(const PipelineStateUnpackInfo& DeArchiveInfo, IPipelineState** ppPSO) const;
-    bool VerifyResourceSignatureUnpackInfo(const ResourceSignatureUnpackInfo& DeArchiveInfo, IPipelineResourceSignature** ppSignature) const;
-    bool VerifyRenderPassUnpackInfo(const RenderPassUnpackInfo& DeArchiveInfo, IRenderPass** ppRP) const;
+    virtual RefCntAutoPtr<IShader> UnpackShader(const ShaderCreateInfo& ShaderCI,
+                                                IRenderDevice*          pDevice);
 
 protected:
+    using PSODataHeader          = DeviceObjectArchiveBase::PSODataHeader;
+    using PRSDataHeader          = DeviceObjectArchiveBase::PRSDataHeader;
+    using ChunkType              = DeviceObjectArchiveBase::ChunkType;
+    using NameToArchiveRegionMap = DeviceObjectArchiveBase::NameToArchiveRegionMap;
+    using DeviceType             = DeviceObjectArchiveBase::DeviceType;
+    using SerializedPSOAuxData   = DeviceObjectArchiveBase::SerializedPSOAuxData;
+    using TPRSNames              = DeviceObjectArchiveBase::TPRSNames;
+    using RPDataHeader           = DeviceObjectArchiveBase::RPDataHeader;
+    using ArchiveRegion          = DeviceObjectArchiveBase::ArchiveRegion;
+
+    template <typename ResType>
+    class NamedResourceCache
+    {
+    public:
+        NamedResourceCache() noexcept {};
+
+        NamedResourceCache(const NamedResourceCache&) = delete;
+        NamedResourceCache& operator=(const NamedResourceCache&) = delete;
+        NamedResourceCache(NamedResourceCache&&)                 = default;
+        NamedResourceCache& operator=(NamedResourceCache&&) = default;
+
+        bool Get(const char* Name, ResType** ppResource);
+        void Set(const char* Name, ResType* pResource);
+
+        void Clear() { m_Map.clear(); }
+
+    private:
+        std::mutex m_Mtx;
+        // Keep weak resource references in the cache
+        std::unordered_map<HashMapStringKey, RefCntWeakPtr<ResType>> m_Map;
+    };
+
+    struct ResourceCache
+    {
+        NamedResourceCache<IPipelineResourceSignature> Sign;
+        NamedResourceCache<IRenderPass>                RenderPass;
+
+        NamedResourceCache<IPipelineState> GraphPSO;
+        NamedResourceCache<IPipelineState> CompPSO;
+        NamedResourceCache<IPipelineState> TilePSO;
+        NamedResourceCache<IPipelineState> RayTrPSO;
+    } m_Cache;
+
+    struct PRSData
+    {
+        DynamicLinearAllocator        Allocator;
+        const PRSDataHeader*          pHeader = nullptr;
+        PipelineResourceSignatureDesc Desc{};
+
+        static constexpr ChunkType ExpectedChunkType = ChunkType::ResourceSignature;
+
+        explicit PRSData(IMemoryAllocator& Allocator, Uint32 BlockSize = 1 << 10) :
+            Allocator{Allocator, BlockSize}
+        {}
+
+        bool Deserialize(const char* Name, Serializer<SerializerMode::Read>& Ser);
+    };
+
+    static DeviceType GetArchiveDeviceType(const IRenderDevice* pDevice);
+
+private:
+    template <typename CreateInfoType>
+    struct PSOData;
+
+    struct RPData;
+
+    template <typename CreateInfoType>
+    bool UnpackPSOSignatures(PSOData<CreateInfoType>& PSO, IRenderDevice* pDevice);
+
+    template <typename CreateInfoType>
+    bool UnpackPSORenderPass(PSOData<CreateInfoType>& PSO, IRenderDevice* pDevice) { return true; }
+
+    template <typename CreateInfoType>
+    bool UnpackPSOShaders(PSOData<CreateInfoType>& PSO, IRenderDevice* pDevice);
+
+    template <typename CreateInfoType>
+    void UnpackPipelineStateImpl(const PipelineStateUnpackInfo&      UnpackInfo,
+                                 IPipelineState**                    ppPSO,
+                                 const NameToArchiveRegionMap&       PSONameToRegion,
+                                 NamedResourceCache<IPipelineState>& PSOCache);
+
     RefCntAutoPtr<DeviceObjectArchiveBase> m_pArchive;
 };
+
+
+template <typename RenderDeviceImplType, typename PRSSerializerType>
+RefCntAutoPtr<IPipelineResourceSignature> DearchiverBase::UnpackResourceSignatureImpl(
+    const ResourceSignatureUnpackInfo& DeArchiveInfo,
+    bool                               IsImplicit)
+{
+    RefCntAutoPtr<IPipelineResourceSignature> pSignature;
+    // Do not reuse implicit signatures
+    if (!IsImplicit && m_Cache.Sign.Get(DeArchiveInfo.Name, pSignature.RawDblPtr()))
+        return pSignature;
+
+    PRSData PRS{GetRawAllocator()};
+    if (!m_pArchive->LoadResourceData(m_pArchive->m_ArchiveIndex.Sign, DeArchiveInfo.Name, PRS))
+        return {};
+
+    PRS.Desc.SRBAllocationGranularity = DeArchiveInfo.SRBAllocationGranularity;
+
+    const auto DevType = GetArchiveDeviceType(DeArchiveInfo.pDevice);
+    const auto Data    = m_pArchive->GetDeviceSpecificData(DevType, *PRS.pHeader, PRS.Allocator, ChunkType::ResourceSignature);
+    if (!Data)
+        return {};
+
+    Serializer<SerializerMode::Read> Ser{Data};
+
+    bool SpecialDesc = false;
+    Ser(SpecialDesc);
+    if (SpecialDesc)
+    {
+        // The signature uses special description that differs from the common
+        const auto* Name = PRS.Desc.Name;
+        PRS.Desc         = {};
+        PRS.Deserialize(Name, Ser);
+    }
+
+    typename PRSSerializerType::InternalDataType InternalData;
+    PRSSerializerType::SerializeInternalData(Ser, InternalData, &PRS.Allocator);
+    VERIFY_EXPR(Ser.IsEnded());
+
+    auto* pRenderDevice = ClassPtrCast<RenderDeviceImplType>(DeArchiveInfo.pDevice);
+    pRenderDevice->CreatePipelineResourceSignature(PRS.Desc, InternalData, &pSignature);
+
+    if (!IsImplicit)
+        m_Cache.Sign.Set(DeArchiveInfo.Name, pSignature.RawPtr());
+
+    return pSignature;
+}
 
 } // namespace Diligent

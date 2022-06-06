@@ -29,24 +29,11 @@
 /// \file
 /// Declaration of Diligent::DeviceObjectArchiveVkImpl class
 
-#include "Dearchiver.h"
-
 #include "EngineVkImplTraits.hpp"
-#include "DeviceObjectArchiveBase.hpp"
 #include "PSOSerializer.hpp"
 
 namespace Diligent
 {
-
-/// Device object archive object implementation in Vulkan backend.
-class DeviceObjectArchiveVkImpl final : public DeviceObjectArchiveBase
-{
-public:
-    DeviceObjectArchiveVkImpl(IReferenceCounters* pRefCounters, IArchive* pSource);
-    ~DeviceObjectArchiveVkImpl();
-
-    RefCntAutoPtr<IPipelineResourceSignature> UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, bool IsImplicit) override final;
-};
 
 template <SerializerMode Mode>
 struct PRSSerializerVk : PRSSerializer<Mode>

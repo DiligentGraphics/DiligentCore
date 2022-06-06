@@ -32,20 +32,6 @@
 namespace Diligent
 {
 
-DeviceObjectArchiveD3D12Impl::DeviceObjectArchiveD3D12Impl(IReferenceCounters* pRefCounters, IArchive* pSource) :
-    DeviceObjectArchiveBase{pRefCounters, pSource}
-{
-}
-
-DeviceObjectArchiveD3D12Impl::~DeviceObjectArchiveD3D12Impl()
-{
-}
-
-RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveD3D12Impl::UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, bool IsImplicit)
-{
-    return DeviceObjectArchiveBase::UnpackResourceSignatureImpl<RenderDeviceD3D12Impl, PRSSerializerD3D12<SerializerMode::Read>>(DeArchiveInfo, IsImplicit);
-}
-
 template <SerializerMode Mode>
 void PRSSerializerD3D12<Mode>::SerializeInternalData(
     Serializer<Mode>&                                      Ser,

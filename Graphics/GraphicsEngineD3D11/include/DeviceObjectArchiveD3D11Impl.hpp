@@ -29,24 +29,11 @@
 /// \file
 /// Declaration of Diligent::DeviceObjectArchiveD3D11Impl class
 
-#include "Dearchiver.h"
-
 #include "EngineD3D11ImplTraits.hpp"
-#include "DeviceObjectArchiveBase.hpp"
 #include "PSOSerializer.hpp"
 
 namespace Diligent
 {
-
-/// Device object archive object implementation in Direct3D11 backend.
-class DeviceObjectArchiveD3D11Impl final : public DeviceObjectArchiveBase
-{
-public:
-    DeviceObjectArchiveD3D11Impl(IReferenceCounters* pRefCounters, IArchive* pSource);
-    ~DeviceObjectArchiveD3D11Impl();
-
-    RefCntAutoPtr<IPipelineResourceSignature> UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, bool IsImplicit) override final;
-};
 
 template <SerializerMode Mode>
 struct PRSSerializerD3D11 : PRSSerializer<Mode>

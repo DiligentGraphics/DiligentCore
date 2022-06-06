@@ -212,7 +212,7 @@ DILIGENT_BEGIN_INTERFACE(IDearchiver, IObject)
     /// \note   Resource signatures used by the PSO will be unpacked from the same archive.
     VIRTUAL void METHOD(UnpackPipelineState)(THIS_
                                              const PipelineStateUnpackInfo REF UnpackInfo,
-                                             IPipelineState**                  ppPSO) CONST PURE;
+                                             IPipelineState**                  ppPSO) PURE;
 
     /// Unpacks resource signature from the device object archive.
 
@@ -223,7 +223,7 @@ DILIGENT_BEGIN_INTERFACE(IDearchiver, IObject)
     ///                            one reference.
     VIRTUAL void METHOD(UnpackResourceSignature)(THIS_
                                                  const ResourceSignatureUnpackInfo REF UnpackInfo,
-                                                 IPipelineResourceSignature**          ppSignature) CONST PURE;
+                                                 IPipelineResourceSignature**          ppSignature) PURE;
 
     /// Unpacks render pass from the device object archive.
 
@@ -234,7 +234,7 @@ DILIGENT_BEGIN_INTERFACE(IDearchiver, IObject)
     ///                            one reference.
     VIRTUAL void METHOD(UnpackRenderPass)(THIS_
                                           const RenderPassUnpackInfo REF UnpackInfo,
-                                          IRenderPass**                  ppRP) CONST PURE;
+                                          IRenderPass**                  ppRP) PURE;
 
     /// Resets the dearchiver state and releases all loaded objects.
     VIRTUAL void METHOD(Reset)(THIS) PURE;

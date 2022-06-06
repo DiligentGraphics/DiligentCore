@@ -32,20 +32,6 @@
 namespace Diligent
 {
 
-DeviceObjectArchiveGLImpl::DeviceObjectArchiveGLImpl(IReferenceCounters* pRefCounters, IArchive* pSource) :
-    DeviceObjectArchiveBase{pRefCounters, pSource}
-{
-}
-
-DeviceObjectArchiveGLImpl::~DeviceObjectArchiveGLImpl()
-{
-}
-
-RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveGLImpl::UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo, bool IsImplicit)
-{
-    return DeviceObjectArchiveBase::UnpackResourceSignatureImpl<RenderDeviceGLImpl, PRSSerializerGL<SerializerMode::Read>>(DeArchiveInfo, IsImplicit);
-}
-
 template <SerializerMode Mode>
 void PRSSerializerGL<Mode>::SerializeInternalData(
     Serializer<Mode>&                                   Ser,
