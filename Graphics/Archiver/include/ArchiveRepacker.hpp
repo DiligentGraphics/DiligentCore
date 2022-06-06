@@ -45,20 +45,21 @@ public:
     void Print() const;
 
 private:
-    using ArchiveHeader     = DeviceObjectArchiveBase::ArchiveHeader;
-    using BlockOffsetType   = DeviceObjectArchiveBase::BlockOffsetType;
-    using ChunkHeader       = DeviceObjectArchiveBase::ChunkHeader;
-    using ChunkType         = DeviceObjectArchiveBase::ChunkType;
-    using FileOffsetAndSize = DeviceObjectArchiveBase::ArchiveRegion;
-    using DataHeaderBase    = DeviceObjectArchiveBase::DataHeaderBase;
-    using RPDataHeader      = DeviceObjectArchiveBase::RPDataHeader;
-    using ShadersDataHeader = DeviceObjectArchiveBase::ShadersDataHeader;
-
-    using NameOffsetMap = std::unordered_map<HashMapStringKey, FileOffsetAndSize>;
+    using ArchiveHeader          = DeviceObjectArchiveBase::ArchiveHeader;
+    using BlockOffsetType        = DeviceObjectArchiveBase::BlockOffsetType;
+    using ChunkHeader            = DeviceObjectArchiveBase::ChunkHeader;
+    using ChunkType              = DeviceObjectArchiveBase::ChunkType;
+    using FileOffsetAndSize      = DeviceObjectArchiveBase::ArchiveRegion;
+    using DataHeaderBase         = DeviceObjectArchiveBase::DataHeaderBase;
+    using RPDataHeader           = DeviceObjectArchiveBase::RPDataHeader;
+    using ShadersDataHeader      = DeviceObjectArchiveBase::ShadersDataHeader;
+    using NameToArchiveRegionMap = DeviceObjectArchiveBase::NameToArchiveRegionMap;
 
     static constexpr auto HeaderMagicNumber = DeviceObjectArchiveBase::HeaderMagicNumber;
     static constexpr auto HeaderVersion     = DeviceObjectArchiveBase::HeaderVersion;
     static constexpr auto InvalidOffset     = DeviceObjectArchiveBase::DataHeaderBase::InvalidOffset;
+
+    DeviceObjectArchiveBase::ArchiveIndex m_Index;
 
     struct ArchiveBlock
     {
@@ -86,15 +87,6 @@ private:
 
     ArchiveBlock         m_CommonData;
     DeviceSpecificBlocks m_DeviceSpecific;
-
-    std::vector<ChunkHeader> m_Chunks;
-
-    NameOffsetMap m_PRSMap;
-    NameOffsetMap m_GraphicsPSOMap;
-    NameOffsetMap m_ComputePSOMap;
-    NameOffsetMap m_TilePSOMap;
-    NameOffsetMap m_RayTracingPSOMap;
-    NameOffsetMap m_RenderPassMap;
 };
 
 } // namespace Diligent

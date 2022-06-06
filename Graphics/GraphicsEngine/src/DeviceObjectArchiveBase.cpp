@@ -116,17 +116,99 @@ void DeviceObjectArchiveBase::NamedResourceCache<ResType>::Set(const char* Name,
 // Instantiation is required by UnpackResourceSignatureImpl
 template class DeviceObjectArchiveBase::NamedResourceCache<IPipelineResourceSignature>;
 
-DeviceObjectArchiveBase::DeviceObjectArchiveBase(IReferenceCounters* pRefCounters, IArchive* pArchive) :
-    TObjectBase{pRefCounters},
-    m_pArchive{pArchive}
+
+void DeviceObjectArchiveBase::ReadNamedResourceRegions(IArchive*               pArchive,
+                                                       const ChunkHeader&      Chunk,
+                                                       NameToArchiveRegionMap& NameToRegion) noexcept(false)
 {
-    if (m_pArchive == nullptr)
-        LOG_ERROR_AND_THROW("pSource must not be null");
+    VERIFY_EXPR(Chunk.Type == ChunkType::ResourceSignature ||
+                Chunk.Type == ChunkType::GraphicsPipelineStates ||
+                Chunk.Type == ChunkType::ComputePipelineStates ||
+                Chunk.Type == ChunkType::RayTracingPipelineStates ||
+                Chunk.Type == ChunkType::TilePipelineStates ||
+                Chunk.Type == ChunkType::RenderPass);
+
+    std::vector<Uint8> Data(Chunk.Size);
+    if (!pArchive->Read(Chunk.Offset, Data.size(), Data.data()))
+    {
+        LOG_ERROR_AND_THROW("Failed to read resource list from archive");
+    }
+
+    FixedLinearAllocator InPlaceAlloc{Data.data(), Data.size()};
+
+    const auto& Header          = *InPlaceAlloc.Allocate<NamedResourceArrayHeader>();
+    const auto* NameLengthArray = InPlaceAlloc.Allocate<Uint32>(Header.Count);
+    const auto* DataSizeArray   = InPlaceAlloc.Allocate<Uint32>(Header.Count);
+    const auto* DataOffsetArray = InPlaceAlloc.Allocate<Uint32>(Header.Count);
+
+    // Read names
+    for (Uint32 i = 0; i < Header.Count; ++i)
+    {
+        if (InPlaceAlloc.GetCurrentSize() + NameLengthArray[i] > Data.size())
+        {
+            LOG_ERROR_AND_THROW("Failed to read archive data");
+        }
+        if (size_t{DataOffsetArray[i]} + size_t{DataSizeArray[i]} > pArchive->GetSize())
+        {
+            LOG_ERROR_AND_THROW("Failed to read archive data");
+        }
+        const auto* Name = InPlaceAlloc.Allocate<char>(NameLengthArray[i]);
+        VERIFY_EXPR(strlen(Name) + 1 == NameLengthArray[i]);
+
+        // Make string copy
+        bool Inserted = NameToRegion.emplace(HashMapStringKey{Name, true}, ArchiveRegion{DataOffsetArray[i], DataSizeArray[i]}).second;
+        VERIFY(Inserted, "Each resource name in the archive map must be unique");
+    }
+}
+
+void DeviceObjectArchiveBase::ReadArchiveDebugInfo(IArchive* pArchive, const ChunkHeader& Chunk, ArchiveDebugInfo& DebugInfo) noexcept(false)
+{
+    VERIFY_EXPR(Chunk.Type == ChunkType::ArchiveDebugInfo);
+
+    SerializedData Data{Chunk.Size, GetRawAllocator()};
+    if (!pArchive->Read(Chunk.Offset, Data.Size(), Data.Ptr()))
+    {
+        LOG_ERROR_AND_THROW("Failed to read archive debug info");
+    }
+
+    Serializer<SerializerMode::Read> Ser{Data};
+
+    Ser(DebugInfo.APIVersion);
+
+    const char* GitHash = nullptr;
+    Ser(GitHash);
+
+    VERIFY_EXPR(Ser.IsEnded());
+    DebugInfo.GitHash = String{GitHash};
+
+    if (DebugInfo.APIVersion != DILIGENT_API_VERSION)
+        LOG_INFO_MESSAGE("Archive was created with Engine API version (", DebugInfo.APIVersion, ") but is used with (", DILIGENT_API_VERSION, ")");
+#ifdef DILIGENT_CORE_COMMIT_HASH
+    if (DebugInfo.GitHash != DILIGENT_CORE_COMMIT_HASH)
+        LOG_INFO_MESSAGE("Archive was built with Diligent Core git hash '", DebugInfo.GitHash, "' but is used with '", DILIGENT_CORE_COMMIT_HASH, "'.");
+#endif
+}
+
+void DeviceObjectArchiveBase::ReadShadersHeader(IArchive* pArchive, const ChunkHeader& Chunk, ShadersDataHeader& ShadersHeader) noexcept(false)
+{
+    VERIFY_EXPR(Chunk.Type == ChunkType::Shaders);
+    VERIFY_EXPR(Chunk.Size == sizeof(ShadersHeader));
+
+    if (!pArchive->Read(Chunk.Offset, sizeof(ShadersHeader), &ShadersHeader))
+    {
+        LOG_ERROR_AND_THROW("Failed to read shaders data header from the archive");
+    }
+}
+
+void DeviceObjectArchiveBase::ReadArchiveIndex(IArchive* pArchive, ArchiveIndex& Index) noexcept(false)
+{
+    if (pArchive == nullptr)
+        LOG_ERROR_AND_THROW("pArchive must not be null");
 
     // Read header
     ArchiveHeader Header{};
     {
-        if (!m_pArchive->Read(0, sizeof(Header), &Header))
+        if (!pArchive->Read(0, sizeof(Header), &Header))
         {
             LOG_ERROR_AND_THROW("Failed to read archive header");
         }
@@ -139,29 +221,18 @@ DeviceObjectArchiveBase::DeviceObjectArchiveBase(IReferenceCounters* pRefCounter
             LOG_ERROR_AND_THROW("Archive version (", Header.Version, ") is not supported; expected version: ", Uint32{HeaderVersion}, ".");
         }
 
-        m_BaseOffsets = Header.BlockBaseOffsets;
+        Index.BaseOffsets = Header.BlockBaseOffsets;
     }
 
     // Read chunks
-    std::vector<ChunkHeader> Chunks{Header.NumChunks};
-    if (!m_pArchive->Read(sizeof(Header), sizeof(Chunks[0]) * Chunks.size(), Chunks.data()))
+    Index.Chunks.resize(Header.NumChunks);
+    if (!pArchive->Read(sizeof(Header), sizeof(Index.Chunks[0]) * Index.Chunks.size(), Index.Chunks.data()))
     {
         LOG_ERROR_AND_THROW("Failed to read chunk headers");
     }
 
-    auto ReadResourceRegions = [this](const ChunkHeader& Chunk, NameToArchiveRegionMap& NameToRegion) {
-        ReadNamedResources(
-            m_pArchive, Chunk,
-            [&NameToRegion](const char* Name, Uint32 Offset, Uint32 Size) //
-            {
-                // No need to make string copy
-                bool Inserted = NameToRegion.emplace(HashMapStringKey{Name, true}, ArchiveRegion{Offset, Size}).second;
-                DEV_CHECK_ERR(Inserted, "Each resource name in the archive map must be unique");
-            });
-    };
-
     std::bitset<static_cast<size_t>(ChunkType::Count)> ProcessedBits{};
-    for (const auto& Chunk : Chunks)
+    for (const auto& Chunk : Index.Chunks)
     {
         if (ProcessedBits[static_cast<size_t>(Chunk.Type)])
         {
@@ -173,19 +244,26 @@ DeviceObjectArchiveBase::DeviceObjectArchiveBase(IReferenceCounters* pRefCounter
         switch (Chunk.Type)
         {
             // clang-format off
-            case ChunkType::ArchiveDebugInfo:         ReadArchiveDebugInfo(Chunk);                            break;
-            case ChunkType::ResourceSignature:        ReadResourceRegions (Chunk, m_ArchiveIndex.Sign);       break;
-            case ChunkType::GraphicsPipelineStates:   ReadResourceRegions (Chunk, m_ArchiveIndex.GraphPSO);   break;
-            case ChunkType::ComputePipelineStates:    ReadResourceRegions (Chunk, m_ArchiveIndex.CompPSO);    break;
-            case ChunkType::RayTracingPipelineStates: ReadResourceRegions (Chunk, m_ArchiveIndex.RayTrPSO);   break;
-            case ChunkType::TilePipelineStates:       ReadResourceRegions (Chunk, m_ArchiveIndex.TilePSO);    break;
-            case ChunkType::RenderPass:               ReadResourceRegions (Chunk, m_ArchiveIndex.RenderPass); break;
-            case ChunkType::Shaders:                  ReadShadersHeader   (Chunk);                            break;
+            case ChunkType::ArchiveDebugInfo:         ReadArchiveDebugInfo    (pArchive, Chunk, Index.DebugInfo);  break;
+            case ChunkType::ResourceSignature:        ReadNamedResourceRegions(pArchive, Chunk, Index.Sign);       break;
+            case ChunkType::GraphicsPipelineStates:   ReadNamedResourceRegions(pArchive, Chunk, Index.GraphPSO);   break;
+            case ChunkType::ComputePipelineStates:    ReadNamedResourceRegions(pArchive, Chunk, Index.CompPSO);    break;
+            case ChunkType::RayTracingPipelineStates: ReadNamedResourceRegions(pArchive, Chunk, Index.RayTrPSO);   break;
+            case ChunkType::TilePipelineStates:       ReadNamedResourceRegions(pArchive, Chunk, Index.TilePSO);    break;
+            case ChunkType::RenderPass:               ReadNamedResourceRegions(pArchive, Chunk, Index.RenderPass); break;
+            case ChunkType::Shaders:                  ReadShadersHeader       (pArchive, Chunk, Index.Shaders);    break;
             // clang-format on
             default:
                 LOG_ERROR_AND_THROW("Unknown chunk type (", static_cast<Uint32>(Chunk.Type), ")");
         }
     }
+}
+
+DeviceObjectArchiveBase::DeviceObjectArchiveBase(IReferenceCounters* pRefCounters, IArchive* pArchive) noexcept(false) :
+    TObjectBase{pRefCounters},
+    m_pArchive{pArchive}
+{
+    ReadArchiveIndex(pArchive, m_ArchiveIndex);
 }
 
 DeviceObjectArchiveBase::DeviceType DeviceObjectArchiveBase::RenderDeviceTypeToArchiveDeviceType(RENDER_DEVICE_TYPE Type)
@@ -258,44 +336,6 @@ const char* DeviceObjectArchiveBase::ChunkTypeToResName(ChunkType Type)
     }
 }
 
-void DeviceObjectArchiveBase::ReadArchiveDebugInfo(const ChunkHeader& Chunk) noexcept(false)
-{
-    VERIFY_EXPR(Chunk.Type == ChunkType::ArchiveDebugInfo);
-
-    SerializedData Data{Chunk.Size, GetRawAllocator()};
-    if (!m_pArchive->Read(Chunk.Offset, Data.Size(), Data.Ptr()))
-    {
-        LOG_ERROR_AND_THROW("Failed to read archive debug info");
-    }
-
-    Serializer<SerializerMode::Read> Ser{Data};
-
-    Ser(m_DebugInfo.APIVersion);
-
-    const char* GitHash = nullptr;
-    Ser(GitHash);
-
-    VERIFY_EXPR(Ser.IsEnded());
-    m_DebugInfo.GitHash = String{GitHash};
-
-    if (m_DebugInfo.APIVersion != DILIGENT_API_VERSION)
-        LOG_INFO_MESSAGE("Archive was created with Engine API version (", m_DebugInfo.APIVersion, ") but is used with (", DILIGENT_API_VERSION, ")");
-#ifdef DILIGENT_CORE_COMMIT_HASH
-    if (m_DebugInfo.GitHash != DILIGENT_CORE_COMMIT_HASH)
-        LOG_INFO_MESSAGE("Archive was built with Diligent Core git hash '", m_DebugInfo.GitHash, "' but is used with '", DILIGENT_CORE_COMMIT_HASH, "'.");
-#endif
-}
-
-void DeviceObjectArchiveBase::ReadShadersHeader(const ChunkHeader& Chunk) noexcept(false)
-{
-    VERIFY_EXPR(Chunk.Type == ChunkType::Shaders);
-    VERIFY_EXPR(Chunk.Size == sizeof(m_ShadersHeader));
-
-    if (!m_pArchive->Read(Chunk.Offset, sizeof(m_ShadersHeader), &m_ShadersHeader))
-    {
-        LOG_ERROR_AND_THROW("Failed to read indexed resources info from the archive");
-    }
-}
 
 DeviceObjectArchiveBase::ShaderDeviceInfo& DeviceObjectArchiveBase::GetShaderDeviceInfo(DeviceType DevType, DynamicLinearAllocator& Allocator) noexcept(false)
 {
@@ -307,7 +347,7 @@ DeviceObjectArchiveBase::ShaderDeviceInfo& DeviceObjectArchiveBase::GetShaderDev
             return ShaderInfo;
     }
 
-    if (const auto ShaderData = GetDeviceSpecificData(DevType, m_ShadersHeader, Allocator, "Shader list"))
+    if (const auto ShaderData = GetDeviceSpecificData(DevType, m_ArchiveIndex.Shaders, Allocator, "Shader list"))
     {
         VERIFY_EXPR(ShaderData.Size() % sizeof(ArchiveRegion) == 0);
         const size_t Count = ShaderData.Size() / sizeof(ArchiveRegion);
@@ -376,7 +416,7 @@ SerializedData DeviceObjectArchiveBase::GetDeviceSpecificData(DeviceType        
                                                               const char*             ResTypeName)
 {
     const auto   BlockType   = GetBlockOffsetType(DevType);
-    const Uint64 BaseOffset  = m_BaseOffsets[static_cast<size_t>(BlockType)];
+    const Uint64 BaseOffset  = m_ArchiveIndex.BaseOffsets[static_cast<size_t>(BlockType)];
     const auto   ArchiveSize = m_pArchive->GetSize();
     if (BaseOffset > ArchiveSize)
     {
@@ -645,7 +685,7 @@ bool DeviceObjectArchiveBase::UnpackPSOShaders(PSOData<CreateInfoType>& PSO,
     if (!ShaderData)
         return false;
 
-    const Uint64 BaseOffset = m_BaseOffsets[static_cast<size_t>(GetBlockOffsetType(DevType))];
+    const Uint64 BaseOffset = m_ArchiveIndex.BaseOffsets[static_cast<size_t>(GetBlockOffsetType(DevType))];
     if (BaseOffset > m_pArchive->GetSize())
     {
         LOG_ERROR_MESSAGE("Required block does not exist in archive");

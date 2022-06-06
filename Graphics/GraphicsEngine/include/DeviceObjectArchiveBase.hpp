@@ -93,7 +93,7 @@ public:
     /// \param pRefCounters - Reference counters object that controls the lifetime of this device object archive.
     /// \param pArchive     - Source data that this archive will be created from.
     DeviceObjectArchiveBase(IReferenceCounters* pRefCounters,
-                            IArchive*           pArchive);
+                            IArchive*           pArchive) noexcept(false);
 
     void UnpackGraphicsPSO(const PipelineStateUnpackInfo& UnpackInfo, IPipelineState** ppPSO);
     void UnpackComputePSO(const PipelineStateUnpackInfo& UnpackInfo, IPipelineState** ppPSO);
@@ -277,16 +277,30 @@ private:
 
     using NameToArchiveRegionMap = std::unordered_map<HashMapStringKey, ArchiveRegion>;
 
+    struct ArchiveDebugInfo
+    {
+        String GitHash;
+        Uint32 APIVersion = 0;
+    };
+
     struct ArchiveIndex
     {
+        TBlockBaseOffsets BaseOffsets;
+        ArchiveDebugInfo  DebugInfo;
+
+        std::vector<ChunkHeader> Chunks;
+
         NameToArchiveRegionMap Sign;
         NameToArchiveRegionMap RenderPass;
         NameToArchiveRegionMap GraphPSO;
         NameToArchiveRegionMap CompPSO;
         NameToArchiveRegionMap TilePSO;
         NameToArchiveRegionMap RayTrPSO;
+
+        ShadersDataHeader Shaders;
     } m_ArchiveIndex;
 
+    static void ReadArchiveIndex(IArchive* pArchive, ArchiveIndex& Index) noexcept(false);
 
     template <typename ResType>
     class NamedResourceCache
@@ -319,8 +333,6 @@ private:
         NamedResourceCache<IPipelineState> RayTrPSO;
     } m_Cache;
 
-    ShadersDataHeader m_ShadersHeader;
-
     struct ShaderDeviceInfo
     {
         std::mutex Mtx;
@@ -331,22 +343,11 @@ private:
     };
     std::array<ShaderDeviceInfo, static_cast<size_t>(DeviceType::Count)> m_ShaderInfo;
 
-    struct
-    {
-        String GitHash;
-        Uint32 APIVersion = 0;
-    } m_DebugInfo;
-
     RefCntAutoPtr<IArchive> m_pArchive; // archive is thread-safe
-    TBlockBaseOffsets       m_BaseOffsets = {};
 
-    template <typename ResourceHandlerType>
-    static void ReadNamedResources(IArchive*             pArchive,
-                                   const ChunkHeader&    Chunk,
-                                   ResourceHandlerType&& Handler) noexcept(false);
-
-    void ReadShadersHeader(const ChunkHeader& Chunk) noexcept(false);
-    void ReadArchiveDebugInfo(const ChunkHeader& Chunk) noexcept(false);
+    static void ReadNamedResourceRegions(IArchive* pArchive, const ChunkHeader& Chunk, NameToArchiveRegionMap& NameToRegion) noexcept(false);
+    static void ReadShadersHeader(IArchive* pArchive, const ChunkHeader& Chunk, ShadersDataHeader& ShadersHeader) noexcept(false);
+    static void ReadArchiveDebugInfo(IArchive* pArchive, const ChunkHeader& Chunk, ArchiveDebugInfo& DebugInfo) noexcept(false);
 
     ShaderDeviceInfo& GetShaderDeviceInfo(DeviceType DevType, DynamicLinearAllocator& Allocator) noexcept(false);
 
@@ -461,50 +462,6 @@ RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveBase::UnpackResourc
         m_Cache.Sign.Set(DeArchiveInfo.Name, pSignature.RawPtr());
 
     return pSignature;
-}
-
-
-template <typename ResourceHandlerType>
-void DeviceObjectArchiveBase::ReadNamedResources(IArchive*             pArchive,
-                                                 const ChunkHeader&    Chunk,
-                                                 ResourceHandlerType&& Handler) noexcept(false)
-{
-    VERIFY_EXPR(Chunk.Type == ChunkType::ResourceSignature ||
-                Chunk.Type == ChunkType::GraphicsPipelineStates ||
-                Chunk.Type == ChunkType::ComputePipelineStates ||
-                Chunk.Type == ChunkType::RayTracingPipelineStates ||
-                Chunk.Type == ChunkType::TilePipelineStates ||
-                Chunk.Type == ChunkType::RenderPass);
-
-    std::vector<Uint8> Data(Chunk.Size);
-    if (!pArchive->Read(Chunk.Offset, Data.size(), Data.data()))
-    {
-        LOG_ERROR_AND_THROW("Failed to read resource list from archive");
-    }
-
-    FixedLinearAllocator InPlaceAlloc{Data.data(), Data.size()};
-
-    const auto& Header          = *InPlaceAlloc.Allocate<NamedResourceArrayHeader>();
-    const auto* NameLengthArray = InPlaceAlloc.Allocate<Uint32>(Header.Count);
-    const auto* DataSizeArray   = InPlaceAlloc.Allocate<Uint32>(Header.Count);
-    const auto* DataOffsetArray = InPlaceAlloc.Allocate<Uint32>(Header.Count);
-
-    // Read names
-    for (Uint32 i = 0; i < Header.Count; ++i)
-    {
-        if (InPlaceAlloc.GetCurrentSize() + NameLengthArray[i] > Data.size())
-        {
-            LOG_ERROR_AND_THROW("Failed to read archive data");
-        }
-        if (size_t{DataOffsetArray[i]} + size_t{DataSizeArray[i]} > pArchive->GetSize())
-        {
-            LOG_ERROR_AND_THROW("Failed to read archive data");
-        }
-        const auto* Name = InPlaceAlloc.Allocate<char>(NameLengthArray[i]);
-        VERIFY_EXPR(strlen(Name) + 1 == NameLengthArray[i]);
-
-        Handler(Name, DataOffsetArray[i], DataSizeArray[i]);
-    }
 }
 
 } // namespace Diligent
