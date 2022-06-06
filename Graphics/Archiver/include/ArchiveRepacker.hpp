@@ -50,7 +50,7 @@ private:
     using ChunkHeader       = DeviceObjectArchiveBase::ChunkHeader;
     using ChunkType         = DeviceObjectArchiveBase::ChunkType;
     using FileOffsetAndSize = DeviceObjectArchiveBase::FileOffsetAndSize;
-    using BaseDataHeader    = DeviceObjectArchiveBase::BaseDataHeader;
+    using DataHeaderBase    = DeviceObjectArchiveBase::DataHeaderBase;
     using RPDataHeader      = DeviceObjectArchiveBase::RPDataHeader;
     using ShadersDataHeader = DeviceObjectArchiveBase::ShadersDataHeader;
 
@@ -58,9 +58,7 @@ private:
 
     static constexpr auto HeaderMagicNumber = DeviceObjectArchiveBase::HeaderMagicNumber;
     static constexpr auto HeaderVersion     = DeviceObjectArchiveBase::HeaderVersion;
-    static constexpr auto InvalidOffset     = DeviceObjectArchiveBase::BaseDataHeader::InvalidOffset;
-
-    void ReadNamedResources(const ChunkHeader& Chunk, NameOffsetMap& NameAndOffset) noexcept(false);
+    static constexpr auto InvalidOffset     = DeviceObjectArchiveBase::DataHeaderBase::InvalidOffset;
 
     struct ArchiveBlock
     {

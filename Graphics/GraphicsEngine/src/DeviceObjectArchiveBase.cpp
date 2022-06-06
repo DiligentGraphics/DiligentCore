@@ -37,6 +37,50 @@
 namespace Diligent
 {
 
+template <typename CreateInfoType>
+struct DeviceObjectArchiveBase::PSOData
+{
+    DynamicLinearAllocator Allocator;
+    const PSODataHeader*   pHeader = nullptr;
+    CreateInfoType         CreateInfo{};
+    PSOCreateInternalInfo  InternalCI;
+    SerializedPSOAuxData   AuxData;
+    TPRSNames              PRSNames{};
+    const char*            RenderPassName = nullptr;
+
+    // Strong references to pipeline resource signatures, render pass, etc.
+    std::vector<RefCntAutoPtr<IDeviceObject>> Objects;
+    std::vector<RefCntAutoPtr<IShader>>       Shaders;
+
+    static const ChunkType ExpectedChunkType;
+
+    explicit PSOData(IMemoryAllocator& Allocator, Uint32 BlockSize = 2 << 10) :
+        Allocator{Allocator, BlockSize}
+    {}
+
+    bool Deserialize(const char* Name, Serializer<SerializerMode::Read>& Ser);
+    void AssignShaders();
+    void CreatePipeline(IRenderDevice* pDevice, IPipelineState** ppPSO);
+
+private:
+    void DeserializeInternal(Serializer<SerializerMode::Read>& Ser);
+};
+
+struct DeviceObjectArchiveBase::RPData
+{
+    DynamicLinearAllocator Allocator;
+    const RPDataHeader*    pHeader = nullptr;
+    RenderPassDesc         Desc{};
+
+    static constexpr ChunkType ExpectedChunkType = ChunkType::RenderPass;
+
+    explicit RPData(IMemoryAllocator& Allocator, Uint32 BlockSize = 1 << 10) :
+        Allocator{Allocator, BlockSize}
+    {}
+
+    bool Deserialize(const char* Name, Serializer<SerializerMode::Read>& Ser);
+};
+
 template <typename ResType>
 void DeviceObjectArchiveBase::OffsetSizeAndResourceMap<ResType>::Insert(const char* Name, Uint32 Offset, Uint32 Size)
 {
@@ -148,6 +192,15 @@ DeviceObjectArchiveBase::DeviceObjectArchiveBase(IReferenceCounters* pRefCounter
         LOG_ERROR_AND_THROW("Failed to read chunk headers");
     }
 
+    auto ReadResourceMap = [this](const ChunkHeader& Chunk, auto& Map) {
+        ReadNamedResources(
+            m_pArchive, Chunk,
+            [&Map](const char* Name, Uint32 Offset, Uint32 Size) //
+            {
+                Map.Insert(Name, Offset, Size);
+            });
+    };
+
     std::bitset<static_cast<size_t>(ChunkType::Count)> ProcessedBits{};
     for (const auto& Chunk : Chunks)
     {
@@ -162,12 +215,12 @@ DeviceObjectArchiveBase::DeviceObjectArchiveBase(IReferenceCounters* pRefCounter
         {
             // clang-format off
             case ChunkType::ArchiveDebugInfo:         ReadArchiveDebugInfo(Chunk);                     break;
-            case ChunkType::ResourceSignature:        ReadNamedResources  (Chunk, m_PRSMap);           break;
-            case ChunkType::GraphicsPipelineStates:   ReadNamedResources  (Chunk, m_GraphicsPSOMap);   break;
-            case ChunkType::ComputePipelineStates:    ReadNamedResources  (Chunk, m_ComputePSOMap);    break;
-            case ChunkType::RayTracingPipelineStates: ReadNamedResources  (Chunk, m_RayTracingPSOMap); break;
-            case ChunkType::TilePipelineStates:       ReadNamedResources  (Chunk, m_TilePSOMap);       break;
-            case ChunkType::RenderPass:               ReadNamedResources  (Chunk, m_RenderPassMap);    break;
+            case ChunkType::ResourceSignature:        ReadResourceMap     (Chunk, m_PRSMap);           break;
+            case ChunkType::GraphicsPipelineStates:   ReadResourceMap     (Chunk, m_GraphicsPSOMap);   break;
+            case ChunkType::ComputePipelineStates:    ReadResourceMap     (Chunk, m_ComputePSOMap);    break;
+            case ChunkType::RayTracingPipelineStates: ReadResourceMap     (Chunk, m_RayTracingPSOMap); break;
+            case ChunkType::TilePipelineStates:       ReadResourceMap     (Chunk, m_TilePSOMap);       break;
+            case ChunkType::RenderPass:               ReadResourceMap     (Chunk, m_RenderPassMap);    break;
             case ChunkType::Shaders:                  ReadShadersHeader   (Chunk);                     break;
             // clang-format on
             default:
@@ -274,16 +327,6 @@ void DeviceObjectArchiveBase::ReadArchiveDebugInfo(const ChunkHeader& Chunk) noe
 #endif
 }
 
-template <typename ResType>
-void DeviceObjectArchiveBase::ReadNamedResources(const ChunkHeader& Chunk, OffsetSizeAndResourceMap<ResType>& NameAndOffset) noexcept(false)
-{
-    ReadNamedResources(m_pArchive, Chunk,
-                       [&NameAndOffset](const char* Name, Uint32 Offset, Uint32 Size) //
-                       {
-                           NameAndOffset.Insert(Name, Offset, Size);
-                       });
-}
-
 void DeviceObjectArchiveBase::ReadShadersHeader(const ChunkHeader& Chunk) noexcept(false)
 {
     VERIFY_EXPR(Chunk.Type == ChunkType::Shaders);
@@ -377,17 +420,17 @@ SerializedData DeviceObjectArchiveBase::GetDeviceSpecificData(DeviceType        
     const auto   ArchiveSize = m_pArchive->GetSize();
     if (BaseOffset > ArchiveSize)
     {
-        LOG_ERROR_MESSAGE("Required block does not exist in archive");
+        LOG_ERROR_MESSAGE(ResTypeName, " chunk is not present in the archive");
         return {};
     }
     if (Header.GetSize(DevType) == 0)
     {
-        LOG_ERROR_MESSAGE("Device specific data is not specified for ", ResTypeName);
+        LOG_ERROR_MESSAGE("Device-specific data is missing for ", ResTypeName);
         return {};
     }
     if (BaseOffset + Header.GetEndOffset(DevType) > ArchiveSize)
     {
-        LOG_ERROR_MESSAGE("Invalid offset in the archive");
+        LOG_ERROR_MESSAGE("Invalid offset in the archive for ", ResTypeName);
         return {};
     }
 

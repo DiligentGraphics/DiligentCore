@@ -103,6 +103,14 @@ ArchiveRepacker::ArchiveRepacker(IArchive* pArchive)
         LOG_ERROR_AND_THROW("Failed to read chunk headers");
     }
 
+    auto ReadResourceMap = [this](const ChunkHeader& Chunk, auto& Map) {
+        DeviceObjectArchiveBase::ReadNamedResources(m_CommonData.pArchive, Chunk,
+                                                    [&Map](const char* Name, Uint32 Offset, Uint32 Size) //
+                                                    {
+                                                        Map.emplace(HashMapStringKey{Name, true}, FileOffsetAndSize{Offset, Size});
+                                                    });
+    };
+
     std::bitset<static_cast<size_t>(ChunkType::Count)> ProcessedBits{};
     for (const auto& Chunk : m_Chunks)
     {
@@ -117,12 +125,12 @@ ArchiveRepacker::ArchiveRepacker(IArchive* pArchive)
         {
             // clang-format off
             case ChunkType::ArchiveDebugInfo:         break;
-            case ChunkType::ResourceSignature:        ReadNamedResources(Chunk, m_PRSMap);           break;
-            case ChunkType::GraphicsPipelineStates:   ReadNamedResources(Chunk, m_GraphicsPSOMap);   break;
-            case ChunkType::ComputePipelineStates:    ReadNamedResources(Chunk, m_ComputePSOMap);    break;
-            case ChunkType::RayTracingPipelineStates: ReadNamedResources(Chunk, m_RayTracingPSOMap); break;
-            case ChunkType::TilePipelineStates:       ReadNamedResources(Chunk, m_TilePSOMap);       break;
-            case ChunkType::RenderPass:               ReadNamedResources(Chunk, m_RenderPassMap);    break;
+            case ChunkType::ResourceSignature:        ReadResourceMap(Chunk, m_PRSMap);           break;
+            case ChunkType::GraphicsPipelineStates:   ReadResourceMap(Chunk, m_GraphicsPSOMap);   break;
+            case ChunkType::ComputePipelineStates:    ReadResourceMap(Chunk, m_ComputePSOMap);    break;
+            case ChunkType::RayTracingPipelineStates: ReadResourceMap(Chunk, m_RayTracingPSOMap); break;
+            case ChunkType::TilePipelineStates:       ReadResourceMap(Chunk, m_TilePSOMap);       break;
+            case ChunkType::RenderPass:               ReadResourceMap(Chunk, m_RenderPassMap);    break;
             case ChunkType::Shaders:                  break;
             // clang-format on
             default:
@@ -152,7 +160,7 @@ void ArchiveRepacker::RemoveDeviceData(DeviceType Dev) noexcept(false)
             if (!NewCommonBlock.Read(Res.second.Offset, Temp.size(), Temp.data()))
                 continue;
 
-            BaseDataHeader Header{ChunkType::Undefined};
+            DataHeaderBase Header{ChunkType::Undefined};
             if (Temp.size() < sizeof(Header))
                 continue;
 
@@ -308,8 +316,8 @@ void ArchiveRepacker::AppendDeviceData(const ArchiveRepacker& Src, DeviceType De
             if (TempSrc.size() != TempDst.size())
                 LOG_ERROR_AND_THROW(ResTypeName, " '", DstRes.first.GetStr(), "' common data size must match");
 
-            BaseDataHeader SrcHeader{ChunkType::Undefined};
-            BaseDataHeader DstHeader{ChunkType::Undefined};
+            DataHeaderBase SrcHeader{ChunkType::Undefined};
+            DataHeaderBase DstHeader{ChunkType::Undefined};
             if (TempSrc.size() < sizeof(SrcHeader) || TempDst.size() < sizeof(DstHeader))
                 LOG_ERROR_AND_THROW(ResTypeName, " '", DstRes.first.GetStr(), "' data size is too small to have header");
 
@@ -475,16 +483,6 @@ void ArchiveRepacker::Serialize(IFileStream* pStream) noexcept(false)
     VERIFY_EXPR(Offset == pStream->GetSize());
 }
 
-void ArchiveRepacker::ReadNamedResources(const ChunkHeader& Chunk, NameOffsetMap& NameAndOffset) noexcept(false)
-{
-    auto* pArchive = m_CommonData.pArchive.RawPtr<IArchive>();
-    DeviceObjectArchiveBase::ReadNamedResources(pArchive, Chunk,
-                                                [&NameAndOffset](const char* Name, Uint32 Offset, Uint32 Size) //
-                                                {
-                                                    NameAndOffset.emplace(HashMapStringKey{Name, true}, FileOffsetAndSize{Offset, Size});
-                                                });
-}
-
 namespace
 {
 const char* GetDeviceName(Uint32 dev)
@@ -542,7 +540,7 @@ bool ArchiveRepacker::Validate() const
             if (!ValidateResource(Res, ResTypeName))
                 continue;
 
-            BaseDataHeader Header{ChunkType::Undefined};
+            DataHeaderBase Header{ChunkType::Undefined};
             if (Temp.size() < sizeof(Header))
             {
                 VALIDATE_RES("resource data is too small to store header - archive corrupted");
@@ -707,7 +705,7 @@ void ArchiveRepacker::Print() const
             Log += "  ";
             Log += Res.first.GetStr();
 
-            BaseDataHeader Header{ChunkType::Undefined};
+            DataHeaderBase Header{ChunkType::Undefined};
             if (LoadResource(Res) &&
                 Temp.size() >= sizeof(Header))
             {

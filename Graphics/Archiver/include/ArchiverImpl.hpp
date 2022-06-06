@@ -97,7 +97,7 @@ private:
     using ShaderIndexArray         = DeviceObjectArchiveBase::ShaderIndexArray;
     using SerializedPSOAuxData     = DeviceObjectArchiveBase::SerializedPSOAuxData;
 
-    static constexpr auto InvalidOffset   = DeviceObjectArchiveBase::BaseDataHeader::InvalidOffset;
+    static constexpr auto InvalidOffset   = DeviceObjectArchiveBase::DataHeaderBase::InvalidOffset;
     static constexpr auto DeviceDataCount = static_cast<size_t>(DeviceType::Count);
     static constexpr auto ChunkCount      = static_cast<size_t>(ChunkType::Count);
 

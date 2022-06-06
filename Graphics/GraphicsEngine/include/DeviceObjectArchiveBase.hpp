@@ -66,7 +66,7 @@ public:
 
     enum class DeviceType : Uint32
     {
-        OpenGL, // same as GLES
+        OpenGL, // Same as GLES
         Direct3D11,
         Direct3D12,
         Vulkan,
@@ -186,13 +186,13 @@ protected:
     };
     CHECK_HEADER_SIZE(NamedResourceArrayHeader, 8)
 
-    struct BaseDataHeader
+    struct DataHeaderBase
     {
         using Uint32Array = std::array<Uint32, static_cast<size_t>(DeviceType::Count)>;
 
         static constexpr Uint32 InvalidOffset = ~0u;
 
-        BaseDataHeader(ChunkType _Type) noexcept :
+        DataHeaderBase(ChunkType _Type) noexcept :
             Type{_Type}
         {
             DeviceSpecificDataOffset.fill(Uint32{InvalidOffset});
@@ -211,12 +211,12 @@ protected:
         void SetSize(DeviceType DevType, Uint32 Size) { DeviceSpecificDataSize[static_cast<size_t>(DevType)] = Size; }
         void SetOffset(DeviceType DevType, Uint32 Offset) { DeviceSpecificDataOffset[static_cast<size_t>(DevType)] = Offset; }
     };
-    CHECK_HEADER_SIZE(BaseDataHeader, 56)
+    CHECK_HEADER_SIZE(DataHeaderBase, 56)
 
-    struct PRSDataHeader : BaseDataHeader
+    struct PRSDataHeader : DataHeaderBase
     {
         PRSDataHeader(ChunkType _Type) noexcept :
-            BaseDataHeader{_Type}
+            DataHeaderBase{_Type}
         {
             VERIFY_EXPR(Type == ChunkType::ResourceSignature);
         }
@@ -226,10 +226,10 @@ protected:
     CHECK_HEADER_SIZE(PRSDataHeader, 56)
 
 
-    struct PSODataHeader : BaseDataHeader
+    struct PSODataHeader : DataHeaderBase
     {
         PSODataHeader(ChunkType _Type) noexcept :
-            BaseDataHeader{_Type}
+            DataHeaderBase{_Type}
         {
             VERIFY_EXPR((Type == ChunkType::GraphicsPipelineStates ||
                          Type == ChunkType::ComputePipelineStates ||
@@ -242,10 +242,10 @@ protected:
     CHECK_HEADER_SIZE(PSODataHeader, 56)
 
 
-    struct ShadersDataHeader : BaseDataHeader
+    struct ShadersDataHeader : DataHeaderBase
     {
         ShadersDataHeader(ChunkType _Type = ChunkType::Shaders) noexcept :
-            BaseDataHeader{_Type}
+            DataHeaderBase{_Type}
         {
             VERIFY_EXPR(Type == ChunkType::Shaders);
         }
@@ -347,8 +347,6 @@ private:
                                    const ChunkHeader&    Chunk,
                                    ResourceHandlerType&& Handler) noexcept(false);
 
-    template <typename ResType>
-    void ReadNamedResources(const ChunkHeader& Chunk, OffsetSizeAndResourceMap<ResType>& ResourceMap) noexcept(false);
     void ReadShadersHeader(const ChunkHeader& Chunk) noexcept(false);
     void ReadArchiveDebugInfo(const ChunkHeader& Chunk) noexcept(false);
 
@@ -376,50 +374,11 @@ protected:
         bool Deserialize(const char* Name, Serializer<SerializerMode::Read>& Ser);
     };
 
-    template <typename CreateInfoType>
-    struct PSOData
-    {
-        DynamicLinearAllocator Allocator;
-        const PSODataHeader*   pHeader = nullptr;
-        CreateInfoType         CreateInfo{};
-        PSOCreateInternalInfo  InternalCI;
-        SerializedPSOAuxData   AuxData;
-        TPRSNames              PRSNames{};
-        const char*            RenderPassName = nullptr;
-
-        // Strong references to pipeline resource signatures, render pass, etc.
-        std::vector<RefCntAutoPtr<IDeviceObject>> Objects;
-        std::vector<RefCntAutoPtr<IShader>>       Shaders;
-
-        static const ChunkType ExpectedChunkType;
-
-        explicit PSOData(IMemoryAllocator& Allocator, Uint32 BlockSize = 2 << 10) :
-            Allocator{Allocator, BlockSize}
-        {}
-
-        bool Deserialize(const char* Name, Serializer<SerializerMode::Read>& Ser);
-        void AssignShaders();
-        void CreatePipeline(IRenderDevice* pDevice, IPipelineState** ppPSO);
-
-    private:
-        void DeserializeInternal(Serializer<SerializerMode::Read>& Ser);
-    };
-
 private:
-    struct RPData
-    {
-        DynamicLinearAllocator Allocator;
-        const RPDataHeader*    pHeader = nullptr;
-        RenderPassDesc         Desc{};
+    template <typename CreateInfoType>
+    struct PSOData;
 
-        static constexpr ChunkType ExpectedChunkType = ChunkType::RenderPass;
-
-        explicit RPData(IMemoryAllocator& Allocator, Uint32 BlockSize = 1 << 10) :
-            Allocator{Allocator, BlockSize}
-        {}
-
-        bool Deserialize(const char* Name, Serializer<SerializerMode::Read>& Ser);
-    };
+    struct RPData;
 
     template <typename ResType, typename ReourceDataType>
     bool LoadResourceData(OffsetSizeAndResourceMap<ResType>& ResourceMap,
