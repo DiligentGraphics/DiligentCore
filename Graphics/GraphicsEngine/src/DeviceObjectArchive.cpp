@@ -36,17 +36,22 @@
 namespace Diligent
 {
 
-
-void DeviceObjectArchive::ReadNamedResourceRegions(IArchive*               pArchive,
-                                                   const ChunkHeader&      Chunk,
-                                                   NameToArchiveRegionMap& NameToRegion) noexcept(false)
+namespace
 {
-    VERIFY_EXPR(Chunk.Type == ChunkType::ResourceSignature ||
-                Chunk.Type == ChunkType::GraphicsPipelineStates ||
-                Chunk.Type == ChunkType::ComputePipelineStates ||
-                Chunk.Type == ChunkType::RayTracingPipelineStates ||
-                Chunk.Type == ChunkType::TilePipelineStates ||
-                Chunk.Type == ChunkType::RenderPass);
+
+void ReadNamedResourceRegions(IArchive*                                    pArchive,
+                              const DeviceObjectArchive::ChunkHeader&      Chunk,
+                              DeviceObjectArchive::NameToArchiveRegionMap& NameToRegion) noexcept(false)
+{
+    using NamedResourceArrayHeader = DeviceObjectArchive::NamedResourceArrayHeader;
+    using ArchiveRegion            = DeviceObjectArchive::ArchiveRegion;
+
+    VERIFY_EXPR(Chunk.Type == DeviceObjectArchive::ChunkType::ResourceSignature ||
+                Chunk.Type == DeviceObjectArchive::ChunkType::GraphicsPipelineStates ||
+                Chunk.Type == DeviceObjectArchive::ChunkType::ComputePipelineStates ||
+                Chunk.Type == DeviceObjectArchive::ChunkType::RayTracingPipelineStates ||
+                Chunk.Type == DeviceObjectArchive::ChunkType::TilePipelineStates ||
+                Chunk.Type == DeviceObjectArchive::ChunkType::RenderPass);
 
     std::vector<Uint8> Data(Chunk.Size);
     if (!pArchive->Read(Chunk.Offset, Data.size(), Data.data()))
@@ -81,9 +86,11 @@ void DeviceObjectArchive::ReadNamedResourceRegions(IArchive*               pArch
     }
 }
 
-void DeviceObjectArchive::ReadArchiveDebugInfo(IArchive* pArchive, const ChunkHeader& Chunk, ArchiveDebugInfo& DebugInfo) noexcept(false)
+void ReadArchiveDebugInfo(IArchive*                               pArchive,
+                          const DeviceObjectArchive::ChunkHeader& Chunk,
+                          DeviceObjectArchive::ArchiveDebugInfo&  DebugInfo) noexcept(false)
 {
-    VERIFY_EXPR(Chunk.Type == ChunkType::ArchiveDebugInfo);
+    VERIFY_EXPR(Chunk.Type == DeviceObjectArchive::ChunkType::ArchiveDebugInfo);
 
     SerializedData Data{Chunk.Size, GetRawAllocator()};
     if (!pArchive->Read(Chunk.Offset, Data.Size(), Data.Ptr()))
@@ -109,9 +116,11 @@ void DeviceObjectArchive::ReadArchiveDebugInfo(IArchive* pArchive, const ChunkHe
 #endif
 }
 
-void DeviceObjectArchive::ReadShadersHeader(IArchive* pArchive, const ChunkHeader& Chunk, ShadersDataHeader& ShadersHeader) noexcept(false)
+void ReadShadersHeader(IArchive*                               pArchive,
+                       const DeviceObjectArchive::ChunkHeader& Chunk,
+                       DeviceObjectArchive::ShadersDataHeader& ShadersHeader) noexcept(false)
 {
-    VERIFY_EXPR(Chunk.Type == ChunkType::Shaders);
+    VERIFY_EXPR(Chunk.Type == DeviceObjectArchive::ChunkType::Shaders);
     VERIFY_EXPR(Chunk.Size == sizeof(ShadersHeader));
 
     if (!pArchive->Read(Chunk.Offset, sizeof(ShadersHeader), &ShadersHeader))
@@ -120,7 +129,10 @@ void DeviceObjectArchive::ReadShadersHeader(IArchive* pArchive, const ChunkHeade
     }
 }
 
-void DeviceObjectArchive::ReadArchiveIndex(IArchive* pArchive, ArchiveIndex& Index) noexcept(false)
+} // namespace
+
+DeviceObjectArchive::DeviceObjectArchive(IArchive* pArchive) noexcept(false) :
+    m_pArchive{pArchive}
 {
     if (pArchive == nullptr)
         LOG_ERROR_AND_THROW("pArchive must not be null");
@@ -141,18 +153,18 @@ void DeviceObjectArchive::ReadArchiveIndex(IArchive* pArchive, ArchiveIndex& Ind
             LOG_ERROR_AND_THROW("Archive version (", Header.Version, ") is not supported; expected version: ", Uint32{HeaderVersion}, ".");
         }
 
-        Index.BaseOffsets = Header.BlockBaseOffsets;
+        m_BaseOffsets = Header.BlockBaseOffsets;
     }
 
     // Read chunks
-    Index.Chunks.resize(Header.NumChunks);
-    if (!pArchive->Read(sizeof(Header), sizeof(Index.Chunks[0]) * Index.Chunks.size(), Index.Chunks.data()))
+    m_Chunks.resize(Header.NumChunks);
+    if (!pArchive->Read(sizeof(Header), sizeof(m_Chunks[0]) * m_Chunks.size(), m_Chunks.data()))
     {
         LOG_ERROR_AND_THROW("Failed to read chunk headers");
     }
 
     std::bitset<static_cast<size_t>(ChunkType::Count)> ProcessedBits{};
-    for (const auto& Chunk : Index.Chunks)
+    for (const auto& Chunk : m_Chunks)
     {
         if (ProcessedBits[static_cast<size_t>(Chunk.Type)])
         {
@@ -164,26 +176,19 @@ void DeviceObjectArchive::ReadArchiveIndex(IArchive* pArchive, ArchiveIndex& Ind
         switch (Chunk.Type)
         {
             // clang-format off
-            case ChunkType::ArchiveDebugInfo:         ReadArchiveDebugInfo    (pArchive, Chunk, Index.DebugInfo);  break;
-            case ChunkType::ResourceSignature:        ReadNamedResourceRegions(pArchive, Chunk, Index.Sign);       break;
-            case ChunkType::GraphicsPipelineStates:   ReadNamedResourceRegions(pArchive, Chunk, Index.GraphPSO);   break;
-            case ChunkType::ComputePipelineStates:    ReadNamedResourceRegions(pArchive, Chunk, Index.CompPSO);    break;
-            case ChunkType::RayTracingPipelineStates: ReadNamedResourceRegions(pArchive, Chunk, Index.RayTrPSO);   break;
-            case ChunkType::TilePipelineStates:       ReadNamedResourceRegions(pArchive, Chunk, Index.TilePSO);    break;
-            case ChunkType::RenderPass:               ReadNamedResourceRegions(pArchive, Chunk, Index.RenderPass); break;
-            case ChunkType::Shaders:                  ReadShadersHeader       (pArchive, Chunk, Index.Shaders);    break;
+            case ChunkType::ArchiveDebugInfo:         ReadArchiveDebugInfo    (pArchive, Chunk, m_DebugInfo);         break;
+            case ChunkType::ResourceSignature:        ReadNamedResourceRegions(pArchive, Chunk, m_ResMap.Sign);       break;
+            case ChunkType::GraphicsPipelineStates:   ReadNamedResourceRegions(pArchive, Chunk, m_ResMap.GraphPSO);   break;
+            case ChunkType::ComputePipelineStates:    ReadNamedResourceRegions(pArchive, Chunk, m_ResMap.CompPSO);    break;
+            case ChunkType::RayTracingPipelineStates: ReadNamedResourceRegions(pArchive, Chunk, m_ResMap.RayTrPSO);   break;
+            case ChunkType::TilePipelineStates:       ReadNamedResourceRegions(pArchive, Chunk, m_ResMap.TilePSO);    break;
+            case ChunkType::RenderPass:               ReadNamedResourceRegions(pArchive, Chunk, m_ResMap.RenderPass); break;
+            case ChunkType::Shaders:                  ReadShadersHeader       (pArchive, Chunk, m_ShadersHeader);     break;
             // clang-format on
             default:
                 LOG_ERROR_AND_THROW("Unknown chunk type (", static_cast<Uint32>(Chunk.Type), ")");
         }
     }
-}
-
-DeviceObjectArchive::DeviceObjectArchive(IReferenceCounters* pRefCounters, IArchive* pArchive) noexcept(false) :
-    TObjectBase{pRefCounters},
-    m_pArchive{pArchive}
-{
-    ReadArchiveIndex(pArchive, m_ArchiveIndex);
 }
 
 DeviceObjectArchive::DeviceType DeviceObjectArchive::RenderDeviceTypeToArchiveDeviceType(RENDER_DEVICE_TYPE Type)
@@ -251,41 +256,40 @@ const char* DeviceObjectArchive::ChunkTypeToResName(ChunkType Type)
 }
 
 
-DeviceObjectArchive::ShaderDeviceInfo& DeviceObjectArchive::GetShaderDeviceInfo(DeviceType DevType, DynamicLinearAllocator& Allocator) noexcept(false)
+const std::vector<DeviceObjectArchive::ArchiveRegion>& DeviceObjectArchive::GetShaderRegions(DeviceType DevType, DynamicLinearAllocator& Allocator) noexcept
 {
-    auto& ShaderInfo = m_ShaderInfo[static_cast<size_t>(DevType)];
+    auto& RegionsInfo = m_ShaderRegions[static_cast<size_t>(DevType)];
 
     {
-        std::unique_lock<std::mutex> Lock{ShaderInfo.Mtx};
-        if (!ShaderInfo.Regions.empty())
-            return ShaderInfo;
+        std::unique_lock<std::mutex> Lock{RegionsInfo.Mtx};
+        if (!RegionsInfo.Regions.empty())
+            return RegionsInfo.Regions;
     }
 
-    if (const auto ShaderData = GetDeviceSpecificData(DevType, m_ArchiveIndex.Shaders, Allocator, ChunkType::Shaders))
+    if (const auto ShaderData = GetDeviceSpecificData(DevType, m_ShadersHeader, Allocator, ChunkType::Shaders))
     {
         VERIFY_EXPR(ShaderData.Size() % sizeof(ArchiveRegion) == 0);
         const size_t Count = ShaderData.Size() / sizeof(ArchiveRegion);
 
         const auto* pSrcRegions = ShaderData.Ptr<const ArchiveRegion>();
 
-        std::unique_lock<std::mutex> WriteLock{ShaderInfo.Mtx};
-        ShaderInfo.Regions.reserve(Count);
+        std::unique_lock<std::mutex> WriteLock{RegionsInfo.Mtx};
+        RegionsInfo.Regions.reserve(Count);
         for (Uint32 i = 0; i < Count; ++i)
-            ShaderInfo.Regions.emplace_back(pSrcRegions[i]);
-        //ShaderInfo.Cache.resize(Count);
+            RegionsInfo.Regions.emplace_back(pSrcRegions[i]);
     }
 
-    return ShaderInfo;
+    return RegionsInfo.Regions;
 }
 
 SerializedData DeviceObjectArchive::GetDeviceSpecificData(DeviceType              DevType,
                                                           const DataHeaderBase&   Header,
                                                           DynamicLinearAllocator& Allocator,
-                                                          ChunkType               ExpectedChunkType)
+                                                          ChunkType               ExpectedChunkType) noexcept
 {
     const char*  ChunkName   = ChunkTypeToResName(ExpectedChunkType);
     const auto   BlockType   = GetBlockOffsetType(DevType);
-    const Uint64 BaseOffset  = m_ArchiveIndex.BaseOffsets[static_cast<size_t>(BlockType)];
+    const Uint64 BaseOffset  = m_BaseOffsets[static_cast<size_t>(BlockType)];
     const auto   ArchiveSize = m_pArchive->GetSize();
     if (BaseOffset > ArchiveSize)
     {

@@ -29,8 +29,11 @@
 /// \file
 /// Implementation of the Diligent::DearchiverBase class
 
+#include <memory>
+
 #include "Dearchiver.h"
 #include "RenderDevice.h"
+#include "Shader.h"
 
 #include "ObjectBase.hpp"
 #include "EngineMemory.h"
@@ -167,7 +170,15 @@ private:
                                  const NameToArchiveRegionMap&       PSONameToRegion,
                                  NamedResourceCache<IPipelineState>& PSOCache);
 
-    RefCntAutoPtr<DeviceObjectArchive> m_pArchive;
+    struct ShaderCacheData
+    {
+        std::mutex Mtx;
+
+        std::vector<RefCntAutoPtr<IShader>> Shaders;
+    };
+    std::array<ShaderCacheData, static_cast<size_t>(DeviceType::Count)> m_CachedShaders;
+
+    std::unique_ptr<DeviceObjectArchive> m_pArchive;
 };
 
 
@@ -182,7 +193,7 @@ RefCntAutoPtr<IPipelineResourceSignature> DearchiverBase::UnpackResourceSignatur
         return pSignature;
 
     PRSData PRS{GetRawAllocator()};
-    if (!m_pArchive->LoadResourceData(m_pArchive->m_ArchiveIndex.Sign, DeArchiveInfo.Name, PRS))
+    if (!m_pArchive->LoadResourceData(m_pArchive->GetResourceMap().Sign, DeArchiveInfo.Name, PRS))
         return {};
 
     PRS.Desc.SRBAllocationGranularity = DeArchiveInfo.SRBAllocationGranularity;

@@ -31,30 +31,29 @@
 namespace Diligent
 {
 
-ArchiveRepacker::ArchiveRepacker(IArchive* pArchive)
+ArchiveRepacker::ArchiveRepacker(IArchive* pArchive) :
+    m_pArchive{std::make_unique<DeviceObjectArchive>(pArchive)}
 {
-    DeviceObjectArchive::ReadArchiveIndex(pArchive, m_Index);
-
     // Calculate device-specific block sizes
     {
         std::array<Uint32, static_cast<size_t>(BlockOffsetType::Count) + 1> SortedOffsets = {};
 
         const Uint32 ArchiveSize = StaticCast<Uint32>(pArchive->GetSize());
 
-        for (size_t i = 0; i < m_Index.BaseOffsets.size(); ++i)
+        for (size_t i = 0; i < static_cast<size_t>(BlockOffsetType::Count); ++i)
         {
-            const Uint32 Offset = m_Index.BaseOffsets[i];
+            const Uint32 Offset = m_pArchive->GetBaseOffset(static_cast<BlockOffsetType>(i));
             VERIFY_EXPR(Offset < ArchiveSize || Offset == InvalidOffset);
             SortedOffsets[i] = Offset;
         }
 
-        SortedOffsets[m_Index.BaseOffsets.size()] = ArchiveSize;
+        SortedOffsets[static_cast<size_t>(BlockOffsetType::Count)] = ArchiveSize;
 
         std::sort(SortedOffsets.begin(), SortedOffsets.end(), [](auto& lhs, auto& rhs) { return lhs < rhs; });
 
-        for (size_t j = 0; j < m_Index.BaseOffsets.size(); ++j)
+        for (size_t j = 0; j < static_cast<size_t>(BlockOffsetType::Count); ++j)
         {
-            const auto BaseOffset = m_Index.BaseOffsets[j];
+            const auto BaseOffset = m_pArchive->GetBaseOffset(static_cast<BlockOffsetType>(j));
             Uint32     BlockSize  = 0;
 
             for (size_t i = 0; i < SortedOffsets.size(); ++i)
@@ -118,18 +117,19 @@ void ArchiveRepacker::RemoveDeviceData(DeviceType Dev) noexcept(false)
 
     // Remove device specific data offset
     static_assert(static_cast<Uint32>(ChunkType::Count) == 9, "Please handle the new chunk type below");
+    const auto& ResMap = m_pArchive->GetResourceMap();
     // clang-format off
-    UpdateResources(m_Index.Sign,     ChunkType::ResourceSignature);
-    UpdateResources(m_Index.GraphPSO, ChunkType::GraphicsPipelineStates);
-    UpdateResources(m_Index.CompPSO,  ChunkType::ComputePipelineStates);
-    UpdateResources(m_Index.TilePSO,  ChunkType::TilePipelineStates);
-    UpdateResources(m_Index.RayTrPSO, ChunkType::RayTracingPipelineStates);
+    UpdateResources(ResMap.Sign,     ChunkType::ResourceSignature);
+    UpdateResources(ResMap.GraphPSO, ChunkType::GraphicsPipelineStates);
+    UpdateResources(ResMap.CompPSO,  ChunkType::ComputePipelineStates);
+    UpdateResources(ResMap.TilePSO,  ChunkType::TilePipelineStates);
+    UpdateResources(ResMap.RayTrPSO, ChunkType::RayTracingPipelineStates);
     // clang-format on
 
     // Ignore render passes
 
     // Patch shader chunk
-    for (auto& Chunk : m_Index.Chunks)
+    for (auto& Chunk : m_pArchive->GetChunks())
     {
         if (Chunk.Type == ChunkType::Shaders)
         {
@@ -287,23 +287,25 @@ void ArchiveRepacker::AppendDeviceData(const ArchiveRepacker& Src, DeviceType De
     };
 
     static_assert(static_cast<Uint32>(ChunkType::Count) == 9, "Please handle the new chunk type below");
+    const auto& SrcResMap = Src.m_pArchive->GetResourceMap();
+    const auto& ResMap    = m_pArchive->GetResourceMap();
     // clang-format off
-    CmpAndUpdateResources(m_Index.Sign,     Src.m_Index.Sign,     ChunkType::ResourceSignature,        "ResourceSignature");
-    CmpAndUpdateResources(m_Index.GraphPSO, Src.m_Index.GraphPSO, ChunkType::GraphicsPipelineStates,   "GraphicsPipelineState");
-    CmpAndUpdateResources(m_Index.CompPSO,  Src.m_Index.CompPSO,  ChunkType::ComputePipelineStates,    "ComputePipelineState");
-    CmpAndUpdateResources(m_Index.TilePSO,  Src.m_Index.TilePSO,  ChunkType::TilePipelineStates,       "TilePipelineState");
-    CmpAndUpdateResources(m_Index.RayTrPSO, Src.m_Index.RayTrPSO, ChunkType::RayTracingPipelineStates, "RayTracingPipelineState");
+    CmpAndUpdateResources(ResMap.Sign,     SrcResMap.Sign,     ChunkType::ResourceSignature,        "ResourceSignature");
+    CmpAndUpdateResources(ResMap.GraphPSO, SrcResMap.GraphPSO, ChunkType::GraphicsPipelineStates,   "GraphicsPipelineState");
+    CmpAndUpdateResources(ResMap.CompPSO,  SrcResMap.CompPSO,  ChunkType::ComputePipelineStates,    "ComputePipelineState");
+    CmpAndUpdateResources(ResMap.TilePSO,  SrcResMap.TilePSO,  ChunkType::TilePipelineStates,       "TilePipelineState");
+    CmpAndUpdateResources(ResMap.RayTrPSO, SrcResMap.RayTrPSO, ChunkType::RayTracingPipelineStates, "RayTracingPipelineState");
     // clang-format on
 
     // Compare render passes
     {
-        if (m_Index.RenderPass.size() != Src.m_Index.RenderPass.size())
+        if (ResMap.RenderPass.size() != SrcResMap.RenderPass.size())
             LOG_ERROR_AND_THROW("Number of RenderPass resources in source and destination archive does not match");
 
-        for (auto& DstRes : m_Index.RenderPass)
+        for (auto& DstRes : ResMap.RenderPass)
         {
-            auto Iter = Src.m_Index.RenderPass.find(DstRes.first);
-            if (Iter == Src.m_Index.RenderPass.end())
+            auto Iter = SrcResMap.RenderPass.find(DstRes.first);
+            if (Iter == SrcResMap.RenderPass.end())
                 LOG_ERROR_AND_THROW("RenderPass '", DstRes.first.GetStr(), "' is not found");
 
             const auto& SrcRes = *Iter;
@@ -342,11 +344,11 @@ void ArchiveRepacker::AppendDeviceData(const ArchiveRepacker& Src, DeviceType De
 
         ShadersDataHeader DstHeader;
         Uint32            DstHeaderOffset = 0;
-        if (ReadShaderHeader(DstHeader, DstHeaderOffset, m_Index.Chunks, m_CommonData))
+        if (ReadShaderHeader(DstHeader, DstHeaderOffset, m_pArchive->GetChunks(), m_CommonData))
         {
             ShadersDataHeader SrcHeader;
             Uint32            SrcHeaderOffset = 0;
-            if (!ReadShaderHeader(SrcHeader, SrcHeaderOffset, Src.m_Index.Chunks, Src.m_CommonData))
+            if (!ReadShaderHeader(SrcHeader, SrcHeaderOffset, Src.m_pArchive->GetChunks(), Src.m_CommonData))
                 LOG_ERROR_AND_THROW("Failed to find shaders in source archive");
 
             const auto  SrcSize   = SrcHeader.DeviceSpecificDataSize[static_cast<Uint32>(Dev)];
@@ -390,7 +392,7 @@ void ArchiveRepacker::Serialize(IFileStream* pStream) noexcept(false)
     ArchiveHeader Header;
     Header.MagicNumber = HeaderMagicNumber;
     Header.Version     = HeaderVersion;
-    Header.NumChunks   = StaticCast<Uint32>(m_Index.Chunks.size());
+    Header.NumChunks   = StaticCast<Uint32>(m_pArchive->GetChunks().size());
 
     size_t Offset = m_CommonData.Size;
     for (size_t dev = 0; dev < m_DeviceSpecific.size(); ++dev)
@@ -522,18 +524,19 @@ bool ArchiveRepacker::Validate() const
     };
 
     static_assert(static_cast<Uint32>(ChunkType::Count) == 9, "Please handle the new chunk type below");
+    const auto& ResMap = m_pArchive->GetResourceMap();
     // clang-format off
-    ValidateResources(m_Index.Sign,     ChunkType::ResourceSignature,        "ResourceSignature");
-    ValidateResources(m_Index.GraphPSO, ChunkType::GraphicsPipelineStates,   "GraphicsPipelineState");
-    ValidateResources(m_Index.CompPSO,  ChunkType::ComputePipelineStates,    "ComputePipelineState");
-    ValidateResources(m_Index.TilePSO,  ChunkType::RayTracingPipelineStates, "RayTracingPipelineState");
-    ValidateResources(m_Index.RayTrPSO, ChunkType::TilePipelineStates,       "TilePipelineState");
+    ValidateResources(ResMap.Sign,     ChunkType::ResourceSignature,        "ResourceSignature");
+    ValidateResources(ResMap.GraphPSO, ChunkType::GraphicsPipelineStates,   "GraphicsPipelineState");
+    ValidateResources(ResMap.CompPSO,  ChunkType::ComputePipelineStates,    "ComputePipelineState");
+    ValidateResources(ResMap.TilePSO,  ChunkType::RayTracingPipelineStates, "RayTracingPipelineState");
+    ValidateResources(ResMap.RayTrPSO, ChunkType::TilePipelineStates,       "TilePipelineState");
     // clang-format on
 
     // Validate render passes
     {
         const char* ResTypeName = "RenderPass";
-        for (auto& Res : m_Index.RenderPass)
+        for (auto& Res : ResMap.RenderPass)
         {
             if (!ValidateResource(Res, ResTypeName))
                 continue;
@@ -555,7 +558,7 @@ bool ArchiveRepacker::Validate() const
     }
 
     // Validate shaders
-    for (auto& Chunk : m_Index.Chunks)
+    for (auto& Chunk : m_pArchive->GetChunks())
     {
         if (Chunk.Type == ChunkType::Shaders)
         {
@@ -694,6 +697,9 @@ void ArchiveRepacker::Print() const
         Output += "  version: " + std::to_string(HeaderVersion) + "\n";
     }
 
+    const auto& ResMap = m_pArchive->GetResourceMap();
+    const auto& Chunks = m_pArchive->GetChunks();
+
     // Print chunks
     {
         const auto ChunkTypeToString = [](ChunkType Type) //
@@ -716,7 +722,7 @@ void ArchiveRepacker::Print() const
         };
 
         Output += "------------------\nChunks\n";
-        for (auto& Chunk : m_Index.Chunks)
+        for (auto& Chunk : Chunks)
         {
             Output += String{"  "} + ChunkTypeToString(Chunk.Type) + ", range: [" + std::to_string(Chunk.Offset) + "; " + std::to_string(Chunk.Offset + Chunk.Size) + "]\n";
         }
@@ -724,7 +730,7 @@ void ArchiveRepacker::Print() const
 
     // Print debug info
     {
-        for (auto& Chunk : m_Index.Chunks)
+        for (auto& Chunk : Chunks)
         {
             if (Chunk.Type == ChunkType::ArchiveDebugInfo)
             {
@@ -776,19 +782,19 @@ void ArchiveRepacker::Print() const
     {
         static_assert(static_cast<Uint32>(ChunkType::Count) == 9, "Please handle the new chunk type below");
         // clang-format off
-        PrintResources(m_Index.Sign,     "ResourceSignature");
-        PrintResources(m_Index.GraphPSO, "GraphicsPipelineState");
-        PrintResources(m_Index.CompPSO,  "ComputePipelineState");
-        PrintResources(m_Index.TilePSO,  "RayTracingPipelineState");
-        PrintResources(m_Index.RayTrPSO, "TilePipelineState");
+        PrintResources(ResMap.Sign,     "ResourceSignature");
+        PrintResources(ResMap.GraphPSO, "GraphicsPipelineState");
+        PrintResources(ResMap.CompPSO,  "ComputePipelineState");
+        PrintResources(ResMap.TilePSO,  "RayTracingPipelineState");
+        PrintResources(ResMap.RayTrPSO, "TilePipelineState");
         // clang-format on
 
-        if (!m_Index.RenderPass.empty())
+        if (!ResMap.RenderPass.empty())
         {
             Output += "------------------\nRenderPass\n";
 
             String Log;
-            for (auto& Res : m_Index.RenderPass)
+            for (auto& Res : ResMap.RenderPass)
             {
                 Log.clear();
                 Log += "  ";
@@ -812,7 +818,7 @@ void ArchiveRepacker::Print() const
         }
 
         // Print shaders
-        for (auto& Chunk : m_Index.Chunks)
+        for (auto& Chunk : Chunks)
         {
             if (Chunk.Type == ChunkType::Shaders)
             {

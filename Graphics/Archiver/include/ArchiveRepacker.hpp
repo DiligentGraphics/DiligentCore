@@ -27,6 +27,7 @@
 #pragma once
 
 #include "DeviceObjectArchive.hpp"
+#include "FileStream.h"
 
 namespace Diligent
 {
@@ -59,7 +60,7 @@ private:
     static constexpr auto HeaderVersion     = DeviceObjectArchive::HeaderVersion;
     static constexpr auto InvalidOffset     = DeviceObjectArchive::DataHeaderBase::InvalidOffset;
 
-    DeviceObjectArchive::ArchiveIndex m_Index;
+    std::unique_ptr<DeviceObjectArchive> m_pArchive;
 
     struct ArchiveBlock
     {

@@ -46,9 +46,6 @@
 
 #include "GraphicsTypes.h"
 #include "Archive.h"
-#include "Shader.h"
-
-#include "ObjectBase.hpp"
 
 #include "HashUtils.hpp"
 #include "RefCntAutoPtr.hpp"
@@ -58,12 +55,10 @@
 namespace Diligent
 {
 
-/// Class implementing base functionality of the device object archive object
-class DeviceObjectArchive : public ObjectBase<IObject>
+/// Device object archive object implementation.
+class DeviceObjectArchive
 {
 public:
-    using TObjectBase = ObjectBase<IObject>;
-
     enum class DeviceType : Uint32
     {
         OpenGL, // Same as GLES
@@ -89,12 +84,6 @@ public:
         // Shaders have been serialized without the shader reflection information.
         bool NoShaderReflection = false;
     };
-
-    /// \param pRefCounters - Reference counters object that controls the lifetime of this device object archive.
-    /// \param pArchive     - Source data that this archive will be created from.
-    DeviceObjectArchive(IReferenceCounters* pRefCounters,
-                        IArchive*           pArchive) noexcept(false);
-
 
     static constexpr Uint32 HeaderMagicNumber = 0xDE00000A;
     static constexpr Uint32 HeaderVersion     = 2;
@@ -274,42 +263,20 @@ public:
         Uint32 APIVersion = 0;
     };
 
-    struct ArchiveIndex
+    struct NamedResourcesMap
     {
-        TBlockBaseOffsets BaseOffsets;
-        ArchiveDebugInfo  DebugInfo;
-
-        std::vector<ChunkHeader> Chunks;
-
         NameToArchiveRegionMap Sign;
         NameToArchiveRegionMap RenderPass;
         NameToArchiveRegionMap GraphPSO;
         NameToArchiveRegionMap CompPSO;
         NameToArchiveRegionMap TilePSO;
         NameToArchiveRegionMap RayTrPSO;
-
-        ShadersDataHeader Shaders;
-    } m_ArchiveIndex;
-
-    static void ReadArchiveIndex(IArchive* pArchive, ArchiveIndex& Index) noexcept(false);
-
-    struct ShaderDeviceInfo
-    {
-        std::mutex Mtx;
-
-        std::vector<ArchiveRegion> Regions;
-        // Keep strong references
-        std::vector<RefCntAutoPtr<IShader>> Cache;
     };
-    std::array<ShaderDeviceInfo, static_cast<size_t>(DeviceType::Count)> m_ShaderInfo;
 
-    RefCntAutoPtr<IArchive> m_pArchive; // archive is thread-safe
+    /// \param pArchive - Source data that this archive will be created from.
+    DeviceObjectArchive(IArchive* pArchive) noexcept(false);
 
-    static void ReadNamedResourceRegions(IArchive* pArchive, const ChunkHeader& Chunk, NameToArchiveRegionMap& NameToRegion) noexcept(false);
-    static void ReadShadersHeader(IArchive* pArchive, const ChunkHeader& Chunk, ShadersDataHeader& ShadersHeader) noexcept(false);
-    static void ReadArchiveDebugInfo(IArchive* pArchive, const ChunkHeader& Chunk, ArchiveDebugInfo& DebugInfo) noexcept(false);
-
-    ShaderDeviceInfo& GetShaderDeviceInfo(DeviceType DevType, DynamicLinearAllocator& Allocator) noexcept(false);
+    const std::vector<ArchiveRegion>& GetShaderRegions(DeviceType DevType, DynamicLinearAllocator& Allocator) noexcept;
 
     static BlockOffsetType GetBlockOffsetType(DeviceType DevType);
     static DeviceType      RenderDeviceTypeToArchiveDeviceType(RENDER_DEVICE_TYPE Type);
@@ -324,7 +291,43 @@ public:
     SerializedData GetDeviceSpecificData(DeviceType              DevType,
                                          const DataHeaderBase&   Header,
                                          DynamicLinearAllocator& Allocator,
-                                         ChunkType               ExpectedChunkType);
+                                         ChunkType               ExpectedChunkType) noexcept;
+
+    Uint32 GetBaseOffset(BlockOffsetType Type) const
+    {
+        return m_BaseOffsets[static_cast<size_t>(Type)];
+    }
+    const std::vector<ChunkHeader>& GetChunks() const
+    {
+        return m_Chunks;
+    }
+    const NamedResourcesMap& GetResourceMap() const
+    {
+        return m_ResMap;
+    }
+    IArchive* GetArchive() const
+    {
+        return m_pArchive.RawPtr<IArchive>();
+    }
+
+private:
+    TBlockBaseOffsets m_BaseOffsets;
+    ArchiveDebugInfo  m_DebugInfo;
+
+    std::vector<ChunkHeader> m_Chunks;
+
+    NamedResourcesMap m_ResMap;
+    ShadersDataHeader m_ShadersHeader;
+
+    struct ShaderRegionsInfo
+    {
+        std::mutex Mtx;
+
+        std::vector<ArchiveRegion> Regions;
+    };
+    std::array<ShaderRegionsInfo, static_cast<size_t>(DeviceType::Count)> m_ShaderRegions;
+
+    RefCntAutoPtr<IArchive> m_pArchive; // archive is thread-safe
 };
 
 
