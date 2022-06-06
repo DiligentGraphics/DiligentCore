@@ -88,7 +88,7 @@ private:
     using ArchiveHeader            = DeviceObjectArchiveBase::ArchiveHeader;
     using ChunkHeader              = DeviceObjectArchiveBase::ChunkHeader;
     using NamedResourceArrayHeader = DeviceObjectArchiveBase::NamedResourceArrayHeader;
-    using FileOffsetAndSize        = DeviceObjectArchiveBase::FileOffsetAndSize;
+    using FileOffsetAndSize        = DeviceObjectArchiveBase::ArchiveRegion;
     using PRSDataHeader            = DeviceObjectArchiveBase::PRSDataHeader;
     using PSODataHeader            = DeviceObjectArchiveBase::PSODataHeader;
     using RPDataHeader             = DeviceObjectArchiveBase::RPDataHeader;

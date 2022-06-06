@@ -49,7 +49,7 @@ private:
     using BlockOffsetType   = DeviceObjectArchiveBase::BlockOffsetType;
     using ChunkHeader       = DeviceObjectArchiveBase::ChunkHeader;
     using ChunkType         = DeviceObjectArchiveBase::ChunkType;
-    using FileOffsetAndSize = DeviceObjectArchiveBase::FileOffsetAndSize;
+    using FileOffsetAndSize = DeviceObjectArchiveBase::ArchiveRegion;
     using DataHeaderBase    = DeviceObjectArchiveBase::DataHeaderBase;
     using RPDataHeader      = DeviceObjectArchiveBase::RPDataHeader;
     using ShadersDataHeader = DeviceObjectArchiveBase::ShadersDataHeader;

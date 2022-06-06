@@ -56,7 +56,6 @@ public:
     virtual void DILIGENT_CALL_TYPE Reset() override final
     {
         m_pArchive.Release();
-        //m_pArchive->ClearResourceCache();
     }
 
 protected:

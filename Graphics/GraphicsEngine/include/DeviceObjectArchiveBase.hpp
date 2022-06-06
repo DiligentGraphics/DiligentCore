@@ -95,8 +95,6 @@ public:
     DeviceObjectArchiveBase(IReferenceCounters* pRefCounters,
                             IArchive*           pArchive);
 
-    virtual void ClearResourceCache();
-
     void UnpackGraphicsPSO(const PipelineStateUnpackInfo& UnpackInfo, IPipelineState** ppPSO);
     void UnpackComputePSO(const PipelineStateUnpackInfo& UnpackInfo, IPipelineState** ppPSO);
     void UnpackRayTracingPSO(const PipelineStateUnpackInfo& UnpackInfo, IPipelineState** ppPSO);
@@ -269,67 +267,67 @@ protected:
 #undef CHECK_HEADER_SIZE
 
 private:
-    struct FileOffsetAndSize
+    struct ArchiveRegion
     {
         Uint32 Offset = 0;
         Uint32 Size   = 0;
 
-        constexpr bool operator==(const FileOffsetAndSize& Rhs) const { return Offset == Rhs.Offset && Size == Rhs.Size; }
-
-        static constexpr FileOffsetAndSize Invalid() { return {~0u, ~0u}; }
+        constexpr bool operator==(const ArchiveRegion& Rhs) const { return Offset == Rhs.Offset && Size == Rhs.Size; }
     };
 
-    template <typename ResPtrType> // RefCntAutoPtr or RefCntWeakPtr
-    struct FileOffsetSizeAndRes : FileOffsetAndSize
+    using NameToArchiveRegionMap = std::unordered_map<HashMapStringKey, ArchiveRegion>;
+
+    struct ArchiveIndex
     {
-        ResPtrType pRes;
-
-        explicit FileOffsetSizeAndRes(const FileOffsetAndSize& OffsetAndSize) noexcept :
-            FileOffsetAndSize{OffsetAndSize}
-        {}
-    };
+        NameToArchiveRegionMap Sign;
+        NameToArchiveRegionMap RenderPass;
+        NameToArchiveRegionMap GraphPSO;
+        NameToArchiveRegionMap CompPSO;
+        NameToArchiveRegionMap TilePSO;
+        NameToArchiveRegionMap RayTrPSO;
+    } m_ArchiveIndex;
 
 
     template <typename ResType>
-    class OffsetSizeAndResourceMap
+    class NamedResourceCache
     {
     public:
-        OffsetSizeAndResourceMap() noexcept {};
+        NamedResourceCache() noexcept {};
 
-        OffsetSizeAndResourceMap(const OffsetSizeAndResourceMap&) = delete;
-        OffsetSizeAndResourceMap(OffsetSizeAndResourceMap&&)      = delete;
-        OffsetSizeAndResourceMap& operator=(const OffsetSizeAndResourceMap&) = delete;
-        OffsetSizeAndResourceMap& operator=(OffsetSizeAndResourceMap&&) = delete;
+        NamedResourceCache(const NamedResourceCache&) = delete;
+        NamedResourceCache(NamedResourceCache&&)      = delete;
+        NamedResourceCache& operator=(const NamedResourceCache&) = delete;
+        NamedResourceCache& operator=(NamedResourceCache&&) = delete;
 
-        void Insert(const char* Name, Uint32 Offset, Uint32 Size);
-
-        FileOffsetAndSize GetOffsetAndSize(const char* Name, const char*& StoredNamePtr);
-
-        bool GetResource(const char* Name, ResType** ppResource);
-        void SetResource(const char* Name, ResType* pResource);
-
-        void ReleaseResources();
+        bool Get(const char* Name, ResType** ppResource);
+        void Set(const char* Name, ResType* pResource);
 
     private:
         std::mutex m_Mtx;
         // Keep weak resource references in the cache
-        std::unordered_map<HashMapStringKey, FileOffsetSizeAndRes<RefCntWeakPtr<ResType>>> m_Map;
+        std::unordered_map<HashMapStringKey, RefCntWeakPtr<ResType>> m_Map;
     };
 
-    OffsetSizeAndResourceMap<IPipelineResourceSignature> m_PRSMap;
-    OffsetSizeAndResourceMap<IPipelineState>             m_GraphicsPSOMap;
-    OffsetSizeAndResourceMap<IPipelineState>             m_ComputePSOMap;
-    OffsetSizeAndResourceMap<IPipelineState>             m_TilePSOMap;
-    OffsetSizeAndResourceMap<IPipelineState>             m_RayTracingPSOMap;
-    OffsetSizeAndResourceMap<IRenderPass>                m_RenderPassMap;
+    struct ResourceCache
+    {
+        NamedResourceCache<IPipelineResourceSignature> Sign;
+        NamedResourceCache<IRenderPass>                RenderPass;
+
+        NamedResourceCache<IPipelineState> GraphPSO;
+        NamedResourceCache<IPipelineState> CompPSO;
+        NamedResourceCache<IPipelineState> TilePSO;
+        NamedResourceCache<IPipelineState> RayTrPSO;
+    } m_Cache;
 
     ShadersDataHeader m_ShadersHeader;
 
     struct ShaderDeviceInfo
     {
         std::mutex Mtx;
-        // Use strong references for shaders
-        std::vector<FileOffsetSizeAndRes<RefCntAutoPtr<IShader>>> OffsetsAndCache;
+
+        std::vector<ArchiveRegion> Regions;
+        // Keep strong references
+        std::vector<RefCntAutoPtr<IShader>> Cache;
     };
     std::array<ShaderDeviceInfo, static_cast<size_t>(DeviceType::Count)> m_ShaderInfo;
 
@@ -380,10 +378,10 @@ private:
 
     struct RPData;
 
-    template <typename ResType, typename ReourceDataType>
-    bool LoadResourceData(OffsetSizeAndResourceMap<ResType>& ResourceMap,
-                          const char*                        ResourceName,
-                          ReourceDataType&                   ResData);
+    template <typename ReourceDataType>
+    bool LoadResourceData(const NameToArchiveRegionMap& NameToRegion,
+                          const char*                   ResourceName,
+                          ReourceDataType&              ResData) const;
 
     template <typename HeaderType>
     SerializedData GetDeviceSpecificData(DeviceType              DevType,
@@ -400,14 +398,11 @@ private:
     template <typename CreateInfoType>
     bool UnpackPSOShaders(PSOData<CreateInfoType>& PSO, IRenderDevice* pDevice);
 
-    template <typename PSOCreateInfoType>
-    bool ModifyPipelineStateCreateInfo(PSOCreateInfoType&             CreateInfo,
-                                       const PipelineStateUnpackInfo& DeArchiveInfo);
-
     template <typename CreateInfoType>
-    void UnpackPipelineStateImpl(const PipelineStateUnpackInfo&            UnpackInfo,
-                                 IPipelineState**                          ppPSO,
-                                 OffsetSizeAndResourceMap<IPipelineState>& PSOMap);
+    void UnpackPipelineStateImpl(const PipelineStateUnpackInfo&      UnpackInfo,
+                                 IPipelineState**                    ppPSO,
+                                 const NameToArchiveRegionMap&       PSONameToRegion,
+                                 NamedResourceCache<IPipelineState>& PSOCache);
 
 protected:
     template <typename RenderDeviceImplType, typename PRSSerializerType>
@@ -429,11 +424,11 @@ RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveBase::UnpackResourc
 {
     RefCntAutoPtr<IPipelineResourceSignature> pSignature;
     // Do not reuse implicit signatures
-    if (!IsImplicit && m_PRSMap.GetResource(DeArchiveInfo.Name, pSignature.RawDblPtr()))
+    if (!IsImplicit && m_Cache.Sign.Get(DeArchiveInfo.Name, pSignature.RawDblPtr()))
         return pSignature;
 
     PRSData PRS{GetRawAllocator()};
-    if (!LoadResourceData(m_PRSMap, DeArchiveInfo.Name, PRS))
+    if (!LoadResourceData(m_ArchiveIndex.Sign, DeArchiveInfo.Name, PRS))
         return {};
 
     PRS.Desc.SRBAllocationGranularity = DeArchiveInfo.SRBAllocationGranularity;
@@ -463,7 +458,7 @@ RefCntAutoPtr<IPipelineResourceSignature> DeviceObjectArchiveBase::UnpackResourc
     pRenderDevice->CreatePipelineResourceSignature(PRS.Desc, InternalData, &pSignature);
 
     if (!IsImplicit)
-        m_PRSMap.SetResource(DeArchiveInfo.Name, pSignature.RawPtr());
+        m_Cache.Sign.Set(DeArchiveInfo.Name, pSignature.RawPtr());
 
     return pSignature;
 }
