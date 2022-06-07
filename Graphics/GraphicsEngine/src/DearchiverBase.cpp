@@ -33,6 +33,27 @@
 namespace Diligent
 {
 
+template <>
+DearchiverBase::NamedResourceCache<IPipelineState>& DearchiverBase::ResourceCache::GetPsoCache<GraphicsPipelineStateCreateInfo>()
+{
+    return GraphPSO;
+}
+template <>
+DearchiverBase::NamedResourceCache<IPipelineState>& DearchiverBase::ResourceCache::GetPsoCache<ComputePipelineStateCreateInfo>()
+{
+    return CompPSO;
+}
+template <>
+DearchiverBase::NamedResourceCache<IPipelineState>& DearchiverBase::ResourceCache::GetPsoCache<TilePipelineStateCreateInfo>()
+{
+    return TilePSO;
+}
+template <>
+DearchiverBase::NamedResourceCache<IPipelineState>& DearchiverBase::ResourceCache::GetPsoCache<RayTracingPipelineStateCreateInfo>()
+{
+    return RayTrPSO;
+}
+
 #define CHECK_UNPACK_PARAMATER(Expr, ...)   \
     do                                      \
     {                                       \
@@ -403,16 +424,18 @@ void DearchiverBase::PSOData<RayTracingPipelineStateCreateInfo>::CreatePipeline(
 }
 
 template <typename CreateInfoType>
-bool DearchiverBase::UnpackPSOShaders(PSOData<CreateInfoType>& PSO,
-                                      IRenderDevice*           pDevice)
+bool DearchiverBase::UnpackPSOShaders(DeviceObjectArchive&         Archive,
+                                      PSOData<CreateInfoType>&     PSO,
+                                      PerDeviceCachedShadersArray& PerDeviceCachedShaders,
+                                      IRenderDevice*               pDevice)
 {
-    const auto DevType    = GetArchiveDeviceType(pDevice);
-    const auto ShaderData = m_pArchive->GetDeviceSpecificData(DevType, *PSO.pHeader, PSO.Allocator, PSO.ExpectedChunkType);
-    if (!ShaderData)
+    const auto DevType       = GetArchiveDeviceType(pDevice);
+    const auto ShaderIdxData = Archive.GetDeviceSpecificData(DevType, *PSO.pHeader, PSO.Allocator, PSO.ExpectedChunkType);
+    if (!ShaderIdxData)
         return false;
 
-    const Uint64 BaseOffset = m_pArchive->GetBaseOffset(DeviceObjectArchive::GetBlockOffsetType(DevType));
-    if (BaseOffset > m_pArchive->GetArchive()->GetSize())
+    const Uint64 BaseOffset = Archive.GetBaseOffset(DeviceObjectArchive::GetBlockOffsetType(DevType));
+    if (BaseOffset > Archive.GetArchive()->GetSize())
     {
         LOG_ERROR_MESSAGE("Required block does not exist in archive");
         return false;
@@ -422,12 +445,12 @@ bool DearchiverBase::UnpackPSOShaders(PSOData<CreateInfoType>& PSO,
 
     DeviceObjectArchive::ShaderIndexArray ShaderIndices;
     {
-        Serializer<SerializerMode::Read> Ser{ShaderData};
+        Serializer<SerializerMode::Read> Ser{ShaderIdxData};
         PSOSerializer<SerializerMode::Read>::SerializeShaderIndices(Ser, ShaderIndices, &Allocator);
         VERIFY_EXPR(Ser.IsEnded());
     }
 
-    auto& ShaderCache = m_CachedShaders[static_cast<size_t>(DevType)];
+    auto& ShaderCache = PerDeviceCachedShaders[static_cast<size_t>(DevType)];
 
     PSO.Shaders.resize(ShaderIndices.Count);
     for (Uint32 i = 0; i < ShaderIndices.Count; ++i)
@@ -448,14 +471,14 @@ bool DearchiverBase::UnpackPSOShaders(PSOData<CreateInfoType>& PSO,
             }
         }
 
-        const auto& ShaderRegions = m_pArchive->GetShaderRegions(DevType, Allocator);
+        const auto& ShaderRegions = Archive.GetShaderRegions(DevType, Allocator);
         if (Idx >= ShaderRegions.size())
             return false;
         OffsetAndSize = ShaderRegions[Idx];
 
         void* pData = Allocator.Allocate(OffsetAndSize.Size, DeviceObjectArchive::DataPtrAlign);
 
-        if (!m_pArchive->GetArchive()->Read(BaseOffset + OffsetAndSize.Offset, OffsetAndSize.Size, pData))
+        if (!Archive.GetArchive()->Read(BaseOffset + OffsetAndSize.Offset, OffsetAndSize.Size, pData))
             return false;
 
         {
@@ -574,15 +597,16 @@ static bool ModifyPipelineStateCreateInfo(PSOCreateInfoType&             CreateI
 }
 
 template <typename CreateInfoType>
-void DearchiverBase::UnpackPipelineStateImpl(const PipelineStateUnpackInfo&      UnpackInfo,
-                                             IPipelineState**                    ppPSO,
-                                             const NameToArchiveRegionMap&       PSONameToRegion,
-                                             NamedResourceCache<IPipelineState>& PSOCache)
+void DearchiverBase::UnpackPipelineStateImpl(const PipelineStateUnpackInfo& UnpackInfo,
+                                             IPipelineState**               ppPSO)
 {
     VERIFY_EXPR(UnpackInfo.pDevice != nullptr);
 
+    auto& PSOCache = m_Cache.GetPsoCache<CreateInfoType>();
     if (UnpackInfo.ModifyPipelineStateCreateInfo == nullptr && PSOCache.Get(UnpackInfo.Name, ppPSO))
         return;
+
+    const auto& PSONameToRegion = m_pArchive->GetResourceMap().GetPsoMap<CreateInfoType>();
 
     PSOData<CreateInfoType> PSO{GetRawAllocator()};
     if (!m_pArchive->LoadResourceData(PSONameToRegion, UnpackInfo.Name, PSO))
@@ -603,7 +627,7 @@ void DearchiverBase::UnpackPipelineStateImpl(const PipelineStateUnpackInfo&     
     if (!UnpackPSOSignatures(PSO, UnpackInfo.pDevice))
         return;
 
-    if (!UnpackPSOShaders(PSO, UnpackInfo.pDevice))
+    if (!UnpackPSOShaders(*m_pArchive, PSO, m_CachedShaders, UnpackInfo.pDevice))
         return;
 
     PSO.AssignShaders();
@@ -645,24 +669,23 @@ void DearchiverBase::UnpackPipelineState(const PipelineStateUnpackInfo& UnpackIn
 
     *ppPSO = nullptr;
 
-    const auto& ResMap = m_pArchive->GetResourceMap();
     switch (UnpackInfo.PipelineType)
     {
         case PIPELINE_TYPE_GRAPHICS:
         case PIPELINE_TYPE_MESH:
-            UnpackPipelineStateImpl<GraphicsPipelineStateCreateInfo>(UnpackInfo, ppPSO, ResMap.GraphPSO, m_Cache.GraphPSO);
+            UnpackPipelineStateImpl<GraphicsPipelineStateCreateInfo>(UnpackInfo, ppPSO);
             break;
 
         case PIPELINE_TYPE_COMPUTE:
-            UnpackPipelineStateImpl<ComputePipelineStateCreateInfo>(UnpackInfo, ppPSO, ResMap.CompPSO, m_Cache.CompPSO);
+            UnpackPipelineStateImpl<ComputePipelineStateCreateInfo>(UnpackInfo, ppPSO);
             break;
 
         case PIPELINE_TYPE_RAY_TRACING:
-            UnpackPipelineStateImpl<TilePipelineStateCreateInfo>(UnpackInfo, ppPSO, ResMap.TilePSO, m_Cache.TilePSO);
+            UnpackPipelineStateImpl<TilePipelineStateCreateInfo>(UnpackInfo, ppPSO);
             break;
 
         case PIPELINE_TYPE_TILE:
-            UnpackPipelineStateImpl<RayTracingPipelineStateCreateInfo>(UnpackInfo, ppPSO, ResMap.RayTrPSO, m_Cache.RayTrPSO);
+            UnpackPipelineStateImpl<RayTracingPipelineStateCreateInfo>(UnpackInfo, ppPSO);
             break;
 
         case PIPELINE_TYPE_INVALID:

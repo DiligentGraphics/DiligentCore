@@ -36,6 +36,27 @@
 namespace Diligent
 {
 
+template <>
+const DeviceObjectArchive::NameToArchiveRegionMap& DeviceObjectArchive::NamedResourcesMap::GetPsoMap<GraphicsPipelineStateCreateInfo>() const
+{
+    return GraphPSO;
+}
+template <>
+const DeviceObjectArchive::NameToArchiveRegionMap& DeviceObjectArchive::NamedResourcesMap::GetPsoMap<ComputePipelineStateCreateInfo>() const
+{
+    return CompPSO;
+}
+template <>
+const DeviceObjectArchive::NameToArchiveRegionMap& DeviceObjectArchive::NamedResourcesMap::GetPsoMap<TilePipelineStateCreateInfo>() const
+{
+    return TilePSO;
+}
+template <>
+const DeviceObjectArchive::NameToArchiveRegionMap& DeviceObjectArchive::NamedResourcesMap::GetPsoMap<RayTracingPipelineStateCreateInfo>() const
+{
+    return RayTrPSO;
+}
+
 namespace
 {
 

@@ -130,6 +130,9 @@ protected:
         NamedResourceCache<IPipelineState> CompPSO;
         NamedResourceCache<IPipelineState> TilePSO;
         NamedResourceCache<IPipelineState> RayTrPSO;
+
+        template <typename PSOCreateInfoType>
+        NamedResourceCache<IPipelineState>& GetPsoCache();
     } m_Cache;
 
     struct PRSData
@@ -155,6 +158,14 @@ private:
 
     struct RPData;
 
+    struct ShaderCacheData
+    {
+        std::mutex Mtx;
+
+        std::vector<RefCntAutoPtr<IShader>> Shaders;
+    };
+    using PerDeviceCachedShadersArray = std::array<ShaderCacheData, static_cast<size_t>(DeviceType::Count)>;
+
     template <typename CreateInfoType>
     bool UnpackPSOSignatures(PSOData<CreateInfoType>& PSO, IRenderDevice* pDevice);
 
@@ -162,21 +173,15 @@ private:
     bool UnpackPSORenderPass(PSOData<CreateInfoType>& PSO, IRenderDevice* pDevice) { return true; }
 
     template <typename CreateInfoType>
-    bool UnpackPSOShaders(PSOData<CreateInfoType>& PSO, IRenderDevice* pDevice);
+    bool UnpackPSOShaders(DeviceObjectArchive&         Archive,
+                          PSOData<CreateInfoType>&     PSO,
+                          PerDeviceCachedShadersArray& PerDeviceCachedShaders,
+                          IRenderDevice*               pDevice);
 
     template <typename CreateInfoType>
-    void UnpackPipelineStateImpl(const PipelineStateUnpackInfo&      UnpackInfo,
-                                 IPipelineState**                    ppPSO,
-                                 const NameToArchiveRegionMap&       PSONameToRegion,
-                                 NamedResourceCache<IPipelineState>& PSOCache);
+    void UnpackPipelineStateImpl(const PipelineStateUnpackInfo& UnpackInfo, IPipelineState** ppPSO);
 
-    struct ShaderCacheData
-    {
-        std::mutex Mtx;
-
-        std::vector<RefCntAutoPtr<IShader>> Shaders;
-    };
-    std::array<ShaderCacheData, static_cast<size_t>(DeviceType::Count)> m_CachedShaders;
+    PerDeviceCachedShadersArray m_CachedShaders;
 
     std::unique_ptr<DeviceObjectArchive> m_pArchive;
 };

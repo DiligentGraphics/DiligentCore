@@ -271,6 +271,9 @@ public:
         NameToArchiveRegionMap CompPSO;
         NameToArchiveRegionMap TilePSO;
         NameToArchiveRegionMap RayTrPSO;
+
+        template <typename PSOCreateInfoType>
+        const NameToArchiveRegionMap& GetPsoMap() const;
     };
 
     /// \param pArchive - Source data that this archive will be created from.
@@ -339,7 +342,7 @@ bool DeviceObjectArchive::LoadResourceData(const NameToArchiveRegionMap& NameToR
     auto it = NameToRegion.find(ResourceName);
     if (it == NameToRegion.end())
     {
-        LOG_ERROR_MESSAGE(ChunkTypeToResName(ResData.ExpectedChunkType), " with name '", ResourceName, "' is not present in the archive");
+        LOG_ERROR_MESSAGE("Resource '", ResourceName, "' is not present in the archive");
         return false;
     }
     VERIFY_EXPR(SafeStrEqual(ResourceName, it->first.GetStr()));
@@ -350,7 +353,7 @@ bool DeviceObjectArchive::LoadResourceData(const NameToArchiveRegionMap& NameToR
     void*       pData  = ResData.Allocator.Allocate(Region.Size, DataPtrAlign);
     if (!m_pArchive.RawPtr<IArchive>()->Read(Region.Offset, Region.Size, pData))
     {
-        LOG_ERROR_MESSAGE("Failed to read ", ChunkTypeToResName(ResData.ExpectedChunkType), " with name '", ResourceName, "' data from the archive");
+        LOG_ERROR_MESSAGE("Failed to read resource '", ResourceName, "' data from the archive");
         return false;
     }
 
@@ -360,8 +363,8 @@ bool DeviceObjectArchive::LoadResourceData(const NameToArchiveRegionMap& NameToR
     ResData.pHeader  = Ser.Cast<HeaderType>();
     if (ResData.pHeader->Type != ResData.ExpectedChunkType)
     {
-        LOG_ERROR_MESSAGE("Invalid chunk header: ", ChunkTypeToResName(ResData.pHeader->Type),
-                          "; expected: ", ChunkTypeToResName(ResData.ExpectedChunkType), ".");
+        LOG_ERROR_MESSAGE("Invalid chunk header: '", ChunkTypeToResName(ResData.pHeader->Type),
+                          "'; expected: '", ChunkTypeToResName(ResData.ExpectedChunkType), "'.");
         return false;
     }
 
