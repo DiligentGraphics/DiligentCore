@@ -30,6 +30,7 @@
 /// Implementation of the Diligent::DearchiverBase class
 
 #include <memory>
+#include <vector>
 
 #include "Dearchiver.h"
 #include "RenderDevice.h"
@@ -163,6 +164,16 @@ private:
         std::mutex Mtx;
 
         std::vector<RefCntAutoPtr<IShader>> Shaders;
+
+        ShaderCacheData() = default;
+        ShaderCacheData(ShaderCacheData&& rhs) noexcept :
+            Shaders{std::move(rhs.Shaders)}
+        {}
+        // clang-format off
+        ShaderCacheData           (const ShaderCacheData&)  = delete;
+        ShaderCacheData& operator=(const ShaderCacheData&)  = delete;
+        ShaderCacheData& operator=(      ShaderCacheData&&) = delete;
+        // clang-format on
     };
     using PerDeviceCachedShadersArray = std::array<ShaderCacheData, static_cast<size_t>(DeviceType::Count)>;
 
@@ -181,9 +192,38 @@ private:
     template <typename CreateInfoType>
     void UnpackPipelineStateImpl(const PipelineStateUnpackInfo& UnpackInfo, IPipelineState** ppPSO);
 
-    PerDeviceCachedShadersArray m_CachedShaders;
+    // Resource name -> archive index that contains this resource.
+    // Names must be unique for each resource type.
+    using NameToArchiveIdxMapType = std::unordered_map<HashMapStringKey, size_t>;
+    struct ResNameToArchiveIdxMap
+    {
+        NameToArchiveIdxMapType Sign;
+        NameToArchiveIdxMapType RenderPass;
+        NameToArchiveIdxMapType GraphPSO;
+        NameToArchiveIdxMapType CompPSO;
+        NameToArchiveIdxMapType TilePSO;
+        NameToArchiveIdxMapType RayTrPSO;
 
-    std::unique_ptr<DeviceObjectArchive> m_pArchive;
+        template <typename PSOCreateInfoType>
+        const NameToArchiveIdxMapType& GetPsoMap() const;
+    } m_ResNameToArchiveIdx;
+
+    struct ArchiveData
+    {
+        ArchiveData(std::unique_ptr<DeviceObjectArchive>&& _pArchive) :
+            pArchive{std::move(_pArchive)}
+        {}
+        // clang-format off
+        ArchiveData           (const ArchiveData&)  = delete;
+        ArchiveData           (      ArchiveData&&) = default;
+        ArchiveData& operator=(const ArchiveData&)  = delete;
+        ArchiveData& operator=(      ArchiveData&&) = delete;
+        // clang-format on
+
+        std::unique_ptr<DeviceObjectArchive> pArchive;
+        PerDeviceCachedShadersArray          CachedShaders;
+    };
+    std::vector<ArchiveData> m_Archives;
 };
 
 
@@ -194,17 +234,34 @@ RefCntAutoPtr<IPipelineResourceSignature> DearchiverBase::UnpackResourceSignatur
 {
     RefCntAutoPtr<IPipelineResourceSignature> pSignature;
     // Do not reuse implicit signatures
-    if (!IsImplicit && m_Cache.Sign.Get(DeArchiveInfo.Name, pSignature.RawDblPtr()))
-        return pSignature;
+    if (!IsImplicit)
+    {
+        // Since signature names must be unique, we use a single cache for all
+        // loaded archives.
+        if (m_Cache.Sign.Get(DeArchiveInfo.Name, pSignature.RawDblPtr()))
+            return pSignature;
+    }
+
+    // Find the archive that contains this signature
+    auto archive_idx_it = m_ResNameToArchiveIdx.Sign.find(DeArchiveInfo.Name);
+    if (archive_idx_it == m_ResNameToArchiveIdx.Sign.end())
+        return {};
+
+    auto& pArchive = m_Archives[archive_idx_it->second].pArchive;
+    if (!pArchive)
+    {
+        UNEXPECTED("Null archives should never be added to the list. This is a bug.");
+        return {};
+    }
 
     PRSData PRS{GetRawAllocator()};
-    if (!m_pArchive->LoadResourceData(m_pArchive->GetResourceMap().Sign, DeArchiveInfo.Name, PRS))
+    if (!pArchive->LoadResourceData(pArchive->GetResourceMap().Sign, DeArchiveInfo.Name, PRS))
         return {};
 
     PRS.Desc.SRBAllocationGranularity = DeArchiveInfo.SRBAllocationGranularity;
 
     const auto DevType = GetArchiveDeviceType(DeArchiveInfo.pDevice);
-    const auto Data    = m_pArchive->GetDeviceSpecificData(DevType, *PRS.pHeader, PRS.Allocator, ChunkType::ResourceSignature);
+    const auto Data    = pArchive->GetDeviceSpecificData(DevType, *PRS.pHeader, PRS.Allocator, ChunkType::ResourceSignature);
     if (!Data)
         return {};
 

@@ -198,6 +198,9 @@ DILIGENT_BEGIN_INTERFACE(IDearchiver, IObject)
 
     /// \param [in] pArchive - A pointer to the source raw data to load objects from.
     /// \return     true if the archive has been loaded successfully, and false otherwise.
+    ///
+    /// \warning    This method is not thread-safe and must not be called simultaneously
+    ///             with other methods.
     VIRTUAL bool METHOD(LoadArchive)(THIS_
                                      IArchive* pArchive) PURE;
 
@@ -210,6 +213,8 @@ DILIGENT_BEGIN_INTERFACE(IDearchiver, IObject)
     ///                           one reference.
     ///
     /// \note   Resource signatures used by the PSO will be unpacked from the same archive.
+    ///
+    ///         This method is thread-safe.
     VIRTUAL void METHOD(UnpackPipelineState)(THIS_
                                              const PipelineStateUnpackInfo REF UnpackInfo,
                                              IPipelineState**                  ppPSO) PURE;
@@ -221,6 +226,8 @@ DILIGENT_BEGIN_INTERFACE(IDearchiver, IObject)
     ///                            unpacked pipeline resource signature object will be stored.
     ///                            The function calls AddRef(), so that the resource signature will have
     ///                            one reference.
+    ///
+    /// \note   This method is thread-safe.
     VIRTUAL void METHOD(UnpackResourceSignature)(THIS_
                                                  const ResourceSignatureUnpackInfo REF UnpackInfo,
                                                  IPipelineResourceSignature**          ppSignature) PURE;
@@ -232,11 +239,16 @@ DILIGENT_BEGIN_INTERFACE(IDearchiver, IObject)
     ///                            unpacked render pass object will be stored.
     ///                            The function calls AddRef(), so that the render pass will have
     ///                            one reference.
+    ///
+    /// \note   This method is thread-safe.
     VIRTUAL void METHOD(UnpackRenderPass)(THIS_
                                           const RenderPassUnpackInfo REF UnpackInfo,
                                           IRenderPass**                  ppRP) PURE;
 
     /// Resets the dearchiver state and releases all loaded objects.
+    ///
+    /// \warning    This method is not thread-safe and must not be called simultaneously
+    ///             with other methods.
     VIRTUAL void METHOD(Reset)(THIS) PURE;
 };
 DILIGENT_END_INTERFACE

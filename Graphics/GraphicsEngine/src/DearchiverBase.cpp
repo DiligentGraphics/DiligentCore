@@ -54,6 +54,27 @@ DearchiverBase::NamedResourceCache<IPipelineState>& DearchiverBase::ResourceCach
     return RayTrPSO;
 }
 
+template <>
+const DearchiverBase::NameToArchiveIdxMapType& DearchiverBase::ResNameToArchiveIdxMap::GetPsoMap<GraphicsPipelineStateCreateInfo>() const
+{
+    return GraphPSO;
+}
+template <>
+const DearchiverBase::NameToArchiveIdxMapType& DearchiverBase::ResNameToArchiveIdxMap::GetPsoMap<ComputePipelineStateCreateInfo>() const
+{
+    return CompPSO;
+}
+template <>
+const DearchiverBase::NameToArchiveIdxMapType& DearchiverBase::ResNameToArchiveIdxMap::GetPsoMap<TilePipelineStateCreateInfo>() const
+{
+    return TilePSO;
+}
+template <>
+const DearchiverBase::NameToArchiveIdxMapType& DearchiverBase::ResNameToArchiveIdxMap::GetPsoMap<RayTracingPipelineStateCreateInfo>() const
+{
+    return RayTrPSO;
+}
+
 #define CHECK_UNPACK_PARAMATER(Expr, ...)   \
     do                                      \
     {                                       \
@@ -603,13 +624,33 @@ void DearchiverBase::UnpackPipelineStateImpl(const PipelineStateUnpackInfo& Unpa
     VERIFY_EXPR(UnpackInfo.pDevice != nullptr);
 
     auto& PSOCache = m_Cache.GetPsoCache<CreateInfoType>();
-    if (UnpackInfo.ModifyPipelineStateCreateInfo == nullptr && PSOCache.Get(UnpackInfo.Name, ppPSO))
+    // Do not cache modified PSOs
+    if (UnpackInfo.ModifyPipelineStateCreateInfo == nullptr)
+    {
+        // Since PSO names must be unique (for each PSO type), we use a single cache for all
+        // loaded archives.
+        if (PSOCache.Get(UnpackInfo.Name, ppPSO))
+            return;
+    }
+
+    // Get the Name->ArchiveIdx map for this PSO type
+    const auto& PsoNameToIdx = m_ResNameToArchiveIdx.GetPsoMap<CreateInfoType>();
+    // Find the archive that contains this PSO
+    const auto archive_idx_it = PsoNameToIdx.find(UnpackInfo.Name);
+    if (archive_idx_it == PsoNameToIdx.end())
         return;
 
-    const auto& PSONameToRegion = m_pArchive->GetResourceMap().GetPsoMap<CreateInfoType>();
+    auto& Archive = m_Archives[archive_idx_it->second];
+    if (!Archive.pArchive)
+    {
+        UNEXPECTED("Null archives should never be added to the list. This is a bug.");
+        return;
+    }
+
+    const auto& PSONameToRegion = Archive.pArchive->GetResourceMap().template GetPsoMap<CreateInfoType>();
 
     PSOData<CreateInfoType> PSO{GetRawAllocator()};
-    if (!m_pArchive->LoadResourceData(PSONameToRegion, UnpackInfo.Name, PSO))
+    if (!Archive.pArchive->LoadResourceData(PSONameToRegion, UnpackInfo.Name, PSO))
         return;
 
 #ifdef DILIGENT_DEVELOPMENT
@@ -627,7 +668,7 @@ void DearchiverBase::UnpackPipelineStateImpl(const PipelineStateUnpackInfo& Unpa
     if (!UnpackPSOSignatures(PSO, UnpackInfo.pDevice))
         return;
 
-    if (!UnpackPSOShaders(*m_pArchive, PSO, m_CachedShaders, UnpackInfo.pDevice))
+    if (!UnpackPSOShaders(*Archive.pArchive, PSO, Archive.CachedShaders, UnpackInfo.pDevice))
         return;
 
     PSO.AssignShaders();
@@ -645,14 +686,39 @@ void DearchiverBase::UnpackPipelineStateImpl(const PipelineStateUnpackInfo& Unpa
         PSOCache.Set(UnpackInfo.Name, *ppPSO);
 }
 
-bool DearchiverBase::LoadArchive(IArchive* pArchive)
+bool DearchiverBase::LoadArchive(IArchive* pRawArchive)
 {
-    if (pArchive == nullptr)
+    if (pRawArchive == nullptr)
         return false;
 
     try
     {
-        m_pArchive = std::make_unique<DeviceObjectArchive>(pArchive);
+        auto pArchive   = std::make_unique<DeviceObjectArchive>(pRawArchive);
+        auto ArchiveIdx = m_Archives.size();
+
+        auto RegisterArchive = [ArchiveIdx](const auto& SrcMap, auto& DstMap) {
+            for (auto it = SrcMap.begin(); it != SrcMap.end(); ++it)
+            {
+                const auto* ResName  = it->first.GetStr();
+                const auto  inserted = DstMap.emplace(HashMapStringKey{ResName, true}, ArchiveIdx).second;
+                if (!inserted)
+                {
+                    LOG_ERROR_MESSAGE("Resource with name '", ResName, "' already present in the archive.");
+                }
+            }
+        };
+        const auto& ResMap = pArchive->GetResourceMap();
+#define REGISTER_ARCHIVE(MapName) RegisterArchive(ResMap.MapName, m_ResNameToArchiveIdx.MapName)
+        REGISTER_ARCHIVE(Sign);
+        REGISTER_ARCHIVE(RenderPass);
+        REGISTER_ARCHIVE(GraphPSO);
+        REGISTER_ARCHIVE(CompPSO);
+        REGISTER_ARCHIVE(TilePSO);
+        REGISTER_ARCHIVE(RayTrPSO);
+#undef REGISTER_ARCHIVE
+
+        m_Archives.emplace_back(std::move(pArchive));
+
         return true;
     }
     catch (...)
@@ -715,12 +781,29 @@ void DearchiverBase::UnpackRenderPass(const RenderPassUnpackInfo& UnpackInfo, IR
     *ppRP = nullptr;
 
     VERIFY_EXPR(UnpackInfo.pDevice != nullptr);
+    // Do not cache modified render passes.
+    if (UnpackInfo.ModifyRenderPassDesc == nullptr)
+    {
+        // Since render pass names must be unique, we use a single cache for all
+        // loaded archives.
+        if (m_Cache.RenderPass.Get(UnpackInfo.Name, ppRP))
+            return;
+    }
 
-    if (UnpackInfo.ModifyRenderPassDesc == nullptr && m_Cache.RenderPass.Get(UnpackInfo.Name, ppRP))
+    // Find the archive that contains this render pass.
+    auto archive_idx_it = m_ResNameToArchiveIdx.RenderPass.find(UnpackInfo.Name);
+    if (archive_idx_it == m_ResNameToArchiveIdx.RenderPass.end())
         return;
 
+    auto& pArchive = m_Archives[archive_idx_it->second].pArchive;
+    if (!pArchive)
+    {
+        UNEXPECTED("Null archives should never be added to the list. This is a bug.");
+        return;
+    }
+
     RPData RP{GetRawAllocator()};
-    if (!m_pArchive->LoadResourceData(m_pArchive->GetResourceMap().RenderPass, UnpackInfo.Name, RP))
+    if (!pArchive->LoadResourceData(pArchive->GetResourceMap().RenderPass, UnpackInfo.Name, RP))
         return;
 
     if (UnpackInfo.ModifyRenderPassDesc != nullptr)
@@ -734,13 +817,7 @@ void DearchiverBase::UnpackRenderPass(const RenderPassUnpackInfo& UnpackInfo, IR
 
 void DearchiverBase::Reset()
 {
-    m_pArchive.reset();
-    m_Cache.Sign.Clear();
-    m_Cache.RenderPass.Clear();
-    m_Cache.GraphPSO.Clear();
-    m_Cache.CompPSO.Clear();
-    m_Cache.TilePSO.Clear();
-    m_Cache.RayTrPSO.Clear();
+    m_Archives.clear();
 }
 
 } // namespace Diligent
