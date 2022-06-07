@@ -747,11 +747,11 @@ void DearchiverBase::UnpackPipelineState(const PipelineStateUnpackInfo& UnpackIn
             break;
 
         case PIPELINE_TYPE_RAY_TRACING:
-            UnpackPipelineStateImpl<TilePipelineStateCreateInfo>(UnpackInfo, ppPSO);
+            UnpackPipelineStateImpl<RayTracingPipelineStateCreateInfo>(UnpackInfo, ppPSO);
             break;
 
         case PIPELINE_TYPE_TILE:
-            UnpackPipelineStateImpl<RayTracingPipelineStateCreateInfo>(UnpackInfo, ppPSO);
+            UnpackPipelineStateImpl<TilePipelineStateCreateInfo>(UnpackInfo, ppPSO);
             break;
 
         case PIPELINE_TYPE_INVALID:
