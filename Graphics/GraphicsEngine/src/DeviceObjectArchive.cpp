@@ -871,4 +871,291 @@ std::string DeviceObjectArchive::ToString() const
     return Output;
 }
 
+
+void DeviceObjectArchive::RemoveDeviceData(DeviceType Dev) noexcept(false)
+{
+    m_DeviceSpecific[static_cast<size_t>(Dev)] = ArchiveBlock{};
+
+    ArchiveBlock NewCommonBlock = m_CommonData;
+    if (!NewCommonBlock.LoadToMemory())
+        LOG_ERROR_AND_THROW("Failed to load common block");
+
+    std::vector<Uint8> Temp;
+
+    const auto UpdateResources = [&](const NameToArchiveRegionMap& ResMap, ChunkType chunkType) //
+    {
+        for (auto& Res : ResMap)
+        {
+            Temp.resize(Res.second.Size);
+            if (!NewCommonBlock.Read(Res.second.Offset, Temp.size(), Temp.data()))
+                continue;
+
+            DataHeaderBase Header{ChunkType::Undefined};
+            if (Temp.size() < sizeof(Header))
+                continue;
+
+            memcpy(&Header, Temp.data(), sizeof(Header));
+            if (Header.Type != chunkType)
+                continue;
+
+            Header.DeviceSpecificDataSize[static_cast<size_t>(Dev)]   = 0;
+            Header.DeviceSpecificDataOffset[static_cast<size_t>(Dev)] = DataHeaderBase::InvalidOffset;
+
+            // Update header
+            NewCommonBlock.Write(Res.second.Offset, sizeof(Header), &Header);
+        }
+    };
+
+    // Remove device specific data offset
+    static_assert(static_cast<Uint32>(ChunkType::Count) == 9, "Please handle the new chunk type below");
+    // clang-format off
+    UpdateResources(m_ResMap.Sign,     ChunkType::ResourceSignature);
+    UpdateResources(m_ResMap.GraphPSO, ChunkType::GraphicsPipelineStates);
+    UpdateResources(m_ResMap.CompPSO,  ChunkType::ComputePipelineStates);
+    UpdateResources(m_ResMap.TilePSO,  ChunkType::TilePipelineStates);
+    UpdateResources(m_ResMap.RayTrPSO, ChunkType::RayTracingPipelineStates);
+    // clang-format on
+
+    // Ignore render passes
+
+    // Patch shader chunk
+    for (auto& Chunk : m_Chunks)
+    {
+        if (Chunk.Type == ChunkType::Shaders)
+        {
+            ShadersDataHeader Header;
+            VERIFY_EXPR(sizeof(Header) == Chunk.Size);
+
+            if (NewCommonBlock.Read(Chunk.Offset, sizeof(Header), &Header))
+            {
+                VERIFY_EXPR(Header.Type == ChunkType::Shaders);
+
+                Header.DeviceSpecificDataSize[static_cast<size_t>(Dev)]   = 0;
+                Header.DeviceSpecificDataOffset[static_cast<size_t>(Dev)] = DataHeaderBase::InvalidOffset;
+
+                // Update header
+                NewCommonBlock.Write(Chunk.Offset, sizeof(Header), &Header);
+            }
+            break;
+        }
+    }
+
+    m_CommonData = std::move(NewCommonBlock);
+
+    VERIFY_EXPR(Validate());
+}
+
+
+void DeviceObjectArchive::AppendDeviceData(const DeviceObjectArchive& Src, DeviceType Dev) noexcept(false)
+{
+    if (!Src.m_CommonData.IsValid())
+        LOG_ERROR_AND_THROW("Common data block is not present");
+
+    if (!Src.m_DeviceSpecific[static_cast<size_t>(Dev)].IsValid())
+        LOG_ERROR_AND_THROW("Can not append device specific block - block is not present");
+
+    ArchiveBlock NewCommonBlock = m_CommonData;
+    if (!NewCommonBlock.LoadToMemory())
+        LOG_ERROR_AND_THROW("Failed to load common block in destination archive");
+
+    const auto LoadResource = [](std::vector<Uint8>& Data, const NameToArchiveRegionMap::value_type& Res, const ArchiveBlock& Block) //
+    {
+        Data.clear();
+
+        // ignore Block.Offset
+        if (Res.second.Offset > Block.Size || Res.second.Offset + Res.second.Size > Block.Size)
+            return false;
+
+        Data.resize(Res.second.Size);
+        return Block.Read(Res.second.Offset, Data.size(), Data.data());
+    };
+
+    std::vector<Uint8> TempSrc, TempDst;
+
+    const auto CmpAndUpdateResources = [&](const NameToArchiveRegionMap& DstResMap, const NameToArchiveRegionMap& SrcResMap, ChunkType chunkType, const char* ResTypeName) //
+    {
+        if (DstResMap.size() != SrcResMap.size())
+            LOG_ERROR_AND_THROW("Number of ", ResTypeName, " resources in source and destination archive does not match");
+
+        for (auto& DstRes : DstResMap)
+        {
+            auto Iter = SrcResMap.find(DstRes.first);
+            if (Iter == SrcResMap.end())
+                LOG_ERROR_AND_THROW(ResTypeName, " '", DstRes.first.GetStr(), "' is not found");
+
+            const auto& SrcRes = *Iter;
+            if (!LoadResource(TempDst, DstRes, NewCommonBlock) || !LoadResource(TempSrc, SrcRes, Src.m_CommonData))
+                LOG_ERROR_AND_THROW("Failed to load ", ResTypeName, " '", DstRes.first.GetStr(), "' common data");
+
+            if (TempSrc.size() != TempDst.size())
+                LOG_ERROR_AND_THROW(ResTypeName, " '", DstRes.first.GetStr(), "' common data size must match");
+
+            DataHeaderBase SrcHeader{ChunkType::Undefined};
+            DataHeaderBase DstHeader{ChunkType::Undefined};
+            if (TempSrc.size() < sizeof(SrcHeader) || TempDst.size() < sizeof(DstHeader))
+                LOG_ERROR_AND_THROW(ResTypeName, " '", DstRes.first.GetStr(), "' data size is too small to have header");
+
+            if (memcmp(&TempSrc[sizeof(SrcHeader)], &TempDst[sizeof(DstHeader)], TempDst.size() - sizeof(DstHeader)) != 0)
+                LOG_ERROR_AND_THROW(ResTypeName, " '", DstRes.first.GetStr(), "' common data must match");
+
+            memcpy(&SrcHeader, TempSrc.data(), sizeof(SrcHeader));
+            memcpy(&DstHeader, TempDst.data(), sizeof(DstHeader));
+
+            if (SrcHeader.Type != chunkType || DstHeader.Type != chunkType)
+                LOG_ERROR_AND_THROW(ResTypeName, " '", DstRes.first.GetStr(), "' header chunk type is invalid");
+
+            const auto  SrcSize   = SrcHeader.DeviceSpecificDataSize[static_cast<Uint32>(Dev)];
+            const auto  SrcOffset = SrcHeader.DeviceSpecificDataOffset[static_cast<Uint32>(Dev)];
+            const auto& SrcBlock  = Src.m_DeviceSpecific[static_cast<Uint32>(Dev)];
+
+            // ignore Block.Offset
+            if (SrcOffset > SrcBlock.Size || SrcOffset + SrcSize > SrcBlock.Size)
+                LOG_ERROR_AND_THROW("Source device specific data for ", ResTypeName, " '", DstRes.first.GetStr(), "' is out of block range");
+
+            DstHeader.DeviceSpecificDataSize[static_cast<Uint32>(Dev)]   = SrcSize;
+            DstHeader.DeviceSpecificDataOffset[static_cast<Uint32>(Dev)] = SrcOffset;
+
+            // Update header
+            NewCommonBlock.Write(DstRes.second.Offset, sizeof(DstHeader), &DstHeader);
+        }
+    };
+
+    static_assert(static_cast<Uint32>(ChunkType::Count) == 9, "Please handle the new chunk type below");
+    const auto& SrcResMap = Src.GetResourceMap();
+    // clang-format off
+    CmpAndUpdateResources(m_ResMap.Sign,     SrcResMap.Sign,     ChunkType::ResourceSignature,        "ResourceSignature");
+    CmpAndUpdateResources(m_ResMap.GraphPSO, SrcResMap.GraphPSO, ChunkType::GraphicsPipelineStates,   "GraphicsPipelineState");
+    CmpAndUpdateResources(m_ResMap.CompPSO,  SrcResMap.CompPSO,  ChunkType::ComputePipelineStates,    "ComputePipelineState");
+    CmpAndUpdateResources(m_ResMap.TilePSO,  SrcResMap.TilePSO,  ChunkType::TilePipelineStates,       "TilePipelineState");
+    CmpAndUpdateResources(m_ResMap.RayTrPSO, SrcResMap.RayTrPSO, ChunkType::RayTracingPipelineStates, "RayTracingPipelineState");
+    // clang-format on
+
+    // Compare render passes
+    {
+        if (m_ResMap.RenderPass.size() != SrcResMap.RenderPass.size())
+            LOG_ERROR_AND_THROW("Number of RenderPass resources in source and destination archive does not match");
+
+        for (auto& DstRes : m_ResMap.RenderPass)
+        {
+            auto Iter = SrcResMap.RenderPass.find(DstRes.first);
+            if (Iter == SrcResMap.RenderPass.end())
+                LOG_ERROR_AND_THROW("RenderPass '", DstRes.first.GetStr(), "' is not found");
+
+            const auto& SrcRes = *Iter;
+            if (!LoadResource(TempDst, DstRes, NewCommonBlock) || !LoadResource(TempSrc, SrcRes, Src.m_CommonData))
+                LOG_ERROR_AND_THROW("Failed to load RenderPass '", DstRes.first.GetStr(), "' common data");
+
+            if (TempSrc != TempDst)
+                LOG_ERROR_AND_THROW("RenderPass '", DstRes.first.GetStr(), "' common data must match");
+        }
+    }
+
+    // Update shader device specific offsets
+    {
+        const auto ReadShaderHeader = [](ShadersDataHeader& Header, Uint32& HeaderOffset, const std::vector<ChunkHeader>& Chunks, const ArchiveBlock& Block) //
+        {
+            HeaderOffset = 0;
+            for (auto& Chunk : Chunks)
+            {
+                if (Chunk.Type == ChunkType::Shaders)
+                {
+                    if (sizeof(Header) != Chunk.Size)
+                        LOG_ERROR_AND_THROW("Invalid chunk size for ShadersDataHeader");
+
+                    if (!Block.Read(Chunk.Offset, sizeof(Header), &Header))
+                        LOG_ERROR_AND_THROW("Failed to read ShadersDataHeader");
+
+                    if (Header.Type != ChunkType::Shaders)
+                        LOG_ERROR_AND_THROW("Invalid chunk type for ShadersDataHeader");
+
+                    HeaderOffset = Chunk.Offset;
+                    return true;
+                }
+            }
+            return false;
+        };
+
+        ShadersDataHeader DstHeader;
+        Uint32            DstHeaderOffset = 0;
+        if (ReadShaderHeader(DstHeader, DstHeaderOffset, m_Chunks, m_CommonData))
+        {
+            ShadersDataHeader SrcHeader;
+            Uint32            SrcHeaderOffset = 0;
+            if (!ReadShaderHeader(SrcHeader, SrcHeaderOffset, Src.GetChunks(), Src.m_CommonData))
+                LOG_ERROR_AND_THROW("Failed to find shaders in source archive");
+
+            const auto  SrcSize   = SrcHeader.DeviceSpecificDataSize[static_cast<Uint32>(Dev)];
+            const auto  SrcOffset = SrcHeader.DeviceSpecificDataOffset[static_cast<Uint32>(Dev)];
+            const auto& SrcBlock  = Src.m_DeviceSpecific[static_cast<Uint32>(Dev)];
+
+            // ignore Block.Offset
+            if (SrcOffset > SrcBlock.Size || SrcOffset + SrcSize > SrcBlock.Size)
+                LOG_ERROR_AND_THROW("Source device specific data for Shaders is out of block range");
+
+            DstHeader.DeviceSpecificDataSize[static_cast<Uint32>(Dev)]   = SrcSize;
+            DstHeader.DeviceSpecificDataOffset[static_cast<Uint32>(Dev)] = SrcOffset;
+
+            // Update header
+            NewCommonBlock.Write(DstHeaderOffset, sizeof(DstHeader), &DstHeader);
+        }
+    }
+
+    m_CommonData = std::move(NewCommonBlock);
+
+    m_DeviceSpecific[static_cast<Uint32>(Dev)] = Src.m_DeviceSpecific[static_cast<Uint32>(Dev)];
+
+    VERIFY_EXPR(Validate());
+}
+
+void DeviceObjectArchive::Serialize(IFileStream* pStream) const noexcept(false)
+{
+    std::vector<Uint8> Temp;
+
+    const auto CopyToStream = [&pStream, &Temp](const ArchiveBlock& Block, Uint32 Offset) //
+    {
+        Temp.resize(Block.Size - Offset);
+
+        if (!Block.Read(Offset, Temp.size(), Temp.data()))
+            LOG_ERROR_AND_THROW("Failed to read block from archive");
+
+        if (!pStream->Write(Temp.data(), Temp.size()))
+            LOG_ERROR_AND_THROW("Failed to store block");
+    };
+
+    ArchiveHeader Header;
+    Header.MagicNumber = HeaderMagicNumber;
+    Header.Version     = HeaderVersion;
+    Header.NumChunks   = StaticCast<Uint32>(m_Chunks.size());
+
+    size_t Offset = m_CommonData.Size;
+    for (size_t dev = 0; dev < m_DeviceSpecific.size(); ++dev)
+    {
+        const auto& Block = m_DeviceSpecific[dev];
+
+        if (Block.IsValid())
+        {
+            Header.BlockBaseOffsets[dev] = StaticCast<Uint32>(Offset);
+            Offset += Block.Size;
+        }
+        else
+            Header.BlockBaseOffsets[dev] = DataHeaderBase::InvalidOffset;
+    }
+
+    pStream->Write(&Header, sizeof(Header));
+    CopyToStream(m_CommonData, sizeof(Header));
+
+    for (size_t dev = 0; dev < m_DeviceSpecific.size(); ++dev)
+    {
+        const auto& Block = m_DeviceSpecific[dev];
+        if (Block.IsValid())
+        {
+            const size_t Pos = pStream->GetSize();
+            VERIFY_EXPR(Header.BlockBaseOffsets[dev] == Pos);
+            CopyToStream(Block, 0);
+        }
+    }
+
+    VERIFY_EXPR(Offset == pStream->GetSize());
+}
+
 } // namespace Diligent

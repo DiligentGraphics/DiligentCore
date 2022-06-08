@@ -32,7 +32,6 @@
 #include "ArchiverImpl.hpp"
 #include "SerializationDeviceImpl.hpp"
 #include "EngineMemory.h"
-#include "ArchiveRepacker.hpp"
 #include "ArchiveMemoryImpl.hpp"
 
 namespace Diligent
@@ -189,17 +188,17 @@ Bool ArchiverFactoryImpl::RemoveDeviceData(IArchive* pSrcArchive, ARCHIVE_DEVICE
 
     try
     {
-        ArchiveRepacker Repacker{pSrcArchive};
+        DeviceObjectArchive ObjectArchive{pSrcArchive};
 
         while (DeviceFlags != ARCHIVE_DEVICE_DATA_FLAG_NONE)
         {
             const auto DataTypeFlag      = ExtractLSB(DeviceFlags);
             const auto ArchiveDeviceType = ArchiveDeviceDataFlagToArchiveDeviceType(DataTypeFlag);
 
-            Repacker.RemoveDeviceData(ArchiveDeviceType);
+            ObjectArchive.RemoveDeviceData(ArchiveDeviceType);
         }
 
-        Repacker.Serialize(pStream);
+        ObjectArchive.Serialize(pStream);
         return true;
     }
     catch (...)
@@ -218,18 +217,18 @@ Bool ArchiverFactoryImpl::AppendDeviceData(IArchive* pSrcArchive, ARCHIVE_DEVICE
 
     try
     {
-        ArchiveRepacker       SrcRepacker{pSrcArchive};
-        const ArchiveRepacker DevRepacker{pDeviceArchive};
+        DeviceObjectArchive       ObjectArchive{pSrcArchive};
+        const DeviceObjectArchive DevObjectArchive{pDeviceArchive};
 
         while (DeviceFlags != ARCHIVE_DEVICE_DATA_FLAG_NONE)
         {
             const auto DataTypeFlag      = ExtractLSB(DeviceFlags);
             const auto ArchiveDeviceType = ArchiveDeviceDataFlagToArchiveDeviceType(DataTypeFlag);
 
-            SrcRepacker.AppendDeviceData(DevRepacker, ArchiveDeviceType);
+            ObjectArchive.AppendDeviceData(DevObjectArchive, ArchiveDeviceType);
         }
 
-        SrcRepacker.Serialize(pStream);
+        ObjectArchive.Serialize(pStream);
         return true;
     }
     catch (...)
@@ -242,9 +241,9 @@ Bool ArchiverFactoryImpl::PrintArchiveContent(IArchive* pArchive) const
 {
     try
     {
-        ArchiveRepacker Repacker{pArchive};
+        DeviceObjectArchive ObjArchive{pArchive};
 
-        Repacker.Print();
+        LOG_INFO_MESSAGE(ObjArchive.ToString());
         return true;
     }
     catch (...)

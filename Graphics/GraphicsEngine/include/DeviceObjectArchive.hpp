@@ -46,6 +46,7 @@
 
 #include "GraphicsTypes.h"
 #include "Archive.h"
+#include "FileStream.h"
 
 #include "HashUtils.hpp"
 #include "RefCntAutoPtr.hpp"
@@ -313,6 +314,11 @@ public:
     {
         return m_pArchive.RawPtr<IArchive>();
     }
+
+
+    void RemoveDeviceData(DeviceType Dev) noexcept(false);
+    void AppendDeviceData(const DeviceObjectArchive& Src, DeviceType Dev) noexcept(false);
+    void Serialize(IFileStream* pStream) const noexcept(false);
 
     bool Validate() const;
 
