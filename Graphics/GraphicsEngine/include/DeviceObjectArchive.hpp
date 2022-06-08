@@ -265,6 +265,7 @@ public:
 
     struct NamedResourcesMap
     {
+        // TODO: use one hash map with ChunkType in the key
         NameToArchiveRegionMap Sign;
         NameToArchiveRegionMap RenderPass;
         NameToArchiveRegionMap GraphPSO;
@@ -313,7 +314,14 @@ public:
         return m_pArchive.RawPtr<IArchive>();
     }
 
+    bool Validate() const;
+
+    std::string ToString() const;
+
 private:
+    // Temporary
+    friend class ArchiveRepacker;
+
     TBlockBaseOffsets m_BaseOffsets;
     ArchiveDebugInfo  m_DebugInfo;
 
@@ -329,6 +337,35 @@ private:
         std::vector<ArchiveRegion> Regions;
     };
     std::array<ShaderRegionsInfo, static_cast<size_t>(DeviceType::Count)> m_ShaderRegions;
+
+    struct ArchiveBlock
+    {
+        RefCntAutoPtr<IArchive> pArchive;
+
+        Uint32 Offset = DataHeaderBase::InvalidOffset;
+        Uint32 Size   = 0;
+
+        std::vector<Uint8> Memory; // can be used for patching
+
+        ArchiveBlock() noexcept {}
+        ArchiveBlock(const ArchiveBlock&) = default;
+
+        ArchiveBlock(IArchive* _pArchive, Uint32 _Offset, Uint32 _Size) noexcept :
+            pArchive{_pArchive}, Offset{_Offset}, Size{_Size} {}
+
+        ArchiveBlock& operator=(ArchiveBlock&&) = default;
+        ArchiveBlock& operator=(const ArchiveBlock&) = default;
+
+        bool IsValid() const { return pArchive != nullptr && Offset != DataHeaderBase::InvalidOffset && Size != 0; }
+
+        bool LoadToMemory();
+        bool Read(Uint64 Offset, Uint64 Size, void* pData) const;
+        bool Write(Uint64 Offset, Uint64 Size, const void* pData);
+    };
+    using DeviceSpecificBlocks = std::array<ArchiveBlock, static_cast<size_t>(BlockOffsetType::Count)>;
+
+    ArchiveBlock         m_CommonData;
+    DeviceSpecificBlocks m_DeviceSpecific;
 
     RefCntAutoPtr<IArchive> m_pArchive; // archive is thread-safe
 };

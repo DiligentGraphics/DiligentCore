@@ -29,12 +29,69 @@
 #include <bitset>
 #include <unordered_set>
 #include <algorithm>
+#include <set>
+#include <algorithm>
 
 #include "DebugUtilities.hpp"
 #include "PSOSerializer.hpp"
 
 namespace Diligent
 {
+
+
+bool DeviceObjectArchive::ArchiveBlock::LoadToMemory()
+{
+    if (!IsValid())
+        return false;
+
+    Memory.resize(Size);
+    if (!pArchive->Read(Offset, Memory.size(), Memory.data()))
+    {
+        Memory.clear();
+        return false;
+    }
+    return true;
+}
+
+bool DeviceObjectArchive::ArchiveBlock::Read(Uint64 OffsetInBlock, Uint64 DataSize, void* pData) const
+{
+    if (!IsValid())
+        return false;
+
+    if (!Memory.empty())
+    {
+        if (OffsetInBlock < Memory.size() && OffsetInBlock + DataSize <= Memory.size())
+        {
+            memcpy(pData, &Memory[StaticCast<size_t>(OffsetInBlock)], StaticCast<size_t>(DataSize));
+            return true;
+        }
+        return false;
+    }
+
+    auto* Archive = pArchive.RawPtr<IArchive>();
+    if (Archive && Archive->Read(Offset + OffsetInBlock, DataSize, pData))
+        return true;
+
+    return false;
+}
+
+bool DeviceObjectArchive::ArchiveBlock::Write(Uint64 OffsetInBlock, Uint64 DataSize, const void* pData)
+{
+    if (!IsValid())
+        return false;
+
+    if (!Memory.empty())
+    {
+        if (OffsetInBlock < Memory.size() && OffsetInBlock + DataSize <= Memory.size())
+        {
+            memcpy(&Memory[static_cast<size_t>(OffsetInBlock)], pData, static_cast<size_t>(DataSize));
+            return true;
+        }
+    }
+
+    // can not write to archive
+    return false;
+}
 
 template <>
 const DeviceObjectArchive::NameToArchiveRegionMap& DeviceObjectArchive::NamedResourcesMap::GetPsoMap<GraphicsPipelineStateCreateInfo>() const
@@ -150,6 +207,23 @@ void ReadShadersHeader(IArchive*                               pArchive,
     }
 }
 
+const char* ArchiveDeviceTypeToString(Uint32 dev)
+{
+    using DeviceType = DeviceObjectArchive::DeviceType;
+    switch (static_cast<DeviceType>(dev))
+    {
+        // clang-format off
+        case DeviceType::OpenGL:      return "OpenGL";
+        case DeviceType::Direct3D11:  return "Direct3D11";
+        case DeviceType::Direct3D12:  return "Direct3D12";
+        case DeviceType::Vulkan:      return "Vulkan";
+        case DeviceType::Metal_iOS:   return "Metal for iOS";
+        case DeviceType::Metal_MacOS: return "Metal for MacOS";
+        // clang-format on
+        default: return "unknown";
+    }
+}
+
 } // namespace
 
 DeviceObjectArchive::DeviceObjectArchive(IArchive* pArchive) noexcept(false) :
@@ -210,6 +284,41 @@ DeviceObjectArchive::DeviceObjectArchive(IArchive* pArchive) noexcept(false) :
                 LOG_ERROR_AND_THROW("Unknown chunk type (", static_cast<Uint32>(Chunk.Type), ")");
         }
     }
+
+    // Calculate device-specific block sizes
+    {
+        std::set<Uint32> SortedOffsets;
+
+        const Uint32 ArchiveSize = StaticCast<Uint32>(pArchive->GetSize());
+        for (auto BaseOffset : m_BaseOffsets)
+        {
+            if (BaseOffset == DataHeaderBase::InvalidOffset)
+                continue;
+            VERIFY_EXPR(BaseOffset < ArchiveSize);
+            SortedOffsets.insert(BaseOffset);
+        }
+        // TODO: using the archive size as last offset is incorrect as
+        //       there may be some additional data past the archive data.
+        SortedOffsets.insert(ArchiveSize);
+
+        for (size_t i = 0; i < static_cast<size_t>(BlockOffsetType::Count); ++i)
+        {
+            const auto BaseOffset = m_BaseOffsets[i];
+            if (BaseOffset == DataHeaderBase::InvalidOffset)
+                continue;
+            auto next_offset = SortedOffsets.find(BaseOffset);
+            VERIFY_EXPR(next_offset != SortedOffsets.end());
+            ++next_offset;
+            VERIFY_EXPR(next_offset != SortedOffsets.end());
+            Uint32 BlockSize    = *next_offset - BaseOffset;
+            m_DeviceSpecific[i] = ArchiveBlock{pArchive, BaseOffset, BlockSize};
+        }
+
+        m_CommonData = ArchiveBlock{pArchive, 0, *SortedOffsets.begin()};
+        VERIFY_EXPR(m_CommonData.IsValid());
+    }
+
+    VERIFY_EXPR(Validate());
 }
 
 DeviceObjectArchive::DeviceType DeviceObjectArchive::RenderDeviceTypeToArchiveDeviceType(RENDER_DEVICE_TYPE Type)
@@ -337,6 +446,429 @@ SerializedData DeviceObjectArchive::GetDeviceSpecificData(DeviceType            
     }
 
     return {pData, Size};
+}
+
+
+bool DeviceObjectArchive::Validate() const
+{
+#define VALIDATE_RES(...) \
+    IsValid = false;      \
+    LOG_INFO_MESSAGE(ResTypeName, " '", Res.first.GetStr(), "': ", __VA_ARGS__);
+
+    std::vector<Uint8> Temp;
+    bool               IsValid = true;
+
+    const auto ValidateResource = [&](const NameToArchiveRegionMap::value_type& Res, const char* ResTypeName) //
+    {
+        Temp.clear();
+
+        // ignore m_CommonData.Offset
+        if (Res.second.Offset > m_CommonData.Size || Res.second.Offset + Res.second.Size > m_CommonData.Size)
+        {
+            VALIDATE_RES("common data in range [", Res.second.Offset, "; ", Res.second.Offset + Res.second.Size,
+                         "] is out of common block size (", m_CommonData.Size, ")");
+            return false;
+        }
+
+        Temp.resize(Res.second.Size);
+        if (!m_CommonData.Read(Res.second.Offset, Temp.size(), Temp.data()))
+        {
+            VALIDATE_RES("failed to read data from archive");
+            return false;
+        }
+        return true;
+    };
+
+    const auto ValidateResources = [&](const NameToArchiveRegionMap& ResMap, ChunkType chunkType, const char* ResTypeName) //
+    {
+        for (auto& Res : ResMap)
+        {
+            if (!ValidateResource(Res, ResTypeName))
+                continue;
+
+            DataHeaderBase Header{ChunkType::Undefined};
+            if (Temp.size() < sizeof(Header))
+            {
+                VALIDATE_RES("resource data is too small to store header - archive corrupted");
+                continue;
+            }
+
+            memcpy(&Header, Temp.data(), sizeof(Header));
+            if (Header.Type != chunkType)
+            {
+                VALIDATE_RES("invalid chunk type");
+                continue;
+            }
+
+            for (Uint32 dev = 0; dev < Header.DeviceSpecificDataSize.size(); ++dev)
+            {
+                const auto  Size   = Header.DeviceSpecificDataSize[dev];
+                const auto  Offset = Header.DeviceSpecificDataOffset[dev];
+                const auto& Block  = m_DeviceSpecific[dev];
+
+                if (Size == 0 && Offset == DataHeaderBase::InvalidOffset)
+                    continue;
+
+                if (Block.IsValid())
+                {
+                    // ignore Block.Offset
+                    if (Offset > Block.Size || Offset + Size > Block.Size)
+                    {
+                        VALIDATE_RES(ArchiveDeviceTypeToString(dev), " specific data is out of block size (", Block.Size, ")");
+                        continue;
+                    }
+                }
+                else
+                {
+                    VALIDATE_RES(ArchiveDeviceTypeToString(dev), " specific data block is not present, but resource requires that data");
+                    continue;
+                }
+            }
+        }
+    };
+
+    static_assert(static_cast<Uint32>(ChunkType::Count) == 9, "Please handle the new chunk type below");
+    // clang-format off
+    ValidateResources(m_ResMap.Sign,     ChunkType::ResourceSignature,        "ResourceSignature");
+    ValidateResources(m_ResMap.GraphPSO, ChunkType::GraphicsPipelineStates,   "GraphicsPipelineState");
+    ValidateResources(m_ResMap.CompPSO,  ChunkType::ComputePipelineStates,    "ComputePipelineState");
+    ValidateResources(m_ResMap.RayTrPSO, ChunkType::RayTracingPipelineStates, "RayTracingPipelineState");
+    ValidateResources(m_ResMap.TilePSO,  ChunkType::TilePipelineStates,       "TilePipelineState");
+    // clang-format on
+
+    // Validate render passes
+    {
+        const char* ResTypeName = "RenderPass";
+        for (auto& Res : m_ResMap.RenderPass)
+        {
+            if (!ValidateResource(Res, ResTypeName))
+                continue;
+
+            RPDataHeader Header{ChunkType::RenderPass};
+            if (Temp.size() < sizeof(Header))
+            {
+                VALIDATE_RES("resource data is too small to store header - archive corrupted");
+                continue;
+            }
+
+            memcpy(&Header, Temp.data(), sizeof(Header));
+            if (Header.Type != ChunkType::RenderPass)
+            {
+                VALIDATE_RES("invalid chunk type");
+                continue;
+            }
+        }
+    }
+
+    // Validate shaders
+    for (const auto& Chunk : m_Chunks)
+    {
+        if (Chunk.Type == ChunkType::Shaders)
+        {
+            ShadersDataHeader Header;
+            VERIFY_EXPR(sizeof(Header) == Chunk.Size);
+
+            if (m_CommonData.Read(Chunk.Offset, sizeof(Header), &Header))
+            {
+                if (Header.Type != ChunkType::Shaders)
+                {
+                    LOG_INFO_MESSAGE("Invalid shaders header");
+                    IsValid = false;
+                    break;
+                }
+
+                for (Uint32 dev = 0; dev < Header.DeviceSpecificDataSize.size(); ++dev)
+                {
+                    const auto  Size   = Header.DeviceSpecificDataSize[dev];
+                    const auto  Offset = Header.DeviceSpecificDataOffset[dev];
+                    const auto& Block  = m_DeviceSpecific[dev];
+
+                    if (Size == 0 && Offset == DataHeaderBase::InvalidOffset)
+                        continue;
+
+                    if (Block.IsValid())
+                    {
+                        // ignore Block.Offset
+                        if (Offset > Block.Size || Offset + Size > Block.Size)
+                        {
+                            LOG_INFO_MESSAGE(ArchiveDeviceTypeToString(dev), " specific data for shaders is out of block size (", Block.Size, ")");
+                            IsValid = false;
+                            continue;
+                        }
+                    }
+                    else
+                    {
+                        LOG_INFO_MESSAGE(ArchiveDeviceTypeToString(dev), " specific data for shaders block is not present, but resource requires that data");
+                        IsValid = false;
+                        continue;
+                    }
+                }
+            }
+            break;
+        }
+    }
+
+    return IsValid;
+}
+
+std::string DeviceObjectArchive::ToString() const
+{
+    std::vector<Uint8> Temp;
+    String             Output           = "Archive content:\n";
+    size_t             MaxDevNameLen    = 0;
+    const char         CommonDataName[] = "Common";
+
+    for (Uint32 i = 0, Cnt = static_cast<Uint32>(DeviceType::Count); i < Cnt; ++i)
+    {
+        MaxDevNameLen = std::max(MaxDevNameLen, strlen(ArchiveDeviceTypeToString(i)));
+    }
+
+    const auto LoadResource = [&](const NameToArchiveRegionMap::value_type& Res) //
+    {
+        Temp.clear();
+
+        // ignore m_CommonData.Offset
+        if (Res.second.Offset > m_CommonData.Size || Res.second.Offset + Res.second.Size > m_CommonData.Size)
+            return false;
+
+        Temp.resize(Res.second.Size);
+        return m_CommonData.Read(Res.second.Offset, Temp.size(), Temp.data());
+    };
+
+    const auto PrintResources = [&](const NameToArchiveRegionMap& ResMap, const char* ResTypeName) //
+    {
+        if (ResMap.empty())
+            return;
+
+        Output += "------------------\n";
+        Output += ResTypeName;
+        Output += "\n";
+
+        String Log;
+        for (auto& Res : ResMap)
+        {
+            Log.clear();
+            Log += "  ";
+            Log += Res.first.GetStr();
+
+            DataHeaderBase Header{ChunkType::Undefined};
+            if (LoadResource(Res) &&
+                Temp.size() >= sizeof(Header))
+            {
+                memcpy(&Header, Temp.data(), sizeof(Header));
+                Log += '\n';
+
+                // Common data & header
+                {
+                    Log += "    ";
+                    Log += CommonDataName;
+                    for (size_t i = strlen(CommonDataName); i < MaxDevNameLen; ++i)
+                        Log += ' ';
+                    Log += " - [" + std::to_string(Res.second.Offset) + "; " + std::to_string(Res.second.Offset + Res.second.Size) + "]\n";
+                }
+
+                for (Uint32 dev = 0; dev < Header.DeviceSpecificDataSize.size(); ++dev)
+                {
+                    const auto  Size    = Header.DeviceSpecificDataSize[dev];
+                    const auto  Offset  = Header.DeviceSpecificDataOffset[dev];
+                    const auto& Block   = m_DeviceSpecific[dev];
+                    const char* DevName = ArchiveDeviceTypeToString(dev);
+
+                    Log += "    ";
+                    Log += DevName;
+                    for (size_t i = strlen(DevName); i < MaxDevNameLen; ++i)
+                        Log += ' ';
+
+                    if (Size == 0 || Offset == DataHeaderBase::InvalidOffset || !Block.IsValid())
+                        Log += " - none\n";
+                    else
+                        Log += " - [" + std::to_string(Offset) + "; " + std::to_string(Offset + Size) + "]\n";
+                }
+
+                Output += Log;
+                continue;
+            }
+
+            Log += " - invalid data\n";
+            Output += Log;
+        }
+    };
+
+    // Print header
+    {
+        Output += "Header\n";
+        Output += "  version: " + std::to_string(HeaderVersion) + "\n";
+    }
+
+    // Print chunks
+    {
+        const auto ChunkTypeToString = [](ChunkType Type) //
+        {
+            static_assert(static_cast<Uint32>(ChunkType::Count) == 9, "Please handle the new chunk type below");
+            switch (Type)
+            {
+                // clang-format off
+                case ChunkType::ArchiveDebugInfo:         return "ArchiveDebugInfo";
+                case ChunkType::ResourceSignature:        return "ResourceSignature";
+                case ChunkType::GraphicsPipelineStates:   return "GraphicsPipelineStates";
+                case ChunkType::ComputePipelineStates:    return "ComputePipelineStates";
+                case ChunkType::RayTracingPipelineStates: return "RayTracingPipelineStates";
+                case ChunkType::TilePipelineStates:       return "TilePipelineStates";
+                case ChunkType::RenderPass:               return "RenderPass";
+                case ChunkType::Shaders:                  return "Shaders";
+                default:                                  return "unknown";
+                    // clang-format on
+            }
+        };
+
+        Output += "------------------\nChunks\n";
+        for (auto& Chunk : m_Chunks)
+        {
+            Output += String{"  "} + ChunkTypeToString(Chunk.Type) + ", range: [" + std::to_string(Chunk.Offset) + "; " + std::to_string(Chunk.Offset + Chunk.Size) + "]\n";
+        }
+    }
+
+    // Print debug info
+    {
+        for (auto& Chunk : m_Chunks)
+        {
+            if (Chunk.Type == ChunkType::ArchiveDebugInfo)
+            {
+                Temp.resize(Chunk.Size);
+                if (m_CommonData.Read(Chunk.Offset, Temp.size(), Temp.data()))
+                {
+                    Serializer<SerializerMode::Read> Ser{SerializedData{Temp.data(), Temp.size()}};
+
+                    Uint32      APIVersion = 0;
+                    const char* GitHash    = nullptr;
+                    Ser(APIVersion, GitHash);
+
+                    Output += "------------------\nDebug info";
+                    Output += "\n  APIVersion: " + std::to_string(APIVersion);
+                    Output += "\n  GitHash:    " + String{GitHash} + "\n";
+                }
+                break;
+            }
+        }
+    }
+
+    // Print archive blocks
+    {
+        Output += "------------------\nBlocks\n";
+        Output += "  ";
+        Output += CommonDataName;
+        for (size_t i = strlen(CommonDataName); i < MaxDevNameLen; ++i)
+            Output += ' ';
+        Output += " - " + std::to_string(m_CommonData.Size) + " bytes\n";
+
+        for (Uint32 dev = 0, Cnt = static_cast<Uint32>(DeviceType::Count); dev < Cnt; ++dev)
+        {
+            const auto& Block   = m_DeviceSpecific[dev];
+            const char* DevName = ArchiveDeviceTypeToString(dev);
+
+            Output += "  ";
+            Output += DevName;
+            for (size_t i = strlen(DevName); i < MaxDevNameLen; ++i)
+                Output += ' ';
+
+            if (!Block.IsValid())
+                Output += " - none\n";
+            else
+                Output += " - " + std::to_string(Block.Size) + " bytes\n";
+        }
+    }
+
+    // Print resources
+    {
+        static_assert(static_cast<Uint32>(ChunkType::Count) == 9, "Please handle the new chunk type below");
+        // clang-format off
+        PrintResources(m_ResMap.Sign,     "ResourceSignature");
+        PrintResources(m_ResMap.GraphPSO, "GraphicsPipelineState");
+        PrintResources(m_ResMap.CompPSO,  "ComputePipelineState");
+        PrintResources(m_ResMap.RayTrPSO, "RayTracingPipelineState");
+        PrintResources(m_ResMap.TilePSO,  "TilePipelineState");
+        // clang-format on
+
+        if (!m_ResMap.RenderPass.empty())
+        {
+            Output += "------------------\nRenderPass\n";
+
+            String Log;
+            for (auto& Res : m_ResMap.RenderPass)
+            {
+                Log.clear();
+                Log += "  ";
+                Log += Res.first.GetStr();
+
+                if (LoadResource(Res))
+                {
+                    Log += '\n';
+
+                    // Common data & header
+                    {
+                        Log += "    ";
+                        Log += CommonDataName;
+                        Log += " - [" + std::to_string(Res.second.Offset) + "; " + std::to_string(Res.second.Offset + Res.second.Size) + "]\n";
+                    }
+                }
+                else
+                    Log += " - invalid data\n";
+                Output += Log;
+            }
+        }
+
+        // Print shaders
+        for (auto& Chunk : m_Chunks)
+        {
+            if (Chunk.Type == ChunkType::Shaders)
+            {
+                ShadersDataHeader Header;
+                VERIFY_EXPR(sizeof(Header) == Chunk.Size);
+
+                if (m_CommonData.Read(Chunk.Offset, sizeof(Header), &Header))
+                {
+                    Output += "------------------\nShaders\n";
+                    for (Uint32 dev = 0; dev < Header.DeviceSpecificDataSize.size(); ++dev)
+                    {
+                        const auto  Size    = Header.DeviceSpecificDataSize[dev];
+                        const auto  Offset  = Header.DeviceSpecificDataOffset[dev];
+                        const auto& Block   = m_DeviceSpecific[dev];
+                        const char* DevName = ArchiveDeviceTypeToString(dev);
+
+                        Output += "  ";
+                        Output += DevName;
+                        for (size_t i = strlen(DevName); i < MaxDevNameLen; ++i)
+                            Output += ' ';
+
+                        if (Size == 0 || Offset == DataHeaderBase::InvalidOffset || !Block.IsValid())
+                            Output += " - none\n";
+                        else
+                        {
+                            Output += " - list range: [" + std::to_string(Offset) + "; " + std::to_string(Offset + Size) + "], count: " + std::to_string(Size / sizeof(ArchiveRegion));
+
+                            // Calculate data size
+                            std::vector<ArchiveRegion> OffsetAndSizeArray(Size / sizeof(ArchiveRegion));
+                            if (Block.Read(Offset, OffsetAndSizeArray.size() * sizeof(OffsetAndSizeArray[0]), OffsetAndSizeArray.data()))
+                            {
+                                Uint32 MinOffset = ~0u;
+                                Uint32 MaxOffset = 0;
+                                for (auto& OffsetAndSize : OffsetAndSizeArray)
+                                {
+                                    MinOffset = std::min(MinOffset, OffsetAndSize.Offset);
+                                    MaxOffset = std::max(MaxOffset, OffsetAndSize.Offset + OffsetAndSize.Size);
+                                }
+                                Output += ", data range: [" + std::to_string(MinOffset) + "; " + std::to_string(MaxOffset) + "]";
+                            }
+                            Output += "\n";
+                        }
+                    }
+                }
+                break;
+            }
+        }
+    }
+
+    return Output;
 }
 
 } // namespace Diligent

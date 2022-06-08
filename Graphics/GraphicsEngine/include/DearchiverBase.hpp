@@ -106,10 +106,12 @@ protected:
     public:
         NamedResourceCache() noexcept {};
 
-        NamedResourceCache(const NamedResourceCache&) = delete;
+        // clang-format off
+        NamedResourceCache           (const NamedResourceCache&) = delete;
         NamedResourceCache& operator=(const NamedResourceCache&) = delete;
-        NamedResourceCache(NamedResourceCache&&)                 = default;
-        NamedResourceCache& operator=(NamedResourceCache&&) = default;
+        NamedResourceCache           (NamedResourceCache&&)      = default;
+        NamedResourceCache& operator=(NamedResourceCache&&)      = default;
+        // clang-format on
 
         bool Get(const char* Name, ResType** ppResource);
         void Set(const char* Name, ResType* pResource);

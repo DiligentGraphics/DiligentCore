@@ -55,39 +55,13 @@ private:
     using RPDataHeader           = DeviceObjectArchive::RPDataHeader;
     using ShadersDataHeader      = DeviceObjectArchive::ShadersDataHeader;
     using NameToArchiveRegionMap = DeviceObjectArchive::NameToArchiveRegionMap;
+    using ArchiveBlock           = DeviceObjectArchive::ArchiveBlock;
 
     static constexpr auto HeaderMagicNumber = DeviceObjectArchive::HeaderMagicNumber;
     static constexpr auto HeaderVersion     = DeviceObjectArchive::HeaderVersion;
     static constexpr auto InvalidOffset     = DeviceObjectArchive::DataHeaderBase::InvalidOffset;
 
     std::unique_ptr<DeviceObjectArchive> m_pArchive;
-
-    struct ArchiveBlock
-    {
-        RefCntAutoPtr<IArchive> pArchive;
-        std::vector<Uint8>      Memory; // can be used for patching
-        Uint32                  Offset = InvalidOffset;
-        Uint32                  Size   = 0;
-
-        ArchiveBlock() noexcept {}
-        ArchiveBlock(const ArchiveBlock&) = default;
-
-        ArchiveBlock(IArchive* _pArchive, Uint32 _Offset, Uint32 _Size) noexcept :
-            pArchive{_pArchive}, Offset{_Offset}, Size{_Size} {}
-
-        ArchiveBlock& operator=(ArchiveBlock&& Rhs) = default;
-        ArchiveBlock& operator=(const ArchiveBlock& Rhs) = default;
-
-        bool IsValid() const { return pArchive != nullptr && Offset != InvalidOffset && Size != 0; }
-
-        bool LoadToMemory();
-        bool Read(Uint64 Offset, Uint64 Size, void* pData) const;
-        bool Write(Uint64 Offset, Uint64 Size, const void* pData);
-    };
-    using DeviceSpecificBlocks = std::array<ArchiveBlock, static_cast<size_t>(BlockOffsetType::Count)>;
-
-    ArchiveBlock         m_CommonData;
-    DeviceSpecificBlocks m_DeviceSpecific;
 };
 
 } // namespace Diligent
