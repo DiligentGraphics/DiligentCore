@@ -86,7 +86,7 @@ bool DeviceObjectArchive::ArchiveBlock::Write(Uint64 OffsetInBlock, Uint64 DataS
 
     if (!Memory.empty())
     {
-        if (OffsetInBlock < Memory.size() && OffsetInBlock + DataSize <= Memory.size())
+        if (OffsetInBlock + DataSize <= Memory.size())
         {
             memcpy(&Memory[static_cast<size_t>(OffsetInBlock)], pData, static_cast<size_t>(DataSize));
             return true;
@@ -892,21 +892,14 @@ void DeviceObjectArchive::RemoveDeviceData(DeviceType Dev) noexcept(false)
     if (!NewCommonBlock.LoadToMemory())
         LOG_ERROR_AND_THROW("Failed to load common block");
 
-    std::vector<Uint8> Temp;
-
     const auto UpdateResources = [&](const NameToArchiveRegionMap& ResMap, ChunkType chunkType) //
     {
         for (auto& Res : ResMap)
         {
-            Temp.resize(Res.second.Size);
-            if (!NewCommonBlock.Read(Res.second.Offset, Temp.size(), Temp.data()))
-                continue;
-
             DataHeaderBase Header{ChunkType::Undefined};
-            if (Temp.size() < sizeof(Header))
+            if (!NewCommonBlock.Read(Res.second.Offset, sizeof(Header), &Header))
                 continue;
 
-            memcpy(&Header, Temp.data(), sizeof(Header));
             if (Header.Type != chunkType)
                 continue;
 
@@ -933,23 +926,23 @@ void DeviceObjectArchive::RemoveDeviceData(DeviceType Dev) noexcept(false)
     // Patch shader chunk
     for (auto& Chunk : m_Chunks)
     {
-        if (Chunk.Type == ChunkType::Shaders)
+        if (Chunk.Type != ChunkType::Shaders)
+            continue;
+
+        ShadersDataHeader Header;
+        VERIFY_EXPR(sizeof(Header) == Chunk.Size);
+
+        if (NewCommonBlock.Read(Chunk.Offset, sizeof(Header), &Header))
         {
-            ShadersDataHeader Header;
-            VERIFY_EXPR(sizeof(Header) == Chunk.Size);
+            VERIFY_EXPR(Header.Type == ChunkType::Shaders);
 
-            if (NewCommonBlock.Read(Chunk.Offset, sizeof(Header), &Header))
-            {
-                VERIFY_EXPR(Header.Type == ChunkType::Shaders);
+            Header.DeviceSpecificDataSize[static_cast<size_t>(Dev)]   = 0;
+            Header.DeviceSpecificDataOffset[static_cast<size_t>(Dev)] = DataHeaderBase::InvalidOffset;
 
-                Header.DeviceSpecificDataSize[static_cast<size_t>(Dev)]   = 0;
-                Header.DeviceSpecificDataOffset[static_cast<size_t>(Dev)] = DataHeaderBase::InvalidOffset;
-
-                // Update header
-                NewCommonBlock.Write(Chunk.Offset, sizeof(Header), &Header);
-            }
-            break;
+            // Update header
+            NewCommonBlock.Write(Chunk.Offset, sizeof(Header), &Header);
         }
+        break;
     }
 
     m_CommonData = std::move(NewCommonBlock);
