@@ -456,80 +456,58 @@ SerializedData DeviceObjectArchive::GetDeviceSpecificData(DeviceType            
 
 bool DeviceObjectArchive::Validate() const
 {
-#define VALIDATE_RES(...) \
-    IsValid = false;      \
-    LOG_INFO_MESSAGE(ResTypeName, " '", Res.first.GetStr(), "': ", __VA_ARGS__);
+#define VALIDATE_RES(Expr, ...)                                                                             \
+    do                                                                                                      \
+    {                                                                                                       \
+        if (!(Expr))                                                                                        \
+        {                                                                                                   \
+            IsValid = false;                                                                                \
+            LOG_ERROR_MESSAGE("The data of resource '", Res.first.GetStr(), "' is invalid: ", __VA_ARGS__); \
+            return false;                                                                                   \
+        }                                                                                                   \
+    } while (false)
 
-    std::vector<Uint8> Temp;
-    bool               IsValid = true;
+    bool IsValid = true;
 
-    const auto ValidateResource = [&](const NameToArchiveRegionMap::value_type& Res, const char* ResTypeName) //
+    const auto ReadHeader = [&](const NameToArchiveRegionMap::value_type& Res, auto& Header, ChunkType ExpectedChunkType) //
     {
-        Temp.clear();
-
         // ignore m_CommonData.Offset
-        if (Res.second.Offset > m_CommonData.Size || Res.second.Offset + Res.second.Size > m_CommonData.Size)
-        {
-            VALIDATE_RES("common data in range [", Res.second.Offset, "; ", Res.second.Offset + Res.second.Size,
-                         ") is out of common block size (", m_CommonData.Size, ")");
-            return false;
-        }
+        VALIDATE_RES(Res.second.Offset + Res.second.Size <= m_CommonData.Size,
+                     "common data in range [", Res.second.Offset, "; ", Res.second.Offset + Res.second.Size,
+                     ") exceeds the common block size (", m_CommonData.Size, ")");
 
-        Temp.resize(Res.second.Size);
-        if (!m_CommonData.Read(Res.second.Offset, Temp.size(), Temp.data()))
-        {
-            VALIDATE_RES("failed to read data from archive");
-            return false;
-        }
+        VALIDATE_RES(Res.second.Size >= sizeof(Header), "resource data is too small to store the header");
+
+        VALIDATE_RES(m_CommonData.Read(Res.second.Offset, sizeof(Header), &Header), "failed to read the data header");
+
+        VALIDATE_RES(Header.Type == ExpectedChunkType, "invalid chunk type");
+
         return true;
     };
 
     const auto ValidateResources = [&](const NameToArchiveRegionMap& ResMap, ChunkType chunkType) //
     {
-        const auto* ResTypeName = ChunkTypeToString(chunkType);
-
-        for (auto& Res : ResMap)
+        for (const auto& Res : ResMap)
         {
-            if (!ValidateResource(Res, ResTypeName))
-                continue;
-
             DataHeaderBase Header{ChunkType::Undefined};
-            if (Temp.size() < sizeof(Header))
-            {
-                VALIDATE_RES("resource data is too small to store header - archive corrupted");
+            if (!ReadHeader(Res, Header, chunkType))
                 continue;
-            }
-
-            memcpy(&Header, Temp.data(), sizeof(Header));
-            if (Header.Type != chunkType)
-            {
-                VALIDATE_RES("invalid chunk type");
-                continue;
-            }
 
             for (Uint32 dev = 0; dev < Header.DeviceSpecificDataSize.size(); ++dev)
             {
-                const auto  Size   = Header.DeviceSpecificDataSize[dev];
-                const auto  Offset = Header.DeviceSpecificDataOffset[dev];
-                const auto& Block  = m_DeviceSpecific[dev];
-
+                const auto Size   = Header.DeviceSpecificDataSize[dev];
+                const auto Offset = Header.DeviceSpecificDataOffset[dev];
                 if (Size == 0 && Offset == DataHeaderBase::InvalidOffset)
                     continue;
 
-                if (Block.IsValid())
-                {
-                    // ignore Block.Offset
-                    if (Offset > Block.Size || Offset + Size > Block.Size)
-                    {
-                        VALIDATE_RES(ArchiveDeviceTypeToString(dev), " specific data is out of block size (", Block.Size, ")");
-                        continue;
-                    }
-                }
-                else
-                {
-                    VALIDATE_RES(ArchiveDeviceTypeToString(dev), " specific data block is not present, but resource requires that data");
-                    continue;
-                }
+                const auto& Block = m_DeviceSpecific[dev];
+
+                auto ValidateBlock = [&]() {
+                    VALIDATE_RES(Block.IsValid(), ArchiveDeviceTypeToString(dev), "-specific data block is not present");
+                    VALIDATE_RES(Offset + Size <= Block.Size, ArchiveDeviceTypeToString(dev), "-specific data exceeds the block size (", Block.Size, ")");
+                    return true;
+                };
+                ValidateBlock();
             }
         }
     };
@@ -545,75 +523,63 @@ bool DeviceObjectArchive::Validate() const
 
     // Validate render passes
     {
-        const char* ResTypeName = "RenderPass";
-        for (auto& Res : m_ResMap.RenderPass)
+        for (const auto& Res : m_ResMap.RenderPass)
         {
-            if (!ValidateResource(Res, ResTypeName))
-                continue;
-
             RPDataHeader Header{ChunkType::RenderPass};
-            if (Temp.size() < sizeof(Header))
-            {
-                VALIDATE_RES("resource data is too small to store header - archive corrupted");
+            if (!ReadHeader(Res, Header, ChunkType::RenderPass))
                 continue;
-            }
-
-            memcpy(&Header, Temp.data(), sizeof(Header));
-            if (Header.Type != ChunkType::RenderPass)
-            {
-                VALIDATE_RES("invalid chunk type");
-                continue;
-            }
         }
     }
 
     // Validate shaders
     for (const auto& Chunk : m_Chunks)
     {
-        if (Chunk.Type == ChunkType::Shaders)
+        if (Chunk.Type != ChunkType::Shaders)
+            continue;
+
+        ShadersDataHeader Header;
+        VERIFY_EXPR(sizeof(Header) == Chunk.Size);
+
+        if (m_CommonData.Read(Chunk.Offset, sizeof(Header), &Header))
         {
-            ShadersDataHeader Header;
-            VERIFY_EXPR(sizeof(Header) == Chunk.Size);
-
-            if (m_CommonData.Read(Chunk.Offset, sizeof(Header), &Header))
+            if (Header.Type != ChunkType::Shaders)
             {
-                if (Header.Type != ChunkType::Shaders)
+                LOG_INFO_MESSAGE("Invalid shaders header");
+                IsValid = false;
+                break;
+            }
+
+            for (Uint32 dev = 0; dev < Header.DeviceSpecificDataSize.size(); ++dev)
+            {
+                const auto  Size   = Header.DeviceSpecificDataSize[dev];
+                const auto  Offset = Header.DeviceSpecificDataOffset[dev];
+                const auto& Block  = m_DeviceSpecific[dev];
+
+                if (Size == 0 && Offset == DataHeaderBase::InvalidOffset)
+                    continue;
+
+                if (Block.IsValid())
                 {
-                    LOG_INFO_MESSAGE("Invalid shaders header");
-                    IsValid = false;
-                    break;
-                }
-
-                for (Uint32 dev = 0; dev < Header.DeviceSpecificDataSize.size(); ++dev)
-                {
-                    const auto  Size   = Header.DeviceSpecificDataSize[dev];
-                    const auto  Offset = Header.DeviceSpecificDataOffset[dev];
-                    const auto& Block  = m_DeviceSpecific[dev];
-
-                    if (Size == 0 && Offset == DataHeaderBase::InvalidOffset)
-                        continue;
-
-                    if (Block.IsValid())
+                    // ignore Block.Offset
+                    if (Offset + Size > Block.Size)
                     {
-                        // ignore Block.Offset
-                        if (Offset > Block.Size || Offset + Size > Block.Size)
-                        {
-                            LOG_INFO_MESSAGE(ArchiveDeviceTypeToString(dev), " specific data for shaders is out of block size (", Block.Size, ")");
-                            IsValid = false;
-                            continue;
-                        }
-                    }
-                    else
-                    {
-                        LOG_INFO_MESSAGE(ArchiveDeviceTypeToString(dev), " specific data for shaders block is not present, but resource requires that data");
+                        LOG_INFO_MESSAGE(ArchiveDeviceTypeToString(dev), "-specific data for shaders exceeds the block size (", Block.Size, ")");
                         IsValid = false;
                         continue;
                     }
                 }
+                else
+                {
+                    LOG_INFO_MESSAGE(ArchiveDeviceTypeToString(dev), "-specific data for shaders block is not present");
+                    IsValid = false;
+                    continue;
+                }
             }
-            break;
         }
+        break;
     }
+
+#undef VALIDATE_RES
 
     return IsValid;
 }
