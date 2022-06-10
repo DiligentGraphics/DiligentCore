@@ -286,7 +286,7 @@ public:
     static BlockOffsetType GetBlockOffsetType(DeviceType DevType);
     static DeviceType      RenderDeviceTypeToArchiveDeviceType(RENDER_DEVICE_TYPE Type);
 
-    static const char* ChunkTypeToResName(ChunkType Type);
+    static const char* ChunkTypeToString(ChunkType Type);
 
     template <typename ReourceDataType>
     bool LoadResourceData(const NameToArchiveRegionMap& NameToRegion,
@@ -346,13 +346,6 @@ private:
 
     struct ArchiveBlock
     {
-        RefCntAutoPtr<IArchive> pArchive;
-
-        Uint32 Offset = DataHeaderBase::InvalidOffset;
-        Uint32 Size   = 0;
-
-        std::vector<Uint8> Memory; // can be used for patching
-
         ArchiveBlock() noexcept {}
         ArchiveBlock(const ArchiveBlock&) = default;
 
@@ -367,6 +360,15 @@ private:
         bool LoadToMemory();
         bool Read(Uint64 Offset, Uint64 Size, void* pData) const;
         bool Write(Uint64 Offset, Uint64 Size, const void* pData);
+
+    public:
+        RefCntAutoPtr<IArchive> pArchive;
+
+        Uint32 Offset = DataHeaderBase::InvalidOffset;
+        Uint32 Size   = 0;
+
+    private:
+        std::vector<Uint8> Memory; // can be used for patching
     };
     using DeviceSpecificBlocks = std::array<ArchiveBlock, static_cast<size_t>(BlockOffsetType::Count)>;
 
@@ -406,8 +408,8 @@ bool DeviceObjectArchive::LoadResourceData(const NameToArchiveRegionMap& NameToR
     ResData.pHeader  = Ser.Cast<HeaderType>();
     if (ResData.pHeader->Type != ResData.ExpectedChunkType)
     {
-        LOG_ERROR_MESSAGE("Invalid chunk header: '", ChunkTypeToResName(ResData.pHeader->Type),
-                          "'; expected: '", ChunkTypeToResName(ResData.ExpectedChunkType), "'.");
+        LOG_ERROR_MESSAGE("Invalid chunk header: '", ChunkTypeToString(ResData.pHeader->Type),
+                          "'; expected: '", ChunkTypeToString(ResData.ExpectedChunkType), "'.");
         return false;
     }
 

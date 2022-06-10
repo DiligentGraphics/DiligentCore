@@ -184,8 +184,9 @@ void UnpackPRS(IArchive*                   pArchive,
                IPipelineResourceSignature* pRefPRS_1,
                IPipelineResourceSignature* pRefPRS_2)
 {
-    auto* pEnv    = GPUTestingEnvironment::GetInstance();
-    auto* pDevice = pEnv->GetDevice();
+    auto* pEnv             = GPUTestingEnvironment::GetInstance();
+    auto* pDevice          = pEnv->GetDevice();
+    auto* pArchiverFactory = pEnv->GetArchiverFactory();
 
     RefCntAutoPtr<IDearchiver> pDearchiver;
     DearchiverCreateInfo       DearchiverCI{pDevice};
@@ -193,6 +194,8 @@ void UnpackPRS(IArchive*                   pArchive,
     ASSERT_TRUE(pDearchiver);
 
     ASSERT_NE(pArchive, nullptr);
+    EXPECT_TRUE(pArchiverFactory->ValidateArchive(pArchive));
+    EXPECT_TRUE(pArchiverFactory->PrintArchiveContent(pArchive));
     pDearchiver->LoadArchive(pArchive);
 
     // Unpack PRS 1
@@ -942,7 +945,9 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
         pArchiver->SerializeToBlob(&pBlob);
         ASSERT_NE(pBlob, nullptr);
 
-        RefCntAutoPtr<IArchive> pArchive{MakeNewRCObj<ArchiveMemoryImpl>{}(pBlob)};
+        auto pArchive = ArchiveMemoryImpl::Create(pBlob);
+        EXPECT_TRUE(pArchiverFactory->ValidateArchive(pArchive));
+        EXPECT_TRUE(pArchiverFactory->PrintArchiveContent(pArchive));
         pDearchiver->LoadArchive(pArchive);
     }
 
@@ -1262,7 +1267,9 @@ void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
         pArchiver->SerializeToBlob(&pBlob);
         ASSERT_NE(pBlob, nullptr);
 
-        RefCntAutoPtr<IArchive> pArchive{MakeNewRCObj<ArchiveMemoryImpl>{}(pBlob)};
+        auto pArchive = ArchiveMemoryImpl::Create(pBlob);
+        EXPECT_TRUE(pArchiverFactory->ValidateArchive(pArchive));
+        EXPECT_TRUE(pArchiverFactory->PrintArchiveContent(pArchive));
         pDearchiver->LoadArchive(pArchive);
     }
 
@@ -1456,7 +1463,9 @@ TEST(ArchiveTest, RayTracingPipeline)
         pArchiver->SerializeToBlob(&pBlob);
         ASSERT_NE(pBlob, nullptr);
 
-        RefCntAutoPtr<IArchive> pArchive{MakeNewRCObj<ArchiveMemoryImpl>{}(pBlob)};
+        auto pArchive = ArchiveMemoryImpl::Create(pBlob);
+        EXPECT_TRUE(pArchiverFactory->ValidateArchive(pArchive));
+        EXPECT_TRUE(pArchiverFactory->PrintArchiveContent(pArchive));
         pDearchiver->LoadArchive(pArchive);
     }
 
@@ -2240,7 +2249,9 @@ TEST_P(TestSamplers, GraphicsPipeline)
         pArchiver->SerializeToBlob(&pBlob);
         ASSERT_NE(pBlob, nullptr);
 
-        RefCntAutoPtr<IArchive> pArchive{MakeNewRCObj<ArchiveMemoryImpl>{}(pBlob)};
+        auto pArchive = ArchiveMemoryImpl::Create(pBlob);
+        EXPECT_TRUE(pArchiverFactory->ValidateArchive(pArchive));
+        EXPECT_TRUE(pArchiverFactory->PrintArchiveContent(pArchive));
         pDearchiver->LoadArchive(pArchive);
     }
 
