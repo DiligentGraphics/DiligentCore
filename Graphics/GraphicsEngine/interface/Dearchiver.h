@@ -75,7 +75,15 @@ DILIGENT_TYPED_ENUM(PSO_ARCHIVE_FLAGS, Uint32)
     /// to avoid situations where the same byte code is archived with
     /// and without reflection from different PSOs.
     PSO_ARCHIVE_FLAG_STRIP_REFLECTION = 1u << 0,
+
+    /// Do not archive signatures used by the pipeline state.
+    ///
+    /// \note   The flag only applies to explicit signatures.
+    ///         Implicit signatures are always packed.
+    PSO_ARCHIVE_FLAG_DON_NOT_PACK_SIGNATURES = 1u << 1
 };
+DEFINE_FLAG_ENUM_OPERATORS(PSO_ARCHIVE_FLAGS)
+
 
 /// Pipeline state unpack flags
 DILIGENT_TYPED_ENUM(PSO_UNPACK_FLAGS, Uint32)
@@ -92,6 +100,7 @@ DILIGENT_TYPED_ENUM(PSO_UNPACK_FLAGS, Uint32)
     ///          and this flag will have no effect.
     PSO_UNPACK_FLAG_NO_VALIDATION = 1u << 0,
 };
+DEFINE_FLAG_ENUM_OPERATORS(PSO_UNPACK_FLAGS)
 
 
 /// Pipeline state unpack parameters

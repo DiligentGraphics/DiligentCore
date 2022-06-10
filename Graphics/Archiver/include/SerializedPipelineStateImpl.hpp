@@ -112,6 +112,8 @@ public:
             SHADER_TYPE    Stage = SHADER_TYPE_UNKNOWN;
         };
         std::array<std::vector<ShaderInfo>, DeviceDataCount> Shaders;
+
+        bool DoNotPackSignatures = false;
     };
 
     const Data& GetData() const { return m_Data; }

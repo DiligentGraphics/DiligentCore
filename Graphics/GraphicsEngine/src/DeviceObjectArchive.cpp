@@ -968,7 +968,7 @@ void DeviceObjectArchive::AppendDeviceData(const DeviceObjectArchive& Src, Devic
         Data.clear();
 
         // ignore Block.Offset
-        if (Res.second.Offset > Block.Size || Res.second.Offset + Res.second.Size > Block.Size)
+        if (Res.second.Offset + Res.second.Size > Block.Size)
             return false;
 
         Data.resize(Res.second.Size);
@@ -1062,20 +1062,20 @@ void DeviceObjectArchive::AppendDeviceData(const DeviceObjectArchive& Src, Devic
             HeaderOffset = 0;
             for (auto& Chunk : Chunks)
             {
-                if (Chunk.Type == ChunkType::Shaders)
-                {
-                    if (sizeof(Header) != Chunk.Size)
-                        LOG_ERROR_AND_THROW("Invalid chunk size for ShadersDataHeader");
+                if (Chunk.Type != ChunkType::Shaders)
+                    continue;
 
-                    if (!Block.Read(Chunk.Offset, sizeof(Header), &Header))
-                        LOG_ERROR_AND_THROW("Failed to read ShadersDataHeader");
+                if (sizeof(Header) != Chunk.Size)
+                    LOG_ERROR_AND_THROW("Invalid chunk size for ShadersDataHeader");
 
-                    if (Header.Type != ChunkType::Shaders)
-                        LOG_ERROR_AND_THROW("Invalid chunk type for ShadersDataHeader");
+                if (!Block.Read(Chunk.Offset, sizeof(Header), &Header))
+                    LOG_ERROR_AND_THROW("Failed to read ShadersDataHeader");
 
-                    HeaderOffset = Chunk.Offset;
-                    return true;
-                }
+                if (Header.Type != ChunkType::Shaders)
+                    LOG_ERROR_AND_THROW("Invalid chunk type for ShadersDataHeader");
+
+                HeaderOffset = Chunk.Offset;
+                return true;
             }
             return false;
         };

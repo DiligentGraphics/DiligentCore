@@ -79,6 +79,9 @@ public:
     /// Implementation of IArchiver::AddPipelineResourceSignature().
     virtual Bool DILIGENT_CALL_TYPE AddPipelineResourceSignature(IPipelineResourceSignature* pSignature) override final;
 
+    /// Implementation of IArchiver::Reset().
+    virtual void DILIGENT_CALL_TYPE Reset() override final;
+
 public:
     using DeviceType   = DeviceObjectArchive::DeviceType;
     using ChunkType    = DeviceObjectArchive::ChunkType;

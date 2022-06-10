@@ -1245,6 +1245,9 @@ void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
             pDevice->CreateComputePipelineState(PSOCreateInfo, &pRefPSO);
             ASSERT_NE(pRefPSO, nullptr);
         }
+
+        RefCntAutoPtr<IArchive> pArchive;
+        RefCntAutoPtr<IArchive> pSignArchive;
         {
             ComputePipelineStateCreateInfo PSOCreateInfo;
             PSOCreateInfo.PSODesc.Name         = PSO1Name;
@@ -1262,15 +1265,35 @@ void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
             pSerializationDevice->CreateComputePipelineState(PSOCreateInfo, ArchiveInfo, &pSerializedPSO);
             ASSERT_NE(pSerializedPSO, nullptr);
             ASSERT_TRUE(pArchiver->AddPipelineState(pSerializedPSO));
-        }
-        RefCntAutoPtr<IDataBlob> pBlob;
-        pArchiver->SerializeToBlob(&pBlob);
-        ASSERT_NE(pBlob, nullptr);
 
-        auto pArchive = ArchiveMemoryImpl::Create(pBlob);
-        EXPECT_TRUE(pArchiverFactory->ValidateArchive(pArchive));
-        EXPECT_TRUE(pArchiverFactory->PrintArchiveContent(pArchive));
+            {
+                RefCntAutoPtr<IDataBlob> pBlob;
+                pArchiver->SerializeToBlob(&pBlob);
+                ASSERT_NE(pBlob, nullptr);
+
+                pArchive = ArchiveMemoryImpl::Create(pBlob);
+                EXPECT_TRUE(pArchiverFactory->ValidateArchive(pArchive));
+                EXPECT_TRUE(pArchiverFactory->PrintArchiveContent(pArchive));
+            }
+
+            if (ArchiveFlags & PSO_ARCHIVE_FLAG_DON_NOT_PACK_SIGNATURES)
+            {
+                pArchiver->Reset();
+                ASSERT_TRUE(pArchiver->AddPipelineResourceSignature(pSerializedPRS));
+
+                RefCntAutoPtr<IDataBlob> pBlob;
+                pArchiver->SerializeToBlob(&pBlob);
+                ASSERT_NE(pBlob, nullptr);
+
+                pSignArchive = ArchiveMemoryImpl::Create(pBlob);
+                EXPECT_TRUE(pArchiverFactory->ValidateArchive(pSignArchive));
+                EXPECT_TRUE(pArchiverFactory->PrintArchiveContent(pSignArchive));
+            }
+        }
+
         pDearchiver->LoadArchive(pArchive);
+        if (pSignArchive)
+            pDearchiver->LoadArchive(pSignArchive);
     }
 
     // Unpack PSO
@@ -1329,6 +1352,16 @@ TEST(ArchiveTest, ComputePipeline)
 TEST(ArchiveTest, ComputePipeline_NoReflection)
 {
     TestComputePipeline(PSO_ARCHIVE_FLAG_STRIP_REFLECTION);
+}
+
+TEST(ArchiveTest, ComputePipeline_SplitArchive)
+{
+    TestComputePipeline(PSO_ARCHIVE_FLAG_DON_NOT_PACK_SIGNATURES);
+}
+
+TEST(ArchiveTest, ComputePipeline_NoReflection_SplitArchive)
+{
+    TestComputePipeline(PSO_ARCHIVE_FLAG_STRIP_REFLECTION | PSO_ARCHIVE_FLAG_DON_NOT_PACK_SIGNATURES);
 }
 
 TEST(ArchiveTest, RayTracingPipeline)

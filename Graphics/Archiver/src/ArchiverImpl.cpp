@@ -656,14 +656,36 @@ Bool ArchiverImpl::AddPipelineState(IPipelineState* pPSO)
             Res = false;
     }
 
-    const auto& Signatures = pSerializedPSO->GetSignatures();
-    for (auto& pSign : Signatures)
+    if (!pSerializedPSO->GetData().DoNotPackSignatures)
     {
-        if (!AddPipelineResourceSignature(pSign.RawPtr<IPipelineResourceSignature>()))
-            Res = false;
+        const auto& Signatures = pSerializedPSO->GetSignatures();
+        for (auto& pSign : Signatures)
+        {
+            if (!AddPipelineResourceSignature(pSign.RawPtr<IPipelineResourceSignature>()))
+                Res = false;
+        }
     }
 
     return Res;
+}
+
+void ArchiverImpl::Reset()
+{
+    {
+        std::lock_guard<std::mutex> Lock{m_SignaturesMtx};
+        m_Signatures.clear();
+    }
+
+    {
+        std::lock_guard<std::mutex> Lock{m_RenderPassesMtx};
+        m_RenderPasses.clear();
+    }
+
+    for (size_t i = 0; i < m_Pipelines.size(); ++i)
+    {
+        std::lock_guard<std::mutex> Lock{m_PipelinesMtx[i]};
+        m_Pipelines[i].clear();
+    }
 }
 
 } // namespace Diligent

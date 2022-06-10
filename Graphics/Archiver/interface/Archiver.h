@@ -122,6 +122,9 @@ DILIGENT_BEGIN_INTERFACE(IArchiver, IObject)
     ///     The method is thread-safe and may be called from multiple threads simultaneously.
     VIRTUAL Bool METHOD(AddPipelineResourceSignature)(THIS_
                                                       IPipelineResourceSignature* pSignature) PURE;
+
+    /// Resets the archiver to default state and removes all added resources.
+    VIRTUAL void METHOD(Reset)(THIS) PURE;
 };
 DILIGENT_END_INTERFACE
 
