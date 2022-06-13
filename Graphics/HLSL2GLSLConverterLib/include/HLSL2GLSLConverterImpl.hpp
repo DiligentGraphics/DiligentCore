@@ -448,12 +448,24 @@ private:
         {
             enum class StorageQualifier : Int8
             {
-                Unknown = 0,
-                In      = 1,
-                Out     = 2,
-                InOut   = 3,
-                Ret     = 4
-            } storageQualifier;
+                Unknown,
+                In,
+                Out,
+                InOut,
+                Ret
+            } storageQualifier = StorageQualifier::Unknown;
+
+            enum class InterpolationQualifier : Int8
+            {
+                Default,
+                Linear,
+                Nointerpolation,
+                Noperspective,
+                Centroid,
+                Sample
+            } interpolationQualifier = InterpolationQualifier::Default;
+
+            bool SetInterpolationQualifier(TokenType tokenType);
 
             struct GSAttributes
             {
@@ -473,12 +485,8 @@ private:
                     Line      = 2,
                     Triangle  = 3
                 };
-                PrimitiveType PrimType;
-                StreamType    Stream;
-                GSAttributes() :
-                    PrimType{PrimitiveType::Undefined},
-                    Stream{StreamType::Undefined}
-                {}
+                PrimitiveType PrimType = PrimitiveType::Undefined;
+                StreamType    Stream   = StreamType::Undefined;
             } GSAttribs;
 
             struct HSAttributes
@@ -488,10 +496,7 @@ private:
                     Undefined   = 0,
                     InputPatch  = 1,
                     OutputPatch = 2
-                } PatchType;
-                HSAttributes() :
-                    PatchType{InOutPatchType::Undefined}
-                {}
+                } PatchType = InOutPatchType::Undefined;
             } HSAttribs;
 
             String ArraySize;
@@ -500,17 +505,15 @@ private:
             String Semantic;
 
             std::vector<ShaderParameterInfo> members;
-
-            ShaderParameterInfo() :
-                storageQualifier{StorageQualifier::Unknown}
-            {}
         };
         void ParseShaderParameter(TokenListType::iterator& Token,
                                   ShaderParameterInfo&     ParamInfo);
         void ProcessFunctionParameters(TokenListType::iterator&          Token,
                                        std::vector<ShaderParameterInfo>& Params,
                                        bool&                             bIsVoid);
-        bool RequiresFlatQualifier(const String& Type);
+
+        const char* GetInterpolationQualifier(const ShaderParameterInfo& ParamInfo) const;
+
         void ProcessFragmentShaderArguments(std::vector<ShaderParameterInfo>& Params,
                                             String&                           GlobalVariables,
                                             std::stringstream&                ReturnHandlerSS,
@@ -520,7 +523,7 @@ private:
                                   Char                                           Separator,
                                   const Char*                                    Prefix             = "",
                                   const Char*                                    SubstituteInstName = "",
-                                  const Char*                                    Index              = "");
+                                  const Char*                                    Index              = "") const;
 
         template <typename THandler>
         void ProcessScope(TokenListType::iterator& Token,
