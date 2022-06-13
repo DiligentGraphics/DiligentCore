@@ -384,10 +384,14 @@ function(add_format_validation_target MODULE_NAME MODULE_ROOT_PATH IDE_FOLDER)
         return()
     endif()
 
-    # Start by copying .clang-format file to the module's root folder
-    add_custom_target(${MODULE_NAME}-ValidateFormatting ALL
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${DILIGENT_CORE_SOURCE_DIR}/.clang-format" "${MODULE_ROOT_PATH}/.clang-format"
-    )
+    add_custom_target(${MODULE_NAME}-ValidateFormatting ALL)
+
+    if (NOT ("${DILIGENT_CORE_SOURCE_DIR}" STREQUAL "${MODULE_ROOT_PATH}"))
+        # Start by copying .clang-format file to the module's root folder
+        add_custom_command(TARGET ${MODULE_NAME}-ValidateFormatting
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${DILIGENT_CORE_SOURCE_DIR}/.clang-format" "${MODULE_ROOT_PATH}/.clang-format"
+        )
+    endif()
 
     if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
         set(RUN_VALIDATION_SCRIPT validate_format_win.bat)
