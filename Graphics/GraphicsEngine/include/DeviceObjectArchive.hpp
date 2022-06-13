@@ -92,8 +92,8 @@ public:
 
     // Archive header contains the block offsets.
     // Any block can be added or removed without patching all offsets in the archive,
-    // only the base offsets need to be patched.
-    enum class BlockOffsetType : Uint32
+    // only the block offsets in the header need to be patched.
+    enum class ArchiveBlockType : Uint32
     {
         // Device-specific data
         OpenGL,
@@ -102,20 +102,21 @@ public:
         Vulkan,
         Metal_MacOS,
         Metal_iOS,
+        //PipelineCache,
         Count
     };
-    using TBlockBaseOffsets = std::array<Uint32, static_cast<size_t>(BlockOffsetType::Count)>;
+    using TArchiveBlockOffsets = std::array<Uint32, static_cast<size_t>(ArchiveBlockType::Count)>;
 
-    enum class ChunkType : Uint32
+    enum class ResourceGroupType : Uint32
     {
         Undefined = 0,
-        ArchiveDebugInfo,
-        ResourceSignature,
-        GraphicsPipelineStates,
-        ComputePipelineStates,
-        RayTracingPipelineStates,
-        TilePipelineStates,
-        RenderPass,
+        DebugInfo,
+        ResourceSignatures,
+        GraphicsPipelines,
+        ComputePipelines,
+        RayTracingPipelines,
+        TilePipelines,
+        RenderPasses,
         Shaders,
         Count
     };
@@ -127,11 +128,11 @@ public:
 
     struct ArchiveHeader
     {
-        Uint32            MagicNumber      = 0;
-        Uint32            Version          = 0;
-        TBlockBaseOffsets BlockBaseOffsets = {};
-        Uint32            NumChunks        = 0;
-        Uint32            _Padding         = ~0u;
+        Uint32               MagicNumber  = 0;
+        Uint32               Version      = 0;
+        TArchiveBlockOffsets BlockOffsets = {};
+        Uint32               NumChunks    = 0;
+        Uint32               _Padding     = ~0u;
 
         //ChunkHeader     Chunks  [NumChunks]
     };
@@ -140,14 +141,14 @@ public:
     struct ChunkHeader
     {
         ChunkHeader() noexcept {}
-        ChunkHeader(ChunkType _Type) noexcept :
+        ChunkHeader(ResourceGroupType _Type) noexcept :
             Type{_Type}
         {}
 
-        ChunkType Type     = ChunkType::Undefined;
-        Uint32    Size     = 0;
-        Uint32    Offset   = 0; // offset to NamedResourceArrayHeader
-        Uint32    _Padding = ~0u;
+        ResourceGroupType Type     = ResourceGroupType::Undefined;
+        Uint32            Size     = 0;
+        Uint32            Offset   = 0; // offset to NamedResourceArrayHeader
+        Uint32            _Padding = ~0u;
 
         bool operator==(const ChunkHeader& Rhs) const { return Type == Rhs.Type && Size == Rhs.Size && Offset == Rhs.Offset; }
     };
@@ -158,10 +159,10 @@ public:
         Uint32 Count    = 0;
         Uint32 _Padding = ~0u;
 
-        //Uint32 NameLength    [Count]
-        //Uint32 ***DataSize   [Count]
-        //Uint32 ***DataOffset [Count] // for PRSDataHeader / PSODataHeader
-        //char   NameData      []
+        //Uint32 NameLength [Count]
+        //Uint32 DataSize   [Count]
+        //Uint32 DataOffset [Count] // for PRSDataHeader / PSODataHeader
+        //char   NameData   []
     };
     CHECK_HEADER_SIZE(NamedResourceArrayHeader, 8)
 
@@ -171,14 +172,14 @@ public:
 
         static constexpr Uint32 InvalidOffset = ~0u;
 
-        DataHeaderBase(ChunkType _Type) noexcept :
+        DataHeaderBase(ResourceGroupType _Type) noexcept :
             Type{_Type}
         {
             DeviceSpecificDataOffset.fill(Uint32{InvalidOffset});
         }
 
-        const ChunkType Type      = ChunkType::Undefined;
-        const Uint32    _Padding0 = ~0u;
+        const ResourceGroupType Type      = ResourceGroupType::Undefined;
+        const Uint32            _Padding0 = ~0u;
 
         Uint32Array DeviceSpecificDataSize{};
         Uint32Array DeviceSpecificDataOffset{};
@@ -194,10 +195,10 @@ public:
 
     struct PRSDataHeader : DataHeaderBase
     {
-        PRSDataHeader(ChunkType _Type) noexcept :
+        PRSDataHeader(ResourceGroupType _Type) noexcept :
             DataHeaderBase{_Type}
         {
-            VERIFY_EXPR(Type == ChunkType::ResourceSignature);
+            VERIFY_EXPR(Type == ResourceGroupType::ResourceSignatures);
         }
         //PipelineResourceSignatureDesc
         //PipelineResourceSignatureInternalData
@@ -207,13 +208,13 @@ public:
 
     struct PSODataHeader : DataHeaderBase
     {
-        PSODataHeader(ChunkType _Type) noexcept :
+        PSODataHeader(ResourceGroupType _Type) noexcept :
             DataHeaderBase{_Type}
         {
-            VERIFY_EXPR((Type == ChunkType::GraphicsPipelineStates ||
-                         Type == ChunkType::ComputePipelineStates ||
-                         Type == ChunkType::RayTracingPipelineStates ||
-                         Type == ChunkType::TilePipelineStates));
+            VERIFY_EXPR((Type == ResourceGroupType::GraphicsPipelines ||
+                         Type == ResourceGroupType::ComputePipelines ||
+                         Type == ResourceGroupType::RayTracingPipelines ||
+                         Type == ResourceGroupType::TilePipelines));
         }
 
         //GraphicsPipelineStateCreateInfo | ComputePipelineStateCreateInfo | TilePipelineStateCreateInfo | RayTracingPipelineStateCreateInfo
@@ -223,10 +224,10 @@ public:
 
     struct ShadersDataHeader : DataHeaderBase
     {
-        ShadersDataHeader(ChunkType _Type = ChunkType::Shaders) noexcept :
+        ShadersDataHeader(ResourceGroupType _Type = ResourceGroupType::Shaders) noexcept :
             DataHeaderBase{_Type}
         {
-            VERIFY_EXPR(Type == ChunkType::Shaders);
+            VERIFY_EXPR(Type == ResourceGroupType::Shaders);
         }
     };
     CHECK_HEADER_SIZE(ShadersDataHeader, 56)
@@ -234,14 +235,14 @@ public:
 
     struct RPDataHeader
     {
-        RPDataHeader(ChunkType _Type) noexcept :
+        RPDataHeader(ResourceGroupType _Type) noexcept :
             Type{_Type}
         {
-            VERIFY_EXPR(Type == ChunkType::RenderPass);
+            VERIFY_EXPR(Type == ResourceGroupType::RenderPasses);
         }
 
-        const ChunkType Type      = ChunkType::RenderPass;
-        const Uint32    _Padding1 = ~0u;
+        const ResourceGroupType Type      = ResourceGroupType::RenderPasses;
+        const Uint32            _Padding1 = ~0u;
     };
     CHECK_HEADER_SIZE(RPDataHeader, 8)
 
@@ -256,7 +257,6 @@ public:
         constexpr bool operator==(const ArchiveRegion& Rhs) const { return Offset == Rhs.Offset && Size == Rhs.Size; }
     };
 
-    using NameToArchiveRegionMap = std::unordered_map<HashMapStringKey, ArchiveRegion>;
 
     struct ArchiveDebugInfo
     {
@@ -264,9 +264,11 @@ public:
         Uint32 APIVersion = 0;
     };
 
+    using NameToArchiveRegionMap = std::unordered_map<HashMapStringKey, ArchiveRegion>;
+
     struct NamedResourcesMap
     {
-        // TODO: use one hash map with ChunkType in the key
+        // TODO: use one hash map with ResourceGroupType in the key
         NameToArchiveRegionMap Sign;
         NameToArchiveRegionMap RenderPass;
         NameToArchiveRegionMap GraphPSO;
@@ -283,10 +285,10 @@ public:
 
     const std::vector<ArchiveRegion>& GetShaderRegions(DeviceType DevType, DynamicLinearAllocator& Allocator) noexcept;
 
-    static BlockOffsetType GetBlockOffsetType(DeviceType DevType);
-    static DeviceType      RenderDeviceTypeToArchiveDeviceType(RENDER_DEVICE_TYPE Type);
+    static ArchiveBlockType ArchiveDeviceTypeToBlockType(DeviceType DevType);
+    static DeviceType       RenderDeviceTypeToArchiveDeviceType(RENDER_DEVICE_TYPE Type);
 
-    static const char* ChunkTypeToString(ChunkType Type);
+    static const char* ResourceGroupTypeToString(ResourceGroupType Type);
 
     template <typename ReourceDataType>
     bool LoadResourceData(const NameToArchiveRegionMap& NameToRegion,
@@ -296,11 +298,11 @@ public:
     SerializedData GetDeviceSpecificData(DeviceType              DevType,
                                          const DataHeaderBase&   Header,
                                          DynamicLinearAllocator& Allocator,
-                                         ChunkType               ExpectedChunkType) noexcept;
+                                         ResourceGroupType       ExpectedResourceGroupType) noexcept;
 
-    Uint32 GetBaseOffset(BlockOffsetType Type) const
+    Uint32 GetBlockOffset(ArchiveBlockType Type) const
     {
-        return m_BaseOffsets[static_cast<size_t>(Type)];
+        return m_BlockOffsets[static_cast<size_t>(Type)];
     }
     const std::vector<ChunkHeader>& GetChunks() const
     {
@@ -325,11 +327,8 @@ public:
     std::string ToString() const;
 
 private:
-    // Temporary
-    friend class ArchiveRepacker;
-
-    TBlockBaseOffsets m_BaseOffsets;
-    ArchiveDebugInfo  m_DebugInfo;
+    TArchiveBlockOffsets m_BlockOffsets;
+    ArchiveDebugInfo     m_DebugInfo;
 
     std::vector<ChunkHeader> m_Chunks;
 
@@ -370,7 +369,7 @@ private:
     private:
         std::vector<Uint8> Memory; // can be used for patching
     };
-    using DeviceSpecificBlocks = std::array<ArchiveBlock, static_cast<size_t>(BlockOffsetType::Count)>;
+    using DeviceSpecificBlocks = std::array<ArchiveBlock, static_cast<size_t>(ArchiveBlockType::Count)>;
 
     ArchiveBlock         m_CommonData;
     DeviceSpecificBlocks m_DeviceSpecific;
@@ -406,10 +405,10 @@ bool DeviceObjectArchive::LoadResourceData(const NameToArchiveRegionMap& NameToR
 
     using HeaderType = typename std::remove_reference<decltype(*ResData.pHeader)>::type;
     ResData.pHeader  = Ser.Cast<HeaderType>();
-    if (ResData.pHeader->Type != ResData.ExpectedChunkType)
+    if (ResData.pHeader->Type != ResData.ExpectedResourceGroupType)
     {
-        LOG_ERROR_MESSAGE("Invalid chunk header: '", ChunkTypeToString(ResData.pHeader->Type),
-                          "'; expected: '", ChunkTypeToString(ResData.ExpectedChunkType), "'.");
+        LOG_ERROR_MESSAGE("Invalid chunk header: '", ResourceGroupTypeToString(ResData.pHeader->Type),
+                          "'; expected: '", ResourceGroupTypeToString(ResData.ExpectedResourceGroupType), "'.");
         return false;
     }
 

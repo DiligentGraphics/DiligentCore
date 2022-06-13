@@ -38,28 +38,28 @@
 namespace Diligent
 {
 
-static ArchiverImpl::ChunkType PipelineTypeToChunkType(PIPELINE_TYPE PipelineType)
+static ArchiverImpl::ResourceGroupType PipelineTypeToResourceGroupType(PIPELINE_TYPE PipelineType)
 {
-    using ChunkType = ArchiverImpl::ChunkType;
+    using GroupType = ArchiverImpl::ResourceGroupType;
     static_assert(PIPELINE_TYPE_COUNT == 5, "Please handle the new pipeline type below");
     switch (PipelineType)
     {
         case PIPELINE_TYPE_GRAPHICS:
         case PIPELINE_TYPE_MESH:
-            return ChunkType::GraphicsPipelineStates;
+            return GroupType::GraphicsPipelines;
 
         case PIPELINE_TYPE_COMPUTE:
-            return ChunkType::ComputePipelineStates;
+            return GroupType::ComputePipelines;
 
         case PIPELINE_TYPE_RAY_TRACING:
-            return ChunkType::RayTracingPipelineStates;
+            return GroupType::RayTracingPipelines;
 
         case PIPELINE_TYPE_TILE:
-            return ChunkType::TilePipelineStates;
+            return GroupType::TilePipelines;
 
         default:
             UNEXPECTED("Unexpected pipeline type");
-            return ChunkType::Undefined;
+            return GroupType::Undefined;
     }
 }
 
@@ -97,37 +97,37 @@ const SerializedData& ArchiverImpl::GetDeviceData(const PendingData& Pending, co
 
 
 template <typename MapType>
-Uint32* ArchiverImpl::InitNamedResourceArrayHeader(ChunkType      Type,
-                                                   const MapType& Map,
-                                                   PendingData&   Pending)
+Uint32* ArchiverImpl::InitNamedResourceArrayHeader(ResourceGroupType GroupType,
+                                                   const MapType&    Map,
+                                                   PendingData&      Pending)
 {
     VERIFY_EXPR(!Map.empty());
 
-    const auto ChunkInd = static_cast<size_t>(Type);
+    const auto GroupInd = static_cast<size_t>(GroupType);
 
-    auto& DataOffsetArray = Pending.DataOffsetArrayPerChunk[ChunkInd];
-    auto& ChunkData       = Pending.ChunkData[ChunkInd];
-    auto& Count           = Pending.ResourceCountPerChunk[ChunkInd];
+    auto& DataOffsetArray = Pending.DataOffsetArrayPerGroup[GroupInd];
+    auto& Chunk           = Pending.Chunks[GroupInd];
+    auto& Count           = Pending.ResourceCountPerGroup[GroupInd];
 
     Count = StaticCast<Uint32>(Map.size());
 
-    ChunkData = TDataElement{GetRawAllocator()};
-    ChunkData.AddSpace<NamedResourceArrayHeader>();
-    ChunkData.AddSpace<Uint32>(Count); // NameLength
-    ChunkData.AddSpace<Uint32>(Count); // ***DataSize
-    ChunkData.AddSpace<Uint32>(Count); // ***DataOffset
+    Chunk = TDataElement{GetRawAllocator()};
+    Chunk.AddSpace<NamedResourceArrayHeader>();
+    Chunk.AddSpace<Uint32>(Count); // NameLength
+    Chunk.AddSpace<Uint32>(Count); // DataSize
+    Chunk.AddSpace<Uint32>(Count); // DataOffset
 
     for (const auto& NameAndData : Map)
-        ChunkData.AddSpaceForString(NameAndData.first.GetStr());
+        Chunk.AddSpaceForString(NameAndData.first.GetStr());
 
-    ChunkData.Reserve();
+    Chunk.Reserve();
 
-    auto& Header = *ChunkData.Construct<NamedResourceArrayHeader>(Count);
+    auto& Header = *Chunk.Construct<NamedResourceArrayHeader>(Count);
     VERIFY_EXPR(Header.Count == Count);
 
-    auto* NameLengthArray = ChunkData.ConstructArray<Uint32>(Count);
-    auto* DataSizeArray   = ChunkData.ConstructArray<Uint32>(Count);
-    DataOffsetArray       = ChunkData.ConstructArray<Uint32>(Count); // will be initialized later
+    auto* NameLengthArray = Chunk.ConstructArray<Uint32>(Count);
+    auto* DataSizeArray   = Chunk.ConstructArray<Uint32>(Count);
+    DataOffsetArray       = Chunk.ConstructArray<Uint32>(Count); // will be initialized later
 
     Uint32 i = 0;
     for (const auto& NameAndData : Map)
@@ -135,7 +135,7 @@ Uint32* ArchiverImpl::InitNamedResourceArrayHeader(ChunkType      Type,
         const auto* Name    = NameAndData.first.GetStr();
         const auto  NameLen = strlen(Name);
 
-        auto* pStr = ChunkData.CopyString(Name, NameLen);
+        auto* pStr = Chunk.CopyString(Name, NameLen);
         (void)pStr;
 
         NameLengthArray[i] = StaticCast<Uint32>(NameLen + 1);
@@ -224,7 +224,7 @@ void ArchiverImpl::ReserveSpace(PendingData& Pending) const
         }
     }
 
-    static_assert(ChunkCount == 9, "Reserve space for new chunk type");
+    static_assert(ResourceGroupCount == 9, "Reserve space for new chunk type");
 
     Pending.CommonData.Reserve();
     for (auto& DeviceData : Pending.PerDeviceData)
@@ -233,7 +233,7 @@ void ArchiverImpl::ReserveSpace(PendingData& Pending) const
 
 void ArchiverImpl::WriteDebugInfo(PendingData& Pending) const
 {
-    auto& Chunk = Pending.ChunkData[static_cast<size_t>(ChunkType::ArchiveDebugInfo)];
+    auto& Chunk = Pending.Chunks[static_cast<size_t>(ResourceGroupType::DebugInfo)];
 
     auto SerializeDebugInfo = [](auto& Ser) //
     {
@@ -263,14 +263,14 @@ void ArchiverImpl::WriteDebugInfo(PendingData& Pending) const
 }
 
 template <typename HeaderType>
-HeaderType* WriteHeader(ArchiverImpl::ChunkType     Type,
-                        const SerializedData&       SrcData,
-                        ArchiverImpl::TDataElement& DstChunk,
-                        Uint32&                     DstOffset,
-                        Uint32&                     DstArraySize)
+HeaderType* WriteHeader(ArchiverImpl::ResourceGroupType GroupType,
+                        const SerializedData&           SrcData,
+                        ArchiverImpl::TDataElement&     DstChunk,
+                        Uint32&                         DstOffset,
+                        Uint32&                         DstArraySize)
 {
-    auto* pHeader = DstChunk.Construct<HeaderType>(Type);
-    VERIFY_EXPR(pHeader->Type == Type);
+    auto* pHeader = DstChunk.Construct<HeaderType>(GroupType);
+    VERIFY_EXPR(pHeader->Type == GroupType);
     DstOffset = StaticCast<Uint32>(reinterpret_cast<const Uint8*>(pHeader) - DstChunk.GetDataPtr<const Uint8>());
     // DeviceSpecificDataSize & DeviceSpecificDataOffset will be initialized later
 
@@ -296,13 +296,13 @@ void WritePerDeviceData(HeaderType&                 Header,
 }
 
 template <typename DataHeaderType, typename MapType, typename WritePerDeviceDataType>
-void ArchiverImpl::WriteDeviceObjectData(ChunkType Type, PendingData& Pending, MapType& ObjectMap, WritePerDeviceDataType WriteDeviceData) const
+void ArchiverImpl::WriteResourceGroupDeviceData(ResourceGroupType Type, PendingData& Pending, MapType& ObjectMap, WritePerDeviceDataType WriteDeviceData) const
 {
     if (ObjectMap.empty())
         return;
 
     auto* DataSizeArray   = InitNamedResourceArrayHeader(Type, ObjectMap, Pending);
-    auto* DataOffsetArray = Pending.DataOffsetArrayPerChunk[static_cast<size_t>(Type)];
+    auto* DataOffsetArray = Pending.DataOffsetArrayPerGroup[static_cast<size_t>(Type)];
 
     Uint32 j = 0;
     for (auto& Obj : ObjectMap)
@@ -329,8 +329,8 @@ void ArchiverImpl::WriteShaderData(PendingData& Pending) const
             return;
     }
 
-    const auto ChunkInd        = static_cast<Uint32>(ChunkType::Shaders);
-    auto&      Chunk           = Pending.ChunkData[ChunkInd];
+    const auto ChunkInd        = static_cast<size_t>(ResourceGroupType::Shaders);
+    auto&      Chunk           = Pending.Chunks[ChunkInd];
     Uint32*    DataOffsetArray = nullptr; // Pending.DataOffsetArrayPerChunk[ChunkInd];
     Uint32*    DataSizeArray   = nullptr;
     {
@@ -339,11 +339,11 @@ void ArchiverImpl::WriteShaderData(PendingData& Pending) const
         Chunk.AddSpace<ShadersDataHeader>();
         Chunk.Reserve();
 
-        auto& Header    = *Chunk.Construct<ShadersDataHeader>(ChunkType::Shaders);
+        auto& Header    = *Chunk.Construct<ShadersDataHeader>(ResourceGroupType::Shaders);
         DataSizeArray   = Header.DeviceSpecificDataSize.data();
         DataOffsetArray = Header.DeviceSpecificDataOffset.data();
 
-        Pending.ResourceCountPerChunk[ChunkInd] = DeviceDataCount;
+        Pending.ResourceCountPerGroup[ChunkInd] = DeviceDataCount;
     }
 
     for (Uint32 dev = 0; dev < DeviceDataCount; ++dev)
@@ -375,38 +375,38 @@ void ArchiverImpl::WriteShaderData(PendingData& Pending) const
 
 void ArchiverImpl::UpdateOffsetsInArchive(PendingData& Pending) const
 {
-    auto& ChunkData    = Pending.ChunkData;
-    auto& HeaderData   = Pending.HeaderData;
-    auto& OffsetInFile = Pending.OffsetInFile;
+    const auto& Chunks = Pending.Chunks;
 
     Uint32 NumChunks = 0;
-    for (auto& Chunk : ChunkData)
+    for (const auto& Chunk : Chunks)
     {
         NumChunks += (Chunk.IsEmpty() ? 0 : 1);
     }
 
-    HeaderData = TDataElement{GetRawAllocator()};
-    HeaderData.AddSpace<ArchiveHeader>();
-    HeaderData.AddSpace<ChunkHeader>(NumChunks);
-    HeaderData.Reserve();
-    auto&       FileHeader   = *HeaderData.Construct<ArchiveHeader>();
-    auto* const ChunkHeaders = HeaderData.ConstructArray<ChunkHeader>(NumChunks);
+    auto& Headers = Pending.Headers;
+    Headers       = TDataElement{GetRawAllocator()};
+    Headers.AddSpace<ArchiveHeader>();
+    Headers.AddSpace<ChunkHeader>(NumChunks);
+    Headers.Reserve();
+    auto&       FileHeader   = *Headers.Construct<ArchiveHeader>();
+    auto* const ChunkHeaders = Headers.ConstructArray<ChunkHeader>(NumChunks);
 
     FileHeader.MagicNumber = DeviceObjectArchive::HeaderMagicNumber;
     FileHeader.Version     = DeviceObjectArchive::HeaderVersion;
     FileHeader.NumChunks   = NumChunks;
 
+    auto& OffsetInFile = Pending.OffsetInFile;
     // Update offsets to the NamedResourceArrayHeader
-    OffsetInFile    = HeaderData.GetCurrentSize();
+    OffsetInFile    = Headers.GetCurrentSize();
     size_t ChunkIdx = 0;
-    for (Uint32 i = 0; i < ChunkData.size(); ++i)
+    for (size_t i = 0; i < Chunks.size(); ++i)
     {
-        if (ChunkData[i].IsEmpty())
+        if (Chunks[i].IsEmpty())
             continue;
 
         auto& ChunkHdr  = ChunkHeaders[ChunkIdx++];
-        ChunkHdr.Type   = static_cast<ChunkType>(i);
-        ChunkHdr.Size   = StaticCast<Uint32>(ChunkData[i].GetCurrentSize());
+        ChunkHdr.Type   = static_cast<ResourceGroupType>(i);
+        ChunkHdr.Size   = StaticCast<Uint32>(Chunks[i].GetCurrentSize());
         ChunkHdr.Offset = StaticCast<Uint32>(OffsetInFile);
 
         OffsetInFile += ChunkHdr.Size;
@@ -414,19 +414,19 @@ void ArchiverImpl::UpdateOffsetsInArchive(PendingData& Pending) const
 
     // Common data
     {
-        for (Uint32 i = 0; i < NumChunks; ++i)
+        for (size_t i = 0; i < NumChunks; ++i)
         {
             const auto& ChunkHdr = ChunkHeaders[i];
             VERIFY_EXPR(ChunkHdr.Size > 0);
             const auto ChunkInd = static_cast<Uint32>(ChunkHdr.Type);
-            const auto Count    = Pending.ResourceCountPerChunk[ChunkInd];
+            const auto Count    = Pending.ResourceCountPerGroup[ChunkInd];
 
             for (Uint32 j = 0; j < Count; ++j)
             {
                 // Update offsets to the ***DataHeader
-                if (Pending.DataOffsetArrayPerChunk[ChunkInd] != nullptr)
+                if (Pending.DataOffsetArrayPerGroup[ChunkInd] != nullptr)
                 {
-                    Uint32& Offset = Pending.DataOffsetArrayPerChunk[ChunkInd][j];
+                    Uint32& Offset = Pending.DataOffsetArrayPerGroup[ChunkInd][j];
                     Offset         = (Offset == InvalidOffset ? InvalidOffset : StaticCast<Uint32>(Offset + OffsetInFile));
                 }
             }
@@ -441,11 +441,11 @@ void ArchiverImpl::UpdateOffsetsInArchive(PendingData& Pending) const
     {
         if (Pending.PerDeviceData[dev].IsEmpty())
         {
-            FileHeader.BlockBaseOffsets[dev] = InvalidOffset;
+            FileHeader.BlockOffsets[dev] = InvalidOffset;
         }
         else
         {
-            FileHeader.BlockBaseOffsets[dev] = StaticCast<Uint32>(OffsetInFile);
+            FileHeader.BlockOffsets[dev] = StaticCast<Uint32>(OffsetInFile);
             OffsetInFile += Pending.PerDeviceData[dev].GetCurrentSize();
         }
     }
@@ -454,9 +454,9 @@ void ArchiverImpl::UpdateOffsetsInArchive(PendingData& Pending) const
 void ArchiverImpl::WritePendingDataToStream(const PendingData& Pending, IFileStream* pStream) const
 {
     const size_t InitialSize = pStream->GetSize();
-    pStream->Write(Pending.HeaderData.GetDataPtr(), Pending.HeaderData.GetCurrentSize());
+    pStream->Write(Pending.Headers.GetDataPtr(), Pending.Headers.GetCurrentSize());
 
-    for (auto& Chunk : Pending.ChunkData)
+    for (auto& Chunk : Pending.Chunks)
     {
         if (Chunk.IsEmpty())
             continue;
@@ -538,9 +538,9 @@ Bool ArchiverImpl::SerializeToStream(IFileStream* pStream)
     {
         WritePerDeviceData(Header, Type, GetDeviceData(*pPRS, Type), Pending.PerDeviceData[static_cast<size_t>(Type)]);
     };
-    WriteDeviceObjectData<PRSDataHeader>(ChunkType::ResourceSignature, Pending, m_Signatures, WritePRSPerDeviceData);
+    WriteResourceGroupDeviceData<PRSDataHeader>(ResourceGroupType::ResourceSignatures, Pending, m_Signatures, WritePRSPerDeviceData);
 
-    WriteDeviceObjectData<RPDataHeader>(ChunkType::RenderPass, Pending, m_RenderPasses, [](RPDataHeader& Header, DeviceType Type, const RefCntAutoPtr<SerializedRenderPassImpl>&) {});
+    WriteResourceGroupDeviceData<RPDataHeader>(ResourceGroupType::RenderPasses, Pending, m_RenderPasses, [](RPDataHeader& Header, DeviceType Type, const RefCntAutoPtr<SerializedRenderPassImpl>&) {});
 
     auto WritePSOPerDeviceData = [&Pending](PSODataHeader& Header, DeviceType Type, const auto& pPSO) //
     {
@@ -549,12 +549,12 @@ Bool ArchiverImpl::SerializeToStream(IFileStream* pStream)
 
     for (Uint32 type = 0; type < m_Pipelines.size(); ++type)
     {
-        const auto& Pipelines = m_Pipelines[type];
-        const auto  chunkType = PipelineTypeToChunkType(static_cast<PIPELINE_TYPE>(type));
-        WriteDeviceObjectData<PSODataHeader>(chunkType, Pending, Pipelines, WritePSOPerDeviceData);
+        const auto& Pipelines         = m_Pipelines[type];
+        const auto  ResourceGroupType = PipelineTypeToResourceGroupType(static_cast<PIPELINE_TYPE>(type));
+        WriteResourceGroupDeviceData<PSODataHeader>(ResourceGroupType, Pending, Pipelines, WritePSOPerDeviceData);
     }
 
-    static_assert(ChunkCount == 9, "Write data for new chunk type");
+    static_assert(ResourceGroupCount == 9, "Write data for new chunk type");
 
     UpdateOffsetsInArchive(Pending);
     WritePendingDataToStream(Pending, pStream);

@@ -83,9 +83,9 @@ public:
     virtual void DILIGENT_CALL_TYPE Reset() override final;
 
 public:
-    using DeviceType   = DeviceObjectArchive::DeviceType;
-    using ChunkType    = DeviceObjectArchive::ChunkType;
-    using TDataElement = FixedLinearAllocator;
+    using DeviceType        = DeviceObjectArchive::DeviceType;
+    using ResourceGroupType = DeviceObjectArchive::ResourceGroupType;
+    using TDataElement      = FixedLinearAllocator;
 
 private:
     using ArchiveHeader            = DeviceObjectArchive::ArchiveHeader;
@@ -100,9 +100,9 @@ private:
     using ShaderIndexArray         = DeviceObjectArchive::ShaderIndexArray;
     using SerializedPSOAuxData     = DeviceObjectArchive::SerializedPSOAuxData;
 
-    static constexpr auto InvalidOffset   = DeviceObjectArchive::DataHeaderBase::InvalidOffset;
-    static constexpr auto DeviceDataCount = static_cast<size_t>(DeviceType::Count);
-    static constexpr auto ChunkCount      = static_cast<size_t>(ChunkType::Count);
+    static constexpr auto InvalidOffset      = DeviceObjectArchive::DataHeaderBase::InvalidOffset;
+    static constexpr auto DeviceDataCount    = static_cast<size_t>(DeviceType::Count);
+    static constexpr auto ResourceGroupCount = static_cast<size_t>(ResourceGroupType::Count);
 
     RefCntAutoPtr<SerializationDeviceImpl> m_pSerializationDevice;
 
@@ -129,13 +129,13 @@ private:
 
     struct PendingData
     {
-        TDataElement                              HeaderData;                   // ArchiveHeader, ChunkHeader[]
-        std::array<TDataElement, ChunkCount>      ChunkData;                    // NamedResourceArrayHeader
-        std::array<Uint32*, ChunkCount>           DataOffsetArrayPerChunk = {}; // pointer to NamedResourceArrayHeader::DataOffset - offsets to ***DataHeader
-        std::array<Uint32, ChunkCount>            ResourceCountPerChunk   = {}; //
-        TDataElement                              CommonData;                   // ***DataHeader
-        std::array<TDataElement, DeviceDataCount> PerDeviceData;                // device specific data
-        size_t                                    OffsetInFile = 0;
+        TDataElement                                 Headers;                      // ArchiveHeader, ChunkHeader[]
+        std::array<TDataElement, ResourceGroupCount> Chunks;                       // NamedResourceArrayHeader
+        std::array<Uint32*, ResourceGroupCount>      DataOffsetArrayPerGroup = {}; // pointer to NamedResourceArrayHeader::DataOffset - offsets to ***DataHeader
+        std::array<Uint32, ResourceGroupCount>       ResourceCountPerGroup   = {}; //
+        TDataElement                                 CommonData;                   // ***DataHeader
+        std::array<TDataElement, DeviceDataCount>    PerDeviceData;                // device specific data
+        size_t                                       OffsetInFile = 0;
 
         std::array<PerDeviceShaderData, DeviceDataCount> Shaders;
         // Serialized global shader indices in the archive for each shader of each device type
@@ -149,15 +149,15 @@ private:
     void WriteDebugInfo(PendingData& Pending) const;
     void WriteShaderData(PendingData& Pending) const;
     template <typename DataHeaderType, typename MapType, typename WritePerDeviceDataType>
-    void WriteDeviceObjectData(ChunkType Type, PendingData& Pending, MapType& Map, WritePerDeviceDataType WriteDeviceData) const;
+    void WriteResourceGroupDeviceData(ResourceGroupType GroupType, PendingData& Pending, MapType& Map, WritePerDeviceDataType WriteDeviceData) const;
 
     void UpdateOffsetsInArchive(PendingData& Pending) const;
     void WritePendingDataToStream(const PendingData& Pending, IFileStream* pStream) const;
 
     template <typename MapType>
-    static Uint32* InitNamedResourceArrayHeader(ChunkType      Type,
-                                                const MapType& Map,
-                                                PendingData&   Pending);
+    static Uint32* InitNamedResourceArrayHeader(ResourceGroupType GroupType,
+                                                const MapType&    Map,
+                                                PendingData&      Pending);
 
     bool AddRenderPass(IRenderPass* pRP);
 };

@@ -92,7 +92,7 @@ protected:
 protected:
     using PSODataHeader          = DeviceObjectArchive::PSODataHeader;
     using PRSDataHeader          = DeviceObjectArchive::PRSDataHeader;
-    using ChunkType              = DeviceObjectArchive::ChunkType;
+    using ResourceGroupType      = DeviceObjectArchive::ResourceGroupType;
     using NameToArchiveRegionMap = DeviceObjectArchive::NameToArchiveRegionMap;
     using DeviceType             = DeviceObjectArchive::DeviceType;
     using SerializedPSOAuxData   = DeviceObjectArchive::SerializedPSOAuxData;
@@ -144,7 +144,7 @@ protected:
         const PRSDataHeader*          pHeader = nullptr;
         PipelineResourceSignatureDesc Desc{};
 
-        static constexpr ChunkType ExpectedChunkType = ChunkType::ResourceSignature;
+        static constexpr ResourceGroupType ExpectedResourceGroupType = ResourceGroupType::ResourceSignatures;
 
         explicit PRSData(IMemoryAllocator& Allocator, Uint32 BlockSize = 1 << 10) :
             Allocator{Allocator, BlockSize}
@@ -263,7 +263,7 @@ RefCntAutoPtr<IPipelineResourceSignature> DearchiverBase::UnpackResourceSignatur
     PRS.Desc.SRBAllocationGranularity = DeArchiveInfo.SRBAllocationGranularity;
 
     const auto DevType = GetArchiveDeviceType(DeArchiveInfo.pDevice);
-    const auto Data    = pArchive->GetDeviceSpecificData(DevType, *PRS.pHeader, PRS.Allocator, ChunkType::ResourceSignature);
+    const auto Data    = pArchive->GetDeviceSpecificData(DevType, *PRS.pHeader, PRS.Allocator, ResourceGroupType::ResourceSignatures);
     if (!Data)
         return {};
 

@@ -148,7 +148,7 @@ struct DearchiverBase::PSOData
     std::vector<RefCntAutoPtr<IDeviceObject>> Objects;
     std::vector<RefCntAutoPtr<IShader>>       Shaders;
 
-    static const ChunkType ExpectedChunkType;
+    static const ResourceGroupType ExpectedResourceGroupType;
 
     explicit PSOData(IMemoryAllocator& Allocator, Uint32 BlockSize = 2 << 10) :
         Allocator{Allocator, BlockSize}
@@ -169,7 +169,7 @@ struct DearchiverBase::RPData
     const RPDataHeader*    pHeader = nullptr;
     RenderPassDesc         Desc{};
 
-    static constexpr ChunkType ExpectedChunkType = ChunkType::RenderPass;
+    static constexpr ResourceGroupType ExpectedResourceGroupType = ResourceGroupType::RenderPasses;
 
     explicit RPData(IMemoryAllocator& Allocator, Uint32 BlockSize = 1 << 10) :
         Allocator{Allocator, BlockSize}
@@ -280,13 +280,13 @@ bool DearchiverBase::PSOData<CreateInfoType>::Deserialize(const char* Name, Seri
 }
 
 template <>
-const DearchiverBase::ChunkType DearchiverBase::PSOData<GraphicsPipelineStateCreateInfo>::ExpectedChunkType = DearchiverBase::ChunkType::GraphicsPipelineStates;
+const DearchiverBase::ResourceGroupType DearchiverBase::PSOData<GraphicsPipelineStateCreateInfo>::ExpectedResourceGroupType = DearchiverBase::ResourceGroupType::GraphicsPipelines;
 template <>
-const DearchiverBase::ChunkType DearchiverBase::PSOData<ComputePipelineStateCreateInfo>::ExpectedChunkType = DearchiverBase::ChunkType::ComputePipelineStates;
+const DearchiverBase::ResourceGroupType DearchiverBase::PSOData<ComputePipelineStateCreateInfo>::ExpectedResourceGroupType = DearchiverBase::ResourceGroupType::ComputePipelines;
 template <>
-const DearchiverBase::ChunkType DearchiverBase::PSOData<TilePipelineStateCreateInfo>::ExpectedChunkType = DearchiverBase::ChunkType::TilePipelineStates;
+const DearchiverBase::ResourceGroupType DearchiverBase::PSOData<TilePipelineStateCreateInfo>::ExpectedResourceGroupType = DearchiverBase::ResourceGroupType::TilePipelines;
 template <>
-const DearchiverBase::ChunkType DearchiverBase::PSOData<RayTracingPipelineStateCreateInfo>::ExpectedChunkType = DearchiverBase::ChunkType::RayTracingPipelineStates;
+const DearchiverBase::ResourceGroupType DearchiverBase::PSOData<RayTracingPipelineStateCreateInfo>::ExpectedResourceGroupType = DearchiverBase::ResourceGroupType::RayTracingPipelines;
 
 
 template <>
@@ -451,11 +451,11 @@ bool DearchiverBase::UnpackPSOShaders(DeviceObjectArchive&         Archive,
                                       IRenderDevice*               pDevice)
 {
     const auto DevType       = GetArchiveDeviceType(pDevice);
-    const auto ShaderIdxData = Archive.GetDeviceSpecificData(DevType, *PSO.pHeader, PSO.Allocator, PSO.ExpectedChunkType);
+    const auto ShaderIdxData = Archive.GetDeviceSpecificData(DevType, *PSO.pHeader, PSO.Allocator, PSO.ExpectedResourceGroupType);
     if (!ShaderIdxData)
         return false;
 
-    const Uint64 BaseOffset = Archive.GetBaseOffset(DeviceObjectArchive::GetBlockOffsetType(DevType));
+    const Uint64 BaseOffset = Archive.GetBlockOffset(DeviceObjectArchive::ArchiveDeviceTypeToBlockType(DevType));
     if (BaseOffset > Archive.GetArchive()->GetSize())
     {
         LOG_ERROR_MESSAGE("Required block does not exist in archive");

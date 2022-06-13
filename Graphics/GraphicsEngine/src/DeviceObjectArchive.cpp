@@ -128,12 +128,12 @@ void ReadNamedResourceRegions(IArchive*                                    pArch
     using NamedResourceArrayHeader = DeviceObjectArchive::NamedResourceArrayHeader;
     using ArchiveRegion            = DeviceObjectArchive::ArchiveRegion;
 
-    VERIFY_EXPR(Chunk.Type == DeviceObjectArchive::ChunkType::ResourceSignature ||
-                Chunk.Type == DeviceObjectArchive::ChunkType::GraphicsPipelineStates ||
-                Chunk.Type == DeviceObjectArchive::ChunkType::ComputePipelineStates ||
-                Chunk.Type == DeviceObjectArchive::ChunkType::RayTracingPipelineStates ||
-                Chunk.Type == DeviceObjectArchive::ChunkType::TilePipelineStates ||
-                Chunk.Type == DeviceObjectArchive::ChunkType::RenderPass);
+    VERIFY_EXPR(Chunk.Type == DeviceObjectArchive::ResourceGroupType::ResourceSignatures ||
+                Chunk.Type == DeviceObjectArchive::ResourceGroupType::GraphicsPipelines ||
+                Chunk.Type == DeviceObjectArchive::ResourceGroupType::ComputePipelines ||
+                Chunk.Type == DeviceObjectArchive::ResourceGroupType::RayTracingPipelines ||
+                Chunk.Type == DeviceObjectArchive::ResourceGroupType::TilePipelines ||
+                Chunk.Type == DeviceObjectArchive::ResourceGroupType::RenderPasses);
 
     std::vector<Uint8> Data(Chunk.Size);
     if (!pArchive->Read(Chunk.Offset, Data.size(), Data.data()))
@@ -172,7 +172,7 @@ void ReadArchiveDebugInfo(IArchive*                               pArchive,
                           const DeviceObjectArchive::ChunkHeader& Chunk,
                           DeviceObjectArchive::ArchiveDebugInfo&  DebugInfo) noexcept(false)
 {
-    VERIFY_EXPR(Chunk.Type == DeviceObjectArchive::ChunkType::ArchiveDebugInfo);
+    VERIFY_EXPR(Chunk.Type == DeviceObjectArchive::ResourceGroupType::DebugInfo);
 
     SerializedData Data{Chunk.Size, GetRawAllocator()};
     if (!pArchive->Read(Chunk.Offset, Data.Size(), Data.Ptr()))
@@ -202,7 +202,7 @@ void ReadShadersHeader(IArchive*                               pArchive,
                        const DeviceObjectArchive::ChunkHeader& Chunk,
                        DeviceObjectArchive::ShadersDataHeader& ShadersHeader) noexcept(false)
 {
-    VERIFY_EXPR(Chunk.Type == DeviceObjectArchive::ChunkType::Shaders);
+    VERIFY_EXPR(Chunk.Type == DeviceObjectArchive::ResourceGroupType::Shaders);
     VERIFY_EXPR(Chunk.Size == sizeof(ShadersHeader));
 
     if (!pArchive->Read(Chunk.Offset, sizeof(ShadersHeader), &ShadersHeader))
@@ -253,7 +253,7 @@ DeviceObjectArchive::DeviceObjectArchive(IArchive* pArchive) noexcept(false) :
             LOG_ERROR_AND_THROW("Archive version (", Header.Version, ") is not supported; expected version: ", Uint32{HeaderVersion}, ".");
         }
 
-        m_BaseOffsets = Header.BlockBaseOffsets;
+        m_BlockOffsets = Header.BlockOffsets;
     }
 
     // Read chunks
@@ -263,7 +263,7 @@ DeviceObjectArchive::DeviceObjectArchive(IArchive* pArchive) noexcept(false) :
         LOG_ERROR_AND_THROW("Failed to read chunk headers");
     }
 
-    std::bitset<static_cast<size_t>(ChunkType::Count)> ProcessedBits{};
+    std::bitset<static_cast<size_t>(ResourceGroupType::Count)> ProcessedBits{};
     for (const auto& Chunk : m_Chunks)
     {
         if (ProcessedBits[static_cast<size_t>(Chunk.Type)])
@@ -272,18 +272,18 @@ DeviceObjectArchive::DeviceObjectArchive(IArchive* pArchive) noexcept(false) :
         }
         ProcessedBits[static_cast<size_t>(Chunk.Type)] = true;
 
-        static_assert(static_cast<size_t>(ChunkType::Count) == 9, "Please handle the new chunk type below");
+        static_assert(static_cast<size_t>(ResourceGroupType::Count) == 9, "Please handle the new chunk type below");
         switch (Chunk.Type)
         {
             // clang-format off
-            case ChunkType::ArchiveDebugInfo:         ReadArchiveDebugInfo    (pArchive, Chunk, m_DebugInfo);         break;
-            case ChunkType::ResourceSignature:        ReadNamedResourceRegions(pArchive, Chunk, m_ResMap.Sign);       break;
-            case ChunkType::GraphicsPipelineStates:   ReadNamedResourceRegions(pArchive, Chunk, m_ResMap.GraphPSO);   break;
-            case ChunkType::ComputePipelineStates:    ReadNamedResourceRegions(pArchive, Chunk, m_ResMap.CompPSO);    break;
-            case ChunkType::RayTracingPipelineStates: ReadNamedResourceRegions(pArchive, Chunk, m_ResMap.RayTrPSO);   break;
-            case ChunkType::TilePipelineStates:       ReadNamedResourceRegions(pArchive, Chunk, m_ResMap.TilePSO);    break;
-            case ChunkType::RenderPass:               ReadNamedResourceRegions(pArchive, Chunk, m_ResMap.RenderPass); break;
-            case ChunkType::Shaders:                  ReadShadersHeader       (pArchive, Chunk, m_ShadersHeader);     break;
+            case ResourceGroupType::DebugInfo:           ReadArchiveDebugInfo    (pArchive, Chunk, m_DebugInfo);         break;
+            case ResourceGroupType::ResourceSignatures:  ReadNamedResourceRegions(pArchive, Chunk, m_ResMap.Sign);       break;
+            case ResourceGroupType::GraphicsPipelines:   ReadNamedResourceRegions(pArchive, Chunk, m_ResMap.GraphPSO);   break;
+            case ResourceGroupType::ComputePipelines:    ReadNamedResourceRegions(pArchive, Chunk, m_ResMap.CompPSO);    break;
+            case ResourceGroupType::RayTracingPipelines: ReadNamedResourceRegions(pArchive, Chunk, m_ResMap.RayTrPSO);   break;
+            case ResourceGroupType::TilePipelines:       ReadNamedResourceRegions(pArchive, Chunk, m_ResMap.TilePSO);    break;
+            case ResourceGroupType::RenderPasses:        ReadNamedResourceRegions(pArchive, Chunk, m_ResMap.RenderPass); break;
+            case ResourceGroupType::Shaders:             ReadShadersHeader       (pArchive, Chunk, m_ShadersHeader);     break;
             // clang-format on
             default:
                 LOG_ERROR_AND_THROW("Unknown chunk type (", static_cast<Uint32>(Chunk.Type), ")");
@@ -295,7 +295,7 @@ DeviceObjectArchive::DeviceObjectArchive(IArchive* pArchive) noexcept(false) :
         std::set<Uint32> SortedOffsets;
 
         const Uint32 ArchiveSize = StaticCast<Uint32>(pArchive->GetSize());
-        for (auto BaseOffset : m_BaseOffsets)
+        for (auto BaseOffset : m_BlockOffsets)
         {
             if (BaseOffset == DataHeaderBase::InvalidOffset)
                 continue;
@@ -306,9 +306,9 @@ DeviceObjectArchive::DeviceObjectArchive(IArchive* pArchive) noexcept(false) :
         //       there may be some additional data past the archive data.
         SortedOffsets.insert(ArchiveSize);
 
-        for (size_t i = 0; i < static_cast<size_t>(BlockOffsetType::Count); ++i)
+        for (size_t i = 0; i < static_cast<size_t>(ArchiveBlockType::Count); ++i)
         {
-            const auto BaseOffset = m_BaseOffsets[i];
+            const auto BaseOffset = m_BlockOffsets[i];
             if (BaseOffset == DataHeaderBase::InvalidOffset)
                 continue;
             auto next_offset = SortedOffsets.find(BaseOffset);
@@ -349,40 +349,40 @@ DeviceObjectArchive::DeviceType DeviceObjectArchive::RenderDeviceTypeToArchiveDe
     }
 }
 
-DeviceObjectArchive::BlockOffsetType DeviceObjectArchive::GetBlockOffsetType(DeviceType DevType)
+DeviceObjectArchive::ArchiveBlockType DeviceObjectArchive::ArchiveDeviceTypeToBlockType(DeviceType DevType)
 {
     static_assert(static_cast<size_t>(DeviceType::Count) == 6, "Please handle the new device type below");
     switch (DevType)
     {
         // clang-format off
-        case DeviceType::OpenGL:      return BlockOffsetType::OpenGL;
-        case DeviceType::Direct3D11:  return BlockOffsetType::Direct3D11;
-        case DeviceType::Direct3D12:  return BlockOffsetType::Direct3D12;
-        case DeviceType::Vulkan:      return BlockOffsetType::Vulkan;
-        case DeviceType::Metal_iOS:   return BlockOffsetType::Metal_iOS;
-        case DeviceType::Metal_MacOS: return BlockOffsetType::Metal_MacOS;
+        case DeviceType::OpenGL:      return ArchiveBlockType::OpenGL;
+        case DeviceType::Direct3D11:  return ArchiveBlockType::Direct3D11;
+        case DeviceType::Direct3D12:  return ArchiveBlockType::Direct3D12;
+        case DeviceType::Vulkan:      return ArchiveBlockType::Vulkan;
+        case DeviceType::Metal_iOS:   return ArchiveBlockType::Metal_iOS;
+        case DeviceType::Metal_MacOS: return ArchiveBlockType::Metal_MacOS;
         // clang-format on
         default:
             UNEXPECTED("Unexpected device type");
-            return BlockOffsetType::Count;
+            return ArchiveBlockType::Count;
     }
 }
 
-const char* DeviceObjectArchive::ChunkTypeToString(ChunkType Type)
+const char* DeviceObjectArchive::ResourceGroupTypeToString(ResourceGroupType Type)
 {
-    static_assert(static_cast<size_t>(ChunkType::Count) == 9, "Please handle the new chunk type below");
+    static_assert(static_cast<size_t>(ResourceGroupType::Count) == 9, "Please handle the new chunk type below");
     switch (Type)
     {
         // clang-format off
-        case ChunkType::Undefined:                return "Undefined";
-        case ChunkType::ArchiveDebugInfo:         return "Debug Info";
-        case ChunkType::ResourceSignature:        return "Resource Signatures";
-        case ChunkType::GraphicsPipelineStates:   return "Graphics Pipelines";
-        case ChunkType::ComputePipelineStates:    return "Compute Pipelines";
-        case ChunkType::RayTracingPipelineStates: return "Ray-Tracing Pipelines";
-        case ChunkType::TilePipelineStates:       return "Tile Pipelines";
-        case ChunkType::RenderPass:               return "Render Passes";
-        case ChunkType::Shaders:                  return "Shaders";
+        case ResourceGroupType::Undefined:           return "Undefined";
+        case ResourceGroupType::DebugInfo:           return "Debug Info";
+        case ResourceGroupType::ResourceSignatures:  return "Resource Signatures";
+        case ResourceGroupType::GraphicsPipelines:   return "Graphics Pipelines";
+        case ResourceGroupType::ComputePipelines:    return "Compute Pipelines";
+        case ResourceGroupType::RayTracingPipelines: return "Ray-Tracing Pipelines";
+        case ResourceGroupType::TilePipelines:       return "Tile Pipelines";
+        case ResourceGroupType::RenderPasses:        return "Render Passes";
+        case ResourceGroupType::Shaders:             return "Shaders";
         // clang-format on
         default:
             UNEXPECTED("Unexpected chunk type");
@@ -401,7 +401,7 @@ const std::vector<DeviceObjectArchive::ArchiveRegion>& DeviceObjectArchive::GetS
             return RegionsInfo.Regions;
     }
 
-    if (const auto ShaderData = GetDeviceSpecificData(DevType, m_ShadersHeader, Allocator, ChunkType::Shaders))
+    if (const auto ShaderData = GetDeviceSpecificData(DevType, m_ShadersHeader, Allocator, ResourceGroupType::Shaders))
     {
         VERIFY_EXPR(ShaderData.Size() % sizeof(ArchiveRegion) == 0);
         const size_t Count = ShaderData.Size() / sizeof(ArchiveRegion);
@@ -420,11 +420,11 @@ const std::vector<DeviceObjectArchive::ArchiveRegion>& DeviceObjectArchive::GetS
 SerializedData DeviceObjectArchive::GetDeviceSpecificData(DeviceType              DevType,
                                                           const DataHeaderBase&   Header,
                                                           DynamicLinearAllocator& Allocator,
-                                                          ChunkType               ExpectedChunkType) noexcept
+                                                          ResourceGroupType       ExpectedResourceGroupType) noexcept
 {
-    const char*  ChunkName   = ChunkTypeToString(ExpectedChunkType);
-    const auto   BlockType   = GetBlockOffsetType(DevType);
-    const Uint64 BaseOffset  = m_BaseOffsets[static_cast<size_t>(BlockType)];
+    const char*  ChunkName   = ResourceGroupTypeToString(ExpectedResourceGroupType);
+    const auto   BlockType   = ArchiveDeviceTypeToBlockType(DevType);
+    const Uint64 BaseOffset  = m_BlockOffsets[static_cast<size_t>(BlockType)];
     const auto   ArchiveSize = m_pArchive->GetSize();
     if (BaseOffset > ArchiveSize)
     {
@@ -469,7 +469,7 @@ bool DeviceObjectArchive::Validate() const
 
     bool IsValid = true;
 
-    const auto ReadHeader = [&](const NameToArchiveRegionMap::value_type& Res, auto& Header, ChunkType ExpectedChunkType) //
+    const auto ReadHeader = [&](const NameToArchiveRegionMap::value_type& Res, auto& Header, ResourceGroupType ExpectedResourceGroupType) //
     {
         // ignore m_CommonData.Offset
         VALIDATE_RES(Res.second.Offset + Res.second.Size <= m_CommonData.Size,
@@ -480,17 +480,17 @@ bool DeviceObjectArchive::Validate() const
 
         VALIDATE_RES(m_CommonData.Read(Res.second.Offset, sizeof(Header), &Header), "failed to read the data header");
 
-        VALIDATE_RES(Header.Type == ExpectedChunkType, "invalid chunk type");
+        VALIDATE_RES(Header.Type == ExpectedResourceGroupType, "invalid chunk type");
 
         return true;
     };
 
-    const auto ValidateResources = [&](const NameToArchiveRegionMap& ResMap, ChunkType chunkType) //
+    const auto ValidateResources = [&](const NameToArchiveRegionMap& ResMap, ResourceGroupType ResourceGroupType) //
     {
         for (const auto& Res : ResMap)
         {
-            DataHeaderBase Header{ChunkType::Undefined};
-            if (!ReadHeader(Res, Header, chunkType))
+            DataHeaderBase Header{ResourceGroupType::Undefined};
+            if (!ReadHeader(Res, Header, ResourceGroupType))
                 continue;
 
             for (Uint32 dev = 0; dev < Header.DeviceSpecificDataSize.size(); ++dev)
@@ -512,21 +512,21 @@ bool DeviceObjectArchive::Validate() const
         }
     };
 
-    static_assert(static_cast<Uint32>(ChunkType::Count) == 9, "Please handle the new chunk type below");
+    static_assert(static_cast<Uint32>(ResourceGroupType::Count) == 9, "Please handle the new chunk type below");
     // clang-format off
-    ValidateResources(m_ResMap.Sign,     ChunkType::ResourceSignature);
-    ValidateResources(m_ResMap.GraphPSO, ChunkType::GraphicsPipelineStates);
-    ValidateResources(m_ResMap.CompPSO,  ChunkType::ComputePipelineStates);
-    ValidateResources(m_ResMap.RayTrPSO, ChunkType::RayTracingPipelineStates);
-    ValidateResources(m_ResMap.TilePSO,  ChunkType::TilePipelineStates);
+    ValidateResources(m_ResMap.Sign,     ResourceGroupType::ResourceSignatures);
+    ValidateResources(m_ResMap.GraphPSO, ResourceGroupType::GraphicsPipelines);
+    ValidateResources(m_ResMap.CompPSO,  ResourceGroupType::ComputePipelines);
+    ValidateResources(m_ResMap.RayTrPSO, ResourceGroupType::RayTracingPipelines);
+    ValidateResources(m_ResMap.TilePSO,  ResourceGroupType::TilePipelines);
     // clang-format on
 
     // Validate render passes
     {
         for (const auto& Res : m_ResMap.RenderPass)
         {
-            RPDataHeader Header{ChunkType::RenderPass};
-            if (!ReadHeader(Res, Header, ChunkType::RenderPass))
+            RPDataHeader Header{ResourceGroupType::RenderPasses};
+            if (!ReadHeader(Res, Header, ResourceGroupType::RenderPasses))
                 continue;
         }
     }
@@ -534,7 +534,7 @@ bool DeviceObjectArchive::Validate() const
     // Validate shaders
     for (const auto& Chunk : m_Chunks)
     {
-        if (Chunk.Type != ChunkType::Shaders)
+        if (Chunk.Type != ResourceGroupType::Shaders)
             continue;
 
         ShadersDataHeader Header;
@@ -542,7 +542,7 @@ bool DeviceObjectArchive::Validate() const
 
         if (m_CommonData.Read(Chunk.Offset, sizeof(Header), &Header))
         {
-            if (Header.Type != ChunkType::Shaders)
+            if (Header.Type != ResourceGroupType::Shaders)
             {
                 LOG_INFO_MESSAGE("Invalid shaders header");
                 IsValid = false;
@@ -618,7 +618,7 @@ std::string DeviceObjectArchive::ToString() const
         Uint32 MaxOffset       = 0;
         for (auto& Chunk : m_Chunks)
         {
-            MaxChunkNameLen = std::max(MaxChunkNameLen, strlen(ChunkTypeToString(Chunk.Type)));
+            MaxChunkNameLen = std::max(MaxChunkNameLen, strlen(ResourceGroupTypeToString(Chunk.Type)));
             MaxOffset       = std::max(MaxOffset, Chunk.Offset + Chunk.Size);
         }
         const auto OffsetFieldW = GetNumFieldWidth(MaxOffset);
@@ -627,7 +627,7 @@ std::string DeviceObjectArchive::ToString() const
                << "Chunks\n";
         for (auto& Chunk : m_Chunks)
         {
-            Output << Ident1 << std::setw(MaxChunkNameLen + 2) << std::left << std::string{ChunkTypeToString(Chunk.Type)} + ": "
+            Output << Ident1 << std::setw(MaxChunkNameLen + 2) << std::left << std::string{ResourceGroupTypeToString(Chunk.Type)} + ": "
                    << "[" << std::setw(OffsetFieldW) << std::right << Chunk.Offset << "; "
                    << std::setw(OffsetFieldW) << (Chunk.Offset + Chunk.Size)
                    << ") - " << std::setw(OffsetFieldW) << Chunk.Size << " bytes\n";
@@ -643,7 +643,7 @@ std::string DeviceObjectArchive::ToString() const
     {
         for (auto& Chunk : m_Chunks)
         {
-            if (Chunk.Type != ChunkType::ArchiveDebugInfo)
+            if (Chunk.Type != ResourceGroupType::DebugInfo)
                 continue;
 
             Temp.resize(Chunk.Size);
@@ -749,7 +749,7 @@ std::string DeviceObjectArchive::ToString() const
 
                 Output << Ident1 << it.first.GetStr();
 
-                DataHeaderBase Header{ChunkType::Undefined};
+                DataHeaderBase Header{ResourceGroupType::Undefined};
                 if (LoadResource(Region) &&
                     Temp.size() >= sizeof(Header))
                 {
@@ -793,7 +793,7 @@ std::string DeviceObjectArchive::ToString() const
             }
         };
 
-        static_assert(static_cast<Uint32>(ChunkType::Count) == 9, "Please handle the new chunk type below");
+        static_assert(static_cast<Uint32>(ResourceGroupType::Count) == 9, "Please handle the new chunk type below");
         // clang-format off
         PrintResources(m_ResMap.Sign,     "Resource Signatures");
         PrintResources(m_ResMap.GraphPSO, "Graphics Pipeline States");
@@ -833,7 +833,7 @@ std::string DeviceObjectArchive::ToString() const
     {
         for (auto& Chunk : m_Chunks)
         {
-            if (Chunk.Type != ChunkType::Shaders)
+            if (Chunk.Type != ResourceGroupType::Shaders)
                 continue;
 
             ShadersDataHeader Header;
@@ -892,15 +892,15 @@ void DeviceObjectArchive::RemoveDeviceData(DeviceType Dev) noexcept(false)
     if (!NewCommonBlock.LoadToMemory())
         LOG_ERROR_AND_THROW("Failed to load common block");
 
-    const auto UpdateResources = [&](const NameToArchiveRegionMap& ResMap, ChunkType chunkType) //
+    const auto UpdateResources = [&](const NameToArchiveRegionMap& ResMap, ResourceGroupType ResourceGroupType) //
     {
         for (auto& Res : ResMap)
         {
-            DataHeaderBase Header{ChunkType::Undefined};
+            DataHeaderBase Header{ResourceGroupType::Undefined};
             if (!NewCommonBlock.Read(Res.second.Offset, sizeof(Header), &Header))
                 continue;
 
-            if (Header.Type != chunkType)
+            if (Header.Type != ResourceGroupType)
                 continue;
 
             Header.DeviceSpecificDataSize[static_cast<size_t>(Dev)]   = 0;
@@ -912,13 +912,13 @@ void DeviceObjectArchive::RemoveDeviceData(DeviceType Dev) noexcept(false)
     };
 
     // Remove device specific data offset
-    static_assert(static_cast<Uint32>(ChunkType::Count) == 9, "Please handle the new chunk type below");
+    static_assert(static_cast<Uint32>(ResourceGroupType::Count) == 9, "Please handle the new chunk type below");
     // clang-format off
-    UpdateResources(m_ResMap.Sign,     ChunkType::ResourceSignature);
-    UpdateResources(m_ResMap.GraphPSO, ChunkType::GraphicsPipelineStates);
-    UpdateResources(m_ResMap.CompPSO,  ChunkType::ComputePipelineStates);
-    UpdateResources(m_ResMap.TilePSO,  ChunkType::TilePipelineStates);
-    UpdateResources(m_ResMap.RayTrPSO, ChunkType::RayTracingPipelineStates);
+    UpdateResources(m_ResMap.Sign,     ResourceGroupType::ResourceSignatures);
+    UpdateResources(m_ResMap.GraphPSO, ResourceGroupType::GraphicsPipelines);
+    UpdateResources(m_ResMap.CompPSO,  ResourceGroupType::ComputePipelines);
+    UpdateResources(m_ResMap.TilePSO,  ResourceGroupType::TilePipelines);
+    UpdateResources(m_ResMap.RayTrPSO, ResourceGroupType::RayTracingPipelines);
     // clang-format on
 
     // Ignore render passes
@@ -926,7 +926,7 @@ void DeviceObjectArchive::RemoveDeviceData(DeviceType Dev) noexcept(false)
     // Patch shader chunk
     for (auto& Chunk : m_Chunks)
     {
-        if (Chunk.Type != ChunkType::Shaders)
+        if (Chunk.Type != ResourceGroupType::Shaders)
             continue;
 
         ShadersDataHeader Header;
@@ -934,7 +934,7 @@ void DeviceObjectArchive::RemoveDeviceData(DeviceType Dev) noexcept(false)
 
         if (NewCommonBlock.Read(Chunk.Offset, sizeof(Header), &Header))
         {
-            VERIFY_EXPR(Header.Type == ChunkType::Shaders);
+            VERIFY_EXPR(Header.Type == ResourceGroupType::Shaders);
 
             Header.DeviceSpecificDataSize[static_cast<size_t>(Dev)]   = 0;
             Header.DeviceSpecificDataOffset[static_cast<size_t>(Dev)] = DataHeaderBase::InvalidOffset;
@@ -977,7 +977,7 @@ void DeviceObjectArchive::AppendDeviceData(const DeviceObjectArchive& Src, Devic
 
     std::vector<Uint8> TempSrc, TempDst;
 
-    const auto CmpAndUpdateResources = [&](const NameToArchiveRegionMap& DstResMap, const NameToArchiveRegionMap& SrcResMap, ChunkType chunkType, const char* ResTypeName) //
+    const auto CmpAndUpdateResources = [&](const NameToArchiveRegionMap& DstResMap, const NameToArchiveRegionMap& SrcResMap, ResourceGroupType ResourceGroupType, const char* ResTypeName) //
     {
         if (DstResMap.size() != SrcResMap.size())
             LOG_ERROR_AND_THROW("Number of ", ResTypeName, " resources in source and destination archive does not match");
@@ -995,8 +995,8 @@ void DeviceObjectArchive::AppendDeviceData(const DeviceObjectArchive& Src, Devic
             if (TempSrc.size() != TempDst.size())
                 LOG_ERROR_AND_THROW(ResTypeName, " '", DstRes.first.GetStr(), "' common data size must match");
 
-            DataHeaderBase SrcHeader{ChunkType::Undefined};
-            DataHeaderBase DstHeader{ChunkType::Undefined};
+            DataHeaderBase SrcHeader{ResourceGroupType::Undefined};
+            DataHeaderBase DstHeader{ResourceGroupType::Undefined};
             if (TempSrc.size() < sizeof(SrcHeader) || TempDst.size() < sizeof(DstHeader))
                 LOG_ERROR_AND_THROW(ResTypeName, " '", DstRes.first.GetStr(), "' data size is too small to have header");
 
@@ -1006,7 +1006,7 @@ void DeviceObjectArchive::AppendDeviceData(const DeviceObjectArchive& Src, Devic
             memcpy(&SrcHeader, TempSrc.data(), sizeof(SrcHeader));
             memcpy(&DstHeader, TempDst.data(), sizeof(DstHeader));
 
-            if (SrcHeader.Type != chunkType || DstHeader.Type != chunkType)
+            if (SrcHeader.Type != ResourceGroupType || DstHeader.Type != ResourceGroupType)
                 LOG_ERROR_AND_THROW(ResTypeName, " '", DstRes.first.GetStr(), "' header chunk type is invalid");
 
             const auto  SrcSize   = SrcHeader.DeviceSpecificDataSize[static_cast<Uint32>(Dev)];
@@ -1025,14 +1025,14 @@ void DeviceObjectArchive::AppendDeviceData(const DeviceObjectArchive& Src, Devic
         }
     };
 
-    static_assert(static_cast<Uint32>(ChunkType::Count) == 9, "Please handle the new chunk type below");
+    static_assert(static_cast<Uint32>(ResourceGroupType::Count) == 9, "Please handle the new chunk type below");
     const auto& SrcResMap = Src.GetResourceMap();
     // clang-format off
-    CmpAndUpdateResources(m_ResMap.Sign,     SrcResMap.Sign,     ChunkType::ResourceSignature,        "ResourceSignature");
-    CmpAndUpdateResources(m_ResMap.GraphPSO, SrcResMap.GraphPSO, ChunkType::GraphicsPipelineStates,   "GraphicsPipelineState");
-    CmpAndUpdateResources(m_ResMap.CompPSO,  SrcResMap.CompPSO,  ChunkType::ComputePipelineStates,    "ComputePipelineState");
-    CmpAndUpdateResources(m_ResMap.TilePSO,  SrcResMap.TilePSO,  ChunkType::TilePipelineStates,       "TilePipelineState");
-    CmpAndUpdateResources(m_ResMap.RayTrPSO, SrcResMap.RayTrPSO, ChunkType::RayTracingPipelineStates, "RayTracingPipelineState");
+    CmpAndUpdateResources(m_ResMap.Sign,     SrcResMap.Sign,     ResourceGroupType::ResourceSignatures,  "ResourceSignature");
+    CmpAndUpdateResources(m_ResMap.GraphPSO, SrcResMap.GraphPSO, ResourceGroupType::GraphicsPipelines,   "GraphicsPipelineState");
+    CmpAndUpdateResources(m_ResMap.CompPSO,  SrcResMap.CompPSO,  ResourceGroupType::ComputePipelines,    "ComputePipelineState");
+    CmpAndUpdateResources(m_ResMap.TilePSO,  SrcResMap.TilePSO,  ResourceGroupType::TilePipelines,       "TilePipelineState");
+    CmpAndUpdateResources(m_ResMap.RayTrPSO, SrcResMap.RayTrPSO, ResourceGroupType::RayTracingPipelines, "RayTracingPipelineState");
     // clang-format on
 
     // Compare render passes
@@ -1062,7 +1062,7 @@ void DeviceObjectArchive::AppendDeviceData(const DeviceObjectArchive& Src, Devic
             HeaderOffset = 0;
             for (auto& Chunk : Chunks)
             {
-                if (Chunk.Type != ChunkType::Shaders)
+                if (Chunk.Type != ResourceGroupType::Shaders)
                     continue;
 
                 if (sizeof(Header) != Chunk.Size)
@@ -1071,7 +1071,7 @@ void DeviceObjectArchive::AppendDeviceData(const DeviceObjectArchive& Src, Devic
                 if (!Block.Read(Chunk.Offset, sizeof(Header), &Header))
                     LOG_ERROR_AND_THROW("Failed to read ShadersDataHeader");
 
-                if (Header.Type != ChunkType::Shaders)
+                if (Header.Type != ResourceGroupType::Shaders)
                     LOG_ERROR_AND_THROW("Invalid chunk type for ShadersDataHeader");
 
                 HeaderOffset = Chunk.Offset;
@@ -1139,11 +1139,11 @@ void DeviceObjectArchive::Serialize(IFileStream* pStream) const noexcept(false)
 
         if (Block.IsValid())
         {
-            Header.BlockBaseOffsets[dev] = StaticCast<Uint32>(Offset);
+            Header.BlockOffsets[dev] = StaticCast<Uint32>(Offset);
             Offset += Block.Size;
         }
         else
-            Header.BlockBaseOffsets[dev] = DataHeaderBase::InvalidOffset;
+            Header.BlockOffsets[dev] = DataHeaderBase::InvalidOffset;
     }
 
     pStream->Write(&Header, sizeof(Header));
@@ -1155,7 +1155,7 @@ void DeviceObjectArchive::Serialize(IFileStream* pStream) const noexcept(false)
         if (Block.IsValid())
         {
             const size_t Pos = pStream->GetSize();
-            VERIFY_EXPR(Header.BlockBaseOffsets[dev] == Pos);
+            VERIFY_EXPR(Header.BlockOffsets[dev] == Pos);
             CopyToStream(Block, 0);
         }
     }
