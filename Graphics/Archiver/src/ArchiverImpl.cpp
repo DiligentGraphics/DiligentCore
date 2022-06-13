@@ -386,10 +386,10 @@ void ArchiverImpl::UpdateOffsetsInArchive(PendingData& Pending) const
     auto& Headers = Pending.Headers;
     Headers       = TDataElement{GetRawAllocator()};
     Headers.AddSpace<ArchiveHeader>();
-    Headers.AddSpace<ChunkHeader>(NumChunks);
+    Headers.AddSpace<ResourceGroupHeader>(NumChunks);
     Headers.Reserve();
-    auto&       FileHeader   = *Headers.Construct<ArchiveHeader>();
-    auto* const ChunkHeaders = Headers.ConstructArray<ChunkHeader>(NumChunks);
+    auto&       FileHeader           = *Headers.Construct<ArchiveHeader>();
+    auto* const ResourceGroupHeaders = Headers.ConstructArray<ResourceGroupHeader>(NumChunks);
 
     FileHeader.MagicNumber = DeviceObjectArchive::HeaderMagicNumber;
     FileHeader.Version     = DeviceObjectArchive::HeaderVersion;
@@ -404,7 +404,7 @@ void ArchiverImpl::UpdateOffsetsInArchive(PendingData& Pending) const
         if (Chunks[i].IsEmpty())
             continue;
 
-        auto& ChunkHdr  = ChunkHeaders[ChunkIdx++];
+        auto& ChunkHdr  = ResourceGroupHeaders[ChunkIdx++];
         ChunkHdr.Type   = static_cast<ResourceGroupType>(i);
         ChunkHdr.Size   = StaticCast<Uint32>(Chunks[i].GetCurrentSize());
         ChunkHdr.Offset = StaticCast<Uint32>(OffsetInFile);
@@ -416,7 +416,7 @@ void ArchiverImpl::UpdateOffsetsInArchive(PendingData& Pending) const
     {
         for (size_t i = 0; i < NumChunks; ++i)
         {
-            const auto& ChunkHdr = ChunkHeaders[i];
+            const auto& ChunkHdr = ResourceGroupHeaders[i];
             VERIFY_EXPR(ChunkHdr.Size > 0);
             const auto ChunkInd = static_cast<Uint32>(ChunkHdr.Type);
             const auto Count    = Pending.ResourceCountPerGroup[ChunkInd];

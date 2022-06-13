@@ -121,9 +121,9 @@ const DeviceObjectArchive::NameToArchiveRegionMap& DeviceObjectArchive::NamedRes
 namespace
 {
 
-void ReadNamedResourceRegions(IArchive*                                    pArchive,
-                              const DeviceObjectArchive::ChunkHeader&      Chunk,
-                              DeviceObjectArchive::NameToArchiveRegionMap& NameToRegion) noexcept(false)
+void ReadNamedResourceRegions(IArchive*                                       pArchive,
+                              const DeviceObjectArchive::ResourceGroupHeader& Chunk,
+                              DeviceObjectArchive::NameToArchiveRegionMap&    NameToRegion) noexcept(false)
 {
     using NamedResourceArrayHeader = DeviceObjectArchive::NamedResourceArrayHeader;
     using ArchiveRegion            = DeviceObjectArchive::ArchiveRegion;
@@ -168,9 +168,9 @@ void ReadNamedResourceRegions(IArchive*                                    pArch
     }
 }
 
-void ReadArchiveDebugInfo(IArchive*                               pArchive,
-                          const DeviceObjectArchive::ChunkHeader& Chunk,
-                          DeviceObjectArchive::ArchiveDebugInfo&  DebugInfo) noexcept(false)
+void ReadArchiveDebugInfo(IArchive*                                       pArchive,
+                          const DeviceObjectArchive::ResourceGroupHeader& Chunk,
+                          DeviceObjectArchive::ArchiveDebugInfo&          DebugInfo) noexcept(false)
 {
     VERIFY_EXPR(Chunk.Type == DeviceObjectArchive::ResourceGroupType::DebugInfo);
 
@@ -198,9 +198,9 @@ void ReadArchiveDebugInfo(IArchive*                               pArchive,
 #endif
 }
 
-void ReadShadersHeader(IArchive*                               pArchive,
-                       const DeviceObjectArchive::ChunkHeader& Chunk,
-                       DeviceObjectArchive::ShadersDataHeader& ShadersHeader) noexcept(false)
+void ReadShadersHeader(IArchive*                                       pArchive,
+                       const DeviceObjectArchive::ResourceGroupHeader& Chunk,
+                       DeviceObjectArchive::ShadersDataHeader&         ShadersHeader) noexcept(false)
 {
     VERIFY_EXPR(Chunk.Type == DeviceObjectArchive::ResourceGroupType::Shaders);
     VERIFY_EXPR(Chunk.Size == sizeof(ShadersHeader));
@@ -1057,7 +1057,7 @@ void DeviceObjectArchive::AppendDeviceData(const DeviceObjectArchive& Src, Devic
 
     // Update shader device specific offsets
     {
-        const auto ReadShaderHeader = [](ShadersDataHeader& Header, Uint32& HeaderOffset, const std::vector<ChunkHeader>& Chunks, const ArchiveBlock& Block) //
+        const auto ReadShaderHeader = [](ShadersDataHeader& Header, Uint32& HeaderOffset, const std::vector<ResourceGroupHeader>& Chunks, const ArchiveBlock& Block) //
         {
             HeaderOffset = 0;
             for (auto& Chunk : Chunks)

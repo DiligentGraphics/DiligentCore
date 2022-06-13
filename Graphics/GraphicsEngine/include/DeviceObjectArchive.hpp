@@ -33,7 +33,7 @@
 //
 // | ArchiveHeader |
 //
-// | ChunkHeader | --> offset --> | NamedResourceArrayHeader |
+// | ResourceGroupHeader | --> offset --> | NamedResourceArrayHeader |
 //
 // | NamedResourceArrayHeader | --> offset --> | ***DataHeader |
 //
@@ -134,14 +134,14 @@ public:
         Uint32               NumChunks    = 0;
         Uint32               _Padding     = ~0u;
 
-        //ChunkHeader     Chunks  [NumChunks]
+        //ResourceGroupHeader     Chunks  [NumChunks]
     };
     CHECK_HEADER_SIZE(ArchiveHeader, 40)
 
-    struct ChunkHeader
+    struct ResourceGroupHeader
     {
-        ChunkHeader() noexcept {}
-        ChunkHeader(ResourceGroupType _Type) noexcept :
+        ResourceGroupHeader() noexcept {}
+        ResourceGroupHeader(ResourceGroupType _Type) noexcept :
             Type{_Type}
         {}
 
@@ -150,9 +150,9 @@ public:
         Uint32            Offset   = 0; // offset to NamedResourceArrayHeader
         Uint32            _Padding = ~0u;
 
-        bool operator==(const ChunkHeader& Rhs) const { return Type == Rhs.Type && Size == Rhs.Size && Offset == Rhs.Offset; }
+        bool operator==(const ResourceGroupHeader& Rhs) const { return Type == Rhs.Type && Size == Rhs.Size && Offset == Rhs.Offset; }
     };
-    CHECK_HEADER_SIZE(ChunkHeader, 16)
+    CHECK_HEADER_SIZE(ResourceGroupHeader, 16)
 
     struct NamedResourceArrayHeader
     {
@@ -268,7 +268,6 @@ public:
 
     struct NamedResourcesMap
     {
-        // TODO: use one hash map with ResourceGroupType in the key
         NameToArchiveRegionMap Sign;
         NameToArchiveRegionMap RenderPass;
         NameToArchiveRegionMap GraphPSO;
@@ -304,7 +303,7 @@ public:
     {
         return m_BlockOffsets[static_cast<size_t>(Type)];
     }
-    const std::vector<ChunkHeader>& GetChunks() const
+    const std::vector<ResourceGroupHeader>& GetChunks() const
     {
         return m_Chunks;
     }
@@ -330,7 +329,7 @@ private:
     TArchiveBlockOffsets m_BlockOffsets;
     ArchiveDebugInfo     m_DebugInfo;
 
-    std::vector<ChunkHeader> m_Chunks;
+    std::vector<ResourceGroupHeader> m_Chunks;
 
     NamedResourcesMap m_ResMap;
     ShadersDataHeader m_ShadersHeader;

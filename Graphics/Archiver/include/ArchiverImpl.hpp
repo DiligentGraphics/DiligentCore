@@ -89,7 +89,7 @@ public:
 
 private:
     using ArchiveHeader            = DeviceObjectArchive::ArchiveHeader;
-    using ChunkHeader              = DeviceObjectArchive::ChunkHeader;
+    using ResourceGroupHeader      = DeviceObjectArchive::ResourceGroupHeader;
     using NamedResourceArrayHeader = DeviceObjectArchive::NamedResourceArrayHeader;
     using FileOffsetAndSize        = DeviceObjectArchive::ArchiveRegion;
     using PRSDataHeader            = DeviceObjectArchive::PRSDataHeader;
@@ -129,7 +129,7 @@ private:
 
     struct PendingData
     {
-        TDataElement                                 Headers;                      // ArchiveHeader, ChunkHeader[]
+        TDataElement                                 Headers;                      // ArchiveHeader, ResourceGroupHeader[]
         std::array<TDataElement, ResourceGroupCount> Chunks;                       // NamedResourceArrayHeader
         std::array<Uint32*, ResourceGroupCount>      DataOffsetArrayPerGroup = {}; // pointer to NamedResourceArrayHeader::DataOffset - offsets to ***DataHeader
         std::array<Uint32, ResourceGroupCount>       ResourceCountPerGroup   = {}; //
