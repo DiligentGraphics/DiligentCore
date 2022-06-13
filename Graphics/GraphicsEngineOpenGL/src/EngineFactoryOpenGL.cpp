@@ -118,7 +118,7 @@ public:
 
 static void SetDefaultGraphicsAdapterInfo(GraphicsAdapterInfo& AdapterInfo)
 {
-    AdapterInfo = {};
+    AdapterInfo = GraphicsAdapterInfo{};
 
 #if PLATFORM_ANDROID || PLATFORM_IOS
     AdapterInfo.Type = ADAPTER_TYPE_INTEGRATED;
