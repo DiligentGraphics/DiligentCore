@@ -147,7 +147,6 @@ void DeviceObjectArchive::Serialize(IDataBlob** ppDataBlob) const
 }
 
 
-#if 0
 namespace
 {
 
@@ -170,7 +169,7 @@ const char* ArchiveDeviceTypeToString(Uint32 dev)
 }
 
 } // namespace
-#endif
+
 
 DeviceObjectArchive::DeviceObjectArchive(IDataBlob* pArchive) noexcept(false) :
     m_pRawData{pArchive}
@@ -242,9 +241,6 @@ const SerializedData& DeviceObjectArchive::GetDeviceSpecificData(ResourceType Ty
 
 std::string DeviceObjectArchive::ToString() const
 {
-    return "TBD";
-
-#if 0
     std::stringstream Output;
     Output << "Archive contents:\n";
 
@@ -255,10 +251,12 @@ std::string DeviceObjectArchive::ToString() const
     // Print header
     {
         Output << "Header\n"
-               << Ident1 << "version: " << HeaderVersion << '\n';
+               << Ident1 << "version: " << ArchiveVersion << '\n';
     }
 
-    auto GetNumFieldWidth = [](Uint32 Number) //
+    constexpr char CommonDataName[] = "Common";
+
+    auto GetNumFieldWidth = [](auto Number) //
     {
         size_t Width = 1;
         for (; Number >= 10; Number /= 10)
@@ -266,281 +264,110 @@ std::string DeviceObjectArchive::ToString() const
         return Width;
     };
 
-    // Print chunks, for example:
-    //   Chunks
-    //     Debug Info:          [104; 135) -  31 bytes
-    //     Resource Signatures: [135; 189) -  54 bytes
-    //     Compute Pipelines:   [189; 243) -  54 bytes
-    //     Shaders:             [243; 299) -  56 bytes
+    // Print resources, e.g.:
+    //
+    //   ------------------
+    //   Resource Signatures (1)
+    //     Test PRS
+    //       Common     1015 bytes
+    //       OpenGL      729 bytes
+    //       Direct3D11  384 bytes
+    //       Direct3D12  504 bytes
+    //       Vulkan      881 bytes
     {
-        size_t MaxChunkNameLen = 0;
-        Uint32 MaxOffset       = 0;
-        for (auto& Chunk : m_Chunks)
+        std::array<std::vector<std::reference_wrapper<const decltype(m_NamedResources)::value_type>>, static_cast<size_t>(ResourceType::Count)> ResourcesByType;
+        for (const auto& it : m_NamedResources)
         {
-            MaxChunkNameLen = std::max(MaxChunkNameLen, strlen(ResourceGroupTypeToString(Chunk.Type)));
-            MaxOffset       = std::max(MaxOffset, Chunk.Offset + Chunk.Size);
+            ResourcesByType[static_cast<size_t>(it.first.GetType())].emplace_back(it);
         }
-        const auto OffsetFieldW = GetNumFieldWidth(MaxOffset);
-
-        Output << SeparatorLine
-               << "Chunks\n";
-        for (auto& Chunk : m_Chunks)
+        for (const auto& Resources : ResourcesByType)
         {
-            Output << Ident1 << std::setw(MaxChunkNameLen + 2) << std::left << std::string{ResourceGroupTypeToString(Chunk.Type)} + ": "
-                   << "[" << std::setw(OffsetFieldW) << std::right << Chunk.Offset << "; "
-                   << std::setw(OffsetFieldW) << (Chunk.Offset + Chunk.Size)
-                   << ") - " << std::setw(OffsetFieldW) << Chunk.Size << " bytes\n";
-        }
-    }
-
-    std::vector<Uint8> Temp;
-
-    // Print debug info, for example:
-    //   Debug info
-    //     APIVersion: 252002
-    //     GitHash:    API252002-15-g127edf0+
-    {
-        for (auto& Chunk : m_Chunks)
-        {
-            if (Chunk.Type != ResourceGroupType::DebugInfo)
+            if (Resources.empty())
                 continue;
 
-            Temp.resize(Chunk.Size);
-            if (m_CommonData.Read(Chunk.Offset, Temp.size(), Temp.data()))
-            {
-                Serializer<SerializerMode::Read> Ser{SerializedData{Temp.data(), Temp.size()}};
-
-                Uint32      APIVersion = 0;
-                const char* GitHash    = nullptr;
-                Ser(APIVersion, GitHash);
-
-                Output << SeparatorLine
-                       << "Debug info\n"
-                       << Ident1 << "APIVersion: " << APIVersion << '\n'
-                       << Ident1 << "GitHash:    " << GitHash << "\n";
-            }
-            break;
-        }
-    }
-
-    constexpr char CommonDataName[] = "Common";
-
-    static const auto MaxDevNameLen = [CommonDataName]() {
-        size_t MaxLen = strlen(CommonDataName);
-        for (Uint32 i = 0; i < static_cast<Uint32>(DeviceType::Count); ++i)
-        {
-            MaxLen = std::max(MaxLen, strlen(ArchiveDeviceTypeToString(i)));
-        }
-        return MaxLen;
-    }();
-
-
-    // Print archive blocks, for example:
-    //   Blocks
-    //     Common          - 639 bytes
-    //     OpenGL          -  88 bytes
-    //     Direct3D11      - 144 bytes
-    //     Direct3D12      - 160 bytes
-    //     Vulkan          - 168 bytes
-    //     Metal for MacOS - none
-    //     Metal for iOS   - none
-    {
-        Uint32 MaxBlockSize = m_CommonData.Size;
-        for (Uint32 dev = 0; dev < static_cast<Uint32>(DeviceType::Count); ++dev)
-            MaxBlockSize = std::max(MaxBlockSize, m_DeviceSpecific[dev].Size);
-        const auto BlockSizeFieldW = GetNumFieldWidth(MaxBlockSize);
-
-        Output << SeparatorLine
-               << "Blocks\n"
-               << Ident1 << std::setw(MaxDevNameLen) << std::setfill(' ') << std::left << CommonDataName
-               << " - " << std::setw(BlockSizeFieldW) << std::right << m_CommonData.Size << " bytes\n";
-
-        for (Uint32 dev = 0; dev < static_cast<Uint32>(DeviceType::Count); ++dev)
-        {
-            const auto& Block   = m_DeviceSpecific[dev];
-            const auto* DevName = ArchiveDeviceTypeToString(dev);
-
-            Output << Ident1 << std::setw(MaxDevNameLen) << std::setfill(' ') << std::left << DevName;
-
-            if (!Block.IsValid())
-                Output << " - none\n";
-            else
-                Output << " - " << std::setw(BlockSizeFieldW) << std::right << Block.Size << " bytes\n";
-        }
-    }
-
-
-    const auto LoadResource = [&](const ArchiveRegion& Region) //
-    {
-        Temp.clear();
-
-        // ignore m_CommonData.Offset
-        if (Region.Offset + Region.Size > m_CommonData.Size)
-            return false;
-
-        Temp.resize(Region.Size);
-        return m_CommonData.Read(Region.Offset, Temp.size(), Temp.data());
-    };
-
-    // Print Signatures and Pipelines, for example:
-    //   Resource Signatures
-    //     ResourceSignatureTest
-    //       Common          - [211; 519)
-    //       OpenGL          - [  0;  52)
-    //       Direct3D11      - [  0;  96)
-    //       Direct3D12      - [  0; 104)
-    //       Vulkan          - [  0; 108)
-    //       Metal for MacOS - none
-    //       Metal for iOS   - none
-    {
-        const auto PrintResources = [&](const NameToArchiveRegionMap& ResMap, const char* ResTypeName) //
-        {
-            if (ResMap.empty())
-                return;
-
+            const auto ResType = Resources.front().get().first.GetType();
             Output << SeparatorLine
-                   << ResTypeName
-                   << "\n";
+                   << ResourceTypeToString(ResType) << " (" << Resources.size() << ")\n";
 
-            for (const auto& it : ResMap)
+            for (const auto& res_ref : Resources)
             {
-                const auto& Region = it.second;
+                const auto& it = res_ref.get();
+                Output << Ident1 << it.first.GetName() << '\n';
+                const auto& Res = it.second;
 
-                Output << Ident1 << it.first.GetStr();
-
-                DataHeaderBase Header{ResourceGroupType::Undefined};
-                if (LoadResource(Region) &&
-                    Temp.size() >= sizeof(Header))
+                auto   MaxSize       = Res.Common.Size();
+                size_t MaxDevNameLen = strlen(CommonDataName);
+                for (Uint32 i = 0; i < Res.DeviceSpecific.size(); ++i)
                 {
-                    memcpy(&Header, Temp.data(), sizeof(Header));
-                    auto MaxOffset = Region.Offset + Region.Size;
-                    for (Uint32 dev = 0; dev < Header.DeviceSpecificDataSize.size(); ++dev)
-                    {
-                        const auto Size   = Header.DeviceSpecificDataSize[dev];
-                        const auto Offset = Header.DeviceSpecificDataOffset[dev];
-                        if (Offset != DataHeaderBase::InvalidOffset)
-                            MaxOffset = std::max(MaxOffset, Offset + Size);
-                    }
-                    const auto OffsetFieldW = GetNumFieldWidth(MaxOffset);
+                    const auto DevDataSize = Res.DeviceSpecific[i].Size();
 
-                    Output << '\n';
-
-                    // Common data & header
-                    Output << Ident2 << std::setw(MaxDevNameLen) << std::left << CommonDataName
-                           << " - [" << std::setw(OffsetFieldW) << std::right << Region.Offset << "; "
-                           << std::setw(OffsetFieldW) << std::right << (Region.Offset + Region.Size) << ")\n";
-
-                    for (Uint32 dev = 0; dev < Header.DeviceSpecificDataSize.size(); ++dev)
-                    {
-                        const auto  Size    = Header.DeviceSpecificDataSize[dev];
-                        const auto  Offset  = Header.DeviceSpecificDataOffset[dev];
-                        const auto& Block   = m_DeviceSpecific[dev];
-                        const char* DevName = ArchiveDeviceTypeToString(dev);
-
-                        Output << Ident2 << std::setw(MaxDevNameLen) << std::left << DevName;
-                        if (Size == 0 || Offset == DataHeaderBase::InvalidOffset || !Block.IsValid())
-                            Output << " - none\n";
-                        else
-                            Output << " - [" << std::setw(OffsetFieldW) << std::right << Offset
-                                   << "; " << std::setw(OffsetFieldW) << std::right << (Offset + Size) << ")\n";
-                    }
+                    MaxSize = std::max(MaxSize, DevDataSize);
+                    if (DevDataSize != 0)
+                        MaxDevNameLen = std::max(MaxDevNameLen, strlen(ArchiveDeviceTypeToString(i)));
                 }
-                else
+                const auto SizeFieldW = GetNumFieldWidth(MaxSize);
+
+                Output << Ident2 << std::setw(MaxDevNameLen) << std::left << CommonDataName << ' '
+                       << std::setw(SizeFieldW) << std::right << Res.Common.Size() << " bytes\n";
+
+                for (Uint32 i = 0; i < Res.DeviceSpecific.size(); ++i)
                 {
-                    Output << " - invalid data\n";
+                    const auto DevDataSize = Res.DeviceSpecific[i].Size();
+                    if (DevDataSize > 0)
+                    {
+                        Output << Ident2 << std::setw(MaxDevNameLen) << std::left << ArchiveDeviceTypeToString(i) << ' '
+                               << std::setw(SizeFieldW) << std::right << DevDataSize << " bytes\n";
+                    }
                 }
             }
-        };
-
-        static_assert(static_cast<Uint32>(ResourceGroupType::Count) == 9, "Please handle the new chunk type below");
-        // clang-format off
-        PrintResources(m_ResMap.Sign,     "Resource Signatures");
-        PrintResources(m_ResMap.GraphPSO, "Graphics Pipeline States");
-        PrintResources(m_ResMap.CompPSO,  "Compute Pipeline States");
-        PrintResources(m_ResMap.RayTrPSO, "Ray-tracing Pipeline States");
-        PrintResources(m_ResMap.TilePSO,  "Tile Pipeline States");
-        // clang-format on
+        }
     }
 
-    // Render passes, for example:
-    //   Render Passes
-    //     RenderPassTest
-    //       Common - [2191; 2258)
+    // Print shaders, e.g.
+    //
+    //   ------------------
+    //   Shaders
+    //     OpenGL(2)
+    //       [0] 4020 bytes
+    //       [1] 4020 bytes
+    //     Vulkan(2)
+    //       [0] 8364 bytes
+    //       [1] 7380 bytes
     {
-        if (!m_ResMap.RenderPass.empty())
+        bool HasShaders = false;
+        for (const auto& Shaders : m_DeviceShaders)
+        {
+            if (!Shaders.empty())
+                HasShaders = true;
+        }
+
+        if (HasShaders)
         {
             Output << SeparatorLine
-                   << "Render Passes\n";
+                   << "Shaders\n";
 
-            for (const auto& it : m_ResMap.RenderPass)
+            for (Uint32 dev = 0; dev < m_DeviceShaders.size(); ++dev)
             {
-                const auto& Region = it.second;
-                Output << Ident1 << it.first.GetStr();
+                const auto& Shaders = m_DeviceShaders[dev];
+                if (Shaders.empty())
+                    continue;
+                Output << Ident1 << ArchiveDeviceTypeToString(dev) << '(' << Shaders.size() << ")\n";
 
-                if (LoadResource(Region))
+                size_t MaxSize = 0;
+                for (const auto& Shader : Shaders)
+                    MaxSize = std::max(MaxSize, Shader.Size());
+                const auto IdxFieldW  = GetNumFieldWidth(Shaders.size());
+                const auto SizeFieldW = GetNumFieldWidth(MaxSize);
+                for (Uint32 idx = 0; idx < Shaders.size(); ++idx)
                 {
-                    Output << '\n'
-                           << Ident2 << CommonDataName << " - [" << Region.Offset << "; " << (Region.Offset + Region.Size) << ")\n";
-                }
-                else
-                    Output << " - invalid data\n";
-            }
-        }
-    }
-
-    // Shaders
-    {
-        for (auto& Chunk : m_Chunks)
-        {
-            if (Chunk.Type != ResourceGroupType::Shaders)
-                continue;
-
-            ShadersDataHeader Header;
-            VERIFY_EXPR(sizeof(Header) == Chunk.Size);
-
-            if (m_CommonData.Read(Chunk.Offset, sizeof(Header), &Header))
-            {
-                Output << SeparatorLine
-                       << "Shaders\n";
-                for (Uint32 dev = 0; dev < Header.DeviceSpecificDataSize.size(); ++dev)
-                {
-                    const auto  Size    = Header.DeviceSpecificDataSize[dev];
-                    const auto  Offset  = Header.DeviceSpecificDataOffset[dev];
-                    const auto& Block   = m_DeviceSpecific[dev];
-                    const char* DevName = ArchiveDeviceTypeToString(dev);
-
-                    Output << Ident1 << std::setw(MaxDevNameLen) << std::setfill(' ') << std::left << DevName;
-
-                    if (Size == 0 || Offset == DataHeaderBase::InvalidOffset || !Block.IsValid())
-                        Output << " - none\n";
-                    else
-                    {
-                        Output << " - list range: [" << Offset << "; " << (Offset + Size) << "), count: " << (Size / sizeof(ArchiveRegion));
-
-                        // Calculate data size
-                        std::vector<ArchiveRegion> OffsetAndSizeArray(Size / sizeof(ArchiveRegion));
-                        if (Block.Read(Offset, OffsetAndSizeArray.size() * sizeof(OffsetAndSizeArray[0]), OffsetAndSizeArray.data()))
-                        {
-                            Uint32 MinOffset = ~0u;
-                            Uint32 MaxOffset = 0;
-                            for (auto& OffsetAndSize : OffsetAndSizeArray)
-                            {
-                                MinOffset = std::min(MinOffset, OffsetAndSize.Offset);
-                                MaxOffset = std::max(MaxOffset, OffsetAndSize.Offset + OffsetAndSize.Size);
-                            }
-                            Output << "; data range: [" << MinOffset << "; " << MaxOffset << ") - " << (MaxOffset - MinOffset) << " bytes";
-                        }
-                        Output << "\n";
-                    }
+                    Output << Ident2 << '[' << std::setw(IdxFieldW) << std::right << idx << "] "
+                           << std::setw(SizeFieldW) << std::right << Shaders[idx].Size() << " bytes\n";
                 }
             }
-
-            break;
         }
     }
 
     return Output.str();
-#endif
 }
 
 
