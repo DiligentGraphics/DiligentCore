@@ -297,7 +297,7 @@ private:
     void AlignOffset(size_t Alignment)
     {
         const auto Size       = GetSize();
-        const auto AlignShift = AlignUp(Size, size_t{8}) - Size;
+        const auto AlignShift = AlignUp(Size, Alignment) - Size;
         VERIFY_EXPR(m_Ptr + AlignShift <= m_End);
         m_Ptr += AlignShift;
     }
@@ -391,20 +391,20 @@ inline void Serializer<SerializerMode::Read>::Serialize(SerializedData& Data)
 {
     size_t      Size = 0;
     const void* Ptr  = nullptr;
-    SerializeBytes(Ptr, Size, 1u);
+    SerializeBytes(Ptr, Size);
     Data = SerializedData{Size > 0 ? const_cast<void*>(Ptr) : nullptr, Size};
 }
 
 template <>
 inline void Serializer<SerializerMode::Write>::Serialize(const SerializedData& Data)
 {
-    SerializeBytes(Data.Ptr(), Data.Size(), 1u);
+    SerializeBytes(Data.Ptr(), Data.Size());
 }
 
 template <>
 inline void Serializer<SerializerMode::Measure>::Serialize(const SerializedData& Data)
 {
-    SerializeBytes(Data.Ptr(), Data.Size(), 1u);
+    SerializeBytes(Data.Ptr(), Data.Size());
 }
 
 
