@@ -194,7 +194,6 @@ void UnpackPRS(IArchive*                   pArchive,
     ASSERT_TRUE(pDearchiver);
 
     ASSERT_NE(pArchive, nullptr);
-    EXPECT_TRUE(pArchiverFactory->ValidateArchive(pArchive));
     EXPECT_TRUE(pArchiverFactory->PrintArchiveContent(pArchive));
     pDearchiver->LoadArchive(pArchive);
 
@@ -946,7 +945,6 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
         ASSERT_NE(pBlob, nullptr);
 
         auto pArchive = ArchiveMemoryImpl::Create(pBlob);
-        EXPECT_TRUE(pArchiverFactory->ValidateArchive(pArchive));
         EXPECT_TRUE(pArchiverFactory->PrintArchiveContent(pArchive));
         pDearchiver->LoadArchive(pArchive);
     }
@@ -1272,11 +1270,10 @@ void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
                 ASSERT_NE(pBlob, nullptr);
 
                 pArchive = ArchiveMemoryImpl::Create(pBlob);
-                EXPECT_TRUE(pArchiverFactory->ValidateArchive(pArchive));
                 EXPECT_TRUE(pArchiverFactory->PrintArchiveContent(pArchive));
             }
 
-            if (ArchiveFlags & PSO_ARCHIVE_FLAG_DON_NOT_PACK_SIGNATURES)
+            if (ArchiveFlags & PSO_ARCHIVE_FLAG_DO_NOT_PACK_SIGNATURES)
             {
                 pArchiver->Reset();
                 ASSERT_TRUE(pArchiver->AddPipelineResourceSignature(pSerializedPRS));
@@ -1286,7 +1283,6 @@ void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
                 ASSERT_NE(pBlob, nullptr);
 
                 pSignArchive = ArchiveMemoryImpl::Create(pBlob);
-                EXPECT_TRUE(pArchiverFactory->ValidateArchive(pSignArchive));
                 EXPECT_TRUE(pArchiverFactory->PrintArchiveContent(pSignArchive));
             }
         }
@@ -1356,12 +1352,12 @@ TEST(ArchiveTest, ComputePipeline_NoReflection)
 
 TEST(ArchiveTest, ComputePipeline_SplitArchive)
 {
-    TestComputePipeline(PSO_ARCHIVE_FLAG_DON_NOT_PACK_SIGNATURES);
+    TestComputePipeline(PSO_ARCHIVE_FLAG_DO_NOT_PACK_SIGNATURES);
 }
 
 TEST(ArchiveTest, ComputePipeline_NoReflection_SplitArchive)
 {
-    TestComputePipeline(PSO_ARCHIVE_FLAG_STRIP_REFLECTION | PSO_ARCHIVE_FLAG_DON_NOT_PACK_SIGNATURES);
+    TestComputePipeline(PSO_ARCHIVE_FLAG_STRIP_REFLECTION | PSO_ARCHIVE_FLAG_DO_NOT_PACK_SIGNATURES);
 }
 
 TEST(ArchiveTest, RayTracingPipeline)
@@ -1497,7 +1493,6 @@ TEST(ArchiveTest, RayTracingPipeline)
         ASSERT_NE(pBlob, nullptr);
 
         auto pArchive = ArchiveMemoryImpl::Create(pBlob);
-        EXPECT_TRUE(pArchiverFactory->ValidateArchive(pArchive));
         EXPECT_TRUE(pArchiverFactory->PrintArchiveContent(pArchive));
         pDearchiver->LoadArchive(pArchive);
     }
@@ -2283,7 +2278,6 @@ TEST_P(TestSamplers, GraphicsPipeline)
         ASSERT_NE(pBlob, nullptr);
 
         auto pArchive = ArchiveMemoryImpl::Create(pBlob);
-        EXPECT_TRUE(pArchiverFactory->ValidateArchive(pArchive));
         EXPECT_TRUE(pArchiverFactory->PrintArchiveContent(pArchive));
         pDearchiver->LoadArchive(pArchive);
     }

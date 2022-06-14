@@ -28,11 +28,9 @@
 
 #include <unordered_map>
 #include <array>
-#include <vector>
 #include <mutex>
 
 #include "Archiver.h"
-#include "ArchiverFactory.h"
 #include "PipelineResourceSignature.h"
 #include "PipelineState.h"
 #include "DataBlob.h"
@@ -43,10 +41,6 @@
 #include "ObjectBase.hpp"
 
 #include "HashUtils.hpp"
-#include "BasicMath.hpp"
-#include "PlatformMisc.hpp"
-#include "FixedLinearAllocator.hpp"
-#include "Serializer.hpp"
 
 #include "SerializationDeviceImpl.hpp"
 #include "SerializedShaderImpl.hpp"
@@ -82,84 +76,29 @@ public:
     /// Implementation of IArchiver::Reset().
     virtual void DILIGENT_CALL_TYPE Reset() override final;
 
-public:
-    using DeviceType        = DeviceObjectArchive::DeviceType;
-    using ResourceGroupType = DeviceObjectArchive::ResourceGroupType;
-    using TDataElement      = FixedLinearAllocator;
+private:
+    bool AddRenderPass(IRenderPass* pRP);
 
 private:
-    using ArchiveHeader            = DeviceObjectArchive::ArchiveHeader;
-    using ResourceGroupHeader      = DeviceObjectArchive::ResourceGroupHeader;
-    using NamedResourceArrayHeader = DeviceObjectArchive::NamedResourceArrayHeader;
-    using FileOffsetAndSize        = DeviceObjectArchive::ArchiveRegion;
-    using PRSDataHeader            = DeviceObjectArchive::PRSDataHeader;
-    using PSODataHeader            = DeviceObjectArchive::PSODataHeader;
-    using RPDataHeader             = DeviceObjectArchive::RPDataHeader;
-    using ShadersDataHeader        = DeviceObjectArchive::ShadersDataHeader;
-    using TPRSNames                = DeviceObjectArchive::TPRSNames;
-    using ShaderIndexArray         = DeviceObjectArchive::ShaderIndexArray;
-    using SerializedPSOAuxData     = DeviceObjectArchive::SerializedPSOAuxData;
-
-    static constexpr auto InvalidOffset      = DeviceObjectArchive::DataHeaderBase::InvalidOffset;
-    static constexpr auto DeviceDataCount    = static_cast<size_t>(DeviceType::Count);
-    static constexpr auto ResourceGroupCount = static_cast<size_t>(ResourceGroupType::Count);
+    using DeviceType        = DeviceObjectArchive::DeviceType;
+    using ResourceGroupType = DeviceObjectArchive::ResourceGroupType;
 
     RefCntAutoPtr<SerializationDeviceImpl> m_pSerializationDevice;
 
-
     template <typename Type>
-    using NamedObjectHashMap = std::unordered_map<HashMapStringKey, Type>;
+    using NamedObjectHashMap = std::unordered_map<HashMapStringKey, RefCntAutoPtr<Type>>;
 
-    std::mutex                                                         m_SignaturesMtx;
-    NamedObjectHashMap<RefCntAutoPtr<SerializedResourceSignatureImpl>> m_Signatures;
+    std::mutex                                          m_SignaturesMtx;
+    NamedObjectHashMap<SerializedResourceSignatureImpl> m_Signatures;
 
-    std::mutex                                                  m_RenderPassesMtx;
-    NamedObjectHashMap<RefCntAutoPtr<SerializedRenderPassImpl>> m_RenderPasses;
+    std::mutex                                   m_RenderPassesMtx;
+    NamedObjectHashMap<SerializedRenderPassImpl> m_RenderPasses;
 
-    using PSOHashMapType = NamedObjectHashMap<RefCntAutoPtr<SerializedPipelineStateImpl>>;
+    using NamedResourceKey = DeviceObjectArchive::NamedResourceKey;
+    using PSOHashMapType   = std::unordered_map<NamedResourceKey, RefCntAutoPtr<SerializedPipelineStateImpl>, NamedResourceKey::Hasher>;
 
-    std::array<std::mutex, PIPELINE_TYPE_COUNT>     m_PipelinesMtx;
-    std::array<PSOHashMapType, PIPELINE_TYPE_COUNT> m_Pipelines;
-
-    struct PerDeviceShaderData
-    {
-        std::unordered_map<size_t, Uint32>                        HashToIdx;
-        std::vector<std::reference_wrapper<const SerializedData>> Bytecodes;
-    };
-
-    struct PendingData
-    {
-        TDataElement                                 Headers;                      // ArchiveHeader, ResourceGroupHeader[]
-        std::array<TDataElement, ResourceGroupCount> Chunks;                       // NamedResourceArrayHeader
-        std::array<Uint32*, ResourceGroupCount>      DataOffsetArrayPerGroup = {}; // pointer to NamedResourceArrayHeader::DataOffset - offsets to ***DataHeader
-        std::array<Uint32, ResourceGroupCount>       ResourceCountPerGroup   = {}; //
-        TDataElement                                 CommonData;                   // ***DataHeader
-        std::array<TDataElement, DeviceDataCount>    PerDeviceData;                // device specific data
-        size_t                                       OffsetInFile = 0;
-
-        std::array<PerDeviceShaderData, DeviceDataCount> Shaders;
-        // Serialized global shader indices in the archive for each shader of each device type
-        std::unordered_map<const SerializedPipelineStateImpl*, std::array<SerializedData, DeviceDataCount>> PSOShaderIndices;
-    };
-
-    static const SerializedData& GetDeviceData(const SerializedResourceSignatureImpl& PRS, DeviceType Type);
-    static const SerializedData& GetDeviceData(const PendingData& Pending, const SerializedPipelineStateImpl& PSO, DeviceType Type);
-
-    void ReserveSpace(PendingData& Pending) const;
-    void WriteDebugInfo(PendingData& Pending) const;
-    void WriteShaderData(PendingData& Pending) const;
-    template <typename DataHeaderType, typename MapType, typename WritePerDeviceDataType>
-    void WriteResourceGroupDeviceData(ResourceGroupType GroupType, PendingData& Pending, MapType& Map, WritePerDeviceDataType WriteDeviceData) const;
-
-    void UpdateOffsetsInArchive(PendingData& Pending) const;
-    void WritePendingDataToStream(const PendingData& Pending, IFileStream* pStream) const;
-
-    template <typename MapType>
-    static Uint32* InitNamedResourceArrayHeader(ResourceGroupType GroupType,
-                                                const MapType&    Map,
-                                                PendingData&      Pending);
-
-    bool AddRenderPass(IRenderPass* pRP);
+    std::mutex     m_PipelinesMtx;
+    PSOHashMapType m_Pipelines;
 };
 
 } // namespace Diligent

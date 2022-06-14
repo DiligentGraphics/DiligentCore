@@ -250,12 +250,6 @@ DILIGENT_BEGIN_INTERFACE(IArchiverFactory, IObject)
                                           IArchive*                 pDeviceArchive,
                                           IFileStream*              pStream) CONST PURE;
 
-    /// Validates archive contents. Returns true if archive is valid, and
-    /// false otherwise.
-    VIRTUAL Bool METHOD(ValidateArchive)(THIS_
-                                         IArchive* pArchive) CONST PURE;
-
-
     /// Prints archive content for debugging and validation.
     VIRTUAL Bool METHOD(PrintArchiveContent)(THIS_
                                              IArchive* pArchive) CONST PURE;

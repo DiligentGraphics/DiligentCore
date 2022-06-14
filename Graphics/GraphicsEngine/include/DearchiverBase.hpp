@@ -31,6 +31,8 @@
 
 #include <memory>
 #include <vector>
+#include <unordered_map>
+#include <mutex>
 
 #include "Dearchiver.h"
 #include "RenderDevice.h"
@@ -90,15 +92,10 @@ protected:
                                                 IRenderDevice*          pDevice);
 
 protected:
-    using PSODataHeader          = DeviceObjectArchive::PSODataHeader;
-    using PRSDataHeader          = DeviceObjectArchive::PRSDataHeader;
-    using ResourceGroupType      = DeviceObjectArchive::ResourceGroupType;
-    using NameToArchiveRegionMap = DeviceObjectArchive::NameToArchiveRegionMap;
-    using DeviceType             = DeviceObjectArchive::DeviceType;
-    using SerializedPSOAuxData   = DeviceObjectArchive::SerializedPSOAuxData;
-    using TPRSNames              = DeviceObjectArchive::TPRSNames;
-    using RPDataHeader           = DeviceObjectArchive::RPDataHeader;
-    using ArchiveRegion          = DeviceObjectArchive::ArchiveRegion;
+    using ResourceGroupType    = DeviceObjectArchive::ResourceGroupType;
+    using DeviceType           = DeviceObjectArchive::DeviceType;
+    using SerializedPSOAuxData = DeviceObjectArchive::SerializedPSOAuxData;
+    using TPRSNames            = DeviceObjectArchive::TPRSNames;
 
     template <typename ResType>
     class NamedResourceCache
@@ -141,10 +138,9 @@ protected:
     struct PRSData
     {
         DynamicLinearAllocator        Allocator;
-        const PRSDataHeader*          pHeader = nullptr;
-        PipelineResourceSignatureDesc Desc{};
+        PipelineResourceSignatureDesc Desc;
 
-        static constexpr ResourceGroupType ExpectedResourceGroupType = ResourceGroupType::ResourceSignatures;
+        static constexpr ResourceGroupType ArchiveResType = ResourceGroupType::ResourceSignatures;
 
         explicit PRSData(IMemoryAllocator& Allocator, Uint32 BlockSize = 1 << 10) :
             Allocator{Allocator, BlockSize}
@@ -186,7 +182,7 @@ private:
     bool UnpackPSORenderPass(PSOData<CreateInfoType>& PSO, IRenderDevice* pDevice) { return true; }
 
     template <typename CreateInfoType>
-    bool UnpackPSOShaders(DeviceObjectArchive&         Archive,
+    bool UnpackPSOShaders(const DeviceObjectArchive&   Archive,
                           PSOData<CreateInfoType>&     PSO,
                           PerDeviceCachedShadersArray& PerDeviceCachedShaders,
                           IRenderDevice*               pDevice);
@@ -194,21 +190,10 @@ private:
     template <typename CreateInfoType>
     void UnpackPipelineStateImpl(const PipelineStateUnpackInfo& UnpackInfo, IPipelineState** ppPSO);
 
-    // Resource name -> archive index that contains this resource.
+    // Resource type and name -> archive index that contains this resource.
     // Names must be unique for each resource type.
-    using NameToArchiveIdxMapType = std::unordered_map<HashMapStringKey, size_t>;
-    struct ResNameToArchiveIdxMap
-    {
-        NameToArchiveIdxMapType Sign;
-        NameToArchiveIdxMapType RenderPass;
-        NameToArchiveIdxMapType GraphPSO;
-        NameToArchiveIdxMapType CompPSO;
-        NameToArchiveIdxMapType TilePSO;
-        NameToArchiveIdxMapType RayTrPSO;
-
-        template <typename PSOCreateInfoType>
-        const NameToArchiveIdxMapType& GetPsoMap() const;
-    } m_ResNameToArchiveIdx;
+    using NamedResourceKey = DeviceObjectArchive::NamedResourceKey;
+    std::unordered_map<NamedResourceKey, size_t, NamedResourceKey::Hasher> m_ResNameToArchiveIdx;
 
     struct ArchiveData
     {
@@ -245,8 +230,8 @@ RefCntAutoPtr<IPipelineResourceSignature> DearchiverBase::UnpackResourceSignatur
     }
 
     // Find the archive that contains this signature
-    auto archive_idx_it = m_ResNameToArchiveIdx.Sign.find(DeArchiveInfo.Name);
-    if (archive_idx_it == m_ResNameToArchiveIdx.Sign.end())
+    auto archive_idx_it = m_ResNameToArchiveIdx.find(NamedResourceKey{PRSData::ArchiveResType, DeArchiveInfo.Name});
+    if (archive_idx_it == m_ResNameToArchiveIdx.end())
         return {};
 
     auto& pArchive = m_Archives[archive_idx_it->second].pArchive;
@@ -257,13 +242,13 @@ RefCntAutoPtr<IPipelineResourceSignature> DearchiverBase::UnpackResourceSignatur
     }
 
     PRSData PRS{GetRawAllocator()};
-    if (!pArchive->LoadResourceData(pArchive->GetResourceMap().Sign, DeArchiveInfo.Name, PRS))
+    if (!pArchive->LoadResourceCommonData(PRSData::ArchiveResType, DeArchiveInfo.Name, PRS))
         return {};
 
     PRS.Desc.SRBAllocationGranularity = DeArchiveInfo.SRBAllocationGranularity;
 
-    const auto DevType = GetArchiveDeviceType(DeArchiveInfo.pDevice);
-    const auto Data    = pArchive->GetDeviceSpecificData(DevType, *PRS.pHeader, PRS.Allocator, ResourceGroupType::ResourceSignatures);
+    const auto  DevType = GetArchiveDeviceType(DeArchiveInfo.pDevice);
+    const auto& Data    = pArchive->GetDeviceSpecificData(PRSData::ArchiveResType, DeArchiveInfo.Name, DevType);
     if (!Data)
         return {};
 
@@ -273,7 +258,7 @@ RefCntAutoPtr<IPipelineResourceSignature> DearchiverBase::UnpackResourceSignatur
     Ser(SpecialDesc);
     if (SpecialDesc)
     {
-        // The signature uses special description that differs from the common
+        // The signature uses a special description that differs from the common
         const auto* Name = PRS.Desc.Name;
         PRS.Desc         = {};
         PRS.Deserialize(Name, Ser);

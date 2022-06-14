@@ -272,7 +272,7 @@ SerializedPipelineStateImpl::SerializedPipelineStateImpl(IReferenceCounters*    
         }
         else
         {
-            m_Data.DoNotPackSignatures = (ArchiveInfo.PSOFlags & PSO_ARCHIVE_FLAG_DON_NOT_PACK_SIGNATURES) != 0;
+            m_Data.DoNotPackSignatures = (ArchiveInfo.PSOFlags & PSO_ARCHIVE_FLAG_DO_NOT_PACK_SIGNATURES) != 0;
         }
 
         auto   SignaturesCount = CreateInfo.ResourceSignaturesCount;

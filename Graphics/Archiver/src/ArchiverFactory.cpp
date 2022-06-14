@@ -111,7 +111,6 @@ public:
     virtual void DILIGENT_CALL_TYPE CreateDefaultShaderSourceStreamFactory(const Char* SearchDirectories, struct IShaderSourceInputStreamFactory** ppShaderSourceFactory) const override final;
     virtual Bool DILIGENT_CALL_TYPE RemoveDeviceData(IArchive* pSrcArchive, ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags, IFileStream* pStream) const override final;
     virtual Bool DILIGENT_CALL_TYPE AppendDeviceData(IArchive* pSrcArchive, ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags, IArchive* pDeviceArchive, IFileStream* pStream) const override final;
-    virtual Bool DILIGENT_CALL_TYPE ValidateArchive(IArchive* pArchive) const override final;
     virtual Bool DILIGENT_CALL_TYPE PrintArchiveContent(IArchive* pArchive) const override final;
     virtual void DILIGENT_CALL_TYPE SetMessageCallback(DebugMessageCallbackType MessageCallback) const override final;
 
@@ -231,19 +230,6 @@ Bool ArchiverFactoryImpl::AppendDeviceData(IArchive* pSrcArchive, ARCHIVE_DEVICE
 
         ObjectArchive.Serialize(pStream);
         return true;
-    }
-    catch (...)
-    {
-        return false;
-    }
-}
-
-Bool ArchiverFactoryImpl::ValidateArchive(IArchive* pArchive) const
-{
-    try
-    {
-        DeviceObjectArchive ObjArchive{pArchive};
-        return ObjArchive.Validate();
     }
     catch (...)
     {

@@ -54,27 +54,6 @@ DearchiverBase::NamedResourceCache<IPipelineState>& DearchiverBase::ResourceCach
     return RayTrPSO;
 }
 
-template <>
-const DearchiverBase::NameToArchiveIdxMapType& DearchiverBase::ResNameToArchiveIdxMap::GetPsoMap<GraphicsPipelineStateCreateInfo>() const
-{
-    return GraphPSO;
-}
-template <>
-const DearchiverBase::NameToArchiveIdxMapType& DearchiverBase::ResNameToArchiveIdxMap::GetPsoMap<ComputePipelineStateCreateInfo>() const
-{
-    return CompPSO;
-}
-template <>
-const DearchiverBase::NameToArchiveIdxMapType& DearchiverBase::ResNameToArchiveIdxMap::GetPsoMap<TilePipelineStateCreateInfo>() const
-{
-    return TilePSO;
-}
-template <>
-const DearchiverBase::NameToArchiveIdxMapType& DearchiverBase::ResNameToArchiveIdxMap::GetPsoMap<RayTracingPipelineStateCreateInfo>() const
-{
-    return RayTrPSO;
-}
-
 #define CHECK_UNPACK_PARAMATER(Expr, ...)   \
     do                                      \
     {                                       \
@@ -137,7 +116,6 @@ template <typename CreateInfoType>
 struct DearchiverBase::PSOData
 {
     DynamicLinearAllocator Allocator;
-    const PSODataHeader*   pHeader = nullptr;
     CreateInfoType         CreateInfo{};
     PSOCreateInternalInfo  InternalCI;
     SerializedPSOAuxData   AuxData;
@@ -148,7 +126,7 @@ struct DearchiverBase::PSOData
     std::vector<RefCntAutoPtr<IDeviceObject>> Objects;
     std::vector<RefCntAutoPtr<IShader>>       Shaders;
 
-    static const ResourceGroupType ExpectedResourceGroupType;
+    static const ResourceGroupType ArchiveResType;
 
     explicit PSOData(IMemoryAllocator& Allocator, Uint32 BlockSize = 2 << 10) :
         Allocator{Allocator, BlockSize}
@@ -166,10 +144,9 @@ private:
 struct DearchiverBase::RPData
 {
     DynamicLinearAllocator Allocator;
-    const RPDataHeader*    pHeader = nullptr;
-    RenderPassDesc         Desc{};
+    RenderPassDesc         Desc;
 
-    static constexpr ResourceGroupType ExpectedResourceGroupType = ResourceGroupType::RenderPasses;
+    static constexpr ResourceGroupType ArchiveResType = ResourceGroupType::RenderPasses;
 
     explicit RPData(IMemoryAllocator& Allocator, Uint32 BlockSize = 1 << 10) :
         Allocator{Allocator, BlockSize}
@@ -215,10 +192,10 @@ template class DearchiverBase::NamedResourceCache<IPipelineResourceSignature>;
 
 
 // Instantiation is required by UnpackResourceSignatureImpl
-template bool DeviceObjectArchive::LoadResourceData<DearchiverBase::PRSData>(
-    const NameToArchiveRegionMap& NameToRegion,
-    const char*                   ResourceName,
-    DearchiverBase::PRSData&      ResData) const;
+template bool DeviceObjectArchive::LoadResourceCommonData<DearchiverBase::PRSData>(
+    ResourceGroupType        Type,
+    const char*              ResourceName,
+    DearchiverBase::PRSData& ResData) const;
 
 
 bool DearchiverBase::PRSData::Deserialize(const char* Name, Serializer<SerializerMode::Read>& Ser)
@@ -280,13 +257,13 @@ bool DearchiverBase::PSOData<CreateInfoType>::Deserialize(const char* Name, Seri
 }
 
 template <>
-const DearchiverBase::ResourceGroupType DearchiverBase::PSOData<GraphicsPipelineStateCreateInfo>::ExpectedResourceGroupType = DearchiverBase::ResourceGroupType::GraphicsPipelines;
+const DearchiverBase::ResourceGroupType DearchiverBase::PSOData<GraphicsPipelineStateCreateInfo>::ArchiveResType = DearchiverBase::ResourceGroupType::GraphicsPipelines;
 template <>
-const DearchiverBase::ResourceGroupType DearchiverBase::PSOData<ComputePipelineStateCreateInfo>::ExpectedResourceGroupType = DearchiverBase::ResourceGroupType::ComputePipelines;
+const DearchiverBase::ResourceGroupType DearchiverBase::PSOData<ComputePipelineStateCreateInfo>::ArchiveResType = DearchiverBase::ResourceGroupType::ComputePipelines;
 template <>
-const DearchiverBase::ResourceGroupType DearchiverBase::PSOData<TilePipelineStateCreateInfo>::ExpectedResourceGroupType = DearchiverBase::ResourceGroupType::TilePipelines;
+const DearchiverBase::ResourceGroupType DearchiverBase::PSOData<TilePipelineStateCreateInfo>::ArchiveResType = DearchiverBase::ResourceGroupType::TilePipelines;
 template <>
-const DearchiverBase::ResourceGroupType DearchiverBase::PSOData<RayTracingPipelineStateCreateInfo>::ExpectedResourceGroupType = DearchiverBase::ResourceGroupType::RayTracingPipelines;
+const DearchiverBase::ResourceGroupType DearchiverBase::PSOData<RayTracingPipelineStateCreateInfo>::ArchiveResType = DearchiverBase::ResourceGroupType::RayTracingPipelines;
 
 
 template <>
@@ -445,22 +422,15 @@ void DearchiverBase::PSOData<RayTracingPipelineStateCreateInfo>::CreatePipeline(
 }
 
 template <typename CreateInfoType>
-bool DearchiverBase::UnpackPSOShaders(DeviceObjectArchive&         Archive,
+bool DearchiverBase::UnpackPSOShaders(const DeviceObjectArchive&   Archive,
                                       PSOData<CreateInfoType>&     PSO,
                                       PerDeviceCachedShadersArray& PerDeviceCachedShaders,
                                       IRenderDevice*               pDevice)
 {
-    const auto DevType       = GetArchiveDeviceType(pDevice);
-    const auto ShaderIdxData = Archive.GetDeviceSpecificData(DevType, *PSO.pHeader, PSO.Allocator, PSO.ExpectedResourceGroupType);
+    const auto  DevType       = GetArchiveDeviceType(pDevice);
+    const auto& ShaderIdxData = Archive.GetDeviceSpecificData(PSO.ArchiveResType, PSO.CreateInfo.PSODesc.Name, DevType);
     if (!ShaderIdxData)
         return false;
-
-    const Uint64 BaseOffset = Archive.GetBlockOffset(DeviceObjectArchive::ArchiveDeviceTypeToBlockType(DevType));
-    if (BaseOffset > Archive.GetArchive()->GetSize())
-    {
-        LOG_ERROR_MESSAGE("Required block does not exist in archive");
-        return false;
-    }
 
     DynamicLinearAllocator Allocator{GetRawAllocator()};
 
@@ -480,7 +450,6 @@ bool DearchiverBase::UnpackPSOShaders(DeviceObjectArchive&         Archive,
 
         const Uint32 Idx = ShaderIndices.pIndices[i];
 
-        ArchiveRegion OffsetAndSize;
         {
             std::unique_lock<std::mutex> ReadLock{ShaderCache.Mtx};
             if (Idx < ShaderCache.Shaders.size())
@@ -492,20 +461,14 @@ bool DearchiverBase::UnpackPSOShaders(DeviceObjectArchive&         Archive,
             }
         }
 
-        const auto& ShaderRegions = Archive.GetShaderRegions(DevType, Allocator);
-        if (Idx >= ShaderRegions.size())
-            return false;
-        OffsetAndSize = ShaderRegions[Idx];
-
-        void* pData = Allocator.Allocate(OffsetAndSize.Size, DeviceObjectArchive::DataPtrAlign);
-
-        if (!Archive.GetArchive()->Read(BaseOffset + OffsetAndSize.Offset, OffsetAndSize.Size, pData))
+        const auto& SerializedShader = Archive.GetSerializedShader(DevType, Idx);
+        if (!SerializedShader)
             return false;
 
         {
             ShaderCreateInfo ShaderCI;
             {
-                Serializer<SerializerMode::Read> ShaderSer{SerializedData{pData, OffsetAndSize.Size}};
+                Serializer<SerializerMode::Read> ShaderSer{SerializedShader};
                 ShaderSerializer<SerializerMode::Read>::SerializeCI(ShaderSer, ShaderCI);
                 VERIFY_EXPR(ShaderSer.IsEnded());
             }
@@ -521,10 +484,8 @@ bool DearchiverBase::UnpackPSOShaders(DeviceObjectArchive&         Archive,
         // Add to the cache
         {
             std::unique_lock<std::mutex> WriteLock{ShaderCache.Mtx};
-            if (ShaderCache.Shaders.empty())
-                ShaderCache.Shaders.resize(ShaderRegions.size());
-            else
-                VERIFY_EXPR(ShaderCache.Shaders.size() == ShaderRegions.size());
+            if (Idx >= ShaderCache.Shaders.size())
+                ShaderCache.Shaders.resize(Idx + 1);
             ShaderCache.Shaders[Idx] = pShader;
         }
     }
@@ -633,11 +594,10 @@ void DearchiverBase::UnpackPipelineStateImpl(const PipelineStateUnpackInfo& Unpa
             return;
     }
 
-    // Get the Name->ArchiveIdx map for this PSO type
-    const auto& PsoNameToIdx = m_ResNameToArchiveIdx.GetPsoMap<CreateInfoType>();
+    constexpr auto ResType = PSOData<CreateInfoType>::ArchiveResType;
     // Find the archive that contains this PSO
-    const auto archive_idx_it = PsoNameToIdx.find(UnpackInfo.Name);
-    if (archive_idx_it == PsoNameToIdx.end())
+    const auto archive_idx_it = m_ResNameToArchiveIdx.find(NamedResourceKey{ResType, UnpackInfo.Name});
+    if (archive_idx_it == m_ResNameToArchiveIdx.end())
         return;
 
     auto& Archive = m_Archives[archive_idx_it->second];
@@ -647,10 +607,8 @@ void DearchiverBase::UnpackPipelineStateImpl(const PipelineStateUnpackInfo& Unpa
         return;
     }
 
-    const auto& PSONameToRegion = Archive.pArchive->GetResourceMap().template GetPsoMap<CreateInfoType>();
-
     PSOData<CreateInfoType> PSO{GetRawAllocator()};
-    if (!Archive.pArchive->LoadResourceData(PSONameToRegion, UnpackInfo.Name, PSO))
+    if (!Archive.pArchive->LoadResourceCommonData(ResType, UnpackInfo.Name, PSO))
         return;
 
 #ifdef DILIGENT_DEVELOPMENT
@@ -696,26 +654,15 @@ bool DearchiverBase::LoadArchive(IArchive* pRawArchive)
         auto pArchive   = std::make_unique<DeviceObjectArchive>(pRawArchive);
         auto ArchiveIdx = m_Archives.size();
 
-        auto RegisterArchive = [ArchiveIdx](const auto& SrcMap, auto& DstMap) {
-            for (auto it = SrcMap.begin(); it != SrcMap.end(); ++it)
+        const auto& ArchiveResources = pArchive->GetNamedResources();
+        for (const auto& it : ArchiveResources)
+        {
+            const auto inserted = m_ResNameToArchiveIdx.emplace(NamedResourceKey{it.first.GetType(), it.first.GetName(), true}, ArchiveIdx).second;
+            if (!inserted)
             {
-                const auto* ResName  = it->first.GetStr();
-                const auto  inserted = DstMap.emplace(HashMapStringKey{ResName, true}, ArchiveIdx).second;
-                if (!inserted)
-                {
-                    LOG_ERROR_MESSAGE("Resource with name '", ResName, "' already present in the archive.");
-                }
+                LOG_ERROR_MESSAGE("Resource with name '", it.first.GetName(), "' already present in the archive.");
             }
-        };
-        const auto& ResMap = pArchive->GetResourceMap();
-#define REGISTER_ARCHIVE(MapName) RegisterArchive(ResMap.MapName, m_ResNameToArchiveIdx.MapName)
-        REGISTER_ARCHIVE(Sign);
-        REGISTER_ARCHIVE(RenderPass);
-        REGISTER_ARCHIVE(GraphPSO);
-        REGISTER_ARCHIVE(CompPSO);
-        REGISTER_ARCHIVE(TilePSO);
-        REGISTER_ARCHIVE(RayTrPSO);
-#undef REGISTER_ARCHIVE
+        }
 
         m_Archives.emplace_back(std::move(pArchive));
 
@@ -791,8 +738,8 @@ void DearchiverBase::UnpackRenderPass(const RenderPassUnpackInfo& UnpackInfo, IR
     }
 
     // Find the archive that contains this render pass.
-    auto archive_idx_it = m_ResNameToArchiveIdx.RenderPass.find(UnpackInfo.Name);
-    if (archive_idx_it == m_ResNameToArchiveIdx.RenderPass.end())
+    auto archive_idx_it = m_ResNameToArchiveIdx.find(NamedResourceKey{RPData::ArchiveResType, UnpackInfo.Name});
+    if (archive_idx_it == m_ResNameToArchiveIdx.end())
         return;
 
     auto& pArchive = m_Archives[archive_idx_it->second].pArchive;
@@ -803,7 +750,7 @@ void DearchiverBase::UnpackRenderPass(const RenderPassUnpackInfo& UnpackInfo, IR
     }
 
     RPData RP{GetRawAllocator()};
-    if (!pArchive->LoadResourceData(pArchive->GetResourceMap().RenderPass, UnpackInfo.Name, RP))
+    if (!pArchive->LoadResourceCommonData(RPData::ArchiveResType, UnpackInfo.Name, RP))
         return;
 
     if (UnpackInfo.ModifyRenderPassDesc != nullptr)

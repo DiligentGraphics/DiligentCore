@@ -91,6 +91,8 @@ public:
 
     void Free();
 
+    SerializedData MakeCopy(IMemoryAllocator& Allocator) const;
+
     struct Hasher
     {
         size_t operator()(const SerializedData& Mem) const
@@ -201,6 +203,8 @@ public:
 
     template <typename T>
     TEnableStr<T> Serialize(CharPtr Str);
+
+    void Serialize(ConstQual<SerializedData>& Data);
 
     /// Serializes Size bytes to/from pBytes
     ///
@@ -379,6 +383,28 @@ inline void Serializer<Mode>::SerializeBytes(VoidPtr pBytes, ConstQual<size_t>& 
     Serialize<Uint32>(static_cast<Uint32>(Size));
     AlignOffset(Alignment);
     Copy(pBytes, Size);
+}
+
+
+template <>
+inline void Serializer<SerializerMode::Read>::Serialize(SerializedData& Data)
+{
+    size_t      Size = 0;
+    const void* Ptr  = nullptr;
+    SerializeBytes(Ptr, Size, 1u);
+    Data = SerializedData{Size > 0 ? const_cast<void*>(Ptr) : nullptr, Size};
+}
+
+template <>
+inline void Serializer<SerializerMode::Write>::Serialize(const SerializedData& Data)
+{
+    SerializeBytes(Data.Ptr(), Data.Size(), 1u);
+}
+
+template <>
+inline void Serializer<SerializerMode::Measure>::Serialize(const SerializedData& Data)
+{
+    SerializeBytes(Data.Ptr(), Data.Size(), 1u);
 }
 
 

@@ -80,7 +80,7 @@ DILIGENT_TYPED_ENUM(PSO_ARCHIVE_FLAGS, Uint32)
     ///
     /// \note   The flag only applies to explicit signatures.
     ///         Implicit signatures are always packed.
-    PSO_ARCHIVE_FLAG_DON_NOT_PACK_SIGNATURES = 1u << 1
+    PSO_ARCHIVE_FLAG_DO_NOT_PACK_SIGNATURES = 1u << 1
 };
 DEFINE_FLAG_ENUM_OPERATORS(PSO_ARCHIVE_FLAGS)
 

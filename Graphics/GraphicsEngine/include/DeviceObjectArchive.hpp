@@ -29,18 +29,7 @@
 /// \file
 /// Implementation of the Diligent::DeviceObjectArchive class
 
-// Archive file format
-//
-// | ArchiveHeader |
-//
-// | ResourceGroupHeader | --> offset --> | NamedResourceArrayHeader |
-//
-// | NamedResourceArrayHeader | --> offset --> | ***DataHeader |
-//
-// | ***DataHeader | --> offset --> | device specific data |
-
 #include <array>
-#include <mutex>
 #include <vector>
 #include <unordered_map>
 
@@ -86,27 +75,6 @@ public:
         bool NoShaderReflection = false;
     };
 
-    static constexpr Uint32 HeaderMagicNumber = 0xDE00000A;
-    static constexpr Uint32 HeaderVersion     = 2;
-    static constexpr Uint32 DataPtrAlign      = sizeof(Uint64);
-
-    // Archive header contains the block offsets.
-    // Any block can be added or removed without patching all offsets in the archive,
-    // only the block offsets in the header need to be patched.
-    enum class ArchiveBlockType : Uint32
-    {
-        // Device-specific data
-        OpenGL,
-        Direct3D11,
-        Direct3D12,
-        Vulkan,
-        Metal_MacOS,
-        Metal_iOS,
-        //PipelineCache,
-        Count
-    };
-    using TArchiveBlockOffsets = std::array<Uint32, static_cast<size_t>(ArchiveBlockType::Count)>;
-
     enum class ResourceGroupType : Uint32
     {
         Undefined = 0,
@@ -121,142 +89,14 @@ public:
         Count
     };
 
-#define CHECK_HEADER_SIZE(Header, Size)                                                                                                           \
-    static_assert(sizeof(Header) % 8 == 0, "sizeof(" #Header ") must be a multiple of 8. Use padding to align it.");                              \
-    static_assert(sizeof(Header) == Size, "sizeof(" #Header ") must be " #Size ". Reading binary archive will result in invalid memory access."); \
-    static_assert(sizeof(Header) % alignof(Header) == 0, "sizeof(" #Header ") is not a multiple of its alignment.");
+    static constexpr Uint32 HeaderMagicNumber = 0xDE00000A;
+    static constexpr Uint32 ArchiveVersion    = 3;
 
     struct ArchiveHeader
     {
-        Uint32               MagicNumber  = 0;
-        Uint32               Version      = 0;
-        TArchiveBlockOffsets BlockOffsets = {};
-        Uint32               NumChunks    = 0;
-        Uint32               _Padding     = ~0u;
-
-        //ResourceGroupHeader     Chunks  [NumChunks]
+        Uint32 MagicNumber = HeaderMagicNumber;
+        Uint32 Version     = ArchiveVersion;
     };
-    CHECK_HEADER_SIZE(ArchiveHeader, 40)
-
-    struct ResourceGroupHeader
-    {
-        ResourceGroupHeader() noexcept {}
-        ResourceGroupHeader(ResourceGroupType _Type) noexcept :
-            Type{_Type}
-        {}
-
-        ResourceGroupType Type     = ResourceGroupType::Undefined;
-        Uint32            Size     = 0;
-        Uint32            Offset   = 0; // offset to NamedResourceArrayHeader
-        Uint32            _Padding = ~0u;
-
-        bool operator==(const ResourceGroupHeader& Rhs) const { return Type == Rhs.Type && Size == Rhs.Size && Offset == Rhs.Offset; }
-    };
-    CHECK_HEADER_SIZE(ResourceGroupHeader, 16)
-
-    struct NamedResourceArrayHeader
-    {
-        Uint32 Count    = 0;
-        Uint32 _Padding = ~0u;
-
-        //Uint32 NameLength [Count]
-        //Uint32 DataSize   [Count]
-        //Uint32 DataOffset [Count] // for PRSDataHeader / PSODataHeader
-        //char   NameData   []
-    };
-    CHECK_HEADER_SIZE(NamedResourceArrayHeader, 8)
-
-    struct DataHeaderBase
-    {
-        using Uint32Array = std::array<Uint32, static_cast<size_t>(DeviceType::Count)>;
-
-        static constexpr Uint32 InvalidOffset = ~0u;
-
-        DataHeaderBase(ResourceGroupType _Type) noexcept :
-            Type{_Type}
-        {
-            DeviceSpecificDataOffset.fill(Uint32{InvalidOffset});
-        }
-
-        const ResourceGroupType Type      = ResourceGroupType::Undefined;
-        const Uint32            _Padding0 = ~0u;
-
-        Uint32Array DeviceSpecificDataSize{};
-        Uint32Array DeviceSpecificDataOffset{};
-
-        Uint32 GetSize(DeviceType DevType) const { return DeviceSpecificDataSize[static_cast<size_t>(DevType)]; }
-        Uint32 GetOffset(DeviceType DevType) const { return DeviceSpecificDataOffset[static_cast<size_t>(DevType)]; }
-        Uint32 GetEndOffset(DeviceType DevType) const { return GetOffset(DevType) + GetSize(DevType); }
-
-        void SetSize(DeviceType DevType, Uint32 Size) { DeviceSpecificDataSize[static_cast<size_t>(DevType)] = Size; }
-        void SetOffset(DeviceType DevType, Uint32 Offset) { DeviceSpecificDataOffset[static_cast<size_t>(DevType)] = Offset; }
-    };
-    CHECK_HEADER_SIZE(DataHeaderBase, 56)
-
-    struct PRSDataHeader : DataHeaderBase
-    {
-        PRSDataHeader(ResourceGroupType _Type) noexcept :
-            DataHeaderBase{_Type}
-        {
-            VERIFY_EXPR(Type == ResourceGroupType::ResourceSignatures);
-        }
-        //PipelineResourceSignatureDesc
-        //PipelineResourceSignatureInternalData
-    };
-    CHECK_HEADER_SIZE(PRSDataHeader, 56)
-
-
-    struct PSODataHeader : DataHeaderBase
-    {
-        PSODataHeader(ResourceGroupType _Type) noexcept :
-            DataHeaderBase{_Type}
-        {
-            VERIFY_EXPR((Type == ResourceGroupType::GraphicsPipelines ||
-                         Type == ResourceGroupType::ComputePipelines ||
-                         Type == ResourceGroupType::RayTracingPipelines ||
-                         Type == ResourceGroupType::TilePipelines));
-        }
-
-        //GraphicsPipelineStateCreateInfo | ComputePipelineStateCreateInfo | TilePipelineStateCreateInfo | RayTracingPipelineStateCreateInfo
-    };
-    CHECK_HEADER_SIZE(PSODataHeader, 56)
-
-
-    struct ShadersDataHeader : DataHeaderBase
-    {
-        ShadersDataHeader(ResourceGroupType _Type = ResourceGroupType::Shaders) noexcept :
-            DataHeaderBase{_Type}
-        {
-            VERIFY_EXPR(Type == ResourceGroupType::Shaders);
-        }
-    };
-    CHECK_HEADER_SIZE(ShadersDataHeader, 56)
-
-
-    struct RPDataHeader
-    {
-        RPDataHeader(ResourceGroupType _Type) noexcept :
-            Type{_Type}
-        {
-            VERIFY_EXPR(Type == ResourceGroupType::RenderPasses);
-        }
-
-        const ResourceGroupType Type      = ResourceGroupType::RenderPasses;
-        const Uint32            _Padding1 = ~0u;
-    };
-    CHECK_HEADER_SIZE(RPDataHeader, 8)
-
-#undef CHECK_HEADER_SIZE
-
-
-    struct ArchiveRegion
-    {
-        Uint32 Offset = 0;
-        Uint32 Size   = 0;
-
-        constexpr bool operator==(const ArchiveRegion& Rhs) const { return Offset == Rhs.Offset && Size == Rhs.Size; }
-    };
-
 
     struct ArchiveDebugInfo
     {
@@ -264,156 +104,128 @@ public:
         Uint32 APIVersion = 0;
     };
 
-    using NameToArchiveRegionMap = std::unordered_map<HashMapStringKey, ArchiveRegion>;
-
-    struct NamedResourcesMap
+    struct ResourceData
     {
-        NameToArchiveRegionMap Sign;
-        NameToArchiveRegionMap RenderPass;
-        NameToArchiveRegionMap GraphPSO;
-        NameToArchiveRegionMap CompPSO;
-        NameToArchiveRegionMap TilePSO;
-        NameToArchiveRegionMap RayTrPSO;
+        // Device-agnostic data (e.g. description)
+        SerializedData Common;
 
-        template <typename PSOCreateInfoType>
-        const NameToArchiveRegionMap& GetPsoMap() const;
+        // Device-specific data (e.g. patched shader byte code, device-specific resource signature data, etc.)
+        std::array<SerializedData, static_cast<size_t>(DeviceType::Count)> DeviceSpecific;
     };
 
+    struct NamedResourceKey
+    {
+        NamedResourceKey(ResourceGroupType _Type,
+                         const char*       _Name,
+                         bool              CopyName = false) noexcept :
+            Type{_Type},
+            Name{_Name, CopyName}
+        {}
+
+        struct Hasher
+        {
+            size_t operator()(const NamedResourceKey& Key) const
+            {
+                return ComputeHash(static_cast<size_t>(Key.Type), Key.Name.GetHash());
+            }
+        };
+
+        bool operator==(const NamedResourceKey& Key) const
+        {
+            return Type == Key.Type && Name == Key.Name;
+        }
+
+        const char* GetName() const
+        {
+            return Name.GetStr();
+        }
+
+        ResourceGroupType GetType() const
+        {
+            return Type;
+        }
+
+    private:
+        const ResourceGroupType Type;
+        HashMapStringKey        Name;
+    };
+
+public:
     /// \param pArchive - Source data that this archive will be created from.
     DeviceObjectArchive(IArchive* pArchive) noexcept(false);
+    DeviceObjectArchive() noexcept;
 
-    const std::vector<ArchiveRegion>& GetShaderRegions(DeviceType DevType, DynamicLinearAllocator& Allocator) noexcept;
+    void RemoveDeviceData(DeviceType Dev) noexcept(false);
+    void AppendDeviceData(const DeviceObjectArchive& Src, DeviceType Dev) noexcept(false);
 
-    static ArchiveBlockType ArchiveDeviceTypeToBlockType(DeviceType DevType);
-    static DeviceType       RenderDeviceTypeToArchiveDeviceType(RENDER_DEVICE_TYPE Type);
+    void Deserialize(const void* pData, size_t Size);
+    void Serialize(IFileStream* pStream) const noexcept(false);
+    void Serialize(IDataBlob** ppDataBlob) const;
+
+    std::string ToString() const;
+
+    static DeviceType RenderDeviceTypeToArchiveDeviceType(RENDER_DEVICE_TYPE Type);
 
     static const char* ResourceGroupTypeToString(ResourceGroupType Type);
 
     template <typename ReourceDataType>
-    bool LoadResourceData(const NameToArchiveRegionMap& NameToRegion,
-                          const char*                   ResourceName,
-                          ReourceDataType&              ResData) const;
+    bool LoadResourceCommonData(ResourceGroupType Type,
+                                const char*       Name,
+                                ReourceDataType&  ResData) const
+    {
+        auto it = m_NamedResources.find(NamedResourceKey{Type, Name});
+        if (it == m_NamedResources.end())
+        {
+            LOG_ERROR_MESSAGE("Resource '", Name, "' is not present in the archive");
+            return false;
+        }
+        VERIFY_EXPR(SafeStrEqual(Name, it->first.GetName()));
+        // Use string copy from the map
+        Name = it->first.GetName();
 
-    SerializedData GetDeviceSpecificData(DeviceType              DevType,
-                                         const DataHeaderBase&   Header,
-                                         DynamicLinearAllocator& Allocator,
-                                         ResourceGroupType       ExpectedResourceGroupType) noexcept;
+        Serializer<SerializerMode::Read> Ser{it->second.Common};
 
-    Uint32 GetBlockOffset(ArchiveBlockType Type) const
-    {
-        return m_BlockOffsets[static_cast<size_t>(Type)];
-    }
-    const std::vector<ResourceGroupHeader>& GetChunks() const
-    {
-        return m_Chunks;
-    }
-    const NamedResourcesMap& GetResourceMap() const
-    {
-        return m_ResMap;
-    }
-    IArchive* GetArchive() const
-    {
-        return m_pArchive.RawPtr<IArchive>();
+        auto Res = ResData.Deserialize(Name, Ser);
+        VERIFY_EXPR(Ser.IsEnded());
+        return Res;
     }
 
+    const SerializedData& GetDeviceSpecificData(ResourceGroupType Type,
+                                                const char*       Name,
+                                                DeviceType        DevType) const noexcept;
 
-    void RemoveDeviceData(DeviceType Dev) noexcept(false);
-    void AppendDeviceData(const DeviceObjectArchive& Src, DeviceType Dev) noexcept(false);
-    void Serialize(IFileStream* pStream) const noexcept(false);
+    ResourceData& GetResourceData(ResourceGroupType Type, const char* Name) noexcept
+    {
+        return m_NamedResources[NamedResourceKey{Type, Name, true}];
+    }
 
-    bool Validate() const;
+    auto& GetDeviceShaders(DeviceType Type) noexcept
+    {
+        return m_DeviceShaders[static_cast<size_t>(Type)];
+    }
 
-    std::string ToString() const;
+    const auto& GetSerializedShader(DeviceType Type, size_t Idx) const noexcept
+    {
+        auto& DeviceShaders = m_DeviceShaders[static_cast<size_t>(Type)];
+        if (Idx < DeviceShaders.size())
+            return DeviceShaders[Idx];
+
+        static const SerializedData NullData;
+        return NullData;
+    }
+
+    const auto& GetNamedResources() const
+    {
+        return m_NamedResources;
+    }
 
 private:
-    TArchiveBlockOffsets m_BlockOffsets;
-    ArchiveDebugInfo     m_DebugInfo;
+    std::unordered_map<NamedResourceKey, ResourceData, NamedResourceKey::Hasher> m_NamedResources;
 
-    std::vector<ResourceGroupHeader> m_Chunks;
+    std::array<std::vector<SerializedData>, static_cast<size_t>(DeviceType::Count)> m_DeviceShaders;
 
-    NamedResourcesMap m_ResMap;
-    ShadersDataHeader m_ShadersHeader;
-
-    struct ShaderRegionsInfo
-    {
-        std::mutex Mtx;
-
-        std::vector<ArchiveRegion> Regions;
-    };
-    std::array<ShaderRegionsInfo, static_cast<size_t>(DeviceType::Count)> m_ShaderRegions;
-
-    struct ArchiveBlock
-    {
-        ArchiveBlock() noexcept {}
-        ArchiveBlock(const ArchiveBlock&) = default;
-
-        ArchiveBlock(IArchive* _pArchive, Uint32 _Offset, Uint32 _Size) noexcept :
-            pArchive{_pArchive}, Offset{_Offset}, Size{_Size} {}
-
-        ArchiveBlock& operator=(ArchiveBlock&&) = default;
-        ArchiveBlock& operator=(const ArchiveBlock&) = default;
-
-        bool IsValid() const { return pArchive != nullptr && Offset != DataHeaderBase::InvalidOffset && Size != 0; }
-
-        bool LoadToMemory();
-        bool Read(Uint64 Offset, Uint64 Size, void* pData) const;
-        bool Write(Uint64 Offset, Uint64 Size, const void* pData);
-
-    public:
-        RefCntAutoPtr<IArchive> pArchive;
-
-        Uint32 Offset = DataHeaderBase::InvalidOffset;
-        Uint32 Size   = 0;
-
-    private:
-        std::vector<Uint8> Memory; // can be used for patching
-    };
-    using DeviceSpecificBlocks = std::array<ArchiveBlock, static_cast<size_t>(ArchiveBlockType::Count)>;
-
-    ArchiveBlock         m_CommonData;
-    DeviceSpecificBlocks m_DeviceSpecific;
-
-    RefCntAutoPtr<IArchive> m_pArchive; // archive is thread-safe
+    ArchiveDebugInfo         m_DebugInfo;
+    RefCntAutoPtr<IDataBlob> m_pRawData;
 };
-
-
-template <typename ReourceDataType>
-bool DeviceObjectArchive::LoadResourceData(const NameToArchiveRegionMap& NameToRegion,
-                                           const char*                   ResourceName,
-                                           ReourceDataType&              ResData) const
-{
-    auto it = NameToRegion.find(ResourceName);
-    if (it == NameToRegion.end())
-    {
-        LOG_ERROR_MESSAGE("Resource '", ResourceName, "' is not present in the archive");
-        return false;
-    }
-    VERIFY_EXPR(SafeStrEqual(ResourceName, it->first.GetStr()));
-    // Use string copy from the map
-    ResourceName = it->first.GetStr();
-
-    const auto& Region = it->second;
-    void*       pData  = ResData.Allocator.Allocate(Region.Size, DataPtrAlign);
-    if (!m_pArchive.RawPtr<IArchive>()->Read(Region.Offset, Region.Size, pData))
-    {
-        LOG_ERROR_MESSAGE("Failed to read resource '", ResourceName, "' data from the archive");
-        return false;
-    }
-
-    Serializer<SerializerMode::Read> Ser{SerializedData{pData, Region.Size}};
-
-    using HeaderType = typename std::remove_reference<decltype(*ResData.pHeader)>::type;
-    ResData.pHeader  = Ser.Cast<HeaderType>();
-    if (ResData.pHeader->Type != ResData.ExpectedResourceGroupType)
-    {
-        LOG_ERROR_MESSAGE("Invalid chunk header: '", ResourceGroupTypeToString(ResData.pHeader->Type),
-                          "'; expected: '", ResourceGroupTypeToString(ResData.ExpectedResourceGroupType), "'.");
-        return false;
-    }
-
-    auto Res = ResData.Deserialize(ResourceName, Ser);
-    VERIFY_EXPR(Ser.IsEnded());
-    return Res;
-}
 
 } // namespace Diligent
