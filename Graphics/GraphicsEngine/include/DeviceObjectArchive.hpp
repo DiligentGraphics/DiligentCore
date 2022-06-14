@@ -41,6 +41,40 @@
 #include "DynamicLinearAllocator.hpp"
 #include "Serializer.hpp"
 
+// Device object archive structure:
+//
+// | Header |  Resource Data  |  Shader Data  |
+//
+//     |  Resource Data  | = | Res1 | Res2 | ... | ResN |
+//
+//         | ResI | = | Type | Name | Common Data |  OpenGL data | D3D11 data | ...  | Metal-iOS data |
+//
+//     |  Shader Data  | =  |  OpenGL shaders | D3D11 shaders | ...  | Metal-iOS shaders |
+//
+// The header contains general information such as:
+// - Magic number
+// - Archive version
+// - API version
+
+// Resource data contains an array of resources. Each resource contains:
+// - Type (Signature, Graphics Pipeline, Render Pass, etc.)
+// - Name
+// - Common data (e.g. a resource description)
+// - Device-specific data (e.g. shader indices)
+//
+// Shader data contains an array of shaders for each device type
+//
+//
+// For pipelines, device-specific data is the array of shader indices in the
+// archive's shader array, e.g.:
+//
+// | PsoX | = |   Type   |   Name   |   Common Data   |   OpenGL data   |    D3D11 data   | ...
+//              GraphPSO   "My PSO"    <Description>        {0, 1}             {1, 2}
+//                                                                  ____________|  |
+//                                                                 |               |
+//                                                                 V               V
+// | GL Shader 0 | GL Shader 1 |  ... | D3D11 Shader 0 | D3D11 Shader 1 | D3D11 Shader 2 |
+
 namespace Diligent
 {
 
