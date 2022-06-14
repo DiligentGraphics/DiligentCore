@@ -33,27 +33,6 @@
 namespace Diligent
 {
 
-template <>
-DearchiverBase::NamedResourceCache<IPipelineState>& DearchiverBase::ResourceCache::GetPsoCache<GraphicsPipelineStateCreateInfo>()
-{
-    return GraphPSO;
-}
-template <>
-DearchiverBase::NamedResourceCache<IPipelineState>& DearchiverBase::ResourceCache::GetPsoCache<ComputePipelineStateCreateInfo>()
-{
-    return CompPSO;
-}
-template <>
-DearchiverBase::NamedResourceCache<IPipelineState>& DearchiverBase::ResourceCache::GetPsoCache<TilePipelineStateCreateInfo>()
-{
-    return TilePSO;
-}
-template <>
-DearchiverBase::NamedResourceCache<IPipelineState>& DearchiverBase::ResourceCache::GetPsoCache<RayTracingPipelineStateCreateInfo>()
-{
-    return RayTrPSO;
-}
-
 #define CHECK_UNPACK_PARAMATER(Expr, ...)   \
     do                                      \
     {                                       \
@@ -157,7 +136,7 @@ struct DearchiverBase::RPData
 
 
 template <typename ResType>
-bool DearchiverBase::NamedResourceCache<ResType>::Get(const char* Name, ResType** ppResource)
+bool DearchiverBase::NamedResourceCache<ResType>::Get(ResourceType Type, const char* Name, ResType** ppResource)
 {
     VERIFY_EXPR(Name != nullptr);
     VERIFY_EXPR(ppResource != nullptr && *ppResource == nullptr);
@@ -165,7 +144,7 @@ bool DearchiverBase::NamedResourceCache<ResType>::Get(const char* Name, ResType*
 
     std::unique_lock<std::mutex> Lock{m_Mtx};
 
-    auto it = m_Map.find(Name);
+    auto it = m_Map.find(NamedResourceKey{Type, Name});
     if (it == m_Map.end())
         return false;
 
@@ -178,13 +157,13 @@ bool DearchiverBase::NamedResourceCache<ResType>::Get(const char* Name, ResType*
 }
 
 template <typename ResType>
-void DearchiverBase::NamedResourceCache<ResType>::Set(const char* Name, ResType* pResource)
+void DearchiverBase::NamedResourceCache<ResType>::Set(ResourceType Type, const char* Name, ResType* pResource)
 {
     VERIFY_EXPR(Name != nullptr && Name[0] != '\0');
     VERIFY_EXPR(pResource != nullptr);
 
     std::unique_lock<std::mutex> Lock{m_Mtx};
-    m_Map.emplace(HashMapStringKey{Name, true}, pResource);
+    m_Map.emplace(NamedResourceKey{Type, Name, true}, pResource);
 }
 
 // Instantiation is required by UnpackResourceSignatureImpl
@@ -584,17 +563,17 @@ void DearchiverBase::UnpackPipelineStateImpl(const PipelineStateUnpackInfo& Unpa
 {
     VERIFY_EXPR(UnpackInfo.pDevice != nullptr);
 
-    auto& PSOCache = m_Cache.GetPsoCache<CreateInfoType>();
+    constexpr auto ResType = PSOData<CreateInfoType>::ArchiveResType;
+
     // Do not cache modified PSOs
     if (UnpackInfo.ModifyPipelineStateCreateInfo == nullptr)
     {
         // Since PSO names must be unique (for each PSO type), we use a single cache for all
         // loaded archives.
-        if (PSOCache.Get(UnpackInfo.Name, ppPSO))
+        if (m_Cache.PSO.Get(ResType, UnpackInfo.Name, ppPSO))
             return;
     }
 
-    constexpr auto ResType = PSOData<CreateInfoType>::ArchiveResType;
     // Find the archive that contains this PSO
     const auto archive_idx_it = m_ResNameToArchiveIdx.find(NamedResourceKey{ResType, UnpackInfo.Name});
     if (archive_idx_it == m_ResNameToArchiveIdx.end())
@@ -641,7 +620,7 @@ void DearchiverBase::UnpackPipelineStateImpl(const PipelineStateUnpackInfo& Unpa
     PSO.CreatePipeline(UnpackInfo.pDevice, ppPSO);
 
     if (UnpackInfo.ModifyPipelineStateCreateInfo == nullptr)
-        PSOCache.Set(UnpackInfo.Name, *ppPSO);
+        m_Cache.PSO.Set(ResType, UnpackInfo.Name, *ppPSO);
 }
 
 bool DearchiverBase::LoadArchive(IArchive* pRawArchive)
@@ -733,7 +712,7 @@ void DearchiverBase::UnpackRenderPass(const RenderPassUnpackInfo& UnpackInfo, IR
     {
         // Since render pass names must be unique, we use a single cache for all
         // loaded archives.
-        if (m_Cache.RenderPass.Get(UnpackInfo.Name, ppRP))
+        if (m_Cache.RenderPass.Get(RPData::ArchiveResType, UnpackInfo.Name, ppRP))
             return;
     }
 
@@ -759,7 +738,7 @@ void DearchiverBase::UnpackRenderPass(const RenderPassUnpackInfo& UnpackInfo, IR
     UnpackInfo.pDevice->CreateRenderPass(RP.Desc, ppRP);
 
     if (UnpackInfo.ModifyRenderPassDesc == nullptr)
-        m_Cache.RenderPass.Set(UnpackInfo.Name, *ppRP);
+        m_Cache.RenderPass.Set(RPData::ArchiveResType, UnpackInfo.Name, *ppRP);
 }
 
 void DearchiverBase::Reset()

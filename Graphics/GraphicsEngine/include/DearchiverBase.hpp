@@ -96,6 +96,7 @@ protected:
     using DeviceType           = DeviceObjectArchive::DeviceType;
     using SerializedPSOAuxData = DeviceObjectArchive::SerializedPSOAuxData;
     using TPRSNames            = DeviceObjectArchive::TPRSNames;
+    using ResourceKey          = DeviceObjectArchive::NamedResourceKey;
 
     template <typename ResType>
     class NamedResourceCache
@@ -110,29 +111,22 @@ protected:
         NamedResourceCache& operator=(NamedResourceCache&&)      = default;
         // clang-format on
 
-        bool Get(const char* Name, ResType** ppResource);
-        void Set(const char* Name, ResType* pResource);
+        bool Get(ResourceType Type, const char* Name, ResType** ppResource);
+        void Set(ResourceType Type, const char* Name, ResType* pResource);
 
         void Clear() { m_Map.clear(); }
 
     private:
         std::mutex m_Mtx;
         // Keep weak resource references in the cache
-        std::unordered_map<HashMapStringKey, RefCntWeakPtr<ResType>> m_Map;
+        std::unordered_map<ResourceKey, RefCntWeakPtr<ResType>, ResourceKey::Hasher> m_Map;
     };
 
     struct ResourceCache
     {
         NamedResourceCache<IPipelineResourceSignature> Sign;
         NamedResourceCache<IRenderPass>                RenderPass;
-
-        NamedResourceCache<IPipelineState> GraphPSO;
-        NamedResourceCache<IPipelineState> CompPSO;
-        NamedResourceCache<IPipelineState> TilePSO;
-        NamedResourceCache<IPipelineState> RayTrPSO;
-
-        template <typename PSOCreateInfoType>
-        NamedResourceCache<IPipelineState>& GetPsoCache();
+        NamedResourceCache<IPipelineState>             PSO;
     } m_Cache;
 
     struct PRSData
@@ -225,7 +219,7 @@ RefCntAutoPtr<IPipelineResourceSignature> DearchiverBase::UnpackResourceSignatur
     {
         // Since signature names must be unique, we use a single cache for all
         // loaded archives.
-        if (m_Cache.Sign.Get(DeArchiveInfo.Name, pSignature.RawDblPtr()))
+        if (m_Cache.Sign.Get(PRSData::ArchiveResType, DeArchiveInfo.Name, pSignature.RawDblPtr()))
             return pSignature;
     }
 
@@ -272,7 +266,7 @@ RefCntAutoPtr<IPipelineResourceSignature> DearchiverBase::UnpackResourceSignatur
     pRenderDevice->CreatePipelineResourceSignature(PRS.Desc, InternalData, &pSignature);
 
     if (!IsImplicit)
-        m_Cache.Sign.Set(DeArchiveInfo.Name, pSignature.RawPtr());
+        m_Cache.Sign.Set(PRSData::ArchiveResType, DeArchiveInfo.Name, pSignature.RawPtr());
 
     return pSignature;
 }
