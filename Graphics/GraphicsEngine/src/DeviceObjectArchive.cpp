@@ -49,7 +49,9 @@ void DeviceObjectArchive::Deserialize(const void* pData, size_t Size) noexcept(f
     Serializer<SerializerMode::Read> Reader{SerializedData{const_cast<void*>(pData), Size}};
 
     ArchiveHeader Header;
-    Reader(Header.MagicNumber, Header.Version, Header.APIVersion, Header.GitHash);
+    if (!Reader(Header.MagicNumber, Header.Version, Header.APIVersion, Header.GitHash))
+        LOG_ERROR_AND_THROW("Failed to read archive header");
+
     if (Header.MagicNumber != HeaderMagicNumber)
         LOG_ERROR_AND_THROW("Invalid archive header");
 
@@ -57,27 +59,40 @@ void DeviceObjectArchive::Deserialize(const void* pData, size_t Size) noexcept(f
         LOG_ERROR_AND_THROW("Unsupported archive version: ", Header.Version, ". Expected version: ", Uint32{ArchiveVersion});
 
     Uint32 NumResources = 0;
-    Reader(NumResources);
+    if (!Reader(NumResources))
+        LOG_ERROR_AND_THROW("Failed to read the number of named resources");
 
     for (Uint32 res = 0; res < NumResources; ++res)
     {
         const char*  Name    = nullptr;
         ResourceType ResType = ResourceType::Undefined;
-        Reader(ResType, Name);
+        if (!Reader(ResType, Name))
+            LOG_ERROR_AND_THROW("Failed to read resource name");
         VERIFY_EXPR(Name != nullptr);
+
         auto& ResData = m_NamedResources[NamedResourceKey{ResType, Name}];
-        Reader.Serialize(ResData.Common);
+
+        if (!Reader.Serialize(ResData.Common))
+            LOG_ERROR_AND_THROW("Failed to read common data of resource '", Name, "'.");
+
         for (auto& DevData : ResData.DeviceSpecific)
-            Reader.Serialize(DevData);
+        {
+            if (!Reader.Serialize(DevData))
+                LOG_ERROR_AND_THROW("Failed to read device-specific data of resource '", Name, "'.");
+        }
     }
 
     for (auto& Shaders : m_DeviceShaders)
     {
         Uint32 NumShaders = 0;
-        Reader(NumShaders);
+        if (!Reader(NumShaders))
+            LOG_ERROR_AND_THROW("Failed to read the number of shaders");
         Shaders.resize(NumShaders);
         for (auto& Shader : Shaders)
-            Reader.Serialize(Shader);
+        {
+            if (!Reader.Serialize(Shader))
+                LOG_ERROR_AND_THROW("Failed to read shader data");
+        }
     }
 }
 
