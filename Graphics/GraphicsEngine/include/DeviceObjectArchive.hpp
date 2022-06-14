@@ -92,14 +92,10 @@ public:
 
     struct ArchiveHeader
     {
-        Uint32 MagicNumber = HeaderMagicNumber;
-        Uint32 Version     = ArchiveVersion;
-    };
-
-    struct ArchiveDebugInfo
-    {
-        String GitHash;
-        Uint32 APIVersion = 0;
+        Uint32      MagicNumber = HeaderMagicNumber;
+        Uint32      Version     = ArchiveVersion;
+        Uint32      APIVersion  = DILIGENT_API_VERSION;
+        const char* GitHash     = nullptr;
     };
 
     struct ResourceData
@@ -156,7 +152,7 @@ public:
     void RemoveDeviceData(DeviceType Dev) noexcept(false);
     void AppendDeviceData(const DeviceObjectArchive& Src, DeviceType Dev) noexcept(false);
 
-    void Deserialize(const void* pData, size_t Size);
+    void Deserialize(const void* pData, size_t Size) noexcept(false);
     void Serialize(IFileStream* pStream) const noexcept(false);
     void Serialize(IDataBlob** ppDataBlob) const;
 
@@ -222,7 +218,6 @@ private:
 
     std::array<std::vector<SerializedData>, static_cast<size_t>(DeviceType::Count)> m_DeviceShaders;
 
-    ArchiveDebugInfo         m_DebugInfo;
     RefCntAutoPtr<IDataBlob> m_pRawData;
 };
 

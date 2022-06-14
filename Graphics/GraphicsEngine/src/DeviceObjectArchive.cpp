@@ -40,44 +40,21 @@
 namespace Diligent
 {
 
-//void ArchiverImpl::WriteDebugInfo(PendingData& Pending) const
-//{
-//    auto& Chunk = Pending.Chunks[static_cast<size_t>(ResourceGroupType::DebugInfo)];
-//
-//    auto SerializeDebugInfo = [](auto& Ser) //
-//    {
-//        Uint32 APIVersion = DILIGENT_API_VERSION;
-//        Ser(APIVersion);
-//
-//        const char* GitHash = nullptr;
-//#ifdef DILIGENT_CORE_COMMIT_HASH
-//        GitHash = DILIGENT_CORE_COMMIT_HASH;
-//#endif
-//        Ser(GitHash);
-//    };
-//
-//    Serializer<SerializerMode::Measure> MeasureSer;
-//    SerializeDebugInfo(MeasureSer);
-//
-//    VERIFY_EXPR(Chunk.IsEmpty());
-//    const auto Size = MeasureSer.GetSize();
-//    if (Size == 0)
-//        return;
-//
-//    Chunk = TDataElement{GetRawAllocator()};
-//    Chunk.AddSpace(Size);
-//    Chunk.Reserve();
-//    Serializer<SerializerMode::Write> Ser{SerializedData{Chunk.Allocate(Size), Size}};
-//    SerializeDebugInfo(Ser);
-//}
-
 DeviceObjectArchive::DeviceObjectArchive() noexcept
 {
 }
 
-void DeviceObjectArchive::Deserialize(const void* pData, size_t Size)
+void DeviceObjectArchive::Deserialize(const void* pData, size_t Size) noexcept(false)
 {
     Serializer<SerializerMode::Read> Reader{SerializedData{const_cast<void*>(pData), Size}};
+
+    ArchiveHeader Header;
+    Reader(Header.MagicNumber, Header.Version, Header.APIVersion, Header.GitHash);
+    if (Header.MagicNumber != HeaderMagicNumber)
+        LOG_ERROR_AND_THROW("Invalid archive header");
+
+    if (Header.Version != ArchiveVersion)
+        LOG_ERROR_AND_THROW("Unsupported archive version: ", Header.Version, ". Expected version: ", Uint32{ArchiveVersion});
 
     Uint32 NumResources = 0;
     Reader(NumResources);
@@ -110,6 +87,15 @@ void DeviceObjectArchive::Serialize(IDataBlob** ppDataBlob) const
     DEV_CHECK_ERR(*ppDataBlob == nullptr, "Data blob object must be null");
 
     auto SerializeThis = [this](auto& Ser) {
+        ArchiveHeader Header;
+        Ser(Header.MagicNumber, Header.Version, Header.APIVersion);
+
+        const char* GitHash = nullptr;
+#ifdef DILIGENT_CORE_COMMIT_HASH
+        GitHash = DILIGENT_CORE_COMMIT_HASH;
+#endif
+        Ser(GitHash);
+
         Uint32 NumResources = static_cast<Uint32>(m_NamedResources.size());
         Ser(NumResources);
 
