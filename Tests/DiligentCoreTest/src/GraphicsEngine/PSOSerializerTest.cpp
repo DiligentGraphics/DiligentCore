@@ -166,16 +166,16 @@ TEST(PSOSerializerTest, SerializePRSDesc)
         SerializedData         Data;
         {
             Serializer<SerializerMode::Measure> MSer;
-            PRSSerializer<SerializerMode::Measure>::SerializeDesc(MSer, SrcPRSDesc, nullptr);
-            PRSSerializer<SerializerMode::Measure>::SerializeInternalData(MSer, SrcInternalData, nullptr);
+            EXPECT_TRUE(PRSSerializer<SerializerMode::Measure>::SerializeDesc(MSer, SrcPRSDesc, nullptr));
+            EXPECT_TRUE(PRSSerializer<SerializerMode::Measure>::SerializeInternalData(MSer, SrcInternalData, nullptr));
 
             Data = MSer.AllocateData(GetRawAllocator());
         }
 
         {
             Serializer<SerializerMode::Write> WSer{Data};
-            PRSSerializer<SerializerMode::Write>::SerializeDesc(WSer, SrcPRSDesc, nullptr);
-            PRSSerializer<SerializerMode::Write>::SerializeInternalData(WSer, SrcInternalData, nullptr);
+            EXPECT_TRUE(PRSSerializer<SerializerMode::Write>::SerializeDesc(WSer, SrcPRSDesc, nullptr));
+            EXPECT_TRUE(PRSSerializer<SerializerMode::Write>::SerializeInternalData(WSer, SrcInternalData, nullptr));
 
             EXPECT_EQ(Data.Size(), WSer.GetSize());
         }
@@ -184,8 +184,8 @@ TEST(PSOSerializerTest, SerializePRSDesc)
         PipelineResourceSignatureInternalData DstInternalData;
         {
             Serializer<SerializerMode::Read> RSer{Data};
-            PRSSerializer<SerializerMode::Read>::SerializeDesc(RSer, DstPRSDesc, &Allocator);
-            PRSSerializer<SerializerMode::Read>::SerializeInternalData(RSer, DstInternalData, nullptr);
+            EXPECT_TRUE(PRSSerializer<SerializerMode::Read>::SerializeDesc(RSer, DstPRSDesc, &Allocator));
+            EXPECT_TRUE(PRSSerializer<SerializerMode::Read>::SerializeInternalData(RSer, DstInternalData, nullptr));
 
             EXPECT_TRUE(RSer.IsEnded());
         }
@@ -262,17 +262,17 @@ TEST(PSOSerializerTest, SerializePSOCreateInfo)
 
         void Measure(Serializer<SerializerMode::Measure>& Ser, const PipelineStateCreateInfo& CI, const TPRSNames& PRSNames)
         {
-            PSOSerializer<SerializerMode::Measure>::SerializeCreateInfo(Ser, CI, PRSNames, nullptr);
+            EXPECT_TRUE(PSOSerializer<SerializerMode::Measure>::SerializeCreateInfo(Ser, CI, PRSNames, nullptr));
         }
 
         void Write(Serializer<SerializerMode::Write>& Ser, const PipelineStateCreateInfo& CI, const TPRSNames& PRSNames)
         {
-            PSOSerializer<SerializerMode::Write>::SerializeCreateInfo(Ser, CI, PRSNames, nullptr);
+            EXPECT_TRUE(PSOSerializer<SerializerMode::Write>::SerializeCreateInfo(Ser, CI, PRSNames, nullptr));
         }
 
         void Read(Serializer<SerializerMode::Read>& Ser, PipelineStateCreateInfo& CI, TPRSNames& PRSNames, DynamicLinearAllocator* Allocator)
         {
-            PSOSerializer<SerializerMode::Read>::SerializeCreateInfo(Ser, CI, PRSNames, Allocator);
+            EXPECT_TRUE(PSOSerializer<SerializerMode::Read>::SerializeCreateInfo(Ser, CI, PRSNames, Allocator));
         }
     };
     TestSerializePSOCreateInfo<PipelineStateCreateInfo>(Helper{});
@@ -376,19 +376,19 @@ TEST(PSOSerializerTest, SerializeGraphicsPSOCreateInfo)
         void Measure(Serializer<SerializerMode::Measure>& Ser, const GraphicsPipelineStateCreateInfo& CI, const TPRSNames& PRSNames)
         {
             const char* RPName = SrcRenderPassName.c_str();
-            PSOSerializer<SerializerMode::Measure>::SerializeCreateInfo(Ser, CI, PRSNames, nullptr, RPName);
+            EXPECT_TRUE(PSOSerializer<SerializerMode::Measure>::SerializeCreateInfo(Ser, CI, PRSNames, nullptr, RPName));
         }
 
         void Write(Serializer<SerializerMode::Write>& Ser, const GraphicsPipelineStateCreateInfo& CI, const TPRSNames& PRSNames)
         {
             const char* RPName = SrcRenderPassName.c_str();
-            PSOSerializer<SerializerMode::Write>::SerializeCreateInfo(Ser, CI, PRSNames, nullptr, RPName);
+            EXPECT_TRUE(PSOSerializer<SerializerMode::Write>::SerializeCreateInfo(Ser, CI, PRSNames, nullptr, RPName));
         }
 
         void Read(Serializer<SerializerMode::Read>& Ser, GraphicsPipelineStateCreateInfo& CI, TPRSNames& PRSNames, DynamicLinearAllocator* Allocator)
         {
             const char* RPName = nullptr;
-            PSOSerializer<SerializerMode::Read>::SerializeCreateInfo(Ser, CI, PRSNames, Allocator, RPName);
+            EXPECT_TRUE(PSOSerializer<SerializerMode::Read>::SerializeCreateInfo(Ser, CI, PRSNames, Allocator, RPName));
             EXPECT_EQ(SrcRenderPassName, RPName);
         }
     };
@@ -405,17 +405,17 @@ TEST(PSOSerializerTest, SerializeComputePSOCreateInfo)
 
         void Measure(Serializer<SerializerMode::Measure>& Ser, const ComputePipelineStateCreateInfo& CI, const TPRSNames& PRSNames)
         {
-            PSOSerializer<SerializerMode::Measure>::SerializeCreateInfo(Ser, CI, PRSNames, nullptr);
+            EXPECT_TRUE(PSOSerializer<SerializerMode::Measure>::SerializeCreateInfo(Ser, CI, PRSNames, nullptr));
         }
 
         void Write(Serializer<SerializerMode::Write>& Ser, const ComputePipelineStateCreateInfo& CI, const TPRSNames& PRSNames)
         {
-            PSOSerializer<SerializerMode::Write>::SerializeCreateInfo(Ser, CI, PRSNames, nullptr);
+            EXPECT_TRUE(PSOSerializer<SerializerMode::Write>::SerializeCreateInfo(Ser, CI, PRSNames, nullptr));
         }
 
         void Read(Serializer<SerializerMode::Read>& Ser, ComputePipelineStateCreateInfo& CI, TPRSNames& PRSNames, DynamicLinearAllocator* Allocator)
         {
-            PSOSerializer<SerializerMode::Read>::SerializeCreateInfo(Ser, CI, PRSNames, Allocator);
+            EXPECT_TRUE(PSOSerializer<SerializerMode::Read>::SerializeCreateInfo(Ser, CI, PRSNames, Allocator));
         }
     };
     TestSerializePSOCreateInfo<ComputePipelineStateCreateInfo>(Helper{});
@@ -438,17 +438,17 @@ TEST(PSOSerializerTest, SerializeTilePSOCreateInfo)
 
         void Measure(Serializer<SerializerMode::Measure>& Ser, const TilePipelineStateCreateInfo& CI, const TPRSNames& PRSNames)
         {
-            PSOSerializer<SerializerMode::Measure>::SerializeCreateInfo(Ser, CI, PRSNames, nullptr);
+            EXPECT_TRUE(PSOSerializer<SerializerMode::Measure>::SerializeCreateInfo(Ser, CI, PRSNames, nullptr));
         }
 
         void Write(Serializer<SerializerMode::Write>& Ser, const TilePipelineStateCreateInfo& CI, const TPRSNames& PRSNames)
         {
-            PSOSerializer<SerializerMode::Write>::SerializeCreateInfo(Ser, CI, PRSNames, nullptr);
+            EXPECT_TRUE(PSOSerializer<SerializerMode::Write>::SerializeCreateInfo(Ser, CI, PRSNames, nullptr));
         }
 
         void Read(Serializer<SerializerMode::Read>& Ser, TilePipelineStateCreateInfo& CI, TPRSNames& PRSNames, DynamicLinearAllocator* Allocator)
         {
-            PSOSerializer<SerializerMode::Read>::SerializeCreateInfo(Ser, CI, PRSNames, Allocator);
+            EXPECT_TRUE(PSOSerializer<SerializerMode::Read>::SerializeCreateInfo(Ser, CI, PRSNames, Allocator));
         }
     };
     TestSerializePSOCreateInfo<TilePipelineStateCreateInfo>(Helper{});
@@ -528,23 +528,29 @@ TEST(PSOSerializerTest, SerializeRayTracingPSOCreateInfo)
 
         void Measure(Serializer<SerializerMode::Measure>& Ser, const RayTracingPipelineStateCreateInfo& CI, const TPRSNames& PRSNames)
         {
-            PSOSerializer<SerializerMode::Measure>::SerializeCreateInfo(
-                Ser, CI, PRSNames, nullptr,
-                [](Uint32& outIndex, IShader* const& inShader) { outIndex = static_cast<Uint32>(BitCast<size_t>(inShader)); });
+            auto res =
+                PSOSerializer<SerializerMode::Measure>::SerializeCreateInfo(
+                    Ser, CI, PRSNames, nullptr,
+                    [](Uint32& outIndex, IShader* const& inShader) { outIndex = static_cast<Uint32>(BitCast<size_t>(inShader)); });
+            EXPECT_TRUE(res);
         }
 
         void Write(Serializer<SerializerMode::Write>& Ser, const RayTracingPipelineStateCreateInfo& CI, const TPRSNames& PRSNames)
         {
-            PSOSerializer<SerializerMode::Write>::SerializeCreateInfo(
-                Ser, CI, PRSNames, nullptr,
-                [](Uint32& outIndex, IShader* const& inShader) { outIndex = static_cast<Uint32>(BitCast<size_t>(inShader)); });
+            auto res =
+                PSOSerializer<SerializerMode::Write>::SerializeCreateInfo(
+                    Ser, CI, PRSNames, nullptr,
+                    [](Uint32& outIndex, IShader* const& inShader) { outIndex = static_cast<Uint32>(BitCast<size_t>(inShader)); });
+            EXPECT_TRUE(res);
         }
 
         void Read(Serializer<SerializerMode::Read>& Ser, RayTracingPipelineStateCreateInfo& CI, TPRSNames& PRSNames, DynamicLinearAllocator* Allocator)
         {
-            PSOSerializer<SerializerMode::Read>::SerializeCreateInfo(
-                Ser, CI, PRSNames, Allocator,
-                [](Uint32& inIndex, IShader*& outShader) { outShader = BitCast<IShader*>(inIndex); });
+            auto res =
+                PSOSerializer<SerializerMode::Read>::SerializeCreateInfo(
+                    Ser, CI, PRSNames, Allocator,
+                    [](Uint32& inIndex, IShader*& outShader) { outShader = BitCast<IShader*>(inIndex); });
+            EXPECT_TRUE(res);
         }
     };
     TestSerializePSOCreateInfo<RayTracingPipelineStateCreateInfo>(Helper{});
@@ -667,20 +673,20 @@ TEST(PSOSerializerTest, SerializeRenderPassDesc)
         SrcRP.pDependencies = SrcRP.DependencyCount ? Dependencies : nullptr;
 
         Serializer<SerializerMode::Measure> MSer;
-        RPSerializer<SerializerMode::Measure>::SerializeDesc(MSer, SrcRP, nullptr);
+        EXPECT_TRUE(RPSerializer<SerializerMode::Measure>::SerializeDesc(MSer, SrcRP, nullptr));
 
         DynamicLinearAllocator Allocator{GetRawAllocator()};
         SerializedData         Data{MSer.GetSize(), GetRawAllocator()};
 
         Serializer<SerializerMode::Write> WSer{Data};
-        RPSerializer<SerializerMode::Write>::SerializeDesc(WSer, SrcRP, nullptr);
+        EXPECT_TRUE(RPSerializer<SerializerMode::Write>::SerializeDesc(WSer, SrcRP, nullptr));
 
         EXPECT_EQ(Data.Size(), WSer.GetSize());
 
         RenderPassDesc DstRP;
 
         Serializer<SerializerMode::Read> RSer{Data};
-        RPSerializer<SerializerMode::Read>::SerializeDesc(RSer, DstRP, &Allocator);
+        EXPECT_TRUE(RPSerializer<SerializerMode::Read>::SerializeDesc(RSer, DstRP, &Allocator));
 
         EXPECT_TRUE(RSer.IsEnded());
         EXPECT_EQ(SrcRP, DstRP);
@@ -719,19 +725,19 @@ void SerializeShaderCreateInfo(bool UseBytecode)
     SerializedData Data;
     {
         Serializer<SerializerMode::Measure> Ser;
-        ShaderSerializer<SerializerMode::Measure>::SerializeCI(Ser, RefCI);
+        EXPECT_TRUE(ShaderSerializer<SerializerMode::Measure>::SerializeCI(Ser, RefCI));
         Data = Ser.AllocateData(GetRawAllocator());
     }
 
     {
         Serializer<SerializerMode::Write> Ser{Data};
-        ShaderSerializer<SerializerMode::Write>::SerializeCI(Ser, RefCI);
+        EXPECT_TRUE(ShaderSerializer<SerializerMode::Write>::SerializeCI(Ser, RefCI));
     }
 
     ShaderCreateInfo CI;
     {
         Serializer<SerializerMode::Read> Ser{Data};
-        ShaderSerializer<SerializerMode::Read>::SerializeCI(Ser, CI);
+        EXPECT_TRUE(ShaderSerializer<SerializerMode::Read>::SerializeCI(Ser, CI));
     }
 
     // clang-format off
