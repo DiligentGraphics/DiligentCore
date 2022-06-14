@@ -34,7 +34,6 @@
 #include <unordered_map>
 
 #include "GraphicsTypes.h"
-#include "Archive.h"
 #include "FileStream.h"
 
 #include "HashUtils.hpp"
@@ -146,7 +145,7 @@ public:
 
 public:
     /// \param pArchive - Source data that this archive will be created from.
-    DeviceObjectArchive(IArchive* pArchive) noexcept(false);
+    DeviceObjectArchive(IDataBlob* pArchive) noexcept(false);
     DeviceObjectArchive() noexcept;
 
     void RemoveDeviceData(DeviceType Dev) noexcept(false);

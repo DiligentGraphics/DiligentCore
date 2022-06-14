@@ -28,7 +28,7 @@
 
 void TestDearchiver_CInterface(IDearchiver* pDearchiver)
 {
-    IDearchiver_LoadArchive(pDearchiver, (IArchive*)NULL);
+    IDearchiver_LoadArchive(pDearchiver, (IDataBlob*)NULL);
     IDearchiver_UnpackPipelineState(pDearchiver, (const PipelineStateUnpackInfo*)NULL, (IPipelineState**)NULL);
     IDearchiver_UnpackResourceSignature(pDearchiver, (const ResourceSignatureUnpackInfo*)NULL, (IPipelineResourceSignature**)NULL);
     IDearchiver_UnpackRenderPass(pDearchiver, (const RenderPassUnpackInfo*)NULL, (IRenderPass**)NULL);

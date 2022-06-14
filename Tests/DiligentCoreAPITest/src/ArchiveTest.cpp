@@ -31,12 +31,9 @@
 #include "TestingSwapChainBase.hpp"
 
 #include "GraphicsAccessories.hpp"
-#include "ArchiveMemoryImpl.hpp"
 #include "Dearchiver.h"
 #include "SerializedPipelineState.h"
 #include "ShaderMacroHelper.hpp"
-#include "DataBlobImpl.hpp"
-#include "MemoryFileStream.hpp"
 
 #include "ResourceLayoutTestCommon.hpp"
 #include "gtest/gtest.h"
@@ -73,7 +70,7 @@ constexpr ARCHIVE_DEVICE_DATA_FLAGS GetDeviceBits()
     return DeviceBits;
 }
 
-void ArchivePRS(RefCntAutoPtr<IArchive>&                   pSource,
+void ArchivePRS(RefCntAutoPtr<IDataBlob>&                  pArchive,
                 const char*                                PRS1Name,
                 const char*                                PRS2Name,
                 RefCntAutoPtr<IPipelineResourceSignature>& pRefPRS_1,
@@ -171,14 +168,11 @@ void ArchivePRS(RefCntAutoPtr<IArchive>&                   pSource,
         ASSERT_NE(pRefPRS_2, nullptr);
     }
 
-    RefCntAutoPtr<IDataBlob> pBlob;
-    pArchiver->SerializeToBlob(&pBlob);
-    ASSERT_NE(pBlob, nullptr);
-
-    pSource = RefCntAutoPtr<IArchive>{MakeNewRCObj<ArchiveMemoryImpl>{}(pBlob)};
+    pArchiver->SerializeToBlob(&pArchive);
+    ASSERT_NE(pArchive, nullptr);
 }
 
-void UnpackPRS(IArchive*                   pArchive,
+void UnpackPRS(IDataBlob*                  pArchive,
                const char*                 PRS1Name,
                const char*                 PRS2Name,
                IPipelineResourceSignature* pRefPRS_1,
@@ -252,7 +246,7 @@ TEST(ArchiveTest, ResourceSignature)
     constexpr char PRS1Name[] = "ArchiveTest.ResourceSignature - PRS 1";
     constexpr char PRS2Name[] = "ArchiveTest.ResourceSignature - PRS 2";
 
-    RefCntAutoPtr<IArchive>                   pArchive;
+    RefCntAutoPtr<IDataBlob>                  pArchive;
     RefCntAutoPtr<IPipelineResourceSignature> pRefPRS_1;
     RefCntAutoPtr<IPipelineResourceSignature> pRefPRS_2;
     ArchivePRS(pArchive, PRS1Name, PRS2Name, pRefPRS_1, pRefPRS_2, GetDeviceBits());
@@ -281,7 +275,7 @@ TEST(ArchiveTest, RemoveDeviceData)
     constexpr char PRS1Name[] = "ArchiveTest.RemoveDeviceData - PRS 1";
     constexpr char PRS2Name[] = "ArchiveTest.RemoveDeviceData - PRS 2";
 
-    RefCntAutoPtr<IArchive> pArchive1;
+    RefCntAutoPtr<IDataBlob> pArchive1;
     {
         RefCntAutoPtr<IPipelineResourceSignature> pRefPRS_1;
         RefCntAutoPtr<IPipelineResourceSignature> pRefPRS_2;
@@ -290,15 +284,11 @@ TEST(ArchiveTest, RemoveDeviceData)
     }
 
     {
-        auto pDataBlob  = DataBlobImpl::Create(0);
-        auto pMemStream = MemoryFileStream::Create(pDataBlob);
-
-        ASSERT_TRUE(pArchiverFactory->RemoveDeviceData(pArchive1, CurrentDeviceFlag, pMemStream));
-
-        RefCntAutoPtr<IArchive> pArchive2{MakeNewRCObj<ArchiveMemoryImpl>{}(pDataBlob)};
+        RefCntAutoPtr<IDataBlob> pResArhive;
+        ASSERT_TRUE(pArchiverFactory->RemoveDeviceData(pArchive1, CurrentDeviceFlag, &pResArhive));
 
         // PRS creation must fail
-        UnpackPRS(pArchive2, PRS1Name, PRS2Name, nullptr, nullptr);
+        UnpackPRS(pResArhive, PRS1Name, PRS2Name, nullptr, nullptr);
     }
 }
 
@@ -330,12 +320,12 @@ TEST(ArchiveTest, AppendDeviceData)
     constexpr char PRS1Name[] = "ArchiveTest.AppendDeviceData - PRS 1";
     constexpr char PRS2Name[] = "ArchiveTest.AppendDeviceData - PRS 2";
 
-    RefCntAutoPtr<IArchive> pArchive;
+    RefCntAutoPtr<IDataBlob> pArchive;
     for (; AllDeviceFlags != 0;)
     {
         const auto DeviceFlag = ExtractLSB(AllDeviceFlags);
 
-        RefCntAutoPtr<IArchive>                   pArchive2;
+        RefCntAutoPtr<IDataBlob>                  pArchive2;
         RefCntAutoPtr<IPipelineResourceSignature> pRefPRS_1;
         RefCntAutoPtr<IPipelineResourceSignature> pRefPRS_2;
         ArchivePRS(pArchive2, PRS1Name, PRS2Name, pRefPRS_1, pRefPRS_2, DeviceFlag);
@@ -344,14 +334,11 @@ TEST(ArchiveTest, AppendDeviceData)
 
         if (pArchive != nullptr)
         {
-            auto pDataBlob  = DataBlobImpl::Create(0);
-            auto pMemStream = MemoryFileStream::Create(pDataBlob);
-
+            RefCntAutoPtr<IDataBlob> pTmpArchive;
             // pArchive  - without DeviceFlag
             // pArchive2 - with DeviceFlag
-            ASSERT_TRUE(pArchiverFactory->AppendDeviceData(pArchive, DeviceFlag, pArchive2, pMemStream));
-
-            pArchive = RefCntAutoPtr<IArchive>{MakeNewRCObj<ArchiveMemoryImpl>{}(pDataBlob)};
+            ASSERT_TRUE(pArchiverFactory->AppendDeviceData(pArchive, DeviceFlag, pArchive2, &pTmpArchive));
+            pArchive = pTmpArchive;
         }
         else
         {
@@ -359,22 +346,18 @@ TEST(ArchiveTest, AppendDeviceData)
         }
     }
 
-    RefCntAutoPtr<IArchive>                   pArchive3;
+    RefCntAutoPtr<IDataBlob>                  pArchive3;
     RefCntAutoPtr<IPipelineResourceSignature> pRefPRS_1;
     RefCntAutoPtr<IPipelineResourceSignature> pRefPRS_2;
     ArchivePRS(pArchive3, PRS1Name, PRS2Name, pRefPRS_1, pRefPRS_2, CurrentDeviceFlag);
 
     // Append device data
     {
-        auto pDataBlob  = DataBlobImpl::Create(0);
-        auto pMemStream = MemoryFileStream::Create(pDataBlob);
-
+        RefCntAutoPtr<IDataBlob> pTmpArchive;
         // pArchive  - without CurrentDeviceFlag
         // pArchive3 - with CurrentDeviceFlag
-        ASSERT_TRUE(pArchiverFactory->AppendDeviceData(pArchive, CurrentDeviceFlag, pArchive3, pMemStream));
-
-        pArchive = RefCntAutoPtr<IArchive>{MakeNewRCObj<ArchiveMemoryImpl>{}(pDataBlob)};
-        UnpackPRS(pArchive, PRS1Name, PRS2Name, pRefPRS_1, pRefPRS_2);
+        ASSERT_TRUE(pArchiverFactory->AppendDeviceData(pArchive, CurrentDeviceFlag, pArchive3, &pTmpArchive));
+        UnpackPRS(pTmpArchive, PRS1Name, PRS2Name, pRefPRS_1, pRefPRS_2);
     }
 }
 
@@ -940,11 +923,10 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
             }
         }
 
-        RefCntAutoPtr<IDataBlob> pBlob;
-        pArchiver->SerializeToBlob(&pBlob);
-        ASSERT_NE(pBlob, nullptr);
+        RefCntAutoPtr<IDataBlob> pArchive;
+        pArchiver->SerializeToBlob(&pArchive);
+        ASSERT_NE(pArchive, nullptr);
 
-        auto pArchive = ArchiveMemoryImpl::Create(pBlob);
         EXPECT_TRUE(pArchiverFactory->PrintArchiveContent(pArchive));
         pDearchiver->LoadArchive(pArchive);
     }
@@ -1244,8 +1226,8 @@ void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
             ASSERT_NE(pRefPSO, nullptr);
         }
 
-        RefCntAutoPtr<IArchive> pArchive;
-        RefCntAutoPtr<IArchive> pSignArchive;
+        RefCntAutoPtr<IDataBlob> pArchive;
+        RefCntAutoPtr<IDataBlob> pSignArchive;
         {
             ComputePipelineStateCreateInfo PSOCreateInfo;
             PSOCreateInfo.PSODesc.Name         = PSO1Name;
@@ -1265,11 +1247,8 @@ void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
             ASSERT_TRUE(pArchiver->AddPipelineState(pSerializedPSO));
 
             {
-                RefCntAutoPtr<IDataBlob> pBlob;
-                pArchiver->SerializeToBlob(&pBlob);
-                ASSERT_NE(pBlob, nullptr);
-
-                pArchive = ArchiveMemoryImpl::Create(pBlob);
+                pArchiver->SerializeToBlob(&pArchive);
+                ASSERT_NE(pArchive, nullptr);
                 EXPECT_TRUE(pArchiverFactory->PrintArchiveContent(pArchive));
             }
 
@@ -1278,11 +1257,8 @@ void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
                 pArchiver->Reset();
                 ASSERT_TRUE(pArchiver->AddPipelineResourceSignature(pSerializedPRS));
 
-                RefCntAutoPtr<IDataBlob> pBlob;
-                pArchiver->SerializeToBlob(&pBlob);
-                ASSERT_NE(pBlob, nullptr);
-
-                pSignArchive = ArchiveMemoryImpl::Create(pBlob);
+                pArchiver->SerializeToBlob(&pSignArchive);
+                ASSERT_NE(pSignArchive, nullptr);
                 EXPECT_TRUE(pArchiverFactory->PrintArchiveContent(pSignArchive));
             }
         }
@@ -1488,11 +1464,10 @@ TEST(ArchiveTest, RayTracingPipeline)
             ASSERT_NE(pSerializedPSO, nullptr);
             ASSERT_TRUE(pArchiver->AddPipelineState(pSerializedPSO));
         }
-        RefCntAutoPtr<IDataBlob> pBlob;
-        pArchiver->SerializeToBlob(&pBlob);
-        ASSERT_NE(pBlob, nullptr);
+        RefCntAutoPtr<IDataBlob> pArchive;
+        pArchiver->SerializeToBlob(&pArchive);
+        ASSERT_NE(pArchive, nullptr);
 
-        auto pArchive = ArchiveMemoryImpl::Create(pBlob);
         EXPECT_TRUE(pArchiverFactory->PrintArchiveContent(pArchive));
         pDearchiver->LoadArchive(pArchive);
     }
@@ -2273,11 +2248,10 @@ TEST_P(TestSamplers, GraphicsPipeline)
         ASSERT_NE(pSerializedPSO, nullptr);
         ASSERT_TRUE(pArchiver->AddPipelineState(pSerializedPSO));
 
-        RefCntAutoPtr<IDataBlob> pBlob;
-        pArchiver->SerializeToBlob(&pBlob);
-        ASSERT_NE(pBlob, nullptr);
+        RefCntAutoPtr<IDataBlob> pArchive;
+        pArchiver->SerializeToBlob(&pArchive);
+        ASSERT_NE(pArchive, nullptr);
 
-        auto pArchive = ArchiveMemoryImpl::Create(pBlob);
         EXPECT_TRUE(pArchiverFactory->PrintArchiveContent(pArchive));
         pDearchiver->LoadArchive(pArchive);
     }

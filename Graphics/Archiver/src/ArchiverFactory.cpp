@@ -109,9 +109,9 @@ public:
     virtual void DILIGENT_CALL_TYPE CreateArchiver(ISerializationDevice* pDevice, IArchiver** ppArchiver) override final;
     virtual void DILIGENT_CALL_TYPE CreateSerializationDevice(const SerializationDeviceCreateInfo& CreateInfo, ISerializationDevice** ppDevice) override final;
     virtual void DILIGENT_CALL_TYPE CreateDefaultShaderSourceStreamFactory(const Char* SearchDirectories, struct IShaderSourceInputStreamFactory** ppShaderSourceFactory) const override final;
-    virtual Bool DILIGENT_CALL_TYPE RemoveDeviceData(IArchive* pSrcArchive, ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags, IFileStream* pStream) const override final;
-    virtual Bool DILIGENT_CALL_TYPE AppendDeviceData(IArchive* pSrcArchive, ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags, IArchive* pDeviceArchive, IFileStream* pStream) const override final;
-    virtual Bool DILIGENT_CALL_TYPE PrintArchiveContent(IArchive* pArchive) const override final;
+    virtual Bool DILIGENT_CALL_TYPE RemoveDeviceData(IDataBlob* pSrcArchive, ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags, IDataBlob** ppDstArchive) const override final;
+    virtual Bool DILIGENT_CALL_TYPE AppendDeviceData(IDataBlob* pSrcArchive, ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags, IDataBlob* pDeviceArchive, IDataBlob** ppDstArchive) const override final;
+    virtual Bool DILIGENT_CALL_TYPE PrintArchiveContent(IDataBlob* pArchive) const override final;
     virtual void DILIGENT_CALL_TYPE SetMessageCallback(DebugMessageCallbackType MessageCallback) const override final;
 
 private:
@@ -179,11 +179,13 @@ void ArchiverFactoryImpl::CreateDefaultShaderSourceStreamFactory(const Char* Sea
     Diligent::CreateDefaultShaderSourceStreamFactory(SearchDirectories, ppShaderSourceFactory);
 }
 
-Bool ArchiverFactoryImpl::RemoveDeviceData(IArchive* pSrcArchive, ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags, IFileStream* pStream) const
+Bool ArchiverFactoryImpl::RemoveDeviceData(IDataBlob* pSrcArchive, ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags, IDataBlob** ppDstArchive) const
 {
     DEV_CHECK_ERR(pSrcArchive != nullptr, "pSrcArchive must not be null");
-    DEV_CHECK_ERR(pStream != nullptr, "pStream must not be null");
-    if (pStream == nullptr || pSrcArchive == nullptr)
+    DEV_CHECK_ERR(ppDstArchive != nullptr, "ppDstArchive must not be null");
+    DEV_CHECK_ERR(*ppDstArchive == nullptr, "*ppDstArchive must be null");
+
+    if (ppDstArchive == nullptr || pSrcArchive == nullptr)
         return false;
 
     try
@@ -198,8 +200,8 @@ Bool ArchiverFactoryImpl::RemoveDeviceData(IArchive* pSrcArchive, ARCHIVE_DEVICE
             ObjectArchive.RemoveDeviceData(ArchiveDeviceType);
         }
 
-        ObjectArchive.Serialize(pStream);
-        return true;
+        ObjectArchive.Serialize(ppDstArchive);
+        return *ppDstArchive != nullptr;
     }
     catch (...)
     {
@@ -207,12 +209,14 @@ Bool ArchiverFactoryImpl::RemoveDeviceData(IArchive* pSrcArchive, ARCHIVE_DEVICE
     }
 }
 
-Bool ArchiverFactoryImpl::AppendDeviceData(IArchive* pSrcArchive, ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags, IArchive* pDeviceArchive, IFileStream* pStream) const
+Bool ArchiverFactoryImpl::AppendDeviceData(IDataBlob* pSrcArchive, ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags, IDataBlob* pDeviceArchive, IDataBlob** ppDstArchive) const
 {
     DEV_CHECK_ERR(pSrcArchive != nullptr, "pSrcArchive must not be null");
     DEV_CHECK_ERR(pDeviceArchive != nullptr, "pDeviceArchive must not be null");
-    DEV_CHECK_ERR(pStream != nullptr, "pStream must not be null");
-    if (pStream == nullptr || pDeviceArchive == nullptr || pSrcArchive == nullptr)
+    DEV_CHECK_ERR(ppDstArchive != nullptr, "ppDstArchive must not be null");
+    DEV_CHECK_ERR(*ppDstArchive == nullptr, "*ppDstArchive must be null");
+
+    if (ppDstArchive == nullptr || pDeviceArchive == nullptr || pSrcArchive == nullptr)
         return false;
 
     try
@@ -228,8 +232,8 @@ Bool ArchiverFactoryImpl::AppendDeviceData(IArchive* pSrcArchive, ARCHIVE_DEVICE
             ObjectArchive.AppendDeviceData(DevObjectArchive, ArchiveDeviceType);
         }
 
-        ObjectArchive.Serialize(pStream);
-        return true;
+        ObjectArchive.Serialize(ppDstArchive);
+        return *ppDstArchive != nullptr;
     }
     catch (...)
     {
@@ -237,7 +241,7 @@ Bool ArchiverFactoryImpl::AppendDeviceData(IArchive* pSrcArchive, ARCHIVE_DEVICE
     }
 }
 
-Bool ArchiverFactoryImpl::PrintArchiveContent(IArchive* pArchive) const
+Bool ArchiverFactoryImpl::PrintArchiveContent(IDataBlob* pArchive) const
 {
     try
     {

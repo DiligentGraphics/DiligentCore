@@ -623,7 +623,7 @@ void DearchiverBase::UnpackPipelineStateImpl(const PipelineStateUnpackInfo& Unpa
         m_Cache.PSO.Set(ResType, UnpackInfo.Name, *ppPSO);
 }
 
-bool DearchiverBase::LoadArchive(IArchive* pRawArchive)
+bool DearchiverBase::LoadArchive(IDataBlob* pRawArchive)
 {
     if (pRawArchive == nullptr)
         return false;

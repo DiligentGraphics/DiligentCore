@@ -62,7 +62,7 @@ public:
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_Dearchiver, TObjectBase)
 
     /// Implementation of IDearchiver::LoadArchive().
-    virtual bool DILIGENT_CALL_TYPE LoadArchive(IArchive* pArchive) override final;
+    virtual bool DILIGENT_CALL_TYPE LoadArchive(IDataBlob* pArchive) override final;
 
     /// Implementation of IDearchiver::UnpackPipelineState().
     virtual void DILIGENT_CALL_TYPE UnpackPipelineState(const PipelineStateUnpackInfo& DeArchiveInfo,

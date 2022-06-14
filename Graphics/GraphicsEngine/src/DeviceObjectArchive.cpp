@@ -172,13 +172,12 @@ const char* ArchiveDeviceTypeToString(Uint32 dev)
 } // namespace
 #endif
 
-DeviceObjectArchive::DeviceObjectArchive(IArchive* pArchive) noexcept(false)
+DeviceObjectArchive::DeviceObjectArchive(IDataBlob* pArchive) noexcept(false) :
+    m_pRawData{pArchive}
 {
-    if (pArchive == nullptr)
+    if (!m_pRawData)
         LOG_ERROR_AND_THROW("pArchive must not be null");
 
-    m_pRawData = DataBlobImpl::Create(StaticCast<size_t>(pArchive->GetSize()));
-    pArchive->Read(0, pArchive->GetSize(), m_pRawData->GetDataPtr());
     Deserialize(m_pRawData->GetConstDataPtr(), StaticCast<size_t>(pArchive->GetSize()));
 }
 

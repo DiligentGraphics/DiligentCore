@@ -30,7 +30,6 @@
 /// Definition of the Diligent::IDearchiver interface and related data structures
 
 #include "../../../Primitives/interface/DataBlob.h"
-#include "../../../Primitives/interface/Archive.h"
 #include "PipelineResourceSignature.h"
 #include "PipelineState.h"
 
@@ -208,10 +207,14 @@ DILIGENT_BEGIN_INTERFACE(IDearchiver, IObject)
     /// \param [in] pArchive - A pointer to the source raw data to load objects from.
     /// \return     true if the archive has been loaded successfully, and false otherwise.
     ///
+    /// \note       The dearchiver will keep a strong reference to the pArchive data blob.
+    ///             It will be kept alive until the dearchiver object is released or
+    ///             the Reset() method is called.
+    /// 
     /// \warning    This method is not thread-safe and must not be called simultaneously
     ///             with other methods.
     VIRTUAL bool METHOD(LoadArchive)(THIS_
-                                     IArchive* pArchive) PURE;
+                                     IDataBlob* pArchive) PURE;
 
     /// Unpacks a pipeline state object from the device object archive.
 
