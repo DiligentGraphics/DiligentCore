@@ -25,8 +25,6 @@
  */
 
 #include "DearchiverBase.hpp"
-#include "ArchiveFileImpl.hpp"
-#include "ArchiveMemoryImpl.hpp"
 #include "PipelineStateBase.hpp"
 #include "PSOSerializer.hpp"
 

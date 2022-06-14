@@ -9,8 +9,6 @@ set(INCLUDE
 set(INTERFACE
     interface/AdvancedMath.hpp
     interface/Align.hpp
-    interface/ArchiveFileImpl.hpp
-    interface/ArchiveMemoryImpl.hpp
     interface/Array2DTools.hpp
     interface/BasicMath.hpp
     interface/BasicFileStream.hpp
@@ -46,8 +44,6 @@ set(INTERFACE
 )
 
 set(SOURCE
-    src/ArchiveFileImpl.cpp
-    src/ArchiveMemoryImpl.cpp
     src/Array2DTools.cpp
     src/BasicFileStream.cpp
     src/DataBlobImpl.cpp

@@ -32,7 +32,6 @@
 #include "ArchiverImpl.hpp"
 #include "SerializationDeviceImpl.hpp"
 #include "EngineMemory.h"
-#include "ArchiveMemoryImpl.hpp"
 
 namespace Diligent
 {
