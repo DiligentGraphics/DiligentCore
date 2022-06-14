@@ -84,8 +84,8 @@ void DeviceObjectArchive::Deserialize(const void* pData, size_t Size)
 
     for (Uint32 res = 0; res < NumResources; ++res)
     {
-        const char*       Name    = nullptr;
-        ResourceGroupType ResType = ResourceGroupType::Undefined;
+        const char*  Name    = nullptr;
+        ResourceType ResType = ResourceType::Undefined;
         Reader(ResType, Name);
         VERIFY_EXPR(Name != nullptr);
         auto& ResData = m_NamedResources[NamedResourceKey{ResType, Name}];
@@ -204,21 +204,19 @@ DeviceObjectArchive::DeviceType DeviceObjectArchive::RenderDeviceTypeToArchiveDe
     }
 }
 
-const char* DeviceObjectArchive::ResourceGroupTypeToString(ResourceGroupType Type)
+const char* DeviceObjectArchive::ResourceTypeToString(ResourceType Type)
 {
-    static_assert(static_cast<size_t>(ResourceGroupType::Count) == 9, "Please handle the new chunk type below");
+    static_assert(static_cast<size_t>(ResourceType::Count) == 7, "Please handle the new chunk type below");
     switch (Type)
     {
         // clang-format off
-        case ResourceGroupType::Undefined:           return "Undefined";
-        case ResourceGroupType::DebugInfo:           return "Debug Info";
-        case ResourceGroupType::ResourceSignatures:  return "Resource Signatures";
-        case ResourceGroupType::GraphicsPipelines:   return "Graphics Pipelines";
-        case ResourceGroupType::ComputePipelines:    return "Compute Pipelines";
-        case ResourceGroupType::RayTracingPipelines: return "Ray-Tracing Pipelines";
-        case ResourceGroupType::TilePipelines:       return "Tile Pipelines";
-        case ResourceGroupType::RenderPasses:        return "Render Passes";
-        case ResourceGroupType::Shaders:             return "Shaders";
+        case ResourceType::Undefined:          return "Undefined";
+        case ResourceType::ResourceSignature:  return "Resource Signatures";
+        case ResourceType::GraphicsPipeline:   return "Graphics Pipelines";
+        case ResourceType::ComputePipeline:    return "Compute Pipelines";
+        case ResourceType::RayTracingPipeline: return "Ray-Tracing Pipelines";
+        case ResourceType::TilePipeline:       return "Tile Pipelines";
+        case ResourceType::RenderPass:         return "Render Passes";
         // clang-format on
         default:
             UNEXPECTED("Unexpected chunk type");
@@ -226,9 +224,9 @@ const char* DeviceObjectArchive::ResourceGroupTypeToString(ResourceGroupType Typ
     }
 }
 
-const SerializedData& DeviceObjectArchive::GetDeviceSpecificData(ResourceGroupType Type,
-                                                                 const char*       Name,
-                                                                 DeviceType        DevType) const noexcept
+const SerializedData& DeviceObjectArchive::GetDeviceSpecificData(ResourceType Type,
+                                                                 const char*  Name,
+                                                                 DeviceType   DevType) const noexcept
 {
     auto it = m_NamedResources.find(NamedResourceKey{Type, Name});
     if (it == m_NamedResources.end())

@@ -126,7 +126,7 @@ struct DearchiverBase::PSOData
     std::vector<RefCntAutoPtr<IDeviceObject>> Objects;
     std::vector<RefCntAutoPtr<IShader>>       Shaders;
 
-    static const ResourceGroupType ArchiveResType;
+    static const ResourceType ArchiveResType;
 
     explicit PSOData(IMemoryAllocator& Allocator, Uint32 BlockSize = 2 << 10) :
         Allocator{Allocator, BlockSize}
@@ -146,7 +146,7 @@ struct DearchiverBase::RPData
     DynamicLinearAllocator Allocator;
     RenderPassDesc         Desc;
 
-    static constexpr ResourceGroupType ArchiveResType = ResourceGroupType::RenderPasses;
+    static constexpr ResourceType ArchiveResType = ResourceType::RenderPass;
 
     explicit RPData(IMemoryAllocator& Allocator, Uint32 BlockSize = 1 << 10) :
         Allocator{Allocator, BlockSize}
@@ -193,7 +193,7 @@ template class DearchiverBase::NamedResourceCache<IPipelineResourceSignature>;
 
 // Instantiation is required by UnpackResourceSignatureImpl
 template bool DeviceObjectArchive::LoadResourceCommonData<DearchiverBase::PRSData>(
-    ResourceGroupType        Type,
+    ResourceType             Type,
     const char*              ResourceName,
     DearchiverBase::PRSData& ResData) const;
 
@@ -257,13 +257,13 @@ bool DearchiverBase::PSOData<CreateInfoType>::Deserialize(const char* Name, Seri
 }
 
 template <>
-const DearchiverBase::ResourceGroupType DearchiverBase::PSOData<GraphicsPipelineStateCreateInfo>::ArchiveResType = DearchiverBase::ResourceGroupType::GraphicsPipelines;
+const DearchiverBase::ResourceType DearchiverBase::PSOData<GraphicsPipelineStateCreateInfo>::ArchiveResType = DearchiverBase::ResourceType::GraphicsPipeline;
 template <>
-const DearchiverBase::ResourceGroupType DearchiverBase::PSOData<ComputePipelineStateCreateInfo>::ArchiveResType = DearchiverBase::ResourceGroupType::ComputePipelines;
+const DearchiverBase::ResourceType DearchiverBase::PSOData<ComputePipelineStateCreateInfo>::ArchiveResType = DearchiverBase::ResourceType::ComputePipeline;
 template <>
-const DearchiverBase::ResourceGroupType DearchiverBase::PSOData<TilePipelineStateCreateInfo>::ArchiveResType = DearchiverBase::ResourceGroupType::TilePipelines;
+const DearchiverBase::ResourceType DearchiverBase::PSOData<TilePipelineStateCreateInfo>::ArchiveResType = DearchiverBase::ResourceType::TilePipeline;
 template <>
-const DearchiverBase::ResourceGroupType DearchiverBase::PSOData<RayTracingPipelineStateCreateInfo>::ArchiveResType = DearchiverBase::ResourceGroupType::RayTracingPipelines;
+const DearchiverBase::ResourceType DearchiverBase::PSOData<RayTracingPipelineStateCreateInfo>::ArchiveResType = DearchiverBase::ResourceType::RayTracingPipeline;
 
 
 template <>

@@ -36,28 +36,28 @@
 namespace Diligent
 {
 
-static DeviceObjectArchive::ResourceGroupType PipelineTypeToResourceGroupType(PIPELINE_TYPE PipelineType)
+static DeviceObjectArchive::ResourceType PipelineTypeToArchiveResourceType(PIPELINE_TYPE PipelineType)
 {
-    using GroupType = DeviceObjectArchive::ResourceGroupType;
+    using ResourceType = DeviceObjectArchive::ResourceType;
     static_assert(PIPELINE_TYPE_COUNT == 5, "Please handle the new pipeline type below");
     switch (PipelineType)
     {
         case PIPELINE_TYPE_GRAPHICS:
         case PIPELINE_TYPE_MESH:
-            return GroupType::GraphicsPipelines;
+            return ResourceType::GraphicsPipeline;
 
         case PIPELINE_TYPE_COMPUTE:
-            return GroupType::ComputePipelines;
+            return ResourceType::ComputePipeline;
 
         case PIPELINE_TYPE_RAY_TRACING:
-            return GroupType::RayTracingPipelines;
+            return ResourceType::RayTracingPipeline;
 
         case PIPELINE_TYPE_TILE:
-            return GroupType::TilePipelines;
+            return ResourceType::TilePipeline;
 
         default:
             UNEXPECTED("Unexpected pipeline type");
-            return GroupType::Undefined;
+            return ResourceType::Undefined;
     }
 }
 
@@ -110,7 +110,7 @@ Bool ArchiverImpl::SerializeToStream(IFileStream* pStream)
             const auto& SrcPSO  = *pso_it.second;
             const auto& SrcData = SrcPSO.GetData();
             VERIFY_EXPR(SafeStrEqual(Name, SrcPSO.GetDesc().Name));
-            VERIFY_EXPR(ResType == PipelineTypeToResourceGroupType(SrcPSO.GetDesc().PipelineType));
+            VERIFY_EXPR(ResType == PipelineTypeToArchiveResourceType(SrcPSO.GetDesc().PipelineType));
 
             auto& DstData = Archive.GetResourceData(ResType, Name);
             // Add PSO common data
@@ -163,7 +163,7 @@ Bool ArchiverImpl::SerializeToStream(IFileStream* pStream)
         const auto& SrcSign = *sign_it.second;
         VERIFY_EXPR(SafeStrEqual(Name, SrcSign.GetDesc().Name));
 
-        auto& DstData  = Archive.GetResourceData(ResourceGroupType::ResourceSignatures, Name);
+        auto& DstData  = Archive.GetResourceData(ResourceType::ResourceSignature, Name);
         DstData.Common = SrcSign.GetCommonData().MakeCopy(Allocator);
 
         for (size_t device_type = 0; device_type < static_cast<size_t>(DeviceType::Count); ++device_type)
@@ -180,7 +180,7 @@ Bool ArchiverImpl::SerializeToStream(IFileStream* pStream)
         const auto& SrcRP = *rp_it.second;
         VERIFY_EXPR(SafeStrEqual(Name, SrcRP.GetDesc().Name));
 
-        auto& DstData  = Archive.GetResourceData(ResourceGroupType::RenderPasses, Name);
+        auto& DstData  = Archive.GetResourceData(ResourceType::RenderPass, Name);
         DstData.Common = SrcRP.GetCommonData().MakeCopy(Allocator);
     }
 
@@ -263,7 +263,7 @@ Bool ArchiverImpl::AddPipelineState(IPipelineState* pPSO)
     const auto& Desc = pSerializedPSO->GetDesc();
     const auto* Name = Desc.Name;
     // Mesh pipelines are serialized as graphics pipeliens
-    const auto ArchiveResType = PipelineTypeToResourceGroupType(Desc.PipelineType);
+    const auto ArchiveResType = PipelineTypeToArchiveResourceType(Desc.PipelineType);
 
     {
         std::lock_guard<std::mutex> Lock{m_PipelinesMtx};

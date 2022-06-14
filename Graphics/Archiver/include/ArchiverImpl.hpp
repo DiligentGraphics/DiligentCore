@@ -80,8 +80,8 @@ private:
     bool AddRenderPass(IRenderPass* pRP);
 
 private:
-    using DeviceType        = DeviceObjectArchive::DeviceType;
-    using ResourceGroupType = DeviceObjectArchive::ResourceGroupType;
+    using DeviceType   = DeviceObjectArchive::DeviceType;
+    using ResourceType = DeviceObjectArchive::ResourceType;
 
     RefCntAutoPtr<SerializationDeviceImpl> m_pSerializationDevice;
 

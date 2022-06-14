@@ -92,7 +92,7 @@ protected:
                                                 IRenderDevice*          pDevice);
 
 protected:
-    using ResourceGroupType    = DeviceObjectArchive::ResourceGroupType;
+    using ResourceType         = DeviceObjectArchive::ResourceType;
     using DeviceType           = DeviceObjectArchive::DeviceType;
     using SerializedPSOAuxData = DeviceObjectArchive::SerializedPSOAuxData;
     using TPRSNames            = DeviceObjectArchive::TPRSNames;
@@ -140,7 +140,7 @@ protected:
         DynamicLinearAllocator        Allocator;
         PipelineResourceSignatureDesc Desc;
 
-        static constexpr ResourceGroupType ArchiveResType = ResourceGroupType::ResourceSignatures;
+        static constexpr ResourceType ArchiveResType = ResourceType::ResourceSignature;
 
         explicit PRSData(IMemoryAllocator& Allocator, Uint32 BlockSize = 1 << 10) :
             Allocator{Allocator, BlockSize}

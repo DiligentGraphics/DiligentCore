@@ -75,17 +75,15 @@ public:
         bool NoShaderReflection = false;
     };
 
-    enum class ResourceGroupType : Uint32
+    enum class ResourceType : Uint32
     {
         Undefined = 0,
-        DebugInfo,
-        ResourceSignatures,
-        GraphicsPipelines,
-        ComputePipelines,
-        RayTracingPipelines,
-        TilePipelines,
-        RenderPasses,
-        Shaders,
+        ResourceSignature,
+        GraphicsPipeline,
+        ComputePipeline,
+        RayTracingPipeline,
+        TilePipeline,
+        RenderPass,
         Count
     };
 
@@ -115,9 +113,9 @@ public:
 
     struct NamedResourceKey
     {
-        NamedResourceKey(ResourceGroupType _Type,
-                         const char*       _Name,
-                         bool              CopyName = false) noexcept :
+        NamedResourceKey(ResourceType _Type,
+                         const char*  _Name,
+                         bool         CopyName = false) noexcept :
             Type{_Type},
             Name{_Name, CopyName}
         {}
@@ -140,14 +138,14 @@ public:
             return Name.GetStr();
         }
 
-        ResourceGroupType GetType() const
+        ResourceType GetType() const
         {
             return Type;
         }
 
     private:
-        const ResourceGroupType Type;
-        HashMapStringKey        Name;
+        const ResourceType Type;
+        HashMapStringKey   Name;
     };
 
 public:
@@ -166,12 +164,12 @@ public:
 
     static DeviceType RenderDeviceTypeToArchiveDeviceType(RENDER_DEVICE_TYPE Type);
 
-    static const char* ResourceGroupTypeToString(ResourceGroupType Type);
+    static const char* ResourceTypeToString(ResourceType Type);
 
     template <typename ReourceDataType>
-    bool LoadResourceCommonData(ResourceGroupType Type,
-                                const char*       Name,
-                                ReourceDataType&  ResData) const
+    bool LoadResourceCommonData(ResourceType     Type,
+                                const char*      Name,
+                                ReourceDataType& ResData) const
     {
         auto it = m_NamedResources.find(NamedResourceKey{Type, Name});
         if (it == m_NamedResources.end())
@@ -190,11 +188,11 @@ public:
         return Res;
     }
 
-    const SerializedData& GetDeviceSpecificData(ResourceGroupType Type,
-                                                const char*       Name,
-                                                DeviceType        DevType) const noexcept;
+    const SerializedData& GetDeviceSpecificData(ResourceType Type,
+                                                const char*  Name,
+                                                DeviceType   DevType) const noexcept;
 
-    ResourceData& GetResourceData(ResourceGroupType Type, const char* Name) noexcept
+    ResourceData& GetResourceData(ResourceType Type, const char* Name) noexcept
     {
         return m_NamedResources[NamedResourceKey{Type, Name, true}];
     }
