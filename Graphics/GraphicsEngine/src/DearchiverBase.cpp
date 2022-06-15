@@ -137,7 +137,7 @@ struct DearchiverBase::PSOData
     void CreatePipeline(IRenderDevice* pDevice, IPipelineState** ppPSO);
 
 private:
-    void DeserializeInternal(Serializer<SerializerMode::Read>& Ser);
+    bool DeserializeInternal(Serializer<SerializerMode::Read>& Ser);
 };
 
 
@@ -159,7 +159,7 @@ struct DearchiverBase::RPData
 template <typename ResType>
 bool DearchiverBase::NamedResourceCache<ResType>::Get(ResourceType Type, const char* Name, ResType** ppResource)
 {
-    VERIFY_EXPR(Name != nullptr);
+    VERIFY_EXPR(Name != nullptr && Name[0] != '\0');
     VERIFY_EXPR(ppResource != nullptr && *ppResource == nullptr);
     *ppResource = nullptr;
 
@@ -184,7 +184,7 @@ void DearchiverBase::NamedResourceCache<ResType>::Set(ResourceType Type, const c
     VERIFY_EXPR(pResource != nullptr);
 
     std::unique_lock<std::mutex> Lock{m_Mtx};
-    m_Map.emplace(NamedResourceKey{Type, Name, true}, pResource);
+    m_Map.emplace(NamedResourceKey{Type, Name, /*CopyName = */ true}, pResource);
 }
 
 // Instantiation is required by UnpackResourceSignatureImpl
@@ -201,36 +201,34 @@ template bool DeviceObjectArchive::LoadResourceCommonData<DearchiverBase::PRSDat
 bool DearchiverBase::PRSData::Deserialize(const char* Name, Serializer<SerializerMode::Read>& Ser)
 {
     Desc.Name = Name;
-    PRSSerializer<SerializerMode::Read>::SerializeDesc(Ser, Desc, &Allocator);
-    return true;
+    return PRSSerializer<SerializerMode::Read>::SerializeDesc(Ser, Desc, &Allocator);
 }
 
 bool DearchiverBase::RPData::Deserialize(const char* Name, Serializer<SerializerMode::Read>& Ser)
 {
     Desc.Name = Name;
-    RPSerializer<SerializerMode::Read>::SerializeDesc(Ser, Desc, &Allocator);
-    return true;
+    return RPSerializer<SerializerMode::Read>::SerializeDesc(Ser, Desc, &Allocator);
 }
 
 template <typename CreateInfoType>
-void DearchiverBase::PSOData<CreateInfoType>::DeserializeInternal(Serializer<SerializerMode::Read>& Ser)
+bool DearchiverBase::PSOData<CreateInfoType>::DeserializeInternal(Serializer<SerializerMode::Read>& Ser)
 {
-    PSOSerializer<SerializerMode::Read>::SerializeCreateInfo(Ser, CreateInfo, PRSNames, &Allocator);
+    return PSOSerializer<SerializerMode::Read>::SerializeCreateInfo(Ser, CreateInfo, PRSNames, &Allocator);
 }
 
 template <>
-void DearchiverBase::PSOData<GraphicsPipelineStateCreateInfo>::DeserializeInternal(Serializer<SerializerMode::Read>& Ser)
+bool DearchiverBase::PSOData<GraphicsPipelineStateCreateInfo>::DeserializeInternal(Serializer<SerializerMode::Read>& Ser)
 {
-    PSOSerializer<SerializerMode::Read>::SerializeCreateInfo(Ser, CreateInfo, PRSNames, &Allocator, RenderPassName);
+    return PSOSerializer<SerializerMode::Read>::SerializeCreateInfo(Ser, CreateInfo, PRSNames, &Allocator, RenderPassName);
 }
 
 template <>
-void DearchiverBase::PSOData<RayTracingPipelineStateCreateInfo>::DeserializeInternal(Serializer<SerializerMode::Read>& Ser)
+bool DearchiverBase::PSOData<RayTracingPipelineStateCreateInfo>::DeserializeInternal(Serializer<SerializerMode::Read>& Ser)
 {
     auto RemapShaders = [](Uint32& InIndex, IShader*& outShader) {
         outShader = BitCast<IShader*>(size_t{InIndex});
     };
-    PSOSerializer<SerializerMode::Read>::SerializeCreateInfo(Ser, CreateInfo, PRSNames, &Allocator, RemapShaders);
+    return PSOSerializer<SerializerMode::Read>::SerializeCreateInfo(Ser, CreateInfo, PRSNames, &Allocator, RemapShaders);
 }
 
 template <typename CreateInfoType>
@@ -238,8 +236,11 @@ bool DearchiverBase::PSOData<CreateInfoType>::Deserialize(const char* Name, Seri
 {
     CreateInfo.PSODesc.Name = Name;
 
-    DeserializeInternal(Ser);
-    PSOSerializer<SerializerMode::Read>::SerializeAuxData(Ser, AuxData, &Allocator);
+    if (!DeserializeInternal(Ser))
+        return false;
+
+    if (!PSOSerializer<SerializerMode::Read>::SerializeAuxData(Ser, AuxData, &Allocator))
+        return false;
 
     CreateInfo.Flags |= PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES;
     if (AuxData.NoShaderReflection)
@@ -422,13 +423,14 @@ void DearchiverBase::PSOData<RayTracingPipelineStateCreateInfo>::CreatePipeline(
 }
 
 template <typename CreateInfoType>
-bool DearchiverBase::UnpackPSOShaders(const DeviceObjectArchive&   Archive,
-                                      PSOData<CreateInfoType>&     PSO,
-                                      PerDeviceCachedShadersArray& PerDeviceCachedShaders,
-                                      IRenderDevice*               pDevice)
+bool DearchiverBase::UnpackPSOShaders(ArchiveData&             Archive,
+                                      PSOData<CreateInfoType>& PSO,
+                                      IRenderDevice*           pDevice)
 {
+    const auto& pObjArchive = Archive.pObjArchive;
+    VERIFY_EXPR(pObjArchive);
     const auto  DevType       = GetArchiveDeviceType(pDevice);
-    const auto& ShaderIdxData = Archive.GetDeviceSpecificData(PSO.ArchiveResType, PSO.CreateInfo.PSODesc.Name, DevType);
+    const auto& ShaderIdxData = pObjArchive->GetDeviceSpecificData(PSO.ArchiveResType, PSO.CreateInfo.PSODesc.Name, DevType);
     if (!ShaderIdxData)
         return false;
 
@@ -437,11 +439,15 @@ bool DearchiverBase::UnpackPSOShaders(const DeviceObjectArchive&   Archive,
     DeviceObjectArchive::ShaderIndexArray ShaderIndices;
     {
         Serializer<SerializerMode::Read> Ser{ShaderIdxData};
-        PSOSerializer<SerializerMode::Read>::SerializeShaderIndices(Ser, ShaderIndices, &Allocator);
+        if (!PSOSerializer<SerializerMode::Read>::SerializeShaderIndices(Ser, ShaderIndices, &Allocator))
+        {
+            LOG_ERROR_MESSAGE("Failed to deserialize PSO shader indices. Archive file may be corrupted or invalid.");
+            return false;
+        }
         VERIFY_EXPR(Ser.IsEnded());
     }
 
-    auto& ShaderCache = PerDeviceCachedShaders[static_cast<size_t>(DevType)];
+    auto& ShaderCache = Archive.CachedShaders[static_cast<size_t>(DevType)];
 
     PSO.Shaders.resize(ShaderIndices.Count);
     for (Uint32 i = 0; i < ShaderIndices.Count; ++i)
@@ -461,7 +467,7 @@ bool DearchiverBase::UnpackPSOShaders(const DeviceObjectArchive&   Archive,
             }
         }
 
-        const auto& SerializedShader = Archive.GetSerializedShader(DevType, Idx);
+        const auto& SerializedShader = pObjArchive->GetSerializedShader(DevType, Idx);
         if (!SerializedShader)
             return false;
 
@@ -469,7 +475,11 @@ bool DearchiverBase::UnpackPSOShaders(const DeviceObjectArchive&   Archive,
             ShaderCreateInfo ShaderCI;
             {
                 Serializer<SerializerMode::Read> ShaderSer{SerializedShader};
-                ShaderSerializer<SerializerMode::Read>::SerializeCI(ShaderSer, ShaderCI);
+                if (!ShaderSerializer<SerializerMode::Read>::SerializeCI(ShaderSer, ShaderCI))
+                {
+                    LOG_ERROR_MESSAGE("Failed to deserialize shader create info. Archive file may be corrupted or invalid.");
+                    return false;
+                }
                 VERIFY_EXPR(ShaderSer.IsEnded());
             }
 
@@ -485,7 +495,7 @@ bool DearchiverBase::UnpackPSOShaders(const DeviceObjectArchive&   Archive,
         {
             std::unique_lock<std::mutex> WriteLock{ShaderCache.Mtx};
             if (Idx >= ShaderCache.Shaders.size())
-                ShaderCache.Shaders.resize(Idx + 1);
+                ShaderCache.Shaders.resize(size_t{Idx} + 1);
             ShaderCache.Shaders[Idx] = pShader;
         }
     }
@@ -601,14 +611,14 @@ void DearchiverBase::UnpackPipelineStateImpl(const PipelineStateUnpackInfo& Unpa
         return;
 
     auto& Archive = m_Archives[archive_idx_it->second];
-    if (!Archive.pArchive)
+    if (!Archive.pObjArchive)
     {
-        UNEXPECTED("Null archives should never be added to the list. This is a bug.");
+        UNEXPECTED("Null object archives should never be added to the list. This is a bug.");
         return;
     }
 
     PSOData<CreateInfoType> PSO{GetRawAllocator()};
-    if (!Archive.pArchive->LoadResourceCommonData(ResType, UnpackInfo.Name, PSO))
+    if (!Archive.pObjArchive->LoadResourceCommonData(ResType, UnpackInfo.Name, PSO))
         return;
 
 #ifdef DILIGENT_DEVELOPMENT
@@ -626,7 +636,7 @@ void DearchiverBase::UnpackPipelineStateImpl(const PipelineStateUnpackInfo& Unpa
     if (!UnpackPSOSignatures(PSO, UnpackInfo.pDevice))
         return;
 
-    if (!UnpackPSOShaders(*Archive.pArchive, PSO, Archive.CachedShaders, UnpackInfo.pDevice))
+    if (!UnpackPSOShaders(Archive, PSO, UnpackInfo.pDevice))
         return;
 
     PSO.AssignShaders();
@@ -644,27 +654,31 @@ void DearchiverBase::UnpackPipelineStateImpl(const PipelineStateUnpackInfo& Unpa
         m_Cache.PSO.Set(ResType, UnpackInfo.Name, *ppPSO);
 }
 
-bool DearchiverBase::LoadArchive(IDataBlob* pRawArchive)
+bool DearchiverBase::LoadArchive(const IDataBlob* pArchiveData)
 {
-    if (pRawArchive == nullptr)
+    if (pArchiveData == nullptr)
         return false;
 
     try
     {
-        auto pArchive   = std::make_unique<DeviceObjectArchive>(pRawArchive);
-        auto ArchiveIdx = m_Archives.size();
+        auto       pObjArchive = std::make_unique<DeviceObjectArchive>(pArchiveData);
+        const auto ArchiveIdx  = m_Archives.size();
 
-        const auto& ArchiveResources = pArchive->GetNamedResources();
+        const auto& ArchiveResources = pObjArchive->GetNamedResources();
         for (const auto& it : ArchiveResources)
         {
-            const auto inserted = m_ResNameToArchiveIdx.emplace(NamedResourceKey{it.first.GetType(), it.first.GetName(), true}, ArchiveIdx).second;
+            const auto     ResType      = it.first.GetType();
+            const auto*    ResName      = it.first.GetName();
+            constexpr auto MakeNameCopy = true;
+
+            const auto inserted = m_ResNameToArchiveIdx.emplace(NamedResourceKey{ResType, ResName, MakeNameCopy}, ArchiveIdx).second;
             if (!inserted)
             {
-                LOG_ERROR_MESSAGE("Resource with name '", it.first.GetName(), "' already present in the archive.");
+                LOG_ERROR_MESSAGE("Resource with name '", ResName, "' already exists in the archive.");
             }
         }
 
-        m_Archives.emplace_back(std::move(pArchive));
+        m_Archives.emplace_back(std::move(pObjArchive));
 
         return true;
     }
@@ -742,15 +756,15 @@ void DearchiverBase::UnpackRenderPass(const RenderPassUnpackInfo& UnpackInfo, IR
     if (archive_idx_it == m_ResNameToArchiveIdx.end())
         return;
 
-    auto& pArchive = m_Archives[archive_idx_it->second].pArchive;
-    if (!pArchive)
+    const auto& pObjArchive = m_Archives[archive_idx_it->second].pObjArchive;
+    if (!pObjArchive)
     {
-        UNEXPECTED("Null archives should never be added to the list. This is a bug.");
+        UNEXPECTED("Null object archives should never be added to the list. This is a bug.");
         return;
     }
 
     RPData RP{GetRawAllocator()};
-    if (!pArchive->LoadResourceCommonData(RPData::ArchiveResType, UnpackInfo.Name, RP))
+    if (!pObjArchive->LoadResourceCommonData(RPData::ArchiveResType, UnpackInfo.Name, RP))
         return;
 
     if (UnpackInfo.ModifyRenderPassDesc != nullptr)

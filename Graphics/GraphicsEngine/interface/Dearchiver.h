@@ -214,7 +214,7 @@ DILIGENT_BEGIN_INTERFACE(IDearchiver, IObject)
     /// \warning    This method is not thread-safe and must not be called simultaneously
     ///             with other methods.
     VIRTUAL bool METHOD(LoadArchive)(THIS_
-                                     IDataBlob* pArchive) PURE;
+                                     const IDataBlob* pArchive) PURE;
 
     /// Unpacks a pipeline state object from the device object archive.
 

@@ -42,6 +42,7 @@
 #include "EngineMemory.h"
 #include "RefCntAutoPtr.hpp"
 #include "DeviceObjectArchive.hpp"
+#include "DynamicLinearAllocator.hpp"
 
 namespace Diligent
 {
@@ -54,7 +55,7 @@ class DearchiverBase : public ObjectBase<IDearchiver>
 public:
     using TObjectBase = ObjectBase<IDearchiver>;
 
-    explicit DearchiverBase(IReferenceCounters* pRefCounters, const DearchiverCreateInfo& CI) noexcept :
+    DearchiverBase(IReferenceCounters* pRefCounters, const DearchiverCreateInfo& CI) noexcept :
         TObjectBase{pRefCounters}
     {
     }
@@ -62,7 +63,7 @@ public:
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_Dearchiver, TObjectBase)
 
     /// Implementation of IDearchiver::LoadArchive().
-    virtual bool DILIGENT_CALL_TYPE LoadArchive(IDataBlob* pArchive) override final;
+    virtual bool DILIGENT_CALL_TYPE LoadArchive(const IDataBlob* pArchiveData) override final;
 
     /// Implementation of IDearchiver::UnpackPipelineState().
     virtual void DILIGENT_CALL_TYPE UnpackPipelineState(const PipelineStateUnpackInfo& DeArchiveInfo,
@@ -167,32 +168,11 @@ private:
         ShaderCacheData& operator=(      ShaderCacheData&&) = delete;
         // clang-format on
     };
-    using PerDeviceCachedShadersArray = std::array<ShaderCacheData, static_cast<size_t>(DeviceType::Count)>;
-
-    template <typename CreateInfoType>
-    bool UnpackPSOSignatures(PSOData<CreateInfoType>& PSO, IRenderDevice* pDevice);
-
-    template <typename CreateInfoType>
-    bool UnpackPSORenderPass(PSOData<CreateInfoType>& PSO, IRenderDevice* pDevice) { return true; }
-
-    template <typename CreateInfoType>
-    bool UnpackPSOShaders(const DeviceObjectArchive&   Archive,
-                          PSOData<CreateInfoType>&     PSO,
-                          PerDeviceCachedShadersArray& PerDeviceCachedShaders,
-                          IRenderDevice*               pDevice);
-
-    template <typename CreateInfoType>
-    void UnpackPipelineStateImpl(const PipelineStateUnpackInfo& UnpackInfo, IPipelineState** ppPSO);
-
-    // Resource type and name -> archive index that contains this resource.
-    // Names must be unique for each resource type.
-    using NamedResourceKey = DeviceObjectArchive::NamedResourceKey;
-    std::unordered_map<NamedResourceKey, size_t, NamedResourceKey::Hasher> m_ResNameToArchiveIdx;
 
     struct ArchiveData
     {
-        ArchiveData(std::unique_ptr<DeviceObjectArchive>&& _pArchive) :
-            pArchive{std::move(_pArchive)}
+        ArchiveData(std::unique_ptr<DeviceObjectArchive>&& _pObjArchive) :
+            pObjArchive{std::move(_pObjArchive)}
         {}
         // clang-format off
         ArchiveData           (const ArchiveData&)  = delete;
@@ -201,9 +181,31 @@ private:
         ArchiveData& operator=(      ArchiveData&&) = delete;
         // clang-format on
 
-        std::unique_ptr<DeviceObjectArchive> pArchive;
-        PerDeviceCachedShadersArray          CachedShaders;
+        std::unique_ptr<const DeviceObjectArchive> pObjArchive;
+
+        std::array<ShaderCacheData, static_cast<size_t>(DeviceType::Count)> CachedShaders;
     };
+
+    template <typename CreateInfoType>
+    bool UnpackPSOSignatures(PSOData<CreateInfoType>& PSO, IRenderDevice* pDevice);
+
+    template <typename CreateInfoType>
+    bool UnpackPSORenderPass(PSOData<CreateInfoType>& PSO, IRenderDevice* pDevice) { return true; }
+
+    template <typename CreateInfoType>
+    bool UnpackPSOShaders(ArchiveData&             Archive,
+                          PSOData<CreateInfoType>& PSO,
+                          IRenderDevice*           pDevice);
+
+    template <typename CreateInfoType>
+    void UnpackPipelineStateImpl(const PipelineStateUnpackInfo& UnpackInfo, IPipelineState** ppPSO);
+
+private:
+    // Resource type and name -> archive index that contains this resource.
+    // Names must be unique for each resource type.
+    using NamedResourceKey = DeviceObjectArchive::NamedResourceKey;
+    std::unordered_map<NamedResourceKey, size_t, NamedResourceKey::Hasher> m_ResNameToArchiveIdx;
+
     std::vector<ArchiveData> m_Archives;
 };
 
@@ -228,38 +230,51 @@ RefCntAutoPtr<IPipelineResourceSignature> DearchiverBase::UnpackResourceSignatur
     if (archive_idx_it == m_ResNameToArchiveIdx.end())
         return {};
 
-    auto& pArchive = m_Archives[archive_idx_it->second].pArchive;
-    if (!pArchive)
+    const auto& pObjArchive = m_Archives[archive_idx_it->second].pObjArchive;
+    if (!pObjArchive)
     {
-        UNEXPECTED("Null archives should never be added to the list. This is a bug.");
+        UNEXPECTED("Null object archives should never be added to the list. This is a bug.");
         return {};
     }
 
     PRSData PRS{GetRawAllocator()};
-    if (!pArchive->LoadResourceCommonData(PRSData::ArchiveResType, DeArchiveInfo.Name, PRS))
+    if (!pObjArchive->LoadResourceCommonData(PRSData::ArchiveResType, DeArchiveInfo.Name, PRS))
         return {};
 
     PRS.Desc.SRBAllocationGranularity = DeArchiveInfo.SRBAllocationGranularity;
 
     const auto  DevType = GetArchiveDeviceType(DeArchiveInfo.pDevice);
-    const auto& Data    = pArchive->GetDeviceSpecificData(PRSData::ArchiveResType, DeArchiveInfo.Name, DevType);
+    const auto& Data    = pObjArchive->GetDeviceSpecificData(PRSData::ArchiveResType, DeArchiveInfo.Name, DevType);
     if (!Data)
         return {};
 
     Serializer<SerializerMode::Read> Ser{Data};
 
     bool SpecialDesc = false;
-    Ser(SpecialDesc);
+    if (!Ser(SpecialDesc))
+    {
+        LOG_ERROR_MESSAGE("Failed to deserialize SpecialDesc flag. Archive file may be corrupted or invalid.");
+        return {};
+    }
+
     if (SpecialDesc)
     {
         // The signature uses a special description that differs from the common
         const auto* Name = PRS.Desc.Name;
         PRS.Desc         = {};
-        PRS.Deserialize(Name, Ser);
+        if (!PRS.Deserialize(Name, Ser))
+        {
+            LOG_ERROR_MESSAGE("Failed to deserialize PRS description. Archive file may be corrupted or invalid.");
+            return {};
+        }
     }
 
     typename PRSSerializerType::InternalDataType InternalData;
-    PRSSerializerType::SerializeInternalData(Ser, InternalData, &PRS.Allocator);
+    if (!PRSSerializerType::SerializeInternalData(Ser, InternalData, &PRS.Allocator))
+    {
+        LOG_ERROR_MESSAGE("Failed to deserialize PRS internal data. Archive file may be corrupted or invalid.");
+        return {};
+    }
     VERIFY_EXPR(Ser.IsEnded());
 
     auto* pRenderDevice = ClassPtrCast<RenderDeviceImplType>(DeArchiveInfo.pDevice);

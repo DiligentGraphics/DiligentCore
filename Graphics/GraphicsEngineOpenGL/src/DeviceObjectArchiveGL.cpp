@@ -33,16 +33,20 @@ namespace Diligent
 {
 
 template <SerializerMode Mode>
-void PRSSerializerGL<Mode>::SerializeInternalData(
+bool PRSSerializerGL<Mode>::SerializeInternalData(
     Serializer<Mode>&                                   Ser,
     ConstQual<PipelineResourceSignatureInternalDataGL>& InternalData,
     DynamicLinearAllocator*                             Allocator)
 {
-    PRSSerializer<Mode>::SerializeInternalData(Ser, InternalData, Allocator);
+    if (!PRSSerializer<Mode>::SerializeInternalData(Ser, InternalData, Allocator))
+        return false;
 
-    Ser.SerializeArrayRaw(Allocator, InternalData.pResourceAttribs, InternalData.NumResources);
+    if (!Ser.SerializeArrayRaw(Allocator, InternalData.pResourceAttribs, InternalData.NumResources))
+        return false;
 
     ASSERT_SIZEOF64(InternalData, 48, "Did you add a new member to PipelineResourceSignatureInternalDataGL? Please add serialization here.");
+
+    return true;
 }
 
 template struct PRSSerializerGL<SerializerMode::Read>;

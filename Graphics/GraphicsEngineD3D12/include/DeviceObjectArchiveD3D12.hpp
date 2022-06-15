@@ -43,7 +43,7 @@ struct PRSSerializerD3D12 : PRSSerializer<Mode>
 
     using InternalDataType = PipelineResourceSignatureInternalDataD3D12;
 
-    static void SerializeInternalData(Serializer<Mode>&            Ser,
+    static bool SerializeInternalData(Serializer<Mode>&            Ser,
                                       ConstQual<InternalDataType>& InternalData,
                                       DynamicLinearAllocator*      Allocator);
 };

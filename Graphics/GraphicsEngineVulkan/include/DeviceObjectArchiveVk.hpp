@@ -43,7 +43,7 @@ struct PRSSerializerVk : PRSSerializer<Mode>
 
     using InternalDataType = PipelineResourceSignatureInternalDataVk;
 
-    static void SerializeInternalData(Serializer<Mode>&            Ser,
+    static bool SerializeInternalData(Serializer<Mode>&            Ser,
                                       ConstQual<InternalDataType>& InternalData,
                                       DynamicLinearAllocator*      Allocator);
 };
