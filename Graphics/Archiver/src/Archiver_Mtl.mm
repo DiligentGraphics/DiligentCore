@@ -551,7 +551,7 @@ void SerializationDeviceImpl::GetPipelineResourceBindingsMtl(const PipelineResou
         const auto* pSerPRS = ClassPtrCast<SerializedResourceSignatureImpl>(Info.ppResourceSignatures[i]);
         const auto& Desc    = pSerPRS->GetDesc();
 
-        Signatures[Desc.BindingIndex] = pSerPRS->GetDeviceSignature<PipelineResourceSignatureMtlImpl>(DeviceObjectArchiveBase::DeviceType::Metal_MacOS);
+        Signatures[Desc.BindingIndex] = pSerPRS->GetDeviceSignature<PipelineResourceSignatureMtlImpl>(DeviceObjectArchive::DeviceType::Metal_MacOS);
         SignaturesCount               = std::max(SignaturesCount, static_cast<Uint32>(Desc.BindingIndex) + 1);
     }
 
