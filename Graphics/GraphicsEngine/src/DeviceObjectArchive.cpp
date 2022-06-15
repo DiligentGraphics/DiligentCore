@@ -257,13 +257,13 @@ const char* ResourceTypeToString(DeviceObjectArchive::ResourceType Type)
 } // namespace
 
 
-DeviceObjectArchive::DeviceObjectArchive(IDataBlob* pData) noexcept(false) :
-    m_pArchiveData{pData}
+DeviceObjectArchive::DeviceObjectArchive(const IDataBlob* pData) noexcept(false) :
+    m_pArchiveData{const_cast<IDataBlob*>(pData)} // Need to remove const for AddRef/Release
 {
-    if (!m_pArchiveData)
+    if (pData == nullptr)
         LOG_ERROR_AND_THROW("pArchive must not be null");
 
-    Deserialize(m_pArchiveData->GetConstDataPtr(), StaticCast<size_t>(m_pArchiveData->GetSize()));
+    Deserialize(pData->GetConstDataPtr(), StaticCast<size_t>(pData->GetSize()));
 }
 
 const SerializedData& DeviceObjectArchive::GetDeviceSpecificData(ResourceType Type,

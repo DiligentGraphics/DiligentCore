@@ -186,7 +186,7 @@ public:
 
 public:
     /// Initializes a new device object archive from pData.
-    DeviceObjectArchive(IDataBlob* pData) noexcept(false);
+    DeviceObjectArchive(const IDataBlob* pData) noexcept(false);
 
     /// Initializes an empty archive.
     DeviceObjectArchive() noexcept;

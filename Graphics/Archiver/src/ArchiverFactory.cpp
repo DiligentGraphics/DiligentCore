@@ -105,12 +105,31 @@ public:
         return const_cast<IReferenceCounters*>(static_cast<const IReferenceCounters*>(&m_RefCounters));
     }
 
-    virtual void DILIGENT_CALL_TYPE CreateArchiver(ISerializationDevice* pDevice, IArchiver** ppArchiver) override final;
-    virtual void DILIGENT_CALL_TYPE CreateSerializationDevice(const SerializationDeviceCreateInfo& CreateInfo, ISerializationDevice** ppDevice) override final;
-    virtual void DILIGENT_CALL_TYPE CreateDefaultShaderSourceStreamFactory(const Char* SearchDirectories, struct IShaderSourceInputStreamFactory** ppShaderSourceFactory) const override final;
-    virtual Bool DILIGENT_CALL_TYPE RemoveDeviceData(IDataBlob* pSrcArchive, ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags, IDataBlob** ppDstArchive) const override final;
-    virtual Bool DILIGENT_CALL_TYPE AppendDeviceData(IDataBlob* pSrcArchive, ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags, IDataBlob* pDeviceArchive, IDataBlob** ppDstArchive) const override final;
-    virtual Bool DILIGENT_CALL_TYPE PrintArchiveContent(IDataBlob* pArchive) const override final;
+    virtual void DILIGENT_CALL_TYPE CreateArchiver(
+        ISerializationDevice* pDevice,
+        IArchiver**           ppArchiver) override final;
+
+    virtual void DILIGENT_CALL_TYPE CreateSerializationDevice(
+        const SerializationDeviceCreateInfo& CreateInfo,
+        ISerializationDevice**               ppDevice) override final;
+
+    virtual void DILIGENT_CALL_TYPE CreateDefaultShaderSourceStreamFactory(
+        const Char*                              SearchDirectories,
+        struct IShaderSourceInputStreamFactory** ppShaderSourceFactory) const override final;
+
+    virtual Bool DILIGENT_CALL_TYPE RemoveDeviceData(
+        const IDataBlob*          pSrcArchive,
+        ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags,
+        IDataBlob**               ppDstArchive) const override final;
+
+    virtual Bool DILIGENT_CALL_TYPE AppendDeviceData(
+        const IDataBlob*          pSrcArchive,
+        ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags,
+        const IDataBlob*          pDeviceArchive,
+        IDataBlob**               ppDstArchive) const override final;
+
+    virtual Bool DILIGENT_CALL_TYPE PrintArchiveContent(const IDataBlob* pArchive) const override final;
+
     virtual void DILIGENT_CALL_TYPE SetMessageCallback(DebugMessageCallbackType MessageCallback) const override final;
 
 private:
@@ -178,7 +197,9 @@ void ArchiverFactoryImpl::CreateDefaultShaderSourceStreamFactory(const Char* Sea
     Diligent::CreateDefaultShaderSourceStreamFactory(SearchDirectories, ppShaderSourceFactory);
 }
 
-Bool ArchiverFactoryImpl::RemoveDeviceData(IDataBlob* pSrcArchive, ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags, IDataBlob** ppDstArchive) const
+Bool ArchiverFactoryImpl::RemoveDeviceData(const IDataBlob*          pSrcArchive,
+                                           ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags,
+                                           IDataBlob**               ppDstArchive) const
 {
     DEV_CHECK_ERR(pSrcArchive != nullptr, "pSrcArchive must not be null");
     DEV_CHECK_ERR(ppDstArchive != nullptr, "ppDstArchive must not be null");
@@ -208,7 +229,10 @@ Bool ArchiverFactoryImpl::RemoveDeviceData(IDataBlob* pSrcArchive, ARCHIVE_DEVIC
     }
 }
 
-Bool ArchiverFactoryImpl::AppendDeviceData(IDataBlob* pSrcArchive, ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags, IDataBlob* pDeviceArchive, IDataBlob** ppDstArchive) const
+Bool ArchiverFactoryImpl::AppendDeviceData(const IDataBlob*          pSrcArchive,
+                                           ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags,
+                                           const IDataBlob*          pDeviceArchive,
+                                           IDataBlob**               ppDstArchive) const
 {
     DEV_CHECK_ERR(pSrcArchive != nullptr, "pSrcArchive must not be null");
     DEV_CHECK_ERR(pDeviceArchive != nullptr, "pDeviceArchive must not be null");
@@ -240,7 +264,7 @@ Bool ArchiverFactoryImpl::AppendDeviceData(IDataBlob* pSrcArchive, ARCHIVE_DEVIC
     }
 }
 
-Bool ArchiverFactoryImpl::PrintArchiveContent(IDataBlob* pArchive) const
+Bool ArchiverFactoryImpl::PrintArchiveContent(const IDataBlob* pArchive) const
 {
     try
     {

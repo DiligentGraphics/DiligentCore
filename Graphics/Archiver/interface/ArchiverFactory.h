@@ -233,7 +233,7 @@ DILIGENT_BEGIN_INTERFACE(IArchiverFactory, IObject)
     /// \param [in]  DeviceFlags  - Combination of device types that will be removed.
     /// \param [out] ppDstArchive - Memory address where a pointer to the new archive will be written.
     VIRTUAL Bool METHOD(RemoveDeviceData)(THIS_
-                                          IDataBlob*                pSrcArchive,
+                                          const IDataBlob*          pSrcArchive,
                                           ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags,
                                           IDataBlob**               ppDstArchive) CONST PURE;
 
@@ -245,14 +245,14 @@ DILIGENT_BEGIN_INTERFACE(IArchiverFactory, IObject)
     /// \param [in]  pDeviceArchive - Archive that contains the same common data and additional device-specific data.
     /// \param [out] ppDstArchive   - Memory address where a pointer to the new archive will be written.
     VIRTUAL Bool METHOD(AppendDeviceData)(THIS_
-                                          IDataBlob*                pSrcArchive,
+                                          const IDataBlob*          pSrcArchive,
                                           ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags,
-                                          IDataBlob*                pDeviceArchive,
+                                          const IDataBlob*          pDeviceArchive,
                                           IDataBlob**               ppDstArchive) CONST PURE;
 
     /// Prints archive content for debugging and validation.
     VIRTUAL Bool METHOD(PrintArchiveContent)(THIS_
-                                             IDataBlob* pArchive) CONST PURE;
+                                             const IDataBlob* pArchive) CONST PURE;
 
     /// Sets a user-provided debug message callback.
 
