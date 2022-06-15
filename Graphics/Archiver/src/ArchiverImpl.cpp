@@ -30,8 +30,6 @@
 #include <vector>
 
 #include "PSOSerializer.hpp"
-#include "DataBlobImpl.hpp"
-#include "MemoryFileStream.hpp"
 
 namespace Diligent
 {
@@ -76,27 +74,7 @@ Bool ArchiverImpl::SerializeToBlob(IDataBlob** ppBlob)
     if (ppBlob == nullptr)
         return false;
 
-    *ppBlob = nullptr;
-
-    auto pDataBlob  = DataBlobImpl::Create();
-    auto pMemStream = MemoryFileStream::Create(pDataBlob);
-
-    if (!SerializeToStream(pMemStream))
-        return false;
-
-    pDataBlob->QueryInterface(IID_DataBlob, reinterpret_cast<IObject**>(ppBlob));
-    return true;
-}
-
-Bool ArchiverImpl::SerializeToStream(IFileStream* pStream)
-{
-    DEV_CHECK_ERR(pStream != nullptr, "pStream must not be null");
-    if (pStream == nullptr)
-        return false;
-
     DeviceObjectArchive Archive;
-
-    auto& Allocator = GetRawAllocator();
 
     // Add pipelines and shaders
     {
@@ -114,7 +92,8 @@ Bool ArchiverImpl::SerializeToStream(IFileStream* pStream)
 
             auto& DstData = Archive.GetResourceData(ResType, Name);
             // Add PSO common data
-            DstData.Common = SrcData.Common.MakeCopy(Allocator);
+            // NB: since the Archive object is temporary, we do not need to copy the data
+            DstData.Common = SerializedData{SrcData.Common.Ptr(), SrcData.Common.Size()};
 
             // Add shaders for each device type, if present
             for (size_t device_type = 0; device_type < SrcData.Shaders.size(); ++device_type)
@@ -135,19 +114,19 @@ Bool ArchiverImpl::SerializeToStream(IFileStream* pStream)
                     if (it_inserted.second)
                     {
                         // New byte code - add it
-                        DstShaders.emplace_back(SrcShader.Data.MakeCopy(Allocator));
+                        DstShaders.emplace_back(SrcShader.Data.Ptr(), SrcShader.Data.Size());
                     }
                     ShaderIndices.emplace_back(it_inserted.first->second);
                 }
 
-                DeviceObjectArchive::ShaderIndexArray Indices{ShaderIndices.data(), static_cast<Uint32>(ShaderIndices.size())};
+                DeviceObjectArchive::ShaderIndexArray Indices{ShaderIndices.data(), StaticCast<Uint32>(ShaderIndices.size())};
 
                 // For pipelines, device specific data is the shader indices
                 auto& SerializedIndices = DstData.DeviceSpecific[device_type];
 
                 Serializer<SerializerMode::Measure> MeasureSer;
                 PSOSerializer<SerializerMode::Measure>::SerializeShaderIndices(MeasureSer, Indices, nullptr);
-                SerializedIndices = MeasureSer.AllocateData(Allocator);
+                SerializedIndices = MeasureSer.AllocateData(GetRawAllocator());
 
                 Serializer<SerializerMode::Write> Ser{SerializedIndices};
                 PSOSerializer<SerializerMode::Write>::SerializeShaderIndices(Ser, Indices, nullptr);
@@ -162,14 +141,16 @@ Bool ArchiverImpl::SerializeToStream(IFileStream* pStream)
         const auto* Name    = sign_it.first.GetStr();
         const auto& SrcSign = *sign_it.second;
         VERIFY_EXPR(SafeStrEqual(Name, SrcSign.GetDesc().Name));
+        const auto& SrcCommonData = SrcSign.GetCommonData();
 
-        auto& DstData  = Archive.GetResourceData(ResourceType::ResourceSignature, Name);
-        DstData.Common = SrcSign.GetCommonData().MakeCopy(Allocator);
+        auto& DstData = Archive.GetResourceData(ResourceType::ResourceSignature, Name);
+        // NB: since the Archive object is temporary, we do not need to copy the data
+        DstData.Common = SerializedData{SrcCommonData.Ptr(), SrcCommonData.Size()};
 
         for (size_t device_type = 0; device_type < static_cast<size_t>(DeviceType::Count); ++device_type)
         {
             if (const auto* pMem = SrcSign.GetDeviceData(static_cast<DeviceType>(device_type)))
-                DstData.DeviceSpecific[device_type] = pMem->MakeCopy(Allocator);
+                DstData.DeviceSpecific[device_type] = SerializedData{pMem->Ptr(), pMem->Size()};
         }
     }
 
@@ -179,15 +160,31 @@ Bool ArchiverImpl::SerializeToStream(IFileStream* pStream)
         const auto* Name  = rp_it.first.GetStr();
         const auto& SrcRP = *rp_it.second;
         VERIFY_EXPR(SafeStrEqual(Name, SrcRP.GetDesc().Name));
+        const auto& SrcData = SrcRP.GetCommonData();
 
         auto& DstData  = Archive.GetResourceData(ResourceType::RenderPass, Name);
-        DstData.Common = SrcRP.GetCommonData().MakeCopy(Allocator);
+        DstData.Common = SerializedData{SrcData.Ptr(), SrcData.Size()};
     }
 
-    Archive.Serialize(pStream);
+    Archive.Serialize(ppBlob);
 
-    return true;
+    return *ppBlob != nullptr;
 }
+
+
+Bool ArchiverImpl::SerializeToStream(IFileStream* pStream)
+{
+    DEV_CHECK_ERR(pStream != nullptr, "pStream must not be null");
+    if (pStream == nullptr)
+        return false;
+
+    RefCntAutoPtr<IDataBlob> pDataBlob;
+    if (!SerializeToBlob(&pDataBlob))
+        return false;
+
+    return pStream->Write(pDataBlob->GetConstDataPtr(), pDataBlob->GetSize());
+}
+
 
 bool ArchiverImpl::AddPipelineResourceSignature(IPipelineResourceSignature* pPRS)
 {

@@ -1,5 +1,7 @@
 # Current progress
 
+* Refactored archiver API (removed `IDeviceObjectArchive` and `IArchive`; enabled dearchiver
+  to load multiple archives to allow storing signatures and pipelines separately) (API252003)
 * Added `SET_SHADER_RESOURCES_FLAGS` enum and `Flags` parameter to `IShaderResourceVariable::Set`
   and `IShaderResourceVariable::SetArray` methods (API252002)
 * Added primitive topologies with adjacency (API252001)
