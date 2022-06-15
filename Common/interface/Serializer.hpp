@@ -44,7 +44,7 @@ namespace Diligent
 class SerializedData
 {
 public:
-    SerializedData() {}
+    SerializedData() noexcept {}
 
     SerializedData(void* pData, size_t Size) noexcept;
 
@@ -356,14 +356,15 @@ template <>
 template <typename T>
 typename Serializer<SerializerMode::Read>::TEnableStr<T> Serializer<SerializerMode::Read>::Serialize(CharPtr Str)
 {
-    Uint32 Length = 0;
-    if (!Serialize<Uint32>(Length))
+    Uint32 LenWithNull = 0;
+    if (!Serialize<Uint32>(LenWithNull))
         return false;
 
-    CHECK_REMAINING_SIZE(Length, "Note enough data to read ", Length, " characters.");
+    CHECK_REMAINING_SIZE(LenWithNull, "Note enough data to read ", LenWithNull, " characters.");
 
-    Str = Length > 1 ? reinterpret_cast<const char*>(m_Ptr) : "";
-    m_Ptr += Length;
+    Str = LenWithNull > 1 ? reinterpret_cast<const char*>(m_Ptr) : "";
+    VERIFY_EXPR(Str[0] == '\0' || strlen(Str) < LenWithNull);
+    m_Ptr += LenWithNull;
     return true;
 }
 
@@ -372,11 +373,11 @@ template <typename T>
 typename Serializer<Mode>::template TEnableStr<T> Serializer<Mode>::Serialize(CharPtr Str)
 {
     static_assert(Mode == SerializerMode::Write || Mode == SerializerMode::Measure, "Unexpected mode");
-    const Uint32 Length = static_cast<Uint32>((Str != nullptr && *Str != 0) ? strlen(Str) + 1 : 0);
-    if (!Serialize<Uint32>(Length))
+    const Uint32 LenWithNull = static_cast<Uint32>((Str != nullptr && Str[0] != '\0') ? strlen(Str) + 1 : 0);
+    if (!Serialize<Uint32>(LenWithNull))
         return false;
 
-    return Copy(Str, Length);
+    return Copy(Str, LenWithNull);
 }
 
 

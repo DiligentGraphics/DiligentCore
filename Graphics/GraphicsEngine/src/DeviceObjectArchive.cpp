@@ -26,19 +26,95 @@
 
 #include "DeviceObjectArchive.hpp"
 
-#include <bitset>
-#include <unordered_set>
-#include <algorithm>
-#include <set>
 #include <algorithm>
 #include <sstream>
 
-#include "DebugUtilities.hpp"
-#include "PSOSerializer.hpp"
+#include "EngineMemory.h"
 #include "DataBlobImpl.hpp"
 
 namespace Diligent
 {
+
+DeviceObjectArchive::ArchiveHeader::ArchiveHeader() noexcept
+{
+#ifdef DILIGENT_CORE_COMMIT_HASH
+    GitHash = DILIGENT_CORE_COMMIT_HASH;
+#endif
+}
+
+namespace
+{
+
+template <SerializerMode Mode>
+struct ArchiveSerializer
+{
+    Serializer<Mode>& Ser;
+
+    template <typename T>
+    using ConstQual = typename Serializer<Mode>::template ConstQual<T>;
+
+    using ArchiveHeader = DeviceObjectArchive::ArchiveHeader;
+    using ResourceData  = DeviceObjectArchive::ResourceData;
+    using ShadersVector = std::vector<SerializedData>;
+
+    bool SerializeHeader(ConstQual<ArchiveHeader>& Header) const
+    {
+        return Ser(Header.MagicNumber, Header.Version, Header.APIVersion, Header.GitHash);
+    }
+
+    bool SerializeResourceData(ConstQual<ResourceData>& ResData) const
+    {
+        if (!Ser.Serialize(ResData.Common))
+            return true;
+
+        for (auto& DevData : ResData.DeviceSpecific)
+        {
+            if (!Ser.Serialize(DevData))
+                return false;
+        }
+
+        return true;
+    }
+
+    bool SerializeShaders(ConstQual<ShadersVector>& Shaders) const;
+};
+
+template <SerializerMode Mode>
+bool ArchiveSerializer<Mode>::SerializeShaders(ConstQual<ShadersVector>& Shaders) const
+{
+    static_assert(Mode == SerializerMode::Measure || Mode == SerializerMode::Write, "Measure or Write mode is expected.");
+
+    Uint32 NumShaders = static_cast<Uint32>(Shaders.size());
+    if (!Ser(NumShaders))
+        return false;
+
+    for (const auto& Shader : Shaders)
+    {
+        if (!Ser.Serialize(Shader))
+            return false;
+    }
+
+    return true;
+}
+
+template <>
+bool ArchiveSerializer<SerializerMode::Read>::SerializeShaders(ShadersVector& Shaders) const
+{
+    Uint32 NumShaders = 0;
+    if (!Ser(NumShaders))
+        return false;
+
+    Shaders.resize(NumShaders);
+    for (auto& Shader : Shaders)
+    {
+        if (!Ser.Serialize(Shader))
+            return false;
+    }
+
+    return true;
+}
+
+} // namespace
 
 DeviceObjectArchive::DeviceObjectArchive() noexcept
 {
@@ -46,53 +122,43 @@ DeviceObjectArchive::DeviceObjectArchive() noexcept
 
 void DeviceObjectArchive::Deserialize(const void* pData, size_t Size) noexcept(false)
 {
-    Serializer<SerializerMode::Read> Reader{SerializedData{const_cast<void*>(pData), Size}};
+    Serializer<SerializerMode::Read>        Reader{SerializedData{const_cast<void*>(pData), Size}};
+    ArchiveSerializer<SerializerMode::Read> ArchiveReader{Reader};
 
     ArchiveHeader Header;
-    if (!Reader(Header.MagicNumber, Header.Version, Header.APIVersion, Header.GitHash))
-        LOG_ERROR_AND_THROW("Failed to read archive header");
+    if (!ArchiveReader.SerializeHeader(Header))
+        LOG_ERROR_AND_THROW("Failed to read device object archive header.");
 
     if (Header.MagicNumber != HeaderMagicNumber)
-        LOG_ERROR_AND_THROW("Invalid archive header");
+        LOG_ERROR_AND_THROW("Invalid device object archive header.");
 
     if (Header.Version != ArchiveVersion)
-        LOG_ERROR_AND_THROW("Unsupported archive version: ", Header.Version, ". Expected version: ", Uint32{ArchiveVersion});
+        LOG_ERROR_AND_THROW("Unsupported device object archive version: ", Header.Version, ". Expected version: ", Uint32{ArchiveVersion});
 
     Uint32 NumResources = 0;
     if (!Reader(NumResources))
-        LOG_ERROR_AND_THROW("Failed to read the number of named resources");
+        LOG_ERROR_AND_THROW("Failed to read the number of named resources in the device object archive.");
 
     for (Uint32 res = 0; res < NumResources; ++res)
     {
         const char*  Name    = nullptr;
         ResourceType ResType = ResourceType::Undefined;
         if (!Reader(ResType, Name))
-            LOG_ERROR_AND_THROW("Failed to read resource name");
+            LOG_ERROR_AND_THROW("Failed to read the type and name of resource ", res, "/", NumResources, '.');
         VERIFY_EXPR(Name != nullptr);
 
-        auto& ResData = m_NamedResources[NamedResourceKey{ResType, Name}];
+        // No need to make the name copy as we keep the source data blob alive.
+        constexpr auto MakeNameCopy = false;
+        auto&          ResData      = m_NamedResources[NamedResourceKey{ResType, Name, MakeNameCopy}];
 
-        if (!Reader.Serialize(ResData.Common))
-            LOG_ERROR_AND_THROW("Failed to read common data of resource '", Name, "'.");
-
-        for (auto& DevData : ResData.DeviceSpecific)
-        {
-            if (!Reader.Serialize(DevData))
-                LOG_ERROR_AND_THROW("Failed to read device-specific data of resource '", Name, "'.");
-        }
+        if (!ArchiveReader.SerializeResourceData(ResData))
+            LOG_ERROR_AND_THROW("Failed to read data of resource '", Name, "'.");
     }
 
     for (auto& Shaders : m_DeviceShaders)
     {
-        Uint32 NumShaders = 0;
-        if (!Reader(NumShaders))
-            LOG_ERROR_AND_THROW("Failed to read the number of shaders");
-        Shaders.resize(NumShaders);
-        for (auto& Shader : Shaders)
-        {
-            if (!Reader.Serialize(Shader))
-                LOG_ERROR_AND_THROW("Failed to read shader data");
-        }
+        if (!ArchiveReader.SerializeShaders(Shaders))
+            LOG_ERROR_AND_THROW("Failed to read shader data from the device object archive.");
     }
 }
 
@@ -102,48 +168,45 @@ void DeviceObjectArchive::Serialize(IDataBlob** ppDataBlob) const
     DEV_CHECK_ERR(*ppDataBlob == nullptr, "Data blob object must be null");
 
     auto SerializeThis = [this](auto& Ser) {
-        ArchiveHeader Header;
-        Ser(Header.MagicNumber, Header.Version, Header.APIVersion);
+        constexpr auto SerMode    = std::remove_reference<decltype(Ser)>::type::GetMode();
+        const auto     ArchiveSer = ArchiveSerializer<SerMode>{Ser};
 
-        const char* GitHash = nullptr;
-#ifdef DILIGENT_CORE_COMMIT_HASH
-        GitHash = DILIGENT_CORE_COMMIT_HASH;
-#endif
-        Ser(GitHash);
+        auto res = ArchiveSer.SerializeHeader(ArchiveHeader{});
+        VERIFY(res, "Failed to serialize header");
 
-        Uint32 NumResources = static_cast<Uint32>(m_NamedResources.size());
-        Ser(NumResources);
+        Uint32 NumResources = StaticCast<Uint32>(m_NamedResources.size());
+        res                 = Ser(NumResources);
+        VERIFY(res, "Failed to serialize the number of resources");
 
         for (const auto& res_it : m_NamedResources)
         {
             const auto* Name    = res_it.first.GetName();
             const auto  ResType = res_it.first.GetType();
-            Ser(ResType, Name);
-            Ser.Serialize(res_it.second.Common);
-            for (const auto& DevData : res_it.second.DeviceSpecific)
-                Ser.Serialize(DevData);
+
+            res = Ser(ResType, Name);
+            VERIFY(res, "Failed to serialize resource type and name");
+
+            res = ArchiveSer.SerializeResourceData(res_it.second);
+            VERIFY(res, "Failed to serialize resource data");
         }
 
         for (auto& Shaders : m_DeviceShaders)
         {
-            Uint32 NumShaders = static_cast<Uint32>(Shaders.size());
-            Ser(NumShaders);
-            for (const auto& Shader : Shaders)
-                Ser.Serialize(Shader);
+            res = ArchiveSer.SerializeShaders(Shaders);
+            VERIFY(res, "Failed to serialize shaders");
         }
     };
 
     Serializer<SerializerMode::Measure> Measurer;
     SerializeThis(Measurer);
 
-    auto SerializedData = Measurer.AllocateData(GetRawAllocator());
+    auto pDataBlob = DataBlobImpl::Create(Measurer.GetSize());
 
-    Serializer<SerializerMode::Write> Writer{SerializedData};
+    Serializer<SerializerMode::Write> Writer{SerializedData{pDataBlob->GetDataPtr(), pDataBlob->GetSize()}};
     SerializeThis(Writer);
     VERIFY_EXPR(Writer.IsEnded());
 
-    auto pDataBlob = DataBlobImpl::Create(SerializedData.Size(), SerializedData.Ptr());
-    *ppDataBlob    = pDataBlob.Detach();
+    *ppDataBlob = pDataBlob.Detach();
 }
 
 
@@ -161,50 +224,18 @@ const char* ArchiveDeviceTypeToString(Uint32 dev)
         case DeviceType::Direct3D11:  return "Direct3D11";
         case DeviceType::Direct3D12:  return "Direct3D12";
         case DeviceType::Vulkan:      return "Vulkan";
-        case DeviceType::Metal_iOS:   return "Metal for iOS";
         case DeviceType::Metal_MacOS: return "Metal for MacOS";
-        // clang-format on
-        default: return "unknown";
-    }
-}
-
-} // namespace
-
-
-DeviceObjectArchive::DeviceObjectArchive(IDataBlob* pArchive) noexcept(false) :
-    m_pRawData{pArchive}
-{
-    if (!m_pRawData)
-        LOG_ERROR_AND_THROW("pArchive must not be null");
-
-    Deserialize(m_pRawData->GetConstDataPtr(), StaticCast<size_t>(pArchive->GetSize()));
-}
-
-DeviceObjectArchive::DeviceType DeviceObjectArchive::RenderDeviceTypeToArchiveDeviceType(RENDER_DEVICE_TYPE Type)
-{
-    static_assert(RENDER_DEVICE_TYPE_COUNT == 7, "Did you add a new render device type? Please handle it here.");
-    switch (Type)
-    {
-        // clang-format off
-        case RENDER_DEVICE_TYPE_D3D11:  return DeviceObjectArchive::DeviceType::Direct3D11;
-        case RENDER_DEVICE_TYPE_D3D12:  return DeviceObjectArchive::DeviceType::Direct3D12;
-        case RENDER_DEVICE_TYPE_GL:     return DeviceObjectArchive::DeviceType::OpenGL;
-        case RENDER_DEVICE_TYPE_GLES:   return DeviceObjectArchive::DeviceType::OpenGL;
-        case RENDER_DEVICE_TYPE_VULKAN: return DeviceObjectArchive::DeviceType::Vulkan;
-#if PLATFORM_MACOS
-        case RENDER_DEVICE_TYPE_METAL:  return DeviceObjectArchive::DeviceType::Metal_MacOS;
-#elif PLATFORM_IOS || PLATFORM_TVOS
-        case RENDER_DEVICE_TYPE_METAL:  return DeviceObjectArchive::DeviceType::Metal_iOS;
-#endif
+        case DeviceType::Metal_iOS:   return "Metal for iOS";
         // clang-format on
         default:
             UNEXPECTED("Unexpected device type");
-            return DeviceObjectArchive::DeviceType::Count;
+            return "unknown";
     }
 }
 
-const char* DeviceObjectArchive::ResourceTypeToString(ResourceType Type)
+const char* ResourceTypeToString(DeviceObjectArchive::ResourceType Type)
 {
+    using ResourceType = DeviceObjectArchive::ResourceType;
     static_assert(static_cast<size_t>(ResourceType::Count) == 7, "Please handle the new chunk type below");
     switch (Type)
     {
@@ -223,6 +254,18 @@ const char* DeviceObjectArchive::ResourceTypeToString(ResourceType Type)
     }
 }
 
+} // namespace
+
+
+DeviceObjectArchive::DeviceObjectArchive(IDataBlob* pData) noexcept(false) :
+    m_pArchiveData{pData}
+{
+    if (!m_pArchiveData)
+        LOG_ERROR_AND_THROW("pArchive must not be null");
+
+    Deserialize(m_pArchiveData->GetConstDataPtr(), StaticCast<size_t>(m_pArchiveData->GetSize()));
+}
+
 const SerializedData& DeviceObjectArchive::GetDeviceSpecificData(ResourceType Type,
                                                                  const char*  Name,
                                                                  DeviceType   DevType) const noexcept
@@ -230,7 +273,6 @@ const SerializedData& DeviceObjectArchive::GetDeviceSpecificData(ResourceType Ty
     auto it = m_NamedResources.find(NamedResourceKey{Type, Name});
     if (it == m_NamedResources.end())
     {
-        ;
         LOG_ERROR_MESSAGE("Resource '", Name, "' is not present in the archive");
         static const SerializedData NullData;
         return NullData;
@@ -280,6 +322,7 @@ std::string DeviceObjectArchive::ToString() const
         {
             ResourcesByType[static_cast<size_t>(it.first.GetType())].emplace_back(it);
         }
+
         for (const auto& Resources : ResourcesByType)
         {
             if (Resources.empty())
@@ -288,11 +331,15 @@ std::string DeviceObjectArchive::ToString() const
             const auto ResType = Resources.front().get().first.GetType();
             Output << SeparatorLine
                    << ResourceTypeToString(ResType) << " (" << Resources.size() << ")\n";
+            // ------------------
+            // Resource Signatures (1)
 
             for (const auto& res_ref : Resources)
             {
                 const auto& it = res_ref.get();
                 Output << Ident1 << it.first.GetName() << '\n';
+                // ..Test PRS
+
                 const auto& Res = it.second;
 
                 auto   MaxSize       = Res.Common.Size();
@@ -309,6 +356,7 @@ std::string DeviceObjectArchive::ToString() const
 
                 Output << Ident2 << std::setw(MaxDevNameLen) << std::left << CommonDataName << ' '
                        << std::setw(SizeFieldW) << std::right << Res.Common.Size() << " bytes\n";
+                // ....Common     1015 bytes
 
                 for (Uint32 i = 0; i < Res.DeviceSpecific.size(); ++i)
                 {
@@ -317,6 +365,7 @@ std::string DeviceObjectArchive::ToString() const
                     {
                         Output << Ident2 << std::setw(MaxDevNameLen) << std::left << ArchiveDeviceTypeToString(i) << ' '
                                << std::setw(SizeFieldW) << std::right << DevDataSize << " bytes\n";
+                        // ....OpenGL      729 bytes
                     }
                 }
             }
@@ -345,6 +394,8 @@ std::string DeviceObjectArchive::ToString() const
         {
             Output << SeparatorLine
                    << "Shaders\n";
+            // ------------------
+            // Shaders
 
             for (Uint32 dev = 0; dev < m_DeviceShaders.size(); ++dev)
             {
@@ -352,6 +403,7 @@ std::string DeviceObjectArchive::ToString() const
                 if (Shaders.empty())
                     continue;
                 Output << Ident1 << ArchiveDeviceTypeToString(dev) << '(' << Shaders.size() << ")\n";
+                // ..OpenGL(2)
 
                 size_t MaxSize = 0;
                 for (const auto& Shader : Shaders)
@@ -362,6 +414,7 @@ std::string DeviceObjectArchive::ToString() const
                 {
                     Output << Ident2 << '[' << std::setw(IdxFieldW) << std::right << idx << "] "
                            << std::setw(SizeFieldW) << std::right << Shaders[idx].Size() << " bytes\n";
+                    // ....[0] 4020 bytes
                 }
             }
         }
@@ -397,7 +450,7 @@ void DeviceObjectArchive::AppendDeviceData(const DeviceObjectArchive& Src, Devic
         dst_res_it.second.DeviceSpecific[static_cast<size_t>(Dev)] = SrcData.MakeCopy(Allocator);
     }
 
-    // Copy all shaders
+    // Copy all shaders to make sure PSO shader indices are correct
     const auto& SrcShaders = Src.m_DeviceShaders[static_cast<size_t>(Dev)];
     auto&       DstShaders = m_DeviceShaders[static_cast<size_t>(Dev)];
     DstShaders.clear();
@@ -405,7 +458,7 @@ void DeviceObjectArchive::AppendDeviceData(const DeviceObjectArchive& Src, Devic
         DstShaders.emplace_back(SrcShader.MakeCopy(Allocator));
 }
 
-void DeviceObjectArchive::Serialize(IFileStream* pStream) const noexcept(false)
+void DeviceObjectArchive::Serialize(IFileStream* pStream) const
 {
     DEV_CHECK_ERR(pStream != nullptr, "File stream must not be null");
     RefCntAutoPtr<IDataBlob> pDataBlob;

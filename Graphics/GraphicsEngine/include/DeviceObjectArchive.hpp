@@ -40,6 +40,7 @@
 #include "RefCntAutoPtr.hpp"
 #include "DynamicLinearAllocator.hpp"
 #include "Serializer.hpp"
+#include "DebugUtilities.hpp"
 
 // Device object archive structure:
 //
@@ -69,16 +70,16 @@
 // archive's shader array, e.g.:
 //
 // | PsoX | = |   Type   |   Name   |   Common Data   |   OpenGL data   |    D3D11 data   | ...
-//              GraphPSO   "My PSO"    <Description>        {0, 1}             {1, 2}
+//              Graphics   "My PSO"    <Description>        {0, 1}             {1, 2}
 //                                                                  ____________|  |
 //                                                                 |               |
 //                                                                 V               V
-// | GL Shader 0 | GL Shader 1 |  ... | D3D11 Shader 0 | D3D11 Shader 1 | D3D11 Shader 2 |
+// | GL Shader 0 | GL Shader 1 |  ... | D3D11 Shader 0 | D3D11 Shader 1 | D3D11 Shader 2 | ...
 
 namespace Diligent
 {
 
-/// Device object archive object implementation.
+/// Device object archive object.
 class DeviceObjectArchive
 {
 public:
@@ -95,19 +96,23 @@ public:
 
     using TPRSNames = std::array<const char*, MAX_RESOURCE_SIGNATURES>;
 
+    // Shader indices that identify patched PSO shaders in the archive's shader array.
+    // Every PSO stores a shader index array in each device-sepcific data.
+    // Note that indices may be different for different devices due to patching specifics.
     struct ShaderIndexArray
     {
         const Uint32* pIndices = nullptr;
         Uint32        Count    = 0;
     };
 
-    // Serialized pipeline state auxiliary data
+    // Serialized pipeline state auxiliary data.
     struct SerializedPSOAuxData
     {
         // Shaders have been serialized without the shader reflection information.
         bool NoShaderReflection = false;
     };
 
+    // Archived resource type.
     enum class ResourceType : Uint32
     {
         Undefined = 0,
@@ -125,6 +130,8 @@ public:
 
     struct ArchiveHeader
     {
+        ArchiveHeader() noexcept;
+
         Uint32      MagicNumber = HeaderMagicNumber;
         Uint32      Version     = ArchiveVersion;
         Uint32      APIVersion  = DILIGENT_API_VERSION;
@@ -136,7 +143,7 @@ public:
         // Device-agnostic data (e.g. description)
         SerializedData Common;
 
-        // Device-specific data (e.g. patched shader byte code, device-specific resource signature data, etc.)
+        // Device-specific data (e.g. device-specific resource signature data, PSO shader index array, etc.)
         std::array<SerializedData, static_cast<size_t>(DeviceType::Count)> DeviceSpecific;
     };
 
@@ -178,22 +185,20 @@ public:
     };
 
 public:
-    /// \param pArchive - Source data that this archive will be created from.
-    DeviceObjectArchive(IDataBlob* pArchive) noexcept(false);
+    /// Initializes a new device object archive from pData.
+    DeviceObjectArchive(IDataBlob* pData) noexcept(false);
+
+    /// Initializes an empty archive.
     DeviceObjectArchive() noexcept;
 
     void RemoveDeviceData(DeviceType Dev) noexcept(false);
     void AppendDeviceData(const DeviceObjectArchive& Src, DeviceType Dev) noexcept(false);
 
     void Deserialize(const void* pData, size_t Size) noexcept(false);
-    void Serialize(IFileStream* pStream) const noexcept(false);
+    void Serialize(IFileStream* pStream) const;
     void Serialize(IDataBlob** ppDataBlob) const;
 
     std::string ToString() const;
-
-    static DeviceType RenderDeviceTypeToArchiveDeviceType(RENDER_DEVICE_TYPE Type);
-
-    static const char* ResourceTypeToString(ResourceType Type);
 
     template <typename ReourceDataType>
     bool LoadResourceCommonData(ResourceType     Type,
@@ -223,7 +228,8 @@ public:
 
     ResourceData& GetResourceData(ResourceType Type, const char* Name) noexcept
     {
-        return m_NamedResources[NamedResourceKey{Type, Name, true}];
+        constexpr auto MakeCopy = true;
+        return m_NamedResources[NamedResourceKey{Type, Name, MakeCopy}];
     }
 
     auto& GetDeviceShaders(DeviceType Type) noexcept
@@ -233,7 +239,7 @@ public:
 
     const auto& GetSerializedShader(DeviceType Type, size_t Idx) const noexcept
     {
-        auto& DeviceShaders = m_DeviceShaders[static_cast<size_t>(Type)];
+        const auto& DeviceShaders = m_DeviceShaders[static_cast<size_t>(Type)];
         if (Idx < DeviceShaders.size())
             return DeviceShaders[Idx];
 
@@ -247,11 +253,15 @@ public:
     }
 
 private:
+    // Named resources
     std::unordered_map<NamedResourceKey, ResourceData, NamedResourceKey::Hasher> m_NamedResources;
 
+    // Shaders
     std::array<std::vector<SerializedData>, static_cast<size_t>(DeviceType::Count)> m_DeviceShaders;
 
-    RefCntAutoPtr<IDataBlob> m_pRawData;
+    // Strong reference to the original data blob.
+    // Resources will not make copies and reference this data.
+    RefCntAutoPtr<IDataBlob> m_pArchiveData;
 };
 
 } // namespace Diligent

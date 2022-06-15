@@ -79,6 +79,29 @@ bool VerifyRenderPassUnpackInfo(const RenderPassUnpackInfo& DeArchiveInfo, IRend
     return true;
 }
 
+DeviceObjectArchive::DeviceType RenderDeviceTypeToArchiveDeviceType(RENDER_DEVICE_TYPE Type)
+{
+    static_assert(RENDER_DEVICE_TYPE_COUNT == 7, "Did you add a new render device type? Please handle it here.");
+    switch (Type)
+    {
+        // clang-format off
+        case RENDER_DEVICE_TYPE_D3D11:  return DeviceObjectArchive::DeviceType::Direct3D11;
+        case RENDER_DEVICE_TYPE_D3D12:  return DeviceObjectArchive::DeviceType::Direct3D12;
+        case RENDER_DEVICE_TYPE_GL:     return DeviceObjectArchive::DeviceType::OpenGL;
+        case RENDER_DEVICE_TYPE_GLES:   return DeviceObjectArchive::DeviceType::OpenGL;
+        case RENDER_DEVICE_TYPE_VULKAN: return DeviceObjectArchive::DeviceType::Vulkan;
+#if PLATFORM_MACOS
+        case RENDER_DEVICE_TYPE_METAL:  return DeviceObjectArchive::DeviceType::Metal_MacOS;
+#elif PLATFORM_IOS || PLATFORM_TVOS
+        case RENDER_DEVICE_TYPE_METAL:  return DeviceObjectArchive::DeviceType::Metal_iOS;
+#endif
+        // clang-format on
+        default:
+            UNEXPECTED("Unexpected device type");
+            return DeviceObjectArchive::DeviceType::Count;
+    }
+}
+
 } // namespace
 
 
@@ -86,7 +109,7 @@ DearchiverBase::DeviceType DearchiverBase::GetArchiveDeviceType(const IRenderDev
 {
     VERIFY_EXPR(pDevice != nullptr);
     const auto Type = pDevice->GetDeviceInfo().Type;
-    return DeviceObjectArchive::RenderDeviceTypeToArchiveDeviceType(Type);
+    return RenderDeviceTypeToArchiveDeviceType(Type);
 }
 
 template <typename CreateInfoType>
