@@ -173,7 +173,7 @@ if (MINGW_BUILD)
     target_link_options(Diligent-Archiver-shared PRIVATE LINKER:--version-script=export.map)
 endif()
 
-source_group("source" FILES ${SOURCE})
+source_group("src" FILES ${SOURCE})
 source_group("include" FILES ${INCLUDE})
 source_group("interface" FILES ${INTERFACE})
 source_group("dll" FILES ${DLL_SOURCE})
