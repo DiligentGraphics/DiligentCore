@@ -191,13 +191,6 @@ void DearchiverBase::NamedResourceCache<ResType>::Set(ResourceType Type, const c
 template class DearchiverBase::NamedResourceCache<IPipelineResourceSignature>;
 
 
-// Instantiation is required by UnpackResourceSignatureImpl
-template bool DeviceObjectArchive::LoadResourceCommonData<DearchiverBase::PRSData>(
-    ResourceType             Type,
-    const char*              ResourceName,
-    DearchiverBase::PRSData& ResData) const;
-
-
 bool DearchiverBase::PRSData::Deserialize(const char* Name, Serializer<SerializerMode::Read>& Ser)
 {
     Desc.Name = Name;
