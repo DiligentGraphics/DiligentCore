@@ -121,7 +121,6 @@ DeviceContextVkImpl::DeviceContextVkImpl(IReferenceCounters*       pRefCounters,
     m_vkClearValues.reserve(16);
 
     m_DynamicBufferOffsets.reserve(64);
-    m_DynamicBufferOffsets.resize(1);
 
     CreateASCompactedSizeQueryPool();
 }
@@ -366,6 +365,7 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
 
     BindInfo.vkPipelineLayout = Layout.GetVkPipelineLayout();
 
+    Uint32 TotalDynamicOffsetCount = 0;
     for (Uint32 i = 0; i < SignCount; ++i)
     {
         auto* pSignature = pPipelineStateVk->GetResourceSignature(i);
@@ -378,7 +378,11 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
 
         SetInfo.BaseInd            = Layout.GetFirstDescrSetIndex(pSignature->GetDesc().BindingIndex);
         SetInfo.DynamicOffsetCount = pSignature->GetDynamicOffsetCount();
+        TotalDynamicOffsetCount += SetInfo.DynamicOffsetCount;
     }
+
+    // Reserve space to store all dynamic buffer offsets
+    m_DynamicBufferOffsets.resize(TotalDynamicOffsetCount);
 }
 
 DeviceContextVkImpl::ResourceBindInfo& DeviceContextVkImpl::GetBindInfo(PIPELINE_TYPE Type)
@@ -407,48 +411,65 @@ DeviceContextVkImpl::ResourceBindInfo& DeviceContextVkImpl::GetBindInfo(PIPELINE
 void DeviceContextVkImpl::CommitDescriptorSets(ResourceBindInfo& BindInfo, Uint32 CommitSRBMask)
 {
     VERIFY(CommitSRBMask != 0, "This method should not be called when there is nothing to commit");
-    while (CommitSRBMask != 0)
+
+    const auto FirstSign = PlatformMisc::GetLSB(CommitSRBMask);
+    const auto LastSign  = PlatformMisc::GetMSB(CommitSRBMask);
+    VERIFY_EXPR(LastSign < m_pPipelineState->GetResourceSignatureCount());
+
+    // Bind all descriptor sets in a single BindDescriptorSets call
+    uint32_t   DynamicOffsetCount = 0;
+    uint32_t   TotalSetCount      = 0;
+    const auto FirstSetToBind     = BindInfo.SetInfo[FirstSign].BaseInd;
+    for (Uint32 sign = FirstSign; sign <= LastSign; ++sign)
     {
-        Uint32 sign = PlatformMisc::GetLSB(CommitSRBMask);
-        VERIFY_EXPR(sign < m_pPipelineState->GetResourceSignatureCount());
-        CommitSRBMask &= ~(Uint32{1} << sign);
+        auto& SetInfo = BindInfo.SetInfo[sign];
+        VERIFY(SetInfo.vkSets[0] != VK_NULL_HANDLE || (CommitSRBMask & (1u << sign)) == 0,
+               "At least one descriptor set in the stale SRB must not be NULL. Empty SRBs should not be marked as stale by CommitShaderResources()");
+
+        if (SetInfo.vkSets[0] == VK_NULL_HANDLE)
+        {
+            VERIFY_EXPR(SetInfo.vkSets[1] == VK_NULL_HANDLE);
+            continue;
+        }
+
+        VERIFY_EXPR(SetInfo.BaseInd >= FirstSetToBind + TotalSetCount);
+        while (FirstSetToBind + TotalSetCount < SetInfo.BaseInd)
+            m_DescriptorSets[TotalSetCount++] = VK_NULL_HANDLE;
 
         const auto* pResourceCache = BindInfo.ResourceCaches[sign];
-        DEV_CHECK_ERR(pResourceCache != nullptr, "Resource cache at index ", sign, " is null");
+        DEV_CHECK_ERR(pResourceCache != nullptr, "Resource cache at binding index ", sign, " is null, but corresponding descriptor set is not");
 
-        auto& SetInfo = BindInfo.SetInfo[sign];
-        VERIFY(SetInfo.vkSets[0] != VK_NULL_HANDLE,
-               "At least one descriptor set in the stale SRB must not be NULL. Empty SRBs should not be marked as stale by CommitShaderResources()");
-        const Uint32 SetCount = 1 + (SetInfo.vkSets[1] != VK_NULL_HANDLE ? 1 : 0);
-
-        VERIFY_EXPR(SetCount == pResourceCache->GetNumDescriptorSets());
+        m_DescriptorSets[TotalSetCount++] = SetInfo.vkSets[0];
+        if (SetInfo.vkSets[1] != VK_NULL_HANDLE)
+            m_DescriptorSets[TotalSetCount++] = SetInfo.vkSets[1];
 
         if (SetInfo.DynamicOffsetCount > 0)
         {
             VERIFY(m_DynamicBufferOffsets.size() >= SetInfo.DynamicOffsetCount,
                    "m_DynamicBufferOffsets must've been resized by CommitShaderResources() to have enough space");
 
-            auto NumOffsetsWritten = pResourceCache->GetDynamicBufferOffsets(GetContextId(), m_DynamicBufferOffsets);
+            auto NumOffsetsWritten = pResourceCache->GetDynamicBufferOffsets(GetContextId(), m_DynamicBufferOffsets, DynamicOffsetCount);
             VERIFY_EXPR(NumOffsetsWritten == SetInfo.DynamicOffsetCount);
+            DynamicOffsetCount += SetInfo.DynamicOffsetCount;
         }
-
-        // Note that there is one global dynamic buffer from which all dynamic resources are suballocated in Vulkan back-end,
-        // and this buffer is not resizable, so the buffer handle can never change.
-
-        // vkCmdBindDescriptorSets causes the sets numbered [firstSet .. firstSet+descriptorSetCount-1] to use the
-        // bindings stored in pDescriptorSets[0 .. descriptorSetCount-1] for subsequent rendering commands
-        // (either compute or graphics, according to the pipelineBindPoint). Any bindings that were previously
-        // applied via these sets are no longer valid (13.2.5)
-        VERIFY_EXPR(m_State.vkPipelineBindPoint != VK_PIPELINE_BIND_POINT_MAX_ENUM);
-        m_CommandBuffer.BindDescriptorSets(m_State.vkPipelineBindPoint, BindInfo.vkPipelineLayout, SetInfo.BaseInd, SetCount,
-                                           SetInfo.vkSets.data(), SetInfo.DynamicOffsetCount, m_DynamicBufferOffsets.data());
 
 #ifdef DILIGENT_DEVELOPMENT
         SetInfo.LastBoundBaseInd = SetInfo.BaseInd;
 #endif
     }
 
-    VERIFY_EXPR((CommitSRBMask & BindInfo.ActiveSRBMask) == 0);
+    // Note that there is one global dynamic buffer from which all dynamic resources are suballocated in Vulkan back-end,
+    // and this buffer is not resizable, so the buffer handle can never change.
+
+    // vkCmdBindDescriptorSets causes the sets numbered [firstSet .. firstSet+descriptorSetCount-1] to use the
+    // bindings stored in pDescriptorSets[0 .. descriptorSetCount-1] for subsequent rendering commands
+    // (either compute or graphics, according to the pipelineBindPoint). Any bindings that were previously
+    // applied via these sets are no longer valid.
+    // https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/vkCmdBindDescriptorSets.html
+    VERIFY_EXPR(m_State.vkPipelineBindPoint != VK_PIPELINE_BIND_POINT_MAX_ENUM);
+    m_CommandBuffer.BindDescriptorSets(m_State.vkPipelineBindPoint, BindInfo.vkPipelineLayout, FirstSetToBind, TotalSetCount,
+                                       m_DescriptorSets.data(), DynamicOffsetCount, m_DynamicBufferOffsets.data());
+
     BindInfo.StaleSRBMask &= ~BindInfo.ActiveSRBMask;
 }
 
@@ -575,8 +596,6 @@ void DeviceContextVkImpl::CommitShaderResources(IShaderResourceBinding* pShaderR
     }
 
     VERIFY_EXPR(DSIndex == ResourceCache.GetNumDescriptorSets());
-
-    m_DynamicBufferOffsets.resize(std::max<size_t>(m_DynamicBufferOffsets.size(), pSignature->GetDynamicOffsetCount()));
 }
 
 void DeviceContextVkImpl::SetStencilRef(Uint32 StencilRef)
