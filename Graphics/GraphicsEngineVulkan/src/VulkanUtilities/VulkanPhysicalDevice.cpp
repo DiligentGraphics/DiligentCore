@@ -70,6 +70,11 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice      vkDevice,
         VERIFY_EXPR(ExtensionCount == m_SupportedExtensions.size());
     }
 
+    if (!m_SupportedExtensions.empty())
+    {
+        LOG_INFO_MESSAGE("Supported Vulkan device extensions: ", PrintExtensionsList(m_SupportedExtensions, 3));
+    }
+
     m_VkVersion = std::min(Instance.GetVersion(), m_Properties.apiVersion);
 
     // remove patch version

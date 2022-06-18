@@ -49,6 +49,46 @@
 namespace VulkanUtilities
 {
 
+std::string PrintExtensionsList(const std::vector<VkExtensionProperties>& Extensions, size_t NumColumns)
+{
+    VERIFY_EXPR(NumColumns > 0);
+
+    std::vector<std::string> ExtStrings;
+    ExtStrings.reserve(Extensions.size());
+    for (const auto& Ext : Extensions)
+    {
+        std::stringstream ss;
+        ss << Ext.extensionName << ' '
+           << VK_API_VERSION_MAJOR(Ext.specVersion) << '.'
+           << VK_API_VERSION_MINOR(Ext.specVersion) << '.'
+           << VK_API_VERSION_PATCH(Ext.specVersion);
+        ExtStrings.emplace_back(ss.str());
+    }
+
+    std::vector<size_t> ColWidth(NumColumns);
+    for (size_t i = 0; i < Extensions.size();)
+    {
+        for (size_t col = 0; col < NumColumns && i < Extensions.size(); ++col, ++i)
+        {
+            ColWidth[col] = std::max(ColWidth[col], ExtStrings[i].length());
+        }
+    }
+
+    std::stringstream ss;
+    for (size_t i = 0; i < Extensions.size();)
+    {
+        for (size_t col = 0; col < NumColumns && i < Extensions.size(); ++col, ++i)
+        {
+            ss << (col == 0 ? "\n    " : "    ");
+            if (col + 1 < NumColumns && i + 1 < Extensions.size())
+                ss << std::setw(ColWidth[col]) << std::left;
+            ss << ExtStrings[i];
+        }
+    }
+
+    return ss.str();
+}
+
 bool VulkanInstance::IsLayerAvailable(const char* LayerName, uint32_t& Version) const
 {
     for (const auto& Layer : m_Layers)
@@ -108,6 +148,20 @@ VulkanInstance::VulkanInstance(const CreateInfo& CI) :
         VERIFY_EXPR(LayerCount == m_Layers.size());
     }
 
+    if (!m_Layers.empty())
+    {
+        std::stringstream ss;
+        for (const auto& Layer : m_Layers)
+        {
+            ss << "\n    "
+               << Layer.layerName << ' '
+               << VK_API_VERSION_MAJOR(Layer.specVersion) << '.'
+               << VK_API_VERSION_MINOR(Layer.specVersion) << '.'
+               << VK_API_VERSION_PATCH(Layer.specVersion);
+        }
+        LOG_INFO_MESSAGE("Available Vulkan instance layers: ", ss.str());
+    }
+
     {
         // Enumerate available extensions
         uint32_t ExtensionCount = 0;
@@ -118,6 +172,11 @@ VulkanInstance::VulkanInstance(const CreateInfo& CI) :
         vkEnumerateInstanceExtensionProperties(nullptr, &ExtensionCount, m_Extensions.data());
         CHECK_VK_ERROR_AND_THROW(res, "Failed to enumerate extensions");
         VERIFY_EXPR(ExtensionCount == m_Extensions.size());
+    }
+
+    if (!m_Extensions.empty())
+    {
+        LOG_INFO_MESSAGE("Supported Vulkan instance extensions: ", PrintExtensionsList(m_Extensions, 1));
     }
 
     std::vector<const char*> InstanceExtensions =
@@ -234,9 +293,9 @@ VulkanInstance::VulkanInstance(const CreateInfo& CI) :
             // New enums are not supported and may cause validation error.
             if (LayerVer < VK_HEADER_VERSION_COMPLETE)
             {
-                LOG_WARNING_MESSAGE("Layer '", pLayerName, "' version (", VK_API_VERSION_MAJOR(LayerVer), ".", VK_API_VERSION_MINOR(LayerVer), ".", VK_API_VERSION_PATCH(LayerVer),
-                                    ") is less than header version (",
-                                    VK_API_VERSION_MAJOR(VK_HEADER_VERSION_COMPLETE), ".", VK_API_VERSION_MINOR(VK_HEADER_VERSION_COMPLETE), ".", VK_API_VERSION_PATCH(VK_HEADER_VERSION_COMPLETE),
+                LOG_WARNING_MESSAGE("Layer '", pLayerName, "' version (", VK_API_VERSION_MAJOR(LayerVer), '.', VK_API_VERSION_MINOR(LayerVer), '.', VK_API_VERSION_PATCH(LayerVer),
+                                    ") is less than the header version (",
+                                    VK_API_VERSION_MAJOR(VK_HEADER_VERSION_COMPLETE), '.', VK_API_VERSION_MINOR(VK_HEADER_VERSION_COMPLETE), '.', VK_API_VERSION_PATCH(VK_HEADER_VERSION_COMPLETE),
                                     ").");
             }
         }

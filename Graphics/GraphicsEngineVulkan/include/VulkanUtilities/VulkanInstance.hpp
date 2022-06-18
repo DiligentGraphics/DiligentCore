@@ -29,10 +29,14 @@
 
 #include <vector>
 #include <memory>
+#include <string>
+
 #include "VulkanHeaders.h"
 
 namespace VulkanUtilities
 {
+
+std::string PrintExtensionsList(const std::vector<VkExtensionProperties>& Extensions, size_t NumColumns);
 
 class VulkanInstance : public std::enable_shared_from_this<VulkanInstance>
 {
