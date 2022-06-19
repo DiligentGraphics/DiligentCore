@@ -36,7 +36,7 @@
 #include "../../Primitives/interface/MemoryAllocator.h"
 #include "../../Platforms/interface/Atomics.hpp"
 #include "../../Platforms/Basic/interface/DebugUtilities.hpp"
-#include "LockHelper.hpp"
+#include "SpinLock.hpp"
 #include "Cast.hpp"
 
 namespace Diligent
@@ -84,7 +84,8 @@ public:
     inline virtual ReferenceCounterValueType ReleaseWeakRef() override final
     {
         // The method must be serialized!
-        ThreadingTools::LockHelper Lock{m_LockFlag};
+        std::unique_lock<ThreadingTools::SpinLock> Guard{m_Lock};
+
         // It is essentially important to check the number of weak references
         // while holding the lock. Otherwise reference counters object
         // may be destroyed twice if ReleaseStrongRef() is executed by other
@@ -147,7 +148,7 @@ public:
             // We can safely unlock it and destroy.
             // If we do not unlock it, this->m_LockFlag will expire,
             // which will cause Lock.~LockHelper() to crash.
-            Lock.Unlock();
+            Guard.unlock();
             SelfDestroy();
         }
         return NumWeakReferences;
@@ -174,7 +175,7 @@ public:
         //    Destroy the object               |                                   | -Return reference to the soon
         //                                     |                                   |  to expire object
         //
-        ThreadingTools::LockHelper Lock{m_LockFlag};
+        ThreadingTools::SpinLockGuard Guard{m_Lock};
 
         const auto StrongRefCnt = Atomics::AtomicIncrement(m_lNumStrongReferences);
 
@@ -361,7 +362,7 @@ private:
 #endif
 
         // Acquire the lock.
-        ThreadingTools::LockHelper Lock{m_LockFlag};
+        std::unique_lock<ThreadingTools::SpinLock> Guard{m_Lock};
 
         // QueryObject() first acquires the lock, and only then increments and
         // decrements the ref counter. If it reads 1 after incrementing the counter,
@@ -435,7 +436,7 @@ private:
             // We must explicitly unlock the object now to avoid deadlocks. Also,
             // if this is deleted, this->m_LockFlag will expire, which will cause
             // Lock.~LockHelper() to crash
-            Lock.Unlock();
+            Guard.unlock();
 
             // Destroy referenced object
             pWrapper->DestroyObject();
@@ -480,7 +481,7 @@ private:
     Atomics::AtomicLong m_lNumStrongReferences{0};
     Atomics::AtomicLong m_lNumWeakReferences{0};
 
-    ThreadingTools::LockFlag m_LockFlag;
+    ThreadingTools::SpinLock m_Lock;
 
     enum class ObjectState : Int32
     {

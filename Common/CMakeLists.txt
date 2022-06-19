@@ -20,7 +20,6 @@ set(INTERFACE
     interface/FilteringTools.hpp
     interface/FixedBlockMemoryAllocator.hpp
     interface/HashUtils.hpp
-    interface/LockHelper.hpp
     interface/FixedLinearAllocator.hpp
     interface/DynamicLinearAllocator.hpp
     interface/MemoryFileStream.hpp
@@ -29,6 +28,7 @@ set(INTERFACE
     interface/RefCntAutoPtr.hpp
     interface/RefCountedObjectImpl.hpp
     interface/Serializer.hpp
+    interface/SpinLock.hpp
     interface/STDAllocator.hpp
     interface/StringDataBlobImpl.hpp
     interface/StringTools.h
@@ -49,9 +49,9 @@ set(SOURCE
     src/DataBlobImpl.cpp
     src/DefaultRawMemoryAllocator.cpp
     src/FixedBlockMemoryAllocator.cpp
-    src/LockHelper.cpp
     src/MemoryFileStream.cpp
     src/Serializer.cpp
+    src/SpinLock.cpp
     src/ThreadPool.cpp
     src/Timer.cpp
 )

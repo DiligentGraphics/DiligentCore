@@ -30,8 +30,9 @@
 /// \file
 /// Implementation of the Diligent::StateObjectsRegistry template class
 
-#include "DeviceObject.h"
 #include <unordered_map>
+
+#include "DeviceObject.h"
 #include "STDAllocator.hpp"
 
 namespace Diligent
@@ -95,7 +96,7 @@ public:
     /// cost to it.
     void Add(const ResourceDescType& ObjectDesc, IDeviceObject* pObject)
     {
-        ThreadingTools::LockHelper Lock{m_LockFlag};
+        ThreadingTools::SpinLockGuard Guard{m_Lock};
 
         // If the number of outstanding deleted objects reached the threshold value,
         // purge the registry. Since we have exclusive access now, it is safe
@@ -139,7 +140,7 @@ public:
     {
         VERIFY(*ppObject == nullptr, "Overwriting reference to existing object may cause memory leaks");
         *ppObject = nullptr;
-        ThreadingTools::LockHelper Lock{m_LockFlag};
+        ThreadingTools::SpinLockGuard Guard{m_Lock};
 
         auto It = m_DescToObjHashMap.find(Desc);
         if (It != m_DescToObjHashMap.end())
@@ -201,7 +202,7 @@ public:
 
 private:
     /// Lock flag to protect the m_DescToObjHashMap
-    ThreadingTools::LockFlag m_LockFlag;
+    ThreadingTools::SpinLock m_Lock;
 
     /// Number of outstanding deleted objects that have not been purged
     Atomics::AtomicLong m_NumDeletedObjects;

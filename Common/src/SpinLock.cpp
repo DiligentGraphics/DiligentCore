@@ -1,6 +1,5 @@
 /*
  *  Copyright 2019-2022 Diligent Graphics LLC
- *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -25,15 +24,23 @@
  *  of the possibility of such damages.
  */
 
-#include <thread>
-#include "LockHelper.hpp"
+#include "SpinLock.hpp"
+
+#if defined(_MSC_VER) && ((_M_IX86_FP >= 2) || defined(_M_X64))
+#    include <emmintrin.h>
+#    define PAUSE _mm_pause
+#elif (defined(__clang__) || defined(__GNUC__)) && (defined(__i386__) || defined(__x86_64__))
+#    define PAUSE __builtin_ia32_pause
+#else
+#    define PAUSE()
+#endif
 
 namespace ThreadingTools
 {
 
-void LockHelper::YieldThread() noexcept
+void SpinLock::Pause() noexcept
 {
-    std::this_thread::yield();
+    PAUSE();
 }
 
 } // namespace ThreadingTools

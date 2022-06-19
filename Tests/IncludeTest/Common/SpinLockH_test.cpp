@@ -25,4 +25,4 @@
  *  of the possibility of such damages.
  */
 
-#include "DiligentCore/Common/interface/LockHelper.hpp"
+#include "DiligentCore/Common/interface/SpinLock.hpp"
