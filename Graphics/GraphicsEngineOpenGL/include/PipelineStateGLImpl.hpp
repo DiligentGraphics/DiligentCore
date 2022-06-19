@@ -116,7 +116,7 @@ private:
     using GLProgramObj         = GLObjectWrappers::GLProgramObj;
     GLProgramObj* m_GLPrograms = nullptr; // [m_NumPrograms]
 
-    ThreadingTools::SpinLock m_ProgPipelineLock;
+    Threading::SpinLock m_ProgPipelineLock;
 
     std::vector<std::pair<GLContext::NativeGLContextType, GLObjectWrappers::GLPipelineObj>> m_GLProgPipelines;
 

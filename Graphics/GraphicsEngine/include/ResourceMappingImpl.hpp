@@ -122,7 +122,7 @@ private:
         const Uint32 ArrayIndex;
     };
 
-    ThreadingTools::SpinLock m_Lock;
+    Threading::SpinLock m_Lock;
 
     using HashTableElem = std::pair<const ResMappingHashKey, RefCntAutoPtr<IDeviceObject>>;
     std::unordered_map<ResMappingHashKey,

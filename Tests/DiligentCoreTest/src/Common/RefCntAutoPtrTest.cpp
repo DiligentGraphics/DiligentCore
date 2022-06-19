@@ -652,8 +652,8 @@ public:
 #else
     static const int NumThreadInterations = 50000;
 #endif
-    ThreadingTools::Signal m_WorkerThreadSignal[2];
-    ThreadingTools::Signal m_MainThreadSignal;
+    Threading::Signal m_WorkerThreadSignal[2];
+    Threading::Signal m_MainThreadSignal;
 
     std::mutex      m_NumThreadsCompletedMtx;
     std::atomic_int m_NumThreadsCompleted[2];

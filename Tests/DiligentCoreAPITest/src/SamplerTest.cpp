@@ -488,9 +488,9 @@ TEST(SamplerTest, Multithreading)
 
     GPUTestingEnvironment::ScopedReset AutoReset;
 
-    ThreadingTools::Signal StartWorkSignal;
-    ThreadingTools::Signal WorkCompletedSignal;
-    std::atomic_int        NumCompltedThreads{0};
+    Threading::Signal StartWorkSignal;
+    Threading::Signal WorkCompletedSignal;
+    std::atomic_int   NumCompltedThreads{0};
 
     std::vector<std::thread> Workers(NumThreads);
     for (auto& Worker : Workers)

@@ -120,7 +120,7 @@ private:
     // Clears stale entries from m_PSOToKey and m_BuffToKey when a VAO is removed from m_Cache
     void ClearStaleKeys(const std::vector<VAOHashKey>& StaleKeys);
 
-    ThreadingTools::SpinLock                                                               m_CacheLock;
+    Threading::SpinLock                                                                    m_CacheLock;
     std::unordered_map<VAOHashKey, GLObjectWrappers::GLVertexArrayObj, VAOHashKey::Hasher> m_Cache;
 
     std::unordered_multimap<UniqueIdentifier, VAOHashKey> m_PSOToKey;

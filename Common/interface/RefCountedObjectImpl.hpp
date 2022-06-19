@@ -84,7 +84,7 @@ public:
     inline virtual ReferenceCounterValueType ReleaseWeakRef() override final
     {
         // The method must be serialized!
-        std::unique_lock<ThreadingTools::SpinLock> Guard{m_Lock};
+        std::unique_lock<Threading::SpinLock> Guard{m_Lock};
 
         // It is essentially important to check the number of weak references
         // while holding the lock. Otherwise reference counters object
@@ -175,7 +175,7 @@ public:
         //    Destroy the object               |                                   | -Return reference to the soon
         //                                     |                                   |  to expire object
         //
-        ThreadingTools::SpinLockGuard Guard{m_Lock};
+        Threading::SpinLockGuard Guard{m_Lock};
 
         const auto StrongRefCnt = Atomics::AtomicIncrement(m_lNumStrongReferences);
 
@@ -362,7 +362,7 @@ private:
 #endif
 
         // Acquire the lock.
-        std::unique_lock<ThreadingTools::SpinLock> Guard{m_Lock};
+        std::unique_lock<Threading::SpinLock> Guard{m_Lock};
 
         // QueryObject() first acquires the lock, and only then increments and
         // decrements the ref counter. If it reads 1 after incrementing the counter,
@@ -481,7 +481,7 @@ private:
     Atomics::AtomicLong m_lNumStrongReferences{0};
     Atomics::AtomicLong m_lNumWeakReferences{0};
 
-    ThreadingTools::SpinLock m_Lock;
+    Threading::SpinLock m_Lock;
 
     enum class ObjectState : Int32
     {

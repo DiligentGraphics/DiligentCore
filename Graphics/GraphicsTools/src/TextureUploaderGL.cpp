@@ -137,8 +137,8 @@ private:
     }
 
     friend TextureUploaderGL;
-    ThreadingTools::Signal m_BufferMappedSignal;
-    ThreadingTools::Signal m_CopyScheduledSignal;
+    Threading::Signal      m_BufferMappedSignal;
+    Threading::Signal      m_CopyScheduledSignal;
     RefCntAutoPtr<IBuffer> m_pStagingBuffer;
     std::vector<Uint32>    m_SubresourceOffsets;
     std::vector<Uint32>    m_SubresourceStrides;

@@ -40,7 +40,7 @@ void ResourceMappingImpl::AddResourceArray(const Char* Name, Uint32 StartIndex, 
     if (Name == nullptr || *Name == 0)
         return;
 
-    ThreadingTools::SpinLockGuard Guard{m_Lock};
+    Threading::SpinLockGuard Guard{m_Lock};
     for (Uint32 Elem = 0; Elem < NumElements; ++Elem)
     {
         auto* pObject = ppObjects[Elem];
@@ -73,7 +73,7 @@ void ResourceMappingImpl::RemoveResourceByName(const Char* Name, Uint32 ArrayInd
     if (*Name == 0)
         return;
 
-    ThreadingTools::SpinLockGuard Guard{m_Lock};
+    Threading::SpinLockGuard Guard{m_Lock};
     // Remove object with the given name
     // Name will be implicitly converted to HashMapStringKey without making a copy
     m_HashTable.erase(ResMappingHashKey{Name, false, ArrayIndex});
@@ -87,7 +87,7 @@ IDeviceObject* ResourceMappingImpl::GetResource(const Char* Name, Uint32 ArrayIn
         return nullptr;
     }
 
-    ThreadingTools::SpinLockGuard Guard{m_Lock};
+    Threading::SpinLockGuard Guard{m_Lock};
 
     // Find an object with the requested name
     auto It = m_HashTable.find(ResMappingHashKey{Name, false, ArrayIndex});

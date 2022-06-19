@@ -35,7 +35,7 @@
 #    define PAUSE()
 #endif
 
-namespace ThreadingTools
+namespace Threading
 {
 
 void SpinLock::Pause() noexcept
@@ -43,4 +43,4 @@ void SpinLock::Pause() noexcept
     PAUSE();
 }
 
-} // namespace ThreadingTools
+} // namespace Threading

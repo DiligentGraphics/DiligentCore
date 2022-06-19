@@ -29,7 +29,7 @@
 #include <atomic>
 #include <mutex>
 
-namespace ThreadingTools
+namespace Threading
 {
 
 /// Spin lock implementation
@@ -101,4 +101,4 @@ private:
 
 using SpinLockGuard = std::lock_guard<SpinLock>;
 
-} // namespace ThreadingTools
+} // namespace Threading

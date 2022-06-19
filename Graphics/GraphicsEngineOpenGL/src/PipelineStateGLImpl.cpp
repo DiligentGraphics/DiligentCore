@@ -413,7 +413,7 @@ void PipelineStateGLImpl::CommitProgram(GLContextState& State)
 
 GLObjectWrappers::GLPipelineObj& PipelineStateGLImpl::GetGLProgramPipeline(GLContext::NativeGLContextType Context)
 {
-    ThreadingTools::SpinLockGuard Guard{m_ProgPipelineLock};
+    Threading::SpinLockGuard Guard{m_ProgPipelineLock};
     for (auto& ctx_pipeline : m_GLProgPipelines)
     {
         if (ctx_pipeline.first == Context)

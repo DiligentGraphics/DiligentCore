@@ -92,7 +92,7 @@ private:
 
 
     friend class RenderDeviceGLImpl;
-    ThreadingTools::SpinLock                                                                 m_CacheLock;
+    Threading::SpinLock                                                                      m_CacheLock;
     std::unordered_map<FBOCacheKey, GLObjectWrappers::GLFrameBufferObj, FBOCacheKeyHashFunc> m_Cache;
 
     // Multimap that sets up correspondence between unique texture id and all

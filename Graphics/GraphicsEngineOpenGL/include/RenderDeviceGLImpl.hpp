@@ -219,10 +219,10 @@ protected:
 
     std::unordered_set<String> m_ExtensionStrings;
 
-    ThreadingTools::SpinLock                                     m_VAOCacheLock;
+    Threading::SpinLock                                          m_VAOCacheLock;
     std::unordered_map<GLContext::NativeGLContextType, VAOCache> m_VAOCache;
 
-    ThreadingTools::SpinLock                                     m_FBOCacheLock;
+    Threading::SpinLock                                          m_FBOCacheLock;
     std::unordered_map<GLContext::NativeGLContextType, FBOCache> m_FBOCache;
 
     std::unique_ptr<TexRegionRender> m_pTexRegionRender;
