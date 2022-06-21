@@ -29,8 +29,10 @@
 #include <algorithm>
 #include <sstream>
 
+#include "Shader.h"
 #include "EngineMemory.h"
 #include "DataBlobImpl.hpp"
+#include "PSOSerializer.hpp"
 
 namespace Diligent
 {
@@ -377,11 +379,11 @@ std::string DeviceObjectArchive::ToString() const
     //   ------------------
     //   Shaders
     //     OpenGL(2)
-    //       [0] 4020 bytes
-    //       [1] 4020 bytes
+    //       [0] 'Test VS' 4020 bytes
+    //       [1] 'Test PS' 4020 bytes
     //     Vulkan(2)
-    //       [0] 8364 bytes
-    //       [1] 7380 bytes
+    //       [0] 'Test VS' 8364 bytes
+    //       [1] 'Test PS' 7380 bytes
     {
         bool HasShaders = false;
         for (const auto& Shaders : m_DeviceShaders)
@@ -405,16 +407,32 @@ std::string DeviceObjectArchive::ToString() const
                 Output << Ident1 << ArchiveDeviceTypeToString(dev) << '(' << Shaders.size() << ")\n";
                 // ..OpenGL(2)
 
-                size_t MaxSize = 0;
-                for (const auto& Shader : Shaders)
-                    MaxSize = std::max(MaxSize, Shader.Size());
+                std::vector<std::string> ShaderNames;
+                ShaderNames.reserve(Shaders.size());
+
+                size_t MaxSize    = 0;
+                size_t MaxNameLen = 0;
+                for (const auto& ShaderData : Shaders)
+                {
+                    MaxSize = std::max(MaxSize, ShaderData.Size());
+
+                    ShaderCreateInfo                 ShaderCI;
+                    Serializer<SerializerMode::Read> ShaderSer{ShaderData};
+                    if (ShaderSerializer<SerializerMode::Read>::SerializeCI(ShaderSer, ShaderCI))
+                        ShaderNames.emplace_back(std::string{'\''} + ShaderCI.Desc.Name + '\'');
+                    else
+                        ShaderNames.emplace_back("<Deserialization error>");
+                    MaxNameLen = std::max(MaxNameLen, ShaderNames.back().size());
+                }
+
                 const auto IdxFieldW  = GetNumFieldWidth(Shaders.size());
                 const auto SizeFieldW = GetNumFieldWidth(MaxSize);
                 for (Uint32 idx = 0; idx < Shaders.size(); ++idx)
                 {
                     Output << Ident2 << '[' << std::setw(IdxFieldW) << std::right << idx << "] "
+                           << std::setw(MaxNameLen) << std::left << ShaderNames[idx] << ' '
                            << std::setw(SizeFieldW) << std::right << Shaders[idx].Size() << " bytes\n";
-                    // ....[0] 4020 bytes
+                    // ....[0] 'Test VS' 4020 bytes
                 }
             }
         }
