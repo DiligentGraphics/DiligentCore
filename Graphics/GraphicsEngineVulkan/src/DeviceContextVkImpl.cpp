@@ -445,8 +445,8 @@ void DeviceContextVkImpl::CommitDescriptorSets(ResourceBindInfo& BindInfo, Uint3
 
         if (SetInfo.DynamicOffsetCount > 0)
         {
-            VERIFY(m_DynamicBufferOffsets.size() >= SetInfo.DynamicOffsetCount,
-                   "m_DynamicBufferOffsets must've been resized by CommitShaderResources() to have enough space");
+            VERIFY(m_DynamicBufferOffsets.size() >= DynamicOffsetCount + SetInfo.DynamicOffsetCount,
+                   "m_DynamicBufferOffsets must've been resized by SetPipelineState() to have enough space");
 
             auto NumOffsetsWritten = pResourceCache->GetDynamicBufferOffsets(GetContextId(), m_DynamicBufferOffsets, DynamicOffsetCount);
             VERIFY_EXPR(NumOffsetsWritten == SetInfo.DynamicOffsetCount);

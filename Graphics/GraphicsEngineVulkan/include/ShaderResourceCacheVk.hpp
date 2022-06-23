@@ -392,7 +392,7 @@ __forceinline Uint32 ShaderResourceCacheVk::GetDynamicBufferOffsets(DeviceContex
         }
 #endif
     }
-    return OffsetInd;
+    return OffsetInd - StartInd;
 }
 
 } // namespace Diligent
