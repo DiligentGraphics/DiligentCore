@@ -148,7 +148,7 @@ VulkanInstance::VulkanInstance(const CreateInfo& CI) :
         VERIFY_EXPR(LayerCount == m_Layers.size());
     }
 
-    if (!m_Layers.empty())
+    if (CI.LogExtensions && !m_Layers.empty())
     {
         std::stringstream ss;
         for (const auto& Layer : m_Layers)
@@ -174,7 +174,7 @@ VulkanInstance::VulkanInstance(const CreateInfo& CI) :
         VERIFY_EXPR(ExtensionCount == m_Extensions.size());
     }
 
-    if (!m_Extensions.empty())
+    if (CI.LogExtensions && !m_Extensions.empty())
     {
         LOG_INFO_MESSAGE("Supported Vulkan instance extensions: ", PrintExtensionsList(m_Extensions, 1));
     }

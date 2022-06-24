@@ -595,10 +595,13 @@ void EngineFactoryVkImpl::EnumerateAdapters(Version              MinVersion,
         return;
     }
 
-    // Create instance with maximum available version.
-    // If Volk is not enabled then version will be 1.0
-    const uint32_t APIVersion = VK_MAKE_VERSION(0xFF, 0xFF, 0);
-    auto           Instance   = VulkanUtilities::VulkanInstance::Create({APIVersion, false, m_EnableDeviceSimulation, 0, nullptr, nullptr});
+    VulkanUtilities::VulkanInstance::CreateInfo InstanceCI;
+    // Create instance with the maximum available version.
+    // If Volk is not enabled, the version will be 1.0.
+    InstanceCI.ApiVersion             = VK_MAKE_VERSION(0xFF, 0xFF, 0);
+    InstanceCI.EnableDeviceSimulation = m_EnableDeviceSimulation;
+
+    auto Instance = VulkanUtilities::VulkanInstance::Create(InstanceCI);
 
     if (Adapters == nullptr)
     {
@@ -609,7 +612,7 @@ void EngineFactoryVkImpl::EnumerateAdapters(Version              MinVersion,
     NumAdapters = std::min(NumAdapters, static_cast<Uint32>(Instance->GetVkPhysicalDevices().size()));
     for (Uint32 i = 0; i < NumAdapters; ++i)
     {
-        auto PhysicalDevice = VulkanUtilities::VulkanPhysicalDevice::Create(Instance->GetVkPhysicalDevices()[i], *Instance);
+        auto PhysicalDevice = VulkanUtilities::VulkanPhysicalDevice::Create({*Instance, Instance->GetVkPhysicalDevices()[i]});
         Adapters[i]         = GetPhysicalDeviceGraphicsAdapterInfo(*PhysicalDevice);
     }
 }
@@ -645,18 +648,19 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
             Version{0xFF, 0xFF} : // Instance will use the maximum available version
             EngineCI.GraphicsAPIVersion;
 
-        auto Instance = VulkanUtilities::VulkanInstance::Create(
-            {
-                VK_MAKE_VERSION(GraphicsAPIVersion.Major, GraphicsAPIVersion.Minor, 0),
-                EngineCI.EnableValidation,
-                m_EnableDeviceSimulation,
-                EngineCI.InstanceExtensionCount,
-                EngineCI.ppInstanceExtensionNames,
-                reinterpret_cast<VkAllocationCallbacks*>(EngineCI.pVkAllocator) //
-            });
+        VulkanUtilities::VulkanInstance::CreateInfo InstanceCI;
+        InstanceCI.ApiVersion               = VK_MAKE_VERSION(GraphicsAPIVersion.Major, GraphicsAPIVersion.Minor, 0);
+        InstanceCI.EnableValidation         = EngineCI.EnableValidation;
+        InstanceCI.EnableDeviceSimulation   = m_EnableDeviceSimulation;
+        InstanceCI.LogExtensions            = true;
+        InstanceCI.InstanceExtensionCount   = EngineCI.InstanceExtensionCount;
+        InstanceCI.ppInstanceExtensionNames = EngineCI.ppInstanceExtensionNames;
+        InstanceCI.pVkAllocator             = reinterpret_cast<VkAllocationCallbacks*>(EngineCI.pVkAllocator);
+
+        auto Instance = VulkanUtilities::VulkanInstance::Create(InstanceCI);
 
         auto vkDevice       = Instance->SelectPhysicalDevice(EngineCI.AdapterId);
-        auto PhysicalDevice = VulkanUtilities::VulkanPhysicalDevice::Create(vkDevice, *Instance);
+        auto PhysicalDevice = VulkanUtilities::VulkanPhysicalDevice::Create({*Instance, vkDevice, /*LogExtensions = */ true});
 
         std::vector<const char*> DeviceExtensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
         if (PhysicalDevice->IsExtensionSupported(VK_KHR_MAINTENANCE1_EXTENSION_NAME))

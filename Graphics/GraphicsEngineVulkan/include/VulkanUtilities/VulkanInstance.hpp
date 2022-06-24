@@ -53,6 +53,7 @@ public:
         uint32_t               ApiVersion               = 0;
         bool                   EnableValidation         = false;
         bool                   EnableDeviceSimulation   = false;
+        bool                   LogExtensions            = false;
         uint32_t               InstanceExtensionCount   = 0;
         const char* const*     ppInstanceExtensionNames = nullptr;
         VkAllocationCallbacks* pVkAllocator             = nullptr;
