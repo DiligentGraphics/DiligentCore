@@ -38,15 +38,16 @@ namespace
 
 TEST(Common_SpinLock, ThreadContention)
 {
-    const auto NumCores = std::thread::hardware_concurrency();
-    LOG_INFO_MESSAGE("Running SpinLock test on ", NumCores, " threads");
+    const auto NumCores   = std::thread::hardware_concurrency();
+    const auto NumThreads = NumCores * 8;
+    LOG_INFO_MESSAGE("Running SpinLock test on ", NumThreads, " threads / ", NumCores, " cores");
     size_t Counter = 0;
 
     static constexpr size_t  NumThreadIterations = 32768;
     Threading::SpinLock      Lock;
     std::vector<std::thread> Workers;
-    Workers.reserve(NumCores);
-    for (size_t i = 0; i < NumCores; ++i)
+    Workers.reserve(NumThreads);
+    for (size_t i = 0; i < NumThreads; ++i)
     {
         Workers.emplace_back(
             std::thread(
@@ -66,7 +67,7 @@ TEST(Common_SpinLock, ThreadContention)
 
     {
         Threading::SpinLockGuard Guard{Lock};
-        EXPECT_EQ(Counter, NumThreadIterations * NumCores);
+        EXPECT_EQ(Counter, NumThreadIterations * NumThreads);
     }
 }
 
