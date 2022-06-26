@@ -34,7 +34,6 @@
 #include "EngineFactory.h"
 #include "DefaultShaderSourceStreamFactory.h"
 #include "Dearchiver.h"
-#include "Atomics.hpp"
 #include "DummyReferenceCounters.hpp"
 #include "EngineMemory.h"
 #include "RefCntAutoPtr.hpp"

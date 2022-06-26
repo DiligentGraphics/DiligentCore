@@ -32,7 +32,6 @@
 
 #include <vector>
 
-#include "Atomics.hpp"
 #include "ShaderResourceVariable.h"
 #include "PipelineState.h"
 #include "StringTools.hpp"
