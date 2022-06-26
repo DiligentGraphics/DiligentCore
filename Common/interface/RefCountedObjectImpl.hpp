@@ -134,7 +134,7 @@ public:
         //
         if (NumWeakReferences == 0 && /*m_NumStrongReferences == 0 &&*/ m_ObjectState.load() == ObjectState::Destroyed)
         {
-            VERIFY_EXPR(m_NumStrongReferences == 0);
+            VERIFY_EXPR(m_NumStrongReferences.load() == 0);
             VERIFY(m_ObjectWrapperBuffer[0] == 0 && m_ObjectWrapperBuffer[1] == 0, "Object wrapper must be null");
             // m_ObjectState is set to ObjectState::Destroyed under the lock. If the state is not Destroyed,
             // ReleaseStrongRef() will take care of it.
@@ -388,7 +388,7 @@ private:
 
             // So we copy the object wrapper and destroy the object after unlocking the
             // reference counters
-            size_t ObjectWrapperBufferCopy[ObjectWrapperBufferSize];
+            alignas(ObjectWrapper<IObjectStub, IMemoryAllocator>) size_t ObjectWrapperBufferCopy[ObjectWrapperBufferSize];
             memcpy(ObjectWrapperBufferCopy, m_ObjectWrapperBuffer, sizeof(m_ObjectWrapperBuffer));
             memset(m_ObjectWrapperBuffer, 0, sizeof(m_ObjectWrapperBuffer));
 
@@ -460,10 +460,10 @@ private:
 
     // No copies/moves
     // clang-format off
-    RefCountersImpl             (const RefCountersImpl&) = delete;
-    RefCountersImpl             (RefCountersImpl&&)      = delete;
-    RefCountersImpl& operator = (const RefCountersImpl&) = delete;
-    RefCountersImpl& operator = (RefCountersImpl&&)      = delete;
+    RefCountersImpl             (const RefCountersImpl&)  = delete;
+    RefCountersImpl             (      RefCountersImpl&&) = delete;
+    RefCountersImpl& operator = (const RefCountersImpl&)  = delete;
+    RefCountersImpl& operator = (      RefCountersImpl&&) = delete;
     // clang-format on
 
     struct IObjectStub : public IObject
@@ -475,7 +475,7 @@ private:
     // which does have virtual destructor.
     static constexpr size_t ObjectWrapperBufferSize = sizeof(ObjectWrapper<IObjectStub, IMemoryAllocator>) / sizeof(size_t);
 
-    size_t m_ObjectWrapperBuffer[ObjectWrapperBufferSize]{};
+    alignas(ObjectWrapper<IObjectStub, IMemoryAllocator>) size_t m_ObjectWrapperBuffer[ObjectWrapperBufferSize]{};
 
     std::atomic<ReferenceCounterValueType> m_NumStrongReferences{0};
     std::atomic<ReferenceCounterValueType> m_NumWeakReferences{0};
@@ -636,10 +636,10 @@ public:
     {}
 
     // clang-format off
-    MakeNewRCObj           (const MakeNewRCObj&) = delete;
-    MakeNewRCObj           (MakeNewRCObj&&)      = delete;
-    MakeNewRCObj& operator=(const MakeNewRCObj&) = delete;
-    MakeNewRCObj& operator=(MakeNewRCObj&&)      = delete;
+    MakeNewRCObj           (const MakeNewRCObj&)  = delete;
+    MakeNewRCObj           (      MakeNewRCObj&&) = delete;
+    MakeNewRCObj& operator=(const MakeNewRCObj&)  = delete;
+    MakeNewRCObj& operator=(      MakeNewRCObj&&) = delete;
     // clang-format on
 
     template <typename... CtorArgTypes>
