@@ -14,14 +14,20 @@ static constexpr const char* ValidationLayerNames[] =
 };
 // clang-format on
 
-// Load debug function pointers and set debug callback
-// if callBack is NULL, default message callback will be used
-void SetupDebugging(VkInstance                          instance,
-                    VkDebugUtilsMessageSeverityFlagsEXT messageSeverity,
-                    VkDebugUtilsMessageTypeFlagsEXT     messageType,
-                    void*                               pUserData = nullptr);
-// Clear debug callback
-void FreeDebugging(VkInstance instance);
+
+// Loads the debug utils functions and initialized the debug callback.
+bool SetupDebugUtils(VkInstance                          instance,
+                     VkDebugUtilsMessageSeverityFlagsEXT messageSeverity,
+                     VkDebugUtilsMessageTypeFlagsEXT     messageType,
+                     void*                               pUserData = nullptr);
+
+// Initializes the debug report callback.
+bool SetupDebugReport(VkInstance               instance,
+                      VkDebugReportFlagBitsEXT flags,
+                      void*                    pUserData = nullptr);
+
+// Clears the debug utils/debug report callback
+void FreeDebug(VkInstance instance);
 
 // Setup and functions for the VK_EXT_debug_marker_extension
 // Extension spec can be found at https://github.com/KhronosGroup/Vulkan-Docs/blob/1.0-VK_EXT_debug_marker/doc/specs/vulkan/appendices/VK_EXT_debug_marker.txt

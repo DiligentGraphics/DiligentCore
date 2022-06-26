@@ -89,7 +89,14 @@ public:
 private:
     explicit VulkanInstance(const CreateInfo& CI);
 
-    bool                         m_DebugUtilsEnabled = false;
+    enum DebugMode
+    {
+        Disabled,
+        Utils,
+        Report
+    };
+    DebugMode m_DebugMode = DebugMode::Disabled;
+
     VkAllocationCallbacks* const m_pVkAllocator;
     VkInstance                   m_VkInstance = VK_NULL_HANDLE;
     uint32_t                     m_VkVersion  = VK_API_VERSION_1_0;

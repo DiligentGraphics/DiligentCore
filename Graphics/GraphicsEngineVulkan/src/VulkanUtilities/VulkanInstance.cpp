@@ -235,15 +235,21 @@ VulkanInstance::VulkanInstance(const CreateInfo& CI) :
 
     if (CI.EnableValidation)
     {
-        m_DebugUtilsEnabled = IsExtensionAvailable(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-        if (m_DebugUtilsEnabled)
+        // Prefer VK_EXT_debug_utils
+        if (IsExtensionAvailable(VK_EXT_DEBUG_UTILS_EXTENSION_NAME))
         {
             InstanceExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+            m_DebugMode = DebugMode::Utils;
         }
-        else
+        else if (IsExtensionAvailable(VK_EXT_DEBUG_REPORT_EXTENSION_NAME))
         {
-            LOG_WARNING_MESSAGE("Extension ", VK_EXT_DEBUG_UTILS_EXTENSION_NAME, " is not available.");
+            // If debug utils are unavailable (e.g. on Android), use VK_EXT_debug_report
+            m_DebugMode = DebugMode::Report;
+            InstanceExtensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
         }
+
+        if (m_DebugMode == DebugMode::Disabled)
+            LOG_WARNING_MESSAGE("Neither ", VK_EXT_DEBUG_UTILS_EXTENSION_NAME, " nor ", VK_EXT_DEBUG_REPORT_EXTENSION_NAME, " extension is available. Debug tools (validation layer message logging, performance markers, etc.) will be disabled.");
     }
 
     auto ApiVersion = CI.ApiVersion;
@@ -331,16 +337,26 @@ VulkanInstance::VulkanInstance(const CreateInfo& CI) :
     m_VkVersion         = ApiVersion;
 
     // If requested, we enable the default validation layers for debugging
-    if (m_DebugUtilsEnabled)
+    if (m_DebugMode == DebugMode::Utils)
     {
-        VkDebugUtilsMessageSeverityFlagsEXT messageSeverity =
+        constexpr VkDebugUtilsMessageSeverityFlagsEXT messageSeverity =
             VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
             VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-        VkDebugUtilsMessageTypeFlagsEXT messageType =
+        constexpr VkDebugUtilsMessageTypeFlagsEXT messageType =
             VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
             VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
             VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-        VulkanUtilities::SetupDebugging(m_VkInstance, messageSeverity, messageType, nullptr);
+        if (!VulkanUtilities::SetupDebugUtils(m_VkInstance, messageSeverity, messageType, nullptr))
+            LOG_ERROR_MESSAGE("Failed to initialize debug utils. Validation layer message logging, performance markers, etc. will be disabled.");
+    }
+    else if (m_DebugMode == DebugMode::Report)
+    {
+        constexpr VkDebugReportFlagBitsEXT flags = static_cast<VkDebugReportFlagBitsEXT>(
+            VK_DEBUG_REPORT_WARNING_BIT_EXT |
+            VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT |
+            VK_DEBUG_REPORT_ERROR_BIT_EXT);
+        if (!VulkanUtilities::SetupDebugReport(m_VkInstance, flags, nullptr))
+            LOG_ERROR_MESSAGE("Failed to initialize debug report. Validation layer message logging will be disabled.");
     }
 
     // Enumerate physical devices
@@ -366,9 +382,9 @@ VulkanInstance::VulkanInstance(const CreateInfo& CI) :
 
 VulkanInstance::~VulkanInstance()
 {
-    if (m_DebugUtilsEnabled)
+    if (m_DebugMode != DebugMode::Disabled)
     {
-        VulkanUtilities::FreeDebugging(m_VkInstance);
+        VulkanUtilities::FreeDebug(m_VkInstance);
     }
     vkDestroyInstance(m_VkInstance, m_pVkAllocator);
 
