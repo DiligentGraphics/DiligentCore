@@ -31,6 +31,7 @@
 /// Implementation of the Diligent::StateObjectsRegistry template class
 
 #include <unordered_map>
+#include <atomic>
 
 #include "DeviceObject.h"
 #include "STDAllocator.hpp"
@@ -67,7 +68,6 @@ public:
     static constexpr int DeletedObjectsToPurge = 32;
 
     StateObjectsRegistry(IMemoryAllocator& RawAllocator, const Char* RegistryName) :
-        m_NumDeletedObjects{0},
         m_DescToObjHashMap(STD_ALLOCATOR_RAW_MEM(HashMapElem, RawAllocator, "Allocator for unordered_map<ResourceDescType, RefCntWeakPtr<IDeviceObject> >")),
         m_RegistryName{RegistryName}
     {}
@@ -101,10 +101,10 @@ public:
         // If the number of outstanding deleted objects reached the threshold value,
         // purge the registry. Since we have exclusive access now, it is safe
         // to do.
-        if (m_NumDeletedObjects >= DeletedObjectsToPurge)
+        if (m_NumDeletedObjects.load() >= DeletedObjectsToPurge)
         {
             Purge();
-            m_NumDeletedObjects = 0;
+            m_NumDeletedObjects.store(0);
         }
 
         // Try to construct the new element in place
@@ -158,7 +158,7 @@ public:
             {
                 // Expired object found: remove it from the map
                 m_DescToObjHashMap.erase(It);
-                Atomics::AtomicDecrement(m_NumDeletedObjects);
+                m_NumDeletedObjects.fetch_add(-1);
             }
         }
     }
@@ -197,7 +197,7 @@ public:
     /// be called.
     void ReportDeletedObject()
     {
-        Atomics::AtomicIncrement(m_NumDeletedObjects);
+        m_NumDeletedObjects.fetch_add(+1);
     }
 
 private:
@@ -205,7 +205,7 @@ private:
     Threading::SpinLock m_Lock;
 
     /// Number of outstanding deleted objects that have not been purged
-    Atomics::AtomicLong m_NumDeletedObjects;
+    std::atomic<long> m_NumDeletedObjects{0};
 
     /// Hash map that stores weak pointers to the referenced objects
     typedef std::pair<const ResourceDescType, RefCntWeakPtr<IDeviceObject>>                                                                                           HashMapElem;

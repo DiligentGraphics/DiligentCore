@@ -611,7 +611,7 @@ TEST(Common_RefCntAutoPtr, Misc)
 
             virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final {}
 
-            inline virtual Atomics::Long DILIGENT_CALL_TYPE Release() override final
+            inline virtual ReferenceCounterValueType DILIGENT_CALL_TYPE Release() override final
             {
                 return RefCountedObject<IObject>::Release(
                     [&]() //

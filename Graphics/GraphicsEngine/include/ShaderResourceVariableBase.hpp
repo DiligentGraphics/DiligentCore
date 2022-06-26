@@ -652,12 +652,12 @@ struct ShaderVariableBase : public ResourceVariableBaseInterface
         }
     }
 
-    virtual Atomics::Long DILIGENT_CALL_TYPE AddRef() override final
+    virtual ReferenceCounterValueType DILIGENT_CALL_TYPE AddRef() override final
     {
         return m_ParentManager.GetOwner().AddRef();
     }
 
-    virtual Atomics::Long DILIGENT_CALL_TYPE Release() override final
+    virtual ReferenceCounterValueType DILIGENT_CALL_TYPE Release() override final
     {
         return m_ParentManager.GetOwner().Release();
     }
