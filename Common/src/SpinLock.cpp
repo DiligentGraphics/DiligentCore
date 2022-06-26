@@ -44,18 +44,19 @@ namespace Threading
 
 void SpinLock::Wait() noexcept
 {
-    constexpr size_t NumAttemptsToYield = 256;
     // Wait for the lock to be released without generating cache misses.
-    size_t Attempt = 0;
-    for (; is_locked() && Attempt < NumAttemptsToYield; ++Attempt)
+    constexpr size_t NumAttemptsToYield = 64;
+    for (size_t Attempt = 0; Attempt < NumAttemptsToYield; ++Attempt)
     {
+        if (!is_locked())
+            return;
+
         // Issue X86 PAUSE or ARM YIELD instruction to reduce contention
         // between hyper-threads.
         PAUSE();
     }
 
-    if (Attempt == NumAttemptsToYield)
-        std::this_thread::yield();
+    std::this_thread::yield();
 }
 
 } // namespace Threading
