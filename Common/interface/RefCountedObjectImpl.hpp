@@ -53,7 +53,7 @@ public:
     }
 
     template <class TPreObjectDestroy>
-    inline ReferenceCounterValueType ReleaseStrongRef(TPreObjectDestroy PreObjectDestroy)
+    inline ReferenceCounterValueType ReleaseStrongRef(TPreObjectDestroy&& PreObjectDestroy)
     {
         VERIFY(m_ObjectState.load() == ObjectState::Alive, "Attempting to decrement strong reference counter for an object that is not alive");
         VERIFY(m_ObjectWrapperBuffer[0] != 0 && m_ObjectWrapperBuffer[1] != 0, "Object wrapper is not initialized");
@@ -556,7 +556,7 @@ public:
     }
 
     template <class TPreObjectDestroy>
-    inline ReferenceCounterValueType Release(TPreObjectDestroy PreObjectDestroy)
+    inline ReferenceCounterValueType Release(TPreObjectDestroy&& PreObjectDestroy)
     {
         VERIFY_EXPR(m_pRefCounters != nullptr);
         return m_pRefCounters->ReleaseStrongRef(PreObjectDestroy);
