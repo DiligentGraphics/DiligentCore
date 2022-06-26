@@ -8,7 +8,6 @@ set(SOURCE
 )
 
 set(INTERFACE 
-    interface/BasicAtomics.hpp
     interface/BasicFileSystem.hpp
     interface/BasicPlatformDebug.hpp
     interface/BasicPlatformMisc.hpp

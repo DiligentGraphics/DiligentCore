@@ -3,7 +3,6 @@ cmake_minimum_required (VERSION 3.3)
 project(Diligent-Win32Platform CXX)
 
 set(INTERFACE
-    interface/Win32Atomics.hpp
     interface/Win32Debug.hpp
     interface/Win32FileSystem.hpp
     interface/Win32PlatformDefinitions.h
@@ -12,7 +11,6 @@ set(INTERFACE
 )
 
 set(SOURCE
-    src/Win32Atomics.cpp
     src/Win32Debug.cpp
     src/Win32FileSystem.cpp
     src/Win32PlatformMisc.cpp

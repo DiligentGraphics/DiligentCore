@@ -7,13 +7,11 @@ set(INTERFACE
     interface/UWPFileSystem.hpp
     interface/UWPDefinitions.h
     interface/UWPNativeWindow.h
-    ../Win32/interface/Win32Atomics.hpp
 )
 
 set(SOURCE
     src/UWPDebug.cpp
     src/UWPFileSystem.cpp
-    ../Win32/src/Win32Atomics.cpp
 )
 
 add_library(Diligent-UniversalWindowsPlatform ${SOURCE} ${INTERFACE} ${PLATFORM_INTERFACE_HEADERS})

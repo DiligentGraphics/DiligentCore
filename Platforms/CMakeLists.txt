@@ -5,7 +5,6 @@ add_library(Diligent-PlatformInterface INTERFACE)
 target_include_directories(Diligent-PlatformInterface INTERFACE interface)
 
 set(PLATFORM_INTERFACE_HEADERS
-	../interface/Atomics.hpp
 	../interface/FileSystem.hpp
 	../interface/PlatformDebug.hpp
 	../interface/PlatformDefinitions.h
