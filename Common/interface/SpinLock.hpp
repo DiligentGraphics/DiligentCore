@@ -53,10 +53,7 @@ public:
         while (true)
         {
             // Assume that lock is free on the first try.
-            // Note that original implementation uses memory_order_acquire,
-            // but there is an opinion that this may cause a dead lock in certain
-            // scenarios, so we will be on the safe side with memory_order_seq_cst.
-            const auto WasLocked = m_IsLocked.exchange(true /*, std::memory_order_acquire*/);
+            const auto WasLocked = m_IsLocked.exchange(true, std::memory_order_acquire);
             if (!WasLocked)
                 return; // The lock was not acquired when this thread performed the exchange
 
@@ -77,17 +74,14 @@ public:
         if (is_locked())
             return false;
 
-        // Note that original implementation uses memory_order_acquire,
-        // but there is an opinion that this may cause a dead lock in certain
-        // scenarios, so we will be on the safe side with memory_order_seq_cst.
-        const auto WasLocked = m_IsLocked.exchange(true /*, std::memory_order_acquire*/);
+        const auto WasLocked = m_IsLocked.exchange(true, std::memory_order_acquire);
         return !WasLocked;
     }
 
     void unlock() noexcept
     {
         VERIFY(is_locked(), "Attempting to unlock a spin lock that is not locked. This is a strong indication of a flawed logic.");
-        m_IsLocked.store(false /*, std::memory_order_release*/);
+        m_IsLocked.store(false, std::memory_order_release);
     }
 
     bool is_locked() const noexcept

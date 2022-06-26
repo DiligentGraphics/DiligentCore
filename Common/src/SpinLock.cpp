@@ -31,6 +31,8 @@
 #    define PAUSE _mm_pause
 #elif (defined(__clang__) || defined(__GNUC__)) && (defined(__i386__) || defined(__x86_64__))
 #    define PAUSE __builtin_ia32_pause
+#elif (defined(__clang__) || defined(__GNUC__)) && (defined(__arm__) || defined(__aarch64__))
+#    define PAUSE() asm volatile("yield")
 #else
 #    define PAUSE()
 #endif
