@@ -57,13 +57,7 @@ public:
             if (!WasLocked)
                 return; // The lock was not acquired when this thread performed the exchange
 
-            // Wait for the lock to be released without generating cache misses.
-            while (is_locked())
-            {
-                // Issue X86 PAUSE or ARM YIELD instruction to reduce contention between
-                // hyper-threads.
-                Pause();
-            }
+            Wait();
         }
     }
 
@@ -92,7 +86,7 @@ public:
     }
 
 private:
-    void Pause() noexcept;
+    void Wait() noexcept;
 
 private:
     std::atomic<bool> m_IsLocked{false};

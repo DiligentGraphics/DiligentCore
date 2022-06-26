@@ -26,36 +26,48 @@
 
 #include "SpinLock.hpp"
 
+#include <vector>
 #include <thread>
 
-#if defined(_MSC_VER) && ((_M_IX86_FP >= 2) || defined(_M_X64))
-#    include <emmintrin.h>
-#    define PAUSE _mm_pause
-#elif (defined(__clang__) || defined(__GNUC__)) && (defined(__i386__) || defined(__x86_64__))
-#    define PAUSE __builtin_ia32_pause
-#elif (defined(__clang__) || defined(__GNUC__)) && (defined(__arm__) || defined(__aarch64__))
-#    define PAUSE() asm volatile("yield")
-#else
-#    define PAUSE()
-#endif
+#include "gtest/gtest.h"
 
-namespace Threading
+using namespace Diligent;
+
+namespace
 {
 
-void SpinLock::Wait() noexcept
+TEST(Common_SpinLock, ThreadContention)
 {
-    constexpr size_t NumAttemptsToYield = 256;
-    // Wait for the lock to be released without generating cache misses.
-    size_t Attempt = 0;
-    for (; is_locked() && Attempt < NumAttemptsToYield; ++Attempt)
+    const auto NumCores = std::thread::hardware_concurrency();
+    LOG_INFO_MESSAGE("Running SpinLock test on ", NumCores, " threads");
+    size_t Counter = 0;
+
+    static constexpr size_t  NumThreadIterations = 32768;
+    Threading::SpinLock      Lock;
+    std::vector<std::thread> Workers;
+    Workers.reserve(NumCores);
+    for (size_t i = 0; i < NumCores; ++i)
     {
-        // Issue X86 PAUSE or ARM YIELD instruction to reduce contention
-        // between hyper-threads.
-        PAUSE();
+        Workers.emplace_back(
+            std::thread(
+                [&Lock, &Counter] //
+                {
+                    for (size_t i = 0; i < NumThreadIterations; ++i)
+                    {
+                        Threading::SpinLockGuard Guard{Lock};
+                        ++Counter;
+                    }
+                } //
+                ) //
+        );
     }
+    for (auto& Thread : Workers)
+        Thread.join();
 
-    if (Attempt == NumAttemptsToYield)
-        std::this_thread::yield();
+    {
+        Threading::SpinLockGuard Guard{Lock};
+        EXPECT_EQ(Counter, NumThreadIterations * NumCores);
+    }
 }
 
-} // namespace Threading
+} // namespace
