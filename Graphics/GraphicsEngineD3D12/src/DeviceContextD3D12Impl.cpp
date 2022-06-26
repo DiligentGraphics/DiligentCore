@@ -373,6 +373,14 @@ void DeviceContextD3D12Impl::CommitRootTablesAndViews(RootTableInfo& RootInfo, U
 {
     const auto& RootSig = m_pPipelineState->GetRootSignature();
 
+    PipelineResourceSignatureD3D12Impl::CommitCacheResourcesAttribs CommitAttribs //
+        {
+            m_pDevice->GetD3D12Device(),
+            CmdCtx,
+            GetContextId(),
+            IsCompute //
+        };
+
     VERIFY(CommitSRBMask != 0, "This method should not be called when there is nothing to commit");
     while (CommitSRBMask != 0)
     {
@@ -386,14 +394,8 @@ void DeviceContextD3D12Impl::CommitRootTablesAndViews(RootTableInfo& RootInfo, U
         const auto* pResourceCache = RootInfo.ResourceCaches[sign];
         DEV_CHECK_ERR(pResourceCache != nullptr, "Resource cache at index ", sign, " is null.");
 
-        PipelineResourceSignatureD3D12Impl::CommitCacheResourcesAttribs CommitAttribs //
-            {
-                *pResourceCache,
-                CmdCtx,
-                GetContextId(),
-                IsCompute,
-                RootSig.GetBaseRootIndex(sign) //
-            };
+        CommitAttribs.pResourceCache = pResourceCache;
+        CommitAttribs.BaseRootIndex  = RootSig.GetBaseRootIndex(sign);
         if ((RootInfo.StaleSRBMask & SignBit) != 0)
         {
             // Commit root tables for stale SRBs only
