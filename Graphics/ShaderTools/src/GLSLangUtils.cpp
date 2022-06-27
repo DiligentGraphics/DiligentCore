@@ -44,8 +44,6 @@
 #include "ShaderToolsCommon.hpp"
 #include "SPIRVTools.hpp"
 
-#include "spirv-tools/optimizer.hpp"
-
 // clang-format off
 static constexpr char g_HLSLDefinitions[] =
 {
@@ -451,13 +449,9 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& ShaderCI,
         return SPIRV;
 
     // SPIR-V bytecode generated from HLSL must be legalized to
-    // turn it into a valid vulkan SPIR-V shader
-    spvtools::Optimizer SpirvOptimizer{spvTarget};
-    SpirvOptimizer.SetMessageConsumer(SpvOptimizerMessageConsumer);
-    SpirvOptimizer.RegisterLegalizationPasses();
-    SpirvOptimizer.RegisterPerformancePasses();
-    std::vector<uint32_t> LegalizedSPIRV;
-    if (SpirvOptimizer.Run(SPIRV.data(), SPIRV.size(), &LegalizedSPIRV))
+    // turn it into a valid vulkan SPIR-V shader.
+    auto LegalizedSPIRV = OptimizeSPIRV(SPIRV, spvTarget, SPIRV_OPTIMIZATION_FLAG_LEGALIZATION | SPIRV_OPTIMIZATION_FLAG_PERFORMANCE);
+    if (!LegalizedSPIRV.empty())
     {
         return LegalizedSPIRV;
     }
@@ -498,11 +492,8 @@ std::vector<unsigned int> GLSLtoSPIRV(const GLSLtoSPIRVAttribs& Attribs)
     if (SPIRV.empty())
         return SPIRV;
 
-    spvtools::Optimizer SpirvOptimizer(spvTarget);
-    SpirvOptimizer.SetMessageConsumer(SpvOptimizerMessageConsumer);
-    SpirvOptimizer.RegisterPerformancePasses();
-    std::vector<uint32_t> OptimizedSPIRV;
-    if (SpirvOptimizer.Run(SPIRV.data(), SPIRV.size(), &OptimizedSPIRV))
+    auto OptimizedSPIRV = OptimizeSPIRV(SPIRV, spvTarget, SPIRV_OPTIMIZATION_FLAG_PERFORMANCE);
+    if (!OptimizedSPIRV.empty())
     {
         return OptimizedSPIRV;
     }
