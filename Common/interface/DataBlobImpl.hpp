@@ -47,6 +47,7 @@ public:
     typedef ObjectBase<IDataBlob> TBase;
 
     static RefCntAutoPtr<DataBlobImpl> Create(size_t InitialSize = 0, const void* pData = nullptr);
+    static RefCntAutoPtr<DataBlobImpl> MakeCopy(const IDataBlob* pDataBlob);
 
     ~DataBlobImpl() override;
 

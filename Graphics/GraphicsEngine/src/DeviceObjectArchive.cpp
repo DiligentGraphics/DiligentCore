@@ -259,11 +259,15 @@ const char* ResourceTypeToString(DeviceObjectArchive::ResourceType Type)
 } // namespace
 
 
-DeviceObjectArchive::DeviceObjectArchive(const IDataBlob* pData) noexcept(false) :
-    m_pArchiveData{const_cast<IDataBlob*>(pData)} // Need to remove const for AddRef/Release
+DeviceObjectArchive::DeviceObjectArchive(const IDataBlob* pData, bool MakeCopy) noexcept(false) :
+    m_pArchiveData{
+        MakeCopy ?
+            DataBlobImpl::MakeCopy(pData) :
+            const_cast<IDataBlob*>(pData) // Need to remove const for AddRef/Release
+    }
 {
-    if (pData == nullptr)
-        LOG_ERROR_AND_THROW("pArchive must not be null");
+    if (!m_pArchiveData)
+        LOG_ERROR_AND_THROW("pData must not be null");
 
     Deserialize(pData->GetConstDataPtr(), StaticCast<size_t>(pData->GetSize()));
 }

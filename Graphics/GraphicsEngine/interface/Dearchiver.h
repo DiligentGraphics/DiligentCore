@@ -205,16 +205,22 @@ DILIGENT_BEGIN_INTERFACE(IDearchiver, IObject)
     /// Lodas a device object archive.
 
     /// \param [in] pArchive - A pointer to the source raw data to load objects from.
+    /// \param [in] MakeCopy - Whether to make a copy of the archive, or use the
+    ///                        the original contents.
     /// \return     true if the archive has been loaded successfully, and false otherwise.
     ///
-    /// \note       The dearchiver will keep a strong reference to the pArchive data blob.
-    ///             It will be kept alive until the dearchiver object is released or
-    ///             the Reset() method is called.
+    /// \note       If the archive was not copied, the dearchiver will keep a strong reference
+    ///             to the pArchive data blob. It will be kept alive until the dearchiver object
+    ///             is released or the Reset() method is called.
+    ///
+    /// \warning    If the archive was loaded without making a copy, the application
+    ///             must not modify its contents while it is in use by the dearchiver.
     /// 
     /// \warning    This method is not thread-safe and must not be called simultaneously
     ///             with other methods.
     VIRTUAL bool METHOD(LoadArchive)(THIS_
-                                     const IDataBlob* pArchive) PURE;
+                                     const IDataBlob* pArchive,
+                                     bool             MakeCopy DEFAULT_VALUE(false)) PURE;
 
     /// Unpacks a pipeline state object from the device object archive.
 

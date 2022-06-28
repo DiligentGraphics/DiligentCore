@@ -647,14 +647,23 @@ void DearchiverBase::UnpackPipelineStateImpl(const PipelineStateUnpackInfo& Unpa
         m_Cache.PSO.Set(ResType, UnpackInfo.Name, *ppPSO);
 }
 
-bool DearchiverBase::LoadArchive(const IDataBlob* pArchiveData)
+bool DearchiverBase::LoadArchive(const IDataBlob* pArchiveData, bool MakeCopy)
 {
     if (pArchiveData == nullptr)
         return false;
 
     try
     {
-        auto       pObjArchive = std::make_unique<DeviceObjectArchive>(pArchiveData);
+        for (const auto& Archive : m_Archives)
+        {
+            if (Archive.pObjArchive->GetData() == pArchiveData)
+            {
+                // The archive is already loaded
+                return true;
+            }
+        }
+
+        auto       pObjArchive = std::make_unique<DeviceObjectArchive>(pArchiveData, MakeCopy);
         const auto ArchiveIdx  = m_Archives.size();
 
         const auto& ArchiveResources = pObjArchive->GetNamedResources();

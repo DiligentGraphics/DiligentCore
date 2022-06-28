@@ -184,9 +184,14 @@ public:
         HashMapStringKey   Name;
     };
 
+    const IDataBlob* GetData() const
+    {
+        return m_pArchiveData;
+    }
+
 public:
     /// Initializes a new device object archive from pData.
-    DeviceObjectArchive(const IDataBlob* pData) noexcept(false);
+    DeviceObjectArchive(const IDataBlob* pData, bool MakeCopy = false) noexcept(false);
 
     /// Initializes an empty archive.
     DeviceObjectArchive() noexcept;
