@@ -82,7 +82,7 @@ void ArchivePRS(RefCntAutoPtr<IDataBlob>&                  pArchive,
     auto* pArchiverFactory = pEnv->GetArchiverFactory();
 
     RefCntAutoPtr<IDearchiver> pDearchiver;
-    DearchiverCreateInfo       DearchiverCI{pDevice};
+    DearchiverCreateInfo       DearchiverCI{};
     pDevice->GetEngineFactory()->CreateDearchiver(DearchiverCI, &pDearchiver);
     if (!pDearchiver || !pArchiverFactory)
         GTEST_SKIP() << "Archiver library is not loaded";
@@ -183,7 +183,7 @@ void UnpackPRS(IDataBlob*                  pArchive,
     auto* pArchiverFactory = pEnv->GetArchiverFactory();
 
     RefCntAutoPtr<IDearchiver> pDearchiver;
-    DearchiverCreateInfo       DearchiverCI{pDevice};
+    DearchiverCreateInfo       DearchiverCI{};
     pDevice->GetEngineFactory()->CreateDearchiver(DearchiverCI, &pDearchiver);
     ASSERT_TRUE(pDearchiver);
 
@@ -261,7 +261,7 @@ TEST(ArchiveTest, RemoveDeviceData)
     auto* pArchiverFactory = pEnv->GetArchiverFactory();
 
     RefCntAutoPtr<IDearchiver> pDearchiver;
-    DearchiverCreateInfo       DearchiverCI{pDevice};
+    DearchiverCreateInfo       DearchiverCI{};
     pDevice->GetEngineFactory()->CreateDearchiver(DearchiverCI, &pDearchiver);
     if (!pDearchiver || !pArchiverFactory)
         GTEST_SKIP() << "Archiver library is not loaded";
@@ -300,7 +300,7 @@ TEST(ArchiveTest, AppendDeviceData)
     auto* pArchiverFactory = pEnv->GetArchiverFactory();
 
     RefCntAutoPtr<IDearchiver> pDearchiver;
-    DearchiverCreateInfo       DearchiverCI{pDevice};
+    DearchiverCreateInfo       DearchiverCI{};
     pDevice->GetEngineFactory()->CreateDearchiver(DearchiverCI, &pDearchiver);
     if (!pDearchiver || !pArchiverFactory)
         GTEST_SKIP() << "Archiver library is not loaded";
@@ -663,7 +663,7 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
         GTEST_SKIP() << "Non separable programs are not supported";
 
     RefCntAutoPtr<IDearchiver> pDearchiver;
-    DearchiverCreateInfo       DearchiverCI{pDevice};
+    DearchiverCreateInfo       DearchiverCI{};
     pDevice->GetEngineFactory()->CreateDearchiver(DearchiverCI, &pDearchiver);
     if (!pDearchiver || !pArchiverFactory)
         GTEST_SKIP() << "Archiver library is not loaded";
@@ -1144,7 +1144,7 @@ void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
     auto* pArchiverFactory = pEnv->GetArchiverFactory();
 
     RefCntAutoPtr<IDearchiver> pDearchiver;
-    DearchiverCreateInfo       DearchiverCI{pDevice};
+    DearchiverCreateInfo       DearchiverCI{};
     pDevice->GetEngineFactory()->CreateDearchiver(DearchiverCI, &pDearchiver);
     if (!pDearchiver || !pArchiverFactory)
         GTEST_SKIP() << "Archiver library is not loaded";
@@ -1343,7 +1343,7 @@ TEST(ArchiveTest, RayTracingPipeline)
     auto* pArchiverFactory = pEnv->GetArchiverFactory();
 
     RefCntAutoPtr<IDearchiver> pDearchiver;
-    DearchiverCreateInfo       DearchiverCI{pDevice};
+    DearchiverCreateInfo       DearchiverCI{};
     pDevice->GetEngineFactory()->CreateDearchiver(DearchiverCI, &pDearchiver);
     if (!pDearchiver || !pArchiverFactory)
         GTEST_SKIP() << "Archiver library is not loaded";
@@ -1964,7 +1964,7 @@ TEST_P(TestSamplers, GraphicsPipeline)
         GTEST_SKIP() << "Direct3D backends support HLSL only";
 
     RefCntAutoPtr<IDearchiver> pDearchiver;
-    DearchiverCreateInfo       DearchiverCI{pDevice};
+    DearchiverCreateInfo       DearchiverCI{};
     pDevice->GetEngineFactory()->CreateDearchiver(DearchiverCI, &pDearchiver);
     if (!pDearchiver || !pArchiverFactory)
         GTEST_SKIP() << "Archiver library is not loaded";
