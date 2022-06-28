@@ -445,7 +445,7 @@ void DeviceContextVkImpl::CommitDescriptorSets(ResourceBindInfo& BindInfo, Uint3
 
         if (SetInfo.DynamicOffsetCount > 0)
         {
-            VERIFY(m_DynamicBufferOffsets.size() >= DynamicOffsetCount + SetInfo.DynamicOffsetCount,
+            VERIFY(m_DynamicBufferOffsets.size() >= size_t{DynamicOffsetCount} + size_t{SetInfo.DynamicOffsetCount},
                    "m_DynamicBufferOffsets must've been resized by SetPipelineState() to have enough space");
 
             auto NumOffsetsWritten = pResourceCache->GetDynamicBufferOffsets(GetContextId(), m_DynamicBufferOffsets, DynamicOffsetCount);
