@@ -6,15 +6,6 @@
 namespace VulkanUtilities
 {
 
-// clang-format off
-// Unified validation layer used on Desktop and Mobile platforms
-static constexpr const char* ValidationLayerNames[] =
-{
-    "VK_LAYER_KHRONOS_validation"
-};
-// clang-format on
-
-
 // Loads the debug utils functions and initialized the debug callback.
 bool SetupDebugUtils(VkInstance                          instance,
                      VkDebugUtilsMessageSeverityFlagsEXT messageSeverity,

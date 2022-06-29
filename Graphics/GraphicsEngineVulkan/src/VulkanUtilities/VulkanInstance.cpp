@@ -31,6 +31,7 @@
 #include <vector>
 #include <cstring>
 #include <algorithm>
+#include <array>
 
 #if DILIGENT_USE_VOLK
 #    define VOLK_IMPLEMENTATION
@@ -102,13 +103,56 @@ bool VulkanInstance::IsLayerAvailable(const char* LayerName, uint32_t& Version) 
     return false;
 }
 
-bool VulkanInstance::IsExtensionAvailable(const char* ExtensionName) const
+namespace
 {
-    for (const auto& Extension : m_Extensions)
+
+// clang-format off
+static constexpr std::array<const char*, 1> ValidationLayerNames =
+{
+    // Unified validation layer used on Desktop and Mobile platforms
+    "VK_LAYER_KHRONOS_validation"
+};
+// clang-format on
+
+
+bool EnumerateInstanceExtensions(const char* LayerName, std::vector<VkExtensionProperties>& Extensions)
+{
+    uint32_t ExtensionCount = 0;
+
+    if (vkEnumerateInstanceExtensionProperties(LayerName, &ExtensionCount, nullptr) != VK_SUCCESS)
+        return false;
+
+    Extensions.resize(ExtensionCount);
+    if (vkEnumerateInstanceExtensionProperties(LayerName, &ExtensionCount, Extensions.data()) != VK_SUCCESS)
+    {
+        Extensions.clear();
+        return false;
+    }
+    VERIFY(ExtensionCount == Extensions.size(),
+           "The number of extensions written by vkEnumerateInstanceExtensionProperties is not consistent "
+           "with the count returned in the first call. This is a Vulkan loader bug.");
+
+    return true;
+}
+
+bool IsExtensionAvailable(const std::vector<VkExtensionProperties>& Extensions, const char* ExtensionName)
+{
+    VERIFY_EXPR(ExtensionName != nullptr);
+
+    for (const auto& Extension : Extensions)
+    {
         if (strcmp(Extension.extensionName, ExtensionName) == 0)
             return true;
+    }
 
     return false;
+}
+
+} // namespace
+
+bool VulkanInstance::IsExtensionAvailable(const char* ExtensionName) const
+{
+    return VulkanUtilities::IsExtensionAvailable(m_Extensions, ExtensionName);
 }
 
 bool VulkanInstance::IsExtensionEnabled(const char* ExtensionName) const
@@ -162,17 +206,9 @@ VulkanInstance::VulkanInstance(const CreateInfo& CI) :
         LOG_INFO_MESSAGE("Available Vulkan instance layers: ", ss.str());
     }
 
-    {
-        // Enumerate available extensions
-        uint32_t ExtensionCount = 0;
-
-        auto res = vkEnumerateInstanceExtensionProperties(nullptr, &ExtensionCount, nullptr);
-        CHECK_VK_ERROR_AND_THROW(res, "Failed to query extension count");
-        m_Extensions.resize(ExtensionCount);
-        vkEnumerateInstanceExtensionProperties(nullptr, &ExtensionCount, m_Extensions.data());
-        CHECK_VK_ERROR_AND_THROW(res, "Failed to enumerate extensions");
-        VERIFY_EXPR(ExtensionCount == m_Extensions.size());
-    }
+    // Enumerate available instance extensions
+    if (!EnumerateInstanceExtensions(nullptr, m_Extensions))
+        LOG_ERROR_AND_THROW("Failed to enumerate instance extensions");
 
     if (CI.LogExtensions && !m_Extensions.empty())
     {
@@ -233,25 +269,6 @@ VulkanInstance::VulkanInstance(const CreateInfo& CI) :
             LOG_ERROR_AND_THROW("Required extension ", ExtName, " is not available");
     }
 
-    if (CI.EnableValidation)
-    {
-        // Prefer VK_EXT_debug_utils
-        if (IsExtensionAvailable(VK_EXT_DEBUG_UTILS_EXTENSION_NAME))
-        {
-            InstanceExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-            m_DebugMode = DebugMode::Utils;
-        }
-        else if (IsExtensionAvailable(VK_EXT_DEBUG_REPORT_EXTENSION_NAME))
-        {
-            // If debug utils are unavailable (e.g. on Android), use VK_EXT_debug_report
-            m_DebugMode = DebugMode::Report;
-            InstanceExtensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
-        }
-
-        if (m_DebugMode == DebugMode::Disabled)
-            LOG_WARNING_MESSAGE("Neither ", VK_EXT_DEBUG_UTILS_EXTENSION_NAME, " nor ", VK_EXT_DEBUG_REPORT_EXTENSION_NAME, " extension is available. Debug tools (validation layer message logging, performance markers, etc.) will be disabled.");
-    }
-
     auto ApiVersion = CI.ApiVersion;
 #if DILIGENT_USE_VOLK
     if (vkEnumerateInstanceVersion != nullptr && ApiVersion > VK_API_VERSION_1_0)
@@ -286,25 +303,65 @@ VulkanInstance::VulkanInstance(const CreateInfo& CI) :
 
     if (CI.EnableValidation)
     {
-        for (size_t l = 0; l < _countof(VulkanUtilities::ValidationLayerNames); ++l)
+        if (IsExtensionAvailable(VK_EXT_DEBUG_UTILS_EXTENSION_NAME))
         {
-            auto*    pLayerName = VulkanUtilities::ValidationLayerNames[l];
-            uint32_t LayerVer   = ~0u; // Prevent warning if the layer is not found
-            if (IsLayerAvailable(pLayerName, LayerVer))
-                InstanceLayers.push_back(pLayerName);
-            else
-                LOG_WARNING_MESSAGE("Failed to find '", pLayerName, "' layer. Validation will be disabled");
+            // Prefer VK_EXT_debug_utils
+            m_DebugMode = DebugMode::Utils;
+        }
+        else if (IsExtensionAvailable(VK_EXT_DEBUG_REPORT_EXTENSION_NAME))
+        {
+            // If debug utils are unavailable (e.g. on Android), use VK_EXT_debug_report
+            m_DebugMode = DebugMode::Report;
+        }
+
+        for (const auto* LayerName : ValidationLayerNames)
+        {
+            uint32_t LayerVer = ~0u;
+            if (!IsLayerAvailable(LayerName, LayerVer))
+            {
+                LOG_WARNING_MESSAGE("Validation layer ", LayerName, " is not available.");
+                continue;
+            }
 
             // Beta extensions may vary and result in a crash.
             // New enums are not supported and may cause validation error.
             if (LayerVer < VK_HEADER_VERSION_COMPLETE)
             {
-                LOG_WARNING_MESSAGE("Layer '", pLayerName, "' version (", VK_API_VERSION_MAJOR(LayerVer), '.', VK_API_VERSION_MINOR(LayerVer), '.', VK_API_VERSION_PATCH(LayerVer),
+                LOG_WARNING_MESSAGE("Layer '", LayerName, "' version (", VK_API_VERSION_MAJOR(LayerVer), '.', VK_API_VERSION_MINOR(LayerVer), '.', VK_API_VERSION_PATCH(LayerVer),
                                     ") is less than the header version (",
                                     VK_API_VERSION_MAJOR(VK_HEADER_VERSION_COMPLETE), '.', VK_API_VERSION_MINOR(VK_HEADER_VERSION_COMPLETE), '.', VK_API_VERSION_PATCH(VK_HEADER_VERSION_COMPLETE),
                                     ").");
             }
+
+            InstanceLayers.push_back(LayerName);
+
+            if (m_DebugMode != DebugMode::Utils)
+            {
+                // On Android, VK_EXT_debug_utils extension may not be supported by the loader,
+                // but supported by the layer.
+                std::vector<VkExtensionProperties> LayerExtensions;
+                if (EnumerateInstanceExtensions(LayerName, LayerExtensions))
+                {
+                    if (VulkanUtilities::IsExtensionAvailable(LayerExtensions, VK_EXT_DEBUG_UTILS_EXTENSION_NAME))
+                        m_DebugMode = DebugMode::Utils;
+
+                    if (m_DebugMode == DebugMode::Disabled && VulkanUtilities::IsExtensionAvailable(LayerExtensions, VK_EXT_DEBUG_REPORT_EXTENSION_NAME))
+                        m_DebugMode = DebugMode::Report; // Resort to debug report
+                }
+                else
+                {
+                    LOG_ERROR_MESSAGE("Failed to enumerate extensions for ", LayerName, " layer");
+                }
+            }
         }
+
+
+        if (m_DebugMode == DebugMode::Utils)
+            InstanceExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+        else if (m_DebugMode == DebugMode::Report)
+            InstanceExtensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+        else
+            LOG_WARNING_MESSAGE("Neither ", VK_EXT_DEBUG_UTILS_EXTENSION_NAME, " nor ", VK_EXT_DEBUG_REPORT_EXTENSION_NAME, " extension is available. Debug tools (validation layer message logging, performance markers, etc.) will be disabled.");
     }
 
     VkApplicationInfo appInfo{};
