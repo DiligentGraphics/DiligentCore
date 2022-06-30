@@ -166,14 +166,12 @@ struct WindowsMisc : public BasicPlatformMisc
         return reinterpret_cast<const Type&>(SwappedBytes);
     }
 
-#if _WIN64
     template <typename Type>
     static typename std::enable_if<sizeof(Type) == 8, Type>::type SwapBytes(Type Val)
     {
         auto SwappedBytes = _byteswap_uint64(reinterpret_cast<unsigned __int64&>(Val));
         return reinterpret_cast<const Type&>(SwappedBytes);
     }
-#endif
 
     /// Sets the current thread affinity mask and on success returns the previous mask.
     /// On failure, returns 0.
