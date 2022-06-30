@@ -66,6 +66,27 @@ else()
     set(ARCH 32 CACHE INTERNAL "32-bit architecture")
 endif()
 
+if(("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86") OR ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "amd") OR
+   ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "X86") OR ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "AMD"))
+    set(TARGET_CPU x86) # Emscripten
+elseif(("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64") OR ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "amd64") OR
+       ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "X86_64") OR ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "AMD64"))
+    # There are no real 32-bit x86 processors these days.
+    # Even for 32-bit builds, system processor will be 64-bit.
+    set(TARGET_CPU x86_64)
+elseif(("${CMAKE_SYSTEM_PROCESSOR}" MATCHES "arm") OR ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "aarch64") OR
+       ("${CMAKE_SYSTEM_PROCESSOR}" MATCHES "ARM") OR ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "AARCH64"))
+    set(TARGET_CPU arm)
+else()
+    message("Unknown system processor: " ${CMAKE_SYSTEM_PROCESSOR})
+endif()
+
+if(TARGET_CPU)
+    message("Target processor: " ${TARGET_CPU})
+    set(TARGET_CPU ${TARGET_CPU} CACHE INTERNAL "Target CPU architecture")
+endif()
+
+
 message("CMake generator: " ${CMAKE_GENERATOR})
 
 if(WIN32)
@@ -298,14 +319,17 @@ foreach(REL_CONFIG ${RELEASE_CONFIGURATIONS})
 	target_compile_definitions(Diligent-BuildSettings INTERFACE "$<$<CONFIG:${REL_CONFIG}>:NDEBUG>")
 endforeach()
 
-
 if(MSVC)
     # Treat warnings as errors
     set(DILIGENT_MSVC_COMPILE_OPTIONS "/WX" CACHE STRING "Common MSVC compile options")
 
-    set(DILIGENT_MSVC_DEBUG_COMPILE_OPTIONS   ""           CACHE STRING "Additional MSVC compile options for debug configuration")
-    # Enable AVX2
-    set(DILIGENT_MSVC_RELEASE_COMPILE_OPTIONS "/arch:AVX2" CACHE STRING "Additional MSVC compile options for release configurations")
+    set(DILIGENT_MSVC_DEBUG_COMPILE_OPTIONS "" CACHE STRING "Additional MSVC compile options for debug configuration")
+
+    if("${TARGET_CPU}" STREQUAL "x86_64")
+        # Enable AVX2
+        set(DILIGENT_MSVC_RELEASE_COMPILE_OPTIONS "/arch:AVX2")
+    endif()
+    set(DILIGENT_MSVC_RELEASE_COMPILE_OPTIONS ${DILIGENT_MSVC_RELEASE_COMPILE_OPTIONS} CACHE STRING "Additional MSVC compile options for release configurations")
 
     # Enable level 4 warnings, but disable
     # - w4100 - unreferenced formal parameter
@@ -363,9 +387,13 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     # Treat warnings as errors
     set(DILIGENT_CLANG_COMPILE_OPTIONS "-Werror" CACHE STRING "Common Clang compile options")
 
-    set(DILIGENT_CLANG_DEBUG_COMPILE_OPTIONS   "" CACHE STRING "Additional Clang compile options for debug configuration")
-    # Enable AVX2
-    set(DILIGENT_CLANG_RELEASE_COMPILE_OPTIONS "-mavx2" CACHE STRING "Additional Clang compile options for release configurations")
+    set(DILIGENT_CLANG_DEBUG_COMPILE_OPTIONS "" CACHE STRING "Additional Clang compile options for debug configuration")
+
+    if("${TARGET_CPU}" STREQUAL "x86_64")
+        # Enable AVX2
+        set(DILIGENT_CLANG_RELEASE_COMPILE_OPTIONS "-mavx2")
+    endif()
+    set(DILIGENT_CLANG_RELEASE_COMPILE_OPTIONS ${DILIGENT_CLANG_RELEASE_COMPILE_OPTIONS} CACHE STRING "Additional Clang compile options for release configurations")
 
     target_compile_options(Diligent-BuildSettings INTERFACE
         ${DILIGENT_CLANG_COMPILE_OPTIONS}
