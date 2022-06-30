@@ -29,10 +29,10 @@
 #include <algorithm>
 
 #ifdef __AVX2__
-#    if defined(_MSC_VER)
+#    if defined(_MSC_VER) && ((_M_IX86_FP >= 2) || defined(_M_X64))
 #        include <immintrin.h>
 #        define USE_AVX2 1
-#    elif defined(__clang__) || defined(__GNUC__)
+#    elif (defined(__clang__) || defined(__GNUC__)) && (defined(__i386__) || defined(__x86_64__))
 // TODO: use clang/gcc builtin functions
 #    endif
 #endif
