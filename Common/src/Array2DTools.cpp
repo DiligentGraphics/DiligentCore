@@ -29,8 +29,12 @@
 #include <algorithm>
 
 #ifdef __AVX2__
-#    include <immintrin.h>
-#    define USE_AVX2 1
+#    if defined(_MSC_VER)
+#        include <immintrin.h>
+#        define USE_AVX2 1
+#    elif defined(__clang__) || defined(__GNUC__)
+// TODO: use clang/gcc builtin functions
+#    endif
 #endif
 
 #include "DebugUtilities.hpp"
