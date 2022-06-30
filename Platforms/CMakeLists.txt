@@ -5,11 +5,12 @@ add_library(Diligent-PlatformInterface INTERFACE)
 target_include_directories(Diligent-PlatformInterface INTERFACE interface)
 
 set(PLATFORM_INTERFACE_HEADERS
-	../interface/FileSystem.hpp
-	../interface/PlatformDebug.hpp
-	../interface/PlatformDefinitions.h
-	../interface/PlatformMisc.hpp
-	../interface/NativeWindow.h
+    ../interface/FileSystem.hpp
+    ../interface/Intrinsics.hpp
+    ../interface/PlatformDebug.hpp
+    ../interface/PlatformDefinitions.h
+    ../interface/PlatformMisc.hpp
+    ../interface/NativeWindow.h
 )
 
 add_subdirectory(Basic)

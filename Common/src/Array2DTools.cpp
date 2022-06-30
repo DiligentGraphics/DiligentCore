@@ -28,15 +28,7 @@
 
 #include <algorithm>
 
-#ifdef __AVX2__
-#    if defined(_MSC_VER) && ((_M_IX86_FP >= 2) || defined(_M_X64))
-#        include <immintrin.h>
-#        define USE_AVX2 1
-#    elif (defined(__clang__) || defined(__GNUC__)) && (defined(__i386__) || defined(__x86_64__))
-// TODO: use clang/gcc builtin functions
-#    endif
-#endif
-
+#include "Intrinsics.hpp"
 #include "DebugUtilities.hpp"
 #include "Align.hpp"
 
@@ -65,7 +57,7 @@ void GetArray2DMinMaxValueGeneric(const float* pData,
     }
 }
 
-#if USE_AVX2
+#if DILIGENT_AVX2_ENABLED
 bool GetArray2DMinMaxValueAVX2(const float* pData,
                                size_t       StrideInFloats,
                                Uint32       Width,
@@ -115,11 +107,21 @@ bool GetArray2DMinMaxValueAVX2(const float* pData,
     mmMin = _mm256_min_ps(mmMin, _mm256_permute_ps(mmMin, Shuffle2301));
     mmMax = _mm256_max_ps(mmMax, _mm256_permute_ps(mmMax, Shuffle2301));
 
-    MinValue = std::min(mmMin.m256_f32[0], MinValue);
-    MinValue = std::min(mmMin.m256_f32[4], MinValue);
+    // Note that _mm256_permute_ps is faster than _mm256_permutevar8x32_ps
+    const auto SelectElement4 = _mm256_set1_epi32(4);
+    // We only need to do min/max between elements 4 and 0
+    mmMin = _mm256_min_ps(mmMin, _mm256_permutevar8x32_ps(mmMin, SelectElement4));
+    mmMax = _mm256_max_ps(mmMax, _mm256_permutevar8x32_ps(mmMax, SelectElement4));
 
-    MaxValue = std::max(mmMax.m256_f32[0], MaxValue);
-    MaxValue = std::max(mmMax.m256_f32[4], MaxValue);
+    // Extract lower 128 bits
+    auto mMin0123 = _mm256_castps256_ps128(mmMin);
+    auto mMax0123 = _mm256_castps256_ps128(mmMax);
+
+    float Min0, Max0;
+    _mm_store_ss(&Min0, mMin0123);
+    _mm_store_ss(&Max0, mMax0123);
+    MinValue = std::min(Min0, MinValue);
+    MaxValue = std::max(Max0, MaxValue);
 
     return true;
 }
@@ -142,7 +144,7 @@ void GetArray2DMinMaxValue(const float* pData,
     DEV_CHECK_ERR(AlignDown(pData, alignof(float)) == pData, "Data pointer is not naturally aligned");
 
     MinValue = MaxValue = pData[0];
-#if USE_AVX2
+#if DILIGENT_AVX2_ENABLED
     if (GetArray2DMinMaxValueAVX2(pData, StrideInFloats, Width, Height, MinValue, MaxValue))
         return;
 #endif
