@@ -26,11 +26,9 @@
 
 #pragma once
 
-#if defined(_MSC_VER) && ((_M_IX86_FP >= 2) || defined(_M_X64))
+#if (defined(_MSC_VER) && ((_M_IX86_FP >= 2) || defined(_M_X64))) || ((defined(__clang__) || defined(__GNUC__)) && (defined(__i386__) || defined(__x86_64__)))
 #    include <immintrin.h>
 #    define DILIGENT_AVX2_SUPPORTED 1
-#elif (defined(__clang__) || defined(__GNUC__)) && (defined(__i386__) || defined(__x86_64__))
-#    include <immintrin.h>
 #endif
 
 #if DILIGENT_AVX2_SUPPORTED && defined(__AVX2__)

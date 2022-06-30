@@ -360,16 +360,24 @@ else()
 endif()
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    # Treat warnings as errors
+    set(DILIGENT_CLANG_COMPILE_OPTIONS "-Werror" CACHE STRING "Common Clang compile options")
+
+    set(DILIGENT_CLANG_DEBUG_COMPILE_OPTIONS   "" CACHE STRING "Additional Clang compile options for debug configuration")
+    # Enable AVX2
+    set(DILIGENT_CLANG_RELEASE_COMPILE_OPTIONS "-mavx2" CACHE STRING "Additional Clang compile options for release configurations")
+
     target_compile_options(Diligent-BuildSettings INTERFACE
-    	# All warnings are errors
-        -Werror
+        ${DILIGENT_CLANG_COMPILE_OPTIONS}
         # Some extra warnings
         -Wall -Wextra -Wuninitialized -Wconditional-uninitialized -Wextra-tokens -Wpointer-arith -Wloop-analysis -Wunused
         # Disable few warnings
         -Wno-overloaded-virtual -Wno-incompatible-pointer-types-discards-qualifiers -Wno-unknown-pragmas
         -Wno-zero-as-null-pointer-constant -Wno-unused-parameter
     )
-    set(CLANG_RELEASE_OPTIONS -Wno-unused-variable)
+    target_compile_options(Diligent-BuildSettings INTERFACE "$<$<CONFIG:DEBUG>:${DILIGENT_CLANG_DEBUG_COMPILE_OPTIONS}>")
+
+    set(CLANG_RELEASE_OPTIONS -Wno-unused-variable ${DILIGENT_CLANG_RELEASE_COMPILE_OPTIONS})
     target_compile_options(Diligent-BuildSettings INTERFACE $<$<NOT:$<CONFIG:Debug>>:${CLANG_RELEASE_OPTIONS}>)
 
     if ((PLATFORM_IOS  AND CMAKE_OSX_SYSROOT STREQUAL "iphonesimulator")  OR PLATFORM_IOS_SIMULATOR OR
