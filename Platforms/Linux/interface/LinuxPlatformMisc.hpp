@@ -107,6 +107,10 @@ struct LinuxMisc : public BasicPlatformMisc
         auto Swapped = __builtin_bswap64(reinterpret_cast<uint64_t&>(Val));
         return reinterpret_cast<Type&>(Swapped);
     }
+
+    /// Sets the current thread affinity mask and on success returns the previous mask.
+    /// On failure, returns 0.
+    static Uint64 SetCurrentThreadAffinity(Uint64 Mask);
 };
 
 } // namespace Diligent

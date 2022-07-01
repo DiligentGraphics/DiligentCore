@@ -13,6 +13,7 @@ set(INTERFACE
 set(SOURCE
     src/LinuxDebug.cpp
     src/LinuxFileSystem.cpp
+    src/LinuxPlatformMisc.cpp
 )
 
 add_library(Diligent-LinuxPlatform ${SOURCE} ${INTERFACE} ${PLATFORM_INTERFACE_HEADERS})
