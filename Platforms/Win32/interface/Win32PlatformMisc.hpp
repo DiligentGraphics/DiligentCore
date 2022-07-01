@@ -35,16 +35,6 @@
 namespace Diligent
 {
 
-enum class ThreadPriority
-{
-    Unknown,
-    Lowest,
-    BelowNormal,
-    Normal,
-    AboveNormal,
-    Highest
-};
-
 struct WindowsMisc : public BasicPlatformMisc
 {
     inline static Uint32 GetMSB(Uint32 Val)

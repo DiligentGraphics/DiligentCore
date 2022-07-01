@@ -32,6 +32,16 @@
 namespace Diligent
 {
 
+enum class ThreadPriority
+{
+    Unknown,
+    Lowest,
+    BelowNormal,
+    Normal,
+    AboveNormal,
+    Highest
+};
+
 struct BasicPlatformMisc
 {
     template <typename Type>
@@ -90,6 +100,12 @@ struct BasicPlatformMisc
         SwapBytes64(reinterpret_cast<Uint64&>(Val));
         return Val;
     }
+
+    static ThreadPriority GetCurrentThreadPriority();
+
+    /// Sets the current thread priority and on success returns the previous priority.
+    /// On failure, returns ThreadPriority::Unknown.
+    static ThreadPriority SetCurrentThreadPriority(ThreadPriority Priority);
 
 private:
     static void SwapBytes16(Uint16& Val)

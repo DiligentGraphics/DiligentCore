@@ -5,6 +5,7 @@ project(Diligent-BasicPlatform CXX)
 set(SOURCE 
     src/BasicFileSystem.cpp
     src/BasicPlatformDebug.cpp
+    src/BasicPlatformMisc.cpp
 )
 
 set(INTERFACE 
