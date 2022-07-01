@@ -61,9 +61,12 @@ String BasicFile::GetOpenModeStr()
     switch (m_OpenAttribs.AccessMode)
     {
         // clang-format off
-        case EFileAccessMode::Read:      OpenModeStr += 'r'; break;
-        case EFileAccessMode::Overwrite: OpenModeStr += 'w'; break;
-        case EFileAccessMode::Append:    OpenModeStr += 'a'; break;
+        case EFileAccessMode::Read:            OpenModeStr += 'r'; break;
+        case EFileAccessMode::Overwrite:       OpenModeStr += 'w'; break;
+        case EFileAccessMode::Append:          OpenModeStr += 'a'; break;
+        case EFileAccessMode::ReadUpdate:      OpenModeStr += "r+"; break;
+        case EFileAccessMode::OverwriteUpdate: OpenModeStr += "w+"; break;
+        case EFileAccessMode::AppendUpdate:    OpenModeStr += "a+"; break;
         // clang-format on
         default: break;
     }

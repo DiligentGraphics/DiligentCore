@@ -37,7 +37,10 @@ enum class EFileAccessMode
 {
     Read,
     Overwrite,
-    Append
+    Append,
+    ReadUpdate,
+    OverwriteUpdate,
+    AppendUpdate
 };
 
 enum class FilePosOrigin
