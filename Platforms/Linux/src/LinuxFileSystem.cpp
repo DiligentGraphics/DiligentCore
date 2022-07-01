@@ -68,7 +68,7 @@ bool LinuxFileSystem::FileExists(const Char* strFilePath)
 
 bool LinuxFileSystem::PathExists(const Char* strPath)
 {
-    std::string path(strPath);
+    std::string path{strPath};
     CorrectSlashes(path);
 
     auto res = access(path.c_str(), R_OK);
@@ -117,7 +117,7 @@ void LinuxFileSystem::DeleteFile(const Char* strPath)
 
 bool LinuxFileSystem::DeleteDirectory(const Char* strPath)
 {
-    std::string path(strPath);
+    std::string path{strPath};
     CorrectSlashes(path);
 
     auto Callaback = [](const char* Path, const struct stat* pStat, int Type, FTW* pFTWB) -> int {
@@ -130,6 +130,18 @@ bool LinuxFileSystem::DeleteDirectory(const Char* strPath)
 
     const auto res = nftw(path.c_str(), Callaback, MaxOpenDirectory, FTW_DEPTH | FTW_MOUNT | FTW_PHYS);
     return res == 0;
+}
+
+bool LinuxFileSystem::IsDirectory(const Char* strPath)
+{
+    std::string path{strPath};
+    CorrectSlashes(path);
+
+    struct stat StatBuff;
+    if (stat(path.c_str(), &StatBuff) != 0)
+        return false;
+
+    return S_ISDIR(StatBuff.st_mode);
 }
 
 std::vector<std::unique_ptr<FindFileData>> LinuxFileSystem::Search(const Char* SearchPattern)

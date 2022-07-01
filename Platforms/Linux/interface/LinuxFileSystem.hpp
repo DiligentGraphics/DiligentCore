@@ -49,6 +49,7 @@ public:
 
     static bool CreateDirectory(const Char* strPath);
     static bool DeleteDirectory(const Char* strPath);
+    static bool IsDirectory(const Char* strPath);
 
     static void ClearDirectory(const Char* strPath);
     static void DeleteFile(const Char* strPath);
