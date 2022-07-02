@@ -59,6 +59,8 @@ public:
     // Thread-safe popen/pclose
     static FILE* popen(const char* command, const char* type);
     static int   pclose(FILE* stream);
+
+    static std::string GetCurrentDirectory();
 };
 
 } // namespace Diligent

@@ -28,6 +28,8 @@
 
 #include "gtest/gtest.h"
 
+#include "DebugUtilities.hpp"
+
 using namespace Diligent;
 
 namespace
@@ -363,6 +365,14 @@ TEST(Platforms_FileSystem, GetRelativePath)
     EXPECT_EQ(FileSystem::GetRelativePath("a/b/c/from/file", false, "a/b/c/to/dir", true).c_str(), BuildPath({"..", "to", "dir"}));
     EXPECT_EQ(FileSystem::GetRelativePath("a/b/c/from/dir", true, "a/b/c/to/file", false).c_str(), BuildPath({"..", "..", "to", "file"}));
     EXPECT_EQ(FileSystem::GetRelativePath("a/b/c/from/file", false, "a/b/c/to/file", false).c_str(), BuildPath({"..", "to", "file"}));
+}
+
+
+TEST(Platforms_FileSystem, GetCurrentDirectory)
+{
+    const auto CurrDir = FileSystem::GetCurrentDirectory();
+    EXPECT_FALSE(CurrDir.empty());
+    LOG_INFO_MESSAGE("Current directory: ", CurrDir);
 }
 
 } // namespace

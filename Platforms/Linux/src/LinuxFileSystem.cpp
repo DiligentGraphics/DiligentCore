@@ -165,4 +165,15 @@ int LinuxFileSystem::pclose(FILE* stream)
     return ::pclose(stream);
 }
 
+std::string LinuxFileSystem::GetCurrentDirectory()
+{
+    std::string CurrDir;
+    if (auto* cwd = getcwd(NULL, 0))
+    {
+        CurrDir = cwd;
+        free(cwd);
+    }
+    return CurrDir;
+}
+
 } // namespace Diligent
