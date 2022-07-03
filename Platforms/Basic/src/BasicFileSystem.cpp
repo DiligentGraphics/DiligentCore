@@ -313,4 +313,11 @@ std::string BasicFileSystem::GetRelativePath(const Char* PathFrom,
     return RelPath;
 }
 
+
+std::string BasicFileSystem::FileDialog(const FileDialogAttribs& DialogAttribs)
+{
+    LOG_WARNING_MESSAGE("File dialog is not implemented on this platform");
+    return "";
+}
+
 } // namespace Diligent

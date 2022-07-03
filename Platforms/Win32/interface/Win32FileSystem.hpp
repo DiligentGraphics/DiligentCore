@@ -30,7 +30,6 @@
 #include <memory>
 #include "../../Basic/interface/BasicFileSystem.hpp"
 #include "../../Basic/interface/StandardFile.hpp"
-#include "../../../Primitives/interface/FlagEnum.h"
 
 namespace Diligent
 {
@@ -39,58 +38,6 @@ class WindowsFile : public StandardFile
 {
 public:
     WindowsFile(const FileOpenAttribs& OpenAttribs);
-};
-
-enum FILE_DIALOG_FLAGS : Uint32
-{
-    FILE_DIALOG_FLAG_NONE = 0x000,
-
-    /// Prevents the system from adding a link to the selected file in the file system
-    /// directory that contains the user's most recently used documents.
-    FILE_DIALOG_FLAG_DONT_ADD_TO_RECENT = 0x001,
-
-    /// Only existing files can be opened
-    FILE_DIALOG_FLAG_FILE_MUST_EXIST = 0x002,
-
-    /// Restores the current directory to its original value if the user changed the
-    /// directory while searching for files.
-    FILE_DIALOG_FLAG_NO_CHANGE_DIR = 0x004,
-
-    /// Causes the Save As dialog box to show a message box if the selected file already exists.
-    FILE_DIALOG_FLAG_OVERWRITE_PROMPT = 0x008
-};
-DEFINE_FLAG_ENUM_OPERATORS(FILE_DIALOG_FLAGS);
-
-enum FILE_DIALOG_TYPE : Uint32
-{
-    FILE_DIALOG_TYPE_OPEN,
-    FILE_DIALOG_TYPE_SAVE
-};
-
-struct FileDialogAttribs
-{
-    FILE_DIALOG_TYPE  Type  = FILE_DIALOG_TYPE_OPEN;
-    FILE_DIALOG_FLAGS Flags = FILE_DIALOG_FLAG_NONE;
-
-    const char* Title  = nullptr;
-    const char* Filter = nullptr;
-
-    FileDialogAttribs() noexcept {}
-
-    explicit FileDialogAttribs(FILE_DIALOG_TYPE _Type) noexcept :
-        Type{_Type}
-    {
-        switch (Type)
-        {
-            case FILE_DIALOG_TYPE_OPEN:
-                Flags = FILE_DIALOG_FLAG_DONT_ADD_TO_RECENT | FILE_DIALOG_FLAG_FILE_MUST_EXIST | FILE_DIALOG_FLAG_NO_CHANGE_DIR;
-                break;
-
-            case FILE_DIALOG_TYPE_SAVE:
-                Flags = FILE_DIALOG_FLAG_DONT_ADD_TO_RECENT | FILE_DIALOG_FLAG_OVERWRITE_PROMPT | FILE_DIALOG_FLAG_NO_CHANGE_DIR;
-                break;
-        }
-    }
 };
 
 struct WindowsFileSystem : public BasicFileSystem
