@@ -145,6 +145,7 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& CI, const SwapCha
         }
     };
 
+#if D3D12_SUPPORTED || VULKAN_SUPPORTED || METAL_SUPPORTED
     auto AddContext = [&ContextCI, &Adapters](COMMAND_QUEUE_TYPE Type, const char* Name, Uint32 AdapterId) //
     {
         if (AdapterId >= Adapters.size())
@@ -171,6 +172,7 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& CI, const SwapCha
             }
         }
     };
+#endif
 
 #if D3D11_SUPPORTED || D3D12_SUPPORTED
     auto PrintAdapterInfo = [](Uint32 AdapterId, const GraphicsAdapterInfo& AdapterInfo, const std::vector<DisplayModeAttribs>& DisplayModes) //
