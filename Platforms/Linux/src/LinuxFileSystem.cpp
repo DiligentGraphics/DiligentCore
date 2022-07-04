@@ -31,6 +31,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <ftw.h>
+#include <glob.h>
 #include <mutex>
 
 #include "LinuxFileSystem.hpp"
@@ -55,15 +56,14 @@ LinuxFile* LinuxFileSystem::OpenFile(const FileOpenAttribs& OpenAttribs)
 
 bool LinuxFileSystem::FileExists(const Char* strFilePath)
 {
-    FileOpenAttribs OpenAttribs;
-    OpenAttribs.strFilePath = strFilePath;
-    BasicFile   DummyFile{OpenAttribs};
-    const auto& Path   = DummyFile.GetPath(); // This is necessary to correct slashes
-    FILE*       pFile  = fopen(Path.c_str(), "r");
-    bool        Exists = (pFile != nullptr);
-    if (Exists)
-        fclose(pFile);
-    return Exists;
+    std::string path{strFilePath};
+    CorrectSlashes(path);
+
+    struct stat StatBuff;
+    if (stat(path.c_str(), &StatBuff) != 0)
+        return false;
+
+    return !S_ISDIR(StatBuff.st_mode);
 }
 
 bool LinuxFileSystem::PathExists(const Char* strPath)
@@ -71,8 +71,8 @@ bool LinuxFileSystem::PathExists(const Char* strPath)
     std::string path{strPath};
     CorrectSlashes(path);
 
-    auto res = access(path.c_str(), R_OK);
-    return res == 0;
+    struct stat StatBuff;
+    return (stat(path.c_str(), &StatBuff) == 0);
 }
 
 bool LinuxFileSystem::CreateDirectory(const Char* strPath)
@@ -105,9 +105,30 @@ bool LinuxFileSystem::CreateDirectory(const Char* strPath)
     return true;
 }
 
+static bool ClearDirectory(const Char* strPath, bool RemoveRoot)
+{
+    std::string path{strPath};
+    LinuxFileSystem::CorrectSlashes(path);
+
+    auto Callaback = RemoveRoot ?
+        [](const char* Path, const struct stat* pStat, int Type, FTW* pFTWB) {
+            return remove(Path);
+        } :
+        [](const char* Path, const struct stat* pStat, int Type, FTW* pFTWB) {
+            if (pFTWB->level == 0)
+                return 0;
+            return remove(Path);
+        };
+
+    constexpr Int32 MaxOpenDirectory = 16;
+
+    const auto res = nftw(path.c_str(), Callaback, MaxOpenDirectory, FTW_DEPTH | FTW_MOUNT | FTW_PHYS);
+    return res == 0;
+}
+
 void LinuxFileSystem::ClearDirectory(const Char* strPath)
 {
-    UNSUPPORTED("Not implemented");
+    Diligent::ClearDirectory(strPath, false);
 }
 
 void LinuxFileSystem::DeleteFile(const Char* strPath)
@@ -117,19 +138,7 @@ void LinuxFileSystem::DeleteFile(const Char* strPath)
 
 bool LinuxFileSystem::DeleteDirectory(const Char* strPath)
 {
-    std::string path{strPath};
-    CorrectSlashes(path);
-
-    auto Callaback = [](const char* Path, const struct stat* pStat, int Type, FTW* pFTWB) -> int {
-        if (remove(Path) < 0)
-            return -1;
-        return 0;
-    };
-
-    constexpr Int32 MaxOpenDirectory = 16;
-
-    const auto res = nftw(path.c_str(), Callaback, MaxOpenDirectory, FTW_DEPTH | FTW_MOUNT | FTW_PHYS);
-    return res == 0;
+    return Diligent::ClearDirectory(strPath, true);
 }
 
 bool LinuxFileSystem::IsDirectory(const Char* strPath)
@@ -144,10 +153,43 @@ bool LinuxFileSystem::IsDirectory(const Char* strPath)
     return S_ISDIR(StatBuff.st_mode);
 }
 
+struct LinuxFindFileData : public FindFileData
+{
+    virtual const Char* Name() const override { return m_Name.c_str(); }
+
+    virtual bool IsDirectory() const override { return m_IsDirectory; }
+
+    const std::string m_Name;
+    const bool        m_IsDirectory;
+
+    LinuxFindFileData(std::string _Name, bool _IsDirectory) :
+        m_Name{std::move(_Name)},
+        m_IsDirectory{_IsDirectory}
+    {}
+};
+
 std::vector<std::unique_ptr<FindFileData>> LinuxFileSystem::Search(const Char* SearchPattern)
 {
-    UNSUPPORTED("Not implemented");
-    return std::vector<std::unique_ptr<FindFileData>>();
+    std::vector<std::unique_ptr<FindFileData>> SearchRes;
+
+    glob_t glob_result = {};
+    if (glob(SearchPattern, GLOB_TILDE, NULL, &glob_result) == 0)
+    {
+        for (unsigned int i = 0; i < glob_result.gl_pathc; ++i)
+        {
+            const auto* path = glob_result.gl_pathv[i];
+
+            struct stat StatBuff = {};
+            stat(path, &StatBuff);
+
+            std::string FileName;
+            GetPathComponents(path, nullptr, &FileName);
+            SearchRes.emplace_back(std::make_unique<LinuxFindFileData>(std::move(FileName), S_ISDIR(StatBuff.st_mode)));
+        }
+    }
+    globfree(&glob_result);
+
+    return SearchRes;
 }
 
 // popen/pclose are not thread-safe
