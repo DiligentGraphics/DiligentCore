@@ -315,6 +315,17 @@ static bool CreateDirectoryImpl(const Char* strPath)
     return true;
 }
 
+template <typename CharType>
+inline bool IsDot(const CharType Name[])
+{
+    return Name[0] == CharType{'.'} && Name[1] == 0;
+}
+template <typename CharType>
+inline bool IsDblDot(const CharType Name[])
+{
+    return Name[0] == CharType{'.'} && Name[1] == CharType{'.'} && Name[2] == 0;
+}
+
 void WindowsFileSystem::ClearDirectory(const Char* strPath, bool Recursive)
 {
     // Find the first file in the directory.
@@ -339,7 +350,7 @@ void WindowsFileSystem::ClearDirectory(const Char* strPath, bool Recursive)
             if (Recursive)
             {
                 // Skip '.' and '..'
-                if (!((ffd.cFileName[0] == L'.' && ffd.cFileName[1] == 0) || (ffd.cFileName[0] == L'.' && ffd.cFileName[1] == L'.' && ffd.cFileName[2] == 0)))
+                if (!IsDot(ffd.cFileName) && !IsDblDot(ffd.cFileName))
                 {
                     auto SubDirName = Directory / NarrowString(ffd.cFileName);
                     ClearDirectory(SubDirName.c_str(), Recursive);
@@ -428,7 +439,7 @@ std::vector<std::unique_ptr<FindFileData>> WindowsFileSystem::Search(const Char*
     do
     {
         // Skip '.' and '..' that add no value
-        if ((ffd.cFileName[0] == L'.' && ffd.cFileName[1] == 0) || (ffd.cFileName[0] == L'.' && ffd.cFileName[1] == L'.' && ffd.cFileName[2] == 0))
+        if (IsDot(ffd.cFileName) || IsDblDot(ffd.cFileName))
             continue;
 
         SearchRes.emplace_back(std::make_unique<WndFindFileData>(ffd));
