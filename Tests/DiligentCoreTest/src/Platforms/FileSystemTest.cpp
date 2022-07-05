@@ -26,11 +26,18 @@
 
 #include "FileSystem.hpp"
 
+#include <vector>
+#include <unordered_set>
+
 #include "gtest/gtest.h"
 
 #include "DebugUtilities.hpp"
+#include "TempDirectory.hpp"
+#include "FileWrapper.hpp"
+#include "FastRand.hpp"
 
 using namespace Diligent;
+using namespace Diligent::Testing;
 
 namespace
 {
@@ -373,6 +380,156 @@ TEST(Platforms_FileSystem, GetCurrentDirectory)
     const auto CurrDir = FileSystem::GetCurrentDirectory();
     EXPECT_FALSE(CurrDir.empty());
     LOG_INFO_MESSAGE("Current directory: ", CurrDir);
+}
+
+TEST(Platforms_FileSystem, File)
+{
+    TempDirectory TmpDir;
+    const auto&   TmpDirPath = TmpDir.Get();
+    ASSERT_TRUE(FileSystem::PathExists(TmpDirPath.c_str()));
+
+    std::vector<Int32> Data(512);
+
+    FastRandInt rnd{0, 0, static_cast<Int32>(FastRand::Max - 1)};
+    for (auto& Elem : Data)
+        Elem = rnd();
+    const auto FilePath = TmpDirPath + FileSystem::SlashSymbol + "TestFile1.ext";
+    EXPECT_FALSE(FileSystem::FileExists(FilePath.c_str()));
+
+    {
+        FileWrapper File{FilePath.c_str(), EFileAccessMode::Overwrite};
+        ASSERT_TRUE(File);
+        EXPECT_TRUE(File->Write(Data.data(), Data.size() * sizeof(Data[0])));
+    }
+
+    EXPECT_TRUE(FileSystem::FileExists(FilePath.c_str()));
+    EXPECT_FALSE(FileSystem::IsDirectory(FilePath.c_str()));
+
+    {
+        FileWrapper File{FilePath.c_str(), EFileAccessMode::Read};
+        ASSERT_TRUE(File);
+        std::vector<Int32> InData(Data.size());
+        EXPECT_TRUE(File->Read(InData.data(), InData.size() * sizeof(InData[0])));
+        EXPECT_EQ(InData, Data);
+    }
+
+    {
+        FileWrapper File{FilePath.c_str(), EFileAccessMode::ReadUpdate};
+        ASSERT_TRUE(File);
+        File->SetPos(0, FilePosOrigin::Start);
+        Data[0] = -1;
+        File->Write(&Data[0], sizeof(Data[0]));
+
+        std::vector<Int32> InData(Data.size());
+        File->SetPos(0, FilePosOrigin::Start);
+        EXPECT_TRUE(File->Read(InData.data(), InData.size() * sizeof(InData[0])));
+        EXPECT_EQ(InData, Data);
+    }
+
+    {
+        FileWrapper File{FilePath.c_str(), EFileAccessMode::AppendUpdate};
+        ASSERT_TRUE(File);
+        Data.push_back(-2);
+        File->Write(&Data.back(), sizeof(Data[0]));
+
+        std::vector<Int32> InData(Data.size());
+        File->SetPos(0, FilePosOrigin::Start);
+        EXPECT_TRUE(File->Read(InData.data(), InData.size() * sizeof(InData[0])));
+        EXPECT_EQ(InData, Data);
+    }
+
+    FileSystem::DeleteFile(FilePath.c_str());
+    EXPECT_FALSE(FileSystem::PathExists(FilePath.c_str()));
+    EXPECT_FALSE(FileSystem::FileExists(FilePath.c_str()));
+}
+
+TEST(Platforms_FileSystem, Directories)
+{
+    TempDirectory TmpDir;
+    const auto&   TmpDirPath = TmpDir.Get();
+    ASSERT_TRUE(FileSystem::PathExists(TmpDirPath.c_str()));
+    EXPECT_TRUE(FileSystem::IsDirectory(TmpDirPath.c_str()));
+    EXPECT_FALSE(FileSystem::FileExists(TmpDirPath.c_str()));
+
+    auto SubDir1Path = TmpDirPath + FileSystem::SlashSymbol + "Subdir1";
+    auto SubDir2Path = SubDir1Path + FileSystem::SlashSymbol + "Subdir2";
+    EXPECT_FALSE(FileSystem::PathExists(SubDir1Path.c_str()));
+    EXPECT_FALSE(FileSystem::PathExists(SubDir2Path.c_str()));
+
+    EXPECT_TRUE(FileSystem::CreateDirectory(SubDir2Path.c_str()));
+    EXPECT_TRUE(FileSystem::PathExists(SubDir1Path.c_str()));
+    EXPECT_TRUE(FileSystem::PathExists(SubDir2Path.c_str()));
+    EXPECT_FALSE(FileSystem::FileExists(SubDir1Path.c_str()));
+    EXPECT_FALSE(FileSystem::FileExists(SubDir2Path.c_str()));
+    EXPECT_TRUE(FileSystem::IsDirectory(SubDir1Path.c_str()));
+    EXPECT_TRUE(FileSystem::IsDirectory(SubDir2Path.c_str()));
+
+    FileSystem::DeleteDirectory(SubDir1Path.c_str());
+    EXPECT_FALSE(FileSystem::PathExists(SubDir1Path.c_str()));
+    EXPECT_TRUE(FileSystem::PathExists(TmpDirPath.c_str()));
+}
+
+TEST(Platforms_FileSystem, Search)
+{
+    TempDirectory TmpDir;
+    const auto&   TmpDirPath = TmpDir.Get();
+    ASSERT_TRUE(FileSystem::PathExists(TmpDirPath.c_str()));
+    EXPECT_TRUE(FileSystem::IsDirectory(TmpDirPath.c_str()));
+    std::unordered_set<std::string> FileNames = {"File1.ext", "File2.ext", "File3.ext"};
+
+    auto CreateTestFile = [](const std::string& Dir, const std::string& FileName) //
+    {
+        const auto& Path = Dir + FileSystem::SlashSymbol + FileName;
+        {
+            FileWrapper File{Path.c_str(), EFileAccessMode::Overwrite};
+            ASSERT_TRUE(File);
+
+            std::vector<Int32> Data(512);
+            EXPECT_TRUE(File->Write(Data.data(), Data.size() * sizeof(Data[0])));
+        }
+        EXPECT_TRUE(FileSystem::FileExists(Path.c_str()));
+    };
+
+    for (auto& Name : FileNames)
+    {
+        CreateTestFile(TmpDirPath, Name);
+    }
+
+    std::unordered_set<std::string> DirNames = {"Subdir1", "subdir2"};
+    for (auto& Name : DirNames)
+    {
+        auto SubdirPath = TmpDirPath + FileSystem::SlashSymbol + Name;
+        EXPECT_TRUE(FileSystem::CreateDirectory(SubdirPath.c_str()));
+        EXPECT_TRUE(FileSystem::PathExists(SubdirPath.c_str()));
+        CreateTestFile(SubdirPath, "Subfile1.ext");
+        CreateTestFile(SubdirPath, "Subfile2.ext");
+    }
+
+    auto SearchPattern = TmpDirPath + FileSystem::SlashSymbol + '*';
+    auto SearchRes     = FileSystem::Search(SearchPattern.c_str());
+    EXPECT_EQ(SearchRes.size(), FileNames.size() + DirNames.size());
+    for (const auto& Res : SearchRes)
+    {
+        if (FileNames.find(Res->Name()) != FileNames.end())
+            EXPECT_FALSE(Res->IsDirectory());
+        else if (DirNames.find(Res->Name()) != DirNames.end())
+            EXPECT_TRUE(Res->IsDirectory());
+        else
+            GTEST_FAIL() << Res->Name();
+    }
+
+    FileSystem::ClearDirectory(TmpDirPath.c_str(), false);
+    ASSERT_TRUE(FileSystem::PathExists(TmpDirPath.c_str()));
+    SearchRes = FileSystem::Search(SearchPattern.c_str());
+    EXPECT_EQ(SearchRes.size(), DirNames.size());
+    for (const auto& Res : SearchRes)
+    {
+        EXPECT_TRUE(DirNames.find(Res->Name()) != DirNames.end());
+    }
+
+    FileSystem::ClearDirectory(TmpDirPath.c_str(), true);
+    SearchRes = FileSystem::Search(SearchPattern.c_str());
+    EXPECT_TRUE(SearchRes.empty());
 }
 
 } // namespace

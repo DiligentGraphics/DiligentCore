@@ -112,17 +112,4 @@ AppleFile* AppleFileSystem::OpenFile(const FileOpenAttribs& OpenAttribs)
     return pFile;
 }
 
-bool AppleFileSystem::FileExists(const Char* strFilePath)
-{
-    std::string path(strFilePath);
-    CorrectSlashes(path);
-    auto resource_path = FindResource(path);
-
-    if (!FindResource(path).empty())
-        return true;
-
-    auto res = access(path.c_str(), F_OK);
-    return res == 0;
-}
-
 } // namespace Diligent

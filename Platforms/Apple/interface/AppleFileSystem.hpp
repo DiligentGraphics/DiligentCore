@@ -43,8 +43,6 @@ struct AppleFileSystem : public LinuxFileSystem
 {
 public:
     static AppleFile* OpenFile(const FileOpenAttribs& OpenAttribs);
-
-    static bool FileExists(const Char* strFilePath);
 };
 
 } // namespace Diligent

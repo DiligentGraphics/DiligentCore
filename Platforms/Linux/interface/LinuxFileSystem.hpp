@@ -51,7 +51,7 @@ public:
     static bool DeleteDirectory(const Char* strPath);
     static bool IsDirectory(const Char* strPath);
 
-    static void ClearDirectory(const Char* strPath);
+    static void ClearDirectory(const Char* strPath, bool Recursive = false);
     static void DeleteFile(const Char* strPath);
 
     static std::vector<std::unique_ptr<FindFileData>> Search(const Char* SearchPattern);

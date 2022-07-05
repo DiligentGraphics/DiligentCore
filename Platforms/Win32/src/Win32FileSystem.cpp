@@ -338,8 +338,8 @@ void WindowsFileSystem::ClearDirectory(const Char* strPath, bool Recursive)
         {
             if (Recursive)
             {
-                // Skip '.' and anything that begins with '..'
-                if (!((ffd.cFileName[0] == L'.' && ffd.cFileName[1] == 0) || (ffd.cFileName[0] == L'.' && ffd.cFileName[1] == L'.')))
+                // Skip '.' and '..'
+                if (!((ffd.cFileName[0] == L'.' && ffd.cFileName[1] == 0) || (ffd.cFileName[0] == L'.' && ffd.cFileName[1] == L'.' && ffd.cFileName[2] == 0)))
                 {
                     auto SubDirName = Directory / NarrowString(ffd.cFileName);
                     ClearDirectory(SubDirName.c_str(), Recursive);
@@ -427,6 +427,10 @@ std::vector<std::unique_ptr<FindFileData>> WindowsFileSystem::Search(const Char*
     // List all the files in the directory
     do
     {
+        // Skip '.' and '..' that add no value
+        if ((ffd.cFileName[0] == L'.' && ffd.cFileName[1] == 0) || (ffd.cFileName[0] == L'.' && ffd.cFileName[1] == L'.' && ffd.cFileName[2] == 0))
+            continue;
+
         SearchRes.emplace_back(std::make_unique<WndFindFileData>(ffd));
     } while (FindNextFileA(hFind, &ffd) != 0);
 

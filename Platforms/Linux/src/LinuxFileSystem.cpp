@@ -105,30 +105,28 @@ bool LinuxFileSystem::CreateDirectory(const Char* strPath)
     return true;
 }
 
-static bool ClearDirectory(const Char* strPath, bool RemoveRoot)
+static constexpr int MaxOpenNTFWDescriptors = 32;
+
+void LinuxFileSystem::ClearDirectory(const Char* strPath, bool Recursive)
 {
     std::string path{strPath};
     LinuxFileSystem::CorrectSlashes(path);
 
-    auto Callaback = RemoveRoot ?
+    auto Callaback = Recursive ?
         [](const char* Path, const struct stat* pStat, int Type, FTW* pFTWB) {
-            return remove(Path);
+            if (pFTWB->level >= 1)
+                return remove(Path);
+            else
+                return 0;
         } :
         [](const char* Path, const struct stat* pStat, int Type, FTW* pFTWB) {
-            if (pFTWB->level == 0)
+            if (pFTWB->level == 1 && !S_ISDIR(pStat->st_mode))
+                return remove(Path);
+            else
                 return 0;
-            return remove(Path);
         };
 
-    constexpr Int32 MaxOpenDirectory = 16;
-
-    const auto res = nftw(path.c_str(), Callaback, MaxOpenDirectory, FTW_DEPTH | FTW_MOUNT | FTW_PHYS);
-    return res == 0;
-}
-
-void LinuxFileSystem::ClearDirectory(const Char* strPath)
-{
-    Diligent::ClearDirectory(strPath, false);
+    nftw(path.c_str(), Callaback, MaxOpenNTFWDescriptors, FTW_DEPTH | FTW_MOUNT | FTW_PHYS);
 }
 
 void LinuxFileSystem::DeleteFile(const Char* strPath)
@@ -138,7 +136,16 @@ void LinuxFileSystem::DeleteFile(const Char* strPath)
 
 bool LinuxFileSystem::DeleteDirectory(const Char* strPath)
 {
-    return Diligent::ClearDirectory(strPath, true);
+    std::string path{strPath};
+    LinuxFileSystem::CorrectSlashes(path);
+
+    auto Callaback =
+        [](const char* Path, const struct stat* pStat, int Type, FTW* pFTWB) {
+            return remove(Path);
+        };
+
+    const auto res = nftw(path.c_str(), Callaback, MaxOpenNTFWDescriptors, FTW_DEPTH | FTW_MOUNT | FTW_PHYS);
+    return res == 0;
 }
 
 bool LinuxFileSystem::IsDirectory(const Char* strPath)
