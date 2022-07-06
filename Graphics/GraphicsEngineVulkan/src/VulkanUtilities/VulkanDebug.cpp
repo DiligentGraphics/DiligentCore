@@ -10,12 +10,15 @@
 
 #include <sstream>
 #include <cstring>
+#include <unordered_map>
+#include <atomic>
 
 #include "VulkanUtilities/VulkanDebug.hpp"
 #include "VulkanUtilities/VulkanLogicalDevice.hpp"
 #include "Errors.hpp"
 #include "DebugUtilities.hpp"
 #include "BasicMath.hpp"
+#include "HashUtils.hpp"
 
 using namespace Diligent;
 
@@ -42,48 +45,43 @@ PFN_vkDestroyDebugReportCallbackEXT DestroyDebugReportCallbackEXT = nullptr;
 VkDebugUtilsMessengerEXT DbgMessenger = VK_NULL_HANDLE;
 VkDebugReportCallbackEXT DbgCallback  = VK_NULL_HANDLE;
 
+std::unordered_map<HashMapStringKey, std::atomic<int>> g_IgnoreMessages;
+
 VKAPI_ATTR VkBool32 VKAPI_CALL DebugMessengerCallback(VkDebugUtilsMessageSeverityFlagBitsEXT      messageSeverity,
                                                       VkDebugUtilsMessageTypeFlagsEXT             messageType,
                                                       const VkDebugUtilsMessengerCallbackDataEXT* callbackData,
                                                       void*                                       userData)
 {
-    // Ignore some validation messages
-    if ((messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT))
+    auto MsgSeverity = DEBUG_MESSAGE_SEVERITY_INFO;
+    if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
     {
-        {
-            // UNASSIGNED-CoreValidation-DrawState-ClearCmdBeforeDraw:
-            // vkCmdClearAttachments() issued on command buffer object 0x... prior to any Draw Cmds. It is recommended you use RenderPass LOAD_OP_CLEAR on Attachments prior to any Draw.
-            static const char* ClearCmdBeforeDrawIdName             = "UNASSIGNED-CoreValidation-DrawState-ClearCmdBeforeDraw";
-            constexpr int32_t  DeprecatedClearCmdBeforeDrawIdNumber = 64; // Starting with sdk version 1.1.85, messageIdNumber is 0 for all messages
-            if ((callbackData->pMessageIdName != nullptr && strcmp(callbackData->pMessageIdName, ClearCmdBeforeDrawIdName) == 0) || callbackData->messageIdNumber == DeprecatedClearCmdBeforeDrawIdNumber)
-                return VK_FALSE;
-        }
-    }
-
-    // "The SPIR-V Capability (ImageGatherExtended) was declared, but none of the requirements were met to use it."
-    if (strcmp(callbackData->pMessageIdName, "VUID-VkShaderModuleCreateInfo-pCode-01091") == 0)
-        return VK_FALSE;
-
-    Diligent::DEBUG_MESSAGE_SEVERITY MsgSeverity = Diligent::DEBUG_MESSAGE_SEVERITY_INFO;
-    if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT)
-    {
-        MsgSeverity = Diligent::DEBUG_MESSAGE_SEVERITY_INFO;
-    }
-    else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT)
-    {
-        MsgSeverity = Diligent::DEBUG_MESSAGE_SEVERITY_INFO;
+        MsgSeverity = DEBUG_MESSAGE_SEVERITY_ERROR;
     }
     else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
     {
-        MsgSeverity = Diligent::DEBUG_MESSAGE_SEVERITY_WARNING;
+        MsgSeverity = DEBUG_MESSAGE_SEVERITY_WARNING;
     }
-    else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
+    else if (messageSeverity & (VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT))
     {
-        MsgSeverity = Diligent::DEBUG_MESSAGE_SEVERITY_ERROR;
+        MsgSeverity = DEBUG_MESSAGE_SEVERITY_INFO;
     }
     else
     {
-        MsgSeverity = Diligent::DEBUG_MESSAGE_SEVERITY_INFO;
+        MsgSeverity = DEBUG_MESSAGE_SEVERITY_INFO;
+    }
+
+    if (callbackData->pMessageIdName != nullptr)
+    {
+        auto it = g_IgnoreMessages.find(callbackData->pMessageIdName);
+        if (it != g_IgnoreMessages.end())
+        {
+            const auto PrevMsgCount = it->second.fetch_add(1);
+            if (MsgSeverity == DEBUG_MESSAGE_SEVERITY_ERROR && PrevMsgCount == 0)
+            {
+                LOG_WARNING_MESSAGE("Vulkan Validation error '", callbackData->pMessageIdName, "' is being ignored. This may obfuscate a real issue.");
+            }
+            return VK_FALSE;
+        }
     }
 
     std::stringstream debugMessage;
@@ -165,18 +163,18 @@ VkBool32 VKAPI_PTR DebugReportCallback(
     const char*                pMessage,     // a null-terminated string detailing the trigger conditions.
     void*                      pUserData)
 {
-    Diligent::DEBUG_MESSAGE_SEVERITY MsgSeverity = Diligent::DEBUG_MESSAGE_SEVERITY_INFO;
-    if (flags & (VK_DEBUG_REPORT_INFORMATION_BIT_EXT | VK_DEBUG_REPORT_DEBUG_BIT_EXT))
+    auto MsgSeverity = DEBUG_MESSAGE_SEVERITY_INFO;
+    if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
     {
-        MsgSeverity = Diligent::DEBUG_MESSAGE_SEVERITY_INFO;
+        MsgSeverity = DEBUG_MESSAGE_SEVERITY_ERROR;
     }
     else if (flags & (VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT))
     {
-        MsgSeverity = Diligent::DEBUG_MESSAGE_SEVERITY_WARNING;
+        MsgSeverity = DEBUG_MESSAGE_SEVERITY_WARNING;
     }
-    else if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
+    else if (flags & (VK_DEBUG_REPORT_INFORMATION_BIT_EXT | VK_DEBUG_REPORT_DEBUG_BIT_EXT))
     {
-        MsgSeverity = Diligent::DEBUG_MESSAGE_SEVERITY_ERROR;
+        MsgSeverity = DEBUG_MESSAGE_SEVERITY_INFO;
     }
 
     std::stringstream debugMessage;
@@ -200,6 +198,8 @@ VkBool32 VKAPI_PTR DebugReportCallback(
 bool SetupDebugUtils(VkInstance                          instance,
                      VkDebugUtilsMessageSeverityFlagsEXT messageSeverity,
                      VkDebugUtilsMessageTypeFlagsEXT     messageType,
+                     uint32_t                            IgnoreMessageCount,
+                     const char* const*                  ppIgnoreMessageNames,
                      void*                               pUserData)
 {
     CreateDebugUtilsMessengerEXT  = reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT"));
@@ -218,6 +218,15 @@ bool SetupDebugUtils(VkInstance                          instance,
 
     auto err = CreateDebugUtilsMessengerEXT(instance, &DbgMessenger_CI, nullptr, &DbgMessenger);
     VERIFY(err == VK_SUCCESS, "Failed to create debug utils messenger");
+
+    g_IgnoreMessages.clear();
+    // UNASSIGNED-CoreValidation-DrawState-ClearCmdBeforeDraw:
+    // vkCmdClearAttachments() issued on command buffer object 0x... prior to any Draw Cmds. It is recommended you use RenderPass LOAD_OP_CLEAR on Attachments prior to any Draw.
+    g_IgnoreMessages.emplace("UNASSIGNED-CoreValidation-DrawState-ClearCmdBeforeDraw", 0);
+    for (uint32_t i = 0; i < IgnoreMessageCount; ++i)
+    {
+        g_IgnoreMessages.emplace(HashMapStringKey{ppIgnoreMessageNames[i], true}, 0);
+    }
 
     // Load function pointers
     SetDebugUtilsObjectNameEXT = reinterpret_cast<PFN_vkSetDebugUtilsObjectNameEXT>(vkGetInstanceProcAddr(instance, "vkSetDebugUtilsObjectNameEXT"));
@@ -266,6 +275,12 @@ void FreeDebug(VkInstance instance)
     if (DbgCallback != VK_NULL_HANDLE)
     {
         DestroyDebugReportCallbackEXT(instance, DbgCallback, nullptr);
+    }
+
+    for (const auto& it : g_IgnoreMessages)
+    {
+        if (it.second > 0)
+            LOG_INFO_MESSAGE("Validation message '", it.first.GetStr(), "' was ignored ", it.second, (it.second > 1 ? " times" : " time"));
     }
 }
 

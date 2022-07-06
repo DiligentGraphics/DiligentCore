@@ -3667,6 +3667,12 @@ struct EngineVkCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     /// Allocator used as pAllocator parameter in calls to Vulkan Create* functions
     void*              pVkAllocator             DEFAULT_INITIALIZER(nullptr);
 
+    /// The number of Vulkan validation messages to ignore in ppIgnoreMessageNames array.
+    Uint32             IgnoreDebugMessageCount  DEFAULT_INITIALIZER(0);
+
+    /// An optional list of IgnoreDebugMessageCount Vulkan validation message names to ignore.
+    const char* const* ppIgnoreDebugMessageNames DEFAULT_INITIALIZER(nullptr);
+
     /// Size of the main descriptor pool that is used to allocate descriptor sets
     /// for static and mutable variables. If allocation from the current pool fails,
     /// the engine creates another one.

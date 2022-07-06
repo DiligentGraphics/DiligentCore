@@ -403,7 +403,7 @@ VulkanInstance::VulkanInstance(const CreateInfo& CI) :
             VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
             VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
             VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-        if (!VulkanUtilities::SetupDebugUtils(m_VkInstance, messageSeverity, messageType, nullptr))
+        if (!VulkanUtilities::SetupDebugUtils(m_VkInstance, messageSeverity, messageType, CI.IgnoreDebugMessageCount, CI.ppIgnoreDebugMessageNames, nullptr))
             LOG_ERROR_MESSAGE("Failed to initialize debug utils. Validation layer message logging, performance markers, etc. will be disabled.");
     }
     else if (m_DebugMode == DebugMode::Report)

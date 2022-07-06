@@ -649,13 +649,15 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
             EngineCI.GraphicsAPIVersion;
 
         VulkanUtilities::VulkanInstance::CreateInfo InstanceCI;
-        InstanceCI.ApiVersion               = VK_MAKE_VERSION(GraphicsAPIVersion.Major, GraphicsAPIVersion.Minor, 0);
-        InstanceCI.EnableValidation         = EngineCI.EnableValidation;
-        InstanceCI.EnableDeviceSimulation   = m_EnableDeviceSimulation;
-        InstanceCI.LogExtensions            = true;
-        InstanceCI.InstanceExtensionCount   = EngineCI.InstanceExtensionCount;
-        InstanceCI.ppInstanceExtensionNames = EngineCI.ppInstanceExtensionNames;
-        InstanceCI.pVkAllocator             = reinterpret_cast<VkAllocationCallbacks*>(EngineCI.pVkAllocator);
+        InstanceCI.ApiVersion                = VK_MAKE_VERSION(GraphicsAPIVersion.Major, GraphicsAPIVersion.Minor, 0);
+        InstanceCI.EnableValidation          = EngineCI.EnableValidation;
+        InstanceCI.EnableDeviceSimulation    = m_EnableDeviceSimulation;
+        InstanceCI.LogExtensions             = true;
+        InstanceCI.InstanceExtensionCount    = EngineCI.InstanceExtensionCount;
+        InstanceCI.ppInstanceExtensionNames  = EngineCI.ppInstanceExtensionNames;
+        InstanceCI.pVkAllocator              = reinterpret_cast<VkAllocationCallbacks*>(EngineCI.pVkAllocator);
+        InstanceCI.IgnoreDebugMessageCount   = EngineCI.IgnoreDebugMessageCount;
+        InstanceCI.ppIgnoreDebugMessageNames = EngineCI.ppIgnoreDebugMessageNames;
 
         auto Instance = VulkanUtilities::VulkanInstance::Create(InstanceCI);
 
@@ -799,6 +801,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
         vkEnabledFeatures.shaderSampledImageArrayDynamicIndexing  = vkDeviceFeatures.shaderSampledImageArrayDynamicIndexing;
         vkEnabledFeatures.shaderStorageBufferArrayDynamicIndexing = vkDeviceFeatures.shaderStorageBufferArrayDynamicIndexing;
         vkEnabledFeatures.shaderStorageImageArrayDynamicIndexing  = vkDeviceFeatures.shaderStorageImageArrayDynamicIndexing;
+        vkEnabledFeatures.shaderImageGatherExtended               = vkDeviceFeatures.shaderImageGatherExtended;
 
         if (EnabledFeatures.SparseResources)
         {

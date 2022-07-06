@@ -10,6 +10,8 @@ namespace VulkanUtilities
 bool SetupDebugUtils(VkInstance                          instance,
                      VkDebugUtilsMessageSeverityFlagsEXT messageSeverity,
                      VkDebugUtilsMessageTypeFlagsEXT     messageType,
+                     uint32_t                            IgnoreMessageCount,
+                     const char* const*                  ppIgnoreMessageNames,
                      void*                               pUserData = nullptr);
 
 // Initializes the debug report callback.
