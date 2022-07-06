@@ -99,11 +99,11 @@ public:
                      VkDeviceSize          PageSize,
                      uint32_t              MemoryTypeIndex,
                      bool                  IsHostVisible,
-                     VkMemoryAllocateFlags AllocateFlags) noexcept;
+                     VkMemoryAllocateFlags AllocateFlags);
     ~VulkanMemoryPage();
 
     // clang-format off
-    VulkanMemoryPage(VulkanMemoryPage&& rhs)noexcept :
+    VulkanMemoryPage(VulkanMemoryPage&& rhs) :
         m_ParentMemoryMgr {rhs.m_ParentMemoryMgr         },
         m_AllocationMgr   {std::move(rhs.m_AllocationMgr)},
         m_VkMemory        {std::move(rhs.m_VkMemory)     },
