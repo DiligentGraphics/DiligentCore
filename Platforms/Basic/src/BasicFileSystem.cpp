@@ -240,21 +240,26 @@ std::string BasicFileSystem::SimplifyPath(const Char* Path, Char Slash)
         const char* const End;
     };
 
-    const auto PathComponents = Diligent::SplitPath<MiniStringView>(Path, true);
+    const auto PathComponents  = Diligent::SplitPath<MiniStringView>(Path, true);
+    const auto NumComponents   = PathComponents.size();
+    const auto UseLeadingSlash = Slash == '/' && IsSlash(Path[0]);
 
-    size_t Len = 0;
+    size_t Len = UseLeadingSlash ? 1 : 0;
     for (const auto& Cmp : PathComponents)
         Len += Cmp.End - Cmp.Start;
-    if (!PathComponents.empty())
-        Len += PathComponents.size() - 1;
+    if (NumComponents > 0)
+        Len += NumComponents - 1;
 
     std::string SimplifiedPath;
     SimplifiedPath.reserve(Len);
+    if (UseLeadingSlash)
+        SimplifiedPath.push_back(Slash);
 
-    for (const auto& Cmp : PathComponents)
+    for (size_t i = 0; i < NumComponents; ++i)
     {
-        if (!SimplifiedPath.empty())
+        if (i > 0)
             SimplifiedPath.push_back(Slash);
+        const auto& Cmp = PathComponents[i];
         SimplifiedPath.append(Cmp.Start, Cmp.End);
     }
     VERIFY_EXPR(SimplifiedPath.length() == Len);

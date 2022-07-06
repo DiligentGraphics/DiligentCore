@@ -63,6 +63,9 @@ TEST(Platforms_FileSystem, SplitPath)
     TestSplitPath("/", false, {});
     TestSplitPath("\\", false, {});
 
+    TestSplitPath("a", true, {"a"});
+    TestSplitPath("a", false, {"a"});
+
     TestSplitPath("a/", true, {"a"});
     TestSplitPath("a\\", true, {"a"});
     TestSplitPath("a/", false, {"a"});
@@ -163,24 +166,34 @@ TEST(Platforms_FileSystem, SimplifyPath)
     EXPECT_STREQ(FileSystem::SimplifyPath("a", '/').c_str(), "a");
     EXPECT_STREQ(FileSystem::SimplifyPath("a", '\\').c_str(), "a");
 
-    EXPECT_STREQ(FileSystem::SimplifyPath("/", '/').c_str(), "");
+    EXPECT_STREQ(FileSystem::SimplifyPath("/", '/').c_str(), "/");
     EXPECT_STREQ(FileSystem::SimplifyPath("/", '\\').c_str(), "");
-    EXPECT_STREQ(FileSystem::SimplifyPath("\\", '/').c_str(), "");
+    EXPECT_STREQ(FileSystem::SimplifyPath("\\", '/').c_str(), "/");
     EXPECT_STREQ(FileSystem::SimplifyPath("\\", '\\').c_str(), "");
+
+    EXPECT_STREQ(FileSystem::SimplifyPath("//", '/').c_str(), "/");
+    EXPECT_STREQ(FileSystem::SimplifyPath("//", '\\').c_str(), "");
+    EXPECT_STREQ(FileSystem::SimplifyPath("\\\\", '/').c_str(), "/");
+    EXPECT_STREQ(FileSystem::SimplifyPath("\\\\", '\\').c_str(), "");
 
     EXPECT_STREQ(FileSystem::SimplifyPath("a/", '/').c_str(), "a");
     EXPECT_STREQ(FileSystem::SimplifyPath("a/", '\\').c_str(), "a");
     EXPECT_STREQ(FileSystem::SimplifyPath("a\\", '/').c_str(), "a");
     EXPECT_STREQ(FileSystem::SimplifyPath("a\\", '\\').c_str(), "a");
 
-    EXPECT_STREQ(FileSystem::SimplifyPath("/a", '/').c_str(), "a");
+    EXPECT_STREQ(FileSystem::SimplifyPath("/a", '/').c_str(), "/a");
     EXPECT_STREQ(FileSystem::SimplifyPath("/a", '\\').c_str(), "a");
-    EXPECT_STREQ(FileSystem::SimplifyPath("\\a", '/').c_str(), "a");
+    EXPECT_STREQ(FileSystem::SimplifyPath("\\a", '/').c_str(), "/a");
     EXPECT_STREQ(FileSystem::SimplifyPath("\\a", '\\').c_str(), "a");
 
-    EXPECT_STREQ(FileSystem::SimplifyPath("/a/", '/').c_str(), "a");
+    EXPECT_STREQ(FileSystem::SimplifyPath("//a", '/').c_str(), "/a");
+    EXPECT_STREQ(FileSystem::SimplifyPath("//a", '\\').c_str(), "a");
+    EXPECT_STREQ(FileSystem::SimplifyPath("\\\\a", '/').c_str(), "/a");
+    EXPECT_STREQ(FileSystem::SimplifyPath("\\\\a", '\\').c_str(), "a");
+
+    EXPECT_STREQ(FileSystem::SimplifyPath("/a/", '/').c_str(), "/a");
     EXPECT_STREQ(FileSystem::SimplifyPath("/a/", '\\').c_str(), "a");
-    EXPECT_STREQ(FileSystem::SimplifyPath("\\a/", '/').c_str(), "a");
+    EXPECT_STREQ(FileSystem::SimplifyPath("\\a/", '/').c_str(), "/a");
     EXPECT_STREQ(FileSystem::SimplifyPath("\\a/", '\\').c_str(), "a");
 
     EXPECT_STREQ(FileSystem::SimplifyPath("a/b", '/').c_str(), "a/b");

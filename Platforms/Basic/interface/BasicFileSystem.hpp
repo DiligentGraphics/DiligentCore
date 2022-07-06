@@ -185,7 +185,8 @@ public:
     /// - Removes redundant slashes (a///b -> a/b)
     /// - Removes redundant . (a/./b -> a/b)
     /// - Collapses .. (a/b/../c -> a/c)
-    /// - Removes leading and trailing slashes (/a/b/c/ -> a/b/c)
+    /// - Removes trailing slashes (/a/b/c/ -> /a/b/c)
+    /// - When 'Slash' is Windows slash ('\'), removes leading slashes (\a\b\c -> a\b\c)
     static std::string SimplifyPath(const Char* Path, Char Slash = 0);
 
 
