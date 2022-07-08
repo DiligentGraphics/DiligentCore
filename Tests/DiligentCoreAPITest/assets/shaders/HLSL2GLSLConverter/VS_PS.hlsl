@@ -952,9 +952,9 @@ struct VSInput
 
 struct VSOutputSubStruct
 {
-    sample float  fAttrib  : F_ATTRIB2;
-           float4 f4Attrib : F4_ATTRIB2;
-           int    iAttrib  : I_ATTRIB2;
+    sample          float  fAttrib  : F_ATTRIB2;
+                    float4 f4Attrib : F4_ATTRIB2;
+    nointerpolation int    iAttrib  : I_ATTRIB2;
 };
 struct VSOutput
 {
