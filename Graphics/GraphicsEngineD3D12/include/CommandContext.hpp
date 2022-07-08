@@ -239,9 +239,14 @@ public:
     void PixSetMarker(const Char* Label, const float* pColor);
 #else
     void PixBeginEvent(const Char* Name, const float* pColor)
-    {}
+    {
+        LOG_WARNING_MESSAGE_ONCE("Diligent Engine was built without PIX support. Use DILIGENT_LOAD_PIX_EVENT_RUNTIME CMake option to enable it.");
+    }
     void PixEndEvent() {}
-    void PixSetMarker(const Char* Label, const float* pColor) {}
+    void PixSetMarker(const Char* Label, const float* pColor)
+    {
+        LOG_WARNING_MESSAGE_ONCE("Diligent Engine was built without PIX support. Use DILIGENT_LOAD_PIX_EVENT_RUNTIME CMake option to enable it.");
+    }
 #endif
 
 protected:
