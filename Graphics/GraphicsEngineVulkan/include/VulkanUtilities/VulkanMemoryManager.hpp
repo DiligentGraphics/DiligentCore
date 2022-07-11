@@ -103,7 +103,7 @@ public:
     ~VulkanMemoryPage();
 
     // clang-format off
-    VulkanMemoryPage(VulkanMemoryPage&& rhs) :
+    VulkanMemoryPage(VulkanMemoryPage&& rhs)noexcept :
         m_ParentMemoryMgr {rhs.m_ParentMemoryMgr         },
         m_AllocationMgr   {std::move(rhs.m_AllocationMgr)},
         m_VkMemory        {std::move(rhs.m_VkMemory)     },
