@@ -112,4 +112,17 @@ AppleFile* AppleFileSystem::OpenFile(const FileOpenAttribs& OpenAttribs)
     return pFile;
 }
 
+bool AppleFileSystem::FileExists(const Char* strFilePath)
+{
+    if (LinuxFileSystem::FileExists(strFilePath))
+        return true;
+
+    // Try to find the file in bundle resources
+    std::string path{strFilePath};
+    CorrectSlashes(path);
+    const auto resource_path = FindResource(path);
+
+    return !resource_path.empty();
+}
+
 } // namespace Diligent

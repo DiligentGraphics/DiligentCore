@@ -80,7 +80,7 @@ void DefaultShaderSourceStreamFactory::CreateInputStream2(const Char*           
 {
     auto CreateFileStream = [](const char* Path) //
     {
-        Diligent::RefCntAutoPtr<BasicFileStream> pFileStream;
+        RefCntAutoPtr<BasicFileStream> pFileStream;
         if (FileSystem::FileExists(Path))
         {
             pFileStream = MakeNewRCObj<BasicFileStream>()(Path, EFileAccessMode::Read);
@@ -90,7 +90,7 @@ void DefaultShaderSourceStreamFactory::CreateInputStream2(const Char*           
         return pFileStream;
     };
 
-    Diligent::RefCntAutoPtr<BasicFileStream> pFileStream;
+    RefCntAutoPtr<BasicFileStream> pFileStream;
     if (FileSystem::IsPathAbsolute(Name))
     {
         pFileStream = CreateFileStream(Name);
