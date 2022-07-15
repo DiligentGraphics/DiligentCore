@@ -360,8 +360,8 @@ std::string DeviceObjectArchive::ToString() const
                 }
                 const auto SizeFieldW = GetNumFieldWidth(MaxSize);
 
-                Output << Ident2 << std::setw(MaxDevNameLen) << std::left << CommonDataName << ' '
-                       << std::setw(SizeFieldW) << std::right << Res.Common.Size() << " bytes\n";
+                Output << Ident2 << std::setw(static_cast<int>(MaxDevNameLen)) << std::left << CommonDataName << ' '
+                       << std::setw(static_cast<int>(SizeFieldW)) << std::right << Res.Common.Size() << " bytes\n";
                 // ....Common     1015 bytes
 
                 for (Uint32 i = 0; i < Res.DeviceSpecific.size(); ++i)
@@ -369,8 +369,8 @@ std::string DeviceObjectArchive::ToString() const
                     const auto DevDataSize = Res.DeviceSpecific[i].Size();
                     if (DevDataSize > 0)
                     {
-                        Output << Ident2 << std::setw(MaxDevNameLen) << std::left << ArchiveDeviceTypeToString(i) << ' '
-                               << std::setw(SizeFieldW) << std::right << DevDataSize << " bytes\n";
+                        Output << Ident2 << std::setw(static_cast<int>(MaxDevNameLen)) << std::left << ArchiveDeviceTypeToString(i) << ' '
+                               << std::setw(static_cast<int>(SizeFieldW)) << std::right << DevDataSize << " bytes\n";
                         // ....OpenGL      729 bytes
                     }
                 }
@@ -433,9 +433,9 @@ std::string DeviceObjectArchive::ToString() const
                 const auto SizeFieldW = GetNumFieldWidth(MaxSize);
                 for (Uint32 idx = 0; idx < Shaders.size(); ++idx)
                 {
-                    Output << Ident2 << '[' << std::setw(IdxFieldW) << std::right << idx << "] "
-                           << std::setw(MaxNameLen) << std::left << ShaderNames[idx] << ' '
-                           << std::setw(SizeFieldW) << std::right << Shaders[idx].Size() << " bytes\n";
+                    Output << Ident2 << '[' << std::setw(static_cast<int>(IdxFieldW)) << std::right << idx << "] "
+                           << std::setw(static_cast<int>(MaxNameLen)) << std::left << ShaderNames[idx] << ' '
+                           << std::setw(static_cast<int>(SizeFieldW)) << std::right << Shaders[idx].Size() << " bytes\n";
                     // ....[0] 'Test VS' 4020 bytes
                 }
             }
