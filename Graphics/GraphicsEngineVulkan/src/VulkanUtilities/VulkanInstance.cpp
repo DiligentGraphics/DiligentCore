@@ -82,7 +82,7 @@ std::string PrintExtensionsList(const std::vector<VkExtensionProperties>& Extens
         {
             ss << (col == 0 ? "\n    " : "    ");
             if (col + 1 < NumColumns && i + 1 < Extensions.size())
-                ss << std::setw(ColWidth[col]) << std::left;
+                ss << std::setw(static_cast<int>(ColWidth[col])) << std::left;
             ss << ExtStrings[i];
         }
     }
