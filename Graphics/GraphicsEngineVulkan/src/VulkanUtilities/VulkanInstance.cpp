@@ -243,7 +243,7 @@ VulkanInstance::VulkanInstance(const CreateInfo& CI) :
 #endif
     };
 
-#if PLATFORM_MACOS || PLATFORM_IOS || PLATFORM_TVOS
+#if PLATFORM_MACOS
     // Beginning with the 1.3.216 Vulkan SDK, the Vulkan Loader is strictly
     // enforcing the new VK_KHR_PORTABILITY_subset extension.
     constexpr bool UsePortabilityEnumeartion = true;
