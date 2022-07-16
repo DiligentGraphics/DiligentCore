@@ -243,6 +243,17 @@ VulkanInstance::VulkanInstance(const CreateInfo& CI) :
 #endif
     };
 
+#if PLATFORM_MACOS || PLATFORM_IOS || PLATFORM_TVOS
+    // Beginning with the 1.3.216 Vulkan SDK, the Vulkan Loader is strictly
+    // enforcing the new VK_KHR_PORTABILITY_subset extension.
+    constexpr bool UsePortabilityEnumeartion = true;
+#else
+    constexpr bool UsePortabilityEnumeartion = false;
+#endif
+
+    if (UsePortabilityEnumeartion)
+        InstanceExtensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+
     // This extension added to core in 1.1, but current version is 1.0
     if (IsExtensionAvailable(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME))
     {
@@ -374,9 +385,16 @@ VulkanInstance::VulkanInstance(const CreateInfo& CI) :
     appInfo.apiVersion         = ApiVersion;
 
     VkInstanceCreateInfo InstanceCreateInfo{};
-    InstanceCreateInfo.sType                   = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    InstanceCreateInfo.pNext                   = nullptr; // Pointer to an extension-specific structure.
-    InstanceCreateInfo.flags                   = 0;       // Reserved for future use.
+    InstanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    InstanceCreateInfo.pNext = nullptr; // Pointer to an extension-specific structure.
+    InstanceCreateInfo.flags = 0;
+    if (UsePortabilityEnumeartion)
+    {
+        // The instance will enumerate available Vulkan Portability-compliant physical
+        // devices and groups in addition to the Vulkan physical devices and groups that
+        // are enumerated by default.
+        InstanceCreateInfo.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+    }
     InstanceCreateInfo.pApplicationInfo        = &appInfo;
     InstanceCreateInfo.enabledExtensionCount   = static_cast<uint32_t>(InstanceExtensions.size());
     InstanceCreateInfo.ppEnabledExtensionNames = InstanceExtensions.empty() ? nullptr : InstanceExtensions.data();
