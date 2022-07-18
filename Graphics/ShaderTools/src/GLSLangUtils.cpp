@@ -33,7 +33,9 @@
 #if (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
 #    include <MoltenGLSLToSPIRVConverter/GLSLToSPIRVConverter.h>
 #else
-#    define ENABLE_HLSL
+#    ifndef ENABLE_HLSL
+#        define ENABLE_HLSL
+#    endif
 #    include "SPIRV/GlslangToSpv.h"
 #endif
 
