@@ -147,6 +147,8 @@ struct CStringCompare<Char>
 struct HashMapStringKey
 {
 public:
+    HashMapStringKey() noexcept {}
+
     // This constructor can perform implicit const Char* -> HashMapStringKey
     // conversion without copying the string.
     HashMapStringKey(const Char* _Str, bool bMakeCopy = false) :
@@ -181,6 +183,17 @@ public:
         Key.Ownership_Hash = 0;
     }
 
+    HashMapStringKey& operator=(HashMapStringKey&& rhs) noexcept
+    {
+        Str            = rhs.Str;
+        Ownership_Hash = rhs.Ownership_Hash;
+
+        rhs.Str            = nullptr;
+        rhs.Ownership_Hash = 0;
+
+        return *this;
+    }
+
     ~HashMapStringKey()
     {
         if (Str != nullptr && (Ownership_Hash & StrOwnershipMask) != 0)
@@ -192,8 +205,12 @@ public:
     // clang-format off
     HashMapStringKey           (const HashMapStringKey&) = delete;
     HashMapStringKey& operator=(const HashMapStringKey&) = delete;
-    HashMapStringKey& operator=(HashMapStringKey&&)      = delete;
     // clang-format on
+
+    HashMapStringKey Clone() const
+    {
+        return HashMapStringKey{GetStr(), (Ownership_Hash & StrOwnershipMask) != 0};
+    }
 
     bool operator==(const HashMapStringKey& RHS) const
     {
@@ -235,6 +252,11 @@ public:
     bool operator!=(const HashMapStringKey& RHS) const
     {
         return !(*this == RHS);
+    }
+
+    explicit operator bool() const
+    {
+        return GetStr() != nullptr;
     }
 
     size_t GetHash() const
