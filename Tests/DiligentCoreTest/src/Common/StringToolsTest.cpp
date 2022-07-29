@@ -168,24 +168,24 @@ TEST(Common_StringTools, CountFloatNumberChars)
     EXPECT_EQ(CountFloatNumberChars(".0123456789f"), size_t{12});
 }
 
-TEST(Common_StringTools, SplitString)
+TEST(Common_StringTools, SplitLongString)
 {
     auto Test = [](std::string Str, size_t MaxChunkLen, size_t NewLineSearchLen, const std::initializer_list<const char*> RefStrings) {
         auto Ref = RefStrings.begin();
-        SplitString(Str.begin(), Str.end(), MaxChunkLen, NewLineSearchLen,
-                    [&](std::string::iterator Start, std::string::iterator End) {
-                        ASSERT_NE(Ref, RefStrings.end());
-                        char tmp = '\0';
-                        if (End != Str.end())
-                        {
-                            tmp  = *End;
-                            *End = '\0';
-                        }
-                        EXPECT_STREQ(&*Start, *Ref);
-                        if (tmp != '\0')
-                            *End = tmp;
-                        ++Ref;
-                    });
+        SplitLongString(Str.begin(), Str.end(), MaxChunkLen, NewLineSearchLen,
+                        [&](std::string::iterator Start, std::string::iterator End) {
+                            ASSERT_NE(Ref, RefStrings.end());
+                            char tmp = '\0';
+                            if (End != Str.end())
+                            {
+                                tmp  = *End;
+                                *End = '\0';
+                            }
+                            EXPECT_STREQ(&*Start, *Ref);
+                            if (tmp != '\0')
+                                *End = tmp;
+                            ++Ref;
+                        });
     };
     Test("12345", 5, 5, {"12345"});
     Test("12345", 5, 1, {"12345"});
