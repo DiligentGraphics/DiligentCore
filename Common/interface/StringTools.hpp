@@ -31,6 +31,7 @@
 #include <sstream>
 #include <locale>
 #include <algorithm>
+#include <vector>
 #include <cctype>
 
 #include "../../Platforms/Basic/interface/DebugUtilities.hpp"
@@ -202,7 +203,7 @@ void SplitLongString(IterType Start, IterType End, size_t MaxChunkLen, size_t Ne
 
     if (MaxChunkLen == 0)
         MaxChunkLen = 32;
-    while (Start < End)
+    while (Start != End)
     {
         auto ChunkEnd = End;
         if (static_cast<size_t>(ChunkEnd - Start) > MaxChunkLen)
@@ -221,6 +222,47 @@ void SplitLongString(IterType Start, IterType End, size_t MaxChunkLen, size_t Ne
         Handler(Start, ChunkEnd);
         Start = ChunkEnd;
     }
+}
+
+
+/// Splits string [Start, End) into chunks separated by Delimiters.
+/// Ignores all leading and trailing delimiters.
+/// For each chunk, calls the Handler.
+template <typename IterType, typename HandlerType>
+void SplitString(IterType Start, IterType End, const char* Delimiters, HandlerType&& Handler)
+{
+    if (Delimiters == nullptr)
+        Delimiters = " \t\r\n";
+
+    auto Pos = Start;
+    while (Pos != End)
+    {
+        while (Pos != End && strchr(Delimiters, *Pos) != nullptr)
+            ++Pos;
+        if (Pos == End)
+            break;
+
+        auto SubstrStart = Pos;
+        while (Pos != End && strchr(Delimiters, *Pos) == nullptr)
+            ++Pos;
+
+        Handler(SubstrStart, Pos);
+    }
+}
+
+
+/// Splits string [Start, End) into chunks separated by Delimiters and returns them as vector of strings.
+/// Ignores all leading and trailing delimiters.
+template <typename IterType>
+std::vector<std::string> SplitString(IterType Start, IterType End, const char* Delimiters = nullptr)
+{
+    std::vector<std::string> Strings;
+    SplitString(Start, End, Delimiters,
+                [&Strings](IterType Start, IterType End) //
+                {
+                    Strings.emplace_back(Start, End);
+                });
+    return Strings;
 }
 
 } // namespace Diligent

@@ -208,6 +208,30 @@ TEST(Common_StringTools, SplitLongString)
          14, 5, {"123456789\n", "abcdefghi\n", "ABCD\n"});
 }
 
+TEST(Common_StringTools, SplitString)
+{
+    auto Test = [](std::string Str, const std::vector<const char*> RefStrings, const char* Delimiters = nullptr) //
+    {
+        const auto Strings = SplitString(Str.begin(), Str.end(), Delimiters);
+        EXPECT_EQ(Strings.size(), RefStrings.size());
+        if (Strings.size() != RefStrings.size())
+            return;
+
+        for (size_t i = 0; i < RefStrings.size(); ++i)
+        {
+            EXPECT_STREQ(Strings[i].c_str(), RefStrings[i]);
+        }
+    };
+    Test("", {});
+    Test(" \r \t \n  ", {});
+    Test("abc", {"abc"});
+    Test(" \r \t \n  abc  \r \t \n ", {"abc"});
+    Test(" \r \t \n  abc  \r \t \n def", {"abc", "def"});
+    Test(" \r \t \n  abc  \r \t \n def \r \t \n", {"abc", "def"});
+    Test(" \r \t \n  abc  \r \t \n def \r \t \n  ", {"\r", "\t", "\n", "abc", "\r", "\t", "\n", "def", "\r", "\t", "\n"}, " ");
+    Test(" \r \t \n  abc  \r \t \n def \r \t \n  ", {" \r \t ", "  abc  \r \t ", " def \r \t ", "  "}, "\n");
+}
+
 TEST(Common_StringTools, WidenString)
 {
     EXPECT_STREQ(WidenString("").c_str(), L"");
