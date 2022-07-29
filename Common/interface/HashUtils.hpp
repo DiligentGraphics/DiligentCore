@@ -185,6 +185,11 @@ public:
 
     HashMapStringKey& operator=(HashMapStringKey&& rhs) noexcept
     {
+        if (this == &rhs)
+            return *this;
+
+        Clear();
+
         Str            = rhs.Str;
         Ownership_Hash = rhs.Ownership_Hash;
 
@@ -196,8 +201,7 @@ public:
 
     ~HashMapStringKey()
     {
-        if (Str != nullptr && (Ownership_Hash & StrOwnershipMask) != 0)
-            delete[] Str;
+        Clear();
     }
 
     // Disable copy constructor and assignments. The struct is designed
@@ -276,6 +280,15 @@ public:
             return Key.GetHash();
         }
     };
+
+    void Clear()
+    {
+        if (Str != nullptr && (Ownership_Hash & StrOwnershipMask) != 0)
+            delete[] Str;
+
+        Str            = nullptr;
+        Ownership_Hash = 0;
+    }
 
 protected:
     static constexpr size_t StrOwnershipBit  = sizeof(size_t) * 8 - 1;
