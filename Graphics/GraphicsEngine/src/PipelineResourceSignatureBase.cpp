@@ -473,11 +473,17 @@ void CopyPipelineResourceSignatureDesc(FixedLinearAllocator&                    
         ++ResourceOffsets[size_t{DstRes.VarType} + 1];
     }
 
-    // Sort resources by variable type (all static -> all mutable -> all dynamic)
-    std::sort(pResources, pResources + SrcDesc.NumResources,
-              [](const PipelineResourceDesc& lhs, const PipelineResourceDesc& rhs) {
-                  return lhs.VarType < rhs.VarType;
-              });
+    // Sort resources by variable type (all static -> all mutable -> all dynamic).
+    // NB: It is crucial to use stable sort to make sure that relative
+    //     positions of resources are preserved.
+    //     std::sort may reposition equal elements differently depending on
+    //     the original arrangement, e.g.:
+    //          B1 B2 A1 A2 -> A1 A2 B1 B2
+    //          A1 B1 A2 B2 -> A2 A1 B2 B1
+    std::stable_sort(pResources, pResources + SrcDesc.NumResources,
+                     [](const PipelineResourceDesc& lhs, const PipelineResourceDesc& rhs) {
+                         return lhs.VarType < rhs.VarType;
+                     });
 
     for (size_t i = 1; i < ResourceOffsets.size(); ++i)
         ResourceOffsets[i] += ResourceOffsets[i - 1];
