@@ -215,31 +215,32 @@ VulkanInstance::VulkanInstance(const CreateInfo& CI) :
         LOG_INFO_MESSAGE("Supported Vulkan instance extensions: ", PrintExtensionsList(m_Extensions, 1));
     }
 
-    std::vector<const char*> InstanceExtensions =
+    std::vector<const char*> InstanceExtensions;
+    if (IsExtensionAvailable(VK_KHR_SURFACE_EXTENSION_NAME))
     {
-        VK_KHR_SURFACE_EXTENSION_NAME,
+        InstanceExtensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
 
-    // Enable surface extensions depending on OS
+        // Enable surface extensions depending on OS
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
-        VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
+        InstanceExtensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 #endif
 #if defined(VK_USE_PLATFORM_ANDROID_KHR)
-        VK_KHR_ANDROID_SURFACE_EXTENSION_NAME,
+        InstanceExtensions.push_back(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
 #endif
 #if defined(VK_USE_PLATFORM_WAYLAND_KHR)
-        VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME,
+        InstanceExtensions.push_back(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
 #endif
 #if defined(VK_USE_PLATFORM_XLIB_KHR)
-        VK_KHR_XLIB_SURFACE_EXTENSION_NAME,
+        InstanceExtensions.push_back(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
 #endif
 #if defined(VK_USE_PLATFORM_XCB_KHR)
-        VK_KHR_XCB_SURFACE_EXTENSION_NAME,
+        InstanceExtensions.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
 #endif
 #if defined(VK_USE_PLATFORM_IOS_MVK)
-        VK_MVK_IOS_SURFACE_EXTENSION_NAME,
+        InstanceExtensions.push_back(VK_MVK_IOS_SURFACE_EXTENSION_NAME);
 #endif
 #if defined(VK_USE_PLATFORM_MACOS_MVK)
-        VK_MVK_MACOS_SURFACE_EXTENSION_NAME,
+        InstanceExtensions.push_back(VK_MVK_MACOS_SURFACE_EXTENSION_NAME);
 #endif
     };
 
