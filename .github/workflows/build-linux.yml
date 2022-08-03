@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 jobs:
   precheks:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     name: Linux -> Pre-checks
 
     steps:
@@ -30,6 +30,7 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
+      fail-fast: false
       matrix:
         include:
           - name:            "GCC"
