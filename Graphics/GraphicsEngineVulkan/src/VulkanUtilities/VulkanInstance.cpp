@@ -192,27 +192,37 @@ VulkanInstance::VulkanInstance(const CreateInfo& CI) :
         VERIFY_EXPR(LayerCount == m_Layers.size());
     }
 
-    if (CI.LogExtensions && !m_Layers.empty())
+    if (CI.LogExtensions)
     {
-        std::stringstream ss;
-        for (const auto& Layer : m_Layers)
+        if (!m_Layers.empty())
         {
-            ss << "\n    "
-               << Layer.layerName << ' '
-               << VK_API_VERSION_MAJOR(Layer.specVersion) << '.'
-               << VK_API_VERSION_MINOR(Layer.specVersion) << '.'
-               << VK_API_VERSION_PATCH(Layer.specVersion);
+            std::stringstream ss;
+            for (const auto& Layer : m_Layers)
+            {
+                ss << "\n    "
+                   << Layer.layerName << ' '
+                   << VK_API_VERSION_MAJOR(Layer.specVersion) << '.'
+                   << VK_API_VERSION_MINOR(Layer.specVersion) << '.'
+                   << VK_API_VERSION_PATCH(Layer.specVersion);
+            }
+            LOG_INFO_MESSAGE("Available Vulkan instance layers: ", ss.str());
         }
-        LOG_INFO_MESSAGE("Available Vulkan instance layers: ", ss.str());
+        else
+        {
+            LOG_INFO_MESSAGE("No Vulkan instance layers found");
+        }
     }
 
     // Enumerate available instance extensions
     if (!EnumerateInstanceExtensions(nullptr, m_Extensions))
         LOG_ERROR_AND_THROW("Failed to enumerate instance extensions");
 
-    if (CI.LogExtensions && !m_Extensions.empty())
+    if (CI.LogExtensions)
     {
-        LOG_INFO_MESSAGE("Supported Vulkan instance extensions: ", PrintExtensionsList(m_Extensions, 1));
+        if (!m_Extensions.empty())
+            LOG_INFO_MESSAGE("Supported Vulkan instance extensions: ", PrintExtensionsList(m_Extensions, 1));
+        else
+            LOG_INFO_MESSAGE("No Vulkan instance extensions found");
     }
 
     std::vector<const char*> InstanceExtensions;
