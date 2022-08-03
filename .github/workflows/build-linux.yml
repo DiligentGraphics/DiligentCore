@@ -110,6 +110,13 @@ jobs:
       if:   success()
       uses: DiligentGraphics/github-action/run-core-tests@v1
 
+    - name: DiligentCoreAPITest VK
+      if: ${{ success() && (matrix.name == 'Clang' || matrix.name == 'GCC') }}
+      uses: DiligentGraphics/github-action/run-core-gpu-tests@v1
+      with:
+        mode: vk_sw
+        args: --gtest_filter=-DrawCommandTest.DrawIndexedInstancedIndirect_FirstInstance_BaseVertex_FirstIndex_VBOffset_IBOffset_InstOffset:TextureCreation/TextureCreationTest.CreateTexture/TEX_FORMAT_BGRA8_TYPELESS
+
     - name: Upload artifact
       uses: actions/upload-artifact@v2
       if: ${{ success() && matrix.build_type != 'Debug' }}
