@@ -117,6 +117,8 @@ TEST(FilterTypeTest, AnisotropicFilter)
 {
     auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
+    if (!pDevice->GetAdapterInfo().Sampler.AnisotropicFilteringSupported)
+        GTEST_SKIP() << "Anisotropic filtering is not supported by this device";
 
     GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
