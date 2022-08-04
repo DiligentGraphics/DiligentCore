@@ -144,7 +144,7 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& EnvCI, const Swap
             }
         }
 
-        LOG_INFO_MESSAGE("Found ", Adapters.size(), " compatible adapters");
+        LOG_INFO_MESSAGE("Found ", Adapters.size(), " compatible ", (Adapters.size() == 1 ? "adapter" : "adapters"));
         for (Uint32 i = 0; i < Adapters.size(); ++i)
         {
             const auto& AdapterInfo  = Adapters[i];
