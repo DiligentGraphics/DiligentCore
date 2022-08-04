@@ -707,7 +707,7 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
         D3D12_FEATURE_DATA_ARCHITECTURE DataArch = {};
         if (SUCCEEDED(d3d12Device->CheckFeatureSupport(D3D12_FEATURE_ARCHITECTURE, &DataArch, sizeof(DataArch))))
         {
-            if (AdapterInfo.Type != ADAPTER_TYPE_SOFTWARE && DataArch.UMA)
+            if (AdapterInfo.Type != ADAPTER_TYPE_SOFTWARE && (DataArch.UMA || DataArch.CacheCoherentUMA))
                 AdapterInfo.Type = ADAPTER_TYPE_INTEGRATED;
         }
     }
