@@ -102,6 +102,7 @@ jobs:
 
 
     - name: Build
+      id:   build
       if:   success()
       uses: DiligentGraphics/github-action/build@v1
       with:
@@ -112,7 +113,9 @@ jobs:
       uses: DiligentGraphics/github-action/run-core-tests@v1
 
     - name: DiligentCoreAPITest VK
-      if: ${{ success() && (matrix.name == 'Clang' || matrix.name == 'GCC') }}
+      # NB: it is essential to include failure() to override the default status check of success()
+      #     that is automatically applied to if conditions that don't contain a status check function.
+      if: ${{ (success() || failure() && steps.build.outcome == 'success') && (matrix.name == 'Clang' || matrix.name == 'GCC') }}
       uses: DiligentGraphics/github-action/run-core-gpu-tests@v1
       with:
         mode: vk_sw
