@@ -121,6 +121,20 @@ jobs:
         mode: vk_sw
         args: --gtest_filter=-DrawCommandTest.DrawIndexedInstancedIndirect_FirstInstance_BaseVertex_FirstIndex_VBOffset_IBOffset_InstOffset:TextureCreation/TextureCreationTest.CreateTexture/TEX_FORMAT_BGRA8_TYPELESS
 
+    - name: DiligentCoreAPITest GL
+      if: ${{ (success() || failure() && steps.build.outcome == 'success') && (matrix.name == 'Clang' || matrix.name == 'GCC') }}
+      uses: DiligentGraphics/github-action/run-core-gpu-tests@v1
+      with:
+        mode: gl
+        args: "--gtest_filter=-DrawCommandTest.MultiDrawIndirectCount:DrawCommandTest.MultiDrawIndexedIndirectCount:PipelineResourceSignatureTest.StructuredBuffers"
+
+    - name: DiligentCoreAPITest GL with Non-Separable Programs
+      if: ${{ (success() || failure() && steps.build.outcome == 'success') && (matrix.name == 'Clang' || matrix.name == 'GCC') }}
+      uses: DiligentGraphics/github-action/run-core-gpu-tests@v1
+      with:
+        mode: gl
+        args: "--non_separable_progs --gtest_filter=-DrawCommandTest.MultiDrawIndirectCount:DrawCommandTest.MultiDrawIndexedIndirectCount:DrawCommandTest.StructuredBufferArray:PipelineResourceSignatureTest.StructuredBuffers"
+
     - name: Upload artifact
       uses: actions/upload-artifact@v2
       if: ${{ success() && matrix.build_type != 'Debug' }}
