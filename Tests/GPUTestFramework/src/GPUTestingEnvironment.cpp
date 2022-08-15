@@ -874,20 +874,12 @@ GPUTestingEnvironment* GPUTestingEnvironment::Initialize(int argc, char** argv)
         {
 #if D3D11_SUPPORTED
             case RENDER_DEVICE_TYPE_D3D11:
-                if (TestEnvCI.AdapterType == ADAPTER_TYPE_SOFTWARE)
-                    std::cout << "\n\n\n================ Running tests in Direct3D11-SW mode =================\n\n";
-                else
-                    std::cout << "\n\n\n================== Running tests in Direct3D11 mode ==================\n\n";
                 pEnv = CreateTestingEnvironmentD3D11(TestEnvCI, SCDesc);
                 break;
 #endif
 
 #if D3D12_SUPPORTED
             case RENDER_DEVICE_TYPE_D3D12:
-                if (TestEnvCI.AdapterType == ADAPTER_TYPE_SOFTWARE)
-                    std::cout << "\n\n\n================ Running tests in Direct3D12-SW mode =================\n\n";
-                else
-                    std::cout << "\n\n\n================== Running tests in Direct3D12 mode ==================\n\n";
                 pEnv = CreateTestingEnvironmentD3D12(TestEnvCI, SCDesc);
                 break;
 #endif
@@ -895,7 +887,6 @@ GPUTestingEnvironment* GPUTestingEnvironment::Initialize(int argc, char** argv)
 #if GL_SUPPORTED || GLES_SUPPORTED
             case RENDER_DEVICE_TYPE_GL:
             case RENDER_DEVICE_TYPE_GLES:
-                std::cout << "\n\n\n==================== Running tests in OpenGL mode ====================\n\n";
                 pEnv = CreateTestingEnvironmentGL(TestEnvCI, SCDesc);
                 break;
 
@@ -903,17 +894,12 @@ GPUTestingEnvironment* GPUTestingEnvironment::Initialize(int argc, char** argv)
 
 #if VULKAN_SUPPORTED
             case RENDER_DEVICE_TYPE_VULKAN:
-                if (TestEnvCI.AdapterType == ADAPTER_TYPE_SOFTWARE)
-                    std::cout << "\n\n\n================== Running tests in Vulkan-SW mode ===================\n\n";
-                else
-                    std::cout << "\n\n\n==================== Running tests in Vulkan mode ====================\n\n";
                 pEnv = CreateTestingEnvironmentVk(TestEnvCI, SCDesc);
                 break;
 #endif
 
 #if METAL_SUPPORTED
             case RENDER_DEVICE_TYPE_METAL:
-                std::cout << "\n\n\n==================== Running tests in Metal mode ====================\n\n";
                 pEnv = CreateTestingEnvironmentMtl(TestEnvCI, SCDesc);
                 break;
 #endif
@@ -921,6 +907,20 @@ GPUTestingEnvironment* GPUTestingEnvironment::Initialize(int argc, char** argv)
             default:
                 LOG_ERROR_AND_THROW("Unsupported device type");
         }
+
+        const auto DeviceType = pEnv->GetDevice()->GetDeviceInfo().Type;
+        if (DeviceType != TestEnvCI.deviceType)
+        {
+            delete pEnv;
+            LOG_ERROR_AND_THROW("Requested device type (", GetRenderDeviceTypeString(TestEnvCI.deviceType),
+                                ") does not match the type of the device that was created (", GetRenderDeviceTypeString(DeviceType), ").");
+        }
+        const auto AdapterType = pEnv->GetDevice()->GetAdapterInfo().Type;
+
+        std::cout << "\n\n\n==================== Running tests in "
+                  << GetRenderDeviceTypeString(DeviceType)
+                  << (AdapterType == ADAPTER_TYPE_SOFTWARE ? "-SW" : "")
+                  << " mode ====================\n\n";
     }
     catch (...)
     {

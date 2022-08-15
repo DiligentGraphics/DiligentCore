@@ -1227,6 +1227,24 @@ const char* GetDeviceFeatureStateString(DEVICE_FEATURE_STATE State, bool bGetFul
     }
 }
 
+const char* GetRenderDeviceTypeString(RENDER_DEVICE_TYPE DeviceType, bool bGetEnumString)
+{
+    static_assert(RENDER_DEVICE_TYPE_COUNT == 7, "Did you add a new device type? Please update the switch below.");
+    switch (DeviceType)
+    {
+        // clang-format off
+        case RENDER_DEVICE_TYPE_UNDEFINED: return bGetEnumString ? "RENDER_DEVICE_TYPE_UNDEFINED" : "Undefined";  break;
+        case RENDER_DEVICE_TYPE_D3D11:     return bGetEnumString ? "RENDER_DEVICE_TYPE_D3D11"     : "Direct3D11"; break;
+        case RENDER_DEVICE_TYPE_D3D12:     return bGetEnumString ? "RENDER_DEVICE_TYPE_D3D12"     : "Direct3D12"; break;
+        case RENDER_DEVICE_TYPE_GL:        return bGetEnumString ? "RENDER_DEVICE_TYPE_GL"        : "OpenGL";     break;
+        case RENDER_DEVICE_TYPE_GLES:      return bGetEnumString ? "RENDER_DEVICE_TYPE_GLES"      : "OpenGLES";   break;
+        case RENDER_DEVICE_TYPE_VULKAN:    return bGetEnumString ? "RENDER_DEVICE_TYPE_VULKAN"    : "Vulkan";     break;
+        case RENDER_DEVICE_TYPE_METAL:     return bGetEnumString ? "RENDER_DEVICE_TYPE_METAL"     : "Metal";      break;
+        // clang-format on
+        default: UNEXPECTED("Unknown/unsupported device type"); return "UNKNOWN";
+    }
+}
+
 String GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAGS Flags, bool GetFullName /*= false*/, const char* DelimiterString /*= "|"*/)
 {
     if (Flags == PIPELINE_RESOURCE_FLAG_NONE)

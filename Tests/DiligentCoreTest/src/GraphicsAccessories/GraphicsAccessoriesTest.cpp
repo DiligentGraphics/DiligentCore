@@ -1068,4 +1068,25 @@ TEST(GraphicsAccessories_GraphicsAccessories, SwapChainUsageFlagsToBindFlags)
     EXPECT_EQ(SwapChainUsageFlagsToBindFlags(SWAP_CHAIN_USAGE_SHADER_RESOURCE | SWAP_CHAIN_USAGE_INPUT_ATTACHMENT), BIND_SHADER_RESOURCE | BIND_INPUT_ATTACHMENT);
 }
 
+TEST(GraphicsAccessories_GraphicsAccessories, GetRenderDeviceTypeString)
+{
+    static_assert(RENDER_DEVICE_TYPE_COUNT == 7, "Please add the new device type to the test");
+
+    EXPECT_STREQ(GetRenderDeviceTypeString(RENDER_DEVICE_TYPE_UNDEFINED), "Undefined");
+    EXPECT_STREQ(GetRenderDeviceTypeString(RENDER_DEVICE_TYPE_D3D11), "Direct3D11");
+    EXPECT_STREQ(GetRenderDeviceTypeString(RENDER_DEVICE_TYPE_D3D12), "Direct3D12");
+    EXPECT_STREQ(GetRenderDeviceTypeString(RENDER_DEVICE_TYPE_GL), "OpenGL");
+    EXPECT_STREQ(GetRenderDeviceTypeString(RENDER_DEVICE_TYPE_GLES), "OpenGLES");
+    EXPECT_STREQ(GetRenderDeviceTypeString(RENDER_DEVICE_TYPE_VULKAN), "Vulkan");
+    EXPECT_STREQ(GetRenderDeviceTypeString(RENDER_DEVICE_TYPE_METAL), "Metal");
+
+    EXPECT_STREQ(GetRenderDeviceTypeString(RENDER_DEVICE_TYPE_UNDEFINED, true), "RENDER_DEVICE_TYPE_UNDEFINED");
+    EXPECT_STREQ(GetRenderDeviceTypeString(RENDER_DEVICE_TYPE_D3D11, true), "RENDER_DEVICE_TYPE_D3D11");
+    EXPECT_STREQ(GetRenderDeviceTypeString(RENDER_DEVICE_TYPE_D3D12, true), "RENDER_DEVICE_TYPE_D3D12");
+    EXPECT_STREQ(GetRenderDeviceTypeString(RENDER_DEVICE_TYPE_GL, true), "RENDER_DEVICE_TYPE_GL");
+    EXPECT_STREQ(GetRenderDeviceTypeString(RENDER_DEVICE_TYPE_GLES, true), "RENDER_DEVICE_TYPE_GLES");
+    EXPECT_STREQ(GetRenderDeviceTypeString(RENDER_DEVICE_TYPE_VULKAN, true), "RENDER_DEVICE_TYPE_VULKAN");
+    EXPECT_STREQ(GetRenderDeviceTypeString(RENDER_DEVICE_TYPE_METAL, true), "RENDER_DEVICE_TYPE_METAL");
+}
+
 } // namespace
