@@ -1089,4 +1089,19 @@ TEST(GraphicsAccessories_GraphicsAccessories, GetRenderDeviceTypeString)
     EXPECT_STREQ(GetRenderDeviceTypeString(RENDER_DEVICE_TYPE_METAL, true), "RENDER_DEVICE_TYPE_METAL");
 }
 
+TEST(GraphicsAccessories_GraphicsAccessories, GetAdapterTypeString)
+{
+    static_assert(ADAPTER_TYPE_COUNT == 4, "Please add the new adapter type to the test");
+
+    EXPECT_STREQ(GetAdapterTypeString(ADAPTER_TYPE_UNKNOWN), "Unknown");
+    EXPECT_STREQ(GetAdapterTypeString(ADAPTER_TYPE_SOFTWARE), "Software");
+    EXPECT_STREQ(GetAdapterTypeString(ADAPTER_TYPE_INTEGRATED), "Integrated");
+    EXPECT_STREQ(GetAdapterTypeString(ADAPTER_TYPE_DISCRETE), "Discrete");
+
+    EXPECT_STREQ(GetAdapterTypeString(ADAPTER_TYPE_UNKNOWN, true), "ADAPTER_TYPE_UNKNOWN");
+    EXPECT_STREQ(GetAdapterTypeString(ADAPTER_TYPE_SOFTWARE, true), "ADAPTER_TYPE_SOFTWARE");
+    EXPECT_STREQ(GetAdapterTypeString(ADAPTER_TYPE_INTEGRATED, true), "ADAPTER_TYPE_INTEGRATED");
+    EXPECT_STREQ(GetAdapterTypeString(ADAPTER_TYPE_DISCRETE, true), "ADAPTER_TYPE_DISCRETE");
+}
+
 } // namespace

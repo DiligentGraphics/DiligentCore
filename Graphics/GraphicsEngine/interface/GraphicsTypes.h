@@ -1308,6 +1308,8 @@ DILIGENT_TYPED_ENUM(ADAPTER_TYPE, Uint8)
 
     /// Discrete hardware adapter
     ADAPTER_TYPE_DISCRETE,
+
+    ADAPTER_TYPE_COUNT
 };
 
 

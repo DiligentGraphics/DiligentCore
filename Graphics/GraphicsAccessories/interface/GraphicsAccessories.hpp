@@ -397,6 +397,8 @@ const char* GetDeviceFeatureStateString(DEVICE_FEATURE_STATE State, bool bGetFul
 
 const char* GetRenderDeviceTypeString(RENDER_DEVICE_TYPE DeviceType, bool bGetEnumString = false);
 
+const char* GetAdapterTypeString(ADAPTER_TYPE AdapterType, bool bGetEnumString = false);
+
 String GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAGS Flags, bool GetFullName = false, const char* DelimiterString = "|");
 
 PIPELINE_RESOURCE_FLAGS GetValidPipelineResourceFlags(SHADER_RESOURCE_TYPE ResourceType);

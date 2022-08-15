@@ -1245,6 +1245,21 @@ const char* GetRenderDeviceTypeString(RENDER_DEVICE_TYPE DeviceType, bool bGetEn
     }
 }
 
+const char* GetAdapterTypeString(ADAPTER_TYPE AdapterType, bool bGetEnumString)
+{
+    static_assert(ADAPTER_TYPE_COUNT == 4, "Did you add a new adapter type? Please update the switch below.");
+    switch (AdapterType)
+    {
+        // clang-format off
+        case ADAPTER_TYPE_UNKNOWN:    return bGetEnumString ? "ADAPTER_TYPE_UNKNOWN"    : "Unknown";    break;
+        case ADAPTER_TYPE_SOFTWARE:   return bGetEnumString ? "ADAPTER_TYPE_SOFTWARE"   : "Software";   break;
+        case ADAPTER_TYPE_INTEGRATED: return bGetEnumString ? "ADAPTER_TYPE_INTEGRATED" : "Integrated"; break;
+        case ADAPTER_TYPE_DISCRETE:   return bGetEnumString ? "ADAPTER_TYPE_DISCRETE"   : "Discrete";   break;
+        // clang-format on
+        default: UNEXPECTED("Unknown/unsupported adapter type"); return "UNKNOWN";
+    }
+}
+
 String GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAGS Flags, bool GetFullName /*= false*/, const char* DelimiterString /*= "|"*/)
 {
     if (Flags == PIPELINE_RESOURCE_FLAG_NONE)

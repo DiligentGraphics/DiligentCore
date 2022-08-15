@@ -870,6 +870,11 @@ GPUTestingEnvironment* GPUTestingEnvironment::Initialize(int argc, char** argv)
     Diligent::Testing::GPUTestingEnvironment* pEnv = nullptr;
     try
     {
+        std::cout << "\n\n\n==================== Running tests in "
+                  << GetRenderDeviceTypeString(TestEnvCI.deviceType)
+                  << (TestEnvCI.AdapterType == ADAPTER_TYPE_SOFTWARE ? "-SW" : "")
+                  << " mode ====================\n\n";
+
         switch (TestEnvCI.deviceType)
         {
 #if D3D11_SUPPORTED
@@ -915,12 +920,14 @@ GPUTestingEnvironment* GPUTestingEnvironment::Initialize(int argc, char** argv)
             LOG_ERROR_AND_THROW("Requested device type (", GetRenderDeviceTypeString(TestEnvCI.deviceType),
                                 ") does not match the type of the device that was created (", GetRenderDeviceTypeString(DeviceType), ").");
         }
-        const auto AdapterType = pEnv->GetDevice()->GetAdapterInfo().Type;
 
-        std::cout << "\n\n\n==================== Running tests in "
-                  << GetRenderDeviceTypeString(DeviceType)
-                  << (AdapterType == ADAPTER_TYPE_SOFTWARE ? "-SW" : "")
-                  << " mode ====================\n\n";
+        const auto AdapterType = pEnv->GetDevice()->GetAdapterInfo().Type;
+        if (TestEnvCI.AdapterType != ADAPTER_TYPE_UNKNOWN && TestEnvCI.AdapterType != AdapterType)
+        {
+            delete pEnv;
+            LOG_ERROR_AND_THROW("Requested adapter type (", GetAdapterTypeString(TestEnvCI.AdapterType),
+                                ") does not match the type of the adapter that was created (", GetAdapterTypeString(AdapterType), ").");
+        }
     }
     catch (...)
     {
