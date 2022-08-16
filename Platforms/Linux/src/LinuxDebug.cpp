@@ -43,10 +43,17 @@ void LinuxDebug ::AssertionFailed(const Char* Message, const char* Function, con
 };
 
 
-void LinuxDebug::OutputDebugMessage(DEBUG_MESSAGE_SEVERITY Severity, const Char* Message, const char* Function, const char* File, int Line)
+void LinuxDebug::OutputDebugMessage(DEBUG_MESSAGE_SEVERITY Severity,
+                                    const Char*            Message,
+                                    const char*            Function,
+                                    const char*            File,
+                                    int                    Line,
+                                    TextColor              Color)
 {
     auto msg = FormatDebugMessage(Severity, Message, Function, File, Line);
-    std::cerr << msg;
+
+    const auto* ColorCode = TextColorToTextColorCode(Severity, Color);
+    std::cout << ColorCode << msg << TextColorCode::Default;
 }
 
 void DebugAssertionFailed(const Char* Message, const char* Function, const char* File, int Line)
@@ -54,6 +61,16 @@ void DebugAssertionFailed(const Char* Message, const char* Function, const char*
     LinuxDebug ::AssertionFailed(Message, Function, File, Line);
 }
 
-DebugMessageCallbackType DebugMessageCallback = LinuxDebug::OutputDebugMessage;
+static void OutputDebugMessage(DEBUG_MESSAGE_SEVERITY Severity,
+                               const Char*            Message,
+                               const char*            Function,
+                               const char*            File,
+                               int                    Line)
+{
+    return LinuxDebug::OutputDebugMessage(Severity, Message, Function, File, Line, TextColor::Auto);
+}
+
+
+DebugMessageCallbackType DebugMessageCallback = OutputDebugMessage;
 
 } // namespace Diligent

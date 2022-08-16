@@ -68,15 +68,18 @@ void WindowsDebug::AssertionFailed(const Char* Message, const char* Function, co
         return;
 };
 
-void WindowsDebug::OutputDebugMessage(DEBUG_MESSAGE_SEVERITY Severity, const Char* Message, const char* Function, const char* File, int Line)
+void WindowsDebug::OutputDebugMessage(DEBUG_MESSAGE_SEVERITY Severity,
+                                      const Char*            Message,
+                                      const char*            Function,
+                                      const char*            File,
+                                      int                    Line,
+                                      TextColor              Color)
 {
     auto msg = FormatDebugMessage(Severity, Message, Function, File, Line);
     OutputDebugStringA(msg.c_str());
 
-    if (Severity == DEBUG_MESSAGE_SEVERITY_ERROR || Severity == DEBUG_MESSAGE_SEVERITY_FATAL_ERROR)
-        std::cerr << msg;
-    else
-        std::cout << msg;
+    const auto* ColorCode = TextColorToTextColorCode(Severity, Color);
+    std::cout << ColorCode << msg << TextColorCode::Default;
 }
 
 void DebugAssertionFailed(const Char* Message, const char* Function, const char* File, int Line)
@@ -84,6 +87,15 @@ void DebugAssertionFailed(const Char* Message, const char* Function, const char*
     WindowsDebug::AssertionFailed(Message, Function, File, Line);
 }
 
-DebugMessageCallbackType DebugMessageCallback = WindowsDebug::OutputDebugMessage;
+static void OutputDebugMessage(DEBUG_MESSAGE_SEVERITY Severity,
+                               const Char*            Message,
+                               const char*            Function,
+                               const char*            File,
+                               int                    Line)
+{
+    return WindowsDebug::OutputDebugMessage(Severity, Message, Function, File, Line, TextColor::Auto);
+}
+
+DebugMessageCallbackType DebugMessageCallback = OutputDebugMessage;
 
 } // namespace Diligent

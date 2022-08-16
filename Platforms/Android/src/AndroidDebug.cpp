@@ -42,7 +42,12 @@ void AndroidDebug::AssertionFailed(const Char* Message, const char* Function, co
     raise(SIGTRAP);
 };
 
-void AndroidDebug::OutputDebugMessage(DEBUG_MESSAGE_SEVERITY Severity, const Char* Message, const char* Function, const char* File, int Line)
+void AndroidDebug::OutputDebugMessage(DEBUG_MESSAGE_SEVERITY Severity,
+                                      const Char*            Message,
+                                      const char*            Function,
+                                      const char*            File,
+                                      int                    Line,
+                                      TextColor              Color)
 {
     auto Msg = FormatDebugMessage(Severity, Message, Function, File, Line);
 
@@ -72,6 +77,15 @@ void DebugAssertionFailed(const Char* Message, const char* Function, const char*
     AndroidDebug::AssertionFailed(Message, Function, File, Line);
 }
 
-DebugMessageCallbackType DebugMessageCallback = AndroidDebug::OutputDebugMessage;
+static void OutputDebugMessage(DEBUG_MESSAGE_SEVERITY Severity,
+                               const Char*            Message,
+                               const char*            Function,
+                               const char*            File,
+                               int                    Line)
+{
+    return AndroidDebug::OutputDebugMessage(Severity, Message, Function, File, Line, TextColor::Auto);
+}
+
+DebugMessageCallbackType DebugMessageCallback = OutputDebugMessage;
 
 } // namespace Diligent
