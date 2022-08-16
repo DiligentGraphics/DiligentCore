@@ -85,7 +85,7 @@ void TestingEnvironment::SetErrorAllowance(int NumErrorsToAllow, const char* Inf
     m_NumAllowedErrors = NumErrorsToAllow;
     if (InfoMessage != nullptr)
     {
-        std::cout << InfoMessage;
+        std::cout << TextColorCode::Cyan << InfoMessage << TextColorCode::Default;
     }
     if (m_NumAllowedErrors == 0)
     {
