@@ -12,9 +12,9 @@ jobs:
             toolset:         "x64"
             build_type:      "Debug"
             cmake_args:      "-DDILIGENT_NO_GLSLANG=ON -DDILIGENT_NO_HLSL=ON"
-            cmake_generator: "Visual Studio 17 2022"
+            cmake_generator: "Visual Studio 16 2019"
 
-    runs-on: windows-2022
+    runs-on: windows-2019
     name: ${{ matrix.host_name }} -> MSVC Analysis, ${{ matrix.toolset }}, ${{ matrix.build_type }}
 
     permissions:
