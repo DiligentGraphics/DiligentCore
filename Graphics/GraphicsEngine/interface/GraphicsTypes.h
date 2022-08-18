@@ -3650,16 +3650,22 @@ typedef struct VulkanDescriptorPoolSize VulkanDescriptorPoolSize;
 /// Attributes specific to Vulkan engine
 struct EngineVkCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
 
+    /// The number of Vulkan instance layers in ppInstanceLayerNames array.
+    Uint32             IntanceLayerCount        DEFAULT_INITIALIZER(0);
+
+    /// A list of additional Vulkan instance layers to enable.
+    const char* const* ppInstanceLayerNames     DEFAULT_INITIALIZER(nullptr);
+
     /// The number of Vulkan instance extensions in ppInstanceExtensionNames array.
     Uint32             InstanceExtensionCount   DEFAULT_INITIALIZER(0);
 
-    /// A list of InstanceExtensionCount Vulkan instance extensions to enable.
+    /// A list of additional Vulkan instance extensions to enable.
     const char* const* ppInstanceExtensionNames DEFAULT_INITIALIZER(nullptr);
 
     /// Number of Vulkan device extensions in ppDeviceExtensionNames array.
     Uint32             DeviceExtensionCount     DEFAULT_INITIALIZER(0);
 
-    /// List of Vulkan device extensions to enable.
+    /// A list of additional Vulkan device extensions to enable.
     const char* const* ppDeviceExtensionNames   DEFAULT_INITIALIZER(nullptr);
 
     /// Pointer to Vulkan device extension features.

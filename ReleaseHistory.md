@@ -1,5 +1,6 @@
 # Current progress
 
+* Added `IntanceLayerCount` and `ppInstanceLayerNames` members to EngineVkCreateInfo struct (API252005)
 * Added `IgnoreDebugMessageCount` and `ppIgnoreDebugMessageNames` to `EngineVkCreateInfo` struct (API252004)
 * Refactored archiver API (removed `IDeviceObjectArchive` and `IArchive`; enabled dearchiver
   to load multiple archives to allow storing signatures and pipelines separately) (API252003)

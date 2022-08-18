@@ -271,24 +271,30 @@ VulkanInstance::VulkanInstance(const CreateInfo& CI) :
         InstanceExtensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
     }
 
-    if (CI.ppInstanceExtensionNames != nullptr)
-    {
-        for (uint32_t ext = 0; ext < CI.InstanceExtensionCount; ++ext)
-            InstanceExtensions.push_back(CI.ppInstanceExtensionNames[ext]);
-    }
-    else
-    {
-        if (CI.InstanceExtensionCount != 0)
-        {
-            LOG_ERROR_MESSAGE("Global extensions pointer is null while extensions count is ", CI.InstanceExtensionCount,
-                              ". Please initialize 'ppInstanceExtensionNames' member of EngineVkCreateInfo struct.");
-        }
-    }
-
     for (const auto* ExtName : InstanceExtensions)
     {
         if (!IsExtensionAvailable(ExtName))
             LOG_ERROR_AND_THROW("Required extension ", ExtName, " is not available");
+    }
+
+    if (CI.ppExtensionNames != nullptr)
+    {
+        for (uint32_t ext = 0; ext < CI.ExtensionCount; ++ext)
+        {
+            const auto* ExtName = CI.ppExtensionNames[ext];
+            if (ExtName == nullptr)
+                continue;
+            if (IsExtensionAvailable(ExtName))
+                InstanceExtensions.push_back(ExtName);
+            else
+                LOG_WARNING_MESSAGE("Extension ", ExtName, " is not available");
+        }
+    }
+    else
+    {
+        DEV_CHECK_ERR(CI.ExtensionCount == 0,
+                      "Global extensions pointer is null while extensions count is ", CI.ExtensionCount,
+                      ". Please initialize 'ppInstanceExtensionNames' member of EngineVkCreateInfo struct.");
     }
 
     auto ApiVersion = CI.ApiVersion;
@@ -384,6 +390,21 @@ VulkanInstance::VulkanInstance(const CreateInfo& CI) :
             InstanceExtensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
         else
             LOG_WARNING_MESSAGE("Neither ", VK_EXT_DEBUG_UTILS_EXTENSION_NAME, " nor ", VK_EXT_DEBUG_REPORT_EXTENSION_NAME, " extension is available. Debug tools (validation layer message logging, performance markers, etc.) will be disabled.");
+    }
+
+    if (CI.ppEnabledLayerNames != nullptr)
+    {
+        for (size_t i = 0; i < CI.EnabledLayerCount; ++i)
+        {
+            const auto* LayerName = CI.ppEnabledLayerNames[i];
+            if (LayerName == nullptr)
+                return;
+            uint32_t LayerVer = 0;
+            if (IsLayerAvailable(LayerName, LayerVer))
+                InstanceLayers.push_back(LayerName);
+            else
+                LOG_WARNING_MESSAGE("Instance layer ", LayerName, " is not available");
+        }
     }
 
     VkApplicationInfo appInfo{};

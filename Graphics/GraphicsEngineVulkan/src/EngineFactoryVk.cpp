@@ -653,8 +653,10 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
         InstanceCI.EnableValidation          = EngineCI.EnableValidation;
         InstanceCI.EnableDeviceSimulation    = m_EnableDeviceSimulation;
         InstanceCI.LogExtensions             = true;
-        InstanceCI.InstanceExtensionCount    = EngineCI.InstanceExtensionCount;
-        InstanceCI.ppInstanceExtensionNames  = EngineCI.ppInstanceExtensionNames;
+        InstanceCI.EnabledLayerCount         = EngineCI.IntanceLayerCount;
+        InstanceCI.ppEnabledLayerNames       = EngineCI.ppInstanceLayerNames;
+        InstanceCI.ExtensionCount            = EngineCI.InstanceExtensionCount;
+        InstanceCI.ppExtensionNames          = EngineCI.ppInstanceExtensionNames;
         InstanceCI.pVkAllocator              = reinterpret_cast<VkAllocationCallbacks*>(EngineCI.pVkAllocator);
         InstanceCI.IgnoreDebugMessageCount   = EngineCI.IgnoreDebugMessageCount;
         InstanceCI.ppIgnoreDebugMessageNames = EngineCI.ppIgnoreDebugMessageNames;
