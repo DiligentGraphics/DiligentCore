@@ -541,7 +541,7 @@ static bool ModifyPipelineStateCreateInfo(PSOCreateInfoType&             CreateI
         // Immutable sampler descriptions can be modified, but shader stages must be the same
         if (ResourceLayout.ImmutableSamplers[i].ShaderStages != CreateInfo.PSODesc.ResourceLayout.ImmutableSamplers[i].ShaderStages)
         {
-            LOG_ERROR_MESSAGE("Modifiying immutable sampler shader stages in the resource layout is not allowed");
+            LOG_ERROR_MESSAGE("Modifying immutable sampler shader stages in the resource layout is not allowed");
             return false;
         }
     }
@@ -573,7 +573,7 @@ static bool ModifyPipelineStateCreateInfo(PSOCreateInfoType&             CreateI
         const auto& NewDesc  = pNewSign->GetDesc();
         if (!PipelineResourceSignaturesCompatible(OrigDesc, NewDesc, /*IgnoreSamplerDescriptions =*/true))
         {
-            LOG_ERROR_MESSAGE("When changing pipeline resource singatures, only immutable sampler descriptions in new signatures are allowed to differ from original");
+            LOG_ERROR_MESSAGE("When changing pipeline resource signatures, only immutable sampler descriptions in new signatures are allowed to differ from original");
             return false;
         }
     }

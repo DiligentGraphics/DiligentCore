@@ -91,7 +91,7 @@ TEST(GraphicsTypesXTest, SubpassDescX)
 {
     constexpr AttachmentReference   Inputs[]        = {{2, RESOURCE_STATE_SHADER_RESOURCE}, {4, RESOURCE_STATE_SHADER_RESOURCE}};
     constexpr AttachmentReference   RenderTargets[] = {{1, RESOURCE_STATE_RENDER_TARGET}, {2, RESOURCE_STATE_RENDER_TARGET}};
-    constexpr AttachmentReference   Resovles[]      = {{3, RESOURCE_STATE_RESOLVE_DEST}, {4, RESOURCE_STATE_RESOLVE_DEST}};
+    constexpr AttachmentReference   Resolves[]      = {{3, RESOURCE_STATE_RESOLVE_DEST}, {4, RESOURCE_STATE_RESOLVE_DEST}};
     constexpr AttachmentReference   DepthStencil    = {5, RESOURCE_STATE_DEPTH_WRITE};
     constexpr Uint32                Preserves[]     = {1, 3, 5};
     constexpr ShadingRateAttachment ShadingRate     = {{6, RESOURCE_STATE_SHADING_RATE}, 128, 256};
@@ -105,7 +105,7 @@ TEST(GraphicsTypesXTest, SubpassDescX)
     Ref.pRenderTargetAttachments    = RenderTargets;
     TestCtorsAndAssignments<SubpassDescX>(Ref);
 
-    Ref.pResolveAttachments = Resovles;
+    Ref.pResolveAttachments = Resolves;
     TestCtorsAndAssignments<SubpassDescX>(Ref);
 
     Ref.PreserveAttachmentCount = _countof(Preserves);
@@ -121,8 +121,8 @@ TEST(GraphicsTypesXTest, SubpassDescX)
         DescX
             .AddInput(Inputs[0])
             .AddInput(Inputs[1])
-            .AddRenderTarget(RenderTargets[0], &Resovles[0])
-            .AddRenderTarget(RenderTargets[1], &Resovles[1])
+            .AddRenderTarget(RenderTargets[0], &Resolves[0])
+            .AddRenderTarget(RenderTargets[1], &Resolves[1])
             .SetDepthStencil(&DepthStencil)
             .SetShadingRate(&ShadingRate)
             .AddPreserve(Preserves[0])
@@ -143,12 +143,12 @@ TEST(GraphicsTypesXTest, SubpassDescX)
             .AddRenderTarget(RenderTargets[1]);
         EXPECT_EQ(DescX, Ref);
 
-        constexpr AttachmentReference Resovles2[] = {{ATTACHMENT_UNUSED, RESOURCE_STATE_UNKNOWN}, {4, RESOURCE_STATE_RESOLVE_DEST}};
-        Ref.pResolveAttachments                   = Resovles2;
+        constexpr AttachmentReference Resolves2[] = {{ATTACHMENT_UNUSED, RESOURCE_STATE_UNKNOWN}, {4, RESOURCE_STATE_RESOLVE_DEST}};
+        Ref.pResolveAttachments                   = Resolves2;
         DescX.ClearRenderTargets();
         DescX
             .AddRenderTarget(RenderTargets[0])
-            .AddRenderTarget(RenderTargets[1], &Resovles2[1]);
+            .AddRenderTarget(RenderTargets[1], &Resolves2[1]);
         EXPECT_EQ(DescX, Ref);
 
         DescX.ClearInputs();

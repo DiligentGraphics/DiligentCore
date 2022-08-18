@@ -259,7 +259,7 @@ Bool ArchiverImpl::AddPipelineState(IPipelineState* pPSO)
 
     const auto& Desc = pSerializedPSO->GetDesc();
     const auto* Name = Desc.Name;
-    // Mesh pipelines are serialized as graphics pipeliens
+    // Mesh pipelines are serialized as graphics pipelines
     const auto ArchiveResType = PipelineTypeToArchiveResourceType(Desc.PipelineType);
 
     {
