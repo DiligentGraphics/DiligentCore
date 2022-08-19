@@ -332,10 +332,11 @@ if(MSVC)
     set(DILIGENT_MSVC_RELEASE_COMPILE_OPTIONS ${DILIGENT_MSVC_RELEASE_COMPILE_OPTIONS} CACHE STRING "Additional MSVC compile options for release configurations")
 
     # Enable level 4 warnings, but disable
-    # - w4100 - unreferenced formal parameter
-    # - w4201 - nonstandard extension used: nameless struct/union
-    # - w4505 - unreferenced local function has been removed
-    target_compile_options(Diligent-BuildSettings INTERFACE /W4 /wd4100 /wd4201 /wd4505 /MP ${DILIGENT_MSVC_COMPILE_OPTIONS})
+    # - w4100  - unreferenced formal parameter
+    # - w4201  - nonstandard extension used: nameless struct/union
+    # - w4505  - unreferenced local function has been removed
+    # - C26812 - Prefer 'enum class' over 'enum' (Code analysis warning)
+    target_compile_options(Diligent-BuildSettings INTERFACE /W4 /wd4100 /wd4201 /wd4505 /wd26812 /MP ${DILIGENT_MSVC_COMPILE_OPTIONS})
 
     # In all release modes also:
     # - disable w4189 - local variable is initialized but not referenced
