@@ -34,6 +34,41 @@
 namespace Diligent
 {
 
+namespace
+{
+
+class ConsoleSetUpHelper
+{
+public:
+    ConsoleSetUpHelper()
+    {
+        // Set proper console mode to ensure colored output (required ENABLE_VIRTUAL_TERMINAL_PROCESSING flag is not set
+        // by default for stdout when starting an app from Windows terminal).
+        for (auto StdHandle : {GetStdHandle(STD_OUTPUT_HANDLE), GetStdHandle(STD_ERROR_HANDLE)})
+        {
+            DWORD Mode = 0;
+            // https://docs.microsoft.com/en-us/windows/console/setconsolemode
+            if (GetConsoleMode(StdHandle, &Mode))
+            {
+                // Characters written by the WriteFile or WriteConsole function or echoed by the ReadFile or
+                // ReadConsole function are parsed for ASCII control sequences, and the correct action is performed.
+                // Backspace, tab, bell, carriage return, and line feed characters are processed. It should be
+                // enabled when using control sequences or when ENABLE_VIRTUAL_TERMINAL_PROCESSING is set.
+                Mode |= ENABLE_PROCESSED_OUTPUT;
+
+                // When writing with WriteFile or WriteConsole, characters are parsed for VT100 and similar
+                // control character sequences that control cursor movement, color/font mode, and other operations
+                // that can also be performed via the existing Console APIs.
+                Mode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+
+                SetConsoleMode(StdHandle, Mode);
+            }
+        }
+    }
+};
+
+} // namespace
+
 void WindowsDebug::AssertionFailed(const Char* Message, const char* Function, const char* File, int Line)
 {
     auto AssertionFailedMessage = FormatAssertionFailedMessage(Message, Function, File, Line);
@@ -75,6 +110,8 @@ void WindowsDebug::OutputDebugMessage(DEBUG_MESSAGE_SEVERITY Severity,
                                       int                    Line,
                                       TextColor              Color)
 {
+    static ConsoleSetUpHelper SetUpConsole;
+
     auto msg = FormatDebugMessage(Severity, Message, Function, File, Line);
     OutputDebugStringA(msg.c_str());
 
