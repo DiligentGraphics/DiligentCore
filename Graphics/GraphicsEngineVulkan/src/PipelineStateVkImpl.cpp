@@ -146,6 +146,8 @@ void CreateGraphicsPipeline(RenderDeviceVkImpl*                           pDevic
             GraphicsPipeline.DSVFormat,
             (GraphicsPipeline.ShadingRateFlags & PIPELINE_SHADING_RATE_FLAG_TEXTURE_BASED) != 0};
         pRenderPass = RPCache.GetRenderPass(Key);
+        if (pRenderPass == nullptr)
+            LOG_ERROR_AND_THROW("Failed to create default render pass.");
     }
 
     VkGraphicsPipelineCreateInfo PipelineCI{};

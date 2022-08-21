@@ -597,6 +597,32 @@ void ValidateGraphicsPipelineCreateInfo(const GraphicsPipelineStateCreateInfo& C
     }
     else
     {
+        for (Uint32 rt = 0; rt < GraphicsPipeline.NumRenderTargets; ++rt)
+        {
+            const auto RTVFmt = GraphicsPipeline.RTVFormats[rt];
+            if (RTVFmt == TEX_FORMAT_UNKNOWN)
+                continue;
+
+            const auto& FmtAttribs = GetTextureFormatAttribs(RTVFmt);
+            if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH ||
+                FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL ||
+                FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
+            {
+                LOG_PSO_ERROR_AND_THROW("Format ", FmtAttribs.Name, " of render target slot ", rt,
+                                        " is invalid: depth-stencil or compressed formats are not allowed.");
+            }
+        }
+
+        if (GraphicsPipeline.DSVFormat != TEX_FORMAT_UNKNOWN)
+        {
+            const auto& FmtAttribs = GetTextureFormatAttribs(GraphicsPipeline.DSVFormat);
+            if (FmtAttribs.ComponentType != COMPONENT_TYPE_DEPTH &&
+                FmtAttribs.ComponentType != COMPONENT_TYPE_DEPTH_STENCIL)
+            {
+                LOG_PSO_ERROR_AND_THROW(FmtAttribs.Name, " is not a valid depth buffer format.");
+            }
+        }
+
         for (Uint32 rt = GraphicsPipeline.NumRenderTargets; rt < _countof(GraphicsPipeline.RTVFormats); ++rt)
         {
             auto RTVFmt = GraphicsPipeline.RTVFormats[rt];

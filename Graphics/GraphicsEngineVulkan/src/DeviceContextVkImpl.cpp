@@ -1747,10 +1747,19 @@ void DeviceContextVkImpl::ChooseRenderPassAndFramebuffer()
     auto& FBCache = m_pDevice->GetFramebufferCache();
     auto& RPCache = m_pDevice->GetImplicitRenderPassCache();
 
-    m_vkRenderPass         = RPCache.GetRenderPass(RenderPassKey)->GetVkRenderPass();
-    FBKey.Pass             = m_vkRenderPass;
-    FBKey.CommandQueueMask = ~Uint64{0};
-    m_vkFramebuffer        = FBCache.GetFramebuffer(FBKey, m_FramebufferWidth, m_FramebufferHeight, m_FramebufferSlices);
+    if (auto* pRenderPass = RPCache.GetRenderPass(RenderPassKey))
+    {
+        m_vkRenderPass         = pRenderPass->GetVkRenderPass();
+        FBKey.Pass             = m_vkRenderPass;
+        FBKey.CommandQueueMask = ~Uint64{0};
+        m_vkFramebuffer        = FBCache.GetFramebuffer(FBKey, m_FramebufferWidth, m_FramebufferHeight, m_FramebufferSlices);
+    }
+    else
+    {
+        UNEXPECTED("Unable to get render pass for the currently bound render targets");
+        m_vkRenderPass  = VK_NULL_HANDLE;
+        m_vkFramebuffer = VK_NULL_HANDLE;
+    }
 }
 
 void DeviceContextVkImpl::SetRenderTargetsExt(const SetRenderTargetsAttribs& Attribs)
