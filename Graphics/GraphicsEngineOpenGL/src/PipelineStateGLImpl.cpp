@@ -97,7 +97,7 @@ PipelineResourceSignatureDescWrapper PipelineStateGLImpl::GetDefaultResourceSign
     const PipelineResourceLayoutDesc& ResourceLayout,
     Uint32                            SRBAllocationGranularity) noexcept(false)
 {
-    return {};
+    return PipelineResourceSignatureDescWrapper{PSOName, {}, 1};
 }
 
 PipelineResourceSignatureDescWrapper PipelineStateGLImpl::GetDefaultSignatureDesc(
