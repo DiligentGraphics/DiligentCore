@@ -201,7 +201,7 @@ SerializedPipelineStateImpl::SerializedPipelineStateImpl(IReferenceCounters*    
     if (CreateInfo.PSODesc.Name == nullptr || CreateInfo.PSODesc.Name[0] == '\0')
         LOG_ERROR_AND_THROW("Serialized pipeline state name can't be null or empty");
 
-    ValidatePipelineStateArchiveInfo(CreateInfo, ArchiveInfo, pDevice->GetValidDeviceFlags());
+    ValidatePipelineStateArchiveInfo(CreateInfo, ArchiveInfo, pDevice->GetSupportedDeviceFlags());
     ValidatePSOCreateInfo(pDevice, CreateInfo);
 
     auto DeviceBits = ArchiveInfo.DeviceFlags;

@@ -50,7 +50,7 @@ SerializedShaderImpl::SerializedShaderImpl(IReferenceCounters*      pRefCounters
     }
 
     auto DeviceFlags = ArchiveInfo.DeviceFlags;
-    if ((DeviceFlags & m_pDevice->GetValidDeviceFlags()) != DeviceFlags)
+    if ((DeviceFlags & m_pDevice->GetSupportedDeviceFlags()) != DeviceFlags)
     {
         LOG_ERROR_AND_THROW("DeviceFlags contain unsupported device type");
     }
