@@ -142,11 +142,12 @@ endif()
 find_package(Git QUIET)
 if(Git_FOUND)
     execute_process(
-        COMMAND "${GIT_EXECUTABLE}" describe --dirty=+ --tags --always
-        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+        COMMAND "${GIT_EXECUTABLE}" rev-parse --short=8 HEAD
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
         OUTPUT_VARIABLE DILIGENT_CORE_COMMIT_HASH
         ERROR_QUIET
         OUTPUT_STRIP_TRAILING_WHITESPACE)
     set(DILIGENT_CORE_COMMIT_HASH "${DILIGENT_CORE_COMMIT_HASH}" CACHE INTERNAL "" FORCE)
+    message(STATUS "DiligentCore commit hash: " ${DILIGENT_CORE_COMMIT_HASH})
     target_compile_definitions(Diligent-GraphicsEngine PRIVATE DILIGENT_CORE_COMMIT_HASH="${DILIGENT_CORE_COMMIT_HASH}")
 endif()
