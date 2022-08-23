@@ -66,19 +66,28 @@ else()
     set(ARCH 32 CACHE INTERNAL "32-bit architecture")
 endif()
 
-if(("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86") OR ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "amd") OR
-   ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "X86") OR ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "AMD"))
-    set(TARGET_CPU x86) # Emscripten
-elseif(("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64") OR ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "amd64") OR
-       ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "X86_64") OR ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "AMD64"))
-    # There are no real 32-bit x86 processors these days.
-    # Even for 32-bit builds, system processor will be 64-bit.
-    set(TARGET_CPU x86_64)
-elseif(("${CMAKE_SYSTEM_PROCESSOR}" MATCHES "arm") OR ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "aarch64") OR
-       ("${CMAKE_SYSTEM_PROCESSOR}" MATCHES "ARM") OR ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "AARCH64"))
-    set(TARGET_CPU arm)
+# When not cross-compiling, CMAKE_SYSTEM_PROCESSOR has the same value as the CMAKE_HOST_SYSTEM_PROCESSOR variable.
+# In many cases, this will correspond to the target architecture for the build, but this is not guaranteed.
+# (E.g. on Windows, the host may be AMD64 even when using a MSVC cl compiler with a 32-bit target.)
+# When cross-compiling, a CMAKE_TOOLCHAIN_FILE should set the CMAKE_SYSTEM_PROCESSOR variable to match target
+# architecture that it specifies.
+if(CMAKE_SYSTEM_PROCESSOR)
+    if(("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86") OR ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "amd") OR
+       ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "X86") OR ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "AMD"))
+        set(TARGET_CPU x86) # Emscripten
+    elseif(("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64") OR ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "amd64") OR
+           ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "X86_64") OR ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "AMD64"))
+        # There are no real 32-bit x86 processors these days.
+        # Even for 32-bit builds, system processor will be 64-bit.
+        set(TARGET_CPU x86_64)
+    elseif(("${CMAKE_SYSTEM_PROCESSOR}" MATCHES "arm") OR ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "aarch64") OR
+           ("${CMAKE_SYSTEM_PROCESSOR}" MATCHES "ARM") OR ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "AARCH64"))
+        set(TARGET_CPU arm)
+    else()
+        message("Unknown system processor: " ${CMAKE_SYSTEM_PROCESSOR})
+    endif()
 else()
-    message("Unknown system processor: " ${CMAKE_SYSTEM_PROCESSOR})
+    message("Unable to detect target processor: CMAKE_SYSTEM_PROCESSOR is not defined")
 endif()
 
 if(TARGET_CPU)
