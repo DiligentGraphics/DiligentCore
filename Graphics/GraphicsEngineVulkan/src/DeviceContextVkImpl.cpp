@@ -368,13 +368,16 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
     Uint32 TotalDynamicOffsetCount = 0;
     for (Uint32 i = 0; i < SignCount; ++i)
     {
+        auto& SetInfo = BindInfo.SetInfo[i];
+
         auto* pSignature = pPipelineStateVk->GetResourceSignature(i);
         if (pSignature == nullptr || pSignature->GetNumDescriptorSets() == 0)
+        {
+            SetInfo = {};
             continue;
+        }
 
         VERIFY_EXPR(BindInfo.ActiveSRBMask & (1u << i));
-
-        auto& SetInfo = BindInfo.SetInfo[i];
 
         SetInfo.BaseInd            = Layout.GetFirstDescrSetIndex(pSignature->GetDesc().BindingIndex);
         SetInfo.DynamicOffsetCount = pSignature->GetDynamicOffsetCount();
@@ -426,6 +429,7 @@ void DeviceContextVkImpl::CommitDescriptorSets(ResourceBindInfo& BindInfo, Uint3
         VERIFY(SetInfo.vkSets[0] != VK_NULL_HANDLE || (CommitSRBMask & (1u << sign)) == 0,
                "At least one descriptor set in the stale SRB must not be NULL. Empty SRBs should not be marked as stale by CommitShaderResources()");
 
+        VERIFY((BindInfo.ActiveSRBMask & (1u << sign)) != 0 || SetInfo.vkSets[0] == VK_NULL_HANDLE, "Descriptor sets must be null for inactive slots");
         if (SetInfo.vkSets[0] == VK_NULL_HANDLE)
         {
             VERIFY_EXPR(SetInfo.vkSets[1] == VK_NULL_HANDLE);
