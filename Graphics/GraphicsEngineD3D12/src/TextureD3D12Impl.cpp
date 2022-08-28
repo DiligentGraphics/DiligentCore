@@ -228,10 +228,18 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
         auto InitialState = bInitializeTexture ? RESOURCE_STATE_COPY_DEST : RESOURCE_STATE_UNDEFINED;
         SetState(InitialState);
 
-        auto d3d12State = ResourceStateFlagsToD3D12ResourceStates(InitialState) & d3d12StateMask;
-        auto hr =
-            pd3d12Device->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE, &d3d12TexDesc, d3d12State, pClearValue, __uuidof(m_pd3d12Resource),
-                                                  reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&m_pd3d12Resource)));
+        const auto d3d12State = ResourceStateFlagsToD3D12ResourceStates(InitialState) & d3d12StateMask;
+
+        // By default, committed resources and heaps are almost always zeroed upon creation.
+        // CREATE_NOT_ZEROED flag allows this to be elided in some scenarios to lower the overhead
+        // of creating the heap. No need to zero the resource if we initialize it.
+        const auto d3d12HeapFlags = bInitializeTexture ?
+            D3D12_HEAP_FLAG_CREATE_NOT_ZEROED :
+            D3D12_HEAP_FLAG_NONE;
+
+        auto hr = pd3d12Device->CreateCommittedResource(
+            &HeapProps, d3d12HeapFlags, &d3d12TexDesc, d3d12State, pClearValue, __uuidof(m_pd3d12Resource),
+            reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&m_pd3d12Resource)));
         if (FAILED(hr))
             LOG_ERROR_AND_THROW("Failed to create D3D12 texture");
 
@@ -267,16 +275,13 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
             UploadBuffDesc.Layout             = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
             UploadBuffDesc.Flags              = D3D12_RESOURCE_FLAG_NONE;
 
-            // By default, committed resources and heaps are almost always zeroed upon creation.
-            // CREATE_NOT_ZEROED flag allows this to be elided in some scenarios to lower the overhead
-            // of creating the heap.
-            constexpr auto HeapFlags = D3D12_HEAP_FLAG_CREATE_NOT_ZEROED;
-
             CComPtr<ID3D12Resource> UploadBuffer;
-            hr = pd3d12Device->CreateCommittedResource(&UploadHeapProps, HeapFlags,
-                                                       &UploadBuffDesc, D3D12_RESOURCE_STATE_GENERIC_READ,
-                                                       nullptr, __uuidof(UploadBuffer),
-                                                       reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&UploadBuffer)));
+            hr = pd3d12Device->CreateCommittedResource(
+                &UploadHeapProps,
+                D3D12_HEAP_FLAG_CREATE_NOT_ZEROED, // Do not zero the heap
+                &UploadBuffDesc, D3D12_RESOURCE_STATE_GENERIC_READ,
+                nullptr, __uuidof(UploadBuffer),
+                reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&UploadBuffer)));
             if (FAILED(hr))
                 LOG_ERROR_AND_THROW("Failed to create committed resource in an upload heap");
 
