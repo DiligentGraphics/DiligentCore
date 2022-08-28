@@ -254,22 +254,27 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
             UploadHeapProps.CreationNodeMask     = 1;
             UploadHeapProps.VisibleNodeMask      = 1;
 
-            D3D12_RESOURCE_DESC BufferDesc{};
-            BufferDesc.Dimension          = D3D12_RESOURCE_DIMENSION_BUFFER;
-            BufferDesc.Alignment          = 0;
-            BufferDesc.Width              = uploadBufferSize;
-            BufferDesc.Height             = 1;
-            BufferDesc.DepthOrArraySize   = 1;
-            BufferDesc.MipLevels          = 1;
-            BufferDesc.Format             = DXGI_FORMAT_UNKNOWN;
-            BufferDesc.SampleDesc.Count   = 1;
-            BufferDesc.SampleDesc.Quality = 0;
-            BufferDesc.Layout             = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-            BufferDesc.Flags              = D3D12_RESOURCE_FLAG_NONE;
+            D3D12_RESOURCE_DESC UploadBuffDesc{};
+            UploadBuffDesc.Dimension          = D3D12_RESOURCE_DIMENSION_BUFFER;
+            UploadBuffDesc.Alignment          = 0;
+            UploadBuffDesc.Width              = uploadBufferSize;
+            UploadBuffDesc.Height             = 1;
+            UploadBuffDesc.DepthOrArraySize   = 1;
+            UploadBuffDesc.MipLevels          = 1;
+            UploadBuffDesc.Format             = DXGI_FORMAT_UNKNOWN;
+            UploadBuffDesc.SampleDesc.Count   = 1;
+            UploadBuffDesc.SampleDesc.Quality = 0;
+            UploadBuffDesc.Layout             = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+            UploadBuffDesc.Flags              = D3D12_RESOURCE_FLAG_NONE;
+
+            // By default, committed resources and heaps are almost always zeroed upon creation.
+            // CREATE_NOT_ZEROED flag allows this to be elided in some scenarios to lower the overhead
+            // of creating the heap.
+            constexpr auto HeapFlags = D3D12_HEAP_FLAG_CREATE_NOT_ZEROED;
 
             CComPtr<ID3D12Resource> UploadBuffer;
-            hr = pd3d12Device->CreateCommittedResource(&UploadHeapProps, D3D12_HEAP_FLAG_NONE,
-                                                       &BufferDesc, D3D12_RESOURCE_STATE_GENERIC_READ,
+            hr = pd3d12Device->CreateCommittedResource(&UploadHeapProps, HeapFlags,
+                                                       &UploadBuffDesc, D3D12_RESOURCE_STATE_GENERIC_READ,
                                                        nullptr, __uuidof(UploadBuffer),
                                                        reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&UploadBuffer)));
             if (FAILED(hr))

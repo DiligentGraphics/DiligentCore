@@ -185,8 +185,14 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
                 UploadHeapProps.VisibleNodeMask      = 1;
 
                 D3D12BuffDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+                // By default, committed resources and heaps are almost always zeroed upon creation.
+                // CREATE_NOT_ZEROED flag allows this to be elided in some scenarios to lower the overhead
+                // of creating the heap.
+                constexpr auto HeapFlags = D3D12_HEAP_FLAG_CREATE_NOT_ZEROED;
+
                 CComPtr<ID3D12Resource> UploadBuffer;
-                hr = pd3d12Device->CreateCommittedResource(&UploadHeapProps, D3D12_HEAP_FLAG_NONE,
+                hr = pd3d12Device->CreateCommittedResource(&UploadHeapProps, HeapFlags,
                                                            &D3D12BuffDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, __uuidof(UploadBuffer),
                                                            reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&UploadBuffer)));
                 if (FAILED(hr))
