@@ -511,12 +511,20 @@ public:
             auto SliceMgr = pBatch->LockSliceAfter(Slice);
             if (!SliceMgr)
             {
-                Slice = GetNextAvailableSlice();
-                if (Slice == ~Uint32{0})
-                    break;
-
-                SliceMgr = pBatch->AddSlice(Slice);
-                VERIFY_EXPR(SliceMgr);
+                const auto NewSlice = GetNextAvailableSlice();
+                if (NewSlice != ~Uint32{0})
+                {
+                    Slice    = NewSlice;
+                    SliceMgr = pBatch->AddSlice(Slice);
+                    VERIFY_EXPR(SliceMgr);
+                }
+                else
+                {
+                    // It is possible that another thread added a new slice while this thread failed
+                    SliceMgr = pBatch->LockSliceAfter(Slice);
+                    if (!SliceMgr)
+                        break;
+                }
             }
 
             if (SliceMgr)
