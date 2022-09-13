@@ -34,13 +34,13 @@
 namespace Diligent
 {
 
-void LinuxDebug ::AssertionFailed(const Char* Message, const char* Function, const char* File, int Line)
+void LinuxDebug::AssertionFailed(const Char* Message, const char* Function, const char* File, int Line)
 {
     auto AssertionFailedMessage = FormatAssertionFailedMessage(Message, Function, File, Line);
     OutputDebugMessage(DEBUG_MESSAGE_SEVERITY_ERROR, AssertionFailedMessage.c_str(), nullptr, nullptr, 0);
 
     raise(SIGTRAP);
-};
+}
 
 
 void LinuxDebug::OutputDebugMessage(DEBUG_MESSAGE_SEVERITY Severity,
@@ -58,7 +58,7 @@ void LinuxDebug::OutputDebugMessage(DEBUG_MESSAGE_SEVERITY Severity,
 
 void DebugAssertionFailed(const Char* Message, const char* Function, const char* File, int Line)
 {
-    LinuxDebug ::AssertionFailed(Message, Function, File, Line);
+    LinuxDebug::AssertionFailed(Message, Function, File, Line);
 }
 
 static void OutputDebugMessage(DEBUG_MESSAGE_SEVERITY Severity,
