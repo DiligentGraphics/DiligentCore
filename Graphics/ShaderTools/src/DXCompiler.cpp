@@ -135,6 +135,8 @@ private:
 
         if (m_pCreateInstance)
         {
+            m_MaxShaderModel = TestMaxShaderModel(m_pCreateInstance, m_Target);
+
             CComPtr<IDxcValidator> pdxcValidator;
             if (SUCCEEDED(m_pCreateInstance(CLSID_DxcValidator, IID_PPV_ARGS(&pdxcValidator))))
             {
@@ -142,22 +144,10 @@ private:
                 if (SUCCEEDED(pdxcValidator->QueryInterface(IID_PPV_ARGS(&pdxcVerInfo))))
                 {
                     pdxcVerInfo->GetVersion(&m_MajorVer, &m_MinorVer);
-
-                    LOG_INFO_MESSAGE("Loaded DX Shader Compiler, version ", m_MajorVer, ".", m_MinorVer);
-
-                    auto ver = (m_MajorVer << 16) | (m_MinorVer & 0xFFFF);
-
-                    // map known DXC version to maximum SM
-                    switch (ver)
-                    {
-                        case 0x10005: m_MaxShaderModel = {6, 5}; break; // SM 6.5 and SM 6.6 preview
-                        case 0x10004: m_MaxShaderModel = {6, 4}; break; // SM 6.4 and SM 6.5 preview
-                        case 0x10003:
-                        case 0x10002: m_MaxShaderModel = {6, 1}; break; // SM 6.1 and SM 6.2 preview
-                        default: m_MaxShaderModel = (ver > 0x10005 ? ShaderVersion{6, 6} : ShaderVersion{6, 0}); break;
-                    }
                 }
             }
+
+            LOG_INFO_MESSAGE("Loaded DX Shader Compiler ", m_MajorVer, ".", m_MinorVer, ". Max supported shader model: ", m_MaxShaderModel.Major, '.', m_MaxShaderModel.Minor);
         }
 
         return m_pCreateInstance;
@@ -188,6 +178,8 @@ private:
     static void PatchResourceDeclaration(const TResourceBindingMap& ResourceMap, TExtendedResourceMap& ExtResMap, String& DXIL) noexcept(false);
     static void PatchResourceDeclarationRT(const TResourceBindingMap& ResourceMap, TExtendedResourceMap& ExtResMap, String& DXIL) noexcept(false);
     static void PatchResourceHandle(const TResourceBindingMap& ResourceMap, TExtendedResourceMap& ExtResMap, String& DXIL) noexcept(false);
+
+    static ShaderVersion TestMaxShaderModel(DxcCreateInstanceProc CreateInstance, DXCompilerTarget Target);
 
 private:
     DxcCreateInstanceProc  m_pCreateInstance = nullptr;
@@ -298,6 +290,71 @@ private:
 std::unique_ptr<IDXCompiler> CreateDXCompiler(DXCompilerTarget Target, Uint32 APIVersion, const char* pLibraryName)
 {
     return std::make_unique<DXCompilerImpl>(Target, APIVersion, pLibraryName);
+}
+
+ShaderVersion DXCompilerImpl::TestMaxShaderModel(DxcCreateInstanceProc CreateInstance, DXCompilerTarget Target)
+{
+    VERIFY_EXPR(CreateInstance != nullptr);
+    try
+    {
+        CComPtr<IDxcLibrary> pdxcLibrary;
+        CHECK_D3D_RESULT(CreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&pdxcLibrary)), "Failed to create DXC Library");
+
+        CComPtr<IDxcCompiler> pdxcCompiler;
+        CHECK_D3D_RESULT(CreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&pdxcCompiler)), "Failed to create DXC Compiler");
+
+        constexpr char TestShader[] = R"(
+float4 main() : SV_Target0
+{
+    return float4(0.0, 0.0, 0.0, 0.0);
+}
+)";
+
+        CComPtr<IDxcBlobEncoding> pSourceBlob;
+        CHECK_D3D_RESULT(pdxcLibrary->CreateBlobWithEncodingFromPinned(TestShader, sizeof(TestShader), CP_UTF8, &pSourceBlob), "Failed to create DXC Blob Encoding");
+
+        ShaderVersion MaxSM{6, 0};
+
+        std::vector<const wchar_t*> DxilArgs;
+        if (Target == DXCompilerTarget::Vulkan)
+            DxilArgs.push_back(L"-spirv");
+
+        for (Uint32 MinorVer = 1;; ++MinorVer)
+        {
+            std::wstring Profile = L"ps_6_";
+            Profile += std::to_wstring(MinorVer);
+
+            CComPtr<IDxcOperationResult> pdxcResult;
+
+            auto hr = pdxcCompiler->Compile(
+                pSourceBlob,
+                L"",
+                L"main",
+                Profile.c_str(),
+                !DxilArgs.empty() ? DxilArgs.data() : nullptr,
+                static_cast<UINT32>(DxilArgs.size()),
+                nullptr, // Array of defines
+                0,       // Number of defines
+                nullptr, // Include handler
+                &pdxcResult);
+            if (FAILED(hr))
+                break;
+
+            HRESULT status = E_FAIL;
+            if (FAILED(pdxcResult->GetStatus(&status)))
+                break;
+            if (FAILED(status))
+                break;
+
+            MaxSM.Minor = MinorVer;
+        }
+
+        return MaxSM;
+    }
+    catch (...)
+    {
+        return {};
+    }
 }
 
 bool DXCompilerImpl::Compile(const CompileAttribs& Attribs)
