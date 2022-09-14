@@ -135,13 +135,13 @@ private:
 
         if (m_pCreateInstance)
         {
-            CComPtr<IDxcValidator> validator;
-            if (SUCCEEDED(m_pCreateInstance(CLSID_DxcValidator, IID_PPV_ARGS(&validator))))
+            CComPtr<IDxcValidator> pdxcValidator;
+            if (SUCCEEDED(m_pCreateInstance(CLSID_DxcValidator, IID_PPV_ARGS(&pdxcValidator))))
             {
-                CComPtr<IDxcVersionInfo> info;
-                if (SUCCEEDED(validator->QueryInterface(IID_PPV_ARGS(&info))))
+                CComPtr<IDxcVersionInfo> pdxcVerInfo;
+                if (SUCCEEDED(pdxcValidator->QueryInterface(IID_PPV_ARGS(&pdxcVerInfo))))
                 {
-                    info->GetVersion(&m_MajorVer, &m_MinorVer);
+                    pdxcVerInfo->GetVersion(&m_MajorVer, &m_MinorVer);
 
                     LOG_INFO_MESSAGE("Loaded DX Shader Compiler, version ", m_MajorVer, ".", m_MinorVer);
 
@@ -163,7 +163,7 @@ private:
         return m_pCreateInstance;
     }
 
-    bool ValidateAndSign(DxcCreateInstanceProc CreateInstance, IDxcLibrary* library, CComPtr<IDxcBlob>& compiled, IDxcBlob** ppBlobOut) const;
+    bool ValidateAndSign(DxcCreateInstanceProc CreateInstance, IDxcLibrary* pdxcLibrary, CComPtr<IDxcBlob>& pCompiled, IDxcBlob** ppOutput) const noexcept(false);
 
     enum RES_TYPE : Uint32
     {
@@ -185,9 +185,9 @@ private:
     using TExtendedResourceMap = std::unordered_map<TResourceBindingMap::value_type const*, ResourceExtendedInfo>;
 
     static bool PatchDXIL(const TResourceBindingMap& ResourceMap, TExtendedResourceMap& ExtResMap, SHADER_TYPE ShaderType, String& DXIL);
-    static void PatchResourceDeclaration(const TResourceBindingMap& ResourceMap, TExtendedResourceMap& ExtResMap, String& DXIL);
-    static void PatchResourceDeclarationRT(const TResourceBindingMap& ResourceMap, TExtendedResourceMap& ExtResMap, String& DXIL);
-    static void PatchResourceHandle(const TResourceBindingMap& ResourceMap, TExtendedResourceMap& ExtResMap, String& DXIL);
+    static void PatchResourceDeclaration(const TResourceBindingMap& ResourceMap, TExtendedResourceMap& ExtResMap, String& DXIL) noexcept(false);
+    static void PatchResourceDeclarationRT(const TResourceBindingMap& ResourceMap, TExtendedResourceMap& ExtResMap, String& DXIL) noexcept(false);
+    static void PatchResourceHandle(const TResourceBindingMap& ResourceMap, TExtendedResourceMap& ExtResMap, String& DXIL) noexcept(false);
 
 private:
     DxcCreateInstanceProc  m_pCreateInstance = nullptr;
@@ -202,12 +202,21 @@ private:
     UINT32 m_MinorVer = 0;
 };
 
+#define CHECK_D3D_RESULT(Expr, Message)   \
+    do                                    \
+    {                                     \
+        HRESULT _hr_ = Expr;              \
+        if (FAILED(_hr_))                 \
+        {                                 \
+            LOG_ERROR_AND_THROW(Message); \
+        }                                 \
+    } while (false)
 
 class DxcIncludeHandlerImpl final : public IDxcIncludeHandler
 {
 public:
-    explicit DxcIncludeHandlerImpl(IShaderSourceInputStreamFactory* pStreamFactory, CComPtr<IDxcLibrary> pLibrary) :
-        m_pLibrary{pLibrary},
+    explicit DxcIncludeHandlerImpl(IShaderSourceInputStreamFactory* pStreamFactory, CComPtr<IDxcLibrary> pdxcLibrary) :
+        m_pdxcLibrary{std::move(pdxcLibrary)},
         m_pStreamFactory{pStreamFactory}
     {
     }
@@ -245,18 +254,18 @@ public:
         auto pFileData = DataBlobImpl::Create();
         pSourceStream->ReadBlob(pFileData);
 
-        CComPtr<IDxcBlobEncoding> sourceBlob;
+        CComPtr<IDxcBlobEncoding> pSourceBlob;
 
-        HRESULT hr = m_pLibrary->CreateBlobWithEncodingFromPinned(pFileData->GetDataPtr(), static_cast<UINT32>(pFileData->GetSize()), CP_UTF8, &sourceBlob);
+        HRESULT hr = m_pdxcLibrary->CreateBlobWithEncodingFromPinned(pFileData->GetDataPtr(), static_cast<UINT32>(pFileData->GetSize()), CP_UTF8, &pSourceBlob);
         if (FAILED(hr))
         {
-            LOG_ERROR("Failed to allocate space for shader include file ", fileName, ".");
+            LOG_ERROR_MESSAGE("Failed to allocate space for shader include file ", fileName, ".");
             return E_FAIL;
         }
 
         m_FileDataCache.emplace_back(std::move(pFileData));
 
-        sourceBlob->QueryInterface(IID_PPV_ARGS(ppIncludeSource));
+        pSourceBlob->QueryInterface(IID_PPV_ARGS(ppIncludeSource));
         return S_OK;
     }
 
@@ -277,7 +286,7 @@ public:
     }
 
 private:
-    CComPtr<IDxcLibrary>                   m_pLibrary;
+    CComPtr<IDxcLibrary>                   m_pdxcLibrary;
     IShaderSourceInputStreamFactory* const m_pStreamFactory;
     std::atomic_long                       m_RefCount{0};
     std::vector<RefCntAutoPtr<IDataBlob>>  m_FileDataCache;
@@ -288,151 +297,125 @@ private:
 
 std::unique_ptr<IDXCompiler> CreateDXCompiler(DXCompilerTarget Target, Uint32 APIVersion, const char* pLibraryName)
 {
-    return std::unique_ptr<IDXCompiler>{new DXCompilerImpl{Target, APIVersion, pLibraryName}};
+    return std::make_unique<DXCompilerImpl>(Target, APIVersion, pLibraryName);
 }
 
 bool DXCompilerImpl::Compile(const CompileAttribs& Attribs)
 {
-    auto CreateInstance = GetCreateInstanceProc();
-
-    if (CreateInstance == nullptr)
+    try
     {
-        LOG_ERROR("Failed to load DXCompiler");
-        return false;
-    }
+        auto CreateInstance = GetCreateInstanceProc();
+        if (CreateInstance == nullptr)
+            LOG_ERROR_AND_THROW("Failed to load DXCompiler");
 
-    DEV_CHECK_ERR(Attribs.Source != nullptr && Attribs.SourceLength > 0, "'Source' must not be null and 'SourceLength' must be greater than 0");
-    DEV_CHECK_ERR(Attribs.EntryPoint != nullptr, "'EntryPoint' must not be null");
-    DEV_CHECK_ERR(Attribs.Profile != nullptr, "'Profile' must not be null");
-    DEV_CHECK_ERR((Attribs.pDefines != nullptr) == (Attribs.DefinesCount > 0), "'DefinesCount' must be 0 if 'pDefines' is null");
-    DEV_CHECK_ERR((Attribs.pArgs != nullptr) == (Attribs.ArgsCount > 0), "'ArgsCount' must be 0 if 'pArgs' is null");
-    DEV_CHECK_ERR(Attribs.ppBlobOut != nullptr, "'ppBlobOut' must not be null");
-    DEV_CHECK_ERR(Attribs.ppCompilerOutput != nullptr, "'ppCompilerOutput' must not be null");
+        DEV_CHECK_ERR(Attribs.Source != nullptr && Attribs.SourceLength > 0, "'Source' must not be null and 'SourceLength' must be greater than 0");
+        DEV_CHECK_ERR(Attribs.EntryPoint != nullptr, "'EntryPoint' must not be null");
+        DEV_CHECK_ERR(Attribs.Profile != nullptr, "'Profile' must not be null");
+        DEV_CHECK_ERR((Attribs.pDefines != nullptr) == (Attribs.DefinesCount > 0), "'DefinesCount' must be 0 if 'pDefines' is null");
+        DEV_CHECK_ERR((Attribs.pArgs != nullptr) == (Attribs.ArgsCount > 0), "'ArgsCount' must be 0 if 'pArgs' is null");
+        DEV_CHECK_ERR(Attribs.ppBlobOut != nullptr, "'ppBlobOut' must not be null");
+        DEV_CHECK_ERR(Attribs.ppCompilerOutput != nullptr, "'ppCompilerOutput' must not be null");
 
-    HRESULT hr;
+        HRESULT hr;
 
-    // NOTE: The call to DxcCreateInstance is thread-safe, but objects created by DxcCreateInstance aren't thread-safe.
-    // Compiler objects should be created and then used on the same thread.
-    // https://github.com/microsoft/DirectXShaderCompiler/wiki/Using-dxc.exe-and-dxcompiler.dll#dxcompiler-dll-interface
+        // NOTE: The call to DxcCreateInstance is thread-safe, but objects created by DxcCreateInstance aren't thread-safe.
+        // Compiler objects should be created and then used on the same thread.
+        // https://github.com/microsoft/DirectXShaderCompiler/wiki/Using-dxc.exe-and-dxcompiler.dll#dxcompiler-dll-interface
 
-    CComPtr<IDxcLibrary> library;
-    hr = CreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&library));
-    if (FAILED(hr))
-    {
-        LOG_ERROR("Failed to create DXC Library");
-        return false;
-    }
+        CComPtr<IDxcLibrary> pdxcLibrary;
+        CHECK_D3D_RESULT(CreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&pdxcLibrary)), "Failed to create DXC Library");
 
-    CComPtr<IDxcCompiler> compiler;
-    hr = CreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler));
-    if (FAILED(hr))
-    {
-        LOG_ERROR("Failed to create DXC Compiler");
-        return false;
-    }
+        CComPtr<IDxcCompiler> pdxcCompiler;
+        CHECK_D3D_RESULT(CreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&pdxcCompiler)), "Failed to create DXC Compiler");
 
-    CComPtr<IDxcBlobEncoding> sourceBlob;
-    hr = library->CreateBlobWithEncodingFromPinned(Attribs.Source, UINT32{Attribs.SourceLength}, CP_UTF8, &sourceBlob);
-    if (FAILED(hr))
-    {
-        LOG_ERROR("Failed to create DXC Blob encoding");
-        return false;
-    }
+        CComPtr<IDxcBlobEncoding> pSourceBlob;
+        CHECK_D3D_RESULT(pdxcLibrary->CreateBlobWithEncodingFromPinned(Attribs.Source, UINT32{Attribs.SourceLength}, CP_UTF8, &pSourceBlob), "Failed to create DXC Blob Encoding");
 
-    DxcIncludeHandlerImpl IncludeHandler{Attribs.pShaderSourceStreamFactory, library};
+        DxcIncludeHandlerImpl IncludeHandler{Attribs.pShaderSourceStreamFactory, pdxcLibrary};
 
-    CComPtr<IDxcOperationResult> result;
-    hr = compiler->Compile(
-        sourceBlob,
-        L"",
-        Attribs.EntryPoint,
-        Attribs.Profile,
-        Attribs.pArgs, UINT32{Attribs.ArgsCount},
-        Attribs.pDefines, UINT32{Attribs.DefinesCount},
-        Attribs.pShaderSourceStreamFactory ? &IncludeHandler : nullptr,
-        &result);
+        CComPtr<IDxcOperationResult> pdxcResult;
+        hr = pdxcCompiler->Compile(
+            pSourceBlob,
+            L"",
+            Attribs.EntryPoint,
+            Attribs.Profile,
+            Attribs.pArgs, UINT32{Attribs.ArgsCount},
+            Attribs.pDefines, UINT32{Attribs.DefinesCount},
+            Attribs.pShaderSourceStreamFactory ? &IncludeHandler : nullptr,
+            &pdxcResult);
 
-    if (SUCCEEDED(hr))
-    {
-        HRESULT status;
-        if (SUCCEEDED(result->GetStatus(&status)))
-            hr = status;
-    }
-
-    if (result)
-    {
-        CComPtr<IDxcBlobEncoding> errorsBlob;
-        CComPtr<IDxcBlobEncoding> errorsBlobUtf8;
-        if (SUCCEEDED(result->GetErrorBuffer(&errorsBlob)) && SUCCEEDED(library->GetBlobAsUtf8(errorsBlob, &errorsBlobUtf8)))
+        if (SUCCEEDED(hr))
         {
-            errorsBlobUtf8->QueryInterface(IID_PPV_ARGS(Attribs.ppCompilerOutput));
+            HRESULT status = E_FAIL;
+            if (SUCCEEDED(pdxcResult->GetStatus(&status)))
+                hr = status;
+        }
+
+        if (pdxcResult)
+        {
+            CComPtr<IDxcBlobEncoding> pErrorsBlob;
+            CComPtr<IDxcBlobEncoding> pErrorsBlobUtf8;
+            if (SUCCEEDED(pdxcResult->GetErrorBuffer(&pErrorsBlob)) && SUCCEEDED(pdxcLibrary->GetBlobAsUtf8(pErrorsBlob, &pErrorsBlobUtf8)))
+            {
+                pErrorsBlobUtf8->QueryInterface(IID_PPV_ARGS(Attribs.ppCompilerOutput));
+            }
+        }
+
+        if (FAILED(hr))
+        {
+            return false;
+        }
+
+        CComPtr<IDxcBlob> pCompiledBlob;
+        CHECK_D3D_RESULT(pdxcResult->GetResult(&pCompiledBlob), "Failed to get compiled blob from DXC operation result");
+
+        // Validate and sign
+        if (m_Target == DXCompilerTarget::Direct3D12)
+        {
+            return ValidateAndSign(CreateInstance, pdxcLibrary, pCompiledBlob, Attribs.ppBlobOut);
+        }
+        else
+        {
+            *Attribs.ppBlobOut = pCompiledBlob.Detach();
+            return true;
         }
     }
-
-    if (FAILED(hr))
+    catch (...)
     {
         return false;
     }
-
-    CComPtr<IDxcBlob> compiled;
-    hr = result->GetResult(&compiled);
-    if (FAILED(hr))
-        return false;
-
-    // validate and sign
-    if (m_Target == DXCompilerTarget::Direct3D12)
-    {
-        return ValidateAndSign(CreateInstance, library, compiled, Attribs.ppBlobOut);
-    }
-
-    *Attribs.ppBlobOut = compiled.Detach();
-    return true;
 }
 
-bool DXCompilerImpl::ValidateAndSign(DxcCreateInstanceProc CreateInstance, IDxcLibrary* library, CComPtr<IDxcBlob>& compiled, IDxcBlob** ppBlobOut) const
+bool DXCompilerImpl::ValidateAndSign(DxcCreateInstanceProc CreateInstance, IDxcLibrary* library, CComPtr<IDxcBlob>& compiled, IDxcBlob** ppBlobOut) const noexcept(false)
 {
-    HRESULT                hr;
-    CComPtr<IDxcValidator> validator;
-    hr = CreateInstance(CLSID_DxcValidator, IID_PPV_ARGS(&validator));
-    if (FAILED(hr))
-    {
-        LOG_ERROR("Failed to create DXC Validator");
-        return false;
-    }
+    CComPtr<IDxcValidator> pdxcValidator;
+    CHECK_D3D_RESULT(CreateInstance(CLSID_DxcValidator, IID_PPV_ARGS(&pdxcValidator)), "Failed to create DXC Validator");
 
-    CComPtr<IDxcOperationResult> validationResult;
-    hr = validator->Validate(compiled, DxcValidatorFlags_InPlaceEdit, &validationResult);
-
-    if (validationResult == nullptr || FAILED(hr))
-    {
-        LOG_ERROR("Failed to validate shader bytecode");
-        return false;
-    }
+    CComPtr<IDxcOperationResult> pdxcResult;
+    CHECK_D3D_RESULT(pdxcValidator->Validate(compiled, DxcValidatorFlags_InPlaceEdit, &pdxcResult), "Failed to validate shader bytecode");
 
     HRESULT status = E_FAIL;
-    validationResult->GetStatus(&status);
+    pdxcResult->GetStatus(&status);
 
     if (SUCCEEDED(status))
     {
-        CComPtr<IDxcBlob> validated;
-        hr = validationResult->GetResult(&validated);
-        if (FAILED(hr))
-            return false;
+        CComPtr<IDxcBlob> pValidatedBlob;
+        CHECK_D3D_RESULT(pdxcResult->GetResult(&pValidatedBlob), "Failed to get validated data blob from DXC operation result");
 
-        *ppBlobOut = validated ? validated.Detach() : compiled.Detach();
+        *ppBlobOut = pValidatedBlob ? pValidatedBlob.Detach() : compiled.Detach();
         return true;
     }
     else
     {
-        CComPtr<IDxcBlobEncoding> validationOutput;
-        CComPtr<IDxcBlobEncoding> validationOutputUtf8;
-        validationResult->GetErrorBuffer(&validationOutput);
-        library->GetBlobAsUtf8(validationOutput, &validationOutputUtf8);
+        CComPtr<IDxcBlobEncoding> pdxcOutput;
+        CComPtr<IDxcBlobEncoding> pdxcOutputUtf8;
+        pdxcResult->GetErrorBuffer(&pdxcOutput);
+        library->GetBlobAsUtf8(pdxcOutput, &pdxcOutputUtf8);
 
-        size_t      ValidationMsgLen = validationOutputUtf8 ? validationOutputUtf8->GetBufferSize() : 0;
-        const char* ValidationMsg    = ValidationMsgLen > 0 ? static_cast<const char*>(validationOutputUtf8->GetBufferPointer()) : "";
+        const auto  ValidationMsgLen = pdxcOutputUtf8 ? pdxcOutputUtf8->GetBufferSize() : 0;
+        const auto* ValidationMsg    = ValidationMsgLen > 0 ? static_cast<const char*>(pdxcOutputUtf8->GetBufferPointer()) : "";
 
-        LOG_ERROR("Shader validation failed: ", ValidationMsg);
+        LOG_ERROR_MESSAGE("Shader validation failed: ", ValidationMsg);
         return false;
     }
 }
@@ -441,9 +424,9 @@ bool DXCompilerImpl::ValidateAndSign(DxcCreateInstanceProc CreateInstance, IDxcL
 class ShaderReflectionViaLibraryReflection final : public ID3D12ShaderReflection
 {
 public:
-    ShaderReflectionViaLibraryReflection(CComPtr<ID3D12LibraryReflection> pLib, ID3D12FunctionReflection* pFunc) :
-        m_pLib{std::move(pLib)},
-        m_pFunc{pFunc}
+    ShaderReflectionViaLibraryReflection(CComPtr<ID3D12LibraryReflection> pd3d12LibRefl, ID3D12FunctionReflection* pd3d12FuncRefl) :
+        m_pd3d12LibRefl{std::move(pd3d12LibRefl)},
+        m_pd3d12FuncRefl{pd3d12FuncRefl}
     {}
 
     HRESULT STDMETHODCALLTYPE QueryInterface(REFIID iid, LPVOID* ppv) override
@@ -470,7 +453,7 @@ public:
     HRESULT STDMETHODCALLTYPE GetDesc(D3D12_SHADER_DESC* pDesc) override
     {
         D3D12_FUNCTION_DESC FnDesc{};
-        HRESULT             hr = m_pFunc->GetDesc(&FnDesc);
+        HRESULT             hr = m_pd3d12FuncRefl->GetDesc(&FnDesc);
         if (FAILED(hr))
             return hr;
 
@@ -518,17 +501,17 @@ public:
 
     ID3D12ShaderReflectionConstantBuffer* STDMETHODCALLTYPE GetConstantBufferByIndex(UINT Index) override
     {
-        return m_pFunc->GetConstantBufferByIndex(Index);
+        return m_pd3d12FuncRefl->GetConstantBufferByIndex(Index);
     }
 
     ID3D12ShaderReflectionConstantBuffer* STDMETHODCALLTYPE GetConstantBufferByName(LPCSTR Name) override
     {
-        return m_pFunc->GetConstantBufferByName(Name);
+        return m_pd3d12FuncRefl->GetConstantBufferByName(Name);
     }
 
     HRESULT STDMETHODCALLTYPE GetResourceBindingDesc(UINT ResourceIndex, D3D12_SHADER_INPUT_BIND_DESC* pDesc) override
     {
-        return m_pFunc->GetResourceBindingDesc(ResourceIndex, pDesc);
+        return m_pd3d12FuncRefl->GetResourceBindingDesc(ResourceIndex, pDesc);
     }
 
     HRESULT STDMETHODCALLTYPE GetInputParameterDesc(UINT ParameterIndex, D3D12_SIGNATURE_PARAMETER_DESC* pDesc) override
@@ -551,12 +534,12 @@ public:
 
     ID3D12ShaderReflectionVariable* STDMETHODCALLTYPE GetVariableByName(LPCSTR Name) override
     {
-        return m_pFunc->GetVariableByName(Name);
+        return m_pd3d12FuncRefl->GetVariableByName(Name);
     }
 
     HRESULT STDMETHODCALLTYPE GetResourceBindingDescByName(LPCSTR Name, D3D12_SHADER_INPUT_BIND_DESC* pDesc) override
     {
-        return m_pFunc->GetResourceBindingDescByName(Name, pDesc);
+        return m_pd3d12FuncRefl->GetResourceBindingDescByName(Name, pDesc);
     }
 
     UINT STDMETHODCALLTYPE GetMovInstructionCount() override
@@ -621,8 +604,8 @@ public:
     }
 
 private:
-    CComPtr<ID3D12LibraryReflection> m_pLib;
-    ID3D12FunctionReflection*        m_pFunc = nullptr;
+    CComPtr<ID3D12LibraryReflection> m_pd3d12LibRefl;
+    ID3D12FunctionReflection*        m_pd3d12FuncRefl = nullptr;
     std::atomic_long                 m_RefCount{0};
 };
 #endif // D3D12_SUPPORTED
@@ -638,50 +621,35 @@ void DXCompilerImpl::GetD3D12ShaderReflection(IDxcBlob*                pShaderBy
         if (CreateInstance == nullptr)
             return;
 
-        CComPtr<IDxcContainerReflection> pReflection;
+        CComPtr<IDxcContainerReflection> pdxcReflection;
 
-        auto hr = CreateInstance(CLSID_DxcContainerReflection, IID_PPV_ARGS(&pReflection));
-        if (FAILED(hr))
-            LOG_ERROR_AND_THROW("Failed to create shader reflection instance");
-
-        hr = pReflection->Load(pShaderBytecode);
-        if (FAILED(hr))
-            LOG_ERROR_AND_THROW("Failed to load shader reflection from bytecode");
+        CHECK_D3D_RESULT(CreateInstance(CLSID_DxcContainerReflection, IID_PPV_ARGS(&pdxcReflection)), "Failed to create DXC shader reflection instance");
+        CHECK_D3D_RESULT(pdxcReflection->Load(pShaderBytecode), "Failed to load shader reflection from bytecode");
 
         UINT32 shaderIdx = 0;
+        CHECK_D3D_RESULT(pdxcReflection->FindFirstPartKind(DXC_PART_DXIL, &shaderIdx), "Failed to get the shader reflection");
 
-        hr = pReflection->FindFirstPartKind(DXC_PART_DXIL, &shaderIdx);
+        auto hr = pdxcReflection->GetPartReflection(shaderIdx, IID_PPV_ARGS(ppShaderReflection));
         if (SUCCEEDED(hr))
-        {
-            hr = pReflection->GetPartReflection(shaderIdx, IID_PPV_ARGS(ppShaderReflection));
-            if (SUCCEEDED(hr))
-                return;
+            return;
 
-            // Try to get the reflection via library reflection
-            CComPtr<ID3D12LibraryReflection> pLib;
+        // Try to get the reflection via library reflection
+        CComPtr<ID3D12LibraryReflection> pd3d12LibRefl;
 
-            hr = pReflection->GetPartReflection(shaderIdx, IID_PPV_ARGS(&pLib));
-            if (SUCCEEDED(hr))
-            {
+        CHECK_D3D_RESULT(pdxcReflection->GetPartReflection(shaderIdx, IID_PPV_ARGS(&pd3d12LibRefl)), "Failed to get d3d12 library reflection part");
 #    ifdef DILIGENT_DEVELOPMENT
-                {
-                    D3D12_LIBRARY_DESC Desc = {};
-                    pLib->GetDesc(&Desc);
-                    DEV_CHECK_ERR(Desc.FunctionCount == 1, "Single-function library is expected");
-                }
+        {
+            D3D12_LIBRARY_DESC Desc = {};
+            pd3d12LibRefl->GetDesc(&Desc);
+            DEV_CHECK_ERR(Desc.FunctionCount == 1, "Single-function library is expected");
+        }
 #    endif
 
-                ID3D12FunctionReflection* pFunc = pLib->GetFunctionByIndex(0);
-                if (pFunc != nullptr)
-                {
-                    *ppShaderReflection = new ShaderReflectionViaLibraryReflection{std::move(pLib), pFunc};
-                    (*ppShaderReflection)->AddRef();
-                    return;
-                }
-            }
+        if (auto* pFunc = pd3d12LibRefl->GetFunctionByIndex(0))
+        {
+            *ppShaderReflection = new ShaderReflectionViaLibraryReflection{std::move(pd3d12LibRefl), pFunc};
+            (*ppShaderReflection)->AddRef();
         }
-
-        LOG_ERROR_AND_THROW("Failed to get the shader reflection");
     }
     catch (...)
     {
@@ -821,66 +789,41 @@ bool DXCompilerImpl::RemapResourceBindings(const TResourceBindingMap& ResourceMa
                                            IDxcBlob**                 ppDstByteCode)
 {
 #if D3D12_SUPPORTED
-    auto CreateInstance = GetCreateInstanceProc();
-    if (CreateInstance == nullptr)
-    {
-        LOG_ERROR("Failed to load DXCompiler");
-        return false;
-    }
-
-    HRESULT              hr;
-    CComPtr<IDxcLibrary> library;
-    hr = CreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&library));
-    if (FAILED(hr))
-    {
-        LOG_ERROR("Failed to create DXC Library");
-        return false;
-    }
-
-    CComPtr<IDxcAssembler> assembler;
-    hr = CreateInstance(CLSID_DxcAssembler, IID_PPV_ARGS(&assembler));
-    if (FAILED(hr))
-    {
-        LOG_ERROR("Failed to create DXC assembler");
-        return false;
-    }
-
-    CComPtr<IDxcCompiler> compiler;
-    hr = CreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler));
-    if (FAILED(hr))
-    {
-        LOG_ERROR("Failed to create DXC Compiler");
-        return false;
-    }
-
-    CComPtr<IDxcBlobEncoding> disasm;
-    hr = compiler->Disassemble(pSrcBytecode, &disasm);
-    if (FAILED(hr))
-    {
-        LOG_ERROR("Failed to disassemble bytecode");
-        return false;
-    }
-
-    CComPtr<ID3D12ShaderReflection> pShaderReflection;
     try
     {
-        GetD3D12ShaderReflection(pSrcBytecode, &pShaderReflection);
-    }
-    catch (...)
-    {
-        LOG_ERROR("Failed to get shader reflection");
-        return false;
-    }
-
-    SHADER_TYPE ShaderType = SHADER_TYPE_UNKNOWN;
-    {
-        D3D12_SHADER_DESC ShDesc = {};
-        pShaderReflection->GetDesc(&ShDesc);
-
-        const Uint32 ShType = D3D12_SHVER_GET_TYPE(ShDesc.Version);
-        switch (ShType)
+        auto CreateInstance = GetCreateInstanceProc();
+        if (CreateInstance == nullptr)
         {
-            // clang-format off
+            LOG_ERROR("Failed to load DXCompiler");
+            return false;
+        }
+
+        CComPtr<IDxcLibrary> pdxcLibrary;
+        CHECK_D3D_RESULT(CreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&pdxcLibrary)), "Failed to create DXC Library");
+
+        CComPtr<IDxcAssembler> pdxcAssembler;
+        CHECK_D3D_RESULT(CreateInstance(CLSID_DxcAssembler, IID_PPV_ARGS(&pdxcAssembler)), "Failed to create DXC assembler");
+
+        CComPtr<IDxcCompiler> pdxcCompiler;
+        CHECK_D3D_RESULT(CreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&pdxcCompiler)), "Failed to create DXC Compiler");
+
+        CComPtr<IDxcBlobEncoding> pdxcDisasm;
+        CHECK_D3D_RESULT(pdxcCompiler->Disassemble(pSrcBytecode, &pdxcDisasm), "Failed to disassemble bytecode");
+
+        CComPtr<ID3D12ShaderReflection> pd3d12Reflection;
+        GetD3D12ShaderReflection(pSrcBytecode, &pd3d12Reflection);
+        if (!pd3d12Reflection)
+            LOG_ERROR_AND_THROW("Failed to get D3D12 shader reflection from shader bytecode");
+
+        SHADER_TYPE ShaderType = SHADER_TYPE_UNKNOWN;
+        {
+            D3D12_SHADER_DESC ShDesc = {};
+            pd3d12Reflection->GetDesc(&ShDesc);
+
+            const Uint32 ShType = D3D12_SHVER_GET_TYPE(ShDesc.Version);
+            switch (ShType)
+            {
+                    // clang-format off
             case D3D12_SHVER_PIXEL_SHADER:    ShaderType = SHADER_TYPE_PIXEL;            break;
             case D3D12_SHVER_VERTEX_SHADER:   ShaderType = SHADER_TYPE_VERTEX;           break;
             case D3D12_SHVER_GEOMETRY_SHADER: ShaderType = SHADER_TYPE_GEOMETRY;         break;
@@ -895,63 +838,63 @@ bool DXCompilerImpl::RemapResourceBindings(const TResourceBindingMap& ResourceMa
             case 12:                          ShaderType = SHADER_TYPE_CALLABLE;         break;
             case 13:                          ShaderType = SHADER_TYPE_MESH;             break;
             case 14:                          ShaderType = SHADER_TYPE_AMPLIFICATION;    break;
-            // clang-format on
-            default:
-                UNEXPECTED("Unknown shader type");
+                // clang-format on
+                default:
+                    UNEXPECTED("Unknown shader type");
+            }
         }
-    }
 
-    TExtendedResourceMap ExtResourceMap;
+        TExtendedResourceMap ExtResourceMap;
 
-    for (auto& NameAndBinding : ResourceMap)
-    {
-        D3D12_SHADER_INPUT_BIND_DESC ResDesc = {};
-        if (pShaderReflection->GetResourceBindingDescByName(NameAndBinding.first.GetStr(), &ResDesc) == S_OK)
+        for (auto& NameAndBinding : ResourceMap)
         {
-            auto& Ext        = ExtResourceMap[&NameAndBinding];
-            Ext.SrcBindPoint = ResDesc.BindPoint;
-            Ext.SrcSpace     = ResDesc.Space;
+            D3D12_SHADER_INPUT_BIND_DESC ResDesc = {};
+            if (pd3d12Reflection->GetResourceBindingDescByName(NameAndBinding.first.GetStr(), &ResDesc) == S_OK)
+            {
+                auto& Ext        = ExtResourceMap[&NameAndBinding];
+                Ext.SrcBindPoint = ResDesc.BindPoint;
+                Ext.SrcSpace     = ResDesc.Space;
 
 #    ifdef NO_D3D_SIT_ACCELSTRUCT_FEEDBACK_TEX
-            switch (int{ResDesc.Type}) // Prevent "not a valid value for switch of enum '_D3D_SHADER_INPUT_TYPE'" warning
+                switch (int{ResDesc.Type}) // Prevent "not a valid value for switch of enum '_D3D_SHADER_INPUT_TYPE'" warning
 #    else
-            switch (ResDesc.Type)
+                switch (ResDesc.Type)
 #    endif
-            {
-                case D3D_SIT_CBUFFER:
-                    Ext.Type = RES_TYPE_CBV;
-                    break;
-                case D3D_SIT_SAMPLER:
-                    Ext.Type = RES_TYPE_SAMPLER;
-                    break;
-                case D3D_SIT_TBUFFER:
-                case D3D_SIT_TEXTURE:
-                case D3D_SIT_STRUCTURED:
-                case D3D_SIT_BYTEADDRESS:
-                case D3D_SIT_RTACCELERATIONSTRUCTURE:
-                    Ext.Type = RES_TYPE_SRV;
-                    break;
-                case D3D_SIT_UAV_RWTYPED:
-                case D3D_SIT_UAV_RWSTRUCTURED:
-                case D3D_SIT_UAV_RWBYTEADDRESS:
-                case D3D_SIT_UAV_APPEND_STRUCTURED:
-                case D3D_SIT_UAV_CONSUME_STRUCTURED:
-                case D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER:
-                case D3D_SIT_UAV_FEEDBACKTEXTURE:
-                    Ext.Type = RES_TYPE_UAV;
-                    break;
-                default:
-                    LOG_ERROR("Unknown shader resource type");
-                    return false;
-            }
+                {
+                    case D3D_SIT_CBUFFER:
+                        Ext.Type = RES_TYPE_CBV;
+                        break;
+                    case D3D_SIT_SAMPLER:
+                        Ext.Type = RES_TYPE_SAMPLER;
+                        break;
+                    case D3D_SIT_TBUFFER:
+                    case D3D_SIT_TEXTURE:
+                    case D3D_SIT_STRUCTURED:
+                    case D3D_SIT_BYTEADDRESS:
+                    case D3D_SIT_RTACCELERATIONSTRUCTURE:
+                        Ext.Type = RES_TYPE_SRV;
+                        break;
+                    case D3D_SIT_UAV_RWTYPED:
+                    case D3D_SIT_UAV_RWSTRUCTURED:
+                    case D3D_SIT_UAV_RWBYTEADDRESS:
+                    case D3D_SIT_UAV_APPEND_STRUCTURED:
+                    case D3D_SIT_UAV_CONSUME_STRUCTURED:
+                    case D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER:
+                    case D3D_SIT_UAV_FEEDBACKTEXTURE:
+                        Ext.Type = RES_TYPE_UAV;
+                        break;
+                    default:
+                        LOG_ERROR("Unknown shader resource type");
+                        return false;
+                }
 
 #    ifdef DILIGENT_DEVELOPMENT
-            {
-                static_assert(SHADER_RESOURCE_TYPE_LAST == 8, "Please update the switch below to handle the new shader resource type");
-                RES_TYPE ExpectedResType = RES_TYPE_COUNT;
-                switch (NameAndBinding.second.ResType)
                 {
-                    // clang-format off
+                    static_assert(SHADER_RESOURCE_TYPE_LAST == 8, "Please update the switch below to handle the new shader resource type");
+                    RES_TYPE ExpectedResType = RES_TYPE_COUNT;
+                    switch (NameAndBinding.second.ResType)
+                    {
+                            // clang-format off
                     case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:  ExpectedResType = RES_TYPE_CBV;     break;
                     case SHADER_RESOURCE_TYPE_TEXTURE_SRV:      ExpectedResType = RES_TYPE_SRV;     break;
                     case SHADER_RESOURCE_TYPE_BUFFER_SRV:       ExpectedResType = RES_TYPE_SRV;     break;
@@ -960,78 +903,68 @@ bool DXCompilerImpl::RemapResourceBindings(const TResourceBindingMap& ResourceMa
                     case SHADER_RESOURCE_TYPE_SAMPLER:          ExpectedResType = RES_TYPE_SAMPLER; break;
                     case SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT: ExpectedResType = RES_TYPE_SRV;     break;
                     case SHADER_RESOURCE_TYPE_ACCEL_STRUCT:     ExpectedResType = RES_TYPE_SRV;     break;
-                    // clang-format on
-                    default: UNEXPECTED("Unsupported shader resource type.");
+                        // clang-format on
+                        default: UNEXPECTED("Unsupported shader resource type.");
+                    }
+                    DEV_CHECK_ERR(Ext.Type == ExpectedResType,
+                                  "There is a mismatch between the type of resource '", NameAndBinding.first.GetStr(),
+                                  "' expected by the client and the actual resource type.");
                 }
-                DEV_CHECK_ERR(Ext.Type == ExpectedResType,
-                              "There is a mismatch between the type of resource '", NameAndBinding.first.GetStr(),
-                              "' expected by the client and the actual resource type.");
-            }
 #    endif
 
-            // For some reason
-            //      Texture2D g_Textures[]
-            // produces BindCount == 0, but
-            //      ConstantBuffer<CBData> g_ConstantBuffers[]
-            // produces BindCount == UINT_MAX
-            VERIFY_EXPR((Ext.Type != RES_TYPE_CBV && ResDesc.BindCount == 0) ||
-                        (Ext.Type == RES_TYPE_CBV && ResDesc.BindCount == UINT_MAX) ||
-                        NameAndBinding.second.ArraySize >= ResDesc.BindCount);
+                // For some reason
+                //      Texture2D g_Textures[]
+                // produces BindCount == 0, but
+                //      ConstantBuffer<CBData> g_ConstantBuffers[]
+                // produces BindCount == UINT_MAX
+                VERIFY_EXPR((Ext.Type != RES_TYPE_CBV && ResDesc.BindCount == 0) ||
+                            (Ext.Type == RES_TYPE_CBV && ResDesc.BindCount == UINT_MAX) ||
+                            NameAndBinding.second.ArraySize >= ResDesc.BindCount);
+            }
         }
-    }
 
-    String dxilAsm;
-    dxilAsm.assign(static_cast<const char*>(disasm->GetBufferPointer()), disasm->GetBufferSize());
+        String dxilAsm{static_cast<const char*>(pdxcDisasm->GetBufferPointer()), pdxcDisasm->GetBufferSize()};
 
-    if (!PatchDXIL(ResourceMap, ExtResourceMap, ShaderType, dxilAsm))
-    {
-        LOG_ERROR("Failed to patch resource bindings");
-        return false;
-    }
-
-    CComPtr<IDxcBlobEncoding> patchedDisasm;
-    hr = library->CreateBlobWithEncodingFromPinned(dxilAsm.data(), static_cast<UINT32>(dxilAsm.size()), 0, &patchedDisasm);
-    if (FAILED(hr))
-    {
-        LOG_ERROR("Failed to create disassemble blob");
-        return false;
-    }
-
-    CComPtr<IDxcOperationResult> dxilResult;
-    hr = assembler->AssembleToContainer(patchedDisasm, &dxilResult);
-    if (FAILED(hr) || dxilResult == nullptr)
-    {
-        LOG_ERROR("Failed to create DXIL container");
-        return false;
-    }
-
-    HRESULT status = E_FAIL;
-    dxilResult->GetStatus(&status);
-
-    if (FAILED(status))
-    {
-        CComPtr<IDxcBlobEncoding> errorsBlob;
-        CComPtr<IDxcBlobEncoding> errorsBlobUtf8;
-        if (SUCCEEDED(dxilResult->GetErrorBuffer(&errorsBlob)) && SUCCEEDED(library->GetBlobAsUtf8(errorsBlob, &errorsBlobUtf8)))
+        if (!PatchDXIL(ResourceMap, ExtResourceMap, ShaderType, dxilAsm))
         {
-            String errorLog;
-            errorLog.assign(static_cast<const char*>(errorsBlobUtf8->GetBufferPointer()), errorsBlobUtf8->GetBufferSize());
-            LOG_ERROR_MESSAGE("Compilation message: ", errorLog);
+            LOG_ERROR_AND_THROW("Failed to patch resource bindings");
+            return false;
         }
-        else
-            LOG_ERROR("Failed to compile patched asm");
 
+        CComPtr<IDxcBlobEncoding> pPatchedDisasm;
+        CHECK_D3D_RESULT(pdxcLibrary->CreateBlobWithEncodingFromPinned(dxilAsm.data(), static_cast<UINT32>(dxilAsm.size()), 0, &pPatchedDisasm), "Failed to create patched disassemble blob");
+
+        CComPtr<IDxcOperationResult> pdxcResult;
+        CHECK_D3D_RESULT(pdxcAssembler->AssembleToContainer(pPatchedDisasm, &pdxcResult), "Failed to assemble patched disassembly");
+
+        HRESULT status = E_FAIL;
+        pdxcResult->GetStatus(&status);
+
+        if (FAILED(status))
+        {
+            CComPtr<IDxcBlobEncoding> pErrorsBlob;
+            CComPtr<IDxcBlobEncoding> pErrorsBlobUtf8;
+            if (SUCCEEDED(pdxcResult->GetErrorBuffer(&pErrorsBlob)) && SUCCEEDED(pdxcLibrary->GetBlobAsUtf8(pErrorsBlob, &pErrorsBlobUtf8)))
+            {
+                String errorLog{static_cast<const char*>(pErrorsBlobUtf8->GetBufferPointer()), pErrorsBlobUtf8->GetBufferSize()};
+                LOG_ERROR_AND_THROW("Failed to compile patched assembly: ", errorLog);
+            }
+            else
+                LOG_ERROR_AND_THROW("Failed to compile patched assembly");
+
+            return false;
+        }
+
+        CComPtr<IDxcBlob> pCompiledBlob;
+        CHECK_D3D_RESULT(pdxcResult->GetResult(static_cast<IDxcBlob**>(&pCompiledBlob)), "Failed to get compiled blob from DXC result");
+
+        return ValidateAndSign(CreateInstance, pdxcLibrary, pCompiledBlob, ppDstByteCode);
+    }
+    catch (...)
+    {
         return false;
     }
-
-    CComPtr<IDxcBlob> compiled;
-    hr = dxilResult->GetResult(static_cast<IDxcBlob**>(&compiled));
-    if (FAILED(hr))
-        return false;
-
-    return ValidateAndSign(CreateInstance, library, compiled, ppDstByteCode);
 #else
-
     return false;
 #endif // D3D12_SUPPORTED
 }
@@ -1117,7 +1050,7 @@ bool IsNumberSymbol(char c)
 
 } // namespace
 
-void DXCompilerImpl::PatchResourceDeclarationRT(const TResourceBindingMap& ResourceMap, TExtendedResourceMap& ExtResMap, String& DXIL)
+void DXCompilerImpl::PatchResourceDeclarationRT(const TResourceBindingMap& ResourceMap, TExtendedResourceMap& ExtResMap, String& DXIL) noexcept(false)
 {
 #define CHECK_PATCHING_ERROR(Cond, ...)                                                         \
     if (!(Cond))                                                                                \
@@ -1200,7 +1133,7 @@ void DXCompilerImpl::PatchResourceDeclarationRT(const TResourceBindingMap& Resou
 #undef CHECK_PATCHING_ERROR
 }
 
-void DXCompilerImpl::PatchResourceDeclaration(const TResourceBindingMap& ResourceMap, TExtendedResourceMap& ExtResMap, String& DXIL)
+void DXCompilerImpl::PatchResourceDeclaration(const TResourceBindingMap& ResourceMap, TExtendedResourceMap& ExtResMap, String& DXIL) noexcept(false)
 {
     // This resource patching method is valid for optimized shaders without metadata.
 
@@ -1537,7 +1470,7 @@ void DXCompilerImpl::PatchResourceDeclaration(const TResourceBindingMap& Resourc
 #undef CHECK_PATCHING_ERROR
 }
 
-void DXCompilerImpl::PatchResourceHandle(const TResourceBindingMap& ResourceMap, TExtendedResourceMap& ExtResMap, String& DXIL)
+void DXCompilerImpl::PatchResourceHandle(const TResourceBindingMap& ResourceMap, TExtendedResourceMap& ExtResMap, String& DXIL) noexcept(false)
 {
     // Patch createHandle command
     static const String   CallHandlePattern = " = call %dx.types.Handle @dx.op.createHandle(";
