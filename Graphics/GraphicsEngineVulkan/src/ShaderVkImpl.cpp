@@ -69,7 +69,7 @@ std::vector<uint32_t> CompileShaderDXC(const ShaderCreateInfo&         ShaderCI,
     auto* pDXCompiler = VkShaderCI.pDXCompiler;
     VERIFY_EXPR(pDXCompiler != nullptr && pDXCompiler->IsLoaded());
     std::vector<uint32_t> SPIRV;
-    pDXCompiler->Compile(ShaderCI, ShaderVersion{}, VulkanDefine, nullptr, &SPIRV, ShaderCI.ppCompilerOutput);
+    pDXCompiler->Compile(ShaderCI, ShaderCI.HLSLVersion, VulkanDefine, nullptr, &SPIRV, ShaderCI.ppCompilerOutput);
 
 #if !DILIGENT_NO_HLSL
     // SPIR-V bytecode generated from HLSL must be legalized to
