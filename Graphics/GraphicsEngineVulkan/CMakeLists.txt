@@ -240,7 +240,7 @@ endif()
 
 if(EXISTS ${DXC_SPIRV_PATH})
     set(DILIGENT_DXCOMPILER_FOR_SPIRV_PATH "${DXC_SPIRV_PATH}" CACHE INTERNAL "" FORCE)
-    message(STATUS "Found DXCompiler for Vulkan")
+    message(STATUS "Found DXCompiler for Vulkan: " ${DILIGENT_DXCOMPILER_FOR_SPIRV_PATH})
 else()
     set(DILIGENT_DXCOMPILER_FOR_SPIRV_PATH "" CACHE INTERNAL "" FORCE)
 endif()
