@@ -227,7 +227,7 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
                 LoadShaderInputs,
                 m_EntryPoint //
             };
-        VERIFY_EXPR(m_EntryPoint == ShaderCI.EntryPoint);
+        VERIFY_EXPR(ShaderCI.ByteCode != nullptr || m_EntryPoint == ShaderCI.EntryPoint);
         m_pShaderResources.reset(pResources, STDDeleterRawMem<SPIRVShaderResources>(Allocator));
 
         if (LoadShaderInputs && m_pShaderResources->IsHLSLSource())
