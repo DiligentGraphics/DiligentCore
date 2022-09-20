@@ -55,23 +55,33 @@ struct hash<Diligent::SamplerDesc>
     {
         // Sampler name is ignored in comparison operator
         // and should not be hashed
+        ASSERT_SIZEOF(SamDesc.MinFilter, 1, "Hash logic below may be incorrect.");
+        ASSERT_SIZEOF(SamDesc.MagFilter, 1, "Hash logic below may be incorrect.");
+        ASSERT_SIZEOF(SamDesc.MipFilter, 1, "Hash logic below may be incorrect.");
+        ASSERT_SIZEOF(SamDesc.AddressU, 1, "Hash logic below may be incorrect.");
+        ASSERT_SIZEOF(SamDesc.AddressV, 1, "Hash logic below may be incorrect.");
+        ASSERT_SIZEOF(SamDesc.AddressW, 1, "Hash logic below may be incorrect.");
+        ASSERT_SIZEOF(SamDesc.Flags, 1, "Hash logic below may be incorrect.");
+
         return Diligent::ComputeHash( // SamDesc.Name,
-            static_cast<int>(SamDesc.MinFilter),
-            static_cast<int>(SamDesc.MagFilter),
-            static_cast<int>(SamDesc.MipFilter),
-            static_cast<int>(SamDesc.AddressU),
-            static_cast<int>(SamDesc.AddressV),
-            static_cast<int>(SamDesc.AddressW),
-            static_cast<int>(SamDesc.Flags),
-            SamDesc.UnnormalizedCoords,
+            ((static_cast<uint32_t>(SamDesc.MinFilter) << 0u) |
+             (static_cast<uint32_t>(SamDesc.MagFilter) << 8u) |
+             (static_cast<uint32_t>(SamDesc.MipFilter) << 24u)),
+            ((static_cast<uint32_t>(SamDesc.AddressU) << 0u) |
+             (static_cast<uint32_t>(SamDesc.AddressV) << 8u) |
+             (static_cast<uint32_t>(SamDesc.AddressW) << 24u)),
+            ((static_cast<uint32_t>(SamDesc.Flags) << 0u) |
+             ((SamDesc.UnnormalizedCoords ? 1u : 0u) << 8u)),
             SamDesc.MipLODBias,
             SamDesc.MaxAnisotropy,
-            static_cast<int>(SamDesc.ComparisonFunc),
+            static_cast<uint32_t>(SamDesc.ComparisonFunc),
             SamDesc.BorderColor[0],
             SamDesc.BorderColor[1],
             SamDesc.BorderColor[2],
             SamDesc.BorderColor[3],
-            SamDesc.MinLOD, SamDesc.MaxLOD);
+            SamDesc.MinLOD,
+            SamDesc.MaxLOD);
+        ASSERT_SIZEOF64(Diligent::SamplerDesc, 56, "Did you add new members to SamplerDesc? Please handle them here.");
     }
 };
 
@@ -81,10 +91,18 @@ struct hash<Diligent::StencilOpDesc>
 {
     size_t operator()(const Diligent::StencilOpDesc& StOpDesc) const
     {
-        return Diligent::ComputeHash(static_cast<int>(StOpDesc.StencilFailOp),
-                                     static_cast<int>(StOpDesc.StencilDepthFailOp),
-                                     static_cast<int>(StOpDesc.StencilPassOp),
-                                     static_cast<int>(StOpDesc.StencilFunc));
+        // clang-format off
+        ASSERT_SIZEOF(StOpDesc.StencilFailOp,      1, "Hash logic below may be incorrect.");
+        ASSERT_SIZEOF(StOpDesc.StencilDepthFailOp, 1, "Hash logic below may be incorrect.");
+        ASSERT_SIZEOF(StOpDesc.StencilPassOp,      1, "Hash logic below may be incorrect.");
+        ASSERT_SIZEOF(StOpDesc.StencilFunc,        1, "Hash logic below may be incorrect.");
+
+        return Diligent::ComputeHash(((static_cast<uint32_t>(StOpDesc.StencilFailOp)      <<  0u) |
+                                      (static_cast<uint32_t>(StOpDesc.StencilDepthFailOp) <<  8u) |
+                                      (static_cast<uint32_t>(StOpDesc.StencilPassOp)      << 16u) |
+                                      (static_cast<uint32_t>(StOpDesc.StencilFunc)        << 24u)));
+        // clang-format on
+        ASSERT_SIZEOF(Diligent::StencilOpDesc, 4, "Did you add new members to StencilOpDesc? Please handle them here.");
     }
 };
 
@@ -94,14 +112,20 @@ struct hash<Diligent::DepthStencilStateDesc>
 {
     size_t operator()(const Diligent::DepthStencilStateDesc& DepthStencilDesc) const
     {
-        return Diligent::ComputeHash(DepthStencilDesc.DepthEnable,
-                                     DepthStencilDesc.DepthWriteEnable,
-                                     static_cast<int>(DepthStencilDesc.DepthFunc),
-                                     DepthStencilDesc.StencilEnable,
-                                     DepthStencilDesc.StencilReadMask,
-                                     DepthStencilDesc.StencilWriteMask,
+        ASSERT_SIZEOF(DepthStencilDesc.DepthFunc, 1, "Hash logic below may be incorrect.");
+        ASSERT_SIZEOF(DepthStencilDesc.StencilReadMask, 1, "Hash logic below may be incorrect.");
+        ASSERT_SIZEOF(DepthStencilDesc.StencilWriteMask, 1, "Hash logic below may be incorrect.");
+        // clang-format off
+        return Diligent::ComputeHash((((DepthStencilDesc.DepthEnable      ? 1u : 0u) << 0u) |
+                                      ((DepthStencilDesc.DepthWriteEnable ? 1u : 0u) << 1u) |
+                                      ((DepthStencilDesc.StencilEnable    ? 1u : 0u) << 2u) |
+                                      (static_cast<uint32_t>(DepthStencilDesc.DepthFunc)        << 8u)  |
+                                      (static_cast<uint32_t>(DepthStencilDesc.StencilReadMask)  << 16u) |
+                                      (static_cast<uint32_t>(DepthStencilDesc.StencilWriteMask) << 24u)),
                                      DepthStencilDesc.FrontFace,
                                      DepthStencilDesc.BackFace);
+        // clang-format on
+        ASSERT_SIZEOF(Diligent::DepthStencilStateDesc, 14, "Did you add new members to DepthStencilStateDesc? Please handle them here.");
     }
 };
 
@@ -111,15 +135,21 @@ struct hash<Diligent::RasterizerStateDesc>
 {
     size_t operator()(const Diligent::RasterizerStateDesc& RasterizerDesc) const
     {
-        return Diligent::ComputeHash(static_cast<int>(RasterizerDesc.FillMode),
-                                     static_cast<int>(RasterizerDesc.CullMode),
-                                     RasterizerDesc.FrontCounterClockwise,
-                                     RasterizerDesc.DepthClipEnable,
-                                     RasterizerDesc.ScissorEnable,
-                                     RasterizerDesc.AntialiasedLineEnable,
+        ASSERT_SIZEOF(RasterizerDesc.FillMode, 1, "Hash logic below may be incorrect.");
+        ASSERT_SIZEOF(RasterizerDesc.CullMode, 1, "Hash logic below may be incorrect.");
+
+        // clang-format off
+        return Diligent::ComputeHash(((static_cast<uint32_t>(RasterizerDesc.FillMode) << 0u) |
+                                      (static_cast<uint32_t>(RasterizerDesc.CullMode) << 8u) |
+                                      ((RasterizerDesc.FrontCounterClockwise ? 1u : 0u) << 16u) |
+                                      ((RasterizerDesc.DepthClipEnable       ? 1u : 0u) << 17u) |
+                                      ((RasterizerDesc.ScissorEnable         ? 1u : 0u) << 18u) |
+                                      ((RasterizerDesc.AntialiasedLineEnable ? 1u : 0u) << 19u)),
                                      RasterizerDesc.DepthBias,
                                      RasterizerDesc.DepthBiasClamp,
                                      RasterizerDesc.SlopeScaledDepthBias);
+        // clang-format on
+        ASSERT_SIZEOF(Diligent::RasterizerStateDesc, 20, "Did you add new members to RasterizerStateDesc? Please handle them here.");
     }
 };
 
@@ -133,19 +163,36 @@ struct hash<Diligent::BlendStateDesc>
         for (size_t i = 0; i < Diligent::MAX_RENDER_TARGETS; ++i)
         {
             const auto& rt = BSDesc.RenderTargets[i];
+
+            ASSERT_SIZEOF(rt.SrcBlend, 1, "Hash logic below may be incorrect.");
+            ASSERT_SIZEOF(rt.DestBlend, 1, "Hash logic below may be incorrect.");
+            ASSERT_SIZEOF(rt.BlendOp, 1, "Hash logic below may be incorrect.");
+            ASSERT_SIZEOF(rt.SrcBlendAlpha, 1, "Hash logic below may be incorrect.");
+            ASSERT_SIZEOF(rt.DestBlendAlpha, 1, "Hash logic below may be incorrect.");
+            ASSERT_SIZEOF(rt.BlendOpAlpha, 1, "Hash logic below may be incorrect.");
+            ASSERT_SIZEOF(rt.LogicOp, 1, "Hash logic below may be incorrect.");
+            ASSERT_SIZEOF(rt.RenderTargetWriteMask, 1, "Hash logic below may be incorrect.");
+
+            // clang-format off
             Diligent::HashCombine(Seed,
-                                  rt.BlendEnable,
-                                  static_cast<int>(rt.SrcBlend),
-                                  static_cast<int>(rt.DestBlend),
-                                  static_cast<int>(rt.BlendOp),
-                                  static_cast<int>(rt.SrcBlendAlpha),
-                                  static_cast<int>(rt.DestBlendAlpha),
-                                  static_cast<int>(rt.BlendOpAlpha),
+                                  (((rt.BlendEnable          ? 1u : 0u) <<  0u) |
+                                   ((rt.LogicOperationEnable ? 1u : 0u) <<  1u) |
+                                   (static_cast<uint32_t>(rt.SrcBlend)  <<  8u) |
+                                   (static_cast<uint32_t>(rt.DestBlend) << 16u) |
+                                   (static_cast<uint32_t>(rt.BlendOp)   << 24u)),
+                                  ((static_cast<uint32_t>(rt.SrcBlendAlpha)  <<  0u) |
+                                   (static_cast<uint32_t>(rt.DestBlendAlpha) <<  8u) |
+                                   (static_cast<uint32_t>(rt.BlendOpAlpha)   << 16u) |
+                                   (static_cast<uint32_t>(rt.LogicOp)        << 24u)),
                                   rt.RenderTargetWriteMask);
+            // clang-format on
         }
         Diligent::HashCombine(Seed,
-                              BSDesc.AlphaToCoverageEnable,
-                              BSDesc.IndependentBlendEnable);
+                              (((BSDesc.AlphaToCoverageEnable ? 1u : 0u) << 0u) |
+                               ((BSDesc.IndependentBlendEnable ? 1u : 0u) << 1u)));
+
+        ASSERT_SIZEOF(Diligent::BlendStateDesc, 82, "Did you add new members to BlendStateDesc? Please handle them here.");
+
         return Seed;
     }
 };
@@ -157,18 +204,23 @@ struct hash<Diligent::TextureViewDesc>
 {
     size_t operator()(const Diligent::TextureViewDesc& TexViewDesc) const
     {
-        std::size_t Seed = 0;
-        Diligent::HashCombine(Seed,
-                              static_cast<Diligent::Int32>(TexViewDesc.ViewType),
-                              static_cast<Diligent::Int32>(TexViewDesc.TextureDim),
-                              static_cast<Diligent::Int32>(TexViewDesc.Format),
-                              TexViewDesc.MostDetailedMip,
-                              TexViewDesc.NumMipLevels,
-                              TexViewDesc.FirstArraySlice,
-                              TexViewDesc.NumArraySlices,
-                              static_cast<Diligent::Uint32>(TexViewDesc.AccessFlags),
-                              static_cast<Diligent::Uint32>(TexViewDesc.Flags));
-        return Seed;
+        ASSERT_SIZEOF(TexViewDesc.ViewType, 1, "Hash logic below may be incorrect.");
+        ASSERT_SIZEOF(TexViewDesc.TextureDim, 1, "Hash logic below may be incorrect.");
+        ASSERT_SIZEOF(TexViewDesc.Format, 2, "Hash logic below may be incorrect.");
+        ASSERT_SIZEOF(TexViewDesc.AccessFlags, 1, "Hash logic below may be incorrect.");
+        ASSERT_SIZEOF(TexViewDesc.Flags, 1, "Hash logic below may be incorrect.");
+
+        return Diligent::ComputeHash(
+            ((static_cast<uint32_t>(TexViewDesc.ViewType) << 0u) |
+             (static_cast<uint32_t>(TexViewDesc.TextureDim) << 8u) |
+             (static_cast<uint32_t>(TexViewDesc.Format) << 16u)),
+            TexViewDesc.MostDetailedMip,
+            TexViewDesc.NumMipLevels,
+            TexViewDesc.FirstArraySlice,
+            TexViewDesc.NumArraySlices,
+            ((static_cast<uint32_t>(TexViewDesc.AccessFlags) << 0u) |
+             (static_cast<uint32_t>(TexViewDesc.Flags) << 8u)));
+        ASSERT_SIZEOF64(Diligent::TextureViewDesc, 32, "Did you add new members to TextureViewDesc? Please handle them here.");
     }
 };
 

@@ -41,29 +41,96 @@
 namespace Diligent
 {
 
+#if (defined(__clang__) || defined(__GNUC__))
+
+// GCC's and Clang's implementation of std::hash for integral types is IDENTITY,
+// which is an unbelievably poor design choice.
+
+// https://github.com/facebook/folly/blob/main/folly/hash/Hash.h
+
+// Robert Jenkins' reversible 32 bit mix hash function.
+constexpr uint32_t jenkins_rev_mix32(uint32_t key) noexcept
+{
+    key += (key << 12); // key *= (1 + (1 << 12))
+    key ^= (key >> 22);
+    key += (key << 4); // key *= (1 + (1 << 4))
+    key ^= (key >> 9);
+    key += (key << 10); // key *= (1 + (1 << 10))
+    key ^= (key >> 2);
+    // key *= (1 + (1 << 7)) * (1 + (1 << 12))
+    key += (key << 7);
+    key += (key << 12);
+    return key;
+}
+
+// Thomas Wang 64 bit mix hash function.
+constexpr uint64_t twang_mix64(uint64_t key) noexcept
+{
+    key = (~key) + (key << 21); // key *= (1 << 21) - 1; key -= 1;
+    key = key ^ (key >> 24);
+    key = key + (key << 3) + (key << 8); // key *= 1 + (1 << 3) + (1 << 8)
+    key = key ^ (key >> 14);
+    key = key + (key << 2) + (key << 4); // key *= 1 + (1 << 2) + (1 << 4)
+    key = key ^ (key >> 28);
+    key = key + (key << 31); // key *= 1 + (1 << 31)
+    return key;
+}
+
+template <typename T>
+typename std::enable_if<std::is_fundamental<T>::value && sizeof(T) == 8, size_t>::type ComputeHash(const T& Val) noexcept
+{
+    uint64_t Val64 = 0;
+    std::memcpy(&Val64, &Val, sizeof(Val));
+    return twang_mix64(Val64);
+}
+
+template <typename T>
+typename std::enable_if<std::is_fundamental<T>::value && sizeof(T) <= 4, size_t>::type ComputeHash(const T& Val) noexcept
+{
+    uint32_t Val32 = 0;
+    std::memcpy(&Val32, &Val, sizeof(Val));
+    return jenkins_rev_mix32(Val32);
+}
+
+template <typename T>
+typename std::enable_if<!std::is_fundamental<T>::value, size_t>::type ComputeHash(const T& Val) noexcept
+{
+    return std::hash<T>{}(Val);
+}
+
+#else
+
+template <typename T>
+size_t ComputeHash(const T& Val) noexcept
+{
+    return std::hash<T>{}(Val);
+}
+
+#endif
+
 // http://www.boost.org/doc/libs/1_35_0/doc/html/hash/combine.html
 template <typename T>
-void HashCombine(std::size_t& Seed, const T& Val)
+void HashCombine(std::size_t& Seed, const T& Val) noexcept
 {
-    Seed ^= std::hash<T>{}(Val) + 0x9e3779b9 + (Seed << 6) + (Seed >> 2);
+    Seed ^= ComputeHash(Val) + 0x9e3779b9 + (Seed << 6) + (Seed >> 2);
 }
 
 template <typename FirstArgType, typename... RestArgsType>
-void HashCombine(std::size_t& Seed, const FirstArgType& FirstArg, const RestArgsType&... RestArgs)
+void HashCombine(std::size_t& Seed, const FirstArgType& FirstArg, const RestArgsType&... RestArgs) noexcept
 {
     HashCombine(Seed, FirstArg);
     HashCombine(Seed, RestArgs...); // recursive call using pack expansion syntax
 }
 
-template <typename... ArgsType>
-std::size_t ComputeHash(const ArgsType&... Args)
+template <typename FirstArgType, typename... RestArgsType>
+std::size_t ComputeHash(const FirstArgType& FirstArg, const RestArgsType&... RestArgs) noexcept
 {
     std::size_t Seed = 0;
-    HashCombine(Seed, Args...);
+    HashCombine(Seed, FirstArg, RestArgs...);
     return Seed;
 }
 
-inline std::size_t ComputeHashRaw(const void* pData, size_t Size)
+inline std::size_t ComputeHashRaw(const void* pData, size_t Size) noexcept
 {
     size_t Hash = 0;
 
@@ -111,7 +178,7 @@ inline std::size_t ComputeHashRaw(const void* pData, size_t Size)
 template <typename CharType>
 struct CStringHash
 {
-    size_t operator()(const CharType* str) const
+    size_t operator()(const CharType* str) const noexcept
     {
         // http://www.cse.yorku.ca/~oz/hash.html
         std::size_t Seed = 0;
@@ -134,7 +201,7 @@ struct CStringCompare
 template <>
 struct CStringCompare<Char>
 {
-    bool operator()(const Char* str1, const Char* str2) const
+    bool operator()(const Char* str1, const Char* str2) const noexcept
     {
         return strcmp(str1, str2) == 0;
     }
@@ -161,7 +228,7 @@ public:
         {
             auto  LenWithZeroTerm = strlen(Str) + 1;
             auto* StrCopy         = new char[LenWithZeroTerm];
-            memcpy(StrCopy, Str, LenWithZeroTerm);
+            std::memcpy(StrCopy, Str, LenWithZeroTerm);
             Str = StrCopy;
             Ownership_Hash |= StrOwnershipMask;
         }
@@ -216,7 +283,7 @@ public:
         return HashMapStringKey{GetStr(), (Ownership_Hash & StrOwnershipMask) != 0};
     }
 
-    bool operator==(const HashMapStringKey& RHS) const
+    bool operator==(const HashMapStringKey& RHS) const noexcept
     {
         if (Str == RHS.Str)
             return true;
@@ -253,29 +320,29 @@ public:
         return IsEqual;
     }
 
-    bool operator!=(const HashMapStringKey& RHS) const
+    bool operator!=(const HashMapStringKey& RHS) const noexcept
     {
         return !(*this == RHS);
     }
 
-    explicit operator bool() const
+    explicit operator bool() const noexcept
     {
         return GetStr() != nullptr;
     }
 
-    size_t GetHash() const
+    size_t GetHash() const noexcept
     {
         return Ownership_Hash & HashMask;
     }
 
-    const Char* GetStr() const
+    const Char* GetStr() const noexcept
     {
         return Str;
     }
 
     struct Hasher
     {
-        size_t operator()(const HashMapStringKey& Key) const
+        size_t operator()(const HashMapStringKey& Key) const noexcept
         {
             return Key.GetHash();
         }
@@ -309,7 +376,7 @@ namespace std
 template <>
 struct hash<Diligent::HashMapStringKey>
 {
-    size_t operator()(const Diligent::HashMapStringKey& Key) const
+    size_t operator()(const Diligent::HashMapStringKey& Key) const noexcept
     {
         return Key.GetHash();
     }

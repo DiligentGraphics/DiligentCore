@@ -58,7 +58,9 @@ DILIGENT_TYPED_ENUM(UAV_ACCESS_FLAG, Uint8)
     UAV_ACCESS_FLAG_WRITE  = 0x02,
 
     /// Allow read and write operations on the UAV
-    UAV_ACCESS_FLAG_READ_WRITE = UAV_ACCESS_FLAG_READ | UAV_ACCESS_FLAG_WRITE
+    UAV_ACCESS_FLAG_READ_WRITE = UAV_ACCESS_FLAG_READ | UAV_ACCESS_FLAG_WRITE,
+
+    UAV_ACCESS_FLAG_LAST = UAV_ACCESS_FLAG_READ_WRITE
 };
 DEFINE_FLAG_ENUM_OPERATORS(UAV_ACCESS_FLAG)
 
@@ -71,7 +73,9 @@ DILIGENT_TYPED_ENUM(TEXTURE_VIEW_FLAGS, Uint8)
     /// Allow automatic mipmap generation for this view.
     /// This flag is only allowed for TEXTURE_VIEW_SHADER_RESOURCE view type.
     /// The texture must be created with MISC_TEXTURE_FLAG_GENERATE_MIPS flag.
-    TEXTURE_VIEW_FLAG_ALLOW_MIP_MAP_GENERATION = 1u << 0
+    TEXTURE_VIEW_FLAG_ALLOW_MIP_MAP_GENERATION = 1u << 0,
+
+    TEXTURE_VIEW_FLAG_LAST = TEXTURE_VIEW_FLAG_ALLOW_MIP_MAP_GENERATION
 };
 DEFINE_FLAG_ENUM_OPERATORS(TEXTURE_VIEW_FLAGS)
 
@@ -164,11 +168,6 @@ struct TextureViewDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     constexpr Uint32 NumArrayOrDepthSlices()  const { return NumArraySlices; }
 
     /// Tests if two structures are equivalent
-
-    /// \param [in] RHS - reference to the structure to perform comparison with
-    /// \return
-    /// - True if all members of the two structures are equal.
-    /// - False otherwise
     constexpr bool operator==(const TextureViewDesc& RHS) const
     {
         // Name is primarily used for debug purposes and does not affect the view.
@@ -182,6 +181,10 @@ struct TextureViewDesc DILIGENT_DERIVE(DeviceObjectAttribs)
             FirstArrayOrDepthSlice() == RHS.FirstArrayOrDepthSlice() &&
             NumArrayOrDepthSlices() == RHS.NumArrayOrDepthSlices() &&
             AccessFlags == RHS.AccessFlags;
+    }
+    constexpr bool operator!=(const TextureViewDesc& RHS) const
+    {
+        return !(*this == RHS);
     }
 #else
 
