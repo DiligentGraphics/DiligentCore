@@ -65,6 +65,7 @@ DEFINE_TYPE_PRINTER(BufferFormat, GetBufferFormatString)
 DEFINE_TYPE_PRINTER(BUFFER_MODE, GetBufferModeString)
 DEFINE_TYPE_PRINTER(BufferDesc, GetBufferDescString)
 DEFINE_TYPE_PRINTER(RESOURCE_STATE, GetResourceStateFlagString)
+DEFINE_TYPE_PRINTER(AttachmentReference, GetAttachmentReferenceString)
 #undef DEFINE_TYPE_PRINTER
 
 } // namespace Diligent

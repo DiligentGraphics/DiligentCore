@@ -365,6 +365,11 @@ String GetObjectDescString(const TObjectDescType&)
     return "";
 }
 
+inline String GetAttachmentReferenceString(const AttachmentReference& Attachment)
+{
+    return std::to_string(Attachment.AttachmentIndex) + ", " + GetResourceStateString(Attachment.State);
+}
+
 /// Template specialization for texture description
 template <>
 inline String GetObjectDescString(const TextureDesc& TexDesc)

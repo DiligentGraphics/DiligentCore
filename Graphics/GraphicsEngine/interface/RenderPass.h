@@ -131,6 +131,7 @@ struct RenderPassAttachmentDesc
     /// - False otherwise
     constexpr bool operator == (const RenderPassAttachmentDesc& RHS) const
     {
+        static_assert(sizeof(*this)==16, "Did you add new members? Please handle them here");
         return  Format          == RHS.Format         &&
                 SampleCount     == RHS.SampleCount    &&
                 LoadOp          == RHS.LoadOp         &&
@@ -139,6 +140,10 @@ struct RenderPassAttachmentDesc
                 StencilStoreOp  == RHS.StencilStoreOp &&
                 InitialState    == RHS.InitialState   &&
                 FinalState      == RHS.FinalState;
+    }
+    constexpr bool operator != (const RenderPassAttachmentDesc& RHS) const
+    {
+        return !(*this == RHS);
     }
 #endif
 };
@@ -173,6 +178,7 @@ struct AttachmentReference
     /// - False otherwise
     constexpr bool operator == (const AttachmentReference& RHS) const
     {
+        static_assert(sizeof(*this)==8, "Did you add new members? Please handle them here");
         return  AttachmentIndex == RHS.AttachmentIndex &&
                 State           == RHS.State;
     }
@@ -209,6 +215,7 @@ struct ShadingRateAttachment
 
     constexpr bool operator == (const ShadingRateAttachment& RHS) const
     {
+        static_assert(sizeof(*this)==16, "Did you add new members? Please handle them here");
         return  Attachment  == RHS.Attachment  &&
                 TileSize[0] == RHS.TileSize[0] &&
                 TileSize[1] == RHS.TileSize[1];
@@ -336,6 +343,11 @@ struct SubpassDesc
 
         return true;
     }
+
+    constexpr bool operator != (const SubpassDesc& RHS) const
+    {
+        return !(*this== RHS);
+    }
 #endif
 };
 typedef struct SubpassDesc SubpassDesc;
@@ -373,6 +385,7 @@ struct SubpassDependencyDesc
     /// - False otherwise
     constexpr bool operator == (const SubpassDependencyDesc& RHS) const
     {
+        static_assert(sizeof(*this)==24, "Did you add new members? Please handle them here");
         return  SrcSubpass    == RHS.SrcSubpass    &&
                 DstSubpass    == RHS.DstSubpass    &&
                 SrcStageMask  == RHS.SrcStageMask  &&
@@ -442,6 +455,10 @@ struct RenderPassDesc DILIGENT_DERIVE(DeviceObjectAttribs)
                 return false;
         }
         return true;
+    }
+    bool operator!=(const RenderPassDesc& Rhs) const noexcept
+    {
+        return !(*this == Rhs);
     }
 #endif
 };

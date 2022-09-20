@@ -31,6 +31,7 @@
 #include <vector>
 
 #include "HashUtils.hpp"
+#include "GraphicsTypesOutputInserters.hpp"
 
 #include "gtest/gtest.h"
 
@@ -230,7 +231,7 @@ public:
 
     template <typename MemberType>
     typename std::enable_if<std::is_floating_point<MemberType>::value || std::is_integral<MemberType>::value, void>::type
-    AddRange(MemberType& Member, const char* MemberName, MemberType StartValue, MemberType EndValue, MemberType Step)
+    AddRange(MemberType& Member, const char* MemberName, MemberType StartValue, MemberType EndValue, MemberType Step = MemberType{1})
     {
         Restart();
         for (auto i = StartValue; i <= EndValue; i += Step)
@@ -304,6 +305,8 @@ private:
     std::unordered_set<size_t> m_Hashes;
     std::unordered_set<Type>   m_Descs;
 };
+#define DEFINE_HELPER(Type) \
+    Common_HashUtilsHelper<Type> Helper { #Type }
 #define TEST_VALUE(Member, ...)   Helper.Add(Helper.Get().Member, #Member, __VA_ARGS__)
 #define TEST_RANGE(Member, ...)   Helper.AddRange(Helper.Get().Member, #Member, __VA_ARGS__)
 #define TEST_BOOL(Member, ...)    Helper.AddBool(Helper.Get().Member, #Member)
@@ -313,7 +316,7 @@ private:
 TEST(Common_HashUtils, SamplerDescHasher)
 {
     ASSERT_SIZEOF64(SamplerDesc, 56, "Did you add new members to SamplerDesc? Please update the tests.");
-    Common_HashUtilsHelper<SamplerDesc> Helper{"SamplerDesc"};
+    DEFINE_HELPER(SamplerDesc);
 
     TEST_RANGE(MinFilter, FILTER_TYPE_UNKNOWN, FILTER_TYPE_NUM_FILTERS);
     TEST_RANGE(MagFilter, FILTER_TYPE_UNKNOWN, FILTER_TYPE_NUM_FILTERS);
@@ -327,7 +330,7 @@ TEST(Common_HashUtils, SamplerDescHasher)
     TEST_BOOL(UnnormalizedCoords);
     TEST_RANGE(MipLODBias, -10.f, +10.f, 0.25f);
 
-    TEST_RANGE(MaxAnisotropy, 0u, 16u, 1u);
+    TEST_RANGE(MaxAnisotropy, 0u, 16u);
     TEST_RANGE(ComparisonFunc, COMPARISON_FUNC_UNKNOWN, COMPARISON_FUNC_NUM_FUNCTIONS);
     TEST_RANGE(BorderColor[0], 1.f, 10.f, 0.25f);
     TEST_RANGE(BorderColor[1], 1.f, 10.f, 0.25f);
@@ -341,7 +344,7 @@ TEST(Common_HashUtils, SamplerDescHasher)
 TEST(Common_HashUtils, StencilOpDescHasher)
 {
     ASSERT_SIZEOF(StencilOpDesc, 4, "Did you add new members to StencilOpDesc? Please update the tests.");
-    Common_HashUtilsHelper<StencilOpDesc> Helper{"StencilOpDesc"};
+    DEFINE_HELPER(StencilOpDesc);
 
     TEST_RANGE(StencilFailOp, STENCIL_OP_UNDEFINED, STENCIL_OP_NUM_OPS);
     TEST_RANGE(StencilDepthFailOp, STENCIL_OP_UNDEFINED, STENCIL_OP_NUM_OPS);
@@ -353,21 +356,21 @@ TEST(Common_HashUtils, StencilOpDescHasher)
 TEST(Common_HashUtils, DepthStencilStateDescHasher)
 {
     ASSERT_SIZEOF(DepthStencilStateDesc, 14, "Did you add new members to StencilOpDesc? Please update the tests.");
-    Common_HashUtilsHelper<DepthStencilStateDesc> Helper{"DepthStencilStateDesc"};
+    DEFINE_HELPER(DepthStencilStateDesc);
 
     TEST_BOOL(DepthEnable);
     TEST_BOOL(DepthWriteEnable);
     TEST_RANGE(DepthFunc, COMPARISON_FUNC_UNKNOWN, COMPARISON_FUNC_NUM_FUNCTIONS);
     TEST_BOOL(StencilEnable);
-    TEST_RANGE(StencilReadMask, Uint8{0u}, Uint8{255u}, Uint8{1u});
-    TEST_RANGE(StencilWriteMask, Uint8{0u}, Uint8{255u}, Uint8{1u});
+    TEST_RANGE(StencilReadMask, Uint8{0u}, Uint8{255u});
+    TEST_RANGE(StencilWriteMask, Uint8{0u}, Uint8{255u});
 }
 
 
 TEST(Common_HashUtils, RasterizerStateDescHasher)
 {
     ASSERT_SIZEOF(RasterizerStateDesc, 20, "Did you add new members to RasterizerStateDesc? Please update the tests.");
-    Common_HashUtilsHelper<RasterizerStateDesc> Helper{"RasterizerStateDesc"};
+    DEFINE_HELPER(RasterizerStateDesc);
 
     TEST_RANGE(FillMode, FILL_MODE_UNDEFINED, FILL_MODE_NUM_MODES);
     TEST_RANGE(CullMode, CULL_MODE_UNDEFINED, CULL_MODE_NUM_MODES);
@@ -384,7 +387,7 @@ TEST(Common_HashUtils, RasterizerStateDescHasher)
 TEST(Common_HashUtils, BlendStateDescHasher)
 {
     ASSERT_SIZEOF(BlendStateDesc, 82, "Did you add new members to RasterizerStateDesc? Please update the tests.");
-    Common_HashUtilsHelper<BlendStateDesc> Helper{"BlendStateDesc"};
+    DEFINE_HELPER(BlendStateDesc);
 
     TEST_BOOL(AlphaToCoverageEnable);
     TEST_BOOL(IndependentBlendEnable);
@@ -408,15 +411,15 @@ TEST(Common_HashUtils, BlendStateDescHasher)
 TEST(Common_HashUtils, TextureViewDescHasher)
 {
     ASSERT_SIZEOF64(TextureViewDesc, 32, "Did you add new members to TextureViewDesc? Please update the tests.");
-    Common_HashUtilsHelper<TextureViewDesc> Helper{"TextureViewDesc"};
+    DEFINE_HELPER(TextureViewDesc);
 
     TEST_RANGE(ViewType, TEXTURE_VIEW_UNDEFINED, TEXTURE_VIEW_NUM_VIEWS);
     TEST_RANGE(TextureDim, RESOURCE_DIM_UNDEFINED, RESOURCE_DIM_NUM_DIMENSIONS);
     TEST_RANGE(Format, TEX_FORMAT_UNKNOWN, TEX_FORMAT_NUM_FORMATS);
-    TEST_RANGE(MostDetailedMip, 0u, 32u, 1u);
-    TEST_RANGE(NumMipLevels, 0u, 32u, 1u);
-    TEST_RANGE(FirstArraySlice, 0u, 32u, 1u);
-    TEST_RANGE(NumArraySlices, 0u, 2048u, 1u);
+    TEST_RANGE(MostDetailedMip, 0u, 32u);
+    TEST_RANGE(NumMipLevels, 0u, 32u);
+    TEST_RANGE(FirstArraySlice, 0u, 32u);
+    TEST_RANGE(NumArraySlices, 0u, 2048u);
     TEST_FLAGS(AccessFlags, static_cast<UAV_ACCESS_FLAG>(1u), UAV_ACCESS_FLAG_LAST);
     TEST_FLAGS(Flags, static_cast<TEXTURE_VIEW_FLAGS>(1u), TEXTURE_VIEW_FLAG_LAST);
 }
@@ -425,17 +428,17 @@ TEST(Common_HashUtils, TextureViewDescHasher)
 TEST(Common_HashUtils, SampleDescHasher)
 {
     ASSERT_SIZEOF(SampleDesc, 2, "Did you add new members to SampleDesc? Please update the tests.");
-    Common_HashUtilsHelper<SampleDesc> Helper{"SampleDesc"};
+    DEFINE_HELPER(SampleDesc);
 
-    TEST_RANGE(Count, Uint8{0u}, Uint8{255u}, Uint8{1u});
-    TEST_RANGE(Quality, Uint8{0u}, Uint8{255u}, Uint8{1u});
+    TEST_RANGE(Count, Uint8{0u}, Uint8{255u});
+    TEST_RANGE(Quality, Uint8{0u}, Uint8{255u});
 }
 
 
-TEST(Common_HashUtils, ShaderResourceVariableDesc)
+TEST(Common_HashUtils, ShaderResourceVariableDescHasher)
 {
     ASSERT_SIZEOF64(ShaderResourceVariableDesc, 16, "Did you add new members to ShaderResourceVariableDesc? Please update the tests.");
-    Common_HashUtilsHelper<ShaderResourceVariableDesc> Helper{"ShaderResourceVariableDesc"};
+    DEFINE_HELPER(ShaderResourceVariableDesc);
 
     TEST_STRINGS(Name, "Name1", "Name2", "Name3");
     TEST_FLAGS(ShaderStages, static_cast<SHADER_TYPE>(1), SHADER_TYPE_LAST);
@@ -444,34 +447,34 @@ TEST(Common_HashUtils, ShaderResourceVariableDesc)
 }
 
 
-TEST(Common_HashUtils, ImmutableSamplerDesc)
+TEST(Common_HashUtils, ImmutableSamplerDescHasher)
 {
     ASSERT_SIZEOF64(ImmutableSamplerDesc, 16 + sizeof(SamplerDesc), "Did you add new members to ImmutableSamplerDesc? Please update the tests.");
-    Common_HashUtilsHelper<ImmutableSamplerDesc> Helper{"ImmutableSamplerDesc"};
+    DEFINE_HELPER(ImmutableSamplerDesc);
 
     TEST_FLAGS(ShaderStages, static_cast<SHADER_TYPE>(1), SHADER_TYPE_LAST);
     TEST_STRINGS(SamplerOrTextureName, "Name1", "Name2", "Name3");
 }
 
 
-TEST(Common_HashUtils, PipelineResourceDesc)
+TEST(Common_HashUtils, PipelineResourceDescHasher)
 {
     ASSERT_SIZEOF64(PipelineResourceDesc, 24, "Did you add new members to PipelineResourceDesc? Please update the tests.");
-    Common_HashUtilsHelper<PipelineResourceDesc> Helper{"PipelineResourceDesc"};
+    DEFINE_HELPER(PipelineResourceDesc);
 
     TEST_STRINGS(Name, "Name1", "Name2", "Name3");
     TEST_FLAGS(ShaderStages, static_cast<SHADER_TYPE>(1), SHADER_TYPE_LAST);
-    TEST_RANGE(ArraySize, 0u, 2048u, 1u);
+    TEST_RANGE(ArraySize, 0u, 2048u);
     TEST_RANGE(ResourceType, SHADER_RESOURCE_TYPE_UNKNOWN, static_cast<SHADER_RESOURCE_TYPE>(SHADER_RESOURCE_TYPE_LAST + 1));
     TEST_RANGE(VarType, static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(0), SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES);
     TEST_FLAGS(Flags, static_cast<PIPELINE_RESOURCE_FLAGS>(1), PIPELINE_RESOURCE_FLAG_LAST);
 }
 
 
-TEST(Common_HashUtils, PipelineResourceLayoutDesc)
+TEST(Common_HashUtils, PipelineResourceLayoutDescHasher)
 {
     ASSERT_SIZEOF64(PipelineResourceLayoutDesc, 40, "Did you add new members to PipelineResourceLayoutDesc? Please update the tests.");
-    Common_HashUtilsHelper<PipelineResourceLayoutDesc> Helper{"PipelineResourceDesc"};
+    DEFINE_HELPER(PipelineResourceLayoutDesc);
 
     TEST_RANGE(DefaultVariableType, static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(0), SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES);
     TEST_FLAGS(DefaultVariableMergeStages, static_cast<SHADER_TYPE>(1), SHADER_TYPE_LAST);
@@ -482,7 +485,8 @@ TEST(Common_HashUtils, PipelineResourceLayoutDesc)
             {SHADER_TYPE_PIXEL, "Var2", SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC, SHADER_VARIABLE_FLAG_GENERAL_INPUT_ATTACHMENT},
         };
     Helper.Get().Variables = Vars;
-    TEST_VALUE(NumVariables, Uint32{_countof(Vars)});
+    TEST_VALUE(NumVariables, 1u);
+    TEST_VALUE(NumVariables, 2u);
 
     constexpr ImmutableSamplerDesc ImtblSamplers[] = //
         {
@@ -490,7 +494,138 @@ TEST(Common_HashUtils, PipelineResourceLayoutDesc)
             {SHADER_TYPE_PIXEL, "Sam2", SamplerDesc{}} //
         };
     Helper.Get().ImmutableSamplers = ImtblSamplers;
-    TEST_VALUE(NumImmutableSamplers, Uint32{_countof(ImtblSamplers)});
+    TEST_VALUE(NumImmutableSamplers, 1u);
+    TEST_VALUE(NumImmutableSamplers, 2u);
+}
+
+
+TEST(Common_HashUtils, RenderPassAttachmentDescHasher)
+{
+    ASSERT_SIZEOF(RenderPassAttachmentDesc, 16, "Did you add new members to RenderPassAttachmentDesc? Please update the tests.");
+    DEFINE_HELPER(RenderPassAttachmentDesc);
+
+    TEST_RANGE(Format, TEX_FORMAT_UNKNOWN, TEX_FORMAT_NUM_FORMATS);
+    TEST_RANGE(SampleCount, Uint8{1u}, Uint8{32u});
+    TEST_RANGE(LoadOp, static_cast<ATTACHMENT_LOAD_OP>(0), ATTACHMENT_LOAD_OP_COUNT);
+    TEST_RANGE(StoreOp, static_cast<ATTACHMENT_STORE_OP>(0), ATTACHMENT_STORE_OP_COUNT);
+    TEST_RANGE(StencilLoadOp, static_cast<ATTACHMENT_LOAD_OP>(0), ATTACHMENT_LOAD_OP_COUNT);
+    TEST_RANGE(StencilStoreOp, static_cast<ATTACHMENT_STORE_OP>(0), ATTACHMENT_STORE_OP_COUNT);
+    TEST_FLAGS(InitialState, static_cast<RESOURCE_STATE>(1), RESOURCE_STATE_MAX_BIT);
+    TEST_FLAGS(FinalState, static_cast<RESOURCE_STATE>(1), RESOURCE_STATE_MAX_BIT);
+}
+
+
+TEST(Common_HashUtils, AttachmentReferenceHasher)
+{
+    ASSERT_SIZEOF(AttachmentReference, 8, "Did you add new members to AttachmentReference? Please update the tests.");
+    DEFINE_HELPER(AttachmentReference);
+
+    TEST_RANGE(AttachmentIndex, 0u, 8u);
+    TEST_FLAGS(State, static_cast<RESOURCE_STATE>(1), RESOURCE_STATE_MAX_BIT);
+}
+
+
+TEST(Common_HashUtils, ShadingRateAttachmentHasher)
+{
+    ASSERT_SIZEOF(ShadingRateAttachment, 16, "Did you add new members to ShadingRateAttachment? Please update the tests.");
+    DEFINE_HELPER(ShadingRateAttachment);
+
+    TEST_VALUE(Attachment, AttachmentReference{1, RESOURCE_STATE_RENDER_TARGET});
+    TEST_VALUE(Attachment, AttachmentReference{2, RESOURCE_STATE_UNORDERED_ACCESS});
+
+    TEST_RANGE(TileSize[0], 1u, 32u);
+    TEST_RANGE(TileSize[1], 1u, 32u);
+}
+
+
+TEST(Common_HashUtils, SubpassDescHasher)
+{
+    ASSERT_SIZEOF64(SubpassDesc, 72, "Did you add new members to SubpassDesc? Please update the tests.");
+    DEFINE_HELPER(SubpassDesc);
+
+    constexpr AttachmentReference Inputs[] =
+        {
+            {1, RESOURCE_STATE_INPUT_ATTACHMENT},
+            {3, RESOURCE_STATE_INPUT_ATTACHMENT},
+            {5, RESOURCE_STATE_INPUT_ATTACHMENT},
+        };
+    Helper.Get().pInputAttachments = Inputs;
+    TEST_VALUE(InputAttachmentCount, 1u);
+    TEST_VALUE(InputAttachmentCount, 2u);
+    TEST_VALUE(InputAttachmentCount, 3u);
+
+    constexpr AttachmentReference RenderTargets[] =
+        {
+            {2, RESOURCE_STATE_RENDER_TARGET},
+            {4, RESOURCE_STATE_UNORDERED_ACCESS},
+            {6, RESOURCE_STATE_COMMON},
+        };
+    Helper.Get().pRenderTargetAttachments = RenderTargets;
+    TEST_VALUE(RenderTargetAttachmentCount, 1u);
+    TEST_VALUE(RenderTargetAttachmentCount, 2u);
+    TEST_VALUE(RenderTargetAttachmentCount, 3u);
+
+    constexpr AttachmentReference ResolveTargets[] =
+        {
+            {7, RESOURCE_STATE_RENDER_TARGET},
+            {8, RESOURCE_STATE_UNORDERED_ACCESS},
+            {9, RESOURCE_STATE_COMMON},
+        };
+    Helper.Get().pResolveAttachments = ResolveTargets;
+    TEST_VALUE(RenderTargetAttachmentCount, 1u);
+    TEST_VALUE(RenderTargetAttachmentCount, 2u);
+    TEST_VALUE(RenderTargetAttachmentCount, 3u);
+
+    constexpr AttachmentReference DepthStencil{10, RESOURCE_STATE_DEPTH_WRITE};
+    TEST_VALUE(pDepthStencilAttachment, &DepthStencil);
+
+    constexpr Uint32 Preserves[]      = {3, 4, 7};
+    Helper.Get().pPreserveAttachments = Preserves;
+    TEST_VALUE(PreserveAttachmentCount, 1u);
+    TEST_VALUE(PreserveAttachmentCount, 2u);
+    TEST_VALUE(PreserveAttachmentCount, 3u);
+
+    constexpr ShadingRateAttachment SRA{{5, RESOURCE_STATE_SHADING_RATE}, 32, 64};
+    TEST_VALUE(pShadingRateAttachment, &SRA);
+}
+
+
+TEST(Common_HashUtils, SubpassDependencyDescHasher)
+{
+    ASSERT_SIZEOF64(SubpassDependencyDesc, 24, "Did you add new members to SubpassDependencyDesc? Please update the tests.");
+    DEFINE_HELPER(SubpassDependencyDesc);
+
+    TEST_RANGE(SrcSubpass, 1u, 32u);
+    TEST_RANGE(DstSubpass, 1u, 32u);
+    TEST_FLAGS(SrcStageMask, static_cast<PIPELINE_STAGE_FLAGS>(1), PIPELINE_STAGE_FLAG_DEFAULT);
+    TEST_FLAGS(DstStageMask, static_cast<PIPELINE_STAGE_FLAGS>(1), PIPELINE_STAGE_FLAG_DEFAULT);
+    TEST_FLAGS(SrcAccessMask, static_cast<ACCESS_FLAGS>(1), ACCESS_FLAG_DEFAULT);
+    TEST_FLAGS(DstAccessMask, static_cast<ACCESS_FLAGS>(1), ACCESS_FLAG_DEFAULT);
+}
+
+
+TEST(Common_HashUtils, RenderPassDescHasher)
+{
+    ASSERT_SIZEOF64(RenderPassDesc, 56, "Did you add new members to RenderPassDesc? Please update the tests.");
+    DEFINE_HELPER(RenderPassDesc);
+
+    RenderPassAttachmentDesc Attachments[3];
+    Helper.Get().pAttachments = Attachments;
+    TEST_VALUE(AttachmentCount, 1u);
+    TEST_VALUE(AttachmentCount, 2u);
+    TEST_VALUE(AttachmentCount, 3u);
+
+    SubpassDesc Subpasses[3];
+    Helper.Get().pSubpasses = Subpasses;
+    TEST_VALUE(SubpassCount, 1u);
+    TEST_VALUE(SubpassCount, 2u);
+    TEST_VALUE(SubpassCount, 3u);
+
+    SubpassDependencyDesc Deps[3];
+    Helper.Get().pDependencies = Deps;
+    TEST_VALUE(DependencyCount, 1u);
+    TEST_VALUE(DependencyCount, 2u);
+    TEST_VALUE(DependencyCount, 3u);
 }
 
 } // namespace

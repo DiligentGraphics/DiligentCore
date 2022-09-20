@@ -408,6 +408,7 @@ struct hash<Diligent::SamplerDesc>
         ASSERT_SIZEOF(SamDesc.AddressV, 1, "Hash logic below may be incorrect.");
         ASSERT_SIZEOF(SamDesc.AddressW, 1, "Hash logic below may be incorrect.");
         ASSERT_SIZEOF(SamDesc.Flags, 1, "Hash logic below may be incorrect.");
+        ASSERT_SIZEOF(SamDesc.BorderColor, 16, "Hash logic below may be incorrect.");
 
         return Diligent::ComputeHash( // SamDesc.Name,
             ((static_cast<uint32_t>(SamDesc.MinFilter) << 0u) |
@@ -658,5 +659,184 @@ struct hash<Diligent::PipelineResourceLayoutDesc>
         ASSERT_SIZEOF64(Diligent::PipelineResourceLayoutDesc, 40, "Did you add new members to PipelineResourceDesc? Please handle them here.");
     }
 };
+
+
+/// Hash function specialization for Diligent::RenderPassAttachmentDesc structure.
+template <>
+struct hash<Diligent::RenderPassAttachmentDesc>
+{
+    size_t operator()(const Diligent::RenderPassAttachmentDesc& Desc) const
+    {
+        ASSERT_SIZEOF(Desc.Format, 2, "Hash logic below may be incorrect.");
+        ASSERT_SIZEOF(Desc.SampleCount, 1, "Hash logic below may be incorrect.");
+        ASSERT_SIZEOF(Desc.LoadOp, 1, "Hash logic below may be incorrect.");
+        ASSERT_SIZEOF(Desc.StoreOp, 1, "Hash logic below may be incorrect.");
+        ASSERT_SIZEOF(Desc.StencilLoadOp, 1, "Hash logic below may be incorrect.");
+        ASSERT_SIZEOF(Desc.StencilStoreOp, 1, "Hash logic below may be incorrect.");
+
+        return Diligent::ComputeHash(
+            ((static_cast<uint32_t>(Desc.Format) << 0u) |
+             (static_cast<uint32_t>(Desc.SampleCount) << 16u) |
+             (static_cast<uint32_t>(Desc.LoadOp) << 24u)),
+            ((static_cast<uint32_t>(Desc.StoreOp) << 0u) |
+             (static_cast<uint32_t>(Desc.StencilLoadOp) << 8u) |
+             (static_cast<uint32_t>(Desc.StencilStoreOp) << 16u)),
+            Desc.InitialState,
+            Desc.FinalState);
+        ASSERT_SIZEOF(Diligent::RenderPassAttachmentDesc, 16, "Did you add new members to RenderPassAttachmentDesc? Please handle them here.");
+    }
+};
+
+
+/// Hash function specialization for Diligent::RenderPassAttachmentDesc structure.
+template <>
+struct hash<Diligent::AttachmentReference>
+{
+    size_t operator()(const Diligent::AttachmentReference& Ref) const
+    {
+        return Diligent::ComputeHash(Ref.AttachmentIndex, Ref.State);
+        ASSERT_SIZEOF(Diligent::AttachmentReference, 8, "Did you add new members to AttachmentReference? Please handle them here.");
+    }
+};
+
+
+/// Hash function specialization for Diligent::ShadingRateAttachment structure.
+template <>
+struct hash<Diligent::ShadingRateAttachment>
+{
+    size_t operator()(const Diligent::ShadingRateAttachment& SRA) const
+    {
+        ASSERT_SIZEOF(SRA.TileSize, 8, "Hash logic below may be incorrect.");
+        return Diligent::ComputeHash(SRA.Attachment, SRA.TileSize[0], SRA.TileSize[1]);
+        ASSERT_SIZEOF(Diligent::ShadingRateAttachment, 16, "Did you add new members to AttachmentReference? Please handle them here.");
+    }
+};
+
+
+
+/// Hash function specialization for Diligent::SubpassDesc structure.
+template <>
+struct hash<Diligent::SubpassDesc>
+{
+    size_t operator()(const Diligent::SubpassDesc& Subpass) const
+    {
+        size_t Hash = 0;
+        Diligent::HashCombine(Hash,
+                              Subpass.InputAttachmentCount,
+                              Subpass.RenderTargetAttachmentCount,
+                              Subpass.PreserveAttachmentCount);
+
+        if (Subpass.pInputAttachments != nullptr)
+        {
+            for (size_t i = 0; i < Subpass.InputAttachmentCount; ++i)
+                Diligent::HashCombine(Hash, Subpass.pInputAttachments[i]);
+        }
+        else
+        {
+            VERIFY_EXPR(Subpass.InputAttachmentCount == 0);
+        }
+
+        if (Subpass.pRenderTargetAttachments != nullptr)
+        {
+            for (size_t i = 0; i < Subpass.RenderTargetAttachmentCount; ++i)
+                Diligent::HashCombine(Hash, Subpass.pRenderTargetAttachments[i]);
+        }
+        else
+        {
+            VERIFY_EXPR(Subpass.RenderTargetAttachmentCount == 0);
+        }
+
+        if (Subpass.pResolveAttachments != nullptr)
+        {
+            for (size_t i = 0; i < Subpass.RenderTargetAttachmentCount; ++i)
+                Diligent::HashCombine(Hash, Subpass.pResolveAttachments[i]);
+        }
+
+        if (Subpass.pDepthStencilAttachment)
+            Diligent::HashCombine(Hash, *Subpass.pDepthStencilAttachment);
+
+        if (Subpass.pPreserveAttachments != nullptr)
+        {
+            for (size_t i = 0; i < Subpass.PreserveAttachmentCount; ++i)
+                Diligent::HashCombine(Hash, Subpass.pPreserveAttachments[i]);
+        }
+        else
+        {
+            VERIFY_EXPR(Subpass.PreserveAttachmentCount == 0);
+        }
+
+        if (Subpass.pShadingRateAttachment)
+            Diligent::HashCombine(Hash, *Subpass.pShadingRateAttachment);
+
+        ASSERT_SIZEOF64(Diligent::SubpassDesc, 72, "Did you add new members to SubpassDesc? Please handle them here.");
+        return Hash;
+    }
+};
+
+/// Hash function specialization for Diligent::SubpassDependencyDesc structure.
+template <>
+struct hash<Diligent::SubpassDependencyDesc>
+{
+    size_t operator()(const Diligent::SubpassDependencyDesc& Dep) const
+    {
+        return Diligent::ComputeHash(
+            Dep.SrcSubpass,
+            Dep.DstSubpass,
+            Dep.SrcStageMask,
+            Dep.DstStageMask,
+            Dep.SrcAccessMask,
+            Dep.DstAccessMask);
+        ASSERT_SIZEOF(Diligent::SubpassDependencyDesc, 24, "Did you add new members to SubpassDependencyDesc? Please handle them here.");
+    }
+};
+
+
+/// Hash function specialization for Diligent::RenderPassDesc structure.
+template <>
+struct hash<Diligent::RenderPassDesc>
+{
+    size_t operator()(const Diligent::RenderPassDesc& RP) const
+    {
+        size_t Hash = 0;
+        Diligent::HashCombine(Hash,
+                              RP.AttachmentCount,
+                              RP.SubpassCount,
+                              RP.DependencyCount);
+
+        if (RP.pAttachments != nullptr)
+        {
+            for (size_t i = 0; i < RP.AttachmentCount; ++i)
+                Diligent::HashCombine(Hash, RP.pAttachments[i]);
+        }
+        else
+        {
+            VERIFY_EXPR(RP.AttachmentCount == 0);
+        }
+
+        if (RP.pSubpasses != nullptr)
+        {
+            for (size_t i = 0; i < RP.SubpassCount; ++i)
+                Diligent::HashCombine(Hash, RP.pSubpasses[i]);
+        }
+        else
+        {
+            VERIFY_EXPR(RP.SubpassCount == 0);
+        }
+
+        if (RP.pDependencies != nullptr)
+        {
+            for (size_t i = 0; i < RP.DependencyCount; ++i)
+                Diligent::HashCombine(Hash, RP.pDependencies[i]);
+        }
+        else
+        {
+            VERIFY_EXPR(RP.DependencyCount == 0);
+        }
+
+        return Hash;
+        ASSERT_SIZEOF64(Diligent::RenderPassDesc, 56, "Did you add new members to RenderPassDesc? Please handle them here.");
+    }
+};
+
 
 } // namespace std
