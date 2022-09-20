@@ -1790,14 +1790,14 @@ TEST(ArchiveTest, ResourceSignatureBindings)
                 Key(const char* _Name, SHADER_TYPE _Stages) :
                     Name{_Name}, Stages{_Stages} {}
 
-                bool operator==(const Key& Rhs) const
+                bool operator==(const Key& Rhs) const noexcept
                 {
                     return Name == Rhs.Name && Stages == Rhs.Stages;
                 }
 
                 struct Hasher
                 {
-                    size_t operator()(const Key& key) const
+                    size_t operator()(const Key& key) const noexcept
                     {
                         size_t Hash = key.Name.GetHash();
                         HashCombine(Hash, key.Stages);

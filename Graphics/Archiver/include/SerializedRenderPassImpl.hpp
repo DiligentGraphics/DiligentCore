@@ -53,8 +53,8 @@ public:
 
     const SerializedData& GetCommonData() const { return m_CommonData; }
 
-    bool operator==(const SerializedRenderPassImpl& Rhs) const;
-    bool operator!=(const SerializedRenderPassImpl& Rhs) const
+    bool operator==(const SerializedRenderPassImpl& Rhs) const noexcept;
+    bool operator!=(const SerializedRenderPassImpl& Rhs) const noexcept
     {
         return !(*this == Rhs);
     }

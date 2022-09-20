@@ -89,12 +89,12 @@ public:
         // Dynamic offset in bytes
         Uint32 DynamicOffset = 0;
 
-        explicit operator bool() const
+        explicit operator bool() const noexcept
         {
             return pBuff;
         }
 
-        bool operator==(const CachedCB& rhs) const
+        bool operator==(const CachedCB& rhs) const noexcept
         {
             // clang-format off
             return pBuff         == rhs.pBuff      &&
@@ -154,7 +154,7 @@ public:
             return pSampler;
         }
 
-        bool operator==(const CachedSampler& rhs) const
+        bool operator==(const CachedSampler& rhs) const noexcept
         {
             return pSampler == rhs.pSampler;
         }
@@ -201,7 +201,7 @@ public:
             return pView;
         }
 
-        bool operator==(const CachedResource& rhs) const
+        bool operator==(const CachedResource& rhs) const noexcept
         {
             // clang-format off
             return pView          == rhs.pView    &&

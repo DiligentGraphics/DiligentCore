@@ -81,8 +81,8 @@ public:
     // clang-format on
 
     bool IsCompatible(const SerializedResourceSignatureImpl& Rhs, ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags) const;
-    bool operator==(const SerializedResourceSignatureImpl& Rhs) const;
-    bool operator!=(const SerializedResourceSignatureImpl& Rhs) const
+    bool operator==(const SerializedResourceSignatureImpl& Rhs) const noexcept;
+    bool operator!=(const SerializedResourceSignatureImpl& Rhs) const noexcept
     {
         return !(*this == Rhs);
     }

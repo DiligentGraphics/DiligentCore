@@ -76,11 +76,14 @@ struct SampleDesc
     /// \return
     /// - True if all members of the two structures are equal.
     /// - False otherwise.
-    bool operator==(const SampleDesc& RHS) const
+    constexpr bool operator==(const SampleDesc& RHS) const
     {
         return Count == RHS.Count && Quality == RHS.Quality;
     }
-
+    constexpr bool operator!=(const SampleDesc& RHS) const
+    {
+        return !(*this == RHS);
+    }
 #endif
 };
 typedef struct SampleDesc SampleDesc;
@@ -147,7 +150,7 @@ struct ShaderResourceVariableDesc
     /// \return
     /// - True if all members of the two structures are equal.
     /// - False otherwise.
-    bool operator==(const ShaderResourceVariableDesc& RHS) const
+    bool operator==(const ShaderResourceVariableDesc& RHS) const noexcept
     {
         return ShaderStages == RHS.ShaderStages && 
                Type         == RHS.Type         &&
@@ -155,7 +158,7 @@ struct ShaderResourceVariableDesc
                SafeStrEqual(Name, RHS.Name);
     }
 
-    bool operator!=(const ShaderResourceVariableDesc& RHS) const
+    bool operator!=(const ShaderResourceVariableDesc& RHS) const noexcept
     {
         return !(*this == RHS);
     }
@@ -248,11 +251,11 @@ struct PipelineResourceLayoutDesc
     }
 
     /// Comparison operator tests if two structures are equivalent
-    bool operator==(const PipelineResourceLayoutDesc& RHS) const
+    bool operator==(const PipelineResourceLayoutDesc& RHS) const noexcept
     {
         return IsEqual(*this, RHS);
     }
-    bool operator!=(const PipelineResourceLayoutDesc& RHS) const
+    bool operator!=(const PipelineResourceLayoutDesc& RHS) const noexcept
     {
         return !(*this == RHS);
     }
@@ -324,7 +327,7 @@ struct GraphicsPipelineDesc
     Uint32 NodeMask DEFAULT_INITIALIZER(0);
 
 #if DILIGENT_CPP_INTERFACE
-    bool operator==(const GraphicsPipelineDesc& Rhs) const
+    bool operator==(const GraphicsPipelineDesc& Rhs) const noexcept
     {
         if (!(BlendDesc         == Rhs.BlendDesc         &&
               SampleMask        == Rhs.SampleMask        &&
@@ -358,7 +361,7 @@ struct GraphicsPipelineDesc
         }
         return true;
     }
-    bool operator!=(const GraphicsPipelineDesc& Rhs) const
+    bool operator!=(const GraphicsPipelineDesc& Rhs) const noexcept
     {
         return !(*this == Rhs);
     }
@@ -386,11 +389,11 @@ struct RayTracingGeneralShaderGroup
         pShader{_pShader}
     {}
 
-    bool operator==(const RayTracingGeneralShaderGroup& Rhs) const
+    bool operator==(const RayTracingGeneralShaderGroup& Rhs) const noexcept
     {
         return SafeStrEqual(Name, Rhs.Name) && pShader == Rhs.pShader;
     }
-    bool operator!=(const RayTracingGeneralShaderGroup& Rhs) const
+    bool operator!=(const RayTracingGeneralShaderGroup& Rhs) const noexcept
     {
         return !(*this == Rhs);
     }
@@ -424,13 +427,13 @@ struct RayTracingTriangleHitShaderGroup
         pAnyHitShader    {_pAnyHitShader    }
     {}
 
-    bool operator==(const RayTracingTriangleHitShaderGroup& Rhs) const
+    bool operator==(const RayTracingTriangleHitShaderGroup& Rhs) const noexcept
     {
         return SafeStrEqual(Name, Rhs.Name) &&
             pClosestHitShader == Rhs.pClosestHitShader &&
             pAnyHitShader     == Rhs.pAnyHitShader;
     }
-    bool operator!=(const RayTracingTriangleHitShaderGroup& Rhs) const
+    bool operator!=(const RayTracingTriangleHitShaderGroup& Rhs) const noexcept
     {
         return !(*this == Rhs);
     }
@@ -470,14 +473,14 @@ struct RayTracingProceduralHitShaderGroup
         pAnyHitShader      {_pAnyHitShader      }
     {}
 
-    bool operator==(const RayTracingProceduralHitShaderGroup& Rhs) const
+    bool operator==(const RayTracingProceduralHitShaderGroup& Rhs) const noexcept
     {
         return SafeStrEqual(Name, Rhs.Name) &&
             pIntersectionShader == Rhs.pIntersectionShader &&
             pClosestHitShader   == Rhs.pClosestHitShader   &&
             pAnyHitShader       == Rhs.pAnyHitShader;
     }
-    bool operator!=(const RayTracingProceduralHitShaderGroup& Rhs) const
+    bool operator!=(const RayTracingProceduralHitShaderGroup& Rhs) const noexcept
     {
         return !(*this == Rhs);
     }
@@ -570,7 +573,7 @@ struct PipelineStateDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
 #if DILIGENT_CPP_INTERFACE
     /// Comparison operator tests if two structures are equivalent
-    bool operator==(const PipelineStateDesc& RHS) const
+    bool operator==(const PipelineStateDesc& RHS) const noexcept
     {
         return PipelineType             == RHS.PipelineType             &&
                SRBAllocationGranularity == RHS.SRBAllocationGranularity &&
@@ -578,7 +581,7 @@ struct PipelineStateDesc DILIGENT_DERIVE(DeviceObjectAttribs)
                ResourceLayout           == RHS.ResourceLayout           &&
                SafeStrEqual(Name, RHS.Name);
     }
-    bool operator!=(const PipelineStateDesc& RHS) const
+    bool operator!=(const PipelineStateDesc& RHS) const noexcept
     {
         return !(*this == RHS);
     }
@@ -662,7 +665,7 @@ struct PipelineStateCreateInfo
 #endif
 
 #if DILIGENT_CPP_INTERFACE
-    bool operator==(const PipelineStateCreateInfo& RHS) const
+    bool operator==(const PipelineStateCreateInfo& RHS) const noexcept
     {
         if (PSODesc                 != RHS.PSODesc ||
             Flags                   != RHS.Flags   ||
@@ -693,7 +696,7 @@ struct PipelineStateCreateInfo
 
         return true;
     }
-    bool operator!=(const PipelineStateCreateInfo& RHS) const
+    bool operator!=(const PipelineStateCreateInfo& RHS) const noexcept
     {
         return !(*this == RHS);
     }
@@ -730,7 +733,7 @@ struct GraphicsPipelineStateCreateInfo DILIGENT_DERIVE(PipelineStateCreateInfo)
     IShader* pMS DEFAULT_INITIALIZER(nullptr);
 
 #if DILIGENT_CPP_INTERFACE
-    bool operator==(const GraphicsPipelineStateCreateInfo& Rhs) const
+    bool operator==(const GraphicsPipelineStateCreateInfo& Rhs) const noexcept
     {
         if (static_cast<const PipelineStateCreateInfo&>(*this) != static_cast<const PipelineStateCreateInfo&>(Rhs))
             return false;
@@ -746,7 +749,7 @@ struct GraphicsPipelineStateCreateInfo DILIGENT_DERIVE(PipelineStateCreateInfo)
                 pAS == Rhs.pAS &&
                 pMS == Rhs.pMS);
     }
-    bool operator!=(const GraphicsPipelineStateCreateInfo& Rhs) const
+    bool operator!=(const GraphicsPipelineStateCreateInfo& Rhs) const noexcept
     {
         return !(*this == Rhs);
     }
@@ -767,14 +770,14 @@ struct ComputePipelineStateCreateInfo DILIGENT_DERIVE(PipelineStateCreateInfo)
         PSODesc.PipelineType = PIPELINE_TYPE_COMPUTE;
     }
 
-    bool operator==(const ComputePipelineStateCreateInfo& Rhs) const
+    bool operator==(const ComputePipelineStateCreateInfo& Rhs) const noexcept
     {
         if (static_cast<const PipelineStateCreateInfo&>(*this) != static_cast<const PipelineStateCreateInfo&>(Rhs))
             return false;
 
         return pCS == Rhs.pCS;
     }
-    bool operator!=(const ComputePipelineStateCreateInfo& Rhs) const
+    bool operator!=(const ComputePipelineStateCreateInfo& Rhs) const noexcept
     {
         return !(*this == Rhs);
     }
@@ -828,7 +831,7 @@ struct RayTracingPipelineStateCreateInfo DILIGENT_DERIVE(PipelineStateCreateInfo
         PSODesc.PipelineType = PIPELINE_TYPE_RAY_TRACING;
     }
 
-    bool operator==(const RayTracingPipelineStateCreateInfo& RHS)const
+    bool operator==(const RayTracingPipelineStateCreateInfo& RHS)const noexcept
     {
         if (static_cast<const PipelineStateCreateInfo&>(*this) != static_cast<const PipelineStateCreateInfo&>(RHS))
             return false;
@@ -862,7 +865,7 @@ struct RayTracingPipelineStateCreateInfo DILIGENT_DERIVE(PipelineStateCreateInfo
 
         return true;
     }
-    bool operator!=(const RayTracingPipelineStateCreateInfo& RHS)const
+    bool operator!=(const RayTracingPipelineStateCreateInfo& RHS)const noexcept
     {
         return !(*this == RHS);
     }
@@ -920,7 +923,7 @@ struct TilePipelineStateCreateInfo DILIGENT_DERIVE(PipelineStateCreateInfo)
     {
         PSODesc.PipelineType = PIPELINE_TYPE_TILE;
     }
-    bool operator==(const TilePipelineStateCreateInfo& Rhs) const
+    bool operator==(const TilePipelineStateCreateInfo& Rhs) const noexcept
     {
         if (static_cast<const PipelineStateCreateInfo&>(*this) != static_cast<const PipelineStateCreateInfo&>(Rhs))
             return false;
@@ -930,7 +933,7 @@ struct TilePipelineStateCreateInfo DILIGENT_DERIVE(PipelineStateCreateInfo)
 
         return pTS == Rhs.pTS;
     }
-    bool operator!=(const TilePipelineStateCreateInfo& Rhs) const
+    bool operator!=(const TilePipelineStateCreateInfo& Rhs) const noexcept
     {
         return !(*this == Rhs);
     }

@@ -411,7 +411,7 @@ struct RenderPassDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     const SubpassDependencyDesc*     pDependencies      DEFAULT_INITIALIZER(nullptr);
 
 #if DILIGENT_CPP_INTERFACE
-    bool operator==(const RenderPassDesc& Rhs) const
+    bool operator==(const RenderPassDesc& Rhs) const noexcept
     {
         if (AttachmentCount != Rhs.AttachmentCount ||
             SubpassCount    != Rhs.SubpassCount    ||

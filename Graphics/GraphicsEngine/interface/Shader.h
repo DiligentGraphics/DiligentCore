@@ -126,7 +126,7 @@ struct ShaderDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// \return
     /// - True if all members of the two structures are equal.
     /// - False otherwise.
-    bool operator==(const ShaderDesc& RHS) const
+    bool operator==(const ShaderDesc& RHS) const noexcept
     {
         return ShaderType == RHS.ShaderType && SafeStrEqual(Name, RHS.Name);
     }
@@ -193,11 +193,11 @@ struct ShaderMacro
     {}
 
     /// Comparison operator tests if two structures are equivalent
-    bool operator==(const ShaderMacro& RHS) const
+    bool operator==(const ShaderMacro& RHS) const noexcept
     {
         return SafeStrEqual(Name, RHS.Name) && SafeStrEqual(Definition, RHS.Definition);
     }
-    bool operator!=(const ShaderMacro& RHS) const
+    bool operator!=(const ShaderMacro& RHS) const noexcept
     {
         return !(*this == RHS);
     }
@@ -429,7 +429,7 @@ struct ShaderResourceDesc
     /// \return
     /// - True if all members of the two structures are equal.
     /// - False otherwise.
-    bool operator==(const ShaderResourceDesc& RHS) const
+    bool operator==(const ShaderResourceDesc& RHS) const noexcept
     {
         return Type == RHS.Type && ArraySize == RHS.ArraySize && SafeStrEqual(Name, RHS.Name);
     }

@@ -110,7 +110,7 @@ struct PipelineResourceSignatureInternalData
 
     Uint8 _Padding = 0;
 
-    bool operator==(const PipelineResourceSignatureInternalData& Rhs) const
+    constexpr bool operator==(const PipelineResourceSignatureInternalData& Rhs) const
     {
         // clang-format off
         return ShaderStages          == Rhs.ShaderStages          &&

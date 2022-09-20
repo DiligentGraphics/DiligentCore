@@ -439,13 +439,13 @@ inline float GetPointToBoxDistance(const BoundBox& BndBox, const float3& Pos)
     return length(RangeVec);
 }
 
-inline bool operator==(const Plane3D& p1, const Plane3D& p2)
+inline bool operator==(const Plane3D& p1, const Plane3D& p2) noexcept
 {
     return p1.Normal == p2.Normal &&
         p1.Distance == p2.Distance;
 }
 
-inline bool operator==(const ViewFrustum& f1, const ViewFrustum& f2)
+inline bool operator==(const ViewFrustum& f1, const ViewFrustum& f2) noexcept
 {
     // clang-format off
     return f1.LeftPlane   == f2.LeftPlane   &&
@@ -457,7 +457,7 @@ inline bool operator==(const ViewFrustum& f1, const ViewFrustum& f2)
     // clang-format on
 }
 
-inline bool operator==(const ViewFrustumExt& f1, const ViewFrustumExt& f2)
+inline bool operator==(const ViewFrustumExt& f1, const ViewFrustumExt& f2) noexcept
 {
     if (!(static_cast<const ViewFrustum&>(f1) == static_cast<const ViewFrustum&>(f2)))
         return false;

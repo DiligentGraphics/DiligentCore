@@ -184,7 +184,7 @@ bool SerializedResourceSignatureImpl::IsCompatible(const SerializedResourceSigna
     return true;
 }
 
-bool SerializedResourceSignatureImpl::operator==(const SerializedResourceSignatureImpl& Rhs) const
+bool SerializedResourceSignatureImpl::operator==(const SerializedResourceSignatureImpl& Rhs) const noexcept
 {
     if (GetCommonData() != Rhs.GetCommonData())
         return false;

@@ -40,7 +40,7 @@ struct XXH128Hash
     Uint64 LowPart  = {};
     Uint64 HighPart = {};
 
-    constexpr bool operator==(const XXH128Hash& RHS) const
+    constexpr bool operator==(const XXH128Hash& RHS) const noexcept
     {
         return LowPart == RHS.LowPart && HighPart == RHS.HighPart;
     }

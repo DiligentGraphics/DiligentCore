@@ -71,13 +71,13 @@ struct ImmutableSamplerDesc
         Desc                {_Desc                }
     {}
 
-    bool operator==(const ImmutableSamplerDesc& Rhs) const
+    bool operator==(const ImmutableSamplerDesc& Rhs) const noexcept
     {
         return ShaderStages == Rhs.ShaderStages &&
                Desc         == Rhs.Desc &&
                SafeStrEqual(SamplerOrTextureName, Rhs.SamplerOrTextureName);
     }
-    bool operator!=(const ImmutableSamplerDesc& Rhs) const
+    bool operator!=(const ImmutableSamplerDesc& Rhs) const noexcept
     {
         return !(*this == Rhs);
     }
@@ -176,7 +176,7 @@ struct PipelineResourceDesc
         Flags       {_Flags       }
     {}
 
-    bool operator==(const PipelineResourceDesc& Rhs) const
+    bool operator==(const PipelineResourceDesc& Rhs) const noexcept
     {
         return ShaderStages == Rhs.ShaderStages &&
                ArraySize    == Rhs.ArraySize    &&
@@ -185,7 +185,7 @@ struct PipelineResourceDesc
                Flags        == Rhs.Flags        &&
                SafeStrEqual(Name, Rhs.Name);
     }
-    bool operator!=(const PipelineResourceDesc& Rhs) const
+    bool operator!=(const PipelineResourceDesc& Rhs) const noexcept
     {
         return !(*this == Rhs);
     }
@@ -240,7 +240,7 @@ struct PipelineResourceSignatureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
 #if DILIGENT_CPP_INTERFACE
 
-    bool operator==(const PipelineResourceSignatureDesc& Rhs) const
+    bool operator==(const PipelineResourceSignatureDesc& Rhs) const noexcept
     {
         if (NumResources               != Rhs.NumResources         ||
             NumImmutableSamplers       != Rhs.NumImmutableSamplers ||

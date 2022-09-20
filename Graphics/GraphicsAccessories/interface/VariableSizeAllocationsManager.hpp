@@ -175,7 +175,7 @@ public:
             return UnalignedOffset != InvalidAllocation().UnalignedOffset;
         }
 
-        bool operator==(const Allocation& rhs) const
+        bool operator==(const Allocation& rhs) const noexcept
         {
             return UnalignedOffset == rhs.UnalignedOffset &&
                 Size == rhs.Size;

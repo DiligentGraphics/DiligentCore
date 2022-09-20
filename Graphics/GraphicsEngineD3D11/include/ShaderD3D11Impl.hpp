@@ -111,13 +111,13 @@ private:
 
         struct Hasher
         {
-            size_t operator()(const BlobHashKey& Key) const
+            size_t operator()(const BlobHashKey& Key) const noexcept
             {
                 return Key.Hash;
             }
         };
 
-        bool operator==(const BlobHashKey& rhs) const
+        bool operator==(const BlobHashKey& rhs) const noexcept
         {
             if (Hash != rhs.Hash)
                 return false;

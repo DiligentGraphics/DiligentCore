@@ -218,7 +218,7 @@ struct DepthStencilStateDesc
     {}
 
     /// Tests if two structures are equivalent
-    bool operator== (const DepthStencilStateDesc& rhs) const
+    constexpr bool operator== (const DepthStencilStateDesc& rhs) const
     {
         return  DepthEnable      == rhs.DepthEnable      &&
                 DepthWriteEnable == rhs.DepthWriteEnable &&
@@ -230,7 +230,7 @@ struct DepthStencilStateDesc
                 BackFace         == rhs.BackFace;
         static_assert(sizeof(*this) == 14, "Did you add new members to DepthStencilStateDesc? Please handle them here.");
     }
-    bool operator != (const DepthStencilStateDesc& rhs) const
+    constexpr bool operator != (const DepthStencilStateDesc& rhs) const
     {
         return !(*this == rhs);
     }

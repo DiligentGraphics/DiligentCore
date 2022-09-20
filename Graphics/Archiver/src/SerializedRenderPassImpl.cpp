@@ -53,7 +53,7 @@ SerializedRenderPassImpl::SerializedRenderPassImpl(IReferenceCounters*      pRef
 SerializedRenderPassImpl::~SerializedRenderPassImpl()
 {}
 
-bool SerializedRenderPassImpl::operator==(const SerializedRenderPassImpl& Rhs) const
+bool SerializedRenderPassImpl::operator==(const SerializedRenderPassImpl& Rhs) const noexcept
 {
     return GetCommonData() == Rhs.GetCommonData();
 }

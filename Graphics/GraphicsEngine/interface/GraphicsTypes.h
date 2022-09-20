@@ -2831,7 +2831,7 @@ struct ShadingRateProperties
     /// \return
     /// - True if all members of the two structures are equal.
     /// - False otherwise.
-    bool operator==(const ShadingRateProperties& RHS) const
+    bool operator==(const ShadingRateProperties& RHS) const noexcept
     {
         return NumShadingRates          == RHS.NumShadingRates          &&
                CapFlags                 == RHS.CapFlags                 &&
@@ -3103,7 +3103,7 @@ struct CommandQueueInfo
     /// \return
     /// - True if all members of the two structures are equal.
     /// - False otherwise.
-    bool operator==(const CommandQueueInfo& RHS) const 
+    bool operator==(const CommandQueueInfo& RHS) const noexcept
     {
         return QueueType         == RHS.QueueType         &&
                MaxDeviceContexts == RHS.MaxDeviceContexts &&
@@ -3190,7 +3190,7 @@ struct GraphicsAdapterInfo
     /// \return
     /// - True if all members of the two structures are equal.
     /// - False otherwise.
-    bool operator==(const GraphicsAdapterInfo& RHS) const
+    bool operator==(const GraphicsAdapterInfo& RHS) const noexcept
     {
         if (NumQueues != RHS.NumQueues)
             return false;

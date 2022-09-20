@@ -100,7 +100,7 @@ struct D3D11ResourceBindPoints
         return Hash;
     }
 
-    bool operator==(const D3D11ResourceBindPoints& rhs) const
+    bool operator==(const D3D11ResourceBindPoints& rhs) const noexcept
     {
         return Bindings == rhs.Bindings;
     }
@@ -201,7 +201,7 @@ struct D3D11ResourceRangeCounters
         return *this;
     }
 
-    bool operator==(const D3D11ResourceRangeCounters& rhs) const
+    bool operator==(const D3D11ResourceRangeCounters& rhs) const noexcept
     {
         return PackedCounters == rhs.PackedCounters;
     }

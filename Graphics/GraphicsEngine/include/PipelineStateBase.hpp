@@ -152,7 +152,7 @@ struct ShaderResourceHashKey : public HashMapStringKey
         Key.ShaderStages = SHADER_TYPE_UNKNOWN;
     }
 
-    bool operator==(const ShaderResourceHashKey& rhs) const
+    bool operator==(const ShaderResourceHashKey& rhs) const noexcept
     {
         return ShaderStages == rhs.ShaderStages &&
             static_cast<const HashMapStringKey&>(*this) == static_cast<const HashMapStringKey&>(rhs);
@@ -160,7 +160,7 @@ struct ShaderResourceHashKey : public HashMapStringKey
 
     struct Hasher
     {
-        size_t operator()(const ShaderResourceHashKey& Key) const
+        size_t operator()(const ShaderResourceHashKey& Key) const noexcept
         {
             return Key.GetHash();
         }

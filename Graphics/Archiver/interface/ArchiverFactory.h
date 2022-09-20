@@ -81,11 +81,11 @@ struct SerializationDeviceD3D12Info
 
 #if DILIGENT_CPP_INTERFACE
     /// Tests if two structures are equivalent
-    bool operator==(const SerializationDeviceD3D12Info& RHS) const
+    bool operator==(const SerializationDeviceD3D12Info& RHS) const noexcept
     {
         return ShaderVersion == RHS.ShaderVersion && SafeStrEqual(DxCompilerPath, RHS.DxCompilerPath);
     }
-    bool operator!=(const SerializationDeviceD3D12Info& RHS) const
+    bool operator!=(const SerializationDeviceD3D12Info& RHS) const noexcept
     {
         return !(*this == RHS);
     }
@@ -109,13 +109,13 @@ struct SerializationDeviceVkInfo
 
 #if DILIGENT_CPP_INTERFACE
     /// Tests if two structures are equivalent
-    bool operator==(const SerializationDeviceVkInfo& RHS) const 
+    bool operator==(const SerializationDeviceVkInfo& RHS) const noexcept
     {
         return ApiVersion      == RHS.ApiVersion &&
                SupportsSpirv14 == RHS.SupportsSpirv14 &&
                SafeStrEqual(DxCompilerPath, RHS.DxCompilerPath);
     }
-    bool operator!=(const SerializationDeviceVkInfo& RHS) const
+    bool operator!=(const SerializationDeviceVkInfo& RHS) const noexcept
     {
         return !(*this == RHS);
     }
@@ -142,13 +142,13 @@ struct SerializationDeviceMtlInfo
 
 #if DILIGENT_CPP_INTERFACE
     /// Tests if two structures are equivalent
-    bool operator==(const SerializationDeviceMtlInfo& RHS) const 
+    bool operator==(const SerializationDeviceMtlInfo& RHS) const noexcept
     {
         return SafeStrEqual(CompileOptionsMacOS, RHS.CompileOptionsMacOS) &&
                SafeStrEqual(CompileOptionsiOS,   RHS.CompileOptionsiOS)   &&
                SafeStrEqual(MslPreprocessorCmd,  RHS.MslPreprocessorCmd);
     }
-    bool operator!=(const SerializationDeviceMtlInfo& RHS) const
+    bool operator!=(const SerializationDeviceMtlInfo& RHS) const noexcept
     {
         return !(*this == RHS);
     }

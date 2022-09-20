@@ -190,20 +190,20 @@ struct SubpassDescX
         return Desc;
     }
 
-    bool operator==(const SubpassDesc& RHS) const
+    bool operator==(const SubpassDesc& RHS) const noexcept
     {
         return static_cast<const SubpassDesc&>(*this) == RHS;
     }
-    bool operator!=(const SubpassDesc& RHS) const
+    bool operator!=(const SubpassDesc& RHS) const noexcept
     {
         return !(static_cast<const SubpassDesc&>(*this) == RHS);
     }
 
-    bool operator==(const SubpassDescX& RHS) const
+    bool operator==(const SubpassDescX& RHS) const noexcept
     {
         return *this == static_cast<const SubpassDesc&>(RHS);
     }
-    bool operator!=(const SubpassDescX& RHS) const
+    bool operator!=(const SubpassDescX& RHS) const noexcept
     {
         return *this != static_cast<const SubpassDesc&>(RHS);
     }
@@ -333,20 +333,20 @@ struct RenderPassDescX
         return Desc;
     }
 
-    bool operator==(const RenderPassDesc& RHS) const
+    bool operator==(const RenderPassDesc& RHS) const noexcept
     {
         return static_cast<const RenderPassDesc&>(*this) == RHS;
     }
-    bool operator!=(const RenderPassDesc& RHS) const
+    bool operator!=(const RenderPassDesc& RHS) const noexcept
     {
         return !(static_cast<const RenderPassDesc&>(*this) == RHS);
     }
 
-    bool operator==(const RenderPassDescX& RHS) const
+    bool operator==(const RenderPassDescX& RHS) const noexcept
     {
         return *this == static_cast<const RenderPassDesc&>(RHS);
     }
-    bool operator!=(const RenderPassDescX& RHS) const
+    bool operator!=(const RenderPassDescX& RHS) const noexcept
     {
         return *this != static_cast<const RenderPassDesc&>(RHS);
     }
@@ -445,20 +445,20 @@ struct InputLayoutDescX
         return Desc;
     }
 
-    bool operator==(const InputLayoutDesc& RHS) const
+    bool operator==(const InputLayoutDesc& RHS) const noexcept
     {
         return static_cast<const InputLayoutDesc&>(*this) == RHS;
     }
-    bool operator!=(const InputLayoutDesc& RHS) const
+    bool operator!=(const InputLayoutDesc& RHS) const noexcept
     {
         return !(static_cast<const InputLayoutDesc&>(*this) == RHS);
     }
 
-    bool operator==(const InputLayoutDescX& RHS) const
+    bool operator==(const InputLayoutDescX& RHS) const noexcept
     {
         return *this == static_cast<const InputLayoutDesc&>(RHS);
     }
-    bool operator!=(const InputLayoutDescX& RHS) const
+    bool operator!=(const InputLayoutDescX& RHS) const noexcept
     {
         return *this != static_cast<const InputLayoutDesc&>(RHS);
     }

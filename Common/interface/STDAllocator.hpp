@@ -164,7 +164,7 @@ struct STDAllocator
 #define STD_ALLOCATOR(Type, AllocatorType, Allocator, Description) STDAllocator<Type, AllocatorType>(Allocator, Description, __FILE__, __LINE__)
 
 template <class T, class U, class A>
-bool operator==(const STDAllocator<T, A>& left, const STDAllocator<U, A>& right)
+bool operator==(const STDAllocator<T, A>& left, const STDAllocator<U, A>& right) noexcept
 {
     return &left.m_Allocator == &right.m_Allocator;
 }

@@ -158,23 +158,23 @@ public:
 
         struct Hasher
         {
-            size_t operator()(const NamedResourceKey& Key) const
+            size_t operator()(const NamedResourceKey& Key) const noexcept
             {
                 return ComputeHash(static_cast<size_t>(Key.Type), Key.Name.GetHash());
             }
         };
 
-        bool operator==(const NamedResourceKey& Key) const
+        constexpr bool operator==(const NamedResourceKey& Key) const
         {
             return Type == Key.Type && Name == Key.Name;
         }
 
-        const char* GetName() const
+        const char* GetName() const noexcept
         {
             return Name.GetStr();
         }
 
-        ResourceType GetType() const
+        ResourceType GetType() const noexcept
         {
             return Type;
         }

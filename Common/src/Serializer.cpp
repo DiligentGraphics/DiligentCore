@@ -98,7 +98,7 @@ size_t SerializedData::GetHash() const
     return Hash;
 }
 
-bool SerializedData::operator==(const SerializedData& Rhs) const
+bool SerializedData::operator==(const SerializedData& Rhs) const noexcept
 {
     if (m_Size != Rhs.m_Size)
         return false;
