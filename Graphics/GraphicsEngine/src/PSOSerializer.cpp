@@ -144,7 +144,7 @@ bool PSOSerializer<Mode>::SerializeCreateInfo(
             return false;
     }
 
-    ASSERT_SIZEOF64(ShaderResourceVariableDesc, 24, "Did you add a new member to ShaderResourceVariableDesc? Please add serialization here.");
+    ASSERT_SIZEOF64(ShaderResourceVariableDesc, 16, "Did you add a new member to ShaderResourceVariableDesc? Please add serialization here.");
     ASSERT_SIZEOF64(PipelineStateCreateInfo, 96, "Did you add a new member to PipelineStateCreateInfo? Please add serialization here.");
 
     return true;

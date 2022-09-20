@@ -39,6 +39,8 @@
 #include "../../Graphics/GraphicsEngine/interface/DepthStencilState.h"
 #include "../../Graphics/GraphicsEngine/interface/BlendState.h"
 #include "../../Graphics/GraphicsEngine/interface/TextureView.h"
+#include "../../Graphics/GraphicsEngine/interface/PipelineResourceSignature.h"
+#include "../../Graphics/GraphicsEngine/interface/PipelineState.h"
 #include "Align.hpp"
 
 #define LOG_HASH_CONFLICTS 1
@@ -185,6 +187,9 @@ struct CStringHash
 {
     size_t operator()(const CharType* str) const noexcept
     {
+        if (str == nullptr)
+            return 0;
+
         // http://www.cse.yorku.ca/~oz/hash.html
         std::size_t Seed = 0;
         while (std::size_t Ch = *(str++))
@@ -562,6 +567,95 @@ struct hash<Diligent::TextureViewDesc>
             ((static_cast<uint32_t>(TexViewDesc.AccessFlags) << 0u) |
              (static_cast<uint32_t>(TexViewDesc.Flags) << 8u)));
         ASSERT_SIZEOF64(Diligent::TextureViewDesc, 32, "Did you add new members to TextureViewDesc? Please handle them here.");
+    }
+};
+
+/// Hash function specialization for Diligent::SampleDesc structure.
+template <>
+struct hash<Diligent::SampleDesc>
+{
+    size_t operator()(const Diligent::SampleDesc& SmplDesc) const
+    {
+        ASSERT_SIZEOF(SmplDesc.Count, 1, "Hash logic below may be incorrect.");
+        ASSERT_SIZEOF(SmplDesc.Quality, 1, "Hash logic below may be incorrect.");
+
+        return Diligent::ComputeHash(
+            ((static_cast<uint32_t>(SmplDesc.Count) << 0u) |
+             (static_cast<uint32_t>(SmplDesc.Quality) << 8u)));
+        ASSERT_SIZEOF(Diligent::SampleDesc, 2, "Did you add new members to SampleDesc? Please handle them here.");
+    }
+};
+
+/// Hash function specialization for Diligent::ShaderResourceVariableDesc structure.
+template <>
+struct hash<Diligent::ShaderResourceVariableDesc>
+{
+    size_t operator()(const Diligent::ShaderResourceVariableDesc& VarDesc) const
+    {
+        ASSERT_SIZEOF(VarDesc.Type, 1, "Hash logic below may be incorrect.");
+        ASSERT_SIZEOF(VarDesc.Flags, 1, "Hash logic below may be incorrect.");
+
+        return Diligent::ComputeHash(
+            VarDesc.Name,
+            VarDesc.ShaderStages,
+            ((static_cast<uint32_t>(VarDesc.Type) << 0u) |
+             (static_cast<uint32_t>(VarDesc.Flags) << 8u)));
+        ASSERT_SIZEOF64(Diligent::ShaderResourceVariableDesc, 16, "Did you add new members to ShaderResourceVariableDesc? Please handle them here.");
+    }
+};
+
+/// Hash function specialization for Diligent::ImmutableSamplerDesc structure.
+template <>
+struct hash<Diligent::ImmutableSamplerDesc>
+{
+    size_t operator()(const Diligent::ImmutableSamplerDesc& SamDesc) const
+    {
+        return Diligent::ComputeHash(SamDesc.ShaderStages, SamDesc.SamplerOrTextureName, SamDesc.Desc);
+        ASSERT_SIZEOF64(Diligent::ImmutableSamplerDesc, 16 + sizeof(Diligent::SamplerDesc), "Did you add new members to ImmutableSamplerDesc? Please handle them here.");
+    }
+};
+
+/// Hash function specialization for Diligent::PipelineResourceDesc structure.
+template <>
+struct hash<Diligent::PipelineResourceDesc>
+{
+    size_t operator()(const Diligent::PipelineResourceDesc& ResDesc) const
+    {
+        ASSERT_SIZEOF(ResDesc.ResourceType, 1, "Hash logic below may be incorrect.");
+        ASSERT_SIZEOF(ResDesc.VarType, 1, "Hash logic below may be incorrect.");
+        ASSERT_SIZEOF(ResDesc.Flags, 1, "Hash logic below may be incorrect.");
+
+        return Diligent::ComputeHash(
+            ResDesc.Name,
+            ResDesc.ShaderStages,
+            ResDesc.ArraySize,
+            ((static_cast<uint32_t>(ResDesc.ResourceType) << 0u) |
+             (static_cast<uint32_t>(ResDesc.VarType) << 8u) |
+             (static_cast<uint32_t>(ResDesc.Flags) << 16u)));
+        ASSERT_SIZEOF64(Diligent::PipelineResourceDesc, 24, "Did you add new members to PipelineResourceDesc? Please handle them here.");
+    }
+};
+
+/// Hash function specialization for Diligent::PipelineResourceLayoutDesc structure.
+template <>
+struct hash<Diligent::PipelineResourceLayoutDesc>
+{
+    size_t operator()(const Diligent::PipelineResourceLayoutDesc& LayoutDesc) const
+    {
+        size_t Hash = 0;
+        Diligent::HashCombine(Hash,
+                              LayoutDesc.DefaultVariableType,
+                              LayoutDesc.DefaultVariableMergeStages,
+                              LayoutDesc.NumVariables,
+                              LayoutDesc.NumImmutableSamplers);
+        for (size_t i = 0; i < LayoutDesc.NumVariables; ++i)
+            Diligent::HashCombine(Hash, LayoutDesc.Variables[i]);
+
+        for (size_t i = 0; i < LayoutDesc.NumImmutableSamplers; ++i)
+            Diligent::HashCombine(Hash, LayoutDesc.ImmutableSamplers[i]);
+
+        return Hash;
+        ASSERT_SIZEOF64(Diligent::PipelineResourceLayoutDesc, 40, "Did you add new members to PipelineResourceDesc? Please handle them here.");
     }
 };
 

@@ -118,13 +118,13 @@ DEFINE_FLAG_ENUM_OPERATORS(SHADER_VARIABLE_FLAGS);
 /// Describes shader variable
 struct ShaderResourceVariableDesc
 {
+    /// Shader variable name
+    const Char*                   Name         DEFAULT_INITIALIZER(nullptr);
+
     /// Shader stages this resources variable applies to. If more than one shader stage is specified,
     /// the variable will be shared between these stages. Shader stages used by different variables
     /// with the same name must not overlap.
     SHADER_TYPE                   ShaderStages DEFAULT_INITIALIZER(SHADER_TYPE_UNKNOWN);
-
-    /// Shader variable name
-    const Char*                   Name         DEFAULT_INITIALIZER(nullptr);
 
     /// Shader variable type. See Diligent::SHADER_RESOURCE_VARIABLE_TYPE for a list of allowed types
     SHADER_RESOURCE_VARIABLE_TYPE Type         DEFAULT_INITIALIZER(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
@@ -138,8 +138,8 @@ struct ShaderResourceVariableDesc
                                          const Char*                   _Name,
                                          SHADER_RESOURCE_VARIABLE_TYPE _Type,
                                          SHADER_VARIABLE_FLAGS         _Flags = SHADER_VARIABLE_FLAG_NONE) noexcept :
-        ShaderStages{_ShaderStages},
         Name        {_Name        },
+        ShaderStages{_ShaderStages},
         Type        {_Type        },
         Flags       {_Flags       }
     {}

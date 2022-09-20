@@ -28,6 +28,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <array>
+#include <vector>
 
 #include "HashUtils.hpp"
 
@@ -259,6 +260,16 @@ public:
         }
     }
 
+    template <typename MemberType>
+    void AddStrings(MemberType& Member, const char* MemberName, const std::vector<const char*>& Strings)
+    {
+        Restart();
+        for (const auto* Str : Strings)
+        {
+            Add(Member, MemberName, Str);
+        }
+    }
+
     void Clear()
     {
         m_Hashes.clear();
@@ -293,9 +304,11 @@ private:
     std::unordered_set<size_t> m_Hashes;
     std::unordered_set<Type>   m_Descs;
 };
-#define TEST_RANGE(Member, ...) Helper.AddRange(Helper.Get().Member, #Member, __VA_ARGS__)
-#define TEST_BOOL(Member, ...)  Helper.AddBool(Helper.Get().Member, #Member)
-#define TEST_FLAGS(Member, ...) Helper.AddFlags(Helper.Get().Member, #Member, __VA_ARGS__)
+#define TEST_VALUE(Member, ...)   Helper.Add(Helper.Get().Member, #Member, __VA_ARGS__)
+#define TEST_RANGE(Member, ...)   Helper.AddRange(Helper.Get().Member, #Member, __VA_ARGS__)
+#define TEST_BOOL(Member, ...)    Helper.AddBool(Helper.Get().Member, #Member)
+#define TEST_FLAGS(Member, ...)   Helper.AddFlags(Helper.Get().Member, #Member, __VA_ARGS__)
+#define TEST_STRINGS(Member, ...) Helper.AddStrings(Helper.Get().Member, #Member, {__VA_ARGS__})
 
 TEST(Common_HashUtils, SamplerDescHasher)
 {
@@ -406,6 +419,78 @@ TEST(Common_HashUtils, TextureViewDescHasher)
     TEST_RANGE(NumArraySlices, 0u, 2048u, 1u);
     TEST_FLAGS(AccessFlags, static_cast<UAV_ACCESS_FLAG>(1u), UAV_ACCESS_FLAG_LAST);
     TEST_FLAGS(Flags, static_cast<TEXTURE_VIEW_FLAGS>(1u), TEXTURE_VIEW_FLAG_LAST);
+}
+
+
+TEST(Common_HashUtils, SampleDescHasher)
+{
+    ASSERT_SIZEOF(SampleDesc, 2, "Did you add new members to SampleDesc? Please update the tests.");
+    Common_HashUtilsHelper<SampleDesc> Helper{"SampleDesc"};
+
+    TEST_RANGE(Count, Uint8{0u}, Uint8{255u}, Uint8{1u});
+    TEST_RANGE(Quality, Uint8{0u}, Uint8{255u}, Uint8{1u});
+}
+
+
+TEST(Common_HashUtils, ShaderResourceVariableDesc)
+{
+    ASSERT_SIZEOF64(ShaderResourceVariableDesc, 16, "Did you add new members to ShaderResourceVariableDesc? Please update the tests.");
+    Common_HashUtilsHelper<ShaderResourceVariableDesc> Helper{"ShaderResourceVariableDesc"};
+
+    TEST_STRINGS(Name, "Name1", "Name2", "Name3");
+    TEST_FLAGS(ShaderStages, static_cast<SHADER_TYPE>(1), SHADER_TYPE_LAST);
+    TEST_RANGE(Type, static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(0), SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES);
+    TEST_FLAGS(Flags, static_cast<SHADER_VARIABLE_FLAGS>(1), SHADER_VARIABLE_FLAG_LAST);
+}
+
+
+TEST(Common_HashUtils, ImmutableSamplerDesc)
+{
+    ASSERT_SIZEOF64(ImmutableSamplerDesc, 16 + sizeof(SamplerDesc), "Did you add new members to ImmutableSamplerDesc? Please update the tests.");
+    Common_HashUtilsHelper<ImmutableSamplerDesc> Helper{"ImmutableSamplerDesc"};
+
+    TEST_FLAGS(ShaderStages, static_cast<SHADER_TYPE>(1), SHADER_TYPE_LAST);
+    TEST_STRINGS(SamplerOrTextureName, "Name1", "Name2", "Name3");
+}
+
+
+TEST(Common_HashUtils, PipelineResourceDesc)
+{
+    ASSERT_SIZEOF64(PipelineResourceDesc, 24, "Did you add new members to PipelineResourceDesc? Please update the tests.");
+    Common_HashUtilsHelper<PipelineResourceDesc> Helper{"PipelineResourceDesc"};
+
+    TEST_STRINGS(Name, "Name1", "Name2", "Name3");
+    TEST_FLAGS(ShaderStages, static_cast<SHADER_TYPE>(1), SHADER_TYPE_LAST);
+    TEST_RANGE(ArraySize, 0u, 2048u, 1u);
+    TEST_RANGE(ResourceType, SHADER_RESOURCE_TYPE_UNKNOWN, static_cast<SHADER_RESOURCE_TYPE>(SHADER_RESOURCE_TYPE_LAST + 1));
+    TEST_RANGE(VarType, static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(0), SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES);
+    TEST_FLAGS(Flags, static_cast<PIPELINE_RESOURCE_FLAGS>(1), PIPELINE_RESOURCE_FLAG_LAST);
+}
+
+
+TEST(Common_HashUtils, PipelineResourceLayoutDesc)
+{
+    ASSERT_SIZEOF64(PipelineResourceLayoutDesc, 40, "Did you add new members to PipelineResourceLayoutDesc? Please update the tests.");
+    Common_HashUtilsHelper<PipelineResourceLayoutDesc> Helper{"PipelineResourceDesc"};
+
+    TEST_RANGE(DefaultVariableType, static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(0), SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES);
+    TEST_FLAGS(DefaultVariableMergeStages, static_cast<SHADER_TYPE>(1), SHADER_TYPE_LAST);
+
+    constexpr ShaderResourceVariableDesc Vars[] =
+        {
+            {SHADER_TYPE_VERTEX, "Var1", SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_VARIABLE_FLAG_NO_DYNAMIC_BUFFERS},
+            {SHADER_TYPE_PIXEL, "Var2", SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC, SHADER_VARIABLE_FLAG_GENERAL_INPUT_ATTACHMENT},
+        };
+    Helper.Get().Variables = Vars;
+    TEST_VALUE(NumVariables, Uint32{_countof(Vars)});
+
+    constexpr ImmutableSamplerDesc ImtblSamplers[] = //
+        {
+            {SHADER_TYPE_VERTEX, "Sam1", SamplerDesc{}},
+            {SHADER_TYPE_PIXEL, "Sam2", SamplerDesc{}} //
+        };
+    Helper.Get().ImmutableSamplers = ImtblSamplers;
+    TEST_VALUE(NumImmutableSamplers, Uint32{_countof(ImtblSamplers)});
 }
 
 } // namespace
