@@ -649,11 +649,25 @@ struct hash<Diligent::PipelineResourceLayoutDesc>
             LayoutDesc.NumVariables,
             LayoutDesc.NumImmutableSamplers);
 
-        for (size_t i = 0; i < LayoutDesc.NumVariables; ++i)
-            Diligent::HashCombine(Hash, LayoutDesc.Variables[i]);
+        if (LayoutDesc.Variables != nullptr)
+        {
+            for (size_t i = 0; i < LayoutDesc.NumVariables; ++i)
+                Diligent::HashCombine(Hash, LayoutDesc.Variables[i]);
+        }
+        else
+        {
+            VERIFY_EXPR(LayoutDesc.NumVariables == 0);
+        }
 
-        for (size_t i = 0; i < LayoutDesc.NumImmutableSamplers; ++i)
-            Diligent::HashCombine(Hash, LayoutDesc.ImmutableSamplers[i]);
+        if (LayoutDesc.ImmutableSamplers != nullptr)
+        {
+            for (size_t i = 0; i < LayoutDesc.NumImmutableSamplers; ++i)
+                Diligent::HashCombine(Hash, LayoutDesc.ImmutableSamplers[i]);
+        }
+        else
+        {
+            VERIFY_EXPR(LayoutDesc.NumImmutableSamplers == 0);
+        }
 
         return Hash;
         ASSERT_SIZEOF64(Diligent::PipelineResourceLayoutDesc, 40, "Did you add new members to PipelineResourceDesc? Please handle them here.");
@@ -954,5 +968,48 @@ struct hash<Diligent::PipelineStateDesc>
     }
 };
 
+
+/// Hash function specialization for Diligent::PipelineResourceSignatureDesc structure.
+template <>
+struct hash<Diligent::PipelineResourceSignatureDesc>
+{
+    size_t operator()(const Diligent::PipelineResourceSignatureDesc& Desc) const
+    {
+        ASSERT_SIZEOF(Desc.BindingIndex, 1, "Hash logic below may be incorrect.");
+        ASSERT_SIZEOF(Desc.UseCombinedTextureSamplers, 1, "Hash logic below may be incorrect.");
+        auto Hash = Diligent::ComputeHash(
+            Desc.NumResources,
+            Desc.NumImmutableSamplers,
+            ((static_cast<uint32_t>(Desc.BindingIndex) << 0u) |
+             (static_cast<uint32_t>(Desc.UseCombinedTextureSamplers) << 8u)),
+            Desc.SRBAllocationGranularity);
+
+        if (Desc.Resources != nullptr)
+        {
+            for (size_t i = 0; i < Desc.NumResources; ++i)
+                Diligent::HashCombine(Hash, Desc.Resources[i]);
+        }
+        else
+        {
+            VERIFY_EXPR(Desc.NumResources == 0);
+        }
+
+        if (Desc.ImmutableSamplers != nullptr)
+        {
+            for (size_t i = 0; i < Desc.NumImmutableSamplers; ++i)
+                Diligent::HashCombine(Hash, Desc.ImmutableSamplers[i]);
+        }
+        else
+        {
+            VERIFY_EXPR(Desc.NumImmutableSamplers == 0);
+        }
+
+        if (Desc.UseCombinedTextureSamplers)
+            Diligent::HashCombine(Hash, Desc.CombinedSamplerSuffix);
+
+        return Hash;
+        ASSERT_SIZEOF64(Diligent::PipelineResourceSignatureDesc, 56, "Did you add new members to PipelineResourceSignatureDesc? Please handle them here.");
+    }
+};
 
 } // namespace std

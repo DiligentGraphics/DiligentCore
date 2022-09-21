@@ -271,9 +271,10 @@ public:
     }
 
     template <typename MemberType>
-    void AddStrings(MemberType& Member, const char* MemberName, const std::vector<const char*>& Strings)
+    void AddStrings(MemberType& Member, const char* MemberName, const std::vector<const char*>& Strings, bool NoRestart = false)
     {
-        Restart();
+        if (!NoRestart)
+            Restart();
         for (const auto* Str : Strings)
         {
             Add(Member, MemberName, Str);
@@ -656,7 +657,7 @@ TEST(Common_HashUtils, LayoutElementHasher)
 }
 
 
-TEST(Common_HashUtils, InputLayoutDesc)
+TEST(Common_HashUtils, InputLayoutDescHasher)
 {
     ASSERT_SIZEOF64(InputLayoutDesc, 16, "Did you add new members to InputLayoutDesc? Please update the tests.");
     DEFINE_HELPER(InputLayoutDesc);
@@ -716,7 +717,7 @@ TEST(Common_HashUtils, GraphicsPipelineDescHasher)
 }
 
 
-TEST(Common_HashUtils, RayTracingPipelineDesc)
+TEST(Common_HashUtils, RayTracingPipelineDescHasher)
 {
     DEFINE_HELPER(RayTracingPipelineDesc);
 
@@ -725,7 +726,7 @@ TEST(Common_HashUtils, RayTracingPipelineDesc)
 }
 
 
-TEST(Common_HashUtils, PipelineStateDesc)
+TEST(Common_HashUtils, PipelineStateDescHasher)
 {
     DEFINE_HELPER(PipelineStateDesc);
 
@@ -735,6 +736,39 @@ TEST(Common_HashUtils, PipelineStateDesc)
 
     Helper.Get().ResourceLayout.DefaultVariableType = SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC;
     Helper.Add("ResourceLayout");
+}
+
+
+TEST(Common_HashUtils, PipelineResourceSignatureDescHasher)
+{
+    ASSERT_SIZEOF64(PipelineResourceSignatureDesc, 56, "Did you add new members to PipelineResourceSignatureDesc? Please update the tests.");
+    DEFINE_HELPER(PipelineResourceSignatureDesc);
+
+    constexpr PipelineResourceDesc Resources[] = //
+        {
+            {SHADER_TYPE_VERTEX, "Res1", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_STATIC, PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS},
+            {SHADER_TYPE_PIXEL, "Res2", 2, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC, PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER} //
+        };
+
+    constexpr ImmutableSamplerDesc ImtblSamplers[] = //
+        {
+            {SHADER_TYPE_VERTEX, "Sam1", SamplerDesc{}},
+            {SHADER_TYPE_PIXEL, "Sam2", SamplerDesc{}} //
+        };
+
+    Helper.Get().Resources = Resources;
+    TEST_VALUE(NumResources, 1u);
+    TEST_VALUE(NumResources, 2u);
+
+    Helper.Get().ImmutableSamplers = ImtblSamplers;
+    TEST_VALUE(NumImmutableSamplers, 1u);
+    TEST_VALUE(NumImmutableSamplers, 2u);
+
+    TEST_RANGE(BindingIndex, Uint8{0u}, Uint8{8u});
+    TEST_BOOL(UseCombinedTextureSamplers);
+
+    Helper.Get().UseCombinedTextureSamplers = true;
+    Helper.AddStrings(Helper.Get().CombinedSamplerSuffix, "CombinedSamplerSuffix", {"_Sampler", "_sam", "_Samp"}, true);
 }
 
 } // namespace
