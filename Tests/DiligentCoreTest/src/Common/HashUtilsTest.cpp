@@ -715,4 +715,26 @@ TEST(Common_HashUtils, GraphicsPipelineDescHasher)
     TEST_RANGE(NodeMask, 0u, 64u);
 }
 
+
+TEST(Common_HashUtils, RayTracingPipelineDesc)
+{
+    DEFINE_HELPER(RayTracingPipelineDesc);
+
+    TEST_RANGE(ShaderRecordSize, Uint16{32u}, Uint16{48000u}, Uint16{1024u});
+    TEST_RANGE(MaxRecursionDepth, Uint8{0u}, Uint8{32u});
+}
+
+
+TEST(Common_HashUtils, PipelineStateDesc)
+{
+    DEFINE_HELPER(PipelineStateDesc);
+
+    TEST_RANGE(PipelineType, static_cast<PIPELINE_TYPE>(0), PIPELINE_TYPE_COUNT);
+    TEST_RANGE(SRBAllocationGranularity, 0u, 64u);
+    TEST_FLAGS(ImmediateContextMask, Uint64{1u}, Uint64{1u} << Uint64{63u});
+
+    Helper.Get().ResourceLayout.DefaultVariableType = SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC;
+    Helper.Add("ResourceLayout");
+}
+
 } // namespace

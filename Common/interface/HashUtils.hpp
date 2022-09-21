@@ -923,4 +923,36 @@ struct hash<Diligent::GraphicsPipelineDesc>
     }
 };
 
+
+/// Hash function specialization for Diligent::RayTracingPipelineDesc structure.
+template <>
+struct hash<Diligent::RayTracingPipelineDesc>
+{
+    size_t operator()(const Diligent::RayTracingPipelineDesc& Desc) const
+    {
+        ASSERT_SIZEOF(Desc.ShaderRecordSize, 2, "Hash logic below may be incorrect.");
+        ASSERT_SIZEOF(Desc.MaxRecursionDepth, 1, "Hash logic below may be incorrect.");
+        return Diligent::ComputeHash(
+            ((static_cast<uint32_t>(Desc.ShaderRecordSize) << 0u) |
+             (static_cast<uint32_t>(Desc.MaxRecursionDepth) << 16u)));
+        ASSERT_SIZEOF(Diligent::RayTracingPipelineDesc, 4, "Did you add new members to RayTracingPipelineDesc? Please handle them here.");
+    }
+};
+
+
+/// Hash function specialization for Diligent::PipelineStateDesc structure.
+template <>
+struct hash<Diligent::PipelineStateDesc>
+{
+    size_t operator()(const Diligent::PipelineStateDesc& Desc) const
+    {
+        return Diligent::ComputeHash(
+            Desc.PipelineType,
+            Desc.SRBAllocationGranularity,
+            Desc.ImmediateContextMask,
+            Desc.ResourceLayout);
+    }
+};
+
+
 } // namespace std
