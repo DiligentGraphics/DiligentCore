@@ -197,10 +197,8 @@ public:
         EXPECT_TRUE(m_Descs.insert(m_Desc).second);
     }
 
-    template <typename MemberType>
-    void Add(MemberType& Member, const char* MemberName, MemberType Value)
+    void Add(const char* Msg)
     {
-        Member = Value;
         if (m_Desc == Type{})
         {
             EXPECT_FALSE(m_DefaultOccured);
@@ -208,21 +206,31 @@ public:
             return;
         }
 
-        EXPECT_TRUE(m_Hashes.insert(m_Hasher(m_Desc)).second) << m_StructName << '.' << MemberName << '=' << Value;
-        EXPECT_TRUE(m_Descs.insert(m_Desc).second) << m_StructName << '.' << MemberName << '=' << Value;
+        EXPECT_TRUE(m_Hashes.insert(m_Hasher(m_Desc)).second) << Msg;
+        EXPECT_TRUE(m_Descs.insert(m_Desc).second) << Msg;
 
-        EXPECT_FALSE(m_Desc == m_LastDesc) << m_StructName << '.' << MemberName << '=' << Value;
-        EXPECT_TRUE(m_Desc != m_LastDesc) << m_StructName << '.' << MemberName << '=' << Value;
+        EXPECT_FALSE(m_Desc == m_LastDesc) << Msg;
+        EXPECT_TRUE(m_Desc != m_LastDesc) << Msg;
         m_LastDesc = m_Desc;
-        EXPECT_TRUE(m_Desc == m_LastDesc) << m_StructName << '.' << MemberName << '=' << Value;
-        EXPECT_FALSE(m_Desc != m_LastDesc) << m_StructName << '.' << MemberName << '=' << Value;
+        EXPECT_TRUE(m_Desc == m_LastDesc) << Msg;
+        EXPECT_FALSE(m_Desc != m_LastDesc) << Msg;
+    }
+
+    template <typename MemberType>
+    void Add(MemberType& Member, const char* MemberName, MemberType Value)
+    {
+        Member = Value;
+        std::stringstream ss;
+        ss << m_StructName << '.' << MemberName << '=' << Value;
+        Add(ss.str().c_str());
     }
 
     template <typename MemberType>
     typename std::enable_if<std::is_enum<MemberType>::value, void>::type
-    AddRange(MemberType& Member, const char* MemberName, MemberType StartValue, MemberType EndValue)
+    AddRange(MemberType& Member, const char* MemberName, MemberType StartValue, MemberType EndValue, bool NoRestart = false)
     {
-        Restart();
+        if (!NoRestart)
+            Restart();
         for (typename std::underlying_type<MemberType>::type i = StartValue; i < EndValue; ++i)
         {
             Add(Member, MemberName, static_cast<MemberType>(i));
@@ -231,9 +239,10 @@ public:
 
     template <typename MemberType>
     typename std::enable_if<std::is_floating_point<MemberType>::value || std::is_integral<MemberType>::value, void>::type
-    AddRange(MemberType& Member, const char* MemberName, MemberType StartValue, MemberType EndValue, MemberType Step = MemberType{1})
+    AddRange(MemberType& Member, const char* MemberName, MemberType StartValue, MemberType EndValue, MemberType Step = MemberType{1}, bool NoRestart = false)
     {
-        Restart();
+        if (!NoRestart)
+            Restart();
         for (auto i = StartValue; i <= EndValue; i += Step)
         {
             Add(Member, MemberName, static_cast<MemberType>(i));
@@ -626,6 +635,84 @@ TEST(Common_HashUtils, RenderPassDescHasher)
     TEST_VALUE(DependencyCount, 1u);
     TEST_VALUE(DependencyCount, 2u);
     TEST_VALUE(DependencyCount, 3u);
+}
+
+
+TEST(Common_HashUtils, LayoutElementHasher)
+{
+    ASSERT_SIZEOF64(LayoutElement, 40, "Did you add new members to LayoutElement? Please update the tests.");
+    DEFINE_HELPER(LayoutElement);
+
+    TEST_STRINGS(HLSLSemantic, "ATTRIB1", "ATTRIB2", "ATTRIB3");
+    TEST_RANGE(InputIndex, 1u, 32u);
+    TEST_RANGE(BufferSlot, 1u, 32u);
+    TEST_RANGE(NumComponents, 1u, 8u);
+    TEST_RANGE(ValueType, VT_UNDEFINED, VT_NUM_TYPES);
+    TEST_BOOL(IsNormalized);
+    TEST_RANGE(RelativeOffset, 0u, 1024u, 32u);
+    TEST_RANGE(Stride, 16u, 1024u, 32u);
+    TEST_RANGE(Frequency, INPUT_ELEMENT_FREQUENCY_UNDEFINED, INPUT_ELEMENT_FREQUENCY_NUM_FREQUENCIES);
+    TEST_RANGE(InstanceDataStepRate, 0u, 64u);
+}
+
+
+TEST(Common_HashUtils, InputLayoutDesc)
+{
+    ASSERT_SIZEOF64(InputLayoutDesc, 16, "Did you add new members to InputLayoutDesc? Please update the tests.");
+    DEFINE_HELPER(InputLayoutDesc);
+
+    constexpr LayoutElement LayoutElems[] =
+        {
+            LayoutElement{0, 0, 4, VT_FLOAT32, False, INPUT_ELEMENT_FREQUENCY_PER_INSTANCE},
+            LayoutElement{1, 0, 4, VT_UINT32, False, INPUT_ELEMENT_FREQUENCY_PER_VERTEX},
+            LayoutElement{2, 1, 3, VT_UINT16, False, INPUT_ELEMENT_FREQUENCY_PER_VERTEX},
+            LayoutElement{3, 3, 3, VT_UINT8, True, INPUT_ELEMENT_FREQUENCY_PER_INSTANCE},
+            LayoutElement{4, 5, 1, VT_INT8, True, INPUT_ELEMENT_FREQUENCY_PER_VERTEX},
+        };
+    Helper.Get().LayoutElements = LayoutElems;
+    TEST_RANGE(NumElements, 0u, Uint32{_countof(LayoutElems)}, 1u, true);
+}
+
+
+TEST(Common_HashUtils, GraphicsPipelineDescHasher)
+{
+    DEFINE_HELPER(GraphicsPipelineDesc);
+
+    TEST_FLAGS(SampleMask, 1u, 0xFFFFFFFFu);
+
+    Helper.Get().BlendDesc.AlphaToCoverageEnable = True;
+    Helper.Add("BlendDesc");
+
+    Helper.Get().RasterizerDesc.ScissorEnable = True;
+    Helper.Add("RasterizerDesc");
+
+    Helper.Get().DepthStencilDesc.StencilEnable = True;
+    Helper.Add("DepthStencilDesc");
+
+    constexpr LayoutElement LayoutElems[] = {LayoutElement{0, 0, 4, VT_FLOAT32, False, INPUT_ELEMENT_FREQUENCY_PER_INSTANCE}};
+    Helper.Get().InputLayout              = {LayoutElems, 1};
+    Helper.Add("InputLayout");
+
+    TEST_RANGE(PrimitiveTopology, PRIMITIVE_TOPOLOGY_UNDEFINED, PRIMITIVE_TOPOLOGY_NUM_TOPOLOGIES);
+    TEST_RANGE(NumRenderTargets, Uint8{0u}, Uint8{8u});
+    TEST_RANGE(NumViewports, Uint8{1u}, Uint8{32u});
+    TEST_RANGE(SubpassIndex, Uint8{1u}, Uint8{8u});
+    TEST_FLAGS(ShadingRateFlags, static_cast<PIPELINE_SHADING_RATE_FLAGS>(1), PIPELINE_SHADING_RATE_FLAG_LAST);
+
+    for (Uint8 i = 1; i < MAX_RENDER_TARGETS; ++i)
+    {
+        Helper.Get().NumRenderTargets = i;
+        TEST_RANGE(RTVFormats[i - 1], TEX_FORMAT_UNKNOWN, TEX_FORMAT_NUM_FORMATS, true);
+    }
+
+    TEST_RANGE(DSVFormat, TEX_FORMAT_UNKNOWN, TEX_FORMAT_NUM_FORMATS);
+
+    Helper.Get().SmplDesc.Count = 4;
+    Helper.Add("SmplDesc");
+
+    //IRenderPass* pRenderPass DEFAULT_INITIALIZER(nullptr);
+
+    TEST_RANGE(NodeMask, 0u, 64u);
 }
 
 } // namespace

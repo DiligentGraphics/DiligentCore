@@ -42,7 +42,7 @@ static const Uint32 LAYOUT_ELEMENT_AUTO_OFFSET = 0xFFFFFFFF;
 static const Uint32 LAYOUT_ELEMENT_AUTO_STRIDE = 0xFFFFFFFF;
 
 /// Input frequency
-enum INPUT_ELEMENT_FREQUENCY
+DILIGENT_TYPED_ENUM(INPUT_ELEMENT_FREQUENCY, Uint8)
 {
     /// Frequency is undefined.
     INPUT_ELEMENT_FREQUENCY_UNDEFINED = 0,
@@ -98,7 +98,7 @@ struct LayoutElement
     /// they all must specify the same stride or use LAYOUT_ELEMENT_AUTO_STRIDE value.
     Uint32 Stride            DEFAULT_INITIALIZER(LAYOUT_ELEMENT_AUTO_STRIDE);
 
-    enum INPUT_ELEMENT_FREQUENCY Frequency DEFAULT_INITIALIZER(INPUT_ELEMENT_FREQUENCY_PER_VERTEX);
+    INPUT_ELEMENT_FREQUENCY Frequency DEFAULT_INITIALIZER(INPUT_ELEMENT_FREQUENCY_PER_VERTEX);
 
     /// The number of instances to draw using the same per-instance data before advancing
     /// in the buffer by one element.

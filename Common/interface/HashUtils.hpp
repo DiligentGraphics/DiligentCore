@@ -643,12 +643,12 @@ struct hash<Diligent::PipelineResourceLayoutDesc>
 {
     size_t operator()(const Diligent::PipelineResourceLayoutDesc& LayoutDesc) const
     {
-        size_t Hash = 0;
-        Diligent::HashCombine(Hash,
-                              LayoutDesc.DefaultVariableType,
-                              LayoutDesc.DefaultVariableMergeStages,
-                              LayoutDesc.NumVariables,
-                              LayoutDesc.NumImmutableSamplers);
+        auto Hash = Diligent::ComputeHash(
+            LayoutDesc.DefaultVariableType,
+            LayoutDesc.DefaultVariableMergeStages,
+            LayoutDesc.NumVariables,
+            LayoutDesc.NumImmutableSamplers);
+
         for (size_t i = 0; i < LayoutDesc.NumVariables; ++i)
             Diligent::HashCombine(Hash, LayoutDesc.Variables[i]);
 
@@ -720,11 +720,10 @@ struct hash<Diligent::SubpassDesc>
 {
     size_t operator()(const Diligent::SubpassDesc& Subpass) const
     {
-        size_t Hash = 0;
-        Diligent::HashCombine(Hash,
-                              Subpass.InputAttachmentCount,
-                              Subpass.RenderTargetAttachmentCount,
-                              Subpass.PreserveAttachmentCount);
+        auto Hash = Diligent::ComputeHash(
+            Subpass.InputAttachmentCount,
+            Subpass.RenderTargetAttachmentCount,
+            Subpass.PreserveAttachmentCount);
 
         if (Subpass.pInputAttachments != nullptr)
         {
@@ -797,11 +796,10 @@ struct hash<Diligent::RenderPassDesc>
 {
     size_t operator()(const Diligent::RenderPassDesc& RP) const
     {
-        size_t Hash = 0;
-        Diligent::HashCombine(Hash,
-                              RP.AttachmentCount,
-                              RP.SubpassCount,
-                              RP.DependencyCount);
+        auto Hash = Diligent::ComputeHash(
+            RP.AttachmentCount,
+            RP.SubpassCount,
+            RP.DependencyCount);
 
         if (RP.pAttachments != nullptr)
         {
@@ -838,5 +836,91 @@ struct hash<Diligent::RenderPassDesc>
     }
 };
 
+
+/// Hash function specialization for Diligent::LayoutElement structure.
+template <>
+struct hash<Diligent::LayoutElement>
+{
+    size_t operator()(const Diligent::LayoutElement& Elem) const
+    {
+        ASSERT_SIZEOF(Elem.ValueType, 1, "Hash logic below may be incorrect.");
+        ASSERT_SIZEOF(Elem.IsNormalized, 1, "Hash logic below may be incorrect.");
+        ASSERT_SIZEOF(Elem.Frequency, 1, "Hash logic below may be incorrect.");
+
+        return Diligent::ComputeHash(
+            Elem.HLSLSemantic,
+            Elem.InputIndex,
+            Elem.BufferSlot,
+            Elem.NumComponents,
+            ((static_cast<uint32_t>(Elem.ValueType) << 0u) |
+             ((Elem.IsNormalized ? 1u : 0u) << 8u) |
+             (static_cast<uint32_t>(Elem.Frequency) << 16u)),
+            Elem.RelativeOffset,
+            Elem.Stride,
+            Elem.InstanceDataStepRate);
+        ASSERT_SIZEOF64(Diligent::LayoutElement, 40, "Did you add new members to LayoutElement? Please handle them here.");
+    }
+};
+
+
+/// Hash function specialization for Diligent::InputLayoutDesc structure.
+template <>
+struct hash<Diligent::InputLayoutDesc>
+{
+    size_t operator()(const Diligent::InputLayoutDesc& Layout) const
+    {
+        size_t Hash = Diligent::ComputeHash(Layout.NumElements);
+        if (Layout.LayoutElements != nullptr)
+        {
+            for (size_t i = 0; i < Layout.NumElements; ++i)
+                Diligent::HashCombine(Hash, Layout.LayoutElements[i]);
+        }
+        else
+        {
+            VERIFY_EXPR(Layout.NumElements == 0);
+        }
+        return Hash;
+        ASSERT_SIZEOF64(Diligent::InputLayoutDesc, 16, "Did you add new members to InputLayoutDesc? Please handle them here.");
+    }
+};
+
+/// Hash function specialization for Diligent::GraphicsPipelineDesc structure.
+template <>
+struct hash<Diligent::GraphicsPipelineDesc>
+{
+    size_t operator()(const Diligent::GraphicsPipelineDesc& Desc) const
+    {
+        ASSERT_SIZEOF(Desc.NumViewports, 1, "Hash logic below may be incorrect.");
+        ASSERT_SIZEOF(Desc.NumRenderTargets, 1, "Hash logic below may be incorrect.");
+        ASSERT_SIZEOF(Desc.SubpassIndex, 1, "Hash logic below may be incorrect.");
+        ASSERT_SIZEOF(Desc.ShadingRateFlags, 1, "Hash logic below may be incorrect.");
+
+        auto Hash = Diligent::ComputeHash(
+            Desc.BlendDesc,
+            Desc.SampleMask,
+            Desc.RasterizerDesc,
+            Desc.DepthStencilDesc,
+            Desc.InputLayout,
+            Desc.PrimitiveTopology,
+            Desc.NumViewports,
+            ((static_cast<uint32_t>(Desc.NumViewports) << 0u) |
+             (static_cast<uint32_t>(Desc.NumRenderTargets) << 8u) |
+             (static_cast<uint32_t>(Desc.SubpassIndex) << 16u) |
+             (static_cast<uint32_t>(Desc.ShadingRateFlags) << 24u)));
+
+        for (size_t i = 0; i < Desc.NumRenderTargets; ++i)
+            Diligent::HashCombine(Hash, Desc.RTVFormats[i]);
+
+        Diligent::HashCombine(Hash,
+                              Desc.DSVFormat,
+                              Desc.SmplDesc,
+                              Desc.NodeMask);
+
+        if (Desc.pRenderPass != nullptr)
+            Diligent::HashCombine(Hash, Desc.pRenderPass->GetDesc());
+
+        return Hash;
+    }
+};
 
 } // namespace std

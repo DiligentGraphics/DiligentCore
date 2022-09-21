@@ -340,8 +340,8 @@ struct GraphicsPipelineDesc
               SubpassIndex      == Rhs.SubpassIndex      &&
               ShadingRateFlags  == Rhs.ShadingRateFlags  &&
               DSVFormat         == Rhs.DSVFormat         &&
-              SmplDesc.Count    == Rhs.SmplDesc.Count    &&
-              SmplDesc.Quality  == Rhs.SmplDesc.Quality))
+              SmplDesc          == Rhs.SmplDesc          &&
+              NodeMask          == Rhs.NodeMask))
             return false;
 
         for (Uint32 i = 0; i < NumRenderTargets; ++i)
@@ -350,11 +350,10 @@ struct GraphicsPipelineDesc
                 return false;
         }
 
-        // AZ TODO: check render pass compatibility
         if ((pRenderPass != nullptr) != (Rhs.pRenderPass != nullptr))
             return false;
 
-        if (pRenderPass)
+        if (pRenderPass != nullptr)
         {
             if (!(pRenderPass->GetDesc() == Rhs.pRenderPass->GetDesc()))
                 return false;
