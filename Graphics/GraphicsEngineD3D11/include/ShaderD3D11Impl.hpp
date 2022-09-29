@@ -89,10 +89,14 @@ public:
     /// Implementation of IShaderD3D11::GetD3D11Shader() method.
     virtual ID3D11DeviceChild* DILIGENT_CALL_TYPE GetD3D11Shader() override final
     {
-        return m_d3dDefaultShader;
+        return GetD3D11Shader(m_pShaderByteCode);
     }
 
-    ID3DBlob* GetBytecode() { return m_pShaderByteCode; }
+    virtual void DILIGENT_CALL_TYPE GetBytecode(const void** ppBytecode,
+                                                Uint64&      Size) const override final
+    {
+        ShaderD3DBase::GetBytecode(ppBytecode, Size);
+    }
 
     const std::shared_ptr<const ShaderResourcesD3D11>& GetShaderResources() const { return m_pShaderResources; }
 
@@ -147,8 +151,6 @@ private:
 
     std::mutex                                                                       m_d3dShaderCacheMtx;
     std::unordered_map<BlobHashKey, CComPtr<ID3D11DeviceChild>, BlobHashKey::Hasher> m_d3dShaderCache;
-
-    CComPtr<ID3D11DeviceChild> m_d3dDefaultShader;
 
     // ShaderResources class instance must be referenced through the shared pointer, because
     // it is referenced by ShaderResourceLayoutD3D11 class instances

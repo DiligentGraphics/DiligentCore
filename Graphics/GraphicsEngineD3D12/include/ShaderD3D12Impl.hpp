@@ -80,7 +80,12 @@ public:
             ResourceDesc = m_pShaderResources->GetHLSLShaderResourceDesc(Index);
     }
 
-    ID3DBlob*   GetShaderByteCode() const { return m_pShaderByteCode; }
+    virtual void DILIGENT_CALL_TYPE GetBytecode(const void** ppBytecode,
+                                                Uint64&      Size) const override final
+    {
+        ShaderD3DBase::GetBytecode(ppBytecode, Size);
+    }
+
     const Char* GetEntryPoint() const { return m_EntryPoint.c_str(); }
 
     const std::shared_ptr<const ShaderResourcesD3D12>& GetShaderResources() const { return m_pShaderResources; }

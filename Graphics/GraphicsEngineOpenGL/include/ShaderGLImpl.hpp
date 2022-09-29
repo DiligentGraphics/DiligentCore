@@ -61,8 +61,16 @@ public:
 
     SHADER_SOURCE_LANGUAGE GetSourceLanguage() const { return m_SourceLanguage; }
 
+    virtual void DILIGENT_CALL_TYPE GetBytecode(const void** ppData,
+                                                Uint64&      DataSize) const override final
+    {
+        *ppData  = m_GLSLSourceString.c_str();
+        DataSize = m_GLSLSourceString.length();
+    }
+
 private:
     const SHADER_SOURCE_LANGUAGE             m_SourceLanguage;
+    std::string                              m_GLSLSourceString;
     GLObjectWrappers::GLShaderObj            m_GLShaderObj;
     std::shared_ptr<const ShaderResourcesGL> m_pShaderResources;
 };

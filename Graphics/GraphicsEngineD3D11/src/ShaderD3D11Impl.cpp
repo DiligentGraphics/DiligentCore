@@ -109,10 +109,6 @@ ShaderD3D11Impl::ShaderD3D11Impl(IReferenceCounters*     pRefCounters,
         auto* pResources = new (pRawMem) ShaderResourcesD3D11{m_pShaderByteCode, m_Desc, ShaderCI.UseCombinedTextureSamplers ? ShaderCI.CombinedSamplerSuffix : nullptr};
         m_pShaderResources.reset(pResources, STDDeleterRawMem<ShaderResourcesD3D11>(Allocator));
     }
-
-    // Add shader to the cache
-    if (HasDevice())
-        m_d3dDefaultShader = GetD3D11Shader(m_pShaderByteCode);
 }
 
 ShaderD3D11Impl::~ShaderD3D11Impl()
@@ -146,7 +142,7 @@ ID3D11DeviceChild* ShaderD3D11Impl::GetD3D11Shader(ID3DBlob* pBlob) noexcept(fal
         return it->second;
     }
 
-    VERIFY(pBlob->GetBufferSize() == m_pShaderByteCode->GetBufferSize(), "The byte code size does not match the size of original byte code");
+    VERIFY(pBlob->GetBufferSize() == m_pShaderByteCode->GetBufferSize(), "The byte code size does not match the size of the original byte code");
 
     auto* pd3d11Device = GetDevice()->GetD3D11Device();
 

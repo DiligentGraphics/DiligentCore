@@ -65,6 +65,7 @@ public:
     UNSUPPORTED_CONST_METHOD(Int32, GetUniqueID)
     UNSUPPORTED_METHOD(void, SetUserData, IObject* pUserData)
     UNSUPPORTED_CONST_METHOD(IObject*, GetUserData)
+    UNSUPPORTED_CONST_METHOD(void, GetBytecode, const void** ppBytecode, Uint64& Size);
 
     struct CompiledShader
     {

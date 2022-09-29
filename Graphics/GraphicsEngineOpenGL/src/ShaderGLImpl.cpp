@@ -85,7 +85,6 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
     std::array<GLint, 1>       Lengths       = {};
 
     ShaderSourceFileData SourceData;
-    std::string          GLSLSourceString;
     if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM)
     {
         if (ShaderCI.Macros != nullptr)
@@ -94,9 +93,8 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
         }
 
         // Read the source file directly and use it as is
-        SourceData       = ReadShaderSourceFile(ShaderCI);
-        ShaderStrings[0] = SourceData.Source;
-        Lengths[0]       = StaticCast<GLint>(SourceData.SourceLength);
+        SourceData         = ReadShaderSourceFile(ShaderCI);
+        m_GLSLSourceString = std::string{SourceData.Source, SourceData.SourceLength};
     }
     else
     {
@@ -104,12 +102,12 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
 
         // Build the full source code string that will contain GLSL version declaration,
         // platform definitions, user-provided shader macros, etc.
-        GLSLSourceString = BuildGLSLSourceString(
+        m_GLSLSourceString = BuildGLSLSourceString(
             ShaderCI, DeviceInfo, AdapterInfo, TargetGLSLCompiler::driver,
             (pDeviceGL->GetDeviceInfo().NDC.MinZ >= 0 ? NDCDefine : nullptr));
-        ShaderStrings[0] = GLSLSourceString.c_str();
-        Lengths[0]       = static_cast<GLint>(GLSLSourceString.length());
     }
+    ShaderStrings[0] = m_GLSLSourceString.c_str();
+    Lengths[0]       = static_cast<GLint>(m_GLSLSourceString.length());
 
 
     // Provide source strings (the strings will be saved in internal OpenGL memory)

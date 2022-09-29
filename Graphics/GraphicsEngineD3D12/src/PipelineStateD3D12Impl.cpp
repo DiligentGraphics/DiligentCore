@@ -302,7 +302,7 @@ void GetShaderIdentifiers(ID3D12DeviceChild*                       pSO,
 PipelineStateD3D12Impl::ShaderStageInfo::ShaderStageInfo(const ShaderD3D12Impl* _pShader) :
     Type{_pShader->GetDesc().ShaderType},
     Shaders{_pShader},
-    ByteCodes{_pShader->GetShaderByteCode()}
+    ByteCodes{_pShader->GetD3DBytecode()}
 {
 }
 
@@ -326,7 +326,7 @@ void PipelineStateD3D12Impl::ShaderStageInfo::Append(const ShaderD3D12Impl* pSha
     }
 
     Shaders.push_back(pShader);
-    ByteCodes.push_back(pShader->GetShaderByteCode());
+    ByteCodes.push_back(pShader->GetD3DBytecode());
 }
 
 size_t PipelineStateD3D12Impl::ShaderStageInfo::Count() const

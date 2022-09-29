@@ -80,6 +80,13 @@ public:
 
     const char* GetEntryPoint() const { return m_EntryPoint.c_str(); }
 
+    virtual void DILIGENT_CALL_TYPE GetBytecode(const void** ppBytecode,
+                                                Uint64&      Size) const override final
+    {
+        *ppBytecode = !m_SPIRV.empty() ? m_SPIRV.data() : nullptr;
+        Size        = m_SPIRV.size();
+    }
+
 private:
     void MapHLSLVertexShaderInputs();
 

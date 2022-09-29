@@ -120,7 +120,7 @@ void PipelineStateD3D11Impl::RemapOrVerifyShaderResources(const TShaderStages&  
     {
         auto* const pShader    = Shaders[s];
         auto const  ShaderType = pShader->GetDesc().ShaderType;
-        auto* const pBytecode  = Shaders[s]->GetBytecode();
+        auto* const pBytecode  = Shaders[s]->GetD3DBytecode();
 
         ResourceBinding::TMap ResourceMap;
         for (Uint32 sign = 0; sign < SignatureCount; ++sign)
@@ -255,7 +255,7 @@ void PipelineStateD3D11Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
             VERIFY_EXPR(m_ppd3d11Shaders[s]);
 
             if (pShader->GetDesc().ShaderType == SHADER_TYPE_VERTEX)
-                pVSByteCode = pShader->GetBytecode();
+                pVSByteCode = pShader->GetD3DBytecode();
         }
     }
 }

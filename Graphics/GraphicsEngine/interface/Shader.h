@@ -462,6 +462,20 @@ DILIGENT_BEGIN_INTERFACE(IShader, IDeviceObject)
     VIRTUAL void METHOD(GetResourceDesc)(THIS_
                                          Uint32 Index,
                                          ShaderResourceDesc REF ResourceDesc) CONST PURE;
+
+    /// Returns the shader bytecode.
+    ///
+    /// \param [out] ppBytecode - A pointer to the memory location where
+    ///                           a pointer to the byte code will be written.
+    /// \param [out] Size       - The size of the byte code.
+    ///
+    /// \remarks For OpenGL, this method returns the full GLSL source.
+    ///
+    ///          The pointer returned by the method remains valid while the
+    ///          shader object is alive. An application must NOT free the memory.
+    VIRTUAL void METHOD(GetBytecode)(THIS_
+                                     const void** ppBytecode,
+                                     Uint64 REF   Size) CONST PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -475,6 +489,7 @@ DILIGENT_END_INTERFACE
 
 #    define IShader_GetResourceCount(This)     CALL_IFACE_METHOD(Shader, GetResourceCount, This)
 #    define IShader_GetResourceDesc(This, ...) CALL_IFACE_METHOD(Shader, GetResourceDesc,  This, __VA_ARGS__)
+#    define IShader_GetBytecode(This, ...)     CALL_IFACE_METHOD(Shader, GetBytecode,      This, __VA_ARGS__)
 
 // clang-format on
 
