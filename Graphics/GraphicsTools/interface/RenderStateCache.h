@@ -1,0 +1,144 @@
+/*
+ *  Copyright 2019-2022 Diligent Graphics LLC
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ *  In no event and under no legal theory, whether in tort (including negligence),
+ *  contract, or otherwise, unless required by applicable law (such as deliberate
+ *  and grossly negligent acts) or agreed to in writing, shall any Contributor be
+ *  liable for any damages, including any direct, indirect, special, incidental,
+ *  or consequential damages of any character arising as a result of this License or
+ *  out of the use or inability to use the software (including but not limited to damages
+ *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and
+ *  all other commercial damages or losses), even if such Contributor has been advised
+ *  of the possibility of such damages.
+ */
+
+#pragma once
+
+/// \file
+/// Defines Diligent::IRenderStateCache interface
+
+#include "../../GraphicsEngine/interface/RenderDevice.h"
+#include "BytecodeCache.h"
+
+DILIGENT_BEGIN_NAMESPACE(Diligent)
+
+/// Render state cache create information.
+struct RenderStateCacheCreateInfo
+{
+    /// A pointer to the render device, must not be null.
+    IRenderDevice* pDevice DEFAULT_INITIALIZER(nullptr);
+
+    /// A pointer to the bytecode cache.
+    IBytecodeCache* pBytecodeCache DEFAULT_INITIALIZER(nullptr);
+};
+typedef struct RenderStateCacheCreateInfo RenderStateCacheCreateInfo;
+
+
+// clang-format on
+
+// {5B356268-256C-401F-BDE2-B9832157141A}
+static const INTERFACE_ID IID_RenderStateCache =
+    {0x5b356268, 0x256c, 0x401f, {0xbd, 0xe2, 0xb9, 0x83, 0x21, 0x57, 0x14, 0x1a}};
+
+#define DILIGENT_INTERFACE_NAME IRenderStateCache
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+#define IRenderStateCacheInclusiveMethods \
+    IObjectInclusiveMethods;              \
+    IRenderStateCacheMethods RenderStateCache
+
+// clang-format off
+
+DILIGENT_BEGIN_INTERFACE(IRenderStateCache, IObject)
+{
+    /// Creates a shader object from cached data.
+
+    /// \param [in]  ShaderCI - Shader create info, see Diligent::ShaderCreateInfo for details.
+    /// \param [out] ppShader - Address of the memory location where a pointer to the created
+    ///                         shader object will be written.
+    ///
+    /// \return     true if the shader was loaded from the cache, and false otherwise.
+    VIRTUAL bool METHOD(CreateShader)(THIS_
+                                      const ShaderCreateInfo REF ShaderCI,
+                                      IShader**                  ppShader) PURE;
+
+    /// Creates a graphics pipeline state object from cached data.
+
+    /// \param [in]  PSOCreateInfo   - Graphics pipeline state create info, see Diligent::GraphicsPipelineStateCreateInfo for details.
+    /// \param [out] ppPipelineState - Address of the memory location where a pointer to the created
+    ///                                pipeline state object will be written.
+    ///
+    /// \return     true if the pipeline state was loaded from the cache, and false otherwise.
+    VIRTUAL bool METHOD(CreateGraphicsPipelineState)(THIS_
+                                                     const GraphicsPipelineStateCreateInfo REF PSOCreateInfo,
+                                                     IPipelineState**                          ppPipelineState) PURE;
+
+    /// Creates a compute pipeline state object from cached data.
+
+    /// \param [in]  PSOCreateInfo   - Compute pipeline state create info, see Diligent::ComputePipelineStateCreateInfo for details.
+    /// \param [out] ppPipelineState - Address of the memory location where a pointer to the created
+    ///                                pipeline state object will be written.
+    ///
+    /// \return     true if the pipeline state was loaded from the cache, and false otherwise.
+    VIRTUAL bool METHOD(CreateComputePipelineState)(THIS_
+                                                    const ComputePipelineStateCreateInfo REF PSOCreateInfo,
+                                                    IPipelineState**                         ppPipelineState) PURE;
+
+    /// Creates a ray tracing pipeline state object from cached data.
+
+    /// \param [in]  PSOCreateInfo   - Ray tracing pipeline state create info, see Diligent::RayTracingPipelineStateCreateInfo for details.
+    /// \param [out] ppPipelineState - Address of the memory location where a pointer to the created
+    ///                                pipeline state object will be written.
+    ///
+    /// \return     true if the pipeline state was loaded from the cache, and false otherwise.
+    VIRTUAL bool METHOD(CreateRayTracingPipelineState)(THIS_
+                                                       const RayTracingPipelineStateCreateInfo REF PSOCreateInfo,
+                                                       IPipelineState**                            ppPipelineState) PURE;
+
+    /// Creates a tile pipeline state object from cached data.
+
+    /// \param [in]  PSOCreateInfo   - Tile pipeline state create info, see Diligent::TilePipelineStateCreateInfo for details.
+    /// \param [out] ppPipelineState - Address of the memory location where a pointer to the created
+    ///                                pipeline state object will be written.
+    ///
+    /// \return     true if the pipeline state was loaded from the cache, and false otherwise.
+    VIRTUAL bool METHOD(CreateTilePipelineState)(THIS_
+                                                 const TilePipelineStateCreateInfo REF PSOCreateInfo,
+                                                 IPipelineState**                      ppPipelineState) PURE;
+};
+DILIGENT_END_INTERFACE
+
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+// clang-format off
+#    define IRenderStateCache_CreateShader(This, ...)                  CALL_IFACE_METHOD(RenderStateCache, CreateShader,                 This, __VA_ARGS__)
+#    define IRenderStateCache_CreateGraphicsPipelineState(This, ...)   CALL_IFACE_METHOD(RenderStateCache, CreateGraphicsPipelineState,  This, __VA_ARGS__)
+#    define IRenderStateCache_CreateComputePipelineState(This, ...)    CALL_IFACE_METHOD(RenderStateCache, CreateComputePipelineState,   This, __VA_ARGS__)
+#    define IRenderStateCache_CreateRayTracingPipelineState(This, ...) CALL_IFACE_METHOD(RenderStateCache, CreateRayTracingPipelineState,This, __VA_ARGS__)
+#    define IRenderStateCache_CreateTilePipelineState(This, ...)       CALL_IFACE_METHOD(RenderStateCache, CreateTilePipelineState,      This, __VA_ARGS__)
+// clang-format on
+
+#endif
+
+#include "../../../Primitives/interface/DefineGlobalFuncHelperMacros.h"
+
+void DILIGENT_GLOBAL_FUNCTION(CreateRenderStateCache)(const RenderStateCacheCreateInfo REF CreateInfo,
+                                                      IRenderStateCache**                  ppCache);
+
+#include "../../../Primitives/interface/UndefGlobalFuncHelperMacros.h"
+
+DILIGENT_END_NAMESPACE // namespace Diligent

@@ -48,23 +48,28 @@ static const INTERFACE_ID IID_BytecodeCache = {0xD1F8295F, 0xF9D7, 0x4CD4, {0x9D
 
 #define IBytecodeCacheInclusiveMethods \
     IObjectInclusiveMethods;           \
-    IBytecodeCache BytecodeCache
+    IBytecodeCacheMethods BytecodeCache
 
 // clang-format off
 
 DILIGENT_BEGIN_INTERFACE(IBytecodeCache, IObject)
 {
-    VIRTUAL bool METHOD(Load)(THIS_ IDataBlob* pData) PURE;
+    VIRTUAL bool METHOD(Load)(THIS_
+                              IDataBlob* pData) PURE;
 
-    VIRTUAL void METHOD(GetBytecode)(THIS_ const ShaderCreateInfo REF ShaderCI,
-                                     IDataBlob**                      ppByteCode) PURE;
+    VIRTUAL void METHOD(GetBytecode)(THIS_
+                                     const ShaderCreateInfo REF ShaderCI,
+                                     IDataBlob**                ppByteCode) PURE;
 
-    VIRTUAL void METHOD(AddBytecode)(THIS_ const ShaderCreateInfo REF ShaderCI,
-                                     IDataBlob*                       pByteCode) PURE;
+    VIRTUAL void METHOD(AddBytecode)(THIS_ 
+                                     const ShaderCreateInfo REF ShaderCI,
+                                     IDataBlob*                 pByteCode) PURE;
 
-    VIRTUAL void METHOD(RemoveBytecode)(THIS_ const ShaderCreateInfo REF ShaderCI) PURE;
+    VIRTUAL void METHOD(RemoveBytecode)(THIS_ 
+                                        const ShaderCreateInfo REF ShaderCI) PURE;
 
-    VIRTUAL void METHOD(Store)(THIS_ IDataBlob** ppDataBlob) PURE;
+    VIRTUAL void METHOD(Store)(THIS_
+                               IDataBlob** ppDataBlob) PURE;
 
     VIRTUAL void METHOD(Clear)(THIS) PURE;
 };

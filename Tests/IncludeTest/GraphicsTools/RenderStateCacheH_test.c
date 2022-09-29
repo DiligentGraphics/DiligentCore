@@ -24,19 +24,23 @@
  *  of the possibility of such damages.
  */
 
-#include "DiligentCore/Graphics/GraphicsTools/interface/BytecodeCache.h"
+#include "DiligentCore/Graphics/GraphicsTools/interface/RenderStateCache.h"
 
-void TestBytecodeCacheCInterface()
+void TestRenderStateCacheCInterface()
 {
-    BytecodeCacheCreateInfo CI;
-    CI.DeviceType = RENDER_DEVICE_TYPE_D3D11;
+    RenderStateCacheCreateInfo CI;
+    CI.pDevice        = NULL;
+    CI.pBytecodeCache = NULL;
 
-    IBytecodeCache* pCache = NULL;
-    Diligent_CreateBytecodeCache(&CI, &pCache);
-    IBytecodeCache_Load(pCache, (IDataBlob*)NULL);
-    IBytecodeCache_GetBytecode(pCache, (ShaderCreateInfo*)NULL, (IDataBlob**)NULL);
-    IBytecodeCache_AddBytecode(pCache, (ShaderCreateInfo*)NULL, (IDataBlob*)NULL);
-    IBytecodeCache_RemoveBytecode(pCache, (ShaderCreateInfo*)NULL);
-    IBytecodeCache_Store(pCache, (IDataBlob**)NULL);
-    IBytecodeCache_Clear(pCache);
+    IRenderStateCache* pCache = NULL;
+    Diligent_CreateRenderStateCache(&CI, &pCache);
+
+    IShader* pShader = NULL;
+    IRenderStateCache_CreateShader(pCache, (ShaderCreateInfo*)NULL, &pShader);
+
+    IPipelineState* pPSO = NULL;
+    IRenderStateCache_CreateGraphicsPipelineState(pCache, (GraphicsPipelineStateCreateInfo*)NULL, &pPSO);
+    IRenderStateCache_CreateComputePipelineState(pCache, (ComputePipelineStateCreateInfo*)NULL, &pPSO);
+    IRenderStateCache_CreateRayTracingPipelineState(pCache, (RayTracingPipelineStateCreateInfo*)NULL, &pPSO);
+    IRenderStateCache_CreateTilePipelineState(pCache, (TilePipelineStateCreateInfo*)NULL, &pPSO);
 }

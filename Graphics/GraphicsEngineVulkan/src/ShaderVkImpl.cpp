@@ -194,7 +194,7 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
 
         if (m_SPIRV.empty())
         {
-            LOG_ERROR_AND_THROW("Failed to compile shader '", ShaderCI.Desc.Name, '\'');
+            LOG_ERROR_AND_THROW("Failed to compile shader '", m_Desc.Name, '\'');
         }
     }
     else if (ShaderCI.ByteCode != nullptr)

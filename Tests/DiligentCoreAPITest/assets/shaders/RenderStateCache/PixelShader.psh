@@ -1,0 +1,17 @@
+#include "Common.h"
+
+Texture2D    g_GBuffer_Color;
+SamplerState g_GBuffer_Color_sampler;
+Texture2D    g_GBuffer_Normal;
+SamplerState g_GBuffer_Normal_sampler;
+Texture2D    g_GBuffer_Depth;
+SamplerState g_GBuffer_Depth_sampler;
+
+float4 main(in PSInput PSIn) : SV_Target
+{
+    float4 Color  = g_GBuffer_Color .Sample(g_GBuffer_Color_sampler,  PSIn.UV) * ColorScale;
+    float4 Normal = g_GBuffer_Normal.Sample(g_GBuffer_Normal_sampler, PSIn.UV) * NormalScale;
+    float4 Depth  = g_GBuffer_Depth .Sample(g_GBuffer_Depth_sampler,  PSIn.UV) * DepthScale;
+
+    return Color + Normal + Depth + float4(PSIn.Color.rgb, 1.0);
+}

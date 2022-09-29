@@ -11,6 +11,7 @@ set(INTERFACE
     interface/DurationQueryHelper.hpp
     interface/GraphicsUtilities.h
     interface/MapHelper.hpp
+    interface/RenderStateCache.h
     interface/ScopedDebugGroup.hpp
     interface/GPUCompletionAwaitQueue.hpp
     interface/ScopedQueryHelper.hpp
@@ -30,6 +31,7 @@ set(SOURCE
     src/DynamicTextureArray.cpp
     src/DynamicTextureAtlas.cpp
     src/GraphicsUtilities.cpp
+    src/RenderStateCache.cpp
     src/ScopedQueryHelper.cpp
     src/ScreenCapture.cpp
     src/TextureUploader.cpp
