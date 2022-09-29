@@ -136,8 +136,6 @@ DILIGENT_TYPED_ENUM(BIND_FLAGS, Uint32)
     BIND_UNIFORM_BUFFER      = 1u << 2u,
 
     /// A buffer or a texture can be bound as a shader resource.
-    //
-    /// \warning This flag cannot be used with MAP_WRITE_NO_OVERWRITE flag.
     BIND_SHADER_RESOURCE     = 1u << 3u,
 
     /// A buffer can be bound as a target for stream output stage.
