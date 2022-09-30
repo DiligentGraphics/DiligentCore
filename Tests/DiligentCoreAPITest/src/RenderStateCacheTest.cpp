@@ -35,10 +35,20 @@ using namespace Diligent::Testing;
 namespace
 {
 
-RefCntAutoPtr<IRenderStateCache> CreateCache(IRenderDevice* pDevice)
+RefCntAutoPtr<IRenderStateCache> CreateCache(IRenderDevice* pDevice, IDataBlob* pBytecodeData = nullptr)
 {
     RenderStateCacheCreateInfo CacheCI;
     CacheCI.pDevice = pDevice;
+
+    RefCntAutoPtr<IBytecodeCache> pBcCache;
+    if (pBytecodeData != nullptr)
+    {
+        BytecodeCacheCreateInfo BcCacheCI{pDevice->GetDeviceInfo().Type};
+
+        CreateBytecodeCache(BcCacheCI, &pBcCache);
+        pBcCache->Load(pBytecodeData);
+        CacheCI.pBytecodeCache = pBcCache;
+    }
 
     RefCntAutoPtr<IRenderStateCache> pCache;
     CreateRenderStateCache(CacheCI, &pCache);
@@ -59,47 +69,61 @@ TEST(RenderStateCacheTest, CreateGraphicsPSO)
     pDevice->GetEngineFactory()->CreateDefaultShaderSourceStreamFactory("shaders/RenderStateCache", &pShaderSourceFactory);
     ASSERT_TRUE(pShaderSourceFactory);
 
-    ShaderCreateInfo ShaderCI;
-    ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
-    ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
-    ShaderCI.UseCombinedTextureSamplers = true;
+    auto CreatePSO = [&](bool PresentInCache) {
+        ShaderCreateInfo ShaderCI;
+        ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
+        ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
+        ShaderCI.ShaderCompiler             = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+        ShaderCI.UseCombinedTextureSamplers = true;
 
-    RefCntAutoPtr<IShader> pVS;
-    {
-        ShaderCI.Desc.Name       = "RenderStateCache - VS";
-        ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
-        ShaderCI.FilePath        = "VertexShader.vsh";
-        EXPECT_FALSE(pCache->CreateShader(ShaderCI, &pVS));
-        ASSERT_TRUE(pVS);
-    }
-
-    RefCntAutoPtr<IShader> pPS;
-    {
-        ShaderCI.Desc.Name       = "RenderStateCache - PS";
-        ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
-        ShaderCI.FilePath        = "PixelShader.psh";
-        EXPECT_FALSE(pCache->CreateShader(ShaderCI, &pPS));
-        ASSERT_TRUE(pPS);
-    }
-
-    GraphicsPipelineStateCreateInfo PsoCI;
-    PsoCI.pVS = pVS;
-    PsoCI.pPS = pPS;
-
-    constexpr LayoutElement VSInputs[] =
+        RefCntAutoPtr<IShader> pVS;
         {
-            LayoutElement{0, 0, 4, VT_FLOAT32},
-            LayoutElement{1, 0, 3, VT_FLOAT32},
-            LayoutElement{2, 0, 2, VT_FLOAT32},
-        };
-    PsoCI.GraphicsPipeline.InputLayout = {VSInputs, _countof(VSInputs)};
+            ShaderCI.Desc.Name       = "RenderStateCache - VS";
+            ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
+            ShaderCI.FilePath        = "VertexShader.vsh";
+            EXPECT_EQ(pCache->CreateShader(ShaderCI, &pVS), PresentInCache);
+            ASSERT_TRUE(pVS);
+        }
 
-    PsoCI.GraphicsPipeline.NumRenderTargets             = 1;
-    PsoCI.GraphicsPipeline.RTVFormats[0]                = TEX_FORMAT_RGBA8_UNORM;
-    PsoCI.GraphicsPipeline.DepthStencilDesc.DepthEnable = True;
+        RefCntAutoPtr<IShader> pPS;
+        {
+            ShaderCI.Desc.Name       = "RenderStateCache - PS";
+            ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
+            ShaderCI.FilePath        = "PixelShader.psh";
+            EXPECT_EQ(pCache->CreateShader(ShaderCI, &pPS), PresentInCache);
+            ASSERT_TRUE(pPS);
+        }
 
-    RefCntAutoPtr<IPipelineState> pPSO;
-    EXPECT_FALSE(pCache->CreateGraphicsPipelineState(PsoCI, &pPSO));
+        GraphicsPipelineStateCreateInfo PsoCI;
+        PsoCI.pVS = pVS;
+        PsoCI.pPS = pPS;
+
+        constexpr LayoutElement VSInputs[] =
+            {
+                LayoutElement{0, 0, 4, VT_FLOAT32},
+                LayoutElement{1, 0, 3, VT_FLOAT32},
+                LayoutElement{2, 0, 2, VT_FLOAT32},
+            };
+        PsoCI.GraphicsPipeline.InputLayout = {VSInputs, _countof(VSInputs)};
+
+        PsoCI.GraphicsPipeline.NumRenderTargets             = 1;
+        PsoCI.GraphicsPipeline.RTVFormats[0]                = TEX_FORMAT_RGBA8_UNORM;
+        PsoCI.GraphicsPipeline.DepthStencilDesc.DepthEnable = True;
+
+        RefCntAutoPtr<IPipelineState> pPSO;
+        EXPECT_FALSE(pCache->CreateGraphicsPipelineState(PsoCI, &pPSO));
+    };
+
+    CreatePSO(false);
+    CreatePSO(true);
+
+    RefCntAutoPtr<IDataBlob> pBcData;
+    pCache->GetBytecodeCache()->Store(&pBcData);
+
+    pCache.Release();
+    pCache = CreateCache(pDevice, pBcData);
+
+    CreatePSO(true);
 }
 
 TEST(RenderStateCacheTest, CreateComputePSO)
@@ -116,25 +140,38 @@ TEST(RenderStateCacheTest, CreateComputePSO)
     pDevice->GetEngineFactory()->CreateDefaultShaderSourceStreamFactory("shaders/RenderStateCache", &pShaderSourceFactory);
     ASSERT_TRUE(pShaderSourceFactory);
 
-    ShaderCreateInfo ShaderCI;
-    ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
-    ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
-    ShaderCI.UseCombinedTextureSamplers = true;
+    auto CreatePSO = [&](bool PresentInCache) {
+        ShaderCreateInfo ShaderCI;
+        ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
+        ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
+        ShaderCI.ShaderCompiler             = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+        ShaderCI.UseCombinedTextureSamplers = true;
 
-    RefCntAutoPtr<IShader> pCS;
-    {
-        ShaderCI.Desc.Name       = "RenderStateCache - CS";
-        ShaderCI.Desc.ShaderType = SHADER_TYPE_COMPUTE;
-        ShaderCI.FilePath        = "ComputeShader.csh";
-        EXPECT_FALSE(pCache->CreateShader(ShaderCI, &pCS));
-        ASSERT_TRUE(pCS);
-    }
+        RefCntAutoPtr<IShader> pCS;
+        {
+            ShaderCI.Desc.Name       = "RenderStateCache - CS";
+            ShaderCI.Desc.ShaderType = SHADER_TYPE_COMPUTE;
+            ShaderCI.FilePath        = "ComputeShader.csh";
+            EXPECT_EQ(pCache->CreateShader(ShaderCI, &pCS), PresentInCache);
+            ASSERT_TRUE(pCS);
+        }
 
-    ComputePipelineStateCreateInfo PsoCI;
-    PsoCI.pCS = pCS;
+        ComputePipelineStateCreateInfo PsoCI;
+        PsoCI.pCS = pCS;
 
-    RefCntAutoPtr<IPipelineState> pPSO;
-    EXPECT_FALSE(pCache->CreateComputePipelineState(PsoCI, &pPSO));
+        RefCntAutoPtr<IPipelineState> pPSO;
+        EXPECT_FALSE(pCache->CreateComputePipelineState(PsoCI, &pPSO));
+    };
+    CreatePSO(false);
+    CreatePSO(true);
+
+    RefCntAutoPtr<IDataBlob> pBcData;
+    pCache->GetBytecodeCache()->Store(&pBcData);
+
+    pCache.Release();
+    pCache = CreateCache(pDevice, pBcData);
+
+    CreatePSO(true);
 }
 
 TEST(RenderStateCacheTest, CreateRayTracingPSO)

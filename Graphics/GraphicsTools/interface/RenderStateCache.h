@@ -117,6 +117,9 @@ DILIGENT_BEGIN_INTERFACE(IRenderStateCache, IObject)
     VIRTUAL bool METHOD(CreateTilePipelineState)(THIS_
                                                  const TilePipelineStateCreateInfo REF PSOCreateInfo,
                                                  IPipelineState**                      ppPipelineState) PURE;
+
+    /// Returns a pointer to the byte code cache.
+    VIRTUAL IBytecodeCache* METHOD(GetBytecodeCache)(THIS) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -130,6 +133,7 @@ DILIGENT_END_INTERFACE
 #    define IRenderStateCache_CreateComputePipelineState(This, ...)    CALL_IFACE_METHOD(RenderStateCache, CreateComputePipelineState,   This, __VA_ARGS__)
 #    define IRenderStateCache_CreateRayTracingPipelineState(This, ...) CALL_IFACE_METHOD(RenderStateCache, CreateRayTracingPipelineState,This, __VA_ARGS__)
 #    define IRenderStateCache_CreateTilePipelineState(This, ...)       CALL_IFACE_METHOD(RenderStateCache, CreateTilePipelineState,      This, __VA_ARGS__)
+#    define IRenderStateCache_GetBytecodeCache(This)                   CALL_IFACE_METHOD(RenderStateCache, GetBytecodeCache,             This)
 // clang-format on
 
 #endif

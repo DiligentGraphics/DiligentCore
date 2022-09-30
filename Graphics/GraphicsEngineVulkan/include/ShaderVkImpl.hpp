@@ -84,7 +84,7 @@ public:
                                                 Uint64&      Size) const override final
     {
         *ppBytecode = !m_SPIRV.empty() ? m_SPIRV.data() : nullptr;
-        Size        = m_SPIRV.size();
+        Size        = m_SPIRV.size() * sizeof(m_SPIRV[0]);
     }
 
 private:

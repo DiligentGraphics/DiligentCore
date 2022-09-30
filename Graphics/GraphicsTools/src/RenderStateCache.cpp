@@ -27,6 +27,7 @@
 #include "RenderStateCache.h"
 #include "ObjectBase.hpp"
 #include "RefCntAutoPtr.hpp"
+#include "DataBlobImpl.hpp"
 #include "XXH128Hasher.hpp"
 
 namespace Diligent
@@ -62,8 +63,44 @@ public:
     virtual bool DILIGENT_CALL_TYPE CreateShader(const ShaderCreateInfo& ShaderCI,
                                                  IShader**               ppShader) override final
     {
-        m_pDevice->CreateShader(ShaderCI, ppShader);
-        return false;
+        RefCntAutoPtr<IDataBlob> pByteCode;
+        m_pBytecodeCache->GetBytecode(ShaderCI, &pByteCode);
+        if (pByteCode)
+        {
+            ShaderCreateInfo ShaderCI2{ShaderCI};
+            ShaderCI2.Source                     = nullptr;
+            ShaderCI2.FilePath                   = nullptr;
+            ShaderCI2.pShaderSourceStreamFactory = nullptr;
+            if (m_pDevice->GetDeviceInfo().IsGLDevice())
+            {
+                ShaderCI2.Source         = static_cast<const char*>(pByteCode->GetConstDataPtr());
+                ShaderCI2.SourceLength   = pByteCode->GetSize();
+                ShaderCI2.SourceLanguage = SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM;
+            }
+            else
+            {
+                ShaderCI2.ByteCode     = pByteCode->GetConstDataPtr();
+                ShaderCI2.ByteCodeSize = pByteCode->GetSize();
+            }
+            m_pDevice->CreateShader(ShaderCI2, ppShader);
+            return true;
+        }
+        else
+        {
+            m_pDevice->CreateShader(ShaderCI, ppShader);
+            if (*ppShader != nullptr)
+            {
+                const void* pBytecodePtr = nullptr;
+                Uint64      BytecodeSize = 0;
+                (*ppShader)->GetBytecode(&pBytecodePtr, BytecodeSize);
+                if (pBytecodePtr != nullptr && BytecodeSize != 0)
+                {
+                    pByteCode = DataBlobImpl::Create(StaticCast<size_t>(BytecodeSize), pBytecodePtr);
+                    m_pBytecodeCache->AddBytecode(ShaderCI, pByteCode);
+                }
+            }
+            return false;
+        }
     }
 
     virtual bool DILIGENT_CALL_TYPE CreateGraphicsPipelineState(
@@ -96,6 +133,12 @@ public:
     {
         m_pDevice->CreateTilePipelineState(PSOCreateInfo, ppPipelineState);
         return false;
+    }
+
+
+    virtual IBytecodeCache* DILIGENT_CALL_TYPE GetBytecodeCache() override final
+    {
+        return m_pBytecodeCache;
     }
 
 private:

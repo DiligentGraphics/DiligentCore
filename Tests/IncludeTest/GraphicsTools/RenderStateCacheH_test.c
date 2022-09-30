@@ -43,4 +43,6 @@ void TestRenderStateCacheCInterface()
     IRenderStateCache_CreateComputePipelineState(pCache, (ComputePipelineStateCreateInfo*)NULL, &pPSO);
     IRenderStateCache_CreateRayTracingPipelineState(pCache, (RayTracingPipelineStateCreateInfo*)NULL, &pPSO);
     IRenderStateCache_CreateTilePipelineState(pCache, (TilePipelineStateCreateInfo*)NULL, &pPSO);
+
+    CI.pBytecodeCache = IRenderStateCache_GetBytecodeCache(pCache);
 }
