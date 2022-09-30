@@ -31,7 +31,6 @@
 #include "ObjectBase.hpp"
 #include "Serializer.hpp"
 #include "BytecodeCache.h"
-#include "ShaderToolsCommon.hpp"
 #include "XXH128Hasher.hpp"
 #include "DefaultRawMemoryAllocator.hpp"
 
@@ -191,54 +190,14 @@ private:
     XXH128Hash ComputeHash(const ShaderCreateInfo& ShaderCI) const
     {
         XXH128State Hasher;
-        Hasher.Update(ShaderCI.FilePath);
-        Hasher.Update(ShaderCI.EntryPoint);
-        Hasher.Update(ShaderCI.CombinedSamplerSuffix);
-        Hasher.Update(ShaderCI.Desc.Name);
-
-        if (ShaderCI.Macros != nullptr)
-        {
-            for (auto* Macro = ShaderCI.Macros; *Macro != ShaderMacro{nullptr, nullptr}; ++Macro)
-            {
-                Hasher.Update(Macro->Name);
-                Hasher.Update(Macro->Definition);
-            }
-        }
-
-        Hasher.Update(ShaderCI.Desc.ShaderType);
-        Hasher.Update(ShaderCI.UseCombinedTextureSamplers);
-        Hasher.Update(ShaderCI.SourceLanguage);
-        Hasher.Update(ShaderCI.ShaderCompiler);
-        Hasher.Update(ShaderCI.HLSLVersion);
-        Hasher.Update(ShaderCI.GLSLVersion);
-        Hasher.Update(ShaderCI.GLESSLVersion);
-        Hasher.Update(ShaderCI.CompileFlags);
-        Hasher.Update(m_DeviceType);
-
-        ProcessShaderIncludes(ShaderCI, [&](const ShaderIncludePreprocessInfo& ProcessInfo) {
-            Hasher.Update(ProcessInfo.Source, ProcessInfo.SourceLength);
-        });
-
+        Hasher.Update(ShaderCI, m_DeviceType);
         return Hasher.Digest();
     }
 
 private:
-    struct XXH128HashHasher
-    {
-        size_t operator()(const XXH128Hash& Hash) const
-        {
-            Uint64 h = Hash.LowPart ^ Hash.HighPart;
-#if defined(DILIGENT_PLATFORM_64)
-            return StaticCast<size_t>(h);
-#elif defined(DILIGENT_PLATFORM_32)
-            return StaticCast<size_t>((h & ~Uint32{0}) ^ (h >> 32u));
-#endif
-        }
-    };
-
     RENDER_DEVICE_TYPE m_DeviceType;
 
-    std::unordered_map<XXH128Hash, RefCntAutoPtr<IDataBlob>, XXH128HashHasher> m_HashMap;
+    std::unordered_map<XXH128Hash, RefCntAutoPtr<IDataBlob>> m_HashMap;
 };
 
 void CreateBytecodeCache(const BytecodeCacheCreateInfo& CreateInfo,

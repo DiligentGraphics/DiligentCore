@@ -24,11 +24,13 @@
  *  of the possibility of such damages.
  */
 
+#include "XXH128Hasher.hpp"
+
 #include "xxhash.h"
 
-#include "XXH128Hasher.hpp"
 #include "DebugUtilities.hpp"
 #include "Cast.hpp"
+#include "ShaderToolsCommon.hpp"
 
 namespace Diligent
 {
@@ -45,31 +47,71 @@ XXH128State::~XXH128State()
     XXH3_freeState(m_State);
 }
 
-XXH128State::XXH128State(XXH128State&& RHS) noexcept :
-    m_State{RHS.m_State}
-{
-    RHS.m_State = nullptr;
-}
-
-XXH128State& XXH128State::operator=(XXH128State&& RHS) noexcept
-{
-    this->m_State = RHS.m_State;
-    RHS.m_State   = nullptr;
-
-    return *this;
-}
-
-void XXH128State::Update(const void* pData, uint64_t Size)
+void XXH128State::UpdateRaw(const void* pData, uint64_t Size) noexcept
 {
     VERIFY_EXPR(pData != nullptr);
     VERIFY_EXPR(Size != 0);
     XXH3_128bits_update(m_State, pData, StaticCast<size_t>(Size));
 }
 
-XXH128Hash XXH128State::Digest()
+XXH128Hash XXH128State::Digest() noexcept
 {
     XXH128_hash_t Hash = XXH3_128bits_digest(m_State);
     return {Hash.low64, Hash.high64};
+}
+
+void XXH128State::Update(const ShaderDesc& Desc) noexcept
+{
+    ASSERT_SIZEOF64(Desc, 16, "Did you add new members to ShaderDesc? Please handle them here.");
+    Update(Desc.ShaderType);
+}
+
+void XXH128State::Update(const ShaderVersion& Ver) noexcept
+{
+    ASSERT_SIZEOF(Ver, 8, "Did you add new members to ShaderVersion? Please handle them here.");
+    Update(Ver.Minor, Ver.Major);
+}
+
+void XXH128State::Update(const ShaderCreateInfo& ShaderCI) noexcept
+{
+    ASSERT_SIZEOF64(ShaderCI, 152, "Did you add new members to ShaderCreateInfo? Please handle them here.");
+
+    Update(
+        ShaderCI.Source,
+        ShaderCI.SourceLength,
+        ShaderCI.EntryPoint,
+        ShaderCI.UseCombinedTextureSamplers,
+        ShaderCI.CombinedSamplerSuffix,
+        ShaderCI.Desc,
+        ShaderCI.SourceLanguage,
+        ShaderCI.ShaderCompiler,
+        ShaderCI.HLSLVersion,
+        ShaderCI.GLSLVersion,
+        ShaderCI.GLESSLVersion,
+        ShaderCI.MSLVersion,
+        ShaderCI.CompileFlags);
+
+    if (ShaderCI.ByteCode != 0 && ShaderCI.ByteCodeSize != 0)
+    {
+        VERIFY_EXPR(ShaderCI.Source == nullptr && ShaderCI.FilePath == nullptr);
+        UpdateRaw(ShaderCI.ByteCode, ShaderCI.ByteCodeSize);
+    }
+
+    if (ShaderCI.Macros != nullptr)
+    {
+        for (auto* Macro = ShaderCI.Macros; *Macro != ShaderMacro{}; ++Macro)
+        {
+            Update(Macro->Name, Macro->Definition);
+        }
+    }
+
+
+    if (ShaderCI.Source != nullptr || ShaderCI.FilePath != nullptr)
+    {
+        ProcessShaderIncludes(ShaderCI, [this](const ShaderIncludePreprocessInfo& ProcessInfo) {
+            UpdateStr(ProcessInfo.Source, ProcessInfo.SourceLength);
+        });
+    }
 }
 
 } // namespace Diligent

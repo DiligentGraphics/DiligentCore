@@ -78,6 +78,16 @@ inline std::wstring WidenString(const char* Str, size_t Len = 0)
     return WideStr;
 }
 
+inline size_t StrLen(const char* Str)
+{
+    return Str != nullptr ? strlen(Str) : 0;
+}
+
+inline size_t StrLen(const wchar_t* Str)
+{
+    return Str != nullptr ? wcslen(Str) : 0;
+}
+
 inline std::wstring WidenString(const std::string& Str)
 {
     return WidenString(Str.c_str(), Str.length());
