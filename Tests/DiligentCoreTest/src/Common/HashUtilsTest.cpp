@@ -31,6 +31,7 @@
 #include <vector>
 
 #include "HashUtils.hpp"
+#include "XXH128Hasher.hpp"
 #include "GraphicsTypesOutputInserters.hpp"
 
 #include "gtest/gtest.h"
@@ -187,10 +188,10 @@ TEST(Common_HashUtils, ComputeHashRaw)
 
 
 template <typename Type>
-class Common_HashUtilsHelper
+class StdHasherTestHelper
 {
 public:
-    Common_HashUtilsHelper(const char* StructName, bool ZeroOut = false) :
+    StdHasherTestHelper(const char* StructName, bool ZeroOut = false) :
         m_StructName{StructName}
     {
         if (ZeroOut)
@@ -286,15 +287,109 @@ private:
     std::unordered_set<size_t> m_Hashes;
     std::unordered_set<Type>   m_Descs;
 };
+
+
+template <typename Type>
+class XXH128HasherTestHelper
+{
+public:
+    XXH128HasherTestHelper(const char* StructName, bool ZeroOut = false) :
+        m_StructName{StructName}
+    {
+        if (ZeroOut)
+            memset(&m_Desc, 0, sizeof(m_Desc));
+    }
+
+    void Add(const char* Msg)
+    {
+        XXH128State Hasher;
+        Hasher.Update(m_Desc);
+        EXPECT_TRUE(m_Hashes.insert(Hasher.Digest()).second) << Msg;
+    }
+
+    template <typename MemberType>
+    void Add(MemberType& Member, const char* MemberName, MemberType Value)
+    {
+        Member = Value;
+        std::stringstream ss;
+        ss << m_StructName << '.' << MemberName << '=' << Value;
+        Add(ss.str().c_str());
+    }
+
+    template <typename MemberType>
+    typename std::enable_if<std::is_enum<MemberType>::value, void>::type
+    AddRange(MemberType& Member, const char* MemberName, MemberType StartValue, MemberType EndValue)
+    {
+        for (typename std::underlying_type<MemberType>::type i = StartValue; i < EndValue; ++i)
+        {
+            Add(Member, MemberName, static_cast<MemberType>(i));
+        }
+    }
+
+    template <typename MemberType>
+    typename std::enable_if<std::is_floating_point<MemberType>::value || std::is_integral<MemberType>::value, void>::type
+    AddRange(MemberType& Member, const char* MemberName, MemberType StartValue, MemberType EndValue, MemberType Step = MemberType{1})
+    {
+        for (auto i = StartValue; i <= EndValue; i += Step)
+        {
+            Add(Member, MemberName, static_cast<MemberType>(i));
+            if (i == EndValue)
+                break;
+        }
+    }
+
+    void AddBool(bool& Member, const char* MemberName)
+    {
+        Add(Member, MemberName, !Member);
+    }
+
+    template <typename MemberType>
+    void AddFlags(MemberType& Member, const char* MemberName, MemberType StartValue, MemberType EndValue)
+    {
+        for (Uint64 i = StartValue; i <= EndValue; i *= 2)
+        {
+            Add(Member, MemberName, static_cast<MemberType>(i));
+            if (i == EndValue)
+                break;
+        }
+    }
+
+    template <typename MemberType>
+    void AddStrings(MemberType& Member, const char* MemberName, const std::vector<const char*>& Strings)
+    {
+        for (const auto* Str : Strings)
+        {
+            Add(Member, MemberName, Str);
+        }
+    }
+
+    Type& Get()
+    {
+        return m_Desc;
+    }
+    operator Type&()
+    {
+        return Get();
+    }
+
+private:
+    const char* const m_StructName;
+
+    Type m_Desc;
+
+    std::unordered_set<XXH128Hash> m_Hashes;
+};
+
 #define DEFINE_HELPER(Type, ...) \
-    Common_HashUtilsHelper<Type> Helper { #Type, ##__VA_ARGS__ }
+    HelperType<Type> Helper { #Type, ##__VA_ARGS__ }
 #define TEST_VALUE(Member, ...)   Helper.Add(Helper.Get().Member, #Member, __VA_ARGS__)
 #define TEST_RANGE(Member, ...)   Helper.AddRange(Helper.Get().Member, #Member, __VA_ARGS__)
 #define TEST_BOOL(Member, ...)    Helper.AddBool(Helper.Get().Member, #Member)
 #define TEST_FLAGS(Member, ...)   Helper.AddFlags(Helper.Get().Member, #Member, __VA_ARGS__)
 #define TEST_STRINGS(Member, ...) Helper.AddStrings(Helper.Get().Member, #Member, {__VA_ARGS__})
 
-TEST(Common_HashUtils, SamplerDescHasher)
+template <template <typename T> class HelperType>
+void TestSamplerDescHasher()
 {
     ASSERT_SIZEOF64(SamplerDesc, 56, "Did you add new members to SamplerDesc? Please update the tests.");
     DEFINE_HELPER(SamplerDesc, true);
@@ -321,7 +416,19 @@ TEST(Common_HashUtils, SamplerDescHasher)
     TEST_RANGE(MaxLOD, -10.125f, +10.f, 0.25f);
 }
 
-TEST(Common_HashUtils, StencilOpDescHasher)
+TEST(Common_HashUtils, SamplerDescStdHash)
+{
+    TestSamplerDescHasher<StdHasherTestHelper>();
+}
+
+TEST(Common_HashUtils, SamplerDescXXH128Hash)
+{
+    TestSamplerDescHasher<XXH128HasherTestHelper>();
+}
+
+
+template <template <typename T> class HelperType>
+void TestStencilOpDescHasher()
 {
     ASSERT_SIZEOF(StencilOpDesc, 4, "Did you add new members to StencilOpDesc? Please update the tests.");
     DEFINE_HELPER(StencilOpDesc, true);
@@ -332,7 +439,19 @@ TEST(Common_HashUtils, StencilOpDescHasher)
     TEST_RANGE(StencilFunc, static_cast<COMPARISON_FUNCTION>(1), COMPARISON_FUNC_NUM_FUNCTIONS);
 }
 
-TEST(Common_HashUtils, DepthStencilStateDescHasher)
+TEST(Common_HashUtils, StencilOpDescStdHash)
+{
+    TestStencilOpDescHasher<StdHasherTestHelper>();
+}
+
+TEST(Common_HashUtils, StencilOpDescXXH128Hash)
+{
+    TestStencilOpDescHasher<XXH128HasherTestHelper>();
+}
+
+
+template <template <typename T> class HelperType>
+void TestDepthStencilStateDescHasher()
 {
     ASSERT_SIZEOF(DepthStencilStateDesc, 14, "Did you add new members to StencilOpDesc? Please update the tests.");
     DEFINE_HELPER(DepthStencilStateDesc, true);
@@ -345,8 +464,19 @@ TEST(Common_HashUtils, DepthStencilStateDescHasher)
     TEST_RANGE(StencilWriteMask, Uint8{1u}, Uint8{255u});
 }
 
+TEST(Common_HashUtils, DepthStencilStateDescStdHash)
+{
+    TestDepthStencilStateDescHasher<StdHasherTestHelper>();
+}
 
-TEST(Common_HashUtils, RasterizerStateDescHasher)
+TEST(Common_HashUtils, DepthStencilStateDescXXH128Hash)
+{
+    TestDepthStencilStateDescHasher<XXH128HasherTestHelper>();
+}
+
+
+template <template <typename T> class HelperType>
+void TestRasterizerStateDesc()
 {
     ASSERT_SIZEOF(RasterizerStateDesc, 20, "Did you add new members to RasterizerStateDesc? Please update the tests.");
     DEFINE_HELPER(RasterizerStateDesc, true);
@@ -362,8 +492,19 @@ TEST(Common_HashUtils, RasterizerStateDescHasher)
     TEST_RANGE(SlopeScaledDepthBias, -16.0625f, +16.f, 0.125f);
 }
 
+TEST(Common_HashUtils, RasterizerStateDescStdHash)
+{
+    TestRasterizerStateDesc<StdHasherTestHelper>();
+}
 
-TEST(Common_HashUtils, BlendStateDescHasher)
+TEST(Common_HashUtils, RasterizerStateDescXXH128Hash)
+{
+    TestRasterizerStateDesc<XXH128HasherTestHelper>();
+}
+
+
+template <template <typename T> class HelperType>
+void TestBlendStateDescHasher()
 {
     ASSERT_SIZEOF(BlendStateDesc, 82, "Did you add new members to RasterizerStateDesc? Please update the tests.");
     DEFINE_HELPER(BlendStateDesc, true);
@@ -386,8 +527,19 @@ TEST(Common_HashUtils, BlendStateDescHasher)
     }
 }
 
+TEST(Common_HashUtils, BlendStateDescStdHash)
+{
+    TestBlendStateDescHasher<StdHasherTestHelper>();
+}
 
-TEST(Common_HashUtils, TextureViewDescHasher)
+TEST(Common_HashUtils, BlendStateDescXXH128Hash)
+{
+    TestBlendStateDescHasher<XXH128HasherTestHelper>();
+}
+
+
+template <template <typename T> class HelperType>
+void TestTextureViewDescHasher()
 {
     ASSERT_SIZEOF64(TextureViewDesc, 32, "Did you add new members to TextureViewDesc? Please update the tests.");
     DEFINE_HELPER(TextureViewDesc);
@@ -403,8 +555,19 @@ TEST(Common_HashUtils, TextureViewDescHasher)
     TEST_FLAGS(Flags, static_cast<TEXTURE_VIEW_FLAGS>(1u), TEXTURE_VIEW_FLAG_LAST);
 }
 
+TEST(Common_HashUtils, TextureViewDescStdHash)
+{
+    TestTextureViewDescHasher<StdHasherTestHelper>();
+}
 
-TEST(Common_HashUtils, SampleDescHasher)
+TEST(Common_HashUtils, TextureViewDescXXH128Hash)
+{
+    TestTextureViewDescHasher<XXH128HasherTestHelper>();
+}
+
+
+template <template <typename T> class HelperType>
+void TestSampleDescHasher()
 {
     ASSERT_SIZEOF(SampleDesc, 2, "Did you add new members to SampleDesc? Please update the tests.");
     DEFINE_HELPER(SampleDesc);
@@ -413,8 +576,19 @@ TEST(Common_HashUtils, SampleDescHasher)
     TEST_RANGE(Quality, Uint8{1u}, Uint8{255u});
 }
 
+TEST(Common_HashUtils, SampleDescStdHash)
+{
+    TestSampleDescHasher<StdHasherTestHelper>();
+}
 
-TEST(Common_HashUtils, ShaderResourceVariableDescHasher)
+TEST(Common_HashUtils, SampleDescXXH128Hash)
+{
+    TestSampleDescHasher<XXH128HasherTestHelper>();
+}
+
+
+template <template <typename T> class HelperType>
+void TestShaderResourceVariableDescHasher()
 {
     ASSERT_SIZEOF64(ShaderResourceVariableDesc, 16, "Did you add new members to ShaderResourceVariableDesc? Please update the tests.");
     DEFINE_HELPER(ShaderResourceVariableDesc);
@@ -425,8 +599,19 @@ TEST(Common_HashUtils, ShaderResourceVariableDescHasher)
     TEST_FLAGS(Flags, static_cast<SHADER_VARIABLE_FLAGS>(1), SHADER_VARIABLE_FLAG_LAST);
 }
 
+TEST(Common_HashUtils, ShaderResourceVariableStdHasher)
+{
+    TestShaderResourceVariableDescHasher<StdHasherTestHelper>();
+}
 
-TEST(Common_HashUtils, ImmutableSamplerDescHasher)
+TEST(Common_HashUtils, ShaderResourceVariableXXH128Hasher)
+{
+    TestShaderResourceVariableDescHasher<XXH128HasherTestHelper>();
+}
+
+
+template <template <typename T> class HelperType>
+void TestImmutableSamplerDescHasher()
 {
     ASSERT_SIZEOF64(ImmutableSamplerDesc, 16 + sizeof(SamplerDesc), "Did you add new members to ImmutableSamplerDesc? Please update the tests.");
     DEFINE_HELPER(ImmutableSamplerDesc);
@@ -435,8 +620,19 @@ TEST(Common_HashUtils, ImmutableSamplerDescHasher)
     TEST_STRINGS(SamplerOrTextureName, "Name1", "Name2", "Name3");
 }
 
+TEST(Common_HashUtils, ImmutableSamplerDescStdHash)
+{
+    TestImmutableSamplerDescHasher<StdHasherTestHelper>();
+}
 
-TEST(Common_HashUtils, PipelineResourceDescHasher)
+TEST(Common_HashUtils, ImmutableSamplerDescXXH128Hash)
+{
+    TestImmutableSamplerDescHasher<XXH128HasherTestHelper>();
+}
+
+
+template <template <typename T> class HelperType>
+void TestPipelineResourceDescHasher()
 {
     ASSERT_SIZEOF64(PipelineResourceDesc, 24, "Did you add new members to PipelineResourceDesc? Please update the tests.");
     DEFINE_HELPER(PipelineResourceDesc);
@@ -450,8 +646,19 @@ TEST(Common_HashUtils, PipelineResourceDescHasher)
     TEST_FLAGS(Flags, static_cast<PIPELINE_RESOURCE_FLAGS>(1), PIPELINE_RESOURCE_FLAG_LAST);
 }
 
+TEST(Common_HashUtils, PipelineResourceDescStdHash)
+{
+    TestPipelineResourceDescHasher<StdHasherTestHelper>();
+}
 
-TEST(Common_HashUtils, PipelineResourceLayoutDescHasher)
+TEST(Common_HashUtils, PipelineResourceDescXXH128Hash)
+{
+    TestPipelineResourceDescHasher<XXH128HasherTestHelper>();
+}
+
+
+template <template <typename T> class HelperType>
+void TestPipelineResourceLayoutDescHasher()
 {
     ASSERT_SIZEOF64(PipelineResourceLayoutDesc, 40, "Did you add new members to PipelineResourceLayoutDesc? Please update the tests.");
     DEFINE_HELPER(PipelineResourceLayoutDesc);
@@ -478,8 +685,19 @@ TEST(Common_HashUtils, PipelineResourceLayoutDescHasher)
     TEST_VALUE(NumImmutableSamplers, 2u);
 }
 
+TEST(Common_HashUtils, PipelineResourceLayoutDescStdHash)
+{
+    TestPipelineResourceLayoutDescHasher<StdHasherTestHelper>();
+}
 
-TEST(Common_HashUtils, RenderPassAttachmentDescHasher)
+TEST(Common_HashUtils, PipelineResourceLayoutDescXXH128Hash)
+{
+    TestPipelineResourceLayoutDescHasher<XXH128HasherTestHelper>();
+}
+
+
+template <template <typename T> class HelperType>
+void TestRenderPassAttachmentDescHasher()
 {
     ASSERT_SIZEOF(RenderPassAttachmentDesc, 16, "Did you add new members to RenderPassAttachmentDesc? Please update the tests.");
     DEFINE_HELPER(RenderPassAttachmentDesc);
@@ -494,8 +712,19 @@ TEST(Common_HashUtils, RenderPassAttachmentDescHasher)
     TEST_FLAGS(FinalState, static_cast<RESOURCE_STATE>(1), RESOURCE_STATE_MAX_BIT);
 }
 
+TEST(Common_HashUtils, RenderPassAttachmentDescStdHash)
+{
+    TestRenderPassAttachmentDescHasher<StdHasherTestHelper>();
+}
 
-TEST(Common_HashUtils, AttachmentReferenceHasher)
+TEST(Common_HashUtils, RenderPassAttachmentXXH128Hasher)
+{
+    TestRenderPassAttachmentDescHasher<XXH128HasherTestHelper>();
+}
+
+
+template <template <typename T> class HelperType>
+void TestAttachmentReferenceHasher()
 {
     ASSERT_SIZEOF(AttachmentReference, 8, "Did you add new members to AttachmentReference? Please update the tests.");
     DEFINE_HELPER(AttachmentReference);
@@ -504,8 +733,19 @@ TEST(Common_HashUtils, AttachmentReferenceHasher)
     TEST_FLAGS(State, static_cast<RESOURCE_STATE>(1), RESOURCE_STATE_MAX_BIT);
 }
 
+TEST(Common_HashUtils, AttachmentReferenceStdHash)
+{
+    TestAttachmentReferenceHasher<StdHasherTestHelper>();
+}
 
-TEST(Common_HashUtils, ShadingRateAttachmentHasher)
+TEST(Common_HashUtils, AttachmentReferenceXXH128Hash)
+{
+    TestAttachmentReferenceHasher<XXH128HasherTestHelper>();
+}
+
+
+template <template <typename T> class HelperType>
+void TestShadingRateAttachmentHasher()
 {
     ASSERT_SIZEOF(ShadingRateAttachment, 16, "Did you add new members to ShadingRateAttachment? Please update the tests.");
     DEFINE_HELPER(ShadingRateAttachment);
@@ -517,8 +757,19 @@ TEST(Common_HashUtils, ShadingRateAttachmentHasher)
     TEST_RANGE(TileSize[1], 1u, 32u);
 }
 
+TEST(Common_HashUtils, ShadingRateAttachmentStdHash)
+{
+    TestShadingRateAttachmentHasher<StdHasherTestHelper>();
+}
 
-TEST(Common_HashUtils, SubpassDescHasher)
+TEST(Common_HashUtils, ShadingRateAttachmentXXH128Hash)
+{
+    TestShadingRateAttachmentHasher<XXH128HasherTestHelper>();
+}
+
+
+template <template <typename T> class HelperType>
+void TestSubpassDescHasher()
 {
     ASSERT_SIZEOF64(SubpassDesc, 72, "Did you add new members to SubpassDesc? Please update the tests.");
     DEFINE_HELPER(SubpassDesc);
@@ -569,8 +820,19 @@ TEST(Common_HashUtils, SubpassDescHasher)
     TEST_VALUE(pShadingRateAttachment, &SRA);
 }
 
+TEST(Common_HashUtils, SubpassDescStdHash)
+{
+    TestSubpassDescHasher<StdHasherTestHelper>();
+}
 
-TEST(Common_HashUtils, SubpassDependencyDescHasher)
+TEST(Common_HashUtils, SubpassDescXXH128Hash)
+{
+    TestSubpassDescHasher<XXH128HasherTestHelper>();
+}
+
+
+template <template <typename T> class HelperType>
+void TestSubpassDependencyDescHasher()
 {
     ASSERT_SIZEOF64(SubpassDependencyDesc, 24, "Did you add new members to SubpassDependencyDesc? Please update the tests.");
     DEFINE_HELPER(SubpassDependencyDesc);
@@ -583,8 +845,19 @@ TEST(Common_HashUtils, SubpassDependencyDescHasher)
     TEST_FLAGS(DstAccessMask, static_cast<ACCESS_FLAGS>(1), ACCESS_FLAG_DEFAULT);
 }
 
+TEST(Common_HashUtils, SubpassDependencyDescStdHash)
+{
+    TestSubpassDependencyDescHasher<StdHasherTestHelper>();
+}
 
-TEST(Common_HashUtils, RenderPassDescHasher)
+TEST(Common_HashUtils, SubpassDependencyDescXXH128Hash)
+{
+    TestSubpassDependencyDescHasher<XXH128HasherTestHelper>();
+}
+
+
+template <template <typename T> class HelperType>
+void TestRenderPassDescHasher()
 {
     ASSERT_SIZEOF64(RenderPassDesc, 56, "Did you add new members to RenderPassDesc? Please update the tests.");
     DEFINE_HELPER(RenderPassDesc);
@@ -608,8 +881,19 @@ TEST(Common_HashUtils, RenderPassDescHasher)
     TEST_VALUE(DependencyCount, 3u);
 }
 
+TEST(Common_HashUtils, RenderPassDescStdHash)
+{
+    TestRenderPassDescHasher<StdHasherTestHelper>();
+}
 
-TEST(Common_HashUtils, LayoutElementHasher)
+TEST(Common_HashUtils, RenderPassDescXXH128Hash)
+{
+    TestRenderPassDescHasher<XXH128HasherTestHelper>();
+}
+
+
+template <template <typename T> class HelperType>
+void TestLayoutElementHasher()
 {
     ASSERT_SIZEOF64(LayoutElement, 40, "Did you add new members to LayoutElement? Please update the tests.");
     DEFINE_HELPER(LayoutElement);
@@ -628,8 +912,19 @@ TEST(Common_HashUtils, LayoutElementHasher)
     TEST_RANGE(InstanceDataStepRate, 2u, 64u);
 }
 
+TEST(Common_HashUtils, LayoutElementStdHash)
+{
+    TestLayoutElementHasher<StdHasherTestHelper>();
+}
 
-TEST(Common_HashUtils, InputLayoutDescHasher)
+TEST(Common_HashUtils, LayoutElementXXH128Hash)
+{
+    TestLayoutElementHasher<XXH128HasherTestHelper>();
+}
+
+
+template <template <typename T> class HelperType>
+void TestInputLayoutDescHasher()
 {
     ASSERT_SIZEOF64(InputLayoutDesc, 16, "Did you add new members to InputLayoutDesc? Please update the tests.");
     DEFINE_HELPER(InputLayoutDesc);
@@ -646,8 +941,19 @@ TEST(Common_HashUtils, InputLayoutDescHasher)
     TEST_RANGE(NumElements, 1u, Uint32{_countof(LayoutElems)}, 1u);
 }
 
+TEST(Common_HashUtils, InputLayoutDescStdHash)
+{
+    TestInputLayoutDescHasher<StdHasherTestHelper>();
+}
 
-TEST(Common_HashUtils, GraphicsPipelineDescHasher)
+TEST(Common_HashUtils, InputLayoutDescXXH128Hash)
+{
+    TestInputLayoutDescHasher<XXH128HasherTestHelper>();
+}
+
+
+template <template <typename T> class HelperType>
+void TestGraphicsPipelineDescHasher()
 {
     DEFINE_HELPER(GraphicsPipelineDesc);
     Helper.Get().PrimitiveTopology = PRIMITIVE_TOPOLOGY_UNDEFINED;
@@ -689,8 +995,19 @@ TEST(Common_HashUtils, GraphicsPipelineDescHasher)
     TEST_RANGE(NodeMask, 2u, 64u);
 }
 
+TEST(Common_HashUtils, GraphicsPipelineDescStdHash)
+{
+    TestGraphicsPipelineDescHasher<StdHasherTestHelper>();
+}
 
-TEST(Common_HashUtils, RayTracingPipelineDescHasher)
+TEST(Common_HashUtils, GraphicsPipelineDescXXH128Hash)
+{
+    TestGraphicsPipelineDescHasher<XXH128HasherTestHelper>();
+}
+
+
+template <template <typename T> class HelperType>
+void TestRayTracingPipelineDescHasher()
 {
     DEFINE_HELPER(RayTracingPipelineDesc);
 
@@ -698,8 +1015,19 @@ TEST(Common_HashUtils, RayTracingPipelineDescHasher)
     TEST_RANGE(MaxRecursionDepth, Uint8{1u}, Uint8{32u});
 }
 
+TEST(Common_HashUtils, RayTracingPipelineDescStdHash)
+{
+    TestRayTracingPipelineDescHasher<StdHasherTestHelper>();
+}
 
-TEST(Common_HashUtils, PipelineStateDescHasher)
+TEST(Common_HashUtils, RayTracingPipelineDescXXH128Hash)
+{
+    TestRayTracingPipelineDescHasher<XXH128HasherTestHelper>();
+}
+
+
+template <template <typename T> class HelperType>
+void TestPipelineStateDescHasher()
 {
     DEFINE_HELPER(PipelineStateDesc);
 
@@ -711,8 +1039,19 @@ TEST(Common_HashUtils, PipelineStateDescHasher)
     Helper.Add("ResourceLayout");
 }
 
+TEST(Common_HashUtils, PipelineStateDescStdHash)
+{
+    TestPipelineStateDescHasher<StdHasherTestHelper>();
+}
 
-TEST(Common_HashUtils, PipelineResourceSignatureDescHasher)
+TEST(Common_HashUtils, PipelineStateDescXXH128Hash)
+{
+    TestPipelineStateDescHasher<XXH128HasherTestHelper>();
+}
+
+
+template <template <typename T> class HelperType>
+void TestPipelineResourceSignatureDescHasher()
 {
     ASSERT_SIZEOF64(PipelineResourceSignatureDesc, 56, "Did you add new members to PipelineResourceSignatureDesc? Please update the tests.");
     DEFINE_HELPER(PipelineResourceSignatureDesc);
@@ -744,5 +1083,57 @@ TEST(Common_HashUtils, PipelineResourceSignatureDescHasher)
     Helper.AddStrings(Helper.Get().CombinedSamplerSuffix, "CombinedSamplerSuffix", {"_Sampler", "_sam", "_Samp"});
 }
 
+TEST(Common_HashUtils, PipelineResourceSignatureDescStdHash)
+{
+    TestPipelineResourceSignatureDescHasher<StdHasherTestHelper>();
+}
+
+TEST(Common_HashUtils, PipelineResourceSignatureDescXXH128Hash)
+{
+    TestPipelineResourceSignatureDescHasher<XXH128HasherTestHelper>();
+}
+
+TEST(XXH128HasherTest, ShaderCreateInfo)
+{
+    ASSERT_SIZEOF64(ShaderCreateInfo, 152, "Did you add new members to ShaderCreateInfo? Please update the tests.");
+    XXH128HasherTestHelper<ShaderCreateInfo> Helper{"ShaderCreateInfo"};
+
+    TEST_STRINGS(Source, "Source1", "Source2", "Source3");
+    TEST_RANGE(SourceLength, size_t{1}, size_t{5});
+
+    Helper.Get().Source       = nullptr;
+    constexpr uint32_t Data[] = {1, 2, 3, 4};
+    Helper.Get().ByteCode     = Data;
+
+    TEST_RANGE(ByteCodeSize, size_t{1}, size_t{8});
+
+    TEST_STRINGS(EntryPoint, "Entry1", "Entry2", "Entry3");
+
+    constexpr ShaderMacro Macros[] = {
+        {"Macro1", "Def1"},
+        {"Macro2", "Def2"},
+        {"Macro3", "Def3"},
+        {},
+    };
+    TEST_VALUE(Macros, Macros);
+    TEST_BOOL(UseCombinedTextureSamplers);
+
+    TEST_STRINGS(CombinedSamplerSuffix, "_sampler1", "_sampler2", "_sampler3");
+
+    TEST_FLAGS(Desc.ShaderType, static_cast<SHADER_TYPE>(1), SHADER_TYPE_LAST);
+    TEST_RANGE(SourceLanguage, static_cast<SHADER_SOURCE_LANGUAGE>(1), SHADER_SOURCE_LANGUAGE_COUNT);
+    TEST_RANGE(ShaderCompiler, static_cast<SHADER_COMPILER>(1), SHADER_COMPILER_COUNT);
+
+    TEST_RANGE(HLSLVersion.Minor, 1u, 10u);
+    TEST_RANGE(HLSLVersion.Major, 1u, 10u);
+    TEST_RANGE(GLSLVersion.Minor, 1u, 10u);
+    TEST_RANGE(GLSLVersion.Major, 1u, 10u);
+    TEST_RANGE(GLESSLVersion.Minor, 1u, 10u);
+    TEST_RANGE(GLESSLVersion.Major, 1u, 10u);
+    TEST_RANGE(MSLVersion.Minor, 1u, 10u);
+    TEST_RANGE(MSLVersion.Major, 1u, 10u);
+
+    TEST_FLAGS(CompileFlags, static_cast<SHADER_COMPILE_FLAGS>(1), SHADER_COMPILE_FLAG_LAST);
+}
 
 } // namespace
