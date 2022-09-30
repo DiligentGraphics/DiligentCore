@@ -377,27 +377,18 @@ protected:
     size_t Ownership_Hash = 0;
 };
 
-} // namespace Diligent
 
+template <typename HasherType, typename Type>
+struct HashCombiner;
 
-namespace std
+template <typename HasherType>
+struct HashCombiner<HasherType, SamplerDesc>
 {
+    HashCombiner(HasherType& Hasher) :
+        m_Hasher{Hasher}
+    {}
 
-template <>
-struct hash<Diligent::HashMapStringKey>
-{
-    size_t operator()(const Diligent::HashMapStringKey& Key) const noexcept
-    {
-        return Key.GetHash();
-    }
-};
-
-
-/// Hash function specialization for Diligent::SamplerDesc structure.
-template <>
-struct hash<Diligent::SamplerDesc>
-{
-    size_t operator()(const Diligent::SamplerDesc& SamDesc) const
+    void operator()(const SamplerDesc& SamDesc) const
     {
         // Sampler name is ignored in comparison operator
         // and should not be hashed
@@ -410,7 +401,7 @@ struct hash<Diligent::SamplerDesc>
         ASSERT_SIZEOF(SamDesc.Flags, 1, "Hash logic below may be incorrect.");
         ASSERT_SIZEOF(SamDesc.BorderColor, 16, "Hash logic below may be incorrect.");
 
-        return Diligent::ComputeHash( // SamDesc.Name,
+        m_Hasher( // SamDesc.Name,
             ((static_cast<uint32_t>(SamDesc.MinFilter) << 0u) |
              (static_cast<uint32_t>(SamDesc.MagFilter) << 8u) |
              (static_cast<uint32_t>(SamDesc.MipFilter) << 24u)),
@@ -428,15 +419,22 @@ struct hash<Diligent::SamplerDesc>
             SamDesc.BorderColor[3],
             SamDesc.MinLOD,
             SamDesc.MaxLOD);
-        ASSERT_SIZEOF64(Diligent::SamplerDesc, 56, "Did you add new members to SamplerDesc? Please handle them here.");
+        ASSERT_SIZEOF64(SamDesc, 56, "Did you add new members to SamplerDesc? Please handle them here.");
     }
+
+private:
+    HasherType& m_Hasher;
 };
 
-/// Hash function specialization for Diligent::StencilOpDesc structure.
-template <>
-struct hash<Diligent::StencilOpDesc>
+
+template <typename HasherType>
+struct HashCombiner<HasherType, StencilOpDesc>
 {
-    size_t operator()(const Diligent::StencilOpDesc& StOpDesc) const
+    HashCombiner(HasherType& Hasher) :
+        m_Hasher{Hasher}
+    {}
+
+    void operator()(const StencilOpDesc& StOpDesc) const
     {
         // clang-format off
         ASSERT_SIZEOF(StOpDesc.StencilFailOp,      1, "Hash logic below may be incorrect.");
@@ -444,70 +442,90 @@ struct hash<Diligent::StencilOpDesc>
         ASSERT_SIZEOF(StOpDesc.StencilPassOp,      1, "Hash logic below may be incorrect.");
         ASSERT_SIZEOF(StOpDesc.StencilFunc,        1, "Hash logic below may be incorrect.");
 
-        return Diligent::ComputeHash(((static_cast<uint32_t>(StOpDesc.StencilFailOp)      <<  0u) |
-                                      (static_cast<uint32_t>(StOpDesc.StencilDepthFailOp) <<  8u) |
-                                      (static_cast<uint32_t>(StOpDesc.StencilPassOp)      << 16u) |
-                                      (static_cast<uint32_t>(StOpDesc.StencilFunc)        << 24u)));
+        m_Hasher(((static_cast<uint32_t>(StOpDesc.StencilFailOp)      <<  0u) |
+                  (static_cast<uint32_t>(StOpDesc.StencilDepthFailOp) <<  8u) |
+                  (static_cast<uint32_t>(StOpDesc.StencilPassOp)      << 16u) |
+                  (static_cast<uint32_t>(StOpDesc.StencilFunc)        << 24u)));
         // clang-format on
-        ASSERT_SIZEOF(Diligent::StencilOpDesc, 4, "Did you add new members to StencilOpDesc? Please handle them here.");
+        ASSERT_SIZEOF(StOpDesc, 4, "Did you add new members to StencilOpDesc? Please handle them here.");
     }
+
+private:
+    HasherType& m_Hasher;
 };
 
-/// Hash function specialization for Diligent::DepthStencilStateDesc structure.
-template <>
-struct hash<Diligent::DepthStencilStateDesc>
+
+template <typename HasherType>
+struct HashCombiner<HasherType, DepthStencilStateDesc>
 {
-    size_t operator()(const Diligent::DepthStencilStateDesc& DepthStencilDesc) const
+    HashCombiner(HasherType& Hasher) :
+        m_Hasher{Hasher}
+    {}
+
+    void operator()(const DepthStencilStateDesc& DSSDesc) const
     {
-        ASSERT_SIZEOF(DepthStencilDesc.DepthFunc, 1, "Hash logic below may be incorrect.");
-        ASSERT_SIZEOF(DepthStencilDesc.StencilReadMask, 1, "Hash logic below may be incorrect.");
-        ASSERT_SIZEOF(DepthStencilDesc.StencilWriteMask, 1, "Hash logic below may be incorrect.");
+        ASSERT_SIZEOF(DSSDesc.DepthFunc, 1, "Hash logic below may be incorrect.");
+        ASSERT_SIZEOF(DSSDesc.StencilReadMask, 1, "Hash logic below may be incorrect.");
+        ASSERT_SIZEOF(DSSDesc.StencilWriteMask, 1, "Hash logic below may be incorrect.");
         // clang-format off
-        return Diligent::ComputeHash((((DepthStencilDesc.DepthEnable      ? 1u : 0u) << 0u) |
-                                      ((DepthStencilDesc.DepthWriteEnable ? 1u : 0u) << 1u) |
-                                      ((DepthStencilDesc.StencilEnable    ? 1u : 0u) << 2u) |
-                                      (static_cast<uint32_t>(DepthStencilDesc.DepthFunc)        << 8u)  |
-                                      (static_cast<uint32_t>(DepthStencilDesc.StencilReadMask)  << 16u) |
-                                      (static_cast<uint32_t>(DepthStencilDesc.StencilWriteMask) << 24u)),
-                                     DepthStencilDesc.FrontFace,
-                                     DepthStencilDesc.BackFace);
+        m_Hasher((((DSSDesc.DepthEnable      ? 1u : 0u) << 0u) |
+                  ((DSSDesc.DepthWriteEnable ? 1u : 0u) << 1u) |
+                  ((DSSDesc.StencilEnable    ? 1u : 0u) << 2u) |
+                  (static_cast<uint32_t>(DSSDesc.DepthFunc)        << 8u)  |
+                  (static_cast<uint32_t>(DSSDesc.StencilReadMask)  << 16u) |
+                  (static_cast<uint32_t>(DSSDesc.StencilWriteMask) << 24u)),
+                 DSSDesc.FrontFace,
+                 DSSDesc.BackFace);
         // clang-format on
-        ASSERT_SIZEOF(Diligent::DepthStencilStateDesc, 14, "Did you add new members to DepthStencilStateDesc? Please handle them here.");
+        ASSERT_SIZEOF(DSSDesc, 14, "Did you add new members to DepthStencilStateDesc? Please handle them here.");
     }
+
+private:
+    HasherType& m_Hasher;
 };
 
-/// Hash function specialization for Diligent::RasterizerStateDesc structure.
-template <>
-struct hash<Diligent::RasterizerStateDesc>
+
+template <typename HasherType>
+struct HashCombiner<HasherType, RasterizerStateDesc>
 {
-    size_t operator()(const Diligent::RasterizerStateDesc& RasterizerDesc) const
+    HashCombiner(HasherType& Hasher) :
+        m_Hasher{Hasher}
+    {}
+
+    void operator()(const RasterizerStateDesc& RSDesc) const
     {
-        ASSERT_SIZEOF(RasterizerDesc.FillMode, 1, "Hash logic below may be incorrect.");
-        ASSERT_SIZEOF(RasterizerDesc.CullMode, 1, "Hash logic below may be incorrect.");
+        ASSERT_SIZEOF(RSDesc.FillMode, 1, "Hash logic below may be incorrect.");
+        ASSERT_SIZEOF(RSDesc.CullMode, 1, "Hash logic below may be incorrect.");
 
         // clang-format off
-        return Diligent::ComputeHash(((static_cast<uint32_t>(RasterizerDesc.FillMode) << 0u) |
-                                      (static_cast<uint32_t>(RasterizerDesc.CullMode) << 8u) |
-                                      ((RasterizerDesc.FrontCounterClockwise ? 1u : 0u) << 16u) |
-                                      ((RasterizerDesc.DepthClipEnable       ? 1u : 0u) << 17u) |
-                                      ((RasterizerDesc.ScissorEnable         ? 1u : 0u) << 18u) |
-                                      ((RasterizerDesc.AntialiasedLineEnable ? 1u : 0u) << 19u)),
-                                     RasterizerDesc.DepthBias,
-                                     RasterizerDesc.DepthBiasClamp,
-                                     RasterizerDesc.SlopeScaledDepthBias);
+        m_Hasher(((static_cast<uint32_t>(RSDesc.FillMode) << 0u) |
+                  (static_cast<uint32_t>(RSDesc.CullMode) << 8u) |
+                  ((RSDesc.FrontCounterClockwise ? 1u : 0u) << 16u) |
+                  ((RSDesc.DepthClipEnable       ? 1u : 0u) << 17u) |
+                  ((RSDesc.ScissorEnable         ? 1u : 0u) << 18u) |
+                  ((RSDesc.AntialiasedLineEnable ? 1u : 0u) << 19u)),
+                 RSDesc.DepthBias,
+                 RSDesc.DepthBiasClamp,
+                 RSDesc.SlopeScaledDepthBias);
         // clang-format on
-        ASSERT_SIZEOF(Diligent::RasterizerStateDesc, 20, "Did you add new members to RasterizerStateDesc? Please handle them here.");
+        ASSERT_SIZEOF(RSDesc, 20, "Did you add new members to RasterizerStateDesc? Please handle them here.");
     }
+
+private:
+    HasherType& m_Hasher;
 };
 
-/// Hash function specialization for Diligent::BlendStateDesc structure.
-template <>
-struct hash<Diligent::BlendStateDesc>
+
+template <typename HasherType>
+struct HashCombiner<HasherType, BlendStateDesc>
 {
-    size_t operator()(const Diligent::BlendStateDesc& BSDesc) const
+    HashCombiner(HasherType& Hasher) :
+        m_Hasher{Hasher}
+    {}
+
+    void operator()(const BlendStateDesc& BSDesc) const
     {
-        std::size_t Seed = 0;
-        for (size_t i = 0; i < Diligent::MAX_RENDER_TARGETS; ++i)
+        for (size_t i = 0; i < MAX_RENDER_TARGETS; ++i)
         {
             const auto& rt = BSDesc.RenderTargets[i];
 
@@ -521,35 +539,37 @@ struct hash<Diligent::BlendStateDesc>
             ASSERT_SIZEOF(rt.RenderTargetWriteMask, 1, "Hash logic below may be incorrect.");
 
             // clang-format off
-            Diligent::HashCombine(Seed,
-                                  (((rt.BlendEnable          ? 1u : 0u) <<  0u) |
-                                   ((rt.LogicOperationEnable ? 1u : 0u) <<  1u) |
-                                   (static_cast<uint32_t>(rt.SrcBlend)  <<  8u) |
-                                   (static_cast<uint32_t>(rt.DestBlend) << 16u) |
-                                   (static_cast<uint32_t>(rt.BlendOp)   << 24u)),
-                                  ((static_cast<uint32_t>(rt.SrcBlendAlpha)  <<  0u) |
-                                   (static_cast<uint32_t>(rt.DestBlendAlpha) <<  8u) |
-                                   (static_cast<uint32_t>(rt.BlendOpAlpha)   << 16u) |
-                                   (static_cast<uint32_t>(rt.LogicOp)        << 24u)),
-                                  rt.RenderTargetWriteMask);
+            m_Hasher((((rt.BlendEnable          ? 1u : 0u) <<  0u) |
+                      ((rt.LogicOperationEnable ? 1u : 0u) <<  1u) |
+                      (static_cast<uint32_t>(rt.SrcBlend)  <<  8u) |
+                      (static_cast<uint32_t>(rt.DestBlend) << 16u) |
+                      (static_cast<uint32_t>(rt.BlendOp)   << 24u)),
+                     ((static_cast<uint32_t>(rt.SrcBlendAlpha)  <<  0u) |
+                      (static_cast<uint32_t>(rt.DestBlendAlpha) <<  8u) |
+                      (static_cast<uint32_t>(rt.BlendOpAlpha)   << 16u) |
+                      (static_cast<uint32_t>(rt.LogicOp)        << 24u)),
+                     rt.RenderTargetWriteMask);
             // clang-format on
         }
-        Diligent::HashCombine(Seed,
-                              (((BSDesc.AlphaToCoverageEnable ? 1u : 0u) << 0u) |
-                               ((BSDesc.IndependentBlendEnable ? 1u : 0u) << 1u)));
+        m_Hasher((((BSDesc.AlphaToCoverageEnable ? 1u : 0u) << 0u) |
+                  ((BSDesc.IndependentBlendEnable ? 1u : 0u) << 1u)));
 
-        ASSERT_SIZEOF(Diligent::BlendStateDesc, 82, "Did you add new members to BlendStateDesc? Please handle them here.");
-
-        return Seed;
+        ASSERT_SIZEOF(BSDesc, 82, "Did you add new members to BlendStateDesc? Please handle them here.");
     }
+
+private:
+    HasherType& m_Hasher;
 };
 
 
-/// Hash function specialization for Diligent::TextureViewDesc structure.
-template <>
-struct hash<Diligent::TextureViewDesc>
+template <typename HasherType>
+struct HashCombiner<HasherType, TextureViewDesc>
 {
-    size_t operator()(const Diligent::TextureViewDesc& TexViewDesc) const
+    HashCombiner(HasherType& Hasher) :
+        m_Hasher{Hasher}
+    {}
+
+    void operator()(const TextureViewDesc& TexViewDesc) const
     {
         ASSERT_SIZEOF(TexViewDesc.ViewType, 1, "Hash logic below may be incorrect.");
         ASSERT_SIZEOF(TexViewDesc.TextureDim, 1, "Hash logic below may be incorrect.");
@@ -557,7 +577,7 @@ struct hash<Diligent::TextureViewDesc>
         ASSERT_SIZEOF(TexViewDesc.AccessFlags, 1, "Hash logic below may be incorrect.");
         ASSERT_SIZEOF(TexViewDesc.Flags, 1, "Hash logic below may be incorrect.");
 
-        return Diligent::ComputeHash(
+        m_Hasher(
             ((static_cast<uint32_t>(TexViewDesc.ViewType) << 0u) |
              (static_cast<uint32_t>(TexViewDesc.TextureDim) << 8u) |
              (static_cast<uint32_t>(TexViewDesc.Format) << 16u)),
@@ -567,83 +587,118 @@ struct hash<Diligent::TextureViewDesc>
             TexViewDesc.NumArraySlices,
             ((static_cast<uint32_t>(TexViewDesc.AccessFlags) << 0u) |
              (static_cast<uint32_t>(TexViewDesc.Flags) << 8u)));
-        ASSERT_SIZEOF64(Diligent::TextureViewDesc, 32, "Did you add new members to TextureViewDesc? Please handle them here.");
+        ASSERT_SIZEOF64(TexViewDesc, 32, "Did you add new members to TextureViewDesc? Please handle them here.");
     }
+
+private:
+    HasherType& m_Hasher;
 };
 
-/// Hash function specialization for Diligent::SampleDesc structure.
-template <>
-struct hash<Diligent::SampleDesc>
+
+template <typename HasherType>
+struct HashCombiner<HasherType, SampleDesc>
 {
-    size_t operator()(const Diligent::SampleDesc& SmplDesc) const
+    HashCombiner(HasherType& Hasher) :
+        m_Hasher{Hasher}
+    {}
+
+    void operator()(const SampleDesc& SmplDesc) const
     {
         ASSERT_SIZEOF(SmplDesc.Count, 1, "Hash logic below may be incorrect.");
         ASSERT_SIZEOF(SmplDesc.Quality, 1, "Hash logic below may be incorrect.");
 
-        return Diligent::ComputeHash(
+        m_Hasher(
             ((static_cast<uint32_t>(SmplDesc.Count) << 0u) |
              (static_cast<uint32_t>(SmplDesc.Quality) << 8u)));
-        ASSERT_SIZEOF(Diligent::SampleDesc, 2, "Did you add new members to SampleDesc? Please handle them here.");
+        ASSERT_SIZEOF(SmplDesc, 2, "Did you add new members to SampleDesc? Please handle them here.");
     }
+
+private:
+    HasherType& m_Hasher;
 };
 
-/// Hash function specialization for Diligent::ShaderResourceVariableDesc structure.
-template <>
-struct hash<Diligent::ShaderResourceVariableDesc>
+
+template <typename HasherType>
+struct HashCombiner<HasherType, ShaderResourceVariableDesc>
 {
-    size_t operator()(const Diligent::ShaderResourceVariableDesc& VarDesc) const
+    HashCombiner(HasherType& Hasher) :
+        m_Hasher{Hasher}
+    {}
+
+    void operator()(const ShaderResourceVariableDesc& VarDesc) const
     {
         ASSERT_SIZEOF(VarDesc.Type, 1, "Hash logic below may be incorrect.");
         ASSERT_SIZEOF(VarDesc.Flags, 1, "Hash logic below may be incorrect.");
 
-        return Diligent::ComputeHash(
+        m_Hasher(
             VarDesc.Name,
             VarDesc.ShaderStages,
             ((static_cast<uint32_t>(VarDesc.Type) << 0u) |
              (static_cast<uint32_t>(VarDesc.Flags) << 8u)));
-        ASSERT_SIZEOF64(Diligent::ShaderResourceVariableDesc, 16, "Did you add new members to ShaderResourceVariableDesc? Please handle them here.");
+        ASSERT_SIZEOF64(VarDesc, 16, "Did you add new members to ShaderResourceVariableDesc? Please handle them here.");
     }
+
+private:
+    HasherType& m_Hasher;
 };
 
-/// Hash function specialization for Diligent::ImmutableSamplerDesc structure.
-template <>
-struct hash<Diligent::ImmutableSamplerDesc>
+
+template <typename HasherType>
+struct HashCombiner<HasherType, ImmutableSamplerDesc>
 {
-    size_t operator()(const Diligent::ImmutableSamplerDesc& SamDesc) const
+    HashCombiner(HasherType& Hasher) :
+        m_Hasher{Hasher}
+    {}
+
+    void operator()(const ImmutableSamplerDesc& SamDesc) const
     {
-        return Diligent::ComputeHash(SamDesc.ShaderStages, SamDesc.SamplerOrTextureName, SamDesc.Desc);
-        ASSERT_SIZEOF64(Diligent::ImmutableSamplerDesc, 16 + sizeof(Diligent::SamplerDesc), "Did you add new members to ImmutableSamplerDesc? Please handle them here.");
+        m_Hasher(SamDesc.ShaderStages, SamDesc.SamplerOrTextureName, SamDesc.Desc);
+        ASSERT_SIZEOF64(SamDesc, 16 + sizeof(SamplerDesc), "Did you add new members to ImmutableSamplerDesc? Please handle them here.");
     }
+
+private:
+    HasherType& m_Hasher;
 };
 
-/// Hash function specialization for Diligent::PipelineResourceDesc structure.
-template <>
-struct hash<Diligent::PipelineResourceDesc>
+
+template <typename HasherType>
+struct HashCombiner<HasherType, PipelineResourceDesc>
 {
-    size_t operator()(const Diligent::PipelineResourceDesc& ResDesc) const
+    HashCombiner(HasherType& Hasher) :
+        m_Hasher{Hasher}
+    {}
+
+    void operator()(const PipelineResourceDesc& ResDesc) const
     {
         ASSERT_SIZEOF(ResDesc.ResourceType, 1, "Hash logic below may be incorrect.");
         ASSERT_SIZEOF(ResDesc.VarType, 1, "Hash logic below may be incorrect.");
         ASSERT_SIZEOF(ResDesc.Flags, 1, "Hash logic below may be incorrect.");
 
-        return Diligent::ComputeHash(
+        m_Hasher(
             ResDesc.Name,
             ResDesc.ShaderStages,
             ResDesc.ArraySize,
             ((static_cast<uint32_t>(ResDesc.ResourceType) << 0u) |
              (static_cast<uint32_t>(ResDesc.VarType) << 8u) |
              (static_cast<uint32_t>(ResDesc.Flags) << 16u)));
-        ASSERT_SIZEOF64(Diligent::PipelineResourceDesc, 24, "Did you add new members to PipelineResourceDesc? Please handle them here.");
+        ASSERT_SIZEOF64(ResDesc, 24, "Did you add new members to PipelineResourceDesc? Please handle them here.");
     }
+
+private:
+    HasherType& m_Hasher;
 };
 
-/// Hash function specialization for Diligent::PipelineResourceLayoutDesc structure.
-template <>
-struct hash<Diligent::PipelineResourceLayoutDesc>
+
+template <typename HasherType>
+struct HashCombiner<HasherType, PipelineResourceLayoutDesc>
 {
-    size_t operator()(const Diligent::PipelineResourceLayoutDesc& LayoutDesc) const
+    HashCombiner(HasherType& Hasher) :
+        m_Hasher{Hasher}
+    {}
+
+    void operator()(const PipelineResourceLayoutDesc& LayoutDesc) const
     {
-        auto Hash = Diligent::ComputeHash(
+        m_Hasher(
             LayoutDesc.DefaultVariableType,
             LayoutDesc.DefaultVariableMergeStages,
             LayoutDesc.NumVariables,
@@ -652,7 +707,7 @@ struct hash<Diligent::PipelineResourceLayoutDesc>
         if (LayoutDesc.Variables != nullptr)
         {
             for (size_t i = 0; i < LayoutDesc.NumVariables; ++i)
-                Diligent::HashCombine(Hash, LayoutDesc.Variables[i]);
+                m_Hasher(LayoutDesc.Variables[i]);
         }
         else
         {
@@ -662,24 +717,30 @@ struct hash<Diligent::PipelineResourceLayoutDesc>
         if (LayoutDesc.ImmutableSamplers != nullptr)
         {
             for (size_t i = 0; i < LayoutDesc.NumImmutableSamplers; ++i)
-                Diligent::HashCombine(Hash, LayoutDesc.ImmutableSamplers[i]);
+                m_Hasher(LayoutDesc.ImmutableSamplers[i]);
         }
         else
         {
             VERIFY_EXPR(LayoutDesc.NumImmutableSamplers == 0);
         }
 
-        return Hash;
-        ASSERT_SIZEOF64(Diligent::PipelineResourceLayoutDesc, 40, "Did you add new members to PipelineResourceDesc? Please handle them here.");
+        ASSERT_SIZEOF64(LayoutDesc, 40, "Did you add new members to PipelineResourceDesc? Please handle them here.");
     }
+
+private:
+    HasherType& m_Hasher;
 };
 
 
-/// Hash function specialization for Diligent::RenderPassAttachmentDesc structure.
-template <>
-struct hash<Diligent::RenderPassAttachmentDesc>
+
+template <typename HasherType>
+struct HashCombiner<HasherType, RenderPassAttachmentDesc>
 {
-    size_t operator()(const Diligent::RenderPassAttachmentDesc& Desc) const
+    HashCombiner(HasherType& Hasher) :
+        m_Hasher{Hasher}
+    {}
+
+    void operator()(const RenderPassAttachmentDesc& Desc) const
     {
         ASSERT_SIZEOF(Desc.Format, 2, "Hash logic below may be incorrect.");
         ASSERT_SIZEOF(Desc.SampleCount, 1, "Hash logic below may be incorrect.");
@@ -688,7 +749,7 @@ struct hash<Diligent::RenderPassAttachmentDesc>
         ASSERT_SIZEOF(Desc.StencilLoadOp, 1, "Hash logic below may be incorrect.");
         ASSERT_SIZEOF(Desc.StencilStoreOp, 1, "Hash logic below may be incorrect.");
 
-        return Diligent::ComputeHash(
+        m_Hasher(
             ((static_cast<uint32_t>(Desc.Format) << 0u) |
              (static_cast<uint32_t>(Desc.SampleCount) << 16u) |
              (static_cast<uint32_t>(Desc.LoadOp) << 24u)),
@@ -697,44 +758,61 @@ struct hash<Diligent::RenderPassAttachmentDesc>
              (static_cast<uint32_t>(Desc.StencilStoreOp) << 16u)),
             Desc.InitialState,
             Desc.FinalState);
-        ASSERT_SIZEOF(Diligent::RenderPassAttachmentDesc, 16, "Did you add new members to RenderPassAttachmentDesc? Please handle them here.");
+        ASSERT_SIZEOF(Desc, 16, "Did you add new members to RenderPassAttachmentDesc? Please handle them here.");
     }
+
+private:
+    HasherType& m_Hasher;
 };
 
 
-/// Hash function specialization for Diligent::RenderPassAttachmentDesc structure.
-template <>
-struct hash<Diligent::AttachmentReference>
+template <typename HasherType>
+struct HashCombiner<HasherType, AttachmentReference>
 {
-    size_t operator()(const Diligent::AttachmentReference& Ref) const
+    HashCombiner(HasherType& Hasher) :
+        m_Hasher{Hasher}
+    {}
+
+    void operator()(const AttachmentReference& Ref) const
     {
-        return Diligent::ComputeHash(Ref.AttachmentIndex, Ref.State);
-        ASSERT_SIZEOF(Diligent::AttachmentReference, 8, "Did you add new members to AttachmentReference? Please handle them here.");
+        m_Hasher(Ref.AttachmentIndex, Ref.State);
+        ASSERT_SIZEOF(Ref, 8, "Did you add new members to AttachmentReference? Please handle them here.");
     }
+
+private:
+    HasherType& m_Hasher;
 };
 
 
-/// Hash function specialization for Diligent::ShadingRateAttachment structure.
-template <>
-struct hash<Diligent::ShadingRateAttachment>
+template <typename HasherType>
+struct HashCombiner<HasherType, ShadingRateAttachment>
 {
-    size_t operator()(const Diligent::ShadingRateAttachment& SRA) const
+    HashCombiner(HasherType& Hasher) :
+        m_Hasher{Hasher}
+    {}
+
+    void operator()(const ShadingRateAttachment& SRA) const
     {
         ASSERT_SIZEOF(SRA.TileSize, 8, "Hash logic below may be incorrect.");
-        return Diligent::ComputeHash(SRA.Attachment, SRA.TileSize[0], SRA.TileSize[1]);
-        ASSERT_SIZEOF(Diligent::ShadingRateAttachment, 16, "Did you add new members to AttachmentReference? Please handle them here.");
+        m_Hasher(SRA.Attachment, SRA.TileSize[0], SRA.TileSize[1]);
+        ASSERT_SIZEOF(SRA, 16, "Did you add new members to AttachmentReference? Please handle them here.");
     }
+
+private:
+    HasherType& m_Hasher;
 };
 
 
-
-/// Hash function specialization for Diligent::SubpassDesc structure.
-template <>
-struct hash<Diligent::SubpassDesc>
+template <typename HasherType>
+struct HashCombiner<HasherType, SubpassDesc>
 {
-    size_t operator()(const Diligent::SubpassDesc& Subpass) const
+    HashCombiner(HasherType& Hasher) :
+        m_Hasher{Hasher}
+    {}
+
+    void operator()(const SubpassDesc& Subpass) const
     {
-        auto Hash = Diligent::ComputeHash(
+        m_Hasher(
             Subpass.InputAttachmentCount,
             Subpass.RenderTargetAttachmentCount,
             Subpass.PreserveAttachmentCount);
@@ -742,7 +820,7 @@ struct hash<Diligent::SubpassDesc>
         if (Subpass.pInputAttachments != nullptr)
         {
             for (size_t i = 0; i < Subpass.InputAttachmentCount; ++i)
-                Diligent::HashCombine(Hash, Subpass.pInputAttachments[i]);
+                m_Hasher(Subpass.pInputAttachments[i]);
         }
         else
         {
@@ -752,7 +830,7 @@ struct hash<Diligent::SubpassDesc>
         if (Subpass.pRenderTargetAttachments != nullptr)
         {
             for (size_t i = 0; i < Subpass.RenderTargetAttachmentCount; ++i)
-                Diligent::HashCombine(Hash, Subpass.pRenderTargetAttachments[i]);
+                m_Hasher(Subpass.pRenderTargetAttachments[i]);
         }
         else
         {
@@ -762,16 +840,16 @@ struct hash<Diligent::SubpassDesc>
         if (Subpass.pResolveAttachments != nullptr)
         {
             for (size_t i = 0; i < Subpass.RenderTargetAttachmentCount; ++i)
-                Diligent::HashCombine(Hash, Subpass.pResolveAttachments[i]);
+                m_Hasher(Subpass.pResolveAttachments[i]);
         }
 
         if (Subpass.pDepthStencilAttachment)
-            Diligent::HashCombine(Hash, *Subpass.pDepthStencilAttachment);
+            m_Hasher(*Subpass.pDepthStencilAttachment);
 
         if (Subpass.pPreserveAttachments != nullptr)
         {
             for (size_t i = 0; i < Subpass.PreserveAttachmentCount; ++i)
-                Diligent::HashCombine(Hash, Subpass.pPreserveAttachments[i]);
+                m_Hasher(Subpass.pPreserveAttachments[i]);
         }
         else
         {
@@ -779,38 +857,50 @@ struct hash<Diligent::SubpassDesc>
         }
 
         if (Subpass.pShadingRateAttachment)
-            Diligent::HashCombine(Hash, *Subpass.pShadingRateAttachment);
+            m_Hasher(*Subpass.pShadingRateAttachment);
 
-        ASSERT_SIZEOF64(Diligent::SubpassDesc, 72, "Did you add new members to SubpassDesc? Please handle them here.");
-        return Hash;
+        ASSERT_SIZEOF64(Subpass, 72, "Did you add new members to SubpassDesc? Please handle them here.");
     }
+
+private:
+    HasherType& m_Hasher;
 };
 
-/// Hash function specialization for Diligent::SubpassDependencyDesc structure.
-template <>
-struct hash<Diligent::SubpassDependencyDesc>
+
+template <typename HasherType>
+struct HashCombiner<HasherType, SubpassDependencyDesc>
 {
-    size_t operator()(const Diligent::SubpassDependencyDesc& Dep) const
+    HashCombiner(HasherType& Hasher) :
+        m_Hasher{Hasher}
+    {}
+
+    void operator()(const SubpassDependencyDesc& Dep) const
     {
-        return Diligent::ComputeHash(
+        m_Hasher(
             Dep.SrcSubpass,
             Dep.DstSubpass,
             Dep.SrcStageMask,
             Dep.DstStageMask,
             Dep.SrcAccessMask,
             Dep.DstAccessMask);
-        ASSERT_SIZEOF(Diligent::SubpassDependencyDesc, 24, "Did you add new members to SubpassDependencyDesc? Please handle them here.");
+        ASSERT_SIZEOF(Dep, 24, "Did you add new members to SubpassDependencyDesc? Please handle them here.");
     }
+
+private:
+    HasherType& m_Hasher;
 };
 
 
-/// Hash function specialization for Diligent::RenderPassDesc structure.
-template <>
-struct hash<Diligent::RenderPassDesc>
+template <typename HasherType>
+struct HashCombiner<HasherType, RenderPassDesc>
 {
-    size_t operator()(const Diligent::RenderPassDesc& RP) const
+    HashCombiner(HasherType& Hasher) :
+        m_Hasher{Hasher}
+    {}
+
+    void operator()(const RenderPassDesc& RP) const
     {
-        auto Hash = Diligent::ComputeHash(
+        m_Hasher(
             RP.AttachmentCount,
             RP.SubpassCount,
             RP.DependencyCount);
@@ -818,7 +908,7 @@ struct hash<Diligent::RenderPassDesc>
         if (RP.pAttachments != nullptr)
         {
             for (size_t i = 0; i < RP.AttachmentCount; ++i)
-                Diligent::HashCombine(Hash, RP.pAttachments[i]);
+                m_Hasher(RP.pAttachments[i]);
         }
         else
         {
@@ -828,7 +918,7 @@ struct hash<Diligent::RenderPassDesc>
         if (RP.pSubpasses != nullptr)
         {
             for (size_t i = 0; i < RP.SubpassCount; ++i)
-                Diligent::HashCombine(Hash, RP.pSubpasses[i]);
+                m_Hasher(RP.pSubpasses[i]);
         }
         else
         {
@@ -838,30 +928,35 @@ struct hash<Diligent::RenderPassDesc>
         if (RP.pDependencies != nullptr)
         {
             for (size_t i = 0; i < RP.DependencyCount; ++i)
-                Diligent::HashCombine(Hash, RP.pDependencies[i]);
+                m_Hasher(RP.pDependencies[i]);
         }
         else
         {
             VERIFY_EXPR(RP.DependencyCount == 0);
         }
 
-        return Hash;
-        ASSERT_SIZEOF64(Diligent::RenderPassDesc, 56, "Did you add new members to RenderPassDesc? Please handle them here.");
+        ASSERT_SIZEOF64(RP, 56, "Did you add new members to RenderPassDesc? Please handle them here.");
     }
+
+private:
+    HasherType& m_Hasher;
 };
 
 
-/// Hash function specialization for Diligent::LayoutElement structure.
-template <>
-struct hash<Diligent::LayoutElement>
+template <typename HasherType>
+struct HashCombiner<HasherType, LayoutElement>
 {
-    size_t operator()(const Diligent::LayoutElement& Elem) const
+    HashCombiner(HasherType& Hasher) :
+        m_Hasher{Hasher}
+    {}
+
+    void operator()(const LayoutElement& Elem) const
     {
         ASSERT_SIZEOF(Elem.ValueType, 1, "Hash logic below may be incorrect.");
         ASSERT_SIZEOF(Elem.IsNormalized, 1, "Hash logic below may be incorrect.");
         ASSERT_SIZEOF(Elem.Frequency, 1, "Hash logic below may be incorrect.");
 
-        return Diligent::ComputeHash(
+        m_Hasher(
             Elem.HLSLSemantic,
             Elem.InputIndex,
             Elem.BufferSlot,
@@ -872,44 +967,57 @@ struct hash<Diligent::LayoutElement>
             Elem.RelativeOffset,
             Elem.Stride,
             Elem.InstanceDataStepRate);
-        ASSERT_SIZEOF64(Diligent::LayoutElement, 40, "Did you add new members to LayoutElement? Please handle them here.");
+        ASSERT_SIZEOF64(Elem, 40, "Did you add new members to LayoutElement? Please handle them here.");
     }
+
+private:
+    HasherType& m_Hasher;
 };
 
 
-/// Hash function specialization for Diligent::InputLayoutDesc structure.
-template <>
-struct hash<Diligent::InputLayoutDesc>
+template <typename HasherType>
+struct HashCombiner<HasherType, InputLayoutDesc>
 {
-    size_t operator()(const Diligent::InputLayoutDesc& Layout) const
+    HashCombiner(HasherType& Hasher) :
+        m_Hasher{Hasher}
+    {}
+
+    void operator()(const InputLayoutDesc& Layout) const
     {
-        size_t Hash = Diligent::ComputeHash(Layout.NumElements);
+        m_Hasher(Layout.NumElements);
         if (Layout.LayoutElements != nullptr)
         {
             for (size_t i = 0; i < Layout.NumElements; ++i)
-                Diligent::HashCombine(Hash, Layout.LayoutElements[i]);
+                m_Hasher(Layout.LayoutElements[i]);
         }
         else
         {
             VERIFY_EXPR(Layout.NumElements == 0);
         }
-        return Hash;
-        ASSERT_SIZEOF64(Diligent::InputLayoutDesc, 16, "Did you add new members to InputLayoutDesc? Please handle them here.");
+
+        ASSERT_SIZEOF64(Layout, 16, "Did you add new members to InputLayoutDesc? Please handle them here.");
     }
+
+private:
+    HasherType& m_Hasher;
 };
 
-/// Hash function specialization for Diligent::GraphicsPipelineDesc structure.
-template <>
-struct hash<Diligent::GraphicsPipelineDesc>
+
+template <typename HasherType>
+struct HashCombiner<HasherType, GraphicsPipelineDesc>
 {
-    size_t operator()(const Diligent::GraphicsPipelineDesc& Desc) const
+    HashCombiner(HasherType& Hasher) :
+        m_Hasher{Hasher}
+    {}
+
+    void operator()(const GraphicsPipelineDesc& Desc) const
     {
         ASSERT_SIZEOF(Desc.NumViewports, 1, "Hash logic below may be incorrect.");
         ASSERT_SIZEOF(Desc.NumRenderTargets, 1, "Hash logic below may be incorrect.");
         ASSERT_SIZEOF(Desc.SubpassIndex, 1, "Hash logic below may be incorrect.");
         ASSERT_SIZEOF(Desc.ShadingRateFlags, 1, "Hash logic below may be incorrect.");
 
-        auto Hash = Diligent::ComputeHash(
+        m_Hasher(
             Desc.BlendDesc,
             Desc.SampleMask,
             Desc.RasterizerDesc,
@@ -923,61 +1031,76 @@ struct hash<Diligent::GraphicsPipelineDesc>
              (static_cast<uint32_t>(Desc.ShadingRateFlags) << 24u)));
 
         for (size_t i = 0; i < Desc.NumRenderTargets; ++i)
-            Diligent::HashCombine(Hash, Desc.RTVFormats[i]);
+            m_Hasher(Desc.RTVFormats[i]);
 
-        Diligent::HashCombine(Hash,
-                              Desc.DSVFormat,
-                              Desc.SmplDesc,
-                              Desc.NodeMask);
+        m_Hasher(Desc.DSVFormat,
+                 Desc.SmplDesc,
+                 Desc.NodeMask);
 
         if (Desc.pRenderPass != nullptr)
-            Diligent::HashCombine(Hash, Desc.pRenderPass->GetDesc());
-
-        return Hash;
+            m_Hasher(Desc.pRenderPass->GetDesc());
     }
+
+private:
+    HasherType& m_Hasher;
 };
 
 
-/// Hash function specialization for Diligent::RayTracingPipelineDesc structure.
-template <>
-struct hash<Diligent::RayTracingPipelineDesc>
+template <typename HasherType>
+struct HashCombiner<HasherType, RayTracingPipelineDesc>
 {
-    size_t operator()(const Diligent::RayTracingPipelineDesc& Desc) const
+    HashCombiner(HasherType& Hasher) :
+        m_Hasher{Hasher}
+    {}
+
+    void operator()(const RayTracingPipelineDesc& Desc) const
     {
         ASSERT_SIZEOF(Desc.ShaderRecordSize, 2, "Hash logic below may be incorrect.");
         ASSERT_SIZEOF(Desc.MaxRecursionDepth, 1, "Hash logic below may be incorrect.");
-        return Diligent::ComputeHash(
+        m_Hasher(
             ((static_cast<uint32_t>(Desc.ShaderRecordSize) << 0u) |
              (static_cast<uint32_t>(Desc.MaxRecursionDepth) << 16u)));
-        ASSERT_SIZEOF(Diligent::RayTracingPipelineDesc, 4, "Did you add new members to RayTracingPipelineDesc? Please handle them here.");
+        ASSERT_SIZEOF(Desc, 4, "Did you add new members to RayTracingPipelineDesc? Please handle them here.");
     }
+
+private:
+    HasherType& m_Hasher;
 };
 
 
-/// Hash function specialization for Diligent::PipelineStateDesc structure.
-template <>
-struct hash<Diligent::PipelineStateDesc>
+template <typename HasherType>
+struct HashCombiner<HasherType, PipelineStateDesc>
 {
-    size_t operator()(const Diligent::PipelineStateDesc& Desc) const
+    HashCombiner(HasherType& Hasher) :
+        m_Hasher{Hasher}
+    {}
+
+    void operator()(const PipelineStateDesc& Desc) const
     {
-        return Diligent::ComputeHash(
+        m_Hasher(
             Desc.PipelineType,
             Desc.SRBAllocationGranularity,
             Desc.ImmediateContextMask,
             Desc.ResourceLayout);
     }
+
+private:
+    HasherType& m_Hasher;
 };
 
 
-/// Hash function specialization for Diligent::PipelineResourceSignatureDesc structure.
-template <>
-struct hash<Diligent::PipelineResourceSignatureDesc>
+template <typename HasherType>
+struct HashCombiner<HasherType, PipelineResourceSignatureDesc>
 {
-    size_t operator()(const Diligent::PipelineResourceSignatureDesc& Desc) const
+    HashCombiner(HasherType& Hasher) :
+        m_Hasher{Hasher}
+    {}
+
+    void operator()(const PipelineResourceSignatureDesc& Desc) const
     {
         ASSERT_SIZEOF(Desc.BindingIndex, 1, "Hash logic below may be incorrect.");
         ASSERT_SIZEOF(Desc.UseCombinedTextureSamplers, 1, "Hash logic below may be incorrect.");
-        auto Hash = Diligent::ComputeHash(
+        m_Hasher(
             Desc.NumResources,
             Desc.NumImmutableSamplers,
             ((static_cast<uint32_t>(Desc.BindingIndex) << 0u) |
@@ -987,7 +1110,7 @@ struct hash<Diligent::PipelineResourceSignatureDesc>
         if (Desc.Resources != nullptr)
         {
             for (size_t i = 0; i < Desc.NumResources; ++i)
-                Diligent::HashCombine(Hash, Desc.Resources[i]);
+                m_Hasher(Desc.Resources[i]);
         }
         else
         {
@@ -997,7 +1120,7 @@ struct hash<Diligent::PipelineResourceSignatureDesc>
         if (Desc.ImmutableSamplers != nullptr)
         {
             for (size_t i = 0; i < Desc.NumImmutableSamplers; ++i)
-                Diligent::HashCombine(Hash, Desc.ImmutableSamplers[i]);
+                m_Hasher(Desc.ImmutableSamplers[i]);
         }
         else
         {
@@ -1005,11 +1128,97 @@ struct hash<Diligent::PipelineResourceSignatureDesc>
         }
 
         if (Desc.UseCombinedTextureSamplers)
-            Diligent::HashCombine(Hash, Desc.CombinedSamplerSuffix);
+            m_Hasher(Desc.CombinedSamplerSuffix);
 
-        return Hash;
-        ASSERT_SIZEOF64(Diligent::PipelineResourceSignatureDesc, 56, "Did you add new members to PipelineResourceSignatureDesc? Please handle them here.");
+        ASSERT_SIZEOF64(Desc, 56, "Did you add new members to PipelineResourceSignatureDesc? Please handle them here.");
+    }
+
+private:
+    HasherType& m_Hasher;
+};
+
+
+struct DefaultHasher
+{
+    template <typename... ArgsType>
+    std::size_t operator()(const ArgsType&... Args) noexcept
+    {
+        HashCombine(m_Seed, Args...);
+        return m_Seed;
+    }
+
+    size_t Get() const
+    {
+        return m_Seed;
+    }
+
+private:
+    size_t m_Seed = 0;
+};
+
+template <typename Type>
+struct StdHasher
+{
+    size_t operator()(const Type& Val) const
+    {
+        DefaultHasher                     Hasher;
+        HashCombiner<DefaultHasher, Type> Combiner{Hasher};
+        Combiner(Val);
+        return Hasher.Get();
     }
 };
+
+} // namespace Diligent
+
+
+namespace std
+{
+
+template <>
+struct hash<Diligent::HashMapStringKey>
+{
+    size_t operator()(const Diligent::HashMapStringKey& Key) const noexcept
+    {
+        return Key.GetHash();
+    }
+};
+
+
+#define DEFINE_HASH(Type)                        \
+    template <>                                  \
+    struct hash<Type>                            \
+    {                                            \
+        size_t operator()(const Type& Val) const \
+        {                                        \
+            Diligent::StdHasher<Type> Hasher;    \
+            return Hasher(Val);                  \
+        }                                        \
+    }
+
+DEFINE_HASH(Diligent::SamplerDesc);
+DEFINE_HASH(Diligent::StencilOpDesc);
+DEFINE_HASH(Diligent::DepthStencilStateDesc);
+DEFINE_HASH(Diligent::RasterizerStateDesc);
+DEFINE_HASH(Diligent::BlendStateDesc);
+DEFINE_HASH(Diligent::TextureViewDesc);
+DEFINE_HASH(Diligent::SampleDesc);
+DEFINE_HASH(Diligent::ShaderResourceVariableDesc);
+DEFINE_HASH(Diligent::ImmutableSamplerDesc);
+DEFINE_HASH(Diligent::PipelineResourceDesc);
+DEFINE_HASH(Diligent::PipelineResourceLayoutDesc);
+DEFINE_HASH(Diligent::RenderPassAttachmentDesc);
+DEFINE_HASH(Diligent::AttachmentReference);
+DEFINE_HASH(Diligent::ShadingRateAttachment);
+DEFINE_HASH(Diligent::SubpassDesc);
+DEFINE_HASH(Diligent::SubpassDependencyDesc);
+DEFINE_HASH(Diligent::RenderPassDesc);
+DEFINE_HASH(Diligent::LayoutElement);
+DEFINE_HASH(Diligent::InputLayoutDesc);
+DEFINE_HASH(Diligent::GraphicsPipelineDesc);
+DEFINE_HASH(Diligent::RayTracingPipelineDesc);
+DEFINE_HASH(Diligent::PipelineStateDesc);
+DEFINE_HASH(Diligent::PipelineResourceSignatureDesc);
+
+#undef DEFINE_HASH
 
 } // namespace std

@@ -31,6 +31,7 @@
 #include "../../../Primitives/interface/BasicTypes.h"
 #include "../../../Graphics/GraphicsEngine/interface/Shader.h"
 #include "../../../Common/interface/StringTools.hpp"
+#include "../../../Common/interface/HashUtils.hpp"
 
 struct XXH3_state_s;
 
@@ -114,10 +115,47 @@ struct XXH128State final
         UpdateRaw(pStr, Len);
     }
 
+    template <typename... ArgsType>
+    void operator()(const ArgsType&... Args) noexcept
+    {
+        Update(Args...);
+    }
 
     void Update(const ShaderDesc& Desc) noexcept;
     void Update(const ShaderVersion& Ver) noexcept;
     void Update(const ShaderCreateInfo& ShaderCI) noexcept;
+
+    template <typename T>
+    typename std::enable_if<(std::is_same<typename std::remove_cv<T>::type, SamplerDesc>::value ||
+                             std::is_same<typename std::remove_cv<T>::type, StencilOpDesc>::value ||
+                             std::is_same<typename std::remove_cv<T>::type, DepthStencilStateDesc>::value ||
+                             std::is_same<typename std::remove_cv<T>::type, RasterizerStateDesc>::value ||
+                             std::is_same<typename std::remove_cv<T>::type, BlendStateDesc>::value ||
+                             std::is_same<typename std::remove_cv<T>::type, TextureViewDesc>::value ||
+                             std::is_same<typename std::remove_cv<T>::type, SampleDesc>::value ||
+                             std::is_same<typename std::remove_cv<T>::type, ShaderResourceVariableDesc>::value ||
+                             std::is_same<typename std::remove_cv<T>::type, ImmutableSamplerDesc>::value ||
+                             std::is_same<typename std::remove_cv<T>::type, PipelineResourceDesc>::value ||
+                             std::is_same<typename std::remove_cv<T>::type, PipelineResourceLayoutDesc>::value ||
+                             std::is_same<typename std::remove_cv<T>::type, RenderPassAttachmentDesc>::value ||
+                             std::is_same<typename std::remove_cv<T>::type, AttachmentReference>::value ||
+                             std::is_same<typename std::remove_cv<T>::type, ShadingRateAttachment>::value ||
+                             std::is_same<typename std::remove_cv<T>::type, SubpassDesc>::value ||
+                             std::is_same<typename std::remove_cv<T>::type, SubpassDependencyDesc>::value ||
+                             std::is_same<typename std::remove_cv<T>::type, RenderPassDesc>::value ||
+                             std::is_same<typename std::remove_cv<T>::type, LayoutElement>::value ||
+                             std::is_same<typename std::remove_cv<T>::type, InputLayoutDesc>::value ||
+                             std::is_same<typename std::remove_cv<T>::type, GraphicsPipelineDesc>::value ||
+                             std::is_same<typename std::remove_cv<T>::type, RayTracingPipelineDesc>::value ||
+                             std::is_same<typename std::remove_cv<T>::type, PipelineStateDesc>::value ||
+                             std::is_same<typename std::remove_cv<T>::type, PipelineResourceSignatureDesc>::value),
+                            void>::type
+    Update(const T& Val) noexcept
+    {
+        HashCombiner<XXH128State, T> Combiner{*this};
+        Combiner(Val);
+    }
+
 
     XXH128Hash Digest() noexcept;
 
