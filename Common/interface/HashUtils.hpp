@@ -378,14 +378,25 @@ protected:
 };
 
 
+template <typename HasherType>
+struct HashCombinerBase
+{
+    HashCombinerBase(HasherType& Hasher) :
+        m_Hasher{Hasher}
+    {}
+
+protected:
+    HasherType& m_Hasher;
+};
+
 template <typename HasherType, typename Type>
 struct HashCombiner;
 
 template <typename HasherType>
-struct HashCombiner<HasherType, SamplerDesc>
+struct HashCombiner<HasherType, SamplerDesc> : HashCombinerBase<HasherType>
 {
     HashCombiner(HasherType& Hasher) :
-        m_Hasher{Hasher}
+        HashCombinerBase<HasherType>{Hasher}
     {}
 
     void operator()(const SamplerDesc& SamDesc) const
@@ -401,7 +412,7 @@ struct HashCombiner<HasherType, SamplerDesc>
         ASSERT_SIZEOF(SamDesc.Flags, 1, "Hash logic below may be incorrect.");
         ASSERT_SIZEOF(SamDesc.BorderColor, 16, "Hash logic below may be incorrect.");
 
-        m_Hasher( // SamDesc.Name,
+        this->m_Hasher( // SamDesc.Name,
             ((static_cast<uint32_t>(SamDesc.MinFilter) << 0u) |
              (static_cast<uint32_t>(SamDesc.MagFilter) << 8u) |
              (static_cast<uint32_t>(SamDesc.MipFilter) << 24u)),
@@ -421,17 +432,14 @@ struct HashCombiner<HasherType, SamplerDesc>
             SamDesc.MaxLOD);
         ASSERT_SIZEOF64(SamDesc, 56, "Did you add new members to SamplerDesc? Please handle them here.");
     }
-
-private:
-    HasherType& m_Hasher;
 };
 
 
 template <typename HasherType>
-struct HashCombiner<HasherType, StencilOpDesc>
+struct HashCombiner<HasherType, StencilOpDesc> : HashCombinerBase<HasherType>
 {
     HashCombiner(HasherType& Hasher) :
-        m_Hasher{Hasher}
+        HashCombinerBase<HasherType>{Hasher}
     {}
 
     void operator()(const StencilOpDesc& StOpDesc) const
@@ -442,24 +450,22 @@ struct HashCombiner<HasherType, StencilOpDesc>
         ASSERT_SIZEOF(StOpDesc.StencilPassOp,      1, "Hash logic below may be incorrect.");
         ASSERT_SIZEOF(StOpDesc.StencilFunc,        1, "Hash logic below may be incorrect.");
 
-        m_Hasher(((static_cast<uint32_t>(StOpDesc.StencilFailOp)      <<  0u) |
-                  (static_cast<uint32_t>(StOpDesc.StencilDepthFailOp) <<  8u) |
-                  (static_cast<uint32_t>(StOpDesc.StencilPassOp)      << 16u) |
-                  (static_cast<uint32_t>(StOpDesc.StencilFunc)        << 24u)));
+        this->m_Hasher(
+            ((static_cast<uint32_t>(StOpDesc.StencilFailOp)      <<  0u) |
+             (static_cast<uint32_t>(StOpDesc.StencilDepthFailOp) <<  8u) |
+             (static_cast<uint32_t>(StOpDesc.StencilPassOp)      << 16u) |
+             (static_cast<uint32_t>(StOpDesc.StencilFunc)        << 24u)));
         // clang-format on
         ASSERT_SIZEOF(StOpDesc, 4, "Did you add new members to StencilOpDesc? Please handle them here.");
     }
-
-private:
-    HasherType& m_Hasher;
 };
 
 
 template <typename HasherType>
-struct HashCombiner<HasherType, DepthStencilStateDesc>
+struct HashCombiner<HasherType, DepthStencilStateDesc> : HashCombinerBase<HasherType>
 {
     HashCombiner(HasherType& Hasher) :
-        m_Hasher{Hasher}
+        HashCombinerBase<HasherType>{Hasher}
     {}
 
     void operator()(const DepthStencilStateDesc& DSSDesc) const
@@ -468,28 +474,26 @@ struct HashCombiner<HasherType, DepthStencilStateDesc>
         ASSERT_SIZEOF(DSSDesc.StencilReadMask, 1, "Hash logic below may be incorrect.");
         ASSERT_SIZEOF(DSSDesc.StencilWriteMask, 1, "Hash logic below may be incorrect.");
         // clang-format off
-        m_Hasher((((DSSDesc.DepthEnable      ? 1u : 0u) << 0u) |
-                  ((DSSDesc.DepthWriteEnable ? 1u : 0u) << 1u) |
-                  ((DSSDesc.StencilEnable    ? 1u : 0u) << 2u) |
-                  (static_cast<uint32_t>(DSSDesc.DepthFunc)        << 8u)  |
-                  (static_cast<uint32_t>(DSSDesc.StencilReadMask)  << 16u) |
-                  (static_cast<uint32_t>(DSSDesc.StencilWriteMask) << 24u)),
-                 DSSDesc.FrontFace,
-                 DSSDesc.BackFace);
+        this->m_Hasher(
+            (((DSSDesc.DepthEnable      ? 1u : 0u) << 0u) |
+             ((DSSDesc.DepthWriteEnable ? 1u : 0u) << 1u) |
+             ((DSSDesc.StencilEnable    ? 1u : 0u) << 2u) |
+             (static_cast<uint32_t>(DSSDesc.DepthFunc)        << 8u)  |
+             (static_cast<uint32_t>(DSSDesc.StencilReadMask)  << 16u) |
+             (static_cast<uint32_t>(DSSDesc.StencilWriteMask) << 24u)),
+            DSSDesc.FrontFace,
+            DSSDesc.BackFace);
         // clang-format on
         ASSERT_SIZEOF(DSSDesc, 14, "Did you add new members to DepthStencilStateDesc? Please handle them here.");
     }
-
-private:
-    HasherType& m_Hasher;
 };
 
 
 template <typename HasherType>
-struct HashCombiner<HasherType, RasterizerStateDesc>
+struct HashCombiner<HasherType, RasterizerStateDesc> : HashCombinerBase<HasherType>
 {
     HashCombiner(HasherType& Hasher) :
-        m_Hasher{Hasher}
+        HashCombinerBase<HasherType>{Hasher}
     {}
 
     void operator()(const RasterizerStateDesc& RSDesc) const
@@ -498,29 +502,27 @@ struct HashCombiner<HasherType, RasterizerStateDesc>
         ASSERT_SIZEOF(RSDesc.CullMode, 1, "Hash logic below may be incorrect.");
 
         // clang-format off
-        m_Hasher(((static_cast<uint32_t>(RSDesc.FillMode) << 0u) |
-                  (static_cast<uint32_t>(RSDesc.CullMode) << 8u) |
-                  ((RSDesc.FrontCounterClockwise ? 1u : 0u) << 16u) |
-                  ((RSDesc.DepthClipEnable       ? 1u : 0u) << 17u) |
-                  ((RSDesc.ScissorEnable         ? 1u : 0u) << 18u) |
-                  ((RSDesc.AntialiasedLineEnable ? 1u : 0u) << 19u)),
-                 RSDesc.DepthBias,
-                 RSDesc.DepthBiasClamp,
-                 RSDesc.SlopeScaledDepthBias);
+        this->m_Hasher(
+            ((static_cast<uint32_t>(RSDesc.FillMode) << 0u) |
+             (static_cast<uint32_t>(RSDesc.CullMode) << 8u) |
+             ((RSDesc.FrontCounterClockwise ? 1u : 0u) << 16u) |
+             ((RSDesc.DepthClipEnable       ? 1u : 0u) << 17u) |
+             ((RSDesc.ScissorEnable         ? 1u : 0u) << 18u) |
+             ((RSDesc.AntialiasedLineEnable ? 1u : 0u) << 19u)),
+            RSDesc.DepthBias,
+            RSDesc.DepthBiasClamp,
+            RSDesc.SlopeScaledDepthBias);
         // clang-format on
         ASSERT_SIZEOF(RSDesc, 20, "Did you add new members to RasterizerStateDesc? Please handle them here.");
     }
-
-private:
-    HasherType& m_Hasher;
 };
 
 
 template <typename HasherType>
-struct HashCombiner<HasherType, BlendStateDesc>
+struct HashCombiner<HasherType, BlendStateDesc> : HashCombinerBase<HasherType>
 {
     HashCombiner(HasherType& Hasher) :
-        m_Hasher{Hasher}
+        HashCombinerBase<HasherType>{Hasher}
     {}
 
     void operator()(const BlendStateDesc& BSDesc) const
@@ -539,34 +541,33 @@ struct HashCombiner<HasherType, BlendStateDesc>
             ASSERT_SIZEOF(rt.RenderTargetWriteMask, 1, "Hash logic below may be incorrect.");
 
             // clang-format off
-            m_Hasher((((rt.BlendEnable          ? 1u : 0u) <<  0u) |
-                      ((rt.LogicOperationEnable ? 1u : 0u) <<  1u) |
-                      (static_cast<uint32_t>(rt.SrcBlend)  <<  8u) |
-                      (static_cast<uint32_t>(rt.DestBlend) << 16u) |
-                      (static_cast<uint32_t>(rt.BlendOp)   << 24u)),
-                     ((static_cast<uint32_t>(rt.SrcBlendAlpha)  <<  0u) |
-                      (static_cast<uint32_t>(rt.DestBlendAlpha) <<  8u) |
-                      (static_cast<uint32_t>(rt.BlendOpAlpha)   << 16u) |
-                      (static_cast<uint32_t>(rt.LogicOp)        << 24u)),
-                     rt.RenderTargetWriteMask);
+            this->m_Hasher(
+                (((rt.BlendEnable          ? 1u : 0u) <<  0u) |
+                 ((rt.LogicOperationEnable ? 1u : 0u) <<  1u) |
+                 (static_cast<uint32_t>(rt.SrcBlend)  <<  8u) |
+                 (static_cast<uint32_t>(rt.DestBlend) << 16u) |
+                 (static_cast<uint32_t>(rt.BlendOp)   << 24u)),
+                ((static_cast<uint32_t>(rt.SrcBlendAlpha)  <<  0u) |
+                 (static_cast<uint32_t>(rt.DestBlendAlpha) <<  8u) |
+                 (static_cast<uint32_t>(rt.BlendOpAlpha)   << 16u) |
+                 (static_cast<uint32_t>(rt.LogicOp)        << 24u)),
+                rt.RenderTargetWriteMask);
             // clang-format on
         }
-        m_Hasher((((BSDesc.AlphaToCoverageEnable ? 1u : 0u) << 0u) |
-                  ((BSDesc.IndependentBlendEnable ? 1u : 0u) << 1u)));
+        this->m_Hasher(
+            (((BSDesc.AlphaToCoverageEnable ? 1u : 0u) << 0u) |
+             ((BSDesc.IndependentBlendEnable ? 1u : 0u) << 1u)));
 
         ASSERT_SIZEOF(BSDesc, 82, "Did you add new members to BlendStateDesc? Please handle them here.");
     }
-
-private:
-    HasherType& m_Hasher;
 };
 
 
 template <typename HasherType>
-struct HashCombiner<HasherType, TextureViewDesc>
+struct HashCombiner<HasherType, TextureViewDesc> : HashCombinerBase<HasherType>
 {
     HashCombiner(HasherType& Hasher) :
-        m_Hasher{Hasher}
+        HashCombinerBase<HasherType>{Hasher}
     {}
 
     void operator()(const TextureViewDesc& TexViewDesc) const
@@ -577,7 +578,7 @@ struct HashCombiner<HasherType, TextureViewDesc>
         ASSERT_SIZEOF(TexViewDesc.AccessFlags, 1, "Hash logic below may be incorrect.");
         ASSERT_SIZEOF(TexViewDesc.Flags, 1, "Hash logic below may be incorrect.");
 
-        m_Hasher(
+        this->m_Hasher(
             ((static_cast<uint32_t>(TexViewDesc.ViewType) << 0u) |
              (static_cast<uint32_t>(TexViewDesc.TextureDim) << 8u) |
              (static_cast<uint32_t>(TexViewDesc.Format) << 16u)),
@@ -589,17 +590,14 @@ struct HashCombiner<HasherType, TextureViewDesc>
              (static_cast<uint32_t>(TexViewDesc.Flags) << 8u)));
         ASSERT_SIZEOF64(TexViewDesc, 32, "Did you add new members to TextureViewDesc? Please handle them here.");
     }
-
-private:
-    HasherType& m_Hasher;
 };
 
 
 template <typename HasherType>
-struct HashCombiner<HasherType, SampleDesc>
+struct HashCombiner<HasherType, SampleDesc> : HashCombinerBase<HasherType>
 {
     HashCombiner(HasherType& Hasher) :
-        m_Hasher{Hasher}
+        HashCombinerBase<HasherType>{Hasher}
     {}
 
     void operator()(const SampleDesc& SmplDesc) const
@@ -607,22 +605,19 @@ struct HashCombiner<HasherType, SampleDesc>
         ASSERT_SIZEOF(SmplDesc.Count, 1, "Hash logic below may be incorrect.");
         ASSERT_SIZEOF(SmplDesc.Quality, 1, "Hash logic below may be incorrect.");
 
-        m_Hasher(
+        this->m_Hasher(
             ((static_cast<uint32_t>(SmplDesc.Count) << 0u) |
              (static_cast<uint32_t>(SmplDesc.Quality) << 8u)));
         ASSERT_SIZEOF(SmplDesc, 2, "Did you add new members to SampleDesc? Please handle them here.");
     }
-
-private:
-    HasherType& m_Hasher;
 };
 
 
 template <typename HasherType>
-struct HashCombiner<HasherType, ShaderResourceVariableDesc>
+struct HashCombiner<HasherType, ShaderResourceVariableDesc> : HashCombinerBase<HasherType>
 {
     HashCombiner(HasherType& Hasher) :
-        m_Hasher{Hasher}
+        HashCombinerBase<HasherType>{Hasher}
     {}
 
     void operator()(const ShaderResourceVariableDesc& VarDesc) const
@@ -630,42 +625,36 @@ struct HashCombiner<HasherType, ShaderResourceVariableDesc>
         ASSERT_SIZEOF(VarDesc.Type, 1, "Hash logic below may be incorrect.");
         ASSERT_SIZEOF(VarDesc.Flags, 1, "Hash logic below may be incorrect.");
 
-        m_Hasher(
+        this->m_Hasher(
             VarDesc.Name,
             VarDesc.ShaderStages,
             ((static_cast<uint32_t>(VarDesc.Type) << 0u) |
              (static_cast<uint32_t>(VarDesc.Flags) << 8u)));
         ASSERT_SIZEOF64(VarDesc, 16, "Did you add new members to ShaderResourceVariableDesc? Please handle them here.");
     }
-
-private:
-    HasherType& m_Hasher;
 };
 
 
 template <typename HasherType>
-struct HashCombiner<HasherType, ImmutableSamplerDesc>
+struct HashCombiner<HasherType, ImmutableSamplerDesc> : HashCombinerBase<HasherType>
 {
     HashCombiner(HasherType& Hasher) :
-        m_Hasher{Hasher}
+        HashCombinerBase<HasherType>{Hasher}
     {}
 
     void operator()(const ImmutableSamplerDesc& SamDesc) const
     {
-        m_Hasher(SamDesc.ShaderStages, SamDesc.SamplerOrTextureName, SamDesc.Desc);
+        this->m_Hasher(SamDesc.ShaderStages, SamDesc.SamplerOrTextureName, SamDesc.Desc);
         ASSERT_SIZEOF64(SamDesc, 16 + sizeof(SamplerDesc), "Did you add new members to ImmutableSamplerDesc? Please handle them here.");
     }
-
-private:
-    HasherType& m_Hasher;
 };
 
 
 template <typename HasherType>
-struct HashCombiner<HasherType, PipelineResourceDesc>
+struct HashCombiner<HasherType, PipelineResourceDesc> : HashCombinerBase<HasherType>
 {
     HashCombiner(HasherType& Hasher) :
-        m_Hasher{Hasher}
+        HashCombinerBase<HasherType>{Hasher}
     {}
 
     void operator()(const PipelineResourceDesc& ResDesc) const
@@ -674,7 +663,7 @@ struct HashCombiner<HasherType, PipelineResourceDesc>
         ASSERT_SIZEOF(ResDesc.VarType, 1, "Hash logic below may be incorrect.");
         ASSERT_SIZEOF(ResDesc.Flags, 1, "Hash logic below may be incorrect.");
 
-        m_Hasher(
+        this->m_Hasher(
             ResDesc.Name,
             ResDesc.ShaderStages,
             ResDesc.ArraySize,
@@ -683,22 +672,19 @@ struct HashCombiner<HasherType, PipelineResourceDesc>
              (static_cast<uint32_t>(ResDesc.Flags) << 16u)));
         ASSERT_SIZEOF64(ResDesc, 24, "Did you add new members to PipelineResourceDesc? Please handle them here.");
     }
-
-private:
-    HasherType& m_Hasher;
 };
 
 
 template <typename HasherType>
-struct HashCombiner<HasherType, PipelineResourceLayoutDesc>
+struct HashCombiner<HasherType, PipelineResourceLayoutDesc> : HashCombinerBase<HasherType>
 {
     HashCombiner(HasherType& Hasher) :
-        m_Hasher{Hasher}
+        HashCombinerBase<HasherType>{Hasher}
     {}
 
     void operator()(const PipelineResourceLayoutDesc& LayoutDesc) const
     {
-        m_Hasher(
+        this->m_Hasher(
             LayoutDesc.DefaultVariableType,
             LayoutDesc.DefaultVariableMergeStages,
             LayoutDesc.NumVariables,
@@ -707,7 +693,7 @@ struct HashCombiner<HasherType, PipelineResourceLayoutDesc>
         if (LayoutDesc.Variables != nullptr)
         {
             for (size_t i = 0; i < LayoutDesc.NumVariables; ++i)
-                m_Hasher(LayoutDesc.Variables[i]);
+                this->m_Hasher(LayoutDesc.Variables[i]);
         }
         else
         {
@@ -717,7 +703,7 @@ struct HashCombiner<HasherType, PipelineResourceLayoutDesc>
         if (LayoutDesc.ImmutableSamplers != nullptr)
         {
             for (size_t i = 0; i < LayoutDesc.NumImmutableSamplers; ++i)
-                m_Hasher(LayoutDesc.ImmutableSamplers[i]);
+                this->m_Hasher(LayoutDesc.ImmutableSamplers[i]);
         }
         else
         {
@@ -726,18 +712,15 @@ struct HashCombiner<HasherType, PipelineResourceLayoutDesc>
 
         ASSERT_SIZEOF64(LayoutDesc, 40, "Did you add new members to PipelineResourceDesc? Please handle them here.");
     }
-
-private:
-    HasherType& m_Hasher;
 };
 
 
 
 template <typename HasherType>
-struct HashCombiner<HasherType, RenderPassAttachmentDesc>
+struct HashCombiner<HasherType, RenderPassAttachmentDesc> : HashCombinerBase<HasherType>
 {
     HashCombiner(HasherType& Hasher) :
-        m_Hasher{Hasher}
+        HashCombinerBase<HasherType>{Hasher}
     {}
 
     void operator()(const RenderPassAttachmentDesc& Desc) const
@@ -749,7 +732,7 @@ struct HashCombiner<HasherType, RenderPassAttachmentDesc>
         ASSERT_SIZEOF(Desc.StencilLoadOp, 1, "Hash logic below may be incorrect.");
         ASSERT_SIZEOF(Desc.StencilStoreOp, 1, "Hash logic below may be incorrect.");
 
-        m_Hasher(
+        this->m_Hasher(
             ((static_cast<uint32_t>(Desc.Format) << 0u) |
              (static_cast<uint32_t>(Desc.SampleCount) << 16u) |
              (static_cast<uint32_t>(Desc.LoadOp) << 24u)),
@@ -760,59 +743,50 @@ struct HashCombiner<HasherType, RenderPassAttachmentDesc>
             Desc.FinalState);
         ASSERT_SIZEOF(Desc, 16, "Did you add new members to RenderPassAttachmentDesc? Please handle them here.");
     }
-
-private:
-    HasherType& m_Hasher;
 };
 
 
 template <typename HasherType>
-struct HashCombiner<HasherType, AttachmentReference>
+struct HashCombiner<HasherType, AttachmentReference> : HashCombinerBase<HasherType>
 {
     HashCombiner(HasherType& Hasher) :
-        m_Hasher{Hasher}
+        HashCombinerBase<HasherType>{Hasher}
     {}
 
     void operator()(const AttachmentReference& Ref) const
     {
-        m_Hasher(Ref.AttachmentIndex, Ref.State);
+        this->m_Hasher(Ref.AttachmentIndex, Ref.State);
         ASSERT_SIZEOF(Ref, 8, "Did you add new members to AttachmentReference? Please handle them here.");
     }
-
-private:
-    HasherType& m_Hasher;
 };
 
 
 template <typename HasherType>
-struct HashCombiner<HasherType, ShadingRateAttachment>
+struct HashCombiner<HasherType, ShadingRateAttachment> : HashCombinerBase<HasherType>
 {
     HashCombiner(HasherType& Hasher) :
-        m_Hasher{Hasher}
+        HashCombinerBase<HasherType>{Hasher}
     {}
 
     void operator()(const ShadingRateAttachment& SRA) const
     {
         ASSERT_SIZEOF(SRA.TileSize, 8, "Hash logic below may be incorrect.");
-        m_Hasher(SRA.Attachment, SRA.TileSize[0], SRA.TileSize[1]);
+        this->m_Hasher(SRA.Attachment, SRA.TileSize[0], SRA.TileSize[1]);
         ASSERT_SIZEOF(SRA, 16, "Did you add new members to AttachmentReference? Please handle them here.");
     }
-
-private:
-    HasherType& m_Hasher;
 };
 
 
 template <typename HasherType>
-struct HashCombiner<HasherType, SubpassDesc>
+struct HashCombiner<HasherType, SubpassDesc> : HashCombinerBase<HasherType>
 {
     HashCombiner(HasherType& Hasher) :
-        m_Hasher{Hasher}
+        HashCombinerBase<HasherType>{Hasher}
     {}
 
     void operator()(const SubpassDesc& Subpass) const
     {
-        m_Hasher(
+        this->m_Hasher(
             Subpass.InputAttachmentCount,
             Subpass.RenderTargetAttachmentCount,
             Subpass.PreserveAttachmentCount);
@@ -820,7 +794,7 @@ struct HashCombiner<HasherType, SubpassDesc>
         if (Subpass.pInputAttachments != nullptr)
         {
             for (size_t i = 0; i < Subpass.InputAttachmentCount; ++i)
-                m_Hasher(Subpass.pInputAttachments[i]);
+                this->m_Hasher(Subpass.pInputAttachments[i]);
         }
         else
         {
@@ -830,7 +804,7 @@ struct HashCombiner<HasherType, SubpassDesc>
         if (Subpass.pRenderTargetAttachments != nullptr)
         {
             for (size_t i = 0; i < Subpass.RenderTargetAttachmentCount; ++i)
-                m_Hasher(Subpass.pRenderTargetAttachments[i]);
+                this->m_Hasher(Subpass.pRenderTargetAttachments[i]);
         }
         else
         {
@@ -840,16 +814,16 @@ struct HashCombiner<HasherType, SubpassDesc>
         if (Subpass.pResolveAttachments != nullptr)
         {
             for (size_t i = 0; i < Subpass.RenderTargetAttachmentCount; ++i)
-                m_Hasher(Subpass.pResolveAttachments[i]);
+                this->m_Hasher(Subpass.pResolveAttachments[i]);
         }
 
         if (Subpass.pDepthStencilAttachment)
-            m_Hasher(*Subpass.pDepthStencilAttachment);
+            this->m_Hasher(*Subpass.pDepthStencilAttachment);
 
         if (Subpass.pPreserveAttachments != nullptr)
         {
             for (size_t i = 0; i < Subpass.PreserveAttachmentCount; ++i)
-                m_Hasher(Subpass.pPreserveAttachments[i]);
+                this->m_Hasher(Subpass.pPreserveAttachments[i]);
         }
         else
         {
@@ -857,26 +831,23 @@ struct HashCombiner<HasherType, SubpassDesc>
         }
 
         if (Subpass.pShadingRateAttachment)
-            m_Hasher(*Subpass.pShadingRateAttachment);
+            this->m_Hasher(*Subpass.pShadingRateAttachment);
 
         ASSERT_SIZEOF64(Subpass, 72, "Did you add new members to SubpassDesc? Please handle them here.");
     }
-
-private:
-    HasherType& m_Hasher;
 };
 
 
 template <typename HasherType>
-struct HashCombiner<HasherType, SubpassDependencyDesc>
+struct HashCombiner<HasherType, SubpassDependencyDesc> : HashCombinerBase<HasherType>
 {
     HashCombiner(HasherType& Hasher) :
-        m_Hasher{Hasher}
+        HashCombinerBase<HasherType>{Hasher}
     {}
 
     void operator()(const SubpassDependencyDesc& Dep) const
     {
-        m_Hasher(
+        this->m_Hasher(
             Dep.SrcSubpass,
             Dep.DstSubpass,
             Dep.SrcStageMask,
@@ -885,22 +856,19 @@ struct HashCombiner<HasherType, SubpassDependencyDesc>
             Dep.DstAccessMask);
         ASSERT_SIZEOF(Dep, 24, "Did you add new members to SubpassDependencyDesc? Please handle them here.");
     }
-
-private:
-    HasherType& m_Hasher;
 };
 
 
 template <typename HasherType>
-struct HashCombiner<HasherType, RenderPassDesc>
+struct HashCombiner<HasherType, RenderPassDesc> : HashCombinerBase<HasherType>
 {
     HashCombiner(HasherType& Hasher) :
-        m_Hasher{Hasher}
+        HashCombinerBase<HasherType>{Hasher}
     {}
 
     void operator()(const RenderPassDesc& RP) const
     {
-        m_Hasher(
+        this->m_Hasher(
             RP.AttachmentCount,
             RP.SubpassCount,
             RP.DependencyCount);
@@ -908,7 +876,7 @@ struct HashCombiner<HasherType, RenderPassDesc>
         if (RP.pAttachments != nullptr)
         {
             for (size_t i = 0; i < RP.AttachmentCount; ++i)
-                m_Hasher(RP.pAttachments[i]);
+                this->m_Hasher(RP.pAttachments[i]);
         }
         else
         {
@@ -918,7 +886,7 @@ struct HashCombiner<HasherType, RenderPassDesc>
         if (RP.pSubpasses != nullptr)
         {
             for (size_t i = 0; i < RP.SubpassCount; ++i)
-                m_Hasher(RP.pSubpasses[i]);
+                this->m_Hasher(RP.pSubpasses[i]);
         }
         else
         {
@@ -928,7 +896,7 @@ struct HashCombiner<HasherType, RenderPassDesc>
         if (RP.pDependencies != nullptr)
         {
             for (size_t i = 0; i < RP.DependencyCount; ++i)
-                m_Hasher(RP.pDependencies[i]);
+                this->m_Hasher(RP.pDependencies[i]);
         }
         else
         {
@@ -937,17 +905,14 @@ struct HashCombiner<HasherType, RenderPassDesc>
 
         ASSERT_SIZEOF64(RP, 56, "Did you add new members to RenderPassDesc? Please handle them here.");
     }
-
-private:
-    HasherType& m_Hasher;
 };
 
 
 template <typename HasherType>
-struct HashCombiner<HasherType, LayoutElement>
+struct HashCombiner<HasherType, LayoutElement> : HashCombinerBase<HasherType>
 {
     HashCombiner(HasherType& Hasher) :
-        m_Hasher{Hasher}
+        HashCombinerBase<HasherType>{Hasher}
     {}
 
     void operator()(const LayoutElement& Elem) const
@@ -956,7 +921,7 @@ struct HashCombiner<HasherType, LayoutElement>
         ASSERT_SIZEOF(Elem.IsNormalized, 1, "Hash logic below may be incorrect.");
         ASSERT_SIZEOF(Elem.Frequency, 1, "Hash logic below may be incorrect.");
 
-        m_Hasher(
+        this->m_Hasher(
             Elem.HLSLSemantic,
             Elem.InputIndex,
             Elem.BufferSlot,
@@ -969,26 +934,23 @@ struct HashCombiner<HasherType, LayoutElement>
             Elem.InstanceDataStepRate);
         ASSERT_SIZEOF64(Elem, 40, "Did you add new members to LayoutElement? Please handle them here.");
     }
-
-private:
-    HasherType& m_Hasher;
 };
 
 
 template <typename HasherType>
-struct HashCombiner<HasherType, InputLayoutDesc>
+struct HashCombiner<HasherType, InputLayoutDesc> : HashCombinerBase<HasherType>
 {
     HashCombiner(HasherType& Hasher) :
-        m_Hasher{Hasher}
+        HashCombinerBase<HasherType>{Hasher}
     {}
 
     void operator()(const InputLayoutDesc& Layout) const
     {
-        m_Hasher(Layout.NumElements);
+        this->m_Hasher(Layout.NumElements);
         if (Layout.LayoutElements != nullptr)
         {
             for (size_t i = 0; i < Layout.NumElements; ++i)
-                m_Hasher(Layout.LayoutElements[i]);
+                this->m_Hasher(Layout.LayoutElements[i]);
         }
         else
         {
@@ -997,17 +959,14 @@ struct HashCombiner<HasherType, InputLayoutDesc>
 
         ASSERT_SIZEOF64(Layout, 16, "Did you add new members to InputLayoutDesc? Please handle them here.");
     }
-
-private:
-    HasherType& m_Hasher;
 };
 
 
 template <typename HasherType>
-struct HashCombiner<HasherType, GraphicsPipelineDesc>
+struct HashCombiner<HasherType, GraphicsPipelineDesc> : HashCombinerBase<HasherType>
 {
     HashCombiner(HasherType& Hasher) :
-        m_Hasher{Hasher}
+        HashCombinerBase<HasherType>{Hasher}
     {}
 
     void operator()(const GraphicsPipelineDesc& Desc) const
@@ -1017,7 +976,7 @@ struct HashCombiner<HasherType, GraphicsPipelineDesc>
         ASSERT_SIZEOF(Desc.SubpassIndex, 1, "Hash logic below may be incorrect.");
         ASSERT_SIZEOF(Desc.ShadingRateFlags, 1, "Hash logic below may be incorrect.");
 
-        m_Hasher(
+        this->m_Hasher(
             Desc.BlendDesc,
             Desc.SampleMask,
             Desc.RasterizerDesc,
@@ -1031,76 +990,67 @@ struct HashCombiner<HasherType, GraphicsPipelineDesc>
              (static_cast<uint32_t>(Desc.ShadingRateFlags) << 24u)));
 
         for (size_t i = 0; i < Desc.NumRenderTargets; ++i)
-            m_Hasher(Desc.RTVFormats[i]);
+            this->m_Hasher(Desc.RTVFormats[i]);
 
-        m_Hasher(Desc.DSVFormat,
-                 Desc.SmplDesc,
-                 Desc.NodeMask);
+        this->m_Hasher(Desc.DSVFormat,
+                       Desc.SmplDesc,
+                       Desc.NodeMask);
 
         if (Desc.pRenderPass != nullptr)
-            m_Hasher(Desc.pRenderPass->GetDesc());
+            this->m_Hasher(Desc.pRenderPass->GetDesc());
     }
-
-private:
-    HasherType& m_Hasher;
 };
 
 
 template <typename HasherType>
-struct HashCombiner<HasherType, RayTracingPipelineDesc>
+struct HashCombiner<HasherType, RayTracingPipelineDesc> : HashCombinerBase<HasherType>
 {
     HashCombiner(HasherType& Hasher) :
-        m_Hasher{Hasher}
+        HashCombinerBase<HasherType>{Hasher}
     {}
 
     void operator()(const RayTracingPipelineDesc& Desc) const
     {
         ASSERT_SIZEOF(Desc.ShaderRecordSize, 2, "Hash logic below may be incorrect.");
         ASSERT_SIZEOF(Desc.MaxRecursionDepth, 1, "Hash logic below may be incorrect.");
-        m_Hasher(
+        this->m_Hasher(
             ((static_cast<uint32_t>(Desc.ShaderRecordSize) << 0u) |
              (static_cast<uint32_t>(Desc.MaxRecursionDepth) << 16u)));
         ASSERT_SIZEOF(Desc, 4, "Did you add new members to RayTracingPipelineDesc? Please handle them here.");
     }
-
-private:
-    HasherType& m_Hasher;
 };
 
 
 template <typename HasherType>
-struct HashCombiner<HasherType, PipelineStateDesc>
+struct HashCombiner<HasherType, PipelineStateDesc> : HashCombinerBase<HasherType>
 {
     HashCombiner(HasherType& Hasher) :
-        m_Hasher{Hasher}
+        HashCombinerBase<HasherType>{Hasher}
     {}
 
     void operator()(const PipelineStateDesc& Desc) const
     {
-        m_Hasher(
+        this->m_Hasher(
             Desc.PipelineType,
             Desc.SRBAllocationGranularity,
             Desc.ImmediateContextMask,
             Desc.ResourceLayout);
     }
-
-private:
-    HasherType& m_Hasher;
 };
 
 
 template <typename HasherType>
-struct HashCombiner<HasherType, PipelineResourceSignatureDesc>
+struct HashCombiner<HasherType, PipelineResourceSignatureDesc> : HashCombinerBase<HasherType>
 {
     HashCombiner(HasherType& Hasher) :
-        m_Hasher{Hasher}
+        HashCombinerBase<HasherType>{Hasher}
     {}
 
     void operator()(const PipelineResourceSignatureDesc& Desc) const
     {
         ASSERT_SIZEOF(Desc.BindingIndex, 1, "Hash logic below may be incorrect.");
         ASSERT_SIZEOF(Desc.UseCombinedTextureSamplers, 1, "Hash logic below may be incorrect.");
-        m_Hasher(
+        this->m_Hasher(
             Desc.NumResources,
             Desc.NumImmutableSamplers,
             ((static_cast<uint32_t>(Desc.BindingIndex) << 0u) |
@@ -1110,7 +1060,7 @@ struct HashCombiner<HasherType, PipelineResourceSignatureDesc>
         if (Desc.Resources != nullptr)
         {
             for (size_t i = 0; i < Desc.NumResources; ++i)
-                m_Hasher(Desc.Resources[i]);
+                this->m_Hasher(Desc.Resources[i]);
         }
         else
         {
@@ -1120,7 +1070,7 @@ struct HashCombiner<HasherType, PipelineResourceSignatureDesc>
         if (Desc.ImmutableSamplers != nullptr)
         {
             for (size_t i = 0; i < Desc.NumImmutableSamplers; ++i)
-                m_Hasher(Desc.ImmutableSamplers[i]);
+                this->m_Hasher(Desc.ImmutableSamplers[i]);
         }
         else
         {
@@ -1128,13 +1078,10 @@ struct HashCombiner<HasherType, PipelineResourceSignatureDesc>
         }
 
         if (Desc.UseCombinedTextureSamplers)
-            m_Hasher(Desc.CombinedSamplerSuffix);
+            this->m_Hasher(Desc.CombinedSamplerSuffix);
 
         ASSERT_SIZEOF64(Desc, 56, "Did you add new members to PipelineResourceSignatureDesc? Please handle them here.");
     }
-
-private:
-    HasherType& m_Hasher;
 };
 
 
