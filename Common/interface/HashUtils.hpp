@@ -84,7 +84,7 @@ constexpr uint64_t twang_mix64(uint64_t key) noexcept
 }
 
 template <typename T>
-typename std::enable_if<std::is_fundamental<T>::value && sizeof(T) == 8, size_t>::type ComputeHash(const T& Val) noexcept
+typename std::enable_if<(std::is_fundamental<T>::value || std::is_enum<T>::value) && sizeof(T) == 8, size_t>::type ComputeHash(const T& Val) noexcept
 {
     uint64_t Val64 = 0;
     std::memcpy(&Val64, &Val, sizeof(Val));
@@ -92,7 +92,7 @@ typename std::enable_if<std::is_fundamental<T>::value && sizeof(T) == 8, size_t>
 }
 
 template <typename T>
-typename std::enable_if<std::is_fundamental<T>::value && sizeof(T) <= 4, size_t>::type ComputeHash(const T& Val) noexcept
+typename std::enable_if<(std::is_fundamental<T>::value || std::is_enum<T>::value) && sizeof(T) <= 4, size_t>::type ComputeHash(const T& Val) noexcept
 {
     uint32_t Val32 = 0;
     std::memcpy(&Val32, &Val, sizeof(Val));
@@ -100,7 +100,7 @@ typename std::enable_if<std::is_fundamental<T>::value && sizeof(T) <= 4, size_t>
 }
 
 template <typename T>
-typename std::enable_if<!std::is_fundamental<T>::value, size_t>::type ComputeHash(const T& Val) noexcept
+typename std::enable_if<!(std::is_fundamental<T>::value || std::is_enum<T>::value), size_t>::type ComputeHash(const T& Val) noexcept
 {
     return std::hash<T>{}(Val);
 }

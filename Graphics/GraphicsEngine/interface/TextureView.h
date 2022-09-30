@@ -180,7 +180,8 @@ struct TextureViewDesc DILIGENT_DERIVE(DeviceObjectAttribs)
             NumMipLevels == RHS.NumMipLevels &&
             FirstArrayOrDepthSlice() == RHS.FirstArrayOrDepthSlice() &&
             NumArrayOrDepthSlices() == RHS.NumArrayOrDepthSlices() &&
-            AccessFlags == RHS.AccessFlags;
+            AccessFlags == RHS.AccessFlags &&
+            Flags == RHS.Flags;
     }
     constexpr bool operator!=(const TextureViewDesc& RHS) const
     {
