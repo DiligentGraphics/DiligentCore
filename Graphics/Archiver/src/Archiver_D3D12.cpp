@@ -54,6 +54,7 @@ struct CompiledShaderD3D12 final : SerializedShaderImpl::CompiledShader
 
         ShaderCI.Source       = nullptr;
         ShaderCI.FilePath     = nullptr;
+        ShaderCI.Macros       = nullptr;
         ShaderCI.ByteCode     = pBytecode->GetBufferPointer();
         ShaderCI.ByteCodeSize = pBytecode->GetBufferSize();
         return SerializedShaderImpl::SerializeCreateInfo(ShaderCI);
@@ -149,6 +150,7 @@ void SerializedPipelineStateImpl::PatchShadersD3D12(const CreateInfoType& Create
             auto        ShaderCI  = ShaderStages[j].Serialized[i]->GetCreateInfo();
             ShaderCI.Source       = nullptr;
             ShaderCI.FilePath     = nullptr;
+            ShaderCI.Macros       = nullptr;
             ShaderCI.ByteCode     = pBytecode->GetBufferPointer();
             ShaderCI.ByteCodeSize = pBytecode->GetBufferSize();
             SerializeShaderCreateInfo(DeviceType::Direct3D12, ShaderCI);

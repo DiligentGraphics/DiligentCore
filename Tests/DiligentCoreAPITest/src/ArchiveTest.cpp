@@ -635,7 +635,7 @@ void CreateGraphicsShaders(IRenderDevice*        pDevice,
     const auto* pEnv = GPUTestingEnvironment::GetInstance();
 
     ShaderMacroHelper Macros;
-    Macros.AddShaderMacro("TEST_MACRO", 1u);
+    Macros.AddShaderMacro("TEST_MACRO", 1);
 
     VertexShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
     VertexShaderCI.ShaderCompiler             = pEnv->GetDefaultCompiler(VertexShaderCI.SourceLanguage);
