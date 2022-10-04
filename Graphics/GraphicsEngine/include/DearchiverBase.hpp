@@ -65,6 +65,10 @@ public:
     /// Implementation of IDearchiver::LoadArchive().
     virtual bool DILIGENT_CALL_TYPE LoadArchive(const IDataBlob* pArchiveData, bool MakeCopy) override final;
 
+    /// Implementation of IDearchiver::UnpackShader().
+    virtual void DILIGENT_CALL_TYPE UnpackShader(const ShaderUnpackInfo& UnpackInfo,
+                                                 IShader**               ppShader) override final;
+
     /// Implementation of IDearchiver::UnpackPipelineState().
     virtual void DILIGENT_CALL_TYPE UnpackPipelineState(const PipelineStateUnpackInfo& DeArchiveInfo,
                                                         IPipelineState**               ppPSO) override final;
@@ -171,7 +175,7 @@ private:
 
     struct ArchiveData
     {
-        ArchiveData(std::unique_ptr<DeviceObjectArchive>&& _pObjArchive) :
+        explicit ArchiveData(std::unique_ptr<DeviceObjectArchive>&& _pObjArchive) noexcept :
             pObjArchive{std::move(_pObjArchive)}
         {}
         // clang-format off
@@ -199,6 +203,8 @@ private:
 
     template <typename CreateInfoType>
     void UnpackPipelineStateImpl(const PipelineStateUnpackInfo& UnpackInfo, IPipelineState** ppPSO);
+
+    ArchiveData* FindArchive(ResourceType ResType, const char* ResName);
 
 private:
     // Resource type and name -> archive index that contains this resource.

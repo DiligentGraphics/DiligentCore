@@ -51,13 +51,24 @@ struct SerializedResourceSignatureImpl::SignatureTraits<PipelineResourceSignatur
 namespace
 {
 
-struct CompiledShaderD3D11 : SerializedShaderImpl::CompiledShader
+struct CompiledShaderD3D11 final : SerializedShaderImpl::CompiledShader
 {
     ShaderD3D11Impl ShaderD3D11;
 
     CompiledShaderD3D11(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI, const ShaderD3D11Impl::CreateInfo& D3D11ShaderCI) :
         ShaderD3D11{pRefCounters, nullptr, ShaderCI, D3D11ShaderCI, true}
     {}
+
+    virtual SerializedData Serialize(ShaderCreateInfo ShaderCI) const override final
+    {
+        const auto& pBytecode = ShaderD3D11.GetD3DBytecode();
+
+        ShaderCI.Source       = nullptr;
+        ShaderCI.FilePath     = nullptr;
+        ShaderCI.ByteCode     = pBytecode->GetBufferPointer();
+        ShaderCI.ByteCodeSize = pBytecode->GetBufferSize();
+        return SerializedShaderImpl::SerializeCreateInfo(ShaderCI);
+    }
 };
 
 struct ShaderStageInfoD3D11

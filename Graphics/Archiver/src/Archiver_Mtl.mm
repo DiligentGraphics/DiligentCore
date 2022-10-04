@@ -276,6 +276,23 @@ struct CompiledShaderMtl final : SerializedShaderImpl::CompiledShader
         ParsedMsl = ShaderMtlImpl::ParseMSL(MSLData);
     }
 
+    virtual SerializedData Serialize(ShaderCreateInfo ShaderCI) const override final
+    {
+        const auto Source = ParsedMsl.pParser->BuildSource();
+        
+        ShaderCI.FilePath       = nullptr;
+        ShaderCI.ByteCode       = nullptr;
+        ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_MSL;
+        ShaderCI.Source         = Source.c_str();
+        ShaderCI.SourceLength   = Source.length();
+        
+        //const auto UnrolledSource = UnrollShaderIncludes(ShaderCI);
+        //ShaderCI.Source           = UnrolledSource.c_str();
+        //ShaderCI.SourceLength     = UnrolledSource.length();
+        
+        return SerializedShaderImpl::SerializeCreateInfo(ShaderCI);
+    }
+    
     MSLParseData  MSLData;
     ParsedMSLInfo ParsedMsl;
 };

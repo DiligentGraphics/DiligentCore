@@ -1906,6 +1906,10 @@ struct Version
     {
         return Major == rhs.Major && Minor == rhs.Minor;
     }
+    constexpr bool operator!=(const Version& rhs) const
+    {
+        return !(*this == rhs);
+    }
 
     constexpr bool operator>(const Version& rhs) const
     {

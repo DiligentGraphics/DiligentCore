@@ -43,6 +43,17 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // clang-format off
 
+/// Shader unpack parameters
+struct ShaderUnpackInfo
+{
+    struct IRenderDevice* pDevice DEFAULT_INITIALIZER(nullptr);
+
+    /// Name of the shader to unpack.
+    const char* Name DEFAULT_INITIALIZER(nullptr);
+};
+typedef struct ShaderUnpackInfo ShaderUnpackInfo;
+
+
 /// Resource signature unpack parameters
 struct ResourceSignatureUnpackInfo
 {
@@ -222,6 +233,19 @@ DILIGENT_BEGIN_INTERFACE(IDearchiver, IObject)
                                      const IDataBlob* pArchive,
                                      bool             MakeCopy DEFAULT_VALUE(false)) PURE;
 
+    /// Unpacks a shader from the device object archive.
+
+    /// \param [in]  UnpackInfo - Shader unpack info, see Diligent::ShaderUnpackInfo.
+    /// \param [out] ppShader   - Address of the memory location where a pointer to the
+    ///                           unpacked shader object will be stored.
+    ///                           The function calls AddRef(), so that the shader object will have
+    ///                           one reference.
+    ///
+    /// \note   This method is thread-safe.
+    VIRTUAL void METHOD(UnpackShader)(THIS_
+                                      const ShaderUnpackInfo REF UnpackInfo,
+                                      IShader**                  ppShader) PURE;
+
     /// Unpacks a pipeline state object from the device object archive.
 
     /// \param [in]  UnpackInfo - Pipeline state unpack info, see Diligent::PipelineStateUnpackInfo.
@@ -276,6 +300,7 @@ DILIGENT_END_INTERFACE
 #if DILIGENT_C_INTERFACE
 
 #    define IDearchiver_LoadArchive(This, ...)             CALL_IFACE_METHOD(Dearchiver, LoadArchive,             This, __VA_ARGS__)
+#    define IDearchiver_UnpackShader(This, ...)            CALL_IFACE_METHOD(Dearchiver, UnpackShader,            This, __VA_ARGS__)
 #    define IDearchiver_UnpackPipelineState(This, ...)     CALL_IFACE_METHOD(Dearchiver, UnpackPipelineState,     This, __VA_ARGS__)
 #    define IDearchiver_UnpackResourceSignature(This, ...) CALL_IFACE_METHOD(Dearchiver, UnpackResourceSignature, This, __VA_ARGS__)
 #    define IDearchiver_UnpackRenderPass(This, ...)        CALL_IFACE_METHOD(Dearchiver, UnpackRenderPass,        This, __VA_ARGS__)

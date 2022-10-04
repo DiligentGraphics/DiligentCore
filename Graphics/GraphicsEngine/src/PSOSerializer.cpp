@@ -463,7 +463,7 @@ template <SerializerMode Mode>
 bool ShaderSerializer<Mode>::SerializeBytecodeOrSource(Serializer<Mode>&            Ser,
                                                        ConstQual<ShaderCreateInfo>& CI)
 {
-    VERIFY((CI.Source != nullptr) ^ (CI.ByteCode != nullptr), "Only one of Source or Bytecode must not be null");
+    VERIFY(CI.Source == nullptr || CI.ByteCode == nullptr, "Only one of Source or Bytecode can be non-null");
     const Uint8 UseBytecode = CI.ByteCode != nullptr ? 1 : 0;
 
     if (!Ser(UseBytecode))

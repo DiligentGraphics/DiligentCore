@@ -623,6 +623,62 @@ std::array<RefCntAutoPtr<ITexture>, 3> CreateTestGBuffer(GPUTestingEnvironment* 
     return GBuffer;
 }
 
+void CreateGraphicsShaders(IRenderDevice*        pDevice,
+                           ISerializationDevice* pSerializationDevice,
+                           ShaderCreateInfo&     VertexShaderCI,
+                           IShader**             ppVS,
+                           IShader**             ppSerializedVS,
+                           ShaderCreateInfo&     PixelShaderCI,
+                           IShader**             ppPS,
+                           IShader**             ppSerializedPS)
+{
+    const auto* pEnv = GPUTestingEnvironment::GetInstance();
+
+    ShaderMacroHelper Macros;
+    Macros.AddShaderMacro("TEST_MACRO", 1u);
+
+    VertexShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
+    VertexShaderCI.ShaderCompiler             = pEnv->GetDefaultCompiler(VertexShaderCI.SourceLanguage);
+    VertexShaderCI.UseCombinedTextureSamplers = true;
+    VertexShaderCI.Macros                     = Macros;
+
+    RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
+    pDevice->GetEngineFactory()->CreateDefaultShaderSourceStreamFactory("shaders/Archiver", &pShaderSourceFactory);
+    VertexShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
+
+    {
+        VertexShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
+        VertexShaderCI.EntryPoint      = "main";
+        VertexShaderCI.Desc.Name       = "Archive test vertex shader";
+        VertexShaderCI.FilePath        = "VertexShader.vsh";
+
+        if (ppVS != nullptr)
+        {
+            pDevice->CreateShader(VertexShaderCI, ppVS);
+            ASSERT_NE(*ppVS, nullptr);
+        }
+
+        pSerializationDevice->CreateShader(VertexShaderCI, ShaderArchiveInfo{GetDeviceBits()}, ppSerializedVS);
+        ASSERT_NE(*ppSerializedVS, nullptr);
+    }
+
+    PixelShaderCI = VertexShaderCI;
+    {
+        PixelShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
+        PixelShaderCI.EntryPoint      = "main";
+        PixelShaderCI.Desc.Name       = "Archive test pixel shader";
+        PixelShaderCI.FilePath        = "PixelShader.psh";
+
+        if (ppPS != nullptr)
+        {
+            pDevice->CreateShader(PixelShaderCI, ppPS);
+            ASSERT_NE(*ppPS, nullptr);
+        }
+
+        pSerializationDevice->CreateShader(PixelShaderCI, ShaderArchiveInfo{GetDeviceBits()}, ppSerializedPS);
+        ASSERT_NE(*ppSerializedPS, nullptr);
+    }
+}
 
 void RenderGraphicsPSOTestImage(IDeviceContext*         pContext,
                                 IPipelineState*         pPSO,
@@ -743,50 +799,13 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
         pArchiverFactory->CreateArchiver(pSerializationDevice, &pArchiver);
         ASSERT_NE(pArchiver, nullptr);
 
-        ShaderMacroHelper Macros;
-        Macros.AddShaderMacro("TEST_MACRO", 1u);
-
-        ShaderCreateInfo VertexShaderCI;
-        VertexShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
-        VertexShaderCI.ShaderCompiler             = pEnv->GetDefaultCompiler(VertexShaderCI.SourceLanguage);
-        VertexShaderCI.UseCombinedTextureSamplers = true;
-        VertexShaderCI.Macros                     = Macros;
-
-        RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
-        pDevice->GetEngineFactory()->CreateDefaultShaderSourceStreamFactory("shaders/Archiver", &pShaderSourceFactory);
-        VertexShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
-
+        ShaderCreateInfo       VertexShaderCI;
+        ShaderCreateInfo       PixelShaderCI;
         RefCntAutoPtr<IShader> pVS;
         RefCntAutoPtr<IShader> pSerializedVS;
-        {
-            VertexShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
-            VertexShaderCI.EntryPoint      = "main";
-            VertexShaderCI.Desc.Name       = "Archive test vertex shader";
-            VertexShaderCI.FilePath        = "VertexShader.vsh";
-
-            pDevice->CreateShader(VertexShaderCI, &pVS);
-            ASSERT_NE(pVS, nullptr);
-
-            pSerializationDevice->CreateShader(VertexShaderCI, ShaderArchiveInfo{GetDeviceBits()}, &pSerializedVS);
-            ASSERT_NE(pSerializedVS, nullptr);
-        }
-
         RefCntAutoPtr<IShader> pPS;
         RefCntAutoPtr<IShader> pSerializedPS;
-
-        auto PixelShaderCI = VertexShaderCI;
-        {
-            PixelShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
-            PixelShaderCI.EntryPoint      = "main";
-            PixelShaderCI.Desc.Name       = "Archive test pixel shader";
-            PixelShaderCI.FilePath        = "PixelShader.psh";
-
-            pDevice->CreateShader(PixelShaderCI, &pPS);
-            ASSERT_NE(pPS, nullptr);
-
-            pSerializationDevice->CreateShader(PixelShaderCI, ShaderArchiveInfo{GetDeviceBits()}, &pSerializedPS);
-            ASSERT_NE(pSerializedPS, nullptr);
-        }
+        CreateGraphicsShaders(pDevice, pSerializationDevice, VertexShaderCI, &pVS, &pSerializedVS, PixelShaderCI, &pPS, &pSerializedPS);
 
         GraphicsPipelineStateCreateInfo PSOCreateInfo;
 
@@ -1113,6 +1132,78 @@ TEST(ArchiveTest, GraphicsPipeline_NoReflection)
 {
     TestGraphicsPipeline(PSO_ARCHIVE_FLAG_STRIP_REFLECTION);
 }
+
+
+TEST(ArchiveTest, Shaders)
+{
+    auto* pEnv             = GPUTestingEnvironment::GetInstance();
+    auto* pDevice          = pEnv->GetDevice();
+    auto* pArchiverFactory = pEnv->GetArchiverFactory();
+
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+
+    RefCntAutoPtr<IDearchiver> pDearchiver;
+    DearchiverCreateInfo       DearchiverCI{};
+    pDevice->GetEngineFactory()->CreateDearchiver(DearchiverCI, &pDearchiver);
+    if (!pDearchiver || !pArchiverFactory)
+        GTEST_SKIP() << "Archiver library is not loaded";
+
+    RefCntAutoPtr<ISerializationDevice> pSerializationDevice;
+    pArchiverFactory->CreateSerializationDevice(SerializationDeviceCreateInfo{}, &pSerializationDevice);
+    ASSERT_NE(pSerializationDevice, nullptr);
+
+    RefCntAutoPtr<IArchiver> pArchiver;
+    pArchiverFactory->CreateArchiver(pSerializationDevice, &pArchiver);
+    ASSERT_NE(pArchiver, nullptr);
+
+    ShaderCreateInfo       VertexShaderCI;
+    ShaderCreateInfo       PixelShaderCI;
+    RefCntAutoPtr<IShader> pSerializedVS, pSerializedVS2;
+    RefCntAutoPtr<IShader> pSerializedPS, pSerializedPS2;
+    CreateGraphicsShaders(pDevice, pSerializationDevice, VertexShaderCI, nullptr, &pSerializedVS, PixelShaderCI, nullptr, &pSerializedPS);
+    CreateGraphicsShaders(pDevice, pSerializationDevice, VertexShaderCI, nullptr, &pSerializedVS2, PixelShaderCI, nullptr, &pSerializedPS2);
+
+    EXPECT_TRUE(pArchiver->AddShader(pSerializedVS));
+    EXPECT_TRUE(pArchiver->AddShader(pSerializedPS));
+    EXPECT_TRUE(pArchiver->AddShader(pSerializedVS));
+    EXPECT_TRUE(pArchiver->AddShader(pSerializedPS));
+    EXPECT_TRUE(pArchiver->AddShader(pSerializedVS2));
+    EXPECT_TRUE(pArchiver->AddShader(pSerializedPS2));
+
+    RefCntAutoPtr<IDataBlob> pArchive;
+    pArchiver->SerializeToBlob(&pArchive);
+    ASSERT_NE(pArchive, nullptr);
+    EXPECT_TRUE(pArchiverFactory->PrintArchiveContent(pArchive));
+
+    pDearchiver->LoadArchive(pArchive);
+
+    {
+        RefCntAutoPtr<IShader> pUnpackedVS;
+
+        ShaderUnpackInfo UnpackInfo;
+        UnpackInfo.Name    = VertexShaderCI.Desc.Name;
+        UnpackInfo.pDevice = pDevice;
+
+        pDearchiver->UnpackShader(UnpackInfo, &pUnpackedVS);
+        ASSERT_NE(pUnpackedVS, nullptr);
+        EXPECT_EQ(pUnpackedVS->GetDesc().ShaderType, SHADER_TYPE_VERTEX);
+        EXPECT_STREQ(pUnpackedVS->GetDesc().Name, VertexShaderCI.Desc.Name);
+    }
+
+    {
+        RefCntAutoPtr<IShader> pUnpackedPS;
+
+        ShaderUnpackInfo UnpackInfo;
+        UnpackInfo.Name    = PixelShaderCI.Desc.Name;
+        UnpackInfo.pDevice = pDevice;
+
+        pDearchiver->UnpackShader(UnpackInfo, &pUnpackedPS);
+        ASSERT_NE(pUnpackedPS, nullptr);
+        EXPECT_EQ(pUnpackedPS->GetDesc().ShaderType, SHADER_TYPE_PIXEL);
+        EXPECT_STREQ(pUnpackedPS->GetDesc().Name, PixelShaderCI.Desc.Name);
+    }
+}
+
 
 namespace HLSL
 {

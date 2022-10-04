@@ -30,6 +30,7 @@
 #include "Constants.h"
 #include "SerializationDeviceImpl.hpp"
 #include "SerializedResourceSignatureImpl.hpp"
+#include "SerializedShaderImpl.hpp"
 #include "PSOSerializer.hpp"
 #include "Align.hpp"
 #include "FileSystem.hpp"
@@ -344,20 +345,9 @@ void SerializedPipelineStateImpl::SerializeShaderCreateInfo(DeviceType          
                                                             const ShaderCreateInfo& CI)
 {
     Data::ShaderInfo ShaderData;
-    {
-        Serializer<SerializerMode::Measure> Ser;
-        ShaderSerializer<SerializerMode::Measure>::SerializeCI(Ser, CI);
-        ShaderData.Data = Ser.AllocateData(GetRawAllocator());
-    }
-
-    {
-        Serializer<SerializerMode::Write> Ser{ShaderData.Data};
-        ShaderSerializer<SerializerMode::Write>::SerializeCI(Ser, CI);
-        VERIFY_EXPR(Ser.IsEnded());
-    }
-
+    ShaderData.Data  = SerializedShaderImpl::SerializeCreateInfo(CI);
     ShaderData.Stage = CI.Desc.ShaderType;
-    ShaderData.Hash  = ComputeHashRaw(ShaderData.Data.Ptr(), ShaderData.Data.Size());
+    ShaderData.Hash  = ShaderData.Data.GetHash();
 #ifdef DILIGENT_DEBUG
     for (const auto& Data : m_Data.Shaders[static_cast<size_t>(Type)])
         VERIFY(Data.Hash != ShaderData.Hash, "Shader with the same hash is already in the list.");

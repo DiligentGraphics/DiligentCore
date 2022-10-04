@@ -133,6 +133,10 @@ struct ShaderDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     {
         return ShaderType == RHS.ShaderType && SafeStrEqual(Name, RHS.Name);
     }
+    bool operator!=(const ShaderDesc& RHS) const noexcept
+    {
+        return !(*this == RHS);
+    }
 #endif
 
 };
@@ -362,6 +366,86 @@ struct ShaderCreateInfo
     /// output message. The second one is the full shader source code including definitions added
     /// by the engine. Data blob object must be released by the client.
     IDataBlob** ppCompilerOutput DEFAULT_INITIALIZER(nullptr);
+
+#if DILIGENT_CPP_INTERFACE
+    /// Comparison operator tests if two structures are equivalent
+    bool operator==(const ShaderCreateInfo& RHS) const noexcept
+    {
+        const auto& CI1 = *this;
+        const auto& CI2 = RHS;
+
+        if (!SafeStrEqual(CI1.FilePath, CI2.FilePath))
+            return false;
+
+        //if (CI1.FilePath != nullptr && CI1.pShaderSourceStreamFactory != CI2.pShaderSourceStreamFactory)
+        //    return false;
+
+        if (!SafeStrEqual(CI1.Source, CI2.Source))
+            return false;
+
+        if (CI1.SourceLength != CI2.SourceLength)
+            return false;
+
+        if ((CI1.ByteCode != nullptr) != (CI2.ByteCode != nullptr))
+            return false;
+
+        if ((CI1.ByteCode != nullptr) && (CI2.ByteCode != nullptr))
+        {
+            if (memcmp(CI1.ByteCode, CI2.ByteCode, CI1.ByteCodeSize) != 0)
+                return false;
+        }
+
+        if (!SafeStrEqual(CI1.EntryPoint, CI2.EntryPoint))
+            return false;
+
+        const auto* m1 = CI1.Macros;
+        const auto* m2 = CI2.Macros;
+        while (m1 != nullptr && m2 != nullptr)
+        {
+            if (*m1 != *m2)
+                return false;
+            ++m1;
+            ++m2;
+            if (*m1 == ShaderMacro{})
+                m1 = nullptr;
+            if (*m2 == ShaderMacro{})
+                m2 = nullptr;
+        }
+        if (m1 != nullptr || m2 != nullptr)
+            return false;
+
+        if (CI1.UseCombinedTextureSamplers != CI2.UseCombinedTextureSamplers)
+            return false;
+
+        if (!SafeStrEqual(CI1.CombinedSamplerSuffix, CI2.CombinedSamplerSuffix))
+            return false;
+
+        if (CI1.Desc != CI2.Desc)
+            return false;
+
+        if (CI1.SourceLanguage != CI2.SourceLanguage)
+            return false;
+
+        if (CI1.ShaderCompiler != CI2.ShaderCompiler)
+            return false;
+
+        if ((CI1.HLSLVersion != CI2.HLSLVersion ||
+             CI1.GLSLVersion != CI2.GLSLVersion ||
+             CI1.GLESSLVersion != CI2.GLESSLVersion ||
+             CI1.MSLVersion != CI2.MSLVersion))
+            return false;
+
+        if (CI1.CompileFlags != CI2.CompileFlags)
+            return false;
+
+        return true;
+    }
+
+    bool operator!=(const ShaderCreateInfo& RHS) const noexcept
+    {
+        return !(*this == RHS);
+    }
+#endif
 };
 typedef struct ShaderCreateInfo ShaderCreateInfo;
 

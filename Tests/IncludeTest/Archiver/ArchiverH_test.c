@@ -30,6 +30,7 @@ void TestArchiver_CInterface(IArchiver* pArchiver)
 {
     IArchiver_SerializeToBlob(pArchiver, (IDataBlob**)NULL);
     IArchiver_SerializeToStream(pArchiver, (IFileStream*)NULL);
+    IArchiver_AddShader(pArchiver, (IShader*)NULL);
     IArchiver_AddPipelineState(pArchiver, (IPipelineState*)NULL);
     IArchiver_AddPipelineResourceSignature(pArchiver, (IPipelineResourceSignature*)NULL);
 }

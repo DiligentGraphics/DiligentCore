@@ -70,6 +70,7 @@ public:
     struct CompiledShader
     {
         virtual ~CompiledShader() {}
+        virtual SerializedData Serialize(ShaderCreateInfo ShaderCI) const = 0;
     };
 
     template <typename CompiledShaderType>
@@ -78,9 +79,20 @@ public:
         return static_cast<CompiledShaderType*>(m_Shaders[static_cast<size_t>(Type)].get());
     }
 
+    SerializedData GetCommonData() const { return SerializedData{}; }
+    SerializedData GetDeviceData(DeviceType Type) const;
+
     const ShaderCreateInfo& GetCreateInfo() const
     {
         return m_CreateInfo;
+    }
+
+    static SerializedData SerializeCreateInfo(const ShaderCreateInfo& CI);
+
+    bool operator==(const SerializedShaderImpl& Rhs) const noexcept;
+    bool operator!=(const SerializedShaderImpl& Rhs) const noexcept
+    {
+        return !(*this == Rhs);
     }
 
 private:
@@ -108,7 +120,8 @@ private:
 #endif
 
 #if GL_SUPPORTED || GLES_SUPPORTED
-    void CreateShaderGL(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI, RENDER_DEVICE_TYPE DeviceType) noexcept(false);
+    void           CreateShaderGL(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI, RENDER_DEVICE_TYPE DeviceType) noexcept(false);
+    SerializedData GetDeviceDataGL() const;
 #endif
 
 #if VULKAN_SUPPORTED

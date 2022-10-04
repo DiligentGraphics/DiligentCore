@@ -116,6 +116,7 @@ public:
     enum class ResourceType : Uint32
     {
         Undefined = 0,
+        StandaloneShader,
         ResourceSignature,
         GraphicsPipeline,
         ComputePipeline,
@@ -126,7 +127,7 @@ public:
     };
 
     static constexpr Uint32 HeaderMagicNumber = 0xDE00000A;
-    static constexpr Uint32 ArchiveVersion    = 3;
+    static constexpr Uint32 ArchiveVersion    = 4;
 
     struct ArchiveHeader
     {

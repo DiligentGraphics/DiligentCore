@@ -238,11 +238,12 @@ const char* ArchiveDeviceTypeToString(Uint32 dev)
 const char* ResourceTypeToString(DeviceObjectArchive::ResourceType Type)
 {
     using ResourceType = DeviceObjectArchive::ResourceType;
-    static_assert(static_cast<size_t>(ResourceType::Count) == 7, "Please handle the new chunk type below");
+    static_assert(static_cast<size_t>(ResourceType::Count) == 8, "Please handle the new chunk type below");
     switch (Type)
     {
         // clang-format off
         case ResourceType::Undefined:          return "Undefined";
+        case ResourceType::StandaloneShader:   return "Standalone Shaders";
         case ResourceType::ResourceSignature:  return "Resource Signatures";
         case ResourceType::GraphicsPipeline:   return "Graphics Pipelines";
         case ResourceType::ComputePipeline:    return "Compute Pipelines";
@@ -399,9 +400,9 @@ std::string DeviceObjectArchive::ToString() const
         if (HasShaders)
         {
             Output << SeparatorLine
-                   << "Shaders\n";
+                   << "Compiled Shaders\n";
             // ------------------
-            // Shaders
+            // Compiled Shaders
 
             for (Uint32 dev = 0; dev < m_DeviceShaders.size(); ++dev)
             {

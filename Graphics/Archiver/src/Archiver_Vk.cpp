@@ -49,6 +49,17 @@ struct CompiledShaderVk : SerializedShaderImpl::CompiledShader
                      const ShaderVkImpl::CreateInfo& VkShaderCI) :
         ShaderVk{pRefCounters, nullptr, ShaderCI, VkShaderCI, true}
     {}
+
+    virtual SerializedData Serialize(ShaderCreateInfo ShaderCI) const override final
+    {
+        const auto& SPIRV = ShaderVk.GetSPIRV();
+
+        ShaderCI.Source       = nullptr;
+        ShaderCI.FilePath     = nullptr;
+        ShaderCI.ByteCode     = SPIRV.data();
+        ShaderCI.ByteCodeSize = SPIRV.size() * sizeof(SPIRV[0]);
+        return SerializedShaderImpl::SerializeCreateInfo(ShaderCI);
+    }
 };
 
 inline const ShaderVkImpl* GetShaderVk(const SerializedShaderImpl* pShader)

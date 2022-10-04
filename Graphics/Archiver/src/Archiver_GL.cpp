@@ -82,6 +82,20 @@ inline SHADER_TYPE GetShaderStageType(const ShaderStageInfoGL& Stage)
 }
 #endif
 
+String GetShaderSourceGL(const ShaderCreateInfo& CI)
+{
+    String Source;
+    if (CI.Macros != nullptr)
+    {
+        if (CI.SourceLanguage != SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM)
+            AppendShaderMacros(Source, CI.Macros);
+        else
+            DEV_ERROR("Shader macros are ignored when compiling GLSL verbatim in OpenGL backend");
+    }
+    Source.append(UnrollShaderIncludes(CI));
+    return Source;
+}
+
 } // namespace
 
 template <typename CreateInfoType>
@@ -91,6 +105,18 @@ void SerializedPipelineStateImpl::PrepareDefaultSignatureGL(const CreateInfoType
     // or there will be an error when unpacking the signature.
     std::vector<ShaderGLImpl*> DummyShadersGL;
     CreateDefaultResourceSignature<PipelineStateGLImpl, PipelineResourceSignatureGLImpl>(DeviceType::OpenGL, CreateInfo.PSODesc, SHADER_TYPE_UNKNOWN, DummyShadersGL);
+}
+
+SerializedData SerializedShaderImpl::GetDeviceDataGL() const
+{
+    auto       CI     = GetCreateInfo();
+    const auto Source = GetShaderSourceGL(CI);
+    CI.Source         = Source.c_str();
+    CI.SourceLength   = StaticCast<Uint32>(Source.length() + 1);
+    CI.FilePath       = nullptr;
+    CI.Macros         = nullptr;
+
+    return SerializedShaderImpl::SerializeCreateInfo(CI);
 }
 
 template <typename CreateInfoType>
@@ -105,16 +131,11 @@ void SerializedPipelineStateImpl::PatchShadersGL(const CreateInfoType& CreateInf
     {
         auto CI = ShaderStages[i].pShader->GetCreateInfo();
 
-        String Source;
-        if (CI.Macros != nullptr)
-        {
-            DEV_CHECK_ERR(CI.SourceLanguage != SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM, "Shader macros are ignored when compiling GLSL verbatim in OpenGL backend");
-            AppendShaderMacros(Source, CI.Macros);
-        }
-        Source.append(UnrollShaderIncludes(CI));
-        CI.Source       = Source.c_str();
-        CI.SourceLength = StaticCast<Uint32>(Source.length() + 1);
-        CI.FilePath     = nullptr;
+        const auto Source = GetShaderSourceGL(CI);
+        CI.Source         = Source.c_str();
+        CI.SourceLength   = StaticCast<Uint32>(Source.length() + 1);
+        CI.FilePath       = nullptr;
+        CI.Macros         = nullptr;
 
         SerializeShaderCreateInfo(DeviceType::OpenGL, CI);
     }

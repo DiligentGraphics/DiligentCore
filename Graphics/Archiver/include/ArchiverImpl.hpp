@@ -67,6 +67,9 @@ public:
     /// Implementation of IArchiver::SerializeToStream().
     virtual Bool DILIGENT_CALL_TYPE SerializeToStream(IFileStream* pStream) override final;
 
+    /// Implementation of IArchiver::AddShader().
+    virtual Bool DILIGENT_CALL_TYPE AddShader(IShader* pShader) override final;
+
     /// Implementation of IArchiver::AddPipelineState().
     virtual Bool DILIGENT_CALL_TYPE AddPipelineState(IPipelineState* pPSO) override final;
 
@@ -93,6 +96,9 @@ private:
 
     std::mutex                                   m_RenderPassesMtx;
     NamedObjectHashMap<SerializedRenderPassImpl> m_RenderPasses;
+
+    std::mutex                               m_ShadersMtx;
+    NamedObjectHashMap<SerializedShaderImpl> m_Shaders;
 
     using NamedResourceKey = DeviceObjectArchive::NamedResourceKey;
     using PSOHashMapType   = std::unordered_map<NamedResourceKey, RefCntAutoPtr<SerializedPipelineStateImpl>, NamedResourceKey::Hasher>;

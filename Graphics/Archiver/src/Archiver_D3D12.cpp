@@ -40,13 +40,24 @@ namespace Diligent
 namespace
 {
 
-struct CompiledShaderD3D12 : SerializedShaderImpl::CompiledShader
+struct CompiledShaderD3D12 final : SerializedShaderImpl::CompiledShader
 {
     ShaderD3D12Impl ShaderD3D12;
 
     CompiledShaderD3D12(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI, const ShaderD3D12Impl::CreateInfo& D3D12ShaderCI) :
         ShaderD3D12{pRefCounters, nullptr, ShaderCI, D3D12ShaderCI, true}
     {}
+
+    virtual SerializedData Serialize(ShaderCreateInfo ShaderCI) const override final
+    {
+        const auto& pBytecode = ShaderD3D12.GetD3DBytecode();
+
+        ShaderCI.Source       = nullptr;
+        ShaderCI.FilePath     = nullptr;
+        ShaderCI.ByteCode     = pBytecode->GetBufferPointer();
+        ShaderCI.ByteCodeSize = pBytecode->GetBufferSize();
+        return SerializedShaderImpl::SerializeCreateInfo(ShaderCI);
+    }
 };
 
 inline const ShaderD3D12Impl* GetShaderD3D12(const SerializedShaderImpl* pShader)

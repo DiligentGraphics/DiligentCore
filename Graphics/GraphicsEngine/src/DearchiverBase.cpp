@@ -79,6 +79,18 @@ bool VerifyRenderPassUnpackInfo(const RenderPassUnpackInfo& DeArchiveInfo, IRend
     return true;
 }
 
+bool VerifShaderUnpackInfo(const ShaderUnpackInfo& DeArchiveInfo, IShader** ppShader)
+{
+#define CHECK_UNPACK_RENDER_PASS_PARAM(Expr, ...) CHECK_UNPACK_PARAMATER("Invalid shader unpack parameter: ", ##__VA_ARGS__)
+    CHECK_UNPACK_RENDER_PASS_PARAM(ppShader != nullptr, "ppShader must not be null");
+    CHECK_UNPACK_RENDER_PASS_PARAM(DeArchiveInfo.pArchive != nullptr, "pArchive must not be null");
+    CHECK_UNPACK_RENDER_PASS_PARAM(DeArchiveInfo.Name != nullptr, "Name must not be null");
+    CHECK_UNPACK_RENDER_PASS_PARAM(DeArchiveInfo.pDevice != nullptr, "pDevice must not be null");
+#undef CHECK_UNPACK_RENDER_PASS_PARAM
+
+    return true;
+}
+
 DeviceObjectArchive::DeviceType RenderDeviceTypeToArchiveDeviceType(RENDER_DEVICE_TYPE Type)
 {
     static_assert(RENDER_DEVICE_TYPE_COUNT == 7, "Did you add a new render device type? Please handle it here.");
@@ -496,6 +508,25 @@ bool DearchiverBase::UnpackPSOShaders(ArchiveData&             Archive,
     return true;
 }
 
+DearchiverBase::ArchiveData* DearchiverBase::FindArchive(ResourceType ResType, const char* ResName)
+{
+    VERIFY_EXPR(ResType != ResourceType::Undefined);
+    VERIFY_EXPR(ResName != nullptr);
+
+    const auto archive_idx_it = m_ResNameToArchiveIdx.find(NamedResourceKey{ResType, ResName});
+    if (archive_idx_it == m_ResNameToArchiveIdx.end())
+        return nullptr;
+
+    auto& Archive = m_Archives[archive_idx_it->second];
+    if (!Archive.pObjArchive)
+    {
+        UNEXPECTED("Null object archives should never be added to the list. This is a bug.");
+        return nullptr;
+    }
+
+    return &Archive;
+}
+
 template <typename PSOCreateInfoType>
 static bool ModifyPipelineStateCreateInfo(PSOCreateInfoType&             CreateInfo,
                                           const PipelineStateUnpackInfo& UnpackInfo)
@@ -599,19 +630,12 @@ void DearchiverBase::UnpackPipelineStateImpl(const PipelineStateUnpackInfo& Unpa
     }
 
     // Find the archive that contains this PSO
-    const auto archive_idx_it = m_ResNameToArchiveIdx.find(NamedResourceKey{ResType, UnpackInfo.Name});
-    if (archive_idx_it == m_ResNameToArchiveIdx.end())
+    auto* pArchiveData = FindArchive(ResType, UnpackInfo.Name);
+    if (pArchiveData == nullptr)
         return;
-
-    auto& Archive = m_Archives[archive_idx_it->second];
-    if (!Archive.pObjArchive)
-    {
-        UNEXPECTED("Null object archives should never be added to the list. This is a bug.");
-        return;
-    }
 
     PSOData<CreateInfoType> PSO{GetRawAllocator()};
-    if (!Archive.pObjArchive->LoadResourceCommonData(ResType, UnpackInfo.Name, PSO))
+    if (!pArchiveData->pObjArchive->LoadResourceCommonData(ResType, UnpackInfo.Name, PSO))
         return;
 
 #ifdef DILIGENT_DEVELOPMENT
@@ -629,7 +653,7 @@ void DearchiverBase::UnpackPipelineStateImpl(const PipelineStateUnpackInfo& Unpa
     if (!UnpackPSOSignatures(PSO, UnpackInfo.pDevice))
         return;
 
-    if (!UnpackPSOShaders(Archive, PSO, UnpackInfo.pDevice))
+    if (!UnpackPSOShaders(*pArchiveData, PSO, UnpackInfo.pDevice))
         return;
 
     PSO.AssignShaders();
@@ -724,6 +748,62 @@ void DearchiverBase::UnpackPipelineState(const PipelineStateUnpackInfo& UnpackIn
     }
 }
 
+void DearchiverBase::UnpackShader(const ShaderUnpackInfo& UnpackInfo,
+                                  IShader**               ppShader)
+{
+    if (!VerifShaderUnpackInfo(UnpackInfo, ppShader))
+        return;
+
+    *ppShader = nullptr;
+
+    constexpr auto ResType = ResourceType::StandaloneShader;
+
+    // Find the archive that contains this shader.
+    auto* pArchiveData = FindArchive(ResType, UnpackInfo.Name);
+    if (pArchiveData == nullptr)
+        return;
+
+    const auto& pObjArchive = pArchiveData->pObjArchive;
+    VERIFY_EXPR(pObjArchive);
+
+    const auto  DevType       = GetArchiveDeviceType(UnpackInfo.pDevice);
+    const auto& ShaderIdxData = pObjArchive->GetDeviceSpecificData(ResType, UnpackInfo.Name, DevType);
+    if (!ShaderIdxData)
+        return;
+
+    Uint32 Idx = 0;
+    {
+        Serializer<SerializerMode::Read> Ser{ShaderIdxData};
+        if (!Ser(Idx))
+        {
+            LOG_ERROR_MESSAGE("Failed to deserialize compiled shader index. Archive file may be corrupted or invalid.");
+            return;
+        }
+        VERIFY_EXPR(Ser.IsEnded());
+    }
+
+    const auto& SerializedShader = pObjArchive->GetSerializedShader(DevType, Idx);
+    if (!SerializedShader)
+        return;
+
+    ShaderCreateInfo ShaderCI;
+    {
+        Serializer<SerializerMode::Read> Ser{SerializedShader};
+        if (!ShaderSerializer<SerializerMode::Read>::SerializeCI(Ser, ShaderCI))
+        {
+            LOG_ERROR_MESSAGE("Failed to deserialize shader create info. Archive file may be corrupted or invalid.");
+            return;
+        }
+        VERIFY_EXPR(Ser.IsEnded());
+    }
+
+    auto pShader = UnpackShader(ShaderCI, UnpackInfo.pDevice);
+    if (!pShader)
+        return;
+
+    pShader->QueryInterface(IID_Shader, reinterpret_cast<IObject**>(ppShader));
+}
+
 void DearchiverBase::UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo,
                                              IPipelineResourceSignature**       ppSignature)
 {
@@ -754,19 +834,15 @@ void DearchiverBase::UnpackRenderPass(const RenderPassUnpackInfo& UnpackInfo, IR
     }
 
     // Find the archive that contains this render pass.
-    auto archive_idx_it = m_ResNameToArchiveIdx.find(NamedResourceKey{RPData::ArchiveResType, UnpackInfo.Name});
-    if (archive_idx_it == m_ResNameToArchiveIdx.end())
+    auto* pArchiveData = FindArchive(RPData::ArchiveResType, UnpackInfo.Name);
+    if (pArchiveData == nullptr)
         return;
 
-    const auto& pObjArchive = m_Archives[archive_idx_it->second].pObjArchive;
-    if (!pObjArchive)
-    {
-        UNEXPECTED("Null object archives should never be added to the list. This is a bug.");
-        return;
-    }
+    const auto& pObjArchive = pArchiveData->pObjArchive;
+    VERIFY_EXPR(pObjArchive);
 
     RPData RP{GetRawAllocator()};
-    if (!pObjArchive->LoadResourceCommonData(RPData::ArchiveResType, UnpackInfo.Name, RP))
+    if (!pArchiveData->pObjArchive->LoadResourceCommonData(RPData::ArchiveResType, UnpackInfo.Name, RP))
         return;
 
     if (UnpackInfo.ModifyRenderPassDesc != nullptr)

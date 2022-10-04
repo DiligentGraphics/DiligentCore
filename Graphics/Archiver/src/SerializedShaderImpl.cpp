@@ -25,12 +25,16 @@
  */
 
 #include "SerializedShaderImpl.hpp"
+
+#include <cstring>
+
 #include "SerializationDeviceImpl.hpp"
 #include "FixedLinearAllocator.hpp"
 #include "EngineMemory.h"
 #include "DataBlobImpl.hpp"
 #include "PlatformMisc.hpp"
 #include "BasicMath.hpp"
+#include "PSOSerializer.hpp"
 
 namespace Diligent
 {
@@ -210,6 +214,48 @@ void DILIGENT_CALL_TYPE SerializedShaderImpl::QueryInterface(const INTERFACE_ID&
     {
         TBase::QueryInterface(IID, ppInterface);
     }
+}
+
+bool SerializedShaderImpl::operator==(const SerializedShaderImpl& Rhs) const noexcept
+{
+    return m_CreateInfo == Rhs.m_CreateInfo;
+}
+
+SerializedData SerializedShaderImpl::SerializeCreateInfo(const ShaderCreateInfo& CI)
+{
+    SerializedData ShaderData;
+
+    {
+        Serializer<SerializerMode::Measure> Ser;
+        ShaderSerializer<SerializerMode::Measure>::SerializeCI(Ser, CI);
+        ShaderData = Ser.AllocateData(GetRawAllocator());
+    }
+
+    {
+        Serializer<SerializerMode::Write> Ser{ShaderData};
+        ShaderSerializer<SerializerMode::Write>::SerializeCI(Ser, CI);
+        VERIFY_EXPR(Ser.IsEnded());
+    }
+
+    return ShaderData;
+}
+
+SerializedData SerializedShaderImpl::GetDeviceData(DeviceType Type) const
+{
+    if (Type == DeviceType::OpenGL)
+    {
+#if GL_SUPPORTED || GLES_SUPPORTED
+        return GetDeviceDataGL();
+#else
+        UNEXPECTED("OpenGL backend is disabled");
+        return SerializedData{};
+#endif
+    }
+
+    const auto& pCompiledShader = m_Shaders[static_cast<size_t>(Type)];
+    return pCompiledShader ?
+        pCompiledShader->Serialize(GetCreateInfo()) :
+        SerializedData{};
 }
 
 } // namespace Diligent

@@ -97,11 +97,29 @@ DILIGENT_BEGIN_INTERFACE(IArchiver, IObject)
     VIRTUAL Bool METHOD(SerializeToStream)(THIS_
                                            IFileStream* pStream) PURE;
 
+    /// Adds a shader to the archive.
+
+    /// \param [in] pShader - a pointer to the shader to add to the archive.
+    ///
+    /// \return     true if the shader was added successfully, and false otherwise.
+    ///
+    /// \note
+    ///     Shader object pointed to by pShader must have been created by the serialization device.
+    ///
+    ///     Multiple shaders may be packed into the same archive as long as they use unique names.
+    ///
+    ///     The method is thread-safe and may be called from multiple threads simultaneously.
+    VIRTUAL Bool METHOD(AddShader)(THIS_
+                                   IShader* pShader) PURE;
 
     /// Adds a pipeline state to the archive.
 
+    /// \param [in] pPSO - a pointer to the pipeline state to add to the archive.
+    ///
+    /// \return     true if the pipeline state was added successfully, and false otherwise.
+    ///
     /// \note
-    ///     Pipeline state must have been created by the serialization device.
+    ///     Pipeline state object pointed to by pPSO must have been created by the serialization device.
     ///
     ///     Multiple pipeline states may be packed into the same archive as long as they use unique names.
     ///     All dependent objects (render pass, resource signatures, shaders) will be added to the archive
@@ -114,8 +132,12 @@ DILIGENT_BEGIN_INTERFACE(IArchiver, IObject)
 
     /// Adds a pipeline resource signature to the archive.
 
+    /// \param [in] pSignature - a pointer to the resource signature to add to the archive.
+    ///
+    /// \return     true if the signature was added successfully, and false otherwise.
+    ///
     /// \note
-    ///     Pipeline resource signature must have been created by the serialization device.
+    ///     Pipeline resource signature pointed to by pSignature must have been created by the serialization device.
     ///
     ///     Multiple PSOs and signatures may be packed into the same archive as long as they use distinct names.
     ///
@@ -134,6 +156,7 @@ DILIGENT_END_INTERFACE
 
 #    define IArchiver_SerializeToBlob(This, ...)              CALL_IFACE_METHOD(Archiver, SerializeToBlob,              This, __VA_ARGS__)
 #    define IArchiver_SerializeToStream(This, ...)            CALL_IFACE_METHOD(Archiver, SerializeToStream,            This, __VA_ARGS__)
+#    define IArchiver_AddShader(This, ...)                    CALL_IFACE_METHOD(Archiver, AddShader,                    This, __VA_ARGS__)
 #    define IArchiver_AddPipelineState(This, ...)             CALL_IFACE_METHOD(Archiver, AddPipelineState,             This, __VA_ARGS__)
 #    define IArchiver_AddPipelineResourceSignature(This, ...) CALL_IFACE_METHOD(Archiver, AddPipelineResourceSignature, This, __VA_ARGS__)
 
