@@ -258,4 +258,13 @@ SerializedData SerializedShaderImpl::GetDeviceData(DeviceType Type) const
         SerializedData{};
 }
 
+IShader* SerializedShaderImpl::GetDeviceShader(RENDER_DEVICE_TYPE Type) const
+{
+    const auto  ArchiveDeviceType = RenderDeviceTypeToArchiveDeviceType(Type);
+    const auto& pCompiledShader   = m_Shaders[static_cast<size_t>(ArchiveDeviceType)];
+    return pCompiledShader ?
+        pCompiledShader->GetDeviceShader() :
+        nullptr;
+}
+
 } // namespace Diligent

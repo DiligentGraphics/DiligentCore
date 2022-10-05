@@ -270,4 +270,6 @@ private:
     RefCntAutoPtr<IDataBlob> m_pArchiveData;
 };
 
+DeviceObjectArchive::DeviceType RenderDeviceTypeToArchiveDeviceType(RENDER_DEVICE_TYPE Type);
+
 } // namespace Diligent

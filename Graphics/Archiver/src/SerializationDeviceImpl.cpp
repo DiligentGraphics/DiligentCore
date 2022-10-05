@@ -279,4 +279,19 @@ PipelineResourceBinding SerializationDeviceImpl::ResDescToPipelineResBinding(con
     return BindigDesc;
 }
 
+void SerializationDeviceImpl::AddRenderDevice(IRenderDevice* pDevice)
+{
+    if (pDevice == nullptr)
+    {
+        DEV_ERROR("pDevice must not be null");
+        return;
+    }
+
+    const auto Type = pDevice->GetDeviceInfo().Type;
+    if (m_RenderDevices[Type])
+        LOG_WARNING_MESSAGE(GetRenderDeviceTypeString(Type), " device has already been added.");
+
+    m_RenderDevices[Type] = pDevice;
+}
+
 } // namespace Diligent

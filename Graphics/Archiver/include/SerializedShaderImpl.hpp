@@ -29,7 +29,7 @@
 #include <memory>
 #include <array>
 
-#include "Shader.h"
+#include "SerializedShader.h"
 #include "SerializationEngineImplTraits.hpp"
 #include "ObjectBase.hpp"
 #include "RefCntAutoPtr.hpp"
@@ -40,14 +40,10 @@
 namespace Diligent
 {
 
-// {53A9A017-6A34-4AE9-AA23-C8E587023F9E}
-static const INTERFACE_ID IID_SerializedShader =
-    {0x53a9a017, 0x6a34, 0x4ae9, {0xaa, 0x23, 0xc8, 0xe5, 0x87, 0x2, 0x3f, 0x9e}};
-
-class SerializedShaderImpl final : public ObjectBase<IShader>
+class SerializedShaderImpl final : public ObjectBase<ISerializedShader>
 {
 public:
-    using TBase      = ObjectBase<IShader>;
+    using TBase      = ObjectBase<ISerializedShader>;
     using DeviceType = DeviceObjectArchive::DeviceType;
 
     SerializedShaderImpl(IReferenceCounters*      pRefCounters,
@@ -67,10 +63,17 @@ public:
     UNSUPPORTED_CONST_METHOD(IObject*, GetUserData)
     UNSUPPORTED_CONST_METHOD(void, GetBytecode, const void** ppBytecode, Uint64& Size);
 
+    virtual IShader* DILIGENT_CALL_TYPE GetDeviceShader(RENDER_DEVICE_TYPE Type) const override final;
+
     struct CompiledShader
     {
         virtual ~CompiledShader() {}
         virtual SerializedData Serialize(ShaderCreateInfo ShaderCI) const = 0;
+
+        virtual IShader* GetDeviceShader()
+        {
+            return nullptr;
+        }
     };
 
     template <typename CompiledShaderType>

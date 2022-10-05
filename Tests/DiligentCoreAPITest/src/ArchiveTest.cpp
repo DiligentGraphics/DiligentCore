@@ -33,6 +33,7 @@
 #include "GraphicsAccessories.hpp"
 #include "Dearchiver.h"
 #include "SerializedPipelineState.h"
+#include "SerializedShader.h"
 #include "ShaderMacroHelper.hpp"
 
 #include "ResourceLayoutTestCommon.hpp"
@@ -660,6 +661,15 @@ void CreateGraphicsShaders(IRenderDevice*        pDevice,
 
         pSerializationDevice->CreateShader(VertexShaderCI, ShaderArchiveInfo{GetDeviceBits()}, ppSerializedVS);
         ASSERT_NE(*ppSerializedVS, nullptr);
+
+        RefCntAutoPtr<ISerializedShader> pSerializedVS{*ppSerializedVS, IID_SerializedShader};
+        ASSERT_NE(pSerializedVS, nullptr);
+        const auto Bits = GetDeviceBits();
+        for (const auto Type : {RENDER_DEVICE_TYPE_D3D11, RENDER_DEVICE_TYPE_D3D12, RENDER_DEVICE_TYPE_VULKAN})
+        {
+            if (Bits & (1 << Type))
+                EXPECT_NE(pSerializedVS->GetDeviceShader(Type), nullptr);
+        }
     }
 
     PixelShaderCI = VertexShaderCI;
@@ -677,6 +687,15 @@ void CreateGraphicsShaders(IRenderDevice*        pDevice,
 
         pSerializationDevice->CreateShader(PixelShaderCI, ShaderArchiveInfo{GetDeviceBits()}, ppSerializedPS);
         ASSERT_NE(*ppSerializedPS, nullptr);
+
+        RefCntAutoPtr<ISerializedShader> pSerializedPS{*ppSerializedPS, IID_SerializedShader};
+        ASSERT_NE(pSerializedPS, nullptr);
+        const auto Bits = GetDeviceBits();
+        for (const auto Type : {RENDER_DEVICE_TYPE_D3D11, RENDER_DEVICE_TYPE_D3D12, RENDER_DEVICE_TYPE_VULKAN})
+        {
+            if (Bits & (1 << Type))
+                EXPECT_NE(pSerializedPS->GetDeviceShader(Type), nullptr);
+        }
     }
 }
 

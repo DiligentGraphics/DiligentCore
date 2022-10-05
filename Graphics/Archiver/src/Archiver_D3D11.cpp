@@ -55,8 +55,11 @@ struct CompiledShaderD3D11 final : SerializedShaderImpl::CompiledShader
 {
     ShaderD3D11Impl ShaderD3D11;
 
-    CompiledShaderD3D11(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI, const ShaderD3D11Impl::CreateInfo& D3D11ShaderCI) :
-        ShaderD3D11{pRefCounters, nullptr, ShaderCI, D3D11ShaderCI, true}
+    CompiledShaderD3D11(IReferenceCounters*                pRefCounters,
+                        const ShaderCreateInfo&            ShaderCI,
+                        const ShaderD3D11Impl::CreateInfo& D3D11ShaderCI,
+                        IRenderDevice*                     pRenderDeviceD3D11) :
+        ShaderD3D11{pRefCounters, ClassPtrCast<RenderDeviceD3D11Impl>(pRenderDeviceD3D11), ShaderCI, D3D11ShaderCI, true}
     {}
 
     virtual SerializedData Serialize(ShaderCreateInfo ShaderCI) const override final
@@ -69,6 +72,11 @@ struct CompiledShaderD3D11 final : SerializedShaderImpl::CompiledShader
         ShaderCI.ByteCode     = pBytecode->GetBufferPointer();
         ShaderCI.ByteCodeSize = pBytecode->GetBufferSize();
         return SerializedShaderImpl::SerializeCreateInfo(ShaderCI);
+    }
+
+    virtual IShader* GetDeviceShader() override final
+    {
+        return &ShaderD3D11;
     }
 };
 
@@ -196,7 +204,7 @@ void SerializedShaderImpl::CreateShaderD3D11(IReferenceCounters* pRefCounters, c
         m_pDevice->GetAdapterInfo(),
         static_cast<D3D_FEATURE_LEVEL>(m_pDevice->GetD3D11Properties().FeatureLevel) //
     };
-    CreateShader<CompiledShaderD3D11>(DeviceType::Direct3D11, pRefCounters, ShaderCI, D3D11ShaderCI);
+    CreateShader<CompiledShaderD3D11>(DeviceType::Direct3D11, pRefCounters, ShaderCI, D3D11ShaderCI, m_pDevice->GetRenderDevice(RENDER_DEVICE_TYPE_D3D11));
 }
 
 void SerializationDeviceImpl::GetPipelineResourceBindingsD3D11(const PipelineResourceBindingAttribs& Info,

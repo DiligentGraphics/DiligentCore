@@ -248,6 +248,13 @@ DILIGENT_BEGIN_INTERFACE(ISerializationDevice, IRenderDevice)
 
     /// Returns a combination of supported device flags, see Diligent::ARCHIVE_DEVICE_DATA_FLAGS.
     VIRTUAL ARCHIVE_DEVICE_DATA_FLAGS METHOD(GetSupportedDeviceFlags)(THIS) CONST PURE;
+
+    /// Adds a optional render device that will be used to initialize device-specific objects that
+    /// may be used for rendering (e.g. shaders).
+    /// For example, a shader object retrieved with ISerializedShader::GetDeviceShader() will be
+    /// suitable for rendering.
+    VIRTUAL void METHOD(AddRenderDevice)(THIS_
+                                         IRenderDevice* pDevice) PURE;
 };
 DILIGENT_END_INTERFACE
 
