@@ -343,4 +343,61 @@ void ArchiverImpl::Reset()
     }
 }
 
+IShader* ArchiverImpl::GetShader(const char* Name)
+{
+    std::lock_guard<std::mutex> Guard{m_ShadersMtx};
+
+    auto it = m_Shaders.find(Name);
+    return it != m_Shaders.end() ? it->second.RawPtr() : nullptr;
+}
+
+static DeviceObjectArchive::ResourceType PiplineTypeToArchiveResourceType(PIPELINE_TYPE Type)
+{
+    using ResourceType = DeviceObjectArchive::ResourceType;
+
+    static_assert(PIPELINE_TYPE_COUNT == 5, "Did you add a new pipeline type? Please handle it here.");
+    switch (Type)
+    {
+        case PIPELINE_TYPE_GRAPHICS:
+        case PIPELINE_TYPE_MESH:
+            return ResourceType::GraphicsPipeline;
+
+        case PIPELINE_TYPE_COMPUTE:
+            return ResourceType::ComputePipeline;
+
+        case PIPELINE_TYPE_RAY_TRACING:
+            return ResourceType::RayTracingPipeline;
+
+        case PIPELINE_TYPE_TILE:
+            return ResourceType::TilePipeline;
+
+        default:
+            return ResourceType::Undefined;
+    }
+}
+
+IPipelineState* ArchiverImpl::GetPipelineState(PIPELINE_TYPE PSOType,
+                                               const char*   PSOName)
+{
+    std::lock_guard<std::mutex> Guard{m_PipelinesMtx};
+
+    const auto ResType = PiplineTypeToArchiveResourceType(PSOType);
+    if (ResType == ResourceType::Undefined)
+    {
+        UNEXPECTED("Unexpected pipline type");
+        return nullptr;
+    }
+
+    auto it = m_Pipelines.find(NamedResourceKey{ResType, PSOName});
+    return it != m_Pipelines.end() ? it->second.RawPtr() : nullptr;
+}
+
+IPipelineResourceSignature* ArchiverImpl::GetPipelineResourceSignature(const char* PRSName)
+{
+    std::lock_guard<std::mutex> Guard{m_SignaturesMtx};
+
+    auto it = m_Signatures.find(PRSName);
+    return it != m_Signatures.end() ? it->second.RawPtr() : nullptr;
+}
+
 } // namespace Diligent

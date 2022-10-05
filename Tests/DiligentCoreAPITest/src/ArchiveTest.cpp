@@ -125,15 +125,17 @@ void ArchivePRS(RefCntAutoPtr<IDataBlob>&                  pArchive,
         PRSDesc.ImmutableSamplers    = ImmutableSamplers;
         PRSDesc.NumImmutableSamplers = _countof(ImmutableSamplers);
 
-        for (Uint32 i = 0; i < 3; ++i)
+        RefCntAutoPtr<IPipelineResourceSignature> pSerializedPRS[3];
+        for (Uint32 i = 0; i < _countof(pSerializedPRS); ++i)
         {
             ResourceSignatureArchiveInfo ArchiveInfo;
             ArchiveInfo.DeviceFlags = DeviceBits;
-            RefCntAutoPtr<IPipelineResourceSignature> pSerializedPRS;
-            pSerializationDevice->CreatePipelineResourceSignature(PRSDesc, ArchiveInfo, &pSerializedPRS);
-            ASSERT_NE(pSerializedPRS, nullptr);
-            ASSERT_TRUE(pArchiver->AddPipelineResourceSignature(pSerializedPRS));
+            pSerializationDevice->CreatePipelineResourceSignature(PRSDesc, ArchiveInfo, &pSerializedPRS[i]);
+            ASSERT_NE(pSerializedPRS[i], nullptr);
+            ASSERT_TRUE(pArchiver->AddPipelineResourceSignature(pSerializedPRS[i]));
+            EXPECT_EQ(pArchiver->GetPipelineResourceSignature(PRSDesc.Name), pSerializedPRS[0]);
         }
+        EXPECT_EQ(pArchiver->GetPipelineResourceSignature("Non-existing PRS name"), nullptr);
 
         pDevice->CreatePipelineResourceSignature(PRSDesc, &pRefPRS_1);
         ASSERT_NE(pRefPRS_1, nullptr);
@@ -155,14 +157,15 @@ void ArchivePRS(RefCntAutoPtr<IDataBlob>&                  pArchive,
         PRSDesc.Resources    = Resources;
         PRSDesc.NumResources = _countof(Resources);
 
-        for (Uint32 i = 0; i < 3; ++i)
+        RefCntAutoPtr<IPipelineResourceSignature> pSerializedPRS[3];
+        for (Uint32 i = 0; i < _countof(pSerializedPRS); ++i)
         {
             ResourceSignatureArchiveInfo ArchiveInfo;
             ArchiveInfo.DeviceFlags = DeviceBits;
-            RefCntAutoPtr<IPipelineResourceSignature> pSerializedPRS;
-            pSerializationDevice->CreatePipelineResourceSignature(PRSDesc, ArchiveInfo, &pSerializedPRS);
-            ASSERT_NE(pSerializedPRS, nullptr);
-            ASSERT_TRUE(pArchiver->AddPipelineResourceSignature(pSerializedPRS));
+            pSerializationDevice->CreatePipelineResourceSignature(PRSDesc, ArchiveInfo, &pSerializedPRS[i]);
+            ASSERT_NE(pSerializedPRS[i], nullptr);
+            ASSERT_TRUE(pArchiver->AddPipelineResourceSignature(pSerializedPRS[i]));
+            EXPECT_EQ(pArchiver->GetPipelineResourceSignature(PRSDesc.Name), pSerializedPRS[0]);
         }
 
         pDevice->CreatePipelineResourceSignature(PRSDesc, &pRefPRS_2);
@@ -887,6 +890,8 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
                 pSerializationDevice->CreateGraphicsPipelineState(PSOCreateInfo, ArchiveInfo, &pSerializedPSO);
                 ASSERT_NE(pSerializedPSO, nullptr);
                 ASSERT_TRUE(pArchiver->AddPipelineState(pSerializedPSO));
+                EXPECT_EQ(pArchiver->GetPipelineState(PSOCreateInfo.PSODesc.PipelineType, PSOCreateInfo.PSODesc.Name), pSerializedPSO);
+                EXPECT_EQ(pArchiver->GetPipelineState(PIPELINE_TYPE_GRAPHICS, "Non-existing PSO name"), nullptr);
 
                 for (auto Flags = ArchiveInfo.DeviceFlags; Flags != ARCHIVE_DEVICE_DATA_FLAG_NONE;)
                 {
@@ -918,6 +923,7 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
                 pSerializationDevice->CreateGraphicsPipelineState(PSOCreateInfo, ArchiveInfo, &pSerializedPSO);
                 ASSERT_NE(pSerializedPSO, nullptr);
                 ASSERT_TRUE(pArchiver->AddPipelineState(pSerializedPSO));
+                EXPECT_EQ(pArchiver->GetPipelineState(PSOCreateInfo.PSODesc.PipelineType, PSOCreateInfo.PSODesc.Name), pSerializedPSO);
             }
 
             PSOCreateInfo.PSODesc.ResourceLayout = {};
@@ -944,6 +950,7 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
                 pSerializationDevice->CreateGraphicsPipelineState(PSOCreateInfo, ArchiveInfo, &pSerializedPSO);
                 ASSERT_NE(pSerializedPSO, nullptr);
                 ASSERT_TRUE(pArchiver->AddPipelineState(pSerializedPSO));
+                EXPECT_EQ(pArchiver->GetPipelineState(PSOCreateInfo.PSODesc.PipelineType, PSOCreateInfo.PSODesc.Name), pSerializedPSO);
             }
 
             {
@@ -1189,6 +1196,10 @@ TEST(ArchiveTest, Shaders)
     EXPECT_TRUE(pArchiver->AddShader(pSerializedVS2));
     EXPECT_TRUE(pArchiver->AddShader(pSerializedPS2));
 
+    EXPECT_EQ(pArchiver->GetShader(VertexShaderCI.Desc.Name), pSerializedVS);
+    EXPECT_EQ(pArchiver->GetShader(PixelShaderCI.Desc.Name), pSerializedPS);
+    EXPECT_EQ(pArchiver->GetShader("Non-existing shader name"), nullptr);
+
     RefCntAutoPtr<IDataBlob> pArchive;
     pArchiver->SerializeToBlob(&pArchive);
     ASSERT_NE(pArchive, nullptr);
@@ -1355,6 +1366,8 @@ void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
             pSerializationDevice->CreateComputePipelineState(PSOCreateInfo, ArchiveInfo, &pSerializedPSO);
             ASSERT_NE(pSerializedPSO, nullptr);
             ASSERT_TRUE(pArchiver->AddPipelineState(pSerializedPSO));
+            EXPECT_EQ(pArchiver->GetPipelineState(PSOCreateInfo.PSODesc.PipelineType, PSOCreateInfo.PSODesc.Name), pSerializedPSO);
+            EXPECT_EQ(pArchiver->GetPipelineState(PIPELINE_TYPE_COMPUTE, "Non-existing PSO name"), nullptr);
 
             {
                 pArchiver->SerializeToBlob(&pArchive);
@@ -1573,6 +1586,8 @@ TEST(ArchiveTest, RayTracingPipeline)
             pSerializationDevice->CreateRayTracingPipelineState(PSOCreateInfo, ArchiveInfo, &pSerializedPSO);
             ASSERT_NE(pSerializedPSO, nullptr);
             ASSERT_TRUE(pArchiver->AddPipelineState(pSerializedPSO));
+            EXPECT_EQ(pArchiver->GetPipelineState(PSOCreateInfo.PSODesc.PipelineType, PSOCreateInfo.PSODesc.Name), pSerializedPSO);
+            EXPECT_EQ(pArchiver->GetPipelineState(PIPELINE_TYPE_RAY_TRACING, "Non-existing PSO name"), nullptr);
         }
         RefCntAutoPtr<IDataBlob> pArchive;
         pArchiver->SerializeToBlob(&pArchive);
@@ -2357,6 +2372,7 @@ TEST_P(TestSamplers, GraphicsPipeline)
         pSerializationDevice->CreateGraphicsPipelineState(PSOCreateInfo, ArchiveInfo, &pSerializedPSO);
         ASSERT_NE(pSerializedPSO, nullptr);
         ASSERT_TRUE(pArchiver->AddPipelineState(pSerializedPSO));
+        EXPECT_EQ(pArchiver->GetPipelineState(PSOCreateInfo.PSODesc.PipelineType, PSOCreateInfo.PSODesc.Name), pSerializedPSO);
 
         RefCntAutoPtr<IDataBlob> pArchive;
         pArchiver->SerializeToBlob(&pArchive);

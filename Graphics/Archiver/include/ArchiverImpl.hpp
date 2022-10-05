@@ -79,6 +79,16 @@ public:
     /// Implementation of IArchiver::Reset().
     virtual void DILIGENT_CALL_TYPE Reset() override final;
 
+    /// Implementation of IArchiver::GetShader().
+    virtual IShader* DILIGENT_CALL_TYPE GetShader(const char* Name) override final;
+
+    /// Implementation of IArchiver::GetPipelineState().
+    virtual IPipelineState* DILIGENT_CALL_TYPE GetPipelineState(PIPELINE_TYPE PSOType,
+                                                                const char*   PSOName) override final;
+
+    /// Implementation of IArchiver::GetPipelineResourceSignature().
+    virtual IPipelineResourceSignature* DILIGENT_CALL_TYPE GetPipelineResourceSignature(const char* PRSName) override final;
+
 private:
     bool AddRenderPass(IRenderPass* pRP);
 
