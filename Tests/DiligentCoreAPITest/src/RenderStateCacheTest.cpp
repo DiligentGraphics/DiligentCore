@@ -35,23 +35,17 @@ using namespace Diligent::Testing;
 namespace
 {
 
-RefCntAutoPtr<IRenderStateCache> CreateCache(IRenderDevice* pDevice, IDataBlob* pBytecodeData = nullptr)
+RefCntAutoPtr<IRenderStateCache> CreateCache(IRenderDevice* pDevice, IDataBlob* pCacheData = nullptr)
 {
     RenderStateCacheCreateInfo CacheCI;
     CacheCI.pDevice = pDevice;
 
-    RefCntAutoPtr<IBytecodeCache> pBcCache;
-    if (pBytecodeData != nullptr)
-    {
-        BytecodeCacheCreateInfo BcCacheCI{pDevice->GetDeviceInfo().Type};
-
-        CreateBytecodeCache(BcCacheCI, &pBcCache);
-        pBcCache->Load(pBytecodeData);
-        CacheCI.pBytecodeCache = pBcCache;
-    }
-
     RefCntAutoPtr<IRenderStateCache> pCache;
     CreateRenderStateCache(CacheCI, &pCache);
+
+    if (pCacheData != nullptr)
+        pCache->Load(pCacheData);
+
     return pCache;
 }
 
@@ -69,7 +63,7 @@ TEST(RenderStateCacheTest, CreateGraphicsPSO)
     pDevice->GetEngineFactory()->CreateDefaultShaderSourceStreamFactory("shaders/RenderStateCache", &pShaderSourceFactory);
     ASSERT_TRUE(pShaderSourceFactory);
 
-    auto CreatePSO = [&](bool PresentInCache) {
+    auto CreatePSO = [&](bool PresentInCache, IShader** ppVS = nullptr, IShader** ppPS = nullptr) {
         ShaderCreateInfo ShaderCI;
         ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
         ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
@@ -112,16 +106,29 @@ TEST(RenderStateCacheTest, CreateGraphicsPSO)
 
         RefCntAutoPtr<IPipelineState> pPSO;
         EXPECT_FALSE(pCache->CreateGraphicsPipelineState(PsoCI, &pPSO));
+
+        if (ppVS != nullptr)
+            *ppVS = pVS.Detach();
+        if (ppPS != nullptr)
+            *ppPS = pPS.Detach();
     };
 
-    CreatePSO(false);
+    {
+        RefCntAutoPtr<IShader> pVS1, pPS1;
+        CreatePSO(false, &pVS1, &pPS1);
+        RefCntAutoPtr<IShader> pVS2, pPS2;
+        CreatePSO(true, &pVS2, &pPS2);
+        EXPECT_EQ(pVS1, pVS2);
+        EXPECT_EQ(pPS1, pPS2);
+    }
+
     CreatePSO(true);
 
-    RefCntAutoPtr<IDataBlob> pBcData;
-    pCache->GetBytecodeCache()->Store(&pBcData);
+    RefCntAutoPtr<IDataBlob> pData;
+    pCache->WriteToBlob(&pData);
 
     pCache.Release();
-    pCache = CreateCache(pDevice, pBcData);
+    pCache = CreateCache(pDevice, pData);
 
     CreatePSO(true);
 }
@@ -165,11 +172,11 @@ TEST(RenderStateCacheTest, CreateComputePSO)
     CreatePSO(false);
     CreatePSO(true);
 
-    RefCntAutoPtr<IDataBlob> pBcData;
-    pCache->GetBytecodeCache()->Store(&pBcData);
+    RefCntAutoPtr<IDataBlob> pData;
+    pCache->WriteToBlob(&pData);
 
     pCache.Release();
-    pCache = CreateCache(pDevice, pBcData);
+    pCache = CreateCache(pDevice, pData);
 
     CreatePSO(true);
 }

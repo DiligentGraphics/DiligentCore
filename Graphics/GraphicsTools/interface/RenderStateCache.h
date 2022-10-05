@@ -30,7 +30,6 @@
 /// Defines Diligent::IRenderStateCache interface
 
 #include "../../GraphicsEngine/interface/RenderDevice.h"
-#include "BytecodeCache.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
@@ -39,9 +38,6 @@ struct RenderStateCacheCreateInfo
 {
     /// A pointer to the render device, must not be null.
     IRenderDevice* pDevice DEFAULT_INITIALIZER(nullptr);
-
-    /// A pointer to the bytecode cache.
-    IBytecodeCache* pBytecodeCache DEFAULT_INITIALIZER(nullptr);
 };
 typedef struct RenderStateCacheCreateInfo RenderStateCacheCreateInfo;
 
@@ -63,6 +59,26 @@ static const INTERFACE_ID IID_RenderStateCache =
 
 DILIGENT_BEGIN_INTERFACE(IRenderStateCache, IObject)
 {
+    /// Loads the cache contents.
+
+    /// \param [in] pCacheData - A pointer to the cache data to load objects from.
+    /// \param [in] MakeCopy   - Whether to make a copy of the data blob, or use the
+    ///                          the original contents.
+    /// \return     true if the data were loaded successfully, and false otherwise.
+    ///
+    /// \note       If the data were not copied, the cache will keep a strong reference
+    ///             to the pCacheData data blob. It will be kept alive until the cache object
+    ///             is released or the Reset() method is called.
+    ///
+    /// \warning    If the data were loaded without making a copy, the application
+    ///             must not modify it while it is in use by the cache object.
+    /// 
+    /// \warning    This method is not thread-safe and must not be called simultaneously
+    ///             with other methods.
+    VIRTUAL bool METHOD(Load)(THIS_
+                              const IDataBlob* pCacheData,
+                              bool             MakeCopy DEFAULT_VALUE(false)) PURE;
+
     /// Creates a shader object from cached data.
 
     /// \param [in]  ShaderCI - Shader create info, see Diligent::ShaderCreateInfo for details.
@@ -118,8 +134,17 @@ DILIGENT_BEGIN_INTERFACE(IRenderStateCache, IObject)
                                                  const TilePipelineStateCreateInfo REF PSOCreateInfo,
                                                  IPipelineState**                      ppPipelineState) PURE;
 
-    /// Returns a pointer to the byte code cache.
-    VIRTUAL IBytecodeCache* METHOD(GetBytecodeCache)(THIS) PURE;
+    /// Writes cache contents to a memory blob.
+    VIRTUAL Bool METHOD(WriteToBlob)(THIS_
+                                     IDataBlob** ppBlob) PURE;
+
+    /// Writes cache contents to a file stream.
+    VIRTUAL Bool METHOD(WriteToStream)(THIS_
+                                       IFileStream* pStream) PURE;
+
+
+    /// Resets the cache to default state.
+    VIRTUAL void METHOD(Reset)(THIS) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -128,12 +153,15 @@ DILIGENT_END_INTERFACE
 #if DILIGENT_C_INTERFACE
 
 // clang-format off
+#    define IRenderStateCache_Load(This, ...)                          CALL_IFACE_METHOD(RenderStateCache, Load,                         This, __VA_ARGS__)
 #    define IRenderStateCache_CreateShader(This, ...)                  CALL_IFACE_METHOD(RenderStateCache, CreateShader,                 This, __VA_ARGS__)
 #    define IRenderStateCache_CreateGraphicsPipelineState(This, ...)   CALL_IFACE_METHOD(RenderStateCache, CreateGraphicsPipelineState,  This, __VA_ARGS__)
 #    define IRenderStateCache_CreateComputePipelineState(This, ...)    CALL_IFACE_METHOD(RenderStateCache, CreateComputePipelineState,   This, __VA_ARGS__)
 #    define IRenderStateCache_CreateRayTracingPipelineState(This, ...) CALL_IFACE_METHOD(RenderStateCache, CreateRayTracingPipelineState,This, __VA_ARGS__)
 #    define IRenderStateCache_CreateTilePipelineState(This, ...)       CALL_IFACE_METHOD(RenderStateCache, CreateTilePipelineState,      This, __VA_ARGS__)
-#    define IRenderStateCache_GetBytecodeCache(This)                   CALL_IFACE_METHOD(RenderStateCache, GetBytecodeCache,             This)
+#    define IRenderStateCache_WriteToBlob(This, ...)                   CALL_IFACE_METHOD(RenderStateCache, WriteToBlob,                  This, __VA_ARGS__)
+#    define IRenderStateCache_WriteToStream(This, ...)                 CALL_IFACE_METHOD(RenderStateCache, WriteToStream,                This, __VA_ARGS__)
+#    define IRenderStateCache_Reset(This)                              CALL_IFACE_METHOD(RenderStateCache, Reset,                        This)
 // clang-format on
 
 #endif

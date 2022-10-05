@@ -11,7 +11,6 @@ set(INTERFACE
     interface/DurationQueryHelper.hpp
     interface/GraphicsUtilities.h
     interface/MapHelper.hpp
-    interface/RenderStateCache.h
     interface/ScopedDebugGroup.hpp
     interface/GPUCompletionAwaitQueue.hpp
     interface/ScopedQueryHelper.hpp
@@ -31,13 +30,21 @@ set(SOURCE
     src/DynamicTextureArray.cpp
     src/DynamicTextureAtlas.cpp
     src/GraphicsUtilities.cpp
-    src/RenderStateCache.cpp
     src/ScopedQueryHelper.cpp
     src/ScreenCapture.cpp
     src/TextureUploader.cpp
     src/XXH128Hasher.cpp
     src/BytecodeCache.cpp
 )
+
+if(ARCHIVER_SUPPORTED)
+    list(APPEND INTERFACE
+        interface/RenderStateCache.h
+    )
+    list(APPEND SOURCE
+        src/RenderStateCache.cpp
+    )
+endif()
 
 set(DEPENDENCIES)
 
@@ -79,6 +86,13 @@ PRIVATE
 PUBLIC
     Diligent-GraphicsEngineInterface
 )
+
+if(ARCHIVER_SUPPORTED)
+    target_link_libraries(Diligent-GraphicsTools
+    PRIVATE
+        Diligent-Archiver-static
+    )
+endif()
 
 if(D3D11_SUPPORTED OR D3D12_SUPPORTED)
     target_link_libraries(Diligent-GraphicsTools

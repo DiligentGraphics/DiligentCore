@@ -78,7 +78,7 @@ void XXH128State::Update(const ShaderCreateInfo& ShaderCI) noexcept
 
     Update(
         ShaderCI.Source,
-        ShaderCI.SourceLength,
+        ShaderCI.SourceLength, // Aka ByteCodeSize
         ShaderCI.EntryPoint,
         ShaderCI.UseCombinedTextureSamplers,
         ShaderCI.CombinedSamplerSuffix,

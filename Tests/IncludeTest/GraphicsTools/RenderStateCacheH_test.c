@@ -29,11 +29,11 @@
 void TestRenderStateCacheCInterface()
 {
     RenderStateCacheCreateInfo CI;
-    CI.pDevice        = NULL;
-    CI.pBytecodeCache = NULL;
+    CI.pDevice = NULL;
 
     IRenderStateCache* pCache = NULL;
     Diligent_CreateRenderStateCache(&CI, &pCache);
+    IRenderStateCache_Load(pCache, (IDataBlob*)NULL, true);
 
     IShader* pShader = NULL;
     IRenderStateCache_CreateShader(pCache, (ShaderCreateInfo*)NULL, &pShader);
@@ -43,6 +43,7 @@ void TestRenderStateCacheCInterface()
     IRenderStateCache_CreateComputePipelineState(pCache, (ComputePipelineStateCreateInfo*)NULL, &pPSO);
     IRenderStateCache_CreateRayTracingPipelineState(pCache, (RayTracingPipelineStateCreateInfo*)NULL, &pPSO);
     IRenderStateCache_CreateTilePipelineState(pCache, (TilePipelineStateCreateInfo*)NULL, &pPSO);
-
-    CI.pBytecodeCache = IRenderStateCache_GetBytecodeCache(pCache);
+    IRenderStateCache_WriteToBlob(pCache, (IDataBlob**)NULL);
+    IRenderStateCache_WriteToStream(pCache, (IFileStream*)NULL);
+    IRenderStateCache_Reset(pCache);
 }
