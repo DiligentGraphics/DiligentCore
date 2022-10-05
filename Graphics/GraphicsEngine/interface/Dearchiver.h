@@ -50,6 +50,13 @@ struct ShaderUnpackInfo
 
     /// Name of the shader to unpack.
     const char* Name DEFAULT_INITIALIZER(nullptr);
+
+    /// An optional function to be called by the dearchiver to let the application modify
+    /// the shader description.
+    void (*ModifyShaderDesc)(ShaderDesc REF Desc, void* pUserData) DEFAULT_INITIALIZER(nullptr);
+
+    /// A pointer to the user data to pass to the ModifyShaderDesc function.
+    void* pUserData DEFAULT_INITIALIZER(nullptr);
 };
 typedef struct ShaderUnpackInfo ShaderUnpackInfo;
 

@@ -748,6 +748,25 @@ void DearchiverBase::UnpackPipelineState(const PipelineStateUnpackInfo& UnpackIn
     }
 }
 
+static bool ModifyShaderDesc(ShaderDesc&             Desc,
+                             const ShaderUnpackInfo& UnpackInfo)
+{
+    if (UnpackInfo.ModifyShaderDesc == nullptr)
+        return true;
+
+    const auto ShaderType = Desc.ShaderType;
+
+    UnpackInfo.ModifyShaderDesc(Desc, UnpackInfo.pUserData);
+
+    if (ShaderType != Desc.ShaderType)
+    {
+        LOG_ERROR_MESSAGE("Modifying shader type is not allowed");
+        return false;
+    }
+
+    return true;
+}
+
 void DearchiverBase::UnpackShader(const ShaderUnpackInfo& UnpackInfo,
                                   IShader**               ppShader)
 {
@@ -796,6 +815,9 @@ void DearchiverBase::UnpackShader(const ShaderUnpackInfo& UnpackInfo,
         }
         VERIFY_EXPR(Ser.IsEnded());
     }
+
+    if (!ModifyShaderDesc(ShaderCI.Desc, UnpackInfo))
+        return;
 
     auto pShader = UnpackShader(ShaderCI, UnpackInfo.pDevice);
     if (!pShader)
