@@ -1123,6 +1123,164 @@ struct HashCombiner<HasherType, Version> : HashCombinerBase<HasherType>
 };
 
 
+template <typename HasherType>
+struct HashCombiner<HasherType, PipelineStateCreateInfo> : HashCombinerBase<HasherType>
+{
+    HashCombiner(HasherType& Hasher) :
+        HashCombinerBase<HasherType>{Hasher}
+    {}
+
+    void operator()(const PipelineStateCreateInfo& CI) const
+    {
+        this->m_Hasher(
+            CI.PSODesc,
+            CI.Flags,
+            CI.ResourceSignaturesCount);
+        if (CI.ppResourceSignatures != nullptr)
+        {
+            for (size_t i = 0; i < CI.ResourceSignaturesCount; ++i)
+            {
+                if (const auto* pSign = CI.ppResourceSignatures[i])
+                {
+                    this->m_Hasher(pSign->GetDesc());
+                }
+            }
+        }
+        else
+        {
+            VERIFY_EXPR(CI.ResourceSignaturesCount == 0);
+        }
+    }
+};
+
+template <typename HasherType>
+void HashShaderBytecode(HasherType& Hasher, IShader* pShader)
+{
+    if (pShader == nullptr)
+        return;
+
+    const void* pBytecode = nullptr;
+    Uint64      Size      = 0;
+    pShader->GetBytecode(&pBytecode, Size);
+    Hasher.UpdateRaw(pBytecode, static_cast<size_t>(Size));
+}
+
+template <typename HasherType>
+struct HashCombiner<HasherType, GraphicsPipelineStateCreateInfo> : HashCombinerBase<HasherType>
+{
+    HashCombiner(HasherType& Hasher) :
+        HashCombinerBase<HasherType>{Hasher}
+    {}
+
+    void operator()(const GraphicsPipelineStateCreateInfo& CI) const
+    {
+        this->m_Hasher(
+            static_cast<const PipelineStateCreateInfo&>(CI),
+            CI.GraphicsPipeline);
+        HashShaderBytecode(this->m_Hasher, CI.pVS);
+        HashShaderBytecode(this->m_Hasher, CI.pPS);
+        HashShaderBytecode(this->m_Hasher, CI.pDS);
+        HashShaderBytecode(this->m_Hasher, CI.pHS);
+        HashShaderBytecode(this->m_Hasher, CI.pGS);
+        HashShaderBytecode(this->m_Hasher, CI.pAS);
+        HashShaderBytecode(this->m_Hasher, CI.pMS);
+    }
+};
+
+template <typename HasherType>
+struct HashCombiner<HasherType, ComputePipelineStateCreateInfo> : HashCombinerBase<HasherType>
+{
+    HashCombiner(HasherType& Hasher) :
+        HashCombinerBase<HasherType>{Hasher}
+    {}
+
+    void operator()(const ComputePipelineStateCreateInfo& CI) const
+    {
+        this->m_Hasher(static_cast<const PipelineStateCreateInfo&>(CI));
+        HashShaderBytecode(this->m_Hasher, CI.pCS);
+    }
+};
+
+template <typename HasherType>
+struct HashCombiner<HasherType, RayTracingPipelineStateCreateInfo> : HashCombinerBase<HasherType>
+{
+    HashCombiner(HasherType& Hasher) :
+        HashCombinerBase<HasherType>{Hasher}
+    {}
+
+    void operator()(const RayTracingPipelineStateCreateInfo& CI) const
+    {
+        this->m_Hasher(
+            static_cast<const PipelineStateCreateInfo&>(CI),
+            CI.RayTracingPipeline,
+            CI.GeneralShaderCount,
+            CI.TriangleHitShaderCount,
+            CI.ProceduralHitShaderCount,
+            CI.pShaderRecordName,
+            CI.MaxAttributeSize,
+            CI.MaxPayloadSize);
+
+        for (size_t i = 0; i < CI.GeneralShaderCount; ++i)
+        {
+            const auto& GeneralShader = CI.pGeneralShaders[i];
+            this->m_Hasher(GeneralShader.Name);
+            HashShaderBytecode(this->m_Hasher, GeneralShader.pShader);
+        }
+
+        for (size_t i = 0; i < CI.TriangleHitShaderCount; ++i)
+        {
+            const auto& TriHitShader = CI.pTriangleHitShaders[i];
+            this->m_Hasher(TriHitShader.Name);
+            HashShaderBytecode(this->m_Hasher, TriHitShader.pAnyHitShader);
+            HashShaderBytecode(this->m_Hasher, TriHitShader.pClosestHitShader);
+        }
+
+        for (size_t i = 0; i < CI.ProceduralHitShaderCount; ++i)
+        {
+            const auto& ProcHitShader = CI.pProceduralHitShaders[i];
+            this->m_Hasher(ProcHitShader.Name);
+            HashShaderBytecode(this->m_Hasher, ProcHitShader.pAnyHitShader);
+            HashShaderBytecode(this->m_Hasher, ProcHitShader.pClosestHitShader);
+            HashShaderBytecode(this->m_Hasher, ProcHitShader.pIntersectionShader);
+        }
+    }
+};
+
+template <typename HasherType>
+struct HashCombiner<HasherType, TilePipelineDesc> : HashCombinerBase<HasherType>
+{
+    HashCombiner(HasherType& Hasher) :
+        HashCombinerBase<HasherType>{Hasher}
+    {}
+
+    void operator()(const TilePipelineDesc& Desc) const
+    {
+        ASSERT_SIZEOF(Desc.NumRenderTargets, 1, "Hash logic below may be incorrect.");
+        ASSERT_SIZEOF(Desc.SampleCount, 1, "Hash logic below may be incorrect.");
+
+        this->m_Hasher(
+            ((static_cast<uint32_t>(Desc.NumRenderTargets) << 0u) |
+             (static_cast<uint32_t>(Desc.SampleCount) << 8u)));
+
+        for (size_t i = 0; i < Desc.NumRenderTargets; ++i)
+            this->m_Hasher(Desc.RTVFormats[i]);
+    }
+};
+
+template <typename HasherType>
+struct HashCombiner<HasherType, TilePipelineStateCreateInfo> : HashCombinerBase<HasherType>
+{
+    HashCombiner(HasherType& Hasher) :
+        HashCombinerBase<HasherType>{Hasher}
+    {}
+
+    void operator()(const TilePipelineStateCreateInfo& CI) const
+    {
+        this->m_Hasher(static_cast<const PipelineStateCreateInfo&>(CI), CI.TilePipeline);
+        HashShaderBytecode(this->m_Hasher, CI.pTS);
+    }
+};
+
 struct DefaultHasher
 {
     template <typename... ArgsType>
@@ -1130,6 +1288,11 @@ struct DefaultHasher
     {
         HashCombine(m_Seed, Args...);
         return m_Seed;
+    }
+
+    void UpdateRaw(const void* pData, uint64_t Size) noexcept
+    {
+        HashCombine(m_Seed, ComputeHashRaw(pData, static_cast<size_t>(Size)));
     }
 
     size_t Get() const
@@ -1205,6 +1368,12 @@ DEFINE_HASH(Diligent::PipelineStateDesc);
 DEFINE_HASH(Diligent::PipelineResourceSignatureDesc);
 DEFINE_HASH(Diligent::ShaderDesc);
 DEFINE_HASH(Diligent::Version);
+DEFINE_HASH(Diligent::PipelineStateCreateInfo);
+DEFINE_HASH(Diligent::GraphicsPipelineStateCreateInfo);
+DEFINE_HASH(Diligent::ComputePipelineStateCreateInfo);
+DEFINE_HASH(Diligent::RayTracingPipelineStateCreateInfo);
+DEFINE_HASH(Diligent::TilePipelineDesc);
+DEFINE_HASH(Diligent::TilePipelineStateCreateInfo);
 
 #undef DEFINE_HASH
 

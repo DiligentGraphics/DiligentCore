@@ -148,7 +148,13 @@ struct XXH128State final
                              std::is_same<typename std::remove_cv<T>::type, PipelineStateDesc>::value ||
                              std::is_same<typename std::remove_cv<T>::type, PipelineResourceSignatureDesc>::value ||
                              std::is_same<typename std::remove_cv<T>::type, Version>::value ||
-                             std::is_same<typename std::remove_cv<T>::type, ShaderDesc>::value),
+                             std::is_same<typename std::remove_cv<T>::type, ShaderDesc>::value ||
+                             std::is_same<typename std::remove_cv<T>::type, TilePipelineDesc>::value ||
+                             std::is_same<typename std::remove_cv<T>::type, PipelineStateCreateInfo>::value ||
+                             std::is_same<typename std::remove_cv<T>::type, GraphicsPipelineStateCreateInfo>::value ||
+                             std::is_same<typename std::remove_cv<T>::type, ComputePipelineStateCreateInfo>::value ||
+                             std::is_same<typename std::remove_cv<T>::type, RayTracingPipelineStateCreateInfo>::value ||
+                             std::is_same<typename std::remove_cv<T>::type, TilePipelineStateCreateInfo>::value),
                             void>::type
     Update(const T& Val) noexcept
     {

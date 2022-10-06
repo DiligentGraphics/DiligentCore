@@ -1179,4 +1179,149 @@ TEST(XXH128HasherTest, ShaderCreateInfo)
     TEST_FLAGS(CompileFlags, static_cast<SHADER_COMPILE_FLAGS>(1), SHADER_COMPILE_FLAG_LAST);
 }
 
+
+
+template <template <typename T> class HelperType>
+void TestPipelineStateCIHasher()
+{
+    DEFINE_HELPER(PipelineStateCreateInfo);
+
+    TEST_FLAGS(Flags, static_cast<PSO_CREATE_FLAGS>(1), PSO_CREATE_FLAG_LAST);
+    TEST_RANGE(PSODesc.PipelineType, static_cast<PIPELINE_TYPE>(1), PIPELINE_TYPE_COUNT);
+
+    std::array<IPipelineResourceSignature*, MAX_RESOURCE_SIGNATURES> ppSignatures{};
+    Helper.Get().ppResourceSignatures = ppSignatures.data();
+    TEST_RANGE(ResourceSignaturesCount, 1u, MAX_RESOURCE_SIGNATURES);
+}
+
+TEST(Common_HashUtils, PipelineStateCIStdHash)
+{
+    TestPipelineStateCIHasher<StdHasherTestHelper>();
+}
+
+TEST(Common_HashUtils, PipelineStateCIXXH128Hash)
+{
+    TestPipelineStateCIHasher<XXH128HasherTestHelper>();
+}
+
+
+
+template <template <typename T> class HelperType>
+void TestGraphicsPipelineStateCIHasher()
+{
+    DEFINE_HELPER(GraphicsPipelineStateCreateInfo);
+
+    TEST_FLAGS(Flags, static_cast<PSO_CREATE_FLAGS>(1), PSO_CREATE_FLAG_LAST);
+    TEST_FLAGS(GraphicsPipeline.SampleMask, 1u, 0xFFFFFFFFu);
+}
+
+TEST(Common_HashUtils, GraphicsPipelineStateCIStdHash)
+{
+    TestGraphicsPipelineStateCIHasher<StdHasherTestHelper>();
+}
+
+TEST(Common_HashUtils, GraphicsPipelineStateCIXXH128Hash)
+{
+    TestGraphicsPipelineStateCIHasher<XXH128HasherTestHelper>();
+}
+
+
+template <template <typename T> class HelperType>
+void TestComputePipelineStateCIHasher()
+{
+    DEFINE_HELPER(ComputePipelineStateCreateInfo);
+
+    TEST_FLAGS(Flags, static_cast<PSO_CREATE_FLAGS>(1), PSO_CREATE_FLAG_LAST);
+}
+
+TEST(Common_HashUtils, ComputePipelineStateCIStdHash)
+{
+    TestComputePipelineStateCIHasher<StdHasherTestHelper>();
+}
+
+TEST(Common_HashUtils, ComputePipelineStateCIXXH128Hash)
+{
+    TestComputePipelineStateCIHasher<XXH128HasherTestHelper>();
+}
+
+
+template <template <typename T> class HelperType>
+void TestRTPipelineStateCIHasher()
+{
+    DEFINE_HELPER(RayTracingPipelineStateCreateInfo);
+
+    TEST_FLAGS(Flags, static_cast<PSO_CREATE_FLAGS>(1), PSO_CREATE_FLAG_LAST);
+    TEST_RANGE(RayTracingPipeline.ShaderRecordSize, Uint16{32u}, Uint16{48000u}, Uint16{1024u});
+
+    std::array<RayTracingGeneralShaderGroup, 8>       pGeneralShaders{};
+    std::array<RayTracingTriangleHitShaderGroup, 8>   pTriangleHitShaders{};
+    std::array<RayTracingProceduralHitShaderGroup, 8> pProceduralHitShaders{};
+
+    Helper.Get().pGeneralShaders       = pGeneralShaders.data();
+    Helper.Get().pTriangleHitShaders   = pTriangleHitShaders.data();
+    Helper.Get().pProceduralHitShaders = pProceduralHitShaders.data();
+
+    TEST_RANGE(GeneralShaderCount, 1u, static_cast<Uint32>(pGeneralShaders.size()));
+    TEST_RANGE(TriangleHitShaderCount, 1u, static_cast<Uint32>(pTriangleHitShaders.size()));
+    TEST_RANGE(ProceduralHitShaderCount, 1u, static_cast<Uint32>(pProceduralHitShaders.size()));
+    TEST_STRINGS(pShaderRecordName, "Name1", "Name2", "Name3");
+    TEST_RANGE(MaxAttributeSize, 1u, 128u);
+    TEST_RANGE(MaxPayloadSize, 1u, 128u);
+}
+
+TEST(Common_HashUtils, RTPipelineStateCIStdHash)
+{
+    TestRTPipelineStateCIHasher<StdHasherTestHelper>();
+}
+
+TEST(Common_HashUtils, RTPipelineStateCIXXH128Hash)
+{
+    TestRTPipelineStateCIHasher<XXH128HasherTestHelper>();
+}
+
+
+template <template <typename T> class HelperType>
+void TestTilePipelineDescHasher()
+{
+    DEFINE_HELPER(TilePipelineDesc);
+
+    TEST_RANGE(NumRenderTargets, Uint8{1u}, Uint8{8u});
+    TEST_RANGE(SampleCount, Uint8{2u}, Uint8{32u});
+    for (Uint8 i = 1; i < MAX_RENDER_TARGETS; ++i)
+    {
+        Helper.Get().NumRenderTargets = i;
+        TEST_RANGE(RTVFormats[i - 1], TEX_FORMAT_UNKNOWN, TEX_FORMAT_NUM_FORMATS);
+    }
+}
+
+TEST(Common_HashUtils, TilePipelineDescStdHash)
+{
+    TestTilePipelineDescHasher<StdHasherTestHelper>();
+}
+
+TEST(Common_HashUtils, TilePipelineDescXXH128Hash)
+{
+    TestTilePipelineDescHasher<XXH128HasherTestHelper>();
+}
+
+
+template <template <typename T> class HelperType>
+void TestTilePipelineStateCIHasher()
+{
+    DEFINE_HELPER(TilePipelineStateCreateInfo);
+
+    TEST_FLAGS(Flags, static_cast<PSO_CREATE_FLAGS>(1), PSO_CREATE_FLAG_LAST);
+    TEST_RANGE(TilePipeline.SampleCount, Uint8{2u}, Uint8{32u});
+}
+
+TEST(Common_HashUtils, TilePipelineStateCIStdHash)
+{
+    TestTilePipelineStateCIHasher<StdHasherTestHelper>();
+}
+
+TEST(Common_HashUtils, TilePipelineStateCIXXH128Hash)
+{
+    TestTilePipelineStateCIHasher<XXH128HasherTestHelper>();
+}
+
 } // namespace
