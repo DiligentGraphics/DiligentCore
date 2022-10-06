@@ -401,8 +401,6 @@ struct HashCombiner<HasherType, SamplerDesc> : HashCombinerBase<HasherType>
 
     void operator()(const SamplerDesc& SamDesc) const
     {
-        // Sampler name is ignored in comparison operator
-        // and should not be hashed
         ASSERT_SIZEOF(SamDesc.MinFilter, 1, "Hash logic below may be incorrect.");
         ASSERT_SIZEOF(SamDesc.MagFilter, 1, "Hash logic below may be incorrect.");
         ASSERT_SIZEOF(SamDesc.MipFilter, 1, "Hash logic below may be incorrect.");
@@ -412,6 +410,7 @@ struct HashCombiner<HasherType, SamplerDesc> : HashCombinerBase<HasherType>
         ASSERT_SIZEOF(SamDesc.Flags, 1, "Hash logic below may be incorrect.");
         ASSERT_SIZEOF(SamDesc.BorderColor, 16, "Hash logic below may be incorrect.");
 
+        // Ignore Name. This is consistent with the operator==
         this->m_Hasher( // SamDesc.Name,
             ((static_cast<uint32_t>(SamDesc.MinFilter) << 0u) |
              (static_cast<uint32_t>(SamDesc.MagFilter) << 8u) |
@@ -578,6 +577,7 @@ struct HashCombiner<HasherType, TextureViewDesc> : HashCombinerBase<HasherType>
         ASSERT_SIZEOF(TexViewDesc.AccessFlags, 1, "Hash logic below may be incorrect.");
         ASSERT_SIZEOF(TexViewDesc.Flags, 1, "Hash logic below may be incorrect.");
 
+        // Ignore Name. This is consistent with the operator==
         this->m_Hasher(
             ((static_cast<uint32_t>(TexViewDesc.ViewType) << 0u) |
              (static_cast<uint32_t>(TexViewDesc.TextureDim) << 8u) |
@@ -868,6 +868,7 @@ struct HashCombiner<HasherType, RenderPassDesc> : HashCombinerBase<HasherType>
 
     void operator()(const RenderPassDesc& RP) const
     {
+        // Ignore Name. This is consistent with the operator==
         this->m_Hasher(
             RP.AttachmentCount,
             RP.SubpassCount,
@@ -1030,6 +1031,7 @@ struct HashCombiner<HasherType, PipelineStateDesc> : HashCombinerBase<HasherType
 
     void operator()(const PipelineStateDesc& Desc) const
     {
+        // Ignore Name. This is consistent with the operator==
         this->m_Hasher(
             Desc.PipelineType,
             Desc.SRBAllocationGranularity,
@@ -1050,6 +1052,7 @@ struct HashCombiner<HasherType, PipelineResourceSignatureDesc> : HashCombinerBas
     {
         ASSERT_SIZEOF(Desc.BindingIndex, 1, "Hash logic below may be incorrect.");
         ASSERT_SIZEOF(Desc.UseCombinedTextureSamplers, 1, "Hash logic below may be incorrect.");
+        // Ignore Name. This is consistent with the operator==
         this->m_Hasher(
             Desc.NumResources,
             Desc.NumImmutableSamplers,
@@ -1094,6 +1097,7 @@ struct HashCombiner<HasherType, ShaderDesc> : HashCombinerBase<HasherType>
 
     void operator()(const ShaderDesc& Desc) const
     {
+        // Ignore Name. This is consistent with the operator==
         this->m_Hasher(
             Desc.ShaderType,
             Desc.UseCombinedTextureSamplers,

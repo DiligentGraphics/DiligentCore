@@ -167,11 +167,18 @@ struct TextureViewDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     constexpr Uint32 FirstArrayOrDepthSlice() const { return FirstArraySlice; }
     constexpr Uint32 NumArrayOrDepthSlices()  const { return NumArraySlices; }
 
-    /// Tests if two structures are equivalent
+    /// Tests if two texture view descriptions are equal.
+
+    /// \param [in] RHS - reference to the structure to compare with.
+    ///
+    /// \return     true if all members of the two structures *except for the Name* are equal,
+    ///             and false otherwise.
+    ///
+    /// \note   The operator ignores the Name field as it is used for debug purposes and
+    ///         doesn't affect the texture view properties.
     constexpr bool operator==(const TextureViewDesc& RHS) const
     {
-        // Name is primarily used for debug purposes and does not affect the view.
-        // It is ignored in comparison operation.
+        // Ignore Name. This is consistent with the hasher (HashCombiner<HasherType, TextureViewDesc>).
         return //strcmp(Name, RHS.Name) == 0            &&
             ViewType == RHS.ViewType &&
             TextureDim == RHS.TextureDim &&

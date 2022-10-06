@@ -571,14 +571,22 @@ struct PipelineStateDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     PipelineResourceLayoutDesc ResourceLayout;
 
 #if DILIGENT_CPP_INTERFACE
-    /// Comparison operator tests if two structures are equivalent
+    /// Tests if two pipeline state descriptions are equal.
+
+    /// \param [in] RHS - reference to the structure to compare with.
+    ///
+    /// \return     true if all members of the two structures *except for the Name* are equal,
+    ///             and false otherwise.
+    ///
+    /// \note   The operator ignores the Name field as it is used for debug purposes and
+    ///         doesn't affect the pipeline state properties.
     bool operator==(const PipelineStateDesc& RHS) const noexcept
     {
+        // Ignore Name. This is consistent with the hasher (HashCombiner<HasherType, PipelineStateDesc>).
         return PipelineType             == RHS.PipelineType             &&
                SRBAllocationGranularity == RHS.SRBAllocationGranularity &&
                ImmediateContextMask     == RHS.ImmediateContextMask     &&
-               ResourceLayout           == RHS.ResourceLayout           &&
-               SafeStrEqual(Name, RHS.Name);
+               ResourceLayout           == RHS.ResourceLayout;
     }
     bool operator!=(const PipelineStateDesc& RHS) const noexcept
     {

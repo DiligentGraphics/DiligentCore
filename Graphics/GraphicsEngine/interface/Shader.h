@@ -154,12 +154,18 @@ struct ShaderDesc DILIGENT_DERIVE(DeviceObjectAttribs)
         CombinedSamplerSuffix     {_CombinedSamplerSuffix}
     {}
 
-    /// Comparison operator tests if two structures are equivalent.
+    /// Tests if two shader descriptions are equal.
+
+    /// \param [in] RHS - reference to the structure to compare with.
     ///
-    /// \note   Comparison ignores shader name.
+    /// \return     true if all members of the two structures *except for the Name* are equal,
+    ///             and false otherwise.
+    ///
+    /// \note   The operator ignores the Name field as it is used for debug purposes and
+    ///         doesn't affect the shader properties.
     bool operator==(const ShaderDesc& RHS) const noexcept
     {
-        // Ignore name
+        // Ignore Name. This is consistent with the hasher (HashCombiner<HasherType, ShaderDesc>).
         return ShaderType                 == RHS.ShaderType                 && 
                UseCombinedTextureSamplers == RHS.UseCombinedTextureSamplers &&
                SafeStrEqual(CombinedSamplerSuffix, RHS.CombinedSamplerSuffix);

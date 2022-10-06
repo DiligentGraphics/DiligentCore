@@ -240,8 +240,18 @@ struct PipelineResourceSignatureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
 #if DILIGENT_CPP_INTERFACE
 
+    /// Tests if two pipeline resource signature descriptions are equal.
+
+    /// \param [in] Rhs - reference to the structure to compare with.
+    ///
+    /// \return     true if all members of the two structures *except for the Name* are equal,
+    ///             and false otherwise.
+    ///
+    /// \note   The operator ignores the Name field as it is used for debug purposes and
+    ///         doesn't affect the pipeline resource signature properties.
     bool operator==(const PipelineResourceSignatureDesc& Rhs) const noexcept
     {
+        // Ignore Name. This is consistent with the hasher (HashCombiner<HasherType, PipelineResourceSignatureDesc>).
         if (NumResources               != Rhs.NumResources         ||
             NumImmutableSamplers       != Rhs.NumImmutableSamplers ||
             BindingIndex               != Rhs.BindingIndex         ||

@@ -424,8 +424,18 @@ struct RenderPassDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     const SubpassDependencyDesc*     pDependencies      DEFAULT_INITIALIZER(nullptr);
 
 #if DILIGENT_CPP_INTERFACE
+    /// Tests if two render pass descriptions are equal.
+
+    /// \param [in] Rhs - reference to the structure to compare with.
+    ///
+    /// \return     true if all members of the two structures *except for the Name* are equal,
+    ///             and false otherwise.
+    ///
+    /// \note   The operator ignores the Name field as it is used for debug purposes and
+    ///         doesn't affect the render pass properties.
     bool operator==(const RenderPassDesc& Rhs) const noexcept
     {
+        // Ignore Name. This is consistent with the hasher (HashCombiner<HasherType, RenderPassDesc>).
         if (AttachmentCount != Rhs.AttachmentCount ||
             SubpassCount    != Rhs.SubpassCount    ||
             DependencyCount != Rhs.DependencyCount)

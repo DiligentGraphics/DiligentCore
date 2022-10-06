@@ -203,6 +203,15 @@ struct BottomLevelASDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     Uint64                     ImmediateContextMask    DEFAULT_INITIALIZER(1);
 
 #if DILIGENT_CPP_INTERFACE
+    /// Tests if two BLAS descriptions are equal.
+
+    /// \param [in] RHS - reference to the structure to compare with.
+    ///
+    /// \return     true if all members of the two structures *except for the Name* are equal,
+    ///             and false otherwise.
+    ///
+    /// \note   The operator ignores the Name field as it is used for debug purposes and
+    ///         doesn't affect the BLAS properties.
     bool operator == (const BottomLevelASDesc& rhs) const
     {
         if (TriangleCount        != rhs.TriangleCount ||
