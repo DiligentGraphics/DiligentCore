@@ -119,15 +119,13 @@ protected:
 
         ShaderCreateInfo ShaderCI;
         ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
-        ShaderCI.UseCombinedTextureSamplers = deviceCaps.IsGLDevice();
 
-        ShaderCI.FilePath        = FileName;
-        ShaderCI.Desc.Name       = ShaderName;
-        ShaderCI.EntryPoint      = EntryPoint;
-        ShaderCI.Desc.ShaderType = ShaderType;
-        ShaderCI.SourceLanguage  = SrcLang;
-        ShaderCI.Macros          = Macros;
-        ShaderCI.ShaderCompiler  = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+        ShaderCI.FilePath       = FileName;
+        ShaderCI.Desc           = {ShaderName, ShaderType, deviceCaps.IsGLDevice()};
+        ShaderCI.EntryPoint     = EntryPoint;
+        ShaderCI.SourceLanguage = SrcLang;
+        ShaderCI.Macros         = Macros;
+        ShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
 
         ModifyShaderCI(ShaderCI);
 
@@ -352,7 +350,7 @@ void ShaderResourceLayoutTest::TestTexturesAndImtblSamplers(bool TestImtblSample
         {
             if (TestImtblSamplers)
             {
-                ShaderCI.UseCombinedTextureSamplers = true;
+                ShaderCI.Desc.UseCombinedTextureSamplers = true;
                 // Immutable sampler arrays are not allowed in 5.1, and DXC only supports 6.0+
                 ShaderCI.ShaderCompiler = SHADER_COMPILER_DEFAULT;
                 ShaderCI.HLSLVersion    = ShaderVersion{5, 0};
@@ -367,7 +365,7 @@ void ShaderResourceLayoutTest::TestTexturesAndImtblSamplers(bool TestImtblSample
         }
         else if (ShaderLang == SHADER_SOURCE_LANGUAGE_GLSL)
         {
-            ShaderCI.UseCombinedTextureSamplers = true;
+            ShaderCI.Desc.UseCombinedTextureSamplers = true;
         }
         else
         {
@@ -1595,7 +1593,7 @@ TEST_F(ShaderResourceLayoutTest, MergedVarStages)
     // clang-format on
 
     auto ModifyShaderCI = [](ShaderCreateInfo& ShaderCI) {
-        ShaderCI.UseCombinedTextureSamplers = true;
+        ShaderCI.Desc.UseCombinedTextureSamplers = true;
     };
     auto pVS = CreateShader("ShaderResourceLayoutTest.MergedVarStages - VS",
                             "MergedVarStages.hlsl",

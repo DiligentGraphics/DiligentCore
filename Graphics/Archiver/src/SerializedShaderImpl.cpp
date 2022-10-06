@@ -124,7 +124,7 @@ void SerializedShaderImpl::CopyShaderCreateInfo(const ShaderCreateInfo& ShaderCI
     FixedLinearAllocator Allocator{RawAllocator};
 
     Allocator.AddSpaceForString(ShaderCI.EntryPoint);
-    Allocator.AddSpaceForString(ShaderCI.CombinedSamplerSuffix);
+    Allocator.AddSpaceForString(ShaderCI.Desc.CombinedSamplerSuffix);
     Allocator.AddSpaceForString(ShaderCI.Desc.Name);
 
     if (ShaderCI.ByteCode && ShaderCI.ByteCodeSize > 0)
@@ -162,9 +162,9 @@ void SerializedShaderImpl::CopyShaderCreateInfo(const ShaderCreateInfo& ShaderCI
 
     m_pRawMemory = decltype(m_pRawMemory){Allocator.ReleaseOwnership(), STDDeleterRawMem<void>{RawAllocator}};
 
-    m_CreateInfo.EntryPoint            = Allocator.CopyString(ShaderCI.EntryPoint);
-    m_CreateInfo.CombinedSamplerSuffix = Allocator.CopyString(ShaderCI.CombinedSamplerSuffix);
-    m_CreateInfo.Desc.Name             = Allocator.CopyString(ShaderCI.Desc.Name);
+    m_CreateInfo.EntryPoint                 = Allocator.CopyString(ShaderCI.EntryPoint);
+    m_CreateInfo.Desc.CombinedSamplerSuffix = Allocator.CopyString(ShaderCI.Desc.CombinedSamplerSuffix);
+    m_CreateInfo.Desc.Name                  = Allocator.CopyString(ShaderCI.Desc.Name);
 
     if (m_CreateInfo.Desc.Name == nullptr)
         m_CreateInfo.Desc.Name = "";

@@ -1093,9 +1093,52 @@ TEST(Common_HashUtils, PipelineResourceSignatureDescXXH128Hash)
     TestPipelineResourceSignatureDescHasher<XXH128HasherTestHelper>();
 }
 
+
+template <template <typename T> class HelperType>
+void TestShaderDescHasher()
+{
+    ASSERT_SIZEOF64(ShaderDesc, 24, "Did you add new members to ShaderDesc? Please update the tests.");
+    DEFINE_HELPER(ShaderDesc);
+
+    TEST_FLAGS(ShaderType, static_cast<SHADER_TYPE>(1), SHADER_TYPE_LAST);
+    TEST_BOOL(UseCombinedTextureSamplers);
+    TEST_STRINGS(CombinedSamplerSuffix, "_sampler1", "_sampler2", "_sampler3");
+}
+
+TEST(Common_HashUtils, ShaderDescStdHash)
+{
+    TestShaderDescHasher<StdHasherTestHelper>();
+}
+
+TEST(Common_HashUtils, ShaderDescXXH128Hash)
+{
+    TestShaderDescHasher<XXH128HasherTestHelper>();
+}
+
+
+template <template <typename T> class HelperType>
+void TestVersionHasher()
+{
+    ASSERT_SIZEOF64(Version, 8, "Did you add new members to Version? Please update the tests.");
+    DEFINE_HELPER(Version);
+
+    TEST_RANGE(Minor, 1u, 1024u);
+    TEST_RANGE(Major, 1u, 1024u);
+}
+
+TEST(Common_HashUtils, VersionStdHash)
+{
+    TestVersionHasher<StdHasherTestHelper>();
+}
+
+TEST(Common_HashUtils, VersionXXH128Hash)
+{
+    TestVersionHasher<XXH128HasherTestHelper>();
+}
+
 TEST(XXH128HasherTest, ShaderCreateInfo)
 {
-    ASSERT_SIZEOF64(ShaderCreateInfo, 152, "Did you add new members to ShaderCreateInfo? Please update the tests.");
+    ASSERT_SIZEOF64(ShaderCreateInfo, 144, "Did you add new members to ShaderCreateInfo? Please update the tests.");
     XXH128HasherTestHelper<ShaderCreateInfo> Helper{"ShaderCreateInfo"};
 
     TEST_STRINGS(Source, "Source1", "Source2", "Source3");
@@ -1116,9 +1159,9 @@ TEST(XXH128HasherTest, ShaderCreateInfo)
         {},
     };
     TEST_VALUE(Macros, Macros);
-    TEST_BOOL(UseCombinedTextureSamplers);
+    TEST_BOOL(Desc.UseCombinedTextureSamplers);
 
-    TEST_STRINGS(CombinedSamplerSuffix, "_sampler1", "_sampler2", "_sampler3");
+    TEST_STRINGS(Desc.CombinedSamplerSuffix, "_sampler1", "_sampler2", "_sampler3");
 
     TEST_FLAGS(Desc.ShaderType, static_cast<SHADER_TYPE>(1), SHADER_TYPE_LAST);
     TEST_RANGE(SourceLanguage, static_cast<SHADER_SOURCE_LANGUAGE>(1), SHADER_SOURCE_LANGUAGE_COUNT);

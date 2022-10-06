@@ -223,7 +223,7 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
                 Allocator,
                 m_SPIRV,
                 m_Desc,
-                ShaderCI.UseCombinedTextureSamplers ? ShaderCI.CombinedSamplerSuffix : nullptr,
+                m_Desc.UseCombinedTextureSamplers ? m_Desc.CombinedSamplerSuffix : nullptr,
                 LoadShaderInputs,
                 m_EntryPoint //
             };

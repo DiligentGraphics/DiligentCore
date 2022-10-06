@@ -122,16 +122,47 @@ struct ShaderDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// Shader type. See Diligent::SHADER_TYPE.
     SHADER_TYPE ShaderType DEFAULT_INITIALIZER(SHADER_TYPE_UNKNOWN);
 
-#if DILIGENT_CPP_INTERFACE
-    /// Comparison operator tests if two structures are equivalent
+    /// If set to true, textures will be combined with texture samplers.
+    /// The CombinedSamplerSuffix member defines the suffix added to the texture
+    /// variable name to get corresponding sampler name. When using combined samplers,
+    /// the sampler assigned to the shader resource view is automatically set when
+    /// the view is bound. Otherwise, samplers need to be explicitly set similar to other
+    /// shader variables.
+    ///
+    /// This member has no effect if the shader is used in the PSO that uses pipeline resource signature(s).
+    bool UseCombinedTextureSamplers DEFAULT_INITIALIZER(false);
 
-    /// \param [in] RHS - reference to the structure to perform comparison with
-    /// \return
-    /// - True if all members of the two structures are equal.
-    /// - False otherwise.
+    /// If UseCombinedTextureSamplers is true, defines the suffix added to the
+    /// texture variable name to get corresponding sampler name.  For example,
+    /// for default value "_sampler", a texture named "tex" will be combined
+    /// with the sampler named "tex_sampler".
+    /// If UseCombinedTextureSamplers is false, this member is ignored.
+    ///
+    /// This member has no effect if the shader is used in the PSO that uses pipeline resource signature(s).
+    const Char* CombinedSamplerSuffix DEFAULT_INITIALIZER("_sampler");
+
+#if DILIGENT_CPP_INTERFACE
+    constexpr ShaderDesc() noexcept {}
+
+    constexpr ShaderDesc(const Char* _Name,
+                         SHADER_TYPE _ShaderType,
+                         bool        _UseCombinedTextureSamplers = ShaderDesc{}.UseCombinedTextureSamplers,
+                         const char* _CombinedSamplerSuffix      = ShaderDesc{}.CombinedSamplerSuffix) :
+        DeviceObjectAttribs{_Name},
+        ShaderType                {_ShaderType},
+        UseCombinedTextureSamplers{_UseCombinedTextureSamplers},
+        CombinedSamplerSuffix     {_CombinedSamplerSuffix}
+    {}
+
+    /// Comparison operator tests if two structures are equivalent.
+    ///
+    /// \note   Comparison ignores shader name.
     bool operator==(const ShaderDesc& RHS) const noexcept
     {
-        return ShaderType == RHS.ShaderType && SafeStrEqual(Name, RHS.Name);
+        // Ignore name
+        return ShaderType                 == RHS.ShaderType                 && 
+               UseCombinedTextureSamplers == RHS.UseCombinedTextureSamplers &&
+               SafeStrEqual(CombinedSamplerSuffix, RHS.CombinedSamplerSuffix);
     }
     bool operator!=(const ShaderDesc& RHS) const noexcept
     {
@@ -308,23 +339,6 @@ struct ShaderCreateInfo
     /// This member is ignored if ByteCode is not null
     const ShaderMacro* Macros DEFAULT_INITIALIZER(nullptr);
 
-    /// If set to true, textures will be combined with texture samplers.
-    /// The CombinedSamplerSuffix member defines the suffix added to the texture variable
-    /// name to get corresponding sampler name. When using combined samplers,
-    /// the sampler assigned to the shader resource view is automatically set when
-    /// the view is bound. Otherwise samplers need to be explicitly set similar to other
-    /// shader variables.
-    /// This member has no effect if the shader is used in the PSO that uses pipeline resource signature(s).
-    bool UseCombinedTextureSamplers DEFAULT_INITIALIZER(false);
-
-    /// If UseCombinedTextureSamplers is true, defines the suffix added to the
-    /// texture variable name to get corresponding sampler name.  For example,
-    /// for default value "_sampler", a texture named "tex" will be combined
-    /// with sampler named "tex_sampler".
-    /// If UseCombinedTextureSamplers is false, this member is ignored.
-    /// This member has no effect if the shader is used in the PSO that uses pipeline resource signature(s).
-    const Char* CombinedSamplerSuffix DEFAULT_INITIALIZER("_sampler");
-
     /// Shader description. See Diligent::ShaderDesc.
     ShaderDesc Desc;
 
@@ -368,7 +382,9 @@ struct ShaderCreateInfo
     IDataBlob** ppCompilerOutput DEFAULT_INITIALIZER(nullptr);
 
 #if DILIGENT_CPP_INTERFACE
-    /// Comparison operator tests if two structures are equivalent
+    /// Comparison operator tests if two structures are equivalent.
+    ///
+    /// \note   Comparison ignores shader name.
     bool operator==(const ShaderCreateInfo& RHS) const noexcept
     {
         const auto& CI1 = *this;
@@ -412,12 +428,6 @@ struct ShaderCreateInfo
                 m2 = nullptr;
         }
         if (m1 != nullptr || m2 != nullptr)
-            return false;
-
-        if (CI1.UseCombinedTextureSamplers != CI2.UseCombinedTextureSamplers)
-            return false;
-
-        if (!SafeStrEqual(CI1.CombinedSamplerSuffix, CI2.CombinedSamplerSuffix))
             return false;
 
         if (CI1.Desc != CI2.Desc)

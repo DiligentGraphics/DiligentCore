@@ -1,5 +1,6 @@
 # Current progress
 
+* Moved `UseCombinedTextureSamplers` and `CombinedSamplerSuffix` members from `ShaderCreateInfo` to `ShaderDesc` (API252006)
 * Added `IntanceLayerCount` and `ppInstanceLayerNames` members to EngineVkCreateInfo struct (API252005)
 * Added `IgnoreDebugMessageCount` and `ppIgnoreDebugMessageNames` to `EngineVkCreateInfo` struct (API252004)
 * Refactored archiver API (removed `IDeviceObjectArchive` and `IArchive`; enabled dearchiver

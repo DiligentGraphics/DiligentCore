@@ -1085,6 +1085,40 @@ struct HashCombiner<HasherType, PipelineResourceSignatureDesc> : HashCombinerBas
 };
 
 
+template <typename HasherType>
+struct HashCombiner<HasherType, ShaderDesc> : HashCombinerBase<HasherType>
+{
+    HashCombiner(HasherType& Hasher) :
+        HashCombinerBase<HasherType>{Hasher}
+    {}
+
+    void operator()(const ShaderDesc& Desc) const
+    {
+        this->m_Hasher(
+            Desc.ShaderType,
+            Desc.UseCombinedTextureSamplers,
+            Desc.CombinedSamplerSuffix);
+
+        ASSERT_SIZEOF64(Desc, 24, "Did you add new members to ShaderDesc? Please handle them here.");
+    }
+};
+
+
+template <typename HasherType>
+struct HashCombiner<HasherType, Version> : HashCombinerBase<HasherType>
+{
+    HashCombiner(HasherType& Hasher) :
+        HashCombinerBase<HasherType>{Hasher}
+    {}
+
+    void operator()(const Version& Ver) const
+    {
+        this->m_Hasher(Ver.Minor, Ver.Major);
+        ASSERT_SIZEOF64(Ver, 8, "Did you add new members to Version? Please handle them here.");
+    }
+};
+
+
 struct DefaultHasher
 {
     template <typename... ArgsType>
@@ -1165,6 +1199,8 @@ DEFINE_HASH(Diligent::GraphicsPipelineDesc);
 DEFINE_HASH(Diligent::RayTracingPipelineDesc);
 DEFINE_HASH(Diligent::PipelineStateDesc);
 DEFINE_HASH(Diligent::PipelineResourceSignatureDesc);
+DEFINE_HASH(Diligent::ShaderDesc);
+DEFINE_HASH(Diligent::Version);
 
 #undef DEFINE_HASH
 

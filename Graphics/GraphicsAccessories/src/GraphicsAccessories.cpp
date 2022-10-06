@@ -1054,6 +1054,24 @@ String GetBufferDescString(const BufferDesc& Desc)
     return Str;
 }
 
+String GetShaderDescString(const ShaderDesc& Desc)
+{
+    String Str;
+    Str += "Name: '";
+    Str += Desc.Name != nullptr ? Desc.Name : "<NULL>";
+
+    Str += "'; Type: ";
+    Str += GetShaderTypeLiteralName(Desc.ShaderType);
+
+    Str += "; combined samplers: ";
+    Str += Desc.UseCombinedTextureSamplers ? '1' : '0';
+
+    Str += "; sampler suffix: ";
+    Str += Desc.CombinedSamplerSuffix != nullptr ? Desc.CombinedSamplerSuffix : "<NULL>";
+
+    return Str;
+}
+
 const Char* GetResourceStateFlagString(RESOURCE_STATE State)
 {
     VERIFY(State == RESOURCE_STATE_UNKNOWN || IsPowerOfTwo(State), "Single state is expected");

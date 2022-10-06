@@ -348,6 +348,9 @@ const Char* GetBufferModeString(BUFFER_MODE Mode);
 /// Returns the string containing the buffer description
 String GetBufferDescString(const BufferDesc& Desc);
 
+/// Returns the string containing the shader description
+String GetShaderDescString(const ShaderDesc& Desc);
+
 /// Returns the string containing the buffer mode description
 const Char* GetResourceStateFlagString(RESOURCE_STATE State);
 String      GetResourceStateString(RESOURCE_STATE State);

@@ -68,22 +68,19 @@ TEST(RenderStateCacheTest, CreateGraphicsPSO)
         ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
         ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
         ShaderCI.ShaderCompiler             = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
-        ShaderCI.UseCombinedTextureSamplers = true;
 
         RefCntAutoPtr<IShader> pVS;
         {
-            ShaderCI.Desc.Name       = "RenderStateCache - VS";
-            ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
-            ShaderCI.FilePath        = "VertexShader.vsh";
+            ShaderCI.Desc     = {"RenderStateCache - VS", SHADER_TYPE_VERTEX, true};
+            ShaderCI.FilePath = "VertexShader.vsh";
             EXPECT_EQ(pCache->CreateShader(ShaderCI, &pVS), PresentInCache);
             ASSERT_TRUE(pVS);
         }
 
         RefCntAutoPtr<IShader> pPS;
         {
-            ShaderCI.Desc.Name       = "RenderStateCache - PS";
-            ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
-            ShaderCI.FilePath        = "PixelShader.psh";
+            ShaderCI.Desc     = {"RenderStateCache - PS", SHADER_TYPE_PIXEL, true};
+            ShaderCI.FilePath = "PixelShader.psh";
             EXPECT_EQ(pCache->CreateShader(ShaderCI, &pPS), PresentInCache);
             ASSERT_TRUE(pPS);
         }
@@ -152,13 +149,11 @@ TEST(RenderStateCacheTest, CreateComputePSO)
         ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
         ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
         ShaderCI.ShaderCompiler             = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
-        ShaderCI.UseCombinedTextureSamplers = true;
 
         RefCntAutoPtr<IShader> pCS;
         {
-            ShaderCI.Desc.Name       = "RenderStateCache - CS";
-            ShaderCI.Desc.ShaderType = SHADER_TYPE_COMPUTE;
-            ShaderCI.FilePath        = "ComputeShader.csh";
+            ShaderCI.Desc     = {"RenderStateCache - CS", SHADER_TYPE_COMPUTE, true};
+            ShaderCI.FilePath = "ComputeShader.csh";
             EXPECT_EQ(pCache->CreateShader(ShaderCI, &pCS), PresentInCache);
             ASSERT_TRUE(pCS);
         }

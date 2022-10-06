@@ -60,28 +60,14 @@ XXH128Hash XXH128State::Digest() noexcept
     return {Hash.low64, Hash.high64};
 }
 
-void XXH128State::Update(const ShaderDesc& Desc) noexcept
-{
-    ASSERT_SIZEOF64(Desc, 16, "Did you add new members to ShaderDesc? Please handle them here.");
-    Update(Desc.ShaderType);
-}
-
-void XXH128State::Update(const ShaderVersion& Ver) noexcept
-{
-    ASSERT_SIZEOF(Ver, 8, "Did you add new members to ShaderVersion? Please handle them here.");
-    Update(Ver.Minor, Ver.Major);
-}
-
 void XXH128State::Update(const ShaderCreateInfo& ShaderCI) noexcept
 {
-    ASSERT_SIZEOF64(ShaderCI, 152, "Did you add new members to ShaderCreateInfo? Please handle them here.");
+    ASSERT_SIZEOF64(ShaderCI, 144, "Did you add new members to ShaderCreateInfo? Please handle them here.");
 
     Update(
         ShaderCI.Source,
         ShaderCI.SourceLength, // Aka ByteCodeSize
         ShaderCI.EntryPoint,
-        ShaderCI.UseCombinedTextureSamplers,
-        ShaderCI.CombinedSamplerSuffix,
         ShaderCI.Desc,
         ShaderCI.SourceLanguage,
         ShaderCI.ShaderCompiler,

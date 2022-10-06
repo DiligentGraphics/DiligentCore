@@ -390,11 +390,9 @@ TEST_P(TestBrokenShader, CompileFailure)
     pArchiverFactory->CreateDefaultShaderSourceStreamFactory("shaders/Archiver", &pShaderSourceFactory);
 
     ShaderCreateInfo ShaderCI;
-    ShaderCI.UseCombinedTextureSamplers = true;
-    ShaderCI.Desc.ShaderType            = SHADER_TYPE_VERTEX;
-    ShaderCI.EntryPoint                 = "main";
-    ShaderCI.Desc.Name                  = "Archive test broken shader";
-    ShaderCI.Source                     = "Not even a shader source";
+    ShaderCI.Desc       = {"Archive test broken shader", SHADER_TYPE_VERTEX, true};
+    ShaderCI.EntryPoint = "main";
+    ShaderCI.Source     = "Not even a shader source";
 
     RefCntAutoPtr<IDataBlob> pCompilerOutput;
     ShaderCI.ppCompilerOutput = pCompilerOutput.RawDblPtr();
@@ -430,10 +428,8 @@ TEST_P(TestBrokenShader, MissingSourceFile)
     pArchiverFactory->CreateDefaultShaderSourceStreamFactory("shaders/Archiver", &pShaderSourceFactory);
 
     ShaderCreateInfo ShaderCI;
-    ShaderCI.UseCombinedTextureSamplers = true;
-    ShaderCI.Desc.ShaderType            = SHADER_TYPE_VERTEX;
+    ShaderCI.Desc                       = {"Archive test broken shader", SHADER_TYPE_VERTEX, true};
     ShaderCI.EntryPoint                 = "main";
-    ShaderCI.Desc.Name                  = "Archive test broken shader";
     ShaderCI.FilePath                   = "non_existing.shader";
     ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
 
@@ -641,20 +637,18 @@ void CreateGraphicsShaders(IRenderDevice*        pDevice,
     ShaderMacroHelper Macros;
     Macros.AddShaderMacro("TEST_MACRO", 1);
 
-    VertexShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
-    VertexShaderCI.ShaderCompiler             = pEnv->GetDefaultCompiler(VertexShaderCI.SourceLanguage);
-    VertexShaderCI.UseCombinedTextureSamplers = true;
-    VertexShaderCI.Macros                     = Macros;
+    VertexShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
+    VertexShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(VertexShaderCI.SourceLanguage);
+    VertexShaderCI.Macros         = Macros;
 
     RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
     pDevice->GetEngineFactory()->CreateDefaultShaderSourceStreamFactory("shaders/Archiver", &pShaderSourceFactory);
     VertexShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
 
     {
-        VertexShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
-        VertexShaderCI.EntryPoint      = "main";
-        VertexShaderCI.Desc.Name       = "Archive test vertex shader";
-        VertexShaderCI.FilePath        = "VertexShader.vsh";
+        VertexShaderCI.Desc       = {"Archive test vertex shader", SHADER_TYPE_VERTEX, true};
+        VertexShaderCI.EntryPoint = "main";
+        VertexShaderCI.FilePath   = "VertexShader.vsh";
 
         if (ppVS != nullptr)
         {
@@ -905,9 +899,8 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
                         EXPECT_TRUE(ShaderCI.Desc.ShaderType == SHADER_TYPE_VERTEX || ShaderCI.Desc.ShaderType == SHADER_TYPE_PIXEL);
                         const auto& RefCI = ShaderCI.Desc.ShaderType == SHADER_TYPE_VERTEX ? VertexShaderCI : PixelShaderCI;
                         EXPECT_STREQ(ShaderCI.Desc.Name, RefCI.Desc.Name);
+                        EXPECT_EQ(ShaderCI.Desc, RefCI.Desc);
                         EXPECT_STREQ(ShaderCI.EntryPoint, RefCI.EntryPoint);
-                        EXPECT_EQ(ShaderCI.UseCombinedTextureSamplers, RefCI.UseCombinedTextureSamplers);
-                        EXPECT_STREQ(ShaderCI.CombinedSamplerSuffix, RefCI.CombinedSamplerSuffix);
                         EXPECT_TRUE(ShaderCI.ByteCodeSize > 0 || ShaderCI.SourceLength > 0);
                     }
                 }
@@ -1314,16 +1307,14 @@ void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
         ASSERT_NE(pArchiver, nullptr);
 
         ShaderCreateInfo ShaderCI;
-        ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
-        ShaderCI.ShaderCompiler             = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
-        ShaderCI.UseCombinedTextureSamplers = true;
+        ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
+        ShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
 
         RefCntAutoPtr<IShader> pCS;
         RefCntAutoPtr<IShader> pSerializedCS;
         {
-            ShaderCI.Desc.ShaderType = SHADER_TYPE_COMPUTE;
-            ShaderCI.EntryPoint      = "main";
-            ShaderCI.Desc.Name       = "Compute shader test";
+            ShaderCI.Desc       = {"Compute shader test", SHADER_TYPE_COMPUTE, true};
+            ShaderCI.EntryPoint = "main";
             // Test shader source string
             ShaderCI.Source = HLSL::ComputePSOTest_CS.c_str();
 
@@ -2209,9 +2200,7 @@ TEST_P(TestSamplers, GraphicsPipeline)
 
         ShaderCreateInfo ShaderCI;
         ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
-        ShaderCI.UseCombinedTextureSamplers = deviceCaps.IsGLDevice();
         ShaderCI.ShaderCompiler             = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
-        ShaderCI.UseCombinedTextureSamplers = true;
 
         ShaderCI.SourceLanguage = ShaderLang;
         switch (ShaderLang)
@@ -2237,10 +2226,9 @@ TEST_P(TestSamplers, GraphicsPipeline)
         RefCntAutoPtr<IShader> pSerializedVS;
         {
             PrepareMacros(VSResArrId);
-            ShaderCI.Macros          = Macros;
-            ShaderCI.Desc.Name       = "Archiver.Samplers - VS";
-            ShaderCI.EntryPoint      = ShaderLang == SHADER_SOURCE_LANGUAGE_GLSL ? "main" : "VSMain";
-            ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
+            ShaderCI.Macros     = Macros;
+            ShaderCI.Desc       = {"Archiver.Samplers - VS", SHADER_TYPE_VERTEX, true};
+            ShaderCI.EntryPoint = ShaderLang == SHADER_SOURCE_LANGUAGE_GLSL ? "main" : "VSMain";
 
             pSerializationDevice->CreateShader(ShaderCI, ShaderArchiveInfo{PackFlags}, &pSerializedVS);
             ASSERT_NE(pSerializedVS, nullptr);
@@ -2249,10 +2237,9 @@ TEST_P(TestSamplers, GraphicsPipeline)
         RefCntAutoPtr<IShader> pSerializedPS;
         {
             PrepareMacros(PSResArrId);
-            ShaderCI.Macros          = Macros;
-            ShaderCI.Desc.Name       = "Archiver.Samplers - PS";
-            ShaderCI.EntryPoint      = ShaderLang == SHADER_SOURCE_LANGUAGE_GLSL ? "main" : "PSMain";
-            ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
+            ShaderCI.Macros     = Macros;
+            ShaderCI.Desc       = {"Archiver.Samplers - PS", SHADER_TYPE_PIXEL, true};
+            ShaderCI.EntryPoint = ShaderLang == SHADER_SOURCE_LANGUAGE_GLSL ? "main" : "PSMain";
 
             pSerializationDevice->CreateShader(ShaderCI, ShaderArchiveInfo{PackFlags}, &pSerializedPS);
             ASSERT_NE(pSerializedPS, nullptr);

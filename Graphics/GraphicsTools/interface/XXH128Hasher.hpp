@@ -121,8 +121,6 @@ struct XXH128State final
         Update(Args...);
     }
 
-    void Update(const ShaderDesc& Desc) noexcept;
-    void Update(const ShaderVersion& Ver) noexcept;
     void Update(const ShaderCreateInfo& ShaderCI) noexcept;
 
     template <typename T>
@@ -148,7 +146,9 @@ struct XXH128State final
                              std::is_same<typename std::remove_cv<T>::type, GraphicsPipelineDesc>::value ||
                              std::is_same<typename std::remove_cv<T>::type, RayTracingPipelineDesc>::value ||
                              std::is_same<typename std::remove_cv<T>::type, PipelineStateDesc>::value ||
-                             std::is_same<typename std::remove_cv<T>::type, PipelineResourceSignatureDesc>::value),
+                             std::is_same<typename std::remove_cv<T>::type, PipelineResourceSignatureDesc>::value ||
+                             std::is_same<typename std::remove_cv<T>::type, Version>::value ||
+                             std::is_same<typename std::remove_cv<T>::type, ShaderDesc>::value),
                             void>::type
     Update(const T& Val) noexcept
     {

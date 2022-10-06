@@ -278,7 +278,7 @@ String BuildGLSLSourceString(const ShaderCreateInfo&    ShaderCI,
 #if DILIGENT_NO_HLSL
         LOG_ERROR_AND_THROW("Unable to convert HLSL source to GLSL: HLSL support is disabled");
 #else
-        if (!ShaderCI.UseCombinedTextureSamplers)
+        if (!ShaderCI.Desc.UseCombinedTextureSamplers)
         {
             LOG_ERROR_AND_THROW("Combined texture samplers are required to convert HLSL source to GLSL");
         }
@@ -294,7 +294,9 @@ String BuildGLSLSourceString(const ShaderCreateInfo&    ShaderCI,
         Attribs.ShaderType           = ShaderCI.Desc.ShaderType;
         Attribs.IncludeDefinitions   = true;
         Attribs.InputFileName        = ShaderCI.FilePath;
-        Attribs.SamplerSuffix        = ShaderCI.CombinedSamplerSuffix;
+        Attribs.SamplerSuffix        = ShaderCI.Desc.CombinedSamplerSuffix != nullptr ?
+            ShaderCI.Desc.CombinedSamplerSuffix :
+            ShaderDesc{}.CombinedSamplerSuffix;
         // Separate shader objects extension also allows input/output layout qualifiers for
         // all shader stages.
         // https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_separate_shader_objects.txt

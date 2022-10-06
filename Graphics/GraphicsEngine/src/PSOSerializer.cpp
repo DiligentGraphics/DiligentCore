@@ -502,11 +502,11 @@ bool ShaderSerializer<Mode>::SerializeCI(Serializer<Mode>&            Ser,
 {
     if (!Ser(CI.Desc.Name,
              CI.Desc.ShaderType,
+             CI.Desc.UseCombinedTextureSamplers,
+             CI.Desc.CombinedSamplerSuffix,
              CI.EntryPoint,
              CI.SourceLanguage,
-             CI.ShaderCompiler,
-             CI.UseCombinedTextureSamplers,
-             CI.CombinedSamplerSuffix))
+             CI.ShaderCompiler))
         return false;
 
     return SerializeBytecodeOrSource(Ser, CI);
