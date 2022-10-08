@@ -362,6 +362,11 @@ out gl_PerVertex
 };
 #endif
 
+#ifdef VULKAN
+#   define gl_VertexID gl_VertexIndex
+#   define gl_InstanceID gl_InstanceIndex
+#endif
+
 layout(location = 0)out vec3 out_Color;
 
 void main()

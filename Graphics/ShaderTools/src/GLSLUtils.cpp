@@ -255,13 +255,6 @@ String BuildGLSLSourceString(const ShaderCreateInfo&    ShaderCI,
     GLSLSource.append(
         "layout(std140) uniform;\n");
 
-    if (ShaderType == SHADER_TYPE_VERTEX && TargetCompiler == TargetGLSLCompiler::glslang)
-    {
-        // https://github.com/KhronosGroup/GLSL/blob/master/extensions/khr/GL_KHR_vulkan_glsl.txt
-        GLSLSource.append("#define gl_VertexID gl_VertexIndex\n"
-                          "#define gl_InstanceID gl_InstanceIndex\n");
-    }
-
     AppendShaderTypeDefinitions(GLSLSource, ShaderType);
 
     if (ExtraDefinitions != nullptr)
