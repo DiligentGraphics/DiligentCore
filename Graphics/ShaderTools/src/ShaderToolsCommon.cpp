@@ -458,12 +458,12 @@ std::string UnrollShaderIncludes(const ShaderCreateInfo& ShaderCI) noexcept(fals
     }
     catch (const std::pair<std::string, std::string>& ErrInfo)
     {
-        LOG_ERROR_MESSAGE("Failed to unroll includes in ", ErrInfo.first, ": ", ErrInfo.second);
+        LOG_ERROR_AND_THROW("Failed to unroll includes in ", ErrInfo.first, ": ", ErrInfo.second);
         return "";
     }
     catch (...)
     {
-        LOG_ERROR_MESSAGE("Failed to unroll includes in shader '", (ShaderCI.Desc.Name != nullptr ? ShaderCI.Desc.Name : ""), "'.");
+        LOG_ERROR_AND_THROW("Failed to unroll includes in shader '", (ShaderCI.Desc.Name != nullptr ? ShaderCI.Desc.Name : ""), "'.");
         return "";
     }
 }

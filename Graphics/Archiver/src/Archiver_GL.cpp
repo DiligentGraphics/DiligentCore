@@ -68,22 +68,27 @@ struct CompiledShaderGL final : SerializedShaderImpl::CompiledShader
                      IRenderDevice*                  pRenderDeviceGL) :
         UnrolledSource{UnrollSource(ShaderCI)}
     {
+        // Use serialization CI to be consistent with what will be saved in the archive.
+        const auto SerializationCI = GetSerializationCI(ShaderCI);
         if (pRenderDeviceGL)
         {
-            // Use serialization CI to be consistent with what will be saved in the archive.
-            const auto SerializationCI = GetSerializationCI(ShaderCI);
-            // GL shader must be created through the render devices as GL functions
+            // GL shader must be created through the render device as GL functions
             // are not loaded by the archiver.
             pRenderDeviceGL->CreateShader(SerializationCI, &pShaderGL);
+        }
+        else
+        {
+            pShaderGL = NEW_RC_OBJ(GetRawAllocator(), "Shader instance", ShaderGLImpl)(nullptr, SerializationCI, GLShaderCI, true /*bIsDeviceInternal*/);
         }
     }
 
     ShaderCreateInfo GetSerializationCI(ShaderCreateInfo ShaderCI) const
     {
-        ShaderCI.FilePath     = nullptr;
-        ShaderCI.ByteCode     = nullptr;
-        ShaderCI.Source       = UnrolledSource.c_str();
-        ShaderCI.SourceLength = UnrolledSource.length();
+        ShaderCI.FilePath       = nullptr;
+        ShaderCI.ByteCode       = nullptr;
+        ShaderCI.Source         = UnrolledSource.c_str();
+        ShaderCI.SourceLength   = UnrolledSource.length();
+        ShaderCI.ShaderCompiler = SHADER_COMPILER_DEFAULT;
 
         return ShaderCI;
     }
@@ -220,7 +225,22 @@ void SerializedShaderImpl::CreateShaderGL(IReferenceCounters*     pRefCounters,
                                           const ShaderCreateInfo& ShaderCI,
                                           RENDER_DEVICE_TYPE      DeviceType) noexcept(false)
 {
+    const ShaderGLImpl::CreateInfo GLShaderCI{
+        m_pDevice->GetDeviceInfo(),
+        m_pDevice->GetAdapterInfo() //
+    };
+    CreateShader<CompiledShaderGL>(DeviceType::OpenGL, pRefCounters, ShaderCI, GLShaderCI, m_pDevice->GetRenderDevice(RENDER_DEVICE_TYPE_GL));
+
 #if !DILIGENT_NO_GLSLANG
+    const auto* pCompiledShaderGL = GetShader<CompiledShaderGL>(DeviceObjectArchive::DeviceType::OpenGL);
+    VERIFY_EXPR(pCompiledShaderGL != nullptr);
+
+    const void* Source    = nullptr;
+    Uint64      SourceLen = 0;
+    // For OpenGL, GetBytecode returns the full GLSL source
+    pCompiledShaderGL->pShaderGL->GetBytecode(&Source, SourceLen);
+    VERIFY_EXPR(Source != nullptr && SourceLen != 0);
+
     GLSLangUtils::GLSLtoSPIRVAttribs Attribs;
 
     Attribs.ShaderType = ShaderCI.Desc.ShaderType;
@@ -228,41 +248,12 @@ void SerializedShaderImpl::CreateShaderGL(IReferenceCounters*     pRefCounters,
     Attribs.Version = DeviceType == RENDER_DEVICE_TYPE_GL ? GLSLangUtils::SpirvVersion::GL : GLSLangUtils::SpirvVersion::GLES;
 
     Attribs.ppCompilerOutput = ShaderCI.ppCompilerOutput;
+    Attribs.ShaderSource     = static_cast<const char*>(Source);
+    Attribs.SourceCodeLen    = static_cast<int>(SourceLen);
 
-    if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL)
-    {
-        if (GLSLangUtils::HLSLtoSPIRV(ShaderCI, Attribs.Version, nullptr, Attribs.ppCompilerOutput).empty())
-            LOG_ERROR_AND_THROW("Failed to compile shader '", ShaderCI.Desc.Name, "'");
-    }
-    else if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_DEFAULT ||
-             ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL)
-    {
-        const auto GLSLSourceString = BuildGLSLSourceString(ShaderCI, m_pDevice->GetDeviceInfo(), m_pDevice->GetAdapterInfo(), TargetGLSLCompiler::glslang, "");
-
-        Attribs.ShaderSource  = GLSLSourceString.c_str();
-        Attribs.SourceCodeLen = static_cast<int>(GLSLSourceString.size());
-        Attribs.Macros        = ShaderCI.Macros;
-
-        if (GLSLangUtils::GLSLtoSPIRV(Attribs).empty())
-            LOG_ERROR_AND_THROW("Failed to compile shader '", ShaderCI.Desc.Name, "'");
-    }
-    else if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM)
-    {
-        if (ShaderCI.Macros != nullptr)
-            LOG_WARNING_MESSAGE("Shader macros are ignored when compiling GLSL verbatim in OpenGL backend");
-
-        Attribs.ShaderSource  = ShaderCI.Source;
-        Attribs.SourceCodeLen = static_cast<int>(ShaderCI.SourceLength);
-
-        if (GLSLangUtils::GLSLtoSPIRV(Attribs).empty())
-            LOG_ERROR_AND_THROW("Failed to compile shader '", ShaderCI.Desc.Name, "'");
-    }
+    if (GLSLangUtils::GLSLtoSPIRV(Attribs).empty())
+        LOG_ERROR_AND_THROW("Failed to compile shader '", ShaderCI.Desc.Name, "'");
 #endif
-    const ShaderGLImpl::CreateInfo GLShaderCI{
-        m_pDevice->GetDeviceInfo(),
-        m_pDevice->GetAdapterInfo() //
-    };
-    CreateShader<CompiledShaderGL>(DeviceType::OpenGL, pRefCounters, ShaderCI, GLShaderCI, m_pDevice->GetRenderDevice(RENDER_DEVICE_TYPE_GL));
 }
 
 } // namespace Diligent
