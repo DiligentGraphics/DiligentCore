@@ -389,6 +389,30 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     /// \remark This method does not increment the reference counter of the returned interface,
     ///         so the application should not call Release().
     VIRTUAL IEngineFactory* METHOD(GetEngineFactory)(THIS) CONST PURE;
+
+
+#if DILIGENT_CPP_INTERFACE
+    /// Overloaded alias for CreateGraphicsPipelineState.
+    void CreatePipelineState(const GraphicsPipelineStateCreateInfo& CI, IPipelineState** ppPipelineState)
+    {
+        CreateGraphicsPipelineState(CI, ppPipelineState);
+    }
+    /// Overloaded alias for CreateComputePipelineState.
+    void CreatePipelineState(const ComputePipelineStateCreateInfo& CI, IPipelineState** ppPipelineState)
+    {
+        CreateComputePipelineState(CI, ppPipelineState);
+    }
+    /// Overloaded alias for CreateRayTracingPipelineState.
+    void CreatePipelineState(const RayTracingPipelineStateCreateInfo& CI, IPipelineState** ppPipelineState)
+    {
+        CreateRayTracingPipelineState(CI, ppPipelineState);
+    }
+    /// Overloaded alias for CreateTilePipelineState.
+    void CreatePipelineState(const TilePipelineStateCreateInfo& CI, IPipelineState** ppPipelineState)
+    {
+        CreateTilePipelineState(CI, ppPipelineState);
+    }
+#endif
 };
 DILIGENT_END_INTERFACE
 

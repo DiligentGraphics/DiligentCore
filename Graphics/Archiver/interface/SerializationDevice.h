@@ -255,6 +255,29 @@ DILIGENT_BEGIN_INTERFACE(ISerializationDevice, IRenderDevice)
     /// suitable for rendering.
     VIRTUAL void METHOD(AddRenderDevice)(THIS_
                                          IRenderDevice* pDevice) PURE;
+
+#if DILIGENT_CPP_INTERFACE
+    /// Overloaded alias for CreateGraphicsPipelineState.
+    void CreatePipelineState(const GraphicsPipelineStateCreateInfo& CI, const PipelineStateArchiveInfo& ArchiveInfo, IPipelineState** ppPipelineState)
+    {
+        CreateGraphicsPipelineState(CI, ArchiveInfo, ppPipelineState);
+    }
+    /// Overloaded alias for CreateComputePipelineState.
+    void CreatePipelineState(const ComputePipelineStateCreateInfo& CI, const PipelineStateArchiveInfo& ArchiveInfo, IPipelineState** ppPipelineState)
+    {
+        CreateComputePipelineState(CI, ArchiveInfo, ppPipelineState);
+    }
+    /// Overloaded alias for CreateRayTracingPipelineState.
+    void CreatePipelineState(const RayTracingPipelineStateCreateInfo& CI, const PipelineStateArchiveInfo& ArchiveInfo, IPipelineState** ppPipelineState)
+    {
+        CreateRayTracingPipelineState(CI, ArchiveInfo, ppPipelineState);
+    }
+    /// Overloaded alias for CreateTilePipelineState.
+    void CreatePipelineState(const TilePipelineStateCreateInfo& CI, const PipelineStateArchiveInfo& ArchiveInfo, IPipelineState** ppPipelineState)
+    {
+        CreateTilePipelineState(CI, ArchiveInfo, ppPipelineState);
+    }
+#endif
 };
 DILIGENT_END_INTERFACE
 
