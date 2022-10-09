@@ -41,9 +41,16 @@ class ShaderGLImpl final : public ShaderBase<EngineGLImplTraits>
 public:
     using TShaderBase = ShaderBase<EngineGLImplTraits>;
 
+    struct CreateInfo
+    {
+        const RenderDeviceInfo&    DeviceInfo;
+        const GraphicsAdapterInfo& AdapterInfo;
+    };
+
     ShaderGLImpl(IReferenceCounters*     pRefCounters,
                  RenderDeviceGLImpl*     pDeviceGL,
                  const ShaderCreateInfo& ShaderCI,
+                 const CreateInfo&       GLShaderCI,
                  bool                    bIsDeviceInternal = false);
     ~ShaderGLImpl();
 
@@ -64,7 +71,7 @@ public:
     virtual void DILIGENT_CALL_TYPE GetBytecode(const void** ppData,
                                                 Uint64&      DataSize) const override final
     {
-        *ppData  = m_GLSLSourceString.c_str();
+        *ppData  = !m_GLSLSourceString.empty() ? m_GLSLSourceString.c_str() : nullptr;
         DataSize = m_GLSLSourceString.length();
     }
 

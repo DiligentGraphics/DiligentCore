@@ -66,6 +66,12 @@ SerializedShaderImpl::SerializedShaderImpl(IReferenceCounters*      pRefCounters
 
     CopyShaderCreateInfo(ShaderCI);
 
+    if ((DeviceFlags & ARCHIVE_DEVICE_DATA_FLAG_GL) != 0 && (DeviceFlags & ARCHIVE_DEVICE_DATA_FLAG_GLES) != 0)
+    {
+        // OpenGL and GLES use the same device data. Clear one flag to avoid shader duplication.
+        DeviceFlags &= ~ARCHIVE_DEVICE_DATA_FLAG_GLES;
+    }
+
     while (DeviceFlags != ARCHIVE_DEVICE_DATA_FLAG_NONE)
     {
         const auto Flag = ExtractLSB(DeviceFlags);
@@ -242,16 +248,6 @@ SerializedData SerializedShaderImpl::SerializeCreateInfo(const ShaderCreateInfo&
 
 SerializedData SerializedShaderImpl::GetDeviceData(DeviceType Type) const
 {
-    if (Type == DeviceType::OpenGL)
-    {
-#if GL_SUPPORTED || GLES_SUPPORTED
-        return GetDeviceDataGL();
-#else
-        UNEXPECTED("OpenGL backend is disabled");
-        return SerializedData{};
-#endif
-    }
-
     const auto& pCompiledShader = m_Shaders[static_cast<size_t>(Type)];
     return pCompiledShader ?
         pCompiledShader->Serialize(GetCreateInfo()) :

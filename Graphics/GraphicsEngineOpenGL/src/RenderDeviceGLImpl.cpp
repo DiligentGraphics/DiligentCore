@@ -305,7 +305,11 @@ void RenderDeviceGLImpl::CreateBufferFromGLHandle(Uint32 GLHandle, const BufferD
 
 void RenderDeviceGLImpl::CreateShader(const ShaderCreateInfo& ShaderCreateInfo, IShader** ppShader, bool bIsDeviceInternal)
 {
-    CreateShaderImpl(ppShader, ShaderCreateInfo, bIsDeviceInternal);
+    const ShaderGLImpl::CreateInfo GLShaderCI{
+        GetDeviceInfo(),
+        GetAdapterInfo() //
+    };
+    CreateShaderImpl(ppShader, ShaderCreateInfo, GLShaderCI, bIsDeviceInternal);
 }
 
 void RenderDeviceGLImpl::CreateShader(const ShaderCreateInfo& ShaderCreateInfo, IShader** ppShader)

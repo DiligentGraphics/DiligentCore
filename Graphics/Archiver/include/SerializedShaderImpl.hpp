@@ -123,8 +123,7 @@ private:
 #endif
 
 #if GL_SUPPORTED || GLES_SUPPORTED
-    void           CreateShaderGL(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI, RENDER_DEVICE_TYPE DeviceType) noexcept(false);
-    SerializedData GetDeviceDataGL() const;
+    void CreateShaderGL(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI, RENDER_DEVICE_TYPE DeviceType) noexcept(false);
 #endif
 
 #if VULKAN_SUPPORTED

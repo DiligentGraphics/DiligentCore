@@ -46,6 +46,7 @@ namespace Diligent
 ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
                            RenderDeviceGLImpl*     pDeviceGL,
                            const ShaderCreateInfo& ShaderCI,
+                           const CreateInfo&       GLShaderCI,
                            bool                    bIsDeviceInternal) :
     // clang-format off
     TShaderBase
@@ -53,36 +54,19 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
         pRefCounters,
         pDeviceGL,
         ShaderCI.Desc,
-        pDeviceGL->GetDeviceInfo(),
-        pDeviceGL->GetAdapterInfo(),
+        GLShaderCI.DeviceInfo,
+        GLShaderCI.AdapterInfo,
         bIsDeviceInternal
     },
     m_SourceLanguage{ShaderCI.SourceLanguage},
-    m_GLShaderObj{true, GLObjectWrappers::GLShaderObjCreateReleaseHelper{GetGLShaderType(m_Desc.ShaderType)}}
+    m_GLShaderObj{pDeviceGL != nullptr, GLObjectWrappers::GLShaderObjCreateReleaseHelper{GetGLShaderType(m_Desc.ShaderType)}}
 // clang-format on
 {
     DEV_CHECK_ERR(ShaderCI.ByteCode == nullptr, "'ByteCode' must be null when shader is created from the source code or a file");
     DEV_CHECK_ERR(ShaderCI.ShaderCompiler == SHADER_COMPILER_DEFAULT, "only default compiler is supported in OpenGL");
 
-    const auto& DeviceInfo  = pDeviceGL->GetDeviceInfo();
-    const auto& AdapterInfo = pDeviceGL->GetAdapterInfo();
-
-    // Note: there is a simpler way to create the program:
-    //m_uiShaderSeparateProg = glCreateShaderProgramv(GL_VERTEX_SHADER, _countof(ShaderStrings), ShaderStrings);
-    // NOTE: glCreateShaderProgramv() is considered equivalent to both a shader compilation and a program linking
-    // operation. Since it performs both at the same time, compiler or linker errors can be encountered. However,
-    // since this function only returns a program object, compiler-type errors will be reported as linker errors
-    // through the following API:
-    // GLint isLinked = 0;
-    // glGetProgramiv(program, GL_LINK_STATUS, &isLinked);
-    // The log can then be queried in the same way
-
-
-    // Each element in the length array may contain the length of the corresponding string
-    // (the null character is not counted as part of the string length).
-    // Not specifying lengths causes shader compilation errors on Android
-    std::array<const char*, 1> ShaderStrings = {};
-    std::array<GLint, 1>       Lengths       = {};
+    const auto& DeviceInfo  = GLShaderCI.DeviceInfo;
+    const auto& AdapterInfo = GLShaderCI.AdapterInfo;
 
     ShaderSourceFileData SourceData;
     if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM)
@@ -104,11 +88,31 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
         // platform definitions, user-provided shader macros, etc.
         m_GLSLSourceString = BuildGLSLSourceString(
             ShaderCI, DeviceInfo, AdapterInfo, TargetGLSLCompiler::driver,
-            (pDeviceGL->GetDeviceInfo().NDC.MinZ >= 0 ? NDCDefine : nullptr));
+            (DeviceInfo.NDC.MinZ >= 0 ? NDCDefine : nullptr));
     }
+
+    if (pDeviceGL == nullptr)
+        return;
+
+    // Note: there is a simpler way to create the program:
+    //m_uiShaderSeparateProg = glCreateShaderProgramv(GL_VERTEX_SHADER, _countof(ShaderStrings), ShaderStrings);
+    // NOTE: glCreateShaderProgramv() is considered equivalent to both a shader compilation and a program linking
+    // operation. Since it performs both at the same time, compiler or linker errors can be encountered. However,
+    // since this function only returns a program object, compiler-type errors will be reported as linker errors
+    // through the following API:
+    // GLint isLinked = 0;
+    // glGetProgramiv(program, GL_LINK_STATUS, &isLinked);
+    // The log can then be queried in the same way
+
+
+    // Each element in the length array may contain the length of the corresponding string
+    // (the null character is not counted as part of the string length).
+    // Not specifying lengths causes shader compilation errors on Android
+    std::array<const char*, 1> ShaderStrings = {};
+    std::array<GLint, 1>       Lengths       = {};
+
     ShaderStrings[0] = m_GLSLSourceString.c_str();
     Lengths[0]       = static_cast<GLint>(m_GLSLSourceString.length());
-
 
     // Provide source strings (the strings will be saved in internal OpenGL memory)
     glShaderSource(m_GLShaderObj, static_cast<GLsizei>(ShaderStrings.size()), ShaderStrings.data(), Lengths.data());
