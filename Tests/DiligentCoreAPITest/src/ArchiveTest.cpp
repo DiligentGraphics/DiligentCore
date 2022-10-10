@@ -735,9 +735,6 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
 
     GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
-    if (pDevice->GetDeviceInfo().Features.SeparablePrograms != DEVICE_FEATURE_STATE_ENABLED)
-        GTEST_SKIP() << "Non separable programs are not supported";
-
     RefCntAutoPtr<IDearchiver> pDearchiver;
     DearchiverCreateInfo       DearchiverCI{};
     pDevice->GetEngineFactory()->CreateDearchiver(DearchiverCI, &pDearchiver);
@@ -761,6 +758,8 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
     RefCntAutoPtr<ISerializationDevice> pSerializationDevice;
     {
         SerializationDeviceCreateInfo DeviceCI;
+        DeviceCI.DeviceInfo.Features.SeparablePrograms = pDevice->GetDeviceInfo().Features.SeparablePrograms;
+
         DeviceCI.Metal.CompileOptionsMacOS = "-sdk macosx metal -std=macos-metal2.0 -mmacos-version-min=10.0";
         DeviceCI.Metal.CompileOptionsiOS   = "-sdk iphoneos metal -std=ios-metal2.0 -mios-version-min=10.0";
         DeviceCI.Metal.MslPreprocessorCmd  = "ls";
@@ -1171,8 +1170,10 @@ TEST(ArchiveTest, Shaders)
     if (!pDearchiver || !pArchiverFactory)
         GTEST_SKIP() << "Archiver library is not loaded";
 
+    SerializationDeviceCreateInfo SerDeviceCI;
+    SerDeviceCI.DeviceInfo.Features.SeparablePrograms = pDevice->GetDeviceInfo().Features.SeparablePrograms;
     RefCntAutoPtr<ISerializationDevice> pSerializationDevice;
-    pArchiverFactory->CreateSerializationDevice(SerializationDeviceCreateInfo{}, &pSerializationDevice);
+    pArchiverFactory->CreateSerializationDevice(SerDeviceCI, &pSerializationDevice);
     ASSERT_NE(pSerializationDevice, nullptr);
 
     RefCntAutoPtr<IArchiver> pArchiver;
@@ -1283,8 +1284,10 @@ void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
         GTEST_SKIP() << "Compute shader test requires testing swap chain";
     }
 
+    SerializationDeviceCreateInfo SerDeviceCI;
+    SerDeviceCI.DeviceInfo.Features.SeparablePrograms = pDevice->GetDeviceInfo().Features.SeparablePrograms;
     RefCntAutoPtr<ISerializationDevice> pSerializationDevice;
-    pArchiverFactory->CreateSerializationDevice(SerializationDeviceCreateInfo{}, &pSerializationDevice);
+    pArchiverFactory->CreateSerializationDevice(SerDeviceCI, &pSerializationDevice);
     ASSERT_NE(pSerializationDevice, nullptr);
 
     RefCntAutoPtr<IPipelineResourceSignature> pRefPRS;
@@ -2142,8 +2145,10 @@ TEST_P(TestSamplers, GraphicsPipeline)
     constexpr char PSOName[] = "Archiver sampler test";
     constexpr char PRSName[] = "SamplerTest - PRS";
 
+    SerializationDeviceCreateInfo SerDeviceCI;
+    SerDeviceCI.DeviceInfo.Features.SeparablePrograms = pDevice->GetDeviceInfo().Features.SeparablePrograms;
     RefCntAutoPtr<ISerializationDevice> pSerializationDevice;
-    pArchiverFactory->CreateSerializationDevice(SerializationDeviceCreateInfo{}, &pSerializationDevice);
+    pArchiverFactory->CreateSerializationDevice(SerDeviceCI, &pSerializationDevice);
     ASSERT_NE(pSerializationDevice, nullptr);
 
     {
