@@ -29,6 +29,7 @@
 #include <array>
 #include <unordered_map>
 #include <mutex>
+#include <vector>
 
 #include "ObjectBase.hpp"
 #include "RefCntAutoPtr.hpp"
@@ -153,7 +154,7 @@ public:
         };
         AddShaderHelper AutoAddShader{*this, Hash, ppShader};
 
-        const auto HashStr = std::string{ShaderCI.Desc.Name} + " [" + HashToStr(Hash.LowPart, Hash.HighPart) + ']';
+        const auto HashStr = MakeHashStr(ShaderCI.Desc.Name, Hash);
 
         // Try to find shader in the loaded archive
         {
@@ -200,10 +201,7 @@ public:
                 }
                 else
                 {
-                    // OpenGL and Metal do not provide device shaders from serialized shader
-                    VERIFY_EXPR((m_DeviceType != RENDER_DEVICE_TYPE_D3D11 &&
-                                 m_DeviceType != RENDER_DEVICE_TYPE_D3D12 &&
-                                 m_DeviceType != RENDER_DEVICE_TYPE_VULKAN));
+                    UNEXPECTED("Byte code must not be null");
                 }
             }
         }
@@ -220,32 +218,38 @@ public:
         const GraphicsPipelineStateCreateInfo& PSOCreateInfo,
         IPipelineState**                       ppPipelineState) override final
     {
-        m_pDevice->CreateGraphicsPipelineState(PSOCreateInfo, ppPipelineState);
-        return false;
+        return CreatePipelineState(PSOCreateInfo, ppPipelineState);
     }
 
     virtual bool DILIGENT_CALL_TYPE CreateComputePipelineState(
         const ComputePipelineStateCreateInfo& PSOCreateInfo,
         IPipelineState**                      ppPipelineState) override final
     {
-        m_pDevice->CreateComputePipelineState(PSOCreateInfo, ppPipelineState);
-        return false;
+        return CreatePipelineState(PSOCreateInfo, ppPipelineState);
     }
 
     virtual bool DILIGENT_CALL_TYPE CreateRayTracingPipelineState(
         const RayTracingPipelineStateCreateInfo& PSOCreateInfo,
         IPipelineState**                         ppPipelineState) override final
     {
-        m_pDevice->CreateRayTracingPipelineState(PSOCreateInfo, ppPipelineState);
-        return false;
+        auto CI = PSOCreateInfo;
+
+        std::vector<RayTracingGeneralShaderGroup>       pGeneralShaders{CI.pGeneralShaders, CI.pGeneralShaders + CI.GeneralShaderCount};
+        std::vector<RayTracingTriangleHitShaderGroup>   pTriangleHitShaders{CI.pTriangleHitShaders, CI.pTriangleHitShaders + CI.TriangleHitShaderCount};
+        std::vector<RayTracingProceduralHitShaderGroup> pProceduralHitShaders{CI.pProceduralHitShaders, CI.pProceduralHitShaders + CI.ProceduralHitShaderCount};
+
+        CI.pGeneralShaders       = pGeneralShaders.data();
+        CI.pTriangleHitShaders   = pTriangleHitShaders.data();
+        CI.pProceduralHitShaders = pProceduralHitShaders.data();
+
+        return CreatePipelineState(CI, ppPipelineState);
     }
 
     virtual bool DILIGENT_CALL_TYPE CreateTilePipelineState(
         const TilePipelineStateCreateInfo& PSOCreateInfo,
         IPipelineState**                   ppPipelineState) override final
     {
-        m_pDevice->CreateTilePipelineState(PSOCreateInfo, ppPipelineState);
-        return false;
+        return CreatePipelineState(PSOCreateInfo, ppPipelineState);
     }
 
     virtual Bool DILIGENT_CALL_TYPE WriteToBlob(IDataBlob** ppBlob) override final
@@ -266,6 +270,176 @@ public:
     }
 
 private:
+    static std::string MakeHashStr(const char* Name, const XXH128Hash& Hash)
+    {
+        std::string HashStr = HashToStr(Hash.LowPart, Hash.HighPart);
+        if (Name != nullptr)
+            HashStr = std::string{Name} + " [" + HashStr + ']';
+        return HashStr;
+    }
+
+    template <typename HandlerType>
+    void ProcessPipelineShaders(GraphicsPipelineStateCreateInfo& CI, HandlerType&& Handler)
+    {
+        Handler(CI.pVS);
+        Handler(CI.pPS);
+        Handler(CI.pDS);
+        Handler(CI.pHS);
+        Handler(CI.pGS);
+        Handler(CI.pAS);
+        Handler(CI.pMS);
+    }
+
+    template <typename HandlerType>
+    void ProcessPipelineShaders(ComputePipelineStateCreateInfo& CI, HandlerType&& Handler)
+    {
+        Handler(CI.pCS);
+    }
+
+    template <typename HandlerType>
+    void ProcessPipelineShaders(RayTracingPipelineStateCreateInfo& CI, HandlerType&& Handler)
+    {
+        for (size_t i = 0; i < CI.GeneralShaderCount; ++i)
+        {
+            auto& GeneralShader = const_cast<RayTracingGeneralShaderGroup&>(CI.pGeneralShaders[i]);
+            Handler(GeneralShader.pShader);
+        }
+
+        for (size_t i = 0; i < CI.TriangleHitShaderCount; ++i)
+        {
+            auto& TriHitShader = const_cast<RayTracingTriangleHitShaderGroup&>(CI.pTriangleHitShaders[i]);
+            Handler(TriHitShader.pAnyHitShader);
+            Handler(TriHitShader.pClosestHitShader);
+        }
+
+        for (size_t i = 0; i < CI.ProceduralHitShaderCount; ++i)
+        {
+            auto& ProcHitShader = const_cast<RayTracingProceduralHitShaderGroup&>(CI.pProceduralHitShaders[i]);
+            Handler(ProcHitShader.pAnyHitShader);
+            Handler(ProcHitShader.pClosestHitShader);
+            Handler(ProcHitShader.pIntersectionShader);
+        }
+    }
+
+    template <typename HandlerType>
+    void ProcessPipelineShaders(TilePipelineStateCreateInfo& CI, HandlerType&& Handler)
+    {
+        Handler(CI.pTS);
+    }
+
+    template <typename CreateInfoType>
+    bool CreatePipelineState(CreateInfoType   PSOCreateInfo,
+                             IPipelineState** ppPipelineState)
+    {
+        *ppPipelineState = nullptr;
+
+        XXH128State Hasher;
+        Hasher.Update(PSOCreateInfo);
+        const auto Hash = Hasher.Digest();
+
+        // First, try to check if the PSO has already been requested
+        {
+            std::lock_guard<std::mutex> Guard{m_PipelinesMtx};
+
+            auto it = m_Pipelines.find(Hash);
+            if (it != m_Pipelines.end())
+            {
+                if (auto pPSO = it->second.Lock())
+                {
+                    *ppPipelineState = pPSO.Detach();
+                    return true;
+                }
+                else
+                {
+                    m_Pipelines.erase(it);
+                }
+            }
+        }
+
+        const auto HashStr = MakeHashStr(PSOCreateInfo.PSODesc.Name, Hash);
+
+        // Try to find PSO in the loaded archive
+        {
+            auto Callback = MakeCallback(
+                [&PSOCreateInfo](PipelineStateCreateInfo& CI) {
+                    CI.PSODesc.Name = PSOCreateInfo.PSODesc.Name;
+                });
+
+            PipelineStateUnpackInfo UnpackInfo;
+            UnpackInfo.PipelineType                  = PSOCreateInfo.PSODesc.PipelineType;
+            UnpackInfo.Name                          = HashStr.c_str();
+            UnpackInfo.pDevice                       = m_pDevice;
+            UnpackInfo.ModifyPipelineStateCreateInfo = Callback;
+            UnpackInfo.pUserData                     = Callback;
+            m_pDearchiver->UnpackPipelineState(UnpackInfo, ppPipelineState);
+            if (*ppPipelineState != nullptr)
+                return true;
+        }
+
+        m_pDevice->CreatePipelineState(PSOCreateInfo, ppPipelineState);
+        if (*ppPipelineState == nullptr)
+            return false;
+
+        {
+            std::lock_guard<std::mutex> Guard{m_PipelinesMtx};
+            m_Pipelines.emplace(Hash, *ppPipelineState);
+        }
+
+        if (m_pArchiver->GetPipelineState(PSOCreateInfo.PSODesc.PipelineType, HashStr.c_str()) != nullptr)
+            return true;
+
+        // Replace shaders with serialized shaders
+        std::vector<RefCntAutoPtr<IObject>> TmpObjects;
+        ProcessPipelineShaders(PSOCreateInfo,
+                               [&](IShader*& pShader) {
+                                   if (pShader == nullptr)
+                                       return;
+
+                                   RefCntAutoPtr<IObject> pObject;
+                                   pShader->GetReferenceCounters()->QueryObject(&pObject);
+                                   RefCntAutoPtr<IShader> pSerializedShader{pObject, IID_SerializedShader};
+                                   if (!pSerializedShader)
+                                   {
+                                       ShaderCreateInfo ShaderCI;
+                                       ShaderCI.Desc = pShader->GetDesc();
+
+                                       Uint64 Size = 0;
+                                       pShader->GetBytecode(&ShaderCI.ByteCode, Size);
+                                       ShaderCI.ByteCodeSize = static_cast<size_t>(Size);
+                                       if (m_DeviceType == RENDER_DEVICE_TYPE_GL)
+                                       {
+                                           ShaderCI.Source   = static_cast<const char*>(ShaderCI.ByteCode);
+                                           ShaderCI.ByteCode = nullptr;
+                                           if (ShaderCI.SourceLength > 1)
+                                           {
+                                               --ShaderCI.SourceLength;
+                                           }
+                                           ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM;
+                                       }
+                                       ShaderArchiveInfo ArchiveInfo;
+                                       ArchiveInfo.DeviceFlags = static_cast<ARCHIVE_DEVICE_DATA_FLAGS>(1 << m_DeviceType);
+                                       m_pSerializationDevice->CreateShader(ShaderCI, ArchiveInfo, &pSerializedShader);
+                                   }
+
+                                   pShader = pSerializedShader;
+                                   TmpObjects.emplace_back(std::move(pSerializedShader));
+                               });
+
+        RefCntAutoPtr<IPipelineState> pSerializedPSO;
+        {
+            PipelineStateArchiveInfo ArchiveInfo;
+            ArchiveInfo.DeviceFlags    = static_cast<ARCHIVE_DEVICE_DATA_FLAGS>(1 << m_DeviceType);
+            PSOCreateInfo.PSODesc.Name = HashStr.c_str();
+            m_pSerializationDevice->CreatePipelineState(PSOCreateInfo, ArchiveInfo, &pSerializedPSO);
+        }
+        if (pSerializedPSO)
+        {
+            m_pArchiver->AddPipelineState(pSerializedPSO);
+        }
+
+        return false;
+    }
+
     static std::string HashToStr(Uint64 Low, Uint64 High)
     {
         static constexpr std::array<char, 16> Symbols = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
@@ -289,6 +463,9 @@ private:
 
     std::mutex                                             m_ShadersMtx;
     std::unordered_map<XXH128Hash, RefCntWeakPtr<IShader>> m_Shaders;
+
+    std::mutex                                                    m_PipelinesMtx;
+    std::unordered_map<XXH128Hash, RefCntWeakPtr<IPipelineState>> m_Pipelines;
 };
 
 void CreateRenderStateCache(const RenderStateCacheCreateInfo& CreateInfo,

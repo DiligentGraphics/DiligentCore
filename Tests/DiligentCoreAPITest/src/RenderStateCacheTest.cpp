@@ -102,7 +102,7 @@ TEST(RenderStateCacheTest, CreateGraphicsPSO)
         PsoCI.GraphicsPipeline.DepthStencilDesc.DepthEnable = True;
 
         RefCntAutoPtr<IPipelineState> pPSO;
-        EXPECT_FALSE(pCache->CreateGraphicsPipelineState(PsoCI, &pPSO));
+        EXPECT_EQ(pCache->CreateGraphicsPipelineState(PsoCI, &pPSO), PresentInCache);
 
         if (ppVS != nullptr)
             *ppVS = pVS.Detach();
@@ -162,7 +162,7 @@ TEST(RenderStateCacheTest, CreateComputePSO)
         PsoCI.pCS = pCS;
 
         RefCntAutoPtr<IPipelineState> pPSO;
-        EXPECT_FALSE(pCache->CreateComputePipelineState(PsoCI, &pPSO));
+        EXPECT_EQ(pCache->CreateComputePipelineState(PsoCI, &pPSO), PresentInCache);
     };
     CreatePSO(false);
     CreatePSO(true);

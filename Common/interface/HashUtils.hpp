@@ -1162,6 +1162,7 @@ void HashShaderBytecode(HasherType& Hasher, IShader* pShader)
     const void* pBytecode = nullptr;
     Uint64      Size      = 0;
     pShader->GetBytecode(&pBytecode, Size);
+    VERIFY_EXPR(pBytecode != nullptr && Size != 0);
     Hasher.UpdateRaw(pBytecode, static_cast<size_t>(Size));
 }
 
