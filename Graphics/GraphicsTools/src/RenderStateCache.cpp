@@ -156,7 +156,7 @@ public:
 
         const auto HashStr = MakeHashStr(ShaderCI.Desc.Name, Hash);
 
-        // Try to find shader in the loaded archive
+        // Try to find the shader in the loaded archive
         {
             auto Callback = MakeCallback(
                 [&ShaderCI](ShaderDesc& Desc) {
@@ -201,7 +201,7 @@ public:
                 }
                 else
                 {
-                    UNEXPECTED("Byte code must not be null");
+                    UNEXPECTED("Device shader must not be null");
                 }
             }
         }
@@ -358,6 +358,7 @@ private:
 
         const auto HashStr = MakeHashStr(PSOCreateInfo.PSODesc.Name, Hash);
 
+        bool FoundInCache = false;
         // Try to find PSO in the loaded archive
         {
             auto Callback = MakeCallback(
@@ -372,18 +373,23 @@ private:
             UnpackInfo.ModifyPipelineStateCreateInfo = Callback;
             UnpackInfo.pUserData                     = Callback;
             m_pDearchiver->UnpackPipelineState(UnpackInfo, ppPipelineState);
-            if (*ppPipelineState != nullptr)
-                return true;
+            FoundInCache = (*ppPipelineState != nullptr);
         }
 
-        m_pDevice->CreatePipelineState(PSOCreateInfo, ppPipelineState);
         if (*ppPipelineState == nullptr)
-            return false;
+        {
+            m_pDevice->CreatePipelineState(PSOCreateInfo, ppPipelineState);
+            if (*ppPipelineState == nullptr)
+                return false;
+        }
 
         {
             std::lock_guard<std::mutex> Guard{m_PipelinesMtx};
             m_Pipelines.emplace(Hash, *ppPipelineState);
         }
+
+        if (FoundInCache)
+            return true;
 
         if (m_pArchiver->GetPipelineState(PSOCreateInfo.PSODesc.PipelineType, HashStr.c_str()) != nullptr)
             return true;
