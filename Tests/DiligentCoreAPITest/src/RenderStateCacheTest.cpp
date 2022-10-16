@@ -120,7 +120,9 @@ void CreateGraphicsShaders(IRenderStateCache*               pCache,
                            IShaderSourceInputStreamFactory* pShaderSourceFactory,
                            RefCntAutoPtr<IShader>&          pVS,
                            RefCntAutoPtr<IShader>&          pPS,
-                           bool                             PresentInCache)
+                           bool                             PresentInCache,
+                           const char*                      VSPath = nullptr,
+                           const char*                      PSPath = nullptr)
 {
     auto* const pEnv    = GPUTestingEnvironment::GetInstance();
     auto* const pDevice = pEnv->GetDevice();
@@ -135,7 +137,7 @@ void CreateGraphicsShaders(IRenderStateCache*               pCache,
 
     {
         ShaderCI.Desc     = {"RenderStateCache - VS", SHADER_TYPE_VERTEX, true};
-        ShaderCI.FilePath = "VertexShader.vsh";
+        ShaderCI.FilePath = VSPath != nullptr ? VSPath : "VertexShader.vsh";
         if (pCache != nullptr)
         {
             EXPECT_EQ(pCache->CreateShader(ShaderCI, &pVS), PresentInCache);
@@ -150,7 +152,7 @@ void CreateGraphicsShaders(IRenderStateCache*               pCache,
 
     {
         ShaderCI.Desc     = {"RenderStateCache - PS", SHADER_TYPE_PIXEL, true};
-        ShaderCI.FilePath = "PixelShader.psh";
+        ShaderCI.FilePath = PSPath != nullptr ? PSPath : "PixelShader.psh";
         if (pCache != nullptr)
         {
             EXPECT_EQ(pCache->CreateShader(ShaderCI, &pPS), PresentInCache);
@@ -222,6 +224,11 @@ TEST(RenderStateCacheTest, CreateGraphicsPSO)
     pDevice->GetEngineFactory()->CreateDefaultShaderSourceStreamFactory("shaders/RenderStateCache", &pShaderSourceFactory);
     ASSERT_TRUE(pShaderSourceFactory);
 
+    RefCntAutoPtr<IShader> pUncachedVS, pUncachedPS;
+    CreateGraphicsShaders(nullptr, pShaderSourceFactory, pUncachedVS, pUncachedPS, false, "VertexShader2.vsh", "PixelShader2.psh");
+    ASSERT_NE(pUncachedVS, nullptr);
+    ASSERT_NE(pUncachedPS, nullptr);
+
     RefCntAutoPtr<IDataBlob> pData;
     for (Uint32 pass = 0; pass < 2; ++pass)
     {
@@ -259,6 +266,12 @@ TEST(RenderStateCacheTest, CreateGraphicsPSO)
             RefCntAutoPtr<IPipelineState> pPSO2;
             CreatePSO(true, pVS1, pPS1, &pPSO2);
             EXPECT_EQ(pPSO, pPSO2);
+        }
+
+        {
+            RefCntAutoPtr<IPipelineState> pPSO2;
+            CreatePSO(pData != nullptr, pUncachedVS, pUncachedPS, &pPSO2);
+            VerifyGraphicsPSO(pPSO2);
         }
 
         pData.Release();

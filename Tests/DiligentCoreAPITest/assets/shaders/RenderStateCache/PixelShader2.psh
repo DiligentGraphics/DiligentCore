@@ -1,0 +1,6 @@
+#include "Common.h"
+
+float4 main(in PSInput PSIn) : SV_Target
+{
+    return float4(PSIn.Color.bgr, 1.0);
+}
