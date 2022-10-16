@@ -89,6 +89,7 @@ struct CompiledShaderGL final : SerializedShaderImpl::CompiledShader
         ShaderCI.Source         = UnrolledSource.c_str();
         ShaderCI.SourceLength   = UnrolledSource.length();
         ShaderCI.ShaderCompiler = SHADER_COMPILER_DEFAULT;
+        ShaderCI.Macros         = nullptr; // Macros are inlined into unrolled source
 
         return ShaderCI;
     }
