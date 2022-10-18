@@ -268,93 +268,102 @@ private:
         return HashStr;
     }
 
-    template <typename HandlerType>
-    void ProcessPipelineShaders(GraphicsPipelineStateCreateInfo& CI, HandlerType&& Handler)
-    {
-        Handler(CI.pVS);
-        Handler(CI.pPS);
-        Handler(CI.pDS);
-        Handler(CI.pHS);
-        Handler(CI.pGS);
-        Handler(CI.pAS);
-        Handler(CI.pMS);
-    }
-
-    template <typename HandlerType>
-    void ProcessPipelineShaders(ComputePipelineStateCreateInfo& CI, HandlerType&& Handler)
-    {
-        Handler(CI.pCS);
-    }
-
-    template <typename HandlerType>
-    void ProcessPipelineShaders(RayTracingPipelineStateCreateInfo& CI, HandlerType&& Handler)
-    {
-        for (size_t i = 0; i < CI.GeneralShaderCount; ++i)
-        {
-            auto& GeneralShader = const_cast<RayTracingGeneralShaderGroup&>(CI.pGeneralShaders[i]);
-            Handler(GeneralShader.pShader);
-        }
-
-        for (size_t i = 0; i < CI.TriangleHitShaderCount; ++i)
-        {
-            auto& TriHitShader = const_cast<RayTracingTriangleHitShaderGroup&>(CI.pTriangleHitShaders[i]);
-            Handler(TriHitShader.pAnyHitShader);
-            Handler(TriHitShader.pClosestHitShader);
-        }
-
-        for (size_t i = 0; i < CI.ProceduralHitShaderCount; ++i)
-        {
-            auto& ProcHitShader = const_cast<RayTracingProceduralHitShaderGroup&>(CI.pProceduralHitShaders[i]);
-            Handler(ProcHitShader.pAnyHitShader);
-            Handler(ProcHitShader.pClosestHitShader);
-            Handler(ProcHitShader.pIntersectionShader);
-        }
-    }
-
-    template <typename HandlerType>
-    void ProcessPipelineShaders(TilePipelineStateCreateInfo& CI, HandlerType&& Handler)
-    {
-        Handler(CI.pTS);
-    }
-
     template <typename CreateInfoType>
-    struct PsoCIWrapperBase
+    struct SerializedPsoCIWrapperBase
     {
-        PsoCIWrapperBase(const CreateInfoType& _CI) :
+        SerializedPsoCIWrapperBase(ISerializationDevice* pSerializationDevice, RENDER_DEVICE_TYPE DeviceType, const CreateInfoType& _CI) :
             CI{_CI},
             ppSignatures{_CI.ppResourceSignatures, _CI.ppResourceSignatures + _CI.ResourceSignaturesCount}
         {
             CI.ppResourceSignatures = !ppSignatures.empty() ? ppSignatures.data() : nullptr;
+
+            // Replace signatures with serialized signatures
+            for (size_t i = 0; i < ppSignatures.size(); ++i)
+            {
+                auto& pSign = ppSignatures[i];
+                if (pSign == nullptr)
+                    continue;
+                const auto&                  SignDesc = pSign->GetDesc();
+                ResourceSignatureArchiveInfo ArchiveInfo;
+                ArchiveInfo.DeviceFlags = static_cast<ARCHIVE_DEVICE_DATA_FLAGS>(1 << DeviceType);
+                RefCntAutoPtr<IPipelineResourceSignature> pSerializedSign;
+                pSerializationDevice->CreatePipelineResourceSignature(SignDesc, ArchiveInfo, &pSerializedSign);
+                if (!pSerializedSign)
+                {
+                    LOG_ERROR_MESSAGE("Failed to serialize pipeline resource signature '", SignDesc.Name, "'.");
+                }
+                pSign = pSerializedSign;
+                SerializedObjects.emplace_back(std::move(pSerializedSign));
+            }
         }
 
-        PsoCIWrapperBase(const PsoCIWrapperBase&) = delete;
-        PsoCIWrapperBase(PsoCIWrapperBase&&)      = delete;
-        PsoCIWrapperBase& operator=(const PsoCIWrapperBase&) = delete;
-        PsoCIWrapperBase& operator=(PsoCIWrapperBase&&) = delete;
+        SerializedPsoCIWrapperBase(const SerializedPsoCIWrapperBase&) = delete;
+        SerializedPsoCIWrapperBase(SerializedPsoCIWrapperBase&&)      = delete;
+        SerializedPsoCIWrapperBase& operator=(const SerializedPsoCIWrapperBase&) = delete;
+        SerializedPsoCIWrapperBase& operator=(SerializedPsoCIWrapperBase&&) = delete;
 
-        operator CreateInfoType&()
+        void SetName(const char* Name)
+        {
+            VERIFY_EXPR(Name != nullptr);
+            CI.PSODesc.Name = Name;
+        }
+
+        operator const CreateInfoType&()
         {
             return CI;
         }
 
-        std::vector<IPipelineResourceSignature*>& GetSignatures()
+    protected:
+        // Replaces shader with a serialized shader
+        void SerializeShader(ISerializationDevice* pSerializationDevice, RENDER_DEVICE_TYPE DeviceType, IShader*& pShader)
         {
-            return ppSignatures;
+            if (pShader == nullptr)
+                return;
+
+            RefCntAutoPtr<IObject> pObject;
+            pShader->GetReferenceCounters()->QueryObject(&pObject);
+            RefCntAutoPtr<IShader> pSerializedShader{pObject, IID_SerializedShader};
+            if (!pSerializedShader)
+            {
+                ShaderCreateInfo ShaderCI;
+                ShaderCI.Desc = pShader->GetDesc();
+
+                Uint64 Size = 0;
+                pShader->GetBytecode(&ShaderCI.ByteCode, Size);
+                ShaderCI.ByteCodeSize = static_cast<size_t>(Size);
+                if (DeviceType == RENDER_DEVICE_TYPE_GL)
+                {
+                    ShaderCI.Source   = static_cast<const char*>(ShaderCI.ByteCode);
+                    ShaderCI.ByteCode = nullptr;
+                    if (ShaderCI.SourceLength > 1)
+                    {
+                        --ShaderCI.SourceLength;
+                    }
+                    ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM;
+                }
+                ShaderArchiveInfo ArchiveInfo;
+                ArchiveInfo.DeviceFlags = static_cast<ARCHIVE_DEVICE_DATA_FLAGS>(1 << DeviceType);
+                pSerializationDevice->CreateShader(ShaderCI, ArchiveInfo, &pSerializedShader);
+                if (!pSerializedShader)
+                {
+                    LOG_ERROR_MESSAGE("Failed to serialize shader '", ShaderCI.Desc.Name, "'.");
+                }
+            }
+
+            pShader = pSerializedShader;
+            SerializedObjects.emplace_back(std::move(pSerializedShader));
         }
 
     protected:
         CreateInfoType CI;
 
         std::vector<IPipelineResourceSignature*> ppSignatures;
+        std::vector<RefCntAutoPtr<IObject>>      SerializedObjects;
     };
 
     template <typename CreateInfoType>
-    struct PsoCIWrapper : PsoCIWrapperBase<CreateInfoType>
-    {
-        PsoCIWrapper(const CreateInfoType& _CI) :
-            PsoCIWrapperBase<CreateInfoType>{_CI}
-        {}
-    };
+    struct SerializedPsoCIWrapper : SerializedPsoCIWrapperBase<CreateInfoType>
+    {};
 
     template <typename CreateInfoType>
     bool CreatePipelineState(const CreateInfoType& PSOCreateInfo,
@@ -423,77 +432,24 @@ private:
         if (m_pArchiver->GetPipelineState(PSOCreateInfo.PSODesc.PipelineType, HashStr.c_str()) != nullptr)
             return true;
 
-        // Make a copy of create info
-        PsoCIWrapper<CreateInfoType> CICopy{PSOCreateInfo};
-        CreateInfoType&              CI = CICopy;
-
-        // Replace signatures with serialized signatures
-        auto& Signatures           = CICopy.GetSignatures();
-        auto  SerializedSignatures = std::vector<RefCntAutoPtr<IPipelineResourceSignature>>(Signatures.size());
-        for (size_t i = 0; i < Signatures.size(); ++i)
+        try
         {
-            auto& pSign = Signatures[i];
-            if (pSign == nullptr)
-                continue;
-            const auto&                  SignDesc = pSign->GetDesc();
-            ResourceSignatureArchiveInfo ArchiveInfo;
-            ArchiveInfo.DeviceFlags = static_cast<ARCHIVE_DEVICE_DATA_FLAGS>(1 << m_DeviceType);
-            m_pSerializationDevice->CreatePipelineResourceSignature(SignDesc, ArchiveInfo, &SerializedSignatures[i]);
-            if (SerializedSignatures[i] == nullptr)
-            {
-                LOG_ERROR_MESSAGE("Failed to create serialized pipeline resource signature #", i, " from signature '", SignDesc.Name, "' for pipeline state '", (PSOCreateInfo.PSODesc.Name ? PSOCreateInfo.PSODesc.Name : "<noname>"), "'.");
-                return false;
-            }
-            pSign = SerializedSignatures[i];
-        }
+            // Make a copy of create info that contains serialized objects
+            SerializedPsoCIWrapper<CreateInfoType> SerializedPsoCI{m_pSerializationDevice, m_DeviceType, PSOCreateInfo};
+            SerializedPsoCI.SetName(HashStr.c_str());
 
-        // Replace shaders with serialized shaders
-        std::vector<RefCntAutoPtr<IObject>> TmpObjects;
-        ProcessPipelineShaders(CI,
-                               [&](IShader*& pShader) {
-                                   if (pShader == nullptr)
-                                       return;
-
-                                   RefCntAutoPtr<IObject> pObject;
-                                   pShader->GetReferenceCounters()->QueryObject(&pObject);
-                                   RefCntAutoPtr<IShader> pSerializedShader{pObject, IID_SerializedShader};
-                                   if (!pSerializedShader)
-                                   {
-                                       ShaderCreateInfo ShaderCI;
-                                       ShaderCI.Desc = pShader->GetDesc();
-
-                                       Uint64 Size = 0;
-                                       pShader->GetBytecode(&ShaderCI.ByteCode, Size);
-                                       ShaderCI.ByteCodeSize = static_cast<size_t>(Size);
-                                       if (m_DeviceType == RENDER_DEVICE_TYPE_GL)
-                                       {
-                                           ShaderCI.Source   = static_cast<const char*>(ShaderCI.ByteCode);
-                                           ShaderCI.ByteCode = nullptr;
-                                           if (ShaderCI.SourceLength > 1)
-                                           {
-                                               --ShaderCI.SourceLength;
-                                           }
-                                           ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM;
-                                       }
-                                       ShaderArchiveInfo ArchiveInfo;
-                                       ArchiveInfo.DeviceFlags = static_cast<ARCHIVE_DEVICE_DATA_FLAGS>(1 << m_DeviceType);
-                                       m_pSerializationDevice->CreateShader(ShaderCI, ArchiveInfo, &pSerializedShader);
-                                   }
-
-                                   pShader = pSerializedShader;
-                                   TmpObjects.emplace_back(std::move(pSerializedShader));
-                               });
-
-        RefCntAutoPtr<IPipelineState> pSerializedPSO;
-        {
             PipelineStateArchiveInfo ArchiveInfo;
             ArchiveInfo.DeviceFlags = static_cast<ARCHIVE_DEVICE_DATA_FLAGS>(1 << m_DeviceType);
-            CI.PSODesc.Name         = HashStr.c_str();
-            m_pSerializationDevice->CreatePipelineState(CI, ArchiveInfo, &pSerializedPSO);
+            RefCntAutoPtr<IPipelineState> pSerializedPSO;
+            m_pSerializationDevice->CreatePipelineState(SerializedPsoCI, ArchiveInfo, &pSerializedPSO);
+
+            if (pSerializedPSO)
+            {
+                m_pArchiver->AddPipelineState(pSerializedPSO);
+            }
         }
-        if (pSerializedPSO)
+        catch (...)
         {
-            m_pArchiver->AddPipelineState(pSerializedPSO);
         }
 
         return false;
@@ -528,10 +484,47 @@ private:
 };
 
 template <>
-struct RenderStateCacheImpl::PsoCIWrapper<RayTracingPipelineStateCreateInfo> : PsoCIWrapperBase<RayTracingPipelineStateCreateInfo>
+struct RenderStateCacheImpl::SerializedPsoCIWrapper<GraphicsPipelineStateCreateInfo> : SerializedPsoCIWrapperBase<GraphicsPipelineStateCreateInfo>
 {
-    PsoCIWrapper(const RayTracingPipelineStateCreateInfo& _CI) :
-        PsoCIWrapperBase<RayTracingPipelineStateCreateInfo>{_CI},
+    SerializedPsoCIWrapper(ISerializationDevice* pSerializationDevice, RENDER_DEVICE_TYPE DeviceType, const GraphicsPipelineStateCreateInfo& _CI) :
+        SerializedPsoCIWrapperBase<GraphicsPipelineStateCreateInfo>{pSerializationDevice, DeviceType, _CI}
+    {
+        SerializeShader(pSerializationDevice, DeviceType, CI.pVS);
+        SerializeShader(pSerializationDevice, DeviceType, CI.pPS);
+        SerializeShader(pSerializationDevice, DeviceType, CI.pDS);
+        SerializeShader(pSerializationDevice, DeviceType, CI.pHS);
+        SerializeShader(pSerializationDevice, DeviceType, CI.pGS);
+        SerializeShader(pSerializationDevice, DeviceType, CI.pAS);
+        SerializeShader(pSerializationDevice, DeviceType, CI.pMS);
+    }
+};
+
+template <>
+struct RenderStateCacheImpl::SerializedPsoCIWrapper<ComputePipelineStateCreateInfo> : SerializedPsoCIWrapperBase<ComputePipelineStateCreateInfo>
+{
+    SerializedPsoCIWrapper(ISerializationDevice* pSerializationDevice, RENDER_DEVICE_TYPE DeviceType, const ComputePipelineStateCreateInfo& _CI) :
+        SerializedPsoCIWrapperBase<ComputePipelineStateCreateInfo>{pSerializationDevice, DeviceType, _CI}
+    {
+        SerializeShader(pSerializationDevice, DeviceType, CI.pCS);
+    }
+};
+
+template <>
+struct RenderStateCacheImpl::SerializedPsoCIWrapper<TilePipelineStateCreateInfo> : SerializedPsoCIWrapperBase<TilePipelineStateCreateInfo>
+{
+    SerializedPsoCIWrapper(ISerializationDevice* pSerializationDevice, RENDER_DEVICE_TYPE DeviceType, const TilePipelineStateCreateInfo& _CI) :
+        SerializedPsoCIWrapperBase<TilePipelineStateCreateInfo>{pSerializationDevice, DeviceType, _CI}
+    {
+        SerializeShader(pSerializationDevice, DeviceType, CI.pTS);
+    }
+};
+
+
+template <>
+struct RenderStateCacheImpl::SerializedPsoCIWrapper<RayTracingPipelineStateCreateInfo> : SerializedPsoCIWrapperBase<RayTracingPipelineStateCreateInfo>
+{
+    SerializedPsoCIWrapper(ISerializationDevice* pSerializationDevice, RENDER_DEVICE_TYPE DeviceType, const RayTracingPipelineStateCreateInfo& _CI) :
+        SerializedPsoCIWrapperBase<RayTracingPipelineStateCreateInfo>{pSerializationDevice, DeviceType, _CI},
         // clang-format off
         pGeneralShaders      {_CI.pGeneralShaders,       _CI.pGeneralShaders       + _CI.GeneralShaderCount},
         pTriangleHitShaders  {_CI.pTriangleHitShaders,   _CI.pTriangleHitShaders   + _CI.TriangleHitShaderCount},
@@ -541,6 +534,24 @@ struct RenderStateCacheImpl::PsoCIWrapper<RayTracingPipelineStateCreateInfo> : P
         CI.pGeneralShaders       = pGeneralShaders.data();
         CI.pTriangleHitShaders   = pTriangleHitShaders.data();
         CI.pProceduralHitShaders = pProceduralHitShaders.data();
+
+        for (auto& GeneralShader : pGeneralShaders)
+        {
+            SerializeShader(pSerializationDevice, DeviceType, GeneralShader.pShader);
+        }
+
+        for (auto& TriHitShader : pTriangleHitShaders)
+        {
+            SerializeShader(pSerializationDevice, DeviceType, TriHitShader.pAnyHitShader);
+            SerializeShader(pSerializationDevice, DeviceType, TriHitShader.pClosestHitShader);
+        }
+
+        for (auto& ProcHitShader : pProceduralHitShaders)
+        {
+            SerializeShader(pSerializationDevice, DeviceType, ProcHitShader.pAnyHitShader);
+            SerializeShader(pSerializationDevice, DeviceType, ProcHitShader.pClosestHitShader);
+            SerializeShader(pSerializationDevice, DeviceType, ProcHitShader.pIntersectionShader);
+        }
     }
 
 private:
