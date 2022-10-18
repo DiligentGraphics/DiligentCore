@@ -1147,8 +1147,12 @@ TEST(XXH128HasherTest, ShaderCreateInfo)
     Helper.Get().Source       = nullptr;
     constexpr uint32_t Data[] = {1, 2, 3, 4};
     Helper.Get().ByteCode     = Data;
-
     TEST_RANGE(ByteCodeSize, size_t{1}, size_t{8});
+
+    constexpr char Source[8] = {'1', '2', '3', '4', '5', '6', '7', '8'};
+    Helper.Get().ByteCode    = nullptr;
+    Helper.Get().Source      = Source;
+    TEST_RANGE(SourceLength, size_t{1}, sizeof(Source));
 
     TEST_STRINGS(EntryPoint, "Entry1", "Entry2", "Entry3");
 

@@ -64,22 +64,26 @@ void XXH128State::Update(const ShaderCreateInfo& ShaderCI) noexcept
 {
     ASSERT_SIZEOF64(ShaderCI, 144, "Did you add new members to ShaderCreateInfo? Please handle them here.");
 
-    Update(
-        ShaderCI.Source,
-        ShaderCI.SourceLength, // Aka ByteCodeSize
-        ShaderCI.EntryPoint,
-        ShaderCI.Desc,
-        ShaderCI.SourceLanguage,
-        ShaderCI.ShaderCompiler,
-        ShaderCI.HLSLVersion,
-        ShaderCI.GLSLVersion,
-        ShaderCI.GLESSLVersion,
-        ShaderCI.MSLVersion,
-        ShaderCI.CompileFlags);
+    Update(ShaderCI.SourceLength, // Aka ByteCodeSize
+           ShaderCI.EntryPoint,
+           ShaderCI.Desc,
+           ShaderCI.SourceLanguage,
+           ShaderCI.ShaderCompiler,
+           ShaderCI.HLSLVersion,
+           ShaderCI.GLSLVersion,
+           ShaderCI.GLESSLVersion,
+           ShaderCI.MSLVersion,
+           ShaderCI.CompileFlags);
 
-    if (ShaderCI.ByteCode != 0 && ShaderCI.ByteCodeSize != 0)
+    if (ShaderCI.Source != nullptr || ShaderCI.FilePath != nullptr)
     {
-        VERIFY_EXPR(ShaderCI.Source == nullptr && ShaderCI.FilePath == nullptr);
+        DEV_CHECK_ERR(ShaderCI.ByteCode == nullptr, "ShaderCI.ByteCode must be null when either Source or FilePath is specified");
+        ProcessShaderIncludes(ShaderCI, [this](const ShaderIncludePreprocessInfo& ProcessInfo) {
+            UpdateStr(ProcessInfo.Source, ProcessInfo.SourceLength);
+        });
+    }
+    else if (ShaderCI.ByteCode != nullptr && ShaderCI.ByteCodeSize != 0)
+    {
         UpdateRaw(ShaderCI.ByteCode, ShaderCI.ByteCodeSize);
     }
 
@@ -89,14 +93,6 @@ void XXH128State::Update(const ShaderCreateInfo& ShaderCI) noexcept
         {
             Update(Macro->Name, Macro->Definition);
         }
-    }
-
-
-    if (ShaderCI.Source != nullptr || ShaderCI.FilePath != nullptr)
-    {
-        ProcessShaderIncludes(ShaderCI, [this](const ShaderIncludePreprocessInfo& ProcessInfo) {
-            UpdateStr(ProcessInfo.Source, ProcessInfo.SourceLength);
-        });
     }
 }
 
