@@ -75,6 +75,8 @@ struct CompiledShaderGL final : SerializedShaderImpl::CompiledShader
             // GL shader must be created through the render device as GL functions
             // are not loaded by the archiver.
             pRenderDeviceGL->CreateShader(SerializationCI, &pShaderGL);
+            if (!pShaderGL)
+                LOG_ERROR_AND_THROW("Failed to create GL shader '", (ShaderCI.Desc.Name ? ShaderCI.Desc.Name : ""), "'.");
         }
         else
         {

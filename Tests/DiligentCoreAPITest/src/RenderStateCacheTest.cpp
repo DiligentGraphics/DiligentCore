@@ -312,6 +312,31 @@ TEST(RenderStateCacheTest, CreateShader)
     }
 }
 
+TEST(RenderStateCacheTest, BrokenShader)
+{
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+
+    GPUTestingEnvironment::ScopedReset AutoReset;
+
+    constexpr char NotASource[] = "Not a shader source";
+
+    auto pCache = CreateCache(pDevice);
+    ASSERT_TRUE(pCache);
+
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.Source       = NotASource;
+    ShaderCI.SourceLength = sizeof(NotASource);
+
+    constexpr ShaderMacro Macros[] = {{"EXTERNAL_MACROS", "2"}, {}};
+    ShaderCI.Macros                = Macros;
+    ShaderCI.Desc                  = {"Broken shader", SHADER_TYPE_VERTEX, true};
+    RefCntAutoPtr<IShader> pShader;
+    pEnv->SetErrorAllowance(6, "\n\nNo worries, testing broken shader...\n\n");
+    EXPECT_FALSE(pCache->CreateShader(ShaderCI, &pShader));
+    EXPECT_EQ(pShader, nullptr);
+}
+
 void TestGraphicsPSO(bool UseRenderPass)
 {
     auto* pEnv       = GPUTestingEnvironment::GetInstance();
