@@ -25,6 +25,7 @@
  */
 
 #include "GPUTestingEnvironment.hpp"
+#include "TestingSwapChainBase.hpp"
 #include "RenderStateCache.h"
 #include "FastRand.hpp"
 
@@ -35,7 +36,8 @@ namespace Diligent
 namespace Testing
 {
 void RenderDrawCommandReference(ISwapChain* pSwapChain, const float* pClearColor = nullptr);
-}
+void ComputeShaderReference(ISwapChain* pSwapChain);
+} // namespace Testing
 } // namespace Diligent
 
 using namespace Diligent;
@@ -102,6 +104,37 @@ void VerifyGraphicsPSO(IPipelineState* pPSO)
     TestDraw(nullptr, nullptr, pPSO);
 }
 
+void VerifyComputePSO(IPipelineState* pPSO)
+{
+    auto* pEnv       = GPUTestingEnvironment::GetInstance();
+    auto* pCtx       = pEnv->GetDeviceContext();
+    auto* pSwapChain = pEnv->GetSwapChain();
+
+    pCtx->Flush();
+    pCtx->InvalidateState();
+    ComputeShaderReference(pSwapChain);
+
+    RefCntAutoPtr<IShaderResourceBinding> pSRB;
+    pPSO->CreateShaderResourceBinding(&pSRB, true);
+    ASSERT_TRUE(pSRB);
+
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_TestingSwapChain};
+    ASSERT_NE(pTestingSwapChain, nullptr);
+    pSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_tex2DUAV")->Set(pTestingSwapChain->GetCurrentBackBufferUAV());
+
+    pCtx->SetPipelineState(pPSO);
+    pCtx->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    const auto& SCDesc = pSwapChain->GetDesc();
+
+    DispatchComputeAttribs DispatchAttribs;
+    DispatchAttribs.ThreadGroupCountX = (SCDesc.Width + 15) / 16;
+    DispatchAttribs.ThreadGroupCountY = (SCDesc.Height + 15) / 16;
+    pCtx->DispatchCompute(DispatchAttribs);
+
+    pSwapChain->Present();
+}
+
 RefCntAutoPtr<IRenderStateCache> CreateCache(IRenderDevice* pDevice, IDataBlob* pCacheData = nullptr)
 {
     RenderStateCacheCreateInfo CacheCI;
@@ -116,13 +149,13 @@ RefCntAutoPtr<IRenderStateCache> CreateCache(IRenderDevice* pDevice, IDataBlob* 
     return pCache;
 }
 
-void CreateGraphicsShaders(IRenderStateCache*               pCache,
-                           IShaderSourceInputStreamFactory* pShaderSourceFactory,
-                           RefCntAutoPtr<IShader>&          pVS,
-                           RefCntAutoPtr<IShader>&          pPS,
-                           bool                             PresentInCache,
-                           const char*                      VSPath = nullptr,
-                           const char*                      PSPath = nullptr)
+void CreateShader(IRenderStateCache*               pCache,
+                  IShaderSourceInputStreamFactory* pShaderSourceFactory,
+                  SHADER_TYPE                      Type,
+                  const char*                      Name,
+                  const char*                      Path,
+                  bool                             PresentInCache,
+                  RefCntAutoPtr<IShader>&          pShader)
 {
     auto* const pEnv    = GPUTestingEnvironment::GetInstance();
     auto* const pDevice = pEnv->GetDevice();
@@ -136,34 +169,49 @@ void CreateGraphicsShaders(IRenderStateCache*               pCache,
     ShaderCI.Macros                = Macros;
 
     {
-        ShaderCI.Desc     = {"RenderStateCache - VS", SHADER_TYPE_VERTEX, true};
-        ShaderCI.FilePath = VSPath != nullptr ? VSPath : "VertexShader.vsh";
+        ShaderCI.Desc     = {Name, Type, true};
+        ShaderCI.FilePath = Path;
         if (pCache != nullptr)
         {
-            EXPECT_EQ(pCache->CreateShader(ShaderCI, &pVS), PresentInCache);
+            EXPECT_EQ(pCache->CreateShader(ShaderCI, &pShader), PresentInCache);
         }
         else
         {
-            pDevice->CreateShader(ShaderCI, &pVS);
+            pDevice->CreateShader(ShaderCI, &pShader);
             EXPECT_EQ(PresentInCache, false);
         }
-        ASSERT_TRUE(pVS);
+        ASSERT_TRUE(pShader);
     }
+}
 
-    {
-        ShaderCI.Desc     = {"RenderStateCache - PS", SHADER_TYPE_PIXEL, true};
-        ShaderCI.FilePath = PSPath != nullptr ? PSPath : "PixelShader.psh";
-        if (pCache != nullptr)
-        {
-            EXPECT_EQ(pCache->CreateShader(ShaderCI, &pPS), PresentInCache);
-        }
-        else
-        {
-            pDevice->CreateShader(ShaderCI, &pPS);
-            EXPECT_EQ(PresentInCache, false);
-        }
-        ASSERT_TRUE(pPS);
-    }
+void CreateGraphicsShaders(IRenderStateCache*               pCache,
+                           IShaderSourceInputStreamFactory* pShaderSourceFactory,
+                           RefCntAutoPtr<IShader>&          pVS,
+                           RefCntAutoPtr<IShader>&          pPS,
+                           bool                             PresentInCache,
+                           const char*                      VSPath = nullptr,
+                           const char*                      PSPath = nullptr)
+{
+    CreateShader(pCache, pShaderSourceFactory, SHADER_TYPE_VERTEX,
+                 "RenderStateCache - VS", VSPath != nullptr ? VSPath : "VertexShader.vsh",
+                 PresentInCache, pVS);
+    ASSERT_TRUE(pVS);
+
+    CreateShader(pCache, pShaderSourceFactory, SHADER_TYPE_PIXEL,
+                 "RenderStateCache - PS", VSPath != nullptr ? PSPath : "PixelShader.psh",
+                 PresentInCache, pPS);
+    ASSERT_TRUE(pPS);
+}
+
+
+void CreateComputeShader(IRenderStateCache*               pCache,
+                         IShaderSourceInputStreamFactory* pShaderSourceFactory,
+                         RefCntAutoPtr<IShader>&          pCS,
+                         bool                             PresentInCache)
+{
+    CreateShader(pCache, pShaderSourceFactory, SHADER_TYPE_COMPUTE,
+                 "RenderStateCache - CS", "ComputeShader.csh",
+                 PresentInCache, pCS);
 }
 
 TEST(RenderStateCacheTest, CreateShader)
@@ -206,6 +254,12 @@ TEST(RenderStateCacheTest, CreateShader)
             CreateGraphicsShaders(pCache, pShaderSourceFactory, pVS, pPS, true);
             EXPECT_NE(pVS, nullptr);
             EXPECT_NE(pPS, nullptr);
+        }
+
+        {
+            RefCntAutoPtr<IShader> pCS;
+            CreateComputeShader(pCache, pShaderSourceFactory, pCS, pData != nullptr);
+            EXPECT_NE(pCS, nullptr);
         }
 
         pData.Release();
@@ -259,6 +313,7 @@ TEST(RenderStateCacheTest, CreateGraphicsPSO)
 
         RefCntAutoPtr<IPipelineState> pPSO;
         CreatePSO(pData != nullptr, pVS1, pPS1, &pPSO);
+        ASSERT_NE(pPSO, nullptr);
 
         VerifyGraphicsPSO(pPSO);
 
@@ -283,46 +338,60 @@ TEST(RenderStateCacheTest, CreateComputePSO)
 {
     auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
+    if (!pDevice->GetDeviceInfo().Features.ComputeShaders)
+    {
+        GTEST_SKIP() << "Compute shaders are not supported by this device";
+    }
 
     GPUTestingEnvironment::ScopedReset AutoReset;
-
-    auto pCache = CreateCache(pDevice);
-    ASSERT_TRUE(pCache);
 
     RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
     pDevice->GetEngineFactory()->CreateDefaultShaderSourceStreamFactory("shaders/RenderStateCache", &pShaderSourceFactory);
     ASSERT_TRUE(pShaderSourceFactory);
 
-    auto CreatePSO = [&](bool PresentInCache) {
-        ShaderCreateInfo ShaderCI;
-        ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
-        ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
-        ShaderCI.ShaderCompiler             = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+    RefCntAutoPtr<IDataBlob> pData;
+    for (Uint32 pass = 0; pass < 2; ++pass)
+    {
+        // 0: empty cache
+        // 1: loaded cache
+        // 2: reloaded cache (loaded -> stored -> loaded)
+
+        auto pCache = CreateCache(pDevice, pData);
+        ASSERT_TRUE(pCache);
+
+        auto CreatePSO = [&](bool PresentInCache, IShader* pCS, IPipelineState** ppPSO) {
+            ComputePipelineStateCreateInfo PsoCI;
+            PsoCI.PSODesc.Name = "Render State Cache Test";
+            PsoCI.pCS          = pCS;
+
+            constexpr ShaderResourceVariableDesc Variables[] //
+                {
+                    ShaderResourceVariableDesc{SHADER_TYPE_COMPUTE, "g_tex2DUAV", SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE} //
+                };
+            PsoCI.PSODesc.ResourceLayout.Variables    = Variables;
+            PsoCI.PSODesc.ResourceLayout.NumVariables = _countof(Variables);
+
+            EXPECT_EQ(pCache->CreateComputePipelineState(PsoCI, ppPSO), PresentInCache);
+        };
 
         RefCntAutoPtr<IShader> pCS;
-        {
-            ShaderCI.Desc     = {"RenderStateCache - CS", SHADER_TYPE_COMPUTE, true};
-            ShaderCI.FilePath = "ComputeShader.csh";
-            EXPECT_EQ(pCache->CreateShader(ShaderCI, &pCS), PresentInCache);
-            ASSERT_TRUE(pCS);
-        }
-
-        ComputePipelineStateCreateInfo PsoCI;
-        PsoCI.pCS = pCS;
+        CreateComputeShader(pCache, pShaderSourceFactory, pCS, pData != nullptr);
 
         RefCntAutoPtr<IPipelineState> pPSO;
-        EXPECT_EQ(pCache->CreateComputePipelineState(PsoCI, &pPSO), PresentInCache);
-    };
-    CreatePSO(false);
-    CreatePSO(true);
+        CreatePSO(pData != nullptr, pCS, &pPSO);
+        ASSERT_NE(pPSO, nullptr);
 
-    RefCntAutoPtr<IDataBlob> pData;
-    pCache->WriteToBlob(&pData);
+        VerifyComputePSO(pPSO);
 
-    pCache.Release();
-    pCache = CreateCache(pDevice, pData);
+        {
+            RefCntAutoPtr<IPipelineState> pPSO2;
+            CreatePSO(true, pCS, &pPSO2);
+            EXPECT_EQ(pPSO, pPSO2);
+        }
 
-    CreatePSO(true);
+        pData.Release();
+        pCache->WriteToBlob(&pData);
+    }
 }
 
 TEST(RenderStateCacheTest, CreateRayTracingPSO)

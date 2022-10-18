@@ -1,4 +1,4 @@
-#include "Common.h"
+#include "GraphicsCommon.h"
 
 float4 main(in PSInput PSIn) : SV_Target
 {
