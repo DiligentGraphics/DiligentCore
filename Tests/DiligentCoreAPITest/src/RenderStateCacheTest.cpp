@@ -104,7 +104,7 @@ void VerifyGraphicsPSO(IPipelineState* pPSO)
     TestDraw(nullptr, nullptr, pPSO);
 }
 
-void VerifyComputePSO(IPipelineState* pPSO)
+void VerifyComputePSO(IPipelineState* pPSO, bool UseSignature = false)
 {
     auto* pEnv       = GPUTestingEnvironment::GetInstance();
     auto* pCtx       = pEnv->GetDeviceContext();
@@ -115,7 +115,16 @@ void VerifyComputePSO(IPipelineState* pPSO)
     ComputeShaderReference(pSwapChain);
 
     RefCntAutoPtr<IShaderResourceBinding> pSRB;
-    pPSO->CreateShaderResourceBinding(&pSRB, true);
+    if (UseSignature)
+    {
+        auto* pSign = pPSO->GetResourceSignature(0);
+        ASSERT_NE(pSign, nullptr);
+        pSign->CreateShaderResourceBinding(&pSRB, true);
+    }
+    else
+    {
+        pPSO->CreateShaderResourceBinding(&pSRB, true);
+    }
     ASSERT_TRUE(pSRB);
 
     RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_TestingSwapChain};
@@ -305,6 +314,11 @@ TEST(RenderStateCacheTest, CreateGraphicsPSO)
             PsoCI.GraphicsPipeline.DepthStencilDesc.DepthEnable = True;
 
             EXPECT_EQ(pCache->CreateGraphicsPipelineState(PsoCI, ppPSO), PresentInCache);
+            if (*ppPSO != nullptr)
+            {
+                const auto& Desc = (*ppPSO)->GetDesc();
+                EXPECT_EQ(PsoCI.PSODesc, Desc);
+            }
         };
 
         RefCntAutoPtr<IShader> pVS1, pPS1;
@@ -334,7 +348,7 @@ TEST(RenderStateCacheTest, CreateGraphicsPSO)
     }
 }
 
-TEST(RenderStateCacheTest, CreateComputePSO)
+void TestComputePSO(bool UseSignature)
 {
     auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
@@ -368,10 +382,47 @@ TEST(RenderStateCacheTest, CreateComputePSO)
                 {
                     ShaderResourceVariableDesc{SHADER_TYPE_COMPUTE, "g_tex2DUAV", SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE} //
                 };
-            PsoCI.PSODesc.ResourceLayout.Variables    = Variables;
-            PsoCI.PSODesc.ResourceLayout.NumVariables = _countof(Variables);
+
+            constexpr PipelineResourceDesc Resources[] //
+                {
+                    PipelineResourceDesc{SHADER_TYPE_COMPUTE, "g_tex2DUAV", 1, SHADER_RESOURCE_TYPE_TEXTURE_UAV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE} //
+                };
+
+            RefCntAutoPtr<IPipelineResourceSignature> pSign;
+            IPipelineResourceSignature*               ppSignatures[1] = {};
+
+            if (UseSignature)
+            {
+                PipelineResourceSignatureDesc SignDesc;
+
+                SignDesc.Name         = "Render State Cache Test";
+                SignDesc.Resources    = Resources;
+                SignDesc.NumResources = _countof(Resources);
+                pDevice->CreatePipelineResourceSignature(SignDesc, &pSign);
+                ASSERT_NE(pSign, nullptr);
+                ppSignatures[0]               = pSign;
+                PsoCI.ppResourceSignatures    = ppSignatures;
+                PsoCI.ResourceSignaturesCount = _countof(ppSignatures);
+            }
+            else
+            {
+                PsoCI.PSODesc.ResourceLayout.Variables    = Variables;
+                PsoCI.PSODesc.ResourceLayout.NumVariables = _countof(Variables);
+            }
 
             EXPECT_EQ(pCache->CreateComputePipelineState(PsoCI, ppPSO), PresentInCache);
+            if (*ppPSO != nullptr)
+            {
+                const auto& Desc = (*ppPSO)->GetDesc();
+                EXPECT_EQ(PsoCI.PSODesc, Desc);
+                if (UseSignature)
+                {
+                    EXPECT_EQ((*ppPSO)->GetResourceSignatureCount(), 1u);
+                    auto* _pSign = (*ppPSO)->GetResourceSignature(0);
+                    ASSERT_NE(_pSign, nullptr);
+                    EXPECT_EQ(_pSign->GetDesc(), pSign->GetDesc());
+                }
+            }
         };
 
         RefCntAutoPtr<IShader> pCS;
@@ -381,7 +432,7 @@ TEST(RenderStateCacheTest, CreateComputePSO)
         CreatePSO(pData != nullptr, pCS, &pPSO);
         ASSERT_NE(pPSO, nullptr);
 
-        VerifyComputePSO(pPSO);
+        VerifyComputePSO(pPSO, /* UseSignature = */ true);
 
         {
             RefCntAutoPtr<IPipelineState> pPSO2;
@@ -392,6 +443,16 @@ TEST(RenderStateCacheTest, CreateComputePSO)
         pData.Release();
         pCache->WriteToBlob(&pData);
     }
+}
+
+TEST(RenderStateCacheTest, CreateComputePSO)
+{
+    TestComputePSO(/*UseSignature = */ false);
+}
+
+TEST(RenderStateCacheTest, CreateComputePSO_Sign)
+{
+    TestComputePSO(/*UseSignature = */ true);
 }
 
 TEST(RenderStateCacheTest, CreateRayTracingPSO)

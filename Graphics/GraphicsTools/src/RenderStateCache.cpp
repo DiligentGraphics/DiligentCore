@@ -232,17 +232,7 @@ public:
         const RayTracingPipelineStateCreateInfo& PSOCreateInfo,
         IPipelineState**                         ppPipelineState) override final
     {
-        auto CI = PSOCreateInfo;
-
-        std::vector<RayTracingGeneralShaderGroup>       pGeneralShaders{CI.pGeneralShaders, CI.pGeneralShaders + CI.GeneralShaderCount};
-        std::vector<RayTracingTriangleHitShaderGroup>   pTriangleHitShaders{CI.pTriangleHitShaders, CI.pTriangleHitShaders + CI.TriangleHitShaderCount};
-        std::vector<RayTracingProceduralHitShaderGroup> pProceduralHitShaders{CI.pProceduralHitShaders, CI.pProceduralHitShaders + CI.ProceduralHitShaderCount};
-
-        CI.pGeneralShaders       = pGeneralShaders.data();
-        CI.pTriangleHitShaders   = pTriangleHitShaders.data();
-        CI.pProceduralHitShaders = pProceduralHitShaders.data();
-
-        return CreatePipelineState(CI, ppPipelineState);
+        return CreatePipelineState(PSOCreateInfo, ppPipelineState);
     }
 
     virtual bool DILIGENT_CALL_TYPE CreateTilePipelineState(
@@ -328,8 +318,47 @@ private:
     }
 
     template <typename CreateInfoType>
-    bool CreatePipelineState(CreateInfoType   PSOCreateInfo,
-                             IPipelineState** ppPipelineState)
+    struct PsoCIWrapperBase
+    {
+        PsoCIWrapperBase(const CreateInfoType& _CI) :
+            CI{_CI},
+            ppSignatures{_CI.ppResourceSignatures, _CI.ppResourceSignatures + _CI.ResourceSignaturesCount}
+        {
+            CI.ppResourceSignatures = !ppSignatures.empty() ? ppSignatures.data() : nullptr;
+        }
+
+        PsoCIWrapperBase(const PsoCIWrapperBase&) = delete;
+        PsoCIWrapperBase(PsoCIWrapperBase&&)      = delete;
+        PsoCIWrapperBase& operator=(const PsoCIWrapperBase&) = delete;
+        PsoCIWrapperBase& operator=(PsoCIWrapperBase&&) = delete;
+
+        operator CreateInfoType&()
+        {
+            return CI;
+        }
+
+        std::vector<IPipelineResourceSignature*>& GetSignatures()
+        {
+            return ppSignatures;
+        }
+
+    protected:
+        CreateInfoType CI;
+
+        std::vector<IPipelineResourceSignature*> ppSignatures;
+    };
+
+    template <typename CreateInfoType>
+    struct PsoCIWrapper : PsoCIWrapperBase<CreateInfoType>
+    {
+        PsoCIWrapper(const CreateInfoType& _CI) :
+            PsoCIWrapperBase<CreateInfoType>{_CI}
+        {}
+    };
+
+    template <typename CreateInfoType>
+    bool CreatePipelineState(const CreateInfoType& PSOCreateInfo,
+                             IPipelineState**      ppPipelineState)
     {
         *ppPipelineState = nullptr;
 
@@ -394,9 +423,33 @@ private:
         if (m_pArchiver->GetPipelineState(PSOCreateInfo.PSODesc.PipelineType, HashStr.c_str()) != nullptr)
             return true;
 
+        // Make a copy of create info
+        PsoCIWrapper<CreateInfoType> CICopy{PSOCreateInfo};
+        CreateInfoType&              CI = CICopy;
+
+        // Replace signatures with serialized signatures
+        auto& Signatures           = CICopy.GetSignatures();
+        auto  SerializedSignatures = std::vector<RefCntAutoPtr<IPipelineResourceSignature>>(Signatures.size());
+        for (size_t i = 0; i < Signatures.size(); ++i)
+        {
+            auto& pSign = Signatures[i];
+            if (pSign == nullptr)
+                continue;
+            const auto&                  SignDesc = pSign->GetDesc();
+            ResourceSignatureArchiveInfo ArchiveInfo;
+            ArchiveInfo.DeviceFlags = static_cast<ARCHIVE_DEVICE_DATA_FLAGS>(1 << m_DeviceType);
+            m_pSerializationDevice->CreatePipelineResourceSignature(SignDesc, ArchiveInfo, &SerializedSignatures[i]);
+            if (SerializedSignatures[i] == nullptr)
+            {
+                LOG_ERROR_MESSAGE("Failed to create serialized pipeline resource signature #", i, " from signature '", SignDesc.Name, "' for pipeline state '", (PSOCreateInfo.PSODesc.Name ? PSOCreateInfo.PSODesc.Name : "<noname>"), "'.");
+                return false;
+            }
+            pSign = SerializedSignatures[i];
+        }
+
         // Replace shaders with serialized shaders
         std::vector<RefCntAutoPtr<IObject>> TmpObjects;
-        ProcessPipelineShaders(PSOCreateInfo,
+        ProcessPipelineShaders(CI,
                                [&](IShader*& pShader) {
                                    if (pShader == nullptr)
                                        return;
@@ -434,9 +487,9 @@ private:
         RefCntAutoPtr<IPipelineState> pSerializedPSO;
         {
             PipelineStateArchiveInfo ArchiveInfo;
-            ArchiveInfo.DeviceFlags    = static_cast<ARCHIVE_DEVICE_DATA_FLAGS>(1 << m_DeviceType);
-            PSOCreateInfo.PSODesc.Name = HashStr.c_str();
-            m_pSerializationDevice->CreatePipelineState(PSOCreateInfo, ArchiveInfo, &pSerializedPSO);
+            ArchiveInfo.DeviceFlags = static_cast<ARCHIVE_DEVICE_DATA_FLAGS>(1 << m_DeviceType);
+            CI.PSODesc.Name         = HashStr.c_str();
+            m_pSerializationDevice->CreatePipelineState(CI, ArchiveInfo, &pSerializedPSO);
         }
         if (pSerializedPSO)
         {
@@ -473,6 +526,29 @@ private:
     std::mutex                                                    m_PipelinesMtx;
     std::unordered_map<XXH128Hash, RefCntWeakPtr<IPipelineState>> m_Pipelines;
 };
+
+template <>
+struct RenderStateCacheImpl::PsoCIWrapper<RayTracingPipelineStateCreateInfo> : PsoCIWrapperBase<RayTracingPipelineStateCreateInfo>
+{
+    PsoCIWrapper(const RayTracingPipelineStateCreateInfo& _CI) :
+        PsoCIWrapperBase<RayTracingPipelineStateCreateInfo>{_CI},
+        // clang-format off
+        pGeneralShaders      {_CI.pGeneralShaders,       _CI.pGeneralShaders       + _CI.GeneralShaderCount},
+        pTriangleHitShaders  {_CI.pTriangleHitShaders,   _CI.pTriangleHitShaders   + _CI.TriangleHitShaderCount},
+        pProceduralHitShaders{_CI.pProceduralHitShaders, _CI.pProceduralHitShaders + _CI.ProceduralHitShaderCount}
+    // clang-format on
+    {
+        CI.pGeneralShaders       = pGeneralShaders.data();
+        CI.pTriangleHitShaders   = pTriangleHitShaders.data();
+        CI.pProceduralHitShaders = pProceduralHitShaders.data();
+    }
+
+private:
+    std::vector<RayTracingGeneralShaderGroup>       pGeneralShaders;
+    std::vector<RayTracingTriangleHitShaderGroup>   pTriangleHitShaders;
+    std::vector<RayTracingProceduralHitShaderGroup> pProceduralHitShaders;
+};
+
 
 void CreateRenderStateCache(const RenderStateCacheCreateInfo& CreateInfo,
                             IRenderStateCache**               ppCache)
