@@ -333,12 +333,8 @@ private:
                 ShaderCI.ByteCodeSize = static_cast<size_t>(Size);
                 if (DeviceType == RENDER_DEVICE_TYPE_GL)
                 {
-                    ShaderCI.Source   = static_cast<const char*>(ShaderCI.ByteCode);
-                    ShaderCI.ByteCode = nullptr;
-                    if (ShaderCI.SourceLength > 1)
-                    {
-                        --ShaderCI.SourceLength;
-                    }
+                    ShaderCI.Source         = static_cast<const char*>(ShaderCI.ByteCode);
+                    ShaderCI.ByteCode       = nullptr;
                     ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM;
                 }
                 ShaderArchiveInfo ArchiveInfo;
@@ -533,7 +529,6 @@ struct RenderStateCacheImpl::SerializedPsoCIWrapper<TilePipelineStateCreateInfo>
         SerializeShader(pSerializationDevice, DeviceType, CI.pTS);
     }
 };
-
 
 template <>
 struct RenderStateCacheImpl::SerializedPsoCIWrapper<RayTracingPipelineStateCreateInfo> : SerializedPsoCIWrapperBase<RayTracingPipelineStateCreateInfo>

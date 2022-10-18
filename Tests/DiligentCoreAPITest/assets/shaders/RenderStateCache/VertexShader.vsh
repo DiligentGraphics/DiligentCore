@@ -25,4 +25,5 @@ void main(in  uint    VertId : SV_VertexID,
     PSIn.Pos   = Pos[VertId];
     PSIn.Color = Col[VertId];
 }
+// NB: no new line at the end of file!
 #endif
