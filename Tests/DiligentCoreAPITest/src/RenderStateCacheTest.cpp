@@ -599,4 +599,24 @@ TEST(RenderStateCacheTest, CreateTilePSO)
     ASSERT_TRUE(pCache);
 }
 
+
+TEST(RenderStateCacheTest, BrokenPSO)
+{
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+
+    GPUTestingEnvironment::ScopedReset AutoReset;
+
+    auto pCache = CreateCache(pDevice);
+    ASSERT_TRUE(pCache);
+
+    GraphicsPipelineStateCreateInfo PipelineCI;
+    PipelineCI.PSODesc.Name = "Invalid PSO";
+    PipelineCI.pVS          = nullptr; // Must not be null
+    pEnv->SetErrorAllowance(2, "\n\nNo worries, testing broken PSO...\n\n");
+    RefCntAutoPtr<IPipelineState> pPSO;
+    EXPECT_FALSE(pCache->CreateGraphicsPipelineState(PipelineCI, &pPSO));
+    EXPECT_EQ(pPSO, nullptr);
+}
+
 } // namespace
