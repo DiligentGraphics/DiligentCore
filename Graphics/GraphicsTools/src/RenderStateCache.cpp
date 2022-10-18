@@ -290,7 +290,7 @@ private:
                 pSerializationDevice->CreatePipelineResourceSignature(SignDesc, ArchiveInfo, &pSerializedSign);
                 if (!pSerializedSign)
                 {
-                    LOG_ERROR_MESSAGE("Failed to serialize pipeline resource signature '", SignDesc.Name, "'.");
+                    LOG_ERROR_AND_THROW("Failed to serialize pipeline resource signature '", SignDesc.Name, "'.");
                 }
                 pSign = pSerializedSign;
                 SerializedObjects.emplace_back(std::move(pSerializedSign));
@@ -346,7 +346,7 @@ private:
                 pSerializationDevice->CreateShader(ShaderCI, ArchiveInfo, &pSerializedShader);
                 if (!pSerializedShader)
                 {
-                    LOG_ERROR_MESSAGE("Failed to serialize shader '", ShaderCI.Desc.Name, "'.");
+                    LOG_ERROR_AND_THROW("Failed to serialize shader '", ShaderCI.Desc.Name, "'.");
                 }
             }
 
@@ -496,6 +496,21 @@ struct RenderStateCacheImpl::SerializedPsoCIWrapper<GraphicsPipelineStateCreateI
         SerializeShader(pSerializationDevice, DeviceType, CI.pGS);
         SerializeShader(pSerializationDevice, DeviceType, CI.pAS);
         SerializeShader(pSerializationDevice, DeviceType, CI.pMS);
+
+        // Replace render pass with serialized render pass
+        if (CI.GraphicsPipeline.pRenderPass != nullptr)
+        {
+            const auto& RPDesc = CI.GraphicsPipeline.pRenderPass->GetDesc();
+
+            RefCntAutoPtr<IRenderPass> pSerializedRP;
+            pSerializationDevice->CreateRenderPass(RPDesc, &pSerializedRP);
+            if (!pSerializedRP)
+            {
+                LOG_ERROR_AND_THROW("Failed to serialize render pass '", RPDesc.Name, "'.");
+            }
+            CI.GraphicsPipeline.pRenderPass = pSerializedRP;
+            SerializedObjects.emplace_back(std::move(pSerializedRP));
+        }
     }
 };
 
