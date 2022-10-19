@@ -294,6 +294,18 @@ DILIGENT_BEGIN_INTERFACE(IDearchiver, IObject)
                                           const RenderPassUnpackInfo REF UnpackInfo,
                                           IRenderPass**                  ppRP) PURE;
 
+    /// Writes archive data to the data blob.
+
+    /// \param [in] ppArchive - Memory location where a pointer to the archive data blob will be written.
+    /// \return     true if the archive data was written successfully, and false otherwise.
+    ///
+    /// \note       This method combines all archives loaded by the dearchiver into a single archive.
+    ///
+    /// \warning    This method is not thread-safe and must not be called simultaneously
+    ///             with other methods.
+    VIRTUAL bool METHOD(Store)(THIS_
+                               IDataBlob** ppArchive) CONST PURE;
+
     /// Resets the dearchiver state and releases all loaded objects.
     ///
     /// \warning    This method is not thread-safe and must not be called simultaneously
@@ -311,6 +323,8 @@ DILIGENT_END_INTERFACE
 #    define IDearchiver_UnpackPipelineState(This, ...)     CALL_IFACE_METHOD(Dearchiver, UnpackPipelineState,     This, __VA_ARGS__)
 #    define IDearchiver_UnpackResourceSignature(This, ...) CALL_IFACE_METHOD(Dearchiver, UnpackResourceSignature, This, __VA_ARGS__)
 #    define IDearchiver_UnpackRenderPass(This, ...)        CALL_IFACE_METHOD(Dearchiver, UnpackRenderPass,        This, __VA_ARGS__)
+#    define IDearchiver_Store(This, ...)                   CALL_IFACE_METHOD(Dearchiver, Store,                   This, __VA_ARGS__)
+#    define IDearchiver_Reset(This)                        CALL_IFACE_METHOD(Dearchiver, Reset,                   This)
 
 #endif
 

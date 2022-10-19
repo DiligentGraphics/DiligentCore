@@ -96,12 +96,38 @@ public:
 
     virtual Bool DILIGENT_CALL_TYPE WriteToBlob(IDataBlob** ppBlob) override final
     {
-        return m_pArchiver->SerializeToBlob(ppBlob);
+        // Load new render states from archiver to dearchiver
+
+        RefCntAutoPtr<IDataBlob> pNewData;
+        m_pArchiver->SerializeToBlob(&pNewData);
+        if (!pNewData)
+        {
+            LOG_ERROR_MESSAGE("Failed to serialize render state data");
+            return false;
+        }
+
+        if (!m_pDearchiver->LoadArchive(pNewData))
+        {
+            LOG_ERROR_MESSAGE("Failed to load new render state data");
+            return false;
+        }
+
+        m_pArchiver->Reset();
+
+        return m_pDearchiver->Store(ppBlob);
     }
 
     virtual Bool DILIGENT_CALL_TYPE WriteToStream(IFileStream* pStream) override final
     {
-        return m_pArchiver->SerializeToStream(pStream);
+        DEV_CHECK_ERR(pStream != nullptr, "pStream must not be null");
+        if (pStream == nullptr)
+            return false;
+
+        RefCntAutoPtr<IDataBlob> pDataBlob;
+        if (!WriteToBlob(&pDataBlob))
+            return false;
+
+        return pStream->Write(pDataBlob->GetConstDataPtr(), pDataBlob->GetSize());
     }
 
     virtual void DILIGENT_CALL_TYPE Reset() override final

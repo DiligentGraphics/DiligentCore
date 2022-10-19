@@ -81,6 +81,9 @@ public:
     virtual void DILIGENT_CALL_TYPE UnpackRenderPass(const RenderPassUnpackInfo& DeArchiveInfo,
                                                      IRenderPass**               ppRP) override final;
 
+    /// Implementation of IDearchiver::Store().
+    virtual bool DILIGENT_CALL_TYPE Store(IDataBlob** ppArchive) const override final;
+
     /// Implementation of IDearchiver::Reset().
     virtual void DILIGENT_CALL_TYPE Reset() override final;
 

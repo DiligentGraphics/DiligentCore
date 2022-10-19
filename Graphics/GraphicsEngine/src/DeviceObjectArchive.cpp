@@ -189,7 +189,11 @@ void DeviceObjectArchive::Deserialize(const void* pData, size_t Size) noexcept(f
 
 void DeviceObjectArchive::Serialize(IDataBlob** ppDataBlob) const
 {
-    DEV_CHECK_ERR(ppDataBlob != nullptr, "Pointer to the data blob object must not be null");
+    if (ppDataBlob == nullptr)
+    {
+        DEV_ERROR("Pointer to the data blob object must not be null");
+        return;
+    }
     DEV_CHECK_ERR(*ppDataBlob == nullptr, "Data blob object must be null");
 
     auto SerializeThis = [this](auto& Ser) {

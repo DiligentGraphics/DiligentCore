@@ -271,7 +271,7 @@ TEST(RenderStateCacheTest, CreateShader)
     ASSERT_TRUE(pShaderSourceFactory);
 
     RefCntAutoPtr<IDataBlob> pData;
-    for (Uint32 pass = 0; pass < 2; ++pass)
+    for (Uint32 pass = 0; pass < 3; ++pass)
     {
         // 0: empty cache
         // 1: loaded cache
@@ -355,7 +355,7 @@ void TestGraphicsPSO(bool UseRenderPass)
     ASSERT_NE(pUncachedPS, nullptr);
 
     RefCntAutoPtr<IDataBlob> pData;
-    for (Uint32 pass = 0; pass < 2; ++pass)
+    for (Uint32 pass = 0; pass < 3; ++pass)
     {
         // 0: empty cache
         // 1: loaded cache
@@ -476,7 +476,7 @@ void TestComputePSO(bool UseSignature)
     ASSERT_TRUE(pShaderSourceFactory);
 
     RefCntAutoPtr<IDataBlob> pData;
-    for (Uint32 pass = 0; pass < 2; ++pass)
+    for (Uint32 pass = 0; pass < 3; ++pass)
     {
         // 0: empty cache
         // 1: loaded cache

@@ -853,6 +853,34 @@ void DearchiverBase::UnpackRenderPass(const RenderPassUnpackInfo& UnpackInfo, IR
         m_Cache.RenderPass.Set(RPData::ArchiveResType, UnpackInfo.Name, *ppRP);
 }
 
+bool DearchiverBase::Store(IDataBlob** ppArchive) const
+{
+    if (ppArchive == nullptr)
+    {
+        DEV_ERROR("ppArchive must not be null");
+        return false;
+    }
+    DEV_CHECK_ERR(*ppArchive == nullptr, "*ppArchive must be null - make sure you are not overwriting "
+                                         "reference to an existing object as this will cause memory leaks.");
+
+    try
+    {
+        DeviceObjectArchive MergedArchive;
+        for (const auto& Archive : m_Archives)
+        {
+            if (Archive.pObjArchive)
+                MergedArchive.Merge(*Archive.pObjArchive);
+        }
+
+        MergedArchive.Serialize(ppArchive);
+        return *ppArchive != nullptr;
+    }
+    catch (...)
+    {
+        return false;
+    }
+}
+
 void DearchiverBase::Reset()
 {
     m_Archives.clear();
