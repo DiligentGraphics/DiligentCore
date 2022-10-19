@@ -53,45 +53,7 @@ public:
 
 public:
     RenderStateCacheImpl(IReferenceCounters*               pRefCounters,
-                         const RenderStateCacheCreateInfo& CreateInfo) :
-        TBase{pRefCounters},
-        m_pDevice{CreateInfo.pDevice},
-        m_DeviceType{CreateInfo.pDevice != nullptr ? CreateInfo.pDevice->GetDeviceInfo().Type : RENDER_DEVICE_TYPE_UNDEFINED}
-    {
-        if (CreateInfo.pDevice == nullptr)
-            LOG_ERROR_AND_THROW("CreateInfo.pDevice must not be null");
-
-        IArchiverFactory* pArchiverFactory = nullptr;
-#if EXPLICITLY_LOAD_ARCHIVER_FACTORY_DLL
-        auto GetArchiverFactory = LoadArchiverFactory();
-        if (GetArchiverFactory != nullptr)
-        {
-            pArchiverFactory = GetArchiverFactory();
-        }
-#else
-        pArchiverFactory = GetArchiverFactory();
-#endif
-        VERIFY_EXPR(pArchiverFactory != nullptr);
-
-        SerializationDeviceCreateInfo SerializationDeviceCI;
-        SerializationDeviceCI.DeviceInfo  = m_pDevice->GetDeviceInfo();
-        SerializationDeviceCI.AdapterInfo = m_pDevice->GetAdapterInfo();
-
-        pArchiverFactory->CreateSerializationDevice(SerializationDeviceCI, &m_pSerializationDevice);
-        if (!m_pSerializationDevice)
-            LOG_ERROR_AND_THROW("Failed to create serialization device");
-
-        m_pSerializationDevice->AddRenderDevice(m_pDevice);
-
-        pArchiverFactory->CreateArchiver(m_pSerializationDevice, &m_pArchiver);
-        if (!m_pArchiver)
-            LOG_ERROR_AND_THROW("Failed to create archiver");
-
-        DearchiverCreateInfo DearchiverCI;
-        m_pDevice->GetEngineFactory()->CreateDearchiver(DearchiverCI, &m_pDearchiver);
-        if (!m_pDearchiver)
-            LOG_ERROR_AND_THROW("Failed to create dearchiver");
-    }
+                         const RenderStateCacheCreateInfo& CreateInfo);
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_RenderStateCache, TBase);
 
@@ -102,124 +64,7 @@ public:
     }
 
     virtual bool DILIGENT_CALL_TYPE CreateShader(const ShaderCreateInfo& ShaderCI,
-                                                 IShader**               ppShader) override final
-    {
-        if (ppShader == nullptr)
-        {
-            DEV_ERROR("ppShader must not be null");
-            return false;
-        }
-        DEV_CHECK_ERR(*ppShader == nullptr, "Overwriting reference to existing shader may cause memory leaks");
-
-        *ppShader = nullptr;
-
-        XXH128State Hasher;
-        Hasher.Update(ShaderCI);
-        const auto Hash = Hasher.Digest();
-
-        // First, try to check if the shader has already been requested
-        {
-            std::lock_guard<std::mutex> Guard{m_ShadersMtx};
-            auto                        it = m_Shaders.find(Hash);
-            if (it != m_Shaders.end())
-            {
-                if (auto pShader = it->second.Lock())
-                {
-                    *ppShader = pShader.Detach();
-                    return true;
-                }
-                else
-                {
-                    m_Shaders.erase(it);
-                }
-            }
-        }
-
-        class AddShaderHelper
-        {
-        public:
-            AddShaderHelper(RenderStateCacheImpl& Cache, const XXH128Hash& Hash, IShader** ppShader) :
-                m_Cache{Cache},
-                m_Hash{Hash},
-                m_ppShader{ppShader}
-            {
-            }
-
-            ~AddShaderHelper()
-            {
-                if (*m_ppShader != nullptr)
-                {
-                    std::lock_guard<std::mutex> Guard{m_Cache.m_ShadersMtx};
-                    m_Cache.m_Shaders.emplace(m_Hash, *m_ppShader);
-                }
-            }
-
-        private:
-            RenderStateCacheImpl& m_Cache;
-            const XXH128Hash&     m_Hash;
-            IShader** const       m_ppShader;
-        };
-        AddShaderHelper AutoAddShader{*this, Hash, ppShader};
-
-        const auto HashStr = MakeHashStr(ShaderCI.Desc.Name, Hash);
-
-        // Try to find the shader in the loaded archive
-        {
-            auto Callback = MakeCallback(
-                [&ShaderCI](ShaderDesc& Desc) {
-                    Desc.Name = ShaderCI.Desc.Name;
-                });
-
-            ShaderUnpackInfo UnpackInfo;
-            UnpackInfo.Name             = HashStr.c_str();
-            UnpackInfo.pDevice          = m_pDevice;
-            UnpackInfo.ModifyShaderDesc = Callback;
-            UnpackInfo.pUserData        = Callback;
-            m_pDearchiver->UnpackShader(UnpackInfo, ppShader);
-            if (*ppShader != nullptr)
-                return true;
-        }
-
-        // Next, try to find the shader in the archiver
-        RefCntAutoPtr<IShader> pArchivedShader{m_pArchiver->GetShader(HashStr.c_str())};
-        const auto             FoundInArchive = pArchivedShader != nullptr;
-        if (!pArchivedShader)
-        {
-            auto ArchiveShaderCI      = ShaderCI;
-            ArchiveShaderCI.Desc.Name = HashStr.c_str();
-            ShaderArchiveInfo ArchiveInfo;
-            ArchiveInfo.DeviceFlags = static_cast<ARCHIVE_DEVICE_DATA_FLAGS>(1 << m_DeviceType);
-            m_pSerializationDevice->CreateShader(ArchiveShaderCI, ArchiveInfo, &pArchivedShader);
-            if (pArchivedShader)
-                m_pArchiver->AddShader(pArchivedShader);
-        }
-
-        if (pArchivedShader)
-        {
-            RefCntAutoPtr<ISerializedShader> pSerializedShader{pArchivedShader, IID_SerializedShader};
-            VERIFY(pSerializedShader, "Shader object is not a serialized shader");
-            if (pSerializedShader)
-            {
-                *ppShader = pSerializedShader->GetDeviceShader(m_DeviceType);
-                if (*ppShader != nullptr)
-                {
-                    (*ppShader)->AddRef();
-                    return FoundInArchive;
-                }
-                else
-                {
-                    UNEXPECTED("Device shader must not be null");
-                }
-            }
-        }
-
-        if (*ppShader == nullptr)
-        {
-            m_pDevice->CreateShader(ShaderCI, ppShader);
-        }
-
-        return FoundInArchive;
-    }
+                                                 IShader**               ppShader) override final;
 
     virtual bool DILIGENT_CALL_TYPE CreateGraphicsPipelineState(
         const GraphicsPipelineStateCreateInfo& PSOCreateInfo,
@@ -264,207 +109,10 @@ public:
         m_pDearchiver->Reset();
         m_pArchiver->Reset();
         m_Shaders.clear();
+        m_Pipelines.clear();
     }
 
 private:
-    static std::string MakeHashStr(const char* Name, const XXH128Hash& Hash)
-    {
-        std::string HashStr = HashToStr(Hash.LowPart, Hash.HighPart);
-        if (Name != nullptr)
-            HashStr = std::string{Name} + " [" + HashStr + ']';
-        return HashStr;
-    }
-
-    template <typename CreateInfoType>
-    struct SerializedPsoCIWrapperBase
-    {
-        SerializedPsoCIWrapperBase(ISerializationDevice* pSerializationDevice, RENDER_DEVICE_TYPE DeviceType, const CreateInfoType& _CI) :
-            CI{_CI},
-            ppSignatures{_CI.ppResourceSignatures, _CI.ppResourceSignatures + _CI.ResourceSignaturesCount}
-        {
-            CI.ppResourceSignatures = !ppSignatures.empty() ? ppSignatures.data() : nullptr;
-
-            // Replace signatures with serialized signatures
-            for (size_t i = 0; i < ppSignatures.size(); ++i)
-            {
-                auto& pSign = ppSignatures[i];
-                if (pSign == nullptr)
-                    continue;
-                const auto&                  SignDesc = pSign->GetDesc();
-                ResourceSignatureArchiveInfo ArchiveInfo;
-                ArchiveInfo.DeviceFlags = static_cast<ARCHIVE_DEVICE_DATA_FLAGS>(1 << DeviceType);
-                RefCntAutoPtr<IPipelineResourceSignature> pSerializedSign;
-                pSerializationDevice->CreatePipelineResourceSignature(SignDesc, ArchiveInfo, &pSerializedSign);
-                if (!pSerializedSign)
-                {
-                    LOG_ERROR_AND_THROW("Failed to serialize pipeline resource signature '", SignDesc.Name, "'.");
-                }
-                pSign = pSerializedSign;
-                SerializedObjects.emplace_back(std::move(pSerializedSign));
-            }
-        }
-
-        SerializedPsoCIWrapperBase(const SerializedPsoCIWrapperBase&) = delete;
-        SerializedPsoCIWrapperBase(SerializedPsoCIWrapperBase&&)      = delete;
-        SerializedPsoCIWrapperBase& operator=(const SerializedPsoCIWrapperBase&) = delete;
-        SerializedPsoCIWrapperBase& operator=(SerializedPsoCIWrapperBase&&) = delete;
-
-        void SetName(const char* Name)
-        {
-            VERIFY_EXPR(Name != nullptr);
-            CI.PSODesc.Name = Name;
-        }
-
-        operator const CreateInfoType&()
-        {
-            return CI;
-        }
-
-    protected:
-        // Replaces shader with a serialized shader
-        void SerializeShader(ISerializationDevice* pSerializationDevice, RENDER_DEVICE_TYPE DeviceType, IShader*& pShader)
-        {
-            if (pShader == nullptr)
-                return;
-
-            RefCntAutoPtr<IObject> pObject;
-            pShader->GetReferenceCounters()->QueryObject(&pObject);
-            RefCntAutoPtr<IShader> pSerializedShader{pObject, IID_SerializedShader};
-            if (!pSerializedShader)
-            {
-                ShaderCreateInfo ShaderCI;
-                ShaderCI.Desc = pShader->GetDesc();
-
-                Uint64 Size = 0;
-                pShader->GetBytecode(&ShaderCI.ByteCode, Size);
-                ShaderCI.ByteCodeSize = static_cast<size_t>(Size);
-                if (DeviceType == RENDER_DEVICE_TYPE_GL)
-                {
-                    ShaderCI.Source         = static_cast<const char*>(ShaderCI.ByteCode);
-                    ShaderCI.ByteCode       = nullptr;
-                    ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM;
-                }
-                ShaderArchiveInfo ArchiveInfo;
-                ArchiveInfo.DeviceFlags = static_cast<ARCHIVE_DEVICE_DATA_FLAGS>(1 << DeviceType);
-                pSerializationDevice->CreateShader(ShaderCI, ArchiveInfo, &pSerializedShader);
-                if (!pSerializedShader)
-                {
-                    LOG_ERROR_AND_THROW("Failed to serialize shader '", ShaderCI.Desc.Name, "'.");
-                }
-            }
-
-            pShader = pSerializedShader;
-            SerializedObjects.emplace_back(std::move(pSerializedShader));
-        }
-
-    protected:
-        CreateInfoType CI;
-
-        std::vector<IPipelineResourceSignature*> ppSignatures;
-        std::vector<RefCntAutoPtr<IObject>>      SerializedObjects;
-    };
-
-    template <typename CreateInfoType>
-    struct SerializedPsoCIWrapper : SerializedPsoCIWrapperBase<CreateInfoType>
-    {};
-
-    template <typename CreateInfoType>
-    bool CreatePipelineState(const CreateInfoType& PSOCreateInfo,
-                             IPipelineState**      ppPipelineState)
-    {
-        if (ppPipelineState == nullptr)
-        {
-            DEV_ERROR("ppPipelineState must not be null");
-            return false;
-        }
-        DEV_CHECK_ERR(*ppPipelineState == nullptr, "Overwriting reference to existing pipeline state may cause memory leaks");
-
-        *ppPipelineState = nullptr;
-
-        XXH128State Hasher;
-        Hasher.Update(PSOCreateInfo);
-        const auto Hash = Hasher.Digest();
-
-        // First, try to check if the PSO has already been requested
-        {
-            std::lock_guard<std::mutex> Guard{m_PipelinesMtx};
-
-            auto it = m_Pipelines.find(Hash);
-            if (it != m_Pipelines.end())
-            {
-                if (auto pPSO = it->second.Lock())
-                {
-                    *ppPipelineState = pPSO.Detach();
-                    return true;
-                }
-                else
-                {
-                    m_Pipelines.erase(it);
-                }
-            }
-        }
-
-        const auto HashStr = MakeHashStr(PSOCreateInfo.PSODesc.Name, Hash);
-
-        bool FoundInCache = false;
-        // Try to find PSO in the loaded archive
-        {
-            auto Callback = MakeCallback(
-                [&PSOCreateInfo](PipelineStateCreateInfo& CI) {
-                    CI.PSODesc.Name = PSOCreateInfo.PSODesc.Name;
-                });
-
-            PipelineStateUnpackInfo UnpackInfo;
-            UnpackInfo.PipelineType                  = PSOCreateInfo.PSODesc.PipelineType;
-            UnpackInfo.Name                          = HashStr.c_str();
-            UnpackInfo.pDevice                       = m_pDevice;
-            UnpackInfo.ModifyPipelineStateCreateInfo = Callback;
-            UnpackInfo.pUserData                     = Callback;
-            m_pDearchiver->UnpackPipelineState(UnpackInfo, ppPipelineState);
-            FoundInCache = (*ppPipelineState != nullptr);
-        }
-
-        if (*ppPipelineState == nullptr)
-        {
-            m_pDevice->CreatePipelineState(PSOCreateInfo, ppPipelineState);
-            if (*ppPipelineState == nullptr)
-                return false;
-        }
-
-        {
-            std::lock_guard<std::mutex> Guard{m_PipelinesMtx};
-            m_Pipelines.emplace(Hash, *ppPipelineState);
-        }
-
-        if (FoundInCache)
-            return true;
-
-        if (m_pArchiver->GetPipelineState(PSOCreateInfo.PSODesc.PipelineType, HashStr.c_str()) != nullptr)
-            return true;
-
-        try
-        {
-            // Make a copy of create info that contains serialized objects
-            SerializedPsoCIWrapper<CreateInfoType> SerializedPsoCI{m_pSerializationDevice, m_DeviceType, PSOCreateInfo};
-            SerializedPsoCI.SetName(HashStr.c_str());
-
-            PipelineStateArchiveInfo ArchiveInfo;
-            ArchiveInfo.DeviceFlags = static_cast<ARCHIVE_DEVICE_DATA_FLAGS>(1 << m_DeviceType);
-            RefCntAutoPtr<IPipelineState> pSerializedPSO;
-            m_pSerializationDevice->CreatePipelineState(SerializedPsoCI, ArchiveInfo, &pSerializedPSO);
-
-            if (pSerializedPSO)
-            {
-                m_pArchiver->AddPipelineState(pSerializedPSO);
-            }
-        }
-        catch (...)
-        {
-        }
-
-        return false;
-    }
-
     static std::string HashToStr(Uint64 Low, Uint64 High)
     {
         static constexpr std::array<char, 16> Symbols = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
@@ -479,6 +127,25 @@ private:
         return Str;
     }
 
+    static std::string MakeHashStr(const char* Name, const XXH128Hash& Hash)
+    {
+        std::string HashStr = HashToStr(Hash.LowPart, Hash.HighPart);
+        if (Name != nullptr)
+            HashStr = std::string{Name} + " [" + HashStr + ']';
+        return HashStr;
+    }
+
+    template <typename CreateInfoType>
+    struct SerializedPsoCIWrapperBase;
+
+    template <typename CreateInfoType>
+    struct SerializedPsoCIWrapper : SerializedPsoCIWrapperBase<CreateInfoType>
+    {};
+
+    template <typename CreateInfoType>
+    bool CreatePipelineState(const CreateInfoType& PSOCreateInfo,
+                             IPipelineState**      ppPipelineState);
+
 private:
     RefCntAutoPtr<IRenderDevice>        m_pDevice;
     const RENDER_DEVICE_TYPE            m_DeviceType;
@@ -491,6 +158,256 @@ private:
 
     std::mutex                                                    m_PipelinesMtx;
     std::unordered_map<XXH128Hash, RefCntWeakPtr<IPipelineState>> m_Pipelines;
+};
+
+RenderStateCacheImpl::RenderStateCacheImpl(IReferenceCounters*               pRefCounters,
+                                           const RenderStateCacheCreateInfo& CreateInfo) :
+    TBase{pRefCounters},
+    m_pDevice{CreateInfo.pDevice},
+    m_DeviceType{CreateInfo.pDevice != nullptr ? CreateInfo.pDevice->GetDeviceInfo().Type : RENDER_DEVICE_TYPE_UNDEFINED}
+{
+    if (CreateInfo.pDevice == nullptr)
+        LOG_ERROR_AND_THROW("CreateInfo.pDevice must not be null");
+
+    IArchiverFactory* pArchiverFactory = nullptr;
+#if EXPLICITLY_LOAD_ARCHIVER_FACTORY_DLL
+    auto GetArchiverFactory = LoadArchiverFactory();
+    if (GetArchiverFactory != nullptr)
+    {
+        pArchiverFactory = GetArchiverFactory();
+    }
+#else
+    pArchiverFactory = GetArchiverFactory();
+#endif
+    VERIFY_EXPR(pArchiverFactory != nullptr);
+
+    SerializationDeviceCreateInfo SerializationDeviceCI;
+    SerializationDeviceCI.DeviceInfo  = m_pDevice->GetDeviceInfo();
+    SerializationDeviceCI.AdapterInfo = m_pDevice->GetAdapterInfo();
+
+    pArchiverFactory->CreateSerializationDevice(SerializationDeviceCI, &m_pSerializationDevice);
+    if (!m_pSerializationDevice)
+        LOG_ERROR_AND_THROW("Failed to create serialization device");
+
+    m_pSerializationDevice->AddRenderDevice(m_pDevice);
+
+    pArchiverFactory->CreateArchiver(m_pSerializationDevice, &m_pArchiver);
+    if (!m_pArchiver)
+        LOG_ERROR_AND_THROW("Failed to create archiver");
+
+    DearchiverCreateInfo DearchiverCI;
+    m_pDevice->GetEngineFactory()->CreateDearchiver(DearchiverCI, &m_pDearchiver);
+    if (!m_pDearchiver)
+        LOG_ERROR_AND_THROW("Failed to create dearchiver");
+}
+
+bool RenderStateCacheImpl::CreateShader(const ShaderCreateInfo& ShaderCI,
+                                        IShader**               ppShader)
+{
+    if (ppShader == nullptr)
+    {
+        DEV_ERROR("ppShader must not be null");
+        return false;
+    }
+    DEV_CHECK_ERR(*ppShader == nullptr, "Overwriting reference to existing shader may cause memory leaks");
+
+    *ppShader = nullptr;
+
+    XXH128State Hasher;
+    Hasher.Update(ShaderCI);
+    const auto Hash = Hasher.Digest();
+
+    // First, try to check if the shader has already been requested
+    {
+        std::lock_guard<std::mutex> Guard{m_ShadersMtx};
+        auto                        it = m_Shaders.find(Hash);
+        if (it != m_Shaders.end())
+        {
+            if (auto pShader = it->second.Lock())
+            {
+                *ppShader = pShader.Detach();
+                return true;
+            }
+            else
+            {
+                m_Shaders.erase(it);
+            }
+        }
+    }
+
+    class AddShaderHelper
+    {
+    public:
+        AddShaderHelper(RenderStateCacheImpl& Cache, const XXH128Hash& Hash, IShader** ppShader) :
+            m_Cache{Cache},
+            m_Hash{Hash},
+            m_ppShader{ppShader}
+        {
+        }
+
+        ~AddShaderHelper()
+        {
+            if (*m_ppShader != nullptr)
+            {
+                std::lock_guard<std::mutex> Guard{m_Cache.m_ShadersMtx};
+                m_Cache.m_Shaders.emplace(m_Hash, *m_ppShader);
+            }
+        }
+
+    private:
+        RenderStateCacheImpl& m_Cache;
+        const XXH128Hash&     m_Hash;
+        IShader** const       m_ppShader;
+    };
+    AddShaderHelper AutoAddShader{*this, Hash, ppShader};
+
+    const auto HashStr = MakeHashStr(ShaderCI.Desc.Name, Hash);
+
+    // Try to find the shader in the loaded archive
+    {
+        auto Callback = MakeCallback(
+            [&ShaderCI](ShaderDesc& Desc) {
+                Desc.Name = ShaderCI.Desc.Name;
+            });
+
+        ShaderUnpackInfo UnpackInfo;
+        UnpackInfo.Name             = HashStr.c_str();
+        UnpackInfo.pDevice          = m_pDevice;
+        UnpackInfo.ModifyShaderDesc = Callback;
+        UnpackInfo.pUserData        = Callback;
+        m_pDearchiver->UnpackShader(UnpackInfo, ppShader);
+        if (*ppShader != nullptr)
+            return true;
+    }
+
+    // Next, try to find the shader in the archiver
+    RefCntAutoPtr<IShader> pArchivedShader{m_pArchiver->GetShader(HashStr.c_str())};
+    const auto             FoundInArchive = pArchivedShader != nullptr;
+    if (!pArchivedShader)
+    {
+        auto ArchiveShaderCI      = ShaderCI;
+        ArchiveShaderCI.Desc.Name = HashStr.c_str();
+        ShaderArchiveInfo ArchiveInfo;
+        ArchiveInfo.DeviceFlags = static_cast<ARCHIVE_DEVICE_DATA_FLAGS>(1 << m_DeviceType);
+        m_pSerializationDevice->CreateShader(ArchiveShaderCI, ArchiveInfo, &pArchivedShader);
+        if (pArchivedShader)
+            m_pArchiver->AddShader(pArchivedShader);
+    }
+
+    if (pArchivedShader)
+    {
+        RefCntAutoPtr<ISerializedShader> pSerializedShader{pArchivedShader, IID_SerializedShader};
+        VERIFY(pSerializedShader, "Shader object is not a serialized shader");
+        if (pSerializedShader)
+        {
+            *ppShader = pSerializedShader->GetDeviceShader(m_DeviceType);
+            if (*ppShader != nullptr)
+            {
+                (*ppShader)->AddRef();
+                return FoundInArchive;
+            }
+            else
+            {
+                UNEXPECTED("Device shader must not be null");
+            }
+        }
+    }
+
+    if (*ppShader == nullptr)
+    {
+        m_pDevice->CreateShader(ShaderCI, ppShader);
+    }
+
+    return FoundInArchive;
+}
+
+template <typename CreateInfoType>
+struct RenderStateCacheImpl::SerializedPsoCIWrapperBase
+{
+    SerializedPsoCIWrapperBase(ISerializationDevice* pSerializationDevice, RENDER_DEVICE_TYPE DeviceType, const CreateInfoType& _CI) :
+        CI{_CI},
+        ppSignatures{_CI.ppResourceSignatures, _CI.ppResourceSignatures + _CI.ResourceSignaturesCount}
+    {
+        CI.ppResourceSignatures = !ppSignatures.empty() ? ppSignatures.data() : nullptr;
+
+        // Replace signatures with serialized signatures
+        for (size_t i = 0; i < ppSignatures.size(); ++i)
+        {
+            auto& pSign = ppSignatures[i];
+            if (pSign == nullptr)
+                continue;
+            const auto&                  SignDesc = pSign->GetDesc();
+            ResourceSignatureArchiveInfo ArchiveInfo;
+            ArchiveInfo.DeviceFlags = static_cast<ARCHIVE_DEVICE_DATA_FLAGS>(1 << DeviceType);
+            RefCntAutoPtr<IPipelineResourceSignature> pSerializedSign;
+            pSerializationDevice->CreatePipelineResourceSignature(SignDesc, ArchiveInfo, &pSerializedSign);
+            if (!pSerializedSign)
+            {
+                LOG_ERROR_AND_THROW("Failed to serialize pipeline resource signature '", SignDesc.Name, "'.");
+            }
+            pSign = pSerializedSign;
+            SerializedObjects.emplace_back(std::move(pSerializedSign));
+        }
+    }
+
+    SerializedPsoCIWrapperBase(const SerializedPsoCIWrapperBase&) = delete;
+    SerializedPsoCIWrapperBase(SerializedPsoCIWrapperBase&&)      = delete;
+    SerializedPsoCIWrapperBase& operator=(const SerializedPsoCIWrapperBase&) = delete;
+    SerializedPsoCIWrapperBase& operator=(SerializedPsoCIWrapperBase&&) = delete;
+
+    void SetName(const char* Name)
+    {
+        VERIFY_EXPR(Name != nullptr);
+        CI.PSODesc.Name = Name;
+    }
+
+    operator const CreateInfoType&()
+    {
+        return CI;
+    }
+
+protected:
+    // Replaces shader with a serialized shader
+    void SerializeShader(ISerializationDevice* pSerializationDevice, RENDER_DEVICE_TYPE DeviceType, IShader*& pShader)
+    {
+        if (pShader == nullptr)
+            return;
+
+        RefCntAutoPtr<IObject> pObject;
+        pShader->GetReferenceCounters()->QueryObject(&pObject);
+        RefCntAutoPtr<IShader> pSerializedShader{pObject, IID_SerializedShader};
+        if (!pSerializedShader)
+        {
+            ShaderCreateInfo ShaderCI;
+            ShaderCI.Desc = pShader->GetDesc();
+
+            Uint64 Size = 0;
+            pShader->GetBytecode(&ShaderCI.ByteCode, Size);
+            ShaderCI.ByteCodeSize = static_cast<size_t>(Size);
+            if (DeviceType == RENDER_DEVICE_TYPE_GL)
+            {
+                ShaderCI.Source         = static_cast<const char*>(ShaderCI.ByteCode);
+                ShaderCI.ByteCode       = nullptr;
+                ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM;
+            }
+            ShaderArchiveInfo ArchiveInfo;
+            ArchiveInfo.DeviceFlags = static_cast<ARCHIVE_DEVICE_DATA_FLAGS>(1 << DeviceType);
+            pSerializationDevice->CreateShader(ShaderCI, ArchiveInfo, &pSerializedShader);
+            if (!pSerializedShader)
+            {
+                LOG_ERROR_AND_THROW("Failed to serialize shader '", ShaderCI.Desc.Name, "'.");
+            }
+        }
+
+        pShader = pSerializedShader;
+        SerializedObjects.emplace_back(std::move(pSerializedShader));
+    }
+
+protected:
+    CreateInfoType CI;
+
+    std::vector<IPipelineResourceSignature*> ppSignatures;
+    std::vector<RefCntAutoPtr<IObject>>      SerializedObjects;
 };
 
 template <>
@@ -598,6 +515,103 @@ void CreateRenderStateCache(const RenderStateCacheCreateInfo& CreateInfo,
     {
         LOG_ERROR("Failed to create the bytecode cache");
     }
+}
+
+template <typename CreateInfoType>
+bool RenderStateCacheImpl::CreatePipelineState(const CreateInfoType& PSOCreateInfo,
+                                               IPipelineState**      ppPipelineState)
+{
+    if (ppPipelineState == nullptr)
+    {
+        DEV_ERROR("ppPipelineState must not be null");
+        return false;
+    }
+    DEV_CHECK_ERR(*ppPipelineState == nullptr, "Overwriting reference to existing pipeline state may cause memory leaks");
+
+    *ppPipelineState = nullptr;
+
+    XXH128State Hasher;
+    Hasher.Update(PSOCreateInfo);
+    const auto Hash = Hasher.Digest();
+
+    // First, try to check if the PSO has already been requested
+    {
+        std::lock_guard<std::mutex> Guard{m_PipelinesMtx};
+
+        auto it = m_Pipelines.find(Hash);
+        if (it != m_Pipelines.end())
+        {
+            if (auto pPSO = it->second.Lock())
+            {
+                *ppPipelineState = pPSO.Detach();
+                return true;
+            }
+            else
+            {
+                m_Pipelines.erase(it);
+            }
+        }
+    }
+
+    const auto HashStr = MakeHashStr(PSOCreateInfo.PSODesc.Name, Hash);
+
+    bool FoundInCache = false;
+    // Try to find PSO in the loaded archive
+    {
+        auto Callback = MakeCallback(
+            [&PSOCreateInfo](PipelineStateCreateInfo& CI) {
+                CI.PSODesc.Name = PSOCreateInfo.PSODesc.Name;
+            });
+
+        PipelineStateUnpackInfo UnpackInfo;
+        UnpackInfo.PipelineType                  = PSOCreateInfo.PSODesc.PipelineType;
+        UnpackInfo.Name                          = HashStr.c_str();
+        UnpackInfo.pDevice                       = m_pDevice;
+        UnpackInfo.ModifyPipelineStateCreateInfo = Callback;
+        UnpackInfo.pUserData                     = Callback;
+        m_pDearchiver->UnpackPipelineState(UnpackInfo, ppPipelineState);
+        FoundInCache = (*ppPipelineState != nullptr);
+    }
+
+    if (*ppPipelineState == nullptr)
+    {
+        m_pDevice->CreatePipelineState(PSOCreateInfo, ppPipelineState);
+        if (*ppPipelineState == nullptr)
+            return false;
+    }
+
+    {
+        std::lock_guard<std::mutex> Guard{m_PipelinesMtx};
+        m_Pipelines.emplace(Hash, *ppPipelineState);
+    }
+
+    if (FoundInCache)
+        return true;
+
+    if (m_pArchiver->GetPipelineState(PSOCreateInfo.PSODesc.PipelineType, HashStr.c_str()) != nullptr)
+        return true;
+
+    try
+    {
+        // Make a copy of create info that contains serialized objects
+        SerializedPsoCIWrapper<CreateInfoType> SerializedPsoCI{m_pSerializationDevice, m_DeviceType, PSOCreateInfo};
+        SerializedPsoCI.SetName(HashStr.c_str());
+
+        PipelineStateArchiveInfo ArchiveInfo;
+        ArchiveInfo.DeviceFlags = static_cast<ARCHIVE_DEVICE_DATA_FLAGS>(1 << m_DeviceType);
+        RefCntAutoPtr<IPipelineState> pSerializedPSO;
+        m_pSerializationDevice->CreatePipelineState(SerializedPsoCI, ArchiveInfo, &pSerializedPSO);
+
+        if (pSerializedPSO)
+        {
+            m_pArchiver->AddPipelineState(pSerializedPSO);
+        }
+    }
+    catch (...)
+    {
+    }
+
+    return false;
 }
 
 } // namespace Diligent
