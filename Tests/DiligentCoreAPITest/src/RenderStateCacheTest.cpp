@@ -337,11 +337,74 @@ TEST(RenderStateCacheTest, BrokenShader)
     EXPECT_EQ(pShader, nullptr);
 }
 
-void TestGraphicsPSO(bool UseRenderPass)
+void CreateGraphicsPSO(IRenderStateCache* pCache, bool PresentInCache, IShader* pVS, IShader* pPS, bool UseRenderPass, IPipelineState** ppPSO)
 {
     auto* pEnv       = GPUTestingEnvironment::GetInstance();
     auto* pDevice    = pEnv->GetDevice();
     auto* pSwapChain = pEnv->GetSwapChain();
+
+    GraphicsPipelineStateCreateInfo PsoCI;
+    PsoCI.PSODesc.Name = "Render State Cache Test";
+
+    PsoCI.pVS = pVS;
+    PsoCI.pPS = pPS;
+
+    const auto ColorBufferFormat = pSwapChain->GetDesc().ColorBufferFormat;
+
+    RefCntAutoPtr<IRenderPass> pRenderPass;
+    if (UseRenderPass)
+    {
+        RenderPassAttachmentDesc Attachments[1];
+        Attachments[0].Format       = ColorBufferFormat;
+        Attachments[0].InitialState = RESOURCE_STATE_RENDER_TARGET;
+        Attachments[0].FinalState   = RESOURCE_STATE_RENDER_TARGET;
+        Attachments[0].LoadOp       = ATTACHMENT_LOAD_OP_CLEAR;
+        Attachments[0].StoreOp      = ATTACHMENT_STORE_OP_STORE;
+
+        constexpr AttachmentReference RTAttachmentRefs0[] =
+            {
+                {0, RESOURCE_STATE_RENDER_TARGET},
+            };
+        SubpassDesc Subpasses[1];
+        Subpasses[0].RenderTargetAttachmentCount = _countof(RTAttachmentRefs0);
+        Subpasses[0].pRenderTargetAttachments    = RTAttachmentRefs0;
+
+        RenderPassDesc RPDesc;
+        RPDesc.Name            = "Render State Cache Test";
+        RPDesc.AttachmentCount = _countof(Attachments);
+        RPDesc.pAttachments    = Attachments;
+        RPDesc.SubpassCount    = _countof(Subpasses);
+        RPDesc.pSubpasses      = Subpasses;
+
+        pDevice->CreateRenderPass(RPDesc, &pRenderPass);
+        ASSERT_NE(pRenderPass, nullptr);
+        PsoCI.GraphicsPipeline.pRenderPass = pRenderPass;
+    }
+    else
+    {
+        PsoCI.GraphicsPipeline.NumRenderTargets = 1;
+        PsoCI.GraphicsPipeline.RTVFormats[0]    = ColorBufferFormat;
+    }
+
+    EXPECT_EQ(pCache->CreateGraphicsPipelineState(PsoCI, ppPSO), PresentInCache);
+    if (*ppPSO != nullptr)
+    {
+        const auto& Desc = (*ppPSO)->GetDesc();
+        EXPECT_EQ(PsoCI.PSODesc, Desc);
+
+        if (UseRenderPass)
+        {
+            auto* _pRenderPass = (*ppPSO)->GetGraphicsPipelineDesc().pRenderPass;
+            ASSERT_NE(_pRenderPass, nullptr);
+            EXPECT_EQ(_pRenderPass->GetDesc(), pRenderPass->GetDesc());
+        }
+    }
+}
+
+void TestGraphicsPSO(bool UseRenderPass)
+{
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
 
     GPUTestingEnvironment::ScopedReset AutoReset;
 
@@ -364,84 +427,26 @@ void TestGraphicsPSO(bool UseRenderPass)
         auto pCache = CreateCache(pDevice, pData);
         ASSERT_TRUE(pCache);
 
-        auto CreatePSO = [&](bool PresentInCache, IShader* pVS, IShader* pPS, IPipelineState** ppPSO) {
-            GraphicsPipelineStateCreateInfo PsoCI;
-            PsoCI.PSODesc.Name = "Render State Cache Test";
-
-            PsoCI.pVS = pVS;
-            PsoCI.pPS = pPS;
-
-            const auto ColorBufferFormat = pSwapChain->GetDesc().ColorBufferFormat;
-
-            RefCntAutoPtr<IRenderPass> pRenderPass;
-            if (UseRenderPass)
-            {
-                RenderPassAttachmentDesc Attachments[1];
-                Attachments[0].Format       = ColorBufferFormat;
-                Attachments[0].InitialState = RESOURCE_STATE_RENDER_TARGET;
-                Attachments[0].FinalState   = RESOURCE_STATE_RENDER_TARGET;
-                Attachments[0].LoadOp       = ATTACHMENT_LOAD_OP_CLEAR;
-                Attachments[0].StoreOp      = ATTACHMENT_STORE_OP_STORE;
-
-                constexpr AttachmentReference RTAttachmentRefs0[] =
-                    {
-                        {0, RESOURCE_STATE_RENDER_TARGET},
-                    };
-                SubpassDesc Subpasses[1];
-                Subpasses[0].RenderTargetAttachmentCount = _countof(RTAttachmentRefs0);
-                Subpasses[0].pRenderTargetAttachments    = RTAttachmentRefs0;
-
-                RenderPassDesc RPDesc;
-                RPDesc.Name            = "Render State Cache Test";
-                RPDesc.AttachmentCount = _countof(Attachments);
-                RPDesc.pAttachments    = Attachments;
-                RPDesc.SubpassCount    = _countof(Subpasses);
-                RPDesc.pSubpasses      = Subpasses;
-
-                pDevice->CreateRenderPass(RPDesc, &pRenderPass);
-                ASSERT_NE(pRenderPass, nullptr);
-                PsoCI.GraphicsPipeline.pRenderPass = pRenderPass;
-            }
-            else
-            {
-                PsoCI.GraphicsPipeline.NumRenderTargets = 1;
-                PsoCI.GraphicsPipeline.RTVFormats[0]    = ColorBufferFormat;
-            }
-
-            EXPECT_EQ(pCache->CreateGraphicsPipelineState(PsoCI, ppPSO), PresentInCache);
-            if (*ppPSO != nullptr)
-            {
-                const auto& Desc = (*ppPSO)->GetDesc();
-                EXPECT_EQ(PsoCI.PSODesc, Desc);
-
-                if (UseRenderPass)
-                {
-                    auto* _pRenderPass = (*ppPSO)->GetGraphicsPipelineDesc().pRenderPass;
-                    ASSERT_NE(_pRenderPass, nullptr);
-                    EXPECT_EQ(_pRenderPass->GetDesc(), pRenderPass->GetDesc());
-                }
-            }
-        };
-
         RefCntAutoPtr<IShader> pVS1, pPS1;
         CreateGraphicsShaders(pCache, pShaderSourceFactory, pVS1, pPS1, pData != nullptr);
-        ASSERT_NE(pVS1, pPS1);
+        ASSERT_NE(pVS1, nullptr);
+        ASSERT_NE(pPS1, nullptr);
 
         RefCntAutoPtr<IPipelineState> pPSO;
-        CreatePSO(pData != nullptr, pVS1, pPS1, &pPSO);
+        CreateGraphicsPSO(pCache, pData != nullptr, pVS1, pPS1, UseRenderPass, &pPSO);
         ASSERT_NE(pPSO, nullptr);
 
         VerifyGraphicsPSO(pPSO, UseRenderPass);
 
         {
             RefCntAutoPtr<IPipelineState> pPSO2;
-            CreatePSO(true, pVS1, pPS1, &pPSO2);
+            CreateGraphicsPSO(pCache, true, pVS1, pPS1, UseRenderPass, &pPSO2);
             EXPECT_EQ(pPSO, pPSO2);
         }
 
         {
             RefCntAutoPtr<IPipelineState> pPSO2;
-            CreatePSO(pData != nullptr, pUncachedVS, pUncachedPS, &pPSO2);
+            CreateGraphicsPSO(pCache, pData != nullptr, pUncachedVS, pUncachedPS, UseRenderPass, &pPSO2);
             VerifyGraphicsPSO(pPSO2, UseRenderPass);
         }
 
@@ -458,6 +463,62 @@ TEST(RenderStateCacheTest, CreateGraphicsPSO)
 TEST(RenderStateCacheTest, CreateGraphicsPSO_RenderPass)
 {
     TestGraphicsPSO(/*UseRenderPass = */ true);
+}
+
+void CreateComputePSO(IRenderStateCache* pCache, bool PresentInCache, IShader* pCS, bool UseSignature, IPipelineState** ppPSO)
+{
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+
+    ComputePipelineStateCreateInfo PsoCI;
+    PsoCI.PSODesc.Name = "Render State Cache Test";
+    PsoCI.pCS          = pCS;
+
+    constexpr ShaderResourceVariableDesc Variables[] //
+        {
+            ShaderResourceVariableDesc{SHADER_TYPE_COMPUTE, "g_tex2DUAV", SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE} //
+        };
+
+    constexpr PipelineResourceDesc Resources[] //
+        {
+            PipelineResourceDesc{SHADER_TYPE_COMPUTE, "g_tex2DUAV", 1, SHADER_RESOURCE_TYPE_TEXTURE_UAV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE} //
+        };
+
+    RefCntAutoPtr<IPipelineResourceSignature> pSign;
+    IPipelineResourceSignature*               ppSignatures[1] = {};
+
+    if (UseSignature)
+    {
+        PipelineResourceSignatureDesc SignDesc;
+
+        SignDesc.Name         = "Render State Cache Test";
+        SignDesc.Resources    = Resources;
+        SignDesc.NumResources = _countof(Resources);
+        pDevice->CreatePipelineResourceSignature(SignDesc, &pSign);
+        ASSERT_NE(pSign, nullptr);
+        ppSignatures[0]               = pSign;
+        PsoCI.ppResourceSignatures    = ppSignatures;
+        PsoCI.ResourceSignaturesCount = _countof(ppSignatures);
+    }
+    else
+    {
+        PsoCI.PSODesc.ResourceLayout.Variables    = Variables;
+        PsoCI.PSODesc.ResourceLayout.NumVariables = _countof(Variables);
+    }
+
+    EXPECT_EQ(pCache->CreateComputePipelineState(PsoCI, ppPSO), PresentInCache);
+    if (*ppPSO != nullptr)
+    {
+        const auto& Desc = (*ppPSO)->GetDesc();
+        EXPECT_EQ(PsoCI.PSODesc, Desc);
+        if (UseSignature)
+        {
+            EXPECT_EQ((*ppPSO)->GetResourceSignatureCount(), 1u);
+            auto* _pSign = (*ppPSO)->GetResourceSignature(0);
+            ASSERT_NE(_pSign, nullptr);
+            EXPECT_EQ(_pSign->GetDesc(), pSign->GetDesc());
+        }
+    }
 }
 
 void TestComputePSO(bool UseSignature)
@@ -485,70 +546,19 @@ void TestComputePSO(bool UseSignature)
         auto pCache = CreateCache(pDevice, pData);
         ASSERT_TRUE(pCache);
 
-        auto CreatePSO = [&](bool PresentInCache, IShader* pCS, IPipelineState** ppPSO) {
-            ComputePipelineStateCreateInfo PsoCI;
-            PsoCI.PSODesc.Name = "Render State Cache Test";
-            PsoCI.pCS          = pCS;
-
-            constexpr ShaderResourceVariableDesc Variables[] //
-                {
-                    ShaderResourceVariableDesc{SHADER_TYPE_COMPUTE, "g_tex2DUAV", SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE} //
-                };
-
-            constexpr PipelineResourceDesc Resources[] //
-                {
-                    PipelineResourceDesc{SHADER_TYPE_COMPUTE, "g_tex2DUAV", 1, SHADER_RESOURCE_TYPE_TEXTURE_UAV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE} //
-                };
-
-            RefCntAutoPtr<IPipelineResourceSignature> pSign;
-            IPipelineResourceSignature*               ppSignatures[1] = {};
-
-            if (UseSignature)
-            {
-                PipelineResourceSignatureDesc SignDesc;
-
-                SignDesc.Name         = "Render State Cache Test";
-                SignDesc.Resources    = Resources;
-                SignDesc.NumResources = _countof(Resources);
-                pDevice->CreatePipelineResourceSignature(SignDesc, &pSign);
-                ASSERT_NE(pSign, nullptr);
-                ppSignatures[0]               = pSign;
-                PsoCI.ppResourceSignatures    = ppSignatures;
-                PsoCI.ResourceSignaturesCount = _countof(ppSignatures);
-            }
-            else
-            {
-                PsoCI.PSODesc.ResourceLayout.Variables    = Variables;
-                PsoCI.PSODesc.ResourceLayout.NumVariables = _countof(Variables);
-            }
-
-            EXPECT_EQ(pCache->CreateComputePipelineState(PsoCI, ppPSO), PresentInCache);
-            if (*ppPSO != nullptr)
-            {
-                const auto& Desc = (*ppPSO)->GetDesc();
-                EXPECT_EQ(PsoCI.PSODesc, Desc);
-                if (UseSignature)
-                {
-                    EXPECT_EQ((*ppPSO)->GetResourceSignatureCount(), 1u);
-                    auto* _pSign = (*ppPSO)->GetResourceSignature(0);
-                    ASSERT_NE(_pSign, nullptr);
-                    EXPECT_EQ(_pSign->GetDesc(), pSign->GetDesc());
-                }
-            }
-        };
-
         RefCntAutoPtr<IShader> pCS;
         CreateComputeShader(pCache, pShaderSourceFactory, pCS, pData != nullptr);
+        ASSERT_NE(pCS, nullptr);
 
         RefCntAutoPtr<IPipelineState> pPSO;
-        CreatePSO(pData != nullptr, pCS, &pPSO);
+        CreateComputePSO(pCache, pData != nullptr, pCS, UseSignature, &pPSO);
         ASSERT_NE(pPSO, nullptr);
 
         VerifyComputePSO(pPSO, /* UseSignature = */ true);
 
         {
             RefCntAutoPtr<IPipelineState> pPSO2;
-            CreatePSO(true, pCS, &pPSO2);
+            CreateComputePSO(pCache, true, pCS, UseSignature, &pPSO2);
             EXPECT_EQ(pPSO, pPSO2);
         }
 
@@ -617,6 +627,62 @@ TEST(RenderStateCacheTest, BrokenPSO)
     RefCntAutoPtr<IPipelineState> pPSO;
     EXPECT_FALSE(pCache->CreateGraphicsPipelineState(PipelineCI, &pPSO));
     EXPECT_EQ(pPSO, nullptr);
+}
+
+
+TEST(RenderStateCacheTest, AppendData)
+{
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+    if (!pDevice->GetDeviceInfo().Features.ComputeShaders)
+    {
+        GTEST_SKIP() << "Compute shaders are not supported by this device";
+    }
+
+    GPUTestingEnvironment::ScopedReset AutoReset;
+
+    RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
+    pDevice->GetEngineFactory()->CreateDefaultShaderSourceStreamFactory("shaders/RenderStateCache", &pShaderSourceFactory);
+    ASSERT_TRUE(pShaderSourceFactory);
+
+    constexpr bool UseSignature  = false;
+    constexpr bool UseRenderPass = false;
+
+    RefCntAutoPtr<IDataBlob> pData;
+    {
+        auto pCache = CreateCache(pDevice);
+
+        RefCntAutoPtr<IShader> pCS;
+        CreateComputeShader(pCache, pShaderSourceFactory, pCS, false);
+        ASSERT_NE(pCS, nullptr);
+
+        RefCntAutoPtr<IPipelineState> pPSO;
+        CreateComputePSO(pCache, /*PresentInCache = */ false, pCS, UseSignature, &pPSO);
+        ASSERT_NE(pPSO, nullptr);
+
+        pCache->WriteToBlob(&pData);
+        ASSERT_NE(pData, nullptr);
+    }
+
+    for (Uint32 pass = 0; pass < 3; ++pass)
+    {
+        auto pCache = CreateCache(pDevice, pData);
+
+        RefCntAutoPtr<IShader> pVS1, pPS1;
+        CreateGraphicsShaders(pCache, pShaderSourceFactory, pVS1, pPS1, pass > 0);
+        ASSERT_NE(pVS1, nullptr);
+        ASSERT_NE(pPS1, nullptr);
+
+        RefCntAutoPtr<IPipelineState> pPSO;
+        CreateGraphicsPSO(pCache, pass > 0, pVS1, pPS1, UseRenderPass, &pPSO);
+        ASSERT_NE(pPSO, nullptr);
+
+        VerifyGraphicsPSO(pPSO, UseRenderPass);
+
+        pData.Release();
+        pCache->WriteToBlob(&pData);
+        ASSERT_NE(pData, nullptr);
+    }
 }
 
 } // namespace
