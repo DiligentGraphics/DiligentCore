@@ -286,6 +286,7 @@ DILIGENT_END_INTERFACE
 #    define IArchiverFactory_CreateDefaultShaderSourceStreamFactory(This, ...)  CALL_IFACE_METHOD(ArchiverFactory, CreateDefaultShaderSourceStreamFactory, This, __VA_ARGS__)
 #    define IArchiverFactory_RemoveDeviceData(This, ...)                        CALL_IFACE_METHOD(ArchiverFactory, RemoveDeviceData,                       This, __VA_ARGS__)
 #    define IArchiverFactory_AppendDeviceData(This, ...)                        CALL_IFACE_METHOD(ArchiverFactory, AppendDeviceData,                       This, __VA_ARGS__)
+#    define IArchiverFactory_MergeArchives(This, ...)                           CALL_IFACE_METHOD(ArchiverFactory, MergeArchives,                          This, __VA_ARGS__)
 #    define IArchiverFactory_PrintArchiveContent(This, ...)                     CALL_IFACE_METHOD(ArchiverFactory, PrintArchiveContent,                    This, __VA_ARGS__)
 #    define IArchiverFactory_SetMessageCallback(This, ...)                      CALL_IFACE_METHOD(ArchiverFactory, SetMessageCallback,                     This, __VA_ARGS__)
 
