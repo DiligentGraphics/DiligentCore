@@ -493,7 +493,7 @@ void DeviceObjectArchive::AppendDeviceData(const DeviceObjectArchive& Src, Devic
 
         const auto& SrcData{src_res_it->second.DeviceSpecific[static_cast<size_t>(Dev)]};
         // Always copy src data even if it is empty
-        dst_res_it.second.DeviceSpecific[static_cast<size_t>(Dev)] = SrcData.MakeCopy(Allocator);
+        DstData = SrcData.MakeCopy(Allocator);
     }
 
     // Copy all shaders to make sure PSO shader indices are correct
@@ -502,6 +502,107 @@ void DeviceObjectArchive::AppendDeviceData(const DeviceObjectArchive& Src, Devic
     DstShaders.clear();
     for (const auto& SrcShader : SrcShaders)
         DstShaders.emplace_back(SrcShader.MakeCopy(Allocator));
+}
+
+void DeviceObjectArchive::Merge(const DeviceObjectArchive& Src) noexcept(false)
+{
+    static_assert(static_cast<size_t>(ResourceType::Count) == 8, "Did you add a new resource type? You may need to handle it here.");
+
+    auto&                  Allocator = GetRawAllocator();
+    DynamicLinearAllocator DynAllocator{Allocator, 512};
+
+    // Copy shaders
+    std::array<Uint32, static_cast<size_t>(DeviceType::Count)> ShaderBaseIndices{};
+    for (size_t i = 0; i < m_DeviceShaders.size(); ++i)
+    {
+        const auto& SrcShaders = Src.m_DeviceShaders[i];
+        auto&       DstShaders = m_DeviceShaders[i];
+        ShaderBaseIndices[i]   = static_cast<Uint32>(DstShaders.size());
+        if (SrcShaders.empty())
+            continue;
+        DstShaders.reserve(DstShaders.size() + SrcShaders.size());
+        for (const auto& SrcShader : SrcShaders)
+            DstShaders.emplace_back(SrcShader.MakeCopy(Allocator));
+    }
+
+    // Copy named resources
+    for (auto& src_res_it : Src.m_NamedResources)
+    {
+        const auto  ResType     = src_res_it.first.GetType();
+        const auto* ResName     = src_res_it.first.GetName();
+        auto        it_inserted = m_NamedResources.emplace(NamedResourceKey{ResType, ResName, /*CopyName = */ true}, src_res_it.second.MakeCopy(Allocator));
+
+        if (!it_inserted.second)
+        {
+            LOG_WARNING_MESSAGE("Failed to copy resource '", ResName, "': resource with the same name already exists.");
+            continue;
+        }
+
+        const auto IsStandaloneShader = (ResType == ResourceType::StandaloneShader);
+        const auto IsPipeline =
+            (ResType == ResourceType::GraphicsPipeline ||
+             ResType == ResourceType::ComputePipeline ||
+             ResType == ResourceType::RayTracingPipeline ||
+             ResType == ResourceType::TilePipeline);
+
+        // Update shader indices
+        if (IsStandaloneShader || IsPipeline)
+        {
+            for (size_t i = 0; i < static_cast<size_t>(DeviceType::Count); ++i)
+            {
+                const auto BaseIdx = ShaderBaseIndices[i];
+
+                auto& DeviceData = it_inserted.first->second.DeviceSpecific[i];
+                if (!DeviceData)
+                    continue;
+
+                if (IsStandaloneShader)
+                {
+                    // For shaders, device-specific data is the serialized shader bytecode index
+                    Uint32 ShaderIndex = 0;
+                    {
+                        Serializer<SerializerMode::Read> Ser{DeviceData};
+                        if (!Ser(ShaderIndex))
+                            LOG_ERROR_AND_THROW("Failed to deserialize standalone shader index. Archive file may be corrupted or invalid.");
+                        VERIFY(Ser.IsEnded(), "No other data besides the shader index is expected");
+                    }
+
+                    ShaderIndex += BaseIdx;
+
+                    {
+                        Serializer<SerializerMode::Write> Ser{DeviceData};
+                        Ser(ShaderIndex);
+                        VERIFY_EXPR(Ser.IsEnded());
+                    }
+                }
+                else if (IsPipeline)
+                {
+                    // For pipelines, device-specific data is the shader index array
+                    ShaderIndexArray ShaderIndices;
+                    {
+                        Serializer<SerializerMode::Read> Ser{DeviceData};
+                        if (!PSOSerializer<SerializerMode::Read>::SerializeShaderIndices(Ser, ShaderIndices, &DynAllocator))
+                            LOG_ERROR_AND_THROW("Failed to deserialize PSO shader indices. Archive file may be corrupted or invalid.");
+                        VERIFY(Ser.IsEnded(), "No other data besides shader indices is expected");
+                    }
+
+                    std::vector<Uint32> NewIndices{ShaderIndices.pIndices, ShaderIndices.pIndices + ShaderIndices.Count};
+                    for (auto& Idx : NewIndices)
+                        Idx += BaseIdx;
+
+                    {
+                        Serializer<SerializerMode::Write> Ser{DeviceData};
+                        PSOSerializer<SerializerMode::Write>::SerializeShaderIndices(Ser, ShaderIndexArray{NewIndices.data(), ShaderIndices.Count}, nullptr);
+                        VERIFY_EXPR(Ser.IsEnded());
+                    }
+                }
+                else
+                {
+                    UNEXPECTED("Unexpected resource type");
+                }
+            }
+        }
+    }
 }
 
 void DeviceObjectArchive::Serialize(IFileStream* pStream) const

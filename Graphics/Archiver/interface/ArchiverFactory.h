@@ -232,6 +232,7 @@ DILIGENT_BEGIN_INTERFACE(IArchiverFactory, IObject)
     /// \param [in]  pSrcArchive  - Source archive from which device specific-data will be removed.
     /// \param [in]  DeviceFlags  - Combination of device types that will be removed.
     /// \param [out] ppDstArchive - Memory address where a pointer to the new archive will be written.
+    /// \return     true if the device-specific data was successfully removed, and false otherwise.
     VIRTUAL Bool METHOD(RemoveDeviceData)(THIS_
                                           const IDataBlob*          pSrcArchive,
                                           ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags,
@@ -244,11 +245,25 @@ DILIGENT_BEGIN_INTERFACE(IArchiverFactory, IObject)
     /// \param [in]  DeviceFlags    - Combination of device types that will be copied.
     /// \param [in]  pDeviceArchive - Archive that contains the same common data and additional device-specific data.
     /// \param [out] ppDstArchive   - Memory address where a pointer to the new archive will be written.
+    /// \return     true if the device-specific data was successfully added, and false otherwise.
     VIRTUAL Bool METHOD(AppendDeviceData)(THIS_
                                           const IDataBlob*          pSrcArchive,
                                           ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags,
                                           const IDataBlob*          pDeviceArchive,
                                           IDataBlob**               ppDstArchive) CONST PURE;
+
+
+    /// Merges multiple archives into one.
+
+    /// \param [in]  ppSrcArchives   - An array of pointers to the source archives.
+    /// \param [in]  NumSrcArchives  - The number of elements in ppArchives array.
+    /// \param [out] ppDstArchive    - Memory address where a pointer to the merged archive will be written.
+    /// \return     true if the archives were successfully merged, and false otherwise.
+    VIRTUAL Bool METHOD(MergeArchives)(THIS_
+                                       const IDataBlob* ppSrcArchives[],
+                                       Uint32           NumSrcArchives,
+                                       IDataBlob**      ppDstArchive) CONST PURE;
+
 
     /// Prints archive content for debugging and validation.
     VIRTUAL Bool METHOD(PrintArchiveContent)(THIS_

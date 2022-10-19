@@ -100,6 +100,7 @@ void ArchivePRS(RefCntAutoPtr<IDataBlob>&                  pArchive,
     ASSERT_NE(pArchiver, nullptr);
 
     // PRS 1
+    if (PRS1Name != nullptr)
     {
         constexpr auto VarType = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE;
 
@@ -142,6 +143,7 @@ void ArchivePRS(RefCntAutoPtr<IDataBlob>&                  pArchive,
     }
 
     // PRS 2
+    if (PRS2Name != nullptr)
     {
         constexpr auto VarType = SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC;
 
@@ -1205,31 +1207,20 @@ TEST(ArchiveTest, Shaders)
 
     pDearchiver->LoadArchive(pArchive);
 
-    {
-        RefCntAutoPtr<IShader> pUnpackedVS;
+    auto UnpackShader = [](IRenderDevice* pDevice, IDearchiver* pDearchiver, const ShaderCreateInfo& CI) {
+        RefCntAutoPtr<IShader> pUnpackedShader;
 
         ShaderUnpackInfo UnpackInfo;
-        UnpackInfo.Name    = VertexShaderCI.Desc.Name;
+        UnpackInfo.Name    = CI.Desc.Name;
         UnpackInfo.pDevice = pDevice;
 
-        pDearchiver->UnpackShader(UnpackInfo, &pUnpackedVS);
-        ASSERT_NE(pUnpackedVS, nullptr);
-        EXPECT_EQ(pUnpackedVS->GetDesc().ShaderType, SHADER_TYPE_VERTEX);
-        EXPECT_STREQ(pUnpackedVS->GetDesc().Name, VertexShaderCI.Desc.Name);
-    }
-
-    {
-        RefCntAutoPtr<IShader> pUnpackedPS;
-
-        ShaderUnpackInfo UnpackInfo;
-        UnpackInfo.Name    = PixelShaderCI.Desc.Name;
-        UnpackInfo.pDevice = pDevice;
-
-        pDearchiver->UnpackShader(UnpackInfo, &pUnpackedPS);
-        ASSERT_NE(pUnpackedPS, nullptr);
-        EXPECT_EQ(pUnpackedPS->GetDesc().ShaderType, SHADER_TYPE_PIXEL);
-        EXPECT_STREQ(pUnpackedPS->GetDesc().Name, PixelShaderCI.Desc.Name);
-    }
+        pDearchiver->UnpackShader(UnpackInfo, &pUnpackedShader);
+        ASSERT_NE(pUnpackedShader, nullptr);
+        EXPECT_EQ(pUnpackedShader->GetDesc(), CI.Desc);
+        EXPECT_STREQ(pUnpackedShader->GetDesc().Name, CI.Desc.Name);
+    };
+    UnpackShader(pDevice, pDearchiver, VertexShaderCI);
+    UnpackShader(pDevice, pDearchiver, PixelShaderCI);
 }
 
 
@@ -1255,6 +1246,30 @@ void main(uint3 DTid : SV_DispatchThreadID)
 )"};
 
 } // namespace HLSL
+
+
+void CreateComputeShader(IRenderDevice*        pDevice,
+                         ISerializationDevice* pSerializationDevice,
+                         ShaderCreateInfo&     ShaderCI,
+                         IShader**             ppCS,
+                         IShader**             ppSerializedCS)
+{
+    const auto* pEnv = GPUTestingEnvironment::GetInstance();
+
+    ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+
+    ShaderCI.Desc       = {"Compute shader test", SHADER_TYPE_COMPUTE, true};
+    ShaderCI.EntryPoint = "main";
+    // Test shader source string
+    ShaderCI.Source = HLSL::ComputePSOTest_CS.c_str();
+
+    if (ppCS != nullptr)
+        pDevice->CreateShader(ShaderCI, ppCS);
+
+    if (ppSerializedCS != nullptr)
+        pSerializationDevice->CreateShader(ShaderCI, ShaderArchiveInfo{GetDeviceBits()}, ppSerializedCS);
+}
 
 void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
 {
@@ -1313,24 +1328,13 @@ void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
         pArchiverFactory->CreateArchiver(pSerializationDevice, &pArchiver);
         ASSERT_NE(pArchiver, nullptr);
 
-        ShaderCreateInfo ShaderCI;
-        ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
-        ShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
-
+        ShaderCreateInfo       ShaderCI;
         RefCntAutoPtr<IShader> pCS;
         RefCntAutoPtr<IShader> pSerializedCS;
-        {
-            ShaderCI.Desc       = {"Compute shader test", SHADER_TYPE_COMPUTE, true};
-            ShaderCI.EntryPoint = "main";
-            // Test shader source string
-            ShaderCI.Source = HLSL::ComputePSOTest_CS.c_str();
+        CreateComputeShader(pDevice, pSerializationDevice, ShaderCI, &pCS, &pSerializedCS);
 
-            pDevice->CreateShader(ShaderCI, &pCS);
-            ASSERT_NE(pCS, nullptr);
-
-            pSerializationDevice->CreateShader(ShaderCI, ShaderArchiveInfo{GetDeviceBits()}, &pSerializedCS);
-            ASSERT_NE(pSerializedCS, nullptr);
-        }
+        ASSERT_NE(pCS, nullptr);
+        ASSERT_NE(pSerializedCS, nullptr);
         {
             ComputePipelineStateCreateInfo PSOCreateInfo;
             PSOCreateInfo.PSODesc.Name         = PSO1Name;
@@ -2478,5 +2482,163 @@ INSTANTIATE_TEST_SUITE_P(ArchiveTest,
 
                              return name_ss.str();
                          });
+
+
+
+TEST(ArchiveTest, MergeArchives)
+{
+    auto* pEnv             = GPUTestingEnvironment::GetInstance();
+    auto* pDevice          = pEnv->GetDevice();
+    auto* pArchiverFactory = pEnv->GetArchiverFactory();
+    auto* pSwapChain       = pEnv->GetSwapChain();
+
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+
+    RefCntAutoPtr<IDearchiver> pDearchiver;
+    DearchiverCreateInfo       DearchiverCI{};
+    pDevice->GetEngineFactory()->CreateDearchiver(DearchiverCI, &pDearchiver);
+    if (!pDearchiver || !pArchiverFactory)
+        GTEST_SKIP() << "Archiver library is not loaded";
+
+    SerializationDeviceCreateInfo SerDeviceCI;
+    SerDeviceCI.DeviceInfo.Features.SeparablePrograms = pDevice->GetDeviceInfo().Features.SeparablePrograms;
+    RefCntAutoPtr<ISerializationDevice> pSerializationDevice;
+    pArchiverFactory->CreateSerializationDevice(SerDeviceCI, &pSerializationDevice);
+    ASSERT_NE(pSerializationDevice, nullptr);
+
+    RefCntAutoPtr<IArchiver> pArchiver;
+    pArchiverFactory->CreateArchiver(pSerializationDevice, &pArchiver);
+    ASSERT_NE(pArchiver, nullptr);
+
+    constexpr char PRS1Name[] = "ArchiveTest.MergeArchives - PRS 1";
+    constexpr char PRS2Name[] = "ArchiveTest.MergeArchives - PRS 2";
+    constexpr char RPName[]   = "ArchiveTest.MergeArchives - RP";
+    constexpr char PSOName[]  = "ArchiveTest.MergeArchives - Graphics PSO";
+
+    RefCntAutoPtr<IPipelineResourceSignature> pRefPRS_1;
+    RefCntAutoPtr<IPipelineResourceSignature> pRefPRS_2;
+    RefCntAutoPtr<IDataBlob>                  pPRSArchive1;
+    RefCntAutoPtr<IDataBlob>                  pPRSArchive2;
+    ArchivePRS(pPRSArchive1, PRS1Name, nullptr, pRefPRS_1, pRefPRS_2, GetDeviceBits());
+    ArchivePRS(pPRSArchive2, nullptr, PRS2Name, pRefPRS_1, pRefPRS_2, GetDeviceBits());
+
+    RefCntAutoPtr<IDataBlob> pShaderArchive1;
+    ShaderCreateInfo         CsCI;
+    {
+        RefCntAutoPtr<IShader> pSerCS;
+        CreateComputeShader(pDevice, pSerializationDevice, CsCI, nullptr, &pSerCS);
+        ASSERT_NE(pSerCS, nullptr);
+
+        EXPECT_TRUE(pArchiver->AddShader(pSerCS));
+
+        pArchiver->SerializeToBlob(&pShaderArchive1);
+        ASSERT_NE(pShaderArchive1, nullptr);
+        EXPECT_TRUE(pArchiverFactory->PrintArchiveContent(pShaderArchive1));
+
+        pArchiver->Reset();
+    }
+
+    RefCntAutoPtr<IDataBlob> pShaderArchive2;
+    ShaderCreateInfo         VsCI;
+    ShaderCreateInfo         PsCI;
+    RefCntAutoPtr<IShader>   pSerVS;
+    RefCntAutoPtr<IShader>   pSerPS;
+    {
+        CreateGraphicsShaders(pDevice, pSerializationDevice, VsCI, nullptr, &pSerVS, PsCI, nullptr, &pSerPS);
+        ASSERT_NE(pSerVS, nullptr);
+        ASSERT_NE(pSerPS, nullptr);
+
+        EXPECT_TRUE(pArchiver->AddShader(pSerVS));
+        EXPECT_TRUE(pArchiver->AddShader(pSerPS));
+
+        pArchiver->SerializeToBlob(&pShaderArchive2);
+        ASSERT_NE(pShaderArchive2, nullptr);
+        EXPECT_TRUE(pArchiverFactory->PrintArchiveContent(pShaderArchive2));
+
+        pArchiver->Reset();
+    }
+
+    RefCntAutoPtr<IDataBlob>        pGraphicsArchive;
+    RefCntAutoPtr<IRenderPass>      pRenderPass;
+    GraphicsPipelineStateCreateInfo PSOCreateInfo;
+    {
+        RefCntAutoPtr<IRenderPass> pSerializedRenderPass;
+        CreateTestRenderPass1(pDevice, pSerializationDevice, pSwapChain, RPName, &pRenderPass, &pSerializedRenderPass);
+
+        PSOCreateInfo.PSODesc.Name = PSOName;
+
+        auto& GraphicsPipeline{PSOCreateInfo.GraphicsPipeline};
+        GraphicsPipeline.pRenderPass       = pSerializedRenderPass;
+        GraphicsPipeline.PrimitiveTopology = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        constexpr LayoutElement Elems[] =
+            {
+                LayoutElement{0, 0, 4, VT_FLOAT32},
+                LayoutElement{1, 0, 3, VT_FLOAT32},
+                LayoutElement{2, 0, 2, VT_FLOAT32} //
+            };
+        GraphicsPipeline.InputLayout.LayoutElements = Elems;
+        GraphicsPipeline.InputLayout.NumElements    = _countof(Elems);
+
+        PipelineStateArchiveInfo ArchiveInfo;
+        ArchiveInfo.DeviceFlags = GetDeviceBits();
+
+        PSOCreateInfo.pVS = pSerVS;
+        PSOCreateInfo.pPS = pSerPS;
+        RefCntAutoPtr<IPipelineState> pSerializedPSO;
+        pSerializationDevice->CreateGraphicsPipelineState(PSOCreateInfo, ArchiveInfo, &pSerializedPSO);
+        ASSERT_NE(pSerializedPSO, nullptr);
+
+        EXPECT_TRUE(pArchiver->AddPipelineState(pSerializedPSO));
+
+        pArchiver->SerializeToBlob(&pGraphicsArchive);
+        ASSERT_NE(pGraphicsArchive, nullptr);
+        EXPECT_TRUE(pArchiverFactory->PrintArchiveContent(pGraphicsArchive));
+    }
+
+
+    RefCntAutoPtr<IDataBlob> pArchive;
+    const IDataBlob*         ppArchives[] = {pPRSArchive1, pPRSArchive2, pShaderArchive1, pShaderArchive2, pGraphicsArchive};
+    pArchiverFactory->MergeArchives(ppArchives, _countof(ppArchives), &pArchive);
+    ASSERT_NE(pArchive, nullptr);
+
+    pPRSArchive1.Release();
+    pPRSArchive2.Release();
+    pShaderArchive1.Release();
+    pShaderArchive2.Release();
+    pGraphicsArchive.Release();
+
+    pDearchiver->LoadArchive(pArchive);
+
+    UnpackPRS(pArchive, PRS1Name, PRS2Name, pRefPRS_1, pRefPRS_2);
+
+    auto UnpackShader = [](IRenderDevice* pDevice, IDearchiver* pDearchiver, const ShaderCreateInfo& CI) {
+        RefCntAutoPtr<IShader> pUnpackedShader;
+
+        ShaderUnpackInfo UnpackInfo;
+        UnpackInfo.Name    = CI.Desc.Name;
+        UnpackInfo.pDevice = pDevice;
+
+        pDearchiver->UnpackShader(UnpackInfo, &pUnpackedShader);
+        ASSERT_NE(pUnpackedShader, nullptr);
+        EXPECT_EQ(pUnpackedShader->GetDesc(), CI.Desc);
+        EXPECT_STREQ(pUnpackedShader->GetDesc().Name, CI.Desc.Name);
+    };
+
+    UnpackShader(pDevice, pDearchiver, VsCI);
+    UnpackShader(pDevice, pDearchiver, PsCI);
+    UnpackShader(pDevice, pDearchiver, CsCI);
+
+    {
+        PipelineStateUnpackInfo UnpackInfo;
+        UnpackInfo.Name         = PSOName;
+        UnpackInfo.pDevice      = pDevice;
+        UnpackInfo.PipelineType = PIPELINE_TYPE_GRAPHICS;
+
+        RefCntAutoPtr<IPipelineState> pUnpackedPSO;
+        pDearchiver->UnpackPipelineState(UnpackInfo, &pUnpackedPSO);
+        ASSERT_NE(pUnpackedPSO, nullptr);
+        EXPECT_EQ(pUnpackedPSO->GetDesc(), PSOCreateInfo.PSODesc);
+    }
+}
 
 } // namespace

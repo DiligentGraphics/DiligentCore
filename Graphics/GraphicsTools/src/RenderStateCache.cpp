@@ -104,6 +104,13 @@ public:
     virtual bool DILIGENT_CALL_TYPE CreateShader(const ShaderCreateInfo& ShaderCI,
                                                  IShader**               ppShader) override final
     {
+        if (ppShader == nullptr)
+        {
+            DEV_ERROR("ppShader must not be null");
+            return false;
+        }
+        DEV_CHECK_ERR(*ppShader == nullptr, "Overwriting reference to existing shader may cause memory leaks");
+
         *ppShader = nullptr;
 
         XXH128State Hasher;
@@ -365,6 +372,13 @@ private:
     bool CreatePipelineState(const CreateInfoType& PSOCreateInfo,
                              IPipelineState**      ppPipelineState)
     {
+        if (ppPipelineState == nullptr)
+        {
+            DEV_ERROR("ppPipelineState must not be null");
+            return false;
+        }
+        DEV_CHECK_ERR(*ppPipelineState == nullptr, "Overwriting reference to existing pipeline state may cause memory leaks");
+
         *ppPipelineState = nullptr;
 
         XXH128State Hasher;

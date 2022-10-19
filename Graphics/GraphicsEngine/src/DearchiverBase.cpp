@@ -426,7 +426,7 @@ bool DearchiverBase::UnpackPSOShaders(ArchiveData&             Archive,
             LOG_ERROR_MESSAGE("Failed to deserialize PSO shader indices. Archive file may be corrupted or invalid.");
             return false;
         }
-        VERIFY_EXPR(Ser.IsEnded());
+        VERIFY(Ser.IsEnded(), "No other data besides shader indices is expected");
     }
 
     auto& ShaderCache = Archive.CachedShaders[static_cast<size_t>(DevType)];

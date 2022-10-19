@@ -128,6 +128,11 @@ public:
         const IDataBlob*          pDeviceArchive,
         IDataBlob**               ppDstArchive) const override final;
 
+    virtual Bool DILIGENT_CALL_TYPE MergeArchives(
+        const IDataBlob* ppSrcArchives[],
+        Uint32           NumSrcArchives,
+        IDataBlob**      ppDstArchive) const override final;
+
     virtual Bool DILIGENT_CALL_TYPE PrintArchiveContent(const IDataBlob* pArchive) const override final;
 
     virtual void DILIGENT_CALL_TYPE SetMessageCallback(DebugMessageCallbackType MessageCallback) const override final;
@@ -256,6 +261,38 @@ Bool ArchiverFactoryImpl::AppendDeviceData(const IDataBlob*          pSrcArchive
         }
 
         ObjectArchive.Serialize(ppDstArchive);
+        return *ppDstArchive != nullptr;
+    }
+    catch (...)
+    {
+        return false;
+    }
+}
+
+Bool ArchiverFactoryImpl::MergeArchives(
+    const IDataBlob* ppSrcArchives[],
+    Uint32           NumSrcArchives,
+    IDataBlob**      ppDstArchive) const
+{
+    if (NumSrcArchives == 0)
+        return false;
+
+    DEV_CHECK_ERR(ppSrcArchives != nullptr, "ppSrcArchives must not be null");
+    DEV_CHECK_ERR(ppDstArchive != nullptr, "ppDstArchive must not be null");
+
+    if (ppSrcArchives == nullptr || ppDstArchive == nullptr)
+        return false;
+
+    try
+    {
+        DeviceObjectArchive MergedArchive{ppSrcArchives[0]};
+        for (Uint32 i = 1; i < NumSrcArchives; ++i)
+        {
+            const DeviceObjectArchive Archive{ppSrcArchives[i]};
+            MergedArchive.Merge(Archive);
+        }
+
+        MergedArchive.Serialize(ppDstArchive);
         return *ppDstArchive != nullptr;
     }
     catch (...)

@@ -120,7 +120,7 @@ Bool ArchiverImpl::SerializeToBlob(IDataBlob** ppBlob)
 
             DeviceObjectArchive::ShaderIndexArray Indices{ShaderIndices.data(), StaticCast<Uint32>(ShaderIndices.size())};
 
-            // For pipelines, device specific data is the shader indices
+            // For pipelines, device-specific data is the shader indices
             auto& SerializedIndices = DstData.DeviceSpecific[device_type];
 
             Serializer<SerializerMode::Measure> MeasureSer;
@@ -189,7 +189,7 @@ Bool ArchiverImpl::SerializeToBlob(IDataBlob** ppBlob)
             }
             const Uint32 Index = it_inserted.first->second;
 
-            // For shaders, device specific data is the serialized shader bytecode index
+            // For shaders, device-specific data is the serialized shader bytecode index
             auto& SerializedIndex = DstData.DeviceSpecific[device_type];
 
             Serializer<SerializerMode::Measure> MeasureSer;

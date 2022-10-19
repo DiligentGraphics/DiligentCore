@@ -146,6 +146,15 @@ public:
 
         // Device-specific data (e.g. device-specific resource signature data, PSO shader index array, etc.)
         std::array<SerializedData, static_cast<size_t>(DeviceType::Count)> DeviceSpecific;
+
+        ResourceData MakeCopy(IMemoryAllocator& Allocator) const
+        {
+            ResourceData DataCopy;
+            DataCopy.Common = Common.MakeCopy(Allocator);
+            for (size_t i = 0; i < DeviceSpecific.size(); ++i)
+                DataCopy.DeviceSpecific[i] = DeviceSpecific[i].MakeCopy(Allocator);
+            return DataCopy;
+        }
     };
 
     struct NamedResourceKey
@@ -199,6 +208,7 @@ public:
 
     void RemoveDeviceData(DeviceType Dev) noexcept(false);
     void AppendDeviceData(const DeviceObjectArchive& Src, DeviceType Dev) noexcept(false);
+    void Merge(const DeviceObjectArchive& Src) noexcept(false);
 
     void Deserialize(const void* pData, size_t Size) noexcept(false);
     void Serialize(IFileStream* pStream) const;

@@ -37,8 +37,8 @@ SerializedData::SerializedData(void* pData, size_t Size) noexcept :
 {}
 
 SerializedData::SerializedData(size_t Size, IMemoryAllocator& Allocator) noexcept :
-    m_pAllocator{&Allocator},
-    m_Ptr{Allocator.Allocate(Size, "Serialized data memory", __FILE__, __LINE__)},
+    m_pAllocator{Size > 0 ? &Allocator : nullptr},
+    m_Ptr{Size > 0 ? Allocator.Allocate(Size, "Serialized data memory", __FILE__, __LINE__) : nullptr},
     m_Size{Size}
 {
     // We need to zero out memory as due to element alignment, there may be gaps
