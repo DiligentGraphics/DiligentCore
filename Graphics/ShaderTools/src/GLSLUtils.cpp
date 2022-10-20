@@ -70,11 +70,18 @@ String BuildGLSLSourceString(const ShaderCreateInfo&    ShaderCI,
 #    endif
 #elif PLATFORM_MACOS
     if (TargetCompiler == TargetGLSLCompiler::glslang)
+    {
         GLSLSource.append("#version 430 core\n");
+    }
     else if (TargetCompiler == TargetGLSLCompiler::driver)
-        GLSLSource.append("#version 410 core\n");
+    {
+        GLSLSource.append("#version 410 core\n"
+                          "#extension GL_ARB_shading_language_420pack : enable\n");
+    }
     else
+    {
         UNEXPECTED("Unexpected target GLSL compiler");
+    }
 
     GLSLSource.append(
         "#define DESKTOP_GL 1\n"
