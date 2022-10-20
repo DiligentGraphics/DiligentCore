@@ -38,6 +38,22 @@ struct RenderStateCacheCreateInfo
 {
     /// A pointer to the render device, must not be null.
     IRenderDevice* pDevice DEFAULT_INITIALIZER(nullptr);
+
+    /// Whether to log the cache usage events such as
+    /// if the object was found in the cache or not.
+    bool EnableLogging DEFAULT_INITIALIZER(false);
+
+#if DILIGENT_CPP_INTERFACE
+    constexpr RenderStateCacheCreateInfo() noexcept
+    {}
+
+    constexpr explicit RenderStateCacheCreateInfo(
+        IRenderDevice* _pDevice,
+        bool           _EnableLogging = RenderStateCacheCreateInfo{}.EnableLogging) noexcept :
+        pDevice{_pDevice},
+        EnableLogging{_EnableLogging}
+    {}
+#endif
 };
 typedef struct RenderStateCacheCreateInfo RenderStateCacheCreateInfo;
 

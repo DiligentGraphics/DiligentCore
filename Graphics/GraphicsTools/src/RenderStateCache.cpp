@@ -175,6 +175,7 @@ private:
 private:
     RefCntAutoPtr<IRenderDevice>        m_pDevice;
     const RENDER_DEVICE_TYPE            m_DeviceType;
+    const bool                          m_EnableLogging;
     RefCntAutoPtr<ISerializationDevice> m_pSerializationDevice;
     RefCntAutoPtr<IArchiver>            m_pArchiver;
     RefCntAutoPtr<IDearchiver>          m_pDearchiver;
@@ -189,8 +190,11 @@ private:
 RenderStateCacheImpl::RenderStateCacheImpl(IReferenceCounters*               pRefCounters,
                                            const RenderStateCacheCreateInfo& CreateInfo) :
     TBase{pRefCounters},
-    m_pDevice{CreateInfo.pDevice},
-    m_DeviceType{CreateInfo.pDevice != nullptr ? CreateInfo.pDevice->GetDeviceInfo().Type : RENDER_DEVICE_TYPE_UNDEFINED}
+    // clang-format off
+    m_pDevice      {CreateInfo.pDevice},
+    m_DeviceType   {CreateInfo.pDevice != nullptr ? CreateInfo.pDevice->GetDeviceInfo().Type : RENDER_DEVICE_TYPE_UNDEFINED},
+    m_EnableLogging{CreateInfo.EnableLogging}
+// clang-format on
 {
     if (CreateInfo.pDevice == nullptr)
         LOG_ERROR_AND_THROW("CreateInfo.pDevice must not be null");
@@ -227,6 +231,15 @@ RenderStateCacheImpl::RenderStateCacheImpl(IReferenceCounters*               pRe
         LOG_ERROR_AND_THROW("Failed to create dearchiver");
 }
 
+#define RENDER_STATE_CACHE_LOG(...)                                \
+    do                                                             \
+    {                                                              \
+        if (m_EnableLogging)                                       \
+        {                                                          \
+            LOG_INFO_MESSAGE("Render state cache: ", __VA_ARGS__); \
+        }                                                          \
+    } while (false)
+
 bool RenderStateCacheImpl::CreateShader(const ShaderCreateInfo& ShaderCI,
                                         IShader**               ppShader)
 {
@@ -252,6 +265,7 @@ bool RenderStateCacheImpl::CreateShader(const ShaderCreateInfo& ShaderCI,
             if (auto pShader = it->second.Lock())
             {
                 *ppShader = pShader.Detach();
+                RENDER_STATE_CACHE_LOG("Reusing existing shader '", (ShaderCI.Desc.Name ? ShaderCI.Desc.Name : ""), "'.");
                 return true;
             }
             else
@@ -303,7 +317,10 @@ bool RenderStateCacheImpl::CreateShader(const ShaderCreateInfo& ShaderCI,
         UnpackInfo.pUserData        = Callback;
         m_pDearchiver->UnpackShader(UnpackInfo, ppShader);
         if (*ppShader != nullptr)
+        {
+            RENDER_STATE_CACHE_LOG("Found shader '", HashStr, "'.");
             return true;
+        }
     }
 
     // Next, try to find the shader in the archiver
@@ -317,7 +334,12 @@ bool RenderStateCacheImpl::CreateShader(const ShaderCreateInfo& ShaderCI,
         ArchiveInfo.DeviceFlags = static_cast<ARCHIVE_DEVICE_DATA_FLAGS>(1 << m_DeviceType);
         m_pSerializationDevice->CreateShader(ArchiveShaderCI, ArchiveInfo, &pArchivedShader);
         if (pArchivedShader)
-            m_pArchiver->AddShader(pArchivedShader);
+        {
+            if (m_pArchiver->AddShader(pArchivedShader))
+                RENDER_STATE_CACHE_LOG("Added shader '", HashStr, "'.");
+            else
+                LOG_ERROR_MESSAGE("Failed to archive shader '", HashStr, "'.");
+        }
     }
 
     if (pArchivedShader)
@@ -570,6 +592,7 @@ bool RenderStateCacheImpl::CreatePipelineState(const CreateInfoType& PSOCreateIn
             if (auto pPSO = it->second.Lock())
             {
                 *ppPipelineState = pPSO.Detach();
+                RENDER_STATE_CACHE_LOG("Reusing existing PSO '", (PSOCreateInfo.PSODesc.Name ? PSOCreateInfo.PSODesc.Name : ""), "'.");
                 return true;
             }
             else
@@ -612,7 +635,10 @@ bool RenderStateCacheImpl::CreatePipelineState(const CreateInfoType& PSOCreateIn
     }
 
     if (FoundInCache)
+    {
+        RENDER_STATE_CACHE_LOG("Found PSO '", HashStr, "'.");
         return true;
+    }
 
     if (m_pArchiver->GetPipelineState(PSOCreateInfo.PSODesc.PipelineType, HashStr.c_str()) != nullptr)
         return true;
@@ -630,7 +656,10 @@ bool RenderStateCacheImpl::CreatePipelineState(const CreateInfoType& PSOCreateIn
 
         if (pSerializedPSO)
         {
-            m_pArchiver->AddPipelineState(pSerializedPSO);
+            if (m_pArchiver->AddPipelineState(pSerializedPSO))
+                RENDER_STATE_CACHE_LOG("Added PSO '", HashStr, "'.");
+            else
+                LOG_ERROR_MESSAGE("Failed to archive PSO '", HashStr, "'.");
         }
     }
     catch (...)

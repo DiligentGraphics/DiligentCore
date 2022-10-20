@@ -182,8 +182,7 @@ void VerifyComputePSO(IPipelineState* pPSO, bool UseSignature = false)
 
 RefCntAutoPtr<IRenderStateCache> CreateCache(IRenderDevice* pDevice, IDataBlob* pCacheData = nullptr)
 {
-    RenderStateCacheCreateInfo CacheCI;
-    CacheCI.pDevice = pDevice;
+    RenderStateCacheCreateInfo CacheCI{pDevice, true};
 
     RefCntAutoPtr<IRenderStateCache> pCache;
     CreateRenderStateCache(CacheCI, &pCache);
