@@ -1268,7 +1268,14 @@ void CreateComputeShader(IRenderDevice*        pDevice,
         pDevice->CreateShader(ShaderCI, ppCS);
 
     if (ppSerializedCS != nullptr)
-        pSerializationDevice->CreateShader(ShaderCI, ShaderArchiveInfo{GetDeviceBits()}, ppSerializedCS);
+    {
+        auto DeviceBits = GetDeviceBits();
+#if PLATFORM_MACOS
+        // Compute shaders are not supported in OpenGL on MacOS
+        DeviceBits &= ~(ARCHIVE_DEVICE_DATA_FLAG_GL | ARCHIVE_DEVICE_DATA_FLAG_GLES);
+#endif
+        pSerializationDevice->CreateShader(ShaderCI, ShaderArchiveInfo{DeviceBits}, ppSerializedCS);
+    }
 }
 
 void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
@@ -1363,7 +1370,11 @@ void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
 
             PipelineStateArchiveInfo ArchiveInfo;
             ArchiveInfo.DeviceFlags = GetDeviceBits();
-            ArchiveInfo.PSOFlags    = ArchiveFlags;
+#if PLATFORM_MACOS
+            // Compute shaders are not supported in OpenGL on MacOS
+            ArchiveInfo.DeviceFlags &= ~(ARCHIVE_DEVICE_DATA_FLAG_GL | ARCHIVE_DEVICE_DATA_FLAG_GLES);
+#endif
+            ArchiveInfo.PSOFlags = ArchiveFlags;
             RefCntAutoPtr<IPipelineState> pSerializedPSO;
             pSerializationDevice->CreateComputePipelineState(PSOCreateInfo, ArchiveInfo, &pSerializedPSO);
             ASSERT_NE(pSerializedPSO, nullptr);
