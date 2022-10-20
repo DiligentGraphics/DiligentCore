@@ -68,6 +68,12 @@ DILIGENT_TYPED_ENUM(SHADER_SOURCE_LANGUAGE, Uint32)
 
     /// The source language is Metal shading language (MSL)
     SHADER_SOURCE_LANGUAGE_MSL,
+    
+    /// The source language is Metal shading language (MSL) that should be compiled verbatim
+
+    /// Note that shader macros are ignored when compiling MSL verbatim, and an application
+    /// should add the macro definitions to the source code.
+    SHADER_SOURCE_LANGUAGE_MSL_VERBATIM,
 
     /// The source language is Metal bytecode
     SHADER_SOURCE_LANGUAGE_MTLB,

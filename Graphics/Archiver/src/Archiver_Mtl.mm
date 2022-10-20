@@ -292,7 +292,8 @@ struct CompiledShaderMtl final : SerializedShaderImpl::CompiledShader
         
         ShaderCI.FilePath       = nullptr;
         ShaderCI.ByteCode       = nullptr;
-        ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_MSL;
+        ShaderCI.Macros         = nullptr;
+        ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_MSL_VERBATIM;
         ShaderCI.Source         = Source.c_str();
         ShaderCI.SourceLength   = Source.length();
         
