@@ -41,6 +41,7 @@
 #include "ArchiverFactoryLoader.h"
 #include "XXH128Hasher.hpp"
 #include "CallbackWrapper.hpp"
+#include "GraphicsUtilities.h"
 
 namespace Diligent
 {
@@ -214,6 +215,32 @@ RenderStateCacheImpl::RenderStateCacheImpl(IReferenceCounters*               pRe
     SerializationDeviceCreateInfo SerializationDeviceCI;
     SerializationDeviceCI.DeviceInfo  = m_pDevice->GetDeviceInfo();
     SerializationDeviceCI.AdapterInfo = m_pDevice->GetAdapterInfo();
+
+    switch (m_DeviceType)
+    {
+        case RENDER_DEVICE_TYPE_D3D11:
+            SerializationDeviceCI.D3D11.FeatureLevel = SerializationDeviceCI.DeviceInfo.APIVersion;
+            break;
+
+        case RENDER_DEVICE_TYPE_D3D12:
+            GetRenderDeviceD3D12MaxShaderVersion(m_pDevice, SerializationDeviceCI.D3D12.ShaderVersion);
+            break;
+
+        case RENDER_DEVICE_TYPE_GL:
+        case RENDER_DEVICE_TYPE_GLES:
+            // Nothing to do
+            break;
+
+        case RENDER_DEVICE_TYPE_VULKAN:
+            SerializationDeviceCI.Vulkan.ApiVersion = SerializationDeviceCI.DeviceInfo.APIVersion;
+            break;
+
+        case RENDER_DEVICE_TYPE_METAL:
+            break;
+
+        default:
+            UNEXPECTED("Unknown device type");
+    }
 
     pArchiverFactory->CreateSerializationDevice(SerializationDeviceCI, &m_pSerializationDevice);
     if (!m_pSerializationDevice)

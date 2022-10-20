@@ -29,6 +29,8 @@
 #include "RenderStateCache.h"
 #include "FastRand.hpp"
 
+#include "InlineShaders/RayTracingTestHLSL.h"
+
 #include "gtest/gtest.h"
 
 namespace Diligent
@@ -576,6 +578,93 @@ TEST(RenderStateCacheTest, CreateComputePSO_Sign)
     TestComputePSO(/*UseSignature = */ true);
 }
 
+void CreateRayTracingShaders(IRenderStateCache*               pCache,
+                             IShaderSourceInputStreamFactory* pShaderSourceFactory,
+                             RefCntAutoPtr<IShader>&          pRayGen,
+                             RefCntAutoPtr<IShader>&          pRayMiss,
+                             RefCntAutoPtr<IShader>&          pClosestHit,
+                             RefCntAutoPtr<IShader>&          pIntersection,
+                             bool                             PresentInCache)
+{
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.ShaderCompiler = SHADER_COMPILER_DXC;
+    ShaderCI.HLSLVersion    = {6, 3};
+    ShaderCI.EntryPoint     = "main";
+
+    // Create ray generation shader.
+    {
+        ShaderCI.Desc.ShaderType = SHADER_TYPE_RAY_GEN;
+        ShaderCI.Desc.Name       = "Render State Cache - RayGen";
+        ShaderCI.Source          = HLSL::RayTracingTest1_RG.c_str();
+        pCache->CreateShader(ShaderCI, &pRayGen);
+        ASSERT_NE(pRayGen, nullptr);
+    }
+
+    // Create ray miss shader.
+    RefCntAutoPtr<IShader> pRMiss;
+    {
+        ShaderCI.Desc.ShaderType = SHADER_TYPE_RAY_MISS;
+        ShaderCI.Desc.Name       = "Render State Cache - Miss Shader";
+        ShaderCI.Source          = HLSL::RayTracingTest1_RM.c_str();
+        pCache->CreateShader(ShaderCI, &pRayMiss);
+        ASSERT_NE(pRayMiss, nullptr);
+    }
+
+    // Create ray closest hit shader.
+    {
+        ShaderCI.Desc.ShaderType = SHADER_TYPE_RAY_CLOSEST_HIT;
+        ShaderCI.Desc.Name       = "Render State Cache - Closest Hit";
+        ShaderCI.Source          = HLSL::RayTracingTest1_RCH.c_str();
+        pCache->CreateShader(ShaderCI, &pClosestHit);
+        ASSERT_NE(pClosestHit, nullptr);
+    }
+
+    // Create ray intersection shader.
+    {
+        ShaderCI.Desc.ShaderType = SHADER_TYPE_RAY_INTERSECTION;
+        ShaderCI.Desc.Name       = "Ray intersection shader";
+        ShaderCI.Source          = HLSL::RayTracingTest3_RI.c_str();
+        pCache->CreateShader(ShaderCI, &pIntersection);
+        ASSERT_NE(pIntersection, nullptr);
+    }
+}
+
+
+void CreateRayTracingPSO(IRenderStateCache* pCache,
+                         bool               PresentInCache,
+                         IShader*           pRayGen,
+                         IShader*           pRayMiss,
+                         IShader*           pClosestHit,
+                         IShader*           pIntersection,
+                         IPipelineState**   ppPSO)
+{
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+
+    RayTracingPipelineStateCreateInfo PSOCreateInfo;
+
+    PSOCreateInfo.PSODesc.Name         = "Render State Cache - Ray Tracing PSO";
+    PSOCreateInfo.PSODesc.PipelineType = PIPELINE_TYPE_RAY_TRACING;
+
+    const RayTracingGeneralShaderGroup       GeneralShaders[]       = {{"Main", pRayGen}, {"Miss", pRayMiss}};
+    const RayTracingTriangleHitShaderGroup   TriangleHitShaders[]   = {{"TriHitGroup", pClosestHit}};
+    const RayTracingProceduralHitShaderGroup ProceduralHitShaders[] = {{"ProcHitGroup", pIntersection, pClosestHit}};
+
+    PSOCreateInfo.pGeneralShaders          = GeneralShaders;
+    PSOCreateInfo.GeneralShaderCount       = _countof(GeneralShaders);
+    PSOCreateInfo.pTriangleHitShaders      = TriangleHitShaders;
+    PSOCreateInfo.TriangleHitShaderCount   = _countof(TriangleHitShaders);
+    PSOCreateInfo.pProceduralHitShaders    = ProceduralHitShaders;
+    PSOCreateInfo.ProceduralHitShaderCount = _countof(ProceduralHitShaders);
+
+    PSOCreateInfo.RayTracingPipeline.MaxRecursionDepth       = 1;
+    PSOCreateInfo.PSODesc.ResourceLayout.DefaultVariableType = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE;
+
+    pDevice->CreateRayTracingPipelineState(PSOCreateInfo, ppPSO);
+    ASSERT_NE(*ppPSO, nullptr);
+}
+
 TEST(RenderStateCacheTest, CreateRayTracingPSO)
 {
     auto* pEnv    = GPUTestingEnvironment::GetInstance();
@@ -588,8 +677,39 @@ TEST(RenderStateCacheTest, CreateRayTracingPSO)
 
     GPUTestingEnvironment::ScopedReset AutoReset;
 
-    auto pCache = CreateCache(pDevice);
-    ASSERT_TRUE(pCache);
+    RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
+    pDevice->GetEngineFactory()->CreateDefaultShaderSourceStreamFactory("shaders/RenderStateCache", &pShaderSourceFactory);
+    ASSERT_TRUE(pShaderSourceFactory);
+
+    RefCntAutoPtr<IDataBlob> pData;
+    for (Uint32 pass = 0; pass < 3; ++pass)
+    {
+        // 0: empty cache
+        // 1: loaded cache
+        // 2: reloaded cache (loaded -> stored -> loaded)
+
+        auto pCache = CreateCache(pDevice, pData);
+        ASSERT_TRUE(pCache);
+
+        RefCntAutoPtr<IShader> pRayGen;
+        RefCntAutoPtr<IShader> pRayMiss;
+        RefCntAutoPtr<IShader> pClosestHit;
+        RefCntAutoPtr<IShader> pIntersection;
+        CreateRayTracingShaders(pCache, pShaderSourceFactory, pRayGen, pRayMiss, pClosestHit, pIntersection, pData != nullptr);
+
+        RefCntAutoPtr<IPipelineState> pPSO;
+        CreateRayTracingPSO(pCache, pData != nullptr, pRayGen, pRayMiss, pClosestHit, pIntersection, &pPSO);
+        ASSERT_NE(pPSO, nullptr);
+
+        {
+            RefCntAutoPtr<IPipelineState> pPSO2;
+            CreateRayTracingPSO(pCache, true, pRayGen, pRayMiss, pClosestHit, pIntersection, &pPSO2);
+            ASSERT_NE(pPSO2, nullptr);
+        }
+
+        pData.Release();
+        pCache->WriteToBlob(&pData);
+    }
 }
 
 TEST(RenderStateCacheTest, CreateTilePSO)

@@ -1,6 +1,5 @@
 /*
  *  Copyright 2019-2022 Diligent Graphics LLC
- *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -25,19 +24,13 @@
  *  of the possibility of such damages.
  */
 
-#include <d3d12.h>
+#include "GraphicsUtilities.h"
 
-#include "DiligentCore/Graphics/GraphicsEngineD3D12/interface/RenderDeviceD3D12.h"
+#if VULKAN_SUPPORTED
+#    include "../../GraphicsEngineVulkan/include/VulkanUtilities/VulkanHeaders.h"
+#endif
 
-void TestRenderDeviceD3D12CInterface(IRenderDeviceD3D12* pDevice)
+namespace Diligent
 {
-    ID3D12Device* pD3D12Device = IRenderDeviceD3D12_GetD3D12Device(pDevice);
-    (void)pD3D12Device;
 
-    IRenderDeviceD3D12_CreateTextureFromD3DResource(pDevice, (ID3D12Resource*)NULL, RESOURCE_STATE_SHADER_RESOURCE, (ITexture**)NULL);
-    IRenderDeviceD3D12_CreateBufferFromD3DResource(pDevice, (ID3D12Resource*)NULL, (BufferDesc*)NULL, RESOURCE_STATE_CONSTANT_BUFFER, (IBuffer**)NULL);
-    IRenderDeviceD3D12_CreateBLASFromD3DResource(pDevice, (ID3D12Resource*)NULL, (BottomLevelASDesc*)NULL, RESOURCE_STATE_BUILD_AS_READ, (IBottomLevelAS**)NULL);
-    IRenderDeviceD3D12_CreateTLASFromD3DResource(pDevice, (ID3D12Resource*)NULL, (TopLevelASDesc*)NULL, RESOURCE_STATE_BUILD_AS_READ, (ITopLevelAS**)NULL);
-    const ShaderVersion* MaxVer = IRenderDeviceD3D12_GetMaxShaderVersion(pDevice);
-    (void)MaxVer;
-}
+} // namespace Diligent

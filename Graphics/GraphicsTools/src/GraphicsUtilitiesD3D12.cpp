@@ -1,6 +1,5 @@
 /*
  *  Copyright 2019-2022 Diligent Graphics LLC
- *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -25,19 +24,55 @@
  *  of the possibility of such damages.
  */
 
-#include <d3d12.h>
+#include "GraphicsUtilities.h"
 
-#include "DiligentCore/Graphics/GraphicsEngineD3D12/interface/RenderDeviceD3D12.h"
+#if D3D12_SUPPORTED
+#    include <d3d12.h>
+#    include "RenderDeviceD3D12.h"
 
-void TestRenderDeviceD3D12CInterface(IRenderDeviceD3D12* pDevice)
+#    include "RefCntAutoPtr.hpp"
+#    include "DebugUtilities.hpp"
+#endif
+
+namespace Diligent
 {
-    ID3D12Device* pD3D12Device = IRenderDeviceD3D12_GetD3D12Device(pDevice);
-    (void)pD3D12Device;
 
-    IRenderDeviceD3D12_CreateTextureFromD3DResource(pDevice, (ID3D12Resource*)NULL, RESOURCE_STATE_SHADER_RESOURCE, (ITexture**)NULL);
-    IRenderDeviceD3D12_CreateBufferFromD3DResource(pDevice, (ID3D12Resource*)NULL, (BufferDesc*)NULL, RESOURCE_STATE_CONSTANT_BUFFER, (IBuffer**)NULL);
-    IRenderDeviceD3D12_CreateBLASFromD3DResource(pDevice, (ID3D12Resource*)NULL, (BottomLevelASDesc*)NULL, RESOURCE_STATE_BUILD_AS_READ, (IBottomLevelAS**)NULL);
-    IRenderDeviceD3D12_CreateTLASFromD3DResource(pDevice, (ID3D12Resource*)NULL, (TopLevelASDesc*)NULL, RESOURCE_STATE_BUILD_AS_READ, (ITopLevelAS**)NULL);
-    const ShaderVersion* MaxVer = IRenderDeviceD3D12_GetMaxShaderVersion(pDevice);
-    (void)MaxVer;
+bool GetRenderDeviceD3D12MaxShaderVersion(IRenderDevice* pDevice, ShaderVersion& Version)
+{
+    Version = {};
+#if D3D12_SUPPORTED
+    if (pDevice == nullptr)
+    {
+        UNEXPECTED("pDevice must not be null");
+        return false;
+    }
+
+    if (pDevice->GetDeviceInfo().Type != RENDER_DEVICE_TYPE_D3D12)
+    {
+        return false;
+    }
+
+    RefCntAutoPtr<IRenderDeviceD3D12> pDeviceD3D12{pDevice, IID_RenderDeviceD3D12};
+    if (!pDeviceD3D12)
+    {
+        UNEXPECTED("Failed to query the IRenderDeviceD3D12 interface");
+        return false;
+    }
+
+    Version = pDeviceD3D12->GetMaxShaderVersion();
+    return true;
+#else
+    return false;
+#endif
+}
+
+} // namespace Diligent
+
+
+extern "C"
+{
+    bool Diligent_GetRenderDeviceD3D12MaxShaderVersion(Diligent::IRenderDevice* pDevice, Diligent::ShaderVersion& Version)
+    {
+        return Diligent::GetRenderDeviceD3D12MaxShaderVersion(pDevice, Version);
+    }
 }
