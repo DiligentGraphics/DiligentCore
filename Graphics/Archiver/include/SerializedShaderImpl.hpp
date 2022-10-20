@@ -70,10 +70,7 @@ public:
         virtual ~CompiledShader() {}
         virtual SerializedData Serialize(ShaderCreateInfo ShaderCI) const = 0;
 
-        virtual IShader* GetDeviceShader()
-        {
-            return nullptr;
-        }
+        virtual IShader* GetDeviceShader() = 0;
     };
 
     template <typename CompiledShaderType>
@@ -131,7 +128,7 @@ private:
 #endif
 
 #if METAL_SUPPORTED
-    void CreateShaderMtl(const ShaderCreateInfo& ShaderCI, DeviceType Type) noexcept(false);
+    void CreateShaderMtl(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI, DeviceType Type) noexcept(false);
 #endif
 };
 

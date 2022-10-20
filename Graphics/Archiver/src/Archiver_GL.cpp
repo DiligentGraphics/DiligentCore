@@ -108,7 +108,7 @@ struct CompiledShaderGL final : SerializedShaderImpl::CompiledShader
     }
 
 private:
-    String UnrollSource(const ShaderCreateInfo& CI)
+    static String UnrollSource(const ShaderCreateInfo& CI)
     {
         String Source;
         if (CI.Macros != nullptr)
