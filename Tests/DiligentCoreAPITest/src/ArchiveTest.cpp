@@ -435,12 +435,8 @@ TEST_P(TestBrokenShader, MissingSourceFile)
     ShaderCI.FilePath                   = "non_existing.shader";
     ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
 
-    const auto IsGL = DataFlag == ARCHIVE_DEVICE_DATA_FLAG_GL || DataFlag == ARCHIVE_DEVICE_DATA_FLAG_GLES;
-
-    pEnv->SetErrorAllowance(IsGL ? 4 : 3, "No worries, errors are expected: testing broken shader\n");
+    pEnv->SetErrorAllowance(3, "No worries, errors are expected: testing broken shader\n");
     pEnv->PushExpectedErrorSubstring("Failed to create Shader object 'Archive test broken shader'");
-    if (IsGL)
-        pEnv->PushExpectedErrorSubstring("Failed to unroll includes in shader 'Archive test broken shader'", false);
     pEnv->PushExpectedErrorSubstring("Failed to load shader source file 'non_existing.shader'", false);
     pEnv->PushExpectedErrorSubstring("Failed to create input stream for source file non_existing.shader", false);
 

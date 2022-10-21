@@ -108,7 +108,7 @@ struct ShaderIncludePreprocessInfo
 /// The function recursively finds all include files in the shader and calls the
 /// IncludeHandler function for all source files, including the original one.
 /// Includes are processed in a depth-first order such that original source file is processed last.
-bool ProcessShaderIncludes(const ShaderCreateInfo& ShaderCI, std::function<void(const ShaderIncludePreprocessInfo&)> IncludeHandler);
+bool ProcessShaderIncludes(const ShaderCreateInfo& ShaderCI, std::function<void(const ShaderIncludePreprocessInfo&)> IncludeHandler) noexcept;
 
 ///  Unrolls all include files into a single file
 std::string UnrollShaderIncludes(const ShaderCreateInfo& ShaderCI) noexcept(false);

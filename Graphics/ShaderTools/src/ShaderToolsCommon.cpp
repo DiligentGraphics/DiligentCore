@@ -389,7 +389,7 @@ void ProcessShaderIncludesImpl(const ShaderCreateInfo& ShaderCI, std::unordered_
         IncludeHandler(FileInfo);
 }
 
-bool ProcessShaderIncludes(const ShaderCreateInfo& ShaderCI, std::function<void(const ShaderIncludePreprocessInfo&)> IncludeHandler)
+bool ProcessShaderIncludes(const ShaderCreateInfo& ShaderCI, std::function<void(const ShaderIncludePreprocessInfo&)> IncludeHandler) noexcept
 {
     try
     {
@@ -461,11 +461,7 @@ std::string UnrollShaderIncludes(const ShaderCreateInfo& ShaderCI) noexcept(fals
         LOG_ERROR_AND_THROW("Failed to unroll includes in ", ErrInfo.first, ": ", ErrInfo.second);
         return "";
     }
-    catch (...)
-    {
-        LOG_ERROR_AND_THROW("Failed to unroll includes in shader '", (ShaderCI.Desc.Name != nullptr ? ShaderCI.Desc.Name : ""), "'.");
-        return "";
-    }
+    // Let other exceptions (e.g. 'Failed to load shader source file...') pass through
 }
 
 } // namespace Diligent
