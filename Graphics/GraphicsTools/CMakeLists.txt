@@ -44,6 +44,7 @@ set(SOURCE
 if(ARCHIVER_SUPPORTED)
     list(APPEND INTERFACE
         interface/RenderStateCache.h
+        interface/RenderStateCache.hpp
     )
     list(APPEND SOURCE
         src/RenderStateCache.cpp

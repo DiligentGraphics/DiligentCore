@@ -27,6 +27,7 @@
 #include "GPUTestingEnvironment.hpp"
 #include "TestingSwapChainBase.hpp"
 #include "RenderStateCache.h"
+#include "RenderStateCache.hpp"
 #include "FastRand.hpp"
 
 #include "InlineShaders/RayTracingTestHLSL.h"
@@ -801,6 +802,43 @@ TEST(RenderStateCacheTest, AppendData)
         pData.Release();
         pCache->WriteToBlob(&pData);
         ASSERT_NE(pData, nullptr);
+    }
+}
+
+TEST(RenderStateCacheTest, RenderDeviceWithCache)
+{
+    constexpr bool Execute = false;
+    if (Execute)
+    {
+        RenderDeviceWithCache<> Device{nullptr, nullptr};
+        {
+            auto pShader = Device.CreateShader(ShaderCreateInfo{});
+            pShader.Release();
+        }
+        {
+            auto pPSO = Device.CreateGraphicsPipelineState(GraphicsPipelineStateCreateInfo{});
+            pPSO.Release();
+            pPSO = Device.CreatePipelineState(GraphicsPipelineStateCreateInfo{});
+            pPSO.Release();
+        }
+        {
+            auto pPSO = Device.CreateComputePipelineState(ComputePipelineStateCreateInfo{});
+            pPSO.Release();
+            pPSO = Device.CreatePipelineState(ComputePipelineStateCreateInfo{});
+            pPSO.Release();
+        }
+        {
+            auto pPSO = Device.CreateRayTracingPipelineState(RayTracingPipelineStateCreateInfo{});
+            pPSO.Release();
+            pPSO = Device.CreatePipelineState(RayTracingPipelineStateCreateInfo{});
+            pPSO.Release();
+        }
+        {
+            auto pPSO = Device.CreateTilePipelineState(TilePipelineStateCreateInfo{});
+            pPSO.Release();
+            pPSO = Device.CreatePipelineState(TilePipelineStateCreateInfo{});
+            pPSO.Release();
+        }
     }
 }
 

@@ -1218,6 +1218,8 @@ private:
     std::unordered_set<std::string>                 StringPool;
 };
 
+
+/// C++ wrapper over IRenderDevice.
 template <bool ThrowOnError = true>
 class RenderDeviceX
 {
