@@ -780,6 +780,10 @@ TEST(GraphicsTypesXTest, RenderDeviceX)
             pBuffer.Release();
         }
         {
+            auto pBuffer = Device.CreateBuffer("Name", 1024);
+            pBuffer.Release();
+        }
+        {
             auto pTex = Device.CreateTexture(TextureDesc{});
             pTex.Release();
         }

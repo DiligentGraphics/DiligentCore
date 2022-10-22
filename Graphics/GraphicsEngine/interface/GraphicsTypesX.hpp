@@ -1236,6 +1236,30 @@ public:
         return CreateDeviceObject<IBuffer>("buffer", BuffDesc.Name, &IRenderDevice::CreateBuffer, BuffDesc, pBuffData);
     }
 
+    RefCntAutoPtr<IBuffer> CreateBuffer(const Char*      Name,
+                                        Uint64           Size,
+                                        USAGE            Usage          = USAGE_DYNAMIC,
+                                        BIND_FLAGS       BindFlags      = BIND_UNIFORM_BUFFER,
+                                        CPU_ACCESS_FLAGS CPUAccessFlags = CPU_ACCESS_WRITE,
+                                        void*            pData          = nullptr) noexcept(!ThrowOnError)
+    {
+        BufferDesc Desc;
+        Desc.Name           = Name;
+        Desc.Size           = Size;
+        Desc.Usage          = Usage;
+        Desc.BindFlags      = BindFlags;
+        Desc.CPUAccessFlags = CPUAccessFlags;
+
+        BufferData InitialData;
+        if (pData != nullptr)
+        {
+            InitialData.pData    = pData;
+            InitialData.DataSize = Size;
+        }
+
+        return CreateBuffer(Desc, pData != nullptr ? &InitialData : nullptr);
+    }
+
     RefCntAutoPtr<ITexture> CreateTexture(const TextureDesc& TexDesc,
                                           const TextureData* pData = nullptr) noexcept(!ThrowOnError)
     {
