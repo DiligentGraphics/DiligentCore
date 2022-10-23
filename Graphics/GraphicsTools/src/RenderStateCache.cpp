@@ -280,7 +280,7 @@ bool RenderStateCacheImpl::CreateShader(const ShaderCreateInfo& ShaderCI,
     *ppShader = nullptr;
 
     XXH128State Hasher;
-    Hasher.Update(ShaderCI);
+    Hasher.Update(ShaderCI, m_DeviceType);
     const auto Hash = Hasher.Digest();
 
     // First, try to check if the shader has already been requested
@@ -630,7 +630,7 @@ bool RenderStateCacheImpl::CreatePipelineState(const CreateInfoType& PSOCreateIn
     *ppPipelineState = nullptr;
 
     XXH128State Hasher;
-    Hasher.Update(PSOCreateInfo);
+    Hasher.Update(PSOCreateInfo, m_DeviceType);
     const auto Hash = Hasher.Digest();
 
     // First, try to check if the PSO has already been requested
