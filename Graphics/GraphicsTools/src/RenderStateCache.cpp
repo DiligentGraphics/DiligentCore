@@ -208,7 +208,7 @@ RenderStateCacheImpl::RenderStateCacheImpl(IReferenceCounters*               pRe
         pArchiverFactory = GetArchiverFactory();
     }
 #else
-    pArchiverFactory = GetArchiverFactory();
+    pArchiverFactory       = GetArchiverFactory();
 #endif
     VERIFY_EXPR(pArchiverFactory != nullptr);
 
@@ -280,7 +280,12 @@ bool RenderStateCacheImpl::CreateShader(const ShaderCreateInfo& ShaderCI,
     *ppShader = nullptr;
 
     XXH128State Hasher;
-    Hasher.Update(ShaderCI, m_DeviceType);
+#ifdef DILIGENT_DEBUG
+    constexpr bool IsDebug = true;
+#else
+    constexpr bool IsDebug = false;
+#endif
+    Hasher.Update(ShaderCI, m_DeviceType, IsDebug);
     const auto Hash = Hasher.Digest();
 
     // First, try to check if the shader has already been requested
