@@ -1240,14 +1240,17 @@ public:
                                         Uint64           Size,
                                         USAGE            Usage          = USAGE_DYNAMIC,
                                         BIND_FLAGS       BindFlags      = BIND_UNIFORM_BUFFER,
-                                        CPU_ACCESS_FLAGS CPUAccessFlags = CPU_ACCESS_WRITE,
+                                        CPU_ACCESS_FLAGS CPUAccessFlags = CPU_ACCESS_NONE,
                                         void*            pData          = nullptr) noexcept(!ThrowOnError)
     {
         BufferDesc Desc;
-        Desc.Name           = Name;
-        Desc.Size           = Size;
-        Desc.Usage          = Usage;
-        Desc.BindFlags      = BindFlags;
+        Desc.Name      = Name;
+        Desc.Size      = Size;
+        Desc.Usage     = Usage;
+        Desc.BindFlags = BindFlags;
+
+        if (Usage == USAGE_DYNAMIC && CPUAccessFlags == CPU_ACCESS_NONE)
+            CPUAccessFlags = CPU_ACCESS_WRITE;
         Desc.CPUAccessFlags = CPUAccessFlags;
 
         BufferData InitialData;
@@ -1412,6 +1415,11 @@ public:
     IEngineFactory* GetEngineFactory() const noexcept
     {
         return m_pDevice->GetEngineFactory();
+    }
+
+    operator IRenderDevice*()
+    {
+        return m_pDevice;
     }
 
 private:
