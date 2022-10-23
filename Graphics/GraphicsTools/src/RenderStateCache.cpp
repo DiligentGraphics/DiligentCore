@@ -342,11 +342,22 @@ bool RenderStateCacheImpl::CreateShader(const ShaderCreateInfo& ShaderCI,
         UnpackInfo.pDevice          = m_pDevice;
         UnpackInfo.ModifyShaderDesc = Callback;
         UnpackInfo.pUserData        = Callback;
-        m_pDearchiver->UnpackShader(UnpackInfo, ppShader);
-        if (*ppShader != nullptr)
+        RefCntAutoPtr<IShader> pShader;
+        m_pDearchiver->UnpackShader(UnpackInfo, &pShader);
+        if (pShader)
         {
-            RENDER_STATE_CACHE_LOG("Found shader '", HashStr, "'.");
-            return true;
+            if (pShader->GetDesc() == ShaderCI.Desc)
+            {
+                RENDER_STATE_CACHE_LOG("Found shader '", HashStr, "'.");
+                *ppShader = pShader.Detach();
+                return true;
+            }
+            else
+            {
+                LOG_ERROR_MESSAGE("Description of shader '", (ShaderCI.Desc.Name != nullptr ? ShaderCI.Desc.Name : "<unnamed>"),
+                                  "' does not match the description of the shader unpacked from the cache. This may be the result of a "
+                                  "hash conflict, but the probability of this should be virtually zero.");
+            }
         }
     }
 
@@ -375,11 +386,19 @@ bool RenderStateCacheImpl::CreateShader(const ShaderCreateInfo& ShaderCI,
         VERIFY(pSerializedShader, "Shader object is not a serialized shader");
         if (pSerializedShader)
         {
-            *ppShader = pSerializedShader->GetDeviceShader(m_DeviceType);
-            if (*ppShader != nullptr)
+            if (RefCntAutoPtr<IShader> pShader{pSerializedShader->GetDeviceShader(m_DeviceType)})
             {
-                (*ppShader)->AddRef();
-                return FoundInArchive;
+                if (pShader->GetDesc() == ShaderCI.Desc)
+                {
+                    *ppShader = pShader.Detach();
+                    return FoundInArchive;
+                }
+                else
+                {
+                    LOG_ERROR_MESSAGE("Description of shader '", (ShaderCI.Desc.Name != nullptr ? ShaderCI.Desc.Name : "<unnamed>"),
+                                      "' does not match the description of the shader recently added to the cache. This may be the result of a "
+                                      "hash conflict, but the probability of this should be virtually zero.");
+                }
             }
             else
             {
@@ -393,7 +412,7 @@ bool RenderStateCacheImpl::CreateShader(const ShaderCreateInfo& ShaderCI,
         m_pDevice->CreateShader(ShaderCI, ppShader);
     }
 
-    return FoundInArchive;
+    return false;
 }
 
 template <typename CreateInfoType>
@@ -650,8 +669,22 @@ bool RenderStateCacheImpl::CreatePipelineState(const CreateInfoType& PSOCreateIn
         UnpackInfo.pDevice                       = m_pDevice;
         UnpackInfo.ModifyPipelineStateCreateInfo = Callback;
         UnpackInfo.pUserData                     = Callback;
-        m_pDearchiver->UnpackPipelineState(UnpackInfo, ppPipelineState);
-        FoundInCache = (*ppPipelineState != nullptr);
+        RefCntAutoPtr<IPipelineState> pPSO;
+        m_pDearchiver->UnpackPipelineState(UnpackInfo, &pPSO);
+        if (pPSO)
+        {
+            if (pPSO->GetDesc() == PSOCreateInfo.PSODesc)
+            {
+                *ppPipelineState = pPSO.Detach();
+                FoundInCache     = true;
+            }
+            else
+            {
+                LOG_ERROR_MESSAGE("Description of pipeline state '", (PSOCreateInfo.PSODesc.Name != nullptr ? PSOCreateInfo.PSODesc.Name : "<unnamed>"),
+                                  "' does not match the description of the pipeline unpacked from the cache. This may be the result of a "
+                                  "hash conflict, but the probability of this should be virtually zero.");
+            }
+        }
     }
 
     if (*ppPipelineState == nullptr)
