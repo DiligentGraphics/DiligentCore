@@ -546,10 +546,9 @@ TEST(Platforms_FileSystem, Search)
     EXPECT_TRUE(SearchRes.empty());
 }
 
-#if PLATFORM_WIN32
 TEST(Platforms_FileSystem, GetLocalAppDataDirectory)
 {
-    auto AppDataDir = FileSystem::GetLocalAppDataDirectory("DiligentTests");
+    const auto AppDataDir = FileSystem::GetLocalAppDataDirectory("DiligentTests");
     ASSERT_TRUE(FileSystem::PathExists(AppDataDir.c_str()));
     const Uint32 TestData[] = {0, 1, 2, 3};
 
@@ -582,6 +581,5 @@ TEST(Platforms_FileSystem, GetLocalAppDataDirectory)
     FileSystem::DeleteDirectory(AppDataDir.c_str());
     EXPECT_FALSE(FileSystem::PathExists(AppDataDir.c_str()));
 }
-#endif
 
 } // namespace
