@@ -403,7 +403,13 @@ const char* GetArchiveDeviceDataFlagString(ARCHIVE_DEVICE_DATA_FLAGS Flag, bool 
 
 const char* GetDeviceFeatureStateString(DEVICE_FEATURE_STATE State, bool bGetFullName = false);
 
-const char* GetRenderDeviceTypeString(RENDER_DEVICE_TYPE DeviceType, bool bGetEnumString = false);
+/// Returns the render device type string (e.g. "RENDER_DEVICE_TYPE_D3D11" when GetEnumString is true,
+/// or "Direct3D11" when GetEnumString is false).
+const char* GetRenderDeviceTypeString(RENDER_DEVICE_TYPE DeviceType, bool GetEnumString = false);
+
+/// Returns the render device type short string (e.g. "D3D11" when Capital is true,
+/// or "d3d11" when Capital is false).
+const char* GetRenderDeviceTypeShortString(RENDER_DEVICE_TYPE DeviceType, bool Capital = false);
 
 const char* GetAdapterTypeString(ADAPTER_TYPE AdapterType, bool bGetEnumString = false);
 

@@ -1263,6 +1263,24 @@ const char* GetRenderDeviceTypeString(RENDER_DEVICE_TYPE DeviceType, bool bGetEn
     }
 }
 
+const char* GetRenderDeviceTypeShortString(RENDER_DEVICE_TYPE DeviceType, bool Capital)
+{
+    static_assert(RENDER_DEVICE_TYPE_COUNT == 7, "Did you add a new device type? Please update the switch below.");
+    switch (DeviceType)
+    {
+        // clang-format off
+        case RENDER_DEVICE_TYPE_UNDEFINED: return Capital ? "UNDEFINED" : "undefined"; break;
+        case RENDER_DEVICE_TYPE_D3D11:     return Capital ? "D3D11"     : "d3d11";     break;
+        case RENDER_DEVICE_TYPE_D3D12:     return Capital ? "D3D12"     : "d3d12";     break;
+        case RENDER_DEVICE_TYPE_GL:        return Capital ? "GL"        : "gl";        break;
+        case RENDER_DEVICE_TYPE_GLES:      return Capital ? "GLES"      : "gles";      break;
+        case RENDER_DEVICE_TYPE_VULKAN:    return Capital ? "VK"        : "vk";        break;
+        case RENDER_DEVICE_TYPE_METAL:     return Capital ? "MTL"       : "mtl";       break;
+        // clang-format on
+        default: UNEXPECTED("Unknown/unsupported device type"); return "UNKNOWN";
+    }
+}
+
 const char* GetAdapterTypeString(ADAPTER_TYPE AdapterType, bool bGetEnumString)
 {
     static_assert(ADAPTER_TYPE_COUNT == 4, "Did you add a new adapter type? Please update the switch below.");
