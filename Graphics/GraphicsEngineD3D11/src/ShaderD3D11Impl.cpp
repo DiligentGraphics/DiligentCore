@@ -33,6 +33,8 @@
 namespace Diligent
 {
 
+const INTERFACE_ID ShaderD3D11Impl::IID_InternalImpl;
+
 static const ShaderVersion HLSLValidateShaderVersion(const ShaderVersion& Version, const ShaderVersion& MaxVersion)
 {
     ShaderVersion ModelVer;
@@ -119,7 +121,7 @@ void ShaderD3D11Impl::QueryInterface(const INTERFACE_ID& IID, IObject** ppInterf
 {
     if (ppInterface == nullptr)
         return;
-    if (IID == IID_ShaderD3D || IID == IID_ShaderD3D11)
+    if (IID == IID_ShaderD3D || IID == IID_ShaderD3D11 || IID == IID_InternalImpl)
     {
         *ppInterface = this;
         (*ppInterface)->AddRef();

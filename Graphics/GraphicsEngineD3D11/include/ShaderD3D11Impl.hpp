@@ -51,6 +51,9 @@ class ShaderD3D11Impl final : public ShaderBase<EngineD3D11ImplTraits>, public S
 public:
     using TShaderBase = ShaderBase<EngineD3D11ImplTraits>;
 
+    static constexpr INTERFACE_ID IID_InternalImpl =
+        {0xc6e1e44d, 0xb9d7, 0x4793, {0xb3, 0x8f, 0x4c, 0x2e, 0xb3, 0x9f, 0x20, 0xb0}};
+
     struct CreateInfo
     {
         const RenderDeviceInfo&    DeviceInfo;

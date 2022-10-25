@@ -44,6 +44,9 @@ class ShaderVkImpl final : public ShaderBase<EngineVkImplTraits>
 public:
     using TShaderBase = ShaderBase<EngineVkImplTraits>;
 
+    static constexpr INTERFACE_ID IID_InternalImpl =
+        {0x17523656, 0x19a6, 0x4874, {0x8c, 0x48, 0x74, 0xf5, 0xb7, 0x2, 0x31, 0x1}};
+
     struct CreateInfo
     {
         IDXCompiler* const         pDXCompiler;
@@ -59,7 +62,7 @@ public:
                  bool                    IsDeviceInternal = false);
     ~ShaderVkImpl();
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ShaderVk, TShaderBase)
+    IMPLEMENT_QUERY_INTERFACE2_IN_PLACE(IID_ShaderVk, IID_InternalImpl, TShaderBase)
 
     /// Implementation of IShader::GetResourceCount() in Vulkan backend.
     virtual Uint32 DILIGENT_CALL_TYPE GetResourceCount() const override final

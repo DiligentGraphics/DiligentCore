@@ -39,6 +39,8 @@
 namespace Diligent
 {
 
+const INTERFACE_ID ShaderD3D12Impl::IID_InternalImpl;
+
 static ShaderVersion GetD3D12ShaderModel(const ShaderVersion& HLSLVersion,
                                          SHADER_COMPILER      ShaderCompiler,
                                          IDXCompiler*         pDXCompiler,
@@ -132,7 +134,7 @@ void ShaderD3D12Impl::QueryInterface(const INTERFACE_ID& IID, IObject** ppInterf
 {
     if (ppInterface == nullptr)
         return;
-    if (IID == IID_ShaderD3D || IID == IID_ShaderD3D12)
+    if (IID == IID_ShaderD3D || IID == IID_ShaderD3D12 || IID == IID_InternalImpl)
     {
         *ppInterface = this;
         (*ppInterface)->AddRef();

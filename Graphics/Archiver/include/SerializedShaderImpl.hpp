@@ -46,6 +46,9 @@ public:
     using TBase      = ObjectBase<ISerializedShader>;
     using DeviceType = DeviceObjectArchive::DeviceType;
 
+    static constexpr INTERFACE_ID IID_InternalImpl =
+        {0x949bcae1, 0xb92c, 0x4f31, {0x88, 0x13, 0xec, 0x83, 0xa7, 0xe3, 0x89, 0x3}};
+
     SerializedShaderImpl(IReferenceCounters*      pRefCounters,
                          SerializationDeviceImpl* pDevice,
                          const ShaderCreateInfo&  ShaderCI,

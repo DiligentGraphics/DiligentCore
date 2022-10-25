@@ -589,7 +589,9 @@ public:
         auto AddShaderStage = [&](IShader* pShader) {
             if (pShader != nullptr)
             {
-                ShaderStages.emplace_back(ClassPtrCast<ShaderImplType>(pShader));
+                RefCntAutoPtr<ShaderImplType> pShaderImpl{pShader, ShaderImplType::IID_InternalImpl};
+                VERIFY(pShaderImpl, "Unexpected shader object implementation");
+                ShaderStages.emplace_back(pShaderImpl);
                 const auto ShaderType = pShader->GetDesc().ShaderType;
                 VERIFY((ActiveShaderStages & ShaderType) == 0,
                        "Shader stage ", GetShaderTypeLiteralName(ShaderType), " has already been initialized in PSO.");
@@ -643,7 +645,9 @@ public:
         VERIFY_EXPR(CreateInfo.pCS != nullptr);
         VERIFY_EXPR(CreateInfo.pCS->GetDesc().ShaderType == SHADER_TYPE_COMPUTE);
 
-        ShaderStages.emplace_back(ClassPtrCast<ShaderImplType>(CreateInfo.pCS));
+        RefCntAutoPtr<ShaderImplType> pShaderImpl{CreateInfo.pCS, ShaderImplType::IID_InternalImpl};
+        VERIFY(pShaderImpl, "Unexpected shader object implementation");
+        ShaderStages.emplace_back(pShaderImpl);
         ActiveShaderStages = SHADER_TYPE_COMPUTE;
 
         VERIFY_EXPR(!ShaderStages.empty());
@@ -665,7 +669,9 @@ public:
                 const auto StageInd   = GetShaderTypePipelineIndex(ShaderType, PIPELINE_TYPE_RAY_TRACING);
                 auto&      Stage      = ShaderStages[StageInd];
                 ActiveShaderStages |= ShaderType;
-                Stage.Append(ClassPtrCast<ShaderImplType>(pShader));
+                RefCntAutoPtr<ShaderImplType> pShaderImpl{pShader, ShaderImplType::IID_InternalImpl};
+                VERIFY(pShaderImpl, "Unexpected shader object implementation");
+                Stage.Append(pShaderImpl);
             }
         };
 
@@ -720,7 +726,9 @@ public:
         VERIFY_EXPR(CreateInfo.pTS != nullptr);
         VERIFY_EXPR(CreateInfo.pTS->GetDesc().ShaderType == SHADER_TYPE_TILE);
 
-        ShaderStages.emplace_back(ClassPtrCast<ShaderImplType>(CreateInfo.pTS));
+        RefCntAutoPtr<ShaderImplType> pShaderImpl{CreateInfo.pTS, ShaderImplType::IID_InternalImpl};
+        VERIFY(pShaderImpl, "Unexpected shader object implementation");
+        ShaderStages.emplace_back(pShaderImpl);
         ActiveShaderStages = SHADER_TYPE_TILE;
 
         VERIFY_EXPR(!ShaderStages.empty());

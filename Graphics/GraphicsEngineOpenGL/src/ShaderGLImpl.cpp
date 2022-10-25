@@ -43,6 +43,8 @@ using namespace Diligent;
 namespace Diligent
 {
 
+constexpr INTERFACE_ID ShaderGLImpl::IID_InternalImpl;
+
 ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
                            RenderDeviceGLImpl*     pDeviceGL,
                            const ShaderCreateInfo& ShaderCI,
@@ -191,7 +193,7 @@ ShaderGLImpl::~ShaderGLImpl()
 {
 }
 
-IMPLEMENT_QUERY_INTERFACE(ShaderGLImpl, IID_ShaderGL, TShaderBase)
+IMPLEMENT_QUERY_INTERFACE2(ShaderGLImpl, IID_ShaderGL, IID_InternalImpl, TShaderBase)
 
 
 GLObjectWrappers::GLProgramObj ShaderGLImpl::LinkProgram(ShaderGLImpl* const* ppShaders, Uint32 NumShaders, bool IsSeparableProgram)

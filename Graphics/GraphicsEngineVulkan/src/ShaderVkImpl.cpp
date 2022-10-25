@@ -49,6 +49,8 @@
 namespace Diligent
 {
 
+constexpr INTERFACE_ID ShaderVkImpl::IID_InternalImpl;
+
 namespace
 {
 

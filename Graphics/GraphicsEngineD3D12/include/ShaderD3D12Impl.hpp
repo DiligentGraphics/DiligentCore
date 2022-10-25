@@ -44,6 +44,9 @@ class ShaderD3D12Impl final : public ShaderBase<EngineD3D12ImplTraits>, public S
 public:
     using TShaderBase = ShaderBase<EngineD3D12ImplTraits>;
 
+    static constexpr INTERFACE_ID IID_InternalImpl =
+        {0x98a800f1, 0x673, 0x4a39, {0xaf, 0x28, 0xa4, 0xa5, 0xd6, 0x3e, 0x84, 0xa2}};
+
     struct CreateInfo
     {
         IDXCompiler* const         pDXCompiler;

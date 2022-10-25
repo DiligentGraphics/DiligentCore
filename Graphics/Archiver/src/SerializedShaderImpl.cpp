@@ -39,6 +39,8 @@
 namespace Diligent
 {
 
+const INTERFACE_ID SerializedShaderImpl::IID_InternalImpl;
+
 SerializedShaderImpl::SerializedShaderImpl(IReferenceCounters*      pRefCounters,
                                            SerializationDeviceImpl* pDevice,
                                            const ShaderCreateInfo&  ShaderCI,
@@ -211,7 +213,7 @@ void DILIGENT_CALL_TYPE SerializedShaderImpl::QueryInterface(const INTERFACE_ID&
 {
     if (ppInterface == nullptr)
         return;
-    if (IID == IID_SerializedShader || IID == IID_Shader)
+    if (IID == IID_SerializedShader || IID == IID_Shader || IID == IID_InternalImpl)
     {
         *ppInterface = this;
         (*ppInterface)->AddRef();
