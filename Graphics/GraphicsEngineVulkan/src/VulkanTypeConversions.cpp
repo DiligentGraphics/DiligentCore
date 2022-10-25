@@ -1713,7 +1713,7 @@ SHADER_TYPE VkShaderStageFlagsToShaderTypes(VkShaderStageFlags StageFlags)
 
 VkBuildAccelerationStructureFlagsKHR BuildASFlagsToVkBuildAccelerationStructureFlags(RAYTRACING_BUILD_AS_FLAGS Flags)
 {
-    static_assert(RAYTRACING_BUILD_AS_FLAGS_LAST == RAYTRACING_BUILD_AS_LOW_MEMORY,
+    static_assert(RAYTRACING_BUILD_AS_FLAG_LAST == RAYTRACING_BUILD_AS_LOW_MEMORY,
                   "Please update the switch below to handle the new ray tracing build flag");
 
     VkBuildAccelerationStructureFlagsKHR Result = 0;
@@ -1737,7 +1737,7 @@ VkBuildAccelerationStructureFlagsKHR BuildASFlagsToVkBuildAccelerationStructureF
 
 VkGeometryFlagsKHR GeometryFlagsToVkGeometryFlags(RAYTRACING_GEOMETRY_FLAGS Flags)
 {
-    static_assert(RAYTRACING_GEOMETRY_FLAGS_LAST == RAYTRACING_GEOMETRY_FLAG_NO_DUPLICATE_ANY_HIT_INVOCATION,
+    static_assert(RAYTRACING_GEOMETRY_FLAG_LAST == RAYTRACING_GEOMETRY_FLAG_NO_DUPLICATE_ANY_HIT_INVOCATION,
                   "Please update the switch below to handle the new ray tracing geometry flag");
 
     VkGeometryFlagsKHR Result = 0;
@@ -1758,7 +1758,7 @@ VkGeometryFlagsKHR GeometryFlagsToVkGeometryFlags(RAYTRACING_GEOMETRY_FLAGS Flag
 
 VkGeometryInstanceFlagsKHR InstanceFlagsToVkGeometryInstanceFlags(RAYTRACING_INSTANCE_FLAGS Flags)
 {
-    static_assert(RAYTRACING_INSTANCE_FLAGS_LAST == RAYTRACING_INSTANCE_FORCE_NO_OPAQUE,
+    static_assert(RAYTRACING_INSTANCE_FLAG_LAST == RAYTRACING_INSTANCE_FORCE_NO_OPAQUE,
                   "Please update the switch below to handle the new ray tracing instance flag");
 
     VkGeometryInstanceFlagsKHR Result = 0;
@@ -2068,7 +2068,7 @@ VkImageUsageFlags BindFlagsToVkImageUsage(BIND_FLAGS Flags, bool IsMemoryless, b
     while (Flags != BIND_NONE)
     {
         auto FlagBit = ExtractLSB(Flags);
-        static_assert(BIND_FLAGS_LAST == (1u << 11), "This function must be updated to handle new bind flag");
+        static_assert(BIND_FLAG_LAST == (1u << 11), "This function must be updated to handle new bind flag");
         switch (FlagBit)
         {
             case BIND_RENDER_TARGET:
@@ -2110,7 +2110,7 @@ void GetAllowedStagesAndAccessMask(BIND_FLAGS Flags, VkPipelineStageFlags& Stage
     while (Flags != BIND_NONE)
     {
         auto FlagBit = ExtractLSB(Flags);
-        static_assert(BIND_FLAGS_LAST == (1u << 11), "This function must be updated to handle new bind flag");
+        static_assert(BIND_FLAG_LAST == (1u << 11), "This function must be updated to handle new bind flag");
         switch (FlagBit)
         {
             case BIND_VERTEX_BUFFER:

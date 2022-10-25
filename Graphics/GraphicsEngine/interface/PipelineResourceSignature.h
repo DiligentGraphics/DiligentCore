@@ -223,7 +223,7 @@ struct PipelineResourceSignatureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// the sampler assigned to the shader resource view is automatically set when
     /// the view is bound. Otherwise samplers need to be explicitly set similar to other
     /// shader variables.
-    bool UseCombinedTextureSamplers DEFAULT_INITIALIZER(false);
+    Bool UseCombinedTextureSamplers DEFAULT_INITIALIZER(false);
 
     /// If UseCombinedTextureSamplers is true, defines the suffix added to the
     /// texture variable name to get corresponding sampler name.  For example,
@@ -316,7 +316,7 @@ DILIGENT_BEGIN_INTERFACE(IPipelineResourceSignature, IDeviceObject)
     ///                                        IPipelineResourceSignature::InitializeStaticSRBResources().
     VIRTUAL void METHOD(CreateShaderResourceBinding)(THIS_
                                                      IShaderResourceBinding** ppShaderResourceBinding,
-                                                     bool                     InitStaticResources DEFAULT_VALUE(false)) PURE;
+                                                     Bool                     InitStaticResources DEFAULT_VALUE(false)) PURE;
 
 
     /// Binds static resources for the specified shader stages in the pipeline resource signature.
@@ -412,7 +412,7 @@ DILIGENT_BEGIN_INTERFACE(IPipelineResourceSignature, IDeviceObject)
 
     /// \remarks    Two signatures are compatible if they contain identical resources and immutabke samplers,
     ///             defined in the same order disregarding their names.
-    VIRTUAL bool METHOD(IsCompatibleWith)(THIS_
+    VIRTUAL Bool METHOD(IsCompatibleWith)(THIS_
                                           const struct IPipelineResourceSignature* pPRS) CONST PURE;
 };
 DILIGENT_END_INTERFACE

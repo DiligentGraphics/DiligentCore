@@ -3168,7 +3168,7 @@ void DeviceContextVkImpl::AliasingBarrier(IDeviceObject* pResourceBefore, IDevic
         }
         else
         {
-            constexpr auto BindAll = static_cast<BIND_FLAGS>((Uint32{BIND_FLAGS_LAST} << 1) - 1);
+            constexpr auto BindAll = static_cast<BIND_FLAGS>((Uint32{BIND_FLAG_LAST} << 1) - 1);
             return BindAll;
         }
     };

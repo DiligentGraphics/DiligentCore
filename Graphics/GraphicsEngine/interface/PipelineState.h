@@ -1068,7 +1068,7 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
     ///             IPipelineResourceSignature::CreateShaderResourceBinding() method.
     VIRTUAL void METHOD(CreateShaderResourceBinding)(THIS_
                                                      IShaderResourceBinding** ppShaderResourceBinding,
-                                                     bool                     InitStaticResources DEFAULT_VALUE(false)) PURE;
+                                                     Bool                     InitStaticResources DEFAULT_VALUE(false)) PURE;
 
 
 

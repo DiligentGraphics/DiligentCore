@@ -30,11 +30,9 @@
 #include "CommonDefinitions.h"
 
 #if DILIGENT_C_INTERFACE
-#    include <stdint.h>
 #    include <stdbool.h>
 #    include <stddef.h>
 #else
-#    include <cstdint>
 #    include <string>
 #endif
 

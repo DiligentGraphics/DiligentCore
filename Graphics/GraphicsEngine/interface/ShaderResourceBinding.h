@@ -150,7 +150,7 @@ DILIGENT_BEGIN_INTERFACE(IShaderResourceBinding, IObject)
                                                                 Uint32      Index) PURE;
 
     /// Returns true if static resources have been initialized in this SRB.
-    VIRTUAL bool METHOD(StaticResourcesInitialized)(THIS) CONST PURE;
+    VIRTUAL Bool METHOD(StaticResourcesInitialized)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE
 
